@@ -121,8 +121,8 @@ class TestQuantBatchMatmulV4InferShapeCsv : public testing::TestWithParam<Param>
 
 TEST_P(TestQuantBatchMatmulV4InferShapeCsv, runCase)
 {
-    const auto &param = GetParam();
-    auto *opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulV4");
+    const auto& param = GetParam();
+    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulV4");
     ASSERT_NE(opImpl, nullptr);
     if (param.caseType == "infer_shape_range") {
         auto inferShapeRangeFunc = opImpl->infer_shape_range;
@@ -137,17 +137,18 @@ TEST_P(TestQuantBatchMatmulV4InferShapeCsv, runCase)
         gert::Range<gert::Shape> x2Range(&x2Min, &x2Max);
         gert::Range<gert::Shape> outRange(&outMin, &outMax);
         auto holder = gert::InferShapeRangeContextFaker()
-            .NodeIoNum(2, 1)
-            .IrInputNum(2)
-            .NodeInputTd(0, param.x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .InputShapeRanges({&x1Range, &x2Range})
-            .OutputShapeRanges({&outRange})
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(param.dtype))},
-                        {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                        {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
-                        {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
-            .Build();
+                          .NodeIoNum(2, 1)
+                          .IrInputNum(2)
+                          .NodeInputTd(0, param.x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .InputShapeRanges({&x1Range, &x2Range})
+                          .OutputShapeRanges({&outRange})
+                          .NodeAttrs(
+                              {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(param.dtype))},
+                               {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                               {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
+                               {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
+                          .Build();
         ASSERT_EQ(inferShapeRangeFunc(holder.GetContext<gert::InferShapeRangeContext>()), param.expectRet)
             << "case=" << param.caseName;
         if (param.expectRet == ge::GRAPH_SUCCESS) {
@@ -171,16 +172,17 @@ TEST_P(TestQuantBatchMatmulV4InferShapeCsv, runCase)
     gert::Shape outputShape = {};
     if (param.nodeIoNum == 2) {
         auto holder = gert::InferShapeContextFaker()
-            .NodeIoNum(2, 1)
-            .IrInstanceNum({1, 1})
-            .InputShapes({&x1, &x2})
-            .OutputShapes({&outputShape})
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(param.dtype))},
-                        {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                        {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
-                        {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
-            .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .Build();
+                          .NodeIoNum(2, 1)
+                          .IrInstanceNum({1, 1})
+                          .InputShapes({&x1, &x2})
+                          .OutputShapes({&outputShape})
+                          .NodeAttrs(
+                              {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(param.dtype))},
+                               {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                               {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
+                               {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
+                          .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
         ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), param.expectRet)
             << "case=" << param.caseName;
         if (param.expectRet == ge::GRAPH_SUCCESS) {
@@ -191,18 +193,19 @@ TEST_P(TestQuantBatchMatmulV4InferShapeCsv, runCase)
         return;
     }
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(6, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1, 1})
-        .InputShapes({&x1, &x2, param.in2Null ? nullptr : &bias, param.in3Null ? nullptr : &x1Scale,
-                      param.in4Null ? nullptr : &x2Scale, param.in5Null ? nullptr : &offset})
-        .OutputShapes({&outputShape})
-        .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(param.dtype))},
-                    {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                    {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
-        .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .Build();
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), param.expectRet) << "case=" << param.caseName;
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1, &x2, param.in2Null ? nullptr : &bias, param.in3Null ? nullptr : &x1Scale,
+                                    param.in4Null ? nullptr : &x2Scale, param.in5Null ? nullptr : &offset})
+                      .OutputShapes({&outputShape})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(param.dtype))},
+                                  {"compute_type", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
+                      .NodeInputTd(1, param.x2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), param.expectRet)
+        << "case=" << param.caseName;
     if (param.expectRet == ge::GRAPH_SUCCESS) {
         auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
         ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(ToShape(param.expectOutShape)))

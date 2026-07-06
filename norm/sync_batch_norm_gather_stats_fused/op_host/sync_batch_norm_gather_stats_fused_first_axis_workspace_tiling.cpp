@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file sync_batch_norm_gather_stats_fused_first_axis_workspace_tiling.cpp
  * \brief
  */
@@ -24,17 +24,14 @@ static const int64_t FIRST_AXIS_WORKSPACE_B32_ALIGN_FACTOR = 8;
 static const int64_t FIRST_AXIS_WORKSPACE_MAX_BUFFER_NUM = 3;
 static const int64_t FIRST_AXIS_WORKSPACE_MIN_C = 4800;
 static const int64_t FIRST_AXIS_FLOAT_DTYPE_SIZE = 4;
-static const size_t  FIRST_AXIS_WORKSPACE_RESERVED = 16 * 1024 * 1024;
+static const size_t FIRST_AXIS_WORKSPACE_RESERVED = 16 * 1024 * 1024;
 
 static inline int64_t WorkspaceCeilDiv(int64_t value, int64_t factor)
 {
     return factor == 0 ? value : (value + factor - 1) / factor;
 }
 
-bool SyncBatchNormGatherStatsFusedFirstAxisWorkspaceTiling::IsCapable()
-{
-    return true;
-}
+bool SyncBatchNormGatherStatsFusedFirstAxisWorkspaceTiling::IsCapable() { return true; }
 
 uint64_t SyncBatchNormGatherStatsFusedFirstAxisWorkspaceTiling::GetTilingKey() const
 {
@@ -53,16 +50,16 @@ ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisWorkspaceTiling::DoOpTilin
     td_.set_blockFormer(blockFormer);
     td_.set_blockNum(blockNum);
     td_.set_blockTail(blockTail);
-    int64_t cAlignV_ =
-        WorkspaceCeilDiv(commonParams.cLength, FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR) * FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR;
+    int64_t cAlignV_ = WorkspaceCeilDiv(commonParams.cLength, FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR) *
+                       FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR;
 
-    int64_t maxBufferSize = (commonParams.ubSizePlatForm - 1024) / FIRST_AXIS_WORKSPACE_MAX_BUFFER_NUM / FIRST_AXIS_FLOAT_DTYPE_SIZE /
-                            FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR * FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR;
+    int64_t maxBufferSize = (commonParams.ubSizePlatForm - 1024) / FIRST_AXIS_WORKSPACE_MAX_BUFFER_NUM /
+                            FIRST_AXIS_FLOAT_DTYPE_SIZE / FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR *
+                            FIRST_AXIS_WORKSPACE_B16_ALIGN_FACTOR;
 
     int64_t ubFormer = std::min(maxBufferSize, cAlignV_);
     int64_t ubLoop = WorkspaceCeilDiv(commonParams.cLength, ubFormer);
     int64_t ubTail = commonParams.cLength - (ubLoop - 1) * ubFormer;
-
 
     td_.set_cAlignV(cAlignV_);
     td_.set_ubFormer(ubFormer);
@@ -86,7 +83,8 @@ ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisWorkspaceTiling::PostTilin
 ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisWorkspaceTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = (td_.get_blockNum() + 2) * td_.get_cAlignV() * FIRST_AXIS_FLOAT_DTYPE_SIZE + FIRST_AXIS_WORKSPACE_RESERVED;
+    workspaces[0] = (td_.get_blockNum() + 2) * td_.get_cAlignV() * FIRST_AXIS_FLOAT_DTYPE_SIZE +
+                    FIRST_AXIS_WORKSPACE_RESERVED;
 
     return ge::GRAPH_SUCCESS;
 }

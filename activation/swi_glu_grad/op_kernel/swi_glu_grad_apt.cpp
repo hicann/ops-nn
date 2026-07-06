@@ -20,16 +20,17 @@
 using namespace AscendC;
 using namespace SwiGluGrad;
 
-#define SWIGLUGRAD_MOVEALIGN_FP16        1000001
-#define SWIGLUGRAD_MOVEALIGN_FP32        1000011
-#define SWIGLUGRAD_MOVEALIGN_BF16        1000021
-#define SWIGLUGRAD_UB_REARRANGE_FP16     1000000
-#define SWIGLUGRAD_UB_REARRANGE_FP32     1000010
-#define SWIGLUGRAD_UB_REARRANGE_BF16     1000020
+#define SWIGLUGRAD_MOVEALIGN_FP16 1000001
+#define SWIGLUGRAD_MOVEALIGN_FP32 1000011
+#define SWIGLUGRAD_MOVEALIGN_BF16 1000021
+#define SWIGLUGRAD_UB_REARRANGE_FP16 1000000
+#define SWIGLUGRAD_UB_REARRANGE_FP32 1000010
+#define SWIGLUGRAD_UB_REARRANGE_BF16 1000020
 
 extern "C" __global__ __aicore__ void swi_glu_grad(GM_ADDR gradout_gm, GM_ADDR input_gm, GM_ADDR output_gm,
-                                                   GM_ADDR workspace, GM_ADDR tiling) {
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);                                                    
+                                                   GM_ADDR workspace, GM_ADDR tiling)
+{
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (workspace == nullptr) {
         return;
     }

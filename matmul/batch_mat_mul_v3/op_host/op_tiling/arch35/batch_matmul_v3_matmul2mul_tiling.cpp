@@ -89,8 +89,7 @@ bool BatchMatMulV3ToMulTiling::IsCapable()
         return false;
     }
     // N>256/DtypeSize才能用满Vector的计算能力，小N走特殊优化
-    if (args_.nValue > BLOCK_BYTE_SIZE / args_.aDtypeSize &&
-        args_.nValue <= BASIC_BLOCK_SIZE_256 / args_.aDtypeSize) {
+    if (args_.nValue > BLOCK_BYTE_SIZE / args_.aDtypeSize && args_.nValue <= BASIC_BLOCK_SIZE_256 / args_.aDtypeSize) {
         return false;
     }
     // N=1时部分case劣化
@@ -119,10 +118,7 @@ uint64_t BatchMatMulV3ToMulTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-uint64_t BatchMatMulV3ToMulTiling::GetNumBlocks() const
-{
-    return runInfo_.bmmToMulInfo.usedCoreNum;
-}
+uint64_t BatchMatMulV3ToMulTiling::GetNumBlocks() const { return runInfo_.bmmToMulInfo.usedCoreNum; }
 
 ge::graphStatus BatchMatMulV3ToMulTiling::GetTilingData(TilingResult& tiling) const
 {

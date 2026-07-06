@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -27,20 +28,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void layer_norm_v4(
-    GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void layer_norm_v4(GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta,
+                                                    GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
 class layer_norm_v4_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_v4_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_v4_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_v4_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "layer_norm_v4_test TearDown\n" << endl; }
 };
 
 TEST_F(layer_norm_v4_test, test_case_0003)
@@ -84,20 +79,20 @@ TEST_F(layer_norm_v4_test, test_case_0003)
     tilingDatafromBin->apiTempBufferSize = 0;
 
     ICPU_SET_TILING_KEY(400);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(410);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(411);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(420);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(422);
-    ICPU_RUN_KF(
-        layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

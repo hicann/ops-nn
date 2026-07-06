@@ -81,4 +81,4 @@ public:
 };
 
 OP_ADD(QuantizedBatchNorm);
-}
+} // namespace ops

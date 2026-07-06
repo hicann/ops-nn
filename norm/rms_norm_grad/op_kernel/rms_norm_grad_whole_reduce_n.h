@@ -20,9 +20,8 @@ template <typename T>
 class RmsNormGradWholeReduceN {
 public:
     __aicore__ inline RmsNormGradWholeReduceN(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
-        const RmsNormGradTilingData* tiling);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
+                                const RmsNormGradTilingData* tiling);
     __aicore__ inline void Process();
 
 protected:
@@ -68,14 +67,14 @@ protected:
     __aicore__ inline void CopyDgammaOut();
     __aicore__ inline void CopyDgammaOutInOrder();
     __aicore__ inline void Compute(uint32_t calcLen, LocalTensor<T>& gammaUb, LocalTensor<float>& dgamma);
-    __aicore__ inline void ComputeMain(
-        LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy, LocalTensor<float>& rstd, LocalTensor<T>& gamma,
-        LocalTensor<float>& dgamma, uint32_t calcLen);
+    __aicore__ inline void ComputeMain(LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy,
+                                       LocalTensor<float>& rstd, LocalTensor<T>& gamma, LocalTensor<float>& dgamma,
+                                       uint32_t calcLen);
 };
 
 template <typename T>
-__aicore__ inline void RmsNormGradWholeReduceN<T>::Init(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, const RmsNormGradTilingData* tiling)
+__aicore__ inline void RmsNormGradWholeReduceN<T>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                                        GM_ADDR dgamma, const RmsNormGradTilingData* tiling)
 {
     InitData(tiling);
 
@@ -261,8 +260,8 @@ __aicore__ inline void RmsNormGradWholeReduceN<T>::CopyDgammaOutInOrder()
 }
 
 template <typename T>
-__aicore__ inline void RmsNormGradWholeReduceN<T>::Compute(
-    uint32_t calcLen, LocalTensor<T>& gammaUb, LocalTensor<float>& dgamma)
+__aicore__ inline void RmsNormGradWholeReduceN<T>::Compute(uint32_t calcLen, LocalTensor<T>& gammaUb,
+                                                           LocalTensor<float>& dgamma)
 {
     LocalTensor<T> xUb = inQueX.DeQue<T>();
     LocalTensor<T> dyUb = inQueDY.DeQue<T>();
@@ -273,9 +272,10 @@ __aicore__ inline void RmsNormGradWholeReduceN<T>::Compute(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceN<half>::ComputeMain(
-    LocalTensor<half>& x, LocalTensor<half>& dx, LocalTensor<half>& dy, LocalTensor<float>& rstd,
-    LocalTensor<half>& gamma, LocalTensor<float>& dgamma, uint32_t calcLen)
+__aicore__ inline void RmsNormGradWholeReduceN<half>::ComputeMain(LocalTensor<half>& x, LocalTensor<half>& dx,
+                                                                  LocalTensor<half>& dy, LocalTensor<float>& rstd,
+                                                                  LocalTensor<half>& gamma, LocalTensor<float>& dgamma,
+                                                                  uint32_t calcLen)
 {
     PipeBarrier<PIPE_ALL>();
     LocalTensor<float> dySum = ndBufFp32Buf1.Get<float>();
@@ -360,9 +360,10 @@ __aicore__ inline void RmsNormGradWholeReduceN<half>::ComputeMain(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceN<float>::ComputeMain(
-    LocalTensor<float>& x, LocalTensor<float>& dx, LocalTensor<float>& dy, LocalTensor<float>& rstd,
-    LocalTensor<float>& gamma, LocalTensor<float>& dgamma, uint32_t calcLen)
+__aicore__ inline void RmsNormGradWholeReduceN<float>::ComputeMain(LocalTensor<float>& x, LocalTensor<float>& dx,
+                                                                   LocalTensor<float>& dy, LocalTensor<float>& rstd,
+                                                                   LocalTensor<float>& gamma,
+                                                                   LocalTensor<float>& dgamma, uint32_t calcLen)
 {
     LocalTensor<float> tmp_buf = ndBufFp32Buf1.Get<float>(calcLen * colVal);
     PipeBarrier<PIPE_ALL>();

@@ -25,24 +25,24 @@ namespace optiling {
 using namespace Ops::Base;
 using namespace ApplyFtrlOpTiling;
 class ApplyFtrlRegbaseTiling {
- public:
-  explicit ApplyFtrlRegbaseTiling(gert::TilingContext *context) : tilingContext_(context) {};
+public:
+    explicit ApplyFtrlRegbaseTiling(gert::TilingContext* context) : tilingContext_(context){};
 
-  ge::graphStatus RunTiling();
-  ApplyFtrlRegbaseTilingData *tiling_ = nullptr;
+    ge::graphStatus RunTiling();
+    ApplyFtrlRegbaseTilingData* tiling_ = nullptr;
 
- protected:
-  ge::graphStatus DoElewiseTiling();
-  ge::graphStatus CheckScalarShape(int32_t inputIdx);
-  ge::graphStatus CheckSameShape(int32_t inputIdx, const gert::Shape& input0Shape);
-  ge::graphStatus CheckSameDtype(int32_t inputIdx, const ge::DataType& input0Dtype);
-  ge::graphStatus CheckShapeAndType();
-  ge::graphStatus SetTilingData();
+protected:
+    ge::graphStatus DoElewiseTiling();
+    ge::graphStatus CheckScalarShape(int32_t inputIdx);
+    ge::graphStatus CheckSameShape(int32_t inputIdx, const gert::Shape& input0Shape);
+    ge::graphStatus CheckSameDtype(int32_t inputIdx, const ge::DataType& input0Dtype);
+    ge::graphStatus CheckShapeAndType();
+    ge::graphStatus SetTilingData();
 
- private:
-  gert::TilingContext *tilingContext_;
-  uint64_t tilingKey = 0;
+private:
+    gert::TilingContext* tilingContext_;
+    uint64_t tilingKey = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // RUNTIME_V2_OP_IMPL_APPLY_FTRL_REGBASE_TILING_H_
+#endif // RUNTIME_V2_OP_IMPL_APPLY_FTRL_REGBASE_TILING_H_

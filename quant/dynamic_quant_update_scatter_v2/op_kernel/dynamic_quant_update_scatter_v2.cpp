@@ -19,9 +19,11 @@
 using namespace AscendC;
 using namespace DynamicQuantUpdateScatterV2NDOpt;
 
-extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR var, GM_ADDR varScale, GM_ADDR varOffset, GM_ADDR varOut, GM_ADDR varScaleOut,
-    GM_ADDR varOffsetOut, GM_ADDR workSpace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(GM_ADDR x, GM_ADDR indices, GM_ADDR var,
+                                                                      GM_ADDR varScale, GM_ADDR varOffset,
+                                                                      GM_ADDR varOut, GM_ADDR varScaleOut,
+                                                                      GM_ADDR varOffsetOut, GM_ADDR workSpace,
+                                                                      GM_ADDR tiling)
 {
     if (x == nullptr || indices == nullptr || var == nullptr || varScale == nullptr || varOffset == nullptr) {
         return;

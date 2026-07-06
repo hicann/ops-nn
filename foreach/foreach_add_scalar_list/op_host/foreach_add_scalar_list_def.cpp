@@ -47,9 +47,7 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig regbaseCfg;
-        regbaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", regbaseCfg);
 
         this->AICore().AddConfig("ascend910_93");
@@ -73,11 +71,10 @@ private:
         std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32};
         std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
         std::vector<ge::DataType> scalar_dtype_list_kirin;
-        std::for_each(
-            tensor_dtype_list_kirin.cbegin(), tensor_dtype_list_kirin.cend(),
-            [&scalar_dtype_list_kirin](ge::DataType dtype) {
-                scalar_dtype_list_kirin.push_back(DtypeTensor2Scalar(dtype));
-            });
+        std::for_each(tensor_dtype_list_kirin.cbegin(), tensor_dtype_list_kirin.cend(),
+                      [&scalar_dtype_list_kirin](ge::DataType dtype) {
+                          scalar_dtype_list_kirin.push_back(DtypeTensor2Scalar(dtype));
+                      });
         config_kirin.Input("x")
             .ParamType(DYNAMIC)
             .DataType(tensor_dtype_list_kirin)

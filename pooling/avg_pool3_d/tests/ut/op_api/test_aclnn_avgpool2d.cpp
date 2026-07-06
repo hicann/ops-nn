@@ -25,14 +25,15 @@ using namespace std;
 
 class l2_avgpool2d_test : public testing::Test {
 protected:
- static void SetUpTestCase() { std::cout << "avgpool2d_test Setup" << std::endl; }
- static void TearDownTestCase() { std::cout << "avgpool2d_test TearDown" << std::endl; }
+    static void SetUpTestCase() { std::cout << "avgpool2d_test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "avgpool2d_test TearDown" << std::endl; }
 };
 
 const int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 
 // cubeMathType取值非法拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_cubeMathType) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_cubeMathType)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = false;
     bool ceil_mode = true;
@@ -50,9 +51,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_cubeMathType) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -61,7 +62,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_cubeMathType) {
 }
 
 // 参数kernel的shape取值不合法拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -78,9 +80,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override , cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -88,7 +90,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape) {
 }
 
 // 参数kernel的shape取值不合法拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_1) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_1)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -105,9 +108,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_1) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override , cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -115,7 +118,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_1) {
 }
 
 // 参数kernel的shape取值不合法拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_2) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_2)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -132,16 +136,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_kernel_illegal_shape_2) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override , cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 // 参数stride的shape取值不合法拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_stride_illegal_shape) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_stride_illegal_shape)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -158,9 +163,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_stride_illegal_shape) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -168,7 +173,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_stride_illegal_shape) {
 }
 
 // FP16，走Vector分支
-TEST_F(l2_avgpool2d_test, test_avgpool2d_globalpool_fp16) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_globalpool_fp16)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -186,8 +192,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_globalpool_fp16) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -195,7 +201,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_globalpool_fp16) {
 }
 
 // FP16，走Cube分支，countIncludePad=True，不插入AvgPoolUpdate算子
-TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -213,8 +220,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -222,7 +229,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16) {
 }
 
 // FP16，走3d分支，countIncludePad=True
-TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16_to3d) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16_to3d)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -240,8 +248,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16_to3d) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -249,7 +257,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp16_to3d) {
 }
 
 // FP16，走3d分支,countIncludePad=False
-TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16_to3d) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16_to3d)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = false;
     bool ceil_mode = false;
@@ -267,8 +276,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16_to3d) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -276,7 +285,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16_to3d) {
 }
 
 // FP16，走Cube分支，countIncludePad=False，插入AvgPoolUpdate算子
-TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = false;
     bool ceil_mode = false;
@@ -294,8 +304,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -303,7 +313,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp16) {
 }
 
 // FP16，走AICPU分支
-TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp16) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp16)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -320,9 +331,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp16) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -330,7 +341,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp16) {
 }
 
 // FP32，走3d分支，countIncludePad=True
-TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp32_to3d) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp32_to3d)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -347,9 +359,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp32_to3d) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -357,7 +369,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_include_fp32_to3d) {
 }
 
 // FP32，走3d分支，countIncludePad=False
-TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp32_to3d) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp32_to3d)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = false;
     bool ceil_mode = false;
@@ -374,9 +387,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp32_to3d) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -384,7 +397,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_avgpool_exclude_fp32_to3d) {
 }
 
 // FP32，走AICPU分支
-TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp32) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -401,9 +415,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp32) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -411,7 +425,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_no_global_no_average_fp32) {
 }
 
 // self空指针拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_self) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_self)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -428,9 +443,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_self) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT((aclTensor*)nullptr, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT((aclTensor*)nullptr, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -438,7 +453,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_self) {
 }
 
 // kernel空指针拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_kernel) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_kernel)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -455,9 +471,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_kernel) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, (aclIntArray*)nullptr, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, (aclIntArray*)nullptr, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -465,7 +481,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_kernel) {
 }
 
 // stride空指针拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_stride) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_stride)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -482,9 +499,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_stride) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, (aclIntArray*)nullptr, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, (aclIntArray*)nullptr, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -492,7 +509,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_stride) {
 }
 
 // padding空指针拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_padding) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_padding)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -509,9 +527,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_padding) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, (aclIntArray*)nullptr,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, (aclIntArray*)nullptr, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -519,7 +537,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_padding) {
 }
 
 // out空指针拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_out) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_out)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -536,9 +555,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_out) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT((aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -546,7 +565,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_nullptr_out) {
 }
 
 // 输出out是空Tensor
-TEST_F(l2_avgpool2d_test, test_avgpool2d_out_empty_tensor) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_out_empty_tensor)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -563,9 +583,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_out_empty_tensor) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -573,7 +593,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_out_empty_tensor) {
 }
 
 // 输入输出Format不是NCHW拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_format_not_nchw) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_format_not_nchw)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -590,9 +611,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_format_not_nchw) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NHWC);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -600,7 +621,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_format_not_nchw) {
 }
 
 // 异常Dtype拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_dtype_abnormal) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_dtype_abnormal)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -617,9 +639,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_dtype_abnormal) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_DT_UNDEFINED, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -627,7 +649,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_dtype_abnormal) {
 }
 
 // 构造一个不支持的shape，看能否拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_format_abnormal) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_format_abnormal)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -644,16 +667,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_format_abnormal) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_dtype) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_dtype)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -670,9 +694,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_dtype) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -680,7 +704,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_dtype) {
 }
 
 // 输入输出Format不匹配拦截
-TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_format) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_format)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -697,9 +722,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_format) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NHWC);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -707,7 +732,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_input_output_different_format) {
 }
 
 // 参数ceil_mode取true,走3d
-TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true_to3d) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true_to3d)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -724,9 +750,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true_to3d) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -734,7 +760,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true_to3d) {
 }
 
 // 参数ceil_mode取true,走2d
-TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -751,9 +778,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -761,7 +788,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_true) {
 }
 
 // 参数ceil_mode取false,走2d
-TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -778,9 +806,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -788,7 +816,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false) {
 }
 
 // 参数ceil_mode取false,走3d
-TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false_to3d) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false_to3d)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -805,16 +834,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_ceilmode_false_to3d) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_keepdtype_fp32) {
+TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_keepdtype_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -832,16 +862,17 @@ TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_keepdtype_fp32
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, Ascend910B2_test_avgpool2d_cubeMathType_keepdtype_bf16) {
+TEST_F(l2_avgpool2d_test, Ascend910B2_test_avgpool2d_cubeMathType_keepdtype_bf16)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -859,16 +890,17 @@ TEST_F(l2_avgpool2d_test, Ascend910B2_test_avgpool2d_cubeMathType_keepdtype_bf16
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_BF16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_cubeMathType_usefp16_fp32) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_cubeMathType_usefp16_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -886,16 +918,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_cubeMathType_usefp16_fp32) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_usefp16_fp32) {
+TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_usefp16_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -913,16 +946,17 @@ TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_usefp16_fp32) 
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_usehf32_fp32) {
+TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_usehf32_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -940,16 +974,17 @@ TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_usehf32_fp32) 
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_cubeMathType_allowfp32downprecision_fp32) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_cubeMathType_allowfp32downprecision_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -967,16 +1002,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_cubeMathType_allowfp32downprecision_fp3
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_allowfp32downprecision_fp32) {
+TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_allowfp32downprecision_fp32)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = true;
@@ -994,16 +1030,17 @@ TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_cubeMathType_allowfp32downp
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_divisorOverride_aicpu_fp16) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_divisorOverride_aicpu_fp16)
+{
     int64_t divisor_override = -256;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1021,16 +1058,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_divisorOverride_aicpu_fp16) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType_0),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType_0), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_divisorOverride_cube_fp32) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_divisorOverride_cube_fp32)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1047,16 +1085,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_divisorOverride_cube_fp32) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_divisorOverride_cube_fp32) {
+TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_divisorOverride_cube_fp32)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1073,16 +1112,17 @@ TEST_F(l2_avgpool2d_test, ascend910B2_test_avgpool2d_divisorOverride_cube_fp32) 
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1100,9 +1140,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -1110,7 +1150,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad) {
 }
 
 // FP16, illegal stride ut
-TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_stride) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_stride)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1128,8 +1169,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_stride) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -1137,7 +1178,8 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_stride) {
 }
 
 // FP16, illegal dim 3 and format NCHW
-TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_dim_and_format) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_dim_and_format)
+{
     int64_t divisor_override = 0;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1155,15 +1197,16 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_dim_and_format) {
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType), // host api输入
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad_value1) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad_value1)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1181,16 +1224,17 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad_value1) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad_value2) {
+TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad_value2)
+{
     int64_t divisor_override = -4;
     bool count_include_pad = true;
     bool ceil_mode = false;
@@ -1208,9 +1252,9 @@ TEST_F(l2_avgpool2d_test, test_avgpool2d_illegal_pad_value2) {
     auto padding_desc = IntArrayDesc(padding_dims);
     auto out_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(aclnnAvgPool2d,  // host api第二段接口名称
-                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc,
-                              ceil_mode, count_include_pad, divisor_override, cubeMathType),  // host api输入
+    auto ut = OP_API_UT(aclnnAvgPool2d, // host api第二段接口名称
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
+                              divisor_override, cubeMathType), // host api输入
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph

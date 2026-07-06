@@ -12,7 +12,7 @@
  * \file quant_update_scatter_apt.cpp
  * \brief quant_update_scatter_apt kernel entry file
  */
-#if ASC_DEVKIT_MAJOR >=9
+#if ASC_DEVKIT_MAJOR >= 9
 #include "basic_api/kernel_vec_intf.h"
 #else
 #include "kernel_operator.h"
@@ -30,55 +30,55 @@ using namespace AscendC;
 using namespace QuantUpdateScatter;
 
 template <uint64_t SplitMode, uint64_t ZeroPointsType, uint64_t DivMode, uint64_t CastRoundMode>
-__global__ __aicore__ void quant_update_scatter(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR quant_scales, GM_ADDR quant_zero_points, GM_ADDR out,
-    GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void quant_update_scatter(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR quant_scales,
+                                                GM_ADDR quant_zero_points, GM_ADDR out, GM_ADDR workSpace,
+                                                GM_ADDR tiling)
 {
-    #if (__NPU_ARCH__ == 3510)
-        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
-    #endif
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+#endif
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     using ZeroType = typename TypeFromEnum<ZeroPointsType>::type;
 
     if constexpr (SplitMode == TPL_MODE_LITTLE_ELE_LITTLE_QUANT) {
-        QuantUpdateScatterRegbase<
-            DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode, CastRoundMode>
+        QuantUpdateScatterRegbase<DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode,
+                                  CastRoundMode>
             op;
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     } else if constexpr (SplitMode == TPL_MODE_LARGE_BATCH) {
-        QuantUpdateScatterLargeBatchRegbase<
-            DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode, CastRoundMode>
+        QuantUpdateScatterLargeBatchRegbase<DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType,
+                                            DivMode, CastRoundMode>
             op;
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     } else if constexpr (SplitMode == TPL_MODE_LARGE_ELE_LITTLE_QUANT) {
-        QuantUpdateScatterLargeEleLittleQuantRegbase<
-            DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode, CastRoundMode>
+        QuantUpdateScatterLargeEleLittleQuantRegbase<DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES,
+                                                     ZeroType, DivMode, CastRoundMode>
             op;
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     } else if constexpr (SplitMode == TPL_MODE_LARGE_ELE_LARGE_QUANT) {
-        QuantUpdateScatterLargeEleLargeQuantRegbase<
-            DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode, CastRoundMode>
+        QuantUpdateScatterLargeEleLargeQuantRegbase<DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES,
+                                                    ZeroType, DivMode, CastRoundMode>
             op;
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     } else if constexpr (SplitMode == TPL_MODE_LARGE_BATCH_LITTLE_QUANT) {
-        QuantUpdateScatterLargeBatchLittleQuantRegbase<
-            DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode, CastRoundMode>
+        QuantUpdateScatterLargeBatchLittleQuantRegbase<DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES,
+                                                       ZeroType, DivMode, CastRoundMode>
             op;
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     } else if constexpr (SplitMode == TPL_MODE_LARGE_BATCH_LARGE_QUANT) {
-        QuantUpdateScatterLargeBatchLargeQuantRegbase<
-            DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES, ZeroType, DivMode, CastRoundMode>
+        QuantUpdateScatterLargeBatchLargeQuantRegbase<DTYPE_VAR, DTYPE_INDICES, DTYPE_UPDATES, DTYPE_QUANT_SCALES,
+                                                      ZeroType, DivMode, CastRoundMode>
             op;
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     }
-    #if (__NPU_ARCH__ == 3510)
-        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
-    #endif
+#if (__NPU_ARCH__ == 3510)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+#endif
 }

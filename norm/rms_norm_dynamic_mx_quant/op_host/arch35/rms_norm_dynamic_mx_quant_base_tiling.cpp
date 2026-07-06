@@ -62,8 +62,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetPlatformInfo()
     ubBlockFp32Num_ = ubBlockSize_ / FP32_BYTES;
     ubBlockB16Num_ = ubBlockSize_ / FP16_BYTES;
 
-    OP_CHECK_IF(
-        totalCoreNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(totalCoreNum_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(ubSize_ <= 0, OP_LOGE(context_->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
 
@@ -78,47 +78,44 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     auto inputXPtr = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
     xDtype_ = inputXPtr->GetDataType();
-    OP_CHECK_IF(
-        X_SUPPORT_DTYPE_SET.count(xDtype_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x", Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str(),
-            "float16 or bfloat16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(X_SUPPORT_DTYPE_SET.count(xDtype_) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+                                          Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str(),
+                                          "float16 or bfloat16"),
+                return ge::GRAPH_FAILED);
 
     auto inputGammaPtr = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGammaPtr);
     gammaDtype_ = inputGammaPtr->GetDataType();
     std::string gammaReasonStr = "same as x (" + Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)) + ") or float";
-    OP_CHECK_IF(
-        gammaDtype_ != xDtype_ && gammaDtype_ != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "gamma", Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)).c_str(),
-            gammaReasonStr.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gammaDtype_ != xDtype_ && gammaDtype_ != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "gamma",
+                    Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)).c_str(), gammaReasonStr.c_str()),
+                return ge::GRAPH_FAILED);
 
     gammaDtypeSize_ = gammaDtype_ == ge::DT_FLOAT ? FP32_BYTES : FP16_BYTES;
 
     auto inputBetaPtr = context_->GetOptionalInputDesc(2);
     if (inputBetaPtr != nullptr) {
         auto betaDtype = inputBetaPtr->GetDataType();
-        std::string betaReasonStr = "same as gamma (" + Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)) + ")";
-        OP_CHECK_IF(
-            betaDtype != gammaDtype_,
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                context_->GetNodeName(), "beta", Ops::Base::ToString(static_cast<ge::DataType>(betaDtype)).c_str(),
-                betaReasonStr.c_str()),
-            return ge::GRAPH_FAILED);
+        std::string betaReasonStr = "same as gamma (" + Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)) +
+                                    ")";
+        OP_CHECK_IF(betaDtype != gammaDtype_,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        context_->GetNodeName(), "beta",
+                        Ops::Base::ToString(static_cast<ge::DataType>(betaDtype)).c_str(), betaReasonStr.c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     yDtype_ = outputYPtr->GetDataType();
-    OP_CHECK_IF(
-        Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "y", Ops::Base::ToString(static_cast<ge::DataType>(yDtype_)).c_str(),
-            "float4_e2m1, float4_e1m2, float8_e4m3fn and float8_e5m2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y",
+                                          Ops::Base::ToString(static_cast<ge::DataType>(yDtype_)).c_str(),
+                                          "float4_e2m1, float4_e1m2, float8_e4m3fn and float8_e5m2"),
+                return ge::GRAPH_FAILED);
 
     int checkDstType = static_cast<int>(dstType_);
     OP_CHECK_IF(
@@ -126,16 +123,14 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
             (yDtype_ == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
             (yDtype_ == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||
             (yDtype_ == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "dst_type", std::to_string(checkDstType).c_str(),
-            "40/41/36/35 for float4_e2m1/float4_e1m2/float8_e4m3fn/float8_e5m2"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dst_type", std::to_string(checkDstType).c_str(),
+                                              "40/41/36/35 for float4_e2m1/float4_e1m2/float8_e4m3fn/float8_e5m2"),
         return ge::GRAPH_FAILED);
 
     // 暂不支持fp4的cublass方案
-    OP_CHECK_IF(
-        scaleAlg_ == 1 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0,
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scaleAlg_ == 1 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0,
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0"),
+                return ge::GRAPH_FAILED);
 
     // y输出为fp8时只支持rint
     OP_CHECK_IF(
@@ -148,9 +143,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     auto mxscaleDtype = outputMxScalePtr->GetDataType();
     OP_CHECK_IF(
         mxscaleDtype != ge::DT_FLOAT8_E8M0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "mxscale", Ops::Base::ToString(static_cast<ge::DataType>(mxscaleDtype)).c_str(),
-            "float8_e8m0"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "mxscale",
+                                  Ops::Base::ToString(static_cast<ge::DataType>(mxscaleDtype)).c_str(), "float8_e8m0"),
         return ge::GRAPH_FAILED);
 
     if (hasOutputRstd_) {
@@ -159,9 +153,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
         auto rstdDtype = outputRstdPtr->GetDataType();
         OP_CHECK_IF(
             rstdDtype != ge::DT_FLOAT,
-            OP_LOGE_FOR_INVALID_DTYPE(
-                context_->GetNodeName(), "rstd", Ops::Base::ToString(static_cast<ge::DataType>(rstdDtype)).c_str(),
-                "float"),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "rstd",
+                                      Ops::Base::ToString(static_cast<ge::DataType>(rstdDtype)).c_str(), "float"),
             return ge::GRAPH_FAILED);
     }
 
@@ -221,8 +214,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
 
     OP_CHECK_IF(
         xShapeDimNum < 1 || xShapeDimNum > MAX_DIM_NUM,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x", std::to_string(xShapeDimNum).c_str(), "1D to 7D"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(xShapeDimNum).c_str(), "1D to 7D"),
         return ge::GRAPH_FAILED);
 
     int64_t xLastDim = xShape.GetDim(xShapeDimNum - 1);
@@ -235,98 +227,86 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
     avgFactor_ = float(1.0) / float(numN_);
 
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
-        OP_CHECK_IF(
-            xLastDim % 2 != 0,
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                context_->GetNodeName(), "x", std::to_string(xLastDim).c_str(), "even number when y dtype is fp4"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xLastDim % 2 != 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x", std::to_string(xLastDim).c_str(),
+                                                  "even number when y dtype is fp4"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto gammaShapePtr = context_->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gammaShapePtr);
     auto gammaShape = gammaShapePtr->GetStorageShape();
-    OP_CHECK_IF(
-        gammaShape.GetDimNum() != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "gamma", std::to_string(gammaShape.GetDimNum()).c_str(), "1D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gammaShape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "gamma",
+                                             std::to_string(gammaShape.GetDimNum()).c_str(), "1D"),
+                return ge::GRAPH_FAILED);
 
     int64_t gammaDim = gammaShape.GetDim(0);
     std::string gammaReasonStr = "gamma dim should be " + std::to_string(xLastDim) + ", same as x's last dim";
-    OP_CHECK_IF(
-        gammaDim != xLastDim,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "gamma", std::to_string(gammaDim).c_str(), gammaReasonStr.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gammaDim != xLastDim,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma",
+                                                      std::to_string(gammaDim).c_str(), gammaReasonStr.c_str()),
+                return ge::GRAPH_FAILED);
 
     auto betaShapePtr = context_->GetOptionalInputShape(2);
     if (betaShapePtr != nullptr) {
         auto betaShape = betaShapePtr->GetStorageShape();
-        OP_CHECK_IF(
-            betaShape.GetDimNum() != 1,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(
-                context_->GetNodeName(), "beta", std::to_string(betaShape.GetDimNum()).c_str(), "1D"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(betaShape.GetDimNum() != 1,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "beta",
+                                                 std::to_string(betaShape.GetDimNum()).c_str(), "1D"),
+                    return ge::GRAPH_FAILED);
         int64_t betaDim = betaShape.GetDim(0);
         std::string betaReasonStr = "beta dim should be " + std::to_string(xLastDim) + ", same as x's last dim";
-        OP_CHECK_IF(
-            betaDim != xLastDim,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context_->GetNodeName(), "beta", std::to_string(betaDim).c_str(), betaReasonStr.c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(betaDim != xLastDim,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "beta",
+                                                          std::to_string(betaDim).c_str(), betaReasonStr.c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     auto yShapePtr = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
     std::string yReasonStr = "y shape should be " + Ops::Base::ToString(xShape) + ", same as x's shape";
-    OP_CHECK_IF(
-        xShape != yShape,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "y", Ops::Base::ToString(yShape).c_str(), yReasonStr.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape != yShape,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y", Ops::Base::ToString(yShape).c_str(),
+                                                      yReasonStr.c_str()),
+                return ge::GRAPH_FAILED);
 
     if (hasOutputRstd_) {
         auto rstdShapePtr = context_->GetOutputShape(2);
         auto rstdShape = rstdShapePtr->GetStorageShape();
         int64_t rstdDimNum = rstdShape.GetDimNum();
-        OP_CHECK_IF(
-            rstdDimNum != xShapeDimNum,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(
-                context_->GetNodeName(), "rstd", std::to_string(rstdDimNum).c_str(),
-                std::to_string(xShapeDimNum).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(rstdDimNum != xShapeDimNum,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "rstd", std::to_string(rstdDimNum).c_str(),
+                                                 std::to_string(xShapeDimNum).c_str()),
+                    return ge::GRAPH_FAILED);
 
         auto expectedRstdShape = xShape;
         expectedRstdShape.SetDim(xShapeDimNum - 1, 1);
-        std::string rstdReasonStr = "rstd shape should be " + Ops::Base::ToString(expectedRstdShape) + ", same dims as x except last dim is 1";
+        std::string rstdReasonStr = "rstd shape should be " + Ops::Base::ToString(expectedRstdShape) +
+                                    ", same dims as x except last dim is 1";
         for (int64_t i = 0; i < xShapeDimNum - 1; i++) {
             OP_CHECK_IF(
                 rstdShape.GetDim(i) != xShape.GetDim(i),
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    context_->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape).c_str(),
-                    rstdReasonStr.c_str()),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd",
+                                                      Ops::Base::ToString(rstdShape).c_str(), rstdReasonStr.c_str()),
                 return ge::GRAPH_FAILED);
         }
 
-        OP_CHECK_IF(
-            rstdShape.GetDim(xShapeDimNum - 1) != 1,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context_->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape).c_str(),
-                rstdReasonStr.c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(rstdShape.GetDim(xShapeDimNum - 1) != 1,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape).c_str(), rstdReasonStr.c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     auto mxscaleShapePtr = context_->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, mxscaleShapePtr);
     auto mxscaleShape = mxscaleShapePtr->GetStorageShape();
     int64_t mxscaleDimNum = mxscaleShape.GetDimNum();
-    OP_CHECK_IF(
-        mxscaleDimNum != xShapeDimNum + 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "mxscale", std::to_string(mxscaleDimNum).c_str(),
-            std::to_string(xShapeDimNum + 1).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(mxscaleDimNum != xShapeDimNum + 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "mxscale", std::to_string(mxscaleDimNum).c_str(),
+                                             std::to_string(xShapeDimNum + 1).c_str()),
+                return ge::GRAPH_FAILED);
 
     auto newScaleShape = xShape;
     newScaleShape.SetDim(xShapeDimNum - 1, Ops::Base::CeilDiv(Ops::Base::CeilDiv(xLastDim, MX_BLOCK_SIZE), CONST_TWO));
@@ -335,8 +315,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
     std::string mxscaleReasonStr = "mxscale shape should be " + Ops::Base::ToString(newScaleShape);
     OP_CHECK_IF(
         newScaleShape != mxscaleShape,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "mxscale", Ops::Base::ToString(mxscaleShape).c_str(), mxscaleReasonStr.c_str()),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mxscale",
+                                              Ops::Base::ToString(mxscaleShape).c_str(), mxscaleReasonStr.c_str()),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -380,21 +360,16 @@ int64_t RmsNormDynamicMxQuantTilingBase::FindNearestPower2(const int64_t value)
 // ============== GetShapeAttrsInfo ==============
 ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(
-        context_ == nullptr, OP_LOGE("RmsNormDynamicMxQuantTilingBase", "context is nullptr."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "GetAttr Failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckDtype Failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckShape Failed."),
-        return ge::GRAPH_FAILED);
-    OP_LOGD(
-        context_->GetNodeName(), "numM: %ld, numN: %ld, epsilon: %f, dstType: %ld, quantAlg: %ld, roundMode: %ld",
-        numM_, numN_, epsilon_, dstType_, scaleAlg_, roundMode_);
+    OP_CHECK_IF(context_ == nullptr, OP_LOGE("RmsNormDynamicMxQuantTilingBase", "context is nullptr."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "GetAttr Failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckDtype Failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckShape Failed."),
+                return ge::GRAPH_FAILED);
+    OP_LOGD(context_->GetNodeName(), "numM: %ld, numN: %ld, epsilon: %f, dstType: %ld, quantAlg: %ld, roundMode: %ld",
+            numM_, numN_, epsilon_, dstType_, scaleAlg_, roundMode_);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -425,19 +400,17 @@ ge::graphStatus TilingPrepareForRmsNormDynamicMxQuant(gert::TilingParseContext* 
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(
-        (compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        context->GetNodeName(), "TilingPrepareForRmsNormDynamicMxQuant: coreNum: %ld, ubSize: %ld",
-        compileInfo->coreNum, compileInfo->ubSize);
+    OP_LOGD(context->GetNodeName(), "TilingPrepareForRmsNormDynamicMxQuant: coreNum: %ld, ubSize: %ld",
+            compileInfo->coreNum, compileInfo->ubSize);
 
     return ge::GRAPH_SUCCESS;
 }

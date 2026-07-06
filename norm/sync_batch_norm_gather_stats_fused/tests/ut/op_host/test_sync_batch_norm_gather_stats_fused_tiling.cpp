@@ -39,19 +39,19 @@ protected:
 };
 
 TEST_F(SyncBatchNormGatherStatsFusedTiling, test_case_101_fp32)
-{  
+{
     // 输入shape定义
-    gert::StorageShape mean_shape = {{4, 256}, {4, 256}};        // mean: [4, 256]
-    gert::StorageShape invstd_shape = {{4, 256}, {4, 256}};      // invstd: [4, 256]
-    gert::StorageShape counts_shape = {{4}, {4}};            // counts: [4]
-    gert::StorageShape runningMean_shape = {{256}, {256}};  
-    gert::StorageShape runningVar_shape = {{256}, {256}};        // runningVar: [256]
-    
+    gert::StorageShape mean_shape = {{4, 256}, {4, 256}};   // mean: [4, 256]
+    gert::StorageShape invstd_shape = {{4, 256}, {4, 256}}; // invstd: [4, 256]
+    gert::StorageShape counts_shape = {{4}, {4}};           // counts: [4]
+    gert::StorageShape runningMean_shape = {{256}, {256}};
+    gert::StorageShape runningVar_shape = {{256}, {256}}; // runningVar: [256]
+
     // 输出shape定义
-    gert::StorageShape meanAllOut_shape = {{256}, {256}};        // meanAllOut: [256]
-    gert::StorageShape invstdAllOut_shape = {{256}, {256}};      // invstdAllOut: [256]
-    gert::StorageShape runningVarOut_shape = {{256}, {256}};     // runningVarOut: [256]
-    gert::StorageShape runningMeanOut_shape = {{256}, {256}};  
+    gert::StorageShape meanAllOut_shape = {{256}, {256}};    // meanAllOut: [256]
+    gert::StorageShape invstdAllOut_shape = {{256}, {256}};  // invstdAllOut: [256]
+    gert::StorageShape runningVarOut_shape = {{256}, {256}}; // runningVarOut: [256]
+    gert::StorageShape runningMeanOut_shape = {{256}, {256}};
 
     string compile_info_string = R"({
        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -60,7 +60,7 @@ TEST_F(SyncBatchNormGatherStatsFusedTiling, test_case_101_fp32)
                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                          "CORE_NUM": 48}
                          })";
-    
+
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -76,17 +76,18 @@ TEST_F(SyncBatchNormGatherStatsFusedTiling, test_case_101_fp32)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     auto kernel_holder = gert::KernelRunContextFaker()
-        .KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-        .Outputs({&compile_info})
-        .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -96,27 +97,28 @@ TEST_F(SyncBatchNormGatherStatsFusedTiling, test_case_101_fp32)
     ASSERT_NE(param, nullptr);
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType("SyncBatchNormGatherStatsFused")
-        .NodeIoNum(5, 4)
-        .IrInstanceNum({1, 1, 1, 1, 1})
-        .InputShapes({&mean_shape, &invstd_shape, &counts_shape, &runningMean_shape, &runningVar_shape})
-        .OutputShapes({&meanAllOut_shape, &invstdAllOut_shape, &runningMeanOut_shape, &runningVarOut_shape})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)      // mean
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)      // invstd
-        .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)      // counts (always FLOAT)
-        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)      // runningMean
-        .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)      // runningVar
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)     // meanAllOut
-        .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)     // invstdAllOut
-        .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)     // runningMeanOut
-        .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)     // runningVarOut
-        .NodeAttrs({{"momentum",  Ops::NN::AnyValue::CreateFrom<float>(0.1f)},
-                    {"eps",  Ops::NN::AnyValue::CreateFrom<float>(1e-5f)}})
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType("SyncBatchNormGatherStatsFused")
+                      .NodeIoNum(5, 4)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&mean_shape, &invstd_shape, &counts_shape, &runningMean_shape, &runningVar_shape})
+                      .OutputShapes(
+                          {&meanAllOut_shape, &invstdAllOut_shape, &runningMeanOut_shape, &runningVarOut_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)  // mean
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)  // invstd
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)  // counts (always FLOAT)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)  // runningMean
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)  // runningVar
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND) // meanAllOut
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND) // invstdAllOut
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND) // runningMeanOut
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND) // runningVarOut
+                      .NodeAttrs({{"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1f)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom<float>(1e-5f)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

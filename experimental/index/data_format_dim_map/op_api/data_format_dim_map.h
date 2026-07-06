@@ -20,8 +20,8 @@
 
 namespace l0op {
 
-const aclTensor* DataFormatDimMap(const aclTensor* x, const char* srcFormat,
-                                   const char* dstFormat, aclOpExecutor* executor);
+const aclTensor* DataFormatDimMap(const aclTensor* x, const char* srcFormat, const char* dstFormat,
+                                  aclOpExecutor* executor);
 
 } // namespace l0op
 

@@ -65,4 +65,4 @@ ACLNN_API aclnnStatus aclnnSoftMarginLossBackward(void* workspace, uint64_t work
 }
 #endif
 
-#endif  // OP_API_INC_SOFT_MARGIN_LOSS_BACKWARD_H_
+#endif // OP_API_INC_SOFT_MARGIN_LOSS_BACKWARD_H_

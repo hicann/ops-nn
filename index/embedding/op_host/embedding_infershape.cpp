@@ -21,37 +21,33 @@ const size_t INPUT_IDX_X = 0;
 const size_t INPUT_IDX_INDICES = 1;
 const int64_t DIM_TWO = 2;
 
-static ge::graphStatus InferShapeForEmbedding(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "infershape is begin");
-  auto xShape = context->GetInputShape(INPUT_IDX_X);
-  OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
-  int64_t xDim = xShape->GetDimNum();
-  OP_CHECK_IF(
-        xDim != DIM_TWO,
-        OP_LOGE(context->GetNodeName(), "x input dim should be 2."),
-        return ge::GRAPH_FAILED);
-  
-  auto indiesShape = context->GetInputShape(INPUT_IDX_INDICES);
-  OP_CHECK_NULL_WITH_CONTEXT(context, indiesShape);
-  int64_t rankIndices = indiesShape->GetDimNum();
+static ge::graphStatus InferShapeForEmbedding(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "infershape is begin");
+    auto xShape = context->GetInputShape(INPUT_IDX_X);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    int64_t xDim = xShape->GetDimNum();
+    OP_CHECK_IF(xDim != DIM_TWO, OP_LOGE(context->GetNodeName(), "x input dim should be 2."), return ge::GRAPH_FAILED);
 
-  auto outShape = context->GetOutputShape(INPUT_IDX_X);
-  OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
-  outShape->SetDimNum(rankIndices + 1);
+    auto indiesShape = context->GetInputShape(INPUT_IDX_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indiesShape);
+    int64_t rankIndices = indiesShape->GetDimNum();
 
-  for (int64_t i = 0; i < rankIndices; i++) {
-    outShape->SetDim(i, indiesShape->GetDim(i));
-  }
+    auto outShape = context->GetOutputShape(INPUT_IDX_X);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+    outShape->SetDimNum(rankIndices + 1);
 
-  for (int64_t i = 1; i < xDim; i++) {
-    outShape->SetDim(i, xShape->GetDim(i));
-  }
-  OP_CHECK_IF(
-      xShape->GetShapeSize() > INT32_MAX || outShape->GetShapeSize() > INT32_MAX,
-      OP_LOGE(context->GetNodeName(), "input or output shape is too large."),
-      return ge::GRAPH_FAILED);
-  return ge::GRAPH_SUCCESS;
+    for (int64_t i = 0; i < rankIndices; i++) {
+        outShape->SetDim(i, indiesShape->GetDim(i));
+    }
+
+    for (int64_t i = 1; i < xDim; i++) {
+        outShape->SetDim(i, xShape->GetDim(i));
+    }
+    OP_CHECK_IF(xShape->GetShapeSize() > INT32_MAX || outShape->GetShapeSize() > INT32_MAX,
+                OP_LOGE(context->GetNodeName(), "input or output shape is too large."), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(Embedding).InferShape(InferShapeForEmbedding);
-}  // namespace ops
+} // namespace ops

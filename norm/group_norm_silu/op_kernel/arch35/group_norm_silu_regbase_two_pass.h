@@ -21,13 +21,11 @@
 namespace GroupNormSilu {
 using namespace AscendC;
 template <typename T1, typename T2, int32_t BUFFER_NUM = 2>
-class GroupNormSiluTwoPass
-{
+class GroupNormSiluTwoPass {
 public:
     __aicore__ inline GroupNormSiluTwoPass(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluRegbaseTilingData* tilingData)
     {
         tiling = tilingData;
         blockIdx = GetBlockIdx();
@@ -71,12 +69,11 @@ public:
             if constexpr (sizeof(T2) == sizeof(float)) {
                 LocalTensor<T2> meanOutTensorNew = meanOutTensor.template ReinterpretCast<T2>();
                 LocalTensor<T2> rstdOutTensorNew = rstdOutTensor.template ReinterpretCast<T2>();
-                ProcessMeanAndRstd<T2>(
-                    meanTensor, meanOutTensorNew, meanT2Gm, rstdTensor, rstdOutTensorNew, rstdT2Gm, gmOffset,
-                    numPerCoreOneLoop);
+                ProcessMeanAndRstd<T2>(meanTensor, meanOutTensorNew, meanT2Gm, rstdTensor, rstdOutTensorNew, rstdT2Gm,
+                                       gmOffset, numPerCoreOneLoop);
             } else {
-                ProcessMeanAndRstd<T1>(
-                    meanTensor, meanOutTensor, meanGm, rstdTensor, rstdOutTensor, rstdGm, gmOffset, numPerCoreOneLoop);
+                ProcessMeanAndRstd<T1>(meanTensor, meanOutTensor, meanGm, rstdTensor, rstdOutTensor, rstdGm, gmOffset,
+                                       numPerCoreOneLoop);
             }
             if (i < numPerCoreLoop - 1) {
                 SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
@@ -120,9 +117,8 @@ private:
             if (i > 1) {
                 WaitFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
             }
-            CalMeanAndRstd<T1>(
-                xLocal, meanLocal, rstdLocal, dichotomyAddLocal, numPerCoreProcess, dichotomyAddPower, dichotomyAddK,
-                dichotomyAddLastNum, powerOfTwoForReduce, elemNum, eps);
+            CalMeanAndRstd<T1>(xLocal, meanLocal, rstdLocal, dichotomyAddLocal, numPerCoreProcess, dichotomyAddPower,
+                               dichotomyAddK, dichotomyAddLastNum, powerOfTwoForReduce, elemNum, eps);
             NormalizeAndSwish(xUbOffset, offset + i * onceNumPerCore, numPerCoreProcess, i);
             if (i < numPerCoreExtent - BUFFER_NUM) {
                 SetFlag<HardEvent::V_MTE2>(isPing ? eventIDVToMte2Ping : eventIDVToMte2Pong);
@@ -144,8 +140,8 @@ private:
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventIDMte3ToVPong);
     }
 
-    __aicore__ inline void NormalizeAndSwish(
-        uint32_t xUbOffset, uint32_t numPerCoreoffset, int64_t numPerCoreProcess, uint32_t numPerCoreLoop)
+    __aicore__ inline void NormalizeAndSwish(uint32_t xUbOffset, uint32_t numPerCoreoffset, int64_t numPerCoreProcess,
+                                             uint32_t numPerCoreLoop)
     {
         if (isFold) {
             return NormalizeAndSwishFold(xUbOffset, numPerCoreoffset, numPerCoreProcess, numPerCoreLoop);
@@ -153,8 +149,8 @@ private:
         return NormalizeAndSwishCommon(xUbOffset, numPerCoreoffset, numPerCoreProcess, numPerCoreLoop);
     }
 
-    __aicore__ inline void NormalizeAndSwishCommon(
-        uint32_t xUbOffset, uint32_t numPerCoreoffset, int64_t numPerCoreProcess, uint32_t numPerCoreLoop)
+    __aicore__ inline void NormalizeAndSwishCommon(uint32_t xUbOffset, uint32_t numPerCoreoffset,
+                                                   int64_t numPerCoreProcess, uint32_t numPerCoreLoop)
     {
         __local_mem__ T1* xLocal = (__local_mem__ T1*)xTensor[xUbOffset].GetPhyAddr();
         __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[xUbOffset].GetPhyAddr();
@@ -163,16 +159,15 @@ private:
             uint64_t betaOffset = gammaOffset;
             __local_mem__ T1* xLocal = (__local_mem__ T1*)xTensor[xUbOffset + i * elemNumAlign].GetPhyAddr();
             __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[xUbOffset + i * elemNumAlign].GetPhyAddr();
-            __local_mem__ T2* gammaLocal =
-                hasGamma ? (__local_mem__ T2*)gammaTensor[gammaOffset].GetPhyAddr() : nullptr;
+            __local_mem__ T2* gammaLocal = hasGamma ? (__local_mem__ T2*)gammaTensor[gammaOffset].GetPhyAddr() :
+                                                      nullptr;
             __local_mem__ T2* betaLocal = hasBeta ? (__local_mem__ T2*)betaTensor[betaOffset].GetPhyAddr() : nullptr;
-            __local_mem__ float* meanLocal =
-                (__local_mem__ float*)meanTensor[numPerCoreLoop * onceNumPerCore + i].GetPhyAddr();
-            __local_mem__ float* rstdLocal =
-                (__local_mem__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore + i].GetPhyAddr();
-            VFNormalizeAndSwishUnAlign<T1, T2>(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, shapeD, hwNum, activateSilu, hasGamma,
-                hasBeta);
+            __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[numPerCoreLoop * onceNumPerCore + i]
+                                                 .GetPhyAddr();
+            __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore + i]
+                                                 .GetPhyAddr();
+            VFNormalizeAndSwishUnAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, shapeD,
+                                               hwNum, activateSilu, hasGamma, hasBeta);
         }
     }
 
@@ -184,8 +179,8 @@ private:
     // [curNumPerCoreHead, n * numGroups) [n * numGroups, m * numGroups) [m * numGroups, curNumPerCoreTail)
     // 其中：n * numGroups = curNumPerCoreHeadUpAlign, m * numGroups = curNumPerCoreTailDownAlign
     // 每个区间对应一个VF
-    __aicore__ inline void NormalizeAndSwishFold(
-        uint32_t xUbOffset, uint32_t numPerCoreoffset, int64_t numPerCoreProcess, uint32_t numPerCoreLoop)
+    __aicore__ inline void NormalizeAndSwishFold(uint32_t xUbOffset, uint32_t numPerCoreoffset,
+                                                 int64_t numPerCoreProcess, uint32_t numPerCoreLoop)
     {
         uint64_t curNumPerCoreHead = blockIdx * tiling->numPerCore + numPerCoreoffset;
         uint64_t curNumPerCoreTail = curNumPerCoreHead + numPerCoreProcess;
@@ -201,18 +196,17 @@ private:
         __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore].GetPhyAddr();
         // case1
         if (curNumPerCoreTailDownAlign < curNumPerCoreHeadUpAlign) {
-            VFNormalizeAndSwishFold(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1, numPerCoreProcess, shapeD * hwNum,
-                activateSilu, hasGamma, hasBeta);
+            VFNormalizeAndSwishFold(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
+                                    numPerCoreProcess, shapeD * hwNum, activateSilu, hasGamma, hasBeta);
             return;
         }
 
         // case2
         // 区间1：[curNumPerCoreHead, curNumPerCoreHeadUpAlign)
         if (curNumPerCoreHeadUpAlign - curNumPerCoreHead > 0) {
-            VFNormalizeAndSwishFold(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
-                curNumPerCoreHeadUpAlign - curNumPerCoreHead, shapeD * hwNum, activateSilu, hasGamma, hasBeta);
+            VFNormalizeAndSwishFold(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
+                                    curNumPerCoreHeadUpAlign - curNumPerCoreHead, shapeD * hwNum, activateSilu,
+                                    hasGamma, hasBeta);
         }
         // 区间2：[curNumPerCoreHeadUpAlign, curNumPerCoreTailDownAlign)
         uint32_t groupsCount = (curNumPerCoreTailDownAlign - curNumPerCoreHeadUpAlign) / numGroups;
@@ -223,9 +217,8 @@ private:
         gammaLocal = hasGamma ? (__local_mem__ T2*)gammaTensor.GetPhyAddr() : nullptr;
         betaLocal = hasBeta ? (__local_mem__ T2*)betaTensor.GetPhyAddr() : nullptr;
         if (groupsCount > 0) {
-            VFNormalizeAndSwishFold(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, groupsCount, numGroups, shapeD * hwNum,
-                activateSilu, hasGamma, hasBeta);
+            VFNormalizeAndSwishFold(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, groupsCount,
+                                    numGroups, shapeD * hwNum, activateSilu, hasGamma, hasBeta);
         }
         // 区间3: [curNumPerCoreTailDownAlign, curNumPerCoreTail)
         if (curNumPerCoreTail - curNumPerCoreTailDownAlign > 0) {
@@ -233,9 +226,9 @@ private:
             yOutLocal = yOutLocal + groupsCount * numGroups * elemNumAlign;
             meanLocal = meanLocal + groupsCount * numGroups;
             rstdLocal = rstdLocal + groupsCount * numGroups;
-            VFNormalizeAndSwishFold(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
-                curNumPerCoreTail - curNumPerCoreTailDownAlign, shapeD * hwNum, activateSilu, hasGamma, hasBeta);
+            VFNormalizeAndSwishFold(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
+                                    curNumPerCoreTail - curNumPerCoreTailDownAlign, shapeD * hwNum, activateSilu,
+                                    hasGamma, hasBeta);
         }
     }
 
@@ -245,8 +238,8 @@ private:
             return;
         }
         if (isFold) {
-            CopyGammaAndBeta2UBByNDDMA<T2>(
-                gammaGm, betaGm, gammaTensor, betaTensor, numGroups, shapeD, hwNum, elemNumAlign, hasGamma, hasBeta);
+            CopyGammaAndBeta2UBByNDDMA<T2>(gammaGm, betaGm, gammaTensor, betaTensor, numGroups, shapeD, hwNum,
+                                           elemNumAlign, hasGamma, hasBeta);
         } else {
             CopyGammaAndBeta2UB<T2>(gammaGm, betaGm, gammaTensor, betaTensor, 1, shapeC, hasGamma, hasBeta);
         }
@@ -321,7 +314,8 @@ private:
         }
 
         if (hasGamma) {
-            int32_t gammaSize = isFold ? RoundUp<T1>(static_cast<unsigned long>(numGroups * elemNumAlign) * (sizeof(T2) / sizeof(T1))) :
+            int32_t gammaSize = isFold ? RoundUp<T1>(static_cast<unsigned long>(numGroups * elemNumAlign) *
+                                                     (sizeof(T2) / sizeof(T1))) :
                                          RoundUp<T1>(static_cast<unsigned long>(shapeC) * (sizeof(T2) / sizeof(T1)));
             gammaTensor = ubTensor[curOffset].template ReinterpretCast<T2>();
             curOffset += gammaSize;

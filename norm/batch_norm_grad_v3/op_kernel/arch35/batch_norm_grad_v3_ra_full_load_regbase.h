@@ -29,15 +29,12 @@ using AscendC::MicroAPI::MemType;
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
 class BatchNormGradV3RAFullLoad {
 public:
-    __aicore__ inline BatchNormGradV3RAFullLoad(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline BatchNormGradV3RAFullLoad(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma,
-        __gm__ uint8_t* dx, __gm__ uint8_t* dgamma, __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
-        const BatchNormGradV3RAFullLoadTilingData* tilingData)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* gamma, __gm__ uint8_t* dx, __gm__ uint8_t* dgamma,
+                                __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
+                                const BatchNormGradV3RAFullLoadTilingData* tilingData)
     {
         const BatchNormGradV3BaseTilingData& baseTilingData = tilingData->baseTilingData;
         rDim_ = baseTilingData.r1Dim;
@@ -509,11 +506,11 @@ public:
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, dy1Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, rstdReg, pMask);
-                        LoadOneTensor<DY_TYPE>(
-                            dyAddr, dyFold1Reg, pMask, i * outerStride + (2 * j + 0 + vfFoldLoopOffset1) * innerStride);
+                        LoadOneTensor<DY_TYPE>(dyAddr, dyFold1Reg, pMask,
+                                               i * outerStride + (2 * j + 0 + vfFoldLoopOffset1) * innerStride);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dy1Reg, dy1Reg, dyFold1Reg, pMask);
-                        LoadOneTensor<DY_TYPE>(
-                            xAddr, xFold1Reg, pMask, i * outerStride + (2 * j + 0 + vfFoldLoopOffset1) * innerStride);
+                        LoadOneTensor<DY_TYPE>(xAddr, xFold1Reg, pMask,
+                                               i * outerStride + (2 * j + 0 + vfFoldLoopOffset1) * innerStride);
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold1Reg, xFold1Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold1Reg, xFold1Reg, dyFold1Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold1Reg, xFold1Reg, rstdReg, pMask);
@@ -523,13 +520,13 @@ public:
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, dy2Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, rstdReg, pMask);
-                        LoadOneTensor<DY_TYPE>(
-                            dyAddr, dyFold2Reg, pMask, i * outerStride + (2 * j + 1 + vfFoldLoopOffset1) * innerStride);
+                        LoadOneTensor<DY_TYPE>(dyAddr, dyFold2Reg, pMask,
+                                               i * outerStride + (2 * j + 1 + vfFoldLoopOffset1) * innerStride);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dy2Reg, dy2Reg, dyFold2Reg, pMask);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dy1Reg, dy1Reg, dy2Reg, pMask);
                         StoreOneTensor<float>(dbetawsAddr, dy1Reg, pMask, i * outerStride + j * innerStride);
-                        LoadOneTensor<DY_TYPE>(
-                            xAddr, xFold2Reg, pMask, i * outerStride + (2 * j + 1 + vfFoldLoopOffset1) * innerStride);
+                        LoadOneTensor<DY_TYPE>(xAddr, xFold2Reg, pMask,
+                                               i * outerStride + (2 * j + 1 + vfFoldLoopOffset1) * innerStride);
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold2Reg, xFold2Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold2Reg, xFold2Reg, dyFold2Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold2Reg, xFold2Reg, rstdReg, pMask);
@@ -541,8 +538,8 @@ public:
                         AscendC::MicroAPI::RegTensor<float> dy1Reg, dy2Reg, x1Reg, x2Reg;
                         AscendC::MicroAPI::RegTensor<float> dyFold1Reg, xFold1Reg;
                         LoadOneTensor<DY_TYPE>(xAddr, x1Reg, pMask, i * outerStride + vfFoldLoopOffset2 * innerStride);
-                        LoadOneTensor<DY_TYPE>(
-                            dyAddr, dy1Reg, pMask, i * outerStride + vfFoldLoopOffset2 * innerStride);
+                        LoadOneTensor<DY_TYPE>(dyAddr, dy1Reg, pMask,
+                                               i * outerStride + vfFoldLoopOffset2 * innerStride);
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, dy1Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, rstdReg, pMask);
@@ -557,68 +554,62 @@ public:
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold1Reg, xFold1Reg, dyFold1Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xFold1Reg, xFold1Reg, rstdReg, pMask);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, xFold1Reg, pMask);
-                        LoadOneTensor<DY_TYPE>(
-                            dyAddr, dy2Reg, pMask, i * outerStride + (vfFoldLoopOffset2 + 1) * innerStride);
+                        LoadOneTensor<DY_TYPE>(dyAddr, dy2Reg, pMask,
+                                               i * outerStride + (vfFoldLoopOffset2 + 1) * innerStride);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dy1Reg, dy1Reg, dy2Reg, pMask);
-                        StoreOneTensor<float>(
-                            dbetawsAddr, dy1Reg, pMask, i * outerStride + vfFoldLoopStep1 * innerStride);
-                        LoadOneTensor<DY_TYPE>(
-                            xAddr, x2Reg, pMask, i * outerStride + (vfFoldLoopOffset2 + 1) * innerStride);
+                        StoreOneTensor<float>(dbetawsAddr, dy1Reg, pMask,
+                                              i * outerStride + vfFoldLoopStep1 * innerStride);
+                        LoadOneTensor<DY_TYPE>(xAddr, x2Reg, pMask,
+                                               i * outerStride + (vfFoldLoopOffset2 + 1) * innerStride);
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, dy2Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, rstdReg, pMask);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, x2Reg, pMask);
-                        StoreOneTensor<float>(
-                            dgammawsAddr, x1Reg, pMask, i * outerStride + vfFoldLoopStep1 * innerStride);
+                        StoreOneTensor<float>(dgammawsAddr, x1Reg, pMask,
+                                              i * outerStride + vfFoldLoopStep1 * innerStride);
                     }
                     for (uint16_t j = 0; j < vfFoldLoopStep3; ++j) {
                         AscendC::MicroAPI::RegTensor<float> dy1Reg, dy2Reg, x1Reg, x2Reg;
-                        LoadOneTensor<DY_TYPE>(
-                            xAddr, x1Reg, pMask, i * outerStride + (vfFoldLoopOffset3 + 2 * j + 0) * innerStride);
-                        LoadOneTensor<DY_TYPE>(
-                            dyAddr, dy1Reg, pMask, i * outerStride + (vfFoldLoopOffset3 + 2 * j + 0) * innerStride);
+                        LoadOneTensor<DY_TYPE>(xAddr, x1Reg, pMask,
+                                               i * outerStride + (vfFoldLoopOffset3 + 2 * j + 0) * innerStride);
+                        LoadOneTensor<DY_TYPE>(dyAddr, dy1Reg, pMask,
+                                               i * outerStride + (vfFoldLoopOffset3 + 2 * j + 0) * innerStride);
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, dy1Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, rstdReg, pMask);
-                        LoadOneTensor<DY_TYPE>(
-                            dyAddr, dy2Reg, pMask, i * outerStride + (vfFoldLoopOffset3 + 2 * j + 1) * innerStride);
+                        LoadOneTensor<DY_TYPE>(dyAddr, dy2Reg, pMask,
+                                               i * outerStride + (vfFoldLoopOffset3 + 2 * j + 1) * innerStride);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dy1Reg, dy1Reg, dy2Reg, pMask);
-                        StoreOneTensor<float>(
-                            dbetawsAddr, dy1Reg, pMask,
-                            i * outerStride + (vfFoldLoopStep1 + vfFoldLoopStep2 + j) * innerStride);
-                        LoadOneTensor<DY_TYPE>(
-                            xAddr, x2Reg, pMask, i * outerStride + (vfFoldLoopOffset3 + 2 * j + 1) * innerStride);
+                        StoreOneTensor<float>(dbetawsAddr, dy1Reg, pMask,
+                                              i * outerStride + (vfFoldLoopStep1 + vfFoldLoopStep2 + j) * innerStride);
+                        LoadOneTensor<DY_TYPE>(xAddr, x2Reg, pMask,
+                                               i * outerStride + (vfFoldLoopOffset3 + 2 * j + 1) * innerStride);
                         Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, meanReg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, dy2Reg, pMask);
                         Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x2Reg, x2Reg, rstdReg, pMask);
                         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(x1Reg, x1Reg, x2Reg, pMask);
-                        StoreOneTensor<float>(
-                            dgammawsAddr, x1Reg, pMask,
-                            i * outerStride + (vfFoldLoopStep1 + vfFoldLoopStep2 + j) * innerStride);
+                        StoreOneTensor<float>(dgammawsAddr, x1Reg, pMask,
+                                              i * outerStride + (vfFoldLoopStep1 + vfFoldLoopStep2 + j) * innerStride);
                     }
                     uint16_t loopTimes = vfReduceLoopTimes;
                     for (uint16_t k = 0; k < static_cast<uint16_t>(vfReduceRecursionLoop); ++k) {
                         loopTimes = loopTimes >> 1;
                         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                         for (uint16_t j = 0; j < loopTimes; ++j) {
-                            LoadTwoTensorSum(
-                                dbetawsAddr, xReg, pMask, i * outerStride + (2 * j + 0) * innerStride,
-                                i * outerStride + (2 * j + 1) * innerStride);
+                            LoadTwoTensorSum(dbetawsAddr, xReg, pMask, i * outerStride + (2 * j + 0) * innerStride,
+                                             i * outerStride + (2 * j + 1) * innerStride);
                             StoreOneTensor<float>(dbetawsAddr, xReg, pMask, i * outerStride + j * innerStride);
-                            LoadTwoTensorSum(
-                                dgammawsAddr, xReg, pMask, i * outerStride + (2 * j + 0) * innerStride,
-                                i * outerStride + (2 * j + 1) * innerStride);
+                            LoadTwoTensorSum(dgammawsAddr, xReg, pMask, i * outerStride + (2 * j + 0) * innerStride,
+                                             i * outerStride + (2 * j + 1) * innerStride);
                             StoreOneTensor<float>(dgammawsAddr, xReg, pMask, i * outerStride + j * innerStride);
                         }
                     }
                     LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                    LoadTwoTensorSum(
-                        dbetawsAddr, dbetaReg, pMask, i * outerStride + 0 * innerStride,
-                        i * outerStride + 1 * innerStride);
+                    LoadTwoTensorSum(dbetawsAddr, dbetaReg, pMask, i * outerStride + 0 * innerStride,
+                                     i * outerStride + 1 * innerStride);
                     StoreOneTensor<WEIGHT_TYPE>(dbetaAddr, dbetaReg, pMask, i * outerStride);
-                    LoadTwoTensorSum(
-                        dgammawsAddr, dgammaReg, pMask, i * outerStride + 0 * innerStride,
-                        i * outerStride + 1 * innerStride);
+                    LoadTwoTensorSum(dgammawsAddr, dgammaReg, pMask, i * outerStride + 0 * innerStride,
+                                     i * outerStride + 1 * innerStride);
                     StoreOneTensor<WEIGHT_TYPE>(dgammaAddr, dgammaReg, pMask, i * outerStride);
 
                     // dx = rstd * gamma * (dy - reciprocal * (dbeta + (x - mean) * rstd * dgamma))

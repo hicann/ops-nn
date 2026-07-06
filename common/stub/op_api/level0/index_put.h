@@ -19,9 +19,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *IndexPut(const aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values,
-                          const aclTensor *masks, const bool accumulate, aclTensor *out, aclOpExecutor *executor);
+const aclTensor* IndexPut(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
+                          const aclTensor* masks, const bool accumulate, aclTensor* out, aclOpExecutor* executor);
 
 }
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_INDEX_PUT_OP_H_
-

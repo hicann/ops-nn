@@ -19,22 +19,21 @@
 
 namespace optiling {
 struct EmbeddingDenseGradCompileInfo {
-  int32_t core_num;
-  int32_t scale_grad_by_freq;
-  uint32_t maxCoreNum{0};
-  uint32_t ubSizePlatform{0};
-  uint32_t maxThreadNum{0};
+    int32_t core_num;
+    int32_t scale_grad_by_freq;
+    uint32_t maxCoreNum{0};
+    uint32_t ubSizePlatform{0};
+    uint32_t maxThreadNum{0};
 };
 
 struct EmbeddingDenseGradTilingParams {
-  int32_t numel_indices;
-  int32_t embedding_dim;
-  int32_t mode_of_cal;
-  int32_t core_num;
-  int32_t num_weights;
-  int32_t padding_idx;
-  int32_t tiling_core_num;
+    int32_t numel_indices;
+    int32_t embedding_dim;
+    int32_t mode_of_cal;
+    int32_t core_num;
+    int32_t num_weights;
+    int32_t padding_idx;
+    int32_t tiling_core_num;
 };
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_EMBEDDING_DENSE_GRAD_TILING_H
-
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_EMBEDDING_DENSE_GRAD_TILING_H

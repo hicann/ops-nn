@@ -19,7 +19,7 @@ inline void InitMatmulTilingData(uint8_t* tiling, MatmulTilingData* const_data)
     memcpy(const_data, tiling, sizeof(MatmulTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                                        \
-    MatmulTilingData tiling_data;                                                 \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    MatmulTilingData tiling_data;                \
     InitMatmulTilingData(tiling_arg, &tiling_data)
-#endif  // FOREACH_MINIMUM_SCALAR_TILING_DEF_H
+#endif // FOREACH_MINIMUM_SCALAR_TILING_DEF_H

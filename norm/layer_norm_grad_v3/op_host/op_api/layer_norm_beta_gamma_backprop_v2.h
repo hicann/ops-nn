@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::array<aclTensor*, 2> LayerNormBetaGammaBackpropV2(
-    const aclTensor* gradOut, const aclTensor* gammaRes, const aclIntArray* gammaShape, aclOpExecutor* executor);
+const std::array<aclTensor*, 2> LayerNormBetaGammaBackpropV2(const aclTensor* gradOut, const aclTensor* gammaRes,
+                                                             const aclIntArray* gammaShape, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_LAYER_NORM_BETA_GAMMA_BACKPROP_V2_H_

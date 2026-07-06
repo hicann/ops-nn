@@ -33,13 +33,11 @@ constexpr int32_t MAX_GRAD_NORM_ORDER_IN_LOCAL_TENSOR_U = 1;
 constexpr int32_t MAX_GRAD_NORM_ORDER_IN_OUT_LOCAL_TENSOR_U = 0;
 
 template <typename T, typename U, typename Z>
-class ApplyAdamWV2MixType
-{
+class ApplyAdamWV2MixType {
 public:
     __aicore__ inline ApplyAdamWV2MixType(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step, GM_ADDR maxGradNorm,
-        GM_ADDR workspace, const ApplyAdamWV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step,
+                                GM_ADDR maxGradNorm, GM_ADDR workspace, const ApplyAdamWV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 protected:
@@ -115,14 +113,15 @@ __aicore__ inline float ApplyAdamWV2MixType<T, U, Z>::ScalarPow(float x, float y
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     float result = outLocal.GetValue(0);
-    PipeBarrier<PIPE_ALL>();;
+    PipeBarrier<PIPE_ALL>();
+    ;
     return result;
 }
 
 template <typename T, typename U, typename Z>
-__aicore__ inline void ApplyAdamWV2MixType<T, U, Z>::Init(
-    GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
-    const ApplyAdamWV2TilingData* tilingData)
+__aicore__ inline void ApplyAdamWV2MixType<T, U, Z>::Init(GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad,
+                                                          GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
+                                                          const ApplyAdamWV2TilingData* tilingData)
 {
     this->ParseTilingData(tilingData);
 

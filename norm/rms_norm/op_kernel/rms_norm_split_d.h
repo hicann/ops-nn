@@ -26,8 +26,7 @@ class KernelRmsNormSplitD {
 #define IS_GAMMA_FP32 (is_same<T_GAMMA, float>::value)
 #define IS_MIX_DTYPE ((!IS_X_FP32) && IS_GAMMA_FP32)
 public:
-    __aicore__ inline KernelRmsNormSplitD()
-    {}
+    __aicore__ inline KernelRmsNormSplitD() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
@@ -40,8 +39,10 @@ public:
             this->row_work = num_row - (GetBlockNum() - 1) * block_factor;
         }
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * block_factor * num_col, static_cast<uint64_t>(row_work) * num_col);
-        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * block_factor * num_col, static_cast<uint64_t>(row_work) * num_col);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * block_factor * num_col,
+                            static_cast<uint64_t>(row_work) * num_col);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * block_factor * num_col,
+                            static_cast<uint64_t>(row_work) * num_col);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, num_col);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * block_factor, block_factor);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
@@ -75,7 +76,8 @@ public:
         for (uint64_t i_o = 0; i_o < i_o_max - 1; i_o++) {
             DataCopy(rstdGm[i_o * row_factor], temp_zero_tensor, row_factor_align_v1);
         }
-        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor, ROUND_UP(static_cast<uint32_t>(row_tail), NUM_PER_BLK_FP32));
+        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor,
+                 ROUND_UP(static_cast<uint32_t>(row_tail), NUM_PER_BLK_FP32));
         PipeBarrier<PIPE_ALL>();
     }
 
@@ -117,7 +119,8 @@ public:
         for (uint64_t iOuter = 0; iOuter < iOuterMax - 1; iOuter++) {
             SubProcess(static_cast<uint32_t>(iOuter), row_factor, jMax, jTail, jOuterMax, jInnerMax);
         }
-        SubProcess(static_cast<uint32_t>(iOuterMax - 1), static_cast<uint32_t>(rowTail), jMax, jTail, jOuterMax, jInnerMax);
+        SubProcess(static_cast<uint32_t>(iOuterMax - 1), static_cast<uint32_t>(rowTail), jMax, jTail, jOuterMax,
+                   jInnerMax);
 #endif
     }
 
@@ -143,8 +146,8 @@ public:
     }
 
 #else
-    __aicore__ inline void SubProcess(
-        uint32_t iOuter, uint32_t calcRowNum, uint32_t jMax, uint32_t jTail, uint32_t jOuterMax, uint32_t jInnerMax)
+    __aicore__ inline void SubProcess(uint32_t iOuter, uint32_t calcRowNum, uint32_t jMax, uint32_t jTail,
+                                      uint32_t jOuterMax, uint32_t jInnerMax)
     {
         LocalTensor<float> sumLocal = sum_buf.Get<float>();
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
@@ -165,13 +168,14 @@ private:
     __aicore__ inline void CopyIn(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
-        DataCopyCustom<T>(xLocal, xGm[static_cast<uint64_t>(i_idx) * num_col + static_cast<uint64_t>(j_idx) * ub_factor], num);
+        DataCopyCustom<T>(xLocal,
+                          xGm[static_cast<uint64_t>(i_idx) * num_col + static_cast<uint64_t>(j_idx) * ub_factor], num);
         inQueueX.EnQue(xLocal);
     }
 
-    __aicore__ inline void ComputeFormerPrecision(
-        uint32_t iOuter, uint32_t calcRowNum, uint32_t jTail, uint32_t jOuterMax, uint32_t jInnerTail,
-        LocalTensor<float>& rstdLocal)
+    __aicore__ inline void ComputeFormerPrecision(uint32_t iOuter, uint32_t calcRowNum, uint32_t jTail,
+                                                  uint32_t jOuterMax, uint32_t jInnerTail,
+                                                  LocalTensor<float>& rstdLocal)
     {
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -241,9 +245,9 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeFormer(
-        uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx, LocalTensor<float>& rstdLocal,
-        LocalTensor<float>& sumLocal, uint32_t num, uint32_t left_num = 0, uint32_t reduce_mask = 0)
+    __aicore__ inline void ComputeFormer(uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx,
+                                         LocalTensor<float>& rstdLocal, LocalTensor<float>& sumLocal, uint32_t num,
+                                         uint32_t left_num = 0, uint32_t reduce_mask = 0)
     {
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
             CopyIn(static_cast<uint32_t>(static_cast<uint64_t>(i_o_idx) * row_factor + i_i), j_idx, num);
@@ -258,8 +262,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeSum(
-        uint32_t i_i_idx, LocalTensor<float>& sumLocal, uint32_t num, uint32_t left_num = 0, uint32_t reduce_mask = 0)
+    __aicore__ inline void ComputeSum(uint32_t i_i_idx, LocalTensor<float>& sumLocal, uint32_t num,
+                                      uint32_t left_num = 0, uint32_t reduce_mask = 0)
     {
         LocalTensor<T> xLocal = inQueueX.DeQue<T>();
         LocalTensor<float> sqx = sqx_buf.Get<float>();
@@ -300,8 +304,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeLatter(
-        uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx, LocalTensor<float>& rstdLocal, uint32_t num)
+    __aicore__ inline void ComputeLatter(uint32_t i_o_idx, uint32_t calc_row_num, uint32_t j_idx,
+                                         LocalTensor<float>& rstdLocal, uint32_t num)
     {
         CopyInGamma(j_idx, num);
         LocalTensor<T_GAMMA> gammaLocal = inQueueGamma.DeQue<T_GAMMA>();
@@ -320,8 +324,8 @@ private:
         inQueueGamma.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void ComputeY(
-        uint32_t rstdIdx, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t num)
+    __aicore__ inline void ComputeY(uint32_t rstdIdx, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<float>& rstdLocal,
+                                    uint32_t num)
     {
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -377,14 +381,16 @@ private:
     __aicore__ inline void CopyOutY(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
-        DataCopyCustom<T>(yGm[static_cast<uint64_t>(i_idx) * num_col + static_cast<uint64_t>(j_idx) * ub_factor], yLocal, num);
+        DataCopyCustom<T>(yGm[static_cast<uint64_t>(i_idx) * num_col + static_cast<uint64_t>(j_idx) * ub_factor],
+                          yLocal, num);
         outQueueY.FreeTensor(yLocal);
     }
 
     __aicore__ inline void CopyOutRstd(uint32_t i_o_idx, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
-#if (__CCE_AICORE__ == 220) || (__CCE_AICORE__ == 100) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (__CCE_AICORE__ == 220) || (__CCE_AICORE__ == 100) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyCustom<float>(rstdGm[static_cast<uint64_t>(i_o_idx) * row_factor], rstdLocal, num);
 #else
         uint32_t copyRstd_num = ROUND_UP(num, NUM_PER_BLK_FP32);

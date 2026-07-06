@@ -17,16 +17,13 @@
 
 class L1LossGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "L1LossGrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "L1LossGrad SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "L1LossGrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "L1LossGrad TearDown" << std::endl; }
 };
 
-TEST_F(L1LossGradTest, l1lossgrad_infershape_test1) {
+TEST_F(L1LossGradTest, l1lossgrad_infershape_test1)
+{
     ge::op::L1LossGrad op;
     op.UpdateInputDesc("predict", create_desc({-1, 8}, ge::DT_FLOAT));
     op.UpdateInputDesc("grads", create_desc({-1, 8}, ge::DT_FLOAT));
@@ -47,7 +44,8 @@ TEST_F(L1LossGradTest, l1lossgrad_infershape_test1) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(L1LossGradTest, l1lossgrad_infershape_test2) {
+TEST_F(L1LossGradTest, l1lossgrad_infershape_test2)
+{
     ge::op::L1LossGrad op;
     op.UpdateInputDesc("predict", create_desc({-1, -1, 8}, ge::DT_FLOAT));
     op.UpdateInputDesc("grads", create_desc({-1, -1, 8}, ge::DT_FLOAT));
@@ -68,7 +66,8 @@ TEST_F(L1LossGradTest, l1lossgrad_infershape_test2) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(L1LossGradTest, l1lossgrad_infershape_test3) {
+TEST_F(L1LossGradTest, l1lossgrad_infershape_test3)
+{
     ge::op::L1LossGrad op;
     op.UpdateInputDesc("predict", create_desc({4, 16, 36}, ge::DT_FLOAT));
     op.UpdateInputDesc("grads", create_desc({4, 16, 36}, ge::DT_FLOAT));
@@ -89,7 +88,8 @@ TEST_F(L1LossGradTest, l1lossgrad_infershape_test3) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(L1LossGradTest, l1lossgrad_infershape_test4) {
+TEST_F(L1LossGradTest, l1lossgrad_infershape_test4)
+{
     ge::op::L1LossGrad op;
     op.UpdateInputDesc("predict", create_desc({4, 16, 36}, ge::DT_FLOAT));
     op.UpdateInputDesc("grads", create_desc({4, 16, 36}, ge::DT_FLOAT16));

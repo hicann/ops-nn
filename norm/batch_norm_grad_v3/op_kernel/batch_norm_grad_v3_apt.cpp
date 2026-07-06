@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file batch_norm_grad_v3_apt.cpp
  * \brief
@@ -40,9 +39,10 @@ static constexpr int DOUBLE_BUFFER = 2;
 #define BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST 900000UL
 #define BATCH_NORM_GRAD_V3_INFER 910000UL
 
-extern "C" __global__ __aicore__ void batch_norm_grad_v3(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR running_mean, GM_ADDR running_var, GM_ADDR save_mean,
-    GM_ADDR save_rstd, GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void batch_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR running_mean,
+                                                         GM_ADDR running_var, GM_ADDR save_mean, GM_ADDR save_rstd,
+                                                         GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias, GM_ADDR workspace,
+                                                         GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     TPipe pipe;
@@ -77,15 +77,13 @@ extern "C" __global__ __aicore__ void batch_norm_grad_v3(
         BatchNormGradV3RARecompute<DTYPE_DY, DTYPE_WEIGHT, DOUBLE_BUFFER> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
-    } else if (
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST)) {
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER_CHANNEL_LAST)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3InferChannelLastTilingData, tiling_data_in, tiling);
         const BatchNormGradV3InferChannelLastTilingData* __restrict tilingData = &tiling_data_in;
         BatchNormGradV3InferChannelLast<DTYPE_DY, DTYPE_WEIGHT, DTYPE_RUNNING_VAR> op(tilingData);
         op.Init(dy, weight, running_var, dx, &pipe);
         op.Process();
-    } else if (
-        TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER)) {
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_INFER)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3InferTilingData, tiling_data_in, tiling);
         const BatchNormGradV3InferTilingData* __restrict tilingData = &tiling_data_in;
         BatchNormGradV3Infer<DTYPE_DY, DTYPE_WEIGHT, DTYPE_RUNNING_VAR> op(tilingData);

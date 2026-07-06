@@ -29,15 +29,9 @@ using namespace ge;
 
 class FastGeluGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FastGeluGradTilingData SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FastGeluGradTilingData SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FastGeluGradTilingData TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FastGeluGradTilingData TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -83,12 +77,12 @@ TEST_F(FastGeluGradTiling, test_tiling_fp16_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -162,12 +156,12 @@ TEST_F(FastGeluGradTiling, test_tiling_bf16_002)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -241,12 +235,12 @@ TEST_F(FastGeluGradTiling, test_tiling_fp32_003)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -320,12 +314,12 @@ TEST_F(FastGeluGradTiling, test_tiling_failed_dtype_input_output_diff_004)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -395,12 +389,12 @@ TEST_F(FastGeluGradTiling, test_tiling_failed_shape_input_output_diff_005)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -469,12 +463,12 @@ TEST_F(FastGeluGradTiling, test_tiling_failed_empty_tensor_006)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -543,12 +537,12 @@ TEST_F(FastGeluGradTiling, test_tiling_failed_unsupport_input_007)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("FastGeluGrad")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);

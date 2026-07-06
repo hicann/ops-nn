@@ -30,7 +30,8 @@
  *       -lascendcl -lopapi -lnnopbase -lcust_opapi
  *
  * 运行：
- *   export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:$LD_LIBRARY_PATH
+ *   export
+ * LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/lib64:${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:$LD_LIBRARY_PATH
  *   ./example
  */
 
@@ -54,7 +55,8 @@
     } while (0)
 
 // Compute row-major strides from shape
-std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape) {
+std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape)
+{
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; i--) {
         strides[i] = shape[i + 1] * strides[i + 1];
@@ -62,7 +64,8 @@ std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape) {
     return strides;
 }
 
-int main() {
+int main()
+{
     // ===================== 1. 初始化 ACL =====================
     CHECK_ACL(aclInit(nullptr));
     CHECK_ACL(aclrtSetDevice(0));
@@ -75,8 +78,8 @@ int main() {
 
     // ===================== 2. 准备参数 =====================
     const int tensorNum = 3;
-    const std::vector<int64_t> shape = {2, 4};  // 每个 tensor 的 shape
-    const int64_t numElements = 8;               // 2 * 4
+    const std::vector<int64_t> shape = {2, 4}; // 每个 tensor 的 shape
+    const int64_t numElements = 8;             // 2 * 4
     const float scalarValue = -2.0f;
 
     printf("Parameters:\n");
@@ -120,9 +123,8 @@ int main() {
     // 拷贝输入数据到 Device（按偏移写入连续内存）
     for (int t = 0; t < tensorNum; t++) {
         size_t offset = t * bytesPerTensor;
-        CHECK_ACL(aclrtMemcpy(static_cast<char*>(xDev) + offset, bytesPerTensor,
-                               hostInputs[t].data(), bytesPerTensor,
-                               ACL_MEMCPY_HOST_TO_DEVICE));
+        CHECK_ACL(aclrtMemcpy(static_cast<char*>(xDev) + offset, bytesPerTensor, hostInputs[t].data(), bytesPerTensor,
+                              ACL_MEMCPY_HOST_TO_DEVICE));
     }
 
     // ===================== 5. 创建 Tensor 和 TensorList =====================
@@ -132,9 +134,8 @@ int main() {
     std::vector<aclTensor*> xTensors(tensorNum);
     for (int t = 0; t < tensorNum; t++) {
         void* ptr = static_cast<char*>(xDev) + t * bytesPerTensor;
-        xTensors[t] = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT,
-                                       strides.data(), 0, ACL_FORMAT_ND,
-                                       shape.data(), shape.size(), ptr);
+        xTensors[t] = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT, strides.data(), 0, ACL_FORMAT_ND,
+                                      shape.data(), shape.size(), ptr);
     }
     aclTensorList* xList = aclCreateTensorList(xTensors.data(), tensorNum);
 
@@ -142,30 +143,26 @@ int main() {
     std::vector<aclTensor*> yTensors(tensorNum);
     for (int t = 0; t < tensorNum; t++) {
         void* ptr = static_cast<char*>(yDev) + t * bytesPerTensor;
-        yTensors[t] = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT,
-                                       strides.data(), 0, ACL_FORMAT_ND,
-                                       shape.data(), shape.size(), ptr);
+        yTensors[t] = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT, strides.data(), 0, ACL_FORMAT_ND,
+                                      shape.data(), shape.size(), ptr);
     }
     aclTensorList* yList = aclCreateTensorList(yTensors.data(), tensorNum);
 
     // 标量 Tensor（shape={1} 的一维 tensor）
     void* scalarDev = nullptr;
     CHECK_ACL(aclrtMalloc(&scalarDev, sizeof(float), ACL_MEM_MALLOC_HUGE_FIRST));
-    CHECK_ACL(aclrtMemcpy(scalarDev, sizeof(float), &scalarValue, sizeof(float),
-                           ACL_MEMCPY_HOST_TO_DEVICE));
+    CHECK_ACL(aclrtMemcpy(scalarDev, sizeof(float), &scalarValue, sizeof(float), ACL_MEMCPY_HOST_TO_DEVICE));
     std::vector<int64_t> scalarShape = {1};
     auto scalarStrides = ComputeStrides(scalarShape);
-    aclTensor* scalarTensor = aclCreateTensor(scalarShape.data(), 1, ACL_FLOAT,
-                                               scalarStrides.data(), 0, ACL_FORMAT_ND,
-                                               scalarShape.data(), 1, scalarDev);
+    aclTensor* scalarTensor = aclCreateTensor(scalarShape.data(), 1, ACL_FLOAT, scalarStrides.data(), 0, ACL_FORMAT_ND,
+                                              scalarShape.data(), 1, scalarDev);
 
     // ===================== 6. 调用算子（两阶段接口） =====================
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
     // 阶段一：GetWorkspaceSize - 计算所需 workspace 大小
-    CHECK_ACL(aclnnForeachDivScalarGetWorkspaceSize(xList, scalarTensor, yList,
-                                                     &workspaceSize, &executor));
+    CHECK_ACL(aclnnForeachDivScalarGetWorkspaceSize(xList, scalarTensor, yList, &workspaceSize, &executor));
     printf("Workspace size: %lu bytes\n", workspaceSize);
 
     void* workspace = nullptr;
@@ -184,9 +181,8 @@ int main() {
     std::vector<std::vector<float>> hostOutputs(tensorNum, std::vector<float>(numElements));
     for (int t = 0; t < tensorNum; t++) {
         size_t offset = t * bytesPerTensor;
-        CHECK_ACL(aclrtMemcpy(hostOutputs[t].data(), bytesPerTensor,
-                               static_cast<char*>(yDev) + offset, bytesPerTensor,
-                               ACL_MEMCPY_DEVICE_TO_HOST));
+        CHECK_ACL(aclrtMemcpy(hostOutputs[t].data(), bytesPerTensor, static_cast<char*>(yDev) + offset, bytesPerTensor,
+                              ACL_MEMCPY_DEVICE_TO_HOST));
         printf("  y%d = [", t);
         for (int j = 0; j < numElements; j++) {
             printf("%.4f%s", hostOutputs[t][j], j < numElements - 1 ? ", " : "");
@@ -208,8 +204,7 @@ int main() {
             float tol = 1e-4f + 1e-4f * std::abs(expected);
             if (diff > tol) {
                 if (mismatch < 3) {
-                    printf("  y%d[%d]: expected=%.6f, actual=%.6f, diff=%.6e\n",
-                           t, j, expected, actual, diff);
+                    printf("  y%d[%d]: expected=%.6f, actual=%.6f, diff=%.6e\n", t, j, expected, actual, diff);
                 }
                 mismatch++;
             }
@@ -235,7 +230,8 @@ int main() {
     aclrtFree(xDev);
     aclrtFree(yDev);
     aclrtFree(scalarDev);
-    if (workspace) aclrtFree(workspace);
+    if (workspace)
+        aclrtFree(workspace);
 
     aclrtDestroyStream(stream);
     aclrtResetDevice(0);

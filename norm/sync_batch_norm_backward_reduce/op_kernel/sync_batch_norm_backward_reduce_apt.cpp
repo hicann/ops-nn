@@ -22,10 +22,10 @@
 
 using namespace Ops::Base;
 using namespace AscendC;
-using SyncBatchNormBackwardReduceNs::SyncBatchNormBackwardReduceTilingData;
 using SyncBatchNormBackwardReduce::SyncBatchNormBackwardReduceDag;
+using SyncBatchNormBackwardReduceNs::SyncBatchNormBackwardReduceTilingData;
 
-extern "C" __global__ __aicore__ void sync_batch_norm_backward_reduce(GM_ADDR sumDy, GM_ADDR sumDyDxPad, GM_ADDR mean, 
+extern "C" __global__ __aicore__ void sync_batch_norm_backward_reduce(GM_ADDR sumDy, GM_ADDR sumDyDxPad, GM_ADDR mean,
                                                                       GM_ADDR invertStd, GM_ADDR sumDyXmu, GM_ADDR y,
                                                                       GM_ADDR workspace, GM_ADDR tiling)
 {

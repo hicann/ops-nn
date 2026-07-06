@@ -18,9 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* ScatterAddWithSorted(
-    const aclTensor* self, const aclTensor* value, const aclTensor* sorted_index, const aclTensor* pos,
-    const std::string& reduction, aclOpExecutor* executor);
+const aclTensor* ScatterAddWithSorted(const aclTensor* self, const aclTensor* value, const aclTensor* sorted_index,
+                                      const aclTensor* pos, const std::string& reduction, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SCATTER_ADD_WITH_SORTED_H_

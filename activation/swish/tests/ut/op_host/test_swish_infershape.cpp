@@ -23,15 +23,9 @@
 
 class Swish : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Swish Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Swish Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Swish Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Swish Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(Swish, swish_infershape_test0)

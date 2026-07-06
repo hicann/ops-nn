@@ -22,27 +22,25 @@
 
 namespace FusedLinearCrossEntropyLossGradNS {
 
-constexpr MatmulConfig MM_MDL_CFG = GetMDLConfig(
-    false,  // intrinsicsLimit
-    false, 0,
-    false,  // isVecND2NZ，false
-    false, false,
-    false,  // enUnitFlag，false
-    true, true, false, false,
-    false  // enableKdimReorderLoad，false
+constexpr MatmulConfig MM_MDL_CFG = GetMDLConfig(false, // intrinsicsLimit
+                                                 false, 0,
+                                                 false, // isVecND2NZ，false
+                                                 false, false,
+                                                 false, // enUnitFlag，false
+                                                 true, true, false, false,
+                                                 false // enableKdimReorderLoad，false
 );
-constexpr MatmulConfig MM_MDL_HUGE_CFG = GetMDLConfig(
-    true,  // intrinsicsLimit
-    false, 0,
-    false,  // isVecND2NZ
-    false, false,
-    false,  // enUnitFlag
-    true, true, false, false,
-    false  // enableKdimReorderLoad
+constexpr MatmulConfig MM_MDL_HUGE_CFG = GetMDLConfig(true, // intrinsicsLimit
+                                                      false, 0,
+                                                      false, // isVecND2NZ
+                                                      false, false,
+                                                      false, // enUnitFlag
+                                                      true, true, false, false,
+                                                      false // enableKdimReorderLoad
 );
 
-#define HIGH_PERF_KEY 100UL  // 高性能分支tiling key
-#define MEM_FRIENDLY_KEY 101UL  // 省显存分支tiling key
+#define HIGH_PERF_KEY 100UL    // 高性能分支tiling key
+#define MEM_FRIENDLY_KEY 101UL // 省显存分支tiling key
 constexpr uint32_t IN_BYTE_SIZE = 4;
 constexpr uint32_t OUT_BYTE_SIZE = 2;
 constexpr uint32_t BUFFER_NUM = 2;
@@ -59,9 +57,9 @@ constexpr uint8_t CVModeId = 2;
 constexpr float NEG = -1.0f;
 
 #ifdef __CCE_KT_TEST__
-void EmptyTestFunc() {};
-#endif  // __CCE_KT_TEST__
+void EmptyTestFunc(){};
+#endif // __CCE_KT_TEST__
 
-}  // namespace FusedLinearCrossEntropyLossGradNS
+} // namespace FusedLinearCrossEntropyLossGradNS
 
-#endif  // FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_CONFIG_H
+#endif // FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_CONFIG_H

@@ -28,23 +28,21 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SmoothL1LossV2);
 
-const aclTensor *SmoothL1Loss(const aclTensor *self, const aclTensor *target, const std::string &reduction, float beta,
-                              aclOpExecutor *executor) {
-  L0_DFX(SmoothL1Loss, self, target, reduction, beta, reduction);
-  auto result = executor->AllocTensor(self->GetDataType(), self->GetStorageFormat(), self->GetOriginalFormat());
-  auto ret = INFER_SHAPE(SmoothL1LossV2, OP_INPUT(self, target), OP_OUTPUT(result),
-                         OP_ATTR(beta, reduction.c_str()));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "SmoothL1LossV2 InferShape failed.");
-    return nullptr;
-  }
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SmoothL1LossV2,
-                                               OP_INPUT(self, target),
-                                               OP_OUTPUT(result),
-                                               OP_ATTR(beta, reduction.c_str()));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "SmoothL1LossV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+const aclTensor* SmoothL1Loss(const aclTensor* self, const aclTensor* target, const std::string& reduction, float beta,
+                              aclOpExecutor* executor)
+{
+    L0_DFX(SmoothL1Loss, self, target, reduction, beta, reduction);
+    auto result = executor->AllocTensor(self->GetDataType(), self->GetStorageFormat(), self->GetOriginalFormat());
+    auto ret = INFER_SHAPE(SmoothL1LossV2, OP_INPUT(self, target), OP_OUTPUT(result), OP_ATTR(beta, reduction.c_str()));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "SmoothL1LossV2 InferShape failed.");
+        return nullptr;
+    }
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SmoothL1LossV2, OP_INPUT(self, target), OP_OUTPUT(result),
+                                                 OP_ATTR(beta, reduction.c_str()));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "SmoothL1LossV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
 
-  return result;
+    return result;
 }
-}  // namespace l0op
+} // namespace l0op

@@ -36,29 +36,27 @@ static inline bool IsAiCoreSupport(const aclTensor* self)
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
-const aclTensor* AscendQuantV2Aicore(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode, const char* roundMode,
-    int32_t dstType, int32_t axis, aclTensor* out, aclOpExecutor* executor)
+const aclTensor* AscendQuantV2Aicore(const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode,
+                                     const char* roundMode, int32_t dstType, int32_t axis, aclTensor* out,
+                                     aclOpExecutor* executor)
 {
     L0_DFX(AscendQuantV2Aicore, x, scale, offset, sqrtMode, roundMode, dstType, axis, out);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AscendQuantV2, OP_INPUT(x, scale, offset), OP_OUTPUT(out), OP_ATTR(sqrtMode, roundMode, dstType, axis));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        ret != ACLNN_SUCCESS, return nullptr, "AscendQuantV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AscendQuantV2, OP_INPUT(x, scale, offset), OP_OUTPUT(out),
+                                           OP_ATTR(sqrtMode, roundMode, dstType, axis));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
+                                         "AscendQuantV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 }
 
-const aclTensor* AscendQuantV2(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode, const char* roundMode,
-    int32_t dstType, int32_t axis, aclOpExecutor* executor)
+const aclTensor* AscendQuantV2(const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode,
+                               const char* roundMode, int32_t dstType, int32_t axis, aclOpExecutor* executor)
 {
     op::Shape outShape = x->GetViewShape();
     auto out = executor->AllocTensor(outShape, op::DataType(dstType));
 
     if (!IsAiCoreSupport(x)) {
-        OP_LOGE(
-            ACL_ERROR_INVALID_PARAM, "dtype[%s] of input x is not supported",
-            op::ToString(x->GetDataType()).GetString());
+        OP_LOGE(ACL_ERROR_INVALID_PARAM, "dtype[%s] of input x is not supported",
+                op::ToString(x->GetDataType()).GetString());
         return nullptr;
     }
 

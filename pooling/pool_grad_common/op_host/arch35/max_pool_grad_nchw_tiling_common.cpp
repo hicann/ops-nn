@@ -28,8 +28,8 @@ static constexpr int64_t CHECK_RANGE_TILING_KEY_NCHW = 101;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 
-void MaxPoolGradNCHWTilingCommon::InitializationVars(
-    gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData)
+void MaxPoolGradNCHWTilingCommon::InitializationVars(gert::TilingContext* context_,
+                                                     MaxPoolGradWithArgmaxHardwareInfo* hardwareData)
 {
     baseData.vRegSize = Ops::Base::GetVRegSize(context_);
     baseData.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
@@ -111,7 +111,7 @@ void MaxPoolGradNCHWTilingCommon::DoBufferCalculate()
     splitData.inputBufferSize = splitData.highAxisInner * inputPlaneSizeHW * baseData.inputBytes;
     splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeHW * baseData.inputBytes;
     splitData.argmaxBufferSize = splitData.highAxisInner * inputPlaneSizeHW * baseData.indexBytes;
-    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeHW * FLOAT32_SIZE; 
+    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeHW * FLOAT32_SIZE;
 
     int64_t tmpTotalBufferSize = splitData.outputBufferSize + splitData.gradBufferSize + splitData.argmaxBufferSize;
     splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
@@ -309,8 +309,8 @@ void MaxPoolGradNCHWTilingCommon::DoBlockTiling()
     splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter;
     splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
     splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void MaxPoolGradNCHWTilingCommon::PrintBaseData() const
@@ -370,8 +370,8 @@ void MaxPoolGradNCHWTilingCommon::PrintSplitData() const
 
 void MaxPoolGradNCHWTilingCommon::SetTilingData(gert::TilingContext* context, uint64_t key)
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData =
-        context->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData = context->GetTilingData<
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
     tilingData->hArgmax = inputData->hGrad;
     tilingData->wArgmax = inputData->wGrad;
     tilingData->hOutput = inputData->hX;
@@ -406,20 +406,14 @@ void MaxPoolGradNCHWTilingCommon::SetTilingData(gert::TilingContext* context, ui
     tilingData->isPad = baseData.isPad;
 }
 
-MaxPoolGradNCHWSplitInfo MaxPoolGradNCHWTilingCommon::GetSplitData() const
-{
-    return splitData;
-}
+MaxPoolGradNCHWSplitInfo MaxPoolGradNCHWTilingCommon::GetSplitData() const { return splitData; }
 
-MaxPoolGradNCHWBaseInfo MaxPoolGradNCHWTilingCommon::GetBaseData()
-{
-    return baseData;
-}
+MaxPoolGradNCHWBaseInfo MaxPoolGradNCHWTilingCommon::GetBaseData() { return baseData; }
 
 ge::graphStatus MaxPoolGradNCHWTilingCommon::PostTiling(gert::TilingContext* context_)
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
     context_->SetTilingKey(tilingData->tilingKey);
     context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;

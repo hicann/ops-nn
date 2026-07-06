@@ -22,13 +22,11 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 using namespace AscendC;
 
-template <typename T, int32_t OP_TYPE, bool IS_SPARSE=false>
-class Pool3DNcdhwSmallKernel
-{
+template <typename T, int32_t OP_TYPE, bool IS_SPARSE = false>
+class Pool3DNcdhwSmallKernel {
 public:
     __aicore__ inline Pool3DNcdhwSmallKernel(TPipe* pipe, const Pool3DNcdhwSmallKernelTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -38,34 +36,45 @@ public:
 private:
     template <typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
-    __aicore__ inline void SparseCopyInMultiRows(int64_t offset, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, const TensorDescInfo &inputInfo, int32_t splitMode);
+    __aicore__ inline void SparseCopyInMultiRows(int64_t offset, int64_t nout, int64_t dout, int64_t hout,
+                                                 int64_t wout);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, const TensorDescInfo& inputInfo, int32_t splitMode);
     __aicore__ inline void CopyMaxOut(int64_t offset, int64_t blockLen);
     template <typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeMultiBatch(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo);
+    __aicore__ inline void ComputeMultiBatch(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
+                                             const Pool3dParam& paramInfo);
     template <typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeMultiDepth(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo);
+    __aicore__ inline void ComputeMultiDepth(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
+                                             const Pool3dParam& paramInfo);
     template <typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeMultiRow(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo);
+    __aicore__ inline void ComputeMultiRow(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
+                                           const Pool3dParam& paramInfo);
     template <typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeSingleRow(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo);
+    __aicore__ inline void ComputeSingleRow(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
+                                            const Pool3dParam& paramInfo);
     template <typename U, int32_t GATHER_MODE, bool USE_TRAIT_TWO>
-    __aicore__ inline void Compute(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo);
+    __aicore__ inline void Compute(const TensorDescInfo& inputInfo, const ShapeInfo& outInfo,
+                                   const Pool3dParam& paramInfo);
     template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(const GatherIndexImpl::ShapeInfo &param, LocalTensor<U>& indexLocal, uint16_t loopNum=1);
+    __aicore__ inline void GenGatherIndex(const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal,
+                                          uint16_t loopNum = 1);
     __aicore__ inline void GenUbArrange();
-    __aicore__ inline void GenSparseUbArrange(uint32_t &ubStrideW, uint32_t &ubStrideH, uint32_t &ubStrideD);
-    __aicore__ inline void SparseHDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void SparseWHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void SparseWDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void SparseWCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void SparseHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void SparseDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline void SetSparseParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline void GenSparseUbArrange(uint32_t& ubStrideW, uint32_t& ubStrideH, uint32_t& ubStrideD);
+    __aicore__ inline void SparseHDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                             int64_t hout, int64_t wout);
+    __aicore__ inline void SparseWHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                             int64_t hout, int64_t wout);
+    __aicore__ inline void SparseWDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                             int64_t hout, int64_t wout);
+    __aicore__ inline void SparseWCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                            int64_t hout, int64_t wout);
+    __aicore__ inline void SparseHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                            int64_t hout, int64_t wout);
+    __aicore__ inline void SparseDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                            int64_t hout, int64_t wout);
+    __aicore__ inline void SetSparseParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+                                          int64_t hout, int64_t wout);
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -97,7 +106,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::Init(GM_AD
     if (tilingData_->useTraiTwo) {
         oneRepeatNum_ = 2 * platform::GetVRegSize();
     }
-    channel_ = tilingData_->channel; 
+    channel_ = tilingData_->channel;
     oneRepeatNum_ = oneRepeatNum_ / channel_;
     xGm_.SetGlobalBuffer((__gm__ T*)x);
     maxGm_.SetGlobalBuffer((__gm__ T*)y);
@@ -123,7 +132,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::Process()
         BaseCompute<indiceType, GATHER_MULTI_ROW>();
     } else if (tilingData_->gatherMode == GATHER_MULTI_PLANE) {
         BaseCompute<indiceType, GATHER_MULTI_PLANE>();
-    }  else {
+    } else {
         BaseCompute<indiceType, GATHER_MULTI_BATCH>();
     }
 }
@@ -159,7 +168,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenUbArran
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenSparseUbArrange(uint32_t &ubStrideW, uint32_t &ubStrideH, uint32_t &ubStrideD)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenSparseUbArrange(uint32_t& ubStrideW,
+                                                                                         uint32_t& ubStrideH,
+                                                                                         uint32_t& ubStrideD)
 {
     uint32_t sW = tilingData_->sW;
     uint32_t sH = tilingData_->sH;
@@ -174,24 +185,24 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenSparseU
         oneRowElements_ = tilingData_->wInDim * channel_;
         onePlaneElements_ = oneRowElements_ * tilingData_->outUbFactorH * effectiveKh_;
         oneBatchElements_ = onePlaneElements_ * tilingData_->outUbFactorD * effectiveKd_;
-        return;        
+        return;
     }
     uint32_t inputW = (outUbFactorW - 1) * sW + effectiveKw_;
     uint32_t inputH = (outUbFactorH - 1) * sH + effectiveKh_;
     uint32_t inputD = (outUbFactorD - 1) * sD + effectiveKd_;
     if (isSparseW_) {
         ubStrideW = effectiveKw_;
-        inputW = tilingData_->outUbFactorW * effectiveKw_;        
+        inputW = tilingData_->outUbFactorW * effectiveKw_;
     }
 
     if (isSparseH_) {
         ubStrideH = effectiveKh_;
-        inputH = tilingData_->outUbFactorH * effectiveKh_;       
+        inputH = tilingData_->outUbFactorH * effectiveKh_;
     }
 
     if (isSparseD_) {
         ubStrideD = effectiveKd_;
-        inputD = tilingData_->outUbFactorD * effectiveKd_;      
+        inputD = tilingData_->outUbFactorD * effectiveKd_;
     }
 
     oneRowElements_ = inputW * channel_;
@@ -228,17 +239,20 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::BaseComput
         GenUbArrange();
     }
     GatherIndexImpl::ShapeInfo info = {
-        {1, channel_, oneRowElements_, onePlaneElements_, oneBatchElements_},     //input stride
-        {channel_, outUbFactorW, outUbFactorH, outUbFactorD, static_cast<uint32_t>(tilingData_->ubFactorN)},    // gather size
-        {1, ubStrideW, ubStrideH, ubStrideD, 1}   //stride
+        {1, channel_, oneRowElements_, onePlaneElements_, oneBatchElements_}, // input stride
+        {channel_, outUbFactorW, outUbFactorH, outUbFactorD,
+         static_cast<uint32_t>(tilingData_->ubFactorN)}, // gather size
+        {1, ubStrideW, ubStrideH, ubStrideD, 1}          // stride
     };
 
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     GenGatherIndex<U, GATHER_MODE>(info, indexLocal, 2);
     Pool3dParam paramInfo = {
-        {static_cast<uint16_t>(tilingData_->kW), static_cast<uint16_t>(tilingData_->kH), static_cast<uint16_t>(tilingData_->kD)},
+        {static_cast<uint16_t>(tilingData_->kW), static_cast<uint16_t>(tilingData_->kH),
+         static_cast<uint16_t>(tilingData_->kD)},
         {static_cast<uint16_t>(ubStrideW), static_cast<uint16_t>(ubStrideH), static_cast<uint16_t>(ubStrideD)},
-        {static_cast<uint16_t>(tilingData_->dW), static_cast<uint16_t>(tilingData_->dH), static_cast<uint16_t>(tilingData_->dD)},
+        {static_cast<uint16_t>(tilingData_->dW), static_cast<uint16_t>(tilingData_->dH),
+         static_cast<uint16_t>(tilingData_->dD)},
         static_cast<float32_t>(tilingData_->divisor),
     };
 
@@ -249,36 +263,43 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::BaseComput
         int64_t dIdx = tmpIdx / (tilingData_->hLoop * tilingData_->wLoop);
         int64_t hIdx = (tmpIdx - dIdx * tilingData_->hLoop * tilingData_->wLoop) / tilingData_->wLoop;
         int64_t wIdx = tmpIdx % tilingData_->wLoop;
-        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                   : tilingData_->ubFactorN;
-        int64_t depths = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * outUbFactorD : outUbFactorD;                                           
+        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                      tilingData_->ubFactorN;
+        int64_t depths = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * outUbFactorD : outUbFactorD;
         int64_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * outUbFactorH : outUbFactorH;
         int64_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
-        int64_t depthStart = dIdx * sD * outUbFactorD; 
+        int64_t depthStart = dIdx * sD * outUbFactorD;
         int64_t rowStart = hIdx * sH * outUbFactorH;
         int64_t colStart = wIdx * sW * outUbFactorW;
 
-        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim +
-                            depthStart * tilingData_->hInDim * tilingData_->wInDim + rowStart * tilingData_->wInDim + colStart;
-        int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim +
-                            + dIdx * outUbFactorD  * tilingData_->hOutDim * tilingData_->wOutDim 
-                            + hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
-               
-        uint32_t inDepths = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : (depths - 1) * sD + effectiveKd_;
-        uint32_t inRows = (tilingData_->splitMode == SPLIT_BATCHS ||  tilingData_->splitMode == SPLIT_DEPTHS) ? tilingData_->hInDim : (rows - 1) * sH + effectiveKh_;
-        uint32_t inCols = (tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + effectiveKw_) * channel_;
+        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim *
+                                tilingData_->wInDim +
+                            depthStart * tilingData_->hInDim * tilingData_->wInDim + rowStart * tilingData_->wInDim +
+                            colStart;
+        int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim *
+                                tilingData_->wOutDim +
+                            +dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim +
+                            hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
+
+        uint32_t inDepths = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim :
+                                                                     (depths - 1) * sD + effectiveKd_;
+        uint32_t inRows = (tilingData_->splitMode == SPLIT_BATCHS || tilingData_->splitMode == SPLIT_DEPTHS) ?
+                              tilingData_->hInDim :
+                              (rows - 1) * sH + effectiveKh_;
+        uint32_t inCols = (tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim :
+                                                                  (cols - 1) * sW + effectiveKw_) *
+                          channel_;
         if constexpr (!IS_SPARSE) {
             if (tilingData_->splitMode == SPLIT_ROWS) {
                 onePlaneElements_ = inRows * inCols;
-            }else if (tilingData_->splitMode == SPLIT_DEPTHS) {
+            } else if (tilingData_->splitMode == SPLIT_DEPTHS) {
                 oneBatchElements_ = inDepths * inRows * inCols;
-            }        
-        }  
-        TensorDescInfo inputInfo = {
-            {inCols, inRows, inDepths, n},
-            {1, inCols, onePlaneElements_, oneBatchElements_},
-            {1, wInDimWithChannel, wInDimWithChannel * tilingData_->hInDim, tilingData_->dInDim * tilingData_->hInDim * wInDimWithChannel}
-        };
+            }
+        }
+        TensorDescInfo inputInfo = {{inCols, inRows, inDepths, n},
+                                    {1, inCols, onePlaneElements_, oneBatchElements_},
+                                    {1, wInDimWithChannel, wInDimWithChannel * tilingData_->hInDim,
+                                     tilingData_->dInDim * tilingData_->hInDim * wInDimWithChannel}};
         if constexpr (IS_SPARSE) {
             SparseCopyInMultiRows(srcOffset * channel_, n, depths, rows, cols);
             inputInfo.dstStride[1] = oneRowElements_;
@@ -286,20 +307,23 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::BaseComput
             inputInfo.dstStride[3] = oneBatchElements_;
         } else {
             CopyInMultiRows(srcOffset * channel_, inputInfo, tilingData_->splitMode);
-        }        
-        
-        ShapeInfo outInfo = {static_cast<uint16_t>(n), static_cast<uint16_t>(depths),static_cast<uint16_t>(rows),static_cast<uint16_t>(cols)};
+        }
+
+        ShapeInfo outInfo = {static_cast<uint16_t>(n), static_cast<uint16_t>(depths), static_cast<uint16_t>(rows),
+                             static_cast<uint16_t>(cols)};
         if (tilingData_->useTraiTwo) {
             Compute<U, GATHER_MODE, true>(inputInfo, outInfo, paramInfo);
         } else {
             Compute<U, GATHER_MODE, false>(inputInfo, outInfo, paramInfo);
         }
-        CopyMaxOut(dstOffset*channel_, n*depths*rows*cols*channel_);
+        CopyMaxOut(dstOffset * channel_, n * depths * rows * cols * channel_);
     }
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseCopyInMultiRows(int64_t offset, int64_t nout, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseCopyInMultiRows(int64_t offset,
+                                                                                            int64_t nout, int64_t dout,
+                                                                                            int64_t hout, int64_t wout)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
 
@@ -314,7 +338,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseCopy
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyInMultiRows(int64_t offset, const TensorDescInfo &inputInfo, int32_t splitMode)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyInMultiRows(int64_t offset,
+                                                                                      const TensorDescInfo& inputInfo,
+                                                                                      int32_t splitMode)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyPadExtParams<T> padExtParams;
@@ -324,7 +350,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyInMult
     padExtParams.paddingValue = 0;
     LoopModeParams loopParams;
     DataCopyExtParams extParams;
-    if (tilingData_->splitMode == SPLIT_COLS) {    
+    if (tilingData_->splitMode == SPLIT_COLS) {
         extParams.blockCount = inputInfo.size[1];
         extParams.blockLen = inputInfo.size[0] * sizeof(T);
         extParams.srcStride = (inputInfo.srcStride[1] - inputInfo.size[0]) * sizeof(T);
@@ -341,7 +367,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyInMult
     } else if (tilingData_->splitMode == SPLIT_ROWS) {
         extParams.blockCount = inputInfo.size[2];
         extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * sizeof(T);
-        extParams.srcStride = (inputInfo.srcStride[2] - inputInfo.size[0] * inputInfo.size[1] ) * sizeof(T);
+        extParams.srcStride = (inputInfo.srcStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T);
         extParams.dstStride = 0;
         loopParams.loop2Size = 1;
         loopParams.loop1Size = inputInfo.size[3];
@@ -349,14 +375,15 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyInMult
         loopParams.loop1DstStride = inputInfo.dstStride[3] * sizeof(T);
         SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
         DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);        
+        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     } else if (tilingData_->splitMode == SPLIT_DEPTHS) {
         extParams.blockCount = inputInfo.size[3];
         extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2] * sizeof(T);
-        extParams.srcStride = (inputInfo.srcStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2] ) * sizeof(T);
+        extParams.srcStride = (inputInfo.srcStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) *
+                              sizeof(T);
         extParams.dstStride = 0;
         DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-    }  else {
+    } else {
         DataCopyExtParams extParams;
         extParams.blockCount = 1;
         extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2] * inputInfo.size[3] * sizeof(T);
@@ -382,8 +409,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::CopyMaxOut
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenGatherIndex(const GatherIndexImpl::ShapeInfo &param,
-                                                                LocalTensor<U>& indexLocal, uint16_t loopNum)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenGatherIndex(
+    const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal, uint16_t loopNum)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         GatherIndexImpl::GenGatherIndex<U, 2>(param, indexLocal, loopNum);
@@ -398,7 +425,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::GenGatherI
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 template <typename U, int32_t GATHER_MODE, bool USE_TRAIT_TWO>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::Compute(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::Compute(const TensorDescInfo& inputInfo,
+                                                                              const ShapeInfo& outInfo,
+                                                                              const Pool3dParam& paramInfo)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         ComputeSingleRow<U, USE_TRAIT_TWO>(inputInfo, outInfo, paramInfo);
@@ -413,7 +442,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::Compute(co
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 template <typename U, bool USE_TRAIT_TWO>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMultiBatch(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMultiBatch(const TensorDescInfo& inputInfo,
+                                                                                        const ShapeInfo& outInfo,
+                                                                                        const Pool3dParam& paramInfo)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -430,7 +461,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     U oneLoopStrideBtach = static_cast<U>(nFactor * inputInfo.dstStride[3]);
     U oneLoopOutElements = static_cast<U>(nFactor * outInfo.depth * outInfo.width * outInfo.height * channel_);
 
-    uint32_t tailLoopOutElements = static_cast<uint32_t>(tailN * outInfo.depth * outInfo.width * outInfo.height * channel_);
+    uint32_t tailLoopOutElements = static_cast<uint32_t>(tailN * outInfo.depth * outInfo.width * outInfo.height *
+                                                         channel_);
 
     U depthStrideInub = inputInfo.dstStride[2] * paramInfo.dilation[2];
     U rowStrideInub = inputInfo.dstStride[1] * paramInfo.dilation[1];
@@ -438,9 +470,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     uint16_t kD = paramInfo.kSize[2];
     uint16_t kH = paramInfo.kSize[1];
     uint16_t kW = paramInfo.kSize[0];
-    Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstLocalAddr, xLocalAddr, indexAddr, kD, kH,
-                                kW, depthStrideInub, rowStrideInub, colStrideInub,
-                                oneLoopOutElements, tailLoopOutElements, oneLoopStrideBtach, loopN, paramInfo.divisor);
+    Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+        dstLocalAddr, xLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
+        oneLoopOutElements, tailLoopOutElements, oneLoopStrideBtach, loopN, paramInfo.divisor);
 
     inputQue_.FreeTensor<T>(xLocal);
     maxUBOutput_.EnQue<T>(maxOutLocal);
@@ -448,7 +480,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 template <typename U, bool USE_TRAIT_TWO>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMultiDepth(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMultiDepth(const TensorDescInfo& inputInfo,
+                                                                                        const ShapeInfo& outInfo,
+                                                                                        const Pool3dParam& paramInfo)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -473,14 +507,13 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     uint16_t kD = paramInfo.kSize[2];
     uint16_t kH = paramInfo.kSize[1];
     uint16_t kW = paramInfo.kSize[0];
-    for (uint16_t i = 0; i < outInfo.n; i ++) {
-        __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] ;
+    for (uint16_t i = 0; i < outInfo.n; i++) {
+        __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3];
         __local_mem__ T* dstLocalAddr = dstAddr + i * outInfo.depth * outInfo.height * outInfo.width * channel_;
-        Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstLocalAddr, srcLocalAddr, indexAddr, kD, kH,
-                                    kW, depthStrideInub, rowStrideInub, colStrideInub,
-                                    oneLoopOutElements, tailLoopOutElements, oneLoopStrideDepth, loopD, paramInfo.divisor);        
+        Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+            dstLocalAddr, srcLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
+            oneLoopOutElements, tailLoopOutElements, oneLoopStrideDepth, loopD, paramInfo.divisor);
     }
-
 
     inputQue_.FreeTensor<T>(xLocal);
     maxUBOutput_.EnQue<T>(maxOutLocal);
@@ -488,7 +521,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 template <typename U, bool USE_TRAIT_TWO>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMultiRow(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMultiRow(const TensorDescInfo& inputInfo,
+                                                                                      const ShapeInfo& outInfo,
+                                                                                      const Pool3dParam& paramInfo)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -503,7 +538,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
 
     U oneLoopStrideH = static_cast<U>(hFactor * paramInfo.stride[1] * inputInfo.dstStride[1]);
     U oneLoopOutElements = static_cast<U>(hFactor * outInfo.width * channel_);
-    uint32_t tailLoopOutElements = static_cast<uint32_t>(tailH * outInfo.width * channel_);  
+    uint32_t tailLoopOutElements = static_cast<uint32_t>(tailH * outInfo.width * channel_);
     U depthStrideInub = inputInfo.dstStride[2] * paramInfo.dilation[2];
     U rowStrideInub = inputInfo.dstStride[1] * paramInfo.dilation[1];
     U colStrideInub = paramInfo.dilation[0] * channel_;
@@ -512,11 +547,14 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     uint16_t kW = paramInfo.kSize[0];
     for (uint16_t i = 0; i < outInfo.n; i++) {
         for (uint16_t idxD = 0; idxD < outInfo.depth; idxD++) {
-            __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] + idxD * paramInfo.stride[2]  * inputInfo.dstStride[2];
-            __local_mem__ T* dstLocalAddr = dstAddr + (i * outInfo.depth * outInfo.height * outInfo.width + idxD * outInfo.height * outInfo.width) * channel_;
-            Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstLocalAddr, srcLocalAddr, indexAddr, kD, kH,
-                                         kW, depthStrideInub, rowStrideInub, colStrideInub,
-                                         oneLoopOutElements, tailLoopOutElements, oneLoopStrideH, loopH, paramInfo.divisor);
+            __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] +
+                                            idxD * paramInfo.stride[2] * inputInfo.dstStride[2];
+            __local_mem__ T* dstLocalAddr = dstAddr + (i * outInfo.depth * outInfo.height * outInfo.width +
+                                                       idxD * outInfo.height * outInfo.width) *
+                                                          channel_;
+            Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+                dstLocalAddr, srcLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
+                oneLoopOutElements, tailLoopOutElements, oneLoopStrideH, loopH, paramInfo.divisor);
         }
     }
     inputQue_.FreeTensor<T>(xLocal);
@@ -525,7 +563,9 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 template <typename U, bool USE_TRAIT_TWO>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSingleRow(const TensorDescInfo &inputInfo, const ShapeInfo &outInfo, const Pool3dParam &paramInfo)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSingleRow(const TensorDescInfo& inputInfo,
+                                                                                       const ShapeInfo& outInfo,
+                                                                                       const Pool3dParam& paramInfo)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -540,7 +580,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSin
 
     U oneLoopStrideW = static_cast<U>(wFactor * channel_ * paramInfo.stride[0] * inputInfo.dstStride[0]);
     U oneLoopOutElements = static_cast<U>(wFactor * channel_);
-    uint32_t tailLoopOutElements = static_cast<uint32_t>(tailW * channel_);  
+    uint32_t tailLoopOutElements = static_cast<uint32_t>(tailW * channel_);
     U depthStrideInub = inputInfo.dstStride[2] * paramInfo.dilation[2];
     U rowStrideInub = inputInfo.dstStride[1] * paramInfo.dilation[1];
     U colStrideInub = paramInfo.dilation[0] * channel_;
@@ -550,11 +590,16 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSin
     for (uint16_t i = 0; i < outInfo.n; i++) {
         for (uint16_t idxD = 0; idxD < outInfo.depth; idxD++) {
             for (uint16_t idxH = 0; idxH < outInfo.height; idxH++) {
-                __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] + idxD * paramInfo.stride[2] * inputInfo.dstStride[2] + idxH * paramInfo.stride[1] * inputInfo.dstStride[1];
-                __local_mem__ T* dstLocalAddr = dstAddr + (i * outInfo.depth * outInfo.height * outInfo.width + idxD * outInfo.height * outInfo.width + idxH * outInfo.width) * channel_;
-                Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(dstLocalAddr, srcLocalAddr, indexAddr, kD, kH,
-                                  kW, depthStrideInub, rowStrideInub, colStrideInub,
-                                  oneLoopOutElements, tailLoopOutElements, oneLoopStrideW, loopW, paramInfo.divisor);
+                __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] +
+                                                idxD * paramInfo.stride[2] * inputInfo.dstStride[2] +
+                                                idxH * paramInfo.stride[1] * inputInfo.dstStride[1];
+                __local_mem__ T* dstLocalAddr = dstAddr +
+                                                (i * outInfo.depth * outInfo.height * outInfo.width +
+                                                 idxD * outInfo.height * outInfo.width + idxH * outInfo.width) *
+                                                    channel_;
+                Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
+                    dstLocalAddr, srcLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
+                    oneLoopOutElements, tailLoopOutElements, oneLoopStrideW, loopW, paramInfo.divisor);
             }
         }
     }
@@ -563,7 +608,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSin
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHDCopyParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     uint32_t inputCols = tilingData_->wInDim * channel_;
     loopInfo.loopSize[ZERO] = inputCols * effectiveKh_;
@@ -579,12 +625,14 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHDCo
     loopInfo.loopDstStride[ZERO] = 1;
     loopInfo.loopDstStride[ONE] = inputCols * effectiveKh_;
     loopInfo.loopDstStride[TWO] = inputCols * effectiveKh_ * tilingData_->outUbFactorH;
-    loopInfo.loopDstStride[THREE] = inputCols * effectiveKh_ * tilingData_->outUbFactorH * effectiveKd_; 
-    loopInfo.loopDstStride[FOUR] = inputCols * effectiveKh_ * tilingData_->outUbFactorH * effectiveKd_ * tilingData_->outUbFactorD; 
+    loopInfo.loopDstStride[THREE] = inputCols * effectiveKh_ * tilingData_->outUbFactorH * effectiveKd_;
+    loopInfo.loopDstStride[FOUR] = inputCols * effectiveKh_ * tilingData_->outUbFactorH * effectiveKd_ *
+                                   tilingData_->outUbFactorD;
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWHCopyParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = effectiveKw_ * channel_;
     loopInfo.loopSize[ONE] = wout;
@@ -599,12 +647,13 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWHCo
     loopInfo.loopDstStride[ZERO] = 1;
     loopInfo.loopDstStride[ONE] = effectiveKw_ * channel_;
     loopInfo.loopDstStride[TWO] = oneRowElements_;
-    loopInfo.loopDstStride[THREE] = oneRowElements_ * effectiveKh_; 
-    loopInfo.loopDstStride[FOUR] = onePlaneElements_; 
+    loopInfo.loopDstStride[THREE] = oneRowElements_ * effectiveKh_;
+    loopInfo.loopDstStride[FOUR] = onePlaneElements_;
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWDCopyParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = effectiveKw_ * channel_;
     loopInfo.loopSize[ONE] = wout;
@@ -619,12 +668,13 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWDCo
     loopInfo.loopDstStride[ZERO] = 1;
     loopInfo.loopDstStride[ONE] = effectiveKw_ * channel_;
     loopInfo.loopDstStride[TWO] = oneRowElements_;
-    loopInfo.loopDstStride[THREE] = onePlaneElements_; 
-    loopInfo.loopDstStride[FOUR] = onePlaneElements_ * effectiveKd_; 
+    loopInfo.loopDstStride[THREE] = onePlaneElements_;
+    loopInfo.loopDstStride[FOUR] = onePlaneElements_ * effectiveKd_;
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWCopyParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = effectiveKw_ * channel_;
     loopInfo.loopSize[ONE] = wout;
@@ -639,12 +689,13 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWCop
     loopInfo.loopDstStride[ZERO] = 1;
     loopInfo.loopDstStride[ONE] = effectiveKw_ * channel_;
     loopInfo.loopDstStride[TWO] = oneRowElements_;
-    loopInfo.loopDstStride[THREE] = onePlaneElements_; 
-    loopInfo.loopDstStride[FOUR] = oneBatchElements_; 
+    loopInfo.loopDstStride[THREE] = onePlaneElements_;
+    loopInfo.loopDstStride[FOUR] = oneBatchElements_;
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHCopyParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = ((wout - 1) * tilingData_->sW + effectiveKw_) * channel_;
     loopInfo.loopSize[ONE] = effectiveKh_;
@@ -659,12 +710,13 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHCop
     loopInfo.loopDstStride[ZERO] = 1;
     loopInfo.loopDstStride[ONE] = oneRowElements_;
     loopInfo.loopDstStride[TWO] = oneRowElements_ * effectiveKh_;
-    loopInfo.loopDstStride[THREE] = onePlaneElements_; 
-    loopInfo.loopDstStride[FOUR] = oneBatchElements_; 
+    loopInfo.loopDstStride[THREE] = onePlaneElements_;
+    loopInfo.loopDstStride[FOUR] = oneBatchElements_;
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseDCopyParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = ((wout - 1) * tilingData_->sW + effectiveKw_) * channel_;
     loopInfo.loopSize[ONE] = (hout - 1) * tilingData_->sH + effectiveKh_;
@@ -679,35 +731,36 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseDCop
     loopInfo.loopDstStride[ZERO] = 1;
     loopInfo.loopDstStride[ONE] = oneRowElements_;
     loopInfo.loopDstStride[TWO] = onePlaneElements_;
-    loopInfo.loopDstStride[THREE] = onePlaneElements_ * effectiveKd_; 
-    loopInfo.loopDstStride[FOUR] = oneBatchElements_; 
+    loopInfo.loopDstStride[THREE] = onePlaneElements_ * effectiveKd_;
+    loopInfo.loopDstStride[FOUR] = oneBatchElements_;
 }
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
-__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SetSparseParam(MultiCopyLoopInfo<Pool3D::FIVE> &loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout)
+__aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SetSparseParam(
+    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout)
 {
     int32_t sparseMode = tilingData_->sparseMode;
     switch (sparseMode) {
-        case Pool3D::SPARSE_W :
+        case Pool3D::SPARSE_W:
             SparseWCopyParam(loopInfo, nout, dout, hout, wout);
             break;
-        case Pool3D::SPARSE_H : 
+        case Pool3D::SPARSE_H:
             SparseHCopyParam(loopInfo, nout, dout, hout, wout);
             break;
-        case Pool3D::SPARSE_D :
+        case Pool3D::SPARSE_D:
             SparseDCopyParam(loopInfo, nout, dout, hout, wout);
             break;
-        case Pool3D::SPARSE_WH : 
+        case Pool3D::SPARSE_WH:
             SparseWHCopyParam(loopInfo, nout, dout, hout, wout);
             break;
-        case Pool3D::SPARSE_WD :
+        case Pool3D::SPARSE_WD:
             SparseWDCopyParam(loopInfo, nout, dout, hout, wout);
             break;
-        case Pool3D::SPARSE_HD : 
+        case Pool3D::SPARSE_HD:
             SparseHDCopyParam(loopInfo, nout, dout, hout, wout);
             break;
     }
 }
 
-}  // namespace Pool3D
-#endif  // POOL_3D_NCDHW_SMALL_KERNEL_H_
+} // namespace Pool3D
+#endif // POOL_3D_NCDHW_SMALL_KERNEL_H_

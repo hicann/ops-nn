@@ -19,14 +19,8 @@
 
 class l2_hardshrink_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "Hardshrink Backward Test Setup" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "Hardshrink Backward Test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "Hardshrink Backward Test Setup" << endl; }
+    static void TearDownTestCase() { cout << "Hardshrink Backward Test TearDown" << endl; }
 };
 
 TEST_F(l2_hardshrink_backward_test, case_normal)

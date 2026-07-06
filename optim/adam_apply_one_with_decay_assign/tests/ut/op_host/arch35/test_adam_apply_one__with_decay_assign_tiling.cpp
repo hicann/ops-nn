@@ -28,15 +28,9 @@ using namespace ge;
 
 class AdamApplyOneWithDecayAssignTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdamApplyOneWithDecayTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdamApplyOneWithDecayTiling TearDown" << std::endl; }
 };
 
 TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling_test_1)
@@ -54,7 +48,8 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
     gert::StorageShape output0_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape output1_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape output2_shape = {{16, 8, 375}, {16, 8, 375}};
-    string compile_info_string = R"({"_fusion_index": [[0], [1, 2]],"reduce_mean_cof_dtype": "float32", "_pattern": "Broadcast", "_ub_factor_align":128, "_flag_info": [false, false, true, true, false, false, false], "_base_info": {"100": [32, 4, 8184, 4088], "210": [32, 4, 10920, 5456]}, "_elewise_vars": {"210000000": [10000, 20000, 30000], "210010000": [10000, 20000, 30000], "221000000": [10000, 10001], "221000001": [10000, 10001, 20000, 30000], "221000002": [10000, 10001, 20000, 30001], "210000004": [10000, 10001, 20001, 30001]}, "_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "221000000": ["_dim_0_0", "_dim_0_1", "cof"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0", "cof"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1", "cof"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1", "cof"]}, "_normal_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "221000000": ["_dim_0_0", "_dim_0_1"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1"]}, "_attr_vars": {"210000000": [], "210010000": [], "221000000": [], "221000001": [], "221000002": [], "221000004": []}, "_custom_vars": {"210000000": ["cof"], "210010000": ["cof"], "221000000": ["cof"], "221000001": ["cof"], "221000002": ["cof"], "221000004": ["cof"]}})";
+    string compile_info_string =
+        R"({"_fusion_index": [[0], [1, 2]],"reduce_mean_cof_dtype": "float32", "_pattern": "Broadcast", "_ub_factor_align":128, "_flag_info": [false, false, true, true, false, false, false], "_base_info": {"100": [32, 4, 8184, 4088], "210": [32, 4, 10920, 5456]}, "_elewise_vars": {"210000000": [10000, 20000, 30000], "210010000": [10000, 20000, 30000], "221000000": [10000, 10001], "221000001": [10000, 10001, 20000, 30000], "221000002": [10000, 10001, 20000, 30001], "210000004": [10000, 10001, 20001, 30001]}, "_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "221000000": ["_dim_0_0", "_dim_0_1", "cof"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0", "cof"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1", "cof"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1", "cof"]}, "_normal_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "221000000": ["_dim_0_0", "_dim_0_1"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1"]}, "_attr_vars": {"210000000": [], "210010000": [], "221000000": [], "221000001": [], "221000002": [], "221000004": []}, "_custom_vars": {"210000000": ["cof"], "210010000": ["cof"], "221000000": ["cof"], "221000001": ["cof"], "221000002": ["cof"], "221000004": ["cof"]}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -77,19 +72,19 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -101,9 +96,8 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
                       .SetOpType(op_type)
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -148,7 +142,8 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
     gert::StorageShape output0_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape output1_shape = {{16, 8, 375}, {16, 8, 375}};
     gert::StorageShape output2_shape = {{16, 8, 375}, {16, 8, 375}};
-    string compile_info_string = R"({"_fusion_index": [[0], [1, 2]],"reduce_mean_cof_dtype": "float32", "_pattern": "Broadcast", "_ub_factor_align":128, "_flag_info": [false, false, true, true, false, false, false], "_base_info": {"100": [32, 4, 8184, 4088], "210": [32, 4, 10920, 5456]}, "_elewise_vars": {"210000000": [10000, 20000, 30000], "210010000": [10000, 20000, 30000], "221000000": [10000, 10001], "221000001": [10000, 10001, 20000, 30000], "221000002": [10000, 10001, 20000, 30001], "210000004": [10000, 10001, 20001, 30001]}, "_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "221000000": ["_dim_0_0", "_dim_0_1", "cof"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0", "cof"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1", "cof"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1", "cof"]}, "_normal_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "221000000": ["_dim_0_0", "_dim_0_1"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1"]}, "_attr_vars": {"210000000": [], "210010000": [], "221000000": [], "221000001": [], "221000002": [], "221000004": []}, "_custom_vars": {"210000000": ["cof"], "210010000": ["cof"], "221000000": ["cof"], "221000001": ["cof"], "221000002": ["cof"], "221000004": ["cof"]}})";
+    string compile_info_string =
+        R"({"_fusion_index": [[0], [1, 2]],"reduce_mean_cof_dtype": "float32", "_pattern": "Broadcast", "_ub_factor_align":128, "_flag_info": [false, false, true, true, false, false, false], "_base_info": {"100": [32, 4, 8184, 4088], "210": [32, 4, 10920, 5456]}, "_elewise_vars": {"210000000": [10000, 20000, 30000], "210010000": [10000, 20000, 30000], "221000000": [10000, 10001], "221000001": [10000, 10001, 20000, 30000], "221000002": [10000, 10001, 20000, 30001], "210000004": [10000, 10001, 20001, 30001]}, "_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "221000000": ["_dim_0_0", "_dim_0_1", "cof"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0", "cof"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1", "cof"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1", "cof"]}, "_normal_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "221000000": ["_dim_0_0", "_dim_0_1"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1"]}, "_attr_vars": {"210000000": [], "210010000": [], "221000000": [], "221000001": [], "221000002": [], "221000004": []}, "_custom_vars": {"210000000": ["cof"], "210010000": ["cof"], "221000000": ["cof"], "221000001": ["cof"], "221000002": ["cof"], "221000004": ["cof"]}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -169,19 +164,19 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -193,9 +188,8 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
                       .SetOpType(op_type)
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -240,7 +234,8 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
     gert::StorageShape output0_shape = {{16, 8, 32, 16}, {16, 8, 32, 16}};
     gert::StorageShape output1_shape = {{16, 8, 32, 16}, {16, 8, 32, 16}};
     gert::StorageShape output2_shape = {{16, 8, 32, 16}, {16, 8, 32, 16}};
-    string compile_info_string = R"({"_fusion_index": [[0], [1, 2]],"reduce_mean_cof_dtype": "float32", "_pattern": "Broadcast", "_ub_factor_align":128, "_flag_info": [false, false, true, true, false, false, false], "_base_info": {"100": [32, 4, 8184, 4088], "210": [32, 4, 10920, 5456]}, "_elewise_vars": {"210000000": [10000, 20000, 30000], "210010000": [10000, 20000, 30000], "221000000": [10000, 10001], "221000001": [10000, 10001, 20000, 30000], "221000002": [10000, 10001, 20000, 30001], "210000004": [10000, 10001, 20001, 30001]}, "_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "221000000": ["_dim_0_0", "_dim_0_1", "cof"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0", "cof"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1", "cof"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1", "cof"]}, "_normal_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "221000000": ["_dim_0_0", "_dim_0_1"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1"]}, "_attr_vars": {"210000000": [], "210010000": [], "221000000": [], "221000001": [], "221000002": [], "221000004": []}, "_custom_vars": {"210000000": ["cof"], "210010000": ["cof"], "221000000": ["cof"], "221000001": ["cof"], "221000002": ["cof"], "221000004": ["cof"]}})";
+    string compile_info_string =
+        R"({"_fusion_index": [[0], [1, 2]],"reduce_mean_cof_dtype": "float32", "_pattern": "Broadcast", "_ub_factor_align":128, "_flag_info": [false, false, true, true, false, false, false], "_base_info": {"100": [32, 4, 8184, 4088], "210": [32, 4, 10920, 5456]}, "_elewise_vars": {"210000000": [10000, 20000, 30000], "210010000": [10000, 20000, 30000], "221000000": [10000, 10001], "221000001": [10000, 10001, 20000, 30000], "221000002": [10000, 10001, 20000, 30001], "210000004": [10000, 10001, 20001, 30001]}, "_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0", "cof"], "221000000": ["_dim_0_0", "_dim_0_1", "cof"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0", "cof"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1", "cof"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1", "cof"]}, "_normal_vars": {"210000000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "210010000": ["_dim_0_0", "_block_factor_0", "_ub_factor_0"], "221000000": ["_dim_0_0", "_dim_0_1"], "221000001": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_0"], "221000002": ["_dim_0_0", "_dim_0_1", "_block_factor_0", "_ub_factor_1"], "221000004": ["_dim_0_0", "_dim_0_1", "_block_factor_1", "_ub_factor_1"]}, "_attr_vars": {"210000000": [], "210010000": [], "221000000": [], "221000001": [], "221000002": [], "221000004": []}, "_custom_vars": {"210000000": ["cof"], "210010000": ["cof"], "221000000": ["cof"], "221000001": ["cof"], "221000002": ["cof"], "221000004": ["cof"]}})";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -261,19 +256,19 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -285,9 +280,8 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
                       .SetOpType(op_type)
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -317,22 +311,23 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling_test_4) {
-  gert::StorageShape input0_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input1_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input2_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input3_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input4_shape = {{1}, {1}};
-  gert::StorageShape input5_shape = {{1}, {1}};
-  gert::StorageShape input6_shape = {{1}, {1}};
-  gert::StorageShape input7_shape = {{1}, {1}};
-  gert::StorageShape input8_shape = {{1}, {1}};
-  gert::StorageShape input9_shape = {{1}, {1}};
-  gert::StorageShape input10_shape = {{1}, {1}};
-  gert::StorageShape output0_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape output1_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape output2_shape = {{16, 16, 16}, {16, 16, 16}};
-  string compile_info_string = R"({
+TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling_test_4)
+{
+    gert::StorageShape input0_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input1_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input2_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input3_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input4_shape = {{1}, {1}};
+    gert::StorageShape input5_shape = {{1}, {1}};
+    gert::StorageShape input6_shape = {{1}, {1}};
+    gert::StorageShape input7_shape = {{1}, {1}};
+    gert::StorageShape input8_shape = {{1}, {1}};
+    gert::StorageShape input9_shape = {{1}, {1}};
+    gert::StorageShape input10_shape = {{1}, {1}};
+    gert::StorageShape output0_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape output1_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape output2_shape = {{16, 16, 16}, {16, 16, 16}};
+    string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,
@@ -361,12 +356,12 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -385,7 +380,9 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
                       .SetOpType(op_type)
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape, &input10_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape,
+                                    &input10_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -416,22 +413,23 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling_test_5) {
-  gert::StorageShape input0_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input1_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input2_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input3_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape input4_shape = {{1}, {1}};
-  gert::StorageShape input5_shape = {{1}, {1}};
-  gert::StorageShape input6_shape = {{1}, {1}};
-  gert::StorageShape input7_shape = {{1}, {1}};
-  gert::StorageShape input8_shape = {{1}, {1}};
-  gert::StorageShape input9_shape = {{1}, {1}};
-  gert::StorageShape input10_shape = {{1}, {1}};
-  gert::StorageShape output0_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape output1_shape = {{16, 16, 16}, {16, 16, 16}};
-  gert::StorageShape output2_shape = {{16, 16, 16}, {16, 16, 16}};
-  string compile_info_string = R"({
+TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling_test_5)
+{
+    gert::StorageShape input0_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input1_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input2_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input3_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape input4_shape = {{1}, {1}};
+    gert::StorageShape input5_shape = {{1}, {1}};
+    gert::StorageShape input6_shape = {{1}, {1}};
+    gert::StorageShape input7_shape = {{1}, {1}};
+    gert::StorageShape input8_shape = {{1}, {1}};
+    gert::StorageShape input9_shape = {{1}, {1}};
+    gert::StorageShape input10_shape = {{1}, {1}};
+    gert::StorageShape output0_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape output1_shape = {{16, 16, 16}, {16, 16, 16}};
+    gert::StorageShape output2_shape = {{16, 16, 16}, {16, 16, 16}};
+    string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,
@@ -460,12 +458,12 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -484,7 +482,9 @@ TEST_F(AdamApplyOneWithDecayAssignTilingTest, AdamApplyOneWithDecayAssign_tiling
                       .SetOpType(op_type)
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape, &input10_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape,
+                                    &input10_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))

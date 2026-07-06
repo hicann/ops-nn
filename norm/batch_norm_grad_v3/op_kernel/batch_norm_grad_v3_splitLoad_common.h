@@ -24,13 +24,9 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3, BNGV3SplitMode SPLIT_MODE = BNGV3SplitMode::R0_SPLIT_MODE>
 class BatchNormGradV3SplitLoadBase : public BatchNormGradV3Base<T1, T2, T3> {
 public:
-    __aicore__ inline BatchNormGradV3SplitLoadBase()
-    {}
+    __aicore__ inline BatchNormGradV3SplitLoadBase() {}
 
-    __aicore__ inline void Init(GMStruct gmStruct, TPipe* pipeIn)
-    {
-        this->InitSplitLoad(gmStruct, pipeIn);
-    }
+    __aicore__ inline void Init(GMStruct gmStruct, TPipe* pipeIn) { this->InitSplitLoad(gmStruct, pipeIn); }
 
 protected:
     TQue<QuePosition::VECIN, BUFFER_DEPTH> dyQueue_;
@@ -396,19 +392,18 @@ protected:
         PipeBarrier<PIPE_V>();
         uint32_t srcShape[2] = {static_cast<uint32_t>(this->aDim), 1};
         uint32_t dstShape[2] = {static_cast<uint32_t>(this->aDim), static_cast<uint32_t>(this->b1DimAlign)};
-        BroadCast<float, TWO, 1, false>(
-            weightMeanVarStruct.weightBrcbTensor, weightMeanVarStruct.weightTensor, dstShape, srcShape);
-        BroadCast<float, TWO, 1, false>(
-            weightMeanVarStruct.varBrcbTensor, weightMeanVarStruct.varTensor, dstShape, srcShape);
-        BroadCast<float, TWO, 1, false>(
-            weightMeanVarStruct.meanBrcbTensor, weightMeanVarStruct.meanTensor, dstShape, srcShape);
+        BroadCast<float, TWO, 1, false>(weightMeanVarStruct.weightBrcbTensor, weightMeanVarStruct.weightTensor,
+                                        dstShape, srcShape);
+        BroadCast<float, TWO, 1, false>(weightMeanVarStruct.varBrcbTensor, weightMeanVarStruct.varTensor, dstShape,
+                                        srcShape);
+        BroadCast<float, TWO, 1, false>(weightMeanVarStruct.meanBrcbTensor, weightMeanVarStruct.meanTensor, dstShape,
+                                        srcShape);
         PipeBarrier<PIPE_V>();
     }
 
     __aicore__ inline void calcTwoTensorRepeatOperate(
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, const uint8_t,
-            const BinaryRepeatParams&),
+        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t,
+                     const uint8_t, const BinaryRepeatParams&),
         void (*func2)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, const int32_t&),
         LocalTensor<float> dstTensor, LocalTensor<float> src1Tensor, LocalTensor<float> src2Tensor, int64_t nLength,
         int64_t lLength, int64_t totalLength)
@@ -421,34 +416,30 @@ protected:
             uint8_t repStride = lLength / B32_BLOCK_ALIGN_NUM;
             for (int64_t j = 0; j < repeatTime; j++) {
                 for (int64_t i = 0; i < nLoopTime; i++) {
-                    func(
-                        dstTensor[i * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
-                        src1Tensor[i * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
-                        src2Tensor[j * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, UINT8_MAX_NUM,
-                        {1, 1, 1, repStride, repStride, 0});
+                    func(dstTensor[i * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
+                         src1Tensor[i * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
+                         src2Tensor[j * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, UINT8_MAX_NUM,
+                         {1, 1, 1, repStride, repStride, 0});
                 }
                 if (nLength % UINT8_MAX_NUM > 0) {
-                    func(
-                        dstTensor[nLoopTime * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
-                        src1Tensor[nLoopTime * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
-                        src2Tensor[j * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, nLength % UINT8_MAX_NUM,
-                        {1, 1, 1, repStride, repStride, 0});
+                    func(dstTensor[nLoopTime * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
+                         src1Tensor[nLoopTime * UINT8_MAX_NUM * lLength + j * ELEM_PER_REP_FP32],
+                         src2Tensor[j * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, nLength % UINT8_MAX_NUM,
+                         {1, 1, 1, repStride, repStride, 0});
                 }
             }
             if (lLengthTail != 0) {
                 for (int64_t i = 0; i < nLoopTime; i++) {
-                    func(
-                        dstTensor[i * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
-                        src1Tensor[i * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
-                        src2Tensor[repeatTime * ELEM_PER_REP_FP32], lLengthTail, UINT8_MAX_NUM,
-                        {1, 1, 1, repStride, repStride, 0});
+                    func(dstTensor[i * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
+                         src1Tensor[i * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
+                         src2Tensor[repeatTime * ELEM_PER_REP_FP32], lLengthTail, UINT8_MAX_NUM,
+                         {1, 1, 1, repStride, repStride, 0});
                 }
                 if (nLength % UINT8_MAX_NUM > 0) {
-                    func(
-                        dstTensor[nLoopTime * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
-                        src1Tensor[nLoopTime * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
-                        src2Tensor[repeatTime * ELEM_PER_REP_FP32], lLengthTail, nLength % UINT8_MAX_NUM,
-                        {1, 1, 1, repStride, repStride, 0});
+                    func(dstTensor[nLoopTime * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
+                         src1Tensor[nLoopTime * UINT8_MAX_NUM * lLength + repeatTime * ELEM_PER_REP_FP32],
+                         src2Tensor[repeatTime * ELEM_PER_REP_FP32], lLengthTail, nLength % UINT8_MAX_NUM,
+                         {1, 1, 1, repStride, repStride, 0});
                 }
             }
         } else {

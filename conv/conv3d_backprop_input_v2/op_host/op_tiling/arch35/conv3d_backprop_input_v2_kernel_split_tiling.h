@@ -66,10 +66,10 @@ protected:
     bool IsL1ParamsValid(const L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void LadderMatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
-    void SetTilingCondition(
-        const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
-    void SetTilingData(
-        const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
+    void SetTilingCondition(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                            const L0TilingParams& l0Params) override;
+    void SetTilingData(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                       const L0TilingParams& l0Params) override;
     void LegalProtection(L1TilingParams& l1Params, L0TilingParams& l0Params) override;
     bool ShrinkBaseMN(L1TilingParams& l1Params, L0TilingParams& l0Params) override;
     void UpdateL0CBufferMode(L0TilingParams& l0Params) override;
@@ -78,9 +78,8 @@ protected:
     bool CheckDtypeCompatibility();
     bool CheckBasicConstraints();
     bool CheckShapeValue() const;
-    bool CheckKernelSizeStrideMatch(
-        int32_t kernelSplitStrideVal, uint32_t splitKernelSize1, uint32_t splitKernelSize2, uint32_t splitKernelSize3,
-        uint32_t splitKernelSize4);
+    bool CheckKernelSizeStrideMatch(int32_t kernelSplitStrideVal, uint32_t splitKernelSize1, uint32_t splitKernelSize2,
+                                    uint32_t splitKernelSize3, uint32_t splitKernelSize4);
     bool TryKernelSplitHW(uint32_t bestBaseMN);
     bool TryKernelSplitH(uint32_t bestBaseMN);
     void UpdateWorkSpaceSize(L0TilingParams& l0Params);
@@ -101,16 +100,16 @@ private:
     bool CheckKernelSplitHW11Enable();
     int32_t CalFmapHForKernelSplit(const int32_t& mL1Size, bool isKernelSplitOnlyH = false) const;
     bool IsBaseShapeFitKernelSplitHW(const uint32_t bestBaseMN);
-    bool CheckKernelSplitHWEnable(
-        bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal, const uint32_t bestBaseMN);
+    bool CheckKernelSplitHWEnable(bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal,
+                                  const uint32_t bestBaseMN);
     bool IsBaseShapeFitKernelSplitH(const uint32_t bestBaseMN);
     bool CheckKernelSplitHEnable(const uint32_t bestBaseMN);
 
-    void ShrinkCoutA1B1(
-        L1TilingParams& l1Params, L0TilingParams& l0Params, const uint64_t minAl1Size, const uint64_t minBl1Size);
+    void ShrinkCoutA1B1(L1TilingParams& l1Params, L0TilingParams& l0Params, const uint64_t minAl1Size,
+                        const uint64_t minBl1Size);
     void UpdateBaseKParams(L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1, uint32_t coutB1);
-    void ShrinkBaseKForKernelSplit(
-        L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1, uint32_t coutB1);
+    void ShrinkBaseKForKernelSplit(L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1,
+                                   uint32_t coutB1);
 
     bool CheckBestBlockEnable(uint64_t nValue, uint64_t bestBlockCnt);
     bool CheckShapeConditions();

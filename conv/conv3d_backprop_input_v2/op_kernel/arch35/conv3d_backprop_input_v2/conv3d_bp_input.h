@@ -25,5 +25,5 @@ namespace Convolution3DBackprop {
 
 REGISTER_DX_IMPL(Conv3DBackpropInput, Conv3DBpInputCfg, Conv3DBpInputImpl, Conv3DBpInputIntf);
 
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 #endif

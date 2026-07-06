@@ -53,8 +53,7 @@ __aicore__ inline constexpr T GetIdentityOne()
 // ======================== GM Init: fill output with 1 ========================
 template <typename T>
 struct InitGmOneValue {
-    __aicore__ inline InitGmOneValue()
-    {}
+    __aicore__ inline InitGmOneValue() {}
     __aicore__ inline void operator()(GlobalTensor<T> yGmInit, uint64_t initCoreReal)
     {
         InitGlobalMemory(yGmInit, initCoreReal, GetIdentityOne<T>());
@@ -92,12 +91,11 @@ __aicore__ inline void InitGmProd(GM_ADDR output, uint64_t totalNum)
 // ======================== AtomCas Prod for int32/int64/uint32/uint64/float ========================
 template <typename TX, typename Index, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void SimtComputeSegmentProdNormal(
-    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums,
-    const COM_T inputLength, const COM_T innerDimSize, const uint64_t outputOuterDimSize,
-    const COM_T magic, const COM_T shift)
+    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T inputLength,
+    const COM_T innerDimSize, const uint64_t outputOuterDimSize, const COM_T magic, const COM_T shift)
 {
-    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx();
-         inputIndex < inputLength; inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
+    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < inputLength;
+         inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
         COM_T inputSegmentIndex = Simt::UintDiv(inputIndex, magic, shift);
         COM_T segmentOffset = inputIndex - inputSegmentIndex * innerDimSize;
         const Index outputSegmentIndex = segmentIdsGm[inputSegmentIndex];
@@ -121,12 +119,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
 // ======================== AtomCas Prod for half/bfloat16 using uint32_t CAS ========================
 template <typename TX, typename Index, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void SimtComputeSegmentProdFp16(
-    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums,
-    const COM_T inputLength, const COM_T innerDimSize, const uint64_t outputOuterDimSize,
-    const COM_T magic, const COM_T shift, const uint64_t totalOutputSize)
+    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T inputLength,
+    const COM_T innerDimSize, const uint64_t outputOuterDimSize, const COM_T magic, const COM_T shift,
+    const uint64_t totalOutputSize)
 {
-    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx();
-         inputIndex < inputLength;
+    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < inputLength;
          inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
         COM_T inputSegmentIndex = Simt::UintDiv(inputIndex, magic, shift);
         COM_T segmentOffset = inputIndex - inputSegmentIndex * innerDimSize;
@@ -136,10 +133,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
         }
         const uint64_t outputIndex = outputSegmentIndex * innerDimSize + segmentOffset;
         TX curGmValue = xGm[inputIndex];
- 
+
         uint64_t pairIndex = outputIndex & ~1ULL;
         bool isLow = (outputIndex & 1) == 0;
- 
+
         if (pairIndex + 1 >= totalOutputSize) {
             continue;
         }
@@ -160,23 +157,21 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
                 reinterpret_cast<TX*>(&newU32)[0] = neighbor;
                 reinterpret_cast<TX*>(&newU32)[1] = newVal;
             }
-            uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + pairIndex),
-                                              oldU32, newU32);
+            uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + pairIndex), oldU32, newU32);
             if (casU32 == oldU32) {
                 break;
             }
         }
     }
 }
- 
+
 // ======================== AtomCas Prod for half/bfloat16 using half2 ========================
 template <typename TX, typename Index, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void SimtComputeSegmentProdHalf2Even(
-    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums,
-    const COM_T usedThread, const COM_T innerDimSize, const uint64_t outputOuterDimSize)
+    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T usedThread,
+    const COM_T innerDimSize, const uint64_t outputOuterDimSize)
 {
-    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx();
-         inputIndex < usedThread;
+    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < usedThread;
          inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
         COM_T inputSegmentIndex = inputIndex * 2 / innerDimSize;
         COM_T segmentOffset = inputIndex * 2 - inputSegmentIndex * innerDimSize;
@@ -187,7 +182,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
         const uint64_t outputIndex = outputSegmentIndex * innerDimSize + segmentOffset;
         TX curGmValue1 = xGm[inputIndex * 2];
         TX curGmValue2 = xGm[inputIndex * 2 + 1];
- 
+
         while (true) {
             TX oldVal2 = outputGm[outputIndex + 1];
             TX oldVal1 = outputGm[outputIndex];
@@ -197,20 +192,20 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
             reinterpret_cast<TX*>(&oldU32)[0] = oldVal1;
             reinterpret_cast<TX*>(&newU32)[1] = oldVal2 * curGmValue2;
             reinterpret_cast<TX*>(&newU32)[0] = oldVal1 * curGmValue1;
-            uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + outputIndex),
-                                              oldU32, newU32);
+            uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + outputIndex), oldU32,
+                                              newU32);
             if (casU32 == oldU32) {
                 break;
             }
         }
     }
 }
- 
+
 template <typename TX, typename COM_T>
-__simt_callee__ inline void ComputeHalf2OddValues(
-    __gm__ TX* xGm, const uint64_t outputRowIndex, const COM_T inRowIdx,
-    const COM_T threadRowOffset, const COM_T eachRowThread, const COM_T innerDimSize,
-    const bool outputRowOdd, TX& curGmValue1, TX& curGmValue2, uint64_t& outputIndex)
+__simt_callee__ inline void ComputeHalf2OddValues(__gm__ TX* xGm, const uint64_t outputRowIndex, const COM_T inRowIdx,
+                                                  const COM_T threadRowOffset, const COM_T eachRowThread,
+                                                  const COM_T innerDimSize, const bool outputRowOdd, TX& curGmValue1,
+                                                  TX& curGmValue2, uint64_t& outputIndex)
 {
     if (outputRowOdd) {
         COM_T segmentOffset = (threadRowOffset == 0) ? static_cast<COM_T>(-1) : (threadRowOffset - 1) * 2 + 1;
@@ -235,12 +230,12 @@ __simt_callee__ inline void ComputeHalf2OddValues(
         }
     }
 }
- 
+
 template <typename TX, typename COM_T>
-__simt_callee__ inline void CasHalf2OddBoundary(
-    __gm__ TX* outputGm, __gm__ TX* xGm, const uint64_t outputRowIndex,
-    const COM_T inRowIdx, const COM_T threadRowOffset, const COM_T eachRowThread,
-    const COM_T innerDimSize, const bool outputRowOdd)
+__simt_callee__ inline void CasHalf2OddBoundary(__gm__ TX* outputGm, __gm__ TX* xGm, const uint64_t outputRowIndex,
+                                                const COM_T inRowIdx, const COM_T threadRowOffset,
+                                                const COM_T eachRowThread, const COM_T innerDimSize,
+                                                const bool outputRowOdd)
 {
     uint64_t actualOutputIndex;
     TX actualCurGmValue;
@@ -272,23 +267,21 @@ __simt_callee__ inline void CasHalf2OddBoundary(
             reinterpret_cast<TX*>(&newU32)[0] = neighbor;
             reinterpret_cast<TX*>(&newU32)[1] = newVal;
         }
-        uint32_t casU32 = Simt::AtomicCas(
-            reinterpret_cast<__gm__ uint32_t*>(outputGm + pairIndex), oldU32, newU32);
+        uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + pairIndex), oldU32, newU32);
         if (casU32 == oldU32) {
             break;
         }
     }
 }
- 
+
 // Case 2: output row start address is odd OR innerDim (b) is odd
 template <typename TX, typename Index, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void SimtComputeSegmentProdHalf2Odd(
-    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums,
-    const COM_T usedThread, const COM_T innerDimSize, const uint64_t outputOuterDimSize,
-    const COM_T eachRowThread, const uint64_t totalOutputSize)
+    __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T usedThread,
+    const COM_T innerDimSize, const uint64_t outputOuterDimSize, const COM_T eachRowThread,
+    const uint64_t totalOutputSize)
 {
-    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx();
-         inputIndex < usedThread;
+    for (COM_T inputIndex = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < usedThread;
          inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
         COM_T inputSegmentIndex = inputIndex / eachRowThread;
         COM_T threadRowOffset = inputIndex - inputSegmentIndex * eachRowThread;
@@ -302,12 +295,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
         TX curGmValue1;
         TX curGmValue2;
         uint64_t outputIndex;
-        ComputeHalf2OddValues(xGm, outputRowIndex, inRowIdx, threadRowOffset,
-                              eachRowThread, innerDimSize, outputRowOdd,
+        ComputeHalf2OddValues(xGm, outputRowIndex, inRowIdx, threadRowOffset, eachRowThread, innerDimSize, outputRowOdd,
                               curGmValue1, curGmValue2, outputIndex);
         if (outputIndex >= totalOutputSize || outputIndex + 1 >= totalOutputSize) {
-            CasHalf2OddBoundary(outputGm, xGm, outputRowIndex, inRowIdx, threadRowOffset,
-                                eachRowThread, innerDimSize, outputRowOdd);
+            CasHalf2OddBoundary(outputGm, xGm, outputRowIndex, inRowIdx, threadRowOffset, eachRowThread, innerDimSize,
+                                outputRowOdd);
             continue;
         }
         while (true) {
@@ -319,8 +311,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
             reinterpret_cast<TX*>(&oldU32)[1] = oldVal2;
             reinterpret_cast<TX*>(&newU32)[0] = oldVal1 * curGmValue1;
             reinterpret_cast<TX*>(&newU32)[1] = oldVal2 * curGmValue2;
-            uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + outputIndex),
-                                              oldU32, newU32);
+            uint32_t casU32 = Simt::AtomicCas(reinterpret_cast<__gm__ uint32_t*>(outputGm + outputIndex), oldU32,
+                                              newU32);
             if (casU32 == oldU32) {
                 break;
             }
@@ -330,12 +322,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
 
 // ======================== Kernel class ========================
 template <typename T, typename Index>
-class KernelUnsortedSegmentProd
-{
+class KernelUnsortedSegmentProd {
 public:
-    __aicore__ inline KernelUnsortedSegmentProd(
-        const UnsortedSegment::UnsortedSegmentSimtTilingData* tiling, TPipe* pipe)
-        : td_(tiling), pipe_(pipe) {};
+    __aicore__ inline KernelUnsortedSegmentProd(const UnsortedSegment::UnsortedSegmentSimtTilingData* tiling,
+                                                TPipe* pipe)
+        : td_(tiling), pipe_(pipe){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
     {
@@ -359,8 +350,8 @@ public:
         COM_T shift = 1;
         GetUintDivMagicAndShift(magic, shift, static_cast<COM_T>(innerDimSizeTmp));
         AscendC::Simt::VF_CALL<SimtComputeSegmentProdNormal<T, Index, COM_T>>(
-            Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output,
-            blockNums, inputLength, innerDimSizeTmp, td_->outputOuterDim, magic, shift);
+            Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, inputLength,
+            innerDimSizeTmp, td_->outputOuterDim, magic, shift);
     }
 
     template <typename COM_T>
@@ -369,7 +360,7 @@ public:
         __gm__ T* input = (__gm__ T*)xGm.GetPhyAddr();
         __gm__ Index* segmentIds = (__gm__ Index*)segmentIdsGm.GetPhyAddr();
         __gm__ T* output = (__gm__ T*)outputGm.GetPhyAddr();
- 
+
         uint32_t blockNums = GetBlockNum();
         uint64_t innerDimSizeTmp = td_->innerDim;
         uint64_t inputOuterDim = td_->inputOuterDim;
@@ -382,15 +373,14 @@ public:
         if (innerDimEven && outputStartEven) {
             COM_T usedThread = static_cast<COM_T>(inputOuterDim * innerDimSizeTmp / 2);
             AscendC::Simt::VF_CALL<SimtComputeSegmentProdHalf2Even<T, Index, COM_T>>(
-                Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output,
-                blockNums, usedThread, static_cast<COM_T>(innerDimSizeTmp), td_->outputOuterDim);
+                Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, usedThread,
+                static_cast<COM_T>(innerDimSizeTmp), td_->outputOuterDim);
         } else {
             COM_T eachRowThread = static_cast<COM_T>((innerDimSizeTmp + 2) / 2);
             COM_T usedThread = static_cast<COM_T>(inputOuterDim) * eachRowThread;
             AscendC::Simt::VF_CALL<SimtComputeSegmentProdHalf2Odd<T, Index, COM_T>>(
-                Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output,
-                blockNums, usedThread, static_cast<COM_T>(innerDimSizeTmp), td_->outputOuterDim,
-                eachRowThread, totalOutputSize);
+                Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, usedThread,
+                static_cast<COM_T>(innerDimSizeTmp), td_->outputOuterDim, eachRowThread, totalOutputSize);
         }
     }
 

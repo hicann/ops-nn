@@ -108,7 +108,8 @@ inline uint64_t GetTilingKeyByDtypeOnly(ge::DataType dataType)
     }
 }
 
-inline uint64_t GetTilingKeyForForeachCopy(ge::DataType dataType, ge::DataType dstDataType) {
+inline uint64_t GetTilingKeyForForeachCopy(ge::DataType dataType, ge::DataType dstDataType)
+{
     if (dataType == dstDataType) {
         return GetTilingKeyByDtypeOnly(dataType);
     }

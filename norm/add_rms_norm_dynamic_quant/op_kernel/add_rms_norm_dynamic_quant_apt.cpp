@@ -28,10 +28,10 @@ using namespace AscendC;
         op.Process();                                                                                                 \
     } while (0)
 
-#define INIT_AND_PROCESS                                                                             \
-    do {                                                                                             \
+#define INIT_AND_PROCESS                                                                                   \
+    do {                                                                                                   \
         op.Init(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2, tilingData); \
-        op.Process();                                                                                \
+        op.Process();                                                                                      \
     } while (0)
 
 #define INIT_AND_PROCESS_EMPTY   \
@@ -40,9 +40,11 @@ using namespace AscendC;
         op.Process();            \
     } while (0)
 
-extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1,
-    GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma,
+                                                                 GM_ADDR smooathScale1, GM_ADDR smooathScale2,
+                                                                 GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
+                                                                 GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace,
+                                                                 GM_ADDR tiling)
 {
     TPipe pipe;
     if (TILING_KEY_IS(500)) {

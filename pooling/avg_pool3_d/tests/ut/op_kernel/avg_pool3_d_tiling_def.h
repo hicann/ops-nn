@@ -72,13 +72,14 @@ struct AvgPool3DTilingData {
 
 inline void InitAvgPool3DTilingData(uint8_t* tiling, AvgPool3DTilingData* const_data)
 {
-    uint64_t *src = (uint64_t *)tiling;
-    uint64_t *dst = (uint64_t *)const_data;
-    for (auto i = 0; i < sizeof(AvgPool3DTilingData) / 8; i++) *(dst + i) = *(src + i);
+    uint64_t* src = (uint64_t*)tiling;
+    uint64_t* dst = (uint64_t*)const_data;
+    for (auto i = 0; i < sizeof(AvgPool3DTilingData) / 8; i++)
+        *(dst + i) = *(src + i);
 }
 
 #define GET_TILING_DATA(tiling_data, tiling_arg) \
-AvgPool3DTilingData tiling_data; \
-InitAvgPool3DTilingData(tiling_arg, &tiling_data)
+    AvgPool3DTilingData tiling_data;             \
+    InitAvgPool3DTilingData(tiling_arg, &tiling_data)
 
 #endif // __AVG_POOL3_D_TILING_DEF_H__

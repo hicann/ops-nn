@@ -18,8 +18,7 @@
 namespace WeightQuantBatchMatmulV2 {
 using HighPreciseType = int32_t;
 using HighPerformanceType = half;
-enum class QuantType
-{
+enum class QuantType {
     NONE = 0,
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
@@ -27,8 +26,7 @@ enum class QuantType
     MX = 4,
 };
 
-enum class PrecisionType
-{
+enum class PrecisionType {
     NONE = 0,
     HIGH_PRECISION = 1,
 };

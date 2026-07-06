@@ -35,7 +35,7 @@ constexpr uint64_t ADD_MUL_BASE_M_SMALL = 512UL;
 
 inline bool IsSmallNShape(const MatMulV3Args& args, string opType)
 {
-    if(opType == "add" || opType == "mul"){
+    if (opType == "add" || opType == "mul") {
         return args.nValue <= ADD_MUL_SMALL_N_LIMIT && args.kValue <= ADD_MUL_K_LIMIT;
     }
     return args.nValue < SMALL_N_LIMIT;
@@ -43,8 +43,8 @@ inline bool IsSmallNShape(const MatMulV3Args& args, string opType)
 
 inline uint64_t GetSmallNBaseM(const MatMulV3Args& args, string opType)
 {
-    if(opType == "add" || opType == "mul"){
-        if(args.aType == ge::DT_FLOAT){
+    if (opType == "add" || opType == "mul") {
+        if (args.aType == ge::DT_FLOAT) {
             return ADD_MUL_BASE_M_SMALL;
         }
         return ADD_MUL_BASE_M_LARGE;
@@ -65,8 +65,8 @@ inline uint64_t GetSmallNBaseK(const MatMulV3Args& args, uint64_t baseM, uint64_
         baseKAlignValue = BLOCK_BYTE_SIZE / args.aDtypeSize;
     }
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args.kValue), baseKAlignValue);
-    uint64_t kValueMax = ops::FloorAlign(
-        ops::FloorDiv(L0A_SIZE_2 / DB_SIZE / args.aDtypeSize, std::max(baseM, baseN)), baseKAlignValue);
+    uint64_t kValueMax = ops::FloorAlign(ops::FloorDiv(L0A_SIZE_2 / DB_SIZE / args.aDtypeSize, std::max(baseM, baseN)),
+                                         baseKAlignValue);
     return std::min(kValueAlign, kValueMax);
 }
 // ------------------------------ CheckBatch -------------------------------------------//
@@ -83,8 +83,7 @@ bool CheckBatchDav3510(const MatMulV3Args& args)
 {
     if (args.batchInfo->batchC > 1) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            args.opName, "y", "",
-            Ops::NN::FormatString("Batch-axis of y cannot be greater than 1").c_str());
+            args.opName, "y", "", Ops::NN::FormatString("Batch-axis of y cannot be greater than 1").c_str());
         return false;
     }
     return true;
@@ -167,7 +166,8 @@ void FusedMatMulAswBasicApiTiling::AdjustSmallNTiling(string opType)
         return;
     }
 
-    const uint64_t tmpBaseM = std::min(ops::CeilAlign(static_cast<uint64_t>(args_.mValue), BASIC_BLOCK_SIZE_16), targetBaseM);
+    const uint64_t tmpBaseM = std::min(ops::CeilAlign(static_cast<uint64_t>(args_.mValue), BASIC_BLOCK_SIZE_16),
+                                       targetBaseM);
     const uint64_t baseK = GetSmallNBaseK(args_, tmpBaseM, tmpBaseN);
     if (baseK == 0UL) {
         return;
@@ -187,11 +187,11 @@ void FusedMatMulAswBasicApiTiling::AdjustSmallNTiling(string opType)
 
 void FusedMatMulAswBasicApiTiling::UpdateAswDepth()
 {
-    uint64_t remainSizeForAL1BL1 =
-        args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) : compileInfo_.l1Size;
+    uint64_t remainSizeForAL1BL1 = args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) :
+                                                   compileInfo_.l1Size;
     // A/B share the remaining L1 space, so keep stepKa and stepKb identical for ASWT.
-    runInfo_.stepKa =
-        remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) / args_.aDtypeSize;
+    runInfo_.stepKa = remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) /
+                      args_.aDtypeSize;
     runInfo_.stepKb = runInfo_.stepKa;
     runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
     runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
@@ -202,8 +202,7 @@ void FusedMatMulAswBasicApiTiling::UpdateBFullLoadDepth()
     uint64_t kAligned = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), BASIC_BLOCK_SIZE_16);
     uint64_t nAligned = ops::CeilAlign(static_cast<uint64_t>(args_.nValue), BASIC_BLOCK_SIZE_16);
     uint64_t bL1Size = kAligned * nAligned * args_.bDtypeSize;
-    uint64_t baseBiasSize = args_.hasBias ?
-        nAligned * GetSizeByDataType(args_.biasType) : 0;
+    uint64_t baseBiasSize = args_.hasBias ? nAligned * GetSizeByDataType(args_.biasType) : 0;
 
     runInfo_.stepKb = ops::CeilDiv(static_cast<uint64_t>(args_.kValue), runInfo_.baseK);
     uint64_t stepN = ops::CeilDiv(static_cast<uint64_t>(args_.nValue), runInfo_.baseN);
@@ -220,30 +219,29 @@ void FusedMatMulAswBasicApiTiling::UpdateBFullLoadDepth()
     runInfo_.stepKa = remainL1 / DB_SIZE / aPerStep;
     runInfo_.stepKa = std::max(runInfo_.stepKa, 1UL);
     runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
-    uint64_t aL14Buffer = runInfo_.baseK * runInfo_.stepKa * runInfo_.baseM *
-                          args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
+    uint64_t aL14Buffer = runInfo_.baseK * runInfo_.stepKa * runInfo_.baseM * args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
     runInfo_.l1BufferNum = aL14Buffer + bL1Size + baseBiasSize * BASIC_L1_BUFFER_NUM > compileInfo_.l1Size ?
-                           DB_SIZE : BASIC_L1_BUFFER_NUM;
+                               DB_SIZE :
+                               BASIC_L1_BUFFER_NUM;
 
-    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <=
-                     compileInfo_.l0CSize ? DB_SIZE : 1UL;
-    runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 <=
-                            compileInfo_.ubSize ? DB_SIZE : 1UL;
+    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
+    runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 <= compileInfo_.ubSize ? DB_SIZE : 1UL;
 
     runInfo_.singleCoreM = runInfo_.baseM;
     runInfo_.singleCoreN = args_.nValue;
 }
 
-ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling() {
+ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling()
+{
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     const bool isGeluOp = (opType == "gelu_erf" || opType == "gelu_tanh");
     if (isGeluOp) {
         // AIV epilogue ops share ASWT tiling, but use different kernel epilogues.
-        OP_TILING_CHECK(
-            (MatMulV3AswTiling::DoOpTiling() != ge::GRAPH_SUCCESS),
-            CUBE_INNER_ERR_REPORT(args_.opName, "Do MatMul AswTiling failed in FusedMatMul."), return ge::GRAPH_FAILED);
+        OP_TILING_CHECK((MatMulV3AswTiling::DoOpTiling() != ge::GRAPH_SUCCESS),
+                        CUBE_INNER_ERR_REPORT(args_.opName, "Do MatMul AswTiling failed in FusedMatMul."),
+                        return ge::GRAPH_FAILED);
         if (isGeluOp) {
             if (IsSmallNShape(args_, opType)) {
                 // For small-N GELU, increase baseM to reduce data movement bound.
@@ -261,7 +259,8 @@ ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling() {
     if (l0C2Out_ == MatMulV3L0C2Out::ND_FIXPIPE_1_1) {
         l0C2Out_ = MatMulV3L0C2Out::ON_THE_FLY;
     }
-    if ((opType == "add" || opType == "mul") && IsSmallNShape(args_, opType) && fullLoad_ == MatMulV3FullLoad::B_FULL_LOAD) {
+    if ((opType == "add" || opType == "mul") && IsSmallNShape(args_, opType) &&
+        fullLoad_ == MatMulV3FullLoad::B_FULL_LOAD) {
         AdjustSmallNTiling(opType);
         UpdateBFullLoadDepth();
     }
@@ -304,8 +303,8 @@ ge::graphStatus FusedMatMulAswBasicApiTiling::PostTiling()
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if ((opType == "gelu_erf" || opType == "gelu_tanh") && IsSmallNShape(args_, opType)) {
         size_t* workspaces = context_->GetWorkspaceSizes(1);
-        OP_TILING_CHECK(workspaces == nullptr,
-            CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspace is nullptr"), return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(workspaces == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspace is nullptr"),
+                        return ge::GRAPH_FAILED);
         // Kernel indexes the GELU GM workspace with the output matrix offset, so reserve the full output area.
         workspaces[0] += static_cast<size_t>(args_.mValue * args_.nValue * DATA_SIZE_FP32);
     }

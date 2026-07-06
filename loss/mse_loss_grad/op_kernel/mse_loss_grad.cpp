@@ -13,23 +13,24 @@
  * \brief mse_loss_grad
  */
 
- #include "kernel_operator.h"
- #include "arch35/mse_loss_grad_dag.h"
- #include "arch35/mse_loss_grad_tiling_key.h"
- #include "atvoss/broadcast/broadcast_sch.h"
- 
- using namespace AscendC;
- 
- template <uint64_t schMode, uint32_t doutIsScalar>
- __global__ __aicore__ void mse_loss_grad(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, GM_ADDR workspace,
-                                          GM_ADDR tiling) {
-     if constexpr (doutIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
-         using OpDag = MseLossGradOp::MseLossGradScalarDag<DTYPE_PREDICT, float>::OpDag;
-         Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
-         sch.Process(predict, label, dout, y);
-     } else {
-         using OpDag = MseLossGradOp::MseLossGradDag<DTYPE_PREDICT, float>::OpDag;
-         Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
-         sch.Process(predict, label, dout, y);
-     }
- }
+#include "kernel_operator.h"
+#include "arch35/mse_loss_grad_dag.h"
+#include "arch35/mse_loss_grad_tiling_key.h"
+#include "atvoss/broadcast/broadcast_sch.h"
+
+using namespace AscendC;
+
+template <uint64_t schMode, uint32_t doutIsScalar>
+__global__ __aicore__ void mse_loss_grad(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, GM_ADDR workspace,
+                                         GM_ADDR tiling)
+{
+    if constexpr (doutIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
+        using OpDag = MseLossGradOp::MseLossGradScalarDag<DTYPE_PREDICT, float>::OpDag;
+        Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
+        sch.Process(predict, label, dout, y);
+    } else {
+        using OpDag = MseLossGradOp::MseLossGradDag<DTYPE_PREDICT, float>::OpDag;
+        Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
+        sch.Process(predict, label, dout, y);
+    }
+}

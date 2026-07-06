@@ -33,15 +33,15 @@ namespace optiling {
 
 constexpr int64_t ARRAY_LEN_EIGHT = 8;
 BEGIN_TILING_DATA_DEF(GatherElementsNoContiguousTilingData)
-TILING_DATA_FIELD_DEF(int64_t, axis);                                        // 属性axis(dim)的值
-TILING_DATA_FIELD_DEF(int64_t, usedCore);                                    // 使用核数
-TILING_DATA_FIELD_DEF(int64_t, perCoreNum);                                  // simt:非尾核的元素个数 s
-TILING_DATA_FIELD_DEF(int64_t, tailCoreNum);                                 // simt:尾核的元素个数 
+TILING_DATA_FIELD_DEF(int64_t, axis);        // 属性axis(dim)的值
+TILING_DATA_FIELD_DEF(int64_t, usedCore);    // 使用核数
+TILING_DATA_FIELD_DEF(int64_t, perCoreNum);  // simt:非尾核的元素个数 s
+TILING_DATA_FIELD_DEF(int64_t, tailCoreNum); // simt:尾核的元素个数
 TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, indexShape);
 TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, xShape);
-TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, xStride);      // 输入x的stride
-TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, indexStride);  // 输入index的stride
-TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, yStride); 
+TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, xStride);     // 输入x的stride
+TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, indexStride); // 输入index的stride
+TILING_DATA_FIELD_DEF_ARR(int64_t, ARRAY_LEN_EIGHT, yStride);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GatherElements_20100, GatherElementsNoContiguousTilingData)
@@ -123,9 +123,9 @@ REGISTER_TILING_DATA_CLASS(GatherElements_21312, GatherElementsNoContiguousTilin
 
 class GatherElementsNoContiguousTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit GatherElementsNoContiguousTiling(gert::TilingContext *context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {
-    }
+    explicit GatherElementsNoContiguousTiling(gert::TilingContext* context)
+        : Ops::NN::Optiling::TilingBaseClass(context)
+    {}
 
 protected:
     bool IsCapable() override;
@@ -154,23 +154,28 @@ private:
     static constexpr int64_t DIGIT_HUNDRED = 100;
     static constexpr int64_t DIGIT_TEN = 10;
 
-    inline bool ParamTypeIsInvalid(ge::DataType &x);
+    inline bool ParamTypeIsInvalid(ge::DataType& x);
     ge::graphStatus GetInAndOutInfo();
     inline ge::graphStatus GetAttrInfo();
-    inline int HandleCount(int &count, int i, int j);
+    inline int HandleCount(int& count, int i, int j);
     void CalcuCore();
     void PrintTilingData();
-    bool IsContiguous(const gert::Shape &xShape, const gert::Stride &xStride);
+    bool IsContiguous(const gert::Shape& xShape, const gert::Stride& xStride);
     bool CheckIsIndexTranspose();
-    ge::graphStatus GetContiguousTensorInfo(gert::Shape &shape, gert::Stride &stride, size_t idx, bool isOut);
-    ge::graphStatus GetTensorInfo(gert::Shape &shape, gert::Stride &stride, size_t idx, bool isOut=false);
+    ge::graphStatus GetContiguousTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut);
+    ge::graphStatus GetTensorInfo(gert::Shape& shape, gert::Stride& stride, size_t idx, bool isOut = false);
     void SetTilingData();
     bool IsEnableInt64(gert::Shape shape, gert::Stride stride);
     bool CanMerge(int64_t* xShape, int64_t* xStride, int index);
-    void InitVector(vector<int64_t> &tempXShape, vector<int64_t> &tempXStride, vector<int64_t> &tempIndexShape, vector<int64_t> &tempIndexStride, vector<int64_t> &tempYStride);
-    void DoCoalesce(vector<int64_t> &tempXShape, vector<int64_t> &tempXStride, vector<int64_t> &tempIndexShape, vector<int64_t> &tempIndexStride, vector<int64_t> &tempYStride);
-    void UpdateResultFromVector(vector<int64_t> &tempXShape, vector<int64_t> &tempXStride, vector<int64_t> &tempIndexShape, vector<int64_t> &tempIndexStride, vector<int64_t> &tempYStride);
+    void InitVector(vector<int64_t>& tempXShape, vector<int64_t>& tempXStride, vector<int64_t>& tempIndexShape,
+                    vector<int64_t>& tempIndexStride, vector<int64_t>& tempYStride);
+    void DoCoalesce(vector<int64_t>& tempXShape, vector<int64_t>& tempXStride, vector<int64_t>& tempIndexShape,
+                    vector<int64_t>& tempIndexStride, vector<int64_t>& tempYStride);
+    void UpdateResultFromVector(vector<int64_t>& tempXShape, vector<int64_t>& tempXStride,
+                                vector<int64_t>& tempIndexShape, vector<int64_t>& tempIndexStride,
+                                vector<int64_t>& tempYStride);
     void CoalesceGatherElements();
+
 private:
     int64_t axis_ = 0;
     int64_t dimSize_ = 0;
@@ -187,7 +192,7 @@ private:
     int64_t indexDtypeSize_ = 0;
     int64_t xDtypeSize_ = 0;
     bool isIndexTranspose_ = false;
-   
+
     gert::Shape xShape_;
     gert::Shape indexShape_;
     gert::Shape yShape_;
@@ -198,8 +203,8 @@ private:
 
     ge::DataType xDtype_;
     ge::DataType indexDtype_;
- 
-    const char *opName_ = "GatherElements";
+
+    const char* opName_ = "GatherElements";
     GatherElementsNoContiguousTilingData m_tilingData_;
 };
 } // namespace optiling

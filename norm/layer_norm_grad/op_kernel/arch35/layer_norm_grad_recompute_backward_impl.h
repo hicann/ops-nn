@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -23,9 +23,10 @@ namespace LayerNormGrad {
 using namespace AscendC;
 
 template <typename T, typename U>
-__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Init(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR workspace,
-    const LayerNormGradTilingDataRecompute* tilingData, TPipe* pipeIn)
+__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean,
+                                                                  GM_ADDR gamma, GM_ADDR pdX, GM_ADDR workspace,
+                                                                  const LayerNormGradTilingDataRecompute* tilingData,
+                                                                  TPipe* pipeIn)
 {
     td_ = tilingData;
     // Init
@@ -50,7 +51,7 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Init(
     meanInTensorGM.SetGlobalBuffer((__gm__ float*)mean + varTensorSize);
     gammaInTensorGM.SetGlobalBuffer((__gm__ U*)gamma);
     pdXOutTensorGM.SetGlobalBuffer((__gm__ T*)pdX + xInTensorSize);
- 
+
     // Init Pipe
     int64_t dyBufSize = td_->backwardMfactor * td_->backwardNfactorBlockAligned * sizeof(float);
     int64_t cacheBufSize = td_->backwardCacheBufferCountMain * td_->backwardMfactorBlockAligned * sizeof(float);
@@ -84,8 +85,9 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Process()
 
     PRELOAD(4);
     int64_t totalMRounds = Mloop + (Mtail > 0 ? 1 : 0);
-    int64_t nfactor = td_->backwardBasicBlockLoop ? td_->backwardNfactor
-        : (td_->col == td_->backwardNfactor ? td_->backwardNfactor : td_->backwardNLoopTail);
+    int64_t nfactor = td_->backwardBasicBlockLoop ?
+                          td_->backwardNfactor :
+                          (td_->col == td_->backwardNfactor ? td_->backwardNfactor : td_->backwardNLoopTail);
     int64_t xTotalLoop = td_->backwardNLoopMain + (td_->backwardNLoopTail > 0 ? 1 : 0);
     for (int64_t mi = 0; mi < totalMRounds; ++mi) {
         int64_t mfactor = (mi < Mloop) ? td_->backwardMfactor : Mtail;
@@ -93,8 +95,11 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Process()
         int64_t loopCnt = td_->backwardBasicBlockLoop > 0 ? td_->backwardBasicBlockLoop : 1;
         for (int64_t basicBlockIdx = 0; basicBlockIdx < loopCnt; ++basicBlockIdx) {
             ProcessMainBlock(mi, basicBlockIdx, mfactor, nfactor);
-            if (td_->backwardBasicBlockLoop && ((basicBlockIdx < td_->backwardMainFoldCount) || (basicBlockIdx == td_->backwardMainFoldCount && td_->backwardNLoopTail > 0))) {
-                int64_t foldNfactor = (basicBlockIdx < td_->backwardMainFoldCount) ? td_->backwardNfactor : td_->backwardNLoopTail;
+            if (td_->backwardBasicBlockLoop &&
+                ((basicBlockIdx < td_->backwardMainFoldCount) ||
+                 (basicBlockIdx == td_->backwardMainFoldCount && td_->backwardNLoopTail > 0))) {
+                int64_t foldNfactor = (basicBlockIdx < td_->backwardMainFoldCount) ? td_->backwardNfactor :
+                                                                                     td_->backwardNLoopTail;
                 ProcessFoldBlock(mi, basicBlockIdx, mfactor, foldNfactor);
             }
             PRELOAD(2);
@@ -127,14 +132,17 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Prologue(const int6
 }
 
 template <typename T, typename U>
-__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessMainBlock(
-    const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessMainBlock(const int64_t mi,
+                                                                              const int64_t basicBlockIdx,
+                                                                              const int64_t mfactor,
+                                                                              const int64_t nfactor)
 {
     // Process Main Block
     int64_t offset = mi * td_->backwardMfactor * td_->col + basicBlockIdx * td_->backwardNfactor;
     sum1Main_ = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
-        CopyIn(sum1Main_.ReinterpretCast<T>(), dyInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned, td_->col);
+        CopyIn(sum1Main_.ReinterpretCast<T>(), dyInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned,
+               td_->col);
         inQueueDy.EnQue(sum1Main_);
         sum1Main_ = inQueueDy.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
@@ -165,7 +173,8 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessMainBlock(
     offset = mi * td_->backwardMfactor * td_->col + basicBlockIdx * td_->backwardNfactor;
     sum2Main_ = inQueueX.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
-        CopyIn(sum2Main_.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned, td_->col);
+        CopyIn(sum2Main_.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned,
+               td_->col);
         inQueueX.EnQue(sum2Main_);
         sum2Main_ = inQueueX.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
@@ -182,14 +191,18 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessMainBlock(
 }
 
 template <typename T, typename U>
-__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessFoldBlock(
-    const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessFoldBlock(const int64_t mi,
+                                                                              const int64_t basicBlockIdx,
+                                                                              const int64_t mfactor,
+                                                                              const int64_t nfactor)
 {
     // Process Fold Block
-    int64_t offset = mi * td_->backwardMfactor * td_->col + (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
+    int64_t offset = mi * td_->backwardMfactor * td_->col +
+                     (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
     LocalTensor<float> dyFold_ = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
-        CopyIn(dyFold_.ReinterpretCast<T>(), dyInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned, td_->col);
+        CopyIn(dyFold_.ReinterpretCast<T>(), dyInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned,
+               td_->col);
         inQueueDy.EnQue(dyFold_);
         dyFold_ = inQueueDy.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
@@ -218,10 +231,12 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessFoldBlock(
     NlastBroadcastMul(dyFold_, dyFold_, gammaFold_, mfactor, td_->backwardNfactorBlockAligned);
     inQueueGamma.FreeTensor(gammaFold_);
 
-    offset = mi * td_->backwardMfactor * td_->col + (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
+    offset = mi * td_->backwardMfactor * td_->col +
+             (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
     LocalTensor<float> xFold_ = inQueueX.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
-        CopyIn(xFold_.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned, td_->col);
+        CopyIn(xFold_.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned,
+               td_->col);
         inQueueX.EnQue(xFold_);
         xFold_ = inQueueX.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
@@ -241,8 +256,10 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessFoldBlock(
 }
 
 template <typename T, typename U>
-__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessSummation(
-    const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessSummation(const int64_t mi,
+                                                                              const int64_t basicBlockIdx,
+                                                                              const int64_t mfactor,
+                                                                              const int64_t nfactor)
 {
     // Process Summation
     int64_t cacheID = GetCacheID(basicBlockIdx);
@@ -255,14 +272,15 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessSummation(
 }
 
 template <typename T, typename U>
-__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessX(
-    const int64_t mi, const int64_t ni, const int64_t mfactor, const int64_t nfactor)
+__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessX(const int64_t mi, const int64_t ni,
+                                                                      const int64_t mfactor, const int64_t nfactor)
 {
     // Process X
     int64_t offset = mi * td_->backwardMfactor * td_->col + ni * td_->backwardNfactor;
     LocalTensor<float> x_ = inQueueX.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
-        CopyIn(x_.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned, td_->col);
+        CopyIn(x_.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned,
+               td_->col);
         inQueueX.EnQue(x_);
         x_ = inQueueX.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
@@ -276,7 +294,8 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessX(
 
     LocalTensor<float> dy_ = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
-        CopyIn(dy_.ReinterpretCast<T>(), dyInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned, td_->col);
+        CopyIn(dy_.ReinterpretCast<T>(), dyInTensorGM[offset], mfactor, nfactor, td_->backwardNfactorBlockAligned,
+               td_->col);
         inQueueDy.EnQue(dy_);
         dy_ = inQueueDy.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
@@ -322,8 +341,8 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
     // Compute Dx
     constexpr static uint32_t VL = GetVRegSize() / sizeof(float);
     uint16_t outerLoopTimes = rowSize;
-    uint16_t innerLoopTimes =
-        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL;
     float floatN = static_cast<float>(td_->col);
@@ -353,8 +372,8 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
                 DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
                 DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
@@ -391,8 +410,8 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll2 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll2 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);

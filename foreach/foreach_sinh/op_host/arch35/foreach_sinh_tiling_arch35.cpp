@@ -52,7 +52,7 @@ static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
     uint64_t ubSize = 0;
     int64_t maxCoreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, maxCoreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfo = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfo);
@@ -61,8 +61,7 @@ static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
     int32_t tensorNum = static_cast<int32_t>(xInstanceInfo->GetInstanceNum());
 
     OP_CHECK_IF(tensorNum < 0 || tensorNum > MAX_TENSOR_COUNT,
-        OP_LOGE(context, "tensorNum %d must be in [0, 256]", tensorNum),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %d must be in [0, 256]", tensorNum), return ge::GRAPH_FAILED);
 
     ge::DataType xDtype = ge::DT_FLOAT;
     if (tensorNum > 0) {
@@ -80,8 +79,7 @@ static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
         maxTensorElements = std::max(maxTensorElements, elemCount);
     }
 
-    int64_t perCoreElements = std::max(MIN_PER_CORE_ELEMENTS,
-        (maxTensorElements + maxCoreNum - 1) / maxCoreNum);
+    int64_t perCoreElements = std::max(MIN_PER_CORE_ELEMENTS, (maxTensorElements + maxCoreNum - 1) / maxCoreNum);
     perCoreElements = (perCoreElements + ALIGN_SIZE - 1) / ALIGN_SIZE * ALIGN_SIZE;
     int32_t needCoreNum = static_cast<int32_t>(
         std::min(maxCoreNum, (maxTensorElements + perCoreElements - 1) / perCoreElements));
@@ -89,9 +87,8 @@ static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
 
     ForeachSinhTilingData* tiling = context->GetTilingData<ForeachSinhTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachSinhTilingData), 0,
-        sizeof(ForeachSinhTilingData)) != EOK,
-        OP_LOGE(context, "memset_s tiling data failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachSinhTilingData), 0, sizeof(ForeachSinhTilingData)) != EOK,
+                OP_LOGE(context, "memset_s tiling data failed"), return ge::GRAPH_FAILED);
 
     tiling->tensorNum = tensorNum;
     tiling->needCoreNum = needCoreNum;
@@ -122,13 +119,12 @@ static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
     context->SetBlockDim(needCoreNum);
     context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));
 
-    OP_LOGD(context->GetNodeName(), "ForeachSinhTilingFunc end. tensorNum=%d, needCoreNum=%d, tilingKey=%lu",
-        tensorNum, needCoreNum, tilingKey);
+    OP_LOGD(context->GetNodeName(), "ForeachSinhTilingFunc end. tensorNum=%d, needCoreNum=%d, tilingKey=%lu", tensorNum,
+            needCoreNum, tilingKey);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForForeachSinh(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachSinh([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

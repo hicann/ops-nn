@@ -18,12 +18,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
 
-enum ContiguousType
-{
-    CONTIGUOUS,
-    TRANSPOSE_LAST_TWO_DIMS,
-    NOT_CONTIGUOUS
-};
+enum ContiguousType { CONTIGUOUS, TRANSPOSE_LAST_TWO_DIMS, NOT_CONTIGUOUS };
 
 struct WeightQuantBatchMatmulV2TestParam {
     string caseName;
@@ -61,71 +56,43 @@ struct WeightQuantBatchMatmulV2TestParam {
     ContiguousType ctgsY = CONTIGUOUS;
 };
 
-class l2_weight_quant_batch_matmul_v2_test_910B2 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam>
-{
+class l2_weight_quant_batch_matmul_v2_test_910B2 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_910B2 SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_910B2 SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_910B2 TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_910B2 TearDown" << endl; }
 };
 
-class l2_weight_quant_batch_matmul_v2_test_310P : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam>
-{
+class l2_weight_quant_batch_matmul_v2_test_310P : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_310P SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_310P SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_310P TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_310P TearDown" << endl; }
 };
 
-class l2_weight_quant_batch_matmul_v2_test_910 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam>
-{
+class l2_weight_quant_batch_matmul_v2_test_910 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_910 SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_910 SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_910 TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_910 TearDown" << endl; }
 };
 
-class l2_weight_quant_batch_matmul_v2_test_950 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam>
-{
+class l2_weight_quant_batch_matmul_v2_test_950 : public testing::TestWithParam<WeightQuantBatchMatmulV2TestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_950 SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_950 SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_weight_quant_batch_matmul_v2_test_950 TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_950 TearDown" << endl; }
 };
 
 vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
     if (viewShape.size() < 2) { // 维度小于2维无法转Nz
-        throw invalid_argument(
-            "size of viewShape must >= 2 when create fractalNz shape, actual is " + viewShape.size());
+        throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
+                               viewShape.size());
     }
     if (dtype != ACL_INT8 && dtype != ACL_INT4 && dtype != ACL_INT32) {
-        throw invalid_argument(
-            "only support dtype int8/int4/int32 when create fractalNz shape, actual is " + static_cast<int32_t>(dtype));
+        throw invalid_argument("only support dtype int8/int4/int32 when create fractalNz shape, actual is " +
+                               static_cast<int32_t>(dtype));
     }
 
     // nd转Nz时会把viewShape最后2维拆成4维
@@ -156,9 +123,8 @@ vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
     return strides;
 }
 
-aclTensor* CreateAclTensor(
-    const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format, const vector<int64_t>& stride,
-    int64_t offset, const vector<int64_t>& originalShape)
+aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                           const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
 {
     vector<int64_t> storageShape;
     if (format == ACL_FORMAT_FRACTAL_NZ) {
@@ -167,9 +133,8 @@ aclTensor* CreateAclTensor(
         storageShape = originalShape;
     }
 
-    auto tensor = aclCreateTensor(
-        viewShape.data(), viewShape.size(), dtype, stride.data(), offset, format, storageShape.data(),
-        storageShape.size(), nullptr);
+    auto tensor = aclCreateTensor(viewShape.data(), viewShape.size(), dtype, stride.data(), offset, format,
+                                  storageShape.data(), storageShape.size(), nullptr);
     if (originalShape.size() == 3) { // 创建3维的tensor
         tensor->SetOriginalShape(op::Shape{originalShape[0], originalShape[1], originalShape[2]});
     } else if (originalShape.size() == 2) { // 创建2维的tensor
@@ -182,8 +147,8 @@ aclTensor* CreateAclTensor(
     return tensor;
 }
 
-static aclTensor* CreateTensorDesc(
-    const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format, const ContiguousType& ctgsType)
+static aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                                   const ContiguousType& ctgsType)
 {
     vector<int64_t> strides;
     vector<int64_t> originalShape;
@@ -212,8 +177,8 @@ static aclTensor* CreateTensorDesc(
         case NOT_CONTIGUOUS:
             sum = std::accumulate(viewShape.begin(), viewShape.end(), 0);
             if (sum <= 1) {
-                throw invalid_argument(
-                    "sum of viewShape must > 1 when ContiguousType is NOT_CONTIGUOUS, actual is " + viewShape.size());
+                throw invalid_argument("sum of viewShape must > 1 when ContiguousType is NOT_CONTIGUOUS, actual is " +
+                                       viewShape.size());
             }
             if (format == ACL_FORMAT_FRACTAL_NZ) {
                 throw invalid_argument("not support format is FRACTAL_NZ with NOT_CONTIGUOUS");
@@ -238,27 +203,27 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TestParam& param)
     std::cout << "run case start: " << param.caseName << std::endl;
     aclTensor* x = CreateTensorDesc(param.x, param.xType, param.xFormat, param.ctgsX);
     aclTensor* weight = CreateTensorDesc(param.weight, param.weightType, param.weightFormat, param.ctgsWeight);
-    aclTensor* antiquantScale =
-        CreateTensorDesc(param.antiquantScale, param.antiquantScaleType, param.xFormat, param.ctgsAntiquantScale);
+    aclTensor* antiquantScale = CreateTensorDesc(param.antiquantScale, param.antiquantScaleType, param.xFormat,
+                                                 param.ctgsAntiquantScale);
     aclTensor* antiquantOffsetOptional = nullptr;
     if (param.isAntiquantOffsetoptionalNotNull) {
-        antiquantOffsetOptional = CreateTensorDesc(
-            param.antiquantOffsetoptional, param.antiquantOffsetType, param.xFormat, param.ctgsAntiquantOffsetOptional);
+        antiquantOffsetOptional = CreateTensorDesc(param.antiquantOffsetoptional, param.antiquantOffsetType,
+                                                   param.xFormat, param.ctgsAntiquantOffsetOptional);
     }
     aclTensor* quantScaleOptional = nullptr;
     if (param.isQuantScaleOptionalNotNull) {
-        quantScaleOptional = CreateTensorDesc(
-            param.quantScaleOptional, param.quantScaleOptionalType, param.xFormat, param.ctgsQuantScaleOptional);
+        quantScaleOptional = CreateTensorDesc(param.quantScaleOptional, param.quantScaleOptionalType, param.xFormat,
+                                              param.ctgsQuantScaleOptional);
     }
     aclTensor* quantOffsetOptional = nullptr;
     if (param.isQuantOffsetOptionalNotNull) {
-        quantOffsetOptional = CreateTensorDesc(
-            param.quantOffsetOptional, param.quantOffsetOptionalType, param.xFormat, param.ctgsQuantOffsetOptional);
+        quantOffsetOptional = CreateTensorDesc(param.quantOffsetOptional, param.quantOffsetOptionalType, param.xFormat,
+                                               param.ctgsQuantOffsetOptional);
     }
     aclTensor* biasOptional = nullptr;
     if (param.isBiasOptionalNotNull) {
-        biasOptional =
-            CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.xFormat, param.ctgsBiasOptional);
+        biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.xFormat,
+                                        param.ctgsBiasOptional);
     }
     aclTensor* y = CreateTensorDesc(param.y, param.yType, param.xFormat, param.ctgsY);
 
@@ -2710,7 +2675,7 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS,
      CONTIGUOUS,
      CONTIGUOUS},
-     {"Ascend950_case_a16mxf4_nd_invalid_shape",
+    {"Ascend950_case_a16mxf4_nd_invalid_shape",
      {2, 64},
      {64, 129},
      {2, 129},
@@ -2740,21 +2705,17 @@ static WeightQuantBatchMatmulV2TestParam casesParamsAscend950[] = {
      CONTIGUOUS},
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    Ascend910B2_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910B2,
-    testing::ValuesIn(casesParamsAscend910B2));
-INSTANTIATE_TEST_SUITE_P(
-    Ascend310P_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_310P,
-    testing::ValuesIn(casesParamsAscend310P));
-INSTANTIATE_TEST_SUITE_P(
-    Ascend910_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910,
-    testing::ValuesIn(casesParamsAscend910));
-INSTANTIATE_TEST_SUITE_P(
-    Ascend950_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_950,
-    testing::ValuesIn(casesParamsAscend950));
+INSTANTIATE_TEST_SUITE_P(Ascend910B2_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910B2,
+                         testing::ValuesIn(casesParamsAscend910B2));
+INSTANTIATE_TEST_SUITE_P(Ascend310P_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_310P,
+                         testing::ValuesIn(casesParamsAscend310P));
+INSTANTIATE_TEST_SUITE_P(Ascend910_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_910,
+                         testing::ValuesIn(casesParamsAscend910));
+INSTANTIATE_TEST_SUITE_P(Ascend950_WeightQuantBatchMatmulV2, l2_weight_quant_batch_matmul_v2_test_950,
+                         testing::ValuesIn(casesParamsAscend950));
 
-static void ThreadFunc(
-    const WeightQuantBatchMatmulV2TestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
+static void ThreadFunc(const WeightQuantBatchMatmulV2TestParam* params, size_t testcase_num, size_t thread_idx,
+                       size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
@@ -2776,15 +2737,15 @@ static void TestMultiThread(const WeightQuantBatchMatmulV2TestParam* params, siz
 TEST_F(l2_weight_quant_batch_matmul_v2_test_910B2, ascend910B2_multi_thread)
 {
     // 用3个线程测试
-    TestMultiThread(
-        casesParamsAscend910B2, sizeof(casesParamsAscend910B2) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
+    TestMultiThread(casesParamsAscend910B2, sizeof(casesParamsAscend910B2) / sizeof(WeightQuantBatchMatmulV2TestParam),
+                    3);
 }
 
 TEST_F(l2_weight_quant_batch_matmul_v2_test_310P, ascend310P_multi_thread)
 {
     // 用3个线程测试
-    TestMultiThread(
-        casesParamsAscend310P, sizeof(casesParamsAscend310P) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
+    TestMultiThread(casesParamsAscend310P, sizeof(casesParamsAscend310P) / sizeof(WeightQuantBatchMatmulV2TestParam),
+                    3);
 }
 
 TEST_F(l2_weight_quant_batch_matmul_v2_test_910, ascend910_multi_thread)
@@ -2796,6 +2757,5 @@ TEST_F(l2_weight_quant_batch_matmul_v2_test_910, ascend910_multi_thread)
 TEST_F(l2_weight_quant_batch_matmul_v2_test_950, ascend950_multi_thread)
 {
     // 用3个线程测试
-    TestMultiThread(
-        casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
+    TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulV2TestParam), 3);
 }

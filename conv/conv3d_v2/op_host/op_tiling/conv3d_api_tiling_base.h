@@ -21,10 +21,10 @@
 
 namespace Conv3dApiTiling {
 
-constexpr uint32_t NUB_LOAD = 0; // LoadChannelType::NORMAL
-constexpr uint32_t SINGLECO_LOAD = 1; // LoadChannelType::LOAD_TOTAL_CORE
-constexpr uint32_t NL0_LOAD = 2; // LoadChannelType::LOAD_TOTAL_LC0
-constexpr uint32_t KL0_LIMIT = 4096;  // MMad limits
+constexpr uint32_t NUB_LOAD = 0;             // LoadChannelType::NORMAL
+constexpr uint32_t SINGLECO_LOAD = 1;        // LoadChannelType::LOAD_TOTAL_CORE
+constexpr uint32_t NL0_LOAD = 2;             // LoadChannelType::LOAD_TOTAL_LC0
+constexpr uint32_t KL0_LIMIT = 4096;         // MMad limits
 constexpr uint8_t PER_CHANNEL_NO_OFFSET = 6; // QuantType::PER_CHANNEL_NO_OFFSET
 
 constexpr int64_t INITIAL_SHAPE_MINUS_ONE = -1;
@@ -124,8 +124,8 @@ struct Conv3DCalcShape {
 };
 
 struct Conv3DDesc {
-    ConvType fMapType  = {ConvFormat::NDC1HWC0, ConvDtype::FLOAT16, TPosition::GM};
-    ConvType weightType  = {ConvFormat::FRACTAL_Z_3D, ConvDtype::FLOAT16, TPosition::GM};
+    ConvType fMapType = {ConvFormat::NDC1HWC0, ConvDtype::FLOAT16, TPosition::GM};
+    ConvType weightType = {ConvFormat::FRACTAL_Z_3D, ConvDtype::FLOAT16, TPosition::GM};
     ConvType biasType = {ConvFormat::ND, ConvDtype::FLOAT16, TPosition::GM};
     ConvType outputType = {ConvFormat::NDC1HWC0, ConvDtype::FLOAT16, TPosition::CO1};
     ConvType quantScaleType = {ConvFormat::ND, ConvDtype::INT64, TPosition::GM};
@@ -173,7 +173,7 @@ public:
     void SetDilation(int64_t dilationH, int64_t dilationW, int64_t dilationD);
     void SetStride(int64_t strideH, int64_t strideW, int64_t strideD);
     void SetHF32(bool hf32Enable, bool hf32TransMode);
-    bool CalOptGroupParams(const Conv3DOriGroupInfo &oriGroupInfo, Conv3DGroupOptInfo &groupOptInfo) const;
+    bool CalOptGroupParams(const Conv3DOriGroupInfo& oriGroupInfo, Conv3DGroupOptInfo& groupOptInfo) const;
     void SetGroups(int64_t groups);
     void SetOptGroupInfo(int64_t groupOpt, int64_t singleCoreGroupOpt, int64_t cinOpt, int64_t coutOpt);
 

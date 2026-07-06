@@ -27,19 +27,12 @@ using namespace std;
 
 class mse_loss_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "mse_loss_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "mse_loss_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "mse_loss_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "mse_loss_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(mse_loss_grad_test, test_case_0)
 {
-
     size_t inputPredictByteSize = 128 * sizeof(float);
     size_t inputLabelByteSize = 128 * sizeof(float);
     size_t inputDoutByteSize = 128 * sizeof(float);
@@ -70,9 +63,8 @@ TEST_F(mse_loss_grad_test, test_case_0)
     tilingDatafromBin->cof = 2.0;
     tilingDatafromBin->usedDb = 0;
 
-    auto KernelMseLossGrad = [](GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::mse_loss_grad<0>(predict, label, dout, y, workspace, tiling);
-    };    
+    auto KernelMseLossGrad = [](GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, GM_ADDR workspace,
+                                GM_ADDR tiling) { ::mse_loss_grad<0>(predict, label, dout, y, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

@@ -23,22 +23,18 @@ namespace MaxPool3DGradCommon {
 using namespace AscendC;
 
 // Scatter的统一实现类
-template <typename TX, typename TGrad, typename TArgmax, typename TY,
-          typename TilingData, typename ParamsType, typename BlockType,
-          template<typename, typename, typename, typename,
-                   typename, typename, typename> class BaseClass>
-class MaxPool3DGradScatterUnified :
-    public BaseClass<TX, TGrad, TArgmax, TY, TilingData, ParamsType, BlockType>
-{
+template <typename TX, typename TGrad, typename TArgmax, typename TY, typename TilingData, typename ParamsType,
+          typename BlockType,
+          template <typename, typename, typename, typename, typename, typename, typename> class BaseClass>
+class MaxPool3DGradScatterUnified : public BaseClass<TX, TGrad, TArgmax, TY, TilingData, ParamsType, BlockType> {
 private:
     using Base = BaseClass<TX, TGrad, TArgmax, TY, TilingData, ParamsType, BlockType>;
 
 public:
     __aicore__ inline MaxPool3DGradScatterUnified(TPipe* pipe) : Base(pipe) {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
-        const TilingData* __restrict__ tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
+                                const TilingData* __restrict__ tiling)
     {
         // load tiling data
         this->InitParams(tiling);
@@ -51,8 +47,7 @@ public:
         this->pipe_->InitBuffer(this->yQue, 1, BLOCK_SIZE);
     }
 
-    __aicore__ inline void InitYGMGlobalMemory(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax,
-                                               GM_ADDR y, GM_ADDR usrWorkspace)
+    __aicore__ inline void InitYGMGlobalMemory(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace)
     {
         InitGlobalMemory(this->yGm, this->params_.initLen, static_cast<TY>(0));
         event_t eventMTE3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
@@ -110,10 +105,7 @@ public:
         PipeBarrier<PIPE_ALL>();
     }
 
-    __aicore__ inline void Process()
-    {
-        ProcessCommon<ParamsType, BlockType>(this, this->params_.ncIndex);
-    }
+    __aicore__ inline void Process() { ProcessCommon<ParamsType, BlockType>(this, this->params_.ncIndex); }
 };
 
 } // namespace MaxPool3DGradCommon

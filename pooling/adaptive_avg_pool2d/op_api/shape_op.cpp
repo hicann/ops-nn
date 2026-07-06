@@ -16,16 +16,17 @@
 
 namespace l0op {
 OP_TYPE_REGISTER(Shape_op);
-const aclTensor *Shape_op(const aclTensor *x, aclOpExecutor *executor) {
-  L0_DFX(Shape_op, x);
-  auto input_shape = x->GetViewShape();
-  size_t dim_num = input_shape.GetDimNum();
-  int64_t sizes[dim_num];
-  for (size_t i = 0; i < dim_num; ++i) {
-    sizes[i] = input_shape.GetDim(i);
-  }
-  aclIntArray *shapes = executor->AllocIntArray(sizes, dim_num);
-  auto res = executor->ConvertToTensor(shapes, op::DataType::DT_INT64);
-  return res;
+const aclTensor* Shape_op(const aclTensor* x, aclOpExecutor* executor)
+{
+    L0_DFX(Shape_op, x);
+    auto input_shape = x->GetViewShape();
+    size_t dim_num = input_shape.GetDimNum();
+    int64_t sizes[dim_num];
+    for (size_t i = 0; i < dim_num; ++i) {
+        sizes[i] = input_shape.GetDim(i);
+    }
+    aclIntArray* shapes = executor->AllocIntArray(sizes, dim_num);
+    auto res = executor->ConvertToTensor(shapes, op::DataType::DT_INT64);
+    return res;
 }
-}  // namespace l0op
+} // namespace l0op

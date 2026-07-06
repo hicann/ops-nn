@@ -26,17 +26,16 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(BucketizeV2);
 // AICORE算子kernel
-const aclTensor *BucketizeV2(const aclTensor *self, const aclTensor *boundaries, const bool outInt32, 
-                            const bool right, aclOpExecutor *executor) {
-  L0_DFX(BucketizeV2, self, boundaries, outInt32, right);
-  op::DataType outDtype = outInt32 ? op::DataType::DT_INT32 : op::DataType::DT_INT64; 
-  auto bucketizeOut = executor->AllocTensor(self->GetViewShape(), outDtype);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BucketizeV2,
-                                         OP_INPUT(self, boundaries),
-                                         OP_OUTPUT(bucketizeOut),
-                                         OP_ATTR(outInt32),
-                                         OP_ATTR(right));
-  OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BucketizeV2 ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
-  return bucketizeOut;
+const aclTensor* BucketizeV2(const aclTensor* self, const aclTensor* boundaries, const bool outInt32, const bool right,
+                             aclOpExecutor* executor)
+{
+    L0_DFX(BucketizeV2, self, boundaries, outInt32, right);
+    op::DataType outDtype = outInt32 ? op::DataType::DT_INT32 : op::DataType::DT_INT64;
+    auto bucketizeOut = executor->AllocTensor(self->GetViewShape(), outDtype);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(BucketizeV2, OP_INPUT(self, boundaries), OP_OUTPUT(bucketizeOut),
+                                           OP_ATTR(outInt32), OP_ATTR(right));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BucketizeV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return bucketizeOut;
 }
-}  // namespace l0op
+} // namespace l0op

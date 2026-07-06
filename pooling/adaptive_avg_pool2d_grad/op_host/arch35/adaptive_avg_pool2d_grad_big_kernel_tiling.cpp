@@ -34,32 +34,33 @@ void AdaptiveAvgPool2dGradTilingBigKernel::InitializationVars()
     baseData_.vRegSize = Ops::Base::GetVRegSize(context_);
 
     baseData_.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
-    baseData_.inputBytes = inputData_.inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE; 
+    baseData_.inputBytes = inputData_.inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE;
 
-    baseData_.availableUb = ubSize_ - UB_RESVERVED_SIZE - UB_TEMP_BUFF_SIZE; 
-    baseData_.totalCoreNum = coreNum_; 
-    baseData_.coreUsedForBestPerformance = baseData_.totalCoreNum; 
+    baseData_.availableUb = ubSize_ - UB_RESVERVED_SIZE - UB_TEMP_BUFF_SIZE;
+    baseData_.totalCoreNum = coreNum_;
+    baseData_.coreUsedForBestPerformance = baseData_.totalCoreNum;
 
     int64_t oneBlockNum = baseData_.ubBlockSize / baseData_.inputBytes;
 
-    baseData_.maxDataNumInOneBlock = oneBlockNum; 
+    baseData_.maxDataNumInOneBlock = oneBlockNum;
 
-    baseData_.proDataNumInOneBeatT2 = baseData_.vRegSize / baseData_.ubBlockSize * oneBlockNum;  
+    baseData_.proDataNumInOneBeatT2 = baseData_.vRegSize / baseData_.ubBlockSize * oneBlockNum;
     baseData_.inputNCSize = gradOutputN_ * gradOutputC_;
 }
 
 void AdaptiveAvgPool2dGradTilingBigKernel::DoBufferCalculate()
 {
     int64_t hInputInner = Ops::Base::CeilDiv(splitData_.hOutputInner * gradInputH_, gradOutputH_) + 1;
-    int64_t wInputInner = Ops::Base::CeilDiv(splitData_.wOutputInner * gradInputW_, gradOutputW_) + 1; 
+    int64_t wInputInner = Ops::Base::CeilDiv(splitData_.wOutputInner * gradInputW_, gradOutputW_) + 1;
 
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData_.wOutputInner, baseData_.maxDataNumInOneBlock);
 
-    int64_t inputPlaneSizeDHW =  hInputInner * wInputInner;
+    int64_t inputPlaneSizeDHW = hInputInner * wInputInner;
     int64_t outputPlaneSizeDHW = splitData_.hOutputInner * wOutputInnerAligned;
 
-    splitData_.gradInputBufferSize = Ops::Base::CeilAlign(splitData_.highAxisInner * inputPlaneSizeDHW * baseData_.inputBytes, baseData_.ubBlockSize);
-    splitData_.outputBufferSize = splitData_.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE; 
+    splitData_.gradInputBufferSize = Ops::Base::CeilAlign(
+        splitData_.highAxisInner * inputPlaneSizeDHW * baseData_.inputBytes, baseData_.ubBlockSize);
+    splitData_.outputBufferSize = splitData_.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE;
 
     int64_t tmpTotalBufferSize = splitData_.gradInputBufferSize + splitData_.outputBufferSize;
     splitData_.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
@@ -70,7 +71,8 @@ bool AdaptiveAvgPool2dGradTilingBigKernel::IsCapable()
     InitializationVars();
     kernelH_ = Ops::Base::CeilDiv(gradOutputH_, gradInputH_);
     kernelW_ = Ops::Base::CeilDiv(gradOutputW_, gradInputW_);
-    if ((kernelH_ * kernelW_ < ADAPTIVE_BIG_KERNEL_SIZE) || (kernelW_ <= (baseData_.vRegSize / baseData_.inputBytes / THRESHOLD))) {
+    if ((kernelH_ * kernelW_ < ADAPTIVE_BIG_KERNEL_SIZE) ||
+        (kernelW_ <= (baseData_.vRegSize / baseData_.inputBytes / THRESHOLD))) {
         return false;
     }
 
@@ -83,11 +85,11 @@ bool AdaptiveAvgPool2dGradTilingBigKernel::IsCapable()
 
 bool AdaptiveAvgPool2dGradTilingBigKernel::IsMeetTargetCoreNum()
 {
-    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner); 
+    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner);
     int64_t tmpHOutputOuter = Ops::Base::CeilDiv(gradOutputH_, splitData_.hOutputInner);
     int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData_.inputNCSize, splitData_.highAxisInner);
 
-    return  tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData_.coreUsedForBestPerformance;
+    return tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData_.coreUsedForBestPerformance;
 }
 
 bool AdaptiveAvgPool2dGradTilingBigKernel::IsMeetUBSize()
@@ -150,7 +152,7 @@ void AdaptiveAvgPool2dGradTilingBigKernel::SplitAlignDHW()
     splitData_.hOutputInner = gradOutputH_;
     splitData_.wOutputInner = gradOutputW_;
 
-    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner); 
+    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner);
     splitData_.hOutputOuter = Ops::Base::CeilDiv(gradOutputH_, splitData_.hOutputInner);
 
     while (splitData_.hOutputInner > kernelH_ || splitData_.wOutputInner > baseData_.proDataNumInOneBeatT2) {
@@ -183,7 +185,7 @@ void AdaptiveAvgPool2dGradTilingBigKernel::SplitUnalignDHW()
     splitData_.hOutputInner = gradOutputH_;
     splitData_.wOutputInner = gradOutputW_;
 
-    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner); 
+    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner);
     splitData_.hOutputOuter = Ops::Base::CeilDiv(gradOutputH_, splitData_.hOutputInner);
 
     while (splitData_.hOutputInner != 1 || splitData_.wOutputInner > baseData_.proDataNumInOneBeatT2) {
@@ -211,9 +213,9 @@ void AdaptiveAvgPool2dGradTilingBigKernel::DoUBTiling()
     SearchBestTiling();
     DoBufferCalculate();
 
-    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner); 
-    int64_t tempWOutputTail = gradOutputW_ % splitData_.wOutputInner; 
-    splitData_.wOutputTail = tempWOutputTail == 0 ? splitData_.wOutputInner : tempWOutputTail; 
+    splitData_.wOutputOuter = Ops::Base::CeilDiv(gradOutputW_, splitData_.wOutputInner);
+    int64_t tempWOutputTail = gradOutputW_ % splitData_.wOutputInner;
+    splitData_.wOutputTail = tempWOutputTail == 0 ? splitData_.wOutputInner : tempWOutputTail;
 
     splitData_.hOutputOuter = Ops::Base::CeilDiv(gradOutputH_, splitData_.hOutputInner);
     int64_t tempHOutputTail = gradOutputH_ % splitData_.hOutputInner;
@@ -226,17 +228,17 @@ void AdaptiveAvgPool2dGradTilingBigKernel::DoUBTiling()
 
 void AdaptiveAvgPool2dGradTilingBigKernel::DoBlockTiling()
 {
-    splitData_.totalBaseBlockNum = splitData_.highAxisOuter * splitData_.hOutputOuter * splitData_.wOutputOuter; 
-    splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum); 
-    splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum); 
-    splitData_.tailCoreProcessNum =
-        splitData_.totalBaseBlockNum - splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1); 
+    splitData_.totalBaseBlockNum = splitData_.highAxisOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
+    splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
+    splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
+    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
+                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
 }
 
 ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::SetTilingData()
 {
-    AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dGradBigKernelTiling* tilingData =
-        context_->GetTilingData<AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dGradBigKernelTiling>();
+    AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dGradBigKernelTiling*
+        tilingData = context_->GetTilingData<AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dGradBigKernelTiling>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
 
     tilingData->hInput = gradInputH_;
@@ -294,10 +296,7 @@ ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool2dGradTilingBigKernel::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2dGrad, AdaptiveAvgPool2dGradTilingBigKernel, 10);
 } // namespace optiling

@@ -23,8 +23,8 @@ template <typename T, typename DTYPE>
 class EmbeddingBagFP16 {
 public:
     __aicore__ inline EmbeddingBagFP16() = delete;
-    __aicore__ inline EmbeddingBagFP16(
-        GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling, TPipe& pipe)
+    __aicore__ inline EmbeddingBagFP16(GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling,
+                                       TPipe& pipe)
     {
         InitParams(inputTensors, tiling, pipe);
         auto tilingkey = tiling.tilingKey;
@@ -89,8 +89,8 @@ private:
         WaitFlag<HardEvent::MTE3_S>(eventId);
     };
 
-    __aicore__ inline void InitParams(
-        GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling, TPipe& pipe)
+    __aicore__ inline void InitParams(GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling,
+                                      TPipe& pipe)
     {
         pipe_ = &pipe;
         formerOffsetNum_ = tiling.formerOffsetNum;
@@ -238,8 +238,8 @@ private:
     }
 
     template <typename C>
-    __aicore__ inline void GMToUB(
-        GlobalTensor<C>& gm, LocalTensor<C>& tensor, int64_t copyOffset, int32_t moveLength, int32_t realLength)
+    __aicore__ inline void GMToUB(GlobalTensor<C>& gm, LocalTensor<C>& tensor, int64_t copyOffset, int32_t moveLength,
+                                  int32_t realLength)
     {
         auto tensorOffset = 0;
         if (sizeof(C) == 2) {
@@ -256,9 +256,8 @@ private:
     }
 
     template <typename C>
-    __aicore__ inline void UBToGM(
-        GlobalTensor<C>& gm, GlobalTensor<float>& gmFloat, LocalTensor<C>& tensor, int64_t copyOffset,
-        int32_t realLength)
+    __aicore__ inline void UBToGM(GlobalTensor<C>& gm, GlobalTensor<float>& gmFloat, LocalTensor<C>& tensor,
+                                  int64_t copyOffset, int32_t realLength)
     {
 #if __CCE_AICORE__ < 220
         auto numPerBlock = BLOCK_BYTES / sizeof(C);
@@ -311,9 +310,8 @@ private:
         if (mode_ == MODE_SUM && hasPerSampleWeights_) {
             GMToUB(perSampleWeightsGm_, perSamplerWeightTDataLocal, startNumber, indicesMaxMoveLength_, length);
             SyncM2toV();
-            Cast(
-                perSamplerWeightDataLocal, perSamplerWeightTDataLocal[indicesMaxMoveLength_], RoundMode::CAST_NONE,
-                length);
+            Cast(perSamplerWeightDataLocal, perSamplerWeightTDataLocal[indicesMaxMoveLength_], RoundMode::CAST_NONE,
+                 length);
         }
         if (weightOffset_ == 0) {
             Duplicate<DTYPE>(offset2bagDataLocal, static_cast<DTYPE>(offset_ + offsetIdx), length);

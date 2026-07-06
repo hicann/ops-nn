@@ -54,28 +54,16 @@ int64_t GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype)
     return tensorKey * LN_TENSOR_KEY_WEIGHT + paramKey;
 }
 
-bool LayerNormV4TilingBase::IsCapable()
-{
-    return true;
-}
+bool LayerNormV4TilingBase::IsCapable() { return true; }
 
-ge::graphStatus LayerNormV4TilingBase::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV4TilingBase::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LayerNormV4TilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV4TilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t LayerNormV4TilingBase::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t LayerNormV4TilingBase::GetTilingKey() const { return 0; }
 
-ge::graphStatus GetCommonPlatformInfo(
-    gert::TilingContext* context, const LayerNormV4CompileInfo* compileInfo, ParamsLayerNomrV4& commonParams)
+ge::graphStatus GetCommonPlatformInfo(gert::TilingContext* context, const LayerNormV4CompileInfo* compileInfo,
+                                      ParamsLayerNomrV4& commonParams)
 {
     OP_CHECK_IF(compileInfo == nullptr, OP_LOGE(context, "compile info is null"), return ge::GRAPH_FAILED);
     commonParams.coreNum = compileInfo->coreNum;
@@ -93,8 +81,8 @@ ge::graphStatus LayerNormV4TilingBase::GetPlatformInfo()
     return GetCommonPlatformInfo(context_, compileInfo, commonParams);
 }
 
-ge::graphStatus GetCommonShapeAttrsInfo(
-    gert::TilingContext* context, uint64_t colSize, uint64_t rowSize, ParamsLayerNomrV4& commonParams)
+ge::graphStatus GetCommonShapeAttrsInfo(gert::TilingContext* context, uint64_t colSize, uint64_t rowSize,
+                                        ParamsLayerNomrV4& commonParams)
 {
     OP_CHECK_IF(
         commonParams.colSize <= 0,
@@ -112,8 +100,8 @@ ge::graphStatus GetCommonShapeAttrsInfo(
     if (DTYPE_SIZE_MAP.find(commonParams.tensorDtype) != DTYPE_SIZE_MAP.end()) {
         alignment = BLOCK_SIZE / DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x",
-            ToString(commonParams.tensorDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ToString(commonParams.tensorDtype).c_str(),
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     commonParams.rowAlign = (commonParams.rowSize + alignment - 1) / alignment * alignment;
@@ -145,30 +133,29 @@ ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
         OP_LOGE(context_->GetNodeName(), "eps is nullptr");
         return ge::GRAPH_FAILED;
     }
-    
+
     uint64_t normalizedShapeLen;
     const gert::Shape xShape = context_->GetInputShape(K_INPUT_IDX_X)->GetStorageShape();
     const gert::Shape normalizedShape = context_->GetInputShape(K_INPUT_IDX_NORM_SHAPE)->GetStorageShape();
-    OP_CHECK_IF(
-        normalizedShape.GetDimNum() > 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "normalized_shape",
-            std::to_string(normalizedShape.GetDimNum()).c_str(), "0D or 1D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(normalizedShape.GetDimNum() > 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "normalized_shape",
+                                             std::to_string(normalizedShape.GetDimNum()).c_str(), "0D or 1D"),
+                return ge::GRAPH_FAILED);
     normalizedShapeLen = normalizedShape.IsScalar() ? 1 : normalizedShape.GetDim(0);
     if (static_cast<uint64_t>(xShape.GetDimNum()) < normalizedShapeLen) {
-        std::string reasonMsg =
-            "The shape dim of input x must be greater than or equal to " +
-            std::to_string(normalizedShapeLen) + " (the number of elements of input normalized_shape), "
-            "which indicates the number of trailing axes input x that require normalization";
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "x", std::to_string(xShape.GetDimNum()).c_str(), reasonMsg.c_str());
+        std::string reasonMsg = "The shape dim of input x must be greater than or equal to " +
+                                std::to_string(normalizedShapeLen) +
+                                " (the number of elements of input normalized_shape), "
+                                "which indicates the number of trailing axes input x that require normalization";
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                                                 std::to_string(xShape.GetDimNum()).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        static_cast<int64_t>(normalizedShapeLen) < 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "normalized_shape",
-            ToString(normalizedShape).c_str(), "The 0th dimension of input normalized_shape must be greater than 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(static_cast<int64_t>(normalizedShapeLen) < 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "normalized_shape", ToString(normalizedShape).c_str(),
+                    "The 0th dimension of input normalized_shape must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
     // fuse axis
     uint64_t colSize = 1;
@@ -191,9 +178,6 @@ ge::graphStatus LayerNormV4TilingBase::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LayerNormV4TilingBase::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV4TilingBase::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 } // namespace optiling

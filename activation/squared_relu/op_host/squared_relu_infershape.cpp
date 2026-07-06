@@ -12,46 +12,48 @@
  * \file squared_relu.cc
  * \brief
  */
- #include "register/op_impl_registry.h"
- #include "log/log.h"
+#include "register/op_impl_registry.h"
+#include "log/log.h"
 
- using namespace ge;
+using namespace ge;
 
- namespace ops {
+namespace ops {
 
- static constexpr int64_t IDX_0 = 0;
+static constexpr int64_t IDX_0 = 0;
 
- static ge::graphStatus InferShape4SquaredRelu(gert::InferShapeContext* context) {
-   OP_LOGD(context->GetNodeName(), "Begin to do InferShape4SquaredRelu");
+static ge::graphStatus InferShape4SquaredRelu(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferShape4SquaredRelu");
 
-   // get input shapes
-   auto xShape = context->GetInputShape(IDX_0);
-   OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    // get input shapes
+    auto xShape = context->GetInputShape(IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
 
-   // get output shapes
-   auto yShape = context->GetOutputShape(IDX_0);
-   OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+    // get output shapes
+    auto yShape = context->GetOutputShape(IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-   size_t xDimNum = xShape->GetDimNum();
-   yShape->SetDimNum(xDimNum);
+    size_t xDimNum = xShape->GetDimNum();
+    yShape->SetDimNum(xDimNum);
 
-   *yShape = *xShape;
+    *yShape = *xShape;
 
-   OP_LOGD(context->GetNodeName(), "End to do InferShape4SquaredRelu");
-   return GRAPH_SUCCESS;
- }
+    OP_LOGD(context->GetNodeName(), "End to do InferShape4SquaredRelu");
+    return GRAPH_SUCCESS;
+}
 
- static graphStatus InferDataType4SquaredRelu(gert::InferDataTypeContext* context) {
-   OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4SquaredRelu");
+static graphStatus InferDataType4SquaredRelu(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4SquaredRelu");
 
-   auto input_dtype = context->GetInputDataType(IDX_0);
+    auto input_dtype = context->GetInputDataType(IDX_0);
 
-   context->SetOutputDataType(IDX_0, input_dtype);
+    context->SetOutputDataType(IDX_0, input_dtype);
 
-   OP_LOGD(context->GetNodeName(), "End to do InferDataType4SquaredRelu");
+    OP_LOGD(context->GetNodeName(), "End to do InferDataType4SquaredRelu");
 
-   return GRAPH_SUCCESS;
- }
+    return GRAPH_SUCCESS;
+}
 
- IMPL_OP_INFERSHAPE(SquaredRelu).InferShape(InferShape4SquaredRelu).InferDataType(InferDataType4SquaredRelu);
- }  // namespace ops
+IMPL_OP_INFERSHAPE(SquaredRelu).InferShape(InferShape4SquaredRelu).InferDataType(InferDataType4SquaredRelu);
+} // namespace ops

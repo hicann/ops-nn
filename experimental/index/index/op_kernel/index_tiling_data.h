@@ -53,8 +53,8 @@ struct IndexTilingData {
     INDEX_AICORE_INLINE const uint64_t* get_indexStride() const { return indexStride; }
     INDEX_AICORE_INLINE const uint64_t* get_indexInputStrides() const { return indexInputStrides; }
 };
-}  // namespace optiling
+} // namespace optiling
 
 #undef INDEX_AICORE_INLINE
 
-#endif  // OPS_NN_EXPERIMENTAL_INDEX_TILING_DATA_H_
+#endif // OPS_NN_EXPERIMENTAL_INDEX_TILING_DATA_H_

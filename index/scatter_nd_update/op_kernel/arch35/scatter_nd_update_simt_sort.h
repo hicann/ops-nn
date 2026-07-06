@@ -35,9 +35,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SortSim
         int32_t indiceIndex = uniqueIdCountLocalAddr[rowIndex];
 
         OFFSET_T varIndex = shiftSortLocalAddr[indiceIndex];
-        
-        if (varIndex >= 0 && varIndex < varSize)
-        {
+
+        if (varIndex >= 0 && varIndex < varSize) {
             OFFSET_T updateIndex = updatesOriginIdexLocalAddr[indiceIndex];
 
             int64_t varOffset = varIndex + sliceIndex;
@@ -49,18 +48,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SortSim
 
 template <typename OFFSET_T, typename PARAMS_T, typename TYPE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void NoSortSimtCompute(
-    __gm__ PARAMS_T* updateAddr, __gm__ PARAMS_T* varAddr, const __ubuf__ OFFSET_T* varIndexLocalAddr,
-    TYPE_T sliceSize, uint32_t currUbTilingSize, TYPE_T indiceBlockOffSet, int64_t varSize, TYPE_T magic,
-    TYPE_T shift)
+    __gm__ PARAMS_T* updateAddr, __gm__ PARAMS_T* varAddr, const __ubuf__ OFFSET_T* varIndexLocalAddr, TYPE_T sliceSize,
+    uint32_t currUbTilingSize, TYPE_T indiceBlockOffSet, int64_t varSize, TYPE_T magic, TYPE_T shift)
 {
     for (TYPE_T index = threadIdx.x; index < currUbTilingSize * sliceSize; index += blockDim.x) {
         TYPE_T rowIndex = Simt::UintDiv(index, magic, shift);
         TYPE_T sliceIndex = index - rowIndex * sliceSize;
 
         OFFSET_T varIndex = varIndexLocalAddr[rowIndex];
-        
-        if (varIndex >= 0 && varIndex < varSize)
-        {
+
+        if (varIndex >= 0 && varIndex < varSize) {
             int64_t varOffset = varIndex + sliceIndex;
             int64_t updateOffset = (indiceBlockOffSet + rowIndex) * sliceSize + sliceIndex;
             varAddr[varOffset] = updateAddr[updateOffset];
@@ -69,8 +66,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void NoSortS
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T = INDICES_T>
-class ScatterNdUpdateSimtSort : public ScatterNdUpdateBase<PARAMS_T, INDICES_T, OFFSET_T>
-{
+class ScatterNdUpdateSimtSort : public ScatterNdUpdateBase<PARAMS_T, INDICES_T, OFFSET_T> {
 public:
     __aicore__ inline ScatterNdUpdateSimtSort(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe)
         : pipe_(pipe), tiling_(tilingData){};
@@ -80,8 +76,8 @@ public:
 private:
     __aicore__ inline void ParseTilingData();
     __aicore__ inline void InitStride();
-    __aicore__ inline void SimdFree(
-        LocalTensor<uint32_t>& updatesOriginIndexLocal, LocalTensor<int32_t>& uniqueIdCountLocal);
+    __aicore__ inline void SimdFree(LocalTensor<uint32_t>& updatesOriginIndexLocal,
+                                    LocalTensor<int32_t>& uniqueIdCountLocal);
     __aicore__ inline void Compute();
     __aicore__ inline void ComputeSortDimensionOne(LocalTensor<INDICES_T> indiceLocal);
     __aicore__ inline void ComputeSortDimensionOther(LocalTensor<INDICES_T> indiceLocal);
@@ -108,8 +104,9 @@ private:
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(GM_ADDR x, GM_ADDR indices,
+                                                                                            GM_ADDR updates, GM_ADDR y,
+                                                                                            GM_ADDR workspace)
 {
     if (tiling_.sliceSize == 0) {
         return;
@@ -137,7 +134,7 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFS
     pipe_.InitBuffer(indicesQueue_, 1, ROUND_UP32(ubTilingSize * tiling_.rankSize * sizeof(INDICES_T)));
     // 计算完偏移存储indice
     pipe_.InitBuffer(this->outOfstBuf_, ROUND_UP32(ubTilingSize * sizeof(OFFSET_T)));
-    pipe_.InitBuffer(this->sortIndicesQue_, ROUND_UP32(ubTilingSize  * sizeof(OFFSET_T)) + UB_AGLIN_VALUE * 2);
+    pipe_.InitBuffer(this->sortIndicesQue_, ROUND_UP32(ubTilingSize * sizeof(OFFSET_T)) + UB_AGLIN_VALUE * 2);
     pipe_.InitBuffer(this->updatesOriginIdexQue_, 1, ROUND_UP32(ubTilingSize * sizeof(uint32_t)));
     pipe_.InitBuffer(this->uniqueIdCountQue_, 1, ROUND_UP32((ubTilingSize + 1) * sizeof(int32_t)));
 
@@ -233,8 +230,8 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFS
     GetUintDivMagicAndShift(magic, shift, sliceSize);
     asc_vf_call<NoSortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
         dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
-        (__ubuf__ OFFSET_T*)varIndexLocal.GetPhyAddr(), sliceSize, currUbTilingSize, indiceBlockOffSets,
-        varSize, magic, shift);
+        (__ubuf__ OFFSET_T*)varIndexLocal.GetPhyAddr(), sliceSize, currUbTilingSize, indiceBlockOffSets, varSize, magic,
+        shift);
     this->indiceBlockOffSet = this->indiceBlockOffSet + currUbTilingSize;
 }
 
@@ -242,8 +239,8 @@ template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSE
 __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeSortDimensionOther(
     LocalTensor<INDICES_T> indiceLocal)
 {
-    this->template CopyIn<INDICES_T>(
-        indiceLocal, idxGm[this->indiceBlockOffSet * tiling_.rankSize], currUbTilingSize * tiling_.rankSize);
+    this->template CopyIn<INDICES_T>(indiceLocal, idxGm[this->indiceBlockOffSet * tiling_.rankSize],
+                                     currUbTilingSize * tiling_.rankSize);
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -260,8 +257,8 @@ template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSE
 __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeSortDimensionOne(
     LocalTensor<INDICES_T> indiceLocal)
 {
-    this->template CopyIn<INDICES_T>(
-        indiceLocal, idxGm[this->indiceBlockOffSet * tiling_.rankSize], currUbTilingSize * tiling_.rankSize);
+    this->template CopyIn<INDICES_T>(indiceLocal, idxGm[this->indiceBlockOffSet * tiling_.rankSize],
+                                     currUbTilingSize * tiling_.rankSize);
 
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);

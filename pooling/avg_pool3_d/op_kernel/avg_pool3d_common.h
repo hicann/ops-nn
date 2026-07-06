@@ -30,21 +30,13 @@ constexpr uint64_t UNIT_BLOCK_LEN = BLOCK_SIZE / sizeof(float);
 constexpr float ZERO = 0.0f;
 constexpr uint32_t DEFAULT_CLEAR_UB_SIZE = 1024;
 
-__aicore__ inline int64_t Max(int64_t a, int64_t b) {
-    return a > b ? a : b;
-}
+__aicore__ inline int64_t Max(int64_t a, int64_t b) { return a > b ? a : b; }
 
-__aicore__ inline int64_t Min(int64_t a, int64_t b) {
-    return a < b ? a : b;
-}
+__aicore__ inline int64_t Min(int64_t a, int64_t b) { return a < b ? a : b; }
 
-__aicore__ inline int64_t CeilDiv(uint64_t a, uint64_t b) {
-    return b == 0 ? a : (a + b -1) / b;
-}
+__aicore__ inline int64_t CeilDiv(uint64_t a, uint64_t b) { return b == 0 ? a : (a + b - 1) / b; }
 
-__aicore__ inline int64_t CeilValue(int64_t a, int64_t b) {
-    return b == 0 ? a : (a + b - 1) / b * b;
-}
+__aicore__ inline int64_t CeilValue(int64_t a, int64_t b) { return b == 0 ? a : (a + b - 1) / b * b; }
 
 struct PoolShape {
     int64_t N, C, D, H, W;
@@ -53,8 +45,17 @@ struct PoolShape {
     __aicore__ inline PoolShape() {}
 
     __aicore__ inline PoolShape(int64_t N, int64_t C, int64_t D, int64_t H, int64_t W)
-      : N(N), C(C), D(D), H(H), W(W),
-        strideN(C * D * H * W), strideC(D * H * W), strideD(H * W), strideH(W), strideW(1) {}
+        : N(N),
+          C(C),
+          D(D),
+          H(H),
+          W(W),
+          strideN(C * D * H * W),
+          strideC(D * H * W),
+          strideD(H * W),
+          strideH(W),
+          strideW(1)
+    {}
 };
 
 struct PoolParameter {
@@ -72,13 +73,21 @@ struct PoolParameter {
 
     __aicore__ inline PoolParameter() {}
 
-    __aicore__ inline PoolParameter(
-      int64_t kernelD, int64_t kernelH, int64_t kernelW, int64_t strideD, int64_t strideH, int64_t strideW,
-      int64_t padD, int64_t padH, int64_t padW, int64_t divisorOverride, int64_t countIncludePad)
-        : kernelD(kernelD), kernelH(kernelH), kernelW(kernelW),
-          strideD(strideD), strideH(strideH), strideW(strideW),
-          padD(padD), padH(padH), padW(padW),
-          divisorOverride(divisorOverride), countIncludePad(countIncludePad) {}
+    __aicore__ inline PoolParameter(int64_t kernelD, int64_t kernelH, int64_t kernelW, int64_t strideD, int64_t strideH,
+                                    int64_t strideW, int64_t padD, int64_t padH, int64_t padW, int64_t divisorOverride,
+                                    int64_t countIncludePad)
+        : kernelD(kernelD),
+          kernelH(kernelH),
+          kernelW(kernelW),
+          strideD(strideD),
+          strideH(strideH),
+          strideW(strideW),
+          padD(padD),
+          padH(padH),
+          padW(padW),
+          divisorOverride(divisorOverride),
+          countIncludePad(countIncludePad)
+    {}
 };
 
 struct PoolWindow {
@@ -88,8 +97,9 @@ struct PoolWindow {
 
     __aicore__ inline PoolWindow() {}
 
-    __aicore__ inline void Compute(int64_t idx, int64_t inputSize, int64_t kernelSize, int64_t stride,
-                                  int64_t padding, int64_t countIncludePad) {
+    __aicore__ inline void Compute(int64_t idx, int64_t inputSize, int64_t kernelSize, int64_t stride, int64_t padding,
+                                   int64_t countIncludePad)
+    {
         start = idx * stride - padding;
         end = Min(start + kernelSize, inputSize + padding);
 
@@ -117,7 +127,8 @@ struct KernelInfoBuffer {
 
     __aicore__ inline KernelInfoBuffer() {}
 
-    __aicore__ inline void Init(TPipe* pipe, int64_t bufLen) {
+    __aicore__ inline void Init(TPipe* pipe, int64_t bufLen)
+    {
         maxBufferLen = bufLen;
         pipe->InitBuffer(startIndexBuf, bufLen * sizeof(int64_t));
         pipe->InitBuffer(endIndexBuf, bufLen * sizeof(int64_t));
@@ -128,13 +139,15 @@ struct KernelInfoBuffer {
         poolSizeLocal = poolSizeBuf.Get<int64_t>();
     }
 
-    __aicore__ inline void SetValue(int32_t bufIdx, const PoolWindow& window) {
+    __aicore__ inline void SetValue(int32_t bufIdx, const PoolWindow& window)
+    {
         startIndexLocal.SetValue(bufIdx, window.start);
         endIndexLocal.SetValue(bufIdx, window.end);
         poolSizeLocal.SetValue(bufIdx, window.poolSize);
     }
 
-    __aicore__ inline void GetValue(int32_t idx, PoolWindow& window) {
+    __aicore__ inline void GetValue(int32_t idx, PoolWindow& window)
+    {
         int32_t bufIdx = idx - startIndex;
         window.start = startIndexLocal.GetValue(bufIdx);
         window.end = endIndexLocal.GetValue(bufIdx);
@@ -161,21 +174,24 @@ struct IndexBuffer {
 
     __aicore__ inline IndexBuffer() {}
 
-    __aicore__ inline void Init(TPipe* pipe, int64_t bufLen) {
+    __aicore__ inline void Init(TPipe* pipe, int64_t bufLen)
+    {
         D.Init(pipe, bufLen);
         H.Init(pipe, bufLen);
         W.Init(pipe, bufLen);
     }
 
     __aicore__ inline void SetComputeParameter(const PoolShape& outShape, const PoolShape& inShape,
-                                              const PoolParameter& poolParam) {
+                                               const PoolParameter& poolParam)
+    {
         outputShape = outShape;
         inputShape = inShape;
         pool = poolParam;
     }
 
     __aicore__ inline void ComputeIndex(int64_t idx, KernelInfoBuffer& kernelInfo, int64_t inputSize,
-                                        int64_t outputSize, int64_t kernelSize, int64_t stride, int64_t padding) {
+                                        int64_t outputSize, int64_t kernelSize, int64_t stride, int64_t padding)
+    {
         kernelInfo.startIndex = idx;
         kernelInfo.bufferLen = outputSize - idx < kernelInfo.maxBufferLen ? outputSize - idx : kernelInfo.maxBufferLen;
         for (int32_t i = 0; i < kernelInfo.bufferLen; ++i) {
@@ -185,7 +201,8 @@ struct IndexBuffer {
         }
     }
 
-    __aicore__ inline void GetIndex(int64_t idx, Index& index) {
+    __aicore__ inline void GetIndex(int64_t idx, Index& index)
+    {
         idx = idx % outputShape.strideC;
         int64_t od = idx / outputShape.strideD;
         int64_t oh = idx % outputShape.strideD / outputShape.strideH;
@@ -208,7 +225,8 @@ struct IndexBuffer {
         W.GetValue(ow, index.W);
     }
 
-    __aicore__ inline void GetIndexWithoutCheck(int64_t idx, Index& index) {
+    __aicore__ inline void GetIndexWithoutCheck(int64_t idx, Index& index)
+    {
         idx = idx % outputShape.strideC;
         int64_t od = idx / outputShape.strideD;
         int64_t oh = idx % outputShape.strideD / outputShape.strideH;
@@ -219,7 +237,8 @@ struct IndexBuffer {
         W.GetValue(ow, index.W);
     }
 
-    __aicore__ inline void GetWIndex(int64_t idx, Index& index) {
+    __aicore__ inline void GetWIndex(int64_t idx, Index& index)
+    {
         int64_t ow = idx % outputShape.strideH / outputShape.strideW;
         W.GetValue(ow, index.W);
     }
@@ -261,43 +280,50 @@ struct PoolMem {
     uint32_t usedCoreNum;
 };
 
-__aicore__ inline void SToMTE2Sync() {
+__aicore__ inline void SToMTE2Sync()
+{
     event_t eventIDSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
     WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
 }
 
-__aicore__ inline void MTE2ToSSync() {
+__aicore__ inline void MTE2ToSSync()
+{
     event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
 }
 
-__aicore__ inline void SToMTE3Sync() {
+__aicore__ inline void SToMTE3Sync()
+{
     event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
     WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
 }
 
-__aicore__ inline void MTE3ToSSync() {
+__aicore__ inline void MTE3ToSSync()
+{
     event_t eventIDMTE3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
     SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
     WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
 }
 
-__aicore__ inline void SToVSync() {
+__aicore__ inline void SToVSync()
+{
     event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventIDSToV);
     WaitFlag<HardEvent::S_V>(eventIDSToV);
 }
 
-__aicore__ inline void MTE3ToVSync() {
+__aicore__ inline void MTE3ToVSync()
+{
     event_t eventIDMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
     WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
 }
 
-__aicore__ inline void VToMTE3Sync() {
+__aicore__ inline void VToMTE3Sync()
+{
     event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
@@ -311,7 +337,9 @@ __aicore__ inline void MTE3ToMTE2Sync()
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void HandleTailMask( LocalTensor<T>& outputLocal, int64_t gatherOffset, PoolMem<T, QUEUE_DEPTH>& poolMem, uint32_t mask) {
+__aicore__ inline void HandleTailMask(LocalTensor<T>& outputLocal, int64_t gatherOffset,
+                                      PoolMem<T, QUEUE_DEPTH>& poolMem, uint32_t mask)
+{
     MTE3ToVSync();
     int32_t lastLeftShift = poolMem.validTailLen;
     uint64_t rsvdCnt = 0;
@@ -335,8 +363,8 @@ __aicore__ inline void HandleTailMask( LocalTensor<T>& outputLocal, int64_t gath
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void CastAndEnqueueOutput(
-    PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t count, float factor) {
+__aicore__ inline void CastAndEnqueueOutput(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t count, float factor)
+{
     Muls(poolMem.sumBufLocal, poolMem.sumBufLocal, factor, count);
 
     LocalTensor<T> outputLocal = poolMem.outputQueue.template AllocTensor<T>();
@@ -355,14 +383,14 @@ __aicore__ inline void CastAndEnqueueOutput(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void InitCommonBuffers(
-    PoolMem<T, QUEUE_DEPTH>& poolMem, GM_ADDR workspace) {
+__aicore__ inline void InitCommonBuffers(PoolMem<T, QUEUE_DEPTH>& poolMem, GM_ADDR workspace)
+{
 #if __CCE_AICORE__ < 220
     if (poolMem.atomicAddNum) {
         poolMem.pipe->InitBuffer(poolMem.tmpPattern, poolMem.numPerBlock * sizeof(T));
 
         poolMem.pipe->InitBuffer(poolMem.syncWorkQueue, QUEUE_DEPTH, 8 * 32 * sizeof(int32_t));
-        poolMem.syncTensorsGM.SetGlobalBuffer((__gm__ int32_t *)workspace, poolMem.usedCoreNum * 8 * 32);
+        poolMem.syncTensorsGM.SetGlobalBuffer((__gm__ int32_t*)workspace, poolMem.usedCoreNum * 8 * 32);
         poolMem.pipe->InitBuffer(poolMem.clearTensorBuff, DEFAULT_CLEAR_UB_SIZE * sizeof(T));
     } else if (poolMem.validTailLen != 0) {
         poolMem.pipe->InitBuffer(poolMem.tmpPattern, poolMem.numPerBlock * sizeof(T));
@@ -371,7 +399,9 @@ __aicore__ inline void InitCommonBuffers(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void CopyInTemplate(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t offset, uint16_t blockCount, uint32_t blockLen, uint8_t rightPadding) {
+__aicore__ inline void CopyInTemplate(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t offset, uint16_t blockCount,
+                                      uint32_t blockLen, uint8_t rightPadding)
+{
     LocalTensor<T> inputLocal = poolMem.inputQueue.template AllocTensor<T>();
 #if __CCE_AICORE__ < 220
     if constexpr (std::is_same_v<T, float>) {
@@ -389,7 +419,8 @@ __aicore__ inline void CopyInTemplate(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t 
             DataCopy(inputLocal[poolMem.inputBufLen], poolMem.inputGlobal[offset], copyParams);
         } else {
             for (int i = 0; i < blockCount; i++) {
-                DataCopy(inputLocal[poolMem.inputBufLen + i * poolMem.alignC], poolMem.inputGlobal[offset + i * blockLen], poolMem.alignC);
+                DataCopy(inputLocal[poolMem.inputBufLen + i * poolMem.alignC],
+                         poolMem.inputGlobal[offset + i * blockLen], poolMem.alignC);
             }
         }
     }
@@ -406,8 +437,8 @@ __aicore__ inline void CopyInTemplate(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t 
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void HandleAtomicAdd(
-    PoolMem<T, QUEUE_DEPTH>& poolMem) {
+__aicore__ inline void HandleAtomicAdd(PoolMem<T, QUEUE_DEPTH>& poolMem)
+{
 #if __CCE_AICORE__ < 220
     if (poolMem.atomicAddNum) {
         LocalTensor<T> clearUb = poolMem.clearTensorBuff.template Get<T>();
@@ -428,8 +459,9 @@ __aicore__ inline void HandleAtomicAdd(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void HandleAtomicAddWithTail(
-    PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t curOutputPointIdx, int64_t tailLength) {
+__aicore__ inline void HandleAtomicAddWithTail(PoolMem<T, QUEUE_DEPTH>& poolMem, int64_t curOutputPointIdx,
+                                               int64_t tailLength)
+{
 #if __CCE_AICORE__ < 220
     if (poolMem.atomicAddNum) {
         LocalTensor<T> clearUb = poolMem.clearTensorBuff.template Get<T>();

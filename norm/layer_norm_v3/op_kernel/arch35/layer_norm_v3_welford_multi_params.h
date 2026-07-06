@@ -27,8 +27,8 @@ using namespace AscendC;
 template <typename T, typename U, typename M, bool IsOutRstd>
 class LayerNormV3WelfordMultiParams {
 public:
-    __aicore__ inline LayerNormV3WelfordMultiParams(
-        const LayerNormV3TilingDataWelfordMultiParams* tilingData, TPipe* pipeIn)
+    __aicore__ inline LayerNormV3WelfordMultiParams(const LayerNormV3TilingDataWelfordMultiParams* tilingData,
+                                                    TPipe* pipeIn)
     {
         pipe_ = pipeIn;
         td_ = tilingData;
@@ -94,13 +94,13 @@ public:
             WelfordInitialize(mean_, variance_, td_->tileLength);
             for (int64_t welfordUpdateCount = 0; welfordUpdateCount < td_->welfordUpdateTimes; welfordUpdateCount++) {
                 int64_t offset = i * td_->N + welfordUpdateCount * td_->tileLength;
-                ProcessWelfordUpdate(inQueueX, xGm, offset, td_->tileLength,
-                    td_->tileLength, welfordCount, mean_, variance_, shared_);
+                ProcessWelfordUpdate(inQueueX, xGm, offset, td_->tileLength, td_->tileLength, welfordCount, mean_,
+                                     variance_, shared_);
             }
             if (td_->welfordUpdateTail > 0) {
                 int64_t offset = i * td_->N + td_->welfordUpdateTimes * td_->tileLength;
-                ProcessWelfordUpdate(inQueueX, xGm, offset, td_->welfordUpdateTail,
-                    td_->tileLength, welfordCount, mean_, variance_, shared_);
+                ProcessWelfordUpdate(inQueueX, xGm, offset, td_->welfordUpdateTail, td_->tileLength, welfordCount,
+                                     mean_, variance_, shared_);
             }
 
             WelfordFinalizePara para;
@@ -113,13 +113,11 @@ public:
             para.abRec = 1.0f / static_cast<float>(td_->tileLength);
             para.rRec = 1.0f / static_cast<float>(td_->N);
             if constexpr (IsOutRstd) {
-                WelfordFinalize<true>(
-                    meanTensor[cacheCount], varianceTensor[cacheCount], mean_, variance_,
-                    shared_, para);
+                WelfordFinalize<true>(meanTensor[cacheCount], varianceTensor[cacheCount], mean_, variance_, shared_,
+                                      para);
             } else {
-                WelfordFinalize<true>(
-                    meanTensor[cacheCount], lastoutTensor[cacheCount], mean_, variance_,
-                    shared_, para);
+                WelfordFinalize<true>(meanTensor[cacheCount], lastoutTensor[cacheCount], mean_, variance_, shared_,
+                                      para);
             }
 
             // Normalize — compute gammaBase for current row
@@ -139,16 +137,16 @@ public:
             cacheCount++;
             // check cache buffer
             if (cacheCount >= AGGREGATION_COUNT) {
-                RefreshCache<M>(cacheCount, paramAddr, meanTensor, lastoutTensor,
-                    outQueueMean, outQueueLastout, meanGm, lastoutGm);
+                RefreshCache<M>(cacheCount, paramAddr, meanTensor, lastoutTensor, outQueueMean, outQueueLastout, meanGm,
+                                lastoutGm);
                 ResetCache();
-            } 
+            }
         }
 
         // refresh cache
         if (cacheCount > 0) {
-            RefreshCache<M>(cacheCount, paramAddr, meanTensor, lastoutTensor,
-                outQueueMean, outQueueLastout, meanGm, lastoutGm);
+            RefreshCache<M>(cacheCount, paramAddr, meanTensor, lastoutTensor, outQueueMean, outQueueLastout, meanGm,
+                            lastoutGm);
         }
     }
 
@@ -160,8 +158,8 @@ private:
         lastoutTensor = outQueueLastout.template AllocTensor<float>();
     }
 
-    __aicore__ inline void ProcessNormalize(
-        const int64_t fmOffset, const int64_t paramOffset, const int64_t elemCnt, const int64_t gammaBase)
+    __aicore__ inline void ProcessNormalize(const int64_t fmOffset, const int64_t paramOffset, const int64_t elemCnt,
+                                            const int64_t gammaBase)
     {
         xTensor = inQueueX.template AllocTensor<T>();
         CopyIn(xTensor, xGm[fmOffset], elemCnt);
@@ -188,13 +186,12 @@ private:
         para.rLength = elemCnt;
         para.rLengthWithPadding = elemCnt;
         if constexpr (IsOutRstd) {
-            Normalize<U, T, false>(
-                yTensor, lastoutTensor[cacheCount], meanTensor[cacheCount],
-                varianceTensor[cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+            Normalize<U, T, false>(yTensor, lastoutTensor[cacheCount], meanTensor[cacheCount],
+                                   varianceTensor[cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon,
+                                   para);
         } else {
-            Normalize<U, T, false>(
-                yTensor, rstdTensor[cacheCount], meanTensor[cacheCount],
-                lastoutTensor[cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+            Normalize<U, T, false>(yTensor, rstdTensor[cacheCount], meanTensor[cacheCount], lastoutTensor[cacheCount],
+                                   xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         }
 
         inQueueX.FreeTensor(xTensor);

@@ -24,9 +24,9 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(GroupNormSilu);
 
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormSilu(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t numGroups, float eps, bool activateSilu,
-    aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormSilu(const aclTensor* x, const aclTensor* gamma,
+                                                                   const aclTensor* beta, int64_t numGroups, float eps,
+                                                                   bool activateSilu, aclOpExecutor* executor)
 {
     L0_DFX(GroupNormSilu, x, gamma, beta, numGroups, eps, activateSilu);
     auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType(), x->GetViewFormat());
@@ -46,11 +46,10 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormSilu(
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "alloc output tensor failed.");
         return std::tie(y, mean, rstd);
     }
-    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
-        GroupNormSilu, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, rstd), OP_ATTR(numGroups, eps, activateSilu));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr, nullptr),
-        "GroupNormSilu add to aicore launch list failed.");
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(GroupNormSilu, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, rstd),
+                                                 OP_ATTR(numGroups, eps, activateSilu));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr, nullptr),
+                                         "GroupNormSilu add to aicore launch list failed.");
     return std::tie(y, mean, rstd);
 }
 

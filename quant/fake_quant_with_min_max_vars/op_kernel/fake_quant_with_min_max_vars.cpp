@@ -24,9 +24,8 @@
 #include "arch35/fake_quant_with_min_max_vars_kernel.h"
 
 template <uint32_t MODODE, uint32_t BUFFER_MODE, uint32_t ROUND_MODE, uint32_t HAS_ZP>
-__global__ __aicore__ void fake_quant_with_min_max_vars(
-    GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void fake_quant_with_min_max_vars(GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR y,
+                                                        GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(FakeQuantWithMinMaxVarsTilingData);
     GET_TILING_DATA_WITH_STRUCT(FakeQuantWithMinMaxVarsTilingData, tilingData, tiling);

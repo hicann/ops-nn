@@ -29,8 +29,7 @@ constexpr size_t THIRD_ATTR_INDEX = 2;
 
 static graphStatus GroupNormSiluExecuteFunc(OpExecuteContext* hostApiCtx)
 {
-    OP_CHECK_IF(
-        hostApiCtx == nullptr, OP_LOGE(hostApiCtx->GetNodeName(), "hostApiCtx is null"), return GRAPH_FAILED);
+    OP_CHECK_IF(hostApiCtx == nullptr, OP_LOGE(hostApiCtx->GetNodeName(), "hostApiCtx is null"), return GRAPH_FAILED);
     OP_LOGD(hostApiCtx->GetNodeName(), "Enter GroupNormSilu fallback.");
 
     auto self = hostApiCtx->GetInputTensor(SELF_INDEX);
@@ -57,11 +56,10 @@ static graphStatus GroupNormSiluExecuteFunc(OpExecuteContext* hostApiCtx)
     bool activateSilu = *(attrs->GetAttrPointer<bool>(THIRD_ATTR_INDEX));
 
     // execute opapi
-    auto apiRet =
-        EXEC_OPAPI_CMD(aclnnGroupNormSiluV2, self, gamma, beta, *group, eps, activateSilu, out, meanOut, rstdOut);
-    OP_CHECK_IF(
-        apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),
-        return GRAPH_FAILED);
+    auto apiRet = EXEC_OPAPI_CMD(aclnnGroupNormSiluV2, self, gamma, beta, *group, eps, activateSilu, out, meanOut,
+                                 rstdOut);
+    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),
+                return GRAPH_FAILED);
 
     OP_LOGD(hostApiCtx->GetNodeName(), "End GroupNormSilu fallback.");
     return GRAPH_SUCCESS;

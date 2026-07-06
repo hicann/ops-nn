@@ -48,14 +48,13 @@ uint64_t AdaLayerNormGradMergeBSWorkspaceTiling::GetTilingKey() const
 ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::PostTiling()
 {
     context_->SetBlockDim(commonParams.coreNum);
-    td_.SaveToBuffer(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());                             
+    td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::DoOpTiling() 
+ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::DoOpTiling()
 {
     int64_t colAlignV = CeilDiv(static_cast<int64_t>(commonParams.colSize), MERGE_BS_LNG_B16_ALIGN_FACTOR) *
                         MERGE_BS_LNG_B16_ALIGN_FACTOR;
@@ -63,7 +62,8 @@ ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::DoOpTiling()
     if (commonParams.dyDtype == ge::DataType::DT_FLOAT) {
         colAlignM = colAlignV;
     } else {
-        colAlignM = CeilDiv(static_cast<int64_t>(commonParams.colSize), MERGE_BS_LNG_B16_ALIGN_FACTOR) * MERGE_BS_LNG_B16_ALIGN_FACTOR;
+        colAlignM = CeilDiv(static_cast<int64_t>(commonParams.colSize), MERGE_BS_LNG_B16_ALIGN_FACTOR) *
+                    MERGE_BS_LNG_B16_ALIGN_FACTOR;
     }
     // get value
     int64_t batch_ = static_cast<int64_t>(commonParams.batchSize);
@@ -71,7 +71,7 @@ ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::DoOpTiling()
     int64_t row_ = static_cast<int64_t>(commonParams.rowSize);
     int64_t col_ = static_cast<int64_t>(commonParams.colSize);
 
-    td_.set_row(row_); 
+    td_.set_row(row_);
     td_.set_col(col_);
     td_.set_batch(batch_);
     td_.set_seq(seq_);
@@ -80,17 +80,18 @@ ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::DoOpTiling()
     // calculate block tiling, batch split block
 
     int64_t blockFormer = CeilDiv(row_, static_cast<int64_t>(commonParams.coreNum));
-    int64_t blockNum = CeilDiv(row_, blockFormer); 
-    int64_t blockTail = row_ - (blockNum - 1) * blockFormer;             
+    int64_t blockNum = CeilDiv(row_, blockFormer);
+    int64_t blockTail = row_ - (blockNum - 1) * blockFormer;
     td_.set_blockFormer(blockFormer);
     td_.set_blockNum(blockNum);
     td_.set_blockTail(blockTail);
-    int64_t maxBufferSize = (commonParams.ubSizePlatForm - MERGE_BS_LNG_TMP_BUFFER_SIZE_0 * MERGE_BS_LNG_CONSTANT_THREE) /
+    int64_t maxBufferSize = (commonParams.ubSizePlatForm -
+                             MERGE_BS_LNG_TMP_BUFFER_SIZE_0 * MERGE_BS_LNG_CONSTANT_THREE) /
                             MERGE_BS_LNG_MAX_BUFFER_NUM / MERGE_BS_LNG_B32_DTYPE_SIZE / MERGE_BS_LNG_B16_ALIGN_FACTOR *
-                            MERGE_BS_LNG_B16_ALIGN_FACTOR;                                   
-    int64_t ubFormer = std::min(maxBufferSize, colAlignV);                          
-    int64_t ubLoop = CeilDiv(static_cast<int64_t>(commonParams.colSize), ubFormer); 
-    int64_t ubTail = commonParams.colSize - (ubLoop - 1) * ubFormer;                
+                            MERGE_BS_LNG_B16_ALIGN_FACTOR;
+    int64_t ubFormer = std::min(maxBufferSize, colAlignV);
+    int64_t ubLoop = CeilDiv(static_cast<int64_t>(commonParams.colSize), ubFormer);
+    int64_t ubTail = commonParams.colSize - (ubLoop - 1) * ubFormer;
     td_.set_ubFormer(ubFormer);
     td_.set_ubLoop(ubLoop);
     td_.set_ubTail(ubTail);
@@ -101,7 +102,8 @@ ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::DoOpTiling()
 ge::graphStatus AdaLayerNormGradMergeBSWorkspaceTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = td_.get_blockNum() * td_.get_colAlignV() * MERGE_BS_LNG_B32_DTYPE_SIZE * (4 + 2 * td_.get_batch()) + MERGE_BS_LNG_WORKSPACE_RESERVED;
+    workspaces[0] = td_.get_blockNum() * td_.get_colAlignV() * MERGE_BS_LNG_B32_DTYPE_SIZE * (4 + 2 * td_.get_batch()) +
+                    MERGE_BS_LNG_WORKSPACE_RESERVED;
 
     return ge::GRAPH_SUCCESS;
 }

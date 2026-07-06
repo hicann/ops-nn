@@ -29,8 +29,8 @@ using namespace conv_tiling_algo_m;
 using namespace conv_tiling_algo_hw;
 using namespace std;
 
-using optiling::conv_ops_tiling::ConvCeilDiv;
 using optiling::conv_ops_tiling::ConvAlignB;
+using optiling::conv_ops_tiling::ConvCeilDiv;
 
 namespace conv_tiling {
 namespace {
@@ -49,7 +49,7 @@ void Conv3dTiling::InitFlag()
     }
 }
 
-int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 &tiling)
+int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     if (!CheckInputParam()) {
         OP_LOGE(nodeType, "conv3d api tiling check params failed.");
@@ -74,15 +74,9 @@ int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 &tiling)
     return ret;
 }
 
-void Conv3dTiling::SetOutputOrder(int8_t outOrder)
-{
-    this->outputOrder = outOrder;
-}
+void Conv3dTiling::SetOutputOrder(int8_t outOrder) { this->outputOrder = outOrder; }
 
-void Conv3dTiling::SetKernelSplit(bool isKernelSplitIn)
-{
-    this->isKernelSplit = isKernelSplitIn;
-}
+void Conv3dTiling::SetKernelSplit(bool isKernelSplitIn) { this->isKernelSplit = isKernelSplitIn; }
 
 int64_t Conv3dTiling::Compute()
 {
@@ -94,8 +88,8 @@ int64_t Conv3dTiling::Compute()
             algoPtr = std::make_shared<ConvTilingAlgorithmHWmode>(this);
             break;
         default:
-            OP_LOGE(nodeType, "Unsupported output order %d, only support Mmode(%d) and HWmode(%d).",
-                outputOrder, static_cast<int>(OutputOrder::M), static_cast<int>(OutputOrder::HW));
+            OP_LOGE(nodeType, "Unsupported output order %d, only support Mmode(%d) and HWmode(%d).", outputOrder,
+                    static_cast<int>(OutputOrder::M), static_cast<int>(OutputOrder::HW));
             return RET_FAIL;
     }
     int64_t ret = algoPtr->Process();
@@ -114,15 +108,15 @@ void Conv3dTiling::Infer5hdShape()
 bool Conv3dTiling::CheckInputFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet = {
-        {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}, 
-        {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}
-    };
+        {ConvFormat::NCDHW, ConvFormat::NCDHW},
+        {ConvFormat::NDHWC, ConvFormat::DHWCN},
+        {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}};
 
     if (conv3dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv3dSupportFormatSet.end()) {
         OP_LOGE(nodeType, "unSupported format combo: fmap format: %s, weight format: %s.",
-                         FORMAT_TO_STR.at(descInfo.fMapType.format).c_str(),
-                         FORMAT_TO_STR.at(descInfo.weightType.format).c_str());
+                FORMAT_TO_STR.at(descInfo.fMapType.format).c_str(),
+                FORMAT_TO_STR.at(descInfo.weightType.format).c_str());
         return false;
     }
 
@@ -171,8 +165,7 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tili
     uint32_t kernelHxkernelW = tiling.kernelH * tiling.kernelW;
     uint32_t kernelValueInKSize = isKernelSplit ? tiling.khL1 * tiling.kwL1 : kernelHxkernelW;
     uint32_t cinAInCore = tiling.kAL1 / kernelValueInKSize;
-    uint32_t kAL1Tail = (AlignB(tiling.singleCoreCi, cubeInfo.k0) * tiling.kernelD * kernelValueInKSize) %
-                        tiling.kAL1;
+    uint32_t kAL1Tail = (AlignB(tiling.singleCoreCi, cubeInfo.k0) * tiling.kernelD * kernelValueInKSize) % tiling.kAL1;
     kAL1Tail = kAL1Tail == 0 ? tiling.kAL1 : kAL1Tail;
     uint32_t kBL1Tail = (tiling.singleCoreCi * kernelValueInKSize) % tiling.kBL1;
     kBL1Tail = kBL1Tail == 0 ? tiling.kBL1 : kBL1Tail;
@@ -194,7 +187,7 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tili
     uint32_t cinBInCore = tiling.kBL1 / kernelValueInKSize;
     uint32_t nL1DivBlockSize = tiling.nBL1 / cubeInfo.n0;
 
-    tiling.kernelHxkernelW  = kernelHxkernelW;
+    tiling.kernelHxkernelW = kernelHxkernelW;
     tiling.kernelHxkernelWxkernelD = tiling.kernelD * tiling.kernelHxkernelW;
     // l0TilingInfo.nL0 != 0 is checked before
     tiling.multiNBL1 = static_cast<uint32_t>(CeilDiv(tiling.nBL1, tiling.nL0));
@@ -241,7 +234,7 @@ void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& t
     tiling.roundMode = this->attrInfo.roundMode;
     if (this->isScaleBiasInUb) {
         tiling.hasBias = 1;
-        tiling.hasScale = 1;  
+        tiling.hasScale = 1;
     } else {
         tiling.hasBias = static_cast<uint8_t>(this->hasBias);
         tiling.hasScale = static_cast<uint8_t>(this->hasScale);
@@ -251,10 +244,8 @@ void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& t
 void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     conv_tiling::UnionDataXt unionDataXt;
-    uint64_t tmpKh = isKernelSplit ? static_cast<uint64_t>(l1TilingInfo.khL1) :
-        static_cast<uint64_t>(shapeInfo.orgkH);
-    uint64_t tmpKw = isKernelSplit ? static_cast<uint64_t>(l1TilingInfo.kwL1) :
-        static_cast<uint64_t>(shapeInfo.orgkW);
+    uint64_t tmpKh = isKernelSplit ? static_cast<uint64_t>(l1TilingInfo.khL1) : static_cast<uint64_t>(shapeInfo.orgkH);
+    uint64_t tmpKw = isKernelSplit ? static_cast<uint64_t>(l1TilingInfo.kwL1) : static_cast<uint64_t>(shapeInfo.orgkW);
     unionDataXt.bf.kernelW = tmpKw;
     unionDataXt.bf.kernelW_highest_bit = (tmpKw & 0x100) >> 8; // 8 kernelW lower 8 bit
     unionDataXt.bf.kernelH = tmpKh;
@@ -321,25 +312,31 @@ void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling
 bool Conv3dTiling::CheckFeaMapShape()
 {
     if (shapeInfo.orgHi <= 0 || shapeInfo.orgWi <= 0 || shapeInfo.orgDi <= 0) {
-        OP_LOGE(nodeType, "Input illegal orgHi: %ld, orgWi: %ld, orgDi: %ld, which must > 0.",
-            shapeInfo.orgHi, shapeInfo.orgWi, shapeInfo.orgDi);
+        OP_LOGE(nodeType, "Input illegal orgHi: %ld, orgWi: %ld, orgDi: %ld, which must > 0.", shapeInfo.orgHi,
+                shapeInfo.orgWi, shapeInfo.orgDi);
         return false;
     }
     if (attrInfo.strideH == 0 || attrInfo.strideW == 0 || attrInfo.strideD == 0) {
         OP_LOGE(nodeType, "div zero when calculating output shape, strideH: %d, strideW: %d, strideD: %d",
-            attrInfo.strideH, attrInfo.strideW, attrInfo.strideD);
+                attrInfo.strideH, attrInfo.strideW, attrInfo.strideD);
         return false;
     }
 
     shapeInfo.orgHo = (shapeInfo.orgHi + attrInfo.padTop + attrInfo.padBottom -
-                       attrInfo.dilationH * (shapeInfo.orgkH - 1) - 1) / attrInfo.strideH + 1;
+                       attrInfo.dilationH * (shapeInfo.orgkH - 1) - 1) /
+                          attrInfo.strideH +
+                      1;
     shapeInfo.orgWo = (shapeInfo.orgWi + attrInfo.padLeft + attrInfo.padRight -
-                       attrInfo.dilationW * (shapeInfo.orgkW - 1) - 1) / attrInfo.strideW + 1;
+                       attrInfo.dilationW * (shapeInfo.orgkW - 1) - 1) /
+                          attrInfo.strideW +
+                      1;
     shapeInfo.orgDo = (shapeInfo.orgDi + attrInfo.padHead + attrInfo.padTail -
-                       attrInfo.dilationD * (shapeInfo.orgkD - 1) - 1) / attrInfo.strideD + 1;
+                       attrInfo.dilationD * (shapeInfo.orgkD - 1) - 1) /
+                          attrInfo.strideD +
+                      1;
     if (shapeInfo.orgHo <= 0 || shapeInfo.orgWo <= 0 || shapeInfo.orgDo <= 0) {
-        OP_LOGE(nodeType, "Calculated output orgHo: %ld, orgWo: %ld, orgDo: %ld, which must > 0",
-            shapeInfo.orgHo, shapeInfo.orgWo, shapeInfo.orgDo);
+        OP_LOGE(nodeType, "Calculated output orgHo: %ld, orgWo: %ld, orgDo: %ld, which must > 0", shapeInfo.orgHo,
+                shapeInfo.orgWo, shapeInfo.orgDo);
         return false;
     }
 
@@ -351,7 +348,7 @@ bool Conv3dTiling::CheckFeaMapShape()
     int64_t ciPerg = this->optGroupFlag ? shapeInfo.singleCi / shapeInfo.enlarge : shapeInfo.singleCi;
     if (ciPerg * attrInfo.groups != shapeInfo.orgCi) {
         OP_LOGE(nodeType, "only support groups * singleCi = orgCi, current groups: %d, singleCi: %ld, orgCi: %ld",
-                         attrInfo.groups, ciPerg, shapeInfo.orgCi);
+                attrInfo.groups, ciPerg, shapeInfo.orgCi);
         return false;
     }
     if (shapeInfo.singleDo <= 0) {
@@ -385,24 +382,24 @@ bool Conv3dTiling::CheckWeightShape()
         return false;
     }
     if (shapeInfo.singleCo <= 0 || static_cast<uint64_t>(shapeInfo.singleCo) > MAX_31_BIT_NUM) {
-        OP_LOGE(nodeType, "Input illegal SingleCo: %ld, which must in range [1, %lu].",
-            shapeInfo.singleCo, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal SingleCo: %ld, which must in range [1, %lu].", shapeInfo.singleCo,
+                MAX_31_BIT_NUM);
         return false;
     }
 
     if (shapeInfo.singlekH != shapeInfo.orgkH) {
-        OP_LOGE(nodeType, "Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,",
-            shapeInfo.singlekH, shapeInfo.orgkH);
+        OP_LOGE(nodeType, "Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,", shapeInfo.singlekH,
+                shapeInfo.orgkH);
         return false;
     }
     if (shapeInfo.singlekW != shapeInfo.orgkW) {
-        OP_LOGE(nodeType, "Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld",
-            shapeInfo.singlekW, shapeInfo.orgkW);
+        OP_LOGE(nodeType, "Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld", shapeInfo.singlekW,
+                shapeInfo.orgkW);
         return false;
     }
     if (shapeInfo.singlekD != shapeInfo.orgkD) {
-        OP_LOGE(nodeType, "Only support singlekD = orgkD, current singlekD: %ld, orgkD: %ld",
-            shapeInfo.singlekD, shapeInfo.orgkD);
+        OP_LOGE(nodeType, "Only support singlekD = orgkD, current singlekD: %ld, orgkD: %ld", shapeInfo.singlekD,
+                shapeInfo.orgkD);
         return false;
     }
 
@@ -481,26 +478,26 @@ bool Conv3dTiling::CheckAttr()
 
 bool Conv3dTiling::CheckPadStrideDilation()
 {
-    bool padInvalidFlag = (this->attrInfo.padLeft < 0 || this->attrInfo.padRight < 0 ||
-        this->attrInfo.padTop < 0 || this->attrInfo.padBottom < 0 ||
-        this->attrInfo.padHead < 0 || this->attrInfo.padTail < 0);
+    bool padInvalidFlag = (this->attrInfo.padLeft < 0 || this->attrInfo.padRight < 0 || this->attrInfo.padTop < 0 ||
+                           this->attrInfo.padBottom < 0 || this->attrInfo.padHead < 0 || this->attrInfo.padTail < 0);
     if (padInvalidFlag) {
         OP_LOGE(nodeType,
-            "Illegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, padHead=%d, padTail=%d,\
-            which must >= 0.", this->attrInfo.padTop, this->attrInfo.padBottom, this->attrInfo.padLeft,
-            this->attrInfo.padRight, this->attrInfo.padHead, this->attrInfo.padTail);
+                "Illegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, padHead=%d, padTail=%d,\
+            which must >= 0.",
+                this->attrInfo.padTop, this->attrInfo.padBottom, this->attrInfo.padLeft, this->attrInfo.padRight,
+                this->attrInfo.padHead, this->attrInfo.padTail);
         return false;
     }
 
     if (this->attrInfo.strideH <= 0 || this->attrInfo.strideW <= 0 || this->attrInfo.strideD <= 0) {
         OP_LOGE(nodeType, "Illegal attrs have set: strideH=%d, strideW=%d, strideD=%d, which must > 0.",
-                         this->attrInfo.strideH, this->attrInfo.strideW, this->attrInfo.strideD);
+                this->attrInfo.strideH, this->attrInfo.strideW, this->attrInfo.strideD);
         return false;
     }
 
     if (this->attrInfo.dilationH <= 0 || this->attrInfo.dilationW <= 0 || this->attrInfo.dilationD <= 0) {
         OP_LOGE(nodeType, "Illegal attrs have set: dilationH=%d, dilationW=%d, dilationD=%d, which must > 0.",
-                         this->attrInfo.dilationH, this->attrInfo.dilationW, this->attrInfo.dilationD);
+                this->attrInfo.dilationH, this->attrInfo.dilationW, this->attrInfo.dilationD);
         return false;
     }
 
@@ -535,13 +532,13 @@ bool Conv3dTiling::CheckDataCopyLimits()
         uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
         int64_t tmpOrgDi = (shapeInfo.orgDi <= 0) ? 1 : shapeInfo.orgDi;
         uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * tmpOrgDi *
-                                        DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
+                                         DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
         if (loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
-            OP_LOGE(nodeType, 
-                "Fmap shape does not satisfy DataCopy's limits: din(%ld)*hin(%ld)*win(%ld)*datatype size(%u)=%lu, must <= %lu",
-                tmpOrgDi, shapeInfo.orgHi, shapeInfo.orgWi,
-                DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
-                loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
+            OP_LOGE(nodeType,
+                    "Fmap shape does not satisfy DataCopy's limits: din(%ld)*hin(%ld)*win(%ld)*datatype size(%u)=%lu, "
+                    "must <= %lu",
+                    tmpOrgDi, shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
+                    loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
             return false;
         }
     }
@@ -549,10 +546,10 @@ bool Conv3dTiling::CheckDataCopyLimits()
         uint64_t loadAL1SrcNdMatixStride = shapeInfo.orgHi * shapeInfo.orgWi * shapeInfo.orgCi * attrInfo.dilationD;
         if (loadAL1SrcNdMatixStride > MAX_40_BIT_NUM) {
             OP_LOGE(nodeType,
-                "Fmap shape does not satisfy DataCopy's limits: cin(%ld)*hin(%ld)*win(%ld)*dilationD(%d)=%lu, must <= %lu",
-                shapeInfo.orgCi, shapeInfo.orgHi, shapeInfo.orgWi,
-                attrInfo.dilationD,
-                loadAL1SrcNdMatixStride, MAX_40_BIT_NUM);
+                    "Fmap shape does not satisfy DataCopy's limits: cin(%ld)*hin(%ld)*win(%ld)*dilationD(%d)=%lu, must "
+                    "<= %lu",
+                    shapeInfo.orgCi, shapeInfo.orgHi, shapeInfo.orgWi, attrInfo.dilationD, loadAL1SrcNdMatixStride,
+                    MAX_40_BIT_NUM);
             return false;
         }
     }
@@ -567,19 +564,16 @@ bool Conv3dTiling::CheckFixpipeLimits()
         uint64_t fixpipeLoop2DstStride = static_cast<uint64_t>(shapeInfo.orgHo) * shapeInfo.orgWo * tmpOrgDo;
         if (fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
             OP_LOGE(nodeType,
-                "Output shape does not satisfy Fixpipe's limits: dout(%ld)*hout(%ld)*wout(%ld)=%lu, must <= %lu",
-                tmpOrgDo, shapeInfo.orgHo, shapeInfo.orgWo,
-                fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
+                    "Output shape does not satisfy Fixpipe's limits: dout(%ld)*hout(%ld)*wout(%ld)=%lu, must <= %lu",
+                    tmpOrgDo, shapeInfo.orgHo, shapeInfo.orgWo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
             return false;
         }
     }
     if (descInfo.fMapType.format == ConvFormat::NDHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW)) {
         uint64_t fixpipeLoop3DstStride = shapeInfo.orgCo * shapeInfo.orgWo;
         if (fixpipeLoop3DstStride > MAX_32_BIT_NUM) {
-            OP_LOGE(nodeType,
-                "Output shape does not satisfy Fixpipe's limits: cout(%ld)*wout(%ld)=%lu, must <= %lu",
-                shapeInfo.orgCo, shapeInfo.orgWo,
-                fixpipeLoop3DstStride, MAX_32_BIT_NUM);
+            OP_LOGE(nodeType, "Output shape does not satisfy Fixpipe's limits: cout(%ld)*wout(%ld)=%lu, must <= %lu",
+                    shapeInfo.orgCo, shapeInfo.orgWo, fixpipeLoop3DstStride, MAX_32_BIT_NUM);
             return false;
         }
     }
@@ -609,8 +603,7 @@ void Conv3dTiling::SetOrgWeightShape(int64_t orgCo, int64_t orgKd, int64_t orgKh
     this->shapeInfo.orgCo = orgCo;
 }
 
-void Conv3dTiling::SetSingleWeightShape(int64_t singleCi, int64_t singleKd,
-    int64_t singleKh, int64_t singleKw)
+void Conv3dTiling::SetSingleWeightShape(int64_t singleCi, int64_t singleKd, int64_t singleKh, int64_t singleKw)
 {
     this->shapeInfo.singlekH = singleKh;
     this->shapeInfo.singlekW = singleKw;
@@ -634,8 +627,8 @@ void Conv3dTiling::SetSingleOutputShape(int64_t singleCo, int64_t singleDo, int6
     this->shapeInfo.singleBatch = singleBatch;
 }
 
-void Conv3dTiling::SetSingleOutputShape(
-    int64_t singleCo, int64_t singleDo, int64_t singleHo, int64_t singleWo, int64_t singleBatch)
+void Conv3dTiling::SetSingleOutputShape(int64_t singleCo, int64_t singleDo, int64_t singleHo, int64_t singleWo,
+                                        int64_t singleBatch)
 {
     this->shapeInfo.singleCo = singleCo;
     this->shapeInfo.singleDo = singleDo;
@@ -658,8 +651,8 @@ void Conv3dTiling::SetFmapType(TPosition pos, ConvFormat format, ConvDtype dtype
     this->descInfo.fMapType.dtype = dtype;
 }
 
-void Conv3dTiling::SetPadding(int64_t padHead, int64_t padTail, int64_t padTop, int64_t padBottom,
-    int64_t padLeft, int64_t padRight)
+void Conv3dTiling::SetPadding(int64_t padHead, int64_t padTail, int64_t padTop, int64_t padBottom, int64_t padLeft,
+                              int64_t padRight)
 {
     this->attrInfo.padHead = padHead;
     this->attrInfo.padTail = padTail;
@@ -698,10 +691,7 @@ void Conv3dTiling::SetOutputType(TPosition pos, ConvFormat format, ConvDtype dty
     this->descInfo.outputType.dtype = dtype;
 }
 
-void Conv3dTiling::SetGroups(int32_t groups)
-{
-    attrInfo.groups = groups;
-}
+void Conv3dTiling::SetGroups(int32_t groups) { attrInfo.groups = groups; }
 
 void Conv3dTiling::SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt)
 {
@@ -733,7 +723,8 @@ void Conv3dTiling::CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGr
     uint32_t n0 = CUBE_MKN_TAB.GetMKN(oriGroupInfo.weightDtype, MKN_N_INDEX);
 
     optGroupInfo.enlarge = std::min(Lcm(Lcm(oriGroupInfo.ciPerGroup, k0) / oriGroupInfo.ciPerGroup,
-        Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup), static_cast<uint64_t>(oriGroupInfo.groups));
+                                        Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup),
+                                    static_cast<uint64_t>(oriGroupInfo.groups));
     optGroupInfo.groupOpt = CeilDiv(oriGroupInfo.groups, optGroupInfo.enlarge);
     optGroupInfo.cinOpt = oriGroupInfo.ciPerGroup * optGroupInfo.enlarge;
     optGroupInfo.coutOpt = oriGroupInfo.coPerGroup * optGroupInfo.enlarge;
@@ -745,10 +736,7 @@ void Conv3dTiling::SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag = false)
     this->hf32TransMode = hf32TransModeFlag;
 }
 
-void Conv3dTiling::SetQuantConvFlag(bool quantConvEnable)
-{
-    this->quantConvFlag = quantConvEnable;
-}
+void Conv3dTiling::SetQuantConvFlag(bool quantConvEnable) { this->quantConvFlag = quantConvEnable; }
 
 void Conv3dTiling::SetScaleType(TPosition pos, ConvFormat format, ConvDtype dtype)
 {
@@ -770,15 +758,9 @@ void Conv3dTiling::SetFixpipeParams(const optiling::conv_ops_tiling::FixpipeInfo
     shapeInfo.channelWiseCoeff = fixpipeInfo.channelWiseCoeff;
 }
 
-void Conv3dTiling::SetOffsetx(int8_t offsetx)
-{
-    attrInfo.offsetx = offsetx;
-}
+void Conv3dTiling::SetOffsetx(int8_t offsetx) { attrInfo.offsetx = offsetx; }
 
-void Conv3dTiling::SetRoundMode(int8_t roundMode)
-{
-    attrInfo.roundMode = roundMode;
-}
+void Conv3dTiling::SetRoundMode(int8_t roundMode) { attrInfo.roundMode = roundMode; }
 
 void Conv3dTiling::SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                             optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
@@ -801,13 +783,13 @@ void Conv3dTiling::SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag fla
     int64_t singleCoreHo = 0;
     int64_t singleCoreMo = 0;
     if (flagInfo.mSplitModeFlag) {
-        singleCoreMo =
-            ConvCeilDiv(ConvAlignB(convShapeInfo.ho * convShapeInfo.wo, convOpsConstParams.m0), numBlocksRes.mDim);
+        singleCoreMo = ConvCeilDiv(ConvAlignB(convShapeInfo.ho * convShapeInfo.wo, convOpsConstParams.m0),
+                                   numBlocksRes.mDim);
         SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreBatch);
     } else {
         singleCoreHo = ConvCeilDiv(convShapeInfo.ho, numBlocksRes.hoDim);
-        SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo,
-            static_cast<int64_t>(convShapeInfo.wo), singleCoreBatch);
+        SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo, static_cast<int64_t>(convShapeInfo.wo),
+                             singleCoreBatch);
     }
 }
 

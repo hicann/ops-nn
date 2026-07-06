@@ -40,16 +40,11 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static bool CheckNotNull(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v,
-    const aclScalar* beta1Power, const aclScalar* lr,
-    const aclScalar* beta1, const aclScalar* beta2, const aclScalar* epsilon,
-    const aclTensor* grad, const aclTensor* varOut,
-    const aclTensor* mOut, const aclTensor* vOut)
+static bool CheckNotNull(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclScalar* beta1Power,
+                         const aclScalar* lr, const aclScalar* beta1, const aclScalar* beta2, const aclScalar* epsilon,
+                         const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut, const aclTensor* vOut)
 {
     OP_CHECK_NULL(var, return false);
     OP_CHECK_NULL(m, return false);
@@ -66,14 +61,11 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* var, const aclTensor* m,
-    const aclTensor* v, const aclTensor* grad)
+static bool CheckDtypeValid(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad)
 {
     auto dtype = var->GetDataType();
     if (!CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Unsupported dtype: %d. Only FLOAT and FLOAT16 are supported.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported dtype: %d. Only FLOAT and FLOAT16 are supported.",
                 static_cast<int>(dtype));
         return false;
     }
@@ -83,9 +75,7 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckShapeConsistent(
-    const aclTensor* var, const aclTensor* m,
-    const aclTensor* v, const aclTensor* grad)
+static bool CheckShapeConsistent(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad)
 {
     OP_CHECK_MAX_DIM(var, ACLNN_MAX_SHAPE_RANK, return false);
 
@@ -94,32 +84,24 @@ static bool CheckShapeConsistent(
     auto vShape = v->GetViewShape();
     auto gradShape = grad->GetViewShape();
 
-    if (varShape.GetDimNum() == 0 || mShape.GetDimNum() == 0 ||
-        vShape.GetDimNum() == 0 || gradShape.GetDimNum() == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "0-dim scalar Tensor is not supported; supported dim range is 1~%d",
+    if (varShape.GetDimNum() == 0 || mShape.GetDimNum() == 0 || vShape.GetDimNum() == 0 || gradShape.GetDimNum() == 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "0-dim scalar Tensor is not supported; supported dim range is 1~%d",
                 ACLNN_MAX_SHAPE_RANK);
         return false;
     }
 
-    if (varShape.GetDimNum() != mShape.GetDimNum() ||
-        varShape.GetDimNum() != vShape.GetDimNum() ||
+    if (varShape.GetDimNum() != mShape.GetDimNum() || varShape.GetDimNum() != vShape.GetDimNum() ||
         varShape.GetDimNum() != gradShape.GetDimNum()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Shape dims mismatch: var=%zu, m=%zu, v=%zu, grad=%zu",
-                varShape.GetDimNum(), mShape.GetDimNum(),
-                vShape.GetDimNum(), gradShape.GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape dims mismatch: var=%zu, m=%zu, v=%zu, grad=%zu", varShape.GetDimNum(),
+                mShape.GetDimNum(), vShape.GetDimNum(), gradShape.GetDimNum());
         return false;
     }
 
     for (size_t i = 0; i < varShape.GetDimNum(); i++) {
-        if (varShape.GetDim(i) != mShape.GetDim(i) ||
-            varShape.GetDim(i) != vShape.GetDim(i) ||
+        if (varShape.GetDim(i) != mShape.GetDim(i) || varShape.GetDim(i) != vShape.GetDim(i) ||
             varShape.GetDim(i) != gradShape.GetDim(i)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "Shape mismatch at dim %zu: var=%ld, m=%ld, v=%ld, grad=%ld",
-                    i, varShape.GetDim(i), mShape.GetDim(i),
-                    vShape.GetDim(i), gradShape.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape mismatch at dim %zu: var=%ld, m=%ld, v=%ld, grad=%ld", i,
+                    varShape.GetDim(i), mShape.GetDim(i), vShape.GetDim(i), gradShape.GetDim(i));
             return false;
         }
     }
@@ -131,9 +113,8 @@ static bool CheckShapeConsistent(
 //   - beta1Power must be in [0, 1)  (avoid 1 - beta1Power == 0)
 //   - beta1 must be in [0, 1)
 //   - beta2 must be in [0, 1)
-static bool CheckScalarValues(
-    const aclScalar* beta1Power, const aclScalar* lr,
-    const aclScalar* beta1, const aclScalar* beta2, const aclScalar* epsilon)
+static bool CheckScalarValues(const aclScalar* beta1Power, const aclScalar* lr, const aclScalar* beta1,
+                              const aclScalar* beta2, const aclScalar* epsilon)
 {
     float b1pVal = beta1Power->ToFloat();
     float epsVal = epsilon->ToFloat();
@@ -141,37 +122,30 @@ static bool CheckScalarValues(
     float b2Val = beta2->ToFloat();
     (void)lr;
     if (epsVal < 0.0f) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "epsilon must be >= 0, got %f", epsVal);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "epsilon must be >= 0, got %f", epsVal);
         return false;
     }
     if (b1pVal < 0.0f || b1pVal >= 1.0f) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "beta1Power must be in [0, 1), got %f", b1pVal);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta1Power must be in [0, 1), got %f", b1pVal);
         return false;
     }
     if (b1Val < 0.0f || b1Val >= 1.0f) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "beta1 must be in [0, 1), got %f", b1Val);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta1 must be in [0, 1), got %f", b1Val);
         return false;
     }
     if (b2Val < 0.0f || b2Val >= 1.0f) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "beta2 must be in [0, 1), got %f", b2Val);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta2 must be in [0, 1), got %f", b2Val);
         return false;
     }
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v,
-    const aclScalar* beta1Power, const aclScalar* lr,
-    const aclScalar* beta1, const aclScalar* beta2, const aclScalar* epsilon,
-    const aclTensor* grad, const aclTensor* varOut,
-    const aclTensor* mOut, const aclTensor* vOut)
+static aclnnStatus CheckParams(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                               const aclScalar* beta1Power, const aclScalar* lr, const aclScalar* beta1,
+                               const aclScalar* beta2, const aclScalar* epsilon, const aclTensor* grad,
+                               const aclTensor* varOut, const aclTensor* mOut, const aclTensor* vOut)
 {
-    if (!CheckNotNull(var, m, v, beta1Power, lr, beta1, beta2, epsilon, grad,
-                      varOut, mOut, vOut)) {
+    if (!CheckNotNull(var, m, v, beta1Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut)) {
         OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Null pointer in input parameters");
         return ACLNN_ERR_PARAM_NULLPTR;
     }
@@ -187,31 +161,19 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnApplyAdamaxGetWorkspaceSize(
-    const aclTensor* var,
-    const aclTensor* m,
-    const aclTensor* v,
-    const aclScalar* beta1Power,
-    const aclScalar* lr,
-    const aclScalar* beta1,
-    const aclScalar* beta2,
-    const aclScalar* epsilon,
-    const aclTensor* grad,
-    aclTensor* varOut,
-    aclTensor* mOut,
-    aclTensor* vOut,
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnApplyAdamaxGetWorkspaceSize(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                                        const aclScalar* beta1Power, const aclScalar* lr,
+                                                        const aclScalar* beta1, const aclScalar* beta2,
+                                                        const aclScalar* epsilon, const aclTensor* grad,
+                                                        aclTensor* varOut, aclTensor* mOut, aclTensor* vOut,
+                                                        uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnApplyAdamax,
-                    DFX_IN(var, m, v, grad),
-                    DFX_OUT(varOut, mOut, vOut));
+    L2_DFX_PHASE_1(aclnnApplyAdamax, DFX_IN(var, m, v, grad), DFX_OUT(varOut, mOut, vOut));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    auto ret = CheckParams(var, m, v, beta1Power, lr, beta1, beta2, epsilon, grad,
-                           varOut, mOut, vOut);
+    auto ret = CheckParams(var, m, v, beta1Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (var->IsEmpty()) {
@@ -237,10 +199,8 @@ extern "C" aclnnStatus aclnnApplyAdamaxGetWorkspaceSize(
     float beta2Val = beta2->ToFloat();
     float epsVal = epsilon->ToFloat();
 
-    auto opResults = l0op::ApplyAdamax(
-        varContig, mContig, vContig, gradContig,
-        beta1PowerVal, lrVal, beta1Val, beta2Val, epsVal,
-        uniqueExecutor.get());
+    auto opResults = l0op::ApplyAdamax(varContig, mContig, vContig, gradContig, beta1PowerVal, lrVal, beta1Val,
+                                       beta2Val, epsVal, uniqueExecutor.get());
     CHECK_RET(opResults.varOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopy1 = l0op::ViewCopy(opResults.varOut, varOut, uniqueExecutor.get());
@@ -255,11 +215,8 @@ extern "C" aclnnStatus aclnnApplyAdamaxGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnApplyAdamax(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnApplyAdamax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnApplyAdamax);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

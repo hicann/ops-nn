@@ -27,34 +27,35 @@ static const uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
 static const uint32_t NO_DOUBLE_BUFFER = 1;
 static const uint32_t DOUBLE_BUFFER = 2;
 
-template<typename T, bool isScale, bool isShift>
-class ModulateBaseKernel
-{
+template <typename T, bool isScale, bool isShift>
+class ModulateBaseKernel {
 public:
-    __aicore__ inline ModulateBaseKernel(TPipe &tpipe, const ModulateRegbaseTilingData &tilingData) : tpipe_(tpipe), tiling_(tilingData){};
+    __aicore__ inline ModulateBaseKernel(TPipe& tpipe, const ModulateRegbaseTilingData& tilingData)
+        : tpipe_(tpipe), tiling_(tilingData){};
+
 protected:
     __aicore__ inline void InitBuffers();
     __aicore__ inline void InitBaseParams();
-    __aicore__ inline void CopyInScaleShift(const uint64_t &dataNum, const uint64_t &scaleOffset);
-    __aicore__ inline void CopyInX(const uint64_t &copyRows, const uint64_t &dataNum, const uint64_t &xOffset);
-    __aicore__ inline void Compute(const uint64_t &rows, const uint64_t &calCount);
-    __aicore__ inline void ComputeScaleShift(
-        const LocalTensor<T> &yLocal, const LocalTensor<T> &xLocal, const LocalTensor<T> &scaleLocal,
-        const LocalTensor<T> &shiftLocal, const uint64_t &rows, const uint64_t &calCount);
-    __aicore__ inline void ComputeScale(
-        const LocalTensor<T> &yLocal, const LocalTensor<T> &xLocal, const LocalTensor<T> &scaleLocal,
-        const uint64_t &rows, const uint64_t &calCount);
-    __aicore__ inline void ComputeShift(
-        const LocalTensor<T> &yLocal, const LocalTensor<T> &xLocal, const LocalTensor<T> &shiftLocal,
-        const uint64_t &rows, const uint64_t &calCount);
-    __aicore__ inline void CopyOutY(const uint64_t &copyRows, const uint64_t &dataNum, const uint64_t &yOffset);
+    __aicore__ inline void CopyInScaleShift(const uint64_t& dataNum, const uint64_t& scaleOffset);
+    __aicore__ inline void CopyInX(const uint64_t& copyRows, const uint64_t& dataNum, const uint64_t& xOffset);
+    __aicore__ inline void Compute(const uint64_t& rows, const uint64_t& calCount);
+    __aicore__ inline void ComputeScaleShift(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
+                                             const LocalTensor<T>& scaleLocal, const LocalTensor<T>& shiftLocal,
+                                             const uint64_t& rows, const uint64_t& calCount);
+    __aicore__ inline void ComputeScale(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
+                                        const LocalTensor<T>& scaleLocal, const uint64_t& rows,
+                                        const uint64_t& calCount);
+    __aicore__ inline void ComputeShift(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
+                                        const LocalTensor<T>& shiftLocal, const uint64_t& rows,
+                                        const uint64_t& calCount);
+    __aicore__ inline void CopyOutY(const uint64_t& copyRows, const uint64_t& dataNum, const uint64_t& yOffset);
     __aicore__ inline void FreeScaleShift();
 
 protected:
     TPipe& tpipe_;
 
     // tilingData
-    const ModulateRegbaseTilingData &tiling_;
+    const ModulateRegbaseTilingData& tiling_;
 
     // basic params
     uint64_t blockIdx_;
@@ -87,7 +88,7 @@ protected:
     GlobalTensor<T> shiftGm_;
 };
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::InitBaseParams()
 {
     blockIdx_ = GetBlockIdx();
@@ -104,7 +105,7 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::InitBaseParams()
     xAlign_ = BLOCK_SIZE / sizeof(T);
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::InitBuffers()
 {
     uint64_t maxCalcNumAlign = ops::CeilAlign(maxCalcNum_, xAlign_);
@@ -123,8 +124,9 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::InitBuffers()
  * @param dataNum 搬运数据量
  * @param scaleOffset 在scaleGm和shiftGm上的偏移量
  */
-template<typename T, bool isScale, bool isShift>
-__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyInScaleShift(const uint64_t &dataNum, const uint64_t &scaleOffset)
+template <typename T, bool isScale, bool isShift>
+__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyInScaleShift(const uint64_t& dataNum,
+                                                                                 const uint64_t& scaleOffset)
 {
     if constexpr (isScale) {
         LocalTensor<T> scaleLocal = scaleQue_.AllocTensor<T>();
@@ -148,14 +150,15 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyInScaleShift
  * @param dataNum 每行搬运数据量
  * @param xOffset 在xGm上的偏移量
  */
-template<typename T, bool isScale, bool isShift>
-__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyInX(const uint64_t &copyRows, const uint64_t &dataNum, const uint64_t &xOffset)
+template <typename T, bool isScale, bool isShift>
+__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyInX(const uint64_t& copyRows,
+                                                                        const uint64_t& dataNum,
+                                                                        const uint64_t& xOffset)
 {
     LocalTensor<T> xLocal = xQue_.AllocTensor<T>();
     uint8_t xPadNum = (xAlign_ - dataNum % xAlign_) % xAlign_;
-    DataCopyExtParams xCopyParams{
-        static_cast<uint16_t>(copyRows), static_cast<uint32_t>(sizeof(T) * dataNum),
-        static_cast<uint32_t>((inputD_ - dataNum) * sizeof(T)), 0, 0};
+    DataCopyExtParams xCopyParams{static_cast<uint16_t>(copyRows), static_cast<uint32_t>(sizeof(T) * dataNum),
+                                  static_cast<uint32_t>((inputD_ - dataNum) * sizeof(T)), 0, 0};
     DataCopyPadExtParams<T> xPadParams{true, 0, xPadNum, 0};
     DataCopyPad(xLocal, xGm_[xOffset], xCopyParams, xPadParams);
     xQue_.EnQue<T>(xLocal);
@@ -166,8 +169,8 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyInX(const ui
  * @param rows 计算行数
  * @param calCount 每行计算数据量
  */
-template<typename T, bool isScale, bool isShift>
-__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::Compute(const uint64_t &rows, const uint64_t &calCount)
+template <typename T, bool isScale, bool isShift>
+__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::Compute(const uint64_t& rows, const uint64_t& calCount)
 {
     LocalTensor<T> xLocal = xQue_.DeQue<T>();
     LocalTensor<T> yLocal = yQue_.AllocTensor<T>();
@@ -199,10 +202,10 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::Compute(const ui
  * @param rows 计算行数
  * @param calCount 每行计算数据量
  */
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScaleShift(
-    const LocalTensor<T> &yLocal, const LocalTensor<T> &xLocal, const LocalTensor<T> &scaleLocal,
-    const LocalTensor<T> &shiftLocal, const uint64_t &rows, const uint64_t &calCount)
+    const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal, const LocalTensor<T>& scaleLocal,
+    const LocalTensor<T>& shiftLocal, const uint64_t& rows, const uint64_t& calCount)
 {
     __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ T* scaleAddr = (__local_mem__ T*)scaleLocal.GetPhyAddr();
@@ -258,10 +261,12 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScaleShif
  * @param rows 计算行数
  * @param calCount 每行计算数据量
  */
-template<typename T, bool isScale, bool isShift>
-__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScale(
-    const LocalTensor<T> &yLocal, const LocalTensor<T> &xLocal, const LocalTensor<T> &scaleLocal,
-    const uint64_t &rows, const uint64_t &calCount)
+template <typename T, bool isScale, bool isShift>
+__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScale(const LocalTensor<T>& yLocal,
+                                                                             const LocalTensor<T>& xLocal,
+                                                                             const LocalTensor<T>& scaleLocal,
+                                                                             const uint64_t& rows,
+                                                                             const uint64_t& calCount)
 {
     __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ T* scaleAddr = (__local_mem__ T*)scaleLocal.GetPhyAddr();
@@ -312,10 +317,12 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeScale(
  * @param rows 计算行数
  * @param calCount 每行计算数据量
  */
-template<typename T, bool isScale, bool isShift>
-__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeShift(
-    const LocalTensor<T> &yLocal, const LocalTensor<T> &xLocal, const LocalTensor<T> &shiftLocal,
-    const uint64_t &rows, const uint64_t &calCount)
+template <typename T, bool isScale, bool isShift>
+__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeShift(const LocalTensor<T>& yLocal,
+                                                                             const LocalTensor<T>& xLocal,
+                                                                             const LocalTensor<T>& shiftLocal,
+                                                                             const uint64_t& rows,
+                                                                             const uint64_t& calCount)
 {
     __local_mem__ T* xAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ T* shiftAddr = (__local_mem__ T*)shiftLocal.GetPhyAddr();
@@ -362,17 +369,18 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::ComputeShift(
  * @param dataNum 每行搬运数据量
  * @param yOffset 在yGm上的偏移量
  */
-template<typename T, bool isScale, bool isShift>
-__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyOutY(const uint64_t &copyRows, const uint64_t &dataNum, const uint64_t &yOffset)
+template <typename T, bool isScale, bool isShift>
+__aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::CopyOutY(const uint64_t& copyRows,
+                                                                         const uint64_t& dataNum,
+                                                                         const uint64_t& yOffset)
 {
     LocalTensor<T> yLocal = yQue_.DeQue<T>();
-    DataCopyExtParams yCopyParams{
-        static_cast<uint16_t>(copyRows), static_cast<uint32_t>(sizeof(T) * dataNum), 0, 0, 0};
+    DataCopyExtParams yCopyParams{static_cast<uint16_t>(copyRows), static_cast<uint32_t>(sizeof(T) * dataNum), 0, 0, 0};
     DataCopyPad(yGm_[yOffset], yLocal, yCopyParams);
     yQue_.FreeTensor<T>(yLocal);
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::FreeScaleShift()
 {
     if constexpr (isScale) {
@@ -384,5 +392,5 @@ __aicore__ inline void ModulateBaseKernel<T, isScale, isShift>::FreeScaleShift()
         shiftQue_.FreeTensor<T>(shiftLocal);
     }
 }
-}
+} // namespace Modulate
 #endif // MODULATE_REGBASE_COMMON_H

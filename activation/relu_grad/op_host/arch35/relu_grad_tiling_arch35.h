@@ -12,7 +12,7 @@
  * \file relu_grad_tiling_arch35.h
  * \brief relu_grad_tiling
  */
- 
+
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_RELU_GRAD_TILING_H_
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_RELU_GRAD_TILING_H_
 
@@ -24,10 +24,10 @@ using Ops::NN::Optiling::TilingBaseClass;
 using namespace Ops::Base;
 
 class ReluGradTiling : public TilingBaseClass {
-   public:
+public:
     explicit ReluGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-   protected:
+protected:
     bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -37,9 +37,9 @@ class ReluGradTiling : public TilingBaseClass {
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
-   private:
+private:
     uint64_t tilingKey = 0;
 };
-}  // namespace optiling
- 
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_RELU_TILING_H_
+} // namespace optiling
+
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_RELU_TILING_H_

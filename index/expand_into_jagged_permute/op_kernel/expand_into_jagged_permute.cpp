@@ -16,17 +16,20 @@
 #include "kernel_operator.h"
 #include "expand_into_jagged_permute.h"
 
-extern "C" __global__ __aicore__ void expand_into_jagged_permute(GM_ADDR permute, GM_ADDR input_offsets, GM_ADDR output_offsets, GM_ADDR output_permute, GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void expand_into_jagged_permute(GM_ADDR permute, GM_ADDR input_offsets,
+                                                                 GM_ADDR output_offsets, GM_ADDR output_permute,
+                                                                 GM_ADDR workspace, GM_ADDR tiling)
+{
     GET_TILING_DATA(tilingDataIn, tiling);
-    const ExpandIntoJaggedPermuteTilingData *__restrict tilingData = &tilingDataIn;
-    
+    const ExpandIntoJaggedPermuteTilingData* __restrict tilingData = &tilingDataIn;
+
     if (TILING_KEY_IS(0)) {
-    ExpandIntoJaggedPermute<DTYPE_PERMUTE, false> op;
-    op.Init(permute, input_offsets, output_offsets, output_permute, tilingData);
-    op.Process();
-    }else if(TILING_KEY_IS(1)){
-    ExpandIntoJaggedPermute<DTYPE_PERMUTE, true> op;
-    op.Init(permute, input_offsets, output_offsets, output_permute, tilingData);
-    op.Process();
+        ExpandIntoJaggedPermute<DTYPE_PERMUTE, false> op;
+        op.Init(permute, input_offsets, output_offsets, output_permute, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(1)) {
+        ExpandIntoJaggedPermute<DTYPE_PERMUTE, true> op;
+        op.Init(permute, input_offsets, output_offsets, output_permute, tilingData);
+        op.Process();
     }
 }

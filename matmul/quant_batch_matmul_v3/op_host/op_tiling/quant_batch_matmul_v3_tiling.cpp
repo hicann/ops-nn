@@ -31,15 +31,14 @@
 #include "platform_util.h"
 #include "arch20/quant_batch_matmul_v3_tiling_arch20.h"
 
-
-using AscendC::BLOCK_CUBE;    // uint32_t 16
-using AscendC::ONE_BLK_SIZE;  // uint32_t 32
-using Ops::NN::Optiling::TilingRegistry;
-using Ops::NN::Optiling::TilingRegistryArch;
+using AscendC::BLOCK_CUBE;   // uint32_t 16
+using AscendC::ONE_BLK_SIZE; // uint32_t 32
+using ge::float32_t;
 using Ops::NN::CheckSupportConditionQbmm;
 using Ops::NN::GenTiling;
 using Ops::NN::TilingPrepareForOpCache;
-using ge::float32_t;
+using Ops::NN::Optiling::TilingRegistry;
+using Ops::NN::Optiling::TilingRegistryArch;
 
 namespace {
 constexpr uint64_t INT_REDUCE_FACTOR = 32;
@@ -62,14 +61,10 @@ constexpr uint64_t BIAS_TABLE_NUM = 256;
 constexpr uint64_t DATA_SIZE_FP32 = 4;
 constexpr uint64_t UB_EXTRE_BYTE = 8;
 
-const std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP =
-{
-    {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
-    {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
-    {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},
-    {ge::DT_INT8, matmul_tiling::DataType::DT_INT8},
-    {ge::DT_INT4, matmul_tiling::DataType::DT_INT4},
-    {ge::DT_INT32, matmul_tiling::DataType::DT_INT32},
+const std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
+    {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16}, {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
+    {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},       {ge::DT_INT8, matmul_tiling::DataType::DT_INT8},
+    {ge::DT_INT4, matmul_tiling::DataType::DT_INT4},       {ge::DT_INT32, matmul_tiling::DataType::DT_INT32},
 };
 
 matmul_tiling::DataType GetMatmulTilingDtype(ge::DataType dtype)
@@ -101,18 +96,17 @@ std::string DType2Str(const ge::DataType dataType)
     }
     return serialString;
 }
-}  // namespace
+} // namespace
 
 namespace optiling {
-QuantBatchMatmulV3Tiling::QuantBatchMatmulV3Tiling(gert::TilingContext *context)
+QuantBatchMatmulV3Tiling::QuantBatchMatmulV3Tiling(gert::TilingContext* context)
     : QuantBatchMatmulV3TilingBase(context, false), tilingData_(tilingDataSelf_)
 {
     Reset();
 }
 
-QuantBatchMatmulV3Tiling::QuantBatchMatmulV3Tiling(gert::TilingContext *context, QuantBatchMatmulV3TilingData *out)
-    : QuantBatchMatmulV3TilingBase(context, true),
-      tilingData_(*out)
+QuantBatchMatmulV3Tiling::QuantBatchMatmulV3Tiling(gert::TilingContext* context, QuantBatchMatmulV3TilingData* out)
+    : QuantBatchMatmulV3TilingBase(context, true), tilingData_(*out)
 {
     Reset();
     InitCompileInfo();
@@ -128,14 +122,11 @@ void QuantBatchMatmulV3Tiling::Reset()
         tilingData_ = QuantBatchMatmulV3TilingData();
         OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                                  0, context_->GetRawTilingData()->GetCapacity()) != EOK,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return);
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return );
     }
 }
 
-ge::graphStatus QuantBatchMatmulV3Tiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus QuantBatchMatmulV3Tiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus QuantBatchMatmulV3Tiling::GetShapeAttrsInfo()
 {
@@ -190,22 +181,23 @@ bool QuantBatchMatmulV3Tiling::CheckDtypeOnOnlyL0c2outForSupportedList() const
         !(inputParams_.aDtype == ge::DT_INT8 || inputParams_.aDtype == ge::DT_INT4) ||
             !(inputParams_.bDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_INT4),
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input dtype should be INT8 or DT_INT4, actual dtype are %s and %s",
-                              DType2Str(inputParams_.aDtype).c_str(),
-                              DType2Str(inputParams_.bDtype).c_str()),
+                              DType2Str(inputParams_.aDtype).c_str(), DType2Str(inputParams_.bDtype).c_str()),
         return false);
-    OP_TILING_CHECK(!(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_BF16 ||
-                      inputParams_.scaleDtype == ge::DT_INT64 || inputParams_.scaleDtype == ge::DT_FLOAT),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Input scale dtype should be UINT64, BF16, INT64 or FLOAT, actual dtype is %s",
-                                          DType2Str(inputParams_.scaleDtype).c_str()),
-                    return false);
-    OP_TILING_CHECK(context_->GetOptionalInputDesc(BIAS_INDEX) != nullptr &&
-                        !(inputParams_.biasDtype == ge::DT_INT32 || inputParams_.biasDtype == ge::DT_BF16 ||
-                          inputParams_.biasDtype == ge::DT_FLOAT16 || inputParams_.biasDtype == ge::DT_FLOAT),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Input bias dtype should be INT32, BF16, FLOAT16 or FLOAT, actual dtype is %s",
-                                          DType2Str(inputParams_.biasDtype).c_str()),
-                    return false);
+    OP_TILING_CHECK(
+        !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_BF16 ||
+          inputParams_.scaleDtype == ge::DT_INT64 || inputParams_.scaleDtype == ge::DT_FLOAT),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Input scale dtype should be UINT64, BF16, INT64 or FLOAT, actual dtype is %s",
+                              DType2Str(inputParams_.scaleDtype).c_str()),
+        return false);
+    OP_TILING_CHECK(
+        context_->GetOptionalInputDesc(BIAS_INDEX) != nullptr &&
+            !(inputParams_.biasDtype == ge::DT_INT32 || inputParams_.biasDtype == ge::DT_BF16 ||
+              inputParams_.biasDtype == ge::DT_FLOAT16 || inputParams_.biasDtype == ge::DT_FLOAT),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Input bias dtype should be INT32, BF16, FLOAT16 or FLOAT, actual dtype is %s",
+                              DType2Str(inputParams_.biasDtype).c_str()),
+        return false);
     OP_TILING_CHECK(!(inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT16 ||
                       inputParams_.cDtype == ge::DT_BF16 || inputParams_.cDtype == ge::DT_INT32),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
@@ -219,12 +211,12 @@ bool QuantBatchMatmulV3Tiling::CheckDtypeOnOnlyL0c2outForA4W4() const
 {
     // int4
     if (inputParams_.aDtype == ge::DT_INT4) {
-        OP_TILING_CHECK(
-            inputParams_.cDtype != ge::DT_FLOAT16 && inputParams_.cDtype != ge::DT_BF16,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                  "When input dtype is int4, output dtype should be FLOAT16 or BF16, actual dtype is %s.",
-                                  DType2Str(inputParams_.cDtype).c_str()),
-            return false);
+        OP_TILING_CHECK(inputParams_.cDtype != ge::DT_FLOAT16 && inputParams_.cDtype != ge::DT_BF16,
+                        CUBE_INNER_ERR_REPORT(
+                            inputParams_.opName,
+                            "When input dtype is int4, output dtype should be FLOAT16 or BF16, actual dtype is %s.",
+                            DType2Str(inputParams_.cDtype).c_str()),
+                        return false);
         // a4w4场景，x1必须为ND
         auto x1Desc = context_->GetInputDesc(X1_INDEX);
         auto x1Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x1Desc->GetStorageFormat()));
@@ -237,20 +229,20 @@ bool QuantBatchMatmulV3Tiling::CheckDtypeOnOnlyL0c2outForA4W4() const
             OP_TILING_CHECK(
                 inputParams_.scaleDtype != ge::DT_UINT64 && inputParams_.scaleDtype != ge::DT_INT64,
                 CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                    "When input dtype is int4 without pertoken scale, scale dtype should be \
+                                      "When input dtype is int4 without pertoken scale, scale dtype should be \
         UINT64 or INT64, actual dtype is %s.",
-                                    DType2Str(inputParams_.scaleDtype).c_str()),
+                                      DType2Str(inputParams_.scaleDtype).c_str()),
                 return false);
             OP_TILING_CHECK(
                 context_->GetOptionalInputDesc(BIAS_INDEX) != nullptr && inputParams_.biasDtype != ge::DT_INT32,
                 CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                    "When input dtype is int4 without pertoken scale, bias dtype \
+                                      "When input dtype is int4 without pertoken scale, bias dtype \
         should be INT32, actual dtype is %s.",
-                                    DType2Str(inputParams_.biasDtype).c_str()),
+                                      DType2Str(inputParams_.biasDtype).c_str()),
                 return false);
-            } else if (!CheckDtypeOnOnlyL0c2outForPertoken()) {
-                return false;
-            }
+        } else if (!CheckDtypeOnOnlyL0c2outForPertoken()) {
+            return false;
+        }
     }
     return true;
 }
@@ -345,14 +337,16 @@ bool QuantBatchMatmulV3Tiling::CheckDtypeOnOnlyL0c2outForUnclassified() const
 
     // 当scale为BF16时，y必须为BF16或INT32
     OP_TILING_CHECK(
-        inputParams_.scaleDtype == ge::DT_BF16 && !(inputParams_.cDtype == ge::DT_BF16 || inputParams_.cDtype == ge::DT_INT32),
+        inputParams_.scaleDtype == ge::DT_BF16 &&
+            !(inputParams_.cDtype == ge::DT_BF16 || inputParams_.cDtype == ge::DT_INT32),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "When scale dtype is BF16, output dtype should be BF16 or INT32, actual dtype is %s.",
                               DType2Str(inputParams_.cDtype).c_str()),
         return false);
     // 当y为BF16时，scale必须为BF16或FLOAT
     OP_TILING_CHECK(
-        inputParams_.cDtype == ge::DT_BF16 && !(inputParams_.scaleDtype == ge::DT_BF16 || inputParams_.scaleDtype == ge::DT_FLOAT),
+        inputParams_.cDtype == ge::DT_BF16 &&
+            !(inputParams_.scaleDtype == ge::DT_BF16 || inputParams_.scaleDtype == ge::DT_FLOAT),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "When out dtype is BF16, scale dtype should be BF16 or FLOAT, actual dtype is %s.",
                               DType2Str(inputParams_.scaleDtype).c_str()),
@@ -375,7 +369,8 @@ bool QuantBatchMatmulV3Tiling::CheckDtypeOnOnlyL0c2outForUnclassified() const
                     return false);
     // 当y为INT32时，scale必须为FLOAT或BF16
     OP_TILING_CHECK(
-        inputParams_.cDtype == ge::DT_INT32 && !(inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16),
+        inputParams_.cDtype == ge::DT_INT32 &&
+            !(inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "When out dtype is INT32, scale dtype should be FLOAT or BF16, actual dtype is %s.",
                               DType2Str(inputParams_.scaleDtype).c_str()),
@@ -395,34 +390,36 @@ bool QuantBatchMatmulV3Tiling::CheckDtypeOnOnlyL0c2out() const
             return false;
         }
     } else {
-        if (!CheckDtypeOnOnlyL0c2outForX1NZ() || !CheckDtypeOnOnlyL0c2outForUnclassified() || !CheckDtypeOnOnlyL0c2outForPertoken()) {
+        if (!CheckDtypeOnOnlyL0c2outForX1NZ() || !CheckDtypeOnOnlyL0c2outForUnclassified() ||
+            !CheckDtypeOnOnlyL0c2outForPertoken()) {
             return false;
         }
     }
     return true;
 }
 
-bool QuantBatchMatmulV3Tiling::CheckShapeInRangeForOptionalInputs(const gert::StorageShape *biasShape,
-                                                                  const gert::StorageShape *pertokenShape) const
+bool QuantBatchMatmulV3Tiling::CheckShapeInRangeForOptionalInputs(const gert::StorageShape* biasShape,
+                                                                  const gert::StorageShape* pertokenShape) const
 {
     if (biasShape != nullptr) {
         auto biasDimNum = biasShape->GetStorageShape().GetDimNum();
         OP_TILING_CHECK(!(biasDimNum == 1 || biasDimNum == BIAS_THREE_DIM),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The bias dimension should equal to 1 or 3, but it is %zu.",
-                                              biasDimNum), return false);
+                                              "The bias dimension should equal to 1 or 3, but it is %zu.", biasDimNum),
+                        return false);
     }
     if (pertokenShape != nullptr) {
         auto pertokenDimNum = pertokenShape->GetStorageShape().GetDimNum();
-        OP_TILING_CHECK(pertokenDimNum != 1,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The pertoken dimension should equal to 1, but it is %zu.",
-                                              pertokenDimNum), return false);
+        OP_TILING_CHECK(
+            pertokenDimNum != 1,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "The pertoken dimension should equal to 1, but it is %zu.",
+                                  pertokenDimNum),
+            return false);
     }
     return true;
 }
 
-bool QuantBatchMatmulV3Tiling::BiasShapeCheck(const gert::Shape &biasShape) const
+bool QuantBatchMatmulV3Tiling::BiasShapeCheck(const gert::Shape& biasShape) const
 {
     auto biasDimNum = biasShape.GetDimNum();
     if (biasDimNum == 1) {
@@ -430,33 +427,36 @@ bool QuantBatchMatmulV3Tiling::BiasShapeCheck(const gert::Shape &biasShape) cons
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                               "The bias dimension should equal n, but it is %ld while n is %lu.",
                                               biasShape.GetDim(0), inputParams_.nSize),
-                                              return false);
+                        return false);
     }
     // 3 dim bias case
     if (biasDimNum == BIAS_THREE_DIM) {
-        auto biasFirstDim = static_cast<uint64_t>(biasShape.GetDim(0)); // using index 0 to get bias first dim value
+        auto biasFirstDim = static_cast<uint64_t>(biasShape.GetDim(0));  // using index 0 to get bias first dim value
         auto biasSecondDim = static_cast<uint64_t>(biasShape.GetDim(1)); // using index 1 to get bias second dim value
-        auto biasThirdDim = static_cast<uint64_t>(biasShape.GetDim(2)); // using index 2 to get bias third dim value
-        OP_TILING_CHECK(biasFirstDim != inputParams_.batchC,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The bias's 1st dimension size should equal to batchC, but it is %zu.",
-                                              biasFirstDim), return false);
-        OP_TILING_CHECK(biasSecondDim != 1,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The bias's 2nd dimension size should equal to 1, but it is %zu.",
-                                              biasSecondDim), return false);
+        auto biasThirdDim = static_cast<uint64_t>(biasShape.GetDim(2));  // using index 2 to get bias third dim value
+        OP_TILING_CHECK(
+            biasFirstDim != inputParams_.batchC,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                  "The bias's 1st dimension size should equal to batchC, but it is %zu.", biasFirstDim),
+            return false);
+        OP_TILING_CHECK(
+            biasSecondDim != 1,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                  "The bias's 2nd dimension size should equal to 1, but it is %zu.", biasSecondDim),
+            return false);
         OP_TILING_CHECK(biasThirdDim != inputParams_.nSize,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                               "The bias's 3rd dimension size should equal to inputParams_.nSize, \
 but it is %zu while n is %lu.",
-                                              biasThirdDim, inputParams_.nSize), return false);
+                                              biasThirdDim, inputParams_.nSize),
+                        return false);
     }
     return true;
 }
 
-bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape & scaleShape, const gert::StorageShape *biasShape,
-                                             const gert::StorageShape *pertokenShape,
-                                             const std::vector<int64_t> &dimValueOfMKN) const
+bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape& scaleShape, const gert::StorageShape* biasShape,
+                                             const gert::StorageShape* pertokenShape,
+                                             const std::vector<int64_t>& dimValueOfMKN) const
 {
     auto x1Inner = dimValueOfMKN[0]; // using index 0 to get x1Inner
     auto x2Inner = dimValueOfMKN[2]; // using index 2 to get x2Inner
@@ -481,7 +481,8 @@ bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape & scaleShape, con
         OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(0)) != inputParams_.mSize,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                               "The pertoken shape should be equal to m[%lu] but actual is [%ld]",
-                                              inputParams_.mSize, pertoken.GetDim(0)), return false);
+                                              inputParams_.mSize, pertoken.GetDim(0)),
+                        return false);
     }
     if (inputParams_.aDtype == ge::DT_INT4) {
         // remainder by 2 to check if it is a even number
@@ -489,29 +490,30 @@ bool QuantBatchMatmulV3Tiling::CheckDimValue(const gert::Shape & scaleShape, con
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "if input dtype is int4, \
                                               last axis of input x1 and x2 has to be a positive even number, \
                                               but actually last axis of x1 is [%ld], last axis of x2 is [%ld].",
-                                              x1Inner, x2Inner), return false);
+                                              x1Inner, x2Inner),
+                        return false);
     }
     return true;
 }
 
-bool QuantBatchMatmulV3Tiling::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                          const gert::StorageShape *biasShape,
-                                          const gert::StorageShape *pertokenShape,
-                                          const std::vector<int64_t> &dimValueOfMKN) const
+bool QuantBatchMatmulV3Tiling::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                          const gert::StorageShape* biasShape, const gert::StorageShape* pertokenShape,
+                                          const std::vector<int64_t>& dimValueOfMKN) const
 {
-    auto x1Shape = *mandtoryShape[0]; // using index 0 to get x1Shape
-    auto x2Shape = *mandtoryShape[1]; // using index 1 to get x2Shape
+    auto x1Shape = *mandtoryShape[0];    // using index 0 to get x1Shape
+    auto x2Shape = *mandtoryShape[1];    // using index 1 to get x2Shape
     auto scaleShape = *mandtoryShape[2]; // using index 2 to get scaleShape
 
     OP_TILING_CHECK(scaleShape.GetDimNum() != 1 && scaleShape.GetDimNum() != 2,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "Only support for scale dimension equals to 1 and 2, but actually it is %zu.",
-                                          scaleShape.GetDimNum()), return false);
+                                          scaleShape.GetDimNum()),
+                    return false);
 
-    if (!CheckShapeInRangeForOptionalInputs(biasShape, pertokenShape)){
+    if (!CheckShapeInRangeForOptionalInputs(biasShape, pertokenShape)) {
         return false;
     }
-    if (!CheckDimValue(scaleShape, biasShape, pertokenShape, dimValueOfMKN)){
+    if (!CheckDimValue(scaleShape, biasShape, pertokenShape, dimValueOfMKN)) {
         return false;
     }
     if (!CheckShapeInBoundary(x1Shape, X1_INDEX) || !CheckShapeInBoundary(x2Shape, X2_INDEX)) {
@@ -556,11 +558,11 @@ bool QuantBatchMatmulV3Tiling::CheckInputInBoundary() const
     if (scaleShape.GetDimNum() != 1 || pertokenShape->GetStorageShape().GetDimNum() != 1) {
         return false;
     }
-    
+
     return true;
 }
 
-bool QuantBatchMatmulV3Tiling::CheckShapeInBoundary(const gert::Shape &shape, uint32_t shapeIdx) const
+bool QuantBatchMatmulV3Tiling::CheckShapeInBoundary(const gert::Shape& shape, uint32_t shapeIdx) const
 {
     int64_t mul = 1;
     int64_t mulBound = 1;
@@ -571,33 +573,34 @@ bool QuantBatchMatmulV3Tiling::CheckShapeInBoundary(const gert::Shape &shape, ui
     for (size_t i = 0; i < shape.GetDimNum(); ++i) {
         int64_t curDim = shape.GetDim(i);
         if (!(npuArch == NpuArch::DAV_2201 && inputSupport)) {
-            OP_TILING_CHECK(i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
-                            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                                "Last dimension of %s should not be larger than 65535 \
+            OP_TILING_CHECK(
+                i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
+                CUBE_INNER_ERR_REPORT(inputParams_.opName, "Last dimension of %s should not be larger than 65535 \
                                                 but actual is %ld. If user is using the graph mode to call the method, \
                                                 please enable the QuantBatchMatmulV3TransposeFusionPass.",
-                                                dimName, curDim),
-                            return false);
+                                      dimName, curDim),
+                return false);
         }
         OP_TILING_CHECK(curDim <= 0 || curDim > static_cast<int64_t>(INT32_MAX),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Shape must be within the range [1, %d], \
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Shape must be within the range [1, %d], \
                                               but actual %zu dimension of %s is %ld.",
                                               INT32_MAX, i, dimName, curDim),
                         return false);
 
         mulBound = curDim * mul;
-        OP_TILING_CHECK(mulBound / curDim != mul,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Multiple of %s shape dimensions should be in boundary of INT64_MAX.",
-                                              dimName),
-                        return false);
+        OP_TILING_CHECK(
+            mulBound / curDim != mul,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                  "Multiple of %s shape dimensions should be in boundary of INT64_MAX.", dimName),
+            return false);
         mul = mulBound;
     }
     return true;
 }
 
-void QuantBatchMatmulV3Tiling::SetQuantBatchMatmulRunParas(QuantBatchMatmulRunParas& runParams, const optiling::QuantBatchMatmulInfo& inputParams) {
+void QuantBatchMatmulV3Tiling::SetQuantBatchMatmulRunParas(QuantBatchMatmulRunParas& runParams,
+                                                           const optiling::QuantBatchMatmulInfo& inputParams)
+{
     runParams.mSize = inputParams.mSize;
     runParams.kSize = inputParams.kSize;
     runParams.nSize = inputParams.nSize;
@@ -613,9 +616,10 @@ void QuantBatchMatmulV3Tiling::SetQuantBatchMatmulRunParas(QuantBatchMatmulRunPa
     runParams.batchC = inputParams.batchC;
 }
 
-uint64_t QuantBatchMatmulV3Tiling::CalcNeedWorkspace(uint64_t baseM, uint64_t baseN) const {
-    return ops::CeilAlign(ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling_.n_dim)), baseN) * 
-           baseM * sizeof(int32_t) * aicoreParams_.aicNum;
+uint64_t QuantBatchMatmulV3Tiling::CalcNeedWorkspace(uint64_t baseM, uint64_t baseN) const
+{
+    return ops::CeilAlign(ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling_.n_dim)), baseN) * baseM *
+           sizeof(int32_t) * aicoreParams_.aicNum;
 }
 
 // 适用整网decode m方向被切分但每核仍计算一个baseM的场景
@@ -663,7 +667,8 @@ void QuantBatchMatmulV3Tiling::ProcessMSmall()
 {
     QuantBatchMatmulRunParas runParams_;
     SetQuantBatchMatmulRunParas(runParams_, inputParams_);
-    bool isAllMix = CheckSupportConditionQbmm(QbmmType::KN, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out) &&
+    bool isAllMix = CheckSupportConditionQbmm(QbmmType::KN, runParams_, aicoreParams_.aicNum,
+                                              compileInfo_.supportL0c2Out) &&
                     isUbQuant_ && inputParams_.batchC == 1;
     uint64_t baseM = static_cast<uint64_t>(tbeTiling_.m_l0) * BLOCK_CUBE;
     uint64_t baseN = static_cast<uint64_t>(tbeTiling_.n_l0) * BLOCK_CUBE;
@@ -672,9 +677,12 @@ void QuantBatchMatmulV3Tiling::ProcessMSmall()
     bool isPertoken = (needWorkspace < WORKSPACE_LIMIT) && inputParams_.isPertoken;
     bool isDecode = inputParams_.mSize <= baseM;
     isBf16Opt_ = (isDecode && (isAllMix || isPertoken)) || IsKCNetDecode();
-    isBf16Opt_ = isBf16Opt_ || CheckSupportConditionQbmm(QbmmType::Perchannel, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out);
-    isBf16Opt_ = isBf16Opt_ || (CheckSupportConditionQbmm(QbmmType::Pertoken, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out) && isPertoken);
-    isBf16Opt_ = isBf16Opt_ && !isTilingOut_;   // isTilingOut_表示MC2场景，不走opt模板
+    isBf16Opt_ = isBf16Opt_ || CheckSupportConditionQbmm(QbmmType::Perchannel, runParams_, aicoreParams_.aicNum,
+                                                         compileInfo_.supportL0c2Out);
+    isBf16Opt_ = isBf16Opt_ || (CheckSupportConditionQbmm(QbmmType::Pertoken, runParams_, aicoreParams_.aicNum,
+                                                          compileInfo_.supportL0c2Out) &&
+                                isPertoken);
+    isBf16Opt_ = isBf16Opt_ && !isTilingOut_; // isTilingOut_表示MC2场景，不走opt模板
     if (isBf16Opt_ && inputParams_.isPertoken) {
         // cv并行，每次base块
         tbeTiling_.m_al1 = 1;
@@ -693,7 +701,9 @@ void QuantBatchMatmulV3Tiling::UpdateSmallMTbeTiling()
                       inputParams_.cDtype != ge::DT_BF16 || inputParams_.batchC != 1 || !inputParams_.isPertoken;
     QuantBatchMatmulRunParas runParams_;
     SetQuantBatchMatmulRunParas(runParams_, inputParams_);
-    if (!is910B2or910C || (isNotMatch && !CheckSupportConditionQbmm(QbmmType::Perchannel, runParams_, aicoreParams_.aicNum, compileInfo_.supportL0c2Out))) {
+    if (!is910B2or910C ||
+        (isNotMatch && !CheckSupportConditionQbmm(QbmmType::Perchannel, runParams_, aicoreParams_.aicNum,
+                                                  compileInfo_.supportL0c2Out))) {
         return;
     }
 
@@ -706,29 +716,29 @@ void QuantBatchMatmulV3Tiling::UpdateSmallMTbeTiling()
     /* 先计算baseM，尽量不切分 */
     uint64_t m_l0 = ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(BLOCK_CUBE));
     uint64_t baseM = m_l0 * static_cast<uint64_t>(BLOCK_CUBE);
-    uint64_t baseN = 128UL;  // 基准baseN为128
-    uint64_t baseK = 128UL;  // 基准baseK取128
+    uint64_t baseN = 128UL; // 基准baseN为128
+    uint64_t baseK = 128UL; // 基准baseK取128
 
-    auto l0aElements = aicoreParams_.l0aSize / 2UL;  // 2UL表示开启double buffer，sizeof(int8) = 1
-    auto l0bElements = aicoreParams_.l0aSize / 2UL;  // 2UL表示开启double buffer，sizeof(int8) = 1
+    auto l0aElements = aicoreParams_.l0aSize / 2UL; // 2UL表示开启double buffer，sizeof(int8) = 1
+    auto l0bElements = aicoreParams_.l0aSize / 2UL; // 2UL表示开启double buffer，sizeof(int8) = 1
     if (inputParams_.mSize <= 96UL) {
         /* 根据L0C、L0A、L0B大小求解出baseN , 计算访存比最大 */
-        auto l0cElements = aicoreParams_.l0cSize / 4UL;             // L0C不开启db，sizeof(int32) = 4UL
-        baseN = std::min(l0cElements / baseM, l0bElements / 64UL);  // l0c用满，最大化计算访存比，基准baseK取64
-        baseN = baseN / 32UL * 32UL;                                // baseN向下32对齐
+        auto l0cElements = aicoreParams_.l0cSize / 4UL;            // L0C不开启db，sizeof(int32) = 4UL
+        baseN = std::min(l0cElements / baseM, l0bElements / 64UL); // l0c用满，最大化计算访存比，基准baseK取64
+        baseN = baseN / 32UL * 32UL;                               // baseN向下32对齐
         uint64_t maxN = baseN * aicoreParams_.aicNum;
         if (inputParams_.nSize > maxN) {
-            return;  // 1轮计算不完的，L0C开启db会有收益
+            return; // 1轮计算不完的，L0C开启db会有收益
         }
         /* 根据L0A、L0B计算baseK */
-        baseK = std::min(l0aElements / baseM, l0bElements / baseN) / 64UL * 64UL;  // 使baseK向下64对齐
-        baseK = std::min(baseK, 128UL);                                            // 使baseK不超过128
+        baseK = std::min(l0aElements / baseM, l0bElements / baseN) / 64UL * 64UL; // 使baseK向下64对齐
+        baseK = std::min(baseK, 128UL);                                           // 使baseK不超过128
     } else {
         // 调整baseN使得计算的轮次最少，其次核数最大，最后是计算访存比。
         uint64_t curBaseN = 128UL;
         int64_t maxScore = -2400L;
-        uint64_t maxBaseMN = 128UL * 256UL;                           // L0C可容纳 128 x 256 个int32
-        while (curBaseN * baseM <= maxBaseMN && curBaseN <= 256UL) {  // 限制baseN不超过256
+        uint64_t maxBaseMN = 128UL * 256UL;                          // L0C可容纳 128 x 256 个int32
+        while (curBaseN * baseM <= maxBaseMN && curBaseN <= 256UL) { // 限制baseN不超过256
             uint64_t blockNum = ops::CeilDiv(inputParams_.nSize, curBaseN);
             int64_t blockNumPerCore = static_cast<int64_t>(ops::CeilDiv(blockNum, aicoreParams_.aicNum));
             int64_t usedCoreNum = ops::CeilDiv(static_cast<int64_t>(blockNum), blockNumPerCore);
@@ -739,9 +749,9 @@ void QuantBatchMatmulV3Tiling::UpdateSmallMTbeTiling()
                 maxScore = curScore;
                 baseN = curBaseN;
             }
-            curBaseN += 64UL;  // baseN 64 字节对齐
+            curBaseN += 64UL; // baseN 64 字节对齐
         }
-        baseK = 128UL;  // L0A/L0B可容纳 128 x 256 个int8
+        baseK = 128UL; // L0A/L0B可容纳 128 x 256 个int8
     }
 
     UpdateSmallMTbeTiling(baseM, baseN, baseK);
@@ -752,11 +762,11 @@ void QuantBatchMatmulV3Tiling::UpdateSmallMTbeTiling(uint64_t baseM, uint64_t ba
     constexpr uint64_t enableDoubleBuffer = 2UL;
     auto blockNum = ops::CeilDiv(inputParams_.nSize, baseN);
     auto blockNumPerCore = ops::CeilDiv(blockNum, aicoreParams_.aicNum);
-    uint64_t l1Size = aicoreParams_.l1Size - 256UL;  // 保留256UL，不用满l1Size
+    uint64_t l1Size = aicoreParams_.l1Size - 256UL; // 保留256UL，不用满l1Size
 
     uint64_t m_l0 = ops::CeilDiv(baseM, static_cast<uint64_t>(BLOCK_CUBE));
     uint64_t n_l0 = ops::CeilDiv(baseN, static_cast<uint64_t>(BLOCK_CUBE));
-    uint64_t k_l0 = baseK / 32UL;  // basek需要32字节对齐
+    uint64_t k_l0 = baseK / 32UL; // basek需要32字节对齐
 
     /* 仅在baseM/baseN/baseK调整的情况下重新调整其他tiling信息 */
     if ((m_l0 != static_cast<uint64_t>(tbeTiling_.m_l0)) || (n_l0 != static_cast<uint64_t>(tbeTiling_.n_l0)) ||
@@ -766,21 +776,21 @@ void QuantBatchMatmulV3Tiling::UpdateSmallMTbeTiling(uint64_t baseM, uint64_t ba
         tbeTiling_.k_l0 = k_l0;
         tbeTiling_.db_al1 = enableDoubleBuffer;
         tbeTiling_.db_bl1 = enableDoubleBuffer;
-        tbeTiling_.db_l0c = 1;  // L0C不开启db
-        tbeTiling_.m_dim = 1;   // m方向不分核
-        tbeTiling_.k_dim = 1;   // k方向不分核
-        tbeTiling_.m_al1 = 1;   // 配置stepM
-        tbeTiling_.n_bl1 = 1;   // 配置stepN
+        tbeTiling_.db_l0c = 1; // L0C不开启db
+        tbeTiling_.m_dim = 1;  // m方向不分核
+        tbeTiling_.k_dim = 1;  // k方向不分核
+        tbeTiling_.m_al1 = 1;  // 配置stepM
+        tbeTiling_.n_bl1 = 1;  // 配置stepN
 
         /* (stepKa, stepKb)的优先级为：(8, 4) > (4, 4) > (4, 2) > (2, 4) > (2, 2) > (2, 1) > (1, 1)*/
-        uint64_t stepKa = inputParams_.mSize > 96UL ? 4UL : 8UL;  // M大于96时，stepKa从4开始，8会导致头开销大
-        uint64_t stepKb = 4UL;  // 最优选的stepKb为4
+        uint64_t stepKa = inputParams_.mSize > 96UL ? 4UL : 8UL; // M大于96时，stepKa从4开始，8会导致头开销大
+        uint64_t stepKb = 4UL;                                   // 最优选的stepKb为4
         bool reduceStepKa = true;
         while ((stepKa * baseM + stepKb * baseN) * baseK * enableDoubleBuffer > l1Size) {
             if (reduceStepKa) {
-                stepKa = stepKa / 2UL;  // 以2的倍数递减
+                stepKa = stepKa / 2UL; // 以2的倍数递减
             } else {
-                stepKb = stepKb / 2UL;  // 以2的倍数递减
+                stepKb = stepKb / 2UL; // 以2的倍数递减
             }
             reduceStepKa = !reduceStepKa;
         }
@@ -806,8 +816,7 @@ ge::graphStatus QuantBatchMatmulV3Tiling::DoOpTiling()
     tilingData_.params.batchA = inputParams_.batchA;
     tilingData_.params.batchB = inputParams_.batchB;
     tilingData_.params.batchC = inputParams_.batchC;
-    tilingData_.params.singleCoreBatch =
-        ops::CeilDiv(inputParams_.batchC, static_cast<uint64_t>(tbeTiling_.batch_dim));
+    tilingData_.params.singleCoreBatch = ops::CeilDiv(inputParams_.batchC, static_cast<uint64_t>(tbeTiling_.batch_dim));
     tilingData_.params.biasThreeDim = static_cast<uint32_t>(inputParams_.batchBias > 1UL);
     tilingData_.params.isPerTensor = static_cast<uint32_t>(inputParams_.isPerTensor);
     tilingData_.params.isPertoken = static_cast<uint32_t>(inputParams_.isPertoken);
@@ -818,11 +827,14 @@ ge::graphStatus QuantBatchMatmulV3Tiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus QuantBatchMatmulV3Tiling::InitTilingData(matmul_tiling::MatmulApiTilingBase &mm, bool fallback)
+ge::graphStatus QuantBatchMatmulV3Tiling::InitTilingData(matmul_tiling::MatmulApiTilingBase& mm, bool fallback)
 {
-    auto aFormat = inputParams_.aFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND : matmul_tiling::CubeFormat::NZ;
-    auto bFormat = inputParams_.bFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND : matmul_tiling::CubeFormat::NZ;
-    auto cFormat = inputParams_.cFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND : matmul_tiling::CubeFormat::NZ;
+    auto aFormat = inputParams_.aFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND :
+                                                           matmul_tiling::CubeFormat::NZ;
+    auto bFormat = inputParams_.bFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND :
+                                                           matmul_tiling::CubeFormat::NZ;
+    auto cFormat = inputParams_.cFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND :
+                                                           matmul_tiling::CubeFormat::NZ;
     auto aDtype = GetMatmulTilingDtype(inputParams_.aDtype);
     auto bDtype = GetMatmulTilingDtype(inputParams_.bDtype);
     auto cDtype = GetMatmulTilingDtype(inputParams_.cDtype);
@@ -840,14 +852,15 @@ ge::graphStatus QuantBatchMatmulV3Tiling::InitTilingData(matmul_tiling::MatmulAp
         mm.SetShape(ops::CeilDiv<uint64_t>(inputParams_.mSize, tbeTiling_.m_dim),
                     ops::CeilDiv<uint64_t>(inputParams_.nSize, tbeTiling_.n_dim),
                     ops::CeilDiv<uint64_t>(inputParams_.kSize, tbeTiling_.k_dim));
-        mm.SetMatmulConfigParams(1, false, matmul_tiling::ScheduleType::INNER_PRODUCT, matmul_tiling::MatrixTraverse::NOSET, true);
+        mm.SetMatmulConfigParams(1, false, matmul_tiling::ScheduleType::INNER_PRODUCT,
+                                 matmul_tiling::MatrixTraverse::NOSET, true);
     }
     mm.SetOrgShape(inputParams_.mSize, inputParams_.nSize, inputParams_.kSize);
     if (inputParams_.hasBias) {
         mm.SetBias(true);
         auto biasDtype = GetMatmulTilingDtype(inputParams_.biasDtype);
         OP_LOGE_IF(biasDtype == matmul_tiling::DataType::DT_UNDEFINED, ge::GRAPH_FAILED, inputParams_.opName,
-                "invalid bias dtype %s", DType2Str(inputParams_.biasDtype).c_str());
+                   "invalid bias dtype %s", DType2Str(inputParams_.biasDtype).c_str());
         mm.SetBiasType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, biasDtype);
     }
     mm.SetBufferSpace(compileInfo_.l1Size, compileInfo_.l0cSize, compileInfo_.ubSize);
@@ -858,8 +871,8 @@ ge::graphStatus QuantBatchMatmulV3Tiling::InitTilingData(matmul_tiling::MatmulAp
     return ge::GRAPH_SUCCESS;
 }
 
-void QuantBatchMatmulV3Tiling::ConstructCacheParams(BatchmatmulCompileParas &compileParams,
-                                                    BatchmatmulRunParas &runParams) const
+void QuantBatchMatmulV3Tiling::ConstructCacheParams(BatchmatmulCompileParas& compileParams,
+                                                    BatchmatmulRunParas& runParams) const
 {
     compileParams.binary_mode_flag = true;
     compileParams.bias_flag = inputParams_.hasBias && (inputParams_.biasDtype == ge::DT_INT32);
@@ -927,7 +940,7 @@ void QuantBatchMatmulV3Tiling::ConstructCacheParams(BatchmatmulCompileParas &com
 // 需要在传入TBE Tiling前对batch轴解除多核的绑定
 // 使得M/N轴上能有更多的核数参与tiling
 // 避免singleCoreM/N超过INT32_MAX
-void QuantBatchMatmulV3Tiling::ModifyCacheParams(BatchmatmulRunParas &runParams) const
+void QuantBatchMatmulV3Tiling::ModifyCacheParams(BatchmatmulRunParas& runParams) const
 {
     if (runParams.m * static_cast<int64_t>(BLOCK_CUBE) > static_cast<int64_t>(INT32_MAX) ||
         runParams.n * static_cast<int64_t>(BLOCK_CUBE) > static_cast<int64_t>(INT32_MAX)) {
@@ -946,7 +959,7 @@ void QuantBatchMatmulV3Tiling::ModifyCacheParams(BatchmatmulRunParas &runParams)
 ge::graphStatus QuantBatchMatmulV3Tiling::DoLibApiTiling()
 {
     OP_TILING_CHECK(!SetMatmulTilingFromTbeTiling(),
-                CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to get tbe tiling!"), return ge::GRAPH_FAILED);
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to get tbe tiling!"), return ge::GRAPH_FAILED);
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -962,8 +975,7 @@ ge::graphStatus QuantBatchMatmulV3Tiling::DoLibApiTiling()
  */
 uint64_t QuantBatchMatmulV3Tiling::GetTilingKey(bool isBasicTiling) const
 {
-    uint64_t trans =
-        (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+    uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
     uint64_t kernelTemplateType = (static_cast<uint64_t>(isBf16Opt_) << 1) | static_cast<uint64_t>(isBasicTiling);
     uint64_t optionAttrs = 0;
     if (inputParams_.cDtype != ge::DT_BF16) {
@@ -972,10 +984,7 @@ uint64_t QuantBatchMatmulV3Tiling::GetTilingKey(bool isBasicTiling) const
     return GET_TPL_TILING_KEY(trans, kernelTemplateType, static_cast<uint64_t>(inputParams_.isPertoken), optionAttrs);
 }
 
-uint64_t QuantBatchMatmulV3Tiling::GetTilingKey() const
-{
-    return GetTilingKey(false);
-}
+uint64_t QuantBatchMatmulV3Tiling::GetTilingKey() const { return GetTilingKey(false); }
 
 ge::graphStatus QuantBatchMatmulV3Tiling::GetWorkspaceSize()
 {
@@ -998,12 +1007,12 @@ ge::graphStatus QuantBatchMatmulV3Tiling::PostTiling()
     size_t tilingDataSize = sizeof(QuantBatchMatmulV3TilingData);
     OP_LOGD(inputParams_.opName, "Final tiling data size: %zu.", tilingDataSize);
 
-    OP_TILING_CHECK(tilingDataSize % sizeof(uint64_t) != 0,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.",
-                                          tilingDataSize),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        tilingDataSize % sizeof(uint64_t) != 0,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.", tilingDataSize),
+        return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void *>(&tilingData_), tilingDataSize);
+                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -1021,9 +1030,10 @@ ge::graphStatus QuantBatchMatmulV3Tiling::PostTiling()
         context_->SetScheduleMode(1); // kernel use SyncAll()
     }
     if (NeedAtomiClean() && compileInfo_.supportL0c2Out) {
-        context_->SetScheduleMode(1); // 独占全核，设置以后会让所有核空闲以后才启动，有多核同步指令需要做此设置避免影响整网其他算子
+        context_->SetScheduleMode(
+            1); // 独占全核，设置以后会让所有核空闲以后才启动，有多核同步指令需要做此设置避免影响整网其他算子
     }
-    size_t *workspaces = context_->GetWorkspaceSizes(1); // set workspace
+    size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
     PrintTilingParams();
@@ -1048,9 +1058,8 @@ int32_t QuantBatchMatmulV3Tiling::GetIteratorOrder()
     const int32_t singleCoreK = tilingData_.matmulTiling.singleCoreK;
     int32_t reduceSize = GetShapeWithDataType(ONE_BLK_SIZE, inputParams_.aDtype);
     OP_TILING_CHECK(tbeTiling_.kal1_16 * reduceSize == 0 || tbeTiling_.kbl1_16 == 0,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Tiling kal1(%ld), kbl1(%ld) or reduceSize(%d) is 0.",
-                                              tbeTiling_.kal1_16, tbeTiling_.kbl1_16, reduceSize),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling kal1(%ld), kbl1(%ld) or reduceSize(%d) is 0.",
+                                          tbeTiling_.kal1_16, tbeTiling_.kbl1_16, reduceSize),
                     return -1);
     bool fullkAL1Load = (static_cast<float>(singleCoreK) / (tbeTiling_.kal1_16 * reduceSize)) > 1.0 ? false : true;
     bool fullkBL1Load = (static_cast<float>(singleCoreK) / (tbeTiling_.kbl1_16 * reduceSize)) > 1.0 ? false : true;
@@ -1058,46 +1067,50 @@ int32_t QuantBatchMatmulV3Tiling::GetIteratorOrder()
     // if KAL1 and KBL1 both can not be full loaded, then select m or n which is no matter
     if (!fullkAL1Load && !fullkBL1Load) {
         return 0;
-    } else if (fullkAL1Load && !fullkBL1Load) {  // if KAL1 is full loaded, then select the order N fist
+    } else if (fullkAL1Load && !fullkBL1Load) { // if KAL1 is full loaded, then select the order N fist
         return 1;
-    } else if (!fullkAL1Load && fullkBL1Load) {  // if KBL1 is full loaded, then select the order M fist
+    } else if (!fullkAL1Load && fullkBL1Load) { // if KBL1 is full loaded, then select the order M fist
         return 0;
     } else {
         // if AL1LoadSize less then BL1LoadSize, then select order N first, vice versa.
-        int64_t mLoop =
-            ops::CeilDiv(static_cast<int64_t>(singleCoreM), tbeTiling_.m_al1 * tbeTiling_.m_l0 * BLOCK_CUBE);
-        int64_t nLoop =
-            ops::CeilDiv(static_cast<int64_t>(singleCoreN), tbeTiling_.n_bl1 * tbeTiling_.n_l0 * BLOCK_CUBE);
+        int64_t mLoop = ops::CeilDiv(static_cast<int64_t>(singleCoreM),
+                                     tbeTiling_.m_al1 * tbeTiling_.m_l0 * BLOCK_CUBE);
+        int64_t nLoop = ops::CeilDiv(static_cast<int64_t>(singleCoreN),
+                                     tbeTiling_.n_bl1 * tbeTiling_.n_l0 * BLOCK_CUBE);
         int64_t aL1LoadSize = singleCoreM + singleCoreN * mLoop;
         int64_t bL1LoadSize = singleCoreN + singleCoreM * nLoop;
         return aL1LoadSize < bL1LoadSize ? 1 : 0;
     }
 }
 
-bool QuantBatchMatmulV3Tiling::SetBlockDimsAndSingleCore(AscendC::tiling::TCubeTiling &mt)
+bool QuantBatchMatmulV3Tiling::SetBlockDimsAndSingleCore(AscendC::tiling::TCubeTiling& mt)
 {
-    auto mFactor = (inputParams_.transA && inputParams_.mSize >= static_cast<uint64_t>(mt.baseM)
-                        ? static_cast<uint64_t>(mt.baseM)
-                        : BLOCK_CUBE);
-    auto nFactor = (!inputParams_.transB && inputParams_.nSize >= static_cast<uint64_t>(mt.baseN)
-                        ? static_cast<uint64_t>(mt.baseN)
-                        : BLOCK_CUBE);
-    auto singleCoreM =
-        ops::CeilDiv(ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(tbeTiling_.m_dim)), mFactor) * mFactor;
-    auto singleCoreN =
-        ops::CeilDiv(ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling_.n_dim)), nFactor) * nFactor;
+    auto mFactor = (inputParams_.transA && inputParams_.mSize >= static_cast<uint64_t>(mt.baseM) ?
+                        static_cast<uint64_t>(mt.baseM) :
+                        BLOCK_CUBE);
+    auto nFactor = (!inputParams_.transB && inputParams_.nSize >= static_cast<uint64_t>(mt.baseN) ?
+                        static_cast<uint64_t>(mt.baseN) :
+                        BLOCK_CUBE);
+    auto singleCoreM = ops::CeilDiv(ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(tbeTiling_.m_dim)),
+                                    mFactor) *
+                       mFactor;
+    auto singleCoreN = ops::CeilDiv(ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling_.n_dim)),
+                                    nFactor) *
+                       nFactor;
     auto singleCoreK = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(tbeTiling_.k_dim));
-    singleCoreK =
-        tbeTiling_.k_dim == 1 ? singleCoreK : ops::CeilAlign(singleCoreK, static_cast<uint64_t>(ONE_BLK_SIZE));
-    OP_TILING_CHECK(singleCoreM > static_cast<uint64_t>(std::numeric_limits<int>::max()),
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "Cache tiling inner error: singleCoreM exceeds the expression range of the int."), return false);
+    singleCoreK = tbeTiling_.k_dim == 1 ? singleCoreK :
+                                          ops::CeilAlign(singleCoreK, static_cast<uint64_t>(ONE_BLK_SIZE));
+    OP_TILING_CHECK(
+        singleCoreM > static_cast<uint64_t>(std::numeric_limits<int>::max()),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Cache tiling inner error: singleCoreM exceeds the expression range of the int."),
+        return false);
 
-    OP_TILING_CHECK(singleCoreN > static_cast<uint64_t>(std::numeric_limits<int>::max()),
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "Cache tiling inner error: singleCoreN exceeds the expression range of the int."), return false);
+    OP_TILING_CHECK(
+        singleCoreN > static_cast<uint64_t>(std::numeric_limits<int>::max()),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Cache tiling inner error: singleCoreN exceeds the expression range of the int."),
+        return false);
     mt.singleCoreM = singleCoreM;
     mt.singleCoreN = singleCoreN;
     mt.singleCoreK = singleCoreK;
@@ -1115,28 +1128,29 @@ bool QuantBatchMatmulV3Tiling::SetBlockDimsAndSingleCore(AscendC::tiling::TCubeT
     auto batchDim = ops::CeilDiv(inputParams_.batchC, static_cast<uint64_t>(tilingData_.params.singleCoreBatch));
     auto kDim = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreK));
     auto blockDim = mDim * nDim * batchDim * kDim;
-    OP_TILING_CHECK(blockDim > static_cast<uint64_t>(std::numeric_limits<int32_t>::max()),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Cache tiling inner error: blockDim exceeds the expression range of the int."),
-                    return false);
+    OP_TILING_CHECK(
+        blockDim > static_cast<uint64_t>(std::numeric_limits<int32_t>::max()),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "Cache tiling inner error: blockDim exceeds the expression range of the int."),
+        return false);
     mt.usedCoreNum = std::min(blockDim, aicoreParams_.aicNum);
     return true;
 }
 
 bool QuantBatchMatmulV3Tiling::SetMatmulTilingFromTbeTiling()
 {
-    auto &mt = tilingData_.matmulTiling;
+    auto& mt = tilingData_.matmulTiling;
     mt.M = inputParams_.mSize;
     mt.N = inputParams_.nSize;
     mt.Ka = inputParams_.kSize;
     mt.Kb = inputParams_.kSize;
     mt.baseM = tbeTiling_.m_l0 * BLOCK_CUBE;
     mt.baseN = tbeTiling_.n_l0 * BLOCK_CUBE;
-    OP_TILING_CHECK(!SetBlockDimsAndSingleCore(mt),
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName, "Set usedCoreNum or singleCoreM/N faild when m(%lu) and n(%lu).",
-                            inputParams_.mSize, inputParams_.nSize),
-                    return false);
+    OP_TILING_CHECK(
+        !SetBlockDimsAndSingleCore(mt),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Set usedCoreNum or singleCoreM/N faild when m(%lu) and n(%lu).",
+                              inputParams_.mSize, inputParams_.nSize),
+        return false);
 
     int32_t reduceSize = ONE_BLK_SIZE / ge::GetSizeByDataType(inputParams_.aDtype);
     mt.baseK = tbeTiling_.k_l0 * reduceSize;
@@ -1152,15 +1166,15 @@ bool QuantBatchMatmulV3Tiling::SetMatmulTilingFromTbeTiling()
 
     int32_t a1Length = mt.baseM * mt.baseK * ge::GetSizeByDataType(inputParams_.aDtype);
     int32_t b1Length = mt.baseN * mt.baseK * ge::GetSizeByDataType(inputParams_.bDtype);
-    int32_t c1Length = mt.baseN * mt.baseM * 4;  // L0C
+    int32_t c1Length = mt.baseN * mt.baseM * 4; // L0C
     mt.transLength = std::max(std::max(a1Length, b1Length), c1Length);
     auto iteratorOrder = GetIteratorOrder();
-    OP_TILING_CHECK(iteratorOrder < 0,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Get iteratorOrder failed."), return false);
+    OP_TILING_CHECK(iteratorOrder < 0, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Get iteratorOrder failed."),
+                    return false);
     mt.iterateOrder = iteratorOrder;
     mt.shareMode = 0;
-    mt.dbL0A = 2;  // db switch, 1: off, 2: on
-    mt.dbL0B = 2;  // db switch, 1: off, 2: on
+    mt.dbL0A = 2; // db switch, 1: off, 2: on
+    mt.dbL0B = 2; // db switch, 1: off, 2: on
     mt.dbL0C = tbeTiling_.db_l0c;
 
     bool fallback = false;
@@ -1179,8 +1193,9 @@ bool QuantBatchMatmulV3Tiling::SetMatmulTilingFromTbeTiling()
     return true;
 }
 
-uint32_t QuantBatchMatmulV3Tiling::GetABankConflictSize() {
-    auto &mt = tilingData_.matmulTiling;
+uint32_t QuantBatchMatmulV3Tiling::GetABankConflictSize()
+{
+    auto& mt = tilingData_.matmulTiling;
     uint32_t ret = 0;
     if (inputParams_.transA) {
         bool isABankConflict = ops::CeilDiv<uint64_t>(mt.stepM * mt.baseM, ONE_BLK_SIZE) * 32 % 512 == 0;
@@ -1192,12 +1207,12 @@ uint32_t QuantBatchMatmulV3Tiling::GetABankConflictSize() {
     return ret;
 }
 
-bool QuantBatchMatmulV3Tiling::CalcUsedL1AndUBSize(int32_t aL1Size, int32_t bL1Size, bool &fallback)
+bool QuantBatchMatmulV3Tiling::CalcUsedL1AndUBSize(int32_t aL1Size, int32_t bL1Size, bool& fallback)
 {
-    auto &mt = tilingData_.matmulTiling;
-    int32_t biasL1Size = (inputParams_.hasBias && (inputParams_.biasDtype == ge::DT_INT32))
-                             ? mt.baseN * ge::GetSizeByDataType(inputParams_.biasDtype) * mt.stepN
-                             : 0;
+    auto& mt = tilingData_.matmulTiling;
+    int32_t biasL1Size = (inputParams_.hasBias && (inputParams_.biasDtype == ge::DT_INT32)) ?
+                             mt.baseN * ge::GetSizeByDataType(inputParams_.biasDtype) * mt.stepN :
+                             0;
     uint32_t ubSize = 0;
     if (!compileInfo_.supportL0c2Out) {
         biasL1Size = 0;
@@ -1213,8 +1228,8 @@ bool QuantBatchMatmulV3Tiling::CalcUsedL1AndUBSize(int32_t aL1Size, int32_t bL1S
             aL1Size = mt.baseM * mt.baseK * ge::GetSizeByDataType(inputParams_.aDtype) * mt.depthA1;
         }
 
-        OP_TILING_CHECK(mt.stepM <= 0,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "get invalid tiling(stepM <= 0)"), return false);
+        OP_TILING_CHECK(mt.stepM <= 0, CUBE_INNER_ERR_REPORT(inputParams_.opName, "get invalid tiling(stepM <= 0)"),
+                        return false);
         uint32_t aBankConflictSize = GetABankConflictSize();
         uint32_t rqdL1Size = aL1Size + bL1Size + aBankConflictSize * tbeTiling_.db_al1;
         fallback = rqdL1Size > compileInfo_.l1Size;
@@ -1222,10 +1237,10 @@ bool QuantBatchMatmulV3Tiling::CalcUsedL1AndUBSize(int32_t aL1Size, int32_t bL1S
         OP_LOGD(inputParams_.opName, "rqdL1Size: %d", rqdL1Size);
         auto usedCoreNum = mt.usedCoreNum;
         if (fallback) {
-            matmul_tiling::PlatformInfo platformInfo = {platform_ascendc::SocVersion::ASCEND310P,
-                static_cast<uint64_t>(compileInfo_.l1Size), static_cast<uint64_t>(compileInfo_.l0cSize),
-                static_cast<uint64_t>(compileInfo_.ubSize), static_cast<uint64_t>(compileInfo_.l0aSize),
-                static_cast<uint64_t>(compileInfo_.l0bSize)};
+            matmul_tiling::PlatformInfo platformInfo = {
+                platform_ascendc::SocVersion::ASCEND310P,    static_cast<uint64_t>(compileInfo_.l1Size),
+                static_cast<uint64_t>(compileInfo_.l0cSize), static_cast<uint64_t>(compileInfo_.ubSize),
+                static_cast<uint64_t>(compileInfo_.l0aSize), static_cast<uint64_t>(compileInfo_.l0bSize)};
             matmul_tiling::MatmulApiTiling mm(platformInfo);
             OP_TILING_CHECK(InitTilingData(mm, fallback) != ge::GRAPH_SUCCESS,
                             CUBE_INNER_ERR_REPORT(inputParams_.opName, "Init tilingdata (fallback) failed."),
@@ -1243,54 +1258,45 @@ bool QuantBatchMatmulV3Tiling::CalcUsedL1AndUBSize(int32_t aL1Size, int32_t bL1S
     return true;
 }
 
-int32_t QuantBatchMatmulV3Tiling::CalcND2NZSpace() const {
-    auto &mt = tilingData_.matmulTiling;
+int32_t QuantBatchMatmulV3Tiling::CalcND2NZSpace() const
+{
+    auto& mt = tilingData_.matmulTiling;
     auto aDtypeSize = ge::GetSizeByDataType(inputParams_.aDtype);
     int32_t nd2nzSpace = mt.baseM * mt.baseK * mt.stepM * mt.stepKa * aDtypeSize;
     // ub bank confict
-    if (ops::CeilAlign(mt.baseK* mt.stepKa, static_cast<int32_t>(ONE_BLK_SIZE)) % BANK_LEN == 0 &&
-        ops::CeilDiv(static_cast<uint32_t>(mt.baseK* mt.stepKa), ONE_BLK_SIZE) < ONE_BLK_SIZE) {
+    if (ops::CeilAlign(mt.baseK * mt.stepKa, static_cast<int32_t>(ONE_BLK_SIZE)) % BANK_LEN == 0 &&
+        ops::CeilDiv(static_cast<uint32_t>(mt.baseK * mt.stepKa), ONE_BLK_SIZE) < ONE_BLK_SIZE) {
         nd2nzSpace += mt.baseM * mt.stepM * aDtypeSize;
     }
 
     return nd2nzSpace;
 }
 
-void QuantBatchMatmulV3Tiling::PrintTilingData()
-{
-    OP_LOGD(inputParams_.opName, "%ld", PrintTilingDataImpl());
-}
+void QuantBatchMatmulV3Tiling::PrintTilingData() { OP_LOGD(inputParams_.opName, "%ld", PrintTilingDataImpl()); }
 
 int64_t QuantBatchMatmulV3Tiling::PrintTilingDataImpl()
 {
-    auto &tiling = tilingData_.matmulTiling;
+    auto& tiling = tilingData_.matmulTiling;
     std::stringstream ss;
-    ss << " usedCoreNum: " << tiling.usedCoreNum << " M: " << tiling.M << " N: " << tiling.N
-       << " Ka: " << tiling.Ka << " Kb: " << tiling.Kb << " singleCoreM: " << tiling.singleCoreM
-       << " singleCoreN: " << tiling.singleCoreN << " singleCoreK: " << tiling.singleCoreK
-       << " baseM: " << tiling.baseM << " baseN: " << tiling.baseN << " baseK: " << tiling.baseK
-       << " depthA1: " << tiling.depthA1 << " depthB1: " << tiling.depthB1
+    ss << " usedCoreNum: " << tiling.usedCoreNum << " M: " << tiling.M << " N: " << tiling.N << " Ka: " << tiling.Ka
+       << " Kb: " << tiling.Kb << " singleCoreM: " << tiling.singleCoreM << " singleCoreN: " << tiling.singleCoreN
+       << " singleCoreK: " << tiling.singleCoreK << " baseM: " << tiling.baseM << " baseN: " << tiling.baseN
+       << " baseK: " << tiling.baseK << " depthA1: " << tiling.depthA1 << " depthB1: " << tiling.depthB1
        << " stepM: " << tiling.stepM << " stepN: " << tiling.stepN << " stepka: " << tiling.stepKa
-       << " stepkb: " << tiling.stepKb << " isBias: " << tiling.isBias
-       << " transLength: " << tiling.transLength
-       << " iterateOrder: " << ((tiling.iterateOrder == 1) ? "orderM" : "orderN")
-       << " shareMode: " << tiling.shareMode << " dbL0A: " << tiling.dbL0A
-       << " dbL0B: " << tiling.dbL0B << " dbL0C: " << tiling.dbL0C
+       << " stepkb: " << tiling.stepKb << " isBias: " << tiling.isBias << " transLength: " << tiling.transLength
+       << " iterateOrder: " << ((tiling.iterateOrder == 1) ? "orderM" : "orderN") << " shareMode: " << tiling.shareMode
+       << " dbL0A: " << tiling.dbL0A << " dbL0B: " << tiling.dbL0B << " dbL0C: " << tiling.dbL0C
        << " usedL1Size: " << tiling.shareL1Size << " usedL0CSize: " << tiling.shareL0CSize
-       << " usedUBSize: " << tiling.shareUbSize << " batchM: " << tiling.batchM
-       << " batchN: " << tiling.batchN << " singleBatchM: " << tiling.singleBatchM
-       << " singleBatchN: " << tiling.singleBatchN;
+       << " usedUBSize: " << tiling.shareUbSize << " batchM: " << tiling.batchM << " batchN: " << tiling.batchN
+       << " singleBatchM: " << tiling.singleBatchM << " singleBatchN: " << tiling.singleBatchN;
     return 0;
 }
 
-void QuantBatchMatmulV3Tiling::PrintTbeTiling()
-{
-    OP_LOGD(inputParams_.opName, "%ld", PrintTbeTilingImpl());
-}
+void QuantBatchMatmulV3Tiling::PrintTbeTiling() { OP_LOGD(inputParams_.opName, "%ld", PrintTbeTilingImpl()); }
 
 int64_t QuantBatchMatmulV3Tiling::PrintTbeTilingImpl()
 {
-    optiling::CacheTilingData &tiling = tbeTiling_;
+    optiling::CacheTilingData& tiling = tbeTiling_;
     std::stringstream ss;
     ss << "tiling_id: " << tiling.tiling_id << " n_cub: " << tiling.n_cub << " db_cub: " << tiling.db_cub
        << " m_l0: " << tiling.m_l0 << " k_l0: " << tiling.k_l0 << " n_l0: " << tiling.n_l0
@@ -1330,42 +1336,40 @@ int64_t QuantBatchMatmulV3Tiling::PrintTilingParamsImpl() const
     QuantBatchMatmulV3Params& params = tilingData_.params;
     std::stringstream ss;
     ss << " batchA: " << params.batchA << " batchB: " << params.batchB << " batchC: " << params.batchC
-        << " singleCoreBatch: " << params.singleCoreBatch << " isPerTensor: " << params.isPerTensor
-        << " isPertoken: " << params.isPertoken << " biasThreeDim: " << params.biasThreeDim
-        << " ubCalcM: " << params.ubCalcM << " ubCalcN: " << params.ubCalcN
-        << " needUbBuffer: " << params.needUbBuffer << " realSingleCoreM: " << params.realSingleCoreM
-        << " realSingleCoreN: " << params.realSingleCoreN << " biasDtype: " << params.biasDtype
-        << " ubSize: " << params.ubSize;
+       << " singleCoreBatch: " << params.singleCoreBatch << " isPerTensor: " << params.isPerTensor
+       << " isPertoken: " << params.isPertoken << " biasThreeDim: " << params.biasThreeDim
+       << " ubCalcM: " << params.ubCalcM << " ubCalcN: " << params.ubCalcN << " needUbBuffer: " << params.needUbBuffer
+       << " realSingleCoreM: " << params.realSingleCoreM << " realSingleCoreN: " << params.realSingleCoreN
+       << " biasDtype: " << params.biasDtype << " ubSize: " << params.ubSize;
     OPS_LOG_D(inputParams_.opName, "QuantBatchMatmulV3Params params: %s", ss.str().c_str());
     return 0;
 }
 
-void QuantBatchMatmulV3Tiling::SpiltSingleCore(int32_t &singleCoreM, int32_t &singleCoreN)
+void QuantBatchMatmulV3Tiling::SpiltSingleCore(int32_t& singleCoreM, int32_t& singleCoreN)
 {
     // 任意m,n方向无循环，KFC mm计算分区内不会S型计算，可以确定每次计算的起始点
     if (tilingData_.matmulTiling.baseM >= singleCoreM || tilingData_.matmulTiling.baseN >= singleCoreN) {
         return;
     }
     bool spiltM = ops::CeilDiv(singleCoreM, tilingData_.matmulTiling.baseM) <=
-                    ops::CeilDiv(singleCoreN, tilingData_.matmulTiling.baseN);
+                  ops::CeilDiv(singleCoreN, tilingData_.matmulTiling.baseN);
     //  spilt singleCore down to baseM/N in one direction
     if (spiltM) {
         tilingData_.matmulTiling.singleCoreM = tilingData_.matmulTiling.baseM;
         singleCoreM = tilingData_.matmulTiling.baseM;
         tbeTiling_.m_al1 = 1;
         tilingData_.matmulTiling.depthA1 = ops::CeilDiv(tbeTiling_.kal1_16, tbeTiling_.k_l0) * tbeTiling_.m_al1 *
-                                                tbeTiling_.db_al1;
+                                           tbeTiling_.db_al1;
         tilingData_.matmulTiling.stepM = tbeTiling_.m_al1;
     } else {
         tilingData_.matmulTiling.singleCoreN = tilingData_.matmulTiling.baseN;
         singleCoreN = tilingData_.matmulTiling.baseN;
         tbeTiling_.n_bl1 = 1;
         tilingData_.matmulTiling.depthB1 = ops::CeilDiv(tbeTiling_.kbl1_16, tbeTiling_.k_l0) * tbeTiling_.n_bl1 *
-                                                tbeTiling_.db_bl1;
+                                           tbeTiling_.db_bl1;
         tilingData_.matmulTiling.stepN = tbeTiling_.n_bl1;
     }
 }
-
 
 void QuantBatchMatmulV3Tiling::SpiltForWorkSpaceLimit(int32_t singleCoreM, int32_t singleCoreN, int32_t blockDim)
 {
@@ -1374,8 +1378,9 @@ void QuantBatchMatmulV3Tiling::SpiltForWorkSpaceLimit(int32_t singleCoreM, int32
     if (isBf16Opt_ && inputParams_.isPertoken) {
         maxSingleCoreN = ops::CeilAlign(singleCoreN, tilingData_.matmulTiling.baseN);
     }
-    inputParams_.bf16ExtreWorkSpaceSize = static_cast<uint64_t>(maxSingleCoreM) * static_cast<uint64_t>(maxSingleCoreN) *
-                                              sizeof(int32_t) * static_cast<uint64_t>(blockDim);
+    inputParams_.bf16ExtreWorkSpaceSize = static_cast<uint64_t>(maxSingleCoreM) *
+                                          static_cast<uint64_t>(maxSingleCoreN) * sizeof(int32_t) *
+                                          static_cast<uint64_t>(blockDim);
     if (inputParams_.bf16ExtreWorkSpaceSize <= WORKSPACE_LIMIT) {
         return;
     }
@@ -1383,13 +1388,15 @@ void QuantBatchMatmulV3Tiling::SpiltForWorkSpaceLimit(int32_t singleCoreM, int32
     uint64_t singleCoreShapeLimit = static_cast<uint64_t>(singleCoreLimit) / sizeof(int32_t);
     // N after M, minimum is baseM/baseN
     uint64_t spiltFactor = ops::CeilDiv(static_cast<uint64_t>(maxSingleCoreM) * maxSingleCoreN, singleCoreShapeLimit);
-    uint64_t newSingleM = (ops::CeilDiv(static_cast<uint64_t>(maxSingleCoreM), static_cast<uint64_t>(BLOCK_CUBE))
-                            / spiltFactor) * BLOCK_CUBE;
+    uint64_t newSingleM = (ops::CeilDiv(static_cast<uint64_t>(maxSingleCoreM), static_cast<uint64_t>(BLOCK_CUBE)) /
+                           spiltFactor) *
+                          BLOCK_CUBE;
     newSingleM = std::max(newSingleM, static_cast<uint64_t>(tilingData_.matmulTiling.baseM));
-    spiltFactor = ops::CeilDiv(static_cast<uint64_t>(newSingleM) * maxSingleCoreN,  singleCoreShapeLimit);
-    uint64_t newSingleN = static_cast<uint64_t>
-                            (ops::CeilDiv(ops::CeilDiv(maxSingleCoreN, tilingData_.matmulTiling.baseN),
-                            static_cast<int32_t>(spiltFactor))) * tilingData_.matmulTiling.baseN;
+    spiltFactor = ops::CeilDiv(static_cast<uint64_t>(newSingleM) * maxSingleCoreN, singleCoreShapeLimit);
+    uint64_t newSingleN = static_cast<uint64_t>(
+                              ops::CeilDiv(ops::CeilDiv(maxSingleCoreN, tilingData_.matmulTiling.baseN),
+                                           static_cast<int32_t>(spiltFactor))) *
+                          tilingData_.matmulTiling.baseN;
     while (newSingleM * newSingleN > singleCoreShapeLimit) {
         newSingleN -= tilingData_.matmulTiling.baseN;
     }
@@ -1399,18 +1406,18 @@ void QuantBatchMatmulV3Tiling::SpiltForWorkSpaceLimit(int32_t singleCoreM, int32
     if (static_cast<uint32_t>(tilingData_.matmulTiling.baseM * tbeTiling_.m_al1) > newSingleM) {
         tbeTiling_.m_al1 = 1;
         tilingData_.matmulTiling.depthA1 = ops::CeilDiv(tbeTiling_.kal1_16, tbeTiling_.k_l0) * tbeTiling_.m_al1 *
-                                                tbeTiling_.db_al1;
+                                           tbeTiling_.db_al1;
         tilingData_.matmulTiling.stepM = tbeTiling_.m_al1;
     }
     if (static_cast<uint32_t>(tilingData_.matmulTiling.baseN * tbeTiling_.n_bl1) > newSingleN) {
         tbeTiling_.n_bl1 = 1;
         tilingData_.matmulTiling.depthB1 = ops::CeilDiv(tbeTiling_.kbl1_16, tbeTiling_.k_l0) * tbeTiling_.n_bl1 *
-                                                tbeTiling_.db_bl1;
+                                           tbeTiling_.db_bl1;
 
         tilingData_.matmulTiling.stepN = tbeTiling_.n_bl1;
     }
     inputParams_.bf16ExtreWorkSpaceSize = static_cast<uint64_t>(newSingleM) * static_cast<uint64_t>(newSingleN) *
-                                            sizeof(int32_t) * static_cast<uint64_t>(blockDim);
+                                          sizeof(int32_t) * static_cast<uint64_t>(blockDim);
 }
 
 bool QuantBatchMatmulV3Tiling::GetUbDequantExtreSpace()
@@ -1450,8 +1457,8 @@ ge::graphStatus QuantBatchMatmulV3Tiling::CalcPertokenOptUbTiling()
         needUbSize += ubCalcN * sizeof(float32_t);
     }
     OP_TILING_CHECK(needUbSize >= ubSize,
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName, "there is no proper ub tiling when m(%lu) pertoken opt", inputParams_.mSize),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "there is no proper ub tiling when m(%lu) pertoken opt",
+                                          inputParams_.mSize),
                     return ge::GRAPH_FAILED);
 
     ubSize -= needUbSize;
@@ -1486,7 +1493,7 @@ ge::graphStatus QuantBatchMatmulV3Tiling::CalcUbTiling(uint32_t baseN, uint32_t 
     uint64_t ubCalc = (NUM_DB * (sizeof(int32_t) + sizeof(int16_t)) + UB_EXTRE_BYTE) * ubCalcN;
     // input: scale perchannel
     if (!inputParams_.isPerTensor) {
-        ubCalc += NUM_DB * ge::GetSizeByDataType(inputParams_.scaleDtype)* ubCalcN;
+        ubCalc += NUM_DB * ge::GetSizeByDataType(inputParams_.scaleDtype) * ubCalcN;
     }
     if (inputParams_.isPertoken || (inputParams_.biasDtype != ge::DT_INT32)) {
         // veccalc: dequant api dst fp32
@@ -1527,7 +1534,8 @@ ge::graphStatus QuantBatchMatmulV3Tiling::CalcUbTiling(uint32_t baseN, uint32_t 
     return ge::GRAPH_SUCCESS;
 }
 
-bool QuantBatchMatmulV3Tiling::NeedAtomiClean() const {
+bool QuantBatchMatmulV3Tiling::NeedAtomiClean() const
+{
     if (!compileInfo_.supportL0c2Out) {
         uint32_t alignSize = ONE_BLK_SIZE / ge::GetSizeByDataType(inputParams_.cDtype);
 
@@ -1553,8 +1561,7 @@ static ge::graphStatus QuantBatchMatmulV3TilingFunc(gert::TilingContext* context
 {
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulV3", "TilingContext is null!");
     auto compileInfoPtr = context->GetCompileInfo<QuantBatchMatmulV3CompileInfo>();
-    OP_LOGE_IF(
-        compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "The compileInfoPtr is null!");
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "The compileInfoPtr is null!");
     auto npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : compileInfoPtr->npuArch;
     if (PlatformUtil::IsAdvancedArch(npuArch)) {
         ResetQuantBatchMatmulV3InputParams();
@@ -1568,7 +1575,7 @@ static ge::graphStatus QuantBatchMatmulV3TilingFunc(gert::TilingContext* context
     }
 }
 
-static ge::graphStatus TilingParseForQuantBatchMatmulV3(gert::TilingParseContext *context)
+static ge::graphStatus TilingParseForQuantBatchMatmulV3(gert::TilingParseContext* context)
 {
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulV3", "TilingParseContext is null!");
     auto platformInfoPtr = context->GetPlatformInfo();
@@ -1593,7 +1600,7 @@ static ge::graphStatus TilingParseForQuantBatchMatmulV3(gert::TilingParseContext
     compileInfoPtr->supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
     compileInfoPtr->npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     platformInfoPtr->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersionStr);
-    if(!TilingPrepareForOpCache(context)){
+    if (!TilingPrepareForOpCache(context)) {
         return ge::GRAPH_FAILED;
     }
 
@@ -1603,4 +1610,4 @@ static ge::graphStatus TilingParseForQuantBatchMatmulV3(gert::TilingParseContext
 IMPL_OP_OPTILING(QuantBatchMatmulV3)
     .Tiling(QuantBatchMatmulV3TilingFunc)
     .TilingParse<QuantBatchMatmulV3CompileInfo>(TilingParseForQuantBatchMatmulV3);
-}  // namespace optiling
+} // namespace optiling

@@ -24,8 +24,8 @@
 
 namespace ConvolutionBackpropFunc {
 template <class Intf>
-__aicore__ inline void updateParasForSplitKernelHW(
-    Intf* self, Out2L1ScalarParams& out2L1Params, uint32_t startWo, uint64_t out2B1SrcAddrStart, uint32_t wkIdx)
+__aicore__ inline void updateParasForSplitKernelHW(Intf* self, Out2L1ScalarParams& out2L1Params, uint32_t startWo,
+                                                   uint64_t out2B1SrcAddrStart, uint32_t wkIdx)
 {
     int64_t padLeft = 0;
     int64_t padRight = 0;
@@ -121,7 +121,8 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
     ClearBaseMNL0C<Intf>(self, l0c);
 
     CalcParamsL12L0a<Intf>(self);
-    //todo: baseUseM_=1会走到特殊的处理分支，使用Gemv实现mmad,当前按照m0进行对其，走通用分支使用GEMM，后续需要评估特殊分支是否有性能收益决定特殊分支是否有必要存在；
+    // todo:
+    // baseUseM_=1会走到特殊的处理分支，使用Gemv实现mmad,当前按照m0进行对其，走通用分支使用GEMM，后续需要评估特殊分支是否有性能收益决定特殊分支是否有必要存在；
     uint32_t baseUseMBak = self->ctx.baseUseM_;
     if (self->ctx.baseUseM_ == 1) {
         self->ctx.baseUseM_ = ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
@@ -147,8 +148,8 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
     uint64_t wkIdx = 0;
     for (uint64_t hwkLoopIdx = hwkLoopStart; hwkLoopIdx < hwkLoopEnd; hwkLoopIdx++) {
         getHWkIdx(self, hwkLoopIdx, hkIdx, wkIdx);
-        self->ctx.dstL0cOffset_ =
-            dstL0cOffsetBase + (hwkLoopIdx - hwkLoopStart) * self->ctx.tiling_->baseM * self->ctx.tiling_->n0;
+        self->ctx.dstL0cOffset_ = dstL0cOffsetBase +
+                                  (hwkLoopIdx - hwkLoopStart) * self->ctx.tiling_->baseM * self->ctx.tiling_->n0;
         initParasSplitKernelHW(self);
         isFirstMmad = true;
 
@@ -171,8 +172,8 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
             for (int32_t splitWoIdx = 0; splitWoIdx < woIterateTimes; splitWoIdx++) {
                 updateSingleShapeWoI(self, out2L1Params, woIterateTimes, splitWoIdx, splitWo);
                 if (unlikely(self->ctx.isSplitWo_)) {
-                    updateParasForSplitW(
-                        self, out2L1Params, splitWoIdx * splitWo, out2A1SrcAddrStart, out2B1SrcAddrStart);
+                    updateParasForSplitW(self, out2L1Params, splitWoIdx * splitWo, out2A1SrcAddrStart,
+                                         out2B1SrcAddrStart);
                 }
                 updateParasForSplitKernelHW(self, out2L1Params, splitWoIdx * splitWo, out2B1SrcAddrStart, wkIdx);
                 if (!self->ctx.load3d_.l1W) {
@@ -215,8 +216,8 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
                     }
 
                     if (isLoadB1) {
-                        LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(
-                            self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx, skipCurrentHiCompute);
+                        LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params, kbStepIdx,
+                                                                         hkIdx, skipCurrentHiCompute);
                     }
                     if (skipCurrentHiCompute) {
                         UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
@@ -225,8 +226,8 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
                     if (isAL1PingPong) {
                         a1PingPongFlag = (curMKL1Idx + kaStepIdx + 1) & 1;
                     }
-                    ConvolutionBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(
-                        self, a1PingPongFlag, k, out2L1Params, isLoadA1, kaStepIdx);
+                    ConvolutionBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(self, a1PingPongFlag, k, out2L1Params,
+                                                                                 isLoadA1, kaStepIdx);
 
                     WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_ & 1);
 

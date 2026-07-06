@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -18,8 +18,7 @@
 
 #include "layer_norm_grad_grouped_reduce.h"
 
-namespace LayerNormGrad
-{
+namespace LayerNormGrad {
 using namespace AscendC;
 
 template <typename T, typename PD_GAMMA_TYPE>
@@ -73,9 +72,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
     cacheTensor0 = cacheBuffer0.Get<float>();
     cacheTensor1 = cacheBuffer1.Get<float>();
 
-    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop
-                              ? td_->gammaBetaMfactor
-                              : (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
+    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop ?
+                              td_->gammaBetaMfactor :
+                              (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
     int64_t loopCount = td_->gammaBetaBasicBlockLoop ? td_->gammaBetaBasicBlockLoop : 1;
     for (int64_t ni = 0; ni < NTotalloop; ++ni) {
         Prologue();
@@ -88,8 +87,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
             if (td_->gammaBetaBasicBlockLoop > 0 &&
                 ((basicBlockIdx < td_->gammaBetaMainFoldCount) ||
                  (basicBlockIdx == td_->gammaBetaMainFoldCount && td_->gammaBetaMtail > 0))) {
-                const int64_t mfactorFold =
-                    (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor : td_->gammaBetaMtail;
+                const int64_t mfactorFold = (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor :
+                                                                                            td_->gammaBetaMtail;
                 ProcessFoldBlock(ni, basicBlockIdx, mfactorFold, nfactor);
             }
 
@@ -115,7 +114,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
 
 template <typename T, typename PD_GAMMA_TYPE>
 __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>::Epilogue(const int64_t offset,
-                                                                                             const int64_t extent)
+                                                                                           const int64_t extent)
 {
     // Epilogue
     if (td_->pdbetaIsRequire) {
@@ -195,8 +194,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
     const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
 {
     // ProcessFoldBlock
-    int64_t offset =
-        ni * td_->gammaBetaNfactor + (basicBlockIdx + td_->gammaBetaBasicBlockLoop) * td_->gammaBetaMfactor * td_->col;
+    int64_t offset = ni * td_->gammaBetaNfactor +
+                     (basicBlockIdx + td_->gammaBetaBasicBlockLoop) * td_->gammaBetaMfactor * td_->col;
     LocalTensor<float> dyFold_ = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
         CopyIn(dyFold_, dyInTensorGM[offset], mfactor, nfactor, td_->gammaBetaNfactor, td_->col);
@@ -299,8 +298,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
@@ -327,8 +326,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll2 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll2 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
@@ -406,7 +405,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Init(
     pipe_->InitBuffer(cacheBuffer1, cacheBufSize);
 
     pipe_->InitBuffer(inQueueGamma, 2, td_->backwardNfactorBlockAligned * sizeof(float));
-    pipe_->InitBuffer(reduceSumTempBuffer, td_->backwardMfactorBlockAligned * td_->backwardNfactorBlockAligned * sizeof(float));
+    pipe_->InitBuffer(reduceSumTempBuffer,
+                      td_->backwardMfactorBlockAligned * td_->backwardNfactorBlockAligned * sizeof(float));
 }
 
 template <typename T, typename U>
@@ -420,9 +420,10 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Process()
         sum1Tensor = cacheTensor0[ResultCacheID * td_->backwardMfactorBlockAligned];
         sum2Tensor = cacheTensor1[ResultCacheID * td_->backwardMfactorBlockAligned];
 
-        int64_t mainNfactor =
-            BasicBlockLoop ? td_->backwardNfactorBlockAligned
-                           : (nToProcess_ == td_->backwardNfactorBlockAligned ? td_->backwardNfactorBlockAligned : Ntail);
+        int64_t mainNfactor = BasicBlockLoop ?
+                                  td_->backwardNfactorBlockAligned :
+                                  (nToProcess_ == td_->backwardNfactorBlockAligned ? td_->backwardNfactorBlockAligned :
+                                                                                     Ntail);
         int64_t loopCount = BasicBlockLoop ? BasicBlockLoop : 1;
 
         for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
@@ -432,12 +433,13 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Process()
 
             for (int64_t basicBlockIdx = 0; basicBlockIdx < loopCount; ++basicBlockIdx) {
                 ProcessMainBlock(mi, basicBlockIdx, mFactor, mainNfactor);
-                PRELOAD(2);  // 2*2K
-                if (BasicBlockLoop && (basicBlockIdx < MainFoldCount || (basicBlockIdx == MainFoldCount && Ntail > 0))) {
+                PRELOAD(2); // 2*2K
+                if (BasicBlockLoop &&
+                    (basicBlockIdx < MainFoldCount || (basicBlockIdx == MainFoldCount && Ntail > 0))) {
                     int64_t foldNFactor = basicBlockIdx < MainFoldCount ? td_->backwardNfactorBlockAligned : Ntail;
                     ProcessFoldBlock(mi, basicBlockIdx, mFactor, foldNFactor);
                 }
-                PRELOAD(2);  // 2*2K
+                PRELOAD(2); // 2*2K
                 ProcessSummation(mi, basicBlockIdx, mFactor, mainNfactor);
             }
 
@@ -467,12 +469,12 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Process()
         return;
     }
 
-    PRELOAD(4);  // 4*2K
+    PRELOAD(4); // 4*2K
     for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
         int64_t mfactor = mi == (td_->backwardMTotalLoop - 1) ? td_->backwardMtail : td_->backwardMfactor;
         PostPrologue(mi, mfactor);
 
-        PRELOAD(2);  // 2*2K
+        PRELOAD(2); // 2*2K
         int64_t totalN = Nloop + (Ntail > 0 ? 1 : 0);
         for (int64_t ni = 0; ni < totalN; ++ni) {
             const int64_t nfactor = (ni < Nloop) ? td_->backwardNfactorBlockAligned : Ntail;
@@ -501,9 +503,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Prologue(co
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessMainBlock(const int64_t mi,
-                                                                                        const int64_t basicBlockIdx,
-                                                                                        const int64_t mfactor,
-                                                                                        const int64_t nfactor)
+                                                                                      const int64_t basicBlockIdx,
+                                                                                      const int64_t mfactor,
+                                                                                      const int64_t nfactor)
 {
     // Process Main Block
     int64_t offset = mi * td_->backwardMfactor * td_->col + basicBlockIdx * td_->backwardNfactorBlockAligned + startN_;
@@ -557,9 +559,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessMain
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessFoldBlock(const int64_t mi,
-                                                                                        const int64_t basicBlockIdx,
-                                                                                        const int64_t mfactor,
-                                                                                        const int64_t nfactor)
+                                                                                      const int64_t basicBlockIdx,
+                                                                                      const int64_t mfactor,
+                                                                                      const int64_t nfactor)
 {
     // Process Fold Block
     int64_t offset = mi * td_->backwardMfactor * td_->col +
@@ -621,9 +623,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessFold
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessSummation(const int64_t mi,
-                                                                                        const int64_t basicBlockIdx,
-                                                                                        const int64_t mfactor,
-                                                                                        const int64_t nfactor)
+                                                                                      const int64_t basicBlockIdx,
+                                                                                      const int64_t mfactor,
+                                                                                      const int64_t nfactor)
 {
     // Process Summation
     int64_t cacheID = GetCacheID(basicBlockIdx);
@@ -637,8 +639,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessSumm
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ProcessX(const int64_t mi, const int64_t ni,
-                                                                                const int64_t mfactor,
-                                                                                const int64_t nfactor)
+                                                                              const int64_t mfactor,
+                                                                              const int64_t nfactor)
 {
     // Process X
     int64_t offset = mi * td_->backwardMfactor * td_->col + ni * td_->backwardNfactorBlockAligned + startN_;
@@ -705,8 +707,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ComputeDx(
     // Compute Dx
     constexpr static uint32_t VL = GetVRegSize() / sizeof(float);
     uint16_t outerLoopTimes = rowSize;
-    uint16_t innerLoopTimes =
-        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL;
     float floatN = static_cast<float>(td_->col);
@@ -736,8 +738,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ComputeDx(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll3 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll3 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll3, epsilonTmp);
                 DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
                 DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
@@ -749,7 +751,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ComputeDx(
                 Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
                 Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                 StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
+                StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
             }
         }
     } else {
@@ -774,8 +776,8 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ComputeDx(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                AscendC::MicroAPI::MaskReg pregRstdAll4 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll4, epsilonTmp);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);
@@ -806,7 +808,7 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Epilogue()
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::PostPrologue(const int64_t mi,
-                                                                                    const int64_t mfactor)
+                                                                                  const int64_t mfactor)
 {
     // Prologue
     int64_t offset = mi * td_->backwardMfactor;
@@ -842,6 +844,6 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::PostPrologu
     inQueueX.FreeTensor(tempSum2);
 }
 
-}  // namespace LayerNormGrad
+} // namespace LayerNormGrad
 
-#endif  // LAYER_NORM_GRAD_GROUPED_REDUCE_BIG_N_IMPL_
+#endif // LAYER_NORM_GRAD_GROUPED_REDUCE_BIG_N_IMPL_

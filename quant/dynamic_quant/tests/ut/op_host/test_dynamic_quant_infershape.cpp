@@ -14,18 +14,11 @@
 #include "log/log.h"
 #include "../../../op_graph/dynamic_quant_proto.h"
 
-class DynamicQuant : public testing::Test
-{
+class DynamicQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicQuant SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicQuant SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicQuant TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicQuant TearDown" << std::endl; }
 };
 
 TEST_F(DynamicQuant, DynamicQuant_infershape_case_0)

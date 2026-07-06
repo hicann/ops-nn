@@ -100,16 +100,16 @@ uint64_t MaxPoolWithArgmaxV3GatherTiling::GetTilingKey() const
 
 void MaxPoolWithArgmaxV3GatherTiling::DoBufferCalculate()
 {
-    splitData_.hInputInner =
-        (splitData_.hOutputInner - 1) * baseData_.hStride + (baseData_.hKernel - 1) * baseData_.hDilation + 1;
-    splitData_.wInputInner =
-        (splitData_.wOutputInner - 1) * baseData_.wStride + (baseData_.wKernel - 1) * baseData_.wDilation + 1;
+    splitData_.hInputInner = (splitData_.hOutputInner - 1) * baseData_.hStride +
+                             (baseData_.hKernel - 1) * baseData_.hDilation + 1;
+    splitData_.wInputInner = (splitData_.wOutputInner - 1) * baseData_.wStride +
+                             (baseData_.wKernel - 1) * baseData_.wDilation + 1;
     int64_t maxDataNumInOneBlock = std::max(baseData_.oneBlockNumT1, baseData_.oneBlockNumT2);
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(splitData_.wInputInner, baseData_.oneBlockNumT1);
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData_.wOutputInner, maxDataNumInOneBlock);
 
-    int64_t inputBufferSize =
-        splitData_.highAxisInner * splitData_.hInputInner * wInputInnerAligned * baseData_.inputBytes;
+    int64_t inputBufferSize = splitData_.highAxisInner * splitData_.hInputInner * wInputInnerAligned *
+                              baseData_.inputBytes;
     splitData_.inputBufferSize = inputBufferSize;
     // pad情况下COPY IN的UB地址不一定32字节对齐
     if (baseData_.isPad == 1) {
@@ -119,8 +119,8 @@ void MaxPoolWithArgmaxV3GatherTiling::DoBufferCalculate()
     splitData_.maxValueBufferSize = outputDataSize * baseData_.inputBytes;
     splitData_.argmaxBufferSize = outputDataSize * baseData_.indexBytes;
 
-    int64_t tmpTotalBufferSize =
-        inputBufferSize + splitData_.maxValueBufferSize + splitData_.argmaxBufferSize + HELPER_BUFFER_SIZE;
+    int64_t tmpTotalBufferSize = inputBufferSize + splitData_.maxValueBufferSize + splitData_.argmaxBufferSize +
+                                 HELPER_BUFFER_SIZE;
 
     splitData_.totalBufferSize = tmpTotalBufferSize * DOUBLE;
     if (baseData_.isPad == 1) {
@@ -244,8 +244,8 @@ void MaxPoolWithArgmaxV3GatherTiling::DoBlockTiling()
     splitData_.totalBaseBlockNum = splitData_.highAxisOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
     splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
     splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
-    splitData_.tailCoreProcessNum =
-        splitData_.totalBaseBlockNum - splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
+                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
 }
 
 void MaxPoolWithArgmaxV3GatherTiling::PrintBaseData() const

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file ctc_loss_v2_grad_infershape.cpp
  * \brief
@@ -28,8 +28,8 @@
 using namespace ge;
 namespace ops {
 template <typename T>
-static ge::graphStatus GetMaxValueAndSumFromTensor(
-    const T* value, const int64_t batch_size, int64_t& max_length, int64_t& target_lengths_sum)
+static ge::graphStatus GetMaxValueAndSumFromTensor(const T* value, const int64_t batch_size, int64_t& max_length,
+                                                   int64_t& target_lengths_sum)
 {
     for (int64_t i = 0; i < batch_size; i++) {
         T current_value = value[i];

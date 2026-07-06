@@ -24,8 +24,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
 static constexpr uint64_t POOL_3D_TILING_KEY_BIG_KERNEL_NCHW = 511110;
 static constexpr int64_t OUT_BUFFER_LEN = 1024;
@@ -39,11 +38,12 @@ bool Pool3DNcdhwBigKernelTiling::IsCapable()
     if (inputData_.inputFormat != ge::Format::FORMAT_NCDHW) {
         return false;
     }
-    if (inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] 
-        < static_cast<int64_t>(coreNum_ * TWO)) {
+    if (inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <
+        static_cast<int64_t>(coreNum_ * TWO)) {
         return true;
     }
-    if (inputData_.kernelSize[D_DIM] * inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.dtypeSize <
+    if (inputData_.kernelSize[D_DIM] * inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] *
+            inputData_.dtypeSize <
         NUM256) {
         return false;
     }
@@ -52,7 +52,8 @@ bool Pool3DNcdhwBigKernelTiling::IsCapable()
 
 void Pool3DNcdhwBigKernelTiling::DoUBTiling()
 {
-    totalIdx_ = inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM];
+    totalIdx_ = inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] *
+                inputData_.outShape[W_DIM];
     // coreNum已在tiling_base中校验过非0
     blockFactor_ = totalIdx_ / static_cast<int64_t>(coreNum_);
     blockTail_ = totalIdx_ % static_cast<int64_t>(coreNum_);
@@ -61,8 +62,10 @@ void Pool3DNcdhwBigKernelTiling::DoUBTiling()
     } else {
         coreNums_ = static_cast<int64_t>(coreNum_);
     }
-    isSigOut_ =
-        (inputData_.outShape[D_DIM] == 1 && inputData_.outShape[H_DIM] == 1 && inputData_.outShape[W_DIM] == 1) ? 1 : 0;
+    isSigOut_ = (inputData_.outShape[D_DIM] == 1 && inputData_.outShape[H_DIM] == 1 &&
+                 inputData_.outShape[W_DIM] == 1) ?
+                    1 :
+                    0;
 
     int64_t ubAvailable = static_cast<int64_t>(ubSize_) - static_cast<int64_t>(inputData_.dtypeSize) * OUT_BUFFER_LEN;
     int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
@@ -81,15 +84,9 @@ ge::graphStatus Pool3DNcdhwBigKernelTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Pool3DNcdhwBigKernelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Pool3DNcdhwBigKernelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t Pool3DNcdhwBigKernelTiling::GetTilingKey() const
-{
-    return POOL_3D_TILING_KEY_BIG_KERNEL_NCHW;
-}
+uint64_t Pool3DNcdhwBigKernelTiling::GetTilingKey() const { return POOL_3D_TILING_KEY_BIG_KERNEL_NCHW; }
 
 ge::graphStatus Pool3DNcdhwBigKernelTiling::GetWorkspaceSize()
 {
@@ -202,4 +199,4 @@ ge::graphStatus MaxPool3DNcdhwBigKernelTiling::GetShapeAttrsInfo()
 }
 
 REGISTER_OPS_POOL_TILING_TEMPLATE(MaxPool3D, MaxPool3DNcdhwBigKernelTiling, 11);
-}  // namespace optiling
+} // namespace optiling

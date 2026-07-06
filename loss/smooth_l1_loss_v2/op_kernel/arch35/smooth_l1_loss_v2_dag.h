@@ -18,7 +18,7 @@
 #include "atvoss/util/dag.h"
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
-#include "atvoss/reduce/reduce_operator.h"  
+#include "atvoss/reduce/reduce_operator.h"
 
 namespace SmoothL1LossV2 {
 
@@ -50,7 +50,7 @@ struct SmoothL1LossV2OpDag {
     using OpResultCast = Bind<Vec::Cast<T, PromteT, 1>, OpSelect>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpResultCast>;
     // 指定输出节点
-    using Outputs = Elems<OpCopyOut>;  // 设置输出
+    using Outputs = Elems<OpCopyOut>; // 设置输出
     // 指定计算顺序
     using OpDag = DAGSch<Outputs>;
 };
@@ -107,4 +107,4 @@ struct SmoothL1LossV2MeanDag {
 };
 } // namespace SmoothL1LossV2
 
-#endif  // SMOOTH_L1_LOSS_V2_DAG_H
+#endif // SMOOTH_L1_LOSS_V2_DAG_H

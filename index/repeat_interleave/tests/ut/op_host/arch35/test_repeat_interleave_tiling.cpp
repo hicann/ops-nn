@@ -59,15 +59,14 @@ struct OpsParamInfosRepeatInterleave {
 };
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype, nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype,
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -78,10 +77,9 @@ void SetConstInput(
     const_tensors.push_back(std::move(pair));
 }
 
-static void ExecuteTestCase(
-    const OpsParamInfosRepeatInterleave& opsParamInfos, string& expectTilingData,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(const OpsParamInfosRepeatInterleave& opsParamInfos, string& expectTilingData,
+                            std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

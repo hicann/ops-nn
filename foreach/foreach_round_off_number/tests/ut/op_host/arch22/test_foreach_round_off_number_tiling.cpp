@@ -21,19 +21,11 @@
 #include "test_cube_util.h"
 #include "../../../../../foreach_utils/op_host/foreach_tiling_def.h"
 
-
-class ForeachCommonTiling : public testing::Test
-{
+class ForeachCommonTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachCommonTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachCommonTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachCommonTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachCommonTiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -86,19 +78,19 @@ TEST_F(ForeachCommonTiling, test_foreach_round_off_number_tiling_float32_1)
     optiling::ForeachCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(foreach_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(foreach_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 

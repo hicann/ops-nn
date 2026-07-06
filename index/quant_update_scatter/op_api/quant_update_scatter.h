@@ -15,8 +15,8 @@
 namespace l0op {
 const aclTensor* QuantUpdateScatter(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
                                     const aclTensor* quantScales, const aclTensor* quantZeroPoints,
-                                    const std::string& reduce, int64_t axis, int64_t quantAxis,
-                                    aclOpExecutor* executor, bool reciprocalScale = false, const char* roundMode = "rint");
-}  // namespace l0op
+                                    const std::string& reduce, int64_t axis, int64_t quantAxis, aclOpExecutor* executor,
+                                    bool reciprocalScale = false, const char* roundMode = "rint");
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_QUANT_UPDATE_SCATTER_H_
+#endif // OP_API_INC_LEVEL0_QUANT_UPDATE_SCATTER_H_

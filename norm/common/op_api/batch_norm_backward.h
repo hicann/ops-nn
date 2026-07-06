@@ -13,24 +13,22 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::array<aclTensor*, 2> BNTrainingUpdateGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
-    aclOpExecutor* executor);
-const std::array<aclTensor*, 2> BN3DTrainingUpdateGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
-    aclOpExecutor* executor);
+const std::array<aclTensor*, 2> BNTrainingUpdateGrad(const aclTensor* gradOut, const aclTensor* x,
+                                                     const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
+                                                     aclOpExecutor* executor);
+const std::array<aclTensor*, 2> BN3DTrainingUpdateGrad(const aclTensor* gradOut, const aclTensor* x,
+                                                       const aclTensor* saveMean, const aclTensor* saveInvstd,
+                                                       float eps, aclOpExecutor* executor);
 
-const aclTensor* BNTrainingReduceGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight, const aclTensor* gradBias,
-    const aclTensor* weight, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
-    aclOpExecutor* executor);
-const aclTensor* BN3DTrainingReduceGrad(
-    const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight, const aclTensor* gradBias,
-    const aclTensor* weight, const aclTensor* saveMean, const aclTensor* saveInvstd, float eps,
-    aclOpExecutor* executor);
+const aclTensor* BNTrainingReduceGrad(const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight,
+                                      const aclTensor* gradBias, const aclTensor* weight, const aclTensor* saveMean,
+                                      const aclTensor* saveInvstd, float eps, aclOpExecutor* executor);
+const aclTensor* BN3DTrainingReduceGrad(const aclTensor* gradOut, const aclTensor* x, const aclTensor* gradWeight,
+                                        const aclTensor* gradBias, const aclTensor* weight, const aclTensor* saveMean,
+                                        const aclTensor* saveInvstd, float eps, aclOpExecutor* executor);
 
-const aclTensor* BNInferGrad(
-    const aclTensor* gradOut, const aclTensor* weight, const aclTensor* runningVar, float eps, aclOpExecutor* executor);
+const aclTensor* BNInferGrad(const aclTensor* gradOut, const aclTensor* weight, const aclTensor* runningVar, float eps,
+                             aclOpExecutor* executor);
 
 constexpr size_t BN_GRAD_V3_OUTPUT_NUM = 3;
 const std::array<aclTensor*, BN_GRAD_V3_OUTPUT_NUM> BatchNormGradV3(

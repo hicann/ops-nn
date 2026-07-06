@@ -25,7 +25,7 @@ namespace ge {
 * @li input_grad: An NHWC or NCHW tensor of type float16, float32, double or bfloat16. \n
 
 * @par Attributes:
-* @li ksize: A required tuple or list of ints, 
+* @li ksize: A required tuple or list of ints,
 * specifying the size of the window for each dimension of the input tensor.
 * For Ascend 950PR/Ascend 950DT AI Processor: "ksize" length is 1, 2 or 4, must be greater than 0. \n
 * @li strides: A required tuple or list of ints,

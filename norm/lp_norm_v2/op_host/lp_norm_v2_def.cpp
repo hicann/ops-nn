@@ -14,11 +14,9 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
+namespace ops {
 
-class LpNormV2 : public OpDef
-{
+class LpNormV2 : public OpDef {
 public:
     explicit LpNormV2(const char* name) : OpDef(name)
     {
@@ -47,4 +45,4 @@ public:
 };
 
 OP_ADD(LpNormV2);
-}  // namespace ops
+} // namespace ops

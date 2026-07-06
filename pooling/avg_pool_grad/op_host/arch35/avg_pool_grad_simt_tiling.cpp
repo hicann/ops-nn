@@ -24,13 +24,12 @@ using namespace ge;
 
 namespace optiling {
 
-ge::graphStatus AvgPoolGradTilingSIMT::GetPlatformInfo() {
+ge::graphStatus AvgPoolGradTilingSIMT::GetPlatformInfo()
+{
     return GetAvgPoolGradPlatformInfo(context_, ubSize, coreNum);
 }
 
-ge::graphStatus AvgPoolGradTilingSIMT::GetShapeAttrsInfo() {
-    return GetAvgPoolGradShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus AvgPoolGradTilingSIMT::GetShapeAttrsInfo() { return GetAvgPoolGradShapeAttrsInfo(context_, inputData); }
 
 REGISTER_OPS_TILING_TEMPLATE(AvgPoolGrad, AvgPoolGradTilingSIMT, 100);
 } // namespace optiling

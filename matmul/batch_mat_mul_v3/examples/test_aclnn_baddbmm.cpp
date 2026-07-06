@@ -26,12 +26,12 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-#define CHECK_FREE_RET(cond, return_expr)            \
-    do {                                             \
-        if (!(cond)) {                               \
-            Finalize(deviceId, stream); \
-            return_expr;                             \
-        }                                            \
+#define CHECK_FREE_RET(cond, return_expr) \
+    do {                                  \
+        if (!(cond)) {                    \
+            Finalize(deviceId, stream);   \
+            return_expr;                  \
+        }                                 \
     } while (0)
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
@@ -56,9 +56,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请Device侧内存
@@ -76,9 +75,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -174,9 +172,8 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
@@ -187,10 +184,10 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     LOG_PRINT("\ntest aclnnInplaceBaddbmm\n");
     uint64_t workspaceSizeForInplace = 0;
     // 调用aclnnInplaceBaddbmm第一段接口
-    ret = aclnnInplaceBaddbmmGetWorkspaceSize(
-        self, batch1, batch2, alpha, beta, cubeMathType, &workspaceSizeForInplace, &executor);
-    CHECK_RET(
-        ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnInplaceBaddbmmGetWorkspaceSize(self, batch1, batch2, alpha, beta, cubeMathType, &workspaceSizeForInplace,
+                                              &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceBaddbmmGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddrForInplace = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrForInplacePtr(nullptr, aclrtFree);
@@ -208,9 +205,8 @@ int AclnnBaddbmmTest(int32_t deviceId, aclrtStream& stream)
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);

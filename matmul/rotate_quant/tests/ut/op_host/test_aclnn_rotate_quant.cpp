@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <cfloat>
 
 #include <array>
@@ -21,18 +21,11 @@
 using namespace op;
 using namespace std;
 
-class l2_rotate_quant_test : public testing::Test
-{
+class l2_rotate_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_rotate_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_rotate_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_rotate_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_rotate_quant_test TearDown" << endl; }
 };
 
 // x 为 nullptr
@@ -49,7 +42,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_x_nullptr_fail)
     bool trans = false;
 
     auto ut = OP_API_UT(
-        aclnnRotateQuant, INPUT((aclTensor*)nullptr, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+        aclnnRotateQuant,
+        INPUT((aclTensor*)nullptr, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -69,7 +64,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_rot_nullptr_fail)
     bool trans = false;
 
     auto ut = OP_API_UT(
-        aclnnRotateQuant, INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+        aclnnRotateQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -88,8 +85,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_y_nullptr_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(
-        aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT((aclTensor*)nullptr, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT((aclTensor*)nullptr, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -108,8 +106,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_scale_nullptr_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(
-        aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -129,7 +128,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_dtype_mismatch_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -149,7 +150,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_x_dtype_unsupported_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -169,7 +172,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_y_dtype_unsupported_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -189,7 +194,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_scale_dtype_unsupported_fa
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -209,7 +216,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_rot_not_square_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -229,7 +238,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_x_dim_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -249,7 +260,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_rot_dim_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -269,7 +282,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_y_shape_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -289,7 +304,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_scale_shape_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -309,7 +326,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_n_not_divisible_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
@@ -329,7 +348,9 @@ TEST_F(l2_rotate_quant_test, ascend910B1_rotate_quant_empty_tensor)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
@@ -349,7 +370,9 @@ TEST_F(l2_rotate_quant_test, ascend910B2_rotate_quant_bf16_int8_fail)
     double dstTypeMax = 0.0;
     bool trans = false;
 
-    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans), OUTPUT(y_desc, scale_desc));
+    auto ut = OP_API_UT(aclnnRotateQuant,
+                        INPUT(x_desc, rot_desc, (aclTensor*)nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans),
+                        OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }

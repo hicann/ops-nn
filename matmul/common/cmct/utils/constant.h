@@ -14,8 +14,7 @@
 #include "tensor_traits.h"
 
 namespace Cmct::Gemm {
-enum class QuantType
-{
+enum class QuantType {
     NONE = 0,
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
@@ -63,8 +62,8 @@ struct QuantTypeFrom<AscendC::Std::tuple<T0, T1>, AscendC::fp8_e8m0_t>
 } // namespace detail
 
 template <typename Shape, typename ScaleType = void>
-constexpr QuantType QUANT_TYPE =
-    detail::QuantTypeFrom<typename AscendC::Std::remove_cvref_t<Shape>, AscendC::Std::remove_cvref_t<ScaleType>>::VALUE;
+constexpr QuantType QUANT_TYPE = detail::QuantTypeFrom<typename AscendC::Std::remove_cvref_t<Shape>,
+                                                       AscendC::Std::remove_cvref_t<ScaleType>>::VALUE;
 
 constexpr uint32_t BYTE_PER_BLK = 32;
 static constexpr uint64_t SYNC_MODE4 = 4;
@@ -80,8 +79,8 @@ struct Is2D1Dim1Impl : AscendC::Std::false_type {};
 
 template <typename S0, typename S1, typename T0, typename T1>
 struct Is2D1Dim1Impl<AscendC::Layout<AscendC::Std::tuple<S0, S1>, AscendC::Std::tuple<T0, T1>>>
-    : AscendC::Std::bool_constant<
-          AscendC::Std::is_same_v<S1, Cmct::Gemm::_1> && AscendC::Std::is_same_v<T0, Cmct::Gemm::_1>> {};
+    : AscendC::Std::bool_constant<AscendC::Std::is_same_v<S1, Cmct::Gemm::_1> &&
+                                  AscendC::Std::is_same_v<T0, Cmct::Gemm::_1>> {};
 
 template <typename Layout>
 struct IsRowMajor2DImpl : AscendC::Std::false_type {};
@@ -101,9 +100,8 @@ struct IsColumnMajor2DImpl<AscendC::Layout<AscendC::Std::tuple<T0, T1>, AscendC:
 template <typename Layout>
 struct IsNz2DImpl : AscendC::Std::false_type {};
 template <typename Shape, typename T>
-struct IsNz2DImpl<AscendC::Layout<
-    Shape, AscendC::Std::tuple<
-               AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>, AscendC::Std::tuple<Cmct::Gemm::_1, T>>>>
+struct IsNz2DImpl<AscendC::Layout<Shape, AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>,
+                                                             AscendC::Std::tuple<Cmct::Gemm::_1, T>>>>
     : AscendC::Std::true_type {};
 
 // (a1,b1,b0,a0)
@@ -111,9 +109,8 @@ struct IsNz2DImpl<AscendC::Layout<
 template <typename Layout>
 struct IsZn2DImpl : AscendC::Std::false_type {};
 template <typename Shape, typename T1>
-struct IsZn2DImpl<AscendC::Layout<
-    Shape, AscendC::Std::tuple<
-               AscendC::Std::tuple<Cmct::Gemm::_1, T1>, AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>>>>
+struct IsZn2DImpl<AscendC::Layout<Shape, AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_1, T1>,
+                                                             AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>>>>
     : AscendC::Std::bool_constant<!AscendC::Std::is_same_v<T1, Cmct::Gemm::_1>> {};
 
 template <typename Layout>
@@ -200,4 +197,3 @@ constexpr uint64_t BLK_ELEM = 32 / sizeof(T);
 template <typename T>
 inline constexpr uint32_t C0 = 32 / sizeof(T);
 } // namespace Cmct::Gemm
-

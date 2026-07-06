@@ -52,10 +52,9 @@ public:
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-                                               typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA,
-                                               transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -147,7 +146,7 @@ public:
         return Status::success;
     }
 
-    __host_aicore__ static Status CanImplement(Arguments const &args)
+    __host_aicore__ static Status CanImplement(Arguments const& args)
     {
         // Check shape in kernel
         CHECK_AND_RETURN(CheckShape(args.problemShape));
@@ -166,7 +165,7 @@ public:
         return workSpaceSize;
     }
 
-    __host_aicore__ static Params InitParams(Arguments const &args, GM_ADDR workspace)
+    __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR workspace)
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
@@ -229,4 +228,3 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

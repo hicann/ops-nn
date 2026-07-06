@@ -17,8 +17,7 @@
 
 namespace ops {
 
-class FatreluMul : public OpDef
-{
+class FatreluMul : public OpDef {
 public:
     explicit FatreluMul(const char* name) : OpDef(name)
     {

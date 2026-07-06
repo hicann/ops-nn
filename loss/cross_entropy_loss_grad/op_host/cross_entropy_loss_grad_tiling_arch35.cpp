@@ -62,7 +62,8 @@ constexpr int64_t CONST1 = 1;
 constexpr int64_t CONST2 = 2;
 static const gert::Shape g_vec_1_shape = {1};
 
-void CrossEntropyLossGradRegbaseTiling::PrintInfo() {
+void CrossEntropyLossGradRegbaseTiling::PrintInfo()
+{
     auto nodeName = tilingContext;
     OP_LOGD(nodeName, "Start to print CrossEntropyLossGradRegbase tiling data");
     OP_LOGD(nodeName, "reduction: %ld", ceLossGradRegbaseTiling->reduction);
@@ -117,23 +118,28 @@ int64_t CrossEntropyLossGradRegbaseTiling::CalLog2(int64_t value)
     return res;
 }
 
-int64_t CrossEntropyLossGradRegbaseTiling::GetMod(int64_t l_value, int64_t r_value) {
-  if (r_value == 0) {
-    return l_value;
-  }
-  return l_value % r_value;
+int64_t CrossEntropyLossGradRegbaseTiling::GetMod(int64_t l_value, int64_t r_value)
+{
+    if (r_value == 0) {
+        return l_value;
+    }
+    return l_value % r_value;
 }
 
-const gert::Shape &EnsureNotScalar4CELoss(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+const gert::Shape& EnsureNotScalar4CELoss(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
-void CrossEntropyLossGradRegbaseTiling::InitSplitInfo() {
+void CrossEntropyLossGradRegbaseTiling::InitSplitInfo()
+{
     // 分核
-    int64_t frontCoreNum = GetMod(static_cast<int64_t>(rowVal), static_cast<int64_t>(totalCoreNum)) != 0 ? GetMod(static_cast<int64_t>(rowVal), static_cast<int64_t>(totalCoreNum)) : totalCoreNum;
+    int64_t frontCoreNum = GetMod(static_cast<int64_t>(rowVal), static_cast<int64_t>(totalCoreNum)) != 0 ?
+                               GetMod(static_cast<int64_t>(rowVal), static_cast<int64_t>(totalCoreNum)) :
+                               totalCoreNum;
     int64_t tailCoreNum = rowVal <= totalCoreNum ? 0 : totalCoreNum - frontCoreNum;
     int64_t numBlocks = frontCoreNum + tailCoreNum;
     int64_t frontRowNum = Ops::Base::CeilDiv(rowVal, totalCoreNum);
@@ -146,67 +152,66 @@ void CrossEntropyLossGradRegbaseTiling::InitSplitInfo() {
     tilingContext->SetBlockDim(static_cast<uint64_t>(numBlocks));
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetPlatform() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetPlatform()
+{
     auto platformInfo = tilingContext->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, totalUbSize);
     totalCoreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
-    OP_CHECK_IF((totalCoreNum <= 0),
-                    OP_LOGE(tilingContext, "Failed to get core num."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((totalCoreNum <= 0), OP_LOGE(tilingContext, "Failed to get core num."), return ge::GRAPH_FAILED);
     vectorLength = static_cast<uint64_t>(Ops::Base::GetVRegSize(tilingContext));
-    OP_CHECK_IF((vectorLength <= FP32_INT32_DTYPE_SIZE),
-        OP_LOGE(tilingContext, "vector length is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((vectorLength <= FP32_INT32_DTYPE_SIZE), OP_LOGE(tilingContext, "vector length is invalid."),
+                return ge::GRAPH_FAILED);
 
     int64_t blockSizeTemp = Ops::Base::GetUbBlockSize(tilingContext);
-    OP_CHECK_IF((blockSizeTemp <= 0), OP_LOGE(tilingContext, "block size is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((blockSizeTemp <= 0), OP_LOGE(tilingContext, "block size is invalid."), return ge::GRAPH_FAILED);
     blockSize = static_cast<uint64_t>(blockSizeTemp);
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, totalUbSize);
     OP_LOGD(tilingContext, "Get total ub size:%lu", totalUbSize);
-    OP_CHECK_IF((totalUbSize <= 0),
-                    OP_LOGE(tilingContext, "Failed to get ub size."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((totalUbSize <= 0), OP_LOGE(tilingContext, "Failed to get ub size."), return ge::GRAPH_FAILED);
 
     if (ceLossGradRegbaseTiling == nullptr) {
         ceLossGradRegbaseTiling = tilingContext->GetTilingData<CrossEntropyLossGradRegbaseTilingData>();
-        OP_CHECK_IF(ceLossGradRegbaseTiling == nullptr,
-            OP_LOGE(tilingContext, "get tilingdata ptr failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ceLossGradRegbaseTiling == nullptr, OP_LOGE(tilingContext, "get tilingdata ptr failed"),
+                    return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF((memset_s(ceLossGradRegbaseTiling, sizeof(CrossEntropyLossGradRegbaseTilingData), 0,
-        sizeof(CrossEntropyLossGradRegbaseTilingData)) != EOK),
-        OP_LOGE(tilingContext, "memset tilingdata failed"), return ge::GRAPH_FAILED);
+                          sizeof(CrossEntropyLossGradRegbaseTilingData)) != EOK),
+                OP_LOGE(tilingContext, "memset tilingdata failed"), return ge::GRAPH_FAILED);
     OP_LOGD(tilingContext, "Exit CrossEntropyLossGradRegbaseTiling init.");
     return ge::GRAPH_SUCCESS;
 }
 
-bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad() {
+bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad()
+{
     alignColLoopNum = Ops::Base::CeilAlign(colVal, static_cast<int64_t>(blockSize / dtypeSize));
     int64_t queBuffer = 0;
     int64_t tmpBuffer = static_cast<int64_t>(alignColLoopNum * sizeof(float));
-    int64_t tmpABuffer = static_cast<int64_t>(FULL_LOAD_N_TMP_BUFFER * sizeof(float)) + static_cast<int64_t>(targetDtypeSize);
-    int64_t ncBufferNum = INPUT_NC_BUFFER_NUM * alignColLoopNum * static_cast<int64_t>(dtypeSize) + alignColLoopNum * static_cast<int64_t>(FP32_INT32_DTYPE_SIZE); // input+output+tmpbuf
+    int64_t tmpABuffer = static_cast<int64_t>(FULL_LOAD_N_TMP_BUFFER * sizeof(float)) +
+                         static_cast<int64_t>(targetDtypeSize);
+    int64_t ncBufferNum = INPUT_NC_BUFFER_NUM * alignColLoopNum * static_cast<int64_t>(dtypeSize) +
+                          alignColLoopNum * static_cast<int64_t>(FP32_INT32_DTYPE_SIZE); // input+output+tmpbuf
     if (ceLossGradTilingKey.reduction == TILING_KEY_NONE) {
-        tmpABuffer += static_cast<int64_t>(dtypeSize);   //gradloss
+        tmpABuffer += static_cast<int64_t>(dtypeSize); // gradloss
     } else if (ceLossGradTilingKey.reduction == TILING_KEY_MEAN) {
         tBuf3Size = static_cast<int64_t>(Ops::Base::CeilAlign(totalCoreNum * FP32_INT32_DTYPE_SIZE, blockSize));
         tBuf2Size = static_cast<int64_t>(blockSize);
     }
     if (ceLossGradTilingKey.isWeight == TILING_KEY_TRUE) {
         queBuffer += static_cast<int64_t>(alignColLoopNum * sizeof(float)); // weightbuf
-        tmpABuffer += static_cast<int64_t>(FP32_INT32_DTYPE_SIZE);    // weightgather
-        if(ceLossGradTilingKey.labelS == TILING_KEY_TRUE) {
-            ncBufferNum += static_cast<int64_t>(alignColLoopNum * sizeof(float));   // sumtmpbuf
-            tmpABuffer += static_cast<int64_t>(FP32_INT32_DTYPE_SIZE);    // sumbuf
+        tmpABuffer += static_cast<int64_t>(FP32_INT32_DTYPE_SIZE);          // weightgather
+        if (ceLossGradTilingKey.labelS == TILING_KEY_TRUE) {
+            ncBufferNum += static_cast<int64_t>(alignColLoopNum * sizeof(float)); // sumtmpbuf
+            tmpABuffer += static_cast<int64_t>(FP32_INT32_DTYPE_SIZE);            // sumbuf
         }
     }
-    if(ceLossGradTilingKey.labelS == TILING_KEY_TRUE) {
-        tmpABuffer += static_cast<int64_t>(FP32_INT32_DTYPE_SIZE); //smoothbuf
+    if (ceLossGradTilingKey.labelS == TILING_KEY_TRUE) {
+        tmpABuffer += static_cast<int64_t>(FP32_INT32_DTYPE_SIZE); // smoothbuf
     }
-    int64_t ubNSize = static_cast<int64_t>(totalUbSize) - static_cast<int64_t>(queBuffer + tmpBuffer + tBuf2Size + tBuf2Size + tBuf3Size);
+    int64_t ubNSize = static_cast<int64_t>(totalUbSize) -
+                      static_cast<int64_t>(queBuffer + tmpBuffer + tBuf2Size + tBuf2Size + tBuf3Size);
     int64_t theoreticalMaxN = ubNSize / ncBufferNum;
     int64_t theoreticalNAlign = Ops::Base::CeilAlign(theoreticalMaxN, static_cast<int64_t>(blockSize / dtypeSize));
     int64_t allowedN = (ubNSize - tmpABuffer * theoreticalNAlign) / ncBufferNum;
@@ -232,11 +237,14 @@ bool CrossEntropyLossGradRegbaseTiling::CELossGradInnerCoreFullLoad() {
     ceLossGradTilingKey.schId = static_cast<uint32_t>(CROSS_ENTROPY_LOSS_GRAD_MODE_1);
     smoothSize = ceLossGradTilingKey.labelS == TILING_KEY_TRUE ? targetCastSize : 0;
     targetWeightSize = ceLossGradTilingKey.isWeight == TILING_KEY_TRUE ? targetCastSize : 0;
-    gradLossSize = ceLossGradTilingKey.reduction == TILING_KEY_NONE ? Ops::Base::CeilAlign(peerLoopNNum * dtypeSize, blockSize) : 0;
+    gradLossSize = ceLossGradTilingKey.reduction == TILING_KEY_NONE ?
+                       Ops::Base::CeilAlign(peerLoopNNum * dtypeSize, blockSize) :
+                       0;
     return true;
 }
 
-void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo() {
+void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo()
+{
     uint64_t frontRowNum = static_cast<uint64_t>(ceLossGradRegbaseTiling->frontRowNum);
     frontRowNum = frontRowNum > vectorLength ? vectorLength : frontRowNum;
     targetSize = Ops::Base::CeilAlign(frontRowNum * INT64_DTYPE_SIZE, blockSize);
@@ -249,7 +257,7 @@ void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo() {
 
     auto weightTensor = tilingContext->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
     float labelSmooth = ceLossGradRegbaseTiling->labelSmoothing;
-    if (weightTensor == nullptr) {  // weight为None
+    if (weightTensor == nullptr) { // weight为None
         OP_LOGD(tilingContext, "weight is None");
         bufferNum = SPLIT_BUFFER;
     } else {
@@ -261,11 +269,12 @@ void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo() {
         gradLossSize = Ops::Base::CeilAlign(frontRowNum * dtypeSize, blockSize);
     } else if (ceLossGradTilingKey.reduction == TILING_KEY_MEAN) {
         tBuf2Size = static_cast<int64_t>(blockSize);
-        tBuf3Size = Ops::Base::CeilAlign(std::max(static_cast<uint64_t>(totalCoreNum), frontRowNum) * FP32_INT32_DTYPE_SIZE, blockSize);
+        tBuf3Size = Ops::Base::CeilAlign(
+            std::max(static_cast<uint64_t>(totalCoreNum), frontRowNum) * FP32_INT32_DTYPE_SIZE, blockSize);
     }
-    colLoopNum = Ops::Base::FloorDiv((totalUbSize - targetSize - targetCastSize - gradLossSize - tBuf2Size -
-                                tBuf3Size - ignoreSize - targetWeightSize - smoothSize),
-                                bufferNum);
+    colLoopNum = Ops::Base::FloorDiv((totalUbSize - targetSize - targetCastSize - gradLossSize - tBuf2Size - tBuf3Size -
+                                      ignoreSize - targetWeightSize - smoothSize),
+                                     bufferNum);
     if (colLoopNum < colVal) {
         alignColLoopNum = Ops::Base::FloorAlign(colLoopNum, (FP32_ALIGN_NUM));
     } else {
@@ -275,21 +284,23 @@ void CrossEntropyLossGradRegbaseTiling::CELossGradCoreSplitInfo() {
     colLoopNumTail = GetMod(static_cast<int64_t>(colVal), static_cast<int64_t>(alignColLoopNum));
     alignNCNum = alignColLoopNum;
     if (weightTensor != nullptr && labelSmooth > 0) {
-      // 二分
-      kTimes = FindNearestPower2(colLoop);
-      int64_t kNums = CalLog2(kTimes);
-      cOnceNum = alignColLoopNum;
-      int64_t cNumTail = colVal - kTimes * cOnceNum;
-      kTimesTail = cOnceNum == 0 ? 0 : Ops::Base::CeilDiv(cNumTail, cOnceNum);
-      cOnceNumTail = cOnceNum == 0 ? cNumTail : GetMod(static_cast<int64_t>(cNumTail), static_cast<int64_t>(cOnceNum));
-      cOnceNumTailAlign = Ops::Base::CeilAlign(cOnceNumTail, BLOCK_B32);
-      cacheStart = kNums * static_cast<int64_t>(vectorLength / sizeof(float));
+        // 二分
+        kTimes = FindNearestPower2(colLoop);
+        int64_t kNums = CalLog2(kTimes);
+        cOnceNum = alignColLoopNum;
+        int64_t cNumTail = colVal - kTimes * cOnceNum;
+        kTimesTail = cOnceNum == 0 ? 0 : Ops::Base::CeilDiv(cNumTail, cOnceNum);
+        cOnceNumTail = cOnceNum == 0 ? cNumTail :
+                                       GetMod(static_cast<int64_t>(cNumTail), static_cast<int64_t>(cOnceNum));
+        cOnceNumTailAlign = Ops::Base::CeilAlign(cOnceNumTail, BLOCK_B32);
+        cacheStart = kNums * static_cast<int64_t>(vectorLength / sizeof(float));
     }
 
     ceLossGradTilingKey.schId = static_cast<uint32_t>(CROSS_ENTROPY_LOSS_GRAD_MODE_0);
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::SetTilingData() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::SetTilingData()
+{
     ceLossGradRegbaseTiling->rowVal = rowVal;
     ceLossGradRegbaseTiling->colVal = colVal;
     ceLossGradRegbaseTiling->alignColLoopNum = alignColLoopNum;
@@ -319,7 +330,8 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::SetTilingData() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput()
+{
     const gert::StorageShape* gradLossShape = tilingContext->GetInputShape(INPUT_GRAD_LOSS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradLossShape);
     const gert::StorageShape* logProbShape = tilingContext->GetInputShape(INPUT_LOG_PROB_IDX);
@@ -330,26 +342,25 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
     const gert::Shape& logProbStrorageShape = EnsureNotScalar4CELoss(logProbShape->GetStorageShape());
     const gert::Shape& targetStrorageShape = EnsureNotScalar4CELoss(targetShape->GetStorageShape());
     OP_CHECK_IF((logProbStrorageShape.GetDimNum() != 2),
-                    OP_LOGE_FOR_INVALID_SHAPEDIM(
-                        tilingContext->GetNodeName(), "log_prob",
-                        std::to_string(logProbStrorageShape.GetDimNum()).c_str(), "2"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext->GetNodeName(), "log_prob",
+                                             std::to_string(logProbStrorageShape.GetDimNum()).c_str(), "2"),
+                return ge::GRAPH_FAILED);
     if (ceLossGradTilingKey.reduction == TILING_KEY_NONE) {
-        OP_CHECK_IF(
-            (gradLossStrorageShape.GetDim(0) != logProbStrorageShape.GetDim(0) ||
-             gradLossStrorageShape.GetDimNum() != 1),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                tilingContext->GetNodeName(), "log_prob and grad_loss",
-                (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(gradLossStrorageShape.GetDim(0))).c_str(),
-                "The dim 0 of log_prob should be same as the shape size of grad_loss and "
-                "grad_loss dimNum should be same as 1 when reduction is none"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((gradLossStrorageShape.GetDim(0) != logProbStrorageShape.GetDim(0) ||
+                     gradLossStrorageShape.GetDimNum() != 1),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        tilingContext->GetNodeName(), "log_prob and grad_loss",
+                        (std::to_string(logProbStrorageShape.GetDim(0)) + " and " +
+                         std::to_string(gradLossStrorageShape.GetDim(0)))
+                            .c_str(),
+                        "The dim 0 of log_prob should be same as the shape size of grad_loss and "
+                        "grad_loss dimNum should be same as 1 when reduction is none"),
+                    return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(
             (gradLossStrorageShape.GetDim(0) != 1 || gradLossStrorageShape.GetDimNum() != 1),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                tilingContext->GetNodeName(), "grad_loss",
-                std::to_string(gradLossStrorageShape.GetDim(0)).c_str(),
+                tilingContext->GetNodeName(), "grad_loss", std::to_string(gradLossStrorageShape.GetDim(0)).c_str(),
                 "grad_loss should be a scalar or shape should be equal to [1] when reduction is sum or mean"),
             return ge::GRAPH_FAILED);
     }
@@ -368,26 +379,26 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
     if (weightTensor != nullptr) {
         ceLossGradTilingKey.isWeight = TILING_KEY_TRUE;
         auto weightShape = EnsureNotScalar4CELoss(weightTensor->GetStorageShape());
-        OP_CHECK_IF(
-            (weightShape.GetDimNum() != 1),
-            OP_LOGE_FOR_INVALID_SHAPEDIM(
-                tilingContext->GetNodeName(), "weight", std::to_string(weightShape.GetDimNum()).c_str(), "1D"),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            (weightShape.GetDim(0) != logProbShape->GetStorageShape().GetDim(1)),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                tilingContext->GetNodeName(), "log_prob and weight",
-                (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " +
-                 std::to_string(weightShape.GetDim(0))).c_str(),
-                "The dim 1 of log_prob must be the same as the shape size of weight"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((weightShape.GetDimNum() != 1),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext->GetNodeName(), "weight",
+                                                 std::to_string(weightShape.GetDimNum()).c_str(), "1D"),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF((weightShape.GetDim(0) != logProbShape->GetStorageShape().GetDim(1)),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        tilingContext->GetNodeName(), "log_prob and weight",
+                        (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " +
+                         std::to_string(weightShape.GetDim(0)))
+                            .c_str(),
+                        "The dim 1 of log_prob must be the same as the shape size of weight"),
+                    return ge::GRAPH_FAILED);
     }
     rowVal = logProbShape->GetStorageShape().GetDim(0);
     colVal = logProbShape->GetStorageShape().GetDim(1);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr()
+{
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     auto reduction = attrs->GetAttrPointer<char>(REDUCTION_ATTR_IDX);
@@ -397,7 +408,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
         ceLossGradTilingKey.reduction = TILING_KEY_NONE;
     } else if (strcmp(reduction, "mean") == 0) {
         OP_LOGD(tilingContext, "Attr reduction is mean.");
-        ceLossGradTilingKey.reduction  = TILING_KEY_MEAN;
+        ceLossGradTilingKey.reduction = TILING_KEY_MEAN;
     } else if (strcmp(reduction, "sum") == 0) {
         OP_LOGD(tilingContext, "Attr reduction is sum.");
         ceLossGradTilingKey.reduction = TILING_KEY_SUM;
@@ -416,13 +427,12 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
     auto labelSmoothing = attrs->GetAttrPointer<float>(LABEL_SMOOTHING_ATTR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, labelSmoothing);
     float labelSmooth = static_cast<float>(*labelSmoothing);
-    if (labelSmooth >=0 && labelSmooth <= 1) {
-      ceLossGradRegbaseTiling->labelSmoothing = labelSmooth;
+    if (labelSmooth >= 0 && labelSmooth <= 1) {
+        ceLossGradRegbaseTiling->labelSmoothing = labelSmooth;
     } else {
-      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-          tilingContext->GetNodeName(), "label_smoothing", std::to_string(labelSmooth).c_str(),
-          "within [0, 1]");
-      return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "label_smoothing",
+                                              std::to_string(labelSmooth).c_str(), "within [0, 1]");
+        return ge::GRAPH_FAILED;
     }
     if (labelSmooth > 0) {
         ceLossGradTilingKey.labelS = TILING_KEY_TRUE;
@@ -430,7 +440,8 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::DoEmptyTensorTiling() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::DoEmptyTensorTiling()
+{
     uint64_t schEmpty = CROSS_ENTROPY_LOSS_GRAD_MODE_2;
     uint64_t zero = 0;
     OP_LOGI(tilingContext, "schId is %ld", schEmpty);
@@ -444,89 +455,82 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::DoEmptyTensorTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype()
+{
     auto logProbDesc = tilingContext->GetInputDesc(INPUT_LOG_PROB_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, logProbDesc);
     auto dataType = logProbDesc->GetDataType();
     if (dataType == ge::DT_BF16) {
-      dtypeSize = ge::GetSizeByDataType(dataType);
+        dtypeSize = ge::GetSizeByDataType(dataType);
     } else if (dataType == ge::DT_FLOAT16) {
-      dtypeSize = ge::GetSizeByDataType(dataType);
+        dtypeSize = ge::GetSizeByDataType(dataType);
     } else if (dataType == ge::DT_FLOAT) {
-      dtypeSize = ge::GetSizeByDataType(dataType);
+        dtypeSize = ge::GetSizeByDataType(dataType);
     } else {
-      OP_LOGE_FOR_INVALID_DTYPE(
-          tilingContext->GetNodeName(), "log_prob",
-          ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
-          "float32, float16 or bfloat16");
-      return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "log_prob",
+                                  ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
+                                  "float32, float16 or bfloat16");
+        return ge::GRAPH_FAILED;
     }
 
     auto gradLossDesc = tilingContext->GetInputDesc(INPUT_GRAD_LOSS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradLossDesc);
     auto gradLossDataType = gradLossDesc->GetDataType();
     OP_CHECK_IF(gradLossDataType != dataType,
-                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                        tilingContext->GetNodeName(), "log_prob and grad_loss",
-                        (ge::TypeUtils::DataTypeToSerialString(dataType) + " and " + ge::TypeUtils::DataTypeToSerialString(gradLossDataType)).c_str(),
-                        "The dtypes of grad_loss and log_prob must be the same"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "log_prob and grad_loss",
+                                                       (ge::TypeUtils::DataTypeToSerialString(dataType) + " and " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradLossDataType))
+                                                           .c_str(),
+                                                       "The dtypes of grad_loss and log_prob must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto weightDesc = tilingContext->GetOptionalInputDesc(INPUT_WEIGHT_IDX);
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
         OP_CHECK_IF(weightDtype != ge::DT_FLOAT,
-                        OP_LOGE_FOR_INVALID_DTYPE(
-                            tilingContext->GetNodeName(), "weight",
-                            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
-                            "float32"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "weight",
+                                              ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(), "float32"),
+                    return ge::GRAPH_FAILED);
     }
     auto targetDesc = tilingContext->GetInputDesc(INPUT_TARGET_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, targetDesc);
     auto targetDataType = targetDesc->GetDataType();
     if (targetDataType == ge::DT_INT64) {
-      targetDtypeSize = ge::GetSizeByDataType(targetDataType);
+        targetDtypeSize = ge::GetSizeByDataType(targetDataType);
     } else if (targetDataType == ge::DT_INT32) {
         targetDtypeSize = ge::GetSizeByDataType(targetDataType);
     } else {
-      OP_LOGE_FOR_INVALID_DTYPE(
-          tilingContext->GetNodeName(), "target",
-          ge::TypeUtils::DataTypeToSerialString(targetDataType).c_str(),
-          "int32 or int64");
-      return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "target",
+                                  ge::TypeUtils::DataTypeToSerialString(targetDataType).c_str(), "int32 or int64");
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CrossEntropyLossGradRegbaseTiling::RunTiling() {
+ge::graphStatus CrossEntropyLossGradRegbaseTiling::RunTiling()
+{
     if (tilingContext == nullptr) {
         OP_LOGE("CrossEntropyLossGrad", "Tiling Context is nullptr");
     }
     OP_LOGD(tilingContext, "CrossEntropyLossGradRegbaseTiling RunTiling enter.");
 
-    OP_CHECK_IF(GetPlatform() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext, "GetPlatform failed."),
-                    return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetTilingAttr() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext, "GetTilingAttr failed."),
-                    return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetTilingInput() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext, "GetTilingInput failed."),
-                    return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext, "CheckDtype failed."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatform() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "GetPlatform failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingAttr() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "GetTilingAttr failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingInput() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "GetTilingInput failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "CheckDtype failed."),
+                return ge::GRAPH_FAILED);
 
     const gert::StorageShape* inputShape = tilingContext->GetInputShape(INPUT_LOG_PROB_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputShape);
     const gert::Shape& inputStorageShape = inputShape->GetStorageShape();
-    if (inputStorageShape.GetShapeSize() == 0){
-      OP_LOGD(tilingContext, "input has empty tensor");
-      OP_CHECK_IF(DoEmptyTensorTiling() != ge::GRAPH_SUCCESS,
-                      OP_LOGE(tilingContext, "DoEmptyTensorTiling failed."),
-                      return ge::GRAPH_FAILED);
-      return ge::GRAPH_SUCCESS;
+    if (inputStorageShape.GetShapeSize() == 0) {
+        OP_LOGD(tilingContext, "input has empty tensor");
+        OP_CHECK_IF(DoEmptyTensorTiling() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "DoEmptyTensorTiling failed."),
+                    return ge::GRAPH_FAILED);
+        return ge::GRAPH_SUCCESS;
     }
 
     // 核间切分
@@ -534,21 +538,23 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::RunTiling() {
     OP_LOGD("CrossEntropyLossGradRegbaseTiling InitSplitInfo finished");
 
     // 核内切分
-    if (!CELossGradInnerCoreFullLoad()){
+    if (!CELossGradInnerCoreFullLoad()) {
         CELossGradCoreSplitInfo();
     }
     OP_LOGD("CrossEntropyLossGradRegbaseTiling CELossGradCoreSplitInfo finished");
 
-    OP_LOGI(tilingContext, "schId is %u, reduction is %u, isWeight is %u, labelS is %u, isIgnore is %u", ceLossGradTilingKey.schId, ceLossGradTilingKey.reduction,
-    ceLossGradTilingKey.isWeight, ceLossGradTilingKey.labelS, ceLossGradTilingKey.isIgnore);
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(ceLossGradTilingKey.schId, ceLossGradTilingKey.reduction, ceLossGradTilingKey.isWeight, ceLossGradTilingKey.labelS, ceLossGradTilingKey.isIgnore);
+    OP_LOGI(tilingContext, "schId is %u, reduction is %u, isWeight is %u, labelS is %u, isIgnore is %u",
+            ceLossGradTilingKey.schId, ceLossGradTilingKey.reduction, ceLossGradTilingKey.isWeight,
+            ceLossGradTilingKey.labelS, ceLossGradTilingKey.isIgnore);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(ceLossGradTilingKey.schId, ceLossGradTilingKey.reduction,
+                                                  ceLossGradTilingKey.isWeight, ceLossGradTilingKey.labelS,
+                                                  ceLossGradTilingKey.isIgnore);
     OP_LOGI(tilingContext, "tilingKey is %lu", tilingKey);
     tilingContext->SetTilingKey(tilingKey);
 
-    OP_CHECK_IF(SetTilingData() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext, "SetTilingData failed."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "SetTilingData failed."),
+                return ge::GRAPH_FAILED);
     OP_LOGD("CrossEntropyLossGradRegbaseTiling tiling end");
     return ge::GRAPH_SUCCESS;
 }
-}  // namespace optiling
+} // namespace optiling

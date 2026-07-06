@@ -22,30 +22,26 @@ using namespace AscendC;
 template <typename T, typename U, bool updatesIsScalar, bool withPos>
 class ScatterAddWithSortedSIMD {
 public:
-    __aicore__ inline ScatterAddWithSortedSIMD(void)
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR updates, GM_ADDR indices, GM_ADDR pos, GM_ADDR varRef, GM_ADDR workspace, TPipe& pipeIn,
-        const ScatterAddWithSortedSimdTilingData* tilingData);
+    __aicore__ inline ScatterAddWithSortedSIMD(void) {}
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR updates, GM_ADDR indices, GM_ADDR pos, GM_ADDR varRef,
+                                GM_ADDR workspace, TPipe& pipeIn, const ScatterAddWithSortedSimdTilingData* tilingData);
 
-    __aicore__ inline void CopyIn(
-        LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-        uint32_t srcStride = 0, uint32_t dstStride = 0);
+    __aicore__ inline void CopyIn(LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst,
+                                  uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0);
 
-    __aicore__ inline void CopyInIndices(
-        LocalTensor<U> dstLocal, GlobalTensor<U> srcGm, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-        uint32_t srcStride = 0, uint32_t dstStride = 0);
+    __aicore__ inline void CopyInIndices(LocalTensor<U> dstLocal, GlobalTensor<U> srcGm, uint64_t offset,
+                                         uint32_t nBurst, uint32_t copyLen, uint32_t srcStride = 0,
+                                         uint32_t dstStride = 0);
 
-    __aicore__ inline void CopyOut(
-        GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-        uint32_t srcStride = 0, uint32_t dstStride = 0);
+    __aicore__ inline void CopyOut(GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst,
+                                   uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0);
 
-    __aicore__ inline void BroadcastUpdatesScalar(
-        LocalTensor<T> updatesLocal, GlobalTensor<T> updatesGm, int32_t count);
+    __aicore__ inline void BroadcastUpdatesScalar(LocalTensor<T> updatesLocal, GlobalTensor<T> updatesGm,
+                                                  int32_t count);
 
-    __aicore__ inline void ComputeSumAndCopyOut(
-        LocalTensor<T>& yLocal, int32_t curLoopRows, int32_t curLoopCols, int32_t curLoopColsAlign, int64_t colOffset,
-        U& curId, int64_t indicesGmOffset);
+    __aicore__ inline void ComputeSumAndCopyOut(LocalTensor<T>& yLocal, int32_t curLoopRows, int32_t curLoopCols,
+                                                int32_t curLoopColsAlign, int64_t colOffset, U& curId,
+                                                int64_t indicesGmOffset);
 
     __aicore__ inline void Process();
 
@@ -94,10 +90,9 @@ __aicore__ inline void ScatterAddWithSortedSIMD<T, U, updatesIsScalar, withPos>:
 {
     tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
-    if (!KernelUtil::InitSimdBase(
-            tilingData_, blockIdx_, rowCoreIdx_, colCoreIdx_, isStartRowCore_, isEndRowCore_, rowGmOffset_,
-            colGmOffset_, rowUbLoop_, colUbLoop_, normalLoopRows_, tailLoopRows_, normalLoopCols_, tailLoopCols_,
-            updatesGm_, indicesGm_, updates, indices)) {
+    if (!KernelUtil::InitSimdBase(tilingData_, blockIdx_, rowCoreIdx_, colCoreIdx_, isStartRowCore_, isEndRowCore_,
+                                  rowGmOffset_, colGmOffset_, rowUbLoop_, colUbLoop_, normalLoopRows_, tailLoopRows_,
+                                  normalLoopCols_, tailLoopCols_, updatesGm_, indicesGm_, updates, indices)) {
         return;
     }
 
@@ -223,11 +218,10 @@ __aicore__ inline void ScatterAddWithSortedSIMD<T, U, updatesIsScalar, withPos>:
             int64_t curLoopRows = (row == rowUbLoop_ - 1) ? tailLoopRows_ : normalLoopRows_;
             int64_t indicesGmOffset = rowGmOffset_ + row * normalLoopRows_;
 
-            KernelUtil::CopyInRowIndices<U, withPos>(
-                indicesQueue_, posQueue_, indicesGm_, posGm_, indicesGmOffset, static_cast<uint32_t>(curLoopRows));
-            ComputeSumAndCopyOut(
-                yLocal, static_cast<int32_t>(curLoopRows), static_cast<int32_t>(curLoopCols),
-                static_cast<int32_t>(curLoopColsAlign), colOffset, curId, indicesGmOffset);
+            KernelUtil::CopyInRowIndices<U, withPos>(indicesQueue_, posQueue_, indicesGm_, posGm_, indicesGmOffset,
+                                                     static_cast<uint32_t>(curLoopRows));
+            ComputeSumAndCopyOut(yLocal, static_cast<int32_t>(curLoopRows), static_cast<int32_t>(curLoopCols),
+                                 static_cast<int32_t>(curLoopColsAlign), colOffset, curId, indicesGmOffset);
         }
         if (preId_ != static_cast<U>(-1)) {
             KernelUtil::WaitVToMte3();

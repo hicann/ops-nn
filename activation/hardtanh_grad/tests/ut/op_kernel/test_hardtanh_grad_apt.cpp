@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -23,22 +23,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void hardtanh_grad(
-    GM_ADDR result, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void hardtanh_grad(GM_ADDR result, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
 class hardtanh_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "hardtanh_grad_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "hardtanh_grad_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "hardtanh_grad TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./hardtanh_grad_data");
     }
 };
-
 
 TEST_F(hardtanh_grad_test, test_case_fp32_1)
 {
@@ -50,10 +46,11 @@ TEST_F(hardtanh_grad_test, test_case_fp32_1)
     uint8_t* result = (uint8_t*)AscendC::GmAlloc(resultByteSize);
     uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    kernel_ut::SetupTestEnvironment("activation/hardtanh_grad/tests/ut/op_kernel/hardtanh_grad_data", "hardtanh_grad_data");
+    kernel_ut::SetupTestEnvironment("activation/hardtanh_grad/tests/ut/op_kernel/hardtanh_grad_data",
+                                    "hardtanh_grad_data");
     kernel_ut::RunGenData("./hardtanh_grad_data", {"'(256)'", "float32", "-1.0", "1.0"});
 
     std::string path = kernel_ut::GetTestWorkDir();
@@ -73,7 +70,7 @@ TEST_F(hardtanh_grad_test, test_case_fp32_1)
     tilingDatafromBin->baseTiling.scheMode = 0;
     tilingDatafromBin->minVal = -1.0f;
     tilingDatafromBin->maxVal = 1.0f;
-    
+
     ReadFile(path + "/hardtanh_grad_data/input_result.bin", resultByteSize, result, resultByteSize);
     ReadFile(path + "/hardtanh_grad_data/input_grad.bin", gradByteSize, grad, gradByteSize);
     auto KernelHardtanhGrad = [](GM_ADDR result, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {

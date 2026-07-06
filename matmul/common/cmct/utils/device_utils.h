@@ -39,4 +39,3 @@ __aicore__ inline int64_t AlignBlock(const int64_t& t)
 
 } // namespace Gemm
 } // namespace Cmct
-

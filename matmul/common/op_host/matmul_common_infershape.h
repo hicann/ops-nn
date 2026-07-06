@@ -29,4 +29,3 @@ ge::graphStatus InferShapeRangeForBatchMatMul(gert::InferShapeRangeContext* cont
 bool CheckIsUnknownDimNum(const gert::Shape& shape);
 } // namespace NN
 } // namespace Ops
-

@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_aclnn_grouped_dynamic_mx_quant.cpp
  * \brief
  */
@@ -62,7 +62,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType, aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -80,7 +81,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -111,7 +112,7 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     aclTensor* mxscaleOut = nullptr;
     //对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {{0}, {16640}, {17024}, {17408}, {0}, {16640}, {17024}, {17408}};
-    
+
     std::vector<uint32_t> groupedIndexHostData = {4, 8};
     //对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {{0}, {72}, {96}, {120}, {0}, {72}, {96}, {120}};
@@ -128,7 +129,8 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> xDeviceAddrPtr(xDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建groudedIndex aclTensor
-    ret = CreateAclTensor(groupedIndexHostData, groupedIndexShape, &groupedIndexDeviceAddr, aclDataType::ACL_INT32, &groupedIndex);
+    ret = CreateAclTensor(groupedIndexHostData, groupedIndexShape, &groupedIndexDeviceAddr, aclDataType::ACL_INT32,
+                          &groupedIndex);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> groupedIndexTensorPtr(groupedIndex, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> groupedIndexDeviceAddrPtr(groupedIndexDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -138,20 +140,21 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(yOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建mxscaleOut aclTensor
-    ret = CreateAclTensor(mxscaleOutHostData, mxscaleOutShape, &mxscaleOutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscaleOut);
+    ret = CreateAclTensor(mxscaleOutHostData, mxscaleOutShape, &mxscaleOutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &mxscaleOut);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscaleOutTensorPtr(mxscaleOut, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscaleOutDeviceAddrPtr(mxscaleOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
     // 调用aclnnGroupedDynamicMxQuantV2第一段接口
-    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, scaleAlg, dstTypeMax,
-        yOut, mxscaleOut, &workspaceSize, &executor);
+    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, scaleAlg,
+                                                       dstTypeMax, yOut, mxscaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret);
-        return ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -170,22 +173,20 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
 
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape);
-    std::vector<uint8_t> yOutData(
-        size, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
-                    size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+                      size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("y[%ld] is: %d\n", i, yOutData[i]);
     }
     size = GetShapeSize(mxscaleOutShape);
-    std::vector<uint8_t> mxscaleOutData(
-        size, 0);  // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    std::vector<uint8_t> mxscaleOutData(size,
+                                        0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
     ret = aclrtMemcpy(mxscaleOutData.data(), mxscaleOutData.size() * sizeof(mxscaleOutData[0]), mxscaleOutDeviceAddr,
-                    size * sizeof(mxscaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+                      size * sizeof(mxscaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy mxscaleOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("mxscaleOut[%ld] is: %d\n", i, mxscaleOutData[i]);
     }
@@ -199,7 +200,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = aclnnGroupedDynamicMxQuantV2Test(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2Test failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2Test failed. ERROR: %d\n", ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

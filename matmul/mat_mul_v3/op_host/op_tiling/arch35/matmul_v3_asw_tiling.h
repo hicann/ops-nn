@@ -25,19 +25,15 @@ public:
     ~MatMulV3AswTiling() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
+    bool IsCapable() override { return true; };
 
     ge::graphStatus DoOpTiling() override;
 
     uint64_t GetTilingKey() const override;
 
-    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
     void CalcTailBasicBlock();
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling
-

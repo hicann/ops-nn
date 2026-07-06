@@ -24,7 +24,7 @@ namespace ScatterNdCommon {
 constexpr uint16_t MAX_RANK_COUNT_NUM = 7;
 constexpr uint16_t MAX_SHAPE_RANK_NUM = 8;
 
-struct ScatterNdCommonSimtTilingData{
+struct ScatterNdCommonSimtTilingData {
     uint64_t blockNum;
     uint32_t rankSize;
     uint64_t blockTilingSize;
@@ -36,7 +36,7 @@ struct ScatterNdCommonSimtTilingData{
     int64_t varInAxis;
 };
 
-struct ScatterNdCommonSimtSortTilingData{
+struct ScatterNdCommonSimtSortTilingData {
     uint64_t strideList[MAX_RANK_COUNT_NUM];
     uint64_t outPutShape[MAX_SHAPE_RANK_NUM];
     int64_t indicesFactor;
@@ -52,7 +52,7 @@ struct ScatterNdCommonSimtSortTilingData{
     int64_t updateTailNum;
 };
 
-struct ScatterNdCommonSimdSortTilingData{
+struct ScatterNdCommonSimdSortTilingData {
     uint64_t strideList[MAX_RANK_COUNT_NUM];
     uint64_t outPutShape[MAX_SHAPE_RANK_NUM];
     int64_t eachCoreAfterAxisCount;
@@ -73,6 +73,5 @@ struct ScatterNdCommonSimdSortTilingData{
     int64_t singleCol;
 };
 
-
-}// namespace ScatterNdCommon
+} // namespace ScatterNdCommon
 #endif

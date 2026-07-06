@@ -15,67 +15,65 @@
 #include <cstdint>
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-    class MultiScaleDeformableAttentionGrad : public OpDef
+namespace ops {
+class MultiScaleDeformableAttentionGrad : public OpDef {
+public:
+    explicit MultiScaleDeformableAttentionGrad(const char* name) : OpDef(name)
     {
-    public:
-        explicit MultiScaleDeformableAttentionGrad(const char *name) : OpDef(name)
-        {
-            this->Input("value")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Input("value_spatial_shapes")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_INT32})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Input("value_level_start_index")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_INT32})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Input("sampling_locations")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Input("attention_weights")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Input("grad_output")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Output("grad_value")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Output("grad_sampling_locations")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            this->Output("grad_attention_weights")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND});
-            OpAICoreConfig aicore_config;
-            aicore_config.DynamicCompileStaticFlag(true)
+        this->Input("value")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("value_spatial_shapes")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("value_level_start_index")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("sampling_locations")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("attention_weights")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("grad_output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Output("grad_value")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Output("grad_sampling_locations")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->Output("grad_attention_weights")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true);
-            this->AICore().AddConfig("ascend910b", aicore_config);
-            this->AICore().AddConfig("ascend910_93", aicore_config);
-        }
-    };
+        this->AICore().AddConfig("ascend910b", aicore_config);
+        this->AICore().AddConfig("ascend910_93", aicore_config);
+    }
+};
 
-    OP_ADD(MultiScaleDeformableAttentionGrad);
-}
+OP_ADD(MultiScaleDeformableAttentionGrad);
+} // namespace ops

@@ -19,13 +19,12 @@
 
 namespace l0op {
 
-const aclTensor* EmbeddingDenseGrad(
-    const aclTensor* grad, const aclTensor* indices, uint64_t numWeights, uint64_t paddingIdx, bool scaleGradByFreq,
-    aclOpExecutor* executor);
+const aclTensor* EmbeddingDenseGrad(const aclTensor* grad, const aclTensor* indices, uint64_t numWeights,
+                                    uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor);
 
-const aclTensor* EmbeddingDenseGradV2(
-    const aclTensor* grad, const aclTensor* sortIndices, const aclTensor* posIdx, const aclTensor* out, uint64_t numWeights,
-    uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor);
+const aclTensor* EmbeddingDenseGradV2(const aclTensor* grad, const aclTensor* sortIndices, const aclTensor* posIdx,
+                                      const aclTensor* out, uint64_t numWeights, uint64_t paddingIdx,
+                                      bool scaleGradByFreq, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_EMBEDDING_DENSE_GRAD_H_

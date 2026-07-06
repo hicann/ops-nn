@@ -24,8 +24,8 @@ struct MseLossGradTilingData {
     uint64_t tileDataNum = 0;
     uint64_t smallTailDataNum = 0;
     uint64_t bigTailDataNum = 0;
-    uint64_t tailBlockNum = 0; 
-    float cof = 0.0;  
-    uint32_t usedDb = 0; 
+    uint64_t tailBlockNum = 0;
+    float cof = 0.0;
+    uint32_t usedDb = 0;
 };
 #endif

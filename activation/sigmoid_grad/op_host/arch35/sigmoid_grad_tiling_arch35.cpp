@@ -34,8 +34,7 @@ ge::graphStatus SigmoidGradTiling::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
         auto compileInfoPtr = context_->GetCompileInfo<SigmoidGradCompileInfo>();
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
         ubSize = compileInfoPtr->ubSize;
     } else {
@@ -74,7 +73,7 @@ uint64_t SigmoidGradTiling::GenerateTilingKey(uint64_t innerKey) const
 std::map<uint64_t, Ops::Base::ComputeParams> SigmoidGradTiling::GetComputeMap(uint64_t opKeyParam) const
 {
     Ops::Base::ComputeParams computeParams0;
-        switch (opKeyParam) {
+    switch (opKeyParam) {
         case OP_KEY_1:
             computeParams0.maxDtypeBits = static_cast<int64_t>(Ops::Base::BITS_SIZE::BITS32_SIZE);
             computeParams0.minDtypeBits = static_cast<int64_t>(Ops::Base::BITS_SIZE::BITS16_SIZE);
@@ -112,17 +111,16 @@ ge::graphStatus SigmoidGradTiling::GetShapeAttrsInfo()
 
     opKey = GetOpKey(yDtype, dyDtype, zDtype);
     OP_CHECK_IF((opKey == OP_KEY_INVALID),
-                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y, dy, z",
-                        ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(dyDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(zDtype),
-                        "The dtypes of y, dy, z must be the same"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y, dy, z",
+                                                       ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(dyDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(zDtype),
+                                                       "The dtypes of y, dy, z must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool SigmoidGradTiling::IsCapable()
-{
-    return true;
-}
+bool SigmoidGradTiling::IsCapable() { return true; }
 
 ge::graphStatus SigmoidGradTiling::DoOpTiling()
 {
@@ -131,7 +129,8 @@ ge::graphStatus SigmoidGradTiling::DoOpTiling()
     auto dyShape = context_->GetInputShape(INDEX_1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyShape);
     if (!Ops::Base::IsSameElewiseShape(yShape->GetStorageShape(), dyShape->GetStorageShape())) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y, dy",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "y, dy",
             Ops::Base::ToString(yShape->GetStorageShape()) + ", " + Ops::Base::ToString(dyShape->GetStorageShape()),
             "The shapes of y and dy must be the same");
         return ge::GRAPH_FAILED;
@@ -144,9 +143,8 @@ ge::graphStatus SigmoidGradTiling::DoOpTiling()
 
     Ops::Base::ElewiseTilingData elewiseTilingData;
     auto status = Ops::Base::ElewiseTiling(elewiseTilingParams, elewiseTilingData);
-    OP_CHECK_IF((status == ge::GRAPH_FAILED),
-                    OP_LOGE(context_->GetNodeName(), "elewise tiling failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((status == ge::GRAPH_FAILED), OP_LOGE(context_->GetNodeName(), "elewise tiling failed"),
+                return ge::GRAPH_FAILED);
 
     tilingKey_ = GenerateTilingKey(elewiseTilingData.innerKey);
     blockNum = elewiseTilingData.blockNum;
@@ -162,7 +160,8 @@ ge::graphStatus SigmoidGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SigmoidGradTiling::ToString(SigmoidGradTilingData &tilingDataParam) const {
+std::string SigmoidGradTiling::ToString(SigmoidGradTilingData& tilingDataParam) const
+{
     std::string str;
     str += " dim0:" + std::to_string(tilingDataParam.get_dim0());
     str += " blockFormer:" + std::to_string(tilingDataParam.get_blockFormer());
@@ -175,15 +174,9 @@ std::string SigmoidGradTiling::ToString(SigmoidGradTilingData &tilingDataParam) 
     return str;
 }
 
-ge::graphStatus SigmoidGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SigmoidGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t SigmoidGradTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t SigmoidGradTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus SigmoidGradTiling::GetWorkspaceSize()
 {
@@ -196,15 +189,13 @@ ge::graphStatus SigmoidGradTiling::PostTiling()
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(blockNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    OP_CHECK_IF(workspaces == nullptr, OP_LOGE(context_, "workspace is null"),
-            return ge::GRAPH_FAILED);
+    OP_CHECK_IF(workspaces == nullptr, OP_LOGE(context_, "workspace is null"), return ge::GRAPH_FAILED);
     workspaces[0] = workspaceSize_;
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     OP_LOGI(context_, "TilingInfo: %s.", ToString(tilingData).c_str());
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus TilingForSigmoidGrad(gert::TilingContext* context)
 {
@@ -218,7 +209,7 @@ ge::graphStatus TilingPrepareForSigmoidGrad(gert::TilingParseContext* context)
 {
     auto compileInfoPtr = context->GetCompiledInfo<SigmoidGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -230,4 +221,4 @@ IMPL_OP_OPTILING(SigmoidGrad)
     .Tiling(TilingForSigmoidGrad)
     .TilingParse<SigmoidGradCompileInfo>(TilingPrepareForSigmoidGrad);
 
-}  // namespace optiling
+} // namespace optiling

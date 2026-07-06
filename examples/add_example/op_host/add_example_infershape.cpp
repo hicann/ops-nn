@@ -11,7 +11,7 @@
 /*!
  * \file add_example_infershape.cpp
  * \brief Add算子的shape推理和数据类型推理实现
- * 
+ *
  * 本文件提供了推理逻辑，用于确定Add算子的输出张量shape和数据类型。
  */
 
@@ -27,10 +27,10 @@ static constexpr int64_t IDX_0 = 0;
 
 /*!
  * \brief 推理Add算子的输出shape
- * 
+ *
  * 该函数检索输入张量的shape并将其传播到输出张量。
  * 对于Add算子，输出shape与输入shape相同。
- * 
+ *
  * @param context 指向shape推理上下文的指针
  * @return 如果推理成功则返回ge::graphStatus GRAPH_SUCCESS，否则返回错误代码
  */
@@ -50,7 +50,7 @@ static ge::graphStatus InferShapeAddExample(gert::InferShapeContext* context)
     // Add算子的输出shape与输入shape相同
     auto xShapeSize = xShape->GetDimNum();
     yShape->SetDimNum(xShapeSize);
-    
+
     for (size_t i = 0; i < xShapeSize; i++) {
         int64_t dim = xShape->GetDim(i);
         yShape->SetDim(i, dim);
@@ -62,10 +62,10 @@ static ge::graphStatus InferShapeAddExample(gert::InferShapeContext* context)
 
 /*!
  * \brief 推理Add算子的输出数据类型
- * 
+ *
  * 该函数检索输入张量的数据类型并将其传播到输出张量。
  * 对于Add算子，输出数据类型与输入数据类型相同。
- * 
+ *
  * @param context 指向数据类型推理上下文的指针
  * @return 如果推理成功则返回ge::graphStatus GRAPH_SUCCESS，否则返回错误代码
  */

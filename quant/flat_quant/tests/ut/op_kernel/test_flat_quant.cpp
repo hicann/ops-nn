@@ -25,9 +25,8 @@
 #include "kernel_ut_data_helper.h"
 #include "kernel_ut_data_executor.h"
 
-extern "C" __global__ __aicore__ void flat_quant(
-    GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out, GM_ADDR quant_scale, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void flat_quant(GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out,
+                                                 GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling);
 
 class flat_quant_test : public testing::Test {
 protected:
@@ -71,9 +70,8 @@ TEST_F(flat_quant_test, test_case_float16_1)
     uint32_t blockDim = 1;
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(
-        flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     WriteFile("./flat_quant_data/float16_output_quant_scale_flat_quant.bin", quant_scale, scaleByteSize);
 
@@ -124,9 +122,8 @@ TEST_F(flat_quant_test, test_case_float16_2)
     uint32_t blockDim = 8;
     ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(
-        flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     WriteFile("./flat_quant_data/float16_output_quant_scale_flat_quant.bin", quant_scale, scaleByteSize);
 
@@ -177,9 +174,8 @@ TEST_F(flat_quant_test, test_case_float16_3)
     uint32_t blockDim = 1;
     ICPU_SET_TILING_KEY(3);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(
-        flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     WriteFile("./flat_quant_data/float16_output_quant_scale_flat_quant.bin", quant_scale, scaleByteSize);
 
@@ -278,9 +274,8 @@ TEST_F(flat_quant_test, test_case_float16_4)
     uint32_t blockDim = 1;
     ICPU_SET_TILING_KEY(4);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(
-        flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     WriteFile("./flat_quant_data/float16_output_quant_scale_flat_quant.bin", quant_scale, scaleByteSize);
 
@@ -331,9 +326,8 @@ TEST_F(flat_quant_test, test_case_float16_5)
     uint32_t blockDim = 1;
     ICPU_SET_TILING_KEY(5);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(
-        flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(flat_quant, blockDim, x, kronecker_p1, kronecker_p2, out, quant_scale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     WriteFile("./flat_quant_data/float16_output_quant_scale_flat_quant.bin", quant_scale, scaleByteSize);
 

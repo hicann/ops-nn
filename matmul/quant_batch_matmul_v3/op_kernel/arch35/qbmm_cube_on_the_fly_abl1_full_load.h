@@ -46,17 +46,15 @@ template <class x1Type, class x2Type, class inputScaleType, class biasType, clas
           FusedOpType fusedOpType = FusedOpType::NONE>
 class MatmulAswKernelABL1FullLoad : public MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS> {
 public:
-    __aicore__ inline MatmulAswKernelABL1FullLoad()
-    {
-    }
+    __aicore__ inline MatmulAswKernelABL1FullLoad() {}
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale,
-                                GM_ADDR cGM, GM_ADDR workspace, const void *tilingData, TPipe *pipe);
+                                GM_ADDR cGM, GM_ADDR workspace, const void* tilingData, TPipe* pipe);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessWithoutBatch();
 
 protected:
-    using scaleType =
-        typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t, inputScaleType>::type;
+    using scaleType = typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t,
+                                                    inputScaleType>::type;
     // Temp Swap Cache Memory, 用于临时把数据交换到额外空间，进行Matmul计算
     using aType = matmul::MatmulType<AscendC::TPosition::TSCM, formatX1, x1Type, aTrans>;
     using bType = matmul::MatmulType<AscendC::TPosition::TSCM, formatX2, x2Type, bTrans>;
@@ -64,7 +62,7 @@ protected:
     using biasMatmulType = matmul::MatmulType<AscendC::TPosition::TSCM, CubeFormat::ND, biasType>;
     matmul::MatmulImpl<aType, bType, cType, biasMatmulType, ABL1FullLoad::cfg_v<fusedOpType>> mm_;
     TQue<QuePosition::A1, 1> InQueueABL1_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     LocalTensor<x1Type> al1Local_;
     LocalTensor<x2Type> bl1Local_;
     LocalTensor<biasType> biasl1Local_;
@@ -76,14 +74,14 @@ protected:
 LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void MatmulAswKernelABL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale, GM_ADDR cGM, GM_ADDR workSpace,
-    const void *tilingData, TPipe *pipe)
+    const void* tilingData, TPipe* pipe)
 {
     if ASCEND_IS_AIV {
         return;
     }
     pipe_ = pipe;
     this->blockIdx_ = GetBlockIdx();
-    this->quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    this->quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
     this->UpdateGlobalAddr(aGM, bGM, bias, scale, perTokenScale, nullptr, cGM, workSpace);
 }
 
@@ -103,8 +101,7 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::
     uint64_t mAligned = 0;
     uint64_t kaAligned = 0;
     if constexpr (aTrans) {
-        mAligned =
-            DequantBmm::Align(this->block_.tilingData_->matmulTiling.singleCoreM, innerX1AlignedBlock);
+        mAligned = DequantBmm::Align(this->block_.tilingData_->matmulTiling.singleCoreM, innerX1AlignedBlock);
         kaAligned = DequantBmm::Align(this->block_.tilingData_->matmulTiling.Ka, BMM_BLOCK_NUM);
     } else {
         mAligned = DequantBmm::Align(this->block_.tilingData_->matmulTiling.singleCoreM, BMM_BLOCK_NUM);
@@ -118,8 +115,7 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::
         nAligned = DequantBmm::Align(this->block_.tilingData_->matmulTiling.singleCoreN, BMM_BLOCK_NUM);
     } else {
         kbAligned = DequantBmm::Align(this->block_.tilingData_->matmulTiling.Ka, BMM_BLOCK_NUM);
-        nAligned =
-            DequantBmm::Align(this->block_.tilingData_->matmulTiling.singleCoreN, innerX2AlignedBlock);
+        nAligned = DequantBmm::Align(this->block_.tilingData_->matmulTiling.singleCoreN, innerX2AlignedBlock);
     }
 
     this->block_.UpdateBasicIndex(0);
@@ -206,5 +202,4 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::
     }
 }
 
-}  // namespace QuantBatchMatmulV3
-
+} // namespace QuantBatchMatmulV3

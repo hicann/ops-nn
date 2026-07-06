@@ -21,8 +21,7 @@
 #include "../inc/platform.h"
 #include "softmax_grad_base.h"
 
-namespace SoftmaxGradOps
-{
+namespace SoftmaxGradOps {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 
@@ -37,13 +36,9 @@ static constexpr uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
 static constexpr uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T>
-class SoftmaxGradAR : public SoftmaxGradOpsBase
-{
+class SoftmaxGradAR : public SoftmaxGradOpsBase {
 public:
-    __aicore__ inline SoftmaxGradAR(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline SoftmaxGradAR(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y, const SoftmaxGradARTilingData* tilingData);
 
@@ -83,7 +78,7 @@ private:
     TQue<QuePosition::VECOUT, 1> yQueue_;
     TBuf<> binaryTmpLocalBuffer_;
 
-    int64_t blockA_ = 0;  // 获取分块操作中的单个块的大小
+    int64_t blockA_ = 0; // 获取分块操作中的单个块的大小
     const SoftmaxGradARTilingData* tl_ = nullptr;
 };
 
@@ -94,9 +89,9 @@ __aicore__ inline void SoftmaxGradAR<T>::Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y,
     tl_ = tilingData;
 
     // 获取分块操作中的单个块的大小。判断是否是最后一块，是最后一块，则等于剩余元素的数量，否则等于固定的单核处理的行数
-    blockA_ = (AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1)
-                  ? (tl_->a - tl_->aBlockFactor * (AscendC::GetBlockNum() - 1))
-                  : tl_->aBlockFactor;
+    blockA_ = (AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1) ?
+                  (tl_->a - tl_->aBlockFactor * (AscendC::GetBlockNum() - 1)) :
+                  tl_->aBlockFactor;
 
     // 初始化GM Tensor
     int64_t aGmOffset = tl_->aBlockFactor * AscendC::GetBlockIdx() * tl_->r;
@@ -166,8 +161,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 LoadTensorForDtypeTIn(x0, reg0, pMask, i * rAligned);
@@ -196,8 +191,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 LoadTensorForDtypeTIn(x0, reg0, pFull, i * rAligned);
@@ -239,10 +234,10 @@ __aicore__ inline void SoftmaxGradAR<T>::NormCompute(const int64_t aSize)
     LocalTensor<T> dstTensor = yQueue_.AllocTensor<T>();
     LocalTensor<float> reduceSumTempTensor = binaryTmpLocalBuffer_.AllocTensor<float>();
 
-    int64_t ceilVLCount =
-        ops::CeilDiv(static_cast<int64_t>(tl_->r * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
-    int64_t floorVLCount =
-        ops::FloorDiv(static_cast<int64_t>(tl_->r * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    int64_t ceilVLCount = ops::CeilDiv(static_cast<int64_t>(tl_->r * sizeof(float)),
+                                       static_cast<int64_t>(platform::GetVRegSize()));
+    int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(tl_->r * sizeof(float)),
+                                         static_cast<int64_t>(platform::GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -252,8 +247,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormCompute(const int64_t aSize)
     uint16_t unFoldLoopTimes = foldPoint + foldPoint - ceilVLCount;
     uint32_t outerLoopStride = tl_->rAligned;
     uint32_t innerLoopStride = VL_FP32;
-    uint32_t outerLoopDstStride =
-        ops::Aligned(static_cast<int64_t>(foldPoint), static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
+    uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
+                                               static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;
@@ -362,8 +357,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 DataCopy(reg0, (__local_mem__ float*)sumTmp + i * static_cast<uint32_t>(stride));
@@ -396,8 +391,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 DataCopy(reg0, (__local_mem__ float*)sumTmpA + i * static_cast<uint32_t>(stride));
@@ -430,7 +425,7 @@ __aicore__ inline void SoftmaxGradAR<T>::LoadTensorForDtypeTIn(__local_mem__ T* 
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-    } else {  // fp16、bf16
+    } else { // fp16、bf16
         RegTensor<T> xFp16;
         DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
         Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -484,5 +479,5 @@ __aicore__ inline void SoftmaxGradAR<T>::CopyOutY(int64_t ubA, int64_t offset)
     yQueue_.FreeTensor(yOutUb);
 }
 
-}  // namespace SoftmaxGradOps
-#endif  // SOFTMAX_GRAD_AR_FULL_LOAD_H
+} // namespace SoftmaxGradOps
+#endif // SOFTMAX_GRAD_AR_FULL_LOAD_H

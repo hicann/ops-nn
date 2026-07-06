@@ -22,11 +22,7 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_
->
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_>
 class BlockSchedulerVectorBuiltIn {
 public:
     int64_t usedCoreNum_{0};
@@ -68,43 +64,21 @@ public:
         nTileNum_ = CeilDiv(n_, baseN_);
     }
 
-    __aicore__ inline int64_t GetRealBlockNum() {
-        return usedCoreNum_;
-    }
+    __aicore__ inline int64_t GetRealBlockNum() { return usedCoreNum_; }
 
-    __aicore__ inline int64_t GetTileNum() {
-        return mTileNum_ * nTileNum_;
-    }
+    __aicore__ inline int64_t GetTileNum() { return mTileNum_ * nTileNum_; }
 
-    __aicore__ inline TupleShape GetBlockInfo()
-    {
-        return {baseM_, baseN_, mTileNum_, nTileNum_};
-    }
+    __aicore__ inline TupleShape GetBlockInfo() { return {baseM_, baseN_, mTileNum_, nTileNum_}; }
 
-    __aicore__ inline TupleShape GetTailInfo()
-    {
-        return {tailM_, tailN_, tailK_, loopK_};
-    }
+    __aicore__ inline TupleShape GetTailInfo() { return {tailM_, tailN_, tailK_, loopK_}; }
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInVectorScheduler,
-    TransA_,
-    TransB_
-> {
-using SchedulerOp = BlockSchedulerVectorBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInVectorScheduler, TransA_,
+                              TransB_> {
+    using SchedulerOp = BlockSchedulerVectorBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

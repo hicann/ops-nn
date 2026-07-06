@@ -98,9 +98,9 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseSplitTiling::InputPadCalc(const array<i
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t MaxPool3DWithArgmaxV2BaseSplitTiling::CalcBufferSizes(
-    const array<uint64_t, DHW_DIMS> part, const array<uint64_t, DHW_DIMS> partOut, const uint64_t partHwInp,
-    UBBufferSize& ubBufSizes)
+uint64_t MaxPool3DWithArgmaxV2BaseSplitTiling::CalcBufferSizes(const array<uint64_t, DHW_DIMS> part,
+                                                               const array<uint64_t, DHW_DIMS> partOut,
+                                                               const uint64_t partHwInp, UBBufferSize& ubBufSizes)
 {
     if (inputData.kernelSize[D_DIM] == 0 || inputData.kernelSize[H_DIM] == 0 || inputData.kernelSize[W_DIM] == 0) {
         return ge::GRAPH_FAILED;
@@ -114,10 +114,10 @@ uint64_t MaxPool3DWithArgmaxV2BaseSplitTiling::CalcBufferSizes(
                                  (MIN_TRANSPOSE_ROWS + blockLength) * blockLength :
                                  RoundUpBlock(partRoundDhwInp, blockLengthS) * blockLength;
     ubBufSizes.sizeUb1 = partRoundDhwInp < NCHW_CONV_ADDR_LIST_SIZE ?
-                              (MIN_TRANSPOSE_ROWS + blockLength) * blockLength :
-                              RoundUpBlock(partRoundDhwInp, MIN_TRANSPOSE_ROWS) * blockLength;
-    ubBufSizes.valSize =
-        RoundUpBlock(partOut[D_DIM] * partOut[H_DIM] * partOut[W_DIM], MIN_TRANSPOSE_ROWS) * blockLength;
+                             (MIN_TRANSPOSE_ROWS + blockLength) * blockLength :
+                             RoundUpBlock(partRoundDhwInp, MIN_TRANSPOSE_ROWS) * blockLength;
+    ubBufSizes.valSize = RoundUpBlock(partOut[D_DIM] * partOut[H_DIM] * partOut[W_DIM], MIN_TRANSPOSE_ROWS) *
+                         blockLength;
 
     if (inputData.stride[D_DIM] >= inputData.kernelSize[D_DIM] &&
         inputData.stride[H_DIM] >= inputData.kernelSize[H_DIM] &&
@@ -127,36 +127,36 @@ uint64_t MaxPool3DWithArgmaxV2BaseSplitTiling::CalcBufferSizes(
         if (inputData.kernelSize[D_DIM] == 1 && inputData.kernelSize[H_DIM] == 1 && inputData.kernelSize[W_DIM] == 1) {
             ubBufSizes.sizeUb1 = std::max(
                 ubBufSizes.sizeUb1, MASK_COUNT * RoundUpBlock((kernelDHW * blockLength) / BITS_UINT8, BLOCK_LEN_UINT8) *
-                                      partOut[D_DIM] * partOut[H_DIM] * partOut[W_DIM] / static_cast<uint32_t>(sizeof(float)));
+                                        partOut[D_DIM] * partOut[H_DIM] * partOut[W_DIM] /
+                                        static_cast<uint32_t>(sizeof(float)));
         }
     } else {
         if (partOut[D_DIM] * partOut[H_DIM] > 1) {
             transDataSize = kernelDHW * partOut[W_DIM] * blockLength > transDataSize ?
                                 kernelDHW * partOut[W_DIM] * blockLength :
                                 transDataSize;
-            ubBufSizes.sizeUb2 =
-                transDataSize + std::max(
-                                    (kernelDHW - halfKernelDHW) * blockLength * partOut[W_DIM],
-                                    MASK_COUNT * RoundUpBlock((kernelDHW * blockLength) / BITS_UINT8, BLOCK_LEN_UINT8) *
-                                        partOut[W_DIM] / static_cast<uint32_t>(sizeof(float)));
+            ubBufSizes.sizeUb2 = transDataSize +
+                                 std::max((kernelDHW - halfKernelDHW) * blockLength * partOut[W_DIM],
+                                          MASK_COUNT *
+                                              RoundUpBlock((kernelDHW * blockLength) / BITS_UINT8, BLOCK_LEN_UINT8) *
+                                              partOut[W_DIM] / static_cast<uint32_t>(sizeof(float)));
         } else {
-            ubBufSizes.sizeUb1 =
-                (kernelDHW + MAX_DIV - 1) / MAX_DIV * partOut[W_DIM] * blockLength > ubBufSizes.sizeUb1 ?
-                    (kernelDHW + MAX_DIV - 1) / MAX_DIV * partOut[W_DIM] * blockLength :
-                    ubBufSizes.sizeUb1;
+            ubBufSizes.sizeUb1 = (kernelDHW + MAX_DIV - 1) / MAX_DIV * partOut[W_DIM] * blockLength >
+                                         ubBufSizes.sizeUb1 ?
+                                     (kernelDHW + MAX_DIV - 1) / MAX_DIV * partOut[W_DIM] * blockLength :
+                                     ubBufSizes.sizeUb1;
             ubBufSizes.sizeUb1 = std::max(
                 ubBufSizes.sizeUb1, MASK_COUNT * RoundUpBlock((kernelDHW * blockLength) / BITS_UINT8, BLOCK_LEN_UINT8) *
-                                      partOut[W_DIM] / static_cast<uint32_t>(sizeof(float)));
+                                        partOut[W_DIM] / static_cast<uint32_t>(sizeof(float)));
             ubBufSizes.sizeUb2 = kernelDHW * partOut[W_DIM] * blockLength > transDataSize ?
-                                      kernelDHW * partOut[W_DIM] * blockLength :
-                                      transDataSize;
+                                     kernelDHW * partOut[W_DIM] * blockLength :
+                                     transDataSize;
             transDataSize = kernelDHW * partOut[W_DIM] * blockLength > transDataSize ?
                                 kernelDHW * partOut[W_DIM] * blockLength :
                                 transDataSize;
         }
     }
-    ubBufSizes.sizeUb2 =
-        kernelDHW <= blockLength ? ubBufSizes.sizeUb2 + blockLength * blockLength : ubBufSizes.sizeUb2;
+    ubBufSizes.sizeUb2 = kernelDHW <= blockLength ? ubBufSizes.sizeUb2 + blockLength * blockLength : ubBufSizes.sizeUb2;
 
     // extend buffer if output > input
     ubBufSizes.sizeUb2 = std::max(ubBufSizes.sizeUb2, ubBufSizes.valSize);
@@ -183,8 +183,9 @@ uint64_t MaxPool3DWithArgmaxV2BaseSplitTiling::RoundDownBlock(const uint64_t& sr
     return blockLen;
 }
 
-ge::graphStatus MaxPool3DWithArgmaxV2BaseSplitTiling::FindSplitParts(
-    array<uint64_t, DHW_DIMS>& inParts, array<uint64_t, DHW_DIMS>& outParts, UBBufferSize& ubBufSizes, uint64_t dim)
+ge::graphStatus MaxPool3DWithArgmaxV2BaseSplitTiling::FindSplitParts(array<uint64_t, DHW_DIMS>& inParts,
+                                                                     array<uint64_t, DHW_DIMS>& outParts,
+                                                                     UBBufferSize& ubBufSizes, uint64_t dim)
 {
     if (dim != D_DIM && dim != H_DIM && dim != W_DIM) {
         return ge::GRAPH_FAILED;
@@ -196,8 +197,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseSplitTiling::FindSplitParts(
     uint64_t partHwInp = inParts[W_DIM] * inParts[H_DIM];
     while (left < right - 1UL) {
         outParts[dim] = (left + right) / BINARY_SEARCH_COEFF;
-        inParts[dim] =
-            inputData.dilation[dim] * (inputData.kernelSize[dim] - 1) + inputData.stride[dim] * (outParts[dim] - 1) + 1;
+        inParts[dim] = inputData.dilation[dim] * (inputData.kernelSize[dim] - 1) +
+                       inputData.stride[dim] * (outParts[dim] - 1) + 1;
 
         if (dim == H_DIM) {
             partHwInp = RoundUpBlock(inParts[W_DIM] * inParts[H_DIM], blockLengthS);
@@ -227,8 +228,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseSplitTiling::FindSplitParts(
     }
 
     if (left == 0UL) {
-        inParts[dim] =
-            inputData.dilation[dim] * (inputData.kernelSize[dim] - 1) + inputData.stride[dim] * (outParts[dim] - 1) + 1;
+        inParts[dim] = inputData.dilation[dim] * (inputData.kernelSize[dim] - 1) +
+                       inputData.stride[dim] * (outParts[dim] - 1) + 1;
         if (dim == H_DIM) {
             partHwInp = RoundUpBlock(inParts[W_DIM] * inParts[H_DIM], blockLengthS);
         } else if (dim == W_DIM) {

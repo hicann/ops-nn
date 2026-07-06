@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -31,18 +31,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class LogSigmoidRegbaseTiling : public testing::Test
-{
+class LogSigmoidRegbaseTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LogSigmoidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LogSigmoidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LogSigmoidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LogSigmoidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -57,9 +50,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType xDtype, ge::DataType yDtype, gert::StorageShape xShape, gert::StorageShape yShape, int tilingKeyValue,
-    string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType xDtype, ge::DataType yDtype, gert::StorageShape xShape,
+                            gert::StorageShape yShape, int tilingKeyValue, string expectTilingData,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -96,13 +89,13 @@ static void ExecuteTestCase(
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(1024 * 1024);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(1, 1)      
-                      .IrInstanceNum({1})    
-                      .InputShapes({&xShape}) 
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND) 
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .TilingData(param.get())
                       .Workspace(ws_size)

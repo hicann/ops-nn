@@ -36,8 +36,8 @@ using NormCommon::NormCommonRegbase::StoreRegForDtype;
 template <typename T, typename U, typename M>
 class LayerNormV3RegbaseTwoPassPerf {
 public:
-    __aicore__ inline LayerNormV3RegbaseTwoPassPerf(
-        const LayerNormV3TilingDataRegBaseTwoPassPerf* tilingData, TPipe* pipe)
+    __aicore__ inline LayerNormV3RegbaseTwoPassPerf(const LayerNormV3TilingDataRegBaseTwoPassPerf* tilingData,
+                                                    TPipe* pipe)
     {
         pipe_ = pipe;
         tl_ = tilingData;
@@ -73,10 +73,10 @@ public:
         CopyInGammaBeta();
         gammaBetaInUb_ = gammaBetaQueue_.template DeQue<U>();
         int64_t ubLoopNum = GetBlockIdx() == GetBlockNum() - 1 ? tl_->tailBlockUbLoops : tl_->formerBlockUbLoops;
-        int64_t tailA =
-            GetBlockIdx() == GetBlockNum() - 1 ?
-                tl_->a - tl_->aBlockFactor * (GetBlockNum() - 1) - (tl_->tailBlockUbLoops - 1) * tl_->aUbFactor :
-                tl_->aBlockFactor - (tl_->formerBlockUbLoops - 1) * tl_->aUbFactor;
+        int64_t tailA = GetBlockIdx() == GetBlockNum() - 1 ?
+                            tl_->a - tl_->aBlockFactor * (GetBlockNum() - 1) -
+                                (tl_->tailBlockUbLoops - 1) * tl_->aUbFactor :
+                            tl_->aBlockFactor - (tl_->formerBlockUbLoops - 1) * tl_->aUbFactor;
         for (int64_t ubLoopIdx = 0; ubLoopIdx < ubLoopNum; ubLoopIdx++) {
             int64_t currentA = ubLoopIdx == ubLoopNum - 1 ? tailA : tl_->aUbFactor;
             int64_t aOffset = ubLoopIdx * tl_->aUbFactor;
@@ -150,8 +150,8 @@ private:
         } else if (tl_->rAlign <= VL_B32 * VL_B32 * NUM_TWO) {
             CalculateMeanVarRCommon<1>(xInUbAddr, meanOutUbAddr, rstdOutUbAddr, xSubMeanUbAddr, tmpUbAddr, currentANum);
         } else {
-            CalculateMeanVarRCommon<NUM_TWO>(
-                xInUbAddr, meanOutUbAddr, rstdOutUbAddr, xSubMeanUbAddr, tmpUbAddr, currentANum);
+            CalculateMeanVarRCommon<NUM_TWO>(xInUbAddr, meanOutUbAddr, rstdOutUbAddr, xSubMeanUbAddr, tmpUbAddr,
+                                             currentANum);
         }
         CalculateRstdVF(rstdOutUbAddr, currentANum);
 
@@ -160,25 +160,25 @@ private:
         __local_mem__ U* betaInUbAddr = (__local_mem__ U*)gammaBetaInUb_.GetPhyAddr() + tl_->rAlign;
         __local_mem__ T* yOutUbAddr = (__local_mem__ T*)yOutUb.GetPhyAddr();
         if (hasGamma_ && hasBeta_) {
-            CalculateNormalizeVF<true, true>(
-                xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr, currentANum);
+            CalculateNormalizeVF<true, true>(xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr,
+                                             currentANum);
         } else if (!hasGamma_ && hasBeta_) {
-            CalculateNormalizeVF<false, true>(
-                xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr, currentANum);
+            CalculateNormalizeVF<false, true>(xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr,
+                                              currentANum);
         } else if (hasGamma_ && !hasBeta_) {
-            CalculateNormalizeVF<true, false>(
-                xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr, currentANum);
+            CalculateNormalizeVF<true, false>(xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr,
+                                              currentANum);
         } else {
-            CalculateNormalizeVF<false, false>(
-                xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr, currentANum);
+            CalculateNormalizeVF<false, false>(xSubMeanUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, rstdOutUbAddr,
+                                               currentANum);
         }
         xQueue_.FreeTensor(xInUb);
         yQueue_.EnQue(yOutUb);
     }
 
-    __aicore__ inline void CalculateMeanVarRLessThanVL(
-        __local_mem__ T* xInUb, __local_mem__ float* meanInUb, __local_mem__ float* rstdInUb,
-        __local_mem__ float* xSubMeanUb, uint16_t currentANum)
+    __aicore__ inline void CalculateMeanVarRLessThanVL(__local_mem__ T* xInUb, __local_mem__ float* meanInUb,
+                                                       __local_mem__ float* rstdInUb, __local_mem__ float* xSubMeanUb,
+                                                       uint16_t currentANum)
     {
         uint32_t reduceNum = static_cast<uint32_t>(tl_->r);
         float n = static_cast<float>(1.0) / static_cast<float>(tl_->powerOfTwoForR);
@@ -218,9 +218,9 @@ private:
         }
     }
 
-    __aicore__ inline void CalculateMeanVarRLessThanTwoVL(
-        __local_mem__ T* xInUb, __local_mem__ float* meanInUb, __local_mem__ float* rstdInUb,
-        __local_mem__ float* xSubMeanUb, uint16_t currentANum)
+    __aicore__ inline void CalculateMeanVarRLessThanTwoVL(__local_mem__ T* xInUb, __local_mem__ float* meanInUb,
+                                                          __local_mem__ float* rstdInUb,
+                                                          __local_mem__ float* xSubMeanUb, uint16_t currentANum)
     {
         uint32_t reduceNum = static_cast<uint32_t>(tl_->r);
         float n = static_cast<float>(1.0) / static_cast<float>(tl_->powerOfTwoForR);
@@ -278,17 +278,17 @@ private:
     }
 
     template <int32_t LAST_LOOP_NUMS>
-    __aicore__ inline void CalculateMeanVarRCommon(
-        __local_mem__ T* xInUb, __local_mem__ float* meanInUb, __local_mem__ float* rstdInUb,
-        __local_mem__ float* xSubMeanUb, __local_mem__ float* tmpUb, uint16_t currentANum)
+    __aicore__ inline void CalculateMeanVarRCommon(__local_mem__ T* xInUb, __local_mem__ float* meanInUb,
+                                                   __local_mem__ float* rstdInUb, __local_mem__ float* xSubMeanUb,
+                                                   __local_mem__ float* tmpUb, uint16_t currentANum)
     {
         uint32_t reduceNum = static_cast<uint32_t>(tl_->r);
         float n = static_cast<float>(1.0) / static_cast<float>(tl_->powerOfTwoForR);
         float nCorrectionFactor = static_cast<float>(tl_->powerOfTwoForR) / static_cast<float>(reduceNum);
         uint32_t aStride = tl_->rAlign;
 
-        uint32_t binaryAddQuotient =
-            tl_->powerOfTwoForR >= tl_->r ? tl_->powerOfTwoForR / NUM_TWO : tl_->powerOfTwoForR;
+        uint32_t binaryAddQuotient = tl_->powerOfTwoForR >= tl_->r ? tl_->powerOfTwoForR / NUM_TWO :
+                                                                     tl_->powerOfTwoForR;
         uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_B32 - 1) / VL_B32;
 
         uint32_t lastBinaryAddNum = binaryAddQuotient / VL_B32;
@@ -326,11 +326,10 @@ private:
                 for (uint16_t r = 0;
                      r < static_cast<uint16_t>(binaryAddRemainderCeilLoop - binaryAddRemainderFloorLoop); r++) {
                     pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadRegForDtype(
-                        xInUb + binaryAddRemainderFloorLoop * VL_B32, x1, pregFull, (r * VL_B32 + a * aStride));
-                    LoadRegForDtype(
-                        xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, x2, pregLoop,
-                        (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, x2, pregLoop,
+                                    (r * VL_B32 + a * aStride));
                     Muls(x1, x1, n, pregFull);
                     Muls(x2, x2, n, pregLoop);
                     Add(meanSum, x1, x2, pregFull);
@@ -341,8 +340,8 @@ private:
                 }
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop);
                      r++) {
-                    LoadRegForDtype(
-                        xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull, (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + a * aStride));
                     Muls(x1, x1, n, pregFull);
                     ReduceSum(mean, x1, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
@@ -366,8 +365,8 @@ private:
                 for (uint16_t a = 0; a < currentANum; a++) {
                     DataCopy(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     DataCopy(x2, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + VL_B32));
-                    ShiftLefts(
-                        (RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0), pregLast);
+                    ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
+                               pregLast);
                     Add(x1, x1, shlReg, pregFull);
                     ReduceSum(mean, x1, pregFull);
                     Muls(mean, mean, nCorrectionFactor, pregOne);
@@ -400,8 +399,7 @@ private:
                     Sub(xMeanSub1, x1, mean, pregFull);
                     Sub(xMeanSub2, x2, mean, pregFull);
                     StoreRegForDtype(xSubMeanUb, xMeanSub1, pregFull, (r * VL_B32 + a * aStride));
-                    StoreRegForDtype(
-                        xSubMeanUb + binaryAddQuotient, xMeanSub2, pregFull, (r * VL_B32 + a * aStride));
+                    StoreRegForDtype(xSubMeanUb + binaryAddQuotient, xMeanSub2, pregFull, (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Mul(square2, xMeanSub2, xMeanSub2, pregFull);
                     Muls(square1, square1, n, pregFull);
@@ -414,19 +412,16 @@ private:
                 for (uint16_t r = 0;
                      r < static_cast<uint16_t>(binaryAddRemainderCeilLoop - binaryAddRemainderFloorLoop); r++) {
                     pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadRegForDtype(
-                        xInUb + binaryAddRemainderFloorLoop * VL_B32, x1, pregFull, (r * VL_B32 + a * aStride));
-                    LoadRegForDtype(
-                        xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, x2, pregLoop,
-                        (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, x2, pregLoop,
+                                    (r * VL_B32 + a * aStride));
                     Sub(xMeanSub1, x1, mean, pregFull);
                     Sub(xMeanSub2, x2, mean, pregLoop);
-                    StoreRegForDtype(
-                        xSubMeanUb + binaryAddRemainderFloorLoop * VL_B32, xMeanSub1, pregFull,
-                        (r * VL_B32 + a * aStride));
-                    StoreRegForDtype(
-                        xSubMeanUb + +binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, xMeanSub2, pregLoop,
-                        (r * VL_B32 + a * aStride));
+                    StoreRegForDtype(xSubMeanUb + binaryAddRemainderFloorLoop * VL_B32, xMeanSub1, pregFull,
+                                     (r * VL_B32 + a * aStride));
+                    StoreRegForDtype(xSubMeanUb + +binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, xMeanSub2,
+                                     pregLoop, (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Mul(square2, xMeanSub2, xMeanSub2, pregLoop);
                     Muls(square1, square1, n, pregFull);
@@ -439,12 +434,11 @@ private:
                 }
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop);
                      r++) {
-                    LoadRegForDtype(
-                        xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull, (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + a * aStride));
                     Sub(xMeanSub1, x1, mean, pregFull);
-                    StoreRegForDtype(
-                        xSubMeanUb + binaryAddRemainderCeilLoop * VL_B32, xMeanSub1, pregFull,
-                        (r * VL_B32 + a * aStride));
+                    StoreRegForDtype(xSubMeanUb + binaryAddRemainderCeilLoop * VL_B32, xMeanSub1, pregFull,
+                                     (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Muls(square1, square1, n, pregFull);
                     ReduceSum(var, square1, pregFull);
@@ -469,8 +463,8 @@ private:
                 for (uint16_t a = 0; a < currentANum; a++) {
                     DataCopy(x1, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign));
                     DataCopy(x2, tmpUb + static_cast<uint32_t>(a * lastBinaryAddNumAlign + VL_B32));
-                    ShiftLefts(
-                        (RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0), pregLast);
+                    ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
+                               pregLast);
                     Add(x1, x1, shlReg, pregFull);
                     ReduceSum(var, x1, pregFull);
                     Muls(var, var, nCorrectionFactor, pregOne);
@@ -483,14 +477,14 @@ private:
     __aicore__ inline void CalculateRstdVF(__local_mem__ float* rstdOutUb, uint16_t currentANum)
     {
         float epsilonLocal = tl_->epsilon;
-        NormCommon::ComputeRstdNewtonRaphson<false>(
-            rstdOutUb, rstdOutUb, static_cast<uint32_t>(currentANum), epsilonLocal, 1.0f, VL_B32);
+        NormCommon::ComputeRstdNewtonRaphson<false>(rstdOutUb, rstdOutUb, static_cast<uint32_t>(currentANum),
+                                                    epsilonLocal, 1.0f, VL_B32);
     }
 
     template <bool hasGammaFlag, bool hasBetaFlag>
-    __aicore__ inline void CalculateNormalizeVF(
-        __local_mem__ float* xSubMeanUb, __local_mem__ U* betaInUb, __local_mem__ U* gammaInUb, __local_mem__ T* yOutUb,
-        __local_mem__ float* rstdOutUb, uint16_t currentANum)
+    __aicore__ inline void CalculateNormalizeVF(__local_mem__ float* xSubMeanUb, __local_mem__ U* betaInUb,
+                                                __local_mem__ U* gammaInUb, __local_mem__ T* yOutUb,
+                                                __local_mem__ float* rstdOutUb, uint16_t currentANum)
     {
         uint32_t reduceNum = tl_->r;
         uint32_t aStride = tl_->rAlign;
@@ -601,10 +595,10 @@ private:
                 MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_rstd, rstdInAddr + VL_B32 * i);
                 Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ M*)meanOutAddr + i * VL_B16), output_mean, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ M*)rstdOutAddr + i * VL_B16), output_rstd, pregLoop);
+                DataCopy<M, StoreDist::DIST_PACK_B32>(((__local_mem__ M*)meanOutAddr + i * VL_B16), output_mean,
+                                                      pregLoop);
+                DataCopy<M, StoreDist::DIST_PACK_B32>(((__local_mem__ M*)rstdOutAddr + i * VL_B16), output_rstd,
+                                                      pregLoop);
             }
         }
     }

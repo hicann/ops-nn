@@ -45,15 +45,17 @@ const gert::Shape g_vec_1_shape = {1};
  * @param in_shape input shape
  * @return non-scalar shape
  */
-inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.IsScalar()) {
         return g_vec_1_shape;
     }
     return in_shape;
 }
 
-ge::graphStatus RmsNormQuantV2RegbaseTilingBase::CheckDtypeVaild(
-    ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
+ge::graphStatus RmsNormQuantV2RegbaseTilingBase::CheckDtypeVaild(ge::DataType& srcDtype,
+                                                                 std::vector<ge::DataType>& supportDtypeList,
+                                                                 string srcName)
 {
     std::string correctDtype;
     bool isFirst = true;
@@ -67,8 +69,8 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::CheckDtypeVaild(
         correctDtype += ToString(supportedDtype);
         isFirst = false;
     }
-    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), srcName.c_str(),
-        ToString(srcDtype).c_str(), correctDtype.c_str());
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), srcName.c_str(), ToString(srcDtype).c_str(),
+                              correctDtype.c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -81,10 +83,9 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeNull()
     const gert::StorageShape* y1Shape = context_->GetOutputShape(Y1_INDEX);
     const gert::StorageShape* y2Shape = context_->GetOutputShape(Y2_INDEX);
 
-    OP_CHECK_IF(
-        (nullptr == xShape) || (nullptr == gammaShape) || (nullptr == scales1Shape) || 
-         (nullptr == y1Shape) || (nullptr == y2Shape), 
-         , return false);
+    OP_CHECK_IF((nullptr == xShape) || (nullptr == gammaShape) || (nullptr == scales1Shape) || (nullptr == y1Shape) ||
+                    (nullptr == y2Shape),
+                , return false);
     return true;
 }
 
@@ -135,8 +136,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeDim()
     size_t scales1DimNum = scales1Shape.GetDimNum();
 
     std::vector<std::pair<std::string, int64_t>> inputNames = {
-            {"x", xDimNum}, {"gamma", gammaDimNum}, {"scales1", scales1DimNum}
-        };
+        {"x", xDimNum}, {"gamma", gammaDimNum}, {"scales1", scales1DimNum}};
 
     if (tilingParams.hasScales2) {
         auto scales2Shape = EnsureNotScalar(scales2StorageShape->GetStorageShape());
@@ -154,12 +154,12 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeDim()
         auto betaShape = EnsureNotScalar(betaStorageShape->GetStorageShape());
         inputNames.emplace_back("beta", betaShape.GetDimNum());
     }
-    for(auto &[inputName, inputDimNum] : inputNames){
+    for (auto& [inputName, inputDimNum] : inputNames) {
         if (inputDimNum > MAX_DIM_CNT) {
-            std::string reasonMsg = "The shape dim of input " + inputName + 
-                " must be less than or equal to " + std::to_string(MAX_DIM_CNT);
+            std::string reasonMsg = "The shape dim of input " + inputName + " must be less than or equal to " +
+                                    std::to_string(MAX_DIM_CNT);
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), inputName.c_str(),
-                std::to_string(inputDimNum).c_str(), reasonMsg.c_str());
+                                                     std::to_string(inputDimNum).c_str(), reasonMsg.c_str());
             return false;
         }
     }
@@ -188,8 +188,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeValue()
     };
 
     // Check scales1&scales2's shape should be equal
-    if (tilingParams.hasScales2 &&
-        !CheckShapeSame(scales1Shape, scales2Shape, nodeName, "scales1", "scales2")) {
+    if (tilingParams.hasScales2 && !CheckShapeSame(scales1Shape, scales2Shape, nodeName, "scales1", "scales2")) {
         return false;
     };
 
@@ -214,21 +213,23 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeValue()
     };
 
     // Check scales1 should be last few dim of x or be 1
-    if ( !CheckAllDimsAreOne(scales1Shape) &&!CheckShapeBC(xShape, scales1Shape, nodeName, "x", "scales1")) {
-        std::string shapeMsg = ToString(scales1Shape->GetStorageShape()) + " and " + ToString(xShape->GetStorageShape());
+    if (!CheckAllDimsAreOne(scales1Shape) && !CheckShapeBC(xShape, scales1Shape, nodeName, "x", "scales1")) {
+        std::string shapeMsg = ToString(scales1Shape->GetStorageShape()) + " and " +
+                               ToString(xShape->GetStorageShape());
         std::string reasonMsg = "All axes of input scales1 must be 1, "
-            "OR the shape of scales1 must be the same as the shape consisting of the last " +
-            std::to_string(scales1Shape->GetStorageShape().GetDimNum()) +" axes of input x";
+                                "OR the shape of scales1 must be the same as the shape consisting of the last " +
+                                std::to_string(scales1Shape->GetStorageShape().GetDimNum()) + " axes of input x";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales1 and x", shapeMsg.c_str(),
-            reasonMsg.c_str());
+                                               reasonMsg.c_str());
         return false;
     }
 
     return true;
 }
 
-bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-    string inNodeName, string inSrc1Name, string inSrc2Name)
+bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* src1Shape,
+                                                     const gert::StorageShape* src2Shape, string inNodeName,
+                                                     string inSrc1Name, string inSrc2Name)
 {
     size_t src1DimNum = EnsureNotScalar(src1Shape->GetStorageShape()).GetDimNum();
     size_t src2DimNum = EnsureNotScalar(src2Shape->GetStorageShape()).GetDimNum();
@@ -236,10 +237,10 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* s
     if (src1DimNum != src2DimNum) {
         std::string paramMsg = inSrc1Name + " and " + inSrc2Name;
         std::string dimNumMsg = std::to_string(src1DimNum) + " and " + std::to_string(src2DimNum);
-        std::string reasonMsg = "The shape dims of parameter " + inSrc1Name +
-            " and parameter " + inSrc2Name + " must be the same";
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
-            dimNumMsg.c_str(), reasonMsg.c_str());
+        std::string reasonMsg = "The shape dims of parameter " + inSrc1Name + " and parameter " + inSrc2Name +
+                                " must be the same";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), dimNumMsg.c_str(),
+                                                  reasonMsg.c_str());
         return false;
     }
     for (size_t i = 0; i < src1DimNum; i++) {
@@ -249,31 +250,31 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* s
         if (src1DimValue != src2DimValue) {
             std::string paramMsg = inSrc1Name + " and " + inSrc2Name;
             std::string shapeMsg = ToString(src1Shape->GetStorageShape()) + " and " +
-                ToString(src2Shape->GetStorageShape());
-            std::string reasonMsg = "The shapes of parameter " + inSrc1Name +
-            " and parameter " + inSrc2Name + " must be the same";
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
-                shapeMsg.c_str(), reasonMsg.c_str());
+                                   ToString(src2Shape->GetStorageShape());
+            std::string reasonMsg = "The shapes of parameter " + inSrc1Name + " and parameter " + inSrc2Name +
+                                    " must be the same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return false;
         }
-
     }
     return true;
 }
 
-bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape,
-    string inNodeName, string inSrcBcName, string inSrcName)
+bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* srcBcShape,
+                                                   const gert::StorageShape* srcShape, string inNodeName,
+                                                   string inSrcBcName, string inSrcName)
 {
     size_t srcBcDimNum = EnsureNotScalar(srcBcShape->GetStorageShape()).GetDimNum();
     size_t srcDimNum = EnsureNotScalar(srcShape->GetStorageShape()).GetDimNum();
-    bool isBcHeader =  true;
+    bool isBcHeader = true;
     if (srcBcDimNum < srcDimNum) {
         std::string paramMsg = inSrcBcName + " and " + inSrcName;
         std::string dimNumMsg = std::to_string(srcBcDimNum) + " and " + std::to_string(srcDimNum);
         std::string reasonMsg = "The shape dim of parameter " + inSrcBcName +
-            " must be greater than or equal to that of parameter " + inSrcName;
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
-            dimNumMsg.c_str(), reasonMsg.c_str());
+                                " must be greater than or equal to that of parameter " + inSrcName;
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), dimNumMsg.c_str(),
+                                                  reasonMsg.c_str());
         return false;
     }
     for (size_t i = 0; i < srcDimNum; i++) {
@@ -288,12 +289,12 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* src
         if (srcBcDimValue != srcDimValue) {
             std::string paramMsg = inSrcName + " and " + inSrcBcName;
             std::string shapeMsg = ToString(srcShape->GetStorageShape()) + " and " +
-                ToString(srcBcShape->GetStorageShape());
-            std::string reasonMsg =
-                "The shape of parameter " + inSrcName + " must be the same as the shape consisting of the last "
-                + std::to_string(srcDimNum) + " axes of parameter " + inSrcBcName;
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
-                shapeMsg.c_str(), reasonMsg.c_str());
+                                   ToString(srcBcShape->GetStorageShape());
+            std::string reasonMsg = "The shape of parameter " + inSrcName +
+                                    " must be the same as the shape consisting of the last " +
+                                    std::to_string(srcDimNum) + " axes of parameter " + inSrcBcName;
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return false;
         }
     }
@@ -306,7 +307,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckAllDimsAreOne(const gert::StorageShap
     size_t dimNum = shape.GetDimNum();
     for (size_t i = 0; i < dimNum; i++) {
         uint64_t dimValue = shape.GetDim(i);
-        if(dimValue != 1)
+        if (dimValue != 1)
             return false;
     }
     return true;
@@ -332,8 +333,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputShape()
             std::string paramMsg = "rstd and x";
             std::string shapeMsg = ToString(rstdShapeVal) + " and " + ToString(xShapeVal);
             std::string reasonMsg = "The shape dims of parameter rstd and parameter x must be the same";
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(),
+                                                   reasonMsg.c_str());
             return false;
         }
 
@@ -345,8 +346,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputShape()
                     std::string paramMsg = "rstd";
                     std::string shapeMsg = ToString(rstdShapeVal);
                     std::string reasonMsg = "norm dims should be 1";
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                        context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(), reasonMsg.c_str());
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(),
+                                                           reasonMsg.c_str());
                     return false;
                 }
             } else {
@@ -354,8 +355,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputShape()
                     std::string paramMsg = "rstd and x";
                     std::string shapeMsg = ToString(rstdShapeVal) + " and " + ToString(xShapeVal);
                     std::string reasonMsg = "batch dims should match x";
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                        context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(), reasonMsg.c_str());
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(),
+                                                           reasonMsg.c_str());
                     return false;
                 }
             }
@@ -367,22 +368,18 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputShape()
 bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
 {
     OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling CheckOutputDtype.");
-    std::vector<ge::DataType> supportedYDtypes = {
-        ge::DataType::DT_INT8, ge::DataType::DT_INT4, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT8_E4M3FN,
-        ge::DataType::DT_FLOAT8_E5M2};
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_INT4,
+                                                  ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT8_E4M3FN,
+                                                  ge::DataType::DT_FLOAT8_E5M2};
     auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
     auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
     if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "y1")) ||
-        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "y2")) ||
-        (y1DataType != y2DataType)) {
+        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "y2")) || (y1DataType != y2DataType)) {
         std::string dtypeMsg = ToString(y1DataType) + " and " + ToString(y2DataType);
         std::string reasonMsg = "The dtypes of output y1 and output y2 must be int8, fp8e4m3, fp8e5m2 or hifp8, "
-            "and the dtypes of output y1 and output y2 must be the same";
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(),
-            "y1 and y2",
-            dtypeMsg.c_str(),
-            reasonMsg.c_str());
+                                "and the dtypes of output y1 and output y2 must be the same";
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y1 and y2", dtypeMsg.c_str(),
+                                               reasonMsg.c_str());
         return false;
     }
     if (tilingParams.rstdFlag) {
@@ -391,8 +388,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
         ge::DataType rstdDtype = rstdDesc->GetDataType();
         if (rstdDtype != ge::DT_FLOAT) {
             std::string dtypeMsg = ToString(rstdDtype);
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                context_->GetNodeName(), "rstd", dtypeMsg.c_str(), "The dtype of output rstd must be float");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "rstd", dtypeMsg.c_str(),
+                                                  "The dtype of output rstd must be float");
             return false;
         }
     }
@@ -403,7 +400,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
         size_t xDimNum = xShape.GetDimNum();
         int64_t xlastDimValue = xShape.GetDim(xDimNum - 1);
         if (xlastDimValue % 2 != 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xShape).c_str(),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "x", ToString(xShape).c_str(),
                 "The last axis of input x must be an even number when the dtype of output y1 is INT4");
             return false;
         }
@@ -414,30 +412,29 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
 bool RmsNormQuantV2RegbaseTilingBase::CheckInputDtype()
 {
     OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling CheckInputDtype.");
-    std::vector<ge::DataType> supportedXGammaDtypes = {
-        ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
-    std::vector<ge::DataType> supportedScalesDtypes = {
-        ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
-    std::vector<ge::DataType> supportedZeroPointsDtypes = {
-        ge::DataType::DT_INT32, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16,
-        ge::DataType::DT_BF16};
-    std::vector<ge::DataType> supportedYDtypes = {
-        ge::DataType::DT_INT8, ge::DataType::DT_INT4, ge::DataType::DT_FLOAT8_E5M2, ge::DataType::DT_FLOAT8_E4M3FN,
-        ge::DataType::DT_HIFLOAT8};
+    std::vector<ge::DataType> supportedXGammaDtypes = {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16,
+                                                       ge::DataType::DT_BF16};
+    std::vector<ge::DataType> supportedScalesDtypes = {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16,
+                                                       ge::DataType::DT_BF16};
+    std::vector<ge::DataType> supportedZeroPointsDtypes = {ge::DataType::DT_INT32, ge::DataType::DT_INT8,
+                                                           ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16,
+                                                           ge::DataType::DT_BF16};
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_INT4,
+                                                  ge::DataType::DT_FLOAT8_E5M2, ge::DataType::DT_FLOAT8_E4M3FN,
+                                                  ge::DataType::DT_HIFLOAT8};
 
     const uint32_t totalCheckCnt = 7;
     string checkNameList[totalCheckCnt] = {"x", "gamma", "scales1", "scales2", "zeroPoints1", "zeroPoints2", "beta"};
     uint32_t idxList[totalCheckCnt] = {
         X_INDEX, GAMMA_INDEX, SCALES1_INDEX, SCALES2_INDEX, ZERO_POINTS1_INDEX, ZERO_POINTS2_INDEX, BETA_INDEX};
     bool isOptionalList[totalCheckCnt] = {false, false, false, true, true, true, true};
-    bool needCheckList[totalCheckCnt] = {
-        true,
-        true,
-        true,
-        tilingParams.hasScales2,
-        tilingParams.hasZeroPoints1,
-        tilingParams.hasZeroPoints2,
-        tilingParams.hasBeta};
+    bool needCheckList[totalCheckCnt] = {true,
+                                         true,
+                                         true,
+                                         tilingParams.hasScales2,
+                                         tilingParams.hasZeroPoints1,
+                                         tilingParams.hasZeroPoints2,
+                                         tilingParams.hasBeta};
     std::vector<ge::DataType>* supportedList[totalCheckCnt] = {
         &supportedXGammaDtypes,     &supportedXGammaDtypes,     &supportedScalesDtypes, &supportedScalesDtypes,
         &supportedZeroPointsDtypes, &supportedZeroPointsDtypes, &supportedXGammaDtypes};
@@ -464,22 +461,22 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputDtype()
     ge::DataType scales2Dtype = ge::DT_BOOL;     // Init one not support dtype
     ge::DataType zeroPoints1Dtype = ge::DT_BOOL; // Init one not support dtype
     ge::DataType zeroPoints2Dtype = ge::DT_BOOL; // Init one not support dtype
-    ge::DataType zeroPointsDtype = ge::DT_BOOL; // Init one not support dtype
+    ge::DataType zeroPointsDtype = ge::DT_BOOL;  // Init one not support dtype
     bool hasZeroPoints = false;
-    ge::DataType betaDtype = ge::DT_BOOL;        // Init one not support dtype
+    ge::DataType betaDtype = ge::DT_BOOL; // Init one not support dtype
     if (tilingParams.hasScales2) {
         scales2Dtype = context_->GetOptionalInputTensor(SCALES2_INDEX)->GetDataType();
     }
     if (tilingParams.hasZeroPoints1) {
         zeroPoints1Dtype = context_->GetOptionalInputTensor(ZERO_POINTS1_INDEX)->GetDataType();
     }
-    if (tilingParams.hasScales2 && tilingParams.hasZeroPoints2) {  //没有scales2就不用有zeropoints2
+    if (tilingParams.hasScales2 && tilingParams.hasZeroPoints2) { //没有scales2就不用有zeropoints2
         zeroPoints2Dtype = context_->GetOptionalInputTensor(ZERO_POINTS2_INDEX)->GetDataType();
     }
-    if(tilingParams.hasZeroPoints1){
+    if (tilingParams.hasZeroPoints1) {
         zeroPointsDtype = zeroPoints1Dtype;
         hasZeroPoints = true;
-    }else if(tilingParams.hasScales2 && tilingParams.hasZeroPoints2){
+    } else if (tilingParams.hasScales2 && tilingParams.hasZeroPoints2) {
         zeroPointsDtype = zeroPoints2Dtype;
         hasZeroPoints = true;
     }
@@ -489,87 +486,100 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputDtype()
     if (xDtype != gammaDtype) {
         std::string dtypeMsg = ToString(xDtype) + " and " + ToString(gammaDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and gamma", dtypeMsg.c_str(),
-            "The dtypes of input x and input gamma must be the same");
+                                               "The dtypes of input x and input gamma must be the same");
         return false;
     }
     if ((tilingParams.hasBeta) && (xDtype != betaDtype)) {
         std::string dtypeMsg = ToString(xDtype) + " and " + ToString(betaDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and beta", dtypeMsg.c_str(),
-            "The dtypes of input x and input beta must be the same");
+                                               "The dtypes of input x and input beta must be the same");
         return false;
     }
     if (tilingParams.hasScales2 && (scales1Dtype != scales2Dtype)) {
         std::string dtypeMsg = ToString(scales1Dtype) + " and " + ToString(scales2Dtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "scales1 and scales2", dtypeMsg.c_str(),
-            "The dtypes of input scales1 and input scales2 must be the same");
+                                               "The dtypes of input scales1 and input scales2 must be the same");
         return false;
     }
     if (tilingParams.hasZeroPoints1 && tilingParams.hasZeroPoints2 && (zeroPoints1Dtype != zeroPointsDtype)) {
         std::string dtypeMsg = ToString(zeroPoints1Dtype) + " and " + ToString(zeroPoints2Dtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "zero_points1 and zero_points2", dtypeMsg.c_str(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "zero_points1 and zero_points2", dtypeMsg.c_str(),
             "The dtypes of input zero_points1 and input zero_points2 must be the same");
         return false;
     }
-    //check support dtypes 
-    if(xDtype == ge::DataType::DT_FLOAT){
-        if(scales1Dtype != ge::DataType::DT_FLOAT){
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scales1", 
-                ToString(scales1Dtype).c_str(), "The dtype of input scales1 must be FLOAT when the dtype of input x is FLOAT");
+    // check support dtypes
+    if (xDtype == ge::DataType::DT_FLOAT) {
+        if (scales1Dtype != ge::DataType::DT_FLOAT) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "scales1", ToString(scales1Dtype).c_str(),
+                "The dtype of input scales1 must be FLOAT when the dtype of input x is FLOAT");
             return false;
         }
-        if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT){
+        if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT) {
             std::string paramMsg = tilingParams.hasZeroPoints1 ? "zero_points1" : "zero_points2";
-            std::string reasonMsg = "The dtype of input " + paramMsg + " must be FLOAT when the dtype of input x is FLOAT";
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
-                reasonMsg.c_str());
+            std::string reasonMsg = "The dtype of input " + paramMsg +
+                                    " must be FLOAT when the dtype of input x is FLOAT";
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                                                  ToString(zeroPointsDtype).c_str(), reasonMsg.c_str());
             return false;
         }
-    }else if(xDtype == ge::DataType::DT_FLOAT16){
-        if(scales1Dtype == ge::DataType::DT_FLOAT){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT && zeroPointsDtype != ge::DataType::DT_INT32){
+    } else if (xDtype == ge::DataType::DT_FLOAT16) {
+        if (scales1Dtype == ge::DataType::DT_FLOAT) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT &&
+                zeroPointsDtype != ge::DataType::DT_INT32) {
                 std::string paramMsg = tilingParams.hasZeroPoints1 ? "zero_points1" : "zero_points2";
-                std::string reasonMsg = "The dtype of input " + paramMsg + " must be FLOAT or INT32, "
-                    "when the dtype of input x is FLOAT16 and the dtype of input scales1 is FLOAT";
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
-                    reasonMsg.c_str());
+                std::string reasonMsg = "The dtype of input " + paramMsg +
+                                        " must be FLOAT or INT32, "
+                                        "when the dtype of input x is FLOAT16 and the dtype of input scales1 is FLOAT";
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                                                      ToString(zeroPointsDtype).c_str(), reasonMsg.c_str());
                 return false;
             }
-        }else if(scales1Dtype == ge::DataType::DT_FLOAT16){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT16 && zeroPointsDtype != ge::DataType::DT_INT8){
+        } else if (scales1Dtype == ge::DataType::DT_FLOAT16) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT16 &&
+                zeroPointsDtype != ge::DataType::DT_INT8) {
                 std::string paramMsg = tilingParams.hasZeroPoints1 ? "zero_points1" : "zero_points2";
-                std::string reasonMsg = "The dtype of input " + paramMsg + " must be FLOAT16 or INT8, "
-                    "when the dtype of input x is FLOAT16 and the dtype of input scales1 is FLOAT16";
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
-                    reasonMsg.c_str());
+                std::string
+                    reasonMsg = "The dtype of input " + paramMsg +
+                                " must be FLOAT16 or INT8, "
+                                "when the dtype of input x is FLOAT16 and the dtype of input scales1 is FLOAT16";
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                                                      ToString(zeroPointsDtype).c_str(), reasonMsg.c_str());
                 return false;
             }
-        }else {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scales1",
-                ToString(scales1Dtype).c_str(), "The dtype of input scales1 must be FLOAT or FLOAT16 when the dtype of input x is FLOAT16");
+        } else {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "scales1", ToString(scales1Dtype).c_str(),
+                "The dtype of input scales1 must be FLOAT or FLOAT16 when the dtype of input x is FLOAT16");
             return false;
         }
-    }else if(xDtype == ge::DataType::DT_BF16){
-        if(scales1Dtype == ge::DataType::DT_FLOAT){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT && zeroPointsDtype != ge::DataType::DT_INT32){
+    } else if (xDtype == ge::DataType::DT_BF16) {
+        if (scales1Dtype == ge::DataType::DT_FLOAT) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT &&
+                zeroPointsDtype != ge::DataType::DT_INT32) {
                 std::string paramMsg = tilingParams.hasZeroPoints1 ? "zero_points1" : "zero_points2";
-                std::string reasonMsg = "The dtype of input " + paramMsg + " must be FLOAT or INT32, "
-                    "when the dtype of input x is BF16 and the dtype of input scales1 is FLOAT";
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
-                    reasonMsg.c_str());
+                std::string reasonMsg = "The dtype of input " + paramMsg +
+                                        " must be FLOAT or INT32, "
+                                        "when the dtype of input x is BF16 and the dtype of input scales1 is FLOAT";
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                                                      ToString(zeroPointsDtype).c_str(), reasonMsg.c_str());
                 return false;
             }
-        }else if(scales1Dtype == ge::DataType::DT_BF16){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_BF16 && zeroPointsDtype != ge::DataType::DT_INT8){
+        } else if (scales1Dtype == ge::DataType::DT_BF16) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_BF16 && zeroPointsDtype != ge::DataType::DT_INT8) {
                 std::string paramMsg = tilingParams.hasZeroPoints1 ? "zero_points1" : "zero_points2";
-                std::string reasonMsg = "The dtype of input " + paramMsg + " must be BF16 or INT8, "
-                    "when the dtype of input x is BF16 and the dtype of input scales1 is BF16";
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
-                    reasonMsg.c_str());
+                std::string reasonMsg = "The dtype of input " + paramMsg +
+                                        " must be BF16 or INT8, "
+                                        "when the dtype of input x is BF16 and the dtype of input scales1 is BF16";
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                                                      ToString(zeroPointsDtype).c_str(), reasonMsg.c_str());
                 return false;
             }
-        }else {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scales1",
-                ToString(scales1Dtype).c_str(), "The dtype of input scales1 must be FLOAT or BF16 when the dtype of input x is BF16");
+        } else {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "scales1", ToString(scales1Dtype).c_str(),
+                "The dtype of input scales1 must be FLOAT or BF16 when the dtype of input x is BF16");
             return false;
         }
     }
@@ -593,12 +603,12 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     tilingParams.a = 1;
     tilingParams.r = 1;
     tilingParams.q = 1;
-    
+
     for (size_t i = 0; i < xDimNum; i++) {
         if (0 == xShape.GetDim(i)) {
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x",
-                std::to_string(xShape.GetDim(i)).c_str(),
-                "Input x does not support empty tensor");
+                                                      std::to_string(xShape.GetDim(i)).c_str(),
+                                                      "Input x does not support empty tensor");
             return ge::GRAPH_FAILED;
         }
     }
@@ -613,8 +623,8 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     }
     if (0 == tilingParams.r) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "gamma",
-            std::to_string(tilingParams.r).c_str(),
-            "Input gamma does not support empty tensor");
+                                                  std::to_string(tilingParams.r).c_str(),
+                                                  "Input gamma does not support empty tensor");
         return ge::GRAPH_FAILED;
     }
 
@@ -626,15 +636,18 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     tilingParams.scaleDtypeSize = GetSizeByDataType(scaleDataType);
     tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize; // 一个block能容纳x类型的数据个数
     tilingParams.scaleDtypeAlignNum = BLOCK_SIZE / tilingParams.scaleDtypeSize; // 一个block能容纳的scales类型的数据个数
-    if(tilingParams.hasZeroPoints1){
+    if (tilingParams.hasZeroPoints1) {
         auto zeroPointDtype = context_->GetOptionalInputTensor(ZERO_POINTS1_INDEX)->GetDataType();
         tilingParams.zeroPointDtypeSize = GetSizeByDataType(zeroPointDtype);
-        tilingParams.zeroPointDtypeAlignNum = BLOCK_SIZE / tilingParams.zeroPointDtypeSize; // 一个block能容纳的zeropoints类型的数据个数
-    }
-    else if(tilingParams.hasZeroPoints2){
+        tilingParams.zeroPointDtypeAlignNum = BLOCK_SIZE /
+                                              tilingParams
+                                                  .zeroPointDtypeSize; // 一个block能容纳的zeropoints类型的数据个数
+    } else if (tilingParams.hasZeroPoints2) {
         auto zeroPointDtype = context_->GetOptionalInputTensor(ZERO_POINTS2_INDEX)->GetDataType();
         tilingParams.zeroPointDtypeSize = GetSizeByDataType(zeroPointDtype);
-        tilingParams.zeroPointDtypeAlignNum = BLOCK_SIZE / tilingParams.zeroPointDtypeSize; // 一个block能容纳的zeropoints类型的数据个数
+        tilingParams.zeroPointDtypeAlignNum = BLOCK_SIZE /
+                                              tilingParams
+                                                  .zeroPointDtypeSize; // 一个block能容纳的zeropoints类型的数据个数
     }
 
     tilingParams.vecLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
@@ -646,15 +659,14 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
     tilingParams.epsilon = epsilon == nullptr ? DEFAULT_DPSILON : *epsilon;
     tilingParams.avgFactor = 1.0f / static_cast<float>(tilingParams.r);
-    tilingParams.optionMask =
-        ((static_cast<uint64_t>(tilingParams.hasScales2 ? 1 : 0) << 0) |
-         (static_cast<uint64_t>(tilingParams.hasZeroPoints1 ? 1 : 0) << 1) |
-         (static_cast<uint64_t>(tilingParams.hasZeroPoints2 ? 1 : 0) << 2) |
-         (static_cast<uint64_t>(tilingParams.hasBeta ? 1 : 0) << 3) |
-         (static_cast<uint64_t>(tilingParams.q == 1 ? 1 : 0) << 4));
+    tilingParams.optionMask = ((static_cast<uint64_t>(tilingParams.hasScales2 ? 1 : 0) << 0) |
+                               (static_cast<uint64_t>(tilingParams.hasZeroPoints1 ? 1 : 0) << 1) |
+                               (static_cast<uint64_t>(tilingParams.hasZeroPoints2 ? 1 : 0) << 2) |
+                               (static_cast<uint64_t>(tilingParams.hasBeta ? 1 : 0) << 3) |
+                               (static_cast<uint64_t>(tilingParams.q == 1 ? 1 : 0) << 4));
     const bool* divModePtr = attrs->GetBool(DIV_MODE_ATTR_INDEX); // 添加类型判断
     tilingParams.divMode = (divModePtr == nullptr) ? DEFAULT_DIVMODE : *divModePtr;
-     // 读取 output_rstd 属性（V2 无此属性返回 nullptr，rstdFlag=0；V3 有此属性）
+    // 读取 output_rstd 属性（V2 无此属性返回 nullptr，rstdFlag=0；V3 有此属性）
     const bool* outputRstdPtr = attrs->GetBool(OUTPUT_RSTD_ATTR_INDEX);
     tilingParams.rstdFlag = (outputRstdPtr != nullptr && *outputRstdPtr) ? 1 : 0;
 
@@ -664,27 +676,23 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
 ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling GetShapeAttrsInfo.");
-    OP_CHECK_IF(
-        !CheckShapeNull(), OP_LOGE(context_->GetNodeName(), "The not optional input is null."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckOptionalInput(), OP_LOGE(context_->GetNodeName(), "Scales2 is required when zero_points2 is present."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShapeDim(), OP_LOGE(context_->GetNodeName(), "The input shape dim is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShapeValue(), OP_LOGE(context_->GetNodeName(), "The input shape relationship is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckOutputDtype(), OP_LOGE(context_->GetNodeName(), "The output dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckOutputShape(), OP_LOGE(context_->GetNodeName(), "Set Output shape failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(context_->GetNodeName(), "The not optional input is null."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOptionalInput(),
+                OP_LOGE(context_->GetNodeName(), "Scales2 is required when zero_points2 is present."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(context_->GetNodeName(), "The input shape dim is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(context_->GetNodeName(), "The input shape relationship is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(context_->GetNodeName(), "The output dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOutputShape(), OP_LOGE(context_->GetNodeName(), "Set Output shape failed."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -703,10 +711,7 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormQuantV2RegbaseTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RmsNormQuantV2RegbaseTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetWorkspaceSize()
 {

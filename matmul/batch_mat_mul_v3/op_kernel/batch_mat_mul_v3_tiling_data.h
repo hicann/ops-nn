@@ -27,57 +27,57 @@
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) MultiBatchInfo{
-  uint32_t batchUsedCoreNum;
-  uint32_t aBatchDimAll;
-  uint32_t bBatchDimAll;
-  uint32_t cBatchDimAll;
-  uint32_t aBatchDim0;
-  uint32_t bBatchDim0;
-  uint32_t cBatchDim0;
-  uint32_t aBatchDim1;
-  uint32_t bBatchDim1;
-  uint32_t cBatchDim1;
-  uint32_t aBatchDim2;
-  uint32_t bBatchDim2;
-  uint32_t cBatchDim2;
-  uint32_t aBatchDim3;
-  uint32_t bBatchDim3;
-  uint32_t cBatchDim3;
-  uint32_t iterBatch;
-  uint32_t biasWithBatch;
-  uint32_t mOri;
-  uint32_t batchTileBlock;
-  uint32_t aBatch;
-  uint32_t bBatch;
+struct alignas(8) MultiBatchInfo {
+    uint32_t batchUsedCoreNum;
+    uint32_t aBatchDimAll;
+    uint32_t bBatchDimAll;
+    uint32_t cBatchDimAll;
+    uint32_t aBatchDim0;
+    uint32_t bBatchDim0;
+    uint32_t cBatchDim0;
+    uint32_t aBatchDim1;
+    uint32_t bBatchDim1;
+    uint32_t cBatchDim1;
+    uint32_t aBatchDim2;
+    uint32_t bBatchDim2;
+    uint32_t cBatchDim2;
+    uint32_t aBatchDim3;
+    uint32_t bBatchDim3;
+    uint32_t cBatchDim3;
+    uint32_t iterBatch;
+    uint32_t biasWithBatch;
+    uint32_t mOri;
+    uint32_t batchTileBlock;
+    uint32_t aBatch;
+    uint32_t bBatch;
 };
 #pragma pack(pop)
 
 #pragma pack(push, 8)
 constexpr uint32_t kVECTOR_TILING_ALIGN = 8;
 struct alignas(kVECTOR_TILING_ALIGN) VectorTilingInfo {
-  uint64_t coreNumber;
-  uint64_t coreData;
-  uint64_t copyLoop;
-  uint64_t copyTail;
-  uint64_t lastCopyLoop;
-  uint64_t lastCopyTail;
-  uint64_t rowsPerCore;
-  uint64_t aTotalSize;
-  uint64_t bTotalSize;
-  uint64_t cTotalSize;
-  uint64_t dimSizeSecondLast;
-  uint64_t dimSizeLast;
-  uint64_t alignedDimSizeLast;
-  uint64_t bRowsPerBatch;
+    uint64_t coreNumber;
+    uint64_t coreData;
+    uint64_t copyLoop;
+    uint64_t copyTail;
+    uint64_t lastCopyLoop;
+    uint64_t lastCopyTail;
+    uint64_t rowsPerCore;
+    uint64_t aTotalSize;
+    uint64_t bTotalSize;
+    uint64_t cTotalSize;
+    uint64_t dimSizeSecondLast;
+    uint64_t dimSizeLast;
+    uint64_t alignedDimSizeLast;
+    uint64_t bRowsPerBatch;
 };
 #pragma pack(pop)
 
 #pragma pack(push, 8)
-struct alignas(8) BatchMatmulTilingData{
-  MatmulTilingData matmulTiling;
-  MultiBatchInfo multiBatchInfo;
-  VectorTilingInfo vectorTilingInfo;
+struct alignas(8) BatchMatmulTilingData {
+    MatmulTilingData matmulTiling;
+    MultiBatchInfo multiBatchInfo;
+    VectorTilingInfo vectorTilingInfo;
 };
 #pragma pack(pop)
 

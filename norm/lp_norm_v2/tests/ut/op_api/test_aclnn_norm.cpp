@@ -19,14 +19,8 @@ using namespace std;
 
 class l2_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_norm SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_norm TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_norm SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_norm TearDown" << endl; }
 };
 
 // p0_float_ND 场景
@@ -155,7 +149,6 @@ TEST_F(l2_norm_test, case_3_3_4_p2_3dim_float_NHWC_008)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-
 }
 
 // p2_float_HWCN 场景

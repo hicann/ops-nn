@@ -71,8 +71,8 @@ using AscendC::AIC;
 #define LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_BF16 922
 
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
-__aicore__ inline void RegbaseNoReduceImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+__aicore__ inline void RegbaseNoReduceImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                           GM_ADDR lastout, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataRegBaseNoReduce, tiling_data_in, tiling);
@@ -83,8 +83,8 @@ __aicore__ inline void RegbaseNoReduceImpl(
 }
 
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
-__aicore__ inline void RegbaseTwoPassImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+__aicore__ inline void RegbaseTwoPassImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                          GM_ADDR lastout, GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataRegBaseTwoPass, tiling_data_in, tiling);
     const LayerNormV3TilingDataRegBaseTwoPass* __restrict tilingData = &tiling_data_in;
@@ -94,8 +94,8 @@ __aicore__ inline void RegbaseTwoPassImpl(
 }
 
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
-__aicore__ inline void RegbaseWelfordImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+__aicore__ inline void RegbaseWelfordImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                          GM_ADDR lastout, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataWelford, tiling_data_in, tiling);
@@ -106,8 +106,8 @@ __aicore__ inline void RegbaseWelfordImpl(
 }
 
 template <typename Tfm, typename Tweight, typename Tmean>
-__aicore__ inline void RegbaseTwoPassPerfImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR tiling)
+__aicore__ inline void RegbaseTwoPassPerfImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                              GM_ADDR rstd, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataRegBaseTwoPassPerf, tiling_data_in, tiling);
@@ -117,8 +117,8 @@ __aicore__ inline void RegbaseTwoPassPerfImpl(
     op.Process();
 }
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
-__aicore__ inline void RegbaseNormNotEqualParamsImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR tiling)
+__aicore__ inline void RegbaseNormNotEqualParamsImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                     GM_ADDR rstd, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataRegBaseNormNotEqualParams, tiling_data_in, tiling);
@@ -128,8 +128,8 @@ __aicore__ inline void RegbaseNormNotEqualParamsImpl(
     op.Process();
 }
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
-__aicore__ inline void RegbaseWelfordMultiReduceImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+__aicore__ inline void RegbaseWelfordMultiReduceImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                     GM_ADDR lastout, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataWelfordMultiReduce, tiling_data_in, tiling);
@@ -140,8 +140,8 @@ __aicore__ inline void RegbaseWelfordMultiReduceImpl(
 }
 
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
-__aicore__ inline void RegbaseWelfordMultiParamsImpl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+__aicore__ inline void RegbaseWelfordMultiParamsImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                     GM_ADDR lastout, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataWelfordMultiParams, tiling_data_in, tiling);
@@ -152,8 +152,8 @@ __aicore__ inline void RegbaseWelfordMultiParamsImpl(
 }
 
 template <bool IsOutRstd>
-__aicore__ inline void layer_norm_impl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout,
+                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -238,10 +238,12 @@ __aicore__ inline void layer_norm_impl(
         RegbaseNormNotEqualParamsImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_FLOAT)) {
-        RegbaseNormNotEqualParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseNormNotEqualParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_BF16)) {
-        RegbaseNormNotEqualParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseNormNotEqualParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                     tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_FLOAT_FLOAT)) {
         RegbaseWelfordMultiReduceImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
@@ -253,10 +255,12 @@ __aicore__ inline void layer_norm_impl(
         RegbaseWelfordMultiReduceImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_FLOAT)) {
-        RegbaseWelfordMultiReduceImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseWelfordMultiReduceImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_BF16)) {
-        RegbaseWelfordMultiReduceImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseWelfordMultiReduceImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                     tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_FLOAT_FLOAT)) {
         RegbaseWelfordMultiParamsImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
@@ -268,10 +272,12 @@ __aicore__ inline void layer_norm_impl(
         RegbaseWelfordMultiParamsImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_FLOAT)) {
-        RegbaseWelfordMultiParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseWelfordMultiParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_BF16)) {
-        RegbaseWelfordMultiParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseWelfordMultiParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                     tiling);
         return;
     }
 

@@ -20,10 +20,10 @@
 #include "cmct/kernel/kernel_qbmm_mx.h"
 using namespace Cmct;
 using namespace Cmct::Gemm;
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout, uint64_t FULL_LOAD_MODE = 0>
-__aicore__ inline void QbmmMxBasicApiKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout,
+          uint64_t FULL_LOAD_MODE = 0>
+__aicore__ inline void QbmmMxBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias,
+                                            GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -46,13 +46,12 @@ __aicore__ inline void QbmmMxBasicApiKernel(
 
     // 定义MMAD类型
     using DispatchPolicy = MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE>;
-    using BlockMmad = Block::BlockMmadMx<
-        DispatchPolicy, L1TileShape, L0TileShape, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType, cLayout,
-        void>;
+    using BlockMmad = Block::BlockMmadMx<DispatchPolicy, L1TileShape, L0TileShape, AType, aLayout, BType, bLayout,
+                                         OutType, cLayout, BiasType, cLayout, void>;
 
     // 定义Kernel类型
-    using MatmulKernel =
-        Cmct::Gemm::Kernel::QuantMmBatchMX<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, false>;
+    using MatmulKernel = Cmct::Gemm::Kernel::QuantMmBatchMX<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler,
+                                                            false>;
     using Params = typename MatmulKernel::Params;
     const DequantBmm::QuantBatchMatmulV3BasicAPITilingData* quantBmmTilingData_;
     quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingData);
@@ -72,7 +71,9 @@ __aicore__ inline void QbmmMxBasicApiKernel(
                           quantBmmTilingData_->params.batchC3,
                           quantBmmTilingData_->params.batchC4,
                           quantBmmTilingData_->params.biasThreeDim,
-                          matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
+                          matmulTiling.baseM,
+                          matmulTiling.baseN,
+                          matmulTiling.baseK,
                           static_cast<uint32_t>(matmulTiling.isBias),
                           static_cast<uint32_t>(matmulTiling.dbL0C)};
     Params params = {
@@ -86,4 +87,3 @@ __aicore__ inline void QbmmMxBasicApiKernel(
     MatmulKernel qbmm;
     qbmm(params);
 }
-

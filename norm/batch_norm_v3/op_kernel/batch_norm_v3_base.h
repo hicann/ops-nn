@@ -25,8 +25,7 @@ using namespace AscendC;
 template <typename T1, typename T2>
 class BatchNormV3Base {
 public:
-    __aicore__ inline BatchNormV3Base()
-    {}
+    __aicore__ inline BatchNormV3Base() {}
 
 protected:
     /* global memory address */

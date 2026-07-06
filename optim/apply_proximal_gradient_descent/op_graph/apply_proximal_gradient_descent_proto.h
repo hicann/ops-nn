@@ -19,28 +19,28 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
-*@brief Updates "var" as proximal gradient descent:
-*   prox_v = var - alpha * delta
-*   var_out = sign(prox_v) / (1 + alpha * l2) * max(|prox_v| - alpha * l1, 0)
-*
-*@attention Constraints:
-*  var and delta must have the same shape.
-*  alpha, l1 and l2 must be scalars (0-D or shape=[1]).
-*
-*@par Inputs:
-*@li var: A mutable tensor. The variable to be updated.
-*@li alpha: A scalar tensor. The learning rate.
-*@li l1: A scalar tensor. L1 regularization coefficient.
-*@li l2: A scalar tensor. L2 regularization coefficient.
-*@li delta: A tensor. The gradient. Has the same shape as "var".
-*
-*@par Outputs:
-* var_out: A mutable tensor. Has the same type and shape as input "var".
-*
-*@par Third-party framework compatibility
-*Compatible with the TensorFlow operator ApplyProximalGradientDescent.
-*
-*/
+ *@brief Updates "var" as proximal gradient descent:
+ *   prox_v = var - alpha * delta
+ *   var_out = sign(prox_v) / (1 + alpha * l2) * max(|prox_v| - alpha * l1, 0)
+ *
+ *@attention Constraints:
+ *  var and delta must have the same shape.
+ *  alpha, l1 and l2 must be scalars (0-D or shape=[1]).
+ *
+ *@par Inputs:
+ *@li var: A mutable tensor. The variable to be updated.
+ *@li alpha: A scalar tensor. The learning rate.
+ *@li l1: A scalar tensor. L1 regularization coefficient.
+ *@li l2: A scalar tensor. L2 regularization coefficient.
+ *@li delta: A tensor. The gradient. Has the same shape as "var".
+ *
+ *@par Outputs:
+ * var_out: A mutable tensor. Has the same type and shape as input "var".
+ *
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator ApplyProximalGradientDescent.
+ *
+ */
 REG_OP(ApplyProximalGradientDescent)
     .INPUT(var, TensorType::NumberType())
     .INPUT(alpha, TensorType::NumberType())
@@ -50,6 +50,6 @@ REG_OP(ApplyProximalGradientDescent)
     .OUTPUT(var, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyProximalGradientDescent)
-}  // namespace ge
+} // namespace ge
 
 #endif // OPS_OPTIM_APPLY_PROXIMAL_GRADIENT_DESCENT_GRAPH_PLUGIN_PROTO_H_

@@ -57,21 +57,21 @@ static ge::graphStatus InplaceUpdateTilingFunc(gert::TilingContext* context)
         innerSize *= xStorageShape.GetDim(d);
     }
 
-    OP_CHECK_IF(vStorageShape.GetDim(0) != k,
-        OP_LOGE(context, "v.shape[0] must equal indices length K"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(xStorageShape.GetDimNum() != vStorageShape.GetDimNum(),
-        OP_LOGE(context, "x.ndim must equal v.ndim"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(vStorageShape.GetDim(0) != k, OP_LOGE(context, "v.shape[0] must equal indices length K"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xStorageShape.GetDimNum() != vStorageShape.GetDimNum(), OP_LOGE(context, "x.ndim must equal v.ndim"),
+                return ge::GRAPH_FAILED);
     for (size_t d = 1; d < xStorageShape.GetDimNum(); d++) {
         OP_CHECK_IF(xStorageShape.GetDim(d) != vStorageShape.GetDim(d),
-            OP_LOGE(context, "x.shape[d] must equal v.shape[d] for d >= 1"), return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "x.shape[d] must equal v.shape[d] for d >= 1"), return ge::GRAPH_FAILED);
     }
 
     auto xDesc = context->GetInputDesc(0);
     auto vDesc = context->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context, vDesc);
-    OP_CHECK_IF(xDesc->GetDataType() != vDesc->GetDataType(),
-        OP_LOGE(context, "x.dtype must equal v.dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDesc->GetDataType() != vDesc->GetDataType(), OP_LOGE(context, "x.dtype must equal v.dtype"),
+                return ge::GRAPH_FAILED);
 
     int32_t perCoreN;
     int32_t needCoreNum;
@@ -101,7 +101,7 @@ static ge::graphStatus InplaceUpdateTilingFunc(gert::TilingContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE"), return ge::GRAPH_FAILED);
     context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
     uint64_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     size_t* ws = context->GetWorkspaceSizes(1);
@@ -116,6 +116,8 @@ static ge::graphStatus TilingParseForInplaceUpdate([[maybe_unused]] gert::Tiling
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(InplaceUpdate).Tiling(InplaceUpdateTilingFunc).TilingParse<InplaceUpdateCompileInfo>(TilingParseForInplaceUpdate);
+IMPL_OP_OPTILING(InplaceUpdate)
+    .Tiling(InplaceUpdateTilingFunc)
+    .TilingParse<InplaceUpdateCompileInfo>(TilingParseForInplaceUpdate);
 
 } // namespace optiling

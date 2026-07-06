@@ -47,13 +47,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic01)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -92,13 +91,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic02)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -137,13 +135,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic03)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -182,13 +179,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, Basic04)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -227,13 +223,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidBatchSplitFactor)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x1_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -270,13 +265,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidK)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x1_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -313,13 +307,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidN)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x1_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -355,13 +348,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, TQBMM_mxfp8)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -397,13 +389,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermX1)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -439,13 +430,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermX2)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -480,13 +470,12 @@ TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermY)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1_shape, &x2_shape, nullptr, &x1_scale_shape, &x2_scale_shape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)

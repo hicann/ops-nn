@@ -45,8 +45,8 @@ constexpr int64_t MAX_MXSCALE_DIM_NUM = 8;
 constexpr int64_t MIN_MXSCALE_DIM_NUM = 2;
 constexpr size_t WORKSPACE_SIZE = 0;
 
-const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN};
+const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E5M2,
+                                                        ge::DT_FLOAT8_E4M3FN};
 const std::set<ge::DataType> MXSCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 
@@ -55,8 +55,8 @@ inline static ge::graphStatus AntiMxQuantSetTilingData(gert::TilingContext* cont
     uint64_t tilingDataSize = sizeof(tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
     auto rawTilingData = context->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(),
-        reinterpret_cast<void*>(&tilingData), tilingDataSize);
+    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
+                           tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
         return ge::GRAPH_FAILED;
@@ -68,13 +68,13 @@ inline static ge::graphStatus AntiMxQuantSetTilingData(gert::TilingContext* cont
 inline static void PrintTilingData(const gert::TilingContext* context, AntiMxQuantTilingData& tilingData)
 {
     OP_LOGI(context->GetNodeName(),
-        "tilingData is ubSize:%ld, dstType:%ld, totalCoreNum:%ld, usedCoreNum:%ld, "
-        "rowTileNum:%ld, colTileNum:%ld, rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, "
-        "rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld",
-        tilingData.ubSize, tilingData.dstType, tilingData.totalCoreNum, tilingData.usedCoreNum,
-        tilingData.rowTileNum, tilingData.colTileNum, tilingData.rowNum, tilingData.colNum,
-        tilingData.colNormalBlockNum, tilingData.colTailLen, tilingData.rowNormalBlockNum, tilingData.rowTailLen,
-        tilingData.maxUbBlockNum);
+            "tilingData is ubSize:%ld, dstType:%ld, totalCoreNum:%ld, usedCoreNum:%ld, "
+            "rowTileNum:%ld, colTileNum:%ld, rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, "
+            "rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld",
+            tilingData.ubSize, tilingData.dstType, tilingData.totalCoreNum, tilingData.usedCoreNum,
+            tilingData.rowTileNum, tilingData.colTileNum, tilingData.rowNum, tilingData.colNum,
+            tilingData.colNormalBlockNum, tilingData.colTailLen, tilingData.rowNormalBlockNum, tilingData.rowTailLen,
+            tilingData.maxUbBlockNum);
 }
 
 static ge::graphStatus GetAttr(const gert::TilingContext* context, AntiMxQuantTilingParam& tilingParam)
@@ -98,15 +98,13 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, AntiMxQuantTi
     int checkDstType = static_cast<int>(*attrDstType);
 
     // dst_type: 0=FP32, 1=FP16, 27=BF16
-    OP_CHECK_IF(
-        (yDtype == ge::DT_FLOAT && checkDstType != 0) ||
-        (yDtype == ge::DT_FLOAT16 && checkDstType != 1) ||
-        (yDtype == ge::DT_BF16 && checkDstType != 27),
-        OP_LOGE(context->GetNodeName(),
-            "y's data type[%s] and dst_type[%d] is not corresponded, y's data type: "
-            "FLOAT32/FLOAT16/BFLOAT16 correspond to dst_type: 0/1/27, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str(), checkDstType),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((yDtype == ge::DT_FLOAT && checkDstType != 0) || (yDtype == ge::DT_FLOAT16 && checkDstType != 1) ||
+                    (yDtype == ge::DT_BF16 && checkDstType != 27),
+                OP_LOGE(context->GetNodeName(),
+                        "y's data type[%s] and dst_type[%d] is not corresponded, y's data type: "
+                        "FLOAT32/FLOAT16/BFLOAT16 correspond to dst_type: 0/1/27, please check.",
+                        Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str(), checkDstType),
+                return ge::GRAPH_FAILED);
 
     tilingParam.blockSize = BLOCK_SIZE;
 
@@ -122,30 +120,28 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     OP_CHECK_IF(
         INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
         OP_LOGE(context->GetNodeName(),
-            "Input x's data type[%s] only support FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E5M2/FLOAT8_E4M3FN currently, "
-            "please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(xDtype)).c_str()),
+                "Input x's data type[%s] only support FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E5M2/FLOAT8_E4M3FN currently, "
+                "please check.",
+                Ops::Base::ToString(static_cast<ge::DataType>(xDtype)).c_str()),
         return ge::GRAPH_FAILED);
 
     auto inputMxscalePtr = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputMxscalePtr);
     auto mxscaleDtype = inputMxscalePtr->GetDataType();
-    OP_CHECK_IF(
-        MXSCALE_SUPPORT_DTYPE_SET.count(mxscaleDtype) == 0,
-        OP_LOGE(context->GetNodeName(),
-            "Input mxscale's data type[%s] only support FLOAT8_E8M0 currently, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(mxscaleDtype)).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(MXSCALE_SUPPORT_DTYPE_SET.count(mxscaleDtype) == 0,
+                OP_LOGE(context->GetNodeName(),
+                        "Input mxscale's data type[%s] only support FLOAT8_E8M0 currently, please check.",
+                        Ops::Base::ToString(static_cast<ge::DataType>(mxscaleDtype)).c_str()),
+                return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
-    OP_CHECK_IF(
-        Y_SUPPORT_DTYPE_SET.count(yDtype) == 0,
-        OP_LOGE(context->GetNodeName(),
-            "Output y's data type[%s] only support FLOAT16/BFLOAT16/FLOAT32 currently, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(Y_SUPPORT_DTYPE_SET.count(yDtype) == 0,
+                OP_LOGE(context->GetNodeName(),
+                        "Output y's data type[%s] only support FLOAT16/BFLOAT16/FLOAT32 currently, please check.",
+                        Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str()),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -178,15 +174,15 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
 
-    OP_CHECK_IF(
-        xShape.GetDimNum() < 1 || xShape.GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%zu] should be in [1, 7].", xShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDimNum() < 1 || xShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(context->GetNodeName(), "Input x rank[%zu] should be in [1, 7].", xShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     // Check FP4 constraint: last dimension must be even (each byte holds 2 FP4 values)
     auto inputXPtr = context->GetInputDesc(0);
     auto xDtype = inputXPtr->GetDataType();
-    if ((xDtype == ge::DT_FLOAT4_E2M1 || xDtype == ge::DT_FLOAT4_E1M2) && (xShape.GetDim(xShape.GetDimNum() - 1) % DIGIT_TWO != 0)) {
+    if ((xDtype == ge::DT_FLOAT4_E2M1 || xDtype == ge::DT_FLOAT4_E1M2) &&
+        (xShape.GetDim(xShape.GetDimNum() - 1) % DIGIT_TWO != 0)) {
         OP_LOGE(context->GetNodeName(), "For FP4 input, the last dimension (colNum=%ld) must be even.",
                 xShape.GetDim(xShape.GetDimNum() - 1));
         return ge::GRAPH_FAILED;
@@ -194,12 +190,12 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
 
     int64_t axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
     int64_t dimNum = static_cast<int64_t>(xShape.GetDimNum());
-    OP_CHECK_IF(
-        axis != dimNum - 1,
-        OP_LOGE(context->GetNodeName(),
-            "The attr axis[%ld] is invalid for input rank[%zu], the axis only supports the tail axis currently, please check.",
-            tilingParam.axis, xShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(axis != dimNum - 1,
+                OP_LOGE(context->GetNodeName(),
+                        "The attr axis[%ld] is invalid for input rank[%zu], the axis only supports the tail axis "
+                        "currently, please check.",
+                        tilingParam.axis, xShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     auto yShapePtr = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
@@ -207,8 +203,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
 
     OP_CHECK_IF(
         xShape != yShape,
-        OP_LOGE(context->GetNodeName(),
-            "The shape of output y must be same with shape of input x, please check."),
+        OP_LOGE(context->GetNodeName(), "The shape of output y must be same with shape of input x, please check."),
         return ge::GRAPH_FAILED);
 
     auto mxScaleShapePtr = context->GetInputShape(1);
@@ -217,8 +212,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
 
     OP_CHECK_IF(
         mxScaleShape.GetDimNum() < MIN_MXSCALE_DIM_NUM || mxScaleShape.GetDimNum() > MAX_MXSCALE_DIM_NUM,
-        OP_LOGE(context->GetNodeName(),
-            "Input mxscale rank[%zu] should be in [2, 8].", mxScaleShape.GetDimNum()),
+        OP_LOGE(context->GetNodeName(), "Input mxscale rank[%zu] should be in [2, 8].", mxScaleShape.GetDimNum()),
         return ge::GRAPH_FAILED);
 
     // Construct expected mxscale shape:
@@ -230,12 +224,11 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
     expectedMxScaleShape.SetDim(axis, axisScaledSize);
     expectedMxScaleShape.AppendDim(DIGIT_TWO);
 
-    OP_CHECK_IF(
-        expectedMxScaleShape != mxScaleShape,
-        OP_LOGE(context->GetNodeName(),
-            "The shape of input mxscale %s is incorrect, expected shape is %s, please check.",
-            Shape2String(mxScaleShape).c_str(), Shape2String(expectedMxScaleShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(expectedMxScaleShape != mxScaleShape,
+                OP_LOGE(context->GetNodeName(),
+                        "The shape of input mxscale %s is incorrect, expected shape is %s, please check.",
+                        Shape2String(mxScaleShape).c_str(), Shape2String(expectedMxScaleShape).c_str()),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -248,16 +241,14 @@ static ge::graphStatus GetPlatInfo(const gert::TilingContext* context, AntiMxQua
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
 
     tilingParam.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (tilingParam.totalCoreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParam.totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParam.ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(
-        (tilingParam.ubSize <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParam.ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
 
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
 
@@ -270,23 +261,17 @@ ge::graphStatus Tiling4AntiMxQuant(gert::TilingContext* context)
 
     AntiMxQuantTilingParam tilingParam;
 
-    OP_CHECK_IF(
-        CheckDtype(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "The data type check failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtype(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "The data type check failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "The attr get failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "The attr get failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckShape(context, tilingParam) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "The shape check failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "The shape check failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetPlatInfo(context, tilingParam) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "GetPlatInfo failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatInfo(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "GetPlatInfo failed."), return ge::GRAPH_FAILED);
 
     // AntiMxQuant only supports tail axis with blockSize=32 currently
     AntiMxQuantTailAxisTiling tailAxisTiling(context, tilingParam);
@@ -300,8 +285,6 @@ ge::graphStatus TilingPrepare4AntiMxQuant(gert::TilingParseContext* context)
 }
 
 // Register tiling interface of the AntiMxQuant op.
-IMPL_OP_OPTILING(AntiMxQuant)
-    .Tiling(Tiling4AntiMxQuant)
-    .TilingParse<AntiMxQuantCompileInfo>(TilingPrepare4AntiMxQuant);
+IMPL_OP_OPTILING(AntiMxQuant).Tiling(Tiling4AntiMxQuant).TilingParse<AntiMxQuantCompileInfo>(TilingPrepare4AntiMxQuant);
 
 } // namespace optiling

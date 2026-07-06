@@ -17,11 +17,11 @@
 #define _FUSED_BIAS_LEAKY_RELU_TILING_DATA_H_
 
 struct FusedBiasLeakyReluTilingData {
-    int64_t totalNum = 0;                // Total number of elements
-    int64_t blockFactor = 0;             // Number of elements per core
-    int64_t ubFactor = 0;                // Number of elements per UB loop iteration
-    float negativeSlope = 0.2f;          // LeakyReLU negative slope (float32, default 0.2)
-    float scale = 1.414213562373f;       // Scale factor (float32, default sqrt(2))
+    int64_t totalNum = 0;          // Total number of elements
+    int64_t blockFactor = 0;       // Number of elements per core
+    int64_t ubFactor = 0;          // Number of elements per UB loop iteration
+    float negativeSlope = 0.2f;    // LeakyReLU negative slope (float32, default 0.2)
+    float scale = 1.414213562373f; // Scale factor (float32, default sqrt(2))
 };
 
 #endif

@@ -23,9 +23,10 @@ namespace Conv3dApiTiling {
 class __attribute__((visibility("default"))) Conv3dTiling : public Conv3dTilingBase {
 public:
     Conv3dTiling() = default;
-    explicit Conv3dTiling(const PlatformInfo& platform) : Conv3dTilingBase(platform) {};
+    explicit Conv3dTiling(const PlatformInfo& platform) : Conv3dTilingBase(platform){};
     ~Conv3dTiling() override = default;
-    int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling) override;
+    int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling& tiling) override;
+
 protected:
     int64_t Compute() override;
 };

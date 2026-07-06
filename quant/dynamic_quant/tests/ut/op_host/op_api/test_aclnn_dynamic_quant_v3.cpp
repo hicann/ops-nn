@@ -23,15 +23,9 @@ using namespace std;
 
 class l2_dynamic_quant_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_dynamic_quant_v3_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_dynamic_quant_v3_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_dynamic_quant_v3_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_dynamic_quant_v3_test TearDown" << endl; }
 };
 
 TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_fail_01)
@@ -47,9 +41,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_fai
     const char* quantMode = "pertoken";
     bool isSymmetrical = true;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, moe_desc, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, moe_desc, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -68,9 +61,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_02)
     const char* quantMode = "pertoken";
     bool isSymmetrical = false;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, moe_desc, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, moe_desc, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -87,9 +79,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_03)
     const char* quantMode = "pertensor";
     bool isSymmetrical = false;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -107,9 +98,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_fai
     const char* quantMode = "perchannel";
     bool isSymmetrical = true;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -126,9 +116,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_05)
     const char* quantMode = "perchannel";
     bool isSymmetrical = true;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, nullptr));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -145,9 +134,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_sha
     const char* quantMode = "perchannel";
     bool isSymmetrical = true;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, nullptr));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -164,9 +152,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_typ
     const char* quantMode = "perchannel";
     bool isSymmetrical = true;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, nullptr));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, smooth_desc, nullptr, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);
@@ -181,9 +168,8 @@ TEST_F(l2_dynamic_quant_v3_test, ascend950PR_9589_dynamic_quant_v3_bf16_int8_wit
     const char* quantMode = "perchannel";
     bool isSymmetrical = true;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV3, INPUT(x_desc, nullptr, nullptr, dstType, isSymmetrical, quantMode),
-        OUTPUT(y_desc, scale_desc, nullptr));
+    auto ut = OP_API_UT(aclnnDynamicQuantV3, INPUT(x_desc, nullptr, nullptr, dstType, isSymmetrical, quantMode),
+                        OUTPUT(y_desc, scale_desc, nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER);

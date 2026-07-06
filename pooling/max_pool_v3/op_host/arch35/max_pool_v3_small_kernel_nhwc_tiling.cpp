@@ -97,8 +97,8 @@ uint64_t MaxPoolV3NHWCSmallKernelTiling::GetTilingKey() const
     return tilingKey;
 }
 
-int64_t MaxPoolV3NHWCSmallKernelTiling::CalcBufferSize(
-    int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols, bool isPadding)
+int64_t MaxPoolV3NHWCSmallKernelTiling::CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols,
+                                                       bool isPadding)
 {
     int64_t tmpInDataBufferSize = inRows * Ops::Base::CeilAlign(inCols * inputData.channels, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outRows * outCols * inputData.channels, oneBlockNum_);
@@ -157,8 +157,8 @@ void MaxPoolV3NHWCSmallKernelTiling::CalcSplitMaxRows(int64_t maxInCols)
     int64_t inputBufferSize = inputUbRows * Ops::Base::CeilAlign(maxInCols * inputData.channels, oneBlockNum_);
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInRows = MAX_INPUT_ELEMENTS / Ops::Base::CeilAlign(maxInCols * inputData.channels, oneBlockNum_);
-        outUbFactorH_ = std::min(
-            (tmpInRows - inputData.kernelSize[H_DIM]) / inputData.stride[H_DIM] + 1, inputData.outShape[H_DIM]);
+        outUbFactorH_ = std::min((tmpInRows - inputData.kernelSize[H_DIM]) / inputData.stride[H_DIM] + 1,
+                                 inputData.outShape[H_DIM]);
     }
     if (outUbFactorH_ <= 0) {
         OP_LOGE(context_, "MaxPool outUbFactorH_ is %ld.", outUbFactorH_);
@@ -195,8 +195,8 @@ void MaxPoolV3NHWCSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
     int64_t inputBufferSize = minInRows * Ops::Base::CeilAlign(curInCols * inputData.channels, oneBlockNum_);
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInCols = Ops::Base::FloorAlign(MAX_INPUT_ELEMENTS / (minInRows * inputData.channels), oneBlockNum_);
-        outUbFactorW_ = std::min(
-            (tmpInCols - inputData.kernelSize[W_DIM]) / inputData.stride[W_DIM] + 1, inputData.outShape[W_DIM]);
+        outUbFactorW_ = std::min((tmpInCols - inputData.kernelSize[W_DIM]) / inputData.stride[W_DIM] + 1,
+                                 inputData.outShape[W_DIM]);
     }
     if (outUbFactorW_ <= 0) {
         OP_LOGE(context_, "MaxPool outUbFactorW_ is %ld.", outUbFactorW_);
@@ -241,8 +241,8 @@ void MaxPoolV3NHWCSmallKernelTiling::DoUBTilingSingle()
         (inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM],
         inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     int64_t minInRows = inputData.kernelSize[H_DIM];
-    int64_t oneBacthBuffer =
-        CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM], isPadding_);
+    int64_t oneBacthBuffer = CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM],
+                                            isPadding_);
     int64_t oneRowsBuffer = CalcBufferSize(minInRows, maxInCols, 1, inputData.outShape[W_DIM], isPadding_);
     if (oneBacthBuffer <= 0 || oneRowsBuffer <= 0 ||
         inputData.batches * inputData.outShape[W_DIM] * inputData.outShape[H_DIM] <= 0) {
@@ -289,23 +289,23 @@ void MaxPoolV3NHWCSmallKernelTiling::DoBlockTiling()
     int64_t inCols = (outUbFactorW_ - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM];
     int64_t inRows = (outUbFactorH_ - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM];
     if (splitMode_ == SPLIT_BATCHS) {
-        inRows = std::max(
-            inRows, inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
+        inRows = std::max(inRows,
+                          inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     }
     if (splitMode_ != SPLIT_COLS) {
-        inCols = std::max(
-            inCols, inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
+        inCols = std::max(inCols,
+                          inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
     }
     inUbSize_ = ubFactorN_ * inRows * Ops::Base::CeilAlign(inCols * inputData.channels, oneBlockNum_);
     outUbSize_ = ubFactorN_ * Ops::Base::CeilAlign(outUbFactorW_ * outUbFactorH_ * inputData.channels, oneBlockNum_);
     if (inputData.channels * dtypeSize > NOT_GATHER_THRESHOLD) {
         inUbSize_ = ubFactorN_ * inRows * inCols * Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
-        outUbSize_ =
-            ubFactorN_ * outUbFactorW_ * outUbFactorH_ * Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
+        outUbSize_ = ubFactorN_ * outUbFactorW_ * outUbFactorH_ *
+                     Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
     }
     if (wLoop_ == 1 && (inputData.inputShape[W_DIM] * inputData.channels) <= maxGatherScatterElm_) {
-        onceCopyRow_ = std::min(
-            maxGatherScatterElm_ / (inputData.inputShape[W_DIM] * inputData.channels), inputData.inputShape[H_DIM]);
+        onceCopyRow_ = std::min(maxGatherScatterElm_ / (inputData.inputShape[W_DIM] * inputData.channels),
+                                inputData.inputShape[H_DIM]);
     }
 }
 

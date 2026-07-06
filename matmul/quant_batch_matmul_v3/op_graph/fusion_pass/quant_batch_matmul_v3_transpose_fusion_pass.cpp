@@ -73,10 +73,11 @@ constexpr int INNER_SHAPE_LIMIT = 65535;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 
-bool IsTargetVersion(){
+bool IsTargetVersion()
+{
     int32_t version = 0;
     aclsysGetVersionNum("ge-compiler", &version);
-    if(version >= 90100000){
+    if (version >= 90100000) {
         return true;
     }
     return false;
@@ -132,8 +133,7 @@ void GetPlatformSupport(bool& supportL12btBf16, bool& supportMmadS8S4)
 
     auto l12btIter = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_data_move_l12bt");
     supportL12btBf16 = l12btIter != platformInfo.ai_core_intrinsic_dtype_map.end() &&
-                       std::find(l12btIter->second.begin(), l12btIter->second.end(), "bf16") !=
-                           l12btIter->second.end();
+                       std::find(l12btIter->second.begin(), l12btIter->second.end(), "bf16") != l12btIter->second.end();
     auto mmadIter = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_mmad");
     supportMmadS8S4 = mmadIter != platformInfo.ai_core_intrinsic_dtype_map.end() &&
                       std::find(mmadIter->second.begin(), mmadIter->second.end(), "s8s4") != mmadIter->second.end();
@@ -141,8 +141,8 @@ void GetPlatformSupport(bool& supportL12btBf16, bool& supportMmadS8S4)
 
 bool CheckNodeDtype(const GNode& nodeQuantBmmv3)
 {
-    static const std::vector<DataType> legalInputDtypes = {
-        DT_INT8, DT_INT4, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_HIFLOAT8, DT_FLOAT4_E2M1};
+    static const std::vector<DataType> legalInputDtypes = {DT_INT8,        DT_INT4,     DT_FLOAT8_E4M3FN,
+                                                           DT_FLOAT8_E5M2, DT_HIFLOAT8, DT_FLOAT4_E2M1};
     static const std::vector<DataType> legalOutDtypes = {DT_INT8, DT_FLOAT16, DT_BF16, DT_INT32, DT_FLOAT};
 
     TensorDesc x1Desc;
@@ -156,17 +156,17 @@ bool CheckNodeDtype(const GNode& nodeQuantBmmv3)
     }
     if (!IsLegalDataType(x1Desc.GetDataType(), legalInputDtypes)) {
         OP_LOGW(PASS_NAME, "X1 dtype is %s, which must be INT8/INT4/FLOAT8_E4M3/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1.",
-            ge::TypeUtils::DataTypeToSerialString(x1Desc.GetDataType()).c_str());
+                ge::TypeUtils::DataTypeToSerialString(x1Desc.GetDataType()).c_str());
         return false;
     }
     if (!IsLegalDataType(x2Desc.GetDataType(), legalInputDtypes)) {
         OP_LOGW(PASS_NAME, "X2 dtype is %s, which must be INT8/INT4/FLOAT8_E4M3/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1.",
-            ge::TypeUtils::DataTypeToSerialString(x2Desc.GetDataType()).c_str());
+                ge::TypeUtils::DataTypeToSerialString(x2Desc.GetDataType()).c_str());
         return false;
     }
     if (!IsLegalDataType(outputDesc.GetDataType(), legalOutDtypes)) {
         OP_LOGW(PASS_NAME, "Out dtype is %s, which must be INT8/FLOAT16/BFLOAT16/INT32/FLOAT.",
-            ge::TypeUtils::DataTypeToSerialString(outputDesc.GetDataType()).c_str());
+                ge::TypeUtils::DataTypeToSerialString(outputDesc.GetDataType()).c_str());
         return false;
     }
     return true;
@@ -224,8 +224,7 @@ bool IsReshapeTrans(const TensorDesc& inputDesc, const GNodePtr& nodePerInput, b
     // 当前两维任意一维为1时，交换这两维可以用Reshape表示。
     if (inputDesc.GetDataType() == DT_FLOAT8_E8M0 && shapeInput.GetDimNum() == MX_SCALE_LEN &&
         shapeOut.GetDimNum() == MX_SCALE_LEN && shapeInput.GetDim(0) == shapeOut.GetDim(1) &&
-        shapeInput.GetDim(1) == shapeOut.GetDim(0) &&
-        (shapeInput.GetDim(0) == 1 || shapeInput.GetDim(1) == 1)) {
+        shapeInput.GetDim(1) == shapeOut.GetDim(0) && (shapeInput.GetDim(0) == 1 || shapeInput.GetDim(1) == 1)) {
         return true;
     }
 
@@ -294,7 +293,7 @@ bool CheckTranspose(const GNode& nodeQuantBmmv3, bool isBitcastPattern)
 }
 
 bool GetIntrinsicsLimit(const GNode& nodeQuantBmmv3, bool supportL12btBf16, bool limitPass, bool& isDelTransx1,
-    bool& isDelTransx2)
+                        bool& isDelTransx2)
 {
     TensorDesc x1Desc;
     TensorDesc x2Desc;
@@ -331,7 +330,7 @@ bool GetIntrinsicsLimit(const GNode& nodeQuantBmmv3, bool supportL12btBf16, bool
 }
 
 void GetTransposeNode(const GNode& nodeQuantBmmv3, bool isBitcastPattern, bool isDelTransx1, bool isDelTransx2,
-    GNodePtr& nodeTransX1, GNodePtr& nodeTransX2)
+                      GNodePtr& nodeTransX1, GNodePtr& nodeTransX2)
 {
     auto nodeX1 = GetTransposeCandidateNode(nodeQuantBmmv3, X1_INDEX, isBitcastPattern);
     auto nodeX2 = GetTransposeCandidateNode(nodeQuantBmmv3, X2_INDEX, isBitcastPattern);
@@ -344,7 +343,7 @@ void GetTransposeNode(const GNode& nodeQuantBmmv3, bool isBitcastPattern, bool i
 }
 
 bool GetScaleTransNode(const GNode& nodeQuantBmmv3, const GNodePtr& nodeTransX1, const GNodePtr& nodeTransX2,
-    bool isBitcastPattern, bool isDynamic, GNodePtr& nodeTransX1Scale, GNodePtr& nodeTransX2Scale)
+                       bool isBitcastPattern, bool isDynamic, GNodePtr& nodeTransX1Scale, GNodePtr& nodeTransX2Scale)
 {
     if (nodeTransX1 == nullptr && nodeTransX2 == nullptr) {
         return true;
@@ -403,7 +402,7 @@ bool RemoveNode(const GraphPtr& graph, const GNodePtr& dstNode)
 
 // 绕过类transpose节点：普通场景重连到QuantBatchMatmulV3，bitcast场景重连到Bitcast。
 bool RelinkNode(const GraphPtr& graph, GNode& nodeQuantBmmv3, const GNodePtr& nodeTrans, int64_t quantDstInputPort,
-    bool isBitcastPattern)
+                bool isBitcastPattern)
 {
     if (nodeTrans == nullptr) {
         return true;
@@ -476,15 +475,14 @@ bool SetTransposeAttr(GNode& node, const char* attrName)
 }
 
 void ReportTransposeFusion(const std::vector<GNode>& nodesBeforeFuse, const GNode& nodeQuantBmmv3,
-    CustomPassContext& passContext)
+                           CustomPassContext& passContext)
 {
     if (GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, {nodeQuantBmmv3}, passContext) != SUCCESS) {
         OP_LOGW(PASS_NAME, "Failed to report fusion result.");
     }
 }
 
-void AddNodeToRemove(std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>& nodesToRemove,
-    const GNodePtr& node)
+void AddNodeToRemove(std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>& nodesToRemove, const GNodePtr& node)
 {
     if (node == nullptr || std::find(nodesToRemove.begin(), nodesToRemove.end(), node) != nodesToRemove.end()) {
         return;
@@ -494,7 +492,7 @@ void AddNodeToRemove(std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>&
 }
 
 void CollectFusionNodes(const GNode& nodeQuantBmmv3, const std::array<GNodePtr, 4>& transNodes,
-    std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>& nodesToRemove)
+                        std::vector<GNode>& nodesBeforeFuse, std::vector<GNodePtr>& nodesToRemove)
 {
     nodesBeforeFuse = {nodeQuantBmmv3};
     nodesToRemove.clear();
@@ -504,7 +502,7 @@ void CollectFusionNodes(const GNode& nodeQuantBmmv3, const std::array<GNodePtr, 
 }
 
 Status CheckFusionPreconditions(const GNode& nodeQuantBmmv3, bool& isDynamic, bool& isBitcastPattern,
-    bool& supportL12btBf16)
+                                bool& supportL12btBf16)
 {
     if (!CheckQuantBatchMatmulV3(nodeQuantBmmv3)) {
         return GRAPH_NOT_CHANGED;
@@ -527,7 +525,7 @@ Status CheckFusionPreconditions(const GNode& nodeQuantBmmv3, bool& isDynamic, bo
 }
 
 Status FindTransposeNodes(const GNode& nodeQuantBmmv3, bool supportL12btBf16, bool limitPass, bool isBitcastPattern,
-    bool isDynamic, std::array<GNodePtr, 4>& transNodes)
+                          bool isDynamic, std::array<GNodePtr, 4>& transNodes)
 {
     constexpr size_t nodeX1Index = 0;
     constexpr size_t nodeX2Index = 1;
@@ -542,21 +540,20 @@ Status FindTransposeNodes(const GNode& nodeQuantBmmv3, bool supportL12btBf16, bo
         return GRAPH_NOT_CHANGED;
     }
 
-    GetTransposeNode(
-        nodeQuantBmmv3, isBitcastPattern, isDelTransx1, isDelTransx2, transNodes[nodeX1Index],
-        transNodes[nodeX2Index]);
+    GetTransposeNode(nodeQuantBmmv3, isBitcastPattern, isDelTransx1, isDelTransx2, transNodes[nodeX1Index],
+                     transNodes[nodeX2Index]);
     if (transNodes[nodeX1Index] == nullptr && transNodes[nodeX2Index] == nullptr) {
         return GRAPH_NOT_CHANGED;
     }
     if (!GetScaleTransNode(nodeQuantBmmv3, transNodes[nodeX1Index], transNodes[nodeX2Index], isBitcastPattern,
-            isDynamic, transNodes[nodeX1ScaleIndex], transNodes[nodeX2ScaleIndex])) {
+                           isDynamic, transNodes[nodeX1ScaleIndex], transNodes[nodeX2ScaleIndex])) {
         return GRAPH_NOT_CHANGED;
     }
     return SUCCESS;
 }
 
 Status PrepareFusion(const GNode& nodeQuantBmmv3, bool& isDynamic, bool limitPass, bool& isBitcastPattern,
-    std::array<GNodePtr, 4>& transNodes)
+                     std::array<GNodePtr, 4>& transNodes)
 {
     bool supportL12btBf16 = false;
     auto status = CheckFusionPreconditions(nodeQuantBmmv3, isDynamic, isBitcastPattern, supportL12btBf16);
@@ -580,7 +577,7 @@ bool SetTransposeAttrs(GNode& nodeQuantBmmv3, const std::array<GNodePtr, 4>& tra
 }
 
 bool RelinkFusionNodes(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool isBitcastPattern,
-    const std::array<GNodePtr, 4>& transNodes)
+                       const std::array<GNodePtr, 4>& transNodes)
 {
     constexpr std::array<int64_t, 4> inputPorts = {X1_INDEX, X2_INDEX, X1_SCALE_INDEX, X2_SCALE_INDEX};
     for (size_t nodeIndex = 0; nodeIndex < transNodes.size(); ++nodeIndex) {
@@ -602,7 +599,7 @@ bool RemoveFusionNodes(const GraphPtr& graph, const std::vector<GNodePtr>& nodes
 }
 
 Status CommitFusion(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool isBitcastPattern,
-    const std::array<GNodePtr, 4>& transNodes, CustomPassContext& passContext)
+                    const std::array<GNodePtr, 4>& transNodes, CustomPassContext& passContext)
 {
     std::vector<GNode> nodesBeforeFuse;
     std::vector<GNodePtr> nodesToRemove;
@@ -622,7 +619,7 @@ Status CommitFusion(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool isBitcast
 }
 
 Status Fusion(const GraphPtr& graph, GNode& nodeQuantBmmv3, bool& isDynamic, bool limitPass,
-    CustomPassContext& passContext)
+              CustomPassContext& passContext)
 {
     bool isBitcastPattern = false;
     std::array<GNodePtr, 4> transNodes = {};
@@ -672,7 +669,7 @@ Status RunQuantBatchMatmulV3TransposeFusion(const GraphPtr& graph, bool limitPas
 
 Status QuantBatchMatmulV3TransposeFusionPass::Run(GraphPtr& graph, CustomPassContext& passContext)
 {
-    if(!IsTargetVersion()){
+    if (!IsTargetVersion()) {
         return GRAPH_NOT_CHANGED;
     }
     return RunQuantBatchMatmulV3TransposeFusion(graph, false, passContext);
@@ -680,14 +677,16 @@ Status QuantBatchMatmulV3TransposeFusionPass::Run(GraphPtr& graph, CustomPassCon
 
 Status QuantBatchMatmulV3TransposeLimitFusionPass::Run(GraphPtr& graph, CustomPassContext& passContext)
 {
-    if(!IsTargetVersion()){
+    if (!IsTargetVersion()) {
         return GRAPH_NOT_CHANGED;
     }
     return RunQuantBatchMatmulV3TransposeFusion(graph, true, passContext);
 }
 #if GE_COMPILER_VERSION_NUM >= 90100000
-REG_FUSION_PASS(QuantBatchMatmulV3TransposeFusionPass).Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
-REG_FUSION_PASS(QuantBatchMatmulV3TransposeLimitFusionPass).Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
+REG_FUSION_PASS(QuantBatchMatmulV3TransposeFusionPass)
+    .Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
+REG_FUSION_PASS(QuantBatchMatmulV3TransposeLimitFusionPass)
+    .Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
 #endif
 
 } // namespace ops

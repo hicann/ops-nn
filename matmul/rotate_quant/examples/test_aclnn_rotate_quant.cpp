@@ -49,9 +49,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -64,9 +63,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -99,7 +97,7 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    
+
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
@@ -161,9 +159,8 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans,
-                                            yTensor, scaleTensor, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-                   LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+                                           yTensor, scaleTensor, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -216,7 +213,7 @@ int main()
     aclrtFree(yDeviceAddr);
     aclrtFree(scaleDeviceAddr);
     if (workspaceSize > 0) {
-      aclrtFree(workspaceAddr);
+        aclrtFree(workspaceAddr);
     }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);

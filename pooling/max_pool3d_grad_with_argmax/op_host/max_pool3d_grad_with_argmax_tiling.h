@@ -193,10 +193,10 @@ struct MaxPoolGradWithArgmaxTilingParams {
 
 class MaxPool3DGradWithArgmaxTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPool3DGradWithArgmaxTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
+    explicit MaxPool3DGradWithArgmaxTilingBase(gert::TilingContext* context)
+        : Ops::NN::Optiling::TilingBaseClass(context)
     {}
-    ~MaxPool3DGradWithArgmaxTilingBase() override
-    {}
+    ~MaxPool3DGradWithArgmaxTilingBase() override {}
 
     const std::string nodeName = "MaxPool3DGradWithArgmax";
     MaxPool3DGradWithArgmaxTilingData tilingData;
@@ -232,8 +232,7 @@ public:
     explicit MaxPool3DGradWithArgmaxNormalTiling(gert::TilingContext* context)
         : MaxPool3DGradWithArgmaxTilingBase(context)
     {}
-    ~MaxPool3DGradWithArgmaxNormalTiling() override
-    {}
+    ~MaxPool3DGradWithArgmaxNormalTiling() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -259,8 +258,7 @@ public:
     explicit MaxPool3DGradWithArgmaxCutKTiling(gert::TilingContext* context)
         : MaxPool3DGradWithArgmaxTilingBase(context)
     {}
-    ~MaxPool3DGradWithArgmaxCutKTiling() override
-    {}
+    ~MaxPool3DGradWithArgmaxCutKTiling() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -268,13 +266,11 @@ protected:
     ge::graphStatus DoOpTiling() override;
 
 private:
-    void CalXp(
-        uint64_t& baseDo, uint64_t& baseHo, uint64_t& baseWo, uint64_t& baseDp, uint64_t& baseHp, uint64_t& baseWp,
-        const uint32_t ubCutAxis);
+    void CalXp(uint64_t& baseDo, uint64_t& baseHo, uint64_t& baseWo, uint64_t& baseDp, uint64_t& baseHp,
+               uint64_t& baseWp, const uint32_t ubCutAxis);
     uint64_t CalUBTotalSize(uint64_t baseDo, uint64_t baseHo, uint64_t baseWo, const uint32_t ubCutAxis);
-    uint64_t CalCloseBaseSize(
-        uint64_t notCutOuterDimsMul, uint64_t notCutProcessOneDim, uint64_t wiDim, uint64_t kCutDim, uint64_t sCutDim,
-        const uint32_t ubCutAxis);
+    uint64_t CalCloseBaseSize(uint64_t notCutOuterDimsMul, uint64_t notCutProcessOneDim, uint64_t wiDim,
+                              uint64_t kCutDim, uint64_t sCutDim, const uint32_t ubCutAxis);
     bool SetCutKParamsNotCutUB(const uint32_t ubCutAxis);
     bool SetCutKParamsCutUB();
     bool SetCutKTilingParams();
@@ -286,8 +282,7 @@ public:
     explicit MaxPool3DGradWithArgmaxScatterTiling(gert::TilingContext* context)
         : MaxPool3DGradWithArgmaxTilingBase(context)
     {}
-    ~MaxPool3DGradWithArgmaxScatterTiling() override
-    {}
+    ~MaxPool3DGradWithArgmaxScatterTiling() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

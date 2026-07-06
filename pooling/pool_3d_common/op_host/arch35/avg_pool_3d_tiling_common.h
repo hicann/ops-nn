@@ -23,9 +23,8 @@
 #include "op_host/tiling_base.h"
 #include "pool_3d_tiling_common.h"
 
-namespace optiling
-{
- 
+namespace optiling {
+
 struct AvgPool3DCommon {
     int64_t nDim;
     int64_t cDim;
@@ -35,9 +34,9 @@ struct AvgPool3DCommon {
 };
 ge::graphStatus Tiling4AvgPool3DRegBase(gert::TilingContext* context);
 
-ge::graphStatus GetAvgPool3DPlatformInfo(gert::TilingContext *context_, uint64_t& ubSize, uint64_t& coreNum);
-ge::graphStatus GetAvgPool3DShapeAttrsInfo(gert::TilingContext *context_, Pool3DInputInfo& inputData);
+ge::graphStatus GetAvgPool3DPlatformInfo(gert::TilingContext* context_, uint64_t& ubSize, uint64_t& coreNum);
+ge::graphStatus GetAvgPool3DShapeAttrsInfo(gert::TilingContext* context_, Pool3DInputInfo& inputData);
 
-}  // namespace optiling
- 
+} // namespace optiling
+
 #endif

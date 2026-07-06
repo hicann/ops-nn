@@ -1,4 +1,4 @@
- /**
+/**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License")
@@ -19,7 +19,7 @@ namespace ge {
  *@brief Reverses variable length slices. \n
 
 *@par Inputs:
-* @li x: A ND Tensor. The input to reverse. Support 2D ~ 8D.Must be one of the following types: 
+* @li x: A ND Tensor. The input to reverse. Support 2D ~ 8D.Must be one of the following types:
 * complex64, complex128, double, float32, float16, int16, int32, int64, int8, uint16, uint32, uint8, bfloat16.
 * @li seq_lengths: A 1D Tensor of type int32 or int64. \n
 
@@ -42,16 +42,14 @@ reversal is performed. \n
 */
 
 REG_OP(ReverseSequence)
-    .INPUT(x,
-        TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8, DT_INT16, DT_UINT16, \
-        DT_UINT8, DT_INT32, DT_INT64, DT_BOOL, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8, DT_INT16, DT_UINT16, DT_UINT8, DT_INT32, DT_INT64,
+                          DT_BOOL, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128}))
     .INPUT(seq_lengths, TensorType({DT_INT32, DT_INT64}))
-    .OUTPUT(y,
-        TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8, DT_INT16, DT_UINT16, \
-        DT_UINT8, DT_INT32, DT_INT64, DT_BOOL, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8, DT_INT16, DT_UINT16, DT_UINT8, DT_INT32, DT_INT64,
+                           DT_BOOL, DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128}))
     .REQUIRED_ATTR(seq_dim, Int)
     .ATTR(batch_dim, Int, 0)
     .OP_END_FACTORY_REG(ReverseSequence)
-}
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_REVERSE_SEQUENCE_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_REVERSE_SEQUENCE_H_

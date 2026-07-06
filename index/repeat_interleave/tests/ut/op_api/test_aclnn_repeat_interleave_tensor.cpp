@@ -25,22 +25,16 @@ using namespace std;
 
 class l2_repeat_interleave_tensor_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "repeat_interleave_tensor_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "repeat_interleave_tensor_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "repeat_interleave_tensor_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "repeat_interleave_tensor_test TearDown" << std::endl; }
 
-    void test_run(
-        vector<int64_t> repeatsDims, aclDataType repeatsDtype, aclFormat repeatsFormat, vector<int64_t> repeatsRange,
-        int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat)
+    void test_run(vector<int64_t> repeatsDims, aclDataType repeatsDtype, aclFormat repeatsFormat,
+                  vector<int64_t> repeatsRange, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype,
+                  aclFormat outFormat)
     {
-        auto repeats =
-            TensorDesc(repeatsDims, repeatsDtype, repeatsFormat).ValueRange(repeatsRange[0], repeatsRange[1]);
+        auto repeats = TensorDesc(repeatsDims, repeatsDtype, repeatsFormat)
+                           .ValueRange(repeatsRange[0], repeatsRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat).Precision(0.00001, 0.00001);
 
         auto ut = OP_API_UT(aclnnRepeatInterleaveTensor, INPUT(repeats, outputSize), OUTPUT(out));
@@ -49,12 +43,12 @@ protected:
         EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
     }
 
-    void test_run_invalid(
-        vector<int64_t> repeatsDims, aclDataType repeatsDtype, aclFormat repeatsFormat, vector<int64_t> repeatsRange,
-        int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat)
+    void test_run_invalid(vector<int64_t> repeatsDims, aclDataType repeatsDtype, aclFormat repeatsFormat,
+                          vector<int64_t> repeatsRange, int64_t outputSize, vector<int64_t> outDims,
+                          aclDataType outDtype, aclFormat outFormat)
     {
-        auto repeats =
-            TensorDesc(repeatsDims, repeatsDtype, repeatsFormat).ValueRange(repeatsRange[0], repeatsRange[1]);
+        auto repeats = TensorDesc(repeatsDims, repeatsDtype, repeatsFormat)
+                           .ValueRange(repeatsRange[0], repeatsRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat).Precision(0.00001, 0.00001);
 
         auto ut = OP_API_UT(aclnnRepeatInterleaveTensor, INPUT(repeats, outputSize), OUTPUT(out));

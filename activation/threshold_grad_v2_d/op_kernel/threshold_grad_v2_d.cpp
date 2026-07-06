@@ -21,15 +21,14 @@
 #include "arch35/threshold_grad_v2_d.h"
 #include "arch35/threshold_grad_v2_d_tiling_struct.h"
 
-using TilingData4 = ThresholdGradV2DTilingData<4>;  // RANK<=4: 数组维度 [4]
-using TilingData8 = ThresholdGradV2DTilingData<8>;  // RANK>4: 数组维度 [8]
+using TilingData4 = ThresholdGradV2DTilingData<4>; // RANK<=4: 数组维度 [4]
+using TilingData8 = ThresholdGradV2DTilingData<8>; // RANK>4: 数组维度 [8]
 
-template<int RANK>
-__global__ __aicore__ void threshold_grad_v2_d(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out,
-    GM_ADDR workspace, GM_ADDR tiling)
+template <int RANK>
+__global__ __aicore__ void threshold_grad_v2_d(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, GM_ADDR workspace,
+                                               GM_ADDR tiling)
 {
-    GM_ADDR ins[2]  = {gradOutput, self};
+    GM_ADDR ins[2] = {gradOutput, self};
     GM_ADDR outs[1] = {out};
 
     REGISTER_NONE_TILING;

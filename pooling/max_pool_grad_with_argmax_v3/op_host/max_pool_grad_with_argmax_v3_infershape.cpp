@@ -56,10 +56,9 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmaxV3(gert::InferShapeContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xOriFormat = xDesc->GetOriginFormat();
     if (xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC) {
-        OP_LOGE_FOR_INVALID_FORMAT(
-            "MaxPoolGradWithArgmaxV3", "format", Ops::Base::ToString(xOriFormat),
-            Ops::Base::ToString(FORMAT_ND) + "," + Ops::Base::ToString(FORMAT_NCHW) + "," +
-                Ops::Base::ToString(FORMAT_NHWC));
+        OP_LOGE_FOR_INVALID_FORMAT("MaxPoolGradWithArgmaxV3", "format", Ops::Base::ToString(xOriFormat),
+                                   Ops::Base::ToString(FORMAT_ND) + "," + Ops::Base::ToString(FORMAT_NCHW) + "," +
+                                       Ops::Base::ToString(FORMAT_NHWC));
         return GRAPH_FAILED;
     }
     auto attrs = context->GetAttrs();
@@ -68,35 +67,31 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmaxV3(gert::InferShapeContext* co
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
     if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()),
-            std::to_string(ATTR_LIST_SHAPE_SIZE));
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE));
         return GRAPH_FAILED;
     }
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "strides", std::to_string(strides->GetSize()),
-            std::to_string(ATTR_LIST_SHAPE_SIZE));
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE));
         return GRAPH_FAILED;
     }
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     if (pads->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            context->GetNodeName(), "pads", std::to_string(pads->GetSize()),
-            std::to_string(ATTR_LIST_SHAPE_SIZE));
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads", std::to_string(pads->GetSize()),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE));
         return GRAPH_FAILED;
     }
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilation);
-     if (dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
- 	         OP_LOGE_FOR_INVALID_LISTSIZE(
- 	             context->GetNodeName(), "dilation", std::to_string(dilation->GetSize()),
- 	             std::to_string(ATTR_LIST_SHAPE_SIZE));
- 	         return GRAPH_FAILED;
- 	     }
+    if (dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation", std::to_string(dilation->GetSize()),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE));
+        return GRAPH_FAILED;
+    }
     auto ceil_mode = attrs->GetAttrPointer<bool>(ATTR_INDEX_CEIL_MODE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ceil_mode);
 
@@ -113,7 +108,8 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmaxV3(gert::InferShapeContext* co
     gert::Shape* yShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     size_t xDimNum = xShape->GetDimNum();
-    if (Ops::Base::IsUnknownShape(*xShape) || Ops::Base::IsUnknownShape(*gradShape) || Ops::Base::IsUnknownShape(*argmaxShape)) {
+    if (Ops::Base::IsUnknownShape(*xShape) || Ops::Base::IsUnknownShape(*gradShape) ||
+        Ops::Base::IsUnknownShape(*argmaxShape)) {
         SetAllUnknownDim(xDimNum, yShape);
         OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPoolGradWithArgmaxV3 infershape handle unknown rank or shape.");
         return ge::GRAPH_SUCCESS;

@@ -59,8 +59,8 @@ uint32_t GetDataTypeSize(DataType dt)
     return FP32_BYTE_SIZE;
 }
 
-int32_t GenOnesData(vector<int64_t> shapes, Tensor &input_tensor, TensorDesc &input_tensor_desc,
-                    DataType data_type, int value)
+int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                    int value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -68,26 +68,26 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor &input_tensor, TensorDesc &in
         size *= shapes[i];
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    int32_t *pData = new (std::nothrow) int32_t[data_len];
+    int32_t* pData = new (std::nothrow) int32_t[data_len];
     for (uint32_t i = 0; i < size; ++i) {
         *(pData + i) = value;
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t *>(pData), data_len);
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
     delete[] pData;
     return SUCCESS;
 }
 
-int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t *inputData)
+int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 {
-    FILE *fp;
+    FILE* fp;
     fp = fopen(bin_file.c_str(), "w");
     fwrite(inputData, sizeof(uint8_t), data_size, fp);
     fclose(fp);
     return SUCCESS;
 }
 
-int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor> &input, std::vector<Operator> &inputs,
-    std::vector<Operator> &outputs, Graph &graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
 
@@ -117,9 +117,9 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor> &input, std::vect
     return SUCCESS;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    const char *graph_name = "tc_ge_irrun_test";
+    const char* graph_name = "tc_ge_irrun_test";
     Graph graph(graph_name);
     std::vector<ge::Tensor> input;
 
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 
     std::map<AscendString, AscendString> build_options = {};
     printf("%s - INFO - [XIR]: Start to create ir session using build options\n", GetTime().c_str());
-    ge::Session *session = new Session(build_options);
+    ge::Session* session = new Session(build_options);
 
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());

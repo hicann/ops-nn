@@ -61,7 +61,8 @@ constexpr int64_t COMPUTE_BUF_BYTES_BF16 = 32;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
+{
     if (inShape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -126,10 +127,14 @@ static float GetLambdAttr(gert::TilingContext* context)
 static uint64_t GetSchModeFromDtype(ge::DataType dataType)
 {
     switch (dataType) {
-        case ge::DT_FLOAT:    return SOFTSHRINK_TPL_SCH_MODE_FP32;
-        case ge::DT_FLOAT16:  return SOFTSHRINK_TPL_SCH_MODE_FP16;
-        case ge::DT_BF16:     return SOFTSHRINK_TPL_SCH_MODE_BF16;
-        default:              return SOFTSHRINK_TPL_SCH_MODE_FP32;
+        case ge::DT_FLOAT:
+            return SOFTSHRINK_TPL_SCH_MODE_FP32;
+        case ge::DT_FLOAT16:
+            return SOFTSHRINK_TPL_SCH_MODE_FP16;
+        case ge::DT_BF16:
+            return SOFTSHRINK_TPL_SCH_MODE_BF16;
+        default:
+            return SOFTSHRINK_TPL_SCH_MODE_FP32;
     }
 }
 
@@ -138,10 +143,8 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataT
     context->SetBlockDim(1);
     SoftshrinkTilingData* tiling = context->GetTilingData<SoftshrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftshrinkTilingData), 0, sizeof(SoftshrinkTilingData)) != EOK,
-        OP_LOGE(context, "memset_s failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftshrinkTilingData), 0, sizeof(SoftshrinkTilingData)) != EOK,
+                OP_LOGE(context, "memset_s failed"), return ge::GRAPH_FAILED);
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = WS_SYS_SIZE;
@@ -149,8 +152,8 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataT
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSize,
-                                     ge::DataType dataType, int64_t alignElems, int64_t& ubFactor)
+static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSize, ge::DataType dataType,
+                                    int64_t alignElems, int64_t& ubFactor)
 {
     int64_t bytesPerElem;
     if (dataType == ge::DT_BF16) {
@@ -162,15 +165,14 @@ static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSiz
         bytesPerElem = COMPUTE_BUF_BYTES_FP16;
     }
     constexpr uint64_t MAX_UB_SIZE = 512ULL * 1024ULL * 1024ULL;
-    OP_CHECK_IF(ubSize > MAX_UB_SIZE,
-        OP_LOGE(context, "ubSize=%lu exceeds max expected size %lu", ubSize, MAX_UB_SIZE),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize > MAX_UB_SIZE, OP_LOGE(context, "ubSize=%lu exceeds max expected size %lu", ubSize, MAX_UB_SIZE),
+                return ge::GRAPH_FAILED);
     int64_t ubFactorRaw = (static_cast<int64_t>(ubSize) - UB_RESERVED_BYTE) / bytesPerElem;
     ubFactor = FloorAlign(ubFactorRaw, alignElems);
     OP_CHECK_IF(ubFactor <= 0,
-        OP_LOGE(context, "ubFactor is %ld, invalid (ubSize=%lu, UB_RESERVED_BYTE=%ld, dtype=%d)",
-                ubFactor, ubSize, UB_RESERVED_BYTE, static_cast<int>(dataType)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubFactor is %ld, invalid (ubSize=%lu, UB_RESERVED_BYTE=%ld, dtype=%d)", ubFactor,
+                        ubSize, UB_RESERVED_BYTE, static_cast<int>(dataType)),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -178,11 +180,15 @@ static ge::graphStatus SoftshrinkTilingFunc(gert::TilingContext* context)
 {
     SoftshrinkPlatInfo platInfo;
     auto ret = GetPlatformInfo(context, platInfo);
-    if (ret != ge::GRAPH_SUCCESS) { return ret; }
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     SoftshrinkInputInfo inputInfo;
     ret = GetInputInfo(context, inputInfo);
-    if (ret != ge::GRAPH_SUCCESS) { return ret; }
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     float lambd = GetLambdAttr(context);
 
@@ -203,10 +209,8 @@ static ge::graphStatus SoftshrinkTilingFunc(gert::TilingContext* context)
 
     SoftshrinkTilingData* tiling = context->GetTilingData<SoftshrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftshrinkTilingData), 0, sizeof(SoftshrinkTilingData)) != EOK,
-        OP_LOGE(context, "memset_s failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftshrinkTilingData), 0, sizeof(SoftshrinkTilingData)) != EOK,
+                OP_LOGE(context, "memset_s failed"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = inputInfo.totalNum;
     tiling->blockFactor = CeilDiv(inputInfo.totalNum, platInfo.coreNum);
@@ -214,7 +218,9 @@ static ge::graphStatus SoftshrinkTilingFunc(gert::TilingContext* context)
 
     int64_t ubFactor;
     ret = CalcUbFactor(context, platInfo.ubSize, inputInfo.dataType, alignElems, ubFactor);
-    if (ret != ge::GRAPH_SUCCESS) { return ret; }
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
     tiling->ubFactor = ubFactor;
     tiling->lambd = lambd;
 
@@ -229,8 +235,6 @@ static ge::graphStatus TilingParseForSoftshrink([[maybe_unused]] gert::TilingPar
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Softshrink)
-    .Tiling(SoftshrinkTilingFunc)
-    .TilingParse<SoftshrinkCompileInfo>(TilingParseForSoftshrink);
+IMPL_OP_OPTILING(Softshrink).Tiling(SoftshrinkTilingFunc).TilingParse<SoftshrinkCompileInfo>(TilingParseForSoftshrink);
 
 } // namespace optiling

@@ -17,8 +17,8 @@
 #include "clipped_swiglu.hpp"
 
 using namespace AscendC;
-extern "C" __global__ __aicore__ void clipped_swiglu(
-    GM_ADDR xGM, GM_ADDR groupIndexGM, GM_ADDR yGM, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void clipped_swiglu(GM_ADDR xGM, GM_ADDR groupIndexGM, GM_ADDR yGM, GM_ADDR workspace,
+                                                     GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

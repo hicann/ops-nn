@@ -71,22 +71,13 @@ constexpr uint32_t LOW_PRECISION_TYPE_SIZE = 2;
 // ===== AtomicAddDispatch overloads =====
 
 // float: asc_atomic_add(__gm__ float*, float)
-__simt_callee__ inline void AtomicAddDispatch(__gm__ float* addr, float val)
-{
-    asc_atomic_add(addr, val);
-}
+__simt_callee__ inline void AtomicAddDispatch(__gm__ float* addr, float val) { asc_atomic_add(addr, val); }
 
 // half: asc_atomic_add(__gm__ half*, half) - return value unreliable, not used
-__simt_callee__ inline void AtomicAddDispatch(__gm__ half* addr, half val)
-{
-    asc_atomic_add(addr, val);
-}
+__simt_callee__ inline void AtomicAddDispatch(__gm__ half* addr, half val) { asc_atomic_add(addr, val); }
 
 // bfloat16_t: asc_atomic_add(__gm__ bfloat16_t*, bfloat16_t) - return value unreliable
-__simt_callee__ inline void AtomicAddDispatch(__gm__ bfloat16_t* addr, bfloat16_t val)
-{
-    asc_atomic_add(addr, val);
-}
+__simt_callee__ inline void AtomicAddDispatch(__gm__ bfloat16_t* addr, bfloat16_t val) { asc_atomic_add(addr, val); }
 
 // double: asc_atomic_add does not support __gm__ double*
 // ascend950 aicore forbids double arithmetic; implement addition via uint64_t bit manipulation
@@ -95,8 +86,10 @@ __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
 {
     uint64_t aAbs = a & DOUBLE_ABS_MASK;
     uint64_t bAbs = b & DOUBLE_ABS_MASK;
-    if (aAbs == 0) return b;
-    if (bAbs == 0) return a;
+    if (aAbs == 0)
+        return b;
+    if (bAbs == 0)
+        return a;
 
     uint32_t aSign = (uint32_t)(a >> DOUBLE_SIGN_BIT_SHIFT);
     uint32_t aExp = (uint32_t)((a >> DOUBLE_EXP_SHIFT) & DOUBLE_EXP_MASK);
@@ -113,18 +106,28 @@ __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
     bool aIsInf = (aExp == DOUBLE_EXP_MASK) && (aMan == 0);
     bool bIsInf = (bExp == DOUBLE_EXP_MASK) && (bMan == 0);
     // NaN + anything = NaN
-    if (aIsNan || bIsNan) return QUIET_NAN;
+    if (aIsNan || bIsNan)
+        return QUIET_NAN;
     // Inf + (-Inf) = NaN, (-Inf) + Inf = NaN
-    if (aIsInf && bIsInf && (aSign != bSign)) return QUIET_NAN;
+    if (aIsInf && bIsInf && (aSign != bSign))
+        return QUIET_NAN;
     // Inf + Inf (same sign) = Inf; Inf + finite = Inf
-    if (aIsInf) return a;
-    if (bIsInf) return b;
+    if (aIsInf)
+        return a;
+    if (bIsInf)
+        return b;
 
     // Add implicit leading 1
-    if (aExp != 0) aMan |= DOUBLE_IMPLICIT_BIT;
-    else { aExp = 1; } // denormal
-    if (bExp != 0) bMan |= DOUBLE_IMPLICIT_BIT;
-    else { bExp = 1; } // denormal
+    if (aExp != 0)
+        aMan |= DOUBLE_IMPLICIT_BIT;
+    else {
+        aExp = 1;
+    } // denormal
+    if (bExp != 0)
+        bMan |= DOUBLE_IMPLICIT_BIT;
+    else {
+        bExp = 1;
+    } // denormal
 
     // Shift mantissas left by 11 to get 64-bit working space (bit 63 = implicit 1)
     aMan <<= DOUBLE_EXP_WIDTH;
@@ -137,11 +140,17 @@ __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
     if (aExp >= bExp) {
         rExp = aExp;
         uint32_t shift = aExp - bExp;
-        if (shift < SHIFT_LIMIT_64) bMan >>= shift; else bMan = 0;
+        if (shift < SHIFT_LIMIT_64)
+            bMan >>= shift;
+        else
+            bMan = 0;
     } else {
         rExp = bExp;
         uint32_t shift = bExp - aExp;
-        if (shift < SHIFT_LIMIT_64) aMan >>= shift; else aMan = 0;
+        if (shift < SHIFT_LIMIT_64)
+            aMan >>= shift;
+        else
+            aMan = 0;
     }
 
     if (aSign == bSign) {
@@ -157,33 +166,54 @@ __simt_callee__ inline uint64_t DoubleAddBits(uint64_t a, uint64_t b)
         }
     }
 
-    if (rMan == 0) return 0;
+    if (rMan == 0)
+        return 0;
 
     // Normalize: find highest set bit
     uint32_t lz = 0;
     uint64_t tmp = rMan;
-    if ((tmp & LZ_MASK_32) == 0) { lz += LZ_STEP_32; tmp <<= LZ_STEP_32; }
-    if ((tmp & LZ_MASK_16) == 0) { lz += LZ_STEP_16; tmp <<= LZ_STEP_16; }
-    if ((tmp & LZ_MASK_8) == 0) { lz += LZ_STEP_8; tmp <<= LZ_STEP_8; }
-    if ((tmp & LZ_MASK_4) == 0) { lz += LZ_STEP_4; tmp <<= LZ_STEP_4; }
-    if ((tmp & LZ_MASK_2) == 0) { lz += LZ_STEP_2; tmp <<= LZ_STEP_2; }
-    if ((tmp & LZ_MASK_1) == 0) { lz += 1; }
+    if ((tmp & LZ_MASK_32) == 0) {
+        lz += LZ_STEP_32;
+        tmp <<= LZ_STEP_32;
+    }
+    if ((tmp & LZ_MASK_16) == 0) {
+        lz += LZ_STEP_16;
+        tmp <<= LZ_STEP_16;
+    }
+    if ((tmp & LZ_MASK_8) == 0) {
+        lz += LZ_STEP_8;
+        tmp <<= LZ_STEP_8;
+    }
+    if ((tmp & LZ_MASK_4) == 0) {
+        lz += LZ_STEP_4;
+        tmp <<= LZ_STEP_4;
+    }
+    if ((tmp & LZ_MASK_2) == 0) {
+        lz += LZ_STEP_2;
+        tmp <<= LZ_STEP_2;
+    }
+    if ((tmp & LZ_MASK_1) == 0) {
+        lz += 1;
+    }
 
     rMan <<= lz;
     int32_t expAdj = (int32_t)rExp - (int32_t)lz;
     if (expAdj <= 0) {
         // Denormal or zero
-        if (expAdj < DOUBLE_DENORM_CUTOFF) return ((uint64_t)rSign << DOUBLE_SIGN_BIT_SHIFT);
+        if (expAdj < DOUBLE_DENORM_CUTOFF)
+            return ((uint64_t)rSign << DOUBLE_SIGN_BIT_SHIFT);
         rMan >>= (1 - expAdj);
         rExp = 0;
     } else {
         rExp = (uint32_t)expAdj;
-        if (rExp >= DOUBLE_EXP_MASK) return ((uint64_t)rSign << DOUBLE_SIGN_BIT_SHIFT) | DOUBLE_INF_PATTERN; // Inf
+        if (rExp >= DOUBLE_EXP_MASK)
+            return ((uint64_t)rSign << DOUBLE_SIGN_BIT_SHIFT) | DOUBLE_INF_PATTERN; // Inf
     }
 
     // Extract mantissa: bit 63 is the implicit 1, bits 62..12 are the 52-bit mantissa
     uint64_t rManField = (rMan >> DOUBLE_EXP_WIDTH) & DOUBLE_MAN_MASK;
-    if (rExp != 0) rManField &= DOUBLE_MAN_MASK; // remove implicit 1
+    if (rExp != 0)
+        rManField &= DOUBLE_MAN_MASK; // remove implicit 1
 
     return ((uint64_t)rSign << DOUBLE_SIGN_BIT_SHIFT) | ((uint64_t)rExp << DOUBLE_EXP_SHIFT) | rManField;
 }
@@ -203,9 +233,8 @@ __simt_callee__ inline void AtomicAddDispatch(__gm__ double* addr, double val)
 
 // ===== Inner loop: scatter-add one row =====
 template <typename T>
-__simt_callee__ inline void ScatterAddRow(
-    __gm__ T* output, __gm__ const T* grad,
-    int64_t outBase, int64_t gradBase, int64_t innerSize)
+__simt_callee__ inline void ScatterAddRow(__gm__ T* output, __gm__ const T* grad, int64_t outBase, int64_t gradBase,
+                                          int64_t innerSize)
 {
     for (int64_t k = 0; k < innerSize; ++k) {
         AtomicAddDispatch(&output[outBase + k], grad[gradBase + k]);
@@ -214,37 +243,29 @@ __simt_callee__ inline void ScatterAddRow(
 
 // ===== SIMT VF Kernel: Phase 1 - Zero Initialize =====
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>)
-inline void OpSparseSegmentSumGradZeroInit(
-    IDX_T totalOutputElements,
-    __gm__ T* output)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradZeroInit(
+    IDX_T totalOutputElements, __gm__ T* output)
 {
     for (IDX_T idx = static_cast<IDX_T>(blockIdx.x) * static_cast<IDX_T>(blockDim.x) + static_cast<IDX_T>(threadIdx.x);
-         idx < totalOutputElements;
-         idx += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x))
-    {
+         idx < totalOutputElements; idx += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x)) {
         output[idx] = static_cast<T>(0);
     }
 }
 
 // ===== SIMT VF Kernel: Phase 2 - Scatter Add =====
 template <typename T, typename IndexT, typename SegIdT, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>)
-inline void OpSparseSegmentSumGradScatterAdd(
-    IDX_T n, IDX_T innerSize,
-    __gm__ T* grad, __gm__ IndexT* indices, __gm__ SegIdT* segmentIds,
-    __gm__ T* output)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradScatterAdd(
+    IDX_T n, IDX_T innerSize, __gm__ T* grad, __gm__ IndexT* indices, __gm__ SegIdT* segmentIds, __gm__ T* output)
 {
     for (IDX_T j = static_cast<IDX_T>(blockIdx.x) * static_cast<IDX_T>(blockDim.x) + static_cast<IDX_T>(threadIdx.x);
-         j < n;
-         j += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x))
-    {
+         j < n; j += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x)) {
         IndexT outIdx = indices[j];
         SegIdT segId = segmentIds[j];
         IDX_T outBase = static_cast<IDX_T>(outIdx) * innerSize;
         IDX_T gradBase = static_cast<IDX_T>(segId) * innerSize;
 
-        ScatterAddRow<T>(output, grad, static_cast<int64_t>(outBase), static_cast<int64_t>(gradBase), static_cast<int64_t>(innerSize));
+        ScatterAddRow<T>(output, grad, static_cast<int64_t>(outBase), static_cast<int64_t>(gradBase),
+                         static_cast<int64_t>(innerSize));
     }
 }
 
@@ -256,10 +277,8 @@ inline void OpSparseSegmentSumGradScatterAdd(
 static constexpr uint32_t WARP_SZ = 32;
 
 template <typename T, typename IndexT, typename SegIdT, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>)
-inline void OpSparseSegmentSumGradScatterAddWarp(
-    IDX_T n, IDX_T outputDim0, IDX_T innerSize,
-    __gm__ T* grad, __gm__ IndexT* indices, __gm__ SegIdT* segmentIds,
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM<IDX_T>) inline void OpSparseSegmentSumGradScatterAddWarp(
+    IDX_T n, IDX_T outputDim0, IDX_T innerSize, __gm__ T* grad, __gm__ IndexT* indices, __gm__ SegIdT* segmentIds,
     __gm__ T* output)
 {
     uint32_t tid = static_cast<uint32_t>(threadIdx.x);
@@ -276,10 +295,8 @@ inline void OpSparseSegmentSumGradScatterAddWarp(
     int64_t totalOutElems = static_cast<int64_t>(outputDim0) * static_cast<int64_t>(innerSize);
 
     // Each warp processes one output element at a time (grid-stride over output elements)
-    for (int64_t outElem = static_cast<int64_t>(globalWarpId);
-         outElem < totalOutElems;
-         outElem += static_cast<int64_t>(totalWarps))
-    {
+    for (int64_t outElem = static_cast<int64_t>(globalWarpId); outElem < totalOutElems;
+         outElem += static_cast<int64_t>(totalWarps)) {
         IDX_T row = static_cast<IDX_T>(outElem / static_cast<int64_t>(innerSize));
         IDX_T k = static_cast<IDX_T>(outElem % static_cast<int64_t>(innerSize));
 
@@ -289,7 +306,8 @@ inline void OpSparseSegmentSumGradScatterAddWarp(
             IndexT outIdx = indices[j];
             if (static_cast<IDX_T>(outIdx) == row) {
                 SegIdT segId = segmentIds[j];
-                int64_t gradIdx = static_cast<int64_t>(segId) * static_cast<int64_t>(innerSize) + static_cast<int64_t>(k);
+                int64_t gradIdx = static_cast<int64_t>(segId) * static_cast<int64_t>(innerSize) +
+                                  static_cast<int64_t>(k);
                 localSum += static_cast<float>(grad[gradIdx]);
             }
         }
@@ -311,9 +329,8 @@ inline void OpSparseSegmentSumGradScatterAddWarp(
 
 // ===== Process function =====
 template <typename T, typename IndexT, typename SegIdT>
-__aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds,
-                                GM_ADDR outputDim0, GM_ADDR output,
-                                const SparseSegmentSumGradTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds, GM_ADDR outputDim0, GM_ADDR output,
+                               const SparseSegmentSumGradTilingData* tilingData)
 {
     __gm__ T* gradGm = (__gm__ T*)grad;
     __gm__ IndexT* indicesGm = (__gm__ IndexT*)indices;
@@ -325,10 +342,8 @@ __aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds
     int64_t innerSz = tilingData->innerSize;
     int64_t outDim0 = tilingData->outputDim0;
 
-    bool use32 = (totalOut <= static_cast<int64_t>(INT32_MAX)) &&
-                 (n <= static_cast<int64_t>(INT32_MAX)) &&
-                 (innerSz <= static_cast<int64_t>(INT32_MAX)) &&
-                 (outDim0 <= static_cast<int64_t>(INT32_MAX));
+    bool use32 = (totalOut <= static_cast<int64_t>(INT32_MAX)) && (n <= static_cast<int64_t>(INT32_MAX)) &&
+                 (innerSz <= static_cast<int64_t>(INT32_MAX)) && (outDim0 <= static_cast<int64_t>(INT32_MAX));
 
     // Decide whether to use warp-reduction approach (better precision for fp16/bf16,
     // and fewer atomic conflicts for all dtypes on large shapes)
@@ -340,25 +355,22 @@ __aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds
     int64_t warpWork = totalOut * n;
     // Use warp approach when:
     // 1. Low precision dtype (fp16/bf16) with moderate work
-    // 2. fp32 when there are many concurrent writes (n/outputDim0 > HIGH_CONFLICT_RATIO_THRESHOLD) and work is manageable
+    // 2. fp32 when there are many concurrent writes (n/outputDim0 > HIGH_CONFLICT_RATIO_THRESHOLD) and work is
+    // manageable
     // 3. Never for double (compiler cannot handle float↔double in SIMT VF)
     constexpr bool IS_LOW_PRECISION = (sizeof(T) <= LOW_PRECISION_TYPE_SIZE);
     bool highConflict = (outDim0 > 0) && (n / outDim0 > HIGH_CONFLICT_RATIO_THRESHOLD);
-    bool useWarpApproach = !IS_DOUBLE && (
-        (IS_LOW_PRECISION && (innerSz <= WARP_INNER_SIZE_LIMIT) && (n <= WARP_SEGMENT_COUNT_LIMIT) && (warpWork <= WARP_WORK_LIMIT)) ||
-        (highConflict && (innerSz <= WARP_INNER_SIZE_LIMIT) && (n <= WARP_SEGMENT_COUNT_LIMIT) && (warpWork <= WARP_WORK_LIMIT)));
+    bool useWarpApproach = !IS_DOUBLE && ((IS_LOW_PRECISION && (innerSz <= WARP_INNER_SIZE_LIMIT) &&
+                                           (n <= WARP_SEGMENT_COUNT_LIMIT) && (warpWork <= WARP_WORK_LIMIT)) ||
+                                          (highConflict && (innerSz <= WARP_INNER_SIZE_LIMIT) &&
+                                           (n <= WARP_SEGMENT_COUNT_LIMIT) && (warpWork <= WARP_WORK_LIMIT)));
 
     // Phase 1: Zero-initialize output (always runs, even when N=0)
     if (use32) {
-        asc_vf_call<OpSparseSegmentSumGradZeroInit<T, int32_t>>(
-            dim3(THREAD_NUM<int32_t>),
-            static_cast<int32_t>(totalOut),
-            outputGm);
+        asc_vf_call<OpSparseSegmentSumGradZeroInit<T, int32_t>>(dim3(THREAD_NUM<int32_t>),
+                                                                static_cast<int32_t>(totalOut), outputGm);
     } else {
-        asc_vf_call<OpSparseSegmentSumGradZeroInit<T, int64_t>>(
-            dim3(THREAD_NUM<int64_t>),
-            totalOut,
-            outputGm);
+        asc_vf_call<OpSparseSegmentSumGradZeroInit<T, int64_t>>(dim3(THREAD_NUM<int64_t>), totalOut, outputGm);
     }
 
     // N=0 boundary: skip Phase 2 entirely when indices/segment_ids are empty
@@ -373,27 +385,20 @@ __aicore__ inline void Process(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds
     if (use32) {
         if (useWarpApproach) {
             asc_vf_call<OpSparseSegmentSumGradScatterAddWarp<T, IndexT, SegIdT, int32_t>>(
-                dim3(THREAD_NUM<int32_t>),
-                static_cast<int32_t>(n), static_cast<int32_t>(outDim0),
-                static_cast<int32_t>(innerSz),
-                gradGm, indicesGm, segIdsGm, outputGm);
+                dim3(THREAD_NUM<int32_t>), static_cast<int32_t>(n), static_cast<int32_t>(outDim0),
+                static_cast<int32_t>(innerSz), gradGm, indicesGm, segIdsGm, outputGm);
         } else {
             asc_vf_call<OpSparseSegmentSumGradScatterAdd<T, IndexT, SegIdT, int32_t>>(
-                dim3(THREAD_NUM<int32_t>),
-                static_cast<int32_t>(n), static_cast<int32_t>(innerSz),
-                gradGm, indicesGm, segIdsGm, outputGm);
+                dim3(THREAD_NUM<int32_t>), static_cast<int32_t>(n), static_cast<int32_t>(innerSz), gradGm, indicesGm,
+                segIdsGm, outputGm);
         }
     } else {
         if (useWarpApproach) {
             asc_vf_call<OpSparseSegmentSumGradScatterAddWarp<T, IndexT, SegIdT, int64_t>>(
-                dim3(THREAD_NUM<int64_t>),
-                n, outDim0, innerSz,
-                gradGm, indicesGm, segIdsGm, outputGm);
+                dim3(THREAD_NUM<int64_t>), n, outDim0, innerSz, gradGm, indicesGm, segIdsGm, outputGm);
         } else {
             asc_vf_call<OpSparseSegmentSumGradScatterAdd<T, IndexT, SegIdT, int64_t>>(
-                dim3(THREAD_NUM<int64_t>),
-                n, innerSz,
-                gradGm, indicesGm, segIdsGm, outputGm);
+                dim3(THREAD_NUM<int64_t>), n, innerSz, gradGm, indicesGm, segIdsGm, outputGm);
         }
     }
 }

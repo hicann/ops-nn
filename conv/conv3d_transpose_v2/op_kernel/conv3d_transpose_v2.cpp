@@ -35,22 +35,21 @@
 using namespace AscendC;
 
 #if __CCE_AICORE__ == 310
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling, uint8_t loadB1Condition>
-__global__ __aicore__ void conv3d_transpose_v2(
-    GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
+          uint8_t loadB1Condition>
+__global__ __aicore__ void conv3d_transpose_v2(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                               GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    conv3d_transpose_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBasicBlockTiling,
-                               loadB1Condition>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+    conv3d_transpose_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBasicBlockTiling, loadB1Condition>(
+        input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     return;
 #endif
 }
 #else
 template <uint8_t loadB2Condition, bool enableKernelSplit, bool useBasicBlock>
-__global__ __aicore__ void conv3d_transpose_v2(
-    GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void conv3d_transpose_v2(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                               GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -78,11 +77,14 @@ __global__ __aicore__ void conv3d_transpose_v2(
         opInitOutput.Destroy();
     }
     if (useBasicBlock == false) {
-        Conv3dDx<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, loadB2Condition, enableKernelSplit> op;
+        Conv3dDx<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, loadB2Condition, enableKernelSplit>
+            op;
         op.Init(filter, x, y, usrWsp, &tilingData);
         op.Process();
     } else {
-        Conv3dDxBasicBlockSplitMN<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, loadB2Condition, enableKernelSplit> op;
+        Conv3dDxBasicBlockSplitMN<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, loadB2Condition,
+                                  enableKernelSplit>
+            op;
         op.Init(filter, x, y, usrWsp, &tilingData);
         op.Process();
     }

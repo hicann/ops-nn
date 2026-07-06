@@ -31,15 +31,9 @@ using namespace ut_util;
 
 class SmoothL1LossV2DavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SmoothL1LossV2DavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SmoothL1LossV2DavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SmoothL1LossV2DavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SmoothL1LossV2DavidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -54,9 +48,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
         "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64, "socVersion": "Ascend950"}
@@ -66,9 +60,10 @@ static void InitPlatForm(
     platFormInfo.Init();
 }
 
-static void DoSmoothL1LossV2TilingCase(
-    std::initializer_list<int64_t>& predictShape, std::initializer_list<int64_t>& labelShape,
-    std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype, float sigma, std::string reduction, std::string& expectStr)
+static void DoSmoothL1LossV2TilingCase(std::initializer_list<int64_t>& predictShape,
+                                       std::initializer_list<int64_t>& labelShape,
+                                       std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype,
+                                       float sigma, std::string reduction, std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -96,8 +91,8 @@ static void DoSmoothL1LossV2TilingCase(
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -154,6 +149,6 @@ TEST_F(SmoothL1LossV2DavidTiling, smooth_l1_loss_v2_tiling1)
     float sigma = 1.0;
 
     std::string expectStr = "";
-    DoSmoothL1LossV2TilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, sigma, reduction, expectStr);
+    DoSmoothL1LossV2TilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, sigma, reduction,
+                               expectStr);
 }

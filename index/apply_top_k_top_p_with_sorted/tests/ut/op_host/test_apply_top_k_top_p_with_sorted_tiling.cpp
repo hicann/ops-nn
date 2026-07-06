@@ -43,16 +43,11 @@ struct ApplyTopKTopPWithSortedTilingTestParam {
     string expected_tiling_data;
 };
 
-
 class ApplyTopKTopPWithSortedTilingTest : public testing::TestWithParam<ApplyTopKTopPWithSortedTilingTestParam> {
-    protected:
-        static void SetUpTestCase() {
-            std::cout << "ApplyTopKTopPWithSortedTilingTest SetUp" << std::endl;
-        }
+protected:
+    static void SetUpTestCase() { std::cout << "ApplyTopKTopPWithSortedTilingTest SetUp" << std::endl; }
 
-        static void TearDownTestCase() {
-            std::cout << "ApplyTopKTopPWithSortedTilingTest TearDown" << std::endl;
-        }
+    static void TearDownTestCase() { std::cout << "ApplyTopKTopPWithSortedTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -102,18 +97,18 @@ TEST_P(ApplyTopKTopPWithSortedTilingTest, test_case_apply_top_k_top_p_with_sorte
     // compile info
     optiling::TilingForApplyTopKTopPWithSortedCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -280,17 +275,17 @@ static ApplyTopKTopPWithSortedTilingTestParam cases[] = {
      0,
      ""},
     {"test_case_float32_topP_succ",
-    ge::DT_FLOAT,
-    ge::DT_INT32,
-    {4, 152064},
-    {4, 152064},
-    {4},
-    {},
-    {4, 152064},
-    ge::GRAPH_SUCCESS,
-    40,
-    2,
-    "4 152064 0 4 40 1024 1024 1024 1024 512 512 196608 18 0 "},
+     ge::DT_FLOAT,
+     ge::DT_INT32,
+     {4, 152064},
+     {4, 152064},
+     {4},
+     {},
+     {4, 152064},
+     ge::GRAPH_SUCCESS,
+     40,
+     2,
+     "4 152064 0 4 40 1024 1024 1024 1024 512 512 196608 18 0 "},
 };
 
 INSTANTIATE_TEST_CASE_P(ApplyTopKTopPWithSorted, ApplyTopKTopPWithSortedTilingTest, testing::ValuesIn(cases));

@@ -24,15 +24,9 @@
 
 class ForeachCopyTilingArch35 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachCopyTilingArch35 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachCopyTilingArch35 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachCopyTilingArch35 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachCopyTilingArch35 TearDown" << std::endl; }
 };
 
 TEST_F(ForeachCopyTilingArch35, foreach_copy_float32_success)
@@ -69,19 +63,19 @@ TEST_F(ForeachCopyTilingArch35, foreach_copy_float32_success)
 
     ForeachCopyCompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -108,8 +102,7 @@ TEST_F(ForeachCopyTilingArch35, foreach_copy_float32_success)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();

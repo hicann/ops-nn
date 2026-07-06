@@ -25,10 +25,7 @@ using namespace PoolGradNameSpace;
 namespace optiling {
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 
-bool MaxPoolGradTiling::IsCapable()
-{
-    return true;
-}
+bool MaxPoolGradTiling::IsCapable() { return true; }
 
 ge::graphStatus MaxPoolGradTiling::DoOpTiling()
 {
@@ -56,10 +53,7 @@ ge::graphStatus MaxPoolGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaxPoolGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPoolGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t MaxPoolGradTiling::GetTilingKey() const
 {

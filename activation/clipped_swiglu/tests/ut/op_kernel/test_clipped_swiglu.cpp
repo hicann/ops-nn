@@ -21,19 +21,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void clipped_swiglu(
-    GM_ADDR xGM, GM_ADDR groupIndexGM, GM_ADDR yGM, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void clipped_swiglu(GM_ADDR xGM, GM_ADDR groupIndexGM, GM_ADDR yGM, GM_ADDR workspace,
+                                                     GM_ADDR tiling);
 
 class clipped_swiglu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "clipped_swiglu_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "clipped_swiglu_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "clipped_swiglu_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "clipped_swiglu_test TearDown\n" << endl; }
 };
 
 TEST_F(clipped_swiglu_test, test_case_bf16_half_ungrouped_shortH)
@@ -52,8 +46,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_ungrouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -67,17 +61,16 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_ungrouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, nullptr, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -97,8 +90,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_ungrouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -112,17 +105,16 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_ungrouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, nullptr, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -142,8 +134,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_ungrouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -157,17 +149,16 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_ungrouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, nullptr, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -187,8 +178,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_ungrouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -202,17 +193,16 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_ungrouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, nullptr, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -232,8 +222,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_ungrouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -247,17 +237,16 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_ungrouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, nullptr, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -277,8 +266,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_ungrouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -292,17 +281,16 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_ungrouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, nullptr, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -322,8 +310,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -337,17 +325,16 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -367,8 +354,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -382,17 +369,16 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -412,8 +398,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -427,17 +413,16 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -457,8 +442,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -472,17 +457,16 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -502,8 +486,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -517,17 +501,16 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -547,8 +530,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_shortH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -562,17 +545,16 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_shortH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -592,8 +574,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_longH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -607,17 +589,16 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_longH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -637,8 +618,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_longH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -652,17 +633,16 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_longH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -682,8 +662,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_longH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -697,17 +677,16 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_longH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -727,8 +706,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_longH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -742,17 +721,16 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_longH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -772,8 +750,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_longH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -787,17 +765,16 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_longH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }
 
@@ -817,8 +794,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_longH)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(ClippedSwigluTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     system("cp -r ../../../../activation/clipped_swiglu/tests/ut/op_kernel/clipped_swiglu_data ./");
     system("chmod -R 755 ./clipped_swiglu_data/");
@@ -832,16 +809,15 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_longH)
     ReadFile(path + "/clipped_swiglu_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/clipped_swiglu_data/input_group_index.bin", groupIndexByteSize, groupIndex, groupIndexByteSize);
     ReadFile(path + "/clipped_swiglu_data/tiling.bin", tilingDataSize, tiling, tilingDataSize);
-    
+
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(clipped_swiglu, blockDim,
-                x, groupIndex, y, workspace, tiling);
+    ICPU_RUN_KF(clipped_swiglu, blockDim, x, groupIndex, y, workspace, tiling);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)groupIndex);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)groupIndex);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
     free(path_);
 }

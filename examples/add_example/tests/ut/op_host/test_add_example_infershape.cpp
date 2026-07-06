@@ -12,18 +12,11 @@
 
 #include "infershape_case_executor.h"
 
-class AddExampleInfershape : public testing::Test
-{
+class AddExampleInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddExampleInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddExampleInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddExampleInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddExampleInfershape TearDown" << std::endl; }
 };
 
 TEST_F(AddExampleInfershape, add_example_infershape_test1)

@@ -22,18 +22,11 @@
 using namespace op;
 using namespace std;
 
-class l2_scaled_masked_softmax_backward_v2_test : public testing::Test
-{
+class l2_scaled_masked_softmax_backward_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_scaled_masked_softmax_backward_v2_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_scaled_masked_softmax_backward_v2_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_scaled_masked_softmax_backward_v2_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_scaled_masked_softmax_backward_v2_test TearDown" << endl; }
 };
 
 TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_backward_null_y_grad)
@@ -42,8 +35,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnScaledMaskedSoftmaxBackward, INPUT((aclTensor*)nullptr, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT((aclTensor*)nullptr, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -56,8 +49,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, (aclTensor*)nullptr, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, (aclTensor*)nullptr, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -70,8 +63,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc yDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, (aclTensor*)nullptr, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, (aclTensor*)nullptr, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -85,8 +78,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT((aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT((aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -100,8 +93,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -115,8 +108,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -130,8 +123,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_FRACTAL_NZ);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -145,8 +138,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -160,8 +153,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -175,8 +168,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -190,8 +183,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -205,8 +198,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, -1}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -220,8 +213,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({4, 4, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, false),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);
@@ -235,8 +228,8 @@ TEST_F(l2_scaled_masked_softmax_backward_v2_test, test_scaled_masked_softmax_bac
     TensorDesc maskDesc = TensorDesc({1, 2, 4, 128}, ACL_BOOL, ACL_FORMAT_ND);
     TensorDesc outDesc = TensorDesc({1, 2, 4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut =
-        OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, true), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnScaledMaskedSoftmaxBackward, INPUT(yGradDesc, yDesc, maskDesc, 1.0, true),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = nullptr;
     aclnnStatus aclRet = ut.TestGetWorkspaceSizeWithNNopbaseInner(&workspace_size, executor);

@@ -42,38 +42,35 @@
 
 namespace NsApplyCenteredRMSProp {
 
-using AscendC::TPipe;
-using AscendC::TQue;
-using AscendC::TBuf;
-using AscendC::QuePosition;
-using AscendC::GlobalTensor;
-using AscendC::LocalTensor;
+using AscendC::Add;
+using AscendC::Adds;
+using AscendC::Cast;
 using AscendC::DataCopyExtParams;
 using AscendC::DataCopyPad;
 using AscendC::DataCopyPadExtParams;
+using AscendC::Div;
 using AscendC::GetBlockIdx;
-using AscendC::Add;
-using AscendC::Sub;
+using AscendC::GlobalTensor;
+using AscendC::LocalTensor;
+using AscendC::Maxs;
 using AscendC::Mul;
 using AscendC::Muls;
-using AscendC::Adds;
-using AscendC::Maxs;
-using AscendC::Div;
-using AscendC::Sqrt;
-using AscendC::Cast;
+using AscendC::QuePosition;
 using AscendC::RoundMode;
+using AscendC::Sqrt;
+using AscendC::Sub;
+using AscendC::TBuf;
+using AscendC::TPipe;
+using AscendC::TQue;
 
 template <typename T>
 class ApplyCenteredRMSProp {
 public:
     __aicore__ inline ApplyCenteredRMSProp() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom,
-                                GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum,
-                                GM_ADDR epsilon, GM_ADDR grad,
-                                GM_ADDR varOut, GM_ADDR mgOut,
-                                GM_ADDR msOut, GM_ADDR momOut,
-                                const ApplyCenteredRMSPropTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr, GM_ADDR rho,
+                                GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR varOut, GM_ADDR mgOut,
+                                GM_ADDR msOut, GM_ADDR momOut, const ApplyCenteredRMSPropTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -150,8 +147,7 @@ private:
 // LoadScalar: read element[0] of a 1-element GM tensor as float.
 // =============================================================================
 template <typename T>
-__aicore__ inline float ApplyCenteredRMSProp<T>::LoadScalar(
-    const GlobalTensor<T>& src) const
+__aicore__ inline float ApplyCenteredRMSProp<T>::LoadScalar(const GlobalTensor<T>& src) const
 {
     return static_cast<float>(src.GetValue(0));
 }
@@ -160,12 +156,10 @@ __aicore__ inline float ApplyCenteredRMSProp<T>::LoadScalar(
 // Init
 // =============================================================================
 template <typename T>
-__aicore__ inline void ApplyCenteredRMSProp<T>::Init(
-    GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-    GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR mgOut, GM_ADDR msOut, GM_ADDR momOut,
-    const ApplyCenteredRMSPropTilingData* tilingData)
+__aicore__ inline void ApplyCenteredRMSProp<T>::Init(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr,
+                                                     GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad,
+                                                     GM_ADDR varOut, GM_ADDR mgOut, GM_ADDR msOut, GM_ADDR momOut,
+                                                     const ApplyCenteredRMSPropTilingData* tilingData)
 {
     ubFactor_ = tilingData->ubFactor;
 
@@ -183,9 +177,7 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(
         blockLen_ = 0;
         return;
     }
-    blockLen_ = (remaining > tilingData->blockFactor)
-                    ? tilingData->blockFactor
-                    : remaining;
+    blockLen_ = (remaining > tilingData->blockFactor) ? tilingData->blockFactor : remaining;
 
     // Main vectorised tensors -- slice each core's view.
     varGm_.SetGlobalBuffer((__gm__ T*)var + blockOffset_, blockLen_);
@@ -203,21 +195,21 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(
     rhoGm_.SetGlobalBuffer((__gm__ T*)rho, 1);
     momentumGm_.SetGlobalBuffer((__gm__ T*)momentum, 1);
     epsilonGm_.SetGlobalBuffer((__gm__ T*)epsilon, 1);
-    lrScalar_       = LoadScalar(lrGm_);
-    rhoScalar_      = LoadScalar(rhoGm_);
+    lrScalar_ = LoadScalar(lrGm_);
+    rhoScalar_ = LoadScalar(rhoGm_);
     momentumScalar_ = LoadScalar(momentumGm_);
-    epsilonScalar_  = LoadScalar(epsilonGm_);
-    oneMinusRho_    = 1.0f - rhoScalar_;
+    epsilonScalar_ = LoadScalar(epsilonGm_);
+    oneMinusRho_ = 1.0f - rhoScalar_;
 
     // UB buffer allocation -- mixed dtype layout for fp16 path.
-    pipe_.InitBuffer(varInQue_,  2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(mgInQue_,   2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(msInQue_,   2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(momInQue_,  2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(varInQue_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(mgInQue_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(msInQue_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(momInQue_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(gradInQue_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(varOutQue_, 2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(mgOutQue_,  2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(msOutQue_,  2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(mgOutQue_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(msOutQue_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(momOutQue_, 2, ubFactor_ * sizeof(T));
 
     // fp32 scratch (also reused on fp32 path -- single buffer each, no DB).
@@ -227,28 +219,27 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(
     // allocate to free ~9 fp32-units / elem for the fp32 path (Tiling sets
     // UB_BUFFER_COUNT_FP32 = 17 to match).
     if constexpr (std::is_same_v<T, half>) {
-        pipe_.InitBuffer(varF32Buf_,  ubFactor_ * sizeof(float));
-        pipe_.InitBuffer(mgF32Buf_,   ubFactor_ * sizeof(float));
-        pipe_.InitBuffer(msF32Buf_,   ubFactor_ * sizeof(float));
-        pipe_.InitBuffer(momF32Buf_,  ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(varF32Buf_, ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(mgF32Buf_, ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(msF32Buf_, ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(momF32Buf_, ubFactor_ * sizeof(float));
         pipe_.InitBuffer(gradF32Buf_, ubFactor_ * sizeof(float));
     }
-    pipe_.InitBuffer(denomBuf_,   ubFactor_ * sizeof(float));
-    pipe_.InitBuffer(tmp1Buf_,    ubFactor_ * sizeof(float));
-    pipe_.InitBuffer(tmp2Buf_,    ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(denomBuf_, ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(tmp1Buf_, ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(tmp2Buf_, ubFactor_ * sizeof(float));
 }
 
 // =============================================================================
 // CopyInTile: pad-aware DataCopyPad of var / mg / ms / mom / grad.
 // =============================================================================
 template <typename T>
-__aicore__ inline void ApplyCenteredRMSProp<T>::CopyInTile(
-    int64_t gmOffset, int64_t currentNum)
+__aicore__ inline void ApplyCenteredRMSProp<T>::CopyInTile(int64_t gmOffset, int64_t currentNum)
 {
-    LocalTensor<T> varLocal  = varInQue_.template AllocTensor<T>();
-    LocalTensor<T> mgLocal   = mgInQue_.template AllocTensor<T>();
-    LocalTensor<T> msLocal   = msInQue_.template AllocTensor<T>();
-    LocalTensor<T> momLocal  = momInQue_.template AllocTensor<T>();
+    LocalTensor<T> varLocal = varInQue_.template AllocTensor<T>();
+    LocalTensor<T> mgLocal = mgInQue_.template AllocTensor<T>();
+    LocalTensor<T> msLocal = msInQue_.template AllocTensor<T>();
+    LocalTensor<T> momLocal = momInQue_.template AllocTensor<T>();
     LocalTensor<T> gradLocal = gradInQue_.template AllocTensor<T>();
 
     DataCopyExtParams copyParams = MakeTileCopyParams(currentNum);
@@ -257,16 +248,15 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyInTile(
     //   - var/mg/mom/grad: pad with 0 (Add/Mul with 0 preserves accumulators).
     //   - ms:              pad with 1 (sqrt(1 - 0 + eps) > 0, avoids div-by-0).
     constexpr int64_t kAlignBlock = 32 / sizeof(T);
-    int64_t alignedNum =
-        ((currentNum + kAlignBlock - 1) / kAlignBlock) * kAlignBlock;
+    int64_t alignedNum = ((currentNum + kAlignBlock - 1) / kAlignBlock) * kAlignBlock;
     uint8_t rightPadCount = static_cast<uint8_t>(alignedNum - currentNum);
     DataCopyPadExtParams<T> padZero{true, 0, rightPadCount, static_cast<T>(0)};
     DataCopyPadExtParams<T> padOne{true, 0, rightPadCount, static_cast<T>(1.0f)};
 
-    DataCopyPad(varLocal,  varGm_[gmOffset],  copyParams, padZero);
-    DataCopyPad(mgLocal,   mgGm_[gmOffset],   copyParams, padZero);
-    DataCopyPad(msLocal,   msGm_[gmOffset],   copyParams, padOne);
-    DataCopyPad(momLocal,  momGm_[gmOffset],  copyParams, padZero);
+    DataCopyPad(varLocal, varGm_[gmOffset], copyParams, padZero);
+    DataCopyPad(mgLocal, mgGm_[gmOffset], copyParams, padZero);
+    DataCopyPad(msLocal, msGm_[gmOffset], copyParams, padOne);
+    DataCopyPad(momLocal, momGm_[gmOffset], copyParams, padZero);
     DataCopyPad(gradLocal, gradGm_[gmOffset], copyParams, padZero);
 
     varInQue_.EnQue(varLocal);
@@ -280,19 +270,18 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyInTile(
 // CopyOutTile: write back var / mg / ms / mom to their inplace GM slots.
 // =============================================================================
 template <typename T>
-__aicore__ inline void ApplyCenteredRMSProp<T>::CopyOutTile(
-    int64_t gmOffset, int64_t currentNum)
+__aicore__ inline void ApplyCenteredRMSProp<T>::CopyOutTile(int64_t gmOffset, int64_t currentNum)
 {
     LocalTensor<T> varOutLocal = varOutQue_.template DeQue<T>();
-    LocalTensor<T> mgOutLocal  = mgOutQue_.template DeQue<T>();
-    LocalTensor<T> msOutLocal  = msOutQue_.template DeQue<T>();
+    LocalTensor<T> mgOutLocal = mgOutQue_.template DeQue<T>();
+    LocalTensor<T> msOutLocal = msOutQue_.template DeQue<T>();
     LocalTensor<T> momOutLocal = momOutQue_.template DeQue<T>();
 
     DataCopyExtParams copyParams = MakeTileCopyParams(currentNum);
 
     DataCopyPad(varOutGm_[gmOffset], varOutLocal, copyParams);
-    DataCopyPad(mgOutGm_[gmOffset],  mgOutLocal,  copyParams);
-    DataCopyPad(msOutGm_[gmOffset],  msOutLocal,  copyParams);
+    DataCopyPad(mgOutGm_[gmOffset], mgOutLocal, copyParams);
+    DataCopyPad(msOutGm_[gmOffset], msOutLocal, copyParams);
     DataCopyPad(momOutGm_[gmOffset], momOutLocal, copyParams);
 
     varOutQue_.FreeTensor(varOutLocal);
@@ -320,78 +309,77 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyOutTile(
 template <typename T>
 __aicore__ inline void ApplyCenteredRMSProp<T>::Compute(int64_t currentNum)
 {
-    LocalTensor<T> varLocal  = varInQue_.template DeQue<T>();
-    LocalTensor<T> mgLocal   = mgInQue_.template DeQue<T>();
-    LocalTensor<T> msLocal   = msInQue_.template DeQue<T>();
-    LocalTensor<T> momLocal  = momInQue_.template DeQue<T>();
+    LocalTensor<T> varLocal = varInQue_.template DeQue<T>();
+    LocalTensor<T> mgLocal = mgInQue_.template DeQue<T>();
+    LocalTensor<T> msLocal = msInQue_.template DeQue<T>();
+    LocalTensor<T> momLocal = momInQue_.template DeQue<T>();
     LocalTensor<T> gradLocal = gradInQue_.template DeQue<T>();
 
     LocalTensor<T> varOutLocal = varOutQue_.template AllocTensor<T>();
-    LocalTensor<T> mgOutLocal  = mgOutQue_.template AllocTensor<T>();
-    LocalTensor<T> msOutLocal  = msOutQue_.template AllocTensor<T>();
+    LocalTensor<T> mgOutLocal = mgOutQue_.template AllocTensor<T>();
+    LocalTensor<T> msOutLocal = msOutQue_.template AllocTensor<T>();
     LocalTensor<T> momOutLocal = momOutQue_.template AllocTensor<T>();
 
     // 32-byte align the work count (matches ubBlockSize for any dtype).
     constexpr int64_t kAlignBlock = 32 / sizeof(T);
-    int64_t alignedNum =
-        ((currentNum + kAlignBlock - 1) / kAlignBlock) * kAlignBlock;
+    int64_t alignedNum = ((currentNum + kAlignBlock - 1) / kAlignBlock) * kAlignBlock;
     int32_t n = static_cast<int32_t>(alignedNum);
 
     if constexpr (std::is_same_v<T, half>) {
         // ---------- fp16 path (TilingKey 2) -----------------------------------
-        LocalTensor<float> varF32  = varF32Buf_.template Get<float>();
-        LocalTensor<float> mgF32   = mgF32Buf_.template Get<float>();
-        LocalTensor<float> msF32   = msF32Buf_.template Get<float>();
-        LocalTensor<float> momF32  = momF32Buf_.template Get<float>();
+        LocalTensor<float> varF32 = varF32Buf_.template Get<float>();
+        LocalTensor<float> mgF32 = mgF32Buf_.template Get<float>();
+        LocalTensor<float> msF32 = msF32Buf_.template Get<float>();
+        LocalTensor<float> momF32 = momF32Buf_.template Get<float>();
         LocalTensor<float> gradF32 = gradF32Buf_.template Get<float>();
-        LocalTensor<float> denom   = denomBuf_.template Get<float>();
-        LocalTensor<float> tmp1    = tmp1Buf_.template Get<float>();
-        LocalTensor<float> tmp2    = tmp2Buf_.template Get<float>();
+        LocalTensor<float> denom = denomBuf_.template Get<float>();
+        LocalTensor<float> tmp1 = tmp1Buf_.template Get<float>();
+        LocalTensor<float> tmp2 = tmp2Buf_.template Get<float>();
 
         // 1. Cast inputs fp16 -> fp32 (RoundMode::CAST_NONE for half->float).
-        Cast(varF32,  varLocal,  RoundMode::CAST_NONE, n);
-        Cast(mgF32,   mgLocal,   RoundMode::CAST_NONE, n);
-        Cast(msF32,   msLocal,   RoundMode::CAST_NONE, n);
-        Cast(momF32,  momLocal,  RoundMode::CAST_NONE, n);
+        Cast(varF32, varLocal, RoundMode::CAST_NONE, n);
+        Cast(mgF32, mgLocal, RoundMode::CAST_NONE, n);
+        Cast(msF32, msLocal, RoundMode::CAST_NONE, n);
+        Cast(momF32, momLocal, RoundMode::CAST_NONE, n);
         Cast(gradF32, gradLocal, RoundMode::CAST_NONE, n);
 
         // 2. mg_new = rho * mg + (1-rho) * grad
-        Muls(tmp1, mgF32,   rhoScalar_,   n);     // tmp1 = rho * mg
-        Muls(tmp2, gradF32, oneMinusRho_, n);     // tmp2 = (1-rho) * grad
-        Add (mgF32, tmp1, tmp2, n);               // mgF32 = mg_new
+        Muls(tmp1, mgF32, rhoScalar_, n);     // tmp1 = rho * mg
+        Muls(tmp2, gradF32, oneMinusRho_, n); // tmp2 = (1-rho) * grad
+        Add(mgF32, tmp1, tmp2, n);            // mgF32 = mg_new
 
         // 3. ms_new = rho * ms + (1-rho) * grad*grad
-        Mul (tmp1, gradF32, gradF32, n);          // tmp1 = grad*grad
-        Muls(tmp1, tmp1,    oneMinusRho_, n);     // tmp1 = (1-rho)*grad*grad
-        Muls(tmp2, msF32,   rhoScalar_,   n);     // tmp2 = rho * ms
-        Add (msF32, tmp1, tmp2, n);               // msF32 = ms_new
+        Mul(tmp1, gradF32, gradF32, n);    // tmp1 = grad*grad
+        Muls(tmp1, tmp1, oneMinusRho_, n); // tmp1 = (1-rho)*grad*grad
+        Muls(tmp2, msF32, rhoScalar_, n);  // tmp2 = rho * ms
+        Add(msF32, tmp1, tmp2, n);         // msF32 = ms_new
 
         // 4. tmp = ms_new - mg_new*mg_new + epsilon
         //    Clamp inner to >= 0 to mirror CPU golden's numerical-safety guard
         //    (ms_new < mg_new^2 can happen due to fp16 truncation, leading to
         //    Sqrt(NaN) and downstream NaN propagation). See
         //    issues/issue_20260423_sqrt_negative_clamp_1.md.
-        Mul (tmp1, mgF32, mgF32, n);              // tmp1 = mg_new^2
-        Sub (tmp2, msF32, tmp1,  n);              // tmp2 = ms_new - mg_new^2
-        Maxs(tmp2, tmp2, 0.0f, n);                // tmp2 = max(tmp2, 0) -- clamp
-        Adds(tmp2, tmp2, epsilonScalar_, n);      // tmp2 = ... + epsilon
+        Mul(tmp1, mgF32, mgF32, n);          // tmp1 = mg_new^2
+        Sub(tmp2, msF32, tmp1, n);           // tmp2 = ms_new - mg_new^2
+        Maxs(tmp2, tmp2, 0.0f, n);           // tmp2 = max(tmp2, 0) -- clamp
+        Adds(tmp2, tmp2, epsilonScalar_, n); // tmp2 = ... + epsilon
 
         // 5. denom = sqrt(tmp)
         Sqrt(denom, tmp2, n);
 
         // 6. mom_new = momentum * mom + lr * grad / denom
-        Div (tmp1, gradF32, denom, n);            // tmp1 = grad / denom
-        Muls(tmp1, tmp1, lrScalar_, n);           // tmp1 = lr * grad / denom
-        Muls(tmp2, momF32, momentumScalar_, n);   // tmp2 = momentum * mom
-        Add (momF32, tmp1, tmp2, n);              // momF32 = mom_new
+        Div(tmp1, gradF32, denom, n);           // tmp1 = grad / denom
+        Muls(tmp1, tmp1, lrScalar_, n);         // tmp1 = lr * grad / denom
+        Muls(tmp2, momF32, momentumScalar_, n); // tmp2 = momentum * mom
+        Add(momF32, tmp1, tmp2, n);             // momF32 = mom_new
 
         // 7. var_new = var - mom_new
-        Sub (varF32, varF32, momF32, n);
+        Sub(varF32, varF32, momF32, n);
 
         // 8. Cast back fp32 -> fp16 (RoundMode::CAST_RINT for float->half).
         Cast(varOutLocal, varF32, RoundMode::CAST_RINT, n);
-        Cast(mgOutLocal,  mgF32,  RoundMode::CAST_RINT, n);
-        Cast(msOutLocal,  msF32,  RoundMode::CAST_RINT, n);
+        Cast(mgOutLocal, mgF32, RoundMode::CAST_RINT, n);
+        Cast(msOutLocal, msF32, RoundMode::CAST_RINT, n);
         Cast(momOutLocal, momF32, RoundMode::CAST_RINT, n);
     } else {
         // ---------- fp32 path (TilingKey 1) ----------------------------------
@@ -408,37 +396,37 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Compute(int64_t currentNum)
         //   var_new = var - mom_new
         // Maxs(..., 0.0f) clamp is shared with fp16 path for numerical safety.
         LocalTensor<float> denom = denomBuf_.template Get<float>();
-        LocalTensor<float> tmp1  = tmp1Buf_.template Get<float>();
-        LocalTensor<float> tmp2  = tmp2Buf_.template Get<float>();
+        LocalTensor<float> tmp1 = tmp1Buf_.template Get<float>();
+        LocalTensor<float> tmp2 = tmp2Buf_.template Get<float>();
 
         // 2. mg_new = rho * mg + (1-rho) * grad
-        Muls(tmp1,       mgLocal,   static_cast<T>(rhoScalar_),   n);
-        Muls(tmp2,       gradLocal, static_cast<T>(oneMinusRho_), n);
-        Add (mgOutLocal, tmp1, tmp2, n);            // mgOut = mg_new
+        Muls(tmp1, mgLocal, static_cast<T>(rhoScalar_), n);
+        Muls(tmp2, gradLocal, static_cast<T>(oneMinusRho_), n);
+        Add(mgOutLocal, tmp1, tmp2, n); // mgOut = mg_new
 
         // 3. ms_new = rho * ms + (1-rho) * grad*grad
-        Mul (tmp1,       gradLocal, gradLocal, n);
-        Muls(tmp1,       tmp1,      static_cast<T>(oneMinusRho_), n);
-        Muls(tmp2,       msLocal,   static_cast<T>(rhoScalar_),   n);
-        Add (msOutLocal, tmp1, tmp2, n);            // msOut = ms_new
+        Mul(tmp1, gradLocal, gradLocal, n);
+        Muls(tmp1, tmp1, static_cast<T>(oneMinusRho_), n);
+        Muls(tmp2, msLocal, static_cast<T>(rhoScalar_), n);
+        Add(msOutLocal, tmp1, tmp2, n); // msOut = ms_new
 
         // 4. inner = max(ms_new - mg_new^2, 0) + epsilon
-        Mul (tmp1, mgOutLocal, mgOutLocal, n);      // tmp1 = mg_new^2
-        Sub (tmp2, msOutLocal, tmp1, n);            // tmp2 = ms_new - mg_new^2
-        Maxs(tmp2, tmp2, 0.0f, n);                  // clamp >= 0
+        Mul(tmp1, mgOutLocal, mgOutLocal, n); // tmp1 = mg_new^2
+        Sub(tmp2, msOutLocal, tmp1, n);       // tmp2 = ms_new - mg_new^2
+        Maxs(tmp2, tmp2, 0.0f, n);            // clamp >= 0
         Adds(tmp2, tmp2, static_cast<T>(epsilonScalar_), n);
 
         // 5. denom = sqrt(inner)
         Sqrt(denom, tmp2, n);
 
         // 6. mom_new = momentum * mom + lr * grad / denom
-        Div (tmp1,        gradLocal, denom, n);
-        Muls(tmp1,        tmp1,     static_cast<T>(lrScalar_),       n);
-        Muls(tmp2,        momLocal, static_cast<T>(momentumScalar_), n);
-        Add (momOutLocal, tmp1, tmp2, n);           // momOut = mom_new
+        Div(tmp1, gradLocal, denom, n);
+        Muls(tmp1, tmp1, static_cast<T>(lrScalar_), n);
+        Muls(tmp2, momLocal, static_cast<T>(momentumScalar_), n);
+        Add(momOutLocal, tmp1, tmp2, n); // momOut = mom_new
 
         // 7. var_new = var - mom_new
-        Sub (varOutLocal, varLocal, momOutLocal, n);
+        Sub(varOutLocal, varLocal, momOutLocal, n);
     }
 
     varOutQue_.template EnQue<T>(varOutLocal);
@@ -465,9 +453,7 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Process()
     int64_t loopCount = (blockLen_ + ubFactor_ - 1) / ubFactor_;
     for (int64_t i = 0; i < loopCount; i++) {
         int64_t gmOffset = i * ubFactor_;
-        int64_t currentNum = (i == (loopCount - 1))
-                                 ? (blockLen_ - gmOffset)
-                                 : ubFactor_;
+        int64_t currentNum = (i == (loopCount - 1)) ? (blockLen_ - gmOffset) : ubFactor_;
         CopyInTile(gmOffset, currentNum);
         Compute(currentNum);
         CopyOutTile(gmOffset, currentNum);

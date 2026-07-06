@@ -29,17 +29,20 @@ constexpr uint8_t MASK_RESULT = 17; // 00010001
 class MapIndex {
 public:
     __aicore__ inline MapIndex(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dataSeq, GM_ADDR y, GM_ADDR workspace, const MapIndexTilingData &tilingData, TPipe* inputPipe);
-    __aicore__ inline void ParseTilingData(const MapIndexTilingData &tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dataSeq, GM_ADDR y, GM_ADDR workspace,
+                                const MapIndexTilingData& tilingData, TPipe* inputPipe);
+    __aicore__ inline void ParseTilingData(const MapIndexTilingData& tilingData);
     __aicore__ inline void CopyInX(int64_t calCount);
     __aicore__ inline void CopyInDataSeq(int64_t offset, int64_t calCount);
-    __aicore__ inline void ProcessOneRow(LocalTensor<int32_t> &xLocalRes, int64_t offset, int32_t rowCount, LocalTensor<uint8_t> &compareRes, LocalTensor<uint8_t> &compareResultMask);
+    __aicore__ inline void ProcessOneRow(LocalTensor<int32_t>& xLocalRes, int64_t offset, int32_t rowCount,
+                                         LocalTensor<uint8_t>& compareRes, LocalTensor<uint8_t>& compareResultMask);
     __aicore__ inline void Process();
-    __aicore__ inline void ComputeOneRowMask(LocalTensor<int32_t> &xLocalRes, LocalTensor<int32_t> &dataSeqLocalRes, LocalTensor<uint8_t> &maskRes, int32_t calCount);
+    __aicore__ inline void ComputeOneRowMask(LocalTensor<int32_t>& xLocalRes, LocalTensor<int32_t>& dataSeqLocalRes,
+                                             LocalTensor<uint8_t>& maskRes, int32_t calCount);
     __aicore__ inline void CopyOut();
 
 private:
-    TPipe *pipe;
+    TPipe* pipe;
     /* global memory address */
     GlobalTensor<int32_t> xGm_;
     GlobalTensor<int32_t> dataSeqGm_;
@@ -69,7 +72,7 @@ private:
     int64_t loopNum_ = 0;
 };
 
-__aicore__ inline void MapIndex::ParseTilingData(const MapIndexTilingData &tilingData)
+__aicore__ inline void MapIndex::ParseTilingData(const MapIndexTilingData& tilingData)
 {
     usedCoreNum_ = tilingData.usedCoreNum;
     normalCoreProcessNum_ = tilingData.normalCoreProcessNum;
@@ -82,7 +85,8 @@ __aicore__ inline void MapIndex::ParseTilingData(const MapIndexTilingData &tilin
     doubleBuffNum_ = tilingData.doubleBuffNum;
 }
 
-__aicore__ inline void MapIndex::Init(GM_ADDR x, GM_ADDR dataSeq, GM_ADDR y, GM_ADDR workspace, const MapIndexTilingData &tilingData, TPipe* inputPipe)
+__aicore__ inline void MapIndex::Init(GM_ADDR x, GM_ADDR dataSeq, GM_ADDR y, GM_ADDR workspace,
+                                      const MapIndexTilingData& tilingData, TPipe* inputPipe)
 {
     pipe = inputPipe;
     ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
@@ -97,9 +101,9 @@ __aicore__ inline void MapIndex::Init(GM_ADDR x, GM_ADDR dataSeq, GM_ADDR y, GM_
         curCoreProcessNum_ = normalCoreProcessNum_;
     }
 
-    xGm_.SetGlobalBuffer((__gm__ int32_t *)x);
-    dataSeqGm_.SetGlobalBuffer((__gm__ int32_t *)dataSeq);
-    yGm_.SetGlobalBuffer((__gm__ int32_t *)y);
+    xGm_.SetGlobalBuffer((__gm__ int32_t*)x);
+    dataSeqGm_.SetGlobalBuffer((__gm__ int32_t*)dataSeq);
+    yGm_.SetGlobalBuffer((__gm__ int32_t*)y);
 
     if (blockIdx_ == 0) {
         InitOutput<int32_t>(yGm_, 1, -1);
@@ -122,11 +126,11 @@ __aicore__ inline void MapIndex::CopyInX(int64_t calCount)
     event_t eventIDVToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
     SetFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
     WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
-    DataCopyExtParams copyParams{ static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int32_t)),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0) };
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int32_t)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-    DataCopyPadExtParams<int32_t> padParams{ false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
-        static_cast<int32_t>(0) };
+    DataCopyPadExtParams<int32_t> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                            static_cast<int32_t>(0)};
     DataCopyPad(xLocal, xGm_, copyParams, padParams);
     inXQueue_.EnQue(xLocal);
 }
@@ -138,16 +142,18 @@ __aicore__ inline void MapIndex::CopyInDataSeq(int64_t offset, int64_t calCount)
     event_t eventIDVToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
     SetFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
     WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
-    DataCopyExtParams copyParams{ static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int32_t)),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0) };
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int32_t)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     uint64_t intraCoreOffset = blockIdx_ * normalCoreProcessNum_ * Dim1Size_;
-    DataCopyPadExtParams<int32_t> padParams{ false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
-        static_cast<int32_t>(0) };
-    DataCopyPad(dataSeqLocal, dataSeqGm_[offset+intraCoreOffset], copyParams, padParams);
+    DataCopyPadExtParams<int32_t> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                            static_cast<int32_t>(0)};
+    DataCopyPad(dataSeqLocal, dataSeqGm_[offset + intraCoreOffset], copyParams, padParams);
     inDataSeqQueue_.EnQue(dataSeqLocal);
 }
 
-__aicore__ inline void MapIndex::ProcessOneRow(LocalTensor<int32_t> &xLocalRes, int64_t offset, int32_t rowCount, LocalTensor<uint8_t> &compareRes, LocalTensor<uint8_t> &compareResultMask)
+__aicore__ inline void MapIndex::ProcessOneRow(LocalTensor<int32_t>& xLocalRes, int64_t offset, int32_t rowCount,
+                                               LocalTensor<uint8_t>& compareRes,
+                                               LocalTensor<uint8_t>& compareResultMask)
 {
     CopyInDataSeq(offset, rowCount);
     LocalTensor<int32_t> dataSeqLocalRes = inDataSeqQueue_.DeQue<int32_t>();
@@ -169,14 +175,15 @@ __aicore__ inline void MapIndex::Process()
     LocalTensor<int32_t> xLocalRes = inXQueue_.DeQue<int32_t>();
     int64_t loopNum = curCoreProcessNum_;
     for (int64_t loopIndex = 0; loopIndex < loopNum; loopIndex++) {
-        ProcessOneRow(xLocalRes, Dim1Size_ * loopIndex, Dim1Size_, compareRes,  compareResultMask);
+        ProcessOneRow(xLocalRes, Dim1Size_ * loopIndex, Dim1Size_, compareRes, compareResultMask);
         event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIDVToS);
         WaitFlag<HardEvent::V_S>(eventIDVToS);
         uint32_t a = compareResultMask.ReinterpretCast<uint32_t>().GetValue(0);
-        if(a == static_cast<uint32_t>(0xFFFFFFFF)) {
+        if (a == static_cast<uint32_t>(0xFFFFFFFF)) {
             LocalTensor<int32_t> outYLocal = outYQueue_.AllocTensor<int32_t>();
-            Duplicate<int32_t>(outYLocal, static_cast<int32_t>(loopIndex + blockIdx_ * normalCoreProcessNum_), BLOCK_INT8);
+            Duplicate<int32_t>(outYLocal, static_cast<int32_t>(loopIndex + blockIdx_ * normalCoreProcessNum_),
+                               BLOCK_INT8);
             outYQueue_.EnQue(outYLocal);
             CopyOut();
             break;
@@ -185,7 +192,9 @@ __aicore__ inline void MapIndex::Process()
     inXQueue_.FreeTensor(xLocalRes);
 }
 
-__aicore__ inline void MapIndex::ComputeOneRowMask(LocalTensor<int32_t> &xLocalRes, LocalTensor<int32_t> &dataSeqLocalRes, LocalTensor<uint8_t> &maskRes, int32_t calCount)
+__aicore__ inline void MapIndex::ComputeOneRowMask(LocalTensor<int32_t>& xLocalRes,
+                                                   LocalTensor<int32_t>& dataSeqLocalRes, LocalTensor<uint8_t>& maskRes,
+                                                   int32_t calCount)
 {
     uint32_t dtypeSize = sizeof(int32_t);
     uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
@@ -200,10 +209,12 @@ __aicore__ inline void MapIndex::ComputeOneRowMask(LocalTensor<int32_t> &xLocalR
         AscendC::MicroAPI::RegTensor<int32_t> xReg;
         AscendC::MicroAPI::RegTensor<int32_t> dataSeqReg;
         AscendC::MicroAPI::MaskReg preg0;
-        AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg2;
-        AscendC::MicroAPI::MaskReg pregResultMask = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        
+        AscendC::MicroAPI::MaskReg
+            pregResultMask = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+
         uint32_t sreg0 = calCount;
         for (uint16_t i = 0; i < loopNum; i++) { // 256B
             preg0 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg0);
@@ -219,11 +230,11 @@ __aicore__ inline void MapIndex::ComputeOneRowMask(LocalTensor<int32_t> &xLocalR
 __aicore__ inline void MapIndex::CopyOut()
 {
     LocalTensor<int32_t> yOutLocal = outYQueue_.DeQue<int32_t>();
-    DataCopyExtParams copyParams{ static_cast<uint16_t>(1), static_cast<uint32_t>(1 * sizeof(int32_t)),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0) };
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(1 * sizeof(int32_t)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPad(yGm_, yOutLocal, copyParams);
     outYQueue_.FreeTensor(yOutLocal);
 }
 
-}
-#endif 
+} // namespace MapIndexOp
+#endif

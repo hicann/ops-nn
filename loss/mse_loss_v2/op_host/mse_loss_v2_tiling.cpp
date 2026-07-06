@@ -67,10 +67,9 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, targetDesc);
     auto targetDtype = targetDesc->GetDataType();
 
-    OP_CHECK_IF(
-        inputDtype != targetDtype,
-        OP_LOGE(context->GetNodeName(), "Input dtype and target dtype should be consistent."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputDtype != targetDtype,
+                OP_LOGE(context->GetNodeName(), "Input dtype and target dtype should be consistent."),
+                return ge::GRAPH_FAILED);
 
     optiling::dtype = inputDtype;
 
@@ -89,8 +88,7 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
             break;
 
         default:
-            OP_LOGE(
-                context->GetNodeName(), "The input or target dtype must be one of float32, float16, or bfloat16.");
+            OP_LOGE(context->GetNodeName(), "The input or target dtype must be one of float32, float16, or bfloat16.");
             return ge::GRAPH_FAILED;
     }
 
@@ -122,9 +120,7 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
 static void CoreSplit(gert::TilingContext* context, const platform_ascendc::PlatformAscendC* ascendcPlatform)
 {
     uint64_t totalLength = context->GetInputShape(INPUT_DATA_IDX)->GetStorageShape().GetShapeSize();
-    OP_CHECK_IF(
-        totalLength == 0,
-        OP_LOGE(context->GetNodeName(), "The shape size of input should not be 0"), return);
+    OP_CHECK_IF(totalLength == 0, OP_LOGE(context->GetNodeName(), "The shape size of input should not be 0"), return );
     double scale = 1. / totalLength;
     optiling::mseLossV2TilingData.set_scale(static_cast<float>(scale));
 
@@ -163,12 +159,13 @@ static void UBSplit(const platform_ascendc::PlatformAscendC* ascendcPlatform)
             if (optiling::dtype == ge::DT_FLOAT) {
                 optiling::blockPerQue = Ops::Base::FloorDiv(UBTotalBlocks, ((INQUE_NUM + OUTQUE_NUM) * bufferNum));
             } else {
-                optiling::blockPerQue =
-                    Ops::Base::FloorDiv(UBTotalBlocks, ((INQUE_NUM + OUTQUE_NUM) * bufferNum + CAST_BUFFER_NUM));
+                optiling::blockPerQue = Ops::Base::FloorDiv(UBTotalBlocks,
+                                                            ((INQUE_NUM + OUTQUE_NUM) * bufferNum + CAST_BUFFER_NUM));
             }
         } else {
             uint64_t preservedSize = static_cast<uint64_t>(optiling::BYTES_PER_BLOCK * (optiling::kernelNumber + 1u));
-            uint64_t UBTotalBlocks = Ops::Base::FloorDiv((UBSize - preservedSize), static_cast<uint64_t>(optiling::BYTES_PER_BLOCK));
+            uint64_t UBTotalBlocks = Ops::Base::FloorDiv((UBSize - preservedSize),
+                                                         static_cast<uint64_t>(optiling::BYTES_PER_BLOCK));
 
             if (optiling::dtype == ge::DT_FLOAT) {
                 optiling::blockPerQue = Ops::Base::FloorDiv(UBTotalBlocks, (INQUE_NUM * bufferNum));
@@ -239,8 +236,7 @@ static void PrintInfo(const gert::TilingContext* context)
     OP_LOGD(context, "coreLength = %lu.", optiling::mseLossV2TilingData.get_coreLength());
     OP_LOGD(context, "tileLength = %lu.", optiling::mseLossV2TilingData.get_tileLength());
     OP_LOGD(context, "tailTileLength = %lu.", optiling::mseLossV2TilingData.get_tailTileLength());
-    OP_LOGD(
-        context, "tailTileLengthForLastCore = %lu.", optiling::mseLossV2TilingData.get_tailTileLengthForLastCore());
+    OP_LOGD(context, "tailTileLengthForLastCore = %lu.", optiling::mseLossV2TilingData.get_tailTileLengthForLastCore());
     OP_LOGD(context, ">>>>>>>>>>>>> mse_loss_v2 tiling data end <<<<<<<<<<<<<");
 }
 
@@ -257,35 +253,28 @@ ge::graphStatus Tiling4MSELossV2(gert::TilingContext* context)
     optiling::blockPerCore = 0ULL;
     optiling::tailBlocks = 0ULL;
 
-    OP_CHECK_IF(
-        CheckInputDtype(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "CheckInputDtype failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "CheckInputDtype failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "GetTilingAttr failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "GetTilingAttr failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetTilingData(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "GetTilingData failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingData(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "GetTilingData failed."),
+                return ge::GRAPH_FAILED);
 
     context->GetRawTilingData()->SetDataSize(optiling::mseLossV2TilingData.GetDataSize());
     context->SetTilingKey(optiling::tilingKey);
-    optiling::mseLossV2TilingData.SaveToBuffer(
-        context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    optiling::mseLossV2TilingData.SaveToBuffer(context->GetRawTilingData()->GetData(),
+                                               context->GetRawTilingData()->GetCapacity());
 
     PrintInfo(context);
     OP_LOGD(context, "Tiling4MSELossV2 end");
     return ge::GRAPH_SUCCESS;
 }
 
-struct MSELossV2CompileInfo {
-};
+struct MSELossV2CompileInfo {};
 
-ge::graphStatus TilingParse4MSELossV2([[maybe_unused]] gert::TilingParseContext* context)
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingParse4MSELossV2([[maybe_unused]] gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 IMPL_OP_OPTILING(MSELossV2).Tiling(Tiling4MSELossV2).TilingParse<MSELossV2CompileInfo>(TilingParse4MSELossV2);
 } // namespace optiling

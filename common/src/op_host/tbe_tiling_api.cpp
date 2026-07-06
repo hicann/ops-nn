@@ -19,9 +19,8 @@
 // 兼容opp整包场景：整包不编译本文件，仅子包编译
 namespace Ops {
 namespace NN {
-bool GetTbeTiling(
-    gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
-    const optiling::OpTypeV2 opType)
+bool GetTbeTiling(gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
+                  const optiling::OpTypeV2 opType)
 {
     using FuncType = bool (*)(gert::TilingContext*, optiling::Conv3dBackpropV2TBETilingData&, const optiling::OpTypeV2);
     const char* symbolName = "LegacyGenTbeConvBackwardTiling";

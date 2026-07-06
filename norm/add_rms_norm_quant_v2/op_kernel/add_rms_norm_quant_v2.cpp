@@ -23,9 +23,10 @@ using namespace AscendC;
         op.Process();                                                                                                \
     } while (0)
 
-extern "C" __global__ __aicore__ void add_rms_norm_quant_v2(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
-    GM_ADDR bias, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_rms_norm_quant_v2(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1,
+                                                            GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
+                                                            GM_ADDR bias, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
+                                                            GM_ADDR res_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);

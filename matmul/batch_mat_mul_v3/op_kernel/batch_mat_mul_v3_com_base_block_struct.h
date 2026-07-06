@@ -40,24 +40,24 @@ struct CommonKernelBaseBlockArgs {
     uint64_t cBatchDimAll;
 
     uint64_t batchCnt;
-    uint64_t mCnt;       // m方向上分多少个base块
-    uint64_t nCnt;       // n方向上分多少个base块
-    uint64_t nBaseTail;  // n方向上的baseN尾块
-    uint64_t mBaseTail;  // m方向上的baseM尾块
+    uint64_t mCnt;      // m方向上分多少个base块
+    uint64_t nCnt;      // n方向上分多少个base块
+    uint64_t nBaseTail; // n方向上的baseN尾块
+    uint64_t mBaseTail; // m方向上的baseM尾块
     uint64_t mTileCntL2;
     uint64_t nTileCntL2;
     uint64_t mCntTail;
     uint64_t nCntTail;
     uint64_t mTileCnt;
     uint64_t nTileCnt;
-    uint64_t totalCnt;   // 所有的基本块个数
+    uint64_t totalCnt; // 所有的基本块个数
     uint64_t totalTileCnt;
     uint64_t round;      // 每一个core最大做base块计算的次数
     uint64_t realRound;  // 单核做多少次base块计算
     uint64_t preCoreNum; // 从0core开始有多少个core会多做一次base块
-    uint64_t mCntUse; // Tile块内m方向个数
-    uint64_t nCntUse; // Tile块内n方向个数
-    uint32_t rowOrder; // 0 错位分核 ROW_FIRST C矩阵行优先 COL_FIRST C矩阵列优先
+    uint64_t mCntUse;    // Tile块内m方向个数
+    uint64_t nCntUse;    // Tile块内n方向个数
+    uint32_t rowOrder;   // 0 错位分核 ROW_FIRST C矩阵行优先 COL_FIRST C矩阵列优先
     uint64_t blockIdxStart;
     uint64_t blockIdxEnd;
     uint64_t preTotalBlock;
@@ -74,7 +74,7 @@ struct CommonKernelBaseBlockArgs {
     uint64_t alignedKaSize;
     uint64_t alignedKbSize;
 
-    uint64_t index;      // 当前block_idx的起始基本块Index，这个idex是按照先循环N，再循环M的次序
+    uint64_t index; // 当前block_idx的起始基本块Index，这个idex是按照先循环N，再循环M的次序
     bool isHf32;
     bool biasWithBatch;
     bool enableL2Cache;

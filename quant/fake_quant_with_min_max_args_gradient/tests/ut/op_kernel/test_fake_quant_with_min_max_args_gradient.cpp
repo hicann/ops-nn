@@ -26,19 +26,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fake_quant_with_min_max_args_gradient(
-    GM_ADDR gradients, GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fake_quant_with_min_max_args_gradient(GM_ADDR gradients, GM_ADDR x, GM_ADDR y,
+                                                                            GM_ADDR workspace, GM_ADDR tiling);
 
 class FakeQuantWithMinMaxArgsGradientTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "FakeQuantWithMinMaxArgsGradientTest SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "FakeQuantWithMinMaxArgsGradientTest TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "FakeQuantWithMinMaxArgsGradientTest SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "FakeQuantWithMinMaxArgsGradientTest TearDown\n" << endl; }
 };
 
 static void FillTiling(FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin, int64_t totalLen, int64_t numCore)
@@ -58,9 +52,7 @@ static void FillTiling(FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafrom
 // NaN grad on in-range x -> NaN * 1 = NaN (propagates).
 // NaN grad on out-of-range x -> NaN * 0 = NaN per IEEE754 (kernel uses Mul, so
 // this also propagates as NaN). We mark that case explicitly.
-static float GradientGolden(float grad, float xi,
-                            const FakeQuantWithMinMaxArgsGradientTilingData& t,
-                            bool& expectNan)
+static float GradientGolden(float grad, float xi, const FakeQuantWithMinMaxArgsGradientTilingData& t, bool& expectNan)
 {
     expectNan = false;
     bool inRange = !std::isnan(xi) && (xi >= t.nudgedMin) && (xi <= t.nudgedMax);
@@ -98,7 +90,8 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_default)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsGradientTilingData*
+        tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
 
     ICPU_SET_TILING_KEY(0);
@@ -132,7 +125,8 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_narrow_range)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsGradientTilingData*
+        tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
     tilingDatafromBin->nudgedMin = -6.0f + 12.0f / 255.0f;
     tilingDatafromBin->nudgedMax = 6.0f - 12.0f / 255.0f;
@@ -168,7 +162,8 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_4bits)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsGradientTilingData*
+        tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
     tilingDatafromBin->nudgedMin = -1.0f;
     tilingDatafromBin->nudgedMax = 1.0f;
@@ -204,7 +199,8 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_small_shape)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsGradientTilingData*
+        tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
 
     ICPU_SET_TILING_KEY(0);
@@ -263,8 +259,8 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_compute_default_with_
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin =
-        reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsGradientTilingData*
+        tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
 
     float* gradFloat = reinterpret_cast<float*>(gradBuf);
@@ -288,18 +284,30 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_compute_default_with_
         xFloat[i] = 0.1f * (float)i - 1.0f;     // default in-range
         gradFloat[i] = 0.25f * (float)i + 0.5f; // default finite
     }
-    xFloat[0] = 0.0f;    gradFloat[0] = 2.0f;
-    xFloat[1] = 3.0f;    gradFloat[1] = -1.5f;
-    xFloat[2] = -6.0f;   gradFloat[2] = 4.0f;
-    xFloat[3] = 6.0f;    gradFloat[3] = -2.5f;
-    xFloat[4] = 7.0f;    gradFloat[4] = 9.0f;
-    xFloat[5] = 100.0f;  gradFloat[5] = -3.0f;
-    xFloat[6] = -7.0f;   gradFloat[6] = 1.0f;
-    xFloat[7] = -100.0f; gradFloat[7] = -7.0f;
-    xFloat[8] = std::nanf("");  gradFloat[8] = 5.0f;
-    xFloat[9] = std::nanf("");  gradFloat[9] = -5.0f;
-    xFloat[10] = 0.5f;   gradFloat[10] = std::nanf("");
-    xFloat[11] = 8.0f;   gradFloat[11] = std::nanf("");
+    xFloat[0] = 0.0f;
+    gradFloat[0] = 2.0f;
+    xFloat[1] = 3.0f;
+    gradFloat[1] = -1.5f;
+    xFloat[2] = -6.0f;
+    gradFloat[2] = 4.0f;
+    xFloat[3] = 6.0f;
+    gradFloat[3] = -2.5f;
+    xFloat[4] = 7.0f;
+    gradFloat[4] = 9.0f;
+    xFloat[5] = 100.0f;
+    gradFloat[5] = -3.0f;
+    xFloat[6] = -7.0f;
+    gradFloat[6] = 1.0f;
+    xFloat[7] = -100.0f;
+    gradFloat[7] = -7.0f;
+    xFloat[8] = std::nanf("");
+    gradFloat[8] = 5.0f;
+    xFloat[9] = std::nanf("");
+    gradFloat[9] = -5.0f;
+    xFloat[10] = 0.5f;
+    gradFloat[10] = std::nanf("");
+    xFloat[11] = 8.0f;
+    gradFloat[11] = std::nanf("");
 
     ICPU_SET_TILING_KEY(0);
     auto kernel_lambda = [](GM_ADDR gradients, GM_ADDR x, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
@@ -313,13 +321,11 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_compute_default_with_
         float gold = GradientGolden(gradFloat[i], xFloat[i], *tilingDatafromBin, expectNan);
         float got = yFloat[i];
         if (expectNan) {
-            EXPECT_TRUE(std::isnan(got))
-                << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i]
-                << " expected NaN, got=" << got;
+            EXPECT_TRUE(std::isnan(got)) << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i]
+                                         << " expected NaN, got=" << got;
         } else {
             EXPECT_NEAR(got, gold, 1e-5f)
-                << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i]
-                << " gold=" << gold << " got=" << got;
+                << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i] << " gold=" << gold << " got=" << got;
         }
     }
 
@@ -350,8 +356,8 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_compute_narrow_range_
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    FakeQuantWithMinMaxArgsGradientTilingData* tilingDatafromBin =
-        reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
+    FakeQuantWithMinMaxArgsGradientTilingData*
+        tilingDatafromBin = reinterpret_cast<FakeQuantWithMinMaxArgsGradientTilingData*>(tiling);
     FillTiling(tilingDatafromBin, totalLen, blockDim);
     tilingDatafromBin->nudgedMin = -1.0f;
     tilingDatafromBin->nudgedMax = 1.0f;
@@ -364,10 +370,14 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_compute_narrow_range_
         gradFloat[i] = (i % 2 == 0) ? 1.0f : -1.0f;
     }
     // Inject special points
-    xFloat[0] = std::nanf("");   gradFloat[0] = 3.14f;     // NaN x
-    xFloat[1] = 0.0f;            gradFloat[1] = std::nanf(""); // NaN grad in-range
-    xFloat[2] = -1.0f;           gradFloat[2] = 7.0f;      // boundary
-    xFloat[3] = 1.0f;            gradFloat[3] = -8.0f;     // boundary
+    xFloat[0] = std::nanf("");
+    gradFloat[0] = 3.14f; // NaN x
+    xFloat[1] = 0.0f;
+    gradFloat[1] = std::nanf(""); // NaN grad in-range
+    xFloat[2] = -1.0f;
+    gradFloat[2] = 7.0f; // boundary
+    xFloat[3] = 1.0f;
+    gradFloat[3] = -8.0f; // boundary
 
     ICPU_SET_TILING_KEY(0);
     auto kernel_lambda = [](GM_ADDR gradients, GM_ADDR x, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
@@ -381,13 +391,11 @@ TEST_F(FakeQuantWithMinMaxArgsGradientTest, test_case_fp32_compute_narrow_range_
         float gold = GradientGolden(gradFloat[i], xFloat[i], *tilingDatafromBin, expectNan);
         float got = yFloat[i];
         if (expectNan) {
-            EXPECT_TRUE(std::isnan(got))
-                << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i]
-                << " expected NaN, got=" << got;
+            EXPECT_TRUE(std::isnan(got)) << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i]
+                                         << " expected NaN, got=" << got;
         } else {
             EXPECT_NEAR(got, gold, 1e-5f)
-                << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i]
-                << " gold=" << gold << " got=" << got;
+                << "idx=" << i << " grad=" << gradFloat[i] << " x=" << xFloat[i] << " gold=" << gold << " got=" << got;
         }
     }
 

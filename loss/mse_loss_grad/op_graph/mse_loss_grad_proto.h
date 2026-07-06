@@ -45,6 +45,5 @@ REG_OP(MseLossGrad)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(MseLossGrad)
 
-
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM_OPS_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM_OPS_H_

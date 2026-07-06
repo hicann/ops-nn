@@ -53,8 +53,8 @@ constexpr uint64_t SYNC_AIV_AIC_FLAG_SEVEN = 7;
 constexpr int32_t FLOAT32_NEG_INF = 0xFF800000;
 constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;
 constexpr uint16_t BF16_NEG_INF = 0xFF80;
-constexpr MatmulConfig matmulCFGUnitFlag{false, false, true, 0, 0, 0, false, false, false, false, false, 0, 0, 0,
-                                         0, 0, 0, 0, true};
+constexpr MatmulConfig matmulCFGUnitFlag{false, false, true, 0, 0, 0, false, false, false, false,
+                                         false, 0,     0,    0, 0, 0, 0,     0,     true};
 
 struct MNConfig {
     uint64_t m = 0;
@@ -75,15 +75,16 @@ template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 class FusedLinearOnlineMaxSumOp {
 public:
     __aicore__ inline FusedLinearOnlineMaxSumOp(){};
-    __aicore__ inline void Init(
-        const FusedLinearOnlineMaxSumTilingData &__restrict tilingData, GM_ADDR input, GM_ADDR weight, GM_ADDR target,
-        GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal, GM_ADDR predictedLogitsLocal, GM_ADDR targetMask,
-        GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut, GM_ADDR userWorkspace, TPipe *inputPipe);
+    __aicore__ inline void Init(const FusedLinearOnlineMaxSumTilingData& __restrict tilingData, GM_ADDR input,
+                                GM_ADDR weight, GM_ADDR target, GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal,
+                                GM_ADDR predictedLogitsLocal, GM_ADDR targetMask, GM_ADDR maskedTarget,
+                                GM_ADDR vocabParallelLogitsOut, GM_ADDR userWorkspace, TPipe* inputPipe);
     __aicore__ inline void Process();
 
 protected:
     template <typename T>
-    __aicore__ inline T GreatestCommonDivisor(T a, T b) {
+    __aicore__ inline T GreatestCommonDivisor(T a, T b)
+    {
         T c = a;
         if (a < b) {
             a = b;
@@ -97,82 +98,90 @@ protected:
         return a;
     }
     template <typename T>
-    __aicore__ inline T LeastCommonMultiple(T a, T b) {
+    __aicore__ inline T LeastCommonMultiple(T a, T b)
+    {
         return a * b / GreatestCommonDivisor(a, b);
     }
     template <typename T>
-    __aicore__ inline T AlignDown(T a, T base) {
+    __aicore__ inline T AlignDown(T a, T base)
+    {
         if (unlikely(base == 0)) {
             return a;
         }
         return a / base * base;
     }
 
-    __aicore__ inline void InitTilingData(const FusedLinearOnlineMaxSumTilingData &__restrict tilingData);
+    __aicore__ inline void InitTilingData(const FusedLinearOnlineMaxSumTilingData& __restrict tilingData);
     __aicore__ inline void InitOutputAndWorkspace();
     __aicore__ inline void MatmulInputEmptyProcess();
     __aicore__ inline void MatmulInputEmptyMmOut(uint64_t mLoopNum, uint64_t mOffset);
 
     __aicore__ inline void TargetProcess();
     __aicore__ inline void TargetInnerProcess(uint64_t targetGmOffset, uint64_t tasks, uint64_t copyCount);
-    
+
     __aicore__ inline void CVProcess();
 
-    __aicore__ inline void SetMNConfig(MNConfig &mnConfig);
-    __aicore__ inline void SetMKN(MNConfig &mnConfig);
-    __aicore__ inline void MNBlockIdxCompute(
-        MNConfig &mnConfig, const uint64_t curBlock, const uint64_t count, const uint64_t thresholdM_dimN);
+    __aicore__ inline void SetMNConfig(MNConfig& mnConfig);
+    __aicore__ inline void SetMKN(MNConfig& mnConfig);
+    __aicore__ inline void MNBlockIdxCompute(MNConfig& mnConfig, const uint64_t curBlock, const uint64_t count,
+                                             const uint64_t thresholdM_dimN);
     __aicore__ inline void MMCompute(MNConfig& mnConfig, uint64_t tailN, uint64_t outOffset, bool enSequentialWrite);
 
     __aicore__ inline void OnlineMaxSumInitBuffer();
     __aicore__ inline void OnlineMaxSumProcess(MNConfig& mnConfig, uint64_t baseN, uint64_t tailN, uint64_t outOffset);
-    __aicore__ inline void DataCopyCastVocabParallelLogitsOut(
-        MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN, uint64_t outOffset);
-    __aicore__ inline void SetDataCopyPadParamsAndInit(
-        LocalTensor<uint16_t>& tmpTensor, DataCopyExtParams& extParams, DataCopyPadExtParams<mmT>& padExtParams,
-        MNConfig& mnConfig, uint32_t curSingleN);
-    __aicore__ inline void OnlineCopyIn(
-        MNConfig& mnConfig, uint64_t loopStart, uint32_t loopNum, uint32_t curSingleN, uint64_t outOffset);
+    __aicore__ inline void DataCopyCastVocabParallelLogitsOut(MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN,
+                                                              uint64_t outOffset);
+    __aicore__ inline void SetDataCopyPadParamsAndInit(LocalTensor<uint16_t>& tmpTensor, DataCopyExtParams& extParams,
+                                                       DataCopyPadExtParams<mmT>& padExtParams, MNConfig& mnConfig,
+                                                       uint32_t curSingleN);
+    __aicore__ inline void OnlineCopyIn(MNConfig& mnConfig, uint64_t loopStart, uint32_t loopNum, uint32_t curSingleN,
+                                        uint64_t outOffset);
     __aicore__ inline void OnlineMaxCompute(MNConfig& mnConfig, uint32_t loopNum);
     __aicore__ inline void OnlineGetPredictedLogits(MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN);
     __aicore__ inline void OnlineSumCompute(uint32_t loopNum);
-    
+
     __aicore__ inline void AllocEventIDs();
     __aicore__ inline void ReleaseEventIDs();
-    __aicore__ inline void vecIndexCompute(LocalTensor<int32_t> &vecIndexTensor);
+    __aicore__ inline void vecIndexCompute(LocalTensor<int32_t>& vecIndexTensor);
     __aicore__ inline void AllReduceMaxSumInitBuffer();
-    __aicore__ inline void AllReduceMaxSumInnerTiling(
-        uint32_t& loopOffset, uint32_t& outerLoop, uint32_t& outerLoopTail, uint32_t& batchNum);
+    __aicore__ inline void AllReduceMaxSumInnerTiling(uint32_t& loopOffset, uint32_t& outerLoop,
+                                                      uint32_t& outerLoopTail, uint32_t& batchNum);
     __aicore__ inline void AllReduceMaxSumProcess();
-    __aicore__ inline void AllReduceMaxSumSetCopyInParams(
-        DataCopyExtParams& extCopyFromWsParams, DataCopyExtParams& extCopyFromWsTailParams, uint32_t outerLoopTail);
-    __aicore__ inline void AllReduceMaxSumCopyIn(
-        DataCopyExtParams& extCopyFromWsParams, uint64_t gmOffset, uint32_t calCount, uint64_t pp);
+    __aicore__ inline void AllReduceMaxSumSetCopyInParams(DataCopyExtParams& extCopyFromWsParams,
+                                                          DataCopyExtParams& extCopyFromWsTailParams,
+                                                          uint32_t outerLoopTail);
+    __aicore__ inline void AllReduceMaxSumCopyIn(DataCopyExtParams& extCopyFromWsParams, uint64_t gmOffset,
+                                                 uint32_t calCount, uint64_t pp);
     __aicore__ inline void AllReduceMaxSumCompute(uint64_t gmOffset, uint32_t calCount, uint64_t pp);
     __aicore__ inline void AllReduceMaxSumCopyOut(uint64_t gmOffset, uint32_t calCount, uint64_t pp);
 
-    __aicore__ inline void PIPE_MTE2_V() {
+    __aicore__ inline void PIPE_MTE2_V()
+    {
         event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     }
-    __aicore__ inline void PIPE_V_MTE3() {
+    __aicore__ inline void PIPE_V_MTE3()
+    {
         event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
     }
-    __aicore__ inline void PIPE_V_MTE2() {
+    __aicore__ inline void PIPE_V_MTE2()
+    {
         event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
     }
-    __aicore__ inline void PIPE_MTE3_MTE2() {
+    __aicore__ inline void PIPE_MTE3_MTE2()
+    {
         event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
     }
+
 protected:
-    TPipe *pipe_;
+    TPipe* pipe_;
 
     using inputType = matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, inputT>;
     using weightType = matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, inputT, true>;
@@ -250,7 +259,8 @@ protected:
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::InitTilingData(
-    const FusedLinearOnlineMaxSumTilingData &__restrict tilingData) {
+    const FusedLinearOnlineMaxSumTilingData& __restrict tilingData)
+{
     m_ = tilingData.m;
     k_ = tilingData.k;
     n_ = tilingData.n;
@@ -290,35 +300,37 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::Init(
-    const FusedLinearOnlineMaxSumTilingData &__restrict tilingData, GM_ADDR input, GM_ADDR weight, GM_ADDR target,
+    const FusedLinearOnlineMaxSumTilingData& __restrict tilingData, GM_ADDR input, GM_ADDR weight, GM_ADDR target,
     GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal, GM_ADDR predictedLogitsLocal, GM_ADDR targetMask,
-    GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut, GM_ADDR userWorkspace, TPipe *inputPipe) {
+    GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut, GM_ADDR userWorkspace, TPipe* inputPipe)
+{
     pipe_ = inputPipe;
     InitTilingData(tilingData);
 
-    gmInput_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT *>(input));
-    gmWeight_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT *>(weight));
-    gmTarget_.SetGlobalBuffer(reinterpret_cast<__gm__ targetT *>(target));
-    gmLogitsMaxLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(logitsMaxLocal));
-    gmSumExpLogitsLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(sumExpLogitsLocal));
-    gmPredictedLogitsLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(predictedLogitsLocal));
-    gmTargetMask_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t *>(targetMask));
-    gmMaskedTarget_.SetGlobalBuffer(reinterpret_cast<__gm__ targetT *>(maskedTarget));
+    gmInput_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT*>(input));
+    gmWeight_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT*>(weight));
+    gmTarget_.SetGlobalBuffer(reinterpret_cast<__gm__ targetT*>(target));
+    gmLogitsMaxLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(logitsMaxLocal));
+    gmSumExpLogitsLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumExpLogitsLocal));
+    gmPredictedLogitsLocal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(predictedLogitsLocal));
+    gmTargetMask_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(targetMask));
+    gmMaskedTarget_.SetGlobalBuffer(reinterpret_cast<__gm__ targetT*>(maskedTarget));
     if constexpr (mmOutFlag) {
-        mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT *>(vocabParallelLogitsOut));
+        mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT*>(vocabParallelLogitsOut));
     } else {
-        mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT *>(userWorkspace) + m_ * cubeCoreNum_ * NUM_FOUR);
+        mmOutTensor_.SetGlobalBuffer(reinterpret_cast<__gm__ mmT*>(userWorkspace) + m_ * cubeCoreNum_ * NUM_FOUR);
     }
 
-    gmOnlineMax_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(userWorkspace));
-    gmOnlineSum_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(userWorkspace) + m_ * cubeCoreNum_);
+    gmOnlineMax_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(userWorkspace));
+    gmOnlineSum_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(userWorkspace) + m_ * cubeCoreNum_);
     if ASCEND_IS_AIV {
         pipe_->InitBuffer(calcBuf_, bufSize_);
     }
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MatmulInputEmptyProcess() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MatmulInputEmptyProcess()
+{
     zeroTensor = calcBuf_.GetWithOffset<float>(initWorkspaceLength_, 0);
     LocalTensor<float> nTensor = calcBuf_.GetWithOffset<float>(initWorkspaceLength_,
                                                                sizeof(float) * initWorkspaceLength_);
@@ -339,7 +351,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     uint64_t mLoopNumTail = mCalPerVecCore % initWorkspaceLength_;
     DataCopyExtParams copyB32Params{1, static_cast<uint32_t>(sizeof(float) * initWorkspaceLength_), 0, 0, 0};
     PIPE_V_MTE3();
-    for (uint64_t lp = 0; lp < mLoopNum; lp++){
+    for (uint64_t lp = 0; lp < mLoopNum; lp++) {
         uint64_t mOffset = mStartOffset + lp * initWorkspaceLength_;
         DataCopyPad(gmLogitsMaxLocal_[mOffset], zeroTensor, copyB32Params);
         DataCopyPad(gmSumExpLogitsLocal_[mOffset], nTensor, copyB32Params);
@@ -363,7 +375,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MatmulInputEmptyMmOut(
-    uint64_t mLoopNum, uint64_t mOffset) {
+    uint64_t mLoopNum, uint64_t mOffset)
+{
     uint64_t mnLoopNum = mLoopNum * n_ / (initWorkspaceLength_ * NUM_TWO);
     uint64_t mnLoopNumTail = mLoopNum * n_ % (initWorkspaceLength_ * NUM_TWO);
     uint64_t mmStartOffset = mOffset * n_;
@@ -382,7 +395,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::Process() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::Process()
+{
     if ASCEND_IS_AIV {
         if (matmulInputEmptyFlag_ == 1) {
             MatmulInputEmptyProcess();
@@ -416,7 +430,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::CVProcess() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::CVProcess()
+{
     MNConfig mnConfig;
     SetMNConfig(mnConfig);
     mm_.DisableBias();
@@ -445,7 +460,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
                 outOffset = mnConfig.mIdx * mnConfig.singleM * mnConfig.n + tailN;
                 MMCompute(mnConfig, tailN, outOffset, false);
             } else {
-                outOffset = blockIdx_ * DOUBLE_BASE_BLOCK_SIZE +  BASE_BLOCK_SIZE * pp;
+                outOffset = blockIdx_ * DOUBLE_BASE_BLOCK_SIZE + BASE_BLOCK_SIZE * pp;
                 MMCompute(mnConfig, tailN, outOffset, true);
             }
             CrossCoreSetFlag<SYNC_MODE2, PIPE_FIX>(SYNC_AIC_AIV_FLAG_FIVE);
@@ -456,7 +471,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
             if constexpr (mmOutFlag) {
                 outOffset = mnConfig.mIdx * mnConfig.singleM * mnConfig.n + tailN;
             } else {
-                outOffset = this->blockIdx_ / NUM_TWO * DOUBLE_BASE_BLOCK_SIZE +  BASE_BLOCK_SIZE * pp;
+                outOffset = this->blockIdx_ / NUM_TWO * DOUBLE_BASE_BLOCK_SIZE + BASE_BLOCK_SIZE * pp;
             }
             OnlineMaxSumProcess(mnConfig, mnConfig.rowSize, tailN, outOffset);
             if ((count + ppCount < loopCount) && (loopCount > ppCount)) {
@@ -468,14 +483,15 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::InitOutputAndWorkspace() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::InitOutputAndWorkspace()
+{
     zeroTensor = calcBuf_.GetWithOffset<float>(initWorkspaceLength_, 0);
     LocalTensor<float> negInfTensor = calcBuf_.GetWithOffset<float>(initWorkspaceLength_,
-                                                                   sizeof(float) * initWorkspaceLength_);
-    
+                                                                    sizeof(float) * initWorkspaceLength_);
+
     Duplicate(negInfTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, initWorkspaceLength_);
     Duplicate(zeroTensor, float(0), initWorkspaceLength_);
-    
+
     uint64_t workspaceStartIdx = 0;
     uint64_t workspaceTotalCopyNum = 0;
     uint64_t gmStartIdx = 0;
@@ -515,12 +531,12 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::TargetInnerProcess(
-    uint64_t targetGmOffset, uint64_t tasks, uint64_t copyCount) {
+    uint64_t targetGmOffset, uint64_t tasks, uint64_t copyCount)
+{
     uint64_t targetMaskGmOffset = targetGmOffset / DATA_PER_UINT8;
     uint64_t calCount = tasks * DATA_PER_UINT8;
     uint8_t repeatTimes = static_cast<uint8_t>((calCount + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32);
-    uint64_t calCountAlignedRepeat = 
-        (calCount + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32 * DATA_PER_REPEAT_B32;
+    uint64_t calCountAlignedRepeat = (calCount + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32 * DATA_PER_REPEAT_B32;
 
     DataCopyPad(targetTensor, gmTarget_[targetGmOffset],
                 {1, static_cast<uint32_t>(sizeof(targetT) * copyCount), 0, 0, 0},
@@ -535,8 +551,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     Adds(targetTensorFp32, targetTensorFp32, float(-vocabStartIndex_), calCount);
     PipeBarrier<PIPE_V>();
     Add(targetMaskOutTensor.template ReinterpretCast<int32_t>(),
-        targetMaskOutTensor.template ReinterpretCast<int32_t>(),
-        compareTensor.template ReinterpretCast<int32_t>(), calCountAlignedRepeat / BITS_B32);
+        targetMaskOutTensor.template ReinterpretCast<int32_t>(), compareTensor.template ReinterpretCast<int32_t>(),
+        calCountAlignedRepeat / BITS_B32);
 
     PipeBarrier<PIPE_V>();
     Select(targetTensorFp32, targetMaskOutTensor, zeroTensor, targetTensorFp32, SELMODE::VSEL_TENSOR_TENSOR_MODE,
@@ -550,7 +566,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::TargetProcess() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::TargetProcess()
+{
     uint32_t bufOffset = 0;
     uint64_t calCount = targetTasksPerLoop_ * DATA_PER_UINT8;
     uint64_t calCountAlignedRepeat = (calCount + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32 * DATA_PER_REPEAT_B32;
@@ -581,7 +598,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
         TargetInnerProcess(targetGmOffset, targetTasksPerLoop_, copyCount);
         PIPE_MTE3_MTE2();
     }
-    
+
     if (targetTailTasks > 0) {
         uint64_t targetGmOffset = batchOffset_ + targetLoop * targetTasksPerLoop_ * DATA_PER_UINT8;
         copyCount = targetTailTasks * DATA_PER_UINT8;
@@ -592,8 +609,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
             targetPadNum_ = copyCountAligned - copyCount;
             if constexpr (IsSameType<targetT, int64_t>::value) {
                 uint64_t dupOffset = copyCountAligned - targetNumPerBlock;
-                uint64_t copyCountAlignedB32 =
-                    (copyCount + DATA_PER_BLOCK_B32 - 1) / DATA_PER_BLOCK_B32 * DATA_PER_BLOCK_B32;
+                uint64_t copyCountAlignedB32 = (copyCount + DATA_PER_BLOCK_B32 - 1) / DATA_PER_BLOCK_B32 *
+                                               DATA_PER_BLOCK_B32;
                 uint64_t dupCount = (copyCountAlignedB32 - dupOffset) * NUM_TWO;
                 Duplicate(targetTensor[dupOffset].template ReinterpretCast<int32_t>(), int32_t(0), dupCount);
                 PIPE_V_MTE2();
@@ -604,7 +621,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetMNConfig(MNConfig &mnConfig) {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetMNConfig(MNConfig& mnConfig)
+{
     SetMKN(mnConfig);
     mnConfig.baseM = mmTilingData_->baseM;
     mnConfig.baseN = mmTilingData_->baseN;
@@ -620,7 +638,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetMKN(MNConfig &mnConfig) {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetMKN(MNConfig& mnConfig)
+{
     mnConfig.m = m_;
     mnConfig.k = k_;
     mnConfig.n = n_;
@@ -628,32 +647,39 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MNBlockIdxCompute(
-    MNConfig &mnConfig, const uint64_t curBlock, const uint64_t count, const uint64_t thresholdM_dimN) {
+    MNConfig& mnConfig, const uint64_t curBlock, const uint64_t count, const uint64_t thresholdM_dimN)
+{
     if (mnConfig.blockDimM <= THRESHOLD_DIM_M || THRESHOLD_DIM_M == 1) {
         mnConfig.mIdx = (curBlock - count) / mnConfig.blockDimN;
         mnConfig.nIdx = (curBlock - count) % mnConfig.blockDimN;
     } else {
         uint64_t relativeBlock = curBlock - count;
         uint64_t curThresholdM = relativeBlock >= AlignDown(mnConfig.blockDimM * mnConfig.blockDimN, thresholdM_dimN) ?
-            mnConfig.blockDimM % THRESHOLD_BLOCK_NUM : THRESHOLD_BLOCK_NUM;
+                                     mnConfig.blockDimM % THRESHOLD_BLOCK_NUM :
+                                     THRESHOLD_BLOCK_NUM;
         uint64_t curThresholdM_thresholdN = curThresholdM * THRESHOLD_BLOCK_NUM;
-        uint64_t curThresholdN = relativeBlock % thresholdM_dimN >= AlignDown(curThresholdM * mnConfig.blockDimN,
-            curThresholdM_thresholdN) ? mnConfig.blockDimN % THRESHOLD_BLOCK_NUM : THRESHOLD_BLOCK_NUM;
+        uint64_t curThresholdN = relativeBlock % thresholdM_dimN >=
+                                         AlignDown(curThresholdM * mnConfig.blockDimN, curThresholdM_thresholdN) ?
+                                     mnConfig.blockDimN % THRESHOLD_BLOCK_NUM :
+                                     THRESHOLD_BLOCK_NUM;
 
         uint64_t localRelativeBlock = relativeBlock % thresholdM_dimN % curThresholdM_thresholdN;
         mnConfig.mIdx = localRelativeBlock % curThresholdM + relativeBlock / thresholdM_dimN * THRESHOLD_BLOCK_NUM;
-        mnConfig.nIdx = (localRelativeBlock + localRelativeBlock /
-            LeastCommonMultiple(curThresholdM, curThresholdN)) % curThresholdN + relativeBlock %
-            thresholdM_dimN / curThresholdM_thresholdN * THRESHOLD_BLOCK_NUM;
+        mnConfig.nIdx = (localRelativeBlock + localRelativeBlock / LeastCommonMultiple(curThresholdM, curThresholdN)) %
+                            curThresholdN +
+                        relativeBlock % thresholdM_dimN / curThresholdM_thresholdN * THRESHOLD_BLOCK_NUM;
     }
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MMCompute(
-    MNConfig& mnConfig, uint64_t tailN, uint64_t outOffset, bool enSequentialWrite) {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::MMCompute(MNConfig& mnConfig,
+                                                                                             uint64_t tailN,
+                                                                                             uint64_t outOffset,
+                                                                                             bool enSequentialWrite)
+{
     uint64_t curSingleN = mnConfig.nIdx < mnConfig.blockDimN - 1 ? mnConfig.singleN : mnConfig.n - tailN;
-    uint64_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM
-                                                                 : mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
+    uint64_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM :
+                                                                   mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
     uint64_t xOffset = mnConfig.mIdx * mnConfig.singleM * mnConfig.k;
     if constexpr (mmOutFlag) {
         mm_.SetOrgShape(mnConfig.m, mnConfig.n, mnConfig.k);
@@ -669,19 +695,20 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::SetDataCopyPadParamsAndInit(
     LocalTensor<uint16_t>& tmpTensor, DataCopyExtParams& extParams, DataCopyPadExtParams<mmT>& padExtParams,
-    MNConfig& mnConfig, uint32_t curSingleN) {
+    MNConfig& mnConfig, uint32_t curSingleN)
+{
     if (curSingleN != mnConfig.baseN) {
         if constexpr (IsSameType<mmT, half>::value) {
             Duplicate(tmpTensor, FLOAT16_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
             Duplicate(tmpTensor[QUARTER_BASIC_BLOCK_SIZE], FLOAT16_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
             uint16_t negInfFp16 = 0xFC00;
-            mmT negInfValue = *reinterpret_cast<mmT *>(&negInfFp16);
+            mmT negInfValue = *reinterpret_cast<mmT*>(&negInfFp16);
             padExtParams.paddingValue = negInfValue;
         } else {
             Duplicate(tmpTensor, BF16_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
             Duplicate(tmpTensor[QUARTER_BASIC_BLOCK_SIZE], BF16_NEG_INF, QUARTER_BASIC_BLOCK_SIZE);
             uint16_t negInfBf16 = 0xFF80;
-            mmT negInfValue = *reinterpret_cast<mmT *>(&negInfBf16);
+            mmT negInfValue = *reinterpret_cast<mmT*>(&negInfBf16);
             padExtParams.paddingValue = negInfValue;
         }
         event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
@@ -697,7 +724,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
         padExtParams.isPad = true;
         padExtParams.rightPadding = rightPadding;
-        
+
     } else {
         uint32_t srcStride = (mnConfig.rowSize - curSingleN) * sizeof(mmT);
         uint32_t dstStride = 0;
@@ -712,7 +739,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::DataCopyCastVocabParallelLogitsOut(
-    MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN, uint64_t outOffset) {
+    MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN, uint64_t outOffset)
+{
     DataCopyPadExtParams<mmT> padExtParams;
     DataCopyExtParams extParams;
     extParams.blockCount = loopNum;
@@ -722,16 +750,16 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     padExtParams.leftPadding = 0;
     LocalTensor<uint16_t> tmpTensor = vocabParallelLogitsOutTensor.template ReinterpretCast<uint16_t>()[mmOutputOffset];
     SetDataCopyPadParamsAndInit(tmpTensor, extParams, padExtParams, mnConfig, curSingleN);
-    DataCopyPad(vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset],
-                mmOutTensor_[outOffset], extParams, padExtParams);
+    DataCopyPad(vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset], mmOutTensor_[outOffset],
+                extParams, padExtParams);
     PIPE_MTE2_V();
-    Cast(vocabParallelLogitsOutTensor,
-         vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset],
+    Cast(vocabParallelLogitsOutTensor, vocabParallelLogitsOutTensor.template ReinterpretCast<mmT>()[mmOutputOffset],
          RoundMode::CAST_NONE, mmOutputOffset);
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineMaxSumInitBuffer() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineMaxSumInitBuffer()
+{
     uint32_t bufOffset = 0;
     uint32_t baseMDivTwo = mmTilingData_->baseM / NUM_TWO;
     uint32_t basicBlockSize = mmTilingData_->baseN * mmTilingData_->baseM;
@@ -746,8 +774,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     bufOffset += sizeof(float) * baseMDivTwo;
     preSumTensor = calcBuf_.GetWithOffset<float>(baseMDivTwo, bufOffset);
     bufOffset += sizeof(float) * baseMDivTwo;
-    maxTensor = calcBuf_.GetWithOffset<float>(basicBlockSize  / DATA_PER_REPEAT_B32, bufOffset);
-    bufOffset += sizeof(float) * basicBlockSize  / DATA_PER_REPEAT_B32;
+    maxTensor = calcBuf_.GetWithOffset<float>(basicBlockSize / DATA_PER_REPEAT_B32, bufOffset);
+    bufOffset += sizeof(float) * basicBlockSize / DATA_PER_REPEAT_B32;
     brcbMaxTensor = calcBuf_.GetWithOffset<float>(baseMDivTwo * DATA_PER_BLOCK_B32, bufOffset);
     bufOffset += sizeof(float) * baseMDivTwo * DATA_PER_BLOCK_B32;
     brcbSumTensor = calcBuf_.GetWithOffset<float>(baseMDivTwo * DATA_PER_BLOCK_B32, bufOffset);
@@ -767,7 +795,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineCopyIn(
-    MNConfig& mnConfig, uint64_t loopStart, uint32_t loopNum, uint32_t curSingleN, uint64_t outOffset) {
+    MNConfig& mnConfig, uint64_t loopStart, uint32_t loopNum, uint32_t curSingleN, uint64_t outOffset)
+{
     uint64_t wsOffset = blockIdx_ / NUM_TWO * m_;
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(sizeof(float) * loopNum), 0, 0, 0};
     uint64_t gmOffset = mnConfig.mIdx * mnConfig.baseM + loopStart;
@@ -780,14 +809,15 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineMaxCompute(
-    MNConfig& mnConfig, uint32_t loopNum) {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineMaxCompute(MNConfig& mnConfig,
+                                                                                                    uint32_t loopNum)
+{
     int32_t repeatTimes = (loopNum * mnConfig.baseN + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
     int32_t blockMask = DATA_PER_REPEAT_B32;
     int32_t dstRepStride = 1;
     if (repeatTimes > MAX_REPEAT_TIMES_FOR_REDUCE) {
-        int32_t repeatTimesFisrt =
-            (repeatTimes / NUM_TWO + DATA_PER_REPEAT_MAX_OUT - 1) / DATA_PER_REPEAT_MAX_OUT * DATA_PER_REPEAT_MAX_OUT;
+        int32_t repeatTimesFisrt = (repeatTimes / NUM_TWO + DATA_PER_REPEAT_MAX_OUT - 1) / DATA_PER_REPEAT_MAX_OUT *
+                                   DATA_PER_REPEAT_MAX_OUT;
         int32_t repeatTimesSecond = repeatTimes - repeatTimesFisrt;
         WholeReduceMax(maxTensor, vocabParallelLogitsOutTensor, blockMask, repeatTimesFisrt, dstRepStride,
                        DEFAULT_BLK_STRIDE, DEFAULT_REPEAT_STRIDE);
@@ -801,8 +831,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
                        DEFAULT_BLK_STRIDE, DEFAULT_REPEAT_STRIDE);
     }
     PipeBarrier<PIPE_V>();
-    uint8_t dupRepeatTimes =
-        (loopNum * DATA_PER_REPEAT_MAX_OUT + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
+    uint8_t dupRepeatTimes = (loopNum * DATA_PER_REPEAT_MAX_OUT + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
     uint64_t dupMask[2] = {0b1010101010101010101010101010101010101010101010101010101010101010, 0};
     Duplicate(maxTensor.template ReinterpretCast<int32_t>(), FLOAT32_NEG_INF, dupMask, dupRepeatTimes, 1,
               DEFAULT_REPEAT_STRIDE);
@@ -815,7 +844,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineGetPredictedLogits(
-    MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN) {
+    MNConfig& mnConfig, uint32_t loopNum, uint32_t curSingleN)
+{
     float startIndex = -static_cast<int32_t>(mnConfig.nIdx * mnConfig.baseN);
     LocalTensor<float> maskedTargetTensorFp32 = maskedTargetTensor.template ReinterpretCast<float>();
     Cast(maskedTargetTensorFp32, maskedTargetTensor, RoundMode::CAST_RINT, loopNum);
@@ -824,8 +854,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     Muls(vecIndexTensor, vecIndexTensor, int32_t(BYTES_B32 * mnConfig.baseN), loopNum);
     PipeBarrier<PIPE_V>();
     UnaryRepeatParams unaryParams{DEFAULT_BLK_STRIDE, DEFAULT_BLK_STRIDE, DEFAULT_REPEAT_STRIDE, DEFAULT_REPEAT_STRIDE};
-    CompareScalar(compareLtTensor, maskedTargetTensorFp32, float(0), CMPMODE::LT, uint64_t(loopNum), 1,
-                  unaryParams);
+    CompareScalar(compareLtTensor, maskedTargetTensorFp32, float(0), CMPMODE::LT, uint64_t(loopNum), 1, unaryParams);
     CompareScalar(compareGeTensor, maskedTargetTensorFp32, float(static_cast<int32_t>(curSingleN)), CMPMODE::GE,
                   uint64_t(loopNum), 1, unaryParams);
     PipeBarrier<PIPE_V>();
@@ -845,13 +874,13 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     Gather(predictedLogitsTensor, vocabParallelLogitsOutTensor, maskedTargetTensor.template ReinterpretCast<uint32_t>(),
            0, loopNum);
     PipeBarrier<PIPE_V>();
-    Select(predictedLogitsTensor, compareLtTensor, zeroTensor, predictedLogitsTensor,
-           SELMODE::VSEL_TENSOR_TENSOR_MODE, uint64_t(loopNum), 1, selectRepeatParams);
+    Select(predictedLogitsTensor, compareLtTensor, zeroTensor, predictedLogitsTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+           uint64_t(loopNum), 1, selectRepeatParams);
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineSumCompute(
-    uint32_t loopNum) {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineSumCompute(uint32_t loopNum)
+{
     Brcb(brcbMaxTensor, maxTensor, mmTilingData_->baseM / NUM_TWO / DATA_PER_BLOCK_B32,
          {DEFAULT_BLK_STRIDE, DEFAULT_REPEAT_STRIDE});
     Sub(preMaxTensor, preMaxTensor, maxTensor, loopNum);
@@ -888,10 +917,11 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::OnlineMaxSumProcess(
-    MNConfig& mnConfig, uint64_t baseN, uint64_t tailN, uint64_t outOffset) {
+    MNConfig& mnConfig, uint64_t baseN, uint64_t tailN, uint64_t outOffset)
+{
     uint64_t curSingleN = mnConfig.nIdx < mnConfig.blockDimN - 1 ? mnConfig.singleN : mnConfig.n - tailN;
-    uint64_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM
-                                                                 : mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
+    uint64_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM :
+                                                                   mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
 
     uint32_t loopStart = curSingleM / NUM_TWO;
     uint32_t loopCount = curSingleM;
@@ -903,7 +933,7 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     } else {
         outOffset = outOffset + loopStart * baseN;
     }
-    
+
     uint64_t wsOffset = blockIdx_ / NUM_TWO * m_;
 
     OnlineMaxSumInitBuffer();
@@ -930,7 +960,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::vecIndexCompute(
-    LocalTensor<int32_t> &vecIndexTensor) {
+    LocalTensor<int32_t>& vecIndexTensor)
+{
     int32_t addsNum = 4;
     CreateVecIndex(vecIndexTensor, int32_t(0), cubeCoreNumAligned_);
     PipeBarrier<PIPE_V>();
@@ -944,7 +975,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumInitBuffer() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumInitBuffer()
+{
     uint32_t maxLoopNumDoubleBuffer = MAX_LOOP_NUM * DOUBLE_BUFFER;
     uint32_t maxLoopNumAllCoreDoubleBuffer = maxLoopNumDoubleBuffer * cubeCoreNumAligned_;
     uint32_t bufOffset = 0;
@@ -981,27 +1013,29 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumSetCopyInParams(
-    DataCopyExtParams& extCopyFromWsParams, DataCopyExtParams& extCopyFromWsTailParams, uint32_t outerLoopTail) {
+    DataCopyExtParams& extCopyFromWsParams, DataCopyExtParams& extCopyFromWsTailParams, uint32_t outerLoopTail)
+{
     extCopyFromWsParams.blockCount = cubeCoreNum_;
-    extCopyFromWsParams.blockLen =  MAX_LOOP_NUM * sizeof(float);
+    extCopyFromWsParams.blockLen = MAX_LOOP_NUM * sizeof(float);
     extCopyFromWsParams.srcStride = (m_ - MAX_LOOP_NUM) * sizeof(float);
     extCopyFromWsParams.dstStride = 0;
 
     extCopyFromWsTailParams.blockCount = cubeCoreNum_;
-    extCopyFromWsTailParams.blockLen =  outerLoopTail * sizeof(float);
+    extCopyFromWsTailParams.blockLen = outerLoopTail * sizeof(float);
     extCopyFromWsTailParams.srcStride = (m_ - outerLoopTail) * sizeof(float);
     extCopyFromWsTailParams.dstStride = (MAX_LOOP_NUM - outerLoopTail) / DATA_PER_BLOCK_B32;
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumCopyIn(
-    DataCopyExtParams& extCopyFromWsParams, uint64_t gmOffset, uint32_t calCount, uint64_t pp) {
+    DataCopyExtParams& extCopyFromWsParams, uint64_t gmOffset, uint32_t calCount, uint64_t pp)
+{
     uint32_t maxLoopNumPpOffset = pp * MAX_LOOP_NUM;
     uint32_t maxLoopNumAllCorePpOffset = maxLoopNumPpOffset * cubeCoreNumAligned_;
-    DataCopyPad(maxCopyTensor[maxLoopNumAllCorePpOffset], gmOnlineMax_[gmOffset],
-                extCopyFromWsParams, {false, 0, 0, 0});
-    DataCopyPad(sumCopyTensor[maxLoopNumAllCorePpOffset], gmOnlineSum_[gmOffset],
-                extCopyFromWsParams, {false, 0, 0, 0});
+    DataCopyPad(maxCopyTensor[maxLoopNumAllCorePpOffset], gmOnlineMax_[gmOffset], extCopyFromWsParams,
+                {false, 0, 0, 0});
+    DataCopyPad(sumCopyTensor[maxLoopNumAllCorePpOffset], gmOnlineSum_[gmOffset], extCopyFromWsParams,
+                {false, 0, 0, 0});
     DataCopyPad(predictedLogitsTensor[maxLoopNumPpOffset], gmPredictedLogitsLocal_[gmOffset],
                 {1, static_cast<uint32_t>(sizeof(float) * calCount), 0, 0, 0}, {false, 0, 0, 0});
     DataCopyPad(targetTensor[maxLoopNumPpOffset], gmTarget_[gmOffset],
@@ -1010,7 +1044,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumCompute(
-    uint64_t gmOffset, uint32_t calCount, uint64_t pp) {
+    uint64_t gmOffset, uint32_t calCount, uint64_t pp)
+{
     uint32_t cmpResPpOffset = pp * DATA_PER_BLOCK_B8;
     uint32_t loopPpOffset = pp * MAX_LOOP_NUM;
     uint32_t loopPpAllCoreOffset = loopPpOffset * cubeCoreNumAligned_;
@@ -1022,10 +1057,10 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     Gather(maxTensor[loopPpAllCoreOffset], maxCopyTensor[loopPpAllCoreOffset],
            vecIndexTensor.template ReinterpretCast<uint32_t>(), uint32_t(0), calCountAllCore);
     PipeBarrier<PIPE_V>();
-    WholeReduceMax(maxOutTensor[loopPpOffset], maxTensor[loopPpAllCoreOffset], int32_t(cubeCoreNum_), calCount,
-                   1, 1, cubeCoreNumCeilDiv, ReduceOrder::ORDER_ONLY_VALUE);
-    Cast(targetTensor[loopPpOffset].template ReinterpretCast<float>(), targetTensor[loopPpOffset],
-         RoundMode::CAST_RINT, calCount);
+    WholeReduceMax(maxOutTensor[loopPpOffset], maxTensor[loopPpAllCoreOffset], int32_t(cubeCoreNum_), calCount, 1, 1,
+                   cubeCoreNumCeilDiv, ReduceOrder::ORDER_ONLY_VALUE);
+    Cast(targetTensor[loopPpOffset].template ReinterpretCast<float>(), targetTensor[loopPpOffset], RoundMode::CAST_RINT,
+         calCount);
     PipeBarrier<PIPE_ALL>();
     CompareScalar(compareLtTensor[cmpResPpOffset], targetTensor[loopPpOffset].template ReinterpretCast<float>(),
                   vocabStartIndex_, CMPMODE::LT, uint64_t(calCount), 1, unaryParams);
@@ -1060,7 +1095,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumCopyOut(
-    uint64_t gmOffset, uint32_t calCount, uint64_t pp) {
+    uint64_t gmOffset, uint32_t calCount, uint64_t pp)
+{
     uint32_t ubOffset = pp * MAX_LOOP_NUM;
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(sizeof(float) * calCount), 0, 0, 0};
     DataCopyPad(gmLogitsMaxLocal_[gmOffset], maxOutTensor[ubOffset], copyParams);
@@ -1069,7 +1105,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllocEventIDs() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllocEventIDs()
+{
     event_t eventIdMte2ToVPing = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>());
     event_t eventIdMte2ToVPong = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>());
     event_t eventIdVToMte3Ping = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>());
@@ -1086,7 +1123,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::ReleaseEventIDs() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::ReleaseEventIDs()
+{
     GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::MTE2_V>(eventIdMte2ToVList[0]);
     GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::MTE2_V>(eventIdMte2ToVList[1]);
     GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::V_MTE3>(eventIdVToMte3ToVList[0]);
@@ -1097,7 +1135,8 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
 __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumInnerTiling(
-    uint32_t& loopOffset, uint32_t& outerLoop, uint32_t& outerLoopTail, uint32_t& batchNum) {
+    uint32_t& loopOffset, uint32_t& outerLoop, uint32_t& outerLoopTail, uint32_t& batchNum)
+{
     uint32_t mPerCore = m_ / vecCoreNum_;
     uint32_t mPerCoreTail = m_ % vecCoreNum_;
     if (blockIdx_ < mPerCoreTail) {
@@ -1112,14 +1151,15 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     outerLoopTail = batchNum % MAX_LOOP_NUM;
 
     if (outerLoopTail > 0) {
-        outerLoop = outerLoop + 1; 
+        outerLoop = outerLoop + 1;
     } else {
         outerLoopTail = MAX_LOOP_NUM;
     }
 }
 
 template <typename inputT, typename targetT, typename mmT, uint64_t mmOutFlag>
-__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumProcess() {
+__aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag>::AllReduceMaxSumProcess()
+{
     uint32_t calCount = MAX_LOOP_NUM;
     uint32_t loopOffset = 0;
     uint32_t outerLoop = 0;
@@ -1172,5 +1212,5 @@ __aicore__ inline void FusedLinearOnlineMaxSumOp<inputT, targetT, mmT, mmOutFlag
     AllReduceMaxSumCopyOut(gmOffsetPre, outerLoopTail, pp);
 }
 
-} // FusedLinearOnlineMaxSum
+} // namespace FusedLinearOnlineMaxSum
 #endif // _OP_KERNEL_FUSED_LINEAR_ONLINE_MAX_SUM_H_

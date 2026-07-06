@@ -21,17 +21,12 @@ using namespace AscendC;
 
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <typename xDtype, typename yDtype>
-class DynamicQuant : public DynamicQuantBase
-{
+class DynamicQuant : public DynamicQuantBase {
 public:
-    __aicore__ inline DynamicQuant(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuant(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitParams(offset);
@@ -86,19 +81,16 @@ private:
             inGm.SetGlobalBuffer(
                 (__gm__ xDtype*)x + tilingData_.headCoreNum * lenHead + (blockIdx - tilingData_.headCoreNum) * lenTail,
                 lenTail);
-            outGm.SetGlobalBuffer(
-                (__gm__ yDtype*)y + tilingData_.headCoreNum * outLenHead +
-                    (blockIdx - tilingData_.headCoreNum) * outLenTail,
-                outLenTail);
-            scaleGm.SetGlobalBuffer(
-                (__gm__ float*)scale + tilingData_.headCoreNum * rowPerHeadCore +
-                    (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
-                rowPerTailCore);
+            outGm.SetGlobalBuffer((__gm__ yDtype*)y + tilingData_.headCoreNum * outLenHead +
+                                      (blockIdx - tilingData_.headCoreNum) * outLenTail,
+                                  outLenTail);
+            scaleGm.SetGlobalBuffer((__gm__ float*)scale + tilingData_.headCoreNum * rowPerHeadCore +
+                                        (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
+                                    rowPerTailCore);
             if (isAsymmetrical) {
-                offsetGm.SetGlobalBuffer(
-                    (__gm__ float*)offset + tilingData_.headCoreNum * rowPerHeadCore +
-                        (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
-                    rowPerTailCore);
+                offsetGm.SetGlobalBuffer((__gm__ float*)offset + tilingData_.headCoreNum * rowPerHeadCore +
+                                             (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
+                                         rowPerTailCore);
             }
         }
         if (isAsymmetrical) {

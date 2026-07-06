@@ -24,5 +24,5 @@ struct Tiling4AdaptiveMaxPool3DGradCompileInfo {
     uint64_t totalCoreNum = 0;
     uint64_t maxUbSize = 0;
 };
-}
+} // namespace optiling
 #endif // __OP_HOST_MATMUL_V3_COMPILE_INFO_H__

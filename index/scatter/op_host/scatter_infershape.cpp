@@ -24,28 +24,29 @@ namespace ops {
 static constexpr size_t SC_IN_VAR_IDX = 0;
 static constexpr size_t SC_OUT_VAR_IDX = 0;
 static constexpr size_t SC_OUT_ARGMAX_IDX = 1;
-static ge::graphStatus InferShape4Scatter(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "Begin to do Infershape of Scatter.");
-  const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
+static ge::graphStatus InferShape4Scatter(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do Infershape of Scatter.");
+    const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
 
-  gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
+    gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
 
-  if (IsUnknownRank(*var_shape)) {
-    OP_LOGD(context->GetNodeName(), "input shape is UnknownRank, set output shape to (-2, )");
-    SetUnknownRank(*output_shape);
+    if (IsUnknownRank(*var_shape)) {
+        OP_LOGD(context->GetNodeName(), "input shape is UnknownRank, set output shape to (-2, )");
+        SetUnknownRank(*output_shape);
+
+        return ge::GRAPH_SUCCESS;
+    }
+
+    *output_shape = *var_shape;
+
+    OP_LOGD(context->GetNodeName(), "output_shape = %s.", ToString(*output_shape).c_str());
+    OP_LOGD(context->GetNodeName(), "End to do ScatterInfershape.");
 
     return ge::GRAPH_SUCCESS;
-  }
-
-  *output_shape = *var_shape;
-
-  OP_LOGD(context->GetNodeName(), "output_shape = %s.", ToString(*output_shape).c_str());
-  OP_LOGD(context->GetNodeName(), "End to do ScatterInfershape.");
-
-  return ge::GRAPH_SUCCESS;
 }
 // register infershape for Scatter op
 IMPL_OP_INFERSHAPE(Scatter).InferShape(InferShape4Scatter);
-}
+} // namespace ops

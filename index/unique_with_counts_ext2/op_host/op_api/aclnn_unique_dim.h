@@ -76,4 +76,4 @@ ACLNN_API aclnnStatus aclnnUniqueDim(void* workspace, uint64_t workspaceSize, ac
 }
 #endif
 
-#endif  // OP_API_INC_UNIQUE_DIM_H_
+#endif // OP_API_INC_UNIQUE_DIM_H_

@@ -37,8 +37,7 @@ using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2;
 
 template <typename T>
-class HardSwishV2
-{
+class HardSwishV2 {
 public:
     __aicore__ inline HardSwishV2(){};
 
@@ -73,26 +72,26 @@ __aicore__ inline void HardSwishV2<T>::Init(GM_ADDR x, GM_ADDR z, const HardSwis
     uint32_t coreNum = AscendC::GetBlockIdx();
     uint32_t globalBufferIndex = tilingData->bigCoreDataNum * AscendC::GetBlockIdx();
     this->tileDataNum = tilingData->tileDataNum;
-    if (coreNum < tilingData->tailBlockNum) { 
+    if (coreNum < tilingData->tailBlockNum) {
         this->coreDataNum = tilingData->bigCoreDataNum;
         this->tileNum = tilingData->finalBigTileNum;
         this->tailDataNum = tilingData->bigTailDataNum;
-    }
-    else { 
+    } else {
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     inputGMX.SetGlobalBuffer((__gm__ T*)x + globalBufferIndex, this->coreDataNum);
     outputGMZ.SetGlobalBuffer((__gm__ T*)z + globalBufferIndex, this->coreDataNum);
 
     pipe.InitBuffer(inputQueueX, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(outputQueueZ, BUFFER_NUM, this->tileDataNum * sizeof(T));
-    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value){
+    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value) {
         pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(float));
         pipe.InitBuffer(tmpBuf1, this->tileDataNum * sizeof(float));
-    }else{
+    } else {
         pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(T));
     }
 }
@@ -120,7 +119,7 @@ __aicore__ inline void HardSwishV2<T>::Compute(int32_t progress)
     AscendC::LocalTensor<T> zLocal = outputQueueZ.AllocTensor<T>();
     if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value || AscendC::Std::is_same<T, float16_t>::value) {
         AscendC::LocalTensor<float> tmp0 = tmpBuf0.Get<float>();
-        AscendC::LocalTensor<float> tmp1 = tmpBuf1.Get<float>(); 
+        AscendC::LocalTensor<float> tmp1 = tmpBuf1.Get<float>();
         // 将输入从bfloat16转换为float
         AscendC::Cast(tmp0, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(tmp1, zLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
@@ -139,25 +138,25 @@ __aicore__ inline void HardSwishV2<T>::Compute(int32_t progress)
         AscendC::Mul(tmp1, tmp0, tmp1, this->processDataNum); // 使用原始x值
         PipeBarrier<PIPE_V>();
         // 将结果从float转换回bfloat16或float16
-        if(AscendC::Std::is_same<T, bfloat16_t>::value){
-            AscendC::Cast(zLocal, tmp1,AscendC::RoundMode::CAST_RINT, this->processDataNum);
-        }else{
-            AscendC::Cast(zLocal, tmp1, AscendC::RoundMode::CAST_NONE, this->processDataNum);     
+        if (AscendC::Std::is_same<T, bfloat16_t>::value) {
+            AscendC::Cast(zLocal, tmp1, AscendC::RoundMode::CAST_RINT, this->processDataNum);
+        } else {
+            AscendC::Cast(zLocal, tmp1, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         }
-    }else{
+    } else {
         AscendC::LocalTensor<T> tmp0 = tmpBuf0.Get<T>();
-        AscendC::Adds(zLocal, xLocal, (T)3.0f,this->processDataNum);
+        AscendC::Adds(zLocal, xLocal, (T)3.0f, this->processDataNum);
         PipeBarrier<PIPE_V>();
         AscendC::Maxs(zLocal, zLocal, (T)0.0f, this->processDataNum);
         PipeBarrier<PIPE_V>();
-        AscendC::Mins(zLocal, zLocal, (T)6.0f,this->processDataNum);
+        AscendC::Mins(zLocal, zLocal, (T)6.0f, this->processDataNum);
         PipeBarrier<PIPE_V>();
-        AscendC::Duplicate<T>(tmp0,(T)6.0, this->processDataNum);
+        AscendC::Duplicate<T>(tmp0, (T)6.0, this->processDataNum);
         PipeBarrier<PIPE_V>();
-        AscendC::Div(zLocal, zLocal,tmp0,this->processDataNum);
+        AscendC::Div(zLocal, zLocal, tmp0, this->processDataNum);
         PipeBarrier<PIPE_V>();
-        AscendC::Mul(zLocal,xLocal, zLocal,this->processDataNum);
-    }    
+        AscendC::Mul(zLocal, xLocal, zLocal, this->processDataNum);
+    }
     outputQueueZ.EnQue<T>(zLocal);
     inputQueueX.FreeTensor(xLocal);
 }

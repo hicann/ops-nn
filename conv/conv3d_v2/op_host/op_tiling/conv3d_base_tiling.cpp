@@ -29,10 +29,10 @@
 
 using namespace Conv3dApiTiling;
 using namespace Conv3dTilingKey;
-using Ops::NN::Conv3dTilingEngineApi::CONV_ATTRS_DIM;
 using Ops::NN::Conv3dTilingEngineApi::ATTRS_D_DIM_IDX_NCDHW;
 using Ops::NN::Conv3dTilingEngineApi::ATTRS_H_DIM_IDX_NCDHW;
 using Ops::NN::Conv3dTilingEngineApi::ATTRS_W_DIM_IDX_NCDHW;
+using Ops::NN::Conv3dTilingEngineApi::CONV_ATTRS_DIM;
 using Ops::NN::Conv3dTilingEngineApi::MAX_64_BIT_NUM;
 
 namespace optiling {
@@ -40,13 +40,13 @@ namespace Conv3dOpsTiling {
 
 ge::graphStatus Conv3dBaseTiling::GetPlatformInfo()
 {
-    const optiling::Conv3DTilingParseInfo* opInfoPtr =
-        reinterpret_cast<const optiling::Conv3DTilingParseInfo*>(context_->GetCompileInfo());
+    const optiling::Conv3DTilingParseInfo* opInfoPtr = reinterpret_cast<const optiling::Conv3DTilingParseInfo*>(
+        context_->GetCompileInfo());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, opInfoPtr);
 
     opInfo_ = *opInfoPtr;
 
-    fe::PlatFormInfos *platformInfo = context_->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfo = context_->GetPlatformInfo();
     opRunInfo_.socVersion = opInfo_.socVersion;
     opRunInfo_.aicoreNum = platformInfo != nullptr ? platformInfo->GetCoreNumByType("AiCore") : opInfo_.aicoreNum;
 
@@ -107,8 +107,7 @@ bool Conv3dBaseTiling::Is3DFp32InputFp32Output() const
     }
 
     bool ret = fmapDesc->GetDataType() == ge::DataType::DT_FLOAT &&
-        weightDesc->GetDataType() == ge::DataType::DT_FLOAT &&
-        outDesc->GetDataType() == ge::DataType::DT_FLOAT;
+               weightDesc->GetDataType() == ge::DataType::DT_FLOAT && outDesc->GetDataType() == ge::DataType::DT_FLOAT;
 
     auto biasTensor = context_->GetOptionalInputTensor(INPUT_BIAS_INDEX);
     if (biasTensor != nullptr) {
@@ -124,25 +123,25 @@ bool Conv3dBaseTiling::Is3DFp32InputFp32Output() const
 
 void Conv3dBaseTiling::GetDescInfo()
 {
-    descInfo_.fMapFormat = static_cast<ge::Format>
-              (GetPrimaryFormat(context_->GetInputDesc(INPUT_FMAP_INDEX)->GetStorageFormat()));
+    descInfo_.fMapFormat = static_cast<ge::Format>(
+        GetPrimaryFormat(context_->GetInputDesc(INPUT_FMAP_INDEX)->GetStorageFormat()));
     descInfo_.fMapDtype = context_->GetInputDesc(INPUT_FMAP_INDEX)->GetDataType();
-    descInfo_.weightFormat = static_cast<ge::Format>
-              (GetPrimaryFormat(context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetStorageFormat()));
+    descInfo_.weightFormat = static_cast<ge::Format>(
+        GetPrimaryFormat(context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetStorageFormat()));
     descInfo_.weightDtype = context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetDataType();
-    descInfo_.outFormat = static_cast<ge::Format>
-              (GetPrimaryFormat(context_->GetOutputDesc(OUTPUT_INDEX)->GetStorageFormat()));
+    descInfo_.outFormat = static_cast<ge::Format>(
+        GetPrimaryFormat(context_->GetOutputDesc(OUTPUT_INDEX)->GetStorageFormat()));
     descInfo_.outDtype = context_->GetOutputDesc(OUTPUT_INDEX)->GetDataType();
 
     if (flagInfo_.hasBias) {
         descInfo_.biasDtype = context_->GetOptionalInputDesc(INPUT_BIAS_INDEX)->GetDataType();
-        descInfo_.biasFormat = static_cast<ge::Format>
-              (GetPrimaryFormat(context_->GetOptionalInputDesc(INPUT_BIAS_INDEX)->GetStorageFormat()));
+        descInfo_.biasFormat = static_cast<ge::Format>(
+            GetPrimaryFormat(context_->GetOptionalInputDesc(INPUT_BIAS_INDEX)->GetStorageFormat()));
     }
     if (flagInfo_.hasScale) {
         descInfo_.scaleDtype = context_->GetOptionalInputDesc(INPUT_SCALE_INDEX)->GetDataType();
-        descInfo_.scaleFormat = static_cast<ge::Format>
-              (GetPrimaryFormat(context_->GetOptionalInputDesc(INPUT_SCALE_INDEX)->GetStorageFormat()));
+        descInfo_.scaleFormat = static_cast<ge::Format>(
+            GetPrimaryFormat(context_->GetOptionalInputDesc(INPUT_SCALE_INDEX)->GetStorageFormat()));
     }
 
     GetConv3DParasHf32Mode(ATTR_HF32_FLAG_INDEX, attrInfo_.hf32Mode);
@@ -184,7 +183,7 @@ std::vector<int64_t> Conv3dBaseTiling::ExtractOriginOutputShape()
     return shape;
 }
 
-bool Conv3dBaseTiling::ExtractPadList(std::vector<int64_t> &padList) const
+bool Conv3dBaseTiling::ExtractPadList(std::vector<int64_t>& padList) const
 {
     auto padPtr = context_->GetAttrs()->GetListInt(ATTR_PAD_INDEX);
     if (padPtr == nullptr) {
@@ -192,8 +191,8 @@ bool Conv3dBaseTiling::ExtractPadList(std::vector<int64_t> &padList) const
         return false;
     }
     if (padPtr->GetSize() != FORMAT_PAD_DIM) {
-        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: input attr pad dim: %zu != %u.",
-                padPtr->GetSize(), FORMAT_PAD_DIM);
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: input attr pad dim: %zu != %u.", padPtr->GetSize(),
+                FORMAT_PAD_DIM);
         return false;
     }
 
@@ -207,7 +206,7 @@ bool Conv3dBaseTiling::ExtractPadList(std::vector<int64_t> &padList) const
     return true;
 }
 
-bool Conv3dBaseTiling::ExtractStrideList(std::vector<int64_t> &strideList)
+bool Conv3dBaseTiling::ExtractStrideList(std::vector<int64_t>& strideList)
 {
     auto stridePtr = context_->GetAttrs()->GetListInt(ATTR_STRIDE_INDEX);
     if (stridePtr == nullptr) {
@@ -215,8 +214,8 @@ bool Conv3dBaseTiling::ExtractStrideList(std::vector<int64_t> &strideList)
         return false;
     }
     if (stridePtr->GetSize() != FORMAT_NCDHW_DIM) {
-        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: input attr stride dim: %zu != %u.",
-                stridePtr->GetSize(), FORMAT_NCDHW_DIM);
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: input attr stride dim: %zu != %u.", stridePtr->GetSize(),
+                FORMAT_NCDHW_DIM);
         return false;
     }
 
@@ -228,17 +227,17 @@ bool Conv3dBaseTiling::ExtractStrideList(std::vector<int64_t> &strideList)
     return true;
 }
 
-bool Conv3dBaseTiling::ExtractDilationList(std::vector<int64_t> &dilationList)
+bool Conv3dBaseTiling::ExtractDilationList(std::vector<int64_t>& dilationList)
 {
     auto dilationPtr = context_->GetAttrs()->GetListInt(ATTR_DILATION_INDEX);
     // Return in DHW order as expected by Engine
-    dilationList.assign(CONV_ATTRS_DIM, 1);  // Default to 1
+    dilationList.assign(CONV_ATTRS_DIM, 1); // Default to 1
     if (dilationPtr == nullptr) {
         return true;
     }
     if (dilationPtr->GetSize() != FORMAT_NCDHW_DIM) {
-        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: input attr dilation dim: %zu != %u.",
-                dilationPtr->GetSize(), FORMAT_NCDHW_DIM);
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: input attr dilation dim: %zu != %u.", dilationPtr->GetSize(),
+                FORMAT_NCDHW_DIM);
         return false;
     }
 
@@ -248,7 +247,7 @@ bool Conv3dBaseTiling::ExtractDilationList(std::vector<int64_t> &dilationList)
     return true;
 }
 
-bool Conv3dBaseTiling::ExtractBiasShape(std::vector<int64_t> &biasShape) const
+bool Conv3dBaseTiling::ExtractBiasShape(std::vector<int64_t>& biasShape) const
 {
     auto biasShapePtr = context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
     if (biasShapePtr == nullptr) {
@@ -261,7 +260,7 @@ bool Conv3dBaseTiling::ExtractBiasShape(std::vector<int64_t> &biasShape) const
     return true;
 }
 
-bool Conv3dBaseTiling::ExtractScaleShape(std::vector<int64_t> &scaleShape) const
+bool Conv3dBaseTiling::ExtractScaleShape(std::vector<int64_t>& scaleShape) const
 {
     auto scaleShapePtr = context_->GetOptionalInputShape(INPUT_SCALE_INDEX);
     if (scaleShapePtr == nullptr) {
@@ -367,22 +366,28 @@ void Conv3dBaseTiling::PrintTilingInfo()
 void Conv3dBaseTiling::GetShapeInfo()
 {
     auto fMapShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
-    shapeInfo_.batch = static_cast<uint32_t>(fMapShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_N_INDEX));
+    shapeInfo_.batch = static_cast<uint32_t>(
+        fMapShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_N_INDEX));
     shapeInfo_.cIn = static_cast<uint32_t>(fMapShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_C_INDEX));
     shapeInfo_.di = static_cast<uint32_t>(fMapShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_D_INDEX));
     shapeInfo_.hi = static_cast<uint64_t>(fMapShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_H_INDEX));
     shapeInfo_.wi = static_cast<uint64_t>(fMapShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_W_INDEX));
 
     auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
-    shapeInfo_.cOut = static_cast<uint32_t>(weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_N_INDEX));
-    shapeInfo_.kd = static_cast<uint32_t>(weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_D_INDEX));
-    shapeInfo_.kh = static_cast<uint32_t>(weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_H_INDEX));
-    shapeInfo_.kw = static_cast<uint32_t>(weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_W_INDEX));
+    shapeInfo_.cOut = static_cast<uint32_t>(
+        weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_N_INDEX));
+    shapeInfo_.kd = static_cast<uint32_t>(
+        weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_D_INDEX));
+    shapeInfo_.kh = static_cast<uint32_t>(
+        weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_H_INDEX));
+    shapeInfo_.kw = static_cast<uint32_t>(
+        weightShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_WEIGHT_W_INDEX));
 
     auto outputShapePtr = context_->GetOutputShape(OUTPUT_INDEX);
     shapeInfo_.ho = static_cast<uint64_t>(outputShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_H_INDEX));
     shapeInfo_.wo = static_cast<uint64_t>(outputShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_W_INDEX));
-    shapeInfo_.dOut = static_cast<uint32_t>(outputShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_D_INDEX));
+    shapeInfo_.dOut = static_cast<uint32_t>(
+        outputShapePtr->GetOriginShape().GetDim(originalFormat_.FORMAT_FMAP_D_INDEX));
 }
 
 // calculate total tilingdata
@@ -536,20 +541,20 @@ bool Conv3dBaseTiling::GetTilingFromRepo()
     GetTilingInputArgs(inputArgs, inputArgsSize);
 
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
-    uint32_t ret = Ops::NN::QueryBank(
-        inputArgs.get(), inputArgsSize, "Conv3D", opRunInfo_.socVersion, opRunInfo_.aicoreNum, tuningTiling);
+    uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3D", opRunInfo_.socVersion,
+                                      opRunInfo_.aicoreNum, tuningTiling);
     if (ret != VALID_VALUE || tuningTiling == nullptr) {
         return false;
     }
     return TranslateAoeTiling(tuningTiling);
 }
 
-bool Conv3dBaseTiling::GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size_t &size)
+bool Conv3dBaseTiling::GetTilingInputArgs(std::shared_ptr<void>& inputArgs, size_t& size)
 {
     std::shared_ptr<tuningtiling::Conv3DInputArgs> conv3DInput = nullptr;
     try {
         conv3DInput = std::make_shared<tuningtiling::Conv3DInputArgs>();
-    } catch (const std::bad_alloc &) {
+    } catch (const std::bad_alloc&) {
         OP_LOGI(context_->GetNodeName(), "get tiling from repo error: input args is nullptr");
         return false;
     }
@@ -593,7 +598,7 @@ bool Conv3dBaseTiling::GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size
     return true;
 }
 
-bool Conv3dBaseTiling::TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
+bool Conv3dBaseTiling::TranslateAoeTiling(tuningtiling::TuningTilingDefPtr& tuningTiling)
 {
     auto aoeTiling = std::static_pointer_cast<tuningtiling::Conv3DTunerTiling>(tuningTiling);
     if (aoeTiling == nullptr) {
@@ -693,7 +698,8 @@ void Conv3dBaseTiling::SetAdditionalTilingInfo()
     uint64_t n0 = static_cast<uint64_t>(g_cubeMknMap.GetMKN(g_dtypeMap[descInfo_.fMapDtype], MKN_N_IDX));
     uint64_t singleCi1 = CeilDiv(shapeInfo_.cinOpt, k0);
     uint64_t ci0HkWk = shapeInfo_.kh * shapeInfo_.kw * k0;
-    uint64_t alignCinKhKwKd = AlignUp(shapeInfo_.cinOpt, k0) * tilingData_.convApiTiling.kernelH * tilingData_.convApiTiling.kernelW * tilingData_.convApiTiling.kernelD;
+    uint64_t alignCinKhKwKd = AlignUp(shapeInfo_.cinOpt, k0) * tilingData_.convApiTiling.kernelH *
+                              tilingData_.convApiTiling.kernelW * tilingData_.convApiTiling.kernelD;
     uint64_t kAL1TailCheck = alignCinKhKwKd % tilingData_.convApiTiling.kAL1;
     uint32_t kAL1Tail = kAL1TailCheck == 0 ? tilingData_.convApiTiling.kAL1 : kAL1TailCheck;
     uint64_t kBL1TailCheck = alignCinKhKwKd % tilingData_.convApiTiling.kBL1;
@@ -705,12 +711,14 @@ void Conv3dBaseTiling::SetAdditionalTilingInfo()
     tilingData_.convApiTiling.singleCoreGroupOpt = singleCoreGroupOpt;
     tilingData_.convApiTiling.orgHixWi = tilingData_.convApiTiling.orgHi * tilingData_.convApiTiling.orgWi;
     tilingData_.convApiTiling.orgHoxWo = tilingData_.convApiTiling.orgHo * tilingData_.convApiTiling.orgWo;
-    tilingData_.convApiTiling.cin1xOriHixOriWixk0 = singleCi1 * tilingData_.convApiTiling.orgHi * tilingData_.convApiTiling.orgWi * k0;
+    tilingData_.convApiTiling.cin1xOriHixOriWixk0 = singleCi1 * tilingData_.convApiTiling.orgHi *
+                                                    tilingData_.convApiTiling.orgWi * k0;
     tilingData_.convApiTiling.oriHixOriWixk0 = tilingData_.convApiTiling.orgHi * tilingData_.convApiTiling.orgWi * k0;
     tilingData_.convApiTiling.oriWixk0 = tilingData_.convApiTiling.orgWi * k0;
     tilingData_.convApiTiling.kernelHxkernelW = tilingData_.convApiTiling.kernelH * tilingData_.convApiTiling.kernelW;
     tilingData_.convApiTiling.nL0xk0 = tilingData_.convApiTiling.nL0 * k0;
-    tilingData_.convApiTiling.kL0xorgCoAlignN0 = tilingData_.convApiTiling.kL0 * AlignUp(tilingData_.convApiTiling.orgCo, n0);
+    tilingData_.convApiTiling.kL0xorgCoAlignN0 = tilingData_.convApiTiling.kL0 *
+                                                 AlignUp(tilingData_.convApiTiling.orgCo, n0);
     tilingData_.convApiTiling.mAL1DivmL0 = CeilDiv(tilingData_.convApiTiling.mAL1, tilingData_.convApiTiling.mL0);
     tilingData_.convApiTiling.nBL1DivnL0 = CeilDiv(tilingData_.convApiTiling.nBL1, tilingData_.convApiTiling.nL0);
     tilingData_.convApiTiling.cin1InAL1 = tilingData_.convApiTiling.kAL1 / ci0HkWk;
@@ -763,10 +771,10 @@ ge::graphStatus Conv3dBaseTiling::GetWorkspaceSize()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t wssize = MIN_WORKSPACE_SIZE;
     if (flagInfo_.hasScale) {
-        wssize += numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.mDim *
-                numBlocksRes.doDim * numBlocksRes.groupDim * WORKSPACE_NUM *
-                tilingData_.convApiTiling.nL0 * tilingData_.convApiTiling.mL0 *
-                Conv3dApiTiling::g_dtypeSizeTab.at(engine_->conv3dApiTiling_.cubeInfo.madType);
+        wssize += numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.mDim * numBlocksRes.doDim *
+                  numBlocksRes.groupDim * WORKSPACE_NUM * tilingData_.convApiTiling.nL0 *
+                  tilingData_.convApiTiling.mL0 *
+                  Conv3dApiTiling::g_dtypeSizeTab.at(engine_->conv3dApiTiling_.cubeInfo.madType);
     }
 
     workspaces[0] = wssize;
@@ -775,11 +783,10 @@ ge::graphStatus Conv3dBaseTiling::GetWorkspaceSize()
 
 ge::graphStatus Conv3dBaseTiling::PostTiling()
 {
-    void *tilingBuf = context_->GetRawTilingData()->GetData();
+    void* tilingBuf = context_->GetRawTilingData()->GetData();
     size_t tilingBufCap = context_->GetRawTilingData()->GetCapacity();
     if (tilingBuf == nullptr || tilingBufCap < sizeof(tilingData_)) {
-        OP_LOGE(context_->GetNodeName(),
-                "Conv3D AscendC: tiling buffer null or capacity too small, cap=%zu need=%zu.",
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: tiling buffer null or capacity too small, cap=%zu need=%zu.",
                 tilingBufCap, sizeof(tilingData_));
         return ge::GRAPH_FAILED;
     }
@@ -789,8 +796,8 @@ ge::graphStatus Conv3dBaseTiling::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->GetRawTilingData()->SetDataSize(sizeof(tilingData_));
-    context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.mDim *
-                          numBlocksRes.doDim * numBlocksRes.groupDim);
+    context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.nDim * numBlocksRes.mDim * numBlocksRes.doDim *
+                          numBlocksRes.groupDim);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -815,7 +822,8 @@ ge::graphStatus Conv3dBaseTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv3dBaseTiling::SetTilingKey() {
+ge::graphStatus Conv3dBaseTiling::SetTilingKey()
+{
     uint64_t pbufferFlag = tilingData_.convApiTiling.pBufferFlag;
     uint64_t bl1Bypass = tilingData_.convApiTiling.bl1BypassFlag;
     uint64_t convL0PingPong = L0_PINGPONG_ALL_CLOSE;
@@ -833,8 +841,8 @@ ge::graphStatus Conv3dBaseTiling::SetTilingKey() {
         groupConvType = GROUPCONV_WEIGHT_GFZ;
     }
     tilingKey_ = GET_TPL_TILING_KEY(convL0PingPong, bl1Bypass, groupConvType, static_cast<uint64_t>(outputOrder_));
-    OP_LOGD(context_->GetNodeName(), "Conv3D AscendC: tiling key: %lu. pbufferFlag = %lu, bl1Bypass = %lu.",
-            tilingKey_, pbufferFlag, bl1Bypass);
+    OP_LOGD(context_->GetNodeName(), "Conv3D AscendC: tiling key: %lu. pbufferFlag = %lu, bl1Bypass = %lu.", tilingKey_,
+            pbufferFlag, bl1Bypass);
 
     return ge::GRAPH_SUCCESS;
 }

@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef NN_QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_H
 #define NN_QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_H
 #include "ge/fusion/pass/pattern_fusion_pass.h"
@@ -25,5 +24,5 @@ protected:
     std::unique_ptr<Graph> Replacement(const std::unique_ptr<MatchResult>& match_result) override;
 };
 
-} //namespace ops
+} // namespace ops
 #endif // NN_QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_H

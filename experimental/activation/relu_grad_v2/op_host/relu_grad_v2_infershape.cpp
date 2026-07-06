@@ -13,14 +13,14 @@
 
 namespace ops {
 
-static ge::graphStatus InferShapeReluGradV2(gert::InferShapeContext *context)
+static ge::graphStatus InferShapeReluGradV2(gert::InferShapeContext* context)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
 
-    const gert::Shape *gradientsShape = context->GetInputShape(0);
+    const gert::Shape* gradientsShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradientsShape);
 
-    gert::Shape *backpropsShape = context->GetOutputShape(0);
+    gert::Shape* backpropsShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, backpropsShape);
 
     *backpropsShape = *gradientsShape;
@@ -28,4 +28,4 @@ static ge::graphStatus InferShapeReluGradV2(gert::InferShapeContext *context)
 }
 
 IMPL_OP_INFERSHAPE(ReluGradV2).InferShape(InferShapeReluGradV2);
-}  // namespace ops
+} // namespace ops

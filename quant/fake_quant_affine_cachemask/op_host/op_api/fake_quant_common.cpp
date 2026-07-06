@@ -19,8 +19,10 @@ namespace FakeQuantCommon {
 
 auto nullptrInner = std::tuple<aclTensor*, aclTensor*, aclTensor*>(nullptr, nullptr, nullptr);
 
-std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousInput(const aclTensor* self, const aclTensor* scale,
-    const aclTensor* zeroPoint, aclOpExecutor* executor)
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousInput(const aclTensor* self,
+                                                                                    const aclTensor* scale,
+                                                                                    const aclTensor* zeroPoint,
+                                                                                    aclOpExecutor* executor)
 {
     auto selfContiguous = l0op::Contiguous(self, executor);
     OP_CHECK_NULL(selfContiguous, return nullptrInner);
@@ -29,7 +31,7 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousIn
     // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
     auto selfCasted = l0op::Cast(selfContiguous, promoteType, executor);
     OP_CHECK_NULL(selfCasted, return nullptrInner);
-    
+
     auto scaleContiguous = l0op::Contiguous(scale, executor);
     OP_CHECK_NULL(scaleContiguous, return nullptrInner);
 
@@ -40,7 +42,8 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousIn
     auto zeroPointContiguous = l0op::Contiguous(zeroPoint, executor);
     OP_CHECK_NULL(zeroPointContiguous, return nullptrInner);
 
-    return std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(selfCasted, scaleCasted, zeroPointContiguous);
+    return std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(selfCasted, scaleCasted,
+                                                                            zeroPointContiguous);
 }
 
-}
+} // namespace FakeQuantCommon

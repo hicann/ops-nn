@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file dynamic_quant_regbase_moe_full_load.h
  * \brief
@@ -20,7 +20,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
-
 
 namespace DynamicQuantPerChannel {
 using namespace AscendC;
@@ -36,15 +35,11 @@ class DynamicQuantRegbasePerChannnelRecompute {
     using yCopyDtype = std::conditional_t<IsSameType<yDtype, int4b_t>::value, uint8_t, yDtype>;
 
 public:
-    __aicore__ inline DynamicQuantRegbasePerChannnelRecompute(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantRegbasePerChannnelRecompute(TPipe* pipe) { pPipe = pipe; }
 
     // 相比V1新增了group_index输入
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingDataArch35* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                GM_ADDR workSpace, const DynamicQuantTilingDataArch35* __restrict tilingData)
     {
         DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
         coreIndex_ = GetBlockIdx();
@@ -127,8 +122,8 @@ private:
             CopyIn(currRowNum, blockColNum, xOffset, smoothOffset);
             // 计算y和offset
             // inQueue出队、smoothQueue出队，outQueue申请和入队，smoothQueue释放，inQueue释放
-            ComputeOut(
-                colMaxLocal, colMinLocal, scaleLocal, offsetLocal, mBaseIndex, currRowNum, newColNum, newColNumB8);
+            ComputeOut(colMaxLocal, colMinLocal, scaleLocal, offsetLocal, mBaseIndex, currRowNum, newColNum,
+                       newColNumB8);
             // outQueue出队并释放
             CopyOutY(currRowNum, blockColNum, xOffset);
             xOffset += xShift;
@@ -147,34 +142,37 @@ private:
 
     __aicore__ inline void CopyIn(uint32_t blockRowNum, uint32_t blockColNum, uint64_t xOffset, uint64_t smoothOffset);
 
-    __aicore__ inline void ComputeInner(
-        LocalTensor<float>& colMaxLocal, LocalTensor<float>& colMinLocal, LocalTensor<float>& scaleLocal,
-        LocalTensor<float>& offsetLocal, uint32_t mBlockIndex, uint32_t blockRowNum, uint32_t blockColNum);
+    __aicore__ inline void ComputeInner(LocalTensor<float>& colMaxLocal, LocalTensor<float>& colMinLocal,
+                                        LocalTensor<float>& scaleLocal, LocalTensor<float>& offsetLocal,
+                                        uint32_t mBlockIndex, uint32_t blockRowNum, uint32_t blockColNum);
 
-    __aicore__ inline void ComputeOut(
-        LocalTensor<float>& colMaxLocal, LocalTensor<float>& colMinLocal, LocalTensor<float>& scaleLocal,
-        LocalTensor<float>& offsetLocal, uint32_t mBlockIndex, uint32_t blockRowNum, uint32_t blockColNumForX,
-        uint32_t blockColNumForY);
+    __aicore__ inline void ComputeOut(LocalTensor<float>& colMaxLocal, LocalTensor<float>& colMinLocal,
+                                      LocalTensor<float>& scaleLocal, LocalTensor<float>& offsetLocal,
+                                      uint32_t mBlockIndex, uint32_t blockRowNum, uint32_t blockColNumForX,
+                                      uint32_t blockColNumForY);
 
     template <bool isLastBlock>
-    __aicore__ inline void ComputeMaxVFforSymmetric(
-        __local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ float* scaleAddr,
-        __local_mem__ float* colMaxLocalAddr, uint32_t blockRowNum, uint32_t blockColNum);
+    __aicore__ inline void ComputeMaxVFforSymmetric(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
+                                                    __local_mem__ float* scaleAddr,
+                                                    __local_mem__ float* colMaxLocalAddr, uint32_t blockRowNum,
+                                                    uint32_t blockColNum);
 
-    __aicore__ inline void ComputeVFMinMaxforNoSymmetric(
-        __ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ float* scaleAddr,
-        __ubuf__ float* colMaxLocalAddr, __ubuf__ float* colMinLocalAddr, __ubuf__ float* offsetAddr, uint32_t curBaseM,
-        uint32_t curBlockSize);
+    __aicore__ inline void ComputeVFMinMaxforNoSymmetric(__ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr,
+                                                         __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+                                                         __ubuf__ float* colMinLocalAddr, __ubuf__ float* offsetAddr,
+                                                         uint32_t curBaseM, uint32_t curBlockSize);
 
-    __aicore__ inline void ComputeVFforSymmetric(
-        __local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ float* scaleAddr,
-        __local_mem__ float* colMaxLocalAddr, __local_mem__ yCopyDtype* yAddr, uint32_t blockRowNum,
-        uint32_t blockColNumForX, uint32_t blockColNumForY);
+    __aicore__ inline void ComputeVFforSymmetric(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
+                                                 __local_mem__ float* scaleAddr, __local_mem__ float* colMaxLocalAddr,
+                                                 __local_mem__ yCopyDtype* yAddr, uint32_t blockRowNum,
+                                                 uint32_t blockColNumForX, uint32_t blockColNumForY);
 
-    __aicore__ inline void ComputeVFforNoSymmetric(
-        __local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ float* scaleAddr,
-        __local_mem__ float* colMaxLocalAddr, __local_mem__ float* colMinLocalAddr, __local_mem__ yCopyDtype* yAddr,
-        __local_mem__ float* offsetAddr, uint32_t blockRowNum, uint32_t blockColNumForX, uint32_t blockColNumForY);
+    __aicore__ inline void ComputeVFforNoSymmetric(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
+                                                   __local_mem__ float* scaleAddr, __local_mem__ float* colMaxLocalAddr,
+                                                   __local_mem__ float* colMinLocalAddr,
+                                                   __local_mem__ yCopyDtype* yAddr, __local_mem__ float* offsetAddr,
+                                                   uint32_t blockRowNum, uint32_t blockColNumForX,
+                                                   uint32_t blockColNumForY);
 
     __aicore__ inline void CopyOutScaleAndOffset(uint32_t blockColNum, uint64_t scaleOffset);
 
@@ -301,9 +299,9 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, h
     LocalTensor<xDtype> inLocal = inQueue_.AllocTensor<xDtype>();
     // 修改stride，srcStride改成(nLen - blockColNum) * sizeof(xDtype)
     uint32_t srcStrideNum = nLen_ - blockColNum;
-    DataCopyExtParams copyParams = {
-        static_cast<uint16_t>(blockRowNum), static_cast<uint32_t>(blockColNum * sizeof(xDtype)),
-        static_cast<int64_t>(srcStrideNum * sizeof(xDtype)), 0, 0};
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(blockRowNum),
+                                    static_cast<uint32_t>(blockColNum * sizeof(xDtype)),
+                                    static_cast<int64_t>(srcStrideNum * sizeof(xDtype)), 0, 0};
     DataCopyPadExtParams<xDtype> padParams{true, 0, static_cast<uint8_t>(copyPadNumPerRow), 0};
     DataCopyPad(inLocal, inGm_[xOffset], copyParams, padParams);
     inQueue_.EnQue(inLocal);
@@ -351,8 +349,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, h
             ComputeMaxVFforSymmetric<false>(inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, blockRowNum, blockColNum);
         }
     } else {
-        ComputeVFMinMaxforNoSymmetric(
-            inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, colMinLocalAddr, offsetAddr, blockRowNum, blockColNum);
+        ComputeVFMinMaxforNoSymmetric(inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, colMinLocalAddr, offsetAddr,
+                                      blockRowNum, blockColNum);
     }
 
     if constexpr (hasSmooth) {
@@ -387,12 +385,11 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, h
 
     // VF
     if constexpr (isSymmetrical) {
-        ComputeVFforSymmetric(
-            inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, outAddr, blockRowNum, blockColNumForX, blockColNumForY);
+        ComputeVFforSymmetric(inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, outAddr, blockRowNum, blockColNumForX,
+                              blockColNumForY);
     } else {
-        ComputeVFforNoSymmetric(
-            inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, colMinLocalAddr, outAddr, offsetAddr, blockRowNum,
-            blockColNumForX, blockColNumForY);
+        ComputeVFforNoSymmetric(inAddr, smoothAddr, scaleAddr, colMaxLocalAddr, colMinLocalAddr, outAddr, offsetAddr,
+                                blockRowNum, blockColNumForX, blockColNumForY);
     }
 
     outQueue_.EnQue(outLocal);
@@ -442,8 +439,8 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                     vregIn, (__ubuf__ xDtype*)(xAddr + mIdx * blockColNumForX + nIdx * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, mask);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, mask);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, mask);
                 }
@@ -495,8 +492,8 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                     vregIn, (__ubuf__ xDtype*)(xAddr + mIdx * blockColNum + nIdx * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, mask);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, mask);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, mask);
                 }
@@ -546,8 +543,8 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                     vregIn, (__ubuf__ xDtype*)(inAddr + mIdx * curBaseNAligned + nIdxvf * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                 }
@@ -620,7 +617,7 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
             MicroAPI::Mul<float>(vregScale, vregSub, vregOffsetDivVal, preg0); // (max(x)-min(x))/offsetMaxValue
 
             // offset
-            MicroAPI::Div<float, &divHighPrecisionMode >(vregDiv, vregColMax, vregScale, preg0);     // max(x)/scaleout
+            MicroAPI::Div<float, &divHighPrecisionMode>(vregDiv, vregColMax, vregScale, preg0); // max(x)/scaleout
             MicroAPI::Sub<float>(vregOffset, vregMaxFactor, vregDiv, preg0); // max_value - max(x)/scaleout
 
             // y
@@ -630,8 +627,8 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                     vregIn, (__ubuf__ xDtype*)(xAddr + mIdx * curBaseNAligned + nIdxvf * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                 }
@@ -675,9 +672,9 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, h
 {
     LocalTensor<yCopyDtype> yLocal = outQueue_.DeQue<yCopyDtype>();
     uint32_t dstStrideNum = nLen_ - blockColNum;
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(blockRowNum), static_cast<uint32_t>(blockColNum * sizeof(yCopyDtype)), 0,
-        static_cast<int64_t>(dstStrideNum * sizeof(yCopyDtype)), 0};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(blockRowNum),
+                                 static_cast<uint32_t>(blockColNum * sizeof(yCopyDtype)), 0,
+                                 static_cast<int64_t>(dstStrideNum * sizeof(yCopyDtype)), 0};
     if constexpr (IsSameType<yDtype, int4b_t>::value) {
         copyParams.blockLen = copyParams.blockLen >> 1;
         copyParams.dstStride = copyParams.dstStride >> 1;

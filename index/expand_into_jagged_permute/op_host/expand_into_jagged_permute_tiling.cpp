@@ -19,18 +19,19 @@
 #include "platform/platform_info.h"
 #include "tiling/platform/platform_ascendc.h"
 
-
 namespace optiling {
 
 template <typename T>
-static T GetCeilInt(const T& value1, const T& value2) {
+static T GetCeilInt(const T& value1, const T& value2)
+{
     if (value2 == 0) {
         return value2;
     }
     return (value1 + value2 - 1) / value2;
-    }
+}
 
-static inline ge::graphStatus InputParamCheck(const gert::TilingContext* context) {
+static inline ge::graphStatus InputParamCheck(const gert::TilingContext* context)
+{
     const gert::StorageShape* permuteShape = context->GetInputShape(0);
     const gert::StorageShape* inputoffsetShape = context->GetInputShape(1);
     const gert::StorageShape* outputoffsetShape = context->GetInputShape(2);
@@ -54,37 +55,42 @@ static inline ge::graphStatus InputParamCheck(const gert::TilingContext* context
 
     OP_CHECK_IF(
         permuteType != inputoffsetType && permuteType != outputoffsetType && inputoffsetType != outputoffsetType,
-        OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] the datatype of permute、inputoffset and outputoffset is not same."),
+        OP_LOGE(
+            nodeName,
+            "[ExpandIntoJaggedPermuteTilingData] the datatype of permute、inputoffset and outputoffset is not same."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        permuteShape == nullptr || inputoffsetShape == nullptr || outputoffsetShape == nullptr || dataTensor0 == nullptr || dataTensor1 == nullptr||
-        dataTensor2 == nullptr, OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] permute or inputOffsets is nullptr or outputoff is nullptr."),
+        permuteShape == nullptr || inputoffsetShape == nullptr || outputoffsetShape == nullptr ||
+            dataTensor0 == nullptr || dataTensor1 == nullptr || dataTensor2 == nullptr,
+        OP_LOGE(nodeName,
+                "[ExpandIntoJaggedPermuteTilingData] permute or inputOffsets is nullptr or outputoff is nullptr."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(permuteShape->GetStorageShape().GetDimNum() != 1,
-                    OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] permuteShape's shape is not 1D."),
-                    return ge::GRAPH_FAILED);
-    
+                OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] permuteShape's shape is not 1D."),
+                return ge::GRAPH_FAILED);
+
     OP_CHECK_IF(inputoffsetShape->GetStorageShape().GetDimNum() != 1,
-                    OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] inputoffsetShape's shape is not 1D."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] inputoffsetShape's shape is not 1D."),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(outputoffsetShape->GetStorageShape().GetDimNum() != 1,
-                    OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] outputoffsetShape's shape is not 1D."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] outputoffsetShape's shape is not 1D."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 
     OP_CHECK_IF(permuteShape->GetStorageShape().GetDim(0) + 1 != outputoffsetShape->GetStorageShape().GetDim(0) ||
                     permuteShape->GetStorageShape().GetDim(0) + 1 != inputoffsetShape->GetStorageShape().GetDim(0),
-                    OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] outputoffsetShape and inputoffsetShape should be one more than permuteShape."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(nodeName, "[ExpandIntoJaggedPermuteTilingData] outputoffsetShape and inputoffsetShape should "
+                                  "be one more than permuteShape."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static inline void Init(gert::TilingContext *context, ExpandIntoJaggedPermuteParam& param)
+static inline void Init(gert::TilingContext* context, ExpandIntoJaggedPermuteParam& param)
 {
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
     OP_LOGI(context, "get platform from compileInfo");
 
@@ -94,7 +100,7 @@ static inline void Init(gert::TilingContext *context, ExpandIntoJaggedPermutePar
     ascendPlaform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, maxCoreMemery);
     param.maxCoreMemery = static_cast<int64_t>(maxCoreMemery);
 
-    const gert::StorageShape* permuteShape = context->GetInputShape(0);  //inputLen
+    const gert::StorageShape* permuteShape = context->GetInputShape(0); // inputLen
     const gert::StorageShape* inputoffsetShape = context->GetInputShape(1);
     const gert::StorageShape* outputoffsetShape = context->GetInputShape(2);
 
@@ -102,7 +108,7 @@ static inline void Init(gert::TilingContext *context, ExpandIntoJaggedPermutePar
     const int32_t* outputSizePtr = attrs->GetAttrPointer<int32_t>(0);
     param.outputSize = *outputSizePtr;
 
-    param.permute = permuteShape->GetStorageShape().GetDim(0); 
+    param.permute = permuteShape->GetStorageShape().GetDim(0);
     param.inputoffset = inputoffsetShape->GetStorageShape().GetDim(0);
     param.outputoffset = outputoffsetShape->GetStorageShape().GetDim(0);
     param.dtypeSize = ge::GetSizeByDataType(context->GetInputDesc(0)->GetDataType());
@@ -110,23 +116,24 @@ static inline void Init(gert::TilingContext *context, ExpandIntoJaggedPermutePar
     param.oneTaskInputOffsetLen = SIZE;
     param.cacheLine = SIZE;
     param.numBlocks = param.coreNum;
-    param.oneTaskLen = param.cacheLine / param.dtypeSize; 
-    param.taskNum = GetCeilInt(param.permute, param.oneTaskInputOffsetLen); 
+    param.oneTaskLen = param.cacheLine / param.dtypeSize;
+    param.taskNum = GetCeilInt(param.permute, param.oneTaskInputOffsetLen);
     param.numTail = param.permute - SIZE * (param.taskNum - 1);
 }
 
-static ge::graphStatus SetTilingKey(ExpandIntoJaggedPermuteParam& param) {
+static ge::graphStatus SetTilingKey(ExpandIntoJaggedPermuteParam& param)
+{
     uint64_t tilingkey = 0;
     int64_t limitedSize = 512;
-    if(param.inputoffset <= limitedSize){
+    if (param.inputoffset <= limitedSize) {
         param.tilingKey = tilingkey;
-    }else{
+    } else {
         param.tilingKey = tilingkey + 1;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetTilingData(gert::TilingContext *context, const ExpandIntoJaggedPermuteParam& param)
+static ge::graphStatus SetTilingData(gert::TilingContext* context, const ExpandIntoJaggedPermuteParam& param)
 {
     ExpandIntoJaggedPermuteTilingData tilingData;
     tilingData.set_outputSize(param.outputSize);
@@ -135,7 +142,7 @@ static ge::graphStatus SetTilingData(gert::TilingContext *context, const ExpandI
     tilingData.set_inputLen(param.permute);
     tilingData.set_offsetLen(param.permute + 1);
     tilingData.set_lastTaskLen(param.numTail);
-    tilingData.set_oneTaskOffsetLen(param.oneTaskInputOffsetLen); 
+    tilingData.set_oneTaskOffsetLen(param.oneTaskInputOffsetLen);
     tilingData.set_oneTaskLen(param.oneTaskLen);
     auto rawTilingData = context->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context, rawTilingData);
@@ -145,7 +152,8 @@ static ge::graphStatus SetTilingData(gert::TilingContext *context, const ExpandI
     return ge::GRAPH_SUCCESS;
 }
 
-static inline void PrintTilingData(const gert::TilingContext* context, const ExpandIntoJaggedPermuteParam& param) {
+static inline void PrintTilingData(const gert::TilingContext* context, const ExpandIntoJaggedPermuteParam& param)
+{
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, ">>>>>>>>>>>>>>> Start to print ExpandIntoJaggedPermute tiling data <<<<<<<<<<<<<<<<");
     OP_LOGD("offsetLen", " param.offsetLen %ld", param.offsetLen);
@@ -153,7 +161,7 @@ static inline void PrintTilingData(const gert::TilingContext* context, const Exp
     OP_LOGD("oneTaskLen", " param.oneTaskLen %ld", param.oneTaskLen);
     OP_LOGD("oneTaskOffsetLen", " param.oneTaskInputOffsetLen %ld", param.oneTaskInputOffsetLen);
     OP_LOGD("numBlocks", " param.numBlocks %ld", param.numBlocks);
-    OP_LOGD("taskNum", " param.taskNum %ld" , param.taskNum);
+    OP_LOGD("taskNum", " param.taskNum %ld", param.taskNum);
     OP_LOGD("outputSize", " param.outputSize %ld", param.outputSize);
     OP_LOGD("numTail", " param.numTail %ld", param.numTail);
     OP_LOGD(nodeName, ">>>>>>>>>>>>>>> Print ExpandIntoJaggedPermute tiling data end <<<<<<<<<<<<<<<<");
@@ -175,15 +183,13 @@ static ge::graphStatus TilingForExpandIntoJaggedPermute(gert::TilingContext* con
     return context->SetTilingKey(param.tilingKey);
 }
 
-
-ge::graphStatus TilingPrepareExpandIntoJaggedPermute(gert::TilingParseContext *context)
+ge::graphStatus TilingPrepareExpandIntoJaggedPermute(gert::TilingParseContext* context)
 {
     if (context == nullptr) {
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
-
 
 IMPL_OP_OPTILING(ExpandIntoJaggedPermute)
     .Tiling(TilingForExpandIntoJaggedPermute)

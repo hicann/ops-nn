@@ -20,8 +20,7 @@
 
 namespace optiling {
 
-class WeightQuantBatchMatmulV2TilingFixpipe : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2TilingFixpipe : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2TilingFixpipe(gert::TilingContext* context)
         : WeightQuantBatchMatmulV2Tiling(context)
@@ -44,9 +43,8 @@ protected:
         TilingBaseClass::Reset(context_);
         aFullLoad_ = 0;
 
-        OP_TILING_CHECK(memset_s(
-                            context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 0,
-                            context_->GetRawTilingData()->GetCapacity()) != EOK,
+        OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                                 0, context_->GetRawTilingData()->GetCapacity()) != EOK,
                         VECTOR_INNER_ERR_REPORT_TILIING(opName_, "fail to memset tiling data"), return;);
     }
 
@@ -63,10 +61,7 @@ protected:
     ge::graphStatus DoOpTiling() override;
 
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
 
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;

@@ -62,7 +62,7 @@ static bool CheckEnableBlock(const aclTensor* const gradOutput)
     const auto gradShape = gradOutput->GetViewShape();
     const auto gradDimNum = gradShape.GetDimNum();
     const int64_t mergeNC = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? gradShape.GetDim(0) :
-        gradShape.GetDim(0) * gradShape.GetDim(1);
+                                                                              gradShape.GetDim(0) * gradShape.GetDim(1);
     if (mergeNC >= NC_LOW && mergeNC < NC_HIGH) {
         return true;
     }
@@ -70,8 +70,8 @@ static bool CheckEnableBlock(const aclTensor* const gradOutput)
 }
 
 namespace op {
-static aclnnStatus CheckArrayDataAvgPoolBackWard(
-    const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding)
+static aclnnStatus CheckArrayDataAvgPoolBackWard(const aclIntArray* kernelSize, const aclIntArray* stride,
+                                                 const aclIntArray* padding)
 {
     for (uint64_t i = 0; i < kernelSize->Size(); i++) {
         auto size = (*kernelSize)[i];
@@ -97,9 +97,8 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
         auto halfKsize = (*kernelSize)[i] / 2;
         auto padSize = (*padding)[i];
         if (halfKsize < padSize) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld].", i, padSize,
-                halfKsize);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld].", i,
+                    padSize, halfKsize);
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (padSize < 0) {
@@ -112,9 +111,8 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
 } // namespace op
 
 namespace {
-static bool CheckNotNull(
-    const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
-    const aclIntArray* padding, const aclTensor* out)
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize,
+                         const aclIntArray* stride, const aclIntArray* padding, const aclTensor* out)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -128,14 +126,13 @@ static bool CheckNotNull(
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    bool is910SocVersion =
-        (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         Ops::NN::AclnnUtil::IsRegbase());
+    bool is910SocVersion = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+                            Ops::NN::AclnnUtil::IsRegbase());
 
-    const std::initializer_list<DataType> gradDtypeSupportList =
-        is910SocVersion ? GRAD_DTYPE_SUPPORT_LIST_ASCEND910BC : GRAD_DTYPE_SUPPORT_LIST;
-    const std::initializer_list<DataType> outDtypeSupportList =
-        is910SocVersion ? OUT_DTYPE_SUPPORT_LIST_ASCEND910BC : OUT_DTYPE_SUPPORT_LIST;
+    const std::initializer_list<DataType> gradDtypeSupportList = is910SocVersion ? GRAD_DTYPE_SUPPORT_LIST_ASCEND910BC :
+                                                                                   GRAD_DTYPE_SUPPORT_LIST;
+    const std::initializer_list<DataType> outDtypeSupportList = is910SocVersion ? OUT_DTYPE_SUPPORT_LIST_ASCEND910BC :
+                                                                                  OUT_DTYPE_SUPPORT_LIST;
 
     // 检查grad数据类型
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, gradDtypeSupportList, return false);
@@ -145,9 +142,8 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     return true;
 }
 
-static bool CheckDimVlid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
-    const aclIntArray* padding, const aclTensor* out)
+static bool CheckDimVlid(const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize,
+                         const aclIntArray* stride, const aclIntArray* padding, const aclTensor* out)
 {
     auto gradShape = gradOutput->GetViewShape();
     auto outShape = out->GetViewShape();
@@ -161,16 +157,15 @@ static bool CheckDimVlid(
         return false;
     }
     if (inputShape.GetDimNum() != gradShape.GetDimNum() || inputShape.GetDimNum() != outShape.GetDimNum()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "self dim num [%zu] should be equal to grad dim num [%zu] and out dim num [%zu]",
-            inputShape.GetDimNum(), gradShape.GetDimNum(), outShape.GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "self dim num [%zu] should be equal to grad dim num [%zu] and out dim num [%zu]",
+                inputShape.GetDimNum(), gradShape.GetDimNum(), outShape.GetDimNum());
         return false;
     }
     for (size_t i = 0; i < inputShape.GetDimNum(); i++) {
         if (inputShape.GetDim(i) != outShape.GetDim(i)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "self dim [%zu] is [%ld] should be equal to out dim [%ld]", i,
-                inputShape.GetDim(i), outShape.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dim [%zu] is [%ld] should be equal to out dim [%ld]", i,
+                    inputShape.GetDim(i), outShape.GetDim(i));
             return false;
         }
     }
@@ -194,10 +189,9 @@ static bool CheckDimVlid(
 static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* out)
 {
     if (gradOutput->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
-            op::ToString(gradOutput->GetStorageFormat()).GetString(),
-            op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
+                op::ToString(gradOutput->GetStorageFormat()).GetString(),
+                op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -210,8 +204,8 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* out)
 }
 
 // 计算经过avgpool3d后的shape的d和h和w（n,c与input一致，不用计算）
-static inline int64_t PoolingOutShape(
-    const int64_t inputSize, const int64_t kernelSize, const int64_t padL, const int64_t stride, const bool ceilMode)
+static inline int64_t PoolingOutShape(const int64_t inputSize, const int64_t kernelSize, const int64_t padL,
+                                      const int64_t stride, const bool ceilMode)
 {
     int64_t outputSize;
     if (stride == 0) {
@@ -229,9 +223,8 @@ static inline int64_t PoolingOutShape(
     return outputSize;
 }
 
-static bool CheckOutputShape(
-    const aclTensor* self, const aclIntArray* kernel, const aclIntArray* stride, const aclIntArray* padding,
-    const bool ceilMode, const aclTensor* gradOutput)
+static bool CheckOutputShape(const aclTensor* self, const aclIntArray* kernel, const aclIntArray* stride,
+                             const aclIntArray* padding, const bool ceilMode, const aclTensor* gradOutput)
 {
     const bool is4d = self->GetViewShape().GetDimNum() == DIM_NUM_4D;
     const int64_t nBatch = is4d ? 1 : self->GetViewShape().GetDim(0);
@@ -258,11 +251,10 @@ static bool CheckOutputShape(
 
     OP_CHECK(
         (outDepth >= 0 && outHeight >= 0 && outWidth >= 0),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Given input size [%ld,%ld,%ld,%ld], calc gradOutput size [%ld,%ld,%ld,%ld] dim value should be non "
-            "negative",
-            nInputPlane, depth, height, width, nInputPlane, outDepth, outHeight, outWidth),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Given input size [%ld,%ld,%ld,%ld], calc gradOutput size [%ld,%ld,%ld,%ld] dim value should be non "
+                "negative",
+                nInputPlane, depth, height, width, nInputPlane, outDepth, outHeight, outWidth),
         return false);
 
     const op::Shape calcOutShape = is4d ? op::Shape({nInputPlane, outDepth, outHeight, outWidth}) :
@@ -272,9 +264,8 @@ static bool CheckOutputShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
-    const aclIntArray* padding, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize,
+                               const aclIntArray* stride, const aclIntArray* padding, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, kernelSize, stride, padding, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -287,8 +278,10 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static tuple<const aclIntArray*, const aclIntArray*, const aclIntArray*> FillIntArray(
-    const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding, aclOpExecutor* executor)
+static tuple<const aclIntArray*, const aclIntArray*, const aclIntArray*> FillIntArray(const aclIntArray* kernelSize,
+                                                                                      const aclIntArray* stride,
+                                                                                      const aclIntArray* padding,
+                                                                                      aclOpExecutor* executor)
 {
     std::vector<int64_t> kvec(MAX_ARRAY_DIM_SIZE, 0);
     std::vector<int64_t> svec(MAX_ARRAY_DIM_SIZE, 0);
@@ -312,7 +305,7 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
     auto gradShape = gradOutput->GetViewShape();
     auto gradDimNum = gradShape.GetDimNum();
     int64_t mergeNC = gradDimNum == static_cast<uint64_t>(CDHW_SHAPE) ? gradShape.GetDim(0) :
-        gradShape.GetDim(0) * gradShape.GetDim(1);
+                                                                        gradShape.GetDim(0) * gradShape.GetDim(1);
     int64_t depth = gradShape.GetDim(gradDimNum - 3);
     int64_t height = gradShape.GetDim(gradDimNum - 2);
     int64_t weight = gradShape.GetDim(gradDimNum - 1);
@@ -325,7 +318,7 @@ const aclTensor* TransGrad2CDHW(const aclTensor* gradOutput, aclOpExecutor* exec
         deterministicValue = 0;
     }
     if (deterministicValue != 0) {
-        for (size_t i = coreNum;i >= 1;i--) {
+        for (size_t i = coreNum; i >= 1; i--) {
             if (mergeNC % i == 0) {
                 usedCoreNum = i;
                 break;
@@ -369,18 +362,18 @@ const aclTensor* CopyShape2OneDim(const aclTensor* self, aclOpExecutor* executor
     auto shapeCopy = executor->ConvertToTensor(shapeVec.data(), shapeVec.size(), DataType::DT_INT32);
     return shapeCopy;
 }
-} //namespace
+} // namespace
 
-aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
-    const aclIntArray* padding, bool ceilMode, bool countIncludePad, int64_t divisorOverride, aclTensor* output,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                   const aclIntArray* kernelSize, const aclIntArray* stride,
+                                                   const aclIntArray* padding, bool ceilMode, bool countIncludePad,
+                                                   int64_t divisorOverride, aclTensor* output, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(
-        aclnnAvgPool3dBackward,
-        DFX_IN(gradOutput, self, kernelSize, stride, padding, ceilMode, countIncludePad, divisorOverride),
-        DFX_OUT(output));
+    L2_DFX_PHASE_1(aclnnAvgPool3dBackward,
+                   DFX_IN(gradOutput, self, kernelSize, stride, padding, ceilMode, countIncludePad, divisorOverride),
+                   DFX_OUT(output));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -437,9 +430,9 @@ aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(
     CHECK_RET(shapeOrigInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 调用l0op
     std::string dataFormat = (isOnlyT || enableBlock) ? NCDHW_FORMAT : NDHWC_FORMAT;
-    auto avgPool3dBackwardResult = l0op::AvgPool3DGrad(
-        selfContiguous, shapeOrigInput, gradTrans, ksizeFill, stridesFill, padsFill, ceilMode, countIncludePad,
-        divisorOverride, dataFormat, uniqueExecutor.get());
+    auto avgPool3dBackwardResult = l0op::AvgPool3DGrad(selfContiguous, shapeOrigInput, gradTrans, ksizeFill,
+                                                       stridesFill, padsFill, ceilMode, countIncludePad,
+                                                       divisorOverride, dataFormat, uniqueExecutor.get());
     CHECK_RET(avgPool3dBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (!isOnlyT && !enableBlock) {
         // transdata to ncdhw
@@ -462,8 +455,8 @@ aclnnStatus aclnnAvgPool3dBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAvgPool3dBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnAvgPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAvgPool3dBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

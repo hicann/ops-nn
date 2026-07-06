@@ -22,376 +22,403 @@ using namespace op;
 using namespace std;
 
 class l2GatherNdTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "gather_nd_test SetUp" << endl;
-  }
+protected:
+    static void SetUpTestCase() { cout << "gather_nd_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "gather_nd_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "gather_nd_test TearDown" << endl; }
 };
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_nullptr_01) {
-  auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
+TEST_F(l2GatherNdTest, l2_gather_nd_case_nullptr_01)
+{
+    auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT((aclTensor*)nullptr, (aclTensor*)nullptr, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT((aclTensor*)nullptr, (aclTensor*)nullptr, negativeIndexSupport),
+                        OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_nullptr_02) {
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_nullptr_02)
+{
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT((aclTensor*)nullptr, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT((aclTensor*)nullptr, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_nullptr_03) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_nullptr_03)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, (aclTensor*)nullptr, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, (aclTensor*)nullptr, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_inconsistency_01) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_inconsistency_01)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_inconsistency_02) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_inconsistency_02)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_not_support_01) {  
-  auto selfDesc = TensorDesc({2, 2}, ACL_UINT32, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_UINT32, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dtype_not_support_01)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_UINT32, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_UINT32, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_01) {  
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_01)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_02) {  
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 3}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_shape_not_support_02)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 3}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_01) {  
-  auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_01)
+{
+    auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_02) {  
-  auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_dimension_not_support_02)
+{
+    auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_negativeIndexSupport_true_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = true;
-  auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_negativeIndexSupport_true_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = true;
+    auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_negativeIndexSupport_true_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = true;
-  auto outputDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_negativeIndexSupport_true_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = true;
+    auto outputDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_int64_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int64_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_int64_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int64_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_int64_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{1, 0});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_int64_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{1, 0});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_int32_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_int32_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_int32_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_int32_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_int8_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT8, ACL_FORMAT_ND).Value(vector<int8_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_INT8, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_int8_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT8, ACL_FORMAT_ND).Value(vector<int8_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_INT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_int8_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_INT8, ACL_FORMAT_ND).Value(vector<int8_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{1, 0});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_INT8, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_int8_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_INT8, ACL_FORMAT_ND).Value(vector<int8_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{1, 0});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_INT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_uint8_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_UINT8, ACL_FORMAT_ND).Value(vector<uint8_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_UINT8, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_uint8_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_UINT8, ACL_FORMAT_ND).Value(vector<uint8_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_UINT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_uint8_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_UINT8, ACL_FORMAT_ND).Value(vector<uint8_t>{0, 1, 2, 3});
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{1, 0});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_UINT8, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_uint8_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_UINT8, ACL_FORMAT_ND).Value(vector<uint8_t>{0, 1, 2, 3});
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{1, 0});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_UINT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_bool_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{true, true, false, false});
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_BOOL, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_bool_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{true, true, false, false});
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_BOOL, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_bool_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{true, true, false, false});
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_BOOL, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_bool_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{true, true, false, false});
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_BOOL, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_float_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1.1, 1.2, 1.3, 1.4});
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_float_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1.1, 1.2, 1.3, 1.4});
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_float_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1.1, 1.2, 1.3, 1.4});
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_float_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1.1, 1.2, 1.3, 1.4});
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_float16_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_float16_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2GatherNdTest, l2_gather_nd_case_float16_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, l2_gather_nd_case_float16_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2GatherNdTest, ascend910B2_l2_gather_nd_case_bfloat16_001) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2}, ACL_BF16, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, ascend910B2_l2_gather_nd_case_bfloat16_001)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2}, ACL_BF16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2GatherNdTest, ascend910B2_l2_gather_nd_case_bfloat16_002) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_ND);
-  auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
-  bool negativeIndexSupport = false;
-  auto outputDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_ND);
+TEST_F(l2GatherNdTest, ascend910B2_l2_gather_nd_case_bfloat16_002)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 0, 1, 1});
+    bool negativeIndexSupport = false;
+    auto outputDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut = OP_API_UT(aclnnGatherNd, INPUT(selfDesc, indexDesc, negativeIndexSupport), OUTPUT(outputDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

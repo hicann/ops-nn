@@ -21,22 +21,22 @@
 
 namespace ge {
 /**
-* @brief Per-tensor anti-quantization with scalar scale / offset attributes.
-*   y = cast<TOut>((x + offset) * scale)              when sqrt_mode == false
-*   y = cast<TOut>((x + offset) * scale * scale)      when sqrt_mode == true
-*
-* @par Inputs:
-* @li x: A tensor. Type is one of DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN.
-*
-* @par Outputs:
-* @li y: A tensor. Type is one of DT_FLOAT16, DT_FLOAT. Shape is the same as x.
-*
-* @par Attributes:
-* @li scale: Required float. Per-tensor scale value.
-* @li offset: Required float. Per-tensor offset value.
-* @li dtype: Optional int, output dtype. Defaults to DT_FLOAT (0). Allowed: DT_FLOAT16 (1), DT_FLOAT (0).
-* @li sqrt_mode: Optional bool. Defaults to false.
-*/
+ * @brief Per-tensor anti-quantization with scalar scale / offset attributes.
+ *   y = cast<TOut>((x + offset) * scale)              when sqrt_mode == false
+ *   y = cast<TOut>((x + offset) * scale * scale)      when sqrt_mode == true
+ *
+ * @par Inputs:
+ * @li x: A tensor. Type is one of DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN.
+ *
+ * @par Outputs:
+ * @li y: A tensor. Type is one of DT_FLOAT16, DT_FLOAT. Shape is the same as x.
+ *
+ * @par Attributes:
+ * @li scale: Required float. Per-tensor scale value.
+ * @li offset: Required float. Per-tensor offset value.
+ * @li dtype: Optional int, output dtype. Defaults to DT_FLOAT (0). Allowed: DT_FLOAT16 (1), DT_FLOAT (0).
+ * @li sqrt_mode: Optional bool. Defaults to false.
+ */
 REG_OP(AscendAntiQuant)
     .INPUT(x, TensorType({DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -46,6 +46,6 @@ REG_OP(AscendAntiQuant)
     .ATTR(sqrt_mode, Bool, false)
     .OP_END_FACTORY_REG(AscendAntiQuant)
 
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_QUANT_ASCEND_ANTI_QUANT_GRAPH_PLUGIN_ASCEND_ANTI_QUANT_PROTO_H_
+#endif // OPS_QUANT_ASCEND_ANTI_QUANT_GRAPH_PLUGIN_ASCEND_ANTI_QUANT_PROTO_H_

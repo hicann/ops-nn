@@ -14,10 +14,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *AvgPoolNchw(
-    const aclTensor *x, const aclIntArray *window, const aclIntArray *stride, const std::string &paddingMode,
-    const aclIntArray *pad, const std::string &dataFormat, const bool globalPooling, const bool ceilMode,
-    const bool exclusive, const int64_t divisorOverride, aclOpExecutor *executor);
+const aclTensor* AvgPoolNchw(const aclTensor* x, const aclIntArray* window, const aclIntArray* stride,
+                             const std::string& paddingMode, const aclIntArray* pad, const std::string& dataFormat,
+                             const bool globalPooling, const bool ceilMode, const bool exclusive,
+                             const int64_t divisorOverride, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_AVGPOOL_V2_OP_H_

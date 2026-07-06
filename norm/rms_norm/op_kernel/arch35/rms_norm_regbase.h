@@ -22,9 +22,9 @@ using namespace AscendC;
 template <typename DX, typename DG>
 class KernelRmsNormRegBase {
 public:
-    __aicore__ inline KernelRmsNormRegBase()
-    {}
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormArch35TilingData* tiling)
+    __aicore__ inline KernelRmsNormRegBase() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd,
+                                const RMSNormArch35TilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         is_gemma = tiling->is_gemma;
@@ -90,17 +90,16 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInMutiNddma(
-        uint64_t offset, uint32_t count, uint32_t left = 0, uint32_t right = 0, uint32_t curRows = 0)
+    __aicore__ inline void CopyInMutiNddma(uint64_t offset, uint32_t count, uint32_t left = 0, uint32_t right = 0,
+                                           uint32_t curRows = 0)
     {
         LocalTensor<DX> xLocal = inQueueX.AllocTensor<DX>();
-        dmaParam_ = {
-            {{1, 1, 1, (uint32_t)numCol, 1},                 // SrcStride
-             {1, 1, 1, (uint32_t)numColAlign, 1},            // DstStride
-             {1, 1, 1, (uint32_t)curRows, (uint32_t)numCol}, // LoopSize
-             {0, 0, 0, 0, 0},                                // FrontPad
-             {0, 0, 0, 0, (uint8_t)(numColAlign - numCol)}},
-            0}; // pad value
+        dmaParam_ = {{{1, 1, 1, (uint32_t)numCol, 1},                 // SrcStride
+                      {1, 1, 1, (uint32_t)numColAlign, 1},            // DstStride
+                      {1, 1, 1, (uint32_t)curRows, (uint32_t)numCol}, // LoopSize
+                      {0, 0, 0, 0, 0},                                // FrontPad
+                      {0, 0, 0, 0, (uint8_t)(numColAlign - numCol)}},
+                     0}; // pad value
         DataCopy(xLocal, xGm[offset], dmaParam_);
         inQueueX.EnQue(xLocal);
     }
@@ -132,8 +131,8 @@ private:
         inQueueGamma.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void Compute(
-        uint32_t curRow, LocalTensor<DG> gammaLocal, LocalTensor<float> rstdLocal, uint32_t curCols, uint32_t curRows)
+    __aicore__ inline void Compute(uint32_t curRow, LocalTensor<DG> gammaLocal, LocalTensor<float> rstdLocal,
+                                   uint32_t curCols, uint32_t curRows)
     {
         LocalTensor<DX> xLocal = inQueueX.DeQue<DX>();
         LocalTensor<float> xFp32;
@@ -151,8 +150,8 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
-        ComputeFormerImplV1MultiN(
-            xLocal, xFp32, workLocal, rstdLocal, avgFactor, epsilon, curRow, numColAlign, ubFactor, curRows);
+        ComputeFormerImplV1MultiN(xLocal, xFp32, workLocal, rstdLocal, avgFactor, epsilon, curRow, numColAlign,
+                                  ubFactor, curRows);
 
         if constexpr (is_same<DX, half>::value || is_same<DX, bfloat16_t>::value) {
             inQueueX.FreeTensor(xLocal);

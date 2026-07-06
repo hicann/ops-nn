@@ -16,15 +16,9 @@
 
 class l2_hardsigmoid_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_hardsigmoid_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_hardsigmoid_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_hardsigmoid_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_hardsigmoid_backward_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_hardsigmoid_backward_test, grad_nullptr)

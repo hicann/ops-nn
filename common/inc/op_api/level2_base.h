@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -55,7 +55,8 @@ inline static bool CheckNotNull3Tensor(const aclTensor* t0, const aclTensor* t1,
     return true;
 }
 // 检查3个输入和1个输出是否是空指针
-inline static bool CheckNotNull4Tensor(const aclTensor* t0, const aclTensor* t1, const aclTensor* t2, const aclTensor* t3)
+inline static bool CheckNotNull4Tensor(const aclTensor* t0, const aclTensor* t1, const aclTensor* t2,
+                                       const aclTensor* t3)
 {
     // 检查输入是否是空指针
     OP_CHECK_NULL(t0, return false);
@@ -67,9 +68,8 @@ inline static bool CheckNotNull4Tensor(const aclTensor* t0, const aclTensor* t1,
     return true;
 }
 
-inline static bool CheckNotNull2In1Out(
-    const aclTensor* gradOutput, const aclTensor* input, const aclTensor* grid, const aclTensor* inputGrad,
-    const aclTensor* gridGrad)
+inline static bool CheckNotNull2In1Out(const aclTensor* gradOutput, const aclTensor* input, const aclTensor* grid,
+                                       const aclTensor* inputGrad, const aclTensor* gridGrad)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(input, return false);
@@ -79,8 +79,8 @@ inline static bool CheckNotNull2In1Out(
     return true;
 }
 
-inline static bool CheckNotNull2In2Out(
-    const aclTensor* gradOut, const aclIntArray* outputSize, const aclIntArray* inputSize, const aclTensor* gradInput)
+inline static bool CheckNotNull2In2Out(const aclTensor* gradOut, const aclIntArray* outputSize,
+                                       const aclIntArray* inputSize, const aclTensor* gradInput)
 {
     OP_CHECK_NULL(gradOut, return false);
     OP_CHECK_NULL(outputSize, return false);
@@ -129,9 +129,9 @@ inline static bool CheckShapeNotlimitDim1In1Out(const aclTensor* self)
 }
 
 // 检查1个输入和1个输出的数据类型是否在算子的支持列表内
-static inline bool CheckDtypeValid1In1Out(
-    const aclTensor* self, const aclTensor* out, const std::initializer_list<op::DataType>& dtypeSupportList,
-    const std::initializer_list<op::DataType>& dtypeOutList)
+static inline bool CheckDtypeValid1In1Out(const aclTensor* self, const aclTensor* out,
+                                          const std::initializer_list<op::DataType>& dtypeSupportList,
+                                          const std::initializer_list<op::DataType>& dtypeOutList)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
     // 检查输出的数据类型是否在算子的支持列表内
@@ -141,11 +141,11 @@ static inline bool CheckDtypeValid1In1Out(
 }
 
 // 检查1个输入和1个输出的数据类型是否在算子的支持列表内
-static inline bool CheckDtypeValid1In1OutScalar(
-    const aclTensor* self, const aclScalar* attrScalar, const aclTensor* out,
-    const std::initializer_list<op::DataType>& dtypeSupportList,
-    const std::initializer_list<op::DataType>& attrScalarSupportList,
-    const std::initializer_list<op::DataType>& dtypeOutList)
+static inline bool CheckDtypeValid1In1OutScalar(const aclTensor* self, const aclScalar* attrScalar,
+                                                const aclTensor* out,
+                                                const std::initializer_list<op::DataType>& dtypeSupportList,
+                                                const std::initializer_list<op::DataType>& attrScalarSupportList,
+                                                const std::initializer_list<op::DataType>& dtypeOutList)
 {
     // 检查self的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
@@ -161,11 +161,11 @@ static inline bool CheckDtypeValid1In1OutScalar(
 }
 
 // 检查1个输入和1个输出的数据类型是否在算子的支持列表内
-static inline bool CheckDtypeValid1In1OutTensor(
-    const aclTensor* self, const aclTensor* attrTensor, const aclTensor* out,
-    const std::initializer_list<op::DataType>& dtypeSupportList,
-    const std::initializer_list<op::DataType>& attrTensorSupportList,
-    const std::initializer_list<op::DataType>& dtypeOutList)
+static inline bool CheckDtypeValid1In1OutTensor(const aclTensor* self, const aclTensor* attrTensor,
+                                                const aclTensor* out,
+                                                const std::initializer_list<op::DataType>& dtypeSupportList,
+                                                const std::initializer_list<op::DataType>& attrTensorSupportList,
+                                                const std::initializer_list<op::DataType>& dtypeOutList)
 {
     // 检查self的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
@@ -180,9 +180,9 @@ static inline bool CheckDtypeValid1In1OutTensor(
     return true;
 }
 
-static inline bool CheckDtypeValid1In1OutMatch(
-    const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut, const aclTensor* countsOut,
-    const std::initializer_list<op::DataType>& dtypeSupportList)
+static inline bool CheckDtypeValid1In1OutMatch(const aclTensor* self, const aclTensor* valueOut,
+                                               const aclTensor* inverseOut, const aclTensor* countsOut,
+                                               const std::initializer_list<op::DataType>& dtypeSupportList)
 {
     // 检查self的数据类型是否在UniqueConsecutive算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
@@ -222,8 +222,7 @@ inline static const std::initializer_list<DataType>& GetDtypeSupportListV1(
 inline static const std::initializer_list<DataType>& GetDtypeSupportListV2(
     const std::initializer_list<op::DataType>& l1, const std::initializer_list<op::DataType>& l2)
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
-        Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return l1;
     } else {
         return l2;
@@ -249,8 +248,8 @@ inline static const std::initializer_list<op::DataType> GetDtypeSupportListV3(
     }
 }
 
-static inline aclnnStatus CheckArrayDataAvgPoolBackWard(
-    const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding)
+static inline aclnnStatus CheckArrayDataAvgPoolBackWard(const aclIntArray* kernelSize, const aclIntArray* stride,
+                                                        const aclIntArray* padding)
 {
     for (uint64_t i = 0; i < kernelSize->Size(); i++) {
         auto size = (*kernelSize)[i];
@@ -276,9 +275,8 @@ static inline aclnnStatus CheckArrayDataAvgPoolBackWard(
         auto halfKsize = (*kernelSize)[i] / 2;
         auto padSize = (*padding)[i];
         if (halfKsize < padSize) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld]", i, padSize,
-                halfKsize);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld]", i,
+                    padSize, halfKsize);
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (padSize < 0) {
@@ -299,26 +297,24 @@ inline static bool CheckPaddingValidAvgPool2D(const aclIntArray* kernelSize, con
     const int64_t kernelPaddingSize = 1;
     const int64_t MULTIPLIER = 2;
     // 1表示kernelSize长度为1
-    const int64_t kernelW =
-        kernelSize->Size() == kernelPaddingSize ? (*kernelSize)[kKernelSizeHIdx] : (*kernelSize)[kKernelSizeWIdx];
+    const int64_t kernelW = kernelSize->Size() == kernelPaddingSize ? (*kernelSize)[kKernelSizeHIdx] :
+                                                                      (*kernelSize)[kKernelSizeWIdx];
     OP_CHECK(padding->Size() != 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding is empty"), return false);
     const int64_t paddingH = (*padding)[kPaddingUpIdx];
-    const int64_t paddingW =
-        padding->Size() == kernelPaddingSize ? (*padding)[kPaddingUpIdx] : (*padding)[kPaddingLeftIdx];
+    const int64_t paddingW = padding->Size() == kernelPaddingSize ? (*padding)[kPaddingUpIdx] :
+                                                                    (*padding)[kPaddingLeftIdx];
     // MULTIPLIER 表示paddingH不能大于kernelH的一半，下同
     if (kernelH < MULTIPLIER * paddingH) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "value of paddingH should be at most half of kernelH. Actual: paddingH is [%ld],kernelH is [%ld].",
-            paddingH, kernelH);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "value of paddingH should be at most half of kernelH. Actual: paddingH is [%ld],kernelH is [%ld].",
+                paddingH, kernelH);
         return false;
     }
     if (kernelW < MULTIPLIER * paddingW) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "value of paddingW should be at most half of kernelW. Actual: paddingW is [%ld],"
-            "kernelW is [%ld].",
-            paddingW, kernelW);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "value of paddingW should be at most half of kernelW. Actual: paddingW is [%ld],"
+                "kernelW is [%ld].",
+                paddingW, kernelW);
         return false;
     }
     return true;
@@ -333,7 +329,8 @@ static inline bool CheckDtypeValid1Out1In(const aclTensor* gradOut, const aclTen
     return true;
 }
 
-inline static bool CheckUpsampleShape(const aclTensor* gradOut, const aclIntArray* outputSize, const aclIntArray* inputSize)
+inline static bool CheckUpsampleShape(const aclTensor* gradOut, const aclIntArray* outputSize,
+                                      const aclIntArray* inputSize)
 {
     size_t outputSizeNum = outputSize->Size();
     size_t inputSizeNum = inputSize->Size();
@@ -343,36 +340,34 @@ inline static bool CheckUpsampleShape(const aclTensor* gradOut, const aclIntArra
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "It is expected output_size equals to 3, but got size %zu", outputSizeNum),
         return false);
 
-    OP_CHECK(
-        inputSizeNum == UPSAMPLE_DIM_LIMIT,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "It is expected input_size equals to 5, but got size %zu", inputSizeNum),
-        return false);
+    OP_CHECK(inputSizeNum == UPSAMPLE_DIM_LIMIT,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "It is expected input_size equals to 5, but got size %zu", inputSizeNum),
+             return false);
     return true;
 }
 
-static inline bool CheckPromoteTypeGeluBackward(const aclTensor* gradOutput, const aclTensor* self, op::DataType &promoteType,
-    const std::initializer_list<DataType> dtypeSupportList)
+static inline bool CheckPromoteTypeGeluBackward(const aclTensor* gradOutput, const aclTensor* self,
+                                                op::DataType& promoteType,
+                                                const std::initializer_list<DataType> dtypeSupportList)
 {
     // 检查self和gradOutput能否做数据类型推导
     promoteType = op::PromoteType(gradOutput->GetDataType(), self->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and Self dtype %s can not be promoted.",
-            op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and Self dtype %s can not be promoted.",
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString());
         return false;
     }
 
-    if (!(GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
-          Ops::NN::AclnnUtil::IsRegbase()) && (promoteType == op::DataType::DT_BF16)) {
+    if (!(GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) &&
+        (promoteType == op::DataType::DT_BF16)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dtype of gelu is not support bfloat16 in current socversion.");
         return false;
     }
 
     // 检查promoteType的数据类型是否在支持列表内
     if (!CheckType(promoteType, dtypeSupportList)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list %s.",
-            op::ToString(promoteType).GetString(), op::ToString(dtypeSupportList).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list %s.",
+                op::ToString(promoteType).GetString(), op::ToString(dtypeSupportList).GetString());
         return false;
     }
     return true;
@@ -383,11 +378,10 @@ inline static bool CheckSizeLoop(size_t dimNum, Shape gradOutShape, FVector<int6
 {
     for (size_t i = 0; i < dimNum; ++i) {
         if (gradOutShape.GetDim(i) != fullOutputSize[i]) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Expected grad_output to have the same shape as output;"
-                " output.size(%zu) = %ld but got grad_output.size(%zu) = %ld",
-                i, fullOutputSize[i], i, gradOutShape.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Expected grad_output to have the same shape as output;"
+                    " output.size(%zu) = %ld but got grad_output.size(%zu) = %ld",
+                    i, fullOutputSize[i], i, gradOutShape.GetDim(i));
             return false;
         }
     }
@@ -401,47 +395,40 @@ static inline bool CheckInpuNullTensorMaxUnPool3D(const aclTensor* self)
 
     for (size_t i = 1; i < dimNum; ++i) {
         if (inputShape.GetDim(i) <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "max_unpool3d(): Expected input to have non-zero size for non-batch dimensions, "
-                "but got %zu with dimension %zu being empty.",
-                dimNum, i);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "max_unpool3d(): Expected input to have non-zero size for non-batch dimensions, "
+                    "but got %zu with dimension %zu being empty.",
+                    dimNum, i);
             return false;
         }
     }
     return true;
 }
 
-static inline bool CheckIntArrayShapeMaxUnPool3D(
-    const aclTensor* self, const aclIntArray* outputSize, const aclIntArray* stride, const aclIntArray* padding)
+static inline bool CheckIntArrayShapeMaxUnPool3D(const aclTensor* self, const aclIntArray* outputSize,
+                                                 const aclIntArray* stride, const aclIntArray* padding)
 {
     constexpr size_t NCDHW_DIM_NUM = 5;
     constexpr int64_t EXPECT_SIZE = 3;
 
-    OP_CHECK(
-        outputSize->Size() == EXPECT_SIZE,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "There should be exactly three elements (depth, height, width) in "
-            "output_size, but got %zu elements",
-            outputSize->Size()),
-        return false);
-    OP_CHECK(
-        stride->Size() == EXPECT_SIZE,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "There should be exactly three elements (depth, height, width) in "
-            "stride, but got %zu elements",
-            stride->Size()),
-        return false);
-    OP_CHECK(
-        padding->Size() == EXPECT_SIZE,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "There should be exactly three elements (depth, height, width) in "
-            "padding, but got %zu elements",
-            padding->Size()),
-        return false);
+    OP_CHECK(outputSize->Size() == EXPECT_SIZE,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "There should be exactly three elements (depth, height, width) in "
+                     "output_size, but got %zu elements",
+                     outputSize->Size()),
+             return false);
+    OP_CHECK(stride->Size() == EXPECT_SIZE,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "There should be exactly three elements (depth, height, width) in "
+                     "stride, but got %zu elements",
+                     stride->Size()),
+             return false);
+    OP_CHECK(padding->Size() == EXPECT_SIZE,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "There should be exactly three elements (depth, height, width) in "
+                     "padding, but got %zu elements",
+                     padding->Size()),
+             return false);
 
     for (size_t i = 0; i < EXPECT_SIZE; ++i) {
         if ((*stride)[i] <= 0) {
@@ -449,9 +436,8 @@ static inline bool CheckIntArrayShapeMaxUnPool3D(
             return false;
         }
         if ((*outputSize)[i] <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "outputSize[%zu] should be greater than zero, but got %ld.", i,
-                (*outputSize)[i]);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize[%zu] should be greater than zero, but got %ld.", i,
+                    (*outputSize)[i]);
             return false;
         }
     }
@@ -466,14 +452,12 @@ static inline bool CheckIntArrayShapeMaxUnPool3D(
         dimW = self->GetViewShape().GetDim(DIM_FOUR);
     }
 
-    OP_CHECK(
-        ((*outputSize)[DIM_ZERO] * (*outputSize)[DIM_ONE] * (*outputSize)[DIM_TWO]) >= (dimD * dimH * dimW),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The output dimensions are of size %ld x %ld x %ld, "
-            "should be greater than or equal to self of size %ld x %ld x %ld.",
-            (*outputSize)[DIM_ZERO], (*outputSize)[DIM_ONE], (*outputSize)[DIM_TWO], dimD, dimH, dimW),
-        return false);
+    OP_CHECK(((*outputSize)[DIM_ZERO] * (*outputSize)[DIM_ONE] * (*outputSize)[DIM_TWO]) >= (dimD * dimH * dimW),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The output dimensions are of size %ld x %ld x %ld, "
+                     "should be greater than or equal to self of size %ld x %ld x %ld.",
+                     (*outputSize)[DIM_ZERO], (*outputSize)[DIM_ONE], (*outputSize)[DIM_TWO], dimD, dimH, dimW),
+             return false);
     return true;
 }
 
@@ -510,9 +494,8 @@ static inline bool CheckDimValueWithUnique(const aclTensor* self, int64_t dim)
     int64_t dimMin = std::min(-1 * dimSize, dimSize - 1);
     int64_t dimMax = std::max(-1 * dimSize, dimSize - 1);
     if (dim > dimMax || dim < dimMin) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The param of dim must be in the range of [%ld, %ld], but got %ld.", dimMin,
-            dimMax, dim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The param of dim must be in the range of [%ld, %ld], but got %ld.", dimMin,
+                dimMax, dim);
         return false;
     }
     return true;

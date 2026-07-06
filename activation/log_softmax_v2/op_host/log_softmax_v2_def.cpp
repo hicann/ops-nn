@@ -14,10 +14,8 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-class LogSoftmaxV2 : public OpDef
-{
+namespace ops {
+class LogSoftmaxV2 : public OpDef {
 public:
     explicit LogSoftmaxV2(const char* name) : OpDef(name)
     {
@@ -47,4 +45,4 @@ public:
 };
 
 OP_ADD(LogSoftmaxV2);
-}  // namespace ops
+} // namespace ops

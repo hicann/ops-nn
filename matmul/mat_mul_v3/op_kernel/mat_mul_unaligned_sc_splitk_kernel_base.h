@@ -24,7 +24,7 @@ using namespace AscendC;
 using namespace matmul;
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulSingleCoreSplitKBaseBlock,
-    const MatmulConfig &MM_CFG = MM_CFG_NO_PRELOAD>
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD>
 class MatMulUnAlignedSingleCoreSplitKKernelBase {
     struct UnAlignedSingleCoreSplitKParams {
         int nd2nzFlag;
@@ -56,9 +56,9 @@ class MatMulUnAlignedSingleCoreSplitKKernelBase {
 public:
     __aicore__ inline MatMulUnAlignedSingleCoreSplitKKernelBase() {}
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM, const MatmulTilingData *matmulTilingData, TPipe *pipe);
+                                GM_ADDR workspaceGM, const MatmulTilingData* matmulTilingData, TPipe* pipe);
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM);
+                                              GM_ADDR workspaceGM);
     __aicore__ inline void Process(uint8_t enAtomic = 0);
 
     __aicore__ inline void End()
@@ -89,23 +89,23 @@ protected:
 
     GlobalTensor<float> matmulOutput_;
     GlobalTensor<typename C_TYPE::T> castCGm_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     TBuf<> ubBuf_;
     UnAlignedSingleCoreSplitKParams innerParams_;
-    const MatmulTilingData *matmulTilingData_;
+    const MatmulTilingData* matmulTilingData_;
 
 private:
     __aicore__ inline void ProcessNDtoNZ();
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM);
+                                      GM_ADDR workspaceGM);
     __aicore__ inline void ProcessRemovePaddingImpl();
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void
-MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Init(GM_ADDR aGM,
-    GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
-    const MatmulTilingData *matmulTilingData, TPipe *pipe)
+MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Init(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
+    const MatmulTilingData* matmulTilingData, TPipe* pipe)
 {
     matmulTilingData_ = matmulTilingData;
     innerParams_.isTransposeAIn = matmulTilingData_->matmulRunInfo.transA;
@@ -133,24 +133,24 @@ MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLO
 
         if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_B)) {
             mmb_.UnAlignedInit(innerParams_.aGM, innerParams_.alignedworkspaceGM, innerParams_.castAddr, biasGM,
-                offsetWGM, workspaceGM, matmulTilingData, pipe_);
+                               offsetWGM, workspaceGM, matmulTilingData, pipe_);
         } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_A)) {
             mma_.UnAlignedInit(innerParams_.alignedworkspaceGM, innerParams_.bGM, innerParams_.castAddr, biasGM,
-                offsetWGM, workspaceGM, matmulTilingData, pipe_);
+                               offsetWGM, workspaceGM, matmulTilingData, pipe_);
         } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB)) {
             mmab_.UnAlignedInit(innerParams_.alignedworkspaceGM,
-                innerParams_.alignedworkspaceGM +
-                innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize,
-                innerParams_.castAddr, biasGM, offsetWGM, workspaceGM, matmulTilingData, pipe_);
+                                innerParams_.alignedworkspaceGM +
+                                    innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize,
+                                innerParams_.castAddr, biasGM, offsetWGM, workspaceGM, matmulTilingData, pipe_);
         }
         return;
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void
-MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::InitInputs(GM_ADDR aGM,
-    GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
+MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::InitInputs(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
 {
     innerParams_.alignedworkspaceGM = reinterpret_cast<GM_ADDR>(
         ((reinterpret_cast<uint64_t>(workspaceGM + MAX_BLOCK_NUM * DEFAULT_BLOCK_LEN * sizeof(int32_t)) + 511) / 512) *
@@ -181,33 +181,33 @@ MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLO
     if (innerParams_.nd2nzA) {
         innerParams_.nd2nzFlag = static_cast<int32_t>(ND2NZ_SELECT::ONLY_A);
         innerParams_.castAddr = innerParams_.alignedworkspaceGM +
-            innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize;
+                                innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize;
     }
     if (innerParams_.nd2nzB) {
         innerParams_.nd2nzFlag = static_cast<int32_t>(ND2NZ_SELECT::ONLY_B);
         innerParams_.castAddr = innerParams_.alignedworkspaceGM +
-            innerParams_.alignedKbSize * innerParams_.alignedOriN * innerParams_.inputDtypeSize;
+                                innerParams_.alignedKbSize * innerParams_.alignedOriN * innerParams_.inputDtypeSize;
     }
     if (innerParams_.nd2nzA && innerParams_.nd2nzB) {
-        bool isAFullLoad = static_cast<uint64_t>(matmulTilingData_->matmulTiling.baseM) * matmulTilingData_->matmulTiling.baseK *
-            matmulTilingData_->matmulTiling.depthA1 >=
-            innerParams_.alignedOriM * innerParams_.alignedKaSize;
-        bool isBFullLoad = static_cast<uint64_t>(matmulTilingData_->matmulTiling.baseN) * matmulTilingData_->matmulTiling.baseK *
-            matmulTilingData_->matmulTiling.depthB1 >=
-            innerParams_.alignedOriN * innerParams_.alignedKbSize;
+        bool isAFullLoad = static_cast<uint64_t>(matmulTilingData_->matmulTiling.baseM) *
+                               matmulTilingData_->matmulTiling.baseK * matmulTilingData_->matmulTiling.depthA1 >=
+                           innerParams_.alignedOriM * innerParams_.alignedKaSize;
+        bool isBFullLoad = static_cast<uint64_t>(matmulTilingData_->matmulTiling.baseN) *
+                               matmulTilingData_->matmulTiling.baseK * matmulTilingData_->matmulTiling.depthB1 >=
+                           innerParams_.alignedOriN * innerParams_.alignedKbSize;
         if (isAFullLoad) {
             innerParams_.nd2nzFlag = static_cast<int32_t>(ND2NZ_SELECT::ONLY_B);
             innerParams_.castAddr = innerParams_.alignedworkspaceGM +
-                innerParams_.alignedOriN * innerParams_.alignedKbSize * innerParams_.inputDtypeSize;
+                                    innerParams_.alignedOriN * innerParams_.alignedKbSize * innerParams_.inputDtypeSize;
         } else if (isBFullLoad) {
             innerParams_.nd2nzFlag = static_cast<int32_t>(ND2NZ_SELECT::ONLY_A);
             innerParams_.castAddr = innerParams_.alignedworkspaceGM +
-                innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize;
+                                    innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize;
         } else {
             innerParams_.nd2nzFlag = static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB);
-            innerParams_.castAddr =
-                innerParams_.alignedworkspaceGM + (innerParams_.alignedOriM + innerParams_.alignedOriN) *
-                innerParams_.alignedKaSize * innerParams_.inputDtypeSize;
+            innerParams_.castAddr = innerParams_.alignedworkspaceGM +
+                                    (innerParams_.alignedOriM + innerParams_.alignedOriN) * innerParams_.alignedKaSize *
+                                        innerParams_.inputDtypeSize;
         }
     }
     if ASCEND_IS_AIV {
@@ -219,30 +219,33 @@ MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLO
         if constexpr (sizeof(typename C_TYPE::T) == sizeof(float)) {
             return;
         }
-        uint64_t totalSize = static_cast<uint64_t>(matmulTilingData_->matmulTiling.M) * matmulTilingData_->matmulTiling.N;
+        uint64_t totalSize = static_cast<uint64_t>(matmulTilingData_->matmulTiling.M) *
+                             matmulTilingData_->matmulTiling.N;
         uint64_t coreSize = totalSize / (matmulTilingData_->matmulTiling.usedCoreNum * NUM_TWO); // need to align
         innerParams_.coreSizeNum = coreSize;
         innerParams_.offset = innerParams_.vIndex * coreSize;
         if (innerParams_.vIndex == matmulTilingData_->matmulTiling.usedCoreNum * NUM_TWO - 1) {
             // 尾块数据量
-            innerParams_.coreSizeNum =
-                totalSize - (matmulTilingData_->matmulTiling.usedCoreNum * NUM_TWO - 1) * coreSize;
+            innerParams_.coreSizeNum = totalSize -
+                                       (matmulTilingData_->matmulTiling.usedCoreNum * NUM_TWO - 1) * coreSize;
         }
         if (static_cast<uint64_t>(matmulTilingData_->matmulTiling.N) * DATA_SIZE_FP32 % ALIGN_BYTE != 0) {
             innerParams_.alignedN = MMV3DivCeil(matmulTilingData_->matmulTiling.N, 64) * 64;
-            matmulOutput_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(innerParams_.castAddr),
+            matmulOutput_.SetGlobalBuffer(
+                reinterpret_cast<__gm__ float*>(innerParams_.castAddr),
                 static_cast<uint64_t>(matmulTilingData_->matmulTiling.M) * innerParams_.alignedN);
-            castCGm_.SetGlobalBuffer(reinterpret_cast<__gm__ typename C_TYPE::T *>(cGM),
+            castCGm_.SetGlobalBuffer(
+                reinterpret_cast<__gm__ typename C_TYPE::T*>(cGM),
                 static_cast<uint64_t>(matmulTilingData_->matmulTiling.M) * matmulTilingData_->matmulTiling.N);
         }
         return;
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE,
-    MM_CFG>::UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-    GM_ADDR workspaceGM)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void
+MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UpdateGlobalTensor(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
 {
     InitInputs(aGM, bGM, cGM, biasGM, offsetWGM, workspaceGM);
 
@@ -256,47 +259,52 @@ __aicore__ inline void MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE,
 
         if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_B)) {
             mmb_.UpdateGlobalTensor(innerParams_.aGM, innerParams_.alignedworkspaceGM, innerParams_.castAddr, biasGM,
-                offsetWGM, workspaceGM);
+                                    offsetWGM, workspaceGM);
         } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_A)) {
             mma_.UpdateGlobalTensor(innerParams_.alignedworkspaceGM, innerParams_.bGM, innerParams_.castAddr, biasGM,
-                offsetWGM, workspaceGM);
+                                    offsetWGM, workspaceGM);
         } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB)) {
             mmab_.UpdateGlobalTensor(innerParams_.alignedworkspaceGM,
-                innerParams_.alignedworkspaceGM +
-                innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize,
-                innerParams_.castAddr, biasGM, offsetWGM, workspaceGM);
+                                     innerParams_.alignedworkspaceGM + innerParams_.alignedOriM *
+                                                                           innerParams_.alignedKaSize *
+                                                                           innerParams_.inputDtypeSize,
+                                     innerParams_.castAddr, biasGM, offsetWGM, workspaceGM);
         }
         return;
     }
 }
 
-
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void
 MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::ProcessNDtoNZ()
 {
     // ND2NZ
     if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_B)) {
-        MatrixBtoNZV2<typename B_TYPE::T>(innerParams_.alignedworkspaceGM, innerParams_.bGM, matmulTilingData_->matmulTiling, innerParams_.isTransposeBIn, ubBuf_,
+        MatrixBtoNZV2<typename B_TYPE::T>(innerParams_.alignedworkspaceGM, innerParams_.bGM,
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeBIn, ubBuf_,
                                           innerParams_.baseBN, innerParams_.baseBD);
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_A)) {
-        MatrixAtoNZV2<typename A_TYPE::T>(innerParams_.alignedworkspaceGM, innerParams_.aGM, matmulTilingData_->matmulTiling, innerParams_.isTransposeAIn, ubBuf_,
+        MatrixAtoNZV2<typename A_TYPE::T>(innerParams_.alignedworkspaceGM, innerParams_.aGM,
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeAIn, ubBuf_,
                                           innerParams_.baseAN, innerParams_.baseAD);
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB)) {
-        MatrixAtoNZV2<typename A_TYPE::T>(innerParams_.alignedworkspaceGM, innerParams_.aGM, matmulTilingData_->matmulTiling, innerParams_.isTransposeAIn, ubBuf_,
+        MatrixAtoNZV2<typename A_TYPE::T>(innerParams_.alignedworkspaceGM, innerParams_.aGM,
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeAIn, ubBuf_,
                                           innerParams_.baseAN, innerParams_.baseAD);
         event_t eventMTE3MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
-        MatrixBtoNZV2<typename B_TYPE::T>(innerParams_.alignedworkspaceGM +
-                innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize, innerParams_.bGM, matmulTilingData_->matmulTiling, innerParams_.isTransposeBIn, ubBuf_,
-                                          innerParams_.baseBN, innerParams_.baseBD);
+        MatrixBtoNZV2<typename B_TYPE::T>(
+            innerParams_.alignedworkspaceGM +
+                innerParams_.alignedOriM * innerParams_.alignedKaSize * innerParams_.inputDtypeSize,
+            innerParams_.bGM, matmulTilingData_->matmulTiling, innerParams_.isTransposeBIn, ubBuf_, innerParams_.baseBN,
+            innerParams_.baseBD);
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void
-MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::ProcessRemovePaddingImpl()
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE,
+                                                                 MM_CFG>::ProcessRemovePaddingImpl()
 {
     if (static_cast<uint64_t>(matmulTilingData_->matmulTiling.N) * DATA_SIZE_FP32 % ALIGN_BYTE != 0) {
         uint64_t splitM = matmulTilingData_->matmulTiling.M / (matmulTilingData_->matmulTiling.usedCoreNum * NUM_TWO);
@@ -318,15 +326,15 @@ MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLO
             matmulOutput_[innerParams_.vIndex * splitM * innerParams_.alignedN], coreMSize, innerParams_.alignedN,
             matmulTilingData_->matmulTiling.N, ubBuf_);
     } else {
-        UnAlignedCast32to16V220(reinterpret_cast<__gm__ typename C_TYPE::T *>(innerParams_.cGM) + innerParams_.offset,
-            reinterpret_cast<__gm__ float *>(innerParams_.castAddr) + innerParams_.offset, 0, innerParams_.coreSizeNum,
-            ubBuf_);
+        UnAlignedCast32to16V220(reinterpret_cast<__gm__ typename C_TYPE::T*>(innerParams_.cGM) + innerParams_.offset,
+                                reinterpret_cast<__gm__ float*>(innerParams_.castAddr) + innerParams_.offset, 0,
+                                innerParams_.coreSizeNum, ubBuf_);
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void
-MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process(uint8_t enAtomic)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE,
+                                                                 MM_CFG>::Process(uint8_t enAtomic)
 {
     using C_T = typename C_TYPE::T;
     if ASCEND_IS_AIV {

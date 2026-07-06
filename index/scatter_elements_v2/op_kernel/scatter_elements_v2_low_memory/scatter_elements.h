@@ -26,8 +26,9 @@ class ScatterElements {
 public:
     __aicore__ inline ScatterElements() {}
 
-    __aicore__ inline void Init(GlobalTensor<T>& x, GlobalTensor<U>& indices,
-                                GlobalTensor<T>& updates, LocalTensor<uint8_t>& allUbLocal, GM_ADDR workspace) {
+    __aicore__ inline void Init(GlobalTensor<T>& x, GlobalTensor<U>& indices, GlobalTensor<T>& updates,
+                                LocalTensor<uint8_t>& allUbLocal, GM_ADDR workspace)
+    {
         this->xGm = x;
         this->indicesGm = indices;
         this->updatesGm = updates;
@@ -35,31 +36,34 @@ public:
         this->workspace = workspace;
     }
 
-    __aicore__ inline void SetXInfo(uint64_t xDim0, uint64_t xDim1) {
+    __aicore__ inline void SetXInfo(uint64_t xDim0, uint64_t xDim1)
+    {
         this->xDim0 = xDim0;
         this->xDim1 = xDim1;
     }
 
-    __aicore__ inline void SetCoreNums(int32_t coreNums) {
-        this->coreNums = coreNums;
-    }
+    __aicore__ inline void SetCoreNums(int32_t coreNums) { this->coreNums = coreNums; }
 
-    __aicore__ inline void SetIndicesInfo(uint64_t indicesDim0, uint64_t indicesDim1) {
+    __aicore__ inline void SetIndicesInfo(uint64_t indicesDim0, uint64_t indicesDim1)
+    {
         this->indicesDim0 = indicesDim0;
         this->indicesDim1 = indicesDim1;
     }
 
-    __aicore__ inline void SetUpdatesInfo(uint64_t updatesDim0, uint64_t updatesDim1) {
+    __aicore__ inline void SetUpdatesInfo(uint64_t updatesDim0, uint64_t updatesDim1)
+    {
         this->updatesDim0 = updatesDim0;
         this->updatesDim1 = updatesDim1;
     }
 
-    __aicore__ inline void SetModeInfo(uint64_t mode, uint64_t includeSelf) {
+    __aicore__ inline void SetModeInfo(uint64_t mode, uint64_t includeSelf)
+    {
         this->mode = mode;
         this->includeSelf = includeSelf;
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (this->xDim1 < X_LOCAL_LENGTH) {
             if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
                 if (NeedCastFloat()) {
@@ -75,7 +79,8 @@ public:
 
 private:
     template <typename V>
-    __aicore__ inline void ProcessWithUbType() {
+    __aicore__ inline void ProcessWithUbType()
+    {
         ScatterElementsCacheOp<T, U, V, IsScalar> op;
         op.SetModeInfo(this->mode, this->includeSelf);
         op.Init(this->xGm, this->indicesGm, this->updatesGm, this->allUbLocal, this->workspace);
@@ -86,7 +91,8 @@ private:
         op.Process();
     }
 
-    __aicore__ inline bool NeedCastFloat() const {
+    __aicore__ inline bool NeedCastFloat() const
+    {
         return mode >= SCATTER_MODE_REDUCTION_BEGIN && mode <= SCATTER_MODE_REDUCTION_END;
     }
 
@@ -106,5 +112,5 @@ private:
     uint64_t mode = 1;
     uint64_t includeSelf = 1;
 };
-}
+} // namespace ScatterElementsV2NS
 #endif

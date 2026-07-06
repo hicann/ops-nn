@@ -27,14 +27,8 @@ using namespace std;
 
 class sigmoid_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sigmoid_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sigmoid_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sigmoid_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sigmoid_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(sigmoid_grad_test, test_case_0)
@@ -72,7 +66,7 @@ TEST_F(sigmoid_grad_test, test_case_0)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, x, y, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, x, y, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);

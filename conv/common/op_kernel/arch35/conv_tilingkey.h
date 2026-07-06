@@ -80,182 +80,118 @@ namespace ConvKey {
 #define CONV_BIG_KERNEL 1
 
 #if defined(FORMAT_FILTER) && (FORMAT_FILTER == FORMAT_FRACTAL_Z || FORMAT_FILTER == FORMAT_FRACTAL_Z_C04)
-#define CONV2D_SCALAR_OPT_SEL(...)                                                                                   \
-,                                                                                                                    \
-ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST,                                                                  \
-    CONV_MULTI_BATCH, CONV_ONE_BATCH),                                                                               \
-ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST,                                                                     \
-    CONV_HAS_PAD, CONV_NO_PAD),                                                                                      \
-ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, __VA_ARGS__)                                                  \
-ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, CONV_NOT_SMALL_KERNEL, CONV_SMALL_KERNEL)
+#define CONV2D_SCALAR_OPT_SEL(...)                                                           \
+    , ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, CONV_MULTI_BATCH, CONV_ONE_BATCH), \
+        ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, CONV_HAS_PAD, CONV_NO_PAD),         \
+        ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, __VA_ARGS__)                  \
+            ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, CONV_NOT_SMALL_KERNEL, CONV_SMALL_KERNEL)
 #else
-#define CONV2D_SCALAR_OPT_SEL(...)                                                                                   \
-,                                                                                                                    \
-ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, 0),                                                              \
-ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, 0),                                                                 \
-ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, 0)                                                            \
-ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, 0)
+#define CONV2D_SCALAR_OPT_SEL(...)                                                                                 \
+    , ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, 0), ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, 0), \
+        ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, 0)                                                  \
+            ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, 0)
 #endif
 
 #define CONV_COMMON_ONLY_MN_FULLLOAD_SEL()                                                                           \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0),                                                                       \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0),                                                                     \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_ALL_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_M_MODE),                                                                                       \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0),                 \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0),         \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, \
+                             CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),                                  \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_OPEN),                            \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_M_MODE),                            \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST,                            \
+                             CONV_ITER_ORDER_NITER_FIRST),                                                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
 #define CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL()                                                                       \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                       \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_AL0_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                   \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                           \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, \
+                             CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),                                  \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_AL0_OPEN),                            \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE), \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST),                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
 #define CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL()                                                                       \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                       \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_BL0_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                   \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                           \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, \
+                             CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),                                  \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_BL0_OPEN),                            \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE), \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_NITER_FIRST),                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
 #define CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL()                                                                       \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                       \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_ALL_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                   \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                           \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, \
+                             CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),                                  \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_OPEN),                            \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE), \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST,                            \
+                             CONV_ITER_ORDER_NITER_FIRST),                                                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
-#define CONV_COMMON_ONLY_AL1_FULLLOAD_SEL()                                                                          \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_FULLLOAD_AL1),                                                                                  \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                       \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_BL1_OPEN),                                                          \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                                           \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+#define CONV_COMMON_ONLY_AL1_FULLLOAD_SEL()                                                                           \
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_FULLLOAD_AL1),                             \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                            \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_BL1_OPEN), \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),  \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),  \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_NITER_FIRST),                            \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
-#define CONV_COMMON_ONLY_BL1_FULLLOAD_SEL()                                                                          \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_FULLLOAD_BL1),                                                                                \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN),                                                          \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                                           \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+#define CONV_COMMON_ONLY_BL1_FULLLOAD_SEL()                                                                           \
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                    \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_FULLLOAD_BL1),                     \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN), \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),  \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),  \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST),                            \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
 #define CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL()                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_FULLLOAD_AL1),                                                                                  \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_FULLLOAD_BL1),                                                                                \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                               \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_FULLLOAD_AL1),                            \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_FULLLOAD_BL1),                    \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE),                           \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, \
+                             CONV_L0_PINGPONG_ALL_OPEN),                                                             \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE), \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST),                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
 #define CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL()                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_FULLLOAD_AL1),                                                                                  \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_FULLLOAD_BL1),                                                                                \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE),                                                                                     \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                                           \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_NITER_FIRST),                                                                                    \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_FULLLOAD_AL1),                            \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_FULLLOAD_BL1),                    \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE),                           \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN), \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE), \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_NITER_FIRST),                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV)
 
-#define CONV_COMMON_OPT_GROUP_SEL()                                                                                  \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                       \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_ALL_OPEN),                                                          \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_OPT_GROUP_CONV)
+#define CONV_COMMON_OPT_GROUP_SEL()                                                                                   \
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                    \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                            \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_ALL_OPEN), \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN,  \
+                             CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                   \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),  \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST,                             \
+                             CONV_ITER_ORDER_NITER_FIRST),                                                            \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_OPT_GROUP_CONV)
 
-#define CONV_COMMON_ORI_GROUP_SEL()                                                                                  \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                       \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_ALL_OPEN),                                                          \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),                                                            \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_ORI_GROUP_CONV)
-}
+#define CONV_COMMON_ORI_GROUP_SEL()                                                                                   \
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                    \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                            \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_ALL_OPEN), \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN,  \
+                             CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                   \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),  \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST,                             \
+                             CONV_ITER_ORDER_NITER_FIRST),                                                            \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_ORI_GROUP_CONV)
+} // namespace ConvKey
 
 #endif // CONV_TILINGKEY_H

@@ -34,7 +34,7 @@ inline void InitApplyTopKTopPWithSortedTilingData(uint8_t* tiling, ApplyTopKTopP
     memcpy(data, tiling, sizeof(ApplyTopKTopPWithSortedTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg) \
-    ApplyTopKTopPWithSortedTilingData tiling_data;      \
+#define GET_TILING_DATA(tiling_data, tiling_arg)   \
+    ApplyTopKTopPWithSortedTilingData tiling_data; \
     InitApplyTopKTopPWithSortedTilingData(tiling_arg, &tiling_data)
 #endif // APPLY_TOP_K_TOP_P_WITH_SORTED_TILING_H_TEST_KERNEL

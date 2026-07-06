@@ -65,7 +65,8 @@ void MaxPoolV3SmallKernelTiling::InitializationVars()
     } else {
         maxGatherScatterElm_ = Ops::Base::GetVRegSize(context_) / dtypeSize;
     }
-    indiceUbSize_ = Ops::Base::CeilDiv(inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM], maxGatherScatterElm_) *
+    indiceUbSize_ = Ops::Base::CeilDiv(inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM],
+                                       maxGatherScatterElm_) *
                     Ops::Base::GetVRegSize(context_);
     availableUb_ = static_cast<int64_t>(ubSize - UB_RESVERVED_SIZE - indiceUbSize_) / dtypeSize;
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / dtypeSize;
@@ -97,8 +98,8 @@ uint64_t MaxPoolV3SmallKernelTiling::GetTilingKey() const
     return tilingKey;
 }
 
-int64_t MaxPoolV3SmallKernelTiling::CalcBufferSize(
-    int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols, bool isPadding)
+int64_t MaxPoolV3SmallKernelTiling::CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols,
+                                                   bool isPadding)
 {
     int64_t tmpInDataBufferSize = inRows * Ops::Base::CeilAlign(inCols, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outRows * outCols, oneBlockNum_);
@@ -118,8 +119,8 @@ bool MaxPoolV3SmallKernelTiling::IsBufferCapable()
         (inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM],
         inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     maxInCols = Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
-    int64_t oneBatchBuffer =
-        CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM], isPadding_);
+    int64_t oneBatchBuffer = CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM],
+                                            isPadding_);
     if (oneBatchBuffer < availableUb_ &&
         ((availableUb_ / oneBatchBuffer * inputData.outShape[W_DIM] * inputData.outShape[H_DIM]) >= paraNum_)) {
         return true;
@@ -164,8 +165,8 @@ void MaxPoolV3SmallKernelTiling::CalcSplitMaxRows(int64_t maxInCols)
     int64_t inputBufferSize = inputUbRows * Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInRows = MAX_INPUT_ELEMENTS / Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
-        outUbFactorH_ = std::min(
-            (tmpInRows - inputData.kernelSize[H_DIM]) / inputData.stride[H_DIM] + 1, inputData.outShape[H_DIM]);
+        outUbFactorH_ = std::min((tmpInRows - inputData.kernelSize[H_DIM]) / inputData.stride[H_DIM] + 1,
+                                 inputData.outShape[H_DIM]);
     }
     if (outUbFactorH_ <= 0) {
         OP_LOGE(context_, "MaxPool outUbFactorH_ is %ld.", outUbFactorH_);
@@ -202,8 +203,8 @@ void MaxPoolV3SmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
     int64_t inputBufferSize = minInRows * Ops::Base::CeilAlign(curInCols, oneBlockNum_);
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInCols = Ops::Base::FloorAlign(MAX_INPUT_ELEMENTS / minInRows, oneBlockNum_);
-        outUbFactorW_ = std::min(
-            (tmpInCols - inputData.kernelSize[W_DIM]) / inputData.stride[W_DIM] + 1, inputData.outShape[W_DIM]);
+        outUbFactorW_ = std::min((tmpInCols - inputData.kernelSize[W_DIM]) / inputData.stride[W_DIM] + 1,
+                                 inputData.outShape[W_DIM]);
     }
     if (outUbFactorW_ <= 0) {
         OP_LOGE(context_, "MaxPool outUbFactorW_ is %ld.", outUbFactorW_);
@@ -249,8 +250,8 @@ void MaxPoolV3SmallKernelTiling::DoUBTilingSingle()
         inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     maxInCols = Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
     int64_t minInRows = inputData.kernelSize[H_DIM];
-    int64_t oneBacthBuffer =
-        CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM], isPadding_);
+    int64_t oneBacthBuffer = CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM],
+                                            isPadding_);
     int64_t oneRowsBuffer = CalcBufferSize(minInRows, maxInCols, 1, inputData.outShape[W_DIM], isPadding_);
     if (oneBacthBuffer <= 0 || oneRowsBuffer <= 0 ||
         inputData.batches * inputData.outShape[W_DIM] * inputData.outShape[H_DIM] <= 0) {
@@ -297,12 +298,12 @@ void MaxPoolV3SmallKernelTiling::DoBlockTiling()
     int64_t inCols = (outUbFactorW_ - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM];
     int64_t inRows = (outUbFactorH_ - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM];
     if (splitMode_ == SPLIT_BATCHS) {
-        inRows = std::max(
-            inRows, inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
+        inRows = std::max(inRows,
+                          inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     }
     if (splitMode_ != SPLIT_COLS) {
-        inCols = std::max(
-            inCols, inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
+        inCols = std::max(inCols,
+                          inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
     }
     inUbSize_ = ubFactorN_ * inRows * Ops::Base::CeilAlign(inCols, oneBlockNum_);
     outUbSize_ = ubFactorN_ * Ops::Base::CeilAlign(outUbFactorW_ * outUbFactorH_, oneBlockNum_);

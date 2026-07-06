@@ -17,8 +17,8 @@
 #include "register/op_impl_registry.h"
 
 using ge::FORMAT_NCHW;
-using ge::FORMAT_NHWC;
 using ge::FORMAT_ND;
+using ge::FORMAT_NHWC;
 
 struct AvgPoolV2ProtoTestParam {
     string case_name;
@@ -42,10 +42,10 @@ struct AvgPoolV2ProtoTestParam {
 };
 
 // -----------------AvgPoolV2-----------------
-class AvgPoolV2RuntimeInferShape : public testing::TestWithParam<AvgPoolV2ProtoTestParam> {
-};
+class AvgPoolV2RuntimeInferShape : public testing::TestWithParam<AvgPoolV2ProtoTestParam> {};
 
-TEST_P(AvgPoolV2RuntimeInferShape, general_cases) {
+TEST_P(AvgPoolV2RuntimeInferShape, general_cases)
+{
     AvgPoolV2ProtoTestParam param = GetParam();
     std::cout << "run case " << param.case_name << std::endl;
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AvgPoolV2")->infer_shape;
@@ -54,25 +54,25 @@ TEST_P(AvgPoolV2RuntimeInferShape, general_cases) {
     gert::StorageShape yShape = {{}, {}};
 
     auto holder = gert::InferShapeContextFaker()
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1, 1})
-                        .NodeInputTd(0, ge::DT_FLOAT16, param.xFormat, ge::Format::FORMAT_RESERVED)
-                        .NodeOutputTd(0, ge::DT_FLOAT16, param.yFormat, ge::Format::FORMAT_RESERVED)
-                        .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.ksize)},
-                                    {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
-                                    {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>(param.paddingMode)},
-                                    {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
-                                    {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.dataFormat)},
-                                    {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(param.globalPooling)},
-                                    {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(param.ceilMode)},
-                                    {"exclusive", Ops::NN::AnyValue::CreateFrom<bool>(param.exclusive)}})
-                        .InputShapes({&xShape})
-                        .OutputShapes({&yShape})
-                        .Build();
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT16, param.xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, param.yFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
+                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>(param.paddingMode)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.dataFormat)},
+                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(param.globalPooling)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(param.ceilMode)},
+                                  {"exclusive", Ops::NN::AnyValue::CreateFrom<bool>(param.exclusive)}})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
 
     if (param.result) {
         ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-        gert::Shape *output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+        gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
         ASSERT_EQ(Shape2String(*output), Shape2String(CreateShape(std::vector<int64_t>(param.yOriginShape))));
     } else {
         ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -80,50 +80,160 @@ TEST_P(AvgPoolV2RuntimeInferShape, general_cases) {
 }
 
 static AvgPoolV2ProtoTestParam general_cases_params[] = {
-  { "AvgPoolV2_basic1",
-    {3, 16, 16, 64}, {3, 15, 15, 64}, FORMAT_NHWC, FORMAT_NHWC,
-    {1, 2, 2, 1}, {1, 1, 1, 1}, "VALID", {1, 1, 1, 1}, "NHWC", false, false, true, true
-  },
-  { "AvgPoolV2_basic2",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NCHW, FORMAT_NCHW,
-    {1, 1, 2, 2}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NCHW", false, false, true, true
-  },
-  { "AvgPoolV2_basic3",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NCHW, FORMAT_NCHW,
-    {1, 1, 2, 2}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NCHW", false, true, true, true
-  },
-  { "AvgPoolV2_basicGlobal",
-    {1, 128, 32, 32}, {1, 128, 1, 1}, FORMAT_NCHW, FORMAT_NCHW,
-    {1, 1, 32, 32}, {1, 1, 1, 1}, "VALID", {0, 0, 0, 0}, "NCHW", true, true, true, true
-  },
-  { "AvgPoolV2_invalidKsize1",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NCHW, FORMAT_NCHW,
-    {1, 1, 2, -2}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NCHW", false, false, true, false
-  },
-  { "AvgPoolV2_invalidKsize2",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NHWC, FORMAT_NHWC,
-    {1, -1, 2, 2}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NHWC", false, false, true, false
-  },
-  { "AvgPoolV2_invalidKsize3",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NHWC, FORMAT_NHWC,
-    {1, 2, 2}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NHWC", false, false, true, false
-  },
-  { "AvgPoolV2_invalidStride1",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NHWC, FORMAT_NHWC,
-    {1, 1, 2, 2}, {1, -1, -1, 1}, "SAME", {1, 1, 1, 1}, "NHWC", false, false, true, false
-  },
-  { "AvgPoolV2_invalidStride2",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NHWC, FORMAT_NHWC,
-    {1, 1, 2, 2}, {1, 1}, "SAME", {1, 1, 1, 1}, "NHWC", false, false, true, false
-  },
-  { "AvgPoolV2_invalidOutputFormat",
-    {1, 128, 32, 32}, {1, 128, 32, 32}, FORMAT_NCHW, FORMAT_ND,
-    {1, 1, 2, 2}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NCHW", false, false, true, false
-  },
-  { "AvgPoolV2_invalidInputDimSize",
-    {1, 128, 32}, {1, 128, 32, 32}, FORMAT_NHWC, FORMAT_NHWC,
-    {1, 2, 2, 1}, {1, 1, 1, 1}, "SAME", {1, 1, 1, 1}, "NHWC", false, false, true, false
-  },
+    {"AvgPoolV2_basic1",
+     {3, 16, 16, 64},
+     {3, 15, 15, 64},
+     FORMAT_NHWC,
+     FORMAT_NHWC,
+     {1, 2, 2, 1},
+     {1, 1, 1, 1},
+     "VALID",
+     {1, 1, 1, 1},
+     "NHWC",
+     false,
+     false,
+     true,
+     true},
+    {"AvgPoolV2_basic2",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NCHW,
+     FORMAT_NCHW,
+     {1, 1, 2, 2},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NCHW",
+     false,
+     false,
+     true,
+     true},
+    {"AvgPoolV2_basic3",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NCHW,
+     FORMAT_NCHW,
+     {1, 1, 2, 2},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NCHW",
+     false,
+     true,
+     true,
+     true},
+    {"AvgPoolV2_basicGlobal",
+     {1, 128, 32, 32},
+     {1, 128, 1, 1},
+     FORMAT_NCHW,
+     FORMAT_NCHW,
+     {1, 1, 32, 32},
+     {1, 1, 1, 1},
+     "VALID",
+     {0, 0, 0, 0},
+     "NCHW",
+     true,
+     true,
+     true,
+     true},
+    {"AvgPoolV2_invalidKsize1",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NCHW,
+     FORMAT_NCHW,
+     {1, 1, 2, -2},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NCHW",
+     false,
+     false,
+     true,
+     false},
+    {"AvgPoolV2_invalidKsize2",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NHWC,
+     FORMAT_NHWC,
+     {1, -1, 2, 2},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NHWC",
+     false,
+     false,
+     true,
+     false},
+    {"AvgPoolV2_invalidKsize3",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NHWC,
+     FORMAT_NHWC,
+     {1, 2, 2},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NHWC",
+     false,
+     false,
+     true,
+     false},
+    {"AvgPoolV2_invalidStride1",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NHWC,
+     FORMAT_NHWC,
+     {1, 1, 2, 2},
+     {1, -1, -1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NHWC",
+     false,
+     false,
+     true,
+     false},
+    {"AvgPoolV2_invalidStride2",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NHWC,
+     FORMAT_NHWC,
+     {1, 1, 2, 2},
+     {1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NHWC",
+     false,
+     false,
+     true,
+     false},
+    {"AvgPoolV2_invalidOutputFormat",
+     {1, 128, 32, 32},
+     {1, 128, 32, 32},
+     FORMAT_NCHW,
+     FORMAT_ND,
+     {1, 1, 2, 2},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NCHW",
+     false,
+     false,
+     true,
+     false},
+    {"AvgPoolV2_invalidInputDimSize",
+     {1, 128, 32},
+     {1, 128, 32, 32},
+     FORMAT_NHWC,
+     FORMAT_NHWC,
+     {1, 2, 2, 1},
+     {1, 1, 1, 1},
+     "SAME",
+     {1, 1, 1, 1},
+     "NHWC",
+     false,
+     false,
+     true,
+     false},
 };
 
 INSTANTIATE_TEST_CASE_P(AvgPoolV2, AvgPoolV2RuntimeInferShape, testing::ValuesIn(general_cases_params));

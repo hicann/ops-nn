@@ -35,7 +35,7 @@ bool BatchMatMulV3MergeBatchBasicApiTiling::IsCapable()
     }
     bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
                            batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
-    if (isNotEqualBatch)  {
+    if (isNotEqualBatch) {
         return false;
     }
     // each aic should process at least 4 batchs
@@ -84,14 +84,14 @@ ge::graphStatus BatchMatMulV3MergeBatchBasicApiTiling::DoOpTiling()
     double l0cElemSize = static_cast<double>(compileInfo_.l0CSize) / DB_SIZE / sizeof(float);
     uint64_t mValue = args_.isATrans ? alignMValue_ : args_.mValue;
     runInfo_.mergeBatchL0 = std::min({CalBatchL0WithPolynomial(l0cElemSize, mValue), maxBatchL0, batchNumPerCore});
-    uint64_t baseM = args_.isATrans ? runInfo_.mergeBatchL0 * alignMValue_:
-        ops::CeilAlign(runInfo_.mergeBatchL0 * args_.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t baseM = args_.isATrans ? runInfo_.mergeBatchL0 * alignMValue_ :
+                                      ops::CeilAlign(runInfo_.mergeBatchL0 * args_.mValue, BASIC_BLOCK_SIZE_16);
     uint64_t baseN = runInfo_.mergeBatchL0 * alignNValue_;
     // 4 buffer for al1_db and bl1_db
     uint64_t stepKaMax = std::min(ops::CeilDiv(batchNumPerCore, runInfo_.mergeBatchL0),
-        compileInfo_.l1Size / NUM_FOUR / (baseM * runInfo_.baseK * args_.aDtypeSize));
+                                  compileInfo_.l1Size / NUM_FOUR / (baseM * runInfo_.baseK * args_.aDtypeSize));
     uint64_t stepKbMax = std::min(ops::CeilDiv(batchNumPerCore, runInfo_.mergeBatchL0),
-        compileInfo_.l1Size / NUM_FOUR / (baseN * runInfo_.baseK * args_.bDtypeSize));
+                                  compileInfo_.l1Size / NUM_FOUR / (baseN * runInfo_.baseK * args_.bDtypeSize));
     runInfo_.stepKa = std::min(std::min(stepKaMax, stepKbMax), ops::CeilDiv(alignKValue_, runInfo_.baseK));
     // calculate batchAL1 & batchBL1
     runInfo_.mergeBatchAL1 = runInfo_.mergeBatchL0;
@@ -101,8 +101,9 @@ ge::graphStatus BatchMatMulV3MergeBatchBasicApiTiling::DoOpTiling()
     runInfo_.baseN = alignNValue_;
 
     OP_LOGI(args_.opName, "In MergeBatchBasicApi module, temp mergeBatchAL1 is %lu, temp mergeBatchBL1 is %lu, \
-            temp mergeBatchL0 is %lu, kL1 is %lu, baseK is %lu", runInfo_.mergeBatchAL1, runInfo_.mergeBatchBL1,
-            runInfo_.mergeBatchL0, runInfo_.stepKa * runInfo_.baseK, runInfo_.baseK);
+            temp mergeBatchL0 is %lu, kL1 is %lu, baseK is %lu",
+            runInfo_.mergeBatchAL1, runInfo_.mergeBatchBL1, runInfo_.mergeBatchL0, runInfo_.stepKa * runInfo_.baseK,
+            runInfo_.baseK);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -128,10 +129,7 @@ uint64_t BatchMatMulV3MergeBatchBasicApiTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-uint64_t BatchMatMulV3MergeBatchBasicApiTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t BatchMatMulV3MergeBatchBasicApiTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus BatchMatMulV3MergeBatchBasicApiTiling::GetTilingData(TilingResult& tiling) const
 {

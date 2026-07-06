@@ -73,8 +73,8 @@ const FVector<int64_t> WEIGHT_TRANSPOSE_SHAPE_DIMS = {0, 2, 3, 4, 1};
 static constexpr const std::initializer_list<op::DataType> BIAS_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static constexpr const std::initializer_list<op::DataType> BIAS_SUPPORT_LIST_ASCEND310P = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static constexpr const std::initializer_list<op::DataType> BIAS_SUPPORT_LIST_ASCEND310P = {op::DataType::DT_FLOAT,
+                                                                                           op::DataType::DT_FLOAT16};
 } // namespace op
 /**
  * --------------------------------------L0函数注册机制start------------------------------------------------
@@ -114,38 +114,34 @@ using CONV_WITHDTYPE_FUNCTION = const aclTensor* (*)(const aclTensor* input, con
                                                      aclOpExecutor* executor);
 
 namespace op {
-std::string CharToString(const char* a)
-{
-    return std::string(a);
-}
+std::string CharToString(const char* a) { return std::string(a); }
 } // namespace op
 
 #define GET_FUNC_ID(inputDtype, inputFormat, outputDtype, outputFormat)                                         \
     (CharToString(op::ToString(inputDtype).GetString()) + CharToString(op::ToString(inputFormat).GetString()) + \
      CharToString(op::ToString(outputDtype).GetString()) + CharToString(op::ToString(outputFormat).GetString()))
 
-#define REG_L0_FUNCTION(map, function, inputDtype, inputFormat, outputDtype, outputFormat) \
-    ((map).emplace(                                                                        \
-        (GET_FUNC_ID((inputDtype), (inputFormat), (outputDtype), (outputFormat))), (L0FUNCTION(&(function)))))
+#define REG_L0_FUNCTION(map, function, inputDtype, inputFormat, outputDtype, outputFormat)    \
+    ((map).emplace((GET_FUNC_ID((inputDtype), (inputFormat), (outputDtype), (outputFormat))), \
+                   (L0FUNCTION(&(function)))))
 
 namespace op {
 
-static const aclTensor* ConvL0Warper(
-    std::map<std::string, L0FUNCTION> l0Functions, ConvolutionOpInfo& opInfo, const aclTensor* input,
-    const aclTensor* weight, const aclTensor* bias, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, const bool transposed, const aclIntArray* outputPadding, const int64_t groups,
-    bool useHf32, aclOpExecutor* executor)
+static const aclTensor* ConvL0Warper(std::map<std::string, L0FUNCTION> l0Functions, ConvolutionOpInfo& opInfo,
+                                     const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                                     const bool transposed, const aclIntArray* outputPadding, const int64_t groups,
+                                     bool useHf32, aclOpExecutor* executor)
 {
     const aclTensor* result = nullptr;
 
     std::string funcId = GET_FUNC_ID(opInfo.inputDtype, opInfo.inputFormat, opInfo.outputDtype, opInfo.outputFormat);
     if (l0Functions.find(funcId) == l0Functions.end()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Not support the given data type and format combination: "
-            "inputDtype: %s, outputDtype: %s, inputFormat:%s, outputFormat:%s",
-            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-            op::ToString(opInfo.inputFormat).GetString(), op::ToString(opInfo.outputFormat).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Not support the given data type and format combination: "
+                "inputDtype: %s, outputDtype: %s, inputFormat:%s, outputFormat:%s",
+                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                op::ToString(opInfo.inputFormat).GetString(), op::ToString(opInfo.outputFormat).GetString());
 
         return result;
     }
@@ -156,16 +152,16 @@ static const aclTensor* ConvL0Warper(
     if (opInfo.inputDtype == op::DataType::DT_FLOAT16 || opInfo.inputDtype == op::DataType::DT_BF16 ||
         opInfo.inputDtype == op::DataType::DT_HIFLOAT8 || opInfo.inputDtype == op::DataType::DT_FLOAT8_E4M3FN) {
         if (!transposed) {
-            result =
-                (reinterpret_cast<CONV_FUNCTION>(fn))(input, weight, bias, stride, padding, dilation, groups, executor);
+            result = (reinterpret_cast<CONV_FUNCTION>(fn))(input, weight, bias, stride, padding, dilation, groups,
+                                                           executor);
         } else {
-            result = (reinterpret_cast<CONVTRANSPOSE_FUNCTION>(fn))(
-                input, weight, bias, stride, padding, dilation, groups, outputPadding, executor);
+            result = (reinterpret_cast<CONVTRANSPOSE_FUNCTION>(fn))(input, weight, bias, stride, padding, dilation,
+                                                                    groups, outputPadding, executor);
         }
     } else {
         if (!transposed) {
-            result = (reinterpret_cast<CONV_WITHFLAG_FUNCTION>(fn))(
-                input, weight, bias, stride, padding, dilation, groups, useHf32, executor);
+            result = (reinterpret_cast<CONV_WITHFLAG_FUNCTION>(fn))(input, weight, bias, stride, padding, dilation,
+                                                                    groups, useHf32, executor);
         } else {
             result = (reinterpret_cast<CONVTRANSPOSE_WITHFLAG_FUNCTION>(fn))(
                 input, weight, bias, stride, padding, dilation, groups, outputPadding, useHf32, executor);
@@ -174,28 +170,24 @@ static const aclTensor* ConvL0Warper(
     return result;
 }
 
-#define FUNCTION_CALL(                                                                                               \
-    l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, useHf32, \
-    executor)                                                                                                        \
-    ConvL0Warper(                                                                                                    \
-        l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,      \
-        useHf32, executor)
+#define FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, \
+                      groups, useHf32, executor)                                                                      \
+    ConvL0Warper(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding,      \
+                 groups, useHf32, executor)
 } // namespace op
 
 #define REG_L0_FUNCTION_BY_OPTYPE(map, function, opType) ((map).emplace(opType, (L0FUNCTION(&(function)))))
 
 namespace op {
 
-static bool IsSupportND()
-{
-    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
-}
+static bool IsSupportND() { return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510; }
 
-static const aclTensor* L0FuncWarperByOpType(
-    std::map<std::string, L0FUNCTION> l0Functions, std::string functionType, const aclTensor* input,
-    const aclTensor* weight, const aclTensor* bias, op::DataType outputDtype, const aclIntArray* stride,
-    const aclIntArray* padding, const aclIntArray* dilation, const bool transposed, const int64_t groups, bool useHf32,
-    aclOpExecutor* executor)
+static const aclTensor* L0FuncWarperByOpType(std::map<std::string, L0FUNCTION> l0Functions, std::string functionType,
+                                             const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                             op::DataType outputDtype, const aclIntArray* stride,
+                                             const aclIntArray* padding, const aclIntArray* dilation,
+                                             const bool transposed, const int64_t groups, bool useHf32,
+                                             aclOpExecutor* executor)
 {
     const aclTensor* result = nullptr;
     if (l0Functions.find(functionType) == l0Functions.end()) {
@@ -204,18 +196,16 @@ static const aclTensor* L0FuncWarperByOpType(
     }
     L0FUNCTION fn = l0Functions.at(functionType);
     if (op::IsSupportND() && input->GetViewShape().GetDimNum() == op::CONV2D_SHAPE_SIZE && !transposed) {
-        result = (reinterpret_cast<CONV_WITHDTYPE_FUNCTION>(fn))(
-            input, weight, bias, outputDtype, stride, padding, dilation, groups, useHf32, executor);
+        result = (reinterpret_cast<CONV_WITHDTYPE_FUNCTION>(fn))(input, weight, bias, outputDtype, stride, padding,
+                                                                 dilation, groups, useHf32, executor);
     }
     return result;
 }
 
-#define FUNCTION_CALL_BY_OPTYPE(                                                                                       \
-    l0Functions, functionType, input, weight, bias, outputDtype, stride, padding, dilation, transposed, outputPadding, \
-    groups, useHf32, executor)                                                                                         \
-    L0FuncWarperByOpType(                                                                                              \
-        l0Functions, functionType, input, weight, bias, outputDtype, stride, padding, dilation, transposed, groups,    \
-        useHf32, executor)
+#define FUNCTION_CALL_BY_OPTYPE(l0Functions, functionType, input, weight, bias, outputDtype, stride, padding,    \
+                                dilation, transposed, outputPadding, groups, useHf32, executor)                  \
+    L0FuncWarperByOpType(l0Functions, functionType, input, weight, bias, outputDtype, stride, padding, dilation, \
+                         transposed, groups, useHf32, executor)
 
 } // namespace op
 
@@ -344,49 +334,22 @@ public:
         channelLast_ = formatStr.find('C') == formatStr.length() - 1;
         isZeroTensor_ = tensor->IsEmpty();
     }
-    explicit TensorMeta(const aclTensor* tensor)
-    {
-        this->SetFromTensor(tensor);
-    }
+    explicit TensorMeta(const aclTensor* tensor) { this->SetFromTensor(tensor); }
     // candy access functions
-    int64_t N() const
-    {
-        return n_;
-    }
-    int64_t C() const
-    {
-        return c_;
-    }
-    int64_t D() const
-    {
-        return d_;
-    }
-    int64_t H() const
-    {
-        return h_;
-    }
-    int64_t W() const
-    {
-        return w_;
-    }
-    int64_t L() const
-    {
-        return l_;
-    }
+    int64_t N() const { return n_; }
+    int64_t C() const { return c_; }
+    int64_t D() const { return d_; }
+    int64_t H() const { return h_; }
+    int64_t W() const { return w_; }
+    int64_t L() const { return l_; }
     size_t NIdx() const { return nIdx_; }
     size_t CIdx() const { return cIdx_; }
     size_t DIdx() const { return dIdx_; }
     size_t HIdx() const { return hIdx_; }
     size_t WIdx() const { return wIdx_; }
     size_t LIdx() const { return lIdx_; }
-    bool ChannelLast() const
-    {
-        return channelLast_;
-    }
-    bool IsZeroTensor() const
-    {
-        return isZeroTensor_;
-    }
+    bool ChannelLast() const { return channelLast_; }
+    bool IsZeroTensor() const { return isZeroTensor_; }
 
 private:
     int64_t n_ = 0;
@@ -507,8 +470,8 @@ static FVector<int64_t> ConstructPad(FVector<int64_t>& oldPad, FVector<int64_t>&
         if (oldPad.size() == CONV_2D_PAD_DIM) {
             newPad = {(oldPad[0] + oldPad[0]), (oldPad[1] + oldPad[1])};
         } else if (oldPad.size() == CONV_4D_PAD_DIM) {
-            newPad = {
-                (oldPad[PAD_TOP_INDEX] + oldPad[PAD_BOTTOM_INDEX]), (oldPad[PAD_LEFT_INDEX] + oldPad[PAD_RIGHT_INDEX])};
+            newPad = {(oldPad[PAD_TOP_INDEX] + oldPad[PAD_BOTTOM_INDEX]),
+                      (oldPad[PAD_LEFT_INDEX] + oldPad[PAD_RIGHT_INDEX])};
         } else {
             newPad = {0, 0};
         }
@@ -523,26 +486,22 @@ public:
     ConvParams params;
     ConvMeta meta;
     std::string entityName;
-    explicit ConvEngine(ConvParams& convParams) : params(convParams)
-    {
-        meta.FromParams(params);
-    }
-    FVector<int64_t> CalcOutputShape()
-    {
-        return InferShape();
-    }
+    explicit ConvEngine(ConvParams& convParams) : params(convParams) { meta.FromParams(params); }
+    FVector<int64_t> CalcOutputShape() { return InferShape(); }
 
 private:
     FVector<int64_t> InferShape()
     {
         FVector<int64_t> output;
         FVector<int64_t> inputShape = meta.input.shape;
-        int64_t inputSpaceDimIndex =
-            meta.input.ChannelLast() ? 1 : 2;                   // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
+        int64_t inputSpaceDimIndex = meta.input.ChannelLast() ?
+                                         1 :
+                                         2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
         int64_t inputSpaceDimNum = meta.input.shape.size() - 2; // 空间维度大小，1d卷积时为1，2d为2，3d为3
         FVector<int64_t> weightShape = meta.weight.shape;
-        int64_t weightSpaceDimIndex =
-            meta.weight.ChannelLast() ? 1 : 2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
+        int64_t weightSpaceDimIndex = meta.weight.ChannelLast() ?
+                                          1 :
+                                          2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
         // step 1: put nOut in the first place of shape; for conv and transpose mode
         output.push_back(meta.input.N());
         int64_t cOut = meta.weight.N();
@@ -609,7 +568,7 @@ public:
 namespace {
 
 static bool CheckConvParamsDtype(const std::string& entityName, const DataType& currDtype, const string& dtypeStr,
-    const std::initializer_list<op::DataType>& dtypeSupportList)
+                                 const std::initializer_list<op::DataType>& dtypeSupportList)
 {
     for (auto item : dtypeSupportList) {
         if (currDtype == item) {
@@ -656,9 +615,8 @@ static bool CheckPointWise(const aclIntArray* array, int64_t value)
     return true;
 }
 
-static bool NeedPointWiseKernel(
-    const aclTensor* weight, const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
-    const int64_t groups)
+static bool NeedPointWiseKernel(const aclTensor* weight, const aclIntArray* stride, const aclIntArray* padding,
+                                const aclIntArray* dilation, const int64_t groups)
 {
     if (groups != 1) {
         return false;
@@ -696,9 +654,10 @@ public:
     aclnnStatus CheckDim(const std::string& entityName, const string& inStr, size_t inDim) const
     {
         if (inDim != CONV_1D_DIM_SIZE && inDim != CONV_2D_DIM_SIZE && inDim != CONV_3D_DIM_SIZE) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM(entityName, inStr, std::to_string(inDim), "one of {" +
-                std::to_string(CONV_1D_DIM_SIZE) + ", " + std::to_string(CONV_2D_DIM_SIZE) + ", " +
-                std::to_string(CONV_3D_DIM_SIZE) + "}");
+            OP_LOGE_FOR_INVALID_SHAPEDIM(entityName, inStr, std::to_string(inDim),
+                                         "one of {" + std::to_string(CONV_1D_DIM_SIZE) + ", " +
+                                             std::to_string(CONV_2D_DIM_SIZE) + ", " +
+                                             std::to_string(CONV_3D_DIM_SIZE) + "}");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -726,14 +685,14 @@ public:
 
         if (weightDim != inputDim) {
             std::string reason = "the shape dims of x and filter must be the same";
-            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(engine.entityName, "x, filter",
-                std::to_string(inputDim) + ", " + std::to_string(weightDim), reason);
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                engine.entityName, "x, filter", std::to_string(inputDim) + ", " + std::to_string(weightDim), reason);
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (outputDim != inputDim) {
             std::string reason = "the shape dims of x and y must be the same";
-            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(engine.entityName, "x, y",
-                std::to_string(inputDim) + ", " + std::to_string(outputDim), reason);
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                engine.entityName, "x, y", std::to_string(inputDim) + ", " + std::to_string(outputDim), reason);
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -762,22 +721,22 @@ public:
         }
         // 如果是transpose场景, bias的维度大小必须为 weight C * groups
         if (engine.params.transposed && biasSize != weightCValue * groupsValue) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "bias, filter",
-                op::FVectorToString(engine.meta.bias.shape) + ", " +
-                op::FVectorToString(engine.meta.weight.shape),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                engine.entityName, "bias, filter",
+                op::FVectorToString(engine.meta.bias.shape) + ", " + op::FVectorToString(engine.meta.weight.shape),
                 "When transposed is true, shape[0] of bias must be equal to shape[" +
-                std::to_string(engine.meta.weight.CIdx()) + "] of filter multiplied by attribute groups("+
-                std::to_string(groupsValue) + ")");
+                    std::to_string(engine.meta.weight.CIdx()) + "] of filter multiplied by attribute groups(" +
+                    std::to_string(groupsValue) + ")");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         // 如果是非transpose场景, bias的维度大小必须为 weight N
         if (!engine.params.transposed && biasSize != weightNValue) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "bias, filter",
-                op::FVectorToString(engine.meta.bias.shape) + ", " +
-                op::FVectorToString(engine.meta.weight.shape),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                engine.entityName, "bias, filter",
+                op::FVectorToString(engine.meta.bias.shape) + ", " + op::FVectorToString(engine.meta.weight.shape),
                 "When transposed is false, shape[0] of bias must be equal to shape[" +
-                std::to_string(engine.meta.weight.NIdx()) + "] of filter");
+                    std::to_string(engine.meta.weight.NIdx()) + "] of filter");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -791,29 +750,31 @@ public:
         auto strideSize = engine.meta.stride.size();
         if (strideSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "strides", std::to_string(strideSize),
-                std::to_string(inputDim - CONST_VALUE_TWO));
+                                         std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto dilationSize = engine.meta.dilation.size();
         if (dilationSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "dilations", std::to_string(dilationSize),
-                std::to_string(inputDim - CONST_VALUE_TWO));
+                                         std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto paddingSize = engine.meta.padding.size();
         if (((inputDim == CONV_1D_DIM_SIZE || inputDim == CONV_2D_DIM_SIZE) && !engine.params.transposed) ||
             (inputDim == CONV_2D_DIM_SIZE && engine.params.transposed)) {
-            if (!Any(paddingSize, Equal<size_t>, inputDim - CONST_VALUE_TWO, inputDim * CONST_VALUE_TWO - CONST_VALUE_FOUR)) {
+            if (!Any(paddingSize, Equal<size_t>, inputDim - CONST_VALUE_TWO,
+                     inputDim * CONST_VALUE_TWO - CONST_VALUE_FOUR)) {
                 OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(paddingSize),
-                    std::to_string(inputDim - CONST_VALUE_TWO) + " or " + std::to_string(inputDim * CONST_VALUE_TWO - CONST_VALUE_FOUR));
+                                             std::to_string(inputDim - CONST_VALUE_TWO) + " or " +
+                                                 std::to_string(inputDim * CONST_VALUE_TWO - CONST_VALUE_FOUR));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
             if (paddingSize != inputDim - CONST_VALUE_TWO) {
                 OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(paddingSize),
-                    std::to_string(inputDim - CONST_VALUE_TWO));
+                                             std::to_string(inputDim - CONST_VALUE_TWO));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -822,7 +783,7 @@ public:
             auto outputPaddingSize = engine.meta.outputPadding.size();
             if (outputPaddingSize != inputDim - CONST_VALUE_TWO) {
                 OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "outputPadding", std::to_string(outputPaddingSize),
-                    std::to_string(inputDim - CONST_VALUE_TWO));
+                                             std::to_string(inputDim - CONST_VALUE_TWO));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -855,21 +816,21 @@ public:
         size_t inputDim = engine.meta.input.shape.size();
         if (!Any(inputDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDim),
-                std::to_string(CONV_1D_DIM_SIZE));
+                                         std::to_string(CONV_1D_DIM_SIZE));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         size_t weightDim = engine.meta.weight.shape.size();
         if (!Any(weightDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "filter", std::to_string(weightDim),
-                std::to_string(CONV_1D_DIM_SIZE));
+                                         std::to_string(CONV_1D_DIM_SIZE));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         size_t outputDim = engine.meta.output.shape.size();
         if (!Any(outputDim, Equal<size_t>, CONV_1D_DIM_SIZE)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "y", std::to_string(outputDim),
-                std::to_string(CONV_1D_DIM_SIZE));
+                                         std::to_string(CONV_1D_DIM_SIZE));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -877,7 +838,7 @@ public:
         size_t biasDim = engine.meta.bias.shape.size();
         if (!Any(biasDim, Equal<size_t>, biasDimAllowTbc)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "bias", std::to_string(biasDim),
-                std::to_string(biasDimAllowTbc));
+                                         std::to_string(biasDimAllowTbc));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -894,21 +855,21 @@ public:
         size_t inputDim = engine.meta.input.shape.size();
         if (!Any(inputDim, Equal<size_t>, CONV_2D_DIM_SIZE)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDim),
-                std::to_string(CONV_2D_DIM_SIZE));
+                                         std::to_string(CONV_2D_DIM_SIZE));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         size_t weightDim = engine.meta.weight.shape.size();
         if (!Any(weightDim, Equal<size_t>, CONV_2D_DIM_SIZE)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "filter", std::to_string(weightDim),
-                std::to_string(CONV_2D_DIM_SIZE));
+                                         std::to_string(CONV_2D_DIM_SIZE));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         size_t outputDim = engine.meta.output.shape.size();
         if (!Any(outputDim, Equal<size_t>, CONV_2D_DIM_SIZE)) {
             OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "y", std::to_string(outputDim),
-                std::to_string(CONV_2D_DIM_SIZE));
+                                         std::to_string(CONV_2D_DIM_SIZE));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -917,7 +878,7 @@ public:
             constexpr size_t biasDimAllow = 1;
             if (!Any(biasDim, Equal<size_t>, biasDimAllow)) {
                 OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "bias", std::to_string(biasDim),
-                    std::to_string(biasDimAllow));
+                                             std::to_string(biasDimAllow));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -925,21 +886,21 @@ public:
         auto strideSize = engine.meta.stride.size();
         if (strideSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "strides", std::to_string(strideSize),
-                std::to_string(inputDim - CONST_VALUE_TWO));
+                                         std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto dilationSize = engine.meta.dilation.size();
         if (dilationSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "dilations", std::to_string(dilationSize),
-                std::to_string(inputDim - CONST_VALUE_TWO));
+                                         std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto paddingSize = engine.meta.padding.size();
         if (paddingSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(paddingSize),
-                std::to_string(inputDim - CONST_VALUE_TWO));
+                                         std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1000,12 +961,12 @@ public:
         }
         if (inputDtype != weightDtype) {
             OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "x", GeDtypeToString(inputDtype),
-                GeDtypeToString(weightDtype));
+                                      GeDtypeToString(weightDtype));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (weightDtype != outputDtype) {
             OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "filter", GeDtypeToString(weightDtype),
-                GeDtypeToString(outputDtype));
+                                      GeDtypeToString(outputDtype));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1030,7 +991,7 @@ public:
             if (inputDtype != DataType::DT_HIFLOAT8) {
                 if (inputDtype != biasDtype) {
                     OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "x", GeDtypeToString(inputDtype),
-                        GeDtypeToString(biasDtype));
+                                              GeDtypeToString(biasDtype));
                     return ACLNN_ERR_PARAM_INVALID;
                 }
             }
@@ -1046,12 +1007,12 @@ public:
 
         if (inputDtype != weightDtype) {
             OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "x", GeDtypeToString(inputDtype),
-                GeDtypeToString(weightDtype));
+                                      GeDtypeToString(weightDtype));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (weightDtype != outputDtype) {
             OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "filter", GeDtypeToString(weightDtype),
-                GeDtypeToString(outputDtype));
+                                      GeDtypeToString(outputDtype));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1088,10 +1049,11 @@ private:
         auto weightFormat = engine.meta.weight.format;
         auto outputFormat = engine.meta.output.format;
         if (!All(Format::FORMAT_NCL, Equal<op::Format>, inputFormat, weightFormat, outputFormat)) {
-            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(engine.entityName, "x, filter, y",
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                engine.entityName, "x, filter, y",
                 GeFormatToString(inputFormat) + ", " + GeFormatToString(weightFormat) + ", " +
-                GeFormatToString(outputFormat), "formats of x, filter and y should all be " +
-                GeFormatToString(Format::FORMAT_NCL));
+                    GeFormatToString(outputFormat),
+                "formats of x, filter and y should all be " + GeFormatToString(Format::FORMAT_NCL));
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -1107,41 +1069,41 @@ private:
             if (op::IsSupportND()) {
                 if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                     OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                        GeFormatToString(Format::FORMAT_NCHW));
+                                               GeFormatToString(Format::FORMAT_NCHW));
                     return ACLNN_ERR_PARAM_INVALID;
                 }
             } else {
                 if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW, Format::FORMAT_FRACTAL_Z)) {
-                    OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                        GeFormatToString(Format::FORMAT_NCHW) + " or " +
-                        GeFormatToString(Format::FORMAT_FRACTAL_Z));
+                    OP_LOGE_FOR_INVALID_FORMAT(
+                        engine.entityName, "filter", GeFormatToString(weightFormat),
+                        GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_FRACTAL_Z));
                     return ACLNN_ERR_PARAM_INVALID;
                 }
             }
             if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
-                    GeFormatToString(Format::FORMAT_NCHW));
+                                           GeFormatToString(Format::FORMAT_NCHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
-                    GeFormatToString(Format::FORMAT_NCHW));
+                                           GeFormatToString(Format::FORMAT_NCHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
             if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
-                    GeFormatToString(Format::FORMAT_NCHW));
+                                           GeFormatToString(Format::FORMAT_NCHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                    GeFormatToString(Format::FORMAT_NCHW));
+                                           GeFormatToString(Format::FORMAT_NCHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
-                    GeFormatToString(Format::FORMAT_NCHW));
+                                           GeFormatToString(Format::FORMAT_NCHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -1156,41 +1118,42 @@ private:
         if (op::IsSupportND()) {
             if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
-                    GeFormatToString(Format::FORMAT_NCDHW));
+                                           GeFormatToString(Format::FORMAT_NCDHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                    GeFormatToString(Format::FORMAT_NCDHW));
+                                           GeFormatToString(Format::FORMAT_NCDHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCDHW)) {
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
-                    GeFormatToString(Format::FORMAT_NCDHW));
+                                           GeFormatToString(Format::FORMAT_NCDHW));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
             if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCDHW, Format::FORMAT_NDHWC)) {
-                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
-                    GeFormatToString(Format::FORMAT_NCDHW) + " or " +
-                    GeFormatToString(Format::FORMAT_NDHWC));
+                OP_LOGE_FOR_INVALID_FORMAT(
+                    engine.entityName, "x", GeFormatToString(inputFormat),
+                    GeFormatToString(Format::FORMAT_NCDHW) + " or " + GeFormatToString(Format::FORMAT_NDHWC));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCDHW, Format::FORMAT_NDHWC)) {
-                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                    GeFormatToString(Format::FORMAT_NCDHW) + " or " +
-                    GeFormatToString(Format::FORMAT_NDHWC));
+                OP_LOGE_FOR_INVALID_FORMAT(
+                    engine.entityName, "filter", GeFormatToString(weightFormat),
+                    GeFormatToString(Format::FORMAT_NCDHW) + " or " + GeFormatToString(Format::FORMAT_NDHWC));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCDHW, Format::FORMAT_NDHWC)) {
-                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
-                    GeFormatToString(Format::FORMAT_NCDHW) + " or " +
-                    GeFormatToString(Format::FORMAT_NDHWC));
+                OP_LOGE_FOR_INVALID_FORMAT(
+                    engine.entityName, "y", GeFormatToString(outputFormat),
+                    GeFormatToString(Format::FORMAT_NCDHW) + " or " + GeFormatToString(Format::FORMAT_NDHWC));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
         return ACLNN_SUCCESS;
     }
+
 public:
     FormatChecker() = default;
     ~FormatChecker() override = default;
@@ -1199,26 +1162,26 @@ public:
         auto inputFormat = engine.meta.input.format;
         auto outputFormat = engine.meta.output.format;
         if (inputFormat != outputFormat) {
-            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(engine.entityName, "x, y",
-                GeFormatToString(inputFormat) + ", " + GeFormatToString(outputFormat),
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                engine.entityName, "x, y", GeFormatToString(inputFormat) + ", " + GeFormatToString(outputFormat),
                 "the formats of these parameters must be the same");
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (engine.params.bias != nullptr) {
             auto biasFormat = engine.meta.bias.format;
             if (!Any(biasFormat, Equal<op::Format>, Format::FORMAT_NCL, Format::FORMAT_NCHW, Format::FORMAT_NCDHW,
-                    Format::FORMAT_ND)) {
+                     Format::FORMAT_ND)) {
                 std::string correctFormat = "one of {" + GeFormatToString(Format::FORMAT_NCL) + ", " +
-                    GeFormatToString(Format::FORMAT_NCHW) + ", " + GeFormatToString(Format::FORMAT_NCDHW) + ", " +
-                    GeFormatToString(Format::FORMAT_ND) + "}";
+                                            GeFormatToString(Format::FORMAT_NCHW) + ", " +
+                                            GeFormatToString(Format::FORMAT_NCDHW) + ", " +
+                                            GeFormatToString(Format::FORMAT_ND) + "}";
                 OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "bias", GeFormatToString(biasFormat), correctFormat);
                 return ACLNN_ERR_PARAM_INVALID;
             }
 
             if (engine.params.transposed && biasFormat != Format::FORMAT_ND) {
-                OP_LOGW(
-                    "Please set bias format to %s, other formats may cause precision issues.",
-                    GeFormatToString(Format::FORMAT_ND));
+                OP_LOGW("Please set bias format to %s, other formats may cause precision issues.",
+                        GeFormatToString(Format::FORMAT_ND));
             }
         }
         size_t inputDimNum = engine.meta.input.shape.size();
@@ -1233,9 +1196,10 @@ public:
                 return CheckConv3d(engine);
             }
             default:
-                OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDimNum),"one of {" +
-                    std::to_string(CONV_1D_DIM_SIZE) + ", " + std::to_string(CONV_2D_DIM_SIZE) + ", " +
-                    std::to_string(CONV_3D_DIM_SIZE) + "}");
+                OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDimNum),
+                                             "one of {" + std::to_string(CONV_1D_DIM_SIZE) + ", " +
+                                                 std::to_string(CONV_2D_DIM_SIZE) + ", " +
+                                                 std::to_string(CONV_3D_DIM_SIZE) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
         }
     };
@@ -1253,17 +1217,20 @@ public:
 
         // conv_tbc，input weight output format都应是ND或者NCL
         if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_ND, Format::FORMAT_NCL)) {
-            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
+            OP_LOGE_FOR_INVALID_FORMAT(
+                engine.entityName, "x", GeFormatToString(inputFormat),
                 GeFormatToString(Format::FORMAT_ND) + " or " + GeFormatToString(Format::FORMAT_NCL));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_ND, Format::FORMAT_NCL)) {
-            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
+            OP_LOGE_FOR_INVALID_FORMAT(
+                engine.entityName, "filter", GeFormatToString(weightFormat),
                 GeFormatToString(Format::FORMAT_ND) + " or " + GeFormatToString(Format::FORMAT_NCL));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_ND, Format::FORMAT_NCL)) {
-            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
+            OP_LOGE_FOR_INVALID_FORMAT(
+                engine.entityName, "y", GeFormatToString(outputFormat),
                 GeFormatToString(Format::FORMAT_ND) + " or " + GeFormatToString(Format::FORMAT_NCL));
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -1284,24 +1251,24 @@ public:
 
         if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
-                GeFormatToString(Format::FORMAT_NCHW));
+                                       GeFormatToString(Format::FORMAT_NCHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                GeFormatToString(Format::FORMAT_NCHW));
+                                       GeFormatToString(Format::FORMAT_NCHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCHW)) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
-                GeFormatToString(Format::FORMAT_NCHW));
+                                       GeFormatToString(Format::FORMAT_NCHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         // 输入和输出format要求必须一致
         if (inputFormat != outputFormat) {
-            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(engine.entityName, "x, y",
-                GeFormatToString(inputFormat) + ", " + GeFormatToString(outputFormat),
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                engine.entityName, "x, y", GeFormatToString(inputFormat) + ", " + GeFormatToString(outputFormat),
                 "the formats of these parameters must be the same");
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -1309,8 +1276,8 @@ public:
     };
 };
 
-inline void GetSpatialDimInfo(
-    const TensorMeta& tensor, bool& channelLast, int64_t& spaceDimIndex, size_t& spaceDimNum, FVector<int64_t>& shape)
+inline void GetSpatialDimInfo(const TensorMeta& tensor, bool& channelLast, int64_t& spaceDimIndex, size_t& spaceDimNum,
+                              FVector<int64_t>& shape)
 {
     shape = tensor.shape;
     channelLast = tensor.ChannelLast();
@@ -1325,11 +1292,11 @@ inline aclnnStatus CheckShapeByDim(const std::string& entityName, TensorMeta& in
     int64_t weightShapeN = weight.N();
     int64_t weightShapeC = weight.C();
     if (!All(0L, LessEqual<int64_t>, inputShapeN, inputShapeC, weightShapeN, weightShapeC)) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter",
-            op::FVectorToString(input.shape) + ", " + op::FVectorToString(weight.shape),
-            "Shape[" + std::to_string(input.NIdx()) + "], Shape[" + std::to_string(input.CIdx()) +
-            "] of x and Shape[" + std::to_string(weight.NIdx()) + "], Shape[" + std::to_string(weight.CIdx()) +
-            "] of filter must be >= 0");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            entityName, "x, filter", op::FVectorToString(input.shape) + ", " + op::FVectorToString(weight.shape),
+            "Shape[" + std::to_string(input.NIdx()) + "], Shape[" + std::to_string(input.CIdx()) + "] of x and Shape[" +
+                std::to_string(weight.NIdx()) + "], Shape[" + std::to_string(weight.CIdx()) +
+                "] of filter must be >= 0");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
@@ -1342,8 +1309,8 @@ public:
 
     aclnnStatus Check(ConvEngine& engine) override
     {
-        if (CheckShape(engine.entityName, engine.meta.input, engine.meta.weight,
-            engine.params.transposed) != ACLNN_SUCCESS) {
+        if (CheckShape(engine.entityName, engine.meta.input, engine.meta.weight, engine.params.transposed) !=
+            ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         // check stride
@@ -1356,13 +1323,13 @@ public:
         }
         // check pad
         if (CheckPad(engine.entityName, engine.meta.input, engine.meta.weight, engine.meta.dilation,
-                engine.meta.padding, engine.params.transposed) != ACLNN_SUCCESS) {
+                     engine.meta.padding, engine.params.transposed) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         // check channel_value (bias, groups)
         if (engine.params.groups <= 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(engine.entityName, "groups", std::to_string(engine.params.groups),
-                "the value should be greater than 0");
+                                                  "the value should be greater than 0");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1406,8 +1373,8 @@ private:
     {
         if (transposed && input.C() == 0) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "x", op::FVectorToString(input.shape),
-                "When transposed is true, shape[" + std::to_string(input.CIdx()) +
-                "] of this parameter must be greater than 0");
+                                                  "When transposed is true, shape[" + std::to_string(input.CIdx()) +
+                                                      "] of this parameter must be greater than 0");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -1423,26 +1390,31 @@ private:
         auto outputFormat = engine.meta.output.format;
         if (!Any(inputFormat, Equal<op::Format>, Format::FORMAT_NCHW, Format::FORMAT_NCL, Format::FORMAT_NCDHW)) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
-                GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_NCL) +
-                " or " + GeFormatToString(Format::FORMAT_NCDHW));
+                                       GeFormatToString(Format::FORMAT_NCHW) + " or " +
+                                           GeFormatToString(Format::FORMAT_NCL) + " or " +
+                                           GeFormatToString(Format::FORMAT_NCDHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (!Any(weightFormat, Equal<op::Format>, Format::FORMAT_NCHW, Format::FORMAT_NCL, Format::FORMAT_NCDHW)) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
-                GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_NCL) + " or " +
-                GeFormatToString(Format::FORMAT_NCDHW));
+                                       GeFormatToString(Format::FORMAT_NCHW) + " or " +
+                                           GeFormatToString(Format::FORMAT_NCL) + " or " +
+                                           GeFormatToString(Format::FORMAT_NCDHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (!Any(outputFormat, Equal<op::Format>, Format::FORMAT_NCHW, Format::FORMAT_NCL, Format::FORMAT_NCDHW)) {
             OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
-                GeFormatToString(Format::FORMAT_NCHW) + " or " + GeFormatToString(Format::FORMAT_NCL) + " or " +
-                GeFormatToString(Format::FORMAT_NCDHW));
+                                       GeFormatToString(Format::FORMAT_NCHW) + " or " +
+                                           GeFormatToString(Format::FORMAT_NCL) + " or " +
+                                           GeFormatToString(Format::FORMAT_NCDHW));
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (inputFormat != outputFormat || inputFormat != weightFormat || weightFormat != outputFormat) {
             OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(engine.entityName, "x, filter, y",
-                GeFormatToString(inputFormat) + ", " + GeFormatToString(weightFormat) + ", " +
-                GeFormatToString(outputFormat), "the formats of these parameters must be the same");
+                                                    GeFormatToString(inputFormat) + ", " +
+                                                        GeFormatToString(weightFormat) + ", " +
+                                                        GeFormatToString(outputFormat),
+                                                    "the formats of these parameters must be the same");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -1463,30 +1435,32 @@ private:
         FVector<int64_t> outputShape = engine.meta.output.shape;
         // NCL,NCHW,NCDHW
         if (weightShape[engine.meta.weight.NIdx()] <= 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
-                op::FVectorToString(engine.meta.weight.shape), "When transposed is true, shape[" +
-                std::to_string(engine.meta.weight.NIdx()) + "] of this parameter must be greater than 0");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                engine.entityName, "filter", op::FVectorToString(engine.meta.weight.shape),
+                "When transposed is true, shape[" + std::to_string(engine.meta.weight.NIdx()) +
+                    "] of this parameter must be greater than 0");
             return ACLNN_ERR_PARAM_INVALID;
         }
         for (size_t i = 1; i < inputShape.size(); ++i) {
             // input仅可以N等于0
             if (inputShape[i] <= 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "x",
-                    op::FVectorToString(engine.meta.input.shape), "shape[" + std::to_string(i) +
-                    "] of this parameter must be greater than 0");
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    engine.entityName, "x", op::FVectorToString(engine.meta.input.shape),
+                    "shape[" + std::to_string(i) + "] of this parameter must be greater than 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (weightShape[i] < 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
-                    op::FVectorToString(engine.meta.weight.shape), "shape[" + std::to_string(i) +
-                    "] of this parameter cannot be a negative value");
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    engine.entityName, "filter", op::FVectorToString(engine.meta.weight.shape),
+                    "shape[" + std::to_string(i) + "] of this parameter cannot be a negative value");
                 return ACLNN_ERR_PARAM_INVALID;
             }
             // weight: Cin,D,H,W可以为0，仅当output对应维度为0
             if (weightShape[i] == 0 && outputShape[i] != 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
-                    op::FVectorToString(engine.meta.weight.shape), "shape[" + std::to_string(i) +
-                    "] of filter can be 0 only when shape[" + std::to_string(i) + "] of y is 0");
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    engine.entityName, "filter", op::FVectorToString(engine.meta.weight.shape),
+                    "shape[" + std::to_string(i) + "] of filter can be 0 only when shape[" + std::to_string(i) +
+                        "] of y is 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -1523,14 +1497,14 @@ private:
                << "(filter[" << std::to_string(engine.meta.weight.WIdx()) << "] - 1) * dilations["
                << std::to_string(dilationWIdx) << "] - pads[" << std::to_string(padLeftIdx)
                << "] <= " << std::to_string(padBinValue) << " and "
-               << "(filter[" << std::to_string(engine.meta.weight.HIdx()) << "] - 1) * dilations[0] - pads[0] <= "
-               << std::to_string(padBinValue);
+               << "(filter[" << std::to_string(engine.meta.weight.HIdx())
+               << "] - 1) * dilations[0] - pads[0] <= " << std::to_string(padBinValue);
         } else if (weightShape.GetDimNum() == CONV_3D_DIM_SIZE) {
             size_t dilationLastIdx = (engine.meta.dilation.size() == 1) ? 0 : 2;
             int64_t dilationLast = engine.meta.dilation[dilationLastIdx];
             size_t padRightIdx = (engine.meta.padding.size() == 1) ? 0 : 2;
             int64_t padRight = engine.meta.padding[padRightIdx];
-             // dilationW is dialtionH actually, padLeft is padTop actually 
+            // dilationW is dialtionH actually, padLeft is padTop actually
             padValueValid = (((weightW - 1) * dilationLast - padRight) <= padBinValue) &&
                             (((weightW - 1) * dilationLast - padRight) >= 0) &&
                             (((weightH - 1) * dilationW - padLeft) <= padBinValue) &&
@@ -1560,17 +1534,17 @@ private:
         std::stringstream ss;
         if (!GetPadBinaryValidFlag(engine, ss)) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "filter, dilations, pads",
-                op::FVectorToString(engine.meta.weight.shape) + ", " +
-                op::FVectorToString(engine.meta.dilation) + ", " +
-                op::FVectorToString(engine.meta.padding),
-                ss.str());
+                                                   op::FVectorToString(engine.meta.weight.shape) + ", " +
+                                                       op::FVectorToString(engine.meta.dilation) + ", " +
+                                                       op::FVectorToString(engine.meta.padding),
+                                                   ss.str());
             return false;
         }
         return true;
     }
 
     static inline aclnnStatus CheckVectorValueGt0(const std::string& entityName, const std::string& paramName,
-        FVector<int64_t>& param)
+                                                  FVector<int64_t>& param)
     {
         for (size_t i = 0; i < param.size(); ++i) {
             if (param[i] <= 0) {
@@ -1582,9 +1556,8 @@ private:
         return ACLNN_SUCCESS;
     }
 
-    static aclnnStatus CheckPad(
-        const std::string& entityName, TensorMeta& input, TensorMeta& weight, FVector<int64_t>& dilation,
-        FVector<int64_t>& padding, bool transposed)
+    static aclnnStatus CheckPad(const std::string& entityName, TensorMeta& input, TensorMeta& weight,
+                                FVector<int64_t>& dilation, FVector<int64_t>& padding, bool transposed)
     {
         FVector<int64_t> inputShape, weightShape;
         bool inputChannelLast, weightChannelLast;
@@ -1598,9 +1571,10 @@ private:
         for (size_t i = 0; i < inputSpaceDimNum; ++i) {
             auto inputShapeValue = inputShape[i + inputSpaceDimIndex];
             auto weightShapeValue = weightShape[i + weightSpaceDimIndex];
-            auto paddingValueFront =
-                (input.shape.size() == CONV_1D_DIM_SIZE || input.shape.size() == CONV_2D_DIM_SIZE) ? newpad[i] :
-                                                                                                     padding[i];
+            auto paddingValueFront = (input.shape.size() == CONV_1D_DIM_SIZE ||
+                                      input.shape.size() == CONV_2D_DIM_SIZE) ?
+                                         newpad[i] :
+                                         padding[i];
             auto dilationValue = dilation[i];
 
             // check input shape after pad only for conv
@@ -1608,22 +1582,22 @@ private:
                 int64_t inputShapeValueAfterPad = -1;
                 std::string formula;
                 if (input.shape.size() == CONV_1D_DIM_SIZE || input.shape.size() == CONV_2D_DIM_SIZE) {
-                    inputShapeValueAfterPad =
-                        (inputShapeValue + paddingValueFront - dilationValue * (weightShapeValue - 1L) - 1L);
-                    formula = "x[" + std::to_string(i + inputSpaceDimIndex) +"] + pads[" + std::to_string(i) +
-                        "] - dilations[" + std::to_string(i) + "] * (filter[" +
-                        std::to_string(i + weightSpaceDimIndex) + "] - 1) - 1 >= 0";
+                    inputShapeValueAfterPad = (inputShapeValue + paddingValueFront -
+                                               dilationValue * (weightShapeValue - 1L) - 1L);
+                    formula = "x[" + std::to_string(i + inputSpaceDimIndex) + "] + pads[" + std::to_string(i) +
+                              "] - dilations[" + std::to_string(i) + "] * (filter[" +
+                              std::to_string(i + weightSpaceDimIndex) + "] - 1) - 1 >= 0";
                 } else {
-                    inputShapeValueAfterPad =
-                        (inputShapeValue + paddingValueFront * CONST_VALUE_TWO -
-                         dilationValue * (weightShapeValue - 1L) - 1L);
-                    formula = "x[" + std::to_string(i + inputSpaceDimIndex) +"] + pads[" + std::to_string(i) +
-                        "] * 2 - dilations[" + std::to_string(i) + "] * (filter[" +
-                        std::to_string(i + weightSpaceDimIndex) + "] - 1) - 1 >= 0";
+                    inputShapeValueAfterPad = (inputShapeValue + paddingValueFront * CONST_VALUE_TWO -
+                                               dilationValue * (weightShapeValue - 1L) - 1L);
+                    formula = "x[" + std::to_string(i + inputSpaceDimIndex) + "] + pads[" + std::to_string(i) +
+                              "] * 2 - dilations[" + std::to_string(i) + "] * (filter[" +
+                              std::to_string(i + weightSpaceDimIndex) + "] - 1) - 1 >= 0";
                 }
 
                 if (inputShapeValueAfterPad < 0) {
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "x", op::FVectorToString(input.shape),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        entityName, "x", op::FVectorToString(input.shape),
                         "These parameters must meet the following condition: " + formula);
                     return ACLNN_ERR_PARAM_INVALID;
                 }
@@ -1633,8 +1607,8 @@ private:
         return ACLNN_SUCCESS;
     }
 
-    static aclnnStatus CheckConvBias(const std::string& entityName, TensorMeta& bias,
-        TensorMeta& input, int64_t outChannel)
+    static aclnnStatus CheckConvBias(const std::string& entityName, TensorMeta& bias, TensorMeta& input,
+                                     int64_t outChannel)
     {
         auto biasShape = bias.shape;
         size_t biasDimNum = biasShape.size();
@@ -1650,15 +1624,16 @@ private:
             if (i == idx_c) {
                 auto biasCout = biasShape[i];
                 if (biasCout != outChannel) {
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "bias",
-                        op::FVectorToString(bias.shape),
-                        "shape[" + std::to_string(idx_c) + "] of bias must be equal to output channel(" +
-                        std::to_string(outChannel) + ")");
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "bias", op::FVectorToString(bias.shape),
+                                                           "shape[" + std::to_string(idx_c) +
+                                                               "] of bias must be equal to output channel(" +
+                                                               std::to_string(outChannel) + ")");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
             } else {
                 if (biasShape[i] != 1) {
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "bias", op::FVectorToString(bias.shape),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        entityName, "bias", op::FVectorToString(bias.shape),
                         "shape[" + std::to_string(i) + "] of bias must be equal to 1");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
@@ -1674,50 +1649,51 @@ private:
         if (engine.params.transposed) {
             outChannel = engine.meta.weight.C() * engine.params.groups;
             if (engine.meta.weight.N() != inChannel) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "x, filter",
-                    op::FVectorToString(engine.meta.input.shape) + ", " +
-                    op::FVectorToString(engine.meta.weight.shape),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    engine.entityName, "x, filter",
+                    op::FVectorToString(engine.meta.input.shape) + ", " + op::FVectorToString(engine.meta.weight.shape),
                     "When transposed is true, shape[" + std::to_string(engine.meta.weight.NIdx()) +
-                    "] of filter must be equal to shape[" + std::to_string(engine.meta.input.CIdx()) + "] of x");
+                        "] of filter must be equal to shape[" + std::to_string(engine.meta.input.CIdx()) + "] of x");
                 return ACLNN_ERR_PARAM_INVALID;
             }
             // output_padding value check  output_padding参数不支持负数
             for (size_t i = 0; i < engine.meta.outputPadding.size(); i++) {
                 auto outputPaddingValue = engine.meta.outputPadding[i];
                 if (outputPaddingValue >= engine.meta.stride[i] && outputPaddingValue >= engine.meta.dilation[i]) {
-                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(engine.entityName, "outputPadding, strides, dilations",
-                        op::FVectorToString(engine.meta.outputPadding) + ", " + op::FVectorToString(engine.meta.stride) + ", " +
-                        op::FVectorToString(engine.meta.dilation), "outputPadding[" + std::to_string(i) +
-                        "] must be less than both stride[" + std::to_string(i) + "] and dilation[" +
-                        std::to_string(i) + "]");
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        engine.entityName, "outputPadding, strides, dilations",
+                        op::FVectorToString(engine.meta.outputPadding) + ", " +
+                            op::FVectorToString(engine.meta.stride) + ", " + op::FVectorToString(engine.meta.dilation),
+                        "outputPadding[" + std::to_string(i) + "] must be less than both stride[" + std::to_string(i) +
+                            "] and dilation[" + std::to_string(i) + "]");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
 
-                OP_CHECK(
-                    outputPaddingValue >= 0,
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(engine.entityName, "outputPadding",
-                        std::to_string(outputPaddingValue),
-                        "outputPadding[" + std::to_string(i) + "] must be greater than or equal to 0"),
-                    return ACLNN_ERR_PARAM_INVALID);
+                OP_CHECK(outputPaddingValue >= 0,
+                         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                             engine.entityName, "outputPadding", std::to_string(outputPaddingValue),
+                             "outputPadding[" + std::to_string(i) + "] must be greater than or equal to 0"),
+                         return ACLNN_ERR_PARAM_INVALID);
             }
         } else {
             outChannel = engine.meta.weight.N();
             if (engine.meta.weight.C() * engine.params.groups != inChannel) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "x, filter",
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    engine.entityName, "x, filter",
                     op::FVectorToString(engine.meta.input.shape) + ", " + op::FVectorToString(engine.meta.weight.shape),
                     "shape[" + std::to_string(engine.meta.input.CIdx()) + "] of x must be equal to shape[" +
-                    std::to_string(engine.meta.weight.CIdx()) + "] of filter multiplied by attribute groups(" +
-                    std::to_string(engine.params.groups) + ")");
+                        std::to_string(engine.meta.weight.CIdx()) + "] of filter multiplied by attribute groups(" +
+                        std::to_string(engine.params.groups) + ")");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
 
         if (engine.meta.weight.N() % engine.params.groups != 0) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "filter",
-                op::FVectorToString(engine.meta.weight.shape),
-                "shape[" + std::to_string(engine.meta.weight.NIdx()) +
-                "] of filter must be exactly divided by attribute groups(" +
-                std::to_string(engine.params.groups) + ")");
+                                                   op::FVectorToString(engine.meta.weight.shape),
+                                                   "shape[" + std::to_string(engine.meta.weight.NIdx()) +
+                                                       "] of filter must be exactly divided by attribute groups(" +
+                                                       std::to_string(engine.params.groups) + ")");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1725,7 +1701,7 @@ private:
     }
 
     static aclnnStatus CheckShape(const std::string& entityName, TensorMeta& input, TensorMeta& weight,
-        bool transposed = false)
+                                  bool transposed = false)
     {
         if (CheckShapeByDim(entityName, input, weight) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
@@ -1735,7 +1711,7 @@ private:
         FVector<int64_t> inputShape = input.shape;
         bool inputChannelLast = input.ChannelLast();
         int64_t inputSpaceDimIndex = inputChannelLast ? 1 : 2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
-        size_t inputSpaceDimNum = input.shape.size() - 2;      // 空间维度大小，1d卷积时为1，2d为2，3d为3
+        size_t inputSpaceDimNum = input.shape.size() - 2; // 空间维度大小，1d卷积时为1，2d为2，3d为3
 
         FVector<int64_t> weightShape = weight.shape;
         bool weightChannelLast = weight.ChannelLast();
@@ -1745,17 +1721,18 @@ private:
         for (size_t i = 0; i < inputSpaceDimNum; ++i) {
             int64_t inputShapeSpace = inputShape[i + inputSpaceDimIndex]; // 空间维度的值
             if (inputShapeSpace < 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "x", op::FVectorToString(input.shape),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    entityName, "x", op::FVectorToString(input.shape),
                     "shape[" + std::to_string(i + inputSpaceDimIndex) + "] of x must be greater than or equal to 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
-            if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && transposed &&
-                weight.IsZeroTensor()) {
+            if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && transposed && weight.IsZeroTensor()) {
                 continue;
             }
             int64_t weightShapeSpace = weightShape[i + weightSpaceDimIndex];
             if (weightShapeSpace <= 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "filter", op::FVectorToString(weight.shape),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    entityName, "filter", op::FVectorToString(weight.shape),
                     "shape[" + std::to_string(i + weightSpaceDimIndex) + "] of filter must be greater than 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
@@ -1770,8 +1747,8 @@ public:
     ~ValueCheckerTbc() override = default;
     aclnnStatus Check(ConvEngine& engine) override
     {
-        if (CheckShapeTbc(engine.entityName, engine.meta.input, engine.meta.weight,
-            engine.meta.output) != ACLNN_SUCCESS) {
+        if (CheckShapeTbc(engine.entityName, engine.meta.input, engine.meta.weight, engine.meta.output) !=
+            ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         int64_t outChannel = engine.meta.weight.N();
@@ -1780,21 +1757,21 @@ public:
         }
         int64_t kernelSize = engine.meta.weight.shape[CONVTBC_L_INDEX];
         if (kernelSize <= 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
-                op::FVectorToString(engine.meta.weight.shape), "Shape[" +
-                std::to_string(CONVTBC_L_INDEX) + "] of filter must be greater than 0");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                engine.entityName, "filter", op::FVectorToString(engine.meta.weight.shape),
+                "Shape[" + std::to_string(CONVTBC_L_INDEX) + "] of filter must be greater than 0");
             return ACLNN_ERR_PARAM_INVALID;
         }
-        if (CheckPadTbc(engine.entityName, engine.meta.input, engine.meta.weight,
-            engine.meta.padding) != ACLNN_SUCCESS) {
+        if (CheckPadTbc(engine.entityName, engine.meta.input, engine.meta.weight, engine.meta.padding) !=
+            ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (engine.meta.weight.shape[CONVTBC_C_INDEX] != engine.meta.input.shape[CONVTBC_C_INDEX]) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "x, filter",
-                op::FVectorToString(engine.meta.input.shape) + ", " +
-                op::FVectorToString(engine.meta.weight.shape),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                engine.entityName, "x, filter",
+                op::FVectorToString(engine.meta.input.shape) + ", " + op::FVectorToString(engine.meta.weight.shape),
                 "shape[" + std::to_string(CONVTBC_C_INDEX) + "] of x must be equal to shape[" +
-                std::to_string(CONVTBC_C_INDEX) + "] of filter");
+                    std::to_string(CONVTBC_C_INDEX) + "] of filter");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -1806,7 +1783,7 @@ private:
     bias（一维）的值要等于channel_out
     */
     aclnnStatus CheckShapeTbc(const std::string& entityName, TensorMeta& input, TensorMeta& weight,
-        TensorMeta& output) const
+                              TensorMeta& output) const
     {
         int64_t inputShapeN = input.N();
         int64_t inputShapeC = input.C();
@@ -1818,15 +1795,17 @@ private:
         int64_t outputShapeC = output.C();
         int64_t outputShapeL = output.L();
         if (!All(0L, LessEqual<int64_t>, inputShapeN, inputShapeC, inputShapeL, weightShapeN, weightShapeC,
-                weightShapeL, outputShapeN, outputShapeC, outputShapeL)) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter, y",
+                 weightShapeL, outputShapeN, outputShapeC, outputShapeL)) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                entityName, "x, filter, y",
                 op::FVectorToString(input.shape) + ", " + op::FVectorToString(weight.shape) + ", " +
-                op::FVectorToString(output.shape), "Shape[" + std::to_string(input.NIdx()) +
-                "], Shape[" + std::to_string(input.CIdx()) + "], Shape[" + std::to_string(input.LIdx()) +
-                "] of x, Shape[" + std::to_string(weight.NIdx()) + "], Shape[" + std::to_string(weight.CIdx()) +
-                "], Shape[" + std::to_string(weight.LIdx()) + "] of filter and Shape[" + std::to_string(output.NIdx()) +
-                "], Shape[" + std::to_string(output.CIdx()) + "], Shape[" + std::to_string(output.LIdx()) +
-                "] of y must be >= 0");
+                    op::FVectorToString(output.shape),
+                "Shape[" + std::to_string(input.NIdx()) + "], Shape[" + std::to_string(input.CIdx()) + "], Shape[" +
+                    std::to_string(input.LIdx()) + "] of x, Shape[" + std::to_string(weight.NIdx()) + "], Shape[" +
+                    std::to_string(weight.CIdx()) + "], Shape[" + std::to_string(weight.LIdx()) +
+                    "] of filter and Shape[" + std::to_string(output.NIdx()) + "], Shape[" +
+                    std::to_string(output.CIdx()) + "], Shape[" + std::to_string(output.LIdx()) +
+                    "] of y must be >= 0");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1837,8 +1816,8 @@ private:
     {
         auto biasShape = bias.shape;
         if (biasShape[0] != outChannel) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "bias",
-                op::FVectorToString(bias.shape),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                entityName, "bias", op::FVectorToString(bias.shape),
                 "shape[0] of bias must be equal to output channel(" + std::to_string(outChannel) + ")");
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -1846,7 +1825,7 @@ private:
     }
 
     static aclnnStatus CheckPadTbc(const std::string& entityName, TensorMeta& input, TensorMeta& weight,
-        FVector<int64_t>& padding)
+                                   FVector<int64_t>& padding)
     {
         FVector<int64_t> inputShape = input.shape;
         FVector<int64_t> weightShape = weight.shape;
@@ -1857,14 +1836,12 @@ private:
             int64_t inputShapeValueAfterPad = (inputShapeL + padding[0] - dilationValue * (weightShapeL - 1) - 1);
             if (inputShapeValueAfterPad < 0) {
                 std::string incorrectShapes = op::FVectorToString(input.shape) + ", " +
-                    op::FVectorToString(weight.shape) + ", " +
-                    op::FVectorToString(padding);
+                                              op::FVectorToString(weight.shape) + ", " + op::FVectorToString(padding);
                 std::stringstream ss;
                 ss << "These parameters must meet the following condition: ";
                 ss << "x[" << std::to_string(CONVTBC_L_INDEX) << "] + pads[0] - 1 * (filter["
                    << std::to_string(CONVTBC_L_INDEX) << "] - 1) - 1 >= 0";
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter, pads",
-                    incorrectShapes, ss.str());
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter, pads", incorrectShapes, ss.str());
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -1890,9 +1867,8 @@ public:
             return ACLNN_ERR_PARAM_INVALID;
         }
         // check pad
-        if (CheckPadDepthwise2d(
-                engine.entityName, engine.meta.input, engine.meta.weight, engine.meta.dilation, engine.meta.padding,
-                engine.params.transposed) != ACLNN_SUCCESS) {
+        if (CheckPadDepthwise2d(engine.entityName, engine.meta.input, engine.meta.weight, engine.meta.dilation,
+                                engine.meta.padding, engine.params.transposed) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         // check channel
@@ -1900,18 +1876,18 @@ public:
         int64_t outChannel = -1L;
         outChannel = engine.meta.weight.N();
         if (engine.meta.weight.C() != 0L && engine.meta.weight.C() != 1L) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
-                op::FVectorToString(engine.meta.weight.shape),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                engine.entityName, "filter", op::FVectorToString(engine.meta.weight.shape),
                 "shape[" + std::to_string(engine.meta.weight.CIdx()) + "] of this parameter must be 0 or 1");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         if (inChannel != 0 && outChannel % inChannel != 0) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "x, filter",
-                op::FVectorToString(engine.meta.input.shape) + ", " +
-                op::FVectorToString(engine.meta.weight.shape),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                engine.entityName, "x, filter",
+                op::FVectorToString(engine.meta.input.shape) + ", " + op::FVectorToString(engine.meta.weight.shape),
                 "shape[" + std::to_string(engine.meta.weight.NIdx()) + "] of filter must be exactly divided by shape[" +
-                std::to_string(engine.meta.input.CIdx()) + "] of x");
+                    std::to_string(engine.meta.input.CIdx()) + "] of x");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1943,13 +1919,14 @@ private:
             int64_t inputShapeSpace = inputShape[i + inputSpaceDimIndex]; // 空间维度的值
             if (inputShapeSpace < 0) {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "x", op::FVectorToString(input.shape),
-                    "shape[" + std::to_string(i + inputSpaceDimIndex) +
-                    "] of this parameter must be greater than or equal to 0");
+                                                      "shape[" + std::to_string(i + inputSpaceDimIndex) +
+                                                          "] of this parameter must be greater than or equal to 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
             int64_t weightShapeSpace = weightShape[i + weightSpaceDimIndex];
             if (weightShapeSpace <= 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "filter", op::FVectorToString(weight.shape),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    entityName, "filter", op::FVectorToString(weight.shape),
                     "shape[" + std::to_string(i + weightSpaceDimIndex) + "] of this parameter must be greater than 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
@@ -1957,11 +1934,13 @@ private:
         return ACLNN_SUCCESS;
     }
 
-    static inline aclnnStatus CheckVectorValueGt0Depthwise2d(const std::string& entityName, const std::string& paramName, FVector<int64_t>& param)
+    static inline aclnnStatus CheckVectorValueGt0Depthwise2d(const std::string& entityName,
+                                                             const std::string& paramName, FVector<int64_t>& param)
     {
         for (size_t i = 0; i < param.size(); ++i) {
             if (param[i] <= 0) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, paramName, op::FVectorToString(param),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    entityName, paramName, op::FVectorToString(param),
                     "shape[" + std::to_string(i) + "] of this parameter must be greater than 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
@@ -1969,9 +1948,9 @@ private:
         return ACLNN_SUCCESS;
     }
 
-    static aclnnStatus CheckPadDepthwise2d(
-        const std::string& entityName, const TensorMeta& input, const TensorMeta& weight, const FVector<int64_t>& dilation,
-        const FVector<int64_t>& padding, bool transposed)
+    static aclnnStatus CheckPadDepthwise2d(const std::string& entityName, const TensorMeta& input,
+                                           const TensorMeta& weight, const FVector<int64_t>& dilation,
+                                           const FVector<int64_t>& padding, bool transposed)
     {
         FVector<int64_t> inputShape, weightShape;
         bool inputChannelLast, weightChannelLast;
@@ -1989,19 +1968,19 @@ private:
 
             // check input shape after pad only for conv
             if (!transposed && !input.IsZeroTensor()) {
-                int64_t inputShapeValueAfterPad =
-                    (inputShapeValue + paddingValueFront * 2 - dilationValue * (weightShapeValue - 1) - 1);
+                int64_t inputShapeValueAfterPad = (inputShapeValue + paddingValueFront * 2 -
+                                                   dilationValue * (weightShapeValue - 1) - 1);
                 if (inputShapeValueAfterPad < 0) {
                     std::string incorrectShapes = op::FVectorToString(input.shape) + ", " +
-                        op::FVectorToString(weight.shape) + ", " +
-                        op::FVectorToString(padding) + ", " + op::FVectorToString(dilation);
+                                                  op::FVectorToString(weight.shape) + ", " +
+                                                  op::FVectorToString(padding) + ", " + op::FVectorToString(dilation);
                     std::stringstream ss;
                     ss << "These parameters must meet the following condition: "
                        << "x[" << std::to_string(i + inputSpaceDimIndex) << "] + pads[" << std::to_string(i)
-                       << "] * 2 - dilations[" << std::to_string(i) << "] * (filter[" <<
-                       std::to_string(i + weightSpaceDimIndex) << "] - 1) - 1 >= 0";
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter, pads, dilations",
-                        incorrectShapes, ss.str());
+                       << "] * 2 - dilations[" << std::to_string(i) << "] * (filter["
+                       << std::to_string(i + weightSpaceDimIndex) << "] - 1) - 1 >= 0";
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter, pads, dilations", incorrectShapes,
+                                                           ss.str());
                     return ACLNN_ERR_PARAM_INVALID;
                 }
             }
@@ -2014,7 +1993,8 @@ private:
     {
         auto biasShape = bias.shape;
         if (biasShape[0] != outChannel) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "bias", op::FVectorToString(bias.shape),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                entityName, "bias", op::FVectorToString(bias.shape),
                 "shape[0] of bias must be equal to output channel(" + std::to_string(outChannel) + ")");
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -2031,10 +2011,10 @@ public:
         FVector<int64_t> outputShape = engine.CalcOutputShape();
         for (size_t i = 0; i < outputShape.size(); i++) {
             if (outputShape[i] != engine.meta.output.shape[i]) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "y",
-                    op::FVectorToString(engine.meta.output.shape),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    engine.entityName, "y", op::FVectorToString(engine.meta.output.shape),
                     "shape[" + std::to_string(i) + "] of y must be equal to its inferred value(" +
-                    std::to_string(outputShape[i]) + ")");
+                        std::to_string(outputShape[i]) + ")");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -2051,10 +2031,10 @@ public:
         FVector<int64_t> outputShape = engine.CalcOutputShape();
         for (size_t i = 0; i < outputShape.size(); i++) {
             if (outputShape[i] != engine.meta.output.shape[i]) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "y",
-                    op::FVectorToString(engine.meta.output.shape),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    engine.entityName, "y", op::FVectorToString(engine.meta.output.shape),
                     "shape[" + std::to_string(i) + "] of y must be equal to its inferred value(" +
-                    std::to_string(outputShape[i]) + ")");
+                        std::to_string(outputShape[i]) + ")");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -2065,16 +2045,16 @@ public:
             ss << "Empty tensor definition: A dimension in the shape is 0. ";
             if (!engine.meta.output.IsZeroTensor()) {
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "x, filter, y",
-                    op::FVectorToString(engine.meta.input.shape) + ", " +
-                    op::FVectorToString(engine.meta.weight.shape) + ", " +
-                    op::FVectorToString(engine.meta.output.shape),
-                    ss.str());
+                                                       op::FVectorToString(engine.meta.input.shape) + ", " +
+                                                           op::FVectorToString(engine.meta.weight.shape) + ", " +
+                                                           op::FVectorToString(engine.meta.output.shape),
+                                                       ss.str());
                 return ACLNN_ERR_PARAM_INVALID;
             }
             for (size_t i = 0; i < outputShape.size(); i++) {
                 if (outputShape[i] < 0) {
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "y",
-                        op::FVectorToString(engine.meta.output.shape),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        engine.entityName, "y", op::FVectorToString(engine.meta.output.shape),
                         "shape[" + std::to_string(i) + "] of y must be greater than or equal to 0");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
@@ -2130,24 +2110,23 @@ public:
                 break;
             case SocVersion::ASCEND310B: {
                 if (engine.params.transposed || inputDim != CONV_2D_DIM_SIZE) {
-                    OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x",
-                        std::to_string(inputDim),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(
+                        engine.entityName, "x", std::to_string(inputDim),
                         "When the SoC version is " + std::string(op::ToString(socVersion).GetString()) +
-                        ", the value of this parameter can only be " + std::to_string(CONV_2D_DIM_SIZE));
+                            ", the value of this parameter can only be " + std::to_string(CONV_2D_DIM_SIZE));
                     return ACLNN_ERR_PARAM_INVALID;
                 }
                 break;
             }
             default: {
-                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "SoC version",
-                    std::string(op::ToString(socVersion).GetString()), "one of {" +
-                    std::string(op::ToString(SocVersion::ASCEND910).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND310P).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND310B).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND950).GetString()) +
-                    "}");
+                OP_LOGE_FOR_INVALID_VALUE(
+                    engine.entityName, "SoC version", std::string(op::ToString(socVersion).GetString()),
+                    "one of {" + std::string(op::ToString(SocVersion::ASCEND910).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND310P).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND310B).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND950).GetString()) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -2174,14 +2153,13 @@ public:
             case SocVersion::ASCEND310P:
                 break;
             default: {
-                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "SoC version",
-                    std::string(op::ToString(socVersion).GetString()), "one of {" +
-                    std::string(op::ToString(SocVersion::ASCEND910).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND310P).GetString()) + ", " +
-                    std::string(op::ToString(SocVersion::ASCEND950).GetString()) +
-                    "}");
+                OP_LOGE_FOR_INVALID_VALUE(
+                    engine.entityName, "SoC version", std::string(op::ToString(socVersion).GetString()),
+                    "one of {" + std::string(op::ToString(SocVersion::ASCEND910).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND310P).GetString()) + ", " +
+                        std::string(op::ToString(SocVersion::ASCEND950).GetString()) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -2283,16 +2261,16 @@ static aclnnStatus CheckConvDepthwise2dKernelSize(ConvEngine& engine, const aclI
     std::string kernelSizeStr = "[" + std::to_string(kernelH) + ", " + std::to_string(kernelW) + "]";
     if (kernelH != weightH) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "filter, kernelSize",
-            op::FVectorToString(engine.meta.weight.shape) + ", " + kernelSizeStr,
-            "shape[" + std::to_string(engine.meta.weight.HIdx()) +
-            "] of filter must be equal to the shape[0] of kernelSize");
+                                               op::FVectorToString(engine.meta.weight.shape) + ", " + kernelSizeStr,
+                                               "shape[" + std::to_string(engine.meta.weight.HIdx()) +
+                                                   "] of filter must be equal to the shape[0] of kernelSize");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (kernelW != weightW) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "filter, kernelSize",
-            op::FVectorToString(engine.meta.weight.shape) + ", " + kernelSizeStr,
-            "shape[" + std::to_string(engine.meta.weight.WIdx()) +
-            "] of filter must be equal to the shape[1] of kernelSize");
+                                               op::FVectorToString(engine.meta.weight.shape) + ", " + kernelSizeStr,
+                                               "shape[" + std::to_string(engine.meta.weight.WIdx()) +
+                                                   "] of filter must be equal to the shape[1] of kernelSize");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
@@ -2324,8 +2302,8 @@ static aclnnStatus CheckConvDepthwise2dParams(ConvEngine& engine)
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus CheckParamsNullptrTbc(const string& entityName,
-    const aclTensor* self, const aclTensor* weight, const aclTensor* bias, const aclTensor* output)
+static inline aclnnStatus CheckParamsNullptrTbc(const string& entityName, const aclTensor* self,
+                                                const aclTensor* weight, const aclTensor* bias, const aclTensor* output)
 {
     CHECK_PARAM_NULLPTR(entityName, self, "x");
     CHECK_PARAM_NULLPTR(entityName, weight, "filter");
@@ -2342,8 +2320,8 @@ static aclnnStatus CheckOutputBiasShape(const string& entityName, const aclTenso
 
     for (size_t i = 0; i < outputDimNum; i++) {
         if (output->GetViewShape()[i] < 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, "y",
-                op::FVectorToString(op::ToFVector(output->GetViewShape())),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                entityName, "y", op::FVectorToString(op::ToFVector(output->GetViewShape())),
                 "shape[" + std::to_string(i) + "] of y must be greater than or equal to 0");
             return false;
         }
@@ -2351,9 +2329,10 @@ static aclnnStatus CheckOutputBiasShape(const string& entityName, const aclTenso
     OP_CHECK_WRONG_DIMENSION(bias, 1, return false);
 
     if (bias->GetViewShape()[0] != output->GetViewShape()[L_DIM_NCL_INDEX]) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "bias, y",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            entityName, "bias, y",
             op::FVectorToString(op::ToFVector(bias->GetViewShape())) + ", " +
-            op::FVectorToString(op::ToFVector(output->GetViewShape())),
+                op::FVectorToString(op::ToFVector(output->GetViewShape())),
             "shape[0] of bias must be equal to shape[" + std::to_string(L_DIM_NCL_INDEX) + "] of y");
         return false;
     }
@@ -2371,14 +2350,15 @@ static aclnnStatus CheckOutputBiasDtype(const aclTensor* output, const aclTensor
 static aclnnStatus CheckOutputBiasFormat(const string& entityName, const aclTensor* output, const aclTensor* bias)
 {
     if ((output->GetViewFormat() != op::Format::FORMAT_ND && output->GetViewFormat() != op::Format::FORMAT_NCL)) {
-        OP_LOGE_FOR_INVALID_FORMAT(entityName, "y", GeFormatToString(output->GetViewFormat()),
+        OP_LOGE_FOR_INVALID_FORMAT(
+            entityName, "y", GeFormatToString(output->GetViewFormat()),
             GeFormatToString(op::Format::FORMAT_ND) + " or " + GeFormatToString(op::Format::FORMAT_NCL));
         return false;
     }
 
     if (bias->GetViewFormat() != op::Format::FORMAT_ND) {
         OP_LOGE_FOR_INVALID_FORMAT(entityName, "bias", GeFormatToString(bias->GetViewFormat()),
-            GeFormatToString(op::Format::FORMAT_ND));
+                                   GeFormatToString(op::Format::FORMAT_ND));
         return false;
     }
     return true;
@@ -2392,9 +2372,8 @@ static inline aclnnStatus CheckParamsEmpty(const string& entityName, const aclTe
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ProcessBias(
-    const aclTensor*& bias, const aclTensor* contiguousBias, const ConvolutionOpInfo& opInfo, bool transposed,
-    aclOpExecutor* executor)
+static aclnnStatus ProcessBias(const aclTensor*& bias, const aclTensor* contiguousBias, const ConvolutionOpInfo& opInfo,
+                               bool transposed, aclOpExecutor* executor)
 {
     if (bias != nullptr) {
         // cast
@@ -2413,8 +2392,9 @@ static aclnnStatus ProcessBias(
 
 // 实现公共数据预处理，将数据准备为L0可接受的形式
 static aclnnStatus CommonPreProcess(const aclTensor*& input, const aclTensor*& weight, const aclTensor*& bias,
-    const int64_t groups, const bool transposed, const ConvolutionOpInfo& opInfo, bool changeFormat, bool contiguous,
-    aclOpExecutor* executor, bool inputDisContinuous = false)
+                                    const int64_t groups, const bool transposed, const ConvolutionOpInfo& opInfo,
+                                    bool changeFormat, bool contiguous, aclOpExecutor* executor,
+                                    bool inputDisContinuous = false)
 {
     // 非连续转连续 + cast + transdata
     // input
@@ -2468,9 +2448,9 @@ static aclnnStatus CommonPreProcess(const aclTensor*& input, const aclTensor*& w
 }
 
 // 实现公共数据预处理，将数据准备为L0可接受的形式  C04特殊分支
-static aclnnStatus CommonPreProcessC04(
-    const aclTensor*& input, const aclTensor*& weight, const aclTensor*& bias, const int64_t groups,
-    const bool transposed, const ConvolutionOpInfo& opInfo, bool changeFormat, bool contiguous, aclOpExecutor* executor)
+static aclnnStatus CommonPreProcessC04(const aclTensor*& input, const aclTensor*& weight, const aclTensor*& bias,
+                                       const int64_t groups, const bool transposed, const ConvolutionOpInfo& opInfo,
+                                       bool changeFormat, bool contiguous, aclOpExecutor* executor)
 {
     auto contiguousInput = input;
     auto contiguousWeight = weight;
@@ -2574,22 +2554,19 @@ static aclnnStatus CommonPreProcessC04(
     return ACLNN_SUCCESS;
 }
 
-enum class ConvToBmmMode : std::uint8_t
-{
+enum class ConvToBmmMode : std::uint8_t {
     CONV_NO_MM = 0,
     CONV_MM_FEATURE_MAP_EQ_FILTER = 1,
 };
 
-enum class ConvTranspose1DToBmmMode : std::uint8_t
-{
+enum class ConvTranspose1DToBmmMode : std::uint8_t {
     CONVTRANSPOSE1D_NO_MM = 0,
     CONVTRANSPOSE1D_MM_FEATURE_MAP_EQ_FILTER = 1,
 };
 
 // 实现公共数据后处理，将数据转换为L2输出，但并不做viewcopy
-static aclnnStatus CommonPostProcess(
-    const int64_t groups, bool changeFormat, const aclTensor* output, const aclTensor*& convOut,
-    aclOpExecutor* executor)
+static aclnnStatus CommonPostProcess(const int64_t groups, bool changeFormat, const aclTensor* output,
+                                     const aclTensor*& convOut, aclOpExecutor* executor)
 {
     // output format transdata
     auto formatOutput = changeFormat ? l0op::TransData(convOut, output->GetStorageFormat(), groups, executor) : convOut;
@@ -2603,9 +2580,8 @@ static aclnnStatus CommonPostProcess(
     return ACLNN_SUCCESS;
 }
 
-static void UpdateOutputDtype(
-    const aclTensor* output, struct ConvolutionOpInfo& opInfo, int8_t cubeMathType, DataType& upperDtype,
-    const bool transposed)
+static void UpdateOutputDtype(const aclTensor* output, struct ConvolutionOpInfo& opInfo, int8_t cubeMathType,
+                              DataType& upperDtype, const bool transposed)
 {
     if (!transposed) {
         opInfo.outputDtype = upperDtype; // 目前conv2d算子底层二进制仅支持输入输出相同，暂不支持16进32出的场景
@@ -2618,18 +2594,17 @@ static void UpdateOutputDtype(
         opInfo.outputDtype = op::DataType::DT_FLOAT16; // 目前底层二进制暂不支持16进32出的场景，故设为FP16运算
     }
     if ((upperDtype == op::DataType::DT_HIFLOAT8) && op::IsSupportND()) {
-        opInfo.outputDtype =
-            op::DataType::DT_HIFLOAT8; // In conv2d/3d/3dtranspose hif8 case, the output dtype should be hif8.
+        opInfo.outputDtype = op::DataType::DT_HIFLOAT8; // In conv2d/3d/3dtranspose hif8 case, the output dtype should
+                                                        // be hif8.
     }
     if ((upperDtype == op::DataType::DT_FLOAT8_E4M3FN) && op::IsSupportND()) {
-        opInfo.outputDtype =
-            op::DataType::DT_FLOAT8_E4M3FN; // In conv2d/3d/3dtranspose hif8 case, the output dtype should be hif8.
+        opInfo.outputDtype = op::DataType::DT_FLOAT8_E4M3FN; // In conv2d/3d/3dtranspose hif8 case, the output dtype
+                                                             // should be hif8.
     }
 }
 
-static void UpdateInputDtype(
-    const aclTensor* input, const aclTensor* bias, struct ConvolutionOpInfo& opInfo, DataType& upperDtype,
-    const bool transposed)
+static void UpdateInputDtype(const aclTensor* input, const aclTensor* bias, struct ConvolutionOpInfo& opInfo,
+                             DataType& upperDtype, const bool transposed)
 {
     opInfo.inputDtype = upperDtype;
     opInfo.weightDtype = upperDtype;
@@ -2660,9 +2635,8 @@ static void UpdateInputDtype(
     }
 }
 
-void GetConvolutionOpDtype(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-    struct ConvolutionOpInfo& opInfo, const bool transposed, int8_t cubeMathType)
+void GetConvolutionOpDtype(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
+                           struct ConvolutionOpInfo& opInfo, const bool transposed, int8_t cubeMathType)
 {
     OP_LOGD("Get into GetConvolutionOpDtype Function.");
     DataType upperDtype = GetUpperFloatDataType(input->GetDataType(), weight->GetDataType());
@@ -2690,728 +2664,725 @@ const size_t CONV2D_WHITE_LIST_CASE_SIZE = 16;
 constexpr int STRIDE_WHITE_LIST_SIZE = 2;
 
 struct Conv2DParams {
-  const aclTensor *input;
-  const aclTensor *weight;
-  const aclIntArray *padding;
-  const aclIntArray *dilation;
-  int64_t groups;
+    const aclTensor* input;
+    const aclTensor* weight;
+    const aclIntArray* padding;
+    const aclIntArray* dilation;
+    int64_t groups;
 };
 
-const vector<vector<int64_t>> CONV2D_WHITE_LIST =
-{
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1600, 3840,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1600, 4000,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1760, 4000,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1600, 4160,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1920, 4160,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2048, 4160,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2144, 4160,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 3520, 4736,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2144, 4672,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2592, 6368,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2912, 5696,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2880, 3840,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1280, 3264,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1760, 2336,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2048, 2048,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2016, 2016,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 960, 4288,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2720, 1504,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2720, 1536,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 832, 4928,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1568, 2624,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1536, 2720,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2336, 1760,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1440, 2880,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 2048, 2016,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 3, 1088, 3744,     // input shape
-    64, 3, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 896, 656,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1008, 784,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 640, 1200,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 688, 1056,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 352, 304,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1024, 2496,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1072, 2096,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 512, 1504,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 2304, 1056,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 784, 496,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1472, 944,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1456, 1936,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 256, 112,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 480, 240,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 320, 320,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1632, 1152,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 816, 1888,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 512, 1088,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 288, 80,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 656, 304,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 432, 752,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1072, 736,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1712, 592,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1056, 848,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1200, 1968,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1168, 1936,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 2192, 1232,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 416, 752,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 624, 1488,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 2144, 1264,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 80, 256,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1280, 3248,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 176, 1456,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1456, 1248,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 208, 496,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 272, 240,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 736, 2720,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1248, 560,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 384, 944,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 608, 960,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 960, 656,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 640, 496,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 832, 1056,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1728, 1200,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 512, 688,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1376, 592,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1680, 1280,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1008, 1968,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 768, 1696,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 784, 1136,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1616, 1008,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 976, 944,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 752, 1104,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 992, 3008,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 512, 800,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1760, 432,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 896, 784,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 656, 480,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 2336, 1312,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 1088, 560,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 432, 1104,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 512, 704,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  },
-  {
-    DataType::DT_BF16, // input data type
-    1, 256, 592, 880,     // input shape
-    256, 256, 3, 3,        // filter shape
-    1, 1, 1, 1,         // padding
-    1, 1,               // dilation
-    1,                  // groups
-  }
-};
+const vector<vector<int64_t>> CONV2D_WHITE_LIST = {{
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1600, 3840,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1600, 4000,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1760, 4000,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1600, 4160,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1920, 4160,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2048, 4160,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2144, 4160,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 3520, 4736,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2144, 4672,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2592, 6368,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2912, 5696,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2880, 3840,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1280, 3264,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1760, 2336,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2048, 2048,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2016, 2016,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 960, 4288,   // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2720, 1504,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2720, 1536,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 832, 4928,   // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1568, 2624,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1536, 2720,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2336, 1760,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1440, 2880,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 2048, 2016,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 3, 1088, 3744,  // input shape
+                                                       64, 3, 3, 3,       // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 896, 656,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1008, 784, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 640, 1200, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 688, 1056, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 352, 304,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1024, 2496, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1072, 2096, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 512, 1504, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 2304, 1056, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 784, 496,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1472, 944, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1456, 1936, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 256, 112,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 480, 240,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 320, 320,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1632, 1152, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 816, 1888, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 512, 1088, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 288, 80,   // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 656, 304,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 432, 752,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1072, 736, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1712, 592, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1056, 848, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1200, 1968, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1168, 1936, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 2192, 1232, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 416, 752,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 624, 1488, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 2144, 1264, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 80, 256,   // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1280, 3248, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 176, 1456, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1456, 1248, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 208, 496,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 272, 240,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 736, 2720, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1248, 560, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 384, 944,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 608, 960,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 960, 656,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 640, 496,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 832, 1056, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1728, 1200, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 512, 688,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1376, 592, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1680, 1280, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1008, 1968, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 768, 1696, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 784, 1136, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 1616, 1008, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 976, 944,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 752, 1104, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 992, 3008, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 512, 800,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1760, 432, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 896, 784,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 656, 480,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16,  // input data type
+                                                       1, 256, 2336, 1312, // input shape
+                                                       256, 256, 3, 3,     // filter shape
+                                                       1, 1, 1, 1,         // padding
+                                                       1, 1,               // dilation
+                                                       1,                  // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 1088, 560, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 432, 1104, // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 512, 704,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   },
+                                                   {
+                                                       DataType::DT_BF16, // input data type
+                                                       1, 256, 592, 880,  // input shape
+                                                       256, 256, 3, 3,    // filter shape
+                                                       1, 1, 1, 1,        // padding
+                                                       1, 1,              // dilation
+                                                       1,                 // groups
+                                                   }};
 
 static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 {
@@ -3425,9 +3396,9 @@ static bool isNotDMAFromPad(bool isDMASpec, const aclIntArray* padding)
 }
 // padding = [pad_top, pad_bottom, pad_left, pad_right]
 // 1. 不满足DMA的规格   2. load3d L1最小切分要在L1能够放下
-static bool isNotDMA( const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
-    struct ConvolutionOpInfo* opInfo = nullptr)
+static bool isNotDMA(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
+                     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                     struct ConvolutionOpInfo* opInfo = nullptr)
 {
     int64_t inputHeight = (int64_t)input->GetViewShape().GetDim(2);
     int64_t inputWidth = (int64_t)input->GetViewShape().GetDim(3);
@@ -3436,7 +3407,7 @@ static bool isNotDMA( const aclTensor* input, const aclTensor* weight, const acl
     int64_t outputSize = (int64_t)output->GetViewShape().GetDimNum();
     int64_t outputW = (int64_t)output->GetViewShape().GetDim(2);
     if (outputSize == CONV_2D_DIM_SIZE) {
-      outputW = static_cast<int64_t>(output->GetViewShape().GetDim(3)); // NCH(W) -> 012(3)
+        outputW = static_cast<int64_t>(output->GetViewShape().GetDim(3)); // NCH(W) -> 012(3)
     }
 
     // CUBE_FP16的M, K
@@ -3522,9 +3493,9 @@ static bool CanSwitchC04InF16Scene(const struct ConvolutionOpInfo& opInfo)
 }
 
 // 1. groups为1  2. Cin<=4  3. dtype为FP16 4. 必须是910B芯片 5. 非DMA场景   同时满足才能走c04
-static bool CanSwitchC04(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, int64_t groups, bool transposed)
+static bool CanSwitchC04(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
+                         const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                         int64_t groups, bool transposed)
 {
     // 必须为非transpose场景 + format为NCHW才行
     if (transposed || input->GetViewFormat() != Format::FORMAT_NCHW) {
@@ -3543,37 +3514,37 @@ static bool CanSwitchC04(
 }
 
 // 非C04场景的更新 卷积format
-void GetConvolutionOpFormat(
-    struct ConvolutionOpInfo& opInfo, const aclTensor* input, const aclTensor* weight, const aclTensor* output)
+void GetConvolutionOpFormat(struct ConvolutionOpInfo& opInfo, const aclTensor* input, const aclTensor* weight,
+                            const aclTensor* output)
 {
     opInfo.weightFormat = Format::FORMAT_FRACTAL_Z;
     opInfo.inputFormat = Format::FORMAT_NC1HWC0;
     opInfo.outputFormat = Format::FORMAT_NC1HWC0;
     opInfo.biasFormat = Format::FORMAT_ND;
     if (op::IsSupportND()) {
-        opInfo.weightFormat =
-            weight->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC : Format::FORMAT_NCHW;
-        opInfo.inputFormat =
-            input->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC : Format::FORMAT_NCHW;
-        opInfo.outputFormat =
-            output->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC : Format::FORMAT_NCHW;
+        opInfo.weightFormat = weight->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
+                                                                                  Format::FORMAT_NCHW;
+        opInfo.inputFormat = input->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
+                                                                                Format::FORMAT_NCHW;
+        opInfo.outputFormat = output->GetStorageFormat() == Format::FORMAT_NHWC ? Format::FORMAT_NHWC :
+                                                                                  Format::FORMAT_NCHW;
     }
 }
 
-void GetConvolution3dOpFormat(
-    struct ConvolutionOpInfo& opInfo, const aclTensor* input, const aclTensor* weight, const aclTensor* output)
+void GetConvolution3dOpFormat(struct ConvolutionOpInfo& opInfo, const aclTensor* input, const aclTensor* weight,
+                              const aclTensor* output)
 {
     opInfo.weightFormat = Format::FORMAT_FRACTAL_Z_3D;
     opInfo.inputFormat = Format::FORMAT_NDC1HWC0;
     opInfo.outputFormat = Format::FORMAT_NDC1HWC0;
     opInfo.biasFormat = Format::FORMAT_ND;
     if (op::IsSupportND()) {
-        opInfo.weightFormat =
-            weight->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC : Format::FORMAT_NCDHW;
-        opInfo.inputFormat =
-            input->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC : Format::FORMAT_NCDHW;
-        opInfo.outputFormat =
-            output->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC : Format::FORMAT_NCDHW;
+        opInfo.weightFormat = weight->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
+                                                                                   Format::FORMAT_NCDHW;
+        opInfo.inputFormat = input->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
+                                                                                 Format::FORMAT_NCDHW;
+        opInfo.outputFormat = output->GetStorageFormat() == Format::FORMAT_NDHWC ? Format::FORMAT_NDHWC :
+                                                                                   Format::FORMAT_NCDHW;
     }
 }
 
@@ -3585,56 +3556,56 @@ void GetConvolutionOpFormatC04(struct ConvolutionOpInfo& opInfo)
     opInfo.biasFormat = Format::FORMAT_ND;
 }
 
-static void AddAclIntArrayToCaseInfo(const aclIntArray &seg, vector<int64_t> &caseInfo)
+static void AddAclIntArrayToCaseInfo(const aclIntArray& seg, vector<int64_t>& caseInfo)
 {
-  size_t len = seg.Size();
-  for (size_t i = 0; i < len; i++) {
-    caseInfo.push_back(seg[i]);
-  }
-}
-
-static void AddTensorShapeToCaseInfo(const aclTensor &seg, vector<int64_t> &caseInfo)
-{
-  auto segShape = seg.GetViewShape();
-  size_t dimNum = segShape.GetDimNum();
-  for (size_t i=0; i < dimNum; i++) {
-    caseInfo.push_back(segShape.GetDim(i));
-  }
-}
-
-static void ConstructCaseInfo(const Conv2DParams &params, vector<int64_t> &caseInfo)
-{
-  caseInfo.reserve(CONV2D_WHITE_LIST_CASE_SIZE);
-  auto inputDataType = params.input->GetDataType();
-  caseInfo.push_back(static_cast<int64_t>(inputDataType));
-  AddTensorShapeToCaseInfo(*(params.input), caseInfo);
-  AddTensorShapeToCaseInfo(*(params.weight), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
-  caseInfo.push_back(params.groups);
-}
-
-static bool IsConv2DWhiteListCase(const vector<int64_t> &caseInfo, const vector<vector<int64_t>> &whiteList, const aclIntArray &stride)
-{
-  if (stride.Size() != STRIDE_WHITE_LIST_SIZE) {
-    return false;
-  }
-  int64_t h = stride[0];
-  int64_t w = stride[1];
-  bool isStrideRight = (h == 1 && w == 1) || (h == 2 && w == 2);
-  for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
-    if (*it == caseInfo) {
-      return isStrideRight;
+    size_t len = seg.Size();
+    for (size_t i = 0; i < len; i++) {
+        caseInfo.push_back(seg[i]);
     }
-  }
-  return false;
+}
+
+static void AddTensorShapeToCaseInfo(const aclTensor& seg, vector<int64_t>& caseInfo)
+{
+    auto segShape = seg.GetViewShape();
+    size_t dimNum = segShape.GetDimNum();
+    for (size_t i = 0; i < dimNum; i++) {
+        caseInfo.push_back(segShape.GetDim(i));
+    }
+}
+
+static void ConstructCaseInfo(const Conv2DParams& params, vector<int64_t>& caseInfo)
+{
+    caseInfo.reserve(CONV2D_WHITE_LIST_CASE_SIZE);
+    auto inputDataType = params.input->GetDataType();
+    caseInfo.push_back(static_cast<int64_t>(inputDataType));
+    AddTensorShapeToCaseInfo(*(params.input), caseInfo);
+    AddTensorShapeToCaseInfo(*(params.weight), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
+    caseInfo.push_back(params.groups);
+}
+
+static bool IsConv2DWhiteListCase(const vector<int64_t>& caseInfo, const vector<vector<int64_t>>& whiteList,
+                                  const aclIntArray& stride)
+{
+    if (stride.Size() != STRIDE_WHITE_LIST_SIZE) {
+        return false;
+    }
+    int64_t h = stride[0];
+    int64_t w = stride[1];
+    bool isStrideRight = (h == 1 && w == 1) || (h == 2 && w == 2);
+    for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
+        if (*it == caseInfo) {
+            return isStrideRight;
+        }
+    }
+    return false;
 }
 
 // 更新convolution所需要的dtype format
-void GetConvOpInfo(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-    struct ConvolutionOpInfo& opInfo, const bool transposed, int64_t groups, const aclIntArray* stride,
-    const aclIntArray* padding, const aclIntArray* dilation, int8_t cubeMathType)
+void GetConvOpInfo(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
+                   struct ConvolutionOpInfo& opInfo, const bool transposed, int64_t groups, const aclIntArray* stride,
+                   const aclIntArray* padding, const aclIntArray* dilation, int8_t cubeMathType)
 {
     GetConvolutionOpDtype(input, weight, bias, output, opInfo, transposed, cubeMathType);
     // 支持C04 + NCHW + 非transposed的场景
@@ -3645,15 +3616,12 @@ void GetConvOpInfo(
     ConstructCaseInfo(params, caseInfo2d);
     bool isConv2DWhiteListCase = IsConv2DWhiteListCase(caseInfo2d, CONV2D_WHITE_LIST, *stride);
     if (!isConv2DWhiteListCase && (weight->GetViewShape() == weightSpecialShape) &&
-        (input->GetViewShape() == inputSpecialShape) &&
-        CanSwitchC04InF16Scene(opInfo) &&
+        (input->GetViewShape() == inputSpecialShape) && CanSwitchC04InF16Scene(opInfo) &&
         CanSwitchC04(input, weight, bias, output, stride, padding, dilation, groups, transposed)) {
         OP_LOGD("Entering float16 C04 branch");
         GetConvolutionOpFormatC04(opInfo);
-    } else if (
-        !isConv2DWhiteListCase &&
-        CanSwitchC04InBF16Scene(opInfo) &&
-        CanSwitchC04(input, weight, bias, output, stride, padding, dilation, groups, transposed)) {
+    } else if (!isConv2DWhiteListCase && CanSwitchC04InBF16Scene(opInfo) &&
+               CanSwitchC04(input, weight, bias, output, stride, padding, dilation, groups, transposed)) {
         OP_LOGD("Entering bfloat16 C04 branch");
         GetConvolutionOpFormatC04(opInfo);
     } else {
@@ -3669,9 +3637,8 @@ void GetConvOpInfo(
     }
 }
 
-void GetConv3dOpInfo(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
-    struct ConvolutionOpInfo& opInfo, const bool transposed, int8_t cubeMathType)
+void GetConv3dOpInfo(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* output,
+                     struct ConvolutionOpInfo& opInfo, const bool transposed, int8_t cubeMathType)
 {
     GetConvolutionOpDtype(input, weight, bias, output, opInfo, transposed, cubeMathType);
     GetConvolution3dOpFormat(opInfo, input, weight, output);
@@ -3898,14 +3865,15 @@ static aclnnStatus CheckConv2dWithWeightFZ(const string& entityName, const aclTe
         return ACLNN_SUCCESS;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P) {
-        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(entityName, "filter",
-            GeFormatToString(Format::FORMAT_FRACTAL_Z),
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+            entityName, "filter", GeFormatToString(Format::FORMAT_FRACTAL_Z),
             "The value of this parameter can be " + GeFormatToString(Format::FORMAT_FRACTAL_Z) +
-            " only when the SoC version is " + std::string(op::ToString(SocVersion::ASCEND310P).GetString()));
+                " only when the SoC version is " + std::string(op::ToString(SocVersion::ASCEND310P).GetString()));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (input->GetDataType() != weight->GetDataType()) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(entityName, "x, filter",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            entityName, "x, filter",
             GeDtypeToString(input->GetDataType()) + ", " + GeDtypeToString(weight->GetDataType()),
             "the dtypes of x and filter must be the same");
         return ACLNN_ERR_PARAM_INVALID;
@@ -3951,8 +3919,8 @@ static aclnnStatus CommonPostProcessForBmm(const aclTensor* output, const aclTen
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* ViewWithShapeAndReformatND(
-    const aclTensor* tensor, const std::initializer_list<int64_t>& shape, aclOpExecutor* executor)
+static const aclTensor* ViewWithShapeAndReformatND(const aclTensor* tensor, const std::initializer_list<int64_t>& shape,
+                                                   aclOpExecutor* executor)
 {
     op::Shape shapeBMN = op::Shape(shape);
     auto tensorBMN = ViewWithShape(tensor, shapeBMN, executor);
@@ -3972,27 +3940,25 @@ static int64_t CalcCountByAxisVec(const op::Shape& dataShape, const vector<int64
 static aclnnStatus GetAndCastConvolutionOpDtype(ConvEngine& engine, aclOpExecutor* executor)
 {
     ConvolutionOpInfo opInfo = {};
-    GetConvolutionOpDtype(
-        engine.params.input, engine.params.weight, engine.params.bias, engine.params.output, opInfo,
-        engine.params.transposed, engine.params.cubeMathType);
+    GetConvolutionOpDtype(engine.params.input, engine.params.weight, engine.params.bias, engine.params.output, opInfo,
+                          engine.params.transposed, engine.params.cubeMathType);
     opInfo.biasFormat = Format::FORMAT_ND;
- 	OP_LOGD("Reset bias format=%s", op::ToString(opInfo.biasFormat).GetString());
-    return CommonPreProcess(
-        engine.params.input, engine.params.weight, engine.params.bias, engine.params.groups, engine.params.transposed,
-        opInfo, false, true, executor);
+    OP_LOGD("Reset bias format=%s", op::ToString(opInfo.biasFormat).GetString());
+    return CommonPreProcess(engine.params.input, engine.params.weight, engine.params.bias, engine.params.groups,
+                            engine.params.transposed, opInfo, false, true, executor);
 }
 
-static aclnnStatus GenInOutByConvToBmm(
-    ConvEngine engine, const ConvToBmmMode& convToBmmMode, BatchMatmulInput& bmmInput, aclOpExecutor* executor)
+static aclnnStatus GenInOutByConvToBmm(ConvEngine engine, const ConvToBmmMode& convToBmmMode,
+                                       BatchMatmulInput& bmmInput, aclOpExecutor* executor)
 {
     auto ret = GetAndCastConvolutionOpDtype(engine, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     if (convToBmmMode == ConvToBmmMode::CONV_MM_FEATURE_MAP_EQ_FILTER) {
-        const vector<int64_t> cidhwIdxUnionVec{
-            CI_DIM_CO_CI_DHW_INDEX, D_DIM_NCDHW_INDEX, H_DIM_NCDHW_INDEX, W_DIM_NCDHW_INDEX};
+        const vector<int64_t> cidhwIdxUnionVec{CI_DIM_CO_CI_DHW_INDEX, D_DIM_NCDHW_INDEX, H_DIM_NCDHW_INDEX,
+                                               W_DIM_NCDHW_INDEX};
         const vector<int64_t> cihwIdxUnionVec{CI_DIM_CO_CI_DHW_INDEX, H_DIM_NCHW_INDEX, W_DIM_NCHW_INDEX};
-        const auto& dimIdxUnionVec =
-            (engine.meta.input.format == op::Format::FORMAT_NCHW) ? cihwIdxUnionVec : cidhwIdxUnionVec;
+        const auto& dimIdxUnionVec = (engine.meta.input.format == op::Format::FORMAT_NCHW) ? cihwIdxUnionVec :
+                                                                                             cidhwIdxUnionVec;
         // weight --> [1, Co, CiDHW]
         std::initializer_list<int64_t> weightShapeVec = {
             1, engine.meta.weight.N(), CalcCountByAxisVec(engine.meta.weight.tensorShape, dimIdxUnionVec)};
@@ -4020,17 +3986,16 @@ static aclnnStatus GenInOutByConvToBmm(
         bmmInput.biasData = biasND;
         bmmInput.outputData = outputND;
     }
-    OP_LOGD(
-        "convolution to batchmatmul op leftDataType: %s, rightDataType: %s.",
-        op::ToString(bmmInput.leftData->GetDataType()).GetString(),
-        op::ToString(bmmInput.rightData->GetDataType()).GetString());
+    OP_LOGD("convolution to batchmatmul op leftDataType: %s, rightDataType: %s.",
+            op::ToString(bmmInput.leftData->GetDataType()).GetString(),
+            op::ToString(bmmInput.rightData->GetDataType()).GetString());
 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus GenInOutByConvTranspose1DToBmm(
-    ConvEngine engine, const ConvTranspose1DToBmmMode& convTranspose1DToBmmMode, BatchMatmulInput& bmmInput,
-    aclOpExecutor* executor)
+static aclnnStatus GenInOutByConvTranspose1DToBmm(ConvEngine engine,
+                                                  const ConvTranspose1DToBmmMode& convTranspose1DToBmmMode,
+                                                  BatchMatmulInput& bmmInput, aclOpExecutor* executor)
 {
     auto ret = GetAndCastConvolutionOpDtype(engine, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
@@ -4106,8 +4071,7 @@ static bool IsSupportConvToBmm(ConvEngine engine)
 {
     SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
     bool isNotDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510;
-    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
-        isNotDAV3510) {
+    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 && isNotDAV3510) {
         return false;
     }
 
@@ -4172,35 +4136,30 @@ namespace AclnnConvolution {
 
 static inline void RegisterConv2dL0Functions(std::map<std::string, L0FUNCTION>& l0Functions)
 {
-    REG_L0_FUNCTION(
-        l0Functions, Conv2d5HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NC1HWC0, op::DataType::DT_FLOAT16,
-        op::Format::FORMAT_NC1HWC0);
-    REG_L0_FUNCTION(
-        l0Functions, Conv2d5HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NC1HWC0, op::DataType::DT_FLOAT,
-        op::Format::FORMAT_NC1HWC0);
-    REG_L0_FUNCTION(
-        l0Functions, Conv2d5HdFp1625HdFp32, op::DataType::DT_FLOAT16, op::Format::FORMAT_NC1HWC0,
-        op::DataType::DT_FLOAT, op::Format::FORMAT_NC1HWC0);
-    REG_L0_FUNCTION(
-        l0Functions, Conv2d5HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NC1HWC0, op::DataType::DT_BF16,
-        op::Format::FORMAT_NC1HWC0);
+    REG_L0_FUNCTION(l0Functions, Conv2d5HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NC1HWC0,
+                    op::DataType::DT_FLOAT16, op::Format::FORMAT_NC1HWC0);
+    REG_L0_FUNCTION(l0Functions, Conv2d5HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NC1HWC0,
+                    op::DataType::DT_FLOAT, op::Format::FORMAT_NC1HWC0);
+    REG_L0_FUNCTION(l0Functions, Conv2d5HdFp1625HdFp32, op::DataType::DT_FLOAT16, op::Format::FORMAT_NC1HWC0,
+                    op::DataType::DT_FLOAT, op::Format::FORMAT_NC1HWC0);
+    REG_L0_FUNCTION(l0Functions, Conv2d5HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NC1HWC0,
+                    op::DataType::DT_BF16, op::Format::FORMAT_NC1HWC0);
     REG_L0_FUNCTION_BY_OPTYPE(l0Functions, Conv2dV2NCHW, "Conv2DV2");
 }
 
-static inline aclnnStatus CommonConvImpl(
-    std::map<std::string, L0FUNCTION>& l0Functions, ConvolutionOpInfo& opInfo, const aclTensor* input,
-    const aclTensor* weight, const aclTensor* bias, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, bool transposed, const aclIntArray* outputPadding, int64_t groups, bool useHf32,
-    aclOpExecutor* executor, const aclTensor*& convOut, const char* errorMsg)
+static inline aclnnStatus CommonConvImpl(std::map<std::string, L0FUNCTION>& l0Functions, ConvolutionOpInfo& opInfo,
+                                         const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                         const aclIntArray* stride, const aclIntArray* padding,
+                                         const aclIntArray* dilation, bool transposed, const aclIntArray* outputPadding,
+                                         int64_t groups, bool useHf32, aclOpExecutor* executor,
+                                         const aclTensor*& convOut, const char* errorMsg)
 {
     if (op::IsSupportND()) {
-        convOut = FUNCTION_CALL_BY_OPTYPE(
-            l0Functions, "Conv2DV2", input, weight, bias, opInfo.outputDtype, stride, padding, dilation, transposed,
-            outputPadding, groups, useHf32, executor);
+        convOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "Conv2DV2", input, weight, bias, opInfo.outputDtype, stride,
+                                          padding, dilation, transposed, outputPadding, groups, useHf32, executor);
     } else {
-        convOut = FUNCTION_CALL(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor);
+        convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                                outputPadding, groups, useHf32, executor);
     }
 
     if (convOut == nullptr) {
@@ -4215,12 +4174,11 @@ public:
     virtual aclnnStatus PreProcess() = 0;
     virtual aclnnStatus Impl() = 0;
     virtual aclnnStatus PostProcess() = 0;
-    ConvolutionImpl(
-        const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
-        const aclIntArray* strideParam, const aclIntArray* paddingParam, const aclIntArray* dilationParam,
-        const bool transposedParam, const aclIntArray* outputPaddingParam, const int64_t groupsParam,
-        aclTensor* outputParam, bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam,
-        const std::string& entityNameParam)
+    ConvolutionImpl(const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
+                    const aclIntArray* strideParam, const aclIntArray* paddingParam, const aclIntArray* dilationParam,
+                    const bool transposedParam, const aclIntArray* outputPaddingParam, const int64_t groupsParam,
+                    aclTensor* outputParam, bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam,
+                    const std::string& entityNameParam)
         : input(inputParam),
           weight(weightParam),
           bias(biasParam),
@@ -4234,7 +4192,7 @@ public:
           useHf32(useHf32Param),
           cubeMathType(cubeMathTypeParam),
           executor(executorParam),
-          entityName(entityNameParam) {};
+          entityName(entityNameParam){};
     virtual ~ConvolutionImpl()
     {
         input = nullptr;
@@ -4292,33 +4250,31 @@ static inline aclnnStatus ExecuteConvImpl(const std::shared_ptr<AclnnConvolution
     return ACLNN_SUCCESS;
 }
 
-static inline void RegisterTransposedConvL0Functions(
-    std::map<std::string, L0FUNCTION>& l0Functions, op::Format dataFormat)
+static inline void RegisterTransposedConvL0Functions(std::map<std::string, L0FUNCTION>& l0Functions,
+                                                     op::Format dataFormat)
 {
-    REG_L0_FUNCTION(
-        l0Functions, ConvTranspose2d5HdFp16, op::DataType::DT_FLOAT16, dataFormat, op::DataType::DT_FLOAT16,
-        dataFormat);
-    REG_L0_FUNCTION(
-        l0Functions, ConvTranspose2d5HdFp32, op::DataType::DT_FLOAT, dataFormat, op::DataType::DT_FLOAT, dataFormat);
-    REG_L0_FUNCTION(
-        l0Functions, ConvTranspose2d5HdBf16, op::DataType::DT_BF16, dataFormat, op::DataType::DT_BF16, dataFormat);
-    REG_L0_FUNCTION(
-        l0Functions, ConvTranspose2d5HdHif8, op::DataType::DT_HIFLOAT8, dataFormat, op::DataType::DT_HIFLOAT8,
-        dataFormat);
-    REG_L0_FUNCTION(
-        l0Functions, ConvTranspose2d5HdF8e4m3fn, op::DataType::DT_FLOAT8_E4M3FN, dataFormat,
-        op::DataType::DT_FLOAT8_E4M3FN, dataFormat);
+    REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdFp16, op::DataType::DT_FLOAT16, dataFormat, op::DataType::DT_FLOAT16,
+                    dataFormat);
+    REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdFp32, op::DataType::DT_FLOAT, dataFormat, op::DataType::DT_FLOAT,
+                    dataFormat);
+    REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdBf16, op::DataType::DT_BF16, dataFormat, op::DataType::DT_BF16,
+                    dataFormat);
+    REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdHif8, op::DataType::DT_HIFLOAT8, dataFormat,
+                    op::DataType::DT_HIFLOAT8, dataFormat);
+    REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdF8e4m3fn, op::DataType::DT_FLOAT8_E4M3FN, dataFormat,
+                    op::DataType::DT_FLOAT8_E4M3FN, dataFormat);
 }
 
-#define CONV_CONSTRUCTOR(type)                                                                               \
-    CONCAT(Conv##type, Impl)(                                                                                \
-        const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,               \
-        const aclIntArray* strideParam, const aclIntArray* paddingParam, const aclIntArray* dilationParam,   \
-        const bool transposedParam, const aclIntArray* outputPaddingParam, const int64_t groupsParam,        \
-        aclTensor* outputParam, bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam, const std::string& entityNameParam)   \
-        : ConvolutionImpl(                                                                                   \
-              inputParam, weightParam, biasParam, strideParam, paddingParam, dilationParam, transposedParam, \
-              outputPaddingParam, groupsParam, outputParam, useHf32Param, cubeMathTypeParam, executorParam, entityNameParam)  \
+#define CONV_CONSTRUCTOR(type)                                                                          \
+    CONCAT(Conv##type, Impl)                                                                            \
+    (const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,             \
+     const aclIntArray* strideParam, const aclIntArray* paddingParam, const aclIntArray* dilationParam, \
+     const bool transposedParam, const aclIntArray* outputPaddingParam, const int64_t groupsParam,      \
+     aclTensor* outputParam, bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam, \
+     const std::string& entityNameParam)                                                                \
+        : ConvolutionImpl(inputParam, weightParam, biasParam, strideParam, paddingParam, dilationParam, \
+                          transposedParam, outputPaddingParam, groupsParam, outputParam, useHf32Param,  \
+                          cubeMathTypeParam, executorParam, entityNameParam)                            \
     {}
 
 #define CONCAT(a, b) a##b
@@ -4332,7 +4288,7 @@ public:
         RegisterConv2dL0Functions(l0Functions);
         if (padding->Size() != CONV_2D_PAD_DIM && padding->Size() != CONV_4D_PAD_DIM) {
             OP_LOGE_FOR_INVALID_LISTSIZE(entityName, "pads", std::to_string(padding->Size()),
-                std::to_string(CONV_2D_PAD_DIM) + " or " + std::to_string(CONV_4D_PAD_DIM));
+                                         std::to_string(CONV_2D_PAD_DIM) + " or " + std::to_string(CONV_4D_PAD_DIM));
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         if (padding->Size() == CONV_2D_PAD_DIM) {
@@ -4343,10 +4299,9 @@ public:
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
-        OP_LOGD(
-            "convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
-            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-            op::ToString(opInfo.biasDtype).GetString(), useHf32);
+        OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                op::ToString(opInfo.biasDtype).GetString(), useHf32);
         // 需要切C04分支卷积
         if (opInfo.weightFormat == Format::FORMAT_FRACTAL_Z_C04 && weight->GetDataType() == op::DataType::DT_FLOAT16) {
             OP_LOGD("Conv2d entering float16 C04 branch");
@@ -4360,26 +4315,23 @@ public:
             CHECK_RET(changeRes == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
             changeRes = ChangeConv2dInputToConv3d(input, weight, executor);
             CHECK_RET(changeRes == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-            REG_L0_FUNCTION(
-                l0Functions, Conv3dv26HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0,
-                op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0);
-            REG_L0_FUNCTION(
-                l0Functions, Conv3dv26HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDC1HWC0, op::DataType::DT_BF16,
-                op::Format::FORMAT_NDC1HWC0);
-            REG_L0_FUNCTION(
-                l0Functions, Conv3dv26HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0,
-                op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0);
-            OP_LOGD(
-                "convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
-                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-                op::ToString(opInfo.biasDtype).GetString(), useHf32);
+            REG_L0_FUNCTION(l0Functions, Conv3dv26HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0,
+                            op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0);
+            REG_L0_FUNCTION(l0Functions, Conv3dv26HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDC1HWC0,
+                            op::DataType::DT_BF16, op::Format::FORMAT_NDC1HWC0);
+            REG_L0_FUNCTION(l0Functions, Conv3dv26HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0,
+                            op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0);
+            OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+                    op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                    op::ToString(opInfo.biasDtype).GetString(), useHf32);
         } else {
             OP_LOGD("Conv2d entering normal branch");
         }
 
         bool inputDisContinuous = false;
         auto viewShape = input->GetViewShape();
-        std::vector<int64_t> newStrides = {viewShape[C_DIM_NCHW_INDEX], 1,
+        std::vector<int64_t> newStrides = {
+            viewShape[C_DIM_NCHW_INDEX], 1,
             viewShape[N_DIM_NCHW_INDEX] * viewShape[C_DIM_NCHW_INDEX] * viewShape[W_DIM_NCHW_INDEX],
             viewShape[N_DIM_NCHW_INDEX] * viewShape[C_DIM_NCHW_INDEX]};
         bool strideFlag = CheckDisContinuousStride(input, newStrides, CONV_2D_DIMS);
@@ -4387,7 +4339,7 @@ public:
             isNotDMA(input, weight, bias, output, stride, padding, dilation, &opInfo)) {
             OP_LOGD("Conv2d entering disContinuous branch");
             op::Shape newStorageShapeOp = op::Shape({viewShape[H_DIM_NCHW_INDEX], viewShape[W_DIM_NCHW_INDEX],
-                                                    viewShape[N_DIM_NCHW_INDEX], viewShape[C_DIM_NCHW_INDEX]});
+                                                     viewShape[N_DIM_NCHW_INDEX], viewShape[C_DIM_NCHW_INDEX]});
             input = executor->CreateView(input, input->GetViewShape(), newStorageShapeOp, input->GetViewStrides(), 0);
             const_cast<aclTensor*>(input)->SetStorageShape(newStorageShapeOp);
             const_cast<aclTensor*>(input)->SetOriginalShape(viewShape);
@@ -4405,13 +4357,11 @@ public:
     aclnnStatus Impl() override
     {
         if (op::IsSupportND()) {
-            convOut = FUNCTION_CALL_BY_OPTYPE(
-                l0Functions, "Conv2DV2", input, weight, bias, opInfo.outputDtype, stride, padding, dilation, transposed,
-                outputPadding, groups, useHf32, executor);
+            convOut = FUNCTION_CALL_BY_OPTYPE(l0Functions, "Conv2DV2", input, weight, bias, opInfo.outputDtype, stride,
+                                              padding, dilation, transposed, outputPadding, groups, useHf32, executor);
         } else {
-            convOut = FUNCTION_CALL(
-                l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-                useHf32, executor);
+            convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                                    outputPadding, groups, useHf32, executor);
         }
         if (convOut == nullptr) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv2d raise an unknown error");
@@ -4428,8 +4378,8 @@ public:
             CHECK_RET(res == ACLNN_SUCCESS, res);
         } else {
             // splitw模式，会使得conv2d转为conv3d做，所以后处理先按照conv3d的处理方式输出
-            auto fakeOutput3d =
-                executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCDHW, op::Format::FORMAT_NCDHW);
+            auto fakeOutput3d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCDHW,
+                                                      op::Format::FORMAT_NCDHW);
             CHECK_RET(fakeOutput3d != nullptr, ACLNN_ERR_INNER_NULLPTR);
             auto res = CommonPostProcess(groups, true, fakeOutput3d, convOut, executor);
             CHECK_RET(res == ACLNN_SUCCESS, res);
@@ -4472,10 +4422,9 @@ public:
         CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
-        OP_LOGD(
-            "convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
-            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-            op::ToString(opInfo.biasDtype).GetString(), useHf32);
+        OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                op::ToString(opInfo.biasDtype).GetString(), useHf32);
         // 调用静态函数PreProcess
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, true, false, executor);
     };
@@ -4483,16 +4432,15 @@ public:
     aclnnStatus Impl() override
     {
         // conv1d is implement by conv2d
-        return CommonConvImpl(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor, convOut, "convTbc raise an unknown error");
+        return CommonConvImpl(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                              outputPadding, groups, useHf32, executor, convOut, "convTbc raise an unknown error");
     };
 
     aclnnStatus PostProcess() override
     {
         // 因仅支持NCL格式的conv1d，所以转为conv2d的format默认为HCHW
-        auto fakeOutput2d =
-            executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
+        auto fakeOutput2d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW,
+                                                  op::Format::FORMAT_NCHW);
 
         // 调用静态函数PostProcess
         auto res = CommonPostProcess(groups, true, fakeOutput2d, convOut, executor);
@@ -4556,18 +4504,19 @@ public:
         GetConvolutionOpDtype(input, weight, bias, output, opInfo, transposed, cubeMathType);
         auto viewShape = input->GetViewShape();
         bool inputDisContinuous = false;
-        std::vector<int64_t> newStrides =
-            {viewShape[C_DIM_NCL_INDEX], 1, viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]};
+        std::vector<int64_t> newStrides = {viewShape[C_DIM_NCL_INDEX], 1,
+                                           viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]};
         bool strideFlag = CheckDisContinuousStride(input, newStrides, CONV_1D_DIMS);
         if (strideFlag && input->GetViewOffset() == 0 && isSupportInputHWNC(input, opInfo, groups)) {
-            op::Shape viewShape2d =
-                op::Shape({viewShape[N_DIM_NCL_INDEX], viewShape[C_DIM_NCL_INDEX], 1, viewShape[L_DIM_NCL_INDEX]});
-            op::Shape storageShape2d = 
-                op::Shape({1, viewShape[L_DIM_NCL_INDEX], viewShape[N_DIM_NCL_INDEX], viewShape[C_DIM_NCL_INDEX]});
-            op::Strides newStridesOp({viewShape[C_DIM_NCL_INDEX], 1,
-                viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX] * viewShape[L_DIM_NCL_INDEX],
-                viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]});
-            
+            op::Shape viewShape2d = op::Shape(
+                {viewShape[N_DIM_NCL_INDEX], viewShape[C_DIM_NCL_INDEX], 1, viewShape[L_DIM_NCL_INDEX]});
+            op::Shape storageShape2d = op::Shape(
+                {1, viewShape[L_DIM_NCL_INDEX], viewShape[N_DIM_NCL_INDEX], viewShape[C_DIM_NCL_INDEX]});
+            op::Strides newStridesOp(
+                {viewShape[C_DIM_NCL_INDEX], 1,
+                 viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX] * viewShape[L_DIM_NCL_INDEX],
+                 viewShape[N_DIM_NCL_INDEX] * viewShape[C_DIM_NCL_INDEX]});
+
             auto inputView = executor->CreateView(input, viewShape2d, input->GetViewShape(), newStridesOp, 0);
             if (isNotDMA(inputView, weight, bias, output, stride, padding, dilation, &opInfo)) {
                 const_cast<aclTensor*>(inputView)->SetStorageShape(storageShape2d);
@@ -4588,10 +4537,9 @@ public:
 
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
         GetConvOpInfo(input, weight, bias, output, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
-        OP_LOGD(
-            "convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
-            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-            op::ToString(opInfo.biasDtype).GetString(), useHf32);
+        OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                op::ToString(opInfo.biasDtype).GetString(), useHf32);
         specialConv1d = isSpecialConv1d(input, weight, stride, padding, dilation) && (groups == 1);
         // 调用静态函数PreProcess
         bool needChangeFormat = op::IsSupportND() ? false : !specialConv1d;
@@ -4604,8 +4552,8 @@ public:
         if (specialConv1d) {
             // assert x and weight format = NCHW, C=H=1
             // x view to shape n*w/s s, the batch dim is fold to the dim 1,
-            op::Shape inputShape2d =
-                op::Shape({input->GetViewShape()[0] * input->GetViewShape()[3] / (*stride)[1], (*stride)[1]});
+            op::Shape inputShape2d = op::Shape(
+                {input->GetViewShape()[0] * input->GetViewShape()[3] / (*stride)[1], (*stride)[1]});
             auto input2d = ViewWithShape(input, inputShape2d, executor);
             CHECK_RET(input2d != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -4647,17 +4595,16 @@ public:
             return ACLNN_SUCCESS;
         }
         // conv1d is implement by conv2d
-        return CommonConvImpl(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor, convOut, "conv1d raise an unknown error");
+        return CommonConvImpl(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                              outputPadding, groups, useHf32, executor, convOut, "conv1d raise an unknown error");
     };
 
     aclnnStatus PostProcess() override
     {
         // conv1d 转换为conv2d做，所以后处理先按照conv2d的处理方式处理输出
         // 因仅支持NCL格式的conv1d，所以转为conv2d的format默认为HCHW
-        auto fakeOutput2d =
-            executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
+        auto fakeOutput2d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW,
+                                                  op::Format::FORMAT_NCHW);
 
         // 调用静态函数PostProcess
         auto res = CommonPostProcess(groups, !specialConv1d, fakeOutput2d, convOut, executor);
@@ -4677,9 +4624,8 @@ public:
     ~Conv1dImpl() override = default;
 
 private:
-    bool isSpecialConv1d(
-        const aclTensor* inputParam, const aclTensor* weightParam, const aclIntArray* strideParam,
-        const aclIntArray* paddingParam, const aclIntArray* dilationParam) const
+    bool isSpecialConv1d(const aclTensor* inputParam, const aclTensor* weightParam, const aclIntArray* strideParam,
+                         const aclIntArray* paddingParam, const aclIntArray* dilationParam) const
     {
         if ((*strideParam)[1] > op::specialStride &&
             (*strideParam)[1] == weightParam->GetViewShape()[op::specialChannelIndex] &&
@@ -4737,12 +4683,11 @@ public:
         CHECK_RET(output2d != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
-        GetConvOpInfo(
-            input, weight, bias, output2d, opInfo, transposed, groups, stride, padding, dilation, cubeMathType);
-        OP_LOGD(
-            "convolution aclnn op (conv3d->conv2d) inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
-            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-            op::ToString(opInfo.biasDtype).GetString(), useHf32);
+        GetConvOpInfo(input, weight, bias, output2d, opInfo, transposed, groups, stride, padding, dilation,
+                      cubeMathType);
+        OP_LOGD("convolution aclnn op (conv3d->conv2d) inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                op::ToString(opInfo.biasDtype).GetString(), useHf32);
 
         bool needChangeFormat = !op::IsSupportND();
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
@@ -4750,9 +4695,9 @@ public:
 
     aclnnStatus Impl() override
     {
-        return CommonConvImpl(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor, convOut, "conv3d->conv2d raise an unknown error");
+        return CommonConvImpl(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                              outputPadding, groups, useHf32, executor, convOut,
+                              "conv3d->conv2d raise an unknown error");
     };
 
     aclnnStatus PostProcess() override
@@ -4784,27 +4729,20 @@ public:
 
     aclnnStatus PreProcess() override
     {
-        REG_L0_FUNCTION(
-            l0Functions, Conv3d6HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0, op::DataType::DT_FLOAT16,
-            op::Format::FORMAT_NDC1HWC0);
-        REG_L0_FUNCTION(
-            l0Functions, Conv3dv26HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0, op::DataType::DT_FLOAT,
-            op::Format::FORMAT_NDC1HWC0);
-        REG_L0_FUNCTION(
-            l0Functions, Conv3dv26HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDC1HWC0, op::DataType::DT_BF16,
-            op::Format::FORMAT_NDC1HWC0);
-        REG_L0_FUNCTION(
-            l0Functions, Conv3dv2NCDHWFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NCDHW,
-            op::DataType::DT_FLOAT16, op::Format::FORMAT_NCDHW);
-        REG_L0_FUNCTION(
-            l0Functions, Conv3dv2NCDHWFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NCDHW, op::DataType::DT_FLOAT,
-            op::Format::FORMAT_NCDHW);
-        REG_L0_FUNCTION(
-            l0Functions, Conv3dv2NCDHWBf16, op::DataType::DT_BF16, op::Format::FORMAT_NCDHW, op::DataType::DT_BF16,
-            op::Format::FORMAT_NCDHW);
-        REG_L0_FUNCTION(
-            l0Functions, Conv3dv2NCDHWHif8, op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW,
-            op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW);
+        REG_L0_FUNCTION(l0Functions, Conv3d6HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0,
+                        op::DataType::DT_FLOAT16, op::Format::FORMAT_NDC1HWC0);
+        REG_L0_FUNCTION(l0Functions, Conv3dv26HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0,
+                        op::DataType::DT_FLOAT, op::Format::FORMAT_NDC1HWC0);
+        REG_L0_FUNCTION(l0Functions, Conv3dv26HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDC1HWC0,
+                        op::DataType::DT_BF16, op::Format::FORMAT_NDC1HWC0);
+        REG_L0_FUNCTION(l0Functions, Conv3dv2NCDHWFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NCDHW,
+                        op::DataType::DT_FLOAT16, op::Format::FORMAT_NCDHW);
+        REG_L0_FUNCTION(l0Functions, Conv3dv2NCDHWFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NCDHW,
+                        op::DataType::DT_FLOAT, op::Format::FORMAT_NCDHW);
+        REG_L0_FUNCTION(l0Functions, Conv3dv2NCDHWBf16, op::DataType::DT_BF16, op::Format::FORMAT_NCDHW,
+                        op::DataType::DT_BF16, op::Format::FORMAT_NCDHW);
+        REG_L0_FUNCTION(l0Functions, Conv3dv2NCDHWHif8, op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW,
+                        op::DataType::DT_HIFLOAT8, op::Format::FORMAT_NCDHW);
         CHECK_RET(!CheckUnSupportDtype(input, weight), ACLNN_ERR_INNER_NULLPTR);
         GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType);
 
@@ -4820,10 +4758,9 @@ public:
             opInfo.outputFormat = Format::FORMAT_NCDHW;
             OP_LOGD("Entering PointWise branch.");
         }
-        OP_LOGD(
-            "convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
-            op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
-            op::ToString(opInfo.biasDtype).GetString(), useHf32);
+        OP_LOGD("convolution aclnn op inputDtype: %s, outputDtype: %s, biasDtype: %s, useHf32: %d.",
+                op::ToString(opInfo.inputDtype).GetString(), op::ToString(opInfo.outputDtype).GetString(),
+                op::ToString(opInfo.biasDtype).GetString(), useHf32);
         // 调用静态函数PreProcess
         bool needChangeFormat = op::IsSupportND() ? false : !isPointWiseKernelFlag;
         return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
@@ -4831,9 +4768,8 @@ public:
 
     aclnnStatus Impl() override
     {
-        convOut = FUNCTION_CALL(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor);
+        convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                                outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv3d raise an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
@@ -4858,15 +4794,14 @@ private:
 };
 
 inline aclnnStatus PreProcessCheckOutputDtype(const aclTensor* bias, const ConvolutionOpInfo& opInfo,
-    const std::string& entityName)
+                                              const std::string& entityName)
 {
     if (bias != nullptr &&
         (opInfo.outputDtype == op::DataType::DT_HIFLOAT8 || opInfo.outputDtype == op::DataType::DT_FLOAT8_E4M3FN)) {
         std::stringstream reason;
         reason << "When transposed is true and bias is not nullptr, "
-                << "the dtype of this parameter cannot be "
-                << GeDtypeToString(op::DataType::DT_HIFLOAT8) << " or " 
-                << GeDtypeToString(op::DataType::DT_FLOAT8_E4M3FN);
+               << "the dtype of this parameter cannot be " << GeDtypeToString(op::DataType::DT_HIFLOAT8) << " or "
+               << GeDtypeToString(op::DataType::DT_FLOAT8_E4M3FN);
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(entityName, "y", GeDtypeToString(opInfo.outputDtype), reason.str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -4932,9 +4867,8 @@ public:
     aclnnStatus Impl() override
     {
         // conv1d is implement by conv2d
-        convOut = FUNCTION_CALL(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor);
+        convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                                outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv1d raise an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
@@ -4954,14 +4888,14 @@ public:
         }
         // conv1d 转换为conv2d做，所以后处理先按照conv2d的处理方式处理输出
         // 因仅支持NCL格式的conv1d，所以转为conv2d的format默认为NCHW
-        auto fakeOutput2d =
-            executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
+        auto fakeOutput2d = executor->AllocTensor(output->GetDataType(), op::Format::FORMAT_NCHW,
+                                                  op::Format::FORMAT_NCHW);
         // 调用静态函数PostProcess
         bool needChangeFormat = op::IsSupportND() ? false : true;
         auto res = CommonPostProcess(groups, needChangeFormat, fakeOutput2d, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
         // 现在Conv1d转为conv2d来做，所以需要转换输出
-        if(ConvTranspose1dSwapHW) {
+        if (ConvTranspose1dSwapHW) {
             convOut = View4dAs3dw(convOut, executor);
         } else {
             convOut = View4dAs3d(convOut, executor);
@@ -4973,15 +4907,15 @@ public:
         return ACLNN_SUCCESS;
     };
     ~ConvTransposed1dImpl() override = default;
+
 private:
     bool ConvTranspose1dSwapHW = false;
     bool isConvTransposed1dSwitchHW() const
     {
         //针对特定场景进行优化 outW>4096 N=1 inC<=768
-        if(!op::IsSupportND()
-        && output->GetViewShape().GetDim(L_DIM_NCL_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D
-        && input->GetViewShape().GetDim(N_DIM_NCL_INDEX) == 1
-        && input->GetViewShape().GetDim(C_DIM_NCL_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D) {
+        if (!op::IsSupportND() && output->GetViewShape().GetDim(L_DIM_NCL_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
+            input->GetViewShape().GetDim(N_DIM_NCL_INDEX) == 1 &&
+            input->GetViewShape().GetDim(C_DIM_NCL_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D) {
             return true;
         }
         return false;
@@ -4994,18 +4928,14 @@ public:
     {
         op::Format dataFormat = op::IsSupportND() ? op::Format::FORMAT_NCHW : op::Format::FORMAT_NC1HWC0;
         RegisterTransposedConvL0Functions(l0Functions, dataFormat);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose2d5HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NHWC,
-            op::DataType::DT_FLOAT16, op::Format::FORMAT_NHWC);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose2d5HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NHWC,
-            op::DataType::DT_FLOAT, op::Format::FORMAT_NHWC);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose2d5HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NHWC, op::DataType::DT_BF16,
-            op::Format::FORMAT_NHWC);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NHWC,
+                        op::DataType::DT_FLOAT16, op::Format::FORMAT_NHWC);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NHWC,
+                        op::DataType::DT_FLOAT, op::Format::FORMAT_NHWC);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose2d5HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NHWC,
+                        op::DataType::DT_BF16, op::Format::FORMAT_NHWC);
         ConvTransposed2dSwitchHW = isConvTransposed2dSwitchHW();
-        if (ConvTransposed2dSwitchHW)
-        {
+        if (ConvTransposed2dSwitchHW) {
             input = View4DSwapHWForTensor(input, executor);
             weight = View4DSwapHWForTensor(weight, executor);
             stride = View2DSwapHWForAttr(stride, executor);
@@ -5025,9 +4955,8 @@ public:
 
     aclnnStatus Impl() override
     {
-        convOut = FUNCTION_CALL(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor);
+        convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                                outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "convTranspose2d raise an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
@@ -5055,7 +4984,7 @@ public:
         auto res = CommonPostProcess(groups, needChangeFormat, output, convOut, executor);
         CHECK_RET(res == ACLNN_SUCCESS, res);
 
-        if(ConvTransposed2dSwitchHW){
+        if (ConvTransposed2dSwitchHW) {
             convOut = View4DSwapHWForTensor(convOut, executor);
         }
 
@@ -5065,25 +4994,28 @@ public:
         return ACLNN_SUCCESS;
     };
     ~ConvTransposed2dImpl() override = default;
+
 private:
     bool ConvTransposed2dSwitchHW = false;
     bool isConvTransposed2dSwitchHW() const
     {
         //针对特定场景进行优化 pad=0 dilation=1 outputPadding=0 outW>4096 N=1 inC<=768
-        if (!op::IsSupportND() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 && (*outputPadding)[0] == 0
-        && output->GetViewShape().GetDim(W_DIM_NCHW_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D
-        && input->GetViewShape().GetDim(N_DIM_NCHW_INDEX) == 1
-        && input->GetViewShape().GetDim(H_DIM_NCHW_INDEX) == 1
-        && weight->GetViewShape().GetDim(H_DIM_NCHW_INDEX) == 1
-        && input->GetViewShape().GetDim(C_DIM_NCHW_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D)
-        {
+        if (!op::IsSupportND() && (*stride)[0] == 1 && (*padding)[0] == 0 && (*dilation)[0] == 1 &&
+            (*outputPadding)[0] == 0 &&
+            output->GetViewShape().GetDim(W_DIM_NCHW_INDEX) > W_DIM_NCHW_VALUE_TRANSPOSE1D &&
+            input->GetViewShape().GetDim(N_DIM_NCHW_INDEX) == 1 &&
+            input->GetViewShape().GetDim(H_DIM_NCHW_INDEX) == 1 &&
+            weight->GetViewShape().GetDim(H_DIM_NCHW_INDEX) == 1 &&
+            input->GetViewShape().GetDim(C_DIM_NCHW_INDEX) <= C_DIM_NCHW_VALUE_TRANSPOSE1D) {
             return true;
         }
         return false;
     }
 };
 
-static aclnnStatus CheckN2HAndTranspose(const aclTensor *&input, const aclTensor *&weight, int groups, aclOpExecutor *executor, TransposeAdaptParam *params){
+static aclnnStatus CheckN2HAndTranspose(const aclTensor*& input, const aclTensor*& weight, int groups,
+                                        aclOpExecutor* executor, TransposeAdaptParam* params)
+{
     if (CheckTransposeN2HEnable(input, weight, params->adaptStride, params->adaptDilation, params->adaptPad, groups)) {
         auto ret = N2HChangeInput(input, executor);
         if (ret != ACLNN_SUCCESS) {
@@ -5096,7 +5028,8 @@ static aclnnStatus CheckN2HAndTranspose(const aclTensor *&input, const aclTensor
         OP_LOGD("Conv3d transpose v2 support weight pre transpose.");
         auto originShape = weight->GetOriginalShape();
         // transpose weight NCDHW -> NDHWC
-        auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(), WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
+        auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(),
+                                                 WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
         CHECK_RET(permAfter != nullptr, ACLNN_ERR_INNER_NULLPTR);
         weight = l0op::Transpose(weight, permAfter, executor);
         // 为了infershape正确，需要保存原来的shape
@@ -5122,29 +5055,22 @@ public:
         } else {
             dataFormat = op::Format::FORMAT_NDC1HWC0;
         }
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdFp16, op::DataType::DT_FLOAT16, dataFormat, op::DataType::DT_FLOAT16,
-            dataFormat);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdFp32, op::DataType::DT_FLOAT, dataFormat, op::DataType::DT_FLOAT,
-            dataFormat);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdBf16, op::DataType::DT_BF16, dataFormat, op::DataType::DT_BF16, dataFormat);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdHif8, op::DataType::DT_HIFLOAT8, dataFormat, op::DataType::DT_HIFLOAT8,
-            dataFormat);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdF8e4m3fn, op::DataType::DT_FLOAT8_E4M3FN, dataFormat,
-            op::DataType::DT_FLOAT8_E4M3FN, dataFormat);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NDHWC,
-            op::DataType::DT_FLOAT16, op::Format::FORMAT_NDHWC);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NDHWC,
-            op::DataType::DT_FLOAT, op::Format::FORMAT_NDHWC);
-        REG_L0_FUNCTION(
-            l0Functions, ConvTranspose3d6HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDHWC, op::DataType::DT_BF16,
-            op::Format::FORMAT_NDHWC);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdFp16, op::DataType::DT_FLOAT16, dataFormat,
+                        op::DataType::DT_FLOAT16, dataFormat);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdFp32, op::DataType::DT_FLOAT, dataFormat, op::DataType::DT_FLOAT,
+                        dataFormat);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdBf16, op::DataType::DT_BF16, dataFormat, op::DataType::DT_BF16,
+                        dataFormat);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdHif8, op::DataType::DT_HIFLOAT8, dataFormat,
+                        op::DataType::DT_HIFLOAT8, dataFormat);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdF8e4m3fn, op::DataType::DT_FLOAT8_E4M3FN, dataFormat,
+                        op::DataType::DT_FLOAT8_E4M3FN, dataFormat);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdFp16, op::DataType::DT_FLOAT16, op::Format::FORMAT_NDHWC,
+                        op::DataType::DT_FLOAT16, op::Format::FORMAT_NDHWC);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdFp32, op::DataType::DT_FLOAT, op::Format::FORMAT_NDHWC,
+                        op::DataType::DT_FLOAT, op::Format::FORMAT_NDHWC);
+        REG_L0_FUNCTION(l0Functions, ConvTranspose3d6HdBf16, op::DataType::DT_BF16, op::Format::FORMAT_NDHWC,
+                        op::DataType::DT_BF16, op::Format::FORMAT_NDHWC);
         GetConv3dOpInfo(input, weight, bias, output, opInfo, transposed, cubeMathType);
         bool needChangeFormat = op::IsSupportND() ? false : true;
         if (PreProcessCheckOutputDtype(bias, opInfo, entityName) != ACLNN_SUCCESS) {
@@ -5159,9 +5085,8 @@ public:
 
     aclnnStatus Impl() override
     {
-        convOut = FUNCTION_CALL(
-            l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups,
-            useHf32, executor);
+        convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
+                                outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "convTranspose3d raise an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
@@ -5178,18 +5103,18 @@ public:
         }
 
         bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
-        if (bias && !isDAV3510) { 
-            op::Shape biasShape = bias->GetViewShape(); 
-            int64_t biasLength = biasShape.GetDim(0); 
-            if (dstFormat == op::Format::FORMAT_NDHWC) { 
-                bias = l0op::Reshape(bias, {1, 1, 1, 1, biasLength}, executor); 
-            } else { 
-                bias = l0op::Reshape(bias, {1, biasLength, 1, 1, 1}, executor); 
-            } 
-            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR); 
+        if (bias && !isDAV3510) {
+            op::Shape biasShape = bias->GetViewShape();
+            int64_t biasLength = biasShape.GetDim(0);
+            if (dstFormat == op::Format::FORMAT_NDHWC) {
+                bias = l0op::Reshape(bias, {1, 1, 1, 1, biasLength}, executor);
+            } else {
+                bias = l0op::Reshape(bias, {1, biasLength, 1, 1, 1}, executor);
+            }
+            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-            convOut = l0op::Add(convOut, bias, executor); 
-            CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR); 
+            convOut = l0op::Add(convOut, bias, executor);
+            CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
         if (!op::IsSupportND()) {
@@ -5207,7 +5132,8 @@ public:
         return ACLNN_SUCCESS;
     }
 
-    aclnnStatus ProcessResult() {
+    aclnnStatus ProcessResult()
+    {
         OP_LOGD("Check N2H available.");
         auto storageFormat = convOut->GetStorageFormat();
         auto viewFormat = convOut->GetViewFormat();
@@ -5219,17 +5145,14 @@ public:
             convOut = l0op::Transpose(convOut, perm, executor);
             // change output format
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            const_cast<aclTensor *>(convOut)->SetOriginalFormat(Format::FORMAT_NCDHW);
-            const_cast<aclTensor *>(convOut)->SetStorageFormat(Format::FORMAT_NCDHW);
-            const_cast<aclTensor *>(convOut)->SetViewFormat(Format::FORMAT_NCDHW);
+            const_cast<aclTensor*>(convOut)->SetOriginalFormat(Format::FORMAT_NCDHW);
+            const_cast<aclTensor*>(convOut)->SetStorageFormat(Format::FORMAT_NCDHW);
+            const_cast<aclTensor*>(convOut)->SetViewFormat(Format::FORMAT_NCDHW);
         }
         return ACLNN_SUCCESS;
     }
 
-    virtual aclnnStatus ProcessConvOut()
-    {
-        return ProcessBias(output->GetStorageFormat());
-    }
+    virtual aclnnStatus ProcessConvOut() { return ProcessBias(output->GetStorageFormat()); }
 
     aclnnStatus PostProcess() override
     {
@@ -5250,14 +5173,15 @@ public:
 
 class ConvTranspose2dTo3dImpl : public ConvTransposed3dImpl {
 public:
-    ConvTranspose2dTo3dImpl(
-        const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
-        const aclIntArray* strideParam, const aclIntArray* paddingParam, const aclIntArray* dilationParam,
-        const bool transposedParam, const aclIntArray* outputPaddingParam, const int64_t groupsParam,
-        aclTensor* outputParam, bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam, const std::string& entityNameParam)
-        : ConvTransposed3dImpl(
-              inputParam, weightParam, biasParam, strideParam, paddingParam, dilationParam, transposedParam,
-              outputPaddingParam, groupsParam, outputParam, useHf32Param, cubeMathTypeParam, executorParam, entityNameParam)
+    ConvTranspose2dTo3dImpl(const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
+                            const aclIntArray* strideParam, const aclIntArray* paddingParam,
+                            const aclIntArray* dilationParam, const bool transposedParam,
+                            const aclIntArray* outputPaddingParam, const int64_t groupsParam, aclTensor* outputParam,
+                            bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam,
+                            const std::string& entityNameParam)
+        : ConvTransposed3dImpl(inputParam, weightParam, biasParam, strideParam, paddingParam, dilationParam,
+                               transposedParam, outputPaddingParam, groupsParam, outputParam, useHf32Param,
+                               cubeMathTypeParam, executorParam, entityNameParam)
     {}
 
     aclnnStatus PreProcess() override
@@ -5295,14 +5219,15 @@ public:
 
 class ConvTransposed1dTo3dImpl : public ConvTranspose2dTo3dImpl {
 public:
-    ConvTransposed1dTo3dImpl(
-        const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
-        const aclIntArray* strideParam, const aclIntArray* paddingParam, const aclIntArray* dilationParam,
-        const bool transposedParam, const aclIntArray* outputPaddingParam, const int64_t groupsParam,
-        aclTensor* outputParam, bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam, const std::string& entityNameParam)
-        : ConvTranspose2dTo3dImpl(
-              inputParam, weightParam, biasParam, strideParam, paddingParam, dilationParam, transposedParam,
-              outputPaddingParam, groupsParam, outputParam, useHf32Param, cubeMathTypeParam, executorParam, entityNameParam)
+    ConvTransposed1dTo3dImpl(const aclTensor* inputParam, const aclTensor* weightParam, const aclTensor* biasParam,
+                             const aclIntArray* strideParam, const aclIntArray* paddingParam,
+                             const aclIntArray* dilationParam, const bool transposedParam,
+                             const aclIntArray* outputPaddingParam, const int64_t groupsParam, aclTensor* outputParam,
+                             bool useHf32Param, int8_t cubeMathTypeParam, aclOpExecutor* executorParam,
+                             const std::string& entityNameParam)
+        : ConvTranspose2dTo3dImpl(inputParam, weightParam, biasParam, strideParam, paddingParam, dilationParam,
+                                  transposedParam, outputPaddingParam, groupsParam, outputParam, useHf32Param,
+                                  cubeMathTypeParam, executorParam, entityNameParam)
     {}
 
     aclnnStatus PreProcess() override
@@ -5338,21 +5263,18 @@ public:
 
 static bool CheckTensorFormatNCDHW(const aclTensor* tensor)
 {
-    return tensor != nullptr &&
-           tensor->GetViewFormat() == op::Format::FORMAT_NCDHW &&
+    return tensor != nullptr && tensor->GetViewFormat() == op::Format::FORMAT_NCDHW &&
            tensor->GetStorageFormat() == op::Format::FORMAT_NCDHW;
 }
 
 static bool CheckConv3dTensorShape(const aclTensor* tensor)
 {
-    return tensor != nullptr &&
-           tensor->GetViewShape().GetDimNum() == CONV_3D_DIM_SIZE &&
+    return tensor != nullptr && tensor->GetViewShape().GetDimNum() == CONV_3D_DIM_SIZE &&
            tensor->GetViewShape().GetDim(D_DIM_NCDHW_INDEX) == 1;
 }
 
-static bool CanConv3dToConv2dOn310P(
-    const aclTensor* input, const aclTensor* weight, const aclIntArray* padding, const bool transposed,
-    const aclTensor* output)
+static bool CanConv3dToConv2dOn310P(const aclTensor* input, const aclTensor* weight, const aclIntArray* padding,
+                                    const bool transposed, const aclTensor* output)
 {
     if (transposed || GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P) {
         return false;
@@ -5383,11 +5305,13 @@ static bool CanConv3dToConv2dOn310P(
     return true;
 }
 
-std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclIntArray* stride,
-    const aclIntArray* padding, const aclIntArray* dilation, const bool transposed, const bool tbc,
-    const aclIntArray* outputPadding, const int64_t groups, int8_t cubeMathType, aclTensor* output,
-    aclOpExecutor* executor, const std::string& entityName)
+std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(const aclTensor* input, const aclTensor* weight,
+                                                       const aclTensor* bias, const aclIntArray* stride,
+                                                       const aclIntArray* padding, const aclIntArray* dilation,
+                                                       const bool transposed, const bool tbc,
+                                                       const aclIntArray* outputPadding, const int64_t groups,
+                                                       int8_t cubeMathType, aclTensor* output, aclOpExecutor* executor,
+                                                       const std::string& entityName)
 {
     // 存疑：是否按照原来的只看input dtype
     auto promoteType = op::PromoteType(input->GetDataType(), weight->GetDataType());
@@ -5399,31 +5323,30 @@ std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(
 
     size_t inputDim = input->GetViewShape().GetDimNum();
     if (tbc) {
-        return std::make_shared<ConvTbcImpl>(
-            input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-            cubeMathType, executor, entityName);
+        return std::make_shared<ConvTbcImpl>(input, weight, bias, stride, padding, dilation, transposed, outputPadding,
+                                             groups, output, useHf32, cubeMathType, executor, entityName);
     }
     if (!transposed) {
         switch (inputDim) {
             case CONV_1D_DIM_SIZE: {
-                return std::make_shared<Conv1dImpl>(
-                    input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                    cubeMathType, executor, entityName);
+                return std::make_shared<Conv1dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                    outputPadding, groups, output, useHf32, cubeMathType, executor,
+                                                    entityName);
             }
             case CONV_2D_DIM_SIZE: {
-                return std::make_shared<Conv2dImpl>(
-                    input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                    cubeMathType, executor, entityName);
+                return std::make_shared<Conv2dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                    outputPadding, groups, output, useHf32, cubeMathType, executor,
+                                                    entityName);
             }
             case CONV_3D_DIM_SIZE: {
                 if (CanConv3dToConv2dOn310P(input, weight, padding, transposed, output)) {
-                    return std::make_shared<Conv3dTo2dImpl>(
-                        input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output,
-                        useHf32, cubeMathType, executor, entityName);
+                    return std::make_shared<Conv3dTo2dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                            outputPadding, groups, output, useHf32, cubeMathType,
+                                                            executor, entityName);
                 }
-                return std::make_shared<Conv3dImpl>(
-                    input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                    cubeMathType, executor, entityName);
+                return std::make_shared<Conv3dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                    outputPadding, groups, output, useHf32, cubeMathType, executor,
+                                                    entityName);
             }
             default:
                 return nullptr;
@@ -5432,29 +5355,29 @@ std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(
     switch (inputDim) {
         case CONV_1D_DIM_SIZE: {
             if (IsSupportConv1DTransposeTo3D()) {
-                return std::make_shared<ConvTransposed1dTo3dImpl>(
-                    input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                    cubeMathType, executor, entityName);
+                return std::make_shared<ConvTransposed1dTo3dImpl>(input, weight, bias, stride, padding, dilation,
+                                                                  transposed, outputPadding, groups, output, useHf32,
+                                                                  cubeMathType, executor, entityName);
             }
-            return std::make_shared<ConvTransposed1dImpl>(
-                input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                cubeMathType, executor, entityName);
+            return std::make_shared<ConvTransposed1dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                          outputPadding, groups, output, useHf32, cubeMathType,
+                                                          executor, entityName);
         }
         case CONV_2D_DIM_SIZE: {
-            if (IsSupportConv2DTransposeTo3D(
-                    input, weight, bias, stride, padding, dilation, outputPadding, groups, output)) {
-                return std::make_shared<ConvTranspose2dTo3dImpl>(
-                    input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                    cubeMathType, executor, entityName);
+            if (IsSupportConv2DTransposeTo3D(input, weight, bias, stride, padding, dilation, outputPadding, groups,
+                                             output)) {
+                return std::make_shared<ConvTranspose2dTo3dImpl>(input, weight, bias, stride, padding, dilation,
+                                                                 transposed, outputPadding, groups, output, useHf32,
+                                                                 cubeMathType, executor, entityName);
             }
-            return std::make_shared<ConvTransposed2dImpl>(
-                input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                cubeMathType, executor, entityName);
+            return std::make_shared<ConvTransposed2dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                          outputPadding, groups, output, useHf32, cubeMathType,
+                                                          executor, entityName);
         }
         case CONV_3D_DIM_SIZE: {
-            return std::make_shared<ConvTransposed3dImpl>(
-                input, weight, bias, stride, padding, dilation, transposed, outputPadding, groups, output, useHf32,
-                cubeMathType, executor, entityName);
+            return std::make_shared<ConvTransposed3dImpl>(input, weight, bias, stride, padding, dilation, transposed,
+                                                          outputPadding, groups, output, useHf32, cubeMathType,
+                                                          executor, entityName);
         }
         default:
             return nullptr;
@@ -5467,10 +5390,11 @@ std::shared_ptr<ConvolutionImpl> CreateConvolutionImpl(
 extern "C" {
 #endif
 
-aclnnStatus aclnnConvolutionGetWorkspaceSize(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclIntArray* stride,
-    const aclIntArray* padding, const aclIntArray* dilation, bool transposed, const aclIntArray* outputPadding,
-    const int64_t groups, aclTensor* output, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnConvolutionGetWorkspaceSize(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                             const aclIntArray* stride, const aclIntArray* padding,
+                                             const aclIntArray* dilation, bool transposed,
+                                             const aclIntArray* outputPadding, const int64_t groups, aclTensor* output,
+                                             int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(
         aclnnConvolution,
@@ -5500,9 +5424,8 @@ aclnnStatus aclnnConvolutionGetWorkspaceSize(
             auto convOut = ExecBatchMatmulOpWithBiasAndAttrs(
                 bmmInput.leftData, bmmInput.rightData, bmmInput.biasData, bmmInput.outputData, bmmInput.isLeftTranspose,
                 bmmInput.isRightTranspose, cubeMathType, uniqueExecutor.get());
-            OP_CHECK(
-                convOut != nullptr, OP_LOGE(ACLNN_ERR_INNER, "The BatchMatmul in Conv Return Nullptr."),
-                return ACLNN_ERR_INNER_NULLPTR);
+            OP_CHECK(convOut != nullptr, OP_LOGE(ACLNN_ERR_INNER, "The BatchMatmul in Conv Return Nullptr."),
+                     return ACLNN_ERR_INNER_NULLPTR);
             auto resForBmm = CommonPostProcessForBmm(output, convOut, uniqueExecutor.get());
             CHECK_RET(resForBmm == ACLNN_SUCCESS, resForBmm);
         } else if (convTranspose1DToBmmMode != ConvTranspose1DToBmmMode::CONVTRANSPOSE1D_NO_MM) {
@@ -5512,10 +5435,9 @@ aclnnStatus aclnnConvolutionGetWorkspaceSize(
             auto convTranspose1DOut = ExecBatchMatmulOpWithBiasAndAttrs(
                 bmmInput.leftData, bmmInput.rightData, bmmInput.biasData, bmmInput.outputData, bmmInput.isLeftTranspose,
                 bmmInput.isRightTranspose, cubeMathType, uniqueExecutor.get());
-            OP_CHECK(
-                convTranspose1DOut != nullptr,
-                OP_LOGE(ACLNN_ERR_INNER, "The BatchMatmul in ConvTranspose1D Return Nullptr."),
-                return ACLNN_ERR_INNER_NULLPTR);
+            OP_CHECK(convTranspose1DOut != nullptr,
+                     OP_LOGE(ACLNN_ERR_INNER, "The BatchMatmul in ConvTranspose1D Return Nullptr."),
+                     return ACLNN_ERR_INNER_NULLPTR);
             auto resForBmm = CommonPostProcessForBmm(output, convTranspose1DOut, uniqueExecutor.get());
             CHECK_RET(resForBmm == ACLNN_SUCCESS, resForBmm);
         } else {
@@ -5550,9 +5472,9 @@ aclnnStatus aclnnConvolutionGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnConvTbcGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* weight, const aclTensor* bias, const int64_t pad, aclTensor* output,
-    int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnConvTbcGetWorkspaceSize(const aclTensor* self, const aclTensor* weight, const aclTensor* bias,
+                                         const int64_t pad, aclTensor* output, int8_t cubeMathType,
+                                         uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnConvTbc, DFX_IN(self, weight, bias, pad, cubeMathType), DFX_OUT(output));
     std::string entityName = "aclnnConvTbcGetWorkspaceSize";
@@ -5577,10 +5499,10 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(
     FVector<int64_t> permuteDimsAll{1, 2, 0};
     FVector<int64_t> permuteDimsWeight{2, 1, 0};
     op::Shape inputShape = op::Shape({self->GetViewShape()[1], self->GetViewShape()[2], self->GetViewShape()[0]});
-    op::Shape outputShape =
-        op::Shape({output->GetViewShape()[1], output->GetViewShape()[2], output->GetViewShape()[0]});
-    op::Shape weightShape =
-        op::Shape({weight->GetViewShape()[2], weight->GetViewShape()[1], weight->GetViewShape()[0]});
+    op::Shape outputShape = op::Shape(
+        {output->GetViewShape()[1], output->GetViewShape()[2], output->GetViewShape()[0]});
+    op::Shape weightShape = op::Shape(
+        {weight->GetViewShape()[2], weight->GetViewShape()[1], weight->GetViewShape()[0]});
 
     auto* permuteInput = self->IsEmpty() ? ViewWithShape(self, inputShape, uniqueExecutor.get()) :
                                            Permute(self, permuteDimsAll, uniqueExecutor.get());
@@ -5637,14 +5559,14 @@ aclnnStatus aclnnConvTbc(void* workspace, const uint64_t workspaceSize, aclOpExe
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnConvDepthwise2dGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* weight, const aclIntArray* kernelSize, const aclTensor* bias,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, aclTensor* out,
-    int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnConvDepthwise2dGetWorkspaceSize(const aclTensor* self, const aclTensor* weight,
+                                                 const aclIntArray* kernelSize, const aclTensor* bias,
+                                                 const aclIntArray* stride, const aclIntArray* padding,
+                                                 const aclIntArray* dilation, aclTensor* out, int8_t cubeMathType,
+                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnConvDepthwise2d, DFX_IN(self, weight, kernelSize, bias, stride, padding, dilation, cubeMathType),
-        DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnConvDepthwise2d,
+                   DFX_IN(self, weight, kernelSize, bias, stride, padding, dilation, cubeMathType), DFX_OUT(out));
     int64_t groups = 1;
     // construct param and convolution engine
     ConvParams params = {self,    weight, bias, stride,       padding,       dilation, false,
@@ -5696,8 +5618,8 @@ aclnnStatus aclnnConvDepthwise2dGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnConvDepthwise2d(
-    void* workspace, const uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnConvDepthwise2d(void* workspace, const uint64_t workspaceSize, aclOpExecutor* executor,
+                                 aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnConvDepthwise2d);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

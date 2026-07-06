@@ -9,7 +9,7 @@
  */
 /*!
  * \file adam_apply_one_assign_proto.h
- * \brief 
+ * \brief
  */
 #ifndef OPS_OP_PROTO_INC_ADAM_APPLY_ONE_ASSIGN_H_
 #define OPS_OP_PROTO_INC_ADAM_APPLY_ONE_ASSIGN_H_
@@ -38,7 +38,8 @@ namespace ge {
 * @par Outputs:
 * input1: A ND Tensor. Intermediate result: input1 x mul2_x + input0^2 x mul3_x. Type float16, float32.
 * input2: A ND Tensor. Intermediate result: mul0_x x input2 + mul1_x x input0. Type float16, float32.
-* input3: A ND Tensor. Parameter update result: input3 - out_input2 / (sqrt(out_input1) + add2_y) x input4. Type float16, float32.
+* input3: A ND Tensor. Parameter update result: input3 - out_input2 / (sqrt(out_input1) + add2_y) x input4. Type
+float16, float32.
 
 * @attention Constraints:
 * All input and output data types must be consistent.

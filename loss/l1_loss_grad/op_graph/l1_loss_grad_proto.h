@@ -36,7 +36,8 @@ namespace ge {
 * @attention Constraints:
 * @li In Atlas A2 Training Series Product/Atlas 800I A2 Inference Product/A200I A2 Box Heterogeneous Component and
 * Atlas A3 Training Series Product/Atlas A3 Inference Series Product,
-* broadcasting is not allowed between input grads, input predict and input label, the three inputs must have the same shape. \n
+* broadcasting is not allowed between input grads, input predict and input label, the three inputs must have the same
+shape. \n
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator L1LossGrad.
@@ -48,5 +49,5 @@ REG_OP(L1LossGrad)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(L1LossGrad)
-}
+} // namespace ge
 #endif // L1_LOSS_GRAD_OP_PROTO_H_

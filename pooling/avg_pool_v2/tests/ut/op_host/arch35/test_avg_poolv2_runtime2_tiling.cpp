@@ -29,7 +29,7 @@ using namespace ge;
 using namespace gert;
 using namespace optiling;
 
-struct AvgPoolV2TilingParseInfo: CubeTilingCommonParseInfo {
+struct AvgPoolV2TilingParseInfo : CubeTilingCommonParseInfo {
     int64_t stridesH = 0;
     int64_t stridesW = 0;
 };
@@ -48,7 +48,7 @@ struct AvgPoolV2TilingRuntime2TestParam {
     Format yOriginFormat;
     initializer_list<int64_t> yStorageShape;
     Format yStorageFormat;
-    
+
     vector<int64_t> ksize;
     vector<int64_t> strides;
     string paddingMode;
@@ -68,28 +68,26 @@ struct AvgPoolV2TilingRuntime2TestParam {
 };
 
 class AvgPoolV2TilingRunTime2 : public testing::TestWithParam<AvgPoolV2TilingRuntime2TestParam> {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "AvgPoolV2TilingRunTime2 SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "AvgPoolV2TilingRunTime2 SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "AvgPoolV2TilingRunTime2 TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "AvgPoolV2TilingRunTime2 TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tilingData) {
-  auto data = tilingData->GetData();
-  string result;
-  for (size_t i = 0; i < tilingData->GetDataSize(); i += sizeof(int32_t)) {
-    result += std::to_string((reinterpret_cast<const int32_t *>(tilingData->GetData())[i / sizeof(int32_t)]));
-    result += " ";
-  }
+static string TilingData2Str(const gert::TilingData* tilingData)
+{
+    auto data = tilingData->GetData();
+    string result;
+    for (size_t i = 0; i < tilingData->GetDataSize(); i += sizeof(int32_t)) {
+        result += std::to_string((reinterpret_cast<const int32_t*>(tilingData->GetData())[i / sizeof(int32_t)]));
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
-TEST_P(AvgPoolV2TilingRunTime2, general_cases) {
+TEST_P(AvgPoolV2TilingRunTime2, general_cases)
+{
     AvgPoolV2TilingRuntime2TestParam param = GetParam();
     cout << "run case " << param.caseName << endl;
 
@@ -116,10 +114,10 @@ TEST_P(AvgPoolV2TilingRunTime2, general_cases) {
 
     AvgPoolV2TilingParseInfo opInfo;
     auto kernelHolder = gert::KernelRunContextFaker()
-        .KernelIONum(1, 1)
-        .Inputs({const_cast<char *>(param.compileInfo.c_str())})
-        .Outputs({&opInfo})
-        .Build();
+                            .KernelIONum(1, 1)
+                            .Inputs({const_cast<char*>(param.compileInfo.c_str())})
+                            .Outputs({&opInfo})
+                            .Build();
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), GRAPH_SUCCESS);
 
     StorageShape xShape = {param.xOriginShape, param.xStorageShape};
@@ -133,21 +131,21 @@ TEST_P(AvgPoolV2TilingRunTime2, general_cases) {
         make_pair("global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(param.globalPooling)),
         make_pair("ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(param.ceilMode)),
         make_pair("exclusive", Ops::NN::AnyValue::CreateFrom<bool>(param.exclusive)),
-        };
+    };
     auto tilingData = gert::TilingData::CreateCap(2048);
     auto holder = gert::TilingContextFaker()
-        .SetOpType(param.opType)
-        .NodeIoNum(1, 1)
-        .IrInstanceNum({1})
-        .InputShapes({&xShape})
-        .OutputShapes({&yShape})
-        .NodeAttrs(attrsPairs)
-        .NodeInputTd(0, DT_FLOAT16, param.xOriginFormat, param.xStorageFormat)
-        .NodeOutputTd(0, DT_FLOAT16, param.yOriginFormat, param.yStorageFormat)
-        .CompileInfo(&opInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tilingData.get())
-        .Build();
+                      .SetOpType(param.opType)
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs(attrsPairs)
+                      .NodeInputTd(0, DT_FLOAT16, param.xOriginFormat, param.xStorageFormat)
+                      .NodeOutputTd(0, DT_FLOAT16, param.yOriginFormat, param.yStorageFormat)
+                      .CompileInfo(&opInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tilingData.get())
+                      .Build();
 
     TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -174,28 +172,54 @@ TEST_P(AvgPoolV2TilingRunTime2, general_cases) {
 }
 
 static AvgPoolV2TilingRuntime2TestParam general_cases_params[] = {
-    {
-        // data_format="UNKNOWN" -> GetAttrsInfo fails -> GRAPH_FAILED
-        "AvgPoolV2_tiling_dynamic_invalidFormat", "AvgPoolV2",
-        R"({"_pattern": "Convolution", "push_status": 0, "tiling_type": "dynamic_tiling", "repo_seeds": {}, "repo_range": {}, "cost_range": {"10000": [1, 10, 10, 25, 10, 25]}, "block_dim": {"10000": 2}, "strides_h" : 60, "strides_w" : 60, "_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}, "_custom_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}})",
-        {1, 32, 16, 16}, Format::FORMAT_NCHW,
-        {1, 32, 16, 16}, Format::FORMAT_NCHW,
-        {1, 32, 15, 15}, Format::FORMAT_NCHW,
-        {1, 32, 15, 15}, Format::FORMAT_NCHW,
-        {1, 1, 2, 2}, {1, 1, 1, 1}, "VALID", {0, 0, 0, 0}, "UNKNOWN", false, false, true,
-        0, 0, "", false
-    },
-    {
-        // NCHW: strides={1,1,-1,1} -> sH=strides[2]=-1 <= 0 -> GetStrideInfo fails -> GRAPH_FAILED
-        "AvgPoolV2_tiling_dynamic_invalidStride", "AvgPoolV2",
-        R"({"_pattern": "Convolution", "push_status": 0, "tiling_type": "dynamic_tiling", "repo_seeds": {}, "repo_range": {}, "cost_range": {"10000": [1, 10, 10, 25, 10, 25]}, "block_dim": {"10000": 2}, "strides_h" : 64, "strides_w" : 64, "_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}, "_custom_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}})",
-        {1, 32, 16, 16}, Format::FORMAT_NCHW,
-        {1, 32, 16, 16}, Format::FORMAT_NCHW,
-        {1, 32, 15, 15}, Format::FORMAT_NCHW,
-        {1, 32, 15, 15}, Format::FORMAT_NCHW,
-        {1, 1, 2, 2}, {1, 1, -1, 1}, "VALID", {0, 0, 0, 0}, "NCHW", false, false, true,
-        0, 0, "", false
-    },
+    {// data_format="UNKNOWN" -> GetAttrsInfo fails -> GRAPH_FAILED
+     "AvgPoolV2_tiling_dynamic_invalidFormat",
+     "AvgPoolV2",
+     R"({"_pattern": "Convolution", "push_status": 0, "tiling_type": "dynamic_tiling", "repo_seeds": {}, "repo_range": {}, "cost_range": {"10000": [1, 10, 10, 25, 10, 25]}, "block_dim": {"10000": 2}, "strides_h" : 60, "strides_w" : 60, "_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}, "_custom_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}})",
+     {1, 32, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 32, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 32, 15, 15},
+     Format::FORMAT_NCHW,
+     {1, 32, 15, 15},
+     Format::FORMAT_NCHW,
+     {1, 1, 2, 2},
+     {1, 1, 1, 1},
+     "VALID",
+     {0, 0, 0, 0},
+     "UNKNOWN",
+     false,
+     false,
+     true,
+     0,
+     0,
+     "",
+     false},
+    {// NCHW: strides={1,1,-1,1} -> sH=strides[2]=-1 <= 0 -> GetStrideInfo fails -> GRAPH_FAILED
+     "AvgPoolV2_tiling_dynamic_invalidStride",
+     "AvgPoolV2",
+     R"({"_pattern": "Convolution", "push_status": 0, "tiling_type": "dynamic_tiling", "repo_seeds": {}, "repo_range": {}, "cost_range": {"10000": [1, 10, 10, 25, 10, 25]}, "block_dim": {"10000": 2}, "strides_h" : 64, "strides_w" : 64, "_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}, "_custom_vars": {"10000": ["batch_n", "fmap_h", "ho", "fmap_w", "wo"]}})",
+     {1, 32, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 32, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 32, 15, 15},
+     Format::FORMAT_NCHW,
+     {1, 32, 15, 15},
+     Format::FORMAT_NCHW,
+     {1, 1, 2, 2},
+     {1, 1, -1, 1},
+     "VALID",
+     {0, 0, 0, 0},
+     "NCHW",
+     false,
+     false,
+     true,
+     0,
+     0,
+     "",
+     false},
 };
 
 INSTANTIATE_TEST_CASE_P(AvgPoolV2, AvgPoolV2TilingRunTime2, testing::ValuesIn(general_cases_params));

@@ -19,12 +19,13 @@
 using namespace DeformableConv2dNS;
 
 extern "C" __global__ __aicore__ void deformable_conv2d(GM_ADDR x, GM_ADDR weight, GM_ADDR offset, GM_ADDR bias,
-    GM_ADDR out, GM_ADDR deform_out, GM_ADDR workspace, GM_ADDR tiling)
+                                                        GM_ADDR out, GM_ADDR deform_out, GM_ADDR workspace,
+                                                        GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 
-    const DeformableConv2dTilingData *__restrict tiling_data = &tilingData;
-    const TCubeTiling *__restrict mmTiling = &(tiling_data->mmTilingData);
+    const DeformableConv2dTilingData* __restrict tiling_data = &tilingData;
+    const TCubeTiling* __restrict mmTiling = &(tiling_data->mmTilingData);
 
     GM_ADDR userWS = GetUserWorkspace(workspace);
     if (userWS == nullptr) {

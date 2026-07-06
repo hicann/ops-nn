@@ -6,8 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
 
 /*!
  * \file test_conv3d_tiling_engine.cpp
@@ -441,18 +440,18 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 
 //     // Test fMapDtype=INT4 (should be rejected)
 //     engine.SetGroups(1);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::INT4, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
-//     EXPECT_FALSE(engine.CheckInputLimitsHwMode());
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::INT4, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16); EXPECT_FALSE(engine.CheckInputLimitsHwMode());
 
 //     // Test UINT8 dtype with groups=1 (should be rejected in HW mode)
 //     engine.SetGroups(1);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::UINT8, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
-//     EXPECT_FALSE(engine.CheckInputLimitsHwMode());
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::UINT8, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16); EXPECT_FALSE(engine.CheckInputLimitsHwMode());
 
 //     // Test valid case: groups=1 with supported dtype
 //     engine.SetGroups(1);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
-//     EXPECT_TRUE(engine.CheckInputLimitsHwMode());
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16); EXPECT_TRUE(engine.CheckInputLimitsHwMode());
 // }
 
 // // ---------------------------------------------------------------------------
@@ -483,8 +482,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetStride({1, 1, 1});
 //     engine.SetDilation({1, 1, 1});
 //     engine.SetGroups(1);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
-//     engine.SetBias(false, Conv3dApiTiling::ConvDtype::FLOAT32);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16); engine.SetBias(false, Conv3dApiTiling::ConvDtype::FLOAT32);
 
 //     // Use small L1 size to force M mode failure
 //     FillPlatformInfoForTest(engine, 2000);
@@ -508,7 +507,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetStride({1, 1, 1});
 //     engine.SetDilation({1, 1, 1});
 //     engine.SetGroups(2);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     // Use small L1 size to force M mode failure
 //     FillPlatformInfoForTest(engine, 2000);
@@ -534,7 +534,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetOrgWeightShape(weightShape);
 //     engine.SetOrgOutputShape(outputShape);
 //     engine.SetGroups(4);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     EXPECT_TRUE(engine.GetGroupConvOpt());
 //     EXPECT_EQ(engine.attrInfo_.groupOpt, 2);
@@ -554,7 +555,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetOrgFmapShape(fmapShape);
 //     engine.SetOrgWeightShape(weightShape);
 //     engine.SetGroups(3);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     EXPECT_FALSE(engine.GetGroupConvOpt());
 // }
@@ -573,7 +575,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetOrgWeightShape(weightShape);
 //     engine.SetGroups(1);
 
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     // This should fail because cIn and cOut exceed INT32_MAX and will be truncated when casting
 //     // Or because the multiplication inside CalOptGroupParams will overflow
@@ -597,7 +600,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetOrgFmapShape(hugeFmap);
 //     engine.SetOrgWeightShape(hugeWeight);
 //     engine.SetGroups(1000);  // groups = 1000
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     // First get group optimization (should succeed with these values)
 //     EXPECT_TRUE(engine.GetGroupConvOpt());
@@ -635,7 +639,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetOrgWeightShape(weightShape);
 //     engine.SetOrgOutputShape(outputShape);
 //     engine.SetBias(true, Conv3dApiTiling::ConvDtype::FLOAT32);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     // Use L1 size that should accommodate bias contribution
 //     FillPlatformInfoForTest(engine, 200000); // Sufficient L1 size including bias
@@ -764,7 +769,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetStride({2, 2, 2});
 //     engine.SetDilation({1, 1, 1});
 //     engine.SetGroups(1);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     // Test that NumBlocks decision completes successfully
 //     EXPECT_TRUE(engine.ComputeNumBlocks());
@@ -796,7 +802,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetStride({1, 1, 1});
 //     engine.SetDilation({1, 1, 1});
 //     engine.SetGroups(4); // Multi-group to trigger groupDim consideration
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     EXPECT_TRUE(engine.ComputeNumBlocks());
 
@@ -927,7 +934,8 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     engine.SetOrgFmapShape(fmapShape);
 //     engine.SetOrgWeightShape(weightShape);
 //     engine.SetGroups(8);
-//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16);
+//     engine.SetDataType(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::BF16,
+//     Conv3dApiTiling::ConvDtype::BF16);
 
 //     EXPECT_TRUE(engine.GetGroupConvOpt());
 //     // After CalOptGroupParams optimization for BF16 (k0=n0=16):
@@ -1084,11 +1092,12 @@ using optiling::Conv3dOpsTiling::Conv3dBaseTiling;
 //     };
 
 //     std::vector<DtypeCombo> validCombos = {
-//         {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, true, true}, // Supported: BF16,BF16,FLOAT32,BF16
-//         {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, false, true}, // Supported: BF16,BF16,BF16
-//         {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, true, true}, // Supported: FP16,FP16,FP16,FP16
-//         {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, true, true}, // Supported: FP32,FP32,FP32,FP32
-//         {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT32, false, true}  // Supported: INT8,INT8,FLOAT16
+//         {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, true, true}, // Supported:
+//         BF16,BF16,FLOAT32,BF16 {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, false, true},
+//         // Supported: BF16,BF16,BF16 {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16,
+//         true, true}, // Supported: FP16,FP16,FP16,FP16 {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32,
+//         ConvDtype::FLOAT32, true, true}, // Supported: FP32,FP32,FP32,FP32 {ConvDtype::INT8, ConvDtype::INT8,
+//         ConvDtype::FLOAT16, ConvDtype::FLOAT32, false, true}  // Supported: INT8,INT8,FLOAT16
 //     };
 
 //     for (const auto &combo : validCombos) {

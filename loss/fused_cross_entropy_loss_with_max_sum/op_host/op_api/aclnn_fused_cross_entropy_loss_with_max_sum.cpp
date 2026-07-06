@@ -34,12 +34,12 @@ static const int64_t VOCAB_DIM = 2;
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_LOGITS = {DataType::DT_FLOAT};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_VOCAB = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_VOCAB = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                         DataType::DT_BF16};
 
-static inline bool CheckNotNull(
-    const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits,
-    const aclTensor* lossOut, const aclTensor* vocabParallelLogitsOptional, const aclTensor* softMaxOutOptional)
+static inline bool CheckNotNull(const aclTensor* logitsMax, const aclTensor* sumExpLogits,
+                                const aclTensor* predictedLogits, const aclTensor* lossOut,
+                                const aclTensor* vocabParallelLogitsOptional, const aclTensor* softMaxOutOptional)
 {
     OP_CHECK_NULL(logitsMax, return false);
     OP_CHECK_NULL(sumExpLogits, return false);
@@ -51,9 +51,9 @@ static inline bool CheckNotNull(
     return true;
 }
 
-static inline bool CheckDtypeValid(
-    const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits,
-    const aclTensor* vocabParallelLogitsOptional, const aclTensor* lossOut, const aclTensor* softMaxOutOptional)
+static inline bool CheckDtypeValid(const aclTensor* logitsMax, const aclTensor* sumExpLogits,
+                                   const aclTensor* predictedLogits, const aclTensor* vocabParallelLogitsOptional,
+                                   const aclTensor* lossOut, const aclTensor* softMaxOutOptional)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(logitsMax, DTYPE_SUPPORT_LIST_LOGITS, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(sumExpLogits, DTYPE_SUPPORT_LIST_LOGITS, return false);
@@ -69,9 +69,9 @@ static inline bool CheckDtypeValid(
     return true;
 }
 
-static inline bool CheckShape(
-    const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits,
-    const aclTensor* vocabParallelLogitsOptional, const aclTensor* lossOut, const aclTensor* softMaxOutOptional)
+static inline bool CheckShape(const aclTensor* logitsMax, const aclTensor* sumExpLogits,
+                              const aclTensor* predictedLogits, const aclTensor* vocabParallelLogitsOptional,
+                              const aclTensor* lossOut, const aclTensor* softMaxOutOptional)
 {
     OP_CHECK_MAX_DIM(logitsMax, LOGISTS_MAX, return false);
     OP_CHECK_MIN_DIM(logitsMax, LOGISTS_MAX, return false);
@@ -88,20 +88,23 @@ static inline bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits, float labelSmoothing,
-    [[maybe_unused]] const aclTensor* inputOptional, [[maybe_unused]] const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional,
-    aclTensor* lossOut, aclTensor* softMaxOutOptional)
+static aclnnStatus CheckParams(const aclTensor* logitsMax, const aclTensor* sumExpLogits,
+                               const aclTensor* predictedLogits, float labelSmoothing,
+                               [[maybe_unused]] const aclTensor* inputOptional,
+                               [[maybe_unused]] const aclTensor* weightOptional,
+                               const aclTensor* vocabParallelLogitsOptional, aclTensor* lossOut,
+                               aclTensor* softMaxOutOptional)
 {
     // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(logitsMax, sumExpLogits, predictedLogits, lossOut, vocabParallelLogitsOptional, softMaxOutOptional), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(logitsMax, sumExpLogits, predictedLogits, lossOut, vocabParallelLogitsOptional,
+                           softMaxOutOptional),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(
-        CheckDtypeValid(
-            logitsMax, sumExpLogits, predictedLogits, vocabParallelLogitsOptional, lossOut, softMaxOutOptional),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(logitsMax, sumExpLogits, predictedLogits, vocabParallelLogitsOptional, lossOut,
+                              softMaxOutOptional),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查shape是否满足约束
     CHECK_RET(
@@ -121,19 +124,16 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(
     const aclTensor* inputOptional, const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional,
     aclTensor* lossOut, aclTensor* softMaxOutOptional, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnFusedCrossEntropyLossWithMaxSum,
-        DFX_IN(
-            logitsMax, sumExpLogits, predictedLogits, labelSmoothing, inputOptional, weightOptional,
-            vocabParallelLogitsOptional),
-        DFX_OUT(lossOut, softMaxOutOptional));
+    L2_DFX_PHASE_1(aclnnFusedCrossEntropyLossWithMaxSum,
+                   DFX_IN(logitsMax, sumExpLogits, predictedLogits, labelSmoothing, inputOptional, weightOptional,
+                          vocabParallelLogitsOptional),
+                   DFX_OUT(lossOut, softMaxOutOptional));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        logitsMax, sumExpLogits, predictedLogits, labelSmoothing, inputOptional, weightOptional,
-        vocabParallelLogitsOptional, lossOut, softMaxOutOptional);
+    auto ret = CheckParams(logitsMax, sumExpLogits, predictedLogits, labelSmoothing, inputOptional, weightOptional,
+                           vocabParallelLogitsOptional, lossOut, softMaxOutOptional);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     //  logitsMax如果非连续，需要转连续
@@ -162,8 +162,8 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(
     auto viewCopylossOutResult = l0op::ViewCopy(std::get<0>(result), lossOut, uniqueExecutor.get());
     CHECK_RET(viewCopylossOutResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (vocabParallelLogitsOptional != nullptr) {
-        auto viewCopysoftMaxOutOptionalResult =
-            l0op::ViewCopy(std::get<1>(result), softMaxOutOptional, uniqueExecutor.get());
+        auto viewCopysoftMaxOutOptionalResult = l0op::ViewCopy(std::get<1>(result), softMaxOutOptional,
+                                                               uniqueExecutor.get());
         CHECK_RET(viewCopysoftMaxOutOptionalResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     // 固定写法，获取计算过程中需要使用的workspace大小
@@ -172,8 +172,8 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSumGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                 aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFusedCrossEntropyLossWithMaxSum);
     // 固定写法，调用框架能力，完成计算

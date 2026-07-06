@@ -23,15 +23,9 @@
 // ----------------CTCLossV2Grad-------------------
 class CTCLossV2GradProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CTCLossV2Grad Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CTCLossV2Grad Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CTCLossV2Grad Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CTCLossV2Grad Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(CTCLossV2GradProtoTest, ctc_loss_v2_grad_infer_shape_test_1)

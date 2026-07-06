@@ -27,14 +27,8 @@ using namespace std;
 
 class softplus_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "softplus_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "softplus_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "softplus_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "softplus_test TearDown\n" << endl; }
 };
 
 TEST_F(softplus_test, test_case_0)
@@ -71,7 +65,7 @@ TEST_F(softplus_test, test_case_0)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(SoftplusKernel, blockDim, x, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(SoftplusKernel, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);

@@ -38,9 +38,8 @@ const float32_t EPSILON = 0.00001f;
 bool GetCapturedNode(const std::unique_ptr<MatchResult>& match_result, int64_t index, GNode& node)
 {
     NodeIo node_io;
-    OP_LOGE_IF(
-        match_result->GetCapturedTensor(index, node_io) != SUCCESS, false, kPassName.c_str(),
-        "get captured node failed, index is %ld.", index);
+    OP_LOGE_IF(match_result->GetCapturedTensor(index, node_io) != SUCCESS, false, kPassName.c_str(),
+               "get captured node failed, index is %ld.", index);
     node = node_io.node;
     return true;
 }
@@ -51,10 +50,7 @@ bool IsDynamicShape(const Shape& shape)
     return std::any_of(dims.begin(), dims.end(), [](int64_t dim) { return dim < 0; });
 }
 
-bool IsScalar(const Shape& shape)
-{
-    return shape.GetDimNum() == 0;
-}
+bool IsScalar(const Shape& shape) { return shape.GetDimNum() == 0; }
 
 Status InferShape(const std::unique_ptr<Graph>& replace_graph, const std::vector<SubgraphInput>& subgraph_inputs)
 {
@@ -114,9 +110,8 @@ bool IsSupportedPlatform()
 bool CheckNormAxis(const GNode& ln_node, const Shape& x_shape, size_t norm_axis)
 {
     int64_t begin_norm_axis = 0;
-    OP_LOGE_IF(
-        ln_node.GetAttr("begin_norm_axis", begin_norm_axis) != GRAPH_SUCCESS, false, kPassName.c_str(),
-        "get LayerNorm begin_norm_axis attr failed.");
+    OP_LOGE_IF(ln_node.GetAttr("begin_norm_axis", begin_norm_axis) != GRAPH_SUCCESS, false, kPassName.c_str(),
+               "get LayerNorm begin_norm_axis attr failed.");
     const int64_t x_rank = static_cast<int64_t>(x_shape.GetDimNum());
     const int64_t real_norm_axis = begin_norm_axis < 0 ? begin_norm_axis + x_rank : begin_norm_axis;
     if (real_norm_axis < 0 || real_norm_axis >= x_rank) {
@@ -130,21 +125,17 @@ bool CheckNormAxis(const GNode& ln_node, const Shape& x_shape, size_t norm_axis)
     return true;
 }
 
-bool CheckRemoveBrc(
-    const GNode& ln_node, const GNode& gamma_brc_node, const GNode& beta_brc_node)
+bool CheckRemoveBrc(const GNode& ln_node, const GNode& gamma_brc_node, const GNode& beta_brc_node)
 {
     TensorDesc x_desc;
     TensorDesc gamma_desc;
     TensorDesc beta_desc;
-    OP_LOGE_IF(
-        ln_node.GetInputDesc(0, x_desc) != GRAPH_SUCCESS, false, kPassName.c_str(),
-        "get LayerNorm x input desc failed.");
-    OP_LOGE_IF(
-        gamma_brc_node.GetInputDesc(0, gamma_desc) != GRAPH_SUCCESS, false, kPassName.c_str(),
-        "get gamma input desc failed.");
-    OP_LOGE_IF(
-        beta_brc_node.GetInputDesc(0, beta_desc) != GRAPH_SUCCESS, false, kPassName.c_str(),
-        "get beta input desc failed.");
+    OP_LOGE_IF(ln_node.GetInputDesc(0, x_desc) != GRAPH_SUCCESS, false, kPassName.c_str(),
+               "get LayerNorm x input desc failed.");
+    OP_LOGE_IF(gamma_brc_node.GetInputDesc(0, gamma_desc) != GRAPH_SUCCESS, false, kPassName.c_str(),
+               "get gamma input desc failed.");
+    OP_LOGE_IF(beta_brc_node.GetInputDesc(0, beta_desc) != GRAPH_SUCCESS, false, kPassName.c_str(),
+               "get beta input desc failed.");
 
     const Shape x_shape = x_desc.GetShape();
     const Shape gamma_shape = gamma_desc.GetShape();
@@ -186,19 +177,17 @@ Status CalcNormAxis(const GNode& ln_node, const GNode& gamma_brc_node, int64_t& 
 {
     TensorDesc x_desc;
     TensorDesc gamma_desc;
-    OP_LOGE_IF(
-        ln_node.GetInputDesc(0, x_desc) != GRAPH_SUCCESS, FAILED, kPassName.c_str(),
-        "get LayerNorm x input desc failed.");
-    OP_LOGE_IF(
-        gamma_brc_node.GetInputDesc(0, gamma_desc) != GRAPH_SUCCESS, FAILED, kPassName.c_str(),
-        "get gamma input desc failed.");
+    OP_LOGE_IF(ln_node.GetInputDesc(0, x_desc) != GRAPH_SUCCESS, FAILED, kPassName.c_str(),
+               "get LayerNorm x input desc failed.");
+    OP_LOGE_IF(gamma_brc_node.GetInputDesc(0, gamma_desc) != GRAPH_SUCCESS, FAILED, kPassName.c_str(),
+               "get gamma input desc failed.");
 
     norm_axis = static_cast<int64_t>(x_desc.GetShape().GetDimNum() - gamma_desc.GetShape().GetDimNum());
     return SUCCESS;
 }
 
-std::vector<es::EsTensorHolder> CreateReplacementInputs(
-    es::EsGraphBuilder& graph_builder, const std::vector<SubgraphInput>& subgraph_inputs)
+std::vector<es::EsTensorHolder> CreateReplacementInputs(es::EsGraphBuilder& graph_builder,
+                                                        const std::vector<SubgraphInput>& subgraph_inputs)
 {
     std::vector<es::EsTensorHolder> inputs;
     for (size_t i = 0; i < subgraph_inputs.size(); ++i) {
@@ -221,7 +210,7 @@ std::vector<es::EsTensorHolder> CreateReplacementInputs(
     return inputs;
 }
 
-}
+} // namespace
 
 std::vector<PatternUniqPtr> LayerNormRemoveBroadcastFusionPass::Patterns()
 {
@@ -267,14 +256,12 @@ std::unique_ptr<Graph> LayerNormRemoveBroadcastFusionPass::Replacement(const std
 {
     OPS_LOG_D(kPassName.c_str(), "Enter Replacement for LayerNormRemoveBroadcastFusionPass.");
     GNode ln_node;
-    OP_LOGE_IF(
-        !GetCapturedNode(match_result, kLNCaptureIdx, ln_node), nullptr, kPassName.c_str(),
-        "Get captured LayerNorm node failed.");
+    OP_LOGE_IF(!GetCapturedNode(match_result, kLNCaptureIdx, ln_node), nullptr, kPassName.c_str(),
+               "Get captured LayerNorm node failed.");
 
     GNode gamma_brc_node;
-    OP_LOGE_IF(
-        !GetCapturedNode(match_result, kGammaBrcCaptureIdx, gamma_brc_node), nullptr, kPassName.c_str(),
-        "Get captured gamma BroadcastTo node failed.");
+    OP_LOGE_IF(!GetCapturedNode(match_result, kGammaBrcCaptureIdx, gamma_brc_node), nullptr, kPassName.c_str(),
+               "Get captured gamma BroadcastTo node failed.");
 
     std::vector<SubgraphInput> subgraph_inputs;
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);
@@ -296,12 +283,10 @@ std::unique_ptr<Graph> LayerNormRemoveBroadcastFusionPass::Replacement(const std
     if (replacement_inputs.size() != subgraph_inputs.size()) {
         return nullptr;
     }
-    auto layer_norm = es::LayerNorm(
-        replacement_inputs[kSubgraphInputX], replacement_inputs[kSubgraphInputGamma],
-        replacement_inputs[kSubgraphInputBeta], norm_axis, norm_axis, epsilon);
-    OP_LOGE_IF(
-        layer_norm.y.AddControlEdge({replacement_inputs[kSubgraphInputShape]}) != SUCCESS, nullptr, kPassName.c_str(),
-        "Add control edge from broadcast shape to replacement LayerNorm failed.");
+    auto layer_norm = es::LayerNorm(replacement_inputs[kSubgraphInputX], replacement_inputs[kSubgraphInputGamma],
+                                    replacement_inputs[kSubgraphInputBeta], norm_axis, norm_axis, epsilon);
+    OP_LOGE_IF(layer_norm.y.AddControlEdge({replacement_inputs[kSubgraphInputShape]}) != SUCCESS, nullptr,
+               kPassName.c_str(), "Add control edge from broadcast shape to replacement LayerNorm failed.");
 
     std::vector<es::EsTensorHolder> outputs = {layer_norm.y, layer_norm.mean, layer_norm.variance};
     auto graph = graph_builder.BuildAndReset(outputs);
@@ -313,4 +298,4 @@ std::unique_ptr<Graph> LayerNormRemoveBroadcastFusionPass::Replacement(const std
 }
 
 REG_FUSION_PASS(LayerNormRemoveBroadcastFusionPass).Stage(CustomPassStage::kAfterInferShape);
-}
+} // namespace ops

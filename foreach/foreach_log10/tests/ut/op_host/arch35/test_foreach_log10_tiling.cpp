@@ -32,25 +32,19 @@ using namespace ut_util;
 
 class ForeachLog10Arch35TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachLog10Arch35TilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachLog10Arch35TilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachLog10Arch35TilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ForeachLog10Arch35TilingTest TearDown" << std::endl; }
 };
 
-static void DoCase(std::initializer_list<int64_t> xShape,
-                   ge::DataType inputDt, uint64_t expectKey)
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType inputDt, uint64_t expectKey)
 {
     fe::PlatFormInfos pf;
     std::map<std::string, std::string> soc, ai, intr;
     GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":253952,"CORE_NUM":64}})", soc, ai, intr);
     pf.Init();
 
-    struct ForeachLog10CompileInfo {} ci;
+    struct ForeachLog10CompileInfo {
+    } ci;
     auto opType = std::string("ForeachLog10");
     auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
@@ -58,9 +52,11 @@ static void DoCase(std::initializer_list<int64_t> xShape,
     ASSERT_NE(tilingParseFn, nullptr);
 
     std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -72,14 +68,18 @@ static void DoCase(std::initializer_list<int64_t> xShape,
     gert::StorageShape yS = {xShape, xShape};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
-    auto th = gert::TilingContextFaker().NodeIoNum(1, 1).IrInstanceNum({1})
-        .InputShapes({&xS}).OutputShapes({&yS})
-        .CompileInfo(&ci).PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, inputDt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, inputDt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
-        .Build();
+    auto th = gert::TilingContextFaker()
+                  .NodeIoNum(1, 1)
+                  .IrInstanceNum({1})
+                  .InputShapes({&xS})
+                  .OutputShapes({&yS})
+                  .CompileInfo(&ci)
+                  .PlatformInfo(reinterpret_cast<char*>(&pf))
+                  .NodeInputTd(0, inputDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, inputDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .TilingData(param.get())
+                  .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
+                  .Build();
     auto* ctx = th.GetContext<gert::TilingContext>();
     ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -91,18 +91,15 @@ static void DoCase(std::initializer_list<int64_t> xShape,
 
 TEST_F(ForeachLog10Arch35TilingTest, foreach_log10_float32)
 {
-    DoCase({4, 4}, ge::DT_FLOAT,
-           GET_TPL_TILING_KEY(FOREACH_LOG10_TPL_SCH_MODE_FLOAT));
+    DoCase({4, 4}, ge::DT_FLOAT, GET_TPL_TILING_KEY(FOREACH_LOG10_TPL_SCH_MODE_FLOAT));
 }
 
 TEST_F(ForeachLog10Arch35TilingTest, foreach_log10_float16)
 {
-    DoCase({4, 4}, ge::DT_FLOAT16,
-           GET_TPL_TILING_KEY(FOREACH_LOG10_TPL_SCH_MODE_FLOAT16));
+    DoCase({4, 4}, ge::DT_FLOAT16, GET_TPL_TILING_KEY(FOREACH_LOG10_TPL_SCH_MODE_FLOAT16));
 }
 
 TEST_F(ForeachLog10Arch35TilingTest, foreach_log10_bfloat16)
 {
-    DoCase({4, 4}, ge::DT_BF16,
-           GET_TPL_TILING_KEY(FOREACH_LOG10_TPL_SCH_MODE_BF16));
+    DoCase({4, 4}, ge::DT_BF16, GET_TPL_TILING_KEY(FOREACH_LOG10_TPL_SCH_MODE_BF16));
 }

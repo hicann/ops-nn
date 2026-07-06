@@ -26,59 +26,64 @@ OP_TYPE_REGISTER(ScatterUpdate);
 
 // AiCore支持的ScatterUpdate类型
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-  op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_910B = {
-  op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
-  op::DataType::DT_INT64, op::DataType::DT_BF16};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 = {
-  op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_UINT32,
-  op::DataType::DT_INT64, op::DataType::DT_BF16, op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_UINT64,
-  op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0, op::DataType::DT_FLOAT8_E4M3FN};
+    op::DataType::DT_FLOAT,       op::DataType::DT_FLOAT16,     op::DataType::DT_INT32,
+    op::DataType::DT_UINT32,      op::DataType::DT_INT64,       op::DataType::DT_BF16,
+    op::DataType::DT_INT8,        op::DataType::DT_UINT8,       op::DataType::DT_UINT64,
+    op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E8M0, op::DataType::DT_FLOAT8_E4M3FN};
 
-static bool IsAiCoreSupport(const aclTensor* self) {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910B);
-  } else if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
-  } else {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-  }
+static bool IsAiCoreSupport(const aclTensor* self)
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910B);
+    } else if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
+    } else {
+        return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
+    }
 }
 
 // AiCore的执行逻辑
 inline void ScatterUpdateAiCore(const aclTensor* self, const aclTensor* indices, const aclTensor* updates,
-                                bool useLocking, aclOpExecutor* executor) {
-  L0_DFX(ScatterUpdateAiCore, self, indices, updates, useLocking);
-  auto retAicore =
-    ADD_TO_LAUNCHER_LIST_AICORE(ScatterUpdate, OP_INPUT(self, indices, updates), OP_OUTPUT(self), OP_ATTR(useLocking));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return,
-                                       "ScatterUpdate add to aicore launch list failed.");
+                                bool useLocking, aclOpExecutor* executor)
+{
+    L0_DFX(ScatterUpdateAiCore, self, indices, updates, useLocking);
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(ScatterUpdate, OP_INPUT(self, indices, updates), OP_OUTPUT(self),
+                                                 OP_ATTR(useLocking));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return,
+                                         "ScatterUpdate add to aicore launch list failed.");
 }
 
 // AiCPU的执行逻辑
 inline const aclTensor* ScatterUpdateAiCPU(const aclTensor* self, const aclTensor* indices, const aclTensor* updates,
-                                     bool useLocking, aclOpExecutor* executor) {
-  L0_DFX(ScatterUpdateAiCPU, self, indices, updates, useLocking);
+                                           bool useLocking, aclOpExecutor* executor)
+{
+    L0_DFX(ScatterUpdateAiCPU, self, indices, updates, useLocking);
 
-  static internal::AicpuTaskSpace space("ScatterUpdate", ge::DEPEND_IN_SHAPE, true);
-  space.SetRef(0);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ScatterUpdate, OP_ATTR_NAMES({ "Tindices", "T", "use_locking" }),
-                                        OP_INPUT(self, indices, updates), OP_OUTPUT(self),
-                                        OP_ATTR(indices->GetDataType(), updates->GetDataType(), useLocking));
-  CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
-  return self;
+    static internal::AicpuTaskSpace space("ScatterUpdate", ge::DEPEND_IN_SHAPE, true);
+    space.SetRef(0);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ScatterUpdate, OP_ATTR_NAMES({"Tindices", "T", "use_locking"}),
+                                          OP_INPUT(self, indices, updates), OP_OUTPUT(self),
+                                          OP_ATTR(indices->GetDataType(), updates->GetDataType(), useLocking));
+    CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
+    return self;
 }
 
 const aclTensor* ScatterUpdate(const aclTensor* self, const aclTensor* indices, const aclTensor* updates,
-                               aclOpExecutor* executor, bool useLocking) {
-  if (IsAiCoreSupport(self)) {
-    ScatterUpdateAiCore(self, indices, updates, useLocking, executor);
-  } else {
-    return ScatterUpdateAiCPU(self, indices, updates, useLocking, executor);
-  }
-  return self;
+                               aclOpExecutor* executor, bool useLocking)
+{
+    if (IsAiCoreSupport(self)) {
+        ScatterUpdateAiCore(self, indices, updates, useLocking, executor);
+    } else {
+        return ScatterUpdateAiCPU(self, indices, updates, useLocking, executor);
+    }
+    return self;
 }
-}  // namespace l0op
+} // namespace l0op

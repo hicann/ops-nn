@@ -25,13 +25,9 @@
 
 class foreach_div_list_arch35_tiling_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_div_list_arch35_tiling_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_div_list_arch35_tiling_test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "foreach_div_list_arch35_tiling_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "foreach_div_list_arch35_tiling_test TearDown" << std::endl; }
 };
 
 static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
@@ -75,12 +71,12 @@ static void RunTilingCase(ge::DataType dtype, uint64_t expectedTilingKey)
         int64_t ubSize = 1024 * 1024;
     } compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -124,17 +120,8 @@ static void RunTilingCase(ge::DataType dtype, uint64_t expectedTilingKey)
     ASSERT_EQ(tiling_key, expectedTilingKey);
 }
 
-TEST_F(foreach_div_list_arch35_tiling_test, foreach_div_list_arch35_fp32)
-{
-    RunTilingCase(ge::DT_FLOAT, 0);
-}
+TEST_F(foreach_div_list_arch35_tiling_test, foreach_div_list_arch35_fp32) { RunTilingCase(ge::DT_FLOAT, 0); }
 
-TEST_F(foreach_div_list_arch35_tiling_test, foreach_div_list_arch35_fp16)
-{
-    RunTilingCase(ge::DT_FLOAT16, 1);
-}
+TEST_F(foreach_div_list_arch35_tiling_test, foreach_div_list_arch35_fp16) { RunTilingCase(ge::DT_FLOAT16, 1); }
 
-TEST_F(foreach_div_list_arch35_tiling_test, foreach_div_list_arch35_bf16)
-{
-    RunTilingCase(ge::DT_BF16, 2);
-}
+TEST_F(foreach_div_list_arch35_tiling_test, foreach_div_list_arch35_bf16) { RunTilingCase(ge::DT_BF16, 2); }

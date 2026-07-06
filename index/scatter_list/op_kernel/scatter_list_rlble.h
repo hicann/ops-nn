@@ -24,23 +24,21 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListRLBLE : public ScatterListBase<T1>
-{
+class ScatterListRLBLE : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListRLBLE(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ProcessEqLen(const int64_t& eachCoreBatchNum);
     __aicore__ inline void ProcessNotEqLen(const int64_t& eachCoreBatchNum);
     __aicore__ inline void CopyIn(const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx);
-    __aicore__ inline void CopyOutEqLen(
-        const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx, const int64_t& eachBatchInnerLoopEle);
-    __aicore__ inline void CopyOutNotEqLen(
-        const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx, const int64_t& eachBatchInnerLoopEle);
+    __aicore__ inline void CopyOutEqLen(const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx,
+                                        const int64_t& eachBatchInnerLoopEle);
+    __aicore__ inline void CopyOutNotEqLen(const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx,
+                                           const int64_t& eachBatchInnerLoopEle);
 
     constexpr static int32_t bufferNum = 1;
 
@@ -75,9 +73,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBLE<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListRLBLE<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                      GM_ADDR varOut, GM_ADDR workspace,
+                                                      const ScatterListTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     varPtr = var;
@@ -147,16 +145,14 @@ __aicore__ inline void ScatterListRLBLE<T1, T2>::ProcessNotEqLen(const int64_t& 
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBLE<T1, T2>::CopyIn(
-    const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx)
+__aicore__ inline void ScatterListRLBLE<T1, T2>::CopyIn(const int64_t& eachCoreBatchIdx,
+                                                        const int64_t& eachBatchInnerLoopIdx)
 {
     LocalTensor<T1> updatesUb = updatesInQueue.AllocTensor<T1>();
-    DataCopy(
-        updatesUb,
-        updatesGm
-            [(preCoreBatchIdx + eachCoreBatchIdx) * m_tilingData.srcBatchStride +
-             eachBatchInnerLoopIdx * m_tilingData.eachPreLoopEle],
-        m_tilingData.updatesCount);
+    DataCopy(updatesUb,
+             updatesGm[(preCoreBatchIdx + eachCoreBatchIdx) * m_tilingData.srcBatchStride +
+                       eachBatchInnerLoopIdx * m_tilingData.eachPreLoopEle],
+             m_tilingData.updatesCount);
     updatesInQueue.EnQue(updatesUb);
 
     LocalTensor<T2> indiceUb = indiceInQueue.AllocTensor<T2>();
@@ -171,8 +167,9 @@ __aicore__ inline void ScatterListRLBLE<T1, T2>::CopyIn(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBLE<T1, T2>::CopyOutEqLen(
-    const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx, const int64_t& eachBatchInnerLoopEle)
+__aicore__ inline void ScatterListRLBLE<T1, T2>::CopyOutEqLen(const int64_t& eachCoreBatchIdx,
+                                                              const int64_t& eachBatchInnerLoopIdx,
+                                                              const int64_t& eachBatchInnerLoopEle)
 {
     LocalTensor<T1> updatesUb = updatesInQueue.DeQue<T1>();
     LocalTensor<T2> indiceUb = indiceInQueue.DeQue<T2>();
@@ -203,8 +200,9 @@ __aicore__ inline void ScatterListRLBLE<T1, T2>::CopyOutEqLen(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBLE<T1, T2>::CopyOutNotEqLen(
-    const int64_t& eachCoreBatchIdx, const int64_t& eachBatchInnerLoopIdx, const int64_t& eachBatchInnerLoopEle)
+__aicore__ inline void ScatterListRLBLE<T1, T2>::CopyOutNotEqLen(const int64_t& eachCoreBatchIdx,
+                                                                 const int64_t& eachBatchInnerLoopIdx,
+                                                                 const int64_t& eachBatchInnerLoopEle)
 {
     LocalTensor<T1> updatesUb = updatesInQueue.DeQue<T1>();
     LocalTensor<T2> indiceUb = indiceInQueue.DeQue<T2>();
@@ -225,8 +223,8 @@ __aicore__ inline void ScatterListRLBLE<T1, T2>::CopyOutNotEqLen(
         needCopyCount = dim2UpdateLen * m_tilingData.dim3Count;
         haveCopyCount = eachBatchInnerLoopIdx * m_tilingData.eachPreLoopEle;
         if (haveCopyCount < needCopyCount) {
-            dstGmOffset =
-                dim1Idx * m_tilingData.dstBatchStride + dim2OffsetIdx * m_tilingData.dim3Count + haveCopyCount;
+            dstGmOffset = dim1Idx * m_tilingData.dstBatchStride + dim2OffsetIdx * m_tilingData.dim3Count +
+                          haveCopyCount;
             copyCount = needCopyCount - haveCopyCount;
             copyCount = copyCount > eachBatchInnerLoopEle ? eachBatchInnerLoopEle : copyCount;
             DataCopy(varGm[dstGmOffset], updatesUb, copyCount);

@@ -20,25 +20,13 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 
-enum Reduction
-{
-    None,
-    Mean,
-    Sum,
-    END
-};
+enum Reduction { None, Mean, Sum, END };
 
 class l2BinaryCrossEntropyWithLogitsTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "binary_cross_entropy_with_logits_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "binary_cross_entropy_with_logits_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "binary_cross_entropy_with_logits_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "binary_cross_entropy_with_logits_test TearDown" << std::endl; }
 };
 
 // *** tensor dtype test ***

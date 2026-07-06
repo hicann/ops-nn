@@ -31,12 +31,7 @@ struct LineInfo {
     uint64_t currentLineInChannel;
 };
 
-enum class CopyType : uint8_t
-{
-    INPUT = 0,
-    OUTPUT = 1,
-    MASK_INPUT = 2
-};
+enum class CopyType : uint8_t { INPUT = 0, OUTPUT = 1, MASK_INPUT = 2 };
 
 struct GmTensor {
     const GM_ADDR yGrad = nullptr;
@@ -60,13 +55,11 @@ constexpr float MASK_VALUE = 0.0;
 constexpr float DEFAULT_SCALE = 1.0;
 
 template <typename T>
-class ScaledMaskedSoftmaxGradV2Base
-{
+class ScaledMaskedSoftmaxGradV2Base {
 public:
-    __aicore__ inline ScaledMaskedSoftmaxGradV2Base()
-    {}
-    __aicore__ inline void Init(
-        const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData, TPipe* pipeIn);
+    __aicore__ inline ScaledMaskedSoftmaxGradV2Base() {}
+    __aicore__ inline void Init(const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData,
+                                TPipe* pipeIn);
     __aicore__ inline uint64_t CeilDiv(const uint64_t dividend, const uint64_t divisor);
 
 protected:
@@ -74,17 +67,16 @@ protected:
     __aicore__ inline void CopyIn(LocalTensor<T>& yGradLocal, LocalTensor<T>& yLocal, const uint64_t& offset);
     __aicore__ inline void CopyInMask(LocalTensor<bool>& maskLocal, const uint64_t& currentLoop);
     __aicore__ inline void CopyOut(LocalTensor<T>& outLocal, const uint64_t& offset);
-    __aicore__ inline void CopyInMaskLines(
-        LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const uint64_t& curLineNum, const uint64_t& currentLineInMask);
-    __aicore__ inline void CopyInMaskBlock(
-        LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const uint64_t& curLineNum, uint64_t repeatTimes,
-        const uint64_t& currentLineInMask);
-    __aicore__ inline void CopyInMask1NSD(
-        LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const LineInfo& start, const LineInfo& end);
-    __aicore__ inline void CopyInMaskB1SD(
-        LocalTensor<bool>& maskLocal, uint64_t& lineCnt, LineInfo& start, const LineInfo& end);
-    __aicore__ inline void CopyInMask11SD(
-        LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const LineInfo& start, const LineInfo& end);
+    __aicore__ inline void CopyInMaskLines(LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const uint64_t& curLineNum,
+                                           const uint64_t& currentLineInMask);
+    __aicore__ inline void CopyInMaskBlock(LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const uint64_t& curLineNum,
+                                           uint64_t repeatTimes, const uint64_t& currentLineInMask);
+    __aicore__ inline void CopyInMask1NSD(LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const LineInfo& start,
+                                          const LineInfo& end);
+    __aicore__ inline void CopyInMaskB1SD(LocalTensor<bool>& maskLocal, uint64_t& lineCnt, LineInfo& start,
+                                          const LineInfo& end);
+    __aicore__ inline void CopyInMask11SD(LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const LineInfo& start,
+                                          const LineInfo& end);
     __aicore__ inline void CalcLineInfo(LineInfo& info, const uint64_t& currentLoop, const uint64_t& curLineNum);
 
     TPipe* pipe;
@@ -140,8 +132,9 @@ __aicore__ inline uint64_t ScaledMaskedSoftmaxGradV2Base<T>::CeilDiv(const uint6
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::Init(
-    const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData, TPipe* pipeIn)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::Init(const GmTensor* gmTensor,
+                                                              const ScaledMaskedSoftmaxGradV2TilingData& tilingData,
+                                                              TPipe* pipeIn)
 {
     channel_ = tilingData.channel;
     seqLength_ = tilingData.seqLength;
@@ -216,8 +209,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::SetDataCopyParams(const
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyIn(
-    LocalTensor<T>& yGradLocal, LocalTensor<T>& yLocal, const uint64_t& offset)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyIn(LocalTensor<T>& yGradLocal, LocalTensor<T>& yLocal,
+                                                                const uint64_t& offset)
 {
     if (headDim_ % ALIGNED_NUM == 0) {
         DataCopy(yGradLocal, yGradGm[offset], moveNum);
@@ -240,8 +233,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyIn(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask(
-    LocalTensor<bool>& maskLocal, const uint64_t& currentLoop)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask(LocalTensor<bool>& maskLocal,
+                                                                    const uint64_t& currentLoop)
 {
     copyType = CopyType::MASK_INPUT;
     uint64_t lineCnt = 0u;
@@ -282,8 +275,9 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyOut(LocalTensor<T>&
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskLines(
-    LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const uint64_t& curLineNum, const uint64_t& currentLineInMask)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskLines(LocalTensor<bool>& maskLocal,
+                                                                         uint64_t& lineCnt, const uint64_t& curLineNum,
+                                                                         const uint64_t& currentLineInMask)
 {
     uint64_t maskGmOffset = currentLineInMask * headDim_;
     if (headDim_ % ALIGNED_NUM == 0) {
@@ -306,9 +300,10 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskLines(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskBlock(
-    LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const uint64_t& curLineNum, uint64_t repeatTimes,
-    const uint64_t& currentLineInMask)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskBlock(LocalTensor<bool>& maskLocal,
+                                                                         uint64_t& lineCnt, const uint64_t& curLineNum,
+                                                                         uint64_t repeatTimes,
+                                                                         const uint64_t& currentLineInMask)
 {
     uint64_t maskGmOffset = currentLineInMask * headDim_;
     if (headDim_ % ALIGNED_NUM == 0) {
@@ -340,8 +335,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskBlock(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask1NSD(
-    LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const LineInfo& start, const LineInfo& end)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask1NSD(LocalTensor<bool>& maskLocal, uint64_t& lineCnt,
+                                                                        const LineInfo& start, const LineInfo& end)
 {
     if (start.currentBatch == end.currentBatch) {
         CopyInMaskLines(maskLocal, lineCnt, lineNum, start.currentLineInMask);
@@ -358,8 +353,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask1NSD(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskB1SD(
-    LocalTensor<bool>& maskLocal, uint64_t& lineCnt, LineInfo& start, const LineInfo& end)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskB1SD(LocalTensor<bool>& maskLocal, uint64_t& lineCnt,
+                                                                        LineInfo& start, const LineInfo& end)
 {
     if (start.currentChannel == end.currentChannel) {
         CopyInMaskLines(maskLocal, lineCnt, lineNum, start.currentLineInMask);
@@ -367,16 +362,15 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskB1SD(
         CopyInMaskLines(maskLocal, lineCnt, seqLength_ - start.currentLineInChannel, start.currentLineInMask);
         start.currentLineInMask -= start.currentLineInChannel;
         if (start.currentBatch == end.currentBatch) {
-            CopyInMaskBlock(
-                maskLocal, lineCnt, seqLength_, end.currentChannel - start.currentChannel - 1, start.currentLineInMask);
+            CopyInMaskBlock(maskLocal, lineCnt, seqLength_, end.currentChannel - start.currentChannel - 1,
+                            start.currentLineInMask);
             if (end.currentLineInChannel != 0) {
                 CopyInMaskLines(maskLocal, lineCnt, end.currentLineInChannel, start.currentLineInMask);
             }
         } else {
             // first batch
-            CopyInMaskBlock(
-                maskLocal, lineCnt, seqLength_, channel_ - start.currentChannel % channel_ - 1,
-                start.currentLineInMask);
+            CopyInMaskBlock(maskLocal, lineCnt, seqLength_, channel_ - start.currentChannel % channel_ - 1,
+                            start.currentLineInMask);
             start.currentLineInMask += seqLength_;
             // middle batch
             for (uint64_t i = 1; i < end.currentBatch - start.currentBatch; ++i) {
@@ -393,8 +387,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMaskB1SD(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask11SD(
-    LocalTensor<bool>& maskLocal, uint64_t& lineCnt, const LineInfo& start, const LineInfo& end)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask11SD(LocalTensor<bool>& maskLocal, uint64_t& lineCnt,
+                                                                        const LineInfo& start, const LineInfo& end)
 {
     if (start.currentChannel == end.currentChannel) {
         CopyInMaskLines(maskLocal, lineCnt, lineNum, start.currentLineInMask);
@@ -409,8 +403,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CopyInMask11SD(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CalcLineInfo(
-    LineInfo& info, const uint64_t& currentLoop, const uint64_t& curLineNum)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2Base<T>::CalcLineInfo(LineInfo& info, const uint64_t& currentLoop,
+                                                                      const uint64_t& curLineNum)
 {
     info.currentLine = lineOffset + currentLoop * maxLinePerLoop_ + curLineNum;
     info.currentBatch = info.currentLine / linePerBatch;

@@ -14,7 +14,7 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor *Pow(const aclTensor *self, const aclTensor *exponent, aclOpExecutor *executor);
+const aclTensor* Pow(const aclTensor* self, const aclTensor* exponent, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_POW_H_

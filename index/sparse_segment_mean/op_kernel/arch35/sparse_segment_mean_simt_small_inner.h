@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file sparse_segment_mean_simt_small_inner.h
  * \brief
  */
@@ -29,14 +29,13 @@ constexpr uint32_t TBUF_SIZE = 4096;
 namespace SparseSegmentMeanNameSpace {
 using namespace AscendC;
 
-
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
 class SparseSegmentMeanSimtSmallInner {
 public:
-  __aicore__ inline SparseSegmentMeanSimtSmallInner(){};
-  __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
-                              GM_ADDR workspace, const SparseSegmentMeanSimtTilingData* tilingData);
-  __aicore__ inline void Process();
+    __aicore__ inline SparseSegmentMeanSimtSmallInner(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
+                                const SparseSegmentMeanSimtTilingData* tilingData);
+    __aicore__ inline void Process();
 
 private:
     GlobalTensor<X_T> xGm_;
@@ -57,10 +56,10 @@ private:
     uint32_t threadNumZ_ = 0;
 };
 
-
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
-__aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTIDS_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids,GM_ADDR y,
-                                                                                GM_ADDR workspace, const SparseSegmentMeanSimtTilingData* tilingData) 
+__aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTIDS_T>::Init(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
+    const SparseSegmentMeanSimtTilingData* tilingData)
 {
     tilingData_ = tilingData;
     xGm_.SetGlobalBuffer((__gm__ X_T*)x);
@@ -79,18 +78,17 @@ __aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTID
     if (tilingData_->specialBlockTiling) {
         if (tilingData_->secondToLastCoreSegmentNum == 0) {
             segOffsetBase_ = tilingData_->normalCoreSegmentNum * blockIdx_;
-            curCoreSegments_ = blockIdx_ == tilingData_->needCoreNum - 1
-                ? tilingData_->lastCoreSegmentNum
-                : tilingData_->normalCoreSegmentNum;
+            curCoreSegments_ = blockIdx_ == tilingData_->needCoreNum - 1 ? tilingData_->lastCoreSegmentNum :
+                                                                           tilingData_->normalCoreSegmentNum;
         } else {
             if (blockIdx_ == tilingData_->needCoreNum - 1) {
-                segOffsetBase_ = tilingData_->normalCoreSegmentNum * (blockIdx_ - 1) + tilingData_->secondToLastCoreSegmentNum;
+                segOffsetBase_ = tilingData_->normalCoreSegmentNum * (blockIdx_ - 1) +
+                                 tilingData_->secondToLastCoreSegmentNum;
                 curCoreSegments_ = tilingData_->lastCoreSegmentNum;
             } else {
                 segOffsetBase_ = tilingData_->normalCoreSegmentNum * blockIdx_;
-                curCoreSegments_ = blockIdx_ == tilingData_->needCoreNum - 2
-                    ? tilingData_->secondToLastCoreSegmentNum
-                    : tilingData_->normalCoreSegmentNum;
+                curCoreSegments_ = blockIdx_ == tilingData_->needCoreNum - 2 ? tilingData_->secondToLastCoreSegmentNum :
+                                                                               tilingData_->normalCoreSegmentNum;
             }
         }
         threadNumZ_ = blockIdx_ == tilingData_->needCoreNum - 1 ? tilingData_->lastCoreSegmentNum : 16;
@@ -105,7 +103,6 @@ __aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTID
         threadNumZ_ = curCoreSegments_;
     }
 }
-
 
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
 __aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTIDS_T>::Process()
@@ -122,16 +119,18 @@ __aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTID
     uint32_t threadNumY = static_cast<uint32_t>(tilingData_->threadNumY);
     uint32_t innerSize = static_cast<uint32_t>(tilingData_->innerSize);
 
-    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
-                                                               (__gm__ uint32_t*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()));
-    
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(
+        dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
+        (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()));
+
     SyncAll();
 
-    asc_vf_call<SimtSmallInnerComputer<X_T, INDICES_T>>(dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
-                                                                   (__local_mem__ float*) (tmpLocal.GetPhyAddr()), (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
-                                                                   (__gm__ uint32_t*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()));
+    asc_vf_call<SimtSmallInnerComputer<X_T, INDICES_T>>(
+        dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
+        (__local_mem__ float*)(tmpLocal.GetPhyAddr()), (__gm__ X_T*)(xGm_.GetPhyAddr()),
+        (__gm__ volatile X_T*)(yGm_.GetPhyAddr()), (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()),
+        (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()));
 }
 
-
-}  // namespace SparseSegmentMeanNameSpace
-#endif  // SPARSE_SEGMENT_MEAN_SIMT_SMALL_INNER_H
+} // namespace SparseSegmentMeanNameSpace
+#endif // SPARSE_SEGMENT_MEAN_SIMT_SMALL_INNER_H

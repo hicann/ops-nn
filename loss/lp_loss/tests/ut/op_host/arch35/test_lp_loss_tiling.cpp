@@ -27,18 +27,11 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class LpLossDavidTiling : public testing::Test
-{
+class LpLossDavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LpLossDavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LpLossDavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LpLossDavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LpLossDavidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -65,15 +58,15 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
 }
 
 static void DoLpLossTilingCase(std::initializer_list<int64_t>& predictShape, std::initializer_list<int64_t>& lableShape,
-                               std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype,
-                               int64_t p, std::string reduction, std::string& expectStr)
+                               std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype, int64_t p,
+                               std::string reduction, std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    //std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    // std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics);
 
     Ops::Base::ReduceOpCompileInfo compileInfo;
@@ -95,7 +88,7 @@ static void DoLpLossTilingCase(std::initializer_list<int64_t>& predictShape, std
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                            intrinsics);
-    //kernelHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    // kernelHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -137,7 +130,7 @@ static void DoLpLossTilingCase(std::initializer_list<int64_t>& predictShape, std
     EXPECT_EQ(tilingFunc(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    //EXPECT_EQ(tiling_data_result, expectStr);
+    // EXPECT_EQ(tiling_data_result, expectStr);
 }
 
 TEST_F(LpLossDavidTiling, lp_loss_david_tiling1)
@@ -149,10 +142,10 @@ TEST_F(LpLossDavidTiling, lp_loss_david_tiling1)
     int64_t p = 1;
     std::string reduction = "none";
 
-    std::string expectStr =
-        "1 98304 1536 64 9024 1 1 1536 1536 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
-    DoLpLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, 
-                        p, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "1 98304 1536 64 9024 1 1 1536 1536 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 0 0 0 0 0 0 0 0 0 0 ";
+    DoLpLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, p,
+                       reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(LpLossDavidTiling, lp_loss_david_tiling2)
@@ -164,10 +157,10 @@ TEST_F(LpLossDavidTiling, lp_loss_david_tiling2)
     int64_t p = 1;
     std::string reduction = "sum";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 31488 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
-    DoLpLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, 
-                        p, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 31488 3975177272524013632 1 98304 0 0 0 0 0 0 0 "
+                            "98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    DoLpLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, p,
+                       reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(LpLossDavidTiling, lp_loss_david_tiling3)
@@ -179,10 +172,10 @@ TEST_F(LpLossDavidTiling, lp_loss_david_tiling3)
     int64_t p = 1;
     std::string reduction = "mean";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 30208 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
-    DoLpLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, 
-                        p, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 30208 3975177272524013632 1 98304 0 0 0 0 0 0 0 "
+                            "98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    DoLpLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, p,
+                       reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(LpLossDavidTiling, lp_loss_david_tiling4)
@@ -219,8 +212,8 @@ TEST_F(LpLossDavidTiling, lp_loss_david_tiling4)
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                            intrinsics);
-    //std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
-    //kernelHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    // std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    // kernelHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 

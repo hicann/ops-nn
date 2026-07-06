@@ -23,9 +23,11 @@
 #include <cstdint>
 using namespace std;
 
-extern "C" __global__ __aicore__ void top_k_top_p_sample_v2(
-    GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR minPs, GM_ADDR logitsSelectIdx,
-    GM_ADDR logitsTopKpSelect, GM_ADDR logitsIdx, GM_ADDR logitsSortMasked, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void top_k_top_p_sample_v2(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q,
+                                                            GM_ADDR minPs, GM_ADDR logitsSelectIdx,
+                                                            GM_ADDR logitsTopKpSelect, GM_ADDR logitsIdx,
+                                                            GM_ADDR logitsSortMasked, GM_ADDR workspace,
+                                                            GM_ADDR tiling);
 
 class top_k_top_p_sample_v2_test : public testing::Test {
 protected:
@@ -65,10 +67,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_half)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "-1", "1", "1", "1", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "-1", "1", "1", "1", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -79,21 +81,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_half)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -115,9 +117,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_half)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -159,10 +160,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_bf16)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "0", "1", "0", "1"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "0", "1", "0", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -173,21 +174,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_bf16)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -209,9 +210,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_bf16)
 
     uint64_t tillingKey = 1027;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -253,10 +253,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_float)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "1", "0", "1"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "1", "0", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -267,21 +267,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_float)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -303,9 +303,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_float)
 
     uint64_t tillingKey = 1000;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -347,10 +346,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isNeedLogits)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "1", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "1", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -361,21 +360,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isNeedLogits)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -397,9 +396,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isNeedLogits)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
     AscendC::GmFree((void*)topPs);
@@ -440,10 +438,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isNeedSampleResult
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "1", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "1", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -454,21 +452,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isNeedSampleResult
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -490,9 +488,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isNeedSampleResult
 
     uint64_t tillingKey = 1000;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -534,10 +531,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_inputIsLogits)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "0", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "2", "0", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -548,21 +545,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_inputIsLogits)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -584,9 +581,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_inputIsLogits)
 
     uint64_t tillingKey = 1000;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -628,10 +624,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_qsample)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "1", "1", "1", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "1", "1", "1", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -643,21 +639,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_qsample)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -679,9 +675,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_qsample)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -723,10 +718,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isInputMinPs)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "1", "1", "0", "1"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "0", "1", "1", "1", "0", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -738,21 +733,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isInputMinPs)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -774,9 +769,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isInputMinPs)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -818,10 +812,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopK)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -832,21 +826,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopK)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -868,9 +862,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopK)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -912,10 +905,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopP)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "1", "1024", "1", "2", "1", "1", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "1", "1024", "1", "2", "1", "1", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -926,21 +919,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopP)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -962,9 +955,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopP)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1006,10 +998,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_LogitsGuessK)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1020,21 +1012,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_LogitsGuessK)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1056,9 +1048,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_LogitsGuessK)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1100,10 +1091,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_guessK)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "0", "0", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "0", "0", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1114,21 +1105,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_guessK)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1150,9 +1141,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_guessK)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1194,10 +1184,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_sortAll)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "1", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1208,21 +1198,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_sortAll)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1244,9 +1234,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_sortAll)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1288,10 +1277,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_sortAllmultinomial
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "0", "1"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "0", "1", "1", "1", "0", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1302,21 +1291,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_sortAllmultinomial
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1338,9 +1327,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_sortAllmultinomial
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1382,10 +1370,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopKTopPSoftma
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "1", "2", "1", "0", "1", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "1", "2", "1", "0", "1", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1396,21 +1384,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopKTopPSoftma
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1432,9 +1420,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopKTopPSoftma
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1476,10 +1463,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopKTopP)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-10", "0", "1", "2", "1", "1", "1", "0"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-10", "0", "1", "2", "1", "1", "1", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1490,21 +1477,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopKTopP)
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1526,9 +1513,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_skipTopKTopP)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -1570,10 +1556,10 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isInputMinPsGlobal
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data", "top_k_top_p_sample_v2_data");
-    kernel_ut::RunGenData(
-        "./top_k_top_p_sample_v2_data", {"8", "64", "0", "10000", "-2", "-1", "0", "1", "1", "1", "0", "1"});
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample_v2/tests/ut/op_kernel/top_k_top_p_sample_v2_data",
+                                    "top_k_top_p_sample_v2_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_v2_data",
+                          {"8", "64", "0", "10000", "-2", "-1", "0", "1", "1", "1", "0", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_v2_data/logits.bin", logitsSize, logits, logitsSize);
@@ -1585,21 +1571,21 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isInputMinPsGlobal
     topKTopPSampleV2TilingData->numCore = 40;
     topKTopPSampleV2TilingData->rowNum = 8;
     topKTopPSampleV2TilingData->rowLen = 64;
-    topKTopPSampleV2TilingData->headCoreNum =
-        topKTopPSampleV2TilingData->rowNum % topKTopPSampleV2TilingData->numCore; // rowNum % numCore
-    topKTopPSampleV2TilingData->perHeadCoreRowNum =
-        (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
-        topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
-    topKTopPSampleV2TilingData->tailCoreRowNum =
-        topKTopPSampleV2TilingData->rowNum / topKTopPSampleV2TilingData->numCore;
+    topKTopPSampleV2TilingData->headCoreNum = topKTopPSampleV2TilingData->rowNum %
+                                              topKTopPSampleV2TilingData->numCore; // rowNum % numCore
+    topKTopPSampleV2TilingData
+        ->perHeadCoreRowNum = (topKTopPSampleV2TilingData->rowNum + topKTopPSampleV2TilingData->numCore - 1) /
+                              topKTopPSampleV2TilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleV2TilingData->tailCoreRowNum = topKTopPSampleV2TilingData->rowNum /
+                                                 topKTopPSampleV2TilingData->numCore;
     topKTopPSampleV2TilingData->perHeadCorePartNum = 0;
     topKTopPSampleV2TilingData->tailCorePartNum = 0;
     topKTopPSampleV2TilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleV2TilingData->innerLoopTime =
-        (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
-        topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleV2TilingData->innerLoopEleTail =
-        topKTopPSampleV2TilingData->rowLen % topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleV2TilingData
+        ->innerLoopTime = (topKTopPSampleV2TilingData->rowLen + topKTopPSampleV2TilingData->innerLoopEle - 1) /
+                          topKTopPSampleV2TilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleV2TilingData->innerLoopEleTail = topKTopPSampleV2TilingData->rowLen %
+                                                   topKTopPSampleV2TilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleV2TilingData->innerLoopEleTailPad = (topKTopPSampleV2TilingData->innerLoopEleTail + 31) / 32 *
                                                       32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleV2TilingData->softmaxLoopTime = (topKTopPSampleV2TilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -1621,9 +1607,8 @@ TEST_F(top_k_top_p_sample_v2_test, top_k_top_p_sample_v2_test_isInputMinPsGlobal
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx,
-        logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
+    ICPU_RUN_KF(top_k_top_p_sample_v2, 40, logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect,
+                logitsIdx, logitsSortMasked, workspace, (uint8_t*)(topKTopPSampleV2TilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);

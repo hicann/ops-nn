@@ -15,18 +15,11 @@
 #include "error_util.h"
 #include "../../../op_graph/dynamic_quant_v2_proto.h"
 
-class DynamicQuantV2 : public testing::Test
-{
+class DynamicQuantV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicQuantV2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicQuantV2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicQuantV2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicQuantV2 TearDown" << std::endl; }
 };
 
 TEST_F(DynamicQuantV2, DynamicQuantV2_infershape_case_0)
@@ -137,10 +130,9 @@ TEST_F(DynamicQuantV2, DynamicQuantV2_infershape_case_pertensor)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                       {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                       {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("pertensor")}})
+                                  .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                              {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                              {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("pertensor")}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferShapeContext>();
@@ -175,10 +167,9 @@ TEST_F(DynamicQuantV2, DynamicQuantV2_infershape_case_perchannel)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                       {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                       {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("perchannel")}})
+                                  .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                              {"is_symmetrical", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                              {"quant_mode", Ops::NN::AnyValue::CreateFrom<std::string>("perchannel")}})
                                   .Build();
 
         auto context = context_holder.GetContext<gert::InferShapeContext>();

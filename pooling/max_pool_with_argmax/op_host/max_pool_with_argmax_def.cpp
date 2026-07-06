@@ -15,11 +15,9 @@
 
 #include "register/op_def_registry.h"
 
-namespace ops
-{
+namespace ops {
 constexpr int DTYPE_INT64 = 9;
-class MaxPoolWithArgmax : public OpDef
-{
+class MaxPoolWithArgmax : public OpDef {
 public:
     explicit MaxPoolWithArgmax(const char* name) : OpDef(name)
     {
@@ -65,4 +63,4 @@ public:
 };
 
 OP_ADD(MaxPoolWithArgmax);
-}  // namespace ops
+} // namespace ops

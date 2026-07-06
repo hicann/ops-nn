@@ -33,12 +33,10 @@ constexpr float FLOAT_NUM_POS = 0.5;
 constexpr float FLOAT_NUM_ONE = 1.0;
 
 template <typename T>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<float>& float32Tensor, float weightVal,
-        uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<float>& float32Tensor,
+                                   float weightVal, uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = 0;
         uint32_t castTimesRemainder = 0;
@@ -60,9 +58,9 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<T>& x1Local, LocalTensor<T>& x2Local, LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount,
-        float localWeight, uint16_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<T>& x1Local, LocalTensor<T>& x2Local,
+                                          LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount,
+                                          float localWeight, uint16_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, x1Local[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -87,12 +85,11 @@ private:
     }
 };
 template <>
-class InnerComputer<float>
-{
+class InnerComputer<float> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<float>& x1Local, LocalTensor<float>& x2Local, LocalTensor<float>& float32Tensor, float weightVal,
-        uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<float>& x1Local, LocalTensor<float>& x2Local,
+                                   LocalTensor<float>& float32Tensor, float weightVal, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
 
@@ -113,13 +110,11 @@ public:
 };
 
 template <typename T>
-class ForeachLerpScalarND
-{
+class ForeachLerpScalarND {
 public:
     __aicore__ inline ForeachLerpScalarND(){};
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace,
-        const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -131,8 +126,8 @@ private:
     __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
     __aicore__ inline void SingleTensorProcess(int64_t dataCount, LocalTensor<float>& float32Tensor);
     __aicore__ inline void CopyIn(uint16_t index, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void ComputeAndCopyOut(
-        uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder);
+    __aicore__ inline void ComputeAndCopyOut(uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                             bool isRemainder);
     __aicore__ inline __gm__ T* GetTensorAddr(uint16_t index, GM_ADDR gmAddr);
 
 private:
@@ -167,8 +162,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachLerpScalarND<T>::Init(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachLerpScalarND<T>::Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y,
+                                                    GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     x1TensorPtr = x1;
@@ -304,8 +299,8 @@ __aicore__ inline void ForeachLerpScalarND<T>::CopyIn(uint16_t index, int64_t da
 }
 
 template <typename T>
-__aicore__ inline void ForeachLerpScalarND<T>::ComputeAndCopyOut(
-    uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+__aicore__ inline void ForeachLerpScalarND<T>::ComputeAndCopyOut(uint16_t index, int64_t dataCount,
+                                                                 LocalTensor<float>& float32Tensor, bool isRemainder)
 {
     LocalTensor<T> x1Local = x1Queue.DeQue<T>();
     LocalTensor<T> x2Local = x2Queue.DeQue<T>();

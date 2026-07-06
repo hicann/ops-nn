@@ -23,14 +23,8 @@ using namespace std;
 
 class l2_sigmoid_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "Sigmoid Backward Test Setup" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "Sigmoid Backward Test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "Sigmoid Backward Test Setup" << endl; }
+    static void TearDownTestCase() { cout << "Sigmoid Backward Test TearDown" << endl; }
 };
 
 TEST_F(l2_sigmoid_backward_test, case_1)

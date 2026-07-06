@@ -29,13 +29,13 @@ public:
     __aicore__ inline NonZeroBigMaskDim2(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
-        const NonZeroTilingData *tilingData);
-    template <typename CLS_NAME, void (CLS_NAME::*ComputeOutputPtr)(LocalTensor<int32_t> &yUb)>
-    __aicore__ inline void Process(CLS_NAME *objPtr);
-    __aicore__ inline void ComputeOutput(LocalTensor<int32_t> &yUb);
+                                const NonZeroTilingData* tilingData);
+    template <typename CLS_NAME, void (CLS_NAME::*ComputeOutputPtr)(LocalTensor<int32_t>& yUb)>
+    __aicore__ inline void Process(CLS_NAME* objPtr);
+    __aicore__ inline void ComputeOutput(LocalTensor<int32_t>& yUb);
 };
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMaskDim2<T1, T2>::ComputeOutput(LocalTensor<int32_t> &yUb)
+__aicore__ inline void NonZeroBigMaskDim2<T1, T2>::ComputeOutput(LocalTensor<int32_t>& yUb)
 {
     // Scalar
     LocalTensor<uint32_t> multipDim = this->multipDimUb.template Get<uint32_t>();
@@ -44,17 +44,17 @@ __aicore__ inline void NonZeroBigMaskDim2<T1, T2>::ComputeOutput(LocalTensor<int
     int16_t dim0KValue = (int16_t)multipDim.GetValue(IDX_NUM_8);
 
     // address
-    __ubuf__ uint32_t *dstPtr0 = nullptr;
-    __ubuf__ uint32_t *dstLastPtr = nullptr;
+    __ubuf__ uint32_t* dstPtr0 = nullptr;
+    __ubuf__ uint32_t* dstLastPtr = nullptr;
 
     if constexpr (IsSameType<T2, int64_t>::value) {
-        dstPtr0 = (__ubuf__ uint32_t *)yUb[this->processSize_ * (this->shapeDim_ + 1)].GetPhyAddr();
+        dstPtr0 = (__ubuf__ uint32_t*)yUb[this->processSize_ * (this->shapeDim_ + 1)].GetPhyAddr();
     } else {
-        dstPtr0 = (__ubuf__ uint32_t *)yUb[this->processSize_].GetPhyAddr();
+        dstPtr0 = (__ubuf__ uint32_t*)yUb[this->processSize_].GetPhyAddr();
     }
 
     dstLastPtr = dstPtr0 + this->processSize_ * (this->shapeDim_ - 1);
-    auto srcPtr = (__ubuf__ uint32_t *)yUb.GetPhyAddr();
+    auto srcPtr = (__ubuf__ uint32_t*)yUb.GetPhyAddr();
 
     // params
     uint16_t repeatTimes = CeilDivision(this->arNum_, this->repeatElmB32_);
@@ -74,7 +74,7 @@ __aicore__ inline void NonZeroBigMaskDim2<T1, T2>::ComputeOutput(LocalTensor<int
             preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
             AscendC::MicroAPI::AddrReg vagReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(1, offsetI);
             this->ComputeOutputBaseFunc(srcPtr, dstPtr0, dstLastPtr, preg, vagReg, srcReg, subReg, shapeReg, mulReg,
-                mReg, divReg0, divReg1, dim0SValue, dim0MValue, dim0KValue);
+                                        mReg, divReg0, divReg1, dim0SValue, dim0MValue, dim0KValue);
         }
         mem_bar(VST_VLD);
     }
@@ -84,13 +84,13 @@ __aicore__ inline void NonZeroBigMaskDim2<T1, T2>::ComputeOutput(LocalTensor<int
 
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMaskDim2<T1, T2>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
-    const NonZeroTilingData *tilingData)
+                                                        const NonZeroTilingData* tilingData)
 {
     this->InitBase(x, y, outShape, workspace, tilingData);
 }
 
 template <typename T1, typename T2>
-template <typename CLS_NAME, void (CLS_NAME::*ComputeOutputPtr)(LocalTensor<int32_t> &yUb)>
+template <typename CLS_NAME, void (CLS_NAME::*ComputeOutputPtr)(LocalTensor<int32_t>& yUb)>
 __aicore__ inline void NonZeroBigMaskDim2<T1, T2>::Process(CLS_NAME* objPtr)
 {
     this->template ProcessBase<CLS_NAME, ComputeOutputPtr>(objPtr);

@@ -57,17 +57,16 @@ static constexpr float EXP_INV_SQRT = -0.5f;
 }
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                       op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static inline bool isBatchNormSupportNcdhw(void)
 {
-    return (
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) ||
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93));
+    return ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) ||
+            (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93));
 }
 
 static bool CheckInputNotNull(const aclTensor* gradOut, const aclTensor* input)
@@ -80,15 +79,14 @@ static bool CheckInputNotNull(const aclTensor* gradOut, const aclTensor* input)
 
 static inline bool isBatchNormSupportAscendC(void)
 {
-    bool socVersionSupport =
-        ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) ||
-         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93));
+    bool socVersionSupport = ((GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B) ||
+                              (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93));
 
     return socVersionSupport;
 }
 
-static bool CheckMaskNotNull(
-    const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias, const aclBoolArray* outputMask)
+static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias,
+                             const aclBoolArray* outputMask)
 {
     // fast batch norm backward: check output mask validity
     OP_CHECK_NULL(outputMask, return false);
@@ -128,8 +126,8 @@ static bool CheckDtypeValid(const aclTensor* gradOut, const aclTensor* input)
     return true;
 }
 
-static bool CheckGradDtypeValid(
-    const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias, const aclBoolArray* outputMask)
+static bool CheckGradDtypeValid(const aclTensor* gradInput, const aclTensor* gradWeight, const aclTensor* gradBias,
+                                const aclBoolArray* outputMask)
 {
     const auto& supportList = GetDtypeSupportList();
     if ((*outputMask)[0]) {
@@ -145,9 +143,8 @@ static bool CheckGradDtypeValid(
     return true;
 }
 
-static bool CheckOtherDtypeValid(
-    const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* saveMean,
-    const aclTensor* saveInvstd)
+static bool CheckOtherDtypeValid(const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar,
+                                 const aclTensor* saveMean, const aclTensor* saveInvstd)
 {
     const auto& supportList = GetDtypeSupportList();
     if (weight != nullptr) {
@@ -168,20 +165,20 @@ static bool CheckOtherDtypeValid(
     return true;
 }
 
-static bool CheckFormat(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput, const aclBoolArray* outputMask)
+static bool CheckFormat(const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput,
+                        const aclBoolArray* outputMask)
 {
     if (gradOut->GetStorageFormat() != input->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of gradOut and input should be equal, gradOut [%s], input [%s].",
-            op::ToString(gradOut->GetStorageFormat()).GetString(), op::ToString(input->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of gradOut and input should be equal, gradOut [%s], input [%s].",
+                op::ToString(gradOut->GetStorageFormat()).GetString(),
+                op::ToString(input->GetStorageFormat()).GetString());
         return false;
     }
     if ((*outputMask)[0] && gradOut->GetStorageFormat() != gradInput->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of gradOut and gradInput should be equal, gradOut [%s], gradInput [%s].",
-            op::ToString(gradOut->GetStorageFormat()).GetString(),
-            op::ToString(gradInput->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format of gradOut and gradInput should be equal, gradOut [%s], gradInput [%s].",
+                op::ToString(gradOut->GetStorageFormat()).GetString(),
+                op::ToString(gradInput->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -193,8 +190,8 @@ static bool CheckFormat(
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput, const aclBoolArray* outputMask)
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput,
+                       const aclBoolArray* outputMask)
 {
     const int max_check_nums = 8;
     OP_CHECK_MAX_DIM(input, max_check_nums, return false);
@@ -211,29 +208,27 @@ static bool CheckShape(
     return true;
 }
 
-static bool CheckOtherShape(
-    int dimC, const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar)
+static bool CheckOtherShape(int dimC, const aclTensor* weight, const aclTensor* runningMean,
+                            const aclTensor* runningVar)
 {
     if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dim of weight should be one and shape is channel num of input[%d], but got [%s].",
-            dimC, op::ToString(weight->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Dim of weight should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                op::ToString(weight->GetViewShape()).GetString());
         return false;
     }
     if (runningMean != nullptr &&
         (runningMean->GetViewShape().GetDimNum() != 1 || runningMean->GetViewShape()[0] != dimC)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", dimC,
-            op::ToString(runningMean->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Dim of runningMean should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                op::ToString(runningMean->GetViewShape()).GetString());
         return false;
     }
     if (runningVar != nullptr &&
         (runningVar->GetViewShape().GetDimNum() != 1 || runningVar->GetViewShape()[0] != dimC)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", dimC,
-            op::ToString(runningVar->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Dim of runningVar should be one and shape is channel num of input[%d], but got [%s].", dimC,
+                op::ToString(runningVar->GetViewShape()).GetString());
         return false;
     }
     return true;
@@ -245,10 +240,10 @@ static int64_t GetDimC(const aclTensor* input)
     return viewShape[1];
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput, const aclTensor* gradWeight,
-    const aclTensor* gradBias, const aclBoolArray* outputMask, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd)
+static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput,
+                               const aclTensor* gradWeight, const aclTensor* gradBias, const aclBoolArray* outputMask,
+                               const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar,
+                               const aclTensor* saveMean, const aclTensor* saveInvstd)
 {
     CHECK_RET(CheckMaskNotNull(gradInput, gradWeight, gradBias, outputMask), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -264,8 +259,8 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus FastBatchNormPost(
-    op::Shape& inputShape, aclTensor* bnGradInput, aclTensor* gradInput, aclOpExecutor* executor)
+aclnnStatus FastBatchNormPost(op::Shape& inputShape, aclTensor* bnGradInput, aclTensor* gradInput,
+                              aclOpExecutor* executor)
 {
     auto inputDims = inputShape.GetDimNum();
     if (inputDims > MAX_BN_DIMS) {
@@ -286,10 +281,11 @@ aclnnStatus FastBatchNormPost(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus FastBatchNormBackwardProc(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
-    aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+aclnnStatus FastBatchNormBackwardProc(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                                      const aclTensor* runningMean, const aclTensor* runningVar,
+                                      const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
+                                      aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias,
+                                      aclOpExecutor* executor)
 {
     bool isSupportNcdhw = isBatchNormSupportNcdhw();
     auto weightResize = op::ResizeFrom1D(weight, input, isSupportNcdhw, executor);
@@ -319,15 +315,15 @@ aclnnStatus FastBatchNormBackwardProc(
         if (input->GetViewShape().GetDimNum() == MAX_BN_DIMS) {
             // fast batch norm: 3D training update grad
             grad = l0op::BN3DTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
-            auto reduceGrad = l0op::BN3DTrainingReduceGrad(
-                gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
+            auto reduceGrad = l0op::BN3DTrainingReduceGrad(gradOut, input, grad[0], grad[1], weightResize,
+                                                           saveMeanResize, saveInvstdResize, eps, executor);
             CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
             *gradInput = const_cast<aclTensor*>(reduceGrad);
         } else {
             // fast batch norm: 2D training update grad
             grad = l0op::BNTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
-            auto reduceGrad = l0op::BNTrainingReduceGrad(
-                gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
+            auto reduceGrad = l0op::BNTrainingReduceGrad(gradOut, input, grad[0], grad[1], weightResize, saveMeanResize,
+                                                         saveInvstdResize, eps, executor);
             CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
             *gradInput = const_cast<aclTensor*>(reduceGrad);
         }
@@ -400,9 +396,8 @@ const aclTensor* TransposeRevert(const aclTensor* output, const aclTensor* input
     return l0op::Transpose(outputFormat, ncdhwArray, executor);
 }
 
-bool FastBatchNormBackwardProcTransposeCalc(
-    const aclTensor* gradOut, const aclTensor** gradOutContiguous, const aclTensor** inputContiguous,
-    aclOpExecutor* executor)
+bool FastBatchNormBackwardProcTransposeCalc(const aclTensor* gradOut, const aclTensor** gradOutContiguous,
+                                            const aclTensor** inputContiguous, aclOpExecutor* executor)
 {
     auto gradOutShape = gradOut->GetViewShape();
     auto gradOutDims = gradOutShape.GetDimNum();
@@ -423,10 +418,12 @@ bool FastBatchNormBackwardProcTransposeCalc(
     return false;
 }
 
-aclnnStatus FastBatchNormBackwardProcForAscendC(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
-    aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+aclnnStatus FastBatchNormBackwardProcForAscendC(const aclTensor* gradOut, const aclTensor* input,
+                                                const aclTensor* weight, const aclTensor* runningMean,
+                                                const aclTensor* runningVar, const aclTensor* saveMean,
+                                                const aclTensor* saveInvstd, bool training, float eps,
+                                                aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias,
+                                                aclOpExecutor* executor)
 {
     auto gradOutContiguous = l0op::Contiguous(gradOut, executor);
     CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -485,9 +482,10 @@ aclnnStatus FastBatchNormBackwardProcForAscendC(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus FastBatchNormBackwardPrepare(
-    const aclTensor* input, const aclTensor*& weight, const aclTensor*& runningMean, const aclTensor*& runningVar,
-    const aclTensor*& saveMean, const aclTensor*& saveInvstd, aclOpExecutor* executor)
+aclnnStatus FastBatchNormBackwardPrepare(const aclTensor* input, const aclTensor*& weight,
+                                         const aclTensor*& runningMean, const aclTensor*& runningVar,
+                                         const aclTensor*& saveMean, const aclTensor*& saveInvstd,
+                                         aclOpExecutor* executor)
 {
     // fast batch norm backward: prepare default values for optional tensors
     size_t dimC = input->GetViewShape()[1];
@@ -514,13 +512,13 @@ aclnnStatus FastBatchNormBackwardPrepare(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus FastBatchNormBackward(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
-    aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+aclnnStatus FastBatchNormBackward(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                                  const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* saveMean,
+                                  const aclTensor* saveInvstd, bool training, float eps, aclTensor** gradInput,
+                                  aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
 {
-    aclnnStatus bnPrepareResp =
-        FastBatchNormBackwardPrepare(input, weight, runningMean, runningVar, saveMean, saveInvstd, executor);
+    aclnnStatus bnPrepareResp = FastBatchNormBackwardPrepare(input, weight, runningMean, runningVar, saveMean,
+                                                             saveInvstd, executor);
     CHECK_RET(bnPrepareResp == ACLNN_SUCCESS, bnPrepareResp);
 
     size_t dimNum = input->GetViewShape().GetDimNum();
@@ -538,14 +536,13 @@ aclnnStatus FastBatchNormBackward(
     // fast batch norm: process backward computation
     aclTensor* result = nullptr;
     if (isBatchNormSupportAscendC()) {
-        auto bnResult = FastBatchNormBackwardProcForAscendC(
-            gradOutPre, inputPre, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, &result,
-            gradWeight, gradBias, executor);
+        auto bnResult = FastBatchNormBackwardProcForAscendC(gradOutPre, inputPre, weight, runningMean, runningVar,
+                                                            saveMean, saveInvstd, training, eps, &result, gradWeight,
+                                                            gradBias, executor);
         CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
     } else {
-        auto bnResult = FastBatchNormBackwardProc(
-            gradOutPre, inputPre, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, &result,
-            gradWeight, gradBias, executor);
+        auto bnResult = FastBatchNormBackwardProc(gradOutPre, inputPre, weight, runningMean, runningVar, saveMean,
+                                                  saveInvstd, training, eps, &result, gradWeight, gradBias, executor);
         CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
     }
 
@@ -559,14 +556,13 @@ aclnnStatus FastBatchNormBackward(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus FastBatchNormBackwardWeightAndBiasPost(
-    const aclBoolArray* outputMask, aclTensor* bnGradWeight, aclTensor* gradWeight, aclTensor* bnGradBias,
-    aclTensor* gradBias, aclOpExecutor* executor)
+aclnnStatus FastBatchNormBackwardWeightAndBiasPost(const aclBoolArray* outputMask, aclTensor* bnGradWeight,
+                                                   aclTensor* gradWeight, aclTensor* bnGradBias, aclTensor* gradBias,
+                                                   aclOpExecutor* executor)
 {
     if (!isBatchNormSupportAscendC()) {
         if ((*outputMask)[GRAD_WEIGHT_INDEX]) {
-            auto viewCopyWeight =
-                op::ResizeTo1D(bnGradWeight, gradWeight, isBatchNormSupportNcdhw(), executor);
+            auto viewCopyWeight = op::ResizeTo1D(bnGradWeight, gradWeight, isBatchNormSupportNcdhw(), executor);
             CHECK_RET(viewCopyWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
@@ -592,16 +588,18 @@ aclnnStatus FastBatchNormBackwardWeightAndBiasPost(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, double eps,
-    const aclBoolArray* outputMask, int version, aclTensor* gradInput, aclTensor* gradWeight, aclTensor* gradBias,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
+                                                       const aclTensor* weight, const aclTensor* runningMean,
+                                                       const aclTensor* runningVar, const aclTensor* saveMean,
+                                                       const aclTensor* saveInvstd, bool training, double eps,
+                                                       const aclBoolArray* outputMask, int version,
+                                                       aclTensor* gradInput, aclTensor* gradWeight, aclTensor* gradBias,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnFastBatchNormBackward,
-        DFX_IN(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, outputMask, version),
-        DFX_OUT(gradInput, gradWeight, gradBias));
+    L2_DFX_PHASE_1(aclnnFastBatchNormBackward,
+                   DFX_IN(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
+                          outputMask, version),
+                   DFX_OUT(gradInput, gradWeight, gradBias));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -615,9 +613,8 @@ aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    auto ret = CheckParams(
-        gradOut, input, gradInput, gradWeight, gradBias, outputMask, weight, runningMean, runningVar, saveMean,
-        saveInvstd);
+    auto ret = CheckParams(gradOut, input, gradInput, gradWeight, gradBias, outputMask, weight, runningMean, runningVar,
+                           saveMean, saveInvstd);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
@@ -638,11 +635,12 @@ aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(
     aclTensor* bnGradInput = nullptr;
     aclTensor* bnGradWeight = nullptr;
     aclTensor* bnGradBias = nullptr;
-    aclnnStatus bnResult = FastBatchNormBackward(
-        gradOutContigous, inputContiguous, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps,
-        &bnGradInput, &bnGradWeight, &bnGradBias, uniqueExecutor.get());
+    aclnnStatus bnResult = FastBatchNormBackward(gradOutContigous, inputContiguous, weight, runningMean, runningVar,
+                                                 saveMean, saveInvstd, training, eps, &bnGradInput, &bnGradWeight,
+                                                 &bnGradBias, uniqueExecutor.get());
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
-    auto weightResult = FastBatchNormBackwardWeightAndBiasPost(outputMask, bnGradWeight, gradWeight, bnGradBias, gradBias, uniqueExecutor.get());
+    auto weightResult = FastBatchNormBackwardWeightAndBiasPost(outputMask, bnGradWeight, gradWeight, bnGradBias,
+                                                               gradBias, uniqueExecutor.get());
     CHECK_RET(weightResult == ACLNN_SUCCESS, weightResult);
     if ((*outputMask)[0]) {
         auto viewCopyInput = FastBatchNormPost(inputShape, bnGradInput, gradInput, uniqueExecutor.get());
@@ -655,8 +653,8 @@ aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFastBatchNormBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnFastBatchNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFastBatchNormBackward);
     // 固定写法，调用框架能力，完成计算

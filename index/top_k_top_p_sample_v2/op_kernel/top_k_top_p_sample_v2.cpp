@@ -19,27 +19,30 @@
 using namespace AscendC;
 using namespace TopKTopPSampleV2;
 
-extern "C" __global__ __aicore__ void top_k_top_p_sample_v2(
-    GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR minPs,
-    GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKpSelect, GM_ADDR logitsIdx, GM_ADDR logitsSortMasked, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void top_k_top_p_sample_v2(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q,
+                                                            GM_ADDR minPs, GM_ADDR logitsSelectIdx,
+                                                            GM_ADDR logitsTopKpSelect, GM_ADDR logitsIdx,
+                                                            GM_ADDR logitsSortMasked, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     GM_ADDR usrWorkspace = GetUserWorkspace(workspace);
     TPipe pipe;
     if (TILING_KEY_IS(1001)) {
         TopKTopPSampleV2Kernel<half> op;
-        op.Init(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx, logitsSortMasked, usrWorkspace, tilingData, &pipe);
+        op.Init(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx, logitsSortMasked,
+                usrWorkspace, tilingData, &pipe);
         op.Process();
         pipe.Destroy();
     } else if (TILING_KEY_IS(1027)) {
         TopKTopPSampleV2Kernel<bfloat16_t> op;
-        op.Init(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx, logitsSortMasked, usrWorkspace, tilingData, &pipe);
+        op.Init(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx, logitsSortMasked,
+                usrWorkspace, tilingData, &pipe);
         op.Process();
         pipe.Destroy();
-    } 
-    else if (TILING_KEY_IS(1000)) {
+    } else if (TILING_KEY_IS(1000)) {
         TopKTopPSampleV2Kernel<float> op;
-        op.Init(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx, logitsSortMasked, usrWorkspace, tilingData, &pipe);
+        op.Init(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKpSelect, logitsIdx, logitsSortMasked,
+                usrWorkspace, tilingData, &pipe);
         op.Process();
         pipe.Destroy();
     } else {

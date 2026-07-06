@@ -14,16 +14,17 @@
 namespace ops {
 class Assert : public OpDef {
 public:
-    explicit Assert(const char *name) : OpDef(name)
+    explicit Assert(const char* name) : OpDef(name)
     {
         this->Input("input_condition").ParamType(REQUIRED).DataType({ge::DT_BOOL});
-        this->Input("input_data").ParamType(DYNAMIC).DataType({
-            ge::DT_INT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_UINT8,
-            ge::DT_INT32, ge::DT_INT64, ge::DT_UINT32, ge::DT_UINT64, ge::DT_BOOL});
+        this->Input("input_data")
+            .ParamType(DYNAMIC)
+            .DataType({ge::DT_INT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_UINT8, ge::DT_INT32, ge::DT_INT64,
+                       ge::DT_UINT32, ge::DT_UINT64, ge::DT_BOOL});
 
         ApplyNnAicpuDefaultCfg(*this);
     }
 };
 
 OP_ADD(Assert);
-}  // namespace ops
+} // namespace ops

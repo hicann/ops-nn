@@ -37,10 +37,10 @@ constexpr size_t ATTR_MAX_INDEX = 1;
 constexpr size_t ATTR_NUM_BITS_INDEX = 2;
 constexpr size_t ATTR_NARROW_RANGE_INDEX = 3;
 constexpr size_t SYNC_WORKSPACE_SIZE = 0;
-constexpr int64_t DEFAULT_BASE_LEN = 8192;       // 32KB per buffer (fp32)
-constexpr int64_t BLOCK_ALIGN_FP32 = 8;          // 32B / 4B
-constexpr int64_t BUFF_NUM = 2;                  // in + out double-buffering => 2 * 2 buffers logically
-constexpr int64_t MIN_BLOCK_FACTOR = 64;         // 至少给单核 256B 工作量
+constexpr int64_t DEFAULT_BASE_LEN = 8192; // 32KB per buffer (fp32)
+constexpr int64_t BLOCK_ALIGN_FP32 = 8;    // 32B / 4B
+constexpr int64_t BUFF_NUM = 2;            // in + out double-buffering => 2 * 2 buffers logically
+constexpr int64_t MIN_BLOCK_FACTOR = 64;   // 至少给单核 256B 工作量
 
 ge::graphStatus FakeQuantWithMinMaxArgsTiling::GetCompileInfo()
 {
@@ -92,17 +92,17 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::GetOpParam()
     narrowRange_ = (attrNarrowRange != nullptr) ? *attrNarrowRange : false;
 
     OP_CHECK_IF((std::isnan(fMin_) || std::isnan(fMax_) || std::isinf(fMin_) || std::isinf(fMax_)),
-                OP_LOGE(context_->GetNodeName(),
-                        "FakeQuantWithMinMaxArgs requires finite min/max, got min=%f max=%f.", fMin_, fMax_),
+                OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs requires finite min/max, got min=%f max=%f.",
+                        fMin_, fMax_),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((fMin_ >= fMax_),
-                OP_LOGE(context_->GetNodeName(),
-                        "FakeQuantWithMinMaxArgs requires min < max, got min=%f max=%f.", fMin_, fMax_),
+                OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs requires min < max, got min=%f max=%f.",
+                        fMin_, fMax_),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((numBits_ < 2 || numBits_ > 16),
-                OP_LOGE(context_->GetNodeName(),
-                        "FakeQuantWithMinMaxArgs num_bits must be in [2,16], got %ld.", numBits_),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (numBits_ < 2 || numBits_ > 16),
+        OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs num_bits must be in [2,16], got %ld.", numBits_),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -113,7 +113,7 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::CalcNudge()
     const float qMinF = narrowRange_ ? 1.0f : 0.0f;
     const float qMaxF = static_cast<float>((1ULL << static_cast<uint32_t>(numBits_)) - 1ULL);
 
-    const float scale = (fMax_ - fMin_) / (qMaxF - qMinF);                  // 反量化
+    const float scale = (fMax_ - fMin_) / (qMaxF - qMinF); // 反量化
     // H1: scaleInv must be re-divided, NOT 1/scale.
     const float scaleInv = (qMaxF - qMinF) / (fMax_ - fMin_);
 
@@ -156,7 +156,7 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::CalcTiling()
 
     // baseLen: 限制在 UB 单次能放下 2 份 fp32 buffer 的范围内（in + out），
     //          每份双缓冲（BUFF_NUM），保留少量预留。
-    int64_t ubAvail = static_cast<int64_t>(ubSize_) - 2048;  // reserve
+    int64_t ubAvail = static_cast<int64_t>(ubSize_) - 2048; // reserve
     int64_t maxBaseLen = ubAvail / (2 * BUFF_NUM * static_cast<int64_t>(sizeof(float)));
     // 向下对齐到 BLOCK_ALIGN_FP32。
     maxBaseLen = (maxBaseLen / BLOCK_ALIGN_FP32) * BLOCK_ALIGN_FP32;
@@ -195,8 +195,7 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::CalcTiling()
     blockTailFactor_ = totalLen_ - blockFactor_ * (numCore_ - 1);
 
     OP_CHECK_IF((blockTailFactor_ <= 0 || blockTailFactor_ > blockFactor_),
-                OP_LOGE(context_->GetNodeName(),
-                        "tiling not conservative: totalLen=%ld numCore=%ld bf=%ld bt=%ld",
+                OP_LOGE(context_->GetNodeName(), "tiling not conservative: totalLen=%ld numCore=%ld bf=%ld bt=%ld",
                         totalLen_, numCore_, blockFactor_, blockTailFactor_),
                 return ge::GRAPH_FAILED);
 
@@ -219,8 +218,8 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::WriteTilingData()
     const size_t dataSize = sizeof(tilingData_);
     auto rawTiling = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, rawTiling);
-    errno_t ret = memcpy_s(rawTiling->GetData(), rawTiling->GetCapacity(),
-                           reinterpret_cast<void*>(&tilingData_), dataSize);
+    errno_t ret = memcpy_s(rawTiling->GetData(), rawTiling->GetCapacity(), reinterpret_cast<void*>(&tilingData_),
+                           dataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s tiling failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -234,9 +233,8 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::WriteTilingData()
     OP_LOGD(context_->GetNodeName(),
             "FakeQuantWithMinMaxArgs tiling: totalLen=%ld numCore=%ld blockFactor=%ld blockTail=%ld baseLen=%ld "
             "nudgedMin=%f nudgedMax=%f scale=%f scaleInv=%f quantZero=%f tilingKey=%lu",
-            totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_,
-            tilingData_.nudgedMin, tilingData_.nudgedMax, tilingData_.scale, tilingData_.scaleInv,
-            tilingData_.quantZero, tilingKey_);
+            totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_, tilingData_.nudgedMin, tilingData_.nudgedMax,
+            tilingData_.scale, tilingData_.scaleInv, tilingData_.quantZero, tilingKey_);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -250,8 +248,7 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::DoTiling()
                 OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs GetOpParam failed."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((CalcNudge() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs CalcNudge failed."),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs CalcNudge failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF((CalcTiling() != ge::GRAPH_SUCCESS),
                 OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs CalcTiling failed."),
                 return ge::GRAPH_FAILED);
@@ -261,8 +258,7 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::DoTiling()
 static ge::graphStatus TilingForFakeQuantWithMinMaxArgs(gert::TilingContext* context)
 {
     OP_LOGD("FakeQuantWithMinMaxArgsTiling", "Enter TilingForFakeQuantWithMinMaxArgs");
-    OP_CHECK_IF(context == nullptr,
-                OP_LOGE("FakeQuantWithMinMaxArgsTiling", "Tiling context is null."),
+    OP_CHECK_IF(context == nullptr, OP_LOGE("FakeQuantWithMinMaxArgsTiling", "Tiling context is null."),
                 return ge::GRAPH_FAILED);
     FakeQuantWithMinMaxArgsTiling tiling(context);
     return tiling.DoTiling();
@@ -271,8 +267,7 @@ static ge::graphStatus TilingForFakeQuantWithMinMaxArgs(gert::TilingContext* con
 static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxArgs(gert::TilingParseContext* context)
 {
     OP_LOGD("FakeQuantWithMinMaxArgsTiling", "Enter TilingPrepareForFakeQuantWithMinMaxArgs");
-    OP_CHECK_IF(context == nullptr,
-                OP_LOGE("FakeQuantWithMinMaxArgsTiling", "TilingParse context is null."),
+    OP_CHECK_IF(context == nullptr, OP_LOGE("FakeQuantWithMinMaxArgsTiling", "TilingParse context is null."),
                 return ge::GRAPH_FAILED);
 
     auto compileInfo = context->GetCompiledInfo<FakeQuantWithMinMaxArgsCompileInfo>();
@@ -284,11 +279,11 @@ static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxArgs(gert::TilingParse
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
-    OP_CHECK_IF((compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-                OP_LOGE(context->GetNodeName(),
-                        "FakeQuantWithMinMaxArgs GetHardwareInfo failed, vectorCoreNum:%d, ubSize:%lu.",
-                        compileInfo->vectorCoreNum, compileInfo->ubSize),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
+        OP_LOGE(context->GetNodeName(), "FakeQuantWithMinMaxArgs GetHardwareInfo failed, vectorCoreNum:%d, ubSize:%lu.",
+                compileInfo->vectorCoreNum, compileInfo->ubSize),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

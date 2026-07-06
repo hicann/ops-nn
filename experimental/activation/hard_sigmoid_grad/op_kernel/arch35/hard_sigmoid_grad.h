@@ -45,10 +45,10 @@ class HardSigmoidGrad {
     static constexpr int32_t BUFFER_NUM = 2; // double buffer
 
 public:
-    __aicore__ inline HardSigmoidGrad() {};
+    __aicore__ inline HardSigmoidGrad(){};
 
     __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-                                 const HardSigmoidGradTilingData* tilingData);
+                                const HardSigmoidGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -62,8 +62,8 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> selfQueue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> gradInputQueue;
     // Temp buffers for computation
-    TBuf<QuePosition::VECCALC> tmpBuf;       // for alpha*x+beta intermediate
-    TBuf<QuePosition::VECCALC> maskBuf;      // for compare bitmask results
+    TBuf<QuePosition::VECCALC> tmpBuf;  // for alpha*x+beta intermediate
+    TBuf<QuePosition::VECCALC> maskBuf; // for compare bitmask results
 
     GlobalTensor<T> gradOutputGM;
     GlobalTensor<T> selfGM;
@@ -76,9 +76,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void HardSigmoidGrad<T>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-    const HardSigmoidGradTilingData* tilingData)
+__aicore__ inline void HardSigmoidGrad<T>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                                const HardSigmoidGradTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalLength - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -89,7 +88,8 @@ __aicore__ inline void HardSigmoidGrad<T>::Init(
     alpha_ = tilingData->alpha;
     beta_ = tilingData->beta;
 
-    gradOutputGM.SetGlobalBuffer((__gm__ T*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    gradOutputGM.SetGlobalBuffer((__gm__ T*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                                 blockLength_);
     selfGM.SetGlobalBuffer((__gm__ T*)self + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
     gradInputGM.SetGlobalBuffer((__gm__ T*)gradInput + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
@@ -100,7 +100,8 @@ __aicore__ inline void HardSigmoidGrad<T>::Init(
     pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(T));
     // mask buffer for compare bitmask: N float32 elements => N/8 uint8 bytes, 32-byte aligned
     int64_t maskBufSize = ((ubLength_ + 7) / 8 + 31) / 32 * 32;
-    if (maskBufSize < 32) maskBufSize = 32;
+    if (maskBufSize < 32)
+        maskBufSize = 32;
     pipe.InitBuffer(maskBuf, maskBufSize);
 }
 
@@ -147,13 +148,11 @@ __aicore__ inline void HardSigmoidGrad<T>::Compute(int64_t currentNum)
 
     // Step 3: mask = (tmp > 0), select result where mask=1, else 0
     CompareScalar(maskLocal, tmpLocal, static_cast<T>(0), CMPMODE::GT, alignedCount);
-    Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0),
-           SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+    Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
     // Step 4: mask = (tmp < 1), select result where mask=1, else 0
     CompareScalar(maskLocal, tmpLocal, static_cast<T>(1), CMPMODE::LT, alignedCount);
-    Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0),
-           SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+    Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
     gradInputQueue.template EnQue<T>(resultLocal);
     gradOutputQueue.FreeTensor(gradLocal);

@@ -17,43 +17,28 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnLSTMGetWorkspaceSize(
-    const aclTensor *input,
-    const aclTensorList *params,
-    const aclTensorList *hx,
-    const aclTensor *batchSizes,
-    bool hasBias,
-    int64_t numLayers,
-    double dropout,
-    bool train,
-    bool bidirectional,        
-    bool batchFirst,
-    aclTensor *output,
-    aclTensor *hy,
-    aclTensor *cy,
-    aclTensorList *iOut,  
-    aclTensorList *jOut, 
-    aclTensorList *fOut,
-    aclTensorList *oOut,
-    aclTensorList *hOut,
-    aclTensorList *cOut,
-    aclTensorList *tanhCOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const aclTensorList* params,
+                                                const aclTensorList* hx, const aclTensor* batchSizes, bool hasBias,
+                                                int64_t numLayers, double dropout, bool train, bool bidirectional,
+                                                bool batchFirst, aclTensor* output, aclTensor* hy, aclTensor* cy,
+                                                aclTensorList* iOut, aclTensorList* jOut, aclTensorList* fOut,
+                                                aclTensorList* oOut, aclTensorList* hOut, aclTensorList* cOut,
+                                                aclTensorList* tanhCOut, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor);
 /**
  * @brief A second interface of aclnnLSTMGetWorkspaceSize, used to perform calculation.
  * @param [in] workspace: start address of the workspace memory allocated on the NPU device.
- * @param [in] workspaceSize: size of the workspace applied on the NPU device, which is obtained by calling the first segment interface aclnnMaxPool3dWithArgmaxGetWorkspaceSize.
+ * @param [in] workspaceSize: size of the workspace applied on the NPU device, which is obtained by calling the first
+ * segment interface aclnnMaxPool3dWithArgmaxGetWorkspaceSize.
  * @param [in] exector: op executor, including the operator calculation process.
  * @param [in] stream: acl stream.
  * @return aclnnStatus: returned status code
  */
 
-ACLNN_API aclnnStatus aclnnLSTM(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                               aclrtStream stream);
+ACLNN_API aclnnStatus aclnnLSTM(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_MAX_POOL3D_WITH_ARGMAX_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_MAX_POOL3D_WITH_ARGMAX_H_

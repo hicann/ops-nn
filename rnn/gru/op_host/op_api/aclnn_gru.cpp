@@ -42,10 +42,10 @@ using namespace op;
 namespace {
 //  =========PackedSequence模式的数据结构
 struct GruDataParamsIn {
-    const aclTensor *input;
-    const aclTensorList *params;
-    const aclTensor *hx;
-    const aclTensor *batchSizes;
+    const aclTensor* input;
+    const aclTensorList* params;
+    const aclTensor* hx;
+    const aclTensor* batchSizes;
     int64_t numLayers;
     bool hasBias;
     bool train;
@@ -53,69 +53,68 @@ struct GruDataParamsIn {
 };
 
 struct GruDataParamsOut {
-    aclTensor *output;
-    aclTensor *hy;
-    aclTensorList *rOut;
-    aclTensorList *zOut;
-    aclTensorList *nOut;
-    aclTensorList *hnOut;
-    aclTensorList *hOut;
+    aclTensor* output;
+    aclTensor* hy;
+    aclTensorList* rOut;
+    aclTensorList* zOut;
+    aclTensorList* nOut;
+    aclTensorList* hnOut;
+    aclTensorList* hOut;
 };
 
 struct GruBaseOpInputs {
-    const aclTensor *input;
-    const aclTensor *weightInput;
-    const aclTensor *weightHidden;
-    const aclTensor *biasInput;
-    const aclTensor *biasHidden;
-    const aclTensor *seqLengthOptional;     //  batch_sizes数组
-    const aclTensor *initHOptional;         //  初始隐状态h0               
-    const char *direction;
+    const aclTensor* input;
+    const aclTensor* weightInput;
+    const aclTensor* weightHidden;
+    const aclTensor* biasInput;
+    const aclTensor* biasHidden;
+    const aclTensor* seqLengthOptional; //  batch_sizes数组
+    const aclTensor* initHOptional;     //  初始隐状态h0
+    const char* direction;
     bool isTraining;
 };
 
 struct GruBaseOpOutputs {
-    aclTensor *l0_yOut;
-    aclTensor *l0_outputHOut;
-    aclTensor *l0_rOut;
-    aclTensor *l0_zOut;
-    aclTensor *l0_nOut;
-    aclTensor *l0_nHOut;
+    aclTensor* l0_yOut;
+    aclTensor* l0_outputHOut;
+    aclTensor* l0_rOut;
+    aclTensor* l0_zOut;
+    aclTensor* l0_nOut;
+    aclTensor* l0_nHOut;
 };
-
 
 struct GruDataInfo {
-    int64_t T;              //  时间步数
-    int64_t B;              //  最大batch数
-    int64_t I;              //  输入特征维度 inputSize    
-    int64_t H;              //  隐层维度 hiddenSize
-    int64_t L;              //  层数 numLayers
-    int64_t D;              //  方向 1=单向  2=双向
-    int64_t groupLen;       //  每组参数个数 有偏置=4(w_ih, w_hh, b_ih, b_hh) 无偏置=2
-    int64_t LD;             //  L * D
-    ge::DataType dtype;     //  数据类型
-    const aclTensor *batchSizes;    //  batchSize数组
-    const aclTensor *lastResult;    //  上一层的推理结果，作为下一层的输入
-    int64_t totalValidSteps;        //  sum(batch_size)
+    int64_t T;                   //  时间步数
+    int64_t B;                   //  最大batch数
+    int64_t I;                   //  输入特征维度 inputSize
+    int64_t H;                   //  隐层维度 hiddenSize
+    int64_t L;                   //  层数 numLayers
+    int64_t D;                   //  方向 1=单向  2=双向
+    int64_t groupLen;            //  每组参数个数 有偏置=4(w_ih, w_hh, b_ih, b_hh) 无偏置=2
+    int64_t LD;                  //  L * D
+    ge::DataType dtype;          //  数据类型
+    const aclTensor* batchSizes; //  batchSize数组
+    const aclTensor* lastResult; //  上一层的推理结果，作为下一层的输入
+    int64_t totalValidSteps;     //  sum(batch_size)
 };
-}   //. namespace
+} // namespace
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static const int64_t INPUT_DIMS = 3;         //  输入tensor维度数
-static const int64_t WEIGHT_DIMS = 2;        //  权重tensor维度数
-static const int64_t BIAS_DIMS = 1;          //  偏置tensor维度数
-static const int64_t INIT_DIMS = 3;          //  初始隐状态维度数
-static const int64_t OUTPUT_DIMS = 3;        //  输出tensor维度数
+static const int64_t INPUT_DIMS = 3;  //  输入tensor维度数
+static const int64_t WEIGHT_DIMS = 2; //  权重tensor维度数
+static const int64_t BIAS_DIMS = 1;   //  偏置tensor维度数
+static const int64_t INIT_DIMS = 3;   //  初始隐状态维度数
+static const int64_t OUTPUT_DIMS = 3; //  输出tensor维度数
 static const int64_t INDEX_0 = 0;
 static const int64_t INDEX_1 = 1;
 static const int64_t INDEX_2 = 2;
 static const int64_t INDEX_3 = 3;
 static const int64_t INDEX_4 = 4;
 static const int64_t GRU_GATE_NUM = 3;
-static const size_t CONCAT_MAX_NUM = 32; 
+static const size_t CONCAT_MAX_NUM = 32;
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 static const std::initializer_list<DataType> INT_DTYPE_SUPPORT_LIST = {DataType::DT_INT64};
@@ -124,10 +123,10 @@ static const std::initializer_list<DataType> INT_DTYPE_SUPPORT_LIST = {DataType:
 auto gruNullptrInner = std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*>(
     nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
-static inline bool CheckNotNull(const aclTensor *input, const aclTensorList *params, const aclTensor *hx,
-    bool train, aclTensor *output, aclTensor *hy,
-    aclTensorList *rOut, aclTensorList *zOut, aclTensorList *nOut,
-    aclTensorList *hnOut, aclTensorList *hOut) {
+static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool train,
+                                aclTensor* output, aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut,
+                                aclTensorList* nOut, aclTensorList* hnOut, aclTensorList* hOut)
+{
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(params, return false);
     OP_CHECK_NULL(output, return false);
@@ -142,10 +141,10 @@ static inline bool CheckNotNull(const aclTensor *input, const aclTensorList *par
     return true;
 }
 
-static inline bool CheckDtypeValid(const aclTensor *input, const aclTensorList *params, const aclTensor *hx,
-    bool train, aclTensor *output, aclTensor *hy,
-    aclTensorList *rOut, aclTensorList *zOut, aclTensorList *nOut,
-    aclTensorList *hnOut, aclTensorList *hOut) {
+static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool train,
+                                   aclTensor* output, aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut,
+                                   aclTensorList* nOut, aclTensorList* hnOut, aclTensorList* hOut)
+{
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
     auto data_type = input->GetDataType();
 
@@ -180,10 +179,10 @@ static inline bool CheckDtypeValid(const aclTensor *input, const aclTensorList *
 }
 
 //  校验tensorList长度
-static bool CheckDimsSize(const aclTensorList *params, const aclTensor *hx, bool hasBias,
-    int64_t numLayers, bool train, bool bidirection,
-    aclTensorList *rOut, aclTensorList *zOut, aclTensorList *nOut,
-    aclTensorList *hnOut, aclTensorList *hOut) {
+static bool CheckDimsSize(const aclTensorList* params, const aclTensor* hx, bool hasBias, int64_t numLayers, bool train,
+                          bool bidirection, aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut,
+                          aclTensorList* hnOut, aclTensorList* hOut)
+{
     uint64_t dScale = bidirection ? 2 : 1;
     uint64_t bScale = hasBias ? 2 : 1;
     uint64_t output_nums = dScale * numLayers;
@@ -191,39 +190,39 @@ static bool CheckDimsSize(const aclTensorList *params, const aclTensor *hx, bool
 
     if (params->Size() != param_nums) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-            "The number of tensors required for the params lists should be %lu, but %lu was obtained.",
-            param_nums, params->Size());
+                "The number of tensors required for the params lists should be %lu, but %lu was obtained.", param_nums,
+                params->Size());
         return false;
     }
     if (train) {
         if (rOut->Size() != output_nums) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The number of tensors required for the rOut lists should be %lu, but %lu was obtained.",
-                output_nums, rOut->Size());
+                    "The number of tensors required for the rOut lists should be %lu, but %lu was obtained.",
+                    output_nums, rOut->Size());
             return false;
         }
         if (zOut->Size() != output_nums) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The number of tensors required for the zOut lists should be %lu, but %lu was obtained.",
-                output_nums, zOut->Size());
+                    "The number of tensors required for the zOut lists should be %lu, but %lu was obtained.",
+                    output_nums, zOut->Size());
             return false;
         }
         if (nOut->Size() != output_nums) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The number of tensors required for the nOut lists should be %lu, but %lu was obtained.",
-                output_nums, nOut->Size());
+                    "The number of tensors required for the nOut lists should be %lu, but %lu was obtained.",
+                    output_nums, nOut->Size());
             return false;
         }
         if (hnOut->Size() != output_nums) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The number of tensors required for the hnOut lists should be %lu, but %lu was obtained.",
-                output_nums, hnOut->Size());
+                    "The number of tensors required for the hnOut lists should be %lu, but %lu was obtained.",
+                    output_nums, hnOut->Size());
             return false;
         }
         if (hOut->Size() != output_nums) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The number of tensors required for the hOut lists should be %lu, but %lu was obtained.",
-                output_nums, hOut->Size());
+                    "The number of tensors required for the hOut lists should be %lu, but %lu was obtained.",
+                    output_nums, hOut->Size());
             return false;
         }
     }
@@ -231,11 +230,11 @@ static bool CheckDimsSize(const aclTensorList *params, const aclTensor *hx, bool
 }
 
 //  校验tensor维度
-static bool CheckDims(const aclTensor *input, const aclTensorList *params, const aclTensor *hx,
-    bool hasBias, int64_t numLayers, bool train, bool bidirection,
-    aclTensor *output, aclTensor *hy,
-    aclTensorList *rOut, aclTensorList *zOut, aclTensorList *nOut,
-    aclTensorList *hnOut, aclTensorList *hOut) {
+static bool CheckDims(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool hasBias,
+                      int64_t numLayers, bool train, bool bidirection, aclTensor* output, aclTensor* hy,
+                      aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut, aclTensorList* hnOut,
+                      aclTensorList* hOut)
+{
     OP_CHECK_WRONG_DIMENSION(input, INPUT_DIMS, return false);
     uint64_t bScale = hasBias ? 2 : 1;
     uint64_t dScale = bidirection ? 2 : 1;
@@ -279,11 +278,11 @@ static bool CheckDims(const aclTensor *input, const aclTensorList *params, const
     return true;
 }
 
-static bool CheckShape(const aclTensor *input, const aclTensorList *params, const aclTensor *hx,
-    bool hasBias, int64_t numLayers, bool train, bool bidirection, bool batchFirst,
-    aclTensor *output, aclTensor *hy,
-    aclTensorList *rOut, aclTensorList *zOut, aclTensorList *nOut,
-    aclTensorList *hnOut, aclTensorList *hOut) {
+static bool CheckShape(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool hasBias,
+                       int64_t numLayers, bool train, bool bidirection, bool batchFirst, aclTensor* output,
+                       aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut,
+                       aclTensorList* hnOut, aclTensorList* hOut)
+{
     //  根据batchFirst确定T和B的位置
     auto timeStep = batchFirst ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
     auto batchSize = batchFirst ? input->GetViewShape().GetDim(0) : input->GetViewShape().GetDim(1);
@@ -340,26 +339,30 @@ static bool CheckShape(const aclTensor *input, const aclTensorList *params, cons
 }
 
 //  标准模式参数校验函数
-static aclnnStatus CheckParams(const aclTensor *input, const aclTensorList *params, const aclTensor *hx,
-                            bool hasBias, int64_t numLayers, bool train, bool bidirection, bool batchFirst,
-                            aclTensor *output, aclTensor *hy, aclTensorList *rOut, aclTensorList *zOut,
-                            aclTensorList *nOut, aclTensorList *hnOut, aclTensorList *hOut) {
-    CHECK_RET(CheckNotNull(input, params, hx, train, output, hy, rOut, zOut, nOut, hnOut, hOut), 
-                ACLNN_ERR_PARAM_NULLPTR);       
-    CHECK_RET(CheckDtypeValid(input, params, hx, train, output, hy, rOut, zOut, nOut, hnOut, hOut), 
-                ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckDimsSize(params, hx, hasBias, numLayers, train, bidirection, rOut, zOut, nOut, hnOut, hOut), 
-                ACLNN_ERR_PARAM_INVALID); 
-    CHECK_RET(CheckDims(input, params, hx, hasBias, numLayers, train, bidirection, output, hy, rOut, zOut, nOut, hnOut, hOut), 
-                ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShape(input, params, hx, hasBias, numLayers, train, bidirection, batchFirst, output, hy, rOut, zOut, nOut, hnOut, hOut), 
-                ACLNN_ERR_PARAM_INVALID);  
-    return ACLNN_SUCCESS;              
+static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool hasBias,
+                               int64_t numLayers, bool train, bool bidirection, bool batchFirst, aclTensor* output,
+                               aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut,
+                               aclTensorList* hnOut, aclTensorList* hOut)
+{
+    CHECK_RET(CheckNotNull(input, params, hx, train, output, hy, rOut, zOut, nOut, hnOut, hOut),
+              ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckDtypeValid(input, params, hx, train, output, hy, rOut, zOut, nOut, hnOut, hOut),
+              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDimsSize(params, hx, hasBias, numLayers, train, bidirection, rOut, zOut, nOut, hnOut, hOut),
+              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        CheckDims(input, params, hx, hasBias, numLayers, train, bidirection, output, hy, rOut, zOut, nOut, hnOut, hOut),
+        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(input, params, hx, hasBias, numLayers, train, bidirection, batchFirst, output, hy, rOut, zOut,
+                         nOut, hnOut, hOut),
+              ACLNN_ERR_PARAM_INVALID);
+    return ACLNN_SUCCESS;
 }
 
 //  通用工具函数
-static aclTensorList *ProcessInputContiguous(const aclTensorList *inputParam, aclOpExecutor *executor) {
-    std::vector<const aclTensor *> inputVec;
+static aclTensorList* ProcessInputContiguous(const aclTensorList* inputParam, aclOpExecutor* executor)
+{
+    std::vector<const aclTensor*> inputVec;
     for (size_t i = 0; i < inputParam->Size(); ++i) {
         auto secondContiguous = l0op::Contiguous((*inputParam)[i], executor);
         inputVec.push_back(secondContiguous);
@@ -369,7 +372,8 @@ static aclTensorList *ProcessInputContiguous(const aclTensorList *inputParam, ac
 }
 
 //  拼接tensor
-static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA, int64_t dim, aclOpExecutor *executor) {
+static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA, int64_t dim, aclOpExecutor* executor)
+{
     if (tensorListA.size() == 1) {
         return tensorListA[0];
     }
@@ -394,7 +398,7 @@ static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA,
             } else {
                 auto aclTensorListTail = executor->AllocTensorList(tensorListOnce.data(), tensorListOnce.size());
                 auto concatTensorTail = l0op::ConcatD(aclTensorListTail, dim, executor);
-                CHECK_RET(concatTensorTail != nullptr, nullptr); 
+                CHECK_RET(concatTensorTail != nullptr, nullptr);
                 tensorListB.emplace_back(concatTensorTail);
             }
             tensorListOnce.clear();
@@ -405,18 +409,18 @@ static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA,
     return tensorListA.front();
 }
 
-
 //  校验tensorList长度
-static aclnnStatus CheckTensorListLength(const aclTensorList *tensorList, int64_t length, const char* name) {
-    OP_CHECK(
-        int64_t(tensorList->Size()) == length,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "length of %s should be %lld, but %lld was obtained.", name, length, tensorList->Size()),
-        return ACLNN_ERR_PARAM_INVALID
-    );
+static aclnnStatus CheckTensorListLength(const aclTensorList* tensorList, int64_t length, const char* name)
+{
+    OP_CHECK(int64_t(tensorList->Size()) == length,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "length of %s should be %lld, but %lld was obtained.", name, length,
+                     tensorList->Size()),
+             return ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckTensorListNullptr(const aclTensorList *tensorList) {
+static aclnnStatus CheckTensorListNullptr(const aclTensorList* tensorList)
+{
     OP_CHECK_NULL(tensorList, return ACLNN_ERR_PARAM_NULLPTR);
     for (int64_t idx = INDEX_0; idx < int64_t(tensorList->Size()); idx++) {
         OP_CHECK_NULL((*tensorList)[idx], return ACLNN_ERR_PARAM_NULLPTR);
@@ -424,57 +428,62 @@ static aclnnStatus CheckTensorListNullptr(const aclTensorList *tensorList) {
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckTensorListShape(const aclTensorList *tensorList, op::Shape shape, const char* name) {
+static aclnnStatus CheckTensorListShape(const aclTensorList* tensorList, op::Shape shape, const char* name)
+{
     for (int64_t idx = INDEX_0; idx < int64_t(tensorList->Size()); idx++) {
         auto tensor = (*tensorList)[idx];
         if (tensor->GetViewShape() != shape) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected tensor in %s to have same size as %s, but got %s.",
-                name, op::ToString(shape).GetString(), op::ToString(tensor->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected tensor in %s to have same size as %s, but got %s.", name,
+                    op::ToString(shape).GetString(), op::ToString(tensor->GetViewShape()).GetString());
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckTensorListDtype(const aclTensorList *tensorList, op::DataType dtype, const char* name) {
+static aclnnStatus CheckTensorListDtype(const aclTensorList* tensorList, op::DataType dtype, const char* name)
+{
     for (int64_t idx = INDEX_0; idx < int64_t(tensorList->Size()); idx++) {
         auto tensor = (*tensorList)[idx];
         if (tensor->GetDataType() != dtype) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected tensor in %s to have dtype as %s, but got %s.",
-                name, op::ToString(dtype).GetString(), op::ToString(tensor->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected tensor in %s to have dtype as %s, but got %s.", name,
+                    op::ToString(dtype).GetString(), op::ToString(tensor->GetDataType()).GetString());
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckDataParamsNullptr(const GruDataParamsIn &inputs, const GruDataParamsOut &outputs) {
+static aclnnStatus CheckDataParamsNullptr(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs)
+{
     OP_CHECK_NULL(inputs.input, return ACLNN_ERR_PARAM_NULLPTR);
     auto ret = CheckTensorListNullptr(inputs.params);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (inputs.hx) {
         OP_CHECK_NULL(inputs.hx, return ACLNN_ERR_PARAM_NULLPTR);
     }
-   
+
     OP_CHECK_NULL(outputs.output, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(outputs.hy, return ACLNN_ERR_PARAM_NULLPTR);
     if (inputs.train) {
         ret = CheckTensorListNullptr(outputs.rOut);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);  
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListNullptr(outputs.zOut);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret); 
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListNullptr(outputs.nOut);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret); 
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListNullptr(outputs.hnOut);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret); 
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CheckTensorListNullptr(outputs.hOut);
-        CHECK_RET(ret == ACLNN_SUCCESS, ret); 
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
     return ACLNN_SUCCESS;
 }
 
 //  PackedSequence模式dim和list长度校验
-static aclnnStatus CheckDataDimsAndListLength(const GruDataParamsIn &inputs, const GruDataParamsOut &outputs, GruDataInfo &info) {
+static aclnnStatus CheckDataDimsAndListLength(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs,
+                                              GruDataInfo& info)
+{
     aclnnStatus ret;
 
     OP_CHECK_WRONG_DIMENSION(inputs.input, INDEX_2, return ACLNN_ERR_PARAM_INVALID);
@@ -509,34 +518,34 @@ static aclnnStatus CheckDataDimsAndListLength(const GruDataParamsIn &inputs, con
 }
 
 //  PackedSequence模式的shape校验
-static aclnnStatus CheckDataShapes(const GruDataParamsIn &inputs, const GruDataParamsOut &outputs, GruDataInfo &info) {
+static aclnnStatus CheckDataShapes(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs, GruDataInfo& info)
+{
     aclnnStatus ret;
 
     auto data2dShape = inputs.input->GetViewShape();
     info.T = inputs.batchSizes->Numel();
     OP_CHECK(info.T != INDEX_0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes should not be empty wen it is a non-null pointer."),
-        return ACLNN_ERR_PARAM_INVALID);
-    
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes should not be empty wen it is a non-null pointer."),
+             return ACLNN_ERR_PARAM_INVALID);
+
     info.totalValidSteps = data2dShape.GetDim(INDEX_0);
 
     auto outputShape = outputs.output->GetViewShape();
     info.B = outputs.hy->GetViewShape().GetDim(INDEX_1);
     info.H = outputShape.GetDim(INDEX_1);
     OP_CHECK(info.B > INDEX_0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch size should be positive, but %lld wad obtained.", info.B),
-        return ACLNN_ERR_PARAM_INVALID);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch size should be positive, but %lld wad obtained.", info.B),
+             return ACLNN_ERR_PARAM_INVALID);
     OP_CHECK(info.totalValidSteps <= info.T * info.B,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
-            "input.shape[0]=%lld should not exceed T*B=%lld (T=%lld, B=%lld).",
-            info.totalValidSteps, info.T * info.B, info.T, info.B),
-        return ACLNN_ERR_PARAM_INVALID);
-    
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input.shape[0]=%lld should not exceed T*B=%lld (T=%lld, B=%lld).",
+                     info.totalValidSteps, info.T * info.B, info.T, info.B),
+             return ACLNN_ERR_PARAM_INVALID);
+
     info.I = data2dShape.GetDim(INDEX_1);
     if (inputs.bidirection) {
         OP_CHECK(info.H % 2 == INDEX_0,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output last dim should be even in bidirection scenarios."),
-            return ACLNN_ERR_PARAM_INVALID);
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output last dim should be even in bidirection scenarios."),
+                 return ACLNN_ERR_PARAM_INVALID);
         info.H = info.H / INDEX_2;
     }
 
@@ -549,31 +558,27 @@ static aclnnStatus CheckDataShapes(const GruDataParamsIn &inputs, const GruDataP
 
     for (int64_t group = INDEX_0; group < info.LD; group++) {
         int64_t currOffset = group * info.groupLen;
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-            (*inputs.params)[currOffset + INDEX_0],
-            ((group < info.D) ? weightIhFirstLayerShape : weightIhShape),
-            return ACLNN_ERR_PARAM_INVALID);
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-            (*inputs.params)[currOffset + INDEX_1], weightHhShape, return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_0],
+                                                    ((group < info.D) ? weightIhFirstLayerShape : weightIhShape),
+                                                    return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_1], weightHhShape,
+                                                    return ACLNN_ERR_PARAM_INVALID);
         if (inputs.hasBias) {
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-                (*inputs.params)[currOffset + INDEX_2], biasShape, return ACLNN_ERR_PARAM_INVALID);
-            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-                (*inputs.params)[currOffset + INDEX_3], biasShape, return ACLNN_ERR_PARAM_INVALID);
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_2], biasShape,
+                                                        return ACLNN_ERR_PARAM_INVALID);
+            OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_3], biasShape,
+                                                        return ACLNN_ERR_PARAM_INVALID);
         }
     }
 
     if (inputs.hx) {
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-                inputs.hx, hxShape, return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(inputs.hx, hxShape, return ACLNN_ERR_PARAM_INVALID);
     }
 
     op::Shape output2dShape = {info.totalValidSteps, info.H * info.D};
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-                outputs.output, output2dShape, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-                outputs.hy, hyShape, return ACLNN_ERR_PARAM_INVALID);
-    
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputs.output, output2dShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(outputs.hy, hyShape, return ACLNN_ERR_PARAM_INVALID);
+
     if (inputs.train) {
         op::Shape gateShape2d = {info.totalValidSteps, info.H};
         ret = CheckTensorListShape(outputs.rOut, gateShape2d, "rOut");
@@ -591,7 +596,8 @@ static aclnnStatus CheckDataShapes(const GruDataParamsIn &inputs, const GruDataP
 }
 
 //  PackedSequence模式的数据类型校验
-static aclnnStatus CheckDataDtypes(const GruDataParamsIn &inputs, const GruDataParamsOut &outputs, GruDataInfo &info) {
+static aclnnStatus CheckDataDtypes(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs, GruDataInfo& info)
+{
     aclnnStatus ret;
 
     OP_CHECK_DTYPE_NOT_SUPPORT(inputs.input, DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
@@ -621,18 +627,20 @@ static aclnnStatus CheckDataDtypes(const GruDataParamsIn &inputs, const GruDataP
 }
 
 //  PackedSequence模式参数校验
-static aclnnStatus CheckDataParamsValid(const GruDataParamsIn &inputs, const GruDataParamsOut &outputs, GruDataInfo &info) {
+static aclnnStatus CheckDataParamsValid(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs,
+                                        GruDataInfo& info)
+{
     aclnnStatus ret;
     ret = CheckDataParamsNullptr(inputs, outputs);
     OP_CHECK(ret == ACLNN_SUCCESS,
-        OP_LOGE(ret, "CheckDataParamsNullptr failed, certain incoming nullptrs may be invalid."),
-        return ret);
-    
-    OP_CHECK(inputs.numLayers >= INDEX_1,
-        OP_LOGE(ret, "numLayers should be a positive integer, but %lld was obtained.", inputs.numLayers),
-        return ACLNN_ERR_PARAM_NULLPTR);
+             OP_LOGE(ret, "CheckDataParamsNullptr failed, certain incoming nullptrs may be invalid."), return ret);
 
-    if (inputs.input->IsEmpty()) return ACLNN_SUCCESS;
+    OP_CHECK(inputs.numLayers >= INDEX_1,
+             OP_LOGE(ret, "numLayers should be a positive integer, but %lld was obtained.", inputs.numLayers),
+             return ACLNN_ERR_PARAM_NULLPTR);
+
+    if (inputs.input->IsEmpty())
+        return ACLNN_SUCCESS;
 
     //  填充维度信息
     info.L = inputs.numLayers;
@@ -651,7 +659,8 @@ static aclnnStatus CheckDataParamsValid(const GruDataParamsIn &inputs, const Gru
 
 //  收集各层各方向最终隐状态
 //  L*D个(1,B,H) -> (L*D,B,H) hy
-static aclnnStatus ProcessViewCopyOutputH(std::vector<const aclTensor*>& hOut, aclTensor *hy, aclOpExecutor *executor) {
+static aclnnStatus ProcessViewCopyOutputH(std::vector<const aclTensor*>& hOut, aclTensor* hy, aclOpExecutor* executor)
+{
     auto outputHConcat = SplitToConcat(hOut, 0, executor);
     auto viewCopyResultOutputH = l0op::ViewCopy(outputHConcat, hy, executor);
     CHECK_RET(viewCopyResultOutputH != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -659,8 +668,9 @@ static aclnnStatus ProcessViewCopyOutputH(std::vector<const aclTensor*>& hOut, a
 }
 
 //  PackedSequence模式 准备当前层\方向的输入参数
-static aclnnStatus GruDataProcessParams(const GruDataParamsIn& inputs, const GruDataInfo& info, int64_t layerIdx, int64_t directIdx,
-    GruBaseOpInputs& baseIn, aclOpExecutor *executor) {
+static aclnnStatus GruDataProcessParams(const GruDataParamsIn& inputs, const GruDataInfo& info, int64_t layerIdx,
+                                        int64_t directIdx, GruBaseOpInputs& baseIn, aclOpExecutor* executor)
+{
     //  从hx中slice出当前层\方向的h0 (L*D, B, H) ->(B, H)
     if (inputs.hx) {
         const int64_t offsetData[] = {layerIdx * info.D + directIdx, 0, 0};
@@ -695,7 +705,9 @@ static aclnnStatus GruDataProcessParams(const GruDataParamsIn& inputs, const Gru
 }
 
 //  PackedSequence模式调用Gru
-static aclnnStatus CallGruBaseOp(const GruBaseOpInputs& baseIn, const GruDataInfo& info, GruBaseOpOutputs& baseOut, aclOpExecutor *executor) {
+static aclnnStatus CallGruBaseOp(const GruBaseOpInputs& baseIn, const GruDataInfo& info, GruBaseOpOutputs& baseOut,
+                                 aclOpExecutor* executor)
+{
     //  y和门输出为紧凑shape [sum(batch_size), H]  output_h也紧凑[B, H]
     op::Shape compactShape = {info.totalValidSteps, info.H};
     op::Shape hyShape = {info.B, info.H};
@@ -706,25 +718,26 @@ static aclnnStatus CallGruBaseOp(const GruBaseOpInputs& baseIn, const GruDataInf
     baseOut.l0_nOut = executor->AllocTensor(compactShape, info.dtype, op::Format::FORMAT_ND);
     baseOut.l0_nHOut = executor->AllocTensor(compactShape, info.dtype, op::Format::FORMAT_ND);
 
-    auto ret = l0op::Gru(
-        baseIn.input, baseIn.weightInput, baseIn.weightHidden, baseIn.biasInput, baseIn.biasHidden,
-        baseIn.seqLengthOptional, baseIn.initHOptional, baseIn.direction, baseIn.isTraining,
-        baseOut.l0_yOut, baseOut.l0_outputHOut, baseOut.l0_rOut, baseOut.l0_zOut, 
-        baseOut.l0_nOut, baseOut.l0_nHOut, executor);
+    auto ret = l0op::Gru(baseIn.input, baseIn.weightInput, baseIn.weightHidden, baseIn.biasInput, baseIn.biasHidden,
+                         baseIn.seqLengthOptional, baseIn.initHOptional, baseIn.direction, baseIn.isTraining,
+                         baseOut.l0_yOut, baseOut.l0_outputHOut, baseOut.l0_rOut, baseOut.l0_zOut, baseOut.l0_nOut,
+                         baseOut.l0_nHOut, executor);
     CHECK_RET(ret != gruNullptrInner, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
 //  PackedSequence模式 获取单层单向GRU输出
-static aclnnStatus GruDataGetBaseOpOut(const GruDataParamsIn& inputs, const GruDataInfo& info, int64_t layerIdx, int64_t directIdx,
-    std::vector<GruBaseOpOutputs>& baseOutVec, aclOpExecutor *executor) {
+static aclnnStatus GruDataGetBaseOpOut(const GruDataParamsIn& inputs, const GruDataInfo& info, int64_t layerIdx,
+                                       int64_t directIdx, std::vector<GruBaseOpOutputs>& baseOutVec,
+                                       aclOpExecutor* executor)
+{
     aclnnStatus ret;
 
     //  构建L0输入
     GruBaseOpInputs baseIn = {
-        info.lastResult, nullptr, nullptr, nullptr, nullptr, info.batchSizes, nullptr,
-        (directIdx == INDEX_0) ? "UNIDIRECTIONAL" : "REDIRECTIONAL", inputs.train
-    };
+        info.lastResult, nullptr,         nullptr, nullptr,
+        nullptr,         info.batchSizes, nullptr, (directIdx == INDEX_0) ? "UNIDIRECTIONAL" : "REDIRECTIONAL",
+        inputs.train};
     ret = GruDataProcessParams(inputs, info, layerIdx, directIdx, baseIn, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -738,9 +751,11 @@ static aclnnStatus GruDataGetBaseOpOut(const GruDataParamsIn& inputs, const GruD
 }
 
 //  PackedSequence模式，拷贝Gru输出到L2 L0:2D(T*B,H) -> L2(sum(batch_size), D*H)
-static aclnnStatus GruDataGetParamsOut(const GruDataParamsIn& inputs, const GruDataInfo& info, 
-    const std::vector<GruBaseOpOutputs>& baseOutVec, GruDataParamsOut& outputs, aclOpExecutor *executor) {
-    const aclTensor *res = nullptr;
+static aclnnStatus GruDataGetParamsOut(const GruDataParamsIn& inputs, const GruDataInfo& info,
+                                       const std::vector<GruBaseOpOutputs>& baseOutVec, GruDataParamsOut& outputs,
+                                       aclOpExecutor* executor)
+{
+    const aclTensor* res = nullptr;
 
     res = l0op::ViewCopy(info.lastResult, outputs.output, executor);
     CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -749,7 +764,7 @@ static aclnnStatus GruDataGetParamsOut(const GruDataParamsIn& inputs, const GruD
     //  outputHOut紧凑[B,H]，直接Reshape为(1,B,H)
     op::Shape size3dShape = {1, info.B, info.H};
     //  所有层*方向 切片+拼接
-    std::vector<const aclTensor *> hyVec;
+    std::vector<const aclTensor*> hyVec;
     for (int64_t idx = INDEX_0; idx < info.LD; idx++) {
         auto hyOut = l0op::Reshape(baseOutVec.at(idx).l0_outputHOut, size3dShape, executor);
         CHECK_RET(hyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -779,9 +794,11 @@ static aclnnStatus GruDataGetParamsOut(const GruDataParamsIn& inputs, const GruD
 }
 
 //  PackedSequence模式的主运行函数 L0 y输出已是紧凑2D
-static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, GruDataParamsOut& outputs, aclOpExecutor *executor) {
+static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, GruDataParamsOut& outputs,
+                              aclOpExecutor* executor)
+{
     aclnnStatus ret;
-    
+
     std::vector<GruBaseOpOutputs> baseOutVec;
     info.lastResult = inputs.input;
     for (int64_t layerIdx = INDEX_0; layerIdx < info.L; layerIdx++) {
@@ -811,7 +828,9 @@ static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, 
 }
 
 //  PackedSequence模式入库函数
-static aclnnStatus GruDataGetWorkspaceSize(GruDataParamsIn& inputs, GruDataParamsOut& outputs, uint64_t *workspaceSize, aclOpExecutor **executor) {
+static aclnnStatus GruDataGetWorkspaceSize(GruDataParamsIn& inputs, GruDataParamsOut& outputs, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
+{
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -853,10 +872,13 @@ static aclnnStatus GruDataGetWorkspaceSize(GruDataParamsIn& inputs, GruDataParam
 
 //  门输出
 //  输出tensorList先层后方向排布 [L0-F, L0-B, L1-F, L1-B,...]
-static aclnnStatus ProcessViewCopy(
-    std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*> layerResult,
-    const aclTensorList *rOut, const aclTensorList *zOut, const aclTensorList *nOut, const aclTensorList *hnOut, const aclTensorList *hOut,
-    int64_t numLayers, bool bidirection, const char *direction, aclOpExecutor *executor) {
+static aclnnStatus ProcessViewCopy(std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                                              const aclTensor*, const aclTensor*>
+                                       layerResult,
+                                   const aclTensorList* rOut, const aclTensorList* zOut, const aclTensorList* nOut,
+                                   const aclTensorList* hnOut, const aclTensorList* hOut, int64_t numLayers,
+                                   bool bidirection, const char* direction, aclOpExecutor* executor)
+{
     auto paramsNumSingleLayer = bidirection ? 2 : 1;
     auto directionStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
     auto idx = paramsNumSingleLayer * numLayers + directionStart;
@@ -877,9 +899,12 @@ static aclnnStatus ProcessViewCopy(
 
 //  从outputHOut中提取最后时刻的隐状态
 //  outputHOut (T, B, H) -> (1, B, H)
-static aclnnStatus ProcessOutputH(
-    std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*> layerResult,
-    std::vector<const aclTensor*>& hyVector, const char *direction, aclOpExecutor *executor) {
+static aclnnStatus ProcessOutputH(std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                                             const aclTensor*, const aclTensor*>
+                                      layerResult,
+                                  std::vector<const aclTensor*>& hyVector, const char* direction,
+                                  aclOpExecutor* executor)
+{
     int64_t numStep = std::get<0>(layerResult)->GetViewShape().GetDim(0);
     int64_t batch = std::get<0>(layerResult)->GetViewShape().GetDim(1);
     int64_t hidden = std::get<0>(layerResult)->GetViewShape().GetDim(2);
@@ -898,11 +923,12 @@ static aclnnStatus ProcessOutputH(
 }
 
 //  单层单向GRU
-std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*> GruSingleLayerDirec(
-    const aclTensor *input, const aclTensorList *params, const aclTensor *hx,
-    aclTensor *yOutDirec, aclTensor *outputHOutDirec, aclTensor *rOutDirec, 
-    aclTensor *zOutDirec, aclTensor *nOutDirec, aclTensor *nHOutDirec,
-    const char *direction, bool bidirection, bool train, int64_t num_layers, bool hasBias,aclOpExecutor *executor) {
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*>
+GruSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, aclTensor* yOutDirec,
+                    aclTensor* outputHOutDirec, aclTensor* rOutDirec, aclTensor* zOutDirec, aclTensor* nOutDirec,
+                    aclTensor* nHOutDirec, const char* direction, bool bidirection, bool train, int64_t num_layers,
+                    bool hasBias, aclOpExecutor* executor)
+{
     //  计算当前层单向的参数个数
     auto oneLayerParams = bidirection ? 4 : 2;
     oneLayerParams = hasBias ? oneLayerParams * 2 : oneLayerParams;
@@ -916,13 +942,13 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor
     aclIntArray* perm = executor->AllocIntArray(permData, INDEX_2);
     OP_CHECK_NULL(perm, return gruNullptrInner);
 
-    const aclTensor *weightInput = l0op::Transpose((*params)[paramsOffsets], perm, executor);
+    const aclTensor* weightInput = l0op::Transpose((*params)[paramsOffsets], perm, executor);
     OP_CHECK_NULL(weightInput, return gruNullptrInner);
-    const aclTensor *weightHidden = l0op::Transpose((*params)[paramsOffsets + 1], perm, executor);
+    const aclTensor* weightHidden = l0op::Transpose((*params)[paramsOffsets + 1], perm, executor);
     OP_CHECK_NULL(weightHidden, return gruNullptrInner);
 
-    const aclTensor *biasInput = nullptr;
-    const aclTensor *biasHidden = nullptr;
+    const aclTensor* biasInput = nullptr;
+    const aclTensor* biasHidden = nullptr;
     if (hasBias) {
         biasInput = (*params)[paramsOffsets + 2];
         biasHidden = (*params)[paramsOffsets + 3];
@@ -930,7 +956,7 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor
 
     //  从hx中Slice出当前层/方向的初始隐状态h0
     //  hx(L*D, B, H) -> 2D(B, H)
-    const aclTensor *initH = nullptr;
+    const aclTensor* initH = nullptr;
     if (hx != nullptr) {
         auto batch = hx->GetViewShape().GetDim(1);
         auto hidden = hx->GetViewShape().GetDim(2);
@@ -938,23 +964,23 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor
         auto initStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : 1;
 
         const int64_t offsetData[] = {oneLayerInit * num_layers + initStart, 0, 0};
-        aclIntArray *offsets = executor->AllocIntArray(offsetData, INDEX_3);
+        aclIntArray* offsets = executor->AllocIntArray(offsetData, INDEX_3);
         OP_CHECK_NULL(offsets, return gruNullptrInner);
         const int64_t sizeData[] = {1, batch, hidden};
-        aclIntArray *size = executor->AllocIntArray(sizeData, INDEX_3);
+        aclIntArray* size = executor->AllocIntArray(sizeData, INDEX_3);
         OP_CHECK_NULL(size, return gruNullptrInner);
         const aclTensor* initH3d = l0op::Slice(hx, offsets, size, executor);
         OP_CHECK_NULL(initH3d, return gruNullptrInner);
         op::Shape initH2dShape = {batch, hidden};
         initH = l0op::Reshape(initH3d, initH2dShape, executor);
-        OP_CHECK_NULL(initH, return gruNullptrInner); 
-    } 
+        OP_CHECK_NULL(initH, return gruNullptrInner);
+    }
 
     //  无batch_size
-    auto layerResult = l0op::Gru(input, weightInput, weightHidden, biasInput, biasHidden,
-        nullptr, initH, direction, train, 
-        yOutDirec, outputHOutDirec, rOutDirec, zOutDirec, nOutDirec, nHOutDirec, executor); 
-    
+    auto layerResult = l0op::Gru(input, weightInput, weightHidden, biasInput, biasHidden, nullptr, initH, direction,
+                                 train, yOutDirec, outputHOutDirec, rOutDirec, zOutDirec, nOutDirec, nHOutDirec,
+                                 executor);
+
     OP_CHECK_NULL(std::get<0>(layerResult), return gruNullptrInner);
     OP_CHECK_NULL(std::get<1>(layerResult), return gruNullptrInner);
     OP_CHECK_NULL(std::get<2>(layerResult), return gruNullptrInner);
@@ -965,18 +991,22 @@ std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor
     return layerResult;
 }
 
-aclnnStatus aclnnGRUGetWorkspaceSize(
-    const aclTensor *input, const aclTensorList *params, const aclTensor *hx, const aclTensor *batchSizes, bool hasBias, int64_t numLayers,
-    double dropout, bool train, bool bidirection, bool batchFirst, aclTensor *output, aclTensor *hy, aclTensorList *rOut, aclTensorList *zOut, 
-    aclTensorList *nOut, aclTensorList *hnOut, aclTensorList *hOut, uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList* params, const aclTensor* hx,
+                                     const aclTensor* batchSizes, bool hasBias, int64_t numLayers, double dropout,
+                                     bool train, bool bidirection, bool batchFirst, aclTensor* output, aclTensor* hy,
+                                     aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut,
+                                     aclTensorList* hnOut, aclTensorList* hOut, uint64_t* workspaceSize,
+                                     aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(aclnnGRU, DFX_IN(input, params, hx, batchSizes, hasBias, numLayers, dropout, train, bidirection, batchFirst), 
-    DFX_OUT(output, hy, rOut, zOut, nOut, hnOut, hOut));
+    L2_DFX_PHASE_1(aclnnGRU,
+                   DFX_IN(input, params, hx, batchSizes, hasBias, numLayers, dropout, train, bidirection, batchFirst),
+                   DFX_OUT(output, hy, rOut, zOut, nOut, hnOut, hOut));
 
     //  判断是否进入PackedSequence模式
     if (batchSizes != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
-            "GRU PackedSequence(variable-length) mode is not supported yet, please use fixed-length 3D input with batchSizes=nullptr.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GRU PackedSequence(variable-length) mode is not supported yet, please use "
+                                         "fixed-length 3D input with batchSizes=nullptr.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -993,8 +1023,8 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
     }
 
     // 固定写法，参数检查
-    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirection, batchFirst,
-         output, hy, rOut, zOut, nOut, hnOut, hOut);
+    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirection, batchFirst, output, hy, rOut,
+                           zOut, nOut, hnOut, hOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 转连续内存布局
@@ -1005,7 +1035,7 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
     CHECK_RET(paramsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // hx
     auto hxContiguous = hx;
-    if (hx != nullptr) { 
+    if (hx != nullptr) {
         hxContiguous = l0op::Contiguous(hx, uniqueExecutor.get());
         CHECK_RET(hxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -1025,12 +1055,13 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
 
     std::vector<const aclTensor*> hyVector = {};
 
-    //  训练模式分支 
+    //  训练模式分支
     if (train) {
         for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
             auto yOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
             CHECK_RET(yOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto outputHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+            auto outputHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                       op::Format::FORMAT_ND);
             CHECK_RET(outputHOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
             auto rOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
             CHECK_RET(rOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -1038,40 +1069,50 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
             CHECK_RET(zOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
             auto nOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
             CHECK_RET(nOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto nHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+            auto nHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                  op::Format::FORMAT_ND);
             CHECK_RET(nHOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-            auto layerResultForward = GruSingleLayerDirec(curInput, paramsContiguous, hxContiguous,
-                yOutForward, outputHOutForward, rOutForward, zOutForward, nOutForward, nHOutForward,
-                "UNIDIRECTIONAL", bidirection, train, i, hasBias, uniqueExecutor.get());
-            
-            ProcessViewCopy(layerResultForward, rOut, zOut, nOut, hnOut, hOut, i, bidirection, "UNIDIRECTIONAL", uniqueExecutor.get());
+            auto layerResultForward = GruSingleLayerDirec(
+                curInput, paramsContiguous, hxContiguous, yOutForward, outputHOutForward, rOutForward, zOutForward,
+                nOutForward, nHOutForward, "UNIDIRECTIONAL", bidirection, train, i, hasBias, uniqueExecutor.get());
+
+            ProcessViewCopy(layerResultForward, rOut, zOut, nOut, hnOut, hOut, i, bidirection, "UNIDIRECTIONAL",
+                            uniqueExecutor.get());
             ProcessOutputH(layerResultForward, hyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
 
             if (bidirection) {
-                auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                      op::Format::FORMAT_ND);
                 CHECK_RET(yOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto outputHOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto outputHOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                            op::Format::FORMAT_ND);
                 CHECK_RET(outputHOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto rOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto rOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                      op::Format::FORMAT_ND);
                 CHECK_RET(rOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto zOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto zOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                      op::Format::FORMAT_ND);
                 CHECK_RET(zOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto nOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto nOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                      op::Format::FORMAT_ND);
                 CHECK_RET(nOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto nHOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto nHOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                       op::Format::FORMAT_ND);
                 CHECK_RET(nHOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-                auto layerResultBackward = GruSingleLayerDirec(curInput, paramsContiguous, hxContiguous,
-                    yOutBackward, outputHOutBackward, rOutBackward, zOutBackward, nOutBackward, nHOutBackward,
-                    "REDIRECTIONAL", bidirection, train, i, hasBias, uniqueExecutor.get());
-                
+                auto layerResultBackward = GruSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutBackward,
+                                                               outputHOutBackward, rOutBackward, zOutBackward,
+                                                               nOutBackward, nHOutBackward, "REDIRECTIONAL",
+                                                               bidirection, train, i, hasBias, uniqueExecutor.get());
+
                 op::FVector<const aclTensor*> inputConcat;
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
                 curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
-                ProcessViewCopy(layerResultBackward, rOut, zOut, nOut, hnOut, hOut, i, bidirection, "REDIRECTIONAL", uniqueExecutor.get());
+                ProcessViewCopy(layerResultBackward, rOut, zOut, nOut, hnOut, hOut, i, bidirection, "REDIRECTIONAL",
+                                uniqueExecutor.get());
                 // 从outputHout切出最后时刻的h -> hyVector
                 ProcessOutputH(layerResultBackward, hyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
@@ -1088,8 +1129,8 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
         auto viewCopyResultInput = l0op::ViewCopy(outputY, output, uniqueExecutor.get());
         CHECK_RET(viewCopyResultInput != nullptr, ACLNN_ERR_INNER_NULLPTR);
         ProcessViewCopyOutputH(hyVector, hy, uniqueExecutor.get());
-    //  推理模式分支
-    //  门输出tensor在循环外分配，所有层复用同一块
+        //  推理模式分支
+        //  门输出tensor在循环外分配，所有层复用同一块
     } else {
         auto rOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
         CHECK_RET(rOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -1100,10 +1141,10 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
         auto nHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
         CHECK_RET(nHOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        aclTensor *rOutBackward = nullptr;
-        aclTensor *zOutBackward = nullptr;
-        aclTensor *nOutBackward = nullptr;
-        aclTensor *nHOutBackward = nullptr;
+        aclTensor* rOutBackward = nullptr;
+        aclTensor* zOutBackward = nullptr;
+        aclTensor* nOutBackward = nullptr;
+        aclTensor* nHOutBackward = nullptr;
 
         if (bidirection) {
             rOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
@@ -1120,27 +1161,31 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
         for (uint64_t i = 0U; i < uint64_t(numLayers); ++i) {
             auto yOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
             CHECK_RET(yOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto outputHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+            auto outputHOutForward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                       op::Format::FORMAT_ND);
             CHECK_RET(outputHOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
             //  单层单向 正向
-            auto layerResultForward = GruSingleLayerDirec(curInput, paramsContiguous, hxContiguous,
-                yOutForward, outputHOutForward, rOutForward, zOutForward, nOutForward, nHOutForward,
-                "UNIDIRECTIONAL", bidirection, train, i, hasBias, uniqueExecutor.get());
+            auto layerResultForward = GruSingleLayerDirec(
+                curInput, paramsContiguous, hxContiguous, yOutForward, outputHOutForward, rOutForward, zOutForward,
+                nOutForward, nHOutForward, "UNIDIRECTIONAL", bidirection, train, i, hasBias, uniqueExecutor.get());
             // 从outputHout切出最后时刻的h -> hyVector
             ProcessOutputH(layerResultForward, hyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
 
             if (bidirection) {
-                auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto yOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                      op::Format::FORMAT_ND);
                 CHECK_RET(yOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                auto outputHOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(), op::Format::FORMAT_ND);
+                auto outputHOutBackward = uniqueExecutor.get()->AllocTensor(outShape, input->GetDataType(),
+                                                                            op::Format::FORMAT_ND);
                 CHECK_RET(outputHOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
                 //  单层单向 反向
-                auto layerResultBackward = GruSingleLayerDirec(curInput, paramsContiguous, hxContiguous,
-                    yOutBackward, outputHOutBackward, rOutBackward, zOutBackward, nOutBackward, nHOutBackward,
-                    "REDIRECTIONAL", bidirection, train, i, hasBias, uniqueExecutor.get());
-                
+                auto layerResultBackward = GruSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutBackward,
+                                                               outputHOutBackward, rOutBackward, zOutBackward,
+                                                               nOutBackward, nHOutBackward, "REDIRECTIONAL",
+                                                               bidirection, train, i, hasBias, uniqueExecutor.get());
+
                 op::FVector<const aclTensor*> inputConcat;
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
@@ -1169,13 +1214,14 @@ aclnnStatus aclnnGRUGetWorkspaceSize(
 }
 
 /**
-* @brief aclnnGRU的第二段接口，用于执行计算。
-*/
-aclnnStatus aclnnGRU(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream) {
+ * @brief aclnnGRU的第二段接口，用于执行计算。
+ */
+aclnnStatus aclnnGRU(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnGRU);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus
 }
-#endif 
+#endif

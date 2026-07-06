@@ -35,13 +35,10 @@ InferShapeContextFaker& InferShapeContextFaker::NodeIoNum(size_t inputNum, size_
     return *this;
 }
 
-InferShapeContextFaker& InferShapeContextFaker::IrInputNum(size_t inputNum)
-{
-    return *this;
-}
+InferShapeContextFaker& InferShapeContextFaker::IrInputNum(size_t inputNum) { return *this; }
 
-InferShapeContextFaker& InferShapeContextFaker::IrInstanceNum(
-    const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum)
+InferShapeContextFaker& InferShapeContextFaker::IrInstanceNum(const std::vector<uint32_t>& inputInstanceNum,
+                                                              const std::vector<uint32_t>& outputInstanceNum)
 {
     OpInferShapeContextBuilder::IOInstanceNum(inputInstanceNum, outputInstanceNum);
     return *this;
@@ -52,8 +49,8 @@ InferShapeContextFaker& InferShapeContextFaker::IrInstanceNum(const std::vector<
     return *this;
 }
 
-InferShapeContextFaker& InferShapeContextFaker::NodeInputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
+InferShapeContextFaker& InferShapeContextFaker::NodeInputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                                            ge::Format storageFormat)
 {
     while (inputTensors_.size() <= index) {
         inputTensors_.emplace_back(Tensor());
@@ -130,8 +127,8 @@ InferShapeContextFaker& InferShapeContextFaker::InputShapes(const std::vector<St
     return *this;
 }
 
-InferShapeContextFaker& InferShapeContextFaker::NodeOutputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
+InferShapeContextFaker& InferShapeContextFaker::NodeOutputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                                             ge::Format storageFormat)
 {
     OpInferShapeContextBuilder::OutputTensorDesc(index, dtype, originFormat, storageFormat);
     return *this;

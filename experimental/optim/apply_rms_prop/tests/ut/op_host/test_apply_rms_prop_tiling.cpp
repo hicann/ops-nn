@@ -64,17 +64,17 @@ static const std::string OP_NAME = "ApplyRmsProp";
 //     `tensor->GetData<uint16_t>()` 读取方式一致）
 // -------------------------------------------------------------------
 struct ScalarStorageF32 {
-    float lr       = 0.01f;
-    float rho      = 0.9f;
+    float lr = 0.01f;
+    float rho = 0.9f;
     float momentum = 0.5f;
-    float epsilon  = 1e-8f;
+    float epsilon = 1e-8f;
 };
 
 struct ScalarStorageU16 {
-    uint16_t lr       = 0;
-    uint16_t rho      = 0;
+    uint16_t lr = 0;
+    uint16_t rho = 0;
     uint16_t momentum = 0;
-    uint16_t epsilon  = 0;
+    uint16_t epsilon = 0;
 };
 
 // -------------------------------------------------------------------
@@ -83,7 +83,7 @@ struct ScalarStorageU16 {
 // -------------------------------------------------------------------
 static float Ut_Fp16BitsToFloat(uint16_t bits)
 {
-    uint32_t sign     = (bits >> 15) & 0x1u;
+    uint32_t sign = (bits >> 15) & 0x1u;
     uint32_t exponent = (bits >> 10) & 0x1Fu;
     uint32_t mantissa = bits & 0x3FFu;
 
@@ -125,8 +125,8 @@ static uint16_t Ut_FloatToFp16Bits(float f)
 {
     uint32_t f32;
     std::memcpy(&f32, &f, sizeof(f32));
-    uint32_t sign     = (f32 >> 31) & 0x1u;
-    int32_t  exp      = static_cast<int32_t>((f32 >> 23) & 0xFFu) - 127;
+    uint32_t sign = (f32 >> 31) & 0x1u;
+    int32_t exp = static_cast<int32_t>((f32 >> 23) & 0xFFu) - 127;
     uint32_t mantissa = f32 & 0x7FFFFFu;
 
     if (f == 0.0f) {
@@ -158,15 +158,9 @@ class AddExampleTilingCompileInfo {};
 
 class ApplyRmsPropTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyRmsPropTilingTest SetUp." << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyRmsPropTilingTest SetUp." << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyRmsPropTilingTest TearDown." << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyRmsPropTilingTest TearDown." << std::endl; }
 };
 
 // -------------------------------------------------------------------
@@ -176,79 +170,69 @@ protected:
 //   算子定义已将 lr/rho/momentum/epsilon 从 Input(scalar tensor) 改为 Attr(float)，
 //   UT helper 同步：inputs 仅 4 个 tensor（var/ms/mom/grad），scalar 通过 attrs_ 传入。
 // -------------------------------------------------------------------
-static gert::TilingContextPara MakeFp32TilingContextPara(
-    const std::initializer_list<int64_t>& varShape,
-    ScalarStorageF32* scalars,
-    void* compileInfo,
-    uint64_t coreNum = 64,
-    uint64_t ubSize = 262144,
-    uint64_t tilingDataSize = 4096)
+static gert::TilingContextPara MakeFp32TilingContextPara(const std::initializer_list<int64_t>& varShape,
+                                                         ScalarStorageF32* scalars, void* compileInfo,
+                                                         uint64_t coreNum = 64, uint64_t ubSize = 262144,
+                                                         uint64_t tilingDataSize = 4096)
 {
     gert::StorageShape tensorShape = {varShape, varShape};
 
     std::vector<TilingContextPara::TensorDescription> inputs({
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // var
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // ms
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // mom
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // grad
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // ms
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // mom
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
     });
 
     std::vector<TilingContextPara::TensorDescription> outputs({
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // var_out
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // ms_out
-        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},  // mom_out
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // var_out
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // ms_out
+        {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND}, // mom_out
     });
 
     std::vector<TilingContextPara::OpAttr> attrs({
-        {"lr",       Ops::Math::AnyValue::CreateFrom<float>(scalars->lr)},
-        {"rho",      Ops::Math::AnyValue::CreateFrom<float>(scalars->rho)},
+        {"lr", Ops::Math::AnyValue::CreateFrom<float>(scalars->lr)},
+        {"rho", Ops::Math::AnyValue::CreateFrom<float>(scalars->rho)},
         {"momentum", Ops::Math::AnyValue::CreateFrom<float>(scalars->momentum)},
-        {"epsilon",  Ops::Math::AnyValue::CreateFrom<float>(scalars->epsilon)},
+        {"epsilon", Ops::Math::AnyValue::CreateFrom<float>(scalars->epsilon)},
     });
-    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, compileInfo,
-                                   coreNum, ubSize, tilingDataSize);
+    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, compileInfo, coreNum, ubSize, tilingDataSize);
 }
 
 // fp16/bf16 共用（方案 B：scalar 仍以 float attr 下发，与 fp32 helper 等价）
 // 保留旧签名以减少 test case 改动面；ScalarStorageU16 字段在 helper 内被
 // 解释回 float（使用对应的 BitsToFloat），便于现有 test 沿用 U16 位模式构造。
-static gert::TilingContextPara Make16BitTilingContextPara(
-    const std::initializer_list<int64_t>& varShape,
-    ge::DataType dtype,
-    ScalarStorageU16* scalars,
-    void* compileInfo,
-    uint64_t coreNum = 64,
-    uint64_t ubSize = 262144,
-    uint64_t tilingDataSize = 4096)
+static gert::TilingContextPara Make16BitTilingContextPara(const std::initializer_list<int64_t>& varShape,
+                                                          ge::DataType dtype, ScalarStorageU16* scalars,
+                                                          void* compileInfo, uint64_t coreNum = 64,
+                                                          uint64_t ubSize = 262144, uint64_t tilingDataSize = 4096)
 {
     gert::StorageShape tensorShape = {varShape, varShape};
 
     std::vector<TilingContextPara::TensorDescription> inputs({
-        {tensorShape, dtype, ge::FORMAT_ND},  // var
-        {tensorShape, dtype, ge::FORMAT_ND},  // ms
-        {tensorShape, dtype, ge::FORMAT_ND},  // mom
-        {tensorShape, dtype, ge::FORMAT_ND},  // grad
+        {tensorShape, dtype, ge::FORMAT_ND}, // var
+        {tensorShape, dtype, ge::FORMAT_ND}, // ms
+        {tensorShape, dtype, ge::FORMAT_ND}, // mom
+        {tensorShape, dtype, ge::FORMAT_ND}, // grad
     });
 
     std::vector<TilingContextPara::TensorDescription> outputs({
-        {tensorShape, dtype, ge::FORMAT_ND},  // var_out
-        {tensorShape, dtype, ge::FORMAT_ND},  // ms_out
-        {tensorShape, dtype, ge::FORMAT_ND},  // mom_out
+        {tensorShape, dtype, ge::FORMAT_ND}, // var_out
+        {tensorShape, dtype, ge::FORMAT_ND}, // ms_out
+        {tensorShape, dtype, ge::FORMAT_ND}, // mom_out
     });
 
     // 将 U16 位模式还原为 float（dtype 决定解码器）
     auto bitsToFloat = [&](uint16_t bits) -> float {
-        return (dtype == ge::DT_FLOAT16) ? Ut_Fp16BitsToFloat(bits)
-                                         : Ut_Bf16BitsToFloat(bits);
+        return (dtype == ge::DT_FLOAT16) ? Ut_Fp16BitsToFloat(bits) : Ut_Bf16BitsToFloat(bits);
     };
     std::vector<TilingContextPara::OpAttr> attrs({
-        {"lr",       Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->lr))},
-        {"rho",      Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->rho))},
+        {"lr", Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->lr))},
+        {"rho", Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->rho))},
         {"momentum", Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->momentum))},
-        {"epsilon",  Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->epsilon))},
+        {"epsilon", Ops::Math::AnyValue::CreateFrom<float>(bitsToFloat(scalars->epsilon))},
     });
-    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, compileInfo,
-                                   coreNum, ubSize, tilingDataSize);
+    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, compileInfo, coreNum, ubSize, tilingDataSize);
 }
 
 // -------------------------------------------------------------------
@@ -258,27 +242,28 @@ TEST_F(ApplyRmsPropTilingTest, T001_BasicShape_Fp32_Succeeds)
 {
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageF32 scalars;
-    scalars.lr       = 0.01f;
-    scalars.rho      = 0.9f;
+    scalars.lr = 0.01f;
+    scalars.rho = 0.9f;
     scalars.momentum = 0.5f;
-    scalars.epsilon  = 1e-8f;
+    scalars.epsilon = 1e-8f;
 
     auto para = MakeFp32TilingContextPara({32, 4, 4, 4}, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for basic fp32 shape";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     // 方案 B：移除 atvoss EleBaseTilingData，自管 ApplyRmsPropTilingData
     EXPECT_GE(info.tilingDataSize, sizeof(ApplyRmsPropTilingData))
         << "TilingData size insufficient for ApplyRmsPropTilingData";
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
-    EXPECT_FLOAT_EQ(td->lr,    0.01f);
+    EXPECT_FLOAT_EQ(td->lr, 0.01f);
     EXPECT_FLOAT_EQ(td->rho1m, 1.0f - 0.9f);
-    EXPECT_FLOAT_EQ(td->mom,   0.5f);
-    EXPECT_FLOAT_EQ(td->eps,   1e-8f);
+    EXPECT_FLOAT_EQ(td->mom, 0.5f);
+    EXPECT_FLOAT_EQ(td->eps, 1e-8f);
 }
 
 // -------------------------------------------------------------------
@@ -288,25 +273,26 @@ TEST_F(ApplyRmsPropTilingTest, T002_LargeShape_Fp32_Succeeds)
 {
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageF32 scalars;
-    scalars.lr       = 0.001f;
-    scalars.rho      = 0.99f;
+    scalars.lr = 0.001f;
+    scalars.rho = 0.99f;
     scalars.momentum = 0.0f;
-    scalars.epsilon  = 1e-7f;
+    scalars.epsilon = 1e-7f;
 
     auto para = MakeFp32TilingContextPara({8192, 128}, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for large shape";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     EXPECT_GT(info.blockNum, 0u) << "Large shape should be split across cores";
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
-    EXPECT_FLOAT_EQ(td->lr,    0.001f);
+    EXPECT_FLOAT_EQ(td->lr, 0.001f);
     EXPECT_NEAR(td->rho1m, 1.0f - 0.99f, 1e-6f);
-    EXPECT_FLOAT_EQ(td->mom,   0.0f);
-    EXPECT_FLOAT_EQ(td->eps,   1e-7f);
+    EXPECT_FLOAT_EQ(td->mom, 0.0f);
+    EXPECT_FLOAT_EQ(td->eps, 1e-7f);
 }
 
 // -------------------------------------------------------------------
@@ -316,23 +302,24 @@ TEST_F(ApplyRmsPropTilingTest, T003_1D_Shape_Succeeds)
 {
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageF32 scalars;
-    scalars.lr       = 0.1f;
-    scalars.rho      = 0.5f;
+    scalars.lr = 0.1f;
+    scalars.rho = 0.5f;
     scalars.momentum = 0.9f;
-    scalars.epsilon  = 1e-6f;
+    scalars.epsilon = 1e-6f;
 
     auto para = MakeFp32TilingContextPara({1024}, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for 1D shape";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
-    EXPECT_FLOAT_EQ(td->lr,    0.1f);
+    EXPECT_FLOAT_EQ(td->lr, 0.1f);
     EXPECT_FLOAT_EQ(td->rho1m, 0.5f);
-    EXPECT_FLOAT_EQ(td->mom,   0.9f);
-    EXPECT_FLOAT_EQ(td->eps,   1e-6f);
+    EXPECT_FLOAT_EQ(td->mom, 0.9f);
+    EXPECT_FLOAT_EQ(td->eps, 1e-6f);
 }
 
 // -------------------------------------------------------------------
@@ -342,23 +329,24 @@ TEST_F(ApplyRmsPropTilingTest, T004_Scalar_BoundaryRho_Succeeds)
 {
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageF32 scalars;
-    scalars.lr       = 1.0f;
-    scalars.rho      = 0.0f;
+    scalars.lr = 1.0f;
+    scalars.rho = 0.0f;
     scalars.momentum = 1.0f;
-    scalars.epsilon  = 0.0f;
+    scalars.epsilon = 0.0f;
 
     auto para = MakeFp32TilingContextPara({64, 32}, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for boundary scalar values";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
-    EXPECT_FLOAT_EQ(td->lr,    1.0f);
+    EXPECT_FLOAT_EQ(td->lr, 1.0f);
     EXPECT_FLOAT_EQ(td->rho1m, 1.0f);
-    EXPECT_FLOAT_EQ(td->mom,   1.0f);
-    EXPECT_FLOAT_EQ(td->eps,   0.0f);
+    EXPECT_FLOAT_EQ(td->mom, 1.0f);
+    EXPECT_FLOAT_EQ(td->eps, 0.0f);
 }
 
 // -------------------------------------------------------------------
@@ -372,31 +360,32 @@ TEST_F(ApplyRmsPropTilingTest, T005_Fp16_BasicShape_Succeeds)
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageU16 scalars;
     // fp16 表示的 lr=0.01（近似值，取 fp16 可精确表示的最近数）
-    scalars.lr       = Ut_FloatToFp16Bits(0.01f);
-    scalars.rho      = Ut_FloatToFp16Bits(0.9f);
+    scalars.lr = Ut_FloatToFp16Bits(0.01f);
+    scalars.rho = Ut_FloatToFp16Bits(0.9f);
     scalars.momentum = Ut_FloatToFp16Bits(0.5f);
-    scalars.epsilon  = Ut_FloatToFp16Bits(0.001f);  // fp16 下 1e-8 会下溢，选较大的值保证精确
+    scalars.epsilon = Ut_FloatToFp16Bits(0.001f); // fp16 下 1e-8 会下溢，选较大的值保证精确
 
     auto para = Make16BitTilingContextPara({16, 32}, ge::DT_FLOAT16, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for fp16 dtype";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     EXPECT_GE(info.tilingDataSize, sizeof(ApplyRmsPropTilingData));
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
     // 预期值用同一位转换函数计算，验证 Tiling 内部使用了相同的 fp16 → fp32 转换
-    float expectLr  = Ut_Fp16BitsToFloat(scalars.lr);
+    float expectLr = Ut_Fp16BitsToFloat(scalars.lr);
     float expectRho = Ut_Fp16BitsToFloat(scalars.rho);
     float expectMom = Ut_Fp16BitsToFloat(scalars.momentum);
     float expectEps = Ut_Fp16BitsToFloat(scalars.epsilon);
 
-    EXPECT_FLOAT_EQ(td->lr,    expectLr);
+    EXPECT_FLOAT_EQ(td->lr, expectLr);
     EXPECT_FLOAT_EQ(td->rho1m, 1.0f - expectRho);
-    EXPECT_FLOAT_EQ(td->mom,   expectMom);
-    EXPECT_FLOAT_EQ(td->eps,   expectEps);
+    EXPECT_FLOAT_EQ(td->mom, expectMom);
+    EXPECT_FLOAT_EQ(td->eps, expectEps);
 }
 
 // -------------------------------------------------------------------
@@ -410,17 +399,18 @@ TEST_F(ApplyRmsPropTilingTest, T006_Fp16_BoundaryScalar_Succeeds)
 {
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageU16 scalars;
-    scalars.lr       = 0x0000;   // +0.0
-    scalars.rho      = 0x8000;   // -0.0 → 1 - (-0) = 1
-    scalars.momentum = 0x3C00;   // 1.0  (sign=0, exp=15, mantissa=0)
-    scalars.epsilon  = 0x0001;   // 最小次正规数 ≈ 5.96e-8
+    scalars.lr = 0x0000;       // +0.0
+    scalars.rho = 0x8000;      // -0.0 → 1 - (-0) = 1
+    scalars.momentum = 0x3C00; // 1.0  (sign=0, exp=15, mantissa=0)
+    scalars.epsilon = 0x0001;  // 最小次正规数 ≈ 5.96e-8
 
     auto para = Make16BitTilingContextPara({128}, ge::DT_FLOAT16, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for fp16 boundary scalars";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
 
@@ -446,29 +436,30 @@ TEST_F(ApplyRmsPropTilingTest, T007_Bf16_BasicShape_Succeeds)
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageU16 scalars;
     // bf16 可表达范围与 fp32 相同（指数 8 位）；截断尾数的位模式
-    scalars.lr       = Ut_FloatToBf16Bits(0.01f);
-    scalars.rho      = Ut_FloatToBf16Bits(0.9f);
+    scalars.lr = Ut_FloatToBf16Bits(0.01f);
+    scalars.rho = Ut_FloatToBf16Bits(0.9f);
     scalars.momentum = Ut_FloatToBf16Bits(0.5f);
-    scalars.epsilon  = Ut_FloatToBf16Bits(1e-8f);
+    scalars.epsilon = Ut_FloatToBf16Bits(1e-8f);
 
     auto para = Make16BitTilingContextPara({64, 64}, ge::DT_BF16, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for bf16 dtype";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
 
-    float expectLr  = Ut_Bf16BitsToFloat(scalars.lr);
+    float expectLr = Ut_Bf16BitsToFloat(scalars.lr);
     float expectRho = Ut_Bf16BitsToFloat(scalars.rho);
     float expectMom = Ut_Bf16BitsToFloat(scalars.momentum);
     float expectEps = Ut_Bf16BitsToFloat(scalars.epsilon);
 
-    EXPECT_FLOAT_EQ(td->lr,    expectLr);
+    EXPECT_FLOAT_EQ(td->lr, expectLr);
     EXPECT_FLOAT_EQ(td->rho1m, 1.0f - expectRho);
-    EXPECT_FLOAT_EQ(td->mom,   expectMom);
-    EXPECT_FLOAT_EQ(td->eps,   expectEps);
+    EXPECT_FLOAT_EQ(td->mom, expectMom);
+    EXPECT_FLOAT_EQ(td->eps, expectEps);
 }
 
 // -------------------------------------------------------------------
@@ -482,24 +473,25 @@ TEST_F(ApplyRmsPropTilingTest, T008_Bf16_BoundaryScalar_Succeeds)
 {
     AddExampleTilingCompileInfo compileInfo;
     ScalarStorageU16 scalars;
-    scalars.lr       = 0x0000;                        // +0.0
-    scalars.rho      = 0x0000;                        // +0.0 → rho1m = 1.0
-    scalars.momentum = Ut_FloatToBf16Bits(-0.25f);    // 负值
-    scalars.epsilon  = 0x3F80;                        // 1.0 (bf16: sign=0, exp=127, mantissa=0)
+    scalars.lr = 0x0000;                           // +0.0
+    scalars.rho = 0x0000;                          // +0.0 → rho1m = 1.0
+    scalars.momentum = Ut_FloatToBf16Bits(-0.25f); // 负值
+    scalars.epsilon = 0x3F80;                      // 1.0 (bf16: sign=0, exp=127, mantissa=0)
 
     auto para = Make16BitTilingContextPara({256}, ge::DT_BF16, &scalars, &compileInfo);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_TRUE(ok) << "Tiling should succeed for bf16 boundary scalars";
-    if (!ok) return;
+    if (!ok)
+        return;
 
     auto* td = reinterpret_cast<ApplyRmsPropTilingData*>(info.tilingData.get());
 
-    EXPECT_FLOAT_EQ(td->lr,    0.0f);
+    EXPECT_FLOAT_EQ(td->lr, 0.0f);
     EXPECT_FLOAT_EQ(td->rho1m, 1.0f);
-    EXPECT_FLOAT_EQ(td->mom,   -0.25f);
-    EXPECT_FLOAT_EQ(td->eps,   1.0f);
+    EXPECT_FLOAT_EQ(td->mom, -0.25f);
+    EXPECT_FLOAT_EQ(td->eps, 1.0f);
 }
 
 // -------------------------------------------------------------------
@@ -514,10 +506,10 @@ TEST_F(ApplyRmsPropTilingTest, T009_TilingKey_DtypeDispatch_Consistent)
 
     // -------- fp32 --------
     ScalarStorageF32 scalarsF32;
-    scalarsF32.lr       = 0.01f;
-    scalarsF32.rho      = 0.9f;
+    scalarsF32.lr = 0.01f;
+    scalarsF32.rho = 0.9f;
     scalarsF32.momentum = 0.5f;
-    scalarsF32.epsilon  = 1e-7f;
+    scalarsF32.epsilon = 1e-7f;
     auto paraF32 = MakeFp32TilingContextPara({1024, 8}, &scalarsF32, &compileInfo);
     TilingInfo infoF32;
     ASSERT_TRUE(ExecuteTiling(paraF32, infoF32)) << "fp32 Tiling failed";
@@ -525,10 +517,10 @@ TEST_F(ApplyRmsPropTilingTest, T009_TilingKey_DtypeDispatch_Consistent)
 
     // -------- fp16 --------
     ScalarStorageU16 scalarsF16;
-    scalarsF16.lr       = Ut_FloatToFp16Bits(0.01f);
-    scalarsF16.rho      = Ut_FloatToFp16Bits(0.9f);
+    scalarsF16.lr = Ut_FloatToFp16Bits(0.01f);
+    scalarsF16.rho = Ut_FloatToFp16Bits(0.9f);
     scalarsF16.momentum = Ut_FloatToFp16Bits(0.5f);
-    scalarsF16.epsilon  = Ut_FloatToFp16Bits(0.001f);
+    scalarsF16.epsilon = Ut_FloatToFp16Bits(0.001f);
     auto paraF16 = Make16BitTilingContextPara({1024, 8}, ge::DT_FLOAT16, &scalarsF16, &compileInfo);
     TilingInfo infoF16;
     ASSERT_TRUE(ExecuteTiling(paraF16, infoF16)) << "fp16 Tiling failed";
@@ -536,18 +528,18 @@ TEST_F(ApplyRmsPropTilingTest, T009_TilingKey_DtypeDispatch_Consistent)
 
     // -------- bf16 --------
     ScalarStorageU16 scalarsBf16;
-    scalarsBf16.lr       = Ut_FloatToBf16Bits(0.01f);
-    scalarsBf16.rho      = Ut_FloatToBf16Bits(0.9f);
+    scalarsBf16.lr = Ut_FloatToBf16Bits(0.01f);
+    scalarsBf16.rho = Ut_FloatToBf16Bits(0.9f);
     scalarsBf16.momentum = Ut_FloatToBf16Bits(0.5f);
-    scalarsBf16.epsilon  = Ut_FloatToBf16Bits(1e-7f);
+    scalarsBf16.epsilon = Ut_FloatToBf16Bits(1e-7f);
     auto paraBf16 = Make16BitTilingContextPara({1024, 8}, ge::DT_BF16, &scalarsBf16, &compileInfo);
     TilingInfo infoBf16;
     ASSERT_TRUE(ExecuteTiling(paraBf16, infoBf16)) << "bf16 Tiling failed";
     EXPECT_GE(infoBf16.tilingKey, 0) << "bf16 TilingKey should be valid";
 
     // 三种 dtype 均写入同样 4 个 float 字段
-    auto* tdF32  = reinterpret_cast<ApplyRmsPropTilingData*>(infoF32.tilingData.get());
-    auto* tdF16  = reinterpret_cast<ApplyRmsPropTilingData*>(infoF16.tilingData.get());
+    auto* tdF32 = reinterpret_cast<ApplyRmsPropTilingData*>(infoF32.tilingData.get());
+    auto* tdF16 = reinterpret_cast<ApplyRmsPropTilingData*>(infoF16.tilingData.get());
     auto* tdBf16 = reinterpret_cast<ApplyRmsPropTilingData*>(infoBf16.tilingData.get());
     EXPECT_FLOAT_EQ(tdF32->lr, 0.01f);
     EXPECT_FLOAT_EQ(tdF16->lr, Ut_Fp16BitsToFloat(scalarsF16.lr));
@@ -555,8 +547,7 @@ TEST_F(ApplyRmsPropTilingTest, T009_TilingKey_DtypeDispatch_Consistent)
 
     // Elewise 模式下 TilingKey 由 schMode 决定（0 或 1），无 dtype 维度
     // 三 dtype 的 TilingKey 取值应在合法域（>=0）；架构上允许不同 shape 下落到不同 schMode
-    std::cout << "TilingKey fp32=" << infoF32.tilingKey
-              << ", fp16=" << infoF16.tilingKey
+    std::cout << "TilingKey fp32=" << infoF32.tilingKey << ", fp16=" << infoF16.tilingKey
               << ", bf16=" << infoBf16.tilingKey << std::endl;
 }
 
@@ -565,13 +556,9 @@ TEST_F(ApplyRmsPropTilingTest, T009_TilingKey_DtypeDispatch_Consistent)
 // -------------------------------------------------------------------
 
 // 构造不支持 dtype 的 TilingContextPara（方案 B：scalar 改为 attr）
-static gert::TilingContextPara MakeIntTilingContextPara(
-    const std::initializer_list<int64_t>& varShape,
-    ge::DataType dtype,
-    void* compileInfo,
-    uint64_t coreNum = 64,
-    uint64_t ubSize = 262144,
-    uint64_t tilingDataSize = 4096)
+static gert::TilingContextPara MakeIntTilingContextPara(const std::initializer_list<int64_t>& varShape,
+                                                        ge::DataType dtype, void* compileInfo, uint64_t coreNum = 64,
+                                                        uint64_t ubSize = 262144, uint64_t tilingDataSize = 4096)
 {
     gert::StorageShape tensorShape = {varShape, varShape};
 
@@ -589,13 +576,12 @@ static gert::TilingContextPara MakeIntTilingContextPara(
     });
 
     std::vector<TilingContextPara::OpAttr> attrs({
-        {"lr",       Ops::Math::AnyValue::CreateFrom<float>(0.01f)},
-        {"rho",      Ops::Math::AnyValue::CreateFrom<float>(0.9f)},
+        {"lr", Ops::Math::AnyValue::CreateFrom<float>(0.01f)},
+        {"rho", Ops::Math::AnyValue::CreateFrom<float>(0.9f)},
         {"momentum", Ops::Math::AnyValue::CreateFrom<float>(0.0f)},
-        {"epsilon",  Ops::Math::AnyValue::CreateFrom<float>(1e-8f)},
+        {"epsilon", Ops::Math::AnyValue::CreateFrom<float>(1e-8f)},
     });
-    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, compileInfo,
-                                   coreNum, ubSize, tilingDataSize);
+    return gert::TilingContextPara(OP_NAME, inputs, outputs, attrs, compileInfo, coreNum, ubSize, tilingDataSize);
 }
 
 // -------------------------------------------------------------------
@@ -645,9 +631,8 @@ TEST_F(ApplyRmsPropTilingTest, T012_Err_Fp32_ScalarDataNull_Fails)
         {tensorShape, ge::DT_FLOAT, ge::FORMAT_ND},
     });
 
-    std::vector<TilingContextPara::OpAttr> attrs;  // 空 attrs → GetFloat 返回 nullptr
-    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo,
-                                 64, 262144, 4096);
+    std::vector<TilingContextPara::OpAttr> attrs; // 空 attrs → GetFloat 返回 nullptr
+    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo, 64, 262144, 4096);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
@@ -674,13 +659,12 @@ TEST_F(ApplyRmsPropTilingTest, T013_Err_Fp16_ScalarDataNull_Fails)
         {tensorShape, ge::DT_FLOAT16, ge::FORMAT_ND},
     });
 
-    std::vector<TilingContextPara::OpAttr> attrs;  // 空 attrs
-    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo,
-                                 64, 262144, 4096);
+    std::vector<TilingContextPara::OpAttr> attrs; // 空 attrs
+    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo, 64, 262144, 4096);
 
     TilingInfo info;
     bool ok = ExecuteTiling(para, info);
     EXPECT_FALSE(ok) << "Tiling should fail when attrs missing (fp16)";
 }
 
-}  // namespace ApplyRmsPropUT
+} // namespace ApplyRmsPropUT

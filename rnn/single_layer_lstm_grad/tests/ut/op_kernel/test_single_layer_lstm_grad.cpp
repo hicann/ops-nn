@@ -25,10 +25,11 @@
 
 using namespace std;
 
-extern "C" void single_layer_lstm_grad(
-    GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR y, GM_ADDR init_h, GM_ADDR init_c, GM_ADDR h, GM_ADDR c, GM_ADDR dy,
-    GM_ADDR dh, GM_ADDR dc, GM_ADDR i, GM_ADDR j, GM_ADDR f, GM_ADDR o, GM_ADDR tanhct, GM_ADDR seq_length, GM_ADDR dw,
-    GM_ADDR db, GM_ADDR dx, GM_ADDR dh_prev, GM_ADDR dc_prev, GM_ADDR workspace, GM_ADDR rnnGradTiling);
+extern "C" void single_layer_lstm_grad(GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR y, GM_ADDR init_h, GM_ADDR init_c,
+                                       GM_ADDR h, GM_ADDR c, GM_ADDR dy, GM_ADDR dh, GM_ADDR dc, GM_ADDR i, GM_ADDR j,
+                                       GM_ADDR f, GM_ADDR o, GM_ADDR tanhct, GM_ADDR seq_length, GM_ADDR dw, GM_ADDR db,
+                                       GM_ADDR dx, GM_ADDR dh_prev, GM_ADDR dc_prev, GM_ADDR workspace,
+                                       GM_ADDR rnnGradTiling);
 
 class SingleLayerLstmGradKernel : public testing::Test {
 protected:
@@ -81,9 +82,8 @@ void FillBufferFast(uint8_t* buffer, size_t size, T value)
 }
 
 template <typename T>
-void AllocateBuffers(
-    LstmGradBuffers& buffers, uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize,
-    uint64_t workspaceSize, bool needSeqLength = false)
+void AllocateBuffers(LstmGradBuffers& buffers, uint64_t batchSize, uint64_t timeStep, uint64_t inputSize,
+                     uint64_t hiddenSize, uint64_t workspaceSize, bool needSeqLength = false)
 {
     size_t xBits = batchSize * inputSize * timeStep * sizeof(T);
     size_t hBits = batchSize * timeStep * hiddenSize * sizeof(T);
@@ -228,8 +228,8 @@ void InitTCubeTiling(TCubeTiling* tiling, uint64_t batchSize)
     tiling->BatchNum = 0;
 }
 
-void InitDefaultTiling(
-    SingleLayerLstmGradTilingDataTest* tiling, uint64_t batchSize, uint64_t inputSize, uint64_t hiddenSize)
+void InitDefaultTiling(SingleLayerLstmGradTilingDataTest* tiling, uint64_t batchSize, uint64_t inputSize,
+                       uint64_t hiddenSize)
 {
     tiling->ubSize = 196352;
     tiling->timeStep = 1;
@@ -359,37 +359,34 @@ void InitDefaultTiling(
 }
 
 template <typename T>
-void TestSingleLayerLstmGradKernel(
-    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize,
-    uint64_t blockDim, uint64_t tilingKey)
+void TestSingleLayerLstmGradKernel(uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize,
+                                   uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
 {
     LstmGradBuffers buffers;
     AllocateBuffers<T>(buffers, batchSize, timeStep, inputSize, hiddenSize, workspaceSize);
 
-    SingleLayerLstmGradTilingDataTest* tilingData =
-        reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(buffers.tiling);
+    SingleLayerLstmGradTilingDataTest* tilingData = reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(
+        buffers.tiling);
     InitDefaultTiling(tilingData, batchSize, inputSize, hiddenSize);
 
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(
-        single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith, buffers.initc,
-        buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j, buffers.f, buffers.o,
-        buffers.tanhc, nullptr, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev, buffers.dcPrev, buffers.workspace,
-        buffers.tiling);
+    ICPU_RUN_KF(single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith,
+                buffers.initc, buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j,
+                buffers.f, buffers.o, buffers.tanhc, nullptr, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev,
+                buffers.dcPrev, buffers.workspace, buffers.tiling);
 
     FreeBuffers(buffers);
 }
 
 template <typename T>
-void TestSingleLayerLstmGradKernelLarge(
-    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize,
-    uint64_t blockDim, uint64_t tilingKey)
+void TestSingleLayerLstmGradKernelLarge(uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize,
+                                        uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
 {
     LstmGradBuffers buffers;
     AllocateBuffers<T>(buffers, batchSize, timeStep, inputSize, hiddenSize, workspaceSize);
 
-    SingleLayerLstmGradTilingDataTest* tilingData =
-        reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(buffers.tiling);
+    SingleLayerLstmGradTilingDataTest* tilingData = reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(
+        buffers.tiling);
     InitDefaultTiling(tilingData, batchSize, inputSize, hiddenSize);
 
     tilingData->singleCoreN = 8;
@@ -447,25 +444,24 @@ void TestSingleLayerLstmGradKernelLarge(
     xhHidden->splitPreCore = 0;
 
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(
-        single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith, buffers.initc,
-        buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j, buffers.f, buffers.o,
-        buffers.tanhc, nullptr, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev, buffers.dcPrev, buffers.workspace,
-        buffers.tiling);
+    ICPU_RUN_KF(single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith,
+                buffers.initc, buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j,
+                buffers.f, buffers.o, buffers.tanhc, nullptr, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev,
+                buffers.dcPrev, buffers.workspace, buffers.tiling);
 
     FreeBuffers(buffers);
 }
 
 template <typename T>
-void TestSingleLayerLstmGradKernelLargeSeq(
-    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize,
-    uint64_t blockDim, uint64_t tilingKey, bool isSeqLength)
+void TestSingleLayerLstmGradKernelLargeSeq(uint64_t batchSize, uint64_t timeStep, uint64_t inputSize,
+                                           uint64_t hiddenSize, uint64_t workspaceSize, uint64_t blockDim,
+                                           uint64_t tilingKey, bool isSeqLength)
 {
     LstmGradBuffers buffers;
     AllocateBuffers<T>(buffers, batchSize, timeStep, inputSize, hiddenSize, workspaceSize, isSeqLength);
 
-    SingleLayerLstmGradTilingDataTest* tilingData =
-        reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(buffers.tiling);
+    SingleLayerLstmGradTilingDataTest* tilingData = reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(
+        buffers.tiling);
     InitDefaultTiling(tilingData, batchSize, inputSize, hiddenSize);
 
     tilingData->isBias = 0;
@@ -490,11 +486,10 @@ void TestSingleLayerLstmGradKernelLargeSeq(
 
     ICPU_SET_TILING_KEY(tilingKey);
     auto seqLengthTensor = isSeqLength ? buffers.seqLength : nullptr;
-    ICPU_RUN_KF(
-        single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith, buffers.initc,
-        buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j, buffers.f, buffers.o,
-        buffers.tanhc, seqLengthTensor, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev, buffers.dcPrev,
-        buffers.workspace, buffers.tiling);
+    ICPU_RUN_KF(single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith,
+                buffers.initc, buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j,
+                buffers.f, buffers.o, buffers.tanhc, seqLengthTensor, buffers.dw, buffers.db, buffers.dx,
+                buffers.dhPrev, buffers.dcPrev, buffers.workspace, buffers.tiling);
 
     FreeBuffers(buffers);
 }

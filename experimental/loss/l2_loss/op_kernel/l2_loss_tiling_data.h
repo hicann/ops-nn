@@ -25,6 +25,6 @@ struct L2LossTilingData {
     uint32_t bigTailDataNum;
     uint32_t tailBlockNum;
     uint32_t inputNum;
-    uint32_t blockNum;   // actual number of cores used for reduction in core 0
+    uint32_t blockNum; // actual number of cores used for reduction in core 0
 };
 #endif // L2_LOSS_TILING_DATA_H

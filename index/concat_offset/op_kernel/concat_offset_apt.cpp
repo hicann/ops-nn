@@ -20,13 +20,12 @@ using namespace ConcatOffset;
 
 #define CONCAT_OFFSET_SIMT_TILING_KEY 1000
 
-
-extern "C" __global__ __aicore__ void concat_offset(GM_ADDR concat_dim, GM_ADDR x, GM_ADDR y,
-                                                    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void concat_offset(GM_ADDR concat_dim, GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ConcatOffsetTilingData);
     GET_TILING_DATA(tilingData, tiling);
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY); 
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (TILING_KEY_IS(CONCAT_OFFSET_SIMT_TILING_KEY)) {
         ConcatOffsetSimt<DTYPE_X> op;
         op.Init(&tilingData);

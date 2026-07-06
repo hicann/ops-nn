@@ -16,7 +16,7 @@
 namespace l0op {
 const aclTensor* SigmoidCrossEntropyWithLogitsV2(const aclTensor* self, const aclTensor* target,
                                                  const aclTensor* weightOptional, const aclTensor* posWeightOptional,
-                                                 const std::string &reduction, aclOpExecutor* executor);
+                                                 const std::string& reduction, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_BINARY_CROSS_ENTROPY_WITH_LOGITS_OP_H_

@@ -24,20 +24,14 @@ using namespace std;
 
 class l2_logsigmoid_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "logsigmoid_backward Test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "logsigmoid_backward Test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "logsigmoid_backward Test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "logsigmoid_backward Test TearDown" << std::endl; }
 };
 
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_001_normal_float32)
 {
-    auto gradOutputDesc =
-        TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND)
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
@@ -56,8 +50,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_001_normal_floa
 // float16
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_002_normal_float16)
 {
-    auto gradOutputDesc =
-        TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND)
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
@@ -97,8 +91,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_004_exception_n
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc);
 
-    auto ut =
-        OP_API_UT(aclnnLogSigmoidBackward, INPUT((aclTensor*)nullptr, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT((aclTensor*)nullptr, selfDesc, bufferDesc),
+                        OUTPUT(gradInputDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -114,8 +108,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_005_exception_n
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc);
 
-    auto ut = OP_API_UT(
-        aclnnLogSigmoidBackward, INPUT(gradOutputDesc, (aclTensor*)nullptr, bufferDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, (aclTensor*)nullptr, bufferDesc),
+                        OUTPUT(gradInputDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -130,8 +124,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_006_exception_n
     auto selfDesc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = (aclTensor*)nullptr;
-    auto ut =
-        OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT((aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc),
+                        OUTPUT((aclTensor*)nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -201,8 +195,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_010_normal_form
         auto selfDesc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ValidList[i]);
         auto bufferDesc = TensorDesc(selfDesc);
         auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
-        auto ut =
-            OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+        auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc),
+                            OUTPUT(gradInputDesc));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspaceSize = 0;

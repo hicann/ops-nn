@@ -30,8 +30,8 @@ template <typename IDX_T>
 static constexpr uint32_t THREADS = (sizeof(IDX_T) == 4) ? 1024 : 512;
 
 template <typename T, typename IndexT, typename IDX_T>
-__simt_callee__ inline IDX_T ComputeScatterOffset(
-    int32_t K, IDX_T i, __gm__ IndexT* indices, __ubuf__ int64_t* stridesUb)
+__simt_callee__ inline IDX_T ComputeScatterOffset(int32_t K, IDX_T i, __gm__ IndexT* indices,
+                                                  __ubuf__ int64_t* stridesUb)
 {
     IDX_T offset = 0;
     for (int32_t k = 0; k < K; k++) {
@@ -42,14 +42,9 @@ __simt_callee__ inline IDX_T ComputeScatterOffset(
 }
 
 template <typename T, typename IndexT, typename IDX_T>
-__simt_callee__ inline void ScatterAddSlice(
-    IDX_T offset, IDX_T i, IDX_T updateDataNum,
-    __gm__ T* updates, __gm__ T* y)
+__simt_callee__ inline void ScatterAddSlice(IDX_T offset, IDX_T i, IDX_T updateDataNum, __gm__ T* updates, __gm__ T* y)
 {
-    for (IDX_T j = static_cast<IDX_T>(threadIdx.x);
-         j < updateDataNum;
-         j += static_cast<IDX_T>(blockDim.x))
-    {
+    for (IDX_T j = static_cast<IDX_T>(threadIdx.x); j < updateDataNum; j += static_cast<IDX_T>(blockDim.x)) {
         T yVal = y[offset + j];
         T updateVal = updates[i * updateDataNum + j];
         y[offset + j] = yVal + updateVal;
@@ -57,12 +52,9 @@ __simt_callee__ inline void ScatterAddSlice(
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>)
-inline void OpScatterCopySimtKernel(
-    int64_t totalElements,
-    int64_t perCoreElements,
-    __gm__ T* x,
-    __gm__ T* y)
+__simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>) inline void OpScatterCopySimtKernel(int64_t totalElements,
+                                                                                             int64_t perCoreElements,
+                                                                                             __gm__ T* x, __gm__ T* y)
 {
     IDX_T totalElems = static_cast<IDX_T>(totalElements);
     IDX_T perCoreElems = static_cast<IDX_T>(perCoreElements);
@@ -71,26 +63,16 @@ inline void OpScatterCopySimtKernel(
     if (coreEnd > totalElems) {
         coreEnd = totalElems;
     }
-    for (IDX_T idx = coreStart + static_cast<IDX_T>(threadIdx.x);
-         idx < coreEnd;
-         idx += static_cast<IDX_T>(blockDim.x))
-    {
+    for (IDX_T idx = coreStart + static_cast<IDX_T>(threadIdx.x); idx < coreEnd;
+         idx += static_cast<IDX_T>(blockDim.x)) {
         y[idx] = x[idx];
     }
 }
 
 template <typename T, typename IndexT, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>)
-inline void OpScatterAddSimtKernel(
-    int32_t K,
-    int64_t totalElements,
-    int64_t totalScatters,
-    int64_t updateDataNum,
-    int64_t perCoreElements,
-    __ubuf__ int64_t* stridesUb,
-    __gm__ IndexT* indices,
-    __gm__ T* updates,
-    __gm__ T* y)
+__simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>) inline void OpScatterAddSimtKernel(
+    int32_t K, int64_t totalElements, int64_t totalScatters, int64_t updateDataNum, int64_t perCoreElements,
+    __ubuf__ int64_t* stridesUb, __gm__ IndexT* indices, __gm__ T* updates, __gm__ T* y)
 {
     IDX_T totalElems = static_cast<IDX_T>(totalElements);
     IDX_T perCoreElems = static_cast<IDX_T>(perCoreElements);
@@ -112,59 +94,33 @@ inline void OpScatterAddSimtKernel(
 }
 
 template <typename T, typename IndexT>
-__aicore__ inline void ScatterDispatch(
-    const ScatterNonAliasingAddTilingData& tilingData,
-    __ubuf__ int64_t* stridesUb,
-    __gm__ T* xGm, __gm__ IndexT* indicesGm,
-    __gm__ T* updatesGm, __gm__ T* yGm)
+__aicore__ inline void ScatterDispatch(const ScatterNonAliasingAddTilingData& tilingData, __ubuf__ int64_t* stridesUb,
+                                       __gm__ T* xGm, __gm__ IndexT* indicesGm, __gm__ T* updatesGm, __gm__ T* yGm)
 {
     if (tilingData.totalElements <= static_cast<int64_t>(INT32_MAX)) {
-        asc_vf_call<OpScatterCopySimtKernel<T, int32_t>>(
-            dim3(THREADS<int32_t>),
-            tilingData.totalElements,
-            tilingData.perCoreElements,
-            xGm, yGm
-        );
+        asc_vf_call<OpScatterCopySimtKernel<T, int32_t>>(dim3(THREADS<int32_t>), tilingData.totalElements,
+                                                         tilingData.perCoreElements, xGm, yGm);
         GlobalTensor<T> yFlushGm;
         yFlushGm.SetGlobalBuffer(yGm);
         DataCacheCleanAndInvalid<T, CacheLine::ENTIRE_DATA_CACHE, DcciDst::CACHELINE_OUT>(yFlushGm);
         asc_vf_call<OpScatterAddSimtKernel<T, IndexT, int32_t>>(
-            dim3(THREADS<int32_t>),
-            tilingData.K,
-            tilingData.totalElements,
-            tilingData.totalScatters,
-            tilingData.updateDataNum,
-            tilingData.perCoreElements,
-            stridesUb,
-            indicesGm, updatesGm, yGm
-        );
+            dim3(THREADS<int32_t>), tilingData.K, tilingData.totalElements, tilingData.totalScatters,
+            tilingData.updateDataNum, tilingData.perCoreElements, stridesUb, indicesGm, updatesGm, yGm);
     } else {
-        asc_vf_call<OpScatterCopySimtKernel<T, int64_t>>(
-            dim3(THREADS<int64_t>),
-            tilingData.totalElements,
-            tilingData.perCoreElements,
-            xGm, yGm
-        );
+        asc_vf_call<OpScatterCopySimtKernel<T, int64_t>>(dim3(THREADS<int64_t>), tilingData.totalElements,
+                                                         tilingData.perCoreElements, xGm, yGm);
         GlobalTensor<T> yFlushGm;
         yFlushGm.SetGlobalBuffer(yGm);
         DataCacheCleanAndInvalid<T, CacheLine::ENTIRE_DATA_CACHE, DcciDst::CACHELINE_OUT>(yFlushGm);
         asc_vf_call<OpScatterAddSimtKernel<T, IndexT, int64_t>>(
-            dim3(THREADS<int64_t>),
-            tilingData.K,
-            tilingData.totalElements,
-            tilingData.totalScatters,
-            tilingData.updateDataNum,
-            tilingData.perCoreElements,
-            stridesUb,
-            indicesGm, updatesGm, yGm
-        );
+            dim3(THREADS<int64_t>), tilingData.K, tilingData.totalElements, tilingData.totalScatters,
+            tilingData.updateDataNum, tilingData.perCoreElements, stridesUb, indicesGm, updatesGm, yGm);
     }
 }
 
 template <typename T, typename IndexT>
-__aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR updates,
-                                GM_ADDR y, GM_ADDR workspace,
-                                const ScatterNonAliasingAddTilingData& tilingData)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                               const ScatterNonAliasingAddTilingData& tilingData)
 {
     LocalMemAllocator<Hardware::UB> ubAlloc;
     constexpr uint32_t STRIDES_UB_WORDS = MAX_STRIDES * sizeof(int64_t) / sizeof(uint32_t);
@@ -174,10 +130,10 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR updates,
         stridesUb[k] = tilingData.strides[k];
     }
     DataSyncBarrier<MemDsbT::UB>();
-    __gm__ T* xGm = (__gm__ T*) x;
-    __gm__ IndexT* indicesGm = (__gm__ IndexT*) indices;
-    __gm__ T* updatesGm = (__gm__ T*) updates;
-    __gm__ T* yGm = (__gm__ T*) y;
+    __gm__ T* xGm = (__gm__ T*)x;
+    __gm__ IndexT* indicesGm = (__gm__ IndexT*)indices;
+    __gm__ T* updatesGm = (__gm__ T*)updates;
+    __gm__ T* yGm = (__gm__ T*)y;
     ScatterDispatch<T, IndexT>(tilingData, stridesUb, xGm, indicesGm, updatesGm, yGm);
 }
 

@@ -61,16 +61,15 @@ struct MNConfig {
 };
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(
-    const AscendC::LocalTensor<T> dst, const AscendC::GlobalTensor<T> src, uint32_t dim1, uint32_t dim0,
-    uint32_t fullDim0)
+__aicore__ inline void DataCopyPad2D(const AscendC::LocalTensor<T> dst, const AscendC::GlobalTensor<T> src,
+                                     uint32_t dim1, uint32_t dim0, uint32_t fullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
     params.blockLen = dim0 * sizeof(T);
     params.srcStride = (fullDim0 - dim0) * sizeof(T);
-    params.dstStride =
-        Ceil(dim0 * sizeof(T), UB_BLOCK_DOUBLE_UNIT_SIZE) * 2 - Ceil(dim0 * sizeof(T), UB_BLOCK_UNIT_SIZE);
+    params.dstStride = Ceil(dim0 * sizeof(T), UB_BLOCK_DOUBLE_UNIT_SIZE) * 2 -
+                       Ceil(dim0 * sizeof(T), UB_BLOCK_UNIT_SIZE);
 
     DataCopyPadExtParams<T> padParams;
     padParams.isPad = true;
@@ -83,8 +82,7 @@ __aicore__ inline void DataCopyPad2D(
 /** @brief GroupMatmul operator Class
  */
 template <typename ComputeType>
-class QbmmRSProcess
-{
+class QbmmRSProcess {
 protected:
     using B = typename ComputeType::B;
     ComputeType& computeOp; // inernal computation operator
@@ -98,11 +96,10 @@ protected:
 
 public:
     /** @brief constructor */
-    __aicore__ inline QbmmRSProcess(ComputeType& computeOp_) : computeOp(computeOp_)
-    {}
+    __aicore__ inline QbmmRSProcess(ComputeType& computeOp_) : computeOp(computeOp_) {}
 
-    __aicore__ inline void Init(
-        const QuantMatmulReduceSumParams* __restrict qbmmParamsIn, const TCubeTiling* __restrict mmTilingDataIn);
+    __aicore__ inline void Init(const QuantMatmulReduceSumParams* __restrict qbmmParamsIn,
+                                const TCubeTiling* __restrict mmTilingDataIn);
 
     __aicore__ inline void Process();
 
@@ -113,13 +110,13 @@ protected:
 
     __aicore__ inline void UpdateMnConfig(MNConfig& mnConfig);
 
-    __aicore__ inline void MNBlockIdxCompute(
-        MNConfig& mnConfig, const uint32_t curBlock, const uint32_t count, const uint32_t thresholdM_dimN);
+    __aicore__ inline void MNBlockIdxCompute(MNConfig& mnConfig, const uint32_t curBlock, const uint32_t count,
+                                             const uint32_t thresholdM_dimN);
 };
 
 template <typename ComputeType>
-__aicore__ inline void QbmmRSProcess<ComputeType>::Init(
-    const QuantMatmulReduceSumParams* __restrict qbmmParamsIn, const TCubeTiling* __restrict mmTilingDataIn)
+__aicore__ inline void QbmmRSProcess<ComputeType>::Init(const QuantMatmulReduceSumParams* __restrict qbmmParamsIn,
+                                                        const TCubeTiling* __restrict mmTilingDataIn)
 {
     blockIdx = GetBlockIdx();
     coreIdx = blockIdx;
@@ -163,8 +160,9 @@ __aicore__ inline void QbmmRSProcess<ComputeType>::UpdateMnConfig(MNConfig& mnCo
 }
 
 template <typename ComputeType>
-__aicore__ inline void QbmmRSProcess<ComputeType>::MNBlockIdxCompute(
-    MNConfig& mnConfig, const uint32_t curBlock, const uint32_t count, const uint32_t thresholdM_dimN)
+__aicore__ inline void QbmmRSProcess<ComputeType>::MNBlockIdxCompute(MNConfig& mnConfig, const uint32_t curBlock,
+                                                                     const uint32_t count,
+                                                                     const uint32_t thresholdM_dimN)
 {
     if (mnConfig.blockDimM <= thresholdDimM || thresholdDimM == 1) {
         mnConfig.mIdx = (curBlock - count) / mnConfig.blockDimN;
@@ -175,10 +173,10 @@ __aicore__ inline void QbmmRSProcess<ComputeType>::MNBlockIdxCompute(
                                      mnConfig.blockDimM % thresholdBlockNum :
                                      thresholdBlockNum;
         uint32_t curThresholdM_thresholdN = curThresholdM * thresholdBlockNum;
-        uint32_t curThresholdN =
-            relativeBlock % thresholdM_dimN >= AlignDown(curThresholdM * mnConfig.blockDimN, curThresholdM_thresholdN) ?
-                mnConfig.blockDimN % thresholdBlockNum :
-                thresholdBlockNum;
+        uint32_t curThresholdN = relativeBlock % thresholdM_dimN >=
+                                         AlignDown(curThresholdM * mnConfig.blockDimN, curThresholdM_thresholdN) ?
+                                     mnConfig.blockDimN % thresholdBlockNum :
+                                     thresholdBlockNum;
 
         uint32_t localRelativeBlock = relativeBlock % thresholdM_dimN % curThresholdM_thresholdN;
         mnConfig.mIdx = localRelativeBlock % curThresholdM + relativeBlock / thresholdM_dimN * thresholdBlockNum;
@@ -223,8 +221,7 @@ __aicore__ inline void QbmmRSProcess<ComputeType>::Process()
 /** @brief intenal computation class
  */
 template <class mmType, bool sync = false>
-class QbmmRSCompute
-{
+class QbmmRSCompute {
 public:
     using AT = typename mmType::AT::T;
     using BT = typename mmType::BT::T;
@@ -235,12 +232,11 @@ public:
     constexpr static bool transposeX2 = mmType::BT::isTrans;
 
     /** @brief constructor */
-    __aicore__ inline QbmmRSCompute(typename mmType::MT& mm_) : mm(mm_)
-    {}
+    __aicore__ inline QbmmRSCompute(typename mmType::MT& mm_) : mm(mm_) {}
 
-    __aicore__ inline void Init(
-        const QbmmRSComputeInitParams* __restrict initParams, const QuantMatmulReduceSumParams* __restrict qbmmParams,
-        const TCubeTiling* __restrict mmTilingData, TPipe* tPipe);
+    __aicore__ inline void Init(const QbmmRSComputeInitParams* __restrict initParams,
+                                const QuantMatmulReduceSumParams* __restrict qbmmParams,
+                                const TCubeTiling* __restrict mmTilingData, TPipe* tPipe);
 
 protected:
     __aicore__ inline AscendC::GlobalTensor<BT> SetGlobalBufferW(uint32_t batchIdx, uint32_t tailN, MNConfig& mnConfig);
@@ -263,9 +259,9 @@ protected:
 };
 
 template <typename mmType, bool sync>
-__aicore__ inline void QbmmRSCompute<mmType, sync>::Init(
-    const QbmmRSComputeInitParams* __restrict initParams, const QuantMatmulReduceSumParams* __restrict qbmmParams,
-    const TCubeTiling* __restrict mmTilingData, TPipe* tPipe)
+__aicore__ inline void QbmmRSCompute<mmType, sync>::Init(const QbmmRSComputeInitParams* __restrict initParams,
+                                                         const QuantMatmulReduceSumParams* __restrict qbmmParams,
+                                                         const TCubeTiling* __restrict mmTilingData, TPipe* tPipe)
 {
     x1TensorPtr = initParams->x1;
     x2TensorPtr = initParams->x2;

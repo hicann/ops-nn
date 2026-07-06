@@ -26,13 +26,9 @@ using namespace conv;
 template <class Intf>
 class OptGroupLoadGM2UBTools {
 public:
-    __aicore__ inline OptGroupLoadGM2UBTools()
-    {}
+    __aicore__ inline OptGroupLoadGM2UBTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
     __aicore__ inline void LoadGM2UB()
     {
@@ -41,8 +37,8 @@ public:
                 LocalTensor<int8_t> zeroTensor = self_->ctx.ndUbBuf.template Get<int8_t>();
                 Duplicate<int8_t>(zeroTensor, 0, self_->ctx.ubBufSize);
             } else {
-                LocalTensor<typename Intf::WeightT> zeroTensor =
-                    self_->ctx.ndUbBuf.template Get<typename Intf::WeightT>();
+                LocalTensor<typename Intf::WeightT> zeroTensor = self_->ctx.ndUbBuf
+                                                                     .template Get<typename Intf::WeightT>();
                 Duplicate<typename Intf::WeightT>(zeroTensor, 0, self_->ctx.ubBufSize);
             }
 
@@ -63,7 +59,7 @@ public:
             uint64_t weightOneGroupSize = 0;
             if constexpr (Intf::formatWeight == ConvFormat::NCHW) {
                 weightOneGroupSize = self_->ctx.coPerGroup * self_->ctx.ciPerGroup * self_->ctx.enlarge *
-                    self_->ctx.convTilingData->kernelHxkernelWxkernelD;
+                                     self_->ctx.convTilingData->kernelHxkernelWxkernelD;
             } else if constexpr (Intf::formatWeight == ConvFormat::HWCN) {
                 weightOneGroupSize = self_->ctx.coPerGroup * self_->ctx.enlarge;
             }
@@ -74,17 +70,17 @@ public:
             copyParamsHWC.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = curSrcCoOpt;
             copyParamsHWC.loopInfo.loopSrcStride[NDDMA_LOOP3_INDEX] = curSrcCoOpt * self_->ctx.ciPerGroup;
             copyParamsHWC.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.singleGroups;
-            DataCopy<typename Intf::WeightT, NDDMA_HWC_DIMS, kDefaultMultiCopyConfig>(ndTensor,
-                self_->ctx.bgm[gmOffset], copyParamsHWC);
+            DataCopy<typename Intf::WeightT, NDDMA_HWC_DIMS, kDefaultMultiCopyConfig>(
+                ndTensor, self_->ctx.bgm[gmOffset], copyParamsHWC);
         } else {
             copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.singleGroups;
             DataCopy<typename Intf::WeightT, NDDMA_DIMS, kDefaultMultiCopyConfig>(ndTensor, self_->ctx.bgm[gmOffset],
-                copyParams);
+                                                                                  copyParams);
         }
     }
 
 private:
-__aicore__ inline void NDDMAFirstSetCopyParamsCHW()
+    __aicore__ inline void NDDMAFirstSetCopyParamsCHW()
     {
         uint64_t srcKSize = self_->ctx.ciPerGroup * self_->ctx.convTilingData->kernelHxkernelWxkernelD;
         // NDDMA Loop0 params
@@ -97,10 +93,9 @@ __aicore__ inline void NDDMAFirstSetCopyParamsCHW()
         copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = self_->ctx.kUbSize;
         // NDDMA Loop2 params
         copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] = self_->ctx.coPerGroup * srcKSize;
-        copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = self_->ctx.coPerGroup * self_->ctx.kUbSize +
-                                                               srcKSize;
+        copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = self_->ctx.coPerGroup * self_->ctx.kUbSize + srcKSize;
     }
-    
+
     __aicore__ inline void NDDMAFirstSetCopyParamsHWC()
     {
         // NDDMA Loop0 params
@@ -120,7 +115,7 @@ __aicore__ inline void NDDMAFirstSetCopyParamsCHW()
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     MultiCopyParams<typename Intf::WeightT, NDDMA_DIMS> copyParams;
     MultiCopyParams<typename Intf::WeightT, NDDMA_HWC_DIMS> copyParamsHWC;
     LocalTensor<typename Intf::WeightT> ndTensor;
@@ -129,10 +124,9 @@ private:
 template <class Intf>
 class OptGroupTransND2NZTools {
 public:
-    __aicore__ inline OptGroupTransND2NZTools()
-    {}
+    __aicore__ inline OptGroupTransND2NZTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
 
@@ -182,7 +176,7 @@ private:
         SetFlag<HardEvent::S_V>(eventId);
         WaitFlag<HardEvent::S_V>(eventId);
 
-        __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
         uint16_t repeatTimes = static_cast<uint16_t>(REG_SIZE / sizeof(IndexT) / Intf::k0 - 1);
         uint8_t dstOffset = Intf::k0;
         uint8_t elesPerRepeat = Intf::k0;
@@ -231,9 +225,9 @@ private:
                 vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
             }
 
-            __local_mem__ SrcT *srcAddr = (__local_mem__ SrcT *)ndTensor.GetPhyAddr();
-            __local_mem__ DstT *dstAddr = (__local_mem__ DstT *)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
+            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
 
             MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
 
@@ -244,18 +238,18 @@ private:
                         uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
                                              coOptIndex * dstCoStride;
 
-                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(
-                            gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
+                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
+                                                                     gatherMaskReg);
 
                         if constexpr (Intf::isQuantScene) {
                             // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
                             MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                (MicroAPI::RegTensor<uint8_t> &)gatherReg, gatherReg);
-                            MicroAPI::DataCopy<DstT>(
-                                dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
+                                (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
+                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
+                                                     vstsMaskReg);
                         } else {
-                            MicroAPI::DataCopy<DstT>(
-                                dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
+                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
+                                                     vstsMaskReg);
                         }
                     }
                 }
@@ -289,9 +283,9 @@ private:
                 vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
             }
 
-            __local_mem__ SrcT *srcAddr = (__local_mem__ SrcT *)ndTensor.GetPhyAddr();
-            __local_mem__ DstT *dstAddr = (__local_mem__ DstT *)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
+            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
 
             MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
 
@@ -304,14 +298,14 @@ private:
                             uint32_t dstOffset = kdIndex * dstKdStride + ci1OptIndex * dstCiStride +
                                                  khkwIndex * dstKhKwStride + coOptIndex * dstCoStride;
 
-                            MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(
-                                gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
+                            MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
+                                                                         gatherMaskReg);
 
                             if constexpr (Intf::isQuantScene) {
                                 MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                    (MicroAPI::RegTensor<uint8_t> &)gatherReg, gatherReg);
-                                MicroAPI::DataCopy<DstT>(
-                                    dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
+                                    (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
+                                MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
+                                                         vstsMaskReg);
                             } else {
                                 MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, gatherReg, vstsMaskReg);
                             }
@@ -336,8 +330,8 @@ private:
         uint32_t srcKhKwStride = srcGroupOptSize;
         uint32_t dstCoStride = coPerReg * Intf::k0;
         uint32_t srcKdStride = self_->ctx.convTilingData->kernelHxkernelW * srcGroupOptSize;
-        uint32_t dstKdStride = self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.coOptAlign *
-                               self_->ctx.ci1Opt * Intf::k0; // ci1Opt has updated in groupOptTail
+        uint32_t dstKdStride = self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.coOptAlign * self_->ctx.ci1Opt *
+                               Intf::k0; // ci1Opt has updated in groupOptTail
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<RegT> gatherReg;
@@ -350,9 +344,9 @@ private:
                 vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
             }
 
-            __local_mem__ SrcT *srcAddr = (__local_mem__ SrcT *)ndTensor.GetPhyAddr();
-            __local_mem__ DstT *dstAddr = (__local_mem__ DstT *)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
+            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
 
             MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
 
@@ -365,14 +359,14 @@ private:
                             uint32_t dstOffset = kdIndex * dstKdStride + ci1OptIndex * dstCiStride +
                                                  khkwIndex * dstKhKwStride + coOptIndex * dstCoStride;
 
-                            MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(
-                                gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
+                            MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
+                                                                         gatherMaskReg);
                             if constexpr (Intf::isQuantScene) {
                                 // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
                                 MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                    (MicroAPI::RegTensor<uint8_t> &)gatherReg, gatherReg);
-                                MicroAPI::DataCopy<DstT>(
-                                    dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
+                                    (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
+                                MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
+                                                         vstsMaskReg);
                             } else {
                                 MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, gatherReg, vstsMaskReg);
                             }
@@ -389,12 +383,12 @@ private:
         uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
         uint16_t coLoopTimes = coOptLoopTimes;
         uint32_t srcCiStride = self_->ctx.coOptAlign * Intf::k0;
-        uint32_t srcKhKwStride = self_->ctx.coOptAlign * self_->ctx.ciOptAlign; 
+        uint32_t srcKhKwStride = self_->ctx.coOptAlign * self_->ctx.ciOptAlign;
         uint32_t srcCoStride = coPerReg;
         uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstCoStride = coPerReg * Intf::k0;
- 
+
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<RegT> gatherReg;
@@ -406,13 +400,13 @@ private:
             } else {
                 vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
             }
- 
-            __local_mem__ SrcT *srcAddr = (__local_mem__ SrcT *)ndTensor.GetPhyAddr();
-            __local_mem__ DstT *dstAddr = (__local_mem__ DstT *)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
- 
+
+            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
+            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
+
             MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
- 
+
             for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
                 for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
                     for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
@@ -420,14 +414,14 @@ private:
                                              coOptIndex * srcCoStride;
                         uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
                                              coOptIndex * dstCoStride;
-                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(
-                            gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
+                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
+                                                                     gatherMaskReg);
                         if constexpr (Intf::isQuantScene) {
                             // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
                             MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                (MicroAPI::RegTensor<uint8_t> &)gatherReg, gatherReg);
-                            MicroAPI::DataCopy<DstT>(
-                                dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
+                                (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
+                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
+                                                     vstsMaskReg);
                         } else {
                             MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, gatherReg, vstsMaskReg);
                         }
@@ -438,13 +432,13 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     using SrcT = typename Conditional<Intf::isQuantScene, int8_t, typename Intf::WeightT>::type;
     using DstT = typename Conditional<Intf::isQuantScene, int8_t, typename Intf::WeightT>::type;
     using RegT = typename Conditional<Intf::isQuantScene, int16_t, typename Intf::WeightT>::type;
-    using IndexT = typename Conditional<
-        AscendC::IsSameType<typename Intf::WeightT, float>::value, uint32_t, uint16_t>::type;
+    using IndexT = typename Conditional<AscendC::IsSameType<typename Intf::WeightT, float>::value, uint32_t,
+                                        uint16_t>::type;
 
     LocalTensor<SrcT> ndTensor;
     LocalTensor<IndexT> indexTensor;
@@ -456,13 +450,9 @@ private:
 template <class Intf>
 class OptGroupLoadUB2L1Tools {
 public:
-    __aicore__ inline OptGroupLoadUB2L1Tools()
-    {}
+    __aicore__ inline OptGroupLoadUB2L1Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
     __aicore__ inline void LoadUB2L1()
     {
@@ -476,7 +466,7 @@ public:
             DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.nzTensor[srcOffset], copyParams);
         } else {
             DataCopy<typename Intf::WeightT>(self_->ctx.bl1[self_->ctx.pingPongFlag * self_->ctx.bL1SpaceSize],
-                self_->ctx.nzTensor[srcOffset], copyParams);
+                                             self_->ctx.nzTensor[srcOffset], copyParams);
             self_->ctx.pingPongFlag ^= 1;
         }
     }
@@ -530,13 +520,13 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     DataCopyParams copyParams;
     uint64_t kOffset = 0;
     uint64_t srcOffset = 0;
 };
 
-};
+}; // namespace ConvFunc
 
 #endif // CONV_INSTR_OPT_GROUP_IMPL_H

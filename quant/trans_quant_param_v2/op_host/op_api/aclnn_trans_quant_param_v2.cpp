@@ -30,8 +30,8 @@ extern "C" {
 #endif
 
 static const std::initializer_list<op::DataType> SCALE_TYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> OUT_TYPE_SUPPORT_LIST = {
-    op::DataType::DT_UINT64, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> OUT_TYPE_SUPPORT_LIST = {op::DataType::DT_UINT64,
+                                                                          op::DataType::DT_INT64};
 
 namespace {
 static inline bool CheckNotNull(const aclTensor* scale, const aclTensor* out)
@@ -52,8 +52,8 @@ static inline bool CheckDtypeValid(const aclTensor* scale, const aclTensor* offs
 }
 static inline bool CheckFormat(const aclTensor* scale, const aclTensor* offset, const aclTensor* out)
 {
-    bool formatValid =
-        scale->GetStorageFormat() == op::Format::FORMAT_ND && out->GetStorageFormat() == op::Format::FORMAT_ND;
+    bool formatValid = scale->GetStorageFormat() == op::Format::FORMAT_ND &&
+                       out->GetStorageFormat() == op::Format::FORMAT_ND;
     if (offset != nullptr) {
         formatValid = formatValid && offset->GetStorageFormat() == op::Format::FORMAT_ND;
     }
@@ -67,18 +67,16 @@ static inline bool CheckShape(const aclTensor* scale, const aclTensor* offset, i
         // 2是scale的shape维度，此时shape为(g, n), (1, n), g为gmm的分组数，n为matmul的右矩阵的n
         if (!(isScaleVaild || (scale->GetViewShape().GetDimNum() == 2 && scale->GetViewShape().GetDim(0) > 0 &&
                                scale->GetViewShape().GetDim(1) > 0))) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Dim value of scale should be greater than 0, but current is %s",
-                op::ToString(scale->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value of scale should be greater than 0, but current is %s",
+                    op::ToString(scale->GetViewShape()).GetString());
             return false;
         }
     } else {
         // 2是scale的shape维度，此时shape为(1, n)，n为matmul的右矩阵的n
         if (!(isScaleVaild || (scale->GetViewShape().GetDimNum() == 2 && scale->GetViewShape().GetDim(0) == 1 &&
                                scale->GetViewShape().GetDim(1) > 0))) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "shape of scale only support (n, ) and (1, n), but current is %s",
-                op::ToString(scale->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shape of scale only support (n, ) and (1, n), but current is %s",
+                    op::ToString(scale->GetViewShape()).GetString());
             return false;
         }
     }
@@ -87,19 +85,17 @@ static inline bool CheckShape(const aclTensor* scale, const aclTensor* offset, i
                              (offset->GetViewShape().GetDimNum() == 2 && offset->GetViewShape().GetDim(0) == 1 &&
                               offset->GetViewShape().GetDim(1) > 0);
         if (isOffsetVaild == false) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "shape of offset only support (n, ) and (1, n), but current is %s",
-                op::ToString(offset->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "shape of offset only support (n, ) and (1, n), but current is %s",
+                    op::ToString(offset->GetViewShape()).GetString());
             return false;
         }
         if (offset->GetViewShape().GetDimNum() == 1) {
             int64_t scaleDimValue = scale->GetViewShape().GetDim(0);
             int64_t offsetDimValue = offset->GetViewShape().GetDim(0);
             if (scaleDimValue > 1 && offsetDimValue > 1 && scaleDimValue != offsetDimValue) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "scale and offset should be same when both greater than 1, but scale is %ld, offset is %ld",
-                    scaleDimValue, offsetDimValue);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "scale and offset should be same when both greater than 1, but scale is %ld, offset is %ld",
+                        scaleDimValue, offsetDimValue);
                 return false;
             }
         }
@@ -128,9 +124,9 @@ static aclnnStatus CheckParams(const aclTensor* scale, const aclTensor* offset, 
 }
 } // namespace
 
-aclnnStatus aclnnTransQuantParamV2GetWorkspaceSize(
-    const aclTensor* scale, const aclTensor* offset, const aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnTransQuantParamV2GetWorkspaceSize(const aclTensor* scale, const aclTensor* offset,
+                                                   const aclTensor* out, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
     auto ret = CheckParams(scale, offset, 0, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -139,9 +135,9 @@ aclnnStatus aclnnTransQuantParamV2GetWorkspaceSize(
     return aclnnInnerTransQuantParamV2GetWorkspaceSize(scale, offset, 0, outX, workspaceSize, executor);
 }
 
-aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
-    const aclTensor* scale, const aclTensor* offset, int64_t roundMode, const aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(const aclTensor* scale, const aclTensor* offset, int64_t roundMode,
+                                                   const aclTensor* out, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
     auto ret = CheckParams(scale, offset, roundMode, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -150,14 +146,14 @@ aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
     return aclnnInnerTransQuantParamV2GetWorkspaceSize(scale, offset, roundMode, outX, workspaceSize, executor);
 }
 
-aclnnStatus aclnnTransQuantParamV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnTransQuantParamV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream)
 {
     return aclnnInnerTransQuantParamV2(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnTransQuantParamV3(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnTransQuantParamV3(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream)
 {
     return aclnnInnerTransQuantParamV2(workspace, workspaceSize, executor, stream);
 }

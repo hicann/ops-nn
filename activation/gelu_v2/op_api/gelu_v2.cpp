@@ -29,8 +29,8 @@ const aclTensor* GeluV2(const aclTensor* x, const std::string& approximate, aclO
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GeluV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
     }
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return nullptr, "GeluV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "GeluV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 }
 } // namespace l0op

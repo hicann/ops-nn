@@ -24,10 +24,11 @@ constexpr size_t GLU_IN_X = 0;
 constexpr size_t GLU_OUT_Y = 0;
 constexpr size_t GLU_ATTR_DIM = 0;
 const size_t SPLIT_NUM = 2;
-}  // namespace
+} // namespace
 
 namespace ops {
-static ge::graphStatus InferShapeForClippedSwiglu(gert::InferShapeContext* context) {
+static ge::graphStatus InferShapeForClippedSwiglu(gert::InferShapeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeForClippedSwiglu");
     auto xShape = context->GetInputShape(GLU_IN_X);
     OPS_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -44,12 +45,12 @@ static ge::graphStatus InferShapeForClippedSwiglu(gert::InferShapeContext* conte
     }
     auto splitDim = *splitDimPtr;
     if (splitDim < 0) {
-      splitDim += xShape->GetDimNum();
+        splitDim += xShape->GetDimNum();
     }
     if (splitDim < 0 || splitDim >= static_cast<int64_t>(xShape->GetDimNum())) {
-      OP_LOGE("ClippedSwiglu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
-                  xShape->GetDimNum(), xShape->GetDimNum() - 1, splitDim);
-      return GRAPH_FAILED;
+        OP_LOGE("ClippedSwiglu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
+                xShape->GetDimNum(), xShape->GetDimNum() - 1, splitDim);
+        return GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "Begin to generate yShape");
     *yShape = *xShape;
@@ -67,7 +68,8 @@ static ge::graphStatus InferShapeForClippedSwiglu(gert::InferShapeContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForClippedSwiglu(gert::InferDataTypeContext *context) {
+static ge::graphStatus InferDataTypeForClippedSwiglu(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForClippedSwiglu");
     const ge::DataType dtype = context->GetInputDataType(0);
     ge::graphStatus ret = context->SetOutputDataType(0, dtype);
@@ -76,4 +78,4 @@ static ge::graphStatus InferDataTypeForClippedSwiglu(gert::InferDataTypeContext 
 }
 
 IMPL_OP_INFERSHAPE(ClippedSwiglu).InferShape(InferShapeForClippedSwiglu).InferDataType(InferDataTypeForClippedSwiglu);
-}  // namespace ops
+} // namespace ops

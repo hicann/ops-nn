@@ -13,9 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SoftMarginLossGrad(const aclTensor* gradOutput, const aclTensor *self, const aclTensor *target,
-                                    const std::string& reduction, aclOpExecutor *executor);
+const aclTensor* SoftMarginLossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                    const std::string& reduction, aclOpExecutor* executor);
 }
 
-#endif  // OP_API_INC_LEVEL0_OP_SOFT_MARGIN_LOSS_GRAD_OP_H_
-
+#endif // OP_API_INC_LEVEL0_OP_SOFT_MARGIN_LOSS_GRAD_OP_H_

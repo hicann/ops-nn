@@ -33,9 +33,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Attr("alpha")
-            .AttrType(OPTIONAL)
-            .Float();
+        this->Attr("alpha").AttrType(OPTIONAL).Float();
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

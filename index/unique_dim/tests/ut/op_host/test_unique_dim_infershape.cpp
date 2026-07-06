@@ -17,15 +17,9 @@
 
 class UniqueDimInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "UniqueDimInfershapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "UniqueDimInfershapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "UniqueDimInfershapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "UniqueDimInfershapeTest TearDown" << std::endl; }
 };
 
 // Basic test: 2D input, check output shapes
@@ -65,9 +59,9 @@ TEST_F(UniqueDimInfershapeTest, unique_dim_infershape_basic_2d)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
-    auto *yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    auto *idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
-    auto *countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
+    auto* yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto* idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    auto* countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
 
     // y: same rank as input (2D), all dims set to -1 by SetUnknownShape
     gert::Shape expected_y = {-1, -1};
@@ -118,9 +112,9 @@ TEST_F(UniqueDimInfershapeTest, unique_dim_infershape_1d)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
-    auto *yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    auto *idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
-    auto *countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
+    auto* yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto* idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    auto* countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
 
     gert::Shape expected_y = {-1};
     ASSERT_EQ(Ops::Base::ToString(*yShape), Ops::Base::ToString(expected_y));
@@ -168,9 +162,9 @@ TEST_F(UniqueDimInfershapeTest, unique_dim_infershape_3d)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
-    auto *yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    auto *idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
-    auto *countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
+    auto* yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto* idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    auto* countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
 
     gert::Shape expected_y = {-1, -1, -1};
     ASSERT_EQ(Ops::Base::ToString(*yShape), Ops::Base::ToString(expected_y));
@@ -218,9 +212,9 @@ TEST_F(UniqueDimInfershapeTest, unique_dim_infershape_empty_input)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
-    auto *yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    auto *idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
-    auto *countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
+    auto* yShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto* idxShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    auto* countShape = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(2);
 
     // empty input -> all outputs are empty
     gert::Shape expected_y = {0, 0};

@@ -17,7 +17,9 @@
 #define CANN_DEQUANT_SWIGLU_QUANT_STATIC_BASE_HPP
 #include "kernel_operator.h"
 
-#define TEMPLATE_DECLARE_STATIC template<typename InType, typename CalcType, typename BiasType, typename OutType, uint16_t bufferNum, uint16_t quantIsOne>
+#define TEMPLATE_DECLARE_STATIC                                                                            \
+    template <typename InType, typename CalcType, typename BiasType, typename OutType, uint16_t bufferNum, \
+              uint16_t quantIsOne>
 #define TEMPLATE_ARGS_STATIC InType, CalcType, BiasType, OutType, bufferNum, quantIsOne
 
 namespace DequantSwigluQuant {
@@ -30,9 +32,10 @@ public:
     __aicore__ inline DequantSwigluQuantStaticBase() {}
     __aicore__ inline ~DequantSwigluQuantStaticBase() {}
 
-    __aicore__ inline void InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-        GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-        const SwiGluTilingData* tilingData, TPipe* pipe_) {
+    __aicore__ inline void InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm,
+                                      GM_ADDR bias_gm, GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm,
+                                      GM_ADDR scale_gm, const SwiGluTilingData* tilingData, TPipe* pipe_)
+    {
         this->blockIdx = GetBlockIdx();
         this->activateLeft = tilingData->activateLeft;
         this->quantScaleIsEmpty = tilingData->quantScaleIsEmpty;
@@ -58,16 +61,18 @@ public:
             this->inputCopyOffset = remainCnt * (perRoundCnt + 1) + (this->blockIdx - remainCnt) * perRoundCnt;
         }
 
-        this->xGm.SetGlobalBuffer((__gm__ InType*)x_gm + this->inputCopyOffset * this->colNum * NUM2, this->curCoreRowNum * this->colNum * NUM2);
-        this->yGm.SetGlobalBuffer((__gm__ OutType*)y_gm + this->inputCopyOffset * this->colNum, this->curCoreRowNum * this->colNum);
+        this->xGm.SetGlobalBuffer((__gm__ InType*)x_gm + this->inputCopyOffset * this->colNum * NUM2,
+                                  this->curCoreRowNum * this->colNum * NUM2);
+        this->yGm.SetGlobalBuffer((__gm__ OutType*)y_gm + this->inputCopyOffset * this->colNum,
+                                  this->curCoreRowNum * this->colNum);
         if (quantScaleIsEmpty == 0) {
-            if constexpr(quantIsOne == 0) {
-                this->quantOffsetGm.SetGlobalBuffer((__gm__ float*) quant_offset_gm, this->colNum);
-                this->quantScaleGm.SetGlobalBuffer((__gm__ float*) quant_scale_gm, this->colNum);
+            if constexpr (quantIsOne == 0) {
+                this->quantOffsetGm.SetGlobalBuffer((__gm__ float*)quant_offset_gm, this->colNum);
+                this->quantScaleGm.SetGlobalBuffer((__gm__ float*)quant_scale_gm, this->colNum);
             } else {
-                this->quantScaleGm.SetGlobalBuffer((__gm__ float*) quant_scale_gm, 1);
+                this->quantScaleGm.SetGlobalBuffer((__gm__ float*)quant_scale_gm, 1);
                 this->quant_scale = 1 / this->quantScaleGm.GetValue(0);
-                this->quantOffsetGm.SetGlobalBuffer((__gm__ float*) quant_offset_gm, 1);
+                this->quantOffsetGm.SetGlobalBuffer((__gm__ float*)quant_offset_gm, 1);
                 this->quant_offset = this->quantOffsetGm.GetValue(0);
             }
         }
@@ -75,13 +80,14 @@ public:
 
     __aicore__ inline void InitUbBufferCommon()
     {
-        int64_t alignColNum = curColNum == Align(curColNum, sizeof(InType)) ? curColNum : Align(curColNum, sizeof(OutType));
+        int64_t alignColNum = curColNum == Align(curColNum, sizeof(InType)) ? curColNum :
+                                                                              Align(curColNum, sizeof(OutType));
         pipe->InitBuffer(inputTempBufferInt32SD, alignColNum * sizeof(CalcType) * NUM2);
         pipe->InitBuffer(swigluTempBuffer, alignColNum * sizeof(CalcType));
         pipe->InitBuffer(inQueue, bufferNum, alignColNum * sizeof(InType) * NUM2);
         pipe->InitBuffer(outQueue, bufferNum, alignColNum * sizeof(OutType));
         if (quantScaleIsEmpty == 0) {
-            if constexpr(quantIsOne == 0) {
+            if constexpr (quantIsOne == 0) {
                 pipe->InitBuffer(inQueueQuant, bufferNum, alignColNum * sizeof(float) * NUM2);
             }
         }
@@ -149,9 +155,9 @@ public:
     __aicore__ inline void CopyIn(int64_t offset1, int64_t offset2)
     {
         DataCopyExtParams params = {1, static_cast<uint32_t>(curColNum * sizeof(InType)), 0, 0, 0};
-        DataCopyPadExtParams <InType> padParams{false, 0, 0, 0};
+        DataCopyPadExtParams<InType> padParams{false, 0, 0, 0};
 
-        LocalTensor <InType> aLocal = inQueue.template AllocTensor<InType>();
+        LocalTensor<InType> aLocal = inQueue.template AllocTensor<InType>();
         if (activateLeft == 0) {
             DataCopyPad(aLocal, xGm[offset2], params, padParams);
             DataCopyPad(aLocal[alignColNum], xGm[offset1], params, padParams);
@@ -164,7 +170,7 @@ public:
 
     __aicore__ inline void dequant(uint64_t tileLen, uint64_t i)
     {
-        LocalTensor <InType> aLocal = this->inQueue.template DeQue<InType>();
+        LocalTensor<InType> aLocal = this->inQueue.template DeQue<InType>();
         this->inputTmpELocal = this->inputTempBufferInt32SD.template Get<CalcType>();
         if constexpr (std::is_same_v<BiasType, int32_t>) {
             if (this->biasIsEmpty == 0) {
@@ -186,7 +192,8 @@ public:
             PipeBarrier<PIPE_V>();
         }
 
-        if constexpr (std::is_same_v<BiasType, float> || std::is_same_v<BiasType, bfloat16_t> || std::is_same_v<BiasType, half>) {
+        if constexpr (std::is_same_v<BiasType, float> || std::is_same_v<BiasType, bfloat16_t> ||
+                      std::is_same_v<BiasType, half>) {
             if (this->biasIsEmpty == 0) {
                 if constexpr (std::is_same_v<BiasType, float>) {
                     Add(this->inputTmpELocal, this->inputTmpELocal, this->biasLocal, tileLen);
@@ -194,7 +201,8 @@ public:
                     LocalTensor<CalcType> biasFloatLocal = this->inputBiasTempBuffer.template Get<CalcType>();
                     Cast(biasFloatLocal, this->biasLocal, RoundMode::CAST_NONE, tileLen / NUM2);
                     PipeBarrier<PIPE_V>();
-                    Cast(biasFloatLocal[tileLen / NUM2], this->biasLocal[biasAlignColNum], RoundMode::CAST_NONE, tileLen / NUM2);
+                    Cast(biasFloatLocal[tileLen / NUM2], this->biasLocal[biasAlignColNum], RoundMode::CAST_NONE,
+                         tileLen / NUM2);
                     PipeBarrier<PIPE_V>();
                     Add(this->inputTmpELocal, this->inputTmpELocal, biasFloatLocal, tileLen);
                 }
@@ -210,7 +218,7 @@ public:
         }
         this->inQueueWeightScale.FreeTensor(this->weightScaleLocal);
         if (quantScaleIsEmpty == 0) {
-            if constexpr(quantIsOne == 0) {
+            if constexpr (quantIsOne == 0) {
                 this->inQueueQuant.FreeTensor(this->quantLocal);
             }
         }
@@ -246,10 +254,11 @@ public:
                 this->activateLocal = this->inQueueActivationScale.template DeQue<float>();
             }
             for (int64_t i = 0; i < this->curCoreRowNum; i++) {
-                this->CopyIn(i * this->colNum * NUM2 + colLoop * this->baseColLen, i * this->colNum * NUM2 + this->colNum + colLoop * this->baseColLen);
+                this->CopyIn(i * this->colNum * NUM2 + colLoop * this->baseColLen,
+                             i * this->colNum * NUM2 + this->colNum + colLoop * this->baseColLen);
                 this->dequant(this->alignColNum * NUM2, i);
                 if (i == 0 && quantScaleIsEmpty == 0) {
-                    if constexpr(quantIsOne == 0) {
+                    if constexpr (quantIsOne == 0) {
                         this->CopyInQuant(colLoop * this->baseColLen);
                         this->quantLocal = this->inQueueQuant.template DeQue<float>();
                     }
@@ -263,7 +272,7 @@ public:
 
     __aicore__ inline void swiglu(uint64_t curTileLen, int64_t idx)
     {
-        LocalTensor <CalcType> swigluLocal = swigluTempBuffer.Get<CalcType>();
+        LocalTensor<CalcType> swigluLocal = swigluTempBuffer.Get<CalcType>();
         Muls(swigluLocal, inputTmpELocal, beta, curTileLen);
         PipeBarrier<PIPE_V>();
         Exp(swigluLocal, swigluLocal, curTileLen);
@@ -275,7 +284,7 @@ public:
         Mul(inputTmpELocal[curTileLen], inputTmpELocal, inputTmpELocal[curTileLen], curTileLen);
         PipeBarrier<PIPE_V>();
         if (quantScaleIsEmpty == 0) {
-            if constexpr(quantIsOne == 0) {
+            if constexpr (quantIsOne == 0) {
                 Div(inputTmpELocal[curTileLen], inputTmpELocal[curTileLen], quantLocal, curTileLen);
                 PipeBarrier<PIPE_V>();
                 Add(inputTmpELocal[curTileLen], inputTmpELocal[curTileLen], quantLocal[curTileLen], curTileLen);
@@ -288,15 +297,15 @@ public:
             }
         }
         // fp32->int16
-        LocalTensor <int16_t> int16Local = swigluTempBuffer.Get<int16_t>();
+        LocalTensor<int16_t> int16Local = swigluTempBuffer.Get<int16_t>();
         Cast(int16Local, inputTmpELocal[curTileLen], RoundMode::CAST_RINT, curTileLen);
         PipeBarrier<PIPE_V>();
         // int16-> half
-        LocalTensor <half> halfLocal = int16Local.ReinterpretCast<half>();
+        LocalTensor<half> halfLocal = int16Local.ReinterpretCast<half>();
         Cast(halfLocal, int16Local, RoundMode::CAST_NONE, curTileLen);
         PipeBarrier<PIPE_V>();
 
-        LocalTensor <OutType> outLocal = outQueue.template AllocTensor<OutType>();
+        LocalTensor<OutType> outLocal = outQueue.template AllocTensor<OutType>();
         // half -> int8
         Cast(outLocal, halfLocal, RoundMode::CAST_NONE, curTileLen);
         outQueue.template EnQue<OutType>(outLocal);
@@ -304,7 +313,7 @@ public:
 
     __aicore__ inline void CopyOut(int64_t colLoop, int64_t idx)
     {
-        LocalTensor <OutType> outLocal = outQueue.template DeQue<OutType>();
+        LocalTensor<OutType> outLocal = outQueue.template DeQue<OutType>();
         DataCopyExtParams dataCopyParams{1, static_cast<uint32_t>(curColNum * sizeof(OutType)), 0, 0, 0};
         DataCopyPad(yGm[idx * colNum + colLoop * baseColLen], outLocal, dataCopyParams);
         outQueue.FreeTensor(outLocal);
@@ -341,31 +350,31 @@ protected:
     int64_t baseRowLen = 0;
     int64_t baseColLen = 0;
 
-    GlobalTensor <OutType> yGm;
-    GlobalTensor <InType> xGm;
+    GlobalTensor<OutType> yGm;
+    GlobalTensor<InType> xGm;
     GlobalTensor<float> weightScaleGm;
     GlobalTensor<float> activationScaleGm;
-    GlobalTensor <BiasType> biasGm;
+    GlobalTensor<BiasType> biasGm;
     GlobalTensor<float> quantScaleGm;
     GlobalTensor<float> quantOffsetGm;
 
-    LocalTensor <CalcType> inputTmpELocal;
+    LocalTensor<CalcType> inputTmpELocal;
     LocalTensor<float> weightScaleLocal;
     LocalTensor<BiasType> biasLocal;
     LocalTensor<float> quantLocal;
     LocalTensor<float> activateLocal;
 
-    TQue <QuePosition::VECIN, bufferNum> inQueueWeightScale;
-    TQue <QuePosition::VECIN, bufferNum> inQueueActivationScale;
-    TQue <QuePosition::VECIN, bufferNum> inQueueBias;
-    TQue <QuePosition::VECIN, bufferNum> inQueueQuant;
-    TQue <QuePosition::VECIN, bufferNum> inQueue;
-    TQue <QuePosition::VECOUT, bufferNum> outQueue;
+    TQue<QuePosition::VECIN, bufferNum> inQueueWeightScale;
+    TQue<QuePosition::VECIN, bufferNum> inQueueActivationScale;
+    TQue<QuePosition::VECIN, bufferNum> inQueueBias;
+    TQue<QuePosition::VECIN, bufferNum> inQueueQuant;
+    TQue<QuePosition::VECIN, bufferNum> inQueue;
+    TQue<QuePosition::VECOUT, bufferNum> outQueue;
 
-    TBuf <TPosition::VECCALC> inputTempBufferInt32SD;
-    TBuf <TPosition::VECCALC> swigluTempBuffer;
-    TBuf <TPosition::VECCALC> inputBiasTempBuffer;
+    TBuf<TPosition::VECCALC> inputTempBufferInt32SD;
+    TBuf<TPosition::VECCALC> swigluTempBuffer;
+    TBuf<TPosition::VECCALC> inputBiasTempBuffer;
 };
-}
+} // namespace DequantSwigluQuant
 
-#endif  // CANN_DEQUANT_SWIGLU_QUANT_STATIC_BASE_HPP
+#endif // CANN_DEQUANT_SWIGLU_QUANT_STATIC_BASE_HPP

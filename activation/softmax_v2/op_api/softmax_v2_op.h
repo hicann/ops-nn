@@ -8,14 +8,13 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef OP_API_OP_API_INC_LEVEL0_OP_SOFTMAX_OP_H_
 #define OP_API_OP_API_INC_LEVEL0_OP_SOFTMAX_OP_H_
 #include "opdev/op_executor.h"
 #include "opdev/fast_vector.h"
 namespace l0op {
 
-const aclTensor *SoftmaxV2(const aclTensor *self, int64_t dim, aclOpExecutor *executor);
+const aclTensor* SoftmaxV2(const aclTensor* self, int64_t dim, aclOpExecutor* executor);
 
 }
 #endif // OP_API_OP_API_INC_LEVEL0_OP_SOFTMAX_OP_H_

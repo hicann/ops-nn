@@ -30,7 +30,7 @@ __global__ __aicore__ void celu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_A
 {
     REGISTER_TILING_DEFAULT(CeluV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(CeluV2TilingData, tilingData, tiling);
-    NsCeluV2::CeluV2<DTYPE_X> op; 
-    op.Init(x, y, &tilingData);      
-    op.Process();                       
+    NsCeluV2::CeluV2<DTYPE_X> op;
+    op.Init(x, y, &tilingData);
+    op.Process();
 }

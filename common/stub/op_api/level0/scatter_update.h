@@ -15,6 +15,6 @@
 namespace l0op {
 const aclTensor* ScatterUpdate(const aclTensor* self, const aclTensor* indices, const aclTensor* updates,
                                aclOpExecutor* executor, bool useLocking = false);
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_SCATTER_UPDATE_OP_H_
+#endif // OP_API_INC_LEVEL0_SCATTER_UPDATE_OP_H_

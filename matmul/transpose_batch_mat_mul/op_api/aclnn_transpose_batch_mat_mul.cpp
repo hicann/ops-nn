@@ -37,14 +37,19 @@
 using namespace std;
 using namespace op;
 using namespace Ops::NN;
-static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16, DataType::DT_INT8};
+static const std::initializer_list<op::DataType> x1_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                    DataType::DT_BF16};
+static const std::initializer_list<op::DataType> x2_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                    DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WEIGHTNZ = {op::DataType::DT_FLOAT16,
+                                                                                op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_WEIGHTNZ = {
+    op::DataType::DT_FLOAT16, op::DataType::DT_BF16, DataType::DT_INT8};
 static const std::initializer_list<op::DataType> x1_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> x2_SCALE_SUPPORT_LIST = {DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT64};
-static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT8};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                           DataType::DT_BF16, DataType::DT_INT8};
 static constexpr size_t EXPECTED_DIM = 3;
 static constexpr int EXPECTED_NZ_DIM = 5;
 
@@ -62,25 +67,22 @@ inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const 
     return true;
 }
 
-inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
-                                   const aclTensor* scale, const aclTensor* out)
+inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
+                                   const aclTensor* out)
 {
     if (x1->GetDataType() != x2->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "x1's dtype [%s] and x2's dtype [%s] are not equal.",
-            op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
-            return false;
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1's dtype [%s] and x2's dtype [%s] are not equal.",
+                op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
+        return false;
     }
     // Handle weight NZ format specific checks
     if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
         auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "transposebatchmatmulweightnz is unsupported by the current SOC version [%s].",
-                op::ToString(socVersion).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "transposebatchmatmulweightnz is unsupported by the current SOC version [%s].",
+                    op::ToString(socVersion).GetString());
             return false;
         }
         OP_CHECK_DTYPE_NOT_SUPPORT(x1, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
@@ -92,12 +94,10 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
             OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SCALE_SUPPORT_LIST, return false);
         }
         if ((x1->GetDataType() != out->GetDataType()) && (npuArch == NpuArch::DAV_2201)) {
-             OP_LOGE(
-                 ACLNN_ERR_PARAM_INVALID,
-                 "x1's dtype [%s] and out's dtype [%s] are not equal in DAV_2201.",
-                 op::ToString(x1->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
-                 return false;
-         }
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1's dtype [%s] and out's dtype [%s] are not equal in DAV_2201.",
+                    op::ToString(x1->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+            return false;
+        }
         return true;
     }
 
@@ -140,9 +140,9 @@ namespace {
 static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
 {
     auto x1_support_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
-                             ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
-    auto x2_support_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) || 
-                             ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+                                ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
+    auto x2_support_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) ||
+                                ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
     auto y_support_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2);
     if (!x1_support_transpose) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [0, 1, 2] or [1, 0, 2].");
@@ -161,7 +161,8 @@ static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x
 } // namespace
 
 static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
-                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y, int32_t batch_split_factor)
+                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y,
+                            int32_t batch_split_factor)
 {
     if (!CheckPermLimit(perm_x1, perm_x2, perm_y)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm is invalid.");
@@ -181,25 +182,25 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     }
 
     if (!IsNpuArch3510Series()) {
-        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);	 
+        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
         auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
         if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch and N should be less than 65536.");
             return false;
         }
-        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) { 
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536."); 
-            return false; 
+        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536.");
+            return false;
         }
         if (x1_need_transpose && (x1KDim >= SUPPORTED_INNER_AXIS || batchNum * x1KDim >= SUPPORTED_INNER_AXIS) &&
             (scale != nullptr || batch_split_factor != 1)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or batch_split_factor != 1 are not supported.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or "
+                                             "batch_split_factor != 1 are not supported.");
             return false;
         }
         if (x2_need_transpose && (scale != nullptr || batch_split_factor != 1 || !x1_need_transpose)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is transposed, input scale or batch_split_factor != 1 are not supported, permX1 must be [1,0,2].");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is transposed, input scale or batch_split_factor != 1 are not "
+                                             "supported, permX1 must be [1,0,2].");
             return false;
         }
     }
@@ -248,12 +249,11 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (IsNpuArch3510Series() && cubeMathType == -1) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnTransposeBatchMatMulGetWorkspaceSize", "cubeMathType",
-            Ops::NN::FormatString("%d", cubeMathType).c_str(),
-            Ops::NN::FormatString(
-                "In %s case, the value of %s cannot be %s", "DAV_3510 architecture", "cubeMathType", "-1")
-                .c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnTransposeBatchMatMulGetWorkspaceSize", "cubeMathType",
+                                              Ops::NN::FormatString("%d", cubeMathType).c_str(),
+                                              Ops::NN::FormatString("In %s case, the value of %s cannot be %s",
+                                                                    "DAV_3510 architecture", "cubeMathType", "-1")
+                                                  .c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(CheckMathType(x1, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
@@ -271,14 +271,13 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, perm_y, batch_split_factor), ACLNN_ERR_PARAM_INVALID);
 
     if (batch_split_factor <= 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be greater than 0.",
-            batch_split_factor);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be greater than 0.", batch_split_factor);
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     if (batch_split_factor > 1 && x1->GetViewShape().GetDim((*perm_x1)[0]) % batch_split_factor != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be factor of batch[%ld]",
-            batch_split_factor, x1->GetViewShape().GetDim((*perm_x1)[0]));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be factor of batch[%ld]", batch_split_factor,
+                x1->GetViewShape().GetDim((*perm_x1)[0]));
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
@@ -287,65 +286,64 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, const aclTensor* x2,
-                                                       const aclTensor* scale, const aclIntArray* perm_x1,
-                                                       const aclIntArray* perm_x2, const aclIntArray* perm_y,
-                                                       int8_t cubeMathType, int32_t batch_split_factor,
-                                                       aclOpExecutor *executor)
+static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
+                                                       const aclIntArray* perm_x1, const aclIntArray* perm_x2,
+                                                       const aclIntArray* perm_y, int8_t cubeMathType,
+                                                       int32_t batch_split_factor, aclOpExecutor* executor)
 {
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
-    OP_CHECK(contiguousX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 preprocess failed, contiguous return nullptr."),
+    OP_CHECK(contiguousX1 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
-    OP_CHECK(reformX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 preprocess failed, reformat return nullptr."),
+    OP_CHECK(reformX1 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     auto contiguousX2 = l0op::Contiguous(x2, executor);
-    OP_CHECK(contiguousX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x2 preprocess failed, contiguous return nullptr."),
+    OP_CHECK(contiguousX2 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX2 = l0op::ReFormat(contiguousX2, op::Format::FORMAT_ND);
-    OP_CHECK(reformX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x2 preprocess failed, reformat return nullptr."),
+    OP_CHECK(reformX2 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     // scale非连续转连续以及转换dtype
     auto contiguousScale = scale;
     if (contiguousScale != nullptr) {
         contiguousScale = l0op::Contiguous(scale, executor);
-        OP_CHECK(contiguousScale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                 "The input scale preprocess failed, contiguous return nullptr."),
+        OP_CHECK(contiguousScale != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
     }
 
     // 构建matmul计算图
-    return l0op::TransposeBatchMatMul(reformX1, reformX2, nullptr, contiguousScale, perm_x1, perm_x2,
-                                      perm_y, cubeMathType == USE_HF32, batch_split_factor, executor);
+    return l0op::TransposeBatchMatMul(reformX1, reformX2, nullptr, contiguousScale, perm_x1, perm_x2, perm_y,
+                                      cubeMathType == USE_HF32, batch_split_factor, executor);
 }
 
 static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* x1, const aclTensor* x2,
                                                                const aclTensor* scale, const aclIntArray* perm_x1,
                                                                const aclIntArray* perm_x2, const aclIntArray* perm_y,
                                                                int8_t cubeMathType, int32_t batch_split_factor,
-                                                               aclOpExecutor *executor)
+                                                               aclOpExecutor* executor)
 {
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
-    OP_CHECK(contiguousX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 preprocess failed, contiguous return nullptr."),
+    OP_CHECK(contiguousX1 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
-    OP_CHECK(reformX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 preprocess failed, reformat return nullptr."),
+    OP_CHECK(reformX1 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     // 原始方法传入
     auto contiguousX2 = l0op::Contiguous(x2, executor);
-    OP_CHECK(contiguousX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x2 preprocess failed, contiguous return nullptr."),
+    OP_CHECK(contiguousX2 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 preprocess failed, contiguous return nullptr."),
              return nullptr);
 
     // weightnz storageshape刷新
@@ -357,25 +355,24 @@ static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* 
     auto contiguousScale = scale;
     if (contiguousScale != nullptr) {
         contiguousScale = l0op::Contiguous(scale, executor);
-        OP_CHECK(contiguousScale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                 "The input scale preprocess failed, contiguous return nullptr."),
+        OP_CHECK(contiguousScale != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
     }
 
     // 构建matmul计算图
-    return l0op::TransposeBatchMatMul(reformX1, contiguousX2, nullptr, contiguousScale, perm_x1, perm_x2,
-                                      perm_y, cubeMathType == USE_HF32, batch_split_factor, executor);
+    return l0op::TransposeBatchMatMul(reformX1, contiguousX2, nullptr, contiguousScale, perm_x1, perm_x2, perm_y,
+                                      cubeMathType == USE_HF32, batch_split_factor, executor);
 }
 
 aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                                       const aclTensor* scale, const aclIntArray* permX1,
                                                       const aclIntArray* permX2, const aclIntArray* permY,
                                                       int8_t cubeMathType, const int32_t batchSplitFactor,
-                                                      aclTensor* out, uint64_t* workspaceSize,
-                                                      aclOpExecutor** executor)
+                                                      aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnTransposeBatchMatMul,
-        DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
+                   DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
 
     // 固定写法, 创建OpExecutor
     auto unique_executor = CREATE_EXECUTOR();
@@ -383,7 +380,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
 
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
-    
+
     // 入参检查
     auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -401,8 +398,8 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
 
     // 构建matmul计算图
     const aclTensor* tbmmOut = nullptr;
-    tbmmOut = BuildTransposeBatchMatMulGraph(x1, x2, scale, permX1, permX2, permY,
-                                             cubeMathType, batchSplitFactor, unique_executor.get());
+    tbmmOut = BuildTransposeBatchMatMulGraph(x1, x2, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor,
+                                             unique_executor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     if (tbmmOut->IsEmpty()) {
@@ -428,15 +425,15 @@ aclnnStatus aclnnTransposeBatchMatMul(void* workspace, uint64_t workspaceSize, a
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
-                                                              const aclTensor* scale, const aclIntArray* permX1,
-                                                              const aclIntArray* permX2, const aclIntArray* permY,
-                                                              int8_t cubeMathType, const int32_t batchSplitFactor,
-                                                              aclTensor* out, uint64_t* workspaceSize,
-                                                              aclOpExecutor** executor)
+aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                              const aclTensor* bias, const aclTensor* scale,
+                                                              const aclIntArray* permX1, const aclIntArray* permX2,
+                                                              const aclIntArray* permY, int8_t cubeMathType,
+                                                              const int32_t batchSplitFactor, aclTensor* out,
+                                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnTransposeBatchMatMulWeightNz,
-        DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
+                   DFX_IN(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor), DFX_OUT(out));
 
     // 固定写法, 创建OpExecutor
     auto unique_executor = CREATE_EXECUTOR();
@@ -444,15 +441,14 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
 
     // x2 format must be NZ
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
-            op::ToString(x2->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
+                op::ToString(x2->GetStorageFormat()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
-    
+
     // 入参检查
     auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -470,8 +466,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
 
     // 构建matmul计算图
     const aclTensor* tbmmOut = nullptr;
-    tbmmOut = BuildTransposeBatchMatMulWeightNzGraph(x1, x2, scale, permX1, permX2, permY,
-                                                     cubeMathType, batchSplitFactor, unique_executor.get());
+    tbmmOut = BuildTransposeBatchMatMulWeightNzGraph(x1, x2, scale, permX1, permX2, permY, cubeMathType,
+                                                     batchSplitFactor, unique_executor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     if (tbmmOut->IsEmpty()) {

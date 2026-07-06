@@ -17,8 +17,7 @@
 
 #include "batch_norm_base.h"
 #include "../../norm_common/reduce_common_regbase.h"
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
 
 using AscendC::MicroAPI::LoadDist;
@@ -28,8 +27,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T1, typename T2>
-class BatchNormWelford
-{
+class BatchNormWelford {
     static constexpr int32_t FOUR_UNROLL = 4;
     static constexpr int32_t INDEX_0 = 0;
     static constexpr int32_t INDEX_1 = 1;
@@ -51,7 +49,7 @@ public:
     __aicore__ inline BatchNormWelford(const BatchNormWelfordRegbaseTilingData* tilingData, TPipe* pipeIn)
     {
         pipe = pipeIn;
-        elemNum = tilingData->elemNum;  // all R axis number in one common axis.
+        elemNum = tilingData->elemNum; // all R axis number in one common axis.
         loopR1outer = tilingData->loopR1outer;
         loopR0outer = tilingData->loopR0outer;
         r1Factor = tilingData->r1Factor;
@@ -196,8 +194,8 @@ public:
             burstLen = r0Tail;
             if (r0HasTail) {
                 for (uint64_t j = 0; j < loopR1outer; j++) {
-                    int64_t index =
-                        j * r1Factor * a0 * r0 + (aParallelIndex * aGatherLimit + i) * r0 + index_last_k * r0Factor;
+                    int64_t index = j * r1Factor * a0 * r0 + (aParallelIndex * aGatherLimit + i) * r0 +
+                                    index_last_k * r0Factor;
                     // after ub spit, there may comes tail block at the end cycle.
                     bool isFirstStep = count == 0;
                     count = count + 1;
@@ -736,10 +734,10 @@ private:
         uint32_t welfordDiffReminderAlign = welfordDiffReminder == 0 ? 0 : VL_FP32;
         uint16_t welfordReminderLoopCount = welfordDiffReminderAlign / VL_FP32;
 
-        uint32_t dichotomyAddReminderAfterSplit =
-            dichotomyAddReminder - (welfordDiffLoopCount + welfordReminderLoopCount) * VL_FP32;
-        uint16_t dichotomyAddReminderLoopCount =
-            ops::CeilDiv(dichotomyAddReminderAfterSplit, static_cast<uint32_t>(VL_FP32));
+        uint32_t dichotomyAddReminderAfterSplit = dichotomyAddReminder -
+                                                  (welfordDiffLoopCount + welfordReminderLoopCount) * VL_FP32;
+        uint16_t dichotomyAddReminderLoopCount = ops::CeilDiv(dichotomyAddReminderAfterSplit,
+                                                              static_cast<uint32_t>(VL_FP32));
         __VEC_SCOPE__
         {
             RegTensor<float> dichotomyAddMeanL;
@@ -940,10 +938,10 @@ private:
         uint32_t tmpReduceCount = dichotomyAddPower / VL_FP32;
         uint16_t innerLoopCountOrigin = tmpReduceCount / VL_FP32;
 
-        uint32_t dichotomyAddReminderAfterSplit =
-            dichotomyAddReminder - welfordDiffLoopCount * VL_FP32 - welfordDiffReminderAlign;
-        uint16_t dichotomyAddReminderLoopCount =
-            ops::CeilDiv(dichotomyAddReminderAfterSplit, static_cast<uint32_t>(VL_FP32));
+        uint32_t dichotomyAddReminderAfterSplit = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32 -
+                                                  welfordDiffReminderAlign;
+        uint16_t dichotomyAddReminderLoopCount = ops::CeilDiv(dichotomyAddReminderAfterSplit,
+                                                              static_cast<uint32_t>(VL_FP32));
         __VEC_SCOPE__
         {
             RegTensor<float> dichotomyAddMeanL;
@@ -1150,8 +1148,8 @@ private:
         uint16_t welfordReminderLoopCount = welfordDiffReminderAlign / VL_FP32;
         uint16_t dichotomyAddPowerRemainLoopCount = dichotomyAddPowerLoopCount - dichotomyAddReminderLoopCount -
                                                     welfordDiffLoopCount - welfordReminderLoopCount;
-        uint32_t dichotomyAddPowerOffset =
-            dichotomyAddReminderRoundUp + welfordDiffLoopCount * VL_FP32 + welfordDiffReminderAlign;
+        uint32_t dichotomyAddPowerOffset = dichotomyAddReminderRoundUp + welfordDiffLoopCount * VL_FP32 +
+                                           welfordDiffReminderAlign;
 
         __VEC_SCOPE__
         {
@@ -1314,8 +1312,8 @@ private:
     {
         // 非对齐Welford finalize阶段由于自身存在整尾块，二分折叠存在整尾块，会出现多种不同的场景，每个场景都有独立的VF
         uint32_t dichotomyAddReminder = reduceCount - dichotomyAddPower;
-        uint32_t dichotomyAddReminderRoundUp =
-            ops::CeilDiv(dichotomyAddReminder, static_cast<uint32_t>(VL_FP32)) * VL_FP32;
+        uint32_t dichotomyAddReminderRoundUp = ops::CeilDiv(dichotomyAddReminder, static_cast<uint32_t>(VL_FP32)) *
+                                               VL_FP32;
         if (tailSize >= dichotomyAddPower) {
             VFWelfordParallelFinalizeNonAlignSituation1(meanLocal, rstdLocal, varLocal, tmpMeanLocal, tmpVarLocal,
                                                         dichotomyAddLocal, reduceCount, dichotomyAddPower,
@@ -1452,7 +1450,7 @@ private:
     int64_t realCoreNum;
     int64_t numPerCore;
     int64_t numLastCore;
-    int64_t elemNum;  // all reduce num in one A for cycle.
+    int64_t elemNum; // all reduce num in one A for cycle.
 
     int64_t a0;
     int64_t r0;
@@ -1464,20 +1462,20 @@ private:
 
     int64_t aBlockFactor;
     int64_t aGatherLimit;
-    int64_t processNumPerCore;  // A loop size after block spilt.
-    int64_t loopR1outer;        // outside R loop size
-    int64_t loopR0outer;        // inside R loop size
-    int64_t r1Factor;           // outside R loop size
-    int64_t r0Factor;           // inside R loop size
+    int64_t processNumPerCore; // A loop size after block spilt.
+    int64_t loopR1outer;       // outside R loop size
+    int64_t loopR0outer;       // inside R loop size
+    int64_t r1Factor;          // outside R loop size
+    int64_t r0Factor;          // inside R loop size
     int64_t ubSize;
     uint32_t binaryAddK;
     uint32_t binaryAddLastNum;
     uint32_t binaryAddQuotient;
     int64_t cutR1OrR0;
 
-    int64_t parallelN;  // welford每个分组的元素
+    int64_t parallelN; // welford每个分组的元素
 
-    bool isLastCore = false;  // judge if process last core currently.
+    bool isLastCore = false; // judge if process last core currently.
     int32_t blockIdx = 0;
 
     float reduceScale0 = 0;
@@ -1506,6 +1504,6 @@ private:
     TBuf<TPosition::VECCALC> batchVarBuff;
     TBuf<TPosition::VECCALC> dichotomyAddBuf;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_WELFORD_H

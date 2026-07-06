@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file unsorted_segment_sum_def.cpp
  * \brief
@@ -21,29 +20,25 @@ static const std::vector<ge::Format> format = {
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 static const std::vector<ge::DataType> valueDataTypeXY = {
     ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_FLOAT,  ge::DT_FLOAT,
     ge::DT_FLOAT,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,  ge::DT_INT64,  ge::DT_INT64,
     ge::DT_INT64,   ge::DT_INT64,   ge::DT_UINT32,  ge::DT_UINT32,  ge::DT_UINT32, ge::DT_UINT32, ge::DT_UINT64,
-    ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_BF16,    ge::DT_BF16,   ge::DT_BF16,   ge::DT_BF16
-};
+    ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_UINT64,  ge::DT_BF16,    ge::DT_BF16,   ge::DT_BF16,   ge::DT_BF16};
 static const std::vector<ge::DataType> valueDataTypeIds = {
     ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
     ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32,
     ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32,
-    ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64
-};
+    ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64};
 static const std::vector<ge::DataType> valueDataTypeNumSeg = {
     ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
     ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64,
     ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
-    ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64
-};
+    ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64};
 class UnsortedSegmentSum : public OpDef {
 public:
-    explicit UnsortedSegmentSum(const char *name) : OpDef(name)
+    explicit UnsortedSegmentSum(const char* name) : OpDef(name)
     {
         this->Input("x").ParamType(REQUIRED).DataType(valueDataTypeXY).Format(format).UnknownShapeFormat(format);
         this->Input("segment_ids")

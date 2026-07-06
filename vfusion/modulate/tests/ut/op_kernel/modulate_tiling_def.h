@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 #pragma pack(1)
 struct ModulateTilingData {
     int64_t inputB = 0;
@@ -33,8 +32,8 @@ inline void InitModulateTilingData(uint8_t* tiling, ModulateTilingData* const_da
     memcpy(const_data, tiling, sizeof(ModulateTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                              \
-    ModulateTilingData tiling_data;                                           \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    ModulateTilingData tiling_data;              \
     InitModulateTilingData(tiling_arg, &tiling_data)
 
 #endif

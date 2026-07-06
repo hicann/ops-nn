@@ -48,17 +48,32 @@
 
 // ---------- RAII 封装：自定义 deleter + unique_ptr ----------
 struct AclTensorDeleter {
-    void operator()(aclTensor* p) const { if (p != nullptr) { aclDestroyTensor(p); } }
+    void operator()(aclTensor* p) const
+    {
+        if (p != nullptr) {
+            aclDestroyTensor(p);
+        }
+    }
 };
 struct DeviceMemDeleter {
-    void operator()(void* p) const { if (p != nullptr) { aclrtFree(p); } }
+    void operator()(void* p) const
+    {
+        if (p != nullptr) {
+            aclrtFree(p);
+        }
+    }
 };
 struct StreamDeleter {
-    void operator()(aclrtStream s) const { if (s != nullptr) { aclrtDestroyStream(s); } }
+    void operator()(aclrtStream s) const
+    {
+        if (s != nullptr) {
+            aclrtDestroyStream(s);
+        }
+    }
 };
 using AclTensorPtr = std::unique_ptr<aclTensor, AclTensorDeleter>;
 using DeviceMemPtr = std::unique_ptr<void, DeviceMemDeleter>;
-using StreamPtr    = std::unique_ptr<std::remove_pointer_t<aclrtStream>, StreamDeleter>;
+using StreamPtr = std::unique_ptr<std::remove_pointer_t<aclrtStream>, StreamDeleter>;
 
 // deviceId/aclInit 需按顺序释放，封装成带析构的 guard
 struct AclDeviceGuard {
@@ -85,9 +100,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, DeviceMemPtr& deviceAddr,
-    aclDataType dataType, AclTensorPtr& tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, DeviceMemPtr& deviceAddr,
+                    aclDataType dataType, AclTensorPtr& tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     void* rawAddr = nullptr;
@@ -103,9 +117,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    aclTensor* rawTensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-        shape.data(), shape.size(), rawAddr);
+    aclTensor* rawTensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0,
+                                           aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), rawAddr);
     CHECK_RET(rawTensor != nullptr, LOG_PRINT("aclCreateTensor returned nullptr\n"); return -1);
     tensor.reset(rawTensor);
     return 0;
@@ -120,15 +133,13 @@ int Init(int32_t deviceId, aclrtStream* stream)
     return 0;
 }
 
-void PrintResult(const std::vector<int64_t>& shape, void* deviceAddr,
-                 const std::vector<float>& inputData, double lambd)
+void PrintResult(const std::vector<int64_t>& shape, void* deviceAddr, const std::vector<float>& inputData, double lambd)
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(float), deviceAddr, size * sizeof(float),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(float), deviceAddr, size * sizeof(float),
+                           ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
 
     LOG_PRINT("HardShrink results (lambd=%.2f):\n", lambd);
     for (int64_t i = 0; i < size && i < 16; i++) {
@@ -156,12 +167,8 @@ int main()
 
     // 2. 构造输入和输出
     std::vector<int64_t> selfShape = {4, 4};
-    std::vector<float> selfHostData = {
-         1.0f,  -1.0f,  0.3f,  -0.3f,
-         0.5f,  -0.5f,  0.0f,   2.0f,
-        -2.0f,   0.1f, -0.1f,  10.0f,
-         0.49f, -0.49f, 0.51f, -0.51f
-    };
+    std::vector<float> selfHostData = {1.0f,  -1.0f, 0.3f,  -0.3f, 0.5f,  -0.5f,  0.0f,  2.0f,
+                                       -2.0f, 0.1f,  -0.1f, 10.0f, 0.49f, -0.49f, 0.51f, -0.51f};
 
     AclTensorPtr self;
     DeviceMemPtr selfDeviceAddr;
@@ -180,8 +187,7 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     ret = aclnnHardShrinkGetWorkspaceSize(self.get(), lambd, out.get(), &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnHardShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 4. 申请 workspace
     DeviceMemPtr workspaceAddr;

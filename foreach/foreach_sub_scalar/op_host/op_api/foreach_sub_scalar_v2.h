@@ -19,8 +19,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensorList* ForeachSubScalarV2(
-    const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out, aclOpExecutor* executor);
+const aclTensorList* ForeachSubScalarV2(const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out,
+                                        aclOpExecutor* executor);
 }
 
 #endif

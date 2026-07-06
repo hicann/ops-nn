@@ -74,10 +74,9 @@ static graphStatus GroupNormSiluInferDtype(gert::InferDataTypeContext* context)
 
     fe::PlatformInfo platform_info;
     fe::OptionalInfo optional_info;
-    OP_CHECK_IF(
-        (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
-         ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
+                 ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
     if (platform_info.str_info.short_soc_version == "Ascend950") {
         auto gammaDtype = context->GetOptionalInputDataType(GROUPNORMSILU_IDX_OUT_MEAN);
@@ -87,9 +86,8 @@ static graphStatus GroupNormSiluInferDtype(gert::InferDataTypeContext* context)
         if (validGammaDtype && validBetaDtype) {
             if (gammaDtype != betaDtype) {
                 std::string dtypeMsg = Ops::Base::ToString(gammaDtype) + " and " + Ops::Base::ToString(betaDtype);
-                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                    context->GetNodeName(), "gamma and beta", dtypeMsg.c_str(),
-                    "The datatypes of gamma and beta must be the same");
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "gamma and beta", dtypeMsg.c_str(),
+                                                       "The datatypes of gamma and beta must be the same");
                 return ge::GRAPH_FAILED;
             }
         }

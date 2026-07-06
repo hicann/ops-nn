@@ -23,14 +23,16 @@
     do {                                \
         printf(message, ##__VA_ARGS__); \
     } while (0)
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
     for (auto i : shape) {
         shapeSize *= i;
     }
     return shapeSize;
 }
-int Init(int32_t deviceId, aclrtStream* stream) {
+int Init(int32_t deviceId, aclrtStream* stream)
+{
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
@@ -43,7 +45,8 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                                        aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -58,13 +61,14 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     }
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_NC1HWC0,
-                                                        shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
 int CreateAclTensorND(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                                        aclDataType dataType, aclTensor** tensor) {
+                      aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -79,10 +83,11 @@ int CreateAclTensorND(const std::vector<T>& hostData, const std::vector<int64_t>
     }
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                                                        shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
-int main() {
+int main()
+{
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
@@ -136,16 +141,18 @@ int main() {
     auto size = GetShapeSize(yOutShape);
     std::vector<float> yOutResultData(size, 0);
     ret = aclrtMemcpy(yOutResultData.data(), yOutResultData.size() * sizeof(yOutResultData[0]), yOutDeviceAddr,
-                                        size * sizeof(yOutResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut result from device to host failed. ERROR: %d\n", ret); return ret);
+                      size * sizeof(yOutResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut result from device to host failed. ERROR: %d\n", ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("aclnnReluV3 yOut result[%ld] is: %f\n", i, yOutResultData[i]);
     }
     size = GetShapeSize(maskOutShape);
     std::vector<uint8_t> maskOutResultData(size, 0);
-    ret = aclrtMemcpy(maskOutResultData.data(), maskOutResultData.size() * sizeof(maskOutResultData[0]), maskOutDeviceAddr,
-                                        size * sizeof(maskOutResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy maskOut result from device to host failed. ERROR: %d\n", ret); return ret);
+    ret = aclrtMemcpy(maskOutResultData.data(), maskOutResultData.size() * sizeof(maskOutResultData[0]),
+                      maskOutDeviceAddr, size * sizeof(maskOutResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy maskOut result from device to host failed. ERROR: %d\n", ret);
+              return ret);
     for (int64_t i = 0; i < size * 8; i++) {
         LOG_PRINT("aclnnReluV3 maskOut result[%ld] is: %d\n", i, maskOutResultData[i / 8] >> i % 8 & 1);
     }

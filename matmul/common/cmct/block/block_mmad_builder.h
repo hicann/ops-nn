@@ -36,20 +36,17 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class AType_, class LayoutA_, class BType_, class LayoutB_, class CType_, class LayoutC_, class BiasType_,
-    class LayoutBias_, class L1TileShape_, class L0TileShape_, class BlockScheduler_,
-    class BlockMatmulPolicy_ = MatmulMultiBlockBias<>, class TileCopyParam_ = void, typename Enable_ = void>
+template <class AType_, class LayoutA_, class BType_, class LayoutB_, class CType_, class LayoutC_, class BiasType_,
+          class LayoutBias_, class L1TileShape_, class L0TileShape_, class BlockScheduler_,
+          class BlockMatmulPolicy_ = MatmulMultiBlockBias<>, class TileCopyParam_ = void, typename Enable_ = void>
 class BlockMmadBuilder {
-    static_assert(
-        AscendC::Std::always_false_v<BlockMatmulPolicy_>,
-        "BlockMmadBuilder is not implemented for this BlockMatmulPolicy");
+    static_assert(AscendC::Std::always_false_v<BlockMatmulPolicy_>,
+                  "BlockMmadBuilder is not implemented for this BlockMatmulPolicy");
 };
 
-template <
-    class AType_, class LayoutA_, class BType_, class LayoutB_, class CType_, class LayoutC_, class BiasType_,
-    class LayoutBias_, class L1TileShape_, class L0TileShape_, class BlockScheduler_, class BlockMatmulPolicy_,
-    class TileCopyParam_>
+template <class AType_, class LayoutA_, class BType_, class LayoutB_, class CType_, class LayoutC_, class BiasType_,
+          class LayoutBias_, class L1TileShape_, class L0TileShape_, class BlockScheduler_, class BlockMatmulPolicy_,
+          class TileCopyParam_>
 class BlockMmadBuilder<
     AType_, LayoutA_, BType_, LayoutB_, CType_, LayoutC_, BiasType_, LayoutBias_, L1TileShape_, L0TileShape_,
     BlockScheduler_, BlockMatmulPolicy_, TileCopyParam_,
@@ -57,10 +54,10 @@ class BlockMmadBuilder<
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithLayout<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulNaivePipelineWithLayout<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithOutQue<>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>, BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>,
+                                   BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_ADD>,
             BlockMatmulPolicy_> ||
@@ -117,20 +114,20 @@ class BlockMmadBuilder<
         AscendC::Std::is_base_of_v<MatmulRotateQuant<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>, BlockMatmulPolicy_> ||
-            AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>, BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>,
+                                   BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>,
+                                   BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<BatchMatmulToMul<>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulToMul<>, BlockMatmulPolicy_>  ||
+        AscendC::Std::is_base_of_v<MatmulToMul<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulToVector<>, BlockMatmulPolicy_>>> {
 public:
     using AType = AType_;
@@ -158,9 +155,8 @@ public:
     using BiasMatmulType = AscendC::MatmulType<AscendC::TPosition::GM, formatBias, BiasType>;
 
     // AType -> AMatmulType
-    using BlockMmadOp = Block::BlockMmad<
-        BlockMatmulPolicy, L1TileShape, L0TileShape, AMatmulType, BMatmulType, CMatmulType, BiasMatmulType,
-        TileCopyParam>;
+    using BlockMmadOp = Block::BlockMmad<BlockMatmulPolicy, L1TileShape, L0TileShape, AMatmulType, BMatmulType,
+                                         CMatmulType, BiasMatmulType, TileCopyParam>;
 
     static constexpr int64_t l1M = GetIntegralConstant<MNK_M, L1TileShape>();
     static constexpr int64_t l1N = GetIntegralConstant<MNK_N, L1TileShape>();
@@ -203,10 +199,7 @@ public:
         return Status::success;
     }
 
-    __host_aicore__ static Params InitParams(const Arguments& args)
-    {
-        return args;
-    }
+    __host_aicore__ static Params InitParams(const Arguments& args) { return args; }
 };
 } // namespace Block
 } // namespace Gemm

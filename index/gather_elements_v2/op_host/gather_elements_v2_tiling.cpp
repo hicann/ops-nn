@@ -25,11 +25,9 @@ constexpr uint64_t X_IDX = 0;
 constexpr uint64_t INDEX_IDX = 1;
 constexpr uint64_t NUM_TWO = 2;
 
-class GatherElementsV2Tiling
-{
+class GatherElementsV2Tiling {
 public:
-    explicit GatherElementsV2Tiling(gert::TilingContext* context) : tilingContext_(context)
-    {}
+    explicit GatherElementsV2Tiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     ge::graphStatus SetKernelTiling();
     void TilingDataPrint() const;
@@ -121,9 +119,9 @@ inline bool GatherElementsV2Tiling::CalcMaxBufferSize()
     if (availableUb < (inBufferSize_ + outBufferSize_)) {
         return false;
     }
-    uint64_t ubLeft =
-        availableUb -
-        (std::max(transInBufferSize, Ops::Base::CeilAlign(xGatherDim_, xAlign) * xDtypeSize_) + transOutBufferSize);
+    uint64_t ubLeft = availableUb -
+                      (std::max(transInBufferSize, Ops::Base::CeilAlign(xGatherDim_, xAlign) * xDtypeSize_) +
+                       transOutBufferSize);
     uint64_t maxIdxGatherDimSlice = ubLeft / (BLOCK_SIZE * NUM_TWO) * idxAlign;
     uint64_t idxGatherDimAlign = Ops::Base::CeilAlign(idxGatherDim_, idxAlign);
     idxGatherDimSlice_ = std::min(maxIdxGatherDimSlice, idxGatherDimAlign);
@@ -261,8 +259,8 @@ ge::graphStatus GatherElementsV2Tiling::Init()
             return ge::GRAPH_FAILED;
         }
         uint64_t xGatherDimAlign = Ops::Base::CeilAlign(xGatherDim_ * xDtypeSize_, sizeof(int32_t)) / xDtypeSize_;
-        uint64_t usedWorkspaceLen =
-            std::min(carryNumAlign_, std::max(formerGroupFormerPostDim_, tailGroupFormerPostDim_));
+        uint64_t usedWorkspaceLen = std::min(carryNumAlign_,
+                                             std::max(formerGroupFormerPostDim_, tailGroupFormerPostDim_));
         workspacePerBlock_ = usedWorkspaceLen * (xGatherDimAlign * xDtypeSize_ + idxGatherDim_ * sizeof(int32_t));
         transWorkspaceSize = usedCoreNum_ * workspacePerBlock_;
     } else {
@@ -323,8 +321,8 @@ ge::graphStatus GatherElementsV2Tiling::SetKernelTiling()
     tilingData_.scalarTiling.set_tailGroupTailData(tailGroupTailData_);
     tilingData_.scalarTiling.set_maxIdxDataAlign(maxIdxDataAlign_);
 
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     TilingDataPrint();
     return ge::GRAPH_SUCCESS;
@@ -394,16 +392,14 @@ ge::graphStatus TilingGatherElementsV2(gert::TilingContext* context)
     }
     if ((dim + dimNum) % dimNum != dimNum - 1) {
         GatherElementsV2Tiling tilingObject(context);
-        OP_CHECK_IF(
-            tilingObject.Init() != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "tiling init fail"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tilingObject.Init() != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "tiling init fail"),
+                    return ge::GRAPH_FAILED);
         return tilingObject.SetKernelTiling();
     } else {
         OP_LOGD(context->GetNodeName(), "TilingGatherElementsV2 last dim enter.");
         GatherElementsV2LastDimTiling tilingObject(context);
-        OP_CHECK_IF(
-            tilingObject.Init() != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "tiling init fail"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tilingObject.Init() != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "tiling init fail"),
+                    return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
     return ge::GRAPH_SUCCESS;
@@ -421,9 +417,8 @@ ge::graphStatus TilingPrepareForGatherElementsV2(gert::TilingParseContext* conte
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

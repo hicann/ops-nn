@@ -45,14 +45,13 @@ static const int32_t SELF_MAX = 2;
 static const int32_t SELF_MIN = 0;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> dtypeSupportList = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> dtypeSupportList = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                     op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {op::DataType::DT_FLOAT,
+                                                                                op::DataType::DT_FLOAT16};
 
-static inline bool CheckInputNotNull(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha)
+static inline bool CheckInputNotNull(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                     const aclScalar* beta, const aclScalar* alpha)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(batch1, return false);
@@ -75,8 +74,8 @@ static inline bool CheckNpuArchIsSupportBf16(void)
     return (npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series();
 }
 
-static inline bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclTensor* out)
+static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                   const aclTensor* out)
 {
     bool bf16flag = CheckNpuArchIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
@@ -110,10 +109,9 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     const op::Shape batch2 = batch2Tensor->GetViewShape();
     // check batch1 last dim and batch2 penultimate dim is equal or not
     if (batch1[THIRD_DIM] != batch2[SECOND_DIM]) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "batch1's last dim and batch2's penultimate dim shoule be same, batch1 [%ld], batch2 [%ld].",
-            batch1[THIRD_DIM], batch2[SECOND_DIM]);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "batch1's last dim and batch2's penultimate dim shoule be same, batch1 [%ld], batch2 [%ld].",
+                batch1[THIRD_DIM], batch2[SECOND_DIM]);
         return false;
     }
 
@@ -140,8 +138,8 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     return true;
 }
 
-static bool CheckBroadCast(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclTensor* out)
+static bool CheckBroadCast(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                           const aclTensor* out)
 {
     // self's dim should be in [1, 2]
     OP_CHECK_MAX_DIM(self, SELF_MAX, return false);
@@ -155,16 +153,14 @@ static bool CheckBroadCast(
     }
 
     if (broadcastShape != out->GetViewShape()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
         return false;
     }
 
     if (broadcastShape != bmmLastTwoShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(bmmLastTwoShape).GetString(), op::ToString(broadcastShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(bmmLastTwoShape).GetString(), op::ToString(broadcastShape).GetString());
         return false;
     }
 
@@ -174,17 +170,16 @@ static bool CheckBroadCast(
 static inline bool CheckAddbmmFormat(const aclTensor* batch1, const aclTensor* batch2)
 {
     if (batch1->GetViewFormat() != batch2->GetViewFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of batch1 and batch2 should be equal, batch1 [%s], batch2 [%s].",
-            op::ToString(batch1->GetViewFormat()).GetString(), op::ToString(batch2->GetViewFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of batch1 and batch2 should be equal, batch1 [%s], batch2 [%s].",
+                op::ToString(batch1->GetViewFormat()).GetString(), op::ToString(batch2->GetViewFormat()).GetString());
         return false;
     }
     return true;
 }
 
-static aclnnStatus CheckInputParams(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, const aclTensor* out, int8_t cubeMathType)
+static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                    const aclScalar* beta, const aclScalar* alpha, const aclTensor* out,
+                                    int8_t cubeMathType)
 {
     // 1. 检查输入、输出参数是否为空指针
     CHECK_RET(CheckInputNotNull(self, batch1, batch2, beta, alpha), ACLNN_ERR_PARAM_NULLPTR);
@@ -213,7 +208,8 @@ static inline bool isAddBmmProcessEmptyTensor(const aclTensor* batch1, const acl
     return (batch1->GetViewShape())[SECOND_DIM] == 0 || (batch2->GetViewShape())[THIRD_DIM] == 0;
 }
 
-static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, aclOpExecutor* executor)
+static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const aclTensor* batch1,
+                                                 const aclTensor* batch2, aclOpExecutor* executor)
 {
     // 获取shape信息
     op::Shape batch1Shape = batch1->GetViewShape();
@@ -226,8 +222,8 @@ static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const ac
     return out;
 }
 
-const aclTensor* addBmmProcessBroadcastSelf(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, aclOpExecutor* executor)
+const aclTensor* addBmmProcessBroadcastSelf(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                            aclOpExecutor* executor)
 {
     std::vector<int64_t> tensorShape{(batch1->GetViewShape())[SECOND_DIM], (batch2->GetViewShape())[THIRD_DIM]};
     int64_t tensorSize = tensorShape.size();
@@ -238,7 +234,8 @@ const aclTensor* addBmmProcessBroadcastSelf(
     return out;
 }
 
-static const aclTensor* SelfMulsBetaProcess(const aclTensor* self, const aclScalar* beta, aclOpExecutor* executor){
+static const aclTensor* SelfMulsBetaProcess(const aclTensor* self, const aclScalar* beta, aclOpExecutor* executor)
+{
     // self * beta
     const aclTensor* selfContiguous = l0op::Contiguous(self, executor);
     // self为bf16时cast为fp32保证精度
@@ -252,15 +249,14 @@ static const aclTensor* SelfMulsBetaProcess(const aclTensor* self, const aclScal
     return mulOut;
 }
 
-class AddbmmAlpha0Beta0Graph : public Ops::NN::MatmulGraphImpl{
+class AddbmmAlpha0Beta0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         FVector<int64_t> fillShape = {(matA->GetViewShape())[SECOND_DIM], (matB->GetViewShape())[THIRD_DIM]};
         const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
         CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -276,7 +272,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         auto viewCopyResult = l0op::ViewCopy(convOut, output, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
@@ -285,15 +282,14 @@ public:
     ~AddbmmAlpha0Beta0Graph() override = default;
 };
 
-class AddbmmAlpha0Graph : public Ops::NN::MatmulGraphImpl{
+class AddbmmAlpha0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // self(bias) * beta
         const aclTensor* mulOut = SelfMulsBetaProcess(bias, beta, executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -304,7 +300,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 固定写法，将计算结果转换成输出output的数据类型
         convOut = l0op::Cast(convOut, output->GetDataType(), executor);
         CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -317,15 +314,14 @@ public:
     ~AddbmmAlpha0Graph() override = default;
 };
 
-class AddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl{
+class AddbmmBeta0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // bmmOut = batch1(matA) @ batch2(matB)
         bool isBaddbmm = false;
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);
@@ -342,7 +338,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 固定写法，将计算结果转换成输出output的数据类型
         convOut = l0op::Cast(convOut, output->GetDataType(), executor);
         CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -355,15 +352,14 @@ public:
     ~AddbmmBeta0Graph() override = default;
 };
 
-class AddbmmMmOpWithBiasGraph : public Ops::NN::MatmulGraphImpl{
+class AddbmmMmOpWithBiasGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // biasBmmOut = batch1(matA) @ batch2(matB) + self(bias)
         const aclTensor* biasBmmOut = ExecBmmOpWithBiasV2(matA, matB, bias, output, cubeMathType, executor);
         CHECK_RET(biasBmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -374,7 +370,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 固定写法，将计算结果转换成输出output的数据类型
         convOut = l0op::Cast(convOut, output->GetDataType(), executor);
         CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -387,15 +384,14 @@ public:
     ~AddbmmMmOpWithBiasGraph() override = default;
 };
 
-class AddbmmMatmulGraph : public Ops::NN::MatmulGraphImpl{
+class AddbmmMatmulGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PreProcess() override { return ACLNN_SUCCESS; };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // self(bias) * beta
         const aclTensor* mulOut = SelfMulsBetaProcess(bias, beta, executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -432,7 +428,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 固定写法，将计算结果转换成输出output的数据类型
         convOut = l0op::Cast(convOut, output->GetDataType(), executor);
         CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -446,9 +443,10 @@ public:
 };
 
 // 创建计算图
-std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta, const aclScalar* alpha,
-    aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(const aclTensor* self, const aclTensor* batch1,
+                                                       const aclTensor* batch2, const aclScalar* beta,
+                                                       const aclScalar* alpha, aclTensor* out, int8_t cubeMathType,
+                                                       aclOpExecutor* executor)
 {
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
 
@@ -456,17 +454,20 @@ std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
     if (std::abs(alpha->ToFloat()) == 0.0f) {
         // beta == 0    self不参与计算
         if (std::abs(beta->ToFloat()) == 0.0f) {
-            matmulGraph = std::make_shared<AddbmmAlpha0Beta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+            matmulGraph = std::make_shared<AddbmmAlpha0Beta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
+                                                                   executor);
             return matmulGraph;
         }
         // beta != 0
-        matmulGraph = std::make_shared<AddbmmAlpha0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        matmulGraph = std::make_shared<AddbmmAlpha0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
+                                                          executor);
         return matmulGraph;
     }
 
     // alpha != 0 && beta == 0    self不参与计算，走计算图3，即不调用add算子
     if (std::abs(beta->ToFloat()) == 0.0f) {
-        matmulGraph = std::make_shared<AddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        matmulGraph = std::make_shared<AddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
+                                                         executor);
         return matmulGraph;
     }
 
@@ -474,7 +475,8 @@ std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
     // beta == 1 && alpha == 1 && self.shape[0] == mat2.shape[1] && 不属于切k，直接走matmul的bias模式
     if (NeedToConvertBias(self, batch1, batch2, beta, alpha)) {
         OP_LOGI("addbmm run in NeedToConvertBias branch");
-        matmulGraph = std::make_shared<AddbmmMmOpWithBiasGraph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
+        matmulGraph = std::make_shared<AddbmmMmOpWithBiasGraph>(batch1, batch2, self, out, alpha, beta, cubeMathType,
+                                                                executor);
         return matmulGraph;
     }
     // 多数场景  beta != 0，则self参与计算，走计算图1和2，即调用add或axpy算子
@@ -485,9 +487,9 @@ std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
 
 } // namespace
 
-aclnnStatus aclnnAddbmmGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta,
-    const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAddbmmGetWorkspaceSize(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2,
+                                        const aclScalar* beta, const aclScalar* alpha, aclTensor* out,
+                                        int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAddbmm, DFX_IN(self, batch1, batch2, beta, alpha, cubeMathType), DFX_OUT(out));
 
@@ -518,7 +520,8 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
     }
 
     // 根据不同的输入选择不同的计算图
-    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddbmmGraphImpl(self, batch1, batch2, beta, alpha, out, cubeMathType, uniqueExecutor.get());
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddbmmGraphImpl(self, batch1, batch2, beta, alpha, out,
+                                                                         cubeMathType, uniqueExecutor.get());
     CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行计算图
@@ -539,13 +542,13 @@ aclnnStatus aclnnAddbmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* 
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceAddbmmGetWorkspaceSize(
-    aclTensor* selfRef, const aclTensor* batch1, const aclTensor* batch2, const aclScalar* beta, const aclScalar* alpha,
-    int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceAddbmmGetWorkspaceSize(aclTensor* selfRef, const aclTensor* batch1, const aclTensor* batch2,
+                                               const aclScalar* beta, const aclScalar* alpha, int8_t cubeMathType,
+                                               uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     auto out = selfRef;
-    return aclnnAddbmmGetWorkspaceSize(
-        selfRef, batch1, batch2, beta, alpha, out, cubeMathType, workspaceSize, executor);
+    return aclnnAddbmmGetWorkspaceSize(selfRef, batch1, batch2, beta, alpha, out, cubeMathType, workspaceSize,
+                                       executor);
 }
 
 aclnnStatus aclnnInplaceAddbmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)

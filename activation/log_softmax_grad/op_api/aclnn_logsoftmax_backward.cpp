@@ -29,7 +29,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *output, const aclTensor *out) {
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* output, const aclTensor* out)
+{
     OP_CHECK_NULL(output, return false);
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(out, return false);
@@ -37,20 +38,21 @@ static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *output, c
 }
 
 // CPU支持 DT_BF16/DT_FLOAT/DT_DOUBLE，AIC支持 DT_FLOAT16/DT_FLOAT，AICPU不支持
-static const std::initializer_list<op::DataType> dtype_support_list = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const size_t AXIS_LIMIT = 8;  // 底层算子不支持超过8维
+static const std::initializer_list<op::DataType> dtype_support_list = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
+static const size_t AXIS_LIMIT = 8; // 底层算子不支持超过8维
 
-static inline bool CheckSocVersionIsSupportBf16(void) {
+static inline bool CheckSocVersionIsSupportBf16(void)
+{
     return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *output) {
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* output)
+{
     if (!CheckSocVersionIsSupportBf16() &&
         ((gradOutput->GetDataType() == op::DataType::DT_BF16) || (output->GetDataType() == op::DataType::DT_BF16))) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-        "aclnnLogSoftmaxBackward is not support bfloat16 in current socversion.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnLogSoftmaxBackward is not support bfloat16 in current socversion.");
         return false;
     }
     OP_CHECK_DTYPE_NOT_SUPPORT(output, dtype_support_list, return false);
@@ -59,7 +61,8 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *output
     return true;
 }
 
-static bool CheckDim(const aclTensor *self, int64_t dim) {
+static bool CheckDim(const aclTensor* self, int64_t dim)
+{
     // 检查指定dim是否在self的维度范围内
     auto selfViewShape = self->GetViewShape();
     auto selfDimNumber = static_cast<int64_t>(selfViewShape.GetDimNum());
@@ -73,7 +76,8 @@ static bool CheckDim(const aclTensor *self, int64_t dim) {
     return true;
 }
 
-static bool CheckShape(const aclTensor *gradOutput, const aclTensor *output, aclTensor *out) {
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* output, aclTensor* out)
+{
     if (gradOutput->GetViewShape().GetDimNum() > AXIS_LIMIT || output->GetViewShape().GetDimNum() > AXIS_LIMIT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of input tensor can't be greater than 8.");
         return false;
@@ -84,7 +88,8 @@ static bool CheckShape(const aclTensor *gradOutput, const aclTensor *output, acl
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *output, int64_t dim, aclTensor *out) {
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* output, int64_t dim, aclTensor* out)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, output, out), ACLNN_ERR_PARAM_NULLPTR);
     // 空tensor直接返回
@@ -102,8 +107,9 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *out
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLogSoftmaxBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *output, int64_t dim,
-    aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnLogSoftmaxBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* output, int64_t dim,
+                                                    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnLogSoftmaxBackward, DFX_IN(gradOutput, output, dim), DFX_OUT(out));
 
     // 固定写法，参数检查
@@ -147,8 +153,9 @@ aclnnStatus aclnnLogSoftmaxBackwardGetWorkspaceSize(const aclTensor *gradOutput,
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLogSoftmaxBackward(void *workspace, uint64_t workspaceSize,
-                                    aclOpExecutor *executor, aclrtStream stream) {
+aclnnStatus aclnnLogSoftmaxBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnLogSoftmaxBackward);
     OP_LOGD("Entering aclnnLogSoftmaxBackward");
     // 固定写法，调用框架能力，完成计算

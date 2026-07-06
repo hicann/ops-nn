@@ -48,8 +48,8 @@ int ExecuteCommand(const std::string& command, const std::string& workDir)
     int exitCode = system(fullCommand.c_str());
 
     if (exitCode == -1) {
-        KERNEL_UT_LOG_ERROR(
-            "[KernelUTExecutor] Failed to execute command (system() returned -1): %s", fullCommand.c_str());
+        KERNEL_UT_LOG_ERROR("[KernelUTExecutor] Failed to execute command (system() returned -1): %s",
+                            fullCommand.c_str());
         return -1;
     } else if (exitCode != 0) {
         KERNEL_UT_LOG_ERROR("[KernelUTExecutor] Command failed with exit code %d: %s", exitCode, fullCommand.c_str());
@@ -93,8 +93,8 @@ bool RunCompareData(const std::string& dataDir, const std::vector<std::string>& 
 
     std::string compareDataScript = dataDir + "/compare_data.py";
     if (!CheckScriptExists(compareDataScript)) {
-        KERNEL_UT_LOG_ERROR(
-            "[KernelUTExecutor] Cannot run compare_data.py: script not found at %s", compareDataScript.c_str());
+        KERNEL_UT_LOG_ERROR("[KernelUTExecutor] Cannot run compare_data.py: script not found at %s",
+                            compareDataScript.c_str());
         return false;
     }
 
@@ -121,8 +121,8 @@ bool RunGenTiling(const std::string& dataDir, const std::string& caseName)
 
     std::string genTilingScript = dataDir + "/gen_tiling.py";
     if (!CheckScriptExists(genTilingScript)) {
-        KERNEL_UT_LOG_WARN(
-            "[KernelUTExecutor] Cannot run gen_tiling.py: script not found at %s", genTilingScript.c_str());
+        KERNEL_UT_LOG_WARN("[KernelUTExecutor] Cannot run gen_tiling.py: script not found at %s",
+                           genTilingScript.c_str());
         return false;
     }
 
@@ -146,8 +146,8 @@ bool RunScript(const std::string& dataDir, const std::string& scriptName, const 
 
     std::string scriptPath = dataDir + "/" + scriptName;
     if (!CheckScriptExists(scriptPath)) {
-        KERNEL_UT_LOG_ERROR(
-            "[KernelUTExecutor] Cannot run %s: script not found at %s", scriptName.c_str(), scriptPath.c_str());
+        KERNEL_UT_LOG_ERROR("[KernelUTExecutor] Cannot run %s: script not found at %s", scriptName.c_str(),
+                            scriptPath.c_str());
         return false;
     }
 

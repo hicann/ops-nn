@@ -18,14 +18,8 @@
 
 class AdaLayerNormGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaLayerNormGradTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaLayerNormGradTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaLayerNormGradTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "AdaLayerNormGradTest TearDown" << std::endl; }
 };
 
 // scale/shift [B, 1, H] shape - 4D input
@@ -50,7 +44,7 @@ TEST_F(AdaLayerNormGradTest, ada_layer_norm_grad_infershape_test_0)
     auto output_pd_beta_desc = op.GetOutputDesc(4);
     std::vector<int64_t> expected_pd_x_shape = {2, 4, 6, 4};
     std::vector<int64_t> expected_pd_scale_shape = {2, 4, 4};
-    std::vector<int64_t> expected_pd_shift_shape = {2, 4, 4};  // pd_shift shape = scale shape
+    std::vector<int64_t> expected_pd_shift_shape = {2, 4, 4}; // pd_shift shape = scale shape
     std::vector<int64_t> expected_pd_gamma_shape = {4};
     std::vector<int64_t> expected_pd_beta_shape = {4};
     EXPECT_EQ(output_pd_x_desc.GetShape().GetDims(), expected_pd_x_shape);
@@ -82,7 +76,7 @@ TEST_F(AdaLayerNormGradTest, ada_layer_norm_grad_infershape_test_1)
     auto output_pd_beta_desc = op.GetOutputDesc(4);
     std::vector<int64_t> expected_pd_x_shape = {2, 4, 6, 4};
     std::vector<int64_t> expected_pd_scale_shape = {2, 4};
-    std::vector<int64_t> expected_pd_shift_shape = {2, 4};  // pd_shift shape = scale shape
+    std::vector<int64_t> expected_pd_shift_shape = {2, 4}; // pd_shift shape = scale shape
     std::vector<int64_t> expected_pd_gamma_shape = {4};
     std::vector<int64_t> expected_pd_beta_shape = {4};
     EXPECT_EQ(output_pd_x_desc.GetShape().GetDims(), expected_pd_x_shape);
@@ -114,7 +108,7 @@ TEST_F(AdaLayerNormGradTest, ada_layer_norm_grad_infershape_test_2)
     auto output_pd_beta_desc = op.GetOutputDesc(4);
     std::vector<int64_t> expected_pd_x_shape = {2, 4, 6, 4};
     std::vector<int64_t> expected_pd_scale_shape = {2, 1, 4};
-    std::vector<int64_t> expected_pd_shift_shape = {2, 1, 4};  // pd_shift shape = scale shape
+    std::vector<int64_t> expected_pd_shift_shape = {2, 1, 4}; // pd_shift shape = scale shape
     std::vector<int64_t> expected_pd_gamma_shape = {4};
     std::vector<int64_t> expected_pd_beta_shape = {4};
     EXPECT_EQ(output_pd_x_desc.GetShape().GetDims(), expected_pd_x_shape);
@@ -146,7 +140,7 @@ TEST_F(AdaLayerNormGradTest, ada_layer_norm_grad_infershape_test_3)
     auto output_pd_beta_desc = op.GetOutputDesc(4);
     std::vector<int64_t> expected_pd_x_shape = {2, 3, 4};
     std::vector<int64_t> expected_pd_scale_shape = {2, 4};
-    std::vector<int64_t> expected_pd_shift_shape = {2, 4};  // pd_shift shape = scale shape
+    std::vector<int64_t> expected_pd_shift_shape = {2, 4}; // pd_shift shape = scale shape
     std::vector<int64_t> expected_pd_gamma_shape = {4};
     std::vector<int64_t> expected_pd_beta_shape = {4};
     EXPECT_EQ(output_pd_x_desc.GetShape().GetDims(), expected_pd_x_shape);
@@ -178,7 +172,7 @@ TEST_F(AdaLayerNormGradTest, ada_layer_norm_grad_infershape_test_4)
     auto output_pd_beta_desc = op.GetOutputDesc(4);
     std::vector<int64_t> expected_pd_x_shape = {8, 9};
     std::vector<int64_t> expected_pd_scale_shape = {9};
-    std::vector<int64_t> expected_pd_shift_shape = {9};  // pd_shift shape = scale shape
+    std::vector<int64_t> expected_pd_shift_shape = {9}; // pd_shift shape = scale shape
     std::vector<int64_t> expected_pd_gamma_shape = {9};
     std::vector<int64_t> expected_pd_beta_shape = {9};
     EXPECT_EQ(output_pd_x_desc.GetShape().GetDims(), expected_pd_x_shape);
@@ -210,7 +204,7 @@ TEST_F(AdaLayerNormGradTest, ada_layer_norm_grad_infershape_test_5)
     auto output_pd_beta_desc = op.GetOutputDesc(4);
     std::vector<int64_t> expected_pd_x_shape = {-2};
     std::vector<int64_t> expected_pd_scale_shape = {-2};
-    std::vector<int64_t> expected_pd_shift_shape = {-2};  // pd_shift shape = scale shape
+    std::vector<int64_t> expected_pd_shift_shape = {-2}; // pd_shift shape = scale shape
     std::vector<int64_t> expected_pd_gamma_shape = {-2};
     std::vector<int64_t> expected_pd_beta_shape = {-2};
     EXPECT_EQ(output_pd_x_desc.GetShape().GetDims(), expected_pd_x_shape);
@@ -231,27 +225,28 @@ TEST_F(AdaLayerNormGradTest, AdaLayerNormGrad_InferDtype_case)
         ge::DataType input_rstd_mean_ref = ge::DT_FLOAT;
         ge::DataType input_scale_gamma_beta_ref = ge::DT_FLOAT16;
 
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 5)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_dy_ref, &input_dy_ref, &input_rstd_mean_ref, &input_rstd_mean_ref,
-                                 &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref})
-                .OutputDataTypes({&input_dy_ref, &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref,
-                                  &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 5)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_dy_ref, &input_dy_ref, &input_rstd_mean_ref,
+                                                   &input_rstd_mean_ref, &input_scale_gamma_beta_ref,
+                                                   &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref})
+                                  .OutputDataTypes({&input_dy_ref, &input_scale_gamma_beta_ref,
+                                                    &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref,
+                                                    &input_scale_gamma_beta_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -266,7 +261,7 @@ TEST_F(AdaLayerNormGradTest, AdaLayerNormGrad_InferDtype_case)
 
         EXPECT_EQ(context->GetOutputDataType(0), input_dy_ref);
         EXPECT_EQ(context->GetOutputDataType(1), input_scale_gamma_beta_ref);
-        EXPECT_EQ(context->GetOutputDataType(2), input_scale_gamma_beta_ref);  // pd_shift dtype = scale dtype
+        EXPECT_EQ(context->GetOutputDataType(2), input_scale_gamma_beta_ref); // pd_shift dtype = scale dtype
         EXPECT_EQ(context->GetOutputDataType(3), input_scale_gamma_beta_ref);
         EXPECT_EQ(context->GetOutputDataType(4), input_scale_gamma_beta_ref);
     }
@@ -283,34 +278,35 @@ TEST_F(AdaLayerNormGradTest, AdaLayerNormGrad_InferDtype_case_float32)
         ge::DataType input_rstd_mean_ref = ge::DT_FLOAT;
         ge::DataType input_scale_gamma_beta_ref = ge::DT_FLOAT;
 
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 5)
-                .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_dy_ref, &input_dy_ref, &input_rstd_mean_ref, &input_rstd_mean_ref,
-                                 &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref})
-                .OutputDataTypes({&input_dy_ref, &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref,
-                                  &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 5)
+                                  .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_dy_ref, &input_dy_ref, &input_rstd_mean_ref,
+                                                   &input_rstd_mean_ref, &input_scale_gamma_beta_ref,
+                                                   &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref})
+                                  .OutputDataTypes({&input_dy_ref, &input_scale_gamma_beta_ref,
+                                                    &input_scale_gamma_beta_ref, &input_scale_gamma_beta_ref,
+                                                    &input_scale_gamma_beta_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
 
         EXPECT_EQ(context->GetOutputDataType(0), input_dy_ref);
         EXPECT_EQ(context->GetOutputDataType(1), input_scale_gamma_beta_ref);
-        EXPECT_EQ(context->GetOutputDataType(2), input_scale_gamma_beta_ref);  // pd_shift dtype = scale dtype
+        EXPECT_EQ(context->GetOutputDataType(2), input_scale_gamma_beta_ref); // pd_shift dtype = scale dtype
         EXPECT_EQ(context->GetOutputDataType(3), input_scale_gamma_beta_ref);
         EXPECT_EQ(context->GetOutputDataType(4), input_scale_gamma_beta_ref);
     }

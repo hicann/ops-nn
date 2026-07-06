@@ -26,25 +26,22 @@ using namespace std;
 using namespace ge;
 
 class HardtanhGradTilingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "HardtanhGradTilingTest SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "HardtanhGradTilingTest SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "HardtanhGradTilingTest TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "HardtanhGradTilingTest TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tiling_data) {
-  auto data = tiling_data->GetData();
-  string result;
-  for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
-    result += std::to_string((reinterpret_cast<const int64_t *>(tiling_data->GetData())[i / sizeof(int64_t)]));
-    result += " ";
-  }
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
+    auto data = tiling_data->GetData();
+    string result;
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
+        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
 TEST_F(HardtanhGradTilingTest, hardtanh_grad_tiling_test_001)
@@ -71,16 +68,16 @@ TEST_F(HardtanhGradTilingTest, hardtanh_grad_tiling_test_001)
 
     std::string op_type("HardtanhGrad");
     gert::StorageShape shape = {{1, 64, 2, 64}, {1, 64, 2, 64}};
-    
+
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");

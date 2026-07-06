@@ -23,8 +23,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 const int32_t INPUT_IDX_X = 0;
 
 const int32_t KERNEL_POS = 0;
@@ -150,7 +149,8 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context_, Pool3DInp
     inputData.dtypeSize = ge::GetSizeByDataType(dtype);
     OP_TILING_CHECK(inputData.dtypeSize <= 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_, "dtypeSize must be greater than 0, dtypeSize: %ld",
-                                                    inputData.dtypeSize), return ge::GRAPH_FAILED);
+                                                    inputData.dtypeSize),
+                    return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(CheckShape(context_, inputShape, outShape, inputData.inputFormat) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPool3D: check shape failed"),
@@ -323,7 +323,8 @@ static ge::graphStatus GetPadInfo(gert::TilingContext* context_, const gert::Run
     if (commInfo.padModeStr == "CALCULATED") {
         auto padding = runtimeAttrs->GetListInt(PADDING_POS);
         OPS_CHECK_NULL_WITH_CONTEXT(context_, padding);
-        OP_TILING_CHECK(padding->GetSize() != PAD_DIMS,
+        OP_TILING_CHECK(
+            padding->GetSize() != PAD_DIMS,
             VECTOR_INNER_ERR_REPORT_TILIING(context_, "MaxPool3D: pad list must have %d elements ", PAD_DIMS),
             return ge::GRAPH_FAILED);
         int64_t frontPad = padding->GetData()[FRONT_PAD_INDEX];
@@ -340,10 +341,12 @@ static ge::graphStatus GetPadInfo(gert::TilingContext* context_, const gert::Run
             frontPad >= fixdkD || frontPad < 0 || backendPad >= fixdkD || backendPad < 0 || topPad >= fixdkH ||
                 topPad < 0 || bottomPad >= fixdkH || bottomPad < 0 || leftPad >= fixdKW || leftPad < 0 ||
                 rightPad >= fixdKW || rightPad < 0,
-            VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                context_->GetNodeName(),
                 "MaxPool3D: not support pad shape [%ld, %ld, %ld, %ld, %ld, %ld] kernel shape [%ld, %ld, %ld], pad should \
 be greater than or equal to 0 and smaller than the corresponding kernel size",
-                frontPad, backendPad, topPad, bottomPad, leftPad, rightPad, fixdkD, fixdkH, fixdKW), return ge::GRAPH_FAILED);
+                frontPad, backendPad, topPad, bottomPad, leftPad, rightPad, fixdkD, fixdkH, fixdKW),
+            return ge::GRAPH_FAILED);
     } else if (commInfo.padModeStr == "VALID") {
         inputData.pad = {0, 0, 0, 0, 0, 0};
     } else if (commInfo.padModeStr == "SAME") {
@@ -415,8 +418,7 @@ static ge::graphStatus CheckOutPutShapeForValid(gert::TilingContext* context_, P
                         inputData.stride[W_DIM];
     if (inputData.outShape[D_DIM] != expectedD || inputData.outShape[H_DIM] != expectedH ||
         inputData.outShape[W_DIM] != expectedW) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_,
-                                        "MaxPool3D: when padmode is VALID, the outputshape in \
+        VECTOR_INNER_ERR_REPORT_TILIING(context_, "MaxPool3D: when padmode is VALID, the outputshape in \
 d-dim, h-dim and w-dim should be [%ld] [%ld] [%ld], but got [%ld] [%ld] [%ld]",
                                         expectedD, expectedH, expectedW, inputData.outShape[D_DIM],
                                         inputData.inputShape[H_DIM], inputData.inputShape[W_DIM]);
@@ -432,8 +434,7 @@ static ge::graphStatus CheckOutPutShapeForSame(gert::TilingContext* context_, Po
     int64_t expectedW = (inputData.inputShape[W_DIM] + inputData.stride[W_DIM] - 1) / inputData.stride[W_DIM];
     if (inputData.outShape[D_DIM] != expectedD || inputData.outShape[H_DIM] != expectedH ||
         inputData.outShape[W_DIM] != expectedW) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_,
-                                        "MaxPool3D: when padmode is SAME, the outputshape in \
+        VECTOR_INNER_ERR_REPORT_TILIING(context_, "MaxPool3D: when padmode is SAME, the outputshape in \
 d-dim, h-dim and w-dim should be [%ld] [%ld] [%ld], but got [%ld] [%ld] [%ld]",
                                         expectedD, expectedH, expectedW, inputData.outShape[D_DIM],
                                         inputData.outShape[H_DIM], inputData.outShape[W_DIM]);
@@ -474,8 +475,7 @@ static ge::graphStatus CheckOutPutShapeForCalculated(gert::TilingContext* contex
         inputData.stride[W_DIM], inputData.ceilMode, inputData.dilation[W_DIM], inputData.inputShape[W_DIM]);
     if (inputData.outShape[D_DIM] != expectedD || inputData.outShape[H_DIM] != expectedH ||
         inputData.outShape[W_DIM] != expectedW) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_,
-                                        "MaxPool3D: when padmode is CALCULATED, the outputshape in \
+        VECTOR_INNER_ERR_REPORT_TILIING(context_, "MaxPool3D: when padmode is CALCULATED, the outputshape in \
 d-dim, h-dim and w-dim should be [%ld] [%ld] [%ld], but got [%ld] [%ld] [%ld]",
                                         expectedD, expectedH, expectedW, inputData.outShape[D_DIM],
                                         inputData.outShape[H_DIM], inputData.outShape[W_DIM]);
@@ -500,24 +500,24 @@ static ge::graphStatus CheckOutPutShape(gert::TilingContext* context_, Pool3DInp
 static void RefineShape(Pool3DInputInfo& inputData)
 {
     if (inputData.outShape[D_DIM] == 1 && inputData.dilation[D_DIM] == 1) {
-        inputData.kernelSize[D_DIM] =
-            std::min(inputData.kernelSize[D_DIM] - inputData.pad[FRONT_PAD_INDEX], inputData.inputShape[D_DIM]);
+        inputData.kernelSize[D_DIM] = std::min(inputData.kernelSize[D_DIM] - inputData.pad[FRONT_PAD_INDEX],
+                                               inputData.inputShape[D_DIM]);
         inputData.pad[FRONT_PAD_INDEX] = 0;
         inputData.pad[BACKEND_PAD_INDEX] = 0;
         inputData.stride[D_DIM] = inputData.inputShape[D_DIM];
     }
 
     if (inputData.outShape[H_DIM] == 1 && inputData.dilation[H_DIM] == 1) {
-        inputData.kernelSize[H_DIM] =
-            std::min(inputData.kernelSize[H_DIM] - inputData.pad[TOP_PAD_INDEX], inputData.inputShape[H_DIM]);
+        inputData.kernelSize[H_DIM] = std::min(inputData.kernelSize[H_DIM] - inputData.pad[TOP_PAD_INDEX],
+                                               inputData.inputShape[H_DIM]);
         inputData.pad[TOP_PAD_INDEX] = 0;
         inputData.pad[BOTTOM_PAD_INDEX] = 0;
         inputData.stride[H_DIM] = inputData.inputShape[H_DIM];
     }
 
     if (inputData.outShape[W_DIM] == 1 && inputData.dilation[W_DIM] == 1) {
-        inputData.kernelSize[W_DIM] =
-            std::min(inputData.kernelSize[W_DIM] - inputData.pad[LEFT_PAD_INDEX], inputData.inputShape[W_DIM]);
+        inputData.kernelSize[W_DIM] = std::min(inputData.kernelSize[W_DIM] - inputData.pad[LEFT_PAD_INDEX],
+                                               inputData.inputShape[W_DIM]);
         inputData.pad[LEFT_PAD_INDEX] = 0;
         inputData.pad[RIGHT_PAD_INDEX] = 0;
         inputData.stride[W_DIM] = inputData.inputShape[W_DIM];
@@ -548,4 +548,4 @@ ge::graphStatus GetMaxPool3DShapeAttrsInfo(gert::TilingContext* context_, Pool3D
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

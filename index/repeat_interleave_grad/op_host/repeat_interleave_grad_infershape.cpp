@@ -26,21 +26,21 @@ static constexpr size_t INPUT_REPEATS_IDX = 1;
 static constexpr size_t OUTPUT_GRAD_IDX = 0;
 static constexpr size_t ATTR_AXIS_IDX = 0;
 
-inline bool IsConstTensor(const gert::Tensor* input_tensor) {
-  if (input_tensor != nullptr) {
-    if (input_tensor->GetAddr() == nullptr) {
-      // empty tensor
-      return input_tensor->GetShapeSize() == 0;
+inline bool IsConstTensor(const gert::Tensor* input_tensor)
+{
+    if (input_tensor != nullptr) {
+        if (input_tensor->GetAddr() == nullptr) {
+            // empty tensor
+            return input_tensor->GetShapeSize() == 0;
+        }
+        return true;
     }
-    return true;
-  }
-  return false;
+    return false;
 }
 
 template <typename T>
-static int64_t GetOutputZeroAxisLen(
-    const gert::Shape* inputGradShape, const gert::Shape* repeatsShape, const gert::Tensor* repeatsInput,
-    int64_t& axisAttr)
+static int64_t GetOutputZeroAxisLen(const gert::Shape* inputGradShape, const gert::Shape* repeatsShape,
+                                    const gert::Tensor* repeatsInput, int64_t& axisAttr)
 {
     int64_t repeatsAxisDim = 0;
     if (repeatsShape->GetShapeSize() == 1) {
@@ -90,16 +90,14 @@ static graphStatus InferShape4RepeatInterleaveGrad(gert::InferShapeContext* cont
         OP_LOGD(context, "repeatsDtype is %s.", Ops::Base::ToString(repeatsDtype).c_str());
         switch (repeatsDtype) {
             case DT_INT32:
-                OP_CHECK_IF(
-                    repeatsInput->GetData<int32_t>() == nullptr, OP_LOGE(context, "repeatsInput->GetData() is nullptr"),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(repeatsInput->GetData<int32_t>() == nullptr,
+                            OP_LOGE(context, "repeatsInput->GetData() is nullptr"), return ge::GRAPH_FAILED);
                 outputGradShape->SetDim(
                     axisAttr, GetOutputZeroAxisLen<int32_t>(inputGradShape, repeatsShape, repeatsInput, axisAttr));
                 break;
             case DT_INT64:
-                OP_CHECK_IF(
-                    repeatsInput->GetData<int64_t>() == nullptr, OP_LOGE(context, "repeatsInput->GetData() is nullptr"),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(repeatsInput->GetData<int64_t>() == nullptr,
+                            OP_LOGE(context, "repeatsInput->GetData() is nullptr"), return ge::GRAPH_FAILED);
                 outputGradShape->SetDim(
                     axisAttr, GetOutputZeroAxisLen<int64_t>(inputGradShape, repeatsShape, repeatsInput, axisAttr));
                 break;
@@ -108,8 +106,8 @@ static graphStatus InferShape4RepeatInterleaveGrad(gert::InferShapeContext* cont
                 return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGD(
-            context, "If not satisfy that repeats is ConstTensor and input[dim] != -1, then set output shape to -2");
+        OP_LOGD(context,
+                "If not satisfy that repeats is ConstTensor and input[dim] != -1, then set output shape to -2");
         Ops::Base::SetUnknownRank(*outputGradShape);
         return ge::GRAPH_SUCCESS;
     }
@@ -122,7 +120,8 @@ static ge::graphStatus InferDataType4RepeatInterleaveGrad(gert::InferDataTypeCon
     OP_LOGD(context, "Begin to do InferDataType4RepeatInterleaveGrad");
     OP_LOGD(context, "input y_grad dtype: %s", Ops::Base::ToString(context->GetInputDataType(INPUT_GRAD_IDX)).c_str());
     context->SetOutputDataType(OUTPUT_GRAD_IDX, context->GetInputDataType(INPUT_GRAD_IDX));
-    OP_LOGD(context, "output x_grad dtype: %s", Ops::Base::ToString(context->GetOutputDataType(OUTPUT_GRAD_IDX)).c_str());
+    OP_LOGD(context, "output x_grad dtype: %s",
+            Ops::Base::ToString(context->GetOutputDataType(OUTPUT_GRAD_IDX)).c_str());
     OP_LOGD(context, "End to do InferDataType4RepeatInterleaveGrad");
     return ge::GRAPH_SUCCESS;
 }

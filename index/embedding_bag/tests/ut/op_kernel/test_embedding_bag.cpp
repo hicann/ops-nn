@@ -23,9 +23,10 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void embedding_bag(
-    GM_ADDR weight, GM_ADDR indices, GM_ADDR offsets, GM_ADDR per_sample_weights, GM_ADDR y, GM_ADDR offset2bag,
-    GM_ADDR bag_size, GM_ADDR max_indices, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indices, GM_ADDR offsets,
+                                                    GM_ADDR per_sample_weights, GM_ADDR y, GM_ADDR offset2bag,
+                                                    GM_ADDR bag_size, GM_ADDR max_indices, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
 class embedding_bag_test : public testing::Test {
 protected:
@@ -72,8 +73,8 @@ TEST_F(embedding_bag_test, params_sum_false)
 
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        embedding_bag, 48, weight, indices, offsets, nullptr, y, offset2bag, bag_size, max_indices, workspace, tiling);
+    ICPU_RUN_KF(embedding_bag, 48, weight, indices, offsets, nullptr, y, offset2bag, bag_size, max_indices, workspace,
+                tiling);
 
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     AscendC::GmFree(weight);

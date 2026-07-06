@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file swish_tiling.cpp
@@ -45,7 +45,9 @@ static ge::graphStatus SwishTilingFunc(gert::TilingContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     auto coreNum = ascendcPlatform.GetCoreNum();
     auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion != platform_ascendc::SocVersion::ASCEND910B && socVersion != platform_ascendc::SocVersion::ASCEND310B && context->GetInputDesc(0)->GetDataType() == ge::DT_BF16) {
+    if (socVersion != platform_ascendc::SocVersion::ASCEND910B &&
+        socVersion != platform_ascendc::SocVersion::ASCEND310B &&
+        context->GetInputDesc(0)->GetDataType() == ge::DT_BF16) {
         OP_LOGE(context, "socVersion error.");
         return ge::GRAPH_FAILED;
     }
@@ -57,7 +59,7 @@ static ge::graphStatus SwishTilingFunc(gert::TilingContext* context)
 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    ge::DataType dataType = inputDesc->GetDataType();    
+    ge::DataType dataType = inputDesc->GetDataType();
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(dataType, typeLength);
 
@@ -70,34 +72,32 @@ static ge::graphStatus SwishTilingFunc(gert::TilingContext* context)
     uint64_t tileDataNum = (tileBlockNum * blockSize) / inputBytes;
 
     uint64_t inputLengthAlgin32 = (((inputLength + blockSize - 1) / blockSize) * blockSize);
-    if(tileDataNum >= inputNum)
-    {
-        coreNum=1;
-    }
-    else
-    {
-        // There is at least 32B of data on each core, satisfying several settings for several cores. The maximum number of audits is the actual number of audits
-        coreNum = (coreNum <  inputLengthAlgin32 / blockSize) ? coreNum : inputLengthAlgin32 / blockSize;
+    if (tileDataNum >= inputNum) {
+        coreNum = 1;
+    } else {
+        // There is at least 32B of data on each core, satisfying several settings for several cores. The maximum number
+        // of audits is the actual number of audits
+        coreNum = (coreNum < inputLengthAlgin32 / blockSize) ? coreNum : inputLengthAlgin32 / blockSize;
     }
     OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(inputBytes == 0, OP_LOGE(context, "inputBytes is 0"), return ge::GRAPH_FAILED);
 
     uint64_t everyCoreInputBlockNum = inputLengthAlgin32 / blockSize / coreNum;
     uint64_t tailBlockNum = (inputLengthAlgin32 / blockSize) % coreNum;
-    
+
     uint64_t smallCoreDataNum = everyCoreInputBlockNum * blockSize / inputBytes;
     uint64_t smallTileNum = everyCoreInputBlockNum / tileBlockNum;
     uint64_t finalSmallTileNum = (everyCoreInputBlockNum % tileBlockNum) == 0 ? smallTileNum : smallTileNum + 1;
     uint64_t smallTailDataNum = smallCoreDataNum - (tileDataNum * smallTileNum);
     smallTailDataNum = smallTailDataNum == 0 ? tileDataNum : smallTailDataNum;
-    
+
     everyCoreInputBlockNum += 1;
     uint64_t bigCoreDataNum = everyCoreInputBlockNum * blockSize / inputBytes;
     uint64_t bigTileNum = everyCoreInputBlockNum / tileBlockNum;
     uint64_t finalBigTileNum = (everyCoreInputBlockNum % tileBlockNum) == 0 ? bigTileNum : bigTileNum + 1;
     uint64_t bigTailDataNum = bigCoreDataNum - tileDataNum * bigTileNum;
-    bigTailDataNum = bigTailDataNum == 0 ? tileDataNum : bigTailDataNum; 
-    
+    bigTailDataNum = bigTailDataNum == 0 ? tileDataNum : bigTailDataNum;
+
     tiling->smallCoreDataNum = (uint32_t)smallCoreDataNum;
     tiling->bigCoreDataNum = (uint32_t)bigCoreDataNum;
     tiling->tileDataNum = (uint32_t)tileDataNum;
@@ -127,7 +127,7 @@ static ge::graphStatus SwishTilingFunc(gert::TilingContext* context)
     context->SetBlockDim(coreNum);
     context->SetTilingKey(GET_TPL_TILING_KEY(TPL_SCH_MODE_0, attrWork));
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }

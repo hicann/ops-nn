@@ -25,21 +25,29 @@ namespace IndexFill {
 using namespace AscendC;
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum, __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n);
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum,
+                                                                                  __gm__ INDEX_TYPE* indices,
+                                                                                  __gm__ int8_t* mask, COM_T indicesNum,
+                                                                                  uint64_t n);
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByIndices(__gm__ T* y, __gm__ INDEX_TYPE* indices, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, 
-     COM_T slice_size, COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q);
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByIndices(
+    __gm__ T* y, __gm__ INDEX_TYPE* indices, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, COM_T slice_size,
+    COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q);
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByN(__gm__ T* y, __gm__ int8_t* mask, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, 
-     COM_T shift_n, COM_T magic_n, COM_T shift_q, COM_T magic_q);
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByN(__gm__ T* y, __gm__ int8_t* mask,
+                                                                                    T value, COM_T total_num, COM_T p,
+                                                                                    COM_T n, COM_T q, COM_T shift_n,
+                                                                                    COM_T magic_n, COM_T shift_q,
+                                                                                    COM_T magic_q);
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
 class IndexFillSimtImpl {
 public:
-    __aicore__ inline IndexFillSimtImpl(const IndexFillSimtTilingData* __restrict tilingData, TPipe *pipe): pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum()) {
-    }
+    __aicore__ inline IndexFillSimtImpl(const IndexFillSimtTilingData* __restrict tilingData, TPipe* pipe)
+        : pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum())
+    {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace);
     __aicore__ inline void Process(__gm__ T* y, GM_ADDR workspace);
@@ -51,7 +59,7 @@ private:
     __aicore__ inline void CopyOut(int64_t offset, int64_t dataLen);
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> dataQueue_;
     AscendC::GlobalTensor<T> xGm_;
     AscendC::GlobalTensor<T> yGm_;
@@ -65,9 +73,11 @@ private:
     T fillValue;
 };
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum,
-    __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
+                                                                                  __gm__ INDEX_TYPE* indices,
+                                                                                  __gm__ int8_t* mask, COM_T indicesNum,
+                                                                                  uint64_t n)
 {
     COM_T threadIdx = static_cast<COM_T>(blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx());
     COM_T threadNum = static_cast<COM_T>(blockNum * Simt::GetThreadNum());
@@ -81,7 +91,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtMaskFil
     }
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::BuildIndicesMask(GM_ADDR workspace)
 {
     maskGm_.SetGlobalBuffer((__gm__ int8_t*)(workspace), tilingData_->n * sizeof(int8_t));
@@ -91,12 +101,14 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::BuildIndicesMask
     uint64_t n = tilingData_->n;
     COM_T indicesNum = static_cast<COM_T>(tilingData_->indicesNum);
     AscendC::Simt::VF_CALL<IndexFillSimtMaskFill<T, INDEX_TYPE, COM_T>>(
-        AscendC::Simt::Dim3(THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indices_.GetPhyAddr()), (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, n);
+        AscendC::Simt::Dim3(THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indices_.GetPhyAddr()),
+        (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, n);
     SyncAll();
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
+__aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices,
+                                                                     GM_ADDR value, GM_ADDR workspace)
 {
     valueGm_.SetGlobalBuffer((__gm__ T*)(value));
     indices_.SetGlobalBuffer((__gm__ INDEX_TYPE*)(indices));
@@ -110,7 +122,8 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, 
     if (blockIdx_ < tilingData_->frontCoreNum) {
         offset_ = blockIdx_ * tilingData_->loopsPerFrontCore * tilingData_->blockSize;
     } else {
-        offset_ = (tilingData_->frontCoreNum * tilingData_->loopsPerFrontCore * tilingData_->blockSize) + ((blockIdx_ - tilingData_->frontCoreNum) * tilingData_->loopsPerTailCore * tilingData_->blockSize);
+        offset_ = (tilingData_->frontCoreNum * tilingData_->loopsPerFrontCore * tilingData_->blockSize) +
+                  ((blockIdx_ - tilingData_->frontCoreNum) * tilingData_->loopsPerTailCore * tilingData_->blockSize);
     }
 
     xGm_.SetGlobalBuffer((__gm__ T*)(x) + offset_);
@@ -121,32 +134,22 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, 
 template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::CopyIn(int64_t offset, int64_t dataLen)
 {
-  DataCopyExtParams inParams = {
-    static_cast<uint16_t>(1),
-    static_cast<uint32_t>(dataLen * sizeof(T)),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0)
-  };
-  DataCopyPadExtParams<T> padParams = { false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0) };
-  LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
-  DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
-  dataQueue_.EnQue(xLocal);
+    DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
+    LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
+    DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
+    dataQueue_.EnQue(xLocal);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::CopyOut(int64_t offset, int64_t dataLen)
 {
-  DataCopyExtParams outParams = {
-    static_cast<uint16_t>(1),
-    static_cast<uint32_t>(dataLen * sizeof(T)),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0)
-  };
-  LocalTensor<T> yLocal = dataQueue_.DeQue<T>();
-  DataCopyPad(yGm_[offset], yLocal, outParams);
-  dataQueue_.FreeTensor(yLocal);
+    DataCopyExtParams outParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                   static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    LocalTensor<T> yLocal = dataQueue_.DeQue<T>();
+    DataCopyPad(yGm_[offset], yLocal, outParams);
+    dataQueue_.FreeTensor(yLocal);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
@@ -156,7 +159,8 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::CopyTensor()
         return;
     }
 
-    int64_t loopSize = blockIdx_ < tilingData_->frontCoreNum ? tilingData_->loopsPerFrontCore : tilingData_->loopsPerTailCore;
+    int64_t loopSize = blockIdx_ < tilingData_->frontCoreNum ? tilingData_->loopsPerFrontCore :
+                                                               tilingData_->loopsPerTailCore;
     int64_t offset = 0;
     for (int64_t idx = 0; idx < loopSize - 1; idx++) {
         offset = idx * tilingData_->blockSize;
@@ -199,8 +203,9 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Process(__gm__ T
         COM_T magic_q = 0;
         GetUintDivMagicAndShift(magic_q, shift_q, q);
 
-        AscendC::Simt::VF_CALL<IndexFillSimtComputeByIndices<T, INDEX_TYPE, COM_T>>(AscendC::Simt::Dim3{THREAD_NUM}, y,
-            (__gm__ INDEX_TYPE*)indices_.GetPhyAddr(), fillValue, process_num, p, n, q, slice_size, shift, magic, shift_q, magic_q);
+        AscendC::Simt::VF_CALL<IndexFillSimtComputeByIndices<T, INDEX_TYPE, COM_T>>(
+            AscendC::Simt::Dim3{THREAD_NUM}, y, (__gm__ INDEX_TYPE*)indices_.GetPhyAddr(), fillValue, process_num, p, n,
+            q, slice_size, shift, magic, shift_q, magic_q);
     } else {
         // 否则，使用n * p * q做simt遍历.
         BuildIndicesMask(workspace);
@@ -215,14 +220,16 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Process(__gm__ T
         GetUintDivMagicAndShift(magic_q, shift_q, q);
 
         // 执行index_fill核心逻辑
-        AscendC::Simt::VF_CALL<IndexFillSimtComputeByN<T, INDEX_TYPE, COM_T>>(AscendC::Simt::Dim3{THREAD_NUM}, y,
-            (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue, process_num, p, n, q, shift_n, magic_n, shift_q, magic_q);
+        AscendC::Simt::VF_CALL<IndexFillSimtComputeByN<T, INDEX_TYPE, COM_T>>(
+            AscendC::Simt::Dim3{THREAD_NUM}, y, (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue, process_num, p, n, q,
+            shift_n, magic_n, shift_q, magic_q);
     }
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByIndices(__gm__ T* y, __gm__ INDEX_TYPE* indices, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, 
-    COM_T slice_size, COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByIndices(
+    __gm__ T* y, __gm__ INDEX_TYPE* indices, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, COM_T slice_size,
+    COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q)
 {
     COM_T threadIdxLocal = static_cast<COM_T>(blockIdx.x * blockDim.x + threadIdx.x);
     COM_T threadNum = static_cast<COM_T>(gridDim.x * blockDim.x);
@@ -236,15 +243,18 @@ template <typename T, typename INDEX_TYPE, typename COM_T>
             continue;
         }
         COM_T pIdx = Simt::UintDiv(innerId, magic_q, shift_q);
-        COM_T qOffset =  innerId - (pIdx * q);
+        COM_T qOffset = innerId - (pIdx * q);
         COM_T offset = pIdx * n * q + nIdx * q + qOffset;
         y[offset] = value;
     }
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
- __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByN(__gm__ T* y, __gm__ int8_t* mask, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, 
-    COM_T shift_n, COM_T magic_n, COM_T shift_q, COM_T magic_q)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtComputeByN(__gm__ T* y, __gm__ int8_t* mask,
+                                                                                    T value, COM_T total_num, COM_T p,
+                                                                                    COM_T n, COM_T q, COM_T shift_n,
+                                                                                    COM_T magic_n, COM_T shift_q,
+                                                                                    COM_T magic_q)
 {
     COM_T threadIdxLocal = static_cast<COM_T>(blockIdx.x * blockDim.x + threadIdx.x);
     COM_T threadNum = static_cast<COM_T>(gridDim.x * blockDim.x);

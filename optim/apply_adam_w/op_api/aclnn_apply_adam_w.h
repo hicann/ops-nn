@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #ifndef OP_API_INC_APPLY_ADAM_W_H_
@@ -22,14 +22,15 @@ extern "C" {
  * @domain aclnn_ops_train
  */
 ACLNN_API aclnnStatus aclnnApplyAdamWGetWorkspaceSize(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef,
-                                                      const aclTensor* beta1Power, const aclTensor* beta2Power, const aclTensor* lr,
-                                                      const aclTensor* weightDecay, const aclTensor* beta1, const aclTensor* beta2,
-                                                      const aclTensor* eps, const aclTensor* grad, const aclTensor* maxGradNormOptional,
-                                                      bool amsgrad, bool maximize,
+                                                      const aclTensor* beta1Power, const aclTensor* beta2Power,
+                                                      const aclTensor* lr, const aclTensor* weightDecay,
+                                                      const aclTensor* beta1, const aclTensor* beta2,
+                                                      const aclTensor* eps, const aclTensor* grad,
+                                                      const aclTensor* maxGradNormOptional, bool amsgrad, bool maximize,
                                                       uint64_t* workspaceSize, aclOpExecutor** executor);
 /* @brief aclnnApplyAdamW的第二段接口，用于执行计算。 */
 ACLNN_API aclnnStatus aclnnApplyAdamW(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                        aclrtStream stream);
+                                      aclrtStream stream);
 
 #ifdef __cplusplus
 }

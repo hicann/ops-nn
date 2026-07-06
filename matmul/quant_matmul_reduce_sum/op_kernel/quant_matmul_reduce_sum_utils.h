@@ -33,8 +33,8 @@ constexpr uint32_t UB_BLOCK_DOUBLE_UNIT_SIZE = 64;                   // 64: a bl
 constexpr uint32_t HALF_UB_BLOCK_UNIT_SIZE = UB_BLOCK_UNIT_SIZE / 2; // 2: a float16 data has two bytes
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 && defined(ORIG_DTYPE_X) && defined(ORIG_DTYPE_WEIGHT) && \
     ORIG_DTYPE_X == DT_INT8 && ORIG_DTYPE_WEIGHT == DT_INT8
-constexpr MatmulConfig NZ_CFG_MDL =
-    GetMDLConfig(false, false, 0, true, false, false, true, true, true, false, false, true);
+constexpr MatmulConfig NZ_CFG_MDL = GetMDLConfig(false, false, 0, true, false, false, true, true, true, false, false,
+                                                 true);
 constexpr MatmulConfig matmulCFGUnitFlag{.doMultiDataLoad = true, .enUnitFlag = true, .enableKdimReorderLoad = true};
 #else
 constexpr MatmulConfig NZ_CFG_MDL = GetMDLConfig(false, false, 0, true, false, false, true);

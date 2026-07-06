@@ -17,7 +17,9 @@
 #define CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BASE_HPP
 #include "kernel_operator.h"
 
-#define TEMPLATE_DECLARE template<typename InType, typename CalcType, typename BiasType, typename OutType, uint16_t bufferNum, uint16_t quantIsOne>
+#define TEMPLATE_DECLARE                                                                                   \
+    template <typename InType, typename CalcType, typename BiasType, typename OutType, uint16_t bufferNum, \
+              uint16_t quantIsOne>
 #define TEMPLATE_ARGS InType, CalcType, BiasType, OutType, bufferNum, quantIsOne
 namespace DequantSwigluQuant {
 constexpr uint32_t DOUBLE = 2;
@@ -29,9 +31,10 @@ public:
     __aicore__ inline DequantSwigluQuantDynamicBase() {}
     __aicore__ inline ~DequantSwigluQuantDynamicBase() {}
 
-    __aicore__ inline void InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-        GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-        GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_)
+    __aicore__ inline void InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm,
+                                      GM_ADDR bias_gm, GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm,
+                                      GM_ADDR scale_gm, GM_ADDR userspace, const SwiGluTilingData* tilingData,
+                                      TPipe* pipe_)
     {
         pipe = pipe_;
         curBlockIdx = GetBlockIdx();
@@ -171,7 +174,8 @@ public:
         uint32_t offsetCalc = (length == 0 ? 0 : (tileLen / length));
         PipeBarrier<PIPE_V>();
         for (int64_t i = 0; i < length; i++) {
-            ReduceMax(maxTempLocal[rowId * baseRowLen + i], absTempLocal[i * offsetCalc], absTempLocal[i * offsetCalc], colNum);
+            ReduceMax(maxTempLocal[rowId * baseRowLen + i], absTempLocal[i * offsetCalc], absTempLocal[i * offsetCalc],
+                      colNum);
             PipeBarrier<PIPE_V>();
 
             event_t eventIdV2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -211,8 +215,8 @@ public:
         outQueueF.FreeTensor(outLocal);
     }
 
-    __aicore__ inline void BaseComputeWithQuantScale(LocalTensor<CalcType> &outTmpLocal, LocalTensor<CalcType> &bLocal,
-        uint64_t curTileLen,  uint64_t blockCount)
+    __aicore__ inline void BaseComputeWithQuantScale(LocalTensor<CalcType>& outTmpLocal, LocalTensor<CalcType>& bLocal,
+                                                     uint64_t curTileLen, uint64_t blockCount)
     {
         LocalTensor<float> swiLocal = swiGluQueue.template AllocTensor<float>();
         Mul(swiLocal, outTmpLocal, bLocal, curTileLen);
@@ -246,7 +250,8 @@ public:
         this->inQueueA.template FreeTensor(inALocal);
         if constexpr (std::is_same_v<InType, int32_t>) {
             addWeightScaleAndActivateScale(inputTmpLocal, this->weightScaleLocalA, curTileLen, value);
-            if constexpr (std::is_same_v<BiasType, float> || std::is_same_v<BiasType, bfloat16_t> || std::is_same_v<BiasType, half>) {
+            if constexpr (std::is_same_v<BiasType, float> || std::is_same_v<BiasType, bfloat16_t> ||
+                          std::is_same_v<BiasType, half>) {
                 if (this->biasIsEmpty == 0) {
                     addBiasWithBiasFloat(inputTmpLocal, this->biasLocalA, curTileLen);
                 }
@@ -271,7 +276,8 @@ public:
         PipeBarrier<PIPE_V>();
         if constexpr (std::is_same_v<InType, int32_t>) {
             addWeightScaleAndActivateScale(bLocal, this->weightScaleLocalB, curTileLen, value);
-            if constexpr (std::is_same_v<BiasType, float> || std::is_same_v<BiasType, bfloat16_t> || std::is_same_v<BiasType, half>) {
+            if constexpr (std::is_same_v<BiasType, float> || std::is_same_v<BiasType, bfloat16_t> ||
+                          std::is_same_v<BiasType, half>) {
                 if (this->biasIsEmpty == 0) {
                     addBiasWithBiasFloat(bLocal, this->biasLocalB, curTileLen);
                 }
@@ -417,8 +423,9 @@ public:
         return value;
     }
 
-    __aicore__ inline void addWeightScaleAndActivateScale(
-        LocalTensor<CalcType> &dstLocal, LocalTensor<CalcType> &weightScaleLocal, uint64_t curTileLen, float value)
+    __aicore__ inline void addWeightScaleAndActivateScale(LocalTensor<CalcType>& dstLocal,
+                                                          LocalTensor<CalcType>& weightScaleLocal, uint64_t curTileLen,
+                                                          float value)
     {
         Mul(dstLocal, dstLocal, weightScaleLocal, curTileLen);
         PipeBarrier<PIPE_V>();
@@ -428,7 +435,8 @@ public:
         }
     }
 
-    __aicore__ inline void addBiasWithBiasInt(LocalTensor<InType> &dstLocal, LocalTensor<BiasType> &biasLocal, uint64_t curTileLen)
+    __aicore__ inline void addBiasWithBiasInt(LocalTensor<InType>& dstLocal, LocalTensor<BiasType>& biasLocal,
+                                              uint64_t curTileLen)
     {
         if (this->biasIsEmpty == 0) {
             Add(dstLocal, dstLocal, biasLocal, curTileLen);
@@ -436,7 +444,8 @@ public:
         }
     }
 
-    __aicore__ inline void addBiasWithBiasFloat(LocalTensor<CalcType> &dstLocal, LocalTensor<BiasType> &biasLocal, uint64_t curTileLen)
+    __aicore__ inline void addBiasWithBiasFloat(LocalTensor<CalcType>& dstLocal, LocalTensor<BiasType>& biasLocal,
+                                                uint64_t curTileLen)
     {
         if (this->biasIsEmpty == 0) {
             if constexpr (std::is_same_v<BiasType, float>) {
@@ -509,7 +518,7 @@ public:
     {
         uint32_t srcStride = dataTileLen * sizeof(InType);
         DataCopyExtParams dataCopyParams{static_cast<uint16_t>(blockCount),
-            static_cast<uint32_t>(dataTileLen * sizeof(InType)), srcStride, dstStride, 0};
+                                         static_cast<uint32_t>(dataTileLen * sizeof(InType)), srcStride, dstStride, 0};
         DataCopyPadExtParams<InType> dataCopyPadParams{false, 0, 0, 0};
         // Copy A
         LocalTensor<InType> aLocal = inQueueA.template AllocTensor<InType>();
@@ -533,13 +542,14 @@ public:
     {
         return (elementNum * bytes + blockBytes - 1) / blockBytes * blockBytes;
     }
+
 protected:
     TPipe* pipe;
     GlobalTensor<InType> xGm;
     GlobalTensor<float> quantScaleGm;
     GlobalTensor<float> weightScaleGm;
     GlobalTensor<float> activationScaleGm;
-    GlobalTensor <BiasType> biasGm;
+    GlobalTensor<BiasType> biasGm;
     GlobalTensor<OutType> yGm;
     GlobalTensor<float> scaleGm;
     GlobalTensor<float> swigluTmpGm;
@@ -562,8 +572,8 @@ protected:
     LocalTensor<float> quantScaleLocal;
     LocalTensor<float> weightScaleLocalA;
     LocalTensor<float> weightScaleLocalB;
-    LocalTensor <BiasType> biasLocalA;
-    LocalTensor <BiasType> biasLocalB;
+    LocalTensor<BiasType> biasLocalA;
+    LocalTensor<BiasType> biasLocalB;
     LocalTensor<float> activateLocal;
     LocalTensor<CalcType> biasFloatLocalA;
     LocalTensor<CalcType> biasFloatLocalB;
@@ -588,5 +598,5 @@ protected:
     bool isMultiCols = false;
     int64_t blockBytes = 32;
 };
-}
-#endif  // CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BASE_HPP
+} // namespace DequantSwigluQuant
+#endif // CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BASE_HPP

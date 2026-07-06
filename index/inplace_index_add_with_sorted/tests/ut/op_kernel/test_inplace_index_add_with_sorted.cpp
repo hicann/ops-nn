@@ -44,9 +44,9 @@ struct InplaceIndexAddWithSortedCompileInfo {
     uint64_t workspaceSize = 0;
 };
 
-extern "C" __global__ __aicore__ void inplace_index_add_with_sorted(
-    GM_ADDR var, GM_ADDR value, GM_ADDR sorted_indices, GM_ADDR pos, GM_ADDR alpha, GM_ADDR output, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void inplace_index_add_with_sorted(GM_ADDR var, GM_ADDR value, GM_ADDR sorted_indices,
+                                                                    GM_ADDR pos, GM_ADDR alpha, GM_ADDR output,
+                                                                    GM_ADDR workspace, GM_ADDR tiling);
 
 static std::string GetShapesString(const std::vector<std::vector<int64_t>>& shapeInfo)
 {
@@ -86,9 +86,8 @@ protected:
     static void TearDownTestSuite() { std::cout << "inplace_index_add_with_sorted_test SetUpTestSuite" << std::endl; }
 
     template <typename T>
-    void SingleCallOperator(
-        const std::vector<std::vector<int64_t>>& shapeInfos, const std::vector<int64_t>& attrInfos,
-        const ge::DataType varDtype)
+    void SingleCallOperator(const std::vector<std::vector<int64_t>>& shapeInfos, const std::vector<int64_t>& attrInfos,
+                            const ge::DataType varDtype)
     {
         // get tiling data and tiling key
         optiling::InplaceIndexAddWithSortedTilingDef tilingObject(shapeInfos, attrInfos, varDtype);
@@ -98,10 +97,9 @@ protected:
         kernel_ut::SetupTestEnvironment(
             "index/inplace_index_add_with_sorted/tests/ut/op_kernel/inplace_index_add_with_sorted_data",
             "inplace_index_add_with_sorted_data");
-        kernel_ut::RunGenData(
-            "./inplace_index_add_with_sorted_data",
-            {"'" + GetShapesString(shapeInfos) + "'", "'" + GetShapesString(attrInfos) + "'",
-             std::to_string(tilingKey)});
+        kernel_ut::RunGenData("./inplace_index_add_with_sorted_data",
+                              {"'" + GetShapesString(shapeInfos) + "'", "'" + GetShapesString(attrInfos) + "'",
+                               std::to_string(tilingKey)});
         size_t usrWorkspaceSize = 4096;
         uint8_t* usrWorkSpace = (uint8_t*)AscendC::GmAlloc(usrWorkspaceSize);
         size_t tilingSize = sizeof(InplaceIndexAddWithSortedTilingData);
@@ -132,9 +130,8 @@ protected:
 
         ICPU_SET_TILING_KEY(tilingKey);
         AscendC::SetKernelMode(KernelMode::AIV_MODE);
-        ICPU_RUN_KF(
-            inplace_index_add_with_sorted, tilingObject.GetNeedCoreNum(), var, value, index, pos, alpha, out,
-            usrWorkSpace, tiling);
+        ICPU_RUN_KF(inplace_index_add_with_sorted, tilingObject.GetNeedCoreNum(), var, value, index, pos, alpha, out,
+                    usrWorkSpace, tiling);
 
         WriteFile("./inplace_index_add_with_sorted_data/output_dx.bin", var, varByteSize);
 

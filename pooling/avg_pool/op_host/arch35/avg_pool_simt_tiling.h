@@ -24,18 +24,12 @@
 #include "pooling/avg_pool/op_host/avg_pool_tiling_common.h"
 #include "pooling/avg_pool/op_kernel/arch35/avg_pool_struct.h"
 
-namespace optiling
-{
-class PoolSimtTiling : public TilingBaseClass
-{
+namespace optiling {
+class PoolSimtTiling : public TilingBaseClass {
 public:
-    explicit PoolSimtTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit PoolSimtTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~PoolSimtTiling() override
-    {
-    }
+    ~PoolSimtTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -54,35 +48,24 @@ public:
     uint64_t ubSize = 0;
 };
 
-
-class AvgPoolSimtTiling : public PoolSimtTiling
-{
+class AvgPoolSimtTiling : public PoolSimtTiling {
 public:
-    explicit AvgPoolSimtTiling(gert::TilingContext* context) : PoolSimtTiling(context)
-    {
-    }
-    ~AvgPoolSimtTiling() override
-    {
-    }
+    explicit AvgPoolSimtTiling(gert::TilingContext* context) : PoolSimtTiling(context) {}
+    ~AvgPoolSimtTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class AvgPoolV2SimtTiling : public PoolSimtTiling
-{
+class AvgPoolV2SimtTiling : public PoolSimtTiling {
 public:
-    explicit AvgPoolV2SimtTiling(gert::TilingContext* context) : PoolSimtTiling(context)
-    {
-    }
-    ~AvgPoolV2SimtTiling() override
-    {
-    }
+    explicit AvgPoolV2SimtTiling(gert::TilingContext* context) : PoolSimtTiling(context) {}
+    ~AvgPoolV2SimtTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
-}
+} // namespace optiling
 #endif

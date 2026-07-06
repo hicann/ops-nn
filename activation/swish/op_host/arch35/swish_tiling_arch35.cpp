@@ -48,8 +48,8 @@ ge::graphStatus SwishTiling::CalcInputDtype()
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtype of x must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
+                                              ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+                                              "The dtype of x must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -63,14 +63,15 @@ ge::graphStatus SwishTiling::CalcOutputDtype()
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "DT_FLOAT16, DT_BF16, DT_FLOAT"),
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, x",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtypes of y and x must be the same"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, x",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+                                                       "The dtypes of y and x must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -86,10 +87,11 @@ ge::graphStatus SwishTiling::CheckShape()
     const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(inputYShape != outputZShape,
-               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
-            Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
-            "The shapes of x and y must be the same"),
-               return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -119,9 +121,12 @@ ge::graphStatus SwishTiling::RunTiling()
     OP_LOGD(tilingContext->GetNodeName(), "SwishTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
 
-    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(SetAttr() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "set Attr failed"), return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
@@ -151,12 +156,12 @@ ge::graphStatus SwishTiling::RunTiling()
         }
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "DT_FLOAT16, DT_BF16, DT_FLOAT");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
     elewiseBaseTiling.SetScalar<float>(attrScale);
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
@@ -169,7 +174,7 @@ ge::graphStatus SwishTiling::RunTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingForSwish(gert::TilingContext *tilingContextGen)
+ge::graphStatus TilingForSwish(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "TilingForSwish rt2.0 is running");
     auto compileInfo = tilingContextGen->GetCompileInfo<SwishCompileInfo>();
@@ -180,7 +185,7 @@ ge::graphStatus TilingForSwish(gert::TilingContext *tilingContextGen)
 
 ge::graphStatus TilingPrepareForSwish(gert::TilingParseContext* context)
 {
-    auto compileInfoPtr = context -> GetCompiledInfo<SwishCompileInfo>();
+    auto compileInfoPtr = context->GetCompiledInfo<SwishCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
@@ -193,4 +198,3 @@ ge::graphStatus TilingPrepareForSwish(gert::TilingParseContext* context)
 IMPL_OP_OPTILING(Swish).Tiling(TilingForSwish).TilingParse<SwishCompileInfo>(TilingPrepareForSwish);
 
 } // namespace optiling
-

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -14,8 +14,7 @@
  */
 
 #include "layer_norm_grad_tiling.h"
-namespace optiling
-{
+namespace optiling {
 constexpr static int64_t CONST_ZERO = 0;
 constexpr static int64_t CONST_ONE = 1;
 constexpr static int64_t CONST_TWO = 2;
@@ -107,8 +106,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::BackwardKernelTiling()
     int64_t coreNum = static_cast<int64_t>(commonParams.coreNum);
 
     // 1. N轴分核
-    int64_t nFactor = rowSize > BACKWARD_BIG_R_FACTOR_THRES ? BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_64
-                                                            : BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_128;
+    int64_t nFactor = rowSize > BACKWARD_BIG_R_FACTOR_THRES ? BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_64 :
+                                                              BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_128;
     // kernel二分计算部分限制核数不超过nfactor
     coreNum = std::min(coreNum, nFactor);
     int64_t mainBlockFactor = ops::CeilDiv(colSize, coreNum);
@@ -149,8 +148,8 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::BackwardKernelTiling()
     // 3. M方向分块参数
     int64_t mFactorAlignedMax = (commonParams.ubSizePlatForm / sizeof(float) - nFactor * CONST_TWO) /
                                 (nFactor * CONST_NINE + CONST_NINE + cacheBufferCountMain * CONST_TWO);
-    mFactorAlignedMax =
-        ops::FloorAlign(mFactorAlignedMax, static_cast<int64_t>(commonParams.blockSize / sizeof(float)));
+    mFactorAlignedMax = ops::FloorAlign(mFactorAlignedMax,
+                                        static_cast<int64_t>(commonParams.blockSize / sizeof(float)));
     OP_TILING_CHECK(mFactorAlignedMax <= 0,
                     OP_LOGI(context_->GetNodeName(),
                             "Big N template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
@@ -222,7 +221,7 @@ ge::graphStatus LayerNormGradGroupedReduceBigNTiling::PostTiling()
 {
     int64_t numBlocks = commonParams.coreNum;
     context_->SetBlockDim(numBlocks);
-    context_->SetScheduleMode(CONST_ONE);  // Set to batch mode, all cores start simultaneously
+    context_->SetScheduleMode(CONST_ONE); // Set to batch mode, all cores start simultaneously
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 
@@ -236,4 +235,4 @@ uint64_t LayerNormGradGroupedReduceBigNTiling::GetTilingKey() const
 }
 
 REGISTER_TILING_TEMPLATE("LayerNormGrad", LayerNormGradGroupedReduceBigNTiling, 6000);
-}  // namespace optiling
+} // namespace optiling

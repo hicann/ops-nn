@@ -28,21 +28,15 @@ using namespace ge;
 
 class MaxPoolWithArgmaxV3Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolWithArgmaxV3Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolWithArgmaxV3Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPoolWithArgmaxV3Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPoolWithArgmaxV3Tiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape argmaxShape, std::vector<int64_t> ksize,
-    std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation, ge::DataType dtype,
-    int64_t index_dtype, bool ceil_mode, std::string data_format, uint64_t except_tilingkey, std::string expect)
+static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape argmaxShape,
+                            std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads,
+                            std::vector<int64_t> dilation, ge::DataType dtype, int64_t index_dtype, bool ceil_mode,
+                            std::string data_format, uint64_t except_tilingkey, std::string expect)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -74,21 +68,21 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -108,14 +102,13 @@ static void ExecuteTestCase(
                       .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -173,19 +166,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -205,14 +198,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test1)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -269,19 +261,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test2)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -301,14 +293,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test2)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -366,19 +357,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test3)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -398,14 +389,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test3)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -456,19 +446,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test4)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -488,14 +478,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test4)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -546,19 +535,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test5)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -578,14 +567,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test5)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("ND")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("ND")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -636,19 +624,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test6)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -668,14 +656,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test6)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -726,19 +713,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test7)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -758,14 +745,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test7)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -816,19 +802,19 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test8)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -848,14 +834,13 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test8)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({64, 64})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -887,9 +872,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test9)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 311110;
     std::string expect = "1024 600 2 2 457 324 457 858 132 30 1 1 40 48 2608 64 29184 0 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test10)
@@ -907,9 +891,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test10)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 311110;
     std::string expect = "1024 640 2 2 513 455 256 455 163 106 1 1 208 16 13328 64 29184 0 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_Gather_Test0)
@@ -927,9 +910,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_Gather_Test0)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 300001;
     std::string expect = "32 32 16 16 2 2 2 2 0 0 2 2 32 16 16 1 16 16 1 1 1 32 8192 2048 2048 0 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_Gather_Test1)
@@ -947,9 +929,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_Gather_Test1)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 300002;
     std::string expect = "30 30 16 16 2 2 2 2 1 1 2 2 32 16 16 1 16 16 1 1 1 32 8192 2048 2048 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_Test01)
 {
@@ -966,9 +947,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_T
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400001;
     std::string expect = "68 22 3 4 16 64 2 2 0 0 1 1 12 5 13 12 0 0 0 0 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_Test02)
@@ -986,9 +966,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_T
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400001;
     std::string expect = "4 522 2 4 516 2 2 2 0 0 1 1 8 8 0 0 1 129 129 4 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_Test03)
@@ -1006,9 +985,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_T
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400002;
     std::string expect = "68 22 3 4 16 64 2 2 0 0 1 1 12 5 13 12 0 0 0 0 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_Test04)
@@ -1026,9 +1004,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Float_T
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400002;
     std::string expect = "4 522 2 4 516 2 2 2 0 0 1 1 8 8 0 0 1 129 129 4 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Bfloat16_Test01)
@@ -1046,9 +1023,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Bfloat1
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 300001;
     std::string expect = "68 22 3 4 64 16 2 2 0 0 1 1 1 1 1 3 1 1 4 1 1 12 2048 32 64 0 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Bfloat16_Test02)
@@ -1066,9 +1042,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Bfloat1
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400003;
     std::string expect = "4 522 2 4 516 2 2 2 0 0 1 1 8 8 0 0 1 129 129 4 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Bfloat16_Test03)
@@ -1086,9 +1061,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Bfloat1
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400004;
     std::string expect = "4 522 2 4 516 2 2 2 0 0 1 1 8 8 0 0 1 129 129 4 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Half_Test01)
@@ -1106,9 +1080,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Half_Te
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 300001;
     std::string expect = "68 22 3 4 64 16 2 2 0 0 1 1 1 1 1 3 1 1 4 1 1 12 2048 32 64 0 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Half_Test02)
@@ -1126,9 +1099,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Half_Te
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400005;
     std::string expect = "4 522 2 4 516 2 2 2 0 0 1 1 8 8 0 0 1 129 129 4 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Half_Test03)
@@ -1146,9 +1118,8 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_MulCore_Half_Te
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 400006;
     std::string expect = "4 522 2 4 516 2 2 2 0 0 1 1 8 8 0 0 1 129 129 4 30016 256 512 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_SIMT_Test01)
@@ -1166,7 +1137,6 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_SIMT_Test01)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 500001;
     std::string expect = "256 64 4 4 2665 4 738 2 456 4 3 3 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode, data_format,
-        except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
 }

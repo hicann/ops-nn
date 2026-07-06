@@ -18,15 +18,9 @@ using namespace op;
 
 class l2ErfinvTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2ErfinvTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2ErfinvTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2ErfinvTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2ErfinvTest TearDown" << std::endl; }
 };
 
 // self的数据类型不在支持范围内

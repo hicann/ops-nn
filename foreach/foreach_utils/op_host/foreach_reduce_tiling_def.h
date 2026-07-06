@@ -57,43 +57,26 @@ TILING_DATA_FIELD_DEF_ARR(uint16_t, MAX_TENSOR_CONT, tensorMiddleStartList);
 TILING_DATA_FIELD_DEF_ARR(uint16_t, MAX_CORE_CONT_950, coreMiddleOffsetList);
 END_TILING_DATA_DEF;
 
-#define REDUCE_MEMBASE_TILING(OP_NAME)                                                            \
-    class OP_NAME##MembaseTiling : public ForeachBaseClass                                        \
-    {                                                                                             \
-    public:                                                                                       \
-        explicit OP_NAME##MembaseTiling(gert::TilingContext* context) : ForeachBaseClass(context) \
-        {}                                                                                        \
-        ~OP_NAME##MembaseTiling() override = default;                                             \
-        void Reset(gert::TilingContext* context) override                                         \
-        {                                                                                         \
-            ForeachBaseClass::Reset(context);                                                     \
-        }                                                                                         \
-                                                                                                  \
-    protected:                                                                                    \
-        bool IsCapable() override                                                                 \
-        {                                                                                         \
-            return !Ops::NN::OpTiling::IsRegbaseSocVersion(context_);                             \
-        }                                                                                         \
-        ge::graphStatus DoOpTiling() override                                                     \
-        {                                                                                         \
-            ForeachReduceTiling tilingObject(context_);                                           \
-            if (tilingObject.Init() != ge::GRAPH_SUCCESS) {                                       \
-                return ge::GRAPH_FAILED;                                                          \
-            }                                                                                     \
-            return tilingObject.RunBigKernelTiling();                                             \
-        }                                                                                         \
-        ge::graphStatus PostTiling() override                                                     \
-        {                                                                                         \
-            return ge::GRAPH_SUCCESS;                                                             \
-        }                                                                                         \
-        ge::graphStatus GetShapeAttrsInfo() override                                              \
-        {                                                                                         \
-            return ge::GRAPH_SUCCESS;                                                             \
-        }                                                                                         \
-        uint64_t GetTilingKey() const override                                                    \
-        {                                                                                         \
-            return context_->GetTilingKey();                                                      \
-        }                                                                                         \
+#define REDUCE_MEMBASE_TILING(OP_NAME)                                                               \
+    class OP_NAME##MembaseTiling : public ForeachBaseClass {                                         \
+    public:                                                                                          \
+        explicit OP_NAME##MembaseTiling(gert::TilingContext* context) : ForeachBaseClass(context) {} \
+        ~OP_NAME##MembaseTiling() override = default;                                                \
+        void Reset(gert::TilingContext* context) override { ForeachBaseClass::Reset(context); }      \
+                                                                                                     \
+    protected:                                                                                       \
+        bool IsCapable() override { return !Ops::NN::OpTiling::IsRegbaseSocVersion(context_); }      \
+        ge::graphStatus DoOpTiling() override                                                        \
+        {                                                                                            \
+            ForeachReduceTiling tilingObject(context_);                                              \
+            if (tilingObject.Init() != ge::GRAPH_SUCCESS) {                                          \
+                return ge::GRAPH_FAILED;                                                             \
+            }                                                                                        \
+            return tilingObject.RunBigKernelTiling();                                                \
+        }                                                                                            \
+        ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }                          \
+        ge::graphStatus GetShapeAttrsInfo() override { return ge::GRAPH_SUCCESS; }                   \
+        uint64_t GetTilingKey() const override { return context_->GetTilingKey(); }                  \
     }
 
 REGISTER_TILING_DATA_CLASS(ForeachNorm, ForeachReduceTilingData)

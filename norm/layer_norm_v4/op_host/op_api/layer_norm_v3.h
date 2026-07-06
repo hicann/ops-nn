@@ -33,11 +33,11 @@ struct LayerNormV3WithImplModeparams {
     int32_t implMode;
 };
 
-const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3(
-    const LayerNormV3params& params, aclOpExecutor* executor);
+const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3(const LayerNormV3params& params,
+                                                                aclOpExecutor* executor);
 
-const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3WithImplMode(
-    const LayerNormV3WithImplModeparams& params, aclOpExecutor* executor);
+const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3WithImplMode(const LayerNormV3WithImplModeparams& params,
+                                                                            aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_LAYER_NORM_V3_H_

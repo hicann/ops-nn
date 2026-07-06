@@ -29,7 +29,8 @@ struct TransposeParams {
 
 __aicore__ inline constexpr bool IsDataCopyPadSupport()
 {
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     return true;
 #else
     return false;
@@ -37,14 +38,13 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
 }
 
 template <typename T>
-class ScatterListBase
-{
+class ScatterListBase {
 public:
     __aicore__ inline ScatterListBase(){};
 
 protected:
-    __aicore__ inline void ParseTilingData(
-        const ScatterListTilingData* tilingData, ScatterListTilingData& m_tilingData);
+    __aicore__ inline void ParseTilingData(const ScatterListTilingData* tilingData,
+                                           ScatterListTilingData& m_tilingData);
     __aicore__ inline __gm__ T* GetTensorAddr(GM_ADDR tensorListPtr, const uint64_t& batchIdx);
     __aicore__ inline int64_t CeilDivMul(const int64_t& value, const int64_t& factor);
     __aicore__ inline void Mte2ToS();
@@ -52,19 +52,19 @@ protected:
     __aicore__ inline void Mte3ToMte2();
     __aicore__ inline void VToMte3();
     __aicore__ inline void Mte2ToV();
-    __aicore__ inline void TransposeB8(
-        const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize);
-    __aicore__ inline void TransposeB16(
-        const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize);
-    __aicore__ inline void TransposeB32(
-        const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize);
-    __aicore__ inline void TransposeB32Back(
-        const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize);
+    __aicore__ inline void TransposeB8(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                       LocalTensor<T>& dstUbSize);
+    __aicore__ inline void TransposeB16(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                        LocalTensor<T>& dstUbSize);
+    __aicore__ inline void TransposeB32(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                        LocalTensor<T>& dstUbSize);
+    __aicore__ inline void TransposeB32Back(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                            LocalTensor<T>& dstUbSize);
 };
 
 template <typename T>
-__aicore__ inline void ScatterListBase<T>::ParseTilingData(
-    const ScatterListTilingData* tilingData, ScatterListTilingData& m_tilingData)
+__aicore__ inline void ScatterListBase<T>::ParseTilingData(const ScatterListTilingData* tilingData,
+                                                           ScatterListTilingData& m_tilingData)
 {
     m_tilingData.dim0Count = tilingData->dim0Count;
     m_tilingData.dim1Count = tilingData->dim1Count;
@@ -163,45 +163,43 @@ __aicore__ inline void ScatterListBase<T>::Mte2ToV()
 }
 
 template <typename T>
-__aicore__ inline void ScatterListBase<T>::TransposeB8(
-    const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize)
+__aicore__ inline void ScatterListBase<T>::TransposeB8(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                                       LocalTensor<T>& dstUbSize)
 {
     __ubuf__ T* srcUb = (__ubuf__ T*)srcUbSize.GetPhyAddr();
     __ubuf__ T* dstUb = (__ubuf__ T*)dstUbSize.GetPhyAddr();
-    __ubuf__ T* srcLocalList[16] = {
-        srcUb,
-        srcUb + params.src,
-        srcUb + params.src * 2,
-        srcUb + params.src * 3,
-        srcUb + params.src * 4,
-        srcUb + params.src * 5,
-        srcUb + params.src * 6,
-        srcUb + params.src * 7,
-        srcUb + params.src * 8,
-        srcUb + params.src * 9,
-        srcUb + params.src * 10,
-        srcUb + params.src * 11,
-        srcUb + params.src * 12,
-        srcUb + params.src * 13,
-        srcUb + params.src * 14,
-        srcUb + params.src * 15};
-    __ubuf__ T* dstLocalList[16] = {
-        dstUb,
-        dstUb + params.dst,
-        dstUb + params.dst * 2,
-        dstUb + params.dst * 3,
-        dstUb + params.dst * 4,
-        dstUb + params.dst * 5,
-        dstUb + params.dst * 6,
-        dstUb + params.dst * 7,
-        dstUb + params.dst * 8,
-        dstUb + params.dst * 9,
-        dstUb + params.dst * 10,
-        dstUb + params.dst * 11,
-        dstUb + params.dst * 12,
-        dstUb + params.dst * 13,
-        dstUb + params.dst * 14,
-        dstUb + params.dst * 15};
+    __ubuf__ T* srcLocalList[16] = {srcUb,
+                                    srcUb + params.src,
+                                    srcUb + params.src * 2,
+                                    srcUb + params.src * 3,
+                                    srcUb + params.src * 4,
+                                    srcUb + params.src * 5,
+                                    srcUb + params.src * 6,
+                                    srcUb + params.src * 7,
+                                    srcUb + params.src * 8,
+                                    srcUb + params.src * 9,
+                                    srcUb + params.src * 10,
+                                    srcUb + params.src * 11,
+                                    srcUb + params.src * 12,
+                                    srcUb + params.src * 13,
+                                    srcUb + params.src * 14,
+                                    srcUb + params.src * 15};
+    __ubuf__ T* dstLocalList[16] = {dstUb,
+                                    dstUb + params.dst,
+                                    dstUb + params.dst * 2,
+                                    dstUb + params.dst * 3,
+                                    dstUb + params.dst * 4,
+                                    dstUb + params.dst * 5,
+                                    dstUb + params.dst * 6,
+                                    dstUb + params.dst * 7,
+                                    dstUb + params.dst * 8,
+                                    dstUb + params.dst * 9,
+                                    dstUb + params.dst * 10,
+                                    dstUb + params.dst * 11,
+                                    dstUb + params.dst * 12,
+                                    dstUb + params.dst * 13,
+                                    dstUb + params.dst * 14,
+                                    dstUb + params.dst * 15};
 
     TransDataTo5HDParams transposeParams;
     transposeParams.dstHighHalf = 0;
@@ -225,23 +223,22 @@ __aicore__ inline void ScatterListBase<T>::TransposeB8(
         srcUb + params.src * 20, srcUb + params.src * 21, srcUb + params.src * 22, srcUb + params.src * 23,
         srcUb + params.src * 24, srcUb + params.src * 25, srcUb + params.src * 26, srcUb + params.src * 27,
         srcUb + params.src * 28, srcUb + params.src * 29, srcUb + params.src * 30, srcUb + params.src * 31};
-    __ubuf__ T* dstLocalList2[16] = {
-        dstUb,
-        dstUb + params.dst,
-        dstUb + params.dst * 2,
-        dstUb + params.dst * 3,
-        dstUb + params.dst * 4,
-        dstUb + params.dst * 5,
-        dstUb + params.dst * 6,
-        dstUb + params.dst * 7,
-        dstUb + params.dst * 8,
-        dstUb + params.dst * 9,
-        dstUb + params.dst * 10,
-        dstUb + params.dst * 11,
-        dstUb + params.dst * 12,
-        dstUb + params.dst * 13,
-        dstUb + params.dst * 14,
-        dstUb + params.dst * 15};
+    __ubuf__ T* dstLocalList2[16] = {dstUb,
+                                     dstUb + params.dst,
+                                     dstUb + params.dst * 2,
+                                     dstUb + params.dst * 3,
+                                     dstUb + params.dst * 4,
+                                     dstUb + params.dst * 5,
+                                     dstUb + params.dst * 6,
+                                     dstUb + params.dst * 7,
+                                     dstUb + params.dst * 8,
+                                     dstUb + params.dst * 9,
+                                     dstUb + params.dst * 10,
+                                     dstUb + params.dst * 11,
+                                     dstUb + params.dst * 12,
+                                     dstUb + params.dst * 13,
+                                     dstUb + params.dst * 14,
+                                     dstUb + params.dst * 15};
     transposeParams.dstHighHalf = 1;
     transposeParams.srcHighHalf = 0;
     TransDataTo5HDImpl(dstLocalList2, srcLocalList2, transposeParams);
@@ -256,45 +253,43 @@ __aicore__ inline void ScatterListBase<T>::TransposeB8(
 }
 
 template <typename T>
-__aicore__ inline void ScatterListBase<T>::TransposeB16(
-    const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize)
+__aicore__ inline void ScatterListBase<T>::TransposeB16(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                                        LocalTensor<T>& dstUbSize)
 {
     __ubuf__ T* srcUb = (__ubuf__ T*)srcUbSize.GetPhyAddr();
     __ubuf__ T* dstUb = (__ubuf__ T*)dstUbSize.GetPhyAddr();
-    __ubuf__ T* srcLocalList[16] = {
-        srcUb,
-        srcUb + params.src,
-        srcUb + params.src * 2,
-        srcUb + params.src * 3,
-        srcUb + params.src * 4,
-        srcUb + params.src * 5,
-        srcUb + params.src * 6,
-        srcUb + params.src * 7,
-        srcUb + params.src * 8,
-        srcUb + params.src * 9,
-        srcUb + params.src * 10,
-        srcUb + params.src * 11,
-        srcUb + params.src * 12,
-        srcUb + params.src * 13,
-        srcUb + params.src * 14,
-        srcUb + params.src * 15};
-    __ubuf__ T* dstLocalList[16] = {
-        dstUb,
-        dstUb + params.dst,
-        dstUb + params.dst * 2,
-        dstUb + params.dst * 3,
-        dstUb + params.dst * 4,
-        dstUb + params.dst * 5,
-        dstUb + params.dst * 6,
-        dstUb + params.dst * 7,
-        dstUb + params.dst * 8,
-        dstUb + params.dst * 9,
-        dstUb + params.dst * 10,
-        dstUb + params.dst * 11,
-        dstUb + params.dst * 12,
-        dstUb + params.dst * 13,
-        dstUb + params.dst * 14,
-        dstUb + params.dst * 15};
+    __ubuf__ T* srcLocalList[16] = {srcUb,
+                                    srcUb + params.src,
+                                    srcUb + params.src * 2,
+                                    srcUb + params.src * 3,
+                                    srcUb + params.src * 4,
+                                    srcUb + params.src * 5,
+                                    srcUb + params.src * 6,
+                                    srcUb + params.src * 7,
+                                    srcUb + params.src * 8,
+                                    srcUb + params.src * 9,
+                                    srcUb + params.src * 10,
+                                    srcUb + params.src * 11,
+                                    srcUb + params.src * 12,
+                                    srcUb + params.src * 13,
+                                    srcUb + params.src * 14,
+                                    srcUb + params.src * 15};
+    __ubuf__ T* dstLocalList[16] = {dstUb,
+                                    dstUb + params.dst,
+                                    dstUb + params.dst * 2,
+                                    dstUb + params.dst * 3,
+                                    dstUb + params.dst * 4,
+                                    dstUb + params.dst * 5,
+                                    dstUb + params.dst * 6,
+                                    dstUb + params.dst * 7,
+                                    dstUb + params.dst * 8,
+                                    dstUb + params.dst * 9,
+                                    dstUb + params.dst * 10,
+                                    dstUb + params.dst * 11,
+                                    dstUb + params.dst * 12,
+                                    dstUb + params.dst * 13,
+                                    dstUb + params.dst * 14,
+                                    dstUb + params.dst * 15};
     TransDataTo5HDParams transposeParams;
     transposeParams.dstHighHalf = 0;
     transposeParams.srcHighHalf = 0;
@@ -305,46 +300,44 @@ __aicore__ inline void ScatterListBase<T>::TransposeB16(
 }
 
 template <typename T>
-__aicore__ inline void ScatterListBase<T>::TransposeB32(
-    const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize)
+__aicore__ inline void ScatterListBase<T>::TransposeB32(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                                        LocalTensor<T>& dstUbSize)
 {
     __ubuf__ T* srcUb = (__ubuf__ T*)srcUbSize.GetPhyAddr();
     __ubuf__ T* dstUb = (__ubuf__ T*)dstUbSize.GetPhyAddr();
-    __ubuf__ T* srcLocalList[16] = {
-        srcUb,
-        srcUb + params.src,
-        srcUb + params.src * 2,
-        srcUb + params.src * 3,
-        srcUb + params.src * 4,
-        srcUb + params.src * 5,
-        srcUb + params.src * 6,
-        srcUb + params.src * 7,
-        srcUb + params.src * 8,
-        srcUb + params.src * 9,
-        srcUb + params.src * 10,
-        srcUb + params.src * 11,
-        srcUb + params.src * 12,
-        srcUb + params.src * 13,
-        srcUb + params.src * 14,
-        srcUb + params.src * 15};
+    __ubuf__ T* srcLocalList[16] = {srcUb,
+                                    srcUb + params.src,
+                                    srcUb + params.src * 2,
+                                    srcUb + params.src * 3,
+                                    srcUb + params.src * 4,
+                                    srcUb + params.src * 5,
+                                    srcUb + params.src * 6,
+                                    srcUb + params.src * 7,
+                                    srcUb + params.src * 8,
+                                    srcUb + params.src * 9,
+                                    srcUb + params.src * 10,
+                                    srcUb + params.src * 11,
+                                    srcUb + params.src * 12,
+                                    srcUb + params.src * 13,
+                                    srcUb + params.src * 14,
+                                    srcUb + params.src * 15};
 
-    __ubuf__ T* dstLocalList[16] = {
-        dstUb,
-        dstUb + 8,
-        dstUb + params.dst,
-        dstUb + params.dst + 8,
-        dstUb + params.dst * 2,
-        dstUb + params.dst * 2 + 8,
-        dstUb + params.dst * 3,
-        dstUb + params.dst * 3 + 8,
-        dstUb + params.dst * 4,
-        dstUb + params.dst * 4 + 8,
-        dstUb + params.dst * 5,
-        dstUb + params.dst * 5 + 8,
-        dstUb + params.dst * 6,
-        dstUb + params.dst * 6 + 8,
-        dstUb + params.dst * 7,
-        dstUb + params.dst * 7 + 8};
+    __ubuf__ T* dstLocalList[16] = {dstUb,
+                                    dstUb + 8,
+                                    dstUb + params.dst,
+                                    dstUb + params.dst + 8,
+                                    dstUb + params.dst * 2,
+                                    dstUb + params.dst * 2 + 8,
+                                    dstUb + params.dst * 3,
+                                    dstUb + params.dst * 3 + 8,
+                                    dstUb + params.dst * 4,
+                                    dstUb + params.dst * 4 + 8,
+                                    dstUb + params.dst * 5,
+                                    dstUb + params.dst * 5 + 8,
+                                    dstUb + params.dst * 6,
+                                    dstUb + params.dst * 6 + 8,
+                                    dstUb + params.dst * 7,
+                                    dstUb + params.dst * 7 + 8};
     TransDataTo5HDParams transposeParams;
     transposeParams.dstHighHalf = 0;
     transposeParams.srcHighHalf = 0;
@@ -356,45 +349,43 @@ __aicore__ inline void ScatterListBase<T>::TransposeB32(
 }
 
 template <typename T>
-__aicore__ inline void ScatterListBase<T>::TransposeB32Back(
-    const TransposeParams& params, LocalTensor<T>& srcUbSize, LocalTensor<T>& dstUbSize)
+__aicore__ inline void ScatterListBase<T>::TransposeB32Back(const TransposeParams& params, LocalTensor<T>& srcUbSize,
+                                                            LocalTensor<T>& dstUbSize)
 {
     __ubuf__ T* srcUb = (__ubuf__ T*)srcUbSize.GetPhyAddr();
     __ubuf__ T* dstUb = (__ubuf__ T*)dstUbSize.GetPhyAddr();
-    __ubuf__ T* srcLocalList[16] = {
-        srcUb,
-        srcUb + params.src,
-        srcUb + params.src * 2,
-        srcUb + params.src * 3,
-        srcUb + params.src * 4,
-        srcUb + params.src * 5,
-        srcUb + params.src * 6,
-        srcUb + params.src * 7,
-        srcUb + 8,
-        srcUb + params.src + 8,
-        srcUb + params.src * 2 + 8,
-        srcUb + params.src * 3 + 8,
-        srcUb + params.src * 4 + 8,
-        srcUb + params.src * 5 + 8,
-        srcUb + params.src * 6 + 8,
-        srcUb + params.src * 7 + 8};
-    __ubuf__ T* dstLocalList[16] = {
-        dstUb,
-        dstUb + 64,
-        dstUb + params.dst,
-        dstUb + params.dst + 64,
-        dstUb + params.dst * 2,
-        dstUb + params.dst * 2 + 64,
-        dstUb + params.dst * 3,
-        dstUb + params.dst * 3 + 64,
-        dstUb + params.dst * 4,
-        dstUb + params.dst * 4 + 64,
-        dstUb + params.dst * 5,
-        dstUb + params.dst * 5 + 64,
-        dstUb + params.dst * 6,
-        dstUb + params.dst * 6 + 64,
-        dstUb + params.dst * 7,
-        dstUb + params.dst * 7 + 64};
+    __ubuf__ T* srcLocalList[16] = {srcUb,
+                                    srcUb + params.src,
+                                    srcUb + params.src * 2,
+                                    srcUb + params.src * 3,
+                                    srcUb + params.src * 4,
+                                    srcUb + params.src * 5,
+                                    srcUb + params.src * 6,
+                                    srcUb + params.src * 7,
+                                    srcUb + 8,
+                                    srcUb + params.src + 8,
+                                    srcUb + params.src * 2 + 8,
+                                    srcUb + params.src * 3 + 8,
+                                    srcUb + params.src * 4 + 8,
+                                    srcUb + params.src * 5 + 8,
+                                    srcUb + params.src * 6 + 8,
+                                    srcUb + params.src * 7 + 8};
+    __ubuf__ T* dstLocalList[16] = {dstUb,
+                                    dstUb + 64,
+                                    dstUb + params.dst,
+                                    dstUb + params.dst + 64,
+                                    dstUb + params.dst * 2,
+                                    dstUb + params.dst * 2 + 64,
+                                    dstUb + params.dst * 3,
+                                    dstUb + params.dst * 3 + 64,
+                                    dstUb + params.dst * 4,
+                                    dstUb + params.dst * 4 + 64,
+                                    dstUb + params.dst * 5,
+                                    dstUb + params.dst * 5 + 64,
+                                    dstUb + params.dst * 6,
+                                    dstUb + params.dst * 6 + 64,
+                                    dstUb + params.dst * 7,
+                                    dstUb + params.dst * 7 + 64};
     TransDataTo5HDParams transposeParams;
     transposeParams.dstHighHalf = 0;
     transposeParams.srcHighHalf = 0;

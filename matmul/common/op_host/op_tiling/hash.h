@@ -19,7 +19,6 @@
 namespace Ops {
 namespace NN {
 constexpr uint32_t kHashSeed = 271828;
-uint32_t MurmurHash(const void *src, uint32_t len, uint32_t seed = kHashSeed);
-}  // namespace NN
-}  // namespace Ops
-
+uint32_t MurmurHash(const void* src, uint32_t len, uint32_t seed = kHashSeed);
+} // namespace NN
+} // namespace Ops

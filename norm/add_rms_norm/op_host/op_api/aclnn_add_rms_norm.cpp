@@ -56,14 +56,14 @@ struct AddRmsNormOutputTensor {
     aclTensor* xOut;
 };
 
-static const std::initializer_list<op::DataType> EXTEND_ATB_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> EXTEND_ATB_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                                  op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> NORMAL_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                  op::DataType::DT_FLOAT16};
 
 static bool IsSocVersion310P()
 {
@@ -96,11 +96,11 @@ static bool CheckDtypeValid(AddRmsNormInputTensor& inputTensor, AddRmsNormOutput
     }
     if (mode == AddRmsNormACLNN::PRE_RMS_NORM_MODE || mode == AddRmsNormACLNN::POST_RMS_NORM_MODE) {
         DTYPE_SUPPORT_LIST = EXTEND_ATB_DTYPE_SUPPORT_LIST;
-        if(IsSocVersion310P()){
+        if (IsSocVersion310P()) {
             DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16};
         }
     }
-    
+
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, DTYPE_SUPPORT_LIST, return false);
@@ -140,7 +140,7 @@ static bool CheckShapeDim(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTe
 
     if (mode == AddRmsNormACLNN::ADD_RMS_NORM_MODE) {
         OP_CHECK_MAX_DIM(outputTensor.rstdOut, MAX_SUPPORT_DIMS_NUMS, return false);
-        
+
         OP_CHECK_MAX_DIM(outputTensor.xOut, MAX_SUPPORT_DIMS_NUMS, return false);
         OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.xOut, return false);
     }
@@ -148,8 +148,8 @@ static bool CheckShapeDim(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTe
         OP_CHECK_MAX_DIM(inputTensor.gamma, DIM_TWO, return false);
         OP_CHECK_MAX_DIM(outputTensor.xOut, MAX_SUPPORT_DIMS_NUMS, return false);
         OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.xOut, return false);
-    } 
-    if(mode == AddRmsNormACLNN::POST_RMS_NORM_MODE) {
+    }
+    if (mode == AddRmsNormACLNN::POST_RMS_NORM_MODE) {
         OP_CHECK_MAX_DIM(inputTensor.gamma, DIM_TWO, return false);
     }
     return true;
@@ -174,16 +174,14 @@ static aclnnStatus CheckParams(AddRmsNormInputTensor& inputTensor, AddRmsNormOut
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus ComputeAddRmsNorm(
-    AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTensor& outputTensor, double& epsilon,  int64_t& mode,
-    aclOpExecutor* executor)
+aclnnStatus ComputeAddRmsNorm(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTensor& outputTensor, double& epsilon,
+                              int64_t& mode, aclOpExecutor* executor)
 {
     aclTensor* yComputeOut = nullptr;
     aclTensor* rstdComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
 
-    auto AddRmsNormOuts =
-        l0op::AddRmsNorm(inputTensor.x1, inputTensor.x2, inputTensor.gamma, epsilon, mode, executor);
+    auto AddRmsNormOuts = l0op::AddRmsNorm(inputTensor.x1, inputTensor.x2, inputTensor.gamma, epsilon, mode, executor);
     yComputeOut = std::get<IDX_0>(AddRmsNormOuts);
     rstdComputeOut = std::get<IDX_1>(AddRmsNormOuts);
     xComputeOut = std::get<IDX_2>(AddRmsNormOuts);
@@ -209,10 +207,9 @@ aclnnStatus ComputeAddRmsNorm(
 }
 } // namespace AddRmsNormACLNN
 
-
-aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, double epsilon, aclTensor* yOut,
-    aclTensor* rstdOut, aclTensor* xOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAddRmsNormGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                            double epsilon, aclTensor* yOut, aclTensor* rstdOut, aclTensor* xOut,
+                                            uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGD("Enter aclnnAddRmsNormGetWorkspaceSize.");
     L2_DFX_PHASE_1(aclnnAddRmsNorm, DFX_IN(x1, x2, gamma, epsilon), DFX_OUT(yOut, rstdOut, xOut));

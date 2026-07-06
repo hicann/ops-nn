@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #include "op_api/op_util.h"
 
 #include "pool_tiling_templates_registry.h"
@@ -21,8 +20,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "util/math_util.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t UB_RESVERVED_SIZE = 1024;
 static constexpr uint64_t NO_PADDING_TILING_KEY = 300001;
 static constexpr uint64_t PADDING_TILING_KEY = 300002;
@@ -34,7 +32,7 @@ static constexpr int64_t DIGIT_FOUR = 4;
 static constexpr int64_t MAX_INPUT_ELEMENTS = std::numeric_limits<uint16_t>::max();
 static constexpr int64_t GATHER_SINGLE_ROW = 0;
 static constexpr int64_t GATHER_MULTI_ROW = 1;
-static constexpr int64_t GATHER_MULTI_DEPTH= 2;
+static constexpr int64_t GATHER_MULTI_DEPTH = 2;
 static constexpr int64_t GATHER_MULTI_BATCH = 3;
 static constexpr int64_t SPLIT_COLS = 1;
 static constexpr int64_t SPLIT_ROWS = 2;
@@ -59,22 +57,21 @@ static constexpr int64_t SPARSEW_THR = 128;
 
 void Pool3DNcdhwSmallKernelTiling::CalcDivsiorUbSize(bool isPad)
 {
-    bool needColInPad =
-                (inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + effectiveKsize_[W_DIM]
-                <= inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX];
-    bool needRowInPad =
-                (inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + effectiveKsize_[H_DIM]
-                <= inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX];
-    bool needDepthInPad =
-                (inputData_.outShape[D_DIM] - 1) * inputData_.stride[D_DIM] + effectiveKsize_[D_DIM]
-                <= inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX];
+    bool needColInPad = (inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + effectiveKsize_[W_DIM] <=
+                        inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX];
+    bool needRowInPad = (inputData_.outShape[H_DIM] - 1) * inputData_.stride[H_DIM] + effectiveKsize_[H_DIM] <=
+                        inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX];
+    bool needDepthInPad = (inputData_.outShape[D_DIM] - 1) * inputData_.stride[D_DIM] + effectiveKsize_[D_DIM] <=
+                          inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] +
+                              inputData_.pad[BACKEND_PAD_INDEX];
     allNeedInPad_ = needColInPad && needRowInPad && needDepthInPad;
     if (inputData_.poolMode != OP_TYPE_AVG_POOL_3D || (!isPad) || (allNeedInPad_ && inputData_.countIncludePad)) {
         divisorUbSize_ = 0;
-        return ;
+        return;
     }
     int64_t oneBatchOutNum = inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[D_DIM];
-    int64_t oneBatchDivisorBuffer = Ops::Base::CeilAlign(oneBatchOutNum * sizeof(float), static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_)));
+    int64_t oneBatchDivisorBuffer = Ops::Base::CeilAlign(oneBatchOutNum * sizeof(float),
+                                                         static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_)));
     if (oneBatchDivisorBuffer <= MIN_DIVISOR_UB) {
         divisorUbSize_ = MIN_DIVISOR_UB;
     } else if (oneBatchDivisorBuffer <= MAX_DIVISOR_UB) {
@@ -92,7 +89,7 @@ void Pool3DNcdhwSmallKernelTiling::InitializationVars()
     } else {
         channel_ = std::max(inputData_.channels, 1L);
     }
- 
+
     if (inputData_.dtypeSize == B8 || inputData_.dtypeSize == B16) {
         // b8, b16使用uint16索引
         maxGatherScatterElm_ = Ops::Base::GetVRegSize(context_) / B16;
@@ -108,15 +105,20 @@ void Pool3DNcdhwSmallKernelTiling::InitializationVars()
     paraNum_ = Ops::Base::GetVRegSize(context_) / inputData_.dtypeSize / channel_;
     CalcDivsiorUbSize(isPadding_);
     availableUb_ = static_cast<int64_t>(ubSize_ - divisorUbSize_ - UB_RESVERVED_SIZE) / inputData_.dtypeSize / channel_;
-    isSparseH_ = (!isPadding_) && (inputData_.stride[H_DIM] >= DIGIT_TWO * effectiveKsize_[H_DIM]) && inputData_.outShape[H_DIM] > 1;
-    isSparseD_ = (!isPadding_) && (inputData_.stride[D_DIM] >= DIGIT_TWO * effectiveKsize_[D_DIM]) && inputData_.outShape[D_DIM] > 1;
+    isSparseH_ = (!isPadding_) && (inputData_.stride[H_DIM] >= DIGIT_TWO * effectiveKsize_[H_DIM]) &&
+                 inputData_.outShape[H_DIM] > 1;
+    isSparseD_ = (!isPadding_) && (inputData_.stride[D_DIM] >= DIGIT_TWO * effectiveKsize_[D_DIM]) &&
+                 inputData_.outShape[D_DIM] > 1;
     if (inputData_.inputFormat == ge::Format::FORMAT_NCDHW) {
-        isSparseW_ = (!isPadding_) && (inputData_.stride[W_DIM] > effectiveKsize_[W_DIM] + SPARSEW_THR / inputData_.dtypeSize) && inputData_.outShape[W_DIM] > 1;
+        isSparseW_ = (!isPadding_) &&
+                     (inputData_.stride[W_DIM] > effectiveKsize_[W_DIM] + SPARSEW_THR / inputData_.dtypeSize) &&
+                     inputData_.outShape[W_DIM] > 1;
     } else {
-        isSparseW_ = (!isPadding_) && (inputData_.stride[W_DIM] >= DIGIT_TWO * effectiveKsize_[W_DIM]) && inputData_.outShape[W_DIM] > 1;
+        isSparseW_ = (!isPadding_) && (inputData_.stride[W_DIM] >= DIGIT_TWO * effectiveKsize_[W_DIM]) &&
+                     inputData_.outShape[W_DIM] > 1;
     }
 }
-void Pool3DNcdhwSmallKernelTiling::CalcKernelAndPadInfo() 
+void Pool3DNcdhwSmallKernelTiling::CalcKernelAndPadInfo()
 {
     isPadding_ = false;
     effectiveKsize_[D_DIM] = (inputData_.kernelSize[D_DIM] - 1) * inputData_.dilation[D_DIM] + 1;
@@ -124,11 +126,11 @@ void Pool3DNcdhwSmallKernelTiling::CalcKernelAndPadInfo()
     effectiveKsize_[W_DIM] = (inputData_.kernelSize[W_DIM] - 1) * inputData_.dilation[W_DIM] + 1;
     if (inputData_.pad[FRONT_PAD_INDEX] != 0 || inputData_.pad[BACKEND_PAD_INDEX] != 0 ||
         inputData_.pad[TOP_PAD_INDEX] != 0 || inputData_.pad[BOTTOM_PAD_INDEX] != 0 ||
-        inputData_.pad[LEFT_PAD_INDEX] != 0 || inputData_.pad[RIGHT_PAD_INDEX] != 0 ) {
+        inputData_.pad[LEFT_PAD_INDEX] != 0 || inputData_.pad[RIGHT_PAD_INDEX] != 0) {
         isPadding_ = true;
     }
     if (inputData_.ceilMode && isPadding_ == false) {
-        if (((inputData_.outShape[D_DIM] - 1) * inputData_.stride[D_DIM] + effectiveKsize_[D_DIM])>
+        if (((inputData_.outShape[D_DIM] - 1) * inputData_.stride[D_DIM] + effectiveKsize_[D_DIM]) >
                 inputData_.inputShape[D_DIM] ||
             ((inputData_.outShape[W_DIM] - 1) * inputData_.stride[W_DIM] + effectiveKsize_[W_DIM]) >
                 inputData_.inputShape[W_DIM] ||
@@ -144,27 +146,28 @@ bool Pool3DNcdhwSmallKernelTiling::IsCapable()
     CalcKernelAndPadInfo();
     int64_t gatherThres = Ops::Base::GetVRegSize(context_) / DIGIT_FOUR;
     // ndhwc 无pad场景小channel进入此模板优化性能
-    bool supportCase = inputData_.inputFormat == ge::Format::FORMAT_NCDHW 
-                    || (inputData_.inputFormat == ge::Format::FORMAT_NDHWC 
-                        && inputData_.dtypeSize * inputData_.channels < gatherThres
-                        && !isPadding_);
+    bool supportCase = inputData_.inputFormat == ge::Format::FORMAT_NCDHW ||
+                       (inputData_.inputFormat == ge::Format::FORMAT_NDHWC &&
+                        inputData_.dtypeSize * inputData_.channels < gatherThres && !isPadding_);
     if (!supportCase) {
         return false;
     }
-    if ((inputData_.dilation[D_DIM] >= MAX_DALITION && inputData_.stride[D_DIM] >= MAX_DALITION) || 
+    if ((inputData_.dilation[D_DIM] >= MAX_DALITION && inputData_.stride[D_DIM] >= MAX_DALITION) ||
         (inputData_.dilation[H_DIM] >= MAX_DALITION && inputData_.stride[H_DIM] >= MAX_DALITION)) {
         // dalition 较大的离散场景不处理
         return false;
     }
-    if (inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] < static_cast<int64_t>(coreNum_)) {
+    if (inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] <
+        static_cast<int64_t>(coreNum_)) {
         return false;
     }
     InitializationVars();
-    if (isPadding_ && ((inputData_.outShape[D_DIM] > 1 && inputData_.stride[D_DIM] >= MAX_STRIDE * effectiveKsize_[D_DIM]) 
-            || (inputData_.outShape[H_DIM] > 1 && inputData_.stride[H_DIM] >= MAX_STRIDE * effectiveKsize_[H_DIM]))) {
+    if (isPadding_ &&
+        ((inputData_.outShape[D_DIM] > 1 && inputData_.stride[D_DIM] >= MAX_STRIDE * effectiveKsize_[D_DIM]) ||
+         (inputData_.outShape[H_DIM] > 1 && inputData_.stride[H_DIM] >= MAX_STRIDE * effectiveKsize_[H_DIM]))) {
         // pad场景stride 较大的离散场景不处理
         return false;
-    }    
+    }
     if (IsBufferCapable()) {
         return true;
     }
@@ -204,8 +207,7 @@ int64_t Pool3DNcdhwSmallKernelTiling::CalcOutputSizeByInput(int64_t inputSize, u
     if (isSparse) {
         return std::min(inputSize / effectiveKsize_[dim], inputData_.outShape[dim]);
     }
-    return std::min((inputSize - effectiveKsize_[dim]) / inputData_.stride[dim] + 1,
-        inputData_.outShape[dim]);
+    return std::min((inputSize - effectiveKsize_[dim]) / inputData_.stride[dim] + 1, inputData_.outShape[dim]);
 }
 
 int64_t Pool3DNcdhwSmallKernelTiling::CalxMaxInputSize(int64_t inputSize, int64_t orgInputAndPad, bool isSparse)
@@ -216,10 +218,7 @@ int64_t Pool3DNcdhwSmallKernelTiling::CalxMaxInputSize(int64_t inputSize, int64_
     return std::max(orgInputAndPad, inputSize);
 }
 
-ge::graphStatus Pool3DNcdhwSmallKernelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Pool3DNcdhwSmallKernelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Pool3DNcdhwSmallKernelTiling::GetWorkspaceSize()
 {
@@ -231,12 +230,14 @@ ge::graphStatus Pool3DNcdhwSmallKernelTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-int64_t Pool3DNcdhwSmallKernelTiling::CalcBufferSize(int64_t inDepths, int64_t inRows, int64_t inCols, int64_t outDepths, int64_t outRows, int64_t outCols,
-                                                   bool isPadding, bool needCalcDivisorBuffer)
+int64_t Pool3DNcdhwSmallKernelTiling::CalcBufferSize(int64_t inDepths, int64_t inRows, int64_t inCols,
+                                                     int64_t outDepths, int64_t outRows, int64_t outCols,
+                                                     bool isPadding, bool needCalcDivisorBuffer)
 {
     int64_t tmpInDataBufferSize = inDepths * inRows * Ops::Base::CeilAlign(inCols, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outDepths * outRows * outCols, oneBlockNum_);
-    if (inputData_.poolMode == OP_TYPE_AVG_POOL_3D && inputData_.divisorOverride == 0 && inputData_.dtypeSize == DIGIT_TWO) {
+    if (inputData_.poolMode == OP_TYPE_AVG_POOL_3D && inputData_.divisorOverride == 0 &&
+        inputData_.dtypeSize == DIGIT_TWO) {
         tmpOutDataBufferSize *= DIGIT_TWO;
     }
     int64_t tmpTotalBufferSize = (tmpInDataBufferSize + tmpOutDataBufferSize) * DOUBLE_BUFFER;
@@ -245,30 +246,34 @@ int64_t Pool3DNcdhwSmallKernelTiling::CalcBufferSize(int64_t inDepths, int64_t i
         tmpTotalBufferSize += tmpInDataBufferSize;
     }
     if (needCalcDivisorBuffer) {
-        tmpTotalBufferSize = tmpTotalBufferSize + Ops::Base::CeilAlign(outDepths * outRows * outCols * sizeof(float), static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_))) / inputData_.dtypeSize;
+        tmpTotalBufferSize = tmpTotalBufferSize +
+                             Ops::Base::CeilAlign(outDepths * outRows * outCols * sizeof(float),
+                                                  static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_))) /
+                                 inputData_.dtypeSize;
     }
     return tmpTotalBufferSize;
 }
 
 bool Pool3DNcdhwSmallKernelTiling::IsBufferCapable()
 {
-    int64_t maxInDepths =
-        CalxMaxInputSize(CalcInputSizeByOutput(inputData_.outShape[D_DIM], D_DIM, isSparseD_),
-                 inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX], isSparseD_);
-    int64_t maxInCols =
-        CalxMaxInputSize(CalcInputSizeByOutput(inputData_.outShape[W_DIM], W_DIM, isSparseW_),
-                 inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_);
-    int64_t maxInRows =
-        CalxMaxInputSize(CalcInputSizeByOutput(inputData_.outShape[H_DIM], H_DIM, isSparseH_),
-                 inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX], isSparseH_);
+    int64_t maxInDepths = CalxMaxInputSize(
+        CalcInputSizeByOutput(inputData_.outShape[D_DIM], D_DIM, isSparseD_),
+        inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX], isSparseD_);
+    int64_t maxInCols = CalxMaxInputSize(
+        CalcInputSizeByOutput(inputData_.outShape[W_DIM], W_DIM, isSparseW_),
+        inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_);
+    int64_t maxInRows = CalxMaxInputSize(
+        CalcInputSizeByOutput(inputData_.outShape[H_DIM], H_DIM, isSparseH_),
+        inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX], isSparseH_);
     maxInCols = Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
-    int64_t oneBatchBuffer =
-        CalcBufferSize(maxInDepths, maxInRows, maxInCols, inputData_.outShape[D_DIM], inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+    int64_t oneBatchBuffer = CalcBufferSize(maxInDepths, maxInRows, maxInCols, inputData_.outShape[D_DIM],
+                                            inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_,
+                                            needCalcDivisorBuffer_);
     if (oneBatchBuffer == 0) {
         return false;
     }
-    if (oneBatchBuffer < availableUb_ &&
-        ((availableUb_ / oneBatchBuffer * inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM]) >= paraNum_)) {
+    if (oneBatchBuffer < availableUb_ && ((availableUb_ / oneBatchBuffer * inputData_.outShape[D_DIM] *
+                                           inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM]) >= paraNum_)) {
         return true;
     }
     int64_t minDepths = effectiveKsize_[D_DIM];
@@ -286,7 +291,7 @@ bool Pool3DNcdhwSmallKernelTiling::IsBufferCapable()
         minCols = CalcInputSizeByOutput(inputData_.outShape[W_DIM], W_DIM, isSparseW_);
         minOutRows = paraNum_ / inputData_.outShape[W_DIM];
         minRows = CalcInputSizeByOutput(minOutRows, H_DIM, isSparseH_);
-    } else if (inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] > paraNum_)  {
+    } else if (inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] > paraNum_) {
         minOutRows = inputData_.outShape[H_DIM];
         minOutCols = inputData_.outShape[W_DIM];
         minOutDepths = paraNum_ / (inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM]);
@@ -305,7 +310,8 @@ bool Pool3DNcdhwSmallKernelTiling::IsBufferCapable()
     }
     minCols = Ops::Base::CeilAlign(minCols, oneBlockNum_);
     // 输出使用compact模式， 无需col对齐
-    int64_t tmpTotalBufferSize = minBatch * CalcBufferSize(minDepths, minRows, minCols, minOutDepths, minOutRows, minOutCols, isPadding_, needCalcDivisorBuffer_);
+    int64_t tmpTotalBufferSize = minBatch * CalcBufferSize(minDepths, minRows, minCols, minOutDepths, minOutRows,
+                                                           minOutCols, isPadding_, needCalcDivisorBuffer_);
 
     return tmpTotalBufferSize <= availableUb_;
 }
@@ -317,7 +323,8 @@ void Pool3DNcdhwSmallKernelTiling::CalcSplitMaxRows(int64_t minInDepth, int64_t 
     while (outRowsLower < outRowsUpper) {
         int64_t outRowsMid = (outRowsLower + outRowsUpper + 1) / DIGIT_TWO;
         int64_t inRowsMid = CalcInputSizeByOutput(outRowsMid, H_DIM, isSparseH_);
-        int64_t midBuffer = CalcBufferSize(minInDepth, inRowsMid, maxInCols, 1, outRowsMid, inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+        int64_t midBuffer = CalcBufferSize(minInDepth, inRowsMid, maxInCols, 1, outRowsMid, inputData_.outShape[W_DIM],
+                                           isPadding_, needCalcDivisorBuffer_);
         if (midBuffer <= availableUb_) {
             outRowsLower = outRowsMid;
         } else {
@@ -356,7 +363,8 @@ void Pool3DNcdhwSmallKernelTiling::CalcSplitMaxCols(int64_t minInDepths, int64_t
     while (outColsLower < outColsUpper) {
         int64_t outColsMid = (outColsLower + outColsUpper + 1) / DIGIT_TWO;
         int64_t inColsMid = CalcInputSizeByOutput(outColsMid, W_DIM, isSparseW_);
-        int64_t midBuffer = CalcBufferSize(minInDepths, minInRows, inColsMid, 1, 1, outColsMid, isPadding_, needCalcDivisorBuffer_);
+        int64_t midBuffer = CalcBufferSize(minInDepths, minInRows, inColsMid, 1, 1, outColsMid, isPadding_,
+                                           needCalcDivisorBuffer_);
         if (midBuffer <= availableUb_) {
             outColsLower = outColsMid;
         } else {
@@ -396,7 +404,8 @@ void Pool3DNcdhwSmallKernelTiling::CalcSplitMaxDepth(int64_t maxInRows, int64_t 
     while (outDepthsLower < outDepthsUpper) {
         int64_t outDepthsMid = (outDepthsLower + outDepthsUpper + 1) / DIGIT_TWO;
         int64_t inDepthsMid = CalcInputSizeByOutput(outDepthsMid, D_DIM, isSparseD_);
-        int64_t midBuffer = CalcBufferSize(inDepthsMid, maxInRows, maxInCols, outDepthsMid, inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+        int64_t midBuffer = CalcBufferSize(inDepthsMid, maxInRows, maxInCols, outDepthsMid, inputData_.outShape[H_DIM],
+                                           inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
         if (midBuffer <= availableUb_) {
             outDepthsLower = outDepthsMid;
         } else {
@@ -451,26 +460,30 @@ void Pool3DNcdhwSmallKernelTiling::CalcSplitMaxBatch(int64_t oneBacthBuffer, int
 
 void Pool3DNcdhwSmallKernelTiling::DoUBTilingSingle()
 {
-    int64_t maxInCols =
-        CalxMaxInputSize(CalcInputSizeByOutput(inputData_.outShape[W_DIM], W_DIM, isSparseW_),
-                 inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_);
-    int64_t maxInRows =
-        CalxMaxInputSize(CalcInputSizeByOutput(inputData_.outShape[H_DIM], H_DIM, isSparseH_),
-                 inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX], isSparseH_);
+    int64_t maxInCols = CalxMaxInputSize(
+        CalcInputSizeByOutput(inputData_.outShape[W_DIM], W_DIM, isSparseW_),
+        inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_);
+    int64_t maxInRows = CalxMaxInputSize(
+        CalcInputSizeByOutput(inputData_.outShape[H_DIM], H_DIM, isSparseH_),
+        inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX], isSparseH_);
 
-    int64_t maxInDepths =
-        CalxMaxInputSize(CalcInputSizeByOutput(inputData_.outShape[D_DIM], D_DIM, isSparseD_),
-                inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX], isSparseD_);
-    
+    int64_t maxInDepths = CalxMaxInputSize(
+        CalcInputSizeByOutput(inputData_.outShape[D_DIM], D_DIM, isSparseD_),
+        inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX], isSparseD_);
+
     maxInCols = Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
     int64_t minInRows = effectiveKsize_[H_DIM];
     int64_t minInDepths = effectiveKsize_[D_DIM];
-    int64_t oneBacthBuffer =
-        CalcBufferSize(maxInDepths, maxInRows, maxInCols, inputData_.outShape[D_DIM], inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
-    int64_t onePlaneBuffer = CalcBufferSize(minInDepths, maxInRows, maxInCols, 1, inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
-    int64_t oneRowsBuffer = CalcBufferSize(minInDepths, minInRows, maxInCols, 1, 1, inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+    int64_t oneBacthBuffer = CalcBufferSize(maxInDepths, maxInRows, maxInCols, inputData_.outShape[D_DIM],
+                                            inputData_.outShape[H_DIM], inputData_.outShape[W_DIM], isPadding_,
+                                            needCalcDivisorBuffer_);
+    int64_t onePlaneBuffer = CalcBufferSize(minInDepths, maxInRows, maxInCols, 1, inputData_.outShape[H_DIM],
+                                            inputData_.outShape[W_DIM], isPadding_, needCalcDivisorBuffer_);
+    int64_t oneRowsBuffer = CalcBufferSize(minInDepths, minInRows, maxInCols, 1, 1, inputData_.outShape[W_DIM],
+                                           isPadding_, needCalcDivisorBuffer_);
     if (oneBacthBuffer <= 0 || oneRowsBuffer <= 0 || onePlaneBuffer <= 0 ||
-        inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] <= 0) {
+        inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] <=
+            0) {
         nLoop_ = 0;
         dLoop_ = 0;
         hLoop_ = 0;
@@ -489,7 +502,7 @@ void Pool3DNcdhwSmallKernelTiling::DoUBTilingSingle()
     if (onePlaneBuffer <= availableUb_ && onePlaneInputSize <= MAX_INPUT_ELEMENTS && enableSplitD_) {
         CalcSplitMaxDepth(maxInRows, maxInCols);
         return;
-    }    
+    }
     // w全载
     int64_t oneRowsInputSize = minInDepths * minInRows * Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
     if (oneRowsBuffer <= availableUb_ && oneRowsInputSize <= MAX_INPUT_ELEMENTS) {
@@ -500,7 +513,8 @@ void Pool3DNcdhwSmallKernelTiling::DoUBTilingSingle()
     CalcSplitMaxCols(minInDepths, minInRows);
 }
 
-void Pool3DNcdhwSmallKernelTiling::CalcEnableSplit() {
+void Pool3DNcdhwSmallKernelTiling::CalcEnableSplit()
+{
     if (isSparseW_ && isSparseD_) {
         enableSplitBatch_ = false;
     }
@@ -525,40 +539,50 @@ void Pool3DNcdhwSmallKernelTiling::DoUBTiling()
 void Pool3DNcdhwSmallKernelTiling::DoBlockTiling()
 {
     int64_t totalLoop = nLoop_ * dLoop_ * hLoop_ * wLoop_;
-    blockFactor_ = totalLoop / static_cast<int64_t>(coreNum_) ;
-    blockTail_ = totalLoop - blockFactor_ * static_cast<int64_t>(coreNum_) ;
-    usedCoreNum_ = blockFactor_ == 0 ? blockTail_ : static_cast<int64_t>(coreNum_) ;
+    blockFactor_ = totalLoop / static_cast<int64_t>(coreNum_);
+    blockTail_ = totalLoop - blockFactor_ * static_cast<int64_t>(coreNum_);
+    usedCoreNum_ = blockFactor_ == 0 ? blockTail_ : static_cast<int64_t>(coreNum_);
 
     int64_t inCols = CalcInputSizeByOutput(outUbFactorW_, W_DIM, isSparseW_);
     int64_t inRows = CalcInputSizeByOutput(outUbFactorH_, H_DIM, isSparseH_);
     int64_t inDepths = CalcInputSizeByOutput(outUbFactorD_, D_DIM, isSparseD_);
 
     if (splitMode_ == SPLIT_BATCHS) {
-        inDepths = 
-            CalxMaxInputSize(inDepths, inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX], isSparseD_);
-        inRows =
-            CalxMaxInputSize(inRows, inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX], isSparseH_);
-        inCols =
-            CalxMaxInputSize(inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_);      
+        inDepths = CalxMaxInputSize(
+            inDepths,
+            inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX],
+            isSparseD_);
+        inRows = CalxMaxInputSize(
+            inRows, inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX],
+            isSparseH_);
+        inCols = CalxMaxInputSize(
+            inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX],
+            isSparseW_);
     }
     if (splitMode_ == SPLIT_DEPTHS) {
-        inRows =
-            CalxMaxInputSize(inRows, inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX], isSparseH_);
-        inCols =
-            CalxMaxInputSize(inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_);             
+        inRows = CalxMaxInputSize(
+            inRows, inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX],
+            isSparseH_);
+        inCols = CalxMaxInputSize(
+            inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX],
+            isSparseW_);
     }
     if (splitMode_ == SPLIT_ROWS) {
-        inCols =
-            CalxMaxInputSize(inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX], isSparseW_); 
+        inCols = CalxMaxInputSize(
+            inCols, inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX],
+            isSparseW_);
     }
     inUbSize_ = ubFactorN_ * inDepths * inRows * Ops::Base::CeilAlign(inCols, oneBlockNum_) * channel_;
-    outUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_, oneBlockNum_) * channel_;
-    if (inputData_.poolMode == OP_TYPE_AVG_POOL_3D && inputData_.divisorOverride == 0 && inputData_.dtypeSize == DIGIT_TWO) {
+    outUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_, oneBlockNum_) *
+                 channel_;
+    if (inputData_.poolMode == OP_TYPE_AVG_POOL_3D && inputData_.divisorOverride == 0 &&
+        inputData_.dtypeSize == DIGIT_TWO) {
         // div场景 结果使用fp32缓存
         outUbSize_ *= DIGIT_TWO;
     }
     if (needCalcDivisorBuffer_) {
-        divisorUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorD_ * outUbFactorH_ * sizeof(float), static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_)));
+        divisorUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorD_ * outUbFactorH_ * sizeof(float),
+                                              static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_)));
     }
 }
 
@@ -571,20 +595,23 @@ void Pool3DNcdhwSmallKernelTiling::CalcSparseMode()
     if (splitMode_ == SPLIT_ROWS) {
         isSparseD_ = false;
     }
-    sparseMode_ = (static_cast<int32_t>(isSparseD_) << DIGIT_TWO) + (static_cast<int32_t>(isSparseH_) << 1) + static_cast<int32_t>(isSparseW_);
+    sparseMode_ = (static_cast<int32_t>(isSparseD_) << DIGIT_TWO) + (static_cast<int32_t>(isSparseH_) << 1) +
+                  static_cast<int32_t>(isSparseW_);
 }
 
 void Pool3DNcdhwSmallKernelTiling::CalcGatherMode()
 {
-    if (ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_ >=  DIGIT_TWO * maxGatherScatterElm_) {
+    if (ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_ >= DIGIT_TWO * maxGatherScatterElm_) {
         maxGatherScatterElm_ *= DIGIT_TWO;
         useTraiTwo_ = 1;
     } else {
         useTraiTwo_ = 0;
     }
-    if (inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <= maxGatherScatterElm_ && splitMode_ == SPLIT_BATCHS) {
+    if (inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <= maxGatherScatterElm_ &&
+        splitMode_ == SPLIT_BATCHS) {
         gatherMode_ = GATHER_MULTI_BATCH;
-    } else if (inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <= maxGatherScatterElm_ && (splitMode_ == SPLIT_BATCHS || splitMode_ == SPLIT_DEPTHS)) {
+    } else if (inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <= maxGatherScatterElm_ &&
+               (splitMode_ == SPLIT_BATCHS || splitMode_ == SPLIT_DEPTHS)) {
         gatherMode_ = GATHER_MULTI_DEPTH;
     } else if (inputData_.outShape[W_DIM] <= maxGatherScatterElm_ && (splitMode_ != SPLIT_COLS)) {
         gatherMode_ = GATHER_MULTI_ROW;
@@ -612,16 +639,20 @@ void Pool3DNcdhwSmallKernelTiling::CalcDivisorMode()
         divisorMode_ = NO_NEED_CALC_DIVISOR;
         realCalcDivisor_ = 0;
         return;
-    } 
+    }
     int64_t maxInt32 = std::numeric_limits<int32_t>::max();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
-    bool colNeedInt64 =
-            inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] + inputData_.pad[RIGHT_PAD_INDEX] > maxInt32;
-    bool rowNeedInt64 =
-             inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] + inputData_.pad[BOTTOM_PAD_INDEX] > maxInt32;
-    bool depthNeedInt64 =
-            inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] + inputData_.pad[BACKEND_PAD_INDEX] > maxInt32;
-    int64_t oneBatchOutElementNum = inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM];
+    bool colNeedInt64 = inputData_.inputShape[W_DIM] + inputData_.pad[LEFT_PAD_INDEX] +
+                            inputData_.pad[RIGHT_PAD_INDEX] >
+                        maxInt32;
+    bool rowNeedInt64 = inputData_.inputShape[H_DIM] + inputData_.pad[TOP_PAD_INDEX] +
+                            inputData_.pad[BOTTOM_PAD_INDEX] >
+                        maxInt32;
+    bool depthNeedInt64 = inputData_.inputShape[D_DIM] + inputData_.pad[FRONT_PAD_INDEX] +
+                              inputData_.pad[BACKEND_PAD_INDEX] >
+                          maxInt32;
+    int64_t oneBatchOutElementNum = inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] *
+                                    inputData_.outShape[W_DIM];
     bool outNeedInt64 = oneBatchOutElementNum > maxInt32;
     int32_t needInt64 = static_cast<int32_t>(colNeedInt64 || rowNeedInt64 || depthNeedInt64 || outNeedInt64);
     int32_t includePad = inputData_.countIncludePad;
@@ -631,7 +662,8 @@ void Pool3DNcdhwSmallKernelTiling::CalcDivisorMode()
     divisorMode_ = (needInt64 << DIGIT_TWO) + (includePad << 1) + needMultiBatch;
     int64_t oncCoreMaxLoop = blockTail_ == 0 ? blockFactor_ : (blockFactor_ + 1);
     int64_t oneCoreMaxOutNum = oncCoreMaxLoop * ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_;
-    if (needCalcDivisorBuffer_ || (oneCoreMaxOutNum < oneBatchOutElementNum && oneBatchOutElementNum > oneRegDivElements)) {
+    if (needCalcDivisorBuffer_ ||
+        (oneCoreMaxOutNum < oneBatchOutElementNum && oneBatchOutElementNum > oneRegDivElements)) {
         realCalcDivisor_ = 1;
     } else {
         realCalcDivisor_ = 0;
@@ -687,7 +719,7 @@ void Pool3DNcdhwSmallKernelTiling::SetTilingData()
 
 ge::graphStatus Pool3DNcdhwSmallKernelTiling::DoOpTiling()
 {
-    CalcEnableSplit(); 
+    CalcEnableSplit();
     DoUBTiling();
     DoBlockTiling();
     CalcSparseMode();
@@ -782,4 +814,4 @@ ge::graphStatus MaxPool3DNcdhwSmallKernelTiling::GetShapeAttrsInfo()
 }
 REGISTER_OPS_POOL_TILING_TEMPLATE(MaxPool3D, MaxPool3DNcdhwSmallKernelTiling, 10);
 
-}  // namespace optiling
+} // namespace optiling

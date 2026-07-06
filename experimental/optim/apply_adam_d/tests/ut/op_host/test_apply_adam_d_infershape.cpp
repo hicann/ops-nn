@@ -40,15 +40,9 @@ static const std::string OP_NAME = "ApplyAdamD";
 
 class ApplyAdamDInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamDInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamDInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamDInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamDInfershape TearDown" << std::endl; }
 };
 
 // 构造 10 输入 + 3 输出的 InferShape 上下文。
@@ -58,22 +52,22 @@ static InfershapeContextPara MakeInfershapePara(const gert::StorageShape& tensor
 {
     gert::StorageShape scalarShape({1}, {1});
     std::vector<InfershapeContextPara::TensorDescription> inputs;
-    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND);  // 0 var
-    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND);  // 1 m
-    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND);  // 2 v
-    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND);  // 3 beta1_power
-    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND);  // 4 beta2_power
-    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND);  // 5 lr
-    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND);  // 6 beta1
-    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND);  // 7 beta2
-    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND);  // 8 epsilon
-    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND);  // 9 grad
+    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND); // 0 var
+    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND); // 1 m
+    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND); // 2 v
+    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND); // 3 beta1_power
+    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND); // 4 beta2_power
+    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND); // 5 lr
+    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND); // 6 beta1
+    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND); // 7 beta2
+    inputs.emplace_back(scalarShape, dtype, ge::FORMAT_ND); // 8 epsilon
+    inputs.emplace_back(tensorShape, dtype, ge::FORMAT_ND); // 9 grad
 
     gert::StorageShape outShape({}, {});
     std::vector<InfershapeContextPara::TensorDescription> outputs;
-    outputs.emplace_back(outShape, dtype, ge::FORMAT_ND);  // var
-    outputs.emplace_back(outShape, dtype, ge::FORMAT_ND);  // m
-    outputs.emplace_back(outShape, dtype, ge::FORMAT_ND);  // v
+    outputs.emplace_back(outShape, dtype, ge::FORMAT_ND); // var
+    outputs.emplace_back(outShape, dtype, ge::FORMAT_ND); // m
+    outputs.emplace_back(outShape, dtype, ge::FORMAT_ND); // v
 
     return InfershapeContextPara(OP_NAME, inputs, outputs);
 }
@@ -86,16 +80,16 @@ static InfershapeContextPara MakeInfershapeParaCustom(const gert::StorageShape& 
 {
     gert::StorageShape scalarShape({1}, {1});
     std::vector<InfershapeContextPara::TensorDescription> inputs;
-    inputs.emplace_back(varShape,    ge::DT_FLOAT, ge::FORMAT_ND);  // 0 var
-    inputs.emplace_back(mShape,      ge::DT_FLOAT, ge::FORMAT_ND);  // 1 m
-    inputs.emplace_back(vShape,      ge::DT_FLOAT, ge::FORMAT_ND);  // 2 v
-    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND);  // 3 beta1_power
-    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND);  // 4 beta2_power
-    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND);  // 5 lr
-    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND);  // 6 beta1
-    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND);  // 7 beta2
-    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND);  // 8 epsilon
-    inputs.emplace_back(gradShape,   ge::DT_FLOAT, ge::FORMAT_ND);  // 9 grad
+    inputs.emplace_back(varShape, ge::DT_FLOAT, ge::FORMAT_ND);    // 0 var
+    inputs.emplace_back(mShape, ge::DT_FLOAT, ge::FORMAT_ND);      // 1 m
+    inputs.emplace_back(vShape, ge::DT_FLOAT, ge::FORMAT_ND);      // 2 v
+    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND); // 3 beta1_power
+    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND); // 4 beta2_power
+    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND); // 5 lr
+    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND); // 6 beta1
+    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND); // 7 beta2
+    inputs.emplace_back(scalarShape, ge::DT_FLOAT, ge::FORMAT_ND); // 8 epsilon
+    inputs.emplace_back(gradShape, ge::DT_FLOAT, ge::FORMAT_ND);   // 9 grad
 
     gert::StorageShape outShape({}, {});
     std::vector<InfershapeContextPara::TensorDescription> outputs;
@@ -147,8 +141,7 @@ TEST_F(ApplyAdamDInfershape, S005_Rank5_Fp16_OutputsEqualInput)
 {
     gert::StorageShape shape({4, 5, 6, 7, 8}, {4, 5, 6, 7, 8});
     auto para = MakeInfershapePara(shape, ge::DT_FLOAT16);
-    std::vector<std::vector<int64_t>> expect = {
-        {4, 5, 6, 7, 8}, {4, 5, 6, 7, 8}, {4, 5, 6, 7, 8}};
+    std::vector<std::vector<int64_t>> expect = {{4, 5, 6, 7, 8}, {4, 5, 6, 7, 8}, {4, 5, 6, 7, 8}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
@@ -165,12 +158,12 @@ TEST_F(ApplyAdamDInfershape, S006_DynamicShape)
 //   覆盖 CopyShapeInput2Output 三次独立调用（OUT_VAR<-var, OUT_M<-m, OUT_V<-v）
 TEST_F(ApplyAdamDInfershape, S007_PerInput_IndependentCopy)
 {
-    gert::StorageShape varShape ({2, 3}, {2, 3});
-    gert::StorageShape mShape   ({4}, {4});
-    gert::StorageShape vShape   ({5, 6}, {5, 6});
+    gert::StorageShape varShape({2, 3}, {2, 3});
+    gert::StorageShape mShape({4}, {4});
+    gert::StorageShape vShape({5, 6}, {5, 6});
     auto para = MakeInfershapeParaCustom(varShape, mShape, vShape, varShape);
     std::vector<std::vector<int64_t>> expect = {{2, 3}, {4}, {5, 6}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-}  // namespace ApplyAdamDUT
+} // namespace ApplyAdamDUT

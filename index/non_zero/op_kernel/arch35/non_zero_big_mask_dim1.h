@@ -28,8 +28,8 @@ class NonZeroBigMaskDim1 : public NonZeroBigMask<T1, T2> {
 public:
     __aicore__ inline NonZeroBigMaskDim1(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                const NonZeroTilingData* tilingData);
     template <typename CLS_NAME, void (CLS_NAME::*ComputeOutputPtr)(LocalTensor<int32_t>& yUb)>
     __aicore__ inline void Process(CLS_NAME* objPtr);
     __aicore__ inline void ComputeOutput(LocalTensor<int32_t>& yUb);
@@ -42,8 +42,8 @@ __aicore__ inline void NonZeroBigMaskDim1<T1, T2>::ComputeOutput(LocalTensor<int
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMaskDim1<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData)
+__aicore__ inline void NonZeroBigMaskDim1<T1, T2>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                                        const NonZeroTilingData* tilingData)
 {
     this->InitBase(x, y, outShape, workspace, tilingData);
 }

@@ -59,8 +59,7 @@ struct TilingParam {
     bool isRegbase = false;
 };
 
-enum class GeGluV2TilingKey : int64_t
-{
+enum class GeGluV2TilingKey : int64_t {
     TILINGKEY_101 = 101,
     TILINGKEY_102 = 102,
     TILINGKEY_103 = 103,

@@ -127,7 +127,11 @@ public:
             .AutoContiguous();
 
         // output
-        this->Output("dx").ParamType(REQUIRED).DataType(dyDataType_95).Format(dyFormat_95).UnknownShapeFormat(dyFormat_95);
+        this->Output("dx")
+            .ParamType(REQUIRED)
+            .DataType(dyDataType_95)
+            .Format(dyFormat_95)
+            .UnknownShapeFormat(dyFormat_95);
         this->Output("dweight")
             .ParamType(REQUIRED)
             .DataType(weightDataType_95)

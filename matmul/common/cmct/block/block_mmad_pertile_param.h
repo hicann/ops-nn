@@ -102,7 +102,7 @@ __aicore__ inline void MatMulCommonParam<aTrans, bTrans>::UpdateProblemParams(co
 {
     problemShape_ = problemShape;
     kA1Tail_ = Get<MNK_K>(problemShape_) % kA1_ == 0 ? kA1_ : Get<MNK_K>(problemShape_) % kA1_;
-    kB1Tail_ = Get<MNK_K>(problemShape_) % kB1_ == 0 ? kB1_ : Get<MNK_K>(problemShape_) % kB1_; 
+    kB1Tail_ = Get<MNK_K>(problemShape_) % kB1_ == 0 ? kB1_ : Get<MNK_K>(problemShape_) % kB1_;
 }
 
 template <bool aTrans, bool bTrans>
@@ -208,13 +208,12 @@ __aicore__ inline uint32_t MatMulCommonParam<aTrans, bTrans>::CalcBL1Offset(uint
 }
 
 template <bool aTrans, bool bTrans>
-__aicore__ inline void
-MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsA(AscendC::LoadData2DParamsV2& loadData2dParams, uint64_t kOffset,
-                                                     bool isTailAL1)
+__aicore__ inline void MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsA(
+    AscendC::LoadData2DParamsV2& loadData2dParams, uint64_t kOffset, bool isTailAL1)
 {
     uint64_t currM = AscendC::Std::min(Get<MNK_M>(actualSingleShape_), Get<MNK_M>(l0Shape_));
-    uint64_t currK =
-        AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset, static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
+    uint64_t currK = AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset,
+                                       static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
     if constexpr (aTrans) {
         // For b8 input in transpose scenarios: use two 16x32 fractals
         loadData2dParams.mStep = Align(Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(QBMM_k0_FLOAT16)), 2UL);
@@ -225,25 +224,22 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsA(AscendC::LoadData2DParamsV2
     } else {
         loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(QBMM_k0_FLOAT16));
         loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
-        loadData2dParams.srcStride =
-            Cmct::Gemm::CeilDiv(currM * stepM_, static_cast<uint64_t>(QBMM_k0_FLOAT16));
+        loadData2dParams.srcStride = Cmct::Gemm::CeilDiv(currM * stepM_, static_cast<uint64_t>(QBMM_k0_FLOAT16));
         loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currM, static_cast<uint64_t>(QBMM_k0_FLOAT16));
     }
 }
 
 template <bool aTrans, bool bTrans>
-__aicore__ inline void
-MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsB(AscendC::LoadData2DParamsV2& loadData2dParams, uint64_t kOffset,
-                                                     bool isTailBL1)
+__aicore__ inline void MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsB(
+    AscendC::LoadData2DParamsV2& loadData2dParams, uint64_t kOffset, bool isTailBL1)
 {
     uint64_t currN = AscendC::Std::min(Get<MNK_N>(actualSingleShape_), Get<MNK_N>(l0Shape_));
-    uint64_t currK =
-        AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset, static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
+    uint64_t currK = AscendC::Std::min(Get<MNK_K>(problemShape_) - kOffset,
+                                       static_cast<uint64_t>(Get<MNK_K>(l0Shape_)));
     if constexpr (bTrans) {
         loadData2dParams.mStep = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(QBMM_k0_FLOAT16));
         loadData2dParams.kStep = Cmct::Gemm::CeilDiv(currK, static_cast<uint64_t>(K0_B8));
-        loadData2dParams.srcStride =
-            Cmct::Gemm::CeilDiv(currN * stepN_, static_cast<uint64_t>(QBMM_k0_FLOAT16));
+        loadData2dParams.srcStride = Cmct::Gemm::CeilDiv(currN * stepN_, static_cast<uint64_t>(QBMM_k0_FLOAT16));
         loadData2dParams.dstStride = Cmct::Gemm::CeilDiv(currN, static_cast<uint64_t>(QBMM_k0_FLOAT16));
     } else {
         loadData2dParams.ifTranspose = true;
@@ -257,4 +253,3 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsB(AscendC::LoadData2DParamsV2
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

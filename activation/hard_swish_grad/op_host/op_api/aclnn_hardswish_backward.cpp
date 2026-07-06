@@ -46,8 +46,8 @@ extern "C" {
  */
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -85,9 +85,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardswishBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnHardswishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -131,8 +130,8 @@ aclnnStatus aclnnHardswishBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardswishBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnHardswishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnHardswishBackward);
     // 固定写法，调用框架能力，完成计算

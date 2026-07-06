@@ -41,7 +41,7 @@ const std::unordered_map<std::string, FQMMFusedOpType> FUSED_UNARY_OP_TYPE_STR_T
 };
 
 bool FusedQuantMatMulUnaryTiling::CheckUseBasicTiling()
-{   
+{
     return true; // 默认走qbmmv3 basic tiling
 }
 
@@ -106,7 +106,7 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeAttrs()
     OP_TILING_CHECK(inputParams_.groupSize != 0ULL,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "FusedQuantMatMul only support groupSize equal 0."),
                     return false);
-    
+
     QuantBatchMatmulV3Trans trans = QuantBatchMatmulV3Trans::NO_TRANS;
     SetTransAttr(trans);
 
@@ -118,7 +118,9 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeAttrs()
     auto it = FUSED_UNARY_OP_TYPE_STR_TO_ENUM_MAP.find(fusedOpTypeStr);
     OP_TILING_CHECK(
         it == FUSED_UNARY_OP_TYPE_STR_TO_ENUM_MAP.end(),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "current fused_op_type:[%s] is not supported, only supports gelu_tanh or gelu_erf", fusedOpType),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "current fused_op_type:[%s] is not supported, only supports gelu_tanh or gelu_erf",
+                              fusedOpType),
         return false);
     fusedOpType_ = static_cast<uint64_t>(it->second);
 
@@ -141,7 +143,7 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeInputs()
     inputParams_.batchBias = inputParams_.hasBias ? GetBatchSize(biasShape->GetStorageShape()) : 1;
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
-    if (!CheckShapeInRangeForMandtoryInputs(x1ShapeLen, x2ShapeLen)){
+    if (!CheckShapeInRangeForMandtoryInputs(x1ShapeLen, x2ShapeLen)) {
         return false;
     }
     auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
@@ -153,23 +155,24 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeInputs()
     inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
-    const std::vector<gert::Shape *> mandtoryShape = {&x1Shape, &x2Shape};
+    const std::vector<gert::Shape*> mandtoryShape = {&x1Shape, &x2Shape};
 
     inputParams_.batchA = GetBatchSize(x1Shape);
     inputParams_.batchB = GetBatchSize(x2Shape);
     AnalyzeBatchInfo(context_->GetInputShape(0)->GetOriginShape(), context_->GetInputShape(1)->GetOriginShape());
     OP_TILING_CHECK(!InferOutBatchDim(x1Shape, x2Shape),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Batch dimension can not be broadcasted."), return false);
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Batch dimension can not be broadcasted."),
+                    return false);
     if (scaleShape != nullptr && !SetQuantMode(scaleShape->GetStorageShape(), pertokenShape)) {
         return false;
     }
     if (!CheckShape(mandtoryShape, biasShape, pertokenShape, scaleShape, dimValueOfMKN)) {
         return false;
     }
-    OP_TILING_CHECK(!CheckOutputShapeAvailable(),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Multiple of output shape dims should be in boundary of INT64_MAX"),
-                                          return false);
+    OP_TILING_CHECK(
+        !CheckOutputShapeAvailable(),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Multiple of output shape dims should be in boundary of INT64_MAX"),
+        return false);
 
     auto isPerTensorStr = inputParams_.isPerTensor ? "true" : "false";
     auto isPertokenStr = inputParams_.isPertoken ? "true" : "false";
@@ -181,50 +184,65 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeInputs()
 bool FusedQuantMatMulUnaryTiling::CheckDtype() const
 {
     OP_TILING_CHECK(
-        !((inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8) || 
-            (inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4)),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1 and x2 of FusedQuantMatmul dtype only support Int4 or Int8, that is only \
-            supports A8W8 or A4W4 scenario now, actual dtype is x1:%s, x2:%s.", DType2Str(inputParams_.aDtype).c_str(),
-            DType2Str(inputParams_.bDtype).c_str()),
+        !((inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8) ||
+          (inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4)),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "x1 and x2 of FusedQuantMatmul dtype only support Int4 or Int8, that is only \
+            supports A8W8 or A4W4 scenario now, actual dtype is x1:%s, x2:%s.",
+                              DType2Str(inputParams_.aDtype).c_str(), DType2Str(inputParams_.bDtype).c_str()),
         return false);
-    
-    OP_TILING_CHECK(
-        !inputParams_.perTokenScaleDtype == ge::DT_FLOAT,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1_scale of FusedQuantMatmul dtype only support Float32 for x1 perToken quant now, actual x1_scale dtype is %s.",
-            DType2Str(inputParams_.perTokenScaleDtype).c_str()),
-        return false);
+
+    OP_TILING_CHECK(!inputParams_.perTokenScaleDtype == ge::DT_FLOAT,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "x1_scale of FusedQuantMatmul dtype only support Float32 for x1 perToken "
+                                          "quant now, actual x1_scale dtype is %s.",
+                                          DType2Str(inputParams_.perTokenScaleDtype).c_str()),
+                    return false);
 
     OP_TILING_CHECK(
         !(inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "y of FusedQuantMatmul dtype only support Float16 or BFloat16, actual y dtype is %s.",
-            DType2Str(inputParams_.cDtype).c_str()),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "y of FusedQuantMatmul dtype only support Float16 or BFloat16, actual y dtype is %s.",
+                              DType2Str(inputParams_.cDtype).c_str()),
         return false);
-    
+
     // 输出是fp16时，x2scale必须是fp32，bias必须是int32/fp16/fp32
     OP_TILING_CHECK(
-            inputParams_.cDtype == ge::DT_FLOAT16 && inputParams_.scaleDtype != ge::DT_FLOAT,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When y dtype is Float16 in FusedQuantMatmul, x2_scale dtype should be Float32, actual dtype is %s.",
-                DType2Str(inputParams_.scaleDtype).c_str()),
-            return false);
+        inputParams_.cDtype == ge::DT_FLOAT16 && inputParams_.scaleDtype != ge::DT_FLOAT,
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName,
+            "When y dtype is Float16 in FusedQuantMatmul, x2_scale dtype should be Float32, actual dtype is %s.",
+            DType2Str(inputParams_.scaleDtype).c_str()),
+        return false);
     OP_TILING_CHECK(
-            inputParams_.cDtype == ge::DT_FLOAT16 && context_->GetOptionalInputDesc(GetBiasIdx()) != nullptr &&
-            (inputParams_.biasDtype != ge::DT_INT32 && inputParams_.biasDtype != ge::DT_FLOAT16 && inputParams_.biasDtype != ge::DT_FLOAT),
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When y dtype is Float16 in FusedQuantMatmul and bias is not null, bias dtype should be Int32/Float16/Float32, \
-                actual dtype is %s.", DType2Str(inputParams_.biasDtype).c_str()),
-            return false);
-    
+        inputParams_.cDtype == ge::DT_FLOAT16 && context_->GetOptionalInputDesc(GetBiasIdx()) != nullptr &&
+            (inputParams_.biasDtype != ge::DT_INT32 && inputParams_.biasDtype != ge::DT_FLOAT16 &&
+             inputParams_.biasDtype != ge::DT_FLOAT),
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName,
+            "When y dtype is Float16 in FusedQuantMatmul and bias is not null, bias dtype should be Int32/Float16/Float32, \
+                actual dtype is %s.",
+            DType2Str(inputParams_.biasDtype).c_str()),
+        return false);
+
     // 输出是bf16时，x2scale必须是bf16/fp32，bias必须是int32/bf16/fp32
+    OP_TILING_CHECK(inputParams_.cDtype == ge::DT_BF16 &&
+                        (inputParams_.scaleDtype != ge::DT_BF16 && inputParams_.scaleDtype != ge::DT_FLOAT),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "When y dtype is BFloat16 in FusedQuantMatmul, x2_scale dtype should be "
+                                          "BFloat16/Float32, actual dtype is %s.",
+                                          DType2Str(inputParams_.scaleDtype).c_str()),
+                    return false);
     OP_TILING_CHECK(
-            inputParams_.cDtype == ge::DT_BF16 && (inputParams_.scaleDtype != ge::DT_BF16 && inputParams_.scaleDtype != ge::DT_FLOAT),
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When y dtype is BFloat16 in FusedQuantMatmul, x2_scale dtype should be BFloat16/Float32, actual dtype is %s.",
-                DType2Str(inputParams_.scaleDtype).c_str()),
-            return false);
-    OP_TILING_CHECK(
-            inputParams_.cDtype == ge::DT_BF16 && context_->GetOptionalInputDesc(GetBiasIdx()) != nullptr &&
-            (inputParams_.biasDtype != ge::DT_INT32 && inputParams_.biasDtype != ge::DT_BF16 && inputParams_.biasDtype != ge::DT_FLOAT),
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When y dtype is BFloat16 in FusedQuantMatmul and bias is not null, bias dtype should be Int32/BFloat16/Float32, \
-                actual dtype is %s.", DType2Str(inputParams_.biasDtype).c_str()),
-            return false);
+        inputParams_.cDtype == ge::DT_BF16 && context_->GetOptionalInputDesc(GetBiasIdx()) != nullptr &&
+            (inputParams_.biasDtype != ge::DT_INT32 && inputParams_.biasDtype != ge::DT_BF16 &&
+             inputParams_.biasDtype != ge::DT_FLOAT),
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName,
+            "When y dtype is BFloat16 in FusedQuantMatmul and bias is not null, bias dtype should be Int32/BFloat16/Float32, \
+                actual dtype is %s.",
+            DType2Str(inputParams_.biasDtype).c_str()),
+        return false);
     return true;
 }
 
@@ -232,42 +250,43 @@ bool FusedQuantMatMulUnaryTiling::CheckFormat() const
 {
     auto x1Desc = context_->GetInputDesc(GetX1Idx());
     auto x1Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x1Desc->GetStorageFormat()));
-    OP_TILING_CHECK(
-        x1Format != ge::Format::FORMAT_ND,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "X1 format should be ND, actual format is %s.",
-            ge::TypeUtils::FormatToSerialString(x1Format).c_str()),
-        return false);
-    
+    OP_TILING_CHECK(x1Format != ge::Format::FORMAT_ND,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "X1 format should be ND, actual format is %s.",
+                                          ge::TypeUtils::FormatToSerialString(x1Format).c_str()),
+                    return false);
+
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
     auto x2Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat()));
     OP_TILING_CHECK(
         x2Format != ge::Format::FORMAT_ND && x2Format != ge::Format::FORMAT_FRACTAL_NZ,
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2 format should be ND/FRACTAL_NZ, actual format is %s.",
-            ge::TypeUtils::FormatToSerialString(x2Format).c_str()),
+                              ge::TypeUtils::FormatToSerialString(x2Format).c_str()),
         return false);
 
     return true;
 }
 
-bool FusedQuantMatMulUnaryTiling::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                          const gert::StorageShape *biasShape,
-                                          const gert::StorageShape *pertokenShape,
-                                          const gert::StorageShape *scaleShape,
-                                          const std::vector<int64_t> &dimValueOfMKN) const
+bool FusedQuantMatMulUnaryTiling::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                             const gert::StorageShape* biasShape,
+                                             const gert::StorageShape* pertokenShape,
+                                             const gert::StorageShape* scaleShape,
+                                             const std::vector<int64_t>& dimValueOfMKN) const
 {
     auto x1Shape = *mandtoryShape[0]; // using index 0 to get x1Shape
     auto x2Shape = *mandtoryShape[1]; // using index 1 to get x2Shape
     auto x2ScaleShape = scaleShape->GetStorageShape();
 
     OP_TILING_CHECK(x2ScaleShape.GetDimNum() != 1,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Only support for x2 scale dimension equals to 1 in FusedQuantMatmul, but actually it is %zu.",
-                                          x2ScaleShape.GetDimNum()), return false);
+                    CUBE_INNER_ERR_REPORT(
+                        inputParams_.opName,
+                        "Only support for x2 scale dimension equals to 1 in FusedQuantMatmul, but actually it is %zu.",
+                        x2ScaleShape.GetDimNum()),
+                    return false);
 
-    if (!CheckShapeInRangeForOptionalInputs(biasShape, pertokenShape)){
+    if (!CheckShapeInRangeForOptionalInputs(biasShape, pertokenShape)) {
         return false;
     }
-    if (!CheckDimValue(x2ScaleShape, biasShape, pertokenShape, dimValueOfMKN)){
+    if (!CheckDimValue(x2ScaleShape, biasShape, pertokenShape, dimValueOfMKN)) {
         return false;
     }
     if (!CheckShapeInBoundary(x1Shape, GetX1Idx()) || !CheckShapeInBoundary(x2Shape, GetX2Idx())) {
@@ -286,24 +305,23 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeDtype()
     inputParams_.biasDtype = biasDesc != nullptr ? biasDesc->GetDataType() : inputParams_.biasDtype;
 
     auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
-    OP_TILING_CHECK(
-        pertokenScaleDesc == nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1_scale of FusedQuantMatmul should not be null for x1 perToken quant."),
-        return false);
+    OP_TILING_CHECK(pertokenScaleDesc == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "x1_scale of FusedQuantMatmul should not be null for x1 perToken quant."),
+                    return false);
     inputParams_.perTokenScaleDtype = pertokenScaleDesc->GetDataType();
 
     auto x2ScaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
-    OP_TILING_CHECK(
-        x2ScaleDesc == nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x2_scale of FusedQuantMatmul should not be null."),
-        return false);
+    OP_TILING_CHECK(x2ScaleDesc == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "x2_scale of FusedQuantMatmul should not be null."),
+                    return false);
     inputParams_.scaleDtype = x2ScaleDesc->GetDataType();
 
     auto x2TableDesc = context_->GetOptionalInputDesc(GetX2TableIdx());
-    OP_TILING_CHECK(
-        x2TableDesc != nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "current FusedQuantMatmul does not support x2_table, it should be null!"),
-        return false);
+    OP_TILING_CHECK(x2TableDesc != nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "current FusedQuantMatmul does not support x2_table, it should be null!"),
+                    return false);
 
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
 
@@ -316,16 +334,15 @@ bool FusedQuantMatMulUnaryTiling::AnalyzeDtype()
 }
 
 uint64_t FusedQuantMatMulUnaryTiling::GetTilingKey() const
-{   
-    uint64_t trans =
-            (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+{
+    uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
     bool isBasicTiling = true;
     uint64_t kernelTemplateType = (static_cast<uint64_t>(isBf16Opt_) << 1) | static_cast<uint64_t>(isBasicTiling);
     uint64_t optionAttrs = 0;
     uint64_t unaryFusedOpType = fusedOpType_;
 
-    return GET_TPL_TILING_KEY(trans, kernelTemplateType, static_cast<uint64_t>(inputParams_.isPertoken), optionAttrs, unaryFusedOpType);
+    return GET_TPL_TILING_KEY(trans, kernelTemplateType, static_cast<uint64_t>(inputParams_.isPertoken), optionAttrs,
+                              unaryFusedOpType);
 }
-
 
 } // namespace optiling

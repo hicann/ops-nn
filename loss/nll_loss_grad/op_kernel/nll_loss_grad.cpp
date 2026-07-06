@@ -13,29 +13,30 @@
  * \brief nll_loss_grad kernel
  */
 
- #include "arch35/nll_loss_grad.h"
+#include "arch35/nll_loss_grad.h"
 
- using namespace NLLLossGrad;
+using namespace NLLLossGrad;
 
- #define COMMON_OP_IMPL(templateClass, ...)                  \
- do {                                                    \
-     templateClass<__VA_ARGS__> op;               \
-     op.Init(x, y_grad, target, weight, total_weight, x_grad, tilingData);  \
-     op.Process();                                       \
- } while (0)
+#define COMMON_OP_IMPL(templateClass, ...)                                    \
+    do {                                                                      \
+        templateClass<__VA_ARGS__> op;                                        \
+        op.Init(x, y_grad, target, weight, total_weight, x_grad, tilingData); \
+        op.Process();                                                         \
+    } while (0)
 
- extern "C" __global__ __aicore__ void nll_loss_grad(GM_ADDR x, GM_ADDR y_grad, GM_ADDR target, GM_ADDR weight,
-     GM_ADDR total_weight, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
- {
-     if (workspace == nullptr) {
-         return;
-     }
-     SetSysWorkspace(workspace);
-     GM_ADDR userWS = GetUserWorkspace(workspace);
-     if (userWS == nullptr) {
-         return;
-     }
-     GET_TILING_DATA(tilingData, tiling);
-     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-     COMMON_OP_IMPL(NLLLossGrad::KernelNLLLossGrad, DTYPE_X, DTYPE_TARGET);
- }
+extern "C" __global__ __aicore__ void nll_loss_grad(GM_ADDR x, GM_ADDR y_grad, GM_ADDR target, GM_ADDR weight,
+                                                    GM_ADDR total_weight, GM_ADDR x_grad, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
+{
+    if (workspace == nullptr) {
+        return;
+    }
+    SetSysWorkspace(workspace);
+    GM_ADDR userWS = GetUserWorkspace(workspace);
+    if (userWS == nullptr) {
+        return;
+    }
+    GET_TILING_DATA(tilingData, tiling);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    COMMON_OP_IMPL(NLLLossGrad::KernelNLLLossGrad, DTYPE_X, DTYPE_TARGET);
+}

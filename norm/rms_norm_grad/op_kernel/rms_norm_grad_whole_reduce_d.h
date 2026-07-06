@@ -20,9 +20,8 @@ template <typename T>
 class RmsNormGradWholeReduceD {
 public:
     __aicore__ inline RmsNormGradWholeReduceD(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
-        const RmsNormGradTilingData* tiling);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
+                                const RmsNormGradTilingData* tiling);
     __aicore__ inline void Process();
 
 protected:
@@ -70,17 +69,17 @@ protected:
     __aicore__ inline void CopyDgammaOut(uint32_t dIdx, uint32_t calcLen);
     __aicore__ inline void CopyDgammaOutInOrder(uint32_t dIdx, uint32_t calcLen);
     __aicore__ inline void ComputeDgammaMain(uint32_t loopLen);
-    __aicore__ inline void ComputeDgamma(
-        uint32_t i, uint32_t j, uint32_t calcLen, LocalTensor<T>& gammaUb, LocalTensor<float>& dgamma);
+    __aicore__ inline void ComputeDgamma(uint32_t i, uint32_t j, uint32_t calcLen, LocalTensor<T>& gammaUb,
+                                         LocalTensor<float>& dgamma);
     __aicore__ inline void ComputeMain(uint32_t calcLen, LocalTensor<T>& gammaUb, float dySumVal);
-    __aicore__ inline void ComputeDySum(
-        uint32_t i, uint32_t j, uint32_t calcLen, uint32_t calcLenAlign, LocalTensor<float>& dySum);
+    __aicore__ inline void ComputeDySum(uint32_t i, uint32_t j, uint32_t calcLen, uint32_t calcLenAlign,
+                                        LocalTensor<float>& dySum);
     __aicore__ inline void ProcessMain(uint32_t loopLen);
 };
 
 template <typename T>
-__aicore__ inline void RmsNormGradWholeReduceD<T>::Init(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, const RmsNormGradTilingData* tiling)
+__aicore__ inline void RmsNormGradWholeReduceD<T>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                                        GM_ADDR dgamma, const RmsNormGradTilingData* tiling)
 {
     InitData(tiling);
 
@@ -257,8 +256,9 @@ __aicore__ inline void RmsNormGradWholeReduceD<T>::ComputeDgammaMain(uint32_t lo
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeDgamma(
-    uint32_t i, uint32_t j, uint32_t calcLen, LocalTensor<half>& gammaUb, LocalTensor<float>& dgamma)
+__aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeDgamma(uint32_t i, uint32_t j, uint32_t calcLen,
+                                                                    LocalTensor<half>& gammaUb,
+                                                                    LocalTensor<float>& dgamma)
 {
     LocalTensor<half> xUb = inQueX.DeQue<half>();
     LocalTensor<half> dyUb = inQueDY.DeQue<half>();
@@ -289,8 +289,9 @@ __aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeDgamma(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeDgamma(
-    uint32_t i, uint32_t j, uint32_t calcLen, LocalTensor<float>& gammaUb, LocalTensor<float>& dgamma)
+__aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeDgamma(uint32_t i, uint32_t j, uint32_t calcLen,
+                                                                     LocalTensor<float>& gammaUb,
+                                                                     LocalTensor<float>& dgamma)
 {
     LocalTensor<float> xUb = inQueX.DeQue<float>();
     LocalTensor<float> dyUb = inQueDY.DeQue<float>();
@@ -315,8 +316,8 @@ __aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeDgamma(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeMain(
-    uint32_t calcLen, LocalTensor<half>& gammaUb, float dySumVal)
+__aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeMain(uint32_t calcLen, LocalTensor<half>& gammaUb,
+                                                                  float dySumVal)
 {
     LocalTensor<half> xUb = inQueX.DeQue<half>();
     LocalTensor<half> dyUb = inQueDY.DeQue<half>();
@@ -367,8 +368,8 @@ __aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeMain(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeMain(
-    uint32_t calcLen, LocalTensor<float>& gammaUb, float dySumVal)
+__aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeMain(uint32_t calcLen, LocalTensor<float>& gammaUb,
+                                                                   float dySumVal)
 {
     LocalTensor<float> xUb = inQueX.DeQue<float>();
     LocalTensor<float> dyUb = inQueDY.DeQue<float>();
@@ -399,8 +400,8 @@ __aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeMain(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeDySum(
-    uint32_t i, uint32_t j, uint32_t calcLen, uint32_t calcLenAlign, LocalTensor<float>& dySum)
+__aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeDySum(uint32_t i, uint32_t j, uint32_t calcLen,
+                                                                   uint32_t calcLenAlign, LocalTensor<float>& dySum)
 {
     CopyGammaIn(j, calcLen);
     CopyIn(i, j, calcLen);
@@ -458,8 +459,8 @@ __aicore__ inline void RmsNormGradWholeReduceD<half>::ComputeDySum(
 }
 
 template <>
-__aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeDySum(
-    uint32_t i, uint32_t j, uint32_t calcLen, uint32_t calcLenAlign, LocalTensor<float>& dySum)
+__aicore__ inline void RmsNormGradWholeReduceD<float>::ComputeDySum(uint32_t i, uint32_t j, uint32_t calcLen,
+                                                                    uint32_t calcLenAlign, LocalTensor<float>& dySum)
 {
     CopyGammaIn(j, calcLen);
     CopyIn(i, j, calcLen);

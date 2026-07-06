@@ -45,15 +45,14 @@ struct PolicySelector<true, true> {
 };
 
 template <bool logTarget, bool broadcast>
-__global__ __aicore__ void kl_div_loss_grad(
-    GM_ADDR grad, GM_ADDR input, GM_ADDR target, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void kl_div_loss_grad(GM_ADDR grad, GM_ADDR input, GM_ADDR target, GM_ADDR y, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(KlDivLossGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(KlDivLossGradTilingData, tilingData, tiling);
     KernelKlDivLossGrad<DTYPE_GRAD, PolicySelector<logTarget, broadcast>::template type> op;
     AscendC::TPipe pipe;
-    op.Init(
-        grad, input, target, y, tilingData.bigCoreDataNum, tilingData.smallCoreDataNum, tilingData.tileDataNum,
-        tilingData.bigCoreNum, tilingData.coff, &pipe);
+    op.Init(grad, input, target, y, tilingData.bigCoreDataNum, tilingData.smallCoreDataNum, tilingData.tileDataNum,
+            tilingData.bigCoreNum, tilingData.coff, &pipe);
     op.Process();
 }

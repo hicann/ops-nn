@@ -22,9 +22,9 @@ extern "C" {
  * @brief aclnnMatmul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
-ACLNN_API aclnnStatus aclnnMatmulGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnMatmulGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                                  int8_t cubeMathType, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor);
 
 /**
  * @brief aclnnMatmul的第二段接口，用于执行计算。
@@ -43,9 +43,9 @@ ACLNN_API aclnnStatus aclnnMatmul(void* workspace, uint64_t workspaceSize, aclOp
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  */
-ACLNN_API aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                                          int8_t cubeMathType, uint64_t* workspaceSize,
+                                                          aclOpExecutor** executor);
 
 /**
  * @brief aclnnMatmulWeightNz的第二段接口，用于执行计算。
@@ -56,8 +56,8 @@ ACLNN_API aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(
  * @return aclnnStatus: 返回状态码
  */
 // for any shape mat multiply
-ACLNN_API aclnnStatus
-aclnnMatmulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnMatmulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                          aclrtStream stream);
 
 #ifdef __cplusplus
 }

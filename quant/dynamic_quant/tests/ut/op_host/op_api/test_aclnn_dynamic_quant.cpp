@@ -23,18 +23,11 @@ using namespace op;
 using namespace std;
 
 // IFA aclnn ut for 910b has error in UT environment. Deleted.
-class l2_dynamic_quant_test : public testing::Test
-{
+class l2_dynamic_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_dynamic_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_dynamic_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_dynamic_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_dynamic_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_dynamic_quant_test, ascend910B2_dynamic_quant_fp16)

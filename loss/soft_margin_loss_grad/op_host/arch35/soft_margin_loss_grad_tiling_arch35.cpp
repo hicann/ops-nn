@@ -28,7 +28,7 @@ namespace optiling {
 // per_buf_elems 按 fp32 计算：fp16/bf16 中间提升 fp32，最大元素 4B
 constexpr int64_t kBufElemSize = 4;
 
-struct SoftMarginLossGradCompileInfo {};  // 入图场景依赖
+struct SoftMarginLossGradCompileInfo {}; // 入图场景依赖
 
 static bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in, int64_t max_rank)
 {
@@ -36,23 +36,25 @@ static bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_
         int64_t ref = -1;
         for (size_t i = 0; i < padded_in.size(); i++) {
             if (padded_in[i][d] != 1) {
-                if (ref == -1) ref = padded_in[i][d];
-                else if (padded_in[i][d] != ref) return false;
+                if (ref == -1)
+                    ref = padded_in[i][d];
+                else if (padded_in[i][d] != ref)
+                    return false;
             }
         }
     }
     return true;
 }
 
-static void PadAndSqueeze(
-    const std::vector<std::vector<int64_t>>& input_shapes,
-    std::vector<int64_t>& maximum_bro_shape,
-    std::vector<std::vector<int64_t>>& normal_input_shapes,
-    std::vector<int64_t>& normal_output_shape)
+static void PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
+                          std::vector<int64_t>& maximum_bro_shape,
+                          std::vector<std::vector<int64_t>>& normal_input_shapes,
+                          std::vector<int64_t>& normal_output_shape)
 {
     int64_t num_inputs = (int64_t)input_shapes.size();
     int64_t max_rank = 1;
-    for (auto& s : input_shapes) max_rank = std::max(max_rank, (int64_t)s.size());
+    for (auto& s : input_shapes)
+        max_rank = std::max(max_rank, (int64_t)s.size());
     auto pad = [&](const std::vector<int64_t>& s) {
         std::vector<int64_t> p;
         p.assign(max_rank - (int64_t)s.size(), 1);
@@ -60,26 +62,31 @@ static void PadAndSqueeze(
         return p;
     };
     std::vector<std::vector<int64_t>> padded(num_inputs);
-    for (int64_t i = 0; i < num_inputs; i++) padded[i] = pad(input_shapes[i]);
+    for (int64_t i = 0; i < num_inputs; i++)
+        padded[i] = pad(input_shapes[i]);
     maximum_bro_shape.clear();
     normal_input_shapes.assign(num_inputs, std::vector<int64_t>());
     normal_output_shape.clear();
     for (int64_t d = 0; d < max_rank; d++) {
-        bool all_one = true; int64_t max_dim = 0;
+        bool all_one = true;
+        int64_t max_dim = 0;
         for (int64_t i = 0; i < num_inputs; i++) {
-            if (padded[i][d] != 1) all_one = false;
+            if (padded[i][d] != 1)
+                all_one = false;
             max_dim = std::max(max_dim, padded[i][d]);
         }
         if (!all_one) {
             maximum_bro_shape.push_back(max_dim);
             normal_output_shape.push_back(max_dim);
-            for (int64_t i = 0; i < num_inputs; i++) normal_input_shapes[i].push_back(padded[i][d]);
+            for (int64_t i = 0; i < num_inputs; i++)
+                normal_input_shapes[i].push_back(padded[i][d]);
         }
     }
     if (maximum_bro_shape.empty()) {
         maximum_bro_shape.push_back(1);
         normal_output_shape.push_back(1);
-        for (int64_t i = 0; i < num_inputs; i++) normal_input_shapes[i].push_back(1);
+        for (int64_t i = 0; i < num_inputs; i++)
+            normal_input_shapes[i].push_back(1);
     }
 }
 
@@ -88,30 +95,42 @@ static void FindSplitAxis(const std::vector<int64_t>& s, int64_t ub_per_core, Sp
     int64_t per_buf_bytes = (ub_per_core / kPhysNodes) & kAlignMask;
     int64_t per_buf_elems = per_buf_bytes / kBufElemSize;
     constexpr int64_t kMinBufElems = 1;
-    if (per_buf_elems < kMinBufElems) per_buf_elems = kMinBufElems;
+    if (per_buf_elems < kMinBufElems)
+        per_buf_elems = kMinBufElems;
     int64_t rank = (int64_t)s.size();
     int64_t inner = 1;
     for (int64_t k = rank - 1; k >= 0; k--) {
         if (s[k] * inner > per_buf_elems) {
-            out.a_i = per_buf_elems / inner; if (out.a_i < 1) out.a_i = 1;
+            out.a_i = per_buf_elems / inner;
+            if (out.a_i < 1)
+                out.a_i = 1;
             out.a_o = (s[k] + out.a_i - 1) / out.a_i;
             int64_t rem = s[k] % out.a_i;
             out.a_i_tail = (rem == 0) ? out.a_i : rem;
             out.axis = k;
             return;
         }
-        if (k == 0) { out.axis = 0; out.a_i = s[0]; out.a_o = 1; out.a_i_tail = s[0]; return; }
+        if (k == 0) {
+            out.axis = 0;
+            out.a_i = s[0];
+            out.a_o = 1;
+            out.a_i_tail = s[0];
+            return;
+        }
         inner *= s[k];
     }
 }
 
-static void MultiCoreSplit(const std::vector<int64_t>& s, const SplitResult& ub, int64_t max_cores, MultiCoreResult& out)
+static void MultiCoreSplit(const std::vector<int64_t>& s, const SplitResult& ub, int64_t max_cores,
+                           MultiCoreResult& out)
 {
     int64_t outer = 1;
-    for (int64_t j = 0; j < ub.axis; j++) outer *= s[j];
+    for (int64_t j = 0; j < ub.axis; j++)
+        outer *= s[j];
     out.total_tiles = outer * ub.a_o;
     out.num_cores = (out.total_tiles < max_cores) ? out.total_tiles : max_cores;
-    if (out.num_cores < 1) out.num_cores = 1;
+    if (out.num_cores < 1)
+        out.num_cores = 1;
     out.tiles_main = out.total_tiles / out.num_cores;
     out.cores_tail = out.total_tiles % out.num_cores;
 }
@@ -121,18 +140,21 @@ static void PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t
     int64_t rank = (int64_t)s.size();
     strides.assign(rank, 0);
     for (int64_t d = rank - 1; d >= 0; d--) {
-        if (s[d] == 1) { strides[d] = 0; continue; }
+        if (s[d] == 1) {
+            strides[d] = 0;
+            continue;
+        }
         int64_t prod = 1;
-        for (int64_t j = d + 1; j < rank; j++) prod *= s[j];
+        for (int64_t j = d + 1; j < rank; j++)
+            prod *= s[j];
         strides[d] = prod;
     }
 }
 
-template<int64_t R>
-static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx,
-    const std::vector<int64_t>& max_bro, const std::vector<std::vector<int64_t>>& nin,
-    const std::vector<int64_t>& nout, int64_t cof_is_mean, int64_t total_num,
-    int64_t ub, int64_t cores)
+template <int64_t R>
+static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx, const std::vector<int64_t>& max_bro,
+                                      const std::vector<std::vector<int64_t>>& nin, const std::vector<int64_t>& nout,
+                                      int64_t cof_is_mean, int64_t total_num, int64_t ub, int64_t cores)
 {
     auto* t = ctx->GetTilingData<SoftMarginLossGradTilingData<R>>();
     OP_CHECK_NULL_WITH_CONTEXT(ctx, t);
@@ -148,19 +170,35 @@ static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx,
     int64_t num_in = (int64_t)nin.size();
     std::vector<std::vector<int64_t>> ins(num_in);
     std::vector<int64_t> os;
-    for (int64_t i = 0; i < num_in; i++) PrecomputeStrides(nin[i], ins[i]);
+    for (int64_t i = 0; i < num_in; i++)
+        PrecomputeStrides(nin[i], ins[i]);
     PrecomputeStrides(nout, os);
     int64_t delta = R - rank;
-    for (int64_t d = 0; d < delta; d++) t->max_bro_shape[d] = 1;
-    for (int64_t d = 0; d < rank; d++) t->max_bro_shape[d + delta] = max_bro[d];
+    for (int64_t d = 0; d < delta; d++)
+        t->max_bro_shape[d] = 1;
+    for (int64_t d = 0; d < rank; d++)
+        t->max_bro_shape[d + delta] = max_bro[d];
     t->split.axis += delta;
-    t->num_inputs = num_in; t->num_outputs = kMaxOutputSlots;
+    t->num_inputs = num_in;
+    t->num_outputs = kMaxOutputSlots;
     for (int64_t i = 0; i < num_in; i++) {
-        for (int64_t d = 0; d < delta; d++) { t->input_shapes[i][d] = 1; t->input_strides[i][d] = 0; }
-        for (int64_t d = 0; d < rank; d++) { t->input_shapes[i][d+delta] = nin[i][d]; t->input_strides[i][d+delta] = ins[i][d]; }
+        for (int64_t d = 0; d < delta; d++) {
+            t->input_shapes[i][d] = 1;
+            t->input_strides[i][d] = 0;
+        }
+        for (int64_t d = 0; d < rank; d++) {
+            t->input_shapes[i][d + delta] = nin[i][d];
+            t->input_strides[i][d + delta] = ins[i][d];
+        }
     }
-    for (int64_t d = 0; d < delta; d++) { t->output_shapes[0][d] = 1; t->output_strides[0][d] = 0; }
-    for (int64_t d = 0; d < rank; d++) { t->output_shapes[0][d+delta] = nout[d]; t->output_strides[0][d+delta] = os[d]; }
+    for (int64_t d = 0; d < delta; d++) {
+        t->output_shapes[0][d] = 1;
+        t->output_strides[0][d] = 0;
+    }
+    for (int64_t d = 0; d < rank; d++) {
+        t->output_shapes[0][d + delta] = nout[d];
+        t->output_strides[0][d + delta] = os[d];
+    }
     ctx->SetBlockDim(t->multicore.num_cores);
     return ge::GRAPH_SUCCESS;
 }
@@ -171,39 +209,53 @@ static ge::graphStatus SoftMarginLossGradTilingFunc(gert::TilingContext* context
     OP_CHECK_NULL_WITH_CONTEXT(context, pinfo);
     auto plat = platform_ascendc::PlatformAscendC(pinfo);
     int64_t cores = plat.GetCoreNumAiv();
-    uint64_t ubSize = 0; plat.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    uint64_t ubSize = 0;
+    plat.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(cores == 0 || ubSize == 0, OP_LOGE(context, "platform info invalid"), return ge::GRAPH_FAILED);
 
     std::vector<std::vector<int64_t>> ins;
     for (size_t i = 0; i < kMaxInputSlots; i++) {
-        auto sh = context->GetInputShape(i); OP_CHECK_NULL_WITH_CONTEXT(context, sh);
+        auto sh = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, sh);
         gert::Shape s = sh->GetStorageShape();
         std::vector<int64_t> d;
-        for (size_t k = 0; k < s.GetDimNum(); k++) d.push_back(s.GetDim(k));
+        for (size_t k = 0; k < s.GetDimNum(); k++)
+            d.push_back(s.GetDim(k));
         ins.push_back(d);
     }
-    std::vector<int64_t> maxb, nout; std::vector<std::vector<int64_t>> nin;
+    std::vector<int64_t> maxb, nout;
+    std::vector<std::vector<int64_t>> nin;
     PadAndSqueeze(ins, maxb, nin, nout);
     int64_t rank = (int64_t)maxb.size();
-    OP_CHECK_IF(rank > SMLG_RANK_8, OP_LOGE(context, "rank %ld exceeds %d", rank, SMLG_RANK_8), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rank > SMLG_RANK_8, OP_LOGE(context, "rank %ld exceeds %d", rank, SMLG_RANK_8),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckBroadcastShape(nin, rank), OP_LOGE(context, "broadcast incompatible"), return ge::GRAPH_FAILED);
 
     int64_t total_num = 1;
     bool empty = false;
-    for (auto v : maxb) { total_num *= v; if (v == 0) empty = true; }
-    for (auto& d : ins) for (auto v : d) if (v == 0) empty = true;
+    for (auto v : maxb) {
+        total_num *= v;
+        if (v == 0)
+            empty = true;
+    }
+    for (auto& d : ins)
+        for (auto v : d)
+            if (v == 0)
+                empty = true;
 
     // reduction attr (String): "none"/"mean"/"sum" → cof_is_mean
     int64_t cof_is_mean = 0;
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const char* red = attrs->GetStr(0);
-        if (red != nullptr && std::string(red) == "mean") cof_is_mean = 1;
+        if (red != nullptr && std::string(red) == "mean")
+            cof_is_mean = 1;
     }
 
     // workspace = sysWorkspace (0)
     size_t* ws = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, ws); ws[0] = 0U;
+    OP_CHECK_NULL_WITH_CONTEXT(context, ws);
+    ws[0] = 0U;
 
     // 空 Tensor：l0op 已短路 workspaceSize=0；保险起见 blockDim=1, 直接选 RANK_4
     if (empty || total_num == 0) {

@@ -21,256 +21,263 @@ using namespace op;
 using namespace std;
 
 class l2_max_unpool2d_backward_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "l2_max_unpool2d_backward_test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "l2_max_unpool2d_backward_test SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "l2_max_unpool2d_backward_test TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "l2_max_unpool2d_backward_test TearDown" << std::endl; }
 };
 
-TEST_F(l2_max_unpool2d_backward_test, case_001) {
-  auto grad_desc = TensorDesc({2, 16, 2, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({2, 16, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({2, 16, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc(self_desc);
+TEST_F(l2_max_unpool2d_backward_test, case_001)
+{
+    auto grad_desc = TensorDesc({2, 16, 2, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({2, 16, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({2, 16, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc(self_desc);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
 }
 
-TEST_F(l2_max_unpool2d_backward_test, case_002) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc(self_desc).Precision(0.0001, 0.0001);
+TEST_F(l2_max_unpool2d_backward_test, case_002)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc(self_desc).Precision(0.0001, 0.0001);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
 }
 
-TEST_F(l2_max_unpool2d_backward_test, case_003) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_INT8, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_INT8, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc(self_desc);
+TEST_F(l2_max_unpool2d_backward_test, case_003)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_INT8, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_INT8, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc(self_desc);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
-TEST_F(l2_max_unpool2d_backward_test, case_004) {
-  auto grad_desc = TensorDesc({3, 7, 2, 3}, ACL_INT32, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({3, 7, 5, 5}, ACL_INT32, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({3, 7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc(self_desc);
+TEST_F(l2_max_unpool2d_backward_test, case_004)
+{
+    auto grad_desc = TensorDesc({3, 7, 2, 3}, ACL_INT32, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({3, 7, 5, 5}, ACL_INT32, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({3, 7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc(self_desc);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
-}
-
-// check shape
-TEST_F(l2_max_unpool2d_backward_test, case_005) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_INT16, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 6, 5}, ACL_INT16, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc(self_desc);
-
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
-
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    ut.TestPrecision();
 }
 
 // check shape
-TEST_F(l2_max_unpool2d_backward_test, case_006) {
-  auto grad_desc = TensorDesc({1, 6, 2, 3}, ACL_UINT8, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({2, 7, 5, 5}, ACL_UINT8, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({2, 7, 5, 5}, ACL_INT32, ACL_FORMAT_NCHW);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc(self_desc);
+TEST_F(l2_max_unpool2d_backward_test, case_005)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_INT16, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 6, 5}, ACL_INT16, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc(self_desc);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // check shape
-TEST_F(l2_max_unpool2d_backward_test, case_007) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_INT8, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_INT8, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3, 4});
-  auto out_desc = TensorDesc(self_desc);
+TEST_F(l2_max_unpool2d_backward_test, case_006)
+{
+    auto grad_desc = TensorDesc({1, 6, 2, 3}, ACL_UINT8, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({2, 7, 5, 5}, ACL_UINT8, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({2, 7, 5, 5}, ACL_INT32, ACL_FORMAT_NCHW);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc(self_desc);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// check shape
+TEST_F(l2_max_unpool2d_backward_test, case_007)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_INT8, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_INT8, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3, 4});
+    auto out_desc = TensorDesc(self_desc);
+
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // check dtype
-TEST_F(l2_max_unpool2d_backward_test, case_008) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_DOUBLE, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_DOUBLE, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3, 4});
-  auto out_desc = TensorDesc(self_desc);
+TEST_F(l2_max_unpool2d_backward_test, case_008)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_DOUBLE, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_DOUBLE, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3, 4});
+    auto out_desc = TensorDesc(self_desc);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // cast
-TEST_F(l2_max_unpool2d_backward_test, case_009) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
+TEST_F(l2_max_unpool2d_backward_test, case_009)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  ut.TestPrecision();
+    ut.TestPrecision();
 }
 
 // nullptr
-TEST_F(l2_max_unpool2d_backward_test, case_010) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
+TEST_F(l2_max_unpool2d_backward_test, case_010)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
 
-  auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT((aclTensor*)nullptr, self_desc, indices_desc, output_szie),
-                      OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT((aclTensor*)nullptr, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-  auto ut2 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, (aclTensor*)nullptr, indices_desc, output_szie),
-                       OUTPUT(out_desc));
+    auto ut2 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, (aclTensor*)nullptr, indices_desc, output_szie),
+                         OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  workspace_size = 0;
-  aclRet = ut2.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    workspace_size = 0;
+    aclRet = ut2.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-  auto ut3 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, (aclTensor*)nullptr, output_szie),
-                       OUTPUT(out_desc));
+    auto ut3 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, (aclTensor*)nullptr, output_szie),
+                         OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  workspace_size = 0;
-  aclRet = ut3.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    workspace_size = 0;
+    aclRet = ut3.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-  auto ut4 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, (aclIntArray*)nullptr),
-                       OUTPUT(out_desc));
+    auto ut4 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, (aclIntArray*)nullptr),
+                         OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  workspace_size = 0;
-  aclRet = ut4.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    workspace_size = 0;
+    aclRet = ut4.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-  auto ut5 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
-                       OUTPUT((aclTensor*)nullptr));
+    auto ut5 = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                         OUTPUT((aclTensor*)nullptr));
 
-  // SAMPLE: only test GetWorkspaceSize
-  workspace_size = 0;
-  aclRet = ut5.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    workspace_size = 0;
+    aclRet = ut5.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // bool
-TEST_F(l2_max_unpool2d_backward_test, case_011) {
-  auto grad_desc = TensorDesc({7, 2, 3}, ACL_BOOL, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 4, 5}, ACL_BOOL, ACL_FORMAT_NCHW, {25, 1, 5}, 0, {7, 5, 4});
-  auto indices_desc = TensorDesc({7, 4, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc({7, 5, 5}, ACL_BOOL, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
+TEST_F(l2_max_unpool2d_backward_test, case_011)
+{
+    auto grad_desc = TensorDesc({7, 2, 3}, ACL_BOOL, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 4, 5}, ACL_BOOL, ACL_FORMAT_NCHW, {25, 1, 5}, 0, {7, 5, 4});
+    auto indices_desc = TensorDesc({7, 4, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc({7, 5, 5}, ACL_BOOL, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_max_unpool2d_backward_test, case_012) {
-  auto grad_desc = TensorDesc({7, 0, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
-  auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
-  auto out_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
+TEST_F(l2_max_unpool2d_backward_test, case_012)
+{
+    auto grad_desc = TensorDesc({7, 0, 3}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto self_desc = TensorDesc({7, 5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto indices_desc = TensorDesc({7, 5, 5}, ACL_INT64, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_szie = IntArrayDesc(vector<int64_t>{2, 3});
+    auto out_desc = TensorDesc({7, 5, 5}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
 
-  auto ut =
-      OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnMaxUnpool2dBackward, INPUT(grad_desc, self_desc, indices_desc, output_szie),
+                        OUTPUT(out_desc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

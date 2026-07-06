@@ -22,21 +22,13 @@
 
 using namespace std;
 
-extern "C" void dynamic_quant_v2(
-    GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-    GM_ADDR tiling);
+extern "C" void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale,
+                                 GM_ADDR offset, GM_ADDR workSpace, GM_ADDR tiling);
 
-class dynamic_quant_v2_test : public testing::Test
-{
+class dynamic_quant_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dynamic_quant_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_quant_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dynamic_quant_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dynamic_quant_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(dynamic_quant_v2_test, test_case_fp16_bf16)
@@ -93,49 +85,42 @@ TEST_F(dynamic_quant_v2_test, test_case_fp16_bf16)
     tilingDatafromBin->numTailTimes = 0;
     tilingDatafromBin->numLastTailRow = 0;
     tilingDatafromBin->alignType = 0;
-    tilingDatafromBin->ubSize = 191*1024;
+    tilingDatafromBin->ubSize = 191 * 1024;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     // bf16
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     // fp16
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     // bf16 db
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     // fp16 db
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     // large shape
     ICPU_SET_TILING_KEY(6);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales, group_index, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     // large shape
     ICPU_SET_TILING_KEY(7);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     // large shape
     ICPU_SET_TILING_KEY(8);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(smooth_scales);
@@ -195,14 +180,13 @@ TEST_F(dynamic_quant_v2_test, test_case_310_01)
     tilingDatafromBin->innerLoopTimes = 0;
     tilingDatafromBin->innerLoopTail = 0;
     tilingDatafromBin->alignType = 0;
-    tilingDatafromBin->ubSize = 191*1024;
+    tilingDatafromBin->ubSize = 191 * 1024;
 
     // bf16
     ICPU_SET_TILING_KEY(10100);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, nullptr, nullptr, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, nullptr, nullptr, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(output);
@@ -260,14 +244,13 @@ TEST_F(dynamic_quant_v2_test, test_case_310_02)
     tilingDatafromBin->innerLoopTimes = 0;
     tilingDatafromBin->innerLoopTail = 0;
     tilingDatafromBin->alignType = 1;
-    tilingDatafromBin->ubSize = 191*1024;
+    tilingDatafromBin->ubSize = 191 * 1024;
 
     // bf16
     ICPU_SET_TILING_KEY(11000);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, nullptr, nullptr, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, nullptr, nullptr, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(output);
@@ -325,14 +308,13 @@ TEST_F(dynamic_quant_v2_test, test_case_310_03)
     tilingDatafromBin->innerLoopTimes = 1;
     tilingDatafromBin->innerLoopTail = 3072;
     tilingDatafromBin->alignType = 1;
-    tilingDatafromBin->ubSize = 191*1024;
+    tilingDatafromBin->ubSize = 191 * 1024;
 
     // bf16
     ICPU_SET_TILING_KEY(11001);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, nullptr, nullptr, output, scale, offset, workSpace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, nullptr, nullptr, output, scale, offset, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(output);
@@ -417,15 +399,13 @@ TEST_F(dynamic_quant_v2_test, test_case_moe_pertensor_fullload)
 
     // moe pertensor full load sym
     ICPU_SET_TILING_KEY(117);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
-        (uint8_t*)(td));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+                (uint8_t*)(td));
 
     // moe pertensor full load nosym
     ICPU_SET_TILING_KEY(53);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
-        (uint8_t*)(td));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+                (uint8_t*)(td));
 
     AscendC::GmFree(input);
     AscendC::GmFree(smooth_scales_moe);
@@ -511,15 +491,13 @@ TEST_F(dynamic_quant_v2_test, test_case_moe_pertensor_largeshape)
 
     // moe pertensor large shape sym
     ICPU_SET_TILING_KEY(119);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
-        (uint8_t*)(td));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+                (uint8_t*)(td));
 
     // moe pertensor large shape nosym
     ICPU_SET_TILING_KEY(55);
-    ICPU_RUN_KF(
-        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
-        (uint8_t*)(td));
+    ICPU_RUN_KF(dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+                (uint8_t*)(td));
 
     AscendC::GmFree(input);
     AscendC::GmFree(smooth_scales_moe);

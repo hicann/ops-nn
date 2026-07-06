@@ -34,11 +34,9 @@
 //  build/tbe/dynamic/apply_rms_prop.py 中 origin_func_name="apply_rms_prop"，
 //  与 apply_adamax/apply_adadelta 等同样以 acronym 整段命名的算子一致。）
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void apply_rms_prop(
-    GM_ADDR var, GM_ADDR ms, GM_ADDR mom,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_rms_prop(GM_ADDR var, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr, GM_ADDR rho,
+                                          GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out,
+                                          GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyRmsPropTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyRmsPropTilingData, tilingData, tiling);

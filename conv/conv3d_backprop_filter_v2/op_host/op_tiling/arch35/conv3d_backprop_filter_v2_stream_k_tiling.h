@@ -25,8 +25,8 @@ namespace NN {
 namespace Conv {
 class Conv3DBackpropFilterV2StreamKTiling : public Conv3DDWV2BasicBlockTilingArch35 {
 public:
-    explicit Conv3DBackpropFilterV2StreamKTiling(gert::TilingContext* context) : Conv3DDWV2BasicBlockTilingArch35(
-        context)
+    explicit Conv3DBackpropFilterV2StreamKTiling(gert::TilingContext* context)
+        : Conv3DDWV2BasicBlockTilingArch35(context)
     {
         Reset();
     }
@@ -44,7 +44,7 @@ private:
     void InitSplitWOI();
 
     void AdjustSmallCaseBaseBlockForStreamK(uint64_t nBlockCnt);
-    
+
     void AdjustSmallCaseBaseBlockForSingleCoreN(uint64_t mBlockCnt, uint64_t nBlockCnt);
 
     void AdjustSmallCaseBaseBlock();
@@ -59,7 +59,7 @@ private:
 
     void DoStreamkByHWout();
 };
-}
-}
-}
-#endif  // CONV3D_DW_BASIC_BLOCK_TILING_H
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
+#endif // CONV3D_DW_BASIC_BLOCK_TILING_H

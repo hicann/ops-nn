@@ -18,19 +18,19 @@
 #include "../add_layer_norm/add_layer_norm_single_row_less_tensor.h"
 #include "../add_layer_norm/add_layer_norm_special_kernel.h"
 
-extern "C" __global__ __aicore__ void inplace_add_layer_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void inplace_add_layer_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta,
+                                                             GM_ADDR bias, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                                             GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     GET_TILING_DATA(inplaceTilingData, tiling);
 
-#define INIT_AND_PROCESS                                                                                      \
-    op.Init(                                                                                                  \
-        x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace, inplaceTilingData.numCore, inplaceTilingData.numLastDim, \
-        inplaceTilingData.numFirstDim, inplaceTilingData.firstDimPerCore, inplaceTilingData.firstDimPerCoreTail,                \
-        inplaceTilingData.firstDimPerTime, inplaceTilingData.lastDimPerTime, inplaceTilingData.eps, inplaceTilingData.aveFactor,      \
-        inplaceTilingData.colMoveCnt, inplaceTilingData.colTail, inplaceTilingData.workspaceSize);                              \
+#define INIT_AND_PROCESS                                                                                    \
+    op.Init(x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace, inplaceTilingData.numCore,              \
+            inplaceTilingData.numLastDim, inplaceTilingData.numFirstDim, inplaceTilingData.firstDimPerCore, \
+            inplaceTilingData.firstDimPerCoreTail, inplaceTilingData.firstDimPerTime,                       \
+            inplaceTilingData.lastDimPerTime, inplaceTilingData.eps, inplaceTilingData.aveFactor,           \
+            inplaceTilingData.colMoveCnt, inplaceTilingData.colTail, inplaceTilingData.workspaceSize);      \
     op.Process()
     if (TILING_KEY_IS(0)) {
         KernelAddLayerNorm<DTYPE_X1, DTYPE_X2, DTYPE_GAMMA, DTYPE_X1, 0> op(&pipe);

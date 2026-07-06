@@ -15,8 +15,7 @@
 
 namespace ops {
 
-class __attribute__((visibility("default"))) QuantBatchMatmulV3TransposeFusionPass
-    : public ge::fusion::FusionBasePass {
+class __attribute__((visibility("default"))) QuantBatchMatmulV3TransposeFusionPass : public ge::fusion::FusionBasePass {
 protected:
     ge::Status Run(ge::GraphPtr& graph, ge::CustomPassContext& passContext) override;
 };
@@ -29,13 +28,12 @@ protected:
 
 } // namespace ops
 
-
 namespace ge {
 namespace fusion {
 class GraphFuseInspectorUtils {
 public:
-    static Status ReportFuse(const std::vector<GNode>& nodesBeforeFuse,
-        const std::vector<GNode>& nodesAfterFuse, CustomPassContext& ctx) __attribute__((weak));
+    static Status ReportFuse(const std::vector<GNode>& nodesBeforeFuse, const std::vector<GNode>& nodesAfterFuse,
+                             CustomPassContext& ctx) __attribute__((weak));
 };
 } // namespace fusion
 } // namespace ge

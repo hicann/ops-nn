@@ -19,15 +19,9 @@ using namespace std;
 
 class l2_linalg_vector_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_linalg_vector_norm_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_linalg_vector_norm_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_linalg_vector_norm_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_linalg_vector_norm_test TearDown" << endl; }
 };
 
 TEST_F(l2_linalg_vector_norm_test, case_float_float_normal)
@@ -48,8 +42,8 @@ TEST_F(l2_linalg_vector_norm_test, case_float_float_normal)
 
 TEST_F(l2_linalg_vector_norm_test, case_float_float_transpose_normal)
 {
-    auto self_desc =
-        TensorDesc({3, 5, 7, 6}, ACL_FLOAT, ACL_FORMAT_ND, {210, 42, 1, 7}, 0, {3, 5, 6, 7}).ValueRange(0, 2);
+    auto self_desc = TensorDesc({3, 5, 7, 6}, ACL_FLOAT, ACL_FORMAT_ND, {210, 42, 1, 7}, 0, {3, 5, 6, 7})
+                         .ValueRange(0, 2);
     auto ord = ScalarDesc(2.0f);
     auto dims = IntArrayDesc({0});
     bool keepdim = false;
@@ -150,8 +144,8 @@ TEST_F(l2_linalg_vector_norm_test, case_out_nullptr)
     bool keepdim = false;
     aclDataType dtype = ACL_FLOAT;
 
-    auto ut =
-        OP_API_UT(aclnnLinalgVectorNorm, INPUT(self_desc, ord, dims, keepdim, dtype), OUTPUT((aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnLinalgVectorNorm, INPUT(self_desc, ord, dims, keepdim, dtype),
+                        OUTPUT((aclTensor*)nullptr));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

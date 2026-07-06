@@ -41,8 +41,7 @@ ACLNN_API aclnnStatus aclnnSiluGetWorkspaceSize(const aclTensor* self, aclTensor
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnSilu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSilu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

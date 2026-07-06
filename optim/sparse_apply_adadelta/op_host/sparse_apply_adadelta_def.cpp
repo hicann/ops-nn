@@ -100,9 +100,7 @@ public:
             .AutoContiguous();
 
         // Attribute: use_locking (ATTR -> OPTIONAL)
-        this->Attr("use_locking")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
@@ -116,4 +114,4 @@ public:
     }
 };
 OP_ADD(SparseApplyAdadelta);
-}  // namespace ops
+} // namespace ops

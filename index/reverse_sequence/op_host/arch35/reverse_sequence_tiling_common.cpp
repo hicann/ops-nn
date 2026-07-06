@@ -20,10 +20,8 @@
 using namespace AscendC;
 using namespace ge;
 
- 
-namespace optiling
-{
-static constexpr int64_t BATCH_AXIS_IDX = 1;  
+namespace optiling {
+static constexpr int64_t BATCH_AXIS_IDX = 1;
 static constexpr int64_t SEQ_AXIS_IDX = 0;
 static constexpr int64_t X_IDX = 0;
 static constexpr int64_t SEQ_LEN_IDX = 1;
@@ -45,9 +43,9 @@ static constexpr int64_t TYPE_SAB = 7;
 static constexpr int64_t TYPE_OTHER = 8;
 static constexpr int64_t TYPE_A1SBA = 9;
 
-static const std::set<ge::DataType> X_DTYPES = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8,
-                                                   ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_INT64,
-                                                   ge::DT_BOOL, ge::DT_DOUBLE, ge::DT_COMPLEX64};
+static const std::set<ge::DataType> X_DTYPES = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,   ge::DT_INT8,
+                                                ge::DT_UINT8,   ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32,
+                                                ge::DT_INT64,   ge::DT_BOOL,  ge::DT_DOUBLE, ge::DT_COMPLEX64};
 static const std::set<ge::DataType> SEQ_LENGTHS_DTYPES = {ge::DT_INT32, ge::DT_INT64};
 
 static ge::graphStatus CheckDTypeParams(gert::TilingContext* context, ReverseInputInfo& inputData)
@@ -56,44 +54,45 @@ static ge::graphStatus CheckDTypeParams(gert::TilingContext* context, ReverseInp
     auto xDescPtr = context->GetInputDesc(X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDescPtr);
     ge::DataType xDtype = xDescPtr->GetDataType();
-OP_CHECK_IF(X_DTYPES.find(xDtype) == X_DTYPES.end(),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
-            Ops::Base::ToString(xDtype).c_str(),
-            "The dtype of x must be within the range [DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_BOOL, DT_DOUBLE, DT_COMPLEX64]."),
-        return ge::GRAPH_FAILED);
-    
-inputData.xDtypeSize = ge::GetSizeByDataType(xDtype);
-    OP_CHECK_IF(inputData.xDtypeSize <= 0, 
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
-            Ops::Base::ToString(xDtype).c_str(),
-            "The dtype size of x must be greater than 0."),
-        return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(X_DTYPES.find(xDtype) == X_DTYPES.end(),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context->GetNodeName(), "x", Ops::Base::ToString(xDtype).c_str(),
+                    "The dtype of x must be within the range [DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT8, DT_UINT8, "
+                    "DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_BOOL, DT_DOUBLE, DT_COMPLEX64]."),
+                return ge::GRAPH_FAILED);
+
+    inputData.xDtypeSize = ge::GetSizeByDataType(xDtype);
+    OP_CHECK_IF(inputData.xDtypeSize <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::ToString(xDtype).c_str(),
+                                                      "The dtype size of x must be greater than 0."),
+                return ge::GRAPH_FAILED);
+
     auto seqLengthsDescPtr = context->GetInputDesc(SEQ_LEN_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, seqLengthsDescPtr);
     auto seqLengthsDtype = seqLengthsDescPtr->GetDataType();
-OP_CHECK_IF(SEQ_LENGTHS_DTYPES.find(seqLengthsDtype) == SEQ_LENGTHS_DTYPES.end(),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "seq_lengths",
-            Ops::Base::ToString(seqLengthsDtype).c_str(),
-            "The dtype of seq_lengths must be within the range [DT_INT32, DT_INT64]."),
-        return ge::GRAPH_FAILED);
-    
-inputData.seqLengthsDtypeSize = ge::GetSizeByDataType(seqLengthsDtype);
-    OP_CHECK_IF(inputData.seqLengthsDtypeSize <= 0, 
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "seq_lengths",
-            Ops::Base::ToString(seqLengthsDtype).c_str(),
-            "The dtype size of seq_lengths must be greater than 0."),
-        return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(SEQ_LENGTHS_DTYPES.find(seqLengthsDtype) == SEQ_LENGTHS_DTYPES.end(),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context->GetNodeName(), "seq_lengths", Ops::Base::ToString(seqLengthsDtype).c_str(),
+                    "The dtype of seq_lengths must be within the range [DT_INT32, DT_INT64]."),
+                return ge::GRAPH_FAILED);
+
+    inputData.seqLengthsDtypeSize = ge::GetSizeByDataType(seqLengthsDtype);
+    OP_CHECK_IF(inputData.seqLengthsDtypeSize <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "seq_lengths",
+                                                      Ops::Base::ToString(seqLengthsDtype).c_str(),
+                                                      "The dtype size of seq_lengths must be greater than 0."),
+                return ge::GRAPH_FAILED);
+
     auto yDescPtr = context->GetOutputDesc(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yDescPtr);
     ge::DataType yDtype = yDescPtr->GetDataType();
-OP_CHECK_IF(yDtype != xDtype, 
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, y",
-            (Ops::Base::ToString(xDtype) + ", " + Ops::Base::ToString(yDtype)).c_str(),
+    OP_CHECK_IF(
+        yDtype != xDtype,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "x, y", (Ops::Base::ToString(xDtype) + ", " + Ops::Base::ToString(yDtype)).c_str(),
             "The dtypes of x and y must be the same."),
         return ge::GRAPH_FAILED);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -107,7 +106,7 @@ static void ComputeCombineType(ReverseInputInfo& inputData)
         }
     } else if (inputData.comBineDims == THREE_DIM) {
         if (inputData.batchAxis == inputData.seqAxis - 1) {
-           if (inputData.batchAxis == 0) {
+            if (inputData.batchAxis == 0) {
                 inputData.comBineType = TYPE_BSA; // BSA
             } else {
                 inputData.comBineType = TYPE_ABS; // ABS
@@ -123,14 +122,15 @@ static void ComputeCombineType(ReverseInputInfo& inputData)
         } else {
             inputData.comBineType = TYPE_SAB; // SAB
         }
-    } else if (inputData.comBineDims == FOUR_DIM && inputData.batchAxis == inputData.seqAxis + 1 && inputData.seqAxis == ONE_DIM) {
+    } else if (inputData.comBineDims == FOUR_DIM && inputData.batchAxis == inputData.seqAxis + 1 &&
+               inputData.seqAxis == ONE_DIM) {
         inputData.comBineType = TYPE_A1SBA; // A1SBA
     } else {
         inputData.comBineType = TYPE_OTHER;
     }
 }
 
-static int64_t ComBineAxis(const gert::Shape& xShape, int64_t& i, int64_t k) 
+static int64_t ComBineAxis(const gert::Shape& xShape, int64_t& i, int64_t k)
 {
     int64_t comBineRes = 1;
     for (; i < k; i++) {
@@ -160,7 +160,7 @@ static void ComputeComBineAxis(const gert::Shape& xShape, int64_t rank, ReverseI
 
     inputData.inputDim[j++] = xShape.GetDim(i++);
     inputData.comBineDims++;
-    
+
     if (secondAxis == i) {
         if (inputData.seqAxis > inputData.batchAxis) {
             inputData.seqAxis = j;
@@ -213,21 +213,21 @@ static ge::graphStatus CheckAttrParams(gert::TilingContext* context, ReverseInpu
     const auto* batchAxisPtr = attrs->GetAttrPointer<int64_t>(BATCH_AXIS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, batchAxisPtr);
     inputData.batchAxis = static_cast<int64_t>(*batchAxisPtr);
-    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld, inputData.seqAxis=%ld", inputData.batchAxis, inputData.seqAxis);
-    
+    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld, inputData.seqAxis=%ld", inputData.batchAxis,
+            inputData.seqAxis);
+
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateXShape(gert::TilingContext* context, const gert::Shape& xShape, 
-                                        int64_t rank, ReverseInputInfo& inputData)
+static ge::graphStatus ValidateXShape(gert::TilingContext* context, const gert::Shape& xShape, int64_t rank,
+                                      ReverseInputInfo& inputData)
 {
     inputData.xShapeSize = xShape.GetShapeSize();
     OP_CHECK_IF(rank < X_MIN_DIM_CNT,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(rank).c_str(),
-            "The shape dim of x must be greater than or equal to 2."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(rank).c_str(),
+                                                         "The shape dim of x must be greater than or equal to 2."),
+                return ge::GRAPH_FAILED);
+
     inputData.batchDim = xShape.GetDim(inputData.batchAxis);
     inputData.seqDim = xShape.GetDim(inputData.seqAxis);
     return ge::GRAPH_SUCCESS;
@@ -237,44 +237,47 @@ static ge::graphStatus ValidateAxisParams(gert::TilingContext* context, int64_t 
 {
     inputData.seqAxis = inputData.seqAxis < 0 ? inputData.seqAxis + rank : inputData.seqAxis;
     inputData.batchAxis = inputData.batchAxis < 0 ? inputData.batchAxis + rank : inputData.batchAxis;
-    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld, inputData.seqAxis=%ld", inputData.batchAxis, inputData.seqAxis);
-    
+    OP_LOGD(context, "CheckShapeParams inputData.batchAxis=%ld, inputData.seqAxis=%ld", inputData.batchAxis,
+            inputData.seqAxis);
+
     OP_CHECK_IF(inputData.seqAxis == inputData.batchAxis,
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "batch_axis, seq_axis",
-            (std::to_string(inputData.batchAxis) + ", " + std::to_string(inputData.seqAxis)).c_str(),
-            "The values of batch_axis and seq_axis must be different."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "batch_axis, seq_axis",
+                    (std::to_string(inputData.batchAxis) + ", " + std::to_string(inputData.seqAxis)).c_str(),
+                    "The values of batch_axis and seq_axis must be different."),
+                return ge::GRAPH_FAILED);
+
     OP_CHECK_IF(inputData.batchAxis < 0 || inputData.batchAxis >= rank,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "batch_axis",
-            std::to_string(inputData.batchAxis).c_str(),
-            "The value of batch_axis must be within the range [0, " + std::to_string(rank) + ")."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context->GetNodeName(), "batch_axis", std::to_string(inputData.batchAxis).c_str(),
+                    "The value of batch_axis must be within the range [0, " + std::to_string(rank) + ")."),
+                return ge::GRAPH_FAILED);
+
     OP_CHECK_IF(inputData.seqAxis < 0 || inputData.seqAxis >= rank,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "seq_axis",
-            std::to_string(inputData.seqAxis).c_str(),
-            "The value of seq_axis must be within the range [0, " + std::to_string(rank) + ")."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context->GetNodeName(), "seq_axis", std::to_string(inputData.seqAxis).c_str(),
+                    "The value of seq_axis must be within the range [0, " + std::to_string(rank) + ")."),
+                return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus ValidateSeqLengthsShape(gert::TilingContext* context, const gert::Shape& seqLenShape,
-                                                const ReverseInputInfo& inputData)
+                                               const ReverseInputInfo& inputData)
 {
     OP_CHECK_IF(seqLenShape.GetDimNum() != SEQ_LENGTHS_DIM_CNT,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "seq_lengths",
-            std::to_string(seqLenShape.GetDimNum()).c_str(),
-            "The shape dim of seq_lengths must be equal to 1."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "seq_lengths",
+                                                         std::to_string(seqLenShape.GetDimNum()).c_str(),
+                                                         "The shape dim of seq_lengths must be equal to 1."),
+                return ge::GRAPH_FAILED);
+
     OP_CHECK_IF(static_cast<int64_t>(seqLenShape.GetDim(0)) != inputData.batchDim,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "seq_lengths, x",
-            (std::to_string(seqLenShape.GetDim(0)) + ", " + std::to_string(inputData.batchDim)).c_str(),
-            "The shape of seq_lengths must match the batch dimension of x."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "seq_lengths, x",
+                    (std::to_string(seqLenShape.GetDim(0)) + ", " + std::to_string(inputData.batchDim)).c_str(),
+                    "The shape of seq_lengths must match the batch dimension of x."),
+                return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -283,70 +286,74 @@ static ge::graphStatus ValidateOutputShape(gert::TilingContext* context, const g
     auto yShapePtr = context->GetOutputShape(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
-    
-    OP_CHECK_IF(yShape != xShape, 
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y",
-            (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape)).c_str(),
+
+    OP_CHECK_IF(
+        yShape != xShape,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, y", (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape)).c_str(),
             "The shapes of x and y must be the same."),
         return ge::GRAPH_FAILED);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus CheckShapeParams(gert::TilingContext* context, ReverseInputInfo& inputData)
 {
     OP_LOGD("CheckShapeParams begin");
-    
+
     auto xShapePtr = context->GetInputShape(X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
     int64_t rank = static_cast<int64_t>(xShape.GetDimNum());
-    
+
     if (ValidateAxisParams(context, rank, inputData) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    
+
     if (ValidateXShape(context, xShape, rank, inputData) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    
+
     auto seqLenShapePtr = context->GetInputShape(SEQ_LEN_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, seqLenShapePtr);
     auto seqLenShape = seqLenShapePtr->GetStorageShape();
-    
+
     if (ValidateSeqLengthsShape(context, seqLenShape, inputData) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    
+
     OP_CHECK_IF(xShape.GetShapeSize() == 0 || seqLenShape.GetShapeSize() == 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "x, seq_lengths",
-            (std::to_string(xShape.GetShapeSize()) + ", " + std::to_string(seqLenShape.GetShapeSize())).c_str(),
-            "The shape sizes of x and seq_lengths must be greater than 0."),
-        return ge::GRAPH_FAILED);
-    
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context->GetNodeName(), "x, seq_lengths",
+                    (std::to_string(xShape.GetShapeSize()) + ", " + std::to_string(seqLenShape.GetShapeSize())).c_str(),
+                    "The shape sizes of x and seq_lengths must be greater than 0."),
+                return ge::GRAPH_FAILED);
+
     if (ValidateOutputShape(context, xShape) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    
+
     ComputeAfterAxisSize(xShape, rank, inputData);
     ComputeComBineAxis(xShape, rank, inputData);
     ComputeCombineType(inputData);
-    OP_LOGD(context, "ComputeComBineAxis inputData.comBineType=%ld, inputData.comBineDims=%ld, inputData.batchAxis=%ld, inputData.seqAxis=%ld", 
-        inputData.comBineType, inputData.comBineDims, inputData.batchAxis, inputData.seqAxis);
-    
+    OP_LOGD(context,
+            "ComputeComBineAxis inputData.comBineType=%ld, inputData.comBineDims=%ld, inputData.batchAxis=%ld, "
+            "inputData.seqAxis=%ld",
+            inputData.comBineType, inputData.comBineDims, inputData.batchAxis, inputData.seqAxis);
+
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GetReverseSequenceShapeAttrsInfo(gert::TilingContext* context, ReverseInputInfo& inputData)
 {
     OP_CHECK_IF(CheckDTypeParams(context, inputData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "CheckDTypeParams failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "CheckDTypeParams failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckAttrParams(context, inputData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "CheckAttrParams failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "CheckAttrParams failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckShapeParams(context, inputData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "CheckShapeParams failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "CheckShapeParams failed."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -361,4 +368,4 @@ ge::graphStatus GetReverseSequencePlatformInfo(gert::TilingContext* context, uin
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

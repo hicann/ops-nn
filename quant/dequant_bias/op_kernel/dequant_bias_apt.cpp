@@ -24,22 +24,32 @@
 /* Bias type selector from tiling key parameter */
 template <uint64_t ID>
 struct BiasTypeSelector {};
-template <> struct BiasTypeSelector<TPL_BIAS_FLOAT> { using type = float; };
-template <> struct BiasTypeSelector<TPL_BIAS_HALF> { using type = half; };
-template <> struct BiasTypeSelector<TPL_BIAS_BFLOAT> { using type = bfloat16_t; };
-template <> struct BiasTypeSelector<TPL_BIAS_INT> { using type = int32_t; };
+template <>
+struct BiasTypeSelector<TPL_BIAS_FLOAT> {
+    using type = float;
+};
+template <>
+struct BiasTypeSelector<TPL_BIAS_HALF> {
+    using type = half;
+};
+template <>
+struct BiasTypeSelector<TPL_BIAS_BFLOAT> {
+    using type = bfloat16_t;
+};
+template <>
+struct BiasTypeSelector<TPL_BIAS_INT> {
+    using type = int32_t;
+};
 
 template <uint64_t HAS_BIAS, uint64_t HAS_ACTIVATE, uint64_t DTYPE_BIAS_ID>
-__global__ __aicore__ void dequant_bias(
-    GM_ADDR x, GM_ADDR weight_scale, GM_ADDR activate_scale,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void dequant_bias(GM_ADDR x, GM_ADDR weight_scale, GM_ADDR activate_scale, GM_ADDR bias,
+                                        GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(DequantBiasArch35TilingData);
     GET_TILING_DATA_WITH_STRUCT(DequantBiasArch35TilingData, tilingData, tiling);
 
     using DTYPE_B = typename BiasTypeSelector<DTYPE_BIAS_ID>::type;
-    NsDequantBias::DequantBiasKernel<int32_t, DTYPE_WEIGHT_SCALE, DTYPE_B, DTYPE_Y,
-                                     HAS_BIAS, HAS_ACTIVATE> op;
+    NsDequantBias::DequantBiasKernel<int32_t, DTYPE_WEIGHT_SCALE, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE> op;
     op.Init(x, weight_scale, activate_scale, bias, y, tiling);
     op.Process();
 }

@@ -29,8 +29,9 @@ using namespace AscendC;
     } while (0)
 
 template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW, bool groupEnlarge>
-__global__ __aicore__ void conv3d_backprop_filter_v2_arch35(
-    GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+__global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop,
+                                                            GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+{
     if (workSpace == nullptr) {
         return;
     }
@@ -55,11 +56,11 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(
     opInitOutput.Destroy();
 
     if constexpr (conv3DDWTemplateId == TPL_STREAM_K) {
-        CONV3D_DX_INPUT_RUN_OP(
-            Conv3dDwBasicBlockStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, isSplitKernelHW, groupEnlarge>);
+        CONV3D_DX_INPUT_RUN_OP(Conv3dDwBasicBlockStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
+                                                         DTYPE_Y, FORMAT_Y, isSplitKernelHW, groupEnlarge>);
     } else if constexpr (conv3DDWTemplateId == TPL_MN_STREAM_K) {
-        CONV3D_DX_INPUT_RUN_OP(
-            Conv3dDwBasicBlockMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, isSplitKernelHW, groupEnlarge>);
+        CONV3D_DX_INPUT_RUN_OP(Conv3dDwBasicBlockMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
+                                                           DTYPE_Y, FORMAT_Y, isSplitKernelHW, groupEnlarge>);
     }
 }
-#endif  // CONV3D_BACKPROP_FILTER_V2_ARCH35_H
+#endif // CONV3D_BACKPROP_FILTER_V2_ARCH35_H

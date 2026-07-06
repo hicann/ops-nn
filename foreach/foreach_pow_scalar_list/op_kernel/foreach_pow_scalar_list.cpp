@@ -17,8 +17,8 @@
 
 using namespace ForeachPowScalarList;
 
-extern "C" __global__ __aicore__ void foreach_pow_scalar_list(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_pow_scalar_list(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs,
+                                                              GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

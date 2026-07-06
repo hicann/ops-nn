@@ -13,19 +13,16 @@
 #include "scatter_non_aliasing_add_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void scatter_non_aliasing_add(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR updates,
-    GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void scatter_non_aliasing_add(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ScatterNonAliasingAddTilingData);
     GET_TILING_DATA_WITH_STRUCT(ScatterNonAliasingAddTilingData, tilingData, tiling);
 
     if constexpr (schMode == SCATTER_IDX_INT32) {
-        NsScatterNonAliasingAdd::Process<DTYPE_X, int32_t>(
-            x, indices, updates, y, workspace, tilingData);
+        NsScatterNonAliasingAdd::Process<DTYPE_X, int32_t>(x, indices, updates, y, workspace, tilingData);
     }
     if constexpr (schMode == SCATTER_IDX_INT64) {
-        NsScatterNonAliasingAdd::Process<DTYPE_X, int64_t>(
-            x, indices, updates, y, workspace, tilingData);
+        NsScatterNonAliasingAdd::Process<DTYPE_X, int64_t>(x, indices, updates, y, workspace, tilingData);
     }
 }

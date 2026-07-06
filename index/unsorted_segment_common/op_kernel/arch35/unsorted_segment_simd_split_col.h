@@ -21,8 +21,7 @@ using namespace AscendC;
 constexpr uint32_t SPLIT_COL_DB_BUF = 2;
 
 template <typename X_T, typename IDS_T, typename InitValueType, typename VectorComputeFunc>
-class KernelSimdSplitCol
-{
+class KernelSimdSplitCol {
 public:
     __aicore__ inline KernelSimdSplitCol(const UnsortedSegmentSimdSplitColTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
@@ -41,15 +40,17 @@ private:
 };
 
 template <typename X_T, typename IDS_T, typename InitValueType, typename VectorComputeFunc>
-__aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorComputeFunc>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+__aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorComputeFunc>::Init(GM_ADDR x,
+                                                                                              GM_ADDR segmentIds,
+                                                                                              GM_ADDR output)
 {
     xGm_.SetGlobalBuffer((__gm__ X_T*)(x));
     idsGm_.SetGlobalBuffer((__gm__ IDS_T*)(segmentIds));
     yGm_.SetGlobalBuffer((__gm__ X_T*)(output));
 
     pipe_->InitBuffer(xQue_, SPLIT_COL_DB_BUF, td_->baseS * td_->baseA * sizeof(X_T));
-    pipe_->InitBuffer(
-        idsQue_, SPLIT_COL_DB_BUF, Aligned(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
+    pipe_->InitBuffer(idsQue_, SPLIT_COL_DB_BUF,
+                      Aligned(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
     pipe_->InitBuffer(yQue_, 1, td_->outputOuterDim * td_->baseA * sizeof(X_T));
 }
 

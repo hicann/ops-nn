@@ -34,15 +34,9 @@ class LoadAL1WithHwModeTools {
 public:
     __aicore__ inline LoadAL1WithHwModeTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
-    __aicore__ inline LoadData3DParamsV2<typename Intf::FmapT>& GetLoadData3DParams()
-    {
-        return loadData3Dv2Params;
-    }
+    __aicore__ inline LoadData3DParamsV2<typename Intf::FmapT>& GetLoadData3DParams() { return loadData3Dv2Params; }
 
     __aicore__ inline void SetLoadData3DParams()
     {
@@ -57,10 +51,7 @@ public:
         loadData3Dv2Params.dilationFilterH = self_->ctx.dilationH;
     }
 
-    __aicore__ inline bool GetSet2dFlag()
-    {
-        return aL1IsFullPad;
-    }
+    __aicore__ inline bool GetSet2dFlag() { return aL1IsFullPad; }
 
     __aicore__ inline void LoadAL1()
     {
@@ -75,16 +66,8 @@ public:
         SetFmatrixForLoad3D();
         CopyDataGMToL1();
         ASC_OP_LOGD("[LoadAL1] hoStartIdx %d, hoEndIdx %d, hiLoadL1 %d, hiIdx %d, "
-                "kdL1Idx %d, cin1L1Idx %d, diIdx %d, cin1LoadL1 %d, aL1GmOffset %d.\n",
-            hoStartIdx,
-            hoEndIdx,
-            hiLoadL1,
-            hiIdx,
-            kdL1Idx,
-            cin1L1Idx,
-            diIdx,
-            cin1LoadL1,
-            aL1GmOffset);
+                    "kdL1Idx %d, cin1L1Idx %d, diIdx %d, cin1LoadL1 %d, aL1GmOffset %d.\n",
+                    hoStartIdx, hoEndIdx, hiLoadL1, hiIdx, kdL1Idx, cin1L1Idx, diIdx, cin1LoadL1, aL1GmOffset);
     }
 
 private:
@@ -98,7 +81,7 @@ private:
         SetFmatrix(hiLoadL1, wiLoadL1, padList, FmatrixMode::FMATRIX_LEFT);
     }
 
-     __aicore__ inline void CopyDataGMToL1()
+    __aicore__ inline void CopyDataGMToL1()
     {
         CalcAL1GmOffset();
         uint64_t blockCount = hiLoadL1;
@@ -116,8 +99,8 @@ private:
                 uint64_t aL1GmSubOffset = aL1GmOffset;
                 uint64_t aL1SubOffset = aL1Offset;
                 for (uint64_t j = 0; j < hiLoadL1; j++) {
-                    DataCopy<typename Intf::FmapT>(
-                        self_->ctx.al1[aL1SubOffset], self_->ctx.agm[aL1GmSubOffset], dataCopyParams);
+                    DataCopy<typename Intf::FmapT>(self_->ctx.al1[aL1SubOffset], self_->ctx.agm[aL1GmSubOffset],
+                                                   dataCopyParams);
                     aL1SubOffset += wiLoadL1 * self_->ctx.cin0;
                     aL1GmSubOffset += self_->ctx.orgWi * self_->ctx.cin0;
                 }
@@ -127,8 +110,8 @@ private:
             }
             aL1Offset += hiLoadL1 * wiLoadL1 * self_->ctx.cin0;
             if ((i + 1) % self_->ctx.cin1 == 0) {
-                aL1GmOffset += ((self_->ctx.dilationD - 1) * self_->ctx.cin1 + 1) *
-                               self_->ctx.orgHi * self_->ctx.orgWi * self_->ctx.cin0;
+                aL1GmOffset += ((self_->ctx.dilationD - 1) * self_->ctx.cin1 + 1) * self_->ctx.orgHi *
+                               self_->ctx.orgWi * self_->ctx.cin0;
             } else {
                 aL1GmOffset += self_->ctx.orgHi * self_->ctx.orgWi * self_->ctx.cin0;
             }
@@ -136,22 +119,20 @@ private:
         Set2DForDinPadTail(aL1Offset);
     }
 
-    __aicore__ inline void Set2DForDinPadHead(uint64_t &aL1Offset)
+    __aicore__ inline void Set2DForDinPadHead(uint64_t& aL1Offset)
     {
         if (set2dFlagDHead) {
             // 前di pad
             if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
                 LocalTensor<uint16_t> clearLocal = self_->ctx.al1.template ReinterpretCast<uint16_t>();
                 InitConstValueParams<uint16_t> initConstValueParams;
-                SetInitConstValueParams<uint16_t>(initConstValueParams,
-                    cin1LoadL1PadHead / self_->ctx.cin1,
-                    self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
+                SetInitConstValueParams<uint16_t>(initConstValueParams, cin1LoadL1PadHead / self_->ctx.cin1,
+                                                  self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
                 InitConstValue<uint16_t>(clearLocal, initConstValueParams);
             } else {
                 InitConstValueParams<typename Intf::FmapT> initConstValueParams;
-                SetInitConstValueParams<typename Intf::FmapT>(initConstValueParams,
-                    cin1LoadL1PadHead / self_->ctx.cin1,
-                    self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
+                SetInitConstValueParams<typename Intf::FmapT>(initConstValueParams, cin1LoadL1PadHead / self_->ctx.cin1,
+                                                              self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
                 InitConstValue<typename Intf::FmapT>(self_->ctx.al1, initConstValueParams);
             }
             aL1Offset += cin1LoadL1PadHead * hiLoadL1 * wiLoadL1 * self_->ctx.cin0;
@@ -159,22 +140,20 @@ private:
         }
     }
 
-    __aicore__ inline void Set2DForDinPadTail(uint64_t &aL1Offset)
+    __aicore__ inline void Set2DForDinPadTail(uint64_t& aL1Offset)
     {
         if (set2dFlagDTail) {
             // 后di pad
             if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
                 LocalTensor<uint16_t> clearLocal = self_->ctx.al1.template ReinterpretCast<uint16_t>();
                 InitConstValueParams<uint16_t> initConstValueParams;
-                SetInitConstValueParams<uint16_t>(initConstValueParams,
-                    cin1LoadL1PadTail / self_->ctx.cin1,
-                    self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
+                SetInitConstValueParams<uint16_t>(initConstValueParams, cin1LoadL1PadTail / self_->ctx.cin1,
+                                                  self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
                 InitConstValue<uint16_t>(clearLocal[aL1Offset / INT16_DIV_INT8], initConstValueParams);
             } else {
                 InitConstValueParams<typename Intf::FmapT> initConstValueParams;
-                SetInitConstValueParams<typename Intf::FmapT>(initConstValueParams,
-                    cin1LoadL1PadTail / self_->ctx.cin1,
-                    self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
+                SetInitConstValueParams<typename Intf::FmapT>(initConstValueParams, cin1LoadL1PadTail / self_->ctx.cin1,
+                                                              self_->ctx.cin1 * hiLoadL1 * wiLoadL1);
                 InitConstValue<typename Intf::FmapT>(self_->ctx.al1[aL1Offset], initConstValueParams);
             }
             set2dFlagDTail = false;
@@ -182,25 +161,22 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<T> &initConstValueParams,
-        const uint64_t repeatTimes, const uint64_t blockNum)
+    __aicore__ inline void SetInitConstValueParams(InitConstValueParams<T>& initConstValueParams,
+                                                   const uint64_t repeatTimes, const uint64_t blockNum)
     {
         initConstValueParams.repeatTimes = repeatTimes;
         initConstValueParams.blockNum = blockNum;
         initConstValueParams.dstGap = 0;
         initConstValueParams.initValue = 0;
-        ASC_OP_LOGD(
-            "[LoadAL1] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
-            initConstValueParams.repeatTimes,
-            initConstValueParams.blockNum);
+        ASC_OP_LOGD("[LoadAL1] initConstValueParams.repeatTimes %d, initConstValueParams.blockNum %d \n",
+                    initConstValueParams.repeatTimes, initConstValueParams.blockNum);
     }
 
     __aicore__ inline void CalcAL1GmOffset()
     {
         aL1GmOffset = diIdx * self_->ctx.cin1 * self_->ctx.orgHi * self_->ctx.orgWi * self_->ctx.cin0 +
                       cin1L1Idx * self_->ctx.orgHi * self_->ctx.orgWi * self_->ctx.cin0 +
-                      hiIdx * self_->ctx.orgWi * self_->ctx.cin0 +
-                      wiIdx * self_->ctx.cin0;
+                      hiIdx * self_->ctx.orgWi * self_->ctx.cin0 + wiIdx * self_->ctx.cin0;
         ASC_OP_LOGD("[LoadAL1] aL1GmOffset %d.\n", aL1GmOffset);
     }
 
@@ -212,20 +188,12 @@ private:
         dataCopyParams.dstStride = 0;
         ASC_OP_LOGD("[LoadAL1] dataCopyParams.blockCount %d, dataCopyParams.blockLen %d, "
                     "dataCopyParams.srcStride %d.\n",
-            dataCopyParams.blockCount,
-            dataCopyParams.blockLen,
-            dataCopyParams.srcStride);
+                    dataCopyParams.blockCount, dataCopyParams.blockLen, dataCopyParams.srcStride);
     }
 
-    __aicore__ inline bool IsMTail()
-    {
-        return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter;
-    }
+    __aicore__ inline bool IsMTail() { return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter; }
 
-    __aicore__ inline bool IsKaL1Tail()
-    {
-        return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter;
-    }
+    __aicore__ inline bool IsKaL1Tail() { return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter; }
 
     __aicore__ inline void PreProcess()
     {
@@ -307,8 +275,8 @@ private:
     {
         uint64_t hiStartIdxWithPad = self_->ctx.hiStartPos + hoStartIdx * self_->ctx.strideH;
         uint64_t hiEndIdxWithPad = hiStartIdxWithPad + hiLoadL1;
-        hiIdx = self_->ctx.hiStartPos <= self_->ctx.padTop ? hiStartIdxWithPad - self_->ctx.padTop
-                                                            : hiStartIdxWithPad - self_->ctx.hiStartPos;
+        hiIdx = self_->ctx.hiStartPos <= self_->ctx.padTop ? hiStartIdxWithPad - self_->ctx.padTop :
+                                                             hiStartIdxWithPad - self_->ctx.hiStartPos;
         if (hiEndIdxWithPad <= self_->ctx.padTop) {
             // hi开头全pad
             aL1IsFullPad = true;
@@ -348,20 +316,20 @@ private:
         }
 
         uint64_t hiStartIdxWithPad = self_->ctx.hiStartPos + hoStartIdx * self_->ctx.strideH;
-        hiIdx = self_->ctx.hiStartPos <= self_->ctx.padTop ? hiStartIdxWithPad - self_->ctx.padTop
-                                                            : hiStartIdxWithPad - self_->ctx.hiStartPos;
+        hiIdx = self_->ctx.hiStartPos <= self_->ctx.padTop ? hiStartIdxWithPad - self_->ctx.padTop :
+                                                             hiStartIdxWithPad - self_->ctx.hiStartPos;
         // get hiLoadL1, hiIdx
     }
 
     __aicore__ inline bool ProcessDoutPad()
     {
-        uint64_t diStartWithPad =
-            self_->ctx.diStartPos + self_->ctx.dOutIter * self_->ctx.strideD + kdL1Idx * self_->ctx.dilationD;
-        uint64_t diEndWithPad = cin1LoadL1 <= self_->ctx.cin1
-                                    ? diStartWithPad + 1
-                                    : diStartWithPad + (cin1LoadL1 / self_->ctx.cin1 - 1) * self_->ctx.dilationD + 1;
-        diIdx = self_->ctx.diStartPos <= self_->ctx.padHead ? diStartWithPad - self_->ctx.padHead
-                                                            : diStartWithPad - self_->ctx.diStartPos;
+        uint64_t diStartWithPad = self_->ctx.diStartPos + self_->ctx.dOutIter * self_->ctx.strideD +
+                                  kdL1Idx * self_->ctx.dilationD;
+        uint64_t diEndWithPad = cin1LoadL1 <= self_->ctx.cin1 ?
+                                    diStartWithPad + 1 :
+                                    diStartWithPad + (cin1LoadL1 / self_->ctx.cin1 - 1) * self_->ctx.dilationD + 1;
+        diIdx = self_->ctx.diStartPos <= self_->ctx.padHead ? diStartWithPad - self_->ctx.padHead :
+                                                              diStartWithPad - self_->ctx.diStartPos;
         if (diEndWithPad <= self_->ctx.padHead) {
             // di开头全pad
             aL1IsFullPad = true;
@@ -409,15 +377,15 @@ private:
             return;
         }
 
-        uint64_t diStartWithPad =
-            self_->ctx.diStartPos + self_->ctx.dOutIter * self_->ctx.strideD + kdL1Idx * self_->ctx.dilationD;
-        diIdx = self_->ctx.diStartPos <= self_->ctx.padHead ? diStartWithPad - self_->ctx.padHead
-                                                            : diStartWithPad - self_->ctx.diStartPos;
+        uint64_t diStartWithPad = self_->ctx.diStartPos + self_->ctx.dOutIter * self_->ctx.strideD +
+                                  kdL1Idx * self_->ctx.dilationD;
+        diIdx = self_->ctx.diStartPos <= self_->ctx.padHead ? diStartWithPad - self_->ctx.padHead :
+                                                              diStartWithPad - self_->ctx.diStartPos;
         // get cin1L1Idx, diIdx
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t aL1GmOffset = 0;
     uint64_t wiLoadL1 = 0;
     uint64_t hiLoadL1 = 0;
@@ -451,10 +419,7 @@ class LoadBL1WithHwModeTools {
 public:
     __aicore__ inline LoadBL1WithHwModeTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
     __aicore__ inline void LoadBL1()
     {
@@ -473,15 +438,9 @@ public:
     }
 
 private:
-    __aicore__ inline bool IsNTail()
-    {
-        return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter;
-    }
+    __aicore__ inline bool IsNTail() { return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter; }
 
-    __aicore__ inline bool IsKBL1Tail()
-    {
-        return self_->ctx.kBL1Iter == self_->ctx.maxKBL1Iter;
-    }
+    __aicore__ inline bool IsKBL1Tail() { return self_->ctx.kBL1Iter == self_->ctx.maxKBL1Iter; }
 
     __aicore__ inline void PreProcess()
     {
@@ -492,13 +451,13 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t bL1GmOffset = 0;
     uint64_t currentNBL1 = 0;
     uint64_t currentKBL1 = 0;
     DataCopyParams dataCopyParams;
 };
 
-};  // namespace Conv3dFunc
+}; // namespace Conv3dFunc
 
-#endif  // __CONV3D_MTE2_HW_MODE_SUB_API_H__
+#endif // __CONV3D_MTE2_HW_MODE_SUB_API_H__

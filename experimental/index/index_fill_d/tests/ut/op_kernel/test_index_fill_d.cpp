@@ -35,10 +35,7 @@ protected:
         system(cmd.c_str());
         system("chmod -R 755 ./index_fill_d_data/");
     }
-    static void TearDownTestCase()
-    {
-        std::cout << "index_fill_d_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "index_fill_d_test TearDown" << std::endl; }
 
 private:
     const static std::string rootPath;
@@ -79,7 +76,7 @@ TEST_F(IndexFillDTest, test_case_float32_1)
 
     IndexFillDTilingData* tilingData = reinterpret_cast<IndexFillDTilingData*>(tiling);
 
-    tilingData->smallCoreDataNum = 64;  
+    tilingData->smallCoreDataNum = 64;
     tilingData->bigCoreDataNum = 128;
     tilingData->tileDataNum = 4864;
     tilingData->smallTailDataNum = 64;
@@ -103,4 +100,4 @@ TEST_F(IndexFillDTest, test_case_float32_1)
     AscendC::GmFree((void*)tiling);
 
     system("cd ./index_fill_d_data/ && python3 compare_data.py 'float32'");
-}   
+}

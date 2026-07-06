@@ -13,7 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *PRelu(const aclTensor *self, const aclTensor *weight, aclOpExecutor *executor);
+const aclTensor* PRelu(const aclTensor* self, const aclTensor* weight, aclOpExecutor* executor);
 
 }
 

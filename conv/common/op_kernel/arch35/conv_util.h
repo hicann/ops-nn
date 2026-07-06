@@ -22,36 +22,36 @@ namespace conv {
 using namespace AscendC;
 
 // 新加bitmode
-#pragma pack(push, 1)  // 确保无填充，严格按位排列
+#pragma pack(push, 1) // 确保无填充，严格按位排列
 typedef struct {
-    uint64_t strideW        : 6;       // bits 0-5
-    uint64_t strideH        : 6;       // bits 6-11
-    uint64_t kernelW        : 8;       // bits 12-19
-    uint64_t kernelH        : 8;       // bits 20-27
-    uint64_t dilationW      : 8;       // bits 28-35
-    uint64_t dilationH      : 8;       // bits 36-43
+    uint64_t strideW : 6;             // bits 0-5
+    uint64_t strideH : 6;             // bits 6-11
+    uint64_t kernelW : 8;             // bits 12-19
+    uint64_t kernelH : 8;             // bits 20-27
+    uint64_t dilationW : 8;           // bits 28-35
+    uint64_t dilationH : 8;           // bits 36-43
     uint64_t kernelW_highest_bit : 1; // bit 44
     uint64_t kernelH_highest_bit : 1; // bit 45
-    uint64_t reserve1       : 2;        // bits 46-47
-    uint64_t channelSize    : 16;      // bits 48-64
+    uint64_t reserve1 : 2;            // bits 46-47
+    uint64_t channelSize : 16;        // bits 48-64
 } BitFieldXtData;
 #pragma pack(pop)
- 
-#pragma pack(push, 1)  // 确保无填充，严格按位排列
+
+#pragma pack(push, 1) // 确保无填充，严格按位排列
 typedef struct {
-    uint64_t currentKL0        : 16;       // bits 0-15
-    uint64_t mExtension_        : 16;       // bits 16-31
-    uint64_t posK        : 16;       // bits 32-47
-    uint64_t mStartPt_        : 16;       // bits 48-63
+    uint64_t currentKL0 : 16;  // bits 0-15
+    uint64_t mExtension_ : 16; // bits 16-31
+    uint64_t posK : 16;        // bits 32-47
+    uint64_t mStartPt_ : 16;   // bits 48-63
 } BitFieldXmData;
 #pragma pack(pop)
- 
+
 union UnionDataXt {
     uint64_t n;
     BitFieldXtData bf;
     __aicore__ inline UnionDataXt() : n(0) {}
 };
- 
+
 union UnionDataXm {
     uint64_t n;
     BitFieldXmData bf;
@@ -84,7 +84,7 @@ const static uint32_t L0_SYNC_DB_OPEN = 0x1;
 const static uint32_t UB_MAX_REPEAT_TIMES = 255;
 const static uint32_t UB_CALC_ONE_REPEAT = 64;
 const static uint32_t COUNT_ONE_BLK_B32 = 8;
-const static uint8_t C04_CIN_SIZE  = 4;
+const static uint8_t C04_CIN_SIZE = 4;
 const static uint8_t ROUND_MODE_RINT = 1;
 const static uint8_t ROUND_MODE_ROUND = 2;
 const static uint8_t ROUND_MODE_HYBRID = 3;
@@ -136,7 +136,7 @@ const static uint8_t DST_STRIDE_OFFSET = 16;
 const static uint8_t K_START_OFFSET = 16;
 const static uint8_t M_STEP_OFFSET = 32;
 const static uint8_t K_STEP_OFFSET = 40;
- 
+
 // parameters mask value
 const static uint64_t MASK_16 = 0xffff;
 const static uint64_t MASK_8 = 0xff;
@@ -149,24 +149,17 @@ const static uint16_t N_VALUE_MAX = 65535;
 const static uint64_t DEQ_SCALAR_ONE = 1065353216;
 static constexpr IsResetLoad3dConfig CONV_LOAD3DV2_DEFAULT_CONFIG = {false, false};
 
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {
-    CO2Layout::COLUMN_MAJOR,
-    false,
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, false,
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    true
+                                                        true
 #endif
 };
-constexpr FixpipeConfig CFG_ROW_MAJOR_FIXED_POINT = {
-    CO2Layout::ROW_MAJOR,
-    false,
+constexpr FixpipeConfig CFG_ROW_MAJOR_FIXED_POINT = {CO2Layout::ROW_MAJOR, false,
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    true
+                                                     true
 #endif
 };
-constexpr FixpipeConfig CFG_ROW_MAJOR_UB = {
-    CO2Layout::ROW_MAJOR,
-    true
-};
+constexpr FixpipeConfig CFG_ROW_MAJOR_UB = {CO2Layout::ROW_MAJOR, true};
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
 #define ASCEND_IS_AIC_CONV constexpr(true)
@@ -186,22 +179,12 @@ constexpr uint8_t UNIT_FLAG_ENABLE_ONLY = 2;
 // and flip the read-write status after writing/reading ends.
 constexpr uint8_t UNIT_FLAG_ENABLE_WITH_FLIP = 3;
 
-static __aicore__ inline uint64_t AlignB(uint64_t a, uint64_t b)
-{
-    return ((a + b - 1) / b) * b;
-}
+static __aicore__ inline uint64_t AlignB(uint64_t a, uint64_t b) { return ((a + b - 1) / b) * b; }
 
-static __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b)
-{
-    return (a + b - 1) / b;
-}
+static __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b) { return (a + b - 1) / b; }
 
-enum class QuantModeType : std::uint8_t {
-    NO_QUANT = 0,
-    SCALAR_QUANT,
-    VECTOR_QUANT
-};
+enum class QuantModeType : std::uint8_t { NO_QUANT = 0, SCALAR_QUANT, VECTOR_QUANT };
 
-}
+} // namespace conv
 
-#endif  // CONV_UTIL_H
+#endif // CONV_UTIL_H

@@ -36,9 +36,9 @@ REG_OP(ScatterNdMax)
     .INPUT(var, TensorType::BasicType())
     .INPUT(indices, TensorType::IndexNumberType())
     .INPUT(updates, TensorType::BasicType())
-    .OUTPUT(var,  TensorType::BasicType())
+    .OUTPUT(var, TensorType::BasicType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterNdMax)
 } // namespace ge
 
-#endif  // SCATTER_ND_MAX_PROTO_H_
+#endif // SCATTER_ND_MAX_PROTO_H_

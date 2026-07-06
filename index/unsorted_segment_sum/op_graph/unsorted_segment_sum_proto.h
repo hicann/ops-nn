@@ -58,4 +58,4 @@ REG_OP(UnsortedSegmentSum)
     .OP_END_FACTORY_REG(UnsortedSegmentSum)
 } // namespace ge
 
-#endif  // UNSORTED_SEGMENT_SUM_PROTO_H_
+#endif // UNSORTED_SEGMENT_SUM_PROTO_H_

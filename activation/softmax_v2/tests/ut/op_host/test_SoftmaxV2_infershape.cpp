@@ -21,18 +21,14 @@
 #include "../../../../../tests/ut/common/any_value.h"
 
 class SoftmaxV2Test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SoftmaxV2Test Proto Test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SoftmaxV2Test Proto Test SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SoftmaxV2Test Proto Test TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SoftmaxV2Test Proto Test TearDown" << std::endl; }
 };
 
-
-TEST_F(SoftmaxV2Test, softmax_v2_test_1) {
+TEST_F(SoftmaxV2Test, softmax_v2_test_1)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxV2")->infer_shape;
 
     gert::StorageShape xShape = {{9, 35}, {9, 35}};
@@ -43,7 +39,8 @@ TEST_F(SoftmaxV2Test, softmax_v2_test_1) {
                       .IrInstanceNum({1})
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"axes", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(axes)}, {"half_to_float", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"axes", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(axes)},
+                                  {"half_to_float", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape})
                       .Build();

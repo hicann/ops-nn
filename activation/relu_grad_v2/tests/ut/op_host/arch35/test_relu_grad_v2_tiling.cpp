@@ -29,15 +29,9 @@ using namespace ge;
 
 class ReluGradV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReluGradV2TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReluGradV2TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReluGradV2TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReluGradV2TilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -52,9 +46,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
 "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -98,8 +92,8 @@ TEST_F(ReluGradV2TilingTest, test_relu_grad_v2_tiling_fp16_001)
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
@@ -165,8 +159,8 @@ TEST_F(ReluGradV2TilingTest, test_relu_grad_v2_tiling_bf16_001)
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 

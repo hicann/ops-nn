@@ -31,8 +31,7 @@ namespace Conv {
 
 bool Conv3DDXV2FullLoadTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
-        NpuArch::DAV_3510 &&
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }
@@ -42,7 +41,7 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
     }
 
     // 暂不支持fp16/bfp16以外类型
- 	if (tilingRunInfo_.tilingHkWkMode != 0) {
+    if (tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
     }
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
@@ -73,8 +72,8 @@ bool Conv3DDXV2FullLoadTiling::IsCapable()
     }
 
     // 在不影响最优基本块的情况下全载的带宽才会更低
-    uint64_t bestBaseN =
-        runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_256;
+    uint64_t bestBaseN = runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 ? BASIC_BLOCK_SIZE_128 :
+                                                                                         BASIC_BLOCK_SIZE_256;
     bestBaseN = std::min(bestBaseN, tilingRunInfo_.nValue);
     if (tilingRunInfo_.kValue * bestBaseN * dtypeByteL0b_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
         tilingRunInfo_.enableFullLoadTiling = true;
@@ -87,7 +86,8 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable full load tiling");
     if (isGetTilingFromRepo) {
-        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: FullLoad get tiling from knowledge_tiling success.");
+        OP_LOGD(context_->GetNodeName(),
+                "Conv3DBackpropInputV2 AscendC: FullLoad get tiling from knowledge_tiling success.");
         PrintTilingSummary();
         return ge::GRAPH_SUCCESS;
     }
@@ -172,7 +172,9 @@ void Conv3DDXV2FullLoadTiling::CalStepK(L1TilingParams& l1Params, const L0Tiling
     Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(l1Params, l0Params);
 }
 
-void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthCnt, uint64_t& nCnt) {
+void Conv3DDXV2FullLoadTiling::AdjustSingleCoreInfo(CoreTilingParams& coreParams, uint64_t& batchDepthCnt,
+                                                    uint64_t& nCnt)
+{
     coreParams.singleCoreDin = ONE_U32;
 
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;

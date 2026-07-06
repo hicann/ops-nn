@@ -16,51 +16,31 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> dataType = {
-    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT   
-};
+static const std::vector<ge::DataType> dataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> dataFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class HardtanhGrad : public OpDef {
-    public:
-        explicit HardtanhGrad(const char* name) : OpDef(name)
-        {
-            this->Input("result")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Input("grad")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Output("y")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Attr("min_val")
-                .AttrType(REQUIRED)
-                .Float(-1.0);
-            this->Attr("max_val")
-                .AttrType(REQUIRED)
-                .Float(1.0);
+public:
+    explicit HardtanhGrad(const char* name) : OpDef(name)
+    {
+        this->Input("result").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Input("grad").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Output("y").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Attr("min_val").AttrType(REQUIRED).Float(-1.0);
+        this->Attr("max_val").AttrType(REQUIRED).Float(1.0);
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(false)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .NeedCheckSupportFlag(false)
-                .PrecisionReduceFlag(true)
-                .ExtendCfgInfo("opFile.value", "hardtanh_grad_apt");
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "hardtanh_grad_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
 
 OP_ADD(HardtanhGrad);
-}  // namespace ops
+} // namespace ops

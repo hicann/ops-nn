@@ -30,14 +30,14 @@
 
 namespace FakeQuantCommon {
 
-std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousInput(const aclTensor* self, const aclTensor* scale,
-    const aclTensor* zeroPoint, aclOpExecutor* executor);
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousInput(const aclTensor* self,
+                                                                                    const aclTensor* scale,
+                                                                                    const aclTensor* zeroPoint,
+                                                                                    aclOpExecutor* executor);
 
-inline aclnnStatus FinalizeOutput(
-    aclTensor* fakeQuantOut, aclTensor* fakeQuantMask,
-    const aclTensor* out, const aclTensor* mask,
-    uint64_t* workspaceSize, aclOpExecutor** executor,
-    UniqueExecutor& uniqueExecutor)
+inline aclnnStatus FinalizeOutput(aclTensor* fakeQuantOut, aclTensor* fakeQuantMask, const aclTensor* out,
+                                  const aclTensor* mask, uint64_t* workspaceSize, aclOpExecutor** executor,
+                                  UniqueExecutor& uniqueExecutor)
 {
     CHECK_RET(fakeQuantOut != nullptr && fakeQuantMask != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -55,6 +55,6 @@ inline aclnnStatus FinalizeOutput(
     return ACLNN_SUCCESS;
 }
 
-}
+} // namespace FakeQuantCommon
 
 #endif

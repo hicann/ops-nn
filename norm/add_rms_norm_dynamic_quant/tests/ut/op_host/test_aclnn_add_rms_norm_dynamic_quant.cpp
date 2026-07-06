@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -20,27 +21,32 @@
 
 using namespace std;
 
-class l2_add_rms_norm_dynamic_quant_test : public testing::Test
-{
+class l2_add_rms_norm_dynamic_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_rms_norm_dynamic_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_rms_norm_dynamic_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "add_rms_norm_dynamic_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "add_rms_norm_dynamic_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910B_case_001)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_gamma = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_s1 = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64,}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_s2 = TensorDesc(
+        {
+            64,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
 
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
     auto tensor_desc_y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
@@ -51,10 +57,8 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910B_case_001)
     double eps = 1e-5;
 
     auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuant,
-        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma,
-            tensor_desc_s1, tensor_desc_s2, eps),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2)
-    );
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, eps),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -65,9 +69,21 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910B_case_002)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_gamma = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s1 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s2 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_scale1 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_scale2 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
@@ -76,10 +92,8 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend910B_case_002)
 
     double eps = 1e-5;
     auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuant,
-        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1,
-             tensor_desc_s2, eps),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2)
-    );
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, eps),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -91,9 +105,21 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_001)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_gamma = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s1 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s2 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_scale1 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_scale2 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
@@ -102,10 +128,8 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_001)
 
     double eps = 1e-5;
     auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuant,
-        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1,
-             tensor_desc_s2, eps),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2)
-    );
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, eps),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -116,9 +140,21 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_002)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_gamma = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s1 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s2 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_scale1 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_scale2 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_HIFLOAT8, ACL_FORMAT_ND);
@@ -127,10 +163,8 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_002)
 
     double eps = 1e-5;
     auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuant,
-        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1,
-             tensor_desc_s2, eps),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2)
-    );
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, eps),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -141,9 +175,21 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_003)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_gamma = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s1 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s2 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_scale1 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_scale2 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -152,10 +198,8 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_003)
 
     double eps = 1e-5;
     auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuant,
-        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1,
-             tensor_desc_s2, eps),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2)
-    );
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, eps),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -166,9 +210,21 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_004)
 {
     auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_gamma = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s1 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64,}, ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_s2 = TensorDesc(
+        {
+            64,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_scale1 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_scale2 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -177,10 +233,8 @@ TEST_F(l2_add_rms_norm_dynamic_quant_test, ascend950_case_004)
 
     double eps = 1e-5;
     auto ut = OP_API_UT(aclnnAddRmsNormDynamicQuant,
-        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1,
-             tensor_desc_s2, eps),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2)
-    );
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, eps),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_scale1, tensor_desc_scale2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

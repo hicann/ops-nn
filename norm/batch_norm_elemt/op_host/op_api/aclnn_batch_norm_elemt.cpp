@@ -29,8 +29,8 @@
 
 using namespace op;
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -48,16 +48,15 @@ template <typename T, typename... Ts>
 static bool CheckDtypeValid(const T& t, const Ts&... args)
 {
     if constexpr (std::is_same_v<T, aclTensor*> || std::is_same_v<T, const aclTensor*>) {
-        bool isBf16SupportedSocVersion =
-            (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-             GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
-            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
-        const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST =
-            isBf16SupportedSocVersion ? ASCEND910B_DTYPE_SUPPORT_LIST : ASCEND910_DTYPE_SUPPORT_LIST;
+        bool isBf16SupportedSocVersion = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                                          GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
+                                         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
+        const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = isBf16SupportedSocVersion ?
+                                                                           ASCEND910B_DTYPE_SUPPORT_LIST :
+                                                                           ASCEND910_DTYPE_SUPPORT_LIST;
         if (t && !CheckType(t->GetDataType(), DTYPE_SUPPORT_LIST)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "input not implemented for %s, should be in dtype support list %s.",
-                op::ToString(t->GetDataType()).GetString(), op::ToString(DTYPE_SUPPORT_LIST).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input not implemented for %s, should be in dtype support list %s.",
+                    op::ToString(t->GetDataType()).GetString(), op::ToString(DTYPE_SUPPORT_LIST).GetString());
             return false;
         }
     }
@@ -71,9 +70,8 @@ static bool CheckDtypeValid(const T& t, const Ts&... args)
 static bool CheckFormat(const aclTensor* input, const aclTensor* out)
 {
     if (input->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
-            op::ToString(input->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
+                op::ToString(input->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -84,9 +82,8 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclTensor* mean,
-    const aclTensor* invstd, const aclTensor* out)
+static bool CheckShape(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclTensor* mean,
+                       const aclTensor* invstd, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(input, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MIN_DIM(input, BN_MIN_SUPPORT_DIMS_NUMS, return false);
@@ -116,9 +113,8 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckBatchNormElemtParams(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* mean, aclTensor* invstd,
-    const aclTensor* output)
+static aclnnStatus CheckBatchNormElemtParams(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                             aclTensor* mean, aclTensor* invstd, const aclTensor* output)
 {
     CHECK_RET(CheckNotNull(input, mean, invstd, output), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckDtypeValid(input, weight, bias, mean, invstd, output), ACLNN_ERR_PARAM_INVALID);
@@ -127,9 +123,9 @@ static aclnnStatus CheckBatchNormElemtParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* mean, aclTensor* invstd,
-    double eps, aclTensor* output, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                                aclTensor* mean, aclTensor* invstd, double eps, aclTensor* output,
+                                                uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnBatchNormElemt, DFX_IN(input, weight, bias, mean, invstd, eps), DFX_OUT(output));
 
@@ -202,9 +198,8 @@ aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(
     auto meanNonConst = const_cast<aclTensor*>(meanContiguous);
     auto varianceNonConst = const_cast<aclTensor*>(variance);
     aclTensor* bnOutput = nullptr;
-    auto bnResult = BatchNorm(
-        inputContiguous, weightContiguous, biasContiguous, meanNonConst, varianceNonConst, false, 0.0, eps, &bnOutput,
-        nullptr, nullptr, uniqueExecutor.get());
+    auto bnResult = BatchNorm(inputContiguous, weightContiguous, biasContiguous, meanNonConst, varianceNonConst, false,
+                              0.0, eps, &bnOutput, nullptr, nullptr, uniqueExecutor.get());
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
     if (inputDims > maxDims) {
@@ -228,8 +223,8 @@ aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormElemt(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnBatchNormElemt(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnBatchNormElemt);
     // 固定写法，调用框架能力，完成计算

@@ -63,32 +63,36 @@ constexpr uint32_t INT4_DATA_BENCK_MARK = 2048;
 // vector指令一个repeat最多处理256B，包含8个Block，repeat_stride最大为8
 constexpr uint32_t VEC_REPEAT_MAX_STRIDE = 8;
 
-template <typename T> __aicore__ inline T CeilAlign(T a, T b)
+template <typename T>
+__aicore__ inline T CeilAlign(T a, T b)
 {
     ASCENDC_ASSERT(b != 0, { KERNEL_LOG(KERNEL_ERROR, "Division by zero error!"); });
     return (a + b - 1) / b * b;
 }
 
-template <typename T> __aicore__ inline T CeilDiv(T a, T b)
+template <typename T>
+__aicore__ inline T CeilDiv(T a, T b)
 {
     ASCENDC_ASSERT(b != 0, { KERNEL_LOG(KERNEL_ERROR, "Division by zero error!"); });
     return (a + b - 1) / b;
 }
 
-template <typename T> __aicore__ inline T FloorDiv(T a, T b)
+template <typename T>
+__aicore__ inline T FloorDiv(T a, T b)
 {
     ASCENDC_ASSERT(b != 0, { KERNEL_LOG(KERNEL_ERROR, "Division by zero error!"); });
     return a / b;
 }
 
-template <typename T> __aicore__ inline T Min(T a, T b)
+template <typename T>
+__aicore__ inline T Min(T a, T b)
 {
     return a < b ? a : b;
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(const LocalTensor<T> &dst, const GlobalTensor<T> &src, uint32_t dim1,
-    uint32_t dim0, uint32_t fullDim0)
+__aicore__ inline void DataCopyPad2D(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t dim1,
+                                     uint32_t dim0, uint32_t fullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
@@ -105,8 +109,8 @@ __aicore__ inline void DataCopyPad2D(const LocalTensor<T> &dst, const GlobalTens
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(const LocalTensor<T> &dst, const GlobalTensor<T> &src, uint32_t blockCount,
-    uint32_t blockLen, uint32_t dstInnerLength, uint32_t srcInnerLength)
+__aicore__ inline void DataCopyPad2D(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount,
+                                     uint32_t blockLen, uint32_t dstInnerLength, uint32_t srcInnerLength)
 {
 #if defined(__CCE_KT_TEST__)
     ASCENDC_ASSERT(dstInnerLength >= blockLen, {
@@ -128,8 +132,8 @@ __aicore__ inline void DataCopyPad2D(const LocalTensor<T> &dst, const GlobalTens
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(const GlobalTensor<T> &dst, const LocalTensor<T> &src, uint32_t dim1,
-    uint32_t dim0, uint32_t dstFullDim0)
+__aicore__ inline void DataCopyPad2D(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint32_t dim1,
+                                     uint32_t dim0, uint32_t dstFullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
@@ -147,7 +151,7 @@ __aicore__ inline void DataCopyPad2D(const GlobalTensor<T> &dst, const LocalTens
 
 template <typename T>
 __aicore__ inline void DataCopyPad2D(const GlobalTensor<T> dst, const LocalTensor<T> src, uint32_t dim1, uint32_t dim0,
-    uint32_t srcFullDim0, uint32_t dstFullDim0)
+                                     uint32_t srcFullDim0, uint32_t dstFullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
@@ -184,7 +188,8 @@ __aicore__ inline void InitAtomicAddr(const GlobalTensor<T> dst, uint64_t initTo
     }
 }
 
-template <HardEvent event> class SyncProcessor {
+template <HardEvent event>
+class SyncProcessor {
 public:
     __aicore__ inline SyncProcessor() {}
     TEventID eventIds_[DOUBLE_BUFFER_NUM];
@@ -203,10 +208,7 @@ public:
         }
     };
 
-    __aicore__ uint64_t GetBufferId()
-    {
-        return setTaskId_ % doubleBufferNum_;
-    }
+    __aicore__ uint64_t GetBufferId() { return setTaskId_ % doubleBufferNum_; }
 
     __aicore__ inline void ReleaseTensor()
     {
@@ -237,5 +239,4 @@ public:
         waitTaskId_ = 0;
     };
 };
-}
-
+} // namespace QuantBatchMatmulV4

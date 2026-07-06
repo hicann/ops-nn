@@ -28,10 +28,7 @@ InferDataTypeContextFaker& InferDataTypeContextFaker::SetOpType(const std::strin
     return *this;
 }
 
-InferDataTypeContextFaker& InferDataTypeContextFaker::IrInputNum(size_t inputNum)
-{
-    return *this;
-}
+InferDataTypeContextFaker& InferDataTypeContextFaker::IrInputNum(size_t inputNum) { return *this; }
 
 InferDataTypeContextFaker& InferDataTypeContextFaker::NodeIoNum(size_t inputNum, size_t outputNum)
 {
@@ -39,8 +36,8 @@ InferDataTypeContextFaker& InferDataTypeContextFaker::NodeIoNum(size_t inputNum,
     return *this;
 }
 
-InferDataTypeContextFaker& InferDataTypeContextFaker::IrInstanceNum(
-    const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum)
+InferDataTypeContextFaker& InferDataTypeContextFaker::IrInstanceNum(const std::vector<uint32_t>& inputInstanceNum,
+                                                                    const std::vector<uint32_t>& outputInstanceNum)
 {
     OpInferDataTypeContextBuilder::IOInstanceNum(inputInstanceNum, outputInstanceNum);
     return *this;
@@ -51,15 +48,15 @@ InferDataTypeContextFaker& InferDataTypeContextFaker::IrInstanceNum(const std::v
     return *this;
 }
 
-InferDataTypeContextFaker& InferDataTypeContextFaker::NodeInputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
+InferDataTypeContextFaker& InferDataTypeContextFaker::NodeInputTd(int32_t index, ge::DataType dtype,
+                                                                  ge::Format originFormat, ge::Format storageFormat)
 {
     OpInferDataTypeContextBuilder::InputTensorDesc(index, dtype, originFormat, storageFormat);
     return *this;
 }
 
-InferDataTypeContextFaker& InferDataTypeContextFaker::NodeOutputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
+InferDataTypeContextFaker& InferDataTypeContextFaker::NodeOutputTd(int32_t index, ge::DataType dtype,
+                                                                   ge::Format originFormat, ge::Format storageFormat)
 {
     OpInferDataTypeContextBuilder::OutputTensorDesc(index, originFormat, storageFormat);
     return *this;

@@ -15,15 +15,9 @@
 
 class l2_index_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_index_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_index_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_index_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_index_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_index_test, l2_test_success_fp32)
@@ -39,9 +33,8 @@ TEST_F(l2_index_test, l2_test_success_fp32)
     });
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -61,9 +54,8 @@ TEST_F(l2_index_test, l2_test_self_empty_fp32)
     });
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -83,9 +75,8 @@ TEST_F(l2_index_test, l2_test_out_empty_fp32)
     });
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -103,9 +94,8 @@ TEST_F(l2_index_test, l2_test_success_multi_indices_aicore)
     auto tensor_list_desc = TensorListDesc({indices_desc, indices_desc});
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -123,9 +113,8 @@ TEST_F(l2_index_test, l2_test_success_multi_indices_aicpu)
     auto tensor_list_desc = TensorListDesc({indices_desc, indices_desc});
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -145,9 +134,8 @@ TEST_F(l2_index_test, l2_test_success_fp16)
     });
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -167,9 +155,8 @@ TEST_F(l2_index_test, l2_test_success_int64)
     });
     auto out_desc = TensorDesc(out_shape, ACL_INT64, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -189,9 +176,8 @@ TEST_F(l2_index_test, l2_test_success_int32)
     });
     auto out_desc = TensorDesc(out_shape, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -211,9 +197,8 @@ TEST_F(l2_index_test, l2_test_success_int8)
     });
     auto out_desc = TensorDesc(out_shape, ACL_INT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -233,9 +218,8 @@ TEST_F(l2_index_test, l2_test_success_bool)
     });
     auto out_desc = TensorDesc(out_shape, ACL_BOOL, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -255,9 +239,8 @@ TEST_F(l2_index_test, l2_test_success_uint8)
     });
     auto out_desc = TensorDesc(out_shape, ACL_UINT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -277,9 +260,8 @@ TEST_F(l2_index_test, l2_test_failed_nullptr)
     });
     auto out_desc = TensorDesc(out_shape, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(nullptr, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(nullptr, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -299,9 +281,8 @@ TEST_F(l2_index_test, l2_test_failed_unmatch_dtype)
     });
     auto out_desc = TensorDesc(out_shape, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -321,9 +302,8 @@ TEST_F(l2_index_test, l2_test_success_single_indices_int_aicore)
     });
     auto out_desc = TensorDesc(out_shape, ACL_INT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -343,9 +323,8 @@ TEST_F(l2_index_test, ascend910B2_l2_test_success_bf16_aicore)
     });
     auto out_desc = TensorDesc(out_shape, ACL_BF16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -363,9 +342,8 @@ TEST_F(l2_index_test, ascend910B2_l2_test_partial_continous)
     auto tensor_list_desc = TensorListDesc({indices_desc, indices_desc});
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -385,9 +363,8 @@ TEST_F(l2_index_test, ascend910B2_l2_test_non_first_axis)
     auto tensor_list_desc = TensorListDesc({empty_indices_desc, indices_desc});
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -407,9 +384,8 @@ TEST_F(l2_index_test, ascend910B2_l2_test_non_first_axis_small_tail)
     auto tensor_list_desc = TensorListDesc({empty_indices_desc, indices_desc, indices_desc});
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -429,9 +405,8 @@ TEST_F(l2_index_test, l2_test_failed_unsupport_format)
     });
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -451,9 +426,8 @@ TEST_F(l2_index_test, ascend950_l2_test_success_fp32)
     });
     auto out_desc = TensorDesc(out_shape, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
-        OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnIndex, INPUT(self_desc, tensor_list_desc), // host api输入
+                        OUTPUT(out_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

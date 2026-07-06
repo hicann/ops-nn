@@ -25,11 +25,11 @@ using namespace AscendC;
 
 constexpr uint64_t INDICES_ONE_SORT = 1;
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
-class ScatterUpdateSimdSort : public ScatterUpdateSimdCommon<T, U, updatesIsScalar>  {
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+class ScatterUpdateSimdSort : public ScatterUpdateSimdCommon<T, U, updatesIsScalar> {
 public:
-    __aicore__ inline ScatterUpdateSimdSort(const ScatterUpdateTilingData& tilingData, TPipe& pipe) :
-        ScatterUpdateSimdCommon<T, U, updatesIsScalar> (tilingData, pipe) {};
+    __aicore__ inline ScatterUpdateSimdSort(const ScatterUpdateTilingData& tilingData, TPipe& pipe)
+        : ScatterUpdateSimdCommon<T, U, updatesIsScalar>(tilingData, pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessNotSplitColSort();
@@ -37,7 +37,8 @@ public:
     __aicore__ inline void ProcessNotSplitUpdatesWithSort(uint32_t rowLen, uint32_t outLen);
     __aicore__ inline void ProcessSplitUpdatesWithSort(uint32_t rowLen);
 
-    __aicore__ inline void SyncVtoS() {
+    __aicore__ inline void SyncVtoS()
+    {
         event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdSToV);
         WaitFlag<HardEvent::V_S>(eventIdSToV);
@@ -50,21 +51,26 @@ private:
     TBuf<QuePosition::VECCALC> castIndicesQue_;
 };
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
-__aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace)
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+__aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::Init(GM_ADDR var,
+                                                                                            GM_ADDR indices,
+                                                                                            GM_ADDR updates,
+                                                                                            GM_ADDR workspace)
 {
     this->InitBase(var, indices, updates);
     this->pipe_.InitBuffer(updatesOriginIdexBuf_, this->indicesUbFactor_ * sizeof(uint32_t));
-    this->pipe_.InitBuffer(uniqueIdCountBuf_, ops::CeilAlign((this->indicesUbFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
+    this->pipe_.InitBuffer(uniqueIdCountBuf_,
+                           ops::CeilAlign((this->indicesUbFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
     if constexpr (castType == CAST_NOT_CAST) {
         this->pipe_.InitBuffer(sortIndicesBuf_, (this->indicesUbFactor_ * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE));
- 	} else {
-        this->pipe_.InitBuffer(sortIndicesBuf_, (this->indicesUbFactor_ * sizeof(CAST_T) + SORT_PAD_NUM * UB_AGLIN_VALUE));
+    } else {
+        this->pipe_.InitBuffer(sortIndicesBuf_,
+                               (this->indicesUbFactor_ * sizeof(CAST_T) + SORT_PAD_NUM * UB_AGLIN_VALUE));
         this->pipe_.InitBuffer(castIndicesQue_, (this->indicesUbFactor_ * sizeof(CAST_T)));
- 	}
+    }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
 __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::Process()
 {
     if (GetBlockIdx() >= this->tilingData_.usedCoreNum) {
@@ -77,7 +83,7 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
 __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::ProcessNotSplitColSort()
 {
     int64_t indicesOffset = 0;
@@ -95,13 +101,14 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexBuf_.Get<uint32_t>();
         LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountBuf_.Get<int32_t>();
         if constexpr (castType == CAST_NOT_CAST) {
-            uniqueIdNum = SortAndComputeUniqueIdx<U>(rowByUb, indicesLocal, sortIndicesLocal, uniqueIdCountLocal, updatesOriginIdexLocal);
+            uniqueIdNum = SortAndComputeUniqueIdx<U>(rowByUb, indicesLocal, sortIndicesLocal, uniqueIdCountLocal,
+                                                     updatesOriginIdexLocal);
         } else {
- 	        LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
- 	        IndicesSortCast<U, CAST_T, castType>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, rowByUb);
- 	        uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(
- 	            rowByUb, indicesCastLocal, sortIndicesLocal, uniqueIdCountLocal, updatesOriginIdexLocal);
- 	    }
+            LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
+            IndicesSortCast<U, CAST_T, castType>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, rowByUb);
+            uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(rowByUb, indicesCastLocal, sortIndicesLocal,
+                                                          uniqueIdCountLocal, updatesOriginIdexLocal);
+        }
         ProcessNotSplitUpdatesWithSort(uniqueIdNum, this->processColNum_);
         indicesOffset = indicesOffset + indicesStride;
         updatesOffset = updatesOffset + updatesStride;
@@ -109,7 +116,7 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
 __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::ProcessSplitColSort()
 {
     int64_t indicesOffset = 0;
@@ -126,21 +133,23 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexBuf_.Get<uint32_t>();
         LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountBuf_.Get<int32_t>();
         if constexpr (castType == CAST_NOT_CAST) {
-            uniqueIdNum = SortAndComputeUniqueIdx<U>(rowByUb, indicesLocal, sortIndicesLocal, uniqueIdCountLocal, updatesOriginIdexLocal);
+            uniqueIdNum = SortAndComputeUniqueIdx<U>(rowByUb, indicesLocal, sortIndicesLocal, uniqueIdCountLocal,
+                                                     updatesOriginIdexLocal);
         } else {
- 	        LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
- 	        IndicesSortCast<U, CAST_T, castType>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, rowByUb);
- 	        uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(
- 	            rowByUb, indicesCastLocal, sortIndicesLocal, uniqueIdCountLocal, updatesOriginIdexLocal);
- 	    }
+            LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
+            IndicesSortCast<U, CAST_T, castType>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, rowByUb);
+            uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(rowByUb, indicesCastLocal, sortIndicesLocal,
+                                                          uniqueIdCountLocal, updatesOriginIdexLocal);
+        }
         ProcessSplitUpdatesWithSort(uniqueIdNum);
         this->indicesInQueue_.FreeTensor(indicesLocal);
         indicesOffset = indicesOffset + indicesStride;
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
-__aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::ProcessNotSplitUpdatesWithSort(uint32_t rowLen, uint32_t outLen)
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+__aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::ProcessNotSplitUpdatesWithSort(
+    uint32_t rowLen, uint32_t outLen)
 {
     LocalTensor<T> updatesLocal = this->updateInQueue_.template DeQue<T>();
     SyncVtoS();
@@ -166,8 +175,9 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
     this->updateInQueue_.FreeTensor(updatesLocal);
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
-__aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::ProcessSplitUpdatesWithSort(uint32_t rowLen)
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType>
+__aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::ProcessSplitUpdatesWithSort(
+    uint32_t rowLen)
 {
     SyncVtoS();
     LocalTensor<U> sortIndicesLocal = sortIndicesBuf_.Get<U>();
@@ -189,12 +199,13 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
             colByUb = j == this->colLoopByUb_ - 1 ? this->processColTail_ : this->processColPerUb_;
             this->CopyInUpdates(updatesOffset, INDICES_ONE_SORT, colByUb);
             LocalTensor<T> updatesLocal = this->updateInQueue_.template DeQue<T>();
-            int64_t varOffset = static_cast<int64_t>(varIndex * this->tilingData_.varStride + this->colTotalOffset_ + j * this->processColPerUb_);
+            int64_t varOffset = static_cast<int64_t>(varIndex * this->tilingData_.varStride + this->colTotalOffset_ +
+                                                     j * this->processColPerUb_);
             this->CopyOutUpdates(varOffset, colByUb, updatesLocal);
             this->updateInQueue_.FreeTensor(updatesLocal);
             updatesOffset = updatesOffset + colByUb;
         }
     }
 }
-}
-#endif  // SCATTER_UPDATE_SIMD_SORT_H
+} // namespace ScatterUpdate
+#endif // SCATTER_UPDATE_SIMD_SORT_H

@@ -48,9 +48,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor, aclFormat format)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor, aclFormat format)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -68,8 +67,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, format, shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, format, shape.data(),
+                              shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -102,13 +101,12 @@ int main(int argc, char* argv[])
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x, aclFormat::ACL_FORMAT_NCHW);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建sum  aclTensor
-    ret =
-        CreateAclTensor(sumHostData, sumShape, &sumDeviceAddr, aclDataType::ACL_FLOAT, &sum, aclFormat::ACL_FORMAT_ND);
+    ret = CreateAclTensor(sumHostData, sumShape, &sumDeviceAddr, aclDataType::ACL_FLOAT, &sum,
+                          aclFormat::ACL_FORMAT_ND);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建squareSum  aclTensor
-    ret = CreateAclTensor(
-        squareSumHostData, squareSumShape, &squareSumDeviceAddr, aclDataType::ACL_FLOAT, &squareSum,
-        aclFormat::ACL_FORMAT_ND);
+    ret = CreateAclTensor(squareSumHostData, squareSumShape, &squareSumDeviceAddr, aclDataType::ACL_FLOAT, &squareSum,
+                          aclFormat::ACL_FORMAT_ND);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 3. 调用CANN算子库API，需要修改为具体的API
     uint64_t workspaceSize = 0;
@@ -132,9 +130,8 @@ int main(int argc, char* argv[])
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(sumShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), sumDeviceAddr, size * 4,
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), sumDeviceAddr, size * 4,
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     for (int64_t i = 0; i < size; i++) {

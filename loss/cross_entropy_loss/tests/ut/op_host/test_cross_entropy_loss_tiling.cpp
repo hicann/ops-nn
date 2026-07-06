@@ -28,18 +28,11 @@
 using namespace ut_util;
 using namespace std;
 using namespace ge;
-class CrossEntropyLossTiling : public testing::Test
-{
+class CrossEntropyLossTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CrossEntropyLossTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CrossEntropyLossTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CrossEntropyLossTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CrossEntropyLossTiling TearDown" << std::endl; }
 };
 
 TEST_F(CrossEntropyLossTiling, test_tiling_bf16_mean)
@@ -69,8 +62,7 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_mean)
     platform_info.Init();
 
     // compile info
-    struct CrossEntropyLossCompileInfo {
-    };
+    struct CrossEntropyLossCompileInfo {};
     CrossEntropyLossCompileInfo compile_info;
 
     std::string op_type("CrossEntropyLoss");
@@ -79,19 +71,19 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_mean)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -114,12 +106,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_mean)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -167,8 +158,7 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_none)
     platform_info.Init();
 
     // compile info
-    struct CrossEntropyLossCompileInfo {
-    };
+    struct CrossEntropyLossCompileInfo {};
     CrossEntropyLossCompileInfo compile_info;
 
     std::string op_type("CrossEntropyLoss");
@@ -177,19 +167,19 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_none)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -212,12 +202,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_none)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -265,8 +254,7 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_mean)
     platform_info.Init();
 
     // compile info
-    struct CrossEntropyLossCompileInfo {
-    };
+    struct CrossEntropyLossCompileInfo {};
     CrossEntropyLossCompileInfo compile_info;
 
     std::string op_type("CrossEntropyLoss");
@@ -275,19 +263,19 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_mean)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -310,12 +298,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_mean)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -363,8 +350,7 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_sum)
     platform_info.Init();
 
     // compile info
-    struct CrossEntropyLossCompileInfo {
-    };
+    struct CrossEntropyLossCompileInfo {};
     CrossEntropyLossCompileInfo compile_info;
 
     std::string op_type("CrossEntropyLoss");
@@ -373,19 +359,19 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_sum)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -408,12 +394,11 @@ TEST_F(CrossEntropyLossTiling, test_tiling_fp32_sum)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("sum")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
-                           {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("sum")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                  {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

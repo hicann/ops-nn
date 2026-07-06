@@ -63,17 +63,17 @@ public:
 
         // Using Conditional<flag, type1, type2>::type to select M or HW, if flag=true, type=type1, else type=type2
         using LoadAL1Tools = typename Conditional<
-            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
-            Conv3dFunc::LoadAL1ToolsMMode<Intf>, Conv3dFunc::LoadAL1ToolsHWmode<Intf>>::type;
+            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE), Conv3dFunc::LoadAL1ToolsMMode<Intf>,
+            Conv3dFunc::LoadAL1ToolsHWmode<Intf>>::type;
         using LoadAL0Tools = typename Conditional<
-            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
-            ConvFunc::LoadAL0ToolsMMode<Intf>, ConvFunc::LoadAL0ToolsHWMode<Intf>>::type;
-        using CopyOutTools = typename Conditional<
-            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
-            ConvFunc::CopyOutToolsMMode<Intf, typename Intf::OutputT>,
-            ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::OutputT>>::type;
-        using LoadBL1Tools = typename Conditional<
-            Config::WEIGHT_NZ_FLAG, ConvFunc::LoadBL1FZTools<Intf>, Conv3dFunc::LoadBL1Tools<Intf>>::type;
+            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE), ConvFunc::LoadAL0ToolsMMode<Intf>,
+            ConvFunc::LoadAL0ToolsHWMode<Intf>>::type;
+        using CopyOutTools = typename Conditional<ConvParam::outputOrder ==
+                                                      static_cast<int8_t>(ConvOutputOrder::M_MODE),
+                                                  ConvFunc::CopyOutToolsMMode<Intf, typename Intf::OutputT>,
+                                                  ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::OutputT>>::type;
+        using LoadBL1Tools = typename Conditional<Config::WEIGHT_NZ_FLAG, ConvFunc::LoadBL1FZTools<Intf>,
+                                                  Conv3dFunc::LoadBL1Tools<Intf>>::type;
 
         LoadAL1Tools loadAl1Ins;
         LoadBL1Tools loadBL1Ins;
@@ -150,6 +150,6 @@ public:
     };
 };
 
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif // CONV3D_V2_API_IMPL_H

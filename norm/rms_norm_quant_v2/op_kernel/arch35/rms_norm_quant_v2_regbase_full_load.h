@@ -104,15 +104,11 @@ private:
     static constexpr float RMS_ZERO = 0.0f;
 
 public:
-    __aicore__ inline RmsNormQuantV2RegbaseFullLoad(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline RmsNormQuantV2RegbaseFullLoad(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
-        const RmsNormQuantV2RegbaseFullLoadTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
+                                GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
+                                const RmsNormQuantV2RegbaseFullLoadTilingData* tilingData)
     {
         // Tiling data
         numA = tilingData->a;
@@ -133,14 +129,15 @@ public:
         scalesDtypeSize = blockSize / sizeof(T_SCALES);
         zeroPointsDtypeSize = blockSize / sizeof(T_ZEROPOINTS);
         yDtypeSize = blockSize / sizeof(yDtype);
-        if constexpr(IsSameType<T_Y, int4b_t>::value) {
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
             yDtypeSize = yDtypeSize * 2;
         }
 
         // dtype align
         xGammaBetaAlign = CeilDiv(numR, static_cast<int64_t>(xDtypeSize)) * static_cast<int64_t>(xDtypeSize);
         scalesAlign = CeilDiv(numR, static_cast<int64_t>(scalesDtypeSize)) * static_cast<int64_t>(scalesDtypeSize);
-        zeroPointsAlign = CeilDiv(numR, static_cast<int64_t>(zeroPointsDtypeSize)) * static_cast<int64_t>(zeroPointsDtypeSize);
+        zeroPointsAlign = CeilDiv(numR, static_cast<int64_t>(zeroPointsDtypeSize)) *
+                          static_cast<int64_t>(zeroPointsDtypeSize);
         yAlign = CeilDiv(numR, static_cast<int64_t>(yDtypeSize)) * static_cast<int64_t>(yDtypeSize);
         rstdAlign = CeilDiv(ubFactor, static_cast<int64_t>(blockSizeB32)) * static_cast<int64_t>(blockSizeB32);
 
@@ -149,16 +146,16 @@ public:
         oriOverflowMode = GetOverflowMode<T_Y>();
 
         // init option
-        if ((optionMask&ZEROS_POINTS1_MASK) == ZEROS_POINTS1_MASK) {
+        if ((optionMask & ZEROS_POINTS1_MASK) == ZEROS_POINTS1_MASK) {
             hasZeroPoints1 = true;
         }
-        if ((optionMask&SCALES2_MASK) == SCALES2_MASK) {
+        if ((optionMask & SCALES2_MASK) == SCALES2_MASK) {
             hasScales2 = true;
         }
-        if ((optionMask&ZEROS_POINTS2_MASK) == ZEROS_POINTS2_MASK) {
+        if ((optionMask & ZEROS_POINTS2_MASK) == ZEROS_POINTS2_MASK) {
             hasZeroPoints2 = true;
         }
-        if ((optionMask&BETA_MASK) == BETA_MASK) {
+        if ((optionMask & BETA_MASK) == BETA_MASK) {
             hasBeta = true;
         }
         hasY2 = hasScales2;
@@ -171,16 +168,15 @@ public:
         InitBuffer(x, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, rstd);
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd)
+    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
+                                      GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd)
     {
         // GM BUFFER
         int64_t xOffset = blockIdx * blockFactor * numR;
         int64_t xLen = curBlockFactor * numR;
         int64_t yOffset = blockIdx * blockFactor * numR;
         int64_t yLen = curBlockFactor * numR;
-        if constexpr(IsSameType<T_Y, int4b_t>::value) {
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
             yOffset = yOffset / 2;
             yLen = yLen / 2;
         }
@@ -222,7 +218,7 @@ public:
         // preload data
         pipe_->InitBuffer(inQueueOhter, 1, preloadDataSize);
         int64_t yQueueSize = ubFactor * yAlign * sizeof(yDtype);
-        if constexpr(IsSameType<T_Y, int4b_t>::value) {
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
             yQueueSize = yQueueSize / 2;
         }
         pipe_->InitBuffer(outQueueY1, DOUBLE_BUFFER_NUM, yQueueSize);
@@ -235,7 +231,10 @@ public:
             pipe_->InitBuffer(rstdBuf, rstdAlign * sizeof(float));
         }
         // reduceTmpBuffer
-        int64_t reduceTmpBufferSize = ubFactor * CeilDiv(CeilDiv(binaryAdd, static_cast<int64_t>(vectorLenB32)), static_cast<int64_t>(blockSizeB32)) * blockSizeB32;
+        int64_t reduceTmpBufferSize = ubFactor *
+                                      CeilDiv(CeilDiv(binaryAdd, static_cast<int64_t>(vectorLenB32)),
+                                              static_cast<int64_t>(blockSizeB32)) *
+                                      blockSizeB32;
         pipe_->InitBuffer(reduceTmpBuf, reduceTmpBufferSize);
     }
 
@@ -248,7 +247,7 @@ public:
         inQueueOhter.DeQue<uint8_t>();
 
         for (int64_t i = 0; i < curUbLoops; i++) {
-            int64_t curUbFactor = (i == (curUbLoops - 1)) ? ubFactorTail : ubFactor; //ubFactorTail 尾部
+            int64_t curUbFactor = (i == (curUbLoops - 1)) ? ubFactorTail : ubFactor; // ubFactorTail 尾部
             int64_t offsetBase = i * numR * ubFactor;
             // x
             DataCopyPadExtParams<T_X> dataCopyPadExtParamsX;
@@ -273,12 +272,12 @@ public:
             } else {
                 rstdLocal = rstdBuf.Get<float>();
             }
-            NormCommon::NormCommonRegbase::CalculateSquareReduceSum<T_X>(xLocal, rstdLocal, reduceTmpLocal,
-                static_cast<uint16_t>(curUbFactor), static_cast<uint32_t>(xGammaBetaAlign),
-                static_cast<uint32_t>(numR), static_cast<uint32_t>(binaryAdd),
+            NormCommon::NormCommonRegbase::CalculateSquareReduceSum<T_X>(
+                xLocal, rstdLocal, reduceTmpLocal, static_cast<uint16_t>(curUbFactor),
+                static_cast<uint32_t>(xGammaBetaAlign), static_cast<uint32_t>(numR), static_cast<uint32_t>(binaryAdd),
                 static_cast<uint32_t>(blockSizeB32), static_cast<uint32_t>(xGammaBetaAlign));
-            NormCommon::ComputeRstdNewtonRaphson<false, true>(
-                rstdLocal, rstdLocal, static_cast<uint32_t>(curUbFactor), epsilon, avgFactor, vectorLenB32);
+            NormCommon::ComputeRstdNewtonRaphson<false, true>(rstdLocal, rstdLocal, static_cast<uint32_t>(curUbFactor),
+                                                              epsilon, avgFactor, vectorLenB32);
             if (rstdFlag_ != 0) {
                 outQueueRstd.EnQue(rstdLocal);
                 rstdLocal = outQueueRstd.DeQue<float>();
@@ -292,13 +291,15 @@ public:
 
             LocalTensor<yDtype> y1Local = outQueueY1.AllocTensor<yDtype>();
             LocalTensor<yDtype> y2Local;
-            if(hasY2){
+            if (hasY2) {
                 y2Local = outQueueY2.AllocTensor<yDtype>();
             }
 
             // compute quant
             SetOverflowMode<T_Y>(0);
-            QuantRoute(optionMask,xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
+            QuantRoute(optionMask, xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local, scales2Local,
+                       zeroPoints1Local, zeroPoints2Local, y1Local, y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                       scalesAlign, zeroPointsAlign, yAlign);
             SetOverflowMode<T_Y>(oriOverflowMode);
             inQueueX.FreeTensor(xLocal);
             if (rstdFlag_ != 0) {
@@ -310,24 +311,24 @@ public:
 
             int64_t yOffsetBase = offsetBase;
             int64_t yBlockLen = numR * sizeof(yDtype);
-            if constexpr(IsSameType<T_Y, int4b_t>::value) {
+            if constexpr (IsSameType<T_Y, int4b_t>::value) {
                 yOffsetBase = yOffsetBase / 2;
                 yBlockLen = yBlockLen / 2;
             }
             DataCopyExtParams copyOutParamsY1;
             copyOutParamsY1.blockCount = curUbFactor;
-            copyOutParamsY1.blockLen =  yBlockLen;
+            copyOutParamsY1.blockLen = yBlockLen;
             copyOutParamsY1.srcStride = 0;
             copyOutParamsY1.dstStride = 0;
             DataCopyPad(y1Gm[yOffsetBase], y1Local, copyOutParamsY1);
             outQueueY1.FreeTensor(y1Local);
 
-            if(hasY2){
+            if (hasY2) {
                 outQueueY2.EnQue(y2Local);
                 outQueueY2.DeQue<yDtype>();
                 DataCopyExtParams copyOutParamsY2;
                 copyOutParamsY2.blockCount = curUbFactor;
-                copyOutParamsY2.blockLen =  yBlockLen;
+                copyOutParamsY2.blockLen = yBlockLen;
                 copyOutParamsY2.srcStride = 0;
                 copyOutParamsY2.dstStride = 0;
                 DataCopyPad(y2Gm[yOffsetBase], y2Local, copyOutParamsY2);
@@ -338,7 +339,6 @@ public:
     }
 
 private:
-
     __aicore__ inline void CopyInOhters(LocalTensor<uint8_t> otherLocal)
     {
         uint32_t localOffset = 0;
@@ -412,126 +412,192 @@ private:
         }
     }
 
-     __aicore__ inline void QuantRoute(uint32_t optionMask,LocalTensor<T_X> xLocal, LocalTensor<float> rstdLocal,
-        LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
-        LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
-        LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local,
-        LocalTensor<yDtype> y1Local, LocalTensor<yDtype> y2Local,
-        int64_t curUbFactor, int64_t numR, int64_t numQ, int64_t xGammaBetaAlign, int64_t scalesAlign,
-        int64_t zeroPointsAlign, int64_t yAlign)
+    __aicore__ inline void QuantRoute(uint32_t optionMask, LocalTensor<T_X> xLocal, LocalTensor<float> rstdLocal,
+                                      LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
+                                      LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
+                                      LocalTensor<T_ZEROPOINTS> zeroPoints1Local,
+                                      LocalTensor<T_ZEROPOINTS> zeroPoints2Local, LocalTensor<yDtype> y1Local,
+                                      LocalTensor<yDtype> y2Local, int64_t curUbFactor, int64_t numR, int64_t numQ,
+                                      int64_t xGammaBetaAlign, int64_t scalesAlign, int64_t zeroPointsAlign,
+                                      int64_t yAlign)
     {
-            // compute quant
-            if (!isScaleDiv) {
-                if (optionMask == 0b1111) {
-                    ComputeQuant<true, true, true, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0111) {
-                    ComputeQuant<false, true, true, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1011) {
-                    ComputeQuant<true, false, true, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0011) {
-                    ComputeQuant<false, false, true, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1101) {
-                    ComputeQuant<true, true, false, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0101) {
-                    ComputeQuant<false, true, false, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1001) {
-                    ComputeQuant<true, false, false, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0001) {
-                    ComputeQuant<false, false, false, true, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1110) {
-                    ComputeQuant<true, true, true, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0110) {
-                    ComputeQuant<false, true, true, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1010) {
-                    ComputeQuant<true, false, true, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0010) {
-                    ComputeQuant<false, false, true, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1100) {
-                    ComputeQuant<true, true, false, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0100) {
-                    ComputeQuant<false, true, false, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1000) {
-                    ComputeQuant<true, false, false, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0000) {
-                    ComputeQuant<false, false, false, false, false>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                }
-            } else {
-                if (optionMask == 0b1111) {
-                    ComputeQuant<true, true, true, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0111) {
-                    ComputeQuant<false, true, true, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1011) {
-                    ComputeQuant<true, false, true, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0011) {
-                    ComputeQuant<false, false, true, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1101) {
-                    ComputeQuant<true, true, false, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0101) {
-                    ComputeQuant<false, true, false, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1001) {
-                    ComputeQuant<true, false, false, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0001) {
-                    ComputeQuant<false, false, false, true, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1110) {
-                    ComputeQuant<true, true, true, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0110) {
-                    ComputeQuant<false, true, true, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1010) {
-                    ComputeQuant<true, false, true, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0010) {
-                    ComputeQuant<false, false, true, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1100) {
-                    ComputeQuant<true, true, false, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0100) {
-                    ComputeQuant<false, true, false, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b1000) {
-                    ComputeQuant<true, false, false, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                } else if (optionMask == 0b0000) {
-                    ComputeQuant<false, false, false, false, true>(xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,
-                    y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
-                }
+        // compute quant
+        if (!isScaleDiv) {
+            if (optionMask == 0b1111) {
+                ComputeQuant<true, true, true, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                            scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                            y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                            scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0111) {
+                ComputeQuant<false, true, true, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1011) {
+                ComputeQuant<true, false, true, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0011) {
+                ComputeQuant<false, false, true, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1101) {
+                ComputeQuant<true, true, false, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0101) {
+                ComputeQuant<false, true, false, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1001) {
+                ComputeQuant<true, false, false, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0001) {
+                ComputeQuant<false, false, false, true, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                               scales2Local, zeroPoints1Local, zeroPoints2Local,
+                                                               y1Local, y2Local, curUbFactor, numR, numQ,
+                                                               xGammaBetaAlign, scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1110) {
+                ComputeQuant<true, true, true, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0110) {
+                ComputeQuant<false, true, true, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1010) {
+                ComputeQuant<true, false, true, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0010) {
+                ComputeQuant<false, false, true, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                               scales2Local, zeroPoints1Local, zeroPoints2Local,
+                                                               y1Local, y2Local, curUbFactor, numR, numQ,
+                                                               xGammaBetaAlign, scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1100) {
+                ComputeQuant<true, true, false, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0100) {
+                ComputeQuant<false, true, false, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                               scales2Local, zeroPoints1Local, zeroPoints2Local,
+                                                               y1Local, y2Local, curUbFactor, numR, numQ,
+                                                               xGammaBetaAlign, scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1000) {
+                ComputeQuant<true, false, false, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                               scales2Local, zeroPoints1Local, zeroPoints2Local,
+                                                               y1Local, y2Local, curUbFactor, numR, numQ,
+                                                               xGammaBetaAlign, scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0000) {
+                ComputeQuant<false, false, false, false, false>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                                scales2Local, zeroPoints1Local, zeroPoints2Local,
+                                                                y1Local, y2Local, curUbFactor, numR, numQ,
+                                                                xGammaBetaAlign, scalesAlign, zeroPointsAlign, yAlign);
             }
+        } else {
+            if (optionMask == 0b1111) {
+                ComputeQuant<true, true, true, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                           scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                           y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                           scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0111) {
+                ComputeQuant<false, true, true, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                            scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                            y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                            scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1011) {
+                ComputeQuant<true, false, true, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                            scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                            y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                            scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0011) {
+                ComputeQuant<false, false, true, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1101) {
+                ComputeQuant<true, true, false, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                            scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                            y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                            scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0101) {
+                ComputeQuant<false, true, false, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1001) {
+                ComputeQuant<true, false, false, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0001) {
+                ComputeQuant<false, false, false, true, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1110) {
+                ComputeQuant<true, true, true, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                            scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                            y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                            scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0110) {
+                ComputeQuant<false, true, true, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1010) {
+                ComputeQuant<true, false, true, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0010) {
+                ComputeQuant<false, false, true, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1100) {
+                ComputeQuant<true, true, false, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                             scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                             y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                             scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0100) {
+                ComputeQuant<false, true, false, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b1000) {
+                ComputeQuant<true, false, false, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                              scales2Local, zeroPoints1Local, zeroPoints2Local, y1Local,
+                                                              y2Local, curUbFactor, numR, numQ, xGammaBetaAlign,
+                                                              scalesAlign, zeroPointsAlign, yAlign);
+            } else if (optionMask == 0b0000) {
+                ComputeQuant<false, false, false, false, true>(xLocal, rstdLocal, gammaLocal, betaLocal, scales1Local,
+                                                               scales2Local, zeroPoints1Local, zeroPoints2Local,
+                                                               y1Local, y2Local, curUbFactor, numR, numQ,
+                                                               xGammaBetaAlign, scalesAlign, zeroPointsAlign, yAlign);
+            }
+        }
     }
 
     template <bool HAS_BETA, bool HAS_ZEROPINTS2, bool HAS_ZEROPINTS1, bool HAS_SCALES2, bool IS_SCALES_DIV>
     __aicore__ inline void ComputeQuant(LocalTensor<T_X> xLocal, LocalTensor<float> rstdLocal,
-        LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
-        LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
-        LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local,
-        LocalTensor<yDtype> y1Local, LocalTensor<yDtype> y2Local,
-        int64_t curUbFactor, int64_t numR, int64_t numQ, int64_t xGammaBetaAlign, int64_t scalesAlign,
-        int64_t zeroPointsAlign, int64_t yAlign)
+                                        LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
+                                        LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
+                                        LocalTensor<T_ZEROPOINTS> zeroPoints1Local,
+                                        LocalTensor<T_ZEROPOINTS> zeroPoints2Local, LocalTensor<yDtype> y1Local,
+                                        LocalTensor<yDtype> y2Local, int64_t curUbFactor, int64_t numR, int64_t numQ,
+                                        int64_t xGammaBetaAlign, int64_t scalesAlign, int64_t zeroPointsAlign,
+                                        int64_t yAlign)
     {
         uint16_t loopsA = static_cast<uint16_t>(curUbFactor);
         uint16_t loopsR = static_cast<uint16_t>(CeilDiv(static_cast<uint32_t>(numR), vectorLenB32));
@@ -549,21 +615,21 @@ private:
         __local_mem__ yDtype* y1Addr;
         __local_mem__ yDtype* y2Addr;
 
-        if constexpr(HAS_ZEROPINTS1) {
+        if constexpr (HAS_ZEROPINTS1) {
             zeroPoints1Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints1Local.GetPhyAddr();
         }
-        if constexpr(HAS_SCALES2) {
+        if constexpr (HAS_SCALES2) {
             scales2Addr = (__ubuf__ T_SCALES*)scales2Local.GetPhyAddr();
         }
-        if constexpr(HAS_ZEROPINTS2) {
+        if constexpr (HAS_ZEROPINTS2) {
             zeroPoints2Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints2Local.GetPhyAddr();
         }
-        if constexpr(HAS_BETA) {
+        if constexpr (HAS_BETA) {
             betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
         }
 
         y1Addr = (__ubuf__ yDtype*)y1Local.GetPhyAddr();
-        if constexpr((HAS_ZEROPINTS2 || HAS_SCALES2)) {
+        if constexpr ((HAS_ZEROPINTS2 || HAS_SCALES2)) {
             y2Addr = (__ubuf__ yDtype*)y2Local.GetPhyAddr();
         }
         // y = cast((x * rstd * gamma + beta) * scales + zeropints)
@@ -582,13 +648,13 @@ private:
 
                 // ld scales and zeropoints
                 LoadScalarForDtypeTIn(scales1Addr, scales1Reg, pregFull, 0);
-                if constexpr(HAS_ZEROPINTS1) {
+                if constexpr (HAS_ZEROPINTS1) {
                     LoadScalarForDtypeTIn(zeroPoints1Addr, zeroPoints1Reg, pregFull, 0);
                 }
-                if constexpr(HAS_SCALES2) {
+                if constexpr (HAS_SCALES2) {
                     LoadScalarForDtypeTIn(scales2Addr, scales2Reg, pregFull, 0);
                 }
-                if constexpr(HAS_ZEROPINTS2) {
+                if constexpr (HAS_ZEROPINTS2) {
                     LoadScalarForDtypeTIn(zeroPoints2Addr, zeroPoints2Reg, pregFull, 0);
                 }
                 for (uint16_t i = 0; i < loopsA; i++) {
@@ -601,34 +667,36 @@ private:
                         Mul(mul1Reg, xReg, rstdReg, pregCurLoop);
                         LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, (j * vectorLenB32));
                         Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
-                        if constexpr(HAS_BETA) {
+                        if constexpr (HAS_BETA) {
                             LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, (j * vectorLenB32));
                             Add(mul2Reg, mul2Reg, betaReg, pregCurLoop);
                         }
-                        if constexpr(IS_SCALES_DIV) {
+                        if constexpr (IS_SCALES_DIV) {
                             Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                         } else {
                             Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                         }
 
-                        if constexpr(HAS_ZEROPINTS1) {
+                        if constexpr (HAS_ZEROPINTS1) {
                             Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
                         }
 
-                        StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4, (i * sregyAlign + j * vectorLenB32));
+                        StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4,
+                                                (i * sregyAlign + j * vectorLenB32));
 
-                        if constexpr((HAS_ZEROPINTS2 || HAS_SCALES2)) {
-                            if constexpr(HAS_SCALES2) {
-                                if constexpr(IS_SCALES_DIV) {
+                        if constexpr ((HAS_ZEROPINTS2 || HAS_SCALES2)) {
+                            if constexpr (HAS_SCALES2) {
+                                if constexpr (IS_SCALES_DIV) {
                                     Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                 } else {
                                     Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                 }
                             }
-                            if constexpr(HAS_ZEROPINTS2) {
+                            if constexpr (HAS_ZEROPINTS2) {
                                 Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
                             }
-                            StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4, (i * sregyAlign + j * vectorLenB32));
+                            StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
+                                                    (i * sregyAlign + j * vectorLenB32));
                         }
                     }
                 }
@@ -654,38 +722,40 @@ private:
                         Mul(mul1Reg, xReg, rstdReg, pregCurLoop);
                         LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, j * vectorLenB32);
                         Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
-                        if constexpr(HAS_BETA) {
+                        if constexpr (HAS_BETA) {
                             LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, j * vectorLenB32);
                             Add(mul2Reg, mul2Reg, betaReg, pregCurLoop);
                         }
                         LoadTensorForDtypeTIn(scales1Addr, scales1Reg, pregCurLoop, j * vectorLenB32);
-                        if constexpr(IS_SCALES_DIV) {
+                        if constexpr (IS_SCALES_DIV) {
                             Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                         } else {
                             Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                         }
 
-                        if constexpr(HAS_ZEROPINTS1) {
+                        if constexpr (HAS_ZEROPINTS1) {
                             LoadTensorForDtypeTIn(zeroPoints1Addr, zeroPoints1Reg, pregCurLoop, j * vectorLenB32);
                             Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
                         }
 
-                        StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4, (i * sregyAlign + j * vectorLenB32));
+                        StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, mask4Int4,
+                                                (i * sregyAlign + j * vectorLenB32));
 
-                        if constexpr((HAS_ZEROPINTS2 || HAS_SCALES2)) {
-                            if constexpr(HAS_SCALES2) {
+                        if constexpr ((HAS_ZEROPINTS2 || HAS_SCALES2)) {
+                            if constexpr (HAS_SCALES2) {
                                 LoadTensorForDtypeTIn(scales2Addr, scales2Reg, pregCurLoop, j * vectorLenB32);
-                                if constexpr(IS_SCALES_DIV) {
+                                if constexpr (IS_SCALES_DIV) {
                                     Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                 } else {
                                     Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                                 }
                             }
-                            if constexpr(HAS_ZEROPINTS2) {
+                            if constexpr (HAS_ZEROPINTS2) {
                                 LoadTensorForDtypeTIn(zeroPoints2Addr, zeroPoints2Reg, pregCurLoop, j * vectorLenB32);
                                 Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
                             }
-                            StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4, (i * sregyAlign + j * vectorLenB32));
+                            StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, mask4Int4,
+                                                    (i * sregyAlign + j * vectorLenB32));
                         }
                     }
                 }

@@ -63,9 +63,8 @@ static int64_t get_batch(const bool& include_last_offset, int64_t offsets_lens)
     return output_dim;
 }
 
-inline ge::graphStatus InferShape4Output(
-    gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim, const int64_t& weight_dim_num,
-    bool is_unknown_rank, bool is_unknown_shape)
+inline ge::graphStatus InferShape4Output(gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim,
+                                         const int64_t& weight_dim_num, bool is_unknown_rank, bool is_unknown_shape)
 {
     auto output_shape = context->GetOutputShape(Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
@@ -84,8 +83,8 @@ inline ge::graphStatus InferShape4Output(
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4Offset2Bag(
-    gert::InferShapeContext* context, int64_t indices_num, bool is_unknown_rank, bool is_unknown_shape)
+inline ge::graphStatus InferShape4Offset2Bag(gert::InferShapeContext* context, int64_t indices_num,
+                                             bool is_unknown_rank, bool is_unknown_shape)
 {
     auto offset_2_bag_shape = context->GetOutputShape(OFFSET_2_BAG_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, offset_2_bag_shape);
@@ -103,8 +102,8 @@ inline ge::graphStatus InferShape4Offset2Bag(
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4BagSize(
-    gert::InferShapeContext* context, int64_t offsets_lens, bool is_unknown_rank, bool is_unknown_shape)
+inline ge::graphStatus InferShape4BagSize(gert::InferShapeContext* context, int64_t offsets_lens, bool is_unknown_rank,
+                                          bool is_unknown_shape)
 {
     auto bag_size_shape = context->GetOutputShape(BAG_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bag_size_shape);
@@ -122,8 +121,8 @@ inline ge::graphStatus InferShape4BagSize(
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4MaxIndices(
-    gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim, bool is_unknown_rank, bool is_unknown_shape, bool is_support)
+inline ge::graphStatus InferShape4MaxIndices(gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim,
+                                             bool is_unknown_rank, bool is_unknown_shape, bool is_support)
 {
     auto max_indices_shape = context->GetOutputShape(MAX_INDICES_IDX);
     if (max_indices_shape == nullptr) {
@@ -142,7 +141,7 @@ inline ge::graphStatus InferShape4MaxIndices(
     if (mode == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    
+
     if (is_unknown_shape && strcmp(mode, ATTR_MODE_MAX) == 0) {
         Ops::Base::SetUnknownShape(DIM_NUM_TWO, *max_indices_shape);
         return ge::GRAPH_SUCCESS;
@@ -159,21 +158,21 @@ inline ge::graphStatus InferShape4MaxIndices(
         max_indices_shape->SetDimNum(MAX_INDICES_DIM);
         if (is_support) {
             max_indices_shape->SetDim(MAX_INDICES_ZERO_DIM, 0);
-        }else {
+        } else {
             max_indices_shape->SetDim(MAX_INDICES_ZERO_DIM, batch);
-        }  
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4OutputSupport(
-    gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim, int64_t dimension,
-    bool is_unknown_weight, bool is_unknown_indices, bool is_unknown_offset)
+inline ge::graphStatus InferShape4OutputSupport(gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim,
+                                                int64_t dimension, bool is_unknown_weight, bool is_unknown_indices,
+                                                bool is_unknown_offset)
 {
     auto output_shape = context->GetOutputShape(Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
     output_shape->SetDimNum(OUTPUT_DIMS);
-    
+
     if (dimension == DIM_NUM_ONE) {
         if (is_unknown_offset) {
             output_shape->SetDim(BATCH_DIM, -1);
@@ -196,8 +195,8 @@ inline ge::graphStatus InferShape4OutputSupport(
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4Offset2BagSupport(
-    gert::InferShapeContext* context, int64_t indices_num, bool is_unknown_indices)
+inline ge::graphStatus InferShape4Offset2BagSupport(gert::InferShapeContext* context, int64_t indices_num,
+                                                    bool is_unknown_indices)
 {
     auto offset_2_bag_shape = context->GetOutputShape(OFFSET_2_BAG_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, offset_2_bag_shape);
@@ -211,8 +210,8 @@ inline ge::graphStatus InferShape4Offset2BagSupport(
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4BagSizeSupport(
-    gert::InferShapeContext* context, int64_t offsets_lens, int64_t dimension, bool is_unknown_indices, bool is_unknown_offset)
+inline ge::graphStatus InferShape4BagSizeSupport(gert::InferShapeContext* context, int64_t offsets_lens,
+                                                 int64_t dimension, bool is_unknown_indices, bool is_unknown_offset)
 {
     auto bag_size_shape = context->GetOutputShape(BAG_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bag_size_shape);
@@ -231,13 +230,13 @@ inline ge::graphStatus InferShape4BagSizeSupport(
             bag_size_shape->SetDim(BAG_SIZE_ZERO_DIM, offsets_lens);
         }
     }
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus InferShape4MaxIndicesSupport(
-    gert::InferShapeContext* context, int64_t batch, int64_t embedding_dim, int64_t dimension,
-    bool is_unknown_weight, bool is_unknown_indices, bool is_unknown_offset)
+inline ge::graphStatus InferShape4MaxIndicesSupport(gert::InferShapeContext* context, int64_t batch,
+                                                    int64_t embedding_dim, int64_t dimension, bool is_unknown_weight,
+                                                    bool is_unknown_indices, bool is_unknown_offset)
 {
     auto max_indices_shape = context->GetOutputShape(MAX_INDICES_IDX);
     if (max_indices_shape == nullptr) {
@@ -280,7 +279,8 @@ inline ge::graphStatus InferShape4MaxIndicesSupport(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckIsUnknown(const gert::Shape* check_shape){
+static ge::graphStatus CheckIsUnknown(const gert::Shape* check_shape)
+{
     bool is_unknown_rank = Ops::Base::IsUnknownRank(*check_shape);
     bool is_unknown_shape = Ops::Base::IsUnknownShape(*check_shape);
     if (is_unknown_rank || is_unknown_shape) {
@@ -305,7 +305,7 @@ static bool InferShapeForEmbeddingBagSupport(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, mode);
     const bool* include_last_offset = attrs->GetAttrPointer<bool>(INCLUDE_LAST_WEIGHT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, include_last_offset);
-    
+
     int64_t embedding_dim = weight_shape->GetDim(EMBEDDING_DIM_IDX);
     int64_t indices_num = indices_shape->GetDim(INDICES_ZERO_DIM);
     int64_t offsets_lens = offsets_shape->GetDim(OFFSETS_LEN_IDX);
@@ -323,33 +323,31 @@ static bool InferShapeForEmbeddingBagSupport(gert::InferShapeContext* context)
     bool is_unknown_weight = CheckIsUnknown(weight_shape);
     bool is_unknown_indices = CheckIsUnknown(indices_shape);
     bool is_unknown_offsets = CheckIsUnknown(offsets_shape);
-    if (InferShape4OutputSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) !=
-        ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "output", "unknown",
-            "EmbeddingBagSupport failed to infer shape for output");
+    if (InferShape4OutputSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices,
+                                 is_unknown_offsets) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "output", "unknown",
+                                              "EmbeddingBagSupport failed to infer shape for output");
         return GRAPH_FAILED;
     }
     if (InferShape4Offset2BagSupport(context, indices_num, is_unknown_indices) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "offset2bag", "unknown",
-            "EmbeddingBagSupport failed to infer shape for offset2bag");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "offset2bag", "unknown",
+                                              "EmbeddingBagSupport failed to infer shape for offset2bag");
         return GRAPH_FAILED;
     }
-    if (InferShape4BagSizeSupport(context, bag_size, dimension, is_unknown_indices, is_unknown_offsets) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "bag_size", "unknown",
-            "EmbeddingBagSupport failed to infer shape for bag_size");
+    if (InferShape4BagSizeSupport(context, bag_size, dimension, is_unknown_indices, is_unknown_offsets) !=
+        ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "bag_size", "unknown",
+                                              "EmbeddingBagSupport failed to infer shape for bag_size");
         return GRAPH_FAILED;
     }
-    if (InferShape4MaxIndicesSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "max_indices", "unknown",
-            "EmbeddingBagSupport failed to infer shape for max_indices");
+    if (InferShape4MaxIndicesSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices,
+                                     is_unknown_offsets) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "max_indices", "unknown",
+                                              "EmbeddingBagSupport failed to infer shape for max_indices");
         return GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "runtime2.0 EmbeddingBagSupport infershape running success.");
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -357,10 +355,9 @@ static ge::graphStatus InferShapeForEmbeddingBag(gert::InferShapeContext* contex
 {
     fe::PlatformInfo platform_info;
     fe::OptionalInfo optional_info;
-    OP_CHECK_IF(
-        (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
-         ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
+                 ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
     if (platform_info.str_info.short_soc_version == "Ascend950") {
         return InferShapeForEmbeddingBagSupport(context);
@@ -390,31 +387,28 @@ static ge::graphStatus InferShapeForEmbeddingBag(gert::InferShapeContext* contex
     bool is_unknown_shape = Ops::Base::IsUnknownShape(*weight_shape);
     if (InferShape4Output(context, batch, embedding_dim, weight_dim_num, is_unknown_rank, is_unknown_shape) !=
         ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "output", "unknown",
-            "failed to infer shape for output");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "output", "unknown",
+                                              "failed to infer shape for output");
         return GRAPH_FAILED;
     }
     if (InferShape4Offset2Bag(context, indices_num, is_unknown_rank, is_unknown_shape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "offset2bag", "unknown",
-            "failed to infer shape for offset2bag");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "offset2bag", "unknown",
+                                              "failed to infer shape for offset2bag");
         return GRAPH_FAILED;
     }
     if (InferShape4BagSize(context, batch, is_unknown_rank, is_unknown_shape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "bag_size", "unknown",
-            "failed to infer shape for bag_size");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "bag_size", "unknown",
+                                              "failed to infer shape for bag_size");
         return GRAPH_FAILED;
     }
-    if (InferShape4MaxIndices(context, batch, embedding_dim, is_unknown_rank, is_unknown_shape, false) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "max_indices", "unknown",
-            "failed to infer shape for max_indices");
+    if (InferShape4MaxIndices(context, batch, embedding_dim, is_unknown_rank, is_unknown_shape, false) !=
+        ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "max_indices", "unknown",
+                                              "failed to infer shape for max_indices");
         return GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "runtime2.0 EmbeddingBag infershape running success.");
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -431,10 +425,9 @@ graphStatus InferDtypeForEmbeddingBag(gert::InferDataTypeContext* context)
 
     fe::PlatformInfo platform_info;
     fe::OptionalInfo optional_info;
-    OP_CHECK_IF(
-        (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
-         ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
+                 ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
     if (platform_info.str_info.short_soc_version == "Ascend950") {
         OP_LOGD(context, "Begin to do InferDtypeForEmbeddingBag offset");

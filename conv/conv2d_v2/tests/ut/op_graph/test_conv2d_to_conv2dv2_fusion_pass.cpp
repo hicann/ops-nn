@@ -42,7 +42,7 @@ public:
     }
 
     Conv2DConfig MakeConvCfg(DataType ioDtype, DataType outputDtype, bool hasBias = false,
-                              DataType biasDtype = DT_FLOAT16)
+                             DataType biasDtype = DT_FLOAT16)
     {
         Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", ioDtype, outputDtype);
         if (hasBias) {
@@ -52,15 +52,9 @@ public:
     }
 
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Conv2dToConv2dV2FusionPassTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Conv2dToConv2dV2FusionPassTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Conv2dToConv2dV2FusionPassTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Conv2dToConv2dV2FusionPassTest TearDown" << std::endl; }
 
     void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)
     {
@@ -106,16 +100,16 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_fusion_success)
         bool hasBias;
         DataType biasDtype;
     } const points[] = {
-        {"dav3510_fp16",          false, DT_FLOAT16,  DT_FLOAT16,  false, DT_FLOAT16},
-        {"dav3510_fp16_bias",     false, DT_FLOAT16,  DT_FLOAT16,  true,  DT_FLOAT16},
-        {"dav3510_fp32",          false, DT_FLOAT,    DT_FLOAT,    false, DT_FLOAT},
-        {"dav3510_bf16",          false, DT_BF16,     DT_BF16,     false, DT_BF16},
-        {"dav3510_fp32_bias",     false, DT_FLOAT,    DT_FLOAT,    true,  DT_FLOAT},
-        {"dav3510_bf16_bias",     false, DT_BF16,     DT_BF16,     true,  DT_BF16},
-        {"dav3510_hifloat8",      false, DT_HIFLOAT8, DT_HIFLOAT8, false, DT_FLOAT},
-        {"dav3510_hifloat8_bias", false, DT_HIFLOAT8, DT_HIFLOAT8, true,  DT_FLOAT},
-        {"dav5102_fp16",          true,  DT_FLOAT16,  DT_FLOAT16,  false, DT_FLOAT16},
-        {"dav5102_fp16_bias",     true,  DT_FLOAT16,  DT_FLOAT16,  true,  DT_FLOAT16},
+        {"dav3510_fp16", false, DT_FLOAT16, DT_FLOAT16, false, DT_FLOAT16},
+        {"dav3510_fp16_bias", false, DT_FLOAT16, DT_FLOAT16, true, DT_FLOAT16},
+        {"dav3510_fp32", false, DT_FLOAT, DT_FLOAT, false, DT_FLOAT},
+        {"dav3510_bf16", false, DT_BF16, DT_BF16, false, DT_BF16},
+        {"dav3510_fp32_bias", false, DT_FLOAT, DT_FLOAT, true, DT_FLOAT},
+        {"dav3510_bf16_bias", false, DT_BF16, DT_BF16, true, DT_BF16},
+        {"dav3510_hifloat8", false, DT_HIFLOAT8, DT_HIFLOAT8, false, DT_FLOAT},
+        {"dav3510_hifloat8_bias", false, DT_HIFLOAT8, DT_HIFLOAT8, true, DT_FLOAT},
+        {"dav5102_fp16", true, DT_FLOAT16, DT_FLOAT16, false, DT_FLOAT16},
+        {"dav5102_fp16_bias", true, DT_FLOAT16, DT_FLOAT16, true, DT_FLOAT16},
     };
 
     for (const auto& p : points) {
@@ -137,33 +131,40 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_no_fusion)
         const char* pointName;
         std::function<GraphPtr()> build;
     } const points[] = {
-        {"unsupported_dtype", [this]() {
+        {"unsupported_dtype",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_unsupported_dtype", false,
                                          Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32));
          }},
-        {"bad_bias_dtype", [this]() {
+        {"bad_bias_dtype",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_bad_bias_dtype", false,
                                          Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16).WithBias(DT_INT32));
          }},
-        {"dav5102_int8_proto_unsupported", [this]() {
+        {"dav5102_int8_proto_unsupported",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_dav5102_int8_proto_unsupported", true,
                                          Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32));
          }},
-        {"filter_dtype_mismatch", [this]() {
+        {"filter_dtype_mismatch",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16);
              convCfg.inputs[1].SetDtype(DT_FLOAT);
              convCfg.inputs[1].tensorDesc.SetDataType(DT_FLOAT);
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_filter_dtype_mismatch", false, convCfg);
          }},
-        {"output_dtype_mismatch", [this]() {
+        {"output_dtype_mismatch",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_output_dtype_mismatch", false,
                                          Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT));
          }},
-        {"hifloat8_bad_output", [this]() {
+        {"hifloat8_bad_output",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_hifloat8_bad_output", false,
                                          Conv2DConfig::Basic("Conv2D", DT_HIFLOAT8, DT_FLOAT));
          }},
-        {"unsupported_soc", []() {
+        {"unsupported_soc",
+         []() {
              TestGraph builder("conv2d_to_conv2dv2_z_no_fusion_unsupported_soc");
              return builder.SetSoc(SocConfig("Ascend910B", "Ascend910B1"))
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
@@ -190,46 +191,56 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_replacement_attr_and_d
         std::function<GraphPtr()> build;
         std::function<void(GNode&)> verify;
     } const points[] = {
-        {"fused_op_impl_mode_enum_is_default_0x1", [this]() {
+        {"fused_op_impl_mode_enum_is_default_0x1",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT, DT_FLOAT);
              convCfg.SetAttr("_op_impl_mode_enum", int64_t(0x40));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_fused_op_impl_mode_enum_is_default_0x1", false, convCfg);
-         }, [](GNode& fused) {
+         },
+         [](GNode& fused) {
              int64_t implMode = static_cast<int64_t>(-1);
              ASSERT_EQ(fused.GetAttr(AscendString("_op_impl_mode_enum"), implMode), GRAPH_SUCCESS);
              EXPECT_EQ(implMode, int64_t{0x1});
          }},
-        {"pad_mode_from_auto_pad", [this]() {
+        {"pad_mode_from_auto_pad",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16);
              convCfg.SetAttr("auto_pad", std::string("SAME_UPPER"));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_pad_mode_from_auto_pad", false, convCfg);
-         }, [](GNode& fused) {
+         },
+         [](GNode& fused) {
              AscendString padMode;
              ASSERT_EQ(fused.GetAttr(AscendString("pad_mode"), padMode), GRAPH_SUCCESS);
              EXPECT_STREQ(padMode.GetString(), "SAME_UPPER");
          }},
-        {"enable_hf32_fp32_impl_0x40", [this]() {
+        {"enable_hf32_fp32_impl_0x40",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT, DT_FLOAT);
              convCfg.SetAttr("_op_impl_mode_enum", int64_t(0x40));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_enable_hf32_fp32_impl_0x40", false, convCfg);
-         }, [](GNode& fused) {
+         },
+         [](GNode& fused) {
              bool enableHf32 = false;
              ASSERT_EQ(fused.GetAttr(AscendString("enable_hf32"), enableHf32), GRAPH_SUCCESS);
              EXPECT_TRUE(enableHf32);
          }},
-        {"enable_hf32_false_fp16", [this]() {
+        {"enable_hf32_false_fp16",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16);
              convCfg.SetAttr("_op_impl_mode_enum", int64_t(0x40));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_enable_hf32_false_fp16", false, convCfg);
-         }, nullptr},
-        {"attr_strides_pads_dilations_groups", [this]() {
+         },
+         nullptr},
+        {"attr_strides_pads_dilations_groups",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16);
              convCfg.SetAttr("strides", std::vector<int64_t>{2, 2, 2, 2});
              convCfg.SetAttr("pads", std::vector<int64_t>{2, 2, 2, 2});
              convCfg.SetAttr("dilations", std::vector<int64_t>{2, 2, 2, 2});
              convCfg.SetAttr("groups", int64_t(2));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_attr_strides_pads_dilations_groups", false, convCfg);
-         }, [](GNode& fused) {
+         },
+         [](GNode& fused) {
              std::vector<int64_t> strides, pads, dilations;
              int64_t groups = 0;
              ASSERT_EQ(fused.GetAttr(AscendString("strides"), strides), GRAPH_SUCCESS);
@@ -241,20 +252,24 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_replacement_attr_and_d
              EXPECT_EQ(dilations, (std::vector<int64_t>{2, 2, 2, 2}));
              EXPECT_EQ(groups, int64_t{2});
          }},
-        {"attr_data_format_nhwc", [this]() {
+        {"attr_data_format_nhwc",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NHWC);
              convCfg.SetAttr("data_format", std::string("NHWC"));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_attr_data_format_nhwc", false, convCfg);
-         }, [](GNode& fused) {
+         },
+         [](GNode& fused) {
              AscendString dataFormat;
              ASSERT_EQ(fused.GetAttr(AscendString("data_format"), dataFormat), GRAPH_SUCCESS);
              EXPECT_STREQ(dataFormat.GetString(), "NHWC");
          }},
-        {"desc_input_output_preserved", [this]() {
+        {"desc_input_output_preserved",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_desc_input_output_preserved", false,
-                 Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
-                     {1, 16, 240, 352}, {3, 16, 3, 3}, {1, 3, 240, 352}));
-         }, [](GNode& fused) {
+                                         Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
+                                                             {1, 16, 240, 352}, {3, 16, 3, 3}, {1, 3, 240, 352}));
+         },
+         [](GNode& fused) {
              TensorDesc fmapDesc, filterDesc, outDesc;
              ASSERT_EQ(fused.GetInputDesc(0, fmapDesc), GRAPH_SUCCESS);
              ASSERT_EQ(fused.GetInputDesc(1, filterDesc), GRAPH_SUCCESS);
@@ -265,25 +280,31 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_replacement_attr_and_d
              EXPECT_EQ(fmapDesc.GetFormat(), FORMAT_NCHW);
              EXPECT_EQ(outDesc.GetFormat(), FORMAT_NCHW);
          }},
-        {"bias_input_absent", [this]() {
+        {"bias_input_absent",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_bias_input_absent", false,
-                 Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16));
-         }, [](GNode& fused) { EXPECT_EQ(fused.GetInputsSize(), size_t{2}); }},
-        {"bias_input_present", [this]() {
+                                         Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16));
+         },
+         [](GNode& fused) { EXPECT_EQ(fused.GetInputsSize(), size_t{2}); }},
+        {"bias_input_present",
+         [this]() {
              return BuildSingleConvGraph("conv2d_to_conv2dv2_bias_input_present", false,
-                 Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16).WithBias(DT_FLOAT16));
-         }, [](GNode& fused) {
+                                         Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16).WithBias(DT_FLOAT16));
+         },
+         [](GNode& fused) {
              TensorDesc biasDesc;
              EXPECT_EQ(fused.GetInputsSize(), size_t{3});
              ASSERT_EQ(fused.GetInputDesc(2, biasDesc), GRAPH_SUCCESS);
              EXPECT_EQ(biasDesc.GetDataType(), DT_FLOAT16);
              EXPECT_EQ(biasDesc.GetFormat(), FORMAT_ND);
          }},
-        {"offset_x_nonzero", [this]() {
+        {"offset_x_nonzero",
+         [this]() {
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16);
              convCfg.SetAttr("offset_x", int64_t(1));
              return BuildSingleConvGraph("conv2d_to_conv2dv2_fusion_offset_x_nonzero", false, convCfg);
-         }, [](GNode& fused) {
+         },
+         [](GNode& fused) {
              int64_t offsetX = 0;
              ASSERT_EQ(fused.GetAttr(AscendString("offset_x"), offsetX), GRAPH_SUCCESS);
              EXPECT_EQ(offsetX, int64_t{1});
@@ -310,45 +331,51 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         const char* pointName;
         std::function<void(Conv2dToConv2dV2FusionPassTest&)> run;
     } const points[] = {
-        {"dynamic_shape_fp16", [](Conv2dToConv2dV2FusionPassTest& self) {
-             auto graph = TestGraph("g").
-                 SetSocAscend950().
-                 AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
-                     {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1})).
-                 SetOutput("Conv2D").
-                 Build();
+        {"dynamic_shape_fp16",
+         [](Conv2dToConv2dV2FusionPassTest& self) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
+                                                             {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}))
+                              .SetOutput("Conv2D")
+                              .Build();
              self.TestTotalPass("conv2d_to_conv2dv2_fusion_dynamic_shape_fp16", graph, SUCCESS);
          }},
-        {"multi_conv2d_same_graph", [](Conv2dToConv2dV2FusionPassTest& self) {
-             auto graph = TestGraph("g").
-                 SetSocAscend950().
-                 AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16)).
-                 AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16)).
-                 SetOutput("Conv2D_1").SetOutput("Conv2D_2").
-                 Build();
+        {"multi_conv2d_same_graph",
+         [](Conv2dToConv2dV2FusionPassTest& self) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16))
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16))
+                              .SetOutput("Conv2D_1")
+                              .SetOutput("Conv2D_2")
+                              .Build();
              self.TestTotalPass("conv2d_to_conv2dv2_fusion_multi_conv2d_same_graph", graph, SUCCESS);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2DV2"), 2);
          }},
-        {"multi_conv2d_serial", [](Conv2dToConv2dV2FusionPassTest& self) {
-             auto graph = TestGraph("g").
-                 SetSocAscend950().
-                 AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16)).
-                 AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
-                     {1, 3, 244, 244}, {3, 3, 3, 3}, {1, 3, 244, 244})).
-                 Connect("Conv2D_1", 0, "Conv2D_2", 0).
-                 SetOutput("Conv2D_2").
-                 Build();
+        {"multi_conv2d_serial",
+         [](Conv2dToConv2dV2FusionPassTest& self) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16))
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
+                                                             {1, 3, 244, 244}, {3, 3, 3, 3}, {1, 3, 244, 244}))
+                              .Connect("Conv2D_1", 0, "Conv2D_2", 0)
+                              .SetOutput("Conv2D_2")
+                              .Build();
              self.TestTotalPass("conv2d_to_conv2dv2_fusion_multi_conv2d_serial", graph, SUCCESS);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2DV2"), 2);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2D"), 0);
          }},
-        {"multi_conv2d_mixed_eligibility", [](Conv2dToConv2dV2FusionPassTest&) {
-             auto graph = TestGraph("g").
-                 SetSocAscend950().
-                 AddConv2D(Conv2DConfig::Basic("Conv2D_ok", DT_FLOAT16, DT_FLOAT16)).
-                 AddConv2D(Conv2DConfig::Basic("Conv2D_bad", DT_INT8, DT_INT32)).
-                 SetOutput("Conv2D_ok").SetOutput("Conv2D_bad").
-                 Build();
+        {"multi_conv2d_mixed_eligibility",
+         [](Conv2dToConv2dV2FusionPassTest&) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D_ok", DT_FLOAT16, DT_FLOAT16))
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D_bad", DT_INT8, DT_INT32))
+                              .SetOutput("Conv2D_ok")
+                              .SetOutput("Conv2D_bad")
+                              .Build();
              CustomPassContext passContext;
              passContext.SetPassName("conv2d_to_conv2dv2_fusion_multi_conv2d_mixed_eligibility");
              Conv2dToConv2dV2FusionPass pass({AscendString("Conv2D")});
@@ -356,23 +383,25 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2DV2"), 1);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2D"), 1);
          }},
-        {"downstream_consumer_preserved", [](Conv2dToConv2dV2FusionPassTest& self) {
-             auto graph = TestGraph("g").
-                 SetSocAscend950().
-                 AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16)).
-                 AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16)).
-                 Connect("Conv2D", 0, "Relu", 0).
-                 SetOutput("Relu").
-                 Build();
+        {"downstream_consumer_preserved",
+         [](Conv2dToConv2dV2FusionPassTest& self) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
+                              .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16))
+                              .Connect("Conv2D", 0, "Relu", 0)
+                              .SetOutput("Relu")
+                              .Build();
              self.TestTotalPass("conv2d_to_conv2dv2_fusion_downstream_consumer_preserved", graph, SUCCESS);
              EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
          }},
-        {"graph_without_conv2d", [](Conv2dToConv2dV2FusionPassTest&) {
-             auto graph = TestGraph("g").
-                 SetSocAscend950().
-                 AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16), true).
-                 SetOutput("Relu").
-                 Build();
+        {"graph_without_conv2d",
+         [](Conv2dToConv2dV2FusionPassTest&) {
+             auto graph = TestGraph("g")
+                              .SetSocAscend950()
+                              .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16), true)
+                              .SetOutput("Relu")
+                              .Build();
              CustomPassContext passContext;
              passContext.SetPassName("conv2d_to_conv2dv2_no_fusion_graph_without_conv2d");
              Conv2dToConv2dV2FusionPass pass({AscendString("Conv2D")});

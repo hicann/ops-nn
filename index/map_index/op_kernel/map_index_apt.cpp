@@ -15,11 +15,12 @@
 
 #include "kernel_operator.h"
 #include "arch35/map_index.h"
- 
+
 using namespace MapIndexOp;
 
-extern "C" __global__ __aicore__ void map_index(
-    GM_ADDR x, GM_ADDR data_seq, GM_ADDR level_index, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void map_index(GM_ADDR x, GM_ADDR data_seq, GM_ADDR level_index, GM_ADDR y,
+                                                GM_ADDR workspace, GM_ADDR tiling)
+{
     if (workspace == nullptr) {
         return;
     }

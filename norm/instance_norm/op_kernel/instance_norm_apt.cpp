@@ -31,9 +31,8 @@ using namespace InstanceNormOps;
 #define TILINGKEY_ARA_FULL_REDUCE 400000
 #define TILINGKEY_ARA_WELFORD 500000
 
-extern "C" __global__ __aicore__ void instance_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean_out, GM_ADDR variance_out, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void instance_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean_out,
+                                                    GM_ADDR variance_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(InstanceNormARFullReduceTilingData);

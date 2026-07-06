@@ -39,4 +39,4 @@ public:
     }
 };
 OP_ADD(EluV2);
-}
+} // namespace ops

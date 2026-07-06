@@ -35,11 +35,10 @@ namespace ge {
 *Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
 */
 REG_OP(Assert)
-  .INPUT(input_condition, TensorType{DT_BOOL})
-  .DYNAMIC_INPUT(input_data, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8,
-      DT_INT16, DT_UINT16, DT_UINT8, DT_INT32, DT_INT64, DT_UINT32,
-      DT_UINT64, DT_BOOL, DT_DOUBLE, DT_STRING}))
-  .ATTR(summarize, Int, 3)
-  .OP_END_FACTORY_REG(Assert)
-}
+    .INPUT(input_condition, TensorType{DT_BOOL})
+    .DYNAMIC_INPUT(input_data, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8, DT_INT16, DT_UINT16, DT_UINT8, DT_INT32,
+                                           DT_INT64, DT_UINT32, DT_UINT64, DT_BOOL, DT_DOUBLE, DT_STRING}))
+    .ATTR(summarize, Int, 3)
+    .OP_END_FACTORY_REG(Assert)
+} // namespace ge
 #endif

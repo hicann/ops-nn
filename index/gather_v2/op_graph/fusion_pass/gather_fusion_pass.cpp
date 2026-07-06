@@ -47,9 +47,8 @@ bool IsTargetPlatform()
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
-    OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
-        false, PASS_NAME.c_str(), "Get platformInfo failed.");
+    OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
+               false, PASS_NAME.c_str(), "Get platformInfo failed.");
     const std::string soc = platformInfo.str_info.short_soc_version;
     bool isSupported = (soc == "Ascend950" || soc == "MC62");
     if (!isSupported) {
@@ -59,11 +58,8 @@ bool IsTargetPlatform()
     return true;
 }
 
-static void GetInputsInfo(
-    const std::vector<SubgraphInput>& subgraphInputs,
-    std::vector<Shape>& inputShapes,
-    std::vector<DataType>& inputDtypes,
-    std::vector<Format>& inputFormats)
+static void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,
+                          std::vector<DataType>& inputDtypes, std::vector<Format>& inputFormats)
 {
     for (const auto& subgraphInput : subgraphInputs) {
         auto matchNode = subgraphInput.GetAllInputs().at(0);
@@ -117,19 +113,17 @@ std::vector<PatternUniqPtr> GatherToGatherV2FusionPass::Patterns()
     ge::Graph* graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     GNode opNode = es::CompliantNodeBuilder(graphPtr)
-        .OpType("Gather")
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .IrDefAttrs({
-            {"batch_dims", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
-             es::CreateFrom(static_cast<int64_t>(0))},
-            {"is_preprocessed", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
-             es::CreateFrom(false)},
-            {"negative_index_support", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
-             es::CreateFrom(false)}
-        })
-        .Build();
+                       .OpType("Gather")
+                       .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                       .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                       .IrDefAttrs({{"batch_dims", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
+                                     es::CreateFrom(static_cast<int64_t>(0))},
+                                    {"is_preprocessed", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
+                                     es::CreateFrom(false)},
+                                    {"negative_index_support", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
+                                     es::CreateFrom(false)}})
+                       .Build();
 
     GNode xNode = *x.GetProducer();
     GNode indicesNode = *indices.GetProducer();
@@ -166,9 +160,8 @@ bool GatherToGatherV2FusionPass::MeetRequirements(const std::unique_ptr<MatchRes
     }
 
     NodeIo captured;
-    OP_LOGE_IF(
-        matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS,
-        false, PASS_NAME.c_str(), "Failed to get captured tensor.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS, false, PASS_NAME.c_str(),
+               "Failed to get captured tensor.");
 
     AscendString nodeType;
     captured.node.GetType(nodeType);
@@ -213,17 +206,14 @@ GraphUniqPtr GatherToGatherV2FusionPass::Replacement(const std::unique_ptr<Match
 
     // 4. 创建替换图
     auto builder = es::EsGraphBuilder("replacement");
-    auto rX = builder.CreateInput(
-        0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
-    auto rIndices = builder.CreateInput(
-        1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
+    auto rX = builder.CreateInput(0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
+    auto rIndices = builder.CreateInput(1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
 
     // 5. 创建 axis 标量常量节点 (值为 0, 类型 INT64)
     auto rAxis = builder.CreateScalar(static_cast<int64_t>(0));
 
     // 6. 创建 GatherV2 节点（使用 ES API）
-    auto gatherv2Output = es::GatherV2(rX, rIndices, rAxis,
-                                         batchDims, isPreprocessed, negativeIndexSupport);
+    auto gatherv2Output = es::GatherV2(rX, rIndices, rAxis, batchDims, isPreprocessed, negativeIndexSupport);
 
     // 6.1 刷新 GatherV2 节点的 Format（InferShape 不推导 Format，需手动刷新）
     GNode gatherv2Node = *gatherv2Output.GetProducer();

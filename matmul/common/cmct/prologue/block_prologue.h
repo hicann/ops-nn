@@ -19,8 +19,7 @@ template <class DispatchPolicy, class... Args>
 class BlockPrologue {
     static_assert(AscendC::Std::always_false_v<DispatchPolicy>, "Could not find an prologue specialization.");
 };
-}  // namespace Cmct::Prologue
+} // namespace Cmct::Prologue
 
 #include "block_prologue_b_antiquant_scmc_nd_kn.h"
 #include "block_prologue_b_antiquant_scmc_nd_nk_nz_kn.h"
-

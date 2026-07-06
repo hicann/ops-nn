@@ -41,7 +41,7 @@ using Ops::Base::CeilDiv;
 
 constexpr uint32_t BLOCK_SIZE = 32U;
 constexpr uint32_t FLOAT_SIZE = 4U;
-constexpr uint32_t ALIGN_ELEM_FP32 = BLOCK_SIZE / FLOAT_SIZE;  // 8 个 float = 32 字节
+constexpr uint32_t ALIGN_ELEM_FP32 = BLOCK_SIZE / FLOAT_SIZE; // 8 个 float = 32 字节
 constexpr uint32_t SCH_CONTIGUOUS = 0;
 constexpr uint32_t SCH_NC1HWC0 = 1;
 
@@ -86,7 +86,7 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
     uint64_t ubSizeU64;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSizeU64, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
     int64_t ubSize = static_cast<int64_t>(ubSizeU64);
 
     // ================================================================
@@ -109,7 +109,7 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
         BnInferGradTilingData* tiling = context->GetTilingData<BnInferGradTilingData>();
         OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
         OP_CHECK_IF(memset_s(tiling, sizeof(BnInferGradTilingData), 0, sizeof(BnInferGradTilingData)) != EOK,
-            OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
         context->SetBlockDim(1);
         size_t* currentWorkspace = context->GetWorkspaceSizes(1);
         OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -150,8 +150,7 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
         }
     }
 
-    OP_LOGI(context, "BnInferGrad: format=%d rank=%ld dtype=%d",
-            (int)format, rank, (int)dataType);
+    OP_LOGI(context, "BnInferGrad: format=%d rank=%ld dtype=%d", (int)format, rank, (int)dataType);
 
     // ================================================================
     // Step 2: 提取通道和空间信息
@@ -201,8 +200,8 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
 
     OP_CHECK_IF(channelSize <= 0, OP_LOGE(context, "channelSize <= 0"), return ge::GRAPH_FAILED);
 
-    OP_LOGI(context, "BnInferGrad: format=%d N=%ld C=%ld spatial=%ld total=%ld dtype=%d coreNum=%ld",
-            (int)formatMode, N, channelSize, spatialSize, totalElements, (int)dataType, coreNum);
+    OP_LOGI(context, "BnInferGrad: format=%d N=%ld C=%ld spatial=%ld total=%ld dtype=%d coreNum=%ld", (int)formatMode,
+            N, channelSize, spatialSize, totalElements, (int)dataType, coreNum);
 
     // ================================================================
     // Step 3: 设置 workspace（无需预计算，Kernel 侧计算 inv_std）
@@ -217,7 +216,7 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
     BnInferGradTilingData* tiling = context->GetTilingData<BnInferGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(BnInferGradTilingData), 0, sizeof(BnInferGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // 通道对齐到 8 个 float（32 字节）
     int64_t alignedC = AlignUp(channelSize, static_cast<int64_t>(ALIGN_ELEM_FP32));
@@ -307,7 +306,8 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
             lastTileLen = tileLen;
         }
 
-        OP_LOGI(context, "BnInferGrad CONTIGUOUS: tileLen=%ld numTiles=%ld lastTileLen=%ld "
+        OP_LOGI(context,
+                "BnInferGrad CONTIGUOUS: tileLen=%ld numTiles=%ld lastTileLen=%ld "
                 "usedCoreNum=%ld elemsPerCore=%ld tailCoreElems=%ld",
                 tileLen, numTiles, lastTileLen, usedCoreNum, elemsPerCore, tailCoreElems);
 
@@ -374,7 +374,8 @@ static ge::graphStatus BnInferGradTilingFunc(gert::TilingContext* context)
         numTiles = numTilesHW;
         lastTileLen = lastTileHW * C0;
 
-        OP_LOGI(context, "BnInferGrad NC1HWC0: tileHW=%ld numTilesHW=%ld lastTileHW=%ld "
+        OP_LOGI(context,
+                "BnInferGrad NC1HWC0: tileHW=%ld numTilesHW=%ld lastTileHW=%ld "
                 "totalTasks=%ld usedCoreNum=%ld tasksPerCore=%ld tailCoreTasks=%ld",
                 tileHW, numTilesHW, lastTileHW, totalTasks, usedCoreNum, tasksPerCore, tailCoreTasks);
     }

@@ -134,12 +134,12 @@ TEST_P(TransposeQuantBatchMatMulTilingRuntime, general_cases)
     platform_info.Init();
 
     optiling::MatmulV3CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(param.compile_info.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(param.compile_info.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -157,8 +157,8 @@ TEST_P(TransposeQuantBatchMatMulTilingRuntime, general_cases)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     if (get_map_string(soc_version, "NpuArch") == "3510") {
         compile_info.aivNum = soc_infos["vector_core_cnt"] == "" ? 0 : std::stoi(soc_infos["vector_core_cnt"]);
@@ -180,13 +180,12 @@ TEST_P(TransposeQuantBatchMatMulTilingRuntime, general_cases)
                      &x2_scale_shape,
                  })
                  .OutputShapes(output_shapes_ref)
-                 .NodeAttrs(
-                     {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(param.dtype)},
-                      {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(param.group_size)},
-                      {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.perm_x1)},
-                      {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.perm_x2)},
-                      {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.perm_y)},
-                      {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(param.batch_split_factor)}})
+                 .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(param.dtype)},
+                             {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(param.group_size)},
+                             {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.perm_x1)},
+                             {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.perm_x2)},
+                             {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.perm_y)},
+                             {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(param.batch_split_factor)}})
                  .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
                  .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
                  .NodeInputTd(3, param.scale_dtype, param.x2_ori_format, param.x2_format)
@@ -415,9 +414,8 @@ static TilingTestParam ascend950_cases_params[] = {
      DT_UINT64,
      DT_HIFLOAT8}};
 
-INSTANTIATE_TEST_CASE_P(
-    TransposeQuantBatchMatMulascend950, TransposeQuantBatchMatMulTilingRuntime,
-    testing::ValuesIn(ascend950_cases_params));
+INSTANTIATE_TEST_CASE_P(TransposeQuantBatchMatMulascend950, TransposeQuantBatchMatMulTilingRuntime,
+                        testing::ValuesIn(ascend950_cases_params));
 
 TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_0)
 {
@@ -438,12 +436,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_0)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     optiling::MatmulV3CompileInfo compileInfoObj;
-    auto parseKernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfoObj})
-            .Build();
+    auto parseKernelHolder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs(
+                                     {const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                                 .Outputs({&compileInfoObj})
+                                 .Build();
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -456,8 +454,8 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_0)
     ASSERT_TRUE(parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
-    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicoreSpec);
+    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicoreSpec);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
@@ -473,13 +471,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_0)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape})
                       .OutputShapes(outputShapesRef)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, DT_FLOAT8_E4M3FN, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
                       .NodeInputTd(3, DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -494,9 +491,10 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_0)
     ASSERT_EQ(opImpl->tiling(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    string golden_tiling_data =
-        "32 425 64 640 640 256 256 640 256 256 128 4 4 1 1 0 0 0 0 98304 8192 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
-        "0 0 0 0 0 0 0 0 16843266 1 1 1 1 1 0 0 0 4 1 2057 2057 2057 1 1 1 1 1 1 1 1 1 1 2057 2057 2057 0 1 1 256 64 256 258 256 1 0 ";
+    string golden_tiling_data = "32 425 64 640 640 256 256 640 256 256 128 4 4 1 1 0 0 0 0 98304 8192 0 1 1 1 1 2 2 0 "
+                                "0 2 2 1 0 0 0 0 0 0 0 0 "
+                                "0 0 0 0 0 0 0 0 16843266 1 1 1 1 1 0 0 0 4 1 2057 2057 2057 1 1 1 1 1 1 1 1 1 1 2057 "
+                                "2057 2057 0 1 1 256 64 256 258 256 1 0 ";
     ASSERT_EQ(tiling_key, 1025);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
@@ -520,12 +518,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_1)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     optiling::MatmulV3CompileInfo compileInfoObj;
-    auto parseKernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfoObj})
-            .Build();
+    auto parseKernelHolder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs(
+                                     {const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                                 .Outputs({&compileInfoObj})
+                                 .Build();
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -538,8 +536,8 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_1)
     ASSERT_TRUE(parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
-    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicoreSpec);
+    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicoreSpec);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
@@ -555,13 +553,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_1)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape})
                       .OutputShapes(outputShapesRef)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, DT_FLOAT8_E4M3FN, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
                       .NodeInputTd(3, DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -576,9 +573,10 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8Success_1)
     ASSERT_EQ(opImpl->tiling(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    string golden_tiling_data =
-        "32 284 192 1472 1472 256 256 1472 256 256 128 4 4 1 1 0 0 0 0 172032 12288 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 "
-        "0 0 0 0 0 0 0 0 0 0 0 16844037 1 1 1 1 1 0 0 0 4 0 1172 1172 1172 1 1 1 1 1 1 1 1 1 1 1172 1172 1172 0 1 1 256 192 256 258 256 1 0 ";
+    string golden_tiling_data = "32 284 192 1472 1472 256 256 1472 256 256 128 4 4 1 1 0 0 0 0 172032 12288 0 1 1 1 1 "
+                                "2 2 0 0 2 2 1 0 0 0 0 0 "
+                                "0 0 0 0 0 0 0 0 0 0 0 16844037 1 1 1 1 1 0 0 0 4 0 1172 1172 1172 1 1 1 1 1 1 1 1 1 1 "
+                                "1172 1172 1172 0 1 1 256 192 256 258 256 1 0 ";
     ASSERT_EQ(tiling_key, 1041);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
@@ -602,12 +600,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzFp8_Fail)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     optiling::MatmulV3CompileInfo compileInfoObj;
-    auto parseKernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfoObj})
-            .Build();
+    auto parseKernelHolder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs(
+                                     {const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                                 .Outputs({&compileInfoObj})
+                                 .Build();
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -620,8 +618,8 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzFp8_Fail)
     ASSERT_TRUE(parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
-    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicoreSpec);
+    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicoreSpec);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
@@ -637,13 +635,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzFp8_Fail)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape})
                       .OutputShapes(outputShapesRef)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, DT_FLOAT8_E4M3FN, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
                       .NodeInputTd(3, DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -677,12 +674,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8GroupSize_Fail)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     optiling::MatmulV3CompileInfo compileInfoObj;
-    auto parseKernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfoObj})
-            .Build();
+    auto parseKernelHolder = gert::KernelRunContextFaker()
+                                 .KernelIONum(2, 1)
+                                 .Inputs(
+                                     {const_cast<char*>(compileInfo.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                                 .Outputs({&compileInfoObj})
+                                 .Build();
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -695,8 +692,8 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8GroupSize_Fail)
     ASSERT_TRUE(parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
-    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicoreSpec);
+    parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                aicoreSpec);
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
     parseKernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
@@ -712,13 +709,12 @@ TEST(TransposeQuantBatchMatMulTilingRuntimeExtra, WeightNzMxFp8GroupSize_Fail)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, nullptr, &x1ScaleShape, &x2ScaleShape})
                       .OutputShapes(outputShapesRef)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(35)},
-                           {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
-                           {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
-                           {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(27)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(35)},
+                                  {"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2, 1})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .NodeInputTd(0, DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, DT_FLOAT8_E4M3FN, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
                       .NodeInputTd(3, DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)

@@ -39,7 +39,7 @@ inline void InitApplyAdamWQuantTilingData(uint8_t* tiling, ApplyAdamWQuantTiling
     memcpy(const_data, tiling, sizeof(ApplyAdamWQuantTilingDataTest));
 }
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  ApplyAdamWQuantTilingDataTest tilingData;                                               \
-  InitApplyAdamWQuantTilingData(tilingPointer, &tilingData)
+#define GET_TILING_DATA(tilingData, tilingPointer) \
+    ApplyAdamWQuantTilingDataTest tilingData;      \
+    InitApplyAdamWQuantTilingData(tilingPointer, &tilingData)
 #endif // _APPLY_ADAM_W_QUANT_TILING_H_

@@ -16,11 +16,11 @@
 using namespace std;
 namespace testConvBp {
 
-void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_infos, map<string, string> &aicore_spec,
-                      map<string, string> &intrinsics);
+void GetPlatFormInfos(const char* compile_info_str, map<string, string>& soc_infos, map<string, string>& aicore_spec,
+                      map<string, string>& intrinsics);
 
-void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_infos, map<string, string> &aicore_spec,
-                      map<string, string> &intrinsics, map<string, string> &soc_version);
+void GetPlatFormInfos(const char* compile_info_str, map<string, string>& soc_infos, map<string, string>& aicore_spec,
+                      map<string, string>& intrinsics, map<string, string>& soc_version);
 
 std::string GetExeDirPath();
-}
+} // namespace testConvBp

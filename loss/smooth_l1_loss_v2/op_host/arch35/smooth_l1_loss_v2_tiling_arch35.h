@@ -26,8 +26,7 @@ namespace optiling {
 
 using namespace Ops::Base;
 
-struct SmoothL1LossV2CompileInfo
-{
+struct SmoothL1LossV2CompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSize = 0;
     Ops::Base::ReduceOpCompileInfo opInfo;
@@ -40,17 +39,19 @@ struct SmoothL1LossV2TilingKey {
 };
 class SmoothL1LossV2Tiling {
 public:
-    explicit SmoothL1LossV2Tiling(gert::TilingContext *context) : tilingContext(context){};
-    ge::graphStatus RunTiling(const SmoothL1LossV2CompileInfo *compileInfo);
+    explicit SmoothL1LossV2Tiling(gert::TilingContext* context) : tilingContext(context){};
+    ge::graphStatus RunTiling(const SmoothL1LossV2CompileInfo* compileInfo);
     SmoothL1LossV2::SmoothL1LossV2TilingData* tiling = nullptr;
+
 protected:
     ge::graphStatus SetTilingData();
     ge::graphStatus CheckShape();
     ge::graphStatus TilingEle();
-    ge::graphStatus TilingReduce(const SmoothL1LossV2CompileInfo *compileInfo);
+    ge::graphStatus TilingReduce(const SmoothL1LossV2CompileInfo* compileInfo);
+
 private:
     ge::DataType outputDtype;
-    gert::TilingContext *tilingContext;
+    gert::TilingContext* tilingContext;
     SmoothL1LossV2TilingKey key;
     uint32_t reduction = 0;
 };

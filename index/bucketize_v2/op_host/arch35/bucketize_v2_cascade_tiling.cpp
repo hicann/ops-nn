@@ -10,7 +10,7 @@
 
 /*!
  * \file bucketize_v2_cascade_tiling.cpp
- * \brief 
+ * \brief
  */
 
 #include "bucketize_v2_cascade_tiling.h"
@@ -30,10 +30,7 @@ static constexpr int64_t SIMT_DCACHE_SIZE = 32 * 1024;
 static constexpr uint64_t TEMPLATE_MODE = 2;
 
 using namespace BucketizeV2;
-bool BucketizeV2CascadeTiling::IsCapable()
-{
-    return true;
-}
+bool BucketizeV2CascadeTiling::IsCapable() { return true; }
 
 uint64_t BucketizeV2CascadeTiling::GetTilingKey() const
 {
@@ -55,11 +52,14 @@ void BucketizeV2CascadeTiling::DoBlockTiling()
 void BucketizeV2CascadeTiling::DoUBTiling()
 {
     int64_t inputUbAlignFactor = xDtypeSize_ == sizeof(int64_t) ? B64_LOAD_ONCE_REG_NUM * vRegLength_ : vRegLength_;
-    int64_t onceWriteVregNum = yDtypeSize_ == sizeof(int64_t) && xDtypeSize_ <= B16 ? INDICE_B16_WRITE_B64_ONCE_REG_NUM : COMMON_WRITE_ONCE_REG_NUM;
+    int64_t onceWriteVregNum = yDtypeSize_ == sizeof(int64_t) && xDtypeSize_ <= B16 ?
+                                   INDICE_B16_WRITE_B64_ONCE_REG_NUM :
+                                   COMMON_WRITE_ONCE_REG_NUM;
     int64_t midOutputUbAlignFactor = onceWriteVregNum * vRegLength_;
-    int64_t ubAvailable = static_cast<int64_t>(ubSize_) - SIMT_DCACHE_SIZE - DOUBLE_BUFFER * (inputUbAlignFactor + ubBlockSize_) - midOutputUbAlignFactor - ubBlockSize_;
+    int64_t ubAvailable = static_cast<int64_t>(ubSize_) - SIMT_DCACHE_SIZE -
+                          DOUBLE_BUFFER * (inputUbAlignFactor + ubBlockSize_) - midOutputUbAlignFactor - ubBlockSize_;
     ubFactor_ = ubAvailable / (DOUBLE_BUFFER * xDtypeSize_ + (DOUBLE_BUFFER + 1) * yDtypeSize_ + boundDtypeSize_);
-    
+
     inUbSize_ = Ops::Base::CeilAlign(ubFactor_ * xDtypeSize_, inputUbAlignFactor);
     outUbSize_ = Ops::Base::CeilAlign(ubFactor_ * yDtypeSize_, ubBlockSize_);
     midOutUbSize_ = Ops::Base::CeilAlign(ubFactor_ * yDtypeSize_, midOutputUbAlignFactor);
@@ -73,8 +73,7 @@ void BucketizeV2CascadeTiling::DoUBTiling()
 
 void BucketizeV2CascadeTiling::SetTilingData()
 {
-    BucketizeV2CascadeTilingData* tilingData =
-    context_->GetTilingData<BucketizeV2CascadeTilingData>();
+    BucketizeV2CascadeTilingData* tilingData = context_->GetTilingData<BucketizeV2CascadeTilingData>();
 
     tilingData->usedCoreNum = usedCoreNum_;
     tilingData->blockFactor = blockFactor_;
@@ -110,8 +109,7 @@ ge::graphStatus BucketizeV2CascadeTiling::PostTiling()
 
 void BucketizeV2CascadeTiling::DumpTilingInfo()
 {
-    BucketizeV2CascadeTilingData* tilingData =
-    context_->GetTilingData<BucketizeV2CascadeTilingData>();
+    BucketizeV2CascadeTilingData* tilingData = context_->GetTilingData<BucketizeV2CascadeTilingData>();
     std::string str;
     str += " usedCoreNum:" + std::to_string(tilingData->usedCoreNum);
     str += " blockFactor:" + std::to_string(tilingData->blockFactor);

@@ -37,18 +37,15 @@ private:
     __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
-    __aicore__ inline void NoSplitKernelProcess(
-        int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t maxCount);
-    __aicore__ inline void SplitKernelProcess(
-        int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t maxCount);
+    __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset,
+                                                int64_t maxCount);
+    __aicore__ inline void SplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset,
+                                              int64_t maxCount);
     template <bool MERGE, bool SPLITKW>
     __aicore__ inline void ComputeSingle(int32_t localCurIdx, int64_t dataCount);
     template <bool CLEAR>
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -99,8 +96,8 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3BigKernel<T>::CalcKernelSize(
-    int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset)
+__aicore__ inline void MaxPoolV3BigKernel<T>::CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW,
+                                                             int64_t& curInOffset)
 {
     if (tilingData_->isSigOut) {
         curInOffset = curIdx * inHW_;
@@ -220,16 +217,16 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::CopyMaxOut(int64_t curIdx)
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3BigKernel<T>::NoSplitKernelProcess(
-    int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t maxCount)
+__aicore__ inline void MaxPoolV3BigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                   int64_t curInOffset, int64_t maxCount)
 {
     CopyInMultiRows(curInOffset, curkW, curkH);
     ComputeSingle<false, false>(localCurIdx, curkW * curkH);
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3BigKernel<T>::SplitKernelProcess(
-    int32_t localCurIdx, int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t maxCount)
+__aicore__ inline void MaxPoolV3BigKernel<T>::SplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                 int64_t curInOffset, int64_t maxCount)
 {
     int64_t realIndex = 0;
     int64_t inputOffset = curInOffset;

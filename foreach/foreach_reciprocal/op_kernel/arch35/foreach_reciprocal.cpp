@@ -17,28 +17,23 @@
 
 #include "foreach_reciprocal_simt.h"
 
-enum class ForeachReciprocalTilingKey : uint32_t
-{
+enum class ForeachReciprocalTilingKey : uint32_t {
     TILING_KEY_FLOAT16 = 0,
-    TILING_KEY_FLOAT   = 1,
-    TILING_KEY_BF16    = 2,
+    TILING_KEY_FLOAT = 1,
+    TILING_KEY_BF16 = 2,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_reciprocal(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_reciprocal(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachReciprocalTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachReciprocalTilingData, tilingData, tiling);
 
-    if constexpr (schMode == static_cast<uint32_t>(
-            ForeachReciprocalTilingKey::TILING_KEY_FLOAT16)) {
+    if constexpr (schMode == static_cast<uint32_t>(ForeachReciprocalTilingKey::TILING_KEY_FLOAT16)) {
         NsForeachReciprocal::Process<half>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachReciprocalTilingKey::TILING_KEY_FLOAT)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachReciprocalTilingKey::TILING_KEY_FLOAT)) {
         NsForeachReciprocal::Process<float>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachReciprocalTilingKey::TILING_KEY_BF16)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachReciprocalTilingKey::TILING_KEY_BF16)) {
         NsForeachReciprocal::Process<bfloat16_t>(x, y, &tilingData);
     }
 }

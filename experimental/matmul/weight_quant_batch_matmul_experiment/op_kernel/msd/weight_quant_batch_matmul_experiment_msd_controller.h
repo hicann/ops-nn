@@ -43,11 +43,11 @@ class WqbmmExpMsdController {
 public:
     __aicore__ inline WqbmmExpMsdController(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR y, GM_ADDR workspace,
-                                const WeightQuantBatchMatmulExperimentTilingData *tilingData, TPipe *tPipe);
+                                const WeightQuantBatchMatmulExperimentTilingData* tilingData, TPipe* tPipe);
     __aicore__ inline void Process();
 
 private:
-    const WeightQuantBatchMatmulExperimentTilingData *tilingData_;
+    const WeightQuantBatchMatmulExperimentTilingData* tilingData_;
     WqbmmExpCubeCompute<xType, wType, int32_t> cubeCompute_;
     WqbmmExpVecCompute<xType, wType, int32_t> vecCompute_;
 
@@ -56,13 +56,13 @@ private:
     GlobalTensor<int32_t> yS32Gm_;
     GlobalTensor<wType> aUnfoldS4Global_;
     GlobalTensor<int8_t> aUnfoldS8Global_;
-    __aicore__ inline void BasicMsd(uint64_t nGmOffset, uint64_t kGmOffset, const A16W4MsdConstParam &constParams);
+    __aicore__ inline void BasicMsd(uint64_t nGmOffset, uint64_t kGmOffset, const A16W4MsdConstParam& constParams);
     __aicore__ inline void BasicEnd();
 
     __aicore__ inline void PreloadMsd(uint64_t nGmOffset, uint64_t curKGmOffset, uint64_t lastKGmOffset,
-                                      const A16W4MsdConstParam &constParams);
+                                      const A16W4MsdConstParam& constParams);
     __aicore__ inline void PreloadEnd(uint64_t nGmOffset, uint64_t lastKGmOffset,
-                                      const A16W4MsdConstParam &constParams);
+                                      const A16W4MsdConstParam& constParams);
     uint64_t cvLoopIdx_ = 0;
     uint64_t aMaxWsOffset_;
     uint64_t aUnfoldWsS4Offset_;
@@ -73,7 +73,7 @@ private:
 WQBMM_EXP_MSD_CONTROLLER_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::Init(
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR y, GM_ADDR workspace,
-    const WeightQuantBatchMatmulExperimentTilingData *tilingData, TPipe *tPipe)
+    const WeightQuantBatchMatmulExperimentTilingData* tilingData, TPipe* tPipe)
 {
     uint64_t bufferNum = 1;
     if constexpr (msdMode == PRELOAD_MSD) {
@@ -81,24 +81,24 @@ __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::Init(
     }
 
     // 设置workspace地址
-    xGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType *>(x));
+    xGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType*>(x));
 
     uint64_t wsB8Offset = 0;
-    aMaxWorkspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(workspace));
+    aMaxWorkspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace));
     aMaxWsOffset_ = CeilAlign(tilingData->matmulTiling.M * FP32_BLOCK_SIZE,
-                              512UL / sizeof(float));  // 空间分配按照512B对齐
+                              512UL / sizeof(float)); // 空间分配按照512B对齐
     wsB8Offset += bufferNum * aMaxWsOffset_ * sizeof(float);
 
     // 实际表示同一个gm地址
-    aUnfoldS4Global_.SetGlobalBuffer(reinterpret_cast<__gm__ wType *>(workspace + wsB8Offset));
-    aUnfoldS8Global_.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t *>(workspace + wsB8Offset));
+    aUnfoldS4Global_.SetGlobalBuffer(reinterpret_cast<__gm__ wType*>(workspace + wsB8Offset));
+    aUnfoldS8Global_.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(workspace + wsB8Offset));
 
     aUnfoldWsS8Offset_ = CeilAlign(tilingData->matmulTiling.M * UNFLOD_TIMES * (tilingData->matmulTiling.Ka >> 1),
-                                   512UL);  // 空间分配按照512B对齐;
+                                   512UL); // 空间分配按照512B对齐;
     aUnfoldWsS4Offset_ = aUnfoldWsS8Offset_ << 1;
     wsB8Offset += 3 * aUnfoldWsS8Offset_;
 
-    yS32Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t *>(workspace + wsB8Offset));
+    yS32Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(workspace + wsB8Offset));
     yS32WsOffset_ = tilingData->matmulTiling.singleCoreM * tilingData->matmulTiling.N;
 
     // 初始化计算单元
@@ -164,7 +164,7 @@ __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::Process()
 
 WQBMM_EXP_MSD_CONTROLLER_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::BasicMsd(uint64_t nGmOffset, uint64_t kGmOffset,
-                                                                const A16W4MsdConstParam &constParams)
+                                                                const A16W4MsdConstParam& constParams)
 {
     if ASCEND_IS_AIV {
         CrossCoreWaitFlag(SYNC_AIV_ONLY_AMAX_FLAG);
@@ -197,10 +197,10 @@ __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::BasicMsd(uint64_t nGmOffs
 WQBMM_EXP_MSD_CONTROLLER_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::PreloadMsd(uint64_t nGmOffset, uint64_t curKGmOffset,
                                                                   uint64_t lastKGmOffset,
-                                                                  const A16W4MsdConstParam &constParams)
+                                                                  const A16W4MsdConstParam& constParams)
 {
     if ASCEND_IS_AIV {
-        CrossCoreWaitFlag(SYNC_AIV_ONLY_AMAX_FLAG);  // 等待AMax的写入flag
+        CrossCoreWaitFlag(SYNC_AIV_ONLY_AMAX_FLAG); // 等待AMax的写入flag
         if (GetBlockIdx() < tilingData_->matmulTiling.M) {
             vecCompute_.UnfoldA(
                 1, GetBlockIdx(), constParams, xGlobal_[GetBlockIdx() * tilingData_->matmulTiling.Ka + curKGmOffset],
@@ -227,7 +227,7 @@ __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::PreloadMsd(uint64_t nGmOf
                                   aUnfoldS8Global_[cvLoopIdx_ % 3 * aUnfoldWsS8Offset_],
                                   yS32Gm_[cvLoopIdx_ % DOUBLE_BUFFER_NUM * yS32WsOffset_ + nGmOffset]);
 
-        CrossCoreWaitFlag(SYNC_AIC_ONLY_AUNFOLD_FLAG);  // 等上一轮的AIC消费完
+        CrossCoreWaitFlag(SYNC_AIC_ONLY_AUNFOLD_FLAG); // 等上一轮的AIC消费完
 
         CrossCoreSetFlag<SYNC_MODE2, PIPE_FIX>(SYNC_AIC_AIV_FLAG);
 
@@ -237,7 +237,7 @@ __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::PreloadMsd(uint64_t nGmOf
 
 WQBMM_EXP_MSD_CONTROLLER_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::PreloadEnd(uint64_t nGmOffset, uint64_t lastKGmOffset,
-                                                                  const A16W4MsdConstParam &constParams)
+                                                                  const A16W4MsdConstParam& constParams)
 {
     if ASCEND_IS_AIV {
         if (cvLoopIdx_ > 0) {
@@ -265,5 +265,5 @@ __aicore__ inline void WQBMM_EXP_MSD_CONTROLLER_CLASS::BasicEnd()
         vecCompute_.End();
     }
 }
-}  // namespace WeightQuantBatchMatmulExperimental
-#endif  // weight_quant_batch_matmul_experimental_msd_controller
+} // namespace WeightQuantBatchMatmulExperimental
+#endif // weight_quant_batch_matmul_experimental_msd_controller

@@ -19,26 +19,14 @@ class MatmulFp32 : public OpDef {
 public:
     explicit MatmulFp32(const char* name) : OpDef(name)
     {
-        this->Input("x1")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND});
-        this->Input("x2")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND});
-        this->Input("bias")
-            .ParamType(OPTIONAL)
-            .DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND});
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND});
+        this->Input("x1").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
+        this->Input("x2").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
+        this->Input("bias").ParamType(OPTIONAL).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
+        this->Output("y").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
         this->Attr("transpose_x1").AttrType(OPTIONAL).Bool(false);
         this->Attr("transpose_x2").AttrType(OPTIONAL).Bool(false);
         this->AICore().AddConfig("ascend910b");
     }
 };
-OP_ADD(MatmulFp32); 
+OP_ADD(MatmulFp32);
 } // namespace ops

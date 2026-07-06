@@ -47,7 +47,7 @@ static BnInferGradCompileInfo g_compileInfo;
 // Constants matching the tiling implementation
 constexpr uint32_t BLOCK_SIZE = 32U;
 constexpr uint32_t FLOAT_SIZE = 4U;
-constexpr uint32_t ALIGN_ELEM_FP32 = BLOCK_SIZE / FLOAT_SIZE;  // 8
+constexpr uint32_t ALIGN_ELEM_FP32 = BLOCK_SIZE / FLOAT_SIZE; // 8
 constexpr uint32_t BYTES_PER_ELEM = 20U;
 
 static inline int64_t AlignUp(int64_t value, int64_t alignment)
@@ -58,12 +58,9 @@ static inline int64_t AlignUp(int64_t value, int64_t alignment)
 // Helper: Create a TilingContextPara for BnInferGrad (NCHW fp32)
 // Inputs: grads (NCHW), scale (1D ND), batch_variance (1D ND)
 // Output: x_backprop (NCHW, same shape as grads)
-static gert::TilingContextPara MakeTilingPara(
-    const gert::StorageShape& gradsShape,
-    int64_t channelSize,
-    ge::DataType dtype = ge::DT_FLOAT,
-    ge::Format format = ge::FORMAT_NCHW,
-    float epsilon = 0.0001f)
+static gert::TilingContextPara MakeTilingPara(const gert::StorageShape& gradsShape, int64_t channelSize,
+                                              ge::DataType dtype = ge::DT_FLOAT, ge::Format format = ge::FORMAT_NCHW,
+                                              float epsilon = 0.0001f)
 {
     // Attribute: epsilon (index=0)
     std::vector<OpAttr> attrs = {
@@ -90,13 +87,13 @@ static gert::TilingContextPara MakeTilingPara(
 }
 
 // Helper: Run tiling and extract BnInferGradTilingData
-static bool RunTilingAndGetData(const gert::TilingContextPara& para,
-                                TilingInfo& info,
-                                BnInferGradTilingData& td)
+static bool RunTilingAndGetData(const gert::TilingContextPara& para, TilingInfo& info, BnInferGradTilingData& td)
 {
     bool ok = ExecuteTiling(para, info);
-    if (!ok) return false;
-    if (info.tilingDataSize < sizeof(BnInferGradTilingData)) return false;
+    if (!ok)
+        return false;
+    if (info.tilingDataSize < sizeof(BnInferGradTilingData))
+        return false;
     memcpy(&td, info.tilingData.get(), sizeof(BnInferGradTilingData));
     return true;
 }
@@ -124,12 +121,12 @@ TEST(BnInferGradTiling, NCHW_FP32_Basic)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 96);       // 2*3*4*4
+    EXPECT_EQ(td.totalElements, 96); // 2*3*4*4
     EXPECT_EQ(td.channelSize, 3);
-    EXPECT_EQ(td.spatialSize, 16);         // 4*4
-    EXPECT_EQ(td.formatMode, 0);           // NCHW
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
+    EXPECT_EQ(td.formatMode, 0);   // NCHW
     EXPECT_EQ(td.N, 2);
-    EXPECT_EQ(td.usedCoreNum, 1);          // Iteration 1: single core
+    EXPECT_EQ(td.usedCoreNum, 1); // Iteration 1: single core
     EXPECT_EQ(td.elemsPerCore, 96);
     EXPECT_EQ(td.tailCoreElems, 96);
 
@@ -176,7 +173,7 @@ TEST(BnInferGradTiling, NCHW_FP32_SingleElement)
     // elemsPerCore = AlignUp(1, 8) = 8; lastTileLen based on elemsPerCore
     EXPECT_EQ(td.elemsPerCore, 8);
     EXPECT_EQ(td.lastTileLen, 8);
-    EXPECT_EQ(td.alignedC, 8);   // AlignUp(1, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(1, 8) = 8
     EXPECT_EQ(info.blockNum, 1u);
 }
 
@@ -191,9 +188,9 @@ TEST(BnInferGradTiling, NCHW_FP32_LargeSpatial)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 3072);     // 1*3*32*32
+    EXPECT_EQ(td.totalElements, 3072); // 1*3*32*32
     EXPECT_EQ(td.channelSize, 3);
-    EXPECT_EQ(td.spatialSize, 1024);       // 32*32
+    EXPECT_EQ(td.spatialSize, 1024); // 32*32
     EXPECT_EQ(td.formatMode, 0);
     EXPECT_EQ(td.N, 1);
     EXPECT_EQ(td.usedCoreNum, 1);
@@ -214,9 +211,9 @@ TEST(BnInferGradTiling, NCHW_FP32_LargeChannel)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8192);     // 2*64*8*8
+    EXPECT_EQ(td.totalElements, 8192); // 2*64*8*8
     EXPECT_EQ(td.channelSize, 64);
-    EXPECT_EQ(td.spatialSize, 64);         // 8*8
+    EXPECT_EQ(td.spatialSize, 64); // 8*8
     EXPECT_EQ(td.formatMode, 0);
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.usedCoreNum, 1);
@@ -241,7 +238,7 @@ TEST(BnInferGradTiling, NCHW_FP32_LargeBatch)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 384);      // 8*3*4*4
+    EXPECT_EQ(td.totalElements, 384); // 8*3*4*4
     EXPECT_EQ(td.channelSize, 3);
     EXPECT_EQ(td.spatialSize, 16);
     EXPECT_EQ(td.N, 8);
@@ -261,9 +258,9 @@ TEST(BnInferGradTiling, NCHW_FP32_MultiTile)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8388608);  // 8*256*64*64
+    EXPECT_EQ(td.totalElements, 8388608); // 8*256*64*64
     EXPECT_EQ(td.channelSize, 256);
-    EXPECT_EQ(td.spatialSize, 4096);       // 64*64
+    EXPECT_EQ(td.spatialSize, 4096); // 64*64
     EXPECT_EQ(td.formatMode, 0);
     EXPECT_EQ(td.N, 8);
 
@@ -294,9 +291,9 @@ TEST(BnInferGradTiling, NCHW_FP32_NonSquareSpatial)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 120);      // 2*3*4*5
+    EXPECT_EQ(td.totalElements, 120); // 2*3*4*5
     EXPECT_EQ(td.channelSize, 3);
-    EXPECT_EQ(td.spatialSize, 20);         // 4*5
+    EXPECT_EQ(td.spatialSize, 20); // 4*5
     EXPECT_EQ(td.formatMode, 0);
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.numTiles, 1);
@@ -314,12 +311,12 @@ TEST(BnInferGradTiling, NCHW_FP32_Spatial1x1)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 512);      // 4*128*1*1
+    EXPECT_EQ(td.totalElements, 512); // 4*128*1*1
     EXPECT_EQ(td.channelSize, 128);
     EXPECT_EQ(td.spatialSize, 1);
     EXPECT_EQ(td.formatMode, 0);
     EXPECT_EQ(td.N, 4);
-    EXPECT_EQ(td.alignedC, 128);  // AlignUp(128, 8) = 128
+    EXPECT_EQ(td.alignedC, 128); // AlignUp(128, 8) = 128
 }
 
 // TC-T-009: Custom epsilon value
@@ -352,9 +349,9 @@ TEST(BnInferGradTiling, NCHW_FP32_UnalignedChannel)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 160);      // 2*5*4*4
+    EXPECT_EQ(td.totalElements, 160); // 2*5*4*4
     EXPECT_EQ(td.channelSize, 5);
-    EXPECT_EQ(td.alignedC, 8);             // AlignUp(5, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(5, 8) = 8
     EXPECT_EQ(td.numTiles, 1);
 }
 
@@ -370,7 +367,7 @@ TEST(BnInferGradTiling, NCHW_FP32_TileConsistency)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 65536);    // 4*64*16*16
+    EXPECT_EQ(td.totalElements, 65536); // 4*64*16*16
 
     // Verify tile consistency per core:
     // (numTiles - 1) * tileLen + lastTileLen == elemsPerCore
@@ -400,11 +397,11 @@ TEST(BnInferGradTiling, NCHW_FP32_BatchOne)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 16384);    // 1*256*8*8
+    EXPECT_EQ(td.totalElements, 16384); // 1*256*8*8
     EXPECT_EQ(td.channelSize, 256);
-    EXPECT_EQ(td.spatialSize, 64);         // 8*8
+    EXPECT_EQ(td.spatialSize, 64); // 8*8
     EXPECT_EQ(td.N, 1);
-    EXPECT_EQ(td.formatMode, 0);           // NCHW -> CONTIGUOUS
+    EXPECT_EQ(td.formatMode, 0); // NCHW -> CONTIGUOUS
     EXPECT_GT(td.usedCoreNum, 0);
 }
 
@@ -414,13 +411,9 @@ TEST(BnInferGradTiling, NCHW_FP32_BatchOne)
 
 // Helper: Create a TilingContextPara for NHWC format
 // NHWC shape: (N, H, W, C). scale/variance: (C,)
-static gert::TilingContextPara MakeTilingParaNHWC(
-    const gert::StorageShape& gradsShape,
-    int64_t channelSize,
-    ge::DataType dtype = ge::DT_FLOAT,
-    float epsilon = 0.0001f,
-    uint64_t coreNum = 64,
-    uint64_t ubSize = 262144)
+static gert::TilingContextPara MakeTilingParaNHWC(const gert::StorageShape& gradsShape, int64_t channelSize,
+                                                  ge::DataType dtype = ge::DT_FLOAT, float epsilon = 0.0001f,
+                                                  uint64_t coreNum = 64, uint64_t ubSize = 262144)
 {
     std::vector<OpAttr> attrs = {
         OpAttr("epsilon", Ops::Math::AnyValue::CreateFrom<float>(epsilon)),
@@ -439,19 +432,14 @@ static gert::TilingContextPara MakeTilingParaNHWC(
         TensorDesc(gradsShape, dtype, ge::FORMAT_NHWC),
     };
 
-    return gert::TilingContextPara("BnInferGrad", inputs, outputs, attrs, &g_compileInfo,
-                                    coreNum, ubSize);
+    return gert::TilingContextPara("BnInferGrad", inputs, outputs, attrs, &g_compileInfo, coreNum, ubSize);
 }
 
 // Helper: Create a TilingContextPara for NC1HWC0 format
 // NC1HWC0 shape: (N, C1, H, W, C0). scale/variance shape: (C1*C0,)
-static gert::TilingContextPara MakeTilingParaNC1HWC0(
-    const gert::StorageShape& gradsShape,
-    int64_t channelSize,
-    ge::DataType dtype = ge::DT_FLOAT,
-    float epsilon = 0.0001f,
-    uint64_t coreNum = 64,
-    uint64_t ubSize = 262144)
+static gert::TilingContextPara MakeTilingParaNC1HWC0(const gert::StorageShape& gradsShape, int64_t channelSize,
+                                                     ge::DataType dtype = ge::DT_FLOAT, float epsilon = 0.0001f,
+                                                     uint64_t coreNum = 64, uint64_t ubSize = 262144)
 {
     std::vector<OpAttr> attrs = {
         OpAttr("epsilon", Ops::Math::AnyValue::CreateFrom<float>(epsilon)),
@@ -470,19 +458,14 @@ static gert::TilingContextPara MakeTilingParaNC1HWC0(
         TensorDesc(gradsShape, dtype, ge::FORMAT_NC1HWC0),
     };
 
-    return gert::TilingContextPara("BnInferGrad", inputs, outputs, attrs, &g_compileInfo,
-                                    coreNum, ubSize);
+    return gert::TilingContextPara("BnInferGrad", inputs, outputs, attrs, &g_compileInfo, coreNum, ubSize);
 }
 
 // Helper: Create NCHW TilingContextPara with custom coreNum/ubSize
-static gert::TilingContextPara MakeTilingParaEx(
-    const gert::StorageShape& gradsShape,
-    int64_t channelSize,
-    ge::DataType dtype = ge::DT_FLOAT,
-    ge::Format format = ge::FORMAT_NCHW,
-    float epsilon = 0.0001f,
-    uint64_t coreNum = 64,
-    uint64_t ubSize = 262144)
+static gert::TilingContextPara MakeTilingParaEx(const gert::StorageShape& gradsShape, int64_t channelSize,
+                                                ge::DataType dtype = ge::DT_FLOAT, ge::Format format = ge::FORMAT_NCHW,
+                                                float epsilon = 0.0001f, uint64_t coreNum = 64,
+                                                uint64_t ubSize = 262144)
 {
     std::vector<OpAttr> attrs = {
         OpAttr("epsilon", Ops::Math::AnyValue::CreateFrom<float>(epsilon)),
@@ -501,8 +484,7 @@ static gert::TilingContextPara MakeTilingParaEx(
         TensorDesc(gradsShape, dtype, format),
     };
 
-    return gert::TilingContextPara("BnInferGrad", inputs, outputs, attrs, &g_compileInfo,
-                                    coreNum, ubSize);
+    return gert::TilingContextPara("BnInferGrad", inputs, outputs, attrs, &g_compileInfo, coreNum, ubSize);
 }
 
 // TC-T-013: NHWC basic, shape=(2,4,4,3), C=3, formatMode=1, CONTIGUOUS branch
@@ -515,12 +497,12 @@ TEST(BnInferGradTiling, NHWC_FP32_Basic)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 96);       // 2*4*4*3
+    EXPECT_EQ(td.totalElements, 96); // 2*4*4*3
     EXPECT_EQ(td.channelSize, 3);
-    EXPECT_EQ(td.spatialSize, 16);         // 4*4
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
+    EXPECT_EQ(td.formatMode, 1);   // NHWC
     EXPECT_EQ(td.N, 2);
-    EXPECT_EQ(td.alignedC, 8);            // AlignUp(3, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(3, 8) = 8
 
     // NHWC tileLen should be aligned to channelSize(3) when possible
     EXPECT_GT(td.tileLen, 0);
@@ -546,12 +528,12 @@ TEST(BnInferGradTiling, NHWC_FP32_LargeChannel)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8192);     // 2*8*8*64
+    EXPECT_EQ(td.totalElements, 8192); // 2*8*8*64
     EXPECT_EQ(td.channelSize, 64);
-    EXPECT_EQ(td.spatialSize, 64);         // 8*8
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.spatialSize, 64); // 8*8
+    EXPECT_EQ(td.formatMode, 1);   // NHWC
     EXPECT_EQ(td.N, 2);
-    EXPECT_EQ(td.alignedC, 64);           // AlignUp(64, 8) = 64
+    EXPECT_EQ(td.alignedC, 64); // AlignUp(64, 8) = 64
 
     // Verify tileLen is aligned to channelSize (64)
     EXPECT_EQ(td.tileLen % 64, 0);
@@ -569,10 +551,10 @@ TEST(BnInferGradTiling, NHWC_FP32_UnalignedChannel)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 80);       // 1*4*4*5
+    EXPECT_EQ(td.totalElements, 80); // 1*4*4*5
     EXPECT_EQ(td.channelSize, 5);
-    EXPECT_EQ(td.spatialSize, 16);         // 4*4
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
+    EXPECT_EQ(td.formatMode, 1);   // NHWC
     EXPECT_EQ(td.N, 1);
 
     // tileLen should be > 0 and aligned to channelSize(5) if possible
@@ -616,10 +598,10 @@ TEST(BnInferGradTiling, NHWC_FP32_MultiTile)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 4194304);  // 8*64*64*128
+    EXPECT_EQ(td.totalElements, 4194304); // 8*64*64*128
     EXPECT_EQ(td.channelSize, 128);
-    EXPECT_EQ(td.spatialSize, 4096);       // 64*64
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.spatialSize, 4096); // 64*64
+    EXPECT_EQ(td.formatMode, 1);     // NHWC
     EXPECT_EQ(td.N, 8);
 
     // Should use multiple tiles per core
@@ -648,30 +630,30 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_Basic)
 {
     // NC1HWC0: (N, C1, H, W, C0)
     gert::StorageShape gradsShape({2, 4, 8, 8, 16}, {2, 4, 8, 8, 16});
-    int64_t C = 4 * 16;  // C1*C0 = 64
+    int64_t C = 4 * 16; // C1*C0 = 64
     auto para = MakeTilingParaNC1HWC0(gradsShape, C);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 2 * 4 * 8 * 8 * 16);  // 8192
-    EXPECT_EQ(td.channelSize, 64);          // C1*C0
-    EXPECT_EQ(td.spatialSize, 64);          // H*W = 8*8
-    EXPECT_EQ(td.formatMode, 2);            // NC1HWC0
+    EXPECT_EQ(td.totalElements, 2 * 4 * 8 * 8 * 16); // 8192
+    EXPECT_EQ(td.channelSize, 64);                   // C1*C0
+    EXPECT_EQ(td.spatialSize, 64);                   // H*W = 8*8
+    EXPECT_EQ(td.formatMode, 2);                     // NC1HWC0
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.C1, 4);
     EXPECT_EQ(td.C0, 16);
 
     // NC1HWC0-specific fields
-    EXPECT_EQ(td.totalTasks, 8);            // N*C1 = 2*4
+    EXPECT_EQ(td.totalTasks, 8); // N*C1 = 2*4
     EXPECT_GT(td.tasksPerCore, 0);
     EXPECT_GT(td.tailCoreTasks, 0);
     EXPECT_LE(td.tailCoreTasks, td.tasksPerCore);
 
     // tileHW and numTilesHW
     EXPECT_GT(td.tileHW, 0);
-    EXPECT_LE(td.tileHW, 64);              // tileHW <= spatialSize
+    EXPECT_LE(td.tileHW, 64); // tileHW <= spatialSize
     EXPECT_GT(td.numTilesHW, 0);
     EXPECT_GT(td.lastTileHW, 0);
     EXPECT_LE(td.lastTileHW, td.tileHW);
@@ -702,27 +684,27 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_Basic)
 TEST(BnInferGradTiling, NC1HWC0_FP32_SingleTask)
 {
     gert::StorageShape gradsShape({1, 1, 4, 4, 16}, {1, 1, 4, 4, 16});
-    int64_t C = 1 * 16;  // 16
+    int64_t C = 1 * 16; // 16
     auto para = MakeTilingParaNC1HWC0(gradsShape, C);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 256);       // 1*1*4*4*16
+    EXPECT_EQ(td.totalElements, 256); // 1*1*4*4*16
     EXPECT_EQ(td.channelSize, 16);
-    EXPECT_EQ(td.spatialSize, 16);          // 4*4
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
     EXPECT_EQ(td.formatMode, 2);
     EXPECT_EQ(td.N, 1);
     EXPECT_EQ(td.C1, 1);
     EXPECT_EQ(td.C0, 16);
-    EXPECT_EQ(td.totalTasks, 1);            // N*C1 = 1
+    EXPECT_EQ(td.totalTasks, 1); // N*C1 = 1
     EXPECT_EQ(td.usedCoreNum, 1);
     EXPECT_EQ(td.tasksPerCore, 1);
     EXPECT_EQ(td.tailCoreTasks, 1);
 
     // tileHW should cover all spatial positions since small
-    EXPECT_EQ(td.tileHW, 16);              // spatialSize fits in UB
+    EXPECT_EQ(td.tileHW, 16); // spatialSize fits in UB
     EXPECT_EQ(td.numTilesHW, 1);
     EXPECT_EQ(td.lastTileHW, 16);
 
@@ -734,20 +716,20 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_SingleTask)
 TEST(BnInferGradTiling, NC1HWC0_FP32_LargeSpatial)
 {
     gert::StorageShape gradsShape({1, 2, 64, 64, 16}, {1, 2, 64, 64, 16});
-    int64_t C = 2 * 16;  // 32
+    int64_t C = 2 * 16; // 32
     auto para = MakeTilingParaNC1HWC0(gradsShape, C);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 1 * 2 * 64 * 64 * 16);  // 131072
+    EXPECT_EQ(td.totalElements, 1 * 2 * 64 * 64 * 16); // 131072
     EXPECT_EQ(td.channelSize, 32);
-    EXPECT_EQ(td.spatialSize, 4096);        // 64*64
+    EXPECT_EQ(td.spatialSize, 4096); // 64*64
     EXPECT_EQ(td.formatMode, 2);
     EXPECT_EQ(td.C1, 2);
     EXPECT_EQ(td.C0, 16);
-    EXPECT_EQ(td.totalTasks, 2);            // N*C1 = 1*2
+    EXPECT_EQ(td.totalTasks, 2); // N*C1 = 1*2
 
     // May have multiple HW tiles
     EXPECT_GT(td.tileHW, 0);
@@ -769,21 +751,21 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_LargeSpatial)
 TEST(BnInferGradTiling, NC1HWC0_FP32_ManyTasks)
 {
     gert::StorageShape gradsShape({4, 8, 4, 4, 16}, {4, 8, 4, 4, 16});
-    int64_t C = 8 * 16;  // 128
+    int64_t C = 8 * 16; // 128
     auto para = MakeTilingParaNC1HWC0(gradsShape, C);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 4 * 8 * 4 * 4 * 16);  // 32768
+    EXPECT_EQ(td.totalElements, 4 * 8 * 4 * 4 * 16); // 32768
     EXPECT_EQ(td.channelSize, 128);
-    EXPECT_EQ(td.spatialSize, 16);          // 4*4
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
     EXPECT_EQ(td.formatMode, 2);
     EXPECT_EQ(td.N, 4);
     EXPECT_EQ(td.C1, 8);
     EXPECT_EQ(td.C0, 16);
-    EXPECT_EQ(td.totalTasks, 32);           // N*C1 = 4*8
+    EXPECT_EQ(td.totalTasks, 32); // N*C1 = 4*8
 
     // With coreNum=64 default, usedCoreNum <= totalTasks=32
     EXPECT_LE(td.usedCoreNum, 32);
@@ -801,20 +783,20 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_ManyTasks)
 TEST(BnInferGradTiling, NC1HWC0_FP32_C0_32)
 {
     gert::StorageShape gradsShape({1, 2, 4, 4, 32}, {1, 2, 4, 4, 32});
-    int64_t C = 2 * 32;  // 64
+    int64_t C = 2 * 32; // 64
     auto para = MakeTilingParaNC1HWC0(gradsShape, C);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 1 * 2 * 4 * 4 * 32);  // 1024
+    EXPECT_EQ(td.totalElements, 1 * 2 * 4 * 4 * 32); // 1024
     EXPECT_EQ(td.channelSize, 64);
-    EXPECT_EQ(td.spatialSize, 16);          // 4*4
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
     EXPECT_EQ(td.formatMode, 2);
     EXPECT_EQ(td.C1, 2);
     EXPECT_EQ(td.C0, 32);
-    EXPECT_EQ(td.totalTasks, 2);            // N*C1 = 1*2
+    EXPECT_EQ(td.totalTasks, 2); // N*C1 = 1*2
 
     // alignedC0 = AlignUp(32, 8) = 32
     EXPECT_EQ(td.alignedC0, 32);
@@ -838,8 +820,8 @@ TEST(BnInferGradTiling, NCHW_FP32_MultiCore)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 16777216);  // 16*256*64*64
-    EXPECT_EQ(td.formatMode, 0);            // NCHW
+    EXPECT_EQ(td.totalElements, 16777216); // 16*256*64*64
+    EXPECT_EQ(td.formatMode, 0);           // NCHW
 
     // Should use multiple cores (totalElements >> tileLen)
     EXPECT_GT(td.usedCoreNum, 1);
@@ -914,9 +896,9 @@ TEST(BnInferGradTiling, NHWC_FP32_MultiCore)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8388608);   // 8*64*64*256
+    EXPECT_EQ(td.totalElements, 8388608); // 8*64*64*256
     EXPECT_EQ(td.channelSize, 256);
-    EXPECT_EQ(td.formatMode, 1);            // NHWC
+    EXPECT_EQ(td.formatMode, 1); // NHWC
 
     // Should use multiple cores
     EXPECT_GT(td.usedCoreNum, 1);
@@ -935,16 +917,16 @@ TEST(BnInferGradTiling, NHWC_FP32_MultiCore)
 TEST(BnInferGradTiling, NC1HWC0_FP32_MultiCore)
 {
     gert::StorageShape gradsShape({8, 16, 8, 8, 16}, {8, 16, 8, 8, 16});
-    int64_t C = 16 * 16;  // 256
+    int64_t C = 16 * 16; // 256
     auto para = MakeTilingParaNC1HWC0(gradsShape, C, ge::DT_FLOAT, 0.0001f, 64);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8 * 16 * 8 * 8 * 16);  // 131072
+    EXPECT_EQ(td.totalElements, 8 * 16 * 8 * 8 * 16); // 131072
     EXPECT_EQ(td.formatMode, 2);
-    EXPECT_EQ(td.totalTasks, 128);          // N*C1 = 8*16
+    EXPECT_EQ(td.totalTasks, 128); // N*C1 = 8*16
 
     // With 128 tasks and coreNum=64, should use multiple cores
     EXPECT_GT(td.usedCoreNum, 1);
@@ -966,15 +948,15 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_MultiCore)
 TEST(BnInferGradTiling, NC1HWC0_FP32_FewerTasksThanCores)
 {
     gert::StorageShape gradsShape({2, 3, 4, 4, 16}, {2, 3, 4, 4, 16});
-    int64_t C = 3 * 16;  // 48
+    int64_t C = 3 * 16; // 48
     auto para = MakeTilingParaNC1HWC0(gradsShape, C, ge::DT_FLOAT, 0.0001f, 64);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalTasks, 6);            // N*C1 = 2*3
-    EXPECT_LE(td.usedCoreNum, 6);           // Cannot exceed totalTasks
+    EXPECT_EQ(td.totalTasks, 6);  // N*C1 = 2*3
+    EXPECT_LE(td.usedCoreNum, 6); // Cannot exceed totalTasks
     EXPECT_GT(td.usedCoreNum, 0);
 
     // Verify task distribution
@@ -988,14 +970,14 @@ TEST(BnInferGradTiling, NC1HWC0_FP32_FewerTasksThanCores)
 TEST(BnInferGradTiling, NC1HWC0_FP32_ElemsPerCoreConsistency)
 {
     gert::StorageShape gradsShape({2, 4, 8, 8, 16}, {2, 4, 8, 8, 16});
-    int64_t C = 4 * 16;  // 64
+    int64_t C = 4 * 16; // 64
     auto para = MakeTilingParaNC1HWC0(gradsShape, C, ge::DT_FLOAT, 0.0001f, 4);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalTasks, 8);            // N*C1 = 2*4
+    EXPECT_EQ(td.totalTasks, 8); // N*C1 = 2*4
     EXPECT_EQ(td.formatMode, 2);
 
     // elemsPerCore = tasksPerCore * spatialSize * C0
@@ -1022,7 +1004,7 @@ TEST(BnInferGradTiling, NCHW_FP32_MultiCoreTileConsistency)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8 * 128 * 32 * 32);  // 4194304
+    EXPECT_EQ(td.totalElements, 8 * 128 * 32 * 32); // 4194304
 
     // numTiles is based on elemsPerCore, not totalElements
     // (numTiles - 1) * tileLen + lastTileLen should cover elemsPerCore
@@ -1053,15 +1035,15 @@ TEST(BnInferGradTiling, NCHW_FP16_Basic)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 96);       // 2*3*4*4
+    EXPECT_EQ(td.totalElements, 96); // 2*3*4*4
     EXPECT_EQ(td.channelSize, 3);
-    EXPECT_EQ(td.spatialSize, 16);         // 4*4
-    EXPECT_EQ(td.formatMode, 0);           // NCHW
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
+    EXPECT_EQ(td.formatMode, 0);   // NCHW
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.usedCoreNum, 1);
     EXPECT_EQ(td.numTiles, 1);
     EXPECT_EQ(td.lastTileLen, 96);
-    EXPECT_EQ(td.alignedC, 8);            // AlignUp(3, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(3, 8) = 8
     EXPECT_GT(td.tileLen, 0);
 
     // Verify epsilon stored as bits
@@ -1083,7 +1065,7 @@ TEST(BnInferGradTiling, NCHW_FP16_MultiTileMultiCore)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 8388608);  // 8*256*64*64
+    EXPECT_EQ(td.totalElements, 8388608); // 8*256*64*64
     EXPECT_EQ(td.channelSize, 256);
     EXPECT_EQ(td.formatMode, 0);
 
@@ -1116,10 +1098,10 @@ TEST(BnInferGradTiling, NHWC_FP16_Basic)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 96);       // 2*4*4*3
+    EXPECT_EQ(td.totalElements, 96); // 2*4*4*3
     EXPECT_EQ(td.channelSize, 3);
-    EXPECT_EQ(td.spatialSize, 16);         // 4*4
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
+    EXPECT_EQ(td.formatMode, 1);   // NHWC
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.numTiles, 1);
     EXPECT_EQ(td.lastTileLen, 96);
@@ -1130,23 +1112,23 @@ TEST(BnInferGradTiling, NHWC_FP16_Basic)
 TEST(BnInferGradTiling, NC1HWC0_FP16_Basic)
 {
     gert::StorageShape gradsShape({2, 4, 8, 8, 16}, {2, 4, 8, 8, 16});
-    int64_t C = 4 * 16;  // 64
+    int64_t C = 4 * 16; // 64
     auto para = MakeTilingParaEx(gradsShape, C, ge::DT_FLOAT16, ge::FORMAT_NC1HWC0);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 2 * 4 * 8 * 8 * 16);  // 8192
+    EXPECT_EQ(td.totalElements, 2 * 4 * 8 * 8 * 16); // 8192
     EXPECT_EQ(td.channelSize, 64);
-    EXPECT_EQ(td.spatialSize, 64);          // H*W = 8*8
-    EXPECT_EQ(td.formatMode, 2);            // NC1HWC0
+    EXPECT_EQ(td.spatialSize, 64); // H*W = 8*8
+    EXPECT_EQ(td.formatMode, 2);   // NC1HWC0
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.C1, 4);
     EXPECT_EQ(td.C0, 16);
 
     // NC1HWC0-specific fields
-    EXPECT_EQ(td.totalTasks, 8);            // N*C1 = 2*4
+    EXPECT_EQ(td.totalTasks, 8); // N*C1 = 2*4
     EXPECT_GT(td.tasksPerCore, 0);
     EXPECT_GT(td.tileHW, 0);
     EXPECT_LE(td.tileHW, 64);
@@ -1174,15 +1156,15 @@ TEST(BnInferGradTiling, NCHW_BF16_Basic)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 96);       // 2*3*4*4
+    EXPECT_EQ(td.totalElements, 96); // 2*3*4*4
     EXPECT_EQ(td.channelSize, 3);
     EXPECT_EQ(td.spatialSize, 16);
-    EXPECT_EQ(td.formatMode, 0);           // NCHW
+    EXPECT_EQ(td.formatMode, 0); // NCHW
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.usedCoreNum, 1);
     EXPECT_EQ(td.numTiles, 1);
     EXPECT_EQ(td.lastTileLen, 96);
-    EXPECT_EQ(td.alignedC, 8);            // AlignUp(3, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(3, 8) = 8
     EXPECT_GT(td.tileLen, 0);
 
     // Verify epsilon stored as bits
@@ -1240,7 +1222,7 @@ TEST(BnInferGradTiling, NHWC_BF16_Basic)
     EXPECT_EQ(td.totalElements, 96);
     EXPECT_EQ(td.channelSize, 3);
     EXPECT_EQ(td.spatialSize, 16);
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.formatMode, 1); // NHWC
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.numTiles, 1);
     EXPECT_EQ(td.lastTileLen, 96);
@@ -1251,17 +1233,17 @@ TEST(BnInferGradTiling, NHWC_BF16_Basic)
 TEST(BnInferGradTiling, NC1HWC0_BF16_Basic)
 {
     gert::StorageShape gradsShape({2, 4, 8, 8, 16}, {2, 4, 8, 8, 16});
-    int64_t C = 4 * 16;  // 64
+    int64_t C = 4 * 16; // 64
     auto para = MakeTilingParaEx(gradsShape, C, ge::DT_BF16, ge::FORMAT_NC1HWC0);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 2 * 4 * 8 * 8 * 16);  // 8192
+    EXPECT_EQ(td.totalElements, 2 * 4 * 8 * 8 * 16); // 8192
     EXPECT_EQ(td.channelSize, 64);
     EXPECT_EQ(td.spatialSize, 64);
-    EXPECT_EQ(td.formatMode, 2);            // NC1HWC0
+    EXPECT_EQ(td.formatMode, 2); // NC1HWC0
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.C1, 4);
     EXPECT_EQ(td.C0, 16);
@@ -1335,7 +1317,7 @@ TEST(BnInferGradTiling, NCHW_CrossDtype_Equivalence)
 TEST(BnInferGradTiling, NC1HWC0_CrossDtype_Equivalence)
 {
     gert::StorageShape gradsShape({2, 4, 8, 8, 16}, {2, 4, 8, 8, 16});
-    int64_t C = 4 * 16;  // 64
+    int64_t C = 4 * 16; // 64
 
     // fp32 baseline
     auto paraFP32 = MakeTilingParaEx(gradsShape, C, ge::DT_FLOAT, ge::FORMAT_NC1HWC0);
@@ -1472,12 +1454,12 @@ TEST(BnInferGradTiling, NCHW_FP32_ChannelOne)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 256);      // 4*1*8*8
+    EXPECT_EQ(td.totalElements, 256); // 4*1*8*8
     EXPECT_EQ(td.channelSize, 1);
-    EXPECT_EQ(td.spatialSize, 64);         // 8*8
-    EXPECT_EQ(td.formatMode, 0);           // NCHW
+    EXPECT_EQ(td.spatialSize, 64); // 8*8
+    EXPECT_EQ(td.formatMode, 0);   // NCHW
     EXPECT_EQ(td.N, 4);
-    EXPECT_EQ(td.alignedC, 8);            // AlignUp(1, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(1, 8) = 8
     EXPECT_EQ(td.numTiles, 1);
     EXPECT_EQ(td.lastTileLen, 256);
     EXPECT_GT(td.tileLen, 0);
@@ -1493,12 +1475,12 @@ TEST(BnInferGradTiling, NHWC_FP16_ChannelOne)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 256);      // 4*8*8*1
+    EXPECT_EQ(td.totalElements, 256); // 4*8*8*1
     EXPECT_EQ(td.channelSize, 1);
-    EXPECT_EQ(td.spatialSize, 64);         // 8*8
-    EXPECT_EQ(td.formatMode, 1);           // NHWC
+    EXPECT_EQ(td.spatialSize, 64); // 8*8
+    EXPECT_EQ(td.formatMode, 1);   // NHWC
     EXPECT_EQ(td.N, 4);
-    EXPECT_EQ(td.alignedC, 8);            // AlignUp(1, 8) = 8
+    EXPECT_EQ(td.alignedC, 8); // AlignUp(1, 8) = 8
     EXPECT_EQ(td.numTiles, 1);
     EXPECT_GT(td.tileLen, 0);
 }
@@ -1508,21 +1490,21 @@ TEST(BnInferGradTiling, NHWC_FP16_ChannelOne)
 TEST(BnInferGradTiling, NC1HWC0_BF16_C1One)
 {
     gert::StorageShape gradsShape({2, 1, 4, 4, 16}, {2, 1, 4, 4, 16});
-    int64_t C = 1 * 16;  // 16
+    int64_t C = 1 * 16; // 16
     auto para = MakeTilingParaEx(gradsShape, C, ge::DT_BF16, ge::FORMAT_NC1HWC0);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 2 * 1 * 4 * 4 * 16);  // 512
+    EXPECT_EQ(td.totalElements, 2 * 1 * 4 * 4 * 16); // 512
     EXPECT_EQ(td.channelSize, 16);
-    EXPECT_EQ(td.spatialSize, 16);          // 4*4
-    EXPECT_EQ(td.formatMode, 2);            // NC1HWC0
+    EXPECT_EQ(td.spatialSize, 16); // 4*4
+    EXPECT_EQ(td.formatMode, 2);   // NC1HWC0
     EXPECT_EQ(td.N, 2);
     EXPECT_EQ(td.C1, 1);
     EXPECT_EQ(td.C0, 16);
-    EXPECT_EQ(td.totalTasks, 2);            // N*C1 = 2*1
+    EXPECT_EQ(td.totalTasks, 2); // N*C1 = 2*1
 
     // tileLen = tileHW * C0
     EXPECT_EQ(td.tileLen, td.tileHW * td.C0);
@@ -1545,9 +1527,9 @@ TEST(BnInferGradTiling, NHWC_FP16_MultiCore)
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 4194304);   // 8*64*64*128
+    EXPECT_EQ(td.totalElements, 4194304); // 8*64*64*128
     EXPECT_EQ(td.channelSize, 128);
-    EXPECT_EQ(td.formatMode, 1);            // NHWC
+    EXPECT_EQ(td.formatMode, 1); // NHWC
 
     // Multi-core
     EXPECT_GT(td.usedCoreNum, 1);
@@ -1566,17 +1548,17 @@ TEST(BnInferGradTiling, NHWC_FP16_MultiCore)
 TEST(BnInferGradTiling, NC1HWC0_BF16_MultiCore)
 {
     gert::StorageShape gradsShape({4, 8, 4, 4, 16}, {4, 8, 4, 4, 16});
-    int64_t C = 8 * 16;  // 128
+    int64_t C = 8 * 16; // 128
     auto para = MakeTilingParaEx(gradsShape, C, ge::DT_BF16, ge::FORMAT_NC1HWC0, 0.0001f, 64);
 
     TilingInfo info;
     BnInferGradTilingData td;
     ASSERT_TRUE(RunTilingAndGetData(para, info, td));
 
-    EXPECT_EQ(td.totalElements, 4 * 8 * 4 * 4 * 16);  // 32768
+    EXPECT_EQ(td.totalElements, 4 * 8 * 4 * 4 * 16); // 32768
     EXPECT_EQ(td.channelSize, 128);
     EXPECT_EQ(td.formatMode, 2);
-    EXPECT_EQ(td.totalTasks, 32);           // N*C1 = 4*8
+    EXPECT_EQ(td.totalTasks, 32); // N*C1 = 4*8
 
     // Multi-core
     EXPECT_GT(td.usedCoreNum, 1);

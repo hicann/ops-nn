@@ -16,36 +16,32 @@
 
 namespace domi {
 
-static Status ParseParamsGatherElements(const Message* op_src, ge::Operator& op_dest) {
-  const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
-  if (nullptr == node) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  int dim_value = 0;
-  for (const auto& attr : node->attribute()) {
-    if (attr.name() == "axis" && attr.type() == ge::onnx::AttributeProto::INT) {
-      dim_value = attr.i();
+static Status ParseParamsGatherElements(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
+    if (nullptr == node) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
-  op_dest.SetAttr("dim", dim_value);
-  return SUCCESS;
+
+    int dim_value = 0;
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "axis" && attr.type() == ge::onnx::AttributeProto::INT) {
+            dim_value = attr.i();
+        }
+    }
+    op_dest.SetAttr("dim", dim_value);
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("GatherElements")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::GatherElements"),
-                   ge::AscendString("ai.onnx::9::GatherElements"),
-                   ge::AscendString("ai.onnx::10::GatherElements"),
-                   ge::AscendString("ai.onnx::11::GatherElements"),
-                   ge::AscendString("ai.onnx::12::GatherElements"),
-                   ge::AscendString("ai.onnx::13::GatherElements"),
-                   ge::AscendString("ai.onnx::14::GatherElements"),
-                   ge::AscendString("ai.onnx::15::GatherElements"),
-                   ge::AscendString("ai.onnx::16::GatherElements"),
-                   ge::AscendString("ai.onnx::17::GatherElements"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::GatherElements"), ge::AscendString("ai.onnx::9::GatherElements"),
+                   ge::AscendString("ai.onnx::10::GatherElements"), ge::AscendString("ai.onnx::11::GatherElements"),
+                   ge::AscendString("ai.onnx::12::GatherElements"), ge::AscendString("ai.onnx::13::GatherElements"),
+                   ge::AscendString("ai.onnx::14::GatherElements"), ge::AscendString("ai.onnx::15::GatherElements"),
+                   ge::AscendString("ai.onnx::16::GatherElements"), ge::AscendString("ai.onnx::17::GatherElements"),
                    ge::AscendString("ai.onnx::18::GatherElements")})
     .ParseParamsFn(ParseParamsGatherElements)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

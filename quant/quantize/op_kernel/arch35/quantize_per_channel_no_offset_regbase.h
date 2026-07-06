@@ -24,8 +24,8 @@ template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, ui
 class QuantizePerChannelNoOffsetRegbase : public QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode> {
 public:
     __aicore__ inline QuantizePerChannelNoOffsetRegbase(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const QuantizeTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const QuantizeTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -184,8 +184,8 @@ __aicore__ inline void QuantizePerChannelNoOffsetRegbase<T, T1, T2, U, DivMode, 
         AscendC::MicroAPI::RegTensor<yCopyDtype> vregY;
 
         AscendC::MicroAPI::MaskReg mask;
-        AscendC::MicroAPI::MaskReg mask4Int4 =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+        AscendC::MicroAPI::MaskReg
+            mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
         for (uint16_t j = 0; j < static_cast<uint16_t>(nRow); ++j) {
             uint32_t count = dataCount;
             uint16_t vfLoopNum = (dataCount + VL - 1) / VL;
@@ -215,8 +215,8 @@ __aicore__ inline void QuantizePerChannelNoOffsetRegbase<T, T1, T2, U, DivMode, 
                 // ld for scale
                 if constexpr (IsSameType<T1, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                        vregFloatS, scaleLocalAddr + i * VL);
+                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatS,
+                                                                                               scaleLocalAddr + i * VL);
                 } else if (IsSameType<T1, half>::value) {
                     // fp16
                     AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(

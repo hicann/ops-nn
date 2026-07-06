@@ -37,9 +37,9 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 
-ACLNN_API aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                                     aclTensor* out, uint64_t* workspaceSize,
+                                                                     aclOpExecutor** executor);
 
 /**
  * @brief aclnnAdaptiveAvgPool3dBackward的第二段接口，用于执行计算。
@@ -56,8 +56,8 @@ ACLNN_API aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnAdaptiveAvgPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnAdaptiveAvgPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                     aclrtStream stream);
 
 #ifdef __cplusplus
 }

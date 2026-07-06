@@ -25,32 +25,24 @@
 
 using namespace std;
 
-extern "C" void thnn_fused_lstm_cell_grad(
-    GM_ADDR dhy, GM_ADDR dc, GM_ADDR cx, GM_ADDR cy,
-    GM_ADDR storage, GM_ADDR dgates, GM_ADDR dc_prev, GM_ADDR db, GM_ADDR workspace, GM_ADDR lstmCellGradTiling);
+extern "C" void thnn_fused_lstm_cell_grad(GM_ADDR dhy, GM_ADDR dc, GM_ADDR cx, GM_ADDR cy, GM_ADDR storage,
+                                          GM_ADDR dgates, GM_ADDR dc_prev, GM_ADDR db, GM_ADDR workspace,
+                                          GM_ADDR lstmCellGradTiling);
 
-class ThnnFusedLstmCellGradKernel : public testing::Test
-{
+class ThnnFusedLstmCellGradKernel : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ThnnFusedLstmCellGrad Kernel SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ThnnFusedLstmCellGrad Kernel TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ThnnFusedLstmCellGrad Kernel SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ThnnFusedLstmCellGrad Kernel TearDown\n" << endl; }
 };
 
 template <typename T>
-void TestThnnFusedLstmCellGradKernel(
-    uint64_t batchSize, uint64_t hiddenSize, uint64_t workspaceSize, uint64_t blockDim,
-    uint64_t tilingKey)
+void TestThnnFusedLstmCellGradKernel(uint64_t batchSize, uint64_t hiddenSize, uint64_t workspaceSize, uint64_t blockDim,
+                                     uint64_t tilingKey)
 {
-    size_t inithBits= batchSize * hiddenSize * sizeof(T);
-    size_t gatesBits= 4 * hiddenSize * batchSize * sizeof(T);
-    size_t bBits= 4 * hiddenSize * sizeof(T);
-    
+    size_t inithBits = batchSize * hiddenSize * sizeof(T);
+    size_t gatesBits = 4 * hiddenSize * batchSize * sizeof(T);
+    size_t bBits = 4 * hiddenSize * sizeof(T);
+
     size_t tilingDataSize = sizeof(ThnnFusedLstmCellGradTilingDataTest);
 
     uint8_t* dhy = (uint8_t*)AscendC::GmAlloc(inithBits);
@@ -76,14 +68,14 @@ void TestThnnFusedLstmCellGradKernel(
         std::memcpy(storage + idx, &one, sizeof(T));
     }
 
-
     uint8_t* dgates = (uint8_t*)AscendC::GmAlloc(gatesBits);
     uint8_t* dcPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
     uint8_t* db = (uint8_t*)AscendC::GmAlloc(bBits);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    ThnnFusedLstmCellGradTilingDataTest* tilingDatafromBin = reinterpret_cast<ThnnFusedLstmCellGradTilingDataTest*>(tiling);
+    ThnnFusedLstmCellGradTilingDataTest* tilingDatafromBin = reinterpret_cast<ThnnFusedLstmCellGradTilingDataTest*>(
+        tiling);
 
     tilingDatafromBin->ubSize = 196352;
     // lstm input tiling
@@ -112,9 +104,8 @@ void TestThnnFusedLstmCellGradKernel(
     // lstm attr
     tilingDatafromBin->isBias = 1;
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(
-        thnn_fused_lstm_cell_grad, blockDim, dhy, dc, cx, cy, storage, dgates, dcPrev, db, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(thnn_fused_lstm_cell_grad, blockDim, dhy, dc, cx, cy, storage, dgates, dcPrev, db, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dhy);
     AscendC::GmFree(dc);
@@ -133,7 +124,5 @@ TEST_F(ThnnFusedLstmCellGradKernel, thnn_fused_lstm_cell_grad_case_float_0)
     uint64_t workspaceSize = 0;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 0;
-    TestThnnFusedLstmCellGradKernel<float>(
-        1, 8, workspaceSize, blockDim, tilingKey);
+    TestThnnFusedLstmCellGradKernel<float>(1, 8, workspaceSize, blockDim, tilingKey);
 }
-

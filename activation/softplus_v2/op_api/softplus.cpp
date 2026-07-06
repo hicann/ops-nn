@@ -24,21 +24,19 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SoftplusV2);
 
-const aclTensor *SoftplusV2(const aclTensor *self, float beta, float threshold,
-                            aclOpExecutor *executor) {
-  auto softplusOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-  CHECK_RET(softplusOut != nullptr, nullptr);
+const aclTensor* SoftplusV2(const aclTensor* self, float beta, float threshold, aclOpExecutor* executor)
+{
+    auto softplusOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    CHECK_RET(softplusOut != nullptr, nullptr);
 
-  // AICORE算子kernel
-  L0_DFX(SoftplusV2, self, beta, threshold, softplusOut);
+    // AICORE算子kernel
+    L0_DFX(SoftplusV2, self, beta, threshold, softplusOut);
 
-  // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore SoftplusV2算子加入任务队列
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SoftplusV2,
-                                               OP_INPUT(self),
-                                               OP_OUTPUT(softplusOut),
-                                               OP_ATTR(beta, threshold));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "SoftplusV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return softplusOut;
+    // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore SoftplusV2算子加入任务队列
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SoftplusV2, OP_INPUT(self), OP_OUTPUT(softplusOut),
+                                                 OP_ATTR(beta, threshold));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "SoftplusV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return softplusOut;
 }
-}  // namespace l0op
+} // namespace l0op

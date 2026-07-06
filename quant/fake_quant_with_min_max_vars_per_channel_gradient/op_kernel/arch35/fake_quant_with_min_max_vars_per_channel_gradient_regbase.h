@@ -30,38 +30,33 @@ constexpr uint32_t FP32_VL = 64; // 256B / 4B per FP32 vector reg
 constexpr uint32_t SPLIT_MODE_ROWS = 0;
 constexpr uint32_t SPLIT_MODE_DCHUNKS = 1;
 
-static constexpr MicroAPI::CastTrait castTraitFp32ToInt32 = {
-    MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
-    MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-static constexpr MicroAPI::CastTrait castTraitInt32ToFp32 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-    MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait castTraitFp32ToInt32 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
+                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait castTraitInt32ToFp32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
+                                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
 class Kernel {
 public:
     __aicore__ inline Kernel() {}
 
-    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR minIn, GM_ADDR maxIn,
-                                GM_ADDR bpx, GM_ADDR bpMin, GM_ADDR bpMax, GM_ADDR workspace,
+    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR minIn, GM_ADDR maxIn, GM_ADDR bpx, GM_ADDR bpMin,
+                                GM_ADDR bpMax, GM_ADDR workspace,
                                 const FakeQuantWithMinMaxVarsPerChannelGradientTilingData& tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void PrepareNudgedChunk(uint32_t dOffset, uint32_t dCount);
     __aicore__ inline void ZeroAccChunk(uint32_t dCount);
-    __aicore__ inline void ProcessRowChunk(uint32_t absRowIdx, uint32_t dOffset, uint32_t dCount,
-                                           bool writeBpx, bool accumulate);
-    __aicore__ inline void ProcessRowBatch(uint32_t startRowIdx, uint32_t dOffset, uint32_t dCount,
-                                           uint32_t batchRows);
+    __aicore__ inline void ProcessRowChunk(uint32_t absRowIdx, uint32_t dOffset, uint32_t dCount, bool writeBpx,
+                                           bool accumulate);
+    __aicore__ inline void ProcessRowBatch(uint32_t startRowIdx, uint32_t dOffset, uint32_t dCount, uint32_t batchRows);
     __aicore__ inline void ZeroWorkspaceSlot();
     __aicore__ inline void WriteAccToWorkspace(uint32_t dOffset, uint32_t dCount);
     __aicore__ inline void MergePhase();
-    __aicore__ inline void ComputeChunkRegbase(__ubuf__ T* gPtr, __ubuf__ T* xPtr,
-                                               __ubuf__ T* loPtr, __ubuf__ T* hiPtr,
-                                               __ubuf__ T* bpxPtr, __ubuf__ T* bpMinAccPtr,
-                                               __ubuf__ T* bpMaxAccPtr, __ubuf__ T* bpMinCompPtr,
-                                               __ubuf__ T* bpMaxCompPtr, uint32_t calCount,
+    __aicore__ inline void ComputeChunkRegbase(__ubuf__ T* gPtr, __ubuf__ T* xPtr, __ubuf__ T* loPtr, __ubuf__ T* hiPtr,
+                                               __ubuf__ T* bpxPtr, __ubuf__ T* bpMinAccPtr, __ubuf__ T* bpMaxAccPtr,
+                                               __ubuf__ T* bpMinCompPtr, __ubuf__ T* bpMaxCompPtr, uint32_t calCount,
                                                bool accumulate);
 
     TPipe pipe_;
@@ -104,8 +99,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void Kernel<T>::Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR minIn, GM_ADDR maxIn,
-                                       GM_ADDR bpx, GM_ADDR bpMin, GM_ADDR bpMax, GM_ADDR workspace,
+__aicore__ inline void Kernel<T>::Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR minIn, GM_ADDR maxIn, GM_ADDR bpx,
+                                       GM_ADDR bpMin, GM_ADDR bpMax, GM_ADDR workspace,
                                        const FakeQuantWithMinMaxVarsPerChannelGradientTilingData& tilingData)
 {
     blockIdx_ = GetBlockIdx();
@@ -209,8 +204,7 @@ __aicore__ inline void Kernel<T>::PrepareNudgedChunk(uint32_t dOffset, uint32_t 
         static constexpr AscendC::MicroAPI::DivSpecificMode DIV_HP_ZP_MODE = {
             .mrgMode = AscendC::MicroAPI::MaskMergeMode::ZEROING,
             .precisionMode = false,
-            .algo = AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE
-        };
+            .algo = AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
         AscendC::MicroAPI::RegTensor<float> vMin;
         AscendC::MicroAPI::RegTensor<float> vMax;
         AscendC::MicroAPI::RegTensor<float> vScale;
@@ -312,12 +306,10 @@ __aicore__ inline void Kernel<T>::ZeroAccChunk(uint32_t dCount)
 }
 
 template <typename T>
-__aicore__ inline void Kernel<T>::ComputeChunkRegbase(__ubuf__ T* gPtr, __ubuf__ T* xPtr,
-                                                     __ubuf__ T* loPtr, __ubuf__ T* hiPtr,
-                                                     __ubuf__ T* bpxPtr, __ubuf__ T* bpMinAccPtr,
-                                                     __ubuf__ T* bpMaxAccPtr, __ubuf__ T* bpMinCompPtr,
-                                                     __ubuf__ T* bpMaxCompPtr, uint32_t calCount,
-                                                     bool accumulate)
+__aicore__ inline void Kernel<T>::ComputeChunkRegbase(__ubuf__ T* gPtr, __ubuf__ T* xPtr, __ubuf__ T* loPtr,
+                                                      __ubuf__ T* hiPtr, __ubuf__ T* bpxPtr, __ubuf__ T* bpMinAccPtr,
+                                                      __ubuf__ T* bpMaxAccPtr, __ubuf__ T* bpMinCompPtr,
+                                                      __ubuf__ T* bpMaxCompPtr, uint32_t calCount, bool accumulate)
 {
 #ifdef __CCE_AICORE__
     uint16_t loopNum = static_cast<uint16_t>((calCount + FP32_VL - 1) / FP32_VL);
@@ -398,8 +390,8 @@ __aicore__ inline void Kernel<T>::ComputeChunkRegbase(__ubuf__ T* gPtr, __ubuf__
 }
 
 template <typename T>
-__aicore__ inline void Kernel<T>::ProcessRowChunk(uint32_t absRowIdx, uint32_t dOffset,
-                                                  uint32_t dCount, bool writeBpx, bool accumulate)
+__aicore__ inline void Kernel<T>::ProcessRowChunk(uint32_t absRowIdx, uint32_t dOffset, uint32_t dCount, bool writeBpx,
+                                                  bool accumulate)
 {
     LocalTensor<T> nudgedMinLocal = nudgedMinBuf_.template Get<T>();
     LocalTensor<T> nudgedMaxLocal = nudgedMaxBuf_.template Get<T>();
@@ -428,8 +420,8 @@ __aicore__ inline void Kernel<T>::ProcessRowChunk(uint32_t absRowIdx, uint32_t d
     __ubuf__ T* gPtr = (__ubuf__ T*)gLocal.GetPhyAddr();
     __ubuf__ T* xPtr = (__ubuf__ T*)xLocal.GetPhyAddr();
     __ubuf__ T* bpxPtr = (__ubuf__ T*)bpxLocal.GetPhyAddr();
-    ComputeChunkRegbase(gPtr, xPtr, loPtr, hiPtr, bpxPtr, bpMinAccPtr, bpMaxAccPtr,
-                        bpMinCompPtr, bpMaxCompPtr, dCount, accumulate);
+    ComputeChunkRegbase(gPtr, xPtr, loPtr, hiPtr, bpxPtr, bpMinAccPtr, bpMaxAccPtr, bpMinCompPtr, bpMaxCompPtr, dCount,
+                        accumulate);
 #endif
 
     PipeBarrier<PIPE_ALL>();
@@ -440,8 +432,8 @@ __aicore__ inline void Kernel<T>::ProcessRowChunk(uint32_t absRowIdx, uint32_t d
 }
 
 template <typename T>
-__aicore__ inline void Kernel<T>::ProcessRowBatch(uint32_t startRowIdx, uint32_t dOffset,
-                                                   uint32_t dCount, uint32_t batchRows)
+__aicore__ inline void Kernel<T>::ProcessRowBatch(uint32_t startRowIdx, uint32_t dOffset, uint32_t dCount,
+                                                  uint32_t batchRows)
 {
     LocalTensor<T> nudgedMinLocal = nudgedMinBuf_.template Get<T>();
     LocalTensor<T> nudgedMaxLocal = nudgedMaxBuf_.template Get<T>();
@@ -475,11 +467,8 @@ __aicore__ inline void Kernel<T>::ProcessRowBatch(uint32_t startRowIdx, uint32_t
     __ubuf__ T* bpxPtr = (__ubuf__ T*)bpxLocal.GetPhyAddr();
 
     for (uint32_t r = 0; r < batchRows; ++r) {
-        ComputeChunkRegbase(gPtr + r * dCount, xPtr + r * dCount,
-                            loPtr, hiPtr, bpxPtr,
-                            bpMinAccPtr, bpMaxAccPtr,
-                            bpMinCompPtr, bpMaxCompPtr,
-                            dCount, true);
+        ComputeChunkRegbase(gPtr + r * dCount, xPtr + r * dCount, loPtr, hiPtr, bpxPtr, bpMinAccPtr, bpMaxAccPtr,
+                            bpMinCompPtr, bpMaxCompPtr, dCount, true);
         PipeBarrier<PIPE_ALL>();
         uint64_t rowOffset = static_cast<uint64_t>(startRowIdx + r) * channelNum_ + dOffset;
         DataCopyPad(bpxGm_[rowOffset], bpxLocal, cpRow);

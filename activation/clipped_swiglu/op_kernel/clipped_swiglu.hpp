@@ -28,10 +28,7 @@ constexpr static int64_t DTYPE_FACTOR = 2;
 template <typename inType>
 class ClippedSwigluBase {
 public:
-    __aicore__ inline ClippedSwigluBase(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline ClippedSwigluBase(TPipe* pipe) { pipe_ = pipe; };
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, const ClippedSwigluTilingData* tilingData);
     __aicore__ inline int64_t AlignBytes(int64_t number);
     __aicore__ inline void Process();
@@ -41,8 +38,8 @@ public:
     __aicore__ inline void CopyInHalfShortH(LocalTensor<inType>& xDTypeLocal, int64_t xOffset);
     __aicore__ inline void CopyInHalfLongH(LocalTensor<inType>& xDTypeLocal, int64_t xOffset);
     __aicore__ inline void CopyInInterLeaved(LocalTensor<inType>& xDTypeLocal, int64_t xOffset);
-    __aicore__ inline void Compute(
-        LocalTensor<float>& xFloatLocal, LocalTensor<float>& tmpUbF32, LocalTensor<float>& yFloatLocal);
+    __aicore__ inline void Compute(LocalTensor<float>& xFloatLocal, LocalTensor<float>& tmpUbF32,
+                                   LocalTensor<float>& yFloatLocal);
     __aicore__ inline void GetAB(LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, LocalTensor<float>& xFloatLocal);
     __aicore__ inline void CopyOut(int64_t yOffset);
 
@@ -72,9 +69,9 @@ protected:
     int64_t batchPreBlock_ = 0; // 当前核处理batch的数量（仅前后排列场景使用）
     int64_t dimH_ = 0;
     int64_t ubMaxPair_ = 0;
-    int64_t xLocalOffset1_ = 0; // copyin时，由于数据类型不同产生的目的地址偏移量
-    int64_t xLocalOffset2_ = 0; // copyin时，前后排列中搬运第二次的目的地址偏移量
-    int64_t xQueSpace_ = 0; // xQue、tmpBuf1_、tmpBuf2_所需存储空间
+    int64_t xLocalOffset1_ = 0;    // copyin时，由于数据类型不同产生的目的地址偏移量
+    int64_t xLocalOffset2_ = 0;    // copyin时，前后排列中搬运第二次的目的地址偏移量
+    int64_t xQueSpace_ = 0;        // xQue、tmpBuf1_、tmpBuf2_所需存储空间
     int64_t calPairFrontLoop_ = 0; // 用于计算的pair数，对于前后排列小2H场景，需要32字节对齐
     int64_t calPairLastLoop_ = 0;
     int64_t calPairNum_ = 0;
@@ -82,14 +79,14 @@ protected:
 };
 
 template <typename inType>
-__aicore__ inline void ClippedSwigluBase<inType>::Init(
-    GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, const ClippedSwigluTilingData* tilingData)
+__aicore__ inline void ClippedSwigluBase<inType>::Init(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y,
+                                                       const ClippedSwigluTilingData* tilingData)
 {
     tl_ = tilingData;
     ubMaxPair_ = tl_->ubMaxPair;
     dimH_ = tl_->dim2H / SWI_FACTOR;
     // 32字节对齐的标准为dimH * sizeof(bf16)必须32字节对齐，DTYPE_FACTOR = sizeof(float) / sizeof(half)
-    xQueSpace_ = SWI_FACTOR * DTYPE_FACTOR * AlignBytes(ubMaxPair_ * static_cast<int64_t>(sizeof(bfloat16_t))); 
+    xQueSpace_ = SWI_FACTOR * DTYPE_FACTOR * AlignBytes(ubMaxPair_ * static_cast<int64_t>(sizeof(bfloat16_t)));
     xGm_.SetGlobalBuffer((__gm__ inType*)x);
     yGm_.SetGlobalBuffer((__gm__ inType*)y);
     if (tl_->isGroup == 1) {
@@ -116,12 +113,13 @@ __aicore__ inline void ClippedSwigluBase<inType>::Process()
         realBatchSize_ = tl_->dimBatchSize;
     } else {
         LocalTensor<int64_t> groupLocal = groupQueue_.AllocTensor<int64_t>();
-        DataCopyPad(groupLocal, groupIndexGm_, {1, static_cast<uint16_t>(tl_->groupNum * sizeof(int64_t)), 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(groupLocal, groupIndexGm_, {1, static_cast<uint16_t>(tl_->groupNum * sizeof(int64_t)), 0, 0},
+                    {false, 0, 0, 0});
         groupQueue_.EnQue<int64_t>(groupLocal);
         groupLocal = groupQueue_.DeQue<int64_t>();
         LocalTensor<float> groupFloatLocal = groupLocal.template ReinterpretCast<float>();
         Cast(groupFloatLocal, groupLocal, RoundMode::CAST_RINT, tl_->groupNum);
-        LocalTensor<float> groupSumLocal = tmpBuf1_.Get<float>(); 
+        LocalTensor<float> groupSumLocal = tmpBuf1_.Get<float>();
         ReduceSum<float>(groupSumLocal, groupFloatLocal, groupFloatLocal, tl_->groupNum);
         float groupSum = groupSumLocal.GetValue(0);
         realBatchSize_ = static_cast<int64_t>(groupSum);
@@ -169,11 +167,13 @@ __aicore__ inline void ClippedSwigluBase<inType>::CalTilingParam()
         // 核间batch切分
         int64_t batchFrontBlock = (realBatchSize_ + tl_->coreNumAll - 1) / tl_->coreNumAll;
         usedCoreNum_ = (realBatchSize_ + batchFrontBlock - 1) / batchFrontBlock;
-        int64_t batchLastBlock = realBatchSize_ - batchFrontBlock * (usedCoreNum_ - 1); 
+        int64_t batchLastBlock = realBatchSize_ - batchFrontBlock * (usedCoreNum_ - 1);
         batchPreBlock_ = blockIdx_ == (usedCoreNum_ - 1) ? batchLastBlock : batchFrontBlock;
         blockOffset_ = batchFrontBlock * tl_->dim2H;
         if (tl_->isLongH == 0) { // dim2H较小时，核内batch切分
-            int64_t batchSpace = SWI_FACTOR * DTYPE_FACTOR * AlignBytes(dimH_ * static_cast<int64_t>(sizeof(bfloat16_t))); // 一个batch32字节对齐所需空间
+            int64_t batchSpace = SWI_FACTOR * DTYPE_FACTOR *
+                                 AlignBytes(dimH_ *
+                                            static_cast<int64_t>(sizeof(bfloat16_t))); // 一个batch32字节对齐所需空间
             int64_t ubMaxBatch = xQueSpace_ / batchSpace; // UB最多可以处理的batch数，即头loop处理batch数
             loopTime_ = (batchPreBlock_ + ubMaxBatch - 1) / ubMaxBatch;
             int64_t batchLastLoop = batchPreBlock_ - ubMaxBatch * (loopTime_ - 1);
@@ -202,7 +202,7 @@ __aicore__ inline void ClippedSwigluBase<inType>::CalTilingParam()
         int64_t pairPreBlock = blockIdx_ == (usedCoreNum_ - 1) ? pairLastBlock : pairFrontBlock;
         blockOffset_ = pairFrontBlock * SWI_FACTOR;
         // 核内pair切分：
-        loopTime_ = (pairPreBlock + ubMaxPair_ - 1) / ubMaxPair_; 
+        loopTime_ = (pairPreBlock + ubMaxPair_ - 1) / ubMaxPair_;
         pairLastLoop_ = pairPreBlock - ubMaxPair_ * (loopTime_ - 1);
         pairFrontLoop_ = ubMaxPair_;
         loopOffset_ = SWI_FACTOR * ubMaxPair_;
@@ -221,9 +221,9 @@ __aicore__ inline void ClippedSwigluBase<inType>::ProcessSingleLoop(int64_t xOff
     if (tl_->isInterleaved == 0) {
         Cast(xFloatLocal, xDTypeLocal[xLocalOffset1_], RoundMode::CAST_NONE, calPairNum_);
         PipeBarrier<PIPE_V>();
-        Cast(xFloatLocal[xQueSpace_ / sizeof(float) / SWI_FACTOR], xDTypeLocal[xLocalOffset1_ + xLocalOffset2_], RoundMode::CAST_NONE, calPairNum_);
-    }
-    else {
+        Cast(xFloatLocal[xQueSpace_ / sizeof(float) / SWI_FACTOR], xDTypeLocal[xLocalOffset1_ + xLocalOffset2_],
+             RoundMode::CAST_NONE, calPairNum_);
+    } else {
         Cast(xFloatLocal, xDTypeLocal[xLocalOffset1_], RoundMode::CAST_NONE, calPairNum_ * SWI_FACTOR);
     }
 
@@ -247,7 +247,7 @@ __aicore__ inline void ClippedSwigluBase<inType>::CopyIn(int64_t xOffset)
 {
 #if (ORIG_DTYPE_X != DT_FLOAT) // 16位的数据DataCopy的时候放在buffer的后面一半，防止后续Cast出错
     xLocalOffset1_ = xQueSpace_ / SWI_FACTOR / static_cast<int64_t>(sizeof(bfloat16_t));
-    xLocalOffset2_ = xLocalOffset1_ / SWI_FACTOR; 
+    xLocalOffset2_ = xLocalOffset1_ / SWI_FACTOR;
 #endif
 #if (ORIG_DTYPE_X == DT_FLOAT)
     xLocalOffset1_ = 0;
@@ -256,11 +256,9 @@ __aicore__ inline void ClippedSwigluBase<inType>::CopyIn(int64_t xOffset)
     LocalTensor<inType> xDTypeLocal = xQueue_.AllocTensor<inType>();
     if (tl_->isInterleaved == 0 && tl_->isLongH == 0) {
         CopyInHalfShortH(xDTypeLocal, xOffset);
-    }
-    else if (tl_->isInterleaved == 0 && tl_->isLongH == 1) {
+    } else if (tl_->isInterleaved == 0 && tl_->isLongH == 1) {
         CopyInHalfLongH(xDTypeLocal, xOffset);
-    }
-    else {
+    } else {
         CopyInInterLeaved(xDTypeLocal, xOffset);
     }
     xQueue_.EnQue(xDTypeLocal);
@@ -271,7 +269,7 @@ __aicore__ inline void ClippedSwigluBase<inType>::CopyInHalfShortH(LocalTensor<i
 {
     DataCopyPadParams padParams{false, 0, 0, 0};
     DataCopyParams dataCopyXParams;
-    dataCopyXParams.blockCount = pairNum_ / dimH_; // 该loop处理的BatchSize数量（已32字节对齐）
+    dataCopyXParams.blockCount = pairNum_ / dimH_;     // 该loop处理的BatchSize数量（已32字节对齐）
     dataCopyXParams.blockLen = dimH_ * sizeof(inType); // 一次搬运一半
     dataCopyXParams.srcStride = dimH_ * sizeof(inType);
     dataCopyXParams.dstStride = 0;
@@ -305,8 +303,8 @@ __aicore__ inline void ClippedSwigluBase<inType>::CopyInInterLeaved(LocalTensor<
 }
 
 template <typename inType>
-__aicore__ inline void ClippedSwigluBase<inType>::Compute(
-    LocalTensor<float>& xFloatLocal, LocalTensor<float>& tmpUbF32, LocalTensor<float>& yFloatLocal)
+__aicore__ inline void ClippedSwigluBase<inType>::Compute(LocalTensor<float>& xFloatLocal, LocalTensor<float>& tmpUbF32,
+                                                          LocalTensor<float>& yFloatLocal)
 {
     LocalTensor<float> tmpA = tmpUbF32;
     LocalTensor<float> tmpB = tmpUbF32[xQueSpace_ / sizeof(float) / SWI_FACTOR];
@@ -335,27 +333,21 @@ __aicore__ inline void ClippedSwigluBase<inType>::Compute(
 }
 
 template <typename inType>
-__aicore__ inline void ClippedSwigluBase<inType>::GetAB(
-    LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, LocalTensor<float>& xFloatLocal)
+__aicore__ inline void ClippedSwigluBase<inType>::GetAB(LocalTensor<float>& tmpA, LocalTensor<float>& tmpB,
+                                                        LocalTensor<float>& xFloatLocal)
 {
     if (tl_->isInterleaved == 0) {
         SetMaskCount();
         SetVectorMask<float, MaskMode::COUNTER>(calPairNum_);
-        Copy<float, false>(
-            tmpA, xFloatLocal, AscendC::MASK_PLACEHOLDER, 1,
-            {1, 1, 0, 0});
-        Copy<float, false>(
-            tmpB, xFloatLocal[xQueSpace_ / sizeof(float) / SWI_FACTOR], AscendC::MASK_PLACEHOLDER, 1,
-            {1, 1, 0, 0});
+        Copy<float, false>(tmpA, xFloatLocal, AscendC::MASK_PLACEHOLDER, 1, {1, 1, 0, 0});
+        Copy<float, false>(tmpB, xFloatLocal[xQueSpace_ / sizeof(float) / SWI_FACTOR], AscendC::MASK_PLACEHOLDER, 1,
+                           {1, 1, 0, 0});
         SetMaskNorm();
         ResetMask();
-    }
-    else {
-        LocalTensor<int32_t> xOffsetLocalI32 =
-            tmpBuf2_.Get<int32_t>();
-        ArithProgression(
-            xOffsetLocalI32, static_cast<int32_t>(0), static_cast<int32_t>(sizeof(float) * SWI_FACTOR),
-            static_cast<int32_t>(ubMaxPair_));
+    } else {
+        LocalTensor<int32_t> xOffsetLocalI32 = tmpBuf2_.Get<int32_t>();
+        ArithProgression(xOffsetLocalI32, static_cast<int32_t>(0), static_cast<int32_t>(sizeof(float) * SWI_FACTOR),
+                         static_cast<int32_t>(ubMaxPair_));
         PipeBarrier<PIPE_V>();
         LocalTensor<uint32_t> xOffsetLocalU32 = xOffsetLocalI32.template ReinterpretCast<uint32_t>();
         Gather(tmpB, xFloatLocal, xOffsetLocalU32, static_cast<uint32_t>(4), pairNum_);
@@ -369,17 +361,16 @@ __aicore__ inline void ClippedSwigluBase<inType>::CopyOut(int64_t yOffset)
 {
     LocalTensor<inType> yDTypeLocal = yQueue_.DeQue<inType>();
     DataCopyParams dataCopyParams;
-    if(tl_->isInterleaved == 0 && tl_->isLongH == 0) { // 前后排列 小2H场景
-      dataCopyParams.blockCount = pairNum_ / dimH_;
-      dataCopyParams.blockLen = dimH_ * sizeof(inType);
-      dataCopyParams.srcStride = 0;
-      dataCopyParams.dstStride = 0;
-    }
-    else { // 奇偶排列；前后排列 大2H场景
-      dataCopyParams.blockCount = 1;
-      dataCopyParams.blockLen = pairNum_ * sizeof(inType);
-      dataCopyParams.srcStride = 0;
-      dataCopyParams.dstStride = 0;
+    if (tl_->isInterleaved == 0 && tl_->isLongH == 0) { // 前后排列 小2H场景
+        dataCopyParams.blockCount = pairNum_ / dimH_;
+        dataCopyParams.blockLen = dimH_ * sizeof(inType);
+        dataCopyParams.srcStride = 0;
+        dataCopyParams.dstStride = 0;
+    } else { // 奇偶排列；前后排列 大2H场景
+        dataCopyParams.blockCount = 1;
+        dataCopyParams.blockLen = pairNum_ * sizeof(inType);
+        dataCopyParams.srcStride = 0;
+        dataCopyParams.dstStride = 0;
     }
     DataCopyPad(yGm_[yOffset], yDTypeLocal, dataCopyParams);
     yQueue_.FreeTensor(yDTypeLocal);

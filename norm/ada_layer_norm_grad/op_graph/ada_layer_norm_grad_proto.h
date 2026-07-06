@@ -37,25 +37,25 @@ namespace ge {
 
 * @par Inputs:
 * Seven inputs, including:
-* @li dy: A tensor. The gradient tensor that represents the reverse calculation. 
+* @li dy: A tensor. The gradient tensor that represents the reverse calculation.
 * Must be one of the following types: float16, float32, bfloat16. The format must be ND.
 * The shape is [B, S, H], where B supports 0-6 dimensions.
 * @li x: A tensor. First input of forward propagation.
 * Must be one of the following types: float16, float32, bfloat16.
 * The shape is the same as dy, which is [B, S, H], where B supports 0-6 dimensions.
-* @li rstd: A tensor. Third output of forward propagation, indicates the reciprocal of the standard deviation of x. 
+* @li rstd: A tensor. Third output of forward propagation, indicates the reciprocal of the standard deviation of x.
 * Must be one of the following types: float32. The format must be ND.
 * Has the shape [B, S, 1], where the last dimension is fixed to 1.
-* @li mean: A tensor. Second output of forward propagation, indicates the mean value of x. 
+* @li mean: A tensor. Second output of forward propagation, indicates the mean value of x.
 * Must be one of the following types: float32. The format must be ND.
 * Has the shape [B, S, 1], where the last dimension is fixed to 1.
-* @li scale: A tensor. Indicates the adaptive scale parameter. 
+* @li scale: A tensor. Indicates the adaptive scale parameter.
 * Must be one of the following types: float16, float32, bfloat16. The format must be ND.
 * The shape is [B, H] or [B, 1, H].
-* @li gamma: A tensor. Indicates the normalization weight parameter. 
+* @li gamma: A tensor. Indicates the normalization weight parameter.
 * Must be one of the following types: float16, float32, bfloat16. The format must be ND.
 * The shape is [H].
-* @li beta: A tensor. Indicates the normalization bias parameter. 
+* @li beta: A tensor. Indicates the normalization bias parameter.
 * Must be one of the following types: float16, float32, bfloat16. The format must be ND.
 * The shape is [H].
 
@@ -92,5 +92,5 @@ REG_OP(AdaLayerNormGrad)
     .OUTPUT(pd_gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OUTPUT(pd_beta, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(AdaLayerNormGrad)
-}  // namespace ge
-#endif  // OPS_NORM_ADA_LAYER_NORM_GRAD_PROTO_H_
+} // namespace ge
+#endif // OPS_NORM_ADA_LAYER_NORM_GRAD_PROTO_H_

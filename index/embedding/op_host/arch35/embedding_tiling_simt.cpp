@@ -94,19 +94,14 @@ inline static bool IsSupportDtype(const std::set<ge::DataType>& supportDtype, co
     return (supportDtype.count(dtype) != 0);
 }
 
-void EmbeddingTilingBase::Reset()
-{
-    opName_ = nullptr;
-}
+void EmbeddingTilingBase::Reset() { opName_ = nullptr; }
 
 ge::graphStatus EmbeddingTilingBase::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
         auto compileInfoPtr = reinterpret_cast<const EmbeddingCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         aivNum_ = compileInfoPtr->coreNum;
         ubSize_ = compileInfoPtr->ubSize;
         OP_LOGD(opName_, "Get ubSize form compileInfo is: %ld", ubSize_);
@@ -144,9 +139,8 @@ inline ge::graphStatus EmbeddingTilingBase::GetIndicesInfoAndCheck()
     indicesDtype_ = context_->GetInputDesc(INPUT_INDICES_INDEX)->GetDataType();
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
     if (!IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDtype_)) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "indices", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            "int32 and int64");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices",
+                                  ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(), "int32 and int64");
         return ge::GRAPH_FAILED;
     }
 
@@ -157,12 +151,10 @@ inline ge::graphStatus EmbeddingTilingBase::GetIndicesInfoAndCheck()
 ge::graphStatus EmbeddingTilingBase::GetShapeAttrsInfo()
 {
     opName_ = context_->GetNodeName();
-    OP_CHECK_IF(
-        GetXInfoAndCheck() != ge::GRAPH_SUCCESS, OP_LOGE(opName_, "input x check failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetIndicesInfoAndCheck() != ge::GRAPH_SUCCESS,
-        OP_LOGE(opName_, "input indices check failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetXInfoAndCheck() != ge::GRAPH_SUCCESS, OP_LOGE(opName_, "input x check failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetIndicesInfoAndCheck() != ge::GRAPH_SUCCESS, OP_LOGE(opName_, "input indices check failed."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -249,19 +241,19 @@ ge::graphStatus EmbeddingTilingBase::SimtTwoDimTiling()
 
 void EmbeddingTilingBase::ShowBaseTilingData()
 {
-    OP_LOGI(
-        opName_,
-        "simtTwoDimTilingData is needCoreNum: %d, threadNum is: %d, gatherDimSize: %d,"
-        "innerSize: %d, perCoreElements: %d, lastCoreElements: %d",
-        simtTwoDimTilingData_.get_needCoreNum(), simtTwoDimTilingData_.get_threadNum(),
-        simtTwoDimTilingData_.get_gatherDimSize(), simtTwoDimTilingData_.get_innerSize(),
-        simtTwoDimTilingData_.get_perCoreElements(), simtTwoDimTilingData_.get_lastCoreElements());
+    OP_LOGI(opName_,
+            "simtTwoDimTilingData is needCoreNum: %d, threadNum is: %d, gatherDimSize: %d,"
+            "innerSize: %d, perCoreElements: %d, lastCoreElements: %d",
+            simtTwoDimTilingData_.get_needCoreNum(), simtTwoDimTilingData_.get_threadNum(),
+            simtTwoDimTilingData_.get_gatherDimSize(), simtTwoDimTilingData_.get_innerSize(),
+            simtTwoDimTilingData_.get_perCoreElements(), simtTwoDimTilingData_.get_lastCoreElements());
 }
 
 bool EmbeddingTilingBase::IsSimtTwoDim()
 {
     bool isTwoDim = batchSize_ == 1 && outerSize_ == 1;
-    bool isSimd = innerSize_ * improveDtypeSize_ >= SIMD_TWO_DIM_THRES && batchSize_ * outerSize_ * gatherSize_ >= RATIO_THRES;
+    bool isSimd = innerSize_ * improveDtypeSize_ >= SIMD_TWO_DIM_THRES &&
+                  batchSize_ * outerSize_ * gatherSize_ >= RATIO_THRES;
     return isTwoDim && (!isSimd);
 }
 
@@ -281,10 +273,7 @@ ge::graphStatus EmbeddingTilingBase::DoOpTiling()
     }
 }
 
-ge::graphStatus EmbeddingTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus EmbeddingTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t EmbeddingTilingBase::GetTilingKey() const
 {
@@ -296,10 +285,7 @@ uint64_t EmbeddingTilingBase::GetTilingKey() const
     return tilingKey;
 }
 
-void EmbeddingTilingBase::DumpTilingInfo()
-{
-    ShowBaseTilingData();
-}
+void EmbeddingTilingBase::DumpTilingInfo() { ShowBaseTilingData(); }
 ge::graphStatus EmbeddingTilingBase::GetWorkspaceSize()
 {
     // 计算workspace大小
@@ -313,8 +299,8 @@ ge::graphStatus EmbeddingTilingBase::PostTiling()
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
     if (tilingMode_ == TILING_SIMT_TWO_DIM) {
-        simtTwoDimTilingData_.SaveToBuffer(
-            context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+        simtTwoDimTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                           context_->GetRawTilingData()->GetCapacity());
         context_->GetRawTilingData()->SetDataSize(simtTwoDimTilingData_.GetDataSize());
     }
 

@@ -30,17 +30,13 @@
 #include "apply_adam_d_tiling_key.h"
 
 template <typename D_T, int USE_NESTEROV>
-__global__ __aicore__ void apply_adam_d(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v,
-    GM_ADDR beta1_power, GM_ADDR beta2_power, GM_ADDR lr,
-    GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_adam_d(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR beta1_power, GM_ADDR beta2_power,
+                                        GM_ADDR lr, GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
+                                        GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAdamDTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdamDTilingData, tilingData, tiling);
     NsApplyAdamD::ApplyAdamD<D_T, USE_NESTEROV> op;
-    op.Init(var, m, v, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad,
-            varOut, mOut, vOut, &tilingData);
+    op.Init(var, m, v, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut, &tilingData);
     op.Process();
 }

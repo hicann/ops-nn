@@ -47,17 +47,32 @@
     } while (0)
 
 struct AclTensorDeleter {
-    void operator()(aclTensor* p) const { if (p != nullptr) { aclDestroyTensor(p); } }
+    void operator()(aclTensor* p) const
+    {
+        if (p != nullptr) {
+            aclDestroyTensor(p);
+        }
+    }
 };
 struct DeviceMemDeleter {
-    void operator()(void* p) const { if (p != nullptr) { aclrtFree(p); } }
+    void operator()(void* p) const
+    {
+        if (p != nullptr) {
+            aclrtFree(p);
+        }
+    }
 };
 struct StreamDeleter {
-    void operator()(aclrtStream s) const { if (s != nullptr) { aclrtDestroyStream(s); } }
+    void operator()(aclrtStream s) const
+    {
+        if (s != nullptr) {
+            aclrtDestroyStream(s);
+        }
+    }
 };
 using AclTensorPtr = std::unique_ptr<aclTensor, AclTensorDeleter>;
 using DeviceMemPtr = std::unique_ptr<void, DeviceMemDeleter>;
-using StreamPtr    = std::unique_ptr<std::remove_pointer_t<aclrtStream>, StreamDeleter>;
+using StreamPtr = std::unique_ptr<std::remove_pointer_t<aclrtStream>, StreamDeleter>;
 
 struct AclDeviceGuard {
     int32_t deviceId{-1};
@@ -102,9 +117,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, DeviceMemPtr& deviceAddr,
-    aclDataType dataType, AclTensorPtr& tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, DeviceMemPtr& deviceAddr,
+                    aclDataType dataType, AclTensorPtr& tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     void* rawAddr = nullptr;
@@ -120,9 +134,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    aclTensor* rawTensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-        shape.data(), shape.size(), rawAddr);
+    aclTensor* rawTensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0,
+                                           aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), rawAddr);
     CHECK_RET(rawTensor != nullptr, LOG_PRINT("aclCreateTensor returned nullptr\n"); return -1);
     tensor.reset(rawTensor);
     return 0;
@@ -152,12 +165,8 @@ int main()
     StreamPtr stream(rawStream);
 
     std::vector<int64_t> selfShape = {4, 4};
-    std::vector<float> selfFloat = {
-         1.0f,  -1.0f,  0.3f,  -0.3f,
-         0.5f,  -0.5f,  0.0f,   2.0f,
-        -2.0f,   0.1f, -0.1f,  10.0f,
-         0.49f, -0.49f, 0.51f, -0.51f
-    };
+    std::vector<float> selfFloat = {1.0f,  -1.0f, 0.3f,  -0.3f, 0.5f,  -0.5f,  0.0f,  2.0f,
+                                    -2.0f, 0.1f,  -0.1f, 10.0f, 0.49f, -0.49f, 0.51f, -0.51f};
     std::vector<uint16_t> selfHostData(selfFloat.size());
     for (size_t i = 0; i < selfFloat.size(); i++) {
         selfHostData[i] = FloatToBF16(selfFloat[i]);
@@ -179,8 +188,7 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     ret = aclnnHardShrinkGetWorkspaceSize(self.get(), lambd, out.get(), &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnHardShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     DeviceMemPtr workspaceAddr;
     if (workspaceSize > 0) {
@@ -198,8 +206,8 @@ int main()
 
     auto size = GetShapeSize(selfShape);
     std::vector<uint16_t> resultData(size);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(uint16_t),
-                      outDeviceAddr.get(), size * sizeof(uint16_t), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(uint16_t), outDeviceAddr.get(),
+                      size * sizeof(uint16_t), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result failed. ERROR: %d\n", ret); return ret);
 
     LOG_PRINT("HardShrink BF16 results (lambd=%.2f):\n", lambd);
@@ -211,9 +219,11 @@ int main()
         float actual = BF16ToFloat(resultData[i]);
         // BF16 尾数仅 7 位，容差放宽
         bool ok = std::fabs(actual - expected) <= 1e-2f;
-        if (ok) { passCount++; }
-        LOG_PRINT("  input[%ld]=%7.4f  =>  output=%7.4f  expected=%7.4f  [%s]\n",
-                  i, x, actual, expected, ok ? "PASS" : "FAIL");
+        if (ok) {
+            passCount++;
+        }
+        LOG_PRINT("  input[%ld]=%7.4f  =>  output=%7.4f  expected=%7.4f  [%s]\n", i, x, actual, expected,
+                  ok ? "PASS" : "FAIL");
     }
     LOG_PRINT("Summary: %ld/%ld passed\n", passCount, size);
 

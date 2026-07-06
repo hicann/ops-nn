@@ -27,19 +27,17 @@ using namespace std;
 using namespace ge;
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::make_unique<uint8_t[]>(sizeof(gert::Tensor) + sizeof(T) * data_size);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::make_unique<uint8_t[]>(sizeof(gert::Tensor) +
+                                                                                 sizeof(T) * data_size);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}},         // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        dtype,                              // dtype
-        nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dtype
+                        nullptr);
     memcpy_s(input_tensor, sizeof(gert::Tensor), &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -52,15 +50,9 @@ void SetConstInput(
 
 class CTCLossV2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CTCLossV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CTCLossV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CTCLossV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CTCLossV2Tiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)

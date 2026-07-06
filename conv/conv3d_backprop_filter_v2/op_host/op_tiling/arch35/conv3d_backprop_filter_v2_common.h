@@ -51,15 +51,15 @@ constexpr int32_t SPLIT_WO_THRESHOLD4SPLIT_KERNEL = 256;
 
 struct PlatformCompileInfo {
     platform_ascendc::SocVersion socVersion;
-	NpuArch npuArch;
+    NpuArch npuArch;
     uint32_t core_num = 1;
     uint64_t l0a_size = 0;
     uint64_t l0b_size = 0;
     uint64_t l0c_size = 0;
-    uint64_t l1_size  = 0;
-    uint64_t ub_size  = 0;
+    uint64_t l1_size = 0;
+    uint64_t ub_size = 0;
 };
-}
-}
-}
-#endif  // CONV3D_DW_V2_COMMON_H
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
+#endif // CONV3D_DW_V2_COMMON_H

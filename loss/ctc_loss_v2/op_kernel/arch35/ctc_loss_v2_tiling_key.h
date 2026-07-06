@@ -10,7 +10,7 @@
 
 /* !
  * \file ctc_loss_v2_tiling_key.h
- * \brief ctc_loss_v2_tiling_key.h declare 
+ * \brief ctc_loss_v2_tiling_key.h declare
  */
 
 #ifndef _CTC_LOSS_V2_TILING_KEY_DECL_H_
@@ -18,16 +18,15 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 
 #define CTC_LOSS_V2_TPL_KEY_TRUE 1
-#define CTC_LOSS_V2_TPL_KEY_FALSE 0 
+#define CTC_LOSS_V2_TPL_KEY_FALSE 0
 
-#define CTC_LOSS_V2_TPL_KEY_DECL()                                                                   \
-    ASCENDC_TPL_UINT_DECL(isFP32, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1),                      \
-    ASCENDC_TPL_UINT_DECL(threadTypeInt32, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1)
-    
+#define CTC_LOSS_V2_TPL_KEY_DECL()                                              \
+    ASCENDC_TPL_UINT_DECL(isFP32, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1), \
+        ASCENDC_TPL_UINT_DECL(threadTypeInt32, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1)
 
-#define CTC_LOSS_V2_FP32_KEY_SEL()                                                                   \
-    ASCENDC_TPL_UINT_SEL(isFP32, ASCENDC_TPL_UI_RANGE, 1, 0, 1),                                     \
-    ASCENDC_TPL_UINT_SEL(threadTypeInt32, ASCENDC_TPL_UI_RANGE, 1, 0, 1)
+#define CTC_LOSS_V2_FP32_KEY_SEL()                               \
+    ASCENDC_TPL_UINT_SEL(isFP32, ASCENDC_TPL_UI_RANGE, 1, 0, 1), \
+        ASCENDC_TPL_UINT_SEL(threadTypeInt32, ASCENDC_TPL_UI_RANGE, 1, 0, 1)
 
 ASCENDC_TPL_ARGS_DECL(CTCLossV2, CTC_LOSS_V2_TPL_KEY_DECL());
 ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(CTC_LOSS_V2_FP32_KEY_SEL()));

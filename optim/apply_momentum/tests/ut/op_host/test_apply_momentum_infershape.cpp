@@ -16,15 +16,9 @@
 
 class ApplyMomentum : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyMomentum SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyMomentum SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyMomentum TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyMomentum TearDown" << std::endl; }
 };
 
 TEST_F(ApplyMomentum, ApplyMomentum_infershape_case_0)
@@ -39,12 +33,11 @@ TEST_F(ApplyMomentum, ApplyMomentum_infershape_case_0)
     gert::StorageShape momentumShape = {{1}, {1}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(5, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1})
-        .InputShapes({&varShape, &accumShape, &lrShape, &gradShape,
-                        &momentumShape})
-        .OutputShapes({&varShape})
-        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &accumShape, &lrShape, &gradShape, &momentumShape})
+                      .OutputShapes({&varShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

@@ -85,12 +85,10 @@ ACLNN_API aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor* self, const aclTensor* input,
-                                                           const aclTensor* weight, const aclTensor* bias,
-                                                           int64_t pad, int8_t cubeMathType,
-                                                           aclTensor* gradInput, aclTensor* gradWeight,
-                                                           aclTensor* gradBias, uint64_t* workspaceSize,
-                                                           aclOpExecutor** executor);
-
+                                                           const aclTensor* weight, const aclTensor* bias, int64_t pad,
+                                                           int8_t cubeMathType, aclTensor* gradInput,
+                                                           aclTensor* gradWeight, aclTensor* gradBias,
+                                                           uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnDeformableConv2dBackward的第一段接口，计算并获取workspace大小
@@ -130,7 +128,7 @@ ACLNN_API aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor* self
  */
 ACLNN_API aclnnStatus aclnnDeformableConv2dBackwardGetWorkspaceSize(
     const aclTensor* input, const aclTensor* gradOutput, const aclTensor* offsetOut, const aclTensor* weight,
-    const aclTensor* offset,  const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding, 
+    const aclTensor* offset, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
     const aclIntArray* dilation, int64_t groups, int64_t deformableGroups, bool modulated, aclTensor* gradInput,
     aclTensor* gradWeight, aclTensor* gradOffset, aclTensor* gradBias, uint64_t* workspaceSize,
     aclOpExecutor** executor);
@@ -140,7 +138,8 @@ ACLNN_API aclnnStatus aclnnDeformableConv2dBackwardGetWorkspaceSize(
  *
  * 算子功能：完成卷积反向计算
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnConvolutionBackwardGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnConvolutionBackwardGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
@@ -166,16 +165,17 @@ ACLNN_API aclnnStatus aclnnConvTbcBackward(void* workspace, uint64_t workspaceSi
  *
  * 算子功能：完成可变形卷积反向计算
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnDeformableConv2dBackwardGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnDeformableConv2dBackwardGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnDeformableConv2dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, 
- 										    		const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnDeformableConv2dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                    const aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_CONVOLUTION_BACKWARD_H_
+#endif // OP_API_INC_CONVOLUTION_BACKWARD_H_

@@ -24,14 +24,15 @@ static constexpr size_t DIM_CHW = 3;
 static constexpr size_t DIM_H = 2;
 static constexpr size_t DIM_W = 3;
 
-static const aclTensor* AdaptiveAvgPool2dGradAiCore(
-    const aclTensor* gradOutput, const aclIntArray* originInputShape, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* AdaptiveAvgPool2dGradAiCore(const aclTensor* gradOutput, const aclIntArray* originInputShape,
+                                                    aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveAvgPool2dGradAiCore, gradOutput, originInputShape, out);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool2dGrad, OP_INPUT(gradOutput), OP_OUTPUT(out), OP_ATTR(originInputShape));
-    OP_CHECK(ret == ACLNN_SUCCESS, 
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool2dGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool2dGrad, OP_INPUT(gradOutput), OP_OUTPUT(out),
+                                           OP_ATTR(originInputShape));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool2dGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 

@@ -31,7 +31,7 @@ constexpr size_t IDX_STRIDES = 2;
 constexpr size_t IDX_INDICES_START = 3;
 constexpr size_t IDX_Y = 0;
 } // namespace
- 
+
 namespace ops {
 
 static graphStatus CanBroadcast(const string& name, const vector<vector<int64_t>>& shapes)
@@ -54,8 +54,10 @@ static graphStatus CanBroadcast(const string& name, const vector<vector<int64_t>
                 }
                 // 检查维度兼容性：要么相等，要么其中一个为1
                 if (current_dim != 1 && dim != 1 && current_dim != dim) {
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(name, "dim", std::to_string(dim).c_str(), 
-                        ("cannot broadcast with current_dim " + std::to_string(current_dim) + ", incompatible dimensions").c_str());
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(name, "dim", std::to_string(dim).c_str(),
+                                                          ("cannot broadcast with current_dim " +
+                                                           std::to_string(current_dim) + ", incompatible dimensions")
+                                                              .c_str());
                     return GRAPH_FAILED;
                 }
                 current_dim = max(current_dim, dim);
@@ -92,7 +94,8 @@ static vector<int64_t> ComputeBroadcastShape(const vector<vector<int64_t>>& shap
 }
 
 // 将单个形状广播到目标形状
-static vector<int64_t> BroadcastSingleShape(const vector<int64_t>& original_shape, const vector<int64_t>& broadcast_shape)
+static vector<int64_t> BroadcastSingleShape(const vector<int64_t>& original_shape,
+                                            const vector<int64_t>& broadcast_shape)
 {
     size_t prepend = broadcast_shape.size() - original_shape.size();
 
@@ -150,8 +153,8 @@ static bool AreIndicesContiguous(const vector<int64_t>& indexed_sizes)
 }
 
 // 计算输出形状
-static vector<int64_t> ComputeOutputShape(
-    const vector<int64_t>& xShape, const vector<int64_t>& indexed_sizes, const vector<int64_t>& indicesShape)
+static vector<int64_t> ComputeOutputShape(const vector<int64_t>& xShape, const vector<int64_t>& indexed_sizes,
+                                          const vector<int64_t>& indicesShape)
 {
     size_t dimCount = indexed_sizes.size();
     vector<int64_t> outputShape;

@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -22,18 +22,20 @@ namespace FlatQuantNS {
 template <typename T, uint8_t MM_MODE>
 class FlatQuantVecOne {
 public:
-    aifunc FlatQuantVecOne(){}
-    aifunc void Init(GM_ADDR p1mtx_, GM_ADDR out_, GM_ADDR qscale_, GM_ADDR workspace_, const FlatQuantTilingData* tilingData){
+    aifunc FlatQuantVecOne() {}
+    aifunc void Init(GM_ADDR p1mtx_, GM_ADDR out_, GM_ADDR qscale_, GM_ADDR workspace_,
+                     const FlatQuantTilingData* tilingData)
+    {
         shape.M = tilingData->M;
         shape.N = tilingData->N;
         shape.K = tilingData->K;
         clipRatio = tilingData->clipRatio;
         tiling();
 
-        p1GM.SetGlobalBuffer((__gm__ T *)p1mtx_);
-        outGM.SetGlobalBuffer((__gm__ int4b_t *)out_);
-        qscaleGM.SetGlobalBuffer((__gm__ float *)qscale_);
-        outnzGM.SetGlobalBuffer((__gm__ T *)workspace_);
+        p1GM.SetGlobalBuffer((__gm__ T*)p1mtx_);
+        outGM.SetGlobalBuffer((__gm__ int4b_t*)out_);
+        qscaleGM.SetGlobalBuffer((__gm__ float*)qscale_);
+        outnzGM.SetGlobalBuffer((__gm__ T*)workspace_);
 
         pipe.InitBuffer(bufQueue, ONE_UB_SIZE);
         xTensor = bufQueue.Get<float>();
@@ -49,12 +51,14 @@ public:
         eventIdMte3ToV = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_V));
     }
 
-    aifunc void tiling(){
+    aifunc void tiling()
+    {
         int allTimes = GetBlockNum() * BATCH_SIZE; // 每个核处理16个批次, 控制同步计数器不会超过16
-    
+
         int64_t oriK = shape.K;
         shape.Nceil = (shape.N + FLOAT_BASE_SIZE - 1) / FLOAT_BASE_SIZE * FLOAT_BASE_SIZE;
-        shape.M = (((shape.K + GetBlockNum() - 1) / GetBlockNum()) + CEIL_SIZE - 1) / CEIL_SIZE * CEIL_SIZE; //reshape K、M
+        shape.M = (((shape.K + GetBlockNum() - 1) / GetBlockNum()) + CEIL_SIZE - 1) / CEIL_SIZE *
+                  CEIL_SIZE; // reshape K、M
         if (shape.M > BASE_SIZE) {
             shape.M = BASE_SIZE;
         }
@@ -75,7 +79,7 @@ public:
 
         int k_per_core = ((shape.K + GetBlockNum() - 1) / GetBlockNum() + shape.perK - 1) / shape.perK * shape.perK;
 
-        shape.K1 = k_per_core * (GetBlockIdx() / DOUBLE);  // vector blk idx is 0~40
+        shape.K1 = k_per_core * (GetBlockIdx() / DOUBLE); // vector blk idx is 0~40
         shape.K2 = ((k_per_core + shape.K1) > shape.K) ? shape.K : (k_per_core + shape.K1);
         isLastK = (k_per_core + shape.K1) >= shape.K;
         shape.K = oriK;
@@ -85,7 +89,8 @@ public:
         splitCount = (shape.Mceil + splitRow - 1) / splitRow;
     }
 
-    aifunc void Process() {
+    aifunc void Process()
+    {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(1 * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
         DataCopyPad(xTensor.template ReinterpretCast<T>()[CEIL_SIZE], p1GM, copyParams, padParams);
@@ -110,7 +115,7 @@ public:
         for (int64_t startK = shape.K1; startK < shape.K2; startK += shape.perK) {
             int64_t endK = startK + shape.perK > shape.K2 ? shape.K2 : startK + shape.perK;
             bool isLast = shape.K - (endK - 1) * perM < perM;
-            for (int64_t k = startK; k < endK; k ++) {
+            for (int64_t k = startK; k < endK; k++) {
                 // 量化分给两个vec核，0核做偶数，1核做奇数
                 if ((k & 1) == subBlockIdx) {
                     if (isLast && shape.K - k * perM < perM) {
@@ -132,7 +137,8 @@ public:
         out_empty.release();
     }
 
-    aifunc void ClearQuant(){
+    aifunc void ClearQuant()
+    {
         // pre-set all buffers to zero
         Duplicate<float>(xTensor, (float)0, DATA_COUNT_ONE);
         Duplicate<float>(x2Tensor, (float)0, DATA_COUNT_ONE);
@@ -153,7 +159,8 @@ public:
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
     }
 
-    aifunc void CopyOutQuant(int64_t scaleK, int64_t scaleCount){
+    aifunc void CopyOutQuant(int64_t scaleK, int64_t scaleCount)
+    {
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         SetAtomicAdd<float>();
@@ -164,8 +171,10 @@ public:
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
     }
 
-    aifunc void MultiQuant(int64_t k, int64_t scaleK, bool isLast) {
-        if (k == shape.K1 || k == shape.K1 + 1 || k == shape.K1 + shape.perK || k % shape.perK == 0 || k % shape.perK == 1) {
+    aifunc void MultiQuant(int64_t k, int64_t scaleK, bool isLast)
+    {
+        if (k == shape.K1 || k == shape.K1 + 1 || k == shape.K1 + shape.perK || k % shape.perK == 0 ||
+            k % shape.perK == 1) {
             CrossCoreWaitFlag(CUBE_VEC_SYNC_ID);
         }
         for (int64_t i = 0; i < loopKM; i++) {
@@ -175,8 +184,10 @@ public:
         return;
     }
 
-    aifunc void MultiQuantTail(int64_t k, int64_t scaleK, bool isLast) {
-        if (k == shape.K1 || k == shape.K1 + 1 || k == shape.K1 + shape.perK || k % shape.perK == 0 || k % shape.perK == 1) {
+    aifunc void MultiQuantTail(int64_t k, int64_t scaleK, bool isLast)
+    {
+        if (k == shape.K1 || k == shape.K1 + 1 || k == shape.K1 + shape.perK || k % shape.perK == 0 ||
+            k % shape.perK == 1) {
             CrossCoreWaitFlag(CUBE_VEC_SYNC_ID);
         }
         for (int64_t i = 0; i < tailLoopKM; i++) {
@@ -186,7 +197,8 @@ public:
         return;
     }
 
-    aifunc void Quant(int64_t k, int64_t scaleK, bool isLast, uint32_t rowNum) {
+    aifunc void Quant(int64_t k, int64_t scaleK, bool isLast, uint32_t rowNum)
+    {
         LocalTensor<float> inTensor = GetXTensor(count);
         LocalTensor<float> outTensorFloat = GetYTensor(count).template ReinterpretCast<float>();
         LocalTensor<int4b_t> outTensor = GetYTensor(count).template ReinterpretCast<int4b_t>();
@@ -194,9 +206,17 @@ public:
         int64_t fullCount = rowNum * shape.Nceil;
         uint8_t repeatStride = shape.Nceil >> (LOG2_16 - 1);
         in_empty.wait();
-        DataCopyStruct dataCopyStruct{shape.N == shape.Nceil ? 1 : rowNum, shape.N == shape.Nceil ? static_cast<uint32_t>(rowNum * shape.Mceil * shape.N * sizeof(T)) : static_cast<uint32_t>(shape.Mceil * shape.N * sizeof(T)),
-                0, static_cast<uint32_t>((shape.Nceil - shape.N) / CEIL_SIZE), shape.N != shape.Nceil, 0, static_cast<uint8_t>((shape.Nceil - shape.N) % 16)};
-        DataCopyInContiguous(inTensor.template ReinterpretCast<T>(), outnzGM[k * shape.Mceil * shape.N], dataCopyStruct, 0);
+        DataCopyStruct dataCopyStruct{shape.N == shape.Nceil ? 1 : rowNum,
+                                      shape.N == shape.Nceil ?
+                                          static_cast<uint32_t>(rowNum * shape.Mceil * shape.N * sizeof(T)) :
+                                          static_cast<uint32_t>(shape.Mceil * shape.N * sizeof(T)),
+                                      0,
+                                      static_cast<uint32_t>((shape.Nceil - shape.N) / CEIL_SIZE),
+                                      shape.N != shape.Nceil,
+                                      0,
+                                      static_cast<uint8_t>((shape.Nceil - shape.N) % 16)};
+        DataCopyInContiguous(inTensor.template ReinterpretCast<T>(), outnzGM[k * shape.Mceil * shape.N], dataCopyStruct,
+                             0);
         in_ready.set();
 
         out_empty.wait();
@@ -216,21 +236,24 @@ public:
         Abs(inTensor.template ReinterpretCast<half>(), inTensor.template ReinterpretCast<half>(), fullCount);
         PipeBarrier<PIPE_V>();
         CalReduceMaxOne(inTensor.template ReinterpretCast<half>(), rowNum, shape.Nceil, shape.N);
-        Cast(inTensor[DATA_COUNT_ONE_HALF_HALF], inTensor.template ReinterpretCast<half>(), RoundMode::CAST_NONE, rowNum);
+        Cast(inTensor[DATA_COUNT_ONE_HALF_HALF], inTensor.template ReinterpretCast<half>(), RoundMode::CAST_NONE,
+             rowNum);
         PipeBarrier<PIPE_V>();
-        Muls(qscaleTensor[k - scaleK], inTensor[DATA_COUNT_ONE_HALF_HALF], clipRatio / NUM_FLOAT_SEVEN,rowNum);
+        Muls(qscaleTensor[k - scaleK], inTensor[DATA_COUNT_ONE_HALF_HALF], clipRatio / NUM_FLOAT_SEVEN, rowNum);
         PipeBarrier<PIPE_V>();
 
         uint32_t brcbRepeat = (rowNum + NUM_EIGHT - 1) / NUM_EIGHT;
         Brcb(inTensor[DATA_COUNT_ONE_HALF_HALF], qscaleTensor[k - scaleK], brcbRepeat, {1, 8});
         PipeBarrier<PIPE_V>();
-        int32_t repeatTimes = shape.Nceil >> (LOG2_128 - 1);   // 除64
+        int32_t repeatTimes = shape.Nceil >> (LOG2_128 - 1); // 除64
         BinaryRepeatParams repeatParams = {1, 1, 0, repeatStride, repeatStride, 1};
         for (int64_t i = 0; i < repeatTimes; i++) {
-            Div(outTensorFloat[FLOAT_BASE_SIZE * i], outTensorFloat[FLOAT_BASE_SIZE * i], inTensor[DATA_COUNT_ONE_HALF_HALF], FLOAT_BASE_SIZE, rowNum, repeatParams);
+            Div(outTensorFloat[FLOAT_BASE_SIZE * i], outTensorFloat[FLOAT_BASE_SIZE * i],
+                inTensor[DATA_COUNT_ONE_HALF_HALF], FLOAT_BASE_SIZE, rowNum, repeatParams);
             PipeBarrier<PIPE_V>();
         }
-        Div(outTensorFloat[FLOAT_BASE_SIZE * repeatTimes], outTensorFloat[FLOAT_BASE_SIZE * repeatTimes], inTensor[DATA_COUNT_ONE_HALF_HALF], shape.Nceil % FLOAT_BASE_SIZE, rowNum, repeatParams);
+        Div(outTensorFloat[FLOAT_BASE_SIZE * repeatTimes], outTensorFloat[FLOAT_BASE_SIZE * repeatTimes],
+            inTensor[DATA_COUNT_ONE_HALF_HALF], shape.Nceil % FLOAT_BASE_SIZE, rowNum, repeatParams);
         PipeBarrier<PIPE_V>();
         Cast(outTensorHalf, outTensorFloat, RoundMode::CAST_NONE, fullCount);
         PipeBarrier<PIPE_V>();
@@ -240,19 +263,19 @@ public:
         in_empty.set();
 
         out_ready.wait();
-        DataCopyExtParams copyParams{static_cast<uint16_t>(shape.Nceil == shape.N ? 1 : rowNum), static_cast<uint16_t>(shape.Nceil == shape.N ?  (uint32_t)fullCount / DOUBLE : (uint32_t)(shape.M * shape.N) / DOUBLE), 0, 0, 0};
+        DataCopyExtParams copyParams{
+            static_cast<uint16_t>(shape.Nceil == shape.N ? 1 : rowNum),
+            static_cast<uint16_t>(shape.Nceil == shape.N ? (uint32_t)fullCount / DOUBLE :
+                                                           (uint32_t)(shape.M * shape.N) / DOUBLE),
+            0, 0, 0};
         DataCopyPad(outGM[k * shape.M * shape.N], outTensor, copyParams);
         out_empty.set();
         count++;
     }
 
-    __aicore__ inline LocalTensor<float> GetXTensor(int64_t k){
-        return ((k & 1) == 0) ? xTensor : x2Tensor;
-    };
+    __aicore__ inline LocalTensor<float> GetXTensor(int64_t k) { return ((k & 1) == 0) ? xTensor : x2Tensor; };
 
-    __aicore__ inline LocalTensor<float> GetYTensor(int64_t k){
-        return ((k & 1) == 0) ? yTensor : y2Tensor;
-    };
+    __aicore__ inline LocalTensor<float> GetYTensor(int64_t k) { return ((k & 1) == 0) ? yTensor : y2Tensor; };
 
 private:
     TPipe pipe;
@@ -297,6 +320,6 @@ private:
     uint32_t count = 0;
     bool isLastK = false;
 };
-}  // namespace FlatQuantNS
+} // namespace FlatQuantNS
 
-#endif  // FLAT_QUANT_VEC_H
+#endif // FLAT_QUANT_VEC_H

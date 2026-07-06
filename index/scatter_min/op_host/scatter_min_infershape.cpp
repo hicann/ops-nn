@@ -35,7 +35,5 @@ static ge::graphStatus InferDataType4ScatterMin(gert::InferDataTypeContext* cont
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ScatterMin)
-    .InferShape(InferShape4ScatterMin)
-    .InferDataType(InferDataType4ScatterMin);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(ScatterMin).InferShape(InferShape4ScatterMin).InferDataType(InferDataType4ScatterMin);
+} // namespace ops

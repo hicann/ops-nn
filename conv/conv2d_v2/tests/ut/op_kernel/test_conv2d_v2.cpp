@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -17,7 +16,6 @@
 #include "tikicpulib.h"
 #include "version/asc_devkit_version.h"
 #include "conv2d_v2_tiling_def.h"
-
 
 #ifndef CONV_KERNEL
 #include "conv2d_v2/conv2d_v2.cpp"
@@ -32,13 +30,9 @@ constexpr uint32_t NUM_16 = 16;
 
 class Conv2DV2KernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "Conv2DV2KernelTest SetUp." << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Conv2DV2KernelTest SetUp." << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "Conv2DV2KernelTest TearDown." << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Conv2DV2KernelTest TearDown." << std::endl; }
 };
 namespace {
 struct ConvShape {
@@ -62,7 +56,8 @@ struct TilingInput {
 uint64_t CalcOutputShape(const ConvShape& convShape)
 {
     return ((convShape.shape + convShape.pad1 + convShape.pad2 - convShape.dilation * (convShape.kernelSize - 1) - 1) /
-        convShape.stride + 1);
+                convShape.stride +
+            1);
 }
 
 size_t VectorReduceMul(const std::vector<uint64_t>& vec)
@@ -162,10 +157,8 @@ void SetConv2dApiPartTwo(Conv2DTilingData* tiling, const TilingInput& tilingInpu
     tiling->nStep = 1;
     tiling->fmapKStride = 1;
     tiling->weightKStride = 1;
-    tiling->cinOffsetBlockInGM = tiling->kAL1 /
-        tiling->kernelHxkernelW * tiling->orgHixWi;
-    tiling->coutOffsetBlock = (tiling->orgCi /
-        tiling->groups) * tiling->kernelHxkernelW;
+    tiling->cinOffsetBlockInGM = tiling->kAL1 / tiling->kernelHxkernelW * tiling->orgHixWi;
+    tiling->coutOffsetBlock = (tiling->orgCi / tiling->groups) * tiling->kernelHxkernelW;
     tiling->nL1DivBlockSize = tiling->nBL1 / N0;
     tiling->kernelH = weightShape[DIM2];
     tiling->kernelW = weightShape[DIM3];
@@ -224,10 +217,8 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
     std::vector<uint64_t> pads = {0, 0, 0, 0};
     std::vector<uint64_t> strides = {1, 1};
     std::vector<uint64_t> dilations = {1, 1};
-    ConvShape convShapeH =
-        {inputShape[DIM2], pads[0], pads[1], dilations[0], strides[0], weightShape[DIM2]};
-    ConvShape convShapeW =
-        {inputShape[DIM3], pads[DIM2], pads[DIM3], dilations[1], strides[1], weightShape[DIM3]};
+    ConvShape convShapeH = {inputShape[DIM2], pads[0], pads[1], dilations[0], strides[0], weightShape[DIM2]};
+    ConvShape convShapeW = {inputShape[DIM3], pads[DIM2], pads[DIM3], dilations[1], strides[1], weightShape[DIM3]};
     uint64_t ho = CalcOutputShape(convShapeH);
     uint64_t wo = CalcOutputShape(convShapeW);
     std::vector<uint64_t> outputShape = {inputShape[0], weightShape[0], ho, wo};
@@ -248,11 +239,10 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
     TilingInput tilingInput = {inputShape, weightShape, outputShape, pads, strides, dilations};
     SetTilingData(tilingData, tilingInput);
 
-    auto conv2dv2_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w,
-        GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+    auto conv2dv2_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace,
+                            GM_ADDR tiling) {
         // OutputOrder=1 (M_MODE): tiling uses hoL1>0 && woL1==0
-        ::conv2dv2<0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>(
-            x, filter, bias, offset_w, y, workspace, tiling);
+        ::conv2dv2<0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>(x, filter, bias, offset_w, y, workspace, tiling);
     };
     ICPU_RUN_KF(conv2dv2_func, numBlocks, input, weight, nullptr, nullptr, output, workspace, tiling);
 

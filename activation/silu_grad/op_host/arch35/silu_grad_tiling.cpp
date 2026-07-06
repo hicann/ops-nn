@@ -41,10 +41,8 @@ ge::graphStatus SiluGradTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        auto compileInfoPtr =
-            reinterpret_cast<const SiluGradCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
-                        return ge::GRAPH_FAILED);
+        auto compileInfoPtr = reinterpret_cast<const SiluGradCompileInfo*>(context_->GetCompileInfo());
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
         ubSize = compileInfoPtr->ubSize;
     } else {
@@ -107,7 +105,7 @@ uint64_t SiluGradTiling::GenerateTilingKey(uint64_t innerKey) const
 std::map<uint64_t, Ops::Base::BroadcastComputeParams> SiluGradTiling::GetComputeMap(uint64_t opKeyParam) const
 {
     Ops::Base::BroadcastComputeParams computeParams0;
-        switch (opKeyParam) {
+    switch (opKeyParam) {
         case OP_KEY_1:
         case OP_KEY_2:
             computeParams0.maxDtypeBits = static_cast<int64_t>(Ops::Base::BROADCAST_BITS_SIZE::BITS32_SIZE);
@@ -156,17 +154,13 @@ ge::graphStatus SiluGradTiling::GetShapeAttrsInfo()
 
     opKey = GetOpKey(dyDtype, xDtype, dxDtype);
     OP_CHECK_IF((opKey == OP_KEY_INVALID),
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "opKey",
-                        std::to_string(opKey),
-                        "The value of opKey cannot be 0"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "opKey", std::to_string(opKey),
+                                                      "The value of opKey cannot be 0"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool SiluGradTiling::IsCapable()
-{
-    return true;
-}
+bool SiluGradTiling::IsCapable() { return true; }
 
 ge::graphStatus SiluGradTiling::DoOpTiling()
 {
@@ -219,7 +213,8 @@ ge::graphStatus SiluGradTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-std::string SiluGradTiling::ToString(SiluGradTilingData &tilingDataParam) const {
+std::string SiluGradTiling::ToString(SiluGradTilingData& tilingDataParam) const
+{
     std::string str;
     str += " blockFormer:" + std::to_string(tilingDataParam.get_blockFormer());
     str += " ubFormer:" + std::to_string(tilingDataParam.get_ubFormer());
@@ -233,15 +228,9 @@ std::string SiluGradTiling::ToString(SiluGradTilingData &tilingDataParam) const 
     return str;
 }
 
-ge::graphStatus SiluGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SiluGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t SiluGradTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t SiluGradTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus SiluGradTiling::GetWorkspaceSize()
 {
@@ -283,8 +272,6 @@ ge::graphStatus TilingPrepareForSiluGrad(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(SiluGrad)
-    .Tiling(TilingForSiluGrad)
-    .TilingParse<SiluGradCompileInfo>(TilingPrepareForSiluGrad);
+IMPL_OP_OPTILING(SiluGrad).Tiling(TilingForSiluGrad).TilingParse<SiluGradCompileInfo>(TilingPrepareForSiluGrad);
 
-}  // namespace optiling
+} // namespace optiling

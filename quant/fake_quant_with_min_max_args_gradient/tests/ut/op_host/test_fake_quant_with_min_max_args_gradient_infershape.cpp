@@ -18,15 +18,9 @@ using namespace op;
 
 class FakeQuantWithMinMaxArgsGradientProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxArgsGradientProto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FakeQuantWithMinMaxArgsGradientProto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxArgsGradientProto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FakeQuantWithMinMaxArgsGradientProto TearDown" << std::endl; }
 };
 
 TEST_F(FakeQuantWithMinMaxArgsGradientProto, Gradient_proto_fp32_1d)

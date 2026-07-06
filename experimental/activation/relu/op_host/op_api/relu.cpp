@@ -22,7 +22,7 @@ namespace l0op {
 
 OP_TYPE_REGISTER(Relu);
 
-const aclTensor *Relu(const aclTensor *self, aclOpExecutor *executor)
+const aclTensor* Relu(const aclTensor* self, aclOpExecutor* executor)
 {
     L0_DFX(Relu, self);
     auto reluOut = executor->AllocTensor(self->GetStorageShape(), self->GetDataType(), self->GetStorageFormat());
@@ -34,4 +34,4 @@ const aclTensor *Relu(const aclTensor *self, aclOpExecutor *executor)
     return reluOut;
 }
 
-}  // namespace l0op
+} // namespace l0op

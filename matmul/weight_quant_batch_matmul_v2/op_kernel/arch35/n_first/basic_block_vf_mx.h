@@ -63,18 +63,18 @@ struct Fp4NzParams {
     __local_mem__ xType* weightHighBitPhyAddr;
 };
 
-static constexpr MicroAPI::CastTrait CAST_BF16_TO_FP16_TRAIT = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait CAST_BF16_TO_FP16_TRAIT = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                                MicroAPI::MaskMergeMode::ZEROING,
+                                                                AscendC::RoundMode::CAST_RINT};
 
-static constexpr MicroAPI::CastTrait CAST_FP4_TO_BF16_TRAIT = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait CAST_FP4_TO_BF16_TRAIT = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                               MicroAPI::MaskMergeMode::ZEROING,
+                                                               AscendC::RoundMode::UNKNOWN};
 
 template <typename xType>
-__aicore__ inline void MxScaleVf(
-    RegTensor<uint8_t>& antiQuantScaleE8m0Vreg0, RegTensor<uint8_t>& antiQuantScaleE8m0Vreg1,
-    RegTensor<xType>& antiQuantScaleF16Vreg0, RegTensor<xType>& antiQuantScaleF16Vreg1, MicroAPI::MaskReg& maskAll)
+__aicore__ inline void MxScaleVf(RegTensor<uint8_t>& antiQuantScaleE8m0Vreg0,
+                                 RegTensor<uint8_t>& antiQuantScaleE8m0Vreg1, RegTensor<xType>& antiQuantScaleF16Vreg0,
+                                 RegTensor<xType>& antiQuantScaleF16Vreg1, MicroAPI::MaskReg& maskAll)
 {
     RegTensor<uint8_t> zeroVreg;
     MicroAPI::Duplicate(zeroVreg, 0);
@@ -93,22 +93,18 @@ __aicore__ inline void MxScaleVf(
         // S1 S2 S3 S4 S5 S6 S7 S8 ..... S127 S128
         // antiQuantScaleF16Vreg1:
         // S128 S129 S130 S131 S132 S133 S134 S135 ..... S255 S256
-        MicroAPI::ShiftRights(
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleF16Vreg0,
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg0, SHIFT_FOR_BF16, maskAll);
-        MicroAPI::ShiftRights(
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleF16Vreg1,
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg1, SHIFT_FOR_BF16, maskAll);
+        MicroAPI::ShiftRights((MicroAPI::RegTensor<uint16_t>&)antiQuantScaleF16Vreg0,
+                              (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg0, SHIFT_FOR_BF16, maskAll);
+        MicroAPI::ShiftRights((MicroAPI::RegTensor<uint16_t>&)antiQuantScaleF16Vreg1,
+                              (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg1, SHIFT_FOR_BF16, maskAll);
     } else {
         // 需要转换为FP16格式时，先转换为BF16再转换为FP16
         RegTensor<uint16_t> antiQuantScaleBF16Vreg0;
         RegTensor<uint16_t> antiQuantScaleBF16Vreg1;
-        MicroAPI::ShiftRights(
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleBF16Vreg0,
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg0, SHIFT_FOR_BF16, maskAll);
-        MicroAPI::ShiftRights(
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleBF16Vreg1,
-            (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg1, SHIFT_FOR_BF16, maskAll);
+        MicroAPI::ShiftRights((MicroAPI::RegTensor<uint16_t>&)antiQuantScaleBF16Vreg0,
+                              (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg0, SHIFT_FOR_BF16, maskAll);
+        MicroAPI::ShiftRights((MicroAPI::RegTensor<uint16_t>&)antiQuantScaleBF16Vreg1,
+                              (MicroAPI::RegTensor<uint16_t>&)antiQuantScaleE8m0Vreg1, SHIFT_FOR_BF16, maskAll);
         MicroAPI::Cast<xType, bfloat16_t, CAST_BF16_TO_FP16_TRAIT>(
             antiQuantScaleF16Vreg0, (MicroAPI::RegTensor<bfloat16_t>&)antiQuantScaleBF16Vreg0, maskAll);
         MicroAPI::Cast<xType, bfloat16_t, CAST_BF16_TO_FP16_TRAIT>(
@@ -149,8 +145,8 @@ __aicore__ inline void MxNkScaleVf(MxFp4NdScaleParams<xType>& mxFp4NdNkScalePara
         MicroAPI::DataCopy<uint8_t, MicroAPI::LoadDist::DIST_US_B8>(
             antiQuantScaleE8m0Vreg0, mxFp4NdNkScaleParams.antiQuantScaleBasePhyAddr + ubLoopNIdx * 128);
 
-        MxScaleVf(
-            antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, antiQuantScaleF16Vreg0, antiQuantScaleF16Vreg1, maskAll);
+        MxScaleVf(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, antiQuantScaleF16Vreg0, antiQuantScaleF16Vreg1,
+                  maskAll);
 
         MicroAPI::DataCopy<xType, MicroAPI::StoreDist::DIST_NORM_B16>(
             mxFp4NdNkScaleParams.antiQuantScaleF16PhyAddr0 + ubLoopNIdx * VECTOR_REG_WIDTH, antiQuantScaleF16Vreg0,
@@ -178,8 +174,8 @@ __aicore__ inline void MxKnScaleVf(MxFp4NdScaleParams<xType>& mxFp4NdScaleParams
         MicroAPI::DataCopy<uint8_t, MicroAPI::LoadDist::DIST_NORM>(
             antiQuantScaleE8m0Vreg0, mxFp4NdScaleParams.antiQuantScaleBasePhyAddr + ubLoopKIdx * VECTOR_REG_WIDTH);
 
-        MxScaleVf(
-            antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, antiQuantScaleF16Vreg0, antiQuantScaleF16Vreg1, maskAll);
+        MxScaleVf(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, antiQuantScaleF16Vreg0, antiQuantScaleF16Vreg1,
+                  maskAll);
 
         MicroAPI::DataCopy<xType, MicroAPI::StoreDist::DIST_NORM_B16>(
             mxFp4NdScaleParams.antiQuantScaleF16PhyAddr0 + ubLoopKIdx * VECTOR_REG_WIDTH, antiQuantScaleF16Vreg0,
@@ -300,9 +296,9 @@ __aicore__ inline void AntiQuantFp4NzKnVf(Fp4NzParams<xType, wType>& fp4NzParams
                 // Vn 0 1 2 3 4 5 6 7 8 9 a b c d e f
                 // Vd 0 1 x x x x x x 2 3 x x x x x x
                 // 4bit物理地址位移 = 逻辑索引 >> 1
-                AddrReg weightFp4AddrReg = MicroAPI::CreateAddrReg<wType>(
-                    loopN1Idx, BLOCK_CUBE * ubMte2KSize >> 1, loopGroupIdx, MX_GROUPSIZE * BLOCK_CUBE >> 1,
-                    loopGroupInnerIdx, VEC_MAX_ELEM_B16 >> 1);
+                AddrReg weightFp4AddrReg = MicroAPI::CreateAddrReg<wType>(loopN1Idx, BLOCK_CUBE * ubMte2KSize >> 1,
+                                                                          loopGroupIdx, MX_GROUPSIZE * BLOCK_CUBE >> 1,
+                                                                          loopGroupInnerIdx, VEC_MAX_ELEM_B16 >> 1);
                 MicroAPI::DataCopy<wType, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
                     weightFp4Vreg, (__local_mem__ wType*)fp4NzParams.weightLowBitPhyAddr, weightFp4AddrReg);
 
@@ -319,4 +315,3 @@ __aicore__ inline void AntiQuantFp4NzKnVf(Fp4NzParams<xType, wType>& fp4NzParams
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

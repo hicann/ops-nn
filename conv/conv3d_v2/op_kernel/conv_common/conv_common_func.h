@@ -32,7 +32,7 @@ using TypeFalse = struct {
 
 template <class Intf, uint32_t ImplType>
 struct SetFmap {
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::FmapT> &fmap)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::FmapT>& fmap)
     {
         self->ctx.agm.SetGlobalBuffer(fmap.GetPhyAddr(0), fmap.GetSize());
     }
@@ -40,7 +40,7 @@ struct SetFmap {
 
 template <class Intf, uint32_t ImplType>
 struct SetWeight {
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::WeightT> &weight)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::WeightT>& weight)
     {
         self->ctx.bgm.SetGlobalBuffer(weight.GetPhyAddr(0), weight.GetSize());
     }
@@ -48,7 +48,7 @@ struct SetWeight {
 
 template <class Intf, uint32_t ImplType>
 struct SetBias {
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::BiasT> &bias)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::BiasT>& bias)
     {
         self->ctx.biasgm.SetGlobalBuffer(bias.GetPhyAddr(0), bias.GetSize());
         if constexpr (Intf::quantType != static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
@@ -59,7 +59,7 @@ struct SetBias {
 
 template <class Intf, uint32_t ImplType>
 struct End {
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         if ASCEND_IS_AIC {
             if (self->ctx.freeAL1TensorFlag) {
@@ -81,5 +81,5 @@ struct End {
     }
 };
 
-}  // namespace ConvFunc
+} // namespace ConvFunc
 #endif

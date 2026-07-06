@@ -40,7 +40,8 @@ constexpr int64_t UB_RESERVED_BYTE = 1024;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
+{
     if (inShape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -107,10 +108,8 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataT
     context->SetBlockDim(1);
     HardShrinkTilingData* tiling = context->GetTilingData<HardShrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardShrinkTilingData), 0, sizeof(HardShrinkTilingData)) != EOK,
-        OP_LOGE(context, "memset_s failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardShrinkTilingData), 0, sizeof(HardShrinkTilingData)) != EOK,
+                OP_LOGE(context, "memset_s failed"), return ge::GRAPH_FAILED);
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = WS_SYS_SIZE;
@@ -122,9 +121,8 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataT
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSize,
-                                     bool needUpcast, int64_t ioTypeSize, int64_t computeTypeSize,
-                                     int64_t BM, int64_t alignElems, int64_t& ubFactor)
+static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSize, bool needUpcast, int64_t ioTypeSize,
+                                    int64_t computeTypeSize, int64_t BM, int64_t alignElems, int64_t& ubFactor)
 {
     int64_t mainBufBytesPerElem;
     if (needUpcast) {
@@ -136,15 +134,14 @@ static ge::graphStatus CalcUbFactor(gert::TilingContext* context, uint64_t ubSiz
         mainBufBytesPerElem = computeTypeSize * 2 * BM + computeTypeSize * 3;
     }
     constexpr uint64_t MAX_UB_SIZE = 512 * 1024 * 1024ULL;
-    OP_CHECK_IF(ubSize > MAX_UB_SIZE,
-        OP_LOGE(context, "ubSize=%lu exceeds max expected size %lu", ubSize, MAX_UB_SIZE),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize > MAX_UB_SIZE, OP_LOGE(context, "ubSize=%lu exceeds max expected size %lu", ubSize, MAX_UB_SIZE),
+                return ge::GRAPH_FAILED);
     int64_t ubFactorRaw = ((static_cast<int64_t>(ubSize) - UB_RESERVED_BYTE) * 8) / (mainBufBytesPerElem * 8 + 1);
     ubFactor = FloorAlign(ubFactorRaw, alignElems);
     OP_CHECK_IF(ubFactor <= 0,
-        OP_LOGE(context, "ubFactor is %ld, invalid (ubSize=%lu, UB_RESERVED_BYTE=%ld)",
-                ubFactor, ubSize, UB_RESERVED_BYTE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubFactor is %ld, invalid (ubSize=%lu, UB_RESERVED_BYTE=%ld)", ubFactor, ubSize,
+                        UB_RESERVED_BYTE),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -152,11 +149,15 @@ static ge::graphStatus HardShrinkTilingFunc(gert::TilingContext* context)
 {
     HardShrinkPlatInfo platInfo;
     auto ret = GetPlatformInfo(context, platInfo);
-    if (ret != ge::GRAPH_SUCCESS) { return ret; }
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     HardShrinkInputInfo inputInfo;
     ret = GetInputInfo(context, inputInfo);
-    if (ret != ge::GRAPH_SUCCESS) { return ret; }
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
 
     float lambd = GetLambdAttr(context);
 
@@ -176,10 +177,8 @@ static ge::graphStatus HardShrinkTilingFunc(gert::TilingContext* context)
 
     HardShrinkTilingData* tiling = context->GetTilingData<HardShrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardShrinkTilingData), 0, sizeof(HardShrinkTilingData)) != EOK,
-        OP_LOGE(context, "memset_s failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardShrinkTilingData), 0, sizeof(HardShrinkTilingData)) != EOK,
+                OP_LOGE(context, "memset_s failed"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = inputInfo.totalNum;
     tiling->blockFactor = CeilDiv(inputInfo.totalNum, platInfo.coreNum);
@@ -191,7 +190,9 @@ static ge::graphStatus HardShrinkTilingFunc(gert::TilingContext* context)
 
     int64_t ubFactor;
     ret = CalcUbFactor(context, platInfo.ubSize, needUpcast, ioTypeSize, computeTypeSize, BM, alignElems, ubFactor);
-    if (ret != ge::GRAPH_SUCCESS) { return ret; }
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
     tiling->ubFactor = ubFactor;
     tiling->lambd = lambd;
 
@@ -211,8 +212,6 @@ static ge::graphStatus TilingParseForHardShrink([[maybe_unused]] gert::TilingPar
 
 struct HardShrinkCompileInfo {};
 
-IMPL_OP_OPTILING(HardShrink)
-    .Tiling(HardShrinkTilingFunc)
-    .TilingParse<HardShrinkCompileInfo>(TilingParseForHardShrink);
+IMPL_OP_OPTILING(HardShrink).Tiling(HardShrinkTilingFunc).TilingParse<HardShrinkCompileInfo>(TilingParseForHardShrink);
 
 } // namespace optiling

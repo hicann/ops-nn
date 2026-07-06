@@ -29,15 +29,9 @@ using namespace ut_util;
 
 class FakeQuantWithMinMaxArgsTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxArgsTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FakeQuantWithMinMaxArgsTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxArgsTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FakeQuantWithMinMaxArgsTiling TearDown" << std::endl; }
 };
 
 struct FakeQuantWithMinMaxArgsCompileInfo {
@@ -53,16 +47,15 @@ struct FakeQuantWithMinMaxArgsTilingDataMirror {
     int64_t blockFactor;
     int64_t blockTailFactor;
     int64_t baseLen;
-    float   nudgedMin;
-    float   nudgedMax;
-    float   scale;
-    float   scaleInv;
-    float   quantZero;
+    float nudgedMin;
+    float nudgedMax;
+    float scale;
+    float scaleInv;
+    float quantZero;
 };
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platform_info, map<string, string>& soc_infos, map<string, string>& aicore_spec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platform_info, map<string, string>& soc_infos,
+                         map<string, string>& aicore_spec, map<string, string>& intrinsics)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -78,10 +71,9 @@ static void InitPlatForm(
     platform_info.Init();
 }
 
- static void DoTilingCase(
-    float minVal, float maxVal, int64_t numBits, bool narrowRange,
-    const gert::StorageShape& xShape, ge::graphStatus expected,
-    bool checkTilingData = false, ge::DataType xDtype = ge::DT_FLOAT)
+static void DoTilingCase(float minVal, float maxVal, int64_t numBits, bool narrowRange,
+                         const gert::StorageShape& xShape, ge::graphStatus expected, bool checkTilingData = false,
+                         ge::DataType xDtype = ge::DT_FLOAT)
 {
     fe::PlatFormInfos platform_info;
     map<string, string> soc_infos;
@@ -108,19 +100,19 @@ static void InitPlatForm(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 

@@ -28,8 +28,7 @@ public:
     using Config = Config_;
 
 public:
-    __aicore__ inline ConvBpImpl()
-    {}
+    __aicore__ inline ConvBpImpl() {}
 
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, Init, Intf);
     DECLARE_IMPL(Config_, ConvolutionBackpropFunc, SetFmap, Intf);
@@ -43,7 +42,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
         DEFINE_STUCT_FIELD(TPipe, pipe_);
-        DEFINE_STUCT_FIELD(const TConv3DDwTiling *__restrict, tiling_);
+        DEFINE_STUCT_FIELD(const TConv3DDwTiling* __restrict, tiling_);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPing_, TPosition::CO1, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPong_, TPosition::CO1, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, a1Ping_, TPosition::A1, 1);
@@ -126,6 +125,6 @@ public:
     };
 };
 
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 
 #endif

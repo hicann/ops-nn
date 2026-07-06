@@ -37,12 +37,11 @@ struct ThresholdCompileInfo {};
 static ge::graphStatus SetUbAndTilingKey(gert::TilingContext* context, uint64_t ubSize)
 {
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize), return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed, ubSize=%lu, DCACHE_SIZE=%u", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "SetLocalMemorySize failed, ubSize=%lu, DCACHE_SIZE=%u", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
 
     uint64_t tilingKey = GET_TPL_TILING_KEY(THRESHOLD_SCH_MODE_0);
     context->SetTilingKey(tilingKey);

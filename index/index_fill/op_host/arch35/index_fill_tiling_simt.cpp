@@ -22,21 +22,20 @@
 #include "op_host/tiling_templates_registry.h"
 #include "index_fill_tiling_simt.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace IndexFill;
 
 constexpr uint64_t DCACHE_SIZE_SIMT = 128 * 1024;
 
-bool IndexFillSimtTiling::IsCapable()
-{
-    return true;
-}
+bool IndexFillSimtTiling::IsCapable() { return true; }
 
 int64_t IndexFillSimtTiling::CalcSimtUsedCoreNum()
 {
-    // 如果输入x大小很小(此时很容易被全量cache)或者indicesNum远远小于n时，才使用p * indicesNum * q做simt遍历; 否则走p * n * q simt遍历
-    simtComputeMode_ = (inputData.numel * inputData.dtypeSize < 256 || inputData.indicesNum <= inputData.N / 5) ? SIMT_COMPUTE_MODE_BY_INDICES : SIMT_COMPUTE_MODE_BY_N;
+    // 如果输入x大小很小(此时很容易被全量cache)或者indicesNum远远小于n时，才使用p * indicesNum * q做simt遍历; 否则走p *
+    // n * q simt遍历
+    simtComputeMode_ = (inputData.numel * inputData.dtypeSize < 256 || inputData.indicesNum <= inputData.N / 5) ?
+                           SIMT_COMPUTE_MODE_BY_INDICES :
+                           SIMT_COMPUTE_MODE_BY_N;
 
     int64_t threadNum = MAX_THREAD_NUM;
     int64_t numelByIndices = static_cast<int64_t>(inputData.P * inputData.Q * inputData.indicesNum);
@@ -57,7 +56,8 @@ void IndexFillSimtTiling::DoUBTiling()
     int64_t numelForTailCore = 0;
     int64_t blockSize = 0;
     int64_t tailBlockSize = 0;
-    // 如果所有核均分后，每个核要搬运的数据小于阈值BLOCK_SPLIT_THREHOLD个字节(1k), 则以阈值大小为准，重新计算需要多少核来搬运.
+    // 如果所有核均分后，每个核要搬运的数据小于阈值BLOCK_SPLIT_THREHOLD个字节(1k),
+    // 则以阈值大小为准，重新计算需要多少核来搬运.
     if (numelPerCore * inputData.dtypeSize <= BLOCK_SPLIT_THREHOLD) {
         uint64_t numelMinThrehold = BLOCK_SPLIT_THREHOLD / inputData.dtypeSize;
         numelPerCore = numelMinThrehold;
@@ -77,7 +77,8 @@ void IndexFillSimtTiling::DoUBTiling()
         // 判断numelPerCore是否超过ub大小，进行ub切分
         int64_t oneBlockNum = Ops::Base::GetUbBlockSize(context_) / inputData.dtypeSize;
         // maxUbAvailable表示ub最大能承载的元素数
-        int64_t maxUbAvailable = Ops::Base::FloorAlign(static_cast<int64_t>((ubSize_ - DCACHE_SIZE_SIMT) / N_BUFFER / inputData.dtypeSize), oneBlockNum);
+        int64_t maxUbAvailable = Ops::Base::FloorAlign(
+            static_cast<int64_t>((ubSize_ - DCACHE_SIZE_SIMT) / N_BUFFER / inputData.dtypeSize), oneBlockNum);
         int64_t ubFactor = std::min(numelPerCore, maxUbAvailable);
 
         blockSize = ubFactor;
@@ -88,7 +89,7 @@ void IndexFillSimtTiling::DoUBTiling()
         // 对切分的块，分核
         int64_t frontCoreNum = totalSliceNum % simdUsedCoreNum;
         int64_t loopsPerFrontCore = Ops::Base::CeilDiv(totalSliceNum, simdUsedCoreNum);
-        int64_t loopsPerTailCore = totalSliceNum /simdUsedCoreNum;
+        int64_t loopsPerTailCore = totalSliceNum / simdUsedCoreNum;
         numelPerCore = loopsPerFrontCore * blockSize;
         numelForTailCore = (loopsPerTailCore - 1) * blockSize + tailBlockSize;
 
@@ -117,7 +118,8 @@ ge::graphStatus IndexFillSimtTiling::GetWorkspaceSize()
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     if (simtComputeMode_ == SIMT_COMPUTE_MODE_BY_N) {
-        currentWorkspace[0] = (inputData.N * sizeof(int8_t)) + sysWorkspaceSize_; // workspace上申请额外申请一片内存，用于存放索引位图
+        currentWorkspace[0] = (inputData.N * sizeof(int8_t)) +
+                              sysWorkspaceSize_; // workspace上申请额外申请一片内存，用于存放索引位图
     } else {
         currentWorkspace[0] = sysWorkspaceSize_;
     }
@@ -171,4 +173,4 @@ void IndexFillSimtTiling::DumpTilingInfo()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(IndexFill, IndexFillSimtTiling, 10);
-}  // namespace optiling
+} // namespace optiling

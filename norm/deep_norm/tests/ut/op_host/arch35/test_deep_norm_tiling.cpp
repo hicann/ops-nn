@@ -40,15 +40,9 @@ using namespace ge;
 
 class DeepNormTilingArch35 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeepNormTilingArch35 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeepNormTilingArch35 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeepNormTilingArch35 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeepNormTilingArch35 TearDown" << std::endl; }
 };
 
 namespace {
@@ -58,14 +52,15 @@ constexpr uint64_t UB_SIZE_240K = 245760;
 // Runs the DeepNorm arch35 tiling once and returns its graphStatus.
 // leadingDims are the rows (N) dims; D is the reduce axis (== gamma length).
 // On GRAPH_SUCCESS, tilingKey is filled with the produced tiling key.
-static ge::graphStatus RunDeepNormArch35Tiling(
-    const std::vector<int64_t>& leadingDims, int64_t D, ge::DataType dt, uint64_t ubSize, int64_t& tilingKey)
+static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadingDims, int64_t D, ge::DataType dt,
+                                               uint64_t ubSize, int64_t& tilingKey)
 {
     std::string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
-                          "UB_SIZE": )" + std::to_string(ubSize) + R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "UB_SIZE": )" +
+                                      std::to_string(ubSize) + R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                           "CORE_NUM": 24}
                           })";
@@ -86,19 +81,19 @@ static ge::graphStatus RunDeepNormArch35Tiling(
     auto tiling_func = opImpl->tiling;
     auto tiling_parse_func = opImpl->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     if (tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -153,9 +148,8 @@ static ge::graphStatus RunDeepNormArch35Tiling(
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.000001)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.000001)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

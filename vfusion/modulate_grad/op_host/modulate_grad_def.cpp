@@ -16,56 +16,56 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class ModulateGrad : public OpDef {
-    public:
-        explicit ModulateGrad(const char* name) : OpDef(name)
-        {
-            this->Input("grad_Output")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("Input")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("Scale")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("Shift")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("grad_input")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("grad_scale")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("grad_shift")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            
-            OpAICoreConfig aicore_config;
-            aicore_config.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true);
-        
-            this->AICore().AddConfig("ascend910b",aicore_config);
-            this->AICore().AddConfig("ascend910_93",aicore_config);
-        }
-    };
+class ModulateGrad : public OpDef {
+public:
+    explicit ModulateGrad(const char* name) : OpDef(name)
+    {
+        this->Input("grad_Output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("Input")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("Scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("Shift")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("grad_input")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("grad_scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("grad_shift")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-    OP_ADD(ModulateGrad);
-}//namespace ops
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true);
+
+        this->AICore().AddConfig("ascend910b", aicore_config);
+        this->AICore().AddConfig("ascend910_93", aicore_config);
+    }
+};
+
+OP_ADD(ModulateGrad);
+} // namespace ops

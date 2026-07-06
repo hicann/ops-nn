@@ -30,8 +30,7 @@ class BatchNormGradV3SplitLoadTiling : public BatchNormGradV3Base {
     static constexpr int64_t TWO = 2;
 
 public:
-    explicit BatchNormGradV3SplitLoadTiling(gert::TilingContext* context) : BatchNormGradV3Base(context)
-    {}
+    explicit BatchNormGradV3SplitLoadTiling(gert::TilingContext* context) : BatchNormGradV3Base(context) {}
     ~BatchNormGradV3SplitLoadTiling() override = default;
 
 protected:
@@ -43,10 +42,9 @@ protected:
 
         CalcBasicInfo();
 
-        OP_LOGD(
-            context_->GetNodeName(),
-            "BatchNormGradV3SplitLoadTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
-            fusedALen_, fusedB1Len_);
+        OP_LOGD(context_->GetNodeName(),
+                "BatchNormGradV3SplitLoadTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
+                fusedALen_, fusedB1Len_);
         return true;
     }
 
@@ -81,11 +79,12 @@ int64_t BatchNormGradV3SplitLoadTiling::CalcBubBlock(int64_t tmpChannelNum)
 
 ge::graphStatus BatchNormGradV3SplitLoadTiling::DoOpTiling()
 {
-    int64_t eachCoreChannel = std::ceil(static_cast<float>(fusedALen_) / aicoreParams_.numBlocks); // 每个核处理的channel个数
+    int64_t eachCoreChannel = std::ceil(static_cast<float>(fusedALen_) /
+                                        aicoreParams_.numBlocks); // 每个核处理的channel个数
     if (eachCoreChannel == 0) {
         return ge::GRAPH_FAILED;
     }
-    needCoreNum = std::ceil(static_cast<float>(fusedALen_) / eachCoreChannel);                   // 需要总核数
+    needCoreNum = std::ceil(static_cast<float>(fusedALen_) / eachCoreChannel);      // 需要总核数
     int64_t eachCoreChannelTail = fusedALen_ - (needCoreNum - 1) * eachCoreChannel; // 尾块
 
     int64_t tmpChannelNum = eachCoreChannel > MAX_CHANNEL_SIZE ? MAX_CHANNEL_SIZE : eachCoreChannel;

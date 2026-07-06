@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -32,8 +32,7 @@ template <typename T>
 class GluSingleShape {
 public:
     __aicore__ inline GluSingleShape(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -72,8 +71,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GluSingleShape<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
+__aicore__ inline void GluSingleShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -87,7 +85,7 @@ __aicore__ inline void GluSingleShape<T>::Init(
     tailLoopNum = tilingData->tailLoopNum;
 
     SetGlobalBufferForGlu(xGm, yGm, x, y);
-    
+
     gmXOffset = blockIdx * tilingData->numPerCore * splitSize * 2;
     gmYOffset = blockIdx * tilingData->numPerCore * splitSize;
 
@@ -154,13 +152,13 @@ __aicore__ inline void GluSingleShape<T>::CopyIn(const int64_t& index, const int
 {
     LocalTensor<T> ubX = inQueueX.AllocTensor<T>();
     int64_t one_process_total_num = blockCount * this->splitSize * 2;
-    
+
     DataCopyExtParams intriParams;
     intriParams.blockCount = 1;
     intriParams.dstStride = 0;
     intriParams.srcStride = 0;
     intriParams.blockLen = one_process_total_num * sizeof(T);
-    
+
     DataCopyPadExtParams<T> intriPadParams{false, 0, 0, 0};
     DataCopyPad(ubX, xGm[gmXOffset + index * one_process_in_stride], intriParams, intriPadParams);
     inQueueX.EnQue(ubX);
@@ -172,29 +170,28 @@ __aicore__ inline void GluSingleShape<T>::ComputeSigmoidAndMul(const int64_t& co
 #ifdef __CCE_AICORE__
     LocalTensor<T> xLocal = inQueueX.DeQue<T>();
     LocalTensor<T> outLocal = outQueue.AllocTensor<T>();
-    
+
     __local_mem__ T* xLocalPtr = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ T* outLocalPtr = (__local_mem__ T*)outLocal.GetPhyAddr();
 
     ComputeSigmoidAndMulWithDeInterleave<T>(xLocalPtr, outLocalPtr, count);
-    
+
     inQueueX.FreeTensor(xLocal);
     outQueue.EnQue(outLocal);
 #endif
 }
 
 template <typename T>
-__aicore__ inline void GluSingleShape<T>::CopyOut(
-    const int64_t& index, const int64_t& count, const int64_t& group)
+__aicore__ inline void GluSingleShape<T>::CopyOut(const int64_t& index, const int64_t& count, const int64_t& group)
 {
     LocalTensor<T> outLocal = outQueue.DeQue<T>();
-    
+
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
     intriParams.dstStride = 0;
     intriParams.srcStride = 0;
     intriParams.blockLen = count * sizeof(T);
-    
+
     DataCopyPad(yGm[gmYOffset + index * one_process_out_stride], outLocal, intriParams);
     outQueue.FreeTensor(outLocal);
 }

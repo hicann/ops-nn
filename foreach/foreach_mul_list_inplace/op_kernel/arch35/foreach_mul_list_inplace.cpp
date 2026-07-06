@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file foreach_mul_list_inplace.cpp
  * \brief
@@ -18,8 +17,8 @@
 using namespace ForeachMulListInplace;
 
 template <typename T>
-__aicore__ inline void ForeachMulListInplaceImpl(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachMulListInplaceImpl(GM_ADDR x1, GM_ADDR x2, GM_ADDR workspace, GM_ADDR tiling,
+                                                 TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
@@ -29,8 +28,8 @@ __aicore__ inline void ForeachMulListInplaceImpl(
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_mul_list_inplace(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_mul_list_inplace(GM_ADDR x1, GM_ADDR x2, GM_ADDR workspace,
+                                                               GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {

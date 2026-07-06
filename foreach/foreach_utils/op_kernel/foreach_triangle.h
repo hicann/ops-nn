@@ -26,12 +26,10 @@ template <typename T>
 using TriangleOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const uint32_t);
 
 template <typename T, typename P, TriangleOp<P>* op, uint8_t paramsCount>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        const LocalTensor<T>& x1Local, const LocalTensor<T>& yLocal, LocalTensor<float>& float32Tensor,
-        uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(const LocalTensor<T>& x1Local, const LocalTensor<T>& yLocal,
+                                   LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         op(yLocal, x1Local, dataCount);
@@ -41,12 +39,10 @@ public:
 
 #if __CCE_AICORE__ >= 220 && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <TriangleOp<float>* op, uint8_t paramsCount>
-class InnerComputer<bfloat16_t, float, op, paramsCount>
-{
+class InnerComputer<bfloat16_t, float, op, paramsCount> {
 public:
-    __aicore__ inline void Compute(
-        const LocalTensor<bfloat16_t>& x1Local, const LocalTensor<bfloat16_t>& yLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(const LocalTensor<bfloat16_t>& x1Local, const LocalTensor<bfloat16_t>& yLocal,
+                                   LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
@@ -61,9 +57,9 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        const LocalTensor<bfloat16_t>& x1Local, const LocalTensor<bfloat16_t>& yLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(const LocalTensor<bfloat16_t>& x1Local, const LocalTensor<bfloat16_t>& yLocal,
+                                          LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, uint32_t index,
+                                          int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, x1Local[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -77,16 +73,13 @@ private:
 };
 #endif
 
-template <
-    typename T, typename P, TriangleOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
-class ForeachTriangle
-    : public KernelForeachUnary<
-          T, ForeachTriangle<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount, needCopyOut>
-{
+template <typename T, typename P, TriangleOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+class ForeachTriangle : public KernelForeachUnary<T, ForeachTriangle<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                                  bufferNum, paramsCount, needCopyOut> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachTriangle<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount, needCopyOut>;
+    using Base = KernelForeachUnary<T, ForeachTriangle<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
+                                    paramsCount, needCopyOut>;
     using Operator = TriangleOp<P>;
 
     __aicore__ inline ForeachTriangle() : Base(*this){};
@@ -94,8 +87,8 @@ public:
     using Base::Process;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> outLocal = Base::outQueue.template AllocTensor<T>();
@@ -107,22 +100,15 @@ private:
         Base::outQueue.template EnQue<T>(outLocal);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
-    {}
+    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder) {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
-    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
-    {}
+    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart) {}
 
     friend Base;
 };

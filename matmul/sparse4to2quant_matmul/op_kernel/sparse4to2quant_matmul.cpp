@@ -38,9 +38,9 @@ constexpr CubeFormat format_x2 = CubeFormat::NZ;
 
 constexpr CubeFormat format_y = CubeFormat::ND;
 
-extern "C" __global__ __aicore__ void sparse4to2quant_matmul(
-    GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index, GM_ADDR xScale, GM_ADDR sparseWeightScale, GM_ADDR bias, GM_ADDR y,
-    GM_ADDR workSpace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sparse4to2quant_matmul(GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index,
+                                                             GM_ADDR xScale, GM_ADDR sparseWeightScale, GM_ADDR bias,
+                                                             GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;

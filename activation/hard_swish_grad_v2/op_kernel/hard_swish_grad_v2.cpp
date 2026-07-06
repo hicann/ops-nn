@@ -24,23 +24,20 @@ using namespace AscendC;
 
 using namespace HardSwishGradV2;
 
-extern "C" __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR gradOutput,
-                                            GM_ADDR self,
-                                            GM_ADDR out,
-                                            GM_ADDR workspace,
-                                            GM_ADDR tiling)
+extern "C" __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 
     GM_ADDR userWs = nullptr;
 
 #if __CCE_AICORE__ == 220
-        HardSwishGradV2220<DTYPE_SELF> op;
-        op.Init(gradOutput, self, out, userWs, &tilingData);
-        op.Process();
+    HardSwishGradV2220<DTYPE_SELF> op;
+    op.Init(gradOutput, self, out, userWs, &tilingData);
+    op.Process();
 #elif __CCE_AICORE__ == 100
-        HardSwishGradV2100<DTYPE_SELF> op;
-        op.Init(gradOutput, self, out, userWs, &tilingData);
-        op.Process();
+    HardSwishGradV2100<DTYPE_SELF> op;
+    op.Init(gradOutput, self, out, userWs, &tilingData);
+    op.Process();
 #endif
 }

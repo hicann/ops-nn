@@ -24,8 +24,7 @@ using namespace AscendC;
 using namespace NsForeachBinaryOp;
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_binary_op(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_binary_op(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachBinaryOpTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachBinaryOpTilingData, tilingData, tiling);

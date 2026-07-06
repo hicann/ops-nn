@@ -26,12 +26,11 @@ using namespace std;
 using namespace op;
 
 class l2_Sparse4to2QuantMatmul_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { cout << "l2_Sparse4to2QuantMatmul_test SetUp" << endl; }
+protected:
+    static void SetUpTestCase() { cout << "l2_Sparse4to2QuantMatmul_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "l2_Sparse4to2QuantMatmul_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "l2_Sparse4to2QuantMatmul_test TearDown" << endl; }
 };
-
 
 TEST_F(l2_Sparse4to2QuantMatmul_test, ascend910B2_test_normal_case_01)
 {
@@ -42,13 +41,11 @@ TEST_F(l2_Sparse4to2QuantMatmul_test, ascend910B2_test_normal_case_01)
     TensorDesc sparse_weight_scale_desc = TensorDesc({256}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({256}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({64, 256}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSparse4to2QuantMatmulWeightNz,
-                        INPUT(x_desc, sparse_weight_desc, index_desc, x_scale_desc,
-                              sparse_weight_scale_desc, bias_desc),
-                        OUTPUT(out_desc));
+    auto ut = OP_API_UT(
+        aclnnSparse4to2QuantMatmulWeightNz,
+        INPUT(x_desc, sparse_weight_desc, index_desc, x_scale_desc, sparse_weight_scale_desc, bias_desc),
+        OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
-
-

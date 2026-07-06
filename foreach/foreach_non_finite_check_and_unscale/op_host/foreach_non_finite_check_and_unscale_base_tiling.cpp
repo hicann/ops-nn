@@ -23,20 +23,11 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ForeachNonFiniteCheckAndUnscaleBaseClass::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Tiling4ForeachNonFiniteCheckAndUnscale(gert::TilingContext* context)
 {

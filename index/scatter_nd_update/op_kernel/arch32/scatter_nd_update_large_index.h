@@ -23,8 +23,8 @@ template <typename T, bool isViewStride0 = false>
 class LargeIndexKernel {
 public:
     __aicore__ inline LargeIndexKernel() = delete;
-    __aicore__ inline LargeIndexKernel(
-        GM_ADDR indices, GM_ADDR updates, GM_ADDR output, const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+    __aicore__ inline LargeIndexKernel(GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
+                                       const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -35,9 +35,8 @@ public:
     {
         blockIdx_ = GetBlockIdx();
 
-        CalcBlockDistribution(
-            blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow, tiling.scatterTiling.tailRow,
-            computeRow_, start_);
+        CalcBlockDistribution(blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow,
+                              tiling.scatterTiling.tailRow, computeRow_, start_);
         end_ = start_ + computeRow_;
 
         startInt64_ = static_cast<int64_t>(start_);
@@ -74,8 +73,8 @@ public:
         updateLocal = updateBuf.Get<T>();
     }
 
-    __aicore__ inline void SetGmAddr(
-        GM_ADDR indices, GM_ADDR updates, GM_ADDR output, const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
+                                     const ScatterNdUpdateArch32TilingData& tiling)
     {
         indicesGmInt64_.SetGlobalBuffer((__gm__ int64_t*)indices);
         updatesGm_.SetGlobalBuffer((__gm__ T*)updates);
@@ -137,9 +136,9 @@ public:
             DataCopyPad(updateLocal, updatesGm_[gmOffset], updateCopyParams, padParams);
             PipeMte2ToS();
 
-            uint64_t outOffset = ResolveOutOffset<isViewStride0>(
-                static_cast<uint64_t>(linearIndex), scatterLength_, firstDimStrideRows_, varStride0Elements_,
-                tileIdx * scatterTileLength_);
+            uint64_t outOffset = ResolveOutOffset<isViewStride0>(static_cast<uint64_t>(linearIndex), scatterLength_,
+                                                                 firstDimStrideRows_, varStride0Elements_,
+                                                                 tileIdx * scatterTileLength_);
             DataCopyExtParams outParams{1, static_cast<uint32_t>(tileLength * sizeof(T)), 0, 0, 0};
             DataCopyPad(outputGm_[outOffset], updateLocal, outParams);
             PipeMte3ToS();

@@ -21,7 +21,8 @@ namespace ops {
 static constexpr size_t SC_IN_VAR_IDX = 0;
 static constexpr size_t SC_OUT_VAR_IDX = 0;
 
-static ge::graphStatus InferShape4QuantUpdateScatter(gert::InferShapeContext *context) {
+static ge::graphStatus InferShape4QuantUpdateScatter(gert::InferShapeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do Infershape of Scatter.");
     const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
@@ -41,7 +42,7 @@ static ge::graphStatus InferShape4QuantUpdateScatter(gert::InferShapeContext *co
     OP_LOGD(context->GetNodeName(), "output_shape = %s.", Ops::Base::ToString(*output_shape).c_str());
     OP_LOGD(context->GetNodeName(), "End to do ScatterInfershape.");
 
-    return ge::GRAPH_SUCCESS;   
+    return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(QuantUpdateScatter).InferShape(InferShape4QuantUpdateScatter);

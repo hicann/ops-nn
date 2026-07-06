@@ -25,9 +25,9 @@ struct ClippedSwigluTilingData {
     int64_t isLongH;
     int64_t isGroup;
     int64_t isInterleaved;
-    float   gluAlpha;
-    float   gluLimit;
-    float   gluBias;
+    float gluAlpha;
+    float gluLimit;
+    float gluBias;
     int64_t ubMaxPair;
     int64_t groupNum;
 };
@@ -39,32 +39,30 @@ inline void IClippedSwigluTilingData(uint8_t* tiling, ClippedSwigluTilingData* c
     memcpy(constData, tiling, sizeof(ClippedSwigluTilingData));
 }
 
-
-
-#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg)      \
-    tilingStruct tilingData;                                                  \
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg) \
+    tilingStruct tilingData;                                             \
     IClippedSwigluTilingData(tilingArg, &tilingData)
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)  \
-    __ubuf__ tilingStruct* tilingDataPointer =                                 \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
-#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)     \
+#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-    ClippedSwigluTilingData tilingData;                                               \
-    INIT_TILING_DATA(ClippedSwigluTilingData, tilingDataPointer, tilingPointer);  \
-    (tilingData).coreNumAll = tilingDataPointer->coreNumAll;                    \
-    (tilingData).dimBatchSize = tilingDataPointer->dimBatchSize;                  \
-    (tilingData).dim2H = tilingDataPointer->dim2H;   \
-    (tilingData).isLongH = tilingDataPointer->isLongH;         \
-    (tilingData).isGroup = tilingDataPointer->isGroup;   \
-    (tilingData).isInterleaved = tilingDataPointer->isInterleaved; \
-    (tilingData).gluAlpha = tilingDataPointer->gluAlpha;      \
-    (tilingData).gluLimit = tilingDataPointer->gluLimit;      \
-    (tilingData).gluBias = tilingDataPointer->gluBias;  \
-    (tilingData).ubMaxPair = tilingDataPointer->ubMaxPair;  \
+#define GET_TILING_DATA(tilingData, tilingPointer)                               \
+    ClippedSwigluTilingData tilingData;                                          \
+    INIT_TILING_DATA(ClippedSwigluTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).coreNumAll = tilingDataPointer->coreNumAll;                     \
+    (tilingData).dimBatchSize = tilingDataPointer->dimBatchSize;                 \
+    (tilingData).dim2H = tilingDataPointer->dim2H;                               \
+    (tilingData).isLongH = tilingDataPointer->isLongH;                           \
+    (tilingData).isGroup = tilingDataPointer->isGroup;                           \
+    (tilingData).isInterleaved = tilingDataPointer->isInterleaved;               \
+    (tilingData).gluAlpha = tilingDataPointer->gluAlpha;                         \
+    (tilingData).gluLimit = tilingDataPointer->gluLimit;                         \
+    (tilingData).gluBias = tilingDataPointer->gluBias;                           \
+    (tilingData).ubMaxPair = tilingDataPointer->ubMaxPair;                       \
     (tilingData).groupNum = tilingDataPointer->groupNum;
 
 // #define DTYPE_X DT_BF16

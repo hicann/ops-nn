@@ -25,13 +25,9 @@
 
 class ForeachAddcdivScalarTilingArch35 : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "ForeachAddcdivScalarTilingArch35 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachAddcdivScalarTilingArch35 SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "ForeachAddcdivScalarTilingArch35 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachAddcdivScalarTilingArch35 TearDown" << std::endl; }
 };
 
 std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
@@ -69,12 +65,12 @@ TEST_F(ForeachAddcdivScalarTilingArch35, foreach_addcdiv_scalar_arch35_fp32)
     platform_info.Init();
     ForeachAddcdivScalarCompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -113,7 +109,7 @@ TEST_F(ForeachAddcdivScalarTilingArch35, foreach_addcdiv_scalar_arch35_fp32)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1);  // TILING_KEY_FP32
+    ASSERT_EQ(tiling_key, 1); // TILING_KEY_FP32
 }
 
 TEST_F(ForeachAddcdivScalarTilingArch35, foreach_addcdiv_scalar_arch35_fp16)
@@ -149,12 +145,12 @@ TEST_F(ForeachAddcdivScalarTilingArch35, foreach_addcdiv_scalar_arch35_fp16)
     platform_info.Init();
     ForeachAddcdivScalarCompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -193,5 +189,5 @@ TEST_F(ForeachAddcdivScalarTilingArch35, foreach_addcdiv_scalar_arch35_fp16)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 0);  // TILING_KEY_FP16
+    ASSERT_EQ(tiling_key, 0); // TILING_KEY_FP16
 }

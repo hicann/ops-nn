@@ -56,10 +56,8 @@ REGISTER_TILING_DATA_CLASS(MaxPoolV2_300002, MaxPoolV3SmallKernelTilingData);
 
 class MaxPoolV3SmallKernelTiling : public MaxPoolV3BaseTiling {
 public:
-    explicit MaxPoolV3SmallKernelTiling(gert::TilingContext* context) : MaxPoolV3BaseTiling(context)
-    {}
-    ~MaxPoolV3SmallKernelTiling() override
-    {}
+    explicit MaxPoolV3SmallKernelTiling(gert::TilingContext* context) : MaxPoolV3BaseTiling(context) {}
+    ~MaxPoolV3SmallKernelTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -104,13 +102,10 @@ protected:
     bool isZero_{false};
 };
 
-class MaxPoolV2SmallKernelTiling : public MaxPoolV3SmallKernelTiling
-{
+class MaxPoolV2SmallKernelTiling : public MaxPoolV3SmallKernelTiling {
 public:
-    explicit MaxPoolV2SmallKernelTiling(gert::TilingContext* context) : MaxPoolV3SmallKernelTiling(context)
-    {}
-    ~MaxPoolV2SmallKernelTiling() override
-    {}
+    explicit MaxPoolV2SmallKernelTiling(gert::TilingContext* context) : MaxPoolV3SmallKernelTiling(context) {}
+    ~MaxPoolV2SmallKernelTiling() override {}
 };
 
 } // namespace optiling

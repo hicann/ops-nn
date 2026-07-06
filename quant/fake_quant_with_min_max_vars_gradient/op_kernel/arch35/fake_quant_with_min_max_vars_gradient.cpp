@@ -28,17 +28,16 @@ using namespace FakeQuantWithMinMaxVarsGradient;
 using namespace FakeQuantWithMinMaxVarsGradientOp;
 
 template <uint64_t schMode>
-__global__ __aicore__ void fake_quant_with_min_max_vars_gradient(
-    GM_ADDR gradients, GM_ADDR x, GM_ADDR min_gm, GM_ADDR max_gm,
-    GM_ADDR backprops_wrt_x, GM_ADDR backprop_wrt_min, GM_ADDR backprop_wrt_max,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void fake_quant_with_min_max_vars_gradient(GM_ADDR gradients, GM_ADDR x, GM_ADDR min_gm,
+                                                                 GM_ADDR max_gm, GM_ADDR backprops_wrt_x,
+                                                                 GM_ADDR backprop_wrt_min, GM_ADDR backprop_wrt_max,
+                                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(FakeQuantWithMinMaxVarsGradientTilingData);
     GET_TILING_DATA(tilingData, tiling);
 
     FakeQuantWithMinMaxVarsGradientRegbase<schMode> op(&tilingData);
-    op.Init(gradients, x, min_gm, max_gm,
-            backprops_wrt_x, backprop_wrt_min, backprop_wrt_max);
+    op.Init(gradients, x, min_gm, max_gm, backprops_wrt_x, backprop_wrt_min, backprop_wrt_max);
     op.Process();
 }

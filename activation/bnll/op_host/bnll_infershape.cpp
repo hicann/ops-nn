@@ -33,8 +33,6 @@ static ge::graphStatus InferShape4BNLL(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(BNLL)
-    .InferShape(InferShape4BNLL)
-    .InferOutDataTypeSameWithFirstInput();
+IMPL_OP_INFERSHAPE(BNLL).InferShape(InferShape4BNLL).InferOutDataTypeSameWithFirstInput();
 
 } // namespace ops

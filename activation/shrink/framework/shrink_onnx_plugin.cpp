@@ -14,43 +14,39 @@ namespace domi {
 static const float BIAS_DEFAULT = 0.0;
 static const float LAMBD_DEFAULT = 0.5;
 
-static Status ParseParamsShrink(const Message* op_src, ge::Operator& op_dest) {
-  const ge::onnx::NodeProto *node = reinterpret_cast<const ge::onnx::NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  float bias = BIAS_DEFAULT;
-  float lambd = LAMBD_DEFAULT;
-  
-  for (const auto &attr : node->attribute()) {
-    if (attr.name() == "bias" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
-        bias = attr.f();
-    } 
-    if (attr.name() == "lambd" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
-        lambd = attr.f();
+static Status ParseParamsShrink(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = reinterpret_cast<const ge::onnx::NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
-  op_dest.SetAttr("bias", bias);
-  op_dest.SetAttr("lambd", lambd);
-  
-  return SUCCESS;
+
+    float bias = BIAS_DEFAULT;
+    float lambd = LAMBD_DEFAULT;
+
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "bias" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
+            bias = attr.f();
+        }
+        if (attr.name() == "lambd" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
+            lambd = attr.f();
+        }
+    }
+    op_dest.SetAttr("bias", bias);
+    op_dest.SetAttr("lambd", lambd);
+
+    return SUCCESS;
 }
 
 // register Shrink op info to GE
 REGISTER_CUSTOM_OP("Shrink")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::9::Shrink"),
-                   ge::AscendString("ai.onnx::10::Shrink"),
-                   ge::AscendString("ai.onnx::11::Shrink"),
-                   ge::AscendString("ai.onnx::12::Shrink"),
-                   ge::AscendString("ai.onnx::13::Shrink"),
-                   ge::AscendString("ai.onnx::14::Shrink"),
-                   ge::AscendString("ai.onnx::15::Shrink"),
-                   ge::AscendString("ai.onnx::16::Shrink"),
-                   ge::AscendString("ai.onnx::17::Shrink"),
-                   ge::AscendString("ai.onnx::18::Shrink")})
+    .OriginOpType({ge::AscendString("ai.onnx::9::Shrink"), ge::AscendString("ai.onnx::10::Shrink"),
+                   ge::AscendString("ai.onnx::11::Shrink"), ge::AscendString("ai.onnx::12::Shrink"),
+                   ge::AscendString("ai.onnx::13::Shrink"), ge::AscendString("ai.onnx::14::Shrink"),
+                   ge::AscendString("ai.onnx::15::Shrink"), ge::AscendString("ai.onnx::16::Shrink"),
+                   ge::AscendString("ai.onnx::17::Shrink"), ge::AscendString("ai.onnx::18::Shrink")})
     .ParseParamsFn(ParseParamsShrink)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

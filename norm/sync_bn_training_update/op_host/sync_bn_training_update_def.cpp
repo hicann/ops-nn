@@ -18,23 +18,23 @@ namespace ops {
 constexpr float MOMENTUM_VALUE = 0.1;
 class SyncBNTrainingUpdate : public OpDef {
 public:
-    explicit SyncBNTrainingUpdate(const char *name) : OpDef(name)
+    explicit SyncBNTrainingUpdate(const char* name) : OpDef(name)
     {
         this->Input("mean")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("running_mean")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("running_mean_update")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("momentum").AttrType(OPTIONAL).Float(MOMENTUM_VALUE);
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

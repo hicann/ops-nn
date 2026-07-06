@@ -29,12 +29,10 @@ static ge::graphStatus InferShapeTwoInOneOutWithReduction(gert::InferShapeContex
     auto input_y_shape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, input_y_shape);
 
-    OP_CHECK_IF(
-        *input_x_shape != *input_y_shape,
-        OP_LOGE(
-            context->GetNodeName(), "input_x shape %s must be same as input_y shape %s",
-            Ops::Base::ToString(*input_x_shape).c_str(), Ops::Base::ToString(*input_y_shape).c_str()),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(*input_x_shape != *input_y_shape,
+                OP_LOGE(context->GetNodeName(), "input_x shape %s must be same as input_y shape %s",
+                        Ops::Base::ToString(*input_x_shape).c_str(), Ops::Base::ToString(*input_y_shape).c_str()),
+                return GRAPH_FAILED);
 
     auto out_shape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);

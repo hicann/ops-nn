@@ -85,12 +85,9 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::DoBufferCalculate()
     const int64_t transColAlign = baseData.maxDataNumInOneBlock;
     const bool needFp32Scratch = (inputData.inputDtype != ge::DT_FLOAT);
 
-    const int64_t dInputInner =
-        Ops::Base::CeilDiv(splitData.dOutputInner * gradInputD, gradOutputD) + 1;
-    const int64_t hInputInner =
-        Ops::Base::CeilDiv(splitData.hOutputInner * gradInputH, gradOutputH) + 1;
-    const int64_t wInputInner =
-        Ops::Base::CeilDiv(splitData.wOutputInner * gradInputW, gradOutputW) + 1;
+    const int64_t dInputInner = Ops::Base::CeilDiv(splitData.dOutputInner * gradInputD, gradOutputD) + 1;
+    const int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner * gradInputH, gradOutputH) + 1;
+    const int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner * gradInputW, gradOutputW) + 1;
 
     const int64_t highAxisInner = splitData.highAxisInner;
     const int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, transColAlign);
@@ -109,20 +106,15 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::DoBufferCalculate()
 
     if (needFp32Scratch) {
         splitData.computeSrcBufferSize = Ops::Base::CeilAlign(
-            (splitData.transQueBufferSize / baseData.inputBytes) * FLOAT32_SIZE,
-            baseData.ubBlockSize);
+            (splitData.transQueBufferSize / baseData.inputBytes) * FLOAT32_SIZE, baseData.ubBlockSize);
 
         splitData.computeAccumBufferSize = Ops::Base::CeilAlign(
-            (splitData.transOutQueBufferSize / baseData.inputBytes) * FLOAT32_SIZE,
-            baseData.ubBlockSize);
+            (splitData.transOutQueBufferSize / baseData.inputBytes) * FLOAT32_SIZE, baseData.ubBlockSize);
     }
 
-    splitData.totalBufferSize =
-        BUFFER_NUM * (splitData.inputQueBufferSize +
-                      splitData.transQueBufferSize +
-                      splitData.transOutQueBufferSize) +
-        splitData.computeSrcBufferSize +
-        splitData.computeAccumBufferSize;
+    splitData.totalBufferSize = BUFFER_NUM * (splitData.inputQueBufferSize + splitData.transQueBufferSize +
+                                              splitData.transOutQueBufferSize) +
+                                splitData.computeSrcBufferSize + splitData.computeAccumBufferSize;
 }
 
 bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
@@ -135,18 +127,17 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
     kernelD = Ops::Base::CeilDiv(gradOutputD, gradInputD);
     kernelH = Ops::Base::CeilDiv(gradOutputH, gradInputH);
     kernelW = Ops::Base::CeilDiv(gradOutputW, gradInputW);
-    if (kernelD * kernelH * kernelW >= KERNEL_SIZE_MAX ||
-        baseData.inputNCSize < HIGH_THRESHOLD ||
+    if (kernelD * kernelH * kernelW >= KERNEL_SIZE_MAX || baseData.inputNCSize < HIGH_THRESHOLD ||
         gradInputW * gradInputH * gradInputD < WINSIZE_THRESHOLD) {
         return false;
     }
 
-    if(inputData.inputDtype == ge::DT_FLOAT) {
-        if(gradInputW < INPUTW_FLOAT_THRESHOLD) {
+    if (inputData.inputDtype == ge::DT_FLOAT) {
+        if (gradInputW < INPUTW_FLOAT_THRESHOLD) {
             return false;
         }
     } else {
-        if(gradInputW < INPUTW_BFLOAT_THRESHOLD) {
+        if (gradInputW < INPUTW_BFLOAT_THRESHOLD) {
             return false;
         }
     }
@@ -210,9 +201,7 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::SplitAlignDHW()
     splitData.hOutputInner = gradOutputH;
     splitData.wOutputInner = gradOutputW;
 
-    while (splitData.dOutputInner > kernelD ||
-           splitData.hOutputInner > kernelH ||
-           splitData.wOutputInner > kernelW) {
+    while (splitData.dOutputInner > kernelD || splitData.hOutputInner > kernelH || splitData.wOutputInner > kernelW) {
         if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
             DynamicAdjustmentAlignDWH();
         } else {
@@ -251,9 +240,7 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::SplitUnalignDHW()
 
         DynamicAdjustmentDWH();
 
-        if (oldD == splitData.dOutputInner &&
-            oldH == splitData.hOutputInner &&
-            oldW == splitData.wOutputInner) {
+        if (oldD == splitData.dOutputInner && oldH == splitData.hOutputInner && oldW == splitData.wOutputInner) {
             break;
         }
     }
@@ -279,37 +266,32 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::DoUBTiling()
     DoBufferCalculate();
 
     splitData.wOutputOuter = Ops::Base::CeilDiv(gradOutputW, splitData.wOutputInner);
-    splitData.wOutputTail =
-        (gradOutputW % splitData.wOutputInner == 0) ? splitData.wOutputInner :
-                                                      (gradOutputW % splitData.wOutputInner);
+    splitData.wOutputTail = (gradOutputW % splitData.wOutputInner == 0) ? splitData.wOutputInner :
+                                                                          (gradOutputW % splitData.wOutputInner);
 
     splitData.hOutputOuter = Ops::Base::CeilDiv(gradOutputH, splitData.hOutputInner);
-    splitData.hOutputTail =
-        (gradOutputH % splitData.hOutputInner == 0) ? splitData.hOutputInner :
-                                                      (gradOutputH % splitData.hOutputInner);
+    splitData.hOutputTail = (gradOutputH % splitData.hOutputInner == 0) ? splitData.hOutputInner :
+                                                                          (gradOutputH % splitData.hOutputInner);
 
     splitData.dOutputOuter = Ops::Base::CeilDiv(gradOutputD, splitData.dOutputInner);
-    splitData.dOutputTail =
-        (gradOutputD % splitData.dOutputInner == 0) ? splitData.dOutputInner :
-                                                      (gradOutputD % splitData.dOutputInner);
+    splitData.dOutputTail = (gradOutputD % splitData.dOutputInner == 0) ? splitData.dOutputInner :
+                                                                          (gradOutputD % splitData.dOutputInner);
 
     splitData.highAxisOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
-    splitData.highAxisTail =
-        (baseData.inputNCSize % splitData.highAxisInner == 0) ? splitData.highAxisInner :
-                                                                (baseData.inputNCSize % splitData.highAxisInner);
+    splitData.highAxisTail = (baseData.inputNCSize % splitData.highAxisInner == 0) ?
+                                 splitData.highAxisInner :
+                                 (baseData.inputNCSize % splitData.highAxisInner);
 }
 
 void AdaptiveAvgPool3dGradTilingSmallKernel::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum =
-        splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter * splitData.dOutputOuter;
+    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter *
+                                  splitData.dOutputOuter;
 
-    splitData.normalCoreProcessNum =
-        Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
-    splitData.usedCoreNum =
-        Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
+    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void AdaptiveAvgPool3dGradTilingSmallKernel::SetTilingData()
@@ -410,10 +392,7 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool3dGradTilingSmallKernel::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3dGrad, AdaptiveAvgPool3dGradTilingSmallKernel, 20);
 } // namespace optiling

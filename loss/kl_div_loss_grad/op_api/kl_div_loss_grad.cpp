@@ -27,35 +27,38 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(KlDivLossGrad);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                              op::DataType::DT_FLOAT16,
-                                                                              op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 // 根据芯片类型、dtype判断算子是否支持走aicore
-static bool IsAiCoreSupport(const aclTensor *self) {
-  // KlDivLossGrad只需要判断dtype
-  return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
+static bool IsAiCoreSupport(const aclTensor* self)
+{
+    // KlDivLossGrad只需要判断dtype
+    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AICORE算子kernel
-static const aclTensor *KlDivLossGradAiCore(const aclTensor *gradOutput, const aclTensor *self,
-                                            const aclTensor *target, const char* reduction,
-                                            bool logTarget, aclTensor *out, aclOpExecutor *executor) {
-  L0_DFX(KlDivLossGradAiCore, gradOutput, self, target, reduction, logTarget);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(KlDivLossGrad, OP_INPUT(gradOutput, self, target),
-                                         OP_OUTPUT(out), OP_ATTR(reduction, logTarget));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "KlDivLossGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
+static const aclTensor* KlDivLossGradAiCore(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                            const char* reduction, bool logTarget, aclTensor* out,
+                                            aclOpExecutor* executor)
+{
+    L0_DFX(KlDivLossGradAiCore, gradOutput, self, target, reduction, logTarget);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(KlDivLossGrad, OP_INPUT(gradOutput, self, target), OP_OUTPUT(out),
+                                           OP_ATTR(reduction, logTarget));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "KlDivLossGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
 
-  return out;
+    return out;
 }
 
-const aclTensor *KlDivLossGrad(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target,
-                               const char* reduction, bool logTarget, aclOpExecutor *executor) {
-  auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
-  if (IsAiCoreSupport(self)) {
-    // 只走aicore
-    return KlDivLossGradAiCore(gradOutput, self, target, reduction, logTarget, out, executor);
-  }
-  return out;
+const aclTensor* KlDivLossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               const char* reduction, bool logTarget, aclOpExecutor* executor)
+{
+    auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
+    if (IsAiCoreSupport(self)) {
+        // 只走aicore
+        return KlDivLossGradAiCore(gradOutput, self, target, reduction, logTarget, out, executor);
+    }
+    return out;
 }
-}  // namespace l0op
+} // namespace l0op

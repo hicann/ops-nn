@@ -35,23 +35,16 @@ using namespace std;
 
 class QuantBatchMatmulInplaceAddKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "QuantBatchMatmulInplaceAddKernelTest SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "QuantBatchMatmulInplaceAddKernelTest SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "QuantBatchMatmulInplaceAddKernelTest TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "QuantBatchMatmulInplaceAddKernelTest TearDown" << endl; }
 };
 
 TEST_F(QuantBatchMatmulInplaceAddKernelTest, Hif8BasicApiKernelCompile)
 {
 #ifdef __CCE_KT_TEST__
-    using KernelFunc = void (*)(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR x2Scale, GM_ADDR yIn, GM_ADDR x1Scale, GM_ADDR y, GM_ADDR workspace,
-        GM_ADDR tiling);
+    using KernelFunc = void (*)(GM_ADDR x1, GM_ADDR x2, GM_ADDR x2Scale, GM_ADDR yIn, GM_ADDR x1Scale, GM_ADDR y,
+                                GM_ADDR workspace, GM_ADDR tiling);
     KernelFunc kernelFunc = quant_batch_matmul_inplace_add<1, 0, TPL_NO_VEC_EPILOGUE_WITH_MMAPI>;
     ASSERT_NE(kernelFunc, nullptr);
     ASSERT_GT(sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData), 0UL);

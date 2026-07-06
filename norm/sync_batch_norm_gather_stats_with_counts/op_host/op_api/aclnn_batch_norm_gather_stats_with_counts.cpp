@@ -51,16 +51,16 @@ aclTensor* BroadCastTensor(const op::Shape dstShape, const aclTensor* src, aclOp
 {
     auto dstTensor = executor->AllocTensor(dstShape, src->GetDataType());
     op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(dstShape);
-    auto shape =
-        executor->ConvertToTensor(broadcastDims.data(), broadcastDims.size(), static_cast<op::DataType>(ACL_INT64));
+    auto shape = executor->ConvertToTensor(broadcastDims.data(), broadcastDims.size(),
+                                           static_cast<op::DataType>(ACL_INT64));
     auto result = l0op::BroadcastTo(src, dstTensor, shape, executor);
     return const_cast<aclTensor*>(result);
 }
 } // namespace op
 
 using namespace op;
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_LIST = {op::DataType::DT_FLOAT,
+                                                                           op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910B_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const int64_t MEAN_INDEX = 0;
@@ -75,9 +75,8 @@ static inline bool CheckSocVersionGe910B(void)
 }
 
 static inline bool IsSocVersion950(void) { return GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950; }
-static bool CheckNotNull(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* invstd, const aclTensor* counts,
-    const aclTensor* meanAll, const aclTensor* invstdAll)
+static bool CheckNotNull(const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
+                         const aclTensor* counts, const aclTensor* meanAll, const aclTensor* invstdAll)
 {
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(mean, return false);
@@ -88,14 +87,15 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* invstd, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* counts, const aclTensor* meanAll, const aclTensor* invstdAll)
+static bool CheckDtypeValid(const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
+                            const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* counts,
+                            const aclTensor* meanAll, const aclTensor* invstdAll)
 {
     bool is910BSocVersion = CheckSocVersionGe910B();
     bool is950SocVersion = IsSocVersion950();
-    const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST =
-        (is910BSocVersion || is950SocVersion) ? DTYPE_SUPPORT_910B_LIST : DTYPE_SUPPORT_910_LIST;
+    const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = (is910BSocVersion || is950SocVersion) ?
+                                                                       DTYPE_SUPPORT_910B_LIST :
+                                                                       DTYPE_SUPPORT_910_LIST;
 
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(mean, DTYPE_SUPPORT_LIST, return false);
@@ -122,30 +122,28 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* mean, const acl
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* invstd, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* counts, const aclTensor* meanAll, const aclTensor* invstdAll)
+static bool CheckShape(const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
+                       const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* counts,
+                       const aclTensor* meanAll, const aclTensor* invstdAll)
 {
     OP_CHECK_MAX_DIM(input, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MIN_DIM(input, BN_MIN_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_WRONG_DIMENSION(mean, BN_MIN_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_WRONG_DIMENSION(invstd, BN_MIN_SUPPORT_DIMS_NUMS, return false);
     if (mean->GetViewShape()[0] != invstd->GetViewShape()[0] || counts->GetViewShape()[0] != mean->GetViewShape()[0]) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "first dimension of mean, invstd and count should be the same, but got "
-            "mean: %s, invstd: %s, counts: %s.",
-            op::ToString(mean->GetViewShape()).GetString(), op::ToString(invstd->GetViewShape()).GetString(),
-            op::ToString(counts->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "first dimension of mean, invstd and count should be the same, but got "
+                "mean: %s, invstd: %s, counts: %s.",
+                op::ToString(mean->GetViewShape()).GetString(), op::ToString(invstd->GetViewShape()).GetString(),
+                op::ToString(counts->GetViewShape()).GetString());
         return false;
     }
     int64_t dimC = input->GetViewShape()[1];
     if (mean->GetViewShape()[1] != dimC || invstd->GetViewShape()[1] != dimC) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "second dimension of mean/invstd should be the channel size of input %ld, but got"
-            "mean: %s, invstd: %s.",
-            dimC, op::ToString(mean->GetViewShape()).GetString(), op::ToString(invstd->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "second dimension of mean/invstd should be the channel size of input %ld, but got"
+                "mean: %s, invstd: %s.",
+                dimC, op::ToString(mean->GetViewShape()).GetString(), op::ToString(invstd->GetViewShape()).GetString());
         return false;
     }
     op::Shape expectShape = {dimC};
@@ -165,19 +163,18 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckBatchNormGatherStatsWithCountsParams(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* invstd, aclTensor* runningMean,
-    aclTensor* runningVar, const aclTensor* counts, aclTensor* meanAll, aclTensor* invstdAll)
+static aclnnStatus CheckBatchNormGatherStatsWithCountsParams(const aclTensor* input, const aclTensor* mean,
+                                                             const aclTensor* invstd, aclTensor* runningMean,
+                                                             aclTensor* runningVar, const aclTensor* counts,
+                                                             aclTensor* meanAll, aclTensor* invstdAll)
 {
-    CHECK_COND(
-        CheckNotNull(input, mean, invstd, counts, meanAll, invstdAll), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
-    CHECK_COND(
-        CheckDtypeValid(input, mean, invstd, runningMean, runningVar, counts, meanAll, invstdAll),
-        ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
+    CHECK_COND(CheckNotNull(input, mean, invstd, counts, meanAll, invstdAll), ACLNN_ERR_PARAM_NULLPTR,
+               "CheckNotNull failed!");
+    CHECK_COND(CheckDtypeValid(input, mean, invstd, runningMean, runningVar, counts, meanAll, invstdAll),
+               ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
     CHECK_COND(CheckFormat(input, mean, invstd, counts), ACLNN_ERR_PARAM_INVALID, "CheckFormat failed!");
-    CHECK_COND(
-        CheckShape(input, mean, invstd, runningMean, runningVar, counts, meanAll, invstdAll), ACLNN_ERR_PARAM_INVALID,
-        "CheckShape failed!");
+    CHECK_COND(CheckShape(input, mean, invstd, runningMean, runningVar, counts, meanAll, invstdAll),
+               ACLNN_ERR_PARAM_INVALID, "CheckShape failed!");
     return ACLNN_SUCCESS;
 }
 
@@ -203,8 +200,8 @@ static const aclTensor* CalculateRunningTensor(const aclTensor* runningTensor, i
     return result;
 }
 
-static const aclTensor* CalculateRunningTensorNoCast(
-    const aclTensor* runningTensor, int64_t dimC, op::DataType dtype, aclOpExecutor* executor)
+static const aclTensor* CalculateRunningTensorNoCast(const aclTensor* runningTensor, int64_t dimC, op::DataType dtype,
+                                                     aclOpExecutor* executor)
 {
     const int64_t shapes[] = {1, dimC};
     aclIntArray* shapeArray = executor->AllocIntArray(shapes, sizeof(shapes) / sizeof(int64_t));
@@ -266,8 +263,8 @@ static std::array<const aclTensor*, OUTPUT_TENSOR_NUM> GatherStatsWithCounts(
     auto countAllSumBroadcast = BroadCastTensor(countBroadcast->GetViewShape(), countAllSum, executor);
     CHECK_RET(countAllSumBroadcast != nullptr, nulls);
 
-    auto meanAllOutput =
-        l0op::ReduceMeanWithCount(meanCast, countBroadcast, countAllSumBroadcast, reduceAxesArray, true, executor);
+    auto meanAllOutput = l0op::ReduceMeanWithCount(meanCast, countBroadcast, countAllSumBroadcast, reduceAxesArray,
+                                                   true, executor);
     CHECK_RET(meanAllOutput != nullptr, nulls);
 
     auto meanAllBroadcast = BroadCastTensor(meanCast->GetViewShape(), meanAllOutput, executor);
@@ -279,9 +276,9 @@ static std::array<const aclTensor*, OUTPUT_TENSOR_NUM> GatherStatsWithCounts(
     return {meanAllOutput, batchNormOut[0], batchNormOut[1]};
 }
 
-static aclnnStatus CopyResultTensorToDst(
-    const aclTensor* runningMeanOutput, const aclTensor* runningVarOutput, const aclTensor* runningMeanDst,
-    const aclTensor* runningVarDst, aclOpExecutor* executor)
+static aclnnStatus CopyResultTensorToDst(const aclTensor* runningMeanOutput, const aclTensor* runningVarOutput,
+                                         const aclTensor* runningMeanDst, const aclTensor* runningVarDst,
+                                         aclOpExecutor* executor)
 {
     if (runningMeanDst == nullptr) {
         return ACLNN_SUCCESS;
@@ -306,9 +303,9 @@ static aclnnStatus CopyResultTensorToDst(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CopyRunningTensorToDst(
-    aclTensor* runningMeanDst, aclTensor* runningVarDst, const aclTensor* meanAllOutput,
-    const aclTensor* runningMeanMid, const aclTensor* runningVarOutput, double momentum, aclOpExecutor* executor)
+static aclnnStatus CopyRunningTensorToDst(aclTensor* runningMeanDst, aclTensor* runningVarDst,
+                                          const aclTensor* meanAllOutput, const aclTensor* runningMeanMid,
+                                          const aclTensor* runningVarOutput, double momentum, aclOpExecutor* executor)
 {
     if (runningMeanDst == nullptr) {
         return ACLNN_SUCCESS;
@@ -317,8 +314,8 @@ static aclnnStatus CopyRunningTensorToDst(
     aclIntArray* appendDimsArray = executor->AllocIntArray(appendDims, 1);
 
     aclTensor* runningMean_ = const_cast<aclTensor*>(runningMeanMid);
-    const aclTensor* runningMeanOutput =
-        l0op::SyncBNTrainingUpdate(meanAllOutput, runningMean_, static_cast<float>(momentum), executor);
+    const aclTensor* runningMeanOutput = l0op::SyncBNTrainingUpdate(meanAllOutput, runningMean_,
+                                                                    static_cast<float>(momentum), executor);
     CHECK_RET(runningMeanOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto runningMeanCast_ = runningMeanOutput;
     auto runningVarCast_ = runningVarOutput;
@@ -344,9 +341,8 @@ static aclnnStatus CopyRunningTensorToDst(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CopyMeanAndInvstdToDst(
-    const aclTensor* meanAllOutput, const aclTensor* invstdAllOutput, aclTensor* meanAll, aclTensor* invstdAll,
-    aclOpExecutor* executor)
+static aclnnStatus CopyMeanAndInvstdToDst(const aclTensor* meanAllOutput, const aclTensor* invstdAllOutput,
+                                          aclTensor* meanAll, aclTensor* invstdAll, aclOpExecutor* executor)
 {
     auto meanAllCast = meanAllOutput;
     auto invstdAllCast = invstdAllOutput;
@@ -375,10 +371,11 @@ static aclnnStatus CopyMeanAndInvstdToDst(
     CHECK_RET(invstdAllViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
-static aclnnStatus GatherStatsWithCountsFused(
-    const aclTensor* mean, const aclTensor* invstd, const aclTensor* counts, const aclTensor* runningMean,
-    const aclTensor* runningVar, aclTensor* meanAll, aclTensor* invstdAll, aclTensor* runningMeanDst,
-    aclTensor* runningVarDst, double momentum, double eps, aclOpExecutor* executor)
+static aclnnStatus GatherStatsWithCountsFused(const aclTensor* mean, const aclTensor* invstd, const aclTensor* counts,
+                                              const aclTensor* runningMean, const aclTensor* runningVar,
+                                              aclTensor* meanAll, aclTensor* invstdAll, aclTensor* runningMeanDst,
+                                              aclTensor* runningVarDst, double momentum, double eps,
+                                              aclOpExecutor* executor)
 {
     auto meanContiguous = l0op::Contiguous(mean, executor);
     CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -399,9 +396,9 @@ static aclnnStatus GatherStatsWithCountsFused(
     CHECK_RET(runningVarContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     std::array<const aclTensor*, 4> gatherResult;
-    gatherResult = l0op::SyncBatchNormGatherStatsFused(
-        meanContiguous, invstdContiguous, countsCast, runningMeanContiguous, runningVarContiguous,
-        static_cast<float>(momentum), static_cast<float>(eps), executor);
+    gatherResult = l0op::SyncBatchNormGatherStatsFused(meanContiguous, invstdContiguous, countsCast,
+                                                       runningMeanContiguous, runningVarContiguous,
+                                                       static_cast<float>(momentum), static_cast<float>(eps), executor);
 
     auto meanAllOutput = gatherResult[0];
     CHECK_RET(meanAllOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -421,16 +418,21 @@ static aclnnStatus GatherStatsWithCountsFused(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(
-    const aclTensor* input, const aclTensor* mean, const aclTensor* invstd, aclTensor* runningMean,
-    aclTensor* runningVar, double momentum, double eps, const aclTensor* counts, aclTensor* meanAll,
-    aclTensor* invstdAll, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(const aclTensor* input, const aclTensor* mean,
+                                                                const aclTensor* invstd, aclTensor* runningMean,
+                                                                aclTensor* runningVar, double momentum, double eps,
+                                                                const aclTensor* counts, aclTensor* meanAll,
+                                                                aclTensor* invstdAll, uint64_t* workspaceSize,
+                                                                aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(aclnnBatchNormGatherStatsWithCounts, DFX_IN(input, mean, invstd, runningMean, runningVar, momentum, eps, counts), DFX_OUT(meanAll, invstdAll));
+    L2_DFX_PHASE_1(aclnnBatchNormGatherStatsWithCounts,
+                   DFX_IN(input, mean, invstd, runningMean, runningVar, momentum, eps, counts),
+                   DFX_OUT(meanAll, invstdAll));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    auto ret = CheckBatchNormGatherStatsWithCountsParams(input, mean, invstd, runningMean, runningVar, counts, meanAll, invstdAll);
+    auto ret = CheckBatchNormGatherStatsWithCountsParams(input, mean, invstd, runningMean, runningVar, counts, meanAll,
+                                                         invstdAll);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (mean->IsEmpty()) {
@@ -446,12 +448,15 @@ aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(
     const aclTensor *runningMeanMid = nullptr, *runningVarMid = nullptr;
 
     if (IsSocVersion950()) {
-        runningMeanMid = CalculateRunningTensorNoCast(runningMean, input->GetViewShape()[1], input->GetDataType(), uniqueExecutor.get());
+        runningMeanMid = CalculateRunningTensorNoCast(runningMean, input->GetViewShape()[1], input->GetDataType(),
+                                                      uniqueExecutor.get());
         CHECK_RET(runningMeanMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        runningVarMid = CalculateRunningTensorNoCast(runningVar, input->GetViewShape()[1], input->GetDataType(), uniqueExecutor.get());
+        runningVarMid = CalculateRunningTensorNoCast(runningVar, input->GetViewShape()[1], input->GetDataType(),
+                                                     uniqueExecutor.get());
         CHECK_RET(runningVarMid != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        ret = GatherStatsWithCountsFused(mean, invstd, counts, runningMeanMid, runningVarMid, meanAll, invstdAll, runningMean, runningVar, momentum, eps, uniqueExecutor.get());
+        ret = GatherStatsWithCountsFused(mean, invstd, counts, runningMeanMid, runningVarMid, meanAll, invstdAll,
+                                         runningMean, runningVar, momentum, eps, uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
     } else {
         runningMeanMid = CalculateRunningTensor(runningMean, input->GetViewShape()[1], uniqueExecutor.get());
@@ -467,7 +472,8 @@ aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(
         CHECK_RET(invstdOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto runningVarOutput = gatherResult[RUNNING_VAR_INDEX];
         CHECK_RET(runningVarOutput != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        ret = CopyRunningTensorToDst(runningMean, runningVar, meanAllOutput, runningMeanMid, runningVarOutput, momentum, uniqueExecutor.get());
+        ret = CopyRunningTensorToDst(runningMean, runningVar, meanAllOutput, runningMeanMid, runningVarOutput, momentum,
+                                     uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         ret = CopyMeanAndInvstdToDst(meanAllOutput, invstdOutput, meanAll, invstdAll, uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -477,8 +483,8 @@ aclnnStatus aclnnBatchNormGatherStatsWithCountsGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBatchNormGatherStatsWithCounts(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnBatchNormGatherStatsWithCounts(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnBatchNormGatherStatsWithCounts);
     // 固定写法，调用框架能力，完成计算

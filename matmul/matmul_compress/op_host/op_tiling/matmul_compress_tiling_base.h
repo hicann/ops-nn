@@ -22,9 +22,9 @@
 namespace optiling {
 namespace matmul_compress {
 
-class MatmulCompressTilingBase{
+class MatmulCompressTilingBase {
 public:
-    explicit MatmulCompressTilingBase(gert::TilingContext* context) 
+    explicit MatmulCompressTilingBase(gert::TilingContext* context)
         : context_(context),
           tiling_(context),
           params_(tiling_.matMulInfo_),
@@ -39,7 +39,7 @@ public:
     ge::graphStatus DoTiling();
     void PrintTiling();
     ge::graphStatus PostTiling();
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
 
 private:
     uint64_t tilingKey_{0};
@@ -49,6 +49,6 @@ private:
     pp_matmul::HardwareInfo& hwInfo_;
     pp_matmul::PpMatmulDefaultTilingData& tilingData_;
 };
-}
-}
+} // namespace matmul_compress
+} // namespace optiling
 #endif

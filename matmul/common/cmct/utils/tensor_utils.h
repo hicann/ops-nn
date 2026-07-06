@@ -115,8 +115,8 @@ __aicore__ inline AscendC::GlobalTensor<CTensorTrait_> GetWorkSpaceGlobal(BlockS
 {
     int64_t blockShapeM = Get<0>(blockShape);
     int64_t blockShapeN = Get<1>(blockShape);
-    Layout_ cLayout = AscendC::MakeLayout(
-        AscendC::MakeShape(blockShapeM, blockShapeN), AscendC::MakeStride(blockShapeN, static_cast<int64_t>(1)));
+    Layout_ cLayout = AscendC::MakeLayout(AscendC::MakeShape(blockShapeM, blockShapeN),
+                                          AscendC::MakeStride(blockShapeN, static_cast<int64_t>(1)));
     CTensorTrait_ cTensorTrait = AscendC::MakeTensorTrait<CType_, AscendC::TPosition::GM>(cLayout);
     AscendC::GlobalTensor<CTensorTrait_> workspaceGlobal;
     workspaceGlobal.SetTensorTrait(cTensorTrait);
@@ -139,16 +139,15 @@ __aicore__ inline __gm__ T* GetTensorAddr(uint64_t index, GM_ADDR tensorPtr)
 }
 
 template <class T, AscendC::TPosition Pos, class Layout, class Coord, class Shape>
-__aicore__ inline constexpr auto GetTile(
-    AscendC::GlobalTensor<AscendC::TensorTrait<T, Pos, Layout>> const& tensor, Coord const& coord, Shape const& shape)
+__aicore__ inline constexpr auto GetTile(AscendC::GlobalTensor<AscendC::TensorTrait<T, Pos, Layout>> const& tensor,
+                                         Coord const& coord, Shape const& shape)
 {
     auto layout = tensor.GetTensorTrait().GetLayout();
     auto offset = layout(coord);
     typename AscendC::Std::remove_cvref_t<decltype(tensor)> newTensor;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 3102)
-    if constexpr (
-        AscendC::IsSameType<T, fp4x2_e2m1_t>::value || AscendC::IsSameType<T, fp4x2_e1m2_t>::value ||
-        AscendC::IsSameType<T, AscendC::int4b_t>::value) {
+    if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value || AscendC::IsSameType<T, fp4x2_e1m2_t>::value ||
+                  AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         newTensor.address_ = (__gm__ T*)((__gm__ uint8_t*)tensor.address_ + (offset >> 1));
     } else {
         newTensor.address_ = (__gm__ T*)((__gm__ uint8_t*)tensor.address_ + offset * sizeof(T));
@@ -165,8 +164,8 @@ __aicore__ inline constexpr auto GetTile(
 template <typename CAST_T, typename T>
 __aicore__ inline auto ReinerpretCast(const AscendC::LocalTensor<T>& tensorIn)
 {
-    static_assert(
-        AscendC::is_tensorTrait_v<CAST_T> && AscendC::is_tensorTrait_v<T>, "only support TensorTrait type Tensor!");
+    static_assert(AscendC::is_tensorTrait_v<CAST_T> && AscendC::is_tensorTrait_v<T>,
+                  "only support TensorTrait type Tensor!");
     if constexpr (AscendC::Std::is_same_v<CAST_T, T>) {
         return tensorIn;
     }
@@ -191,8 +190,8 @@ __aicore__ inline constexpr auto MakeTensor(__gm__ T* addr, Layout const& layout
 }
 
 template <typename T, AscendC::TPosition Pos, typename Layout, typename Stride>
-__aicore__ inline auto SetStride(
-    AscendC::LocalTensor<AscendC::TensorTrait<T, Pos, Layout>>& tensor, Stride const& stride)
+__aicore__ inline auto SetStride(AscendC::LocalTensor<AscendC::TensorTrait<T, Pos, Layout>>& tensor,
+                                 Stride const& stride)
 {
     tensor.SetTensorTrait(AscendC::MakeTensorTrait<T, Pos>(AscendC::MakeLayout(tensor.GetShape(), stride)));
     return tensor;
@@ -219,8 +218,8 @@ __aicore__ inline auto CreateTensor(uint32_t addr)
 template <class DataType, class Tensor>
 __aicore__ inline auto ConvertToTensorWithoutLayout(const Tensor& tensor)
 {
-    typename AscendC::Std::conditional_t<
-        AscendC::is_global_tensor_v<Tensor>, AscendC::GlobalTensor<DataType>, AscendC::LocalTensor<DataType>>
+    typename AscendC::Std::conditional_t<AscendC::is_global_tensor_v<Tensor>, AscendC::GlobalTensor<DataType>,
+                                         AscendC::LocalTensor<DataType>>
         normalTensor;
     if constexpr (AscendC::is_global_tensor_v<Tensor>) {
         normalTensor.address_ = tensor.address_;
@@ -309,4 +308,3 @@ __aicore__ inline constexpr bool PosIsL0C()
 
 } // namespace Gemm
 } // namespace Cmct
-

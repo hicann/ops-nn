@@ -25,8 +25,7 @@ static int64_t GetCoreNum()
     auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
     if (ascendcPlatform == nullptr) {
         return 0;
-    }
-    else {
+    } else {
         return ascendcPlatform->GetCoreNumAic();
     }
 }
@@ -36,12 +35,10 @@ static size_t GetSysWorkspaceSize()
     auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
     if (ascendcPlatform == nullptr) {
         return 0;
-    }
-    else {
+    } else {
         return static_cast<size_t>(ascendcPlatform->GetLibApiWorkSpaceSize());
     }
 }
 } // namespace Gemm
 } // namespace Cmct
 #endif
-

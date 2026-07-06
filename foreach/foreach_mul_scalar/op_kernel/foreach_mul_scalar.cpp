@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file foreach_mul_scalar.cpp
  * \brief
@@ -23,14 +22,14 @@ using namespace AscendC;
 using namespace Common::OpKernel;
 
 template <typename T>
-__aicore__ void MulsAdapter(
-    const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, const T& scalarValue, const int32_t& uValue)
+__aicore__ void MulsAdapter(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, const T& scalarValue,
+                            const int32_t& uValue)
 {
     Muls(dstLocal, srcLocal, scalarValue, static_cast<uint32_t>(uValue));
 }
 
-extern "C" __global__ __aicore__ void foreach_mul_scalar(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_mul_scalar(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

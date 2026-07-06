@@ -23,14 +23,10 @@ using namespace AscendC;
 template <typename xDtype, typename yDtype>
 class DynamicQuantMultiRow {
 public:
-    __aicore__ inline DynamicQuantMultiRow(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantMultiRow(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
     {
         blockIdx_ = GetBlockIdx();
         ParseTilingData(tilingData);
@@ -141,8 +137,8 @@ private:
 
     __aicore__ inline void CopyInSmooth()
     {
-        LocalTensor<xDtype> inSmooth =
-            smoothLocal.template ReinterpretCast<xDtype>()[CeilAlign(rowLen, ALIGN_FACTOR_16)];
+        LocalTensor<xDtype> inSmooth = smoothLocal
+                                           .template ReinterpretCast<xDtype>()[CeilAlign(rowLen, ALIGN_FACTOR_16)];
         DataCopyExtParams copyInParamsSmooth{1, static_cast<uint32_t>(rowLen * sizeof(xDtype)), 0, 0, 0};
         DataCopyPadExtParams<xDtype> padParamsSmooth{false, 0, 0, 0};
         DataCopyPad(inSmooth, smoothGm, copyInParamsSmooth, padParamsSmooth);
@@ -179,9 +175,9 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInAndApplySmooth(
-        GlobalTensor<xDtype> srcGm, DataCopyExtParams& copyInParams, DataCopyPadExtParams<xDtype>& padParams,
-        uint32_t ubRows, uint32_t ubNums)
+    __aicore__ inline void CopyInAndApplySmooth(GlobalTensor<xDtype> srcGm, DataCopyExtParams& copyInParams,
+                                                DataCopyPadExtParams<xDtype>& padParams, uint32_t ubRows,
+                                                uint32_t ubNums)
     {
         DataCopyPad(inLocal, srcGm, copyInParams, padParams);
 
@@ -208,8 +204,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeQuantization(
-        uint32_t ubRows, uint32_t ubNums, uint32_t srcShape1[DIMENSION_2], uint32_t dstShape1[DIMENSION_2])
+    __aicore__ inline void ComputeQuantization(uint32_t ubRows, uint32_t ubNums, uint32_t srcShape1[DIMENSION_2],
+                                               uint32_t dstShape1[DIMENSION_2])
     {
         Abs(absTmp, castTmp, ubNums);
         PipeBarrier<PIPE_V>();

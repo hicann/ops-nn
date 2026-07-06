@@ -12,7 +12,7 @@
  * \file segment_sum_simd_tiling.cpp
  * \brief segment_sum_simd_tiling
  */
- 
+
 #include "segment_sum_simd_tiling.h"
 
 namespace optiling {
@@ -31,7 +31,8 @@ static constexpr uint64_t NUM_FOUR = 4;
 static constexpr uint64_t MIN_INNER_SIZE = 256;
 static constexpr size_t WS_SYS_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 
-static const std::set<ge::DataType> setAtomicSupportSimd = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT16, ge::DT_INT32, ge::DT_INT8, ge::DT_BF16};
+static const std::set<ge::DataType> setAtomicSupportSimd = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT16,
+                                                            ge::DT_INT32, ge::DT_INT8,    ge::DT_BF16};
 
 bool SegmentSumSimdTiling::IsAtomicSupport()
 {
@@ -41,13 +42,12 @@ bool SegmentSumSimdTiling::IsAtomicSupport()
     return false;
 }
 
-bool SegmentSumSimdTiling::IsCapable() 
+bool SegmentSumSimdTiling::IsCapable()
 {
     isAtomicSupport_ = IsAtomicSupport();
     bool isInnerSimd = innerDim_ > SIMD_INNER_THRES;
     return isInnerSimd;
 }
-
 
 std::set<int64_t> ListFactors(int64_t usedCoreNum)
 {
@@ -62,11 +62,13 @@ std::set<int64_t> ListFactors(int64_t usedCoreNum)
     return result;
 }
 
-void SegmentSumSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum)
+void SegmentSumSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum,
+                                            int64_t rowTotalNum, int64_t colTotalNum)
 {
     int64_t tmpEleNum = BASE_BLOCK_ALIGN / valueTypeBytes_;
     int64_t colBlockTotalNum = (colTotalNum + tmpEleNum - 1) / tmpEleNum;
-    usedCoreNum = std::min(usedCoreNum, std::max(int64_t(1), rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
+    usedCoreNum = std::min(usedCoreNum,
+                           std::max(int64_t(1), rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
 
     std::set<int64_t> cutSet = ListFactors(usedCoreNum);
     std::vector<std::vector<int64_t>> allTiling;
@@ -173,7 +175,6 @@ void SegmentSumSimdTiling::DoSplitColUBTiling(int64_t availableUbsize)
     tailCoreNormalLoopOutters_ = Ops::Base::CeilDiv(tailCoreOutterNum_, tailCoreRowUbLoop_);
     tailCoreTailLoopOutters_ = tailCoreOutterNum_ - (tailCoreRowUbLoop_ - 1) * tailCoreNormalLoopOutters_;
 
-
     int64_t colNumInUb = colSizeInUb / valueTypeBytes_;
     normalCoreColUbLoop_ = Ops::Base::CeilDiv(normalCoreInnerNum_, colNumInUb);
     normalCoreNormalLoopInners_ = Ops::Base::CeilDiv(normalCoreInnerNum_, normalCoreColUbLoop_);
@@ -186,7 +187,7 @@ void SegmentSumSimdTiling::DoSplitColUBTiling(int64_t availableUbsize)
 
 void SegmentSumSimdTiling::DoUBTiling()
 {
-    int64_t availableUbsize =  ubSize_;
+    int64_t availableUbsize = ubSize_;
 
     bool isFloat = (dataType_ == ge::DT_FLOAT || dataType_ == ge::DT_FLOAT16 || dataType_ == ge::DT_BF16);
     isDeterministic_ = context_->GetDeterministic() == 1 && isFloat && blockNumInRow_ != 1;
@@ -235,11 +236,13 @@ void SegmentSumSimdTiling::DoMultCoreAddTiling()
         tailCoreMultAddInners_ = innerDim_;
     } else {
         uint64_t minInners = MIN_INNER_SIZE / valueTypeBytes_;
-        normalCoreMultAddInners_ = Ops::Base::CeilAlign(std::max(minInners, Ops::Base::CeilDiv(innerDim_, static_cast<uint64_t>(needCoreNum_))), minInners); // 一个核至少处理256B的inner 且Align(256B)
+        normalCoreMultAddInners_ = Ops::Base::CeilAlign(
+            std::max(minInners, Ops::Base::CeilDiv(innerDim_, static_cast<uint64_t>(needCoreNum_))),
+            minInners); // 一个核至少处理256B的inner 且Align(256B)
         usedCoreNumForMultAdd_ = Ops::Base::CeilDiv(static_cast<int64_t>(innerDim_), normalCoreMultAddInners_);
         tailCoreMultAddInners_ = innerDim_ - (usedCoreNumForMultAdd_ - 1) * normalCoreMultAddInners_;
     }
-    int64_t mulAddUbsize =  ubSize_;
+    int64_t mulAddUbsize = ubSize_;
     multAddIdsBufferSize_ = Ops::Base::CeilAlign(NUM_TWO * blockNumInRow_ * idTypeBytes_, ubBlockSize_);
     mulAddUbsize -= multAddIdsBufferSize_;
     mulAddUbsize /= blockNumInRow_ * NUM_TWO + Y_BUFFER_NUM;
@@ -248,11 +251,13 @@ void SegmentSumSimdTiling::DoMultCoreAddTiling()
     int64_t innerNumInUb = availableInnerUb / valueTypeBytes_;
     normalCoreMultAddInnerLoop_ = Ops::Base::CeilDiv(normalCoreMultAddInners_, innerNumInUb);
     normalCoreMultAddNormalLoopInners_ = Ops::Base::CeilDiv(normalCoreMultAddInners_, normalCoreMultAddInnerLoop_);
-    normalCoreMultAddTailLoopInners_ = normalCoreMultAddInners_ - (normalCoreMultAddInnerLoop_ - 1) * normalCoreMultAddNormalLoopInners_;
+    normalCoreMultAddTailLoopInners_ = normalCoreMultAddInners_ -
+                                       (normalCoreMultAddInnerLoop_ - 1) * normalCoreMultAddNormalLoopInners_;
 
     tailCoreMultAddInnerLoop_ = Ops::Base::CeilDiv(tailCoreMultAddInners_, innerNumInUb);
     tailCoreMultAddNormalLoopInners_ = Ops::Base::CeilDiv(tailCoreMultAddInners_, tailCoreMultAddInnerLoop_);
-    tailCoreMultAddTailLoopInners_ = tailCoreMultAddInners_ - (tailCoreMultAddInnerLoop_ - 1) * tailCoreMultAddNormalLoopInners_;
+    tailCoreMultAddTailLoopInners_ = tailCoreMultAddInners_ -
+                                     (tailCoreMultAddInnerLoop_ - 1) * tailCoreMultAddNormalLoopInners_;
 
     multAddXBufferSize_ = blockNumInRow_ * NUM_TWO * availableInnerUb;
     multAddYBufferSize_ = availableInnerUb;
@@ -335,7 +340,8 @@ ge::graphStatus SegmentSumSimdTiling::GetWorkspaceSize()
 {
     size_t useWorkspace = WS_SYS_SIZE; // 可以不用初值
     if (isDeterministic_ || !isAtomicSupport_) {
-        useWorkspace += blockNumInRow_ * NUM_TWO * (innerDim_ * valueTypeBytes_ + idTypeBytes_) + idTypeBytes_; // 对齐idTypeBytes_  头尾id最好需要间隔 cache line
+        useWorkspace += blockNumInRow_ * NUM_TWO * (innerDim_ * valueTypeBytes_ + idTypeBytes_) +
+                        idTypeBytes_; // 对齐idTypeBytes_  头尾id最好需要间隔 cache line
     }
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
@@ -372,7 +378,7 @@ void SegmentSumSimdTiling::DumpTilingInfo()
 
     info << ", normalCoreInnerNum: " << tilingData_->normalCoreInnerNum;
     info << ", normalCoreOutterNum: " << tilingData_->normalCoreOutterNum;
-    
+
     info << ", normalCoreRowUbLoop: " << tilingData_->normalCoreRowUbLoop;
     info << ", normalCoreNormalLoopOutters: " << tilingData_->normalCoreNormalLoopOutters;
     info << ", normalCoreTailLoopOutters: " << tilingData_->normalCoreTailLoopOutters;
@@ -400,9 +406,9 @@ void SegmentSumSimdTiling::DumpTilingInfo()
     info << ", multAddXBufferSize: " << tilingData_->multAddXBufferSize;
     info << ", multAddIdsBufferSize: " << tilingData_->multAddIdsBufferSize;
     info << ", multAddYBufferSize: " << tilingData_->multAddYBufferSize;
-    
+
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
 REGISTER_TILING_TEMPLATE("SegmentSum", SegmentSumSimdTiling, 0);
-}
+} // namespace optiling

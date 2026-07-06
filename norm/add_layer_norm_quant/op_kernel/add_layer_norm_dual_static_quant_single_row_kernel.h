@@ -21,16 +21,14 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormDualStaticQuantSingleRowV2 : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormDualStaticQuantSingleRowV2(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormDualStaticQuantSingleRowV2(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales1, __gm__ uint8_t* scales2, __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2,
-        __gm__ uint8_t* y1, __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* layernormRes, __gm__ uint8_t* fakeOut1, __gm__ uint8_t* fakeOut2,
-        __gm__ uint8_t* workspace, const AddLayerNormQuantV2TilingData* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales1, __gm__ uint8_t* scales2,
+                                __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2, __gm__ uint8_t* y1,
+                                __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* layernormRes,
+                                __gm__ uint8_t* fakeOut1, __gm__ uint8_t* fakeOut2, __gm__ uint8_t* workspace,
+                                const AddLayerNormQuantV2TilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -92,7 +90,7 @@ private:
     }
 
     __aicore__ inline void CopyInAddSingleRowFp32(uint64_t gm_offset, LocalTensor<float> tmpTensors,
-        LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
+                                                  LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
     {
         LocalTensor<float> x1Fp32 = tmpTensors[0];
         LocalTensor<float> x2Fp32 = tmpTensors[this->numLastDimAligned];
@@ -116,7 +114,8 @@ private:
     }
 
     __aicore__ inline void CopyInAddSingleRowFp16(uint64_t gm_offset, LocalTensor<float> tmpTensors,
-        LocalTensor<T> x1In, LocalTensor<T> x2In, LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
+                                                  LocalTensor<T> x1In, LocalTensor<T> x2In, LocalTensor<T> biasIn,
+                                                  LocalTensor<T> tensor_local)
     {
         LocalTensor<float> xTensor = tmpTensors[0];
         LocalTensor<float> yTensor = tmpTensors[this->numLastDimAligned];
@@ -198,8 +197,8 @@ private:
         return rstdLocalTemp;
     }
 
-    __aicore__ inline void ApplyGammaBeta(
-        LocalTensor<float> xTensor, LocalTensor<float> tmpTensor, LocalTensor<T> gammaLocal, LocalTensor<T> betaLocal)
+    __aicore__ inline void ApplyGammaBeta(LocalTensor<float> xTensor, LocalTensor<float> tmpTensor,
+                                          LocalTensor<T> gammaLocal, LocalTensor<T> betaLocal)
     {
         if constexpr (is_same<T, float>::value) {
             Adds(tmpTensor, gammaLocal, ZERO, this->numLastDim);
@@ -225,16 +224,15 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            fp32Tensor.ReinterpretCast<half>(), fp32Tensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            this->numLastDimAligned);
+        Cast(fp32Tensor.ReinterpretCast<half>(), fp32Tensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             this->numLastDimAligned);
         PipeBarrier<PIPE_V>();
         Cast(yLocal, fp32Tensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDimAligned);
     }
 
     __aicore__ inline void QuantizeY1(uint64_t gm_offset, LocalTensor<float> xTensor, LocalTensor<float> tmpTensor,
-        LocalTensor<float> constsTensor, LocalTensor<T> tensor_local, LocalTensor<int8_t> tensor_localY,
-        LocalTensor<T> scales01Tensor)
+                                      LocalTensor<float> constsTensor, LocalTensor<T> tensor_local,
+                                      LocalTensor<int8_t> tensor_localY, LocalTensor<T> scales01Tensor)
     {
         if (this->isPerTensor) {
             Muls(constsTensor, xTensor, perTensorScale1, this->numLastDim);
@@ -289,8 +287,8 @@ private:
         quantizeOutQue.FreeTensor(y1Out);
     }
 
-    __aicore__ inline void CopyInAndCastScales2Offsets2(LocalTensor<float> constsTensor,
-        LocalTensor<float> tmpTensor, LocalTensor<T> tensor_local)
+    __aicore__ inline void CopyInAndCastScales2Offsets2(LocalTensor<float> constsTensor, LocalTensor<float> tmpTensor,
+                                                        LocalTensor<T> tensor_local)
     {
         event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         LocalTensor<T> scales2In = rowInQue.template AllocTensor<T>();
@@ -325,7 +323,8 @@ private:
     }
 
     __aicore__ inline void QuantizeY2(uint64_t gm_offset, LocalTensor<float> xTensor, LocalTensor<float> tmpTensor,
-        LocalTensor<float> constsTensor, LocalTensor<T> tensor_local, LocalTensor<int8_t> tensor_localY)
+                                      LocalTensor<float> constsTensor, LocalTensor<T> tensor_local,
+                                      LocalTensor<int8_t> tensor_localY)
     {
         CopyInAndCastScales2Offsets2(constsTensor, tmpTensor, tensor_local);
 
@@ -404,7 +403,7 @@ private:
             Adds(resLocal, xTensor, 0.0f, this->numLastDim);
         } else if constexpr (is_same<T, half>::value) {
             Cast(resLocal, xTensor, RoundMode::CAST_NONE, this->numLastDimAligned);
-        } else{
+        } else {
             Cast(resLocal, xTensor, RoundMode::CAST_RINT, this->numLastDimAligned);
         }
         PipeBarrier<PIPE_V>();

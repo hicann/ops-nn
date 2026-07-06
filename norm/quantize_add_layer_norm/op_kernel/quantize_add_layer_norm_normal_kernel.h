@@ -25,16 +25,13 @@ class KernelQuantizeAddLayerNormNormalPerTensorKernel {
 #define IS_ADDITIONAL_OUTPUT_ENABLE ((TILING_KEY % 1000) / 100 == 1)
 
 public:
-    __aicore__ inline KernelQuantizeAddLayerNormNormalPerTensorKernel(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelQuantizeAddLayerNormNormalPerTensorKernel(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales, __gm__ uint8_t* offsets, __gm__ uint8_t* y, __gm__ uint8_t* x, uint32_t numCore_,
-        uint32_t numLastDim_, uint32_t numFirstDim_, uint32_t nlFirstDimPerCore_, uint32_t lFirstDimPerCore_,
-        float eps_, float aveNum_)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales, __gm__ uint8_t* offsets,
+                                __gm__ uint8_t* y, __gm__ uint8_t* x, uint32_t numCore_, uint32_t numLastDim_,
+                                uint32_t numFirstDim_, uint32_t nlFirstDimPerCore_, uint32_t lFirstDimPerCore_,
+                                float eps_, float aveNum_)
     {
         numCore = numCore_;
         numLastDim = numLastDim_;
@@ -120,8 +117,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInAndAdd(
-        LocalTensor<float> biasLocal, int32_t proc_id, int32_t row_count, DataCopyPadParams& padParams)
+    __aicore__ inline void CopyInAndAdd(LocalTensor<float> biasLocal, int32_t proc_id, int32_t row_count,
+                                        DataCopyPadParams& padParams)
     {
         uint64_t gm_offset = static_cast<uint64_t>(proc_id) * rowStep * numLastDim;
         auto elementCount = numLastDimAligned * row_count;
@@ -181,8 +178,8 @@ private:
         xQue.FreeTensor(x);
     }
 
-    __aicore__ inline void precision_compute(
-        int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal)
+    __aicore__ inline void precision_compute(int32_t nums, LocalTensor<float>& gammaLocal,
+                                             LocalTensor<float>& betaLocal)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();

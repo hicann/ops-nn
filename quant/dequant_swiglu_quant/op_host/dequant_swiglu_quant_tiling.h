@@ -16,7 +16,6 @@
 #ifndef DEQUANT_SWIGLU_QUANT_TILING_H
 #define DEQUANT_SWIGLU_QUANT_TILING_H
 
-
 #include <vector>
 #include <iostream>
 #include "register/op_impl_registry.h"
@@ -31,15 +30,14 @@
 #include "op_host/tiling_templates_registry.h"
 
 using namespace Ops::NN::Optiling;
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 BEGIN_TILING_DATA_DEF(DequantSwigluQuantBaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, inDimx);
 TILING_DATA_FIELD_DEF(int64_t, inDimy);
 TILING_DATA_FIELD_DEF(int64_t, outDimy);
 TILING_DATA_FIELD_DEF(int64_t, UbFactorDimx);
-TILING_DATA_FIELD_DEF(int64_t, UbFactorDimy);  // cut for output dim
+TILING_DATA_FIELD_DEF(int64_t, UbFactorDimy); // cut for output dim
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, maxCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, inGroupNum);
@@ -87,7 +85,7 @@ TILING_DATA_FIELD_DEF(int64_t, inDimx);
 TILING_DATA_FIELD_DEF(int64_t, inDimy);
 TILING_DATA_FIELD_DEF(int64_t, outDimy);
 TILING_DATA_FIELD_DEF(int64_t, UbFactorDimx);
-TILING_DATA_FIELD_DEF(int64_t, UbFactorDimy);  // cut for output dim
+TILING_DATA_FIELD_DEF(int64_t, UbFactorDimy); // cut for output dim
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, maxCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, inGroupNum);
@@ -96,14 +94,14 @@ TILING_DATA_FIELD_DEF(int64_t, actRight); // swish的激活与门控左右排布
 TILING_DATA_FIELD_DEF(int64_t, dstType);
 TILING_DATA_FIELD_DEF(int64_t, roundMode);
 TILING_DATA_FIELD_DEF(int64_t, activateDim);
-TILING_DATA_FIELD_DEF(int64_t, loopTimesPerRow); // 非全载模板下处理一行需要的UB循环次数
-TILING_DATA_FIELD_DEF(int64_t, tailPerRow); // 非全载模板UB循环最后一次的元素个数
-TILING_DATA_FIELD_DEF(int64_t, swiGluMode); // 0表示swish的激活与门控左右排布，1表示奇偶排布
-TILING_DATA_FIELD_DEF(int64_t, biasMode); // bias类型，0：不存在；1：int32；2：int64
-TILING_DATA_FIELD_DEF(int64_t, groupIndexMode); // group_index类型，0：不存在；1：int32；2：int64
-TILING_DATA_FIELD_DEF(int64_t, quantIsOne); // kernel侧计算时quant尾轴是否为单个元素
-TILING_DATA_FIELD_DEF(int64_t, speGroupType); //groupidx是否2维
-TILING_DATA_FIELD_DEF(int64_t, isSpecialCoreCut);  // 是否多专家少token场景
+TILING_DATA_FIELD_DEF(int64_t, loopTimesPerRow);  // 非全载模板下处理一行需要的UB循环次数
+TILING_DATA_FIELD_DEF(int64_t, tailPerRow);       // 非全载模板UB循环最后一次的元素个数
+TILING_DATA_FIELD_DEF(int64_t, swiGluMode);       // 0表示swish的激活与门控左右排布，1表示奇偶排布
+TILING_DATA_FIELD_DEF(int64_t, biasMode);         // bias类型，0：不存在；1：int32；2：int64
+TILING_DATA_FIELD_DEF(int64_t, groupIndexMode);   // group_index类型，0：不存在；1：int32；2：int64
+TILING_DATA_FIELD_DEF(int64_t, quantIsOne);       // kernel侧计算时quant尾轴是否为单个元素
+TILING_DATA_FIELD_DEF(int64_t, speGroupType);     // groupidx是否2维
+TILING_DATA_FIELD_DEF(int64_t, isSpecialCoreCut); // 是否多专家少token场景
 TILING_DATA_FIELD_DEF(float, clampLimit);
 TILING_DATA_FIELD_DEF(float, gluAlpha);
 TILING_DATA_FIELD_DEF(float, gluBias);
@@ -249,126 +247,119 @@ TILING_DATA_FIELD_DEF(int64_t, roundMode);
 END_TILING_DATA_DEF;
 
 struct DequantSwigluQuantCompileInfo {
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
 };
 
-class DequantSwigluQuantDskTiling : public TilingBaseClass
-{
-  public:
-  explicit DequantSwigluQuantDskTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext)
-  {
-  }
-  ~DequantSwigluQuantDskTiling() override
-  {
-  }
-  uint64_t coreNum_ = 0;
-  uint64_t ubSize_ = 0;
-  int64_t groupNum_ = 0;
-  int64_t actRight_ = 0;
-  int64_t quantMode_ = 0;
-  uint64_t workspaceSize_ = 0;
-  int64_t maxPreCore_ = 0;
-  bool hasWeightScale_ = false;
-  bool hasActivationScale_ = false;
-  bool hasBias_ = false;
-  bool hasQuantScale_ = false;
-  bool hasQuantOffset_ = false;
-  bool hasGroupIndex_ = false;
-  bool speGroupType_ = false;
+class DequantSwigluQuantDskTiling : public TilingBaseClass {
+public:
+    explicit DequantSwigluQuantDskTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {}
+    ~DequantSwigluQuantDskTiling() override {}
+    uint64_t coreNum_ = 0;
+    uint64_t ubSize_ = 0;
+    int64_t groupNum_ = 0;
+    int64_t actRight_ = 0;
+    int64_t quantMode_ = 0;
+    uint64_t workspaceSize_ = 0;
+    int64_t maxPreCore_ = 0;
+    bool hasWeightScale_ = false;
+    bool hasActivationScale_ = false;
+    bool hasBias_ = false;
+    bool hasQuantScale_ = false;
+    bool hasQuantOffset_ = false;
+    bool hasGroupIndex_ = false;
+    bool speGroupType_ = false;
 
-  // variable for SwiGLU used by GPT-OSS
-  int64_t swigluMode_ = 0;
-  float clampLimit_ = 0.0;
-  float gluAlpha_ = 0.0;
-  float gluBias_ = 0.0;
-  
-  protected:
-  bool IsCapable() override;
-  ge::graphStatus GetPlatformInfo() override;
-  ge::graphStatus GetShapeAttrsInfo() override;
-  ge::graphStatus DoOpTiling() override;
-  ge::graphStatus DoLibApiTiling() override;
-  uint64_t GetTilingKey() const override;
-  ge::graphStatus GetWorkspaceSize() override;
-  ge::graphStatus PostTiling() override;
-  void DumpTilingInfo() override;
-  ge::graphStatus GetAttr();
-  ge::graphStatus CheckBias();
-  ge::graphStatus CheckWeightScale();
-  ge::graphStatus CheckActivationScale();
-  ge::graphStatus CheckXAndGroupIndexDtype();
-  ge::graphStatus CheckForDequant();
-  ge::graphStatus CheckForQuant();
-  ge::graphStatus CheckForDynamicQuant();
-  ge::graphStatus CheckForStaticQuant();
-  ge::graphStatus CheckQuantScaleDtype();
-  ge::graphStatus CheckStaticQuantShape(const int64_t quantInputIdx, int64_t& colLen, const char* paramName);
-  ge::graphStatus CheckIllegalParam();
-  void CountTilingKey();
-  ge::graphStatus CountMaxDim(int64_t& ubFactorDimx);
-  ge::graphStatus CheckScaleShapeWithDim(const int64_t scaleInputIdx, const int64_t expectDim, const char* paramName);
-  bool IsPerformanceAndGroupIndexBrach();
-  ge::graphStatus GetShapeAttrsInfoInner();
-  static bool CheckOptionalShapeExisting(const gert::StorageShape* storageShape);
+    // variable for SwiGLU used by GPT-OSS
+    int64_t swigluMode_ = 0;
+    float clampLimit_ = 0.0;
+    float gluAlpha_ = 0.0;
+    float gluBias_ = 0.0;
 
-  private:
-  uint64_t tilingKey_ = 0;
-  DequantSwigluQuantBaseTilingData tilingData_;
-  int64_t inDimx_ = 0;
-  int64_t inDimy_ = 0;
-  int64_t outDimy_ = 0;
-  platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
+protected:
+    bool IsCapable() override;
+    ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    void DumpTilingInfo() override;
+    ge::graphStatus GetAttr();
+    ge::graphStatus CheckBias();
+    ge::graphStatus CheckWeightScale();
+    ge::graphStatus CheckActivationScale();
+    ge::graphStatus CheckXAndGroupIndexDtype();
+    ge::graphStatus CheckForDequant();
+    ge::graphStatus CheckForQuant();
+    ge::graphStatus CheckForDynamicQuant();
+    ge::graphStatus CheckForStaticQuant();
+    ge::graphStatus CheckQuantScaleDtype();
+    ge::graphStatus CheckStaticQuantShape(const int64_t quantInputIdx, int64_t& colLen, const char* paramName);
+    ge::graphStatus CheckIllegalParam();
+    void CountTilingKey();
+    ge::graphStatus CountMaxDim(int64_t& ubFactorDimx);
+    ge::graphStatus CheckScaleShapeWithDim(const int64_t scaleInputIdx, const int64_t expectDim, const char* paramName);
+    bool IsPerformanceAndGroupIndexBrach();
+    ge::graphStatus GetShapeAttrsInfoInner();
+    static bool CheckOptionalShapeExisting(const gert::StorageShape* storageShape);
+
+private:
+    uint64_t tilingKey_ = 0;
+    DequantSwigluQuantBaseTilingData tilingData_;
+    int64_t inDimx_ = 0;
+    int64_t inDimy_ = 0;
+    int64_t outDimy_ = 0;
+    platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
 };
 
 template <typename T>
 inline auto AlignUp(T num, T rnd) -> decltype(num)
 {
-  return (((rnd) == 0) ? 0 : (((num) + (rnd)-1) / (rnd) * (rnd)));
+    return (((rnd) == 0) ? 0 : (((num) + (rnd)-1) / (rnd) * (rnd)));
 }
 // align num to multiples of rnd, round down
 template <typename T>
 inline auto AlignDown(T num, T rnd) -> decltype(num)
 {
-  return ((((rnd) == 0) || ((num) < (rnd))) ? 0 : ((num) / (rnd) * (rnd)));
+    return ((((rnd) == 0) || ((num) < (rnd))) ? 0 : ((num) / (rnd) * (rnd)));
 }
 
 template <typename T>
 inline auto DivCeil(T num, T div) -> decltype(num)
 {
-  return (((div) == 0) ? 0 : (((num) + (div)-1) / (div)));
+    return (((div) == 0) ? 0 : (((num) + (div)-1) / (div)));
 }
 
 inline bool GetLengthByType(int32_t dtype, uint32_t& dsize)
 {
-  switch (dtype) {
-    case ge::DT_FLOAT16:
-    case ge::DT_INT16:
-    case ge::DT_UINT16:
-    case ge::DT_BF16:
-      dsize = sizeof(int16_t);
-      return true;
-    case ge::DT_FLOAT:
-    case ge::DT_INT32:
-    case ge::DT_UINT32:
-      dsize = sizeof(int32_t);
-      return true;
-    case ge::DT_DOUBLE:
-    case ge::DT_INT64:
-    case ge::DT_UINT64:
-      dsize = sizeof(int64_t);
-      return true;
-    default:
-      return false;
-  }
+    switch (dtype) {
+        case ge::DT_FLOAT16:
+        case ge::DT_INT16:
+        case ge::DT_UINT16:
+        case ge::DT_BF16:
+            dsize = sizeof(int16_t);
+            return true;
+        case ge::DT_FLOAT:
+        case ge::DT_INT32:
+        case ge::DT_UINT32:
+            dsize = sizeof(int32_t);
+            return true;
+        case ge::DT_DOUBLE:
+        case ge::DT_INT64:
+        case ge::DT_UINT64:
+            dsize = sizeof(int64_t);
+            return true;
+        default:
+            return false;
+    }
 }
 
 class DequantSwigluQuantV35DskTiling : public TilingBaseClass {
-  public:
-    explicit DequantSwigluQuantV35DskTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {
-    }
-    ~DequantSwigluQuantV35DskTiling() override {
-    }
+public:
+    explicit DequantSwigluQuantV35DskTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {}
+    ~DequantSwigluQuantV35DskTiling() override {}
     uint64_t coreNum_ = 0;
     uint64_t ubSize_ = 0;
     int64_t actRight_ = 0;
@@ -397,8 +388,8 @@ class DequantSwigluQuantV35DskTiling : public TilingBaseClass {
     int64_t dstType_ = 2;
     int64_t roundMode_ = 0;
     int64_t activateDim_ = -1UL;
-  
-    protected:
+
+protected:
     bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -421,25 +412,24 @@ class DequantSwigluQuantV35DskTiling : public TilingBaseClass {
     ge::graphStatus CheckOutputScale();
     ge::graphStatus DoOpTilingNotFull();
     void CalcTilingKeyForNotFull();
-  
-    private:
+
+private:
     uint64_t tilingKey_ = 0;
     DequantSwigluQuantV35BaseTilingData tilingData_;
     int64_t inDimx_ = 0;
     int64_t inDimy_ = 0;
     int64_t outDimy_ = 0;
     platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
- };
+};
 
 class DequantSwigluQuantV35NlastTiling : public TilingBaseClass {
-  public:
-    explicit DequantSwigluQuantV35NlastTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {
-    }
-    ~DequantSwigluQuantV35NlastTiling() override {
-    }
+public:
+    explicit DequantSwigluQuantV35NlastTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {}
+    ~DequantSwigluQuantV35NlastTiling() override {}
     uint64_t coreNum_ = 0;
     uint64_t ubSize_ = 0;
-  protected:
+
+protected:
     bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -451,8 +441,8 @@ class DequantSwigluQuantV35NlastTiling : public TilingBaseClass {
     void FusedShape();
     void DoBlockSplit();
     bool DoUbSplit();
-  
-  private:
+
+private:
     uint64_t tilingKey_ = 0;
     uint64_t workspaceSize_ = 0;
     int32_t actDimIndex_ = 0;
@@ -476,5 +466,5 @@ class DequantSwigluQuantV35NlastTiling : public TilingBaseClass {
     platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
 };
 
-}  // namespace optiling
-#endif  // DEQUANT_SWIGLU_QUANT_TILING_H
+} // namespace optiling
+#endif // DEQUANT_SWIGLU_QUANT_TILING_H

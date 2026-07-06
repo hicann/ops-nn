@@ -26,27 +26,18 @@
 using namespace op;
 using namespace std;
 
-class l2Gather : public testing::Test
-{
+class l2Gather : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2Gather SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2Gather SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2Gather TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2Gather TearDown" << std::endl; }
 
 public:
-    aclTensor* CreateAclTensor(
-        vector<int64_t> view_shape, vector<int64_t> stride, int64_t offset, vector<int64_t> storage_shape,
-        aclDataType dataType = ACL_FLOAT)
+    aclTensor* CreateAclTensor(vector<int64_t> view_shape, vector<int64_t> stride, int64_t offset,
+                               vector<int64_t> storage_shape, aclDataType dataType = ACL_FLOAT)
     {
-        return aclCreateTensor(
-            view_shape.data(), view_shape.size(), dataType, stride.data(), offset, ACL_FORMAT_ND, storage_shape.data(),
-            storage_shape.size(), nullptr);
+        return aclCreateTensor(view_shape.data(), view_shape.size(), dataType, stride.data(), offset, ACL_FORMAT_ND,
+                               storage_shape.data(), storage_shape.size(), nullptr);
     }
 };
 
@@ -76,8 +67,6 @@ TEST_F(l2Gather, case_norm_float32_aicpu)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    
 }
 
 TEST_F(l2Gather, case_norm_float16)
@@ -110,7 +99,6 @@ TEST_F(l2Gather, case_norm_int32_dim0)
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-
 TEST_F(l2Gather, case_norm_int16)
 {
     auto tensor_desc = TensorDesc({4, 4}, ACL_INT16, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -138,7 +126,7 @@ TEST_F(l2Gather, case_norm_uint16)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // 
+    //
 }
 
 TEST_F(l2Gather, case_norm_uint32)
@@ -154,7 +142,7 @@ TEST_F(l2Gather, case_norm_uint32)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // 
+    //
 }
 
 TEST_F(l2Gather, case_norm_uint64)
@@ -170,7 +158,7 @@ TEST_F(l2Gather, case_norm_uint64)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // 
+    //
 }
 
 TEST_F(l2Gather, case_norm_int64)
@@ -185,8 +173,6 @@ TEST_F(l2Gather, case_norm_int64)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    
 }
 
 TEST_F(l2Gather, case_nullptr_self)
@@ -342,8 +328,6 @@ TEST_F(l2Gather, case_empty_tensor)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    
 }
 
 TEST_F(l2Gather, case_format_abnormal)
@@ -376,8 +360,8 @@ TEST_F(l2Gather, case_dtype_abnormal)
 
 TEST_F(l2Gather, case_strided)
 {
-    auto tensor_desc =
-        TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8});
+    auto tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2})
+                           .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8});
     int64_t dim = 0;
     auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2});
     auto index_desc = TensorDesc({2, 4}, ACL_INT64, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).ValueRange(0, 2);
@@ -392,12 +376,11 @@ TEST_F(l2Gather, case_strided)
 TEST_F(l2Gather, case_ascend910B2_expand)
 {
     auto xTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
-    auto indexTensor = CreateAclTensor(
-        {2076, 6144}, {1, 0}, 0,
-        {
-            2076,
-        },
-        ACL_INT64);
+    auto indexTensor = CreateAclTensor({2076, 6144}, {1, 0}, 0,
+                                       {
+                                           2076,
+                                       },
+                                       ACL_INT64);
     auto outTensor = CreateAclTensor({2076, 6144}, {6144, 1}, 0, {2076, 6144});
     int64_t dim = 0;
     uint64_t workspaceSize = 0U;
@@ -410,12 +393,11 @@ TEST_F(l2Gather, case_ascend910B2_expand)
 TEST_F(l2Gather, case_ascend910B2_last_dim)
 {
     auto xTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
-    auto indexTensor = CreateAclTensor(
-        {2076, 6144}, {1, 0}, 0,
-        {
-            2076,
-        },
-        ACL_INT64);
+    auto indexTensor = CreateAclTensor({2076, 6144}, {1, 0}, 0,
+                                       {
+                                           2076,
+                                       },
+                                       ACL_INT64);
     auto outTensor = CreateAclTensor({2076, 6144}, {6144, 1}, 0, {2076, 6144});
     int64_t dim = -1;
     uint64_t workspaceSize = 0U;
@@ -439,6 +421,4 @@ TEST_F(l2Gather, ascend950_case_norm_int32)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-
-    
 }

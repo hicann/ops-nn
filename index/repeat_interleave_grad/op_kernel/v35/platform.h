@@ -39,10 +39,7 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
 /**
  * Get the block size of unified buffer in bytes
  */
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
 /**
  * Get the size of vector registers in bytes
@@ -59,12 +56,12 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 /**
  * Check whether the type is supported by atomic add for simd
  */
-template<typename T>
+template <typename T>
 __aicore__ inline constexpr bool IsSupportAtomicAddTypeSIMD()
 {
 #if __CCE_AICORE__ == 310
     return ops::IsSame<T, float>::value || ops::IsSame<T, half>::value || ops::IsSame<T, int16_t>::value ||
-        ops::IsSame<T, int32_t>::value || ops::IsSame<T, int8_t>::value || ops::IsSame<T, bfloat16_t>::value;
+           ops::IsSame<T, int32_t>::value || ops::IsSame<T, int8_t>::value || ops::IsSame<T, bfloat16_t>::value;
 #else
     return false;
 #endif
@@ -73,11 +70,8 @@ __aicore__ inline constexpr bool IsSupportAtomicAddTypeSIMD()
 } // namespace platform
 
 namespace PlatformSocInfo {
-__aicore__ inline constexpr bool IsDataCopyPadSupport()
-{
-    return platform::IsDataCopyPadSupport();
-}
+__aicore__ inline constexpr bool IsDataCopyPadSupport() { return platform::IsDataCopyPadSupport(); }
 
-}
+} // namespace PlatformSocInfo
 
-#endif  // OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_
+#endif // OPS_BUILT_IN_OP_ASCENDC_PLATFORM_INFO_H_

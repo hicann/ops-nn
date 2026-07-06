@@ -30,26 +30,23 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "activation/softmax_grad/op_host/arch35/softmax_grad_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t NUM_ZERO = 0;
 constexpr int64_t NEGATIVE_ONE = -1;
 constexpr int64_t NEGATIVE_TWO = -2;
 constexpr int64_t NEGATIVE_FOUR = -4;
 
-class ConfusionSoftmaxGradTilingBase : virtual public SoftmaxGradTilingBase
-{
+class ConfusionSoftmaxGradTilingBase : virtual public SoftmaxGradTilingBase {
 public:
     explicit ConfusionSoftmaxGradTilingBase(gert::TilingContext* context)
         : Ops::NN::Optiling::TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~ConfusionSoftmaxGradTilingBase() override = default;
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // NORM_CONFUSION_SOFTMAX_GRAD_TILING_H_
+#endif // NORM_CONFUSION_SOFTMAX_GRAD_TILING_H_

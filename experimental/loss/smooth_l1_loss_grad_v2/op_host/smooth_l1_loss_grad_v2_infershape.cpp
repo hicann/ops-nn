@@ -41,9 +41,8 @@ static std::string GetReductionAttr(gert::InferShapeContext* context)
             reduction = *attr;
         }
     }
-    std::transform(reduction.begin(), reduction.end(), reduction.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
+    std::transform(reduction.begin(), reduction.end(), reduction.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (reduction == "n")
         reduction = "none";
     else if (reduction == "s")
@@ -65,18 +64,16 @@ static ge::graphStatus InferShapeSmoothL1LossGradV2(gert::InferShapeContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, labelShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, doutShape);
 
-    OP_CHECK_IF(
-        predictShape->GetDimNum() != labelShape->GetDimNum(),
-        OP_LOGE(
-            context, "Predict and label rank mismatch: %zu vs %zu", predictShape->GetDimNum(), labelShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(predictShape->GetDimNum() != labelShape->GetDimNum(),
+                OP_LOGE(context, "Predict and label rank mismatch: %zu vs %zu", predictShape->GetDimNum(),
+                        labelShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < predictShape->GetDimNum(); ++i) {
-        OP_CHECK_IF(
-            predictShape->GetDim(i) != labelShape->GetDim(i),
-            OP_LOGE(
-                context, "Shape mismatch at dim %zu: %ld vs %ld", i, predictShape->GetDim(i), labelShape->GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(predictShape->GetDim(i) != labelShape->GetDim(i),
+                    OP_LOGE(context, "Shape mismatch at dim %zu: %ld vs %ld", i, predictShape->GetDim(i),
+                            labelShape->GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
 
     std::string reduction = GetReductionAttr(context);
@@ -85,23 +82,20 @@ static ge::graphStatus InferShapeSmoothL1LossGradV2(gert::InferShapeContext* con
 
     if (reduction == "sum" || reduction == "mean") {
         if (!doutScalar) {
-            OP_LOGE(
-                context, "For reduction='%s', dout must be scalar (0D or 1D length 1), but got %zuD", reduction.c_str(),
-                doutShape->GetDimNum());
+            OP_LOGE(context, "For reduction='%s', dout must be scalar (0D or 1D length 1), but got %zuD",
+                    reduction.c_str(), doutShape->GetDimNum());
             return GRAPH_FAILED;
         }
     } else if (reduction == "none") {
         if (doutShape->GetDimNum() != predictShape->GetDimNum()) {
-            OP_LOGE(
-                context, "For reduction='none', dout rank must match predict rank: %zu vs %zu", doutShape->GetDimNum(),
-                predictShape->GetDimNum());
+            OP_LOGE(context, "For reduction='none', dout rank must match predict rank: %zu vs %zu",
+                    doutShape->GetDimNum(), predictShape->GetDimNum());
             return GRAPH_FAILED;
         }
         for (size_t i = 0; i < predictShape->GetDimNum(); ++i) {
             if (doutShape->GetDim(i) != predictShape->GetDim(i)) {
-                OP_LOGE(
-                    context, "For reduction='none', dout shape mismatch at dim %zu: %ld vs %ld", i,
-                    doutShape->GetDim(i), predictShape->GetDim(i));
+                OP_LOGE(context, "For reduction='none', dout shape mismatch at dim %zu: %ld vs %ld", i,
+                        doutShape->GetDim(i), predictShape->GetDim(i));
                 return GRAPH_FAILED;
             }
         }

@@ -82,8 +82,8 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensor* values, 
 }
 } // namespace
 
-aclnnStatus aclnnHeavisideGetWorkspaceSize(
-    const aclTensor* input, const aclTensor* values, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnHeavisideGetWorkspaceSize(const aclTensor* input, const aclTensor* values, aclTensor* out,
+                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

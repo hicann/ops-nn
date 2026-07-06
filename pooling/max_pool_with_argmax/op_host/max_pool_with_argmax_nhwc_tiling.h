@@ -19,8 +19,7 @@
 #include "max_pool_with_argmax_tiling.h"
 #include "../op_kernel/arch35/max_pool_with_argmax_struct_common.h"
 
-namespace optiling
-{
+namespace optiling {
 
 struct MaxPoolWithArgmaxNhwcBaseInfo {
     int64_t inputBytes{0};
@@ -127,16 +126,11 @@ struct MaxPoolWithArgmaxNhwcSplitInfo {
     }
 };
 
-class MaxPoolWithArgmaxNhwcTiling : public MaxPoolWithArgmaxBaseTiling
-{
+class MaxPoolWithArgmaxNhwcTiling : public MaxPoolWithArgmaxBaseTiling {
 public:
-    explicit MaxPoolWithArgmaxNhwcTiling(gert::TilingContext* context) : MaxPoolWithArgmaxBaseTiling(context)
-    {
-    }
+    explicit MaxPoolWithArgmaxNhwcTiling(gert::TilingContext* context) : MaxPoolWithArgmaxBaseTiling(context) {}
 
-    ~MaxPoolWithArgmaxNhwcTiling() override
-    {
-    }
+    ~MaxPoolWithArgmaxNhwcTiling() override {}
 
 private:
     void DoUBTiling();
@@ -144,7 +138,7 @@ private:
     bool IsMeetTargetCoreNum() const;
     bool IsMeetUBSize();
     void SearchBestTiling();
-    void BinarySearch(int64_t start, int64_t end, int64_t *value, int64_t rate = 1);
+    void BinarySearch(int64_t start, int64_t end, int64_t* value, int64_t rate = 1);
     bool TrySplitN();
     bool TrySplitH();
     bool TrySplitW();
@@ -164,6 +158,6 @@ private:
     MaxPoolWithArgmaxNhwcSplitInfo splitData_;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

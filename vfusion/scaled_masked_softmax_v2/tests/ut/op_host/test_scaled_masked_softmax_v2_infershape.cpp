@@ -19,18 +19,11 @@
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
-class ScaledMaskedSoftmaxV2Proto : public testing::Test
-{
+class ScaledMaskedSoftmaxV2Proto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ScaledMaskedSoftmaxV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ScaledMaskedSoftmaxV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ScaledMaskedSoftmaxV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ScaledMaskedSoftmaxV2 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(ScaledMaskedSoftmaxV2Proto, inferShape)
@@ -47,9 +40,8 @@ TEST_F(ScaledMaskedSoftmaxV2Proto, inferShape)
                       .IrInstanceNum({1, 1})
                       .InputShapes({&xShape, &maskShape})
                       .OutputShapes({&yShape})
-                      .NodeAttrs(
-                          {{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -69,9 +61,8 @@ TEST_F(ScaledMaskedSoftmaxV2Proto, inferDataType)
                       .IrInstanceNum({1, 1})
                       .InputDataTypes({&xDtype, &maskDtype})
                       .OutputDataTypes({&yDtype})
-                      .NodeAttrs(
-                          {{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"fixed_triu_mask", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
 
     ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);

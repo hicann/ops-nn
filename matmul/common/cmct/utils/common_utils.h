@@ -132,15 +132,14 @@ __aicore__ inline constexpr static bool IsQuantSenario()
 {
     using L0cT = typename AscendC::GetMmDstType<AType>::Type;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    if constexpr (
-        !AscendC::IsTypeOneOfV<AType, int8_t, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, fp4x2_e2m1_t, fp4x2_e1m2_t> &&
-        AscendC::IsTypeOneOfV<CType, half, bfloat16_t>) {
+    if constexpr (!AscendC::IsTypeOneOfV<AType, int8_t, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, fp4x2_e2m1_t,
+                                         fp4x2_e1m2_t> &&
+                  AscendC::IsTypeOneOfV<CType, half, bfloat16_t>) {
         return false;
     }
-    if constexpr (
-        AscendC::IsTypeOneOfV<AType, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, fp4x2_e2m1_t, fp4x2_e1m2_t> &&
-        AscendC::IsTypeOneOfV<
-            CType, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, half, bfloat16_t, float, fp4x2_e2m1_t, fp4x2_e1m2_t>) {
+    if constexpr (AscendC::IsTypeOneOfV<AType, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, fp4x2_e2m1_t, fp4x2_e1m2_t> &&
+                  AscendC::IsTypeOneOfV<CType, hifloat8_t, fp8_e4m3fn_t, fp8_e5m2_t, half, bfloat16_t, float,
+                                        fp4x2_e2m1_t, fp4x2_e1m2_t>) {
         return true;
     }
     if constexpr (AscendC::IsSameTypeV<L0cT, int32_t> && AscendC::IsSameTypeV<CType, bfloat16_t>) {
@@ -175,9 +174,9 @@ struct is_2d_nz_c0_32_impl : AscendC::Std::false_type {};
 
 template <typename T0, typename T1, typename U0, typename U1>
 struct is_2d_nz_c0_32_impl<AscendC::Std::tuple<AscendC::Std::tuple<T0, T1>, AscendC::Std::tuple<U0, U1>>>
-    : AscendC::Std::bool_constant<
-          AscendC::Std::is_same_v<T0, Cmct::Gemm::_32> && AscendC::Std::is_same_v<T1, Cmct::Gemm::_512> &&
-          AscendC::Std::is_same_v<U0, Cmct::Gemm::_1> && !is_static_v<U1>> {};
+    : AscendC::Std::bool_constant<AscendC::Std::is_same_v<T0, Cmct::Gemm::_32> &&
+                                  AscendC::Std::is_same_v<T1, Cmct::Gemm::_512> &&
+                                  AscendC::Std::is_same_v<U0, Cmct::Gemm::_1> && !is_static_v<U1>> {};
 
 template <class Stride>
 struct is_2d_nz_c0_32 : is_2d_nz_c0_32_impl<typename AscendC::Std::remove_cvref_t<Stride>> {};

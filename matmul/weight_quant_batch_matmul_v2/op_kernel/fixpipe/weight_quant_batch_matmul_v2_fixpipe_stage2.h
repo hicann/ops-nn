@@ -26,13 +26,12 @@ using AscendC::LoadData2DParams;
 
 // a * weight_fp16 + bias_fp16 = y_fp16
 template <bool hasBias>
-class WeightQuantBatchMatmulV2FixpipeStage2
-{
+class WeightQuantBatchMatmulV2FixpipeStage2 {
 public:
     __aicore__ inline WeightQuantBatchMatmulV2FixpipeStage2(){};
-    __aicore__ inline void Init(
-        const LocalTensor<half>& a16L0A, const LocalTensor<half>& w16L0B, const LocalTensor<float>& biasBT,
-        const LocalTensor<float>& y32C01, const GlobalTensor<half>& yGm)
+    __aicore__ inline void Init(const LocalTensor<half>& a16L0A, const LocalTensor<half>& w16L0B,
+                                const LocalTensor<float>& biasBT, const LocalTensor<float>& y32C01,
+                                const GlobalTensor<half>& yGm)
     {
         // L0A DB
         a16L0A_ = a16L0A;
@@ -121,9 +120,8 @@ public:
     __aicore__ inline void LoadW16InB2Trans(const LocalTensor<half>& w16B1)
     {
         for (uint64_t i = 0; i < nProcessFracBlk_; ++i) {
-            LoadData(
-                w16L0B_[pingPongOffset_ + i * FRAC_SIZE_HALF], w16B1[i * kbFracStride_],
-                w16InB01Params_); // nz->zn
+            LoadData(w16L0B_[pingPongOffset_ + i * FRAC_SIZE_HALF], w16B1[i * kbFracStride_],
+                     w16InB01Params_); // nz->zn
         }
     }
 
@@ -152,8 +150,8 @@ public:
         LoadW16InB2Trans(w16B1);
     }
 
-    __aicore__ inline void Process2(
-        const uint64_t nOffset, const bool isFirst, const bool isLast, const uint64_t outOffset)
+    __aicore__ inline void Process2(const uint64_t nOffset, const bool isFirst, const bool isLast,
+                                    const uint64_t outOffset)
     {
         if (isFirst) {
             ComputeY32Bias(nOffset);

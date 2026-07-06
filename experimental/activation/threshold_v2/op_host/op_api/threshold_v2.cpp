@@ -28,9 +28,8 @@ namespace l0op {
 
 OP_TYPE_REGISTER(ThresholdV2);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
 static bool IsAiCoreSupport(const aclTensor* self)
 {
@@ -42,43 +41,29 @@ static bool IsAiCoreSupport(const aclTensor* self)
                      static_cast<int>(npuArch)),
              return false);
     OP_CHECK(CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "ThresholdV2 supports DT_FLOAT/DT_FLOAT16/DT_BFLOAT16, got %d.",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ThresholdV2 supports DT_FLOAT/DT_FLOAT16/DT_BFLOAT16, got %d.",
                      static_cast<int>(self->GetDataType())),
              return false);
     return true;
 }
 
-static const aclTensor* ThresholdV2AiCore(const aclTensor* self,
-                                           float thresholdF,
-                                           float valueF,
-                                           const aclTensor* out,
-                                           aclOpExecutor* executor)
+static const aclTensor* ThresholdV2AiCore(const aclTensor* self, float thresholdF, float valueF, const aclTensor* out,
+                                          aclOpExecutor* executor)
 {
     L0_DFX(ThresholdV2AiCore, self, thresholdF, valueF, out);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ThresholdV2,
-        OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(thresholdF, valueF));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ThresholdV2AiCore failed."),
-             return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ThresholdV2, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(thresholdF, valueF));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ThresholdV2AiCore failed."), return nullptr);
     return out;
 }
 
-const aclTensor* ThresholdV2(const aclTensor* self,
-                              float thresholdF,
-                              float valueF,
-                              aclOpExecutor* executor)
+const aclTensor* ThresholdV2(const aclTensor* self, float thresholdF, float valueF, aclOpExecutor* executor)
 {
     op::Shape outShape = self->GetViewShape();
 
-    OP_CHECK(IsAiCoreSupport(self),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "IsAiCoreSupport check failed."),
-             return nullptr);
+    OP_CHECK(IsAiCoreSupport(self), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "IsAiCoreSupport check failed."), return nullptr);
 
     const aclTensor* out = executor->AllocTensor(outShape, self->GetDataType());
-    OP_CHECK(out != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocTensor failed."),
-             return nullptr);
+    OP_CHECK(out != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocTensor failed."), return nullptr);
 
     return ThresholdV2AiCore(self, thresholdF, valueF, out, executor);
 }

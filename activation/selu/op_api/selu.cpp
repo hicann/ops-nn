@@ -23,16 +23,18 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(Selu);
 
-static const aclTensor *SeluAiCore(const aclTensor *self, aclTensor *out, aclOpExecutor *executor) {
-  L0_DFX(SeluAiCore, self, out);
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(Selu, OP_INPUT(self), OP_OUTPUT(out));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "Selu ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return out;
+static const aclTensor* SeluAiCore(const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+{
+    L0_DFX(SeluAiCore, self, out);
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(Selu, OP_INPUT(self), OP_OUTPUT(out));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "Selu ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return out;
 }
 
-const aclTensor *Selu(const aclTensor *self, aclOpExecutor *executor) {
-  auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-  return SeluAiCore(self, out, executor);
+const aclTensor* Selu(const aclTensor* self, aclOpExecutor* executor)
+{
+    auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    return SeluAiCore(self, out, executor);
 }
-}  // namespace l0op
+} // namespace l0op

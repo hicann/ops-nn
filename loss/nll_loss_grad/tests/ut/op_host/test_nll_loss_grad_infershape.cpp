@@ -17,17 +17,14 @@
 
 // ----------------NLLLossGrad--------------
 class nll_loss_grad : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "nll_loss_grad SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "nll_loss_grad SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "nll_loss_grad TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "nll_loss_grad TearDown" << std::endl; }
 };
 
-TEST_F(nll_loss_grad, nll_loss_grad_infershape_test1) {
+TEST_F(nll_loss_grad, nll_loss_grad_infershape_test1)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -43,21 +40,19 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test1) {
     gert::Shape output_shape = {};
 
     auto holder = gert::InferShapeContextFaker()
-                        .NodeIoNum(5, 1)
-                        .IrInstanceNum({1, 1, 1, 1, 1})
-                        .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
-                        .OutputShapes({&output_shape})
-                        .NodeAttrs({
-                            {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                            {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}
-                        })
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
@@ -66,7 +61,8 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test1) {
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
-TEST_F(nll_loss_grad, nll_loss_grad_infershape_test2) {
+TEST_F(nll_loss_grad, nll_loss_grad_infershape_test2)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -82,21 +78,19 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test2) {
     gert::Shape output_shape = {};
 
     auto holder = gert::InferShapeContextFaker()
-                        .NodeIoNum(5, 1)
-                        .IrInstanceNum({1, 1, 1, 1, 1})
-                        .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
-                        .OutputShapes({&output_shape})
-                        .NodeAttrs({
-                            {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                            {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}
-                        })
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
@@ -105,7 +99,8 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test2) {
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
-TEST_F(nll_loss_grad, nll_loss_grad_infershape_test3) {
+TEST_F(nll_loss_grad, nll_loss_grad_infershape_test3)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -121,21 +116,19 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test3) {
     gert::Shape output_shape = {};
 
     auto holder = gert::InferShapeContextFaker()
-                        .NodeIoNum(5, 1)
-                        .IrInstanceNum({1, 1, 1, 1, 1})
-                        .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
-                        .OutputShapes({&output_shape})
-                        .NodeAttrs({
-                            {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                            {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}
-                        })
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 
@@ -144,7 +137,8 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test3) {
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
-TEST_F(nll_loss_grad, nll_loss_grad_infershape_test4) {
+TEST_F(nll_loss_grad, nll_loss_grad_infershape_test4)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -160,21 +154,19 @@ TEST_F(nll_loss_grad, nll_loss_grad_infershape_test4) {
     gert::Shape output_shape = {};
 
     auto holder = gert::InferShapeContextFaker()
-                        .NodeIoNum(5, 1)
-                        .IrInstanceNum({1, 1, 1, 1, 1})
-                        .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
-                        .OutputShapes({&output_shape})
-                        .NodeAttrs({
-                            {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                            {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}
-                        })
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .Build();
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&xShape, &xShape, &xShape, &xShape, &xShape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
@@ -189,21 +181,19 @@ TEST_F(nll_loss_grad, success_dtype_infer_0)
         ge::DataType input_ref2 = ge::DT_INT32;
         ge::DataType output_ref = ge::DT_FLOAT;
         auto holder = gert::InferDataTypeContextFaker()
-            .NodeIoNum(5, 1)
-            .IrInstanceNum({1,1,1,1,1})
-            .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({
-                        {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                        {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}
-                        })
-            .InputDataTypes({ &input_ref1, &input_ref1, &input_ref2, &input_ref1, &input_ref1})
-            .OutputDataTypes({ &output_ref })
-            .Build();
+                          .NodeIoNum(5, 1)
+                          .IrInstanceNum({1, 1, 1, 1, 1})
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                      {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                          .InputDataTypes({&input_ref1, &input_ref1, &input_ref2, &input_ref1, &input_ref1})
+                          .OutputDataTypes({&output_ref})
+                          .Build();
 
         auto context = holder.GetContext<gert::InferDataTypeContext>();
         ASSERT_NE(context, nullptr);
@@ -222,21 +212,19 @@ TEST_F(nll_loss_grad, fail_dtype_infer_0)
         ge::DataType input_ref2 = ge::DT_INT32;
         ge::DataType output_ref = ge::DT_INT32;
         auto holder = gert::InferDataTypeContextFaker()
-            .NodeIoNum(5, 1)
-            .IrInstanceNum({1,1,1,1,1})
-            .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({
-                        {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                        {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}
-                        })
-            .InputDataTypes({ &input_ref1, &input_ref1, &input_ref1, &input_ref1, &input_ref1})
-            .OutputDataTypes({ &output_ref })
-            .Build();
+                          .NodeIoNum(5, 1)
+                          .IrInstanceNum({1, 1, 1, 1, 1})
+                          .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                      {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                          .InputDataTypes({&input_ref1, &input_ref1, &input_ref1, &input_ref1, &input_ref1})
+                          .OutputDataTypes({&output_ref})
+                          .Build();
 
         auto context = holder.GetContext<gert::InferDataTypeContext>();
         ASSERT_NE(context, nullptr);

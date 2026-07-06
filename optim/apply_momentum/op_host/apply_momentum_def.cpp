@@ -16,8 +16,7 @@
 
 namespace ops {
 
-class ApplyMomentum : public OpDef
-{
+class ApplyMomentum : public OpDef {
 public:
     explicit ApplyMomentum(const char* name) : OpDef(name)
     {

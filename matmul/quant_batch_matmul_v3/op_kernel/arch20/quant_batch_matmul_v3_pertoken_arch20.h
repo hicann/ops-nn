@@ -34,7 +34,6 @@ constexpr uint32_t L1_PINGPONG_BUFFER_LEN_INT8 = 131072;
 constexpr uint32_t MAX_NUMEL_INST_B32 = 255 * 64;
 constexpr uint32_t UB_SCALE_BLOCK_SIZE = 8;
 
-
 constexpr uint32_t UB_C_OFFSET = 8 * 1024;
 constexpr uint32_t UB_C_TEMP_OFFSET = 8 * 1024 + 64 * 1024;
 constexpr uint32_t UB_BIAS_OFFSET = 8 * 1024 + 192 * 1024;
@@ -43,10 +42,9 @@ constexpr uint32_t UB_PERTOKEN_SCALE_CALC_OFFSET = 214 * 1024;
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
 
-template <
-    uint32_t SwizzleDir, bool BiasFlag, CubeFormat FormatA = CubeFormat::NZ, CubeFormat FormatB = CubeFormat::NZ,
-    CubeFormat FormatY = CubeFormat::NZ, typename IN_DTYPE = int8_t, typename DESCALE_TYPE = float,
-    typename BIAS_TYPE = int32_t, typename OUT_TYPE = half>
+template <uint32_t SwizzleDir, bool BiasFlag, CubeFormat FormatA = CubeFormat::NZ, CubeFormat FormatB = CubeFormat::NZ,
+          CubeFormat FormatY = CubeFormat::NZ, typename IN_DTYPE = int8_t, typename DESCALE_TYPE = float,
+          typename BIAS_TYPE = int32_t, typename OUT_TYPE = half>
 class QuantBatchMatMulPertokenArch20 {
 public:
     __aicore__ explicit QuantBatchMatMulPertokenArch20()
@@ -57,9 +55,8 @@ public:
         SetMasknorm();
     };
 
-    __aicore__ FORCE_INLINE void Init(
-        GM_ADDR A, GM_ADDR B, GM_ADDR bias, GM_ADDR scale, GM_ADDR pertoken_scale, GM_ADDR C,
-        const QuantMatmulPertokenTilingDataArch20* tilingData)
+    __aicore__ FORCE_INLINE void Init(GM_ADDR A, GM_ADDR B, GM_ADDR bias, GM_ADDR scale, GM_ADDR pertoken_scale,
+                                      GM_ADDR C, const QuantMatmulPertokenTilingDataArch20* tilingData)
     {
         gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE*>(A));
         gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE*>(B));
@@ -100,9 +97,9 @@ public:
         ub_pertoken_scale_calc = buf.template GetBuffer<BufferType::ASCEND_UB, float>(UB_PERTOKEN_SCALE_CALC_OFFSET);
     }
 
-    __aicore__ FORCE_INLINE void CopyTileA(
-        AscendC::LocalTensor<IN_DTYPE>& dstTensor, const AscendC::GlobalTensor<IN_DTYPE>& srcTensor,
-        const uint64_t m_actual, const uint64_t m_round, const uint64_t k_actual, const uint64_t k_round)
+    __aicore__ FORCE_INLINE void CopyTileA(AscendC::LocalTensor<IN_DTYPE>& dstTensor,
+                                           const AscendC::GlobalTensor<IN_DTYPE>& srcTensor, const uint64_t m_actual,
+                                           const uint64_t m_round, const uint64_t k_actual, const uint64_t k_round)
     {
         if (((m_ == 1) || (m_actual == 1)) && FormatA == CubeFormat::ND) {
             gm_to_l1<ArchType::ASCEND_V220, IN_DTYPE, DataFormat::ND, DataFormat::ND>(
@@ -119,9 +116,8 @@ public:
                 int dstOffset = 0;
                 int srcOffset = 0;
                 for (int i = 0; i < k_round / BLOCK_SIZE_32; i++) {
-                    AscendC::DataCopy(
-                        dstTensor[dstOffset], srcTensor[srcOffset],
-                        AscendC::DataCopyParams(m_round, 1, k_ / BLOCK_SIZE_32 - 1, 0));
+                    AscendC::DataCopy(dstTensor[dstOffset], srcTensor[srcOffset],
+                                      AscendC::DataCopyParams(m_round, 1, k_ / BLOCK_SIZE_32 - 1, 0));
                     dstOffset += m_round * BLOCK_SIZE_32;
                     srcOffset += BLOCK_SIZE_32;
                 }
@@ -161,22 +157,20 @@ public:
         }
     }
 
-    __aicore__ FORCE_INLINE void CubeMmad(
-        AscendC::LocalTensor<int32_t> l0cTensor, AscendC::LocalTensor<IN_DTYPE> l0aTensor,
-        AscendC::LocalTensor<IN_DTYPE> l0bTensor, uint32_t mTileActual, uint32_t nTileActual, uint32_t kPartActual,
-        bool initC, uint8_t unitFlag = 0)
+    __aicore__ FORCE_INLINE void CubeMmad(AscendC::LocalTensor<int32_t> l0cTensor,
+                                          AscendC::LocalTensor<IN_DTYPE> l0aTensor,
+                                          AscendC::LocalTensor<IN_DTYPE> l0bTensor, uint32_t mTileActual,
+                                          uint32_t nTileActual, uint32_t kPartActual, bool initC, uint8_t unitFlag = 0)
     {
-        AscendC::Mmad(
-            l0cTensor, // C
-            l0aTensor, // A
-            l0bTensor, // B
-            AscendC::MmadParams(
-                mTileActual, // m
-                nTileActual, // n
-                kPartActual, // k
-                unitFlag,    // unitFlag
-                false,       // cmatrixSource
-                initC));     // cmatrixInitVal
+        AscendC::Mmad(l0cTensor,                       // C
+                      l0aTensor,                       // A
+                      l0bTensor,                       // B
+                      AscendC::MmadParams(mTileActual, // m
+                                          nTileActual, // n
+                                          kPartActual, // k
+                                          unitFlag,    // unitFlag
+                                          false,       // cmatrixSource
+                                          initC));     // cmatrixInitVal
     }
 
     __aicore__ FORCE_INLINE void Process()
@@ -235,13 +229,12 @@ public:
             if constexpr (BiasFlag) {
                 WAIT_FLAG(V, MTE2, EVENT_ID0);
                 uint32_t bias_offset = BiasWithBatch ? b_idx * n_ + n_idx * n0_ : n_idx * n0_;
-                gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(
-                    ub_bias, gm_bias[bias_offset],
-                    0,           // sid
-                    1,           // nBurst
-                    n_round / CONST_8, // lenBurst
-                    0,           // srcStride
-                    0            // dstStride
+                gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(ub_bias, gm_bias[bias_offset],
+                                                           0,                 // sid
+                                                           1,                 // nBurst
+                                                           n_round / CONST_8, // lenBurst
+                                                           0,                 // srcStride
+                                                           0                  // dstStride
                 );
                 SET_FLAG(MTE2, V, EVENT_ID0);
             }
@@ -270,12 +263,12 @@ public:
                     if constexpr (FormatA == CubeFormat::ND) {
                         offset_a_next = b_idx * m_ * k_ + m_idx * m0_ * k_ + (k_idx + 1) * k0_;
                     } else {
-                        offset_a_next =
-                            b_idx * m_org_up * k_org_up + (k_idx + 1) * k0_ * m_org_up + m_idx * m0_ * BLOCK_SIZE_32;
+                        offset_a_next = b_idx * m_org_up * k_org_up + (k_idx + 1) * k0_ * m_org_up +
+                                        m_idx * m0_ * BLOCK_SIZE_32;
                     }
 
-                    offset_b_next =
-                        b_idx * n_org_up * k_org_up + (k_idx + 1) * k0_ * n_org_up + n_idx * n0_ * BLOCK_SIZE_32;
+                    offset_b_next = b_idx * n_org_up * k_org_up + (k_idx + 1) * k0_ * n_org_up +
+                                    n_idx * n0_ * BLOCK_SIZE_32;
                     AscendC::LocalTensor<IN_DTYPE> l1_buf_a_next = (1 - l1_ping_pong) ? l1_a_ping : l1_a_pong;
                     AscendC::LocalTensor<IN_DTYPE> l1_buf_b_next = (1 - l1_ping_pong) ? l1_b_ping : l1_b_pong;
                     event_t l1_a_event_next = (1 - l1_ping_pong) ? EVENT_ID0 : EVENT_ID1;
@@ -366,30 +359,28 @@ public:
             AscendC::PipeBarrier<PIPE_MTE2>();
             WAIT_FLAG(V, MTE2, EVENT_ID1);
             // copy x1Scale
-            gm_to_ub<ArchType::ASCEND_V200, DESCALE_TYPE>(
-                ub_scale, gm_scale[n_idx * n0_],
-                0,                             // sid
-                1,                             // nBurst
-                n_round / UB_SCALE_BLOCK_SIZE, // lenBurst
-                0,                             // srcStride
-                0                              // dstStride
+            gm_to_ub<ArchType::ASCEND_V200, DESCALE_TYPE>(ub_scale, gm_scale[n_idx * n0_],
+                                                          0,                             // sid
+                                                          1,                             // nBurst
+                                                          n_round / UB_SCALE_BLOCK_SIZE, // lenBurst
+                                                          0,                             // srcStride
+                                                          0                              // dstStride
             );
             // copy x2Scale
-            gm_to_ub<ArchType::ASCEND_V220, float>(
-                ub_pertoken_scale, gm_pertoken_scale[offset_pertoken_scalar],
-                0,                             // sid
-                1,                             // nBurst
-                m_round / UB_SCALE_BLOCK_SIZE, // lenBurst
-                0,                             // srcStride
-                0                              // dstStride
+            gm_to_ub<ArchType::ASCEND_V220, float>(ub_pertoken_scale, gm_pertoken_scale[offset_pertoken_scalar],
+                                                   0,                             // sid
+                                                   1,                             // nBurst
+                                                   m_round / UB_SCALE_BLOCK_SIZE, // lenBurst
+                                                   0,                             // srcStride
+                                                   0                              // dstStride
             );
             SET_FLAG(MTE2, V, EVENT_ID0);
             WAIT_FLAG(MTE2, V, EVENT_ID0);
 
             // broc x2Scale
             Brcb(ub_pertoken_scale_calc, ub_pertoken_scale, CeilDiv<CONST_8>(m_round), {CONST_2, CONST_16});
-            AscendC::DataCopy(
-                ub_pertoken_scale_calc[CONST_8], ub_pertoken_scale_calc, AscendC::DataCopyParams(m_round, 1, 1, 1));
+            AscendC::DataCopy(ub_pertoken_scale_calc[CONST_8], ub_pertoken_scale_calc,
+                              AscendC::DataCopyParams(m_round, 1, 1, 1));
 
             SET_FLAG(M, V, EVENT_ID0);
             WAIT_FLAG(M, V, EVENT_ID0);
@@ -398,12 +389,11 @@ public:
             WAIT_FLAG(MTE2, V, EVENT_ID1);
 
             // copy mmOut l0C->UB
-            l0c_to_ub<ArchType::ASCEND_V200, int32_t, int32_t>(
-                ub_c_i32, l0c.ReinterpretCast<int32_t>(),
-                (uint16_t)(n_round / BLOCK_SIZE_16), // nBurst
-                (uint16_t)(m_round / BLOCK_SIZE_16), // lenBurst
-                (uint16_t)0,                         // srcStride
-                (uint16_t)0                          // dstStride
+            l0c_to_ub<ArchType::ASCEND_V200, int32_t, int32_t>(ub_c_i32, l0c.ReinterpretCast<int32_t>(),
+                                                               (uint16_t)(n_round / BLOCK_SIZE_16), // nBurst
+                                                               (uint16_t)(m_round / BLOCK_SIZE_16), // lenBurst
+                                                               (uint16_t)0,                         // srcStride
+                                                               (uint16_t)0                          // dstStride
             );
             AscendC::PipeBarrier<PIPE_V>();
 
@@ -413,20 +403,19 @@ public:
             uint32_t repeat_remainder = (m_round * n_round / CONST_64) % MAX_REPEAT_TIMES;
             for (uint32_t i = 0; i < repeat_count; ++i) {
                 AscendC::Cast<float, int32_t, false>(
-                    ub_c_fp32[i * MAX_NUMEL_INST_B32],       // dst
-                    ub_c_i32[i * MAX_NUMEL_INST_B32],        // src
-                    AscendC::RoundMode::CAST_NONE,           // roundMode
-                    (uint64_t)0,                             // count(unuse)
-                    MAX_REPEAT_TIMES,                                     // repeatTime
+                    ub_c_fp32[i * MAX_NUMEL_INST_B32],                   // dst
+                    ub_c_i32[i * MAX_NUMEL_INST_B32],                    // src
+                    AscendC::RoundMode::CAST_NONE,                       // roundMode
+                    (uint64_t)0,                                         // count(unuse)
+                    MAX_REPEAT_TIMES,                                    // repeatTime
                     AscendC::UnaryRepeatParams(1, 1, CONST_8, CONST_8)); // repeatParams
             }
-            AscendC::Cast<float, int32_t, false>(
-                ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32], // dst
-                ub_c_i32[repeat_count * MAX_NUMEL_INST_B32],  // src
-                AscendC::RoundMode::CAST_NONE,                // roundMode
-                (uint64_t)0,                                  // count(unuse)
-                repeat_remainder,                             // repeatTime
-                AscendC::UnaryRepeatParams(1, 1, CONST_8, CONST_8));      // repeatParams
+            AscendC::Cast<float, int32_t, false>(ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32],        // dst
+                                                 ub_c_i32[repeat_count * MAX_NUMEL_INST_B32],         // src
+                                                 AscendC::RoundMode::CAST_NONE,                       // roundMode
+                                                 (uint64_t)0,                                         // count(unuse)
+                                                 repeat_remainder,                                    // repeatTime
+                                                 AscendC::UnaryRepeatParams(1, 1, CONST_8, CONST_8)); // repeatParams
 
             AscendC::PipeBarrier<PIPE_V>();
 
@@ -437,54 +426,49 @@ public:
             SetVectorMask<int8_t>((uint64_t)0x0, (uint64_t)0xffff);
             for (uint32_t i = 0; i < count; ++i) {
                 if (m_repeat_count > 0) { // m_round 为 256时的处理，由于UB最大只能处理128K数据，max(m_round) = 256
-                    AscendC::Mul<float, false>(
-                        ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
-                        ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
-                        ub_scale[i * BLOCK_SIZE_16],            // src1
-                        (uint64_t)0,                 // count(unuse)
-                        MAX_REPEAT_TIMES,                         // repeatTime
-                        AscendC::BinaryRepeatParams(
-                            1,       // dstBlockStride
-                            1,       // src0BlockStride
-                            1,       // src1BlockStride
-                            CONST_2, // dstRepeatStride
-                            CONST_2, // src0RepeatStride
-                            0));     // src1RepeatStride
+                    AscendC::Mul<float, false>(ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
+                                               ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
+                                               ub_scale[i * BLOCK_SIZE_16],            // src1
+                                               (uint64_t)0,                            // count(unuse)
+                                               MAX_REPEAT_TIMES,                       // repeatTime
+                                               AscendC::BinaryRepeatParams(1,          // dstBlockStride
+                                                                           1,          // src0BlockStride
+                                                                           1,          // src1BlockStride
+                                                                           CONST_2,    // dstRepeatStride
+                                                                           CONST_2,    // src0RepeatStride
+                                                                           0));        // src1RepeatStride
                 }
 
                 // m_repeat_count为0时，等同于repeat计算m_round轮
                 AscendC::Mul<float, false>(
                     ub_c_fp32[i * m_round * BLOCK_SIZE_16 + m_repeat_count * MAX_REPEAT_TIMES * BLOCK_SIZE_16], // dst
                     ub_c_fp32[i * m_round * BLOCK_SIZE_16 + m_repeat_count * MAX_REPEAT_TIMES * BLOCK_SIZE_16], // src0
-                    ub_scale[i * BLOCK_SIZE_16],                                        // src1
-                    (uint64_t)0,                                             // count(unuse)
-                    m_repeat_remainder,                                      // repeatTime
-                    AscendC::BinaryRepeatParams(
-                        1,   // dstBlockStride
-                        1,   // src0BlockStride
-                        1,   // src1BlockStride
-                        CONST_2,   // dstRepeatStride
-                        CONST_2,   // src0RepeatStride
-                        0)); // src1RepeatStride
+                    ub_scale[i * BLOCK_SIZE_16],                                                                // src1
+                    (uint64_t)0,                         // count(unuse)
+                    m_repeat_remainder,                  // repeatTime
+                    AscendC::BinaryRepeatParams(1,       // dstBlockStride
+                                                1,       // src0BlockStride
+                                                1,       // src1BlockStride
+                                                CONST_2, // dstRepeatStride
+                                                CONST_2, // src0RepeatStride
+                                                0));     // src1RepeatStride
             }
             AscendC::PipeBarrier<PIPE_V>();
 
             // dequant x2 scale perToken
             SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
             for (uint32_t i = 0; i < count; ++i) {
-                AscendC::Mul<float, false>(
-                    ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
-                    ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
-                    ub_pertoken_scale_calc,      // src1
-                    (uint64_t)0,                 // count(unuse)
-                    m_round / CONST_4,                 // repeatTime
-                    AscendC::BinaryRepeatParams(
-                        1,   // dstBlockStride
-                        1,   // src0BlockStride
-                        1,   // src1BlockStride
-                        CONST_8,   // dstRepeatStride
-                        CONST_8,   // src0RepeatStride
-                        CONST_8)); // src1RepeatStride
+                AscendC::Mul<float, false>(ub_c_fp32[i * m_round * BLOCK_SIZE_16], // dst
+                                           ub_c_fp32[i * m_round * BLOCK_SIZE_16], // src0
+                                           ub_pertoken_scale_calc,                 // src1
+                                           (uint64_t)0,                            // count(unuse)
+                                           m_round / CONST_4,                      // repeatTime
+                                           AscendC::BinaryRepeatParams(1,          // dstBlockStride
+                                                                       1,          // src0BlockStride
+                                                                       1,          // src1BlockStride
+                                                                       CONST_8,    // dstRepeatStride
+                                                                       CONST_8,    // src0RepeatStride
+                                                                       CONST_8));  // src1RepeatStride
             }
 
             AscendC::PipeBarrier<PIPE_V>();
@@ -492,21 +476,19 @@ public:
             // cast fp32->fp16
             SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
             for (uint32_t i = 0; i < repeat_count; ++i) {
-                AscendC::Cast<half, float, false>(
-                    ub_c[i * MAX_NUMEL_INST_B32],            // dst
-                    ub_c_fp32[i * MAX_NUMEL_INST_B32],       // src
-                    AscendC::RoundMode::CAST_NONE,           // roundMode
-                    (uint64_t)0,                             // count(unuse)
-                    MAX_REPEAT_TIMES,                                     // repeatTime
-                    AscendC::UnaryRepeatParams(1, 1, CONST_4, CONST_8)); // repeatParams
+                AscendC::Cast<half, float, false>(ub_c[i * MAX_NUMEL_INST_B32],                        // dst
+                                                  ub_c_fp32[i * MAX_NUMEL_INST_B32],                   // src
+                                                  AscendC::RoundMode::CAST_NONE,                       // roundMode
+                                                  (uint64_t)0,                                         // count(unuse)
+                                                  MAX_REPEAT_TIMES,                                    // repeatTime
+                                                  AscendC::UnaryRepeatParams(1, 1, CONST_4, CONST_8)); // repeatParams
             }
-            AscendC::Cast<half, float, false>(
-                ub_c[repeat_count * MAX_NUMEL_INST_B32],      // dst
-                ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32], // src
-                AscendC::RoundMode::CAST_NONE,                // roundMode
-                (uint64_t)0,                                  // count(unuse)
-                repeat_remainder,                             // repeatTime
-                AscendC::UnaryRepeatParams(1, 1, CONST_4, CONST_8));      // repeatParams
+            AscendC::Cast<half, float, false>(ub_c[repeat_count * MAX_NUMEL_INST_B32],             // dst
+                                              ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32],        // src
+                                              AscendC::RoundMode::CAST_NONE,                       // roundMode
+                                              (uint64_t)0,                                         // count(unuse)
+                                              repeat_remainder,                                    // repeatTime
+                                              AscendC::UnaryRepeatParams(1, 1, CONST_4, CONST_8)); // repeatParams
 
             SET_FLAG(V, MTE2, EVENT_ID1);
             if (m_actual == 1) {
@@ -514,13 +496,12 @@ public:
                 half zero = 0;
                 for (uint32_t i = 0; i < n_round / BLOCK_SIZE_16; i++) {
                     uint64_t curr_offset_c = i * m_round * BLOCK_SIZE_16 + m_actual * BLOCK_SIZE_16;
-                    AscendC::Muls<half, false>(
-                        ub_c[curr_offset_c],                     // dst
-                        ub_c[curr_offset_c],                     // src0
-                        zero,                                    // src1
-                        (uint64_t)0,                             // count(unuse)
-                        1,                                       // repeatTime
-                        AscendC::UnaryRepeatParams(1, 1, CONST_2, CONST_2)); // repeatParams
+                    AscendC::Muls<half, false>(ub_c[curr_offset_c],                                 // dst
+                                               ub_c[curr_offset_c],                                 // src0
+                                               zero,                                                // src1
+                                               (uint64_t)0,                                         // count(unuse)
+                                               1,                                                   // repeatTime
+                                               AscendC::UnaryRepeatParams(1, 1, CONST_2, CONST_2)); // repeatParams
                 }
             }
             SET_FLAG(V, M, EVENT_ID0);
@@ -529,8 +510,8 @@ public:
 
             if constexpr (FormatY == CubeFormat::ND) {
                 dst_offset = b_idx * m_org_up * n_org_up + m_idx * m0_ * n_org_up + n_idx * n0_;
-                AscendC::DataCopy(
-                    gm_c[dst_offset], ub_c, AscendC::Nz2NdParamsFull(1, m_round, n_round, 0, m_round, n_, 0));
+                AscendC::DataCopy(gm_c[dst_offset], ub_c,
+                                  AscendC::Nz2NdParamsFull(1, m_round, n_round, 0, m_round, n_, 0));
             } else {
                 dst_offset = b_idx * m_org_up * n_org_up + n_idx * n0_ * m_org_up + m_idx * m0_ * BLOCK_SIZE_16;
                 ub_to_gm<ArchType::ASCEND_V200, OUT_TYPE, DataFormat::NZ, DataFormat::NZ>(

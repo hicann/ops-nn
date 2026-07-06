@@ -19,15 +19,9 @@
 
 class SyncBatchNormGatherStatsInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SyncBatchNormGatherStats Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SyncBatchNormGatherStats Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SyncBatchNormGatherStats Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SyncBatchNormGatherStats Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_0)
@@ -129,22 +123,23 @@ TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_InferDty
         ge::DataType input_ref_fp16 = ge::DT_FLOAT16;
         ge::DataType input_ref_int32 = ge::DT_INT32;
         ge::DataType output_ref_fp16 = ge::DT_FLOAT16;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(5)
-                .NodeIoNum(5, 4)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_ref_fp16, &input_ref_fp16, &input_ref_int32, &input_ref_fp16, &input_ref_fp16})
-                .OutputDataTypes({&output_ref_fp16, &output_ref_fp16, &output_ref_fp16, &output_ref_fp16})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(5)
+                                  .NodeIoNum(5, 4)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref_fp16, &input_ref_fp16, &input_ref_int32, &input_ref_fp16,
+                                                   &input_ref_fp16})
+                                  .OutputDataTypes(
+                                      {&output_ref_fp16, &output_ref_fp16, &output_ref_fp16, &output_ref_fp16})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -166,22 +161,23 @@ TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_InferDty
         ge::DataType input_ref_fp32 = ge::DT_FLOAT;
         ge::DataType input_ref_int32 = ge::DT_INT32;
         ge::DataType output_ref_fp32 = ge::DT_FLOAT;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(5)
-                .NodeIoNum(5, 4)
-                .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_ref_fp32, &input_ref_fp32, &input_ref_int32, &input_ref_fp32, &input_ref_fp32})
-                .OutputDataTypes({&output_ref_fp32, &output_ref_fp32, &output_ref_fp32, &output_ref_fp32})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(5)
+                                  .NodeIoNum(5, 4)
+                                  .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref_fp32, &input_ref_fp32, &input_ref_int32, &input_ref_fp32,
+                                                   &input_ref_fp32})
+                                  .OutputDataTypes(
+                                      {&output_ref_fp32, &output_ref_fp32, &output_ref_fp32, &output_ref_fp32})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -203,22 +199,23 @@ TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_InferDty
         ge::DataType input_ref_bf16 = ge::DT_BF16;
         ge::DataType input_ref_int32 = ge::DT_INT32;
         ge::DataType output_ref_bf16 = ge::DT_BF16;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(5)
-                .NodeIoNum(5, 4)
-                .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_ref_bf16, &input_ref_bf16, &input_ref_int32, &input_ref_bf16, &input_ref_bf16})
-                .OutputDataTypes({&output_ref_bf16, &output_ref_bf16, &output_ref_bf16, &output_ref_bf16})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(5)
+                                  .NodeIoNum(5, 4)
+                                  .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref_bf16, &input_ref_bf16, &input_ref_int32, &input_ref_bf16,
+                                                   &input_ref_bf16})
+                                  .OutputDataTypes(
+                                      {&output_ref_bf16, &output_ref_bf16, &output_ref_bf16, &output_ref_bf16})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

@@ -17,14 +17,13 @@
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/l1_tiling_data_calculator.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
-
 namespace optiling {
 
 constexpr uint64_t STEP_K_VALUE_4 = 4;
 
 class AdaptiveSlidingWindowTilingV4 : public AdaptiveSlidingWindowCubeTiling {
 public:
-    explicit AdaptiveSlidingWindowTilingV4(gert::TilingContext *context) : AdaptiveSlidingWindowCubeTiling(context)
+    explicit AdaptiveSlidingWindowTilingV4(gert::TilingContext* context) : AdaptiveSlidingWindowCubeTiling(context)
     {
         inputParams_.Reset();
     }
@@ -33,41 +32,18 @@ public:
 
 protected:
     // 根据V3/V4原型获取输入index
-    uint32_t GetX1Idx() const override
-    {
-        return X1_INDEX_V4;
-    }
-    uint32_t GetX2Idx() const override
-    {
-        return X2_INDEX_V4;
-    }
-    uint32_t GetScaleIdx() const override
-    {
-        return X2_SCALE_INDEX_V4;
-    }
-    uint32_t GetOffsetIdx() const override
-    {
-        return X2_OFFSET_INDEX_V4;
-    }
-    uint32_t GetBiasIdx() const override
-    {
-        return BIAS_INDEX_V4;
-    }
-    uint32_t GetPertokenIdx() const override
-    {
-        return X1_SCALE_INDEX_V4;
-    }
-    uint32_t GetX2TableIdx() const
-    {
-        return X2_TABLE_INDEX_V4;
-    }
+    uint32_t GetX1Idx() const override { return X1_INDEX_V4; }
+    uint32_t GetX2Idx() const override { return X2_INDEX_V4; }
+    uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX_V4; }
+    uint32_t GetOffsetIdx() const override { return X2_OFFSET_INDEX_V4; }
+    uint32_t GetBiasIdx() const override { return BIAS_INDEX_V4; }
+    uint32_t GetPertokenIdx() const override { return X1_SCALE_INDEX_V4; }
+    uint32_t GetX2TableIdx() const { return X2_TABLE_INDEX_V4; }
 
     bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                    const gert::StorageShape *biasShape,
-                    const gert::StorageShape *pertokenShape,
-                    const gert::StorageShape *x2TableShape,
-                    const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+                    const gert::StorageShape* pertokenShape, const gert::StorageShape* x2TableShape,
+                    const std::vector<int64_t>& dimValueOfMKN) const;
     ge::graphStatus CheckContext() override;
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
@@ -86,4 +62,4 @@ protected:
 
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
-}  // namespace optiling
+} // namespace optiling

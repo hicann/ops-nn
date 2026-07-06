@@ -17,17 +17,16 @@
 using namespace ge;
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 
 constexpr int64_t UB_RESERVED_BYTE = 1024 * 8;
 
 bool SoftmaxGradExtTilingARSmallR::IsCapable()
 {
-    OP_TILING_CHECK((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || (r_ > CONST_EIGHT && yDtype_ == ge::DT_FLOAT), OP_LOGI(context_->GetNodeName(), "AR small r template is not capable. "),
-                    return false);
+    OP_TILING_CHECK((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || (r_ > CONST_EIGHT && yDtype_ == ge::DT_FLOAT),
+                    OP_LOGI(context_->GetNodeName(), "AR small r template is not capable. "), return false);
     return true;
-}//检查什么条件下使用AR samll r模板
+} //检查什么条件下使用AR samll r模板
 
 ge::graphStatus SoftmaxGradExtTilingARSmallR::DoOpTiling()
 {
@@ -43,9 +42,9 @@ ge::graphStatus SoftmaxGradExtTilingARSmallR::DoOpTiling()
 
     // rAligned * (grad, x1, x2, yTransposed, y) * DB * sizeof(T) + reduceBuffer * DB * sizeof(float)
     int64_t rFactor = rAligned * (xDtypeSize_ * CONST_FIVE * CONST_TWO) + CONST_TWO * CONST_FOUR;
-    
+
     // ubFactor表示按a轴切分，ub内单次循环计算最大能放多大的切片
-    int64_t ubFactor= (aicoreParams_.ubSize - UB_RESERVED_BYTE)/ rFactor;
+    int64_t ubFactor = (aicoreParams_.ubSize - UB_RESERVED_BYTE) / rFactor;
     // ubFactor 需要按32b对齐，但不能超过ub大小
     ubFactor = CeilAlign(ubFactor, rTileBase);
     if (aicoreParams_.ubSize < static_cast<decltype(aicoreParams_.ubSize)>(rFactor * ubFactor)) {
@@ -77,10 +76,7 @@ ge::graphStatus SoftmaxGradExtTilingARSmallR::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxGradExtTilingARSmallR::GetTilingKey() const
-{
-    return TILINGKEY_AR_SMALL_R;
-}
+uint64_t SoftmaxGradExtTilingARSmallR::GetTilingKey() const { return TILINGKEY_AR_SMALL_R; }
 
 ge::graphStatus SoftmaxGradExtTilingARSmallR::PostTiling()
 {
@@ -95,4 +91,4 @@ ge::graphStatus SoftmaxGradExtTilingARSmallR::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxGradExt, SoftmaxGradExtTilingARSmallR, TEMPLATE_AR_SMALL_R_PRIORITY);
 
-}  // namespace optiling
+} // namespace optiling

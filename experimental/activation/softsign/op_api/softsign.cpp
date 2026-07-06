@@ -9,7 +9,7 @@
  */
 
 /**
-  * NOTE: Portions of this code were AI-generated and have been
+ * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
 
@@ -33,26 +33,17 @@ namespace l0op {
 
 OP_TYPE_REGISTER(Softsign);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor* self)
-{
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* self) { return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
-static const aclTensor* SoftsignAiCore(const aclTensor* self,
-                                        const aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* SoftsignAiCore(const aclTensor* self, const aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(SoftsignAiCore, self, out);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Softsign,
-        OP_INPUT(self), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftsignAiCore failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Softsign, OP_INPUT(self), OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftsignAiCore failed."), return nullptr);
     return out;
 }
 
@@ -76,10 +67,8 @@ const aclTensor* Softsign(const aclTensor* self, aclOpExecutor* executor)
 
     // Output shape = input shape (elementwise), output dtype = input dtype
     const aclTensor* out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-    OP_CHECK(
-        out != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Softsign: AllocTensor for output failed."),
-        return nullptr);
+    OP_CHECK(out != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Softsign: AllocTensor for output failed."),
+             return nullptr);
 
     return SoftsignAiCore(self, out, executor);
 }

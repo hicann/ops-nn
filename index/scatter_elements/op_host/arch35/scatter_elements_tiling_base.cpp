@@ -22,16 +22,15 @@
 
 using namespace AscendC;
 
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t DB_BUFFER = 1;
 constexpr int64_t ACTIVE_NODES_NUM = 2;
 constexpr int64_t GM_ALIGN = 512;
-constexpr int64_t USE_UB_MAX_SIZE = 65536;  // 64K
+constexpr int64_t USE_UB_MAX_SIZE = 65536; // 64K
 constexpr int64_t MAX_THREAD_NUM = 512;
 constexpr int64_t MAX_INT32_NUM = 2147483647;
-constexpr int64_t DCACHE_SIZE = 131072;                // 128K
-constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216;  // 16M
+constexpr int64_t DCACHE_SIZE = 131072;               // 128K
+constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16M
 constexpr int64_t DETERM_DB_BUFFER = 2;
 constexpr int64_t DOUBLE_COUNT = 2;
 constexpr int64_t BASE_S_MAX = 256;
@@ -60,10 +59,7 @@ static const std::set<ge::DataType> SCAT_ELE_MUL_DTYPE = {ge::DT_FLOAT, ge::DT_F
 
 static const std::map<std::string, uint64_t> SCAT_ELE_REDUCTION = {{"none", 0}, {"add", 1}, {"mul", 2}};
 
-bool ScatterElementsTiling::IsCapable()
-{
-    return true;
-}
+bool ScatterElementsTiling::IsCapable() { return true; }
 
 ge::graphStatus ScatterElementsTiling::GetPlatformInfo()
 {
@@ -72,9 +68,10 @@ ge::graphStatus ScatterElementsTiling::GetPlatformInfo()
     totalCoreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
     if (ubSize_ <= DCACHE_SIZE) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ubSize_, DCACHE_SIZE",
-            (std::to_string(static_cast<int32_t>(ubSize_)) + ", " +
-                std::to_string(static_cast<int32_t>(DCACHE_SIZE))).c_str(),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "ubSize_, DCACHE_SIZE",
+            (std::to_string(static_cast<int32_t>(ubSize_)) + ", " + std::to_string(static_cast<int32_t>(DCACHE_SIZE)))
+                .c_str(),
             "ScatterElements ubSize must be less than Dcache Size");
         return ge::GRAPH_FAILED;
     }
@@ -99,7 +96,7 @@ ge::graphStatus ScatterElementsTiling::GetShapeAttrsInfo()
     int16_t dimMax = std::max(-1 * rank_, rank_ - 1);
     if (dim > dimMax || dim < dimMin) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(dim).c_str(),
-                                               "ScatterElements axis must be in range[-rank, rank-1]");
+                                              "ScatterElements axis must be in range[-rank, rank-1]");
         return ge::GRAPH_FAILED;
     }
 
@@ -112,7 +109,7 @@ ge::graphStatus ScatterElementsTiling::GetShapeAttrsInfo()
     bool reductionInValid = it == SCAT_ELE_REDUCTION.end();
     if (reductionInValid) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "reduction", reduceStr.c_str(),
-                                               "ScatterElements reduction must be in [none, add, mul]");
+                                              "ScatterElements reduction must be in [none, add, mul]");
         return ge::GRAPH_FAILED;
     }
     reduction_ = it->second;
@@ -125,8 +122,8 @@ ge::graphStatus ScatterElementsTiling::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    bool isDeterminType = reduction_ == 0 ||
-                        (reduction_ == 1 && SCAT_ELE_ADD_DETERM_DTYPE.find(dtype_) != SCAT_ELE_ADD_DETERM_DTYPE.end());
+    bool isDeterminType = reduction_ == 0 || (reduction_ == 1 && SCAT_ELE_ADD_DETERM_DTYPE.find(dtype_) !=
+                                                                     SCAT_ELE_ADD_DETERM_DTYPE.end());
     if (context_->GetDeterministic() && isDeterminType) {
         isDeterministic_ = 1;
     }
@@ -137,23 +134,26 @@ ge::graphStatus ScatterElementsTiling::CheckXDtype(const ge::DataType dtype)
 {
     if (reduction_ == REDUCTION_NONE) {
         if (SCAT_ELE_NONE_DTYPE.find(dtype) == SCAT_ELE_NONE_DTYPE.end()) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data",
-                                                   std::to_string(static_cast<int32_t>(dtype)).c_str(),
-                                                   "When reduction=none, ScatterElements dtype must be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT64, DT_INT32, DT_INT16, DT_INT8, DT_UINT8, DT_DOUBLE, DT_BOOL]");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "data", std::to_string(static_cast<int32_t>(dtype)).c_str(),
+                "When reduction=none, ScatterElements dtype must be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT64, "
+                "DT_INT32, DT_INT16, DT_INT8, DT_UINT8, DT_DOUBLE, DT_BOOL]");
             return ge::GRAPH_FAILED;
         }
     } else if (reduction_ == REDUCTION_ADD) {
         if (SCAT_ELE_ADD_DTYPE.find(dtype) == SCAT_ELE_ADD_DTYPE.end()) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data",
-                                                   std::to_string(static_cast<int32_t>(dtype)).c_str(),
-                                                   "When reduction=add, ScatterElements dtype must be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT64, DT_INT32, DT_INT16, DT_INT8, DT_UINT8, DT_BOOL]");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "data", std::to_string(static_cast<int32_t>(dtype)).c_str(),
+                "When reduction=add, ScatterElements dtype must be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT64, "
+                "DT_INT32, DT_INT16, DT_INT8, DT_UINT8, DT_BOOL]");
             return ge::GRAPH_FAILED;
         }
     } else if (reduction_ == REDUCTION_MUL) {
         if (SCAT_ELE_MUL_DTYPE.find(dtype) == SCAT_ELE_MUL_DTYPE.end()) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data",
-                                                   std::to_string(static_cast<int32_t>(dtype)).c_str(),
-                                                   "When reduction=mul, ScatterElements dtype must be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT64, DT_INT32, DT_INT16, DT_INT8, DT_UINT8]");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "data", std::to_string(static_cast<int32_t>(dtype)).c_str(),
+                "When reduction=mul, ScatterElements dtype must be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT64, "
+                "DT_INT32, DT_INT16, DT_INT8, DT_UINT8]");
             return ge::GRAPH_FAILED;
         }
     }
@@ -172,8 +172,8 @@ ge::graphStatus ScatterElementsTiling::CheckInputDtype()
     typeSize_ = ge::GetSizeByDataType(dtype_);
     if (typeSize_ <= 0) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data",
-                                               std::to_string(static_cast<int32_t>(dtype_)).c_str(),
-                                               "ScatterElements dtype size is invalid");
+                                              std::to_string(static_cast<int32_t>(dtype_)).c_str(),
+                                              "ScatterElements dtype size is invalid");
         return ge::GRAPH_FAILED;
     }
 
@@ -192,10 +192,11 @@ ge::graphStatus ScatterElementsTiling::CheckInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, updatesPtr);
     auto updatesDtype = updatesPtr->GetDataType();
     if (updatesDtype != dtype_) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "data, updates",
-                                                (std::to_string(static_cast<int32_t>(dtype_)) + ", " +
-                                                 std::to_string(static_cast<int32_t>(updatesDtype))).c_str(),
-                                                "ScatterElements the dtype of data and updates must be same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "data, updates",
+            (std::to_string(static_cast<int32_t>(dtype_)) + ", " + std::to_string(static_cast<int32_t>(updatesDtype)))
+                .c_str(),
+            "ScatterElements the dtype of data and updates must be same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -302,30 +303,29 @@ ge::graphStatus ScatterElementsTiling::CheckInputShape()
     allAxis_ = indicesShape.GetShapeSize();
 
     if (indicesDimNum != rank_) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_, "indices, data",
-                                                   (std::to_string(indicesDimNum) + ", " + std::to_string(rank_)).c_str(),
-                                                   "ScatterElements the dimNum of indices and data must be same");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName_, "indices, data", (std::to_string(indicesDimNum) + ", " + std::to_string(rank_)).c_str(),
+            "ScatterElements the dimNum of indices and data must be same");
         return ge::GRAPH_FAILED;
     }
 
     if (indicesDimNum != updatesDimNum) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_, "indices, updates",
-                                                   (std::to_string(indicesDimNum) + ", " + std::to_string(updatesDimNum)).c_str(),
-                                                   "ScatterElements the dimNum of indices and updates must be same");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName_, "indices, updates", (std::to_string(indicesDimNum) + ", " + std::to_string(updatesDimNum)).c_str(),
+            "ScatterElements the dimNum of indices and updates must be same");
         return ge::GRAPH_FAILED;
     }
 
     if (!CompareShape(indicesShape, updatesShape)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "indices, updates", "indicesShape, updatesShape",
-            "ScatterElements each indices shape dim must be less than data shape");
+                                               "ScatterElements each indices shape dim must be less than data shape");
         return ge::GRAPH_FAILED;
     }
 
     if (!CompareShape(indicesShape, dataShape, dim_)) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, 
-            "indices, data",
-            "indices_shape, data_shape",
-            "ScatterElements the shape of indices must be less than or equal to the shape of data in each dimension except dim");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "indices, data", "indices_shape, data_shape",
+                                               "ScatterElements the shape of indices must be less than or equal to the "
+                                               "shape of data in each dimension except dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -370,10 +370,10 @@ int64_t ScatterElementsTiling::CalBestBaseSize(int64_t baseXoStart, int64_t base
         baseXoMid = (baseXoStart + baseXoEnd) / DOUBLE_COUNT;
         int64_t sortDim = baseS_ * baseXoMid;
         int64_t sortNeedTmpSize = static_cast<int64_t>(GetMaxSortTmpBuf(sortDim));
-        tmpTotalSize = sortDim * indicesTypeSize_ * DETERM_DB_BUFFER + ubBlockSize_ +  // indocesQue
-                       sortDim * indicesTypeSize_ + ubBlockSize_ +                     // sortedkeyBuf
-                       sortDim * sizeof(uint32_t) + ubBlockSize_ +                     // sortedIdxBuf
-                       sortNeedTmpSize + ubBlockSize_;                                 // sort shared buf size
+        tmpTotalSize = sortDim * indicesTypeSize_ * DETERM_DB_BUFFER + ubBlockSize_ + // indocesQue
+                       sortDim * indicesTypeSize_ + ubBlockSize_ +                    // sortedkeyBuf
+                       sortDim * sizeof(uint32_t) + ubBlockSize_ +                    // sortedIdxBuf
+                       sortNeedTmpSize + ubBlockSize_;                                // sort shared buf size
         if (tmpTotalSize <= ubSize_) {
             baseXoStart = baseXoMid;
         } else {
@@ -410,8 +410,8 @@ ge::graphStatus ScatterElementsTiling::DoOpTiling()
         indicesTypeSize_ = ge::GetSizeByDataType(indicesDtype_);
         if (indicesTypeSize_ <= 0) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "indices",
-                                                   std::to_string(static_cast<int32_t>(indicesDtype_)).c_str(),
-                                                   "ScatterElements the size of indices dtype is invalid");
+                                                  std::to_string(static_cast<int32_t>(indicesDtype_)).c_str(),
+                                                  "ScatterElements the size of indices dtype is invalid");
             return ge::GRAPH_FAILED;
         }
         ubBlockSize_ = Ops::Base::GetUbBlockSize(context_);
@@ -430,8 +430,8 @@ ge::graphStatus ScatterElementsTiling::DoOpTiling()
                 tmpSize *= preAxis_;
             }
         }
-        indicesNormBlockData_ =
-            std::max(indicesNormBlockData_, static_cast<int64_t>(UB_MIN_FACTOR / indicesTypeSize_ / tmpSize));
+        indicesNormBlockData_ = std::max(indicesNormBlockData_,
+                                         static_cast<int64_t>(UB_MIN_FACTOR / indicesTypeSize_ / tmpSize));
         indicesUsedCoreNum_ = Ops::Base::CeilDiv(aSplitDimValue, indicesNormBlockData_);
         indicesTailBlockData_ = aSplitDimValue - (indicesUsedCoreNum_ - 1) * indicesNormBlockData_;
         int64_t aDim = indicesUsedCoreNum_ == 1 ? indicesTailBlockData_ : indicesNormBlockData_;
@@ -470,10 +470,7 @@ ge::graphStatus ScatterElementsTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterElementsTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterElementsTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t ScatterElementsTiling::GetTilingKey() const
 {
@@ -523,9 +520,8 @@ ge::graphStatus ScatterElementsTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
     auto res = context_->SetLocalMemorySize(ubSize_ + SIMT_UB_RES_SIZE);
     if (res != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ubSize_",
-            std::to_string(ubSize_).c_str(),
-            "ScatterElements SetLocalMemorySize failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ubSize_", std::to_string(ubSize_).c_str(),
+                                              "ScatterElements SetLocalMemorySize failed");
         return ge::GRAPH_FAILED;
     }
     context_->SetScheduleMode(1);
@@ -535,15 +531,15 @@ ge::graphStatus ScatterElementsTiling::PostTiling()
 }
 
 template <typename T>
-static std::string ToString(const T* value, size_t size) {
-  std::string r = "[";
-  for (size_t i = 0; i < size; i++) {
-    r = r + std::to_string(value[i]) + ", ";
-  }
-  r = r + "]";
-  return r;
+static std::string ToString(const T* value, size_t size)
+{
+    std::string r = "[";
+    for (size_t i = 0; i < size; i++) {
+        r = r + std::to_string(value[i]) + ", ";
+    }
+    r = r + "]";
+    return r;
 }
-
 
 void ScatterElementsTiling::DumpTilingInfo()
 {
@@ -577,4 +573,4 @@ ge::graphStatus ScatterElementsTilingForAscendC(gert::TilingContext* context)
     ScatterElementsTiling tiling(context);
     return tiling.DoTiling();
 }
-}  // namespace optiling
+} // namespace optiling

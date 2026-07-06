@@ -22,25 +22,24 @@ using namespace AscendC;
 constexpr uint32_t X_BUFFER_NUM = 1;
 constexpr uint32_t TMP_BUFFER_NUM = 2;
 
-
 template <typename T1, typename T2>
-class SegmentSumSimd
-{
+class SegmentSumSimd {
 public:
     __aicore__ inline SegmentSumSimd(void){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR y, TPipe& pipeIn, const SegmentSumSimdTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR y, TPipe& pipeIn,
+                                const SegmentSumSimdTilingData* tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void CopyInX(int32_t copyCount, int32_t burstLen, int64_t xGmOffset);
     __aicore__ inline void CopyInSegmentIds(int32_t burstLen, int64_t segmentIdsGmOffset);
     __aicore__ inline void CopyOutY(LocalTensor<T1>& yLocal, int32_t burstLen, T2 id, int64_t colOffset);
-    __aicore__ inline void ComputeSumAndCopyOut(LocalTensor<T1>& yLocal, int32_t curLoopOutters, int32_t curLoopInners, int32_t curLoopInnersAlign, int64_t colOffset, T2& curId);
-
+    __aicore__ inline void ComputeSumAndCopyOut(LocalTensor<T1>& yLocal, int32_t curLoopOutters, int32_t curLoopInners,
+                                                int32_t curLoopInnersAlign, int64_t colOffset, T2& curId);
 
 private:
     GlobalTensor<T1> xGm_;
     GlobalTensor<T2> segmentIdsGm_;
     GlobalTensor<T1> yGm_;
-    
+
     TQue<QuePosition::VECIN, X_BUFFER_NUM> xQue_;
     TQue<QuePosition::VECIN, X_BUFFER_NUM> segmentIdsQue_;
     TQue<QuePosition::VECOUT, TMP_BUFFER_NUM> tmpQue_;
@@ -59,9 +58,9 @@ private:
     int64_t colUbLoop_ = 0; // 当前核的ub在列上的循环次数
 
     int64_t normalLoopOutters_ = 0; // 当前核ub正常循环一次处理的行数
-    int64_t tailLoopOutters_ = 0; // 当前核ub尾循环一次处理的行数
-    int64_t normalLoopInners_ = 0; // 当前核ub正常循环一次处理的列数
-    int64_t tailLoopInners_ = 0; // 当前核ub尾循环一次处理的列数
+    int64_t tailLoopOutters_ = 0;   // 当前核ub尾循环一次处理的行数
+    int64_t normalLoopInners_ = 0;  // 当前核ub正常循环一次处理的列数
+    int64_t tailLoopInners_ = 0;    // 当前核ub尾循环一次处理的列数
 
     T2 preId_ = -1;
     bool isStartRowCore_ = false;
@@ -69,12 +68,11 @@ private:
     bool isFirstId_ = true;
     constexpr static int32_t blockNumT1_ = platform::GetUbBlockSize() / sizeof(T1);
     // constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
-
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void SegmentSumSimd<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR segmentIds, GM_ADDR y, AscendC::TPipe& pipeIn, const SegmentSumSimdTilingData* tilingData)
+__aicore__ inline void SegmentSumSimd<T1, T2>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR y, AscendC::TPipe& pipeIn,
+                                                    const SegmentSumSimdTilingData* tilingData)
 {
     tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
@@ -85,20 +83,26 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::Init(
 
     rowCoreIdx_ = blockIdx_ / tilingData_->blockNumInCol;
     colCoreIdx_ = blockIdx_ % tilingData_->blockNumInCol;
-    isStartRowCore_ = rowCoreIdx_ == 0; // 首行核
+    isStartRowCore_ = rowCoreIdx_ == 0;                            // 首行核
     isEndRowCore_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1; // 尾行核
 
     rowGmOffset_ = rowCoreIdx_ * tilingData_->normalCoreOutterNum;
     colGmOffset_ = colCoreIdx_ * tilingData_->normalCoreInnerNum;
 
-    rowUbLoop_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1 ? tilingData_->tailCoreRowUbLoop : tilingData_->normalCoreRowUbLoop;
-    colUbLoop_ = colCoreIdx_ == tilingData_->blockNumInCol - 1 ? tilingData_->tailCoreColUbLoop : tilingData_->normalCoreColUbLoop;
+    rowUbLoop_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1 ? tilingData_->tailCoreRowUbLoop :
+                                                                 tilingData_->normalCoreRowUbLoop;
+    colUbLoop_ = colCoreIdx_ == tilingData_->blockNumInCol - 1 ? tilingData_->tailCoreColUbLoop :
+                                                                 tilingData_->normalCoreColUbLoop;
 
-    normalLoopOutters_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1 ? tilingData_->tailCoreNormalLoopOutters : tilingData_->normalCoreNormalLoopOutters;
-    tailLoopOutters_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1 ? tilingData_->tailCoreTailLoopOutters : tilingData_->normalCoreTailLoopOutters;
-    normalLoopInners_ = colCoreIdx_ == tilingData_->blockNumInCol - 1 ? tilingData_->tailCoreNormalLoopInners : tilingData_->normalCoreNormalLoopInners;
-    tailLoopInners_ = colCoreIdx_ == tilingData_->blockNumInCol - 1 ? tilingData_->tailCoreTailLoopInners : tilingData_->normalCoreTailLoopInners;
-    
+    normalLoopOutters_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1 ? tilingData_->tailCoreNormalLoopOutters :
+                                                                         tilingData_->normalCoreNormalLoopOutters;
+    tailLoopOutters_ = rowCoreIdx_ == tilingData_->blockNumInRow - 1 ? tilingData_->tailCoreTailLoopOutters :
+                                                                       tilingData_->normalCoreTailLoopOutters;
+    normalLoopInners_ = colCoreIdx_ == tilingData_->blockNumInCol - 1 ? tilingData_->tailCoreNormalLoopInners :
+                                                                        tilingData_->normalCoreNormalLoopInners;
+    tailLoopInners_ = colCoreIdx_ == tilingData_->blockNumInCol - 1 ? tilingData_->tailCoreTailLoopInners :
+                                                                      tilingData_->normalCoreTailLoopInners;
+
     xGm_.SetGlobalBuffer((__gm__ T1*)x + rowGmOffset_ * tilingData_->innerDim + colGmOffset_);
     segmentIdsGm_.SetGlobalBuffer((__gm__ T2*)segmentIds + rowGmOffset_);
     yGm_.SetGlobalBuffer((__gm__ T1*)y + colGmOffset_);
@@ -107,7 +111,6 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::Init(
     pipeIn.InitBuffer(segmentIdsQue_, X_BUFFER_NUM, tilingData_->segmentIdBufferSize);
     pipeIn.InitBuffer(tmpQue_, TMP_BUFFER_NUM, tilingData_->yBufferSize);
     pipeIn.InitBuffer(yBuf_, tilingData_->yBufferSize);
-
 }
 
 template <typename T1, typename T2>
@@ -150,7 +153,8 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::CopyInSegmentIds(int32_t burstLen
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void SegmentSumSimd<T1, T2>::CopyOutY(LocalTensor<T1>& yLocal, int32_t burstLen, T2 id, int64_t colOffset)
+__aicore__ inline void SegmentSumSimd<T1, T2>::CopyOutY(LocalTensor<T1>& yLocal, int32_t burstLen, T2 id,
+                                                        int64_t colOffset)
 {
     DataCopyExtParams dataCoptExtParams;
     dataCoptExtParams.blockCount = 1;
@@ -161,7 +165,9 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::CopyOutY(LocalTensor<T1>& yLocal,
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void SegmentSumSimd<T1, T2>::ComputeSumAndCopyOut(LocalTensor<T1>& yLocal, int32_t curLoopOutters, int32_t curLoopInners, int32_t curLoopInnersAlign, int64_t colOffset, T2& curId)
+__aicore__ inline void SegmentSumSimd<T1, T2>::ComputeSumAndCopyOut(LocalTensor<T1>& yLocal, int32_t curLoopOutters,
+                                                                    int32_t curLoopInners, int32_t curLoopInnersAlign,
+                                                                    int64_t colOffset, T2& curId)
 {
     LocalTensor<T1> xLocal = xQue_.DeQue<T1>();
     LocalTensor<T2> segmentIdsLocal = segmentIdsQue_.DeQue<T2>();
@@ -198,7 +204,6 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::ComputeSumAndCopyOut(LocalTensor<
             Copy(yLocal, xLocal[i * curLoopInnersAlign], curLoopInners);
         }
     }
-    
 
     xQue_.FreeTensor(xLocal);
     segmentIdsQue_.FreeTensor(segmentIdsLocal);
@@ -234,7 +239,7 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::Process()
 
             CopyInX(curLoopOutters, curLoopInners, xGmOffset);
             CopyInSegmentIds(curLoopOutters, segmentIdsGmOffset);
-            
+
             ComputeSumAndCopyOut(yLocal, curLoopOutters, curLoopInners, curLoopInnersAlign, colOffset, curId);
         }
         event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -251,6 +256,5 @@ __aicore__ inline void SegmentSumSimd<T1, T2>::Process()
     }
 }
 
-
-}
+} // namespace SegmentSum
 #endif

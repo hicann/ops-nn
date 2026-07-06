@@ -16,33 +16,34 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class SparseSoftmaxCrossEntropyWithLogits : public OpDef {
-    public:
-        explicit SparseSoftmaxCrossEntropyWithLogits(const char *name) : OpDef(name) {
-            this->Input("features")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("labels")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("loss")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("backprop")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
-    };
+class SparseSoftmaxCrossEntropyWithLogits : public OpDef {
+public:
+    explicit SparseSoftmaxCrossEntropyWithLogits(const char* name) : OpDef(name)
+    {
+        this->Input("features")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("labels")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("loss")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("backprop")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
 
-    OP_ADD(SparseSoftmaxCrossEntropyWithLogits);
+OP_ADD(SparseSoftmaxCrossEntropyWithLogits);
 } // namespace ops

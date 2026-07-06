@@ -30,11 +30,11 @@ struct SyncBatchNormGatherStatsCompileInfo {
 BEGIN_TILING_DATA_DEF(SyncBatchNormGatherStatsTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, blockDim);
 TILING_DATA_FIELD_DEF(uint64_t, blockFormer);
-TILING_DATA_FIELD_DEF(uint64_t, blockTail); 
-TILING_DATA_FIELD_DEF(uint64_t, nLen); 
+TILING_DATA_FIELD_DEF(uint64_t, blockTail);
+TILING_DATA_FIELD_DEF(uint64_t, nLen);
 TILING_DATA_FIELD_DEF(uint64_t, cLen);
-TILING_DATA_FIELD_DEF(uint64_t, ubFormer); 
-TILING_DATA_FIELD_DEF(uint64_t, ubTail); 
+TILING_DATA_FIELD_DEF(uint64_t, ubFormer);
+TILING_DATA_FIELD_DEF(uint64_t, ubTail);
 TILING_DATA_FIELD_DEF(float, momentum);
 TILING_DATA_FIELD_DEF(float, eps);
 END_TILING_DATA_DEF;
@@ -63,12 +63,9 @@ REGISTER_TILING_DATA_CLASS(SyncBatchNormGatherStats_20001, SyncBatchNormGatherSt
 
 class SyncBatchNormGatherStatsTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit SyncBatchNormGatherStatsTiling(gert::TilingContext *context) : TilingBaseClass(context) {
-    }
+    explicit SyncBatchNormGatherStatsTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    void Reset(gert::TilingContext* context) override {
-        TilingBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
     ~SyncBatchNormGatherStatsTiling() override = default;
 
 protected:
@@ -107,7 +104,7 @@ protected:
     int64_t GetCacheID(const int64_t idx);
 
 private:
-    const char *opName = "SyncBatchNormGatherStats";
+    const char* opName = "SyncBatchNormGatherStats";
     SyncBatchNormGatherStatsTilingData tilingData;
     SyncBatchNormGatherStatsNNotFullLoadTilingData nNotFullLoadTilingData;
 
@@ -171,5 +168,5 @@ private:
     int64_t cLoopTail_ = 0;
     int64_t cTailTail_ = 0;
 };
-}; // namespace optiling
+};     // namespace optiling
 #endif // SYNC_BATCH_NORM_GATHER_STATS_TILING_H

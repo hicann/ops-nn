@@ -18,17 +18,11 @@
 
 #include "index_fill_tiling_common.h"
 
-namespace optiling
-{
-class IndexFillSimtTiling : public IndexFillCommonTiling
-{
+namespace optiling {
+class IndexFillSimtTiling : public IndexFillCommonTiling {
 public:
-    explicit IndexFillSimtTiling(gert::TilingContext* context) : IndexFillCommonTiling(context)
-    {
-    }
-    ~IndexFillSimtTiling() override
-    {
-    }
+    explicit IndexFillSimtTiling(gert::TilingContext* context) : IndexFillCommonTiling(context) {}
+    ~IndexFillSimtTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -40,6 +34,7 @@ protected:
 
 protected:
     void DoUBTiling();
+
 private:
     int64_t CalcSimtUsedCoreNum();
 
@@ -51,5 +46,5 @@ protected:
 
 ge::graphStatus Tiling4IndexFillSupportSimt(gert::TilingContext* context);
 
-}  // namespace optiling
-#endif  // INDEX_FILL_TILING_SIMT_H_
+} // namespace optiling
+#endif // INDEX_FILL_TILING_SIMT_H_

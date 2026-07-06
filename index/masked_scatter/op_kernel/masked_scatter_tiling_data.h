@@ -13,8 +13,8 @@
  * \brief tiling data struct
  */
 
- #ifndef _MASKED_SCATTER_TILING_DATA_H_
- #define _MASKED_SCATTER_TILING_DATA_H_
+#ifndef _MASKED_SCATTER_TILING_DATA_H_
+#define _MASKED_SCATTER_TILING_DATA_H_
 
 struct MaskedScatterV1TilingData {
     uint32_t loopNum = 0;

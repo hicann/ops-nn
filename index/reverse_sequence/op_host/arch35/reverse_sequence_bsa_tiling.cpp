@@ -24,8 +24,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 using namespace ReverseSequence;
 
 static constexpr int64_t OUT_BUFFER_LEN = 1024;
@@ -64,14 +63,14 @@ bool ReverseSequenceBSATiling::IsCapable()
     if (inputData_.inputDim[DIM_S] * inputData_.inputDim[DIM_A] < GATHER_THRESHOLD) {
         // SA 较小的离散场景不处理
         return false;
-    }    
+    }
     return true;
 }
 
 void ReverseSequenceBSATiling::InitializationVars()
 {
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / inputData_.xDtypeSize;
-    availableUb_ = static_cast<int64_t>(ubSize_  - UB_RESERVED_SIZE) / inputData_.xDtypeSize;
+    availableUb_ = static_cast<int64_t>(ubSize_ - UB_RESERVED_SIZE) / inputData_.xDtypeSize;
 }
 
 void ReverseSequenceBSATiling::DoBlockTiling()
@@ -175,7 +174,7 @@ void ReverseSequenceBSATiling::CalcSplitDimA()
 }
 
 void ReverseSequenceBSATiling::CalcSplitDimB()
-{    
+{
     int64_t inDimBLower = 1;
     int64_t inDimBUpper = inputData_.inputDim[DIM_B];
     while (inDimBLower < inDimBUpper) {
@@ -201,18 +200,16 @@ void ReverseSequenceBSATiling::CalcSplitDimB()
     splitMode_ = SPLIT_DIM_B;
 }
 
-void ReverseSequenceBSATiling::CalcGatherMode()    
+void ReverseSequenceBSATiling::CalcGatherMode()
 {
-    if (inputData_.inputDim[DIM_A] * inputData_.xDtypeSize <= GATHER_THRESHOLD &&
-        splitMode_ == SPLIT_DIM_B) {
+    if (inputData_.inputDim[DIM_A] * inputData_.xDtypeSize <= GATHER_THRESHOLD && splitMode_ == SPLIT_DIM_B) {
         gatherMode_ = GATHER_DIM_B;
-    }  else if (inputData_.inputDim[DIM_A] * inputData_.xDtypeSize <= GATHER_THRESHOLD && (splitMode_ == SPLIT_DIM_S)) {
+    } else if (inputData_.inputDim[DIM_A] * inputData_.xDtypeSize <= GATHER_THRESHOLD && (splitMode_ == SPLIT_DIM_S)) {
         gatherMode_ = GATHER_DIM_S;
     } else {
         gatherMode_ = NOT_GATHER;
     }
 }
-
 
 void ReverseSequenceBSATiling::DoUBTilingSingle()
 {
@@ -226,7 +223,7 @@ void ReverseSequenceBSATiling::DoUBTilingSingle()
         return;
     }
     // SA 全载
-    if (oneBatchBuffer <= availableUb_ && oneBatchBuffer <= MAX_INPUT_ELEMENTS ) {
+    if (oneBatchBuffer <= availableUb_ && oneBatchBuffer <= MAX_INPUT_ELEMENTS) {
         CalcSplitDimB();
         return;
     }
@@ -260,11 +257,7 @@ ge::graphStatus ReverseSequenceBSATiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ReverseSequenceBSATiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
+ge::graphStatus ReverseSequenceBSATiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t ReverseSequenceBSATiling::GetTilingKey() const
 {
@@ -292,8 +285,8 @@ ge::graphStatus ReverseSequenceBSATiling::PostTiling()
 
 void ReverseSequenceBSATiling::SetTilingData()
 {
-     ReverseSequence::ReverseSequenceBSATilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceBSATilingData>();
+    ReverseSequence::ReverseSequenceBSATilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceBSATilingData>();
 
     tilingData->bDim = inputData_.inputDim[DIM_B];
     tilingData->sDim = inputData_.inputDim[DIM_S];
@@ -314,11 +307,10 @@ void ReverseSequenceBSATiling::SetTilingData()
     tilingData->dtypeSize = inputData_.xDtypeSize;
 }
 
-
 std::string ReverseSequenceBSATiling::TilingDataToString()
 {
-    ReverseSequence::ReverseSequenceBSATilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceBSATilingData>();
+    ReverseSequence::ReverseSequenceBSATilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceBSATilingData>();
     std::string str = " bDim:" + std::to_string(tilingData->bDim);
     str += " sDim:" + std::to_string(tilingData->sDim);
     str += " aDim:" + std::to_string(tilingData->aDim);
@@ -339,7 +331,6 @@ std::string ReverseSequenceBSATiling::TilingDataToString()
     return str;
 }
 
-
 void ReverseSequenceBSATiling::DumpTilingInfo()
 {
     OP_LOGI(context_, "ReverseSequenceBSA tilingInfo is :%s", TilingDataToString().c_str());
@@ -357,4 +348,4 @@ ge::graphStatus ReverseSequenceBSATiling::GetShapeAttrsInfo()
 
 REGISTER_TILING_TEMPLATE("ReverseSequence", ReverseSequenceBSATiling, 1);
 
-}  // namespace optiling
+} // namespace optiling

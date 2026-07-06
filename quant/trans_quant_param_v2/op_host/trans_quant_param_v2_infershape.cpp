@@ -24,7 +24,7 @@ static constexpr int OUTPUT_Y_INDEX = 0;
 static constexpr int GRID_SAMPLER2D_GRAD_SHAPE_LIMIT = 4;
 using namespace ge;
 namespace ops {
-    
+
 static std::set<std::string> QbmmDavidSupportSoc = {"Ascend950"};
 
 static bool IsDavidSupported()
@@ -45,7 +45,8 @@ static bool IsDavidSupported()
 static ge::graphStatus InferShape4TransQuantParamV2(gert::InferShapeContext* context)
 {
     // infer shape
-    OP_CHECK_IF(context == nullptr, OP_LOGE("TransQuantParamV2", "InferShapeContext is nullptr"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, OP_LOGE("TransQuantParamV2", "InferShapeContext is nullptr"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "Begin to do InferShape4TransQuantParamV2.");
 
     const gert::Shape* scaleShape = context->GetInputShape(INPUT_SCALE_INDEX);

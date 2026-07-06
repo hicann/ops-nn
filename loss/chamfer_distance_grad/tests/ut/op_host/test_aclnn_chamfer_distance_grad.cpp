@@ -20,15 +20,9 @@ using namespace std;
 
 class l2_chamfer_distance_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "chamfer_distance_backward_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "chamfer_distance_backward_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "chamfer_distance_backward_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "chamfer_distance_backward_test TearDown" << endl; }
 };
 
 TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_float_normal)
@@ -45,9 +39,8 @@ TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_float_normal)
         auto grad_xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT, ACL_FORMAT_ND);
         auto grad_xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-        auto ut = OP_API_UT(
-            aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
-            OUTPUT(grad_xyz1, grad_xyz2));
+        auto ut = OP_API_UT(aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                            OUTPUT(grad_xyz1, grad_xyz2));
 
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -69,9 +62,8 @@ TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_half_normal)
         auto grad_xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
         auto grad_xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-        auto ut = OP_API_UT(
-            aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
-            OUTPUT(grad_xyz1, grad_xyz2));
+        auto ut = OP_API_UT(aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                            OUTPUT(grad_xyz1, grad_xyz2));
 
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -93,9 +85,9 @@ TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_nullptr_normal)
         auto grad_xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
         auto grad_xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-        auto ut = OP_API_UT(
-            aclnnChamferDistanceBackward, INPUT((aclTensor*)nullptr, xyz2, idx1, idx2, grad_dist1, grad_dist2),
-            OUTPUT(grad_xyz1, grad_xyz2));
+        auto ut = OP_API_UT(aclnnChamferDistanceBackward,
+                            INPUT((aclTensor*)nullptr, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                            OUTPUT(grad_xyz1, grad_xyz2));
 
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -116,9 +108,8 @@ TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_invalid_normal)
     auto grad_xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto grad_xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
-        OUTPUT(grad_xyz1, grad_xyz2));
+    auto ut = OP_API_UT(aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                        OUTPUT(grad_xyz1, grad_xyz2));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

@@ -19,7 +19,6 @@
 // #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct FatreluMulTilingData {
     int64_t lastDimSize = 4;
     int64_t batchSize = 2;

@@ -26,15 +26,14 @@
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 using namespace QuantBatchMatmulV3Arch35TilingKey;
 
-
 namespace {
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_RESV)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::ITER_BATCH;
-}  // namespace
+} // namespace
 
 namespace optiling {
 
-QuantBatchMatmulV3IterbatchTiling::QuantBatchMatmulV3IterbatchTiling(gert::TilingContext *context)
+QuantBatchMatmulV3IterbatchTiling::QuantBatchMatmulV3IterbatchTiling(gert::TilingContext* context)
     : QuantBatchMatmulV3TilingBase(context, false), tilingData_(tilingDataSelf_)
 {
     Reset();
@@ -45,16 +44,16 @@ void QuantBatchMatmulV3IterbatchTiling::Reset()
     isBf16Opt_ = false;
     isUbQuant_ = false;
 
-    if(!isTilingOut_) {
+    if (!isTilingOut_) {
         tilingData_ = DequantBmm::QuantBatchMatmulV3TilingDataParams();
         OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                                  0, context_->GetRawTilingData()->GetCapacity()) != EOK,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."), return);
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."), return );
     }
 }
 
-void QuantBatchMatmulV3IterbatchTiling::GetBroadCastInfo(
-    uint64_t& broadcastNum, uint64_t& innerBatchNum, bool& isBroadcastA, bool& isBroadcastB)
+void QuantBatchMatmulV3IterbatchTiling::GetBroadCastInfo(uint64_t& broadcastNum, uint64_t& innerBatchNum,
+                                                         bool& isBroadcastA, bool& isBroadcastB)
 {
     if (inputParams_.batchA4 != inputParams_.batchB4) {
         broadcastNum = broadcastNum + 1UL;
@@ -103,12 +102,13 @@ bool QuantBatchMatmulV3IterbatchTiling::IsCapable()
 
     // This template only supports one operand being broadcast, not mixed-axis broadcasting on both operands.
     if (isBroadcastA && isBroadcastB) {
-        OP_LOGI(
-            inputParams_.opName, "The multi-batch optimization currently only supports one matrix being broadcasted");
+        OP_LOGI(inputParams_.opName,
+                "The multi-batch optimization currently only supports one matrix being broadcasted");
         return false;
     }
 
-    if (!(broadcastNum == 0 || broadcastNum == 1 || broadcastNum == 4)) { // Only 1-axis or 4-axis broadcast is supported.
+    if (!(broadcastNum == 0 || broadcastNum == 1 ||
+          broadcastNum == 4)) { // Only 1-axis or 4-axis broadcast is supported.
         OP_LOGI(
             inputParams_.opName,
             "The multi-batch optimization currently only supports 1 or 4 batch axis being broadcasted, but it is %lu",
@@ -147,31 +147,33 @@ bool QuantBatchMatmulV3IterbatchTiling::IsCapable()
 uint32_t QuantBatchMatmulV3IterbatchTiling::CalcIterBatch()
 {
     // get align m,k,n value
-    uint64_t baseMAlignNum =
-        inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK;
-    uint64_t baseNAlignNum =
-        inputParams_.transB ? qmmv3_tiling_const::CUBE_BLOCK : GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype);
-    uint64_t baseKAlignNum = (inputParams_.transA && !inputParams_.transB)
-                                ? qmmv3_tiling_const::CUBE_BLOCK
-                                : GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype);
+    uint64_t baseMAlignNum = inputParams_.transA ?
+                                 GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype) :
+                                 qmmv3_tiling_const::CUBE_BLOCK;
+    uint64_t baseNAlignNum = inputParams_.transB ?
+                                 qmmv3_tiling_const::CUBE_BLOCK :
+                                 GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype);
+    uint64_t baseKAlignNum = (inputParams_.transA && !inputParams_.transB) ?
+                                 qmmv3_tiling_const::CUBE_BLOCK :
+                                 GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype);
     uint64_t alignMValue = ops::CeilAlign(inputParams_.mSize, baseMAlignNum);
     uint64_t alignNValue = ops::CeilAlign(inputParams_.nSize, baseNAlignNum);
     uint64_t alignKValue = ops::CeilAlign(inputParams_.kSize, baseKAlignNum);
-    uint64_t biasSize = inputParams_.hasBias
-                            ? alignNValue * static_cast<uint64_t>(ge::GetSizeByDataType(inputParams_.biasDtype)) : 0;
-    uint64_t scaleSize = inputParams_.isPerChannel
-                            ? alignNValue * ge::GetSizeByDataType(inputParams_.scaleDtype)
-                            : ge::GetSizeByDataType(inputParams_.scaleDtype);
+    uint64_t biasSize = inputParams_.hasBias ?
+                            alignNValue * static_cast<uint64_t>(ge::GetSizeByDataType(inputParams_.biasDtype)) :
+                            0;
+    uint64_t scaleSize = inputParams_.isPerChannel ? alignNValue * ge::GetSizeByDataType(inputParams_.scaleDtype) :
+                                                     ge::GetSizeByDataType(inputParams_.scaleDtype);
     uint64_t l1SizeLeft = aicoreParams_.l1Size - biasSize - scaleSize;
-    uint32_t iterBatch = ops::FloorDiv(
-        l1SizeLeft, GetSizeWithDataType(alignMValue * alignKValue, inputParams_.aDtype) +
-                        GetSizeWithDataType(alignKValue * alignNValue, inputParams_.bDtype));
+    uint32_t iterBatch = ops::FloorDiv(l1SizeLeft,
+                                       GetSizeWithDataType(alignMValue * alignKValue, inputParams_.aDtype) +
+                                           GetSizeWithDataType(alignKValue * alignNValue, inputParams_.bDtype));
     return iterBatch;
 }
 
 bool QuantBatchMatmulV3IterbatchTiling::CheckDtype() const
 {
-    QuantBatchMatmulV3CheckerBase *qmmV3Checker = nullptr;
+    QuantBatchMatmulV3CheckerBase* qmmV3Checker = nullptr;
     qmmV3Checker = new (std::nothrow) QuantBatchMatmulV3Checker4MmadS8S4(context_, inputParams_);
 
     OP_TILING_CHECK(qmmV3Checker == nullptr,
@@ -182,12 +184,12 @@ bool QuantBatchMatmulV3IterbatchTiling::CheckDtype() const
     return true;
 }
 
-bool QuantBatchMatmulV3IterbatchTiling::CheckShape(const std::vector<gert::Shape *> &mandatoryShape,
-                                             const gert::StorageShape *biasShape,
-                                             const gert::StorageShape *pertokenShape,
-                                             const std::vector<int64_t> &dimValueOfMKN) const
+bool QuantBatchMatmulV3IterbatchTiling::CheckShape(const std::vector<gert::Shape*>& mandatoryShape,
+                                                   const gert::StorageShape* biasShape,
+                                                   const gert::StorageShape* pertokenShape,
+                                                   const std::vector<int64_t>& dimValueOfMKN) const
 {
-    QuantBatchMatmulV3CheckerBase *qmmV3Checker = nullptr;
+    QuantBatchMatmulV3CheckerBase* qmmV3Checker = nullptr;
     qmmV3Checker = new (std::nothrow) QuantBatchMatmulV3Checker4MmadS8S4(context_, inputParams_);
     OP_TILING_CHECK(qmmV3Checker == nullptr,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to instantiate qmmV3Checker."), return false);
@@ -215,7 +217,8 @@ ge::graphStatus QuantBatchMatmulV3IterbatchTiling::GetShapeAttrsInfo()
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
 
-ge::graphStatus QuantBatchMatmulV3IterbatchTiling::DoOpTiling() {
+ge::graphStatus QuantBatchMatmulV3IterbatchTiling::DoOpTiling()
+{
     uint64_t calcBatch = 0;
     if (inputParams_.batchA4 != inputParams_.batchB4) {
         calcBatch = inputParams_.batchC4;
@@ -231,30 +234,32 @@ ge::graphStatus QuantBatchMatmulV3IterbatchTiling::DoOpTiling() {
     basicTiling_.singleCoreN = inputParams_.nSize;
     basicTiling_.singleCoreK = inputParams_.kSize;
     basicTiling_.baseM = std::min(inputParams_.mSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256);
-    basicTiling_.baseM =
-        !inputParams_.transA
-            ? ops::CeilAlign(static_cast<uint64_t>(basicTiling_.baseM), qmmv3_tiling_const::CUBE_BLOCK)
-            : ops::CeilAlign(static_cast<uint64_t>(basicTiling_.baseM),
-                             GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype));
+    basicTiling_.baseM = !inputParams_.transA ?
+                             ops::CeilAlign(static_cast<uint64_t>(basicTiling_.baseM), qmmv3_tiling_const::CUBE_BLOCK) :
+                             ops::CeilAlign(
+                                 static_cast<uint64_t>(basicTiling_.baseM),
+                                 GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype));
     basicTiling_.baseN = std::min(inputParams_.nSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256);
-    basicTiling_.baseN =
-        inputParams_.transB
-            ? ops::CeilAlign(static_cast<uint64_t>(basicTiling_.baseN), qmmv3_tiling_const::CUBE_BLOCK)
-            : ops::CeilAlign(static_cast<uint64_t>(basicTiling_.baseN),
-                             GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype));
-    basicTiling_.baseK =
-        ops::CeilAlign(std::min(GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_128, inputParams_.aDtype), inputParams_.kSize),
-                       GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype));
+    basicTiling_.baseN = inputParams_.transB ?
+                             ops::CeilAlign(static_cast<uint64_t>(basicTiling_.baseN), qmmv3_tiling_const::CUBE_BLOCK) :
+                             ops::CeilAlign(
+                                 static_cast<uint64_t>(basicTiling_.baseN),
+                                 GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype));
+    basicTiling_.baseK = ops::CeilAlign(
+        std::min(GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_128, inputParams_.aDtype),
+                 inputParams_.kSize),
+        GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype));
     basicTiling_.stepKa = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(basicTiling_.baseK));
     basicTiling_.stepKb = basicTiling_.stepKa;
     basicTiling_.stepM = ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(basicTiling_.baseM));
     basicTiling_.stepN = ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(basicTiling_.baseN));
     basicTiling_.depthA1 = basicTiling_.stepKa * basicTiling_.stepM;
     basicTiling_.depthB1 = basicTiling_.stepKb * basicTiling_.stepN;
-    basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize))
-            ? qmmv3_tiling_const::DOUBLE_BUFFER_NUM
-            : 1;
+    basicTiling_.dbL0c = ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C *
+                               qmmv3_tiling_const::DOUBLE_BUFFER_NUM <=
+                           aicoreParams_.l0cSize)) ?
+                             qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
+                             1;
     SetTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -306,9 +311,8 @@ uint64_t QuantBatchMatmulV3IterbatchTiling::GetApiLevel(NpuArch) const
 uint64_t QuantBatchMatmulV3IterbatchTiling::GetTilingKey() const
 {
     uint64_t kernelType = GetKernelType();
-    return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetBiasMode(),
-        kernelType, GetApiLevel(compileInfo_.npuArch));
+    return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
+                              GetBiasMode(), kernelType, GetApiLevel(compileInfo_.npuArch));
 }
 
 ge::graphStatus QuantBatchMatmulV3IterbatchTiling::GetWorkspaceSize()
@@ -319,24 +323,24 @@ ge::graphStatus QuantBatchMatmulV3IterbatchTiling::GetWorkspaceSize()
 
 ge::graphStatus QuantBatchMatmulV3IterbatchTiling::PostTiling()
 {
-    OP_TILING_CHECK(tilingDataSize_ % sizeof(uint64_t) != 0UL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.",
-                                          tilingDataSize_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        tilingDataSize_ % sizeof(uint64_t) != 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.", tilingDataSize_),
+        return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void *>(&tilingData_), tilingDataSize_);
+                           reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "Failed to copy memory with memcpy_s, ret=%d.", ret);
         return ge::GRAPH_FAILED;
     }
     context_->SetBlockDim(basicTiling_.usedCoreNum);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
-    size_t *workspaces = context_->GetWorkspaceSizes(1);  // set workspace
+    size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    QuantBatchMatmulV3, QuantBatchMatmulV3IterbatchTiling, supportedNpuArch, TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, QuantBatchMatmulV3IterbatchTiling, supportedNpuArch,
+                                   TILING_PRIORITY);
 } // namespace optiling

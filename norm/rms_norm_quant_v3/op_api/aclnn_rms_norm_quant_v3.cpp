@@ -42,9 +42,8 @@ static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int32_t IDX_0 = 0;
 static constexpr int32_t IDX_1 = 1;
 
-static bool CheckNotNull(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
-    aclTensor* y, bool outputRstd, aclTensor* rstd)
+static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, aclTensor* y,
+                         bool outputRstd, aclTensor* rstd)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(gamma, return false);
@@ -58,8 +57,7 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckShapeValid(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* y)
+static bool CheckShapeValid(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* y)
 {
     // gamma 维度校验：1~2维
     int64_t gammaDimNum = static_cast<int64_t>(gamma->GetViewShape().GetDimNum());
@@ -78,37 +76,31 @@ static bool CheckShapeValid(
     int64_t yDimNum = static_cast<int64_t>(y->GetViewShape().GetDimNum());
     int64_t outLastDim = y->GetViewShape().GetDim(yDimNum - 1);
     if (y->GetDataType() == op::DataType::DT_INT32) {
-        OP_CHECK(
-            xLastDim % INT4_NUMS_IN_INT32_SPACE == 0,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int32, the last dim of x must be a multiple of 8,"
-                " but got %ld.",
-                xLastDim),
-            return false);
-        OP_CHECK(
-            xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int32, the out last dim must be 1/8 of x last dim,"
-                " x last dim is (%ld), out last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
+        OP_CHECK(xLastDim % INT4_NUMS_IN_INT32_SPACE == 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "if outType is int32, the last dim of x must be a multiple of 8,"
+                         " but got %ld.",
+                         xLastDim),
+                 return false);
+        OP_CHECK(xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "if outType is int32, the out last dim must be 1/8 of x last dim,"
+                         " x last dim is (%ld), out last dim is (%ld).",
+                         xLastDim, outLastDim),
+                 return false);
     }
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
-    aclTensor* y, bool outputRstd, aclTensor* rstd)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, aclTensor* y,
+                               bool outputRstd, aclTensor* rstd)
 {
     CHECK_RET(CheckNotNull(x, gamma, scale, y, outputRstd, rstd), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckShapeValid(x, gamma, scale, y), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus Int42Int32PackedTensor(
-    const aclTensor* y, const aclTensor*& outTensor, aclOpExecutor* executor)
+static aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTensor, aclOpExecutor* executor)
 {
     auto viewShape = y->GetViewShape();
     auto viewShapeDim = viewShape.GetDimNum();
@@ -123,8 +115,7 @@ static aclnnStatus Int42Int32PackedTensor(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus PreDealData(
-    const aclTensor*& gamma, const aclTensor*& beta, aclOpExecutor* executor)
+static aclnnStatus PreDealData(const aclTensor*& gamma, const aclTensor*& beta, aclOpExecutor* executor)
 {
     if (gamma != nullptr && gamma->GetViewShape().GetDimNum() == DIMS_TWO_NUMS) {
         auto gammaReshape = l0op::Reshape(gamma, {gamma->GetViewShape()[1]}, executor);
@@ -139,22 +130,20 @@ static aclnnStatus PreDealData(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ComputeRmsNormQuantV3(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
-    const aclTensor* offset, const aclTensor* beta, double epsilon,
-    int32_t yType, bool divMode, bool outputRstd,
-    aclTensor* y, aclTensor* rstd, aclOpExecutor* executor)
+static aclnnStatus ComputeRmsNormQuantV3(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
+                                         const aclTensor* offset, const aclTensor* beta, double epsilon, int32_t yType,
+                                         bool divMode, bool outputRstd, aclTensor* y, aclTensor* rstd,
+                                         aclOpExecutor* executor)
 {
     // 创建rstd输出Tensor
-    aclTensor* rstdOutput =
-        (outputRstd) ?
-            executor->AllocTensor(rstd->GetViewShape(), rstd->GetDataType(), rstd->GetViewFormat()) :
-            executor->AllocTensor(op::Shape({0}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
+    aclTensor* rstdOutput = (outputRstd) ?
+                                executor->AllocTensor(rstd->GetViewShape(), rstd->GetDataType(),
+                                                      rstd->GetViewFormat()) :
+                                executor->AllocTensor(op::Shape({0}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
 
     // 调用l0op::RmsNormQuantV3，其中offset对应l0接口中的zero_points
-    auto rmsNormQuantV3Outs = l0op::RmsNormQuantV3(
-        x, gamma, scale, nullptr, offset, nullptr, beta,
-        epsilon, divMode, yType, outputRstd, rstdOutput, executor);
+    auto rmsNormQuantV3Outs = l0op::RmsNormQuantV3(x, gamma, scale, nullptr, offset, nullptr, beta, epsilon, divMode,
+                                                   yType, outputRstd, rstdOutput, executor);
 
     auto resultTensor = std::get<IDX_0>(rmsNormQuantV3Outs);
     auto rstdComputeOut = std::get<IDX_1>(rmsNormQuantV3Outs);
@@ -181,16 +170,14 @@ static aclnnStatus ComputeRmsNormQuantV3(
 }
 } // namespace
 
-aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* scale, const aclTensor* offset,
-    const aclTensor* beta, double epsilon, bool divMode, bool outputRstd,
-    aclTensor* y, aclTensor* rstd, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(const aclTensor* x, const aclTensor* gamma, const aclTensor* scale,
+                                                const aclTensor* offset, const aclTensor* beta, double epsilon,
+                                                bool divMode, bool outputRstd, aclTensor* y, aclTensor* rstd,
+                                                uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGD("Enter aclnnRmsNormQuantV3GetWorkspaceSize.");
-    L2_DFX_PHASE_1(
-        aclnnRmsNormQuantV3,
-        DFX_IN(x, gamma, scale, offset, beta, epsilon, divMode, outputRstd),
-        DFX_OUT(y, rstd));
+    L2_DFX_PHASE_1(aclnnRmsNormQuantV3, DFX_IN(x, gamma, scale, offset, beta, epsilon, divMode, outputRstd),
+                   DFX_OUT(y, rstd));
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -225,9 +212,8 @@ aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(
     const aclTensor* offsetCont = (offset == nullptr) ? nullptr : l0op::Contiguous(offset, uniqueExecutor.get());
     const aclTensor* betaCont = (betaProc == nullptr) ? nullptr : l0op::Contiguous(betaProc, uniqueExecutor.get());
 
-    auto ret = ComputeRmsNormQuantV3(
-        xCont, gammaCont, scaleCont, offsetCont, betaCont, epsilon,
-        yType, divMode, outputRstd, y, rstd, uniqueExecutor.get());
+    auto ret = ComputeRmsNormQuantV3(xCont, gammaCont, scaleCont, offsetCont, betaCont, epsilon, yType, divMode,
+                                     outputRstd, y, rstd, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 获取计算过程中需要使用的workspace大小
@@ -237,8 +223,7 @@ aclnnStatus aclnnRmsNormQuantV3GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnRmsNormQuantV3(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnRmsNormQuantV3(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnRmsNormQuantV3);
     // 固定写法，调用框架能力，完成计算

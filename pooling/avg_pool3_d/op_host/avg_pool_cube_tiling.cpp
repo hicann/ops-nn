@@ -60,9 +60,9 @@ const auto kCalcDist4 = [](const int64_t* shape, const vector<int64_t>& seeds) -
 namespace optiling {
 namespace avgPool3DTilingCompileInfo {
 template <class IsShapeInRange, class CalcDist>
-uint64_t MatchRepoTiling(
-    const int64_t* shape, const vector<vector<int64_t>>& repo_seeds, const vector<vector<int64_t>>& repo_range,
-    const IsShapeInRange& is_shape_in_range, const CalcDist& calc_dist)
+uint64_t MatchRepoTiling(const int64_t* shape, const vector<vector<int64_t>>& repo_seeds,
+                         const vector<vector<int64_t>>& repo_range, const IsShapeInRange& is_shape_in_range,
+                         const CalcDist& calc_dist)
 {
     int64_t min_distance = std::numeric_limits<int64_t>::max();
     size_t idx = 0;
@@ -82,9 +82,8 @@ uint64_t MatchRepoTiling(
 }
 
 template <class IsShapeInRange>
-uint64_t MatchCostModelTiling(
-    const int64_t* shape, const vector<vector<int64_t>>& cost_range, const vector<uint64_t>& tiling_ids,
-    const IsShapeInRange& is_shape_in_range)
+uint64_t MatchCostModelTiling(const int64_t* shape, const vector<vector<int64_t>>& cost_range,
+                              const vector<uint64_t>& tiling_ids, const IsShapeInRange& is_shape_in_range)
 {
     for (size_t idx = 0; idx < cost_range.size(); ++idx) {
         if (is_shape_in_range(shape, cost_range[idx])) {
@@ -130,14 +129,12 @@ bool CubeCompileInfo::AnalyzeCompileInfo(const char* op_name, const char* compil
     try {
         auto compile_info = json::parse(compile_info_str);
         if (compile_info.type() == json::value_t::object) {
-            OP_CHECK_IF(
-                !(AnalyzeExtendInfo(compile_info) && AnalyzeCommonCompileInfo(compile_info)),
-                OP_LOGE(op_name, "Parse compile value fail"), return false);
+            OP_CHECK_IF(!(AnalyzeExtendInfo(compile_info) && AnalyzeCommonCompileInfo(compile_info)),
+                        OP_LOGE(op_name, "Parse compile value fail"), return false);
         } else {
             for (size_t idx = 0; idx < compile_info.size(); ++idx) {
-                OP_CHECK_IF(
-                    !(AnalyzeExtendInfo(compile_info[idx]) && AnalyzeCommonCompileInfo(compile_info[idx])),
-                    OP_LOGE(op_name, "Parse compile value fail"), return false);
+                OP_CHECK_IF(!(AnalyzeExtendInfo(compile_info[idx]) && AnalyzeCommonCompileInfo(compile_info[idx])),
+                            OP_LOGE(op_name, "Parse compile value fail"), return false);
             }
         }
     } catch (...) {
@@ -153,9 +150,7 @@ void CubeCompileInfo::AnalyzeCompileInfoBlockDim(const json& compile_info)
     if (compile_info.contains("block_dim")) {
         const auto& tmp_block_dim = compile_info["block_dim"].get<map<string, uint32_t>>();
         bool is_digit = true;
-        auto is_digit_func = [&is_digit](char element) {
-            is_digit = is_digit && isdigit(element) != 0;
-        };
+        auto is_digit_func = [&is_digit](char element) { is_digit = is_digit && isdigit(element) != 0; };
         for (auto it = tmp_block_dim.begin(); it != tmp_block_dim.end(); ++it) {
             is_digit = true;
             std::for_each(it->first.begin(), it->first.end(), is_digit_func);
@@ -227,9 +222,8 @@ bool CubeCompileInfo::AnalyzeCommonCompileInfo(const json& compile_info)
     return true;
 }
 
-void CubeCompileInfo::GetChipFeature(
-    fe::PlatFormInfos& platform_info, const string& lable, const string& platform_info_key, const string& true_value,
-    bool& value)
+void CubeCompileInfo::GetChipFeature(fe::PlatFormInfos& platform_info, const string& lable,
+                                     const string& platform_info_key, const string& true_value, bool& value)
 {
     std::string temp_str;
     if (platform_info.GetPlatformRes(lable, platform_info_key, temp_str)) {
@@ -241,8 +235,8 @@ void CubeCompileInfo::GetChipFeature(
     }
 }
 
-void CubeCompileInfo::GetLocalMemSize(
-    fe::PlatFormInfos& platform_info, const string& lable, const string& mem_type, uint64_t& size)
+void CubeCompileInfo::GetLocalMemSize(fe::PlatFormInfos& platform_info, const string& lable, const string& mem_type,
+                                      uint64_t& size)
 {
     std::string temp_str;
     size = static_cast<uint64_t>(0);
@@ -258,8 +252,8 @@ void CubeCompileInfo::GetLocalMemSize(
     }
 }
 
-void CubeCompileInfo::GetAICoreIntrinsicDtype(
-    fe::PlatFormInfos& platform_info, const string& intrinsic_name, bool& value)
+void CubeCompileInfo::GetAICoreIntrinsicDtype(fe::PlatFormInfos& platform_info, const string& intrinsic_name,
+                                              bool& value)
 {
     std::string val;
     (void)platform_info.GetPlatformRes("AICoreintrinsicDtypeMap", intrinsic_name, val);
@@ -286,13 +280,13 @@ void CubeCompileInfo::ParseRuntimePlatformInfo(const char* op_name, fe::PlatForm
     platform_info.GetPlatformRes("version", "SoC_version", soc_version);
     GetLocalMemSize(platform_info, "AICoreSpec", "bt_size", bt_size);
     cube_freq = std::atoi(cube_freq_str.c_str());
-    OP_LOGD(
-        op_name, "PLATFORM INFO CORE_NUM: %u, UB: %lu, L1: %lu, L2: %lu, L0_A: %lu, L0_B: %lu, L0_C: %lu, BT_SIZE: %lu",
-        core_num, ub_size, l1_size, l2_size, l0a_size, l0b_size, l0c_size, bt_size);
+    OP_LOGD(op_name,
+            "PLATFORM INFO CORE_NUM: %u, UB: %lu, L1: %lu, L2: %lu, L0_A: %lu, L0_B: %lu, L0_C: %lu, BT_SIZE: %lu",
+            core_num, ub_size, l1_size, l2_size, l0a_size, l0b_size, l0c_size, bt_size);
     OP_LOGD(op_name, "The platform info of soc version: %s, cube_freq %i", soc_version.c_str(), cube_freq);
 
-    GetChipFeature(
-        platform_info, "AICoreintrinsicDtypeMap", "Intrinsic_data_move_l12bt", "bf16", intrinsic_data_move_l12bt_bf16);
+    GetChipFeature(platform_info, "AICoreintrinsicDtypeMap", "Intrinsic_data_move_l12bt", "bf16",
+                   intrinsic_data_move_l12bt_bf16);
     GetChipFeature(platform_info, "AICoreSpec", "load3d_constraints", "1", load3d_constraints);
     GetAICoreIntrinsicDtype(platform_info, "Intrinsic_data_move_l12ub", intrinsic_data_move_l12ub);
     GetAICoreIntrinsicDtype(platform_info, "Intrinsic_data_move_l0c2ub", intrinsic_data_move_l0c2ub);
@@ -450,9 +444,8 @@ bool AvgPool3DGradCubeCompileInfo::AnalyzeExtendInfo(const json& compile_info)
     return true;
 }
 
-ge::graphStatus CubeTiling(
-    const int64_t* input_shape, size_t intput_shape_dim_num, const gert::Shape& var_value,
-    const CubeCompileInfo& compile_info, gert::TilingContext* context)
+ge::graphStatus CubeTiling(const int64_t* input_shape, size_t intput_shape_dim_num, const gert::Shape& var_value,
+                           const CubeCompileInfo& compile_info, gert::TilingContext* context)
 {
     const char* op_name = context->GetNodeName();
     uint64_t tiling_id = kInvalidTilingId;
@@ -470,10 +463,8 @@ ge::graphStatus CubeTiling(
 
     if (tiling_id == kInvalidTilingId) {
         if (compile_info.correct_range_flag) {
-            OP_LOGE(
-                op_name,
-                "The original range does not meet requirements,"
-                "new range is generated during op compile, but the shape is not covered by new range");
+            OP_LOGE(op_name, "The original range does not meet requirements,"
+                             "new range is generated during op compile, but the shape is not covered by new range");
         }
 
         OP_LOGE(op_name, "This shape is not covered by any tiling, please modify range and recompile");
@@ -481,9 +472,8 @@ ge::graphStatus CubeTiling(
     }
 
     auto it = compile_info.block_dim.find(tiling_id);
-    OP_CHECK_IF(
-        it == compile_info.block_dim.end(), OP_LOGE(op_name, "failed to get block dim for tiling id %lu", tiling_id),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(it == compile_info.block_dim.end(),
+                OP_LOGE(op_name, "failed to get block dim for tiling id %lu", tiling_id), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(it->second);
     context->SetTilingKey(tiling_id);
@@ -542,9 +532,9 @@ static size_t InitVarsValuesGetIdx(const gert::Shape& in_shape, gert::Shape& var
     return idx;
 }
 
-static size_t InitVarsValuesForAvgPool3DGradCube(
-    uint32_t var_bit_flags, const gert::Shape& in_shape, const gert::Shape& out_shape, gert::Shape& var_value,
-    int64_t* shape_for_range_match)
+static size_t InitVarsValuesForAvgPool3DGradCube(uint32_t var_bit_flags, const gert::Shape& in_shape,
+                                                 const gert::Shape& out_shape, gert::Shape& var_value,
+                                                 int64_t* shape_for_range_match)
 {
     if ((var_bit_flags & kVarBatchN) != static_cast<uint32_t>(0)) {
         var_value.AppendDim(out_shape.GetDim(kNDim));
@@ -568,9 +558,9 @@ static size_t InitVarsValuesForAvgPool3DGradCube(
     return InitVarsValuesGetIdx(in_shape, var_value, shape_for_range_match);
 }
 
-static size_t InitVarsValuesForAvgPool3DCube(
-    uint32_t var_bit_flags, const gert::Shape& in_shape, const gert::Shape& out_shape, gert::Shape& var_value,
-    int64_t* shape_for_range_match)
+static size_t InitVarsValuesForAvgPool3DCube(uint32_t var_bit_flags, const gert::Shape& in_shape,
+                                             const gert::Shape& out_shape, gert::Shape& var_value,
+                                             int64_t* shape_for_range_match)
 {
     if ((var_bit_flags & kVarBatchN) != static_cast<uint32_t>(0)) {
         var_value.AppendDim(out_shape.GetDim(kNDim));
@@ -594,8 +584,8 @@ static size_t InitVarsValuesForAvgPool3DCube(
     return InitVarsValuesGetIdx(in_shape, var_value, shape_for_range_match);
 }
 
-ge::graphStatus Tiling4AvgPool3DCube(
-    gert::TilingContext* context, const gert::StorageShape* fmap_shape, const gert::StorageShape* out_shape)
+ge::graphStatus Tiling4AvgPool3DCube(gert::TilingContext* context, const gert::StorageShape* fmap_shape,
+                                     const gert::StorageShape* out_shape)
 {
     const auto op_name = context->GetNodeName();
     const auto compile_info = reinterpret_cast<const AvgPool3DCubeCompileInfo*>(context->GetCompileInfo());
@@ -603,20 +593,18 @@ ge::graphStatus Tiling4AvgPool3DCube(
 
     OP_LOGD(op_name, "%s", DebugTilingContext(context).c_str());
 
-    OP_CHECK_IF(
-        fmap_shape == nullptr || out_shape == nullptr, OP_LOGE(op_name, "failed to get fmap/out shape"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(fmap_shape == nullptr || out_shape == nullptr, OP_LOGE(op_name, "failed to get fmap/out shape"),
+                return ge::GRAPH_FAILED);
 
     const auto& fmap_storage_shape = fmap_shape->GetStorageShape();
     const auto& out_storage_shape = out_shape->GetStorageShape();
-    OP_CHECK_IF(
-        (fmap_storage_shape.GetDimNum() < kShapeSize6HD) || (out_storage_shape.GetDimNum() < kShapeSize6HD),
-        OP_LOGE(op_name, "invalid fmap/out dim size"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((fmap_storage_shape.GetDimNum() < kShapeSize6HD) || (out_storage_shape.GetDimNum() < kShapeSize6HD),
+                OP_LOGE(op_name, "invalid fmap/out dim size"), return ge::GRAPH_FAILED);
 
     gert::Shape var_value;
     int64_t shape_for_range_match[4]; // 4: ndhw
-    size_t dim_num = InitVarsValuesForAvgPool3DCube(
-        compile_info->var_bit_flags, fmap_storage_shape, out_storage_shape, var_value, shape_for_range_match);
+    size_t dim_num = InitVarsValuesForAvgPool3DCube(compile_info->var_bit_flags, fmap_storage_shape, out_storage_shape,
+                                                    var_value, shape_for_range_match);
     return CubeTiling(shape_for_range_match, dim_num, var_value, *compile_info, context);
 }
 
@@ -625,28 +613,26 @@ ge::graphStatus TilingForAvgPool3dGrad(gert::TilingContext* context, size_t dedy
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("nil", "context is null"), return ge::GRAPH_FAILED);
     const auto op_name = context->GetNodeName();
     const auto compile_info = reinterpret_cast<const AvgPool3DGradCubeCompileInfo*>(context->GetCompileInfo());
-    OP_CHECK_IF(
-        compile_info == nullptr, CUBE_INNER_ERR_REPORT(op_name, "compile_info is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compile_info == nullptr, CUBE_INNER_ERR_REPORT(op_name, "compile_info is null"),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(op_name, "%s", DebugTilingContext(context).c_str());
 
     const auto dedy_shape = context->GetInputShape(dedy_idx);
     const auto fmap_shape = context->GetOutputShape(0);
 
-    OP_CHECK_IF(
-        fmap_shape == nullptr || dedy_shape == nullptr,
-        CUBE_INNER_ERR_REPORT(op_name, "failed to get input/output shape"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(fmap_shape == nullptr || dedy_shape == nullptr,
+                CUBE_INNER_ERR_REPORT(op_name, "failed to get input/output shape"), return ge::GRAPH_FAILED);
 
     const auto& fmap_storage_shape = fmap_shape->GetStorageShape();
     const auto& dedy_storage_shape = dedy_shape->GetStorageShape();
-    OP_CHECK_IF(
-        (fmap_storage_shape.GetDimNum() < kShapeSize6HD) || (dedy_storage_shape.GetDimNum() < kShapeSize6HD),
-        CUBE_INNER_ERR_REPORT(op_name, "invalid fmap/out_backprop dim size"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((fmap_storage_shape.GetDimNum() < kShapeSize6HD) || (dedy_storage_shape.GetDimNum() < kShapeSize6HD),
+                CUBE_INNER_ERR_REPORT(op_name, "invalid fmap/out_backprop dim size"), return ge::GRAPH_FAILED);
 
     gert::Shape var_value;
     int64_t shape_for_range_match[4]; // 4: ndhw
-    size_t dim_num = InitVarsValuesForAvgPool3DGradCube(
-        compile_info->var_bit_flags, fmap_storage_shape, dedy_storage_shape, var_value, shape_for_range_match);
+    size_t dim_num = InitVarsValuesForAvgPool3DGradCube(compile_info->var_bit_flags, fmap_storage_shape,
+                                                        dedy_storage_shape, var_value, shape_for_range_match);
     return CubeTiling(shape_for_range_match, dim_num, var_value, *compile_info, context);
 }
 

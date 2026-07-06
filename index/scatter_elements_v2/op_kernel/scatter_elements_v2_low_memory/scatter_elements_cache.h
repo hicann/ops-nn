@@ -38,8 +38,9 @@ class ScatterElementsCacheOp {
 public:
     __aicore__ inline ScatterElementsCacheOp() {}
 
-    __aicore__ inline void Init(GlobalTensor<T>& x, GlobalTensor<U>& indices,
-                                GlobalTensor<T>& updates, LocalTensor<uint8_t>& allUbLocal, GM_ADDR workspace) {
+    __aicore__ inline void Init(GlobalTensor<T>& x, GlobalTensor<U>& indices, GlobalTensor<T>& updates,
+                                LocalTensor<uint8_t>& allUbLocal, GM_ADDR workspace)
+    {
         this->xGm = x;
         this->indicesGm = indices;
         this->updatesGm = updates;
@@ -58,37 +59,41 @@ public:
         this->indicesLocalTensor = allUbLocal[xBytes].ReinterpretCast<U>();
         this->updatesLocalTensor = allUbLocal[xBytes + INDICES_LOCAL_LENGTH * sizeof(int64_t)].ReinterpretCast<V>();
         this->aggIndicesOffset = allUbLocal[xBytes + INDICES_LOCAL_LENGTH * sizeof(int64_t) +
-                                            INDICES_LOCAL_LENGTH * sizeof(V)].template ReinterpretCast<int32_t>();
+                                            INDICES_LOCAL_LENGTH * sizeof(V)]
+                                     .template ReinterpretCast<int32_t>();
         this->aggUpdatesOffset = allUbLocal[xBytes + INDICES_LOCAL_LENGTH * sizeof(int64_t) +
-                                            INDICES_LOCAL_LENGTH * sizeof(V) +
-                                            AGG_INDICES_NUM * sizeof(int32_t)].template ReinterpretCast<uint32_t>();
+                                            INDICES_LOCAL_LENGTH * sizeof(V) + AGG_INDICES_NUM * sizeof(int32_t)]
+                                     .template ReinterpretCast<uint32_t>();
     }
 
-    __aicore__ inline void SetXInfo(uint64_t xDim0, uint64_t xDim1) {
+    __aicore__ inline void SetXInfo(uint64_t xDim0, uint64_t xDim1)
+    {
         this->xDim0 = xDim0;
         this->xDim1 = xDim1;
     }
 
-    __aicore__ inline void SetIndicesInfo(uint64_t indicesDim0, uint64_t indicesDim1) {
+    __aicore__ inline void SetIndicesInfo(uint64_t indicesDim0, uint64_t indicesDim1)
+    {
         this->indicesDim0 = indicesDim0;
         this->indicesDim1 = indicesDim1;
     }
 
-    __aicore__ inline void SetUpdatesInfo(uint64_t updatesDim0, uint64_t updatesDim1) {
+    __aicore__ inline void SetUpdatesInfo(uint64_t updatesDim0, uint64_t updatesDim1)
+    {
         this->updatesDim0 = updatesDim0;
         this->updatesDim1 = updatesDim1;
     }
 
-    __aicore__ inline void SetCoreNums(int32_t coreNums) {
-        this->coreNums = coreNums;
-    }
+    __aicore__ inline void SetCoreNums(int32_t coreNums) { this->coreNums = coreNums; }
 
-    __aicore__ inline void SetModeInfo(uint64_t mode, uint64_t includeSelf) {
+    __aicore__ inline void SetModeInfo(uint64_t mode, uint64_t includeSelf)
+    {
         this->mode = mode;
         this->includeSelf = includeSelf;
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (this->indicesDim1 <= BLOCK_SIZE) {
             this->ReadAggIndicesOffset();
         }
@@ -97,14 +102,15 @@ public:
         } else {
             if (this->indicesDim1 <= BLOCK_SIZE && this->updatesDim1 != this->indicesDim1) {
                 this->ReadAggUpdatesOffset();
-            } 
+            }
         }
         this->GetCoreTasks();
         this->DoRowsScatterElements();
     }
 
 private:
-    __aicore__ inline void ReadAggIndicesOffset() {
+    __aicore__ inline void ReadAggIndicesOffset()
+    {
         GlobalTensor<int32_t> offsetGmTensor;
         offsetGmTensor.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(this->workspace));
 
@@ -114,9 +120,11 @@ private:
         PIPE_MTE2_S();
     }
 
-    __aicore__ inline void ReadAggUpdatesOffset() {
+    __aicore__ inline void ReadAggUpdatesOffset()
+    {
         GlobalTensor<uint32_t> offsetGmTensor;
-        offsetGmTensor.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t*>(this->workspace + AGG_INDICES_NUM * sizeof(int32_t)));
+        offsetGmTensor.SetGlobalBuffer(
+            reinterpret_cast<__gm__ uint32_t*>(this->workspace + AGG_INDICES_NUM * sizeof(int32_t)));
 
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(AGG_INDICES_NUM * sizeof(uint32_t)), 0, 0, 0};
         DataCopyPadExtParams<uint32_t> padParams{true, 0, 0, 0};
@@ -124,7 +132,8 @@ private:
         PIPE_MTE2_S();
     }
 
-    __aicore__ inline void ReadUpdatesValue() {
+    __aicore__ inline void ReadUpdatesValue()
+    {
         LocalTensor<T> srcLocal = this->xLocalTensor.template ReinterpretCast<T>();
         LocalTensor<V> dstLocal = this->xLocalTensor[BLOCK_SIZE].template ReinterpretCast<V>();
 
@@ -143,7 +152,8 @@ private:
     /*
      * \brief 按索引行数分核，最终计算出每个核分到的任务数和起始任务
      */
-    __aicore__ inline void GetCoreTasks() {
+    __aicore__ inline void GetCoreTasks()
+    {
         uint32_t tasks = this->indicesDim0;
         uint32_t baseTaskNum = tasks / this->coreNums;
         uint32_t remainder = tasks % this->coreNums;
@@ -157,7 +167,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInupdatesRows(uint64_t mteStart, uint64_t nums, uint64_t rowMteMode) {
+    __aicore__ inline void CopyInupdatesRows(uint64_t mteStart, uint64_t nums, uint64_t rowMteMode)
+    {
         LocalTensor<T> dstUbLocal;
         if constexpr (std::is_same<T, V>::value) {
             dstUbLocal = this->updatesLocalTensor;
@@ -171,7 +182,8 @@ private:
             uint64_t aligned = BLOCK_SIZE / sizeof(T);
             uint64_t indicesDim1Aligned = ((this->indicesDim1 + aligned - 1) / aligned) * aligned;
             for (uint64_t i = 0; i < nums; i++) {
-                DataCopyPad(dstUbLocal[i * indicesDim1Aligned], this->updatesGm[mteStart + i * this->updatesDim1], copyParams, padParams);
+                DataCopyPad(dstUbLocal[i * indicesDim1Aligned], this->updatesGm[mteStart + i * this->updatesDim1],
+                            copyParams, padParams);
             }
         } else {
             DataCopyExtParams copyParams{1, static_cast<uint32_t>(nums * this->updatesDim1 * sizeof(T)), 0, 0, 0};
@@ -192,7 +204,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInXRows(uint64_t startTask, uint64_t tasks) {
+    __aicore__ inline void CopyInXRows(uint64_t startTask, uint64_t tasks)
+    {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(tasks * this->xDim1 * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         uint64_t src = startTask * this->xDim1;
@@ -211,7 +224,8 @@ private:
         this->InitHitCount(tasks * this->xDim1);
     }
 
-    __aicore__ inline void CopyOutXRows(uint64_t startTask, uint64_t tasks) {
+    __aicore__ inline void CopyOutXRows(uint64_t startTask, uint64_t tasks)
+    {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(tasks * this->xDim1 * sizeof(T)), 0, 0, 0};
         uint64_t dst = startTask * this->xDim1;
         LocalTensor<T> srcUbLocal;
@@ -227,7 +241,8 @@ private:
         PIPE_MTE3_S();
     }
 
-    __aicore__ inline void CopyInIndices(uint64_t mteStart, uint64_t mteNums) { // 入参单位都是元素
+    __aicore__ inline void CopyInIndices(uint64_t mteStart, uint64_t mteNums)
+    { // 入参单位都是元素
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(mteNums * sizeof(U)), 0, 0, 0};
         DataCopyPadExtParams<U> padParams{true, 0, 0, 0};
         DataCopyPad(this->indicesLocalTensor, this->indicesGm[mteStart], copyParams, padParams);
@@ -236,12 +251,14 @@ private:
         LocalTensor<int32_t> indicesInt32;
         if constexpr (std::is_same<U, int64_t>::value) {
             // int32类型索引放在后半部分
-            Cast(this->indicesLocalTensor.template ReinterpretCast<int32_t>(), this->indicesLocalTensor, RoundMode::CAST_NONE, mteNums);
+            Cast(this->indicesLocalTensor.template ReinterpretCast<int32_t>(), this->indicesLocalTensor,
+                 RoundMode::CAST_NONE, mteNums);
             PipeBarrier<PIPE_V>();
             indicesInt32 = this->indicesLocalTensor.template ReinterpretCast<int32_t>()[INDICES_LOCAL_LENGTH];
             auto aligned = BLOCK_SIZE / sizeof(int32_t);
             auto mteNumsAligned = ((mteNums + aligned - 1) / aligned) * aligned;
-            DataCopy(indicesInt32, this->indicesLocalTensor.template ReinterpretCast<int32_t>(), mteNumsAligned); // 接口仅支持元素个数对齐
+            DataCopy(indicesInt32, this->indicesLocalTensor.template ReinterpretCast<int32_t>(),
+                     mteNumsAligned); // 接口仅支持元素个数对齐
             PipeBarrier<PIPE_V>();
         } else {
             // int32类型索引放在前半部分
@@ -271,7 +288,8 @@ private:
         PIPE_V_S();
     }
 
-    __aicore__ inline void CopyInupdates(uint64_t mteStart, uint16_t mteNums) { // 入参单位都是元素
+    __aicore__ inline void CopyInupdates(uint64_t mteStart, uint16_t mteNums)
+    { // 入参单位都是元素
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(mteNums * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         LocalTensor<T> updatesUbLocal;
@@ -289,7 +307,8 @@ private:
         }
     }
 
-    __aicore__ inline void GetRowsIndicesAggParams(uint64_t& mteNums, uint64_t& rowMteMode) {
+    __aicore__ inline void GetRowsIndicesAggParams(uint64_t& mteNums, uint64_t& rowMteMode)
+    {
         if (this->indicesDim1 == this->updatesDim1) {
             // 都批量搬运
             mteNums = INDICES_LOCAL_LENGTH / this->indicesDim1;
@@ -308,7 +327,8 @@ private:
         }
     }
 
-    __aicore__ inline void DoRowsScatterElements() {
+    __aicore__ inline void DoRowsScatterElements()
+    {
         this->aggTasks = this->xLocalLength / this->xDim1;
         if (this->aggTasks == 0) {
             return;
@@ -337,7 +357,8 @@ private:
         PIPE_MTE3_S();
     }
 
-    __aicore__ inline void DoRowsScatterElementsSliceIndices(uint64_t startTask, uint64_t tasks) {
+    __aicore__ inline void DoRowsScatterElementsSliceIndices(uint64_t startTask, uint64_t tasks)
+    {
         // 行内切块
         uint64_t sliceBlockNums = this->indicesDim1 / INDICES_LOCAL_LENGTH;
         uint64_t leftIndicesNums = this->indicesDim1 - sliceBlockNums * INDICES_LOCAL_LENGTH;
@@ -363,7 +384,8 @@ private:
     }
 
     template <typename DataType>
-    __aicore__ inline void LoadCache8(__ubuf__ DataType* ubAddress, uint64_t baseOffset, DataType* cache) {
+    __aicore__ inline void LoadCache8(__ubuf__ DataType* ubAddress, uint64_t baseOffset, DataType* cache)
+    {
         uint32_t idx = 0, off = 0;
         cache[idx++] = *(ubAddress + baseOffset + off++);
         cache[idx++] = *(ubAddress + baseOffset + off++);
@@ -375,7 +397,8 @@ private:
         cache[idx++] = *(ubAddress + baseOffset + off++);
     }
 
-    __aicore__ inline void InitHitCount(uint64_t count) {
+    __aicore__ inline void InitHitCount(uint64_t count)
+    {
         if (NeedHitCount()) {
             for (uint64_t i = 0; i < count; i++) {
                 this->hitCountLocal.SetValue(i, 0);
@@ -383,7 +406,8 @@ private:
         }
     }
 
-    __aicore__ inline void CalcMeanValue(uint64_t count) {
+    __aicore__ inline void CalcMeanValue(uint64_t count)
+    {
         if constexpr (!(std::is_same<V, half>::value || std::is_same<V, bfloat16_t>::value)) {
             if (this->mode == SCATTER_MODE_MEAN) {
                 for (uint64_t i = 0; i < count; i++) {
@@ -399,7 +423,8 @@ private:
     }
 
     __aicore__ inline void ScatterSetValue(__ubuf__ V* xUbAddress, __ubuf__ int32_t* hitCountAddress,
-                                           int32_t indexValue, V value) {
+                                           int32_t indexValue, V value)
+    {
         if (this->mode == SCATTER_MODE_NONE) {
             *(xUbAddress + indexValue) = value;
         } else {
@@ -425,13 +450,15 @@ private:
         }
     }
 
-    __aicore__ inline void DoScatterElementsOneByOne(uint64_t indicesStart, uint64_t indicesNums, uint64_t updatesStart, uint64_t xStart) {
-        auto indicesUbAddress = reinterpret_cast<__ubuf__ U *>(this->indicesLocalTensor.GetPhyAddr(indicesStart));
-        auto updatesUbAddress = reinterpret_cast<__ubuf__ V *>(this->updatesLocalTensor.GetPhyAddr(updatesStart));
-        auto xUbAddress = reinterpret_cast<__ubuf__ V *>(this->xLocalTensor.GetPhyAddr(xStart));
+    __aicore__ inline void DoScatterElementsOneByOne(uint64_t indicesStart, uint64_t indicesNums, uint64_t updatesStart,
+                                                     uint64_t xStart)
+    {
+        auto indicesUbAddress = reinterpret_cast<__ubuf__ U*>(this->indicesLocalTensor.GetPhyAddr(indicesStart));
+        auto updatesUbAddress = reinterpret_cast<__ubuf__ V*>(this->updatesLocalTensor.GetPhyAddr(updatesStart));
+        auto xUbAddress = reinterpret_cast<__ubuf__ V*>(this->xLocalTensor.GetPhyAddr(xStart));
         __ubuf__ int32_t* hitCountAddress = nullptr;
         if (NeedHitCount()) {
-            hitCountAddress = reinterpret_cast<__ubuf__ int32_t *>(this->hitCountLocal.GetPhyAddr(xStart));
+            hitCountAddress = reinterpret_cast<__ubuf__ int32_t*>(this->hitCountLocal.GetPhyAddr(xStart));
         }
         U indicesCache[LOOP_UNROLL_SIZE];
         V updatesCache[LOOP_UNROLL_SIZE];
@@ -451,7 +478,7 @@ private:
                 this->ScatterSetValue(xUbAddress, hitCountAddress, indexValue, value);
             }
         }
-        
+
         for (uint64_t i = staticTimes * LOOP_UNROLL_SIZE; i < indicesNums; i++) {
             int32_t indexValue = *(indicesUbAddress + i);
             V value = this->updatesValue;
@@ -462,7 +489,8 @@ private:
         }
     }
 
-    __aicore__ inline void DoRowsScatterElementsAggIndices(uint64_t startTask, uint64_t tasks) {
+    __aicore__ inline void DoRowsScatterElementsAggIndices(uint64_t startTask, uint64_t tasks)
+    {
         uint64_t mteNums = 0; // 一次搬入多少行
         uint64_t rowMteMode = 0;
         this->GetRowsIndicesAggParams(mteNums, rowMteMode);
@@ -487,56 +515,67 @@ private:
         }
     }
 
-    __aicore__ inline void AggregateIndices(uint64_t indicesStart, uint64_t aggRowNums) {
-        if constexpr(std::is_same<U, int32_t>::value) {
-            Add(this->indicesLocalTensor[indicesStart], this->indicesLocalTensor[indicesStart], this->aggIndicesOffset, aggRowNums * this->indicesDim1);
+    __aicore__ inline void AggregateIndices(uint64_t indicesStart, uint64_t aggRowNums)
+    {
+        if constexpr (std::is_same<U, int32_t>::value) {
+            Add(this->indicesLocalTensor[indicesStart], this->indicesLocalTensor[indicesStart], this->aggIndicesOffset,
+                aggRowNums * this->indicesDim1);
         } else {
             auto indicesLocalInt32 = this->indicesLocalTensor[indicesStart].template ReinterpretCast<int32_t>();
-            Cast(indicesLocalInt32, this->indicesLocalTensor[indicesStart], RoundMode::CAST_NONE, aggRowNums * this->indicesDim1);
+            Cast(indicesLocalInt32, this->indicesLocalTensor[indicesStart], RoundMode::CAST_NONE,
+                 aggRowNums * this->indicesDim1);
             PipeBarrier<PIPE_V>();
-            auto indicesLocalInt32Left = this->indicesLocalTensor[indicesStart + HALF_BYTE_ALIGNMENT * this->indicesDim1].template ReinterpretCast<int32_t>();
+            auto
+                indicesLocalInt32Left = this->indicesLocalTensor[indicesStart + HALF_BYTE_ALIGNMENT * this->indicesDim1]
+                                            .template ReinterpretCast<int32_t>();
             DataCopy(indicesLocalInt32Left, indicesLocalInt32, aggRowNums * this->indicesDim1);
             PipeBarrier<PIPE_V>();
             Add(indicesLocalInt32Left, indicesLocalInt32Left, this->aggIndicesOffset, aggRowNums * this->indicesDim1);
             PipeBarrier<PIPE_V>();
-            Cast(this->indicesLocalTensor[indicesStart], indicesLocalInt32Left, RoundMode::CAST_NONE, aggRowNums * this->indicesDim1);
+            Cast(this->indicesLocalTensor[indicesStart], indicesLocalInt32Left, RoundMode::CAST_NONE,
+                 aggRowNums * this->indicesDim1);
         }
         PIPE_V_S();
     }
 
-    __aicore__ inline void ProcessAggRows(uint64_t rowNums, uint64_t xStartRow, uint64_t updatesStride) {
+    __aicore__ inline void ProcessAggRows(uint64_t rowNums, uint64_t xStartRow, uint64_t updatesStride)
+    {
         constexpr uint64_t aggRowNums = BLOCK_SIZE;
         uint32_t aggTimes = rowNums / aggRowNums;
         for (uint32_t i = 0; i < aggTimes; i++) {
             uint64_t indicesStart = i * aggRowNums * this->indicesDim1;
             this->AggregateIndices(indicesStart, aggRowNums);
-            
+
             if constexpr (!IsScalar) {
                 if (this->indicesDim1 != this->updatesDim1) {
                     uint64_t updatesStart = i * aggRowNums * updatesStride;
-                    Gather(this->updatesLocalTensor[updatesStart], this->updatesLocalTensor[updatesStart], this->aggUpdatesOffset, 0, aggRowNums * this->indicesDim1);
+                    Gather(this->updatesLocalTensor[updatesStart], this->updatesLocalTensor[updatesStart],
+                           this->aggUpdatesOffset, 0, aggRowNums * this->indicesDim1);
                     PIPE_V_S();
                 }
             }
             this->DoScatterElementsOneByOne(indicesStart, aggRowNums * this->indicesDim1,
                                             i * aggRowNums * updatesStride, (xStartRow + i * aggRowNums) * this->xDim1);
         }
-        
+
         uint32_t aggLeft = rowNums % aggRowNums;
         for (uint64_t i = 0; i < aggLeft; i++) {
             this->DoScatterElementsOneByOne((aggTimes * aggRowNums + i) * this->indicesDim1, this->indicesDim1,
-                                            (aggTimes * aggRowNums + i) * updatesStride, (xStartRow + aggTimes * aggRowNums + i) * this->xDim1);
+                                            (aggTimes * aggRowNums + i) * updatesStride,
+                                            (xStartRow + aggTimes * aggRowNums + i) * this->xDim1);
         }
     }
 
-    __aicore__ inline void ProcessSimpleRows(uint64_t rowNums, uint64_t xStartRow, uint64_t updatesStride) {
+    __aicore__ inline void ProcessSimpleRows(uint64_t rowNums, uint64_t xStartRow, uint64_t updatesStride)
+    {
         for (uint64_t i = 0; i < rowNums; i++) {
-            this->DoScatterElementsOneByOne(i * this->indicesDim1, this->indicesDim1,
-                                            i * updatesStride, (xStartRow + i) * this->xDim1);
+            this->DoScatterElementsOneByOne(i * this->indicesDim1, this->indicesDim1, i * updatesStride,
+                                            (xStartRow + i) * this->xDim1);
         }
     }
 
-    __aicore__ inline void ScatterElementsRowsInUb(uint64_t rowNums, uint64_t rowMteMode, uint64_t xStartRow) {
+    __aicore__ inline void ScatterElementsRowsInUb(uint64_t rowNums, uint64_t rowMteMode, uint64_t xStartRow)
+    {
         if (rowMteMode == 0 || rowMteMode == MTE_UPDATES_MODE) {
             if constexpr (std::is_same<T, float>::value || std::is_same<T, int32_t>::value ||
                           std::is_same<T, bfloat16_t>::value || std::is_same<T, half>::value) {
@@ -561,9 +600,9 @@ private:
         }
     }
 
-    __aicore__ inline bool NeedHitCount() const {
-          return this->mode >= SCATTER_MODE_REDUCTION_BEGIN &&
-                 this->mode <= SCATTER_MODE_REDUCTION_END;
+    __aicore__ inline bool NeedHitCount() const
+    {
+        return this->mode >= SCATTER_MODE_REDUCTION_BEGIN && this->mode <= SCATTER_MODE_REDUCTION_END;
     }
 
 private:
@@ -588,5 +627,5 @@ private:
     V updatesValue = 0;
     uint64_t xLocalLength = X_LOCAL_LENGTH;
 };
-}
+} // namespace ScatterElementsV2NS
 #endif

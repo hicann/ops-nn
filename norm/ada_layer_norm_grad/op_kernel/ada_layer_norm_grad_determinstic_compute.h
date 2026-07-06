@@ -31,9 +31,9 @@ template <typename T>
 class AdaLayerNormGradDeterminsticCompute {
 public:
     __aicore__ inline AdaLayerNormGradDeterminsticCompute(){};
-    __aicore__ inline void initBuffer(
-        TPipe& pipe, GlobalTensor<T>& pdGammaOutTensorGM, GlobalTensor<T>& pdBetaOutTensorGM,
-        GlobalTensor<float>& workspaceGM, int64_t workspaceNum)
+    __aicore__ inline void initBuffer(TPipe& pipe, GlobalTensor<T>& pdGammaOutTensorGM,
+                                      GlobalTensor<T>& pdBetaOutTensorGM, GlobalTensor<float>& workspaceGM,
+                                      int64_t workspaceNum)
     {
         pipe_ = pipe;
         pipe_.InitBuffer(queueGammaIn_, DOUBLE_BUFFER, ROW_TEMPLATE * COL_TEMPLATE * sizeof(float));
@@ -46,9 +46,9 @@ public:
         workspaceNum_ = workspaceNum;
     }
 
-    __aicore__ inline void BatchFinalProcessDeterministic(
-        int64_t batch, int64_t colAlignV, int64_t blockNum, int64_t col, GlobalTensor<T> pdScaleOutGM,
-        GlobalTensor<T> pdShiftOutGM)
+    __aicore__ inline void BatchFinalProcessDeterministic(int64_t batch, int64_t colAlignV, int64_t blockNum,
+                                                          int64_t col, GlobalTensor<T> pdScaleOutGM,
+                                                          GlobalTensor<T> pdShiftOutGM)
     {
         colAlignV_ = colAlignV;
         row_ = blockNum;

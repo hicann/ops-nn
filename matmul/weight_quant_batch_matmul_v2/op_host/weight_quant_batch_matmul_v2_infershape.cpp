@@ -51,9 +51,9 @@ static ge::graphStatus SetBroadcastShape(const gert::Shape* xShape, const gert::
         for (size_t i = 0; i < outDimNum - MINIMUM_SHAPE_SIZE; i++) {
             OP_CHECK_IF(
                 !BroadcastBatchDim(xShape->GetDim(i), weightShape->GetDim(i), broadcastDim),
-                OP_LOGE(
-                    NODE_NAME, "batch of xShape and batch of wShape can't broadcast, x shape is %s, weight shape is %s",
-                    Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str()),
+                OP_LOGE(NODE_NAME,
+                        "batch of xShape and batch of wShape can't broadcast, x shape is %s, weight shape is %s",
+                        Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str()),
                 return ge::GRAPH_FAILED);
             yShape->SetDim(i, broadcastDim);
         }
@@ -67,9 +67,9 @@ static ge::graphStatus SetBroadcastShape(const gert::Shape* xShape, const gert::
         for (size_t i = batchOffset; i < outDimNum - MINIMUM_SHAPE_SIZE; i++) {
             OP_CHECK_IF(
                 !BroadcastBatchDim(longerShape->GetDim(i), smallShape->GetDim(i - batchOffset), broadcastDim),
-                OP_LOGE(
-                    NODE_NAME, "batch of xShape and batch of wShape can't broadcast, x shape is %s, weight shape is %s",
-                    Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str()),
+                OP_LOGE(NODE_NAME,
+                        "batch of xShape and batch of wShape can't broadcast, x shape is %s, weight shape is %s",
+                        Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str()),
                 return ge::GRAPH_FAILED);
             yShape->SetDim(i, broadcastDim);
         }
@@ -77,18 +77,16 @@ static ge::graphStatus SetBroadcastShape(const gert::Shape* xShape, const gert::
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ShapeCheckAndInfer(
-    const gert::Shape* xShape, const gert::Shape* weightShape, const ge::DataType weightDtype, gert::Shape* yShape,
-    const bool transposeX, const bool transposeWeight)
+static ge::graphStatus ShapeCheckAndInfer(const gert::Shape* xShape, const gert::Shape* weightShape,
+                                          const ge::DataType weightDtype, gert::Shape* yShape, const bool transposeX,
+                                          const bool transposeWeight)
 {
     size_t numDimA = xShape->GetDimNum();
     size_t numDimB = weightShape->GetDimNum();
-    OP_CHECK_IF(
-        std::min(numDimA, numDimB) < MINIMUM_SHAPE_SIZE || std::min(numDimA, numDimB) > MAXNUM_SHAPE_SIZE,
-        OP_LOGE(
-            NODE_NAME, "The shape of x and weight must >= 2 and <=6, which are %s and %s",
-            Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(std::min(numDimA, numDimB) < MINIMUM_SHAPE_SIZE || std::min(numDimA, numDimB) > MAXNUM_SHAPE_SIZE,
+                OP_LOGE(NODE_NAME, "The shape of x and weight must >= 2 and <=6, which are %s and %s",
+                        Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str()),
+                return ge::GRAPH_FAILED);
     size_t mIdx = transposeX ? 1UL : 2UL;
     size_t kaIdx = transposeX ? 2UL : 1UL;
     size_t kbIdx = transposeWeight ? 1UL : 2UL;
@@ -111,9 +109,8 @@ static ge::graphStatus ShapeCheckAndInfer(
             weightN *= INT4_NUMS_IN_INT32;
         }
     }
-    OP_CHECK_IF(
-        xK != weightK && xK > 0 && weightK > 0, OP_LOGE(NODE_NAME, "Ka[%ld] != Kb[%ld]", xK, weightK),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xK != weightK && xK > 0 && weightK > 0, OP_LOGE(NODE_NAME, "Ka[%ld] != Kb[%ld]", xK, weightK),
+                return ge::GRAPH_FAILED);
     size_t outDimNum = std::max(numDimA, numDimB);
     yShape->SetDimNum(outDimNum);
     yShape->SetDim(outDimNum - 2, xShape->GetDim(numDimA - mIdx)); // 2:设置yShape m
@@ -145,16 +142,14 @@ static ge::graphStatus InferShapeForWeightQuantBatchMatmulV2(gert::InferShapeCon
         yShape->SetDim(0, UNKNOWN_DIM_NUM);
         return ge::GRAPH_SUCCESS;
     }
-    OP_LOGD(
-        context->GetNodeName(),
-        "x_shape: %s, weight_shape: %s, transpose_x: %d, transpose_weight: %d, weight_dtype: %s",
-        Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str(), *transposeX, *transposeWeight,
-        ge::TypeUtils::DataTypeToAscendString(weightDtype).GetString());
+    OP_LOGD(context->GetNodeName(),
+            "x_shape: %s, weight_shape: %s, transpose_x: %d, transpose_weight: %d, weight_dtype: %s",
+            Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*weightShape).c_str(), *transposeX,
+            *transposeWeight, ge::TypeUtils::DataTypeToAscendString(weightDtype).GetString());
 
-    OP_CHECK_IF(
-        ShapeCheckAndInfer(xShape, weightShape, weightDtype, yShape, *transposeX, *transposeWeight) !=
-            ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "The Shape Check failed "), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ShapeCheckAndInfer(xShape, weightShape, weightDtype, yShape, *transposeX, *transposeWeight) !=
+                    ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "The Shape Check failed "), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

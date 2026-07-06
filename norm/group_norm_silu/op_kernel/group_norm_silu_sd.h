@@ -21,13 +21,11 @@ namespace GroupNormSilu {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class GroupNormSiluSD : public GroupNormSiluBase<T1>
-{
+class GroupNormSiluSD : public GroupNormSiluBase<T1> {
 public:
     __aicore__ inline GroupNormSiluSD(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -38,8 +36,8 @@ private:
     __aicore__ inline void SumXandX2(const int64_t& num);
     __aicore__ inline void NormaLizeX(const int64_t& xIdx, const float& scale, const float& bias, const int64_t& num);
     __aicore__ inline void CalcSilu(const int64_t& calcNum);
-    __aicore__ inline void ComputeYSmall(
-        const int64_t& cIdx, const float& rstd, const float& mean, const int64_t& gIdxs);
+    __aicore__ inline void ComputeYSmall(const int64_t& cIdx, const float& rstd, const float& mean,
+                                         const int64_t& gIdxs);
     __aicore__ inline void ComputeYBig(const int64_t& cIdx, const float& rstd, const float& mean, const int64_t& num);
     __aicore__ inline void CopyOutY(const int64_t& startAddr, const int64_t& copyNum);
     constexpr static int32_t bufferNum = 2;
@@ -74,9 +72,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSD<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-    const GroupNormSiluTilingData* tilingData)
+__aicore__ inline void GroupNormSiluSD<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean,
+                                                     GM_ADDR rstd, GM_ADDR workspace,
+                                                     const GroupNormSiluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     tiling = tilingData;
@@ -109,9 +107,9 @@ __aicore__ inline void GroupNormSiluSD<T1, T2>::Process()
         int64_t xStartAddr = gammaStartAddr * tiling->hwNum;
         ComputeSilu(tiling->numPerCore + 1, xStartAddr);
     } else {
-        int64_t gammaStartAddr =
-            (tiling->numLastCore * (tiling->numPerCore + 1) + (blockIdx - tiling->numLastCore) * tiling->numPerCore) *
-            tiling->shapeD;
+        int64_t gammaStartAddr = (tiling->numLastCore * (tiling->numPerCore + 1) +
+                                  (blockIdx - tiling->numLastCore) * tiling->numPerCore) *
+                                 tiling->shapeD;
         CastGammaAndBeta(tiling->numPerCore, gammaStartAddr);
         int64_t xStartAddr = gammaStartAddr * tiling->hwNum;
         ComputeSilu(tiling->numPerCore, xStartAddr);
@@ -160,9 +158,8 @@ __aicore__ inline void GroupNormSiluSD<T1, T2>::ComputeSilu(const int64_t& group
             // process tail data
             if (tiling->loopTail > 0) {
                 CopyInX(xStartAddr + tiling->loopNum * tiling->processSize, tiling->loopTail);
-                ComputeYSmall(
-                    gammaIdx + tiling->loopNum * tiling->innerLoopNum, rstd, mean,
-                    tiling->shapeD - tiling->loopNum * tiling->innerLoopNum);
+                ComputeYSmall(gammaIdx + tiling->loopNum * tiling->innerLoopNum, rstd, mean,
+                              tiling->shapeD - tiling->loopNum * tiling->innerLoopNum);
                 CopyOutY(xStartAddr + tiling->loopNum * tiling->processSize, tiling->loopTail);
             }
         } else {
@@ -249,8 +246,8 @@ __aicore__ inline void GroupNormSiluSD<T1, T2>::SumXandX2(const int64_t& num)
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSD<T1, T2>::NormaLizeX(
-    const int64_t& xIdx, const float& scale, const float& bias, const int64_t& num)
+__aicore__ inline void GroupNormSiluSD<T1, T2>::NormaLizeX(const int64_t& xIdx, const float& scale, const float& bias,
+                                                           const int64_t& num)
 {
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();
     // normalize x
@@ -277,8 +274,8 @@ __aicore__ inline void GroupNormSiluSD<T1, T2>::CalcSilu(const int64_t& calcNum)
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSD<T1, T2>::ComputeYSmall(
-    const int64_t& cIdx, const float& rstd, const float& mean, const int64_t& gIdxs)
+__aicore__ inline void GroupNormSiluSD<T1, T2>::ComputeYSmall(const int64_t& cIdx, const float& rstd, const float& mean,
+                                                              const int64_t& gIdxs)
 {
     LocalTensor<T1> xUb = inQueueX.DeQue<T1>();
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();
@@ -305,8 +302,8 @@ __aicore__ inline void GroupNormSiluSD<T1, T2>::ComputeYSmall(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluSD<T1, T2>::ComputeYBig(
-    const int64_t& cIdx, const float& rstd, const float& mean, const int64_t& num)
+__aicore__ inline void GroupNormSiluSD<T1, T2>::ComputeYBig(const int64_t& cIdx, const float& rstd, const float& mean,
+                                                            const int64_t& num)
 {
     LocalTensor<T1> xUb = inQueueX.DeQue<T1>();
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();

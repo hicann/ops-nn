@@ -34,54 +34,30 @@ namespace l0op {
 
 OP_TYPE_REGISTER(ApplyAdadelta);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static bool IsAiCoreSupport(const aclTensor* var)
-{
-    return CheckType(var->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* var) { return CheckType(var->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
-static const aclTensor* ApplyAdadeltaAiCore(
-    const aclTensor* var,
-    const aclTensor* accum,
-    const aclTensor* accumUpdate,
-    const aclTensor* grad,
-    const aclTensor* varOut,
-    const aclTensor* accumOut,
-    const aclTensor* accumUpdateOut,
-    float lr, float rho, float epsilon,
-    aclOpExecutor* executor)
+static const aclTensor* ApplyAdadeltaAiCore(const aclTensor* var, const aclTensor* accum, const aclTensor* accumUpdate,
+                                            const aclTensor* grad, const aclTensor* varOut, const aclTensor* accumOut,
+                                            const aclTensor* accumUpdateOut, float lr, float rho, float epsilon,
+                                            aclOpExecutor* executor)
 {
     L0_DFX(ApplyAdadeltaAiCore, var, accum, accumUpdate, grad, varOut, accumOut, accumUpdateOut);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdadelta,
-        OP_INPUT(var, accum, accumUpdate, grad),
-        OP_OUTPUT(varOut, accumOut, accumUpdateOut),
-        OP_ATTR(lr, rho, epsilon));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdadeltaAiCore failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdadelta, OP_INPUT(var, accum, accumUpdate, grad),
+                                           OP_OUTPUT(varOut, accumOut, accumUpdateOut), OP_ATTR(lr, rho, epsilon));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdadeltaAiCore failed."), return nullptr);
     return varOut;
 }
 
-ApplyAdadeltaOutputs ApplyAdadelta(
-    const aclTensor* var,
-    const aclTensor* accum,
-    const aclTensor* accumUpdate,
-    const aclTensor* grad,
-    float lr,
-    float rho,
-    float epsilon,
-    aclOpExecutor* executor)
+ApplyAdadeltaOutputs ApplyAdadelta(const aclTensor* var, const aclTensor* accum, const aclTensor* accumUpdate,
+                                   const aclTensor* grad, float lr, float rho, float epsilon, aclOpExecutor* executor)
 {
     ApplyAdadeltaOutputs emptyResult = {nullptr, nullptr, nullptr};
 
     if (!IsAiCoreSupport(var)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "ApplyAdadelta not supported: dtype=%d.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ApplyAdadelta not supported: dtype=%d.",
                 static_cast<int>(var->GetDataType()));
         return emptyResult;
     }
@@ -96,9 +72,8 @@ ApplyAdadeltaOutputs ApplyAdadelta(
     const aclTensor* accumOut = executor->AllocTensor(varShape, var->GetDataType());
     const aclTensor* accumUpdateOut = executor->AllocTensor(varShape, var->GetDataType());
 
-    const aclTensor* result = ApplyAdadeltaAiCore(var, accum, accumUpdate, grad,
-                                varOut, accumOut, accumUpdateOut,
-                                lr, rho, epsilon, executor);
+    const aclTensor* result = ApplyAdadeltaAiCore(var, accum, accumUpdate, grad, varOut, accumOut, accumUpdateOut, lr,
+                                                  rho, epsilon, executor);
     if (result == nullptr) {
         return emptyResult;
     }

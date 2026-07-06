@@ -39,4 +39,4 @@ ACLNN_API aclnnStatus aclnnDeformableConv2d(void* workspace, uint64_t workspaceS
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_DEFORMABLE_CONV2D_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_DEFORMABLE_CONV2D_H_

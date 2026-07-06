@@ -9,19 +9,19 @@
  */
 
 /**
-* @file elu_grad_v2.h
-*/
+ * @file elu_grad_v2.h
+ */
 #ifndef ELU_GRAD_V2_H
 #define ELU_GRAD_V2_H
- 
+
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "elu_grad_v2_tiling_data.h"
 #include "elu_grad_v2_tiling_key.h"
- 
+
 namespace NsEluGradV2 {
 using namespace AscendC;
- 
+
 constexpr int32_t MAX_BUFFER_NUM = ELU_GRAD_V2_MAX_BUFFER_NUM;
 
 template <typename T, typename U>
@@ -36,18 +36,18 @@ struct IsSameType<T, T> {
 
 template <typename T, typename U>
 inline constexpr bool kIsSameType = IsSameType<T, U>::value;
- 
+
 template <typename T, bool IS_RESULT_MODE>
 class KernelEluGradV2 {
 public:
     __aicore__ inline KernelEluGradV2() {}
- 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData, TPipe* pipe)
+
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData,
+                                TPipe* pipe)
     {
         uint32_t coreIdx = GetBlockIdx();
         pipe_ = pipe;
- 
+
         coreNum_ = tilingData->coreNum;
         bigCoreNum_ = tilingData->bigCoreNum;
         bigCoreDataNum_ = tilingData->bigCoreDataNum;
@@ -56,7 +56,7 @@ public:
         tileLength_ = tilingData->tileDataNum;
         bufferNum_ = tilingData->bufferOpen != 0U ? ELU_GRAD_V2_MAX_BUFFER_NUM : 1U;
         computeChunk_ = tilingData->computeChunk;
- 
+
         if (coreIdx < bigCoreNum_) {
             startOffset_ = coreIdx * bigCoreDataNum_;
             processLength_ = bigCoreDataNum_;
@@ -72,12 +72,12 @@ public:
         gradsGm_.SetGlobalBuffer((__gm__ T*)grads + startOffset_, processLength_);
         activationsGm_.SetGlobalBuffer((__gm__ T*)activations + startOffset_, processLength_);
         yGm_.SetGlobalBuffer((__gm__ T*)y + startOffset_, processLength_);
- 
+
         factorPos_ = tilingData->scale;
         factorNeg_ = tilingData->alpha * tilingData->scale * tilingData->inputScale;
         inputScale_ = tilingData->inputScale;
         factorNegBias_ = (inputScale_ == 0.0F) ? 0.0F : (factorNeg_ / inputScale_);
- 
+
         InitScratchBuffers();
         if (IsDirectSingleTilePath()) {
             pipe_->InitBuffer(gradsDirectBuf_, tileLength_ * sizeof(T));
@@ -90,7 +90,7 @@ public:
         pipe_->InitBuffer(inQueueAct_, bufferNum_, tileLength_ * sizeof(T));
         pipe_->InitBuffer(outQueueY_, bufferNum_, tileLength_ * sizeof(T));
     }
- 
+
     __aicore__ inline void Process()
     {
         if (processLength_ == 0U) {
@@ -109,7 +109,7 @@ public:
             }
             return;
         }
- 
+
         CopyIn(0U, GetTileLength(0U));
         for (uint32_t i = 1U; i <= tileCount_; ++i) {
             if (i < tileCount_) {
@@ -122,7 +122,7 @@ public:
         }
         CopyOut(GetTileOffset(tileCount_ - 1U), GetTileLength(tileCount_ - 1U));
     }
- 
+
 private:
     __aicore__ inline uint32_t CeilDiv(uint32_t value, uint32_t divisor)
     {
@@ -131,12 +131,9 @@ private:
         }
         return (value + divisor - 1U) / divisor;
     }
- 
-    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs)
-    {
-        return lhs < rhs ? lhs : rhs;
-    }
- 
+
+    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs) { return lhs < rhs ? lhs : rhs; }
+
     __aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t factor)
     {
         if (factor == 0U) {
@@ -144,7 +141,7 @@ private:
         }
         return ((value + factor - 1U) / factor) * factor;
     }
- 
+
     __aicore__ inline uint32_t GetTailLength(uint32_t total, uint32_t tile)
     {
         if (total == 0U) {
@@ -153,7 +150,7 @@ private:
         uint32_t tail = total % tile;
         return tail == 0U ? tile : tail;
     }
- 
+
     __aicore__ inline uint32_t GetExecLength(uint32_t length)
     {
         uint32_t alignNum = ELU_GRAD_V2_BLOCK_BYTES / sizeof(T);
@@ -162,12 +159,9 @@ private:
         }
         return Min(AlignUp(length, alignNum), computeChunk_);
     }
- 
-    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx)
-    {
-        return tileIdx * tileLength_;
-    }
- 
+
+    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx) { return tileIdx * tileLength_; }
+
     __aicore__ inline uint32_t GetTileLength(uint32_t tileIdx)
     {
         return (tileIdx + 1U == tileCount_) ? lastTileLength_ : tileLength_;
@@ -178,17 +172,13 @@ private:
         return tileCount_ == 1U && processLength_ <= ELU_GRAD_V2_CORE_CHUNK;
     }
 
-    __aicore__ inline bool IsNearlyOne(float value) const
-    {
-        return value > 0.999F && value < 1.001F;
-    }
+    __aicore__ inline bool IsNearlyOne(float value) const { return value > 0.999F && value < 1.001F; }
 
     __aicore__ inline void InitScratchBuffers()
     {
         pipe_->InitBuffer(maskBuf_, computeChunk_ * sizeof(uint8_t));
-        if constexpr (
-            kIsSameType<T, bfloat16_t> || kIsSameType<T, float> ||
-            (!kIsSameType<T, float> && !kIsSameType<T, bfloat16_t>)) {
+        if constexpr (kIsSameType<T, bfloat16_t> || kIsSameType<T, float> ||
+                      (!kIsSameType<T, float> && !kIsSameType<T, bfloat16_t>)) {
             pipe_->InitBuffer(tmpBufF32_, computeChunk_ * sizeof(float));
         }
         if constexpr (!kIsSameType<T, float>) {
@@ -302,9 +292,9 @@ private:
         }
         outQueueY_.FreeTensor(yLocal);
     }
- 
-    __aicore__ inline void ComputeFloat(
-        LocalTensor<float> gradsRaw, LocalTensor<float> actRaw, LocalTensor<float> yRaw, uint32_t length)
+
+    __aicore__ inline void ComputeFloat(LocalTensor<float> gradsRaw, LocalTensor<float> actRaw, LocalTensor<float> yRaw,
+                                        uint32_t length)
     {
         if constexpr (IS_RESULT_MODE) {
             ComputeFloatResultMode(gradsRaw, actRaw, yRaw, length);
@@ -312,9 +302,9 @@ private:
             ComputeFloatExpMode(gradsRaw, actRaw, yRaw, length);
         }
     }
- 
-    __aicore__ inline void ComputeMixed(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+
+    __aicore__ inline void ComputeMixed(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                        uint32_t length)
     {
         if constexpr (IS_RESULT_MODE) {
             ComputeMixedResultMode(gradsRaw, actRaw, yRaw, length);
@@ -323,8 +313,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeMixedDirect(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+    __aicore__ inline void ComputeMixedDirect(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                              uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -371,13 +361,13 @@ private:
         Cast(yRaw, gradsF32, RoundMode::CAST_RINT, execLength);
         PipeBarrier<PIPE_V>();
     }
- 
-    __aicore__ inline void ComputeFloatResultMode(
-        LocalTensor<float> gradsRaw, LocalTensor<float> actRaw, LocalTensor<float> yRaw, uint32_t length)
+
+    __aicore__ inline void ComputeFloatResultMode(LocalTensor<float> gradsRaw, LocalTensor<float> actRaw,
+                                                  LocalTensor<float> yRaw, uint32_t length)
     {
         LocalTensor<float> tmp = tmpBufF32_.Get<float>();
         LocalTensor<uint8_t> mask = maskBuf_.Get<uint8_t>();
- 
+
         if (length <= computeChunk_) {
             uint32_t execLength = GetExecLength(length);
             CompareScalar(mask, actRaw, 0.0F, CMPMODE::LE, execLength);
@@ -390,15 +380,15 @@ private:
             Select(yRaw, mask, tmp, yRaw, SELMODE::VSEL_TENSOR_TENSOR_MODE, execLength);
             return;
         }
- 
+
         for (uint32_t offset = 0; offset < length; offset += computeChunk_) {
             uint32_t currentLength = Min(length - offset, computeChunk_);
             uint32_t execLength = GetExecLength(currentLength);
- 
+
             LocalTensor<float> gradsChunk = gradsRaw[offset];
             LocalTensor<float> actChunk = actRaw[offset];
             LocalTensor<float> yChunk = yRaw[offset];
- 
+
             CompareScalar(mask, actChunk, 0.0F, CMPMODE::LE, execLength);
             Adds(tmp, actChunk, factorNegBias_, execLength);
             if (!IsNearlyOne(inputScale_)) {
@@ -409,9 +399,9 @@ private:
             Select(yChunk, mask, tmp, yChunk, SELMODE::VSEL_TENSOR_TENSOR_MODE, execLength);
         }
     }
- 
-    __aicore__ inline void ComputeFloatExpMode(
-        LocalTensor<float> gradsRaw, LocalTensor<float> actRaw, LocalTensor<float> yRaw, uint32_t length)
+
+    __aicore__ inline void ComputeFloatExpMode(LocalTensor<float> gradsRaw, LocalTensor<float> actRaw,
+                                               LocalTensor<float> yRaw, uint32_t length)
     {
         LocalTensor<float> tmp = tmpBufF32_.Get<float>();
         LocalTensor<uint8_t> mask = maskBuf_.Get<uint8_t>();
@@ -419,7 +409,7 @@ private:
         for (uint32_t offset = 0; offset < length; offset += computeChunk_) {
             uint32_t currentLength = Min(length - offset, computeChunk_);
             uint32_t execLength = GetExecLength(currentLength);
- 
+
             LocalTensor<float> gradsChunk = gradsRaw[offset];
             LocalTensor<float> actChunk = actRaw[offset];
             LocalTensor<float> yChunk = yRaw[offset];
@@ -433,9 +423,9 @@ private:
             Select(yChunk, mask, tmp, actChunk, SELMODE::VSEL_TENSOR_TENSOR_MODE, execLength);
         }
     }
- 
-    __aicore__ inline void ComputeMixedResultMode(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+
+    __aicore__ inline void ComputeMixedResultMode(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                                  uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -514,9 +504,9 @@ private:
             }
         }
     }
- 
-    __aicore__ inline void ComputeMixedExpMode(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+
+    __aicore__ inline void ComputeMixedExpMode(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                               uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -525,11 +515,11 @@ private:
         for (uint32_t offset = 0; offset < length; offset += computeChunk_) {
             uint32_t currentLength = Min(length - offset, computeChunk_);
             uint32_t execLength = GetExecLength(currentLength);
- 
+
             LocalTensor<T> gradsChunkRaw = gradsRaw[offset];
             LocalTensor<T> actChunkRaw = actRaw[offset];
             LocalTensor<T> yChunkRaw = yRaw[offset];
- 
+
             Cast(gradsF32, gradsChunkRaw, RoundMode::CAST_NONE, execLength);
             Cast(actF32, actChunkRaw, RoundMode::CAST_NONE, execLength);
             if constexpr (kIsSameType<T, bfloat16_t>) {
@@ -565,7 +555,7 @@ private:
             }
         }
     }
- 
+
 private:
     TPipe* pipe_ = nullptr;
     TQue<QuePosition::VECIN, MAX_BUFFER_NUM> inQueueGrads_;
@@ -581,7 +571,7 @@ private:
     GlobalTensor<T> gradsGm_;
     GlobalTensor<T> activationsGm_;
     GlobalTensor<T> yGm_;
- 
+
     uint32_t coreNum_ = 0U;
     uint32_t bigCoreNum_ = 0U;
     uint32_t bigCoreDataNum_ = 0U;
@@ -605,8 +595,8 @@ class KernelEluGradV2ResultMixedOutput {
 public:
     __aicore__ inline KernelEluGradV2ResultMixedOutput() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData, TPipe* pipe)
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData,
+                                TPipe* pipe)
     {
         uint32_t coreIdx = GetBlockIdx();
         pipe_ = pipe;
@@ -698,10 +688,7 @@ private:
         return (value + divisor - 1U) / divisor;
     }
 
-    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs)
-    {
-        return lhs < rhs ? lhs : rhs;
-    }
+    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs) { return lhs < rhs ? lhs : rhs; }
 
     __aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t factor)
     {
@@ -730,10 +717,7 @@ private:
         return Min(AlignUp(length, alignNum), computeChunk_);
     }
 
-    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx)
-    {
-        return tileIdx * tileLength_;
-    }
+    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx) { return tileIdx * tileLength_; }
 
     __aicore__ inline uint32_t GetTileLength(uint32_t tileIdx)
     {
@@ -841,8 +825,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeResult(
-        LocalTensor<Tin> gradsRaw, LocalTensor<Tin> actRaw, LocalTensor<Tout> yRaw, uint32_t length)
+    __aicore__ inline void ComputeResult(LocalTensor<Tin> gradsRaw, LocalTensor<Tin> actRaw, LocalTensor<Tout> yRaw,
+                                         uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -916,8 +900,8 @@ class KernelEluGradV2SingleTile {
 public:
     __aicore__ inline KernelEluGradV2SingleTile() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData, TPipe* pipe)
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData,
+                                TPipe* pipe)
     {
         uint32_t coreIdx = GetBlockIdx();
         pipe_ = pipe;
@@ -1010,15 +994,9 @@ public:
     }
 
 private:
-    __aicore__ inline bool IsNearlyOne(float value) const
-    {
-        return value > 0.999F && value < 1.001F;
-    }
+    __aicore__ inline bool IsNearlyOne(float value) const { return value > 0.999F && value < 1.001F; }
 
-    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs) const
-    {
-        return lhs < rhs ? lhs : rhs;
-    }
+    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs) const { return lhs < rhs ? lhs : rhs; }
 
     __aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t factor) const
     {
@@ -1051,8 +1029,8 @@ private:
         WaitFlag<HardEvent::V_MTE3>(eventId);
     }
 
-    __aicore__ inline void ComputeFloatDirect(
-        LocalTensor<float> gradsRaw, LocalTensor<float> actRaw, LocalTensor<float> yRaw)
+    __aicore__ inline void ComputeFloatDirect(LocalTensor<float> gradsRaw, LocalTensor<float> actRaw,
+                                              LocalTensor<float> yRaw)
     {
         LocalTensor<uint8_t> mask = maskBuf_.Get<uint8_t>();
         CompareScalar(mask, actRaw, 0.0F, CMPMODE::LE, execLength_);
@@ -1159,8 +1137,8 @@ class KernelEluGradV2Float16AlignedFast {
 public:
     __aicore__ inline KernelEluGradV2Float16AlignedFast() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData, TPipe* pipe)
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData,
+                                TPipe* pipe)
     {
         uint32_t coreIdx = GetBlockIdx();
         pipe_ = pipe;
@@ -1192,9 +1170,7 @@ public:
 
         factorPos_ = tilingData->scale;
         factorNeg_ = tilingData->alpha * tilingData->scale * tilingData->inputScale;
-        factorNegBias_ = (tilingData->inputScale == 0.0F)
-            ? 0.0F
-            : (tilingData->alpha * tilingData->scale);
+        factorNegBias_ = (tilingData->inputScale == 0.0F) ? 0.0F : (tilingData->alpha * tilingData->scale);
         inputScale_ = tilingData->inputScale;
         unitFactorPos_ = IsNearlyOne(factorPos_);
         unitFactorNeg_ = IsNearlyOne(factorNeg_);
@@ -1237,10 +1213,7 @@ public:
     }
 
 private:
-    __aicore__ inline bool IsNearlyOne(float value) const
-    {
-        return value > 0.999F && value < 1.001F;
-    }
+    __aicore__ inline bool IsNearlyOne(float value) const { return value > 0.999F && value < 1.001F; }
 
     __aicore__ inline uint32_t CeilDiv(uint32_t value, uint32_t divisor)
     {
@@ -1250,10 +1223,7 @@ private:
         return (value + divisor - 1U) / divisor;
     }
 
-    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs)
-    {
-        return lhs < rhs ? lhs : rhs;
-    }
+    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs) { return lhs < rhs ? lhs : rhs; }
 
     __aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t factor)
     {
@@ -1281,10 +1251,7 @@ private:
         return Min(AlignUp(length, alignNum), computeChunk_);
     }
 
-    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx)
-    {
-        return tileIdx * tileLength_;
-    }
+    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx) { return tileIdx * tileLength_; }
 
     __aicore__ inline uint32_t GetTileLength(uint32_t tileIdx)
     {
@@ -1321,8 +1288,8 @@ private:
         outQueueY_.FreeTensor(yLocal);
     }
 
-    __aicore__ inline void ComputeFloat16(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+    __aicore__ inline void ComputeFloat16(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                          uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -1406,8 +1373,8 @@ class KernelEluGradV2MixedAlignedFast {
 public:
     __aicore__ inline KernelEluGradV2MixedAlignedFast() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData, TPipe* pipe)
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, const EluGradV2TilingData* tilingData,
+                                TPipe* pipe)
     {
         uint32_t coreIdx = GetBlockIdx();
         pipe_ = pipe;
@@ -1439,9 +1406,7 @@ public:
 
         factorPos_ = tilingData->scale;
         factorNeg_ = tilingData->alpha * tilingData->scale * tilingData->inputScale;
-        factorNegBias_ = (tilingData->inputScale == 0.0F)
-            ? 0.0F
-            : (tilingData->alpha * tilingData->scale);
+        factorNegBias_ = (tilingData->inputScale == 0.0F) ? 0.0F : (tilingData->alpha * tilingData->scale);
         inputScale_ = tilingData->inputScale;
 
         pipe_->InitBuffer(inQueueGrads_, bufferNum_, tileLength_ * sizeof(T));
@@ -1489,10 +1454,7 @@ private:
         return (value + divisor - 1U) / divisor;
     }
 
-    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs)
-    {
-        return lhs < rhs ? lhs : rhs;
-    }
+    __aicore__ inline uint32_t Min(uint32_t lhs, uint32_t rhs) { return lhs < rhs ? lhs : rhs; }
 
     __aicore__ inline uint32_t AlignUp(uint32_t value, uint32_t factor)
     {
@@ -1520,10 +1482,7 @@ private:
         return Min(AlignUp(length, alignNum), computeChunk_);
     }
 
-    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx)
-    {
-        return tileIdx * tileLength_;
-    }
+    __aicore__ inline uint32_t GetTileOffset(uint32_t tileIdx) { return tileIdx * tileLength_; }
 
     __aicore__ inline uint32_t GetTileLength(uint32_t tileIdx)
     {
@@ -1564,8 +1523,8 @@ private:
         outQueueY_.FreeTensor(yLocal);
     }
 
-    __aicore__ inline void ComputeFloat16(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+    __aicore__ inline void ComputeFloat16(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                          uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -1601,8 +1560,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeBf16(
-        LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw, uint32_t length)
+    __aicore__ inline void ComputeBf16(LocalTensor<T> gradsRaw, LocalTensor<T> actRaw, LocalTensor<T> yRaw,
+                                       uint32_t length)
     {
         LocalTensor<float> gradsF32 = gradsBufF32_.Get<float>();
         LocalTensor<float> actF32 = actBufF32_.Get<float>();
@@ -1667,8 +1626,7 @@ private:
     float factorNegBias_ = 1.0F;
     float inputScale_ = 1.0F;
 };
- 
+
 } // namespace NsEluGradV2
- 
+
 #endif // ELU_GRAD_V2_H
- 

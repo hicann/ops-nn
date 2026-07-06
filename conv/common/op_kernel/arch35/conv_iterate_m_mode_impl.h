@@ -25,7 +25,7 @@ using namespace AscendC;
 using namespace conv;
 
 template <class Intf>
-__aicore__ inline void InitMDirectionValue(Intf *self)
+__aicore__ inline void InitMDirectionValue(Intf* self)
 {
     // M方向变量计算
     self->ctx.mAL1Tail = self->ctx.singleCoreM % self->ctx.mAL1;
@@ -39,21 +39,23 @@ __aicore__ inline void InitMDirectionValue(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void CalcMDirectionVar(Intf *self)
+__aicore__ inline void CalcMDirectionVar(Intf* self)
 {
-    self->ctx.l12l0LoopM = self->ctx.mAL1Iter == self->ctx.maxMAL1Iter ?
-        CeilDiv(self->ctx.mAL1Tail, self->ctx.mL0) : CeilDiv(self->ctx.mAL1, self->ctx.mL0);
+    self->ctx.l12l0LoopM = self->ctx.mAL1Iter == self->ctx.maxMAL1Iter ? CeilDiv(self->ctx.mAL1Tail, self->ctx.mL0) :
+                                                                         CeilDiv(self->ctx.mAL1, self->ctx.mL0);
     self->ctx.maxML0Iter = self->ctx.l12l0LoopM - 1;
     self->ctx.mAL1UpdateFlag = true;
 }
 
 template <class Intf>
-__aicore__ inline void CalcGroupOptParamForMMode(Intf *self)
+__aicore__ inline void CalcGroupOptParamForMMode(Intf* self)
 {
     if (((self->ctx.groupOptIter + 1 == self->ctx.singleGroupOpt - 1 && self->ctx.groupOptIter != 0) ||
-        self->ctx.singleGroupOpt == 1) && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
+         self->ctx.singleGroupOpt == 1) &&
+        self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
         self->ctx.singleGroups = self->ctx.updateEnlarge;
-        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->enlarge : self->ctx.singleGroups;
+        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->enlarge :
+                                                               self->ctx.singleGroups;
     }
 
     uint64_t enlargeTail = self->ctx.singleGroups % self->ctx.convTilingData->enlarge;
@@ -63,17 +65,18 @@ __aicore__ inline void CalcGroupOptParamForMMode(Intf *self)
         if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
             self->ctx.singleCoreCo = self->ctx.updateSingleCoOpt;
 
-            uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelW;
+            uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) *
+                                     self->ctx.convTilingData->kernelHxkernelW;
             self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTilingData->kL0);
             self->ctx.maxKL0Iter = self->ctx.ddr2l0LoopK - 1;
             self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTilingData->kL0;
             if constexpr (Intf::k0 != Intf::k0FmapTail) {
                 self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) *
-                    self->ctx.convTilingData->kernelHxkernelW % self->ctx.convTilingData->kL0;
+                                     self->ctx.convTilingData->kernelHxkernelW % self->ctx.convTilingData->kL0;
                 self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kAL0Tail;
             }
             self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kL0Tail;
-            
+
             InitCoDirectionValue<Intf>(self);
         }
     }
@@ -92,7 +95,7 @@ __aicore__ inline void CalcGroupOptParamForMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void FirstIterateImplMMode(Intf *self)
+__aicore__ inline void FirstIterateImplMMode(Intf* self)
 {
     self->ctx.mL0Iter = 0;
     self->ctx.nL0Iter = 0;
@@ -116,16 +119,16 @@ __aicore__ inline void FirstIterateImplMMode(Intf *self)
     if constexpr (Intf::groupOptPreloadFlag) {
         if (self->ctx.singleGroupOpt == 1 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
             self->ctx.singleGroups = self->ctx.updateEnlarge;
-            self->ctx.singleGroups = self->ctx.singleGroups == 0 ?
-                self->ctx.convTilingData->enlarge : self->ctx.singleGroups;
+            self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->enlarge :
+                                                                   self->ctx.singleGroups;
             CalcGroupOptParamForMMode<Intf>(self);
         }
         LoadAL1BaseModule<Intf>(self);
         self->ctx.loadAL1Flag = true;
         if (self->ctx.singleGroupOpt == 2 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
             self->ctx.singleGroups = self->ctx.updateEnlarge;
-            self->ctx.singleGroups = self->ctx.singleGroups == 0 ?
-                self->ctx.convTilingData->enlarge : self->ctx.singleGroups;
+            self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->enlarge :
+                                                                   self->ctx.singleGroups;
             CalcGroupOptParamForMMode<Intf>(self);
         }
     } else if constexpr (Intf::isMPreLoad) {
@@ -143,15 +146,16 @@ __aicore__ inline void FirstIterateImplMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline bool IterateL0MFirstMMode(Intf *self)
+__aicore__ inline bool IterateL0MFirstMMode(Intf* self)
 {
     self->ctx.mL0Iter++;
     if (self->ctx.mL0Iter != self->ctx.l12l0LoopM) {
         self->ctx.loadBL0Flag = false;
         if ASCEND_IS_AIC_CONV {
             if constexpr (Intf::kl0FullLoadFlag) {
-                self->ctx.kL0FullLoadAl0PingPongFlag =
-                    CheckReduceOneKNotSupportDBCase<Intf>(self) ? 0 : self->ctx.kL0FullLoadAl0PingPongFlag;
+                self->ctx.kL0FullLoadAl0PingPongFlag = CheckReduceOneKNotSupportDBCase<Intf>(self) ?
+                                                           0 :
+                                                           self->ctx.kL0FullLoadAl0PingPongFlag;
             }
         }
         return true;
@@ -179,7 +183,7 @@ __aicore__ inline bool IterateL0MFirstMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline bool IterateMFirstMMode(Intf *self)
+__aicore__ inline bool IterateMFirstMMode(Intf* self)
 {
     if (IterateL0MFirstMMode<Intf>(self)) {
         return true;
@@ -259,7 +263,7 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline bool IterateL0NFirstMMode(Intf *self)
+__aicore__ inline bool IterateL0NFirstMMode(Intf* self)
 {
     if constexpr (Intf::hasNL0IterFlag) {
         self->ctx.nL0Iter++;
@@ -267,8 +271,9 @@ __aicore__ inline bool IterateL0NFirstMMode(Intf *self)
             self->ctx.loadAL0Flag = false;
             if ASCEND_IS_AIC_CONV {
                 if constexpr (Intf::kl0FullLoadFlag) {
-                    self->ctx.kL0FullLoadBl0PingPongFlag =
-                        CheckReduceOneKNotSupportDBCase<Intf>(self) ? 0 : self->ctx.kL0FullLoadBl0PingPongFlag;
+                    self->ctx.kL0FullLoadBl0PingPongFlag = CheckReduceOneKNotSupportDBCase<Intf>(self) ?
+                                                               0 :
+                                                               self->ctx.kL0FullLoadBl0PingPongFlag;
                 }
             }
             return true;
@@ -295,7 +300,7 @@ __aicore__ inline bool IterateL0NFirstMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline bool UpdateCommonItersMModeMFirst(Intf *self, TempIters& tempIters)
+__aicore__ inline bool UpdateCommonItersMModeMFirst(Intf* self, TempIters& tempIters)
 {
     tempIters.mAL1Iter = self->ctx.mAL1Iter;
     tempIters.batchIter = self->ctx.batchIter;
@@ -320,7 +325,7 @@ __aicore__ inline bool UpdateCommonItersMModeMFirst(Intf *self, TempIters& tempI
 }
 
 template <class Intf>
-__aicore__ inline bool UpdateCommonItersMModeNFirst(Intf *self, TempIters& tempIters)
+__aicore__ inline bool UpdateCommonItersMModeNFirst(Intf* self, TempIters& tempIters)
 {
     tempIters.nBL1Iter = self->ctx.nBL1Iter;
     tempIters.mAL1Iter = self->ctx.mAL1Iter;
@@ -345,7 +350,7 @@ __aicore__ inline bool UpdateCommonItersMModeNFirst(Intf *self, TempIters& tempI
 }
 
 template <class Intf>
-__aicore__ inline bool IterateNFirstMMode(Intf *self)
+__aicore__ inline bool IterateNFirstMMode(Intf* self)
 {
     if (IterateL0NFirstMMode<Intf>(self)) {
         return true;
@@ -410,6 +415,6 @@ __aicore__ inline bool IterateNFirstMMode(Intf *self)
     return false;
 }
 
-};
+}; // namespace ConvFunc
 
 #endif // CONV_ITERATE_M_MODE_IMPL_H

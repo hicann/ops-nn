@@ -40,17 +40,16 @@ bool AdaptiveAvgPool2dGradTilingBase::CheckInputShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, originInputShapePtr);
     auto originDim = originInputShapePtr->GetSize();
     if (originDim != INPUT_DIM_4D && originDim != INPUT_DIM_3D) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "input dim", std::to_string(originDim),
-            std::to_string(INPUT_DIM_4D) + " or " + std::to_string(INPUT_DIM_3D));
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "input dim", std::to_string(originDim),
+                                     std::to_string(INPUT_DIM_4D) + " or " + std::to_string(INPUT_DIM_3D));
         return false;
     }
     auto originInputShapeSize = static_cast<const int64_t*>(originInputShapePtr->GetData());
     for (uint32_t i = 0; i < originDim; i++) {
         if (originInputShapeSize[i] == 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                context_->GetNodeName(), "orig_input_shape", std::to_string(originInputShapeSize[i]),
-                "The value is invalid for orig_input_shape");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "orig_input_shape",
+                                                  std::to_string(originInputShapeSize[i]),
+                                                  "The value is invalid for orig_input_shape");
             return false;
         }
     }
@@ -60,20 +59,20 @@ bool AdaptiveAvgPool2dGradTilingBase::CheckInputShape()
     size_t outDimNum = outputShape.GetDimNum();
 
     if (originDim != gradDimNum) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "origin input dim", std::to_string(originDim), std::to_string(gradDimNum));
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "origin input dim", std::to_string(originDim),
+                                     std::to_string(gradDimNum));
         return false;
     }
     if (originDim != outDimNum) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "origin input dim", std::to_string(originDim), std::to_string(outDimNum));
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "origin input dim", std::to_string(originDim),
+                                     std::to_string(outDimNum));
         return false;
     }
     for (uint32_t i = 0; i < originDim; i++) {
         if (originInputShapeSize[i] != outputShape.GetDim(i)) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                context_->GetNodeName(), "origin input shape", std::to_string(originInputShapeSize[i]),
-                std::to_string(outputShape.GetDim(i)));
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "origin input shape",
+                                          std::to_string(originInputShapeSize[i]),
+                                          std::to_string(outputShape.GetDim(i)));
             return false;
         }
     }
@@ -81,9 +80,9 @@ bool AdaptiveAvgPool2dGradTilingBase::CheckInputShape()
 
     for (uint32_t i = 0; i < loopSize; i++) {
         if (originInputShapeSize[i] != inputShape.GetDim(i)) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE(
-                context_->GetNodeName(), "origin input shape nc size", std::to_string(originInputShapeSize[i]),
-                std::to_string(inputShape.GetDim(i)));
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "origin input shape nc size",
+                                          std::to_string(originInputShapeSize[i]),
+                                          std::to_string(inputShape.GetDim(i)));
             return false;
         }
     }
@@ -96,9 +95,9 @@ ge::graphStatus AdaptiveAvgPool2dGradTilingBase::CheckInputDtype()
     auto gradDataType = context_->GetInputDesc(INPUT_GRAD_INDEX)->GetDataType();
 
     if ((gradDataType != ge::DT_FLOAT) && (gradDataType != ge::DT_FLOAT16) && (gradDataType != ge::DT_BF16)) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "input data type", ge::TypeUtils::DataTypeToSerialString(gradDataType).c_str(),
-            "float, float16, bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "input data type",
+                                  ge::TypeUtils::DataTypeToSerialString(gradDataType).c_str(),
+                                  "float, float16, bfloat16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -145,33 +144,21 @@ void AdaptiveAvgPool2dGradTilingBase::SetOtherInputParams()
 ge::graphStatus AdaptiveAvgPool2dGradTilingBase::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "Enter AdaptiveAvgPool2dGradTilingBase GetShapeAttrsInfo.");
-    OP_CHECK_IF(
-        CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        SetInputParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Get input shape failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetInputParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Get input shape failed."),
+                return ge::GRAPH_FAILED);
     SetOtherInputParams();
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdaptiveAvgPool2dGradTilingBase::IsCapable()
-{
-    return false;
-}
+bool AdaptiveAvgPool2dGradTilingBase::IsCapable() { return false; }
 
-ge::graphStatus AdaptiveAvgPool2dGradTilingBase::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool2dGradTilingBase::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdaptiveAvgPool2dGradTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool2dGradTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AdaptiveAvgPool2dGradTilingBase::GetPlatformInfo()
 {
@@ -208,13 +195,7 @@ ge::graphStatus AdaptiveAvgPool2dGradTilingBase::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool2dGradTilingBase::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool2dGradTilingBase::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdaptiveAvgPool2dGradTilingBase::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t AdaptiveAvgPool2dGradTilingBase::GetTilingKey() const { return 0; }
 } // namespace optiling

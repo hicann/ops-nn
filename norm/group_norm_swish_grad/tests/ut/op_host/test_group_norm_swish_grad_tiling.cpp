@@ -117,9 +117,9 @@ static void SetPlatformResource(const string& compileInfoString, fe::PlatFormInf
     platformInfo.SetPlatformRes("version", version);
 }
 
-static TilingRunResult RunIsolatedSocTilingCase(
-    const string& socVersion, bool setDeterministic, int32_t deterministic, uint32_t c = 64, uint32_t g = 32,
-    uint32_t h = 128, uint32_t w = 128, uint32_t n = 12, ge::DataType dtype = ge::DT_FLOAT)
+static TilingRunResult RunIsolatedSocTilingCase(const string& socVersion, bool setDeterministic, int32_t deterministic,
+                                                uint32_t c = 64, uint32_t g = 32, uint32_t h = 128, uint32_t w = 128,
+                                                uint32_t n = 12, ge::DataType dtype = ge::DT_FLOAT)
 {
     std::string opType("GroupNormSwishGrad");
     string compileInfoString = BuildCompileInfoString(socVersion);
@@ -135,12 +135,12 @@ static TilingRunResult RunIsolatedSocTilingCase(
     auto tilingFunc = opImpl->tiling;
     auto tilingParseFunc = opImpl->tiling_parse;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     auto parseContext = kernelHolder.GetContext<gert::TilingParseContext>();
     if (parseContext == nullptr || !parseContext->GetPlatformInfo()->Init()) {
         return {};
@@ -183,12 +183,11 @@ static TilingRunResult RunIsolatedSocTilingCase(
         .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
         .NodeOutputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
         .NodeOutputTd(2, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs(
-            {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(g)},
-             {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-             {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-             {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-             {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}});
+        .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(g)},
+                    {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                    {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                    {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                    {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}});
     if (setDeterministic) {
         contextFaker.DeterministicInfo(deterministic);
     }
@@ -259,8 +258,8 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_Ascend950_default_det
 
 TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_Ascend950_fp16_default_deterministic)
 {
-    auto result =
-        RunIsolatedSocTilingCase("Ascend950", false, 0, STAGE_ISOLATION_C, STAGE_ISOLATION_G, 1, 1, 12, ge::DT_FLOAT16);
+    auto result = RunIsolatedSocTilingCase("Ascend950", false, 0, STAGE_ISOLATION_C, STAGE_ISOLATION_G, 1, 1, 12,
+                                           ge::DT_FLOAT16);
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, FP16_DETERMINISTIC_TILING_KEY);
     EXPECT_GT(result.stage2CoreUsed, 0);
@@ -326,18 +325,18 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -377,12 +376,11 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_0)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -429,18 +427,18 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -480,12 +478,11 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_1)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -533,18 +530,18 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_2)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -584,12 +581,11 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_2)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -637,18 +633,18 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_3)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -689,12 +685,11 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_3)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -742,18 +737,18 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_4)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -794,12 +789,11 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_4)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -847,18 +841,18 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_5)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -899,12 +893,11 @@ TEST_F(GroupNormSwishGradTiling, GroupNormSwishGrad_tiling_5)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                           {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"swish_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"dgamma_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dbeta_is_require", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
                       .TilingData(param.get())
                       .Workspace(ws_size)

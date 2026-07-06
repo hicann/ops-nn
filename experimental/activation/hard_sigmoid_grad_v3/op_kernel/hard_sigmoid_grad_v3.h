@@ -83,8 +83,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput, const HardSigmoidGradV3TilingData* tilingData)
+__aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                                               const HardSigmoidGradV3TilingData* tilingData)
 {
     int64_t blockIdx = AscendC::GetBlockIdx();
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * blockIdx;
@@ -111,8 +111,8 @@ __aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::CopyInFull(int64_t pro
 {
     AscendC::LocalTensor<T> gradLocal = gradQueue.template AllocTensor<T>();
     AscendC::LocalTensor<T> selfLocal = selfQueue.template AllocTensor<T>();
-    AscendC::DataCopyExtParams copyParams {1, static_cast<uint32_t>(ubLength_ * sizeof(T)), 0, 0, 0};
-    AscendC::DataCopyPadExtParams<T> padParams {false, 0, 0, static_cast<T>(0)};
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(ubLength_ * sizeof(T)), 0, 0, 0};
+    AscendC::DataCopyPadExtParams<T> padParams{false, 0, 0, static_cast<T>(0)};
     AscendC::DataCopyPad(gradLocal, gradGM[progress * ubLength_], copyParams, padParams);
     AscendC::DataCopyPad(selfLocal, selfGM[progress * ubLength_], copyParams, padParams);
     gradQueue.EnQue(gradLocal);
@@ -124,9 +124,9 @@ __aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::CopyInTail(int64_t pro
 {
     int64_t alignNum = DATA_COPY_ALIGN_BYTES / static_cast<int64_t>(sizeof(T));
     int64_t alignedLength = AlignUp(validLength, alignNum);
-    AscendC::DataCopyExtParams copyParams {1, static_cast<uint32_t>(validLength * sizeof(T)), 0, 0, 0};
-    AscendC::DataCopyPadExtParams<T> padParams {
-        true, 0, static_cast<uint8_t>(alignedLength - validLength), static_cast<T>(0)};
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(validLength * sizeof(T)), 0, 0, 0};
+    AscendC::DataCopyPadExtParams<T> padParams{true, 0, static_cast<uint8_t>(alignedLength - validLength),
+                                               static_cast<T>(0)};
 
     AscendC::LocalTensor<T> gradLocal = gradQueue.template AllocTensor<T>();
     AscendC::LocalTensor<T> selfLocal = selfQueue.template AllocTensor<T>();
@@ -170,8 +170,7 @@ __aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::ComputeFull()
                                static_cast<uint32_t>(ubLength_));
         AscendC::PipeBarrier<PIPE_V>();
         AscendC::Select<T, uint8_t>(resultLocal, compareMask, resultLocal, static_cast<T>(0),
-                                    AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                                    static_cast<uint32_t>(ubLength_));
+                                    AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, static_cast<uint32_t>(ubLength_));
     }
 
     outputQueue.template EnQue<T>(resultLocal);
@@ -224,7 +223,7 @@ template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::CopyOutFull(int64_t progress)
 {
     AscendC::LocalTensor<T> resultLocal = outputQueue.template DeQue<T>();
-    AscendC::DataCopyExtParams copyParams {1, static_cast<uint32_t>(ubLength_ * sizeof(T)), 0, 0, 0};
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(ubLength_ * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPad(outputGM[progress * ubLength_], resultLocal, copyParams);
     outputQueue.FreeTensor(resultLocal);
 }
@@ -233,7 +232,7 @@ template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardSigmoidGradV3<T, BUFFER_MODE>::CopyOutTail(int64_t progress, int64_t validLength)
 {
     AscendC::LocalTensor<T> resultLocal = outputQueue.template DeQue<T>();
-    AscendC::DataCopyExtParams copyParams {1, static_cast<uint32_t>(validLength * sizeof(T)), 0, 0, 0};
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(validLength * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPad(outputGM[progress * ubLength_], resultLocal, copyParams);
     outputQueue.FreeTensor(resultLocal);
 }

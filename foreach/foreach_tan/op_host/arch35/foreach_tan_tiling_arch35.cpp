@@ -53,7 +53,7 @@ static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
     uint64_t ubSize = 0;
     int64_t maxCoreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, maxCoreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
 
     // 2. Get TensorList info
     auto computeNodeInfo = context->GetComputeNodeInfo();
@@ -63,8 +63,7 @@ static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
     int32_t tensorNum = static_cast<int32_t>(xInstanceInfo->GetInstanceNum());
 
     OP_CHECK_IF(tensorNum < 0 || tensorNum > MAX_TENSOR_COUNT,
-        OP_LOGE(context, "tensorNum %d must be in [0, 256]", tensorNum),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %d must be in [0, 256]", tensorNum), return ge::GRAPH_FAILED);
 
     // 3. Get x dtype and compute max element count across all tensors
     ge::DataType xDtype = ge::DT_FLOAT;
@@ -93,9 +92,8 @@ static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
     // 5. Set tiling data
     ForeachTanTilingData* tiling = context->GetTilingData<ForeachTanTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachTanTilingData), 0,
-        sizeof(ForeachTanTilingData)) != EOK,
-        OP_LOGE(context, "memset_s tiling data failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachTanTilingData), 0, sizeof(ForeachTanTilingData)) != EOK,
+                OP_LOGE(context, "memset_s tiling data failed"), return ge::GRAPH_FAILED);
 
     tiling->tensorNum = tensorNum;
     tiling->needCoreNum = needCoreNum;
@@ -128,20 +126,18 @@ static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
     context->SetBlockDim(needCoreNum);
     context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));
 
-    OP_LOGD(context->GetNodeName(), "ForeachTanTilingFunc end. tensorNum=%d, "
-        "needCoreNum=%d, tilingKey=%lu, maxTensorElements=%ld",
-        tensorNum, needCoreNum, tilingKey, maxTensorElements);
+    OP_LOGD(context->GetNodeName(),
+            "ForeachTanTilingFunc end. tensorNum=%d, "
+            "needCoreNum=%d, tilingKey=%lu, maxTensorElements=%ld",
+            tensorNum, needCoreNum, tilingKey, maxTensorElements);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForForeachTan(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachTan([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ForeachTan)
-    .Tiling(ForeachTanTilingFunc)
-    .TilingParse<ForeachTanCompileInfo>(TilingParseForForeachTan);
+IMPL_OP_OPTILING(ForeachTan).Tiling(ForeachTanTilingFunc).TilingParse<ForeachTanCompileInfo>(TilingParseForForeachTan);
 
 } // namespace optiling

@@ -24,21 +24,15 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void apply_adam_w_quant(
-    GM_ADDR var, GM_ADDR grad, GM_ADDR m, GM_ADDR v, GM_ADDR qmapM, GM_ADDR qmapV, GM_ADDR absmaxM, GM_ADDR absmaxV,
-    GM_ADDR step, GM_ADDR varRef, GM_ADDR mRef, GM_ADDR vRef, GM_ADDR absmaxMRef, GM_ADDR absmaxVRef, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void apply_adam_w_quant(GM_ADDR var, GM_ADDR grad, GM_ADDR m, GM_ADDR v, GM_ADDR qmapM,
+                                                         GM_ADDR qmapV, GM_ADDR absmaxM, GM_ADDR absmaxV, GM_ADDR step,
+                                                         GM_ADDR varRef, GM_ADDR mRef, GM_ADDR vRef, GM_ADDR absmaxMRef,
+                                                         GM_ADDR absmaxVRef, GM_ADDR workspace, GM_ADDR tiling);
 
 class apply_adam_w_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "apply_adam_w_quant_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "apply_adam_w_quant_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "apply_adam_w_quant_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "apply_adam_w_quant_test TearDown\n" << std::endl; }
 };
 
 TEST_F(apply_adam_w_quant_test, test_case_float32_tilingkey100_true)
@@ -92,9 +86,9 @@ TEST_F(apply_adam_w_quant_test, test_case_float32_tilingkey100_true)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(
-        apply_adam_w_quant, blockDim, varRef, grad, mRef, vRef, qmapM, qmapV, absmaxMRef, absmaxVRef, step, out_var_ref,
-        out_m_ref, out_v_ref, out_absmax_m_ref, out_absmax_v_ref, workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(apply_adam_w_quant, blockDim, varRef, grad, mRef, vRef, qmapM, qmapV, absmaxMRef, absmaxVRef, step,
+                out_var_ref, out_m_ref, out_v_ref, out_absmax_m_ref, out_absmax_v_ref, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)varRef);
     AscendC::GmFree((void*)grad);
@@ -164,9 +158,9 @@ TEST_F(apply_adam_w_quant_test, test_case_float32_tilingkey200_true)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(200);
-    ICPU_RUN_KF(
-        apply_adam_w_quant, blockDim, varRef, grad, mRef, vRef, qmapM, qmapV, absmaxMRef, absmaxVRef, step, out_var_ref,
-        out_m_ref, out_v_ref, out_absmax_m_ref, out_absmax_v_ref, workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(apply_adam_w_quant, blockDim, varRef, grad, mRef, vRef, qmapM, qmapV, absmaxMRef, absmaxVRef, step,
+                out_var_ref, out_m_ref, out_v_ref, out_absmax_m_ref, out_absmax_v_ref, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)varRef);
     AscendC::GmFree((void*)grad);
@@ -184,7 +178,6 @@ TEST_F(apply_adam_w_quant_test, test_case_float32_tilingkey200_true)
     AscendC::GmFree((void*)out_absmax_v_ref);
     AscendC::GmFree(tiling);
 }
-
 
 TEST_F(apply_adam_w_quant_test, test_case_float32_tilingkey300_true)
 {
@@ -237,9 +230,9 @@ TEST_F(apply_adam_w_quant_test, test_case_float32_tilingkey300_true)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(300);
-    ICPU_RUN_KF(
-        apply_adam_w_quant, blockDim, varRef, grad, mRef, vRef, qmapM, qmapV, absmaxMRef, absmaxVRef, step, out_var_ref,
-        out_m_ref, out_v_ref, out_absmax_m_ref, out_absmax_v_ref, workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(apply_adam_w_quant, blockDim, varRef, grad, mRef, vRef, qmapM, qmapV, absmaxMRef, absmaxVRef, step,
+                out_var_ref, out_m_ref, out_v_ref, out_absmax_m_ref, out_absmax_v_ref, workSpace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)varRef);
     AscendC::GmFree((void*)grad);

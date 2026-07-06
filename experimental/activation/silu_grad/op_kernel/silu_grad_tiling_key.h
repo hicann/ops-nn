@@ -11,26 +11,18 @@
 /**
  * @file silu_grad_tiling_key.h
  */
- #ifndef SILU_GRAD_TILING_KEY_H
- #define SILU_GRAD_TILING_KEY_H
- 
- #include "ascendc/host_api/tiling/template_argument.h"
- 
- #define SILU_GRAD_TPL_SCH_MODE_SINGLE 0
- #define SILU_GRAD_TPL_SCH_MODE_DOUBLE 1
- 
- ASCENDC_TPL_ARGS_DECL(
-     SiluGrad,
-     ASCENDC_TPL_UINT_DECL(
-         schMode, 1, ASCENDC_TPL_UI_LIST,
-         SILU_GRAD_TPL_SCH_MODE_SINGLE,
-         SILU_GRAD_TPL_SCH_MODE_DOUBLE));
- 
- ASCENDC_TPL_SEL(
-     ASCENDC_TPL_ARGS_SEL(
-         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
-             SILU_GRAD_TPL_SCH_MODE_SINGLE,
-             SILU_GRAD_TPL_SCH_MODE_DOUBLE)));
- 
- #endif // SILU_GRAD_TILING_KEY_H
- 
+#ifndef SILU_GRAD_TILING_KEY_H
+#define SILU_GRAD_TILING_KEY_H
+
+#include "ascendc/host_api/tiling/template_argument.h"
+
+#define SILU_GRAD_TPL_SCH_MODE_SINGLE 0
+#define SILU_GRAD_TPL_SCH_MODE_DOUBLE 1
+
+ASCENDC_TPL_ARGS_DECL(SiluGrad, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, SILU_GRAD_TPL_SCH_MODE_SINGLE,
+                                                      SILU_GRAD_TPL_SCH_MODE_DOUBLE));
+
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SILU_GRAD_TPL_SCH_MODE_SINGLE,
+                                                          SILU_GRAD_TPL_SCH_MODE_DOUBLE)));
+
+#endif // SILU_GRAD_TILING_KEY_H

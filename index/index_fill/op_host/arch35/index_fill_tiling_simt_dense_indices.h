@@ -18,17 +18,11 @@
 
 #include "index_fill_tiling_simt.h"
 
-namespace optiling
-{
-class IndexFillSimtDenseIndicesTiling : public IndexFillSimtTiling
-{
+namespace optiling {
+class IndexFillSimtDenseIndicesTiling : public IndexFillSimtTiling {
 public:
-    explicit IndexFillSimtDenseIndicesTiling(gert::TilingContext* context) : IndexFillSimtTiling(context)
-    {
-    }
-    ~IndexFillSimtDenseIndicesTiling() override
-    {
-    }
+    explicit IndexFillSimtDenseIndicesTiling(gert::TilingContext* context) : IndexFillSimtTiling(context) {}
+    ~IndexFillSimtDenseIndicesTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -46,5 +40,5 @@ private:
     int64_t CalcUsedBufSize(int64_t indicesUbFactor, ge::DataType indicesDtype);
 };
 
-}  // namespace optiling
-#endif  // INDEX_FILL_TILING_SIMT_DENSE_INDICES_H_
+} // namespace optiling
+#endif // INDEX_FILL_TILING_SIMT_DENSE_INDICES_H_

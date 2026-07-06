@@ -26,7 +26,8 @@ template <int32_t BUFFER_NUM = 2>
 class KernelAddLayerNormQuantEmptyInput {
 public:
     __aicore__ inline KernelAddLayerNormQuantEmptyInput(TPipe* pipe, const AddLayerNormQuantEmptyTilingData* tilingData)
-        : pipe_(pipe), tiling_(tilingData) {}
+        : pipe_(pipe), tiling_(tilingData)
+    {}
 
     __aicore__ inline void Init(GM_ADDR outScale1, GM_ADDR outScale2)
     {
@@ -34,14 +35,14 @@ public:
         usedCoreNum_ = tiling_->usedCoreNum;
         isDualQuant_ = tiling_->isDualQuant;
         isDyn_ = tiling_->isDyn;
-        if(isDyn_){
+        if (isDyn_) {
             outScales1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(outScale1));
-            if(isDualQuant_){
+            if (isDualQuant_) {
                 outScales2Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(outScale2));
             }
         }
-        
-        if(coreIdx_ >= usedCoreNum_){
+
+        if (coreIdx_ >= usedCoreNum_) {
             return;
         }
 
@@ -65,19 +66,21 @@ public:
         dataCopyParams.blockLen = curRows * sizeof(float);
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
-        if(isDyn_){
+        if (isDyn_) {
             DataCopyPad(outScales1Gm_[outScaleGmOffset], outLocal, dataCopyParams);
-            if(isDualQuant_){
+            if (isDualQuant_) {
                 DataCopyPad(outScales2Gm_[outScaleGmOffset], outLocal, dataCopyParams);
             }
         }
     }
 
-    __aicore__ inline void VFDuplicateRows(LocalTensor<float>& dstAddr, uint32_t curRows){
+    __aicore__ inline void VFDuplicateRows(LocalTensor<float>& dstAddr, uint32_t curRows)
+    {
         AscendC::NumericLimits<float>::NegativeInfinity(dstAddr, curRows);
     }
 
-    __aicore__ inline void CalOutScale(uint64_t gmOffset_, uint32_t curRows){
+    __aicore__ inline void CalOutScale(uint64_t gmOffset_, uint32_t curRows)
+    {
         LocalTensor<float> ScaleOutLocal = outScaleQueue_.AllocTensor<float>();
         VFDuplicateRows(ScaleOutLocal, curRows);
         outScaleQueue_.EnQue(ScaleOutLocal);
@@ -94,7 +97,7 @@ public:
 
         uint64_t outputOffset = 0;
         if (coreIdx_ < usedCoreNum_ - 1) {
-            for (uint32_t curLoop = 0; curLoop < numBlocks_; curLoop++){
+            for (uint32_t curLoop = 0; curLoop < numBlocks_; curLoop++) {
                 outputOffset = curLoop * blockSize_ + gmOffset_;
                 CalOutScale(outputOffset, blockSize_);
             }
@@ -133,5 +136,5 @@ private:
     TPipe* pipe_ = nullptr;
     const AddLayerNormQuantEmptyTilingData* tiling_;
 };
-} // namespace AddLayerNormQuantEmpty
+} // namespace AddLayerNormQuantEmptyInput
 #endif // ADD_LAYER_NORM_QUANT_EMPTY_INPUT_KERNEL_H

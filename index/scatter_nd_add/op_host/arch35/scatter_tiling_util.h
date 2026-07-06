@@ -39,18 +39,18 @@ const int64_t TILING_MODE_7 = 7;
 const int64_t UPDATE_ROW_THRESHOLD = 2048;
 
 struct ScatterCompileInfo {
-  int64_t core_num;
-  int64_t ub_size;
-  int64_t var_size;
-  int64_t indices_size;
-  int64_t support_atomic;
+    int64_t core_num;
+    int64_t ub_size;
+    int64_t var_size;
+    int64_t indices_size;
+    int64_t support_atomic;
 };
 
 struct CalcShapeInfo {
-  gert::Shape var_shape;
-  gert::Shape indices_shape;
-  gert::Shape adds_shape;
-  gert::Shape out_shape;
+    gert::Shape var_shape;
+    gert::Shape indices_shape;
+    gert::Shape adds_shape;
+    gert::Shape out_shape;
 };
 
 /*
@@ -72,98 +72,101 @@ ge::graphStatus TilingPrepare4Scatter(gert::TilingParseContext* context);
 bool CheckScatterOpsTensorShape(const gert::TilingContext* context, const CalcShapeInfo& calc_shape_info);
 
 struct ScatterNdAddTilingParams {
-  int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
-  int64_t tiling_mode;
-  int64_t indice_step;
-  int64_t core_num;
-  int64_t adds_data_num;
-  int64_t indices_loop_num;
-  int64_t indices_last_num;
-  int64_t adds_num;
-  int64_t adds_loop_num;
-  int64_t adds_last_num;
-  int64_t indices_last_dim;
-  int64_t indices_front_dim;
-  int64_t tiling_core_num;
+    int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
+    int64_t tiling_mode;
+    int64_t indice_step;
+    int64_t core_num;
+    int64_t adds_data_num;
+    int64_t indices_loop_num;
+    int64_t indices_last_num;
+    int64_t adds_num;
+    int64_t adds_loop_num;
+    int64_t adds_last_num;
+    int64_t indices_last_dim;
+    int64_t indices_front_dim;
+    int64_t tiling_core_num;
 
-  void Init() {
-    tiling_mode = TILING_MODE_1;
-    indice_step = 0;
-    core_num = 0;
-    adds_data_num = 0;
-    indices_loop_num = 0;
-    indices_last_num = 0;
-    adds_num = 0;
-    adds_loop_num = 0;
-    adds_last_num = 0;
-    indices_last_dim = 0;
-    indices_front_dim = 0;
-    tiling_core_num = 0;
-  }
+    void Init()
+    {
+        tiling_mode = TILING_MODE_1;
+        indice_step = 0;
+        core_num = 0;
+        adds_data_num = 0;
+        indices_loop_num = 0;
+        indices_last_num = 0;
+        adds_num = 0;
+        adds_loop_num = 0;
+        adds_last_num = 0;
+        indices_last_dim = 0;
+        indices_front_dim = 0;
+        tiling_core_num = 0;
+    }
 };
 
 struct ScatterNdAddTilingParamsHP {
-  int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
-  int64_t tiling_mode;
-  int64_t core_num;
-  int64_t indices_last_dim;
-  int64_t updates_data_num;
-  int64_t indices_each_core_data;
-  int64_t indices_last_core_data;
-  int64_t each_core_indices_loop_num;
-  int64_t each_core_indices_last_num;
-  int64_t last_core_indices_loop_num;
-  int64_t last_core_indices_last_num;
-  int64_t updates_loop_num;
-  int64_t updates_last_num;
-  int64_t tiling_core_num;
+    int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
+    int64_t tiling_mode;
+    int64_t core_num;
+    int64_t indices_last_dim;
+    int64_t updates_data_num;
+    int64_t indices_each_core_data;
+    int64_t indices_last_core_data;
+    int64_t each_core_indices_loop_num;
+    int64_t each_core_indices_last_num;
+    int64_t last_core_indices_loop_num;
+    int64_t last_core_indices_last_num;
+    int64_t updates_loop_num;
+    int64_t updates_last_num;
+    int64_t tiling_core_num;
 
-  void Init() {
-    tiling_mode = TILING_MODE_6;
-    core_num = 0;
-    indices_last_dim = 0;
-    updates_data_num = 0;
-    indices_each_core_data = 0;
-    indices_last_core_data = 0;
-    each_core_indices_loop_num = 0;
-    each_core_indices_last_num = 0;
-    last_core_indices_loop_num = 0;
-    last_core_indices_last_num = 0;
-    updates_loop_num = 0;
-    updates_last_num = 0;
-    tiling_core_num = 0;
-  }
+    void Init()
+    {
+        tiling_mode = TILING_MODE_6;
+        core_num = 0;
+        indices_last_dim = 0;
+        updates_data_num = 0;
+        indices_each_core_data = 0;
+        indices_last_core_data = 0;
+        each_core_indices_loop_num = 0;
+        each_core_indices_last_num = 0;
+        last_core_indices_loop_num = 0;
+        last_core_indices_last_num = 0;
+        updates_loop_num = 0;
+        updates_last_num = 0;
+        tiling_core_num = 0;
+    }
 };
 
 struct ScatterNonAliasingAddTilingParams {
-  int64_t tiling_mode;
-  int64_t indice_step;
-  int64_t core_num;
-  int64_t adds_data_num;
-  int64_t indices_loop_num;
-  int64_t indices_last_num;
-  int64_t adds_num;
-  int64_t adds_loop_num;
-  int64_t adds_last_num;
-  int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
-  int64_t indices_last_dim;
-  int64_t indices_front_dim;
-  int64_t var_num;
-  int64_t tiling_core_num;
+    int64_t tiling_mode;
+    int64_t indice_step;
+    int64_t core_num;
+    int64_t adds_data_num;
+    int64_t indices_loop_num;
+    int64_t indices_last_num;
+    int64_t adds_num;
+    int64_t adds_loop_num;
+    int64_t adds_last_num;
+    int64_t var_offset[7] = {0, 0, 0, 0, 0, 0, 0};
+    int64_t indices_last_dim;
+    int64_t indices_front_dim;
+    int64_t var_num;
+    int64_t tiling_core_num;
 
-  void Init() {
-    tiling_mode = TILING_MODE_1;
-    indices_last_num = 0;
-    adds_num = 0;
-    adds_loop_num = 0;
-    adds_last_num = 0;
-    var_num = 0;
-    tiling_core_num = 0;
-    indice_step = 0;
-    core_num = 0;
-    adds_data_num = 0;
-    indices_loop_num = 0;
-  }
+    void Init()
+    {
+        tiling_mode = TILING_MODE_1;
+        indices_last_num = 0;
+        adds_num = 0;
+        adds_loop_num = 0;
+        adds_last_num = 0;
+        var_num = 0;
+        tiling_core_num = 0;
+        indice_step = 0;
+        core_num = 0;
+        adds_data_num = 0;
+        indices_loop_num = 0;
+    }
 };
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_UTIL_H_
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_UTIL_H_

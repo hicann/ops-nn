@@ -39,8 +39,7 @@ constexpr uint32_t DATA_NUM_8B = 12;
 constexpr uint32_t SINGLE_BUFFER_NUM = 1;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 
-struct LpLossCompileInfo {
-};
+struct LpLossCompileInfo {};
 
 struct LpLossTilingInfo {
     uint64_t ubSize = 0;
@@ -111,8 +110,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, LpLossTilin
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetWorkspaceSize(
-    gert::TilingContext* context, int64_t coreNum, uint32_t reductionMode, uint64_t blockSize)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context, int64_t coreNum, uint32_t reductionMode,
+                                        uint64_t blockSize)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(coreNum <= 0, OP_LOGE(context, "coreNum is invalid"), return ge::GRAPH_FAILED);
@@ -150,8 +149,8 @@ static uint64_t GetUbDataNumber(ge::DataType dataType, uint32_t reductionMode)
     }
 }
 
-static ge::graphStatus GetInputMeta(
-    gert::TilingContext* context, uint64_t& inputNum, uint64_t& inputBytes, ge::DataType& dataType)
+static ge::graphStatus GetInputMeta(gert::TilingContext* context, uint64_t& inputNum, uint64_t& inputBytes,
+                                    ge::DataType& dataType)
 {
     auto shape = context->GetInputShape(0);
     OP_CHECK_IF(shape == nullptr, OP_LOGE(context, "input shape is nullptr"), return ge::GRAPH_FAILED);
@@ -162,17 +161,15 @@ static ge::graphStatus GetInputMeta(
     auto labelShape = context->GetInputShape(1);
     OP_CHECK_IF(labelShape == nullptr, OP_LOGE(context, "label shape is nullptr"), return ge::GRAPH_FAILED);
     const gert::Shape& inputLabelShape = EnsureNotScalar(labelShape->GetStorageShape());
-    OP_CHECK_IF(
-        inputShape != inputLabelShape, OP_LOGE(context, "predict and label shapes must match"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape != inputLabelShape, OP_LOGE(context, "predict and label shapes must match"),
+                return ge::GRAPH_FAILED);
 
     auto desc = context->GetInputDesc(0);
     OP_CHECK_IF(desc == nullptr, OP_LOGE(context, "input desc is nullptr"), return ge::GRAPH_FAILED);
     auto labelDesc = context->GetInputDesc(1);
     OP_CHECK_IF(labelDesc == nullptr, OP_LOGE(context, "label desc is nullptr"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        desc->GetDataType() != labelDesc->GetDataType(), OP_LOGE(context, "predict and label dtypes must match"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(desc->GetDataType() != labelDesc->GetDataType(),
+                OP_LOGE(context, "predict and label dtypes must match"), return ge::GRAPH_FAILED);
 
     dataType = desc->GetDataType();
     uint32_t typeLength = 0;
@@ -186,17 +183,15 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, LpLossTil
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
     ge::DataType dataType{};
-    OP_CHECK_IF(
-        GetInputMeta(context, tilingInfo.inputNum, tilingInfo.inputBytes, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetInputMeta failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetInputMeta(context, tilingInfo.inputNum, tilingInfo.inputBytes, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetInputMeta failed"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetReductionMode(context, tilingInfo.reductionMode) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetReductionMode failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetReductionMode(context, tilingInfo.reductionMode) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetReductionMode failed"), return ge::GRAPH_FAILED);
 
-    tilingInfo.inputLengthAlign32 =
-        (((tilingInfo.inputNum * tilingInfo.inputBytes + tilingInfo.blockSize - 1) / tilingInfo.blockSize) *
-         tilingInfo.blockSize);
+    tilingInfo.inputLengthAlign32 = (((tilingInfo.inputNum * tilingInfo.inputBytes + tilingInfo.blockSize - 1) /
+                                      tilingInfo.blockSize) *
+                                     tilingInfo.blockSize);
     uint64_t ubDataNumber = GetUbDataNumber(dataType, tilingInfo.reductionMode);
     OP_CHECK_IF(ubDataNumber == 0, OP_LOGE(context, "ubDataNumber is 0"), return ge::GRAPH_FAILED);
     const uint64_t checkedUbDataNumber = ubDataNumber;
@@ -214,9 +209,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, LpLossTil
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateTileInfo(
-    gert::TilingContext* context, const LpLossTilingInfo& tilingInfo, uint64_t coreInputBlockNum, uint64_t& coreDataNum,
-    uint64_t& tailDataNum, uint64_t& finalTileNum)
+static ge::graphStatus CalculateTileInfo(gert::TilingContext* context, const LpLossTilingInfo& tilingInfo,
+                                         uint64_t coreInputBlockNum, uint64_t& coreDataNum, uint64_t& tailDataNum,
+                                         uint64_t& finalTileNum)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
 
@@ -238,15 +233,13 @@ static ge::graphStatus CalculateCoreBlockNums(gert::TilingContext* context, LpLo
     uint64_t everyCoreInputBlockNum = tilingInfo.inputLengthAlign32 / tilingInfo.blockSize / checkedCoreNum;
     tilingInfo.tailBlockNum = (tilingInfo.inputLengthAlign32 / tilingInfo.blockSize) % checkedCoreNum;
 
-    ge::graphStatus ret = CalculateTileInfo(
-        context, tilingInfo, everyCoreInputBlockNum, tilingInfo.smallCoreDataNum, tilingInfo.smallTailDataNum,
-        tilingInfo.finalSmallTileNum);
+    ge::graphStatus ret = CalculateTileInfo(context, tilingInfo, everyCoreInputBlockNum, tilingInfo.smallCoreDataNum,
+                                            tilingInfo.smallTailDataNum, tilingInfo.finalSmallTileNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateTileInfo for small core failed"), return ret);
 
     everyCoreInputBlockNum += 1;
-    ret = CalculateTileInfo(
-        context, tilingInfo, everyCoreInputBlockNum, tilingInfo.bigCoreDataNum, tilingInfo.bigTailDataNum,
-        tilingInfo.finalBigTileNum);
+    ret = CalculateTileInfo(context, tilingInfo, everyCoreInputBlockNum, tilingInfo.bigCoreDataNum,
+                            tilingInfo.bigTailDataNum, tilingInfo.finalBigTileNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateTileInfo for big core failed"), return ret);
 
     return ge::GRAPH_SUCCESS;
@@ -274,9 +267,8 @@ static ge::graphStatus LpLossTilingFunc(gert::TilingContext* context)
 {
     auto* tiling = context->GetTilingData<LpLossTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(LpLossTilingData), 0, sizeof(LpLossTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(LpLossTilingData), 0, sizeof(LpLossTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     LpLossTilingInfo tilingInfo;
 
@@ -299,10 +291,9 @@ static ge::graphStatus LpLossTilingFunc(gert::TilingContext* context)
 
     SetTilingData(tiling, tilingInfo);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context, tilingInfo.coreNum, tilingInfo.reductionMode, tilingInfo.blockSize) !=
-            ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context, tilingInfo.coreNum, tilingInfo.reductionMode, tilingInfo.blockSize) !=
+                    ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
 
     uint64_t tilingKey = (tilingInfo.bufferNum == DOUBLE_BUFFER_NUM) ? GET_TPL_TILING_KEY(LPLOSS_TPL_SCH_MODE_0) :
                                                                        GET_TPL_TILING_KEY(LPLOSS_TPL_SCH_MODE_1);

@@ -38,15 +38,9 @@ struct QuantizedBatchNormCompileInfo {
 
 class QuantizedBatchNormTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantizedBatchNormTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantizedBatchNormTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantizedBatchNormTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantizedBatchNormTiling TearDown" << std::endl; }
 };
 
 TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1000)
@@ -89,18 +83,18 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1000)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -112,9 +106,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1000)
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -192,19 +185,19 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -217,9 +210,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1001)
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -299,19 +291,19 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1002)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -324,9 +316,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1002)
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -406,19 +397,19 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1003)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -431,9 +422,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1003)
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -513,19 +503,19 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1012)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -538,9 +528,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1012)
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -620,19 +609,19 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1013)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -645,9 +634,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1013)
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -727,19 +715,19 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1002_full_reduce_not_suppo
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -752,9 +740,8 @@ TEST_F(QuantizedBatchNormTiling, quantized_batch_norm_1002_full_reduce_not_suppo
                       .SetOpType(op_type)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
-                           &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
+                      .InputShapes({&x_shape, &mean_shape, &variance_shape, &in_scale_shape, &in_zero_point_shape,
+                                    &out_scale_shape, &out_zero_point_shape, &weight_shape, &bias_shape})
                       .OutputShapes({&y_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))

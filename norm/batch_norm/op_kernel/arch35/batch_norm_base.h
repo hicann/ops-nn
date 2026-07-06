@@ -21,8 +21,7 @@
 #include "../inc/kernel_utils.h"
 #include "../../norm_common/reduce_common_regbase.h"
 
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
@@ -60,14 +59,13 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
     AscendC::RoundMode::CAST_RINT,
 };
 
-
 template <typename T>
 __aicore__ inline void LoadTensorForDtypeT(AscendC::MicroAPI::RegTensor<float>& dst, __local_mem__ T* src,
                                            AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-    } else {  // fp16、bf16
+    } else { // fp16、bf16
         RegTensor<T> xFp16;
         DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
         Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
@@ -80,7 +78,7 @@ __aicore__ inline void LoadTensorForDtypeTBrc(RegTensor<float>& dst, __local_mem
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
-    } else {  // fp16、bf16
+    } else { // fp16、bf16
         RegTensor<T> xFp16;
         DataCopy<T, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ T*)src + offset));
         Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
@@ -139,7 +137,7 @@ __aicore__ inline void LoadTwoTensorForDtypeTBrc(RegTensor<float>& dst1, RegTens
 
 template <typename T>
 __aicore__ inline void StoreTensorForDtypeT(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
-                                               AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+                                            AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
@@ -150,6 +148,6 @@ __aicore__ inline void StoreTensorForDtypeT(__local_mem__ T* dst, AscendC::Micro
     }
 }
 
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_BASE_H

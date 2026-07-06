@@ -34,7 +34,7 @@
 using namespace std;
 
 class batch_mat_mul_v3_test : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { cout << "batch_mat_mul_v3_test SetUp\n" << endl; }
     static void TearDownTestCase() { cout << "batch_mat_mul_v3_test TearDown\n" << endl; }
 };
@@ -46,7 +46,8 @@ struct HcclCombinOpParam {
     uint32_t rankDim;
 };
 
-TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0) {
+TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0)
+{
     // {{1,1,1,1, 32, 128}, {1,1,1,1,128, 128}}
     AscendC::SetKernelMode(KernelMode::AIC_MODE);
 
@@ -61,12 +62,12 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0) {
     size_t tilingSize = sizeof(BatchMatmulTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *aGM = (uint8_t *)AscendC::GmAlloc(shape_a);
-    uint8_t *bGM = (uint8_t *)AscendC::GmAlloc(shape_b);
-    uint8_t *biasGM = nullptr;
-    uint8_t *offsetWGM = nullptr;
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(shape_output);
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+    uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shape_a);
+    uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shape_b);
+    uint8_t* biasGM = nullptr;
+    uint8_t* offsetWGM = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(shape_output);
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
     memset(aGM, 0, shape_a);
     memset(bGM, 0, shape_b);
     memset(output, 0, shape_output);
@@ -75,13 +76,13 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0) {
     system("cd ./batch_mat_mul_v3_data/ && rm -rf ./*bin");
     system("cd ./batch_mat_mul_v3_data/ && python3 gen_data.py 1 32 128 128");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/batch_mat_mul_v3_data/shape_a.bin", shape_a, aGM, shape_a);
     ReadFile(path + "/batch_mat_mul_v3_data/shape_b.bin", shape_b, bGM, shape_b);
     ReadFile(path + "/batch_mat_mul_v3_data/shape_output.bin", shape_output, output, shape_output);
 
-    BatchMatmulTilingData *tiling_data = reinterpret_cast<BatchMatmulTilingData*>(tiling);
+    BatchMatmulTilingData* tiling_data = reinterpret_cast<BatchMatmulTilingData*>(tiling);
 
     tiling_data->matmulTiling.matmulTiling.usedCoreNum = 24;
     tiling_data->matmulTiling.matmulTiling.M = 32;
@@ -134,8 +135,8 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0) {
     tiling_data->multiBatchInfo.iterBatch = 1;
     ICPU_SET_TILING_KEY(10000000000000001001UL);
 
-    auto batch_mat_mul_v3_wrapper = [](GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR contextGM, GM_ADDR y, GM_ADDR workspace,
-                                 GM_ADDR tiling) {
+    auto batch_mat_mul_v3_wrapper = [](GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR contextGM, GM_ADDR y,
+                                       GM_ADDR workspace, GM_ADDR tiling) {
         ::batch_mat_mul_v3<0, 1, 0, 0, 1>(x, w, bias, contextGM, y, workspace, tiling);
     };
     ICPU_RUN_KF(batch_mat_mul_v3_wrapper, 24, aGM, bGM, nullptr, contextGM, output, workspace, tiling);
@@ -147,7 +148,8 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_0) {
     free(path_);
 }
 
-TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_1) {
+TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_1)
+{
     // {{1,1,1,16, 1830, 32}, {1,1,1,16,32, 2598}}
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
@@ -162,12 +164,12 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_1) {
     size_t tilingSize = sizeof(BatchMatmulTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *aGM = (uint8_t *)AscendC::GmAlloc(shape_a);
-    uint8_t *bGM = (uint8_t *)AscendC::GmAlloc(shape_b);
-    uint8_t *biasGM = nullptr;
-    uint8_t *offsetWGM = nullptr;
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(shape_output);
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+    uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shape_a);
+    uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shape_b);
+    uint8_t* biasGM = nullptr;
+    uint8_t* offsetWGM = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(shape_output);
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
     memset(aGM, 0, shape_a);
     memset(bGM, 0, shape_b);
     memset(output, 0, shape_output);
@@ -176,13 +178,13 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_1) {
     system("cd ./batch_mat_mul_v3_data/ && rm -rf ./*bin");
     system("cd ./batch_mat_mul_v3_data/ && python3 gen_data.py 16 1830 32 2598");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/batch_mat_mul_v3_data/shape_a.bin", shape_a, aGM, shape_a);
     ReadFile(path + "/batch_mat_mul_v3_data/shape_b.bin", shape_b, bGM, shape_b);
     ReadFile(path + "/batch_mat_mul_v3_data/shape_output.bin", shape_output, output, shape_output);
 
-    BatchMatmulTilingData *tiling_data = reinterpret_cast<BatchMatmulTilingData*>(tiling);
+    BatchMatmulTilingData* tiling_data = reinterpret_cast<BatchMatmulTilingData*>(tiling);
 
     tiling_data->matmulTiling.matmulTiling.usedCoreNum = 24;
     tiling_data->matmulTiling.matmulTiling.M = 1830;
@@ -259,8 +261,8 @@ TEST_F(batch_mat_mul_v3_test, batch_mat_mul_v3_test_1) {
     tiling_data->multiBatchInfo.bBatch = 0;
     ICPU_SET_TILING_KEY(10000000000000000001UL);
 
-    auto batch_mat_mul_v3_wrapper = [](GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR contextGM, GM_ADDR y, GM_ADDR workspace,
-                                 GM_ADDR tiling) {
+    auto batch_mat_mul_v3_wrapper = [](GM_ADDR x, GM_ADDR w, GM_ADDR bias, GM_ADDR contextGM, GM_ADDR y,
+                                       GM_ADDR workspace, GM_ADDR tiling) {
         ::batch_mat_mul_v3<0, 0, 0, 0, 1>(x, w, bias, contextGM, y, workspace, tiling);
     };
     ICPU_RUN_KF(batch_mat_mul_v3_wrapper, 24, aGM, bGM, nullptr, contextGM, output, workspace, tiling);

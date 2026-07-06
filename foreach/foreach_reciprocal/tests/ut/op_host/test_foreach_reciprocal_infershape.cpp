@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_reciprocal_proto.h"
 
-class ForeachReciprocalTest : public testing::Test
-{
+class ForeachReciprocalTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachReciprocal SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachReciprocal SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachReciprocal TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachReciprocal TearDown" << std::endl; }
 };
 
 TEST_F(ForeachReciprocalTest, infer_shape_known_success)

@@ -17,23 +17,15 @@
 
 using namespace std;
 
-class l2_ada_layer_norm_quant_test : public testing::Test
-{
+class l2_ada_layer_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_ada_layer_norm_quant_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_ada_layer_norm_quant_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_ada_layer_norm_quant_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_ada_layer_norm_quant_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& scaleShape, const vector<int64_t>& weightShape,
-        const vector<int64_t>& outShape, const vector<int64_t>& quantScaleShape, aclDataType dtype,
-        aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& scaleShape,
+                    const vector<int64_t>& weightShape, const vector<int64_t>& outShape,
+                    const vector<int64_t>& quantScaleShape, aclDataType dtype, aclnnStatus expectRet)
     {
         auto x = TensorDesc(xShape, dtype, ACL_FORMAT_NCL);
         auto scale = TensorDesc(scaleShape, dtype, ACL_FORMAT_ND);
@@ -45,9 +37,9 @@ public:
         auto quantScale = TensorDesc(quantScaleShape, ACL_FLOAT, ACL_FORMAT_ND);
         const char* quantMode = "dynamic";
         uint64_t workspace_size = 0;
-        auto ut = OP_API_UT(
-            aclnnAdaLayerNormQuant, INPUT(x, scale, shift, weight, bias, smoothScales, 0.00001, quantMode),
-            OUTPUT(out, quantScale, (aclTensor*)nullptr));
+        auto ut = OP_API_UT(aclnnAdaLayerNormQuant,
+                            INPUT(x, scale, shift, weight, bias, smoothScales, 0.00001, quantMode),
+                            OUTPUT(out, quantScale, (aclTensor*)nullptr));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 
         EXPECT_EQ(aclRet, expectRet);

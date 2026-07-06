@@ -28,7 +28,7 @@ namespace ge {
 * The shape only supports 1 dimension.
 
 * @par Attributes:
-* @li round_mode: An optional string, specifying the quantization rounding mode. 
+* @li round_mode: An optional string, specifying the quantization rounding mode.
 * Defaults and only supports "rint".
 * @li dst_type: An optional int, specifying the dtype of output y. Target data type enum value:
 * - 35: DT_FLOAT8_E5M2
@@ -66,4 +66,4 @@ REG_OP(GroupedDynamicMxQuant)
     .OP_END_FACTORY_REG(GroupedDynamicMxQuant)
 } // namespace ge
 
-#endif  // QUANTIZE_GROUPED_DYNAMIC_MX_QUANT_PROTO_H
+#endif // QUANTIZE_GROUPED_DYNAMIC_MX_QUANT_PROTO_H

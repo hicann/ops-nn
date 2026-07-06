@@ -43,10 +43,7 @@ static const int32_t DTYPE_INT4 = 29;
 static const size_t WORKSPACES_DEFAULT_SIZE_32B = 32;
 static const int64_t EVEN_FACTOR = 2;
 
-bool GroupQuantTiling::IsCapable()
-{
-    return true;
-}
+bool GroupQuantTiling::IsCapable() { return true; }
 const gert::Shape g_vec_1_shape = {1};
 const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 {
@@ -86,19 +83,15 @@ ge::graphStatus GroupQuantTiling::GetShapeAttrsInfo()
     auto inputXDesc = context_->GetInputDesc(INPUT_INDEX_OF_X);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
     auto xDtype = inputXDesc->GetDataType();
-    OP_CHECK_IF(
-        (xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
-        OP_LOGE(
-            context_->GetNodeName(), "x datatype only support FLOAT32, FLOAT16 or BFLOAT16, but is %s",
-            Ops::Base::ToString(xDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
+                OP_LOGE(context_->GetNodeName(), "x datatype only support FLOAT32, FLOAT16 or BFLOAT16, but is %s",
+                        Ops::Base::ToString(xDtype).c_str()),
+                return ge::GRAPH_FAILED);
     auto xShape = EnsureNotScalar(inputX->GetStorageShape());
-    OP_CHECK_IF(
-        xShape.GetDimNum() != DIM_NUM_OF_X,
-        OP_LOGE(
-            context_->GetNodeName(), "x shape length should be 2, but shape is %s",
-            Ops::Base::ToString(xShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDimNum() != DIM_NUM_OF_X,
+                OP_LOGE(context_->GetNodeName(), "x shape length should be 2, but shape is %s",
+                        Ops::Base::ToString(xShape).c_str()),
+                return ge::GRAPH_FAILED);
     dimS = xShape.GetDim(DIM_INDEX_0);
     dimH = xShape.GetDim(DIM_INDEX_1);
 
@@ -108,33 +101,25 @@ ge::graphStatus GroupQuantTiling::GetShapeAttrsInfo()
     auto inputScaleDesc = context_->GetInputDesc(INPUT_INDEX_OF_SCALE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputScaleDesc);
     auto scaleDtype = inputScaleDesc->GetDataType();
-    OP_CHECK_IF(
-        (scaleDtype != ge::DT_FLOAT && scaleDtype != ge::DT_FLOAT16 && scaleDtype != ge::DT_BF16),
-        OP_LOGE(
-            context_->GetNodeName(), "scale datatype only support FLOAT32, FLOAT16 or BFLOAT16, but is %s",
-            Ops::Base::ToString(scaleDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((scaleDtype != ge::DT_FLOAT && scaleDtype != ge::DT_FLOAT16 && scaleDtype != ge::DT_BF16),
+                OP_LOGE(context_->GetNodeName(), "scale datatype only support FLOAT32, FLOAT16 or BFLOAT16, but is %s",
+                        Ops::Base::ToString(scaleDtype).c_str()),
+                return ge::GRAPH_FAILED);
     auto scaleShape = EnsureNotScalar(inputScale->GetStorageShape());
-    OP_CHECK_IF(
-        scaleShape.GetDimNum() != DIM_NUM_OF_SCALE,
-        OP_LOGE(
-            context_->GetNodeName(), "scale shape length should be 2, but shape is %s",
-            Ops::Base::ToString(scaleShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scaleShape.GetDimNum() != DIM_NUM_OF_SCALE,
+                OP_LOGE(context_->GetNodeName(), "scale shape length should be 2, but shape is %s",
+                        Ops::Base::ToString(scaleShape).c_str()),
+                return ge::GRAPH_FAILED);
     dimE = scaleShape.GetDim(DIM_INDEX_0);
-    OP_CHECK_IF(
-        dimE < 1,
-        OP_LOGE(
-            context_->GetNodeName(), "no support for the first dim of scale shape(%s) is less than 1",
-            Ops::Base::ToString(scaleShape).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        scaleShape.GetDim(DIM_INDEX_1) != dimH,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "the second dim of scale shape(%s) should be same as the second dim of x shape(%s)",
-            Ops::Base::ToString(scaleShape).c_str(), Ops::Base::ToString(xShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dimE < 1,
+                OP_LOGE(context_->GetNodeName(), "no support for the first dim of scale shape(%s) is less than 1",
+                        Ops::Base::ToString(scaleShape).c_str()),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scaleShape.GetDim(DIM_INDEX_1) != dimH,
+                OP_LOGE(context_->GetNodeName(),
+                        "the second dim of scale shape(%s) should be same as the second dim of x shape(%s)",
+                        Ops::Base::ToString(scaleShape).c_str(), Ops::Base::ToString(xShape).c_str()),
+                return ge::GRAPH_FAILED);
 
     // check for input group_index
     auto inputGrpIdx = context_->GetInputShape(INPUT_INDEX_OF_GROUP_INDEX);
@@ -142,26 +127,20 @@ ge::graphStatus GroupQuantTiling::GetShapeAttrsInfo()
     auto inputGrpIdxDesc = context_->GetInputDesc(INPUT_INDEX_OF_GROUP_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGrpIdxDesc);
     auto grpIdxDtype = inputGrpIdxDesc->GetDataType();
-    OP_CHECK_IF(
-        (grpIdxDtype != ge::DT_INT32 && grpIdxDtype != ge::DT_INT64),
-        OP_LOGE(
-            context_->GetNodeName(), "group_index datatype only support INT32 or INT64, but is %s",
-            Ops::Base::ToString(grpIdxDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((grpIdxDtype != ge::DT_INT32 && grpIdxDtype != ge::DT_INT64),
+                OP_LOGE(context_->GetNodeName(), "group_index datatype only support INT32 or INT64, but is %s",
+                        Ops::Base::ToString(grpIdxDtype).c_str()),
+                return ge::GRAPH_FAILED);
     auto grpIdxShape = EnsureNotScalar(inputGrpIdx->GetStorageShape());
-    OP_CHECK_IF(
-        grpIdxShape.GetDimNum() != DIM_NUM_OF_GROUP_INDEX,
-        OP_LOGE(
-            context_->GetNodeName(), "group_index shape length should be 1, but shape is %s",
-            Ops::Base::ToString(grpIdxShape).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        grpIdxShape.GetDim(DIM_INDEX_0) != dimE,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The first dim of group_index shape(%s) should be same as the first dim of scale shape(%s)",
-            Ops::Base::ToString(grpIdxShape).c_str(), Ops::Base::ToString(scaleShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(grpIdxShape.GetDimNum() != DIM_NUM_OF_GROUP_INDEX,
+                OP_LOGE(context_->GetNodeName(), "group_index shape length should be 1, but shape is %s",
+                        Ops::Base::ToString(grpIdxShape).c_str()),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(grpIdxShape.GetDim(DIM_INDEX_0) != dimE,
+                OP_LOGE(context_->GetNodeName(),
+                        "The first dim of group_index shape(%s) should be same as the first dim of scale shape(%s)",
+                        Ops::Base::ToString(grpIdxShape).c_str(), Ops::Base::ToString(scaleShape).c_str()),
+                return ge::GRAPH_FAILED);
 
     // check for input offset which is an optional input
     auto inputOffset = context_->GetInputShape(INPUT_INDEX_OF_OFFSET);
@@ -173,18 +152,15 @@ ge::graphStatus GroupQuantTiling::GetShapeAttrsInfo()
         auto inputOffsetDesc = context_->GetInputDesc(INPUT_INDEX_OF_OFFSET);
         OP_CHECK_NULL_WITH_CONTEXT(context_, inputOffsetDesc);
         auto offsetDtype = inputOffsetDesc->GetDataType();
-        OP_CHECK_IF(
-            offsetDtype != scaleDtype,
-            OP_LOGE(
-                context_->GetNodeName(), "offset datatype(%s) should be same as scale datatype(%s)",
-                Ops::Base::ToString(offsetDtype).c_str(), Ops::Base::ToString(scaleDtype).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(offsetDtype != scaleDtype,
+                    OP_LOGE(context_->GetNodeName(), "offset datatype(%s) should be same as scale datatype(%s)",
+                            Ops::Base::ToString(offsetDtype).c_str(), Ops::Base::ToString(scaleDtype).c_str()),
+                    return ge::GRAPH_FAILED);
         auto offsetShape = EnsureNotScalar(inputOffset->GetStorageShape());
         OP_CHECK_IF(
             offsetShape.GetDimNum() != DIM_NUM_OF_OFFSET || offsetShape.GetDim(DIM_INDEX_0) != 1,
-            OP_LOGE(
-                context_->GetNodeName(), "offset should be scalar or vector with shape is [1, ], but shape is %s",
-                Ops::Base::ToString(offsetShape).c_str()),
+            OP_LOGE(context_->GetNodeName(), "offset should be scalar or vector with shape is [1, ], but shape is %s",
+                    Ops::Base::ToString(offsetShape).c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -194,12 +170,10 @@ ge::graphStatus GroupQuantTiling::GetShapeAttrsInfo()
     const int32_t* pDstType = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_TYPE);
     if (pDstType != nullptr) {
         int32_t dstType = *pDstType;
-        OP_CHECK_IF(
-            dstType != DTYPE_INT8 && dstType != DTYPE_INT4,
-            OP_LOGE(
-                context_->GetNodeName(), "dst_type should be DT_INT4 or DT_INT8, but is %s",
-                Ops::Base::ToString(static_cast<ge::DataType>(dstType)).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(dstType != DTYPE_INT8 && dstType != DTYPE_INT4,
+                    OP_LOGE(context_->GetNodeName(), "dst_type should be DT_INT4 or DT_INT8, but is %s",
+                            Ops::Base::ToString(static_cast<ge::DataType>(dstType)).c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     // check for output y
@@ -208,25 +182,21 @@ ge::graphStatus GroupQuantTiling::GetShapeAttrsInfo()
     auto outputYDesc = context_->GetOutputDesc(OUTPUT_INDEX_OF_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYDesc);
     auto yDtype = outputYDesc->GetDataType();
-    OP_CHECK_IF(
-        yDtype != ge::DT_INT4 && yDtype != ge::DT_INT8,
-        OP_LOGE(
-            context_->GetNodeName(), "y datatype only support INT4 or INT8, but is %s",
-            Ops::Base::ToString(yDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDtype != ge::DT_INT4 && yDtype != ge::DT_INT8,
+                OP_LOGE(context_->GetNodeName(), "y datatype only support INT4 or INT8, but is %s",
+                        Ops::Base::ToString(yDtype).c_str()),
+                return ge::GRAPH_FAILED);
     auto yShape = EnsureNotScalar(outputY->GetStorageShape());
     OP_CHECK_IF(
         yShape.GetDimNum() != DIM_NUM_OF_Y || yShape.GetDim(DIM_INDEX_0) != dimS || yShape.GetDim(DIM_INDEX_1) != dimH,
-        OP_LOGE(
-            context_->GetNodeName(), "y shape(%s) should be same as x shape(%s)", Ops::Base::ToString(yShape).c_str(),
-            Ops::Base::ToString(xShape).c_str()),
+        OP_LOGE(context_->GetNodeName(), "y shape(%s) should be same as x shape(%s)",
+                Ops::Base::ToString(yShape).c_str(), Ops::Base::ToString(xShape).c_str()),
         return ge::GRAPH_FAILED);
     if (yDtype == ge::DT_INT4) {
         OP_CHECK_IF(
             dimH % EVEN_FACTOR != 0,
-            OP_LOGE(
-                context_->GetNodeName(), "y datatype is int4, the second dim of shape(%s) should be an even number",
-                Ops::Base::ToString(yShape).c_str()),
+            OP_LOGE(context_->GetNodeName(), "y datatype is int4, the second dim of shape(%s) should be an even number",
+                    Ops::Base::ToString(yShape).c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -246,9 +216,8 @@ ge::graphStatus GroupQuantTiling::DoOpTiling()
     } else {
         needCoreNum = coreNumVar;
     }
-    OP_CHECK_IF(
-        needCoreNum < 1, OP_LOGE(context_->GetNodeName(), "need core num should be greater than 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(needCoreNum < 1, OP_LOGE(context_->GetNodeName(), "need core num should be greater than 0"),
+                return ge::GRAPH_FAILED);
     if (dimS % needCoreNum == 0) {
         preCoreNum = needCoreNum;
     } else {
@@ -270,10 +239,7 @@ ge::graphStatus GroupQuantTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GroupQuantTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GroupQuantTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t GroupQuantTiling::GetTilingKey() const
 {
@@ -300,15 +266,12 @@ ge::graphStatus GroupQuantTiling::PostTiling()
     workspaces[0] = workspaceSize_;
 
     gert::TilingData* rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        rawTilingData == nullptr, OP_LOGE(context_->GetNodeType(), "GetRawTilingData failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        tilingData.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_, "actual tiling data size %zu > context tiling data size %zu", tilingData.GetDataSize(),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rawTilingData == nullptr, OP_LOGE(context_->GetNodeType(), "GetRawTilingData failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingData.GetDataSize() > rawTilingData->GetCapacity(),
+                OP_LOGE(context_, "actual tiling data size %zu > context tiling data size %zu",
+                        tilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData.GetDataSize());
 
@@ -334,21 +297,18 @@ static ge::graphStatus TilingPrepare4GroupQuant(gert::TilingParseContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
+                        static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "Get ub size failed, ub size: %u",
-            static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
+                        static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "TilingPrepare4GroupQuant end.");
     return ge::GRAPH_SUCCESS;

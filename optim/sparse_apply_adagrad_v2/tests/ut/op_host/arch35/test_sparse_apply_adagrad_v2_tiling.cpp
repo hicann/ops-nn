@@ -27,29 +27,25 @@ using namespace ge;
 using namespace ut_util;
 
 class SparseApplyAdagradV2TilingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SparseApplyAdagradV2TilingTest SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SparseApplyAdagradV2TilingTest SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SparseApplyAdagradV2TilingTest TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SparseApplyAdagradV2TilingTest TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tilingDataV)
+static string TilingData2Str(const gert::TilingData* tilingDataV)
 {
     auto data = tilingDataV->GetData();
     string result;
     for (size_t i = 0; i < tilingDataV->GetDataSize(); i += sizeof(int64_t)) {
-        result += std::to_string((reinterpret_cast<const int64_t *>(tilingDataV->GetData())[i / sizeof(int64_t)]));
+        result += std::to_string((reinterpret_cast<const int64_t*>(tilingDataV->GetData())[i / sizeof(int64_t)]));
         result += " ";
     }
     return result;
 }
 
-static void InitPlatForm(fe::PlatFormInfos &platformInfo, map<string, string> &socInfos,
-    map<string, string> &aicoreSpec, map<string, string> &intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -64,13 +60,11 @@ static void InitPlatForm(fe::PlatFormInfos &platformInfo, map<string, string> &s
     platformInfo.Init();
 }
 
-static void DoTest(gert::StorageShape &var, gert::StorageShape &accum,
-                   gert::StorageShape &lr, gert::StorageShape &epsilon,
-                   gert::StorageShape &grad, gert::StorageShape &indices,
-                   gert::StorageShape &var_out, gert::StorageShape &accum_out,
-                   ge::DataType varDtype, ge::DataType indicesDtype,
-                   ge::Format format, bool updateSlots, bool useLocking,
-                   string &expectData, std::vector<size_t> &expectWorkspaces)
+static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::StorageShape& lr,
+                   gert::StorageShape& epsilon, gert::StorageShape& grad, gert::StorageShape& indices,
+                   gert::StorageShape& var_out, gert::StorageShape& accum_out, ge::DataType varDtype,
+                   ge::DataType indicesDtype, ge::Format format, bool updateSlots, bool useLocking, string& expectData,
+                   std::vector<size_t>& expectWorkspaces)
 {
     optiling::SparseApplyAdagradV2CompileInfo compileInfo;
     compileInfo.coreNum = 64;
@@ -89,7 +83,7 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &accum,
     auto param = gert::TilingData::CreateCap(8192);
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(32);
-    auto wsSize = reinterpret_cast<gert::ContinuousVector *>(workspaceSizeHoler.get());
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(6, 2)
@@ -97,7 +91,7 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &accum,
                       .InputShapes({&var, &accum, &lr, &epsilon, &grad, &indices})
                       .OutputShapes({&var_out, &accum_out})
                       .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, varDtype, format, format)
                       .NodeInputTd(1, varDtype, format, format)
                       .NodeInputTd(2, varDtype, format, format)
@@ -112,7 +106,7 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &accum,
                       .Workspace(wsSize)
                       .Build();
 
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -145,7 +139,6 @@ TEST_F(SparseApplyAdagradV2TilingTest, tiling_float32_int32)
     string expectData = "1 6 2 3 4 1 ";
     std::vector<size_t> expectWorkspaces = {16777216};
 
-    DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out,
-           varDtype, indicesDtype, dataFormat, updateSlots, useLocking,
-           expectData, expectWorkspaces);
+    DoTest(var, accum, lr, epsilon, grad, indices, var_out, accum_out, varDtype, indicesDtype, dataFormat, updateSlots,
+           useLocking, expectData, expectWorkspaces);
 }

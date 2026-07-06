@@ -44,14 +44,12 @@ ge::graphStatus TilingPrepare4RmsNormQuantV2(gert::TilingParseContext* context)
     OP_CHECK_IF(nullptr == context, OP_LOGE("RmsNormQuantV2", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "Enter TilingPrepare4RmsNormQuantV2.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(
-        platformInfoPtr == nullptr, OP_LOGE("RmsNormQuantV2", "PlatformInfoPtr is null"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE("RmsNormQuantV2", "PlatformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<RmsNormQuantV2CompileInfo>();
-    OP_CHECK_IF(
-        compileInfoPtr == nullptr, OP_LOGE("RmsNormQuantV2", "CompileInfoPtr is null"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE("RmsNormQuantV2", "CompileInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->curSocVersion = ascendcPlatform.GetCurNpuArch();
@@ -65,8 +63,7 @@ inline ge::graphStatus GenSimplifiedKey4RmsNormQuantV2(gert::TilingContext* cont
     OP_CHECK_IF(nullptr == context, OP_LOGE("RmsNormQuantV2", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGW(context, "Enter RmsNormQuantV2 genSimplifiedKey.");
 
-    OP_CHECK_IF(
-        nullptr == simplifiedKey, OP_LOGE(context, "SimplifiedKey is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == simplifiedKey, OP_LOGE(context, "SimplifiedKey is null"), return ge::GRAPH_FAILED);
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(GAMMA_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(SCALES1_INDEX));
@@ -82,10 +79,9 @@ inline ge::graphStatus GenSimplifiedKey4RmsNormQuantV2(gert::TilingContext* cont
 
     int32_t y1Dtype = static_cast<int32_t>(context->GetOutputDesc(Y1_INDEX)->GetDataType());
 
-    OP_CHECK_IF(
-        context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr,
-        OP_LOGW(context, "Optional input scale2 exist"),
-        scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
+    OP_CHECK_IF(context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr,
+                OP_LOGW(context, "Optional input scale2 exist"),
+                scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
     OP_CHECK_IF(
         context->GetOptionalInputDesc(ZERO_POINTS1_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints1 exist"),
@@ -94,10 +90,8 @@ inline ge::graphStatus GenSimplifiedKey4RmsNormQuantV2(gert::TilingContext* cont
         context->GetOptionalInputDesc(ZERO_POINTS2_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints2 exist"),
         zeroPoints2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS2_INDEX)->GetDataType()));
-    OP_CHECK_IF(
-        context->GetOptionalInputDesc(BETA_INDEX) != nullptr,
-        OP_LOGW(context, "Optional input beta exist"),
-        betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
+    OP_CHECK_IF(context->GetOptionalInputDesc(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
+                betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
 
     std::string simpleKeyTemp = "";
     strcat_s(simplifiedKey, DEST_MAX, "diy,");
@@ -119,11 +113,10 @@ inline ge::graphStatus GenSimplifiedKey4RmsNormQuantV2(gert::TilingContext* cont
         .append(std::to_string(y1Dtype)); // y1Dtype
     OP_LOGW(context, "SimpleKeyTemp: %s", simpleKeyTemp.c_str());
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
-    OP_CHECK_IF(
-        (err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY, OP_LOGE(context, "Len of simplifiedKey exceeds max length."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
+                OP_LOGE(context, "Len of simplifiedKey exceeds max length."), return ge::GRAPH_FAILED);
     OP_LOGW(context, "Finish RmsNormQuantV2 genSimplifiedKey.");
     return ge::GRAPH_SUCCESS;
 }

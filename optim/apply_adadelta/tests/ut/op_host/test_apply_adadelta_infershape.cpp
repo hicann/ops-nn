@@ -37,15 +37,9 @@
 
 class ApplyAdadelta : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdadelta SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdadelta SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdadelta TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdadelta TearDown" << std::endl; }
 };
 
 // case_0: 2D shape, single-output var shape inference.

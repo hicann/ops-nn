@@ -69,25 +69,16 @@ __simt_callee__ inline CalcT LerpCompute(CalcT startVal, CalcT endVal, CalcT wei
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachLerpListSimtKernel(
-    IDX_T totalElements,
-    int32_t tensorCount,
-    __gm__ const int64_t* cumOffsets,
-    GM_ADDR x1List,
-    GM_ADDR x2List,
-    GM_ADDR weightList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachLerpListSimtKernel(
+    IDX_T totalElements, int32_t tensorCount, __gm__ const int64_t* cumOffsets, GM_ADDR x1List, GM_ADDR x2List,
+    GM_ADDR weightList, GM_ADDR yList)
 {
     using CalcT = typename ForeachLerpCalcType<T>::type;
 
-    for (IDX_T flatIdx = static_cast<IDX_T>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum()
-            + AscendC::Simt::GetThreadIdx());
+    for (IDX_T flatIdx = static_cast<IDX_T>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                            AscendC::Simt::GetThreadIdx());
          flatIdx < totalElements;
-         flatIdx += static_cast<IDX_T>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
-
+         flatIdx += static_cast<IDX_T>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         int32_t tensorId = tensorCount - 1;
         IDX_T prevCumSum = 0;
         for (int32_t t = 0; t < tensorCount; t++) {
@@ -115,12 +106,10 @@ inline void OpForeachLerpListSimtKernel(
 }
 
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    __gm__ const ForeachLerpListTilingData* tilingGM =
-        reinterpret_cast<__gm__ const ForeachLerpListTilingData*>(tiling);
+    __gm__ const ForeachLerpListTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachLerpListTilingData*>(
+        tiling);
 
     int64_t totalElements = tilingGM->totalElements;
     int32_t tensorCount = tilingGM->tensorCount;
@@ -132,16 +121,13 @@ __aicore__ inline void Process(
 
     if (totalElements <= static_cast<int64_t>(INT32_MAX)) {
         using IDX_T = int32_t;
-        AscendC::Simt::VF_CALL<OpForeachLerpListSimtKernel<T, IDX_T>>(
-            AscendC::Simt::Dim3(THREAD_NUM_VF<IDX_T>),
-            static_cast<IDX_T>(totalElements), tensorCount,
-            cumOffsets, x1, x2, weight, y);
+        AscendC::Simt::VF_CALL<OpForeachLerpListSimtKernel<T, IDX_T>>(AscendC::Simt::Dim3(THREAD_NUM_VF<IDX_T>),
+                                                                      static_cast<IDX_T>(totalElements), tensorCount,
+                                                                      cumOffsets, x1, x2, weight, y);
     } else {
         using IDX_T = int64_t;
         AscendC::Simt::VF_CALL<OpForeachLerpListSimtKernel<T, IDX_T>>(
-            AscendC::Simt::Dim3(THREAD_NUM_VF<IDX_T>),
-            totalElements, tensorCount,
-            cumOffsets, x1, x2, weight, y);
+            AscendC::Simt::Dim3(THREAD_NUM_VF<IDX_T>), totalElements, tensorCount, cumOffsets, x1, x2, weight, y);
     }
 }
 

@@ -52,8 +52,8 @@ static ge::graphStatus ReadShapeAndAttrs(gert::TilingContext* context, GroupNorm
     auto xShape = context->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     auto storageShape = xShape->GetStorageShape();
-    OP_CHECK_IF(
-        storageShape.GetDimNum() < 2, OP_LOGE(context, "GroupNorm input rank must be >= 2"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(storageShape.GetDimNum() < 2, OP_LOGE(context, "GroupNorm input rank must be >= 2"),
+                return ge::GRAPH_FAILED);
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -70,9 +70,8 @@ static ge::graphStatus ReadShapeAndAttrs(gert::TilingContext* context, GroupNorm
     }
 
     const uint32_t numGroups = static_cast<uint32_t>(*numGroupsAttr);
-    OP_CHECK_IF(
-        c == 0 || n == 0 || hxw == 0, OP_LOGE(context, "GroupNorm does not support zero dim here"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(c == 0 || n == 0 || hxw == 0, OP_LOGE(context, "GroupNorm does not support zero dim here"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(c % numGroups != 0, OP_LOGE(context, "C should be divisible by num_groups"), return ge::GRAPH_FAILED);
 
     tiling.n = n;
@@ -89,8 +88,8 @@ static ge::graphStatus ReadShapeAndAttrs(gert::TilingContext* context, GroupNorm
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus FillSchedule(
-    gert::TilingContext* context, uint64_t ubSize, int64_t coreNum, GroupNormTilingData& tiling)
+static ge::graphStatus FillSchedule(gert::TilingContext* context, uint64_t ubSize, int64_t coreNum,
+                                    GroupNormTilingData& tiling)
 {
     const uint32_t maxCore = static_cast<uint32_t>(coreNum);
     const uint32_t blockNum = tiling.groupNum < maxCore ? tiling.groupNum : maxCore;
@@ -106,8 +105,8 @@ static ge::graphStatus FillSchedule(
                             tileLength :
                             (tileLength > tiling.elementsPerGroup ? tiling.elementsPerGroup : tileLength);
 
-    const uint32_t tilingKey =
-        tiling.elementsPerGroup <= tiling.tileLength ? GROUP_NORM_SCH_SMALL_GROUP : GROUP_NORM_SCH_GENERAL;
+    const uint32_t tilingKey = tiling.elementsPerGroup <= tiling.tileLength ? GROUP_NORM_SCH_SMALL_GROUP :
+                                                                              GROUP_NORM_SCH_GENERAL;
     context->SetTilingKey(tilingKey);
     context->SetBlockDim(blockNum);
 
@@ -122,9 +121,8 @@ static ge::graphStatus GroupNormTilingFunc(gert::TilingContext* context)
 {
     GroupNormTilingData* tiling = context->GetTilingData<GroupNormTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(GroupNormTilingData), 0, sizeof(GroupNormTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(GroupNormTilingData), 0, sizeof(GroupNormTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data failed"), return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     int64_t coreNum = 0;

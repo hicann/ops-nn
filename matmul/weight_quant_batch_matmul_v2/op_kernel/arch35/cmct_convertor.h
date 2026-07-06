@@ -45,8 +45,8 @@ struct XWeightShape<InnerK, false> {
 template <bool InnerK>
 struct XWeightShape<InnerK, true> {
     // k1, n1, n0, k0
-    using Type = AscendC::Std::tuple<
-        AscendC::Std::tuple<Cmct::Gemm::_16, uint64_t>, AscendC::Std::tuple<Cmct::Gemm::_16, uint64_t>>;
+    using Type = AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_16, uint64_t>,
+                                     AscendC::Std::tuple<Cmct::Gemm::_16, uint64_t>>;
 };
 
 template <bool InnerK, bool IsNz, typename DtypeA, typename DtypeB>
@@ -80,16 +80,14 @@ struct XWeightStride<InnerK, true, DtypeA, DtypeB> {
             // n, k -> k1, n1, n0(16), k0(16)
             // m, k -> k1, m1, m0(16), k0(16)
             // stride(以m,k为例) m1*m0*k0, m0*k0(256), k0(16), 1
-            return AscendC::MakeStride(
-                AscendC::MakeStride(Cmct::Gemm::_16{}, Cmct::Gemm::_256{}),
-                AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign(outer, 16UL) * 16UL));
+            return AscendC::MakeStride(AscendC::MakeStride(Cmct::Gemm::_16{}, Cmct::Gemm::_256{}),
+                                       AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign(outer, 16UL) * 16UL));
         } else {
             // k, n -> n1, k1, k0(16), n0(16)
             // k, m -> m1, k1, k0(16), m0(16)
             // stride(以k,m为例) k1*k0*m0, k0*m0(256), m0(16), 1
-            return AscendC::MakeStride(
-                AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign(k, 16UL) * 16UL),
-                AscendC::MakeStride(Cmct::Gemm::_16{}, Cmct::Gemm::_256{}));
+            return AscendC::MakeStride(AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign(k, 16UL) * 16UL),
+                                       AscendC::MakeStride(Cmct::Gemm::_16{}, Cmct::Gemm::_256{}));
         }
     }
 };
@@ -114,10 +112,9 @@ struct ScaleOffsetStride<Trans, Cmct::Gemm::QuantType::PER_CHANNEL> {
 };
 
 template <Cmct::Gemm::QuantType AntiquantType>
-struct ScaleOffsetStride<
-    false, AntiquantType,
-    typename AscendC::Std::enable_if_t<
-        AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
+struct ScaleOffsetStride<false, AntiquantType,
+                         typename AscendC::Std::enable_if_t<AntiquantType == Cmct::Gemm::QuantType::PER_GROUP ||
+                                                            AntiquantType == Cmct::Gemm::QuantType::MX>> {
     __aicore__ inline decltype(auto) operator()(uint64_t n, uint64_t k, int32_t groupSize)
     {
         return AscendC::Std::make_tuple(Cmct::Gemm::_1{}, n);
@@ -125,14 +122,13 @@ struct ScaleOffsetStride<
 };
 
 template <Cmct::Gemm::QuantType AntiquantType>
-struct ScaleOffsetStride<
-    true, AntiquantType,
-    typename AscendC::Std::enable_if_t<
-        AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
+struct ScaleOffsetStride<true, AntiquantType,
+                         typename AscendC::Std::enable_if_t<AntiquantType == Cmct::Gemm::QuantType::PER_GROUP ||
+                                                            AntiquantType == Cmct::Gemm::QuantType::MX>> {
     __aicore__ inline decltype(auto) operator()(uint64_t n, uint64_t k, int32_t groupSize)
     {
-        return AscendC::Std::make_tuple(
-            groupSize == 0 ? k : Cmct::CeilDiv(k, static_cast<uint64_t>(groupSize)), Cmct::Gemm::_1{});
+        return AscendC::Std::make_tuple(groupSize == 0 ? k : Cmct::CeilDiv(k, static_cast<uint64_t>(groupSize)),
+                                        Cmct::Gemm::_1{});
     }
 };
 
@@ -152,14 +148,14 @@ struct StrideXWeight {
 // n,k k1,n1,n0,k0
 template <>
 struct StrideXWeight<true, true> {
-    using Type = AscendC::Std::tuple<
-        AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>, AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>>;
+    using Type = AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>,
+                                     AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>>;
 };
 
 template <>
 struct StrideXWeight<true, false> {
-    using Type = AscendC::Std::tuple<
-        AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>, AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>>;
+    using Type = AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>,
+                                     AscendC::Std::tuple<Cmct::Gemm::_16, Cmct::Gemm::_256>>;
 };
 
 template <>
@@ -174,8 +170,8 @@ struct StrideXWeight<false, false> {
 
 template <Cmct::Gemm::QuantType AntiquantType, bool InnerK, typename Enable = void>
 struct StrideAntiquant {
-    static_assert(
-        AscendC::Std::always_false_v<decltype(AntiquantType)>, "Unsupported (AntiquantType, InnerK) combination");
+    static_assert(AscendC::Std::always_false_v<decltype(AntiquantType)>,
+                  "Unsupported (AntiquantType, InnerK) combination");
 };
 
 template <bool InnerK>
@@ -189,18 +185,16 @@ struct StrideAntiquant<Cmct::Gemm::QuantType::PER_CHANNEL, InnerK> {
 };
 
 template <Cmct::Gemm::QuantType AntiquantType>
-struct StrideAntiquant<
-    AntiquantType, true,
-    typename AscendC::Std::enable_if_t<
-        AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
+struct StrideAntiquant<AntiquantType, true,
+                       typename AscendC::Std::enable_if_t<AntiquantType == Cmct::Gemm::QuantType::PER_GROUP ||
+                                                          AntiquantType == Cmct::Gemm::QuantType::MX>> {
     using Type = AscendC::Std::tuple<uint64_t, Cmct::Gemm::_1>;
 };
 
 template <Cmct::Gemm::QuantType AntiquantType>
-struct StrideAntiquant<
-    AntiquantType, false,
-    typename AscendC::Std::enable_if_t<
-        AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
+struct StrideAntiquant<AntiquantType, false,
+                       typename AscendC::Std::enable_if_t<AntiquantType == Cmct::Gemm::QuantType::PER_GROUP ||
+                                                          AntiquantType == Cmct::Gemm::QuantType::MX>> {
     using Type = AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>;
 };
 
@@ -222,9 +216,8 @@ struct XWeightShapeObj<true> {
     // k, m  m1,k1,k0,n0
     __aicore__ inline decltype(auto) operator()(uint64_t outer, uint64_t k)
     {
-        return AscendC::MakeShape(
-            AscendC::MakeShape(Cmct::Gemm::_16{}, Cmct::CeilDiv(outer, 16UL)),
-            AscendC::MakeShape(Cmct::Gemm::_16{}, Cmct::CeilDiv(k, 16UL)));
+        return AscendC::MakeShape(AscendC::MakeShape(Cmct::Gemm::_16{}, Cmct::CeilDiv(outer, 16UL)),
+                                  AscendC::MakeShape(Cmct::Gemm::_16{}, Cmct::CeilDiv(k, 16UL)));
     }
 };
 
@@ -248,10 +241,9 @@ struct ScaleOffsetShapeObj<Cmct::Gemm::QuantType::PER_CHANNEL> {
 };
 
 template <Cmct::Gemm::QuantType AntiquantType>
-struct ScaleOffsetShapeObj<
-    AntiquantType,
-    typename AscendC::Std::enable_if_t<
-        AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
+struct ScaleOffsetShapeObj<AntiquantType,
+                           typename AscendC::Std::enable_if_t<AntiquantType == Cmct::Gemm::QuantType::PER_GROUP ||
+                                                              AntiquantType == Cmct::Gemm::QuantType::MX>> {
     __aicore__ inline decltype(auto) operator()(uint64_t n, uint64_t k, int32_t groupSize)
     {
         return AscendC::Std::make_tuple(n, Cmct::CeilDiv(k, static_cast<uint64_t>(groupSize)));
@@ -272,29 +264,26 @@ struct ScaleOffsetShape<trans, Cmct::Gemm::QuantType::PER_CHANNEL> {
 };
 
 template <Cmct::Gemm::QuantType AntiquantType, bool trans>
-struct ScaleOffsetShape<
-    trans, AntiquantType,
-    typename AscendC::Std::enable_if_t<
-        AntiquantType == Cmct::Gemm::QuantType::PER_GROUP || AntiquantType == Cmct::Gemm::QuantType::MX>> {
+struct ScaleOffsetShape<trans, AntiquantType,
+                        typename AscendC::Std::enable_if_t<AntiquantType == Cmct::Gemm::QuantType::PER_GROUP ||
+                                                           AntiquantType == Cmct::Gemm::QuantType::MX>> {
     using Type = AscendC::Std::tuple<uint64_t, uint64_t>;
 };
 
-template <
-    typename HighBitType, typename ScaleType, bool IsWeightNz, bool bTrans, typename xType, typename wType,
-    uint32_t ubMte2InnerSize, uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM,
-    Cmct::Gemm::QuantType QuantType>
+template <typename HighBitType, typename ScaleType, bool IsWeightNz, bool bTrans, typename xType, typename wType,
+          uint32_t ubMte2InnerSize, uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM,
+          Cmct::Gemm::QuantType QuantType>
 struct ConfigBAntiquantScmc {};
 
 // Dtype: A16
 // Format: NZ
 // Layout: weight column_major
 // AntiquantType: PerChannel
-template <
-    typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType, uint32_t ubMte2InnerSize,
-    uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM, Cmct::Gemm::QuantType QuantType>
-struct ConfigBAntiquantScmc<
-    HighBitType, ScaleType, true, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum, hasAntiquantOffset, AIV_NUM,
-    QuantType> {
+template <typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType,
+          uint32_t ubMte2InnerSize, uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM,
+          Cmct::Gemm::QuantType QuantType>
+struct ConfigBAntiquantScmc<HighBitType, ScaleType, true, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum,
+                            hasAntiquantOffset, AIV_NUM, QuantType> {
     static constexpr uint64_t UB_OUT_BUF_NUM = Cmct::Gemm::QUADRUPLE_BUFFER_NUM;
     static constexpr uint64_t UB_IN_SIZE = 112;
     static constexpr uint64_t UB_OUT_SIZE = 128;
@@ -305,21 +294,18 @@ struct ConfigBAntiquantScmc<
     static constexpr uint64_t VF_K = 256;
     static_assert(VF_K == ubMte2InnerSize);
     using Type = Cmct::Prologue::BAntiquantScmc<
-        DAV3510, HighBitType, ScaleType, !bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum,
-        ubMte2InnerSize, VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE,
-        ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
+        DAV3510, HighBitType, ScaleType, !bTrans, false, AIV_NUM, hasAntiquantOffset, ubMte2BufNum, ubMte2InnerSize,
+        VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE, ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
 
 // Dtype: A16
 // Format: Nz
 // Layout: weight column_major
 // AntiquantType: PerGroup
-template <
-    typename HighBitType, typename ScaleType, bool bTrans, typename xType, uint32_t ubMte2InnerSize,
-    uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM>
-struct ConfigBAntiquantScmc<
-    HighBitType, ScaleType, true, bTrans, xType, int4b_t, ubMte2InnerSize, ubMte2BufNum, hasAntiquantOffset, AIV_NUM,
-    Cmct::Gemm::QuantType::PER_GROUP> {
+template <typename HighBitType, typename ScaleType, bool bTrans, typename xType, uint32_t ubMte2InnerSize,
+          uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM>
+struct ConfigBAntiquantScmc<HighBitType, ScaleType, true, bTrans, xType, int4b_t, ubMte2InnerSize, ubMte2BufNum,
+                            hasAntiquantOffset, AIV_NUM, Cmct::Gemm::QuantType::PER_GROUP> {
     static constexpr uint64_t UB_OUT_BUF_NUM = Cmct::Gemm::DOUBLE_BUFFER_NUM;
     static constexpr uint64_t UB_IN_SIZE = 128;
     static constexpr uint64_t UB_OUT_SIZE = 64;
@@ -337,12 +323,11 @@ struct ConfigBAntiquantScmc<
 // Format: ND
 // Layout: weight row_major/column_major
 // AntiquantType: PerChannel/PerTensor
-template <
-    typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType, uint32_t ubMte2InnerSize,
-    uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM, Cmct::Gemm::QuantType AntiQuantType>
-struct ConfigBAntiquantScmc<
-    HighBitType, ScaleType, false, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum, hasAntiquantOffset, AIV_NUM,
-    AntiQuantType> {
+template <typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType,
+          uint32_t ubMte2InnerSize, uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM,
+          Cmct::Gemm::QuantType AntiQuantType>
+struct ConfigBAntiquantScmc<HighBitType, ScaleType, false, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum,
+                            hasAntiquantOffset, AIV_NUM, AntiQuantType> {
     static constexpr uint64_t UB_OUT_BUF_NUM = Cmct::Gemm::DOUBLE_BUFFER_NUM;
     static constexpr uint64_t UB_IN_SIZE = 174;
     static constexpr uint64_t UB_OUT_SIZE = 66;
@@ -360,12 +345,10 @@ struct ConfigBAntiquantScmc<
 // Format: ND
 // Layout: weight row_major/column_major
 // AntiquantType: MX
-template <
-    typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType, uint32_t ubMte2InnerSize,
-    uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM>
-struct ConfigBAntiquantScmc<
-    HighBitType, ScaleType, false, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum, hasAntiquantOffset, AIV_NUM,
-    Cmct::Gemm::QuantType::MX> {
+template <typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType,
+          uint32_t ubMte2InnerSize, uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM>
+struct ConfigBAntiquantScmc<HighBitType, ScaleType, false, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum,
+                            hasAntiquantOffset, AIV_NUM, Cmct::Gemm::QuantType::MX> {
     static constexpr uint64_t UB_OUT_BUF_NUM = Cmct::Gemm::DOUBLE_BUFFER_NUM;
     static constexpr uint64_t UB_IN_SIZE = 128;
     static constexpr uint64_t UB_OUT_SIZE = 66;
@@ -383,12 +366,10 @@ struct ConfigBAntiquantScmc<
 // Format: NZ
 // Layout: column_major
 // AntiquantType: MX
-template <
-    typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType, uint32_t ubMte2InnerSize,
-    uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM>
-struct ConfigBAntiquantScmc<
-    HighBitType, ScaleType, true, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum, hasAntiquantOffset, AIV_NUM,
-    Cmct::Gemm::QuantType::MX> {
+template <typename HighBitType, typename ScaleType, bool bTrans, typename xType, typename wType,
+          uint32_t ubMte2InnerSize, uint32_t ubMte2BufNum, bool hasAntiquantOffset, uint64_t AIV_NUM>
+struct ConfigBAntiquantScmc<HighBitType, ScaleType, true, bTrans, xType, wType, ubMte2InnerSize, ubMte2BufNum,
+                            hasAntiquantOffset, AIV_NUM, Cmct::Gemm::QuantType::MX> {
     static constexpr uint64_t UB_OUT_BUF_NUM = Cmct::Gemm::QUADRUPLE_BUFFER_NUM;
     static constexpr uint64_t UB_IN_SIZE = 64;
     static constexpr uint64_t UB_OUT_SIZE = 128;
@@ -402,9 +383,8 @@ struct ConfigBAntiquantScmc<
         VF_N, VF_K, UB_OUT_BUF_NUM, UB_IN_SIZE, UB_OUT_SIZE, SCALE_SIZE, OFFSET_SIZE, ANTIQUANT_SCALE_AFTER_CAST_SIZE>;
 };
 
-template <
-    uint32_t UbMte2InnerSize, uint32_t UbMte2BufNum, bool TransA, bool TransB, Cmct::Gemm::QuantType AntiquantType,
-    bool HasAntiquantOffset, bool IsBiasFp32, bool IsWeightNz>
+template <uint32_t UbMte2InnerSize, uint32_t UbMte2BufNum, bool TransA, bool TransB,
+          Cmct::Gemm::QuantType AntiquantType, bool HasAntiquantOffset, bool IsBiasFp32, bool IsWeightNz>
 struct ScmcKernel {
 #if defined(__DAV_310R6__)
     static constexpr int SUB_BLOCK_NUM = 1;
@@ -429,8 +409,8 @@ struct ScmcKernel {
     using CType = GemmType<DTYPE_Y, AscendC::Layout<ShapeC, StrideC>>;
 
     using DtypeBias = AscendC::Std::conditional_t<IsBiasFp32, float, DTYPE_X>;
-    using BiasType =
-        GemmType<DtypeBias, AscendC::Layout<AscendC::Std::tuple<uint64_t>, AscendC::Std::tuple<Cmct::Gemm::_1>>>;
+    using BiasType = GemmType<DtypeBias,
+                              AscendC::Layout<AscendC::Std::tuple<uint64_t>, AscendC::Std::tuple<Cmct::Gemm::_1>>>;
 
     using DispatchPolicyMmad = MmadAPrefetchBAntiquantScmc<SUB_BLOCK_NUM>;
     using BlockMmad = BlockMmad<DispatchPolicyMmad, TileShapeL1, TileShapeL0, AType, BType, CType, BiasType>;
@@ -440,12 +420,12 @@ struct ScmcKernel {
         HasAntiquantOffset, SUB_BLOCK_NUM, AntiquantType>::Type;
     using BlockPrologue = BlockPrologue<DispatchPolicyPrologue, BType, ScaleType, TileShapeL1>;
 
-    using Kernel =
-        KernelMatmulAPrefetchBAntiquant<ProblemShape, BlockMmad, BlockPrologue, BlockSchedulerTailResplitExpanded>;
+    using Kernel = KernelMatmulAPrefetchBAntiquant<ProblemShape, BlockMmad, BlockPrologue,
+                                                   BlockSchedulerTailResplitExpanded>;
 
-    __aicore__ inline void operator()(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
-        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+    __aicore__ inline void operator()(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                      GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y,
+                                      GM_ADDR workspace, GM_ADDR tiling)
     {
         GET_TILING_DATA_WITH_STRUCT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams, tilingDataIn, tiling);
         auto problemShape = AscendC::Std::make_tuple(tilingDataIn.mSize, tilingDataIn.nSize, tilingDataIn.kSize);
@@ -457,11 +437,10 @@ struct ScmcKernel {
             .layoutA = AscendC::MakeLayout(
                 XWeightShapeObj<false>{}(tilingDataIn.mSize, tilingDataIn.kSize),
                 XWeightStride<!TransA, false, DTYPE_X, DTYPE_WEIGHT>{}(tilingDataIn.mSize, tilingDataIn.kSize)),
-            .layoutC = AscendC::MakeLayout(
-                AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize),
-                AscendC::MakeStride(tilingDataIn.nSize, Cmct::Gemm::_1{})),
-            .layoutBias =
-                AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.nSize), AscendC::MakeStride(Cmct::Gemm::_1{}))};
+            .layoutC = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize),
+                                           AscendC::MakeStride(tilingDataIn.nSize, Cmct::Gemm::_1{})),
+            .layoutBias = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.nSize),
+                                              AscendC::MakeStride(Cmct::Gemm::_1{}))};
         typename BlockPrologue::Arguments prologueArgs{
             .ptrB = weight,
             .ptrScale = antiquantScale,
@@ -471,8 +450,8 @@ struct ScmcKernel {
                 XWeightStride<TransB, IsWeightNz, DTYPE_X, DTYPE_WEIGHT>{}(tilingDataIn.nSize, tilingDataIn.kSize)),
             .layoutScale = AscendC::MakeLayout(
                 ScaleOffsetShapeObj<AntiquantType>{}(tilingDataIn.nSize, tilingDataIn.kSize, tilingDataIn.groupSize),
-                ScaleOffsetStride<TransB, AntiquantType>{}(
-                    tilingDataIn.nSize, tilingDataIn.kSize, tilingDataIn.groupSize)),
+                ScaleOffsetStride<TransB, AntiquantType>{}(tilingDataIn.nSize, tilingDataIn.kSize,
+                                                           tilingDataIn.groupSize)),
             .antiQuantGroupSize = tilingDataIn.groupSize};
 
         typename BlockSchedulerTailResplitExpanded::Arguments schedulerArgs{};
@@ -485,31 +464,31 @@ struct ScmcKernel {
     }
 };
 
-template <
-    int TemplateCustom, bool TransA, bool TransB, int AntiquantType, bool HasAntiquantOffset, bool IsBiasFp32,
-    bool IsWeightNz>
-__aicore__ inline void InvokeKernel(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+template <int TemplateCustom, bool TransA, bool TransB, int AntiquantType, bool HasAntiquantOffset, bool IsBiasFp32,
+          bool IsWeightNz>
+__aicore__ inline void InvokeKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                    GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                    GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     static constexpr Cmct::Gemm::QuantType ANTIQUANT_TYPE = static_cast<Cmct::Gemm::QuantType>(AntiquantType);
 
-    static constexpr bool B8 =
-        IsSameType<DTYPE_WEIGHT, int8_t>::value ||
-        IsSameType<DTYPE_WEIGHT, float8_e4m3_t>::value || IsSameType<DTYPE_WEIGHT, hifloat8_t>::value;
+    static constexpr bool B8 = IsSameType<DTYPE_WEIGHT, int8_t>::value ||
+                               IsSameType<DTYPE_WEIGHT, float8_e4m3_t>::value ||
+                               IsSameType<DTYPE_WEIGHT, hifloat8_t>::value;
     static constexpr uint32_t UB_MTE2_INNER_SIZE = TemplateCustom == 0 || TemplateCustom == 1 || TemplateCustom == 4 ?
                                                        512 :
                                                    TemplateCustom == 2 || TemplateCustom == 6 ? 1024 :
                                                                                                 256;
-    static constexpr uint32_t UB_MTE2_BUF_NUM =
-        TemplateCustom == 0 || TemplateCustom == 2 || (TemplateCustom == 4 && B8) || TemplateCustom == 5 ? 2 : 4;
+    static constexpr uint32_t UB_MTE2_BUF_NUM = TemplateCustom == 0 || TemplateCustom == 2 ||
+                                                        (TemplateCustom == 4 && B8) || TemplateCustom == 5 ?
+                                                    2 :
+                                                    4;
 
-    ScmcKernel<
-        UB_MTE2_INNER_SIZE, UB_MTE2_BUF_NUM, TransA, TransB, ANTIQUANT_TYPE, HasAntiquantOffset, IsBiasFp32,
-        IsWeightNz>{}(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling);
+    ScmcKernel<UB_MTE2_INNER_SIZE, UB_MTE2_BUF_NUM, TransA, TransB, ANTIQUANT_TYPE, HasAntiquantOffset, IsBiasFp32,
+               IsWeightNz>{}(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace,
+                             tiling);
 }
 } // namespace WeightQuantBatchMatmulV2
 
 #define KERNEL_PARAMS x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling
-

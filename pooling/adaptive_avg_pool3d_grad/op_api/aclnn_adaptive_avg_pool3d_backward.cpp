@@ -76,8 +76,7 @@ static bool CheckInputOutDims(const aclTensor* gradOutput, const aclTensor* self
 
     for (size_t i = Ops::NN::AclnnUtil::IsRegbase() ? 1 : 0; i < selfDimNum; i++) {
         if (selfShape.GetDim(i) <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i, 0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i, 0);
             return false;
         }
         if (selfShape.GetDim(i) != outShape.GetDim(i)) {
@@ -94,9 +93,8 @@ static bool CheckInputOutDims(const aclTensor* gradOutput, const aclTensor* self
     }
     for (size_t i = offset; i < gradOutputDimNum; i++) {
         if (gradOutputShape.GetDim(i) <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "gradOutput dims is invalid, self No.[%lu] dim is not bigger than [%d].",
-                i, 0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput dims is invalid, self No.[%lu] dim is not bigger than [%d].",
+                    i, 0);
             return false;
         }
     }
@@ -120,8 +118,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList(const aclTenso
     int64_t hValue = gradOutputShape.GetDim(gradOutputDimNum - H_DIM_INDEX_FROM_LAST);
     int64_t wValue = gradOutputShape.GetDim(gradOutputDimNum - W_DIM_INDEX_FROM_LAST);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || 
-        Ops::NN::AclnnUtil::IsRegbase()) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
         if (dValue == 1 && hValue == 1 && wValue == 1) {
             return ASCEND910B_ALLONE_DTYPE_DTYPE_SUPPORT_LIST;
         } else {
@@ -150,16 +147,14 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
 static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     if (gradOutput->GetStorageFormat() != self->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of inputs should be equal, gradOutput [%s], self [%s]",
-            op::ToString(gradOutput->GetStorageFormat()).GetString(),
-            op::ToString(self->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of inputs should be equal, gradOutput [%s], self [%s]",
+                op::ToString(gradOutput->GetStorageFormat()).GetString(),
+                op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
     if (out->GetStorageFormat() != self->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of self and out should be equal, out [%s], self [%s]",
-            op::ToString(out->GetStorageFormat()).GetString(), op::ToString(self->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and out should be equal, out [%s], self [%s]",
+                op::ToString(out->GetStorageFormat()).GetString(), op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
     // 如果输入格式是私有格式，记录日志，直接报错
@@ -227,8 +222,8 @@ static int64_t adaptive_avg_pool3d_backward_safe_size(const aclTensor* self)
 }
 
 // NC111 --->  NCDHW
-static aclnnStatus DoAllOneAdapativeAvgPool3dBackward(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus DoAllOneAdapativeAvgPool3dBackward(const aclTensor* gradOutput, const aclTensor* self,
+                                                      aclTensor* out, aclOpExecutor* executor)
 {
     // fill value tensor
     float fillVaule = 1.0 / (adaptive_avg_pool3d_backward_safe_size(self));
@@ -244,8 +239,8 @@ static aclnnStatus DoAllOneAdapativeAvgPool3dBackward(
     }
 
     aclIntArray* shapeArray = executor->AllocIntArray(dimTmp.data(), dimTmp.size());
-    const aclTensor* dims =
-        executor->ConvertToTensor(dimTmp.data(), dimTmp.size(), static_cast<op::DataType>(ACL_INT64));
+    const aclTensor* dims = executor->ConvertToTensor(dimTmp.data(), dimTmp.size(),
+                                                      static_cast<op::DataType>(ACL_INT64));
     auto fillOut = l0op::Fill(dims, castTensor, shapeArray, executor);
     CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -261,8 +256,8 @@ static aclnnStatus DoAllOneAdapativeAvgPool3dBackward(
 }
 
 // 不为[1,1,1]
-static aclnnStatus DoCommonAdaptiveAvgPool3dBackward(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus DoCommonAdaptiveAvgPool3dBackward(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out,
+                                                     aclOpExecutor* executor)
 {
     // 进行NC维度的对齐，reshape(展平NC为1维dhwl)
     auto gradOutputReshape = gradOutput;
@@ -314,9 +309,8 @@ static aclnnStatus DoCommonAdaptiveAvgPool3dBackward(
     return ACLNN_SUCCESS;
 }
 
-
-static aclnnStatus Do950CommonAdaptiveAvgPool3dBackward(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus Do950CommonAdaptiveAvgPool3dBackward(const aclTensor* gradOutput, const aclTensor* self,
+                                                        aclTensor* out, aclOpExecutor* executor)
 {
     auto poolResult = l0op::AdaptiveAvgPool3dGrad(gradOutput, self, executor);
     CHECK_RET(poolResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -324,8 +318,8 @@ static aclnnStatus Do950CommonAdaptiveAvgPool3dBackward(
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
-static aclnnStatus SelectAdaptiveAvgPool3dBackward(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus SelectAdaptiveAvgPool3dBackward(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out,
+                                                   aclOpExecutor* executor)
 {
     op::Shape gradOutputShape = gradOutput->GetViewShape();
     auto gradOutputDimNum = gradOutputShape.GetDimNum();
@@ -337,13 +331,13 @@ static aclnnStatus SelectAdaptiveAvgPool3dBackward(
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         return Do950CommonAdaptiveAvgPool3dBackward(gradOutput, self, out, executor);
-    } 
+    }
     return DoCommonAdaptiveAvgPool3dBackward(gradOutput, self, out, executor);
 }
 
-aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                           aclTensor* out, uint64_t* workspaceSize,
+                                                           aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnAdaptiveAvgPool3dBackward, DFX_IN(gradOutput, self), DFX_OUT(out));
@@ -378,8 +372,8 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAdaptiveAvgPool3dBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnAdaptiveAvgPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAdaptiveAvgPool3dBackward);
     // 固定写法，调用框架能力，完成计算

@@ -28,8 +28,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void repeat_interleave_grad(
-    GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void repeat_interleave_grad(GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad,
+                                                             GM_ADDR workspace, GM_ADDR tiling);
 
 class repeat_interleave_grad_test : public testing::Test {
 protected:

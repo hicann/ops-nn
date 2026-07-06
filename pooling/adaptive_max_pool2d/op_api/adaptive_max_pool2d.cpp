@@ -37,15 +37,14 @@ static bool IsAscend950iCoreSupport(const aclTensor* self)
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);
 }
 
-std::tuple<aclTensor*, aclTensor*> AdapativeMaxPool2dAiCpu(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*> AdapativeMaxPool2dAiCpu(const aclTensor* self, const aclIntArray* outputSize,
+                                                           aclTensor* outputOut, aclTensor* indicesOut,
+                                                           aclOpExecutor* executor)
 {
     L0_DFX(AdapativeMaxPool2dAiCpu, self, outputSize, outputOut, indicesOut);
     static internal::AicpuTaskSpace space("AdaptiveMaxPool2d");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        AdaptiveMaxPool2d, OP_ATTR_NAMES({"output_size"}), OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut),
-        OP_ATTR(outputSize));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(AdaptiveMaxPool2d, OP_ATTR_NAMES({"output_size"}), OP_INPUT(self),
+                                          OP_OUTPUT(outputOut, indicesOut), OP_ATTR(outputSize));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool2dAssistMatrixAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
@@ -53,19 +52,18 @@ std::tuple<aclTensor*, aclTensor*> AdapativeMaxPool2dAiCpu(
     return std::tuple<aclTensor*, aclTensor*>(outputOut, indicesOut);
 }
 
-std::tuple<aclTensor*, aclTensor*> AdapativeMaxPool2dAiCore(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*> AdapativeMaxPool2dAiCore(const aclTensor* self, const aclIntArray* outputSize,
+                                                            aclTensor* outputOut, aclTensor* indicesOut,
+                                                            aclOpExecutor* executor)
 {
     L0_DFX(AdapativeMaxPool2dAiCore, self, outputSize, outputOut, indicesOut);
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        AdaptiveMaxPool2d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut), OP_ATTR(outputSize));
+    ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveMaxPool2d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut),
+                                OP_ATTR(outputSize));
     return std::tuple<aclTensor*, aclTensor*>(outputOut, indicesOut);
 }
 
-
-std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool2d(
-    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool2d(const aclTensor* self, const aclIntArray* outputSize,
+                                                     aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveMaxPool2d, self, outputSize);
 

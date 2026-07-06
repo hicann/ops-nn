@@ -25,9 +25,8 @@ namespace FlatQuantNS {
 using namespace Cmct;
 using namespace Cmct::Gemm;
 template <class X_TYPE, class Y_TYPE, class SCALE_TYPE, class C_LAYOUT>
-__aicore__ inline void FlatQuantCmctKernel(
-    GM_ADDR aGM, GM_ADDR p1GM, GM_ADDR p2GM, GM_ADDR cGM, GM_ADDR scaleGM, GM_ADDR workspaceGM,
-    const FlatQuantTilingData& tilingData)
+__aicore__ inline void FlatQuantCmctKernel(GM_ADDR aGM, GM_ADDR p1GM, GM_ADDR p2GM, GM_ADDR cGM, GM_ADDR scaleGM,
+                                           GM_ADDR workspaceGM, const FlatQuantTilingData& tilingData)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -48,9 +47,8 @@ __aicore__ inline void FlatQuantCmctKernel(
 
     // 定义MMAD类型
     using DispatchPolicy = MatmulFlatQuant<>;
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
-        DispatchPolicy>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     // 定义Fusion类型
     using FusionOp = Block::DefaultFusion<OutType, OutType>;
@@ -64,11 +62,10 @@ __aicore__ inline void FlatQuantCmctKernel(
     // 定义Kernel类型
     using MatmulKernel = Kernel::KernelFlatQuant<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {tilingData.M, tilingData.N, tilingData.N, tilingData.K}, // shape
-        {aGM, p1GM, p2GM},                                        // gm addr
-        {cGM, scaleGM},                                           // epilogue args
-        {&tilingData}};
+    Params params = {{tilingData.M, tilingData.N, tilingData.N, tilingData.K}, // shape
+                     {aGM, p1GM, p2GM},                                        // gm addr
+                     {cGM, scaleGM},                                           // epilogue args
+                     {&tilingData}};
 
     MatmulKernel mm;
     mm(params);

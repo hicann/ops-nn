@@ -40,23 +40,22 @@ static inline bool IsAiCoreSupport(const aclTensor* self)
 }
 
 // AICORE算子kernel
-static inline const aclTensor* EluAiCore(
-    const aclTensor* self, float alpha, float scale, float inputScale, aclTensor* out, aclOpExecutor* executor)
+static inline const aclTensor* EluAiCore(const aclTensor* self, float alpha, float scale, float inputScale,
+                                         aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(EluAiCore, self, alpha, scale, inputScale, out);
 
     // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore Elu算子加入任务队列
     // Elu是算子的OpType，self是算子的输入，alpha是算子的属性, out是算子的输出
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Elu, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(alpha, scale, inputScale));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
 // AICPU算子kernel
-static inline const aclTensor* EluAiCpu(
-    const aclTensor* self, float alpha, float scale, float inputScale, aclTensor* out, aclOpExecutor* executor)
+static inline const aclTensor* EluAiCpu(const aclTensor* self, float alpha, float scale, float inputScale,
+                                        aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(EluAiCpu, self, alpha, scale, inputScale, out);
 
@@ -64,12 +63,10 @@ static inline const aclTensor* EluAiCpu(
 
     // 使用框架宏ADD_TO_LAUNCHER_LIST_AICPU，将AiCpu Elu算子加入任务队列
     // Elu是算子的OpType，self是算子的输入，out是算子的输出
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        Elu, OP_ATTR_NAMES({"alpha", "scale", "input_scale"}), OP_INPUT(self), OP_OUTPUT(out),
-        OP_ATTR(alpha, scale, inputScale));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(Elu, OP_ATTR_NAMES({"alpha", "scale", "input_scale"}), OP_INPUT(self),
+                                          OP_OUTPUT(out), OP_ATTR(alpha, scale, inputScale));
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
+             return nullptr);
     return out;
 }
 

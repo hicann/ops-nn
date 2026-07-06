@@ -33,14 +33,16 @@ using namespace std;
 template <typename T, typename U, typename Q>
 class TransposeTileBackward : public TransposeTileBase<T, U, Q> {
 public:
-    __aicore__ inline void SetShape(uint32_t rows, uint32_t cols, uint32_t tileStartCol, uint32_t tensorCols) {
+    __aicore__ inline void SetShape(uint32_t rows, uint32_t cols, uint32_t tileStartCol, uint32_t tensorCols)
+    {
         this->rows = rows;
         this->cols = cols;
         this->tileStartCol = tileStartCol;
         this->tensorCols = tensorCols;
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (this->cols >= this->rows) {
             this->CoreSplitByColumns(this->cols);
         } else {
@@ -53,11 +55,12 @@ public:
     }
 
 private:
-    __aicore__ inline void CoreSplitByRows(uint32_t taskCols) {
+    __aicore__ inline void CoreSplitByRows(uint32_t taskCols)
+    {
         uint32_t baseRows, extraRows;
         uint64_t usedCores;
         this->CalcSplitParams(this->rows, baseRows, extraRows, usedCores);
-        
+
         for (uint32_t j = 0; j <= usedCores; j++) {
             if (j == usedCores && extraRows == 0) {
                 break;
@@ -74,7 +77,8 @@ private:
         }
     }
 
-    __aicore__ inline void CoreSplitByColumns(uint32_t taskCols) {
+    __aicore__ inline void CoreSplitByColumns(uint32_t taskCols)
+    {
         uint32_t baseCols, extraCols;
         uint64_t usedCores;
         this->CalcSplitParams(taskCols, baseCols, extraCols, usedCores);
@@ -93,7 +97,8 @@ private:
         }
     }
 
-    __aicore__ inline void DoTileTranspose(uint32_t startCol, uint32_t taskCols, uint32_t startRow, uint32_t taskRows) {
+    __aicore__ inline void DoTileTranspose(uint32_t startCol, uint32_t taskCols, uint32_t startRow, uint32_t taskRows)
+    {
         uint32_t colTileSize = BASE_TILE_SIZE;
         uint32_t rowTileSize = BASE_TILE_SIZE;
         uint32_t taskColsAligned = (taskCols + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
@@ -127,16 +132,16 @@ private:
                 this->ReadPadOffset();
             }
 
-            uint32_t rowNums = (rowBlockIdx == rowBlocks ? rowsLeft : rowTileSize); 
+            uint32_t rowNums = (rowBlockIdx == rowBlocks ? rowsLeft : rowTileSize);
             for (uint32_t colBlockIdx = 0; colBlockIdx <= colBlocks; colBlockIdx++) {
                 if (colBlockIdx == colBlocks && colLeft == 0) {
                     break;
                 }
-                uint32_t colSize = (colBlockIdx == colBlocks ? colLeft : colTileSize); 
-                uint32_t srcOffset = (startRow + rowBlockIdx * rowTileSize) * this->cols +
-                                      startCol + colBlockIdx * colTileSize;
-                uint32_t dstOffset = (startCol + colBlockIdx * colTileSize) * this->tensorCols +
-                                      this->tileStartCol + startRow + rowBlockIdx * rowTileSize;
+                uint32_t colSize = (colBlockIdx == colBlocks ? colLeft : colTileSize);
+                uint32_t srcOffset = (startRow + rowBlockIdx * rowTileSize) * this->cols + startCol +
+                                     colBlockIdx * colTileSize;
+                uint32_t dstOffset = (startCol + colBlockIdx * colTileSize) * this->tensorCols + this->tileStartCol +
+                                     startRow + rowBlockIdx * rowTileSize;
                 this->LoadDataToUb(srcOffset, rowNums, colSize, this->cols);
                 PIPE_MTE2_S();
                 this->DoTranspose(rowNums, colSize);
@@ -150,6 +155,6 @@ private:
 private:
     uint32_t tensorCols = 0;
 };
-}
+} // namespace ScatterElementsV2NS
 
-# endif
+#endif

@@ -36,7 +36,8 @@ namespace ge {
 * @li activate_left: An optional bool. Reserved parameter for SwiGLU activation side. Defaults to false.
 * @li activate_dim: An optional int. Dimension along which to split input for SwiGLU.
 * Must be last or second-to-last dimension. Defaults to -1.
-* @li swiglu_mode: An optional int. Reserved parameter for SwiGLU variant mode. Defaults to 0. When swiglu_mode = 1, clamp_limit must greater than 0
+* @li swiglu_mode: An optional int. Reserved parameter for SwiGLU variant mode. Defaults to 0. When swiglu_mode = 1,
+clamp_limit must greater than 0
 * @li clamp_limit: An optional float. Reserved parameter for clamp limit in SwiGLU variant. Defaults to 7.0.
 * @li glu_alpha: An optional float. Reserved parameter for alpha value in SwiGLU variant. Defaults to 1.702.
 * @li glu_bias: An optional float. Reserved parameter for bias value in SwiGLU variant. Defaults to 1.0.
@@ -50,7 +51,8 @@ namespace ge {
 * Supports "rint", "floor", "round". Defaults to "rint". When dst_type = 35 or 36, round_mode must be "rint".
 * @li scale_alg: An optional int. Algorithm for computing scale factors.
 * 0=OCP, 1=cuBLAS, 2=RNE. Defaults to 0.When dst_type = 40 or 41, scale_alg must be 0.
-* @li max_dtype_value: An optional float. Reserved parameter for maximum dtype value. Used when scale_alg=2 and dst_type=FP4_E1M2. Defaults to 0.
+* @li max_dtype_value: An optional float. Reserved parameter for maximum dtype value. Used when scale_alg=2 and
+dst_type=FP4_E1M2. Defaults to 0.
 
 * @par Outputs:
 * @li y: Quantized output tensor after SwiGLU activation.

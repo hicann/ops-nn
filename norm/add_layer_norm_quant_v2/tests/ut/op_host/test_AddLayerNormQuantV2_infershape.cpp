@@ -22,15 +22,9 @@
 
 class AddLayerNormQuantV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddLayerNormQuantV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddLayerNormQuantV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddLayerNormQuantV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddLayerNormQuantV2 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(AddLayerNormQuantV2, AddLayerNormQuantV2_infershape_case_dynamic)
@@ -44,34 +38,32 @@ TEST_F(AddLayerNormQuantV2, AddLayerNormQuantV2_infershape_case_dynamic)
         gert::StorageShape out_shape = {{24, 1, 11264}, {24, 1, 11264}};
         gert::StorageShape reduce_shape = {{24, 1, 1}, {24, 1, 1}};
 
-        auto holder =
-            gert::InferShapeContextFaker()
-                .NodeIoNum(9, 6)
-                .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                .InputShapes(
-                    {&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                .NodeAttrs(
-                    {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                     {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                     {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                     {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(7, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(8, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .Build();
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(9, 6)
+                          .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape,
+                                        &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
+                          .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
+                          .NodeAttrs({{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                      {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                      {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                      {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(7, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(8, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
 
         auto context = holder.GetContext<gert::InferShapeContext>();
         EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
@@ -98,34 +90,32 @@ TEST_F(AddLayerNormQuantV2, AddLayerNormQuantV2_infershape_case_unknown_rank)
         gert::StorageShape out_shape = {{-2}, {-2}};
         gert::StorageShape reduce_shape = {{-2}, {-2}};
 
-        auto holder =
-            gert::InferShapeContextFaker()
-                .NodeIoNum(9, 6)
-                .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                .InputShapes(
-                    {&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                .NodeAttrs(
-                    {{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
-                     {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                     {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                     {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(7, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(8, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .Build();
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(9, 6)
+                          .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape,
+                                        &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
+                          .OutputShapes({&out_shape, &out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
+                          .NodeAttrs({{"quant_mode", Ops::NN::AnyValue::CreateFrom<string>("dynamic")},
+                                      {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                      {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                      {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(7, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(8, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
 
         auto context = holder.GetContext<gert::InferShapeContext>();
         EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);

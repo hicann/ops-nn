@@ -22,8 +22,9 @@ static const size_t SECOND_INPUT = 1;
 static const size_t THIRD_INPUT = 2;
 static const size_t FIRST_OUTPUT = 0;
 
-graphStatus PrepareInputTensorListForeachAddList(
-    OpExecuteContext* hostApiCtx, std::vector<const gert::Tensor*>& tensorList, size_t index, size_t& num)
+graphStatus PrepareInputTensorListForeachAddList(OpExecuteContext* hostApiCtx,
+                                                 std::vector<const gert::Tensor*>& tensorList, size_t index,
+                                                 size_t& num)
 {
     while (1) {
         auto inputGe = hostApiCtx->GetDynamicInputTensor(index, num);
@@ -36,8 +37,9 @@ graphStatus PrepareInputTensorListForeachAddList(
     return GRAPH_SUCCESS;
 }
 
-graphStatus PrepareOutputTensorListForeachAddList(
-    OpExecuteContext* hostApiCtx, std::vector<const gert::Tensor*>& tensorList, size_t index, size_t& num)
+graphStatus PrepareOutputTensorListForeachAddList(OpExecuteContext* hostApiCtx,
+                                                  std::vector<const gert::Tensor*>& tensorList, size_t index,
+                                                  size_t& num)
 {
     while (1) {
         auto outputGe = hostApiCtx->GetDynamicOutputTensor(index, num);

@@ -25,8 +25,8 @@ template <typename T, typename U, int64_t SCALE_ALG>
 class DynamicMxQuantTailAxis {
 public:
     __aicore__ inline DynamicMxQuantTailAxis() {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, const DynamicMxQuantTailAxisTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                const DynamicMxQuantTailAxisTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -35,93 +35,85 @@ private:
     __aicore__ inline void GetGmParams();
     __aicore__ inline void GetUbParams();
 
-    __aicore__ inline void CopyIn(
-        int64_t dim0LoopIdx, int64_t dim1LoopIdx, int64_t ubFactorRowNum, int64_t ubFactorColNum,
-        int64_t ubFactorColBlockNum);
+    __aicore__ inline void CopyIn(int64_t dim0LoopIdx, int64_t dim1LoopIdx, int64_t ubFactorRowNum,
+                                  int64_t ubFactorColNum, int64_t ubFactorColBlockNum);
     __aicore__ inline void Compute(int64_t ubFactorRowBlockNum, int64_t ubFactorColBlockNum);
-    __aicore__ inline void CopyOut(
-        int64_t dim0LoopIdx, int64_t dim1LoopIdx, int64_t ubFactorRowNum, int64_t ubFactorColNum,
-        int64_t ubFactorColBlockNum);
+    __aicore__ inline void CopyOut(int64_t dim0LoopIdx, int64_t dim1LoopIdx, int64_t ubFactorRowNum,
+                                   int64_t ubFactorColNum, int64_t ubFactorColBlockNum);
 
     // SCALE_ALG==0: OCP实现
-    __aicore__ inline void ComputeMaxExpOcpHalf(
-        __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpOcpBf16(
-        __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpOcpFp32(
-        __ubuf__ float* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpOcpHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpOcpBf16(__ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpOcpFp32(__ubuf__ float* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                uint16_t loopNum2VF);
 
     // SCALE_ALG==1: Cublas实现
-    __aicore__ inline void ComputeMaxExpCublasHalf(
-        __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpCublasBf16(
-        __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpCublasFp32(
-        __ubuf__ float* xLocalAddr, __ubuf__ uint32_t* maxExpAddr, uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpCublasHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                   uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpCublasBf16(__ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                   uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpCublasFp32(__ubuf__ float* xLocalAddr, __ubuf__ uint32_t* maxExpAddr,
+                                                   uint16_t loopNum2VF);
 
     // SCALE_ALG==2: dst_value_max + Cublas实现
-    __aicore__ inline void ComputeMaxExpDynDtypeRangeHalf(
-        __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpDynDtypeRangeBf16(
-        __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
-    __aicore__ inline void ComputeMaxExpDynDtypeRangeFp32(
-        __ubuf__ float* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpDynDtypeRangeHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                          uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpDynDtypeRangeBf16(__ubuf__ bfloat16_t* xLocalAddr,
+                                                          __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF);
+    __aicore__ inline void ComputeMaxExpDynDtypeRangeFp32(__ubuf__ float* xLocalAddr, __ubuf__ uint16_t* maxExpAddr,
+                                                          uint16_t loopNum2VF);
 
-    __aicore__ inline void ComputeScaleOcp(
-        __ubuf__ uint16_t* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
-        uint16_t loopNum1VF, uint32_t totalScaleInUB);
-    __aicore__ inline void ComputeScaleDynamicDtypeRange(
-        __ubuf__ uint16_t* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
-        uint16_t loopNum1VF, uint32_t totalScaleInUB);
-    __aicore__ inline void ComputeScaleCublas(
-        __ubuf__ intCalcType* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
-        uint16_t loopNumHalfVF, uint32_t totalScaleInUB);
+    __aicore__ inline void ComputeScaleOcp(__ubuf__ uint16_t* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr,
+                                           __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum1VF,
+                                           uint32_t totalScaleInUB);
+    __aicore__ inline void ComputeScaleDynamicDtypeRange(__ubuf__ uint16_t* maxExpAddr,
+                                                         __ubuf__ uint16_t* mxScaleLocalAddr,
+                                                         __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum1VF,
+                                                         uint32_t totalScaleInUB);
+    __aicore__ inline void ComputeScaleCublas(__ubuf__ intCalcType* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr,
+                                              __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNumHalfVF,
+                                              uint32_t totalScaleInUB);
 
     template <RoundMode toBf16RoundMode, RoundMode roundMode>
-    __aicore__ inline void ComputeDataHalf(
-        __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        uint16_t loopNum2VF);
+    __aicore__ inline void ComputeDataHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
+                                           __ubuf__ int8_t* yLocalAddr, uint16_t loopNum2VF);
     template <RoundMode toBf16RoundMode, RoundMode roundMode>
-    __aicore__ inline void ComputeDataBf16(
-        __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        uint16_t loopNum2VF);
+    __aicore__ inline void ComputeDataBf16(__ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
+                                           __ubuf__ int8_t* yLocalAddr, uint16_t loopNum2VF);
     template <RoundMode toBf16RoundMode, RoundMode roundMode>
 
-    __aicore__ inline void ComputeDataOptimizeHalf(
-        __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        uint16_t loopNum2VF);
+    __aicore__ inline void ComputeDataOptimizeHalf(__ubuf__ half* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
+                                                   __ubuf__ int8_t* yLocalAddr, uint16_t loopNum2VF);
     template <RoundMode toBf16RoundMode, RoundMode roundMode>
-    __aicore__ inline void ComputeDataOptimizeBf16(
-        __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        uint16_t loopNum2VF);
+    __aicore__ inline void ComputeDataOptimizeBf16(__ubuf__ bfloat16_t* xLocalAddr,
+                                                   __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
+                                                   uint16_t loopNum2VF);
     // FP32 FP4 tail-axis: reads float directly from xLocalAddr, bypasses bf16Scratch to avoid VEC_ERROR on non-aligned
     // colNum
     template <RoundMode toBf16RoundMode, RoundMode roundMode>
-    __aicore__ inline void ComputeDataFloatToFP4(
-        __ubuf__ float* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        uint16_t loopNum2VF);
-    __aicore__ inline void ComputeFP4FromHalf(
-        Reg::RegTensor<half>& output, Reg::RegTensor<half>& input, Reg::MaskReg& mask);
+    __aicore__ inline void ComputeDataFloatToFP4(__ubuf__ float* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
+                                                 __ubuf__ int8_t* yLocalAddr, uint16_t loopNum2VF);
+    __aicore__ inline void ComputeFP4FromHalf(Reg::RegTensor<half>& output, Reg::RegTensor<half>& input,
+                                              Reg::MaskReg& mask);
     template <RoundMode toBf16RoundMode, RoundMode roundMode>
     __aicore__ inline void ComputeFP4FromFp32(Reg::RegTensor<float>& Reg);
 
-    __aicore__ inline void ComputeOcp(
-        __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr,
-        __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF,
-        uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum);
+    __aicore__ inline void ComputeOcp(__ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr,
+                                      __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
+                                      __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF,
+                                      uint16_t loopNumHalfVF, uint32_t totalBlockNum);
 
-    __aicore__ inline void ComputeCublasFp4(
-        __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr,
-        __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF,
-        uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum);
+    __aicore__ inline void ComputeCublasFp4(__ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr,
+                                            __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
+                                            __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF,
+                                            uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum);
 
-    __aicore__ inline void ComputeCublasFp4Opti(
-        __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr,
-        __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-        __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF,
-        uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum);
+    __aicore__ inline void ComputeCublasFp4Opti(__ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr,
+                                                __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
+                                                __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF,
+                                                uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum);
 
 private:
     TPipe pipe_;
@@ -178,8 +170,8 @@ private:
 };
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, const DynamicMxQuantTailAxisTilingData* tilingData)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                                                     const DynamicMxQuantTailAxisTilingData* tilingData)
 {
 #if (__NPU_ARCH__ == 3510)
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
@@ -222,8 +214,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::GetGmParams()
     xGmOffset_ = coreRowIdx_ * rowNormalBlockNum_ * DIGIT_ONE * colNum_ +
                  coreColIdx_ * colNormalBlockNum_ * DIGIT_EIGHT * blockSize_;
     scaleColNum_ = ops::CeilDiv(ops::CeilDiv(colNum_, blockSize_), DIGIT_TWO) * DIGIT_TWO;
-    scaleGmOffset_ =
-        coreRowIdx_ * rowNormalBlockNum_ * DIGIT_ONE * scaleColNum_ + coreColIdx_ * colNormalBlockNum_ * DIGIT_EIGHT;
+    scaleGmOffset_ = coreRowIdx_ * rowNormalBlockNum_ * DIGIT_ONE * scaleColNum_ +
+                     coreColIdx_ * colNormalBlockNum_ * DIGIT_EIGHT;
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
@@ -243,29 +235,29 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::GetUbParams()
         ubFactorRow1BlockNum_ = rowNormalBlockNum_ * DIGIT_ONE;
     }
 
-    ubFactorColLoopNum_ =
-        ops::CeilDiv(ubFactorCol32BlockNum_, maxUbBlockNum_); // 列方向上UB循环次数（列方向上的切 UB 块数）
-    ubFactorColNormalBlockNum_ =
-        ops::CeilDiv(ubFactorCol32BlockNum_, ubFactorColLoopNum_); // 列方向上头块的Block数量（均衡处理） 用于VF内处理
+    ubFactorColLoopNum_ = ops::CeilDiv(ubFactorCol32BlockNum_,
+                                       maxUbBlockNum_); // 列方向上UB循环次数（列方向上的切 UB 块数）
+    ubFactorColNormalBlockNum_ = ops::CeilDiv(ubFactorCol32BlockNum_,
+                                              ubFactorColLoopNum_); // 列方向上头块的Block数量（均衡处理） 用于VF内处理
     ubFactorColNormalBlockNum_ = ops::CeilDiv(ubFactorColNormalBlockNum_, DIGIT_TWO) *
                                  DIGIT_TWO; // 列方向上头块的Block数量补成偶数，只有尾块有可能需要补Pad
-    ubFactorColTailBlockNum_ =
-        ubFactorCol32BlockNum_ - (ubFactorColLoopNum_ - DIGIT_ONE) *
-                                     ubFactorColNormalBlockNum_; // 列方向上尾块的Block数量（只有一个尾块） 用于VF内处理
-    ubFactorColNormalBlockLen_ =
-        ubFactorColNormalBlockNum_ * blockSize_; // 列方向上头块的元素数量（均衡处理）           用于数据搬运
-    ubFactorColTailBlockLen_ =
-        ubFactorColNum_ - (ubFactorColLoopNum_ - DIGIT_ONE) *
-                              ubFactorColNormalBlockLen_; // 列方向上尾块的元素数量（只有一个尾块）       用于数据搬运
+    ubFactorColTailBlockNum_ = ubFactorCol32BlockNum_ -
+                               (ubFactorColLoopNum_ - DIGIT_ONE) *
+                                   ubFactorColNormalBlockNum_; // 列方向上尾块的Block数量（只有一个尾块） 用于VF内处理
+    ubFactorColNormalBlockLen_ = ubFactorColNormalBlockNum_ *
+                                 blockSize_; // 列方向上头块的元素数量（均衡处理）           用于数据搬运
+    ubFactorColTailBlockLen_ = ubFactorColNum_ -
+                               (ubFactorColLoopNum_ - DIGIT_ONE) *
+                                   ubFactorColNormalBlockLen_; // 列方向上尾块的元素数量（只有一个尾块） 用于数据搬运
 
     ubFactorRowNormalBlockNum_ = ops::FloorDiv(maxUbBlockNum_, ubFactorColNormalBlockNum_); // UB 一次至多载入的行数
-    ubFactorRowLoopNum_ =
-        ops::CeilDiv(ubFactorRow1BlockNum_, ubFactorRowNormalBlockNum_); // 行方向上 UB 循环次数（行方向上的切 UB 块数）
-    ubFactorRowNormalBlockNum_ =
-        ops::CeilDiv(ubFactorRow1BlockNum_, ubFactorRowLoopNum_); // 行方向上的均衡处理 用于VF内处理
-    ubFactorRowTailBlockNum_ =
-        ubFactorRow1BlockNum_ - (ubFactorRowLoopNum_ - DIGIT_ONE) *
-                                    ubFactorRowNormalBlockNum_; // 行方向上尾块的行数（只有一个尾块） 用于VF内处理
+    ubFactorRowLoopNum_ = ops::CeilDiv(ubFactorRow1BlockNum_,
+                                       ubFactorRowNormalBlockNum_); // 行方向上 UB 循环次数（行方向上的切 UB 块数）
+    ubFactorRowNormalBlockNum_ = ops::CeilDiv(ubFactorRow1BlockNum_,
+                                              ubFactorRowLoopNum_); // 行方向上的均衡处理 用于VF内处理
+    ubFactorRowTailBlockNum_ = ubFactorRow1BlockNum_ -
+                               (ubFactorRowLoopNum_ - DIGIT_ONE) *
+                                   ubFactorRowNormalBlockNum_; // 行方向上尾块的行数（只有一个尾块） 用于VF内处理
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
@@ -299,26 +291,24 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Process()
     int64_t dim1LoopIdx = 0;
     for (dim0LoopIdx = 0; dim0LoopIdx < ubFactorRowLoopNum_ - 1; dim0LoopIdx++) {
         for (dim1LoopIdx = 0; dim1LoopIdx < ubFactorColLoopNum_ - 1; dim1LoopIdx++) {
-            CopyIn(
-                dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColNormalBlockLen_,
-                ubFactorColNormalBlockNum_);
+            CopyIn(dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColNormalBlockLen_,
+                   ubFactorColNormalBlockNum_);
             Compute(ubFactorRowNormalBlockNum_, ubFactorColNormalBlockNum_);
-            CopyOut(
-                dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColNormalBlockLen_,
-                ubFactorColNormalBlockNum_);
+            CopyOut(dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColNormalBlockLen_,
+                    ubFactorColNormalBlockNum_);
         }
-        CopyIn(
-            dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColTailBlockLen_, ubFactorColTailBlockNum_);
+        CopyIn(dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColTailBlockLen_,
+               ubFactorColTailBlockNum_);
         Compute(ubFactorRowNormalBlockNum_, ubFactorColTailBlockNum_);
-        CopyOut(
-            dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColTailBlockLen_, ubFactorColTailBlockNum_);
+        CopyOut(dim0LoopIdx, dim1LoopIdx, ubFactorRowNormalBlockNum_, ubFactorColTailBlockLen_,
+                ubFactorColTailBlockNum_);
     }
     for (dim1LoopIdx = 0; dim1LoopIdx < ubFactorColLoopNum_ - 1; dim1LoopIdx++) {
-        CopyIn(
-            dim0LoopIdx, dim1LoopIdx, ubFactorRowTailBlockNum_, ubFactorColNormalBlockLen_, ubFactorColNormalBlockNum_);
+        CopyIn(dim0LoopIdx, dim1LoopIdx, ubFactorRowTailBlockNum_, ubFactorColNormalBlockLen_,
+               ubFactorColNormalBlockNum_);
         Compute(ubFactorRowTailBlockNum_, ubFactorColNormalBlockNum_);
-        CopyOut(
-            dim0LoopIdx, dim1LoopIdx, ubFactorRowTailBlockNum_, ubFactorColNormalBlockLen_, ubFactorColNormalBlockNum_);
+        CopyOut(dim0LoopIdx, dim1LoopIdx, ubFactorRowTailBlockNum_, ubFactorColNormalBlockLen_,
+                ubFactorColNormalBlockNum_);
     }
     CopyIn(dim0LoopIdx, dim1LoopIdx, ubFactorRowTailBlockNum_, ubFactorColTailBlockLen_, ubFactorColTailBlockNum_);
     Compute(ubFactorRowTailBlockNum_, ubFactorColTailBlockNum_);
@@ -327,9 +317,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Process()
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyIn(
-    int64_t dim0LoopIdx, int64_t dim1LoopIdx, int64_t ubFactorRowNum, int64_t ubFactorColNum,
-    int64_t ubFactorColBlockNum)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyIn(int64_t dim0LoopIdx, int64_t dim1LoopIdx,
+                                                                       int64_t ubFactorRowNum, int64_t ubFactorColNum,
+                                                                       int64_t ubFactorColBlockNum)
 {
     int64_t scaleIsNotOdd = ubFactorColBlockNum % DIGIT_TWO;
 
@@ -344,16 +334,16 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyIn(
         WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
 
         int64_t blockSizeDouble = 64;
-        int64_t padRightNum =
-            (ubFactorColNum % FLOAT_PER_UB_BLOCK == 0) ? 0 : FLOAT_PER_UB_BLOCK - ubFactorColNum % FLOAT_PER_UB_BLOCK;
+        int64_t padRightNum = (ubFactorColNum % FLOAT_PER_UB_BLOCK == 0) ?
+                                  0 :
+                                  FLOAT_PER_UB_BLOCK - ubFactorColNum % FLOAT_PER_UB_BLOCK;
         int64_t colNumUbBlockAligned = Ops::Base::CeilAlign(ubFactorColNum, FLOAT_PER_UB_BLOCK);
         int64_t dstStride = colNumUbBlockAligned % blockSizeDouble == 0 ?
                                 0 :
                                 (blockSizeDouble - colNumUbBlockAligned % blockSizeDouble) / FLOAT_PER_UB_BLOCK;
-        copyInParam = {
-            static_cast<uint16_t>(ubFactorRowNum), static_cast<uint32_t>(ubFactorColNum * sizeof(T)),
-            static_cast<uint32_t>((colNum_ - ubFactorColNum) * sizeof(T)), static_cast<uint32_t>(dstStride),
-            static_cast<uint32_t>(0)};
+        copyInParam = {static_cast<uint16_t>(ubFactorRowNum), static_cast<uint32_t>(ubFactorColNum * sizeof(T)),
+                       static_cast<uint32_t>((colNum_ - ubFactorColNum) * sizeof(T)), static_cast<uint32_t>(dstStride),
+                       static_cast<uint32_t>(0)};
         padParams = {true, static_cast<uint8_t>(0), static_cast<uint8_t>(padRightNum), static_cast<T>(0)};
     } else {
         if (scaleIsNotOdd != 0) {
@@ -374,10 +364,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyIn(
         // 当补的数(rightPad)是16时，一定能补到UB的下一个DataBlock，实现补到32个数对齐的功能
         int64_t padRightNumTmp = (ubFactorColNum % 32 > 16) ? (32 - ubFactorColNum % 32) : 16;
         int64_t padRightNum = (ubFactorColNum % 32 == 0) ? 0 : padRightNumTmp;
-        copyInParam = {
-            static_cast<uint16_t>(ubFactorRowNum), static_cast<uint32_t>(ubFactorColNum * sizeof(T)),
-            static_cast<uint32_t>((colNum_ - ubFactorColNum) * sizeof(T)),
-            static_cast<uint32_t>(scaleIsNotOdd * sizeof(T)), static_cast<uint32_t>(0)};
+        copyInParam = {static_cast<uint16_t>(ubFactorRowNum), static_cast<uint32_t>(ubFactorColNum * sizeof(T)),
+                       static_cast<uint32_t>((colNum_ - ubFactorColNum) * sizeof(T)),
+                       static_cast<uint32_t>(scaleIsNotOdd * sizeof(T)), static_cast<uint32_t>(0)};
         padParams = {true, static_cast<uint8_t>(0), static_cast<uint8_t>(padRightNum), static_cast<T>(0)};
     }
     int64_t offset = dim0LoopIdx * ubFactorRowNormalBlockNum_ * colNum_ + dim1LoopIdx * ubFactorColNormalBlockLen_;
@@ -387,9 +376,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyIn(
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyOut(
-    int64_t dim0LoopIdx, int64_t dim1LoopIdx, int64_t ubFactorRowNum, int64_t ubFactorColNum,
-    int64_t ubFactorColBlockNum)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyOut(int64_t dim0LoopIdx, int64_t dim1LoopIdx,
+                                                                        int64_t ubFactorRowNum, int64_t ubFactorColNum,
+                                                                        int64_t ubFactorColBlockNum)
 {
     LocalTensor<uint8_t> scaleLocal = mxScaleQueue_.DeQue<uint8_t>();
     LocalTensor<uint8_t> yLocal = outQueue_.DeQue<uint8_t>();
@@ -400,8 +389,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyOut(
         static_cast<uint32_t>(0), // 一个 BlockSize = 32，64个数对齐，输出 y 为 0.5 Bytes，占用 32 Bytes，srcStride = 0
         static_cast<uint32_t>((colNum_ - ubFactorColNum) / DIGIT_TWO), static_cast<uint32_t>(0)};
 
-    int64_t offset =
-        (dim0LoopIdx * ubFactorRowNormalBlockNum_ * colNum_ + dim1LoopIdx * ubFactorColNormalBlockLen_) / DIGIT_TWO;
+    int64_t offset = (dim0LoopIdx * ubFactorRowNormalBlockNum_ * colNum_ + dim1LoopIdx * ubFactorColNormalBlockLen_) /
+                     DIGIT_TWO;
     DataCopyPad(yGm_[offset], yLocal, copyOutParamY);
 
     DataCopyExtParams copyOutParamScale = {0, 0, 0, 0, 0};
@@ -410,8 +399,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyOut(
     copyOutParamScale.srcStride = 0;
     copyOutParamScale.dstStride = scaleColNum_ - copyOutParamScale.blockLen;
 
-    int64_t scaleOffset =
-        dim0LoopIdx * ubFactorRowNormalBlockNum_ * scaleColNum_ + dim1LoopIdx * ubFactorColNormalBlockNum_;
+    int64_t scaleOffset = dim0LoopIdx * ubFactorRowNormalBlockNum_ * scaleColNum_ +
+                          dim1LoopIdx * ubFactorColNormalBlockNum_;
     DataCopyPad<uint8_t, PaddingMode::Compact>(scaleGm_[scaleOffset], scaleLocal, copyOutParamScale);
 
     outQueue_.FreeTensor(yLocal);
@@ -420,8 +409,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::CopyOut(
 
 // ========================================== Compute Max Exp =====================================================
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcpHalf(
-    __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcpHalf(__ubuf__ half* xLocalAddr,
+                                                                                     __ubuf__ uint16_t* maxExpAddr,
+                                                                                     uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -445,8 +435,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
         Reg::MaskReg invalidDataMask1;
         Reg::UnalignReg ureg;
 
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -466,8 +456,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
 
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -475,8 +465,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcpBf16(
-    __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcpBf16(__ubuf__ bfloat16_t* xLocalAddr,
+                                                                                     __ubuf__ uint16_t* maxExpAddr,
+                                                                                     uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -499,8 +490,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::And(xExpExtract1, (Reg::RegTensor<uint16_t>&)xExp1, expMaskBF16, Mask);
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -508,8 +499,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcpFp32(
-    __ubuf__ float* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcpFp32(__ubuf__ float* xLocalAddr,
+                                                                                     __ubuf__ uint16_t* maxExpAddr,
+                                                                                     uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -528,8 +520,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
         Reg::MaskReg MaskB32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::UnalignReg ureg;
-        static constexpr Reg::CastTrait castTraitFp32toBF16 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitFp32toBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                               Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             // x0ZeroFP32: 1,3,5,7,9,...,127        x1ZeroFP32: 2,4,6,8,10,...,128
             Reg::LoadAlign<float, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B32>(
@@ -541,11 +533,11 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::DeInterleave(x0ZeroFP32, x0OneFP32, x0ZeroFP32, x0OneFP32);
             // x1ZeroFP32: 2,6,10,14,...,254    x1OneFP32: 4,8,12,16,...,256
             Reg::DeInterleave(x1ZeroFP32, x1OneFP32, x1ZeroFP32, x1OneFP32);
-            Reg::And(
-                (Reg::RegTensor<uint32_t>&)x0ZeroFP32, (Reg::RegTensor<uint32_t>&)x0ZeroFP32, expMask32Bit, MaskB32);
+            Reg::And((Reg::RegTensor<uint32_t>&)x0ZeroFP32, (Reg::RegTensor<uint32_t>&)x0ZeroFP32, expMask32Bit,
+                     MaskB32);
             Reg::And((Reg::RegTensor<uint32_t>&)x0OneFP32, (Reg::RegTensor<uint32_t>&)x0OneFP32, expMask32Bit, MaskB32);
-            Reg::And(
-                (Reg::RegTensor<uint32_t>&)x1ZeroFP32, (Reg::RegTensor<uint32_t>&)x1ZeroFP32, expMask32Bit, MaskB32);
+            Reg::And((Reg::RegTensor<uint32_t>&)x1ZeroFP32, (Reg::RegTensor<uint32_t>&)x1ZeroFP32, expMask32Bit,
+                     MaskB32);
             Reg::And((Reg::RegTensor<uint32_t>&)x1OneFP32, (Reg::RegTensor<uint32_t>&)x1OneFP32, expMask32Bit, MaskB32);
             Reg::Max(x0MaxExpB32, (Reg::RegTensor<uint32_t>&)x0ZeroFP32, (Reg::RegTensor<uint32_t>&)x0OneFP32, MaskB32);
             Reg::Max(x1MaxExpB32, (Reg::RegTensor<uint32_t>&)x1ZeroFP32, (Reg::RegTensor<uint32_t>&)x1OneFP32, MaskB32);
@@ -553,8 +545,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::ReduceMaxWithDataBlock(xMaxExpB32, xMaxExpB32, MaskB32);
             Reg::ShiftRights(xMaxExpB32, xMaxExpB32, FP32_PACK_SHR_NUM, MaskB32);
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(xMaxExpB16, xMaxExpB32);
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExpB16, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExpB16, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -589,8 +581,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
         Reg::MaskReg invalidDataMask1;
         Reg::UnalignReg ureg;
 
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -609,8 +601,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
 
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -642,8 +634,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
             Reg::And(xExpExtract1, (Reg::RegTensor<uint16_t>&)xExp1, absMask16Bit, Mask);
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -686,8 +678,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
             Reg::ReduceMaxWithDataBlock(xMaxExpB32, xMaxExpB32, MaskB32);
             Reg::ShiftRights(xMaxExpB32, xMaxExpB32, FP32_PACK_SHR_NUM, MaskB32);
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(xMaxExpB16, xMaxExpB32);
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExpB16, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExpB16, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -695,8 +687,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCublasHalf(
-    __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCublasHalf(__ubuf__ half* xLocalAddr,
+                                                                                        __ubuf__ uint16_t* maxExpAddr,
+                                                                                        uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -717,8 +710,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
             Reg::And((Reg::RegTensor<uint16_t>&)xExp1, (Reg::RegTensor<uint16_t>&)xExp1, absMask16Bit, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint16_t>&)xExp0, (Reg::RegTensor<uint16_t>&)xExp1, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -726,8 +719,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCublasBf16(
-    __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCublasBf16(__ubuf__ bfloat16_t* xLocalAddr,
+                                                                                        __ubuf__ uint16_t* maxExpAddr,
+                                                                                        uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -748,8 +742,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
             Reg::And((Reg::RegTensor<uint16_t>&)xExp1, (Reg::RegTensor<uint16_t>&)xExp1, absMask16Bit, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint16_t>&)xExp0, (Reg::RegTensor<uint16_t>&)xExp1, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
-            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -757,8 +751,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCublasFp32(
-    __ubuf__ float* xLocalAddr, __ubuf__ uint32_t* maxExpAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCublasFp32(__ubuf__ float* xLocalAddr,
+                                                                                        __ubuf__ uint32_t* maxExpAddr,
+                                                                                        uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -789,8 +784,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
             Reg::Max(xMaxExp, (Reg::RegTensor<uint32_t>&)xMaxExp, (Reg::RegTensor<uint32_t>&)xExp2, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint32_t>&)xMaxExp, (Reg::RegTensor<uint32_t>&)xExp3, Mask);
             Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
-            Reg::StoreUnAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                maxExpAddr, xMaxExp, ureg, ELEMENT_AFTER_REDUCE_);
+            Reg::StoreUnAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
+                                                                            ELEMENT_AFTER_REDUCE_);
         }
         Reg::StoreUnAlignPost(maxExpAddr, ureg, 0);
     }
@@ -799,9 +794,11 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
 
 // ========================================== Compute Scale =====================================================
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleOcp(
-    __ubuf__ uint16_t* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr,
-    uint16_t loopNum1VF, uint32_t totalScaleInUB)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleOcp(__ubuf__ uint16_t* maxExpAddr,
+                                                                                __ubuf__ uint16_t* mxScaleLocalAddr,
+                                                                                __ubuf__ uint16_t* recipScaleLocalAddr,
+                                                                                uint16_t loopNum1VF,
+                                                                                uint32_t totalScaleInUB)
 {
     __VEC_SCOPE__
     {
@@ -857,8 +854,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleOcp(
             Reg::Select<uint16_t>(halfScale, halfScale, zeroU16, zeroMask);
             Reg::Select<uint16_t>(halfScale, specialExpU16, halfScale, specialDataMask);
 
-            Reg::StoreAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                recipScaleLocalAddr, halfScale, VF_LEN_16, preMaskScale);
+            Reg::StoreAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(recipScaleLocalAddr, halfScale, VF_LEN_16,
+                                                                          preMaskScale);
         }
     }
     return;
@@ -975,8 +972,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleCubl
         uint32_t SixtyFour = 64;
         Reg::MaskReg dataMaskB16Half = Reg::UpdateMask<uint16_t>(SixtyFour);
 
-        static constexpr Reg::CastTrait castTraitHalf2Float = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitHalf2Float = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                               Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
         for (uint16_t i = 0; i < loopNumHalfVF; i++) {
             preMaskScale = Reg::UpdateMask<uint32_t>(totalScaleInUB);
@@ -986,8 +983,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleCubl
             } else {
                 Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_UNPACK_B16>(
                     max16, maxExpAddr, VF_LEN_32);
-                Reg::Cast<float, T, castTraitHalf2Float>(
-                    (Reg::RegTensor<float>&)max32, (Reg::RegTensor<T>&)max16, preMaskScale);
+                Reg::Cast<float, T, castTraitHalf2Float>((Reg::RegTensor<float>&)max32, (Reg::RegTensor<T>&)max16,
+                                                         preMaskScale);
             }
 
             Reg::Compare<uint32_t, CMPMODE::LT>(cmpResult, max32, expMask, preMaskScale);
@@ -1026,8 +1023,10 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleCubl
 // ================================================ Compute Data =======================================================
 template <typename T, typename U, int64_t SCALE_ALG>
 template <RoundMode toBf16RoundMode, RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataHalf(
-    __ubuf__ half* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr, uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataHalf(__ubuf__ half* xLocalAddr,
+                                                                                __ubuf__ uint16_t* recipScaleLocalAddr,
+                                                                                __ubuf__ int8_t* yLocalAddr,
+                                                                                uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -1045,12 +1044,12 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataHalf(
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
 
-        static constexpr Reg::CastTrait castTrait = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
-        static constexpr Reg::CastTrait castTraitFp32toBF16Data = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTrait = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
+        static constexpr Reg::CastTrait castTraitFp32toBF16Data = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                                   Reg::MaskMergeMode::ZEROING, roundMode};
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -1081,9 +1080,10 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataHalf(
 
 template <typename T, typename U, int64_t SCALE_ALG>
 template <RoundMode toBf16RoundMode, RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataBf16(
-    __ubuf__ bfloat16_t* xLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-    uint16_t loopNum2VF)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataBf16(__ubuf__ bfloat16_t* xLocalAddr,
+                                                                                __ubuf__ uint16_t* recipScaleLocalAddr,
+                                                                                __ubuf__ int8_t* yLocalAddr,
+                                                                                uint16_t loopNum2VF)
 {
     __VEC_SCOPE__
     {
@@ -1095,12 +1095,12 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataBf16(
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
 
-        static constexpr Reg::CastTrait castTrait = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
-        static constexpr Reg::CastTrait castTraitFp32toBF16Data = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTrait = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
+        static constexpr Reg::CastTrait castTraitFp32toBF16Data = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                                   Reg::MaskMergeMode::ZEROING, roundMode};
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<bfloat16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -1157,16 +1157,16 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataOptim
         Reg::MaskReg dataMaskB16 = Reg::CreateMask<half>();
         Reg::MaskReg dataMaskB32 = Reg::CreateMask<float>();
 
-        static constexpr Reg::CastTrait castTrait = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
-        static constexpr Reg::CastTrait castTraitF16toFp32Zero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitF16toFp32One = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitFp32toBF16 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTrait = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
+        static constexpr Reg::CastTrait castTraitF16toFp32Zero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                                  Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitF16toFp32One = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                                 Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitFp32toBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                               Reg::MaskMergeMode::ZEROING, roundMode};
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
@@ -1188,10 +1188,10 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataOptim
             ComputeFP4FromFp32<toBf16RoundMode, roundMode>(xExp0OneFP32);
             Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(xExp0ZeroBF16, xExp0ZeroFP32, dataMaskB32);
             Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(xExp0OneBF16, xExp0OneFP32, dataMaskB32);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)xExp0ZeroBF16, (Reg::RegTensor<uint32_t>&)xExp0ZeroBF16);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)xExp0OneBF16, (Reg::RegTensor<uint32_t>&)xExp0OneBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)xExp0ZeroBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)xExp0ZeroBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)xExp0OneBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)xExp0OneBF16);
             Reg::Interleave(xExp0ZeroBF16, xExp0OneBF16, xExp0ZeroBF16, xExp0OneBF16);
 
             // xExp1
@@ -1204,10 +1204,10 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataOptim
             ComputeFP4FromFp32<toBf16RoundMode, roundMode>(xExp1OneFP32);
             Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(xExp1ZeroBF16, xExp1ZeroFP32, dataMaskB32);
             Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(xExp1OneBF16, xExp1OneFP32, dataMaskB32);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)xExp1ZeroBF16, (Reg::RegTensor<uint32_t>&)xExp1ZeroBF16);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)xExp1OneBF16, (Reg::RegTensor<uint32_t>&)xExp1OneBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)xExp1ZeroBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)xExp1ZeroBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)xExp1OneBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)xExp1OneBF16);
             Reg::Interleave(xExp1ZeroBF16, xExp1OneBF16, xExp1ZeroBF16, xExp1OneBF16);
 
             Reg::Interleave(xExp0ZeroBF16, xExp1ZeroBF16, xExp0ZeroBF16, xExp1ZeroBF16);
@@ -1258,16 +1258,16 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataOptim
         Reg::MaskReg dataMaskB16 = Reg::CreateMask<half>();
         Reg::MaskReg dataMaskB32 = Reg::CreateMask<float>();
 
-        static constexpr Reg::CastTrait castTrait = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
-        static constexpr Reg::CastTrait castTraitF16toFp32Zero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitF16toFp32One = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitFp32toBF16 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTrait = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
+        static constexpr Reg::CastTrait castTraitF16toFp32Zero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                                  Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitF16toFp32One = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                                 Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitFp32toBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                               Reg::MaskMergeMode::ZEROING, roundMode};
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
@@ -1316,12 +1316,12 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataFloat
         Reg::MaskReg maskFP32 = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
         Reg::MaskReg maskB16 = Reg::CreateMask<half, Reg::MaskPattern::ALL>();
 
-        static constexpr Reg::CastTrait castTraitBf16ToFp32 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTrait = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
-        static constexpr Reg::CastTrait castTraitFp32toBF16 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
+        static constexpr Reg::CastTrait castTraitBf16ToFp32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                               Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTrait = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTraitFp32toBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                               Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
 
         Reg::RegTensor<int32_t> maxEleReg;
         Reg::Duplicate(maxEleReg, FP32_MX_MAX_EXP);
@@ -1329,8 +1329,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataFloat
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
                 halfScaleForMul, recipScaleLocalAddr, ELEMENT_AFTER_REDUCE_);
-            Reg::Cast<float, bfloat16_t, castTraitBf16ToFp32>(
-                floatScaleForMul, (Reg::RegTensor<bfloat16_t>&)halfScaleForMul, maskFP32);
+            Reg::Cast<float, bfloat16_t, castTraitBf16ToFp32>(floatScaleForMul,
+                                                              (Reg::RegTensor<bfloat16_t>&)halfScaleForMul, maskFP32);
 
             Reg::LoadAlign<float, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B32>(
                 x0Zero, x1Zero, xLocalAddr, VF_LEN_32_DOUBLE);
@@ -1354,14 +1354,14 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataFloat
             Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1ZeroBF16, x1Zero, maskFP32);
             Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1OneBF16, x1One, maskFP32);
 
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)x0ZeroBF16, (Reg::RegTensor<uint32_t>&)x0ZeroBF16);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)x0OneBF16, (Reg::RegTensor<uint32_t>&)x0OneBF16);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)x1ZeroBF16, (Reg::RegTensor<uint32_t>&)x1ZeroBF16);
-            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint16_t>&)x1OneBF16, (Reg::RegTensor<uint32_t>&)x1OneBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x0ZeroBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)x0ZeroBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x0OneBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)x0OneBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x1ZeroBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)x1ZeroBF16);
+            Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x1OneBF16,
+                                                                    (Reg::RegTensor<uint32_t>&)x1OneBF16);
 
             // Merge zero+one bf16 per group
             Reg::Interleave(x0ZeroBF16, x0OneBF16, x0ZeroBF16, x0OneBF16);
@@ -1385,55 +1385,57 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeDataFloat
 
 template <typename T, typename U, int64_t SCALE_ALG>
 __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeOcp(
-    __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr, __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-    __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum)
+    __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr, __ubuf__ uint16_t* scaleLocalAddr,
+    __ubuf__ int8_t* yLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF,
+    uint16_t loopNumHalfVF, uint32_t totalBlockNum)
 {
     if constexpr (IsSame<T, float>::value) {
         ComputeMaxExpOcpFp32(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         ComputeScaleOcp(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                               yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataFloatToFP4<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr,
+                                                                                yLocalAddr, loopNum2VF);
         }
     } else if constexpr (IsSame<T, bfloat16_t>::value) {
         ComputeMaxExpOcpBf16(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         ComputeScaleOcp(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                                 yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                  yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataBf16<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataBf16<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr, yLocalAddr,
+                                                                          loopNum2VF);
         }
     } else {
         ComputeMaxExpOcpHalf(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         ComputeScaleOcp(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                                 yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                  yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataHalf<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataHalf<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr, yLocalAddr,
+                                                                          loopNum2VF);
         }
     }
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
 __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeCublasFp4(
-    __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr, __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-    __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum)
+    __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr, __ubuf__ uint16_t* scaleLocalAddr,
+    __ubuf__ int8_t* yLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF,
+    uint16_t loopNumHalfVF, uint32_t totalBlockNum)
 {
     if constexpr (IsSame<T, float>::value) {
         LocalTensor<uint32_t> maxExpLocal = maxExpBuffer_.Get<uint32_t>();
@@ -1441,101 +1443,99 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeCublasFp4
         ComputeMaxExpCublasFp32(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         ComputeScaleCublas(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNumHalfVF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                               yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataFloatToFP4<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr,
+                                                                                yLocalAddr, loopNum2VF);
         }
     } else if constexpr (IsSame<T, bfloat16_t>::value) {
         ComputeMaxExpCublasBf16(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         ComputeScaleCublas(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNumHalfVF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                                 yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                  yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataBf16<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataBf16<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr, yLocalAddr,
+                                                                          loopNum2VF);
         }
     } else {
         ComputeMaxExpCublasHalf(xLocalAddr, maxExpLocalAddr, loopNum2VF);
         ComputeScaleCublas(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNumHalfVF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                                 yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                  yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataHalf<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataHalf<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr, yLocalAddr,
+                                                                          loopNum2VF);
         }
     }
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
 __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeCublasFp4Opti(
-    __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr, __ubuf__ uint16_t* scaleLocalAddr, __ubuf__ int8_t* yLocalAddr,
-    __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF, uint16_t loopNumHalfVF, uint32_t totalBlockNum) 
+    __ubuf__ T* xLocalAddr, __ubuf__ uint16_t* maxExpLocalAddr, __ubuf__ uint16_t* scaleLocalAddr,
+    __ubuf__ int8_t* yLocalAddr, __ubuf__ uint16_t* recipScaleLocalAddr, uint16_t loopNum2VF, uint16_t loopNum1VF,
+    uint16_t loopNumHalfVF, uint32_t totalBlockNum)
 {
     if constexpr (IsSame<T, float>::value) {
         ComputeMaxExpDynDtypeRangeFp32(xLocalAddr, maxExpLocalAddr, loopNum2VF);
-        ComputeScaleDynamicDtypeRange(
-            maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
+        ComputeScaleDynamicDtypeRange(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                               yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataFloatToFP4<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataFloatToFP4<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr,
+                                                                                yLocalAddr, loopNum2VF);
         }
     } else if constexpr (IsSame<T, bfloat16_t>::value) {
         ComputeMaxExpDynDtypeRangeBf16(xLocalAddr, maxExpLocalAddr, loopNum2VF);
-        ComputeScaleDynamicDtypeRange(
-            maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
+        ComputeScaleDynamicDtypeRange(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                                 yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeBf16<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                  yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataBf16<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataBf16<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr, yLocalAddr,
+                                                                          loopNum2VF);
         }
     } else {
         ComputeMaxExpDynDtypeRangeHalf(xLocalAddr, maxExpLocalAddr, loopNum2VF);
-        ComputeScaleDynamicDtypeRange(
-            maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
+        ComputeScaleDynamicDtypeRange(maxExpLocalAddr, scaleLocalAddr, recipScaleLocalAddr, loopNum1VF, totalBlockNum);
         if (roundMode_ == MODE_RINT) {
-            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(xLocalAddr, recipScaleLocalAddr,
+                                                                                 yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_ROUND) {
-            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataOptimizeHalf<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(xLocalAddr, recipScaleLocalAddr,
+                                                                                  yLocalAddr, loopNum2VF);
         } else if (roundMode_ == MODE_FLOOR) {
-            ComputeDataHalf<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                xLocalAddr, recipScaleLocalAddr, yLocalAddr, loopNum2VF);
+            ComputeDataHalf<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(xLocalAddr, recipScaleLocalAddr, yLocalAddr,
+                                                                          loopNum2VF);
         }
     }
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Compute(
-    int64_t ubFactorRowBlockNum, int64_t ubFactorColBlockNum)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Compute(int64_t ubFactorRowBlockNum,
+                                                                        int64_t ubFactorColBlockNum)
 {
     ubFactorColBlockNum = ops::CeilDiv(ubFactorColBlockNum, DIGIT_TWO) * DIGIT_TWO;
-    uint32_t totalBlockNum =
-        ubFactorRowBlockNum * ubFactorColBlockNum; // 当前Ub内总的Block数量 = 当前Ub内总的计算出Scale数量
+    uint32_t totalBlockNum = ubFactorRowBlockNum *
+                             ubFactorColBlockNum; // 当前Ub内总的Block数量 = 当前Ub内总的计算出Scale数量
 
     uint16_t loopNum2VF = ops::CeilDiv(
         static_cast<uint16_t>(totalBlockNum),
@@ -1558,13 +1558,17 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Compute(
     auto yLocalAddr = reinterpret_cast<__ubuf__ int8_t*>(yLocal.GetPhyAddr());
     auto maxExpLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(maxExpLocal.GetPhyAddr());
     auto recipScaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(recipScaleLocal.GetPhyAddr());
-    if constexpr (ops::IsSame<U, fp4x2_e1m2_t>::value || (ops::IsSame<U, fp4x2_e2m1_t>::value && SCALE_ALG == DIGIT_ZERO)) {
-        ComputeOcp(xLocalAddr, maxExpLocalAddr, scaleLocalAddr, yLocalAddr, recipScaleLocalAddr, loopNum2VF, loopNum1VF, loopNumHalfVF, totalBlockNum);
+    if constexpr (ops::IsSame<U, fp4x2_e1m2_t>::value ||
+                  (ops::IsSame<U, fp4x2_e2m1_t>::value && SCALE_ALG == DIGIT_ZERO)) {
+        ComputeOcp(xLocalAddr, maxExpLocalAddr, scaleLocalAddr, yLocalAddr, recipScaleLocalAddr, loopNum2VF, loopNum1VF,
+                   loopNumHalfVF, totalBlockNum);
     } else if constexpr (ops::IsSame<U, fp4x2_e2m1_t>::value && SCALE_ALG == DIGIT_TWO) {
         if (dstTypeMax_ == DIGIT_ZERO_FLOAT || dstTypeMax_ == DIGIT_SIX_FLOAT || dstTypeMax_ == DIGIT_SEVEN_FLOAT) {
-            ComputeCublasFp4Opti(xLocalAddr, maxExpLocalAddr, scaleLocalAddr, yLocalAddr, recipScaleLocalAddr, loopNum2VF, loopNum1VF, loopNumHalfVF, totalBlockNum);
+            ComputeCublasFp4Opti(xLocalAddr, maxExpLocalAddr, scaleLocalAddr, yLocalAddr, recipScaleLocalAddr,
+                                 loopNum2VF, loopNum1VF, loopNumHalfVF, totalBlockNum);
         } else {
-            ComputeCublasFp4(xLocalAddr, maxExpLocalAddr, scaleLocalAddr, yLocalAddr, recipScaleLocalAddr, loopNum2VF, loopNum1VF, loopNumHalfVF, totalBlockNum);
+            ComputeCublasFp4(xLocalAddr, maxExpLocalAddr, scaleLocalAddr, yLocalAddr, recipScaleLocalAddr, loopNum2VF,
+                             loopNum1VF, loopNumHalfVF, totalBlockNum);
         }
     }
 
@@ -1575,8 +1579,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::Compute(
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
-__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeFP4FromHalf(
-    Reg::RegTensor<half>& output, Reg::RegTensor<half>& input, Reg::MaskReg& mask)
+__aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeFP4FromHalf(Reg::RegTensor<half>& output,
+                                                                                   Reg::RegTensor<half>& input,
+                                                                                   Reg::MaskReg& mask)
 {
     __VEC_SCOPE__
     {
@@ -1597,8 +1602,8 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeFP4FromHa
         Reg::CompareScalar<uint16_t, CMPMODE::LT>(specialMask, andResult, FP4_NEW_MANTISSA, mask);
         Reg::MaskAnd(specialMask, specialMask, nonzeroMask, mask);
         Reg::Or(newValue, (Reg::RegTensor<uint16_t>&)input, newMantissa, mask);
-        Reg::Select<uint16_t>(
-            (Reg::RegTensor<uint16_t>&)output, newValue, (Reg::RegTensor<uint16_t>&)input, specialMask);
+        Reg::Select<uint16_t>((Reg::RegTensor<uint16_t>&)output, newValue, (Reg::RegTensor<uint16_t>&)input,
+                              specialMask);
     }
     return;
 }

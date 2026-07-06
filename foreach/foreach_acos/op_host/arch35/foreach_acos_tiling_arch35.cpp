@@ -79,11 +79,9 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
     int64_t maxCoreNum = 0;
     int64_t ubSize = 0;
     OP_CHECK_IF(GetPlatformInfoFallback(context, maxCoreNum, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Failed to get platform info"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
 
     // 2. Get tensor count from dynamic input
@@ -94,9 +92,9 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
     OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ACOS),
-        OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ACOS %d",
-                tensorNum, MAX_TENSOR_NUM_FOREACH_ACOS),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ACOS %d", tensorNum,
+                        MAX_TENSOR_NUM_FOREACH_ACOS),
+                return ge::GRAPH_FAILED);
 
     // 3. Compute totalElements and prefixSums, get dtype
     int64_t totalElements = 0;
@@ -122,14 +120,17 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
 
     // 4. Compute needCoreNum first (MDE Section 2.1):
     //    needCoreNum = min(maxCoreNum, max(1, ceil(totalElements / MIN_PER_CORE_ELEMENTS)))
-    int32_t needCoreNum = (totalElements == 0) ? 1
-        : static_cast<int32_t>(std::min<int64_t>(maxCoreNum,
-              (totalElements + MIN_PER_CORE_ELEMENTS - 1) / MIN_PER_CORE_ELEMENTS));
+    int32_t needCoreNum = (totalElements == 0) ?
+                              1 :
+                              static_cast<int32_t>(std::min<int64_t>(
+                                  maxCoreNum, (totalElements + MIN_PER_CORE_ELEMENTS - 1) / MIN_PER_CORE_ELEMENTS));
 
     // 5. Compute perCoreElements (MDE Section 2.1):
     //    perCoreElements = ceil(totalElements / needCoreNum), 32-aligned
-    int64_t perCoreElements = (totalElements == 0) ? 0
-        : ((totalElements + needCoreNum - 1) / needCoreNum + ALIGN_SIZE - 1) / ALIGN_SIZE * ALIGN_SIZE;
+    int64_t perCoreElements = (totalElements == 0) ?
+                                  0 :
+                                  ((totalElements + needCoreNum - 1) / needCoreNum + ALIGN_SIZE - 1) / ALIGN_SIZE *
+                                      ALIGN_SIZE;
 
     // 6. Fill TilingData
     tilingData->needCoreNum = needCoreNum;
@@ -143,9 +144,8 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
 
     // 8. Set local memory size
     auto res = context->SetLocalMemorySize(ubSize);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+                return ge::GRAPH_FAILED);
 
     // 9. Set workspace: not used (metadata stored in TilingData)
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
@@ -163,15 +163,11 @@ static ge::graphStatus TilingParseForForeachAcos(gert::TilingParseContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

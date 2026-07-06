@@ -32,8 +32,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910_LIST = {op::DataType::DT_FLOAT,
+                                                                           op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910B_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> DTYPE_CAST_LIST = {op::DataType::DT_BF16};
@@ -55,8 +55,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     // 检查self的数据类型是否在hardswish算子的支持列表内
     bool is910BSocVersion = CheckSocVersionGe910B();
-    const std::initializer_list<DataType> DTYPE_SUPPORT_LIST =
-        is910BSocVersion ? DTYPE_SUPPORT_910B_LIST : DTYPE_SUPPORT_910_LIST;
+    const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = is910BSocVersion ? DTYPE_SUPPORT_910B_LIST :
+                                                                                  DTYPE_SUPPORT_910_LIST;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
@@ -84,8 +84,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardswishGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnHardswishGetWorkspaceSize(const aclTensor* self, const aclTensor* out, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -142,15 +142,15 @@ aclnnStatus aclnnHardswish(void* workspace, uint64_t workspaceSize, aclOpExecuto
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceHardswishGetWorkspaceSize(
-    const aclTensor* self, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceHardswishGetWorkspaceSize(const aclTensor* self, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
 {
     auto out = const_cast<aclTensor*>(self);
     return aclnnHardswishGetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceHardswish(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnInplaceHardswish(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                  const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceHardswish);
     // 固定写法，调用框架能力，完成计算

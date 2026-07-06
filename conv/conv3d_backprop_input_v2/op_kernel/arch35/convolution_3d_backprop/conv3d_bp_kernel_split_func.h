@@ -25,20 +25,21 @@ DECLARE_CHECK_SYNC_IMPL(IterateAllForKernelSplit);
 namespace Convolution3DBackpropFunc {
 
 template <class Intf>
-static __aicore__ inline void RecalcStepForKernelSplit(Intf *self)
+static __aicore__ inline void RecalcStepForKernelSplit(Intf* self)
 {
-    self->ctx.curStepKa_ = DivCeil(static_cast<uint64_t>(self->ctx.channelSize_ *
-        self->ctx.splitHkWkList_[self->ctx.splitIndex_]),
+    self->ctx.curStepKa_ = DivCeil(
+        static_cast<uint64_t>(self->ctx.channelSize_ * self->ctx.splitHkWkList_[self->ctx.splitIndex_]),
         static_cast<uint64_t>(self->ctx.tiling_->baseK));
-    self->ctx.curStepKb_ = DivCeil(static_cast<uint64_t>(self->ctx.coutChannelSize_ *
-        self->ctx.splitHkWkList_[self->ctx.splitIndex_]), static_cast<uint64_t>(self->ctx.tiling_->baseK));
+    self->ctx.curStepKb_ = DivCeil(
+        static_cast<uint64_t>(self->ctx.coutChannelSize_ * self->ctx.splitHkWkList_[self->ctx.splitIndex_]),
+        static_cast<uint64_t>(self->ctx.tiling_->baseK));
     if (self->ctx.tiling_->stepKb % self->ctx.curStepKb_ == 0) {
-        self->ctx.curStepKb_ = self->ctx.tiling_->stepKb;   // 此时，子hk之间可以整除，因此可以增加stepkb
+        self->ctx.curStepKb_ = self->ctx.tiling_->stepKb; // 此时，子hk之间可以整除，因此可以增加stepkb
     }
 }
 
 template <class Intf>
-__aicore__ inline uint32_t CalFmapHForKernelSplitInner(Intf *self, uint32_t mL1Size, uint32_t hk)
+__aicore__ inline uint32_t CalFmapHForKernelSplitInner(Intf* self, uint32_t mL1Size, uint32_t hk)
 {
     uint32_t hiCal;
     constexpr uint32_t fMapHNum = 2; // 保证不整除时加载足够的ho
@@ -54,19 +55,19 @@ __aicore__ inline uint32_t CalFmapHForKernelSplitInner(Intf *self, uint32_t mL1S
 }
 
 template <class Intf>
-__aicore__ inline uint32_t CalFmapHForKernelSplit(Intf *self, uint32_t mL1Size)
+__aicore__ inline uint32_t CalFmapHForKernelSplit(Intf* self, uint32_t mL1Size)
 {
     return CalFmapHForKernelSplitInner(self, mL1Size, self->ctx.splitHkList_[self->ctx.splitIndex_]);
 }
 
 template <class Intf>
-__aicore__ inline uint32_t CalFmapHMaxForKernelSplit(Intf *self, uint32_t mL1Size)
+__aicore__ inline uint32_t CalFmapHMaxForKernelSplit(Intf* self, uint32_t mL1Size)
 {
     return CalFmapHForKernelSplitInner(self, mL1Size, self->ctx.splitHkList_[0]); // 0: max sub kernel
 }
 
-static __aicore__ inline int32_t CalcSubKernelBackpadBegin(int32_t kernelSize,
-    int32_t stride, int32_t backPad, int32_t idx)
+static __aicore__ inline int32_t CalcSubKernelBackpadBegin(int32_t kernelSize, int32_t stride, int32_t backPad,
+                                                           int32_t idx)
 {
     int32_t subKernelSize = (kernelSize + stride - idx - 1) >> 1;
     int32_t subKernelBackPadMax = subKernelSize - 1;
@@ -75,8 +76,8 @@ static __aicore__ inline int32_t CalcSubKernelBackpadBegin(int32_t kernelSize,
     return subKernelBackPad;
 }
 
-static __aicore__ inline int32_t CalcSubKernelBackpadEnd(int32_t kernelSize,
-    int32_t stride, int32_t backPad, int32_t idx)
+static __aicore__ inline int32_t CalcSubKernelBackpadEnd(int32_t kernelSize, int32_t stride, int32_t backPad,
+                                                         int32_t idx)
 {
     int32_t subKernelSize = (kernelSize + stride - idx - 1) >> 1;
     int32_t subKernelBackPadMax = subKernelSize - 1;
@@ -87,13 +88,13 @@ static __aicore__ inline int32_t CalcSubKernelBackpadEnd(int32_t kernelSize,
 }
 
 template <class Intf>
-static __aicore__ inline void CalcSubKernelPadListForKernelSplit(Intf *self)
+static __aicore__ inline void CalcSubKernelPadListForKernelSplit(Intf* self)
 {
     uint32_t subKernel02PadRight = 0;
     uint32_t subKernel13PadRight = 0;
     // wi奇数且需要交换子kernel顺序的场景下，右侧pad要+1
     if (((self->ctx.tiling_->backpropPadLeft == 0 || self->ctx.tiling_->backpropPadLeft == 2) &&
-        (self->ctx.tiling_->wk == 4 || self->ctx.tiling_->wk == 2)) ||
+         (self->ctx.tiling_->wk == 4 || self->ctx.tiling_->wk == 2)) ||
         (self->ctx.tiling_->backpropPadLeft == 1 && self->ctx.tiling_->wk == 3)) {
         if ((self->ctx.tiling_->wi & 0x1) == 1) {
             subKernel02PadRight = 1;
@@ -107,41 +108,42 @@ static __aicore__ inline void CalcSubKernelPadListForKernelSplit(Intf *self)
     }
 
     // 当前仅支持stride=2，简化计算公式
-    self->ctx.subPadLeftList_[0] = CalcSubKernelBackpadBegin(self->ctx.tiling_->wk,
-        self->ctx.tiling_->strideW, self->ctx.tiling_->backpropPadLeft, 0);
-    self->ctx.subPadLeftList_[1] = CalcSubKernelBackpadBegin(self->ctx.tiling_->wk,
-        self->ctx.tiling_->strideW, self->ctx.tiling_->backpropPadLeft, 1);
+    self->ctx.subPadLeftList_[0] = CalcSubKernelBackpadBegin(self->ctx.tiling_->wk, self->ctx.tiling_->strideW,
+                                                             self->ctx.tiling_->backpropPadLeft, 0);
+    self->ctx.subPadLeftList_[1] = CalcSubKernelBackpadBegin(self->ctx.tiling_->wk, self->ctx.tiling_->strideW,
+                                                             self->ctx.tiling_->backpropPadLeft, 1);
     self->ctx.subPadLeftList_[2] = self->ctx.subPadLeftList_[0];
     self->ctx.subPadLeftList_[3] = self->ctx.subPadLeftList_[1];
-    self->ctx.subPadRightList_[0] = CalcSubKernelBackpadEnd(self->ctx.tiling_->wk,
-        self->ctx.tiling_->strideW, self->ctx.tiling_->backpropPadRight, 0) + subKernel02PadRight;
-    self->ctx.subPadRightList_[1] = CalcSubKernelBackpadEnd(self->ctx.tiling_->wk,
-        self->ctx.tiling_->strideW, self->ctx.tiling_->backpropPadRight, 1) + subKernel13PadRight;
+    self->ctx.subPadRightList_[0] = CalcSubKernelBackpadEnd(self->ctx.tiling_->wk, self->ctx.tiling_->strideW,
+                                                            self->ctx.tiling_->backpropPadRight, 0) +
+                                    subKernel02PadRight;
+    self->ctx.subPadRightList_[1] = CalcSubKernelBackpadEnd(self->ctx.tiling_->wk, self->ctx.tiling_->strideW,
+                                                            self->ctx.tiling_->backpropPadRight, 1) +
+                                    subKernel13PadRight;
     self->ctx.subPadRightList_[2] = self->ctx.subPadRightList_[0];
     self->ctx.subPadRightList_[3] = self->ctx.subPadRightList_[1];
-    self->ctx.subPadUpList_[0] = CalcSubKernelBackpadBegin(self->ctx.tiling_->hk,
-        self->ctx.tiling_->strideH, self->ctx.tiling_->backpropPadUp, 0);
+    self->ctx.subPadUpList_[0] = CalcSubKernelBackpadBegin(self->ctx.tiling_->hk, self->ctx.tiling_->strideH,
+                                                           self->ctx.tiling_->backpropPadUp, 0);
     self->ctx.subPadUpList_[1] = self->ctx.subPadUpList_[0];
-    self->ctx.subPadUpList_[2] = CalcSubKernelBackpadBegin(self->ctx.tiling_->hk,
-        self->ctx.tiling_->strideH, self->ctx.tiling_->backpropPadUp, 1);
+    self->ctx.subPadUpList_[2] = CalcSubKernelBackpadBegin(self->ctx.tiling_->hk, self->ctx.tiling_->strideH,
+                                                           self->ctx.tiling_->backpropPadUp, 1);
     self->ctx.subPadUpList_[3] = self->ctx.subPadUpList_[2];
     // load3d下pad值固定为255，这里不需要再计算下pad信息
 }
 
 template <class Intf>
-static __aicore__ inline void InitParamsForKernelSplitHW(Intf *self)
+static __aicore__ inline void InitParamsForKernelSplitHW(Intf* self)
 {
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.tiling_->hk == self->ctx.tiling_->strideH),
-                    "kernelH should be EQ strideH");
-    ascendc_assert((self->ctx.tiling_->wk == self->ctx.tiling_->strideW),
-                    "kernelW should be EQ strideW");
+    ascendc_assert((self->ctx.tiling_->hk == self->ctx.tiling_->strideH), "kernelH should be EQ strideH");
+    ascendc_assert((self->ctx.tiling_->wk == self->ctx.tiling_->strideW), "kernelW should be EQ strideW");
 #endif
     self->ctx.splitWStartIndex_ = self->ctx.tiling_->padLeft % self->ctx.tiling_->strideW;
     self->ctx.splitHStartIndex_ = self->ctx.tiling_->padUp % self->ctx.tiling_->strideH;
     self->ctx.splitIndex_ = self->ctx.splitHStartIndex_ * self->ctx.tiling_->strideW + self->ctx.splitWStartIndex_;
 
-    // 0,1,2,3 sub kernel index, kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
+    // 0,1,2,3 sub kernel index,
+    // kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
     self->ctx.splitWkList_[0] = DivCeil(self->ctx.tiling_->wk, self->ctx.tiling_->strideW);
     self->ctx.splitWkList_[1] = self->ctx.tiling_->wk - self->ctx.splitWkList_[0];
     self->ctx.splitWkList_[2] = self->ctx.splitWkList_[0];
@@ -162,7 +164,8 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf *self)
     if (self->ctx.kSCoutFullLoad_) {
         self->ctx.channelSize_ = alignedCout;
     } else {
-        uint32_t curChannelSize = (self->ctx.curStepKa_ * self->ctx.tiling_->baseK) / self->ctx.splitHkWkList_[0]; // 3: min sub_kernel size
+        uint32_t curChannelSize = (self->ctx.curStepKa_ * self->ctx.tiling_->baseK) /
+                                  self->ctx.splitHkWkList_[0]; // 3: min sub_kernel size
         self->ctx.channelSize_ = curChannelSize > alignedCout ? alignedCout : curChannelSize;
     }
     self->ctx.coutChannelSize_ = self->ctx.curStepKb_ * self->ctx.tiling_->baseK / self->ctx.splitHkWkList_[0];
@@ -171,7 +174,7 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void InitParamsForKernelSplitH(Intf *self)
+static __aicore__ inline void InitParamsForKernelSplitH(Intf* self)
 {
     self->ctx.splitIndex_ = 0;
     self->ctx.splitWi_ = self->ctx.tiling_->wi;
@@ -188,26 +191,26 @@ static __aicore__ inline void InitParamsForKernelSplitH(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateHoSizeForKernelSplit(Intf *self)
+static __aicore__ inline void UpdateHoSizeForKernelSplit(Intf* self)
 {
     // hoidx和 baseUseM或子kernel发生变化，需要重新计算 curHoSize
     uint32_t hiCal = DivCeil(self->ctx.baseUseM_ + self->ctx.load3d_.mStartPt, self->ctx.splitWi_);
-    uint32_t endHoIdx = self->ctx.curHoIdx_ + (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) *
-        self->ctx.tiling_->dilationH);
+    uint32_t endHoIdx = self->ctx.curHoIdx_ +
+                        (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->dilationH);
     UpdateCurHoSizeCore<Intf>(self, endHoIdx);
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateHoIdxForKernelSplit(Intf *self)
+static __aicore__ inline void UpdateHoIdxForKernelSplit(Intf* self)
 {
-    if (self->ctx.tiling_->backpropPadUp == 2) {    // 2 : 反向pad=2，需要更新hoidx
+    if (self->ctx.tiling_->backpropPadUp == 2) { // 2 : 反向pad=2，需要更新hoidx
         if (self->ctx.rearrangeHIndex_ > 0 && self->ctx.rearrangeWIndex_ == 0) {
             ++self->ctx.curHoIdx_;
             UpdateHoSizeForKernelSplit<Intf>(self);
         }
     }
 
-    if (self->ctx.tiling_->hk == 2 || self->ctx.tiling_->hk == 4) {   // 2 4 : hk等于2或者4时子kernel大小一致
+    if (self->ctx.tiling_->hk == 2 || self->ctx.tiling_->hk == 4) { // 2 4 : hk等于2或者4时子kernel大小一致
         return;
     }
 
@@ -215,14 +218,14 @@ static __aicore__ inline void UpdateHoIdxForKernelSplit(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf *self)
+static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf* self)
 {
     if (self->ctx.rearrangeHIndex_ == 0 || self->ctx.rearrangeWIndex_ > 0) {
         return; // 仅需在rearrangeHIndex_=1, rearrangeWIndex_=0时进入
     }
 
     uint64_t subKernelM = static_cast<uint64_t>(self->ctx.tiling_->hi) / self->ctx.tiling_->strideH *
-    self->ctx.splitWi_;
+                          self->ctx.splitWi_;
     // hi不对齐strideH时，会出现两个子kenrel计算得Msize不一样大得场景，需要重新计算baseUseN, 避免多搬
     uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     if (curMIdx > subKernelM) {
@@ -235,7 +238,7 @@ static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline bool IterateForKernelSplit(Intf *self)
+static __aicore__ inline bool IterateForKernelSplit(Intf* self)
 {
     uint32_t splitWNext = self->ctx.splitWIndex_ + 1;
     self->ctx.splitWIndex_ = splitWNext >= self->ctx.tiling_->strideW ? 0 : splitWNext;
@@ -256,9 +259,9 @@ static __aicore__ inline bool IterateForKernelSplit(Intf *self)
     UpdateHoIdxForKernelSplit<Intf>(self);
     RecalcStepForKernelSplit<Intf>(self);
 
-    uint32_t tmpSingleCoreK = self->ctx.tiling_->group == 1
-        ? self->ctx.tiling_->cout1 * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_]
-        : self->ctx.tiling_->cout1G * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
+    uint32_t tmpSingleCoreK = self->ctx.tiling_->group == 1 ?
+                                  self->ctx.tiling_->cout1 * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_] :
+                                  self->ctx.tiling_->cout1G * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
     self->ctx.kIter_ = DivCeil(tmpSingleCoreK, self->ctx.tiling_->baseK);
     self->ctx.tailK_ = tmpSingleCoreK - (self->ctx.kIter_ - 1) * self->ctx.tiling_->baseK;
     self->ctx.kIterStepKaTail = (DivCeil(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
@@ -276,7 +279,7 @@ static __aicore__ inline bool IterateForKernelSplit(Intf *self)
 template <class Intf>
 struct SetKernelSplitParams {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, uint32_t kSCoutFullLoad, uint32_t kSUseWorkSpace)
+    static __aicore__ inline void call(Intf* self, uint32_t kSCoutFullLoad, uint32_t kSUseWorkSpace)
     {
         self->ctx.kSCoutFullLoad_ = kSCoutFullLoad;
         self->ctx.kSUseWorkSpace_ = kSUseWorkSpace;
@@ -286,14 +289,14 @@ struct SetKernelSplitParams {
 template <class Intf>
 struct SetSingleShapeParams {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, uint32_t curSplitHk, int32_t curBackpropPadUp)
+    static __aicore__ inline void call(Intf* self, uint32_t curSplitHk, int32_t curBackpropPadUp)
     {
         self->ctx.curBackPropPadUp_ = curBackpropPadUp;
         self->ctx.splitHkList_[self->ctx.splitIndex_] = curSplitHk;
         self->ctx.splitHkWkList_[self->ctx.splitIndex_] = self->ctx.splitHkList_[self->ctx.splitIndex_] *
-            self->ctx.splitWkList_[self->ctx.splitIndex_];
+                                                          self->ctx.splitWkList_[self->ctx.splitIndex_];
         self->ctx.splitHkWkC0List_[self->ctx.splitIndex_] = self->ctx.splitHkWkList_[self->ctx.splitIndex_] *
-            self->ctx.tiling_->c0;
+                                                            self->ctx.tiling_->c0;
         RecalcStepForKernelSplit<Intf>(self);
 
         self->ctx.load3d_.filterW = self->ctx.splitWkList_[self->ctx.splitIndex_];
@@ -306,7 +309,7 @@ struct SetSingleShapeParams {
 template <class Intf>
 struct FreeB1Tensor {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         // 整轮计算都未加载B1Tensor就不需要重复释放
         if (self->ctx.isLoadB1_ && !self->ctx.isFreeB1_) {
@@ -320,8 +323,8 @@ struct FreeB1Tensor {
             }
         } else if (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
             // c04场景和group>1（包括enlarge>1）场景不支持calRound间不释放B矩阵
-            if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 &&
-            !Intf::conv3dConfig.enableC04Flag && self->ctx.tiling_->enableFullLoad && self->ctx.tiling_->group == 1) {
+            if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 && !Intf::conv3dConfig.enableC04Flag &&
+                self->ctx.tiling_->enableFullLoad && self->ctx.tiling_->group == 1) {
                 self->ctx.isLoadB1_ = true;
                 self->ctx.isFreeB1_ = false;
                 self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
@@ -330,9 +333,8 @@ struct FreeB1Tensor {
     }
 };
 
-
 template <class Intf>
-__aicore__ inline void CrossCoreCSeitVForKS(Intf *self)
+__aicore__ inline void CrossCoreCSeitVForKS(Intf* self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
@@ -346,7 +348,7 @@ __aicore__ inline void CrossCoreCSeitVForKS(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void CrossCoreCWaitVForKS(Intf *self)
+__aicore__ inline void CrossCoreCWaitVForKS(Intf* self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
@@ -356,7 +358,7 @@ __aicore__ inline void CrossCoreCWaitVForKS(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void CrossCoreVSeitCForKS(Intf *self)
+__aicore__ inline void CrossCoreVSeitCForKS(Intf* self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
@@ -366,7 +368,7 @@ __aicore__ inline void CrossCoreVSeitCForKS(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void CrossCoreVWaitCForKS(Intf *self)
+__aicore__ inline void CrossCoreVWaitCForKS(Intf* self)
 {
 #ifndef __CCE_KT_TEST__
     if (self->ctx.needComputeFlag_) {
@@ -380,11 +382,10 @@ __aicore__ inline void CrossCoreVWaitCForKS(Intf *self)
 #endif
 }
 
-
 template <class Intf, bool sync>
 struct IterateAllForKernelSplit {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic)
     {
         const bool isKernel1x1 = (self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1);
         const uint32_t lastRearrangeW = self->ctx.tiling_->strideW - 1;
@@ -393,7 +394,7 @@ struct IterateAllForKernelSplit {
             if (unlikely(isKernel1x1 && self->ctx.rearrangeHIndex_ != 0)) {
                 continue;
             }
-            if ASCEND_IS_AIC_SCALAR {    
+            if ASCEND_IS_AIC_SCALAR {
                 if (self->ctx.rearrangeWIndex_ == 0) {
                     CrossCoreCWaitVForKS<Intf>(self);
                 }
@@ -419,5 +420,5 @@ struct IterateAllForKernelSplit {
         }
     }
 };
-}  // namespace Convolution3DBackpropFunc
+} // namespace Convolution3DBackpropFunc
 #endif

@@ -27,13 +27,13 @@ struct ThnnFusedLstmCellTilingInfo {
     uint64_t B;
     uint64_t H;
     uint64_t BH;
-    uint64_t col;  // 任务块的列数
+    uint64_t col;        // 任务块的列数
     uint64_t taskTotal;  // 总任务块数
-    uint64_t taskSingle;  // 单个核心需要处理的任务块数
+    uint64_t taskSingle; // 单个核心需要处理的任务块数
     uint64_t ubByteSize;
     size_t sysWorkspaceByteSize;
-    uint32_t taskSize;  // 按照fp32算，单个任务块能容纳（处理）的元素数量
-    uint32_t tailSize;  // 单个门行尾任务块的元素数量
+    uint32_t taskSize; // 按照fp32算，单个任务块能容纳（处理）的元素数量
+    uint32_t tailSize; // 单个门行尾任务块的元素数量
     uint32_t aivNum;
 } info;
 ThnnFusedLstmCellTilingData tiling;
@@ -43,7 +43,6 @@ const size_t INDEX_2 = 2;
 const uint32_t SIZE_UNIT_BYTE = 256;
 const uint32_t FP32CNT_UNIT = SIZE_UNIT_BYTE / sizeof(float);
 const uint32_t UB_RSV_SIZE = 8 * 1024;
-
 
 ge::graphStatus GetInfo(gert::TilingContext* context)
 {
@@ -64,7 +63,8 @@ void FillTilingInfo()
     info.B = static_cast<uint64_t>(info.cxShape[0]);
     info.H = static_cast<uint64_t>(info.cxShape[1]);
     info.BH = info.B * info.H;
-    info.taskSize = (static_cast<uint32_t>(info.ubByteSize) / BUFFER_NUM - UB_RSV_SIZE) / bufCnt / SIZE_UNIT_BYTE * FP32CNT_UNIT;
+    info.taskSize = (static_cast<uint32_t>(info.ubByteSize) / BUFFER_NUM - UB_RSV_SIZE) / bufCnt / SIZE_UNIT_BYTE *
+                    FP32CNT_UNIT;
     info.col = (info.H + static_cast<uint64_t>(info.taskSize) - 1ULL) / static_cast<uint64_t>(info.taskSize);
     info.tailSize = static_cast<uint32_t>(info.H) % info.taskSize;
     info.tailSize = (info.tailSize != 0U) ? info.tailSize : info.taskSize;
@@ -116,25 +116,21 @@ ge::graphStatus ThnnFusedLstmCellTilingFunc(gert::TilingContext* context)
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     // 设置workspace大小。未使用用户workspace
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = info.sysWorkspaceByteSize;
-    OP_LOGD(
-        context->GetNodeName(),
-        "currentWorkspaceSize = %lld.",
-        currentWorkspace[0]
-    );
+    OP_LOGD(context->GetNodeName(), "currentWorkspaceSize = %lld.", currentWorkspace[0]);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ThnnFusedLstmCellTilingPrepare([[maybe_unused]] gert::TilingParseContext *context)
+ge::graphStatus ThnnFusedLstmCellTilingPrepare([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace
+} // namespace
 
 IMPL_OP_OPTILING(ThnnFusedLstmCell)
     .Tiling(ThnnFusedLstmCellTilingFunc)
     .TilingParse<ThnnFusedLstmCellCompileInfo>(ThnnFusedLstmCellTilingPrepare);
 
-}  // namespace optiling
+} // namespace optiling

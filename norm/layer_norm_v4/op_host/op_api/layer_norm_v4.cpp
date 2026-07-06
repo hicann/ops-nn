@@ -21,8 +21,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LayerNormV4);
 
-const std::array<aclTensor*, LAYER_NORM_V4_OUT_NUM> LayerNormV4(
-    const LayerNormV4Params& params, double eps, aclOpExecutor* executor)
+const std::array<aclTensor*, LAYER_NORM_V4_OUT_NUM> LayerNormV4(const LayerNormV4Params& params, double eps,
+                                                                aclOpExecutor* executor)
 {
     L0_DFX(LayerNormV4, params.input, params.normalizedShape, params.weight, params.bias, eps);
 
@@ -39,9 +39,8 @@ const std::array<aclTensor*, LAYER_NORM_V4_OUT_NUM> LayerNormV4(
     auto meanOut = executor->AllocTensor(meanOutShape, DataType::DT_FLOAT, Format::FORMAT_ND);
     auto rstdOut = executor->AllocTensor(meanOutShape, DataType::DT_FLOAT, Format::FORMAT_ND);
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormV4, OP_INPUT(params.input, normTensor, params.weight, params.bias),
-        OP_OUTPUT(output, meanOut, rstdOut), OP_ATTR(static_cast<float>(eps)));
+    ADD_TO_LAUNCHER_LIST_AICORE(LayerNormV4, OP_INPUT(params.input, normTensor, params.weight, params.bias),
+                                OP_OUTPUT(output, meanOut, rstdOut), OP_ATTR(static_cast<float>(eps)));
 
     return {output, meanOut, rstdOut};
 }

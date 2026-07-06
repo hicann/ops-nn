@@ -28,14 +28,11 @@ class RmsNormQuantV2RegbaseRecompute {
     using yCopyDtype = std::conditional_t<IsSameType<T_Y, int4b_t>::value, uint8_t, T_Y>;
 
 public:
-    __aicore__ inline RmsNormQuantV2RegbaseRecompute(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline RmsNormQuantV2RegbaseRecompute(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1, GM_ADDR zeroPoints2,
-        GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, const RmsNormQuantV2RegbaseRecomputeTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
+                                GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
+                                const RmsNormQuantV2RegbaseRecomputeTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -124,8 +121,8 @@ public:
         }
         // tmp buffer allocate
         pipe_->InitBuffer(
-            cacheBuf_,
-            Aligned(static_cast<int64_t>((resultCacheID_ + NUM_ONE) * sizeof(float)) * AR_RECOMPUTE_SUM_LEN, BLOCK_SIZE));
+            cacheBuf_, Aligned(static_cast<int64_t>((resultCacheID_ + NUM_ONE) * sizeof(float)) * AR_RECOMPUTE_SUM_LEN,
+                               BLOCK_SIZE));
         pipe_->InitBuffer(binaryAddBuf_, Aligned(static_cast<int64_t>(VL_FP32 * NUM_TWO * sizeof(float)), BLOCK_SIZE));
         pipe_->InitBuffer(xFp32TmpBuf_, baseN_ * sizeof(float));
     }
@@ -147,8 +144,7 @@ public:
                 ComputeOneLineXSquareSum(rstdLocal, xGmOffset, j);
             }
             // 计算 rstd
-            NormCommon::ComputeRstdNewtonRaphson<true, true>(
-                rstdLocal, rstdLocal, curM, epsilon_, avgFactor_, VL_FP32);
+            NormCommon::ComputeRstdNewtonRaphson<true, true>(rstdLocal, rstdLocal, curM, epsilon_, avgFactor_, VL_FP32);
             if (rstdFlag_ != 0) {
                 outQueueRstd_.EnQue<float>(rstdLocal);
                 rstdLocal = outQueueRstd_.DeQue<float>();
@@ -214,69 +210,69 @@ public:
                     xLocal = inQueueX_.DeQue<T_X>();
 
                     if (option_mask_ == 0b0000) {
-                        ComputeY<false, false, false, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, false, false, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                             zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                             curN, k);
                     } else if (option_mask_ == 0b1000) {
-                        ComputeY<false, false, false, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, false, false, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                            zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                            curN, k);
                     } else if (option_mask_ == 0b0100) {
-                        ComputeY<false, false, true, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, false, true, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                            zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                            curN, k);
                     } else if (option_mask_ == 0b1100) {
-                        ComputeY<false, false, true, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, false, true, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                           zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                           curN, k);
                     } else if (option_mask_ == 0b0010) {
-                        ComputeY<false, true, false, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, true, false, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                            zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                            curN, k);
                     } else if (option_mask_ == 0b1010) {
-                        ComputeY<false, true, false, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, true, false, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                           zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                           curN, k);
                     } else if (option_mask_ == 0b0110) {
-                        ComputeY<false, true, true, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, true, true, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                           zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                           curN, k);
                     } else if (option_mask_ == 0b1110) {
-                        ComputeY<false, true, true, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<false, true, true, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                          zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                          curN, k);
                     } else if (option_mask_ == 0b0001) {
-                        ComputeY<true, false, false, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, false, false, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                            zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                            curN, k);
                     } else if (option_mask_ == 0b1001) {
-                        ComputeY<true, false, false, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, false, false, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                           zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                           curN, k);
                     } else if (option_mask_ == 0b0101) {
-                        ComputeY<true, false, true, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, false, true, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                           zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                           curN, k);
                     } else if (option_mask_ == 0b1101) {
-                        ComputeY<true, false, true, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, false, true, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                          zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                          curN, k);
                     } else if (option_mask_ == 0b0011) {
-                        ComputeY<true, true, false, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, true, false, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                           zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                           curN, k);
                     } else if (option_mask_ == 0b1011) {
-                        ComputeY<true, true, false, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, true, false, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                          zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                          curN, k);
                     } else if (option_mask_ == 0b0111) {
-                        ComputeY<true, true, true, false>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, true, true, false>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                          zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset,
+                                                          curN, k);
                     } else if (option_mask_ == 0b1111) {
-                        ComputeY<true, true, true, true>(
-                            xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local,
-                            zeroPoints2Local, betaLocal, xGmOffset, curN, k);
+                        ComputeY<true, true, true, true>(xLocal, rstdLocal, gammaLocal, scales1Local, scales2Local,
+                                                         zeroPoints1Local, zeroPoints2Local, betaLocal, xGmOffset, curN,
+                                                         k);
                     }
                     inQueueX_.FreeTensor(xLocal);
                     // 输出
@@ -316,9 +312,8 @@ public:
             }
             // CopyOut rstd
             if (rstdFlag_ != 0) {
-                DataCopyExtParams copyParams{
-                    static_cast<uint16_t>(1), static_cast<uint32_t>(curM * sizeof(float)), static_cast<uint32_t>(0),
-                    static_cast<uint32_t>(0), 0};
+                DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(curM * sizeof(float)),
+                                             static_cast<uint32_t>(0), static_cast<uint32_t>(0), 0};
                 DataCopyPad(rstdGm_[i * baseM_], rstdLocal, copyParams);
                 outQueueRstd_.FreeTensor(rstdLocal);
             }
@@ -383,8 +378,8 @@ public:
 
         // 输出转连续  ub 到 ub 搬运
         __local_mem__ float* dstPtr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* cachePtr =
-            (__local_mem__ float*)cacheLocal.GetPhyAddr() + resultCacheID_ * AR_RECOMPUTE_SUM_LEN;
+        __local_mem__ float* cachePtr = (__local_mem__ float*)cacheLocal.GetPhyAddr() +
+                                        resultCacheID_ * AR_RECOMPUTE_SUM_LEN;
         __VEC_SCOPE__
         {
             RegTensor<float> a;
@@ -394,9 +389,8 @@ public:
         }
     }
 
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheId,
-        const int64_t stride)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheId, const int64_t stride)
     {
         uint16_t innerLoopTimes = cacheId;
         uint32_t innerLoopStride = stride;
@@ -419,11 +413,11 @@ public:
     }
 
     template <bool HAS_SCALES2, bool HAS_ZEROPOINTS1, bool HAS_ZEROPOINTS2, bool HAS_BETA>
-    __aicore__ inline void ComputeY(
-        LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal,
-        LocalTensor<T_SCALES>& scales1Local, LocalTensor<T_SCALES>& scales2Local,
-        LocalTensor<T_ZEROPOINTS>& zeroPoints1Local, LocalTensor<T_ZEROPOINTS>& zeroPoints2Local,
-        LocalTensor<T_X>& betaLocal, int64_t gmOffset, uint32_t curN, uint32_t mIdx)
+    __aicore__ inline void ComputeY(LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
+                                    LocalTensor<T_X>& gammaLocal, LocalTensor<T_SCALES>& scales1Local,
+                                    LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
+                                    LocalTensor<T_ZEROPOINTS>& zeroPoints2Local, LocalTensor<T_X>& betaLocal,
+                                    int64_t gmOffset, uint32_t curN, uint32_t mIdx)
     {
         LocalTensor<yCopyDtype> y1Local = outQueueY1_.AllocTensor<yCopyDtype>();
         LocalTensor<yCopyDtype> y2Local;
@@ -459,11 +453,12 @@ public:
     }
 
     template <bool HAS_SCALES2, bool HAS_ZEROPOINTS1, bool HAS_ZEROPOINTS2, bool HAS_BETA, bool DIV_MODE, bool NEED_BRC>
-    __aicore__ inline void ComputeY_VF(
-        LocalTensor<yCopyDtype>& y1Local, LocalTensor<yCopyDtype>& y2Local, LocalTensor<T_X>& xLocal,
-        LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal, LocalTensor<T_SCALES>& scales1Local,
-        LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
-        LocalTensor<T_ZEROPOINTS>& zeroPoints2Local, LocalTensor<T_X>& betaLocal, uint32_t rstdOffset, uint32_t count)
+    __aicore__ inline void ComputeY_VF(LocalTensor<yCopyDtype>& y1Local, LocalTensor<yCopyDtype>& y2Local,
+                                       LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
+                                       LocalTensor<T_X>& gammaLocal, LocalTensor<T_SCALES>& scales1Local,
+                                       LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
+                                       LocalTensor<T_ZEROPOINTS>& zeroPoints2Local, LocalTensor<T_X>& betaLocal,
+                                       uint32_t rstdOffset, uint32_t count)
     {
         SetOverflowMode<T_Y>(0);
         uint32_t sreg = (uint32_t)count;
@@ -613,8 +608,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyOutY(
-        TQue<QuePosition::VECOUT, 1>& outQueue, GlobalTensor<yCopyDtype>& tGm, int64_t offset, uint32_t len)
+    __aicore__ inline void CopyOutY(TQue<QuePosition::VECOUT, 1>& outQueue, GlobalTensor<yCopyDtype>& tGm,
+                                    int64_t offset, uint32_t len)
     {
         uint32_t copySize = len * sizeof(yCopyDtype);
         if constexpr (IsSameType<T_Y, int4b_t>::value) {
@@ -634,8 +629,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyInRPattern(
-        TQue<QuePosition::VECIN, 1>& inQueue, GlobalTensor<T>& tGm, int64_t offset, uint32_t len)
+    __aicore__ inline void CopyInRPattern(TQue<QuePosition::VECIN, 1>& inQueue, GlobalTensor<T>& tGm, int64_t offset,
+                                          uint32_t len)
     {
         LocalTensor<T> localValue = inQueue.AllocTensor<T>();
         DataCopyExtParams copyParams{
@@ -664,9 +659,8 @@ private:
         }
     }
 
-    __aicore__ inline void FoldBlockVF(
-        LocalTensor<T_X>& xLocal, LocalTensor<T_X>& xFoldLocal, LocalTensor<float> xFp32Tmp, uint32_t tailCount,
-        uint32_t count)
+    __aicore__ inline void FoldBlockVF(LocalTensor<T_X>& xLocal, LocalTensor<T_X>& xFoldLocal,
+                                       LocalTensor<float> xFp32Tmp, uint32_t tailCount, uint32_t count)
     {
         __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
         __local_mem__ float* xFp32TmpBuf = (__local_mem__ float*)xFp32Tmp.GetPhyAddr();
@@ -700,12 +694,11 @@ private:
         }
     }
 
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheId,
-        const int64_t stride, const int64_t count)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheId, const int64_t stride, const int64_t count)
     {
-        uint16_t outerLoopTimes =
-            ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+        uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
+                                               static_cast<int64_t>(GetVRegSize()));
         uint16_t innerLoopTimes = cacheId;
         uint32_t outerLoopStride = VL_FP32;
         uint32_t innerLoopStride = stride;
@@ -723,8 +716,8 @@ private:
                 pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
                 AscendC::MicroAPI::DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    AscendC::MicroAPI::DataCopy(
-                        bReg, (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                    AscendC::MicroAPI::DataCopy(bReg,
+                                                (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                     AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
                 AscendC::MicroAPI::DataCopy((__local_mem__ float*)cache + i * outerLoopStride, aReg, pMask);

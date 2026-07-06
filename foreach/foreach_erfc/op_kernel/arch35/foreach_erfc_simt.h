@@ -35,10 +35,7 @@ template <typename IDX_T>
 static constexpr uint32_t THREAD_NUM_VF = (sizeof(IDX_T) == 4) ? 1024 : 512;
 
 struct ErfcCompute {
-    __simt_callee__ static inline float Calc(float val)
-    {
-        return erfcf(val);
-    }
+    __simt_callee__ static inline float Calc(float val) { return erfcf(val); }
 
     __simt_callee__ static inline half Calc(half val)
     {
@@ -63,19 +60,11 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachErfcSimtKernel(
-    IDX_T totalElements,
-    int32_t tensorCount,
-    __gm__ const int64_t* cumOffsets,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachErfcSimtKernel(
+    IDX_T totalElements, int32_t tensorCount, __gm__ const int64_t* cumOffsets, GM_ADDR xList, GM_ADDR yList)
 {
-    for (IDX_T flatIdx = static_cast<IDX_T>(
-            blockIdx.x * blockDim.x + threadIdx.x);
-         flatIdx < totalElements;
-         flatIdx += static_cast<IDX_T>(
-            blockDim.x * gridDim.x)) {
+    for (IDX_T flatIdx = static_cast<IDX_T>(blockIdx.x * blockDim.x + threadIdx.x); flatIdx < totalElements;
+         flatIdx += static_cast<IDX_T>(blockDim.x * gridDim.x)) {
         int32_t tensorId = tensorCount - 1;
         IDX_T prevCumSum = 0;
         for (int32_t t = 0; t < tensorCount; t++) {
@@ -98,8 +87,7 @@ inline void OpForeachErfcSimtKernel(
 template <typename T>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    __gm__ const ForeachErfcTilingData* tilingGM =
-        reinterpret_cast<__gm__ const ForeachErfcTilingData*>(tiling);
+    __gm__ const ForeachErfcTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachErfcTilingData*>(tiling);
 
     int64_t totalElements = tilingGM->totalElements;
     int32_t tensorCount = tilingGM->tensorCount;
@@ -111,16 +99,12 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR 
 
     if (totalElements <= static_cast<int64_t>(INT32_MAX)) {
         using IDX_T = int32_t;
-        asc_vf_call<OpForeachErfcSimtKernel<T, IDX_T>>(
-            dim3(THREAD_NUM_VF<IDX_T>),
-            static_cast<IDX_T>(totalElements), tensorCount,
-            cumOffsets, x, y);
+        asc_vf_call<OpForeachErfcSimtKernel<T, IDX_T>>(dim3(THREAD_NUM_VF<IDX_T>), static_cast<IDX_T>(totalElements),
+                                                       tensorCount, cumOffsets, x, y);
     } else {
         using IDX_T = int64_t;
-        asc_vf_call<OpForeachErfcSimtKernel<T, IDX_T>>(
-            dim3(THREAD_NUM_VF<IDX_T>),
-            totalElements, tensorCount,
-            cumOffsets, x, y);
+        asc_vf_call<OpForeachErfcSimtKernel<T, IDX_T>>(dim3(THREAD_NUM_VF<IDX_T>), totalElements, tensorCount,
+                                                       cumOffsets, x, y);
     }
 }
 

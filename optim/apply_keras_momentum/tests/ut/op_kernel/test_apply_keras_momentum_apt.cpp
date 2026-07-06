@@ -23,11 +23,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void apply_keras_momentum(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
-    GM_ADDR grad, GM_ADDR momentum,
-    GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void apply_keras_momentum(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
+                                                           GM_ADDR momentum, GM_ADDR var_out, GM_ADDR workspace,
+                                                           GM_ADDR tiling);
 
 class ApplyKerasMomentumKernelTest : public testing::Test {
 protected:
@@ -43,21 +41,21 @@ TEST_F(ApplyKerasMomentumKernelTest, test_fp32_basic)
     size_t tilingSize = sizeof(ApplyKerasMomentumTilingData);
     uint32_t blockDim = 1;
 
-    uint8_t* var           = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(var, nullptr) << "GmAlloc var failed";
-    uint8_t* accum         = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* accum = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(accum, nullptr) << "GmAlloc accum failed";
-    uint8_t* lr            = (uint8_t*)AscendC::GmAlloc(scalarSize);
+    uint8_t* lr = (uint8_t*)AscendC::GmAlloc(scalarSize);
     ASSERT_NE(lr, nullptr) << "GmAlloc lr failed";
-    uint8_t* grad          = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(grad, nullptr) << "GmAlloc grad failed";
-    uint8_t* momentum      = (uint8_t*)AscendC::GmAlloc(scalarSize);
+    uint8_t* momentum = (uint8_t*)AscendC::GmAlloc(scalarSize);
     ASSERT_NE(momentum, nullptr) << "GmAlloc momentum failed";
-    uint8_t* var_out       = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* var_out = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(var_out, nullptr) << "GmAlloc var_out failed";
-    uint8_t* workspace     = (uint8_t*)AscendC::GmAlloc(1024 * 1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024);
     ASSERT_NE(workspace, nullptr) << "GmAlloc workspace failed";
-    uint8_t* tiling        = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     ASSERT_NE(tiling, nullptr) << "GmAlloc tiling failed";
 
     auto* varF = reinterpret_cast<float*>(var);
@@ -87,9 +85,7 @@ TEST_F(ApplyKerasMomentumKernelTest, test_fp32_basic)
     tilingData->useNesterov = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(apply_keras_momentum, blockDim,
-                var, accum, lr, grad, momentum,
-                var_out, workspace, tiling);
+    ICPU_RUN_KF(apply_keras_momentum, blockDim, var, accum, lr, grad, momentum, var_out, workspace, tiling);
 
     // accum_new = 0.9 * 0.5 - 0.01 * 0.1 = 0.449
     // var_out = 1.0 + 0.449 = 1.449
@@ -117,21 +113,21 @@ TEST_F(ApplyKerasMomentumKernelTest, test_fp32_nesterov)
     size_t tilingSize = sizeof(ApplyKerasMomentumTilingData);
     uint32_t blockDim = 1;
 
-    uint8_t* var           = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(var, nullptr) << "GmAlloc var failed";
-    uint8_t* accum         = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* accum = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(accum, nullptr) << "GmAlloc accum failed";
-    uint8_t* lr            = (uint8_t*)AscendC::GmAlloc(scalarSize);
+    uint8_t* lr = (uint8_t*)AscendC::GmAlloc(scalarSize);
     ASSERT_NE(lr, nullptr) << "GmAlloc lr failed";
-    uint8_t* grad          = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(grad, nullptr) << "GmAlloc grad failed";
-    uint8_t* momentum      = (uint8_t*)AscendC::GmAlloc(scalarSize);
+    uint8_t* momentum = (uint8_t*)AscendC::GmAlloc(scalarSize);
     ASSERT_NE(momentum, nullptr) << "GmAlloc momentum failed";
-    uint8_t* var_out       = (uint8_t*)AscendC::GmAlloc(dataSize);
+    uint8_t* var_out = (uint8_t*)AscendC::GmAlloc(dataSize);
     ASSERT_NE(var_out, nullptr) << "GmAlloc var_out failed";
-    uint8_t* workspace     = (uint8_t*)AscendC::GmAlloc(1024 * 1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024);
     ASSERT_NE(workspace, nullptr) << "GmAlloc workspace failed";
-    uint8_t* tiling        = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     ASSERT_NE(tiling, nullptr) << "GmAlloc tiling failed";
 
     auto* varF = reinterpret_cast<float*>(var);
@@ -161,9 +157,7 @@ TEST_F(ApplyKerasMomentumKernelTest, test_fp32_nesterov)
     tilingData->useNesterov = 1;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(apply_keras_momentum, blockDim,
-                var, accum, lr, grad, momentum,
-                var_out, workspace, tiling);
+    ICPU_RUN_KF(apply_keras_momentum, blockDim, var, accum, lr, grad, momentum, var_out, workspace, tiling);
 
     // accum_new = 0.9 * 0.5 - 0.01 * 0.1 = 0.449
     // var_out = 1.0 + 0.9 * 0.449 - 0.01 * 0.1 = 1.4031

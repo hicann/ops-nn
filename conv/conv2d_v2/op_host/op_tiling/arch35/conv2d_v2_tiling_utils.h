@@ -23,13 +23,13 @@ namespace optiling {
 namespace conv_ops_tiling {
 using conv_tiling::DTYPE_TO_STR;
 
-#define OPS_CHECK_NOT_NULL_WITH_CONTEXT(context, ptr)                                         \
-  if ((ptr) != nullptr) {                                                                        \
-    const char* name = ((context)->GetNodeName() == nullptr) ? "nil" : (context)->GetNodeName(); \
-    OP_LOGE_WITHOUT_REPORT(name, "%s not support now, must be nullptr!", #ptr);                  \
-    REPORT_INNER_ERR_MSG("EZ9999", "op[%s], %s not support now, must be nullptr!", name, #ptr);  \
-    return ge::GRAPH_FAILED;                                                                     \
-  }
+#define OPS_CHECK_NOT_NULL_WITH_CONTEXT(context, ptr)                                                \
+    if ((ptr) != nullptr) {                                                                          \
+        const char* name = ((context)->GetNodeName() == nullptr) ? "nil" : (context)->GetNodeName(); \
+        OP_LOGE_WITHOUT_REPORT(name, "%s not support now, must be nullptr!", #ptr);                  \
+        REPORT_INNER_ERR_MSG("EZ9999", "op[%s], %s not support now, must be nullptr!", name, #ptr);  \
+        return ge::GRAPH_FAILED;                                                                     \
+    }
 
 constexpr uint32_t FORMAT_NCHW_N_INDEX = 0;
 constexpr uint32_t FORMAT_NCHW_C_INDEX = 1;
@@ -119,31 +119,14 @@ struct Conv2dOriginFormatAixsPosInfo {
 };
 
 // the function used by new MDC chip supporting fix-point operation
-inline bool IsMdcSoc(const NpuArch shortSoc)
-{
-    return shortSoc == NpuArch::DAV_5102;
-}
+inline bool IsMdcSoc(const NpuArch shortSoc) { return shortSoc == NpuArch::DAV_5102; }
 
 // the function used by judgeing operation type
-inline bool isQuantConv2D(const string& nodeType)
-{
-    return nodeType == "QuantConv2D";
-}
+inline bool isQuantConv2D(const string& nodeType) { return nodeType == "QuantConv2D"; }
 
-inline bool isExtendConv2D(const string& nodeType)
-{
-    return nodeType == "ExtendConv2D";
-}
+inline bool isExtendConv2D(const string& nodeType) { return nodeType == "ExtendConv2D"; }
 
-const vector<int64_t> EXTENDCONV2D_SUPPORTED_ATTR_DTYPE = {
-    -1,
-    0,
-    1,
-    2,
-    27,
-    34,
-    36
-};
-}
-}
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_CONV2D_V2_TILING_UTILS_H
+const vector<int64_t> EXTENDCONV2D_SUPPORTED_ATTR_DTYPE = {-1, 0, 1, 2, 27, 34, 36};
+} // namespace conv_ops_tiling
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_CONV2D_V2_TILING_UTILS_H

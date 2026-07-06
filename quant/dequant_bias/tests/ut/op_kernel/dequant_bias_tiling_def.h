@@ -31,34 +31,32 @@
 #define DTYPE_WEIGHT_SCALE int
 #endif
 
-
 struct DequantBiasTilingData {
-  int64_t M = 20;
-  int64_t N = 256;
-  int64_t nAlign = 256;
-  int64_t asExist = 1;
-  int64_t needCoreNum = 20;
-  int64_t perCoreRow = 1;
-  int64_t tailCoreRow = 1;
-  int64_t inBufferSize = 2048;
-  int64_t wsBufferSize = 1024;
-  int64_t asBufferSize = 32;
-  int64_t biasBufferSize = 1024;
-  int64_t perCoreLoopRow = 1;
-  int64_t perCoreTailLoopRow = 1;
-  int64_t perCoreLoops = 1;
-  int64_t tailCoreLoopRow = 1;
-  int64_t tailCoreTailLoopRow = 1;
-  int64_t tailCoreLoops = 1;
+    int64_t M = 20;
+    int64_t N = 256;
+    int64_t nAlign = 256;
+    int64_t asExist = 1;
+    int64_t needCoreNum = 20;
+    int64_t perCoreRow = 1;
+    int64_t tailCoreRow = 1;
+    int64_t inBufferSize = 2048;
+    int64_t wsBufferSize = 1024;
+    int64_t asBufferSize = 32;
+    int64_t biasBufferSize = 1024;
+    int64_t perCoreLoopRow = 1;
+    int64_t perCoreTailLoopRow = 1;
+    int64_t perCoreLoops = 1;
+    int64_t tailCoreLoopRow = 1;
+    int64_t tailCoreTailLoopRow = 1;
+    int64_t tailCoreLoops = 1;
 };
-
 
 inline void IDequantBiasTilingData(uint8_t* tiling, DequantBiasTilingData* const_data)
 {
     memcpy(const_data, tiling, sizeof(DequantBiasTilingData));
 }
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  DequantBiasTilingData tilingData;                           \
-  IDequantBiasTilingData(tilingPointer, &tilingData)
+#define GET_TILING_DATA(tilingData, tilingPointer) \
+    DequantBiasTilingData tilingData;              \
+    IDequantBiasTilingData(tilingPointer, &tilingData)
 #endif

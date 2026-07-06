@@ -20,8 +20,7 @@
 #include "threshold_v2.h"
 
 template <int BUFFER_MODE, int DTYPE_SELF_ID>
-__global__ __aicore__ void threshold_v2(GM_ADDR self, GM_ADDR out,
-                                         GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void threshold_v2(GM_ADDR self, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ThresholdV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(ThresholdV2TilingData, tilingData, tiling);

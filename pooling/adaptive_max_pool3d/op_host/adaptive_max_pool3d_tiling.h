@@ -12,14 +12,14 @@
  * \file adaptive_max_pool3d_tiling.h
  * \brief
  * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (37) (41) USING BLANK LINES.
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
  */
 
 #ifndef ADAPTIVE_MAX_POOL3D_TILING_H
@@ -131,13 +131,10 @@ struct AdaptiveMaxPool3dCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-class AdaptiveMaxPool3dTilingBase : public TilingBaseClass
-{
+class AdaptiveMaxPool3dTilingBase : public TilingBaseClass {
 public:
-    explicit AdaptiveMaxPool3dTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptiveMaxPool3dTilingBase() override
-    {}
+    explicit AdaptiveMaxPool3dTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptiveMaxPool3dTilingBase() override {}
     InputInfo input_;
     CalculateInfo calInfo_;
 
@@ -152,13 +149,10 @@ protected:
     ge::graphStatus PostTiling() override;
 };
 
-class AdaptiveMaxPool3dSmallPoolTiling : public AdaptiveMaxPool3dTilingBase
-{
+class AdaptiveMaxPool3dSmallPoolTiling : public AdaptiveMaxPool3dTilingBase {
 public:
-    explicit AdaptiveMaxPool3dSmallPoolTiling(gert::TilingContext* context) : AdaptiveMaxPool3dTilingBase(context)
-    {}
-    ~AdaptiveMaxPool3dSmallPoolTiling() override
-    {}
+    explicit AdaptiveMaxPool3dSmallPoolTiling(gert::TilingContext* context) : AdaptiveMaxPool3dTilingBase(context) {}
+    ~AdaptiveMaxPool3dSmallPoolTiling() override {}
     AdaptiveMaxPool3dSmallPoolTilingData tilingdata_;
 
 protected:
@@ -172,13 +166,10 @@ private:
     void SetTilingData();
 };
 
-class AdaptiveMaxPool3dBigPoolTiling : public AdaptiveMaxPool3dTilingBase
-{
+class AdaptiveMaxPool3dBigPoolTiling : public AdaptiveMaxPool3dTilingBase {
 public:
-    explicit AdaptiveMaxPool3dBigPoolTiling(gert::TilingContext* context) : AdaptiveMaxPool3dTilingBase(context)
-    {}
-    ~AdaptiveMaxPool3dBigPoolTiling() override
-    {}
+    explicit AdaptiveMaxPool3dBigPoolTiling(gert::TilingContext* context) : AdaptiveMaxPool3dTilingBase(context) {}
+    ~AdaptiveMaxPool3dBigPoolTiling() override {}
     AdaptiveMaxPool3dBigPoolTilingData tilingdata_;
 
 protected:

@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_minimum_scalar_list_proto.h"
 
-class ForeachMinimumScalarListTest : public testing::Test
-{
+class ForeachMinimumScalarListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMinimumScalarList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMinimumScalarList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMinimumScalarList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMinimumScalarList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMinimumScalarListTest, infer_shape_known_success)
@@ -86,8 +79,8 @@ TEST_F(ForeachMinimumScalarListTest, infer_shape_known_success)
 
 TEST_F(ForeachMinimumScalarListTest, infer_dtype_test_1)
 {
-    auto infer_datatype_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMinimumScalarList")->infer_datatype;
+    auto
+        infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMinimumScalarList")->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);
 
     // x1

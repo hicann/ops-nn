@@ -30,14 +30,10 @@
 #define APPLY_ADAM_WITH_AMSGRAD_V2_TPL_SCH_MODE_0 0
 
 ASCENDC_TPL_ARGS_DECL(ApplyAdamWithAmsgradV2,
-    ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST,
-                          APPLY_ADAM_WITH_AMSGRAD_V2_TPL_SCH_MODE_0),
-);
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST,
+                                            APPLY_ADAM_WITH_AMSGRAD_V2_TPL_SCH_MODE_0), );
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
-                             APPLY_ADAM_WITH_AMSGRAD_V2_TPL_SCH_MODE_0)),
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
+                                                          APPLY_ADAM_WITH_AMSGRAD_V2_TPL_SCH_MODE_0)), );
 
 #endif // __APPLY_ADAM_WITH_AMSGRAD_V2_TILING_KEY_H__

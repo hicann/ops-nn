@@ -24,18 +24,11 @@
 using namespace op;
 using namespace std;
 
-class l2_addbmm_test : public testing::Test
-{
+class l2_addbmm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "addbmm_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "addbmm_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "addbmm_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "addbmm_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_addbmm_test, case_fp16_not_align)

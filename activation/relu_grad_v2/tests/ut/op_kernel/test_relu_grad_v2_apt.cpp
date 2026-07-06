@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -23,21 +23,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void relu_grad_v2(GM_ADDR gradients, GM_ADDR mask, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void relu_grad_v2(GM_ADDR gradients, GM_ADDR mask, GM_ADDR backprops,
+                                                   GM_ADDR workspace, GM_ADDR tiling);
 
 class relu_grad_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "relu_grad_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "relu_grad_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "relu_grad_v2 TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./relu_grad_v2_data");
     }
 };
-
 
 TEST_F(relu_grad_v2_test, test_case_fp32_1)
 {
@@ -49,10 +46,11 @@ TEST_F(relu_grad_v2_test, test_case_fp32_1)
     uint8_t* gradients = (uint8_t*)AscendC::GmAlloc(gradientsByteSize);
     uint8_t* mask = (uint8_t*)AscendC::GmAlloc(maskByteSize);
     uint8_t* backprops = (uint8_t*)AscendC::GmAlloc(backpropsByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    kernel_ut::SetupTestEnvironment("activation/relu_grad_v2/tests/ut/op_kernel/relu_grad_v2_data", "relu_grad_v2_data");
+    kernel_ut::SetupTestEnvironment("activation/relu_grad_v2/tests/ut/op_kernel/relu_grad_v2_data",
+                                    "relu_grad_v2_data");
     kernel_ut::RunGenData("./relu_grad_v2_data", {"'(256)'", "float32"});
 
     std::string path = kernel_ut::GetTestWorkDir();

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv2d_v2_weight_ub_trans_impl.h
  * \brief
@@ -26,12 +26,11 @@ using namespace conv;
 
 template <class Intf>
 class WeightUbProcessTools {
-public: 
+public:
     __aicore__ inline WeightUbProcessTools() {}
-    __aicore__ inline void WeightUbTransSyncSet(Intf *self, const uint64_t &kIter)
+    __aicore__ inline void WeightUbTransSyncSet(Intf* self, const uint64_t& kIter)
     {
-        if (!((kIter == self->ctx.ddr2l0LoopK - 1) ||
-            ((kIter + 1) % self->ctx.multiKBL1 == 0))) {
+        if (!((kIter == self->ctx.ddr2l0LoopK - 1) || ((kIter + 1) % self->ctx.multiKBL1 == 0))) {
             return;
         }
 
@@ -41,13 +40,13 @@ public:
         self->ctx.pingPongFlag ^= 1;
     }
 
-    __aicore__ inline void WeightUbTransCalcBL1LoadTimes(Intf *self)
+    __aicore__ inline void WeightUbTransCalcBL1LoadTimes(Intf* self)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             uint64_t ddr2l0LoopM = CeilDiv(self->ctx.singleCoreM, self->ctx.mL0);
             self->ctx.ddr2l1LoopKB = self->ctx.maxKBL1Iter + 1;
             self->ctx.bL1LoadTimes = ddr2l0LoopM * self->ctx.ddr2l1LoopN * self->ctx.l12l0LoopN *
-                                    self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopKB;
+                                     self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopKB;
         } else {
             self->ctx.ddr2l1LoopKB = self->ctx.maxKBL1Iter + 1;
             uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->hoL0);
@@ -55,10 +54,9 @@ public:
             if constexpr (Intf::hasWL0IterFlag) {
                 if (self->ctx.woL1SmallTail > 0) {
                     ddr2l0LoopW = (self->ctx.ddr2l1LoopW - W_TAIL_NUM) *
-                        CeilDiv(self->ctx.convTilingData->woL1,
-                            self->ctx.convTilingData->woL0) +
-                        CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) +
-                        CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->woL0);
+                                      CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
+                                  CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) +
+                                  CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->woL0);
                 } else {
                     ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->woL0);
                 }
@@ -66,19 +64,18 @@ public:
                 ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->woL0);
             }
             self->ctx.bL1LoadTimes = ddr2l0LoopH * ddr2l0LoopW * self->ctx.ddr2l1LoopN * self->ctx.l12l0LoopN *
-                                    self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopKB;
+                                     self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopKB;
         }
         self->ctx.bL1LoadTimes -= 1;
     }
 
-    __aicore__ inline void WeightUbTransInitIterValueMfirstHWMode(Intf *self)
+    __aicore__ inline void WeightUbTransInitIterValueMfirstHWMode(Intf* self)
     {
         uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->hoL0);
         uint64_t ddr2l0LoopW = 0;
         if constexpr (Intf::hasWL0IterFlag) {
             self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->woL1;
-            self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?
-                                  self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
+            self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ? self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
             if (self->ctx.convTilingData->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
                 CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) > 1) {
                 self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTilingData->woL0;
@@ -87,10 +84,9 @@ public:
             }
 
             self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->woL1);
-            ddr2l0LoopW = 
-                (self->ctx.ddr2l1LoopW - 1) *
-                CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
-                CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0);
+            ddr2l0LoopW = (self->ctx.ddr2l1LoopW - 1) *
+                              CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
+                          CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0);
 
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2l0LoopW += CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->woL0);
@@ -102,7 +98,7 @@ public:
         self->ctx.ddr2l1LoopTmp = ddr2l0LoopH * ddr2l0LoopW * self->ctx.ddr2l1LoopBatch;
     }
 
-    __aicore__ inline void WeightUbTransInitIterValueNfirstHWMode(Intf *self)
+    __aicore__ inline void WeightUbTransInitIterValueNfirstHWMode(Intf* self)
     {
         if constexpr (!Intf::hasHL1IterFlag) {
             self->ctx.ddr2l1LoopH = 1;
@@ -119,8 +115,7 @@ public:
         }
 
         self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->woL1;
-        self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?
-                              self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
+        self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ? self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
         if constexpr (Intf::hasWL0IterFlag) {
             if (self->ctx.convTilingData->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
                 CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) > 1) {
@@ -135,8 +130,7 @@ public:
         }
 
         self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTilingData->hoL1;
-        self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ?
-                              self->ctx.convTilingData->hoL1 : self->ctx.hoAL1Tail;
+        self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTilingData->hoL1 : self->ctx.hoAL1Tail;
         self->ctx.currentHoL1 = self->ctx.hoAL1Tail;
         self->ctx.currentWoL1 = self->ctx.woAL1Tail;
         self->ctx.maxWoL1Iter = self->ctx.ddr2l1LoopW - 1;
@@ -144,7 +138,7 @@ public:
         self->ctx.ddr2l1LoopOuter = self->ctx.ddr2l1LoopH * self->ctx.ddr2l1LoopW * self->ctx.ddr2l1LoopBatch;
     }
 
-    __aicore__ inline void WeightUbTransInitIterValue(Intf *self)
+    __aicore__ inline void WeightUbTransInitIterValue(Intf* self)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             if constexpr (Intf::iterateMFirstFlag) {
@@ -169,44 +163,38 @@ public:
         }
     }
 
-    __aicore__ inline void WeightUbTransInitKValue(Intf *self)
+    __aicore__ inline void WeightUbTransInitKValue(Intf* self)
     {
         self->ctx.kBL1Tail = (self->ctx.singleCoreCi * self->ctx.convTilingData->kernelHxkernelW) %
                              self->ctx.convTilingData->kBL1;
-        self->ctx.kBL1Tail = self->ctx.kBL1Tail == 0 ?
-                             self->ctx.convTilingData->kBL1 : self->ctx.kBL1Tail;
+        self->ctx.kBL1Tail = self->ctx.kBL1Tail == 0 ? self->ctx.convTilingData->kBL1 : self->ctx.kBL1Tail;
         self->ctx.kUbTail = self->ctx.kBL1Tail % self->ctx.convTilingData->bUbKStep;
-        self->ctx.kUbTail = self->ctx.kUbTail == 0 ?
-                            self->ctx.convTilingData->bUbKStep : self->ctx.kUbTail;
+        self->ctx.kUbTail = self->ctx.kUbTail == 0 ? self->ctx.convTilingData->bUbKStep : self->ctx.kUbTail;
 
-        self->ctx.ddr2l1LoopKB = 
-            CeilDiv(AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelW,
-                    self->ctx.convTilingData->kBL1);
+        self->ctx.ddr2l1LoopKB = CeilDiv(
+            AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelW,
+            self->ctx.convTilingData->kBL1);
         self->ctx.maxKBL1Iter = self->ctx.ddr2l1LoopKB - 1;
 
-        self->ctx.vecKLoopTimes = CeilDiv(self->ctx.convTilingData->kBL1,
-                                          self->ctx.convTilingData->bUbKStep);
+        self->ctx.vecKLoopTimes = CeilDiv(self->ctx.convTilingData->kBL1, self->ctx.convTilingData->bUbKStep);
         self->ctx.maxVecKIter = self->ctx.vecKLoopTimes - 1;
     }
 
-    __aicore__ inline void WeightUbTransInitNValue(Intf *self)
+    __aicore__ inline void WeightUbTransInitNValue(Intf* self)
     {
         self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTilingData->nBL1;
-        self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ?
-                             self->ctx.convTilingData->nBL1 : self->ctx.nBL1Tail;
+        self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTilingData->nBL1 : self->ctx.nBL1Tail;
         self->ctx.nUbTail = self->ctx.nBL1Tail % self->ctx.convTilingData->bUbNStep;
-        self->ctx.nUbTail = self->ctx.nUbTail == 0 ?
-                            self->ctx.convTilingData->bUbNStep : self->ctx.nUbTail;
+        self->ctx.nUbTail = self->ctx.nUbTail == 0 ? self->ctx.convTilingData->bUbNStep : self->ctx.nUbTail;
 
         self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->nBL1);
-        self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN  - 1;
+        self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN - 1;
         self->ctx.l12l0LoopN = self->ctx.convTilingData->multiNBL1;
     }
 
-    __aicore__ inline void WeightUbTransInitBuf(Intf *self)
+    __aicore__ inline void WeightUbTransInitBuf(Intf* self)
     {
-        self->ctx.ubBufSize = self->ctx.convTilingData->bUbKStep *
-                              self->ctx.convTilingData->bUbNStep;
+        self->ctx.ubBufSize = self->ctx.convTilingData->bUbKStep * self->ctx.convTilingData->bUbNStep;
         self->ctx.pipe.InitBuffer(self->ctx.ndUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
         self->ctx.pipe.InitBuffer(self->ctx.nzUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
         self->ctx.pipe.InitBuffer(self->ctx.indexUbBuf, REG_SIZE);
@@ -219,17 +207,15 @@ public:
         if (al1db) {
             aL1SpaceSize *= DOUBLE_BUF;
         }
-        self->ctx.bL1SpaceSize = self->ctx.convTilingData->nBL1 *
-                                 self->ctx.convTilingData->kBL1;
+        self->ctx.bL1SpaceSize = self->ctx.convTilingData->nBL1 * self->ctx.convTilingData->kBL1;
 
         self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf,
-            aL1SpaceSize + self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
+                                  aL1SpaceSize + self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
 
-        self->ctx.bl1 = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>()[
-            aL1SpaceSize / Intf::sizeOfFmap];
+        self->ctx.bl1 = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>()[aL1SpaceSize / Intf::sizeOfFmap];
     }
 
-    __aicore__ inline void WeightUbTransVecInit(Intf *self)
+    __aicore__ inline void WeightUbTransVecInit(Intf* self)
     {
         self->ctx.vecId = GetSubBlockIdx();
 
@@ -256,10 +242,10 @@ public:
         self->ctx.weightUbLoadUB2L1Tools.SetParams(self);
     }
 
-    __aicore__ inline void WeightUbTransUpdateKValue(Intf *self)
+    __aicore__ inline void WeightUbTransUpdateKValue(Intf* self)
     {
-        uint64_t currentKBL1 = self->ctx.kBL1Iter == self->ctx.maxKBL1Iter ?
-            self->ctx.kBL1Tail : self->ctx.convTilingData->kBL1;
+        uint64_t currentKBL1 = self->ctx.kBL1Iter == self->ctx.maxKBL1Iter ? self->ctx.kBL1Tail :
+                                                                             self->ctx.convTilingData->kBL1;
         self->ctx.vecKLoopTimes = CeilDiv(currentKBL1, self->ctx.convTilingData->bUbKStep);
         self->ctx.maxVecKIter = self->ctx.vecKLoopTimes - 1;
 
@@ -272,10 +258,10 @@ public:
         }
     }
 
-    __aicore__ inline void WeightUbTransUpdateNValue(Intf *self)
+    __aicore__ inline void WeightUbTransUpdateNValue(Intf* self)
     {
-        self->ctx.currentNBL1 = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
-            self->ctx.nBL1Tail : self->ctx.convTilingData->nBL1;
+        self->ctx.currentNBL1 = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ? self->ctx.nBL1Tail :
+                                                                              self->ctx.convTilingData->nBL1;
         self->ctx.l12l0LoopN = CeilDiv(self->ctx.currentNBL1, self->ctx.convTilingData->nL0);
         self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopN;
 
@@ -293,10 +279,12 @@ public:
         }
     }
 
-    __aicore__ inline void WeightUbTransUpdateLoopInner(Intf *self) {
+    __aicore__ inline void WeightUbTransUpdateLoopInner(Intf* self)
+    {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             self->ctx.ddr2l1LoopTmp = self->ctx.outerIter == self->ctx.maxMAL1Iter ?
-                CeilDiv(self->ctx.mAL1Tail, self->ctx.mL0) : self->ctx.l12l0LoopM;
+                                          CeilDiv(self->ctx.mAL1Tail, self->ctx.mL0) :
+                                          self->ctx.l12l0LoopM;
         } else {
             if constexpr (Intf::hasWL1IterFlag) {
                 self->ctx.woAL1Iter = self->ctx.outerIter % self->ctx.ddr2l1LoopW;
@@ -310,7 +298,8 @@ public:
                     }
                 } else {
                     self->ctx.currentWoL1 = self->ctx.woAL1Iter == self->ctx.maxWoL1Iter ?
-                        self->ctx.woAL1Tail : self->ctx.convTilingData->woL1;
+                                                self->ctx.woAL1Tail :
+                                                self->ctx.convTilingData->woL1;
                 }
             }
             if constexpr (Intf::hasWL0IterFlag) {
@@ -319,8 +308,8 @@ public:
 
             if constexpr (Intf::hasHL1IterFlag) {
                 self->ctx.hoAL1Iter = (self->ctx.outerIter / self->ctx.ddr2l1LoopW) % self->ctx.ddr2l1LoopH;
-                self->ctx.currentHoL1 = self->ctx.hoAL1Iter == self->ctx.maxHoL1Iter ?
-                    self->ctx.hoAL1Tail : self->ctx.convTilingData->hoL1;
+                self->ctx.currentHoL1 = self->ctx.hoAL1Iter == self->ctx.maxHoL1Iter ? self->ctx.hoAL1Tail :
+                                                                                       self->ctx.convTilingData->hoL1;
             }
             if constexpr (Intf::hasHL0IterFlag) {
                 self->ctx.l12l0LoopH = CeilDiv(self->ctx.currentHoL1, self->ctx.convTilingData->hoL0);
@@ -331,7 +320,7 @@ public:
         self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopN;
     }
 
-    __aicore__ inline void WeightUbTransIterInit(Intf *self)
+    __aicore__ inline void WeightUbTransIterInit(Intf* self)
     {
         self->ctx.kBL1Iter = 0;
         self->ctx.nBL1Iter = 0;
@@ -350,7 +339,7 @@ public:
         self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopN;
     }
 
-    __aicore__ inline bool WeightUbTransUbIterUpdate(Intf *self)
+    __aicore__ inline bool WeightUbTransUbIterUpdate(Intf* self)
     {
         if (self->ctx.pingPongFlag == self->ctx.vecId) {
             self->ctx.vecKIter++;
@@ -373,7 +362,7 @@ public:
         return false;
     }
 
-    __aicore__ inline bool WeightUbTransIterUpdate(Intf *self)
+    __aicore__ inline bool WeightUbTransIterUpdate(Intf* self)
     {
         if (unlikely(self->ctx.isFirstIterate && self->ctx.vecId == 0)) {
             return true;
@@ -417,7 +406,7 @@ public:
         return false;
     }
 
-    __aicore__ inline bool WeightUbTransVecImpl(Intf *self)
+    __aicore__ inline bool WeightUbTransVecImpl(Intf* self)
     {
         WeightUbTransIterInit(self);
         while (WeightUbTransIterUpdate(self)) {
@@ -465,6 +454,6 @@ public:
     }
 };
 
-}
+} // namespace Conv2dFunc
 
 #endif // CONV2D_V2_WEIGHT_UB_TRANS_IMPL_H

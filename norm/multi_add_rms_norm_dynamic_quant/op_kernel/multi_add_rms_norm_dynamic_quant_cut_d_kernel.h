@@ -21,20 +21,16 @@
 namespace MultiAddRmsNormDynQnt {
 
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
-class KernelMultiAddRmsNormDynamicQuantSliceD : public KernelMultiAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM>
-{
+class KernelMultiAddRmsNormDynamicQuantSliceD
+    : public KernelMultiAddRmsNormDynamicQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
     using xSrcGMList = GlobalTensor<T>[X1_LIST_MAX_SIZE];
 
-    __aicore__ inline KernelMultiAddRmsNormDynamicQuantSliceD(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelMultiAddRmsNormDynamicQuantSliceD(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
-        GM_ADDR y, GM_ADDR outScale1, GM_ADDR outScale2, GM_ADDR workspace,
-        const MultiAddRmsNormDynamicQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR y1,
+                                GM_ADDR y2, GM_ADDR x, GM_ADDR y, GM_ADDR outScale1, GM_ADDR outScale2,
+                                GM_ADDR workspace, const MultiAddRmsNormDynamicQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2);
@@ -168,9 +164,8 @@ private:
         scalesQue.FreeTensor(scalesOut);
     }
 
-    __aicore__ inline void CopyInSmoothNorm(
-        LocalTensor<float>& dstLocal, uint64_t workspaceOffset, uint64_t rowGmOffset, int32_t elementCount,
-        float scaleNum)
+    __aicore__ inline void CopyInSmoothNorm(LocalTensor<float>& dstLocal, uint64_t workspaceOffset,
+                                            uint64_t rowGmOffset, int32_t elementCount, float scaleNum)
     {
         LocalTensor<float> smoothYLocalIn = inRowsQue.template AllocTensor<float>();
         DataCopyEx(smoothYLocalIn, this->workspaceGm[workspaceOffset + rowGmOffset], elementCount);
@@ -187,8 +182,8 @@ private:
         CopyOutX(baseGmOffset, rowGmOffset, elementCount);
     }
 
-    __aicore__ inline void ComputeRmsNormAndSmoothMax(
-        uint64_t baseGmOffset, uint64_t rowGmOffset, int32_t elementCount, float rstdLocalTemp)
+    __aicore__ inline void ComputeRmsNormAndSmoothMax(uint64_t baseGmOffset, uint64_t rowGmOffset, int32_t elementCount,
+                                                      float rstdLocalTemp)
     {
         CopyInTmpX(baseGmOffset, rowGmOffset, elementCount, rstdLocalTemp);
         CopyInGamma(baseGmOffset, rowGmOffset, elementCount);
@@ -199,8 +194,8 @@ private:
         UpdateLocalMax(elementCount);
     }
 
-    __aicore__ inline void CopyInTmpX(
-        uint64_t baseGmOffset, uint64_t rowGmOffset, int32_t elementCount, float rstdLocalTemp)
+    __aicore__ inline void CopyInTmpX(uint64_t baseGmOffset, uint64_t rowGmOffset, int32_t elementCount,
+                                      float rstdLocalTemp)
     {
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
         LocalTensor<float> xLocalIn = inRowsQue.template AllocTensor<float>();
@@ -300,8 +295,8 @@ private:
         }
     }
 
-    __aicore__ inline float FindSliceMax(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, int32_t elementCount)
+    __aicore__ inline float FindSliceMax(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                         int32_t elementCount)
     {
         Abs(tmpTensor, srcTensor, elementCount); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();
@@ -311,8 +306,8 @@ private:
         return maxTemp;
     }
 
-    __aicore__ inline void CopyOutSmoothNorm(
-        LocalTensor<float>& smoothNormTensor, uint64_t workspaceOffset, uint64_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyOutSmoothNorm(LocalTensor<float>& smoothNormTensor, uint64_t workspaceOffset,
+                                             uint64_t rowGmOffset, int32_t elementCount)
     {
         LocalTensor<float> ySmoothLocal = tmpOutQue.template AllocTensor<float>();
         Adds(ySmoothLocal, smoothNormTensor, MultiAddRNDQ::ZERO, elementCount);
@@ -322,9 +317,9 @@ private:
         tmpOutQue.FreeTensor(ySmooth);
     }
 
-    __aicore__ inline void DynamicXCopyAddIn(
-        const xSrcGMList& xGmTsr, const uint64_t xLocalOffset, LocalTensor<float>& dstTmpTsr, uint64_t baseGmOffset,
-        uint64_t rowGmOffset, int32_t elementCount, const int32_t tsrListLen)
+    __aicore__ inline void DynamicXCopyAddIn(const xSrcGMList& xGmTsr, const uint64_t xLocalOffset,
+                                             LocalTensor<float>& dstTmpTsr, uint64_t baseGmOffset, uint64_t rowGmOffset,
+                                             int32_t elementCount, const int32_t tsrListLen)
     {
         // Setup xLocalIn
         LocalTensor<T> xLocalIn = inRowsQue.template AllocTensor<T>();
@@ -359,11 +354,10 @@ private:
 
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
         LocalTensor<float> zLocalFp32 = zBufFp32.Get<float>();
-        DynamicXCopyAddIn(
-            this->x1GmList, 0, yLocalFp32, baseGmOffset, rowGmOffset, elementCount, this->x1Num); // x1->yLocalFp32
-        DynamicXCopyAddIn(
-            this->x2GmList, this->lastDimSliceLen, zLocalFp32, baseGmOffset, rowGmOffset, elementCount,
-            this->x2Num); // x2->zLocalFp32
+        DynamicXCopyAddIn(this->x1GmList, 0, yLocalFp32, baseGmOffset, rowGmOffset, elementCount,
+                          this->x1Num); // x1->yLocalFp32
+        DynamicXCopyAddIn(this->x2GmList, this->lastDimSliceLen, zLocalFp32, baseGmOffset, rowGmOffset, elementCount,
+                          this->x2Num); // x2->zLocalFp32
 
         // A synchronization barrier is needed to guarantee Flow order
         SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);

@@ -21,24 +21,23 @@
 template <typename T, typename S, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormStaticQuantNormal : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormStaticQuantNormal(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormStaticQuantNormal(TPipe* pipe) { Ppipe = pipe; }
 
     template <typename TilingDataT>
-    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales1, __gm__ uint8_t* scales2, __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2, __gm__ uint8_t* y1, 
-        __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* layernormRes, __gm__ uint8_t* outScale1, __gm__ uint8_t* outScale2,
-        __gm__ uint8_t* workspace, const TilingDataT* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales1, __gm__ uint8_t* scales2,
+                                __gm__ uint8_t* zeroPoints1, __gm__ uint8_t* zeroPoints2, __gm__ uint8_t* y1,
+                                __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* layernormRes,
+                                __gm__ uint8_t* outScale1, __gm__ uint8_t* outScale2, __gm__ uint8_t* workspace,
+                                const TilingDataT* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
         this->InitOutGlobalTensors(y1, y2, x);
-        if(layernormRes == nullptr){
+        if (layernormRes == nullptr) {
             // 不输出layernormRes，走v1
             layernormResExist = false;
-        }else{
+        } else {
             layernormResExist = true;
             resGm.SetGlobalBuffer((__gm__ T*)(layernormRes) + block_idx * this->gmOffset_);
         }
@@ -142,7 +141,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInX1X2(uint64_t gmOffset, int32_t rowCount, int32_t elementCount, DataCopyPadParams& padParams)
+    __aicore__ inline void CopyInX1X2(uint64_t gmOffset, int32_t rowCount, int32_t elementCount,
+                                      DataCopyPadParams& padParams)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
 
@@ -150,26 +150,34 @@ private:
             LocalTensor<T> tensor_local = tensor_buf.Get<T>();
 #if __NPU_ARCH__ == 2201
             uint32_t stride_ = (this->numLastDimRoundUp32 - this->numLastDimAligned) * sizeof(T) / 32;
-            DataCopyExAlign(x1x2LocalIn[0], this->x1Gm[gmOffset], tensor_local, this->numLastDim, stride_, rowCount, padParams);
-            DataCopyExAlign(x1x2LocalIn[elementCount], this->x2Gm[gmOffset], tensor_local, this->numLastDim, stride_, rowCount, padParams);
+            DataCopyExAlign(x1x2LocalIn[0], this->x1Gm[gmOffset], tensor_local, this->numLastDim, stride_, rowCount,
+                            padParams);
+            DataCopyExAlign(x1x2LocalIn[elementCount], this->x2Gm[gmOffset], tensor_local, this->numLastDim, stride_,
+                            rowCount, padParams);
             if constexpr (IS_BIAS_ELEWISE) {
                 LocalTensor<T> biasLocal = yBufFp32.template Get<T>();
                 if constexpr (is_same<float, T>::value) {
-                    DataCopyExAlign(biasLocal, this->biasGm[gmOffset], tensor_local, this->numLastDim, stride_, rowCount, padParams);
+                    DataCopyExAlign(biasLocal, this->biasGm[gmOffset], tensor_local, this->numLastDim, stride_,
+                                    rowCount, padParams);
                 } else {
-                    DataCopyExAlign(biasLocal[elementCount], this->biasGm[gmOffset], tensor_local, this->numLastDim, stride_, rowCount, padParams);
+                    DataCopyExAlign(biasLocal[elementCount], this->biasGm[gmOffset], tensor_local, this->numLastDim,
+                                    stride_, rowCount, padParams);
                 }
             }
 #else
             LocalTensor<T> biasLocal = yBufFp32.template Get<T>();
             for (auto i = 0; i < rowCount; i++) {
-                DataCopyExV2(x1x2LocalIn[i * this->numLastDimRoundUp32], this->x1Gm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim, 1);
-                DataCopyExV2(x1x2LocalIn[elementCount + i * this->numLastDimRoundUp32], this->x2Gm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim, 1);
+                DataCopyExV2(x1x2LocalIn[i * this->numLastDimRoundUp32], this->x1Gm[gmOffset + i * this->numLastDim],
+                             tensor_local, this->numLastDim, 1);
+                DataCopyExV2(x1x2LocalIn[elementCount + i * this->numLastDimRoundUp32],
+                             this->x2Gm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim, 1);
                 if constexpr (IS_BIAS_ELEWISE) {
                     if constexpr (is_same<float, T>::value) {
-                        DataCopyExV2(biasLocal[i * this->numLastDimRoundUp32], this->biasGm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim);
+                        DataCopyExV2(biasLocal[i * this->numLastDimRoundUp32],
+                                     this->biasGm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim);
                     } else {
-                        DataCopyExV2(biasLocal[elementCount + i * this->numLastDimRoundUp32], this->biasGm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim);
+                        DataCopyExV2(biasLocal[elementCount + i * this->numLastDimRoundUp32],
+                                     this->biasGm[gmOffset + i * this->numLastDim], tensor_local, this->numLastDim);
                     }
                 }
             }
@@ -189,8 +197,8 @@ private:
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
-    __aicore__ inline void AddX1X2BiasFp32(int32_t elementCount, int32_t rowCount, LocalTensor<float> xLocalFp32, 
-        LocalTensor<T> x1Local, LocalTensor<T> x2Local)
+    __aicore__ inline void AddX1X2BiasFp32(int32_t elementCount, int32_t rowCount, LocalTensor<float> xLocalFp32,
+                                           LocalTensor<T> x1Local, LocalTensor<T> x2Local)
     {
         Add(xLocalFp32, x1Local, x2Local, elementCount);
         PipeBarrier<PIPE_V>();
@@ -205,8 +213,9 @@ private:
         }
     }
 
-    __aicore__ inline void AddX1X2BiasFp16(int32_t elementCount, int32_t rowCount, LocalTensor<float> xLocalFp32, 
-        LocalTensor<float> yLocalFp32, LocalTensor<T> x1Local, LocalTensor<T> x2Local, LocalTensor<T> x1x2Local)
+    __aicore__ inline void AddX1X2BiasFp16(int32_t elementCount, int32_t rowCount, LocalTensor<float> xLocalFp32,
+                                           LocalTensor<float> yLocalFp32, LocalTensor<T> x1Local,
+                                           LocalTensor<T> x2Local, LocalTensor<T> x1x2Local)
     {
         if constexpr (IS_BIAS_BROADCAST) {
             auto biasLocal = biasBuf.template Get<T>();
@@ -282,7 +291,8 @@ private:
                 DataCopyExAlign(this->xGm[gmOffset], x, tensor_local, this->numLastDim, stride_, rowCount);
 #else
                 for (auto i = 0; i < rowCount; i++) {
-                    DataCopyExV2(this->xGm[gmOffset + i * this->numLastDim], x[i * this->numLastDimRoundUp32], tensor_local, this->numLastDim, 1);
+                    DataCopyExV2(this->xGm[gmOffset + i * this->numLastDim], x[i * this->numLastDimRoundUp32],
+                                 tensor_local, this->numLastDim, 1);
                 }
 #endif
             } else {
@@ -293,7 +303,8 @@ private:
     }
 
     __aicore__ inline void ApplyGammaBeta(int32_t roundOffset, int32_t elementCount, LocalTensor<float>& xLocalFp32,
-        LocalTensor<float>& yLocalFp32, LocalTensor<T>& gammaLocal, LocalTensor<T>& betaLocal)
+                                          LocalTensor<float>& yLocalFp32, LocalTensor<T>& gammaLocal,
+                                          LocalTensor<T>& betaLocal)
     {
         if constexpr (!is_same<T, float>::value) {
             Cast(yLocalFp32, gammaLocal, RoundMode::CAST_NONE, this->numLastDim);
@@ -310,7 +321,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeLayerNorm(int32_t gmOffset, int32_t nums, int32_t elementCount, LocalTensor<T>& gammaLocal, LocalTensor<T>& betaLocal)
+    __aicore__ inline void ComputeLayerNorm(int32_t gmOffset, int32_t nums, int32_t elementCount,
+                                            LocalTensor<T>& gammaLocal, LocalTensor<T>& betaLocal)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- x1 + x2 + bias
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -326,7 +338,8 @@ private:
             event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
             SetFlag<HardEvent::S_V>(eventSV);
             WaitFlag<HardEvent::S_V>(eventSV);
-            Adds(xLocalFp32[roundOffset], xLocalFp32[roundOffset], aveLocalTemp * -1, this->numLastDim); // xLocalFp32 <-- x - E(x)
+            Adds(xLocalFp32[roundOffset], xLocalFp32[roundOffset], aveLocalTemp * -1,
+                 this->numLastDim); // xLocalFp32 <-- x - E(x)
         }
         PipeBarrier<PIPE_V>();
 
@@ -344,7 +357,8 @@ private:
             event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
             SetFlag<HardEvent::S_V>(eventSV);
             WaitFlag<HardEvent::S_V>(eventSV);
-            Muls(xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp, this->numLastDim); // xLocalFp32 <-- (x - E(x)) * rstd
+            Muls(xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp,
+                 this->numLastDim); // xLocalFp32 <-- (x - E(x)) * rstd
             PipeBarrier<PIPE_V>();
             ApplyGammaBeta(roundOffset, elementCount, xLocalFp32, yLocalFp32, gammaLocal, betaLocal);
         }
@@ -369,7 +383,8 @@ private:
 
     __aicore__ inline void CopyOutLayernormRes(int32_t gmOffset, int32_t nums, int32_t elementCount)
     {
-        if (!layernormResExist) return;
+        if (!layernormResExist)
+            return;
 
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<T> resLocal = outRowQue.template AllocTensor<T>();
@@ -391,7 +406,8 @@ private:
         DataCopyExAlign(this->resGm[gmOffset], resDeq, tensor_local, this->numLastDim, stride_, nums);
 #else
         for (auto i = 0; i < nums; i++) {
-            DataCopyExV2(this->resGm[gmOffset + i * this->numLastDim], resDeq[i * this->numLastDimRoundUp32], tensor_local, this->numLastDim, 1);
+            DataCopyExV2(this->resGm[gmOffset + i * this->numLastDim], resDeq[i * this->numLastDimRoundUp32],
+                         tensor_local, this->numLastDim, 1);
         }
 #endif
         outRowQue.FreeTensor(resDeq);
@@ -428,9 +444,11 @@ private:
             PipeBarrier<PIPE_V>();
             for (int32_t rid = 0; rid < nums; ++rid) {
                 if (layernormResExist) {
-                Mul(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim); // xLocalFp32 <-- y * scales1
-            } else{
-                Div(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim); // xLocalFp32 <-- y / scales1
+                    Mul(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32,
+                        this->numLastDim); // xLocalFp32 <-- y * scales1
+                } else {
+                    Div(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32,
+                        this->numLastDim); // xLocalFp32 <-- y / scales1
                 }
             }
             PipeBarrier<PIPE_V>();
@@ -451,7 +469,8 @@ private:
     }
 
     __aicore__ inline void ApplyScales2AndOffsets(int32_t nums, int32_t alignedStride, LocalTensor<float>& xLocalFp32,
-        LocalTensor<float>& yLocalFp32, LocalTensor<S>& scalesOffsetLocal, LocalTensor<float>& tmpLocal)
+                                                  LocalTensor<float>& yLocalFp32, LocalTensor<S>& scalesOffsetLocal,
+                                                  LocalTensor<float>& tmpLocal)
     {
         auto scalesLocal = scalesOffsetLocal[0];
         auto offsetsLocal = scalesOffsetLocal[alignedStride];
@@ -499,9 +518,11 @@ private:
             PipeBarrier<PIPE_V>();
             for (int32_t rid = 0; rid < nums; ++rid) {
                 if (layernormResExist) {
-                    Mul(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32, this->numLastDim);
+                    Mul(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32,
+                        this->numLastDim);
                 } else {
-                    Div(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32, this->numLastDim);
+                    Div(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32,
+                        this->numLastDim);
                 }
             }
             PipeBarrier<PIPE_V>();
@@ -549,8 +570,9 @@ private:
             dataCopyParams.blockLen = this->numLastDim * 1;
             DataCopyPad(this->y1Gm[gmOffset], outY1, dataCopyParams);
 #else
-            for(auto i = 0; i < rowCount; i++){
-                DataCopyExV2(this->y1Gm[gmOffset + i * this->numLastDim], outY1[i * this->numLastDimRoundUp32], tensor_local, this->numLastDim, 1);
+            for (auto i = 0; i < rowCount; i++) {
+                DataCopyExV2(this->y1Gm[gmOffset + i * this->numLastDim], outY1[i * this->numLastDimRoundUp32],
+                             tensor_local, this->numLastDim, 1);
             }
 #endif
             if (this->scales2Exist) {

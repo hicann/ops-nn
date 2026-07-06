@@ -37,15 +37,9 @@
 
 class ApplyAddSign : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAddSign SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAddSign SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAddSign TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAddSign TearDown" << std::endl; }
 };
 
 // case_0: 2D shape, single-output var shape inference.
@@ -65,8 +59,7 @@ TEST_F(ApplyAddSign, ApplyAddSign_infershape_case_0)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -90,8 +83,7 @@ TEST_F(ApplyAddSign, ApplyAddSign_infershape_case_1)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -115,8 +107,7 @@ TEST_F(ApplyAddSign, ApplyAddSign_infershape_case_2)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -141,8 +132,7 @@ TEST_F(ApplyAddSign, ApplyAddSign_infershape_case_3_empty)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 
@@ -167,8 +157,7 @@ TEST_F(ApplyAddSign, ApplyAddSign_infershape_case_4_8d)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
+                      .InputShapes({&varShape, &mShape, &lrShape, &alphaShape, &signDecayShape, &betaShape, &gradShape})
                       .OutputShapes({&varShape})
                       .Build();
 

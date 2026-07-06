@@ -35,19 +35,19 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr,
- 	                const std::vector<float>& selfXHostData, const std::vector<float>& selfYHostData)
+void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr, const std::vector<float>& selfXHostData,
+                    const std::vector<float>& selfYHostData)
 {
     // If you want to print more data, please modify the code.
     auto size = std::min(GetShapeSize(shape), static_cast<int64_t>(10));
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     LOG_PRINT("Notice: Only printing the first 10 elements. If you need to print more, please modify the code.\n");
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("add_example first input[%ld] is: %f, second input[%ld] is: %f, result[%ld] is: %f\n", i, selfXHostData[i], i, selfYHostData[i], i, resultData[i]);
+        LOG_PRINT("add_example first input[%ld] is: %f, second input[%ld] is: %f, result[%ld] is: %f\n", i,
+                  selfXHostData[i], i, selfYHostData[i], i, resultData[i]);
     }
 }
 
@@ -64,9 +64,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 2. 申请device侧内存
@@ -83,9 +82,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -135,7 +133,7 @@ int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream)
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
-    std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtr(nullptr, aclrtFree);
+    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > static_cast<uint64_t>(0)) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
@@ -159,7 +157,7 @@ int main()
 {
     int32_t deviceId = 0;
     aclrtStream stream;
-    
+
     auto ret = aclnnAddExampleTest(deviceId, stream);
     // 释放device资源以及acl去初始化
     aclrtDestroyStream(stream);

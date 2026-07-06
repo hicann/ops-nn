@@ -69,11 +69,9 @@ static ge::graphStatus ForeachAbsTilingFunc(gert::TilingContext* context)
     int64_t coreNum = 0;
     int64_t ubSize = 0;
     OP_CHECK_IF(GetPlatformInfoFallback(context, coreNum, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Failed to get platform info"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
@@ -82,7 +80,8 @@ static ge::graphStatus ForeachAbsTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
-    OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ABS),
+    OP_CHECK_IF(
+        (static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ABS),
         OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ABS %d", tensorNum, MAX_TENSOR_NUM_FOREACH_ABS),
         return ge::GRAPH_FAILED);
 
@@ -113,16 +112,14 @@ static ge::graphStatus ForeachAbsTilingFunc(gert::TilingContext* context)
         context->SetBlockDim(1);
         context->SetTilingKey(GetTilingKeyByDtype(dataType));
         auto res = context->SetLocalMemorySize(ubSize);
-        OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-            OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+                    return ge::GRAPH_FAILED);
         size_t* currentWorkspace = context->GetWorkspaceSizes(1);
         currentWorkspace[0] = 0;
         return ge::GRAPH_SUCCESS;
     }
 
-    int64_t perCoreElements = std::max(SINGLE_CORE_MIN_ELEMENTS,
-        (totalElements + coreNum - 1) / coreNum);
+    int64_t perCoreElements = std::max(SINGLE_CORE_MIN_ELEMENTS, (totalElements + coreNum - 1) / coreNum);
     perCoreElements = ((perCoreElements + ALIGN_SIZE - 1) / ALIGN_SIZE) * ALIGN_SIZE;
     int64_t needCoreNum = Ops::Base::CeilDiv(totalElements, perCoreElements);
     needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
@@ -137,9 +134,8 @@ static ge::graphStatus ForeachAbsTilingFunc(gert::TilingContext* context)
     context->SetTilingKey(GetTilingKeyByDtype(dataType));
 
     auto res = context->SetLocalMemorySize(ubSize);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+                return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = 0;
@@ -155,20 +151,14 @@ static ge::graphStatus TilingParseForForeachAbs(gert::TilingParseContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ForeachAbs)
-    .Tiling(ForeachAbsTilingFunc)
-    .TilingParse<ForeachAbsCompileInfo>(TilingParseForForeachAbs);
+IMPL_OP_OPTILING(ForeachAbs).Tiling(ForeachAbsTilingFunc).TilingParse<ForeachAbsCompileInfo>(TilingParseForForeachAbs);
 
 } // namespace optiling

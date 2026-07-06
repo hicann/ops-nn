@@ -27,9 +27,9 @@ namespace RotateQuantNS {
 using namespace Cmct;
 using namespace Cmct::Gemm;
 template <class X_TYPE, class Y_TYPE, class SCALE_TYPE, class C_LAYOUT>
-__aicore__ inline void RotateQuantCmctKernel(
-    GM_ADDR xGM, GM_ADDR rotGM, GM_ADDR alphaGM, GM_ADDR yGM, GM_ADDR scaleGM, GM_ADDR workspaceGM,
-    const RotateQuantAptOpt::RotateQuantAptTilingData& tilingData)
+__aicore__ inline void RotateQuantCmctKernel(GM_ADDR xGM, GM_ADDR rotGM, GM_ADDR alphaGM, GM_ADDR yGM, GM_ADDR scaleGM,
+                                             GM_ADDR workspaceGM,
+                                             const RotateQuantAptOpt::RotateQuantAptTilingData& tilingData)
 {
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
     using L0TileShape = AscendC::Shape<_0, _0, _0>;
@@ -48,9 +48,8 @@ __aicore__ inline void RotateQuantCmctKernel(
     using BlockScheduler = BuiltInRotateQuantScheduler;
 
     using DispatchPolicy = MatmulRotateQuant<>;
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, CType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
-        DispatchPolicy>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, CType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     using FusionOp = Block::DefaultFusion<OutType, CType>;
 

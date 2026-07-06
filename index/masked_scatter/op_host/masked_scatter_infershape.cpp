@@ -18,7 +18,7 @@
 #include "log/log.h"
 
 namespace ops {
-static ge::graphStatus InferShape4MaskedScatter(gert::InferShapeContext *context)
+static ge::graphStatus InferShape4MaskedScatter(gert::InferShapeContext* context)
 {
     return Ops::Base::InferShape4Elewise(context);
 }

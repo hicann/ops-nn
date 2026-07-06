@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -28,29 +28,27 @@ using namespace std;
 using namespace ge;
 
 class ReluTilingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ReluTilingTest SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ReluTilingTest SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ReluTilingTest TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ReluTilingTest TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tiling_data) {
-  auto data = tiling_data->GetData();
-  string result;
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
+    auto data = tiling_data->GetData();
+    string result;
 
-  for (size_t i = 0; i < tiling_data->GetDataSize() - 2 * sizeof(int32_t); i += sizeof(int64_t)) {
-    result += std::to_string((reinterpret_cast<const int64_t *>(tiling_data->GetData())[i / sizeof(int64_t)]));
-    result += " ";
-  }
-  for (size_t i = tiling_data->GetDataSize() - 2 * sizeof(int32_t); i < tiling_data->GetDataSize(); i += sizeof(int32_t)) {
-    result += std::to_string((reinterpret_cast<const int32_t *>(tiling_data->GetData())[i / sizeof(int32_t)]));
-    result += " ";
-  }
-  return result;
+    for (size_t i = 0; i < tiling_data->GetDataSize() - 2 * sizeof(int32_t); i += sizeof(int64_t)) {
+        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+        result += " ";
+    }
+    for (size_t i = tiling_data->GetDataSize() - 2 * sizeof(int32_t); i < tiling_data->GetDataSize();
+         i += sizeof(int32_t)) {
+        result += std::to_string((reinterpret_cast<const int32_t*>(tiling_data->GetData())[i / sizeof(int32_t)]));
+        result += " ";
+    }
+    return result;
 }
 
 TEST_F(ReluTilingTest, test_tiling_fp16_001)

@@ -20,15 +20,9 @@ using namespace std;
 
 class l2_nll_loss2d_forward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_nll_loss2d_forward SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_nll_loss2d_forward SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_nll_loss2d_forward TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_nll_loss2d_forward TearDown" << endl; }
 };
 
 TEST_F(l2_nll_loss2d_forward_test, case_001)
@@ -42,9 +36,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_001)
     auto outDesc = TensorDesc({1, 150, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -58,8 +51,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_001)
 TEST_F(l2_nll_loss2d_forward_test, case_002)
 {
     auto selfDesc = TensorDesc({1, 3, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto targetDesc =
-        TensorDesc({1, 5, 2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 0, 0, 2, 1, 0, 1, 0, 1, 1});
+    auto targetDesc = TensorDesc({1, 5, 2}, ACL_INT64, ACL_FORMAT_ND)
+                          .Value(vector<int64_t>{0, 0, 0, 2, 1, 0, 1, 0, 1, 1});
     auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 5, 2.1});
     int64_t reduction = 0;
     int64_t ignoreIndex = 0;
@@ -67,9 +60,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_002)
     auto outDesc = TensorDesc({1, 5, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -89,9 +81,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_003)
     auto outDesc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -113,9 +104,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_004)
     auto outDesc = TensorDesc({3, 2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -136,9 +126,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_005)
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCHW).Value(vector<int64_t>{3}).ValidCount(0);
     auto outDesc = TensorDesc({3, 2, 5}, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -160,9 +149,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_006)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -184,9 +172,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_007)
     auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_HWCN).Precision(0.001, 0.001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_HWCN).Precision(0.001, 0.001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -208,9 +195,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_008)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NDHWC).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NDHWC).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -232,9 +218,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_009)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -258,9 +243,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_010)
     auto outDesc = TensorDesc({}, ACL_INT16, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_INT16, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -279,9 +263,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_011)
     auto outDesc = TensorDesc({}, ACL_INT8, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_INT8, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -300,9 +283,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_012)
     auto outDesc = TensorDesc({}, ACL_INT16, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_INT16, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -321,9 +303,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_015)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -345,9 +326,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_016)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -370,9 +350,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_017)
 
     auto outDesc = TensorDesc({3, 0, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -393,9 +372,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_018)
     auto outDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(nullptr, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(nullptr, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -414,8 +392,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_019)
     auto outDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0}).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, nullptr, weightDesc, reduction, ignoreIndex), OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, nullptr, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -434,8 +412,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_020)
     auto outDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0}).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, nullptr, reduction, ignoreIndex), OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, nullptr, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -454,8 +432,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_021)
     auto outDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex), OUTPUT(outDesc, nullptr));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -474,9 +452,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_022)
     auto outDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(nullptr, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(nullptr, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -495,9 +472,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_023)
     auto outDesc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -516,9 +492,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_024)
     auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_HWCN).Precision(0.001, 0.001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_HWCN).Precision(0.001, 0.001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -537,9 +512,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_025)
     auto outDesc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -558,9 +532,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_026)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -582,9 +555,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_027)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -605,9 +577,8 @@ TEST_F(l2_nll_loss2d_forward_test, case_029)
     auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.001, 0.001);
     auto totalWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.001, 0.001);
 
-    auto ut = OP_API_UT(
-        aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
-        OUTPUT(outDesc, totalWeightDesc));
+    auto ut = OP_API_UT(aclnnNLLLoss2d, INPUT(selfDesc, targetDesc, weightDesc, reduction, ignoreIndex),
+                        OUTPUT(outDesc, totalWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;

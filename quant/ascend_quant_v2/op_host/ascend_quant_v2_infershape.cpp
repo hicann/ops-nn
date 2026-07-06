@@ -26,7 +26,7 @@ static graphStatus InferShapeForAscendQuantV2(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXShape);
 
     gert::Shape* outputShape = context->GetOutputShape(0);
-    
+
     *outputShape = *inputXShape;
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForAscendQuantV2");
     return ge::GRAPH_SUCCESS;

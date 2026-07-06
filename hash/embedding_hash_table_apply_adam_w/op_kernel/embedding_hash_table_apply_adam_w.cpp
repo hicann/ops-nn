@@ -35,16 +35,14 @@ extern "C" __global__ __aicore__ void embedding_hash_table_apply_adam_w(
 
     if (TILING_KEY_IS(BIT2WIDTH_TILING_KEY)) {
         KernelEmbeddingHashTableApplyAdamW<half> op;
-        op.Init(
-            tableIn, keys, m, v, beta1Power, beta2Power, lr, weightDecay, beta1, beta2, epsilon, grad, maxGradNorm,
-            mOut, vOut, beta1PowerOut, beta2PowerOut, maxGradNormOut, workspace, tilingData);
+        op.Init(tableIn, keys, m, v, beta1Power, beta2Power, lr, weightDecay, beta1, beta2, epsilon, grad, maxGradNorm,
+                mOut, vOut, beta1PowerOut, beta2PowerOut, maxGradNormOut, workspace, tilingData);
         op.Process();
         op.PostProcess(beta1PowerOut, beta2PowerOut);
     } else if (TILING_KEY_IS(BIT4WIDTH_TILING_KEY)) {
         KernelEmbeddingHashTableApplyAdamW<float> op;
-        op.Init(
-            tableIn, keys, m, v, beta1Power, beta2Power, lr, weightDecay, beta1, beta2, epsilon, grad, maxGradNorm,
-            mOut, vOut, beta1PowerOut, beta2PowerOut, maxGradNormOut, workspace, tilingData);
+        op.Init(tableIn, keys, m, v, beta1Power, beta2Power, lr, weightDecay, beta1, beta2, epsilon, grad, maxGradNorm,
+                mOut, vOut, beta1PowerOut, beta2PowerOut, maxGradNormOut, workspace, tilingData);
         op.Process();
         op.PostProcess(beta1PowerOut, beta2PowerOut);
     }

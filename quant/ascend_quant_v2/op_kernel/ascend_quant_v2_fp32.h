@@ -24,8 +24,8 @@ template <typename T>
 class AscendQuantV2PerChannelFP32 : public AscendQuantV2Base<T> {
 public:
     __aicore__ inline AscendQuantV2PerChannelFP32(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const AscendQuantV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const AscendQuantV2TilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
@@ -60,9 +60,8 @@ public:
             gmXOffset_ = blockIdx_ * tilingData_.blockFactor;
             gmSOffset_ = blockIdx_ * tilingData_.blockFactor;
         } else {
-            gmXOffset_ =
-                (blockIdx_ / tilingData_.blockUnion * tilingData_.dim1 +
-                 blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
+            gmXOffset_ = (blockIdx_ / tilingData_.blockUnion * tilingData_.dim1 +
+                          blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
             gmSOffset_ = blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor;
         }
 
@@ -236,8 +235,8 @@ template <typename T>
 class AscendQuantV2PerTensorFP32 : public AscendQuantV2Base<T> {
 public:
     __aicore__ inline AscendQuantV2PerTensorFP32(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const AscendQuantV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const AscendQuantV2TilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
@@ -389,8 +388,8 @@ class AscendQuantV2PerHead : public AscendQuantV2Base<T> {
 public:
     __aicore__ inline AscendQuantV2PerHead(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const AscendQuantV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const AscendQuantV2TilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
@@ -480,9 +479,8 @@ private:
                          blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor * tilingData_.dim2;
             gmSOffset_ = blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor;
         } else {
-            gmXOffset_ =
-                (blockIdx_ / tilingData_.blockUnion * tilingData_.dim2 +
-                 blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
+            gmXOffset_ = (blockIdx_ / tilingData_.blockUnion * tilingData_.dim2 +
+                          blockIdx_ % tilingData_.blockUnion * tilingData_.blockFactor);
             gmSOffset_ = blockIdx_ / tilingData_.blockUnion;
         }
     }
@@ -545,8 +543,8 @@ private:
     }
 
     template <bool SQRT_MODE, bool HAS_OFFSET>
-    __aicore__ inline void ProcessInputLoop(
-        int64_t nLoopLen, int64_t baseXOffset, LocalTensor<float>& scaleLocal, LocalTensor<float>& offsetLocal)
+    __aicore__ inline void ProcessInputLoop(int64_t nLoopLen, int64_t baseXOffset, LocalTensor<float>& scaleLocal,
+                                            LocalTensor<float>& offsetLocal)
     {
         auto loopLen = tilingData_.baseLen;
         auto loopNum = blockLen_ / loopLen;
@@ -561,17 +559,16 @@ private:
     }
 
     template <bool SQRT_MODE, bool HAS_OFFSET>
-    __aicore__ inline void ProcessInputOneLoop(
-        int64_t nLoopLen, int64_t loopLen, int64_t baseXOffset, LocalTensor<float>& scaleLocal,
-        LocalTensor<float>& offsetLocal)
+    __aicore__ inline void ProcessInputOneLoop(int64_t nLoopLen, int64_t loopLen, int64_t baseXOffset,
+                                               LocalTensor<float>& scaleLocal, LocalTensor<float>& offsetLocal)
     {
         CopyInX(nLoopLen, loopLen, baseXOffset);
         Compute<SQRT_MODE, HAS_OFFSET>(nLoopLen, loopLen, scaleLocal, offsetLocal);
         CopyOutY(nLoopLen, loopLen, baseXOffset);
     }
 
-    __aicore__ inline void CopyInParam(
-        TQue<QuePosition::VECIN, 1>& inQueue, GlobalTensor<T>& inGm, int64_t paramLen, int64_t paramOffset)
+    __aicore__ inline void CopyInParam(TQue<QuePosition::VECIN, 1>& inQueue, GlobalTensor<T>& inGm, int64_t paramLen,
+                                       int64_t paramOffset)
     {
         auto paramLocal = inQueue.AllocTensor<T>();
         DataCopyExtParams copyParams = {1, static_cast<uint32_t>(paramLen * sizeof(T)), 0, 0, 0};
@@ -634,8 +631,8 @@ private:
     }
 
     template <bool SQRT_MODE, bool HAS_OFFSET>
-    __aicore__ inline void Compute(
-        int64_t nRow, int64_t dataCount, LocalTensor<float>& scaleLocal, LocalTensor<float>& offsetLocal)
+    __aicore__ inline void Compute(int64_t nRow, int64_t dataCount, LocalTensor<float>& scaleLocal,
+                                   LocalTensor<float>& offsetLocal)
     {
         auto inLocal = inQueueX_.DeQue<T>();
         auto outLocal = outQueueY_.AllocTensor<int8_t>();

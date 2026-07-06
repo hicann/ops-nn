@@ -102,5 +102,5 @@ private:
     gert::TilingContext* context_;
     GruTiling gruParams_;
 };
-}
+} // namespace optiling
 #endif

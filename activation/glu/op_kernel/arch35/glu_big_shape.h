@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -32,8 +32,7 @@ template <typename T>
 class GluBigShape {
 public:
     __aicore__ inline GluBigShape(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -63,8 +62,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GluBigShape<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
+__aicore__ inline void GluBigShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -123,18 +121,17 @@ __aicore__ inline void GluBigShape<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void GluBigShape<T>::CopyIn(
-    const int64_t& batchIdx, const int64_t& splitIdx, const int64_t& length)
+__aicore__ inline void GluBigShape<T>::CopyIn(const int64_t& batchIdx, const int64_t& splitIdx, const int64_t& length)
 {
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
-    
+
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
     intriParams.dstStride = 0;
     intriParams.srcStride = 0;
     intriParams.blockLen = length * sizeof(T);
-    
+
     DataCopyPadParams intriPadParams;
     intriPadParams.isPad = false;
 
@@ -155,13 +152,13 @@ __aicore__ inline void GluBigShape<T>::ComputeSigmoidAndMul(const int64_t& count
     LocalTensor<T> x1Local = inQueueX1.DeQue<T>();
     LocalTensor<T> x2Local = inQueueX2.DeQue<T>();
     LocalTensor<T> outLocal = outQueue.AllocTensor<T>();
-    
+
     __local_mem__ T* x1LocalPtr = (__local_mem__ T*)x1Local.GetPhyAddr();
     __local_mem__ T* x2LocalPtr = (__local_mem__ T*)x2Local.GetPhyAddr();
     __local_mem__ T* outLocalPtr = (__local_mem__ T*)outLocal.GetPhyAddr();
-    
+
     ComputeSigmoidAndMulImpl<T>(x1LocalPtr, x2LocalPtr, outLocalPtr, count);
-    
+
     inQueueX1.FreeTensor(x1Local);
     inQueueX2.FreeTensor(x2Local);
     outQueue.EnQue(outLocal);
@@ -169,11 +166,10 @@ __aicore__ inline void GluBigShape<T>::ComputeSigmoidAndMul(const int64_t& count
 }
 
 template <typename T>
-__aicore__ inline void GluBigShape<T>::CopyOut(
-    const int64_t& batchIdx, const int64_t& splitIdx, const int64_t& length)
+__aicore__ inline void GluBigShape<T>::CopyOut(const int64_t& batchIdx, const int64_t& splitIdx, const int64_t& length)
 {
     LocalTensor<T> outLocal = outQueue.DeQue<T>();
-    
+
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
     intriParams.dstStride = 0;

@@ -20,8 +20,7 @@
 #include "atvoss/util/placeholder.h"
 
 using namespace Ops::Base;
-namespace ReluGradOp
-{
+namespace ReluGradOp {
 const int COMPARE_MODE_LE = 3;
 const int SEL_MODE = 2;
 
@@ -70,5 +69,5 @@ struct ReluGradCastDag {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-}  // namespace ReluGradOp
-#endif  // RELU_GRAD_DAG_H
+} // namespace ReluGradOp
+#endif // RELU_GRAD_DAG_H

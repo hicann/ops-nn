@@ -24,10 +24,8 @@
 #include "apply_adadelta.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void apply_adadelta(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR accumUpdate, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR accumOut, GM_ADDR accumUpdateOut,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_adadelta(GM_ADDR var, GM_ADDR accum, GM_ADDR accumUpdate, GM_ADDR grad, GM_ADDR varOut,
+                                          GM_ADDR accumOut, GM_ADDR accumUpdateOut, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAdadeltaTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdadeltaTilingData, tilingData, tiling);

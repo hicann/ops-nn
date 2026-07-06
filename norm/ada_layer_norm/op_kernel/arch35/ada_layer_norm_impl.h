@@ -42,7 +42,8 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::WelfordInitialize(
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessWelfordUpdate(int64_t computeLength, int64_t welfordCount)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessWelfordUpdate(int64_t computeLength,
+                                                                                   int64_t welfordCount)
 {
     LocalTensor<T> xLocal = xQueue.DeQue<T>();
     WelfordUpdateParam para;
@@ -56,7 +57,8 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessWelfordUpda
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessWelfordFinalize(int64_t welfordCount, int64_t batchCount)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessWelfordFinalize(int64_t welfordCount,
+                                                                                     int64_t batchCount)
 {
     WelfordFinalizePara para;
     para.rnLength = welfordCount;
@@ -110,17 +112,21 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessNormalize(u
 
     NormalizePara para{1, dataCount, WELFORD_COUNT};
     if (hasWeight && hasBias) {
-        Normalize<float, float, false, hasGammaBetaNormalizeConfig>(normLocal, rstdLocal[batchCount], meanLocal[batchCount], 
-            varLocal[batchCount], xLocal, weightLocal, biasLocal, tmpLocal, epsilon, para);
+        Normalize<float, float, false, hasGammaBetaNormalizeConfig>(normLocal, rstdLocal[batchCount],
+                                                                    meanLocal[batchCount], varLocal[batchCount], xLocal,
+                                                                    weightLocal, biasLocal, tmpLocal, epsilon, para);
     } else if (hasWeight && !hasBias) {
-        Normalize<float, float, false, hasGammaNoBetaNormalizeConfig>(normLocal, rstdLocal[batchCount], meanLocal[batchCount], 
-            varLocal[batchCount], xLocal, weightLocal, biasLocal, tmpLocal, epsilon, para);
+        Normalize<float, float, false, hasGammaNoBetaNormalizeConfig>(
+            normLocal, rstdLocal[batchCount], meanLocal[batchCount], varLocal[batchCount], xLocal, weightLocal,
+            biasLocal, tmpLocal, epsilon, para);
     } else if (!hasWeight && hasBias) {
-        Normalize<float, float, false, noGammaHasBetaNormalizeConfig>(normLocal, rstdLocal[batchCount], meanLocal[batchCount], 
-            varLocal[batchCount], xLocal, weightLocal, biasLocal, tmpLocal, epsilon, para);
+        Normalize<float, float, false, noGammaHasBetaNormalizeConfig>(
+            normLocal, rstdLocal[batchCount], meanLocal[batchCount], varLocal[batchCount], xLocal, weightLocal,
+            biasLocal, tmpLocal, epsilon, para);
     } else if (!hasWeight && !hasBias) {
-        Normalize<float, float, false, noGammaNoBetaNormalizeConfig>(normLocal, rstdLocal[batchCount], meanLocal[batchCount], 
-            varLocal[batchCount], xLocal, weightLocal, biasLocal, tmpLocal, epsilon, para);
+        Normalize<float, float, false, noGammaNoBetaNormalizeConfig>(
+            normLocal, rstdLocal[batchCount], meanLocal[batchCount], varLocal[batchCount], xLocal, weightLocal,
+            biasLocal, tmpLocal, epsilon, para);
     }
     PipeBarrier<PIPE_V>();
     xQueue.FreeTensor(xLocal);
@@ -166,7 +172,8 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::CopyInOtherData()
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::CopyInScaleShift(int64_t offset, int64_t localOffset, int64_t repeatNum)
+__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::CopyInScaleShift(int64_t offset, int64_t localOffset,
+                                                                                int64_t repeatNum)
 {
     PIPE_V_MTE2();
     DataCopyExtParams copyInParams{1, static_cast<uint32_t>(hiddenDim * sizeof(T)), 0, 0, 0};
@@ -174,7 +181,7 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::CopyInScaleShift(
     DataCopyPad(scaleLocal[localOffset], scaleGm[offset], copyInParams, padParams);
     DataCopyPad(shiftLocal[localOffset], shiftGm[offset], copyInParams, padParams);
     PIPE_MTE2_V();
-    for (int i = 1;i < repeatNum;i ++) {
+    for (int i = 1; i < repeatNum; i++) {
         Copy(scaleLocal[localOffset + i * hiddenDimCeil], scaleLocal[localOffset], hiddenDim);
         Copy(shiftLocal[localOffset + i * hiddenDimCeil], shiftLocal[localOffset], hiddenDim);
     }
@@ -267,7 +274,8 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::CopyInOtherData(in
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::CopyInScaleShift(int64_t offset, int64_t smoothOffset, int64_t len)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::CopyInScaleShift(int64_t offset, int64_t smoothOffset,
+                                                                               int64_t len)
 {
     LocalTensor<T> scaleLocal = scaleQueue.AllocTensor<T>();
     LocalTensor<T> shiftLocal = shiftQueue.AllocTensor<T>();
@@ -358,4 +366,4 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::CopyMeanRstdOut(in
     rstdQueue.FreeTensor(rstdOut);
 }
 
-#endif  // ADA_LAYER_NORM_IMPL_H
+#endif // ADA_LAYER_NORM_IMPL_H

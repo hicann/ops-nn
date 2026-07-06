@@ -28,7 +28,7 @@ constexpr uint32_t BIAS_INDEX = 6;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr size_t LAST_BATCH_DIM_INDEX = 3;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
-}
+} // namespace
 
 namespace optiling {
 ge::graphStatus WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckContext()
@@ -80,19 +80,20 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckDtype()
             ge::TypeUtils::DataTypeToSerialString(inputParams_.antiQuantScaleDtype).c_str()),
         return false);
 
-    OP_TILING_CHECK(inputParams_.cDtype != ge::DT_FLOAT16 && inputParams_.cDtype != ge::DT_INT8,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Output y dtype must be FLOAT16/INT8, but is [%s]",
-                                                    ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
-                    return false);
+    OP_TILING_CHECK(
+        inputParams_.cDtype != ge::DT_FLOAT16 && inputParams_.cDtype != ge::DT_INT8,
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Output y dtype must be FLOAT16/INT8, but is [%s]",
+                                        ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+        return false);
 
     auto biasDesc = context_->GetOptionalInputDesc(BIAS_INDEX);
     if (biasDesc != nullptr) {
         inputParams_.biasDtype = biasDesc->GetDataType();
-        OP_TILING_CHECK(inputParams_.biasDtype != ge::DT_FLOAT16 && inputParams_.biasDtype != ge::DT_INT32,
-                        VECTOR_INNER_ERR_REPORT_TILIING(
-                            inputParams_.opName,"Input bias dtype must be FLOAT16/INT32, but is [%s]",
-                            ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
-                        return false);
+        OP_TILING_CHECK(
+            inputParams_.biasDtype != ge::DT_FLOAT16 && inputParams_.biasDtype != ge::DT_INT32,
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Input bias dtype must be FLOAT16/INT32, but is [%s]",
+                                            ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
+            return false);
     }
     return true;
 }
@@ -109,12 +110,12 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckAttr()
     size_t idx = 0;
     auto transposeX = attrs->GetAttrPointer<bool>(idx++);
     auto transposeWeight = attrs->GetAttrPointer<bool>(idx++);
-    const int64_t *groupSizePtr = nullptr;
+    const int64_t* groupSizePtr = nullptr;
     if (attrs->GetAttrNum() > idx) {
         groupSizePtr = attrs->GetAttrPointer<int64_t>(idx++);
     }
-    idx++;  // 跳过dtype属性
-    const int64_t *innerPrecisePtr = nullptr;
+    idx++; // 跳过dtype属性
+    const int64_t* innerPrecisePtr = nullptr;
     if (attrs->GetAttrNum() > idx) {
         innerPrecisePtr = attrs->GetAttrPointer<int64_t>(idx++);
     }
@@ -175,10 +176,10 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckShape()
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check input x and weight shape failed"),
                     return false);
     // check batch
-    OP_TILING_CHECK(!CheckBatchInfo(xShape->GetOriginShape(), weightShape->GetOriginShape()),
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                                    "Batch dimension should be equal when their value not 1."),
-                    return false);
+    OP_TILING_CHECK(
+        !CheckBatchInfo(xShape->GetOriginShape(), weightShape->GetOriginShape()),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Batch dimension should be equal when their value not 1."),
+        return false);
     // check antiquant scale, antiquant offset
     OP_TILING_CHECK(!CheckAntiQuantShape(antiQuantScaleShape, antiQuantOffsetShape),
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check antiquant shape failed"), return false);
@@ -193,21 +194,22 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckShape()
     if (biasShape != nullptr) {
         OP_TILING_CHECK(biasShape->GetStorageShape().GetDimNum() != 1,
                         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Bias dimension should equal to 1"),
-                                                        return false);
+                        return false);
         OP_TILING_CHECK(static_cast<uint64_t>(biasShape->GetStorageShape().GetDim(0)) != inputParams_.nSize,
                         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Bias size should be equal to nsize"),
-                                                        return false);
-    } 
+                        return false);
+    }
     // check dim value
     OP_TILING_CHECK(inputParams_.groupSize >= inputParams_.kSize || inputParams_.groupSize % MIN_GROUP_SIZE != 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(
                         inputParams_.opName, "Group sizes should not more than [%lu] and align to 32, but is [%lu]",
-                        inputParams_.kSize, inputParams_.groupSize), return false);
+                        inputParams_.kSize, inputParams_.groupSize),
+                    return false);
     return true;
 }
 
-bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::StorageShape *xShape,
-                                                               const gert::StorageShape *weightShape)
+bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::StorageShape* xShape,
+                                                               const gert::StorageShape* weightShape)
 {
     OP_TILING_CHECK(inputParams_.aFormat != ge::Format::FORMAT_ND && inputParams_.aFormat != ge::Format::FORMAT_NCHW,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input x format should be ND , actual format is %s",
@@ -224,34 +226,39 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::Stora
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     size_t weightDimNum = weightShape->GetStorageShape().GetDimNum();
 
-    OP_TILING_CHECK(xOriDimNum < MIN_SHAPE_LEN_ND || xOriDimNum > MAX_SHAPE_LEN_ND,
+    OP_TILING_CHECK(
+        xOriDimNum < MIN_SHAPE_LEN_ND || xOriDimNum > MAX_SHAPE_LEN_ND,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "OriginalShape of x can not be greater than %zu and \
-                                        less than %zu, but is [%zu]", MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xOriDimNum),
+                                        less than %zu, but is [%zu]",
+                                        MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xOriDimNum),
         return false);
 
-    OP_TILING_CHECK(weightOriDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
+    OP_TILING_CHECK(
+        weightOriDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "OriginalShape of weight can not be greater than %zu and \
-                                        less than %zu, but is [%zu]", MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND,
-                                        weightOriDimNum),
+                                        less than %zu, but is [%zu]",
+                                        MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightOriDimNum),
         return false);
 
-    OP_TILING_CHECK(xDimNum < MIN_SHAPE_LEN_ND || xDimNum > MAX_SHAPE_LEN_ND,
+    OP_TILING_CHECK(
+        xDimNum < MIN_SHAPE_LEN_ND || xDimNum > MAX_SHAPE_LEN_ND,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of x can not be greater than %zu and \
-                                        less than %zu, but is [%zu]", MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xDimNum),
+                                        less than %zu, but is [%zu]",
+                                        MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, xDimNum),
         return false);
 
     OP_TILING_CHECK(weightDimNum < MIN_SHAPE_LEN_ND || weightDimNum > MAX_SHAPE_LEN_ND,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "StorageShape of weight can not be greater \
-                                                    than %zu and less than %zu, but is [%zu]", MAX_SHAPE_LEN_ND,
-                                                    MIN_SHAPE_LEN_ND, weightDimNum),
+                                                    than %zu and less than %zu, but is [%zu]",
+                                                    MAX_SHAPE_LEN_ND, MIN_SHAPE_LEN_ND, weightDimNum),
                     return false);
 
     auto xShapeLen = xShape->GetOriginShape().GetDimNum();
     auto weightShapeLen = weightShape->GetOriginShape().GetDimNum();
     uint64_t weightLastDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_FIRST_DIM_INDEX);
     uint64_t weightFirstDim = weightShape->GetOriginShape().GetDim(weightShapeLen - LAST_SECOND_DIM_INDEX);
-    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen- LAST_SECOND_DIM_INDEX);
-    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen- LAST_FIRST_DIM_INDEX);
+    uint64_t xFirstDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_SECOND_DIM_INDEX);
+    uint64_t xLastDim = xShape->GetOriginShape().GetDim(xShapeLen - LAST_FIRST_DIM_INDEX);
     inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? xLastDim : xFirstDim);
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? xFirstDim : xLastDim);
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? weightFirstDim : weightLastDim);
@@ -265,14 +272,14 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckInputShape(const gert::Stora
     return true;
 }
 
-bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckBatchInfo(const gert::Shape &xShape,
-                                                              const gert::Shape &weightShape) const
+bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckBatchInfo(const gert::Shape& xShape,
+                                                              const gert::Shape& weightShape) const
 {
     auto x1DimNum = xShape.GetDimNum();
     auto x2DimNum = weightShape.GetDimNum();
     auto outDimNum = std::max(x1DimNum, x2DimNum);
-    const gert::Shape &shapeLong = x1DimNum > x2DimNum ? xShape : weightShape;
-    const gert::Shape &shapeShort = x1DimNum > x2DimNum ? weightShape : xShape;
+    const gert::Shape& shapeLong = x1DimNum > x2DimNum ? xShape : weightShape;
+    const gert::Shape& shapeShort = x1DimNum > x2DimNum ? weightShape : xShape;
     size_t validOffset = outDimNum - std::min(x1DimNum, x2DimNum);
     for (size_t i = 0; i < outDimNum - LAST_SECOND_DIM_INDEX; i++) {
         auto shortDim = i < validOffset ? 1 : shapeShort.GetDim(i - validOffset);
@@ -284,8 +291,8 @@ bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckBatchInfo(const gert::Shape 
     return true;
 }
 
-bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckAntiQuantShape(const gert::StorageShape *antiQuantScaleShape,
-                                                                   const gert::StorageShape *antiQuantOffsetShape)
+bool WeightQuantBatchMatmulV2Checker4MmadS8S4::CheckAntiQuantShape(const gert::StorageShape* antiQuantScaleShape,
+                                                                   const gert::StorageShape* antiQuantOffsetShape)
 {
     size_t antiQuantScaleDimNum = antiQuantScaleShape->GetStorageShape().GetDimNum();
     size_t antiQuantScaleShapeSize = static_cast<size_t>(antiQuantScaleShape->GetStorageShape().GetShapeSize());
@@ -338,17 +345,16 @@ ge::graphStatus WeightQuantBatchMatmulV2Checker4MmadS8S4::Check()
     }
     // check the input and output dtype: x, weight, antiquant_scale, y.
     // In RESERVED, antiquant_offset, quant_scale, quant_offset don't need to check, cause they are nullptr
-    OP_TILING_CHECK(!CheckDtype(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check input dtype failed"),
+    OP_TILING_CHECK(!CheckDtype(), VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check input dtype failed"),
                     return ge::GRAPH_FAILED);
     // check attrs: transA, transB, group_size, dtype, innerPrecise
-    OP_TILING_CHECK(!CheckAttr(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check attr failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckAttr(), VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check attr failed"),
+                    return ge::GRAPH_FAILED);
     // check the input and output shape: all
-    OP_TILING_CHECK(!CheckShape(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check shape failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckShape(), VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Check shape failed"),
+                    return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

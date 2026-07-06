@@ -21,9 +21,10 @@
 namespace optiling {
 namespace fused_matmul {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(
-    FusedMatMul, FusedMatMulBatchAswBL1FullLoadBasicTiling, DAV_3510, BL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3);
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBL1FullLoadBasicTiling, DAV_RESV, BL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBL1FullLoadBasicTiling, DAV_3510,
+                            BL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBL1FullLoadBasicTiling, DAV_RESV,
+                            BL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3);
 
 bool FusedMatMulBatchAswBL1FullLoadBasicTiling::IsCapable()
 {

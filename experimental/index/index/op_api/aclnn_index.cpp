@@ -31,11 +31,11 @@ namespace {
 constexpr size_t MAX_DIM_LEN = 8;
 
 const std::initializer_list<DataType> VALUE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_DOUBLE, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT16,
-    DataType::DT_INT32, DataType::DT_INT64, DataType::DT_INT8, DataType::DT_UINT8, DataType::DT_BOOL};
+    DataType::DT_FLOAT, DataType::DT_DOUBLE, DataType::DT_FLOAT16, DataType::DT_BF16,  DataType::DT_INT16,
+    DataType::DT_INT32, DataType::DT_INT64,  DataType::DT_INT8,    DataType::DT_UINT8, DataType::DT_BOOL};
 
-const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {
-    DataType::DT_INT64, DataType::DT_INT32, DataType::DT_BOOL};
+const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_INT32,
+                                                                  DataType::DT_BOOL};
 
 bool CheckNotNull(const aclTensor* self, const aclTensorList* indices, const aclTensor* out)
 {
@@ -130,9 +130,8 @@ bool InferOutputShape(const aclTensor* self, const aclTensorList* indices, Shape
 {
     if (self->GetViewShape().GetDimNum() > MAX_DIM_LEN || indices->Size() == 0 ||
         indices->Size() > self->GetViewShape().GetDimNum()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "self rank must be <= %zu and indices size must be in [1, self rank].",
-            MAX_DIM_LEN);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self rank must be <= %zu and indices size must be in [1, self rank].",
+                MAX_DIM_LEN);
         return false;
     }
     ShapeVector indexShape;
@@ -148,8 +147,8 @@ bool InferOutputShape(const aclTensor* self, const aclTensorList* indices, Shape
     }
     if (outShape.size() > MAX_DIM_LEN) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-            "output rank must be <= %zu, but got %zu. selfRank=%zu, indicesSize=%lu, broadcastIndexRank=%zu.",
-            MAX_DIM_LEN, outShape.size(), self->GetViewShape().GetDimNum(), indices->Size(), indexShape.size());
+                "output rank must be <= %zu, but got %zu. selfRank=%zu, indicesSize=%lu, broadcastIndexRank=%zu.",
+                MAX_DIM_LEN, outShape.size(), self->GetViewShape().GetDimNum(), indices->Size(), indexShape.size());
         return false;
     }
     outputShape.SetDimNum(outShape.size());
@@ -173,7 +172,7 @@ bool ShapeEqual(const Shape& lhs, const Shape& rhs)
 }
 
 bool MakeIndexedMetadata(const aclTensor* self, const aclTensorList* indices, aclOpExecutor* executor,
-    const aclTensor** indexedSizesTensor, const aclTensor** indexedStridesTensor)
+                         const aclTensor** indexedSizesTensor, const aclTensor** indexedStridesTensor)
 {
     std::vector<int64_t> indexedSizes(self->GetViewShape().GetDimNum(), 0);
     for (uint64_t i = 0; i < indices->Size(); ++i) {
@@ -190,16 +189,16 @@ bool MakeIndexedMetadata(const aclTensor* self, const aclTensorList* indices, ac
     auto sizesArray = executor->AllocIntArray(indexedSizes.data(), indexedSizes.size());
     auto stridesArray = executor->AllocIntArray(indexedStrides.data(), indexedStrides.size());
     OP_CHECK(sizesArray != nullptr && stridesArray != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index alloc metadata int arrays failed."), return false);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index alloc metadata int arrays failed."), return false);
     *indexedSizesTensor = executor->ConvertToTensor(sizesArray, ToOpDataType(ACL_INT64));
     *indexedStridesTensor = executor->ConvertToTensor(stridesArray, ToOpDataType(ACL_INT64));
     OP_CHECK(*indexedSizesTensor != nullptr && *indexedStridesTensor != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index convert metadata tensors failed."), return false);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index convert metadata tensors failed."), return false);
     return true;
 }
 
 bool MakeBoolIndexMetadata(const aclTensor* out, const aclTensorList* indices, aclOpExecutor* executor,
-    const aclTensor** indexedSizesTensor, const aclTensor** indexedStridesTensor)
+                           const aclTensor** indexedSizesTensor, const aclTensor** indexedStridesTensor)
 {
     std::vector<int64_t> indexedSizes(indices->Size(), 1);
     std::vector<int64_t> outputShape(out->GetViewShape().GetDimNum(), 1);
@@ -210,11 +209,11 @@ bool MakeBoolIndexMetadata(const aclTensor* out, const aclTensorList* indices, a
     auto sizesArray = executor->AllocIntArray(indexedSizes.data(), indexedSizes.size());
     auto stridesArray = executor->AllocIntArray(outputShape.data(), outputShape.size());
     OP_CHECK(sizesArray != nullptr && stridesArray != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index bool alloc metadata int arrays failed."), return false);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index bool alloc metadata int arrays failed."), return false);
     *indexedSizesTensor = executor->ConvertToTensor(sizesArray, ToOpDataType(ACL_INT64));
     *indexedStridesTensor = executor->ConvertToTensor(stridesArray, ToOpDataType(ACL_INT64));
     OP_CHECK(*indexedSizesTensor != nullptr && *indexedStridesTensor != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index bool convert metadata tensors failed."), return false);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Index bool convert metadata tensors failed."), return false);
     return true;
 }
 
@@ -245,12 +244,11 @@ aclnnStatus CheckParams(const aclTensor* self, const aclTensorList* indices, con
     }
     return ACLNN_SUCCESS;
 }
-}  // namespace
+} // namespace
 
 extern "C" {
-aclnnStatus aclnnIndexGetWorkspaceSize(
-    const aclTensor* self, const aclTensorList* indices, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorList* indices, aclTensor* out,
+                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnIndex, DFX_IN(self, indices), DFX_OUT(out));
@@ -301,18 +299,18 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
     const aclTensor* indexedStrides = nullptr;
     if (hasBoolIndex || indicesBeyondSelfRank) {
         CHECK_RET(MakeBoolIndexMetadata(out, indicesList, uniqueExecutor.get(), &indexedSizes, &indexedStrides),
-            ACLNN_ERR_INNER_NULLPTR);
+                  ACLNN_ERR_INNER_NULLPTR);
     } else {
-        CHECK_RET(MakeIndexedMetadata(
-            selfContiguous, indicesList, uniqueExecutor.get(), &indexedSizes, &indexedStrides),
+        CHECK_RET(
+            MakeIndexedMetadata(selfContiguous, indicesList, uniqueExecutor.get(), &indexedSizes, &indexedStrides),
             ACLNN_ERR_INNER_NULLPTR);
     }
 
     const aclTensor* indexOut = (hasBoolIndex || indicesBeyondSelfRank) ?
-        l0op::IndexAiCpu(selfContiguous, indexedSizes, indexedStrides, outputShape, indicesList,
-            uniqueExecutor.get()) :
-        l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, outputShape, indicesList,
-            uniqueExecutor.get());
+                                    l0op::IndexAiCpu(selfContiguous, indexedSizes, indexedStrides, outputShape,
+                                                     indicesList, uniqueExecutor.get()) :
+                                    l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, outputShape,
+                                                      indicesList, uniqueExecutor.get());
     CHECK_RET(indexOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResult = l0op::ViewCopy(indexOut, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);

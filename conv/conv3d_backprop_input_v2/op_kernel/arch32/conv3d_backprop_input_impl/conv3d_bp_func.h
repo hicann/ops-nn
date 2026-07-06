@@ -41,8 +41,7 @@ using TypeFalse = struct {
     __uint128_t _[1024];
 };
 
-enum class IterateOrder
-{
+enum class IterateOrder {
     ORDER_M = 0,
     ORDER_N,
     UNDEF,
@@ -52,41 +51,47 @@ template <class Intf>
 __aicore__ inline void CheckTiling(Intf* self)
 {
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.tiling_->batch > 0), 
-        "orignal batch is %d , which should be larger than 0", self->ctx.tiling_->batch);
-    ascendc_assert((self->ctx.tiling_->cin > 0),
-        "orignal cin is %d , which should be larger than 0", self->ctx.tiling_->cin);
-    ascendc_assert((self->ctx.tiling_->cout > 0),
-        "orignal cout is %d , which should be larger than 0", self->ctx.tiling_->cout);
-    ascendc_assert((self->ctx.tiling_->ho > 0), 
-        "orignal ho is %d , which should be larger than 0", self->ctx.tiling_->ho);
-    ascendc_assert((self->ctx.tiling_->wo > 0),
-        "orignal wo is %d , which should be larger than 0", self->ctx.tiling_->wo);
-    ascendc_assert((self->ctx.tiling_->hi > 0),
-        "orignal hi is %d , which should be larger than 0", self->ctx.tiling_->hi);
-    ascendc_assert((self->ctx.tiling_->wi > 0),
-        "orignal wi is %d , which should be larger than 0", self->ctx.tiling_->wi);
-    ascendc_assert((self->ctx.tiling_->hk > 0),
-        "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk);
-    ascendc_assert((self->ctx.tiling_->wk > 0),
-        "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk);
-    ascendc_assert((self->ctx.tiling_->stepM == 1 && self->ctx.tiling_->stepN == 1),
-        "stepM or stepN is invalid.");
-    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0),
-        "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
-    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0),
-        "singleCoreCout is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCout);
-    ascendc_assert((self->ctx.tiling_->singleCoreHo > 0),
-        "singleCoreHo is %d , which should be larger than 0", self->ctx.tiling_->singleCoreHo);
-    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0),
-        "singleCoreCin is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCin);
-    ascendc_assert((self->ctx.tiling_->baseM > 0), "baseM is %d , which should be larger than 0", self->ctx.tiling_->baseM);
-    ascendc_assert((self->ctx.tiling_->baseK > 0), "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK);
-    ascendc_assert((self->ctx.tiling_->baseN > 0), "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN);
-    ascendc_assert((self->ctx.tiling_->stepM > 0), "stepM is %d , which should be larger than 0", self->ctx.tiling_->stepM);
-    ascendc_assert((self->ctx.tiling_->stepN > 0), "stepN is %d , which should be larger than 0", self->ctx.tiling_->stepN);
-    ascendc_assert((self->ctx.tiling_->stepKa > 0), "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa);
-    ascendc_assert((self->ctx.tiling_->stepKb > 0), "stepKb is %d , which should be larger than 0", self->ctx.tiling_->stepKb);
+    ascendc_assert((self->ctx.tiling_->batch > 0), "orignal batch is %d , which should be larger than 0",
+                   self->ctx.tiling_->batch);
+    ascendc_assert((self->ctx.tiling_->cin > 0), "orignal cin is %d , which should be larger than 0",
+                   self->ctx.tiling_->cin);
+    ascendc_assert((self->ctx.tiling_->cout > 0), "orignal cout is %d , which should be larger than 0",
+                   self->ctx.tiling_->cout);
+    ascendc_assert((self->ctx.tiling_->ho > 0), "orignal ho is %d , which should be larger than 0",
+                   self->ctx.tiling_->ho);
+    ascendc_assert((self->ctx.tiling_->wo > 0), "orignal wo is %d , which should be larger than 0",
+                   self->ctx.tiling_->wo);
+    ascendc_assert((self->ctx.tiling_->hi > 0), "orignal hi is %d , which should be larger than 0",
+                   self->ctx.tiling_->hi);
+    ascendc_assert((self->ctx.tiling_->wi > 0), "orignal wi is %d , which should be larger than 0",
+                   self->ctx.tiling_->wi);
+    ascendc_assert((self->ctx.tiling_->hk > 0), "orignal hk is %d , which should be larger than 0",
+                   self->ctx.tiling_->hk);
+    ascendc_assert((self->ctx.tiling_->wk > 0), "orignal wk is %d , which should be larger than 0",
+                   self->ctx.tiling_->wk);
+    ascendc_assert((self->ctx.tiling_->stepM == 1 && self->ctx.tiling_->stepN == 1), "stepM or stepN is invalid.");
+    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0), "singleCoreBatch is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreBatch);
+    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0), "singleCoreCout is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreCout);
+    ascendc_assert((self->ctx.tiling_->singleCoreHo > 0), "singleCoreHo is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreHo);
+    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0), "singleCoreCin is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreCin);
+    ascendc_assert((self->ctx.tiling_->baseM > 0), "baseM is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseM);
+    ascendc_assert((self->ctx.tiling_->baseK > 0), "baseK is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseK);
+    ascendc_assert((self->ctx.tiling_->baseN > 0), "baseN is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseN);
+    ascendc_assert((self->ctx.tiling_->stepM > 0), "stepM is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepM);
+    ascendc_assert((self->ctx.tiling_->stepN > 0), "stepN is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepN);
+    ascendc_assert((self->ctx.tiling_->stepKa > 0), "stepKa is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepKa);
+    ascendc_assert((self->ctx.tiling_->stepKb > 0), "stepKb is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepKb);
 #endif
 }
 
@@ -116,8 +121,7 @@ __aicore__ inline void InitStepKParams(Intf* self)
     self->ctx.kIter_ = kIter;
     self->ctx.tailK_ = tmpSingleCoreK - (kIter - 1) * self->ctx.tiling_->baseK;
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.kIter_ > 0),
-        "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
+    ascendc_assert((self->ctx.kIter_ > 0), "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
 #endif
     self->ctx.stepKaRound_ = Ceil(kIter, self->ctx.tiling_->stepKa);
     self->ctx.stepKbRound_ = Ceil(kIter, self->ctx.tiling_->stepKb);
@@ -130,8 +134,7 @@ __aicore__ inline void InitStepNParams(Intf* self)
     self->ctx.nIter_ = Ceil(singleShapeCinAlign, self->ctx.tiling_->baseN);
     self->ctx.tailN_ = singleShapeCinAlign - (self->ctx.nIter_ - 1) * self->ctx.tiling_->baseN;
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.nIter_ > 0),
-        "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
+    ascendc_assert((self->ctx.nIter_ > 0), "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
 #endif
 }
 
@@ -146,10 +149,10 @@ __aicore__ inline void InitParams(Intf* self)
     self->ctx.DkHkWkC0_ = self->ctx.tiling_->dk * self->ctx.tiling_->hk * self->ctx.tiling_->wk * self->ctx.tiling_->c0;
 
     self->ctx.curCin1Size_ = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN / self->ctx.tiling_->c0;
-    self->ctx.isB1FullLoadFlag_ =
-        (self->ctx.tiling_->dk == 1 && self->ctx.tiling_->bl1Pbuffer == 1 &&
-         self->ctx.tiling_->baseK * self->ctx.tiling_->stepKb >= self->ctx.tiling_->singleCoreCout * self->ctx.HkWk_) &&
-        (self->ctx.curCin1Size_ >= self->ctx.tiling_->singleCoreCin1);
+    self->ctx.isB1FullLoadFlag_ = (self->ctx.tiling_->dk == 1 && self->ctx.tiling_->bl1Pbuffer == 1 &&
+                                   self->ctx.tiling_->baseK * self->ctx.tiling_->stepKb >=
+                                       self->ctx.tiling_->singleCoreCout * self->ctx.HkWk_) &&
+                                  (self->ctx.curCin1Size_ >= self->ctx.tiling_->singleCoreCin1);
     self->ctx.hwI_ = static_cast<uint64_t>(self->ctx.tiling_->hi) * self->ctx.tiling_->wi;
     self->ctx.hwO_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
     if constexpr (std::is_same<typename Intf::DstT, float>::value) {
@@ -158,10 +161,8 @@ __aicore__ inline void InitParams(Intf* self)
     }
     if constexpr (Intf::conv3dConfig.enableKernelSplit) {
 #ifdef __CCE_KT_TEST__
-        ascendc_assert((self->ctx.tiling_->hk >= self->ctx.tiling_->strideH),
-            "kernelH should be GE strideH");
-        ascendc_assert((self->ctx.tiling_->wk >= self->ctx.tiling_->strideW),
-            "kernelW should be GE strideW");
+        ascendc_assert((self->ctx.tiling_->hk >= self->ctx.tiling_->strideH), "kernelH should be GE strideH");
+        ascendc_assert((self->ctx.tiling_->wk >= self->ctx.tiling_->strideW), "kernelW should be GE strideW");
 #endif
         // 泛化时需考虑不整除场景
         self->ctx.splitHk_ = self->ctx.tiling_->hk / self->ctx.tiling_->strideH;
@@ -179,8 +180,8 @@ __aicore__ inline void InitParams(Intf* self)
     self->ctx.l0aPingPongFlag_ = 0;
     self->ctx.useL0PingPong_ = (self->ctx.tiling_->al0Pbuffer - 1) & (self->ctx.tiling_->bl0Pbuffer - 1);
     InitLoadToA2Params<Intf>(self);
-    if constexpr (
-        (std::is_same<typename Intf::SrcT, bfloat16_t>::value) || (std::is_same<typename Intf::SrcT, half>::value)) {
+    if constexpr ((std::is_same<typename Intf::SrcT, bfloat16_t>::value) ||
+                  (std::is_same<typename Intf::SrcT, half>::value)) {
         InitLoadToB2Params<Intf>(self);
     }
 }
@@ -252,8 +253,8 @@ static __aicore__ inline void Compute(Intf* self)
     }
 
     InitMmadParams<Intf>(self);
-    if constexpr (
-        (std::is_same<typename Intf::SrcT, bfloat16_t>::value) || (std::is_same<typename Intf::SrcT, half>::value)) {
+    if constexpr ((std::is_same<typename Intf::SrcT, bfloat16_t>::value) ||
+                  (std::is_same<typename Intf::SrcT, half>::value)) {
         if (unlikely(self->ctx.curNL0Idx_ == 0 || self->ctx.curNL0Idx_ + 1 == self->ctx.nIter_)) {
             UpdateLoadToB2ParamsN<Intf>(self);
         }
@@ -333,16 +334,16 @@ static __aicore__ inline void Compute(Intf* self)
                 // 此处默认stepM = 1
                 a1PingPongFlag = ((self->ctx.curML1Idx_ * self->ctx.stepKaRound_ + kaStepIdx + 1) & 1);
             }
-            Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(
-                self, kIdx, curDoutIdx, a1PingPongFlag, isLoadA1);
+            Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(self, kIdx, curDoutIdx, a1PingPongFlag,
+                                                                           isLoadA1);
 
             bool isLoadB1 = kbIdx == 0;
             if (isLoadB1 && self->ctx.tiling_->bl1Pbuffer > 1) {
                 // 此处默认stepN = 1
                 b1PingPongFlag = ((self->ctx.curNL1Idx_ * self->ctx.stepKbRound_ + kbStepIdx + 1) & 1);
             }
-            Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcT>(
-                self, kIdx, curKdIdx, b1PingPongFlag, isLoadB1);
+            Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcT>(self, kIdx, curKdIdx, b1PingPongFlag,
+                                                                           isLoadB1);
 
             l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcT>();
             if (l0aPingPongFlag) {
@@ -380,9 +381,8 @@ static __aicore__ inline void Compute(Intf* self)
                 l0b = l0b[l0bPingPongAddr];
             }
 
-            if (unlikely(
-                    isLoadB1 &&
-                    (!self->ctx.isB1FullLoadFlag_ || (self->ctx.isB1FullLoadFlag_ && self->ctx.isLoadB1_)))) {
+            if (unlikely(isLoadB1 &&
+                         (!self->ctx.isB1FullLoadFlag_ || (self->ctx.isB1FullLoadFlag_ && self->ctx.isLoadB1_)))) {
                 if (b1PingPongFlag) {
                     self->ctx.cacheB1BufPing_ = self->ctx.b1Ping_.template DeQue<typename Intf::SrcT>();
                 } else {
@@ -393,9 +393,8 @@ static __aicore__ inline void Compute(Intf* self)
                 }
             }
 
-            if constexpr (
-                (std::is_same<typename Intf::SrcT, bfloat16_t>::value) ||
-                (std::is_same<typename Intf::SrcT, half>::value)) {
+            if constexpr ((std::is_same<typename Intf::SrcT, bfloat16_t>::value) ||
+                          (std::is_same<typename Intf::SrcT, half>::value)) {
                 if (unlikely(kIdx == 0 || kIdx == self->ctx.kIterStepKbTail)) {
                     UpdateLoadToB2ParamsK<Intf>(self);
                 }
@@ -466,8 +465,8 @@ static __aicore__ inline void UpdateIdxAndStep(Intf* self)
         self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_ + self->ctx.curML0Idx_ * self->ctx.tiling_->baseM /
                                                              self->ctx.splitWi_ * self->ctx.tiling_->strideH;
     } else {
-        self->ctx.curHoIdx_ =
-            self->ctx.curHoStartIdx_ + self->ctx.curML0Idx_ * self->ctx.tiling_->baseM / self->ctx.tiling_->wi;
+        self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_ +
+                              self->ctx.curML0Idx_ * self->ctx.tiling_->baseM / self->ctx.tiling_->wi;
     }
 
     self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM ?
@@ -513,8 +512,8 @@ struct SetOutBackprop {
 template <class Intf>
 struct SetSingleShape {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(
-        Intf* self, uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN, uint32_t singleShapeD)
+    static __aicore__ inline void call(Intf* self, uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN,
+                                       uint32_t singleShapeD)
     {
         self->ctx.singleShapeDin_ = singleShapeD;
         self->ctx.singleShapeM_ = singleShapeM;
@@ -687,9 +686,8 @@ struct IterateAll {
 template <class Intf, bool sync>
 struct GetTensorC {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(
-        Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic = 0,
-        bool enSequentialWrite = false)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                       uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         LoadL0c2Gm<Intf>(self, output, enAtomic, enSequentialWrite);
     }

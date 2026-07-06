@@ -29,15 +29,9 @@
 
 class NLLLossTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "NLLLossTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "NLLLossTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "NLLLossTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "NLLLossTiling TearDown" << std::endl; }
 };
 
 static std::string to_string(const std::stringstream& tiling_data)
@@ -125,9 +119,8 @@ TEST_F(NLLLossTiling, NLLLoss_AC_tiling_1)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -213,9 +206,8 @@ TEST_F(NLLLossTiling, NLLLoss_AC_tiling_2)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -295,9 +287,8 @@ TEST_F(NLLLossTiling, NLLLoss_AC_tiling_3)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

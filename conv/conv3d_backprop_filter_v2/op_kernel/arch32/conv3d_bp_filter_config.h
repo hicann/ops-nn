@@ -21,7 +21,7 @@
 namespace ConvolutionBackprop {
 
 template <class A, class B, class C, class D>
-struct Conv3DBpFilterCfg : public ConvBpContext<A, B, C, D>{
+struct Conv3DBpFilterCfg : public ConvBpContext<A, B, C, D> {
 public:
     __aicore__ inline Conv3DBpFilterCfg() {}
 
@@ -30,5 +30,5 @@ public:
     };
 };
 
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 #endif

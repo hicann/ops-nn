@@ -72,9 +72,8 @@ protected:
     virtual uint64_t GetBatchCoreCnt() const;
     virtual const void* GetTilingData() const;
     bool CheckDtype() const override;
-    bool CheckShape(
-        const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
-        const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
     bool AnalyzeInputs() override;
     void CalcBlockWindowInfo();
     virtual bool CalL1Tiling() = 0;
@@ -92,8 +91,8 @@ protected:
     bool CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit,
                               uint64_t splitMax);
     uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const;
-    void CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax,
-                                 uint64_t preSplitSize, uint64_t secSplitSize);
+    void CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax, uint64_t preSplitSize,
+                                 uint64_t secSplitSize);
     virtual void AnalyseFullLoadInfo() = 0;
     virtual void CalcTailRoundBasicBlockSplit();
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile);

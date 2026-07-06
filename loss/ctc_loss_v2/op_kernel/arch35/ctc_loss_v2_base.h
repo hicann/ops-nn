@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /* !
  * \file ctc_loss_v2_base.h
  * \brief ctc_loss_v2_base
@@ -29,19 +29,21 @@ namespace CTCLossV2 {
 constexpr int64_t THREAD_NUM_1024 = 1024;
 constexpr int64_t THREAD_NUM_512 = 512;
 constexpr float neginf = -INFINITY;
-template <typename T, typename DataType, typename ThreadType> class CTCLossV2Base {
+template <typename T, typename DataType, typename ThreadType>
+class CTCLossV2Base {
 public:
     __aicore__ inline CTCLossV2Base(){};
     __aicore__ inline void BaseInit(GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths, GM_ADDR target_lengths,
-        GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR workspace, const CTCLossV2TilingData4AscendC *tilingData)
+                                    GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR workspace,
+                                    const CTCLossV2TilingData4AscendC* tilingData)
     {
         tdPtr = tilingData;
-        logProbsDataGm.SetGlobalBuffer((__gm__ T *)(log_probs));
-        targetsDataGm.SetGlobalBuffer((__gm__ DataType *)(targets));
-        inputLengthsGm.SetGlobalBuffer((__gm__ DataType *)(input_lengths));
-        targetLengthsGm.SetGlobalBuffer((__gm__ DataType *)(target_lengths));
-        negLogLikelihoodDataGm.SetGlobalBuffer((__gm__ T *)(neg_log_likelihood));
-        logAlphaDataGm.SetGlobalBuffer((__gm__ T *)(log_alpha));
+        logProbsDataGm.SetGlobalBuffer((__gm__ T*)(log_probs));
+        targetsDataGm.SetGlobalBuffer((__gm__ DataType*)(targets));
+        inputLengthsGm.SetGlobalBuffer((__gm__ DataType*)(input_lengths));
+        targetLengthsGm.SetGlobalBuffer((__gm__ DataType*)(target_lengths));
+        negLogLikelihoodDataGm.SetGlobalBuffer((__gm__ T*)(neg_log_likelihood));
+        logAlphaDataGm.SetGlobalBuffer((__gm__ T*)(log_alpha));
         DataType batchSize = tdPtr->batchSize;
         DataType laBatchStride = tdPtr->laBatchStride;
         DataType laInputStride = tdPtr->laInputStride;
@@ -71,7 +73,7 @@ protected:
     GlobalTensor<DataType> targetsDataGm;
     GlobalTensor<DataType> targetLengthsGm;
     GlobalTensor<T> negLogLikelihoodDataGm;
-    const CTCLossV2TilingData4AscendC *tdPtr = nullptr;
+    const CTCLossV2TilingData4AscendC* tdPtr = nullptr;
 };
 } // namespace CTCLossV2
 #endif // CTC_LOSS_V2_BASE

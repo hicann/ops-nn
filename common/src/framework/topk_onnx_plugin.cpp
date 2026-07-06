@@ -127,16 +127,11 @@ REGISTER_CUSTOM_OP("PartitionedCall")
 
 REGISTER_CUSTOM_OP("TopK")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::10::TopK"),
-         ge::AscendString("ai.onnx::11::TopK"),
-         ge::AscendString("ai.onnx::12::TopK"),
-         ge::AscendString("ai.onnx::13::TopK"),
-         ge::AscendString("ai.onnx::14::TopK"),
-         ge::AscendString("ai.onnx::15::TopK"),
-         ge::AscendString("ai.onnx::16::TopK"),
-         ge::AscendString("ai.onnx::17::TopK"),
-         ge::AscendString("ai.onnx::18::TopK")})
+    .OriginOpType({ge::AscendString("ai.onnx::10::TopK"), ge::AscendString("ai.onnx::11::TopK"),
+                   ge::AscendString("ai.onnx::12::TopK"), ge::AscendString("ai.onnx::13::TopK"),
+                   ge::AscendString("ai.onnx::14::TopK"), ge::AscendString("ai.onnx::15::TopK"),
+                   ge::AscendString("ai.onnx::16::TopK"), ge::AscendString("ai.onnx::17::TopK"),
+                   ge::AscendString("ai.onnx::18::TopK")})
     .ParseParamsFn(ParseParamsTopK)
     .ImplyType(ImplyType::TVM);
 

@@ -23,15 +23,13 @@
 #include "scatter_nd_sub_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void scatter_nd_sub(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-    GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void scatter_nd_sub(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR var_out,
+                                          GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ScatterNdSubTilingData);
     GET_TILING_DATA_WITH_STRUCT(ScatterNdSubTilingData, tilingData, tiling);
 
     if constexpr (schMode == SCATTER_ND_SUB_SCENE_DEFAULT) {
-        NsScatterNdSub::Process<DTYPE_VAR, DTYPE_INDICES>(
-            var, indices, updates, var_out, workspace, &tilingData);
+        NsScatterNdSub::Process<DTYPE_VAR, DTYPE_INDICES>(var, indices, updates, var_out, workspace, &tilingData);
     }
 }

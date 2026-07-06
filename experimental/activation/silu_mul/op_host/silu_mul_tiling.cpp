@@ -45,7 +45,7 @@ static constexpr int32_t LENGTH_LIMIT = 200000;
 
 class SiluMulTiling {
 public:
-    explicit SiluMulTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit SiluMulTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunBigKernelTiling();
     ge::graphStatus FillTilingKey();
 
@@ -95,18 +95,16 @@ private:
 
 ge::graphStatus SiluMulTiling::ShapeCheck()
 {
-    OP_CHECK_IF(
-        (lastDimSize > LENGTH_1024),
-        OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be no more than 1024."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize > LENGTH_1024),
+                OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be no more than 1024."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (lastDimSize % SIZE_2 == 1), OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be even."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize % SIZE_2 == 1), OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be even."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (batchSize > LENGTH_LIMIT),
-        OP_LOGE(tilingContext->GetNodeName(), "Batch dim size should be no more than 200000."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((batchSize > LENGTH_LIMIT),
+                OP_LOGE(tilingContext->GetNodeName(), "Batch dim size should be no more than 200000."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -123,15 +121,14 @@ ge::graphStatus SiluMulTiling::RunBigKernelTiling()
     auto srcShape = tilingContext->GetInputShape(0);
     inputShape = srcShape->GetOriginShape();
     size_t inputShapeDim = inputShape.GetDimNum();
-    OP_CHECK_IF(
-        (inputShapeDim < static_cast<size_t>(SIZE_2)),
-        OP_LOGE(tilingContext->GetNodeName(), "Input shape dim should be no less than 2."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((inputShapeDim < static_cast<size_t>(SIZE_2)),
+                OP_LOGE(tilingContext->GetNodeName(), "Input shape dim should be no less than 2."),
+                return ge::GRAPH_FAILED);
     lastDimSize = inputShape.GetDim(inputShapeDim - 1);
     inputShapeSize = inputShape.GetShapeSize();
 
     if (lastDimSize == 0) {
-        OP_LOGE(tilingContext->GetNodeName(),
-            "Last dim elements can not be zero.");
+        OP_LOGE(tilingContext->GetNodeName(), "Last dim elements can not be zero.");
         return ge::GRAPH_FAILED;
     }
 
@@ -142,16 +139,15 @@ ge::graphStatus SiluMulTiling::RunBigKernelTiling()
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = static_cast<size_t>(workspaceSize_);
-    OP_CHECK_IF(
-        (ShapeCheck() == ge::GRAPH_FAILED), OP_LOGE(tilingContext->GetNodeName(), "ShapeCheck failed!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ShapeCheck() == ge::GRAPH_FAILED), OP_LOGE(tilingContext->GetNodeName(), "ShapeCheck failed!"),
+                return ge::GRAPH_FAILED);
     tilingData.set_lastDimSize(lastDimSize);
     tilingData.set_batchSize(batchSize);
     tilingData.set_PPMaxCalNum(PPMaxCalNum);
     tilingData.set_needCoreNum(needCoreNum);
 
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
     tilingContext->SetBlockDim(needCoreNum);

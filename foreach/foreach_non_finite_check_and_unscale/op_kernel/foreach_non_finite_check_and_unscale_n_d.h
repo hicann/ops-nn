@@ -23,13 +23,11 @@ constexpr int32_t BUFFER_NUM = 2;
 constexpr uint32_t BYTE_BLOCK = 32;
 
 template <typename T>
-class ForeachNonFiniteCheckAndUnscaleND
-{
+class ForeachNonFiniteCheckAndUnscaleND {
 public:
     __aicore__ inline ForeachNonFiniteCheckAndUnscaleND(){};
-    __aicore__ inline void Init(
-        GM_ADDR scaled_grads, GM_ADDR found_inf, GM_ADDR inv_scale, GM_ADDR workspace,
-        const ForeachNonFiniteCheckAndUnscaleTilingData* __restrict tilingData);
+    __aicore__ inline void Init(GM_ADDR scaled_grads, GM_ADDR found_inf, GM_ADDR inv_scale, GM_ADDR workspace,
+                                const ForeachNonFiniteCheckAndUnscaleTilingData* __restrict tilingData);
     __aicore__ inline void Process();
 
 private:

@@ -11,7 +11,7 @@
 /*!
  * \file add_example.cpp
  * \brief Add算子的kernel入口函数
- * 
+ *
  * 本文件实现了Add算子在AI Core上的kernel入口函数。
  * 该函数根据tiling key(数据类型)分发到相应的模板实现。
  * kernel使用tiling策略将计算任务划分到多个AI Core上并行执行。
@@ -21,10 +21,9 @@
 
 // 定义Add算子的tiling key枚举
 // tiling key用于区分不同数据类型的实现策略
-enum class AddExampleTilingKey : uint32_t
-{
-    TILING_KEY_EXAMPLE_FLOAT = 0,  // 浮点数类型的tiling key
-    TILING_KEY_EXAMPLE_INT32 = 1,  // 32位整型类型的tiling key
+enum class AddExampleTilingKey : uint32_t {
+    TILING_KEY_EXAMPLE_FLOAT = 0, // 浮点数类型的tiling key
+    TILING_KEY_EXAMPLE_INT32 = 1, // 32位整型类型的tiling key
 };
 
 // Add算子的kernel入口函数
@@ -41,7 +40,7 @@ __global__ __aicore__ void add_example(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR 
     REGISTER_TILING_DEFAULT(AddExampleTilingData);
     // 从GM内存获取tiling数据
     GET_TILING_DATA_WITH_STRUCT(AddExampleTilingData, tilingData, tiling);
-    
+
     // 根据tiling key(schMode)分发到不同数据类型的实现
     if constexpr (schMode == static_cast<uint32_t>(AddExampleTilingKey::TILING_KEY_EXAMPLE_FLOAT)) {
         // 浮点数类型的实现

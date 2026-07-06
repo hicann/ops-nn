@@ -53,12 +53,12 @@ constexpr uint32_t X2_TABLE_INDEX_V4 = 9;
  */
 struct QuantBatchMatmulInfo {
 public:
-    uint64_t GetMatmulApiMSize() const;  // mm api单次计算的M
+    uint64_t GetMatmulApiMSize() const; // mm api单次计算的M
     uint64_t GetTotalMatmulApiMSize(uint64_t baseM) const;
     uint64_t GetTotalBaseMCnt(uint64_t baseM) const;
-    void Reset();  // 新增数据成员要修改Reset函数
+    void Reset(); // 新增数据成员要修改Reset函数
 
-    bool initFlag = false;  // 避免重复解析flag
+    bool initFlag = false; // 避免重复解析flag
     bool transA = false;
     bool transB = false;
     bool hasBias = false;
@@ -106,7 +106,7 @@ public:
     uint64_t groupSizeN = 0UL;
     uint64_t x2TableKSize = 0UL;
     uint64_t x2TableNSize = 0UL;
-    const char *opName = nullptr;
+    const char* opName = nullptr;
     ge::Format aFormat = ge::FORMAT_ND;
     ge::Format bFormat = ge::FORMAT_ND;
     ge::Format cFormat = ge::FORMAT_ND; // 新增数据成员要修改Reset函数
@@ -133,7 +133,7 @@ void ResetQuantBatchMatmulV3InputParams();
 
 class QuantBatchMatmulV3TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit QuantBatchMatmulV3TilingBase(gert::TilingContext *context, bool isTilingOut);
+    explicit QuantBatchMatmulV3TilingBase(gert::TilingContext* context, bool isTilingOut);
     ~QuantBatchMatmulV3TilingBase() override = default;
 
 protected:
@@ -152,62 +152,64 @@ protected:
     // mc2使用的直接接口：begin
     virtual const gert::Shape GetX1Shape(const size_t index);
     virtual const gert::Shape GetX2Shape(const size_t index);
-    virtual const gert::Shape &GetScaleShape(const size_t index);
-    virtual const gert::StorageShape *GetPertokenShape(const size_t index);
-    virtual const gert::StorageShape *GetBiasShape(const size_t index);
+    virtual const gert::Shape& GetScaleShape(const size_t index);
+    virtual const gert::StorageShape* GetPertokenShape(const size_t index);
+    virtual const gert::StorageShape* GetBiasShape(const size_t index);
     virtual bool AnalyzeInputs();
     // mc2使用的直接接口：end
 
     virtual bool GetUbDequantExtreSpace();
     virtual ge::graphStatus CalcUbTiling();
     virtual bool CheckDtype() const;
-    virtual bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape, const gert::StorageShape* biasShape,
-                            const gert::StorageShape* pertokenShape, const std::vector<int64_t> &dimValueOfMKN) const;
+    virtual bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+                            const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const;
 
     virtual ge::graphStatus CheckContext();
     virtual bool AnalyzeDtype();
     virtual bool AnalyzeAttrs();
     void SetFormat();
-    bool SetQuantMode(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape);
-    bool SetX1QuantMode(BasicQuantMode &x1QuantMode, bool isFp8Hif8Input, const gert::StorageShape *pertokenShape);
-    bool SetX2QuantMode(BasicQuantMode &x2QuantMode, bool isFp8Hif8Input, const gert::Shape& scaleShape);
+    bool SetQuantMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape);
+    bool SetX1QuantMode(BasicQuantMode& x1QuantMode, bool isFp8Hif8Input, const gert::StorageShape* pertokenShape);
+    bool SetX2QuantMode(BasicQuantMode& x2QuantMode, bool isFp8Hif8Input, const gert::Shape& scaleShape);
     std::string QuantModeMapToString(const std::vector<BasicQuantMode>& quantModeList) const;
     bool IsMicroScaling() const;
     std::string QuantModeToString(BasicQuantMode quantMode) const;
-    uint64_t GetBatchSize(const gert::Shape &shape) const;
-    bool InferOutBatchDim(const gert::Shape &x1Shape, const gert::Shape &x2Shape);
+    uint64_t GetBatchSize(const gert::Shape& shape) const;
+    bool InferOutBatchDim(const gert::Shape& x1Shape, const gert::Shape& x2Shape);
     int8_t CheckFusionBatchA(const gert::Shape& x1Shape, const gert::Shape& x2Shape,
                              const gert::StorageShape* biasShape, uint64_t fusedDimValue) const;
     bool CheckOutputShapeAvailable() const;
     bool ReCalcGroupSize(uint64_t& groupSize, uint64_t inputSize, uint64_t scaleSize, const char* dimensionName);
-    bool AnalyzeGroupInfo(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape);
-    void AnalyzeBatchInfo(const gert::Shape &oriShapeA, const gert::Shape &oriShapeB);
+    bool AnalyzeGroupInfo(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape);
+    void AnalyzeBatchInfo(const gert::Shape& oriShapeA, const gert::Shape& oriShapeB);
     void DoBatchFusion(uint64_t fusedDimValue);
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
     bool CheckShape4WeightNz() const;
-    bool CheckStorageShape4WeightNz(const gert::Shape &x2StorageShape, size_t &x2StorageDim) const;
+    bool CheckStorageShape4WeightNz(const gert::Shape& x2StorageShape, size_t& x2StorageDim) const;
     bool CheckStorageShape4WeightNzDimAlignment(uint64_t innerDim, uint64_t outerDim, uint64_t x2StorageLastThirdDim,
-        uint64_t x2StorageLastFourthDim) const;
-    void SetTransAttr(QuantBatchMatmulV3Trans &trans) const;
+                                                uint64_t x2StorageLastFourthDim) const;
+    void SetTransAttr(QuantBatchMatmulV3Trans& trans) const;
     virtual bool SetPlatformInfoForTiling();
-    virtual const char *GetDefaultOpName() const;
+    virtual const char* GetDefaultOpName() const;
 
-    template<typename T>
-    inline bool CheckNumberIsValid(const T &num, const std::string &opName, const std::string &description) const {
+    template <typename T>
+    inline bool CheckNumberIsValid(const T& num, const std::string& opName, const std::string& description) const
+    {
         if (num > static_cast<uint64_t>(INT32_MAX)) {
-            OP_LOGW(opName.c_str(), "%s size is greater than INT32_MAX or less than 0, num:%s",
-                        description.c_str(), std::to_string(num).c_str());
+            OP_LOGW(opName.c_str(), "%s size is greater than INT32_MAX or less than 0, num:%s", description.c_str(),
+                    std::to_string(num).c_str());
             return true;
         }
         return false;
     };
 
     // 需要对齐16的参数需要判断是否大于floorAlign(uint32_max, 16)
-    template<typename T>
-    inline bool CheckNumberIsValid2(const T &num, const std::string &opName, const std::string &description) const {
+    template <typename T>
+    inline bool CheckNumberIsValid2(const T& num, const std::string& opName, const std::string& description) const
+    {
         if (num > ops::FloorAlign(static_cast<uint64_t>(INT32_MAX), BASIC_ALIGN_16)) {
             OP_LOGW(opName.c_str(), "%s size is greater than floorAlign(INT32_MAX, 16) or less than 0, num:%s",
-                        description.c_str(), std::to_string(num).c_str());
+                    description.c_str(), std::to_string(num).c_str());
             return true;
         }
         return false;
@@ -249,7 +251,7 @@ protected:
     static constexpr uint64_t WEIGHTNZ_STORAGE_PENULTIMATE_DIM = 16UL;
 
     // 新增数据成员请注意：如果是在GetShapeAttrsInfo函数过程中获取的，请放到QuantBatchMatmulInfo结构体中，或者保证在DoOpTiling赋值
-    QuantBatchMatmulInfo &inputParams_;
+    QuantBatchMatmulInfo& inputParams_;
     bool isBf16Opt_ = false;
     bool isUbQuant_ = false;
     CacheTilingData tbeTiling_;
@@ -258,5 +260,5 @@ protected:
     bool isTilingOut_ = false;
     size_t tilingDataSize_ = 0;
 };
-}  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V3_TILING_BASE_H
+} // namespace optiling
+#endif // QUANT_BATCH_MATMUL_V3_TILING_BASE_H

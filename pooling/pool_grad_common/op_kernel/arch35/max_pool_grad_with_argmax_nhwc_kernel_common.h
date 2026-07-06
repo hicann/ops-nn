@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool_grad_with_argmax_nhwc_kernel_common.h
@@ -21,8 +21,7 @@
 #include "../inc/platform.h"
 #include "max_pool_grad_with_argmax_base_common.h"
 
-namespace MaxPoolGradWithArgmaxNHWCNameSpace
-{
+namespace MaxPoolGradWithArgmaxNHWCNameSpace {
 // preg输入为T2 输出为T1
 template <typename T, const uint32_t IS_MUL_C = 0>
 __aicore__ inline void IndexConvNhwc(MicroAPI::RegTensor<T>& argmaxReg, MicroAPI::RegTensor<int32_t>& hIndexReg,
@@ -34,8 +33,8 @@ __aicore__ inline void IndexConvNhwc(MicroAPI::RegTensor<T>& argmaxReg, MicroAPI
     AscendC::MicroAPI::RegTensor<T> wTmpIndexReg;
     AscendC::MicroAPI::RegTensor<T> tmpReg;
     AscendC::MicroAPI::MaskReg allMask = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
-    AscendC::MicroAPI::MaskReg allMaskU32 =
-        AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::MaskReg
+        allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
     AscendC::MicroAPI::Div(hTmpIndexReg, argmaxReg, wOutputConstReg, allMask);
     if constexpr (std::is_same<T, int64_t>::value) {
@@ -61,7 +60,7 @@ __aicore__ inline void IndexConvNhwc(MicroAPI::RegTensor<T>& argmaxReg, MicroAPI
     AscendC::MicroAPI::Muls((AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg, hIndexReg, wOutputActual, allMaskU32);
     AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg,
                            (AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg, wIndexReg,
-                           allMaskU32);  // H + W
+                           allMaskU32); // H + W
 
     AscendC::MicroAPI::Muls((AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg,
                             (AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg, cOutputAligned, allMaskU32);
@@ -78,14 +77,15 @@ __aicore__ inline void IndexConvNhwc(MicroAPI::RegTensor<T>& argmaxReg, MicroAPI
 
     AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg,
                            (AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg, cIncReg,
-                           allMaskU32);                                  // H + W + C
+                           allMaskU32); // H + W + C
     AscendC::MicroAPI::Adds((AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg,
                             (AscendC::MicroAPI::RegTensor<int32_t>&)argmaxReg, nOffset,
-                            allMaskU32);  // H + W + C + N
+                            allMaskU32); // H + W + C + N
 }
 
 template <typename T>
-__aicore__ inline void TransHWC2HW(MicroAPI::RegTensor<T>& argmaxReg, int32_t cOutputActual) {
+__aicore__ inline void TransHWC2HW(MicroAPI::RegTensor<T>& argmaxReg, int32_t cOutputActual)
+{
     AscendC::MicroAPI::MaskReg allMask = AscendC::MicroAPI::CreateMask<T, AscendC::MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::RegTensor<T> constReg;
     AscendC::MicroAPI::Duplicate(constReg, cOutputActual);
@@ -94,17 +94,17 @@ __aicore__ inline void TransHWC2HW(MicroAPI::RegTensor<T>& argmaxReg, int32_t cO
 
 template <typename T1, typename T2, typename T3>
 __aicore__ inline void GetContinuousInput(MicroAPI::RegTensor<T3>& argmaxReg, MicroAPI::RegTensor<computeType>& gradReg,
-                                        __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
-                                        uint32_t argmaxOffset)
+                                          __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+                                          uint32_t argmaxOffset)
 {
-    if constexpr (std::negation<std::is_same<T1, float>>::value) {  // T1为16位的话
+    if constexpr (std::negation<std::is_same<T1, float>>::value) { // T1为16位的话
         AscendC::MicroAPI::RegTensor<T1> gradRegT1;
-        AscendC::MicroAPI::MaskReg allMaskU32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
         AscendC::MicroAPI::DataCopy(gradRegT1, gradAddr + argmaxOffset);
         AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<uint32_t>&)gradRegT1,
-                                (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
+                                  (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
         AscendC::MicroAPI::Cast<computeType, T1, castTraitT1ComputeType>(gradReg, gradRegT1, allMaskU32);
     } else {
         AscendC::MicroAPI::DataCopy(gradReg, gradAddr + argmaxOffset);
@@ -123,24 +123,24 @@ __aicore__ inline void GetContinuousInput(MicroAPI::RegTensor<T3>& argmaxReg, Mi
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
 __aicore__ inline void DoSingleCNhwc(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                        __local_mem__ T2* argmaxAddr, uint32_t argmaxOffset, uint32_t argmaxMaskCount,
-                                        int64_t curHIndex, int64_t curWIndex, int32_t wOutputActual,
-                                        int32_t cOutputAligned, int32_t cOffset, int32_t nOffset, int32_t cOutputActual,
-                                        int32_t cOutput, MicroAPI::RegTensor<int32_t>& zeroConstReg,
-                                        MicroAPI::RegTensor<int32_t>& wMaxReg, MicroAPI::RegTensor<int32_t>& hMaxReg,
-                                        MicroAPI::RegTensor<T3>& wOutputConstReg)
+                                     __local_mem__ T2* argmaxAddr, uint32_t argmaxOffset, uint32_t argmaxMaskCount,
+                                     int64_t curHIndex, int64_t curWIndex, int32_t wOutputActual,
+                                     int32_t cOutputAligned, int32_t cOffset, int32_t nOffset, int32_t cOutputActual,
+                                     int32_t cOutput, MicroAPI::RegTensor<int32_t>& zeroConstReg,
+                                     MicroAPI::RegTensor<int32_t>& wMaxReg, MicroAPI::RegTensor<int32_t>& hMaxReg,
+                                     MicroAPI::RegTensor<T3>& wOutputConstReg)
 {
     AscendC::MicroAPI::RegTensor<computeType> gradReg;
     AscendC::MicroAPI::RegTensor<T3> argmaxReg;
 
     GetContinuousInput(argmaxReg, gradReg, gradAddr, argmaxAddr, argmaxOffset);
     if constexpr (VER == VER_NORMAL) {
-    TransHWC2HW<T3>(argmaxReg, cOutput);
+        TransHWC2HW<T3>(argmaxReg, cOutput);
     }
     AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
     AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
     IndexConvNhwc<T3, 0>(argmaxReg, hIndexReg, wIndexReg, wOutputConstReg, curHIndex, curWIndex, wOutputActual,
-                                cOutputAligned, cOffset, nOffset, cOutputActual);
+                         cOutputAligned, cOffset, nOffset, cOutputActual);
     uint32_t argmaxMask = argmaxMaskCount;
     AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
     if constexpr (IS_CHECK_RANGE == 1) {
@@ -152,10 +152,10 @@ __aicore__ inline void DoSingleCNhwc(__local_mem__ computeType* yAddr, __local_m
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
 __aicore__ inline void DoMulCNhwc(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                              __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
-                              uint32_t argmaxMaskCount, int64_t curHIndex, int64_t curWIndex, int32_t wOutputActual, int32_t hOutputActual, int32_t cOutputAligned,
-                              int32_t cOffset, int32_t nOffset, int32_t cOutputActual,
-                              MicroAPI::RegTensor<T3>& wOutputConstReg)
+                                  __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
+                                  uint32_t argmaxMaskCount, int64_t curHIndex, int64_t curWIndex, int32_t wOutputActual,
+                                  int32_t hOutputActual, int32_t cOutputAligned, int32_t cOffset, int32_t nOffset,
+                                  int32_t cOutputActual, MicroAPI::RegTensor<T3>& wOutputConstReg)
 {
     AscendC::MicroAPI::RegTensor<computeType> gradReg;
     AscendC::MicroAPI::RegTensor<T3> argmaxReg;
@@ -168,12 +168,12 @@ __aicore__ inline void DoMulCNhwc(__local_mem__ computeType* yAddr, __local_mem_
 
     GetConCurrentInput<T1, T2, T3>(argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, pregT1, pregT2);
     if constexpr (VER == VER_NORMAL) {
-       TransHWC2HW<T3>(argmaxReg, cOutputActual);
+        TransHWC2HW<T3>(argmaxReg, cOutputActual);
     }
     AscendC::MicroAPI::RegTensor<int32_t> hIndexReg;
     AscendC::MicroAPI::RegTensor<int32_t> wIndexReg;
     IndexConvNhwc<T3, 1>(argmaxReg, hIndexReg, wIndexReg, wOutputConstReg, curHIndex, curWIndex, wOutputActual,
-                                cOutputAligned, cOffset, nOffset, cOutputActual);
+                         cOutputAligned, cOffset, nOffset, cOutputActual);
     uint32_t argmaxMask = argmaxMaskCount;
     AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
     if constexpr (IS_CHECK_RANGE == 1) {
@@ -243,13 +243,14 @@ __aicore__ inline void Gen3DIndexOne(MicroAPI::RegTensor<T>& indexReg, int64_t r
 }
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE = 0, int32_t VER = 0>
-class MaxPoolGradWithArgmaxKernelNHWCBase
-{
+class MaxPoolGradWithArgmaxKernelNHWCBase {
 public:
     __aicore__ inline MaxPoolGradWithArgmaxKernelNHWCBase(void){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
-                                const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData& tilingData);
-    __aicore__ inline void ParseTilingData(const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData& tilingData);
+    __aicore__ inline void Init(
+        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, TPipe& pipeIn,
+        const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData& tilingData);
+    __aicore__ inline void ParseTilingData(
+        const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData& tilingData);
     __aicore__ inline void ScalarCompute(int64_t loopNum);
     __aicore__ inline void CopyIn();
     __aicore__ inline void ProcessNoArgmaxBlock();
@@ -337,8 +338,9 @@ public:
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
 
-    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK =
-        BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ? BLOCK_SIZE / sizeof(T1) : BLOCK_SIZE / sizeof(T2);
+    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK = BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ?
+                                                             BLOCK_SIZE / sizeof(T1) :
+                                                             BLOCK_SIZE / sizeof(T2);
     constexpr static int64_t VREG_LENGTH_DATA_NUM_T2 = platform::GetVRegSize() / sizeof(T2);
 };
 
@@ -419,7 +421,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
 }
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>
-__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::ScalarCompute(int64_t loopNum)
+__aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER>::ScalarCompute(
+    int64_t loopNum)
 {
     int64_t baseBlockIdx = blockIdx_ * normalCoreProcessNum_ + loopNum;
     nAxisIndex_ = baseBlockIdx / (hOutputOuter_ * wOutputOuter_ * cOutputOuter_);
@@ -428,8 +431,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     int64_t tempNTail = baseBlockIdx % (hOutputOuter_ * wOutputOuter_ * cOutputOuter_);
     cAxisIndex_ = tempNTail / (hOutputOuter_ * wOutputOuter_);
     cOutputActual_ = cAxisIndex_ == (cOutputOuter_ - 1) ? cOutputTail_ : cOutputInner_;
-    cOutputAligned_ =
-        (cOutputActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK * MAX_DATA_NUM_IN_ONE_BLOCK;
+    cOutputAligned_ = (cOutputActual_ + MAX_DATA_NUM_IN_ONE_BLOCK - 1) / MAX_DATA_NUM_IN_ONE_BLOCK *
+                      MAX_DATA_NUM_IN_ONE_BLOCK;
 
     int64_t tempCTail = tempNTail % (hOutputOuter_ * wOutputOuter_);
     hAxisIndex_ = tempCTail / (wOutputOuter_);
@@ -483,11 +486,10 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     loopModeParamsT1.loop2DstStride = hArgmaxActual_ * wArgmaxActual_ * cOutputAligned_ * sizeof(T1);
 
     SetLoopModePara(loopModeParamsT1, DataCopyMVType::OUT_TO_UB);
-    DataCopyExtParams copyOutParamT1 = {
-        static_cast<uint16_t>(wArgmaxActual_),
-        static_cast<uint32_t>(cOutputActual_ * sizeof(T1)),
-        static_cast<uint32_t>((cOutput_ - cOutputActual_) * sizeof(T1)),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParamT1 = {static_cast<uint16_t>(wArgmaxActual_),
+                                        static_cast<uint32_t>(cOutputActual_ * sizeof(T1)),
+                                        static_cast<uint32_t>((cOutput_ - cOutputActual_) * sizeof(T1)),
+                                        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPad(gradLocal, gradGm_[argmaxGmOffset], copyOutParamT1, paramsT1);
 
     DataCopyPadExtParams<T2> paramsT2 = {false, 0, 0, 0};
@@ -501,11 +503,10 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
 
     uint32_t dstStrideT2 = (cOutputAligned_ - cOutputActual_) * sizeof(T2) / BLOCK_SIZE;
     SetLoopModePara(loopModeParamsT2, DataCopyMVType::OUT_TO_UB);
-    DataCopyExtParams copyOutParamT2 = {
-        static_cast<uint16_t>(wArgmaxActual_),
-        static_cast<uint32_t>(cOutputActual_ * sizeof(T2)),
-        static_cast<uint32_t>((cOutput_ - cOutputActual_) * sizeof(T2)),
-        static_cast<uint32_t>(dstStrideT2), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyOutParamT2 = {static_cast<uint16_t>(wArgmaxActual_),
+                                        static_cast<uint32_t>(cOutputActual_ * sizeof(T2)),
+                                        static_cast<uint32_t>((cOutput_ - cOutputActual_) * sizeof(T2)),
+                                        static_cast<uint32_t>(dstStrideT2), static_cast<uint32_t>(0)};
 
     DataCopyPad(argmaxLocal, argmaxGm_[argmaxGmOffset], copyOutParamT2, paramsT2);
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
@@ -543,5 +544,5 @@ __aicore__ inline void MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
     outputQue_.FreeTensor(yLocal);
 }
-}  // namespace MaxPoolGradWithArgmaxNHWCNameSpace
-#endif  // MAX_POOL_GRAD_WITH_ARGMAX__NHWC_KERNEL_H_
+} // namespace MaxPoolGradWithArgmaxNHWCNameSpace
+#endif // MAX_POOL_GRAD_WITH_ARGMAX__NHWC_KERNEL_H_

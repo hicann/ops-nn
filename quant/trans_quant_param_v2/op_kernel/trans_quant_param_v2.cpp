@@ -16,8 +16,8 @@
 
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void trans_quant_param_v2(
-    GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void trans_quant_param_v2(GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

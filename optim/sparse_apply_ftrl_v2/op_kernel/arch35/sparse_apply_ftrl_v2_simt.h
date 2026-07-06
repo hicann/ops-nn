@@ -48,69 +48,46 @@ static constexpr uint32_t THREAD_NUM = 512;
 // ========== Precision conversion helpers (__simt_callee__, VF-context only) ==========
 namespace detail {
 
-__simt_callee__ inline float ToFloat(float v)
-{
-    return v;
-}
+__simt_callee__ inline float ToFloat(float v) { return v; }
 
-__simt_callee__ inline float ToFloat(half v)
-{
-    return __half2float(v);
-}
+__simt_callee__ inline float ToFloat(half v) { return __half2float(v); }
 
-__simt_callee__ inline float ToFloat(bfloat16_t v)
-{
-    return __bfloat162float(v);
-}
+__simt_callee__ inline float ToFloat(bfloat16_t v) { return __bfloat162float(v); }
 
-}  // namespace detail
+} // namespace detail
 
 // ========== Main VF kernel ==========
 template <typename VarT, typename IndexT>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void OpSparseApplyFtrlV2SimtKernel(
-    int64_t totalElements,
-    int64_t innerSize,
-    int64_t N,
-    int64_t M,
-    __gm__ VarT* var,
-    __gm__ VarT* accum,
-    __gm__ VarT* linear,
-    __gm__ VarT* grad,
-    __gm__ IndexT* indices,
-    __gm__ VarT* lr,
-    __gm__ VarT* l1,
-    __gm__ VarT* l2,
-    __gm__ VarT* l2_shrinkage,
-    __gm__ VarT* lr_power)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyFtrlV2SimtKernel(
+    int64_t totalElements, int64_t innerSize, int64_t N, int64_t M, __gm__ VarT* var, __gm__ VarT* accum,
+    __gm__ VarT* linear, __gm__ VarT* grad, __gm__ IndexT* indices, __gm__ VarT* lr, __gm__ VarT* l1, __gm__ VarT* l2,
+    __gm__ VarT* l2_shrinkage, __gm__ VarT* lr_power)
 {
     // ---- Read scalar values and convert to float ----
-    float fLr  = detail::ToFloat(lr[0]);
-    float fL1  = detail::ToFloat(l1[0]);
-    float fL2  = detail::ToFloat(l2[0]);
+    float fLr = detail::ToFloat(lr[0]);
+    float fL1 = detail::ToFloat(l1[0]);
+    float fL2 = detail::ToFloat(l2[0]);
     float fL2s = detail::ToFloat(l2_shrinkage[0]);
     float fLrp = detail::ToFloat(lr_power[0]);
 
     static constexpr float kLrpNegHalf = -0.5f;
 
     bool isLrpNegHalf = (fLrp == kLrpNegHalf);
-    bool isL2sZero    = (fL2s == 0.0f);
+    bool isL2sZero = (fL2s == 0.0f);
 
     // ---- Pre-compute FMA constants ----
     float twoL2s = 2.0f * fL2s;
-    float twoL2  = 2.0f * fL2;
+    float twoL2 = 2.0f * fL2;
 
     // ---- Grid-Stride distributed pattern ----
     uint64_t totalWork = static_cast<uint64_t>(totalElements);
     uint64_t uInnerSize = static_cast<uint64_t>(innerSize);
 
-    for (uint64_t workIdx = static_cast<uint64_t>(blockIdx.x) * THREAD_NUM + threadIdx.x;
-         workIdx < totalWork;
-         workIdx += blockDim.x * gridDim.x)
-    {
+    for (uint64_t workIdx = static_cast<uint64_t>(blockIdx.x) * THREAD_NUM + threadIdx.x; workIdx < totalWork;
+         workIdx += blockDim.x * gridDim.x) {
         // ---- Coordinate decode (simple division) ----
         uint64_t uRowIdx = workIdx / uInnerSize;
-        uint64_t col     = workIdx % uInnerSize;
+        uint64_t col = workIdx % uInnerSize;
 
         // ---- Bounds check: row index within M ----
         if (static_cast<int64_t>(uRowIdx) >= M) {
@@ -123,34 +100,28 @@ inline void OpSparseApplyFtrlV2SimtKernel(
             continue;
         }
 
-        int64_t varOffset  = static_cast<int64_t>(varIdx) * innerSize + static_cast<int64_t>(col);
+        int64_t varOffset = static_cast<int64_t>(varIdx) * innerSize + static_cast<int64_t>(col);
         int64_t gradOffset = static_cast<int64_t>(uRowIdx) * innerSize + static_cast<int64_t>(col);
 
         // ---- Read and promote to float ----
-        float varVal    = detail::ToFloat(var[varOffset]);
-        float accumVal  = detail::ToFloat(accum[varOffset]);
+        float varVal = detail::ToFloat(var[varOffset]);
+        float accumVal = detail::ToFloat(accum[varOffset]);
         float linearVal = detail::ToFloat(linear[varOffset]);
-        float gradVal   = detail::ToFloat(grad[gradOffset]);
+        float gradVal = detail::ToFloat(grad[gradOffset]);
 
         // ---- Step 1: l2_shrinkage ----
-        float gradShrink = isL2sZero
-            ? gradVal
-            : fmaf(twoL2s, varVal, gradVal);
+        float gradShrink = isL2sZero ? gradVal : fmaf(twoL2s, varVal, gradVal);
 
         // ---- Step 2: accum old power + update + new power ----
         // Clamp accum to non-negative to prevent powf NaN from random test inputs
         float safeAccumVal = fmaxf(accumVal, 0.0f);
-        float accumOldPow = isLrpNegHalf
-            ? sqrtf(safeAccumVal)
-            : powf(safeAccumVal, -fLrp);
+        float accumOldPow = isLrpNegHalf ? sqrtf(safeAccumVal) : powf(safeAccumVal, -fLrp);
 
         float accumNew = accumVal + gradVal * gradVal;
 
         // Also protect accumNew (should always be >= 0, but safety net)
         float safeAccumNew = fmaxf(accumNew, 0.0f);
-        float accumNewPow = isLrpNegHalf
-            ? sqrtf(safeAccumNew)
-            : powf(safeAccumNew, -fLrp);
+        float accumNewPow = isLrpNegHalf ? sqrtf(safeAccumNew) : powf(safeAccumNew, -fLrp);
 
         // ---- Write accum (type-aware) ----
         if constexpr (std::is_same_v<VarT, float>) {
@@ -178,9 +149,7 @@ inline void OpSparseApplyFtrlV2SimtKernel(
         float x = l1Adjust - linearNew;
 
         // ---- Step 6-7: var update ----
-        float powDivLr = isLrpNegHalf
-            ? (sqrtf(safeAccumNew) / fLr)
-            : (powf(safeAccumNew, -fLrp) / fLr);
+        float powDivLr = isLrpNegHalf ? (sqrtf(safeAccumNew) / fLr) : (powf(safeAccumNew, -fLrp) / fLr);
         float y = fmaf(twoL2, 1.0f, powDivLr);
         float varNew = x / y;
 
@@ -196,14 +165,10 @@ inline void OpSparseApplyFtrlV2SimtKernel(
 
 // ========== Process entry (scalar side) ==========
 template <typename VarT, typename IndexT>
-__aicore__ inline void Process(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR linear,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR l2_shrinkage, GM_ADDR lr_power,
-    GM_ADDR /*outVar*/, GM_ADDR /*outAccum*/, GM_ADDR /*outLinear*/,
-    GM_ADDR workspace,
-    const SparseApplyFtrlV2TilingData* td)
+__aicore__ inline void Process(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR indices, GM_ADDR lr,
+                               GM_ADDR l1, GM_ADDR l2, GM_ADDR l2_shrinkage, GM_ADDR lr_power, GM_ADDR /*outVar*/,
+                               GM_ADDR /*outAccum*/, GM_ADDR /*outLinear*/, GM_ADDR workspace,
+                               const SparseApplyFtrlV2TilingData* td)
 {
     if (td->M == 0) {
         return;
@@ -211,24 +176,13 @@ __aicore__ inline void Process(
 
     // Cast and launch VF (grid-stride mode: kernel uses blockIdx.x directly)
     asc_vf_call<OpSparseApplyFtrlV2SimtKernel<VarT, IndexT>>(
-        dim3(THREAD_NUM),
-        td->totalElements,
-        td->innerSize,
-        td->N,
-        td->M,
-        reinterpret_cast<__gm__ VarT*>(var),
-        reinterpret_cast<__gm__ VarT*>(accum),
-        reinterpret_cast<__gm__ VarT*>(linear),
-        reinterpret_cast<__gm__ VarT*>(grad),
-        reinterpret_cast<__gm__ IndexT*>(indices),
-        reinterpret_cast<__gm__ VarT*>(lr),
-        reinterpret_cast<__gm__ VarT*>(l1),
-        reinterpret_cast<__gm__ VarT*>(l2),
-        reinterpret_cast<__gm__ VarT*>(l2_shrinkage),
-        reinterpret_cast<__gm__ VarT*>(lr_power)
-    );
+        dim3(THREAD_NUM), td->totalElements, td->innerSize, td->N, td->M, reinterpret_cast<__gm__ VarT*>(var),
+        reinterpret_cast<__gm__ VarT*>(accum), reinterpret_cast<__gm__ VarT*>(linear),
+        reinterpret_cast<__gm__ VarT*>(grad), reinterpret_cast<__gm__ IndexT*>(indices),
+        reinterpret_cast<__gm__ VarT*>(lr), reinterpret_cast<__gm__ VarT*>(l1), reinterpret_cast<__gm__ VarT*>(l2),
+        reinterpret_cast<__gm__ VarT*>(l2_shrinkage), reinterpret_cast<__gm__ VarT*>(lr_power));
 }
 
-}  // namespace NsSparseApplyFtrlV2
+} // namespace NsSparseApplyFtrlV2
 
-#endif  // SPARSE_APPLY_FTRL_V2_SIMT_H_
+#endif // SPARSE_APPLY_FTRL_V2_SIMT_H_

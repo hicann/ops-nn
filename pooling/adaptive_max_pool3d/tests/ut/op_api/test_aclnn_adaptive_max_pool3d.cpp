@@ -22,18 +22,11 @@
 using namespace op;
 using namespace std;
 
-class l2_adaptive_max_pool3d_test : public testing::Test
-{
+class l2_adaptive_max_pool3d_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_adaptive_max_pool3d_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_adaptive_max_pool3d_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_adaptive_max_pool3d_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_adaptive_max_pool3d_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_maxpool3d)
@@ -49,8 +42,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_maxpool3d)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -73,8 +66,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_maxpool3d_4d)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -97,8 +90,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_adaptive_maxpool3d)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -121,8 +114,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_adaptive_maxpool3d_4
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -144,8 +137,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_input_nullptr)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -164,8 +157,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_outsize_nullptr)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -184,8 +177,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_out_nullptr)
     auto out_tensor_desc = nullptr;
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -205,8 +198,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_input_dims)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -226,8 +219,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_input_format)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -247,8 +240,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_out_format)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -268,8 +261,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_input_data_type)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_INT32, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -289,8 +282,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_self_output_mismatch
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -310,8 +303,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_input_size)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -331,8 +324,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_out_indices_mismatch
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -352,8 +345,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_output_size)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -373,8 +366,8 @@ TEST_F(l2_adaptive_max_pool3d_test, ascend910B1_case_aicore_dhw_size)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc), OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnAdaptiveMaxPool3d, INPUT(self_desc, output_size_desc),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

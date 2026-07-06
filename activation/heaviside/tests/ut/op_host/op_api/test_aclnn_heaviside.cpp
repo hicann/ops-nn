@@ -19,18 +19,11 @@
 
 using namespace std;
 
-class l2_heaviside_test : public testing::Test
-{
+class l2_heaviside_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "heaviside_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "heaviside_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "heaviside_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "heaviside_test TearDown" << endl; }
 };
 
 // 测试aicore:FLOAT32类型支持

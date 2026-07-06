@@ -66,7 +66,8 @@ static QuantBatchMatmulInplaceAddCsvLoadResult LoadCsvRows()
     QuantBatchMatmulInplaceAddCsvLoadResult result;
     string rootPath(ut_str::GetExeDirPath() + "../../../../");
     string casePath(
-        rootPath + "matmul/quant_batch_matmul_inplace_add/tests/ut/op_api/test_aclnn_quant_batch_matmul_inplace_add.csv");
+        rootPath +
+        "matmul/quant_batch_matmul_inplace_add/tests/ut/op_api/test_aclnn_quant_batch_matmul_inplace_add.csv");
     ifstream csvData(casePath, ios::in);
     if (!csvData.is_open()) {
         result.errors.push_back("cannot open case file: " + casePath);
@@ -130,22 +131,19 @@ static QuantBatchMatmulInplaceAddCsvLoadResult LoadCsvRows()
     return result;
 }
 
-static const QuantBatchMatmulInplaceAddCsvLoadResult &GetCsvLoadResult()
+static const QuantBatchMatmulInplaceAddCsvLoadResult& GetCsvLoadResult()
 {
     static const QuantBatchMatmulInplaceAddCsvLoadResult result = LoadCsvRows();
     return result;
 }
 
-static vector<QuantBatchMatmulInplaceAddCsvRow> GetCsvRows()
-{
-    return GetCsvLoadResult().rows;
-}
+static vector<QuantBatchMatmulInplaceAddCsvRow> GetCsvRows() { return GetCsvLoadResult().rows; }
 
 static vector<QuantBatchMatmulInplaceAddTestParam> GetParams()
 {
     vector<QuantBatchMatmulInplaceAddTestParam> params;
     const auto rows = GetCsvRows();
-    for (const auto &row : rows) {
+    for (const auto& row : rows) {
         if (row.socVersion != "Ascend950") {
             continue;
         }
@@ -154,10 +152,10 @@ static vector<QuantBatchMatmulInplaceAddTestParam> GetParams()
     return params;
 }
 
-static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddTestParam> &info)
+static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddTestParam>& info)
 {
     string name = info.param.caseName;
-    for (char &ch : name) {
+    for (char& ch : name) {
         if (!std::isalnum(static_cast<unsigned char>(ch))) {
             ch = '_';
         }
@@ -167,34 +165,32 @@ static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInpl
 
 TEST(QuantBatchMatmulInplaceAddApiCsv, ShouldLoadValidCases)
 {
-    const auto &loadResult = GetCsvLoadResult();
-    for (const auto &error : loadResult.errors) {
+    const auto& loadResult = GetCsvLoadResult();
+    for (const auto& error : loadResult.errors) {
         ADD_FAILURE() << error;
     }
     EXPECT_FALSE(loadResult.rows.empty());
 }
 
 class QuantBatchMatmulInplaceAddApiTest : public testing::TestWithParam<QuantBatchMatmulInplaceAddTestParam> {
- protected:
+protected:
     static void SetUpTestCase() { cout << "QuantBatchMatmulInplaceAddApiTest SetUp" << endl; }
     static void TearDownTestCase() { cout << "QuantBatchMatmulInplaceAddApiTest TearDown" << endl; }
 };
 
 TEST_P(QuantBatchMatmulInplaceAddApiTest, ascend950_csv_test)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
 
     TensorDesc x1Desc = TensorDesc(param.x1Shape, param.x1Type, param.x1Format).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc(param.x2Shape, param.x2Type, param.x2Format).ValueRange(-1, 1);
-    TensorDesc x1ScaleDesc =
-        TensorDesc(param.x1ScaleShape, param.x1ScaleType, param.x1ScaleFormat).ValueRange(-1, 1);
-    TensorDesc x2ScaleDesc =
-        TensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat).ValueRange(-1, 1);
+    TensorDesc x1ScaleDesc = TensorDesc(param.x1ScaleShape, param.x1ScaleType, param.x1ScaleFormat).ValueRange(-1, 1);
+    TensorDesc x2ScaleDesc = TensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat).ValueRange(-1, 1);
     TensorDesc yInputDesc = TensorDesc(param.yInputShape, param.yInputType, param.yInputFormat).ValueRange(-1, 1);
 
     auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,
-                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yInputDesc,
-                              param.transposeX1, param.transposeX2, param.groupSize),
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yInputDesc, param.transposeX1,
+                              param.transposeX2, param.groupSize),
                         OUTPUT());
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -203,7 +199,5 @@ TEST_P(QuantBatchMatmulInplaceAddApiTest, ascend950_csv_test)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(Ascend950QuantBatchMatmulInplaceAdd,
-                         QuantBatchMatmulInplaceAddApiTest,
-                         testing::ValuesIn(GetParams()),
-                         SanitizeCaseName);
+INSTANTIATE_TEST_SUITE_P(Ascend950QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddApiTest,
+                         testing::ValuesIn(GetParams()), SanitizeCaseName);

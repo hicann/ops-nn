@@ -36,7 +36,6 @@ TEST_F(l2_scatter_nd_update_test, case_1)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    
 }
 
 // 空tensor
@@ -80,11 +79,7 @@ TEST_F(l2_scatter_nd_update_test, case_3)
 // CheckDtypeValid for self and src
 TEST_F(l2_scatter_nd_update_test, case_5)
 {
-    vector<aclDataType> ValidList = {
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_BOOL,
-        ACL_DT_UNDEFINED};
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BOOL, ACL_DT_UNDEFINED};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -98,7 +93,7 @@ TEST_F(l2_scatter_nd_update_test, case_5)
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         if (ValidList[i] != ACL_DT_UNDEFINED) {
             EXPECT_EQ(aclRet, ACL_SUCCESS);
-            
+
         } else {
             EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
         }
@@ -108,10 +103,7 @@ TEST_F(l2_scatter_nd_update_test, case_5)
 // CheckDtypeValid for index
 TEST_F(l2_scatter_nd_update_test, case_6)
 {
-    vector<aclDataType> ValidList = {
-        ACL_INT32,
-        ACL_INT64,
-        ACL_DT_UNDEFINED};
+    vector<aclDataType> ValidList = {ACL_INT32, ACL_INT64, ACL_DT_UNDEFINED};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -125,7 +117,7 @@ TEST_F(l2_scatter_nd_update_test, case_6)
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         if (ValidList[i] != ACL_DT_UNDEFINED) {
             EXPECT_EQ(aclRet, ACL_SUCCESS);
-            
+
         } else {
             EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
         }
@@ -158,7 +150,6 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_8)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    
 }
 
 // 空tensor
@@ -202,13 +193,7 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_10)
 // CheckDtypeValid for self and src
 TEST_F(l2_scatter_nd_update_test, ascend910B2_case_12)
 {
-    vector<aclDataType> ValidList = {
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_BOOL,
-        ACL_BF16,
-        ACL_INT64,
-        ACL_DT_UNDEFINED};
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BOOL, ACL_BF16, ACL_INT64, ACL_DT_UNDEFINED};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -222,7 +207,7 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_12)
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         if (ValidList[i] != ACL_DT_UNDEFINED) {
             EXPECT_EQ(aclRet, ACL_SUCCESS);
-            
+
         } else {
             EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
         }
@@ -232,10 +217,7 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_12)
 // CheckDtypeValid for index
 TEST_F(l2_scatter_nd_update_test, ascend910B2_case_13)
 {
-    vector<aclDataType> ValidList = {
-        ACL_INT32,
-        ACL_INT64,
-        ACL_DT_UNDEFINED};
+    vector<aclDataType> ValidList = {ACL_INT32, ACL_INT64, ACL_DT_UNDEFINED};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -249,7 +231,7 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_13)
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         if (ValidList[i] != ACL_DT_UNDEFINED) {
             EXPECT_EQ(aclRet, ACL_SUCCESS);
-            
+
         } else {
             EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
         }
@@ -294,4 +276,3 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_view_stride0_indexdim2_int64)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
-

@@ -14,18 +14,15 @@
 #include "infershape_test_util.h"
 #include "platform/platform_info.h"
 
-class inplace_index_add:public testing::Test{
-    protected:
-        static void SetUpTestCase(){
-            std::cout<<"inplace_index_add Proto Test SetUp"<<std::endl;
-        }
+class inplace_index_add : public testing::Test {
+protected:
+    static void SetUpTestCase() { std::cout << "inplace_index_add Proto Test SetUp" << std::endl; }
 
-        static void TearDownTestCase(){
-            std::cout<<"inplace_index_add Proto Test TearDown"<<std::endl;
-        }
+    static void TearDownTestCase() { std::cout << "inplace_index_add Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(inplace_index_add, inplace_index_add_infershape_diff_test) {
+TEST_F(inplace_index_add, inplace_index_add_infershape_diff_test)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;

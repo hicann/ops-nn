@@ -21,28 +21,22 @@
 
 using namespace FlatQuantNS;
 
-#define INVOKE_FLAT_QUANT_IMPL(Ttype, Mode)                                \
-    do {                                                                                  \
-        if ASCEND_IS_AIV {                                                                \
-            FlatQuantVecOne<Ttype, Mode> op;                                                 \
-            op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData);              \
-            op.Process();                                                                 \
-        }                                                                                 \
-        if ASCEND_IS_AIC {                                                                \
-            FlatQuantCubeOne<Ttype, Mode> op;                                                \
-            op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);               \
-            op.Process();                                                                 \
-        }                                                                                 \
+#define INVOKE_FLAT_QUANT_IMPL(Ttype, Mode)                                  \
+    do {                                                                     \
+        if ASCEND_IS_AIV {                                                   \
+            FlatQuantVecOne<Ttype, Mode> op;                                 \
+            op.Init(kronecker_p1, out, quant_scale, workspace, &tilingData); \
+            op.Process();                                                    \
+        }                                                                    \
+        if ASCEND_IS_AIC {                                                   \
+            FlatQuantCubeOne<Ttype, Mode> op;                                \
+            op.Init(x, kronecker_p1, kronecker_p2, workspace, &tilingData);  \
+            op.Process();                                                    \
+        }                                                                    \
     } while (0)
 
-extern "C" __global__ __aicore__ void flat_quant(
-                                                 GM_ADDR x,
-                                                 GM_ADDR kronecker_p1,
-                                                 GM_ADDR kronecker_p2,
-                                                 GM_ADDR out,
-                                                 GM_ADDR quant_scale,
-                                                 GM_ADDR workspace,
-                                                 GM_ADDR tiling)
+extern "C" __global__ __aicore__ void flat_quant(GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out,
+                                                 GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     const FlatQuantTilingData* __restrict tiling_data = &tilingData;

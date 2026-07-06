@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include "gtest/gtest.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
@@ -20,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_lerp_scalar_proto.h"
 
-class ForeachLerpScalarTest : public testing::Test
-{
+class ForeachLerpScalarTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachLerpScalar SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachLerpScalar SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachLerpScalar TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachLerpScalar TearDown" << std::endl; }
 };
 
 TEST_F(ForeachLerpScalarTest, infer_shape_known_success)

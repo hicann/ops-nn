@@ -29,16 +29,14 @@ namespace detail {
 
 // ND NK
 template <class TensorTraitOut, class TensorTraitIn, class Shape>
-struct TileCastImpl<
-    DAV3510, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
-    typename AscendC::Std::enable_if_t<
-        IsRowMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value // 判断NK场景
-        && AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::fp8_e8m0_t>>> {
+struct TileCastImpl<DAV3510, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
+                    typename AscendC::Std::enable_if_t<
+                        IsRowMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value // 判断NK场景
+                        && AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::fp8_e8m0_t>>> {
     using DtypeOut = AscendC::PrimT<TensorTraitOut>;
     using DtypeIn = AscendC::PrimT<TensorTraitIn>;
-    __aicore__ inline static void Run(
-        const AscendC::LocalTensor<TensorTraitOut>& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
-        const Shape& shape)
+    __aicore__ inline static void Run(const AscendC::LocalTensor<TensorTraitOut>& tensorOut,
+                                      const AscendC::LocalTensor<TensorTraitIn>& tensorIn, const Shape& shape)
     {
         uint16_t ubLoopN = CeilDiv(Get<0>(shape), static_cast<uint64_t>(4));
         constexpr int16_t SHIFT_FOR_BF16 = 1;
@@ -65,8 +63,8 @@ struct TileCastImpl<
                 // Vn s1 0 s2 0 s3 0 s4 0 s5 0 s6 0 s7 0 s8 0....... s127 0 s128 0
                 // antiQuantScaleE8m0Vreg1
                 // Vd s128 0 s129 0 s130 0 s131 0 s132 0 s133 0....... s255 0 s256 0
-                MicroAPI::Interleave(
-                    antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg, antiQuantScaleE8m0Vreg0);
+                MicroAPI::Interleave(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg,
+                                     antiQuantScaleE8m0Vreg0);
                 CastLowBitToF16(antiQuantScaleF16Vreg0, antiQuantScaleE8m0Vreg0, maskAll);
                 CastLowBitToF16(antiQuantScaleF16Vreg1, antiQuantScaleE8m0Vreg1, maskAll);
                 MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
@@ -82,16 +80,14 @@ struct TileCastImpl<
 
 // ND/NZ KN
 template <class TensorTraitOut, class TensorTraitIn, class Shape>
-struct TileCastImpl<
-    DAV3510, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
-    typename AscendC::Std::enable_if_t<
-        IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value // 判断KN场景
-        && AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::fp8_e8m0_t>>> {
+struct TileCastImpl<DAV3510, AscendC::LocalTensor<TensorTraitOut>, AscendC::LocalTensor<TensorTraitIn>, Shape,
+                    typename AscendC::Std::enable_if_t<
+                        IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value // 判断KN场景
+                        && AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::fp8_e8m0_t>>> {
     using DtypeOut = AscendC::PrimT<TensorTraitOut>;
     using DtypeIn = AscendC::PrimT<TensorTraitIn>;
-    __aicore__ inline static void Run(
-        const AscendC::LocalTensor<TensorTraitOut>& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
-        const Shape& shape)
+    __aicore__ inline static void Run(const AscendC::LocalTensor<TensorTraitOut>& tensorOut,
+                                      const AscendC::LocalTensor<TensorTraitIn>& tensorIn, const Shape& shape)
     {
         uint16_t ubLoopK = static_cast<uint16_t>(Get<1>(shape));
         constexpr int16_t SHIFT_FOR_BF16 = 1;
@@ -119,8 +115,8 @@ struct TileCastImpl<
                 // Vn s1 0 s2 0 s3 0 s4 0 s5 0 s6 0 s7 0 s8 0....... s127 0 s128 0
                 // antiQuantScaleE8m0Vreg1
                 // Vd s128 0 s129 0 s130 0 s131 0 s132 0 s133 0....... s255 0 s256 0
-                MicroAPI::Interleave(
-                    antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg, antiQuantScaleE8m0Vreg0);
+                MicroAPI::Interleave(antiQuantScaleE8m0Vreg0, antiQuantScaleE8m0Vreg1, zeroVreg,
+                                     antiQuantScaleE8m0Vreg0);
                 CastLowBitToF16(antiQuantScaleF16Vreg0, antiQuantScaleE8m0Vreg0, maskAll);
                 CastLowBitToF16(antiQuantScaleF16Vreg1, antiQuantScaleE8m0Vreg1, maskAll);
                 MicroAPI::StoreAlign<DtypeOut, MicroAPI::StoreDist::DIST_NORM_B16>(
@@ -133,4 +129,3 @@ struct TileCastImpl<
 };
 } // namespace detail
 } // namespace Cmct::Prologue::Tile
-

@@ -19,9 +19,9 @@
 #define SPARSE_APPLY_FTRL_TILING_DATA_H
 
 struct SparseApplyFtrlTilingData {
-    int64_t numIndices;       // indices count (N = grad.shape[0])
-    int64_t innerSize;        // elements per row (D1*D2*... = var.shape[1:] product)
-    int64_t varDim0;          // var.shape[0] = total rows in var/accum/linear
+    int64_t numIndices; // indices count (N = grad.shape[0])
+    int64_t innerSize;  // elements per row (D1*D2*... = var.shape[1:] product)
+    int64_t varDim0;    // var.shape[0] = total rows in var/accum/linear
     // lr/l1/l2/lrPower are read from GM scalar tensors at kernel runtime,
     // not stored in tiling data (GetData unavailable in binary compile mode)
 };

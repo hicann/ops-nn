@@ -25,10 +25,11 @@ constexpr size_t GLU_IN_X = 0;
 constexpr size_t GLU_OUT_Y = 0;
 constexpr size_t GLU_ATTR_DIM = 0;
 const size_t SPLIT_NUM = 2;
-}  // namespace
+} // namespace
 
 namespace ops {
-static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context) {
+static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context)
+{
     auto x_shape = context->GetInputShape(GLU_IN_X);
     OPS_CHECK_NULL_WITH_CONTEXT(context, x_shape);
     auto y_shape = context->GetOutputShape(GLU_OUT_Y);
@@ -41,7 +42,7 @@ static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context) {
 
     auto split_dim = *split_dim_ptr;
     if (split_dim < 0) {
-      split_dim += x_shape->GetDimNum();
+        split_dim += x_shape->GetDimNum();
     }
 
     if (Ops::Base::IsUnknownRank(*x_shape)) {
@@ -51,9 +52,9 @@ static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context) {
     }
 
     if (split_dim < 0 || split_dim >= static_cast<int64_t>(x_shape->GetDimNum())) {
-      OP_LOGE("SwiGlu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
-                  x_shape->GetDimNum(), x_shape->GetDimNum() - 1, split_dim);
-      return GRAPH_FAILED;
+        OP_LOGE("SwiGlu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
+                x_shape->GetDimNum(), x_shape->GetDimNum() - 1, split_dim);
+        return GRAPH_FAILED;
     }
 
     *y_shape = *x_shape;
@@ -70,11 +71,12 @@ static ge::graphStatus InferShapeForSwiGlu(gert::InferShapeContext* context) {
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForSwiGlu(gert::InferDataTypeContext *context) {
+static ge::graphStatus InferDataTypeForSwiGlu(gert::InferDataTypeContext* context)
+{
     const ge::DataType dtype = context->GetInputDataType(0);
     ge::graphStatus ret = context->SetOutputDataType(0, dtype);
     return ret;
 }
 
 IMPL_OP_INFERSHAPE(SwiGlu).InferShape(InferShapeForSwiGlu).InferDataType(InferDataTypeForSwiGlu);
-}  // namespace ops
+} // namespace ops

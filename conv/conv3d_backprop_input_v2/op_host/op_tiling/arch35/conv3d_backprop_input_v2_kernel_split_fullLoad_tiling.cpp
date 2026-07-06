@@ -30,8 +30,7 @@ namespace Conv {
 
 bool Conv3DDXV2KernelSplitFullLoadTiling::IsCapable()
 {
-    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
-        NpuArch::DAV_3510 &&
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 &&
         !IsSocVersionFuse(context_)) {
         return false;
     }
@@ -61,7 +60,8 @@ ge::graphStatus Conv3DDXV2KernelSplitFullLoadTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable kernel split full load tiling");
     if (isGetTilingFromRepo) {
-        OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: KernelSplitFullLoad get tiling from knowledge_tiling success.");
+        OP_LOGD(context_->GetNodeName(),
+                "Conv3DBackpropInputV2 AscendC: KernelSplitFullLoad get tiling from knowledge_tiling success.");
         PrintTilingSummary();
         return ge::GRAPH_SUCCESS;
     }
@@ -102,12 +102,13 @@ void Conv3DDXV2KernelSplitFullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
     l0Params.bl0Pbuffer = DB_ON;
     l0Params.cl0Pbuffer = DB_OFF;
     if (IsSocVersionFuse(context_)) {
-        // 小shape的情况下，无法很好掩盖scalar计算，耦合架构scalar bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
-        uint64_t expectedMaxCnt = Ops::Base::CeilDiv(
-                                    tilingRunInfo_.nValue * tilingRunInfo_.mValue * ge::GetSizeByDataType(ge::DT_FLOAT),
-                                    static_cast<uint64_t>(platformInfo_.l0_c_size)) *
-                                    runInfo_.batch_n * runInfo_.dedx_d;
-        if (expectedMaxCnt < 1U) {  // 经验值，平均任务轮次不足一轮，计算量较小
+        // 小shape的情况下，无法很好掩盖scalar计算，耦合架构scalar
+        // bound严重，pingpong性能无收益，关闭pingpong可以掩盖scalar时间
+        uint64_t expectedMaxCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue * tilingRunInfo_.mValue *
+                                                         ge::GetSizeByDataType(ge::DT_FLOAT),
+                                                     static_cast<uint64_t>(platformInfo_.l0_c_size)) *
+                                  runInfo_.batch_n * runInfo_.dedx_d;
+        if (expectedMaxCnt < 1U) { // 经验值，平均任务轮次不足一轮，计算量较小
             l0Params.al0Pbuffer = DB_OFF;
             l0Params.bl0Pbuffer = DB_OFF;
             l0Params.cl0Pbuffer = DB_OFF;
@@ -132,15 +133,15 @@ void Conv3DDXV2KernelSplitFullLoadTiling::ApplyL0CapacityLimit(uint32_t& baseM, 
     // 保证基本块大小不超过L0A/L0B/L0C的大小
     uint32_t safeBaseK = std::max(baseK, tilingRunInfo_.k0);
     safeBaseK = (safeBaseK <= 0) ? tilingRunInfo_.k0 : safeBaseK;
-    uint32_t maxBaseMByL0a =
-        std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.m0, ONE_U32) * tilingRunInfo_.m0;
-    uint32_t maxBaseNByL0b =
-        std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
+    uint32_t maxBaseMByL0a = std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.m0, ONE_U32) *
+                             tilingRunInfo_.m0;
+    uint32_t maxBaseNByL0b = std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.n0, ONE_U32) *
+                             tilingRunInfo_.n0;
     baseM = std::min(baseM, maxBaseMByL0a);
     baseN = std::min(baseN, maxBaseNByL0b);
     if (static_cast<uint64_t>(baseM) * baseN > l0cMaxNum) {
-        uint32_t maxBaseNByL0c =
-            std::max(l0cMaxNum / std::max(baseM, ONE_U32) / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
+        uint32_t maxBaseNByL0c = std::max(l0cMaxNum / std::max(baseM, ONE_U32) / tilingRunInfo_.n0, ONE_U32) *
+                                 tilingRunInfo_.n0;
         baseN = std::min(baseN, maxBaseNByL0c);
     }
 }
@@ -166,7 +167,8 @@ void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params
             // 耦合架构下cin小，kernel拆分 scalar bound严重，理论建模失效，在负载均衡下尽可能减少计算轮次
             uint64_t maxSingleCoreM = Base::CeilDiv(tilingRunInfo.mValue, static_cast<uint64_t>(coreNum_));
             maxSingleCoreM = Ops::Base::CeilAlign(maxSingleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));
-            maxBaseM = std::min(static_cast<uint64_t>(kernelSplitPara_.isA16W8 ? MAX_BASE_MN_A16W8 : MAX_BASE_MN), maxSingleCoreM);
+            maxBaseM = std::min(static_cast<uint64_t>(kernelSplitPara_.isA16W8 ? MAX_BASE_MN_A16W8 : MAX_BASE_MN),
+                                maxSingleCoreM);
         }
         uint32_t mL0cMax = std::max(l0cMaxNum / baseN / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
         baseM = std::min(maxBaseM, mL0cMax);

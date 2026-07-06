@@ -27,17 +27,16 @@ bool Conv3dBaseTilingV2::GetTilingFromRepo()
     auto compileInfoPtr = static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
     uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv3DV2", compileInfoPtr->socVersion,
-        opInfo_->aicoreNum, tuningTiling);
+                                      opInfo_->aicoreNum, tuningTiling);
     if (ret != 0 || tuningTiling == nullptr) {
         return false;
     }
     return TranslateRepoTiling(tuningTiling);
 }
 
-void Conv3dBaseTilingV2::GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size_t &size)
+void Conv3dBaseTilingV2::GetTilingInputArgs(std::shared_ptr<void>& inputArgs, size_t& size)
 {
-    std::shared_ptr<tuningtiling::Conv3DV2InputArgs> conv3DInput =
-                std::make_shared<tuningtiling::Conv3DV2InputArgs>();
+    std::shared_ptr<tuningtiling::Conv3DV2InputArgs> conv3DInput = std::make_shared<tuningtiling::Conv3DV2InputArgs>();
 
     conv3DInput->aDtype = descInfo_.fMapDtype;
     conv3DInput->bDtype = descInfo_.weightDtype;
@@ -89,7 +88,7 @@ void Conv3dBaseTilingV2::GetTilingInputArgs(std::shared_ptr<void> &inputArgs, si
     PrintInputArgs(conv3DInput);
 }
 
-bool Conv3dBaseTilingV2::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
+bool Conv3dBaseTilingV2::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& tuningTiling)
 {
     auto convRepoTiling = std::static_pointer_cast<tuningtiling::Conv3DV2TunnerTiling>(tuningTiling);
     if (convRepoTiling == nullptr) {
@@ -182,16 +181,16 @@ void Conv3dBaseTilingV2::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2
     tilingData_.groupOpt = optGroupInfo_.groupOpt;
 }
 
-uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling) {
+uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
+{
     uint64_t aL1SpaceSize = 0;
     uint64_t fmapSize = dtypeSizeTab.at(descInfo_.fMapDtype);
 
     uint64_t dilatedKernelH = (convRepoTiling->kernelH - 1) * convRepoTiling->dilationH + 1;
     if (convRepoTiling->mMode == 1) {
-        uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ?
-                          convRepoTiling->hoL1 : convRepoTiling->singleCoreHo;
-        uint64_t hoL1Max = std::min(mL1Max / convRepoTiling->orgWo + CONST_VALUE_2,
-            convRepoTiling->orgHo);
+        uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ? convRepoTiling->hoL1 :
+                                                                                convRepoTiling->singleCoreHo;
+        uint64_t hoL1Max = std::min(mL1Max / convRepoTiling->orgWo + CONST_VALUE_2, convRepoTiling->orgHo);
         uint64_t hiAL1Max = (hoL1Max - 1) * convRepoTiling->strideH + dilatedKernelH;
         hiAL1Max = hiAL1Max > convRepoTiling->orgHi ? convRepoTiling->orgHi : hiAL1Max;
 
@@ -204,8 +203,7 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
         if ((convRepoTiling->isC04Flag == 1) && convRepoTiling->singleCoreWo == convRepoTiling->woL1) {
             wiAL1Max = convRepoTiling->orgWi;
 
-            aL1SpaceSize = ConvAlignB(hiAL1Max * wiAL1Max, C0_SIZE /
-                (fmapSize * C04_CIN_SIZE)) * C04_CIN_SIZE;
+            aL1SpaceSize = ConvAlignB(hiAL1Max * wiAL1Max, C0_SIZE / (fmapSize * C04_CIN_SIZE)) * C04_CIN_SIZE;
         } else {
             uint64_t dilatedKernelW = (convRepoTiling->kernelW - 1) * convRepoTiling->dilationW + 1;
             wiAL1Max = (convRepoTiling->woL1 - 1) * convRepoTiling->strideW + dilatedKernelW;
@@ -219,15 +217,15 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
-void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling) {
+void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
+{
     uint32_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
     uint32_t kernelValueInKSize = flagInfo_.isKernelSplit ? convRepoTiling->khL1 * convRepoTiling->kwL1 :
-        kernelHxkernelW;
+                                                            kernelHxkernelW;
     uint32_t cinAInCore = convRepoTiling->kAL1 / kernelValueInKSize;
-    uint32_t kAL1Tail =
-        (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) *
-            kernelValueInKSize * convRepoTiling->kernelD) %
-        convRepoTiling->kAL1;
+    uint32_t kAL1Tail = (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) * kernelValueInKSize *
+                         convRepoTiling->kernelD) %
+                        convRepoTiling->kAL1;
     kAL1Tail = kAL1Tail == 0 ? convRepoTiling->kAL1 : kAL1Tail;
     uint32_t kBL1Tail = (convRepoTiling->singleCoreCi * kernelValueInKSize) % convRepoTiling->kBL1;
     kBL1Tail = kBL1Tail == 0 ? convRepoTiling->kBL1 : kBL1Tail;
@@ -236,8 +234,8 @@ void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     uint32_t orgHixWi = convRepoTiling->orgHi * convRepoTiling->orgWi;
     uint32_t cinOffsetBlockInGM = convRepoTiling->kAL1 / kernelValueInKSize * orgHixWi;
     uint32_t mStep = (!flagInfo_.mSplitModeFlag) ?
-        ConvAlignB(convRepoTiling->hoL0 * convRepoTiling->woL0, convOpsConstParams_.m0):
-        ConvAlignB(convRepoTiling->hoL0, convOpsConstParams_.m0);
+                         ConvAlignB(convRepoTiling->hoL0 * convRepoTiling->woL0, convOpsConstParams_.m0) :
+                         ConvAlignB(convRepoTiling->hoL0, convOpsConstParams_.m0);
     uint32_t fmapKStride = mStep / convOpsConstParams_.m0;
     uint32_t nStep = ConvCeilDiv(convRepoTiling->nL0, convOpsConstParams_.n0);
     uint32_t kStep = convRepoTiling->kL0 / convOpsConstParams_.k0;
@@ -266,10 +264,10 @@ void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     tilingData_.offsetx = attrInfo_.offsetx;
     tilingData_.hf32Enable = convRepoTiling->hf32Enable;
     tilingData_.hf32TransMode = convRepoTiling->hf32TransMode;
-    uint64_t singleGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        optGroupInfo_.enlarge : 0;
+    uint64_t singleGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ? optGroupInfo_.enlarge : 0;
     uint64_t singleGroupOpt = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        ConvCeilDiv(optGroupInfo_.groupOpt, convRepoTiling->groupDim) : 0;
+                                  ConvCeilDiv(optGroupInfo_.groupOpt, convRepoTiling->groupDim) :
+                                  0;
     tilingData_.singleCoreGroups = singleGroups;
     tilingData_.singleCoreGroupOpt = singleGroupOpt;
     SetUnionDataXt(convRepoTiling);
@@ -279,9 +277,9 @@ void Conv3dBaseTilingV2::SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerT
 {
     conv_tiling::UnionDataXt unionDataXt;
     uint64_t tmpKh = flagInfo_.isKernelSplit ? static_cast<uint64_t>(convRepoTiling->khL1) :
-        static_cast<uint64_t>(convRepoTiling->kernelH);
+                                               static_cast<uint64_t>(convRepoTiling->kernelH);
     uint64_t tmpKw = flagInfo_.isKernelSplit ? static_cast<uint64_t>(convRepoTiling->kwL1) :
-        static_cast<uint64_t>(convRepoTiling->kernelW);
+                                               static_cast<uint64_t>(convRepoTiling->kernelW);
     unionDataXt.bf.kernelW = tmpKw;
     unionDataXt.bf.kernelW_highest_bit = (tmpKw & 0x100) >> 8; // 8 kernelW lower 8 bit
     unionDataXt.bf.kernelH = tmpKh;
@@ -297,46 +295,28 @@ void Conv3dBaseTilingV2::PrintInputArgs(shared_ptr<tuningtiling::Conv3DV2InputAr
 {
     stringstream ss;
     ss << paramInfo_.nodeType.c_str() << "ops tiling input args: aDtype: " << conv3DInput->aDtype
-    << ", bDtype: " << conv3DInput->bDtype
-    << ", cDtype: " << conv3DInput->cDtype
-    << ", biasDtype: " << conv3DInput->biasDtype
-    << ", aShapeN: " << conv3DInput->aShapeN
-    << ", aShapeD: " << conv3DInput->aShapeD
-    << ", aShapeH: " << conv3DInput->aShapeH
-    << ", aShapeW: " << conv3DInput->aShapeW
-    << ", bShapeN: " << conv3DInput->bShapeN
-    << ", bShapeC: " << conv3DInput->bShapeC
-    << ", bShapeD: " << conv3DInput->bShapeD
-    << ", bShapeH: " << conv3DInput->bShapeH
-    << ", bShapeW: " << conv3DInput->bShapeW
-    << ", cShapeD: " << conv3DInput->cShapeD
-    << ", cShapeH: " << conv3DInput->cShapeH
-    << ", cShapeW: " << conv3DInput->cShapeW
-    << ", aFormat: " << conv3DInput->aFormat
-    << ", bFormat: " << conv3DInput->bFormat
-    << ", cFormat: " << conv3DInput->cFormat
-    << ", groups: " << conv3DInput->groups
-    << ", strideD: " << conv3DInput->strideD
-    << ", strideH: " << conv3DInput->strideH
-    << ", strideW: " << conv3DInput->strideW
-    << ", dilationD: " << conv3DInput->dilationD
-    << ", dilationH: " << conv3DInput->dilationH
-    << ", dilationW: " << conv3DInput->dilationW
-    << ", padHead: " << conv3DInput->padHead
-    << ", padTail: " << conv3DInput->padTail
-    << ", padTop: " << conv3DInput->padTop
-    << ", padBottom: " << conv3DInput->padBottom
-    << ", padLeft: " << conv3DInput->padLeft
-    << ", padRight: " << conv3DInput->padRight
-    << ", biasFlag: " << conv3DInput->biasFlag
-    << ", reserverdParam1: " << conv3DInput->reserverdParam1
-    << ", reserverdParam2: " << conv3DInput->reserverdParam2
-    << ", reserverdParam3: " << conv3DInput->reserverdParam3
-    << ", reserverdParam4: " << conv3DInput->reserverdParam4
-    << ", reserverdParam5: " << conv3DInput->reserverdParam5
-    << ", reserverdParam6: " << conv3DInput->reserverdParam6;
+       << ", bDtype: " << conv3DInput->bDtype << ", cDtype: " << conv3DInput->cDtype
+       << ", biasDtype: " << conv3DInput->biasDtype << ", aShapeN: " << conv3DInput->aShapeN
+       << ", aShapeD: " << conv3DInput->aShapeD << ", aShapeH: " << conv3DInput->aShapeH
+       << ", aShapeW: " << conv3DInput->aShapeW << ", bShapeN: " << conv3DInput->bShapeN
+       << ", bShapeC: " << conv3DInput->bShapeC << ", bShapeD: " << conv3DInput->bShapeD
+       << ", bShapeH: " << conv3DInput->bShapeH << ", bShapeW: " << conv3DInput->bShapeW
+       << ", cShapeD: " << conv3DInput->cShapeD << ", cShapeH: " << conv3DInput->cShapeH
+       << ", cShapeW: " << conv3DInput->cShapeW << ", aFormat: " << conv3DInput->aFormat
+       << ", bFormat: " << conv3DInput->bFormat << ", cFormat: " << conv3DInput->cFormat
+       << ", groups: " << conv3DInput->groups << ", strideD: " << conv3DInput->strideD
+       << ", strideH: " << conv3DInput->strideH << ", strideW: " << conv3DInput->strideW
+       << ", dilationD: " << conv3DInput->dilationD << ", dilationH: " << conv3DInput->dilationH
+       << ", dilationW: " << conv3DInput->dilationW << ", padHead: " << conv3DInput->padHead
+       << ", padTail: " << conv3DInput->padTail << ", padTop: " << conv3DInput->padTop
+       << ", padBottom: " << conv3DInput->padBottom << ", padLeft: " << conv3DInput->padLeft
+       << ", padRight: " << conv3DInput->padRight << ", biasFlag: " << conv3DInput->biasFlag
+       << ", reserverdParam1: " << conv3DInput->reserverdParam1 << ", reserverdParam2: " << conv3DInput->reserverdParam2
+       << ", reserverdParam3: " << conv3DInput->reserverdParam3 << ", reserverdParam4: " << conv3DInput->reserverdParam4
+       << ", reserverdParam5: " << conv3DInput->reserverdParam5
+       << ", reserverdParam6: " << conv3DInput->reserverdParam6;
     OP_LOGD(context_->GetNodeName(), "%s", ss.str().c_str());
 }
 
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

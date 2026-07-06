@@ -43,4 +43,4 @@ static ge::graphStatus InferShapeSparseApplyFtrlV2(gert::InferShapeContext* cont
 
 IMPL_OP_INFERSHAPE(SparseApplyFtrlV2).InferShape(InferShapeSparseApplyFtrlV2);
 
-}  // namespace ops
+} // namespace ops

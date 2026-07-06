@@ -21,17 +21,17 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LayerNormXBackpropV3);
 
-const std::array<aclTensor*, X_V3_OUT_NUM> LayerNormXBackpropV3(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean,
-    const aclTensor* weight, aclOpExecutor* executor)
+const std::array<aclTensor*, X_V3_OUT_NUM> LayerNormXBackpropV3(const aclTensor* gradOut, const aclTensor* input,
+                                                                const aclTensor* rstd, const aclTensor* mean,
+                                                                const aclTensor* weight, aclOpExecutor* executor)
 {
     L0_DFX(LayerNormXBackpropV3, gradOut, input, rstd, mean, weight);
     auto gradInputOut = executor->AllocTensor(input->GetViewShape(), input->GetDataType(), Format::FORMAT_ND);
     // kernel only support second output dtype float32
     auto gammaTempOut = executor->AllocTensor(input->GetViewShape(), DataType::DT_FLOAT, Format::FORMAT_ND);
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormXBackpropV3, OP_INPUT(gradOut, input, rstd, mean, weight), OP_OUTPUT(gradInputOut, gammaTempOut));
+    ADD_TO_LAUNCHER_LIST_AICORE(LayerNormXBackpropV3, OP_INPUT(gradOut, input, rstd, mean, weight),
+                                OP_OUTPUT(gradInputOut, gammaTempOut));
 
     return {gradInputOut, gammaTempOut};
 }

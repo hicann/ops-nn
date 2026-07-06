@@ -58,4 +58,4 @@ ACLNN_API aclnnStatus aclnnSmoothL1LossBackward(void* workspace, uint64_t worksp
 }
 #endif
 
-#endif  // OP_API_INC_SMOOTH_L1_LOSS_BACKWARD_H_
+#endif // OP_API_INC_SMOOTH_L1_LOSS_BACKWARD_H_

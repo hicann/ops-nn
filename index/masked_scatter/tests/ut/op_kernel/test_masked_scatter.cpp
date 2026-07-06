@@ -27,8 +27,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void masked_scatter(
-    GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void masked_scatter(GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y,
+                                                     GM_ADDR workspace, GM_ADDR tiling);
 class masked_scatter_test : public testing::Test {
 protected:
     static void SetUpTestCase() { cout << "masked_scatter_test SetUp\n" << endl; }

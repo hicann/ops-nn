@@ -21,16 +21,9 @@
 namespace optiling {
 
 // 1. All Tensor full size, cut nc between cores, without cut in one core
-template<typename ParamsType>
-inline bool tryNoCut(
-    ParamsType& params,
-    uint64_t ncPreCore,
-    uint64_t doDim,
-    uint64_t hoDim,
-    uint64_t woDim,
-    uint64_t xDtypeSize,
-    uint64_t indexDtypeSize,
-    uint64_t effectiveUbSize)
+template <typename ParamsType>
+inline bool tryNoCut(ParamsType& params, uint64_t ncPreCore, uint64_t doDim, uint64_t hoDim, uint64_t woDim,
+                     uint64_t xDtypeSize, uint64_t indexDtypeSize, uint64_t effectiveUbSize)
 {
     uint64_t noCutSize = ncPreCore * doDim * hoDim * woDim * (xDtypeSize + indexDtypeSize);
     if (noCutSize <= effectiveUbSize) {
@@ -45,16 +38,9 @@ inline bool tryNoCut(
 }
 
 // 2. Cut nc
-template<typename ParamsType>
-inline bool tryCutNc(
-    ParamsType& params,
-    uint64_t doDim,
-    uint64_t hoDim,
-    uint64_t woDim,
-    uint64_t xDtypeSize,
-    uint64_t indexDtypeSize,
-    uint64_t effectiveUbSize,
-    uint64_t maxBlockCount)
+template <typename ParamsType>
+inline bool tryCutNc(ParamsType& params, uint64_t doDim, uint64_t hoDim, uint64_t woDim, uint64_t xDtypeSize,
+                     uint64_t indexDtypeSize, uint64_t effectiveUbSize, uint64_t maxBlockCount)
 {
     uint64_t perNcSize = 1UL * doDim * hoDim * woDim * (xDtypeSize + indexDtypeSize);
     if (perNcSize <= effectiveUbSize) {
@@ -74,14 +60,9 @@ inline bool tryCutNc(
 }
 
 // 3. Cut do
-template<typename ParamsType>
-inline bool tryCutDo(
-    ParamsType& params,
-    uint64_t hoDim,
-    uint64_t woDim,
-    uint64_t xDtypeSize,
-    uint64_t indexDtypeSize,
-    uint64_t effectiveUbSize)
+template <typename ParamsType>
+inline bool tryCutDo(ParamsType& params, uint64_t hoDim, uint64_t woDim, uint64_t xDtypeSize, uint64_t indexDtypeSize,
+                     uint64_t effectiveUbSize)
 {
     uint64_t perDoSize = 1UL * 1UL * hoDim * woDim * (xDtypeSize + indexDtypeSize);
     if (perDoSize <= effectiveUbSize) {
@@ -96,13 +77,9 @@ inline bool tryCutDo(
 }
 
 // 4. Cut ho
-template<typename ParamsType>
-inline bool tryCutHo(
-    ParamsType& params,
-    uint64_t woDim,
-    uint64_t xDtypeSize,
-    uint64_t indexDtypeSize,
-    uint64_t effectiveUbSize)
+template <typename ParamsType>
+inline bool tryCutHo(ParamsType& params, uint64_t woDim, uint64_t xDtypeSize, uint64_t indexDtypeSize,
+                     uint64_t effectiveUbSize)
 {
     uint64_t perHoSize = 1UL * 1UL * 1UL * woDim * (xDtypeSize + indexDtypeSize);
     if (perHoSize <= effectiveUbSize) {
@@ -116,12 +93,8 @@ inline bool tryCutHo(
 }
 
 // 5. Cut wo
-template<typename ParamsType>
-inline bool tryCutWo(
-    ParamsType& params,
-    uint64_t xDtypeSize,
-    uint64_t indexDtypeSize,
-    uint64_t effectiveUbSize)
+template <typename ParamsType>
+inline bool tryCutWo(ParamsType& params, uint64_t xDtypeSize, uint64_t indexDtypeSize, uint64_t effectiveUbSize)
 {
     uint64_t perWoSize = 1UL * 1UL * 1UL * 1UL * (xDtypeSize + indexDtypeSize);
     if (perWoSize <= effectiveUbSize) {
@@ -133,80 +106,59 @@ inline bool tryCutWo(
     return false;
 }
 
-template<typename ParamsType>
-inline bool CalculateScatterTilingParams(
-    ParamsType& params,
-    uint64_t doDim,
-    uint64_t hoDim,
-    uint64_t woDim,
-    uint64_t xDtypeSize,
-    uint64_t indexDtypeSize,
-    uint64_t maxBlockCount,
-    uint64_t blockAdjustment = 0)
+template <typename ParamsType>
+inline bool CalculateScatterTilingParams(ParamsType& params, uint64_t doDim, uint64_t hoDim, uint64_t woDim,
+                                         uint64_t xDtypeSize, uint64_t indexDtypeSize, uint64_t maxBlockCount,
+                                         uint64_t blockAdjustment = 0)
 {
     uint64_t effectiveUbSize = params.maxUbSize;
     if (blockAdjustment > 0 && params.maxUbSize > blockAdjustment) {
         effectiveUbSize = params.maxUbSize - blockAdjustment;
     }
-    
+
     uint64_t ncPreCore = Ops::Base::CeilDiv(params.ncDim, params.totalCoreNum);
     params.usedCoreNum = Ops::Base::CeilDiv(params.ncDim, ncPreCore);
 
     // 尝试五种切分场景
-    if (tryNoCut(params, ncPreCore, doDim, hoDim, woDim, 
-                 xDtypeSize, indexDtypeSize, effectiveUbSize)) {
+    if (tryNoCut(params, ncPreCore, doDim, hoDim, woDim, xDtypeSize, indexDtypeSize, effectiveUbSize)) {
         return true;
     }
-    
-    if (tryCutNc(params, doDim, hoDim, woDim, xDtypeSize, 
-                 indexDtypeSize, effectiveUbSize, maxBlockCount)) {
+
+    if (tryCutNc(params, doDim, hoDim, woDim, xDtypeSize, indexDtypeSize, effectiveUbSize, maxBlockCount)) {
         return true;
     }
-    
-    if (tryCutDo(params, hoDim, woDim, xDtypeSize, 
-                 indexDtypeSize, effectiveUbSize)) {
+
+    if (tryCutDo(params, hoDim, woDim, xDtypeSize, indexDtypeSize, effectiveUbSize)) {
         return true;
     }
-    
-    if (tryCutHo(params, woDim, xDtypeSize, indexDtypeSize, 
-                 effectiveUbSize)) {
+
+    if (tryCutHo(params, woDim, xDtypeSize, indexDtypeSize, effectiveUbSize)) {
         return true;
     }
-    
-    if (tryCutWo(params, xDtypeSize, indexDtypeSize, 
-                 effectiveUbSize)) {
+
+    if (tryCutWo(params, xDtypeSize, indexDtypeSize, effectiveUbSize)) {
         return true;
     }
-    
+
     return false;
 }
-template<typename ParamsType>
-inline void CalculateRoundParams(
-    ParamsType& params,
-    bool isOverLap,
-    uint64_t diDim,
-    uint64_t hiDim,
-    uint64_t wiDim)
+template <typename ParamsType>
+inline void CalculateRoundParams(ParamsType& params, bool isOverLap, uint64_t diDim, uint64_t hiDim, uint64_t wiDim)
 {
     params.ncRound = Ops::Base::CeilDiv(params.ncCnt, params.usedCoreNum);
     params.preCoreNum = params.ncCnt % params.usedCoreNum;
-    params.ncRoundTail = params.preCoreNum == 0UL ? 
-                       params.ncRound : params.ncRound - 1UL;
-    params.totalRound = params.ncRound * params.doCnt * 
-                       params.hoCnt * params.woCnt;
-    
+    params.ncRoundTail = params.preCoreNum == 0UL ? params.ncRound : params.ncRound - 1UL;
+    params.totalRound = params.ncRound * params.doCnt * params.hoCnt * params.woCnt;
+
     if (params.xDtypeSize != DTYPE_LEN_B32 && isOverLap) {
-        params.workspaceSize = params.ncDim * diDim * 
-                             hiDim * wiDim * sizeof(float);
+        params.workspaceSize = params.ncDim * diDim * hiDim * wiDim * sizeof(float);
     } else {
         params.workspaceSize = 0UL;
     }
 }
 
-template<typename TilingDataType, typename ParamsType>
-inline void SetScatterTilingDataCommon(
-    TilingDataType& tilingData,
-    ParamsType& params)
+template <typename TilingDataType, typename ParamsType>
+inline void SetScatterTilingDataCommon(TilingDataType& tilingData, ParamsType& params)
 {
     tilingData.set_ncRound(params.ncRound);
     tilingData.set_ncRoundTail(params.ncRoundTail);
@@ -214,16 +166,11 @@ inline void SetScatterTilingDataCommon(
     tilingData.set_preCoreNum(params.preCoreNum);
 }
 
-template<typename TilingDataType>
-inline void PrintScatterTilingDataCommon(
-    const char* contextName,
-    TilingDataType& tilingData)
+template <typename TilingDataType>
+inline void PrintScatterTilingDataCommon(const char* contextName, TilingDataType& tilingData)
 {
-    OP_LOGI(contextName, 
-            "TilingData ncRound: %lu, ncRoundTail: %lu, totalRound: %lu.",
-            tilingData.get_ncRound(), 
-            tilingData.get_ncRoundTail(), 
-            tilingData.get_totalRound());
+    OP_LOGI(contextName, "TilingData ncRound: %lu, ncRoundTail: %lu, totalRound: %lu.", tilingData.get_ncRound(),
+            tilingData.get_ncRoundTail(), tilingData.get_totalRound());
 }
 
 } // namespace optiling

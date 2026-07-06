@@ -14,11 +14,9 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
+namespace ops {
 
-class Renorm : public OpDef
-{
+class Renorm : public OpDef {
 public:
     explicit Renorm(const char* name) : OpDef(name)
     {
@@ -46,4 +44,4 @@ public:
 };
 
 OP_ADD(Renorm);
-}  // namespace ops
+} // namespace ops

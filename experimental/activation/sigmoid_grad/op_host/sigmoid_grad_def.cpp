@@ -17,72 +17,63 @@
 
 namespace ops {
 
-    class SigmoidGrad : public OpDef
+class SigmoidGrad : public OpDef {
+public:
+    explicit SigmoidGrad(const char* name) : OpDef(name)
     {
-    public:
-        explicit SigmoidGrad(const char* name) : OpDef(name)
-        {
-            this->Input("x")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                             ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,
-                             ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,
-                             ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                         ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,
-                                         ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,
-                                         ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0})
-                    .AutoContiguous();
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                     ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
+                     ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                                 ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
+                                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0,
+                                 ge::FORMAT_C1HWNCoC0})
+            .AutoContiguous();
 
-            this->Input("y")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                             ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,
-                             ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,
-                             ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                         ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,
-                                         ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,
-                                         ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0})
-                    .AutoContiguous();
+        this->Input("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                     ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
+                     ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                                 ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
+                                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0,
+                                 ge::FORMAT_C1HWNCoC0})
+            .AutoContiguous();
 
-            this->Output("z")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-                               ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                             ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,
-                             ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,
-                             ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                         ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,ge::FORMAT_NC1HWC0,
-                                         ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,ge::FORMAT_FRACTAL_NZ,
-                                         ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0,ge::FORMAT_C1HWNCoC0})
-                    .AutoContiguous();
+        this->Output("z")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                     ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
+                     ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NC1HWC0, ge::FORMAT_NC1HWC0,
+                                 ge::FORMAT_NC1HWC0, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ,
+                                 ge::FORMAT_FRACTAL_NZ, ge::FORMAT_C1HWNCoC0, ge::FORMAT_C1HWNCoC0,
+                                 ge::FORMAT_C1HWNCoC0})
+            .AutoContiguous();
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                    .DynamicFormatFlag(false)
-                    .DynamicRankSupportFlag(true)
-                    .DynamicShapeSupportFlag(true)
-                    .NeedCheckSupportFlag(false)
-                    .PrecisionReduceFlag(true)
-                    .ExtendCfgInfo("opFile.value", "sigmoid_grad");  // 对应kernel入口文件名
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "sigmoid_grad"); // 对应kernel入口文件名
 
-            // 支持的芯片版本
-            this->AICore().AddConfig("ascend910b", aicoreConfig);        }
-    };
+        // 支持的芯片版本
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
+    }
+};
 
-    OP_ADD(SigmoidGrad);  // 添加算子信息库
+OP_ADD(SigmoidGrad); // 添加算子信息库
 
 } // namespace ops

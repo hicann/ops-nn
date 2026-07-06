@@ -28,8 +28,7 @@ constexpr int32_t INDEX_GRADS = 1;
 constexpr int32_t INDEX_MOMENTUM_BUFFER = 2;
 
 template <typename T>
-class FusedSgdBase
-{
+class FusedSgdBase {
 public:
     __aicore__ inline FusedSgdBase(){};
     __aicore__ inline void InitData(const FusedSgdTilingData& tiling);

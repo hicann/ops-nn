@@ -27,21 +27,21 @@ namespace optiling {
 constexpr int64_t SILU_GRAD_MAX_DIM_SIZE = 8;
 
 BEGIN_TILING_DATA_DEF(SiluGradTilingData)
-    TILING_DATA_FIELD_DEF(int64_t, blockFormer);
-    TILING_DATA_FIELD_DEF(int64_t, ubFormer);
-    TILING_DATA_FIELD_DEF(int64_t, ubOuter);
-    TILING_DATA_FIELD_DEF(int64_t, ubTail);
-    TILING_DATA_FIELD_DEF(int64_t, blockTail);
-    TILING_DATA_FIELD_DEF(int64_t, shapeLen);
-    TILING_DATA_FIELD_DEF(int64_t, ubSplitAxis);
-    TILING_DATA_FIELD_DEF(int64_t, dimProductBeforeUbInner);
-    TILING_DATA_FIELD_DEF(int64_t, elemNum);
-    TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input0Dims);
-    TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input1Dims);
-    TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, outputDims);
-    TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input0Strides);
-    TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input1Strides);
-    TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, outputStrides);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubOuter);
+TILING_DATA_FIELD_DEF(int64_t, ubTail);
+TILING_DATA_FIELD_DEF(int64_t, blockTail);
+TILING_DATA_FIELD_DEF(int64_t, shapeLen);
+TILING_DATA_FIELD_DEF(int64_t, ubSplitAxis);
+TILING_DATA_FIELD_DEF(int64_t, dimProductBeforeUbInner);
+TILING_DATA_FIELD_DEF(int64_t, elemNum);
+TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input0Dims);
+TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input1Dims);
+TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, outputDims);
+TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input0Strides);
+TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, input1Strides);
+TILING_DATA_FIELD_DEF_ARR(int64_t, SILU_GRAD_MAX_DIM_SIZE, outputStrides);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(SiluGrad, SiluGradTilingData);
@@ -52,10 +52,10 @@ struct SiluGradCompileInfo {
 };
 
 class SiluGradTiling : public Ops::NN::Optiling::TilingBaseClass {
-   public:
+public:
     explicit SiluGradTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
-   protected:
+protected:
     bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -64,9 +64,9 @@ class SiluGradTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    std::string ToString(SiluGradTilingData &tilingDataParam) const;
+    std::string ToString(SiluGradTilingData& tilingDataParam) const;
 
-   private:
+private:
     uint64_t GetOpKey(ge::DataType dyDtype, ge::DataType xDtype, ge::DataType dxDtype) const;
     uint64_t GenerateTilingKey(uint64_t innerKey) const;
     std::map<uint64_t, Ops::Base::BroadcastComputeParams> GetComputeMap(uint64_t opKeyParam) const;
@@ -84,6 +84,6 @@ class SiluGradTiling : public Ops::NN::Optiling::TilingBaseClass {
     int64_t outputStrides[SILU_GRAD_MAX_DIM_SIZE] = {0};
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif //AIR_CXX_RUNTIME_V2_OP_IMPL_SILU_GRAD_H_
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SILU_GRAD_H_

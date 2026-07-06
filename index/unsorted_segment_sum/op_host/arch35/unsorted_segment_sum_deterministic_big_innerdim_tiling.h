@@ -20,8 +20,8 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(UnsortedSegmentSumDeterministicBigInnerDimTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);  
-TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim); 
+TILING_DATA_FIELD_DEF(uint64_t, inputOuterDim);
+TILING_DATA_FIELD_DEF(uint64_t, outputOuterDim);
 TILING_DATA_FIELD_DEF(uint64_t, innerDim);
 TILING_DATA_FIELD_DEF(uint64_t, normalCoreProcessCols);
 TILING_DATA_FIELD_DEF(uint64_t, tailCoreProcessCols);
@@ -32,13 +32,13 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_8000, UnsortedSegmentSumDeterministicBigInnerDimTilingData);
 
-class UnsortedSegmentSumDeterministicBigInnerDimTiling : public UnsortedSegmentSumBaseTiling
-{
+class UnsortedSegmentSumDeterministicBigInnerDimTiling : public UnsortedSegmentSumBaseTiling {
 public:
-    explicit UnsortedSegmentSumDeterministicBigInnerDimTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
+    explicit UnsortedSegmentSumDeterministicBigInnerDimTiling(gert::TilingContext* context)
+        : UnsortedSegmentSumBaseTiling(context)
     {}
-    ~UnsortedSegmentSumDeterministicBigInnerDimTiling() override
-    {}
+    ~UnsortedSegmentSumDeterministicBigInnerDimTiling() override {}
+
 private:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;

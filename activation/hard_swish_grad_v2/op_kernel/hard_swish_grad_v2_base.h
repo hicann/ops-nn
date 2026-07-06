@@ -78,17 +78,18 @@ protected:
     int32_t pingPongFlag = 0;
 
     float oneThird = static_cast<float>(0.33333334);
-    float oneHalf= static_cast<float>(0.5);
+    float oneHalf = static_cast<float>(0.5);
 
-    float negative= static_cast<float>(-3.0);
+    float negative = static_cast<float>(-3.0);
     float positive = static_cast<float>(3.0);
-    float zero= static_cast<float>(0.0);
-    float one= static_cast<float>(1.0);
+    float zero = static_cast<float>(0.0);
+    float one = static_cast<float>(1.0);
 };
 
 template <typename T>
 __aicore__ inline void HardSwishGradV2Base<T>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, GM_ADDR workspace,
-                                              const HardSwishGradV2TilingData* tilingData) {
+                                                    const HardSwishGradV2TilingData* tilingData)
+{
     gradGm.SetGlobalBuffer((__gm__ T*)gradOutput);
     selfGm.SetGlobalBuffer((__gm__ T*)self);
     outGm.SetGlobalBuffer((__gm__ T*)out);
@@ -104,28 +105,27 @@ __aicore__ inline void HardSwishGradV2Base<T>::Init(GM_ADDR gradOutput, GM_ADDR 
 }
 
 template <typename T>
-__aicore__ inline void HardSwishGradV2Base<T>::Process() {
-}
+__aicore__ inline void HardSwishGradV2Base<T>::Process()
+{}
 
 template <typename T>
-__aicore__ inline void HardSwishGradV2Base<T>::ProcessAlign(int64_t inputOffset, int64_t dataCount) {
-}
+__aicore__ inline void HardSwishGradV2Base<T>::ProcessAlign(int64_t inputOffset, int64_t dataCount)
+{}
 
 template <typename T>
-__aicore__ inline void HardSwishGradV2Base<T>::ProcessTail(int64_t inputOffset, int64_t dataCount) {
-}
+__aicore__ inline void HardSwishGradV2Base<T>::ProcessTail(int64_t inputOffset, int64_t dataCount)
+{}
 
 template <typename T>
-__aicore__ inline void HardSwishGradV2Base<T>::CopyInAndCast(int64_t inputOffset, int64_t dataCount) {
-}
+__aicore__ inline void HardSwishGradV2Base<T>::CopyInAndCast(int64_t inputOffset, int64_t dataCount)
+{}
 
 template <typename T>
-__aicore__ inline void HardSwishGradV2Base<T>::Compute(int64_t dataCount) {
-}
-
+__aicore__ inline void HardSwishGradV2Base<T>::Compute(int64_t dataCount)
+{}
 
 template <typename T>
-__aicore__ inline void HardSwishGradV2Base<T>::CastAndCopyOut(int64_t outputOffset, int64_t dataCount) {
-}
-}// namespace HardSwishGradV2
+__aicore__ inline void HardSwishGradV2Base<T>::CastAndCopyOut(int64_t outputOffset, int64_t dataCount)
+{}
+} // namespace HardSwishGradV2
 #endif

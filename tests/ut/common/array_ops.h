@@ -17,11 +17,7 @@
 #include "graph/operator_reg.h"
 namespace ge {
 
-REG_OP(Data)
-    .INPUT(x, TensorType::ALL())
-    .OUTPUT(y, TensorType::ALL())
-    .ATTR(index, Int, 0)
-    .OP_END_FACTORY_REG(Data)
+REG_OP(Data).INPUT(x, TensorType::ALL()).OUTPUT(y, TensorType::ALL()).ATTR(index, Int, 0).OP_END_FACTORY_REG(Data)
 }
 
 #endif

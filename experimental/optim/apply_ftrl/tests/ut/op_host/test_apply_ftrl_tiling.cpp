@@ -43,12 +43,12 @@ using namespace gert;
 static const std::string OP_NAME = "ApplyFtrl";
 
 // 与 op_host/apply_ftrl_tiling.cpp 同步的常量（仅用于 UT 期望值推导）。
-constexpr int64_t kUbBlockSize = 32;            // GetUbBlockSize() 返回 32（元素粒度）
-constexpr int64_t kCmpAlignElem = 64;           // 256B / sizeof(fp32) = 64
-constexpr int64_t kTileTarget = 2048;           // TILE_ELEM_NUM_TARGET
-constexpr int64_t kSelectTmpBytes = 8192;       // Select 模式1/2 框架 tmp（MED-1）
-constexpr int64_t kUbFp32Slots = 24;            // UB_FP32_SLOTS
-constexpr int64_t kMinElemPerCore = 512;        // MIN_ELEM_PER_CORE（PERF: 自适应 block-dim 下限）
+constexpr int64_t kUbBlockSize = 32;      // GetUbBlockSize() 返回 32（元素粒度）
+constexpr int64_t kCmpAlignElem = 64;     // 256B / sizeof(fp32) = 64
+constexpr int64_t kTileTarget = 2048;     // TILE_ELEM_NUM_TARGET
+constexpr int64_t kSelectTmpBytes = 8192; // Select 模式1/2 框架 tmp（MED-1）
+constexpr int64_t kUbFp32Slots = 24;      // UB_FP32_SLOTS
+constexpr int64_t kMinElemPerCore = 512;  // MIN_ELEM_PER_CORE（PERF: 自适应 block-dim 下限）
 
 // -------------------------------------------------------------------
 // TilingKey 字段布局（迭代二 - 全分支覆盖）
@@ -63,17 +63,14 @@ constexpr int64_t kMinElemPerCore = 512;        // MIN_ELEM_PER_CORE（PERF: 自
 //     走运行期快路，HAS_L1=0 二进制仍产出供 op_kernel UT 直驱）。HAS_L1=0 分支由
 //     op_kernel UT 经模板实例化覆盖（见 tests/ut/op_kernel/test_apply_ftrl.cpp）。
 // -------------------------------------------------------------------
-constexpr int64_t kCDtFloat = 0;     // C_DT_FLOAT   (fp32)
-constexpr int64_t kCDtFloat16 = 1;   // C_DT_FLOAT16
-constexpr int64_t kCDtBf16 = 27;     // C_DT_BF16
+constexpr int64_t kCDtFloat = 0;   // C_DT_FLOAT   (fp32)
+constexpr int64_t kCDtFloat16 = 1; // C_DT_FLOAT16
+constexpr int64_t kCDtBf16 = 27;   // C_DT_BF16
 
 static inline int64_t KeyDtype(int64_t k) { return k & 0xFF; }
 static inline int64_t KeyPadTail(int64_t k) { return (k >> 8) & 0xFF; }
 static inline int64_t KeyHasL1(int64_t k) { return (k >> 16) & 0xFF; }
-static inline int64_t ExpectKey(int64_t cdt, int64_t pad, int64_t hasL1)
-{
-    return (hasL1 << 16) | (pad << 8) | cdt;
-}
+static inline int64_t ExpectKey(int64_t cdt, int64_t pad, int64_t hasL1) { return (hasL1 << 16) | (pad << 8) | cdt; }
 
 struct ApplyFtrlCompileInfoStub {};
 
@@ -97,39 +94,34 @@ static gert::StorageShape MakeStorageShape(const std::vector<int64_t>& dims)
     return ss;
 }
 
-static gert::TilingContextPara MakeTilingPara(
-    const std::vector<int64_t>& varShape,
-    const std::vector<int64_t>& accumShape,
-    const std::vector<int64_t>& linearShape,
-    const std::vector<int64_t>& gradShape,
-    ge::DataType dtype,
-    void* compileInfo,
-    uint64_t coreNum = 48,
-    uint64_t ubSize = 262144,
-    uint64_t tilingDataSize = 4096)
+static gert::TilingContextPara MakeTilingPara(const std::vector<int64_t>& varShape,
+                                              const std::vector<int64_t>& accumShape,
+                                              const std::vector<int64_t>& linearShape,
+                                              const std::vector<int64_t>& gradShape, ge::DataType dtype,
+                                              void* compileInfo, uint64_t coreNum = 48, uint64_t ubSize = 262144,
+                                              uint64_t tilingDataSize = 4096)
 {
     auto mk = [](const std::vector<int64_t>& s) { return MakeStorageShape(s); };
     gert::StorageShape scalarShape = mk({1});
 
     std::vector<TilingContextPara::TensorDescription> inputs({
-        {mk(varShape),    dtype, ge::FORMAT_ND},  // var
-        {mk(accumShape),  dtype, ge::FORMAT_ND},  // accum
-        {mk(linearShape), dtype, ge::FORMAT_ND},  // linear
-        {mk(gradShape),   dtype, ge::FORMAT_ND},  // grad
-        {scalarShape,     dtype, ge::FORMAT_ND},  // lr
-        {scalarShape,     dtype, ge::FORMAT_ND},  // l1
-        {scalarShape,     dtype, ge::FORMAT_ND},  // l2
-        {scalarShape,     dtype, ge::FORMAT_ND},  // lr_power
+        {mk(varShape), dtype, ge::FORMAT_ND},    // var
+        {mk(accumShape), dtype, ge::FORMAT_ND},  // accum
+        {mk(linearShape), dtype, ge::FORMAT_ND}, // linear
+        {mk(gradShape), dtype, ge::FORMAT_ND},   // grad
+        {scalarShape, dtype, ge::FORMAT_ND},     // lr
+        {scalarShape, dtype, ge::FORMAT_ND},     // l1
+        {scalarShape, dtype, ge::FORMAT_ND},     // l2
+        {scalarShape, dtype, ge::FORMAT_ND},     // lr_power
     });
     std::vector<TilingContextPara::TensorDescription> outputs({
-        {mk(varShape),    dtype, ge::FORMAT_ND},  // var (declared output)
+        {mk(varShape), dtype, ge::FORMAT_ND}, // var (declared output)
     });
     return gert::TilingContextPara(OP_NAME, inputs, outputs, compileInfo, coreNum, ubSize, tilingDataSize);
 }
 
-static gert::TilingContextPara MakeUniformTilingPara(
-    const std::vector<int64_t>& shape, ge::DataType dtype, void* compileInfo,
-    uint64_t coreNum = 48, uint64_t ubSize = 262144)
+static gert::TilingContextPara MakeUniformTilingPara(const std::vector<int64_t>& shape, ge::DataType dtype,
+                                                     void* compileInfo, uint64_t coreNum = 48, uint64_t ubSize = 262144)
 {
     return MakeTilingPara(shape, shape, shape, shape, dtype, compileInfo, coreNum, ubSize);
 }
@@ -166,23 +158,20 @@ static void CheckCoreInvariants(const TilingInfo& info, int64_t expectTotal)
 
 // 迭代二：大 shape（多核 + ubFactor 命中 TILE 上限 2048）combo 校验：
 //   核心不变式 + 精确 TilingKey + 逐字段解码（dtype/PAD_TAIL/HAS_L1）。
-static void CheckLargeCombo(const TilingInfo& info, int64_t expectTotal, int64_t expectCdt,
-                           int64_t expectPad)
+static void CheckLargeCombo(const TilingInfo& info, int64_t expectTotal, int64_t expectCdt, int64_t expectPad)
 {
     CheckCoreInvariants(info, expectTotal);
     EXPECT_EQ(AsTd(info)->ubFactor, kTileTarget) << "large shape should hit TILE_ELEM_NUM_TARGET=2048";
     EXPECT_GT(info.blockNum, 1u) << "large shape should span multiple cores";
 
     // 精确 TilingKey：host 恒置 HAS_L1=1。
-    EXPECT_EQ(info.tilingKey, ExpectKey(expectCdt, expectPad, 1))
-        << "TilingKey must encode (dtype,PAD_TAIL,HAS_L1=1)";
+    EXPECT_EQ(info.tilingKey, ExpectKey(expectCdt, expectPad, 1)) << "TilingKey must encode (dtype,PAD_TAIL,HAS_L1=1)";
     EXPECT_EQ(KeyDtype(info.tilingKey), expectCdt) << "D_T_VAR byte must encode input0 dtype";
     EXPECT_EQ(KeyPadTail(info.tilingKey), expectPad) << "PAD_TAIL byte must match (total%32!=0)";
     EXPECT_EQ(KeyHasL1(info.tilingKey), 1) << "host must always emit HAS_L1=1";
-    std::cout << "[combo] cdt=" << expectCdt << " pad=" << expectPad
-              << " key=" << info.tilingKey << " ubFactor=" << AsTd(info)->ubFactor
-              << " blockFactor=" << AsTd(info)->blockFactor << " blockNum=" << info.blockNum
-              << std::endl;
+    std::cout << "[combo] cdt=" << expectCdt << " pad=" << expectPad << " key=" << info.tilingKey
+              << " ubFactor=" << AsTd(info)->ubFactor << " blockFactor=" << AsTd(info)->blockFactor
+              << " blockNum=" << info.blockNum << std::endl;
 }
 
 // -------------------------------------------------------------------
@@ -192,7 +181,7 @@ static void CheckLargeCombo(const TilingInfo& info, int64_t expectTotal, int64_t
 TEST_F(ApplyFtrlTilingTest, T001_CorePath_Fp16_MultiCore_Succeeds)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_FLOAT16, &ci);  // 524288
+    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_FLOAT16, &ci); // 524288
 
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info)) << "core-path fp16 tiling should succeed";
@@ -225,16 +214,16 @@ TEST_F(ApplyFtrlTilingTest, T002_UbSplit_8KBSelectTmpDeducted)
     ASSERT_TRUE(ExecuteTiling(para, info)) << "tiling should succeed with tight UB";
     CheckCoreInvariants(info, 524288);
 
-    const int64_t predWith8KB =
-        ((((static_cast<int64_t>(ubSize) - kSelectTmpBytes) / 4) / kUbFp32Slots) / kCmpAlignElem) *
-        kCmpAlignElem;  // 384
-    const int64_t predNo8KB =
-        (((static_cast<int64_t>(ubSize) / 4) / kUbFp32Slots) / kCmpAlignElem) * kCmpAlignElem;  // 512
-    ASSERT_LT(predWith8KB, predNo8KB);  // 守护：扣与不扣确实不同，断言才有判别力
+    const int64_t predWith8KB = ((((static_cast<int64_t>(ubSize) - kSelectTmpBytes) / 4) / kUbFp32Slots) /
+                                 kCmpAlignElem) *
+                                kCmpAlignElem; // 384
+    const int64_t predNo8KB = (((static_cast<int64_t>(ubSize) / 4) / kUbFp32Slots) / kCmpAlignElem) *
+                              kCmpAlignElem; // 512
+    ASSERT_LT(predWith8KB, predNo8KB);       // 守护：扣与不扣确实不同，断言才有判别力
 
     const int64_t ubFactor = AsTd(info)->ubFactor;
-    std::cout << "[T002] ubSize=" << ubSize << " ubFactor=" << ubFactor
-              << " predWith8KB=" << predWith8KB << " predNo8KB=" << predNo8KB << std::endl;
+    std::cout << "[T002] ubSize=" << ubSize << " ubFactor=" << ubFactor << " predWith8KB=" << predWith8KB
+              << " predNo8KB=" << predNo8KB << std::endl;
 
     EXPECT_EQ(ubFactor % kCmpAlignElem, 0) << "ubFactor must be 64-element (256B) aligned";
     // 8KB 扣除被证明：ubFactor 与「扣 8KB」预算一致（容许 1 个 64 块的边界取整），
@@ -289,7 +278,7 @@ TEST_F(ApplyFtrlTilingTest, T004_EmptyTensor_ShortCircuit)
 TEST_F(ApplyFtrlTilingTest, T005_CorePath_Fp32_Succeeds)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({4096, 256}, ge::DT_FLOAT, &ci);  // 1048576
+    auto para = MakeUniformTilingPara({4096, 256}, ge::DT_FLOAT, &ci); // 1048576
 
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info)) << "fp32 tiling should succeed";
@@ -304,7 +293,7 @@ TEST_F(ApplyFtrlTilingTest, T005_CorePath_Fp32_Succeeds)
 TEST_F(ApplyFtrlTilingTest, T006_CorePath_Bf16_Succeeds)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_BF16, &ci);  // 524288
+    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_BF16, &ci); // 524288
 
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info)) << "bf16 tiling should succeed";
@@ -387,77 +376,78 @@ TEST_F(ApplyFtrlTilingTest, T011_Err_UnsupportedDtypeInt32_Fails)
 TEST_F(ApplyFtrlTilingTest, T012_Key_Fp16_Aligned)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_FLOAT16, &ci);  // 524288, %32==0
+    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_FLOAT16, &ci); // 524288, %32==0
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info));
     CheckLargeCombo(info, 524288, kCDtFloat16, /*pad=*/0);
-    EXPECT_EQ(info.tilingKey, 65537);  // 0x010001 实测锚点
+    EXPECT_EQ(info.tilingKey, 65537); // 0x010001 实测锚点
 }
 
 TEST_F(ApplyFtrlTilingTest, T013_Key_Fp16_Tail)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({524287}, ge::DT_FLOAT16, &ci);  // 524287%32==31
+    auto para = MakeUniformTilingPara({524287}, ge::DT_FLOAT16, &ci); // 524287%32==31
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info));
     CheckLargeCombo(info, 524287, kCDtFloat16, /*pad=*/1);
-    EXPECT_EQ(info.tilingKey, 65793);  // 0x010101 实测锚点
+    EXPECT_EQ(info.tilingKey, 65793); // 0x010101 实测锚点
 }
 
 // ---- FLOAT (fp32) ----
 TEST_F(ApplyFtrlTilingTest, T014_Key_Fp32_Aligned)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({4096, 256}, ge::DT_FLOAT, &ci);  // 1048576, %32==0
+    auto para = MakeUniformTilingPara({4096, 256}, ge::DT_FLOAT, &ci); // 1048576, %32==0
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info));
     CheckLargeCombo(info, 1048576, kCDtFloat, /*pad=*/0);
-    EXPECT_EQ(info.tilingKey, 65536);  // 0x010000 (HAS_L1=1, PAD_TAIL=0, C_DT_FLOAT=0)
+    EXPECT_EQ(info.tilingKey, 65536); // 0x010000 (HAS_L1=1, PAD_TAIL=0, C_DT_FLOAT=0)
 }
 
 TEST_F(ApplyFtrlTilingTest, T015_Key_Fp32_Tail)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({1048575}, ge::DT_FLOAT, &ci);  // 1048575%32==31
+    auto para = MakeUniformTilingPara({1048575}, ge::DT_FLOAT, &ci); // 1048575%32==31
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info));
     CheckLargeCombo(info, 1048575, kCDtFloat, /*pad=*/1);
-    EXPECT_EQ(info.tilingKey, 65792);  // 0x010100 (HAS_L1=1, PAD_TAIL=1, C_DT_FLOAT=0)
+    EXPECT_EQ(info.tilingKey, 65792); // 0x010100 (HAS_L1=1, PAD_TAIL=1, C_DT_FLOAT=0)
 }
 
 // ---- BF16 ----
 TEST_F(ApplyFtrlTilingTest, T016_Key_Bf16_Aligned)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_BF16, &ci);  // 524288, %32==0
+    auto para = MakeUniformTilingPara({2048, 256}, ge::DT_BF16, &ci); // 524288, %32==0
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info));
     CheckLargeCombo(info, 524288, kCDtBf16, /*pad=*/0);
-    EXPECT_EQ(info.tilingKey, 65563);  // 0x01001B (HAS_L1=1, PAD_TAIL=0, C_DT_BF16=27)
+    EXPECT_EQ(info.tilingKey, 65563); // 0x01001B (HAS_L1=1, PAD_TAIL=0, C_DT_BF16=27)
 }
 
 TEST_F(ApplyFtrlTilingTest, T017_Key_Bf16_Tail)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({524287}, ge::DT_BF16, &ci);  // 524287%32==31
+    auto para = MakeUniformTilingPara({524287}, ge::DT_BF16, &ci); // 524287%32==31
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info));
     CheckLargeCombo(info, 524287, kCDtBf16, /*pad=*/1);
-    EXPECT_EQ(info.tilingKey, 65819);  // 0x01011B (HAS_L1=1, PAD_TAIL=1, C_DT_BF16=27)
+    EXPECT_EQ(info.tilingKey, 65819); // 0x01011B (HAS_L1=1, PAD_TAIL=1, C_DT_BF16=27)
 }
 
 // T018: 6 组 (dtype × PAD_TAIL) TilingKey 两两互异（证明 key 正确编码 dtype + 对齐位）。
 TEST_F(ApplyFtrlTilingTest, T018_Key_AllSixCombosDistinct)
 {
     ApplyFtrlCompileInfoStub ci;
-    struct Combo { std::vector<int64_t> shape; ge::DataType dt; const char* name; };
+    struct Combo {
+        std::vector<int64_t> shape;
+        ge::DataType dt;
+        const char* name;
+    };
     const std::vector<Combo> combos = {
-        {{2048, 256}, ge::DT_FLOAT16, "fp16_aligned"},
-        {{524287},    ge::DT_FLOAT16, "fp16_tail"},
-        {{4096, 256}, ge::DT_FLOAT,   "fp32_aligned"},
-        {{1048575},   ge::DT_FLOAT,   "fp32_tail"},
-        {{2048, 256}, ge::DT_BF16,    "bf16_aligned"},
-        {{524287},    ge::DT_BF16,    "bf16_tail"},
+        {{2048, 256}, ge::DT_FLOAT16, "fp16_aligned"}, {{524287}, ge::DT_FLOAT16, "fp16_tail"},
+        {{4096, 256}, ge::DT_FLOAT, "fp32_aligned"},   {{1048575}, ge::DT_FLOAT, "fp32_tail"},
+        {{2048, 256}, ge::DT_BF16, "bf16_aligned"},    {{524287}, ge::DT_BF16, "bf16_tail"},
     };
     std::vector<int64_t> keys;
     for (const auto& c : combos) {
@@ -468,9 +458,8 @@ TEST_F(ApplyFtrlTilingTest, T018_Key_AllSixCombosDistinct)
     }
     for (size_t i = 0; i < keys.size(); ++i) {
         for (size_t j = i + 1; j < keys.size(); ++j) {
-            EXPECT_NE(keys[i], keys[j])
-                << "combos " << combos[i].name << " and " << combos[j].name
-                << " must map to distinct TilingKeys (" << keys[i] << " vs " << keys[j] << ")";
+            EXPECT_NE(keys[i], keys[j]) << "combos " << combos[i].name << " and " << combos[j].name
+                                        << " must map to distinct TilingKeys (" << keys[i] << " vs " << keys[j] << ")";
         }
     }
 }
@@ -480,12 +469,14 @@ TEST_F(ApplyFtrlTilingTest, T018_Key_AllSixCombosDistinct)
 TEST_F(ApplyFtrlTilingTest, T019_HasL1_AlwaysOneFromHost)
 {
     ApplyFtrlCompileInfoStub ci;
-    struct Case { std::vector<int64_t> shape; ge::DataType dt; };
+    struct Case {
+        std::vector<int64_t> shape;
+        ge::DataType dt;
+    };
     const std::vector<Case> cases = {
-        {{2048, 256}, ge::DT_FLOAT16}, {{255}, ge::DT_FLOAT16},
-        {{4096, 256}, ge::DT_FLOAT},   {{1048575}, ge::DT_FLOAT},
-        {{2048, 256}, ge::DT_BF16},    {{524287}, ge::DT_BF16},
-        {{0, 3}, ge::DT_FLOAT16},      {{0, 3}, ge::DT_FLOAT},  {{0, 3}, ge::DT_BF16},
+        {{2048, 256}, ge::DT_FLOAT16}, {{255}, ge::DT_FLOAT16},    {{4096, 256}, ge::DT_FLOAT},
+        {{1048575}, ge::DT_FLOAT},     {{2048, 256}, ge::DT_BF16}, {{524287}, ge::DT_BF16},
+        {{0, 3}, ge::DT_FLOAT16},      {{0, 3}, ge::DT_FLOAT},     {{0, 3}, ge::DT_BF16},
     };
     for (const auto& c : cases) {
         auto para = MakeUniformTilingPara(c.shape, c.dt, &ci);
@@ -501,9 +492,14 @@ TEST_F(ApplyFtrlTilingTest, T019_HasL1_AlwaysOneFromHost)
 TEST_F(ApplyFtrlTilingTest, T020_EmptyTensor_TilingKey_PerDtype)
 {
     ApplyFtrlCompileInfoStub ci;
-    struct Case { ge::DataType dt; int64_t cdt; };
+    struct Case {
+        ge::DataType dt;
+        int64_t cdt;
+    };
     const std::vector<Case> cases = {
-        {ge::DT_FLOAT16, kCDtFloat16}, {ge::DT_FLOAT, kCDtFloat}, {ge::DT_BF16, kCDtBf16},
+        {ge::DT_FLOAT16, kCDtFloat16},
+        {ge::DT_FLOAT, kCDtFloat},
+        {ge::DT_BF16, kCDtBf16},
     };
     for (const auto& c : cases) {
         auto para = MakeUniformTilingPara({0, 3}, c.dt, &ci);
@@ -530,23 +526,24 @@ TEST_F(ApplyFtrlTilingTest, T020_EmptyTensor_TilingKey_PerDtype)
 // ===================================================================
 
 // 允许自定义 scalar 端口 shape（验证 op_host 不读 lr/l1/l2/lr_power 形态）。
-static gert::TilingContextPara MakeTilingParaCustomScalar(
-    const std::vector<int64_t>& tensorShape, const std::vector<int64_t>& scalarShape,
-    ge::DataType dtype, void* compileInfo, uint64_t coreNum = 48, uint64_t ubSize = 262144)
+static gert::TilingContextPara MakeTilingParaCustomScalar(const std::vector<int64_t>& tensorShape,
+                                                          const std::vector<int64_t>& scalarShape, ge::DataType dtype,
+                                                          void* compileInfo, uint64_t coreNum = 48,
+                                                          uint64_t ubSize = 262144)
 {
     auto mk = [](const std::vector<int64_t>& s) { return MakeStorageShape(s); };
     std::vector<TilingContextPara::TensorDescription> inputs({
-        {mk(tensorShape), dtype, ge::FORMAT_ND},  // var
-        {mk(tensorShape), dtype, ge::FORMAT_ND},  // accum
-        {mk(tensorShape), dtype, ge::FORMAT_ND},  // linear
-        {mk(tensorShape), dtype, ge::FORMAT_ND},  // grad
-        {mk(scalarShape), dtype, ge::FORMAT_ND},  // lr
-        {mk(scalarShape), dtype, ge::FORMAT_ND},  // l1
-        {mk(scalarShape), dtype, ge::FORMAT_ND},  // l2
-        {mk(scalarShape), dtype, ge::FORMAT_ND},  // lr_power
+        {mk(tensorShape), dtype, ge::FORMAT_ND}, // var
+        {mk(tensorShape), dtype, ge::FORMAT_ND}, // accum
+        {mk(tensorShape), dtype, ge::FORMAT_ND}, // linear
+        {mk(tensorShape), dtype, ge::FORMAT_ND}, // grad
+        {mk(scalarShape), dtype, ge::FORMAT_ND}, // lr
+        {mk(scalarShape), dtype, ge::FORMAT_ND}, // l1
+        {mk(scalarShape), dtype, ge::FORMAT_ND}, // l2
+        {mk(scalarShape), dtype, ge::FORMAT_ND}, // lr_power
     });
     std::vector<TilingContextPara::TensorDescription> outputs({
-        {mk(tensorShape), dtype, ge::FORMAT_ND},  // var (declared output)
+        {mk(tensorShape), dtype, ge::FORMAT_ND}, // var (declared output)
     });
     return gert::TilingContextPara(OP_NAME, inputs, outputs, compileInfo, coreNum, ubSize);
 }
@@ -558,20 +555,23 @@ static int64_t ExpectUbFactor(int64_t blockFactor, uint64_t ubSize = 262144)
 {
     int64_t usableUb = static_cast<int64_t>(ubSize) - kSelectTmpBytes;
     int64_t cap = ((usableUb / 4) / kUbFp32Slots / kCmpAlignElem) * kCmpAlignElem;
-    if (cap > kTileTarget) cap = kTileTarget;
+    if (cap > kTileTarget)
+        cap = kTileTarget;
     int64_t uf = (cap < blockFactor) ? cap : blockFactor;
-    uf = (uf / kCmpAlignElem) * kCmpAlignElem;  // FloorAlign 64
-    if (uf < kCmpAlignElem) uf = kCmpAlignElem;
+    uf = (uf / kCmpAlignElem) * kCmpAlignElem; // FloorAlign 64
+    if (uf < kCmpAlignElem)
+        uf = kCmpAlignElem;
     return uf;
 }
 static int64_t ExpectBlockFactor(int64_t total, int64_t coreNum)
 {
-    int64_t per = (total + coreNum - 1) / coreNum;                       // CeilDiv
-    int64_t bf = ((per + kUbBlockSize - 1) / kUbBlockSize) * kUbBlockSize;  // CeilAlign 32
+    int64_t per = (total + coreNum - 1) / coreNum;                         // CeilDiv
+    int64_t bf = ((per + kUbBlockSize - 1) / kUbBlockSize) * kUbBlockSize; // CeilAlign 32
     // PERF: 自适应 block-dim 下限——blockFactor 抬到 MIN_ELEM_PER_CORE(DMA 对齐)，
     // 仅对小/中 shape 生效（降低用核数）；大 shape 朴素 blockFactor 已超过下限，不变。
     int64_t minBf = ((kMinElemPerCore + kUbBlockSize - 1) / kUbBlockSize) * kUbBlockSize;
-    if (bf < minBf) bf = minBf;
+    if (bf < minBf)
+        bf = minBf;
     return bf;
 }
 
@@ -588,9 +588,9 @@ TEST_F(ApplyFtrlTilingTest, T021_UbFactor_CappedByBlockFactor_64Aligned)
     ASSERT_TRUE(ExecuteTiling(para, info));
     const auto* td = AsTd(info);
     EXPECT_EQ(td->totalElements, 640);
-    EXPECT_EQ(td->blockFactor, ExpectBlockFactor(640, 1));  // 640
+    EXPECT_EQ(td->blockFactor, ExpectBlockFactor(640, 1)); // 640
     EXPECT_EQ(td->blockFactor, 640);
-    EXPECT_EQ(td->ubFactor, ExpectUbFactor(td->blockFactor));  // 640
+    EXPECT_EQ(td->ubFactor, ExpectUbFactor(td->blockFactor)); // 640
     EXPECT_EQ(td->ubFactor, 640);
     EXPECT_EQ(td->ubFactor % kCmpAlignElem, 0);
     EXPECT_EQ(info.blockNum, 1u);
@@ -612,9 +612,10 @@ TEST_F(ApplyFtrlTilingTest, T022_UbFactor_BlockFactorFlooredTo64)
     EXPECT_EQ(td->blockFactor, 1504);
     EXPECT_EQ(td->blockFactor % kUbBlockSize, 0);
     EXPECT_NE(td->blockFactor % kCmpAlignElem, 0) << "blockFactor must be 32- but not 64-aligned here";
-    EXPECT_EQ(td->ubFactor, ExpectUbFactor(td->blockFactor));  // 1472
+    EXPECT_EQ(td->ubFactor, ExpectUbFactor(td->blockFactor)); // 1472
     EXPECT_EQ(td->ubFactor, 1472);
-    EXPECT_LT(td->ubFactor, td->blockFactor) << "256B (64-elem) floor must reduce ubFactor below 32-aligned blockFactor";
+    EXPECT_LT(td->ubFactor, td->blockFactor)
+        << "256B (64-elem) floor must reduce ubFactor below 32-aligned blockFactor";
     EXPECT_EQ(td->ubFactor % kCmpAlignElem, 0);
 }
 
@@ -632,9 +633,9 @@ TEST_F(ApplyFtrlTilingTest, T023_SmallShape_BlockFactorFlooredToMinElemPerCore)
     ASSERT_TRUE(ExecuteTiling(para, info));
     const auto* td = AsTd(info);
     EXPECT_EQ(td->totalElements, 200);
-    EXPECT_EQ(td->blockFactor, ExpectBlockFactor(200, 1));  // 512 (floored)
-    EXPECT_EQ(td->blockFactor, kMinElemPerCore);            // 512
-    EXPECT_EQ(td->ubFactor, ExpectUbFactor(td->blockFactor));  // 512
+    EXPECT_EQ(td->blockFactor, ExpectBlockFactor(200, 1));    // 512 (floored)
+    EXPECT_EQ(td->blockFactor, kMinElemPerCore);              // 512
+    EXPECT_EQ(td->ubFactor, ExpectUbFactor(td->blockFactor)); // 512
     EXPECT_EQ(td->ubFactor, 512);
     EXPECT_EQ(td->ubFactor % kCmpAlignElem, 0);
     EXPECT_EQ(info.blockNum, 1u);
@@ -684,8 +685,7 @@ TEST_F(ApplyFtrlTilingTest, T024_Err_UnsupportedDtypes_Multiple)
     for (auto dt : badDtypes) {
         auto para = MakeUniformTilingPara({32, 32}, dt, &ci);
         TilingInfo info;
-        EXPECT_FALSE(ExecuteTiling(para, info))
-            << "unsupported dtype " << static_cast<int>(dt) << " must fail tiling";
+        EXPECT_FALSE(ExecuteTiling(para, info)) << "unsupported dtype " << static_cast<int>(dt) << " must fail tiling";
     }
 }
 
@@ -711,7 +711,7 @@ TEST_F(ApplyFtrlTilingTest, T025_Err_ShapeMismatch_RankDiff)
 TEST_F(ApplyFtrlTilingTest, T026_Rank8_MaxValid_Succeeds)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({2, 3, 1, 1, 1, 1, 1, 4}, ge::DT_FLOAT16, &ci);  // 24
+    auto para = MakeUniformTilingPara({2, 3, 1, 1, 1, 1, 1, 4}, ge::DT_FLOAT16, &ci); // 24
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(para, info)) << "rank-8 (max valid rank) must tile";
     const auto* td = AsTd(info);
@@ -728,7 +728,7 @@ TEST_F(ApplyFtrlTilingTest, T026_Rank8_MaxValid_Succeeds)
 TEST_F(ApplyFtrlTilingTest, T027_RankOver8_NotEnforcedByOpHost)
 {
     ApplyFtrlCompileInfoStub ci;
-    auto para = MakeUniformTilingPara({2, 3, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT, &ci);  // rank9, numel6
+    auto para = MakeUniformTilingPara({2, 3, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT, &ci); // rank9, numel6
     TilingInfo info;
     EXPECT_TRUE(ExecuteTiling(para, info))
         << "op_host tiling does not enforce rank<=8 (aclnn/GE responsibility per DESIGN s8)";
@@ -747,8 +747,7 @@ TEST_F(ApplyFtrlTilingTest, T028_NonScalarScalarInputs_NotEnforcedByOpHost)
     ApplyFtrlCompileInfoStub ci;
     auto para = MakeTilingParaCustomScalar({16, 16}, {2, 3}, ge::DT_FLOAT16, &ci);
     TilingInfo info;
-    ASSERT_TRUE(ExecuteTiling(para, info))
-        << "op_host tiling ignores scalar-port shape (aclnn-layer concern)";
+    ASSERT_TRUE(ExecuteTiling(para, info)) << "op_host tiling ignores scalar-port shape (aclnn-layer concern)";
     CheckCoreInvariants(info, 256);
 }
 
@@ -792,4 +791,4 @@ TEST_F(ApplyFtrlTilingTest, T030_EmptyTensor_MultiAxis)
     EXPECT_EQ(info.tilingKey, ExpectKey(kCDtBf16, 0, 1)) << "empty tensor key = (dtype,PAD_TAIL=0,HAS_L1=1)";
 }
 
-}  // namespace ApplyFtrlUT
+} // namespace ApplyFtrlUT

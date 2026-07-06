@@ -32,36 +32,45 @@ constexpr uint32_t DOUBLE_BUFFER = 2;
 constexpr uint32_t RETAINED_SIZE_256 = 256;
 constexpr uint32_t FLOAT_SIZE = 4;
 
-
 bool RmsNormQuantV2RegbaseTilingFullLoad::IsCapable()
 {
-    tilingParams.rXDtypeAlign = Ops::Base::CeilAlign(tilingParams.r, tilingParams.xDtypeAlignNum);  //r向上对齐到 一个Block能容纳x个数 的整数倍 
-    tilingParams.rAlign = Ops::Base::CeilAlign(tilingParams.r, static_cast<int64_t>(BLOCK_SIZE)); //r向上对齐到 BlockSize 的整数倍
-    int64_t tmpPower = std::floor(std::log(tilingParams.rXDtypeAlign -1) / std::log(LOG_2));
-    tilingParams.binaryAdd = std::pow(LOG_2, tmpPower);  //二分累加折叠点
+    tilingParams.rXDtypeAlign = Ops::Base::CeilAlign(
+        tilingParams.r, tilingParams.xDtypeAlignNum); // r向上对齐到 一个Block能容纳x个数 的整数倍
+    tilingParams.rAlign = Ops::Base::CeilAlign(tilingParams.r,
+                                               static_cast<int64_t>(BLOCK_SIZE)); // r向上对齐到 BlockSize 的整数倍
+    int64_t tmpPower = std::floor(std::log(tilingParams.rXDtypeAlign - 1) / std::log(LOG_2));
+    tilingParams.binaryAdd = std::pow(LOG_2, tmpPower); //二分累加折叠点
 
-    int64_t tmpUBSize = Ops::Base::CeilDiv(Ops::Base::CeilDiv(tilingParams.binaryAdd, tilingParams.vecLength),static_cast<int64_t>(BLOCK_SIZE)) * BLOCK_SIZE;
+    int64_t tmpUBSize = Ops::Base::CeilDiv(Ops::Base::CeilDiv(tilingParams.binaryAdd, tilingParams.vecLength),
+                                           static_cast<int64_t>(BLOCK_SIZE)) *
+                        BLOCK_SIZE;
 
-    int64_t betaNum        = tilingParams.hasBeta ? CONST_ONE : CONST_ZERO;
-    int64_t scalesNum      = tilingParams.hasScales2 ? CONST_TWO : CONST_ONE;
-    int64_t zeroPointsNum  = (tilingParams.hasZeroPoints1 ? CONST_ONE : CONST_ZERO)
-                            + (tilingParams.hasZeroPoints2 ? CONST_ONE : CONST_ZERO);
-    int64_t yNum           = tilingParams.hasY2 ? CONST_TWO : CONST_ONE;
+    int64_t betaNum = tilingParams.hasBeta ? CONST_ONE : CONST_ZERO;
+    int64_t scalesNum = tilingParams.hasScales2 ? CONST_TWO : CONST_ONE;
+    int64_t zeroPointsNum = (tilingParams.hasZeroPoints1 ? CONST_ONE : CONST_ZERO) +
+                            (tilingParams.hasZeroPoints2 ? CONST_ONE : CONST_ZERO);
+    int64_t yNum = tilingParams.hasY2 ? CONST_TWO : CONST_ONE;
     int64_t r = tilingParams.rAlign;
-    int64_t yDtypeSize = context_->GetOutputDesc(Y1_INDEX)->GetDataType() == ge::DT_INT4 ? 1 : ge::GetSizeByDataType(context_->GetOutputDesc(Y1_INDEX)->GetDataType());
+    int64_t yDtypeSize = context_->GetOutputDesc(Y1_INDEX)->GetDataType() == ge::DT_INT4 ?
+                             1 :
+                             ge::GetSizeByDataType(context_->GetOutputDesc(Y1_INDEX)->GetDataType());
     int64_t rstdBufSizePerRow = (tilingParams.rstdFlag != 0) ? (DOUBLE_BUFFER * FLOAT_SIZE) : FLOAT_SIZE;
-    tilingParams.ubFactor = ((static_cast<int64_t>(tilingParams.maxUbSize) - RETAINED_SIZE_256 - r * tilingParams.xDtypeSize - r * betaNum * tilingParams.xDtypeSize
-                             - r * scalesNum * tilingParams.scaleDtypeSize - r * zeroPointsNum * tilingParams.zeroPointDtypeSize)/
-                             (DOUBLE_BUFFER * r * tilingParams.xDtypeSize + DOUBLE_BUFFER * r * yNum * yDtypeSize
-                             + rstdBufSizePerRow + tmpUBSize));
-    OP_CHECK_IF(tilingParams.r > R_MAX_VALUE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR full load template is not capable. actual r is %ld, larger than %ld", tilingParams.r, R_MAX_VALUE),
-                    return false);
+    tilingParams.ubFactor = ((static_cast<int64_t>(tilingParams.maxUbSize) - RETAINED_SIZE_256 -
+                              r * tilingParams.xDtypeSize - r * betaNum * tilingParams.xDtypeSize -
+                              r * scalesNum * tilingParams.scaleDtypeSize -
+                              r * zeroPointsNum * tilingParams.zeroPointDtypeSize) /
+                             (DOUBLE_BUFFER * r * tilingParams.xDtypeSize + DOUBLE_BUFFER * r * yNum * yDtypeSize +
+                              rstdBufSizePerRow + tmpUBSize));
+    OP_CHECK_IF(
+        tilingParams.r > R_MAX_VALUE,
+        OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. actual r is %ld, larger than %ld",
+                tilingParams.r, R_MAX_VALUE),
+        return false);
     OP_CHECK_IF(tilingParams.ubFactor < CONST_ONE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR full load template is not capable. actual ubFactor is %ld, can not full load ", tilingParams.ubFactor),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR full load template is not capable. actual ubFactor is %ld, can not full load ",
+                        tilingParams.ubFactor),
+                return false);
     return true;
 }
 
@@ -73,13 +82,14 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingFullLoad::DoOpTiling()
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, tilingParams.maxUbSize);
         tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     }
-    
+
     // Set align params
-    tilingParams.rScaleAlign = Ops::Base::CeilAlign(tilingParams.r, tilingParams.scaleDtypeAlignNum); //  能容纳的scale个数  
+    tilingParams.rScaleAlign = Ops::Base::CeilAlign(tilingParams.r,
+                                                    tilingParams.scaleDtypeAlignNum); //  能容纳的scale个数
     tilingParams.rZeroPointAlign = Ops::Base::CeilAlign(tilingParams.r, tilingParams.zeroPointDtypeAlignNum);
 
     tilingParams.blockFactor = Ops::Base::CeilDiv(tilingParams.a, tilingParams.totalCoreNum);
-    tilingParams.ubFactor = std::min(tilingParams.ubFactor,tilingParams.blockFactor);
+    tilingParams.ubFactor = std::min(tilingParams.ubFactor, tilingParams.blockFactor);
     tilingParams.usedCoreNum = Ops::Base::CeilDiv(tilingParams.a, tilingParams.blockFactor);
     tilingParams.blockTail = tilingParams.a - (tilingParams.usedCoreNum - 1) * tilingParams.blockFactor;
     SetTilingData();
@@ -106,16 +116,14 @@ void RmsNormQuantV2RegbaseTilingFullLoad::SetTilingData()
 
 void RmsNormQuantV2RegbaseTilingFullLoad::PrintTilingData()
 {
-    OP_LOGI(
-        nodeName.c_str(),
-        "TilingData a: %ld, r: %ld, q: %ld, blockFactor: %ld, "
-        "blockTail: %ld, ubFactor: %ld, binaryAdd: %ld, "
-        "optionMask: %lu, divMode: %ld, dstDtype: %ld, "
-        "epsilon: %f, avgFactor: %f, rstdFlag: %u.",
-        tilingData.a, tilingData.r, tilingData.q, tilingData.blockFactor,
-        tilingData.blockTail, tilingData.ubFactor, tilingData.binaryAdd,
-        tilingData.optionMask, tilingData.divMode, tilingData.dstDtype,
-        tilingData.epsilon, tilingData.avgFactor, tilingData.rstdFlag);
+    OP_LOGI(nodeName.c_str(),
+            "TilingData a: %ld, r: %ld, q: %ld, blockFactor: %ld, "
+            "blockTail: %ld, ubFactor: %ld, binaryAdd: %ld, "
+            "optionMask: %lu, divMode: %ld, dstDtype: %ld, "
+            "epsilon: %f, avgFactor: %f, rstdFlag: %u.",
+            tilingData.a, tilingData.r, tilingData.q, tilingData.blockFactor, tilingData.blockTail, tilingData.ubFactor,
+            tilingData.binaryAdd, tilingData.optionMask, tilingData.divMode, tilingData.dstDtype, tilingData.epsilon,
+            tilingData.avgFactor, tilingData.rstdFlag);
 }
 
 ge::graphStatus RmsNormQuantV2RegbaseTilingFullLoad::PostTiling()
@@ -130,20 +138,17 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingFullLoad::PostTiling()
     currentWorkspace[0] = usrWorkspaceSize + sysWorkSpaceSize;
 
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(tilingData) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(tilingData),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(tilingData) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(tilingData), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(tilingData));
     return ge::GRAPH_SUCCESS;
 }

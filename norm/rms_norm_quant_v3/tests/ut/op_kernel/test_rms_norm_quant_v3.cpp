@@ -24,17 +24,10 @@
 
 using namespace std;
 
-
 class rms_norm_quant_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_quant_v3_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_quant_v3_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_quant_v3_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "rms_norm_quant_v3_test TearDown\n" << endl; }
 };
 
 TEST_F(rms_norm_quant_v3_test, test_case_full_load)
@@ -62,8 +55,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 294;
     tilingDatafromBin->r = 4628;
@@ -83,14 +76,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -131,8 +123,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseRecomputeTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
+    RmsNormQuantV2RegbaseRecomputeTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
 
     tilingDatafromBin->numM = 365;
     tilingDatafromBin->numN = 10116;
@@ -156,14 +148,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute)
     ICPU_SET_TILING_KEY(6);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -205,8 +196,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_single_batch_no_rstd)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 1;
     tilingDatafromBin->r = 256;
@@ -226,14 +217,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_single_batch_no_rstd)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -275,8 +265,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_large_batch_per_channel)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 512;
     tilingDatafromBin->r = 512;
@@ -296,14 +286,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_large_batch_per_channel)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -345,8 +334,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_non_aligned_r)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 100;
     tilingDatafromBin->r = 1000;
@@ -366,14 +355,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_non_aligned_r)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -415,8 +403,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_ub_boundary)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 8;
     tilingDatafromBin->r = 6144;
@@ -436,14 +424,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_ub_boundary)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -485,8 +472,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_large_r_no_rstd)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseRecomputeTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
+    RmsNormQuantV2RegbaseRecomputeTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
 
     tilingDatafromBin->numM = 16;
     tilingDatafromBin->numN = 20000;
@@ -510,14 +497,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_large_r_no_rstd)
     ICPU_SET_TILING_KEY(6);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -559,8 +545,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_small_a_div_mode_off)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 4;
     tilingDatafromBin->r = 8192;
@@ -580,14 +566,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_small_a_div_mode_off)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -628,8 +613,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_r32_lessThanVL)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 4;
     tilingDatafromBin->r = 32;
@@ -649,14 +634,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_r32_lessThanVL)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -697,8 +681,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_r96_lessThanTwoVL)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 4;
     tilingDatafromBin->r = 96;
@@ -718,14 +702,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_r96_lessThanTwoVL)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -766,8 +749,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_r9216_lastLoop2)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 2;
     tilingDatafromBin->r = 9216;
@@ -787,14 +770,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_r9216_lastLoop2)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -835,8 +817,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_beta_only_mul)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 4;
     tilingDatafromBin->r = 512;
@@ -856,14 +838,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_beta_only_mul)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -904,8 +885,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_zp1_s2_div)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
+    RmsNormQuantV2RegbaseFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->a = 4;
     tilingDatafromBin->r = 512;
@@ -925,14 +906,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_full_load_zp1_s2_div)
     ICPU_SET_TILING_KEY(2);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_FULL_LOAD>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -973,8 +953,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_needbrc_allopts)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseRecomputeTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
+    RmsNormQuantV2RegbaseRecomputeTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
 
     tilingDatafromBin->numM = 8;
     tilingDatafromBin->numN = 10240;
@@ -998,14 +978,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_needbrc_allopts)
     ICPU_SET_TILING_KEY(6);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -1046,8 +1025,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_no_opts_mul)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseRecomputeTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
+    RmsNormQuantV2RegbaseRecomputeTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
 
     tilingDatafromBin->numM = 8;
     tilingDatafromBin->numN = 10240;
@@ -1071,14 +1050,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_no_opts_mul)
     ICPU_SET_TILING_KEY(6);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -1119,8 +1097,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_small_baseN48)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseRecomputeTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
+    RmsNormQuantV2RegbaseRecomputeTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
 
     tilingDatafromBin->numM = 4;
     tilingDatafromBin->numN = 192;
@@ -1144,14 +1122,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_small_baseN48)
     ICPU_SET_TILING_KEY(6);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -1192,8 +1169,8 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_small_baseN96)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    RmsNormQuantV2RegbaseRecomputeTilingData* tilingDatafromBin =
-        reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
+    RmsNormQuantV2RegbaseRecomputeTilingData*
+        tilingDatafromBin = reinterpret_cast<RmsNormQuantV2RegbaseRecomputeTilingData*>(tiling);
 
     tilingDatafromBin->numM = 4;
     tilingDatafromBin->numN = 384;
@@ -1217,14 +1194,13 @@ TEST_F(rms_norm_quant_v3_test, test_case_recompute_small_baseN96)
     ICPU_SET_TILING_KEY(6);
 
     auto rms_norm_quant_v3_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
-                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta,
-                                        GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2,
-                                                     beta, y1, y2, rstd, workspace, tiling);
+                                        GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                        GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_quant_v3<COMPUTE_MODE_RECOMPUTE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                                                    y2, rstd, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(rms_norm_quant_v3_wrapper, blockDim, x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
+                y2, rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

@@ -17,12 +17,13 @@
 #include "kernel_operator.h"
 
 using namespace AscendC;
-template<typename inType, typename outType, uint16_t bufferNum>
+template <typename inType, typename outType, uint16_t bufferNum>
 class SwigluVector {
-  public:
+public:
     __aicore__ inline SwigluVector() {}
     __aicore__ inline ~SwigluVector() = default;
-  protected:
+
+protected:
     __aicore__ inline void InitUbBuffer(uint64_t tileLength);
     __aicore__ inline void Compute(uint64_t curTileLen);
     float beta = 1.0;
@@ -37,8 +38,9 @@ class SwigluVector {
     GlobalTensor<outType> cGm;
 };
 
-template<typename inType, typename outType, uint16_t bufferNum>
-__aicore__ inline void SwigluVector<inType, outType, bufferNum>::InitUbBuffer(uint64_t tileLength) {
+template <typename inType, typename outType, uint16_t bufferNum>
+__aicore__ inline void SwigluVector<inType, outType, bufferNum>::InitUbBuffer(uint64_t tileLength)
+{
     // pipe alloc memory to queue, the unit is Bytes
     pipe.InitBuffer(inQueueA, bufferNum, tileLength * sizeof(inType));
     pipe.InitBuffer(inQueueB, bufferNum, tileLength * sizeof(inType));
@@ -48,7 +50,7 @@ __aicore__ inline void SwigluVector<inType, outType, bufferNum>::InitUbBuffer(ui
     Duplicate<float>(tempLocal, (float)(1.0), tileLength);
 }
 
-template<typename inType, typename outType, uint16_t bufferNum>
+template <typename inType, typename outType, uint16_t bufferNum>
 __aicore__ inline void SwigluVector<inType, outType, bufferNum>::Compute(uint64_t curTileLen)
 {
     LocalTensor<inType> aLocal = inQueueA.template DeQue<inType>();

@@ -40,4 +40,4 @@ REG_OP(UnsortedSegmentProd)
     .OP_END_FACTORY_REG(UnsortedSegmentProd)
 } // namespace ge
 
-#endif  // UNSORTED_SEGMENT_PROD_PROTO_H_
+#endif // UNSORTED_SEGMENT_PROD_PROTO_H_

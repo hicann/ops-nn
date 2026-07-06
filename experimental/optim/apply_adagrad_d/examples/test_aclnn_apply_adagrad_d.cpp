@@ -56,9 +56,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -72,9 +71,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -88,17 +86,17 @@ int main()
     // In-place op: var and accum are updated in place, no separate output tensors.
     // Inputs: var, accum, grad share same shape; lr is scalar {1}
     std::vector<int64_t> varShape = {4, 4};
-    std::vector<int64_t> lrShape  = {1};
+    std::vector<int64_t> lrShape = {1};
 
-    void* varDeviceAddr   = nullptr;
+    void* varDeviceAddr = nullptr;
     void* accumDeviceAddr = nullptr;
-    void* lrDeviceAddr    = nullptr;
-    void* gradDeviceAddr  = nullptr;
+    void* lrDeviceAddr = nullptr;
+    void* gradDeviceAddr = nullptr;
 
-    aclTensor* varTensor   = nullptr;
+    aclTensor* varTensor = nullptr;
     aclTensor* accumTensor = nullptr;
-    aclTensor* lrTensor    = nullptr;
-    aclTensor* gradTensor  = nullptr;
+    aclTensor* lrTensor = nullptr;
+    aclTensor* gradTensor = nullptr;
 
     int64_t elemCount = GetShapeSize(varShape);
 
@@ -107,29 +105,26 @@ int main()
     std::vector<float> lrHostData = {0.1f};
     std::vector<float> gradHostData(elemCount, 2.0f);
 
-    ret = CreateAclTensor(varHostData,   varShape, &varDeviceAddr,   aclDataType::ACL_FLOAT, &varTensor);
+    ret = CreateAclTensor(varHostData, varShape, &varDeviceAddr, aclDataType::ACL_FLOAT, &varTensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(accumHostData, varShape, &accumDeviceAddr, aclDataType::ACL_FLOAT, &accumTensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(lrHostData,    lrShape,  &lrDeviceAddr,    aclDataType::ACL_FLOAT, &lrTensor);
+    ret = CreateAclTensor(lrHostData, lrShape, &lrDeviceAddr, aclDataType::ACL_FLOAT, &lrTensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(gradHostData,  varShape, &gradDeviceAddr,  aclDataType::ACL_FLOAT, &gradTensor);
+    ret = CreateAclTensor(gradHostData, varShape, &gradDeviceAddr, aclDataType::ACL_FLOAT, &gradTensor);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // attrs
     bool updateSlots = true;
-    bool useLocking  = false;
+    bool useLocking = false;
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
     // Signature: (var, accum, lr, grad, updateSlots, useLocking, &workspaceSize, &executor)
-    ret = aclnnApplyAdagradDGetWorkspaceSize(
-        varTensor, accumTensor, lrTensor, gradTensor,
-        updateSlots, useLocking,
-        &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnApplyAdagradDGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnApplyAdagradDGetWorkspaceSize(varTensor, accumTensor, lrTensor, gradTensor, updateSlots, useLocking,
+                                             &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnApplyAdagradDGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
@@ -145,8 +140,8 @@ int main()
 
     // Read back var (in-place updated, expect ≈ 0.9107)
     std::vector<float> varResult(elemCount, 0.0f);
-    ret = aclrtMemcpy(varResult.data(), varResult.size() * sizeof(float),
-                      varDeviceAddr, elemCount * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(varResult.data(), varResult.size() * sizeof(float), varDeviceAddr, elemCount * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy var failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("[var] after update (expect ≈ 0.9107):\n");
     for (int64_t i = 0; i < elemCount && i < 4; i++) {
@@ -155,8 +150,8 @@ int main()
 
     // Read back accum (in-place updated, expect = 5.0)
     std::vector<float> accumResult(elemCount, 0.0f);
-    ret = aclrtMemcpy(accumResult.data(), accumResult.size() * sizeof(float),
-                      accumDeviceAddr, elemCount * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(accumResult.data(), accumResult.size() * sizeof(float), accumDeviceAddr,
+                      elemCount * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy accum failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("[accum] after update (expect = 5.0):\n");
     for (int64_t i = 0; i < elemCount && i < 4; i++) {

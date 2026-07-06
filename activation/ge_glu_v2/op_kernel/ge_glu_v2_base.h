@@ -45,30 +45,28 @@ public:
 
 protected:
     __aicore__ inline void ParseTilingData(const GeGluV2TilingData* tilingData, GeGluV2TilingData& m_tilingData);
-    __aicore__ inline void BaseInit(
-        GM_ADDR x, GM_ADDR y, GM_ADDR gelu, const GeGluV2TilingData* tilingData, bool isLastBig = false,
-        bool isVreudce = false);
-    __aicore__ inline void CopyInXAlign(
-        const int64_t& index, const int64_t& blockCount, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2);
-    __aicore__ inline void CopyOutMulBase(
-        const int64_t& index, const int64_t& ub_num, const int64_t& group, LocalTensor<T>& outLocal);
-    __aicore__ inline void CopyOutGeluBase(
-        const int64_t& index, const int64_t& ub_num, const int64_t& group, LocalTensor<T>& outLocal);
-    __aicore__ inline void ComputeGeluBase(
-        LocalTensor<float>& ubx2_fp32, LocalTensor<float>& tmpBuf2, const int64_t& ub_num);
-    __aicore__ inline void ComputeGeluErf(
-        LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut, LocalTensor<float>& x1, LocalTensor<float>& xPow,
-        const int64_t& length);
-    __aicore__ inline void ComputeFp16VReduce(
-        LocalTensor<half>& ubX1, LocalTensor<half>& ubX2, LocalTensor<half>& ubX, const int64_t& ub_num);
-    __aicore__ inline void ComputeFp32VReduce(
-        LocalTensor<float>& ubX1, LocalTensor<float>& ubX2, LocalTensor<float>& ubX, const int64_t& ub_num);
-    __aicore__ inline void CopyInXAlignLastBig(
-        const int64_t& idx_x, const int64_t& idx_y, const int64_t& length, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2);
-    __aicore__ inline void CopyOutMulBaseLastBig(
-        const int64_t& idx_x, const int64_t& idx_y, const int64_t& length, LocalTensor<T>& outLocal);
-    __aicore__ inline void CopyOutGeluBaseLastBig(
-        const int64_t& idx_x, const int64_t& idx_y, const int64_t& length, LocalTensor<T>& outLocal);
+    __aicore__ inline void BaseInit(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, const GeGluV2TilingData* tilingData,
+                                    bool isLastBig = false, bool isVreudce = false);
+    __aicore__ inline void CopyInXAlign(const int64_t& index, const int64_t& blockCount, LocalTensor<T>& ubX1,
+                                        LocalTensor<T>& ubX2);
+    __aicore__ inline void CopyOutMulBase(const int64_t& index, const int64_t& ub_num, const int64_t& group,
+                                          LocalTensor<T>& outLocal);
+    __aicore__ inline void CopyOutGeluBase(const int64_t& index, const int64_t& ub_num, const int64_t& group,
+                                           LocalTensor<T>& outLocal);
+    __aicore__ inline void ComputeGeluBase(LocalTensor<float>& ubx2_fp32, LocalTensor<float>& tmpBuf2,
+                                           const int64_t& ub_num);
+    __aicore__ inline void ComputeGeluErf(LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut,
+                                          LocalTensor<float>& x1, LocalTensor<float>& xPow, const int64_t& length);
+    __aicore__ inline void ComputeFp16VReduce(LocalTensor<half>& ubX1, LocalTensor<half>& ubX2, LocalTensor<half>& ubX,
+                                              const int64_t& ub_num);
+    __aicore__ inline void ComputeFp32VReduce(LocalTensor<float>& ubX1, LocalTensor<float>& ubX2,
+                                              LocalTensor<float>& ubX, const int64_t& ub_num);
+    __aicore__ inline void CopyInXAlignLastBig(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length,
+                                               LocalTensor<T>& ubX1, LocalTensor<T>& ubX2);
+    __aicore__ inline void CopyOutMulBaseLastBig(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length,
+                                                 LocalTensor<T>& outLocal);
+    __aicore__ inline void CopyOutGeluBaseLastBig(const int64_t& idx_x, const int64_t& idx_y, const int64_t& length,
+                                                  LocalTensor<T>& outLocal);
     __aicore__ inline void CopyInXVreduce(const int64_t& index, const int64_t& blockCount, LocalTensor<T>& ubX);
     __aicore__ inline void CopyOutGeluVreduce(const int64_t& index, const int64_t& ub_num, LocalTensor<T>& outLocal);
     __aicore__ inline void CopyOutMulVreduce(const int64_t& index, const int64_t& ub_num, LocalTensor<T>& outLocal);
@@ -98,8 +96,8 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::BaseInit(
-    GM_ADDR x, GM_ADDR y, GM_ADDR gelu, const GeGluV2TilingData* tilingData, bool isLastBig, bool isVreduce)
+__aicore__ inline void GeGluV2Base<T>::BaseInit(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, const GeGluV2TilingData* tilingData,
+                                                bool isLastBig, bool isVreduce)
 {
     blockIdx = GetBlockIdx();
     this->ParseTilingData(tilingData, m_tilingData);
@@ -115,8 +113,8 @@ __aicore__ inline void GeGluV2Base<T>::BaseInit(
         nlast_tail_ub_num = m_tilingData.nLastTailGroup * this->m_tilingData.splitSize;
         last_tail_ub_num = m_tilingData.lastTailGroup * this->m_tilingData.splitSize;
     } else {
-        int64_t splitSizeAlign =
-            (m_tilingData.splitSize + m_tilingData.blockSize - 1) / m_tilingData.blockSize * m_tilingData.blockSize;
+        int64_t splitSizeAlign = (m_tilingData.splitSize + m_tilingData.blockSize - 1) / m_tilingData.blockSize *
+                                 m_tilingData.blockSize;
         group_ub_num = m_tilingData.group * splitSizeAlign;
         nlast_tail_ub_num = m_tilingData.nLastTailGroup * splitSizeAlign;
         last_tail_ub_num = m_tilingData.lastTailGroup * splitSizeAlign;
@@ -138,8 +136,8 @@ __aicore__ inline void GeGluV2Base<T>::BaseInit(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyInXAlign(
-    const int64_t& index, const int64_t& group, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2)
+__aicore__ inline void GeGluV2Base<T>::CopyInXAlign(const int64_t& index, const int64_t& group, LocalTensor<T>& ubX1,
+                                                    LocalTensor<T>& ubX2)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = group;
@@ -165,8 +163,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyInXAlign(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyOutMulBase(
-    const int64_t& index, const int64_t& ub_num, const int64_t& group, LocalTensor<T>& outLocal)
+__aicore__ inline void GeGluV2Base<T>::CopyOutMulBase(const int64_t& index, const int64_t& ub_num, const int64_t& group,
+                                                      LocalTensor<T>& outLocal)
 {
     if (m_tilingData.splitSize % m_tilingData.blockSize == 0) {
         DataCopy(yMulGm[gmDYOffset + index * one_process_out_stride], outLocal, ub_num);
@@ -181,8 +179,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyOutMulBase(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyOutGeluBase(
-    const int64_t& index, const int64_t& ub_num, const int64_t& group, LocalTensor<T>& outLocal)
+__aicore__ inline void GeGluV2Base<T>::CopyOutGeluBase(const int64_t& index, const int64_t& ub_num,
+                                                       const int64_t& group, LocalTensor<T>& outLocal)
 {
     if (m_tilingData.splitSize % m_tilingData.blockSize == 0) {
         DataCopy(yGeluGm[gmDYOffset + index * one_process_out_stride], outLocal, ub_num);
@@ -197,8 +195,9 @@ __aicore__ inline void GeGluV2Base<T>::CopyOutGeluBase(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyInXAlignLastBig(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length, LocalTensor<T>& ubX1, LocalTensor<T>& ubX2)
+__aicore__ inline void GeGluV2Base<T>::CopyInXAlignLastBig(const int64_t& idx_x, const int64_t& idx_y,
+                                                           const int64_t& length, LocalTensor<T>& ubX1,
+                                                           LocalTensor<T>& ubX2)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
@@ -215,8 +214,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyInXAlignLastBig(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyOutMulBaseLastBig(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length, LocalTensor<T>& outLocal)
+__aicore__ inline void GeGluV2Base<T>::CopyOutMulBaseLastBig(const int64_t& idx_x, const int64_t& idx_y,
+                                                             const int64_t& length, LocalTensor<T>& outLocal)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
@@ -229,8 +228,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyOutMulBaseLastBig(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyOutGeluBaseLastBig(
-    const int64_t& idx_x, const int64_t& idx_y, const int64_t& length, LocalTensor<T>& outLocal)
+__aicore__ inline void GeGluV2Base<T>::CopyOutGeluBaseLastBig(const int64_t& idx_x, const int64_t& idx_y,
+                                                              const int64_t& length, LocalTensor<T>& outLocal)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
@@ -243,8 +242,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyOutGeluBaseLastBig(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::ComputeGeluBase(
-    LocalTensor<float>& ubx2_fp32, LocalTensor<float>& tmpBuf, const int64_t& ub_num)
+__aicore__ inline void GeGluV2Base<T>::ComputeGeluBase(LocalTensor<float>& ubx2_fp32, LocalTensor<float>& tmpBuf,
+                                                       const int64_t& ub_num)
 {
     // compute (2 * np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))
     Mul(tmpBuf, ubx2_fp32, ubx2_fp32, ub_num);
@@ -261,9 +260,9 @@ __aicore__ inline void GeGluV2Base<T>::ComputeGeluBase(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::ComputeGeluErf(
-    LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut, LocalTensor<float>& x1, LocalTensor<float>& xPow,
-    const int64_t& length)
+__aicore__ inline void GeGluV2Base<T>::ComputeGeluErf(LocalTensor<float>& ubx2_fp32, LocalTensor<float>& computeOut,
+                                                      LocalTensor<float>& x1, LocalTensor<float>& xPow,
+                                                      const int64_t& length)
 {
     // res = x/(1+exp(((((((a1*x^2+a2)*x^2+a3)*x^2+a4)*x^2+a5)*x^2+a6)*x^2+a7)*x))
     Mins(x1, ubx2_fp32, ERF_THRESHOLD, length);
@@ -296,8 +295,8 @@ __aicore__ inline void GeGluV2Base<T>::ComputeGeluErf(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyInXVreduce(
-    const int64_t& index, const int64_t& blockCount, LocalTensor<T>& ubX)
+__aicore__ inline void GeGluV2Base<T>::CopyInXVreduce(const int64_t& index, const int64_t& blockCount,
+                                                      LocalTensor<T>& ubX)
 {
     int64_t one_process_total_num = blockCount * m_tilingData.splitSize * 2;
     DataCopyParams intriParams;
@@ -311,8 +310,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyInXVreduce(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::ComputeFp16VReduce(
-    LocalTensor<half>& ubX1, LocalTensor<half>& ubX2, LocalTensor<half>& ubX, const int64_t& ub_num)
+__aicore__ inline void GeGluV2Base<T>::ComputeFp16VReduce(LocalTensor<half>& ubX1, LocalTensor<half>& ubX2,
+                                                          LocalTensor<half>& ubX, const int64_t& ub_num)
 {
     // do computeVreduce
     uint64_t rsvdCnt = 0;
@@ -323,8 +322,8 @@ __aicore__ inline void GeGluV2Base<T>::ComputeFp16VReduce(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::ComputeFp32VReduce(
-    LocalTensor<float>& ubX1, LocalTensor<float>& ubX2, LocalTensor<float>& ubX, const int64_t& ub_num)
+__aicore__ inline void GeGluV2Base<T>::ComputeFp32VReduce(LocalTensor<float>& ubX1, LocalTensor<float>& ubX2,
+                                                          LocalTensor<float>& ubX, const int64_t& ub_num)
 {
     // do computeVreduce
     uint64_t rsvdCnt = 0;
@@ -335,8 +334,8 @@ __aicore__ inline void GeGluV2Base<T>::ComputeFp32VReduce(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyOutMulVreduce(
-    const int64_t& index, const int64_t& ub_num, LocalTensor<T>& outLocal)
+__aicore__ inline void GeGluV2Base<T>::CopyOutMulVreduce(const int64_t& index, const int64_t& ub_num,
+                                                         LocalTensor<T>& outLocal)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
@@ -347,8 +346,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyOutMulVreduce(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::CopyOutGeluVreduce(
-    const int64_t& index, const int64_t& ub_num, LocalTensor<T>& outLocal)
+__aicore__ inline void GeGluV2Base<T>::CopyOutGeluVreduce(const int64_t& index, const int64_t& ub_num,
+                                                          LocalTensor<T>& outLocal)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
@@ -359,8 +358,8 @@ __aicore__ inline void GeGluV2Base<T>::CopyOutGeluVreduce(
 }
 
 template <typename T>
-__aicore__ inline void GeGluV2Base<T>::ParseTilingData(
-    const GeGluV2TilingData* tilingData, GeGluV2TilingData& m_tilingData)
+__aicore__ inline void GeGluV2Base<T>::ParseTilingData(const GeGluV2TilingData* tilingData,
+                                                       GeGluV2TilingData& m_tilingData)
 {
     m_tilingData.group = tilingData->group;
     m_tilingData.loopNum = tilingData->loopNum;

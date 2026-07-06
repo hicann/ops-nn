@@ -28,10 +28,9 @@ namespace Conv3dFunc {
 template <class Intf>
 class LoadAL0WithPointWiseTools {
 public:
-    __aicore__ inline LoadAL0WithPointWiseTools()
-    {}
+    __aicore__ inline LoadAL0WithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         alignMAL1Tail = AlignB(self_->ctx.mAL1Tail, BLOCK_L0_M);
@@ -50,8 +49,7 @@ public:
 
     __aicore__ inline void LoadAL0()
     {
-        currentKL0 = self_->ctx.kIter == self_->ctx.maxKL0Iter ? alignKL0Tail
-                                                                : self_->ctx.conv3dTiling->kL0;
+        currentKL0 = self_->ctx.kIter == self_->ctx.maxKL0Iter ? alignKL0Tail : self_->ctx.conv3dTiling->kL0;
         if constexpr (AscendC::IsSameType<typename Intf::FmapT, float>::value) {
             LoadAL0ByLoad2dTranspose();
         } else {
@@ -61,13 +59,12 @@ public:
     }
 
 private:
-
     __aicore__ inline void LoadAL0ByLoad2dTranspose()
     {
         load2dSrcOffset = self_->ctx.kAL0Iter * self_->ctx.conv3dTiling->kL0 * currentMAL1 +
-                            self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 * DATA_COPY_OP_LEN;
-        ASC_OP_LOGD("[LoadAL0WithPointWise Load2dTranspose] load2dSrcOffset: %u currentKL0: %u\n",
-                        load2dSrcOffset, currentKL0);
+                          self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 * DATA_COPY_OP_LEN;
+        ASC_OP_LOGD("[LoadAL0WithPointWise Load2dTranspose] load2dSrcOffset: %u currentKL0: %u\n", load2dSrcOffset,
+                    currentKL0);
 
         LoadData2dTransposeParams loadData2dTransposeParams;
         uint64_t numKL0Block = currentKL0 / DATA_COPY_OP_LEN;
@@ -76,19 +73,18 @@ private:
         uint64_t tmp2 = DATA_COPY_OP_LEN * currentMAL1;
         for (uint32_t copy_part = 0; copy_part < numKL0Block; ++copy_part) {
             LoadDataWithTranspose<typename Intf::FmapT>(self_->ctx.al0[copy_part * tmp1],
-                    self_->ctx.al1[load2dSrcOffset + copy_part * tmp2],
-                    loadData2dTransposeParams);
+                                                        self_->ctx.al1[load2dSrcOffset + copy_part * tmp2],
+                                                        loadData2dTransposeParams);
         }
     }
 
     __aicore__ inline void LoadAL0ByLoad2d()
     {
         // currentKAL1需要对齐到k0_, kAL1Tail在InitKDirectionBaseValue中已经对齐过。
-        currentKAL1 = self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter ?
-                    alignKAL1Tail : self_->ctx.conv3dTiling->kAL1;
+        currentKAL1 = self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter ? alignKAL1Tail : self_->ctx.conv3dTiling->kAL1;
 
         load2dSrcOffset = self_->ctx.mAL0Iter * self_->ctx.conv3dTiling->mL0 * currentKAL1 +
-                            self_->ctx.kAL0Iter * self_->ctx.conv3dTiling->kL0 * BLOCK_L0_N;
+                          self_->ctx.kAL0Iter * self_->ctx.conv3dTiling->kL0 * BLOCK_L0_N;
 
         uint64_t numKL0Block = currentKL0 / self_->ctx.cin0;
         LoadData2DParams loadData2dParams;
@@ -97,23 +93,20 @@ private:
         loadData2dParams.ifTranspose = true;
         loadData2dParams.dstGap = numML0Block_ - 1;
         ASC_OP_LOGD("[LoadAL0WithPointWise LoadAL0ByLoad2d] load2dSrcOffset: %u currentKAL1: %u currentKL0: %u\n",
-                        load2dSrcOffset, currentKAL1, currentKL0);
+                    load2dSrcOffset, currentKAL1, currentKL0);
 
         uint64_t continueOffset = currentKAL1 * BLOCK_L0_N;
         for (uint32_t copy_part = 0; copy_part < numML0Block_; ++copy_part) {
             LoadData<typename Intf::FmapT>(self_->ctx.al0[copy_part * fractalElements],
-                    self_->ctx.al1[load2dSrcOffset + copy_part * continueOffset],
-                    loadData2dParams);
+                                           self_->ctx.al1[load2dSrcOffset + copy_part * continueOffset],
+                                           loadData2dParams);
         }
     }
 
-    __aicore__ inline bool IsMTail()
-    {
-        return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter;
-    }
+    __aicore__ inline bool IsMTail() { return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter; }
 
-    __aicore__ inline void SetLoadData2dTransposeParams(LoadData2dTransposeParams &loadData2dTransposeParams,
-                                                        const uint64_t &repeatTimes)
+    __aicore__ inline void SetLoadData2dTransposeParams(LoadData2dTransposeParams& loadData2dTransposeParams,
+                                                        const uint64_t& repeatTimes)
     {
         // 从小z大N变成小n大Z
         loadData2dTransposeParams.repeatTimes = repeatTimes;
@@ -131,7 +124,7 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t currentML0_ = 0;
     uint64_t currentKL0 = 0;
     uint64_t numML0Block_ = 0;
@@ -148,10 +141,9 @@ private:
 template <class Intf>
 class LoadBL0WithPointWiseTools {
 public:
-    __aicore__ inline LoadBL0WithPointWiseTools()
-    {}
+    __aicore__ inline LoadBL0WithPointWiseTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         alignNBL1Tail = AlignB(self_->ctx.nBL1Tail, BLOCK_L0_N);
@@ -168,15 +160,13 @@ public:
 
     __aicore__ inline void LoadBL0()
     {
-        currentNBL1 = self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter ?
-                alignNBL1Tail : self_->ctx.conv3dTiling->nBL1;
-        currentKL0 = self_->ctx.kIter == self_->ctx.maxKL0Iter ? alignKL0Tail
-                                                                : self_->ctx.conv3dTiling->kL0;
+        currentNBL1 = self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter ? alignNBL1Tail : self_->ctx.conv3dTiling->nBL1;
+        currentKL0 = self_->ctx.kIter == self_->ctx.maxKL0Iter ? alignKL0Tail : self_->ctx.conv3dTiling->kL0;
 
         uint64_t load2dSrcOffset = self_->ctx.kBL0Iter * self_->ctx.conv3dTiling->kL0 * currentNBL1 +
-                          self_->ctx.nBL0Iter * self_->ctx.conv3dTiling->nL0 * k0_;
-        ASC_OP_LOGD("[LoadBL0WithPointWise] load2dSrcOffset: %u currentNBL1: %u currentKL0: %u\n",
-                        load2dSrcOffset, currentNBL1, currentKL0);
+                                   self_->ctx.nBL0Iter * self_->ctx.conv3dTiling->nL0 * k0_;
+        ASC_OP_LOGD("[LoadBL0WithPointWise] load2dSrcOffset: %u currentNBL1: %u currentKL0: %u\n", load2dSrcOffset,
+                    currentNBL1, currentKL0);
         numKL0Block = currentKL0 / k0_;
         uint64_t numNL0Block = currentNL0_ / BLOCK_L0_M;
 
@@ -185,13 +175,13 @@ public:
         uint64_t continueOffset = currentNBL1 * k0_;
         for (uint32_t copy_part = 0; copy_part < numKL0Block; ++copy_part) {
             LoadData<typename Intf::WeightT>(self_->ctx.bl0[copy_part * fractalElements],
-                    self_->ctx.bl1[load2dSrcOffset + copy_part * continueOffset],
-                    loadData2dParams);
+                                             self_->ctx.bl1[load2dSrcOffset + copy_part * continueOffset],
+                                             loadData2dParams);
         }
     }
 
 private:
-    __aicore__ inline void SetLoadData2DParams(LoadData2DParams &loadData2dParams, const uint64_t &repeatTimes)
+    __aicore__ inline void SetLoadData2DParams(LoadData2DParams& loadData2dParams, const uint64_t& repeatTimes)
     {
         // 从小z大N变成小z大Z
         loadData2dParams.repeatTimes = repeatTimes;
@@ -201,7 +191,7 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t k0_ = 0;
     uint64_t currentNL0_ = 0;
     uint64_t currentKL0 = 0;
@@ -212,6 +202,6 @@ private:
     uint64_t fractalElements = 0;
 };
 
-};  // namespace Conv3dFunc
+}; // namespace Conv3dFunc
 
-#endif  // __CONV3D_MTE1_0POINTWISE_SUB_API_H__
+#endif // __CONV3D_MTE1_0POINTWISE_SUB_API_H__

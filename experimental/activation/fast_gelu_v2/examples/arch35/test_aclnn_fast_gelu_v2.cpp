@@ -27,21 +27,21 @@
 // ============================================================================
 // Macros
 // ============================================================================
-#define CHECK_ACL(expr)                                                 \
-    do {                                                                \
-        auto _ret = (expr);                                             \
-        if (_ret != ACL_SUCCESS) {                                      \
-            std::cerr << "[ERROR] " << #expr << " failed: " << _ret     \
-                      << " at " << __FILE__ << ":" << __LINE__          \
-                      << std::endl;                                     \
-            return 1;                                                   \
-        }                                                               \
+#define CHECK_ACL(expr)                                                                                      \
+    do {                                                                                                     \
+        auto _ret = (expr);                                                                                  \
+        if (_ret != ACL_SUCCESS) {                                                                           \
+            std::cerr << "[ERROR] " << #expr << " failed: " << _ret << " at " << __FILE__ << ":" << __LINE__ \
+                      << std::endl;                                                                          \
+            return 1;                                                                                        \
+        }                                                                                                    \
     } while (0)
 
 // ============================================================================
 // Helper: compute strides from shape (row-major contiguous)
 // ============================================================================
-static std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape) {
+static std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape)
+{
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; --i) {
         strides[i] = shape[i + 1] * strides[i + 1];
@@ -52,19 +52,16 @@ static std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape) {
 // ============================================================================
 // Helper: create aclTensor from host data
 // ============================================================================
-static int CreateAclTensor(const void* hostData, size_t dataBytes,
-                           const std::vector<int64_t>& shape,
-                           void** deviceAddr,
-                           aclDataType dataType,
-                           aclTensor** tensor) {
+static int CreateAclTensor(const void* hostData, size_t dataBytes, const std::vector<int64_t>& shape, void** deviceAddr,
+                           aclDataType dataType, aclTensor** tensor)
+{
     auto ret = aclrtMalloc(deviceAddr, dataBytes, ACL_MEM_MALLOC_HUGE_FIRST);
     if (ret != ACL_SUCCESS) {
         std::cerr << "[ERROR] aclrtMalloc failed: " << ret << std::endl;
         return ret;
     }
 
-    ret = aclrtMemcpy(*deviceAddr, dataBytes, hostData, dataBytes,
-                      ACL_MEMCPY_HOST_TO_DEVICE);
+    ret = aclrtMemcpy(*deviceAddr, dataBytes, hostData, dataBytes, ACL_MEMCPY_HOST_TO_DEVICE);
     if (ret != ACL_SUCCESS) {
         std::cerr << "[ERROR] aclrtMemcpy H2D failed: " << ret << std::endl;
         aclrtFree(*deviceAddr);
@@ -72,8 +69,7 @@ static int CreateAclTensor(const void* hostData, size_t dataBytes,
     }
 
     auto strides = ComputeStrides(shape);
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType,
-                              strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
     if (*tensor == nullptr) {
         std::cerr << "[ERROR] aclCreateTensor returned nullptr" << std::endl;
@@ -86,7 +82,8 @@ static int CreateAclTensor(const void* hostData, size_t dataBytes,
 // ============================================================================
 // CPU golden: FastGeluV2(x) using float32 precision
 // ============================================================================
-static void ComputeGolden(const float* x, float* output, size_t size) {
+static void ComputeGolden(const float* x, float* output, size_t size)
+{
     for (size_t i = 0; i < size; ++i) {
         float xi = x[i];
         float eps = 1e-12f;
@@ -107,7 +104,8 @@ static void ComputeGolden(const float* x, float* output, size_t size) {
 // ============================================================================
 // Main
 // ============================================================================
-int main() {
+int main()
+{
     std::cout << "========================================" << std::endl;
     std::cout << "FastGeluV2 ACLNN Example" << std::endl;
     std::cout << "========================================" << std::endl;
@@ -130,15 +128,15 @@ int main() {
     // -----------------------------------------------------------------------
     std::cout << "\n[Step 2] Preparing input data..." << std::endl;
 
-    std::vector<int64_t> shape = {2, 8};  // 2D tensor, 16 elements total
+    std::vector<int64_t> shape = {2, 8}; // 2D tensor, 16 elements total
     int64_t totalElements = 1;
-    for (auto d : shape) totalElements *= d;
+    for (auto d : shape)
+        totalElements *= d;
 
     // Generate test data: linearly spaced from -5.0 to 5.0
     std::vector<float> hostInput(totalElements);
     for (int64_t i = 0; i < totalElements; ++i) {
-        hostInput[i] = -5.0f + 10.0f * static_cast<float>(i) /
-                       static_cast<float>(totalElements - 1);
+        hostInput[i] = -5.0f + 10.0f * static_cast<float>(i) / static_cast<float>(totalElements - 1);
     }
 
     size_t dataBytes = totalElements * sizeof(float);
@@ -146,8 +144,7 @@ int main() {
     std::cout << "  Shape: [" << shape[0] << ", " << shape[1] << "]" << std::endl;
     std::cout << "  Elements: " << totalElements << std::endl;
     std::cout << "  Dtype: float32" << std::endl;
-    std::cout << "  Input range: [" << hostInput.front() << ", "
-              << hostInput.back() << "]" << std::endl;
+    std::cout << "  Input range: [" << hostInput.front() << ", " << hostInput.back() << "]" << std::endl;
 
     // -----------------------------------------------------------------------
     // Step 3: Create aclTensors (allocate device memory, copy H2D)
@@ -156,8 +153,7 @@ int main() {
 
     void* xDevAddr = nullptr;
     aclTensor* xTensor = nullptr;
-    if (CreateAclTensor(hostInput.data(), dataBytes, shape,
-                        &xDevAddr, ACL_FLOAT, &xTensor) != ACL_SUCCESS) {
+    if (CreateAclTensor(hostInput.data(), dataBytes, shape, &xDevAddr, ACL_FLOAT, &xTensor) != ACL_SUCCESS) {
         std::cerr << "  Failed to create input tensor" << std::endl;
         return 1;
     }
@@ -166,8 +162,7 @@ int main() {
     std::vector<float> hostOutput(totalElements, 0.0f);
     void* outDevAddr = nullptr;
     aclTensor* outTensor = nullptr;
-    if (CreateAclTensor(hostOutput.data(), dataBytes, shape,
-                        &outDevAddr, ACL_FLOAT, &outTensor) != ACL_SUCCESS) {
+    if (CreateAclTensor(hostOutput.data(), dataBytes, shape, &outDevAddr, ACL_FLOAT, &outTensor) != ACL_SUCCESS) {
         std::cerr << "  Failed to create output tensor" << std::endl;
         aclDestroyTensor(xTensor);
         aclrtFree(xDevAddr);
@@ -183,8 +178,7 @@ int main() {
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    CHECK_ACL(aclnnFastGeluV2GetWorkspaceSize(xTensor, outTensor,
-                                              &workspaceSize, &executor));
+    CHECK_ACL(aclnnFastGeluV2GetWorkspaceSize(xTensor, outTensor, &workspaceSize, &executor));
     std::cout << "  workspaceSize = " << workspaceSize << " bytes" << std::endl;
 
     // -----------------------------------------------------------------------
@@ -193,10 +187,8 @@ int main() {
     void* workspace = nullptr;
     if (workspaceSize > 0) {
         std::cout << "\n[Step 5] Allocating workspace..." << std::endl;
-        CHECK_ACL(aclrtMalloc(&workspace, workspaceSize,
-                              ACL_MEM_MALLOC_HUGE_FIRST));
-        std::cout << "  Workspace allocated: " << workspaceSize
-                  << " bytes" << std::endl;
+        CHECK_ACL(aclrtMalloc(&workspace, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST));
+        std::cout << "  Workspace allocated: " << workspaceSize << " bytes" << std::endl;
     } else {
         std::cout << "\n[Step 5] No workspace needed (size=0)" << std::endl;
     }
@@ -215,8 +207,7 @@ int main() {
     // Step 7: Copy result from device to host
     // -----------------------------------------------------------------------
     std::cout << "\n[Step 7] Copying results D2H..." << std::endl;
-    CHECK_ACL(aclrtMemcpy(hostOutput.data(), dataBytes, outDevAddr, dataBytes,
-                          ACL_MEMCPY_DEVICE_TO_HOST));
+    CHECK_ACL(aclrtMemcpy(hostOutput.data(), dataBytes, outDevAddr, dataBytes, ACL_MEMCPY_DEVICE_TO_HOST));
 
     // -----------------------------------------------------------------------
     // Step 8: Compare with CPU golden
@@ -239,18 +230,18 @@ int main() {
         double g = static_cast<double>(golden[i]);
         double a = static_cast<double>(hostOutput[i]);
         double relErr = std::abs(a - g) / (std::abs(g) + eps);
-        if (relErr > maxRelErr) maxRelErr = relErr;
+        if (relErr > maxRelErr)
+            maxRelErr = relErr;
         sumRelErr += relErr;
 
         if (i < printCount) {
             const char* matchStr = (relErr < 1.22e-4) ? "OK" : "MISMATCH";
-            printf("  %5ld | %9.4f | %9.6f | %10.6f | %s\n",
-                   (long)i, hostInput[i], golden[i], hostOutput[i], matchStr);
+            printf("  %5ld | %9.4f | %9.6f | %10.6f | %s\n", (long)i, hostInput[i], golden[i], hostOutput[i], matchStr);
         }
     }
 
     double meanRelErr = sumRelErr / static_cast<double>(totalElements);
-    double threshold = 1.22e-4;  // 2^-13 for float32
+    double threshold = 1.22e-4; // 2^-13 for float32
 
     std::cout << "\n  MERE (mean relative error) = " << meanRelErr << std::endl;
     std::cout << "  MARE (max relative error)  = " << maxRelErr << std::endl;
@@ -263,7 +254,8 @@ int main() {
     // -----------------------------------------------------------------------
     std::cout << "\n[Step 9] Cleaning up..." << std::endl;
 
-    if (workspace) aclrtFree(workspace);
+    if (workspace)
+        aclrtFree(workspace);
     aclDestroyTensor(xTensor);
     aclDestroyTensor(outTensor);
     aclrtFree(xDevAddr);

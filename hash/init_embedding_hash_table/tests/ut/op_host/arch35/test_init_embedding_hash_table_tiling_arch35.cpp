@@ -77,7 +77,7 @@ TEST_F(InitEmbeddingHashTableTiling, InitEmbeddingHashTable_tiling_0)
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     gert::StorageShape table_handle = {{5}, {5}};
     gert::StorageShape sampled_values = {{16}, {16}};
     auto holder = gert::TilingContextFaker()
@@ -86,7 +86,7 @@ TEST_F(InitEmbeddingHashTableTiling, InitEmbeddingHashTable_tiling_0)
                       .InputShapes({&table_handle, &sampled_values})
                       .OutputShapes({&table_handle})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
@@ -97,7 +97,7 @@ TEST_F(InitEmbeddingHashTableTiling, InitEmbeddingHashTable_tiling_0)
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext *tiling_context = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);

@@ -17,18 +17,20 @@
 
 using namespace FusedLinearOnlineMaxSum;
 
-extern "C" __global__ __aicore__ void fused_linear_online_max_sum(
-    GM_ADDR input, GM_ADDR weight, GM_ADDR target, GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal,
-    GM_ADDR predictedLogitsLocal, GM_ADDR targetMask, GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut,
-    GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void fused_linear_online_max_sum(GM_ADDR input, GM_ADDR weight, GM_ADDR target,
+                                                                  GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal,
+                                                                  GM_ADDR predictedLogitsLocal, GM_ADDR targetMask,
+                                                                  GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut,
+                                                                  GM_ADDR workspace, GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     GET_TILING_DATA(tilingData, tiling);
     AscendC::TPipe pipe;
-    __gm__ uint8_t *userWorkspace = GetUserWorkspace(workspace);
+    __gm__ uint8_t* userWorkspace = GetUserWorkspace(workspace);
 
-#define INIT_AND_PROCESS                                                                                \
-    op.Init(tilingData, input, weight, target, logitsMaxLocal, sumExpLogitsLocal, predictedLogitsLocal, \
-            targetMask, maskedTarget, vocabParallelLogitsOut, userWorkspace, &pipe);                    \
+#define INIT_AND_PROCESS                                                                                            \
+    op.Init(tilingData, input, weight, target, logitsMaxLocal, sumExpLogitsLocal, predictedLogitsLocal, targetMask, \
+            maskedTarget, vocabParallelLogitsOut, userWorkspace, &pipe);                                            \
     op.Process()
 
 #if (defined(DTYPE_INPUT) && defined(DTYPE_TARGET))

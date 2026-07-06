@@ -28,14 +28,10 @@ protected:
 
 TEST_F(l2_scatter_nd_test, case_1)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -45,14 +41,10 @@ TEST_F(l2_scatter_nd_test, case_1)
 
 TEST_F(l2_scatter_nd_test, case_2)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int64_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -62,14 +54,10 @@ TEST_F(l2_scatter_nd_test, case_2)
 
 TEST_F(l2_scatter_nd_test, case_3)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -79,14 +67,10 @@ TEST_F(l2_scatter_nd_test, case_3)
 
 TEST_F(l2_scatter_nd_test, case_4)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int64_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -96,14 +80,10 @@ TEST_F(l2_scatter_nd_test, case_4)
 
 TEST_F(l2_scatter_nd_test, case_5)
 {
-    auto self = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int64_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{0, 0, 1, 1});
-    auto out = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{0, 0, 1, 1});
+    auto out = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -113,14 +93,10 @@ TEST_F(l2_scatter_nd_test, case_5)
 
 TEST_F(l2_scatter_nd_test, case_6)
 {
-    auto self = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int64_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{0, 0, 1, 1});
-    auto out = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{0, 0, 1, 1});
+    auto out = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -131,14 +107,10 @@ TEST_F(l2_scatter_nd_test, case_6)
 // 类型
 TEST_F(l2_scatter_nd_test, case_7)
 {
-    auto self = TensorDesc({8}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_DOUBLE, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_DOUBLE, ACL_FORMAT_ND).Value(vector<double>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_DOUBLE, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -149,14 +121,10 @@ TEST_F(l2_scatter_nd_test, case_7)
 // shape
 TEST_F(l2_scatter_nd_test, case_8)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({2,2}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -167,12 +135,9 @@ TEST_F(l2_scatter_nd_test, case_8)
 // 空指针
 TEST_F(l2_scatter_nd_test, case_9)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 2, 3, 4});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, (aclTensor*)nullptr), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -183,12 +148,9 @@ TEST_F(l2_scatter_nd_test, case_9)
 // 空指针
 TEST_F(l2_scatter_nd_test, case_10)
 {
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT((aclTensor*)nullptr, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -199,12 +161,9 @@ TEST_F(l2_scatter_nd_test, case_10)
 // 空指针
 TEST_F(l2_scatter_nd_test, case_11)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, (aclTensor*)nullptr, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -215,12 +174,9 @@ TEST_F(l2_scatter_nd_test, case_11)
 // 空指针
 TEST_F(l2_scatter_nd_test, case_12)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<double>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, (aclTensor*)nullptr, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -245,21 +201,16 @@ TEST_F(l2_scatter_nd_test, case_null_tensor)
 // 数据类型bf16
 TEST_F(l2_scatter_nd_test, case_13)
 {
-    auto self = TensorDesc({8}, ACL_BF16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_BF16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_BF16, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_BF16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_BF16, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_BF16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B ||
-        op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_93
-    ) {
+        op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_93) {
         EXPECT_EQ(aclRet, ACL_SUCCESS);
     } else {
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -269,14 +220,10 @@ TEST_F(l2_scatter_nd_test, case_13)
 // shape
 TEST_F(l2_scatter_nd_test, case_14)
 {
-    auto self = TensorDesc({4,2}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int64_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{0, 0, 1, 1});
-    auto out = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND)
-        .Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({4, 2}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int64_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{0, 0, 1, 1});
+    auto out = TensorDesc({8}, ACL_BOOL, ACL_FORMAT_ND).Value(vector<bool>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -287,14 +234,10 @@ TEST_F(l2_scatter_nd_test, case_14)
 // indices数据类型
 TEST_F(l2_scatter_nd_test, case_15)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_UINT32, ACL_FORMAT_ND)
-        .Value(vector<uint32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_UINT32, ACL_FORMAT_ND).Value(vector<uint32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -305,14 +248,10 @@ TEST_F(l2_scatter_nd_test, case_15)
 // 输入NAN
 TEST_F(l2_scatter_nd_test, case_16)
 {
-    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, NAN, 1, 1, 1, 1, 1});
-    auto indices = TensorDesc({4,1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>{0, 1, 4, 6});
-    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{NAN, 2, 3, 4});
-    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
+    auto self = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, NAN, 1, 1, 1, 1, 1});
+    auto indices = TensorDesc({4, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>{0, 1, 4, 6});
+    auto updates = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{NAN, 2, 3, 4});
+    auto out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1});
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -323,14 +262,11 @@ TEST_F(l2_scatter_nd_test, case_16)
 // 输入大于8维
 TEST_F(l2_scatter_nd_test, case_17)
 {
-    auto self = TensorDesc({2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>(2 * 2 * 2 * 2 * 2 * 2));
-    auto indices = TensorDesc({4, 1, 1, 1, 1, 1, 1, 1}, ACL_INT32, ACL_FORMAT_ND)
-        .Value(vector<int32_t>(4));
+    auto self = TensorDesc({2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>(2 * 2 * 2 * 2 * 2 * 2));
+    auto indices = TensorDesc({4, 1, 1, 1, 1, 1, 1, 1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int32_t>(4));
     auto updates = TensorDesc({4, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>(4 * 2 * 2 * 2 * 2 * 2));
-    auto out = TensorDesc({2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>(2 * 2 * 2 * 2 * 2 * 2));
+                       .Value(vector<float>(4 * 2 * 2 * 2 * 2 * 2));
+    auto out = TensorDesc({2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>(2 * 2 * 2 * 2 * 2 * 2));
     auto ut = OP_API_UT(aclnnScatterNd, INPUT(self, indices, updates, out), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;

@@ -20,8 +20,8 @@
 namespace ConvolutionBackpropFunc {
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Fp32Nd2Nz(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+static __aicore__ inline void LoadToA1Fp32Nd2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
@@ -46,8 +46,8 @@ static __aicore__ inline void LoadToA1Fp32Nd2Nz(
         nd2NzParams.srcNdMatrixStride = 1;       // B_src_stride(loop4_src_stride)
         nd2NzParams.dstNzMatrixStride = 1;       // B_dst_stride(loop4_dst_stride)
         // D1_dst_stride(loop3_dst_stride)
-        nd2NzParams.dstNzC0Stride =
-            ShiftMulM0(ShiftCeilM0(nd2NzParams.nValue, self->ctx.tiling_->m0), self->ctx.tiling_->m0);
+        nd2NzParams.dstNzC0Stride = ShiftMulM0(ShiftCeilM0(nd2NzParams.nValue, self->ctx.tiling_->m0),
+                                               self->ctx.tiling_->m0);
         nd2NzParams.dstNzNStride = 1; // N_dst_stride(loop2_dst_stride)
         return;
     }
@@ -56,8 +56,8 @@ static __aicore__ inline void LoadToA1Fp32Nd2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void SplitWLoadToA1Dn2Nz(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
+static __aicore__ inline void SplitWLoadToA1Dn2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                  uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
 {
     uint32_t hoStartIdx = kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_;
     uint32_t kal1Use = (self->ctx.stepKaRound == (kaStepIdx + 1)) ?
@@ -78,8 +78,8 @@ static __aicore__ inline void SplitWLoadToA1Dn2Nz(
     dn2NzParams.srcDnMatrixStride = self->ctx.tiling_->wo;
 
     // dstNzC0Stride需要用nValue * dnNum 对齐k0
-    dn2NzParams.dstNzC0Stride =
-        ShiftCeilM0(dn2NzParams.nValue * dn2NzParams.dnNum, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
+    dn2NzParams.dstNzC0Stride = ShiftCeilM0(dn2NzParams.nValue * dn2NzParams.dnNum, self->ctx.tiling_->m0) *
+                                self->ctx.tiling_->m0;
     dn2NzParams.dstNzNStride = 1;
     // NDC1HWC0排布，Matrix数量配置的是H轴，目的Matrix间隔为W*C0，即nValue * k0;
     dn2NzParams.dstNzMatrixStride = dn2NzParams.nValue * self->ctx.tiling_->k0;
@@ -88,8 +88,8 @@ static __aicore__ inline void SplitWLoadToA1Dn2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Fp16Dn2Nz(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
+static __aicore__ inline void LoadToA1Fp16Dn2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         dn2NzParams.dnNum = 1;
@@ -109,8 +109,8 @@ static __aicore__ inline void LoadToA1Fp16Dn2Nz(
 
         dn2NzParams.srcDValue = self->ctx.dhwO_;
         // 由于dnNum为1，可以不配置srcDnMatrixStride
-        dn2NzParams.dstNzC0Stride =
-            ShiftCeilChannelSize<Intf>(dn2NzParams.nValue, self->ctx.tiling_->k0) * self->ctx.tiling_->k0;
+        dn2NzParams.dstNzC0Stride = ShiftCeilChannelSize<Intf>(dn2NzParams.nValue, self->ctx.tiling_->k0) *
+                                    self->ctx.tiling_->k0;
         dn2NzParams.dstNzNStride = 1;
         // 由于dnNum为1，可以不配置// B_dst_stride(loop4_dst_stride)
         dn2NzParams.dstNzMatrixStride = 1;
@@ -121,8 +121,8 @@ static __aicore__ inline void LoadToA1Fp16Dn2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Fp32Dn2Nz(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
+static __aicore__ inline void LoadToA1Fp32Dn2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
@@ -156,8 +156,8 @@ static __aicore__ inline void LoadToA1Fp32Dn2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Nd2NzNormal(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+static __aicore__ inline void LoadToA1Nd2NzNormal(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                  uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
 {
     nd2NzParams.ndNum = 1;
     if (self->ctx.stepKaRound == (kaStepIdx + 1)) {
@@ -175,15 +175,15 @@ static __aicore__ inline void LoadToA1Nd2NzNormal(
     }
 
     nd2NzParams.srcDValue = self->ctx.tiling_->cout;
-    nd2NzParams.dstNzC0Stride =
-        ShiftCeilChannelSize<Intf>(nd2NzParams.nValue, self->ctx.tiling_->k0) * self->ctx.tiling_->k0;
+    nd2NzParams.dstNzC0Stride = ShiftCeilChannelSize<Intf>(nd2NzParams.nValue, self->ctx.tiling_->k0) *
+                                self->ctx.tiling_->k0;
     nd2NzParams.dstNzNStride = 1;
     nd2NzParams.dstNzMatrixStride = 1;
 }
 
 template <class Intf>
-static __aicore__ inline void SplitWLoadToA1Nd2Nz(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+static __aicore__ inline void SplitWLoadToA1Nd2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                  uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
 {
     uint32_t hoStartIdx = kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_;
     uint32_t kal1Use = (self->ctx.stepKaRound == (kaStepIdx + 1)) ?
@@ -204,8 +204,8 @@ static __aicore__ inline void SplitWLoadToA1Nd2Nz(
     nd2NzParams.srcNdMatrixStride = self->ctx.tiling_->wo * self->ctx.tiling_->cout;
 
     // dstNzC0Stride需要用nValue * dnNum 对齐m0
-    nd2NzParams.dstNzC0Stride =
-        ShiftCeilM0(nd2NzParams.nValue * nd2NzParams.ndNum, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
+    nd2NzParams.dstNzC0Stride = ShiftCeilM0(nd2NzParams.nValue * nd2NzParams.ndNum, self->ctx.tiling_->m0) *
+                                self->ctx.tiling_->m0;
     nd2NzParams.dstNzNStride = 1;
     // NDC1HWC0排布，Matrix数量配置的是H轴，目的Matrix间隔为W*C0，即nValue * k0;
     nd2NzParams.dstNzMatrixStride = nd2NzParams.nValue * self->ctx.tiling_->k0;
@@ -214,8 +214,8 @@ static __aicore__ inline void SplitWLoadToA1Nd2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Fp16Nd2Nz(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+static __aicore__ inline void LoadToA1Fp16Nd2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         LoadToA1Nd2NzNormal(self, kaIdx, params, kaStepIdx, nd2NzParams);
@@ -225,9 +225,9 @@ static __aicore__ inline void LoadToA1Fp16Nd2Nz(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Dn2NzBaseUseMEqualOne(
-    Intf* self, const Out2L1ScalarParams& params, uint64_t kaStepIdx, uint32_t totalSize,
-    LocalTensor<typename Intf::SrcT>& useA1Buf)
+static __aicore__ inline void LoadToA1Dn2NzBaseUseMEqualOne(Intf* self, const Out2L1ScalarParams& params,
+                                                            uint64_t kaStepIdx, uint32_t totalSize,
+                                                            LocalTensor<typename Intf::SrcT>& useA1Buf)
 {
     uint32_t calCount = (totalSize * sizeof(typename Intf::SrcT) / 32) * (32 / sizeof(typename Intf::SrcT));
     uint32_t tailCount = totalSize - calCount;
@@ -253,9 +253,9 @@ static __aicore__ inline void LoadToA1Dn2NzBaseUseMEqualOne(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1Nd2NzBaseUseMEqualOne(
-    Intf* self, const Out2L1ScalarParams& params, uint64_t kaStepIdx, uint32_t totalSize,
-    LocalTensor<typename Intf::SrcT>& useA1Buf)
+static __aicore__ inline void LoadToA1Nd2NzBaseUseMEqualOne(Intf* self, const Out2L1ScalarParams& params,
+                                                            uint64_t kaStepIdx, uint32_t totalSize,
+                                                            LocalTensor<typename Intf::SrcT>& useA1Buf)
 {
     uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + kaStepIdx * self->ctx.kal1_ * self->ctx.tiling_->cout;
     Dn2NzParams dn2NzParams;
@@ -271,9 +271,8 @@ static __aicore__ inline void LoadToA1Nd2NzBaseUseMEqualOne(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1BaseUseMEqualOne(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx,
-    LocalTensor<typename Intf::SrcT>& useA1Buf)
+static __aicore__ inline void LoadToA1BaseUseMEqualOne(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                       uint64_t kaStepIdx, LocalTensor<typename Intf::SrcT>& useA1Buf)
 {
     self->ctx.alignedL1UseM_ = params.isLastMAL1 ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
     uint32_t totalSize;
@@ -292,9 +291,8 @@ static __aicore__ inline void LoadToA1BaseUseMEqualOne(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToA1ForTransFormat(
-    Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx,
-    LocalTensor<typename Intf::SrcT>& useA1Buf)
+static __aicore__ inline void LoadToA1ForTransFormat(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                                     uint64_t kaStepIdx, LocalTensor<typename Intf::SrcT>& useA1Buf)
 {
     if (self->ctx.baseUseM_ == 1) {
         LoadToA1BaseUseMEqualOne(self, kaIdx, params, kaStepIdx, useA1Buf);
@@ -326,7 +324,7 @@ static __aicore__ inline void LoadToA1ForTransFormat(
         uint64_t offset = kaStepIdx * self->ctx.kal1_ * self->ctx.tiling_->cout;
         if (unlikely(self->ctx.isSplitWo_)) {
             offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo) *
-                        self->ctx.tiling_->cout;
+                     self->ctx.tiling_->cout;
         }
         uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
         if constexpr (IsSameType<typename Intf::SrcT, float>::value) {

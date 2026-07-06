@@ -15,8 +15,7 @@
 #include "index_check.h"
 
 namespace AscendC {
-extern "C" __global__ __aicore__ void index_check(
-    GM_ADDR bounds, GM_ADDR indexList, GM_ADDR workSpace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void index_check(GM_ADDR bounds, GM_ADDR indexList, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;

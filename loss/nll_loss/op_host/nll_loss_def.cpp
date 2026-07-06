@@ -44,9 +44,7 @@ public:
         this->Attr("ignore_index").AttrType(OPTIONAL).Int(DEFAULT_IGNORE_IDX);
 
         OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        aicoreConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

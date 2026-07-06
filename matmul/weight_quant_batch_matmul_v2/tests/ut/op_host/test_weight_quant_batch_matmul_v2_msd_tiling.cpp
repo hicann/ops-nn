@@ -35,9 +35,8 @@ struct WeightQuantBatchMatmulV2TilingMsdTestParam {
     uint64_t tilingKey;
 };
 
-class TestWeightQuantBatchMatmulV2TilingMsd : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingMsdTestParam>
-{
-};
+class TestWeightQuantBatchMatmulV2TilingMsd
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingMsdTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -233,11 +232,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingMsdTestParam& p
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(hasTilingCompileInfo ? &compileInfo : nullptr)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -249,12 +248,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingMsdTestParam& p
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(innerPrecise)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(innerPrecise)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -294,14 +292,14 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingMsd, generalTest)
 //       -1: per channel, 1: per tensor, > 1: per group
 
 static WeightQuantBatchMatmulV2TilingMsdTestParam casesParams2040[] = {
-    {"KeyMsdCase_64_2560_5120_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 20, 365332066075393}, //611200UL
+    {"KeyMsdCase_64_2560_5120_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 20, 365332066075393}, // 611200UL
     {"KeyMsdCase_1_4320_10240_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 20, 365332602946305},
     {"KeyMsdCase2_8_10240_8640_1_0_0_0_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 17, 365332066075393},
     {"msdCase_1_10240_1536_1_0_0_1_0_0_-1_FLOAT16_INT8_UINT64_FLOAT16_20_40", 6, 365332066075393},
 };
 
 static WeightQuantBatchMatmulV2TilingMsdTestParam casesParams2448[] = {
-    {"xf65BCase1_10_8192_3072_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356536509924097}, //10611210UL
+    {"xf65BCase1_10_8192_3072_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356536509924097}, // 10611210UL
     {"xf13BCase1_32_14336_5120_1_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356536509924097},
     {"msdInt4fuzzCase_64_65504_10208_0_0_0_0_0_1_-1_FLOAT16_INT4_UINT64_FLOAT16_24_48", 24, 356261632017153},
     {"KeyMsdSplitKCase_4_20480_5120_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16_24_48", 23, 356536509924097},
@@ -319,16 +317,16 @@ static WeightQuantBatchMatmulV2TilingMsdTestParam casesParams2448[] = {
 INSTANTIATE_TEST_CASE_P(MM2040, TestWeightQuantBatchMatmulV2TilingMsd, testing::ValuesIn(casesParams2040));
 INSTANTIATE_TEST_CASE_P(MM2448, TestWeightQuantBatchMatmulV2TilingMsd, testing::ValuesIn(casesParams2448));
 
-static void ThreadFunc(
-    const WeightQuantBatchMatmulV2TilingMsdTestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
+static void ThreadFunc(const WeightQuantBatchMatmulV2TilingMsdTestParam* params, size_t testcase_num, size_t thread_idx,
+                       size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
 }
 
-static void TestMultiThread(
-    const WeightQuantBatchMatmulV2TilingMsdTestParam* params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const WeightQuantBatchMatmulV2TilingMsdTestParam* params, size_t testcase_num,
+                            size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {
@@ -351,4 +349,3 @@ TEST_F(TestWeightQuantBatchMatmulV2TilingMsd, multi_thread_2448)
     // 用3个线程测试
     TestMultiThread(casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingMsdTestParam), 3);
 }
-

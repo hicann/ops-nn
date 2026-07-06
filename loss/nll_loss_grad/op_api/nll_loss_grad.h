@@ -14,9 +14,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* NLLLossGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const std::string& reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclOpExecutor* executor);
+const aclTensor* NLLLossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                             const aclTensor* weight, const std::string& reduction, int64_t ignoreIndex,
+                             const aclTensor* totalWeight, aclOpExecutor* executor);
 
 }
 

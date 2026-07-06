@@ -55,8 +55,8 @@ ACLNN_API aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnMaxPool2dWithMaskBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnMaxPool2dWithMaskBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                     aclrtStream stream);
 
 /**
  * @brief aclnnMaxPool2dWithIndicesBackward的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -94,8 +94,8 @@ ACLNN_API aclnnStatus aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize(
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnMaxPool2dWithIndicesBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnMaxPool2dWithIndicesBackward(void* workspace, uint64_t workspaceSize,
+                                                        aclOpExecutor* executor, aclrtStream stream);
 #ifdef __cplusplus
 }
 #endif

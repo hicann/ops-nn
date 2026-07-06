@@ -80,9 +80,8 @@ float Fp16ToFloat(uint16_t h)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -99,9 +98,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -130,7 +128,7 @@ int AclnnFusedMatmulTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* x2 = nullptr;
     aclTensor* x3 = nullptr;
     aclTensor* y = nullptr;
-    std::vector<uint16_t> xHostData(512, 0b0011110000000000); // 设置为fp16的1.0，512为xShape的大小
+    std::vector<uint16_t> xHostData(512, 0b0011110000000000);  // 设置为fp16的1.0，512为xShape的大小
     std::vector<uint16_t> x2HostData(512, 0b0011110000000000); // 512为x1Shape的大小
     std::vector<uint16_t> x3HostData(256, 0b0100000000000000); // 设置为fp16的2.0，256为x1Shape的大小
     std::vector<uint16_t> yHostData(256, 0);                   // 256为yShape的大小
@@ -183,9 +181,8 @@ int AclnnFusedMatmulTest(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yShape);
     std::vector<uint16_t> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultData[i]));

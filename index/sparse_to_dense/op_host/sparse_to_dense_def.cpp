@@ -16,49 +16,38 @@
 
 namespace ops {
 static const std::vector<ge::DataType> DataTypeValue = {
-    ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_INT64, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BOOL,
-    ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_INT64, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BOOL
-};
+    ge::DT_INT8,  ge::DT_UINT8, ge::DT_INT16,   ge::DT_UINT16, ge::DT_INT32, ge::DT_INT64, ge::DT_FLOAT16,
+    ge::DT_FLOAT, ge::DT_BF16,  ge::DT_BOOL,    ge::DT_INT8,   ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16,
+    ge::DT_INT32, ge::DT_INT64, ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_BF16,  ge::DT_BOOL};
 
 static const std::vector<ge::Format> format = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 static const std::vector<ge::DataType> DataTypeIndex = {
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64
-};
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 
 class SparseToDense : public OpDef {
 public:
-    explicit SparseToDense(const char* name) : OpDef(name) {
-        this->Input("indices")
-            .ParamType(REQUIRED)
-            .DataType(DataTypeIndex)
-            .Format(format)
-            .UnknownShapeFormat(format);
+    explicit SparseToDense(const char* name) : OpDef(name)
+    {
+        this->Input("indices").ParamType(REQUIRED).DataType(DataTypeIndex).Format(format).UnknownShapeFormat(format);
         this->Input("output_shape")
             .ParamType(REQUIRED)
             .DataType(DataTypeIndex)
             .Format(format)
             .UnknownShapeFormat(format)
             .ValueDepend(OPTIONAL);
-        this->Input("values")
-            .ParamType(REQUIRED)
-            .DataType(DataTypeValue)
-            .Format(format)
-            .UnknownShapeFormat(format);
+        this->Input("values").ParamType(REQUIRED).DataType(DataTypeValue).Format(format).UnknownShapeFormat(format);
         this->Input("default_value")
             .ParamType(REQUIRED)
             .DataType(DataTypeValue)
             .Format(format)
             .UnknownShapeFormat(format);
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(DataTypeValue)
-            .Format(format)
-            .UnknownShapeFormat(format);
+        this->Output("y").ParamType(REQUIRED).DataType(DataTypeValue).Format(format).UnknownShapeFormat(format);
 
         this->Attr("validate_indices").AttrType(OPTIONAL).Bool(true);
         OpAICoreConfig aicore_config;
@@ -73,4 +62,4 @@ public:
 };
 
 OP_ADD(SparseToDense);
-}
+} // namespace ops

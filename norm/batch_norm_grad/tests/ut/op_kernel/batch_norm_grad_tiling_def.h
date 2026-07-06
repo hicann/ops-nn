@@ -54,15 +54,15 @@ struct BatchNormGradRARFullLoadTilingData {
     int64_t formerUbDim;         // 一次完整的UB内，循环执行A轴的次数
     int64_t ubLoopOfFormerBlock; // 整核进行UB循环的次数，formerBlockDim/formerUbDim 向上取整
     int64_t ubTailOfFormerBlock; // 整核最后一轮UB循环，处理的A轴个数
-    int64_t ubLoopOfTailBlock; // 尾核进行UB循环的次数，tailBlockDim/formerUbDim 向上取整
-    int64_t ubTailOfTailBlock; // 尾核最后一轮UB循环，处理的A轴个数
+    int64_t ubLoopOfTailBlock;   // 尾核进行UB循环的次数，tailBlockDim/formerUbDim 向上取整
+    int64_t ubTailOfTailBlock;   // 尾核最后一轮UB循环，处理的A轴个数
 };
 
 struct BatchNormGradRARRecomputeTilingData {
     BatchNormGradBaseTilingData baseTilingData;
     BatchNormGradBinaryAddTilingData generalBinAddTilingData; // 整块的二分累加参数
-    BatchNormGradBinaryAddTilingData tailBinAddTilingData; // 整块+尾块的二分累加参数
-    int64_t ubRDimFactor;              // 一次完整的UB内，循环执行R轴的个数
+    BatchNormGradBinaryAddTilingData tailBinAddTilingData;    // 整块+尾块的二分累加参数
+    int64_t ubRDimFactor;                                     // 一次完整的UB内，循环执行R轴的个数
     int64_t ubRDimFactorAlign;         // 一次完整的UB内，循环对齐到block的R轴大小
     int64_t ubRDimLoopNum;             // 核内R轴UB循环的次数
     int64_t ubRDimTail;                // R轴尾块大小，R - ubRDimFactor * ubRDimLoopNum
@@ -205,12 +205,12 @@ struct BatchNormGradInferDxTilingData {
 struct BatchNormGradInferTilingData {
     BatchNormGradInferDxTilingData baseTilingData;
     BatchNormGradBinaryAddTilingData generalBinAddTilingData; // 整块的二分累加参数
-    BatchNormGradBinaryAddTilingData tailBinAddTilingData; // 整块+尾块的二分累加参数
-    int64_t blockNum;       // 参与计算的所有核数
-    int64_t tailBlockNum;   // 尾核的个数
-    int64_t formerBlockDim; // 整核分配的A轴个数，aDim/blockNum 向下取整
-    int64_t tailBlockDim;   // 尾核分配的A轴个数，aDim/blockNum 向上取整
-    int64_t ubRDimFactor;              // 一次完整的UB内，循环执行R轴的个数
+    BatchNormGradBinaryAddTilingData tailBinAddTilingData;    // 整块+尾块的二分累加参数
+    int64_t blockNum;                                         // 参与计算的所有核数
+    int64_t tailBlockNum;                                     // 尾核的个数
+    int64_t formerBlockDim;                                   // 整核分配的A轴个数，aDim/blockNum 向下取整
+    int64_t tailBlockDim;                                     // 尾核分配的A轴个数，aDim/blockNum 向上取整
+    int64_t ubRDimFactor;                                     // 一次完整的UB内，循环执行R轴的个数
     int64_t ubRDimFactorAlign;         // 一次完整的UB内，循环对齐到block的R轴大小
     int64_t ubRDimLoopNum;             // 核内R轴UB循环的次数
     int64_t ubRDimTail;                // R轴尾块大小，R - ubRDimFactor * ubRDimLoopNum

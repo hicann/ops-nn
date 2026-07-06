@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -22,23 +22,20 @@
 using namespace std;
 
 class l2_nanmedian_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "nanmedian_test SetUp" << endl;
-  }
+protected:
+    static void SetUpTestCase() { cout << "nanmedian_test SetUp" << endl; }
 
-  static void TearDownTestCase() {
-    cout << "nanmedian_test TearDown" << endl;
-  }
+    static void TearDownTestCase() { cout << "nanmedian_test TearDown" << endl; }
 };
 
-TEST_F(l2_nanmedian_test, case_001_self_out_shape_not_euqal) {
-  auto selfTensor = TensorDesc({3, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
-  auto outTensor = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+TEST_F(l2_nanmedian_test, case_001_self_out_shape_not_euqal)
+{
+    auto selfTensor = TensorDesc({3, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto outTensor = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-  auto ut = OP_API_UT(aclnnNanMedian, INPUT(selfTensor), OUTPUT(outTensor));
+    auto ut = OP_API_UT(aclnnNanMedian, INPUT(selfTensor), OUTPUT(outTensor));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

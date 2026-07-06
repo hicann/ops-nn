@@ -19,58 +19,32 @@ namespace optiling {
 
 class QuantBatchMatmulV4Checker4MmadS8S4 : public QuantBatchMatmulV3Checker4MmadS8S4 {
 public:
-    QuantBatchMatmulV4Checker4MmadS8S4(gert::TilingContext *context, const QuantBatchMatmulInfo &inputParams)
-        : QuantBatchMatmulV3Checker4MmadS8S4(context, inputParams) {}
+    QuantBatchMatmulV4Checker4MmadS8S4(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
+        : QuantBatchMatmulV3Checker4MmadS8S4(context, inputParams)
+    {}
 
     ~QuantBatchMatmulV4Checker4MmadS8S4() override = default;
 
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape, const gert::StorageShape *biasShape,
-                    const gert::StorageShape *pertokenShape, const std::vector<int64_t> &dimValueOfMKN) const override;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
 
 protected:
-
     // 根据V3/V4原型获取输入index
-    uint32_t GetX1Idx() const override
-    {
-        return X1_INDEX_V4;
-    }
-    uint32_t GetX2Idx() const override
-    {
-        return X2_INDEX_V4;
-    }
-    uint32_t GetScaleIdx() const override
-    {
-        return X2_SCALE_INDEX_V4;
-    }
-    uint32_t GetOffsetIdx() const override
-    {
-        return X2_OFFSET_INDEX_V4;
-    }
-    uint32_t GetBiasIdx() const override
-    {
-        return BIAS_INDEX_V4;
-    }
-    uint32_t GetPertokenIdx() const override
-    {
-        return X1_SCALE_INDEX_V4;
-    }
-    uint32_t GetX2TableIdx() const
-    {
-        return X2_TABLE_INDEX_V4;
-    }
+    uint32_t GetX1Idx() const override { return X1_INDEX_V4; }
+    uint32_t GetX2Idx() const override { return X2_INDEX_V4; }
+    uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX_V4; }
+    uint32_t GetOffsetIdx() const override { return X2_OFFSET_INDEX_V4; }
+    uint32_t GetBiasIdx() const override { return BIAS_INDEX_V4; }
+    uint32_t GetPertokenIdx() const override { return X1_SCALE_INDEX_V4; }
+    uint32_t GetX2TableIdx() const { return X2_TABLE_INDEX_V4; }
 
     bool CheckDtypesInRange() const override;
     bool CheckABDtypes() const override;
-    bool CalcSingleLutSize(const ge::DataType bDtype,
-                           const ge::DataType x2TableDtype,
-                           uint64_t &singleLutSize) const;
+    bool CalcSingleLutSize(const ge::DataType bDtype, const ge::DataType x2TableDtype, uint64_t& singleLutSize) const;
     bool CheckX2TableShape() const;
-    bool CheckDimValue(const gert::StorageShape *scaleShape,
-                       const gert::StorageShape *biasShape,
-                       const gert::StorageShape *offsetShape,
-                       const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckDimValue(const gert::StorageShape* scaleShape, const gert::StorageShape* biasShape,
+                       const gert::StorageShape* offsetShape, const std::vector<int64_t>& dimValueOfMKN) const;
     bool ExtraInputCheck() const override;
     bool CheckOffset(const gert::StorageShape* offsetShape) const override;
 };
-}  // namespace optiling
-
+} // namespace optiling

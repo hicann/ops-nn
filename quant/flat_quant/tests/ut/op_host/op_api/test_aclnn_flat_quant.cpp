@@ -21,21 +21,14 @@ using namespace std;
 
 class l2_flat_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_flat_quant_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_flat_quant_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_flat_quant_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_flat_quant_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& p1Shape, const vector<int64_t>& p2Shape,
-        const vector<int64_t>& outShape, const vector<int64_t>& scaleShape, aclDataType xDtype, aclDataType p1Dtype,
-        aclDataType p2Dtype, aclDataType outDtype, aclDataType scaleDtype, const double_t clipRatio,
-        aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& p1Shape, const vector<int64_t>& p2Shape,
+                    const vector<int64_t>& outShape, const vector<int64_t>& scaleShape, aclDataType xDtype,
+                    aclDataType p1Dtype, aclDataType p2Dtype, aclDataType outDtype, aclDataType scaleDtype,
+                    const double_t clipRatio, aclnnStatus expectRet)
     {
         auto x = TensorDesc(xShape, xDtype, ACL_FORMAT_NCL);
         auto p1 = TensorDesc(p1Shape, p1Dtype, ACL_FORMAT_ND);
@@ -53,18 +46,14 @@ public:
 TEST_F(l2_flat_quant_test, ascend910B2_success)
 {
     // data type cases
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_SUCCESS);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 8}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32,
-        ACL_FLOAT, 1.0, ACLNN_SUCCESS);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_BF16, ACL_BF16, ACL_BF16, ACL_INT4, ACL_FLOAT, 1.0,
-        ACLNN_SUCCESS);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 8}, {16}, ACL_BF16, ACL_BF16, ACL_BF16, ACL_INT32, ACL_FLOAT, 1.0,
-        ACLNN_SUCCESS);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_SUCCESS);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 8}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32,
+               ACL_FLOAT, 1.0, ACLNN_SUCCESS);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_BF16, ACL_BF16, ACL_BF16, ACL_INT4, ACL_FLOAT,
+               1.0, ACLNN_SUCCESS);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 8}, {16}, ACL_BF16, ACL_BF16, ACL_BF16, ACL_INT32, ACL_FLOAT,
+               1.0, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_flat_quant_test, ascend910B2_param_nullptr)
@@ -103,93 +92,66 @@ TEST_F(l2_flat_quant_test, ascend910B2_param_invalid)
 {
     // invalid x shape
     // axis is 0
-    CommonTest(
-        {0, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 0, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 0}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({0, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 0, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 0}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
     // axis exceeds limit
-    CommonTest(
-        {262145, 64, 64}, {64, 64}, {64, 64}, {262145, 64, 64}, {262145}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
-        ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 257, 64}, {257, 257}, {64, 64}, {16, 257, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 257}, {64, 64}, {257, 257}, {16, 64, 257}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({262145, 64, 64}, {64, 64}, {64, 64}, {262145, 64, 64}, {262145}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 257, 64}, {257, 257}, {64, 64}, {16, 257, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 257}, {64, 64}, {257, 257}, {16, 64, 257}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
     // invalid dtype
     // inconsistent dtype
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
     // unsupported dtype
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_INT32, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_INT32, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_INT32, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_INT32, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_INT32, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_INT32, 1.0, ACLNN_ERR_PARAM_INVALID);
     // invalid dim
-    CommonTest(
-        {16, 16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16, 64}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16, 64}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16,
+               ACL_INT4, ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
     // inconsistent shape
-    CommonTest(
-        {16, 64, 64}, {64, 65}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {65, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 65}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {65, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
     // invalid shape
-    CommonTest(
-        {16, 64, 65}, {64, 64}, {65, 65}, {16, 64, 65}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 8}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4, ACL_FLOAT,
-        1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 65, 8}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32,
-        ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 65}, {64, 64}, {65, 65}, {16, 64, 65}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 8}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 65, 8}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT32,
+               ACL_FLOAT, 1.0, ACLNN_ERR_PARAM_INVALID);
     // clipRatio not valid
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 1.5, ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
-        ACL_FLOAT, 0.0, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 1.5, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {16, 64, 64}, {16}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, ACL_INT4,
+               ACL_FLOAT, 0.0, ACLNN_ERR_PARAM_INVALID);
 }

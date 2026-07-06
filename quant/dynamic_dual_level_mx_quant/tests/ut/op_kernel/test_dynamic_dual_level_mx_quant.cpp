@@ -25,20 +25,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void dynamic_dual_level_mx_quant(
-    GM_ADDR x, GM_ADDR smooth_scale, GM_ADDR y, GM_ADDR level0_scale, GM_ADDR level1_scale, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void dynamic_dual_level_mx_quant(GM_ADDR x, GM_ADDR smooth_scale, GM_ADDR y,
+                                                                  GM_ADDR level0_scale, GM_ADDR level1_scale,
+                                                                  GM_ADDR workspace, GM_ADDR tiling);
 
 class dynamic_dual_level_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dynamic_dual_level_mx_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_dual_level_mx_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dynamic_dual_level_mx_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dynamic_dual_level_mx_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(dynamic_dual_level_mx_quant_test, test_case_100)
@@ -100,8 +94,8 @@ TEST_F(dynamic_dual_level_mx_quant_test, test_case_100)
                                                  GM_ADDR level1Scale, GM_ADDR workSpace, GM_ADDR tiling) {
         ::dynamic_dual_level_mx_quant<4>(x, smoothScale, y, level0Scale, level1Scale, workSpace, tiling);
     };
-    ICPU_RUN_KF(
-        dynamic_dual_level_mx_quant_kernel, blockDim, x, smoothScale, y, level0Scale, level1Scale, workSpace, tiling);
+    ICPU_RUN_KF(dynamic_dual_level_mx_quant_kernel, blockDim, x, smoothScale, y, level0Scale, level1Scale, workSpace,
+                tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(smoothScale);

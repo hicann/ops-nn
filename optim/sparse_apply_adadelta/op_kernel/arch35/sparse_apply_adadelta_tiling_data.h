@@ -28,4 +28,4 @@ struct SparseApplyAdadeltaTilingData {
     int32_t indicesDType = 0;
 };
 
-#endif  // SPARSE_APPLY_ADADELTA_TILING_DATA_H_
+#endif // SPARSE_APPLY_ADADELTA_TILING_DATA_H_

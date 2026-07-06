@@ -52,10 +52,9 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
 {
     auto size = GetShapeSize(shape);
     std::vector<DataType> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("relu6 result[%ld] is: %f\n", i, resultData[i]);
     }
@@ -90,9 +89,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-    aclDataType dataType, aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -105,9 +103,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -140,15 +137,14 @@ int main()
     Relu6CpuReference(selfXHostData.data(), cpuRefOut.data(), 8);
 
     LOG_PRINT("Before GetWorkspaceSize: selfX=%p, out=%p\n", (void*)selfX, (void*)out);
-    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, outDeviceAddr=%p\n",
-              selfXDeviceAddr, outDeviceAddr);
+    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, outDeviceAddr=%p\n", selfXDeviceAddr, outDeviceAddr);
 
     // 3. 调用 aclnnRelu6GetWorkspaceSize（第一段接口）
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     ret = aclnnRelu6GetWorkspaceSize(selfX, out, &workspaceSize, &executor);
-    LOG_PRINT("aclnnRelu6GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n",
-              ret, (unsigned long long)workspaceSize, (void*)executor);
+    LOG_PRINT("aclnnRelu6GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n", ret,
+              (unsigned long long)workspaceSize, (void*)executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRelu6GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据 workspaceSize 申请 device 内存
@@ -171,8 +167,8 @@ int main()
 
     // 7. 简单验证
     std::vector<DataType> npuOut(8);
-    ret = aclrtMemcpy(npuOut.data(), npuOut.size() * sizeof(DataType), outDeviceAddr,
-                      8 * sizeof(DataType), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(npuOut.data(), npuOut.size() * sizeof(DataType), outDeviceAddr, 8 * sizeof(DataType),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result for verification failed. ERROR: %d\n", ret); return ret);
 
     bool pass = true;

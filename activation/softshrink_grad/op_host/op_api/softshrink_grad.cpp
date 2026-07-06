@@ -22,16 +22,19 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SoftShrinkGrad);
 
-const aclTensor *SoftShrinkGrad(const aclTensor *gradOutput, const aclTensor *self,
-                                float lambda, aclOpExecutor *executor) {
-  auto gradInput = executor->AllocTensor(gradOutput->GetViewShape(), gradOutput->GetDataType(),
-                                         gradOutput->GetViewFormat());
-  CHECK_RET(gradInput != nullptr, nullptr);
+const aclTensor* SoftShrinkGrad(const aclTensor* gradOutput, const aclTensor* self, float lambda,
+                                aclOpExecutor* executor)
+{
+    auto gradInput = executor->AllocTensor(gradOutput->GetViewShape(), gradOutput->GetDataType(),
+                                           gradOutput->GetViewFormat());
+    CHECK_RET(gradInput != nullptr, nullptr);
 
-  L0_DFX(SoftShrinkGrad, gradOutput, self, lambda, gradInput);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftShrinkGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(gradInput), OP_ATTR(lambda));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftShrinkGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return gradInput;
+    L0_DFX(SoftShrinkGrad, gradOutput, self, lambda, gradInput);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftShrinkGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(gradInput),
+                                           OP_ATTR(lambda));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftShrinkGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return gradInput;
 }
-}  // namespace l0op
+} // namespace l0op

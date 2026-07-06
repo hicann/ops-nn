@@ -67,7 +67,8 @@ TEST_F(AdaptiveAvgPool2dGradInferShapeTest, adaptive_avg_pool2d_grad_infershape_
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .InputShapes({&yGradShape, &xShape})
                       .OutputShapes({&xGradShape})
-                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 128, 16, 16})}})
+                      .NodeAttrs(
+                          {{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 128, 16, 16})}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -142,7 +143,8 @@ TEST_F(AdaptiveAvgPool2dGradInferShapeTest, adaptive_avg_pool2d_grad_infershape_
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .InputShapes({&yGradShape, &xShape})
                       .OutputShapes({&xGradShape})
-                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 128, 16, 512})}})
+                      .NodeAttrs(
+                          {{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 128, 16, 512})}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -177,9 +179,9 @@ TEST_F(AdaptiveAvgPool2dGradInferShapeTest, adaptive_avg_pool2d_grad_infershape_
 
 // ==================== OP_LOGE_FOR Error Branch UT Cases ====================
 
-static void ExecuteInferShapeErrorTestCase(
-    const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& outputSizeAttr,
-    ge::DataType dtype, ge::Format format)
+static void ExecuteInferShapeErrorTestCase(const std::vector<int64_t>& yGradShapeVec,
+                                           const std::vector<int64_t>& outputSizeAttr, ge::DataType dtype,
+                                           ge::Format format)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveAvgPool2dGrad")->infer_shape;
 
@@ -240,7 +242,8 @@ TEST_F(AdaptiveAvgPool2dGradInferShapeTest, infershape_invalid_grad_dtype)
                               .NodeOutputTd(0, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                               .InputDataTypes({&inputDtype, &inputDtype})
                               .OutputDataTypes({&outputDtype})
-                              .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 4, 16, 16})}})
+                              .NodeAttrs({{"output_size",
+                                           Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 4, 16, 16})}})
                               .Build();
 
     auto context = context_holder.GetContext<gert::InferDataTypeContext>();

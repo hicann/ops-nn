@@ -24,19 +24,13 @@
 #include "reverse_sequence_sba_common_tiling.h"
 #include "reverse_sequence_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 
-class ReverseSequenceA1SBATiling : public ReverseSequenceSBACommonTiling
-{
+class ReverseSequenceA1SBATiling : public ReverseSequenceSBACommonTiling {
 public:
-    explicit ReverseSequenceA1SBATiling(gert::TilingContext* context) : ReverseSequenceSBACommonTiling(context)
-    {
-    }
+    explicit ReverseSequenceA1SBATiling(gert::TilingContext* context) : ReverseSequenceSBACommonTiling(context) {}
 
-    ~ReverseSequenceA1SBATiling() override
-    {
-    }
+    ~ReverseSequenceA1SBATiling() override {}
 
 protected:
     void InitializationVars() override;

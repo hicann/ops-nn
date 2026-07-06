@@ -80,17 +80,17 @@ struct QuantBatchMatmulV4ToV3FusionPassParam {
     int64_t expectedGroupSize;
 };
 
-static std::string GetDirName(const std::string &path)
+static std::string GetDirName(const std::string& path)
 {
     auto pos = path.find_last_of("/\\");
     return pos == std::string::npos ? "." : path.substr(0, pos);
 }
 
-static std::vector<std::string> SplitCsvLine(const std::string &line)
+static std::vector<std::string> SplitCsvLine(const std::string& line)
 {
     std::vector<std::string> fields;
     SplitStr2Vec(line, ",", fields);
-    for (auto &field : fields) {
+    for (auto& field : fields) {
         field = Trim(field);
     }
     return fields;
@@ -105,7 +105,7 @@ static std::ifstream OpenCsvData()
         "../../../../matmul/quant_batch_matmul_v4/tests/ut/op_graph/" + std::string(TEST_CSV_FILE),
     };
     std::string triedPaths;
-    for (const auto &casePath : casePaths) {
+    for (const auto& casePath : casePaths) {
         if (casePath.empty()) {
             continue;
         }
@@ -121,7 +121,7 @@ static std::ifstream OpenCsvData()
     throw std::runtime_error("Open csv file failed, tried: " + triedPaths);
 }
 
-static Status ToStatus(const std::string &value)
+static Status ToStatus(const std::string& value)
 {
     if (value == "SUCCESS") {
         return SUCCESS;
@@ -135,7 +135,7 @@ static Status ToStatus(const std::string &value)
     throw std::runtime_error("Unsupported status: " + value);
 }
 
-static QuantBatchMatmulV4ToV3FusionPassParam ParseParam(const std::vector<std::string> &fields)
+static QuantBatchMatmulV4ToV3FusionPassParam ParseParam(const std::vector<std::string>& fields)
 {
     if (fields.size() != CASE_FIELD_NUM) {
         throw std::runtime_error("Invalid csv column size.");
@@ -211,22 +211,22 @@ static TensorDesc MakeTensorDesc(DataType dtype, int64_t dimNum)
     return desc;
 }
 
-static ge::es::EsTensorHolder CreateInput(ge::es::EsGraphBuilder &graphBuilder, size_t index, const std::string &name,
-    DataType dtype, int64_t dimNum)
+static ge::es::EsTensorHolder CreateInput(ge::es::EsGraphBuilder& graphBuilder, size_t index, const std::string& name,
+                                          DataType dtype, int64_t dimNum)
 {
-    auto input = graphBuilder.CreateInput(
-        static_cast<int64_t>(index), name.c_str(), dtype, FORMAT_ND, MakeDims(dimNum));
+    auto input = graphBuilder.CreateInput(static_cast<int64_t>(index), name.c_str(), dtype, FORMAT_ND,
+                                          MakeDims(dimNum));
     input.GetProducer()->UpdateOutputDesc(0, MakeTensorDesc(dtype, dimNum));
     return input;
 }
 
 template <typename NodePtr>
-static void UpdateInputDesc(const NodePtr &node, size_t inputIndex, DataType dtype, int64_t dimNum)
+static void UpdateInputDesc(const NodePtr& node, size_t inputIndex, DataType dtype, int64_t dimNum)
 {
     node->UpdateInputDesc(inputIndex, MakeTensorDesc(dtype, dimNum));
 }
 
-static std::shared_ptr<Graph> BuildGraph(const QuantBatchMatmulV4ToV3FusionPassParam &param)
+static std::shared_ptr<Graph> BuildGraph(const QuantBatchMatmulV4ToV3FusionPassParam& param)
 {
     auto graphBuilder = ge::es::EsGraphBuilder(param.caseName.c_str());
     std::array<ge::es::EsTensorHolder, V4_INPUT_NUM> inputs;
@@ -240,22 +240,21 @@ static std::shared_ptr<Graph> BuildGraph(const QuantBatchMatmulV4ToV3FusionPassP
         inputs[V4_BIAS_INDEX] = nullptr;
     }
     if (param.hasX1Scale) {
-        inputs[V4_X1SCALE_INDEX] = CreateInput(
-            graphBuilder, graphInputIndex++, "x1_scale", param.x1ScaleDtype, param.x1ScaleDimNum);
+        inputs[V4_X1SCALE_INDEX] = CreateInput(graphBuilder, graphInputIndex++, "x1_scale", param.x1ScaleDtype,
+                                               param.x1ScaleDimNum);
     } else {
         inputs[V4_X1SCALE_INDEX] = nullptr;
     }
     if (param.hasX2Scale) {
-        inputs[V4_X2SCALE_INDEX] = CreateInput(
-            graphBuilder, graphInputIndex++, "x2_scale", param.x2ScaleDtype, param.x2ScaleDimNum);
+        inputs[V4_X2SCALE_INDEX] = CreateInput(graphBuilder, graphInputIndex++, "x2_scale", param.x2ScaleDtype,
+                                               param.x2ScaleDimNum);
     } else {
         inputs[V4_X2SCALE_INDEX] = nullptr;
     }
     inputs[V4_YSCALE_INDEX] = nullptr;
     inputs[V4_X1OFFSET_INDEX] = nullptr;
     if (param.hasX2Offset) {
-        inputs[V4_X2OFFSET_INDEX] = CreateInput(
-            graphBuilder, graphInputIndex++, "x2_offset", param.x2OffsetDtype, 1);
+        inputs[V4_X2OFFSET_INDEX] = CreateInput(graphBuilder, graphInputIndex++, "x2_offset", param.x2OffsetDtype, 1);
     } else {
         inputs[V4_X2OFFSET_INDEX] = nullptr;
     }
@@ -263,8 +262,9 @@ static std::shared_ptr<Graph> BuildGraph(const QuantBatchMatmulV4ToV3FusionPassP
     inputs[V4_X2TABLE_INDEX] = nullptr;
 
     auto y = ge::es::QuantBatchMatmulV4(inputs[V4_X1_INDEX], inputs[V4_X2_INDEX], inputs[V4_BIAS_INDEX],
-        inputs[V4_X1SCALE_INDEX], inputs[V4_X2SCALE_INDEX], inputs[V4_YSCALE_INDEX], inputs[V4_X1OFFSET_INDEX],
-        inputs[V4_X2OFFSET_INDEX], inputs[V4_YOFFSET_INDEX], inputs[V4_X2TABLE_INDEX], param.dtypeAttr);
+                                        inputs[V4_X1SCALE_INDEX], inputs[V4_X2SCALE_INDEX], inputs[V4_YSCALE_INDEX],
+                                        inputs[V4_X1OFFSET_INDEX], inputs[V4_X2OFFSET_INDEX], inputs[V4_YOFFSET_INDEX],
+                                        inputs[V4_X2TABLE_INDEX], param.dtypeAttr);
     auto qmmNode = y.GetProducer();
     int32_t dtypeAttr = param.dtypeAttr;
     bool transposeX1 = param.transposeX1;
@@ -294,7 +294,7 @@ static std::shared_ptr<Graph> BuildGraph(const QuantBatchMatmulV4ToV3FusionPassP
     return graphBuilder.BuildAndReset({y});
 }
 
-static int CountNodes(const std::shared_ptr<Graph> &graph, const char *nodeType)
+static int CountNodes(const std::shared_ptr<Graph>& graph, const char* nodeType)
 {
     int count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -307,14 +307,14 @@ static int CountNodes(const std::shared_ptr<Graph> &graph, const char *nodeType)
     return count;
 }
 
-static void ExpectInputDtype(GNode &node, size_t inputIndex, DataType expectedDtype)
+static void ExpectInputDtype(GNode& node, size_t inputIndex, DataType expectedDtype)
 {
     TensorDesc desc;
     ASSERT_EQ(node.GetInputDesc(inputIndex, desc), GRAPH_SUCCESS);
     EXPECT_EQ(desc.GetDataType(), expectedDtype);
 }
 
-static void CheckFusedNode(const QuantBatchMatmulV4ToV3FusionPassParam &param, GNode &node)
+static void CheckFusedNode(const QuantBatchMatmulV4ToV3FusionPassParam& param, GNode& node)
 {
     ExpectInputDtype(node, V3_X1_INDEX, param.x1Dtype);
     ExpectInputDtype(node, V3_X2_INDEX, param.x2Dtype);
@@ -349,24 +349,23 @@ static void CheckFusedNode(const QuantBatchMatmulV4ToV3FusionPassParam &param, G
     EXPECT_EQ(groupSize, param.expectedGroupSize);
 }
 
-static std::string TestName(const testing::TestParamInfo<QuantBatchMatmulV4ToV3FusionPassParam> &info)
+static std::string TestName(const testing::TestParamInfo<QuantBatchMatmulV4ToV3FusionPassParam>& info)
 {
     std::string name = info.param.caseName;
-    for (auto &ch : name) {
+    for (auto& ch : name) {
         if (!std::isalnum(static_cast<unsigned char>(ch))) {
             ch = '_';
         }
     }
     return name;
 }
-}  // namespace
+} // namespace
 
-class QuantBatchMatmulV4ToV3FusionPassTest
-    : public testing::TestWithParam<QuantBatchMatmulV4ToV3FusionPassParam> {};
+class QuantBatchMatmulV4ToV3FusionPassTest : public testing::TestWithParam<QuantBatchMatmulV4ToV3FusionPassParam> {};
 
 TEST_P(QuantBatchMatmulV4ToV3FusionPassTest, RunFusionPass)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
     auto graph = BuildGraph(param);
 
     CustomPassContext passContext;
@@ -393,4 +392,4 @@ TEST_P(QuantBatchMatmulV4ToV3FusionPassTest, RunFusionPass)
 }
 
 INSTANTIATE_TEST_CASE_P(QuantBatchMatmulV4ToV3FusionPass, QuantBatchMatmulV4ToV3FusionPassTest,
-    testing::ValuesIn(GetParams()), TestName);
+                        testing::ValuesIn(GetParams()), TestName);

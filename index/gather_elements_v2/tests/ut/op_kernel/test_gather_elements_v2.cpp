@@ -31,8 +31,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void gather_elements_v2(
-    GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void gather_elements_v2(GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workSpace,
+                                                         GM_ADDR tiling);
 
 class gather_elements_v2_test : public testing::Test {
 protected:

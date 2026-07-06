@@ -29,10 +29,7 @@ using namespace std;
 
 class conv3d_backprop_input_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "conv3d_backprop_input_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "conv3d_backprop_input_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "conv3d_backprop_input_v2_test TearDown\n" << endl;
@@ -57,8 +54,10 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_1)
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data", "conv3d_backprop_input_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_input_v2_data", {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data",
+                                    "conv3d_backprop_input_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_input_v2_data",
+                          {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
     kernel_ut::RunGenTiling("./conv3d_backprop_input_v2_data", "test_case_1");
 
     string path = kernel_ut::GetTestWorkDir();
@@ -66,9 +65,10 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_1)
     ReadFile(path + "/conv3d_backprop_input_v2_data/filter.bin", filter_size, filter, filter_size);
     ReadFile(path + "/conv3d_backprop_input_v2_data/dedy.bin", dedy_size, dedy, dedy_size);
     ReadFile(path + "/conv3d_backprop_input_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-    
-    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_backprop_input_v2<0,0,0>(input_size, filter, out_backprop, y, workSpace, tiling);
+
+    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
+        ::conv3d_backprop_input_v2<0, 0, 0>(input_size, filter, out_backprop, y, workSpace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);
@@ -132,8 +132,10 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_2)
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data", "conv3d_backprop_input_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_input_v2_data", {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data",
+                                    "conv3d_backprop_input_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_input_v2_data",
+                          {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
     kernel_ut::RunGenTiling("./conv3d_backprop_input_v2_data", "test_case_2");
 
     string path = kernel_ut::GetTestWorkDir();
@@ -141,9 +143,10 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_2)
     ReadFile(path + "/conv3d_backprop_input_v2_data/filter.bin", filter_size, filter, filter_size);
     ReadFile(path + "/conv3d_backprop_input_v2_data/dedy.bin", dedy_size, dedy, dedy_size);
     ReadFile(path + "/conv3d_backprop_input_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-    
-    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_backprop_input_v2<0,0,0>(input_size, filter, out_backprop, y, workSpace, tiling);
+
+    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
+        ::conv3d_backprop_input_v2<0, 0, 0>(input_size, filter, out_backprop, y, workSpace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);
@@ -207,8 +210,10 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_3)
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data", "conv3d_backprop_input_v2_data");
-    kernel_ut::RunGenData("./conv3d_backprop_input_v2_data", {"2", "256", "256", "1", "4", "4", "1", "8", "8", "1", "2", "2"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_input_v2/tests/ut/op_kernel/conv3d_backprop_input_v2_data",
+                                    "conv3d_backprop_input_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_input_v2_data",
+                          {"2", "256", "256", "1", "4", "4", "1", "8", "8", "1", "2", "2"});
     kernel_ut::RunGenTiling("./conv3d_backprop_input_v2_data", "test_case_3");
 
     string path = kernel_ut::GetTestWorkDir();
@@ -216,9 +221,10 @@ TEST_F(conv3d_backprop_input_v2_test, test_case_3)
     ReadFile(path + "/conv3d_backprop_input_v2_data/filter.bin", filter_size, filter, filter_size);
     ReadFile(path + "/conv3d_backprop_input_v2_data/dedy.bin", dedy_size, dedy, dedy_size);
     ReadFile(path + "/conv3d_backprop_input_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
-    
-    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_backprop_input_v2<0,0,0>(input_size, filter, out_backprop, y, workSpace, tiling);
+
+    auto Conv3DDXKernel = [](GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace,
+                             GM_ADDR tiling) {
+        ::conv3d_backprop_input_v2<0, 0, 0>(input_size, filter, out_backprop, y, workSpace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);

@@ -25,7 +25,7 @@ class BmmBasicDequantBf16 {
 public:
     __aicore__ inline BmmBasicDequantBf16() {}
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR bias, GM_ADDR y, GM_ADDR workSpace,
-                                const QuantBatchMatmulV3TilingData *__restrict tilingData, TPipe *tPipe)
+                                const QuantBatchMatmulV3TilingData* __restrict tilingData, TPipe* tPipe)
     {
         blockIdx = GetBlockIdx();
         blockIdx /= GetTaskRation();
@@ -42,8 +42,9 @@ public:
         offsetWorkspaceC_ = BUFFER_NUM * blockIdx * baseM_ * baseN_;
 
         block_.Init(tilingData);
-        update_.template Init<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(&tilingData->matmulTiling, block_.params_);
-        loop_ = 0;  // all_gather_quant_batch_mat_mul.h循环调Init和Process，管理CV同步的计数器每次都要清零
+        update_.template Init<x1Format, x2Format, aTrans, bTrans, x1Type, x2Type>(&tilingData->matmulTiling,
+                                                                                  block_.params_);
+        loop_ = 0; // all_gather_quant_batch_mat_mul.h循环调Init和Process，管理CV同步的计数器每次都要清零
     }
 
     __aicore__ inline void Process()
@@ -63,7 +64,7 @@ public:
             reverse = !reverse;
             for (uint64_t nTileIndexTemp = 0; nTileIndexTemp < block_.params_.nTileCntL2; nTileIndexTemp++) {
                 uint64_t nTileIndex = reverse ? (block_.params_.nTileCntL2 - nTileIndexTemp - 1) : nTileIndexTemp;
-                if (mTileIndex > 0 || nTileIndex > 0) {  // 跳过首块
+                if (mTileIndex > 0 || nTileIndex > 0) { // 跳过首块
                     block_.UpdateBlockCnt(mTileIndex, nTileIndex);
                     block_.InitBlockIndex();
                     OneTileCompute(mTileIndex, nTileIndex, pingOffsetC, pongSwitch);
@@ -74,13 +75,10 @@ public:
         End();
     }
 
-    __aicore__ inline UPDATE_TYPE &GetUpdateObj()
-    {
-        return update_;
-    }
+    __aicore__ inline UPDATE_TYPE& GetUpdateObj() { return update_; }
 
 private:
-    __aicore__ inline void InitTilingData(const QuantBatchMatmulV3TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const QuantBatchMatmulV3TilingData* tilingData)
     {
         isPerTensor_ = tilingData->params.isPerTensor;
 
@@ -108,27 +106,27 @@ private:
                                              GM_ADDR workSpace)
     {
         if (isPerTensor_) {
-            scaleScalar_ = *((__gm__ scaleType *)scale);
+            scaleScalar_ = *((__gm__ scaleType*)scale);
         }
-        xGm_.SetGlobalBuffer((__gm__ x1Type *)x1);
-        weightGm_.SetGlobalBuffer((__gm__ x2Type *)x2);
+        xGm_.SetGlobalBuffer((__gm__ x1Type*)x1);
+        weightGm_.SetGlobalBuffer((__gm__ x2Type*)x2);
         if (m_ <= baseM_) {
             weightGm_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
         }
         if (hasBias_ != 0U) {
             if (biasDtype_ == DT_BF16) {
-                biasGmBf16_.SetGlobalBuffer((__gm__ bfloat16_t *)bias);
+                biasGmBf16_.SetGlobalBuffer((__gm__ bfloat16_t*)bias);
             } else if (biasDtype_ == DT_FLOAT16) {
-                biasGmFp16_.SetGlobalBuffer((__gm__ half *)bias);
+                biasGmFp16_.SetGlobalBuffer((__gm__ half*)bias);
             } else if (biasDtype_ == DT_FLOAT) {
-                biasGmFp32_.SetGlobalBuffer((__gm__ float *)bias);
+                biasGmFp32_.SetGlobalBuffer((__gm__ float*)bias);
             } else {
-                biasGmInt32_.SetGlobalBuffer((__gm__ int32_t *)bias);
+                biasGmInt32_.SetGlobalBuffer((__gm__ int32_t*)bias);
             }
         }
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
-        scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
-        mmOutGm_.SetGlobalBuffer((__gm__ int32_t *)workSpace, BUFFER_NUM * usedCoreNum_ * baseM_ * baseN_);
+        yGm_.SetGlobalBuffer((__gm__ yType*)y);
+        scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
+        mmOutGm_.SetGlobalBuffer((__gm__ int32_t*)workSpace, BUFFER_NUM * usedCoreNum_ * baseM_ * baseN_);
     }
 
     __aicore__ inline void InitLocalBuffers()
@@ -147,7 +145,7 @@ private:
     }
 
     __aicore__ inline void OneTileCompute(uint64_t mTileIndex, uint64_t nTileIndex, uint64_t pingOffsetC,
-                                          bool &pongSwitch)
+                                          bool& pongSwitch)
     {
         for (uint64_t j = 0; j < block_.realRound_; j++) {
             // 更新此次基本块的大小和输入输出地址
@@ -155,8 +153,8 @@ private:
                 block_.params_, offset_, mTileIndex, nTileIndex);
 
             offsetWorkspaceC_ = pingOffsetC + pongSwitch * baseM_ * baseN_;
-            BasicMMDequantCompute(block_.params_.singleCoreM, block_.params_.singleCoreN,
-                                    C2V_PING_FLAG | pongSwitch, V2C_PING_FLAG | pongSwitch);
+            BasicMMDequantCompute(block_.params_.singleCoreM, block_.params_.singleCoreN, C2V_PING_FLAG | pongSwitch,
+                                  V2C_PING_FLAG | pongSwitch);
             pongSwitch = !pongSwitch;
             block_.UpdateBlockIndex();
         }
@@ -166,7 +164,7 @@ private:
                                                  uint16_t c2vSyncFlag)
     {
         if ASCEND_IS_AIC {
-            if (++loop_ > 2) {  // 2表示跳过第一次ping和第一次pong
+            if (++loop_ > 2) { // 2表示跳过第一次ping和第一次pong
                 WaitEvent(v2cSyncFlag);
             }
             BasicMMCompute(basicM, basicN);
@@ -194,7 +192,7 @@ private:
         mm_.GetTensorC(mmOutGm_[offsetWorkspaceC_], 0, true);
     }
 
-    __aicore__ inline void BasicDequantCompute(GlobalTensor<int32_t> &curMmOutGm, uint32_t curAicM, uint32_t curAicN)
+    __aicore__ inline void BasicDequantCompute(GlobalTensor<int32_t>& curMmOutGm, uint32_t curAicM, uint32_t curAicN)
     {
         LocalTensor<float> dstLocalFp32;
         LocalTensor<float> biasFp32;
@@ -273,16 +271,16 @@ private:
         dstLocalFp32 = outFp32Tmp_.Get<float>();
         biasFp32 = biasFp32Tmp_.Get<float>();
         if (biasDtype_ == DT_BF16) {
-            oriBiasBf16 = vecQueBias_.AllocTensor<bfloat16_t>();  // free in CalBiasAdd
+            oriBiasBf16 = vecQueBias_.AllocTensor<bfloat16_t>(); // free in CalBiasAdd
         } else if (biasDtype_ == DT_FLOAT16) {
-            oriBiasFp16 = vecQueBias_.AllocTensor<half>();  // free in CalBiasAdd
+            oriBiasFp16 = vecQueBias_.AllocTensor<half>(); // free in CalBiasAdd
         } else if (biasDtype_ == DT_FLOAT) {
-            oriBiasFp32 = vecQueBias_.AllocTensor<float>();  // free in CalBiasAdd
+            oriBiasFp32 = vecQueBias_.AllocTensor<float>(); // free in CalBiasAdd
         }
     }
 
-    __aicore__ inline void BiasGm2Ub(LocalTensor<bfloat16_t> &oriBiasBf16, LocalTensor<half> &oriBiasFp16,
-                                     LocalTensor<float> &oriBiasFp32, DataCopyPadParams padParams, uint32_t curAivN)
+    __aicore__ inline void BiasGm2Ub(LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                     LocalTensor<float>& oriBiasFp32, DataCopyPadParams padParams, uint32_t curAivN)
     {
         DataCopyParams bias2UbParams{1, 0, 0, 0};
         bias2UbParams.blockLen = curAivN * biasDtypeSize_;
@@ -296,21 +294,21 @@ private:
         }
     }
 
-    __aicore__ inline void Bf16ScaleGm2Ub(LocalTensor<scaleType> &scaleLocal, GlobalTensor<scaleType> &scaleGm_,
-                                          DataCopyPadParams &padParams, uint32_t curAivN)
+    __aicore__ inline void Bf16ScaleGm2Ub(LocalTensor<scaleType>& scaleLocal, GlobalTensor<scaleType>& scaleGm_,
+                                          DataCopyPadParams& padParams, uint32_t curAivN)
     {
         DataCopyParams scale2UbParams{1, 0, 0, 0};
         scale2UbParams.blockLen = curAivN * sizeof(scaleType);
         DataCopyPad(scaleLocal, scaleGm_[offset_.offsetScale], scale2UbParams, padParams);
     }
 
-    __aicore__ inline void CalBiasAdd(LocalTensor<float> &dstLocalFp32, LocalTensor<float> &biasFp32,
-                                      LocalTensor<bfloat16_t> &oriBiasBf16, LocalTensor<half> &oriBiasFp16,
-                                      LocalTensor<float> &oriBiasFp32, LocalTensor<yType> &dstLocal, uint32_t curAivN,
+    __aicore__ inline void CalBiasAdd(LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32,
+                                      LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                      LocalTensor<float>& oriBiasFp32, LocalTensor<yType>& dstLocal, uint32_t curAivN,
                                       uint32_t curAivM)
     {
-        uint32_t computedAivN = DequantBmm::Align(curAivN, 8U);  // 8: 32B aligned for int32_t
-        uint32_t ubResAlignedN = DequantBmm::Align(curAivN);     // 16: sizeof(yType) is 2, 32B / 2
+        uint32_t computedAivN = DequantBmm::Align(curAivN, 8U); // 8: 32B aligned for int32_t
+        uint32_t ubResAlignedN = DequantBmm::Align(curAivN);    // 16: sizeof(yType) is 2, 32B / 2
         AscendC::PipeBarrier<PIPE_V>();
         if (biasDtype_ == DT_BF16) {
             Cast(biasFp32, oriBiasBf16, RoundMode::CAST_NONE, ubResAlignedN);
@@ -349,11 +347,11 @@ private:
     {
         if ASCEND_IS_AIC {
             // AIC跳过前两次Wait，也就是一次ping一次pong，这里补上
-            if (loop_ > 0) {  // 大于0表示需要补上开头跳过的ping
+            if (loop_ > 0) { // 大于0表示需要补上开头跳过的ping
                 WaitEvent(C2V_PING_FLAG);
             }
 
-            if (loop_ > 1) {  // 大于1表示需要补上开头跳过的pong
+            if (loop_ > 1) { // 大于1表示需要补上开头跳过的pong
                 WaitEvent(C2V_PONG_FLAG);
             }
             mm_.End();
@@ -371,7 +369,7 @@ private:
     GlobalTensor<scaleType> scaleGm_;
     GlobalTensor<int32_t> mmOutGm_;
 
-    TPipe *pipe_;
+    TPipe* pipe_;
     // define the que
     TQue<QuePosition::VECIN, 1> vecQueSrc_;
     TQue<QuePosition::VECIN, 1> vecQueScale_;
@@ -417,6 +415,6 @@ private:
     matmul::MatmulImpl<AMatmulType, BMatmulType, CMatmulType, BiasMatmulType, MM_DEFAULT_MDL_CFG> mm_;
 };
 
-}  // namespace AscendC
+} // namespace AscendC
 
-#endif  // QUANT_BATCH_MATMUL_V3_BF16_BASIC_H
+#endif // QUANT_BATCH_MATMUL_V3_BF16_BASIC_H

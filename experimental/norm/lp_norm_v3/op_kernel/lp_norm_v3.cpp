@@ -31,6 +31,6 @@ __global__ __aicore__ void lp_norm_v3(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, G
     REGISTER_TILING_DEFAULT(LpNormV3TilingData);
     GET_TILING_DATA_WITH_STRUCT(LpNormV3TilingData, tilingData, tiling);
     NsLpNormV3::LpNormV3<DTYPE_X, schMode> op;
-    op.Init(x, y , workspace, &tilingData);
+    op.Init(x, y, workspace, &tilingData);
     op.Process();
 }

@@ -25,9 +25,9 @@
 namespace BatchNormGradV3 {
 using namespace AscendC;
 
+using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::LoadDist;
 
 template <typename T1, typename T2, typename T3>
 class BatchNormGradV3InferChannelLast {
@@ -79,8 +79,8 @@ public:
             // ping、pang搬运首次或者tile块沿B轴换列时需要拷贝gamma、runningVar
             bool needCopy = (curIdx <= beginIdx + 1) || (curRowIdx <= 1);
 
-            int64_t curTileBLen =
-                curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail : tilingData_->tileBlockBLen;
+            int64_t curTileBLen = curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail :
+                                                                           tilingData_->tileBlockBLen;
 
             int64_t curTileALen = tilingData_->tileBlockALen;
             int64_t ubStrideT1 = 0;
@@ -97,7 +97,7 @@ public:
 
             CopyInDy(dyOffset, curTileBLen, curTileALen, ubStrideT1);
             CopyInGammaVarCommon(gammaQueue_, runningVarQueue_, gammaGm_, runningVarGm_, needCopy, weightOffset,
-                curTileALen);
+                                 curTileALen);
             Compute(curTileBLen, curTileALen);
             CopyOutDx(dyOffset, curTileBLen, curTileALen, ubStrideT1);
         }
@@ -142,9 +142,9 @@ private:
         runningVarQueue_.FreeTensor<T3>(runningVar);
     }
 
-    __aicore__ inline void VFNormalize(
-        __local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal, __local_mem__ T3* varLocal, __local_mem__ T1* dxLocal,
-        uint16_t curTileBLen, uint16_t curTileALen)
+    __aicore__ inline void VFNormalize(__local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal,
+                                       __local_mem__ T3* varLocal, __local_mem__ T1* dxLocal, uint16_t curTileBLen,
+                                       uint16_t curTileALen)
     {
         __VEC_SCOPE__
         {
@@ -163,8 +163,8 @@ private:
 
                 // load runningVar, gamma
                 LoadOneTensor<T3>(varLocal, runningVar, pregMaskFp32, offset);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 LoadOneTensor<T2>(gammaLocal, gamma, pregMaskFp32, offset);

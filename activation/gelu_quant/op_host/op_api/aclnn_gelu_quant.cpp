@@ -49,9 +49,9 @@ static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<op::DataType> Y_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8};
 
-static inline bool CheckNotNull(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const char* approximate,
-    const char* roundMode, const aclTensor* y, const aclTensor* outScaleOptional, bool isDynQuant)
+static inline bool CheckNotNull(const aclTensor* self, const aclTensor* inputScaleOptional, const char* approximate,
+                                const char* roundMode, const aclTensor* y, const aclTensor* outScaleOptional,
+                                bool isDynQuant)
 {
     OP_CHECK_NULL(self, return false);
     if (!isDynQuant) {
@@ -66,20 +66,16 @@ static inline bool CheckNotNull(
     return true;
 }
 
-static bool IsDynamicQuant(const char* quantMode)
-{
-    return (strncmp(quantMode, "dynamic", strlen("dynamic")) == 0);
-}
+static bool IsDynamicQuant(const char* quantMode) { return (strncmp(quantMode, "dynamic", strlen("dynamic")) == 0); }
 
 static bool GetQuantMode(const char* quantMode, bool& isDynQuant)
 {
     // 检查参数 quantMode 是否合法
     OP_LOGD("Get GeluQuant QuantMode: quantMode: %s", quantMode);
-    bool isValidquantMode =
-        strncmp(quantMode, "dynamic", strlen("dynamic")) == 0 || strncmp(quantMode, "static", strlen("static")) == 0;
-    OP_CHECK(
-        isValidquantMode, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Got quantMode neither \"dynamic\" nor \"static\"."),
-        return false);
+    bool isValidquantMode = strncmp(quantMode, "dynamic", strlen("dynamic")) == 0 ||
+                            strncmp(quantMode, "static", strlen("static")) == 0;
+    OP_CHECK(isValidquantMode, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Got quantMode neither \"dynamic\" nor \"static\"."),
+             return false);
     isDynQuant = IsDynamicQuant(quantMode);
     return true;
 }
@@ -90,17 +86,15 @@ static bool CheckRoundMode(const char* roundMode, int64_t dstType)
     const std::string mode = std::string(roundMode);
     if (dstType == op::DataType::DT_HIFLOAT8) {
         if (mode != "round" && mode != "hybrid") {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
             return false;
         }
     } else {
         if (mode != "rint") {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['rint'] for float8_e5m2/float8_e4m3fn/int8.",
-                mode.c_str());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "check roundMode failed, roundMode[%s] not in ['rint'] for float8_e5m2/float8_e4m3fn/int8.",
+                    mode.c_str());
             return false;
         }
     }
@@ -110,25 +104,23 @@ static bool CheckRoundMode(const char* roundMode, int64_t dstType)
 static inline bool CheckPlatform()
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    OP_CHECK(
-        Ops::NN::AclnnUtil::IsRegbase(npuArch),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for %u is not implemented.", static_cast<uint32_t>(npuArch)),
-        return false);
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(npuArch),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for %u is not implemented.", static_cast<uint32_t>(npuArch)),
+             return false);
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const aclTensor* y, const aclTensor* outScaleOptional, bool isDynQuant)
+static bool CheckShape(const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
+                       const aclTensor* y, const aclTensor* outScaleOptional, bool isDynQuant)
 {
     auto selfShape = self->GetViewShape();
     if (isDynQuant) {
         auto outScaleShape = outScaleOptional->GetViewShape();
         size_t selfDimNums = selfShape.GetDimNum();
         size_t outScaleDimNums = outScaleShape.GetDimNum();
-        OP_CHECK(
-            selfDimNums >= DIM_NUM_TWO && selfDimNums <= DIM_NUM_EIGHT,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input self Dims is %zu, should be 2-8D.", selfDimNums), return false);
+        OP_CHECK(selfDimNums >= DIM_NUM_TWO && selfDimNums <= DIM_NUM_EIGHT,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input self Dims is %zu, should be 2-8D.", selfDimNums),
+                 return false);
         OP_CHECK(
             outScaleDimNums >= 1 && outScaleDimNums <= DIM_NUM_SEVEN,
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output outScaleOptional Dims is %zu, should be 1-7D.", outScaleDimNums),
@@ -148,27 +140,24 @@ static bool CheckShape(
     if (inputScaleOptional != nullptr) {
         auto scaleShape = inputScaleOptional->GetViewShape();
         if (scaleShape.GetDimNum() != 1) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "InputScaleOptional Dims is %zu, only supported 1D.", scaleShape.GetDimNum());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InputScaleOptional Dims is %zu, only supported 1D.",
+                    scaleShape.GetDimNum());
             return false;
         }
     }
     if (inputOffsetOptional != nullptr) {
         auto offsetShape = inputOffsetOptional->GetViewShape();
         if (offsetShape.GetDimNum() != 1) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "inputOffsetOptional Dims is %zu, only supported 1D.",
-                offsetShape.GetDimNum());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inputOffsetOptional Dims is %zu, only supported 1D.",
+                    offsetShape.GetDimNum());
             return false;
         }
         if (inputScaleOptional != nullptr) {
             auto scaleShape = inputScaleOptional->GetViewShape();
-            OP_CHECK(
-                (scaleShape.GetDim(0) == offsetShape.GetDim(0)),
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "The shape of inputOffsetOptional matches the shape of inputScaleOptional."),
-                return false);
+            OP_CHECK((scaleShape.GetDim(0) == offsetShape.GetDim(0)),
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                             "The shape of inputOffsetOptional matches the shape of inputScaleOptional."),
+                     return false);
         }
     }
     OP_CHECK_SHAPE_NOT_EQUAL(self, y, return false);
@@ -187,9 +176,9 @@ static bool CheckDtypeCompatible(const aclTensor* x, const aclTensor* scale)
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const char* approximate, int64_t dstType, const aclTensor* y, const aclTensor* outScaleOptional)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inputScaleOptional,
+                            const aclTensor* inputOffsetOptional, const char* approximate, int64_t dstType,
+                            const aclTensor* y, const aclTensor* outScaleOptional)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, SELF_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(y, Y_DTYPE_SUPPORT_LIST, return false);
@@ -197,10 +186,9 @@ static bool CheckDtypeValid(
     if (inputScaleOptional != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(inputScaleOptional, SELF_DTYPE_SUPPORT_LIST, return false);
         if (!CheckDtypeCompatible(self, inputScaleOptional)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "dtype of input self:%s is not compatible with inputScaleOptional:%s.",
-                op::ToString(self->GetDataType()).GetString(),
-                op::ToString(inputScaleOptional->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype of input self:%s is not compatible with inputScaleOptional:%s.",
+                    op::ToString(self->GetDataType()).GetString(),
+                    op::ToString(inputScaleOptional->GetDataType()).GetString());
             return false;
         }
     }
@@ -215,54 +203,49 @@ static bool CheckDtypeValid(
     }
 
     const std::string approximateGelu = std::string(approximate);
-    OP_CHECK(
-        approximateGelu == "none" || approximateGelu == "tanh",
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "expected approximate equals 'none' or 'tanh', get: %s", approximateGelu.c_str()),
-        return false);
+    OP_CHECK(approximateGelu == "none" || approximateGelu == "tanh",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected approximate equals 'none' or 'tanh', get: %s",
+                     approximateGelu.c_str()),
+             return false);
 
-    OP_CHECK(
-        static_cast<int64_t>(y->GetDataType()) == dstType,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].", dstType,
-            op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(y->GetDataType()).GetString()),
-        return false);
+    OP_CHECK(static_cast<int64_t>(y->GetDataType()) == dstType,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].", dstType,
+                     op::ToString(static_cast<op::DataType>(dstType)).GetString(),
+                     op::ToString(y->GetDataType()).GetString()),
+             return false);
 
     return true;
 }
 
-static bool CheckOptCombValid(
-    const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional, const aclTensor* outScaleOptional,
-    bool isDynQuant)
+static bool CheckOptCombValid(const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
+                              const aclTensor* outScaleOptional, bool isDynQuant)
 {
     bool s1Exist = (nullptr != inputScaleOptional);
     bool s2Exist = (nullptr != inputOffsetOptional);
     bool outscaleExist = (nullptr != outScaleOptional);
-    OP_LOGD(
-        "Got aclnnGeluQuant opt input combination (%d,%d,%d), isDyn=%d", s1Exist, s2Exist, outscaleExist, isDynQuant);
+    OP_LOGD("Got aclnnGeluQuant opt input combination (%d,%d,%d), isDyn=%d", s1Exist, s2Exist, outscaleExist,
+            isDynQuant);
 
     if (isDynQuant) {
         bool validDynQuantComb = (s1Exist && s2Exist && outscaleExist) || (s1Exist && (!s2Exist) && outscaleExist) ||
                                  ((!s1Exist) && (!s2Exist) && outscaleExist);
-        OP_CHECK(
-            (validDynQuantComb),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid Optional input, output combination in dynamic quant mode"),
-            return false);
+        OP_CHECK((validDynQuantComb),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid Optional input, output combination in dynamic quant mode"),
+                 return false);
     } else {
-        bool validStcQuantComb =
-            (s1Exist && s2Exist && (!outscaleExist)) || (s1Exist && (!s2Exist) && (!outscaleExist));
-        OP_CHECK(
-            (validStcQuantComb),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid Optional input, output combination in static quant mode"),
-            return false);
+        bool validStcQuantComb = (s1Exist && s2Exist && (!outscaleExist)) ||
+                                 (s1Exist && (!s2Exist) && (!outscaleExist));
+        OP_CHECK((validStcQuantComb),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid Optional input, output combination in static quant mode"),
+                 return false);
     }
     return true;
 }
 
-inline static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const char* approximate, const char* quantMode, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* outScaleOptional)
+inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* inputScaleOptional,
+                                      const aclTensor* inputOffsetOptional, const char* approximate,
+                                      const char* quantMode, const char* roundMode, int64_t dstType, const aclTensor* y,
+                                      const aclTensor* outScaleOptional)
 {
     // 当前仅支持arch3510
     CHECK_RET(CheckPlatform(), ACLNN_ERR_RUNTIME_ERROR);
@@ -274,22 +257,18 @@ inline static aclnnStatus CheckParams(
 
     // 2. 查 可选输入组合
     // 3. 检查参数是否为空指针
-    CHECK_RET(
-        CheckNotNull(self, inputScaleOptional, approximate, roundMode, y, outScaleOptional, isDynQuant),
-        ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(self, inputScaleOptional, approximate, roundMode, y, outScaleOptional, isDynQuant),
+              ACLNN_ERR_PARAM_NULLPTR);
 
-    CHECK_RET(
-        CheckOptCombValid(inputScaleOptional, inputOffsetOptional, outScaleOptional, isDynQuant),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckOptCombValid(inputScaleOptional, inputOffsetOptional, outScaleOptional, isDynQuant),
+              ACLNN_ERR_PARAM_INVALID);
     // 4. 检查数据类型是否合法
-    CHECK_RET(
-        CheckDtypeValid(self, inputScaleOptional, inputOffsetOptional, approximate, dstType, y, outScaleOptional),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(self, inputScaleOptional, inputOffsetOptional, approximate, dstType, y, outScaleOptional),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查shape是否合法
-    CHECK_RET(
-        CheckShape(self, inputScaleOptional, inputOffsetOptional, y, outScaleOptional, isDynQuant),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(self, inputScaleOptional, inputOffsetOptional, y, outScaleOptional, isDynQuant),
+              ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckRoundMode(roundMode, dstType), ACLNN_ERR_PARAM_INVALID);
 
@@ -304,22 +283,22 @@ static const aclTensor* GetOptTensorContiguous(const aclTensor* opt, aclOpExecut
     return l0op::Contiguous(opt, executor);
 }
 
-aclnnStatus aclnnGeluQuantGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const char* approximate, const char* quantMode, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* outScaleOptional, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeluQuantGetWorkspaceSize(const aclTensor* self, const aclTensor* inputScaleOptional,
+                                           const aclTensor* inputOffsetOptional, const char* approximate,
+                                           const char* quantMode, const char* roundMode, int64_t dstType,
+                                           const aclTensor* y, const aclTensor* outScaleOptional,
+                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnGeluQuant,
-        DFX_IN(self, inputScaleOptional, inputOffsetOptional, approximate, quantMode, roundMode, dstType),
-        DFX_OUT(y, outScaleOptional));
+    L2_DFX_PHASE_1(aclnnGeluQuant,
+                   DFX_IN(self, inputScaleOptional, inputOffsetOptional, approximate, quantMode, roundMode, dstType),
+                   DFX_OUT(y, outScaleOptional));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        self, inputScaleOptional, inputOffsetOptional, approximate, quantMode, roundMode, dstType, y, outScaleOptional);
+    auto ret = CheckParams(self, inputScaleOptional, inputOffsetOptional, approximate, quantMode, roundMode, dstType, y,
+                           outScaleOptional);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空Tensor处理
@@ -337,9 +316,8 @@ aclnnStatus aclnnGeluQuantGetWorkspaceSize(
 
     auto inputScaleOptionalContiguous = GetOptTensorContiguous(inputScaleOptional, uniqueExecutor.get());
     auto inputOffsetOptionalContiguous = GetOptTensorContiguous(inputOffsetOptional, uniqueExecutor.get());
-    auto result = l0op::GeluQuant(
-        selfContiguous, inputScaleOptionalContiguous, inputOffsetOptionalContiguous, approximate, quantMode, roundMode,
-        dstType, uniqueExecutor.get());
+    auto result = l0op::GeluQuant(selfContiguous, inputScaleOptionalContiguous, inputOffsetOptionalContiguous,
+                                  approximate, quantMode, roundMode, dstType, uniqueExecutor.get());
     const aclTensor* yOut = std::get<0>(result);
     const aclTensor* outScaleOptionalOut = std::get<1>(result);
     CHECK_RET(yOut != nullptr && outScaleOptionalOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

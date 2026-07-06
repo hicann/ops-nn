@@ -18,19 +18,18 @@
 #include "add_layer_norm_single_row_less_tensor.h"
 #include "add_layer_norm_kernel.h"
 
-extern "C" __global__ __aicore__ void add_layer_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_layer_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias,
+                                                     GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
+                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     GET_TILING_DATA(tiling_data, tiling);
 
-#define INIT_AND_PROCESS                                                                                     \
-    op.Init(                                                                                                 \
-        x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace, tiling_data.numCore, tiling_data.numLastDim, \
-        tiling_data.numFirstDim, tiling_data.firstDimPerCore, tiling_data.firstDimPerCoreTail,               \
-        tiling_data.firstDimPerTime, tiling_data.lastDimPerTime, tiling_data.eps, tiling_data.aveFactor,     \
-        tiling_data.colMoveCnt, tiling_data.colTail, tiling_data.workspaceSize);                             \
+#define INIT_AND_PROCESS                                                                                         \
+    op.Init(x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace, tiling_data.numCore, tiling_data.numLastDim, \
+            tiling_data.numFirstDim, tiling_data.firstDimPerCore, tiling_data.firstDimPerCoreTail,               \
+            tiling_data.firstDimPerTime, tiling_data.lastDimPerTime, tiling_data.eps, tiling_data.aveFactor,     \
+            tiling_data.colMoveCnt, tiling_data.colTail, tiling_data.workspaceSize);                             \
     op.Process()
     if (TILING_KEY_IS(0)) {
         KernelAddLayerNorm<DTYPE_X1, DTYPE_X2, DTYPE_GAMMA, DTYPE_Y, 0> op(&pipe);

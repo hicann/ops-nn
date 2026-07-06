@@ -22,28 +22,20 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void apply_fused_ema_adam(
-    GM_ADDR grad, GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR s, GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref,
-    GM_ADDR v_ref, GM_ADDR s_ref, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void apply_fused_ema_adam(GM_ADDR grad, GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR s,
+                                                           GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref, GM_ADDR v_ref,
+                                                           GM_ADDR s_ref, GM_ADDR workspace, GM_ADDR tiling);
 
-class apply_fused_ema_adam_test : public testing::Test
-{
+class apply_fused_ema_adam_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "apply_fused_ema_adam_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "apply_fused_ema_adam_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "apply_fused_ema_adam_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "apply_fused_ema_adam_test TearDown\n" << std::endl; }
 };
 
 TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_0_bias_0)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
     system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f32' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -87,8 +79,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_0_bias_0)
     ReadFile("./apply_fused_ema_adam_data/step.bin", inputStepSize, step, inputStepSize);
 
     ICPU_SET_TILING_KEY(102);
-    ICPU_RUN_KF(
-        apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace, tiling);
+    ICPU_RUN_KF(apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace,
+                tiling);
 
     WriteFile("./apply_fused_ema_adam_data/out_var.bin", var_ref, outputSize);
     WriteFile("./apply_fused_ema_adam_data/out_m.bin", m_ref, outputSize);
@@ -111,9 +103,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_0_bias_0)
 
 TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_1_bias_1)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
     system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f32' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -157,8 +148,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_1_bias_1)
     ReadFile("./apply_fused_ema_adam_data/step.bin", inputStepSize, step, inputStepSize);
 
     ICPU_SET_TILING_KEY(102);
-    ICPU_RUN_KF(
-        apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace, tiling);
+    ICPU_RUN_KF(apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace,
+                tiling);
 
     WriteFile("./apply_fused_ema_adam_data/out_var.bin", var_ref, outputSize);
     WriteFile("./apply_fused_ema_adam_data/out_m.bin", m_ref, outputSize);
@@ -181,9 +172,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float32_mode_1_bias_1)
 
 TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_0_bias_1)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
     system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -227,8 +217,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_0_bias_1)
     ReadFile("./apply_fused_ema_adam_data/step.bin", inputStepSize, step, inputStepSize);
 
     ICPU_SET_TILING_KEY(101);
-    ICPU_RUN_KF(
-        apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace, tiling);
+    ICPU_RUN_KF(apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace,
+                tiling);
 
     WriteFile("./apply_fused_ema_adam_data/out_var.bin", var_ref, outputSize);
     WriteFile("./apply_fused_ema_adam_data/out_m.bin", m_ref, outputSize);
@@ -251,9 +241,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_0_bias_1)
 
 TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_1_bias_0)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
     system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'f16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -297,8 +286,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_1_bias_0)
     ReadFile("./apply_fused_ema_adam_data/step.bin", inputStepSize, step, inputStepSize);
 
     ICPU_SET_TILING_KEY(101);
-    ICPU_RUN_KF(
-        apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace, tiling);
+    ICPU_RUN_KF(apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace,
+                tiling);
 
     WriteFile("./apply_fused_ema_adam_data/out_var.bin", var_ref, outputSize);
     WriteFile("./apply_fused_ema_adam_data/out_m.bin", m_ref, outputSize);
@@ -321,9 +310,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_float16_mode_1_bias_0)
 
 TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_0_bias_0)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
     system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'bf16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -367,8 +355,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_0_bias_0)
     ReadFile("./apply_fused_ema_adam_data/step.bin", inputStepSize, step, inputStepSize);
 
     ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(
-        apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace, tiling);
+    ICPU_RUN_KF(apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace,
+                tiling);
 
     WriteFile("./apply_fused_ema_adam_data/out_var.bin", var_ref, outputSize);
     WriteFile("./apply_fused_ema_adam_data/out_m.bin", m_ref, outputSize);
@@ -391,9 +379,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_0_bias_0)
 
 TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_1_bias_1)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_fused_ema_adam/tests/ut/op_kernel/apply_fused_ema_adam_data ./");
     system("chmod -R 755 ./apply_fused_ema_adam_data/");
     system("cd ./apply_fused_ema_adam_data/ && python3 gen_data.py 'bf16' '[32, 64280]' '[1, 8]' '[-5, 5]' ");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -437,8 +424,8 @@ TEST_F(apply_fused_ema_adam_test, test_case_bfloat16_mode_1_bias_1)
     ReadFile("./apply_fused_ema_adam_data/step.bin", inputStepSize, step, inputStepSize);
 
     ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(
-        apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace, tiling);
+    ICPU_RUN_KF(apply_fused_ema_adam, blockDim, grad, var, m, v, s, step, var_ref, m_ref, v_ref, s_ref, workspace,
+                tiling);
 
     WriteFile("./apply_fused_ema_adam_data/out_var.bin", var_ref, outputSize);
     WriteFile("./apply_fused_ema_adam_data/out_m.bin", m_ref, outputSize);

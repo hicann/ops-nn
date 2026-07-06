@@ -33,22 +33,18 @@ using Ops::NN::Conv3dTilingEngineApi::Conv3dTilingEngine;
 
 namespace {
 
-static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base);
+static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::Conv3dBaseTiling& base);
 static optiling::Conv3dOpsTiling::NumBlocksRes ComputeNumBlocksViaEngine(
-    const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base);
+    const optiling::Conv3dOpsTiling::Conv3dBaseTiling& base);
 static std::unique_ptr<Conv3dTilingEngine> MakeInitializedEngineForTest(uint32_t aicoreNum = 20,
-                                                                        const char *socVersion = "Ascend910B");
-static std::vector<std::pair<std::string, Ops::NN::AnyValue>> MakeConv3DV2Attrs(const std::vector<int64_t> &strides,
-                                                                               const std::vector<int64_t> &pads,
-                                                                               const std::vector<int64_t> &dilations,
-                                                                               int64_t groups,
-                                                                               const std::string &dataFormat,
-                                                                               int64_t offsetX = 0,
-                                                                               const std::string &padMode = "SPECIFIC",
-                                                                               bool enableHf32 = false);
+                                                                        const char* socVersion = "Ascend910B");
+static std::vector<std::pair<std::string, Ops::NN::AnyValue>> MakeConv3DV2Attrs(
+    const std::vector<int64_t>& strides, const std::vector<int64_t>& pads, const std::vector<int64_t>& dilations,
+    int64_t groups, const std::string& dataFormat, int64_t offsetX = 0, const std::string& padMode = "SPECIFIC",
+    bool enableHf32 = false);
 
-const char *const DEFAULT_ATTR_VAL = "NONE";
-const std::vector<int64_t> kMinimalShape = {1, 1, 1, 1, 1};  // Minimal NCDHW shape for tiling context build.
+const char* const DEFAULT_ATTR_VAL = "NONE";
+const std::vector<int64_t> kMinimalShape = {1, 1, 1, 1, 1}; // Minimal NCDHW shape for tiling context build.
 
 struct Conv3DV2TilingTestParam {
     std::string caseName;
@@ -93,7 +89,8 @@ protected:
         fe::PlatFormInfos platform_info;
     };
 
-    CompileAndPlatformInfo CreateDefaultCompileAndPlatformInfo() {
+    CompileAndPlatformInfo CreateDefaultCompileAndPlatformInfo()
+    {
         CompileAndPlatformInfo info;
         info.compile_info.tilingType = "Conv3DV2";
         info.compile_info.aicoreNum = 20;
@@ -114,14 +111,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2AllDimEqualTo1)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 1;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -160,14 +157,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BatchDimEqualToAicoreNum)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 4096;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -194,7 +191,6 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2BatchDimEqualToAicoreNum)
     ASSERT_EQ(res.groupDim, expectRes.groupDim);
 }
 
-
 TEST_F(Conv3DV2TilingRuntime, TestConv3DV2KB)
 {
     uint32_t aicoreNum = 20;
@@ -207,14 +203,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2KB)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 16;
     shapeInfo.cIn = 3;
     shapeInfo.di = 26;
@@ -280,7 +276,6 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2KB)
     ASSERT_EQ(conv3dBT.tilingData_.convApiTiling.groupOpt, conv3dBT.attrInfo_.groupOpt);
 }
 
-
 TEST_F(Conv3DV2TilingRuntime, TestConv3DV2NdimEqualToAicoreNum)
 {
     uint32_t aicoreNum = 16;
@@ -293,14 +288,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2NdimEqualToAicoreNum)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 1;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -339,14 +334,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2MdimEqualToAicoreNum)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 1;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -385,14 +380,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2DodimEqualToAicoreNum)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 1;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -431,7 +426,7 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2GetGroupOptSuccess)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
     conv3dBT.attrInfo_.groups = 64;
@@ -456,14 +451,14 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2NumBlocksEqualToHoDim)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 1;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -504,15 +499,15 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2InitOutputOrderMMode)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    optiling::Conv3DTilingParseInfo &opInfo = conv3dBT.opInfo_;
+    optiling::Conv3DTilingParseInfo& opInfo = conv3dBT.opInfo_;
     opInfo.aicoreNum = aicoreNum;
     opInfo.l2Rate = 110;
     opInfo.l1Size = 64; // make sure M_MODE fits into L1
 
-    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo &shapeInfo = conv3dBT.shapeInfo_;
+    optiling::Conv3dOpsTiling::Conv3DAscendcShapesInfo& shapeInfo = conv3dBT.shapeInfo_;
     shapeInfo.batch = 1;
     shapeInfo.cIn = 1;
     shapeInfo.di = 1;
@@ -548,9 +543,8 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2InitOutputOrderMMode)
     engine.SetSingleOutputShapeByMode(engine.numBlocksRes_);
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleCo, static_cast<int64_t>(shapeInfo.cOut));
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleDo, static_cast<int64_t>(shapeInfo.dOut));
-    uint64_t expectedSingleM = optiling::Conv3dOpsTiling::CeilDiv(
-        static_cast<uint64_t>(shapeInfo.ho * shapeInfo.wo),
-        static_cast<uint64_t>(engine.numBlocksRes_.mDim));
+    uint64_t expectedSingleM = optiling::Conv3dOpsTiling::CeilDiv(static_cast<uint64_t>(shapeInfo.ho * shapeInfo.wo),
+                                                                  static_cast<uint64_t>(engine.numBlocksRes_.mDim));
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleM, static_cast<uint64_t>(expectedSingleM));
 }
 
@@ -566,7 +560,7 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2CheckPointWiseSuccess)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .Build();
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
     conv3dBT.shapeInfo_.kh = 1;
@@ -606,7 +600,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractOriginShapes_NCDHW)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -629,9 +623,9 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractOriginShapes_NCDHW)
 TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractOriginShapes_NDHWC)
 {
     // NDHWC input + DHWCN weight + NDHWC output.
-    gert::StorageShape fmap = {{2, 4, 5, 6, 3}, {2, 4, 5, 6, 3}};           // N D H W C
-    gert::StorageShape weight = {{1, 3, 3, 3, 7}, {1, 3, 3, 3, 7}};         // D H W C N
-    gert::StorageShape out = {{2, 4, 5, 6, 7}, {2, 4, 5, 6, 7}};            // N D H W C
+    gert::StorageShape fmap = {{2, 4, 5, 6, 3}, {2, 4, 5, 6, 3}};   // N D H W C
+    gert::StorageShape weight = {{1, 3, 3, 3, 7}, {1, 3, 3, 3, 7}}; // D H W C N
+    gert::StorageShape out = {{2, 4, 5, 6, 7}, {2, 4, 5, 6, 7}};    // N D H W C
 
     auto info = CreateDefaultCompileAndPlatformInfo();
 
@@ -642,7 +636,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractOriginShapes_NDHWC)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_NDHWC)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_DHWCN)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_NDHWC)
@@ -682,7 +676,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractPadList_ValidPadding)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -715,7 +709,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractPadList_MissingPadding)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -735,7 +729,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractPadList_InvalidDimension)
 
     std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrs = {
         {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3})},  // Wrong size.
+        {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3})}, // Wrong size.
     };
 
     auto info = CreateDefaultCompileAndPlatformInfo();
@@ -747,7 +741,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractPadList_InvalidDimension)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -778,7 +772,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractStrideList_NCDHW)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -814,7 +808,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractStrideList_NDHWC)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_NDHWC)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_DHWCN)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_NDHWC)
@@ -838,7 +832,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractStrideList_InvalidDimension)
     gert::StorageShape out = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
 
     std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrs = {
-        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3})},  // Wrong size.
+        {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3})}, // Wrong size.
     };
 
     auto info = CreateDefaultCompileAndPlatformInfo();
@@ -850,7 +844,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractStrideList_InvalidDimension)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -887,7 +881,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractDilationList_DefaultValue)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -925,7 +919,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractDilationList_Valid)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -951,7 +945,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractDilationList_InvalidDimension
     std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrs = {
         {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
         {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-        {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3})},  // Wrong size.
+        {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3})}, // Wrong size.
     };
 
     auto info = CreateDefaultCompileAndPlatformInfo();
@@ -963,7 +957,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractDilationList_InvalidDimension
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -1001,7 +995,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractGroups_DefaultAndPresent)
                              .InputShapes({&fmap, &weight})
                              .OutputShapes({&out})
                              .CompileInfo(&info_default.compile_info)
-                             .PlatformInfo(reinterpret_cast<char *>(&info_default.platform_info))
+                             .PlatformInfo(reinterpret_cast<char*>(&info_default.platform_info))
                              .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                              .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                              .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -1028,7 +1022,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractGroups_DefaultAndPresent)
                              .InputShapes({&fmap, &weight})
                              .OutputShapes({&out})
                              .CompileInfo(&info_present.compile_info)
-                             .PlatformInfo(reinterpret_cast<char *>(&info_present.platform_info))
+                             .PlatformInfo(reinterpret_cast<char*>(&info_present.platform_info))
                              .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                              .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                              .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
@@ -1057,17 +1051,14 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractBiasAndScaleShape_Optional)
                           .InputShapes({&fmap, &weight, nullptr, nullptr})
                           .OutputShapes({&out})
                           .CompileInfo(&info_none.compile_info)
-                          .PlatformInfo(reinterpret_cast<char *>(&info_none.platform_info))
+                          .PlatformInfo(reinterpret_cast<char*>(&info_none.platform_info))
                           .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                           .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                           .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                           .NodeInputTd(3, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                           .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                          .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                      {0, 0, 0, 0, 0, 0},
-                                                      {1, 1, 1, 1, 1},
-                                                      1,
-                                                      "NCDHW"))
+                          .NodeAttrs(
+                              MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                           .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling baseNone(holderNone.GetContext<gert::TilingContext>());
@@ -1088,17 +1079,14 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractBiasAndScaleShape_Optional)
                           .InputShapes({&fmap, &weight, &bias, &scale})
                           .OutputShapes({&out})
                           .CompileInfo(&info_both.compile_info)
-                          .PlatformInfo(reinterpret_cast<char *>(&info_both.platform_info))
+                          .PlatformInfo(reinterpret_cast<char*>(&info_both.platform_info))
                           .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                           .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                           .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                           .NodeInputTd(3, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                           .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                          .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                      {0, 0, 0, 0, 0, 0},
-                                                      {1, 1, 1, 1, 1},
-                                                      1,
-                                                      "NCDHW"))
+                          .NodeAttrs(
+                              MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                           .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling baseBoth(holderBoth.GetContext<gert::TilingContext>());
@@ -1125,15 +1113,11 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractAndSetDataTypesAndFormats)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW"))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1167,20 +1151,16 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractAndSetBiasScale_HF32Enabled)
                       .InputShapes({&fmap, &weight, &bias, &scale})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW",
-                                                  /*offsetX*/ 0,
-                                                  /*padMode*/ "SPECIFIC",
-                                                  /*enableHf32*/ true))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW",
+                                                   /*offsetX*/ 0,
+                                                   /*padMode*/ "SPECIFIC",
+                                                   /*enableHf32*/ true))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1224,16 +1204,13 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingPostTiling_BufferBounds)
                           .InputShapes({&fmap, &weight})
                           .OutputShapes({&out})
                           .CompileInfo(&compileInfo)
-                          .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                           .TilingData(tilingSmall.get())
                           .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                           .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                           .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                          .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                      {0, 0, 0, 0, 0, 0},
-                                                      {1, 1, 1, 1, 1},
-                                                      1,
-                                                      "NCDHW"))
+                          .NodeAttrs(
+                              MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                           .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling baseFail(holderFail.GetContext<gert::TilingContext>());
@@ -1251,16 +1228,12 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingPostTiling_BufferBounds)
                         .InputShapes({&fmap, &weight})
                         .OutputShapes({&out})
                         .CompileInfo(&compileInfo)
-                        .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                         .TilingData(tilingOk.get())
                         .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                         .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                         .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                        .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                    {0, 0, 0, 0, 0, 0},
-                                                    {1, 1, 1, 1, 1},
-                                                    1,
-                                                    "NCDHW"))
+                        .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                         .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling baseOk(holderOk.GetContext<gert::TilingContext>());
@@ -1269,7 +1242,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingPostTiling_BufferBounds)
     EXPECT_EQ(baseOk.PostTiling(), ge::GRAPH_SUCCESS);
 }
 
-static std::unique_ptr<Conv3dTilingEngine> MakeInitializedEngineForTest(uint32_t aicoreNum, const char *socVersion)
+static std::unique_ptr<Conv3dTilingEngine> MakeInitializedEngineForTest(uint32_t aicoreNum, const char* socVersion)
 {
     auto engine = std::make_unique<Conv3dTilingEngine>("Conv3DV2");
     engine->platformInfo_.aicoreNum = aicoreNum;
@@ -1285,14 +1258,9 @@ static std::unique_ptr<Conv3dTilingEngine> MakeInitializedEngineForTest(uint32_t
     return engine;
 }
 
-static std::vector<std::pair<std::string, Ops::NN::AnyValue>> MakeConv3DV2Attrs(const std::vector<int64_t> &strides,
-                                                                               const std::vector<int64_t> &pads,
-                                                                               const std::vector<int64_t> &dilations,
-                                                                               int64_t groups,
-                                                                               const std::string &dataFormat,
-                                                                               int64_t offsetX,
-                                                                               const std::string &padMode,
-                                                                               bool enableHf32)
+static std::vector<std::pair<std::string, Ops::NN::AnyValue>> MakeConv3DV2Attrs(
+    const std::vector<int64_t>& strides, const std::vector<int64_t>& pads, const std::vector<int64_t>& dilations,
+    int64_t groups, const std::string& dataFormat, int64_t offsetX, const std::string& padMode, bool enableHf32)
 {
     // NOTE: In these UT fakers, attr names are not used to bind by schema; values are appended in order.
     // Keep the append order aligned with conv3d_tiling_utils.h attr indices:
@@ -1313,7 +1281,7 @@ static std::vector<std::pair<std::string, Ops::NN::AnyValue>> MakeConv3DV2Attrs(
 // NumBlocksDecision helpers using Conv3dTilingEngine directly
 // ---------------------------------------------------------------------------
 
-static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base)
+static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::Conv3dBaseTiling& base)
 {
     Conv3dTilingEngine engine("Conv3DV2");
     engine.platformInfo_.aicoreNum = static_cast<uint32_t>(base.opInfo_.aicoreNum);
@@ -1346,7 +1314,7 @@ static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::C
 }
 
 static optiling::Conv3dOpsTiling::NumBlocksRes ComputeNumBlocksViaEngine(
-    const optiling::Conv3dOpsTiling::Conv3dBaseTiling &base)
+    const optiling::Conv3dOpsTiling::Conv3dBaseTiling& base)
 {
     auto engine = BuildEngineFromBase(base);
     engine.GetNumBlocksRange();
@@ -1377,17 +1345,13 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_WithBiasAndScale)
                       .InputShapes({&fmap, &weight, &bias, &scale})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW"))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1421,15 +1385,11 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_WithoutBiasAndScale)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW"))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1460,19 +1420,13 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32Enabled_FP32Inputs)
                       .InputShapes({&fmap, &weight, &bias})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW",
-                                                  0,
-                                                  "SPECIFIC",
-                                                  true))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", 0,
+                                                   "SPECIFIC", true))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1484,7 +1438,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32Enabled_FP32Inputs)
     EXPECT_EQ(base.descInfo_.weightDtype, ge::DT_FLOAT);
     EXPECT_EQ(base.descInfo_.outDtype, ge::DT_FLOAT);
     EXPECT_EQ(base.descInfo_.biasDtype, ge::DT_FLOAT);
-    EXPECT_EQ(base.attrInfo_.hf32Mode, 1);  // ENABLE_HF32
+    EXPECT_EQ(base.attrInfo_.hf32Mode, 1); // ENABLE_HF32
 }
 
 TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32Disabled_FP32Inputs)
@@ -1502,18 +1456,12 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32Disabled_FP32Inputs)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW",
-                                                  0,
-                                                  "SPECIFIC",
-                                                  false))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", 0,
+                                                   "SPECIFIC", false))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1523,7 +1471,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32Disabled_FP32Inputs)
     EXPECT_EQ(base.descInfo_.fMapDtype, ge::DT_FLOAT);
     EXPECT_EQ(base.descInfo_.weightDtype, ge::DT_FLOAT);
     EXPECT_EQ(base.descInfo_.outDtype, ge::DT_FLOAT);
-    EXPECT_EQ(base.attrInfo_.hf32Mode, 0);  // DISABLE_HF32
+    EXPECT_EQ(base.attrInfo_.hf32Mode, 0); // DISABLE_HF32
 }
 
 TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32NotApplicable_NonFP32Inputs)
@@ -1541,18 +1489,12 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32NotApplicable_NonFP3
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW",
-                                                  0,
-                                                  "SPECIFIC",
-                                                  false))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", 0,
+                                                   "SPECIFIC", false))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1562,7 +1504,7 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingGetDescInfo_HF32NotApplicable_NonFP3
     EXPECT_EQ(base.descInfo_.fMapDtype, ge::DT_BF16);
     EXPECT_EQ(base.descInfo_.weightDtype, ge::DT_BF16);
     EXPECT_EQ(base.descInfo_.outDtype, ge::DT_BF16);
-    EXPECT_EQ(base.attrInfo_.hf32Mode, 0);  // Not enabled due to non-FP32 inputs
+    EXPECT_EQ(base.attrInfo_.hf32Mode, 0); // Not enabled due to non-FP32 inputs
 }
 
 // ============================================================================
@@ -1585,16 +1527,12 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractAndPassParams_WithBias)
                       .InputShapes({&fmap, &weight, &bias})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW"))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1622,15 +1560,11 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractAndPassParams_WithoutBias)
                       .InputShapes({&fmap, &weight})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW"))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
@@ -1659,17 +1593,13 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractAndPassParams_WithScale)
                       .InputShapes({&fmap, &weight, nullptr, &scale})
                       .OutputShapes({&out})
                       .CompileInfo(&info.compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&info.platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
-                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1},
-                                                  {0, 0, 0, 0, 0, 0},
-                                                  {1, 1, 1, 1, 1},
-                                                  1,
-                                                  "NCDHW"))
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
                       .Build();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());

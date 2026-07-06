@@ -19,9 +19,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SmoothL1LossGradV2(const aclTensor *self, const aclTensor *target, const aclTensor *gradOut,
-                                    const std::string &reduction, float beta, const op::Shape outputShape,
-                                    aclOpExecutor *executor);
+const aclTensor* SmoothL1LossGradV2(const aclTensor* self, const aclTensor* target, const aclTensor* gradOut,
+                                    const std::string& reduction, float beta, const op::Shape outputShape,
+                                    aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SMOOTHL1LOSS_GRAD_V2_H_

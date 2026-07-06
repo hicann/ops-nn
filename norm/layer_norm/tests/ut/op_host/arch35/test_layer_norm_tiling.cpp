@@ -31,15 +31,9 @@ using namespace ge;
 
 class LayerNormTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LayerNormTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LayerNormTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LayerNormTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LayerNormTiling TearDown" << std::endl; }
 };
 
 TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
@@ -81,20 +75,20 @@ TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .SetOpType(op_type)
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .SetOpType(op_type)
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -118,10 +112,9 @@ TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"begin_norm_axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"begin_params_axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .NodeAttrs({{"begin_norm_axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"begin_params_axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

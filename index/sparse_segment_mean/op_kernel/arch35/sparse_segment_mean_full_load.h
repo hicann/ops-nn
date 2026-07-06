@@ -33,17 +33,14 @@ constexpr uint32_t FULL_LOAD_THREAD_NUM = 512;
 constexpr uint32_t FULL_LOAD_THREAD_NUM = 2048;
 #endif
 
-
 template <typename X_T, typename INDICES_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_THREAD_NUM) inline void FullLoadOrderAddComputer(
-    int64_t segOffsetBase, int64_t curCoreSegments,
-    uint32_t innerSize, uint32_t gatherSize, __local_mem__ X_T* xLocal, __gm__ volatile X_T* y,
-    __gm__ uint32_t* segment_offset, __local_mem__ INDICES_T* indicesTensor)
+    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize, uint32_t gatherSize, __local_mem__ X_T* xLocal,
+    __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset, __local_mem__ INDICES_T* indicesTensor)
 {
     uint32_t threadIdxX = threadIdx.x;
     uint32_t threadIdxY = threadIdx.y;
-    for (int64_t seg = threadIdxY; seg < curCoreSegments; seg += blockDim.y)
-    {
+    for (int64_t seg = threadIdxY; seg < curCoreSegments; seg += blockDim.y) {
         for (uint32_t curXIdx = threadIdxX; curXIdx < innerSize; curXIdx += blockDim.x) {
             int64_t globalSeg = segOffsetBase + seg;
             uint32_t begin = segment_offset[globalSeg];
@@ -65,11 +62,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_THREAD_NUM) inline void FullLoadOr
 }
 
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
-class SparseSegmentMeanFullLoad
-{
+class SparseSegmentMeanFullLoad {
 public:
-    __aicore__ inline SparseSegmentMeanFullLoad(const SparseSegmentMeanFullLoadTilingData& tilingData, TPipe& pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline SparseSegmentMeanFullLoad(const SparseSegmentMeanFullLoadTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void Process();
     __aicore__ inline void CopyInX(LocalTensor<X_T>& xLocal);
@@ -96,8 +92,9 @@ private:
 };
 
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
-__aicore__ inline void SparseSegmentMeanFullLoad<X_T, INDICES_T, SEGMENTIDS_T>::Init(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void SparseSegmentMeanFullLoad<X_T, INDICES_T, SEGMENTIDS_T>::Init(GM_ADDR x, GM_ADDR indices,
+                                                                                     GM_ADDR segment_ids, GM_ADDR y,
+                                                                                     GM_ADDR workspace)
 {
     xGm_.SetGlobalBuffer((__gm__ X_T*)x);
     indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)indices);
@@ -178,8 +175,8 @@ __aicore__ inline void SparseSegmentMeanFullLoad<X_T, INDICES_T, SEGMENTIDS_T>::
     WaitFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
 
     asc_vf_call<FullLoadOrderAddComputer<X_T, INDICES_T>>(
-        dim3{threadNumX, threadNumY}, segOffsetBase_, curCoreSegments_, innerSize,
-        gatherSize, (__local_mem__ X_T*)(xLocal.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
+        dim3{threadNumX, threadNumY}, segOffsetBase_, curCoreSegments_, innerSize, gatherSize,
+        (__local_mem__ X_T*)(xLocal.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
         (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()),
         (__local_mem__ INDICES_T*)(indicesTensor.GetPhyAddr()));
 }

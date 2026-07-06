@@ -43,8 +43,7 @@ constexpr char kCompileInfo[] = R"({
 std::unique_ptr<uint8_t[]> MakeAxesConstTensor(const std::vector<int32_t>& axes)
 {
     size_t totalSize = 0;
-    auto holder = gert::Tensor::CreateFollowing(
-        static_cast<int64_t>(axes.size()), ge::DT_INT32, totalSize);
+    auto holder = gert::Tensor::CreateFollowing(static_cast<int64_t>(axes.size()), ge::DT_INT32, totalSize);
     auto* t = reinterpret_cast<gert::Tensor*>(holder.get());
     t->MutableStorageShape().SetDimNum(1);
     t->MutableStorageShape().SetDim(0, static_cast<int64_t>(axes.size()));
@@ -60,39 +59,37 @@ std::unique_ptr<uint8_t[]> MakeAxesConstTensor(const std::vector<int32_t>& axes)
 struct EuclideanNormCompileInfoForTest {};
 
 // 共用 setup：构造 platform_info / kernel context faker
-void SetupPlatform(fe::PlatFormInfos& platformInfo,
-                   map<string, string>& socInfos,
-                   map<string, string>& aicoreSpec,
+void SetupPlatform(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
                    map<string, string>& intrinsics)
 {
     GetPlatFormInfos(kCompileInfo, socInfos, aicoreSpec, intrinsics);
     platformInfo.Init();
 }
 
-void SetupKernelHolder(fe::PlatFormInfos& platformInfo,
-                       EuclideanNormCompileInfoForTest& compileInfo,
-                       const map<string, string>& socInfos,
-                       const map<string, string>& aicoreSpec,
-                       const map<string, string>& intrinsics,
-                       gert::KernelRunContextHolder& kernelHolder)
+void SetupKernelHolder(fe::PlatFormInfos& platformInfo, EuclideanNormCompileInfoForTest& compileInfo,
+                       const map<string, string>& socInfos, const map<string, string>& aicoreSpec,
+                       const map<string, string>& intrinsics, gert::KernelRunContextHolder& kernelHolder)
 {
     std::string compileInfoStr(kCompileInfo);
     kernelHolder = gert::KernelRunContextFaker()
-        .KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
-        .Outputs({&compileInfo})
-        .Build();
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", const_cast<map<string,string>&>(socInfos));
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", const_cast<map<string,string>&>(aicoreSpec));
+                       .KernelIONum(2, 1)
+                       .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                       .Outputs({&compileInfo})
+                       .Build();
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "SoCInfo", const_cast<map<string, string>&>(socInfos));
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreSpec", const_cast<map<string, string>&>(aicoreSpec));
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", const_cast<map<string,string>&>(intrinsics));
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", const_cast<map<string, string>&>(intrinsics));
 }
 
 } // namespace
 
 class EuclideanNormTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()    { std::cout << "EuclideanNormTiling SetUp"    << std::endl; }
+    static void SetUpTestCase() { std::cout << "EuclideanNormTiling SetUp" << std::endl; }
     static void TearDownTestCase() { std::cout << "EuclideanNormTiling TearDown" << std::endl; }
 };
 
@@ -119,28 +116,28 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_reduce_last)
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EuclideanNorm")->tiling;
     ASSERT_NE(tilingFunc, nullptr);
 
-    auto param           = gert::TilingData::CreateCap(4096);
-    auto wsHolder        = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize         = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
     ASSERT_NE(param, nullptr);
 
     bool keepDims = false;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_FLOAT,  ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32,  ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     auto* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext, nullptr);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
@@ -171,25 +168,25 @@ TEST_F(EuclideanNormTiling, tiling_fp16_2d_reduce_last)
 
     auto param = gert::TilingData::CreateCap(4096);
     auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize  = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
 
     bool keepDims = false;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32,   ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     auto* tilingContext = holder.GetContext<gert::TilingContext>();
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
 }
@@ -218,25 +215,25 @@ TEST_F(EuclideanNormTiling, tiling_int32_2d_reduce_first)
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EuclideanNorm")->tiling;
     auto param = gert::TilingData::CreateCap(4096);
     auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize  = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
 
     bool keepDims = false;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     EXPECT_EQ(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
 }
 
@@ -258,33 +255,33 @@ TEST_F(EuclideanNormTiling, tiling_v2_climb_arar_fp32)
     gert::StorageShape xShape = {{4, 4, 8, 8}, {4, 4, 8, 8}};
     gert::StorageShape yShape = {{4, 8}, {4, 8}};
 
-    auto axesHolder  = MakeAxesConstTensor({1, 3});
+    auto axesHolder = MakeAxesConstTensor({1, 3});
     auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EuclideanNorm")->tiling;
-    auto param      = gert::TilingData::CreateCap(4096);
-    auto wsHolder   = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize    = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
 
     bool keepDims = false;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     EXPECT_EQ(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
 }
 
@@ -304,33 +301,33 @@ TEST_F(EuclideanNormTiling, tiling_v2_climb_arara_fp16)
     gert::StorageShape xShape = {{2, 3, 4, 5, 6}, {2, 3, 4, 5, 6}};
     gert::StorageShape yShape = {{2, 4, 6}, {2, 4, 6}};
 
-    auto axesHolder  = MakeAxesConstTensor({1, 3});
+    auto axesHolder = MakeAxesConstTensor({1, 3});
     auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EuclideanNorm")->tiling;
-    auto param      = gert::TilingData::CreateCap(4096);
-    auto wsHolder   = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize    = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
 
     bool keepDims = false;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32,   ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     EXPECT_EQ(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
 }
 
@@ -358,25 +355,25 @@ TEST_F(EuclideanNormTiling, tiling_bf16_3d_reduce_middle)
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EuclideanNorm")->tiling;
     auto param = gert::TilingData::CreateCap(4096);
     auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize  = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
 
     bool keepDims = false;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_BF16,  ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     EXPECT_EQ(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
 }
 
@@ -394,9 +391,9 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_empty_axes_full_reduce)
     SetupKernelHolder(platformInfo, compileInfo, socInfos, aicoreSpec, intrinsics, kernelHolder);
 
     gert::StorageShape xShape = {{4, 64}, {4, 64}};
-    gert::StorageShape yShape = {{1, 1}, {1, 1}};   // full reduce + keep_dims=true → (1, 1)
+    gert::StorageShape yShape = {{1, 1}, {1, 1}}; // full reduce + keep_dims=true → (1, 1)
 
-    auto axesHolder  = MakeAxesConstTensor({});     // 空 axes
+    auto axesHolder = MakeAxesConstTensor({}); // 空 axes
     auto* axesTensor = reinterpret_cast<gert::Tensor*>(axesHolder.get());
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> consts;
     consts.emplace_back(1U, std::move(axesHolder));
@@ -404,27 +401,27 @@ TEST_F(EuclideanNormTiling, tiling_fp32_2d_empty_axes_full_reduce)
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EuclideanNorm")->tiling;
     ASSERT_NE(tilingFunc, nullptr);
 
-    auto param    = gert::TilingData::CreateCap(4096);
+    auto param = gert::TilingData::CreateCap(4096);
     auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto* wsSize  = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
 
     bool keepDims = true;
     auto holder = gert::TilingContextFaker()
-        .SetOpType("EuclideanNorm")
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compileInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-        .NodeInputTd(0, ge::DT_FLOAT,  ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32,  ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
-        .ConstInput(consts)
-        .TilingData(param.get())
-        .Workspace(wsSize)
-        .Build();
+                      .SetOpType("EuclideanNorm")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &axesTensor->MutableStorageShape()})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"keep_dims", Ops::NN::AnyValue::CreateFrom<bool>(keepDims)}})
+                      .ConstInput(consts)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
     auto* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext, nullptr);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);

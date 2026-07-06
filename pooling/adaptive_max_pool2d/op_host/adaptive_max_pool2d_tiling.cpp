@@ -26,32 +26,21 @@ constexpr uint64_t OUTPUTSIZE_DIM_MAX = 2;
 constexpr uint64_t DIM_NUM_FOUR = 4;
 static const gert::Shape g_vec_1_shape = {1};
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
-bool AdaMaxPool2dBaseTiling::IsCapable()
-{
-    return true;
-}
+bool AdaMaxPool2dBaseTiling::IsCapable() { return true; }
 
-ge::graphStatus AdaMaxPool2dBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaMaxPool2dBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdaMaxPool2dBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaMaxPool2dBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdaMaxPool2dBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t AdaMaxPool2dBaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus AdaMaxPool2dBaseTiling::GetPlatformInfo()
 {
@@ -74,12 +63,10 @@ ge::graphStatus AdaMaxPool2dBaseTiling::GetShapeAttrsInfo()
     auto inputXDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
     auto xDtype = inputXDesc->GetDataType();
-    OP_CHECK_IF(
-        (xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
-        OP_LOGE_FOR_INVALID_DTYPE(nodeName, "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
-            "float, float16, bfloat16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
+                OP_LOGE_FOR_INVALID_DTYPE(nodeName, "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+                                          "float, float16, bfloat16"),
+                return ge::GRAPH_FAILED);
     input_.xDtype = xDtype;
     gert::Shape xShape = EnsureNotScalar(inputX->GetStorageShape());
     if (xShape.GetDimNum() == DIM_NUM_FOUR) {
@@ -88,21 +75,17 @@ ge::graphStatus AdaMaxPool2dBaseTiling::GetShapeAttrsInfo()
         input_.Hi = xShape.GetDim(NCHW_DIM_H);
         input_.Wi = xShape.GetDim(NCHW_DIM_W);
     } else {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "x",
-            std::to_string(xShape.GetDimNum()).c_str(), "4");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "x", std::to_string(xShape.GetDimNum()).c_str(), "4");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        input_.N < 1 || input_.C < 1 || input_.Hi < 1 || input_.Wi < 1,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, "x",
-            Ops::Base::ToString(xShape).c_str(),
-            "The dimensions N, C, Hi, Wi must be at least 1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(input_.N < 1 || input_.C < 1 || input_.Hi < 1 || input_.Wi < 1,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, "x", Ops::Base::ToString(xShape).c_str(),
+                                                      "The dimensions N, C, Hi, Wi must be at least 1"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(input_.Hi * input_.Wi > static_cast<int64_t>(std::numeric_limits<int32_t>::max()),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, "x",
-            Ops::Base::ToString(xShape).c_str(),
-            "The product H*W must not exceed int32 max value"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, "x", Ops::Base::ToString(xShape).c_str(),
+                                                      "The product H*W must not exceed int32 max value"),
+                return ge::GRAPH_FAILED);
 
     auto attrPtr = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrPtr);
@@ -110,16 +93,14 @@ ge::graphStatus AdaMaxPool2dBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputSizePtr);
     OP_CHECK_IF(
         outputSizePtr->GetSize() != OUTPUTSIZE_DIM_MAX,
-        OP_LOGE_WITH_INVALID_ATTR(nodeName, "output_size",
-            std::to_string(outputSizePtr->GetSize()).c_str(), "2"),
+        OP_LOGE_WITH_INVALID_ATTR(nodeName, "output_size", std::to_string(outputSizePtr->GetSize()).c_str(), "2"),
         return ge::GRAPH_FAILED);
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());
-    OP_CHECK_IF(
-        outputSize[0] <= 0 || outputSize[1] <= 0,
-        OP_LOGE_WITH_INVALID_ATTR(nodeName, "output_size",
-            (std::to_string(outputSize[0]) + ", " + std::to_string(outputSize[1])).c_str(),
-            "> 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSize[0] <= 0 || outputSize[1] <= 0,
+                OP_LOGE_WITH_INVALID_ATTR(
+                    nodeName, "output_size",
+                    (std::to_string(outputSize[0]) + ", " + std::to_string(outputSize[1])).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
     input_.Ho = outputSize[0];
     input_.Wo = outputSize[1];
     return ge::GRAPH_SUCCESS;
@@ -132,10 +113,7 @@ ge::graphStatus AdaMaxPool2dBaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaMaxPool2dBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaMaxPool2dBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus Tiling4AdaptiveMaxPool2d(gert::TilingContext* context)
 {

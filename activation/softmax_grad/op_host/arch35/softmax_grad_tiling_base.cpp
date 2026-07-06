@@ -66,11 +66,10 @@ ge::graphStatus SoftmaxGradTilingBase::GetAndCheckDtypes()
             "The dtypes of input softmax, input grad_softmax and output grad_x must be the same");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "softmax", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "softmax", ToString(xDtype_).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
 
     if (xDtype_ == ge::DT_FLOAT) {
         xDtypeSize_ = FLOAT32_BYTES;
@@ -100,7 +99,8 @@ ge::graphStatus SoftmaxGradTilingBase::GetDimsAndCheckShapeValid()
     auto yStorageShape = Ops::Base::EnsureNotScalar(yShape->GetStorageShape());
     int64_t yShapeSize = yStorageShape.GetDimNum();
     if (xShapeSize_ != yShapeSize || xShapeSize_ != xShapeSize1) {
-        std::string dimNumMsg = std::to_string(xShapeSize_) + ", " + std::to_string(xShapeSize1) + " and " + std::to_string(yShapeSize);
+        std::string dimNumMsg = std::to_string(xShapeSize_) + ", " + std::to_string(xShapeSize1) + " and " +
+                                std::to_string(yShapeSize);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context_->GetNodeName(), "softmax, grad_softmax and grad_x", dimNumMsg.c_str(),
             "The shape dims of input softmax, input grad_softmax and output grad_x must be the same");
@@ -109,31 +109,31 @@ ge::graphStatus SoftmaxGradTilingBase::GetDimsAndCheckShapeValid()
 
     if (xShapeSize_ > MAX_DIMS) {
         std::string correctMsg = "less than or equal to " + std::to_string(MAX_DIMS);
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "softmax",
-            std::to_string(xShapeSize_).c_str(), correctMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "softmax", std::to_string(xShapeSize_).c_str(),
+                                     correctMsg.c_str());
         return ge::GRAPH_FAILED;
     }
-    
-    OP_CHECK_IF(
-        xShapeSize_ == CONST_ZERO,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "softmax", "0",
-            "The shape dim of input softmax must be greater than 0"),
-        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(xShapeSize_ == CONST_ZERO,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "softmax", "0",
+                                                         "The shape dim of input softmax must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
     xShape_.resize(xShapeSize_);
     for (int i = 0; i < xShapeSize_; i++) {
         if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i) || xStorageShape.GetDim(i) != xStorageShape1.GetDim(i)) {
-            std::string shapesMsg = ToString(xStorageShape) + ", " + ToString(xStorageShape1) + " and " + ToString(yStorageShape);
-            std::string reasonMsg = "The shapes of input softmax, input grad_softmax and output grad_x must be the same";
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context_->GetNodeName(), "softmax, grad_softmax and grad_x", shapesMsg.c_str(), reasonMsg.c_str());
+            std::string shapesMsg = ToString(xStorageShape) + ", " + ToString(xStorageShape1) + " and " +
+                                    ToString(yStorageShape);
+            std::string
+                reasonMsg = "The shapes of input softmax, input grad_softmax and output grad_x must be the same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "softmax, grad_softmax and grad_x",
+                                                   shapesMsg.c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(
             xStorageShape.GetDim(i) <= CONST_ZERO,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context_->GetNodeName(), "softmax", ToString(xStorageShape).c_str(),
-                "All axes of input softmax must be positive numbers"),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "softmax", ToString(xStorageShape).c_str(),
+                                                  "All axes of input softmax must be positive numbers"),
             return ge::GRAPH_FAILED);
         xShape_[i] = xStorageShape.GetDim(i);
     }
@@ -150,18 +150,15 @@ ge::graphStatus SoftmaxGradTilingBase::GetAndCheckAxes()
         // 默认-1轴reduce
         reduceAxes_ = xShapeSize_ - CONST_ONE;
     } else {
-        OP_CHECK_IF(
-            axisListPtr->GetSize() != CONST_ONE,
-            OP_LOGE_FOR_INVALID_LISTSIZE(
-                context_->GetNodeName(), "axes", std::to_string(axisListPtr->GetSize()).c_str(), "1"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(axisListPtr->GetSize() != CONST_ONE,
+                    OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "axes",
+                                                 std::to_string(axisListPtr->GetSize()).c_str(), "1"),
+                    return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[CONST_ZERO];
         if (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - CONST_ONE) {
-            std::string reasonMsg =
-                "The value of attribute axes depends on the number of shape axes of input softmax";
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(),
-                reasonMsg.c_str());
+            std::string reasonMsg = "The value of attribute axes depends on the number of shape axes of input softmax";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(),
+                                                  reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
 
@@ -196,9 +193,8 @@ ge::graphStatus SoftmaxGradTilingBase::GetShapeAttrsInfo()
         a1_ = CONST_ONE;
     }
 
-    OP_LOGD(
-        context_->GetNodeName(), "inputs original shape is:(%s), axes is:%ld, fused shape is: (%ld, %ld, %ld)\n",
-        VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_);
+    OP_LOGD(context_->GetNodeName(), "inputs original shape is:(%s), axes is:%ld, fused shape is: (%ld, %ld, %ld)\n",
+            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -243,16 +239,13 @@ ge::graphStatus TilingPrepareForSoftmaxGradAscendC(gert::TilingParseContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (coreNum <= CONST_ZERO),
-        OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u", coreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((coreNum <= CONST_ZERO), OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u", coreNum),
+                return ge::GRAPH_FAILED);
     uint64_t ubSizeTemp = CONST_ZERO;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp);
-    OP_CHECK_IF(
-        (ubSizeTemp <= CONST_ZERO),
-        OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %lu", ubSizeTemp),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSizeTemp <= CONST_ZERO),
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %lu", ubSizeTemp),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

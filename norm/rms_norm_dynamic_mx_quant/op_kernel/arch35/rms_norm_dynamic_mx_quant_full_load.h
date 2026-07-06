@@ -26,14 +26,10 @@ using namespace AscendC::MicroAPI;
 template <typename T_X, typename T_GAMMA, typename T_Y, bool isOptimizeMode>
 class RmsNormDynamicMxQuantFullLoad {
 public:
-    __aicore__ inline RmsNormDynamicMxQuantFullLoad(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline RmsNormDynamicMxQuantFullLoad(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxScale, GM_ADDR rstd,
-        const RmsNormDynamicMxQuantFullLoadTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxScale, GM_ADDR rstd,
+                                const RmsNormDynamicMxQuantFullLoadTilingData* tilingData)
     {
         tilingData_ = tilingData;
         blockIdx_ = GetBlockIdx();
@@ -66,8 +62,8 @@ public:
         int64_t binAddTmpBufSize = tilingData_->mUbFactor * binAddVlsAligned * sizeof(float);
         pipe_->InitBuffer(xReduceTmpBuffer_, binAddTmpBufSize);
 
-        int64_t rstdBufSize =
-            ops::CeilAlign(static_cast<int64_t>(tilingData_->mUbFactor * sizeof(float)), UB_BLOCK_SIZE);
+        int64_t rstdBufSize = ops::CeilAlign(static_cast<int64_t>(tilingData_->mUbFactor * sizeof(float)),
+                                             UB_BLOCK_SIZE);
         pipe_->InitBuffer(rstdOutQueue_, DOUBLE_BUFFER, rstdBufSize);
         pipe_->InitBuffer(xReduceOutBuffer_, rstdBufSize);
 
@@ -111,8 +107,8 @@ public:
         int64_t usedTailCores = blockIdx_ < tilingData_->mTailCores ? blockIdx_ : tilingData_->mTailCores;
         int64_t xBlockOffset = (blockIdx_ * tilingData_->mPerCore + usedTailCores) * tilingData_->numN;
         int64_t rstdBlockOffset = blockIdx_ * tilingData_->mPerCore + usedTailCores;
-        int64_t scaleBlockOffset =
-            (blockIdx_ * tilingData_->mPerCore + usedTailCores) * tilingData_->nMxblockNumAlignedTwo;
+        int64_t scaleBlockOffset = (blockIdx_ * tilingData_->mPerCore + usedTailCores) *
+                                   tilingData_->nMxblockNumAlignedTwo;
 
         int64_t curM = tilingData_->mPerCore;
         curM = blockIdx_ < tilingData_->mTailCores ? (curM + 1) : curM;
@@ -175,20 +171,19 @@ public:
         xInQueue_.EnQue(xLocal);
     }
 
-    __aicore__ inline void ComputeRmsNormAndQuant(
-        int64_t curM, int64_t rstdOffset, int64_t xOffset, int64_t scaleOffset)
+    __aicore__ inline void ComputeRmsNormAndQuant(int64_t curM, int64_t rstdOffset, int64_t xOffset,
+                                                  int64_t scaleOffset)
     {
         LocalTensor<T_X> xLocal = xInQueue_.DeQue<T_X>();
         LocalTensor<float> rstdLocal = rstdOutQueue_.AllocTensor<float>();
         LocalTensor<float> xReduceTmpLocal = xReduceTmpBuffer_.Get<float>();
         LocalTensor<float> xReduceOutTmpLocal = xReduceOutBuffer_.Get<float>();
-        NormCommon::NormCommonRegbase::CalculateSquareReduceSum<T_X>(xLocal, xReduceOutTmpLocal, xReduceTmpLocal,
-            static_cast<uint16_t>(curM), static_cast<uint32_t>(tilingData_->nMxblockAligned),
-            static_cast<uint32_t>(tilingData_->numN), static_cast<uint32_t>(tilingData_->binAddFoldPoint),
-            static_cast<uint32_t>(UB_BLOCK_SIZE_FP32));
-        NormCommon::ComputeRstdNewtonRaphson<false, true>(
-            xReduceOutTmpLocal, rstdLocal, static_cast<uint32_t>(curM), tilingData_->epsilon,
-            tilingData_->avgFactor, VL_FP32);
+        NormCommon::NormCommonRegbase::CalculateSquareReduceSum<T_X>(
+            xLocal, xReduceOutTmpLocal, xReduceTmpLocal, static_cast<uint16_t>(curM),
+            static_cast<uint32_t>(tilingData_->nMxblockAligned), static_cast<uint32_t>(tilingData_->numN),
+            static_cast<uint32_t>(tilingData_->binAddFoldPoint), static_cast<uint32_t>(UB_BLOCK_SIZE_FP32));
+        NormCommon::ComputeRstdNewtonRaphson<false, true>(xReduceOutTmpLocal, rstdLocal, static_cast<uint32_t>(curM),
+                                                          tilingData_->epsilon, tilingData_->avgFactor, VL_FP32);
         rstdOutQueue_.EnQue(rstdLocal);
         rstdLocal = rstdOutQueue_.DeQue<float>();
         if (tilingData_->hasOutputRstd) {
@@ -225,9 +220,9 @@ public:
     }
 
     template <bool hasInputBeta = false>
-    __aicore__ inline void ComputeY(
-        LocalTensor<T_X> xLocal, LocalTensor<T_GAMMA> gammaLocal, LocalTensor<T_GAMMA> betaLocal,
-        LocalTensor<float> rstdLocal, LocalTensor<T_X> yLocal, int64_t curM)
+    __aicore__ inline void ComputeY(LocalTensor<T_X> xLocal, LocalTensor<T_GAMMA> gammaLocal,
+                                    LocalTensor<T_GAMMA> betaLocal, LocalTensor<float> rstdLocal,
+                                    LocalTensor<T_X> yLocal, int64_t curM)
     {
         __local_mem__ T_X* xLocalAddr = (__local_mem__ T_X*)xLocal.GetPhyAddr();
         __local_mem__ T_GAMMA* gammaLocalUbAddr = (__local_mem__ T_GAMMA*)gammaLocal.GetPhyAddr();
@@ -253,8 +248,8 @@ public:
 
                 uint32_t sreg = nNum;
                 MaskReg pregMask = UpdateMask<float>(sreg);
-                AscendC::MicroAPI::MaskReg pregFull =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
                     DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                     uint32_t xElemOffset = i * xInputStride;
@@ -281,8 +276,8 @@ public:
                 RegTensor<float> betaReg;
                 RegTensor<float> yReg;
                 MaskReg pregMask;
-                AscendC::MicroAPI::MaskReg pregFull =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
                     uint32_t sreg = nNum;
                     DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
@@ -309,8 +304,8 @@ public:
     }
 
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeMxQuantAndOutput(
-        LocalTensor<T_X>& yLocal, int64_t curM, int64_t xOffset, int64_t scaleOutOffset)
+    __aicore__ inline void ComputeMxQuantAndOutput(LocalTensor<T_X>& yLocal, int64_t curM, int64_t xOffset,
+                                                   int64_t scaleOutOffset)
     {
         uint32_t totalScaleInUB = curM * tilingData_->nMxblockNumAlignedTwo;
         uint32_t totalCountInUB = curM * tilingData_->nMxblockNumAlignedTwo * tilingData_->mxBlockSize;
@@ -333,11 +328,11 @@ public:
             ComputeScaleOCP<T_X, T_Y>(maxExpAddr, scaleOutAddr, halfScaleAddr, totalScaleInUB, loopNumScale);
 
             if constexpr (isOptimizeMode) {
-                ComputeDataMxfp4Optimize<T_X, T_Y, toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB, loopNum);
+                ComputeDataMxfp4Optimize<T_X, T_Y, toBf16RoundMode, roundMode>(srcAddr, halfScaleAddr, outLocalAddr,
+                                                                               totalCountInUB, loopNum);
             } else {
-                ComputeDataMxfp4General<T_X, T_Y, toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB, loopNum);
+                ComputeDataMxfp4General<T_X, T_Y, toBf16RoundMode, roundMode>(srcAddr, halfScaleAddr, outLocalAddr,
+                                                                              totalCountInUB, loopNum);
             }
         } else {
             if (tilingData_->scaleAlg == 0) {
@@ -348,8 +343,8 @@ public:
                 ComputeMaxExpcuBLAS<T_X>(srcAddr, maxExpAddr, totalCountInUB, loopNum);
                 ComputeScalecuBLAS<T_X, T_Y>(maxExpAddr, scaleOutAddr, halfScaleAddr, totalScaleInUB, loopNumScale4NV);
             }
-            ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(
-                srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB, loopNum);
+            ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB,
+                                                              loopNum);
         }
 
         yOutQueue_.EnQue(yOutLocal);

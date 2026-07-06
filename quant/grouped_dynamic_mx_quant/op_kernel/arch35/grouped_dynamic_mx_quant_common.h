@@ -21,18 +21,16 @@
 #include "grouped_dynamic_mx_quant_tilingdata.h"
 
 namespace GroupedDynamicMxQuant {
-template<typename Tp, Tp v>
+template <typename Tp, Tp v>
 struct IntegralConstant {
-  static constexpr Tp value = v;
+    static constexpr Tp value = v;
 };
 using trueType = IntegralConstant<bool, true>;
 using falseType = IntegralConstant<bool, false>;
 template <typename, typename>
-struct IsSame : public falseType {
-};
+struct IsSame : public falseType {};
 template <typename Tp>
-struct IsSame<Tp, Tp> : public trueType {
-};
+struct IsSame<Tp, Tp> : public trueType {};
 
 constexpr int64_t DB_BUFFER = 2;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
@@ -54,7 +52,7 @@ constexpr uint32_t MAX_EXP_FOR_FP32 = 0x7f800000;
 constexpr uint32_t NUMBER_ZERO = 0x00000000;
 constexpr uint32_t NUMBER_TWO_FIVE_FOUR = 0x000000fe;
 constexpr uint32_t NUMBER_HALF = 0x00400000;
-constexpr float FP8_E4M3_INV_MAX = 0.002232142857;        // 1/448
-constexpr float FP8_E5M2_INV_MAX = 0.000017438616;        // 1/57344
-}
+constexpr float FP8_E4M3_INV_MAX = 0.002232142857; // 1/448
+constexpr float FP8_E5M2_INV_MAX = 0.000017438616; // 1/57344
+} // namespace GroupedDynamicMxQuant
 #endif // GRROUPED_DYNAMIC_MX_QUANT_COMMON_H

@@ -22,21 +22,18 @@
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddLayerNorm {
-template <
-    typename X1_TYPE, typename X2_TYPE, typename GAMMA_TYPE, typename BETA_TYPE, typename BIAS_TYPE, int TILING_KEY,
-    int BUFFER_NUM = 1>
+template <typename X1_TYPE, typename X2_TYPE, typename GAMMA_TYPE, typename BETA_TYPE, typename BIAS_TYPE,
+          int TILING_KEY, int BUFFER_NUM = 1>
 class RegbaseFullLoad {
 public:
-    static constexpr bool isMix =
-        !(IsSameType<X1_TYPE, X2_TYPE>::value && IsSameType<X1_TYPE, GAMMA_TYPE>::value &&
-          IsSameType<X1_TYPE, BETA_TYPE>::value && IsSameType<X1_TYPE, BIAS_TYPE>::value);
+    static constexpr bool isMix = !(IsSameType<X1_TYPE, X2_TYPE>::value && IsSameType<X1_TYPE, GAMMA_TYPE>::value &&
+                                    IsSameType<X1_TYPE, BETA_TYPE>::value && IsSameType<X1_TYPE, BIAS_TYPE>::value);
 
-    __aicore__ inline RegbaseFullLoad(const AddLayerNormRegbaseTilingData* tilingData) : tiling_(tilingData)
-    {}
+    __aicore__ inline RegbaseFullLoad(const AddLayerNormRegbaseTilingData* tilingData) : tiling_(tilingData) {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* x)
     {
         uint32_t coreIdx = GetBlockIdx();
         if (coreIdx >= tiling_->usedCoreNum) {
@@ -170,9 +167,9 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInputsToUB(
-        LocalTensor<X1_TYPE> x1Local, LocalTensor<X2_TYPE> x2Local, LocalTensor<BIAS_TYPE> biasLocal,
-        int64_t inputOffset, int32_t copyLen, int32_t rowsCount)
+    __aicore__ inline void CopyInputsToUB(LocalTensor<X1_TYPE> x1Local, LocalTensor<X2_TYPE> x2Local,
+                                          LocalTensor<BIAS_TYPE> biasLocal, int64_t inputOffset, int32_t copyLen,
+                                          int32_t rowsCount)
     {
         if constexpr (isMix) {
             {
@@ -266,10 +263,10 @@ public:
         DataCopyPad(yGm_[yOffset], yLocal, dataCopyParams);
     }
 
-    __aicore__ inline void VFCalcMeanVarFast(
-        __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, __local_mem__ BIAS_TYPE* biasAddr,
-        __local_mem__ BIAS_TYPE* xOutAddr, __local_mem__ float* x32Addr, __local_mem__ float* meanAddr,
-        __local_mem__ float* varAddr, uint16_t rowsCount)
+    __aicore__ inline void VFCalcMeanVarFast(__local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr,
+                                             __local_mem__ BIAS_TYPE* biasAddr, __local_mem__ BIAS_TYPE* xOutAddr,
+                                             __local_mem__ float* x32Addr, __local_mem__ float* meanAddr,
+                                             __local_mem__ float* varAddr, uint16_t rowsCount)
     {
         float n = static_cast<float>(1) / static_cast<float>(powerOfTwo_);
         float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
@@ -348,10 +345,10 @@ public:
         }
     }
 
-    __aicore__ inline void VFCalcMeanVar(
-        __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, __local_mem__ BIAS_TYPE* biasAddr,
-        __local_mem__ BIAS_TYPE* xOutAddr, __local_mem__ float* x32Addr, __local_mem__ float* meanAddr,
-        __local_mem__ float* varAddr, uint16_t rowsCount)
+    __aicore__ inline void VFCalcMeanVar(__local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr,
+                                         __local_mem__ BIAS_TYPE* biasAddr, __local_mem__ BIAS_TYPE* xOutAddr,
+                                         __local_mem__ float* x32Addr, __local_mem__ float* meanAddr,
+                                         __local_mem__ float* varAddr, uint16_t rowsCount)
     {
         float n = static_cast<float>(1) / static_cast<float>(powerOfTwo_);
         float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
@@ -423,13 +420,12 @@ public:
                                 i * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset);
                         }
                         StoreRegToOutput(xOutAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlignBias);
-                        StoreRegToOutput(
-                            xOutAddr, binaryAddR, pregLoop, i * vlFp32 + k * colsPerLoopAlignBias + binaryAddOffset);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32, binaryAddQ, pregLoop);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32 + binaryAddOffset,
-                            binaryAddR, pregLoop);
+                        StoreRegToOutput(xOutAddr, binaryAddR, pregLoop,
+                                         i * vlFp32 + k * colsPerLoopAlignBias + binaryAddOffset);
+                        DataCopy((__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32, binaryAddQ,
+                                 pregLoop);
+                        DataCopy((__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32 + binaryAddOffset,
+                                 binaryAddR, pregLoop);
                     } else {
                         if constexpr (IS_BIAS_BROADCAST) {
                             LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
@@ -450,20 +446,19 @@ public:
                                 i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
                         }
                         StoreRegToOutput(xOutAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlign);
-                        StoreRegToOutput(
-                            xOutAddr, binaryAddR, pregLoop, i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign, binaryAddQ, pregLoop);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                            binaryAddR, pregLoop);
+                        StoreRegToOutput(xOutAddr, binaryAddR, pregLoop,
+                                         i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
+                        DataCopy((__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign, binaryAddQ,
+                                 pregLoop);
+                        DataCopy((__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
+                                 binaryAddR, pregLoop);
                     }
                     Muls(binaryAddQ, binaryAddQ, n, pregLoop);
                     Muls(binaryAddR, binaryAddR, n, pregLoop);
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
                     ReduceSum(vlMean, binaryAddQ, pregLoop);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__local_mem__ float*)binaryAddAddr + i), vlMean, pregMerge);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)binaryAddAddr + i),
+                                                                       vlMean, pregMerge);
                 }
                 {
                     pregLoop = UpdateMask<float>(sreg0);
@@ -491,20 +486,17 @@ public:
                                 (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
                                 (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset);
                         }
-                        StoreRegToOutput(
-                            xOutAddr, binaryAddQ, pregMain,
-                            (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignBias);
+                        StoreRegToOutput(xOutAddr, binaryAddQ, pregMain,
+                                         (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignBias);
                         StoreRegToOutput(
                             xOutAddr, binaryAddR, pregLoop,
                             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignBias + binaryAddOffset);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                k * colsPerLoopAlignB32,
-                            binaryAddQ, pregMain);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                k * colsPerLoopAlignB32 + binaryAddOffset,
-                            binaryAddR, pregLoop);
+                        DataCopy((__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                     k * colsPerLoopAlignB32,
+                                 binaryAddQ, pregMain);
+                        DataCopy((__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                     k * colsPerLoopAlignB32 + binaryAddOffset,
+                                 binaryAddR, pregLoop);
                     } else {
                         if constexpr (IS_BIAS_BROADCAST) {
                             LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
@@ -529,20 +521,17 @@ public:
                                 (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
                                 (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
                         }
-                        StoreRegToOutput(
-                            xOutAddr, binaryAddQ, pregMain,
-                            (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
+                        StoreRegToOutput(xOutAddr, binaryAddQ, pregMain,
+                                         (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
                         StoreRegToOutput(
                             xOutAddr, binaryAddR, pregLoop,
                             (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                k * colsPerLoopAlign,
-                            binaryAddQ, pregMain);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                k * colsPerLoopAlign + binaryAddOffset,
-                            binaryAddR, pregLoop);
+                        DataCopy((__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                     k * colsPerLoopAlign,
+                                 binaryAddQ, pregMain);
+                        DataCopy((__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                     k * colsPerLoopAlign + binaryAddOffset,
+                                 binaryAddR, pregLoop);
                     }
                     Muls(binaryAddQ, binaryAddQ, n, pregMain);
                     Muls(binaryAddR, binaryAddR, n, pregLoop);
@@ -566,12 +555,11 @@ public:
                                 (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16,
                                 (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16);
                         }
-                        StoreRegToOutput(
-                            xOutAddr, x, pregMain, (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignBias);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                k * colsPerLoopAlignB32,
-                            x, pregMain);
+                        StoreRegToOutput(xOutAddr, x, pregMain,
+                                         (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignBias);
+                        DataCopy((__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
+                                     k * colsPerLoopAlignB32,
+                                 x, pregMain);
                     } else {
                         if constexpr (IS_BIAS_BROADCAST) {
                             LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
@@ -586,12 +574,11 @@ public:
                                 (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
                                 (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign);
                         }
-                        StoreRegToOutput(
-                            xOutAddr, x, pregMain, (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign);
-                        DataCopy(
-                            (__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                k * colsPerLoopAlign,
-                            x, pregMain);
+                        StoreRegToOutput(xOutAddr, x, pregMain,
+                                         (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign);
+                        DataCopy((__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
+                                     k * colsPerLoopAlign,
+                                 x, pregMain);
                     }
                     Muls(x, x, n, pregMain);
                     ReduceSum(vlMean, x, pregMain);
@@ -604,8 +591,8 @@ public:
                     curBinaryAddLoopMean = curBinaryAddLoopMean / NUM_TWO;
                     for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddAddr + j * vlFp32));
-                        DataCopy(
-                            binaryAddR, ((__local_mem__ float*)binaryAddAddr + (j + curBinaryAddLoopMean) * vlFp32));
+                        DataCopy(binaryAddR,
+                                 ((__local_mem__ float*)binaryAddAddr + (j + curBinaryAddLoopMean) * vlFp32));
                         Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
                         DataCopy(((__local_mem__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
                     }
@@ -620,8 +607,8 @@ public:
                 }
 
                 // batch mean
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)meanAddr + k), mean, pregMerge);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)meanAddr + k), mean,
+                                                                   pregMerge);
                 Duplicate(mean, mean, pregMain);
                 LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
 
@@ -630,14 +617,12 @@ public:
                     pregLoop = UpdateMask<float>(sreg1);
                     if constexpr (isMix) {
                         DataCopy(binaryAddQ, (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32);
-                        DataCopy(
-                            binaryAddR,
-                            (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32 + binaryAddOffset);
+                        DataCopy(binaryAddR, (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32 +
+                                                 binaryAddOffset);
                     } else {
                         DataCopy(binaryAddQ, (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign);
-                        DataCopy(
-                            binaryAddR,
-                            (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
+                        DataCopy(binaryAddR,
+                                 (__local_mem__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
                     }
                     Sub(binaryAddQ, binaryAddQ, mean, pregLoop);
                     Sub(binaryAddR, binaryAddR, mean, pregLoop);
@@ -647,25 +632,21 @@ public:
                     Muls(binaryAddRPow, binaryAddRPow, n, pregLoop);
                     Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregLoop);
                     ReduceSum(vlVar, binaryAddQPow, pregLoop);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__local_mem__ float*)binaryAddAddr + i), vlVar, pregMerge);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)binaryAddAddr + i), vlVar,
+                                                                       pregMerge);
                 }
                 {
                     pregLoop = UpdateMask<float>(sreg1);
                     if constexpr (isMix) {
-                        DataCopy(
-                            binaryAddQ, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                            k * colsPerLoopAlignB32);
-                        DataCopy(
-                            binaryAddR, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                            k * colsPerLoopAlignB32 + binaryAddOffset);
+                        DataCopy(binaryAddQ, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                                 k * colsPerLoopAlignB32);
+                        DataCopy(binaryAddR, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                                 k * colsPerLoopAlignB32 + binaryAddOffset);
                     } else {
-                        DataCopy(
-                            binaryAddQ, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                            k * colsPerLoopAlign);
-                        DataCopy(
-                            binaryAddR, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                            k * colsPerLoopAlign + binaryAddOffset);
+                        DataCopy(binaryAddQ, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                                 k * colsPerLoopAlign);
+                        DataCopy(binaryAddR, (__local_mem__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                                 k * colsPerLoopAlign + binaryAddOffset);
                     }
                     Sub(binaryAddQ, binaryAddQ, mean, pregMain);
                     Sub(binaryAddR, binaryAddR, mean, pregLoop);
@@ -680,13 +661,11 @@ public:
                 }
                 for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                     if constexpr (isMix) {
-                        DataCopy(
-                            x1, (__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                    k * colsPerLoopAlignB32);
+                        DataCopy(x1, (__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
+                                         k * colsPerLoopAlignB32);
                     } else {
-                        DataCopy(
-                            x1, (__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                    k * colsPerLoopAlign);
+                        DataCopy(x1, (__local_mem__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
+                                         k * colsPerLoopAlign);
                     }
                     Sub(y1, x1, mean, pregMain);
                     Mul(y1Pow, y1, y1, pregMain);
@@ -701,8 +680,8 @@ public:
                     curBinaryAddLoopVar = curBinaryAddLoopVar / NUM_TWO;
                     for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddAddr + j * vlFp32));
-                        DataCopy(
-                            binaryAddR, ((__local_mem__ float*)binaryAddAddr + (j + curBinaryAddLoopVar) * vlFp32));
+                        DataCopy(binaryAddR,
+                                 ((__local_mem__ float*)binaryAddAddr + (j + curBinaryAddLoopVar) * vlFp32));
                         Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
                         DataCopy(((__local_mem__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
                     }
@@ -714,18 +693,18 @@ public:
                     DataCopy(varTemp, ((__local_mem__ float*)binaryAddAddr));
                     ReduceSum(var, varTemp, pregLoop);
                     Muls(var, var, nCorrectionFactor, pregMerge);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__local_mem__ float*)varAddr + k), var, pregMerge);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)varAddr + k), var,
+                                                                       pregMerge);
                 }
                 LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
             }
         }
     }
 
-    __aicore__ inline void VFCalcY(
-        __local_mem__ float* x32Addr, __local_mem__ BETA_TYPE* betaAddr, __local_mem__ GAMMA_TYPE* gammaAddr,
-        __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr, __local_mem__ BIAS_TYPE* yOutAddr,
-        uint32_t rowsCount, uint32_t colsCount)
+    __aicore__ inline void VFCalcY(__local_mem__ float* x32Addr, __local_mem__ BETA_TYPE* betaAddr,
+                                   __local_mem__ GAMMA_TYPE* gammaAddr, __local_mem__ float* meanAddr,
+                                   __local_mem__ float* rstdAddr, __local_mem__ BIAS_TYPE* yOutAddr, uint32_t rowsCount,
+                                   uint32_t colsCount)
     {
         uint32_t vlFp32 = vlFp32_;
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
@@ -855,8 +834,8 @@ public:
 
             // copy in gamma, beta
             if (i == 0) {
-                CopyGammaAndBetaToUBCommon<isMix>(
-                    gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_, 0, colsPerLoop_, blockSize_);
+                CopyGammaAndBetaToUBCommon<isMix>(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_, 0,
+                                                  colsPerLoop_, blockSize_);
                 gammaLocal = gammaQueue_.template DeQue<GAMMA_TYPE>();
                 betaLocal = betaQueue_.template DeQue<BETA_TYPE>();
             }

@@ -36,26 +36,27 @@
 #include "acl/acl.h"
 #include "aclnn_apply_proximal_gradient_descent.h"
 
-#define CHECK_RET(cond, msg)                                              \
-    do {                                                                  \
-        if (!(cond)) {                                                    \
-            std::cerr << "[FAIL] " << msg << std::endl;                   \
-            return -1;                                                    \
-        }                                                                 \
+#define CHECK_RET(cond, msg)                            \
+    do {                                                \
+        if (!(cond)) {                                  \
+            std::cerr << "[FAIL] " << msg << std::endl; \
+            return -1;                                  \
+        }                                               \
     } while (0)
 
-#define CHECK_ACL(expr, msg)                                              \
-    do {                                                                  \
-        auto _ret = (expr);                                               \
-        if (_ret != ACL_SUCCESS) {                                        \
-            std::cerr << "[FAIL] " << msg << ", ret=" << _ret             \
-                      << std::endl;                                       \
-            return -1;                                                    \
-        }                                                                 \
+#define CHECK_ACL(expr, msg)                                                \
+    do {                                                                    \
+        auto _ret = (expr);                                                 \
+        if (_ret != ACL_SUCCESS) {                                          \
+            std::cerr << "[FAIL] " << msg << ", ret=" << _ret << std::endl; \
+            return -1;                                                      \
+        }                                                                   \
     } while (0)
 
-static std::vector<int64_t> ComputeStrides(const std::vector<int64_t> &shape) {
-    if (shape.empty()) return {};
+static std::vector<int64_t> ComputeStrides(const std::vector<int64_t>& shape)
+{
+    if (shape.empty())
+        return {};
     std::vector<int64_t> s(shape.size(), 1);
     for (int64_t i = (int64_t)shape.size() - 2; i >= 0; --i) {
         s[i] = shape[i + 1] * s[i + 1];
@@ -64,38 +65,38 @@ static std::vector<int64_t> ComputeStrides(const std::vector<int64_t> &shape) {
 }
 
 template <typename T>
-static int CreateAclTensor(const std::vector<T> &host,
-                           const std::vector<int64_t> &shape,
-                           aclDataType dtype, void **devAddr,
-                           aclTensor **tensor) {
+static int CreateAclTensor(const std::vector<T>& host, const std::vector<int64_t>& shape, aclDataType dtype,
+                           void** devAddr, aclTensor** tensor)
+{
     size_t bytes = host.size() * sizeof(T);
     auto ret = aclrtMalloc(devAddr, bytes, ACL_MEM_MALLOC_HUGE_FIRST);
-    if (ret != ACL_SUCCESS) return ret;
-    ret = aclrtMemcpy(*devAddr, bytes, host.data(), bytes,
-                      ACL_MEMCPY_HOST_TO_DEVICE);
-    if (ret != ACL_SUCCESS) return ret;
+    if (ret != ACL_SUCCESS)
+        return ret;
+    ret = aclrtMemcpy(*devAddr, bytes, host.data(), bytes, ACL_MEMCPY_HOST_TO_DEVICE);
+    if (ret != ACL_SUCCESS)
+        return ret;
     auto strides = ComputeStrides(shape);
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dtype,
-                              strides.empty() ? nullptr : strides.data(), 0,
-                              aclFormat::ACL_FORMAT_ND, shape.data(),
-                              shape.size(), *devAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dtype, strides.empty() ? nullptr : strides.data(), 0,
+                              aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), *devAddr);
     return ACL_SUCCESS;
 }
 
-static void GoldenFp32(const float *var, const float *delta, float alpha,
-                       float l1, float l2, size_t n, float *out) {
+static void GoldenFp32(const float* var, const float* delta, float alpha, float l1, float l2, size_t n, float* out)
+{
     const double a = (double)alpha, l1d = (double)l1, l2d = (double)l2;
     const double denom = 1.0 + a * l2d;
     for (size_t i = 0; i < n; ++i) {
         double prox = (double)var[i] - a * (double)delta[i];
         double sgn = (prox > 0.0) - (prox < 0.0);
         double shrink = std::fabs(prox) - a * l1d;
-        if (shrink < 0.0) shrink = 0.0;
+        if (shrink < 0.0)
+            shrink = 0.0;
         out[i] = (float)(sgn * shrink / denom);
     }
 }
 
-int main() {
+int main()
+{
     // ----------------------------------------------------------------------
     // 1. 初始化 ACL
     // ----------------------------------------------------------------------
@@ -111,11 +112,11 @@ int main() {
     // ----------------------------------------------------------------------
     std::vector<int64_t> varShape = {2, 3};
     std::vector<int64_t> scalarShape = {1};
-    std::vector<float> varHost   = { 0.5f, -0.3f,  0.1f, -0.8f,  0.2f,  0.4f};
-    std::vector<float> deltaHost = { 0.1f,  0.1f,  0.1f,  0.1f,  0.1f,  0.1f};
+    std::vector<float> varHost = {0.5f, -0.3f, 0.1f, -0.8f, 0.2f, 0.4f};
+    std::vector<float> deltaHost = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
     std::vector<float> alphaHost = {0.01f};
-    std::vector<float> l1Host    = {0.001f};
-    std::vector<float> l2Host    = {0.01f};
+    std::vector<float> l1Host = {0.001f};
+    std::vector<float> l2Host = {0.01f};
     std::vector<float> varOutHost(varHost.size(), 0.f);
 
     // ----------------------------------------------------------------------
@@ -126,18 +127,12 @@ int main() {
     aclTensor *varT = nullptr, *deltaT = nullptr, *varOutT = nullptr;
     aclTensor *alphaT = nullptr, *l1T = nullptr, *l2T = nullptr;
 
-    CHECK_ACL(CreateAclTensor(varHost,    varShape,    ACL_FLOAT, &varDev,    &varT),
-              "create var");
-    CHECK_ACL(CreateAclTensor(deltaHost,  varShape,    ACL_FLOAT, &deltaDev,  &deltaT),
-              "create delta");
-    CHECK_ACL(CreateAclTensor(varOutHost, varShape,    ACL_FLOAT, &varOutDev, &varOutT),
-              "create varOut");
-    CHECK_ACL(CreateAclTensor(alphaHost,  scalarShape, ACL_FLOAT, &alphaDev,  &alphaT),
-              "create alpha");
-    CHECK_ACL(CreateAclTensor(l1Host,     scalarShape, ACL_FLOAT, &l1Dev,     &l1T),
-              "create l1");
-    CHECK_ACL(CreateAclTensor(l2Host,     scalarShape, ACL_FLOAT, &l2Dev,     &l2T),
-              "create l2");
+    CHECK_ACL(CreateAclTensor(varHost, varShape, ACL_FLOAT, &varDev, &varT), "create var");
+    CHECK_ACL(CreateAclTensor(deltaHost, varShape, ACL_FLOAT, &deltaDev, &deltaT), "create delta");
+    CHECK_ACL(CreateAclTensor(varOutHost, varShape, ACL_FLOAT, &varOutDev, &varOutT), "create varOut");
+    CHECK_ACL(CreateAclTensor(alphaHost, scalarShape, ACL_FLOAT, &alphaDev, &alphaT), "create alpha");
+    CHECK_ACL(CreateAclTensor(l1Host, scalarShape, ACL_FLOAT, &l1Dev, &l1T), "create l1");
+    CHECK_ACL(CreateAclTensor(l2Host, scalarShape, ACL_FLOAT, &l2Dev, &l2T), "create l2");
 
     // ----------------------------------------------------------------------
     // 4. aclnn 两段式调用
@@ -145,63 +140,49 @@ int main() {
     //    第二段: 提交 stream 执行
     // ----------------------------------------------------------------------
     uint64_t wsSize = 0;
-    aclOpExecutor *executor = nullptr;
-    CHECK_ACL(aclnnApplyProximalGradientDescentGetWorkspaceSize(
-                  varT, alphaT, l1T, l2T, deltaT, varOutT, &wsSize, &executor),
-              "aclnnApplyProximalGradientDescentGetWorkspaceSize");
+    aclOpExecutor* executor = nullptr;
+    CHECK_ACL(
+        aclnnApplyProximalGradientDescentGetWorkspaceSize(varT, alphaT, l1T, l2T, deltaT, varOutT, &wsSize, &executor),
+        "aclnnApplyProximalGradientDescentGetWorkspaceSize");
 
-    void *wsDev = nullptr;
+    void* wsDev = nullptr;
     if (wsSize > 0) {
-        CHECK_ACL(aclrtMalloc(&wsDev, wsSize, ACL_MEM_MALLOC_HUGE_FIRST),
-                  "alloc workspace");
+        CHECK_ACL(aclrtMalloc(&wsDev, wsSize, ACL_MEM_MALLOC_HUGE_FIRST), "alloc workspace");
     }
 
-    CHECK_ACL(aclnnApplyProximalGradientDescent(wsDev, wsSize, executor, stream),
-              "aclnnApplyProximalGradientDescent");
+    CHECK_ACL(aclnnApplyProximalGradientDescent(wsDev, wsSize, executor, stream), "aclnnApplyProximalGradientDescent");
     CHECK_ACL(aclrtSynchronizeStream(stream), "aclrtSynchronizeStream");
 
     // ----------------------------------------------------------------------
     // 5. 回拷 varOut 到 Host
     // ----------------------------------------------------------------------
     size_t varBytes = varHost.size() * sizeof(float);
-    CHECK_ACL(aclrtMemcpy(varOutHost.data(), varBytes, varOutDev, varBytes,
-                          ACL_MEMCPY_DEVICE_TO_HOST),
-              "D2H varOut");
+    CHECK_ACL(aclrtMemcpy(varOutHost.data(), varBytes, varOutDev, varBytes, ACL_MEMCPY_DEVICE_TO_HOST), "D2H varOut");
 
     // ----------------------------------------------------------------------
     // 6. 计算 CPU Golden 并打印对比
     // ----------------------------------------------------------------------
     std::vector<float> golden(varHost.size());
-    GoldenFp32(varHost.data(), deltaHost.data(), alphaHost[0], l1Host[0],
-               l2Host[0], varHost.size(), golden.data());
+    GoldenFp32(varHost.data(), deltaHost.data(), alphaHost[0], l1Host[0], l2Host[0], varHost.size(), golden.data());
 
     std::cout << std::fixed << std::setprecision(7);
-    std::cout << "=========================================================="
-              << std::endl;
-    std::cout << "ApplyProximalGradientDescent example (var[2,3], FP32)"
-              << std::endl;
-    std::cout << "alpha=" << alphaHost[0] << ", l1=" << l1Host[0]
-              << ", l2=" << l2Host[0] << std::endl;
-    std::cout << "----------------------------------------------------------"
-              << std::endl;
-    std::cout << "idx |       var |     delta |    golden |    npuOut |  diff"
-              << std::endl;
+    std::cout << "==========================================================" << std::endl;
+    std::cout << "ApplyProximalGradientDescent example (var[2,3], FP32)" << std::endl;
+    std::cout << "alpha=" << alphaHost[0] << ", l1=" << l1Host[0] << ", l2=" << l2Host[0] << std::endl;
+    std::cout << "----------------------------------------------------------" << std::endl;
+    std::cout << "idx |       var |     delta |    golden |    npuOut |  diff" << std::endl;
     bool ok = true;
     const double atol = 1e-5;
     for (size_t i = 0; i < varHost.size(); ++i) {
         double diff = std::fabs((double)varOutHost[i] - (double)golden[i]);
-        if (diff > atol) ok = false;
-        std::cout << std::setw(3) << i << " | " << std::setw(9) << varHost[i]
-                  << " | " << std::setw(9) << deltaHost[i] << " | "
-                  << std::setw(9) << golden[i] << " | " << std::setw(9)
-                  << varOutHost[i] << " | " << std::scientific
-                  << std::setprecision(2) << diff << std::fixed
-                  << std::setprecision(7) << std::endl;
+        if (diff > atol)
+            ok = false;
+        std::cout << std::setw(3) << i << " | " << std::setw(9) << varHost[i] << " | " << std::setw(9) << deltaHost[i]
+                  << " | " << std::setw(9) << golden[i] << " | " << std::setw(9) << varOutHost[i] << " | "
+                  << std::scientific << std::setprecision(2) << diff << std::fixed << std::setprecision(7) << std::endl;
     }
-    std::cout << "=========================================================="
-              << std::endl;
-    std::cout << "Result: " << (ok ? "PASS" : "FAIL") << " (atol=" << atol
-              << ")" << std::endl;
+    std::cout << "==========================================================" << std::endl;
+    std::cout << "Result: " << (ok ? "PASS" : "FAIL") << " (atol=" << atol << ")" << std::endl;
 
     // ----------------------------------------------------------------------
     // 7. 释放资源
@@ -218,7 +199,8 @@ int main() {
     aclrtFree(alphaDev);
     aclrtFree(l1Dev);
     aclrtFree(l2Dev);
-    if (wsDev) aclrtFree(wsDev);
+    if (wsDev)
+        aclrtFree(wsDev);
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

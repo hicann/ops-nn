@@ -27,15 +27,15 @@ constexpr uint64_t DOUBLE_BUFFER = 2;
 constexpr uint64_t MIN_CP_THRESHOLD = 128;
 
 template <typename T>
-__simd_vf__ inline void CopyOneCpToRepeatOutVf(
-    __ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, int64_t dataCount, uint16_t repeatTimes)
+__simd_vf__ inline void CopyOneCpToRepeatOutVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, int64_t dataCount,
+                                               uint16_t repeatTimes)
 {
     AscendC::MicroAPI::UnalignReg uIn;
     AscendC::MicroAPI::UnalignReg uOut;
     AscendC::MicroAPI::RegTensor<T> inputRegTensor;
     AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
-    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-        inputRegTensor, uIn, xInLocalPtr, dataCount);
+    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
+                                                                                            xInLocalPtr, dataCount);
     for (uint16_t i = 0; i < repeatTimes; i++) {
         AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
             xOutLocalPtr, inputRegTensor, uOut, dataCount);
@@ -43,8 +43,8 @@ __simd_vf__ inline void CopyOneCpToRepeatOutVf(
     AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
-__simd_vf__ inline void CopyXToOutNormVf(
-    __ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr, uint32_t totalBytes, uint16_t size, uint16_t stride)
+__simd_vf__ inline void CopyXToOutNormVf(__ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr,
+                                         uint32_t totalBytes, uint16_t size, uint16_t stride)
 {
     AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
     uint32_t sreg = totalBytes;
@@ -137,7 +137,8 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyInRepeats(int64_t repeatD
     /* repeats搬入地址起始位置 */
     int64_t offset = repeatDimIdx % tilingData_.mergedDims[1];
     int64_t dataLen = (offset + tilingData_.ubFactor) > tilingData_.mergedDims[1] ?
-        (tilingData_.mergedDims[1] - offset) : tilingData_.ubFactor;
+                          (tilingData_.mergedDims[1] - offset) :
+                          tilingData_.ubFactor;
 
     DataCopyExtParams inParams = {1, static_cast<uint32_t>(dataLen * sizeof(U)), 0, 0, 0};
     DataCopyPadExtParams<U> padParams = {false, 0, 0, 0};
@@ -201,8 +202,8 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyInX(int64_t repeatDimIdx,
 }
 
 template <typename T, typename U>
-__aicore__ inline void RepeatInterleaveImpl<T, U>::CopyOneCpToRepeatOut(
-    const LocalTensor<T> xInLocal, uint16_t repeatTimes)
+__aicore__ inline void RepeatInterleaveImpl<T, U>::CopyOneCpToRepeatOut(const LocalTensor<T> xInLocal,
+                                                                        uint16_t repeatTimes)
 {
     LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
     __ubuf__ T* xInLocalPtr = (__ubuf__ T*)xInLocal.GetPhyAddr() + copyFromXNum_;
@@ -226,7 +227,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToMatchOut(int64_t start
     for (int64_t i = 0; i < cpCount; i++) {
         int64_t repeatDimIdx = i + startCpIdx;
         if (!isRepeatsScalar_ && ((repeatDimIdx % tilingData_.mergedDims[1]) >= curRepeatTailPos_ ||
-            (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
+                                  (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
             CopyInRepeats(repeatDimIdx);
         }
         ComputeRepeatsOnCurDim(repeatDimIdx);
@@ -363,7 +364,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ProcessWholeCp()
     CopyInRepeats(0);
     for (int64_t repeatDimIdx = startCpIdx; repeatDimIdx < startCpIdx + curCoreCpCount; repeatDimIdx++) {
         if (!isRepeatsScalar_ && ((repeatDimIdx % tilingData_.mergedDims[1]) >= curRepeatTailPos_ ||
-            (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
+                                  (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
             CopyInRepeats(repeatDimIdx);
         }
         ComputeRepeatsOnCurDim(repeatDimIdx);
@@ -395,7 +396,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ProcessSplitCp()
     CopyInRepeats(0);
     for (int64_t repeatDimIdx = startCpIdx; repeatDimIdx < startCpIdx + tilingData_.mergedDims[1]; repeatDimIdx++) {
         if (!isRepeatsScalar_ && ((repeatDimIdx % tilingData_.mergedDims[1]) >= curRepeatTailPos_ ||
-            (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
+                                  (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
             CopyInRepeats(repeatDimIdx);
         }
         ComputeRepeatsOnCurDim(repeatDimIdx);

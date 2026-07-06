@@ -15,7 +15,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *HardSigmoidV2(const aclTensor *self, aclOpExecutor *executor);
+const aclTensor* HardSigmoidV2(const aclTensor* self, aclOpExecutor* executor);
 }
 
 #endif

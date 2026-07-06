@@ -21,17 +21,12 @@ using namespace AscendC;
 
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <typename T1, typename yDtype>
-class DynamicQuantLargeShapeOpt : public DynamicQuantBase
-{
+class DynamicQuantLargeShapeOpt : public DynamicQuantBase {
 public:
-    __aicore__ inline DynamicQuantLargeShapeOpt(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantLargeShapeOpt(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitLargeShapeParams(offset);
@@ -66,7 +61,8 @@ public:
                     if (tilingData_.innerLoopTail == 0) {
                         CopyInByEle(offsetBase, 0, tilingData_.innerLoopEle, 0);
                     } else {
-                        CopyInByEle(srcOffset + tilingData_.innerLoopEle, innerLoopIndex + 1, tilingData_.innerLoopTail, rightPadding);
+                        CopyInByEle(srcOffset + tilingData_.innerLoopEle, innerLoopIndex + 1, tilingData_.innerLoopTail,
+                                    rightPadding);
                     }
                 } else {
                     CopyInByEle(srcOffset + tilingData_.innerLoopEle, innerLoopIndex + 1, tilingData_.innerLoopEle, 0);
@@ -84,7 +80,7 @@ public:
             // 量化计算
             SymmetricalQuant(offsetBase, scale, i);
 
-            if ((i +1) % scaleMaxLength == 0 || i == loopCnt - 1) {
+            if ((i + 1) % scaleMaxLength == 0 || i == loopCnt - 1) {
                 scaleQueue.EnQue<float>(scaleLocal);
                 if (i == loopCnt - 1) {
                     CopyScalesOut(loopCnt - scaleIdx * scaleMaxLength, scaleIdx * scaleMaxLength);
@@ -106,7 +102,8 @@ public:
                 if (tilingData_.innerLoopTail == 0 && idx < loopCnt - 1) {
                     CopyInByEle((idx + 1) * tilingData_.rowLen, 0, tilingData_.innerLoopEle, 0);
                 } else if (tilingData_.innerLoopTail != 0) {
-                    CopyInByEle(srcOffset + tilingData_.innerLoopEle, innerLoopIndex + 1, tilingData_.innerLoopTail, rightPadding);
+                    CopyInByEle(srcOffset + tilingData_.innerLoopEle, innerLoopIndex + 1, tilingData_.innerLoopTail,
+                                rightPadding);
                 }
             } else {
                 CopyInByEle(srcOffset + tilingData_.innerLoopEle, innerLoopIndex + 1, tilingData_.innerLoopEle, 0);
@@ -141,15 +138,14 @@ public:
             // 计算每一行的最大值以及最小值
             for (uint32_t innerLoopIndex = 0; innerLoopIndex < tilingData_.innerLoopTimes; innerLoopIndex++) {
                 srcOffset = offsetBase + innerLoopIndex * tilingData_.innerLoopEle;
-                ComputeMaxAndMinValue(
-                    srcOffset, innerLoopIndex, tilingData_.innerLoopEle, 0, maxUpdateValue, minUpdateValue);
+                ComputeMaxAndMinValue(srcOffset, innerLoopIndex, tilingData_.innerLoopEle, 0, maxUpdateValue,
+                                      minUpdateValue);
             }
             // 如果核内切的有尾块
             if (tilingData_.innerLoopTail > 0) {
                 srcOffset = offsetBase + tilingData_.innerLoopTimes * tilingData_.innerLoopEle;
-                ComputeMaxAndMinValue(
-                    srcOffset, tilingData_.innerLoopTimes, tilingData_.innerLoopTail, rightPadding, maxUpdateValue,
-                    minUpdateValue);
+                ComputeMaxAndMinValue(srcOffset, tilingData_.innerLoopTimes, tilingData_.innerLoopTail, rightPadding,
+                                      maxUpdateValue, minUpdateValue);
             }
 
             GetScaleAndOffset(maxUpdateValue, minUpdateValue, scale, offset);
@@ -164,9 +160,10 @@ public:
             // 如果核内切的有尾块
             if (tilingData_.innerLoopTail > 0) {
                 srcOffset = offsetBase + tilingData_.innerLoopTimes * tilingData_.innerLoopEle;
-                QuantCompute(srcOffset, tilingData_.innerLoopTimes, scale, offset, tilingData_.innerLoopTail, rightPadding);
+                QuantCompute(srcOffset, tilingData_.innerLoopTimes, scale, offset, tilingData_.innerLoopTail,
+                             rightPadding);
             }
-            if ((i +1) % scaleMaxLength == 0 || i == loopCnt - 1) {
+            if ((i + 1) % scaleMaxLength == 0 || i == loopCnt - 1) {
                 scaleQueue.EnQue<float>(scaleLocal);
                 offsetQueue.EnQue<float>(offsetLocal);
 
@@ -187,7 +184,8 @@ public:
 private:
     __aicore__ inline void InitAndSetBuffer(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset)
     {
-        scaleMaxLength = tilingData_.ubSize - UB_RESERVED_LENGTH - THIRTY_TWO - tilingData_.innerLoopEle * sizeof(float) * DOUBLE;
+        scaleMaxLength = tilingData_.ubSize - UB_RESERVED_LENGTH - THIRTY_TWO -
+                         tilingData_.innerLoopEle * sizeof(float) * DOUBLE;
         if (tilingData_.hasSmooth) {
             smoothGm.SetGlobalBuffer((__gm__ T1*)smooth_scales);
             pPipe->InitBuffer(smoothQueue, DOUBLE_BUFFER_NUM, tilingData_.innerLoopEle * sizeof(T1));
@@ -201,25 +199,23 @@ private:
                 offsetGm.SetGlobalBuffer((__gm__ float*)offset + blockIdx * rowPerHeadCore, rowPerHeadCore);
             }
         } else {
-            inGm.SetGlobalBuffer(
-                (__gm__ T1*)x + tilingData_.headCoreNum * static_cast<int64_t>(lenHead) + (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(lenTail),
-                lenTail);
-            outGm.SetGlobalBuffer(
-                (__gm__ yDtype*)y + tilingData_.headCoreNum * static_cast<int64_t>(outLenHead) +
-                    (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(outLenTail),
-                outLenTail);
-            scaleGm.SetGlobalBuffer(
-                (__gm__ float*)scale + tilingData_.headCoreNum * rowPerHeadCore +
-                    (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
-                rowPerTailCore);
+            inGm.SetGlobalBuffer((__gm__ T1*)x + tilingData_.headCoreNum * static_cast<int64_t>(lenHead) +
+                                     (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(lenTail),
+                                 lenTail);
+            outGm.SetGlobalBuffer((__gm__ yDtype*)y + tilingData_.headCoreNum * static_cast<int64_t>(outLenHead) +
+                                      (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(outLenTail),
+                                  outLenTail);
+            scaleGm.SetGlobalBuffer((__gm__ float*)scale + tilingData_.headCoreNum * rowPerHeadCore +
+                                        (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
+                                    rowPerTailCore);
             if (isAsymmetrical) {
-                offsetGm.SetGlobalBuffer(
-                    (__gm__ float*)offset + tilingData_.headCoreNum * rowPerHeadCore +
-                        (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
-                    rowPerTailCore);
+                offsetGm.SetGlobalBuffer((__gm__ float*)offset + tilingData_.headCoreNum * rowPerHeadCore +
+                                             (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
+                                         rowPerTailCore);
             }
         }
-        scaleMaxLength -= (tilingData_.innerLoopEle * sizeof(T1) + tilingData_.innerLoopEle * sizeof(yDtype)) * DOUBLE_BUFFER_NUM;
+        scaleMaxLength -= (tilingData_.innerLoopEle * sizeof(T1) + tilingData_.innerLoopEle * sizeof(yDtype)) *
+                          DOUBLE_BUFFER_NUM;
         scaleMaxLength = scaleMaxLength / THIRTY_TWO * THIRTY_TWO / sizeof(float);
         if (isAsymmetrical) {
             scaleMaxLength /= DOUBLE;
@@ -265,16 +261,16 @@ private:
         offsetQueue.FreeTensor(offsetLocal);
     }
 
-    __aicore__ inline void QuantCompute(
-        uint32_t offset, uint32_t loopIndex, float scale, float offsetOut, uint32_t elementNum, uint8_t rightPadding)
+    __aicore__ inline void QuantCompute(uint32_t offset, uint32_t loopIndex, float scale, float offsetOut,
+                                        uint32_t elementNum, uint8_t rightPadding)
     {
         CopyInByEle(offset, loopIndex, elementNum, rightPadding);
         Compute(scale, offsetOut, elementNum);
         CopyOut(offset, elementNum);
     }
 
-    __aicore__ inline void ComputeMaxValue(
-        uint32_t offset, uint32_t loopIndex, uint32_t elementNum, uint8_t rightPadding, float& maxUpdateValue)
+    __aicore__ inline void ComputeMaxValue(uint32_t offset, uint32_t loopIndex, uint32_t elementNum,
+                                           uint8_t rightPadding, float& maxUpdateValue)
     {
         CopyInByEle(offset, loopIndex, elementNum, rightPadding);
         ComputeGetMaxValue(elementNum, maxUpdateValue);
@@ -350,9 +346,8 @@ private:
         inQueue.FreeTensor(inLocal);
     }
 
-    __aicore__ inline void ComputeMaxAndMinValue(
-        uint32_t offset, uint32_t loopIndex, uint32_t elementNum, uint8_t rightPadding, float& maxUpdateValue,
-        float& minUpdataValue)
+    __aicore__ inline void ComputeMaxAndMinValue(uint32_t offset, uint32_t loopIndex, uint32_t elementNum,
+                                                 uint8_t rightPadding, float& maxUpdateValue, float& minUpdataValue)
     {
         CopyInByEle(offset, loopIndex, elementNum, rightPadding);
         ComputeGetMaxAndMinValue(elementNum, maxUpdateValue, minUpdataValue);

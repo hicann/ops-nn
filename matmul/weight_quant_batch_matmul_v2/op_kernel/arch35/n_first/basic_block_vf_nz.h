@@ -47,19 +47,18 @@ struct Int4NzParams {
     __local_mem__ uint8_t* antiQuantScaleMaskPhyAddr;
 };
 
-static constexpr MicroAPI::CastTrait CAST_S4_TO_F16_TRAIT = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait CAST_S4_TO_F16_TRAIT = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                             MicroAPI::MaskMergeMode::ZEROING,
+                                                             AscendC::RoundMode::UNKNOWN};
 
-static constexpr MicroAPI::CastTrait CAST_F16_TO_S8_TRAIT = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait CAST_F16_TO_S8_TRAIT = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                             MicroAPI::MaskMergeMode::ZEROING,
+                                                             AscendC::RoundMode::CAST_RINT};
 
 static constexpr int64_t ONE_BLK_ELEM_B16 = ONE_BLK_SIZE / sizeof(half);
 
-template <
-    typename xType, typename wType, typename antiQuantScaleType, bool hasAntiQuantOffset, uint64_t ubMte2InnerSize,
-    bool useVag>
+template <typename xType, typename wType, typename antiQuantScaleType, bool hasAntiQuantOffset,
+          uint64_t ubMte2InnerSize, bool useVag>
 __aicore__ inline void AntiQuantInt4NzKnVf(Int4NzParams<xType, wType, antiQuantScaleType>& int4NzParams)
 {
     RegTensor<antiQuantScaleType> antiQuantScaleVreg;
@@ -109,8 +108,8 @@ __aicore__ inline void AntiQuantInt4NzKnVf(Int4NzParams<xType, wType, antiQuantS
     }
 }
 
-template <
-    typename xType, typename wType, typename antiQuantScaleType, bool hasAntiQuantOffset, uint64_t ubMte2InnerSize>
+template <typename xType, typename wType, typename antiQuantScaleType, bool hasAntiQuantOffset,
+          uint64_t ubMte2InnerSize>
 __aicore__ inline void AntiQuantS8S4NzKnGroupVf(Int4NzParams<xType, wType, antiQuantScaleType>& int4NzParams)
 {
     RegTensor<antiQuantScaleType> antiQuantScaleVreg;
@@ -126,10 +125,10 @@ __aicore__ inline void AntiQuantS8S4NzKnGroupVf(Int4NzParams<xType, wType, antiQ
     for (uint16_t loopN1Idx = 0; loopN1Idx < int4NzParams.loopN1; loopN1Idx++) {
         for (uint16_t loopGroupIdx = 0; loopGroupIdx < int4NzParams.loopGroupNum; loopGroupIdx++) {
             // DIST_BLK 的含义为读取一个32B(即16个数)的数据，广播到256B(即128个数)
-            antiQuantScaleBasePhyAddr =
-                int4NzParams.antiQuantScaleBasePhyAddr + loopN1Idx * C0_SIZE_B8 + loopGroupIdx * VEC_MAX_ELEM_B16;
-            MicroAPI::DataCopy<antiQuantScaleType, MicroAPI::LoadDist::DIST_BLK>(
-                antiQuantScaleVreg, antiQuantScaleBasePhyAddr);
+            antiQuantScaleBasePhyAddr = int4NzParams.antiQuantScaleBasePhyAddr + loopN1Idx * C0_SIZE_B8 +
+                                        loopGroupIdx * VEC_MAX_ELEM_B16;
+            MicroAPI::DataCopy<antiQuantScaleType, MicroAPI::LoadDist::DIST_BLK>(antiQuantScaleVreg,
+                                                                                 antiQuantScaleBasePhyAddr);
             MicroAPI::DataCopy<antiQuantScaleType, MicroAPI::LoadDist::DIST_BLK>(
                 antiQuantScaleVreg1, antiQuantScaleBasePhyAddr + ONE_BLK_ELEM_B16);
             MicroAPI::Select(antiQuantScaleVreg, antiQuantScaleVreg, antiQuantScaleVreg1, maskSelect);
@@ -164,4 +163,3 @@ __aicore__ inline void AntiQuantS8S4NzKnGroupVf(Int4NzParams<xType, wType, antiQ
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

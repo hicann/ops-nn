@@ -61,29 +61,24 @@ constexpr int64_t ONE_BLK_BYTE = 32;
 constexpr int64_t WORKSPACE_SIZE = 32;
 constexpr int64_t DIGIT_THOUSAND = 1000;
 
-int64_t GetRemainder(int64_t u_value, int64_t d_value) {
-  int64_t res_value = 0;
-  if (d_value == 0) {
-    return u_value;
-  }
-  res_value = u_value % d_value;
-
-  return res_value;
-}
-
-bool ReverseV2Tiling::IsCapable()
+int64_t GetRemainder(int64_t u_value, int64_t d_value)
 {
-    return true;
+    int64_t res_value = 0;
+    if (d_value == 0) {
+        return u_value;
+    }
+    res_value = u_value % d_value;
+
+    return res_value;
 }
 
-ge::graphStatus ReverseV2Tiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+bool ReverseV2Tiling::IsCapable() { return true; }
+
+ge::graphStatus ReverseV2Tiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus ReverseV2Tiling::GetPlatformInfo()
 {
-    auto compileInfo = static_cast<const ReverseV2CompileInfo *>(context_->GetCompileInfo());
+    auto compileInfo = static_cast<const ReverseV2CompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     totalCoreNum_ = compileInfo->totalCoreNum;
     ubSize_ = compileInfo->ubSize;
@@ -98,8 +93,8 @@ ge::graphStatus ReverseV2Tiling::GetInputShape()
     auto inputShape = inputX->GetStorageShape();
     size_t inputDimNum = inputShape.GetDimNum();
     if (inputDimNum > DIM8) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "input", std::to_string(inputDimNum).c_str(), "input dim num must be less than or equal to 8");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "input", std::to_string(inputDimNum).c_str(),
+                                                 "input dim num must be less than or equal to 8");
         return ge::GRAPH_FAILED;
     }
     for (size_t i = 0; i < inputDimNum; i++) {
@@ -112,8 +107,8 @@ ge::graphStatus ReverseV2Tiling::GetInputShape()
     auto dtype = inputDesc->GetDataType();
     dtypeSize_ = ge::GetSizeByDataType(dtype);
     if (dtypeSize_ <= 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "input", std::to_string(dtypeSize_).c_str(), "dtypeSize must be greater than 0");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "input", std::to_string(dtypeSize_).c_str(),
+                                              "dtypeSize must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -132,7 +127,7 @@ ge::graphStatus ReverseV2Tiling::GetReversedDims()
     }
     // convert negative axis to positive
     int64_t size = inputShape_.size() > 0 ? inputShape_.size() : DIM1;
-    for (int64_t &num : reversedDims_) {
+    for (int64_t& num : reversedDims_) {
         if (num < 0) {
             num = size + num;
         }
@@ -165,25 +160,25 @@ ge::graphStatus ReverseV2Tiling::GetShapeAttrsInfo()
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "axis", Ops::Base::ToString(axisDataType).c_str(),
-            "[DT_INT32, DT_INT64]");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "axis",
+                                              Ops::Base::ToString(axisDataType).c_str(), "[DT_INT32, DT_INT64]");
         return ge::GRAPH_FAILED;
     }
     // check axis if valid
     // 1. reversedDims_ cannot be duplicated
     std::set<int64_t> dimsSet(reversedDims_.begin(), reversedDims_.end());
     if (dimsSet.size() != reversedDims_.size()) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", "duplicated values", "axis cannot be duplicated");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", "duplicated values",
+                                              "axis cannot be duplicated");
         return ge::GRAPH_FAILED;
     }
     std::vector<int64_t> dimsVec(dimsSet.begin(), dimsSet.end());
     reversedDims_ = dimsVec;
     // 2. inputShape_ dim num must be greater than or equal to reversedDims_ size
     if (reversedDims_.size() > inputShape_.size() && !inputShape_.empty()) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "axis", std::to_string(reversedDims_.size()).c_str(),
-            "axis size must be less than or equal to input shape dim num");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis",
+                                              std::to_string(reversedDims_.size()).c_str(),
+                                              "axis size must be less than or equal to input shape dim num");
         return ge::GRAPH_FAILED;
     }
     auto axis = context_->GetInputTensor(INPUT_AXIS);
@@ -192,16 +187,15 @@ ge::graphStatus ReverseV2Tiling::GetShapeAttrsInfo()
     size_t axisDimNum = axisShape.GetDimNum();
     // 3. axis must be 1D
     if (axisDimNum != 1U) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "axis", std::to_string(axisDimNum).c_str(), "axis dim num must be 1D");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axisDimNum).c_str(),
+                                                 "axis dim num must be 1D");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-std::vector<int64_t> ReverseV2Tiling::GetNonReversedDims(const std::vector<int64_t> &shapeVec,
-                                                         const std::vector<int64_t> &dims,
-                                                         bool isReversedDim)
+std::vector<int64_t> ReverseV2Tiling::GetNonReversedDims(const std::vector<int64_t>& shapeVec,
+                                                         const std::vector<int64_t>& dims, bool isReversedDim)
 {
     if (isReversedDim && shapeVec.empty()) {
         return reversedDims_;
@@ -215,7 +209,7 @@ std::vector<int64_t> ReverseV2Tiling::GetNonReversedDims(const std::vector<int64
     return nonReversedDims;
 }
 
-std::vector<int64_t> MergeInputShape(const std::vector<int64_t> &shapeVec, const std::vector<int64_t> &dims)
+std::vector<int64_t> MergeInputShape(const std::vector<int64_t>& shapeVec, const std::vector<int64_t>& dims)
 {
     std::vector<int64_t> mergedInputShape;
     size_t startDim = 0;
@@ -234,7 +228,7 @@ std::vector<int64_t> MergeInputShape(const std::vector<int64_t> &shapeVec, const
     return mergedInputShape;
 }
 
-int64_t GetParam(const std::vector<int64_t> &shapeVec, int64_t dim)
+int64_t GetParam(const std::vector<int64_t>& shapeVec, int64_t dim)
 {
     int64_t param = 1;
     for (size_t i = dim + 1; i < shapeVec.size(); i++) {
@@ -243,7 +237,7 @@ int64_t GetParam(const std::vector<int64_t> &shapeVec, int64_t dim)
     return param;
 }
 
-std::vector<int64_t> MergeDims(const std::vector<int64_t> &dims)
+std::vector<int64_t> MergeDims(const std::vector<int64_t>& dims)
 {
     std::vector<int64_t> mergedDims;
     size_t cnt = 0;
@@ -305,12 +299,11 @@ void ReverseV2Tiling::DoSimdTiling()
     dimNum_ = inputShape_.size();
     int64_t reverseDimNum = reversedDims_.size();
     //判断输入轴是否有效
-    if (reverseDimNum < 1  || dimNum_ < TWO_DIMS) {
+    if (reverseDimNum < 1 || dimNum_ < TWO_DIMS) {
         isSimd_ = false;
         return;
     }
-    if (reversedDims_[reverseDimNum - 1] == dimNum_ - 1 ||
-        inputShape_[dimNum_ - 1] * dtypeSize_ < SIMD_THRESHOLD) {
+    if (reversedDims_[reverseDimNum - 1] == dimNum_ - 1 || inputShape_[dimNum_ - 1] * dtypeSize_ < SIMD_THRESHOLD) {
         isSimd_ = false;
         return;
     }
@@ -356,9 +349,9 @@ void ReverseV2Tiling::SplitProcess(int64_t inNegOneSize)
     totalLoop_ = 1;
     int64_t tmpAll = 1;
     int64_t splitSize = 1;
-    //at least two dims will in
+    // at least two dims will in
     for (int64_t i = dimNum_ - 1; i >= 0; i--) {
-        if (dimNum_ - 1 == i ) {
+        if (dimNum_ - 1 == i) {
             tmpAll *= inNegOneSize;
         } else {
             tmpAll *= inputShape_[i];
@@ -381,18 +374,15 @@ void ReverseV2Tiling::SplitProcess(int64_t inNegOneSize)
     totalLoop_ *= splitDimLoop_;
 }
 
-
-int64_t ReverseV2Tiling::CalcLoopStride(int64_t index) {
+int64_t ReverseV2Tiling::CalcLoopStride(int64_t index)
+{
     if (index == splitDim_ - 1) {
         return splitDimLoop_;
     }
     return loopStride_[index + 1] * inputShape_[index + 1];
 }
 
-uint64_t ReverseV2Tiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t ReverseV2Tiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus ReverseV2Tiling::GetWorkspaceSize()
 {
@@ -437,8 +427,8 @@ ge::graphStatus ReverseV2Tiling::PostTiling()
     tilingData_.set_loopStride(loopStride_);
     tilingData_.set_usedCoreNum(usedCoreNum_);
 
-    uint64_t dimNum = inputShape_.size() == 0 ?
-                      static_cast<uint64_t>(inputSize_) : static_cast<uint64_t>(inputShape_.size());
+    uint64_t dimNum = inputShape_.size() == 0 ? static_cast<uint64_t>(inputSize_) :
+                                                static_cast<uint64_t>(inputShape_.size());
     uint64_t THRESHOLD = 1000;
     uint64_t mergedInputDimNum = dimNum * THRESHOLD;
     uint64_t reversedDim = reversedDims_[0];
@@ -522,7 +512,7 @@ bool ReverseV2Tiling::IsTensorMove()
     return true;
 }
 
-void CalcBlockFactor4ReverseV2(ReverseV2TilingParam &tilingParam, int64_t numel)
+void CalcBlockFactor4ReverseV2(ReverseV2TilingParam& tilingParam, int64_t numel)
 {
     tilingParam.uo = Ops::Base::CeilDiv(numel, tilingParam.ubFactor);
     tilingParam.tailBlockTailUbFactor = GetRemainder(numel, tilingParam.ubFactor);
@@ -536,7 +526,7 @@ void CalcBlockFactor4ReverseV2(ReverseV2TilingParam &tilingParam, int64_t numel)
     }
 }
 
-static ge::graphStatus DoTiling4ReverseV2(const gert::TilingContext *context, ReverseV2TilingParam &tilingParam)
+static ge::graphStatus DoTiling4ReverseV2(const gert::TilingContext* context, ReverseV2TilingParam& tilingParam)
 {
     auto xShapePtr = context->GetInputShape(INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
@@ -586,11 +576,11 @@ static void SetTilingData4ReverseV2(TensorMoveTilingData& tilingData, const Reve
 static void PrintTilingData4ReverseV2(const gert::TilingContext* context, TensorMoveTilingData& tilingData)
 {
     OP_LOGI(context->GetNodeName(),
-        "ReverseV2 tilingdata: totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, tailBlockTailUbFactor:%ld, "
-        "blockFactor:%ld, tailBlockFactor:%ld, tilingKey:%ld ",
-        tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(), tilingData.get_ubFactor(),
-        tilingData.get_tailBlockTailUbFactor(), tilingData.get_blockFactor(), tilingData.get_tailBlockFactor(),
-        tilingData.get_tilingKey());
+            "ReverseV2 tilingdata: totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, tailBlockTailUbFactor:%ld, "
+            "blockFactor:%ld, tailBlockFactor:%ld, tilingKey:%ld ",
+            tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(), tilingData.get_ubFactor(),
+            tilingData.get_tailBlockTailUbFactor(), tilingData.get_blockFactor(), tilingData.get_tailBlockFactor(),
+            tilingData.get_tilingKey());
 }
 
 static ge::graphStatus ReverseV2SetTilingData(gert::TilingContext* context, TensorMoveTilingData& tilingData)
@@ -603,11 +593,11 @@ static ge::graphStatus ReverseV2SetTilingData(gert::TilingContext* context, Tens
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext *context)
+static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "ReverseV2ToTensorMoveTilingForAscendC running begin.");
 
-    auto compileInfo = reinterpret_cast<const ReverseV2CompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = reinterpret_cast<const ReverseV2CompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     ReverseV2TilingParam tilingParam;
@@ -615,7 +605,7 @@ static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext
     tilingParam.ubSize = compileInfo->ubSize;
 
     OP_CHECK_IF(DoTiling4ReverseV2(context, tilingParam) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "Dotiling failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Dotiling failed."), return ge::GRAPH_FAILED);
 
     // tilingkey由数据类型所占字节(1/2/4/8)*1000 表示
     tilingParam.tilingKey = tilingParam.bytesForOneData * DIGIT_THOUSAND;
@@ -623,11 +613,11 @@ static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext
     TensorMoveTilingData tilingData;
     SetTilingData4ReverseV2(tilingData, tilingParam);
     OP_CHECK_IF(ReverseV2SetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "ReverseV2SetTilingData set tiling data fail."), 
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "ReverseV2SetTilingData set tiling data fail."),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_usedCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
-    size_t *workspaces = context->GetWorkspaceSizes(1);
+    size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = WORKSPACE_SIZE;
 
@@ -636,7 +626,7 @@ static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ReverseV2TilingForAscendC(gert::TilingContext *context)
+ge::graphStatus ReverseV2TilingForAscendC(gert::TilingContext* context)
 {
     ReverseV2Tiling tiling(context);
     if (tiling.GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {

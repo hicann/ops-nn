@@ -44,15 +44,9 @@ struct IndexCompileInfo {
 
 class IndexTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "IndexTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "IndexTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "IndexTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "IndexTiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -81,19 +75,17 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 }
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}},         // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        dtype,                              // dt
-        nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dt
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -718,8 +710,8 @@ TEST_F(IndexTiling, Index_AC_tiling_dim2_int32)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate

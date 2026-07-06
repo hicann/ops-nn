@@ -22,8 +22,9 @@ using namespace AscendC;
 using namespace KlDivLossGrad;
 
 template <uint64_t schMode, uint32_t logTarget>
-__global__ __aicore__ void kl_div_loss_grad(GM_ADDR grad, GM_ADDR input, GM_ADDR target,  
-        GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+__global__ __aicore__ void kl_div_loss_grad(GM_ADDR grad, GM_ADDR input, GM_ADDR target, GM_ADDR y, GM_ADDR workspace,
+                                            GM_ADDR tiling)
+{
     if constexpr (static_cast<uint32_t>(logTarget) == static_cast<uint32_t>(KDLG_TRUE)) {
         using OpDag = KlDivLossGrad::KDLGLogTargetTrue<DTYPE_GRAD>::OpDag;
         BroadcastSch<schMode, OpDag> sch(tiling);

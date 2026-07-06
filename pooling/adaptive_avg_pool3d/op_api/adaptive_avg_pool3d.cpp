@@ -26,16 +26,16 @@ static constexpr size_t SUB_DIM_D = -3;
 static constexpr size_t SUB_DIM_H = -2;
 static constexpr size_t SUB_DIM_W = -1;
 
-static const aclTensor* AdaptiveAvgPool3dAiCore(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* AdaptiveAvgPool3dAiCore(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                                aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveAvgPool3dAiCore, self, outputSize, out);
     std::string dataFormat = (Ops::NN::AclnnUtil::IsRegbase()) ? "NCDHW" : "NDHWC";
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3d, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(outputSize, dataFormat));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool3dAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3d, OP_INPUT(self), OP_OUTPUT(out),
+                                           OP_ATTR(outputSize, dataFormat));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool3dAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
@@ -47,8 +47,8 @@ const aclTensor* AdaptiveAvgPool3d(const aclTensor* self, const aclIntArray* out
         uint64_t size = outShape.GetDimNum();
         outShape.SetDim(size + SUB_DIM_D, (*outputSize)[DIM_D]);
         outShape.SetDim(size + SUB_DIM_H, (*outputSize)[DIM_H]);
-        outShape.SetDim(size + SUB_DIM_W, (*outputSize)[DIM_W]); 
-    }else {
+        outShape.SetDim(size + SUB_DIM_W, (*outputSize)[DIM_W]);
+    } else {
         outShape.SetDim(DIM_D + 1, (*outputSize)[DIM_D]);
         outShape.SetDim(DIM_H + 1, (*outputSize)[DIM_H]);
         outShape.SetDim(DIM_W + 1, (*outputSize)[DIM_W]);

@@ -13,13 +13,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* IndexAiCore(
-    const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides, const op::Shape& outputShape,
-    const aclTensorList* indices, aclOpExecutor* executor);
+const aclTensor* IndexAiCore(const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides,
+                             const op::Shape& outputShape, const aclTensorList* indices, aclOpExecutor* executor);
 
-const aclTensor* IndexAiCpu(
-    const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides, const op::Shape& outputShape,
-    const aclTensorList* indices, aclOpExecutor* executor);
-}  // namespace l0op
+const aclTensor* IndexAiCpu(const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides,
+                            const op::Shape& outputShape, const aclTensorList* indices, aclOpExecutor* executor);
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_EXPERIMENTAL_INDEX_L0_H_
+#endif // OP_API_INC_LEVEL0_EXPERIMENTAL_INDEX_L0_H_

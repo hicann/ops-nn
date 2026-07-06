@@ -78,32 +78,31 @@ uint64_t LayerNormV3RegBaseNormNotEqualParamsTiling::GetTilingKey() const
 {
     uint64_t tilingKey = -1;
     if (commonParams.tensorDtype == ge::DT_FLOAT && commonParams.paramDtype == ge::DT_FLOAT) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT32_FLOAT32);
+        tilingKey = static_cast<uint64_t>(
+            LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT32_FLOAT32);
     }
     if (commonParams.tensorDtype == ge::DT_FLOAT16 && commonParams.paramDtype == ge::DT_FLOAT) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT32);
+        tilingKey = static_cast<uint64_t>(
+            LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT32);
     }
     if (commonParams.tensorDtype == ge::DT_FLOAT16 && commonParams.paramDtype == ge::DT_FLOAT16) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT16);
+        tilingKey = static_cast<uint64_t>(
+            LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT16);
     }
     if (commonParams.tensorDtype == ge::DT_BF16 && commonParams.paramDtype == ge::DT_FLOAT) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_FLOAT32);
+        tilingKey = static_cast<uint64_t>(
+            LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_FLOAT32);
     }
     if (commonParams.tensorDtype == ge::DT_BF16 && commonParams.paramDtype == ge::DT_BF16) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_BFLOAT16);
+        tilingKey = static_cast<uint64_t>(
+            LayerNormV3TilingKey::LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_BFLOAT16);
     }
     return tilingKey;
 }
 
-static inline int64_t CeilDiv(int64_t a, int64_t b)
-{
-    return b == 0 ? a : (a + b - 1) / b;
-}
+static inline int64_t CeilDiv(int64_t a, int64_t b) { return b == 0 ? a : (a + b - 1) / b; }
 
-static inline int64_t AlignB32(int64_t val)
-{
-    return CeilDiv(val, LNV3_B32_ALIGN_NUM) * LNV3_B32_ALIGN_NUM;
-}
+static inline int64_t AlignB32(int64_t val) { return CeilDiv(val, LNV3_B32_ALIGN_NUM) * LNV3_B32_ALIGN_NUM; }
 
 void LayerNormV3RegBaseNormNotEqualParamsTiling::SetBasicTilingParams()
 {
@@ -121,7 +120,7 @@ void LayerNormV3RegBaseNormNotEqualParamsTiling::SetBasicTilingParams()
 bool LayerNormV3RegBaseNormNotEqualParamsTiling::UpdateTiling()
 {
     if (!CanFitInBuffer(1, false)) {
-        return false;   // 终止当前模板，走非全载模板
+        return false; // 终止当前模板，走非全载模板
     }
 
     ubFactor = GetUBCanUseSize() / (commonParams.rowAlign * GetRowWeight(false));
@@ -194,18 +193,14 @@ ge::graphStatus LayerNormV3RegBaseNormNotEqualParamsTiling::DoOpTiling()
     }
 
     bool status = ComputeTiling();
-    OP_CHECK_IF(
-        !status, OP_LOGI(context_->GetNodeName(), "LayerNormV3NormNotEqualParamsTiling ubFactor == 0"),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(!status, OP_LOGI(context_->GetNodeName(), "LayerNormV3NormNotEqualParamsTiling ubFactor == 0"),
+                return ge::GRAPH_PARAM_INVALID);
 
     WriteTiling();
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LayerNormV3RegBaseNormNotEqualParamsTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV3RegBaseNormNotEqualParamsTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus LayerNormV3RegBaseNormNotEqualParamsTiling::PostTiling()
 {

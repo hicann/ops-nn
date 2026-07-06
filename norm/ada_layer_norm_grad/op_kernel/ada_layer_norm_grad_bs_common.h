@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #ifndef ADA_LAYER_NORM_GRAD_MERGE_BS_COMMON_H
 #define ADA_LAYER_NORM_GRAD_MERGE_BS_COMMON_H
 
@@ -28,127 +27,125 @@ using namespace AscendC;
 template <typename T, typename U, bool isDeterministic>
 class AdaLayerNormGradMergeBSCommon {
 public:
-    __aicore__ inline AdaLayerNormGradMergeBSCommon()
-    {}
+    __aicore__ inline AdaLayerNormGradMergeBSCommon() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale, GM_ADDR gamma, GM_ADDR beta, GM_ADDR pdX,
-        GM_ADDR pdScale, GM_ADDR pdShift, GM_ADDR pdGamma, GM_ADDR pdBeta, GM_ADDR workspace,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData, TPipe& pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale, GM_ADDR gamma,
+                                GM_ADDR beta, GM_ADDR pdX, GM_ADDR pdScale, GM_ADDR pdShift, GM_ADDR pdGamma,
+                                GM_ADDR pdBeta, GM_ADDR workspace,
+                                const AdaLayerNormGradTilingDataMergeBSCommon* tilingData, TPipe& pipeIn);
 
     __aicore__ inline void Process(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
 private:
     __aicore__ inline void CopyInBeta(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
     __aicore__ inline void CopyInGamma(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void CopyInPhase0(
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData, const int64_t curRowsNum, const int64_t startRow);
+    __aicore__ inline void CopyInPhase0(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
+                                        const int64_t curRowsNum, const int64_t startRow);
     __aicore__ inline void ComputePhase0(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void CopyInPhase1(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void ComputePhase1(
-        const int64_t outerIdx, const int64_t curRowsNum, const int64_t startRow,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CopyInPhase1(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void ComputePhase1(const int64_t outerIdx, const int64_t curRowsNum, const int64_t startRow,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void CopyInPhase2(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void ComputePhase2(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CopyInPhase2(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void ComputePhase2(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void CopyInPhase3(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void ComputePhase3(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CopyInPhase3(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void ComputePhase3(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void CopyInPhase4(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void ComputePhase4(
-        const int64_t outerIdx, const int64_t curRowsNum, const int64_t startRow,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CopyInPhase4(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void ComputePhase4(const int64_t outerIdx, const int64_t curRowsNum, const int64_t startRow,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void CopyOutPhase0(
-        const int64_t outerIdx, const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void CopyOutPhase1(
-        const int64_t startRow, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CopyOutPhase0(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CopyOutPhase1(const int64_t startRow,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
     __aicore__ inline void CopyOutPhase1Deterministic(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
-    __aicore__ inline void CastWithCopyOutSWT(
-        const int64_t outIdx, const int64_t rowOffset, const int64_t rowOfCp,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CastWithCopyOutSWT(const int64_t outIdx, const int64_t rowOffset, const int64_t rowOfCp,
+                                              const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
     __aicore__ inline void CopyOutPhase2(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
     __aicore__ inline void CopyOutPhase2Deterministic(const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void CastToFloatLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData, RoundMode castMode);
+    __aicore__ inline void CastToFloatLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                                  const int64_t curRowsNum,
+                                                  const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
+                                                  RoundMode castMode);
 
-    __aicore__ inline void CastTo16LargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData, RoundMode castMode);
+    __aicore__ inline void CastTo16LargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                               const int64_t curRowsNum,
+                                               const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
+                                               RoundMode castMode);
 
-    __aicore__ inline void CastToFloat(
-        const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData, const int64_t bufferElemNums);
+    __aicore__ inline void CastToFloat(const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer,
+                                       const int64_t curRowsNum,
+                                       const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
+                                       const int64_t bufferElemNums);
 
-    __aicore__ inline void CastToB16(
-        const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void CastToB16(const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer,
+                                     const int64_t curRowsNum,
+                                     const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
     template <typename dType>
-    __aicore__ inline void BlockBroadcast(
-        const LocalTensor<dType>& dst, const LocalTensor<dType>& src, const int64_t curRowsNum);
+    __aicore__ inline void BlockBroadcast(const LocalTensor<dType>& dst, const LocalTensor<dType>& src,
+                                          const int64_t curRowsNum);
 
-    __aicore__ inline void NlastReduceSumLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void NlastReduceSumLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                                     const int64_t curRowsNum,
+                                                     const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void BinElemNLastBrcLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+    __aicore__ inline void BinElemNLastBrcLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                                      const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                                      const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
+                                                      void (*func)(const LocalTensor<float>&, const LocalTensor<float>&,
+                                                                   const LocalTensor<float>&, uint64_t, uint8_t,
+                                                                   const BinaryRepeatParams&));
 
-    __aicore__ inline void LastBrcFP32LargeStride(
-        const LocalTensor<float>& output, const LocalTensor<float>& input0, const LocalTensor<float>& input1,
-        const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tiling,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+    __aicore__ inline void LastBrcFP32LargeStride(const LocalTensor<float>& output, const LocalTensor<float>& input0,
+                                                  const LocalTensor<float>& input1, const int64_t curRowsNum,
+                                                  const AdaLayerNormGradTilingDataMergeBSCommon* tiling,
+                                                  void (*func)(const LocalTensor<float>&, const LocalTensor<float>&,
+                                                               const LocalTensor<float>&, uint64_t, uint8_t,
+                                                               const BinaryRepeatParams&));
 
-    __aicore__ inline void LastReduceSumLargeStride(
-        const LocalTensor<float>& tmp, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void LastReduceSumLargeStride(const LocalTensor<float>& tmp, const LocalTensor<float>& src,
+                                                    const int64_t curRowsNum,
+                                                    const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
     __aicore__ inline void BinElemWithInlinedLastBrcFP32(
         const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
         const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
+                     const BinaryRepeatParams&));
 
     __aicore__ inline void BinElemWithInlinedNLastBrcFP32(
         const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
         const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
+                     const BinaryRepeatParams&));
 
-    __aicore__ inline void NlastBatchReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum, const int64_t startRow,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void NlastBatchReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                               const int64_t curRowsNum, const int64_t startRow,
+                                               const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void NlastBatchMul(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum, const int64_t startRow, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void NlastBatchMul(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                         const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                         const int64_t startRow,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void NlastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void NlastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                          const int64_t curRowsNum,
+                                          const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
-    __aicore__ inline void LastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const LocalTensor<float>& tmp,
-        const int64_t curRowsNum, const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
+    __aicore__ inline void LastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                         const LocalTensor<float>& tmp, const int64_t curRowsNum,
+                                         const AdaLayerNormGradTilingDataMergeBSCommon* tilingData);
 
 private:
     TPipe pipe;
@@ -183,7 +180,6 @@ private:
     LocalTensor<float> buffer4_;
     LocalTensor<float> buffer6_;
 
-
     GlobalTensor<T> dyInTensorGM_;
     GlobalTensor<T> xInTensorGM_;
     GlobalTensor<float> rstdInTensorGM_;
@@ -191,7 +187,7 @@ private:
     GlobalTensor<U> gammaInTensorGM_;
     GlobalTensor<T> scaleInTensorGM_;
     GlobalTensor<U> betaInTensorGM_;
-    
+
     GlobalTensor<float> dScaleWorkspaceGM;
     GlobalTensor<float> dShiftWorkspaceGM;
     GlobalTensor<float> workspaceGM;

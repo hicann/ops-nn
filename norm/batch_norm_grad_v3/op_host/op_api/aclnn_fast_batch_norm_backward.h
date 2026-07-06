@@ -31,8 +31,8 @@ ACLNN_API aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(
 /**
  * @brief aclnnFastBatchNormBackward的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus
-aclnnFastBatchNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFastBatchNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                 const aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -44,14 +44,14 @@
 #include "acl/acl.h"
 #include "aclnn_celu_v3.h"
 
-#define CHECK_ACL(expr)                                                     \
-    do {                                                                    \
-        auto _ret = (expr);                                                 \
-        if (_ret != ACL_SUCCESS) {                                          \
-            std::cerr << "ACL Error: " << #expr << " returned " << _ret    \
-                      << " at " << __FILE__ << ":" << __LINE__ << std::endl;\
-            return 1;                                                       \
-        }                                                                   \
+#define CHECK_ACL(expr)                                                                                          \
+    do {                                                                                                         \
+        auto _ret = (expr);                                                                                      \
+        if (_ret != ACL_SUCCESS) {                                                                               \
+            std::cerr << "ACL Error: " << #expr << " returned " << _ret << " at " << __FILE__ << ":" << __LINE__ \
+                      << std::endl;                                                                              \
+            return 1;                                                                                            \
+        }                                                                                                        \
     } while (0)
 
 int main()
@@ -82,8 +82,8 @@ int main()
     // ========================================================================
     size_t dataBytes = ELEM_COUNT * sizeof(float);
 
-    void *devInput = nullptr;
-    void *devOutput = nullptr;
+    void* devInput = nullptr;
+    void* devOutput = nullptr;
     CHECK_ACL(aclrtMalloc(&devInput, dataBytes, ACL_MEM_MALLOC_HUGE_FIRST));
     CHECK_ACL(aclrtMalloc(&devOutput, dataBytes, ACL_MEM_MALLOC_HUGE_FIRST));
     CHECK_ACL(aclrtMemset(devOutput, dataBytes, 0, dataBytes));
@@ -92,21 +92,18 @@ int main()
     // ========================================================================
     // 4. 创建 aclTensor
     // ========================================================================
-    aclTensor *selfTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0,
-                                            ACL_FORMAT_ND, shape, ndim, devInput);
-    aclTensor *outTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0,
-                                           ACL_FORMAT_ND, shape, ndim, devOutput);
+    aclTensor* selfTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0, ACL_FORMAT_ND, shape, ndim, devInput);
+    aclTensor* outTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0, ACL_FORMAT_ND, shape, ndim, devOutput);
 
     // ========================================================================
     // 5. 调用 aclnnCeluV3
     // ========================================================================
     uint64_t workspaceSize = 0;
-    aclOpExecutor *executor = nullptr;
+    aclOpExecutor* executor = nullptr;
 
-    CHECK_ACL(aclnnCeluV3GetWorkspaceSize(selfTensor, alpha, outTensor,
-                                          &workspaceSize, &executor));
+    CHECK_ACL(aclnnCeluV3GetWorkspaceSize(selfTensor, alpha, outTensor, &workspaceSize, &executor));
 
-    void *workspace = nullptr;
+    void* workspace = nullptr;
     if (workspaceSize > 0) {
         CHECK_ACL(aclrtMalloc(&workspace, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST));
     }
@@ -127,8 +124,7 @@ int main()
     for (int i = 0; i < ELEM_COUNT; ++i) {
         float x = hostInput[i];
         float expected = std::max(0.0f, x) +
-                         std::min(0.0f, static_cast<float>(alpha) *
-                                        (expf(x / static_cast<float>(alpha)) - 1.0f));
+                         std::min(0.0f, static_cast<float>(alpha) * (expf(x / static_cast<float>(alpha)) - 1.0f));
         printf("  %5d | %9.4f | %9.4f | %9.4f\n", i, x, hostOutput[i], expected);
     }
     std::cout << "-------------------------------------------" << std::endl;
@@ -138,7 +134,8 @@ int main()
     // ========================================================================
     aclDestroyTensor(selfTensor);
     aclDestroyTensor(outTensor);
-    if (workspace) aclrtFree(workspace);
+    if (workspace)
+        aclrtFree(workspace);
     aclrtFree(devInput);
     aclrtFree(devOutput);
     aclrtDestroyStream(stream);

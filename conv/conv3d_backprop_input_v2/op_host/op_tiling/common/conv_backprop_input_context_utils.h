@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file conv_backprop_input_context_utils.h
  * \brief
@@ -24,67 +23,67 @@ namespace NN {
 namespace Conv {
 using namespace optiling;
 
-constexpr uint64_t BT_BUFFER_SIZE = static_cast<uint64_t>(4 * 1024);    // Bias Buffer size
-constexpr uint64_t FB_BUFFER_SIZE = static_cast<uint64_t>(6 * 1024);    // Scale Buffer size
+constexpr uint64_t BT_BUFFER_SIZE = static_cast<uint64_t>(4 * 1024); // Bias Buffer size
+constexpr uint64_t FB_BUFFER_SIZE = static_cast<uint64_t>(6 * 1024); // Scale Buffer size
 
 struct Conv3dBpInputV2RunInfo {
     // Batch and group related
-    int32_t batch_n;           // Batch size
+    int32_t batch_n; // Batch size
     int32_t groups;
-    int32_t real_g;            // Number of groups
+    int32_t real_g;      // Number of groups
     int32_t enlarge = 1; // group放大倍数
 
     // Input dimensions (dedx)
-    int32_t dedx_d;            // Input depth
-    int32_t dedx_cin;         // Input channels
-    int32_t dedx_cin_g;         // Input channels per group
-    int32_t dedx_cin1;         // Input channels per group
-    int32_t dedx_cin1_g;       // Input channels per group (grouped)
-    int32_t dedx_h;            // Input height
-    int32_t dedx_w;            // Input width
+    int32_t dedx_d;      // Input depth
+    int32_t dedx_cin;    // Input channels
+    int32_t dedx_cin_g;  // Input channels per group
+    int32_t dedx_cin1;   // Input channels per group
+    int32_t dedx_cin1_g; // Input channels per group (grouped)
+    int32_t dedx_h;      // Input height
+    int32_t dedx_w;      // Input width
 
     // Output dimensions (dedy)
-    int32_t dedy_d;            // Output depth
-    int32_t dedy_cout;        // Output channels
-    int32_t dedy_cout_g;        // Output channels per group
-    int32_t dedy_cout1;        // Output channels per group
-    int32_t dedy_cout1_g;      // Output channels per group (grouped)
-    int32_t dedy_h;            // Output height
-    int32_t dedy_w;            // Output width
+    int32_t dedy_d;       // Output depth
+    int32_t dedy_cout;    // Output channels
+    int32_t dedy_cout_g;  // Output channels per group
+    int32_t dedy_cout1;   // Output channels per group
+    int32_t dedy_cout1_g; // Output channels per group (grouped)
+    int32_t dedy_h;       // Output height
+    int32_t dedy_w;       // Output width
 
     // Kernel dimensions
-    int32_t kernel_d;          // Kernel depth
-    int32_t kernel_h;          // Kernel height
-    int32_t kernel_w;          // Kernel width
+    int32_t kernel_d; // Kernel depth
+    int32_t kernel_h; // Kernel height
+    int32_t kernel_w; // Kernel width
 
     // Strides
-    int32_t stride_d;          // Stride depth
-    int32_t stride_h;          // Stride height
-    int32_t stride_w;          // Stride width
+    int32_t stride_d; // Stride depth
+    int32_t stride_h; // Stride height
+    int32_t stride_w; // Stride width
 
     // Padding
-    int32_t pad_h;             // Padding height
-    int32_t pad_t;             // Padding top
-    int32_t pad_u;             // Padding up
-    int32_t pad_d;             // Padding down
-    int32_t pad_l;             // Padding left
-    int32_t pad_r;             // Padding right
+    int32_t pad_h; // Padding height
+    int32_t pad_t; // Padding top
+    int32_t pad_u; // Padding up
+    int32_t pad_d; // Padding down
+    int32_t pad_l; // Padding left
+    int32_t pad_r; // Padding right
 
     // Dilation
-    int32_t dilation_d;        // Dilation depth
-    int32_t dilation_h;        // Dilation height
-    int32_t dilation_w;        // Dilation width
+    int32_t dilation_d; // Dilation depth
+    int32_t dilation_h; // Dilation height
+    int32_t dilation_w; // Dilation width
 
     // Backprop padding
-    int32_t backprop_pad_h;    // Backprop padding height
-    int32_t backprop_pad_t;    // Backprop padding top
-    int32_t backprop_pad_u;    // Backprop padding up
-    int32_t backprop_pad_d;    // Backprop padding down
-    int32_t backprop_pad_l;    // Backprop padding left
-    int32_t backprop_pad_r;    // Backprop padding right
+    int32_t backprop_pad_h; // Backprop padding height
+    int32_t backprop_pad_t; // Backprop padding top
+    int32_t backprop_pad_u; // Backprop padding up
+    int32_t backprop_pad_d; // Backprop padding down
+    int32_t backprop_pad_l; // Backprop padding left
+    int32_t backprop_pad_r; // Backprop padding right
 
     // Other flags
-    int32_t hf32_flag;         // Flag for FP32 handling
+    int32_t hf32_flag; // Flag for FP32 handling
     int32_t a_dtype_bytes = 2;
     int32_t b_dtype_bytes = 2;
     int32_t c_dtype_bytes = 2;
@@ -100,13 +99,13 @@ struct Conv3dBpInputV2RunInfo {
 
 enum class QuantMode : std::uint8_t {
     NO_QUANT = 0,
-    SCALAR_QUANT,   // perTensor量化模式，Scale shape为(1)
-    VECTOR_QUANT,   // perChannel量化模式，Scale shape和结果的channel一致
+    SCALAR_QUANT, // perTensor量化模式，Scale shape为(1)
+    VECTOR_QUANT, // perChannel量化模式，Scale shape和结果的channel一致
     UNDEFINED
 };
 
 bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInfoV2, optiling::OpTypeV2 opType);
-bool IsSocVersionFuse(const gert::TilingContext *context);
+bool IsSocVersionFuse(const gert::TilingContext* context);
 } // namespace Conv
 } // namespace NN
 } // namespace Ops

@@ -27,18 +27,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class FusedSgdTiling : public testing::Test
-{
+class FusedSgdTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FusedSgdTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FusedSgdTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FusedSgdTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FusedSgdTiling TearDown" << std::endl; }
 };
 
 TEST_F(FusedSgdTiling, test_tiling_float32)
@@ -66,8 +59,7 @@ TEST_F(FusedSgdTiling, test_tiling_float32)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
 
-    struct FusedSgdCompileInfo {
-    };
+    struct FusedSgdCompileInfo {};
     FusedSgdCompileInfo compile_info;
 
     std::string op_type("FusedSgd");
@@ -75,19 +67,19 @@ TEST_F(FusedSgdTiling, test_tiling_float32)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -110,14 +102,13 @@ TEST_F(FusedSgdTiling, test_tiling_float32)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"weight_decay", Ops::NN::AnyValue::CreateFrom(0.01f)},
-                           {"momentum", Ops::NN::AnyValue::CreateFrom(0.9f)},
-                           {"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
-                           {"dampening", Ops::NN::AnyValue::CreateFrom(0.0f)},
-                           {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"is_first_step", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"weight_decay", Ops::NN::AnyValue::CreateFrom(0.01f)},
+                                  {"momentum", Ops::NN::AnyValue::CreateFrom(0.9f)},
+                                  {"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
+                                  {"dampening", Ops::NN::AnyValue::CreateFrom(0.0f)},
+                                  {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"is_first_step", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -161,8 +152,7 @@ TEST_F(FusedSgdTiling, test_tiling_float16)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
 
-    struct FusedSgdCompileInfo {
-    };
+    struct FusedSgdCompileInfo {};
     FusedSgdCompileInfo compile_info;
 
     std::string op_type("FusedSgd");
@@ -170,19 +160,19 @@ TEST_F(FusedSgdTiling, test_tiling_float16)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -205,14 +195,13 @@ TEST_F(FusedSgdTiling, test_tiling_float16)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"weight_decay", Ops::NN::AnyValue::CreateFrom(0.01f)},
-                           {"momentum", Ops::NN::AnyValue::CreateFrom(0.9f)},
-                           {"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
-                           {"dampening", Ops::NN::AnyValue::CreateFrom(0.0f)},
-                           {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"is_first_step", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"weight_decay", Ops::NN::AnyValue::CreateFrom(0.01f)},
+                                  {"momentum", Ops::NN::AnyValue::CreateFrom(0.9f)},
+                                  {"lr", Ops::NN::AnyValue::CreateFrom(0.001f)},
+                                  {"dampening", Ops::NN::AnyValue::CreateFrom(0.0f)},
+                                  {"nesterov", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"is_first_step", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

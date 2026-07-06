@@ -27,9 +27,9 @@ static ge::graphStatus InferShapeApplyAdagradD(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin InferShapeApplyAdagradD");
 
-    constexpr size_t INPUT_VAR_IDX   = 0;
+    constexpr size_t INPUT_VAR_IDX = 0;
     constexpr size_t INPUT_ACCUM_IDX = 1;
-    constexpr size_t OUTPUT_VAR_IDX  = 0;
+    constexpr size_t OUTPUT_VAR_IDX = 0;
     constexpr size_t OUTPUT_ACCUM_IDX = 1;
 
     // var output shape = var input shape

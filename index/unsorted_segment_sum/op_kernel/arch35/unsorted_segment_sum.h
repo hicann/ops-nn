@@ -23,20 +23,18 @@
 
 #include "unsorted_segment_base.h"
 
-namespace UnsortedSegmentSum
-{
+namespace UnsortedSegmentSum {
 using namespace AscendC;
 constexpr uint64_t MAX_INT32_NUM = 2147483647;
 
 template <typename T, typename Index>
-class KernelUnsortedSegmentSum
-{
+class KernelUnsortedSegmentSum {
 public:
     __aicore__ inline KernelUnsortedSegmentSum(const UnsortedSegmentSumSimtTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
-                                
+
     {
         InitGm<T>(output, td_->outputOuterDim * td_->innerDim);
 
@@ -58,9 +56,9 @@ public:
         COM_T magic = 1;
         COM_T shift = 1;
         GetUintDivMagicAndShift(magic, shift, static_cast<COM_T>(innerDimSizeTmp));
-        asc_vf_call<SimtComputeSegment<T, Index, COM_T>>(
-            dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, inputLength,
-            innerDimSizeTmp, outputOuterDimSizeTmp, magic, shift);
+        asc_vf_call<SimtComputeSegment<T, Index, COM_T>>(dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds,
+                                                         output, blockNums, inputLength, innerDimSizeTmp,
+                                                         outputOuterDimSizeTmp, magic, shift);
     }
 
     __aicore__ inline void Process()
@@ -83,5 +81,5 @@ private:
     AscendC::GlobalTensor<T> xGm, outputGm;
     AscendC::GlobalTensor<Index> segmentIdsGm;
 };
-}  // namespace UnsortedSegmentSum
+} // namespace UnsortedSegmentSum
 #endif

@@ -22,8 +22,7 @@ using namespace AscendC;
 template <typename DX, typename DG>
 class KernelRmsNormRegBaseSplitD {
 public:
-    __aicore__ inline KernelRmsNormRegBaseSplitD()
-    {}
+    __aicore__ inline KernelRmsNormRegBaseSplitD() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
@@ -117,8 +116,8 @@ private:
         inQueueGamma.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void ComputeFormerHandle(
-        LocalTensor<float>& dstLocal, uint64_t srcOffset, uint64_t dstOffset, uint32_t count, uint32_t power)
+    __aicore__ inline void ComputeFormerHandle(LocalTensor<float>& dstLocal, uint64_t srcOffset, uint64_t dstOffset,
+                                               uint32_t count, uint32_t power)
     {
         uint32_t calCount = CeilAlign((uint64_t)(count * sizeof(DX)), ALIGN_32_FACTOR) / sizeof(DX);
         CopyInX(srcOffset, count, 0, calCount - count);
@@ -133,9 +132,8 @@ private:
         inQueueX.FreeTensor(xLocal);
     }
 
-    __aicore__ inline void ComputeFormer(
-        uint32_t curRow, LocalTensor<float> dstLocal, uint32_t position, uint32_t masterLoop, uint32_t tailLoop,
-        uint32_t tail)
+    __aicore__ inline void ComputeFormer(uint32_t curRow, LocalTensor<float> dstLocal, uint32_t position,
+                                         uint32_t masterLoop, uint32_t tailLoop, uint32_t tail)
     {
         uint64_t offset{curRow};
         uint32_t loop = 0;
@@ -196,8 +194,8 @@ private:
         ComputeMultiLevelRstd<false>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2, level3);
     }
 
-    __aicore__ inline void ComputeLatter(
-        uint32_t rowRepeat, uint32_t calRowNum, uint32_t colRepeat, LocalTensor<float>& rstdLocal, uint32_t calColNum)
+    __aicore__ inline void ComputeLatter(uint32_t rowRepeat, uint32_t calRowNum, uint32_t colRepeat,
+                                         LocalTensor<float>& rstdLocal, uint32_t calColNum)
     {
         CopyInGamma(colRepeat, calColNum);
         LocalTensor<DG> gammaLocal = inQueueGamma.DeQue<DG>();

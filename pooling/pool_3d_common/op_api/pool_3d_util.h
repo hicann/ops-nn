@@ -23,7 +23,6 @@ const aclTensor* View5Das4D(const aclTensor* input, const op::Format& format, ac
 const aclTensor* View3Das4D(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* ViewCDHWas5D(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* View5DasCDHW(const aclTensor* input, const op::Format& format, aclOpExecutor* executor);
-}
-
+} // namespace Pool3DCommon
 
 #endif

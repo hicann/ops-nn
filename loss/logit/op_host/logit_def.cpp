@@ -16,8 +16,7 @@
 
 namespace ops {
 
-class Logit : public OpDef
-{
+class Logit : public OpDef {
 public:
     explicit Logit(const char* name) : OpDef(name)
     {

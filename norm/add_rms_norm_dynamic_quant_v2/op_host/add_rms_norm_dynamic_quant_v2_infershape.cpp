@@ -92,18 +92,14 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
     const gert::Shape* smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
     bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
 
-    OP_CHECK_IF(
-        smooth1Exist && (*gammaShape != *smooth1Shape),
-        OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        smooth2Exist && (*gammaShape != *smooth2Shape),
-        OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
+    OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
+                OP_LOGE(context, "GammaShape is not same to smooth1Shape."), return GRAPH_FAILED);
+    OP_CHECK_IF(smooth2Exist && (*gammaShape != *smooth2Shape),
+                OP_LOGE(context, "GammaShape is not same to smooth2Shape."), return GRAPH_FAILED);
 
     bool isOnlyExistSmooth2 = (!smooth1Exist) && smooth2Exist;
-    OP_CHECK_IF(
-        isOnlyExistSmooth2,
-        OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support only have scale2."),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(isOnlyExistSmooth2, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support only have scale2."),
+                return GRAPH_FAILED);
     InferReduceShape(x1Shape, gammaShape, outScale1Shape);
     if (smooth2Exist) {
         *y2Shape = *x1Shape;

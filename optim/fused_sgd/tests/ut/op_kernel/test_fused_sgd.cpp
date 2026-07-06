@@ -23,11 +23,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fused_sgd(
-    GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
-    GM_ADDR grad_scale,
-    GM_ADDR params_ref, GM_ADDR grads_ref, GM_ADDR momentum_buffer_list_ref,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fused_sgd(GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
+                                                GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref,
+                                                GM_ADDR momentum_buffer_list_ref, GM_ADDR workspace, GM_ADDR tiling);
 
 class FusedSgdKernelTest : public testing::Test {
 protected:
@@ -45,7 +43,8 @@ inline T1 CeilA2B(T1 a, T2 b)
 }
 
 template <typename T>
-uint8_t* CreateNormTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, const char* tag = "fused_sgd")
+uint8_t* CreateNormTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type,
+                              const char* tag = "fused_sgd")
 {
     uint64_t tensorListDescCount = 1 + shapeInfos.size() * 2;
     for (auto s : shapeInfos) {
@@ -80,7 +79,8 @@ uint8_t* CreateNormTensorList(const std::vector<std::vector<uint64_t>>& shapeInf
 }
 
 template <typename T>
-void FreeNormTensorList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, const char* tag = "fused_sgd")
+void FreeNormTensorList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type,
+                        const char* tag = "fused_sgd")
 {
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
@@ -104,9 +104,8 @@ TEST_F(FusedSgdKernelTest, test_fp32_basic)
     uint32_t blockDim = 1;
     std::vector<std::vector<uint64_t>> shapeInfos = {{4}};
 
-    system(
-        "cp -rf "
-        "../../../../optim/fused_sgd/tests/ut/op_kernel/sgd_data ./");
+    system("cp -rf "
+           "../../../../optim/fused_sgd/tests/ut/op_kernel/sgd_data ./");
     system("chmod -R 755 ./sgd_data/");
     system("cd ./sgd_data/ && python3 gen_data.py '{{4}}' 'float32'");
 
@@ -140,11 +139,8 @@ TEST_F(FusedSgdKernelTest, test_fp32_basic)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(fused_sgd, blockDim,
-                paramsBuf, gradsBuf, momentumBuf,
-                gradScaleBuf,
-                paramsRefBuf, gradsRefBuf, momentumRefBuf,
-                workspace, (uint8_t*)(tiling));
+    ICPU_RUN_KF(fused_sgd, blockDim, paramsBuf, gradsBuf, momentumBuf, gradScaleBuf, paramsRefBuf, gradsRefBuf,
+                momentumRefBuf, workspace, (uint8_t*)(tiling));
 
     FreeNormTensorList<float>(paramsRefBuf, shapeInfos, "float32", "params_ref");
     FreeNormTensorList<float>(gradsRefBuf, shapeInfos, "float32", "grads_ref");
@@ -165,9 +161,8 @@ TEST_F(FusedSgdKernelTest, test_fp16_basic)
     uint32_t blockDim = 1;
     std::vector<std::vector<uint64_t>> shapeInfos = {{4}};
 
-    system(
-        "cp -rf "
-        "../../../../optim/fused_sgd/tests/ut/op_kernel/sgd_data ./");
+    system("cp -rf "
+           "../../../../optim/fused_sgd/tests/ut/op_kernel/sgd_data ./");
     system("chmod -R 755 ./sgd_data/");
     system("cd ./sgd_data/ && python3 gen_data.py '{{4}}' 'float16'");
 
@@ -201,11 +196,8 @@ TEST_F(FusedSgdKernelTest, test_fp16_basic)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(fused_sgd, blockDim,
-                paramsBuf, gradsBuf, momentumBuf,
-                gradScaleBuf,
-                paramsRefBuf, gradsRefBuf, momentumRefBuf,
-                workspace, (uint8_t*)(tiling));
+    ICPU_RUN_KF(fused_sgd, blockDim, paramsBuf, gradsBuf, momentumBuf, gradScaleBuf, paramsRefBuf, gradsRefBuf,
+                momentumRefBuf, workspace, (uint8_t*)(tiling));
 
     FreeNormTensorList<half>(paramsRefBuf, shapeInfos, "float16", "params_ref");
     FreeNormTensorList<half>(gradsRefBuf, shapeInfos, "float16", "grads_ref");

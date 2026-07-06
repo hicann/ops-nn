@@ -39,6 +39,7 @@ public:
     ge::graphStatus DoTiling();
     ge::graphStatus PostTiling();
     gert::TilingContext* context_ = nullptr;
+
 private:
     uint64_t tilingKey_{0};
     QuantMatmulPertokenTilingDataArch20 qbmmTilingDataArch20_{};

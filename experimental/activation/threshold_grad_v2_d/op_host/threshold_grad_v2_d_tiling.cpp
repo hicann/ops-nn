@@ -68,13 +68,12 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum, uint64_t& inputBytes,
-    uint64_t& tileBlockNum, uint64_t& tileDataNum, uint64_t& inputLengthAlgin)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum,
+                                         uint64_t& inputBytes, uint64_t& tileBlockNum, uint64_t& tileDataNum,
+                                         uint64_t& inputLengthAlgin)
 {
-    OP_CHECK_IF(
-        context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
+                return ge::GRAPH_FAILED);
     inputNum = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(context->GetInputDesc(0)->GetDataType(), typeLength);
@@ -85,7 +84,8 @@ static ge::graphStatus GetShapeAttrsInfo(
     }
     inputBytes = inputLength / inputNum;
     uint64_t ubDataNumber;
-    if  (context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT || context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT16) {
+    if (context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT ||
+        context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT16) {
         ubDataNumber = UB_NUM_F32_F16;
     } else if (context->GetInputDesc(0)->GetDataType() == ge::DT_INT32) {
         ubDataNumber = UB_NUM_INT32;
@@ -108,10 +108,12 @@ static ge::graphStatus GetShapeAttrsInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(
-    gert::TilingContext* context, uint64_t inputLengthAlgin, int64_t coreNum, uint64_t tileBlockNum, uint64_t inputBytes, uint64_t tileDataNum,
-    uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum, uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum,
-    uint64_t& tailBlockNum)
+static ge::graphStatus CalculateCoreBlockNums(gert::TilingContext* context, uint64_t inputLengthAlgin, int64_t coreNum,
+                                              uint64_t tileBlockNum, uint64_t inputBytes, uint64_t tileDataNum,
+                                              uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum,
+                                              uint64_t& smallTailDataNum, uint64_t& bigTailDataNum,
+                                              uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum,
+                                              uint64_t& tailBlockNum)
 {
     if (0 == BLOCK_SIZE || 0 == coreNum || 0 == tileBlockNum || 0 == inputBytes) {
         OP_LOGE(context, "BLOCK_SIZE or coreNum or tileBlockNum or inputBytes is 0");
@@ -148,26 +150,26 @@ static ge::graphStatus ThresholdGradV2DTilingFunc(gert::TilingContext* context)
     ret = GetShapeAttrsInfo(context, ubSize, inputNum, inputBytes, tileBlockNum, tileDataNum, inputLengthAlgin);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
     // 3、获取WorkspaceSize信息
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     // 4、设置tiling信息
     ThresholdGradV2DTilingData* tiling = context->GetTilingData<ThresholdGradV2DTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ThresholdGradV2DTilingData), 0, sizeof(ThresholdGradV2DTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ThresholdGradV2DTilingData), 0, sizeof(ThresholdGradV2DTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (tileDataNum >= inputNum) {
         coreNum = 1;
     } else {
-        coreNum = (static_cast<uint64_t>(coreNum) < inputLengthAlgin / BLOCK_SIZE) ? coreNum : inputLengthAlgin / BLOCK_SIZE;
+        coreNum = (static_cast<uint64_t>(coreNum) < inputLengthAlgin / BLOCK_SIZE) ? coreNum :
+                                                                                     inputLengthAlgin / BLOCK_SIZE;
     }
     // 计算每个core处理的数据块数
-    uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum;
-    ret = CalculateCoreBlockNums(
-        context, inputLengthAlgin, coreNum, tileBlockNum, inputBytes, tileDataNum, smallCoreDataNum, bigCoreDataNum,
-        smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum);
+    uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum,
+        tailBlockNum;
+    ret = CalculateCoreBlockNums(context, inputLengthAlgin, coreNum, tileBlockNum, inputBytes, tileDataNum,
+                                 smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum,
+                                 finalBigTileNum, tailBlockNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateCoreBlockNums error"), return ge::GRAPH_FAILED);
     // 设置tiling数据
     tiling->smallCoreDataNum = static_cast<uint64_t>(smallCoreDataNum);
@@ -182,7 +184,7 @@ static ge::graphStatus ThresholdGradV2DTilingFunc(gert::TilingContext* context)
     float threshold = 1.0f;
     auto attrs = context->GetAttrs();
     if (attrs) {
-        const float* attrS = attrs->GetFloat(0); 
+        const float* attrS = attrs->GetFloat(0);
         if (attrS != nullptr) {
             threshold = *attrS;
         }
@@ -197,5 +199,7 @@ static ge::graphStatus ThresholdGradV2DTilingFunc(gert::TilingContext* context)
 }
 
 // tiling注册入口.
-IMPL_OP_OPTILING(ThresholdGradV2D).Tiling(ThresholdGradV2DTilingFunc).TilingParse<ThresholdGradV2DCompileInfo>(TilingParseForThresholdGradV2D);
+IMPL_OP_OPTILING(ThresholdGradV2D)
+    .Tiling(ThresholdGradV2DTilingFunc)
+    .TilingParse<ThresholdGradV2DCompileInfo>(TilingParseForThresholdGradV2D);
 } // namespace optiling

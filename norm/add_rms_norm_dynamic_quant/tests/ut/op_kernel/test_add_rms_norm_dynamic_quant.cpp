@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -21,21 +22,14 @@
 
 using namespace std;
 
-extern "C" void add_rms_norm_dynamic_quant(
-    uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* scales1, uint8_t* scales2, uint8_t* beta, uint8_t* y1, uint8_t* y2, uint8_t* x,
-    uint8_t* outScale1, uint8_t* outScale2, uint8_t* workspace, uint8_t* tiling);
+extern "C" void add_rms_norm_dynamic_quant(uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* scales1, uint8_t* scales2,
+                                           uint8_t* beta, uint8_t* y1, uint8_t* y2, uint8_t* x, uint8_t* outScale1,
+                                           uint8_t* outScale2, uint8_t* workspace, uint8_t* tiling);
 
-class add_rms_norm_dynamic_quant_test : public testing::Test
-{
+class add_rms_norm_dynamic_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_rms_norm_dynamic_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_rms_norm_dynamic_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_rms_norm_dynamic_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_rms_norm_dynamic_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(add_rms_norm_dynamic_quant_test, test_case_dynamic_dual_smooth)
@@ -91,13 +85,11 @@ TEST_F(add_rms_norm_dynamic_quant_test, test_case_dynamic_dual_smooth)
 
     // dual normal bf16/fp16
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(
-        add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, beta, y1, y2, x, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, beta, y1, y2, x, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, beta,  y1, y2, x, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, beta, y1, y2, x, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -168,9 +160,8 @@ TEST_F(add_rms_norm_dynamic_quant_test, test_case_dynamic_case_3)
 
     // dual normal bf16/fp16
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(
-        add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, beta, y1, y2, x, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, beta, y1, y2, x, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

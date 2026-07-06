@@ -17,8 +17,8 @@
 #include "util/math_util.h"
 
 using namespace op;
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 using Ops::NN::IsTransposeLastTwoDims;
 using Ops::NN::SwapLastTwoDimValue;
 
@@ -67,44 +67,38 @@ static inline bool CheckDtypeValid(const Sparse4to2QuantMatmulParams& params)
     auto out = params.out;
 
     if (x->GetDataType() != op::DataType::DT_INT8 || sparseWeight->GetDataType() != op::DataType::DT_INT8) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input x, sparseWeight dtype should be INT8, actual dtype are %s and %s.",
-            op::ToString(x->GetDataType()).GetString(), op::ToString(sparseWeight->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x, sparseWeight dtype should be INT8, actual dtype are %s and %s.",
+                op::ToString(x->GetDataType()).GetString(), op::ToString(sparseWeight->GetDataType()).GetString());
         return false;
     }
 
     if (index->GetDataType() != op::DataType::DT_UINT8) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input index dtype should be UINT8, actual dtype is %s.",
-            op::ToString(index->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input index dtype should be UINT8, actual dtype is %s.",
+                op::ToString(index->GetDataType()).GetString());
         return false;
     }
 
     if (bias != nullptr && bias->GetDataType() != op::DataType::DT_BF16) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input bias dtype should be BF16, actual dtype is %s.",
-            op::ToString(bias->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input bias dtype should be BF16, actual dtype is %s.",
+                op::ToString(bias->GetDataType()).GetString());
         return false;
     }
 
     if (xScale != nullptr && xScale->GetDataType() != op::DataType::DT_FLOAT) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input xScale dtype should be FLOAT32, actual dtype is %s.",
-            op::ToString(xScale->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input xScale dtype should be FLOAT32, actual dtype is %s.",
+                op::ToString(xScale->GetDataType()).GetString());
         return false;
     }
 
     if (sparseWeightScale != nullptr && sparseWeightScale->GetDataType() != op::DataType::DT_FLOAT) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input sparseWeightScale dtype should be FLOAT32, actual dtype is %s.",
-            op::ToString(sparseWeightScale->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input sparseWeightScale dtype should be FLOAT32, actual dtype is %s.",
+                op::ToString(sparseWeightScale->GetDataType()).GetString());
         return false;
     }
 
     if (out->GetDataType() != op::DataType::DT_BF16) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Output dtype should be BF16, actual dtype is %s.",
-            op::ToString(out->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Output dtype should be BF16, actual dtype is %s.",
+                op::ToString(out->GetDataType()).GetString());
         return false;
     }
 
@@ -113,57 +107,47 @@ static inline bool CheckDtypeValid(const Sparse4to2QuantMatmulParams& params)
 
 static inline bool CheckFormatValid(const Sparse4to2QuantMatmulParams& params)
 {
-    OP_CHECK(
-        params.x->GetStorageFormat() == op::Format::FORMAT_ND,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of x must be ND, actual is %s.",
-            op::ToString(params.x->GetStorageFormat()).GetString()),
-        return false);
+    OP_CHECK(params.x->GetStorageFormat() == op::Format::FORMAT_ND,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x must be ND, actual is %s.",
+                     op::ToString(params.x->GetStorageFormat()).GetString()),
+             return false);
 
-    OP_CHECK(
-        static_cast<ge::Format>(ge::GetPrimaryFormat(params.sparseWeight->GetStorageFormat())) ==
-            Format::FORMAT_FRACTAL_NZ,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of sparseWeight must be FRACTAL_NZ, actual is %s.",
-            op::ToString(params.sparseWeight->GetStorageFormat()).GetString()),
-        return false);
+    OP_CHECK(static_cast<ge::Format>(ge::GetPrimaryFormat(params.sparseWeight->GetStorageFormat())) ==
+                 Format::FORMAT_FRACTAL_NZ,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of sparseWeight must be FRACTAL_NZ, actual is %s.",
+                     op::ToString(params.sparseWeight->GetStorageFormat()).GetString()),
+             return false);
 
     OP_CHECK(params.index->GetStorageFormat() == op::Format::FORMAT_ND,
-             OP_LOGE(
-                 ACLNN_ERR_PARAM_INVALID, "Format of index must be ND, actual is %s.",
-                 op::ToString(params.index->GetStorageFormat()).GetString());
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of index must be ND, actual is %s.",
+                     op::ToString(params.index->GetStorageFormat()).GetString());
              , return false);
 
     if (params.xScale != nullptr) {
         OP_CHECK(params.xScale->GetStorageFormat() == op::Format::FORMAT_ND,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of xScale must be ND, actual is %s.",
-                op::ToString(params.xScale->GetStorageFormat()).GetString()),
-            return false);
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of xScale must be ND, actual is %s.",
+                         op::ToString(params.xScale->GetStorageFormat()).GetString()),
+                 return false);
     }
 
     if (params.sparseWeightScale != nullptr) {
         OP_CHECK(params.sparseWeightScale->GetStorageFormat() == op::Format::FORMAT_ND,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of sparseWeightScale must be ND, actual is %s.",
-                op::ToString(params.sparseWeightScale->GetStorageFormat()).GetString()),
-            return false);
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of sparseWeightScale must be ND, actual is %s.",
+                         op::ToString(params.sparseWeightScale->GetStorageFormat()).GetString()),
+                 return false);
     }
 
     if (params.bias != nullptr) {
-        OP_CHECK(
-            params.bias->GetStorageFormat() == op::Format::FORMAT_ND,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of bias must be ND, actual is %s.",
-                op::ToString(params.bias->GetStorageFormat()).GetString()),
-            return false);
+        OP_CHECK(params.bias->GetStorageFormat() == op::Format::FORMAT_ND,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of bias must be ND, actual is %s.",
+                         op::ToString(params.bias->GetStorageFormat()).GetString()),
+                 return false);
     }
 
     OP_CHECK(params.out->GetStorageFormat() == op::Format::FORMAT_ND,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of out must be ND, actual is %s.",
-            op::ToString(params.out->GetStorageFormat()).GetString()),
-        return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of out must be ND, actual is %s.",
+                     op::ToString(params.out->GetStorageFormat()).GetString()),
+             return false);
     return true;
 }
 
@@ -192,9 +176,8 @@ static inline bool CheckDimRange(const Sparse4to2QuantMatmulParams& params)
 static inline bool CheckOutShape(const aclTensor* out, int64_t xMDim, int64_t weightNDim)
 {
     auto outDimNum = out->GetViewShape().GetDimNum();
-    OP_CHECK(
-        outDimNum == MIN_DIM_NUM_ND,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Out shape must be 2 dimension actual is %ld.", outDimNum), return false);
+    OP_CHECK(outDimNum == MIN_DIM_NUM_ND,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Out shape must be 2 dimension actual is %ld.", outDimNum), return false);
     int64_t outMDim = out->GetViewShape().GetDim(outDimNum - PENULTIMATE_DIM);
     int64_t outNDim = out->GetViewShape().GetDim(outDimNum - 1);
     OP_CHECK(
@@ -205,26 +188,24 @@ static inline bool CheckOutShape(const aclTensor* out, int64_t xMDim, int64_t we
             "of x is %ld.",
             outMDim, xMDim),
         return false);
-    OP_CHECK(
-        outNDim == weightNDim,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Second dim of out should be equal to n dim of sparseWeight , but out 2nd dim is %ld, n dim of "
-            "sparseWeight is %ld.",
-            outNDim, weightNDim),
-        return false);
+    OP_CHECK(outNDim == weightNDim,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "Second dim of out should be equal to n dim of sparseWeight , but out 2nd dim is %ld, n dim of "
+                     "sparseWeight is %ld.",
+                     outNDim, weightNDim),
+             return false);
     return true;
 }
 
-static inline bool CheckDimValue(
-    const aclTensor* bias, const aclTensor* xScale, const aclTensor* sparseWeightScale, int64_t mDim, int64_t nDim)
+static inline bool CheckDimValue(const aclTensor* bias, const aclTensor* xScale, const aclTensor* sparseWeightScale,
+                                 int64_t mDim, int64_t nDim)
 {
     if (bias != nullptr) {
         OP_CHECK_WRONG_DIMENSION(bias, 1, return false);
         if (bias->GetViewShape().GetDim(0) != nDim) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The 1st dim bias should be equal to n dim of x2: %ld, but actually is %ld.",
-                nDim, bias->GetViewShape().GetDim(0));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The 1st dim bias should be equal to n dim of x2: %ld, but actually is %ld.", nDim,
+                    bias->GetViewShape().GetDim(0));
             return false;
         }
     }
@@ -232,10 +213,9 @@ static inline bool CheckDimValue(
     if (sparseWeightScale != nullptr) {
         OP_CHECK_WRONG_DIMENSION(sparseWeightScale, 1, return false);
         if (sparseWeightScale->GetViewShape().GetDim(0) != nDim) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The last dim of sparseWeightScale should equal to n dim of sparseWeight: %ld, but actual is %ld.",
-                nDim, sparseWeightScale->GetViewShape().GetDim(0));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The last dim of sparseWeightScale should equal to n dim of sparseWeight: %ld, but actual is %ld.",
+                    nDim, sparseWeightScale->GetViewShape().GetDim(0));
             return false;
         }
     }
@@ -243,26 +223,23 @@ static inline bool CheckDimValue(
     if (xScale != nullptr) {
         OP_CHECK_WRONG_DIMENSION(xScale, 1, return false);
         if (xScale->GetViewShape().GetDim(0) != mDim) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The 1st dim of xScale should be equal to m dim of x: %ld, but actually is %ld.", mDim,
-                xScale->GetViewShape().GetDim(0));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The 1st dim of xScale should be equal to m dim of x: %ld, but actually is %ld.", mDim,
+                    xScale->GetViewShape().GetDim(0));
             return false;
         }
     }
     return true;
 }
 
-static inline bool MaxDimCheck(
-    int64_t xDimNum, int64_t weightKDim, const op::Shape xShape, const op::Shape& weightShape)
+static inline bool MaxDimCheck(int64_t xDimNum, int64_t weightKDim, const op::Shape xShape,
+                               const op::Shape& weightShape)
 {
-    OP_CHECK(
-        xShape[xDimNum - 1] <= LAST_AXIS_LIMIT && weightShape[weightKDim - 1] <= LAST_AXIS_LIMIT,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The last dim of x or sparseWeight is larger than 65535, x is %ld, sparseWeight is %ld.",
-            xShape[xDimNum - 1], weightShape[weightKDim - 1]),
-        return false);
+    OP_CHECK(xShape[xDimNum - 1] <= LAST_AXIS_LIMIT && weightShape[weightKDim - 1] <= LAST_AXIS_LIMIT,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The last dim of x or sparseWeight is larger than 65535, x is %ld, sparseWeight is %ld.",
+                     xShape[xDimNum - 1], weightShape[weightKDim - 1]),
+             return false);
     return true;
 }
 
@@ -278,13 +255,12 @@ static inline bool CheckShape(const Sparse4to2QuantMatmulParams& params)
     int64_t weightNDim = weightShape[weightDimNum - PENULTIMATE_DIM];
     uint64_t xKDimAlign = CeilAlign(static_cast<uint64_t>(xKDim), SPARSE_ATOMIC_SIZE);
 
-    OP_CHECK(
-        xKDimAlign == static_cast<uint64_t>(weightKDim + weightKDim),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The k dim of x (8-aligned) should be twice that k of sparseWeight, but k dim of x is %lu, "
-            "sparseWeight is %ld.", xKDimAlign, weightKDim),
-        return false);
+    OP_CHECK(xKDimAlign == static_cast<uint64_t>(weightKDim + weightKDim),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The k dim of x (8-aligned) should be twice that k of sparseWeight, but k dim of x is %lu, "
+                     "sparseWeight is %ld.",
+                     xKDimAlign, weightKDim),
+             return false);
 
     CHECK_RET(MaxDimCheck(xDimNum, weightDimNum, xShape, weightShape), false);
 
@@ -334,8 +310,8 @@ static inline bool TensorContiguousProcess(const aclTensor*& contiguousTensor, b
     auto transposeFlag = IsTransposeLastTwoDims(contiguousTensor);
     // swap tensor if its viewshape not satisfy request shape without adding a transpose node
     if (transposeFlag) {
-        contiguousTensor = executor->CreateView(
-            contiguousTensor, SwapLastTwoDimValue(contiguousTensor->GetViewShape()), contiguousTensor->GetViewOffset());
+        contiguousTensor = executor->CreateView(contiguousTensor, SwapLastTwoDimValue(contiguousTensor->GetViewShape()),
+                                                contiguousTensor->GetViewOffset());
         transpose = !transpose;
     } else {
         contiguousTensor = l0op::Contiguous(contiguousTensor, executor);
@@ -347,9 +323,8 @@ static inline bool TensorContiguousProcess(const aclTensor*& contiguousTensor, b
     return true;
 }
 
-static aclnnStatus SpecialOutputProcess(
-    const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* out, const aclTensor*& matmulRet,
-    aclOpExecutor* executor)
+static aclnnStatus SpecialOutputProcess(const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* out,
+                                        const aclTensor*& matmulRet, aclOpExecutor* executor)
 {
     OP_LOGD("Sparse4to2QuantMatmul enter SpecialOutputProcess func.");
     auto xDimNum = x->GetViewShape().GetDimNum();
@@ -365,13 +340,12 @@ static aclnnStatus SpecialOutputProcess(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus PostMatmulCalcProcess(
-    const aclTensor* matmulRet, const Sparse4to2QuantMatmulParams& params, aclOpExecutor* executor)
+static aclnnStatus PostMatmulCalcProcess(const aclTensor* matmulRet, const Sparse4to2QuantMatmulParams& params,
+                                         aclOpExecutor* executor)
 {
     CHECK_RET(matmulRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(
-        SpecialOutputProcess(params.x, params.sparseWeight, params.out, matmulRet, executor) == ACLNN_SUCCESS,
-        ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(SpecialOutputProcess(params.x, params.sparseWeight, params.out, matmulRet, executor) == ACLNN_SUCCESS,
+              ACLNN_ERR_INNER_NULLPTR);
 
     // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
     auto viewCopyResult = l0op::ViewCopy(matmulRet, params.out, executor);
@@ -386,9 +360,8 @@ static aclnnStatus PreMatmulCalcProcess(Sparse4to2QuantMatmulParams& params, acl
     CHECK_RET(CheckNotNull(params), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(TensorContiguousProcess(params.x, transposeX, executor), ACLNN_ERR_INNER_NULLPTR);
 
-    OP_CHECK(
-        !transposeX, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x not support transpose for now"),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(!transposeX, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x not support transpose for now"),
+             return ACLNN_ERR_PARAM_INVALID);
 
     params.sparseWeight->SetOriginalShape(params.sparseWeight->GetViewShape());
     CHECK_RET(CheckDimRange(params), ACLNN_ERR_PARAM_INVALID);
@@ -428,20 +401,19 @@ static const aclTensor* SetTensorToNZFormat(const aclTensor* input, op::Shape& s
 
 } // namespace
 
-aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* index, const aclTensor* xScale,
-    const aclTensor* sparseWeightScale, const aclTensor* biasOptional, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(const aclTensor* x, const aclTensor* sparseWeight,
+                                                               const aclTensor* index, const aclTensor* xScale,
+                                                               const aclTensor* sparseWeightScale,
+                                                               const aclTensor* biasOptional, aclTensor* out,
+                                                               uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnSparse4to2QuantMatmulWeightNz, DFX_IN(x, sparseWeight, index, xScale, sparseWeightScale, biasOptional),
-        DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnSparse4to2QuantMatmulWeightNz,
+                   DFX_IN(x, sparseWeight, index, xScale, sparseWeightScale, biasOptional), DFX_OUT(out));
 
-    OP_CHECK(
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Sparse4to2QuantMatmul is not supported in current platform"),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
+                 GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Sparse4to2QuantMatmul is not supported in current platform"),
+             return ACLNN_ERR_PARAM_INVALID);
 
     OP_CHECK_NULL(sparseWeight, return ACLNN_ERR_PARAM_NULLPTR);
 
@@ -463,9 +435,8 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
     uniqueExecutor->AbandonCache();
 
     sparseWeight = SetTensorToNZFormat(sparseWeight, weightNzShape, uniqueExecutor.get());
-    OP_CHECK(
-        sparseWeight != nullptr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Failed to reset format of sparseWeight."),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(sparseWeight != nullptr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Failed to reset format of sparseWeight."),
+             return ACLNN_ERR_PARAM_INVALID);
     Sparse4to2QuantMatmulParams params({x, sparseWeight, index, xScale, sparseWeightScale, biasOptional, out});
 
     auto ret = PreMatmulCalcProcess(params, uniqueExecutor.get());
@@ -476,8 +447,8 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
     int64_t dtype = static_cast<int64_t>(out->GetDataType());
 
     // 调用l0算子进行计算
-    auto matmulRet = l0op::Sparse4to2QuantMatmul(
-        x, sparseWeight, index, xScale, sparseWeightScale, biasOptional, dtype, uniqueExecutor.get());
+    auto matmulRet = l0op::Sparse4to2QuantMatmul(x, sparseWeight, index, xScale, sparseWeightScale, biasOptional, dtype,
+                                                 uniqueExecutor.get());
     CHECK_RET(PostMatmulCalcProcess(matmulRet, params, uniqueExecutor.get()) == ACLNN_SUCCESS, ret);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
@@ -486,8 +457,8 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnSparse4to2QuantMatmulWeightNz);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

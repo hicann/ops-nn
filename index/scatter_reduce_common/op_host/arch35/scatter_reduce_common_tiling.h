@@ -25,6 +25,6 @@ struct ScatterReduceCompileInfo {
 
 ge::graphStatus TilingPrepareForScatterReduce(gert::TilingParseContext* context);
 ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context);
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SCATTER_REDUCE_COMMON_TILING_H
+#endif // SCATTER_REDUCE_COMMON_TILING_H

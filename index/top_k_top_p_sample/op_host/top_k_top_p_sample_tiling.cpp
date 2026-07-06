@@ -45,9 +45,9 @@ constexpr uint32_t SMALL_BATCH_CRITICAL_VALUE = 33;
 constexpr uint32_t INNER_LOOP_ELE = 4096 * 2;
 
 // 8192 float32 elements for each buffer to guarantee the precision
-constexpr uint32_t SOFTMAX_INNER_LOOP_ELE = (KERNEL_BUFFER_SIZE / SIZEOF_FP32);  
+constexpr uint32_t SOFTMAX_INNER_LOOP_ELE = (KERNEL_BUFFER_SIZE / SIZEOF_FP32);
 
-constexpr int64_t TILING_KEY_BASE_FP16 = 1001; 
+constexpr int64_t TILING_KEY_BASE_FP16 = 1001;
 constexpr int64_t TILING_KEY_BASE_BF16 = 1027;
 
 constexpr uint32_t SORT_PER_MAX = 1024;
@@ -66,8 +66,7 @@ uint32_t SafeCeil(uint32_t a, uint32_t b)
     return (a + b - 1) / b;
 }
 
-class TopKTopPSampleTiling
-{
+class TopKTopPSampleTiling {
 public:
     TopKTopPSampleTiling() = default;
     ~TopKTopPSampleTiling() = default;
@@ -81,8 +80,8 @@ private:
     ge::graphStatus CheckOpInputShape(const gert::TilingContext* context);
     ge::graphStatus CheckOpOutputDtype(const gert::TilingContext* context);
     ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context);
-    ge::graphStatus CheckOpDim(
-        const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim);
+    ge::graphStatus CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim,
+                               uint32_t shape2Dim);
     void SetOpTilingData(gert::TilingContext* context);
     void SetOpTilingKey(gert::TilingContext* context);
     void ResetTilingParams();
@@ -116,7 +115,7 @@ ge::graphStatus TopKTopPSampleTiling::GetCompileInfo(const gert::TilingContext* 
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    
+
     // Get UB SIZE
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, this->ubSize);
     // Get VECTOR corenum
@@ -149,7 +148,7 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpInputShape(const gert::TilingContex
     auto topKsShape = context->GetInputShape(TOP_K_TENSOR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, topKsShape);
     size_t topKsDimNum = topKsShape->GetStorageShape().GetDimNum();
-    if(topKsDimNum != (logitsDimNum - static_cast<size_t>(1))) {
+    if (topKsDimNum != (logitsDimNum - static_cast<size_t>(1))) {
         OP_LOGE(context->GetNodeName(), "topKsDimNum shape dimension is invalid!");
         return ge::GRAPH_FAILED;
     }
@@ -158,7 +157,7 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpInputShape(const gert::TilingContex
     auto topPsShape = context->GetInputShape(TOP_P_TENSOR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, topPsShape);
     size_t topPsDimNum = topPsShape->GetStorageShape().GetDimNum();
-    if(topPsDimNum != (logitsDimNum - static_cast<size_t>(1))) {
+    if (topPsDimNum != (logitsDimNum - static_cast<size_t>(1))) {
         OP_LOGE(context->GetNodeName(), "topPsDimNum shape dimension is invalid!");
         return ge::GRAPH_FAILED;
     }
@@ -166,7 +165,7 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpInputShape(const gert::TilingContex
 
     auto qShape = context->GetOptionalInputShape(Q_TENSOR_INDEX);
     size_t qDimNum = logitsDimNum;
-    if((qShape) != nullptr){
+    if ((qShape) != nullptr) {
         qDimNum = qShape->GetStorageShape().GetDimNum();
     }
 
@@ -174,10 +173,9 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpInputShape(const gert::TilingContex
         OP_LOGE(context->GetNodeName(), "input shape dimension does not match!");
         return ge::GRAPH_FAILED;
     }
-    if((qShape) != nullptr){
+    if ((qShape) != nullptr) {
         OP_CHECK_IF((CheckOpDim(logitsShape, qShape, logitsDimNum, qDimNum) != ge::GRAPH_SUCCESS),
-            OP_LOGE(context->GetNodeName(), "logits and q shape is inconsistency."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "logits and q shape is inconsistency."), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -187,7 +185,7 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpInputDtype(const gert::TilingContex
     auto logitsDesc = context->GetInputDesc(LOGITS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, logitsDesc);
     auto logitsDtype = logitsDesc->GetDataType();
-    if(logitsDtype != ge::DataType::DT_FLOAT16 && logitsDtype != ge::DataType::DT_BF16) {
+    if (logitsDtype != ge::DataType::DT_FLOAT16 && logitsDtype != ge::DataType::DT_BF16) {
         OP_LOGE(context->GetNodeName(), "logits dtype is only support fp16 or bf16.");
         return ge::GRAPH_FAILED;
     }
@@ -215,7 +213,7 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpInputDtype(const gert::TilingContex
             OP_LOGE(context->GetNodeName(), "q dtype is only support fp32.");
             return ge::GRAPH_FAILED;
         }
-    }else{
+    } else {
         OP_LOGI(context->GetNodeName(), "Input None q tensor.");
     }
     return ge::GRAPH_SUCCESS;
@@ -228,10 +226,9 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpOutputShape(const gert::TilingConte
     auto selectLogitsShape = context->GetOutputShape(SELECT_LOGITS_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, selectLogitsShape);
     size_t selectLogitsDimNum = selectLogitsShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        (CheckOpDim(logitsShape, selectLogitsShape, logitsDimNum, selectLogitsDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "input logits and output selected logits shape is inconsistency."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpDim(logitsShape, selectLogitsShape, logitsDimNum, selectLogitsDimNum) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "input logits and output selected logits shape is inconsistency."),
+                return ge::GRAPH_FAILED);
 
     auto topKsShape = context->GetInputShape(TOP_K_TENSOR_INDEX);
     size_t topKsDimNum = topKsShape->GetStorageShape().GetDimNum();
@@ -239,10 +236,9 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpOutputShape(const gert::TilingConte
     OP_CHECK_NULL_WITH_CONTEXT(context, selectIndexShape);
     size_t selectIndexDimNum = selectIndexShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF((CheckOpDim(topKsShape, selectIndexShape, topKsDimNum, selectIndexDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE(
-            context->GetNodeName(), "topKs and output selected index shape is inconsistency."),
+                OP_LOGE(context->GetNodeName(), "topKs and output selected index shape is inconsistency."),
 
-        return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -251,7 +247,7 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpOutputDtype(const gert::TilingConte
     auto selectLogitsDesc = context->GetOutputDesc(SELECT_LOGITS_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, selectLogitsDesc);
     auto selectLogitsDtype = selectLogitsDesc->GetDataType();
-    if(selectLogitsDtype != ge::DataType::DT_FLOAT) {
+    if (selectLogitsDtype != ge::DataType::DT_FLOAT) {
         OP_LOGE(context->GetNodeName(), "output select logits dtype is only support float");
         return ge::GRAPH_FAILED;
     }
@@ -266,8 +262,8 @@ ge::graphStatus TopKTopPSampleTiling::CheckOpOutputDtype(const gert::TilingConte
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TopKTopPSampleTiling::CheckOpDim(
-    const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim)
+ge::graphStatus TopKTopPSampleTiling::CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2,
+                                                 uint32_t shape1Dim, uint32_t shape2Dim)
 {
     if (shape1Dim != shape2Dim) {
         return ge::GRAPH_FAILED;
@@ -337,7 +333,7 @@ void TopKTopPSampleTiling::SetOpTilingData(gert::TilingContext* context)
     const float* eps = attrs->GetAttrPointer<float>(EPS_IDX);
     tiling.set_eps(*eps);
     const bool* isNeedLogits = attrs->GetAttrPointer<bool>(IS_NEED_LOGITS_INDEX);
-    tiling.set_isNeedLogits(*isNeedLogits ? 1 : 0); 
+    tiling.set_isNeedLogits(*isNeedLogits ? 1 : 0);
     const uint32_t* topKGuess = attrs->GetAttrPointer<uint32_t>(TOP_K_GUESS_IDX);
     tiling.set_topKGuess(*topKGuess);
 
@@ -366,21 +362,17 @@ ge::graphStatus TopKTopPSampleTiling::RunKernelTiling(gert::TilingContext* conte
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        (CheckOpInputShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context->GetNodeName(), "input shape check failed!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "input shape check failed!"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOpInputDtype(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "x or smooth_scales dtype is invalid"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpInputDtype(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "x or smooth_scales dtype is invalid"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOpOutputShape(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "output shape check failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpOutputShape(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "output shape check failed!"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOpOutputDtype(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "op output dtype is invalid"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpOutputDtype(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "op output dtype is invalid"), return ge::GRAPH_FAILED);
 
     const gert::Shape& logitsShape = context->GetInputShape(LOGITS_INDEX)->GetStorageShape();
     rowNum = logitsShape[B_DIM_INDEX];
@@ -401,9 +393,9 @@ ge::graphStatus TopKTopPSampleTiling::RunKernelTiling(gert::TilingContext* conte
 
 static bool CheckTilingContext(gert::TilingContext* context)
 {
-    if (context == nullptr || (context->GetRawTilingData() == nullptr) || 
-       (context->GetRawTilingData()->GetData() == nullptr) || (context->GetWorkspaceSizes(1) == nullptr) ||
-       context->GetWorkspaceNum() <= 0) {
+    if (context == nullptr || (context->GetRawTilingData() == nullptr) ||
+        (context->GetRawTilingData()->GetData() == nullptr) || (context->GetWorkspaceSizes(1) == nullptr) ||
+        context->GetWorkspaceNum() <= 0) {
         return false;
     }
     return true;

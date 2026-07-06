@@ -15,8 +15,7 @@
 
 #include "sparse_segment_mean_tiling_simt_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 
 const static uint64_t LARGE_INNER_TILING_KEY = 200;
 const static uint64_t SMALL_INNER_TILING_KEY = 300;
@@ -63,7 +62,6 @@ int64_t SparseSegmentMeanSimtTiling::GetUpPow2(int64_t n)
     return res;
 }
 
-
 void SparseSegmentMeanSimtTiling::CalcThreadTiling()
 {
     int64_t innerPow2 = GetUpPow2(inputData.innerSize);
@@ -74,7 +72,8 @@ void SparseSegmentMeanSimtTiling::CalcThreadTiling()
         if (oneCoreMaxSegNum > MAX_THREAD_BLOCKS) {
             // 16组线程一次处理不完一个核的segmentNum
             specialBlockTiling_ = true;
-            int64_t oneCoreMaxSegNumUp16 = Ops::Base::CeilAlign(oneCoreMaxSegNum, MAX_THREAD_BLOCKS); // 正常核处理的segmentNum需要与16向上对齐
+            int64_t oneCoreMaxSegNumUp16 = Ops::Base::CeilAlign(
+                oneCoreMaxSegNum, MAX_THREAD_BLOCKS); // 正常核处理的segmentNum需要与16向上对齐
             if (inputData.segmentNum % oneCoreMaxSegNumUp16 > MAX_THREAD_BLOCKS) {
                 // 剩下的seg数量大于16，还需要至少2个核处理
                 int64_t tmpCoreNum = hardwareData.coreNum - 1;
@@ -110,7 +109,6 @@ void SparseSegmentMeanSimtTiling::CalcThreadTiling()
     }
 }
 
-
 void SparseSegmentMeanSimtTiling::CalcBlockTiling()
 {
     if (!specialBlockTiling_) {
@@ -123,13 +121,12 @@ void SparseSegmentMeanSimtTiling::CalcBlockTiling()
     }
 }
 
-
-ge::graphStatus SparseSegmentMeanSimtTiling::DoOpTiling() 
+ge::graphStatus SparseSegmentMeanSimtTiling::DoOpTiling()
 {
     CalcThreadTiling();
     CalcBlockTiling();
 
-    SparseSegmentMeanSimtTilingData *tilingData = context_->GetTilingData<SparseSegmentMeanSimtTilingData>();
+    SparseSegmentMeanSimtTilingData* tilingData = context_->GetTilingData<SparseSegmentMeanSimtTilingData>();
     tilingData->needCoreNum = needCoreNum_;
     tilingData->innerSize = inputData.innerSize;
     tilingData->gatherSize = inputData.gatherSize;
@@ -144,36 +141,51 @@ ge::graphStatus SparseSegmentMeanSimtTiling::DoOpTiling()
     tilingData->secondToLastCoreSegmentNum = secondToLastCoreSegmentNum_;
     tilingData->lastCoreSegmentNum = lastCoreSegmentNum_;
     tilingData->specialBlockTiling = specialBlockTiling_;
-    
+
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
-
 
 bool SparseSegmentMeanSimtTiling::IsCapable()
 {
     // 总体规律：inner轴越大simd越好；segmentNum越大simd越好；平均每组的id数越多simd越好
     bool isSimt = inputData.innerSize <= MAX_THREAD_NUMS ||
-                  (inputData.innerSize <= INNER_THRES7 && inputData.segmentNum <= SEGMENTNUM_THRES5 && inputData.outterSize / inputData.segmentNum <= NUM_TWO) ||
-                  (inputData.innerSize <= INNER_THRES1 && inputData.segmentNum <= SEGMENTNUM_THRES4 && inputData.outterSize / inputData.segmentNum <= NUM_TWO) ||
-                  (inputData.innerSize <= INNER_THRES4 && inputData.segmentNum <= SEGMENTNUM_THRES1 && inputData.outterSize / inputData.segmentNum <= NUM_FOUR) ||
-                  (inputData.innerSize <= INNER_THRES5 && inputData.segmentNum <= SEGMENTNUM_THRES2 && inputData.outterSize / inputData.segmentNum <= NUM_FOUR) ||
-                  (inputData.innerSize <= INNER_THRES2 && inputData.segmentNum <= SEGMENTNUM_THRES3 && inputData.outterSize / inputData.segmentNum <= NUM_FOUR) ||
-                  (inputData.innerSize <= INNER_THRES6 && inputData.segmentNum <= SEGMENTNUM_THRES1 && inputData.outterSize / inputData.segmentNum <= NUM_EIGHT) ||
-                  (inputData.innerSize <= INNER_THRES3 && inputData.segmentNum <= SEGMENTNUM_THRES2 && inputData.outterSize / inputData.segmentNum <= NUM_EIGHT);
+                  (inputData.innerSize <= INNER_THRES7 && inputData.segmentNum <= SEGMENTNUM_THRES5 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_TWO) ||
+                  (inputData.innerSize <= INNER_THRES1 && inputData.segmentNum <= SEGMENTNUM_THRES4 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_TWO) ||
+                  (inputData.innerSize <= INNER_THRES4 && inputData.segmentNum <= SEGMENTNUM_THRES1 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_FOUR) ||
+                  (inputData.innerSize <= INNER_THRES5 && inputData.segmentNum <= SEGMENTNUM_THRES2 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_FOUR) ||
+                  (inputData.innerSize <= INNER_THRES2 && inputData.segmentNum <= SEGMENTNUM_THRES3 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_FOUR) ||
+                  (inputData.innerSize <= INNER_THRES6 && inputData.segmentNum <= SEGMENTNUM_THRES1 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_EIGHT) ||
+                  (inputData.innerSize <= INNER_THRES3 && inputData.segmentNum <= SEGMENTNUM_THRES2 &&
+                   inputData.outterSize / inputData.segmentNum <= NUM_EIGHT);
 
     // 尾轴小但是simd更好的场景：(1)尾轴小但是segmentNum和平均每组的id数很大；(2)segmentNum足够小导致simt一半核都开不满
-    bool isSimd = (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS && inputData.segmentNum >= SIMD_INNER_THRES1 && inputData.outterSize / inputData.segmentNum >= NUM_TWENTY_SEVEN) ||
-                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS && inputData.segmentNum >= SIMD_INNER_THRES2 && inputData.outterSize / inputData.segmentNum >= NUM_TEN) ||
-                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS && inputData.segmentNum >= SIMD_INNER_THRES3 && inputData.outterSize / inputData.segmentNum >= NUM_SEVEN) ||
-                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS && inputData.segmentNum <= SIMD_INNER_THRES5 && inputData.outterSize / inputData.segmentNum >= NUM_TWENTY_FIVE) ||
-                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS && inputData.segmentNum >= SIMD_INNER_THRES4);
-    
+    bool isSimd = (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS &&
+                   inputData.segmentNum >= SIMD_INNER_THRES1 &&
+                   inputData.outterSize / inputData.segmentNum >= NUM_TWENTY_SEVEN) ||
+                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS &&
+                   inputData.segmentNum >= SIMD_INNER_THRES2 &&
+                   inputData.outterSize / inputData.segmentNum >= NUM_TEN) ||
+                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS &&
+                   inputData.segmentNum >= SIMD_INNER_THRES3 &&
+                   inputData.outterSize / inputData.segmentNum >= NUM_SEVEN) ||
+                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS &&
+                   inputData.segmentNum <= SIMD_INNER_THRES5 &&
+                   inputData.outterSize / inputData.segmentNum >= NUM_TWENTY_FIVE) ||
+                  (inputData.innerSize >= SMALL_THREAD_NUMS && inputData.innerSize <= MAX_THREAD_NUMS &&
+                   inputData.segmentNum >= SIMD_INNER_THRES4);
+
     return isSimt && (!isSimd);
 }
 
-
-uint64_t SparseSegmentMeanSimtTiling::GetTilingKey() const {
+uint64_t SparseSegmentMeanSimtTiling::GetTilingKey() const
+{
     if (isSmallInner_) {
         return SMALL_INNER_TILING_KEY;
     } else if (isSimtLoop_) {
@@ -182,10 +194,9 @@ uint64_t SparseSegmentMeanSimtTiling::GetTilingKey() const {
     return LARGE_INNER_TILING_KEY;
 }
 
-
 ge::graphStatus SparseSegmentMeanSimtTiling::GetWorkspaceSize()
 {
-    auto sysWorkspace = WS_SYS_SIZE; 
+    auto sysWorkspace = WS_SYS_SIZE;
     sysWorkspace += (inputData.segmentNum + 1) * sizeof(int64_t);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
@@ -193,7 +204,6 @@ ge::graphStatus SparseSegmentMeanSimtTiling::GetWorkspaceSize()
 
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus SparseSegmentMeanSimtTiling::PostTiling()
 {
@@ -205,12 +215,11 @@ ge::graphStatus SparseSegmentMeanSimtTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-
 void SparseSegmentMeanSimtTiling::PrintTilingData() const
 {
     OP_LOGD("SparseSegmentMeanSimt", "[SparseSegmentMeanSimt] PrintTilingData start running");
     std::ostringstream info;
-    SparseSegmentMeanSimtTilingData *tilingData = context_->GetTilingData<SparseSegmentMeanSimtTilingData>();
+    SparseSegmentMeanSimtTilingData* tilingData = context_->GetTilingData<SparseSegmentMeanSimtTilingData>();
 
     info << "needCoreNum: " << tilingData->needCoreNum << ", ";
     info << "innerSize: " << tilingData->innerSize << ", ";
@@ -232,4 +241,4 @@ void SparseSegmentMeanSimtTiling::PrintTilingData() const
 
 REGISTER_OPS_TILING_TEMPLATE(SparseSegmentMean, SparseSegmentMeanSimtTiling, 1);
 
-}  // namespace optiling
+} // namespace optiling

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <array>
@@ -22,21 +23,15 @@
 
 using namespace std;
 
-extern "C" void add_layer_norm_quant(
-    uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias, uint8_t* scales1, uint8_t* scales2,
-    uint8_t* zeroOffset1, uint8_t* zeroOffset2, uint8_t* y1, uint8_t* y2, uint8_t* x, uint8_t* outScale1,
-    uint8_t* outScale2, uint8_t* workspace, uint8_t* tiling);
+extern "C" void add_layer_norm_quant(uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias,
+                                     uint8_t* scales1, uint8_t* scales2, uint8_t* zeroOffset1, uint8_t* zeroOffset2,
+                                     uint8_t* y1, uint8_t* y2, uint8_t* x, uint8_t* outScale1, uint8_t* outScale2,
+                                     uint8_t* workspace, uint8_t* tiling);
 
 class add_layer_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_layer_norm_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_layer_norm_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_layer_norm_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_layer_norm_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(add_layer_norm_quant_test, test_case_dynamic_normal)
@@ -102,15 +97,13 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_normal)
     tilingDatafromBin->gmOffset = 5120;
 
     ICPU_SET_TILING_KEY(1102);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, nullptr, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, nullptr, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     // None normal bf16/fp16
     tilingDatafromBin->scaleOffsetMode = 0;
     ICPU_SET_TILING_KEY(1102);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, nullptr, nullptr, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, nullptr, nullptr, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -190,19 +183,17 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_single_row)
     tilingDatafromBin->rowTailPerBlock = 1;
     tilingDatafromBin->rowTailLastBlock = 1;
     tilingDatafromBin->gmOffset = D;
-    
+
     // Sole normal bf16/fp16
     tilingDatafromBin->scaleOffsetMode = 100;
     ICPU_SET_TILING_KEY(1122);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, nullptr, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, nullptr, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     // None normal bf16/fp16
     tilingDatafromBin->scaleOffsetMode = 0;
     ICPU_SET_TILING_KEY(1122);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, nullptr, nullptr, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, nullptr, nullptr, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -287,9 +278,8 @@ TEST_F(add_layer_norm_quant_test, test_case_static_normal)
     // Dual and No offset
     tilingDatafromBin->scaleOffsetMode = 200;
     ICPU_SET_TILING_KEY(1002);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     // Sole and has offset
     tilingDatafromBin->scaleOffsetMode = 110;
     // ICPU_SET_TILING_KEY(1002);
@@ -299,9 +289,8 @@ TEST_F(add_layer_norm_quant_test, test_case_static_normal)
     // Sole and no offset
     tilingDatafromBin->scaleOffsetMode = 100;
     ICPU_SET_TILING_KEY(1002);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, nullptr, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, scales1, nullptr, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -511,7 +500,7 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_fp32)
     tilingDatafromBin->isXOut = 1;
     tilingDatafromBin->scaleOffsetMode = 200;
     tilingDatafromBin->isPerTensor = 0;
-    
+
     tilingDatafromBin->numLastDimAlign = D;
     tilingDatafromBin->numLastDimAlign32 = D;
     tilingDatafromBin->mulLoopFp32 = 80;
@@ -521,33 +510,27 @@ TEST_F(add_layer_norm_quant_test, test_case_dynamic_fp32)
     tilingDatafromBin->rowTailPerBlock = 1;
     tilingDatafromBin->rowTailLastBlock = 1;
     tilingDatafromBin->gmOffset = D;
-    
+
     // dual normal fp32
     ICPU_SET_TILING_KEY(2100);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(2101);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(2102);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(2120);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(2121);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias1, smooth1, smooth2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(2122);
-    ICPU_RUN_KF(
-        add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2, x,
-        outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_quant, blockDim, x1, x2, gamma, beta, bias, smooth1, smooth2, nullptr, nullptr, y1, y2,
+                x, outScale1, outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

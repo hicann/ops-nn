@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "arch35/mish_grad_dag.h"
@@ -18,12 +18,12 @@
 using namespace AscendC;
 using namespace MishGradOp;
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void mish_grad(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void mish_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace,
+                                     GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EleBaseTilingData16B);
- 	GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData16B, tilingData, tiling);
- 	KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData16B, tilingData, tiling);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if constexpr (dType == TPL_FP16_FULL) {
         ElementwiseSch16B<schMode, MishGradFullDAG<half>::OpDag> sch(tilingData);
         sch.Init(grad, x, tanhx, x_grad);

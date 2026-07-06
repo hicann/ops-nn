@@ -24,18 +24,16 @@ namespace GeluQuantALL {
 using namespace AscendC;
 // static quant per-tensor   elewise切分
 template <typename T1, typename T2>
-class StaticQuantPerTensor : public GeluQuantBase
-{
+class StaticQuantPerTensor : public GeluQuantBase {
 public:
     __aicore__ inline StaticQuantPerTensor(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-        const GeluQuantTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const GeluQuantTilingData& tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessScalarInput();
     __aicore__ inline void ProcessPerLoop(int64_t offset, int32_t calCount);
-    __aicore__ inline void ProcessOptionalInput(
-        LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal, int64_t offset, int32_t calCount);
+    __aicore__ inline void ProcessOptionalInput(LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal,
+                                                int64_t offset, int32_t calCount);
     __aicore__ inline void CopyIn(int64_t offset, int32_t calCount);
     __aicore__ inline void Compute(int32_t calCount);
     __aicore__ inline void CopyOut(int64_t offset, int32_t calCount);
@@ -59,9 +57,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantPerTensor<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void StaticQuantPerTensor<T1, T2>::Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y,
+                                                          GM_ADDR outScale, GM_ADDR workspace,
+                                                          const GeluQuantTilingData& tilingData)
 {
     // Init tiling data
     GeluQuantBase::ParseTilingData(tilingData);
@@ -141,9 +139,8 @@ template <typename T1, typename T2>
 __aicore__ inline void StaticQuantPerTensor<T1, T2>::CopyIn(int64_t offset, int32_t calCount)
 {
     LocalTensor<T1> xLocal = inQueue_.AllocTensor<T1>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T1)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T1> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
     DataCopyPad(xLocal, xGm_[offset], copyParams, padParams);
@@ -152,13 +149,13 @@ __aicore__ inline void StaticQuantPerTensor<T1, T2>::CopyIn(int64_t offset, int3
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantPerTensor<T1, T2>::ProcessOptionalInput(
-    LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal, int64_t offset, int32_t calCount)
+__aicore__ inline void StaticQuantPerTensor<T1, T2>::ProcessOptionalInput(LocalTensor<float>& optionalLocalFp32,
+                                                                          GlobalTensor<T2>& optionalGlobal,
+                                                                          int64_t offset, int32_t calCount)
 {
     LocalTensor<T2> optionalInput = inQueue_.AllocTensor<T2>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T2> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
 
@@ -189,9 +186,8 @@ template <typename T1, typename T2>
 __aicore__ inline void StaticQuantPerTensor<T1, T2>::CopyOut(int64_t offset, int32_t calCount)
 {
     LocalTensor<int8_t> outLocal = outQueue_.DeQue<int8_t>();
-    DataCopyExtParams copyParamsInt8{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int8_t)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsInt8{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int8_t)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(yGm_[offset], outLocal, copyParamsInt8);
 
@@ -225,8 +221,8 @@ __aicore__ inline void StaticQuantPerTensor<T1, T2>::ComputeGelu(LocalTensor<flo
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantPerTensor<T1, T2>::ComputePerTensorQuant(
-    LocalTensor<float>& geluRes, int32_t calCount)
+__aicore__ inline void StaticQuantPerTensor<T1, T2>::ComputePerTensorQuant(LocalTensor<float>& geluRes,
+                                                                           int32_t calCount)
 {
     if (inputScaleType_ == SCALAR_TENSOR) {
         Muls(geluRes, geluRes, inputScaleScalar_, calCount);

@@ -7,7 +7,6 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
 
 #include <array>
 #include <vector>
@@ -22,25 +21,13 @@
 using namespace op;
 using namespace std;
 
-enum Reduction
-{
-    NONE,
-    MEAN,
-    SUM,
-    END
-};
+enum Reduction { NONE, MEAN, SUM, END };
 
 class l2_smooth_l1_loss_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "smooth_l1_loss_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "smooth_l1_loss_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "smooth_l1_loss_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "smooth_l1_loss_backward_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_smooth_l1_loss_backward_test, case_normal)
@@ -52,9 +39,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_normal)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -71,31 +57,29 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_nullptr)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(nullptr, self_desc, target_desc, reduction, beta), OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(nullptr, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut2 = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, nullptr, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut2 = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, nullptr, target_desc, reduction, beta),
+                         OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut2.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut3 = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, nullptr, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut3 = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, nullptr, reduction, beta),
+                         OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut3.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut4 = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta), OUTPUT(nullptr));
+    auto ut4 = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                         OUTPUT(nullptr));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut4.TestGetWorkspaceSize(&workspaceSize);
@@ -112,9 +96,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_empty_tensor)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -134,9 +117,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_dtype_float)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -156,9 +138,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_dtype_float16)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -175,9 +156,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_dtype_promote)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.001, 0.001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -197,12 +177,11 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_dtype_invalid)
         auto target_desc = TensorDesc({1, 4, 4, 1}, DtypeList[(i + 2) % 4], ACL_FORMAT_ND).ValueRange(-2, 2);
         int64_t reduction = NONE;
         float beta = 1;
-        auto grad_input_desc =
-            TensorDesc({1, 4, 4, 1}, DtypeList[(i + 3) % 4], ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+        auto grad_input_desc = TensorDesc({1, 4, 4, 1}, DtypeList[(i + 3) % 4], ACL_FORMAT_ND)
+                                   .Precision(0.0001, 0.0001);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -220,9 +199,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_dim)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -240,9 +218,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_reduction)
         float beta = 1;
         auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -266,9 +243,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_broadcast_succ_1)
     float beta = 1;
     auto grad_input_desc = TensorDesc({1, 0, 4, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -285,9 +261,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_broadcast_succ_2)
     float beta = 1;
     auto grad_input_desc = TensorDesc({1, 2, 4, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -304,9 +279,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_broadcast_fail_1)
     float beta = 1;
     auto grad_input_desc = TensorDesc({1, 1, 4, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -325,9 +299,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_broadcast_fail_2)
     float beta = 1;
     auto grad_input_desc = TensorDesc({1, 1, 4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -347,9 +320,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_beta)
     float beta = -1;
     auto grad_input_desc = TensorDesc({1, 1, 4, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -366,9 +338,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_not_contiguous)
     float beta = 1;
     auto grad_input_desc = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {4, 5}).ValueRange(1, 10);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -389,9 +360,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, case_format)
         float beta = 1;
         auto grad_input_desc = TensorDesc({1, 1, 4, 4}, ACL_FLOAT, ValidList[i]);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -409,9 +379,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend910B2_case_dtype_bfloat16)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.004, 0.004);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -428,9 +397,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_empty_tensor)
     float beta = 1;
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -447,9 +415,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_reduction_dtype_float32)
         float beta = 1;
         auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -471,9 +438,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_reduction_dtype_float16)
         float beta = 1;
         auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.001, 0.001);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -495,9 +461,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_reduction_dtype_bfloat16)
         float beta = 1;
         auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.005, 0.005);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -519,9 +484,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_scalar_reduction_dtype_fl
         float beta = 1;
         auto grad_input_desc = TensorDesc({1, 0, 4, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -543,9 +507,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_scalar_reduction_dtype_fl
         float beta = 1;
         auto grad_input_desc = TensorDesc({1, 0, 4, 2}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -567,9 +530,8 @@ TEST_F(l2_smooth_l1_loss_backward_test, ascend950_case_scalar_reduction_dtype_bf
         float beta = 1;
         auto grad_input_desc = TensorDesc({1, 0, 4, 2}, ACL_BF16, ACL_FORMAT_ND).Precision(0.005, 0.005);
 
-        auto ut = OP_API_UT(
-            aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
-            OUTPUT(grad_input_desc));
+        auto ut = OP_API_UT(aclnnSmoothL1LossBackward, INPUT(grad_output_desc, self_desc, target_desc, reduction, beta),
+                            OUTPUT(grad_input_desc));
         // SAMPLE: only test GetworkspaceSize
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

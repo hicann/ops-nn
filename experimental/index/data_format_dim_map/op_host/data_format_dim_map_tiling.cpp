@@ -24,17 +24,18 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -72,8 +73,7 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context, int64_t& total
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus BuildExpandedTable(gert::TilingContext* context,
-    int32_t expandedTable[10], int32_t& formatLen)
+static ge::graphStatus BuildExpandedTable(gert::TilingContext* context, int32_t expandedTable[10], int32_t& formatLen)
 {
     const char* srcFormat = context->GetAttrs()->GetStr(0);
     const char* dstFormat = context->GetAttrs()->GetStr(1);
@@ -81,10 +81,10 @@ static ge::graphStatus BuildExpandedTable(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, dstFormat);
 
     formatLen = static_cast<int32_t>(strlen(srcFormat));
-    OP_CHECK_IF(formatLen < 1 || formatLen > 5,
-        OP_LOGE(context, "Invalid formatLen: %d", formatLen), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(formatLen < 1 || formatLen > 5, OP_LOGE(context, "Invalid formatLen: %d", formatLen),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(static_cast<int32_t>(strlen(dstFormat)) != formatLen,
-        OP_LOGE(context, "src_format and dst_format length mismatch"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "src_format and dst_format length mismatch"), return ge::GRAPH_FAILED);
 
     for (int32_t i = 0; i < formatLen; i++) {
         bool found = false;
@@ -95,9 +95,8 @@ static ge::graphStatus BuildExpandedTable(gert::TilingContext* context,
                 break;
             }
         }
-        OP_CHECK_IF(!found,
-            OP_LOGE(context, "srcFormat[%d]='%c' not found in dstFormat", i, srcFormat[i]),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!found, OP_LOGE(context, "srcFormat[%d]='%c' not found in dstFormat", i, srcFormat[i]),
+                    return ge::GRAPH_FAILED);
     }
     for (int32_t i = 0; i < formatLen; i++) {
         expandedTable[formatLen + i] = expandedTable[i];
@@ -110,28 +109,27 @@ static ge::graphStatus DataFormatDimMapTilingFunc(gert::TilingContext* context)
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     int64_t totalIdx;
     ge::DataType dataType;
-    OP_CHECK_IF(GetInputInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetInputInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetInputInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetInputInfo error"),
+                return ge::GRAPH_FAILED);
 
     int32_t expandedTable[10] = {0};
     int32_t formatLen = 0;
     OP_CHECK_IF(BuildExpandedTable(context, expandedTable, formatLen) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "BuildExpandedTable error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "BuildExpandedTable error"), return ge::GRAPH_FAILED);
 
     int64_t typeSize = (dataType == ge::DT_INT64) ? 8 : 4;
     int64_t ubBlockSize = GetUbBlockSize(context);
 
     DataFormatDimMapTilingData* tiling = context->GetTilingData<DataFormatDimMapTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(DataFormatDimMapTilingData), 0,
-        sizeof(DataFormatDimMapTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(DataFormatDimMapTilingData), 0, sizeof(DataFormatDimMapTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = totalIdx;
     tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);

@@ -26,7 +26,7 @@ namespace l0op {
 OP_TYPE_REGISTER(AscendAntiQuantV2);
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT4, op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2, 
+    op::DataType::DT_INT4, op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2,
     op::DataType::DT_FLOAT8_E4M3FN};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
@@ -36,23 +36,20 @@ static inline bool IsAiCoreSupport(const aclTensor* self)
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
-const aclTensor* AscendAntiQuantV2Aicore(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, int64_t dstType, bool sqrtMode, aclTensor* out,
-    aclOpExecutor* executor)
+const aclTensor* AscendAntiQuantV2Aicore(const aclTensor* x, const aclTensor* scale, const aclTensor* offset,
+                                         int64_t dstType, bool sqrtMode, aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(AscendAntiQuantV2Aicore, x, scale, offset, dstType, sqrtMode, out)
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AscendAntiQuantV2, OP_INPUT(x, scale, offset), OP_OUTPUT(out), OP_ATTR(dstType, sqrtMode));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AscendAntiQuantV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AscendAntiQuantV2, OP_INPUT(x, scale, offset), OP_OUTPUT(out),
+                                           OP_ATTR(dstType, sqrtMode));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AscendAntiQuantV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* AscendAntiQuantV2(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, int64_t dstType, bool sqrtMode,
-    aclOpExecutor* executor)
+const aclTensor* AscendAntiQuantV2(const aclTensor* x, const aclTensor* scale, const aclTensor* offset, int64_t dstType,
+                                   bool sqrtMode, aclOpExecutor* executor)
 {
     op::Shape outShape = x->GetViewShape();
     auto out = executor->AllocTensor(outShape, op::DataType(dstType));

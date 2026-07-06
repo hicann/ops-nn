@@ -32,21 +32,21 @@ namespace aicpu {
  *        Implements element-wise tensor addition on CPU.
  */
 class AddExampleCpuKernel : public CpuKernel {
- public:
-  ~AddExampleCpuKernel() = default;
-  /*!
-   * \brief Entry point for kernel computation.
-   * \param ctx Kernel context containing input/output tensors.
-   * \return kSuccess on success, error code on failure.
-   */
-  uint32_t Compute(CpuKernelContext &ctx) override;
-  /*!
-   * \brief Template function for type-specific addition computation.
-   * \param ctx Kernel context containing input/output tensors.
-   * \return kSuccess on success, error code on failure.
-   */
-  template<typename T>
-  uint32_t AddCompute(CpuKernelContext &ctx);
+public:
+    ~AddExampleCpuKernel() = default;
+    /*!
+     * \brief Entry point for kernel computation.
+     * \param ctx Kernel context containing input/output tensors.
+     * \return kSuccess on success, error code on failure.
+     */
+    uint32_t Compute(CpuKernelContext& ctx) override;
+    /*!
+     * \brief Template function for type-specific addition computation.
+     * \param ctx Kernel context containing input/output tensors.
+     * \return kSuccess on success, error code on failure.
+     */
+    template <typename T>
+    uint32_t AddCompute(CpuKernelContext& ctx);
 };
-}  // namespace aicpu
+} // namespace aicpu
 #endif

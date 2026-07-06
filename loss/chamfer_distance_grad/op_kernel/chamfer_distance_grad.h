@@ -39,9 +39,9 @@ private:
     uint64_t start_task_id;
 
 public:
-    __aicore__ inline ChamferDistanceGrad(
-        GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR grad_dist1, GM_ADDR grad_dist2, GM_ADDR idx1, GM_ADDR idx2,
-        GM_ADDR grad_xyz1, GM_ADDR grad_xyz2, ChamferDistanceGradTilingData* tiling_data)
+    __aicore__ inline ChamferDistanceGrad(GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR grad_dist1, GM_ADDR grad_dist2,
+                                          GM_ADDR idx1, GM_ADDR idx2, GM_ADDR grad_xyz1, GM_ADDR grad_xyz2,
+                                          ChamferDistanceGradTilingData* tiling_data)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         this->core_num = GetBlockNum();
@@ -85,10 +85,7 @@ public:
         pipe.InitBuffer(out_queue_block, 1, this->t_per_block * sizeof(T));
     }
 
-    __aicore__ inline void process()
-    {
-        main_fuc_of_mode_zero(this->start_task_id);
-    }
+    __aicore__ inline void process() { main_fuc_of_mode_zero(this->start_task_id); }
 
 private:
     __aicore__ inline void init_ub_mode_zero()
@@ -128,15 +125,13 @@ private:
                 cur_task_idx = task_idx + loop_ind * this->per_ub_size;
                 cur_task_batch = cur_task_idx / this->num;
                 cur_task_num = cur_task_idx % this->num;
-                main_cal_func_d2(
-                    cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local, xy_zero_block_local,
-                    block_local, cur_task_num, this->per_ub_size, cur_task_idx);
+                main_cal_func_d2(cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local,
+                                 xy_zero_block_local, block_local, cur_task_num, this->per_ub_size, cur_task_idx);
                 PipeSync<AscendC::HardEvent::V_MTE3>();
                 PipeSync<AscendC::HardEvent::MTE2_MTE3>();
                 SetAtomicAdd<T>();
-                DataCopyPad(
-                    grad_xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
-                    {1, static_cast<uint32_t>(this->per_ub_size * doub * sizeof(T)), 0, 0, 0});
+                DataCopyPad(grad_xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
+                            {1, static_cast<uint32_t>(this->per_ub_size * doub * sizeof(T)), 0, 0, 0});
                 SetAtomicNone();
                 PipeSync<AscendC::HardEvent::MTE3_S>();
             }
@@ -147,9 +142,8 @@ private:
             cur_task_idx = task_idx + loop_num * this->per_ub_size;
             cur_task_batch = cur_task_idx / this->num;
             cur_task_num = cur_task_idx % this->num;
-            main_cal_func_d2(
-                cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local, xy_zero_block_local,
-                block_local, cur_task_num, num, cur_task_idx);
+            main_cal_func_d2(cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local,
+                             xy_zero_block_local, block_local, cur_task_num, num, cur_task_idx);
             PipeSync<AscendC::HardEvent::V_S>();
             PipeSync<AscendC::HardEvent::MTE2_S>();
             PipeSync<AscendC::HardEvent::MTE3_S>();
@@ -162,33 +156,30 @@ private:
             }
             PipeSync<AscendC::HardEvent::V_MTE3>();
             SetAtomicAdd<T>();
-            DataCopyPad(
-                grad_xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
-                {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0});
+            DataCopyPad(grad_xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
+                        {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0});
             SetAtomicNone();
             PipeSync<AscendC::HardEvent::MTE3_S>();
         }
     }
 
-    __aicore__ inline void main_cal_func_d2(
-        uint64_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local, const LocalTensor<T>& grad_dist_local,
-        const LocalTensor<int32_t>& id_local, const LocalTensor<T>& d_local, const LocalTensor<T>& xy_zero_block_local,
-        const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num, uint64_t cur_task_idx)
+    __aicore__ inline void main_cal_func_d2(uint64_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local,
+                                            const LocalTensor<T>& grad_dist_local, const LocalTensor<int32_t>& id_local,
+                                            const LocalTensor<T>& d_local, const LocalTensor<T>& xy_zero_block_local,
+                                            const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num,
+                                            uint64_t cur_task_idx)
     {
         uint32_t doub = 2;
         size_t fp32_type = 4;
         PipeSync<AscendC::HardEvent::S_MTE2>();
-        DataCopyPad(
-            xyz_local, xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub],
-            {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(xyz_local, xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub],
+                    {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         PipeBarrier<PIPE_MTE2>();
-        DataCopyPad(
-            grad_dist_local, grad_dist2_gm[cur_task_batch * this->num + cur_task_num],
-            {1, static_cast<uint32_t>(num * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(grad_dist_local, grad_dist2_gm[cur_task_batch * this->num + cur_task_num],
+                    {1, static_cast<uint32_t>(num * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         PipeBarrier<PIPE_MTE2>();
-        DataCopyPad(
-            id_local, idx2_gm[cur_task_batch * this->num + cur_task_num],
-            {1, static_cast<uint32_t>(num * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(id_local, idx2_gm[cur_task_batch * this->num + cur_task_num],
+                    {1, static_cast<uint32_t>(num * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
         PipeSync<AscendC::HardEvent::MTE2_V>();
         muls_template(grad_dist_local, grad_dist_local, db, ceil(num, this->t_per_block));
         PipeSync<AscendC::HardEvent::V_S>();
@@ -197,9 +188,8 @@ private:
             uint64_t cur_batch = (cur_task_idx + ind) / this->num;
             int32_t cur_ind = id_local.GetValue(ind);
             PipeSync<AscendC::HardEvent::V_MTE2>();
-            DataCopyPad(
-                block_local, xyz1_gm[cur_batch * this->num * doub + cur_ind * doub],
-                {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(block_local, xyz1_gm[cur_batch * this->num * doub + cur_ind * doub],
+                        {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
             PipeSync<AscendC::HardEvent::MTE2_V>();
             float x2 = (float)block_local.GetValue(0);
             float y2 = (float)block_local.GetValue(1);
@@ -229,9 +219,8 @@ private:
             }
             PipeSync<AscendC::HardEvent::V_MTE3>();
             SetAtomicAdd<T>();
-            DataCopyPad(
-                grad_xyz1_gm[cur_batch * this->num * doub + cur_ind * doub], xy_zero_block_local,
-                {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0});
+            DataCopyPad(grad_xyz1_gm[cur_batch * this->num * doub + cur_ind * doub], xy_zero_block_local,
+                        {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0});
             SetAtomicNone();
             PipeSync<AscendC::HardEvent::MTE3_S>();
         }
@@ -262,16 +251,14 @@ private:
                 cur_task_idx = task_idx + loop_ind * this->per_ub_size;
                 cur_task_batch = cur_task_idx / this->num;
                 cur_task_num = cur_task_idx % this->num;
-                main_cal_func_d1(
-                    cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local, xy_zero_block_local,
-                    block_local, cur_task_num, this->per_ub_size, cur_task_idx);
+                main_cal_func_d1(cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local,
+                                 xy_zero_block_local, block_local, cur_task_num, this->per_ub_size, cur_task_idx);
                 PipeSync<AscendC::HardEvent::MTE2_S>();
                 PipeSync<AscendC::HardEvent::S_MTE3>();
                 PipeSync<AscendC::HardEvent::V_MTE3>();
                 SetAtomicAdd<T>();
-                DataCopyPad(
-                    grad_xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
-                    {1, static_cast<uint32_t>(this->per_ub_size * doub * sizeof(T)), 0, 0, 0});
+                DataCopyPad(grad_xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
+                            {1, static_cast<uint32_t>(this->per_ub_size * doub * sizeof(T)), 0, 0, 0});
                 SetAtomicNone();
                 PipeSync<AscendC::HardEvent::MTE3_S>();
             }
@@ -282,9 +269,8 @@ private:
             cur_task_idx = task_idx + loop_num * this->per_ub_size;
             cur_task_batch = cur_task_idx / this->num;
             cur_task_num = cur_task_idx % this->num;
-            main_cal_func_d1(
-                cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local, xy_zero_block_local,
-                block_local, cur_task_num, num, cur_task_idx);
+            main_cal_func_d1(cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local,
+                             xy_zero_block_local, block_local, cur_task_num, num, cur_task_idx);
             PipeSync<AscendC::HardEvent::MTE2_S>();
             PipeSync<AscendC::HardEvent::MTE3_S>();
             PipeSync<AscendC::HardEvent::V_S>();
@@ -297,15 +283,13 @@ private:
             }
             PipeSync<AscendC::HardEvent::V_MTE3>();
             SetAtomicAdd<T>();
-            DataCopyPad(
-                grad_xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
-                {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0});
+            DataCopyPad(grad_xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
+                        {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0});
             SetAtomicNone();
             PipeSync<AscendC::HardEvent::MTE3_S>();
         }
-        compute_mode_zero_with_d2(
-            task_idx, db, neg, fill_value, xyz_local, grad_dist_local, id_local, d_local, xy_zero_block_local,
-            block_local, cur_task_idx, cur_task_batch, cur_task_num);
+        compute_mode_zero_with_d2(task_idx, db, neg, fill_value, xyz_local, grad_dist_local, id_local, d_local,
+                                  xy_zero_block_local, block_local, cur_task_idx, cur_task_batch, cur_task_num);
         PipeSync<AscendC::HardEvent::V_S>();
         PipeSync<AscendC::HardEvent::MTE2_S>();
         PipeSync<AscendC::HardEvent::MTE3_S>();
@@ -317,25 +301,23 @@ private:
         in_queue_id.FreeTensor(id_local);
     }
 
-    __aicore__ inline void main_cal_func_d1(
-        uint64_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local, const LocalTensor<T>& grad_dist_local,
-        const LocalTensor<int32_t>& id_local, const LocalTensor<T>& d_local, const LocalTensor<T>& xy_zero_block_local,
-        const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num, uint64_t cur_task_idx)
+    __aicore__ inline void main_cal_func_d1(uint64_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local,
+                                            const LocalTensor<T>& grad_dist_local, const LocalTensor<int32_t>& id_local,
+                                            const LocalTensor<T>& d_local, const LocalTensor<T>& xy_zero_block_local,
+                                            const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num,
+                                            uint64_t cur_task_idx)
     {
         uint32_t doub = 2;
         size_t fp32_type = 4;
         PipeSync<AscendC::HardEvent::S_MTE2>();
-        DataCopyPad(
-            xyz_local, xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub],
-            {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(xyz_local, xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub],
+                    {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         PipeBarrier<PIPE_MTE2>();
-        DataCopyPad(
-            grad_dist_local, grad_dist1_gm[cur_task_batch * this->num + cur_task_num],
-            {1, static_cast<uint32_t>(num * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(grad_dist_local, grad_dist1_gm[cur_task_batch * this->num + cur_task_num],
+                    {1, static_cast<uint32_t>(num * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         PipeBarrier<PIPE_MTE2>();
-        DataCopyPad(
-            id_local, idx1_gm[cur_task_batch * this->num + cur_task_num],
-            {1, static_cast<uint32_t>(num * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(id_local, idx1_gm[cur_task_batch * this->num + cur_task_num],
+                    {1, static_cast<uint32_t>(num * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
         PipeSync<AscendC::HardEvent::MTE2_V>();
         muls_template(grad_dist_local, grad_dist_local, db, ceil(num, this->t_per_block));
         PipeSync<AscendC::HardEvent::V_S>();
@@ -345,9 +327,8 @@ private:
             int32_t cur_ind = id_local.GetValue(ind);
             PipeSync<AscendC::HardEvent::V_MTE2>();
             PipeSync<AscendC::HardEvent::MTE3_MTE2>();
-            DataCopyPad(
-                block_local, xyz2_gm[cur_batch * this->num * doub + cur_ind * doub],
-                {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(block_local, xyz2_gm[cur_batch * this->num * doub + cur_ind * doub],
+                        {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
             PipeBarrier<PIPE_MTE2>();
             float x2 = (float)block_local.GetValue(0);
             float y2 = (float)block_local.GetValue(1);
@@ -377,9 +358,8 @@ private:
             }
             PipeSync<AscendC::HardEvent::V_MTE3>();
             SetAtomicAdd<T>();
-            DataCopyPad(
-                grad_xyz2_gm[cur_batch * this->num * doub + cur_ind * doub], xy_zero_block_local,
-                {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0});
+            DataCopyPad(grad_xyz2_gm[cur_batch * this->num * doub + cur_ind * doub], xy_zero_block_local,
+                        {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0});
             SetAtomicNone();
             PipeBarrier<PIPE_MTE2>();
             PipeBarrier<PIPE_MTE3>();
@@ -395,8 +375,8 @@ private:
         return ((a - 1) / b + 1) * b;
     }
 
-    __aicore__ inline void muls_template(
-        const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, T scalarValue, const int32_t calCount)
+    __aicore__ inline void muls_template(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, T scalarValue,
+                                         const int32_t calCount)
     {
         int32_t unit = 256;
         int32_t max_repeat = 255;
@@ -408,9 +388,8 @@ private:
         int32_t tensor_offset = 0;
         PipeBarrier<PIPE_V>();
         for (int32_t loop_idx = 0; loop_idx < loop; loop_idx++) {
-            Muls(
-                dstLocal[loop_idx * max_repeat * mask], srcLocal[loop_idx * max_repeat * mask], scalarValue, mask,
-                max_repeat, {1, 1, 8, 8});
+            Muls(dstLocal[loop_idx * max_repeat * mask], srcLocal[loop_idx * max_repeat * mask], scalarValue, mask,
+                 max_repeat, {1, 1, 8, 8});
             PipeBarrier<PIPE_V>();
         }
         tensor_offset = loop * max_repeat * mask;

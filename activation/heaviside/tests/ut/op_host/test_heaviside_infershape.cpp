@@ -16,15 +16,9 @@
 
 class Heaviside : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Heaviside SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Heaviside SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Heaviside TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Heaviside TearDown" << std::endl; }
 };
 
 TEST_F(Heaviside, Heaviside_infershape_case_0)

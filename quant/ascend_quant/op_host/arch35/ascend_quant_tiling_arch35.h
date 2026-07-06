@@ -23,8 +23,7 @@
 namespace optiling {
 using namespace Ops::NN::Optiling;
 namespace ascendquantregbase {
-enum class RoundMode
-{
+enum class RoundMode {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -36,7 +35,7 @@ enum class RoundMode
 
 class AscendQuantRegbase {
 public:
-    explicit AscendQuantRegbase(gert::TilingContext* context) : context_(context) {};
+    explicit AscendQuantRegbase(gert::TilingContext* context) : context_(context){};
     ge::graphStatus DoAscendQuantTiling();
 
 protected:

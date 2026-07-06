@@ -41,20 +41,12 @@ extern "C" {
  * @param [out] executor: 返回op执行器。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnFusedSgdGetWorkspaceSize(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef,
-    const aclTensor *gradScaleOptional,
-    float weightDecay,
-    float momentum,
-    float lr,
-    float dampening,
-    bool nesterov,
-    bool maximize,
-    bool isFirstStep,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnFusedSgdGetWorkspaceSize(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                                                    const aclTensorList* momentumBufferListOptionalRef,
+                                                    const aclTensor* gradScaleOptional, float weightDecay,
+                                                    float momentum, float lr, float dampening, bool nesterov,
+                                                    bool maximize, bool isFirstStep, uint64_t* workspaceSize,
+                                                    aclOpExecutor** executor);
 
 /**
  * @brief aclnnFusedSgd的第二段接口，用于执行计算。
@@ -66,11 +58,8 @@ ACLNN_API aclnnStatus aclnnFusedSgdGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnFusedSgd(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFusedSgd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

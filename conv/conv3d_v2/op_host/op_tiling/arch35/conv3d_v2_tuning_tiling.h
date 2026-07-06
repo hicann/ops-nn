@@ -71,9 +71,9 @@ struct Conv3DV2InputArgs {
 };
 #pragma pack(pop)
 
-#define TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(data_type, field_name, value)             \
-public:                                                                                       \
-    data_type field_name = value;                                                             \
+#define TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(data_type, field_name, value) \
+public:                                                                           \
+    data_type field_name = value;                                                 \
     FieldHandler field_name##_handler_ = FieldHandler(this, #data_type, #field_name)
 
 BEGIN_TUNING_TILING_DEF(Conv3DV2TunnerTiling)
@@ -135,74 +135,39 @@ TUNING_TILING_DATA_FIELD_DEF(uint8_t, isC04Flag);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, mMode);
 END_TUNING_TILING_DEF
 
-DECLARE_SCHEMA(Conv3DV2TunnerTiling,
-    FIELD(Conv3DV2TunnerTiling, groups),
-    FIELD(Conv3DV2TunnerTiling, singleCoreDo),
-    FIELD(Conv3DV2TunnerTiling, singleCoreCo),
-    FIELD(Conv3DV2TunnerTiling, singleCoreHo),
-    FIELD(Conv3DV2TunnerTiling, singleCoreWo),
-    FIELD(Conv3DV2TunnerTiling, singleCoreCi),
-    FIELD(Conv3DV2TunnerTiling, orgDo),
-    FIELD(Conv3DV2TunnerTiling, orgCo),
-    FIELD(Conv3DV2TunnerTiling, orgHo),
-    FIELD(Conv3DV2TunnerTiling, orgWo),
-    FIELD(Conv3DV2TunnerTiling, orgCi),
-    FIELD(Conv3DV2TunnerTiling, orgDi),
-    FIELD(Conv3DV2TunnerTiling, orgHi),
-    FIELD(Conv3DV2TunnerTiling, orgWi),
-    FIELD(Conv3DV2TunnerTiling, kernelD),
-    FIELD(Conv3DV2TunnerTiling, kernelH),
-    FIELD(Conv3DV2TunnerTiling, kernelW),
-    FIELD(Conv3DV2TunnerTiling, strideD),
-    FIELD(Conv3DV2TunnerTiling, strideH),
-    FIELD(Conv3DV2TunnerTiling, strideW),
-    FIELD(Conv3DV2TunnerTiling, dilationD),
-    FIELD(Conv3DV2TunnerTiling, dilationH),
-    FIELD(Conv3DV2TunnerTiling, dilationW),
-    FIELD(Conv3DV2TunnerTiling, padHead),
-    FIELD(Conv3DV2TunnerTiling, padTail),
-    FIELD(Conv3DV2TunnerTiling, padTop),
-    FIELD(Conv3DV2TunnerTiling, padBottom),
-    FIELD(Conv3DV2TunnerTiling, padLeft),
-    FIELD(Conv3DV2TunnerTiling, padRight),
-    FIELD(Conv3DV2TunnerTiling, hoL0),
-    FIELD(Conv3DV2TunnerTiling, woL0),
-    FIELD(Conv3DV2TunnerTiling, kL0),
-    FIELD(Conv3DV2TunnerTiling, nL0),
-    FIELD(Conv3DV2TunnerTiling, kAL1),
-    FIELD(Conv3DV2TunnerTiling, kBL1),
-    FIELD(Conv3DV2TunnerTiling, nBL1),
-    FIELD(Conv3DV2TunnerTiling, hoL1),
-    FIELD(Conv3DV2TunnerTiling, woL1),
-    FIELD(Conv3DV2TunnerTiling, pBufferFlag),
-    FIELD(Conv3DV2TunnerTiling, khL1),
-    FIELD(Conv3DV2TunnerTiling, kwL1),
-    FIELD(Conv3DV2TunnerTiling, bl1FullLoad),
-    FIELD(Conv3DV2TunnerTiling, al1FullLoad),
-    FIELD(Conv3DV2TunnerTiling, bl1BypassFlag),
-    FIELD(Conv3DV2TunnerTiling, iterateMNOrder),
-    FIELD(Conv3DV2TunnerTiling, biasFullLoadFlag),
-    FIELD(Conv3DV2TunnerTiling, fixpParamsFullLoadFlag),
-    FIELD(Conv3DV2TunnerTiling, hf32Enable),
-    FIELD(Conv3DV2TunnerTiling, hf32TransMode),
-    FIELD(Conv3DV2TunnerTiling, batchDim),
-    FIELD(Conv3DV2TunnerTiling, nDim),
-    FIELD(Conv3DV2TunnerTiling, hoDim),
-    FIELD(Conv3DV2TunnerTiling, doDim),
-    FIELD(Conv3DV2TunnerTiling, groupDim),
-    FIELD(Conv3DV2TunnerTiling, isC04Flag),
+DECLARE_SCHEMA(
+    Conv3DV2TunnerTiling, FIELD(Conv3DV2TunnerTiling, groups), FIELD(Conv3DV2TunnerTiling, singleCoreDo),
+    FIELD(Conv3DV2TunnerTiling, singleCoreCo), FIELD(Conv3DV2TunnerTiling, singleCoreHo),
+    FIELD(Conv3DV2TunnerTiling, singleCoreWo), FIELD(Conv3DV2TunnerTiling, singleCoreCi),
+    FIELD(Conv3DV2TunnerTiling, orgDo), FIELD(Conv3DV2TunnerTiling, orgCo), FIELD(Conv3DV2TunnerTiling, orgHo),
+    FIELD(Conv3DV2TunnerTiling, orgWo), FIELD(Conv3DV2TunnerTiling, orgCi), FIELD(Conv3DV2TunnerTiling, orgDi),
+    FIELD(Conv3DV2TunnerTiling, orgHi), FIELD(Conv3DV2TunnerTiling, orgWi), FIELD(Conv3DV2TunnerTiling, kernelD),
+    FIELD(Conv3DV2TunnerTiling, kernelH), FIELD(Conv3DV2TunnerTiling, kernelW), FIELD(Conv3DV2TunnerTiling, strideD),
+    FIELD(Conv3DV2TunnerTiling, strideH), FIELD(Conv3DV2TunnerTiling, strideW), FIELD(Conv3DV2TunnerTiling, dilationD),
+    FIELD(Conv3DV2TunnerTiling, dilationH), FIELD(Conv3DV2TunnerTiling, dilationW),
+    FIELD(Conv3DV2TunnerTiling, padHead), FIELD(Conv3DV2TunnerTiling, padTail), FIELD(Conv3DV2TunnerTiling, padTop),
+    FIELD(Conv3DV2TunnerTiling, padBottom), FIELD(Conv3DV2TunnerTiling, padLeft), FIELD(Conv3DV2TunnerTiling, padRight),
+    FIELD(Conv3DV2TunnerTiling, hoL0), FIELD(Conv3DV2TunnerTiling, woL0), FIELD(Conv3DV2TunnerTiling, kL0),
+    FIELD(Conv3DV2TunnerTiling, nL0), FIELD(Conv3DV2TunnerTiling, kAL1), FIELD(Conv3DV2TunnerTiling, kBL1),
+    FIELD(Conv3DV2TunnerTiling, nBL1), FIELD(Conv3DV2TunnerTiling, hoL1), FIELD(Conv3DV2TunnerTiling, woL1),
+    FIELD(Conv3DV2TunnerTiling, pBufferFlag), FIELD(Conv3DV2TunnerTiling, khL1), FIELD(Conv3DV2TunnerTiling, kwL1),
+    FIELD(Conv3DV2TunnerTiling, bl1FullLoad), FIELD(Conv3DV2TunnerTiling, al1FullLoad),
+    FIELD(Conv3DV2TunnerTiling, bl1BypassFlag), FIELD(Conv3DV2TunnerTiling, iterateMNOrder),
+    FIELD(Conv3DV2TunnerTiling, biasFullLoadFlag), FIELD(Conv3DV2TunnerTiling, fixpParamsFullLoadFlag),
+    FIELD(Conv3DV2TunnerTiling, hf32Enable), FIELD(Conv3DV2TunnerTiling, hf32TransMode),
+    FIELD(Conv3DV2TunnerTiling, batchDim), FIELD(Conv3DV2TunnerTiling, nDim), FIELD(Conv3DV2TunnerTiling, hoDim),
+    FIELD(Conv3DV2TunnerTiling, doDim), FIELD(Conv3DV2TunnerTiling, groupDim), FIELD(Conv3DV2TunnerTiling, isC04Flag),
     FIELD(Conv3DV2TunnerTiling, mMode));
 
-void GetAttrsInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs);
-void GetOutputInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs);
-void GetFmapInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+void GetAttrsInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs);
+void GetOutputInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs);
+void GetFmapInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs,
                  size_t fmapInputIndex);
-void GetBiasInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+void GetBiasInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs,
                  size_t biasInputIndex);
-void GetFilterInfo(const gert::TilingContext *context, std::shared_ptr<Conv3DV2InputArgs> &conv3dArgs,
+void GetFilterInfo(const gert::TilingContext* context, std::shared_ptr<Conv3DV2InputArgs>& conv3dArgs,
                    size_t filterInputIndex);
-bool TilingForConv3DV2Input(const gert::TilingContext *context, std::shared_ptr<void> &inputArgs,
-    size_t &size);
-}  // namespace tuningtiling
+bool TilingForConv3DV2Input(const gert::TilingContext* context, std::shared_ptr<void>& inputArgs, size_t& size);
+} // namespace tuningtiling
 
 #endif

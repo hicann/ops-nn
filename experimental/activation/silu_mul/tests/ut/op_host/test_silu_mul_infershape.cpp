@@ -22,15 +22,9 @@
 #include "log/log.h"
 class SiluMul : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SiluMul SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SiluMul SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SiluMul TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SiluMul TearDown" << std::endl; }
 };
 
 TEST_F(SiluMul, SiluMul_infershape_case_0)

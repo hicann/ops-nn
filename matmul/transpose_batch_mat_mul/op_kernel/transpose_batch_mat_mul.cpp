@@ -49,87 +49,83 @@ constexpr CubeFormat format_y = CubeFormat::ND;
                                                                                          \
     } while (0)
 
-#define PPMATMUL_EINSUM_CLASS(templateClass, transA, transB)                                                            \
-    do {                                                                                                                \
-        PpMatMulNS::SetPadding<uint64_t>((uint64_t)0);                                                                  \
-        PpMatMulNS::SetNdpara(1, 0, 0);                                                                                 \
-        PpMatMulNS::SetAtomicnone();                                                                                    \
-        if (tilingData.swizzleDirect == 0) {                                                                             \
-            templateClass<0, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op;                         \
-            op.Init(aGM, bGM, cGM, &tilingData);                                                                        \
-            op.Process();                                                                                               \
-        } else if (tilingData.swizzleDirect == 1) {                                                                      \
-            templateClass<1, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op;                         \
-            op.Init(aGM, bGM, cGM, &tilingData);                                                                        \
-            op.Process();                                                                                               \
-        }                                                                                                               \
+#define PPMATMUL_EINSUM_CLASS(templateClass, transA, transB)                                    \
+    do {                                                                                        \
+        PpMatMulNS::SetPadding<uint64_t>((uint64_t)0);                                          \
+        PpMatMulNS::SetNdpara(1, 0, 0);                                                         \
+        PpMatMulNS::SetAtomicnone();                                                            \
+        if (tilingData.swizzleDirect == 0) {                                                    \
+            templateClass<0, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op; \
+            op.Init(aGM, bGM, cGM, &tilingData);                                                \
+            op.Process();                                                                       \
+        } else if (tilingData.swizzleDirect == 1) {                                             \
+            templateClass<1, transA, transB, DTYPE_X1, DTYPE_Y, PpMatMulNS::DataFormat::ND> op; \
+            op.Init(aGM, bGM, cGM, &tilingData);                                                \
+            op.Process();                                                                       \
+        }                                                                                       \
     } while (0)
 
 template <int BATCH_SPLIT, int PP_MAT_MUL_EINSUM_MODE, int PERM_X1, int PERM_X2>
-__global__ __aicore__ void transpose_batch_mat_mul(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+__global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM,
+                                                   GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
     REGISTER_TILING_DEFAULT(TBMMTilingData);
 #if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
     if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+                  PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+                  PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 &&
+                  PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
-        BMMV3_IMPL_CLASS_COMMON(
-            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_K_SHIFT);
-    } else if constexpr (
-        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        BMMV3_IMPL_CLASS_COMMON(TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS),
+                                TransposeBatchMatMulBlock, MM_CFG_K_SHIFT);
+    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+                         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 &&
+                         PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
-        BMMV3_IMPL_CLASS_COMMON(
-            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_K_SHIFT);
+        BMMV3_IMPL_CLASS_COMMON(TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS),
+                                TransposeBatchMatMulBlock, MM_CFG_K_SHIFT);
     }
-#else 
+#else
     if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+                  PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+                  PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 &&
+                  PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
-        BMMV3_IMPL_CLASS_COMMON(
-            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_NO_PRELOAD);
-    } else if constexpr (
-        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        BMMV3_IMPL_CLASS_COMMON(TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS),
+                                TransposeBatchMatMulBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+                         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2 &&
+                         PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
-        BMMV3_IMPL_CLASS_COMMON(
-            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_NO_PRELOAD);
-    } else if constexpr (
-        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        BMMV3_IMPL_CLASS_COMMON(TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS),
+                                TransposeBatchMatMulBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+                         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 &&
+                         PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
-        BMMV3_IMPL_CLASS_COMMON(
-            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_NO_PRELOAD);
-    } else if constexpr (
-        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        BMMV3_IMPL_CLASS_COMMON(TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::TRANS_BMM_TRANS_TRANS),
+                                TransposeBatchMatMulBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+                         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_FALSE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2 &&
+                         PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(TBMMTilingData, tilingData, tilingGM);
-        BMMV3_IMPL_CLASS_COMMON(
-            TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS_TRANS), TransposeBatchMatMulBlock,
-            MM_CFG_NO_PRELOAD);        
-    } else if constexpr (
-        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
+        BMMV3_IMPL_CLASS_COMMON(TransposeBatchMatMulKernel, static_cast<int>(TBMM_MODE::BMM_TRANS_TRANS),
+                                TransposeBatchMatMulBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+                         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 &&
+                         PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_1_2) {
         GET_TILING_DATA_WITH_STRUCT(PpMatmulTilingData, tilingData, tilingGM);
         PPMATMUL_EINSUM_CLASS(PpMatMulNS::PpMatmulEinSum, false, false);
-    } else if constexpr (
-        BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
-        PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
-        PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 && PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_2_1) {
+    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+                         PP_MAT_MUL_EINSUM_MODE == TRANSPOSE_BATCH_MAT_MUL_PP_MAT_MUL_EINSUM_MODE_TRUE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2 &&
+                         PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_2_1) {
         GET_TILING_DATA_WITH_STRUCT(PpMatmulTilingData, tilingData, tilingGM);
         PPMATMUL_EINSUM_CLASS(PpMatMulNS::PpMatmulEinSum, false, true);
     }

@@ -41,9 +41,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Attr("negativeSlope")
-            .AttrType(OPTIONAL)
-            .Float(); 
+        this->Attr("negativeSlope").AttrType(OPTIONAL).Float();
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

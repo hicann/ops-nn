@@ -20,9 +20,9 @@
 namespace AscendC {
 constexpr uint8_t VEC_FALG_ID = 5;
 #if __CCE_AICORE__ == 310 || (__NPU_ARCH__ == 5102)
-    #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
-        constexpr int32_t TOTALL0CSIZE = 262144;
-    #endif
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
+constexpr int32_t TOTALL0CSIZE = 262144;
+#endif
 #endif
 
 enum class InitOutputFlag {
@@ -35,7 +35,7 @@ template <typename yType>
 class Conv3dDxInitOutput {
 public:
     __aicore__ inline Conv3dDxInitOutput() {}
-    __aicore__ inline void Init(GM_ADDR y, const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR y, const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
     {
         InitTilingData(tilingData);
     }
@@ -43,10 +43,7 @@ public:
     /** main logical function
      */
 
-    __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b)
-    {
-        return (a + b - 1) / b;
-    }
+    __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b) { return (a + b - 1) / b; }
 
     __aicore__ inline void ProcessWithL0(GM_ADDR y)
     {
@@ -61,16 +58,16 @@ public:
         uint64_t realClearSize = outputSize_ - offset;
         realClearSize = realClearSize > clearSizePerCore ? clearSizePerCore : realClearSize;
 
-        if constexpr (IsSameType<yType, hifloat8_t>::value || IsSameType<yType, fp8_e4m3fn_t>::value) { 
+        if constexpr (IsSameType<yType, hifloat8_t>::value || IsSameType<yType, fp8_e4m3fn_t>::value) {
             GlobalTensor<int8_t> yGm_;
-            yGm_.SetGlobalBuffer((__gm__ int8_t *)y);
+            yGm_.SetGlobalBuffer((__gm__ int8_t*)y);
             InitOutput<int8_t>(yGm_[offset], realClearSize, (int8_t)(0));
-        } else { 
+        } else {
             GlobalTensor<yType> yGm_;
-            yGm_.SetGlobalBuffer((__gm__ yType *)y);
+            yGm_.SetGlobalBuffer((__gm__ yType*)y);
             InitOutput<yType>(yGm_[offset], realClearSize, (yType)(0));
-        } 
-        
+        }
+
         SyncAllCores();
     }
 
@@ -80,44 +77,41 @@ public:
             ProcessWithL0(y);
         }
         if ASCEND_IS_AIC_SCALAR {
-        #if (__NPU_ARCH__ == 5102)
+#if (__NPU_ARCH__ == 5102)
             AscendC::TQueSync<PIPE_MTE1, PIPE_MTE3> sync;
             sync.WaitFlag(VEC_FALG_ID);
-        #else
+#else
             CrossCoreWaitFlag(VEC_FALG_ID);
-        #endif
+#endif
         }
     }
 
     __aicore__ inline void SyncAllCores()
     {
-    #if (__NPU_ARCH__ == 5102)
+#if (__NPU_ARCH__ == 5102)
         AscendC::TQueSync<PIPE_MTE1, PIPE_MTE3> sync;
         sync.SetFlag(VEC_FALG_ID);
-    #else
+#else
         CrossCoreSetFlag<0, PIPE_MTE3>(SYNC_AIV_FLAG);
         CrossCoreWaitFlag(SYNC_AIV_FLAG);
         CrossCoreSetFlag<2, PIPE_MTE3>(VEC_FALG_ID);
-    #endif
+#endif
     }
 
-    __aicore__ inline void Destroy()
-    {
-        pipe_.Destroy();
-    }
+    __aicore__ inline void Destroy() { pipe_.Destroy(); }
 
 protected:
     uint64_t outputSize_;
     TPipe pipe_;
     TBuf<TPosition::CO1> localBuffer_;
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
     {
         uint64_t mSize = static_cast<uint64_t>(tilingData->conv3DDxTiling.hi) * tilingData->conv3DDxTiling.wi;
         uint64_t nSize = static_cast<uint64_t>(tilingData->conv3DDxTiling.cin);
         outputSize_ = mSize * nSize * tilingData->conv3DDxTiling.di * tilingData->conv3DDxTiling.batch;
     }
 };
-}  // namespace AscendC
+} // namespace AscendC
 
-#endif  // CONV3D_BACKPROP_INPUT_V2_INIT_OUTPUT_ADVANCE_H
+#endif // CONV3D_BACKPROP_INPUT_V2_INIT_OUTPUT_ADVANCE_H

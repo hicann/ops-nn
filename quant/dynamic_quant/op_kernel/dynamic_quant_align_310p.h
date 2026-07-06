@@ -36,13 +36,11 @@ constexpr uint32_t DYNAMIC_QUANT_FP16_BUF_SCALE = 2;
 
 using AscendC::HardEvent;
 
-class DynamicQuantAlign310p
-{
+class DynamicQuantAlign310p {
 public:
-    __aicore__ inline DynamicQuantAlign310p()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline DynamicQuantAlign310p() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                const DynamicQuantTilingData* __restrict tilingData)
     {
         InitParams(tilingData, offset);
         InitBuffer(x, y, scale, offset);
@@ -159,12 +157,10 @@ public:
     __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR z, GM_ADDR scale, GM_ADDR offset)
     {
         if (isTailLoop_) {
-            inGm_.SetGlobalBuffer(
-                (__gm__ half*)x + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_,
-                lenTail_ + lenLastTail_);
-            outGm_.SetGlobalBuffer(
-                (__gm__ int8_t*)z + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_,
-                lenTail_ + lenLastTail_);
+            inGm_.SetGlobalBuffer((__gm__ half*)x + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_,
+                                  lenTail_ + lenLastTail_);
+            outGm_.SetGlobalBuffer((__gm__ int8_t*)z + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_,
+                                   lenTail_ + lenLastTail_);
             scaleGm_.SetGlobalBuffer(
                 (__gm__ float*)scale + numHeadCore_ * numHeadRow_ + (blockIdx_ - numHeadCore_) * numTailRow_,
                 numTailRow_ + numCopyRow_);
@@ -182,8 +178,8 @@ public:
                     offsetGm_.SetGlobalBuffer((__gm__ float*)offset + blockIdx_ * numHeadRow_, numHeadRow_);
                 }
             } else {
-                inGm_.SetGlobalBuffer(
-                    (__gm__ half*)x + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_, lenTail_);
+                inGm_.SetGlobalBuffer((__gm__ half*)x + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_,
+                                      lenTail_);
                 outGm_.SetGlobalBuffer(
                     (__gm__ int8_t*)z + numHeadCore_ * lenHead_ + (blockIdx_ - numHeadCore_) * lenTail_, lenTail_);
                 scaleGm_.SetGlobalBuffer(

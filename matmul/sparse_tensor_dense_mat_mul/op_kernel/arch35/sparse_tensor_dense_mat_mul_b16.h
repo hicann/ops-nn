@@ -32,8 +32,8 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void InitGlobalBuffer(
-        GM_ADDR x1Indices, GM_ADDR x1Values, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace);
+    __aicore__ inline void InitGlobalBuffer(GM_ADDR x1Indices, GM_ADDR x1Values, GM_ADDR x2, GM_ADDR y,
+                                            GM_ADDR workspace);
     __aicore__ inline void InitWorkspaceGm();
     __aicore__ inline void InitTQueBuffer();
     __aicore__ inline void ProcessYResult();
@@ -59,8 +59,9 @@ private:
 };
 
 template <typename T_IDX, typename T_VAL, typename T_SUM, bool ADJ_A, bool ADJ_B>
-__aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, ADJ_B>::Init(
-    GM_ADDR x1Indices, GM_ADDR x1Values, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, ADJ_B>::Init(GM_ADDR x1Indices,
+                                                                                           GM_ADDR x1Values, GM_ADDR x2,
+                                                                                           GM_ADDR y, GM_ADDR workspace)
 {
     blockIdx_ = static_cast<uint32_t>(GetBlockIdx());
     InitGlobalBuffer(x1Indices, x1Values, x2, y, workspace);
@@ -172,8 +173,8 @@ __aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, AD
         }
         DataCopyExtParams dataCopyInParams = {1, static_cast<uint32_t>(processNumPerLoop * sizeof(T_SUM)), 0, 0, 0};
         DataCopyExtParams dataCopyOutParams = {1, static_cast<uint32_t>(processNumPerLoop * sizeof(T_VAL)), 0, 0, 0};
-        uint64_t resultGmOffset =
-            blockIdx_ * tilingData_->initAndOutFormerCoreElemNum + ubLoopNum * tilingData_->outFormerCoreUbFactor;
+        uint64_t resultGmOffset = blockIdx_ * tilingData_->initAndOutFormerCoreElemNum +
+                                  ubLoopNum * tilingData_->outFormerCoreUbFactor;
         CopyInYWorkspace(resultGmOffset, dataCopyInParams);
         CastY(processNumPerLoop);
         CopyOutY(resultGmOffset, dataCopyOutParams);
@@ -191,7 +192,8 @@ __aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, AD
 }
 
 template <typename T_IDX, typename T_VAL, typename T_SUM, bool ADJ_A, bool ADJ_B>
-__aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, ADJ_B>::CastY(const uint64_t& processNumPerLoop)
+__aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, ADJ_B>::CastY(
+    const uint64_t& processNumPerLoop)
 {
     LocalTensor<T_SUM> tempResultTensor = wsInQue_.DeQue<T_SUM>();
     LocalTensor<T_VAL> resultTensor = yOutQue_.AllocTensor<T_VAL>();
@@ -210,4 +212,3 @@ __aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, AD
 }
 
 } // namespace SparseTensorDenseMatMul
-

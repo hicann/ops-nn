@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file scatter_add_simd_sort_support_atomicadd.h
  * \brief simd kernel of scatter_add
@@ -24,23 +24,20 @@ using namespace ScatterAddCommon;
 
 constexpr uint32_t SORT_PADDING = 64;
 constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING
-};
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING};
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 class ScatterAddSIMDSortSupportAtomicAdd {
 public:
-    __aicore__ inline ScatterAddSIMDSortSupportAtomicAdd(const ScatterAddTilingData& tilingData, TPipe& pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline ScatterAddSIMDSortSupportAtomicAdd(const ScatterAddTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace);
     __aicore__ inline void Compute();
     __aicore__ inline void Process();
     __aicore__ inline uint32_t ProcessIndices(uint64_t blockOffsetindices, uint64_t rowLoop, uint32_t rows);
     __aicore__ inline void ComputeUpdatesSum(uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum);
     __aicore__ inline void CopyResToGm(uint32_t cols, uint32_t colsAlign, uint64_t ubOffset, uint32_t& uniqueIdNum);
-    
+
     template <typename VGatherIndexDType>
     __aicore__ inline void ComputeUpdatesSumRegbase(uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum);
 
@@ -57,7 +54,7 @@ private:
     TBuf<QuePosition::VECCALC> sortIndicesQue_;
     TBuf<QuePosition::VECCALC> updatesOriginIdexQue_;
     TBuf<QuePosition::VECCALC> uniqueIdCountQue_;
-    
+
     TPipe& pipe_;
     const ScatterAddTilingData& tilingData_;
 
@@ -65,30 +62,36 @@ private:
     static constexpr uint32_t vfLenUpdate_ = VECTOR_LENGTH / sizeof(T);
 };
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::Init(
-                           GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace)
+    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace)
 {
     varRefGm_.SetGlobalBuffer((__gm__ T*)(varRef));
     indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
     updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
 
     pipe_.InitBuffer(indicesQueue_, 1, ops::CeilAlign(tilingData_.ubFactorRow * sizeof(U), UB_AGLIN_VALUE));
-    pipe_.InitBuffer(updatesQueue_, 1, ops::CeilAlign(tilingData_.ubFactorRow * tilingData_.ubFactorCol * sizeof(T), UB_AGLIN_VALUE));
+    pipe_.InitBuffer(updatesQueue_, 1,
+                     ops::CeilAlign(tilingData_.ubFactorRow * tilingData_.ubFactorCol * sizeof(T), UB_AGLIN_VALUE));
     pipe_.InitBuffer(outQueueRes_, 1, tilingData_.ubFactorRow * tilingData_.ubFactorCol * sizeof(T));
     pipe_.InitBuffer(updatesOriginIdexQue_, ops::CeilAlign(tilingData_.ubFactorRow * sizeof(uint32_t), UB_AGLIN_VALUE));
-    pipe_.InitBuffer(uniqueIdCountQue_, ops::CeilAlign(tilingData_.ubFactorRow * sizeof(int32_t), UB_AGLIN_VALUE) + SORT_PADDING);
+    pipe_.InitBuffer(uniqueIdCountQue_,
+                     ops::CeilAlign(tilingData_.ubFactorRow * sizeof(int32_t), UB_AGLIN_VALUE) + SORT_PADDING);
     if constexpr (castType == CAST_0) {
-        pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(tilingData_.ubFactorRow * sizeof(U), UB_AGLIN_VALUE) + SORT_PADDING);
+        pipe_.InitBuffer(sortIndicesQue_,
+                         ops::CeilAlign(tilingData_.ubFactorRow * sizeof(U), UB_AGLIN_VALUE) + SORT_PADDING);
     } else {
-        pipe_.InitBuffer(sortIndicesQue_, ops::CeilAlign(tilingData_.ubFactorRow * sizeof(CAST_T), UB_AGLIN_VALUE) + SORT_PADDING);
+        pipe_.InitBuffer(sortIndicesQue_,
+                         ops::CeilAlign(tilingData_.ubFactorRow * sizeof(CAST_T), UB_AGLIN_VALUE) + SORT_PADDING);
         pipe_.InitBuffer(castIndicesQue_, ops::CeilAlign(tilingData_.ubFactorRow * sizeof(CAST_T), UB_AGLIN_VALUE));
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
-__aicore__ inline uint32_t ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ProcessIndices(
-                                                           uint64_t blockOffsetindices, uint64_t rowLoop, uint32_t rows)
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline uint32_t ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType,
+                                                              scatterOp>::ProcessIndices(uint64_t blockOffsetindices,
+                                                                                         uint64_t rowLoop,
+                                                                                         uint32_t rows)
 {
     LocalTensor<U> indicesLocal = indicesQueue_.AllocTensor<U>();
     CopyIn(indicesLocal, indicesGm_, blockOffsetindices + rowLoop * tilingData_.ubFactorRow, 1, rows);
@@ -101,40 +104,43 @@ __aicore__ inline uint32_t ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, upda
 
     uint32_t uniqueIdNum = 0;
     if constexpr (castType == CAST_0) {
-        uniqueIdNum = SortAndComputeUniqueIdx<U>(rows, indicesLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
+        uniqueIdNum = SortAndComputeUniqueIdx<U>(rows, indicesLocal, indicesSortedLocal, uniqueIdCountLocal,
+                                                 updatesOriginIdxLocal);
     } else {
         LocalTensor<CAST_T> indicesCastLocal = castIndicesQue_.Get<CAST_T>();
         IndicesSortCast<U, CAST_T, castType>(indicesLocal, indicesCastLocal, uniqueIdCountLocal, rows);
-        uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(
-            rows, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
+        uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(rows, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal,
+                                                      updatesOriginIdxLocal);
     }
-    
+
     ComputeUniqueIdTimes(uniqueIdCountLocal, uniqueIdNum); // 计算每个indices的重复度存放于uniqueIdCountLocal
     indicesQueue_.FreeTensor(indicesLocal);
 
     return uniqueIdNum;
 }
 
-
 template <typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt>
-__simd_callee__ inline void ProcessPerUpdateGroup(
-    __local_mem__ T* updatesLocalAddr, __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
-    MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, updateAddParams& params)
+__simd_callee__ inline void ProcessPerUpdateGroup(__local_mem__ T* updatesLocalAddr, __local_mem__ T* resLocalAddr,
+                                                  MicroAPI::MaskReg& maskRegUpdate,
+                                                  MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg,
+                                                  MicroAPI::AddrReg& addrReg, updateAddParams& params)
 {
     if constexpr (IsSameType<VGatherIndexDType, uint16_t>::value) {
         MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
         MicroAPI::RegTensor<VGatherIndexDType> initIdsReg1;
         MicroAPI::RegTensor<uint32_t> tmReg;
         MicroAPI::RegTensor<T> gatherOut;
-        MicroAPI::RegTensor<int16_t> gatherOutInt16;  // 用于int8转int16
+        MicroAPI::RegTensor<int16_t> gatherOutInt16; // 用于int8转int16
         MicroAPI::RegTensor<T> outReg;
         MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskRegU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
 
         MicroAPI::Duplicate(outReg, (T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(tmReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
-            MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>((MicroAPI::RegTensor<uint16_t>&)tmReg, tmReg, maskRegU32);
+            MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+                tmReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
+            MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>((MicroAPI::RegTensor<uint16_t>&)tmReg, tmReg,
+                                                                maskRegU32);
             MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::HIGHEST>(
                 (MicroAPI::RegTensor<uint16_t>&)initIdsReg, (MicroAPI::RegTensor<uint32_t>&)tmReg);
             MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
@@ -167,9 +173,10 @@ __simd_callee__ inline void ProcessPerUpdateGroup(
     }
 }
 
-template<typename T>
+template <typename T>
 __simd_callee__ inline void ProcessPerUpdateScalar(__local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
-                                              MicroAPI::AddrReg& addrReg, updateAddParams& params, T updateScalarValue)
+                                                   MicroAPI::AddrReg& addrReg, updateAddParams& params,
+                                                   T updateScalarValue)
 {
     MicroAPI::RegTensor<T> addOut;
     MicroAPI::RegTensor<T> outReg;
@@ -182,11 +189,13 @@ __simd_callee__ inline void ProcessPerUpdateScalar(__local_mem__ T* resLocalAddr
     MicroAPI::DataCopy(resLocalAddr, outReg, addrReg, maskRegUpdate);
 }
 
-template<typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt, bool updatesIsScalar>
-__simd_vf__ inline void ComputeUpdatesSumRegbaseVf(
-        __local_mem__ T* updatesLocalAddr, __local_mem__ int32_t* uniqueIdCountLocalAddr, __local_mem__ T* resLocalAddr,
-        __local_mem__ T* resLocalBaseAddr, updateAddParams params, 
-        uint64_t cols, uint64_t colsAlign, uint32_t loopPerRow, uint32_t vfLenUpdate,T updateScalarValue, uint32_t uniqueIdNum)
+template <typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt, bool updatesIsScalar>
+__simd_vf__ inline void ComputeUpdatesSumRegbaseVf(__local_mem__ T* updatesLocalAddr,
+                                                   __local_mem__ int32_t* uniqueIdCountLocalAddr,
+                                                   __local_mem__ T* resLocalAddr, __local_mem__ T* resLocalBaseAddr,
+                                                   updateAddParams params, uint64_t cols, uint64_t colsAlign,
+                                                   uint32_t loopPerRow, uint32_t vfLenUpdate, T updateScalarValue,
+                                                   uint32_t uniqueIdNum)
 {
     int32_t sclar0 = 0;
     for (uint16_t i = 0; i < (uint16_t)uniqueIdNum; ++i) {
@@ -211,10 +220,12 @@ __simd_vf__ inline void ComputeUpdatesSumRegbaseVf(
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 template <typename VGatherIndexDType>
-__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ComputeUpdatesSumRegbase(
-                                                               uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum)
+__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType,
+                                                          scatterOp>::ComputeUpdatesSumRegbase(uint64_t cols,
+                                                                                               uint64_t colsAlign,
+                                                                                               uint32_t uniqueIdNum)
 {
     LocalTensor<uint32_t> updatesOriginIdxLocal = updatesOriginIdexQue_.Get<uint32_t>();
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.Get<int32_t>();
@@ -230,8 +241,9 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     using VGatherIndexDTypeInt = std::conditional_t<std::is_same_v<VGatherIndexDType, uint16_t>, int16_t, int32_t>;
 
     ComputeUpdatesSumRegbaseVf<T, VGatherIndexDType, VGatherIndexDTypeInt, updatesIsScalar>(
-            (__local_mem__ T*)updatesLocal.GetPhyAddr(), (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr(), (__local_mem__ T*)resLocal.GetPhyAddr(),
-            (__local_mem__ T*)resLocal.GetPhyAddr(), params, cols, colsAlign, loopPerRow, vfLenUpdate_, updateScalarValue, uniqueIdNum);
+        (__local_mem__ T*)updatesLocal.GetPhyAddr(), (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr(),
+        (__local_mem__ T*)resLocal.GetPhyAddr(), (__local_mem__ T*)resLocal.GetPhyAddr(), params, cols, colsAlign,
+        loopPerRow, vfLenUpdate_, updateScalarValue, uniqueIdNum);
 
     outQueueRes_.EnQue<T>(resLocal);
     if constexpr (updatesIsScalar) {
@@ -241,9 +253,11 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
-__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ComputeUpdatesSum(
-                                                               uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum)
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType,
+                                                          scatterOp>::ComputeUpdatesSum(uint64_t cols,
+                                                                                        uint64_t colsAlign,
+                                                                                        uint32_t uniqueIdNum)
 {
     LocalTensor<uint32_t> updatesOriginIdxLocal = updatesOriginIdexQue_.Get<uint32_t>();
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.Get<int32_t>();
@@ -255,7 +269,7 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     resLocal = outQueueRes_.DeQue<T>();
     uint32_t indicesOffset = 0;
     for (uint32_t i = 0; i < uniqueIdNum; i++) {
-        uint32_t uniqueTimes = static_cast<uint32_t>(uniqueIdCountLocal(i));   // 重复次数
+        uint32_t uniqueTimes = static_cast<uint32_t>(uniqueIdCountLocal(i)); // 重复次数
         for (uint32_t j = 0; j < uniqueTimes; j++) {
             if constexpr (updatesIsScalar) {
                 Add(resLocal[i * colsAlign], resLocal[i * colsAlign], updatesLocal, cols);
@@ -275,9 +289,11 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
-__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::CopyResToGm(
-                                     uint32_t cols, uint32_t colsAlign, uint64_t ubOffset, uint32_t& uniqueIdNum)
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType,
+                                                          scatterOp>::CopyResToGm(uint32_t cols, uint32_t colsAlign,
+                                                                                  uint64_t ubOffset,
+                                                                                  uint32_t& uniqueIdNum)
 {
     LocalTensor<T> resLocal = outQueueRes_.DeQue<T>();
     LocalTensor<CAST_T> indicesSortedLocal = sortIndicesQue_.Get<CAST_T>();
@@ -293,8 +309,8 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
 
     SetAtomicAdd<T>();
     for (uint32_t i = 0; i < uniqueIdNum; i++) {
-        CAST_T dstIndices = indicesSortedLocal(tmpIndex);       // 获取每个可能重复的indices的第一个的值
-        uint64_t offset = dstIndices * tilingData_.varShape[1] + ubOffset;  // 通过indices值获取对应var的偏移
+        CAST_T dstIndices = indicesSortedLocal(tmpIndex); // 获取每个可能重复的indices的第一个的值
+        uint64_t offset = dstIndices * tilingData_.varShape[1] + ubOffset; // 通过indices值获取对应var的偏移
         tmpIndex = tmpIndex + uniqueIdCountLocal(i);
 
         if (dstIndices < 0 || dstIndices >= tilingData_.varShape[0]) {
@@ -307,7 +323,7 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     outQueueRes_.FreeTensor(resLocal);
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::Compute()
 {
     if (GetBlockIdx() >= tilingData_.atomicAddCoreNum) {
@@ -319,27 +335,35 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
         BroadcastUpdatesScalar<T, scatterOp>(updatesLocal, updatesGm_, static_cast<int32_t>(tilingData_.ubFactorCol));
         updatesQueue_.EnQue<T>(updatesLocal);
     }
-    uint64_t rowIdx = GetBlockIdx() / tilingData_.colTileNum;   // 当前block在第几个分块行
-    uint64_t colIdx = GetBlockIdx() % tilingData_.colTileNum;   // 当前block在第几个分块列
-    uint64_t curCoreRows = rowIdx != (tilingData_.rowTileNum - 1) ? tilingData_.normBlockRow : tilingData_.tailBlockRow;  // 当前分块行数
-    uint64_t curCoreCols = colIdx != (tilingData_.colTileNum - 1) ? tilingData_.normBlockCol : tilingData_.tailBlockCol;  // 当前分块列数
+    uint64_t rowIdx = GetBlockIdx() / tilingData_.colTileNum; // 当前block在第几个分块行
+    uint64_t colIdx = GetBlockIdx() % tilingData_.colTileNum; // 当前block在第几个分块列
+    uint64_t curCoreRows = rowIdx != (tilingData_.rowTileNum - 1) ? tilingData_.normBlockRow :
+                                                                    tilingData_.tailBlockRow; // 当前分块行数
+    uint64_t curCoreCols = colIdx != (tilingData_.colTileNum - 1) ? tilingData_.normBlockCol :
+                                                                    tilingData_.tailBlockCol; // 当前分块列数
 
-    uint64_t blockOffsetindices = rowIdx * tilingData_.normBlockRow;   // 当前indices的偏移位置
-    uint64_t blockOffsetUpdate = rowIdx * tilingData_.normBlockRow * tilingData_.varShape[1] + colIdx * tilingData_.normBlockCol;  // 当前updates块的偏移位置
-    uint64_t colUbLoopNum = ops::CeilDiv(curCoreCols, tilingData_.ubFactorCol);   // 当前分块在列方向需要UB循环多少次
-    uint64_t rowUbLoopNum = ops::CeilDiv(curCoreRows, tilingData_.ubFactorRow);   // 当前分块在行方向需要UB循环多少次
+    uint64_t blockOffsetindices = rowIdx * tilingData_.normBlockRow; // 当前indices的偏移位置
+    uint64_t blockOffsetUpdate = rowIdx * tilingData_.normBlockRow * tilingData_.varShape[1] +
+                                 colIdx * tilingData_.normBlockCol;             // 当前updates块的偏移位置
+    uint64_t colUbLoopNum = ops::CeilDiv(curCoreCols, tilingData_.ubFactorCol); // 当前分块在列方向需要UB循环多少次
+    uint64_t rowUbLoopNum = ops::CeilDiv(curCoreRows, tilingData_.ubFactorRow); // 当前分块在行方向需要UB循环多少次
 
     for (uint64_t rowLoop = 0; rowLoop < rowUbLoopNum; rowLoop++) {
-        uint64_t rows = (rowLoop == rowUbLoopNum - 1) ? (curCoreRows - rowLoop * tilingData_.ubFactorRow) : tilingData_.ubFactorRow;
+        uint64_t rows = (rowLoop == rowUbLoopNum - 1) ? (curCoreRows - rowLoop * tilingData_.ubFactorRow) :
+                                                        tilingData_.ubFactorRow;
         uint32_t uniqueIdNum = ProcessIndices(blockOffsetindices, rowLoop, rows);
 
         for (uint64_t colLoop = 0; colLoop < colUbLoopNum; colLoop++) {
-            uint64_t cols = (colLoop == colUbLoopNum - 1) ? (curCoreCols - colLoop * tilingData_.ubFactorCol) : tilingData_.ubFactorCol;  // 当前UB拿到的updates小块的列数
-            uint64_t colsAlign = ops::Aligned(static_cast<uint64_t>(cols * sizeof(T)), static_cast<uint64_t>(ONE_BLOCK_SIZE)) / sizeof(T);
+            uint64_t cols = (colLoop == colUbLoopNum - 1) ? (curCoreCols - colLoop * tilingData_.ubFactorCol) :
+                                                            tilingData_.ubFactorCol; // 当前UB拿到的updates小块的列数
+            uint64_t colsAlign = ops::Aligned(static_cast<uint64_t>(cols * sizeof(T)),
+                                              static_cast<uint64_t>(ONE_BLOCK_SIZE)) /
+                                 sizeof(T);
 
             if constexpr (!updatesIsScalar) {
                 LocalTensor<T> updatesLocal = updatesQueue_.AllocTensor<T>();
-                uint64_t offset = blockOffsetUpdate + rowLoop * tilingData_.ubFactorRow * tilingData_.varShape[1] + colLoop * tilingData_.ubFactorCol;
+                uint64_t offset = blockOffsetUpdate + rowLoop * tilingData_.ubFactorRow * tilingData_.varShape[1] +
+                                  colLoop * tilingData_.ubFactorCol;
                 CopyIn(updatesLocal, updatesGm_, offset, rows, cols, tilingData_.varShape[1] - cols);
                 updatesQueue_.EnQue<T>(updatesLocal);
             }
@@ -350,7 +374,7 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
             } else {
                 ComputeUpdatesSumRegbase<uint32_t>(cols, colsAlign, uniqueIdNum);
             }
-            
+
             uint64_t ubOffset = colIdx * tilingData_.normBlockCol + colLoop * tilingData_.ubFactorCol;
             CopyResToGm(cols, colsAlign, ubOffset, uniqueIdNum);
         }
@@ -362,7 +386,7 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
+template <typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::Process()
 {
     if (GetBlockIdx() >= GetBlockNum()) {
@@ -371,5 +395,5 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
 
     Compute();
 }
-}
-#endif  // SCATTER_ADD_SIMD_SORT_SUPPORT_ATOMICADD_H
+} // namespace ScatterAdd
+#endif // SCATTER_ADD_SIMD_SORT_SUPPORT_ATOMICADD_H

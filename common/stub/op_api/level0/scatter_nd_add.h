@@ -16,6 +16,6 @@
 namespace l0op {
 const aclTensor* ScatterNdAdd(const aclTensor* self, const aclTensor* indices, const aclTensor* updates,
                               bool use_locking, aclOpExecutor* executor);
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_OP_SCATTER_ND_ADD_H_
+#endif // OP_API_INC_LEVEL0_OP_SCATTER_ND_ADD_H_

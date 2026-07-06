@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file optimized_transducer_tiling.cpp
@@ -55,7 +55,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context, size_t usr
 
 static ge::graphStatus OptimizedTransducerTilingFunc(gert::TilingContext* context)
 {
-    OptimizedTransducerTilingData *tiling = context->GetTilingData<OptimizedTransducerTilingData>();
+    OptimizedTransducerTilingData* tiling = context->GetTilingData<OptimizedTransducerTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(OptimizedTransducerTilingData), 0, sizeof(OptimizedTransducerTilingData)) != EOK,
@@ -64,15 +64,15 @@ static ge::graphStatus OptimizedTransducerTilingFunc(gert::TilingContext* contex
     int64_t coreNum;
     ge::graphStatus ret = GetPlatformInfo(context, ubSize, coreNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-    const int64_t *blank = context->GetAttrs()->GetInt(0);
-    const float *clamp = context->GetAttrs()->GetFloat(1);
-    const bool *fused_log_softmax = context->GetAttrs()->GetBool(2);
-    const bool *requires_grad = context->GetAttrs()->GetBool(3);
+    const int64_t* blank = context->GetAttrs()->GetInt(0);
+    const float* clamp = context->GetAttrs()->GetFloat(1);
+    const bool* fused_log_softmax = context->GetAttrs()->GetBool(2);
+    const bool* requires_grad = context->GetAttrs()->GetBool(3);
     const gert::StorageShape* logitsShape = context->GetInputShape(0);
     uint64_t batch_size = logitsShape->GetStorageShape().GetDim(0); // 批次数量
-    uint64_t maxT = logitsShape->GetStorageShape().GetDim(1); // 输入序列长度的最大值
-    uint64_t maxU = logitsShape->GetStorageShape().GetDim(2); // 目标序列长度的最大值 + 1
-    uint64_t V = logitsShape->GetStorageShape().GetDim(3); // 输入类别数量
+    uint64_t maxT = logitsShape->GetStorageShape().GetDim(1);       // 输入序列长度的最大值
+    uint64_t maxU = logitsShape->GetStorageShape().GetDim(2);       // 目标序列长度的最大值 + 1
+    uint64_t V = logitsShape->GetStorageShape().GetDim(3);          // 输入类别数量
     coreNum = (batch_size < coreNum) ? batch_size : coreNum;
     uint64_t bigCoreNum = batch_size % coreNum;
     uint64_t smallCoreProcessNum = batch_size / coreNum;
@@ -88,16 +88,14 @@ static ge::graphStatus OptimizedTransducerTilingFunc(gert::TilingContext* contex
     tiling->clamp = *clamp;
     tiling->fused_log_softmax = *fused_log_softmax;
     tiling->requires_grad = *requires_grad;
-    OP_CHECK_IF(
-        GetWorkspaceSize(context, batch_size * (maxT * maxU * 4 + 63) / 64 * 64 * 5) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context, batch_size * (maxT * maxU * 4 + 63) / 64 * 64 * 5) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
     uint64_t tilingKey = 0;
     auto dataType = context->GetInputTensor(0)->GetDataType();
     if (dataType == ge::DT_FLOAT) {
         tilingKey = GET_TPL_TILING_KEY(TRANSDUCER_TPL_SCH_MODE_0);
         context->SetTilingKey(tilingKey);
-    }
-    else if (dataType == ge::DT_FLOAT16) {
+    } else if (dataType == ge::DT_FLOAT16) {
         tilingKey = GET_TPL_TILING_KEY(TRANSDUCER_TPL_SCH_MODE_1);
         context->SetTilingKey(tilingKey);
     }
@@ -106,7 +104,8 @@ static ge::graphStatus OptimizedTransducerTilingFunc(gert::TilingContext* contex
 }
 
 // tiling注册入口
-IMPL_OP_OPTILING(OptimizedTransducer).Tiling(OptimizedTransducerTilingFunc).TilingParse<OptimizedTransducerCompileInfo>(TilingParseForOptimizedTransducer);
+IMPL_OP_OPTILING(OptimizedTransducer)
+    .Tiling(OptimizedTransducerTilingFunc)
+    .TilingParse<OptimizedTransducerCompileInfo>(TilingParseForOptimizedTransducer);
 
 } // namespace optiling
-

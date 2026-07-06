@@ -21,12 +21,11 @@
 
 namespace AscendC {
 template <typename T_X, typename T_IDX>
-class GatherElementsV2ScalarKernel : public GatherElementsV2KernelBase<T_X, T_IDX>
-{
+class GatherElementsV2ScalarKernel : public GatherElementsV2KernelBase<T_X, T_IDX> {
 public:
     __aicore__ inline GatherElementsV2ScalarKernel() = delete;
-    __aicore__ inline GatherElementsV2ScalarKernel(
-        GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workspace, const GatherElementsV2TilingData& tiling, TPipe& pipe)
+    __aicore__ inline GatherElementsV2ScalarKernel(GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workspace,
+                                                   const GatherElementsV2TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -85,9 +84,9 @@ private:
         maxIdxDataAlign_ = tiling.scalarTiling.maxIdxDataAlign;
     }
 
-    __aicore__ inline void ComputeProcessParams(
-        uint64_t& groupId, uint64_t& xGroupOffset, uint64_t& idxGroupOffset, uint64_t& groupCoreOffset,
-        uint64_t& curGroupPreDim, uint64_t& curGroupData)
+    __aicore__ inline void ComputeProcessParams(uint64_t& groupId, uint64_t& xGroupOffset, uint64_t& idxGroupOffset,
+                                                uint64_t& groupCoreOffset, uint64_t& curGroupPreDim,
+                                                uint64_t& curGroupData)
     {
         uint64_t groupCoreId;
         uint64_t xDimPerPre = this->xGatherDim_ * this->xPostDim_;
@@ -126,8 +125,8 @@ private:
             groupCoreOffset = groupCoreId * curGroupFormerData;
         } else {
             curGroupData = curGroupTailData;
-            groupCoreOffset =
-                curGroupFormerNum * curGroupFormerData + (groupCoreId - curGroupFormerNum) * curGroupTailData;
+            groupCoreOffset = curGroupFormerNum * curGroupFormerData +
+                              (groupCoreId - curGroupFormerNum) * curGroupTailData;
         }
     }
 
@@ -153,8 +152,8 @@ private:
         idxInQue_.EnQue<T_IDX>(idxLocal);
     }
 
-    __aicore__ inline void Compute(
-        const uint64_t& xBaseOffset, const uint64_t& groupCoreOffset, const uint64_t& curDataNum)
+    __aicore__ inline void Compute(const uint64_t& xBaseOffset, const uint64_t& groupCoreOffset,
+                                   const uint64_t& curDataNum)
     {
         LocalTensor<T_IDX> idxLocal = idxInQue_.DeQue<T_IDX>();
         LocalTensor<T_X> yLocal = yOutQue_.AllocTensor<T_X>();

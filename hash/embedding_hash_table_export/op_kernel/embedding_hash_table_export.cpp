@@ -19,10 +19,11 @@ using namespace EmbeddingHashTableExportAicore;
 
 #define BIT4WIDTH_TILING_KEY 6
 extern "C" __global__ __aicore__ void embedding_hash_table_export(GM_ADDR table_handles, GM_ADDR table_sizes,
-    GM_ADDR embedding_dims, GM_ADDR bucket_sizes, GM_ADDR keys, GM_ADDR counters, GM_ADDR filter_flags, GM_ADDR values,
-    GM_ADDR workspace, GM_ADDR tiling)
+                                                                  GM_ADDR embedding_dims, GM_ADDR bucket_sizes,
+                                                                  GM_ADDR keys, GM_ADDR counters, GM_ADDR filter_flags,
+                                                                  GM_ADDR values, GM_ADDR workspace, GM_ADDR tiling)
 {
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY); 
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     SetSysWorkspace(workspace);
     GM_ADDR userWS = GetUserWorkspace(workspace);
     GET_TILING_DATA(tilingData, tiling);
@@ -30,7 +31,7 @@ extern "C" __global__ __aicore__ void embedding_hash_table_export(GM_ADDR table_
     if (TILING_KEY_IS(BIT4WIDTH_TILING_KEY)) {
         EmbeddingHashTableExport<float> op;
         op.Init(table_handles, table_sizes, embedding_dims, bucket_sizes, keys, counters, filter_flags, values, userWS,
-            tilingData);
+                tilingData);
         op.Process();
     }
 }

@@ -47,9 +47,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -66,9 +65,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -142,14 +140,14 @@ int main()
 
     ret = CreateAclTensor(outputpdxHostData, outputpdxShape, &outputpdxDeviceAddr, aclDataType::ACL_FLOAT, &outputpdx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(
-        outputpdgxHostData, outputpdgxShape, &outputpdgxDeviceAddr, aclDataType::ACL_FLOAT, &outputpdgx);
+    ret = CreateAclTensor(outputpdgxHostData, outputpdgxShape, &outputpdgxDeviceAddr, aclDataType::ACL_FLOAT,
+                          &outputpdgx);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(
-        outputpdbetaHostData, outputpdbetaShape, &outputpdbetaDeviceAddr, aclDataType::ACL_FLOAT, &outputpdbeta);
+    ret = CreateAclTensor(outputpdbetaHostData, outputpdbetaShape, &outputpdbetaDeviceAddr, aclDataType::ACL_FLOAT,
+                          &outputpdbeta);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(
-        outputpdgammaHostData, outputpdgammaShape, &outputpdgammaDeviceAddr, aclDataType::ACL_FLOAT, &outputpdgamma);
+    ret = CreateAclTensor(outputpdgammaHostData, outputpdgammaShape, &outputpdgammaDeviceAddr, aclDataType::ACL_FLOAT,
+                          &outputpdgamma);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     uint64_t workspaceSize = 0;
@@ -159,9 +157,8 @@ int main()
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     // 调用aclnnDeepNormGrad第一段接口
     LOG_PRINT("\nUse aclnnDeepNormGrad Port.");
-    ret = aclnnDeepNormGradGetWorkspaceSize(
-        dy, x, gx, gamma, mean, rstd, alpha, outputpdx, outputpdgx, outputpdbeta, outputpdgamma, &workspaceSize,
-        &executor);
+    ret = aclnnDeepNormGradGetWorkspaceSize(dy, x, gx, gamma, mean, rstd, alpha, outputpdx, outputpdgx, outputpdbeta,
+                                            outputpdgamma, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDeepNormGradGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -180,9 +177,8 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto outputpdxsize = GetShapeSize(outputpdxShape);
     std::vector<float> resultDataPdx(outputpdxsize, 0);
-    ret = aclrtMemcpy(
-        resultDataPdx.data(), resultDataPdx.size() * sizeof(resultDataPdx[0]), outputpdxDeviceAddr,
-        outputpdxsize * sizeof(resultDataPdx[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataPdx.data(), resultDataPdx.size() * sizeof(resultDataPdx[0]), outputpdxDeviceAddr,
+                      outputpdxsize * sizeof(resultDataPdx[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("== pdx output");
     for (int64_t i = 0; i < outputpdxsize; i++) {
@@ -190,9 +186,8 @@ int main()
     }
     auto outputpdgxsize = GetShapeSize(outputpdgxShape);
     std::vector<float> resultDataPdgx(outputpdgxsize, 0);
-    ret = aclrtMemcpy(
-        resultDataPdgx.data(), resultDataPdgx.size() * sizeof(resultDataPdgx[0]), outputpdgxDeviceAddr,
-        outputpdgxsize * sizeof(resultDataPdgx[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataPdgx.data(), resultDataPdgx.size() * sizeof(resultDataPdgx[0]), outputpdgxDeviceAddr,
+                      outputpdgxsize * sizeof(resultDataPdgx[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("== pdgx output");
     for (int64_t i = 0; i < outputpdgxsize; i++) {
@@ -200,9 +195,9 @@ int main()
     }
     auto outputpdbetasize = GetShapeSize(outputpdbetaShape);
     std::vector<float> resultDataPdBeta(outputpdbetasize, 0);
-    ret = aclrtMemcpy(
-        resultDataPdBeta.data(), resultDataPdBeta.size() * sizeof(resultDataPdBeta[0]), outputpdbetaDeviceAddr,
-        outputpdbetasize * sizeof(resultDataPdBeta[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataPdBeta.data(), resultDataPdBeta.size() * sizeof(resultDataPdBeta[0]),
+                      outputpdbetaDeviceAddr, outputpdbetasize * sizeof(resultDataPdBeta[0]),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("== pdbeta output");
     for (int64_t i = 0; i < outputpdbetasize; i++) {
@@ -210,9 +205,9 @@ int main()
     }
     auto outputpdgammasize = GetShapeSize(outputpdgammaShape);
     std::vector<float> resultDataPdGamma(outputpdgammasize, 0);
-    ret = aclrtMemcpy(
-        resultDataPdGamma.data(), resultDataPdGamma.size() * sizeof(resultDataPdGamma[0]), outputpdgammaDeviceAddr,
-        outputpdgammasize * sizeof(resultDataPdGamma[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataPdGamma.data(), resultDataPdGamma.size() * sizeof(resultDataPdGamma[0]),
+                      outputpdgammaDeviceAddr, outputpdgammasize * sizeof(resultDataPdGamma[0]),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("== pdgamma output");
     for (int64_t i = 0; i < outputpdgammasize; i++) {

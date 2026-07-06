@@ -22,9 +22,7 @@ using namespace AscendC;
 // In-place foreach log: x = log(x), valid input range (0, inf). half/float compute directly;
 // bfloat16 computes in float (Log supports only half/float). Init/Compute are shared by the base.
 template <typename T, typename Tiling>
-class ForeachLogInplaceRegbase
-    : public ForeachUnaryCastInplaceRegbase<T, Tiling, ForeachLogInplaceRegbase<T, Tiling>>
-{
+class ForeachLogInplaceRegbase : public ForeachUnaryCastInplaceRegbase<T, Tiling, ForeachLogInplaceRegbase<T, Tiling>> {
 public:
     template <typename U>
     __aicore__ inline void ApplyOp(LocalTensor<U> dst, LocalTensor<U> src, int64_t dataCount)

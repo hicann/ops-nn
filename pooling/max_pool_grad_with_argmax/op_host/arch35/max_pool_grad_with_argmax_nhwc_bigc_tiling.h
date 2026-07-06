@@ -1,16 +1,16 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 /*!
-* \file max_pool_grad_with_argmax_nhwc_bigc_tiling.h
-* \brief
-*/
+ * \file max_pool_grad_with_argmax_nhwc_bigc_tiling.h
+ * \brief
+ */
 
 #ifndef MAX_POOL_GRAD_WITH_AGRMAX_NHWC_BIGC_TILING_H_
 #define MAX_POOL_GRAD_WITH_AGRMAX_NHWC_BIGC_TILING_H_
@@ -18,21 +18,14 @@
 #include "max_pool_grad_with_argmax_tiling.h"
 #include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_nhwc_tiling_common.h"
 
-namespace optiling
-{
-class MaxPoolGradWithArgmaxNHWCBigcTiling : public MaxPoolGradWithArgmaxBaseTiling
-{
+namespace optiling {
+class MaxPoolGradWithArgmaxNHWCBigcTiling : public MaxPoolGradWithArgmaxBaseTiling {
 public:
     explicit MaxPoolGradWithArgmaxNHWCBigcTiling(gert::TilingContext* context)
-        : MaxPoolGradWithArgmaxBaseTiling(context), 
-          NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
-    {
-    }
+        : MaxPoolGradWithArgmaxBaseTiling(context), NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
+    {}
 
-    ~MaxPoolGradWithArgmaxNHWCBigcTiling() override
-    {
-        delete NHWCBase;
-    }
+    ~MaxPoolGradWithArgmaxNHWCBigcTiling() override { delete NHWCBase; }
 
 private:
     MaxPoolGradWithArgmaxNHWCTilingCommon* NHWCBase;
@@ -42,6 +35,6 @@ private:
     ge::graphStatus PostTiling() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

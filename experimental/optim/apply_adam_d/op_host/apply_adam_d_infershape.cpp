@@ -71,4 +71,4 @@ static ge::graphStatus InferDataType4ApplyAdamD(gert::InferDataTypeContext* cont
 IMPL_OP_INFERSHAPE(ApplyAdamD).InferShape(InferShape4ApplyAdamD);
 IMPL_OP(ApplyAdamD).InferDataType(InferDataType4ApplyAdamD);
 
-}  // namespace ops
+} // namespace ops

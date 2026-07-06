@@ -24,8 +24,7 @@
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
-class EmbeddingDenseGradV2ForRegBase : public TilingBaseClass
-{
+class EmbeddingDenseGradV2ForRegBase : public TilingBaseClass {
 public:
     explicit EmbeddingDenseGradV2ForRegBase(gert::TilingContext* context)
         : TilingBaseClass(context), opName_(context->GetNodeName())
@@ -77,9 +76,8 @@ private:
     ge::graphStatus VerifyIndicesAndPosIdx();
     bool DoUBTilingSingle(int64_t avaliableUbSize, uint32_t elewiseAligned, int64_t resBufSize);
     void FinalizeProcessOpTiling();
-    void SetTilingData(
-        int64_t scatterDimLoopNum, int64_t elewiseDimLoopNum, int64_t elewiseDimOuterLoopNum,
-        int64_t normalBlockLoopNum, int64_t tailBlockLoopNum);
+    void SetTilingData(int64_t scatterDimLoopNum, int64_t elewiseDimLoopNum, int64_t elewiseDimOuterLoopNum,
+                       int64_t normalBlockLoopNum, int64_t tailBlockLoopNum);
 };
 
 } // namespace optiling

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -27,14 +27,14 @@ using namespace ApplyAdamWOp;
 using namespace ApplyAdamWNs;
 
 namespace optiling {
-const size_t SYS_WORKSPACE = 16777216;  // 16M
+const size_t SYS_WORKSPACE = 16777216; // 16M
 constexpr static int32_t OPTIONAL_INPUT_INDEX = 11;
 const static std::map<size_t, string> TENSOR_INDEX_LIST = {{1, "m"}, {2, "v"}, {10, "grad"}};
-const static std::map<size_t, string> SCALAR_INDEX_LIST = {{3, "beta1_power"},  {4, "beta2_power"}, {5, "lr"},
-                                                           {6, "weight_decay"}, {7, "beta1"},       {8, "beta2"},
-                                                           {9, "epsilon"}};
+const static std::map<size_t, string> SCALAR_INDEX_LIST = {
+    {3, "beta1_power"}, {4, "beta2_power"}, {5, "lr"}, {6, "weight_decay"}, {7, "beta1"}, {8, "beta2"}, {9, "epsilon"}};
 
-ge::graphStatus ApplyAdamWTiling::SetTilingData() {
+ge::graphStatus ApplyAdamWTiling::SetTilingData()
+{
     OP_LOGD(tilingContext_->GetNodeName(), "Enter SetTilingData");
     if (maximizeAttr_) {
         tiling_->maximizeFactor = static_cast<float>(-1.0);
@@ -54,7 +54,8 @@ ge::graphStatus ApplyAdamWTiling::SetTilingData() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdamWTiling::CheckIsScalar(size_t inputIdx) {
+ge::graphStatus ApplyAdamWTiling::CheckIsScalar(size_t inputIdx)
+{
     auto inputShape = tilingContext_->GetInputShape(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto storageShape = inputShape->GetStorageShape();
@@ -64,7 +65,8 @@ ge::graphStatus ApplyAdamWTiling::CheckIsScalar(size_t inputIdx) {
     return ge::GRAPH_FAILED;
 }
 
-ge::graphStatus ApplyAdamWTiling::CheckSameShape(size_t inputIdx, const gert::Shape& input0Shape) {
+ge::graphStatus ApplyAdamWTiling::CheckSameShape(size_t inputIdx, const gert::Shape& input0Shape)
+{
     auto inputShape = tilingContext_->GetInputShape(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto curStorageShape = inputShape->GetStorageShape();
@@ -74,7 +76,8 @@ ge::graphStatus ApplyAdamWTiling::CheckSameShape(size_t inputIdx, const gert::Sh
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdamWTiling::CheckSameDtype(size_t inputIdx, const ge::DataType& input0Dtype) {
+ge::graphStatus ApplyAdamWTiling::CheckSameDtype(size_t inputIdx, const ge::DataType& input0Dtype)
+{
     auto inputDesc = tilingContext_->GetInputDesc(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
     auto curDtype = inputDesc->GetDataType();
@@ -84,7 +87,8 @@ ge::graphStatus ApplyAdamWTiling::CheckSameDtype(size_t inputIdx, const ge::Data
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
+ge::graphStatus ApplyAdamWTiling::CheckShapeAndType()
+{
     auto inputShape = tilingContext_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto inputStorageShape = inputShape->GetStorageShape();
@@ -94,26 +98,22 @@ ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
     auto inputDtype = inputDesc->GetDataType();
     for (const auto& pair : SCALAR_INDEX_LIST) {
         OP_CHECK_IF(CheckIsScalar(pair.first) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Input %s must be scalar.",
-                                                        pair.second.c_str()),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "Input %s must be scalar.", pair.second.c_str()),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(),
-                                                        "the shape of input %s is different from that of input var.",
-                                                        pair.second.c_str()),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "the shape of input %s is different from that of input var.",
+                            pair.second.c_str()),
+                    return ge::GRAPH_FAILED);
     }
     for (const auto& pair : TENSOR_INDEX_LIST) {
         OP_CHECK_IF(CheckSameShape(pair.first, inputStorageShape) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(),
-                                                        "the shape of input %s is different from that of input var.",
-                                                        pair.second.c_str()),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "the shape of input %s is different from that of input var.",
+                            pair.second.c_str()),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext_->GetNodeName(),
-                                                        "the shape of input %s is different from that of input var.",
-                                                        pair.second.c_str()),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext_->GetNodeName(), "the shape of input %s is different from that of input var.",
+                            pair.second.c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     auto maxGradNormDesc = tilingContext_->GetOptionalInputDesc(OPTIONAL_INPUT_INDEX);
@@ -133,7 +133,7 @@ ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
         auto maxGradNormStorageShape = maxGradNormShape->GetStorageShape();
         if (maxGradNormStorageShape != inputStorageShape) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                tilingContext_->GetNodeName(), "max_grad_norm and var", 
+                tilingContext_->GetNodeName(), "max_grad_norm and var",
                 (Ops::Base::ToString(maxGradNormStorageShape) + " and " + Ops::Base::ToString(inputStorageShape))
                     .c_str(),
                 "The shapes of max_grad_norm and var should be the same");
@@ -143,7 +143,8 @@ ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ApplyAdamWTiling::DoElewiseTiling() {
+ge::graphStatus ApplyAdamWTiling::DoElewiseTiling()
+{
     ElewiseBaseTiling eleBaseTiling(tilingContext_);
     auto input0Desc = tilingContext_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, input0Desc);
@@ -161,9 +162,8 @@ ge::graphStatus ApplyAdamWTiling::DoElewiseTiling() {
             ret = eleBaseTiling.DoTiling<ApplyAdamWAmsGradDAG<float, float>::OpDag>(tiling_->eleBaseTilingData);
             dType = APPLY_ADAM_W_TPL_FP32;
         } else {
-            OP_LOGE_FOR_INVALID_DTYPE(
-                tilingContext_->GetNodeName(), "var",
-                Ops::Base::ToString(input0DType).c_str(), "fp16, bf16 or fp32");
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var", Ops::Base::ToString(input0DType).c_str(),
+                                      "fp16, bf16 or fp32");
             ret = ge::GRAPH_FAILED;
         }
     } else {
@@ -177,25 +177,25 @@ ge::graphStatus ApplyAdamWTiling::DoElewiseTiling() {
             ret = eleBaseTiling.DoTiling<ApplyAdamWDAG<float, float>::OpDag>(tiling_->eleBaseTilingData);
             dType = APPLY_ADAM_W_TPL_FP32;
         } else {
-            OP_LOGE_FOR_INVALID_DTYPE(
-                tilingContext_->GetNodeName(), "var",
-                Ops::Base::ToString(input0DType).c_str(), "fp16, bf16 or fp32");
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var", Ops::Base::ToString(input0DType).c_str(),
+                                      "fp16, bf16 or fp32");
             ret = ge::GRAPH_FAILED;
         }
     }
     return ret;
 }
 
-ge::graphStatus ApplyAdamWTiling::RunTiling() {
+ge::graphStatus ApplyAdamWTiling::RunTiling()
+{
     if (tilingContext_ == nullptr) {
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(CheckShapeAndType() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "Shape and Dtype check failed."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext_->GetNodeName(), "Shape and Dtype check failed."), return ge::GRAPH_FAILED);
     ElewiseBaseTiling elewiseBaseTiling(tilingContext_);
     tiling_ = tilingContext_->GetTilingData<ApplyAdamWTilingData>();
-    OP_CHECK_IF((tiling_ == nullptr), OP_LOGE(tilingContext_, "Get EleBaseTilingData from context failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling_ == nullptr), OP_LOGE(tilingContext_, "Get EleBaseTilingData from context failed"),
+                return ge::GRAPH_FAILED);
     auto attrs = tilingContext_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, attrs);
 
@@ -204,13 +204,13 @@ ge::graphStatus ApplyAdamWTiling::RunTiling() {
 
     const bool* maximizeAttr = attrs->GetAttrPointer<bool>(1);
     maximizeAttr_ = maximizeAttr != nullptr ? *maximizeAttr : false;
-    OP_CHECK_IF(DoElewiseTiling() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_, "elewiseBaseTiling failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(DoElewiseTiling() != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext_, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
     return SetTilingData();
 }
 
-static ge::graphStatus TilingForApplyAdamW(gert::TilingContext* context) {
+static ge::graphStatus TilingForApplyAdamW(gert::TilingContext* context)
+{
     if (context == nullptr) {
         OP_LOGE("ApplyAdamWTiling", "Tiling context is null");
         return ge::GRAPH_FAILED;
@@ -238,4 +238,4 @@ ge::graphStatus TilingPrepareForApplyAdamW(gert::TilingParseContext* context)
 }
 
 IMPL_OP_OPTILING(ApplyAdamW).Tiling(TilingForApplyAdamW).TilingParse<ApplyAdamWCompileInfo>(TilingPrepareForApplyAdamW);
-}  // namespace optiling
+} // namespace optiling

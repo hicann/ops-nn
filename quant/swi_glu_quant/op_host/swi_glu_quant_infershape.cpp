@@ -24,10 +24,11 @@ constexpr size_t GLU_OUT_Y2 = 1;
 constexpr size_t GLU_ATTR_DIM = 0;
 constexpr size_t ATTR_DST_TYPE = 3;
 const size_t SPLIT_NUM = 2;
-}  // namespace
+} // namespace
 
 namespace ops {
-static ge::graphStatus InferShapeForSwiGluQuant(gert::InferShapeContext* context) {
+static ge::graphStatus InferShapeForSwiGluQuant(gert::InferShapeContext* context)
+{
     auto x_shape = context->GetInputShape(GLU_IN_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
     auto y_shape = context->GetOutputShape(GLU_OUT_Y);
@@ -37,9 +38,9 @@ static ge::graphStatus InferShapeForSwiGluQuant(gert::InferShapeContext* context
     int64_t in_dim = x_shape->GetDimNum();
     int64_t split_dim = (static_cast<int64_t>(in_dim) - 1);
     if (split_dim < 0 || split_dim >= static_cast<int64_t>(x_shape->GetDimNum())) {
-      D_OP_LOGE("SwiGluQuant", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
+        D_OP_LOGE("SwiGluQuant", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
                   x_shape->GetDimNum(), x_shape->GetDimNum() - 1, split_dim);
-      return GRAPH_FAILED;
+        return GRAPH_FAILED;
     }
     *y_shape = *x_shape;
     // dynamic shape
@@ -52,13 +53,14 @@ static ge::graphStatus InferShapeForSwiGluQuant(gert::InferShapeContext* context
     }
     y_shape->SetDim(split_dim, x_shape->GetDim(split_dim) / SPLIT_NUM);
     scale_shape->SetDimNum(0);
-    for (int i = 0; i< in_dim - 1; i++){
-      scale_shape->AppendDim(x_shape->GetDim(i));
+    for (int i = 0; i < in_dim - 1; i++) {
+        scale_shape->AppendDim(x_shape->GetDim(i));
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForSwiGluQuant(gert::InferDataTypeContext *context) {
+static ge::graphStatus InferDataTypeForSwiGluQuant(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context, "====Enter SwiGluQuant inferDataType impl.=====");
     auto dstTypePtr = context->GetAttrs()->GetInt(ATTR_DST_TYPE);
     ge::DataType dstType = static_cast<ge::DataType>(*dstTypePtr);
@@ -69,4 +71,4 @@ static ge::graphStatus InferDataTypeForSwiGluQuant(gert::InferDataTypeContext *c
 }
 
 IMPL_OP_INFERSHAPE(SwiGluQuant).InferShape(InferShapeForSwiGluQuant).InferDataType(InferDataTypeForSwiGluQuant);
-}  // namespace ops
+} // namespace ops

@@ -96,10 +96,7 @@ struct FilterFormat {
 
 class Conv3DDWV2BasicBlockTilingArch35 : public TilingBaseClass {
 public:
-    explicit Conv3DDWV2BasicBlockTilingArch35(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit Conv3DDWV2BasicBlockTilingArch35(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
 
     ~Conv3DDWV2BasicBlockTilingArch35() override = default;
 
@@ -215,8 +212,8 @@ protected:
 
     uint64_t CalAL1Bound(const BasicBlockTilingParamsArch35& blockTiling);
 
-    uint64_t CalBL1BoundSplitWo(
-        const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo, int32_t currentSplitWi);
+    uint64_t CalBL1BoundSplitWo(const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo,
+                                int32_t currentSplitWi);
 
     uint64_t CalAL1BoundSplitWo(const BasicBlockTilingParamsArch35& blockTiling, int32_t currentSplitWo);
 
@@ -225,10 +222,10 @@ protected:
     uint64_t GetBaseK(uint64_t baseM, uint64_t baseN);
 
     bool GetTilingFromRepo();
- 	bool GetTilingFilterArgs(std::shared_ptr<void>& filterArgs, std::size_t& filterArgsSize);
- 	bool TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
- 	void TranslateRunInfoData();
- 	void TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropFilterTunerTiling> tunerTiling);
+    bool GetTilingFilterArgs(std::shared_ptr<void>& filterArgs, std::size_t& filterArgsSize);
+    bool TranslateTunerTiling(tuningtiling::TuningTilingDefPtr& tuningTiling);
+    void TranslateRunInfoData();
+    void TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropFilterTunerTiling> tunerTiling);
     void PrintRunInfoData();
     void PrintFormatData();
 
@@ -249,7 +246,7 @@ protected:
     bool enableSplitW = false;
     bool isGetTilingFromRepo = false;
 };
-}
-}
-}
-#endif  // CONV3D_DW_BASIC_BLOCK_TILING_ADVANCE_H
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
+#endif // CONV3D_DW_BASIC_BLOCK_TILING_ADVANCE_H

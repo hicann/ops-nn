@@ -23,8 +23,8 @@
 #include "util/math_util.h"
 
 namespace optiling {
-using Ops::NN::Optiling::TilingBaseClass;
 using Ops::NN::OpTiling::IsRegbaseSocVersion;
+using Ops::NN::Optiling::TilingBaseClass;
 
 /* Forward declarations for arch35 regbase wrappers (in dequant_bias_tiling_arch35.cpp) */
 ge::graphStatus Arch35DequantBiasTilingImpl(gert::TilingContext* context);
@@ -60,10 +60,7 @@ inline uint32_t CeilDiv(uint32_t value, uint32_t factor)
 
 class DequantBiasTiling : public TilingBaseClass {
 public:
-    explicit DequantBiasTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit DequantBiasTiling(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~DequantBiasTiling() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -73,10 +70,7 @@ public:
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
@@ -95,12 +89,12 @@ protected:
     void Reset();
 
 private:
-    ge::graphStatus CheckParamsValidity1(
-        const gert::Shape& xShape, const gert::Shape& weightScaleShape, const gert::StorageShape* activateScaleShape,
-        const gert::StorageShape* biasShape, const gert::Shape& yShape);
-    ge::graphStatus CheckParamsValidity2(
-        const gert::Shape& xShape, const gert::Shape& weightScaleShape, const gert::StorageShape* activateScaleShape,
-        const gert::StorageShape* biasShape, const gert::Shape& yShape);
+    ge::graphStatus CheckParamsValidity1(const gert::Shape& xShape, const gert::Shape& weightScaleShape,
+                                         const gert::StorageShape* activateScaleShape,
+                                         const gert::StorageShape* biasShape, const gert::Shape& yShape);
+    ge::graphStatus CheckParamsValidity2(const gert::Shape& xShape, const gert::Shape& weightScaleShape,
+                                         const gert::StorageShape* activateScaleShape,
+                                         const gert::StorageShape* biasShape, const gert::Shape& yShape);
     ge::graphStatus CheckParamsValidity3();
     ge::graphStatus TilingGradCompute();
     void TilingSplitCore();
@@ -141,9 +135,9 @@ ge::graphStatus DequantBiasTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DequantBiasTiling::CheckParamsValidity1(
-    const gert::Shape& xShape, const gert::Shape& weightScaleShape, const gert::StorageShape* activateScaleShape,
-    const gert::StorageShape* biasShape, const gert::Shape& yShape)
+ge::graphStatus DequantBiasTiling::CheckParamsValidity1(const gert::Shape& xShape, const gert::Shape& weightScaleShape,
+                                                        const gert::StorageShape* activateScaleShape,
+                                                        const gert::StorageShape* biasShape, const gert::Shape& yShape)
 {
     // attr属性校验
     if (outputDtype != SIZE_1 && outputDtype != SIZE_27) {
@@ -183,9 +177,9 @@ ge::graphStatus DequantBiasTiling::CheckParamsValidity1(
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DequantBiasTiling::CheckParamsValidity2(
-    const gert::Shape& xShape, const gert::Shape& weightScaleShape, const gert::StorageShape* activateScaleShape,
-    const gert::StorageShape* biasShape, const gert::Shape& yShape)
+ge::graphStatus DequantBiasTiling::CheckParamsValidity2(const gert::Shape& xShape, const gert::Shape& weightScaleShape,
+                                                        const gert::StorageShape* activateScaleShape,
+                                                        const gert::StorageShape* biasShape, const gert::Shape& yShape)
 {
     // shape 约束
     if (weightScaleShape.GetDim(0) != xShape.GetDim(1)) {
@@ -195,17 +189,15 @@ ge::graphStatus DequantBiasTiling::CheckParamsValidity2(
 
     if (activateScaleShape != nullptr && activateScaleShape->GetStorageShape().GetShapeSize() > 0 &&
         activateScaleShape->GetStorageShape().GetDim(0) != xShape.GetDim(0)) {
-        OP_LOGE(
-            context_->GetNodeName(), "dim 0 of x and activateScale %ld and %ld should be same.",
-            activateScaleShape->GetStorageShape().GetDim(0), xShape.GetDim(0));
+        OP_LOGE(context_->GetNodeName(), "dim 0 of x and activateScale %ld and %ld should be same.",
+                activateScaleShape->GetStorageShape().GetDim(0), xShape.GetDim(0));
         return ge::GRAPH_FAILED;
     }
 
     if (biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() > 0 &&
         biasShape->GetStorageShape().GetDim(0) != xShape.GetDim(1)) {
-        OP_LOGE(
-            context_->GetNodeName(), "dim 1 of x %ld and dim 0 of bias %ld should be same.",
-            biasShape->GetStorageShape().GetDim(0), xShape.GetDim(1));
+        OP_LOGE(context_->GetNodeName(), "dim 1 of x %ld and dim 0 of bias %ld should be same.",
+                biasShape->GetStorageShape().GetDim(0), xShape.GetDim(1));
         return ge::GRAPH_FAILED;
     }
 
@@ -311,20 +303,19 @@ ge::graphStatus DequantBiasTiling::GetShapeAttrsInfo()
 
 void DequantBiasTiling::ShowTilingData()
 {
-    OP_LOGI(
-        opName,
-        "DequantBiasTilingData is M:%u, N:%u, nAlign:%u, asExist:%u, needCoreNum:%u, "
-        "perCoreRow:%u, tailCoreRow:%u, inBufferSize:%u, wsBufferSize:%u, asBufferSize:%u, "
-        "biasBufferSize:%u, perCoreLoopRow:%u, perCoreTailLoopRow:%u, perCoreLoops:%u, "
-        "tailCoreLoopRow:%u, tailCoreTailLoopRow:%u, tailCoreLoops:%u",
-        dequantBiasTilingData.get_M(), dequantBiasTilingData.get_N(), dequantBiasTilingData.get_nAlign(),
-        dequantBiasTilingData.get_asExist(), dequantBiasTilingData.get_needCoreNum(),
-        dequantBiasTilingData.get_perCoreRow(), dequantBiasTilingData.get_tailCoreRow(),
-        dequantBiasTilingData.get_inBufferSize(), dequantBiasTilingData.get_wsBufferSize(),
-        dequantBiasTilingData.get_asBufferSize(), dequantBiasTilingData.get_biasBufferSize(),
-        dequantBiasTilingData.get_perCoreLoopRow(), dequantBiasTilingData.get_perCoreTailLoopRow(),
-        dequantBiasTilingData.get_perCoreLoops(), dequantBiasTilingData.get_tailCoreLoopRow(),
-        dequantBiasTilingData.get_tailCoreTailLoopRow(), dequantBiasTilingData.get_tailCoreLoops());
+    OP_LOGI(opName,
+            "DequantBiasTilingData is M:%u, N:%u, nAlign:%u, asExist:%u, needCoreNum:%u, "
+            "perCoreRow:%u, tailCoreRow:%u, inBufferSize:%u, wsBufferSize:%u, asBufferSize:%u, "
+            "biasBufferSize:%u, perCoreLoopRow:%u, perCoreTailLoopRow:%u, perCoreLoops:%u, "
+            "tailCoreLoopRow:%u, tailCoreTailLoopRow:%u, tailCoreLoops:%u",
+            dequantBiasTilingData.get_M(), dequantBiasTilingData.get_N(), dequantBiasTilingData.get_nAlign(),
+            dequantBiasTilingData.get_asExist(), dequantBiasTilingData.get_needCoreNum(),
+            dequantBiasTilingData.get_perCoreRow(), dequantBiasTilingData.get_tailCoreRow(),
+            dequantBiasTilingData.get_inBufferSize(), dequantBiasTilingData.get_wsBufferSize(),
+            dequantBiasTilingData.get_asBufferSize(), dequantBiasTilingData.get_biasBufferSize(),
+            dequantBiasTilingData.get_perCoreLoopRow(), dequantBiasTilingData.get_perCoreTailLoopRow(),
+            dequantBiasTilingData.get_perCoreLoops(), dequantBiasTilingData.get_tailCoreLoopRow(),
+            dequantBiasTilingData.get_tailCoreTailLoopRow(), dequantBiasTilingData.get_tailCoreLoops());
 }
 
 ge::graphStatus DequantBiasTiling::DoOpTiling()
@@ -338,10 +329,7 @@ ge::graphStatus DequantBiasTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DequantBiasTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus DequantBiasTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t DequantBiasTiling::GetTilingKey() const
 {
@@ -464,7 +452,8 @@ ge::graphStatus DequantBiasTiling::TilingGradCompute()
 
 ge::graphStatus TilingForDequantBias(gert::TilingContext* context)
 {
-    if (context == nullptr) return ge::GRAPH_FAILED;
+    if (context == nullptr)
+        return ge::GRAPH_FAILED;
     if (IsRegbaseSocVersion(context)) {
         return Arch35DequantBiasTilingImpl(context);
     }
@@ -474,7 +463,8 @@ ge::graphStatus TilingForDequantBias(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForDequantBias(gert::TilingParseContext* context)
 {
-    if (context == nullptr) return ge::GRAPH_FAILED;
+    if (context == nullptr)
+        return ge::GRAPH_FAILED;
     if (IsRegbaseSocVersion(context)) {
         return Arch35DequantBiasTilingParseImpl(context);
     }

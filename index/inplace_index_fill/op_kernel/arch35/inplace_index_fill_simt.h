@@ -35,18 +35,15 @@ using namespace InplaceIndexFill;
 // 每个线程处理 indices 数组的一部分，将对应 mask[nIdx] 置 1
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFillSimtMaskFill(
-    uint64_t blockIdx, uint64_t blockNum,
-    __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask,
-    COM_T indicesNum, uint64_t n);
+    uint64_t blockIdx, uint64_t blockNum, __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum,
+    uint64_t n);
 
 // ComputeByIndices (路径A): 稀疏场景，按 indicesNum*P*Q 遍历
 // 每个线程从线性索引反算 (sliceId, pIdx, qIdx)，读 indices[sliceId] 得到 nIdx，随机写 x[offset]
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFillSimtComputeByIndices(
-    __gm__ T_X* x, __gm__ INDEX_TYPE* indices, T_X value,
-    COM_T total_num, COM_T p, COM_T n, COM_T q,
-    COM_T slice_size, COM_T shift, COM_T magic,
-    COM_T shift_q, COM_T magic_q);
+    __gm__ T_X* x, __gm__ INDEX_TYPE* indices, T_X value, COM_T total_num, COM_T p, COM_T n, COM_T q, COM_T slice_size,
+    COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q);
 
 // ============================================================================
 // 主类定义
@@ -54,10 +51,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFil
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
 class InplaceIndexFillSimtImpl {
 public:
-    __aicore__ inline InplaceIndexFillSimtImpl(
-        const InplaceIndexFill::InplaceIndexFillSimtTilingData* tilingData)
-        : tilingData_(tilingData),
-          blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum()) {}
+    __aicore__ inline InplaceIndexFillSimtImpl(const InplaceIndexFill::InplaceIndexFillSimtTilingData* tilingData)
+        : tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum())
+    {}
 
     __aicore__ inline void Init(GM_ADDR indices, GM_ADDR value, GM_ADDR workspace);
     __aicore__ inline void Process(__gm__ T_X* x, GM_ADDR workspace);
@@ -66,13 +62,13 @@ private:
     __aicore__ inline void BuildIndicesMask(GM_ADDR workspace);
 
 private:
-    GlobalTensor<T_X> valueGm_;     // value 标量的 GM 地址
-    GlobalTensor<INDEX_TYPE> indicesGm_;  // indices 数组的 GM 地址
-    GlobalTensor<int8_t> maskGm_;   // mask 位图的 GM 地址（workspace 上）
+    GlobalTensor<T_X> valueGm_;          // value 标量的 GM 地址
+    GlobalTensor<INDEX_TYPE> indicesGm_; // indices 数组的 GM 地址
+    GlobalTensor<int8_t> maskGm_;        // mask 位图的 GM 地址（workspace 上）
     const InplaceIndexFill::InplaceIndexFillSimtTilingData* tilingData_;
-    uint32_t blockIdx_ = 0;         // 当前核的 block ID
-    uint32_t blockNum_ = 0;         // 总核数
-    T_X fillValue;                  // 填充值（从 GM 读取后缓存）
+    uint32_t blockIdx_ = 0; // 当前核的 block ID
+    uint32_t blockNum_ = 0; // 总核数
+    T_X fillValue;          // 填充值（从 GM 读取后缓存）
 };
 
 // ============================================================================
@@ -80,9 +76,7 @@ private:
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFillSimtMaskFill(
-    uint64_t blockIdx, uint64_t blockNum,
-    __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask,
-    COM_T indicesNum, uint64_t n)
+    uint64_t blockIdx, uint64_t blockNum, __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
 {
     // 计算全局线程 ID：blockIdx * 每核线程数 + 核内线程 ID
     COM_T threadIdx = static_cast<COM_T>(blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx());
@@ -116,11 +110,8 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::BuildIn
     // 所有核并行填充 mask
     COM_T indicesNum = static_cast<COM_T>(tilingData_->indicesNum);
     Simt::VF_CALL<InplaceIndexFillSimtMaskFill<T_X, INDEX_TYPE, COM_T>>(
-        Simt::Dim3(SIMT_THREAD_NUM),
-        blockIdx_, blockNum_,
-        (__gm__ INDEX_TYPE*)(indicesGm_.GetPhyAddr()),
-        (__gm__ int8_t*)(maskGm_.GetPhyAddr()),
-        indicesNum, static_cast<uint64_t>(n));
+        Simt::Dim3(SIMT_THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indicesGm_.GetPhyAddr()),
+        (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, static_cast<uint64_t>(n));
 
     // 核间同步：确保所有核的 mask 填充完毕后再进入计算阶段
     SyncAll();
@@ -130,8 +121,8 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::BuildIn
 // Init：初始化 GM 地址
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Init(
-    GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
+__aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Init(GM_ADDR indices, GM_ADDR value,
+                                                                              GM_ADDR workspace)
 {
     // 设置 value 和 indices 的 GM 地址
     valueGm_.SetGlobalBuffer((__gm__ T_X*)(value));
@@ -144,8 +135,7 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Init(
 // Process：主流程，选择路径A或路径B执行
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Process(
-    __gm__ T_X* x, GM_ADDR workspace)
+__aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Process(__gm__ T_X* x, GM_ADDR workspace)
 {
     // 读取 tiling 参数
     COM_T p = static_cast<COM_T>(tilingData_->p);
@@ -174,10 +164,8 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Process
 
         // 调用路径A的 SIMT 核函数
         Simt::VF_CALL<InplaceIndexFillSimtComputeByIndices<T_X, INDEX_TYPE, COM_T>>(
-            Simt::Dim3{SIMT_THREAD_NUM},
-            x, (__gm__ INDEX_TYPE*)indicesGm_.GetPhyAddr(),
-            fillValue, process_num, p, n, q,
-            slice_size, shift, magic, shift_q, magic_q);
+            Simt::Dim3{SIMT_THREAD_NUM}, x, (__gm__ INDEX_TYPE*)indicesGm_.GetPhyAddr(), fillValue, process_num, p, n,
+            q, slice_size, shift, magic, shift_q, magic_q);
     } else {
         // ================================================================
         // 路径B：稠密场景（indicesNum * 5 > N）
@@ -187,8 +175,8 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Process
         BuildIndicesMask(workspace);
 
         // 调用路径B的 SIMT 核函数
-        InplaceIndexFillCommon::CallMaskBasedFill<T_X, INDEX_TYPE, COM_T>(
-            x, (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue, n, p, q);
+        InplaceIndexFillCommon::CallMaskBasedFill<T_X, INDEX_TYPE, COM_T>(x, (__gm__ int8_t*)maskGm_.GetPhyAddr(),
+                                                                          fillValue, n, p, q);
     }
 }
 
@@ -199,10 +187,8 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Process
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFillSimtComputeByIndices(
-    __gm__ T_X* x, __gm__ INDEX_TYPE* indices, T_X value,
-    COM_T total_num, COM_T p, COM_T n, COM_T q,
-    COM_T slice_size, COM_T shift, COM_T magic,
-    COM_T shift_q, COM_T magic_q)
+    __gm__ T_X* x, __gm__ INDEX_TYPE* indices, T_X value, COM_T total_num, COM_T p, COM_T n, COM_T q, COM_T slice_size,
+    COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q)
 {
     // 计算全局线程 ID 和总线程数
     COM_T threadIdx = static_cast<COM_T>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());

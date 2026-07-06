@@ -20,14 +20,10 @@ namespace AddRmsNormCast {
 template <typename T_X>
 class KernelAddRmsNormCastRegBaseNormal {
 public:
-    __aicore__ inline KernelAddRmsNormCastRegBaseNormal(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormCastRegBaseNormal(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRmsNormCastRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRmsNormCastRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -62,8 +58,8 @@ public:
         b32BlockStride_ = (baseNReduceAlign_ - baseNB32Align_) * sizeof(float) / ALIGN_32_FACTOR;   // Block
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
+                                      GM_ADDR x)
     {
         // Init GM
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
@@ -110,9 +106,9 @@ public:
 
 private:
     template <typename T>
-    __aicore__ inline void CopyInXMultiNddma(
-        TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T>& srcGm, uint64_t gmOffset, uint64_t repeatTimes,
-        uint64_t blockLen, uint64_t blockLenAlign)
+    __aicore__ inline void CopyInXMultiNddma(TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T>& srcGm,
+                                             uint64_t gmOffset, uint64_t repeatTimes, uint64_t blockLen,
+                                             uint64_t blockLenAlign)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         MultiCopyParams<T, NDDMA_DIM> dmaParam = {
@@ -129,9 +125,9 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyInXMultiMoveAlign(
-        TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T>& srcGm, uint64_t gmOffset, uint64_t repeatTimes,
-        uint64_t blockLen, uint64_t blockLenDtypeAlign)
+    __aicore__ inline void CopyInXMultiMoveAlign(TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T>& srcGm,
+                                                 uint64_t gmOffset, uint64_t repeatTimes, uint64_t blockLen,
+                                                 uint64_t blockLenDtypeAlign)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         DataCopyExtParams extParams{
@@ -159,9 +155,9 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyOutXYMulti(
-        GlobalTensor<T>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset, uint32_t repeatTimes,
-        uint32_t srcStride, uint32_t dstStride)
+    __aicore__ inline void CopyOutXYMulti(GlobalTensor<T>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY,
+                                          uint64_t gmOffset, uint32_t repeatTimes, uint32_t srcStride,
+                                          uint32_t dstStride)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         RmsNorm::DataCopyImpl<T>(yGm[gmOffset], yLocal, repeatTimes, numN_, srcStride, dstStride);
@@ -203,9 +199,8 @@ private:
         // 1. Calc xOut
         LocalTensor<float> rstdLocal = outQueueRstd_.AllocTensor<float>();
         LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
-        ReduceSumRstdMulti<T_X, true, true, true>(
-            rstdLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local, reduceLocal, 0, baseNReduceAlign_, powerSplit_, realM,
-            avgFactor_, epsilon_);
+        ReduceSumRstdMulti<T_X, true, true, true>(rstdLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local, reduceLocal, 0,
+                                                  baseNReduceAlign_, powerSplit_, realM, avgFactor_, epsilon_);
         inQueueX1_.FreeTensor(x1Local);
         inQueueX2_.FreeTensor(x2Local);
         outQueueX_.EnQue<T_X>(xOutLocal);
@@ -214,8 +209,8 @@ private:
         // 2. Calc y1/y2
         LocalTensor<float> y1Local = outQueueY1_.AllocTensor<float>();
         LocalTensor<T_X> y2Local = outQueueY2_.AllocTensor<T_X>();
-        AddRmsNormCast::ComputeYMulti<T_X, T_X>(
-            y1Local, y2Local, xOutTmpLocal, gammaLocal, rstdLocal, 0, baseNReduceAlign_, realM);
+        AddRmsNormCast::ComputeYMulti<T_X, T_X>(y1Local, y2Local, xOutTmpLocal, gammaLocal, rstdLocal, 0,
+                                                baseNReduceAlign_, realM);
         outQueueRstd_.EnQue<float>(rstdLocal);
         outQueueY1_.EnQue<float>(y1Local);
         outQueueY2_.EnQue<T_X>(y2Local);

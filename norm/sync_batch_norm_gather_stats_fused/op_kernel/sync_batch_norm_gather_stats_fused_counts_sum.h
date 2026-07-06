@@ -29,8 +29,8 @@ template <typename T>
 class SyncBatchNormGatherStatsFusedCountsSum {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedCountsSum(){};
-    __aicore__ inline void initBuffer(
-        TPipe& pipe, GlobalTensor<float>& counts, GlobalTensor<float>& reduceresultworkspace)
+    __aicore__ inline void initBuffer(TPipe& pipe, GlobalTensor<float>& counts,
+                                      GlobalTensor<float>& reduceresultworkspace)
     {
         pipe_ = pipe;
         pipe_.InitBuffer(queueIn_, DOUBLE_BUFFER_NUM, BUFFER_COL_NUM * sizeof(float));

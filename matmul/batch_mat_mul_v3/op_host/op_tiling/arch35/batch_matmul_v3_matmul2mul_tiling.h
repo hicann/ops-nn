@@ -20,11 +20,9 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
-class BatchMatMulV3ToMulTiling : public MatMulV3BaseTiling
-{
+class BatchMatMulV3ToMulTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3ToMulTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BaseTiling(context, cfg){};
+    BatchMatMulV3ToMulTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg){};
     ~BatchMatMulV3ToMulTiling() override = default;
 
 protected:
@@ -32,9 +30,8 @@ protected:
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
     uint64_t GetNumBlocks() const override;
-    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
     uint64_t alignNum_ = BLOCK_BYTE_SIZE / args_.aDtypeSize;
 };
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling
-

@@ -51,20 +51,14 @@ using namespace ge;
 
 class TestSparseApplyProximalAdagradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestSparseApplyProximalAdagradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestSparseApplyProximalAdagradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestSparseApplyProximalAdagradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestSparseApplyProximalAdagradTiling TearDown" << std::endl; }
 };
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -127,12 +121,12 @@ static SparseApplyProximalAdagradTilingResult DoTilingCase(const SparseApplyProx
     }
 
     std::initializer_list<int64_t> scalarShape = {1};
-    gert::StorageShape varStorage     = {args.varShape, args.varShape};
-    gert::StorageShape accumStorage   = {args.varShape, args.varShape};
-    gert::StorageShape lrStorage      = {scalarShape, scalarShape};
-    gert::StorageShape l1Storage      = {scalarShape, scalarShape};
-    gert::StorageShape l2Storage      = {scalarShape, scalarShape};
-    gert::StorageShape gradStorage    = {args.gradShape, args.gradShape};
+    gert::StorageShape varStorage = {args.varShape, args.varShape};
+    gert::StorageShape accumStorage = {args.varShape, args.varShape};
+    gert::StorageShape lrStorage = {scalarShape, scalarShape};
+    gert::StorageShape l1Storage = {scalarShape, scalarShape};
+    gert::StorageShape l2Storage = {scalarShape, scalarShape};
+    gert::StorageShape gradStorage = {args.gradShape, args.gradShape};
     gert::StorageShape indicesStorage = {args.indicesShape, args.indicesShape};
 
     SparseApplyProximalAdagradUtCompileInfo compileInfo;
@@ -141,22 +135,20 @@ static SparseApplyProximalAdagradTilingResult DoTilingCase(const SparseApplyProx
                       .SetOpType(opType)
                       .NodeIoNum(7, 2)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &accumStorage,
-                           &lrStorage, &l1Storage, &l2Storage,
-                           &gradStorage, &indicesStorage})
+                      .InputShapes({&varStorage, &accumStorage, &lrStorage, &l1Storage, &l2Storage, &gradStorage,
+                                    &indicesStorage})
                       .OutputShapes({&varStorage, &accumStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                      .NodeInputTd(0, args.tensorDtype,  args.inputFormat, args.inputFormat)  // var
-                      .NodeInputTd(1, args.tensorDtype,  args.inputFormat, args.inputFormat)  // accum
-                      .NodeInputTd(2, args.tensorDtype,  args.inputFormat, args.inputFormat)  // lr
-                      .NodeInputTd(3, args.tensorDtype,  args.inputFormat, args.inputFormat)  // l1
-                      .NodeInputTd(4, args.tensorDtype,  args.inputFormat, args.inputFormat)  // l2
-                      .NodeInputTd(5, args.tensorDtype,  args.inputFormat, args.inputFormat)  // grad
-                      .NodeInputTd(6, args.indicesDtype, args.inputFormat, args.inputFormat)  // indices
-                      .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)  // var
-                      .NodeOutputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat)  // accum
+                      .NodeInputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)  // var
+                      .NodeInputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat)  // accum
+                      .NodeInputTd(2, args.tensorDtype, args.inputFormat, args.inputFormat)  // lr
+                      .NodeInputTd(3, args.tensorDtype, args.inputFormat, args.inputFormat)  // l1
+                      .NodeInputTd(4, args.tensorDtype, args.inputFormat, args.inputFormat)  // l2
+                      .NodeInputTd(5, args.tensorDtype, args.inputFormat, args.inputFormat)  // grad
+                      .NodeInputTd(6, args.indicesDtype, args.inputFormat, args.inputFormat) // indices
+                      .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat) // var
+                      .NodeOutputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat) // accum
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -173,14 +165,12 @@ static SparseApplyProximalAdagradTilingResult DoTilingCase(const SparseApplyProx
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(SparseApplyProximalAdagradTilingData)) {
-            const auto* td = reinterpret_cast<const SparseApplyProximalAdagradTilingData*>(
-                rawTilingData->GetData());
-            result.needCoreNum  = td->needCoreNum;
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(SparseApplyProximalAdagradTilingData)) {
+            const auto* td = reinterpret_cast<const SparseApplyProximalAdagradTilingData*>(rawTilingData->GetData());
+            result.needCoreNum = td->needCoreNum;
             result.totalIndices = td->totalIndices;
-            result.varFirstDim  = td->varFirstDim;
-            result.rowSize      = td->rowSize;
+            result.varFirstDim = td->varFirstDim;
+            result.rowSize = td->rowSize;
         }
     }
     return result;
@@ -189,9 +179,8 @@ static SparseApplyProximalAdagradTilingResult DoTilingCase(const SparseApplyProx
 // T01 FP32 / INT32 basic. var {4,8}, grad {2,8}, indices {2}
 TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_float32_int32)
 {
-    SparseApplyProximalAdagradTilingArgs args{
-        /*var=*/{4, 8}, /*grad=*/{2, 8}, /*indices=*/{2},
-        ge::DT_FLOAT, ge::DT_INT32, ge::FORMAT_ND};
+    SparseApplyProximalAdagradTilingArgs args{/*var=*/{4, 8}, /*grad=*/{2, 8}, /*indices=*/{2},
+                                              ge::DT_FLOAT,   ge::DT_INT32,    ge::FORMAT_ND};
     auto result = DoTilingCase(args);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 0u);
@@ -204,9 +193,8 @@ TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_float
 // T02 FP32 / INT64
 TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_float32_int64)
 {
-    SparseApplyProximalAdagradTilingArgs args{
-        /*var=*/{4, 8}, /*grad=*/{2, 8}, /*indices=*/{2},
-        ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND};
+    SparseApplyProximalAdagradTilingArgs args{/*var=*/{4, 8}, /*grad=*/{2, 8}, /*indices=*/{2},
+                                              ge::DT_FLOAT,   ge::DT_INT64,    ge::FORMAT_ND};
     auto result = DoTilingCase(args);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.totalIndices, 2);
@@ -217,9 +205,8 @@ TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_float
 // T03 FP16 / INT32
 TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_float16_int32)
 {
-    SparseApplyProximalAdagradTilingArgs args{
-        /*var=*/{16, 32}, /*grad=*/{8, 32}, /*indices=*/{8},
-        ge::DT_FLOAT16, ge::DT_INT32, ge::FORMAT_ND};
+    SparseApplyProximalAdagradTilingArgs args{/*var=*/{16, 32}, /*grad=*/{8, 32}, /*indices=*/{8},
+                                              ge::DT_FLOAT16,   ge::DT_INT32,     ge::FORMAT_ND};
     auto result = DoTilingCase(args);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.totalIndices, 8);
@@ -230,9 +217,8 @@ TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_float
 // T04 BF16 / INT64
 TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_bf16_int64)
 {
-    SparseApplyProximalAdagradTilingArgs args{
-        /*var=*/{16, 32}, /*grad=*/{8, 32}, /*indices=*/{8},
-        ge::DT_BF16, ge::DT_INT64, ge::FORMAT_ND};
+    SparseApplyProximalAdagradTilingArgs args{/*var=*/{16, 32}, /*grad=*/{8, 32}, /*indices=*/{8},
+                                              ge::DT_BF16,      ge::DT_INT64,     ge::FORMAT_ND};
     auto result = DoTilingCase(args);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.totalIndices, 8);
@@ -243,9 +229,8 @@ TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_bf16_
 // T05 Empty indices (M == 0) -> needCoreNum == 1, totalIndices == 0
 TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_empty_indices)
 {
-    SparseApplyProximalAdagradTilingArgs args{
-        /*var=*/{4, 8}, /*grad=*/{0, 8}, /*indices=*/{0},
-        ge::DT_FLOAT, ge::DT_INT32, ge::FORMAT_ND};
+    SparseApplyProximalAdagradTilingArgs args{/*var=*/{4, 8}, /*grad=*/{0, 8}, /*indices=*/{0},
+                                              ge::DT_FLOAT,   ge::DT_INT32,    ge::FORMAT_ND};
     auto result = DoTilingCase(args);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, 0u);
@@ -259,9 +244,8 @@ TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_empty
 // var {4096,1024}, grad {2048,1024}, indices {2048}; totalWork=2097152
 TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_large_multicore)
 {
-    SparseApplyProximalAdagradTilingArgs args{
-        /*var=*/{4096, 1024}, /*grad=*/{2048, 1024}, /*indices=*/{2048},
-        ge::DT_FLOAT, ge::DT_INT32, ge::FORMAT_ND};
+    SparseApplyProximalAdagradTilingArgs args{/*var=*/{4096, 1024}, /*grad=*/{2048, 1024}, /*indices=*/{2048},
+                                              ge::DT_FLOAT,         ge::DT_INT32,          ge::FORMAT_ND};
     auto result = DoTilingCase(args);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.totalIndices, 2048);

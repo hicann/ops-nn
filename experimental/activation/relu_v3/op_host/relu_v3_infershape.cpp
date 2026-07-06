@@ -10,27 +10,26 @@
 
 #include "register/op_impl_registry.h"
 
-namespace ge
+namespace ge {
+static ge::graphStatus InferShape(gert::InferShapeContext* context)
 {
-    static ge::graphStatus InferShape(gert::InferShapeContext *context)
-    {
-        const gert::Shape *x_shape = context->GetInputShape(0);
-        gert::Shape *y_shape = context->GetOutputShape(0);
-        gert::Shape *mask_shape = context->GetOutputShape(1);
-        *y_shape = *x_shape;
-        *mask_shape = *x_shape;
-        auto &last_dim = (*mask_shape)[mask_shape->GetDimNum() - 1];
-        last_dim = (last_dim + 7) / 8;
-        return GRAPH_SUCCESS;
-    }
-
-    static ge::graphStatus InferDataType(gert::InferDataTypeContext *context)
-    {
-        const auto inputDataType = context->GetInputDataType(0);
-        context->SetOutputDataType(0, inputDataType);
-        context->SetOutputDataType(1, DT_UINT8);
-        return ge::GRAPH_SUCCESS;
-    }
-
-    IMPL_OP_INFERSHAPE(ReluV3).InferShape(InferShape).InferDataType(InferDataType);
+    const gert::Shape* x_shape = context->GetInputShape(0);
+    gert::Shape* y_shape = context->GetOutputShape(0);
+    gert::Shape* mask_shape = context->GetOutputShape(1);
+    *y_shape = *x_shape;
+    *mask_shape = *x_shape;
+    auto& last_dim = (*mask_shape)[mask_shape->GetDimNum() - 1];
+    last_dim = (last_dim + 7) / 8;
+    return GRAPH_SUCCESS;
 }
+
+static ge::graphStatus InferDataType(gert::InferDataTypeContext* context)
+{
+    const auto inputDataType = context->GetInputDataType(0);
+    context->SetOutputDataType(0, inputDataType);
+    context->SetOutputDataType(1, DT_UINT8);
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(ReluV3).InferShape(InferShape).InferDataType(InferDataType);
+} // namespace ge

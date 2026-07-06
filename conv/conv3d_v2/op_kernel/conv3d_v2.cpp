@@ -50,10 +50,9 @@ constexpr ConvFormat filterFormat = ConvFormat::DHWCN;
 constexpr ConvFormat outputFormat = ConvFormat::NDHWC;
 #endif
 
-#if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && \
-    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_3D && \
+#if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_3D && \
     defined(FORMAT_Y) && FORMAT_Y == FORMAT_NDHWC
-constexpr ConvFormat fmapFormat   = ConvFormat::NCDHW;
+constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
 constexpr ConvFormat filterFormat = ConvFormat::FRACTAL_Z_3D;
 constexpr ConvFormat outputFormat = ConvFormat::NDHWC;
 #endif
@@ -89,10 +88,10 @@ constexpr ConvFormat scaleFormat = ConvFormat::ND;
 #endif
 
 #if (__CCE_AICORE__ > 300)
-template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-         int8_t IterOrder, int8_t GroupType, int8_t BigKernel>
+template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
+          int8_t IterOrder, int8_t GroupType, int8_t BigKernel>
 __global__ __aicore__ void conv3dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+                                    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -110,32 +109,38 @@ __global__ __aicore__ void conv3dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 #if defined(DTYPE_BIAS)
     using biasType = ConvType<TPosition::GM, biasFormat, DTYPE_BIAS>;
 #else
-    using biasType = ConvType<TPosition::GM, biasFormat, half>;  // only for compile
+    using biasType = ConvType<TPosition::GM, biasFormat, half>; // only for compile
 #endif
 
 #if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X == DT_INT8 && defined(DTYPE_SCALE)
     using scaleType = ConvType<TPosition::GM, scaleFormat, DTYPE_SCALE>;
     ExtendParams extendParams(scale, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
-        Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<
-            FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType, BigKernel>> baseConv3d;
+        Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType,
+                     Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                                   BigKernel>>
+            baseConv3d;
         baseConv3d.RunConv3dV2Kernel(x, filter, bias, y, tilingData, &extendParams);
     } else {
-        GroupConv3dV2<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<
-            FmapTiling, WeightTiling, L1PingPong,
-            L0PingPong, OutputOrder, IterOrder, GroupType, BigKernel>> groupConv3d;
+        GroupConv3dV2<fmapType, weightType, outputType, biasType, scaleType,
+                      Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                                    BigKernel>>
+            groupConv3d;
         groupConv3d.RunConv3dV2Kernel(x, filter, bias, y, tilingData, &extendParams);
     }
 #else
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
     if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
-        Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<
-            FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType, BigKernel>> baseConv3d;
+        Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType,
+                     Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                                   BigKernel>>
+            baseConv3d;
         baseConv3d.RunConv3dV2Kernel(x, filter, bias, y, tilingData);
     } else {
-        GroupConv3dV2<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<
-            FmapTiling, WeightTiling, L1PingPong,
-            L0PingPong, OutputOrder, IterOrder, GroupType, BigKernel>> groupConv3d;
+        GroupConv3dV2<fmapType, weightType, outputType, biasType, scaleType,
+                      Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                                    BigKernel>>
+            groupConv3d;
         groupConv3d.RunConv3dV2Kernel(x, filter, bias, y, tilingData);
     }
 #endif
@@ -144,9 +149,8 @@ __global__ __aicore__ void conv3dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 }
 #else
 template <uint8_t ConvL0PingPongT, uint8_t BL1ByPassFlagT, uint8_t GroupConvTypeT, uint8_t OutputOrderT>
-__global__ __aicore__ void conv3dv2(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset, GM_ADDR offset_w, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void conv3dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
+                                    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     ASC_OP_LOGD("[Conv3dv2] Begin to process conv3dv2.\n");
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
@@ -159,10 +163,9 @@ __global__ __aicore__ void conv3dv2(
     REGISTER_TILING_DEFAULT(Ops::NN::Conv3dV2::Conv3DV2TilingData);
     GET_TILING_DATA(tilingData, tiling);
     ASC_OP_LOGD("[Conv3dv2] Get tiling data success.\n");
-    ASC_OP_LOGD(
-        "[Conv3dv2] mUB %u, nUB %u, scaleandbiastype %u, quantType %u.\n", tilingData.convApiTiling.mUB,
-        tilingData.convApiTiling.nUB, tilingData.convApiTiling.scaleAndBiasLoadType,
-        tilingData.convApiTiling.quantType);
+    ASC_OP_LOGD("[Conv3dv2] mUB %u, nUB %u, scaleandbiastype %u, quantType %u.\n", tilingData.convApiTiling.mUB,
+                tilingData.convApiTiling.nUB, tilingData.convApiTiling.scaleAndBiasLoadType,
+                tilingData.convApiTiling.quantType);
 
     using A_TYPE = ConvType<TPosition::GM, aFormat, DTYPE_X>;
     using B_TYPE = ConvType<TPosition::GM, bFormat, DTYPE_FILTER>;
@@ -175,12 +178,9 @@ __global__ __aicore__ void conv3dv2(
     using BIAS_TYPE = ConvType<TPosition::GM, ConvFormat::ND, float>;
 #endif
 
-    DispatchConv3DV2Kernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE,
-                           static_cast<ConvL0PingPong>(ConvL0PingPongT),
-                           static_cast<ConvBL1ByPass>(BL1ByPassFlagT),
-                           static_cast<GroupConvType>(GroupConvTypeT),
-                           static_cast<OutputOrder>(OutputOrderT),
-                           quantType>(
-        x, filter, bias, scale, offset, y, user_workspace, &tilingData);
+    DispatchConv3DV2Kernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, static_cast<ConvL0PingPong>(ConvL0PingPongT),
+                           static_cast<ConvBL1ByPass>(BL1ByPassFlagT), static_cast<GroupConvType>(GroupConvTypeT),
+                           static_cast<OutputOrder>(OutputOrderT), quantType>(x, filter, bias, scale, offset, y,
+                                                                              user_workspace, &tilingData);
 }
 #endif

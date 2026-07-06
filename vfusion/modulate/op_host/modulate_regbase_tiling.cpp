@@ -64,12 +64,10 @@ ge::graphStatus ModulateTilingForRegbase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDType_ = xDesc->GetDataType();
     xDtypeSize_ = ge::GetSizeByDataType(xDType_);
-    OP_CHECK_IF(
-        xDtypeSize_ <= 0,
-        OP_LOGE(
-            opName_, "Get invalid dtype size. x dtype [%s], size: %u.", Ops::Base::ToString(xDType_).c_str(),
-            xDtypeSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDtypeSize_ <= 0,
+                OP_LOGE(opName_, "Get invalid dtype size. x dtype [%s], size: %u.",
+                        Ops::Base::ToString(xDType_).c_str(), xDtypeSize_),
+                return ge::GRAPH_FAILED);
     xAlign_ = BLOCK_SIZE / xDtypeSize_;
     isScale_ = (scaleShape != nullptr);
     isShift_ = (shiftShape != nullptr);
@@ -86,7 +84,7 @@ ge::graphStatus ModulateTilingForRegbase::DoOpTiling()
     OP_LOGD(opName_, "ModulateTilingForRegbase DoOpTiling.");
 
     tilingStrategy_ = SelectStrategy();
-    switch(tilingStrategy_) {
+    switch (tilingStrategy_) {
         case TilingRegbaseStrategy::TilingL:
             CalcTilingParamL(tilingData_.inputB * tilingData_.inputL);
             break;
@@ -101,10 +99,7 @@ ge::graphStatus ModulateTilingForRegbase::DoOpTiling()
 }
 
 // 4、计算高阶API的TilingData
-ge::graphStatus ModulateTilingForRegbase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ModulateTilingForRegbase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 // 5、计算TilingKey
 uint64_t ModulateTilingForRegbase::GetTilingKey() const
@@ -163,7 +158,7 @@ TilingRegbaseStrategy ModulateTilingForRegbase::SelectStrategy()
     return TilingRegbaseStrategy::TilingL;
 }
 
-void ModulateTilingForRegbase::CalcTilingParamL(const uint64_t &dataNum)
+void ModulateTilingForRegbase::CalcTilingParamL(const uint64_t& dataNum)
 {
     blockDim_ = std::max(static_cast<uint64_t>(1), std::min(dataNum, totalCoreNum_));
     tilingData_.formerCoreNum = dataNum % blockDim_;
@@ -172,9 +167,11 @@ void ModulateTilingForRegbase::CalcTilingParamL(const uint64_t &dataNum)
     tilingData_.tailDataNum = dataNum / blockDim_;
     uint64_t inputDAlign = Ops::Base::CeilAlign(tilingData_.inputD, xAlign_);
     uint64_t hasScaleShift = static_cast<uint64_t>(isScale_ && isShift_);
-    uint64_t minMultiRowSize = (X_Y_BUFFER_NUM * DOUBLE_BUFFER * MIN_MULTI_ROWS + 1 + hasScaleShift) * inputDAlign * xDtypeSize_;
+    uint64_t minMultiRowSize = (X_Y_BUFFER_NUM * DOUBLE_BUFFER * MIN_MULTI_ROWS + 1 + hasScaleShift) * inputDAlign *
+                               xDtypeSize_;
     if (minMultiRowSize < ubSize_) {
-        tilingData_.maxCopyRows = (ubSize_ / (inputDAlign * xDtypeSize_) - hasScaleShift - 1) / DOUBLE_BUFFER / X_Y_BUFFER_NUM;
+        tilingData_.maxCopyRows = (ubSize_ / (inputDAlign * xDtypeSize_) - hasScaleShift - 1) / DOUBLE_BUFFER /
+                                  X_Y_BUFFER_NUM;
         tilingData_.maxDInUB = tilingData_.inputD;
         tilingData_.maxCalcNum = tilingData_.inputD;
     } else {
@@ -187,7 +184,7 @@ void ModulateTilingForRegbase::CalcTilingParamL(const uint64_t &dataNum)
     tilingData_.maxCopyRows = std::min(tilingData_.maxCopyRows, tilingData_.formerDataNum);
 }
 
-void ModulateTilingForRegbase::CalcTilingParamD(const uint64_t &dataNum)
+void ModulateTilingForRegbase::CalcTilingParamD(const uint64_t& dataNum)
 {
     blockDim_ = std::max(static_cast<uint64_t>(1), std::min(dataNum, totalCoreNum_));
     tilingData_.formerCoreNum = dataNum % blockDim_;
@@ -199,13 +196,11 @@ void ModulateTilingForRegbase::CalcTilingParamD(const uint64_t &dataNum)
     tilingData_.maxCopyRows = 1;
     tilingData_.maxDInUB = ubSize_ / (X_Y_BUFFER_NUM * DOUBLE_BUFFER + 1 + hasScaleShift);
     tilingData_.maxDInUB = Ops::Base::FloorAlign(tilingData_.maxDInUB, BLOCK_SIZE) / xDtypeSize_;
-    tilingData_.maxCalcNum = tilingData_.formerDataNum < tilingData_.maxDInUB ? tilingData_.formerDataNum : tilingData_.maxDInUB;
+    tilingData_.maxCalcNum = tilingData_.formerDataNum < tilingData_.maxDInUB ? tilingData_.formerDataNum :
+                                                                                tilingData_.maxDInUB;
 }
 
-bool ModulateTilingForRegbase::IsCapable()
-{
-    return true;
-}
+bool ModulateTilingForRegbase::IsCapable() { return true; }
 
 void ModulateTilingForRegbase::PrintTilingData()
 {
@@ -221,12 +216,10 @@ void ModulateTilingForRegbase::PrintTilingData()
     OP_LOGD(opName_, "maxCopyRows:      %lu.", tilingData_.maxCopyRows);
 }
 
-
 void ModulateTilingForRegbase::SetTilingData()
 {
     OP_LOGD(opName_, "ModulateTilingForRegbase SetTilingData.");
-    ModulateRegbaseTilingData* tilingData =
-        context_->GetTilingData<ModulateRegbaseTilingData>();
+    ModulateRegbaseTilingData* tilingData = context_->GetTilingData<ModulateRegbaseTilingData>();
     tilingData->inputB = tilingData_.inputB;
     tilingData->inputL = tilingData_.inputL;
     tilingData->inputD = tilingData_.inputD;
@@ -235,6 +228,5 @@ void ModulateTilingForRegbase::SetTilingData()
     tilingData->formerDataNum = tilingData_.formerDataNum;
     tilingData->tailDataNum = tilingData_.tailDataNum;
 }
-
 
 } // namespace optiling

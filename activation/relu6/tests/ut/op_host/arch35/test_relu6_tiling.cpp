@@ -31,15 +31,9 @@ struct Relu6CompileInfo {};
 
 class Relu6TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Relu6TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Relu6TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Relu6TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Relu6TilingTest TearDown" << std::endl; }
 };
 
 static void Relu6TilingTestCase(std::initializer_list<int64_t> inputShape, ge::DataType dtype,
@@ -71,21 +65,21 @@ static void Relu6TilingTestCase(std::initializer_list<int64_t> inputShape, ge::D
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6")->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6")->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(1, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -122,40 +116,22 @@ TEST_F(Relu6TilingTest, test_tiling_fp16_001)
     Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_FLOAT16, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(Relu6TilingTest, test_tiling_fp32_002)
-{
-    Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_FLOAT, ge::GRAPH_SUCCESS);
-}
+TEST_F(Relu6TilingTest, test_tiling_fp32_002) { Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_FLOAT, ge::GRAPH_SUCCESS); }
 
-TEST_F(Relu6TilingTest, test_tiling_int32_003)
-{
-    Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_INT32, ge::GRAPH_SUCCESS);
-}
+TEST_F(Relu6TilingTest, test_tiling_int32_003) { Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_INT32, ge::GRAPH_SUCCESS); }
 
-TEST_F(Relu6TilingTest, test_tiling_bf16_004)
-{
-    Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_BF16, ge::GRAPH_SUCCESS);
-}
+TEST_F(Relu6TilingTest, test_tiling_bf16_004) { Relu6TilingTestCase({1, 64, 2, 64}, ge::DT_BF16, ge::GRAPH_SUCCESS); }
 
-TEST_F(Relu6TilingTest, test_tiling_small_shape_005)
-{
-    Relu6TilingTestCase({4, 2}, ge::DT_FLOAT, ge::GRAPH_SUCCESS);
-}
+TEST_F(Relu6TilingTest, test_tiling_small_shape_005) { Relu6TilingTestCase({4, 2}, ge::DT_FLOAT, ge::GRAPH_SUCCESS); }
 
 TEST_F(Relu6TilingTest, test_tiling_large_shape_006)
 {
     Relu6TilingTestCase({256, 1024, 64}, ge::DT_FLOAT16, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(Relu6TilingTest, test_tiling_1d_shape_007)
-{
-    Relu6TilingTestCase({8192}, ge::DT_FLOAT, ge::GRAPH_SUCCESS);
-}
+TEST_F(Relu6TilingTest, test_tiling_1d_shape_007) { Relu6TilingTestCase({8192}, ge::DT_FLOAT, ge::GRAPH_SUCCESS); }
 
-TEST_F(Relu6TilingTest, test_tiling_scalar_shape_008)
-{
-    Relu6TilingTestCase({1}, ge::DT_FLOAT16, ge::GRAPH_SUCCESS);
-}
+TEST_F(Relu6TilingTest, test_tiling_scalar_shape_008) { Relu6TilingTestCase({1}, ge::DT_FLOAT16, ge::GRAPH_SUCCESS); }
 
 TEST_F(Relu6TilingTest, test_tiling_empty_tensor_009)
 {

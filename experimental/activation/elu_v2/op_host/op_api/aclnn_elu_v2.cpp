@@ -23,18 +23,13 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool IsDtypeSupported(DataType dtype)
-{
-    return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsDtypeSupported(DataType dtype) { return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST); }
 
-static bool CheckNotNull(
-    const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale,
-    const aclTensor* out)
+static bool CheckNotNull(const aclTensor* self, const aclScalar* alpha, const aclScalar* scale,
+                         const aclScalar* inputScale, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(alpha, return false);
@@ -43,13 +38,12 @@ static bool CheckNotNull(
     OP_CHECK_NULL(out, return false);
     return true;
 }
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale,
-    const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* self, const aclScalar* alpha, const aclScalar* scale,
+                            const aclScalar* inputScale, const aclTensor* out)
 {
     // Output dtype must match input dtype
     OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
-    
+
     if (!IsDtypeSupported(self->GetDataType())) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "Dtype not supported: dtype=%d. "
@@ -60,25 +54,22 @@ static bool CheckDtypeValid(
 
     // 检查scale的数据类型能否转换为FLOAT
     if (!CanCast(scale->GetDataType(), DataType::DT_FLOAT)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "scale dtype %s can not cast to float32.",
-            ToString(scale->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dtype %s can not cast to float32.",
+                ToString(scale->GetDataType()).GetString());
         return false;
     }
 
     // 检查alpha的数据类型能否转换为FLOAT
     if (!CanCast(alpha->GetDataType(), DataType::DT_FLOAT)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "alpha dtype %s can not cast to float32.",
-            ToString(alpha->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alpha dtype %s can not cast to float32.",
+                ToString(alpha->GetDataType()).GetString());
         return false;
     }
 
     // 检查inputScale的数据类型能否转换为FLOAT
     if (!CanCast(inputScale->GetDataType(), DataType::DT_FLOAT)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "inputScale dtype %s can not cast to float32.",
-            ToString(inputScale->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inputScale dtype %s can not cast to float32.",
+                ToString(inputScale->GetDataType()).GetString());
         return false;
     }
 
@@ -91,14 +82,12 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
     auto formatOut = out->GetStorageFormat();
 
     if (IsPrivateFormat(formatSelf) || IsPrivateFormat(formatOut)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Private format not supported: self=%d, out=%d",
-                static_cast<int>(formatSelf), static_cast<int>(formatOut));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format not supported: self=%d, out=%d", static_cast<int>(formatSelf),
+                static_cast<int>(formatOut));
         return false;
     }
     return true;
 }
-
 
 static bool CheckShape(const aclTensor* self, const aclTensor* out)
 {
@@ -107,9 +96,8 @@ static bool CheckShape(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale,
-    const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* alpha, const aclScalar* scale,
+                               const aclScalar* inputScale, const aclTensor* out)
 {
     if (!CheckNotNull(self, alpha, scale, inputScale, out)) {
         OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed");
@@ -132,10 +120,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-
-extern "C" aclnnStatus aclnnEluV2GetWorkspaceSize(
-    const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnEluV2GetWorkspaceSize(const aclTensor* self, const aclScalar* alpha, const aclScalar* scale,
+                                                  const aclScalar* inputScale, aclTensor* out, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnEluV2, DFX_IN(self, alpha, scale, inputScale), DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -154,7 +141,8 @@ extern "C" aclnnStatus aclnnEluV2GetWorkspaceSize(
     auto contiguousSelf = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(contiguousSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor* opResult = l0op::EluV2(contiguousSelf, alpha->ToFloat(), scale->ToFloat(), inputScale->ToFloat(), uniqueExecutor.get());
+    const aclTensor* opResult = l0op::EluV2(contiguousSelf, alpha->ToFloat(), scale->ToFloat(), inputScale->ToFloat(),
+                                            uniqueExecutor.get());
     CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResult = l0op::ViewCopy(opResult, out, uniqueExecutor.get());
@@ -164,7 +152,6 @@ extern "C" aclnnStatus aclnnEluV2GetWorkspaceSize(
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
-
 
 extern "C" aclnnStatus aclnnEluV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {

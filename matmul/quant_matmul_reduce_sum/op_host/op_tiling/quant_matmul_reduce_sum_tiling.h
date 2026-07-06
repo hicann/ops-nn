@@ -45,7 +45,7 @@ public:
     int64_t baseM = 0;
     int64_t baseN = 0;
     int64_t baseK = 0;
-    bool initFlag = false;  // 避免重复解析flag
+    bool initFlag = false; // 避免重复解析flag
     bool transA = false;
     bool transB = false;
     bool isPertoken = false;
@@ -55,20 +55,16 @@ public:
     ge::DataType yDtype = ge::DT_BF16;
     ge::DataType x1scaleDtype = ge::DT_FLOAT;
     ge::DataType x2scaleDtype = ge::DT_BF16;
-    const char *opName = "QuantMatmulReduceSum";
+    const char* opName = "QuantMatmulReduceSum";
 };
 
 class QuantMatmulReduceSumTiling : public TilingBaseClass {
 public:
-    explicit QuantMatmulReduceSumTiling(gert::TilingContext* context) : TilingBaseClass(context){
-        InitCompileInfo();
-    };
+    explicit QuantMatmulReduceSumTiling(gert::TilingContext* context) : TilingBaseClass(context) { InitCompileInfo(); };
     ~QuantMatmulReduceSumTiling() override = default;
 
 protected:
-    bool IsCapable() override {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
@@ -94,12 +90,12 @@ protected:
     ge::graphStatus CalUbSize();
     bool SetMatmulTiling();
     bool SetQbmmTiling();
-    
+
     QuantMatmulReduceSumTilingData tilingData_;
     QuantMatmulReduceSumInfo inputParams_;
     bool isUbQuant_ = false;
     QuantMatmulReduceSumCompileInfo compileInfo_;
     size_t tilingDataSize_ = 0;
 };
-}  // namespace optiling
-#endif  // __OP_HOST_QUANT_MATMUL_REDUCE_SUM_TILING_H__
+} // namespace optiling
+#endif // __OP_HOST_QUANT_MATMUL_REDUCE_SUM_TILING_H__

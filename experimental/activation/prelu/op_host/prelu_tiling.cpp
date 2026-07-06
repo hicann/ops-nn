@@ -61,9 +61,9 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAndDtypeInfo(
-    gert::TilingContext* context, int64_t& totalNum, int64_t& weightSize, int64_t& weightMode,
-    int64_t& channelSize, int64_t& innerSize, int64_t& rowNum, ge::DataType& dataType, uint32_t& typeLength)
+static ge::graphStatus GetShapeAndDtypeInfo(gert::TilingContext* context, int64_t& totalNum, int64_t& weightSize,
+                                            int64_t& weightMode, int64_t& channelSize, int64_t& innerSize,
+                                            int64_t& rowNum, ge::DataType& dataType, uint32_t& typeLength)
 {
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
@@ -75,13 +75,11 @@ static ge::graphStatus GetShapeAndDtypeInfo(
     auto xShape = inputX->GetStorageShape();
     auto wShape = inputWeight->GetStorageShape();
     auto yShape = outputY->GetStorageShape();
-    OP_CHECK_IF(
-        xShape.GetDimNum() != yShape.GetDimNum(), OP_LOGE(context, "Prelu: x/y rank mismatch"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDimNum() != yShape.GetDimNum(), OP_LOGE(context, "Prelu: x/y rank mismatch"),
+                return ge::GRAPH_FAILED);
     for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
-        OP_CHECK_IF(
-            xShape.GetDim(i) != yShape.GetDim(i), OP_LOGE(context, "Prelu: x/y shape mismatch"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xShape.GetDim(i) != yShape.GetDim(i), OP_LOGE(context, "Prelu: x/y shape mismatch"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto xDesc = context->GetInputDesc(0);
@@ -92,20 +90,17 @@ static ge::graphStatus GetShapeAndDtypeInfo(
     OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
 
     dataType = xDesc->GetDataType();
-    OP_CHECK_IF(
-        dataType != ge::DT_FLOAT && dataType != ge::DT_FLOAT16 && dataType != ge::DT_BF16,
-        OP_LOGE(context, "Prelu: unsupported dtype"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        weightDesc->GetDataType() != dataType || yDesc->GetDataType() != dataType,
-        OP_LOGE(context, "Prelu: x, weight and y must have the same dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataType != ge::DT_FLOAT && dataType != ge::DT_FLOAT16 && dataType != ge::DT_BF16,
+                OP_LOGE(context, "Prelu: unsupported dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(weightDesc->GetDataType() != dataType || yDesc->GetDataType() != dataType,
+                OP_LOGE(context, "Prelu: x, weight and y must have the same dtype"), return ge::GRAPH_FAILED);
 
     ge::TypeUtils::GetDataTypeLength(dataType, typeLength);
     OP_CHECK_IF(typeLength == 0, OP_LOGE(context, "Prelu: dtype length is 0"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        wShape.GetDimNum() != 1,
-        OP_LOGE(context, "Prelu: weight must be 1-D, got dim num %zu", wShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(wShape.GetDimNum() != 1,
+                OP_LOGE(context, "Prelu: weight must be 1-D, got dim num %zu", wShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
     weightSize = wShape.GetDim(0);
     OP_CHECK_IF(weightSize <= 0, OP_LOGE(context, "Prelu: weight size must be positive"), return ge::GRAPH_FAILED);
 
@@ -114,20 +109,14 @@ static ge::graphStatus GetShapeAndDtypeInfo(
     innerSize = 1;
     rowNum = 0;
     if (weightSize != 1) {
-        OP_CHECK_IF(
-            xShape.GetDimNum() < 2,
-            OP_LOGE(context, "Prelu: channel weight requires x rank >= 2"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xShape.GetDimNum() < 2, OP_LOGE(context, "Prelu: channel weight requires x rank >= 2"),
+                    return ge::GRAPH_FAILED);
         int64_t batchSize = xShape.GetDim(0);
-        OP_CHECK_IF(
-            batchSize <= 0,
-            OP_LOGE(context, "Prelu: N must be positive, got %ld", batchSize),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(batchSize <= 0, OP_LOGE(context, "Prelu: N must be positive, got %ld", batchSize),
+                    return ge::GRAPH_FAILED);
         channelSize = xShape.GetDim(1);
-        OP_CHECK_IF(
-            channelSize <= 0,
-            OP_LOGE(context, "Prelu: channel size must be positive, got %ld", channelSize),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(channelSize <= 0, OP_LOGE(context, "Prelu: channel size must be positive, got %ld", channelSize),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             weightSize != channelSize,
             OP_LOGE(context, "Prelu: weight size must be 1 or match channel size, weight size=%ld, channel size=%ld",
@@ -137,21 +126,15 @@ static ge::graphStatus GetShapeAndDtypeInfo(
         innerSize = 1;
         for (size_t i = 2; i < xShape.GetDimNum(); ++i) {
             int64_t dimValue = xShape.GetDim(i);
-            OP_CHECK_IF(
-                dimValue <= 0,
-                OP_LOGE(context, "Prelu: x dim %zu must be positive, got %ld", i, dimValue),
-                return ge::GRAPH_FAILED);
-            OP_CHECK_IF(
-                innerSize > std::numeric_limits<int64_t>::max() / dimValue,
-                OP_LOGE(context, "Prelu: L exceeds int64 range"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(dimValue <= 0, OP_LOGE(context, "Prelu: x dim %zu must be positive, got %ld", i, dimValue),
+                        return ge::GRAPH_FAILED);
+            OP_CHECK_IF(innerSize > std::numeric_limits<int64_t>::max() / dimValue,
+                        OP_LOGE(context, "Prelu: L exceeds int64 range"), return ge::GRAPH_FAILED);
             innerSize *= dimValue;
         }
-        OP_CHECK_IF(
-            static_cast<uint64_t>(batchSize) >
-                static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / static_cast<uint64_t>(channelSize),
-            OP_LOGE(context, "Prelu: rowNum exceeds int64 range"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(static_cast<uint64_t>(batchSize) >
+                        static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / static_cast<uint64_t>(channelSize),
+                    OP_LOGE(context, "Prelu: rowNum exceeds int64 range"), return ge::GRAPH_FAILED);
         rowNum = batchSize * channelSize;
         weightMode = 1;
     }
@@ -210,21 +193,15 @@ static uint64_t GetWeightVecBytesPerElement(ge::DataType dataType, uint32_t type
     return typeLength;
 }
 
-static uint64_t CeilDiv(uint64_t value, uint64_t factor)
-{
-    return (value + factor - 1U) / factor;
-}
+static uint64_t CeilDiv(uint64_t value, uint64_t factor) { return (value + factor - 1U) / factor; }
 
-static uint64_t AlignUp(uint64_t value, uint64_t align)
-{
-    return CeilDiv(value, align) * align;
-}
+static uint64_t AlignUp(uint64_t value, uint64_t align) { return CeilDiv(value, align) * align; }
 
-static ge::graphStatus CalcTiling(
-    gert::TilingContext* context, uint64_t ubSize, int64_t coreNum, int64_t totalNum, ge::DataType dataType,
-    uint32_t typeLength, int64_t weightMode, int64_t channelSize, int64_t innerSize, int64_t rowNum,
-    PreluTilingData* tiling, uint32_t& usedCoreNum, bool& useSplitLParallel, bool& useNcWeightReuse,
-    bool& useNcSplitCWeightReuse, bool& useNcResidentWeightReuse)
+static ge::graphStatus CalcTiling(gert::TilingContext* context, uint64_t ubSize, int64_t coreNum, int64_t totalNum,
+                                  ge::DataType dataType, uint32_t typeLength, int64_t weightMode, int64_t channelSize,
+                                  int64_t innerSize, int64_t rowNum, PreluTilingData* tiling, uint32_t& usedCoreNum,
+                                  bool& useSplitLParallel, bool& useNcWeightReuse, bool& useNcSplitCWeightReuse,
+                                  bool& useNcResidentWeightReuse)
 {
     useSplitLParallel = false;
     useNcWeightReuse = false;
@@ -234,9 +211,8 @@ static ge::graphStatus CalcTiling(
     uint64_t usableUbSize = (ubSize > UB_RESERVED_SIZE) ? (ubSize - UB_RESERVED_SIZE) : ubSize;
     uint64_t blockElementNum = BLOCK_SIZE / typeLength;
     uint64_t maxTileElements = usableUbSize / bufferBytesPerElement;
-    OP_CHECK_IF(
-        maxTileElements < blockElementNum, OP_LOGE(context, "Prelu: UB is too small for one aligned tile"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(maxTileElements < blockElementNum, OP_LOGE(context, "Prelu: UB is too small for one aligned tile"),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubFactor = (maxTileElements / blockElementNum) * blockElementNum;
 
@@ -258,7 +234,9 @@ static ge::graphStatus CalcTiling(
         if (blockFactor == 0) {
             blockFactor = coreAlignElementNum;
         }
-        uint64_t finalCoreNum = static_cast<uint64_t>(totalNum) == 0 ? 1U : CeilDiv(static_cast<uint64_t>(totalNum), blockFactor);
+        uint64_t finalCoreNum = static_cast<uint64_t>(totalNum) == 0 ?
+                                    1U :
+                                    CeilDiv(static_cast<uint64_t>(totalNum), blockFactor);
         finalCoreNum = std::min(coreLimit, finalCoreNum);
 
         uint64_t tailLength = 0;
@@ -277,15 +255,11 @@ static ge::graphStatus CalcTiling(
     }
 
     OP_CHECK_IF(innerSize <= 0, OP_LOGE(context, "Prelu: L must be positive"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        static_cast<uint64_t>(innerSize) > std::numeric_limits<uint64_t>::max() - blockElementNum + 1U,
-        OP_LOGE(context, "Prelu: L is too large to align"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(static_cast<uint64_t>(innerSize) > std::numeric_limits<uint64_t>::max() - blockElementNum + 1U,
+                OP_LOGE(context, "Prelu: L is too large to align"), return ge::GRAPH_FAILED);
     uint64_t innerSizeAligned = CeilDiv(static_cast<uint64_t>(innerSize), blockElementNum) * blockElementNum;
-    OP_CHECK_IF(
-        innerSizeAligned > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-        OP_LOGE(context, "Prelu: aligned L exceeds int64 range"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(innerSizeAligned > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                OP_LOGE(context, "Prelu: aligned L exceeds int64 range"), return ge::GRAPH_FAILED);
     uint64_t rowNumU64 = static_cast<uint64_t>(rowNum);
     tiling->formerNum = 0;
     tiling->formerLength = 0;
@@ -293,34 +267,32 @@ static ge::graphStatus CalcTiling(
     tiling->innerSizeAligned = static_cast<int64_t>(innerSizeAligned);
 
     uint64_t batchSize = rowNumU64 / static_cast<uint64_t>(channelSize);
-    bool preferWeightReuseByRow =
-        innerSize == 1 ||
-        (static_cast<uint64_t>(innerSize) <= SPLIT_C_WEIGHT_REUSE_MAX_INNER_SIZE &&
-         static_cast<uint64_t>(channelSize) >= LARGE_C_WEIGHT_REUSE_MIN_CHANNEL_SIZE) ||
-        (static_cast<uint64_t>(innerSize) <= LARGE_L_SPLIT_C_WEIGHT_REUSE_MAX_INNER_SIZE &&
-         static_cast<uint64_t>(channelSize) <= LARGE_L_SPLIT_C_WEIGHT_REUSE_MAX_CHANNEL_SIZE &&
-         static_cast<uint64_t>(channelSize) >= LARGE_C_WEIGHT_REUSE_MIN_CHANNEL_SIZE);
+    bool preferWeightReuseByRow = innerSize == 1 ||
+                                  (static_cast<uint64_t>(innerSize) <= SPLIT_C_WEIGHT_REUSE_MAX_INNER_SIZE &&
+                                   static_cast<uint64_t>(channelSize) >= LARGE_C_WEIGHT_REUSE_MIN_CHANNEL_SIZE) ||
+                                  (static_cast<uint64_t>(innerSize) <= LARGE_L_SPLIT_C_WEIGHT_REUSE_MAX_INNER_SIZE &&
+                                   static_cast<uint64_t>(channelSize) <=
+                                       LARGE_L_SPLIT_C_WEIGHT_REUSE_MAX_CHANNEL_SIZE &&
+                                   static_cast<uint64_t>(channelSize) >= LARGE_C_WEIGHT_REUSE_MIN_CHANNEL_SIZE);
     if (preferWeightReuseByRow && channelSize > 1 && batchSize > 0) {
-        OP_CHECK_IF(
-            static_cast<uint64_t>(channelSize) >
-                std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(innerSize),
-            OP_LOGE(context, "Prelu: C*L exceeds uint64 range"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(static_cast<uint64_t>(channelSize) >
+                        std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(innerSize),
+                    OP_LOGE(context, "Prelu: C*L exceeds uint64 range"), return ge::GRAPH_FAILED);
         uint64_t rowElements = static_cast<uint64_t>(channelSize) * static_cast<uint64_t>(innerSize);
         uint64_t alignedRowElements = AlignUp(rowElements, blockElementNum);
         uint64_t alignedChannelSize = AlignUp(static_cast<uint64_t>(channelSize), blockElementNum);
         uint64_t weightCacheBytesPerElement = GetNcWeightCacheBytesPerElement(dataType, typeLength);
         bool weightCacheSizeValid = alignedChannelSize <=
-            std::numeric_limits<uint64_t>::max() / weightCacheBytesPerElement;
+                                    std::numeric_limits<uint64_t>::max() / weightCacheBytesPerElement;
         uint64_t weightCacheBytes = weightCacheSizeValid ? alignedChannelSize * weightCacheBytesPerElement : 0U;
         uint64_t ncResidentWeightCacheBytes = dataType == ge::DT_BF16 ? weightCacheBytes : 0U;
         if (weightCacheSizeValid && weightCacheBytes < usableUbSize) {
-            uint64_t ncBufferBytesPerElement = innerSize == 1 ?
-                GetNcResidentWeightBufferBytesPerElement(dataType) : GetNcWeightReuseBufferBytesPerElement(dataType);
+            uint64_t ncBufferBytesPerElement = innerSize == 1 ? GetNcResidentWeightBufferBytesPerElement(dataType) :
+                                                                GetNcWeightReuseBufferBytesPerElement(dataType);
             uint64_t ncWeightCacheBytes = innerSize == 1 ? ncResidentWeightCacheBytes : weightCacheBytes;
-            uint64_t ncMaxTileElements =
-                ((usableUbSize - ncWeightCacheBytes) / ncBufferBytesPerElement / alignedRowElements) *
-                alignedRowElements;
+            uint64_t ncMaxTileElements = ((usableUbSize - ncWeightCacheBytes) / ncBufferBytesPerElement /
+                                          alignedRowElements) *
+                                         alignedRowElements;
             if (ncMaxTileElements >= alignedRowElements) {
                 uint64_t finalCoreNum = std::min(coreLimit, batchSize);
                 tiling->tileLength = static_cast<int64_t>(ncMaxTileElements);
@@ -337,25 +309,21 @@ static ge::graphStatus CalcTiling(
         }
 
         if (innerSize == 1) {
-            uint64_t splitCBytesPerElement =
-                weightCacheBytesPerElement + GetNcWeightReuseBufferBytesPerElement(dataType);
+            uint64_t splitCBytesPerElement = weightCacheBytesPerElement +
+                                             GetNcWeightReuseBufferBytesPerElement(dataType);
             uint64_t maxSplitCElements = usableUbSize / splitCBytesPerElement;
             uint64_t splitCTileLength = (maxSplitCElements / blockElementNum) * blockElementNum;
             if (splitCTileLength >= blockElementNum) {
                 uint64_t cTileNum = CeilDiv(static_cast<uint64_t>(channelSize), splitCTileLength);
-                OP_CHECK_IF(
-                    cTileNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-                    OP_LOGE(context, "Prelu: split-C tile count exceeds int64 range"),
-                    return ge::GRAPH_FAILED);
-                OP_CHECK_IF(
-                    batchSize > std::numeric_limits<uint64_t>::max() / cTileNum,
-                    OP_LOGE(context, "Prelu: split-C total task count exceeds uint64 range"),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(cTileNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                            OP_LOGE(context, "Prelu: split-C tile count exceeds int64 range"), return ge::GRAPH_FAILED);
+                OP_CHECK_IF(batchSize > std::numeric_limits<uint64_t>::max() / cTileNum,
+                            OP_LOGE(context, "Prelu: split-C total task count exceeds uint64 range"),
+                            return ge::GRAPH_FAILED);
                 uint64_t totalTaskNum = batchSize * cTileNum;
-                OP_CHECK_IF(
-                    totalTaskNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-                    OP_LOGE(context, "Prelu: split-C total task count exceeds int64 range"),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(totalTaskNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                            OP_LOGE(context, "Prelu: split-C total task count exceeds int64 range"),
+                            return ge::GRAPH_FAILED);
                 uint64_t finalCoreNum = std::min(coreLimit, totalTaskNum);
                 tiling->tileLength = static_cast<int64_t>(splitCTileLength);
                 tiling->innerSizeAligned = static_cast<int64_t>(splitCTileLength);
@@ -368,28 +336,25 @@ static ge::graphStatus CalcTiling(
                 return ge::GRAPH_SUCCESS;
             }
         } else {
-            uint64_t splitCBytesPerChannel =
-                weightCacheBytesPerElement +
-                GetNcWeightReuseBufferBytesPerElement(dataType) * static_cast<uint64_t>(innerSize);
+            uint64_t splitCBytesPerChannel = weightCacheBytesPerElement +
+                                             GetNcWeightReuseBufferBytesPerElement(dataType) *
+                                                 static_cast<uint64_t>(innerSize);
             uint64_t maxSplitCChannels = usableUbSize / splitCBytesPerChannel;
             uint64_t splitCTileChannels = (maxSplitCChannels / blockElementNum) * blockElementNum;
             if (splitCTileChannels >= blockElementNum) {
-                uint64_t alignedSplitCElements =
-                    AlignUp(splitCTileChannels * static_cast<uint64_t>(innerSize), blockElementNum);
+                uint64_t alignedSplitCElements = AlignUp(splitCTileChannels * static_cast<uint64_t>(innerSize),
+                                                         blockElementNum);
                 uint64_t cTileNum = CeilDiv(static_cast<uint64_t>(channelSize), splitCTileChannels);
-                OP_CHECK_IF(
-                    cTileNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-                    OP_LOGE(context, "Prelu: small-L split-C tile count exceeds int64 range"),
-                    return ge::GRAPH_FAILED);
-                OP_CHECK_IF(
-                    batchSize > std::numeric_limits<uint64_t>::max() / cTileNum,
-                    OP_LOGE(context, "Prelu: small-L split-C total task count exceeds uint64 range"),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(cTileNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                            OP_LOGE(context, "Prelu: small-L split-C tile count exceeds int64 range"),
+                            return ge::GRAPH_FAILED);
+                OP_CHECK_IF(batchSize > std::numeric_limits<uint64_t>::max() / cTileNum,
+                            OP_LOGE(context, "Prelu: small-L split-C total task count exceeds uint64 range"),
+                            return ge::GRAPH_FAILED);
                 uint64_t totalTaskNum = batchSize * cTileNum;
-                OP_CHECK_IF(
-                    totalTaskNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-                    OP_LOGE(context, "Prelu: small-L split-C total task count exceeds int64 range"),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(totalTaskNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                            OP_LOGE(context, "Prelu: small-L split-C total task count exceeds int64 range"),
+                            return ge::GRAPH_FAILED);
                 uint64_t finalCoreNum = std::min(coreLimit, totalTaskNum);
                 if (finalCoreNum >= std::min(coreLimit, MIN_SPLIT_C_WEIGHT_REUSE_CORE_NUM)) {
                     tiling->tileLength = static_cast<int64_t>(splitCTileChannels);
@@ -410,25 +375,19 @@ static ge::graphStatus CalcTiling(
     uint64_t minParallelL = minParallelTileLength * MIN_PARALLEL_TILE_NUM;
     if (rowNumU64 * 2U <= coreLimit && static_cast<uint64_t>(innerSize) >= minParallelL) {
         uint64_t targetTilesPerRow = CeilDiv(coreLimit, rowNumU64);
-        uint64_t parallelTileLength =
-            AlignUp(CeilDiv(static_cast<uint64_t>(innerSize), targetTilesPerRow), minParallelTileLength);
+        uint64_t parallelTileLength = AlignUp(CeilDiv(static_cast<uint64_t>(innerSize), targetTilesPerRow),
+                                              minParallelTileLength);
         parallelTileLength = std::max(parallelTileLength, minParallelTileLength);
         parallelTileLength = std::min(parallelTileLength, ubFactor);
 
         uint64_t tilesPerRow = CeilDiv(static_cast<uint64_t>(innerSize), parallelTileLength);
-        OP_CHECK_IF(
-            tilesPerRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-            OP_LOGE(context, "Prelu: tilesPerRow exceeds int64 range"),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            rowNumU64 > std::numeric_limits<uint64_t>::max() / tilesPerRow,
-            OP_LOGE(context, "Prelu: totalTaskNum exceeds uint64 range"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tilesPerRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                    OP_LOGE(context, "Prelu: tilesPerRow exceeds int64 range"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(rowNumU64 > std::numeric_limits<uint64_t>::max() / tilesPerRow,
+                    OP_LOGE(context, "Prelu: totalTaskNum exceeds uint64 range"), return ge::GRAPH_FAILED);
         uint64_t totalTaskNum = rowNumU64 * tilesPerRow;
-        OP_CHECK_IF(
-            totalTaskNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-            OP_LOGE(context, "Prelu: totalTaskNum exceeds int64 range"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(totalTaskNum > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                    OP_LOGE(context, "Prelu: totalTaskNum exceeds int64 range"), return ge::GRAPH_FAILED);
 
         uint64_t finalCoreNum = std::min(coreLimit, totalTaskNum);
         uint64_t minBenefitCoreNum = std::min(coreLimit, rowNumU64 * 2U);
@@ -447,10 +406,8 @@ static ge::graphStatus CalcTiling(
     uint64_t finalCoreNum = rowNumU64 == 0 ? 1U : std::min(coreLimit, rowNumU64);
     if (innerSizeAligned > ubFactor) {
         uint64_t tilesPerRow = CeilDiv(static_cast<uint64_t>(innerSize), ubFactor);
-        OP_CHECK_IF(
-            tilesPerRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
-            OP_LOGE(context, "Prelu: tilesPerRow exceeds int64 range"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tilesPerRow > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                    OP_LOGE(context, "Prelu: tilesPerRow exceeds int64 range"), return ge::GRAPH_FAILED);
         tiling->tilesPerRow = static_cast<int64_t>(tilesPerRow);
     }
     tiling->usedCoreNum = static_cast<int64_t>(finalCoreNum);
@@ -464,15 +421,11 @@ static ge::graphStatus PreluTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     int64_t totalNum = 0;
     int64_t weightSize = 1;
@@ -482,11 +435,9 @@ static ge::graphStatus PreluTilingFunc(gert::TilingContext* context)
     int64_t rowNum = 0;
     ge::DataType dataType = ge::DT_FLOAT;
     uint32_t typeLength = 0;
-    OP_CHECK_IF(
-        GetShapeAndDtypeInfo(context, totalNum, weightSize, weightMode, channelSize, innerSize, rowNum, dataType, typeLength) !=
-            ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAndDtypeInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAndDtypeInfo(context, totalNum, weightSize, weightMode, channelSize, innerSize, rowNum,
+                                     dataType, typeLength) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAndDtypeInfo error"), return ge::GRAPH_FAILED);
 
     PreluTilingData* tiling = context->GetTilingData<PreluTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -496,13 +447,10 @@ static ge::graphStatus PreluTilingFunc(gert::TilingContext* context)
     bool useNcWeightReuse = false;
     bool useNcSplitCWeightReuse = false;
     bool useNcResidentWeightReuse = false;
-    OP_CHECK_IF(
-        CalcTiling(context, ubSize, coreNum, totalNum, dataType, typeLength, weightMode, channelSize, innerSize,
-            rowNum, tiling, usedCoreNum, useSplitLParallel, useNcWeightReuse, useNcSplitCWeightReuse,
-            useNcResidentWeightReuse) !=
-            ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "CalcTiling error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcTiling(context, ubSize, coreNum, totalNum, dataType, typeLength, weightMode, channelSize, innerSize,
+                           rowNum, tiling, usedCoreNum, useSplitLParallel, useNcWeightReuse, useNcSplitCWeightReuse,
+                           useNcResidentWeightReuse) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CalcTiling error"), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(usedCoreNum);
 

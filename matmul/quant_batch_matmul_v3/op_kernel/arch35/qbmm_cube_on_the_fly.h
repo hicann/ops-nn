@@ -34,7 +34,7 @@ constexpr uint64_t DEQ_SCALE_MUL = 0xFFFFE000;
 
 namespace ASW {
 template <bool isLut, class x2Type, FusedOpType fusedOpType>
-constexpr auto cfg_v = []{
+constexpr auto cfg_v = [] {
     auto cfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG;
     if constexpr (isLut) {
         cfg = CFG_NORM;
@@ -53,7 +53,7 @@ constexpr auto cfg_v = []{
     }
     return cfg;
 }();
-}
+} // namespace ASW
 
 template <class x1Type, class x2Type, class inputScaleType, class biasType, class yType, CubeFormat formatX1,
           CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, bool isLut = false,
@@ -63,9 +63,9 @@ public:
     __aicore__ inline MatMulASWKernel() {}
     // 分成两个Init函数，包含x2Table和不包含x2Table, 分别用于qbmmv4,qbmmv3
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale,
-                                GM_ADDR x2Table, GM_ADDR cGM, GM_ADDR workSpace, const void *tilingData, TPipe *que);
+                                GM_ADDR x2Table, GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData, TPipe* que);
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale,
-                                GM_ADDR cGM, GM_ADDR workSpace, const void *tilingData, TPipe *que);
+                                GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData, TPipe* que);
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale,
                                             GM_ADDR perTokenScale, GM_ADDR x2Table, GM_ADDR cGM, GM_ADDR workSpace);
     __aicore__ inline void Process();
@@ -77,7 +77,7 @@ protected:
     GlobalTensor<uint64_t> x2TableGlobal_;
 
     uint32_t blockIdx_;
-    const DequantBmm::QuantBatchMatmulV3TilingDataParams *quantBmmTilingData_;
+    const DequantBmm::QuantBatchMatmulV3TilingDataParams* quantBmmTilingData_;
 
     GlobalTensor<x1Type> aGlobal_;
     GlobalTensor<x2Type> bGlobal_;
@@ -89,8 +89,8 @@ protected:
     GlobalTensor<fp8_e8m0_t> scaleBGlobal_;
     GlobalTensor<uint64_t> scaleGlobal_;
 
-    using scaleType =
-        typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t, inputScaleType>::type;
+    using scaleType = typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t,
+                                                    inputScaleType>::type;
     using aType = typename AscendC::Conditional<
         DequantBmm::IsMxType<scaleType>(),
         matmul::MatmulTypeWithScale<AscendC::TPosition::GM, AscendC::TPosition::GM, formatX1, x1Type, aTrans>,
@@ -114,13 +114,13 @@ LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias,
                                                                          GM_ADDR scale, GM_ADDR perTokenScale,
                                                                          GM_ADDR x2Table, GM_ADDR cGM,
-                                                                         GM_ADDR workSpace, const void *tilingData,
-                                                                         TPipe *que)
+                                                                         GM_ADDR workSpace, const void* tilingData,
+                                                                         TPipe* que)
 {
     if ASCEND_IS_AIV {
         return;
     }
-    quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
     blockIdx_ = GetBlockIdx();
     UpdateGlobalAddr(aGM, bGM, bias, scale, perTokenScale, x2Table, cGM, workSpace);
     mm_.SetSubBlockIdx(0);
@@ -131,12 +131,12 @@ LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias,
                                                                          GM_ADDR scale, GM_ADDR perTokenScale,
                                                                          GM_ADDR cGM, GM_ADDR workSpace,
-                                                                         const void *tilingData, TPipe *que)
+                                                                         const void* tilingData, TPipe* que)
 {
     if ASCEND_IS_AIV {
         return;
     }
-    quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
     blockIdx_ = GetBlockIdx();
     UpdateGlobalAddr(aGM, bGM, bias, scale, perTokenScale, nullptr, cGM, workSpace);
     mm_.SetSubBlockIdx(0);
@@ -155,28 +155,28 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::UpdateGlobal
         scaleAGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)perTokenScale);
         scaleBGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)scale);
     } else {
-        if (static_cast<bool>(quantBmmTilingData_->params.isDoubleScale)) {  // doubleScale
-            float deqScale = (*((__gm__ float *)scale)) * (*((__gm__ float *)perTokenScale));
-            uint32_t uint32Scale = *(reinterpret_cast<uint32_t *>(&deqScale));
-            block_.offset_.scaleScalar = uint32Scale & DEQ_SCALE_MUL;             // fixpipe只能取高19位
-        } else if (static_cast<bool>(quantBmmTilingData_->params.isPerTensor)) {  // pertensor
+        if (static_cast<bool>(quantBmmTilingData_->params.isDoubleScale)) { // doubleScale
+            float deqScale = (*((__gm__ float*)scale)) * (*((__gm__ float*)perTokenScale));
+            uint32_t uint32Scale = *(reinterpret_cast<uint32_t*>(&deqScale));
+            block_.offset_.scaleScalar = uint32Scale & DEQ_SCALE_MUL;            // fixpipe只能取高19位
+        } else if (static_cast<bool>(quantBmmTilingData_->params.isPerTensor)) { // pertensor
             if constexpr (!IsSameType<scaleType, uint64_t>::value) {
                 uint32_t uint32Scale = 0;
                 if constexpr (IsSameType<scaleType, bfloat16_t>::value) {
-                    uint16_t uint16Scale = *((__gm__ uint16_t *)scale);
+                    uint16_t uint16Scale = *((__gm__ uint16_t*)scale);
                     uint32Scale = static_cast<uint32_t>(uint16Scale << BMM_BLOCK_NUM);
                 } else {
-                    uint32Scale = *((__gm__ uint32_t *)scale);
+                    uint32Scale = *((__gm__ uint32_t*)scale);
                 }
                 block_.offset_.scaleScalar = uint32Scale & DEQ_SCALE_MUL;
             } else {
-                block_.offset_.scaleScalar = *((__gm__ uint64_t *)scale);
+                block_.offset_.scaleScalar = *((__gm__ uint64_t*)scale);
             }
         } else {
-            scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t *)scale);
+            scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t*)scale);
         }
         if constexpr (isLut) {
-            x2TableGlobal_.SetGlobalBuffer((__gm__ uint64_t *)x2Table);
+            x2TableGlobal_.SetGlobalBuffer((__gm__ uint64_t*)x2Table);
         }
     }
 
@@ -208,14 +208,14 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::Process()
 LOCAL_TEMPLATE_CLASS_PARAMS
 __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::ComputeBmmOptiLoop()
 {
-    uint64_t batchC3C4 =
-        static_cast<uint64_t>(quantBmmTilingData_->params.batchC3) * quantBmmTilingData_->params.batchC4;
+    uint64_t batchC3C4 = static_cast<uint64_t>(quantBmmTilingData_->params.batchC3) *
+                         quantBmmTilingData_->params.batchC4;
     uint64_t batchC2C3C4 = quantBmmTilingData_->params.batchC2 * batchC3C4;
-    uint64_t batchB3B4 =
-        static_cast<uint64_t>(quantBmmTilingData_->params.batchB3) * quantBmmTilingData_->params.batchB4;
+    uint64_t batchB3B4 = static_cast<uint64_t>(quantBmmTilingData_->params.batchB3) *
+                         quantBmmTilingData_->params.batchB4;
     uint64_t batchB2B3B4 = quantBmmTilingData_->params.batchB2 * batchB3B4;
-    uint64_t batchA3A4 =
-        static_cast<uint64_t>(quantBmmTilingData_->params.batchA3) * quantBmmTilingData_->params.batchA4;
+    uint64_t batchA3A4 = static_cast<uint64_t>(quantBmmTilingData_->params.batchA3) *
+                         quantBmmTilingData_->params.batchA4;
     uint64_t batchA2A3A4 = quantBmmTilingData_->params.batchA2 * batchA3A4;
     uint32_t multiA1C1 = quantBmmTilingData_->params.batchA1 / quantBmmTilingData_->params.batchC1;
     uint32_t multiA2C2 = quantBmmTilingData_->params.batchA2 / quantBmmTilingData_->params.batchC2;
@@ -297,5 +297,4 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::SetMMParaAnd
     mm_.Iterate();
     mm_.GetTensorC(cGlobal_[block_.offset_.offsetC]);
 }
-}
-
+} // namespace AscendC

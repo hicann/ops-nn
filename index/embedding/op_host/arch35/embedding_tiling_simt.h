@@ -49,23 +49,17 @@ struct EmbeddingCompileInfo {
 
 class EmbeddingTilingBase : public TilingBaseClass {
 public:
-    explicit EmbeddingTilingBase(gert::TilingContext *context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit EmbeddingTilingBase(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~EmbeddingTilingBase() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         TilingBaseClass::Reset(context);
         Reset();
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
@@ -92,7 +86,7 @@ private:
     int64_t XDtypeImprove();
     bool IsSimtTwoDim();
     int64_t aivNum_;
-    const char *opName_ = "";
+    const char* opName_ = "";
     EmbeddingTilingDataSimtTwoDim simtTwoDimTilingData_;
 #ifdef DAVID_FPGA
     int64_t threadNum_ = 128;
@@ -122,5 +116,5 @@ private:
     int32_t ubBlockSize_ = 32;
     int32_t vRegSize_ = 256;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_EMBEDDING_H
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_EMBEDDING_H

@@ -22,11 +22,7 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_
->
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_>
 class BlockSchedulerStreamKBuiltIn {
 public:
     int64_t usedCoreNum_{0};
@@ -49,9 +45,9 @@ public:
 
     bool isFp32_{false};
     bool isNdFormat_{true};
- 	bool isSplitSingleK_{false};
+    bool isSplitSingleK_{false};
     int64_t splitSingleKIdx_{0};
-    int64_t blkK_{0};   // blockK after spliting singlecoreK
+    int64_t blkK_{0}; // blockK after spliting singlecoreK
     int64_t splitSingleKRound_{0};
     int64_t splitSingleK_{1024}; // split singlecorek by 1024
     int64_t splitSingleKTail_{0};
@@ -75,9 +71,10 @@ public:
     struct Params {
         const MatMulV3BasicTilingData* tilingData;
     };
+
 public:
-    __aicore__ inline BlockSchedulerStreamKBuiltIn(
-        const ProblemShape& shape, const Params& params, bool isFp32 = false, bool isNdFormat = true)
+    __aicore__ inline BlockSchedulerStreamKBuiltIn(const ProblemShape& shape, const Params& params, bool isFp32 = false,
+                                                   bool isNdFormat = true)
         : isFp32_(isFp32), isNdFormat_(isNdFormat)
     {
         usedCoreNum_ = params.tilingData->usedCoreNum;
@@ -91,7 +88,7 @@ public:
         nL1_ = baseN_; // size of n in L1 & L0 & singlecore, per core use L1 once in stream k
 
         skKSingleCore_ = params.tilingData->skSingleCoreK; // size of k in singlecore
-        baseK_ = params.tilingData->baseK; // fix basek to 32, need to be adjusted by baseM, baseN, L0
+        baseK_ = params.tilingData->baseK;                 // fix basek to 32, need to be adjusted by baseM, baseN, L0
         kL1_ = params.tilingData->kL1;
 
         isHf32_ = params.tilingData->isHf32;
@@ -110,20 +107,11 @@ public:
         }
     }
 
-    __aicore__ inline int64_t GetTotalTileNum()
-    {
-        return tileNum_;
-    }
+    __aicore__ inline int64_t GetTotalTileNum() { return tileNum_; }
 
-    __aicore__ inline int64_t GetHf32Flag()
-    {
-        return isHf32_;
-    }
+    __aicore__ inline int64_t GetHf32Flag() { return isHf32_; }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape()
-    {
-        return {mL1_, nL1_, kL1_, 1};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape() { return {mL1_, nL1_, kL1_, 1}; }
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetMNKTileNum()
     {
@@ -146,10 +134,7 @@ public:
         return tilingBlockNum;
     }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape()
-    {
-        return {baseM_, baseN_, baseK_, 1};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape() { return {baseM_, baseN_, baseK_, 1}; }
 
     __aicore__ inline BlockShape GetSingleCoreShape(int64_t tileIdx)
     {
@@ -220,21 +205,10 @@ public:
     }
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInStreamKScheduler,
-    TransA_,
-    TransB_
-> {
-using SchedulerOp = BlockSchedulerStreamKBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInStreamKScheduler, TransA_,
+                              TransB_> {
+    using SchedulerOp = BlockSchedulerStreamKBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block

@@ -35,12 +35,9 @@
 #include "apply_proximal_adagrad.h"
 
 template <typename D_T_VAR, uint32_t PAD_TAIL, uint32_t HAS_L1>
-__global__ __aicore__ void apply_proximal_adagrad(
-    GM_ADDR var, GM_ADDR accum,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR accum_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_proximal_adagrad(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                                                  GM_ADDR grad, GM_ADDR var_out, GM_ADDR accum_out, GM_ADDR workspace,
+                                                  GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyProximalAdagradTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyProximalAdagradTilingData, tilingData, tiling);

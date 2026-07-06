@@ -48,15 +48,15 @@ public:
     int64_t argmaxWTail = 0;
     int64_t argmaxInnerLoop = 0;
     int64_t argmaxNcInnerTail = 0;
- 	int64_t argmaxNcOuterTail = 0;
- 	int64_t argmaxNcTailTail = 0;
- 	int64_t argmaxHInnerTail = 0;
- 	int64_t argmaxHOuterTail = 0;
- 	int64_t argmaxHTailTail = 0;
- 	int64_t argmaxWInnerTail = 0;
- 	int64_t argmaxWOuterTail = 0;
- 	int64_t argmaxWTailTail = 0;
- 	int64_t argmaxInnerLoopTail = 0;
+    int64_t argmaxNcOuterTail = 0;
+    int64_t argmaxNcTailTail = 0;
+    int64_t argmaxHInnerTail = 0;
+    int64_t argmaxHOuterTail = 0;
+    int64_t argmaxHTailTail = 0;
+    int64_t argmaxWInnerTail = 0;
+    int64_t argmaxWOuterTail = 0;
+    int64_t argmaxWTailTail = 0;
+    int64_t argmaxInnerLoopTail = 0;
 
 public:
     std::string ToString() const
@@ -75,11 +75,12 @@ public:
              << ", argmaxHInner:" << argmaxHInner << ", argmaxHOuter:" << argmaxHOuter
              << ", argmaxHTail:" << argmaxHTail << ", argmaxWInner:" << argmaxWInner
              << ", argmaxWOuter:" << argmaxWOuter << ", argmaxWTail:" << argmaxWTail
-             << ", argmaxInnerLoop:" << argmaxInnerLoop << ", argmaxNcInnerTail:" << argmaxNcInnerTail << ", argmaxNcOuterTail:"
- 	         << argmaxNcOuterTail << ", argmaxNcTailTail:" << argmaxNcTailTail << ", argmaxHInnerTail:" << argmaxHInnerTail
- 	         << ", argmaxHOuterTail:" << argmaxHOuterTail << ", argmaxHTailTail:" << argmaxHTailTail << ", argmaxWInnerTail:"
- 	         << argmaxWInnerTail << ", argmaxWOuterTail:" << argmaxWOuterTail << ", argmaxWTailTail:" << argmaxWTailTail
- 	         << ", argmaxInnerLoopTail:" << argmaxInnerLoopTail;
+             << ", argmaxInnerLoop:" << argmaxInnerLoop << ", argmaxNcInnerTail:" << argmaxNcInnerTail
+             << ", argmaxNcOuterTail:" << argmaxNcOuterTail << ", argmaxNcTailTail:" << argmaxNcTailTail
+             << ", argmaxHInnerTail:" << argmaxHInnerTail << ", argmaxHOuterTail:" << argmaxHOuterTail
+             << ", argmaxHTailTail:" << argmaxHTailTail << ", argmaxWInnerTail:" << argmaxWInnerTail
+             << ", argmaxWOuterTail:" << argmaxWOuterTail << ", argmaxWTailTail:" << argmaxWTailTail
+             << ", argmaxInnerLoopTail:" << argmaxInnerLoopTail;
         info << " }";
         return info.str();
     }
@@ -90,8 +91,7 @@ public:
     explicit MaxPoolGradWithArgmaxV3NCHWScalarTiling(gert::TilingContext* context)
         : MaxPoolGradWithArgmaxV3BaseTiling(context)
     {}
-    ~MaxPoolGradWithArgmaxV3NCHWScalarTiling() override
-    {}
+    ~MaxPoolGradWithArgmaxV3NCHWScalarTiling() override {}
 
 protected:
     void SetTilingData();
@@ -108,8 +108,8 @@ protected:
     void SetNormalInner();
     void SetTailInner();
     MaxPoolGradWithArgmaxV3ScalarTilingInfo scalarTilingData_;
-    int64_t hInputInner_ {0};
-    int64_t wInputInner_ {0};
+    int64_t hInputInner_{0};
+    int64_t wInputInner_{0};
 };
 
 } // namespace optiling

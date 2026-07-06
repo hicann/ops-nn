@@ -27,10 +27,7 @@ using namespace ge;
 
 class SigmoidCrossEntropyWithLogitsGradV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SigmoidCrossEntropyWithLogitsGradV2TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SigmoidCrossEntropyWithLogitsGradV2TilingTest SetUp" << std::endl; }
 
     static void TearDownTestCase()
     {
@@ -61,23 +58,22 @@ TEST_F(SigmoidCrossEntropyWithLogitsGradV2TilingTest, test_tiling_fp32_none)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
 
-    struct SigmoidCrossEntropyWithLogitsGradV2CompileInfo {
-    };
+    struct SigmoidCrossEntropyWithLogitsGradV2CompileInfo {};
     SigmoidCrossEntropyWithLogitsGradV2CompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     auto param = gert::TilingData::CreateCap(1024 * 1024);
     ASSERT_NE(param, nullptr);

@@ -24,10 +24,9 @@ constexpr int64_t B4_BITS = 4;
 ge::Format GetInputStorageFormat(const gert::TilingContext* context, size_t id)
 {
     auto desc = context->GetInputDesc(id);
-    OP_TILING_CHECK(
-        desc == nullptr,
-        OP_LOGE("dual_level_quant_batch_matmul_tiling", "get input[%zu] Desc is null!", id),
-        return ge::FORMAT_NULL);
+    OP_TILING_CHECK(desc == nullptr,
+                    OP_LOGE("dual_level_quant_batch_matmul_tiling", "get input[%zu] Desc is null!", id),
+                    return ge::FORMAT_NULL);
     return static_cast<ge::Format>(GetPrimaryFormat(desc->GetStorageFormat()));
 }
 } // namespace optiling::tool

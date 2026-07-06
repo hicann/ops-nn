@@ -63,21 +63,19 @@ static const std::string PASS_NAME = "DynamicQuantUpdateScatterV2FusionPass";
 
 using UniqueGraphPtr = std::unique_ptr<Graph>;
 
-static es::EsTensorHolder BuildPatternReshapeNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& x, const es::EsTensorHolder& shape)
+static es::EsTensorHolder BuildPatternReshapeNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& x,
+                                                  const es::EsTensorHolder& shape)
 {
     static int counter = 0;
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     std::string name = "Reshape_" + std::to_string(counter++);
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Reshape")
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"shape", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .Name(name.c_str())
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Reshape")
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"shape", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .Name(name.c_str())
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *shape.GetProducer(), shape.GetProducerOutIndex(), node, 1);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
@@ -89,10 +87,10 @@ static es::EsTensorHolder BuildPatternConstNode(es::EsGraphBuilder& builder)
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     std::string name = "Const_" + std::to_string(counter++);
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Const")
-        .Name(name.c_str())
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Const")
+                     .Name(name.c_str())
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
 
@@ -102,11 +100,11 @@ static es::EsTensorHolder BuildNegNode(es::EsGraphBuilder& builder, const es::Es
     std::string name = "Neg_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Neg")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Neg")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -117,11 +115,11 @@ static es::EsTensorHolder BuildUnsqueezeNode(es::EsGraphBuilder& builder, const 
     std::string name = "Unsqueeze_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Unsqueeze")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Unsqueeze")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -132,11 +130,11 @@ static es::EsTensorHolder BuildIdentityNode(es::EsGraphBuilder& builder, const e
     std::string name = "Identity_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Identity")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Identity")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -147,15 +145,13 @@ static es::EsTensorHolder BuildBitcastNode(es::EsGraphBuilder& builder, const es
     std::string name = "Bitcast_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Bitcast")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .IrDefAttrs({
-            {"type", es::CompliantNodeBuilder::kEsAttrRequired, "Int",
-             es::CreateFrom(static_cast<int64_t>(dt))}
-        })
-        .Build();
+                     .OpType("Bitcast")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .IrDefAttrs({{"type", es::CompliantNodeBuilder::kEsAttrRequired, "Int",
+                                   es::CreateFrom(static_cast<int64_t>(dt))}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -172,58 +168,47 @@ static DynamicQuantV2Result BuildDynamicQuantV2Node(es::EsGraphBuilder& builder,
     std::string name = "DynamicQuantV2_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("DynamicQuantV2")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-            {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-        })
-        .IrDefOutputs({
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"offset", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .Build();
+                     .OpType("DynamicQuantV2")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                   {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"offset", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
-    return {
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 2))
-    };
+    return {es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 2))};
 }
 
-static es::EsTensorHolder BuildScatterNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& var,
-    const es::EsTensorHolder& indices, const es::EsTensorHolder& updates, const char* reduce)
+static es::EsTensorHolder BuildScatterNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& var,
+                                           const es::EsTensorHolder& indices, const es::EsTensorHolder& updates,
+                                           const char* reduce)
 {
     static int counter = 0;
     std::string name = "Scatter_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Scatter")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"var", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .IrDefOutputs({{"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .IrDefAttrs({
-            {"reduce", es::CompliantNodeBuilder::kEsAttrOptional, "String",
-             es::CreateFrom(ge::AscendString(reduce))},
-            {"axis", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
-             es::CreateFrom(static_cast<int64_t>(0))}
-        })
-        .Build();
+                     .OpType("Scatter")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"var", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .IrDefAttrs({{"reduce", es::CompliantNodeBuilder::kEsAttrOptional, "String",
+                                   es::CreateFrom(ge::AscendString(reduce))},
+                                  {"axis", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
+                                   es::CreateFrom(static_cast<int64_t>(0))}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *var.GetProducer(), var.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *indices.GetProducer(), indices.GetProducerOutIndex(), node, 1);
     es::AddEdgeAndUpdatePeerDesc(*graph, *updates.GetProducer(), updates.GetProducerOutIndex(), node, 2);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
 
-static void MakePatternForDynamicQuantUpdateScatterV2(
-    std::vector<PatternUniqPtr>& pattern_graphs, bool has_identity)
+static void MakePatternForDynamicQuantUpdateScatterV2(std::vector<PatternUniqPtr>& pattern_graphs, bool has_identity)
 {
     std::string pattern_name = has_identity ? "patternDQUSv2WithIdentity" : "patternDQUSv2";
     auto graph_builder = es::EsGraphBuilder(pattern_name.c_str());
@@ -244,8 +229,8 @@ static void MakePatternForDynamicQuantUpdateScatterV2(
     // The actual graph has 2 Reshapes after Bitcast (dynamic_const shape + static Const shape)
     auto y = BuildPatternReshapeNode(graph_builder, dqv2.y, BuildPatternConstNode(graph_builder));
     y = BuildBitcastNode(graph_builder, y, DT_INT32);
-    y = BuildPatternReshapeNode(graph_builder, y, BuildPatternConstNode(graph_builder));  // dynamic shape reshape
-    y = BuildPatternReshapeNode(graph_builder, y, BuildPatternConstNode(graph_builder));  // static shape reshape
+    y = BuildPatternReshapeNode(graph_builder, y, BuildPatternConstNode(graph_builder)); // dynamic shape reshape
+    y = BuildPatternReshapeNode(graph_builder, y, BuildPatternConstNode(graph_builder)); // static shape reshape
     y = BuildScatterNode(graph_builder, scatter_var0, indices, y, "update");
 
     // Post-Scatter path: Scatter → Reshape → Bitcast → Reshape
@@ -343,8 +328,8 @@ static bool IsAllNodeNotNull(const std::vector<NodeIo>& input_nodes)
     AscendString node_type;
     for (const auto& input_node : input_nodes) {
         input_node.node.GetType(node_type);
-        OP_LOGE_IF(
-            &input_node.node == nullptr, false, PASS_NAME.c_str(), "node %s can't be null.", node_type.GetString());
+        OP_LOGE_IF(&input_node.node == nullptr, false, PASS_NAME.c_str(), "node %s can't be null.",
+                   node_type.GetString());
     }
     OPS_LOG_I(PASS_NAME.c_str(), "All nodes not null.");
     return true;
@@ -371,7 +356,8 @@ static bool IsAllInputShapeRight(std::vector<Shape>& input_shapes)
         OPS_LOG_I(PASS_NAME.c_str(), "var shape is not right.");
         return false;
     }
-    if (input0_shape.GetDims().at(IDX_2) != IDX_1 || input0_shape.GetDims().at(IDX_3) * IDX_8 != x_shape.GetDims().at(IDX_2)) {
+    if (input0_shape.GetDims().at(IDX_2) != IDX_1 ||
+        input0_shape.GetDims().at(IDX_3) * IDX_8 != x_shape.GetDims().at(IDX_2)) {
         OPS_LOG_I(PASS_NAME.c_str(), "var size is not right.");
         return false;
     }
@@ -411,8 +397,8 @@ static Status InferShape(UniqueGraphPtr& replaceGraph, const std::vector<Subgrap
     return GeUtils::InferShape(*replaceGraph, input_shapes);
 }
 
-static void GetInputShapeAndDtype(
-    std::vector<Shape>& input_shapes, std::vector<DataType>& input_dtypes, const std::vector<NodeIo>& input_nodes)
+static void GetInputShapeAndDtype(std::vector<Shape>& input_shapes, std::vector<DataType>& input_dtypes,
+                                  const std::vector<NodeIo>& input_nodes)
 {
     OPS_LOG_I(PASS_NAME.c_str(), "Begin get input_shape and input_dtype.");
     for (const auto& input_node : input_nodes) {
@@ -446,8 +432,8 @@ static void GetInputShapeAndDtype(
     }
 }
 
-static void GetOutputDtype(
-    std::vector<DataType>& output_dtypes, const std::vector<NodeIo>& input_nodes, const std::vector<NodeIo>& output_nodes)
+static void GetOutputDtype(std::vector<DataType>& output_dtypes, const std::vector<NodeIo>& input_nodes,
+                           const std::vector<NodeIo>& output_nodes)
 {
     OPS_LOG_I(PASS_NAME.c_str(), "Begin get output_dtype.");
     for (const auto& input_node : input_nodes) {
@@ -566,7 +552,8 @@ UniqueGraphPtr DynamicQuantUpdateScatterV2FusionPass::Replacement(const std::uni
     std::vector<SubgraphInput> subgraph_inputs;
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);
 
-    es::DynamicQuantUpdateScatterV2Output dynamic_quant_update_scatter_v2 = es::DynamicQuantUpdateScatterV2(r_x, r_indices, r_In0_i4, r_In1, r_In2);
+    es::DynamicQuantUpdateScatterV2Output dynamic_quant_update_scatter_v2 = es::DynamicQuantUpdateScatterV2(
+        r_x, r_indices, r_In0_i4, r_In1, r_In2);
 
     std::vector<es::EsTensorHolder> replace_outputs;
     replace_outputs.emplace_back(dynamic_quant_update_scatter_v2.ref_var);
@@ -575,8 +562,8 @@ UniqueGraphPtr DynamicQuantUpdateScatterV2FusionPass::Replacement(const std::uni
 
     UniqueGraphPtr replaceGraph = replace_graph_builder.BuildAndReset(replace_outputs);
 
-    OP_LOGW_IF(
-        InferShape(replaceGraph, subgraph_inputs) != SUCCESS, PASS_NAME.c_str(), "Infershape for replacement failed.");
+    OP_LOGW_IF(InferShape(replaceGraph, subgraph_inputs) != SUCCESS, PASS_NAME.c_str(),
+               "Infershape for replacement failed.");
     return replaceGraph;
 }
 

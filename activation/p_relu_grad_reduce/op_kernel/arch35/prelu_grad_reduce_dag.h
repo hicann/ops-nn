@@ -22,8 +22,7 @@
 #include "atvoss/util/placeholder.h"
 #include "atvoss/reduce/reduce_operator.h"
 
-namespace PreluGradReduce
-{
+namespace PreluGradReduce {
 using namespace Ops::Base;
 using namespace AscendC;
 
@@ -38,6 +37,6 @@ struct PreluGradReduceDag {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-}  // namespace PreluGradReduce
+} // namespace PreluGradReduce
 
 #endif

@@ -642,9 +642,9 @@ aclnnStatus aclnnMedian(void* workspace, uint64_t workspaceSize, aclOpExecutor* 
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor *self, int64_t dim, bool keepDim,
-                                           aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize,
-                                           aclOpExecutor **executor) {
+aclnnStatus aclnnMedianDimGetWorkspaceSize(const aclTensor* self, int64_t dim, bool keepDim, aclTensor* valuesOut,
+                                           aclTensor* indicesOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
     L2_DFX_PHASE_1(aclnnMedianDim, DFX_IN(self, dim, keepDim), DFX_OUT(valuesOut, indicesOut));
@@ -942,9 +942,9 @@ static aclnnStatus ExecZeroDimNum(const aclTensor* self, int64_t dim, aclTensor*
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnNanMedianDimGetWorkspaceSize(const aclTensor *self, int64_t dim, bool keepDim,
-                                           aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize,
-                                           aclOpExecutor **executor) {
+aclnnStatus aclnnNanMedianDimGetWorkspaceSize(const aclTensor* self, int64_t dim, bool keepDim, aclTensor* valuesOut,
+                                              aclTensor* indicesOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
     L2_DFX_PHASE_1(aclnnNanMedianDim, DFX_IN(self, dim, keepDim), DFX_OUT(valuesOut, indicesOut));

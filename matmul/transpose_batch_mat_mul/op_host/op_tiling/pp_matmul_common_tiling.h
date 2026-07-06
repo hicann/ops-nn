@@ -16,7 +16,6 @@
 #ifndef __OP_HOST_PPMAT_MUL_COMMMON_TILING_H__
 #define __OP_HOST_PPMAT_MUL_COMMMON_TILING_H__
 
-
 #include <cmath>
 #include "pp_matmul_info.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -36,11 +35,11 @@ constexpr uint64_t NZ_SHAPE_SIZE = 4;
 constexpr uint64_t CUBE_BLOCK_SIZE = 256;
 constexpr uint64_t CUBE_BLOCK_SIZE_INT8 = 512;
 constexpr uint64_t L1AB_PINGPONG_BUFFER_SIZE = 262144;
-constexpr uint64_t L0AB_PINGPONG_BUFFER_SIZE_INT8 = 262144; // 131072 * 2 = 256 KB
-constexpr uint64_t L0AB_PINGPONG_BUFFER_SIZE_FP16 = 131072; // 128 KB
+constexpr uint64_t L0AB_PINGPONG_BUFFER_SIZE_INT8 = 262144;        // 131072 * 2 = 256 KB
+constexpr uint64_t L0AB_PINGPONG_BUFFER_SIZE_FP16 = 131072;        // 128 KB
 constexpr uint64_t L1AB_PINGPONG_BUFFER_SIZE_INT8_SPARSE = 163840; // 160 * 1024
-constexpr uint64_t UB_LIMIT_SIZE_910A = 131072; // 128 * 1024
-constexpr uint64_t UB_LIMIT_SIZE_PERTOKEN_ARCH20 = 131072; // 128 * 1024
+constexpr uint64_t UB_LIMIT_SIZE_910A = 131072;                    // 128 * 1024
+constexpr uint64_t UB_LIMIT_SIZE_PERTOKEN_ARCH20 = 131072;         // 128 * 1024
 
 template <uint64_t DIV>
 inline uint64_t CeilDiv(uint64_t num)
@@ -92,19 +91,20 @@ inline uint64_t RoundDown(uint64_t num, uint64_t rnd)
     return num / rnd * rnd;
 }
 
-inline uint64_t GetN0TilingLimit(bool compressFlag, uint64_t tilingN, const platform_ascendc::SocVersion &platformType)
+inline uint64_t GetN0TilingLimit(bool compressFlag, uint64_t tilingN, const platform_ascendc::SocVersion& platformType)
 {
     if (compressFlag) {
         return std::min(tilingN * BLOCK_SIZE, AXES_ALIGN_SIZE_INT8);
     } else {
-        return (platformType == platform_ascendc::SocVersion::ASCEND310P || platformType == platform_ascendc::SocVersion::ASCEND910)
-                   ? AXES_ALIGN_SIZE
-                   : AXES_ALIGN_SIZE_INT8;
+        return (platformType == platform_ascendc::SocVersion::ASCEND310P ||
+                platformType == platform_ascendc::SocVersion::ASCEND910) ?
+                   AXES_ALIGN_SIZE :
+                   AXES_ALIGN_SIZE_INT8;
     }
 }
 
 template <typename OpShareType>
-inline uint64_t GetN0TilingInit(const OpShareType &opShape, bool compressFlag, uint64_t tilingN)
+inline uint64_t GetN0TilingInit(const OpShareType& opShape, bool compressFlag, uint64_t tilingN)
 {
     const uint64_t RND = 16UL;
     if (compressFlag) {
@@ -119,25 +119,25 @@ inline uint64_t GetN0TilingInit(const OpShareType &opShape, bool compressFlag, u
 }
 
 template <bool PRI_FLAG>
-inline bool IsExceedTilingLimit(uint64_t axes0, uint64_t priAxes0,
-                                uint64_t n0TilingLimit, platform_ascendc::SocVersion platformType,
-                                uint64_t basicBlockSize, const bool isPertokenArch20)
+inline bool IsExceedTilingLimit(uint64_t axes0, uint64_t priAxes0, uint64_t n0TilingLimit,
+                                platform_ascendc::SocVersion platformType, uint64_t basicBlockSize,
+                                const bool isPertokenArch20)
 {
     return (PRI_FLAG && axes0 > n0TilingLimit) || (!PRI_FLAG && priAxes0 > n0TilingLimit) ||
            ((platformType == platform_ascendc::SocVersion::ASCEND910 && basicBlockSize > UB_LIMIT_SIZE_910A) ||
-            (platformType == platform_ascendc::SocVersion::ASCEND310P && isPertokenArch20 == true && 
-            basicBlockSize > UB_LIMIT_SIZE_PERTOKEN_ARCH20));
+            (platformType == platform_ascendc::SocVersion::ASCEND310P && isPertokenArch20 == true &&
+             basicBlockSize > UB_LIMIT_SIZE_PERTOKEN_ARCH20));
 }
 
 template <bool PRI_FLAG, typename OpShareType>
-inline void SetOpShapeAxesInfo(OpShareType &opShape, uint64_t priAxes0, uint64_t axes0)
+inline void SetOpShapeAxesInfo(OpShareType& opShape, uint64_t priAxes0, uint64_t axes0)
 {
     opShape.m0 = PRI_FLAG ? priAxes0 : axes0;
     opShape.n0 = PRI_FLAG ? axes0 : priAxes0;
 }
 
 template <typename HardwareType, typename OpShapeType, typename MatMulInfoType>
-inline float CostFunc(const HardwareType &hwInfor, OpShapeType &shape, const MatMulInfoType &mmInfo)
+inline float CostFunc(const HardwareType& hwInfor, OpShapeType& shape, const MatMulInfoType& mmInfo)
 {
     float aCoef = 1;
     float bCoef = 1;
@@ -162,19 +162,20 @@ inline float CostFunc(const HardwareType &hwInfor, OpShapeType &shape, const Mat
 
 // OpShareType is OpShape, TilingType is PpTilingData, HardwareType is  HardwareType, MatMulInfoType is MatMulInfo
 template <bool PRI_FLAG, typename OpShareType, typename TilingType, typename HardwareType, typename MatMulInfoType>
-void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareType &hwInfor,
-                const MatMulInfoType &mmInfo, bool compressFlag = false, const uint64_t tilingN = 1)
+void TilingFunc(OpShareType& opShape, TilingType& tilingParam, const HardwareType& hwInfor,
+                const MatMulInfoType& mmInfo, bool compressFlag = false, const uint64_t tilingN = 1)
 {
     float costMin = 1;
     const float CONST_2 = 2.0;
     const uint64_t CONST_16 = 16UL;
-    uint64_t roundBase =
-        static_cast<uint64_t>(pow(2, ceil(log(CeilDiv(PRI_FLAG ? opShape.n : opShape.m, CONST_16)))) * CONST_16);
+    uint64_t roundBase = static_cast<uint64_t>(pow(2, ceil(log(CeilDiv(PRI_FLAG ? opShape.n : opShape.m, CONST_16)))) *
+                                               CONST_16);
     uint64_t priAxes = RoundUp(PRI_FLAG ? opShape.m : opShape.n, CONST_16);
     uint64_t axes = RoundUp(PRI_FLAG ? opShape.n : opShape.m, roundBase);
     float axes0Max = static_cast<float>(AXES_ALIGN_SIZE) / mmInfo.sizeInDtype;
     auto platformType = hwInfor.socVersion;
-    if (mmInfo.isInt8 && (platformType == platform_ascendc::SocVersion::ASCEND310P || platformType == platform_ascendc::SocVersion::ASCEND910)) {
+    if (mmInfo.isInt8 && (platformType == platform_ascendc::SocVersion::ASCEND310P ||
+                          platformType == platform_ascendc::SocVersion::ASCEND910)) {
         axes0Max /= CONST_2;
     }
     uint64_t n0TilingInit = GetN0TilingInit(opShape, compressFlag, tilingN);
@@ -189,7 +190,8 @@ void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareTyp
                 continue;
             }
             if ((mmInfo.isInt8 || mmInfo.isCompress) &&
-                IsExceedTilingLimit<PRI_FLAG>(axes0, priAxes0, n0TilingLimit, platformType, basicBlockSize, mmInfo.isPertokenArch20)) {
+                IsExceedTilingLimit<PRI_FLAG>(axes0, priAxes0, n0TilingLimit, platformType, basicBlockSize,
+                                              mmInfo.isPertokenArch20)) {
                 continue;
             }
             SetOpShapeAxesInfo<PRI_FLAG>(opShape, priAxes0, axes0);
@@ -204,7 +206,7 @@ void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareTyp
 }
 
 template <typename PpTilingDataType>
-uint64_t Swizzle(PpTilingDataType &tilingData)
+uint64_t Swizzle(PpTilingDataType& tilingData)
 {
     uint64_t swizzleDirect = 0UL;
     uint64_t swizzleCount = 1UL;

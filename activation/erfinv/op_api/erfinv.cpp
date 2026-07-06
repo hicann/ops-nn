@@ -27,9 +27,8 @@ static const aclTensor* ErfinvAiCore(const aclTensor* self, aclTensor* out, aclO
     L0_DFX(ErfinvAiCore, self, out);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Erfinv, OP_INPUT(self), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ErfinvAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ErfinvAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 

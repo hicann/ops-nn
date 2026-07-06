@@ -22,15 +22,9 @@ using namespace std;
 
 class l2_rms_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "rms_norm_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_rms_norm_quant_test, case_fp16_001)
@@ -39,16 +33,23 @@ TEST_F(l2_rms_norm_quant_test, case_fp16_001)
     auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto tensor_desc_s = TensorDesc({1,}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_o = TensorDesc({1,}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
 
     auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
     double eps = 1e-6;
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, eps, tensor_desc_y),
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, eps, tensor_desc_y),
         OUTPUT());
 
     // SAMPLE: only test GetWorkspaceSize
@@ -63,16 +64,23 @@ TEST_F(l2_rms_norm_quant_test, case_bf16_002)
     auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto tensor_desc_beta = TensorDesc({1, 64}, ACL_BF16, ACL_FORMAT_ND);
 
-    auto tensor_desc_s = TensorDesc({1,}, ACL_BF16, ACL_FORMAT_ND);
-    auto tensor_desc_o = TensorDesc({1,}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_s = TensorDesc(
+        {
+            1,
+        },
+        ACL_BF16, ACL_FORMAT_ND);
+    auto tensor_desc_o = TensorDesc(
+        {
+            1,
+        },
+        ACL_INT8, ACL_FORMAT_ND);
 
     auto tensor_desc_y = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
     double eps = 1e-6;
 
     auto ut = OP_API_UT(
         aclnnRmsNormQuant,
-        INPUT(
-            tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, eps, tensor_desc_y),
+        INPUT(tensor_desc_x1, tensor_desc_gamma, tensor_desc_beta, tensor_desc_s, tensor_desc_o, eps, tensor_desc_y),
         OUTPUT());
 
     // SAMPLE: only test GetWorkspaceSize

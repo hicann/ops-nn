@@ -23,57 +23,59 @@ constexpr uint32_t kMaxTilingCacheEntryNum = 500;
 
 template <typename HashInput, typename HashItem>
 class TilingCache {
- public:
-  void Add(uint32_t key, [[maybe_unused]] const HashInput &hash_input, const HashItem &value) {
-    //hash_input 暂时没有用到，但编译不进行告警
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    if (size_ >= kMaxTilingCacheEntryNum) {
-      return;
+public:
+    void Add(uint32_t key, [[maybe_unused]] const HashInput& hash_input, const HashItem& value)
+    {
+        // hash_input 暂时没有用到，但编译不进行告警
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+        if (size_ >= kMaxTilingCacheEntryNum) {
+            return;
+        }
+
+        if (map_.find(key) != map_.end()) {
+            return;
+        }
+
+        map_.emplace(key, value);
+        size_++;
+        return;
     }
 
-    if (map_.find(key) != map_.end()) {
-      return;
+    void Replace(uint32_t key, const HashInput& hash_input, const HashItem& value)
+    {
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+        if (size_ >= kMaxTilingCacheEntryNum) {
+            return;
+        }
+
+        if (map_.find(key) == map_.end()) {
+            size_++;
+        }
+        map_.erase(key);
+        map_.emplace(key, value);
+        return;
     }
 
-    map_.emplace(key, value);
-    size_++;
-    return;
-  }
+    bool Get(uint32_t key, const HashInput& hash_input, HashItem& value)
+    {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        auto iter = map_.find(key);
+        if (iter == map_.end()) {
+            return false;
+        }
+        if (!(hash_input == iter->second.input())) {
+            OP_LOGD("CUBE", "inconsistent input data");
+            return false;
+        }
 
-  void Replace(uint32_t key, const HashInput &hash_input, const HashItem &value) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    if (size_ >= kMaxTilingCacheEntryNum) {
-      return;
+        value = iter->second;
+        return true;
     }
 
-    if (map_.find(key) == map_.end()) {
-      size_++;
-    }
-    map_.erase(key);
-    map_.emplace(key, value);
-    return;
-  }
-
-  bool Get(uint32_t key, const HashInput &hash_input, HashItem &value) {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    auto iter = map_.find(key);
-    if (iter == map_.end()) {
-      return false;
-    }
-    if (!(hash_input == iter->second.input())) {
-      OP_LOGD("CUBE", "inconsistent input data");
-      return false;
-    }
-
-    value = iter->second;
-    return true;
-  }
-
- private:
-  std::map<uint32_t, HashItem> map_;
-  uint32_t size_ = 0;
-  std::shared_mutex mutex_;
+private:
+    std::map<uint32_t, HashItem> map_;
+    uint32_t size_ = 0;
+    std::shared_mutex mutex_;
 };
-}  // namespace NN
-}  // namespace Ops
-
+} // namespace NN
+} // namespace Ops

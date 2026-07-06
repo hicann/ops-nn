@@ -14,9 +14,10 @@
 
 namespace l0op {
 
-const aclTensor *Cumsum(const aclTensor *self, const aclTensor* dim, aclOpExecutor *executor);
-const aclTensor *Cumsum(const aclTensor *self, const aclTensor* dim, bool exclusive, bool reverse, aclOpExecutor *executor);
+const aclTensor* Cumsum(const aclTensor* self, const aclTensor* dim, aclOpExecutor* executor);
+const aclTensor* Cumsum(const aclTensor* self, const aclTensor* dim, bool exclusive, bool reverse,
+                        aclOpExecutor* executor);
 
-}
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_CUMSUM_H_

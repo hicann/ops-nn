@@ -16,4 +16,4 @@ namespace l0op {
 const aclTensor* Mish(const aclTensor* self, aclOpExecutor* executor);
 }
 
-#endif  // OPS_NN_ACTIVATION_MISH_OP_API_H
+#endif // OPS_NN_ACTIVATION_MISH_OP_API_H

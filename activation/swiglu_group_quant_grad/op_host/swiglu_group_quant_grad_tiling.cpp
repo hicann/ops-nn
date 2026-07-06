@@ -20,11 +20,11 @@ namespace optiling {
 
 constexpr uint32_t BATCH_MODE = 1;
 
-static ge::graphStatus Tiling4SwigluGroupQuantGrad(gert::TilingContext *context)
+static ge::graphStatus Tiling4SwigluGroupQuantGrad(gert::TilingContext* context)
 {
     OP_LOGD(context, "Tiling4SwigluGroupQuantGrad start.");
     context->SetScheduleMode(BATCH_MODE);
-    
+
     SwigluGroupQuantGradCompileInfo compileInfo;
     SwigluGroupQuantGradTilingData tilingData;
     if (GetCompileInfo(context, compileInfo) != ge::GRAPH_SUCCESS) {
@@ -33,32 +33,31 @@ static ge::graphStatus Tiling4SwigluGroupQuantGrad(gert::TilingContext *context)
     if (CheckOpAllParams(context, compileInfo) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    
+
     SetBasicTilingData(context, compileInfo, tilingData);
     CalculateTilingParams(context, compileInfo, tilingData);
     if (SetTilingDataToContext(context, tilingData) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    
+
     uint32_t totalTokens = tilingData.get_totalTokens();
     uint32_t coreNumAll = tilingData.get_coreNumAll();
     uint32_t usedCoreNum = (totalTokens < coreNumAll) ? totalTokens : coreNumAll;
-    
+
     context->SetBlockDim(usedCoreNum);
-    
-    size_t *workspaces = context->GetWorkspaceSizes(1);
+
+    size_t* workspaces = context->GetWorkspaceSizes(1);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     workspaces[0] = sysWorkspaceSize + usedCoreNum * BLOCK_SIZE;
-    
-    OP_LOGD(context,
-            "Tiling4SwigluGroupQuantGrad end. usedCoreNum=%u, totalTokens=%u, tileH=%u, tileTokens=%u",
+
+    OP_LOGD(context, "Tiling4SwigluGroupQuantGrad end. usedCoreNum=%u, totalTokens=%u, tileH=%u, tileTokens=%u",
             usedCoreNum, totalTokens, tilingData.get_tileH(), tilingData.get_tileTokens());
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4SwigluGroupQuantGrad(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4SwigluGroupQuantGrad(gert::TilingParseContext* context)
 {
     OP_LOGD(context, "TilingPrepare4SwigluGroupQuantGrad start and end.");
     return ge::GRAPH_SUCCESS;

@@ -26,21 +26,18 @@ namespace l0op {
 OP_TYPE_REGISTER(ThnnFusedLstmCellGrad);
 
 // ThnnFusedLstmCellGrad AICORE算子kernel
-const std::array<const aclTensor *, 3> ThnnFusedLstmCellGrad(
-    const aclTensor *gradHy,
-    const aclTensor *gradC,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    const bool hasBias,
-    aclOpExecutor *executor) {
+const std::array<const aclTensor*, 3> ThnnFusedLstmCellGrad(const aclTensor* gradHy, const aclTensor* gradC,
+                                                            const aclTensor* cx, const aclTensor* cy,
+                                                            const aclTensor* storage, const bool hasBias,
+                                                            aclOpExecutor* executor)
+{
     L0_DFX(ThnnFusedLstmCellGrad, gradHy, gradC, cx, cy, storage, hasBias);
     auto storageShape = storage->GetViewShape();
     auto hiddenShape = cx->GetViewShape();
 
-    const aclTensor *gradInGates = executor->AllocTensor(storageShape, gradHy->GetDataType(), op::Format::FORMAT_ND);
-    const aclTensor *gradCPrev = executor->AllocTensor(hiddenShape, gradHy->GetDataType(), op::Format::FORMAT_ND);
-    const aclTensor *gradB = nullptr;
+    const aclTensor* gradInGates = executor->AllocTensor(storageShape, gradHy->GetDataType(), op::Format::FORMAT_ND);
+    const aclTensor* gradCPrev = executor->AllocTensor(hiddenShape, gradHy->GetDataType(), op::Format::FORMAT_ND);
+    const aclTensor* gradB = nullptr;
     if (hasBias) {
         gert::Shape bShape;
         bShape.AppendDim(storageShape[1]);
@@ -49,14 +46,12 @@ const std::array<const aclTensor *, 3> ThnnFusedLstmCellGrad(
         gradB = executor->AllocTensor(gradHy->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
     }
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ThnnFusedLstmCellGrad,
-                                           OP_INPUT(gradHy, gradC, cx, cy, storage),
-                                           OP_OUTPUT(gradInGates, gradCPrev, gradB),
-                                           OP_ATTR(hasBias));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ThnnFusedLstmCellGrad, OP_INPUT(gradHy, gradC, cx, cy, storage),
+                                           OP_OUTPUT(gradInGates, gradCPrev, gradB), OP_ATTR(hasBias));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ThnnFusedLstmCellGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr, nullptr};
     }
     return {gradInGates, gradCPrev, gradB};
 }
-}  // namespace l0op
+} // namespace l0op

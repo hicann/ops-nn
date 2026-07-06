@@ -73,8 +73,8 @@ bool UnsortedSegmentSumSimdSplitColTiling::IsFullLoad()
 
 ge::graphStatus UnsortedSegmentSumSimdSplitColTiling::DoOpTiling()
 {
-    baseS_ =
-        (ubSize_ - outUbsize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM / (baseA_ * valueTypeBytes_ + idTypeBytes_);
+    baseS_ = (ubSize_ - outUbsize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM /
+             (baseA_ * valueTypeBytes_ + idTypeBytes_);
     SetTilingData();
     return ge::GRAPH_SUCCESS;
 }

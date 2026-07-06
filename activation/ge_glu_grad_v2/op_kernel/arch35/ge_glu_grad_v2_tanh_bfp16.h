@@ -22,31 +22,27 @@ using namespace AscendC;
 
 constexpr int32_t CONST_TWO = 2;
 
-class GeGluGradV2TanhBFP16 : public GeGluGradV2TanhBase<bfloat16_t>
-{
+class GeGluGradV2TanhBFP16 : public GeGluGradV2TanhBase<bfloat16_t> {
 public:
-    __aicore__ inline GeGluGradV2TanhBFP16(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx, const GeGluGradV2TilingData* tilingDataPtr, TPipe* tPipe)
+    __aicore__ inline GeGluGradV2TanhBFP16(GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx,
+                                           const GeGluGradV2TilingData* tilingDataPtr, TPipe* tPipe)
         : GeGluGradV2TanhBase<bfloat16_t>(dy, x, gelu, dx, tilingDataPtr, tPipe){};
     __aicore__ inline void Init();
 
     __aicore__ inline void Process(bool perfMode = false)
     {
         if (perfMode) {
-            ProcessPerf<
-                GeGluGradV2TanhBFP16, &GeGluGradV2TanhBFP16::ComputeLeftHalf, &GeGluGradV2TanhBFP16::ComputeRightHalf>(
-                this);
+            ProcessPerf<GeGluGradV2TanhBFP16, &GeGluGradV2TanhBFP16::ComputeLeftHalf,
+                        &GeGluGradV2TanhBFP16::ComputeRightHalf>(this);
             return;
         }
 
         if (valueM <= maxProcCount) {
-            ProcessLessEqual<
-                GeGluGradV2TanhBFP16, &GeGluGradV2TanhBFP16::ComputeLeftHalf, &GeGluGradV2TanhBFP16::ComputeRightHalf>(
-                this);
+            ProcessLessEqual<GeGluGradV2TanhBFP16, &GeGluGradV2TanhBFP16::ComputeLeftHalf,
+                             &GeGluGradV2TanhBFP16::ComputeRightHalf>(this);
         } else {
-            ProcessGreater<
-                GeGluGradV2TanhBFP16, &GeGluGradV2TanhBFP16::ComputeLeftHalf, &GeGluGradV2TanhBFP16::ComputeRightHalf>(
-                this);
+            ProcessGreater<GeGluGradV2TanhBFP16, &GeGluGradV2TanhBFP16::ComputeLeftHalf,
+                           &GeGluGradV2TanhBFP16::ComputeRightHalf>(this);
         }
     };
 

@@ -97,10 +97,10 @@ struct TConv3DInputV2KSTiling {
     uint32_t kSUseWorkSpace = 0;
 };
 
-struct Conv3DBackpropInputV2TilingData{
+struct Conv3DBackpropInputV2TilingData {
     struct TConv3DInputV2Tiling conv3DDxTiling;
     struct TConv3DInputV2KSTiling conv3DDxKSTiling;
 };
 
-}  // namespace conv_bp_v2_kernel
-#endif  // CONV3D_BACKPROP_INPUT_V2_TILING_DATA_ADVANCE_H
+} // namespace conv_bp_v2_kernel
+#endif // CONV3D_BACKPROP_INPUT_V2_TILING_DATA_ADVANCE_H

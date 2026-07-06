@@ -48,8 +48,8 @@ class DynamicBlockQuantND {
 public:
     __aicore__ inline DynamicBlockQuantND(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace, DynamicBlockQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+                                DynamicBlockQuantTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -107,11 +107,11 @@ private:
     LocalTensor<float> quantScale;
     LocalTensor<float> quantScaleBrcb;
     LocalTensor<float> maskTmp;
-    LocalTensor<float> quantMask; // 填充1.0 tensor
-    LocalTensor<float> quantMask2; // 填充1.0/127 tensor
-    LocalTensor<float> quantMask3; // 填充127.0的tensor
-    LocalTensor<float> minScaleTensor; // 填充minScale的值
-    LocalTensor<float> invMinScaleTensor; // 填充minScale的值
+    LocalTensor<float> quantMask;             // 填充1.0 tensor
+    LocalTensor<float> quantMask2;            // 填充1.0/127 tensor
+    LocalTensor<float> quantMask3;            // 填充127.0的tensor
+    LocalTensor<float> minScaleTensor;        // 填充minScale的值
+    LocalTensor<float> invMinScaleTensor;     // 填充minScale的值
     LocalTensor<float> blockMaxValueMinLimit; // 填充inputMin的限制,防止max值过小
     LocalTensor<T> clearUbZero;               // 全0tensor，用于clear ub
 
@@ -151,8 +151,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void DynamicBlockQuantND<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace, DynamicBlockQuantTilingData* tilingData)
+__aicore__ inline void DynamicBlockQuantND<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+                                                    DynamicBlockQuantTilingData* tilingData)
 {
     // 获取当前核的索引
     coreIdx = GetBlockIdx();
@@ -280,8 +280,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::ProcessWholeRows(int64_t rowIdx, 
 }
 
 template <typename T>
-__aicore__ inline void DynamicBlockQuantND<T>::ProcessSplitRow(
-    int64_t rowIdx, int64_t colBlockStart, int64_t colBlockEnd)
+__aicore__ inline void DynamicBlockQuantND<T>::ProcessSplitRow(int64_t rowIdx, int64_t colBlockStart,
+                                                               int64_t colBlockEnd)
 {
     for (int64_t i = colBlockStart; i < colBlockEnd; i += singleLoopMaxBlock) {
         ProcessTail(rowIdx, i, GetMin(i + singleLoopMaxBlock, colBlockEnd));
@@ -325,8 +325,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::Compute(int64_t calcNum, int64_t 
 }
 
 template <typename T>
-__aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceBf16(
-    int64_t calcNum, int64_t startBlockIdx, int64_t scaleCount)
+__aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceBf16(int64_t calcNum, int64_t startBlockIdx,
+                                                                 int64_t scaleCount)
 {
     LocalTensor<float> scaleLocalTmp = scaleLocal[NUM_ONE_TWO_EIGHT];
     Cast(xLocalTmp, xLocal, RoundMode::CAST_NONE, calcNum);
@@ -336,7 +336,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceBf16(
     Abs(xLocalAbs, xLocalTmp, static_cast<int32_t>(calcNum));
     PipeBarrier<PIPE_V>();
     // 计算每个block的最大值
-    Max(xLocalAbs, xLocalAbs, xLocalAbs[NUM_EIGHT], NUM_SIX_FOUR, scaleCount, {1, NUM_TWO, NUM_TWO, NUM_EIGHT, NUM_ONE_SIX, NUM_ONE_SIX});
+    Max(xLocalAbs, xLocalAbs, xLocalAbs[NUM_EIGHT], NUM_SIX_FOUR, scaleCount,
+        {1, NUM_TWO, NUM_TWO, NUM_EIGHT, NUM_ONE_SIX, NUM_ONE_SIX});
     PipeBarrier<PIPE_V>();
     WholeReduceMax(scaleLocal, xLocalAbs, NUM_SIX_FOUR, scaleCount, 1, 1, NUM_EIGHT, ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
@@ -359,18 +360,16 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceBf16(
     // 扩展quantScale用于量化x
     Brcb(quantScaleBrcb, scaleLocalTmp, CeilDiv(scaleCount, NUM_EIGHT), {1, NUM_EIGHT});
     PipeBarrier<PIPE_V>();
-    Copy(
-        quantScale, quantScaleBrcb, NUM_SIX_FOUR, CeilDiv(scaleCount * NUM_EIGHT, NUM_SIX_FOUR),
-        {NUM_TWO, 1, NUM_ONE_SIX, NUM_EIGHT});
-    Copy(
-        quantScale[NUM_EIGHT], quantScaleBrcb, NUM_SIX_FOUR, CeilDiv(scaleCount * NUM_EIGHT, NUM_SIX_FOUR),
-        {NUM_TWO, 1, NUM_ONE_SIX, NUM_EIGHT});
+    Copy(quantScale, quantScaleBrcb, NUM_SIX_FOUR, CeilDiv(scaleCount * NUM_EIGHT, NUM_SIX_FOUR),
+         {NUM_TWO, 1, NUM_ONE_SIX, NUM_EIGHT});
+    Copy(quantScale[NUM_EIGHT], quantScaleBrcb, NUM_SIX_FOUR, CeilDiv(scaleCount * NUM_EIGHT, NUM_SIX_FOUR),
+         {NUM_TWO, 1, NUM_ONE_SIX, NUM_EIGHT});
     PipeBarrier<PIPE_V>();
 }
 
 template <typename T>
-__aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(
-    int64_t calcNum, int64_t startBlockIdx, int64_t scaleCount)
+__aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(int64_t calcNum, int64_t startBlockIdx,
+                                                                 int64_t scaleCount)
 {
     LocalTensor<T> scaleLocalT = scaleLocal.template ReinterpretCast<T>()[NUM_ONE_TWO_EIGHT];
     LocalTensor<T> quantScaleLocalT = quantScale.template ReinterpretCast<T>()[NUM_ONE_TWO_EIGHT * NUM_ONE_SIX];
@@ -379,8 +378,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(
     PipeBarrier<PIPE_V>();
     SetFlag<HardEvent::V_MTE2>(eventIdVToMTE2);
     WaitFlag<HardEvent::V_MTE2>(eventIdVToMTE2);
-    WholeReduceMax(
-        scaleLocalT, xLocalAbs, NUM_ONE_TWO_EIGHT, scaleCount, 1, 1, NUM_EIGHT, ReduceOrder::ORDER_ONLY_VALUE);
+    WholeReduceMax(scaleLocalT, xLocalAbs, NUM_ONE_TWO_EIGHT, scaleCount, 1, 1, NUM_EIGHT,
+                   ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
     // fp16场景因xLocakAbs不为float，先brcb再div
     Brcb(quantScaleLocalT, scaleLocalT, CeilDiv(calcNum / NUM_ONE_TWO_EIGHT, NUM_EIGHT), {1, NUM_EIGHT});
@@ -393,7 +392,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(
         {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
     if (hasMinScale) {
         PipeBarrier<PIPE_V>();
-        Min(scaleLocal, scaleLocal, invMinScaleTensor, NUM_SIX_FOUR, CeilDiv(scaleCount, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+        Min(scaleLocal, scaleLocal, invMinScaleTensor, NUM_SIX_FOUR, CeilDiv(scaleCount, NUM_SIX_FOUR),
+            {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
     }
     CopyOutScale(startBlockIdx, scaleCount);
     Div(quantScale, quantMask, quantScale, NUM_SIX_FOUR,
@@ -403,7 +403,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::ComputeReduceFp16(
         CeilDiv(calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
     if (hasMinScale) {
         PipeBarrier<PIPE_V>();
-        Max(quantScale, quantScale, minScaleTensor, NUM_SIX_FOUR, CeilDiv(calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
+        Max(quantScale, quantScale, minScaleTensor, NUM_SIX_FOUR,
+            CeilDiv(calcNum / NUM_ONE_TWO_EIGHT * NUM_ONE_SIX, NUM_SIX_FOUR), {1, 1, 0, NUM_EIGHT, NUM_EIGHT, 0});
     }
     PipeBarrier<PIPE_V>();
 }
@@ -439,26 +440,23 @@ __aicore__ inline void DynamicBlockQuantND<T>::CopyIn(int64_t rowStart, int64_t 
     if (colPadExtNum == 0) {
         DataCopy(xLocal, xGM[rowStart * colNum], rowCount * colNum);
     } else if (colPadToBlockNum == 0) {
-        DataCopyParams copyParams{
-            static_cast<uint16_t>(rowCount), static_cast<uint16_t>(colNum * sizeof(T) / SINGLE_DATA_BLOCK_SIZE), 0,
-            static_cast<uint16_t>(colPadExtNum * sizeof(T) / SINGLE_DATA_BLOCK_SIZE)};
+        DataCopyParams copyParams{static_cast<uint16_t>(rowCount),
+                                  static_cast<uint16_t>(colNum * sizeof(T) / SINGLE_DATA_BLOCK_SIZE), 0,
+                                  static_cast<uint16_t>(colPadExtNum * sizeof(T) / SINGLE_DATA_BLOCK_SIZE)};
         DataCopy(xLocal, xGM[rowStart * colNum], copyParams);
         if (colClearExtNum > 0) {
-            Copy(
-                xLocal[colNum], clearUbZero, colClearExtNum, rowCount,
-                {1, 1, static_cast<uint16_t>(colPadNum / (SINGLE_DATA_BLOCK_SIZE / sizeof(T))), 0});
+            Copy(xLocal[colNum], clearUbZero, colClearExtNum, rowCount,
+                 {1, 1, static_cast<uint16_t>(colPadNum / (SINGLE_DATA_BLOCK_SIZE / sizeof(T))), 0});
             PipeBarrier<PIPE_V>();
         }
     } else {
-        DataCopyExtParams copyExtParams{
-            static_cast<uint16_t>(rowCount), static_cast<uint16_t>(colNum * sizeof(T)), 0,
-            static_cast<uint16_t>(colPadExtNum * sizeof(T) / SINGLE_DATA_BLOCK_SIZE), 0};
+        DataCopyExtParams copyExtParams{static_cast<uint16_t>(rowCount), static_cast<uint16_t>(colNum * sizeof(T)), 0,
+                                        static_cast<uint16_t>(colPadExtNum * sizeof(T) / SINGLE_DATA_BLOCK_SIZE), 0};
         DataCopyPadExtParams<T> padParams{static_cast<uint16_t>(1), 0, static_cast<uint8_t>(colPadToBlockNum), 0};
         DataCopyPad(xLocal, xGM[rowStart * colNum], copyExtParams, padParams);
         if (colClearExtNum > 0) {
-            Copy(
-                xLocal[colNum + colPadToBlockNum], clearUbZero, colClearExtNum, rowCount,
-                {1, 1, static_cast<uint16_t>(colPadNum / (SINGLE_DATA_BLOCK_SIZE / sizeof(T))), 0});
+            Copy(xLocal[colNum + colPadToBlockNum], clearUbZero, colClearExtNum, rowCount,
+                 {1, 1, static_cast<uint16_t>(colPadNum / (SINGLE_DATA_BLOCK_SIZE / sizeof(T))), 0});
             PipeBarrier<PIPE_V>();
         }
     }
@@ -468,21 +466,21 @@ template <typename T>
 __aicore__ inline void DynamicBlockQuantND<T>::CopyOutY(int64_t rowStart, int64_t rowCount)
 {
     if (colPadExtNum * sizeof(int8_t) % SINGLE_DATA_BLOCK_SIZE == 0) {
-        DataCopyParams copyParams{
-            static_cast<uint16_t>(rowCount), static_cast<uint16_t>(colNum * sizeof(int8_t) / SINGLE_DATA_BLOCK_SIZE),
-            static_cast<uint16_t>(colPadExtNum * sizeof(int8_t) / SINGLE_DATA_BLOCK_SIZE), 0};
+        DataCopyParams copyParams{static_cast<uint16_t>(rowCount),
+                                  static_cast<uint16_t>(colNum * sizeof(int8_t) / SINGLE_DATA_BLOCK_SIZE),
+                                  static_cast<uint16_t>(colPadExtNum * sizeof(int8_t) / SINGLE_DATA_BLOCK_SIZE), 0};
         DataCopy(yGM[rowStart * colNum], xLocalTmpInt8, copyParams);
     } else {
-        DataCopyExtParams copyExtParams{
-            static_cast<uint16_t>(rowCount), static_cast<uint16_t>(colNum * sizeof(int8_t)),
-            static_cast<uint16_t>(colPadExtNum * sizeof(int8_t) / SINGLE_DATA_BLOCK_SIZE), 0, 0};
+        DataCopyExtParams copyExtParams{static_cast<uint16_t>(rowCount), static_cast<uint16_t>(colNum * sizeof(int8_t)),
+                                        static_cast<uint16_t>(colPadExtNum * sizeof(int8_t) / SINGLE_DATA_BLOCK_SIZE),
+                                        0, 0};
         DataCopyPad(yGM[rowStart * colNum], xLocalTmpInt8, copyExtParams);
     }
 }
 
 template <typename T>
-__aicore__ inline void DynamicBlockQuantND<T>::CopyInTail(
-    int64_t startRowIdx, int64_t colStartBlock, int64_t colEndBlock)
+__aicore__ inline void DynamicBlockQuantND<T>::CopyInTail(int64_t startRowIdx, int64_t colStartBlock,
+                                                          int64_t colEndBlock)
 {
     int64_t copyNum = (colEndBlock - colStartBlock) * blockSizeCol;
     int64_t startIdx = startRowIdx * colNum + colStartBlock * blockSizeCol;
@@ -509,8 +507,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::CopyInTail(
 }
 
 template <typename T>
-__aicore__ inline void DynamicBlockQuantND<T>::CopyOutYTail(
-    int64_t startRowIdx, int64_t colStartBlock, int64_t colEndBlock)
+__aicore__ inline void DynamicBlockQuantND<T>::CopyOutYTail(int64_t startRowIdx, int64_t colStartBlock,
+                                                            int64_t colEndBlock)
 {
     int64_t copyNum = (colEndBlock - colStartBlock) * blockSizeCol;
     int64_t startIdx = startRowIdx * colNum + colStartBlock * blockSizeCol;
@@ -534,8 +532,8 @@ __aicore__ inline void DynamicBlockQuantND<T>::CopyOutScale(int64_t startIdx, in
     if (copyNum * sizeof(float) % SINGLE_DATA_BLOCK_SIZE == 0) {
         DataCopy(scaleGM[startIdx], scaleLocal, copyNum);
     } else {
-        DataCopyExtParams copyExtParams{
-            static_cast<uint16_t>(1), static_cast<uint16_t>(copyNum * sizeof(float)), 0, 0, 0};
+        DataCopyExtParams copyExtParams{static_cast<uint16_t>(1), static_cast<uint16_t>(copyNum * sizeof(float)), 0, 0,
+                                        0};
         DataCopyPad(scaleGM[startIdx], scaleLocal, copyExtParams);
     }
 }

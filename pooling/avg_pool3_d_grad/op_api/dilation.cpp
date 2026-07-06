@@ -26,9 +26,8 @@ const int kPADDINGDOWNIdx = 1;
 const int kPADDINGLEFTIdx = 2;
 const int kPADDINGRIGHTIdx = 3;
 OP_TYPE_REGISTER(Dilation);
-const aclTensor* Dilation(
-    const aclTensor* x, const aclIntArray* dilations, const aclIntArray* pads, float paddingValue,
-    aclOpExecutor* executor)
+const aclTensor* Dilation(const aclTensor* x, const aclIntArray* dilations, const aclIntArray* pads, float paddingValue,
+                          aclOpExecutor* executor)
 {
     L0_DFX(Dilation, x, dilations, pads, paddingValue);
     op::Shape y_view_shape;
@@ -40,19 +39,17 @@ const aclTensor* Dilation(
     int64_t y_shape_w = (x_view_shape.GetDim(kWDimNCHWORNC1HWC0Idx) - 1) * (*dilations)[kWDimNCHWORNC1HWC0Idx] + 1 +
                         (*pads)[kPADDINGLEFTIdx] + (*pads)[kPADDINGRIGHTIdx];
     for (size_t i = 0; i < x_view_shape.GetDimNum(); i++) {
-        y_storage_shape.AppendDim(
-            (i == kHDimNCHWORNC1HWC0Idx) ? y_shape_h :
-            (i == kWDimNCHWORNC1HWC0Idx) ? y_shape_w :
-                                           x_storage_shape.GetDim(i));
-        y_view_shape.AppendDim(
-            (i == kHDimNCHWORNC1HWC0Idx) ? y_shape_h :
-            (i == kWDimNCHWORNC1HWC0Idx) ? y_shape_w :
-                                           x_view_shape.GetDim(i));
+        y_storage_shape.AppendDim((i == kHDimNCHWORNC1HWC0Idx) ? y_shape_h :
+                                  (i == kWDimNCHWORNC1HWC0Idx) ? y_shape_w :
+                                                                 x_storage_shape.GetDim(i));
+        y_view_shape.AppendDim((i == kHDimNCHWORNC1HWC0Idx) ? y_shape_h :
+                               (i == kWDimNCHWORNC1HWC0Idx) ? y_shape_w :
+                                                              x_view_shape.GetDim(i));
     }
     y_storage_shape.AppendDim(x_storage_shape.GetDim(kC0DimNC1HWC0Idx));
 
-    auto y = executor->AllocTensor(
-        y_storage_shape, y_view_shape, x->GetDataType(), x->GetStorageFormat(), x->GetOriginalFormat());
+    auto y = executor->AllocTensor(y_storage_shape, y_view_shape, x->GetDataType(), x->GetStorageFormat(),
+                                   x->GetOriginalFormat());
     ADD_TO_LAUNCHER_LIST_AICORE(Dilation, OP_INPUT(x), OP_OUTPUT(y), OP_ATTR(dilations, pads, paddingValue));
     return y;
 }

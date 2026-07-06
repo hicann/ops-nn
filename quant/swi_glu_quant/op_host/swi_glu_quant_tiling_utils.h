@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #ifndef SWI_GLU_QUANT_TILING_UTILS_H
 #define SWI_GLU_QUANT_TILING_UTILS_H
 
@@ -52,7 +51,6 @@ const std::string QUANT_MODE_STATIC = "static";
 const std::string QUANT_MODE_DYNAMIC = "dynamic";
 const std::string QUANT_MODE_DYNAMIC_MSD = "dynamic_msd";
 
-
 template <typename T>
 inline auto AlignUp(T num, T div) -> decltype(num)
 {
@@ -77,8 +75,7 @@ inline auto Min(T num, T div) -> decltype(num)
     return num < div ? num : div;
 }
 
-
-inline ge::graphStatus CheckInputDtype(const gert::TilingContext *context)
+inline ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
 {
     auto xDtype = context->GetInputDesc(INPUT_X_INDEX)->GetDataType();
     if (xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16 && xDtype != ge::DT_FLOAT) {
@@ -115,8 +112,7 @@ inline ge::graphStatus CheckInputDtype(const gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-
-inline ge::graphStatus CheckOutputDtype(const gert::TilingContext *context)
+inline ge::graphStatus CheckOutputDtype(const gert::TilingContext* context)
 {
     auto yDtype = context->GetOutputDesc(OUTPUT_Y_INDEX)->GetDataType();
     if (yDtype != ge::DataType::DT_INT8 && yDtype != ge::DataType::DT_INT4) {
@@ -133,10 +129,9 @@ inline ge::graphStatus CheckOutputDtype(const gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-
-inline ge::graphStatus CheckAttrs(const gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo)
+inline ge::graphStatus CheckAttrs(const gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo)
 {
-    const gert::RuntimeAttrs *attrs = context->GetAttrs();
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         std::string quantMode = attrs->GetAttrPointer<char>(1);
         if (quantMode != QUANT_MODE_STATIC && quantMode != QUANT_MODE_DYNAMIC && quantMode != QUANT_MODE_DYNAMIC_MSD) {
@@ -149,29 +144,26 @@ inline ge::graphStatus CheckAttrs(const gert::TilingContext *context, SwiGluQuan
         compileInfo.activateLeft = (isActivateLeftAttr ? 1 : 0);
 
         auto groupListTypePtr = attrs->GetInt(GROUP_LIST_TYPE_INDEX);
-        OP_CHECK_IF((groupListTypePtr == nullptr),
-            OP_LOGE(context->GetNodeName(), "Get groupListType failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((groupListTypePtr == nullptr), OP_LOGE(context->GetNodeName(), "Get groupListType failed."),
+                    return ge::GRAPH_FAILED);
         int64_t groupListType = static_cast<int64_t>(*groupListTypePtr);
         OP_CHECK_IF((groupListType != 0 && groupListType != 1),
-            OP_LOGE(context->GetNodeName(), "groupListType can only be 0 or 1."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "groupListType can only be 0 or 1."), return ge::GRAPH_FAILED);
         compileInfo.groupListType = groupListType;
 
         auto dstTypePtr = attrs->GetInt(DST_TYPE_INDEX);
-        OP_CHECK_IF((dstTypePtr == nullptr),
-            OP_LOGE(context->GetNodeName(), "Get dstType failed."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((dstTypePtr == nullptr), OP_LOGE(context->GetNodeName(), "Get dstType failed."),
+                    return ge::GRAPH_FAILED);
         int64_t dstType = static_cast<int64_t>(*dstTypePtr);
         OP_CHECK_IF((dstType != ge::DT_INT8 && dstType != ge::DT_INT4),
-            OP_LOGE(context->GetNodeName(), "dstType can only be 2 or 29."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "dstType can only be 2 or 29."), return ge::GRAPH_FAILED);
         compileInfo.dstType = dstType;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus CheckMoeInputShpae(const gert::StorageShape *shape, uint32_t groupLen){
+inline ge::graphStatus CheckMoeInputShpae(const gert::StorageShape* shape, uint32_t groupLen)
+{
     if (groupLen > ONE) {
         uint32_t shapeDimFirst = shape->GetStorageShape().GetDim(0);
         if (groupLen != shapeDimFirst) {
@@ -181,7 +173,7 @@ inline ge::graphStatus CheckMoeInputShpae(const gert::StorageShape *shape, uint3
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus CheckOpInputShape(const gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo)
+inline ge::graphStatus CheckOpInputShape(const gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo)
 {
     auto xShape = context->GetInputShape(INPUT_X_INDEX);
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -192,9 +184,9 @@ inline ge::graphStatus CheckOpInputShape(const gert::TilingContext *context, Swi
     int64_t xDimLast = xShape->GetStorageShape().GetDim(xDimNum - 1);
     auto yDtype = context->GetOutputDesc(OUTPUT_Y_INDEX)->GetDataType();
     if (yDtype == ge::DT_INT4 && xDimLast % static_cast<int32_t>(CONST_ROUR) != 0) {
-            OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%ld) of x should be divisible by 4.",
+        OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%ld) of x should be divisible by 4.",
                 xDimLast);
-            return ge::GRAPH_FAILED;
+        return ge::GRAPH_FAILED;
     }
     auto smoothScalesShape = context->GetOptionalInputShape(INPUT_SMOOTH_SCALES_INDEX);
     auto offsetsShape = context->GetOptionalInputShape(INPUT_OFFSETS_INDEX);
@@ -215,15 +207,15 @@ inline ge::graphStatus CheckOpInputShape(const gert::TilingContext *context, Swi
         }
         // 针对moe场景下的校验
         if (CheckMoeInputShpae(smoothScalesShape, groupLen) != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context->GetNodeName(),
-                    "moe expert and smooth_scales first dim is not equal! expert nums is :%u", groupLen);
+            OP_LOGE(context->GetNodeName(), "moe expert and smooth_scales first dim is not equal! expert nums is :%u",
+                    groupLen);
             return ge::GRAPH_FAILED;
         }
     }
     if (offsetsShape != nullptr) {
         if (CheckMoeInputShpae(offsetsShape, groupLen) != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context->GetNodeName(),
-                    "moe expert and offsets first dim is not equal! expert nums is :%u", groupLen);
+            OP_LOGE(context->GetNodeName(), "moe expert and offsets first dim is not equal! expert nums is :%u",
+                    groupLen);
             return ge::GRAPH_FAILED;
         }
     }
@@ -232,8 +224,8 @@ inline ge::graphStatus CheckOpInputShape(const gert::TilingContext *context, Swi
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus CheckOpDim(const gert::StorageShape *shape1, const gert::StorageShape *shape2, uint32_t shape1Dim,
-    uint32_t shape2Dim)
+inline ge::graphStatus CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2,
+                                  uint32_t shape1Dim, uint32_t shape2Dim)
 {
     if (shape1Dim != shape2Dim) {
         return ge::GRAPH_FAILED;
@@ -246,8 +238,7 @@ inline ge::graphStatus CheckOpDim(const gert::StorageShape *shape1, const gert::
     return ge::GRAPH_SUCCESS;
 }
 
-
-inline ge::graphStatus CheckOpOutputShape(const gert::TilingContext *context, const SwiGluQuantCompileInfo &compileInfo)
+inline ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context, const SwiGluQuantCompileInfo& compileInfo)
 {
     auto xShape = context->GetInputShape(INPUT_X_INDEX);
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -259,7 +250,8 @@ inline ge::graphStatus CheckOpOutputShape(const gert::TilingContext *context, co
         return ge::GRAPH_FAILED;
     }
     // DT_INT8量化最后一个维度的shape需要满足2倍关系
-    if (compileInfo.dstType == ge::DT_INT8 && (xShape->GetStorageShape().GetDim(xDimNum - 1) != 2 * yShape->GetStorageShape().GetDim(yDimNum - 1))) {
+    if (compileInfo.dstType == ge::DT_INT8 &&
+        (xShape->GetStorageShape().GetDim(xDimNum - 1) != 2 * yShape->GetStorageShape().GetDim(yDimNum - 1))) {
         OP_LOGE(context->GetNodeName(), "CheckOpOutputShape x and y last dim error.");
         return ge::GRAPH_FAILED;
     }
@@ -272,8 +264,7 @@ inline ge::graphStatus CheckOpOutputShape(const gert::TilingContext *context, co
     return ge::GRAPH_SUCCESS;
 }
 
-
-inline ge::graphStatus CheckOpShape(gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo)
+inline ge::graphStatus CheckOpShape(gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo)
 {
     if (CheckOpInputShape(context, compileInfo) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "input shape check failed.");
@@ -286,8 +277,7 @@ inline ge::graphStatus CheckOpShape(gert::TilingContext *context, SwiGluQuantCom
     return ge::GRAPH_SUCCESS;
 }
 
-
-inline ge::graphStatus CheckOpParams(gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo)
+inline ge::graphStatus CheckOpParams(gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo)
 {
     if (CheckInputDtype(context) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "x or smooth_scales dtype is invalid.");
@@ -308,7 +298,7 @@ inline ge::graphStatus CheckOpParams(gert::TilingContext *context, SwiGluQuantCo
     return ge::GRAPH_SUCCESS;
 }
 
-inline bool SetTotalShape(gert::Shape &inShape, const gert::TilingContext *context, SwiGluQuantTilingData &tilingData)
+inline bool SetTotalShape(gert::Shape& inShape, const gert::TilingContext* context, SwiGluQuantTilingData& tilingData)
 {
     int32_t shapeBefore = 1;
     int32_t shapeAfter = 1;
@@ -328,7 +318,7 @@ inline bool SetTotalShape(gert::Shape &inShape, const gert::TilingContext *conte
     }
     if (shapeAfter % EVEN_FACTOR != 0) {
         OP_LOGE(context->GetNodeName(), "SetTotalShape Unsupported inDim %d, shapeAfter %d %% 2 != 0 ", inDim,
-            shapeAfter);
+                shapeAfter);
         return false;
     }
     if (shapeAfter == 0) {
@@ -340,8 +330,8 @@ inline bool SetTotalShape(gert::Shape &inShape, const gert::TilingContext *conte
     return true;
 }
 
-inline bool CalculateMaxUbSizePerRow(const gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo,
-    SwiGluQuantTilingParam &tilingParam, SwiGluQuantTilingData &tilingData)
+inline bool CalculateMaxUbSizePerRow(const gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo,
+                                     SwiGluQuantTilingParam& tilingParam, SwiGluQuantTilingData& tilingData)
 {
     // Align ColLen
     uint32_t colLen = tilingData.get_colLen();
@@ -368,7 +358,7 @@ inline bool CalculateMaxUbSizePerRow(const gert::TilingContext *context, SwiGluQ
     return true;
 }
 
-inline QuantMode GetQuantMode(const SwiGluQuantCompileInfo &compileInfo)
+inline QuantMode GetQuantMode(const SwiGluQuantCompileInfo& compileInfo)
 {
     if (compileInfo.curQuantMode == QUANT_MODE_DYNAMIC) {
         return QuantMode::DYNAMIC;
@@ -377,19 +367,14 @@ inline QuantMode GetQuantMode(const SwiGluQuantCompileInfo &compileInfo)
     }
 }
 
-inline uint32_t CalculateTilingKey(ge::DataType xDtype, const SwiGluQuantCompileInfo &compileInfo)
+inline uint32_t CalculateTilingKey(ge::DataType xDtype, const SwiGluQuantCompileInfo& compileInfo)
 {
     uint32_t tilingKey = 0;
     std::unordered_map<ge::DataType, uint32_t> dTypeTilingKeyMap{
-        {ge::DT_FLOAT16, TILING_KEY_VAL_FP16},
-        {ge::DT_BF16, TILING_KEY_VAL_BF16},
-        {ge::DT_FLOAT, TILING_KEY_VAL_FP}
-    };
-    std::unordered_map<QuantMode, uint8_t> quantModeTilingKeyMap{
-        {QuantMode::STATIC_PER_TENSOR, PER_TENSOR_KEY_VAL},
-        {QuantMode::STATIC_PER_CHANNEL, PER_CHANEL_KEY_VAL},
-        {QuantMode::DYNAMIC, DYNAMIC_KEY_VAL}
-    };
+        {ge::DT_FLOAT16, TILING_KEY_VAL_FP16}, {ge::DT_BF16, TILING_KEY_VAL_BF16}, {ge::DT_FLOAT, TILING_KEY_VAL_FP}};
+    std::unordered_map<QuantMode, uint8_t> quantModeTilingKeyMap{{QuantMode::STATIC_PER_TENSOR, PER_TENSOR_KEY_VAL},
+                                                                 {QuantMode::STATIC_PER_CHANNEL, PER_CHANEL_KEY_VAL},
+                                                                 {QuantMode::DYNAMIC, DYNAMIC_KEY_VAL}};
     QuantMode quantMode = GetQuantMode(compileInfo);
     tilingKey += dTypeTilingKeyMap[xDtype];
     tilingKey += quantModeTilingKeyMap[quantMode];
@@ -397,8 +382,8 @@ inline uint32_t CalculateTilingKey(ge::DataType xDtype, const SwiGluQuantCompile
 }
 
 // 计算每核处理的总行数和实际使用的核数
-inline void CalTilingData(gert::TilingContext *context, SwiGluQuantCompileInfo &compileInfo,
-    SwiGluQuantTilingParam &tilingParam, SwiGluQuantTilingData &tilingData)
+inline void CalTilingData(gert::TilingContext* context, SwiGluQuantCompileInfo& compileInfo,
+                          SwiGluQuantTilingParam& tilingParam, SwiGluQuantTilingData& tilingData)
 {
     uint32_t rowLen = tilingData.get_rowLen();
     tilingParam.coreNumUsed = std::max(std::min(compileInfo.totalCore, rowLen), ONE);
@@ -408,8 +393,8 @@ inline void CalTilingData(gert::TilingContext *context, SwiGluQuantCompileInfo &
     CalculateMaxUbSizePerRow(context, compileInfo, tilingParam, tilingData);
 }
 
-inline void SetTilingData(SwiGluQuantCompileInfo &compileInfo, SwiGluQuantTilingParam &tilingParam,
-    SwiGluQuantTilingData &tilingData)
+inline void SetTilingData(SwiGluQuantCompileInfo& compileInfo, SwiGluQuantTilingParam& tilingParam,
+                          SwiGluQuantTilingData& tilingData)
 {
     tilingData.set_headCoreNum(tilingParam.headCoreNum);
     tilingData.set_basicRowLenHeadCore(tilingParam.optBaseRowLenHeadCore);
@@ -423,5 +408,5 @@ inline void SetTilingData(SwiGluQuantCompileInfo &compileInfo, SwiGluQuantTiling
     tilingData.set_dstType(compileInfo.dstType);
     tilingData.set_hasGroup(compileInfo.hasGroup);
 }
-}
+} // namespace optiling
 #endif

@@ -17,13 +17,7 @@
 using namespace ge;
 class MaskedScatterWithPositionProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaskedScatterWithPositionProtoTest SetUpTestCase" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaskedScatterWithPositionProtoTest SetUpTestCase" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaskedScatterWithPositionProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaskedScatterWithPositionProtoTest TearDown" << std::endl; }
 };

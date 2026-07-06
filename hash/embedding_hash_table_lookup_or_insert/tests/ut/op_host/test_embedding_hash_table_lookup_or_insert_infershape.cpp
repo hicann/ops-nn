@@ -29,15 +29,9 @@ namespace {
 // ----------------EmbeddingHashTableLookupOrInsert-------------------
 class EmbeddingHashTableLookupOrInsertProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingHashTableLookupOrInsert Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingHashTableLookupOrInsert Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingHashTableLookupOrInsert Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingHashTableLookupOrInsert Proto Test TearDown" << std::endl; }
 };
 
 //   pass cases
@@ -51,10 +45,21 @@ TEST_F(EmbeddingHashTableLookupOrInsertProtoTest, embedding_hash_table_lookup_or
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableLookupOrInsert")->infer_shape;
+    auto
+        inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableLookupOrInsert")->infer_shape;
 
-    gert::StorageShape hash_shape = {{5,}, {5,}};
-    gert::StorageShape keys_shape = {{1,}, {1,}};
+    gert::StorageShape hash_shape = {{
+                                         5,
+                                     },
+                                     {
+                                         5,
+                                     }};
+    gert::StorageShape keys_shape = {{
+                                         1,
+                                     },
+                                     {
+                                         1,
+                                     }};
     gert::StorageShape values_shape = {{1, 2}, {1, 2}};
 
     auto holder = gert::InferShapeContextFaker()
@@ -66,15 +71,15 @@ TEST_F(EmbeddingHashTableLookupOrInsertProtoTest, embedding_hash_table_lookup_or
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({
-                        {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(6)},
-                        {"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                        {"filter_mode", Ops::NN::AnyValue::CreateFrom<std::string>("no_filter")},
-                        {"filter_freq", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                        {"default_key_or_value", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                        {"default_key", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                        {"default_value", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
-                        {"filter_key_flag", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                        {"filter_key", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                          {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(6)},
+                          {"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"filter_mode", Ops::NN::AnyValue::CreateFrom<std::string>("no_filter")},
+                          {"filter_freq", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"default_key_or_value", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"default_key", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                          {"default_value", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                          {"filter_key_flag", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                          {"filter_key", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
                       })
                       .Build();
 

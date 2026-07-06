@@ -30,10 +30,12 @@ namespace ge {
 * @li x: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * The shape is [A1,...,Ai,R1,...,Rj].
 * @li gamma: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype and shape as beta. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤ i).
+* Has the same dtype and shape as beta. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤
+i).
 * Dtype must match input x or be float32.
 * @li beta: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype and shape as gamma. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤ i). \n
+* Has the same dtype and shape as gamma. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤
+i). \n
 
 *@par Attributes
 * @li begin_norm_axis: An optional attribute, the dtype is int32. Defaults to 0.
@@ -45,7 +47,7 @@ namespace ge {
 *@par Outputs
 *Three outputs, including:
 * @li y: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype, shape and format as x. 
+* Has the same dtype, shape and format as x.
 * @li mean: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * Has the same shape as variance, which is [A1,...,Ai,1,...,1], where there are j 1's after Ai.
 * @li variance: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.

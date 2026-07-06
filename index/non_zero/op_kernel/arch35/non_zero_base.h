@@ -80,34 +80,29 @@ protected:
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
         AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
-    __aicore__ inline void InitBase(
-        GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData);
+    __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                    const NonZeroTilingData* tilingData);
     __aicore__ inline void BaseProcess();
     __aicore__ inline void VfCleanUb(LocalTensor<uint32_t>& addUbSize);
-    __aicore__ inline void CopyInBefore(
-        int32_t loopNum, int32_t beforeNum, int32_t tailNum, LocalTensor<uint32_t>& addUbSize,
-        LocalTensor<uint32_t>& maskUbSize);
+    __aicore__ inline void CopyInBefore(int32_t loopNum, int32_t beforeNum, int32_t tailNum,
+                                        LocalTensor<uint32_t>& addUbSize, LocalTensor<uint32_t>& maskUbSize);
     __aicore__ inline void VfReduceSum(LocalTensor<uint32_t>& addUbSize);
     __aicore__ inline void VfAllNum(LocalTensor<uint32_t>& addUbSize);
-    __aicore__ inline void ComputeBefore(
-        uint64_t& loopGm, int32_t loopCore, int32_t beforeNumOut, LocalTensor<uint32_t>& maskUbSize);
-    __aicore__ inline void VfComputeIds(
-        int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t>& outUbSize, LocalTensor<uint32_t>& maskUbSize,
-        uint64_t& arNum);
-    __aicore__ inline void VfComputeIdsB64(int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t> &outUbSize,
-        LocalTensor<uint32_t> &maskUbSize, uint64_t &arNum);
+    __aicore__ inline void ComputeBefore(uint64_t& loopGm, int32_t loopCore, int32_t beforeNumOut,
+                                         LocalTensor<uint32_t>& maskUbSize);
+    __aicore__ inline void VfComputeIds(int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t>& outUbSize,
+                                        LocalTensor<uint32_t>& maskUbSize, uint64_t& arNum);
+    __aicore__ inline void VfComputeIdsB64(int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t>& outUbSize,
+                                           LocalTensor<uint32_t>& maskUbSize, uint64_t& arNum);
     __aicore__ inline void ComputeNonZeroNum(LocalTensor<uint32_t>& addUbSize);
-    __aicore__ inline void VfPerCoreNonZeroNum1(
-        int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
-        LocalTensor<uint32_t>& addUbSize);
-    __aicore__ inline void VfPerCoreNonZeroNum2(
-        int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
-        LocalTensor<uint32_t>& addUbSize);
-    __aicore__ inline void VfPerCoreNonZeroNum3(
-        int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
-        LocalTensor<uint32_t>& addUbSize);
-    __aicore__ inline void VfPerCoreNonZeroNum4(int32_t loop, int32_t computeNum, LocalTensor<T1> &xUbSize,
-        LocalTensor<uint32_t> &maskUbSize, LocalTensor<uint32_t> &addUbSize);
+    __aicore__ inline void VfPerCoreNonZeroNum1(int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize,
+                                                LocalTensor<uint32_t>& maskUbSize, LocalTensor<uint32_t>& addUbSize);
+    __aicore__ inline void VfPerCoreNonZeroNum2(int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize,
+                                                LocalTensor<uint32_t>& maskUbSize, LocalTensor<uint32_t>& addUbSize);
+    __aicore__ inline void VfPerCoreNonZeroNum3(int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize,
+                                                LocalTensor<uint32_t>& maskUbSize, LocalTensor<uint32_t>& addUbSize);
+    __aicore__ inline void VfPerCoreNonZeroNum4(int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize,
+                                                LocalTensor<uint32_t>& maskUbSize, LocalTensor<uint32_t>& addUbSize);
     __aicore__ inline void CopyOut(uint64_t arNum, int32_t loopOffset, int32_t alignInt32, LocalTensor<T2>& outUbSize);
     __aicore__ inline void CopyOutTrans(uint64_t arNum, uint64_t looOffset, LocalTensor<T2>& outUbSize);
 
@@ -125,90 +120,90 @@ protected:
     __aicore__ inline void NoTrans6(int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32);
     __aicore__ inline void NoTrans7(int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32);
     __aicore__ inline void NoTrans8(int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32);
-    __aicore__ inline void ComputOut2(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOut3(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOut4(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOut5(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOut6(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOut7(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOut8(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo2(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo3(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo4(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo5(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo6(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo7(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void ComputOutNo8(
-        uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize);
-    __aicore__ inline void CopyInTail(
-        int32_t loopNum, int32_t tailNum, LocalTensor<uint32_t>& addUbSize, LocalTensor<uint32_t>& maskUbSize);
+    __aicore__ inline void ComputOut2(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOut3(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOut4(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOut5(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOut6(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOut7(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOut8(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                      LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo2(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo3(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo4(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo5(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo6(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo7(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void ComputOutNo8(uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32,
+                                        LocalTensor<T2>& xUbSize);
+    __aicore__ inline void CopyInTail(int32_t loopNum, int32_t tailNum, LocalTensor<uint32_t>& addUbSize,
+                                      LocalTensor<uint32_t>& maskUbSize);
 };
 #define ComputeOutIds(dst0, dst1, srcReg, qmulReg, k0, shape0, subReg, offset, dstInt32Ptr, preg) \
-do {                                                                                              \
-    Mull(dst0, dst1, srcReg, qmulReg, preg);                                                      \
-    Add(dst0, srcReg, dst1, preg);                                                                \
-    ShiftRights(dst1, dst0, k0, preg);                                                            \
-    DataCopy(dstInt32Ptr, dst1, offset, preg);                                                    \
-    Muls(dst0, dst1, shape0, preg);                                                               \
-    Sub(subReg, srcReg, dst0, preg);                                                              \
-} while (0)
+    do {                                                                                          \
+        Mull(dst0, dst1, srcReg, qmulReg, preg);                                                  \
+        Add(dst0, srcReg, dst1, preg);                                                            \
+        ShiftRights(dst1, dst0, k0, preg);                                                        \
+        DataCopy(dstInt32Ptr, dst1, offset, preg);                                                \
+        Muls(dst0, dst1, shape0, preg);                                                           \
+        Sub(subReg, srcReg, dst0, preg);                                                          \
+    } while (0)
 
-#define CastInt32(repeatTimes, preg, sregInt32, dst1, dstInt32Ptr1, dstInt64Ptr1)                              \
-do {                                                                                                           \
-    int32_t vfLenInt32 = VF_LEN_INT32;                                                                         \
-    int32_t halfVfLentInt32 = VF_LEN_INT32 / DIM2;                                                             \
-    for (uint16_t k = 0; k < repeatTimes; k++) {                                                               \
-        preg = UpdateMask<int32_t>(sregInt32);                                                                 \
-        AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(k, halfVfLentInt32); \
-        AscendC::MicroAPI::AddrReg dstOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(k, vfLenInt32);      \
-        DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B32>(                                       \
-            (RegTensor<int32_t>&)dst1, dstInt32Ptr1, srcOffset);                                               \
-        DataCopy(dstInt64Ptr1, (RegTensor<int32_t>&)dst1, dstOffset, preg);                                    \
-    }                                                                                                          \
-} while (0)
+#define CastInt32(repeatTimes, preg, sregInt32, dst1, dstInt32Ptr1, dstInt64Ptr1)                                    \
+    do {                                                                                                             \
+        int32_t vfLenInt32 = VF_LEN_INT32;                                                                           \
+        int32_t halfVfLentInt32 = VF_LEN_INT32 / DIM2;                                                               \
+        for (uint16_t k = 0; k < repeatTimes; k++) {                                                                 \
+            preg = UpdateMask<int32_t>(sregInt32);                                                                   \
+            AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(k, halfVfLentInt32);   \
+            AscendC::MicroAPI::AddrReg dstOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(k, vfLenInt32);        \
+            DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B32>((RegTensor<int32_t>&)dst1, dstInt32Ptr1, \
+                                                                            srcOffset);                              \
+            DataCopy(dstInt64Ptr1, (RegTensor<int32_t>&)dst1, dstOffset, preg);                                      \
+        }                                                                                                            \
+    } while (0)
 
 #define ComputeOutIdsTrans24(dst0, dst1, srcReg, q3mulReg, preg, shape2, k2, subReg) \
-do {                                                                                 \
-    Mull(dst0, dst1, srcReg, q3mulReg, preg);                                        \
-    Add(dst0, srcReg, dst1, preg);                                                   \
-    ShiftRights(dst1, dst0, k2, preg);                                               \
-    Muls(dst0, dst1, shape2, preg);                                                  \
-    Sub(subReg, srcReg, dst0, preg);                                                 \
-} while (0)
+    do {                                                                             \
+        Mull(dst0, dst1, srcReg, q3mulReg, preg);                                    \
+        Add(dst0, srcReg, dst1, preg);                                               \
+        ShiftRights(dst1, dst0, k2, preg);                                           \
+        Muls(dst0, dst1, shape2, preg);                                              \
+        Sub(subReg, srcReg, dst0, preg);                                             \
+    } while (0)
 
 #define ComputeOutIdsTrans(dst0, dst1, srcReg, qmulReg, subReg, transReg2, dstInt32Ptr, k1, shape1, preg) \
-do {                                                                                                      \
-    Mull(dst0, dst1, srcReg, qmulReg, preg);                                                              \
-    Add(dst0, srcReg, dst1, preg);                                                                        \
-    ShiftRights(dst1, dst0, k1, preg);                                                                    \
-    Muls(dst0, dst1, shape1, preg);                                                                       \
-    Sub(subReg, srcReg, dst0, preg);                                                                      \
-    DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg2, preg);                            \
-} while (0)
+    do {                                                                                                  \
+        Mull(dst0, dst1, srcReg, qmulReg, preg);                                                          \
+        Add(dst0, srcReg, dst1, preg);                                                                    \
+        ShiftRights(dst1, dst0, k1, preg);                                                                \
+        Muls(dst0, dst1, shape1, preg);                                                                   \
+        Sub(subReg, srcReg, dst0, preg);                                                                  \
+        DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg2, preg);                        \
+    } while (0)
 
 #define ComputeOutIdsTrans1(dst0, dst1, subReg, qmulReg, transReg2, transReg, dstInt32Ptr, k1, shape1, kk, preg) \
-do {                                                                                                             \
-    Mull(dst0, dst1, subReg, qmulReg, preg);                                                                     \
-    Add(dst0, subReg, dst1, preg);                                                                               \
-    ShiftRights(dst1, dst0, k1, preg);                                                                           \
-    Muls(dst0, dst1, shape1, preg);                                                                              \
-    Sub(subReg, subReg, dst0, preg);                                                                             \
-    Adds(transReg, transReg2, kk, preg);                                                                         \
-    DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg, preg);                                    \
-} while (0)
+    do {                                                                                                         \
+        Mull(dst0, dst1, subReg, qmulReg, preg);                                                                 \
+        Add(dst0, subReg, dst1, preg);                                                                           \
+        ShiftRights(dst1, dst0, k1, preg);                                                                       \
+        Muls(dst0, dst1, shape1, preg);                                                                          \
+        Sub(subReg, subReg, dst0, preg);                                                                         \
+        Adds(transReg, transReg2, kk, preg);                                                                     \
+        DataCopyScatter(dstInt32Ptr, dst1, (RegTensor<uint32_t>&)transReg, preg);                                \
+    } while (0)
 
 template <typename T1, typename T2, int TILING_KEY>
 __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfCleanUb(LocalTensor<uint32_t>& addUbSize)
@@ -226,8 +221,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfCleanUb(LocalTensor<ui
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::InitBase(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::InitBase(GM_ADDR x, GM_ADDR y, GM_ADDR outShape,
+                                                                 GM_ADDR workspace, const NonZeroTilingData* tilingData)
 {
     blockIdx_ = GetBlockIdx();
     xGm_.SetGlobalBuffer((__gm__ T1*)x);
@@ -241,16 +236,17 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::InitBase(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyInTail(
-    int32_t loopNum, int32_t tailNum, LocalTensor<uint32_t>& addUbSize, LocalTensor<uint32_t>& maskUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyInTail(int32_t loopNum, int32_t tailNum,
+                                                                   LocalTensor<uint32_t>& addUbSize,
+                                                                   LocalTensor<uint32_t>& maskUbSize)
 {
     LocalTensor<T1> xUb = inQueX_.AllocTensor<T1>();
     copyParams.blockCount = 1;
     copyParams.blockLen = tailNum * sizeof(T1);
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
-    DataCopyPad(
-        xUb, xGm_[blockIdx_ * tilingData_->numPerCore + loopNum * tilingData_->ubFactorNum], copyParams, padParams);
+    DataCopyPad(xUb, xGm_[blockIdx_ * tilingData_->numPerCore + loopNum * tilingData_->ubFactorNum], copyParams,
+                padParams);
     inQueX_.EnQue<QuePosition::VECIN, QuePosition::VECCALC>(xUb);
     LocalTensor<T1> xUbSize = inQueX_.DeQue<QuePosition::VECIN, QuePosition::VECCALC, T1>();
     if constexpr (sizeof(T1) == sizeof(int8_t)) {
@@ -309,9 +305,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputeNonZeroNum(LocalT
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyInBefore(
-    int32_t loopNum, int32_t beforeNum, int32_t tailNum, LocalTensor<uint32_t>& addUbSize,
-    LocalTensor<uint32_t>& maskUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyInBefore(int32_t loopNum, int32_t beforeNum,
+                                                                     int32_t tailNum, LocalTensor<uint32_t>& addUbSize,
+                                                                     LocalTensor<uint32_t>& maskUbSize)
 {
     for (int32_t loopCore = 0; loopCore < loopNum; loopCore++) {
         LocalTensor<T1> xUb = inQueX_.AllocTensor<T1>();
@@ -319,9 +315,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyInBefore(
         copyParams.blockLen = beforeNum * sizeof(T1);
         copyParams.srcStride = 0;
         copyParams.dstStride = 0;
-        DataCopyPad(
-            xUb, xGm_[blockIdx_ * tilingData_->numPerCore + loopCore * tilingData_->ubFactorNum], copyParams,
-            padParams);
+        DataCopyPad(xUb, xGm_[blockIdx_ * tilingData_->numPerCore + loopCore * tilingData_->ubFactorNum], copyParams,
+                    padParams);
         inQueX_.EnQue<QuePosition::VECIN, QuePosition::VECCALC>(xUb);
         LocalTensor<T1> xUbSize = inQueX_.DeQue<QuePosition::VECIN, QuePosition::VECCALC, T1>();
 
@@ -395,9 +390,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfAllNum(LocalTensor<uin
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIds(
-    int32_t loopIndex, int32_t loopNum, LocalTensor<int32_t>& outUbSize, LocalTensor<uint32_t>& maskUbSize,
-    uint64_t& arNum)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIds(int32_t loopIndex, int32_t loopNum,
+                                                                     LocalTensor<int32_t>& outUbSize,
+                                                                     LocalTensor<uint32_t>& maskUbSize, uint64_t& arNum)
 {
     uint32_t sreg = (uint32_t)loopNum;
     uint16_t repeatTimes = CeilDivision(loopNum, VF_LEN_INT32);
@@ -421,8 +416,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIds(
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, 8);
             AscendC::MicroAPI::DataCopy(maskReg, maskUbPtr, offset);
             AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                dstPtr, vsqzReg, ureg0);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg,
+                                                                                                 ureg0);
             AscendC::MicroAPI::Adds(idsReg, idsReg, vfLenInt32, preg);
         }
         AscendC::MicroAPI::DataCopyUnAlignPost(dstPtr, ureg0);
@@ -432,13 +427,15 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIds(
 
 template <typename T1, typename T2, int TILING_KEY>
 __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIdsB64(int32_t loopIndex, int32_t loopNum,
-    LocalTensor<int32_t> &outUbSize, LocalTensor<uint32_t> &maskUbSize, uint64_t &arNum)
+                                                                        LocalTensor<int32_t>& outUbSize,
+                                                                        LocalTensor<uint32_t>& maskUbSize,
+                                                                        uint64_t& arNum)
 {
     uint32_t sreg = (uint32_t)loopNum;
     uint32_t repeatElm = (uint32_t)VF_LEN_INT64;
     uint16_t repeatTimes = CeilDivision(loopNum, repeatElm);
-    auto dstPtr = (__ubuf__ int32_t *)outUbSize.GetPhyAddr() + tilingData_->offsetInt32Trans;
-    auto maskUbPtr = (__ubuf__ uint64_t *)maskUbSize.GetPhyAddr() + loopIndex * tilingData_->maskLoopNumO;
+    auto dstPtr = (__ubuf__ int32_t*)outUbSize.GetPhyAddr() + tilingData_->offsetInt32Trans;
+    auto maskUbPtr = (__ubuf__ uint64_t*)maskUbSize.GetPhyAddr() + loopIndex * tilingData_->maskLoopNumO;
     int32_t numPerCore1 = tilingData_->numPerCore;
     int32_t beforeNumO1 = tilingData_->beforeNumO;
     int32_t scalar = blockIdx_ * numPerCore1 + loopIndex * beforeNumO1;
@@ -456,9 +453,10 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIdsB64(int32_t 
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, 4);
             AscendC::MicroAPI::DataCopy(maskReg, maskUbPtr, offset);
             AscendC::MicroAPI::MaskPack<MicroAPI::HighLowPart::LOWEST>(maskHalf, maskReg);
-            
+
             AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskHalf);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg, ureg0);
+            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg,
+                                                                                                 ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, repeatElm, preg);
         }
@@ -468,9 +466,10 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfComputeIdsB64(int32_t 
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum1(
-    int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
-    LocalTensor<uint32_t>& addUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum1(int32_t loop, int32_t computeNum,
+                                                                             LocalTensor<T1>& xUbSize,
+                                                                             LocalTensor<uint32_t>& maskUbSize,
+                                                                             LocalTensor<uint32_t>& addUbSize)
 {
     auto xUbPtr = (__ubuf__ T1*)xUbSize.GetPhyAddr();
     auto maskUbPtr = (__ubuf__ uint32_t*)maskUbSize.GetPhyAddr() + loop * tilingData_->maskLoopNum;
@@ -546,9 +545,10 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum1(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum2(
-    int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
-    LocalTensor<uint32_t>& addUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum2(int32_t loop, int32_t computeNum,
+                                                                             LocalTensor<T1>& xUbSize,
+                                                                             LocalTensor<uint32_t>& maskUbSize,
+                                                                             LocalTensor<uint32_t>& addUbSize)
 {
     auto xUbPtr = (__ubuf__ T1*)xUbSize.GetPhyAddr();
     auto maskUbPtr = (__ubuf__ uint32_t*)maskUbSize.GetPhyAddr() + loop * tilingData_->maskLoopNum;
@@ -607,9 +607,10 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum2(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum3(
-    int32_t loop, int32_t computeNum, LocalTensor<T1>& xUbSize, LocalTensor<uint32_t>& maskUbSize,
-    LocalTensor<uint32_t>& addUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum3(int32_t loop, int32_t computeNum,
+                                                                             LocalTensor<T1>& xUbSize,
+                                                                             LocalTensor<uint32_t>& maskUbSize,
+                                                                             LocalTensor<uint32_t>& addUbSize)
 {
     auto xUbPtr = (__ubuf__ T1*)xUbSize.GetPhyAddr();
     auto maskUbPtr = (__ubuf__ uint32_t*)maskUbSize.GetPhyAddr() + loop * tilingData_->maskLoopNum;
@@ -656,11 +657,14 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum3(
 
 template <typename T1, typename T2, int TILING_KEY>
 __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum4(int32_t loop, int32_t computeNum,
-    LocalTensor<T1> &xUbSize, LocalTensor<uint32_t> &maskUbSize, LocalTensor<uint32_t> &addUbSize)
+                                                                             LocalTensor<T1>& xUbSize,
+                                                                             LocalTensor<uint32_t>& maskUbSize,
+                                                                             LocalTensor<uint32_t>& addUbSize)
 {
-    auto xUbPtr = (__ubuf__ T1 *)xUbSize.GetPhyAddr();
-    auto maskUbPtr = (__ubuf__ uint64_t *)maskUbSize.GetPhyAddr() + static_cast<uint64_t>(loop) * tilingData_->maskLoopNum;
-    auto dstUbPtr = (__ubuf__ uint64_t *)addUbSize.GetPhyAddr();
+    auto xUbPtr = (__ubuf__ T1*)xUbSize.GetPhyAddr();
+    auto maskUbPtr = (__ubuf__ uint64_t*)maskUbSize.GetPhyAddr() +
+                     static_cast<uint64_t>(loop) * tilingData_->maskLoopNum;
+    auto dstUbPtr = (__ubuf__ uint64_t*)addUbSize.GetPhyAddr();
     uint32_t sreg = (uint32_t)computeNum;
     uint32_t repeatElm = (uint32_t)vfLenT1_;
     uint16_t repeatTimes = CeilDivision(computeNum, repeatElm);
@@ -695,8 +699,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::VfPerCoreNonZeroNum4(int
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyOut(
-    uint64_t arNum, int32_t loopOffset, int32_t alignInt32, LocalTensor<T2>& outUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyOut(uint64_t arNum, int32_t loopOffset, int32_t alignInt32,
+                                                                LocalTensor<T2>& outUbSize)
 {
     int32_t alignInt64 = sizeof(T2) == DIM8 ? ((arNum + DIM4 - 1) / DIM4) * DIM4 : alignInt32;
     int32_t srcStride = ((alignInt32 - alignInt64) * sizeof(T2)) / ONE_BLOCK;
@@ -708,8 +712,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyOut(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyOutTrans(
-    uint64_t arNum, uint64_t looOffset, LocalTensor<T2>& outUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyOutTrans(uint64_t arNum, uint64_t looOffset,
+                                                                     LocalTensor<T2>& outUbSize)
 {
     copyParams.blockCount = 1;
     copyParams.blockLen = tilingData_->inputDims * arNum * sizeof(T2);
@@ -719,8 +723,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::CopyOutTrans(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans2(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans2(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -762,8 +766,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans2(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans3(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans3(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -813,8 +817,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans3(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans4(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans4(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -871,8 +875,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans4(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans5(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans5(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -936,8 +940,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans5(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans6(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans6(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1008,8 +1012,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans6(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans7(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans7(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1087,8 +1091,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans7(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans8(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans8(int32_t alignInt32, uint64_t arNum,
+                                                                 LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1173,8 +1177,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::NoTrans8(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute3(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute3(int32_t alignInt32, uint64_t arNum,
+                                                                      LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1230,8 +1234,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute3(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute5(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute5(int32_t alignInt32, uint64_t arNum,
+                                                                      LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1299,8 +1303,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute5(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute6(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute6(int32_t alignInt32, uint64_t arNum,
+                                                                      LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1374,8 +1378,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute6(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute7(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute7(int32_t alignInt32, uint64_t arNum,
+                                                                      LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1455,8 +1459,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute7(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute8(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute8(int32_t alignInt32, uint64_t arNum,
+                                                                      LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     uint16_t repeatTimes1 = CeilDivision(arNum, VF_LEN_INT32);
@@ -1542,8 +1546,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransCompute8(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransComputeOut2(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransComputeOut2(int32_t alignInt32, uint64_t arNum,
+                                                                         LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     int32_t vfLenInt32 = VF_LEN_INT32;
@@ -1608,8 +1612,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransComputeOut2(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransComputeOut4(
-    int32_t alignInt32, uint64_t arNum, LocalTensor<int32_t>& dstUbInt32)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransComputeOut4(int32_t alignInt32, uint64_t arNum,
+                                                                         LocalTensor<int32_t>& dstUbInt32)
 {
     uint16_t repeatTimes = CeilDivision(alignInt32 * tilingData_->inputDims, VF_LEN_INT64);
     int32_t vfLenInt32 = VF_LEN_INT32;
@@ -1730,8 +1734,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::TransComputeOut4(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut2(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut2(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1746,8 +1751,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut2(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut4(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut4(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1762,8 +1768,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut4(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut3(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut3(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1778,8 +1785,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut3(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut5(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut5(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1794,8 +1802,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut5(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut6(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut6(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1810,8 +1819,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut6(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut7(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut7(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1826,8 +1836,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut7(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut8(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut8(uint64_t arNum, uint64_t loopGm,
+                                                                   LocalTensor<int32_t>& dstUbInt32,
+                                                                   LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1842,8 +1853,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOut8(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo2(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo2(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1858,8 +1870,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo2(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo3(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo3(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1874,8 +1887,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo3(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo4(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo4(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1890,8 +1904,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo4(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo5(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo5(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1906,8 +1921,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo5(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo6(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo6(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1922,8 +1938,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo6(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo7(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo7(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1938,8 +1955,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo7(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo8(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<int32_t>& dstUbInt32, LocalTensor<T2>& xUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo8(uint64_t arNum, uint64_t loopGm,
+                                                                     LocalTensor<int32_t>& dstUbInt32,
+                                                                     LocalTensor<T2>& xUbSize)
 {
     if (arNum > 0) {
         int32_t alignInt32 = ((arNum + 8 - 1) / 8) * 8;
@@ -1954,8 +1972,9 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputOutNo8(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputeBefore(
-    uint64_t& loopGm, int32_t loopCore, int32_t beforeNumOut, LocalTensor<uint32_t>& maskUbSize)
+__aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::ComputeBefore(uint64_t& loopGm, int32_t loopCore,
+                                                                      int32_t beforeNumOut,
+                                                                      LocalTensor<uint32_t>& maskUbSize)
 {
     LocalTensor<T2> dstUbInt64 = inQueX_.AllocTensor<T2>();
     inQueX_.EnQue<QuePosition::VECIN, QuePosition::VECCALC>(dstUbInt64);
@@ -2006,9 +2025,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::BaseProcess()
         LocalTensor<uint32_t> addUbSize = addUb.template Get<uint32_t>();
         LocalTensor<uint32_t> maskUbSize = maskUb.template Get<uint32_t>();
         VfCleanUb(addUbSize);
-        CopyInBefore(
-            tilingData_->loopNumTailCore, tilingData_->ubFactorNum, tilingData_->loopTailTailCore, addUbSize,
-            maskUbSize);
+        CopyInBefore(tilingData_->loopNumTailCore, tilingData_->ubFactorNum, tilingData_->loopTailTailCore, addUbSize,
+                     maskUbSize);
 
         uint64_t loopGm = 0;
         for (int32_t loopCore = 0; loopCore < tilingData_->loopNumTo; loopCore++) {
@@ -2021,8 +2039,8 @@ __aicore__ inline void NonZeroBase<T1, T2, TILING_KEY>::BaseProcess()
         LocalTensor<uint32_t> addUbSize = addUb.template Get<uint32_t>();
         LocalTensor<uint32_t> maskUbSize = maskUb.template Get<uint32_t>();
         VfCleanUb(addUbSize);
-        CopyInBefore(
-            tilingData_->loopNumPerCore, tilingData_->ubFactorNum, tilingData_->loopTailPerCore, addUbSize, maskUbSize);
+        CopyInBefore(tilingData_->loopNumPerCore, tilingData_->ubFactorNum, tilingData_->loopTailPerCore, addUbSize,
+                     maskUbSize);
         uint64_t loopGm = 0;
         for (int32_t loopCore = 0; loopCore < tilingData_->loopNumO; loopCore++) {
             ComputeBefore(loopGm, loopCore, tilingData_->beforeNumO, maskUbSize);

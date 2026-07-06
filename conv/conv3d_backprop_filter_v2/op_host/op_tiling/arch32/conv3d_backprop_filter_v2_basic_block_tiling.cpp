@@ -66,7 +66,7 @@ constexpr uint64_t L0C_SIZE = 131072;
 constexpr uint32_t BF16_DTYPE_SIZE = 2;
 constexpr uint32_t L0C_DTYPE_BYTE = 4;
 constexpr uint64_t WORKSPACE_SYS_SIZE = 16UL * 1024UL * 1024UL; // 16MB libapi workspace
-}  // namespace
+} // namespace
 
 namespace Ops {
 namespace NN {
@@ -91,7 +91,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::GetShapeAttrsInfo()
     aDtype_ = runInfo_.a_dtype;
     coreNum_ = context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->core_num;
 
-    TConv3DDwTiling &dwt = tilingData_.dwTiling;
+    TConv3DDwTiling& dwt = tilingData_.dwTiling;
     SetShapeTiling(dwt);
     SetAttrTiling(dwt);
     SetBasicBlockAttrsTiling();
@@ -108,17 +108,17 @@ void Conv3DDWV2BasicBlockTiling::SetBasicBlockAttrsTiling()
     uint32_t fractalSize0 = tilingData_.dwTiling.channelSize;
     mmInfo_.mValue = static_cast<uint64_t>(runInfo_.cout1_g) * fractalSize0;
     bool splitDk = (runInfo_.real_g > 1) || (runInfo_.dilation_d > 1) || context_->GetDeterministic();
-    mmInfo_.nValue = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw *
-        runInfo_.cin1_g * fractalSize0;
+    mmInfo_.nValue = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw * runInfo_.cin1_g * fractalSize0;
     if (!splitDk) {
         mmInfo_.nValue *= static_cast<uint64_t>(runInfo_.kd);
     }
     mmInfo_.kValue = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo,
-                                    static_cast<uint64_t>(fractalSize0));
+                                          static_cast<uint64_t>(fractalSize0));
     blockTiling_.usedCoreNum = coreNum_;
 }
 
-bool Conv3DDWV2BasicBlockTiling::IsCapable() {
+bool Conv3DDWV2BasicBlockTiling::IsCapable()
+{
     // 当芯片型号为950时需要拦截，主要原因是共用tilingFunc和TilingParse
     if (IsSocVersion91095()) {
         return false;
@@ -126,25 +126,26 @@ bool Conv3DDWV2BasicBlockTiling::IsCapable() {
 
     if (context_->GetDeterministic()) {
         // 确定性计算优先走MN StreamK模板，仅支持NDC1HWC0
-        auto xFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(X_INDEX)->GetStorageFormat()));
+        auto xFormat = static_cast<ge::Format>(
+            ge::GetPrimaryFormat(context_->GetInputDesc(X_INDEX)->GetStorageFormat()));
         bool isFormatSupport = (xFormat == ge::FORMAT_NDC1HWC0);
         bool isDtypeSupport = (runInfo_.a_dtype == ge::DT_BF16 || runInfo_.a_dtype == ge::DT_FLOAT16 ||
-            runInfo_.a_dtype == ge::DT_FLOAT);
+                               runInfo_.a_dtype == ge::DT_FLOAT);
 
-        OP_LOGD(context_->GetNodeName(), "Deterministic isFormatSupport: %d, isDtypeSupport: %d",
-                isFormatSupport, isDtypeSupport);
+        OP_LOGD(context_->GetNodeName(), "Deterministic isFormatSupport: %d, isDtypeSupport: %d", isFormatSupport,
+                isDtypeSupport);
 
         return isFormatSupport && isDtypeSupport;
     }
 
     // 当前仅支持1*1和在一个基本块以上大小的2*2 3*3 4*4卷积
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kh) * runInfo_.kw;
-    bool isKernelSupport = (kernelHW == 1u)
-        || ((kernelHW == KERNEL_HW_4 || kernelHW == KERNEL_HW_9 || kernelHW == KERNEL_HW_16)
-            && mmInfo_.mValue >= BASIC_BLOCK_SIZE_128 && mmInfo_.nValue >= BASIC_BLOCK_SIZE_128);
+    bool isKernelSupport = (kernelHW == 1u) ||
+                           ((kernelHW == KERNEL_HW_4 || kernelHW == KERNEL_HW_9 || kernelHW == KERNEL_HW_16) &&
+                            mmInfo_.mValue >= BASIC_BLOCK_SIZE_128 && mmInfo_.nValue >= BASIC_BLOCK_SIZE_128);
 
-    bool isBasicBlockSupport = isKernelSupport && dtypeByte_ == ge::GetSizeByDataType(ge::DT_BF16)
-        && runInfo_.real_g == 1 && runInfo_.dilation_d == 1;
+    bool isBasicBlockSupport = isKernelSupport && dtypeByte_ == ge::GetSizeByDataType(ge::DT_BF16) &&
+                               runInfo_.real_g == 1 && runInfo_.dilation_d == 1;
     return isBasicBlockSupport;
 }
 
@@ -157,7 +158,7 @@ void Conv3DDWV2BasicBlockTiling::UpdateSingleCoreInfo()
     blockTiling_.singleCoreK = std::max(maxStepKL1 / runInfo_.wo, static_cast<uint64_t>(1)) * runInfo_.wo;
 
     uint64_t khwMulC = (static_cast<uint64_t>(runInfo_.kh) * static_cast<uint64_t>(runInfo_.kw) *
-        static_cast<uint64_t>(tilingData_.dwTiling.channelSize));
+                        static_cast<uint64_t>(tilingData_.dwTiling.channelSize));
     uint64_t l1Cin1 = blockTiling_.stepN * blockTiling_.blockBaseN / std::max(khwMulC, uint64_t(1));
     l1Cin1 = std::max(static_cast<uint32_t>(l1Cin1), static_cast<uint32_t>(1));
     blockTiling_.singleCoreN = l1Cin1 * runInfo_.kh * runInfo_.kw * tilingData_.dwTiling.channelSize;
@@ -179,8 +180,8 @@ void Conv3DDWV2BasicBlockTiling::UpdateSingleCoreInfo()
     if (context_->GetDeterministic()) {
         blockTiling_.totalCnt = mCnt * kCnt * nCnt * groupCnt * dkCnt;
     } else {
-        blockTiling_.totalCnt = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout * mCnt * kCnt * nCnt *
-            groupCnt * dkCnt;
+        blockTiling_.totalCnt = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout * mCnt * kCnt * nCnt * groupCnt *
+                                dkCnt;
     }
 }
 
@@ -189,14 +190,14 @@ uint64_t Conv3DDWV2BasicBlockTiling::GetSingleShapeKByStreamK()
     uint64_t oriHoWo = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
     uint64_t minSingleShapeK = static_cast<uint64_t>(runInfo_.wo);
     minSingleShapeK = std::max(minSingleShapeK, static_cast<uint64_t>(blockTiling_.blockBaseK));
-    
+
     uint32_t maxStreamKDim = static_cast<uint32_t>(Ops::Base::CeilDiv(oriHoWo, minSingleShapeK));
     uint32_t actualStreamKDim = std::min(static_cast<uint32_t>(blockTiling_.coreStreamK), maxStreamKDim);
     actualStreamKDim = std::max(actualStreamKDim, static_cast<uint32_t>(1));
 
-    uint64_t singleShapeK = Ops::Base::CeilDiv(
-                                static_cast<uint64_t>(runInfo_.ho),
-                                static_cast<uint64_t>(actualStreamKDim)) * runInfo_.wo;
+    uint64_t singleShapeK = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.ho),
+                                               static_cast<uint64_t>(actualStreamKDim)) *
+                            runInfo_.wo;
     singleShapeK = Ops::Base::CeilAlign(singleShapeK, static_cast<uint64_t>(runInfo_.wo));
     return singleShapeK;
 }
@@ -204,11 +205,11 @@ uint64_t Conv3DDWV2BasicBlockTiling::GetSingleShapeKByStreamK()
 bool Conv3DDWV2BasicBlockTiling::IsSplitBatchDoutBetter()
 {
     uint64_t singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
-    uint64_t singleShapeBatchDout = Ops::Base::CeilDiv(
-        singleCoreBatchDout, static_cast<uint64_t>(blockTiling_.coreStreamK));
+    uint64_t singleShapeBatchDout = Ops::Base::CeilDiv(singleCoreBatchDout,
+                                                       static_cast<uint64_t>(blockTiling_.coreStreamK));
     uint64_t batchDoutTail = singleCoreBatchDout % singleShapeBatchDout;
-    uint64_t streamkBatchDim = Ops::Base::CeilDiv(
-        static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout, singleShapeBatchDout);
+    uint64_t streamkBatchDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
+                                                  singleShapeBatchDout);
     uint64_t singleShapeK = GetSingleShapeKByStreamK();
 
     uint64_t oriHoWo = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
@@ -228,12 +229,10 @@ bool Conv3DDWV2BasicBlockTiling::IsSplitBatchDoutBetter()
 
 void Conv3DDWV2BasicBlockTiling::DoStreamkByBatchDout()
 {
-    uint64_t singleShapeBatchDout = Ops::Base::CeilDiv(
-        static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
-        static_cast<uint64_t>(blockTiling_.coreStreamK));
-    uint64_t streamkBatchDim = Ops::Base::CeilDiv(
-        static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
-        singleShapeBatchDout);
+    uint64_t singleShapeBatchDout = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
+                                                       static_cast<uint64_t>(blockTiling_.coreStreamK));
+    uint64_t streamkBatchDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout,
+                                                  singleShapeBatchDout);
     if (streamkBatchDim == 1) {
         blockTiling_.streamKType = NO_STREAMK_CALC;
     } else {
@@ -290,7 +289,8 @@ void Conv3DDWV2BasicBlockTiling::UpdateStreamK()
 
     if (tailCnt == blockTiling_.totalCnt) {
         blockTiling_.usedCoreNum = blockTiling_.streamKType == NO_STREAMK_CALC ?
-                    blockTiling_.totalCnt : blockTiling_.totalCnt * blockTiling_.coreStreamK;
+                                       blockTiling_.totalCnt :
+                                       blockTiling_.totalCnt * blockTiling_.coreStreamK;
         blockTiling_.usedCoreNum = std::min(blockTiling_.usedCoreNum, static_cast<uint32_t>(coreNum_));
         blockTiling_.usedCoreNum = std::max(blockTiling_.usedCoreNum, static_cast<uint32_t>(1));
     }
@@ -304,7 +304,7 @@ void Conv3DDWV2BasicBlockTiling::AdjustSingleNForStreamK()
 
     uint64_t targetCoreNum = static_cast<uint64_t>(blockTiling_.usedCoreNum);
     uint64_t currentTotalCnt = blockTiling_.totalCnt;
-    
+
     if (currentTotalCnt % targetCoreNum == 0 && mmInfo_.nValue == blockTiling_.singleCoreN) {
         return;
     }
@@ -338,8 +338,7 @@ void Conv3DDWV2BasicBlockTiling::AdjustSingleNForStreamK()
     uint64_t tailCnt = blockTiling_.totalCnt % targetCoreNum;
 
     uint64_t maxStreamKDim = mmInfo_.kValue / blockTiling_.blockBaseK;
-    uint64_t batchDoutDim = !context_->GetDeterministic() ? 1 :
-                            static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
+    uint64_t batchDoutDim = !context_->GetDeterministic() ? 1 : static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
     maxStreamKDim = std::max(maxStreamKDim, batchDoutDim);
 
     if (maxStreamKDim <= STREAM_K_DIM_MIN || tailCnt + STREAM_K_TAIL_TOLERANCE >= targetCoreNum) {
@@ -365,7 +364,7 @@ uint64_t Conv3DDWV2BasicBlockTiling::CalNewSingleCoreN(uint64_t totalCntWithoutN
     uint64_t missingFactor = targetCoreNum / gcdVal;
 
     uint64_t khwMulC = (static_cast<uint64_t>(runInfo_.kh) * static_cast<uint64_t>(runInfo_.kw) *
-        static_cast<uint64_t>(tilingData_.dwTiling.channelSize));
+                        static_cast<uint64_t>(tilingData_.dwTiling.channelSize));
 
     uint64_t maxCin1 = static_cast<uint64_t>(runInfo_.cin1_g);
 
@@ -400,8 +399,7 @@ void Conv3DDWV2BasicBlockTiling::AdjustBaseNForStreamK()
     uint32_t kernelHW = static_cast<uint32_t>(runInfo_.kh * runInfo_.kw);
     uint32_t kernelNum = Ops::Base::CeilDiv(baseBlockNum, kernelHW);
 
-    kernelNum = kernelNum * kernelHW <= std::max(baseBlockNum, 16U) ?
-                kernelNum : std::max(kernelNum - 1U, 1U);
+    kernelNum = kernelNum * kernelHW <= std::max(baseBlockNum, 16U) ? kernelNum : std::max(kernelNum - 1U, 1U);
     if (kernelNum * kernelHW <= std::max(baseBlockNum, 16U)) {
         uint64_t bL0Max = L0B_SIZE / dtypeByte_ / DB_ON;
         blockTiling_.blockBaseN = kernelNum * kernelHW * BLOCK_CUBE;
@@ -409,7 +407,8 @@ void Conv3DDWV2BasicBlockTiling::AdjustBaseNForStreamK()
         maxBaseM = std::min(maxBaseM, validblockBaseM);
 
         blockTiling_.blockBaseM = validblockBaseM > BASIC_BLOCK_SIZE_128 && maxBaseM < validblockBaseM ?
-                                   validblockBaseM / NUM_HALF : maxBaseM;
+                                      validblockBaseM / NUM_HALF :
+                                      maxBaseM;
         blockTiling_.blockBaseM = std::min(maxBaseM, blockTiling_.blockBaseM);
         blockTiling_.blockBaseM = std::max(blockTiling_.blockBaseM / BLOCK_CUBE, 1U) * BLOCK_CUBE;
         blockTiling_.blockBaseK = bL0Max / std::max(blockTiling_.blockBaseM, blockTiling_.blockBaseN);
@@ -443,8 +442,7 @@ void Conv3DDWV2BasicBlockTiling::CheckDbL0C()
 
 void Conv3DDWV2BasicBlockTiling::InitBaseMNK()
 {
-    if (blockTiling_.coreBindDirection == SPLIT_M_N || 
-        blockTiling_.coreBindDirection == SPLIT_M_N_STREAMK) {
+    if (blockTiling_.coreBindDirection == SPLIT_M_N || blockTiling_.coreBindDirection == SPLIT_M_N_STREAMK) {
         // 不切K算法主要是MTE1 Bound场景，L0A搬运效率是L0B两倍以上，优先让L0A填满
         if (mmInfo_.mValue > BASIC_BLOCK_SIZE_128) {
             blockTiling_.blockBaseM = BASIC_BLOCK_SIZE_256;
@@ -480,9 +478,11 @@ void Conv3DDWV2BasicBlockTiling::InitBaseMNK()
     } else {
         // 根据调小后的BaseM和BaseN调大BaseK
         uint64_t newBaseKa = std::max(aL0Max / blockTiling_.blockBaseM / static_cast<uint64_t>(BLOCK_CUBE),
-            static_cast<uint64_t>(1)) * static_cast<uint64_t>(BLOCK_CUBE);
+                                      static_cast<uint64_t>(1)) *
+                             static_cast<uint64_t>(BLOCK_CUBE);
         uint64_t newBaseKb = std::max(bL0Max / blockTiling_.blockBaseN / static_cast<uint64_t>(BLOCK_CUBE),
-            static_cast<uint64_t>(1)) * static_cast<uint64_t>(BLOCK_CUBE);
+                                      static_cast<uint64_t>(1)) *
+                             static_cast<uint64_t>(BLOCK_CUBE);
         uint64_t newBaseK = std::min(std::min(newBaseKa, newBaseKb), alignedKValue);
         blockTiling_.blockBaseK = newBaseK;
 
@@ -530,15 +530,19 @@ void Conv3DDWV2BasicBlockTiling::UpdateStepMNK()
     blockTiling_.stepKb = std::max(std::min(bL1MaxDivBaseNK / blockTiling_.stepN, maxKIter), minIter);
 
     if (blockTiling_.coreBindDirection == SPLIT_M_K) {
-        blockTiling_.stepKa = std::max(blockTiling_.stepKa / blockTiling_.stepKb, static_cast<uint32_t>(1)) * blockTiling_.stepKb;
+        blockTiling_.stepKa = std::max(blockTiling_.stepKa / blockTiling_.stepKb, static_cast<uint32_t>(1)) *
+                              blockTiling_.stepKb;
     } else if (blockTiling_.coreBindDirection == SPLIT_N_K) {
-        blockTiling_.stepKb = std::max(blockTiling_.stepKb / blockTiling_.stepKa, static_cast<uint32_t>(1)) * blockTiling_.stepKa;
+        blockTiling_.stepKb = std::max(blockTiling_.stepKb / blockTiling_.stepKa, static_cast<uint32_t>(1)) *
+                              blockTiling_.stepKa;
     } else {
         if (blockTiling_.stepKa > blockTiling_.stepKb) {
-            blockTiling_.stepKa = std::max(blockTiling_.stepKa / blockTiling_.stepKb, static_cast<uint32_t>(1)) * blockTiling_.stepKb;
+            blockTiling_.stepKa = std::max(blockTiling_.stepKa / blockTiling_.stepKb, static_cast<uint32_t>(1)) *
+                                  blockTiling_.stepKb;
         }
         if (blockTiling_.stepKb > blockTiling_.stepKa) {
-            blockTiling_.stepKb = std::max(blockTiling_.stepKb / blockTiling_.stepKa, static_cast<uint32_t>(1)) * blockTiling_.stepKa;
+            blockTiling_.stepKb = std::max(blockTiling_.stepKb / blockTiling_.stepKa, static_cast<uint32_t>(1)) *
+                                  blockTiling_.stepKa;
         }
     }
 }
@@ -635,7 +639,8 @@ void Conv3DDWV2BasicBlockTiling::MultiCoreSplitMN()
     if (blockTiling_.totalCnt < blockTiling_.usedCoreNum) {
         if (blockTiling_.coreBindDirection == SPLIT_M_N_STREAMK) {
             blockTiling_.usedCoreNum = blockTiling_.totalCnt > blockTiling_.usedCoreNum / NUM_HALF ?
-                                        blockTiling_.totalCnt : blockTiling_.usedCoreNum;
+                                           blockTiling_.totalCnt :
+                                           blockTiling_.usedCoreNum;
         } else {
             MultiCoreSplitK();
             return;
@@ -649,7 +654,8 @@ uint64_t Conv3DDWV2BasicBlockTiling::CalculateL1SizeGap()
     uint64_t al1LoadSize = static_cast<uint64_t>(blockTiling_.blockBaseK) * blockTiling_.blockBaseM * dtypeByte_;
     uint64_t bl1LoadSize = CalBL1Bound() * dtypeByte_;
     uint64_t deltaL1LoadSize = (al1LoadSize + bl1LoadSize > tilingData_.params.totalL1Size) ?
-                                al1LoadSize + bl1LoadSize - tilingData_.params.totalL1Size : 0;
+                                   al1LoadSize + bl1LoadSize - tilingData_.params.totalL1Size :
+                                   0;
     return deltaL1LoadSize;
 }
 
@@ -676,8 +682,9 @@ bool Conv3DDWV2BasicBlockTiling::ShrinkBlockBaseK()
 
     uint32_t bL1Cin1CopyLen = CalculateBl1Cin1CopyLen(blockTiling_.blockBaseN);
     // 基本块K方向每减小C0, L1B装载大小减小deltaAl1PerC0, 本身这个过程是阶跃的, 此处做线性处理
-    uint64_t deltaBl1PerC0 = Ops::Base::CeilDiv(bL1Cin1CopyLen * fractalSize0 * runInfo_.wi * runInfo_.stride_h
-                                            * BLOCK_CUBE * dtypeByte_, static_cast<uint64_t>(runInfo_.wo));
+    uint64_t deltaBl1PerC0 = Ops::Base::CeilDiv(
+        bL1Cin1CopyLen * fractalSize0 * runInfo_.wi * runInfo_.stride_h * BLOCK_CUBE * dtypeByte_,
+        static_cast<uint64_t>(runInfo_.wo));
 
     // 线性处理后, deltaBl1PerC0一定不小于实际每C0减小, 所以c0ShrinkCount不会大于实际需减小C0数量
     uint64_t c0ShrinkCount = Ops::Base::CeilDiv(deltaL1LoadSize, deltaAl1PerC0 + deltaBl1PerC0);
@@ -691,8 +698,8 @@ bool Conv3DDWV2BasicBlockTiling::ShrinkBlockBaseK()
             blockTiling_.blockBaseK -= BLOCK_CUBE;
             int32_t woModBlockBaseK = runInfo_.wo % std::max(static_cast<int32_t>(blockTiling_.blockBaseK), int32_t(1));
             int32_t woModFractalSize0 = runInfo_.wo % std::max(static_cast<int32_t>(BLOCK_CUBE), int32_t(1));
-            if (static_cast<int32_t>(blockTiling_.blockBaseK) <= runInfo_.wo
-                && (woModBlockBaseK == int32_t(0) || woModFractalSize0 != int32_t(0))) {
+            if (static_cast<int32_t>(blockTiling_.blockBaseK) <= runInfo_.wo &&
+                (woModBlockBaseK == int32_t(0) || woModFractalSize0 != int32_t(0))) {
                 break;
             }
         }
@@ -709,12 +716,12 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBlockBaseMN()
 {
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kh * runInfo_.kw);
     // M和N方向减小, 首先让M和N大小平齐
-    while (blockTiling_.blockBaseM > BLOCK_CUBE && blockTiling_.blockBaseM > blockTiling_.blockBaseN
-            && IsCurBlockL1Invalid()) {
+    while (blockTiling_.blockBaseM > BLOCK_CUBE && blockTiling_.blockBaseM > blockTiling_.blockBaseN &&
+           IsCurBlockL1Invalid()) {
         blockTiling_.blockBaseM -= BLOCK_CUBE;
     }
-    while (blockTiling_.blockBaseN > BLOCK_CUBE && blockTiling_.blockBaseN > blockTiling_.blockBaseM
-            && IsCurBlockL1Invalid()) {
+    while (blockTiling_.blockBaseN > BLOCK_CUBE && blockTiling_.blockBaseN > blockTiling_.blockBaseM &&
+           IsCurBlockL1Invalid()) {
         blockTiling_.blockBaseN -= BLOCK_CUBE;
     }
     if (!IsCurBlockL1Invalid()) {
@@ -732,7 +739,8 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBlockBaseMN()
     }
     int32_t hiCal = (hoCal - 1) * runInfo_.stride_h + (runInfo_.kh - 1) * runInfo_.dilation_h + 1;
     // 与K方向减小采用同样思路, 做线性化处理
-    uint64_t deltaBl1PerC0 = Ops::Base::CeilDiv(static_cast<uint64_t>(hiCal) * runInfo_.wi * BLOCK_CUBE * dtypeByte_, kernelHW);
+    uint64_t deltaBl1PerC0 = Ops::Base::CeilDiv(static_cast<uint64_t>(hiCal) * runInfo_.wi * BLOCK_CUBE * dtypeByte_,
+                                                kernelHW);
     uint64_t deltaL1LoadSize = CalculateL1SizeGap();
     uint32_t c0ShrinkCount = Ops::Base::CeilDiv(deltaL1LoadSize, deltaAl1PerC0 + deltaBl1PerC0);
     if (static_cast<uint64_t>(blockTiling_.blockBaseM) < (c0ShrinkCount + 1) * BLOCK_CUBE) {
@@ -745,7 +753,7 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBlockBaseMN()
     uint32_t bL1Cin1CopyLen = CalculateBl1Cin1CopyLen(blockTiling_.blockBaseN);
 
     while (blockTiling_.blockBaseM > BLOCK_CUBE && IsCurBlockL1Invalid()) {
-        uint32_t newBl1Cin1CopyLen = CalculateBl1Cin1CopyLen(blockTiling_.blockBaseM);// 向上取整，拖尾时默认多搬一行
+        uint32_t newBl1Cin1CopyLen = CalculateBl1Cin1CopyLen(blockTiling_.blockBaseM); // 向上取整，拖尾时默认多搬一行
         if (newBl1Cin1CopyLen < bL1Cin1CopyLen) {
             blockTiling_.blockBaseN = blockTiling_.blockBaseM;
             bL1Cin1CopyLen = newBl1Cin1CopyLen;
@@ -770,8 +778,7 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBaseBlock()
     uint64_t deltaAl1PerC0M = blockTiling_.blockBaseK * BLOCK_CUBE * dtypeByte_;
     uint64_t c0CompensateCountM = deltaL1LoadSize / std::max(deltaAl1PerC0M, uint64_t(1));
     uint64_t cL0Max = L0C_SIZE / dtypeByte_ / DB_ON;
-    uint64_t newBaseMc = std::max(cL0Max / blockTiling_.blockBaseM / BLOCK_CUBE,
-            static_cast<uint64_t>(1)) * BLOCK_CUBE;
+    uint64_t newBaseMc = std::max(cL0Max / blockTiling_.blockBaseM / BLOCK_CUBE, static_cast<uint64_t>(1)) * BLOCK_CUBE;
     blockTiling_.blockBaseM = std::min(blockTiling_.blockBaseM + c0CompensateCountM * BLOCK_CUBE, mmInfo_.mValue);
     blockTiling_.blockBaseM = std::min(newBaseMc, static_cast<uint64_t>(blockTiling_.blockBaseM));
     // K方向回调
@@ -790,10 +797,10 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBaseBlock()
         blockTiling_.blockBaseK = alignedKValue;
     } else {
         // 根据调小后的BaseM和BaseN调大BaseK
-        uint64_t newBaseKa = std::max(aL0Max / blockTiling_.blockBaseM / BLOCK_CUBE,
-            static_cast<uint64_t>(1)) * BLOCK_CUBE;
-        uint64_t newBaseKb = std::max(bL0Max / blockTiling_.blockBaseN / BLOCK_CUBE,
-            static_cast<uint64_t>(1)) * BLOCK_CUBE;
+        uint64_t newBaseKa = std::max(aL0Max / blockTiling_.blockBaseM / BLOCK_CUBE, static_cast<uint64_t>(1)) *
+                             BLOCK_CUBE;
+        uint64_t newBaseKb = std::max(bL0Max / blockTiling_.blockBaseN / BLOCK_CUBE, static_cast<uint64_t>(1)) *
+                             BLOCK_CUBE;
         uint64_t newBaseK = std::min(std::min(newBaseKa, newBaseKb), alignedKValue);
         blockTiling_.blockBaseK = std::min(newBaseK, static_cast<uint64_t>(blockTiling_.blockBaseK));
 
@@ -834,8 +841,7 @@ uint64_t Conv3DDWV2BasicBlockTiling::CalBL1Bound()
     } else if (NUM_HALF * bL1N % kernelHW != 0) {
         ++bL1Cin1CopyLen; // 除了尾块是0.5，其他场景都要搬2行
     }
-    uint64_t bL1Size = static_cast<uint64_t>(hiCal) * runInfo_.wi * bL1Cin1CopyLen *
-                       tilingData_.dwTiling.channelSize;
+    uint64_t bL1Size = static_cast<uint64_t>(hiCal) * runInfo_.wi * bL1Cin1CopyLen * tilingData_.dwTiling.channelSize;
     return bL1Size;
 }
 
@@ -858,7 +864,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::DoOpTiling()
 
 ge::graphStatus Conv3DDWV2BasicBlockTiling::DoLibApiTiling()
 {
-    TConv3DDwTiling &dwt = tilingData_.dwTiling;
+    TConv3DDwTiling& dwt = tilingData_.dwTiling;
     tilingData_.basicBlockTiling.usedCoreNum = blockTiling_.usedCoreNum;
     tilingData_.basicBlockTiling.singleCoreM = blockTiling_.singleCoreM;
     tilingData_.basicBlockTiling.singleCoreN = blockTiling_.singleCoreN;
@@ -879,11 +885,13 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::DoLibApiTiling()
     dwt.al1Pbuffer = blockTiling_.dbL1A;
     dwt.bl1Pbuffer = blockTiling_.dbL1B;
     dwt.cl0Pbuffer = blockTiling_.dbL0C;
-    tilingData_.dwTiling.bl1Bound = static_cast<uint32_t>(CalBL1Bound()); // bl1Bound不超过L1Size，不会超过uint32_t最大值
+    tilingData_.dwTiling.bl1Bound = static_cast<uint32_t>(
+        CalBL1Bound()); // bl1Bound不超过L1Size，不会超过uint32_t最大值
     dwt.singleCoreCout = blockTiling_.singleCoreM;
 
-    uint64_t l1Cin1 = std::max(blockTiling_.singleCoreN /
-        std::max((runInfo_.kh * runInfo_.kw * tilingData_.dwTiling.channelSize), static_cast<uint32_t>(1)),
+    uint64_t l1Cin1 = std::max(
+        blockTiling_.singleCoreN /
+            std::max((runInfo_.kh * runInfo_.kw * tilingData_.dwTiling.channelSize), static_cast<uint32_t>(1)),
         static_cast<uint64_t>(1));
     dwt.singleCoreCin = l1Cin1 * tilingData_.dwTiling.channelSize;
 
@@ -893,23 +901,23 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::DoLibApiTiling()
 
 ge::graphStatus Conv3DDWV2BasicBlockTiling::GetWorkspaceSize()
 {
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t userWorkspaceSize = 0;
 
     if (context_->GetDeterministic() && blockTiling_.streamKType != NO_STREAMK_CALC) {
         uint64_t perCoreSize = static_cast<uint64_t>(blockTiling_.singleCoreM) *
-            static_cast<uint64_t>(blockTiling_.singleCoreN) * sizeof(int32_t);
+                               static_cast<uint64_t>(blockTiling_.singleCoreN) * sizeof(int32_t);
         userWorkspaceSize = static_cast<size_t>(perCoreSize) * blockTiling_.usedCoreNum;
     } else if (context_->GetInputDesc(X_INDEX)->GetStorageFormat() == ge::FORMAT_NCDHW) {
         // keep same transdata workspace behavior as base tiling
         auto singleCoreHo = tilingData_.dwTiling.singleCoreHo;
-        uint32_t singleCoreHi = (singleCoreHo - 1) * tilingData_.dwTiling.strideH
-            + (tilingData_.dwTiling.hk - 1) * tilingData_.dwTiling.dilationH + 1;
+        uint32_t singleCoreHi = (singleCoreHo - 1) * tilingData_.dwTiling.strideH +
+                                (tilingData_.dwTiling.hk - 1) * tilingData_.dwTiling.dilationH + 1;
         singleCoreHi = (singleCoreHi < tilingData_.dwTiling.hi) ? singleCoreHi : tilingData_.dwTiling.hi;
         auto singleCoreCin = tilingData_.dwTiling.singleCoreCin;
-        uint64_t singleCoreTransdataSize = singleCoreCin * singleCoreHi * tilingData_.dwTiling.wi
-            * ge::GetSizeByDataType(ge::DT_BF16) * DB_ON;
+        uint64_t singleCoreTransdataSize = singleCoreCin * singleCoreHi * tilingData_.dwTiling.wi *
+                                           ge::GetSizeByDataType(ge::DT_BF16) * DB_ON;
         userWorkspaceSize = static_cast<size_t>(coreNum_ * singleCoreTransdataSize);
     }
 
@@ -917,7 +925,8 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t Conv3DDWV2BasicBlockTiling::GetTilingKey() const {
+uint64_t Conv3DDWV2BasicBlockTiling::GetTilingKey() const
+{
     const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
     OP_LOGD(context_->GetNodeName(), "coreBindDirection is: [%u]", blockTiling_.coreBindDirection);
@@ -929,7 +938,8 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::PostTiling()
     OP_LOGD(opName_, "final tiling data size: %zu", sizeof(Conv3DBackpropFilterV2TilingData));
 
     OP_TILING_CHECK(sizeof(Conv3DBackpropFilterV2TilingData) % sizeof(uint64_t) != 0,
-                    CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] not aligned to 8", sizeof(Conv3DBackpropFilterV2TilingData)),
+                    CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] not aligned to 8",
+                                          sizeof(Conv3DBackpropFilterV2TilingData)),
                     return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                            &tilingData_, sizeof(Conv3DBackpropFilterV2TilingData));
@@ -950,17 +960,17 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::PostTiling()
 void Conv3DDWV2BasicBlockTiling::PrintBasickBlockTilingData()
 {
     Conv3DBackpropFilterV2Tiling::PrintTilingData();
-    TConv3DDwBasicBlockTiling &tiling = tilingData_.basicBlockTiling;
+    TConv3DDwBasicBlockTiling& tiling = tilingData_.basicBlockTiling;
     std::stringstream ss;
     ss << " singleCoreM: " << tiling.singleCoreM << " singleCoreN: " << tiling.singleCoreN
-        << " singleCoreK: " << tiling.singleCoreK << " coreBindOrder: " << tiling.coreBindOrder
-        << " usedCoreNum: " << tiling.usedCoreNum << " streamKType: " << tiling.streamKType
-        << " coreStreamK: " << tiling.coreStreamK;
+       << " singleCoreK: " << tiling.singleCoreK << " coreBindOrder: " << tiling.coreBindOrder
+       << " usedCoreNum: " << tiling.usedCoreNum << " streamKType: " << tiling.streamKType
+       << " coreStreamK: " << tiling.coreStreamK;
 
     OP_LOGD(opName_, "api basic block tiling: %s", ss.str().c_str());
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropFilterV2", Conv3DDWV2BasicBlockTiling, 0);
-}
-}
-}
+} // namespace Conv
+} // namespace NN
+} // namespace Ops

@@ -18,17 +18,17 @@
 #include "arch35/quant_batch_matmul_inplace_add_tiling_data.h"
 
 template <typename T>
-inline void InitQuantBatchMatmulInplaceAddTilingData(uint8_t *tiling, T *constData)
+inline void InitQuantBatchMatmulInplaceAddTilingData(uint8_t* tiling, T* constData)
 {
     memcpy(constData, tiling, sizeof(T));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                                              \
-    QMMIA::QuantBatchMatmulInplaceAddTilingData tiling_data;                                                 \
+#define GET_TILING_DATA(tiling_data, tiling_arg)             \
+    QMMIA::QuantBatchMatmulInplaceAddTilingData tiling_data; \
     InitQuantBatchMatmulInplaceAddTilingData(tiling_arg, &tiling_data)
 
-#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg)                                  \
-    tiling_struct tiling_data;                                                                               \
+#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
+    tiling_struct tiling_data;                                              \
     InitQuantBatchMatmulInplaceAddTilingData(tiling_arg, &tiling_data)
 
 #endif // QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_DEF_H

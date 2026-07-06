@@ -28,43 +28,47 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBA
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
     op::DataType::DT_BOOL};
 
-inline static bool IsAiCoreSupport(const aclTensor* self) {
-  // ScatterNdAdd只需要判断self
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_REGBASE);
-  }
-  return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
+inline static bool IsAiCoreSupport(const aclTensor* self)
+{
+    // ScatterNdAdd只需要判断self
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_REGBASE);
+    }
+    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AiCore的执行逻辑
 inline static const aclTensor* ScatterNdAddAiCore(const aclTensor* self, const aclTensor* indices,
-                                                  const aclTensor* updates, bool use_locking, aclOpExecutor* executor) {
-  L0_DFX(ScatterNdAddAiCore, self, indices, updates, use_locking);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterNdAdd, OP_INPUT(self, indices, updates), OP_OUTPUT(self),
-                                         OP_ATTR(use_locking));
-  CHECK_RET(ret == ACLNN_SUCCESS, nullptr);   
-  return self;
+                                                  const aclTensor* updates, bool use_locking, aclOpExecutor* executor)
+{
+    L0_DFX(ScatterNdAddAiCore, self, indices, updates, use_locking);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterNdAdd, OP_INPUT(self, indices, updates), OP_OUTPUT(self),
+                                           OP_ATTR(use_locking));
+    CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
+    return self;
 }
 
 // AiCPU的执行逻辑
 inline static const aclTensor* ScatterNdAddAiCPU(const aclTensor* self, const aclTensor* indices,
-                                                 const aclTensor* updates, bool use_locking, aclOpExecutor* executor) {
-  L0_DFX(ScatterNdAddAiCPU, self, indices, updates, use_locking);
+                                                 const aclTensor* updates, bool use_locking, aclOpExecutor* executor)
+{
+    L0_DFX(ScatterNdAddAiCPU, self, indices, updates, use_locking);
 
-  static internal::AicpuTaskSpace space("ScatterNdAdd");
-  space.SetRef(0);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ScatterNdAdd, OP_ATTR_NAMES({"use_locking"}), OP_INPUT(self, indices, updates),
-                                        OP_OUTPUT(self), OP_ATTR(use_locking));
-  CHECK_RET(ret == ACLNN_SUCCESS, nullptr);       
-  return self;
+    static internal::AicpuTaskSpace space("ScatterNdAdd");
+    space.SetRef(0);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ScatterNdAdd, OP_ATTR_NAMES({"use_locking"}),
+                                          OP_INPUT(self, indices, updates), OP_OUTPUT(self), OP_ATTR(use_locking));
+    CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
+    return self;
 }
 
 const aclTensor* ScatterNdAdd(const aclTensor* self, const aclTensor* indices, const aclTensor* updates,
-                              bool use_locking, aclOpExecutor* executor) {
-  if (IsAiCoreSupport(self)) {
-    return ScatterNdAddAiCore(self, indices, updates, use_locking, executor);
-  } else {
-    return ScatterNdAddAiCPU(self, indices, updates, use_locking, executor);
-  }
+                              bool use_locking, aclOpExecutor* executor)
+{
+    if (IsAiCoreSupport(self)) {
+        return ScatterNdAddAiCore(self, indices, updates, use_locking, executor);
+    } else {
+        return ScatterNdAddAiCPU(self, indices, updates, use_locking, executor);
+    }
 }
-}  // namespace l0op
+} // namespace l0op

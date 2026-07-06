@@ -43,7 +43,8 @@ constexpr uint32_t KB_SIZE = 1024;
 static constexpr SortConfig sortConfig = {SortType::RADIX_SORT, false};
 
 template <typename P>
-__aicore__ inline P MIN(P x, P y) {
+__aicore__ inline P MIN(P x, P y)
+{
     return x < y ? x : y;
 }
 
@@ -125,10 +126,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComp
             continue;
         }
 
-        float maxValue = 0.0f;        
+        float maxValue = 0.0f;
         uint64_t num = 0;
 
-        for (uint32_t i = 0; i < curProcessRowsNum; i++) { 
+        for (uint32_t i = 0; i < curProcessRowsNum; i++) {
             int64_t curSegId = static_cast<int64_t>(sortedIdTensor[i]);
 
             // 跳过无效的 segmentId
@@ -147,7 +148,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComp
 
             if (curSegId == startSegId) {
                 num++;
-                maxValue = maxValue > tmpValue ? maxValue : tmpValue;  
+                maxValue = maxValue > tmpValue ? maxValue : tmpValue;
             } else {
                 if (j == 0) {
                     asc_atomic_add(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
@@ -167,48 +168,55 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComp
                 break;
             }
         }
-    }	
+    }
 }
 
 template <typename T, typename U>
-__aicore__ inline void KernelUSSDeterministic<T, U>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output, GM_ADDR workSpace)
+__aicore__ inline void KernelUSSDeterministic<T, U>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output,
+                                                          GM_ADDR workSpace)
 {
     blockId_ = GetBlockIdx();
-    innerDim_ = tilingData_.innerDim; 
+    innerDim_ = tilingData_.innerDim;
     normalCoreProcessNum_ = tilingData_.normalCoreProcessNum;
     tailCoreProcessNum_ = tilingData_.tailCoreProcessNum;
     usedCoreNum_ = tilingData_.usedCoreNum;
     tmpBufferSize_ = tilingData_.tmpBufferSize;
     rowsNumInUb_ = tilingData_.rowsNumInUB;
-    segmentNum_ = tilingData_.outputOuterDim;      
+    segmentNum_ = tilingData_.outputOuterDim;
 
     workspaceNValue_.SetGlobalBuffer((__gm__ uint64_t*)workSpace);
     workspaceMValue_.SetGlobalBuffer((__gm__ float*)workSpace + segmentNum_ * 2 + KB_SIZE / sizeof(float));
-    workspaceOutput_.SetGlobalBuffer((__gm__ int32_t*)workSpace + segmentNum_ * 2 + segmentNum_ * innerDim_ + KB_SIZE * 2 /sizeof(int32_t));
-    
+    workspaceOutput_.SetGlobalBuffer((__gm__ int32_t*)workSpace + segmentNum_ * 2 + segmentNum_ * innerDim_ +
+                                     KB_SIZE * 2 / sizeof(int32_t));
+
     xGm_.SetGlobalBuffer((__gm__ T*)x + blockId_ * normalCoreProcessNum_ * innerDim_);
     yGm_.SetGlobalBuffer((__gm__ T*)output);
     segmentIds_.SetGlobalBuffer((__gm__ U*)segmentIds + blockId_ * normalCoreProcessNum_);
-    
+
     ParallelInitGlobalMemory((__gm__ uint64_t*)workSpace, segmentNum_, (uint64_t)0);
-    ParallelInitGlobalMemory((__gm__ float*)workSpace + segmentNum_ * 2 + KB_SIZE / sizeof(float), segmentNum_ * innerDim_, (float)0);
+    ParallelInitGlobalMemory((__gm__ float*)workSpace + segmentNum_ * 2 + KB_SIZE / sizeof(float),
+                             segmentNum_ * innerDim_, (float)0);
     ParallelInitGlobalMemory((__gm__ T*)output, segmentNum_ * innerDim_, (T)0);
-    ParallelInitGlobalMemory((__gm__ int32_t*)workSpace + segmentNum_ * 2 + segmentNum_ * innerDim_ + KB_SIZE * 2 / sizeof(int32_t), segmentNum_ * innerDim_, (int32_t)0);
+    ParallelInitGlobalMemory(
+        (__gm__ int32_t*)workSpace + segmentNum_ * 2 + segmentNum_ * innerDim_ + KB_SIZE * 2 / sizeof(int32_t),
+        segmentNum_ * innerDim_, (int32_t)0);
 
     PipeBarrier<PIPE_ALL>();
     SyncAll();
     pipe_.Reset();
 
-    curCoreProcessNum_ = blockId_ == (usedCoreNum_ - 1) ? tailCoreProcessNum_ : normalCoreProcessNum_;   
-    uint32_t xQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_* innerDim_ * sizeof(T)), UB_AGLIN_VALUE);
-    uint32_t segmentIdQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_* sizeof(U)), UB_AGLIN_VALUE);
-    uint32_t sortedIdIndexBufSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_* sizeof(uint32_t)), UB_AGLIN_VALUE);
+    curCoreProcessNum_ = blockId_ == (usedCoreNum_ - 1) ? tailCoreProcessNum_ : normalCoreProcessNum_;
+    uint32_t xQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * innerDim_ * sizeof(T)),
+                                               UB_AGLIN_VALUE);
+    uint32_t segmentIdQueueSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * sizeof(U)), UB_AGLIN_VALUE);
+    uint32_t sortedIdIndexBufSize = Ops::Base::CeilAlign(static_cast<uint32_t>(rowsNumInUb_ * sizeof(uint32_t)),
+                                                         UB_AGLIN_VALUE);
 
-    pipe_.InitBuffer(xQueue_, 1, xQueueSize);        
-    pipe_.InitBuffer(segmentIdQueue_, 1, segmentIdQueueSize);        
-    pipe_.InitBuffer(sharedTmpBuf, tmpBufferSize_); 
-    pipe_.InitBuffer(sortedIdBuf, segmentIdQueueSize); 
-    pipe_.InitBuffer(sortedIdIndexBuf, sortedIdIndexBufSize); 
+    pipe_.InitBuffer(xQueue_, 1, xQueueSize);
+    pipe_.InitBuffer(segmentIdQueue_, 1, segmentIdQueueSize);
+    pipe_.InitBuffer(sharedTmpBuf, tmpBufferSize_);
+    pipe_.InitBuffer(sortedIdBuf, segmentIdQueueSize);
+    pipe_.InitBuffer(sortedIdIndexBuf, sortedIdIndexBufSize);
 }
 
 template <typename T, typename U>
@@ -217,7 +225,8 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::Process()
     if (blockId_ < usedCoreNum_) {
         uint32_t loopCnt = Ops::Base::CeilDiv(curCoreProcessNum_, rowsNumInUb_);
         for (uint32_t loop = 0; loop < loopCnt; ++loop) {
-            uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ : rowsNumInUb_;
+            uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ :
+                                                               rowsNumInUb_;
             uint64_t segmentIdOffset = loop * rowsNumInUb_;
             FirstUbProcess(curProcessRowsNum, segmentIdOffset);
         }
@@ -227,10 +236,11 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::Process()
     if (blockId_ < usedCoreNum_) {
         uint32_t loopCnt = Ops::Base::CeilDiv(curCoreProcessNum_, rowsNumInUb_);
         for (uint32_t loop = 0; loop < loopCnt; ++loop) {
-            uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ : rowsNumInUb_;
+            uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ :
+                                                               rowsNumInUb_;
             uint64_t segmentIdOffset = loop * rowsNumInUb_;
-            SecondUbProcess(curProcessRowsNum, segmentIdOffset);  
-        } 
+            SecondUbProcess(curProcessRowsNum, segmentIdOffset);
+        }
         PipeBarrier<PIPE_ALL>();
     }
     SyncAll();
@@ -283,7 +293,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
 
         float sumValue = 0.0f;
 
-        for (uint32_t j = 0; j < curProcessRowsNum; j++) {    
+        for (uint32_t j = 0; j < curProcessRowsNum; j++) {
             int64_t curSegId = static_cast<int64_t>(sortedIdTensor[j]);
 
             // 跳过无效的 segmentId
@@ -293,9 +303,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
                     float mValueFloat = static_cast<float>(mValueWorkSpace[tmpOffset]);
                     float nValueFloat = static_cast<float>(nValueWorkSpace[static_cast<uint64_t>(startSegId)]);
                     sumValue = sumValue / (mValueFloat * nValueFloat) * scaling;
-                    int32_t quantizedResInt =
-                        AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(
-                            sumValue);
+                    int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT,
+                                                                  AscendC::Simt::SatMode::SAT>(sumValue);
                     asc_atomic_add(workspaceOutput32 + tmpOffset, quantizedResInt);
                 }
                 continue;
@@ -312,7 +321,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
                 float nValueFloat = static_cast<float>(nValueWorkSpace[static_cast<uint64_t>(startSegId)]);
 
                 sumValue = sumValue / (mValueFloat * nValueFloat) * scaling;
-                int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(sumValue);
+                int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT,
+                                                              AscendC::Simt::SatMode::SAT>(sumValue);
                 asc_atomic_add(workspaceOutput32 + tmpOffset, quantizedResInt);
 
                 startSegId = curSegId;
@@ -324,7 +334,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
                 float mValueFloat = static_cast<float>(mValueWorkSpace[tmpOffset]);
                 float nValueFloat = static_cast<float>(nValueWorkSpace[static_cast<uint64_t>(startSegId)]);
                 sumValue = sumValue / (mValueFloat * nValueFloat) * scaling;
-                int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(sumValue);
+                int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT,
+                                                              AscendC::Simt::SatMode::SAT>(sumValue);
                 asc_atomic_add(workspaceOutput32 + tmpOffset, quantizedResInt);
                 break;
             }
@@ -333,7 +344,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
 }
 
 template <typename T, typename U>
-__aicore__ inline void KernelUSSDeterministic<T, U>::FirstUbProcess(uint64_t curProcessRowsNum, uint64_t segmentIdOffset)
+__aicore__ inline void KernelUSSDeterministic<T, U>::FirstUbProcess(uint64_t curProcessRowsNum,
+                                                                    uint64_t segmentIdOffset)
 {
     CopyInData(curProcessRowsNum, segmentIdOffset);
     LocalTensor<T> xLocal = xQueue_.DeQue<T>();
@@ -346,17 +358,17 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::FirstUbProcess(uint64_t cur
                                         static_cast<uint32_t>(curProcessRowsNum));
 
     asc_vf_call<SimtAtomicComputeNValueAndMValue<T, U>>(
-        dim3(MAX_THREAD), curProcessRowsNum, innerDim_, segmentNum_,
-        (__gm__ float*)(workspaceMValue_.GetPhyAddr()), (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()),
-        (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ U*)(sortedIdTensor.GetPhyAddr()),
-        (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()));
+        dim3(MAX_THREAD), curProcessRowsNum, innerDim_, segmentNum_, (__gm__ float*)(workspaceMValue_.GetPhyAddr()),
+        (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
+        (__local_mem__ U*)(sortedIdTensor.GetPhyAddr()), (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()));
 
     xQueue_.FreeTensor(xLocal);
     segmentIdQueue_.FreeTensor(segmentIdTensor);
 }
 
 template <typename T, typename U>
-__aicore__ inline void KernelUSSDeterministic<T, U>::SecondUbProcess(uint64_t curProcessRowsNum, uint64_t segmentIdOffset)
+__aicore__ inline void KernelUSSDeterministic<T, U>::SecondUbProcess(uint64_t curProcessRowsNum,
+                                                                     uint64_t segmentIdOffset)
 {
     CopyInData(curProcessRowsNum, segmentIdOffset);
     LocalTensor<T> xLocal = xQueue_.DeQue<T>();
@@ -380,22 +392,22 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::SecondUbProcess(uint64_t cu
 
 template <typename T, typename U>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void Dequantize(
-    __gm__ float* mValueWorkSpace, __gm__ uint64_t* nValueWorkSpace, __gm__ int32_t* workspaceOutput, __gm__ T* yGm, 
+    __gm__ float* mValueWorkSpace, __gm__ uint64_t* nValueWorkSpace, __gm__ int32_t* workspaceOutput, __gm__ T* yGm,
     uint32_t segmentNum, uint32_t innerDim, uint32_t blockId, uint32_t dequantCoreNum)
 {
     float scaling = static_cast<float>(1L << 30);
-    
-    for (uint32_t i = blockId * blockDim.x + threadIdx.x; i < segmentNum * innerDim; 
-        i += dequantCoreNum * blockDim.x) {  
+
+    for (uint32_t i = blockId * blockDim.x + threadIdx.x; i < segmentNum * innerDim; i += dequantCoreNum * blockDim.x) {
         uint32_t row = i / innerDim;
         uint32_t col = i % innerDim;
 
         uint32_t tmpOffset = row * innerDim + col;
         float mValueFloat = static_cast<float>(mValueWorkSpace[tmpOffset]);
         float nValueFloat = static_cast<float>(nValueWorkSpace[row]);
-        float quantizedResFloat = AscendC::Simt::Cast<float, int32_t, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(workspaceOutput[tmpOffset]); 
+        float quantizedResFloat = AscendC::Simt::Cast<float, int32_t, RoundMode::CAST_RINT,
+                                                      AscendC::Simt::SatMode::SAT>(workspaceOutput[tmpOffset]);
         float result = quantizedResFloat * mValueFloat * nValueFloat / scaling;
-        
+
         yGm[tmpOffset] = static_cast<T>(result);
     }
 }
@@ -403,9 +415,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void Dequantize(
 template <typename T, typename U>
 __aicore__ inline void KernelUSSDeterministic<T, U>::ThirdUbProcess()
 {
-    asc_vf_call<Dequantize<T,U>>(dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()), 
-        (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()),
-        (__gm__ T*)(yGm_.GetPhyAddr()), segmentNum_, innerDim_, blockId_, GetBlockNum());
+    asc_vf_call<Dequantize<T, U>>(dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()),
+                                  (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()),
+                                  (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()), (__gm__ T*)(yGm_.GetPhyAddr()),
+                                  segmentNum_, innerDim_, blockId_, GetBlockNum());
 }
 
 } // namespace UnsortedSegmentSum

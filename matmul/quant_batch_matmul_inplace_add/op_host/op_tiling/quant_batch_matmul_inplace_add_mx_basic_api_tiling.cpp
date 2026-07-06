@@ -26,8 +26,7 @@ const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV
 
 namespace optiling {
 
-QuantBatchMatmulInplaceAddMXBasicAPITiling::QuantBatchMatmulInplaceAddMXBasicAPITiling(
-    gert::TilingContext* context)
+QuantBatchMatmulInplaceAddMXBasicAPITiling::QuantBatchMatmulInplaceAddMXBasicAPITiling(gert::TilingContext* context)
     : QuantBatchMatmulInplaceAddHelper<AdaptiveSlidingWindowMXBasicAPITiling>(context)
 {
     Reset();
@@ -41,10 +40,7 @@ void QuantBatchMatmulInplaceAddMXBasicAPITiling::Reset()
     tilingDataSize_ = sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
 }
 
-bool QuantBatchMatmulInplaceAddMXBasicAPITiling::IsCapable()
-{
-    return IsMxQuant() && inputParams_.batchC == 1UL;
-}
+bool QuantBatchMatmulInplaceAddMXBasicAPITiling::IsCapable() { return IsMxQuant() && inputParams_.batchC == 1UL; }
 
 const void* QuantBatchMatmulInplaceAddMXBasicAPITiling::GetTilingData() const
 {
@@ -79,13 +75,12 @@ uint64_t QuantBatchMatmulInplaceAddMXBasicAPITiling::GetKernelType() const
 
 uint64_t QuantBatchMatmulInplaceAddMXBasicAPITiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetKernelType());
+    return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
+                              GetKernelType());
 }
 
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddMXBasicAPITiling, supportedNpuArch,
-    MX_BASIC_API_TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddMXBasicAPITiling,
+                                   supportedNpuArch, MX_BASIC_API_TILING_PRIORITY);
 
 void QuantBatchMatmulInplaceAddMXBasicAPITiling::UpdateTilingData()
 {

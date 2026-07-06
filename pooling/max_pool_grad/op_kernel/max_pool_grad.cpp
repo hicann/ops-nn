@@ -22,11 +22,10 @@ using namespace PoolGradNameSpace;
 using namespace MaxPoolGradNCHWBigKernelNameSpace;
 using namespace MaxPoolGradNCHWSmallKernelNameSpace;
 
-template <
-    uint64_t KERNEL_MODE = TPL_SIMT_KERNEL, uint64_t FORMAT = TPL_NCHW_FORMAT, uint64_t INDICES_DTYPE = TPL_INT32,
-    uint64_t IS_CHECK_RANGE = TPL_NO_CHECK_RANGE>
-__global__ __aicore__ void max_pool_grad(
-    GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grads, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+template <uint64_t KERNEL_MODE = TPL_SIMT_KERNEL, uint64_t FORMAT = TPL_NCHW_FORMAT, uint64_t INDICES_DTYPE = TPL_INT32,
+          uint64_t IS_CHECK_RANGE = TPL_NO_CHECK_RANGE>
+__global__ __aicore__ void max_pool_grad(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grads, GM_ADDR y, GM_ADDR workspace,
+                                         GM_ADDR tiling)
 {
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;

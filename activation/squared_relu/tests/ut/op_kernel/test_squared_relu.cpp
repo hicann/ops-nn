@@ -27,11 +27,7 @@ extern "C" __global__ __aicore__ void squared_relu(GM_ADDR input, GM_ADDR output
 
 class squared_relu_test : public testing::Test {
 protected:
-
-    static void SetUpTestCase()
-    {
-        cout << "squared_relu SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "squared_relu SetUp\n" << endl; }
 
     static void TearDownTestCase()
     {
@@ -40,11 +36,10 @@ protected:
     }
 };
 
-
 TEST_F(squared_relu_test, test_squared_relu_float_0)
 {
-    kernel_ut::SetupTestEnvironment(
-        "activation/squared_relu/tests/ut/op_kernel/squared_relu_data", "squared_relu_data");
+    kernel_ut::SetupTestEnvironment("activation/squared_relu/tests/ut/op_kernel/squared_relu_data",
+                                    "squared_relu_data");
     kernel_ut::RunGenData("./squared_relu_data", {"'(2, 4)'", "'(2, 4)'", "'float32'"});
     size_t M = 2;
     size_t N = 4;
@@ -85,8 +80,8 @@ TEST_F(squared_relu_test, test_squared_relu_float_0)
 
 TEST_F(squared_relu_test, test_squared_relu_float16_1)
 {
-    kernel_ut::SetupTestEnvironment(
-        "activation/squared_relu/tests/ut/op_kernel/squared_relu_data", "squared_relu_data");
+    kernel_ut::SetupTestEnvironment("activation/squared_relu/tests/ut/op_kernel/squared_relu_data",
+                                    "squared_relu_data");
     kernel_ut::RunGenData("./squared_relu_data", {"'(2, 4)'", "'(2, 4)'", "'float16'"});
     size_t M = 2;
     size_t N = 4;
@@ -127,8 +122,8 @@ TEST_F(squared_relu_test, test_squared_relu_float16_1)
 
 TEST_F(squared_relu_test, test_squared_relu_bfloat16_2)
 {
-    kernel_ut::SetupTestEnvironment(
-        "activation/squared_relu/tests/ut/op_kernel/squared_relu_data", "squared_relu_data");
+    kernel_ut::SetupTestEnvironment("activation/squared_relu/tests/ut/op_kernel/squared_relu_data",
+                                    "squared_relu_data");
     kernel_ut::RunGenData("./squared_relu_data", {"'(2, 4)'", "'(2, 4)'", "'bfloat16_t'"});
     size_t M = 2;
     size_t N = 4;

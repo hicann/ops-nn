@@ -24,12 +24,7 @@
 namespace conv {
 using namespace AscendC;
 
-enum class ConvCfgTypeID : std::uint8_t {
-    CONV_ID_Unknown = 0,
-    CONV_ID_Normal,
-    CONV_ID_Test,
-    CONV_ID_END
-};
+enum class ConvCfgTypeID : std::uint8_t { CONV_ID_Unknown = 0, CONV_ID_Normal, CONV_ID_Test, CONV_ID_END };
 
 enum class ConvFormat : std::uint8_t {
     ND = 0,
@@ -81,78 +76,31 @@ struct CopyUbInfo {
     uint64_t outWIdx = 0;
 };
 
-enum class ConvFmapTiling : std::uint8_t {
-    FULLLOAD_AL1 = 0,
-    ONLY_M_FULLLOAD_AL1_AL0,
-    OTHER
-};
+enum class ConvFmapTiling : std::uint8_t { FULLLOAD_AL1 = 0, ONLY_M_FULLLOAD_AL1_AL0, OTHER };
 
-enum class ConvWeightTiling : std::uint8_t {
-    FULLLOAD_BL1 = 0,
-    ONLY_N_FULLLOAD_BL1_BL0,
-    OTHER
-};
+enum class ConvWeightTiling : std::uint8_t { FULLLOAD_BL1 = 0, ONLY_N_FULLLOAD_BL1_BL0, OTHER };
 
-enum class ConvL1PingPong : std::uint8_t {
-    ALL_CLOSE = 0,
-    AL1_OPEN,
-    BL1_OPEN,
-    ALL_OPEN
-};
+enum class ConvL1PingPong : std::uint8_t { ALL_CLOSE = 0, AL1_OPEN, BL1_OPEN, ALL_OPEN };
 
-enum class ConvL0PingPong : std::uint8_t {
-    ALL_CLOSE = 0,
-    AL0_OPEN,
-    BL0_OPEN,
-    ALL_OPEN
-};
+enum class ConvL0PingPong : std::uint8_t { ALL_CLOSE = 0, AL0_OPEN, BL0_OPEN, ALL_OPEN };
 
-enum class ConvOutputOrder : std::uint8_t {
-    HW_MODE = 0,
-    M_MODE
-};
+enum class ConvOutputOrder : std::uint8_t { HW_MODE = 0, M_MODE };
 
-enum class ConvIterOrder : std::uint8_t {
-    MITER_FIRST = 0,
-    NITER_FIRST
-};
+enum class ConvIterOrder : std::uint8_t { MITER_FIRST = 0, NITER_FIRST };
 
-enum class ConvGroupType : std::uint8_t {
-    NORMAL_CONV = 0,
-    ORI_GROUP_CONV,
-    OPT_GROUP_CONV
-};
+enum class ConvGroupType : std::uint8_t { NORMAL_CONV = 0, ORI_GROUP_CONV, OPT_GROUP_CONV };
 
-enum class ConvEnableSmallChannel : std::uint8_t {
-    CLOSE = 0,
-    OPEN
-};
+enum class ConvEnableSmallChannel : std::uint8_t { CLOSE = 0, OPEN };
 
-enum class ConvWeightUbTrans : std::uint8_t {
-    CLOSE = 0,
-    OPEN
-};
+enum class ConvWeightUbTrans : std::uint8_t { CLOSE = 0, OPEN };
 
-enum class ConvFmapCopyMode : std::uint8_t {
-    LOAD3D = 0,
-    DMA
-};
+enum class ConvFmapCopyMode : std::uint8_t { LOAD3D = 0, DMA };
 
-enum class ConvInnerBatch : std::uint8_t {
-    SINGLE_BATCH = 0,
-    KERNEL_1X1_MULTI_BATCH,
-    MULTI_BATCH
-};
+enum class ConvInnerBatch : std::uint8_t { SINGLE_BATCH = 0, KERNEL_1X1_MULTI_BATCH, MULTI_BATCH };
 
-enum class IsExtendConv2D : std::uint8_t {
-    FALSE = 0,
-    TRUE
-};
+enum class IsExtendConv2D : std::uint8_t { FALSE = 0, TRUE };
 
-enum class ConvDisContinuous : std::uint8_t {
-    CLOSE = 0,
-    INPUT_HWNC
-};
+enum class ConvDisContinuous : std::uint8_t { CLOSE = 0, INPUT_HWNC };
 
 struct ConvParam {
     __aicore__ inline ConvParam(){};
@@ -221,7 +169,7 @@ struct ConvDataType {
     using ConvParam = CONV_CFG;
     using FmapT = typename FMAP_TYPE::T;
     using WeightT = typename WEIGHT_TYPE::T;
-    using OutputT  = typename OUTPUT_TYPE::T;
+    using OutputT = typename OUTPUT_TYPE::T;
     using Output1T = typename CONV_CFG::Output1Dtype;
     using BiasT = typename BIAS_TYPE::T;
     using ScaleT = typename SCALE_TYPE::T;
@@ -239,8 +187,8 @@ struct ConvDataType {
     constexpr static auto formatOutput = OUTPUT_TYPE::format;
     constexpr static auto formatBias = BIAS_TYPE::format;
     constexpr static bool WEIGHT_NZ_FLAG = WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z ||
-        WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_C04 ||
-        WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_3D;
+                                           WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_C04 ||
+                                           WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_3D;
 
     constexpr static auto posFmap = FMAP_TYPE::pos;
     constexpr static auto posWeight = WEIGHT_TYPE::pos;
@@ -270,10 +218,10 @@ public:
         GlobalTensor<typename ConvDataType::ScaleT> scale1gm;
         GlobalTensor<typename ConvDataType::ReluWeightT> reluWeightGM;
         GlobalTensor<typename ConvDataType::ReluWeightT> reluWeight1GM;
-        TQue<QuePosition::A1, 1> queueBiasL1; // BiasL1
-        TQue<QuePosition::A1, 1> queueScaleL1; // ScaleL1
+        TQue<QuePosition::A1, 1> queueBiasL1;       // BiasL1
+        TQue<QuePosition::A1, 1> queueScaleL1;      // ScaleL1
         TQue<QuePosition::A1, 1> queueReluWeightL1; // ReluWeightL1
-        TQue<TPosition::C2, 1> queueBiasBT; // BT
+        TQue<TPosition::C2, 1> queueBiasBT;         // BT
         TQue<QuePosition::CO1, 1> queueCL0;
         TBuf<TPosition::A2> al0Buf;
         TBuf<TPosition::B2> bl0Buf;
@@ -290,13 +238,14 @@ public:
         LocalTensor<typename ConvDataType::L0cT> wholeCl0Tensor;
         LocalTensor<typename ConvDataType::L0cT> cl0;
 
-        uint8_t enableBias = false;  // 是否有bias
-        uint8_t enableVectorQuant = false;  // 是否有vector类型scale，双输出场景下任一scale为vector类型，即为true
-        uint8_t enableVectorRelu = false;  // 是否有vector类型relu_weight，双输出场景下任一relu_weight为vector类型，即为true
-        uint64_t scale1L1offset = 0; // 双输出时scale1在L1上的偏移
-        uint64_t reluWeight1L1offset = 0; // 双输出时reluWeight1在L1上的偏移
-        uint64_t deqScalar0 = DEQ_SCALAR_ONE;  // m1 = 1.0, other bits are 0.
-        uint64_t deqScalar1 = DEQ_SCALAR_ONE;  // m1 = 1.0, other bits are 0.
+        uint8_t enableBias = false; // 是否有bias
+        uint8_t enableVectorQuant = false; // 是否有vector类型scale，双输出场景下任一scale为vector类型，即为true
+        uint8_t
+            enableVectorRelu = false; // 是否有vector类型relu_weight，双输出场景下任一relu_weight为vector类型，即为true
+        uint64_t scale1L1offset = 0;          // 双输出时scale1在L1上的偏移
+        uint64_t reluWeight1L1offset = 0;     // 双输出时reluWeight1在L1上的偏移
+        uint64_t deqScalar0 = DEQ_SCALAR_ONE; // m1 = 1.0, other bits are 0.
+        uint64_t deqScalar1 = DEQ_SCALAR_ONE; // m1 = 1.0, other bits are 0.
         uint64_t preReluScalar0 = 0;
         uint64_t preReluScalar1 = 0;
 
@@ -325,10 +274,10 @@ public:
         int64_t wiStartPos = 0;
         uint64_t singleCoreHo = 0; // 单核上处理的Ho大小
         uint64_t singleCoreWo = 0; // 单核上处理的Wo大小
-        uint64_t hoAL1Iter = 0;  // AL1上ho方向迭代器
-        uint64_t woAL1Iter = 0;  // AL1上wo方向迭代器
-        uint64_t hoL0Iter = 0; // L0A上ho方向迭代器
-        uint64_t woL0Iter = 0; // L0A上wo方向迭代器
+        uint64_t hoAL1Iter = 0;    // AL1上ho方向迭代器
+        uint64_t woAL1Iter = 0;    // AL1上wo方向迭代器
+        uint64_t hoL0Iter = 0;     // L0A上ho方向迭代器
+        uint64_t woL0Iter = 0;     // L0A上wo方向迭代器
         uint64_t maxHoL1Iter = 0;
         uint64_t maxWoL1Iter = 0;
         uint64_t maxHoL0Iter = 0;
@@ -339,8 +288,8 @@ public:
         uint64_t l12l0LoopH = 0;
         uint64_t l12l0LoopW = 0;
 
-        uint64_t hoAL1Tail = 0; // AL1上ho方向的尾块大小
-        uint64_t woAL1Tail = 0; // AL1上wo方向的尾块大小
+        uint64_t hoAL1Tail = 0;     // AL1上ho方向的尾块大小
+        uint64_t woAL1Tail = 0;     // AL1上wo方向的尾块大小
         uint64_t woL1SmallTail = 0; // wo方向16不对齐场景会存在小尾块
         uint64_t hoL0Tail = 0;
         uint64_t woL0Tail = 0;
@@ -358,9 +307,9 @@ public:
 
         LocalTensor<typename ConvDataType::WeightT> nzTensor;
 
-        uint16_t vecId = 0;              // V侧: vec id(0/1) C侧: 本次groupOpt对应的vec同步id(0/16)
-        uint32_t ubBufSize = 0;          // vec一次处理的矩阵大小
-        uint32_t bL1SpaceSize = 0;       // Weight载入L1的大小
+        uint16_t vecId = 0;        // V侧: vec id(0/1) C侧: 本次groupOpt对应的vec同步id(0/16)
+        uint32_t ubBufSize = 0;    // vec一次处理的矩阵大小
+        uint32_t bL1SpaceSize = 0; // Weight载入L1的大小
 
         uint8_t pingPongFlag = 0;
 
@@ -375,8 +324,8 @@ public:
         uint16_t coOpt = 0;
         uint16_t co1Opt = 0;
         uint16_t coOptAlign = 0;
-        uint16_t singleGroups = 0;       // 单核上处理的groups大小
-        uint16_t singleGroupOpt = 0;     // 单核上处理的groupOpt大小
+        uint16_t singleGroups = 0;   // 单核上处理的groups大小
+        uint16_t singleGroupOpt = 0; // 单核上处理的groupOpt大小
         uint16_t groupOptIter = 0;
         uint16_t ddr2l1LoopKB = 0;
         uint16_t loadUB2L1Iter = 0;
@@ -387,7 +336,7 @@ public:
         uint16_t outerIter = 0;
         uint16_t bL1LoadTimes = 0;
 
-        uint16_t updateEnlarge = 0; 
+        uint16_t updateEnlarge = 0;
         uint16_t updateSingleCoOpt = N_VALUE_MAX;
 
         int64_t ciStartPos = 0;
@@ -399,10 +348,10 @@ public:
         uint8_t isFirstIterate = true; // 是否第一次Iterate
         uint8_t kAL1fullload = false;
         uint8_t kBL1fullload = false;
-        uint8_t loadAL1Flag = true; // 是否载入AL1的标志
-        uint8_t loadBL1Flag = true; // 是否载入BL1的标志
-        uint8_t loadAL0Flag = true; // 是否载入AL0的标志
-        uint8_t loadBL0Flag = true; // 是否载入BL0的标志
+        uint8_t loadAL1Flag = true;   // 是否载入AL1的标志
+        uint8_t loadBL1Flag = true;   // 是否载入BL1的标志
+        uint8_t loadAL0Flag = true;   // 是否载入AL0的标志
+        uint8_t loadBL0Flag = true;   // 是否载入BL0的标志
         uint8_t updateL1Flag = false; // 是否更新AL1数据的标志
         // 用于管理前融合场景下MTE1/MTE3之前的同步管理，在后续处理中赋值后使用
         AscendC::TEventID eventIdMte3ToMte1;
@@ -412,14 +361,14 @@ public:
         AscendC::TEventID eventIdMte1ToMte3Ping;
         AscendC::TEventID eventIdMte1ToMte3Pong;
 
-        uint64_t kIter = 0; // k方向迭代器，从DDR到L0
+        uint64_t kIter = 0;     // k方向迭代器，从DDR到L0
         uint64_t batchIter = 0; // batch方向迭代器
-        uint64_t kAL1Iter = 0;    // AL1上k方向迭代器
-        uint64_t kBL1Iter = 0;    // BL1上k方向迭代器
-        uint64_t nBL1Iter = 0;   // BL1上n方向迭代器
-        uint64_t kAL0Iter = 0; // L1A 到L0方向的迭代器
-        uint64_t kBL0Iter = 0; // L1B 到L0方向的迭代器
-        uint64_t nL0Iter = 0; // BL0上n方向迭代器
+        uint64_t kAL1Iter = 0;  // AL1上k方向迭代器
+        uint64_t kBL1Iter = 0;  // BL1上k方向迭代器
+        uint64_t nBL1Iter = 0;  // BL1上n方向迭代器
+        uint64_t kAL0Iter = 0;  // L1A 到L0方向的迭代器
+        uint64_t kBL0Iter = 0;  // L1B 到L0方向的迭代器
+        uint64_t nL0Iter = 0;   // BL0上n方向迭代器
 
         uint64_t multiKAL1 = 1;
         uint64_t multiKBL1 = 1;
@@ -437,13 +386,13 @@ public:
         uint64_t singleCoreBatch = 0;
         uint64_t innerBatch = 0;
         uint64_t innerBatchTail = 0;
-        uint64_t kAL1Tail = 0;  // AL1上k方向的尾块大小
+        uint64_t kAL1Tail = 0;        // AL1上k方向的尾块大小
         uint64_t kAL1AlignK0Tail = 0; // AL1对齐k0后上k方向的尾块大小
-        uint64_t kBL1Tail = 0; // BL1上k方向的尾块大小
+        uint64_t kBL1Tail = 0;        // BL1上k方向的尾块大小
         uint64_t kBL1AlignK0Tail = 0; // BL1上对齐k0后上k方向的尾块大小
-        uint64_t nBL1Tail = 0; // BL1上N方向的尾块大小
+        uint64_t nBL1Tail = 0;        // BL1上N方向的尾块大小
         uint64_t kL0Tail = 0;
-        uint64_t nL0Tail = 0; // BL0上n方向的对齐后尾块大小
+        uint64_t nL0Tail = 0;  // BL0上n方向的对齐后尾块大小
         uint64_t kAL0Tail = 0; // AL0上k方向的尾块大小
 
         uint64_t currentNBL1 = 0;
@@ -462,5 +411,5 @@ public:
     };
 };
 
-}  // namespace conv
+} // namespace conv
 #endif

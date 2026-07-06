@@ -30,10 +30,10 @@ using namespace AscendC;
 using namespace AscendC::MicroAPI;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
-using RmsNorm::GetOverflowMode;
-using RmsNorm::SetOverflowMode;
 using RmsNorm::castTraitFp322Fp8;
 using RmsNorm::castTraitFp322Hifp8;
+using RmsNorm::GetOverflowMode;
+using RmsNorm::SetOverflowMode;
 
 constexpr int64_t ALIGN_512_FACTOR = 512;
 constexpr int64_t ALIGN_32_FACTOR = 32;
@@ -118,8 +118,8 @@ __aicore__ inline int64_t GetCacheId(const int64_t idx)
 }
 
 template <typename T_IN>
-__aicore__ inline void LoadScalarForDtypeTIn(
-    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadScalarForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
+                                             uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
         DataCopy<float, LoadDist::DIST_BRC_B32>(dst, src + offset);
@@ -141,8 +141,8 @@ __aicore__ inline void LoadScalarForDtypeTIn(
 }
 
 template <typename T_IN>
-__aicore__ inline void LoadTensorForDtypeTIn(
-    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
+                                             uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
@@ -164,8 +164,8 @@ __aicore__ inline void LoadTensorForDtypeTIn(
 }
 
 template <typename T_OUT>
-__aicore__ inline void StoreTensorForDtypeTOut(
-    __local_mem__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg, MaskReg& mask4Int4, uint32_t offset)
+__aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg,
+                                               MaskReg& mask4Int4, uint32_t offset)
 {
     if constexpr (IsSameType<T_OUT, int8_t>::value) {
         RegTensor<T_OUT> xOut;

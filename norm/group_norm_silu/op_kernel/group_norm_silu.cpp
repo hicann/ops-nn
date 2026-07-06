@@ -24,8 +24,8 @@
 
 using namespace GroupNormSilu;
 
-extern "C" __global__ __aicore__ void group_norm_silu(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void group_norm_silu(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu,
+                                                      GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_VECTOR_CORE);

@@ -28,15 +28,14 @@ namespace {
 static constexpr size_t MAX_DIM_LEN = 8;
 
 static const std::initializer_list<DataType> SELF_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_INT8, DataType::DT_INT16, DataType::DT_INT32,
-    DataType::DT_INT64, DataType::DT_UINT8, DataType::DT_UINT16, DataType::DT_UINT32, DataType::DT_UINT64,
-    DataType::DT_BOOL, DataType::DT_DOUBLE};
+    DataType::DT_FLOAT,  DataType::DT_FLOAT16, DataType::DT_INT8,  DataType::DT_INT16,
+    DataType::DT_INT32,  DataType::DT_INT64,   DataType::DT_UINT8, DataType::DT_UINT16,
+    DataType::DT_UINT32, DataType::DT_UINT64,  DataType::DT_BOOL,  DataType::DT_DOUBLE};
 
 static const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {DataType::DT_INT32, DataType::DT_INT64};
 
-static inline bool CheckNotNull(
-    const aclTensor* self, const aclTensor* index, const aclTensor* out, const uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+static inline bool CheckNotNull(const aclTensor* self, const aclTensor* index, const aclTensor* out,
+                                const uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(index, return false);
@@ -62,7 +61,8 @@ static inline bool CheckShape(const aclTensor* self, const aclTensor* index, con
 
     auto selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
     if (selfDimNum == 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self tensor must be non-scalar for the Ascend C experimental implementation.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "self tensor must be non-scalar for the Ascend C experimental implementation.");
         return false;
     }
     if (dim < -selfDimNum || dim >= selfDimNum) {
@@ -92,7 +92,7 @@ static inline bool CheckShape(const aclTensor* self, const aclTensor* index, con
 }
 
 static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* out,
-    const uint64_t* workspaceSize, aclOpExecutor** executor)
+                               const uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     CHECK_RET(CheckNotNull(self, index, out, workspaceSize, executor), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, index, out), ACLNN_ERR_PARAM_INVALID);
@@ -105,9 +105,8 @@ static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTens
 extern "C" {
 #endif
 
-aclnnStatus aclnnGatherV2GetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnGatherV2GetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index, aclTensor* out,
+                                          uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGatherV2, DFX_IN(self, dim, index), DFX_OUT(out));
 

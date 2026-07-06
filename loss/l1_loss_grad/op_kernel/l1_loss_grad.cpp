@@ -19,10 +19,11 @@
 
 using namespace AscendC;
 
- template <uint64_t schMode, uint32_t inputGradsIsScalar>
- __global__ __aicore__ void l1_loss_grad(GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y, 
-                                         GM_ADDR workspace, GM_ADDR tiling) {
-     if (workspace == nullptr) {
+template <uint64_t schMode, uint32_t inputGradsIsScalar>
+__global__ __aicore__ void l1_loss_grad(GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM_ADDR workspace,
+                                        GM_ADDR tiling)
+{
+    if (workspace == nullptr) {
         return;
     }
 
@@ -31,14 +32,14 @@ using namespace AscendC;
     if (userWS == nullptr) {
         return;
     }
-    
+
     if constexpr (inputGradsIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
         using OpDag = L1LossGradKernel::L1LossGradScalarCast<DTYPE_PREDICT, float>::OpDag;
         Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(grads, predict, label, y);
-     } else {
+    } else {
         using OpDag = L1LossGradKernel::L1LossGradCast<DTYPE_PREDICT, float>::OpDag;
         Ops::Base::BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(grads, predict, label, y);
-     }
- }
+    }
+}

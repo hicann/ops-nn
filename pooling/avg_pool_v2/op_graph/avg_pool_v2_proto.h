@@ -18,8 +18,6 @@
 #include "graph/operator_reg.h"
 #include "graph/operator.h"
 
-
-
 namespace ge {
 /**
 * @brief Performs average pooling on the input.

@@ -42,12 +42,12 @@ struct GeluFusionOpSelector<OP_TYPE_GELU_TANH, OutType> {
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
           uint64_t GELU_OP_TYPE>
-__aicore__ inline void MatMulGeluMixWithoutQueActKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR workspaceGM,
-    const MatMulV3BasicTilingData& matMulTilingData, int64_t batch = 0)
+__aicore__ inline void MatMulGeluMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM,
+                                                        GM_ADDR workspaceGM,
+                                                        const MatMulV3BasicTilingData& matMulTilingData,
+                                                        int64_t batch = 0)
 {
-    static_assert(
-        GELU_OP_TYPE == OP_TYPE_GELU_ERF || GELU_OP_TYPE == OP_TYPE_GELU_TANH, "unsupported gelu op type");
+    static_assert(GELU_OP_TYPE == OP_TYPE_GELU_ERF || GELU_OP_TYPE == OP_TYPE_GELU_TANH, "unsupported gelu op type");
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
     using L0TileShape = AscendC::Shape<_0, _0, _0>;
     using AType = A_TYPE;
@@ -59,23 +59,21 @@ __aicore__ inline void MatMulGeluMixWithoutQueActKernel(
     using LayoutB = B_LAYOUT;
     using LayoutC = C_LAYOUT;
     using BlockScheduler = BuiltInAswtScheduler<MAT_MUL_NO_FULL_LOAD>;
-    using DispatchPolicy =
-        MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, MAT_MUL_NO_FULL_LOAD, GELU_OP_TYPE>;
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, MmadOutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape,
-        BlockScheduler, DispatchPolicy>;
+    using DispatchPolicy = MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, MAT_MUL_NO_FULL_LOAD,
+                                                      GELU_OP_TYPE>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, MmadOutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
     using FusionOp = typename GeluFusionOpSelector<GELU_OP_TYPE, MmadOutType>::type;
     using BlockEpilogue = Block::BlockEpilogueElementwise<L0TileShape, OutType, MmadOutType, FusionOp>;
     using ProblemShape = MatmulShape;
     using MatmulKernel = Kernel::KernelMatmulMixWithoutQue<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {matMulTilingData.m, matMulTilingData.n, matMulTilingData.k, batch},
-        {aGM, bGM, yGM, biasGM},
-        {yGM, {nullptr}},
-        {&matMulTilingData},
-        workspaceGM,
-        matMulTilingData.n < GELU_WORKSPACE_SMALL_N_LIMIT};
+    Params params = {{matMulTilingData.m, matMulTilingData.n, matMulTilingData.k, batch},
+                     {aGM, bGM, yGM, biasGM},
+                     {yGM, {nullptr}},
+                     {&matMulTilingData},
+                     workspaceGM,
+                     matMulTilingData.n < GELU_WORKSPACE_SMALL_N_LIMIT};
     MatmulKernel mm;
     mm(params);
 }

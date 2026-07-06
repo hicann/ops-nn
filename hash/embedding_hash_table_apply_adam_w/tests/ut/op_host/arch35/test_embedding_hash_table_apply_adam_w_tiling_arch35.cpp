@@ -31,18 +31,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class EmbeddingHashTableApplyAdamWTiling : public testing::Test
-{
+class EmbeddingHashTableApplyAdamWTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingHashTableApplyAdamWTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingHashTableApplyAdamWTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingHashTableApplyAdamWTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingHashTableApplyAdamWTiling TearDown" << std::endl; }
 };
 
 TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Tiling_Test1)
@@ -89,12 +82,12 @@ TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Til
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -207,12 +200,12 @@ TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_FP32_Til
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);

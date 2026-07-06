@@ -20,11 +20,11 @@
 
 namespace Ops {
 #define OP_CHECK(cond, log_func, return_expr) \
-    do {                                   \
-        if (cond) {                        \
-            log_func;                      \
-            return_expr;                   \
-        }                                  \
+    do {                                      \
+        if (cond) {                           \
+            log_func;                         \
+            return_expr;                      \
+        }                                     \
     } while (0)
 
 constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
@@ -148,12 +148,13 @@ constexpr size_t kWDimNCHWStridesIdx = 1;
  * @param [out] output_shape: the output shape ptr
  * @return ge::graphStatus
  */
-inline bool IsUnknownRank(const gert::Shape* check_shape) {
-  return check_shape->GetDimNum() == 1 && check_shape->GetDim(0) == UNKNOWN_RANK_DIM_VALUE_;
+inline bool IsUnknownRank(const gert::Shape* check_shape)
+{
+    return check_shape->GetDimNum() == 1 && check_shape->GetDim(0) == UNKNOWN_RANK_DIM_VALUE_;
 }
 
-}  // namespace Conv
-}  // namespace NN
-}  // namespace Ops
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
 
 #endif // OPS_CONV_OP_PROTO_CONV_COMMON_CUBE_UTIL_H_

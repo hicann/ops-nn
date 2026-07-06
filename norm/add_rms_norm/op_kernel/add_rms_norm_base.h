@@ -41,15 +41,12 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
-__aicore__ inline void ReduceSumFP32ToBlock(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local,
-    int32_t count)
+__aicore__ inline void ReduceSumFP32ToBlock(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
+                                            const LocalTensor<float>& work_local, int32_t count)
 {
     // count need smaller than 255 repeat
     uint64_t reduceMask = NUM_PER_REP_FP32;
@@ -77,8 +74,8 @@ __aicore__ inline void ReduceSumFP32ToBlock(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void BlockReduceSumFP32(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, int32_t count)
+__aicore__ inline void BlockReduceSumFP32(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
+                                          int32_t count)
 {
     // count need multiple of 8
     int32_t blockRepeatTimes = count / NUM_PER_REP_FP32;

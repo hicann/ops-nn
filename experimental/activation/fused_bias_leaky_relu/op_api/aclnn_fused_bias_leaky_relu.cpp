@@ -32,19 +32,11 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT};
 
-static bool IsDtypeSupported(DataType dtype)
-{
-    return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsDtypeSupported(DataType dtype) { return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST); }
 
-static bool HasEmptyTensor(const aclTensor* x, const aclTensor* bias)
-{
-    return x->IsEmpty() || bias->IsEmpty();
-}
+static bool HasEmptyTensor(const aclTensor* x, const aclTensor* bias) { return x->IsEmpty() || bias->IsEmpty(); }
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* bias, const aclTensor* out)
 {
@@ -60,8 +52,7 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* bias, const acl
     OP_CHECK_DTYPE_NOT_MATCH(out, x->GetDataType(), return false);
 
     if (!IsDtypeSupported(x->GetDataType())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dtype not supported: dtype=%d. Supported: FLOAT16, FLOAT.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dtype not supported: dtype=%d. Supported: FLOAT16, FLOAT.",
                 static_cast<int>(x->GetDataType()));
         return false;
     }
@@ -75,8 +66,7 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* bias, const aclTens
     auto formatOut = out->GetStorageFormat();
 
     if (IsPrivateFormat(formatX) || IsPrivateFormat(formatBias) || IsPrivateFormat(formatOut)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Private format not supported: x=%d, bias=%d, out=%d",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format not supported: x=%d, bias=%d, out=%d",
                 static_cast<int>(formatX), static_cast<int>(formatBias), static_cast<int>(formatOut));
         return false;
     }
@@ -93,16 +83,14 @@ static bool CheckShape(const aclTensor* x, const aclTensor* bias, const aclTenso
     auto xShape = x->GetViewShape();
     auto biasShape = bias->GetViewShape();
     if (xShape.GetDimNum() != biasShape.GetDimNum()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x and bias dim mismatch: x_dim=%zu, bias_dim=%zu",
-                xShape.GetDimNum(), biasShape.GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x and bias dim mismatch: x_dim=%zu, bias_dim=%zu", xShape.GetDimNum(),
+                biasShape.GetDimNum());
         return false;
     }
     for (size_t i = 0; i < xShape.GetDimNum(); i++) {
         if (xShape.GetDim(i) != biasShape.GetDim(i)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "x and bias shape mismatch at dim %zu: x=%ld, bias=%ld",
-                    i, xShape.GetDim(i), biasShape.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x and bias shape mismatch at dim %zu: x=%ld, bias=%ld", i,
+                    xShape.GetDim(i), biasShape.GetDim(i));
             return false;
         }
     }
@@ -130,14 +118,9 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* bias, const 
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(
-    const aclTensor* x,
-    const aclTensor* bias,
-    double negativeSlope,
-    double scale,
-    const aclTensor* out,
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(const aclTensor* x, const aclTensor* bias,
+                                                               double negativeSlope, double scale, const aclTensor* out,
+                                                               uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFusedBiasLeakyRelu, DFX_IN(x, bias), DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -158,8 +141,8 @@ extern "C" aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(
     auto biasContiguous = l0op::Contiguous(bias, uniqueExecutor.get());
     CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor* opResult = l0op::FusedBiasLeakyRelu(
-        xContiguous, biasContiguous, negativeSlope, scale, uniqueExecutor.get());
+    const aclTensor* opResult = l0op::FusedBiasLeakyRelu(xContiguous, biasContiguous, negativeSlope, scale,
+                                                         uniqueExecutor.get());
     CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResult = l0op::ViewCopy(opResult, out, uniqueExecutor.get());
@@ -170,11 +153,8 @@ extern "C" aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnFusedBiasLeakyRelu(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnFusedBiasLeakyRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFusedBiasLeakyRelu);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

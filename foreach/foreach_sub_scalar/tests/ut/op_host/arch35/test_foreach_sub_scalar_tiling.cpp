@@ -24,18 +24,11 @@
 #include "../../../../op_kernel/arch35/foreach_sub_scalar_tiling_data.h"
 #include "../../../../op_kernel/arch35/foreach_sub_scalar_tiling_key.h"
 
-class foreach_sub_scalar_tiling_arch35_test : public testing::Test
-{
+class foreach_sub_scalar_tiling_arch35_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_sub_scalar_tiling_arch35_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_sub_scalar_tiling_arch35_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_sub_scalar_tiling_arch35_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "foreach_sub_scalar_tiling_arch35_test TearDown" << std::endl; }
 };
 
 TEST_F(foreach_sub_scalar_tiling_arch35_test, test_ascend950_tiling_registration)

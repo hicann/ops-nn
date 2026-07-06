@@ -24,10 +24,9 @@ using namespace AscendC;
 template <typename T>
 class KernelAvgPool3DGradT : public KernelAvgPool3DGradBaseT<T> {
 public:
-    __aicore__ inline KernelAvgPool3DGradT()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace);
+    __aicore__ inline KernelAvgPool3DGradT() {}
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData,
+                                GM_ADDR workspace);
     __aicore__ inline void Process();
 
 private:
@@ -38,8 +37,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void KernelAvgPool3DGradT<T>::Init(
-    GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
+__aicore__ inline void KernelAvgPool3DGradT<T>::Init(GM_ADDR grads, GM_ADDR output,
+                                                     const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
 {
     // Get all required params
     this->thisCoreIdx = GetBlockIdx();

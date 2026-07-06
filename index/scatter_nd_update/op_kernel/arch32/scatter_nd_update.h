@@ -22,8 +22,8 @@ template <typename T, bool isViewStride0 = false>
 class ScatterNdUpdateKernel {
 public:
     __aicore__ inline ScatterNdUpdateKernel() = delete;
-    __aicore__ inline ScatterNdUpdateKernel(
-        GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace, const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+    __aicore__ inline ScatterNdUpdateKernel(GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace,
+                                            const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -33,9 +33,8 @@ public:
     __aicore__ inline void InitParams(const ScatterNdUpdateArch32TilingData& tiling)
     {
         blockIdx_ = GetBlockIdx();
-        CalcBlockDistribution(
-            blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow, tiling.scatterTiling.tailRow,
-            computeRow_, start_);
+        CalcBlockDistribution(blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow,
+                              tiling.scatterTiling.tailRow, computeRow_, start_);
         end_ = start_ + computeRow_;
         blockNum_ = tiling.linearIndexTiling.blockNum;
         blockLength_ = tiling.linearIndexTiling.blockLength;
@@ -63,8 +62,8 @@ public:
         pipe.InitBuffer(updateQue_, DOUBLE_BUFFER, ubLengthForUpdates_ * sizeof(T));
     }
 
-    __aicore__ inline void SetGmAddr(
-        GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace, const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace,
+                                     const ScatterNdUpdateArch32TilingData& tiling)
     {
         sortedIndicesGm_.SetGlobalBuffer((__gm__ int*)workSpace);
         posIndicesGm_.SetGlobalBuffer((__gm__ int*)workSpace + tiling.linearIndexTiling.sortWorkspace);
@@ -103,8 +102,8 @@ public:
         posIdxQue_.EnQue<int>(posIdxLocal);
     }
 
-    __aicore__ inline void CopyUpdateIn(
-        LocalTensor<T>& updateLocal, uint64_t gmIdx, uint64_t ubIdx, uint64_t tileIdx, uint64_t tileLength)
+    __aicore__ inline void CopyUpdateIn(LocalTensor<T>& updateLocal, uint64_t gmIdx, uint64_t ubIdx, uint64_t tileIdx,
+                                        uint64_t tileLength)
     {
         uint64_t gmOffset = gmIdx * scatterLength_ + tileIdx * scatterTileLength_;
         uint64_t ubOffset = ubIdx * scatterTileAlignLength_;
@@ -202,9 +201,8 @@ public:
         posIdxQue_.FreeTensor<int>(posIdxLocal);
     }
 
-    __aicore__ inline void CopyOut(
-        uint64_t inUbNum, int64_t curIdx, LocalTensor<int>& indiceLocal, LocalTensor<int>& posIdxLocal,
-        uint64_t tileIdx, uint64_t tileLength)
+    __aicore__ inline void CopyOut(uint64_t inUbNum, int64_t curIdx, LocalTensor<int>& indiceLocal,
+                                   LocalTensor<int>& posIdxLocal, uint64_t tileIdx, uint64_t tileLength)
     {
         LocalTensor<T> updateLocal = updateQue_.DeQue<T>();
         DataCopyExtParams outParams{1, static_cast<uint32_t>(tileLength * sizeof(T)), 0, 0, 0};
@@ -213,9 +211,9 @@ public:
             if (curIdxValue == lastProcessedIdx_)
                 continue;
             lastProcessedIdx_ = curIdxValue;
-            uint64_t outOffset = ResolveOutOffset<isViewStride0>(
-                static_cast<uint64_t>(curIdxValue), scatterLength_, firstDimStrideRows_, varStride0Elements_,
-                tileIdx * scatterTileLength_);
+            uint64_t outOffset = ResolveOutOffset<isViewStride0>(static_cast<uint64_t>(curIdxValue), scatterLength_,
+                                                                 firstDimStrideRows_, varStride0Elements_,
+                                                                 tileIdx * scatterTileLength_);
             uint64_t updateOffset = (curIdx + inUbNum - 1 - i) * scatterTileAlignLength_;
             DataCopyPad(outputGm_[outOffset], updateLocal[updateOffset], outParams);
         }

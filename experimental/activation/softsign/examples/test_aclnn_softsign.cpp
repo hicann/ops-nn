@@ -9,7 +9,7 @@
  */
 
 /**
-  * NOTE: Portions of this code were AI-generated and have been
+ * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
 
@@ -55,10 +55,7 @@
 /**
  * @brief CPU reference: softsign(x) = x / (1 + |x|)
  */
-static float SoftsignRef(float x)
-{
-    return x / (1.0f + std::fabs(x));
-}
+static float SoftsignRef(float x) { return x / (1.0f + std::fabs(x)); }
 
 int32_t main(int32_t argc, char** argv)
 {
@@ -85,22 +82,19 @@ int32_t main(int32_t argc, char** argv)
     // Input tensor
     void* inputDeviceMem = nullptr;
     CHECK_ACL(aclrtMalloc(&inputDeviceMem, bufferSize, ACL_MEM_MALLOC_HUGE_FIRST));
-    aclTensor* inputTensor = aclCreateTensor(
-        shape.data(), shape.size(), ACL_FLOAT, nullptr, 0, ACL_FORMAT_ND,
-        shape.data(), shape.size(), inputDeviceMem);
+    aclTensor* inputTensor = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT, nullptr, 0, ACL_FORMAT_ND,
+                                             shape.data(), shape.size(), inputDeviceMem);
 
     // Output tensor
     void* outputDeviceMem = nullptr;
     CHECK_ACL(aclrtMalloc(&outputDeviceMem, bufferSize, ACL_MEM_MALLOC_HUGE_FIRST));
-    aclTensor* outputTensor = aclCreateTensor(
-        shape.data(), shape.size(), ACL_FLOAT, nullptr, 0, ACL_FORMAT_ND,
-        shape.data(), shape.size(), outputDeviceMem);
+    aclTensor* outputTensor = aclCreateTensor(shape.data(), shape.size(), ACL_FLOAT, nullptr, 0, ACL_FORMAT_ND,
+                                              shape.data(), shape.size(), outputDeviceMem);
 
     // =========================================================================
     // 4. Copy input data to device
     // =========================================================================
-    CHECK_ACL(aclrtMemcpy(inputDeviceMem, bufferSize, inputData.data(),
-                          bufferSize, ACL_MEMCPY_HOST_TO_DEVICE));
+    CHECK_ACL(aclrtMemcpy(inputDeviceMem, bufferSize, inputData.data(), bufferSize, ACL_MEMCPY_HOST_TO_DEVICE));
 
     // =========================================================================
     // 5. Call two-phase aclnn API
@@ -108,8 +102,7 @@ int32_t main(int32_t argc, char** argv)
     // Phase 1: Get workspace size and create executor
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    CHECK_ACL(aclnnSoftsignGetWorkspaceSize(inputTensor, outputTensor,
-                                            &workspaceSize, &executor));
+    CHECK_ACL(aclnnSoftsignGetWorkspaceSize(inputTensor, outputTensor, &workspaceSize, &executor));
 
     // Allocate workspace on device (if needed)
     void* workspaceDeviceMem = nullptr;
@@ -126,8 +119,7 @@ int32_t main(int32_t argc, char** argv)
     CHECK_ACL(aclrtSynchronizeStream(stream));
 
     std::vector<float> outputData(elementCount, 0.0f);
-    CHECK_ACL(aclrtMemcpy(outputData.data(), bufferSize, outputDeviceMem,
-                          bufferSize, ACL_MEMCPY_DEVICE_TO_HOST));
+    CHECK_ACL(aclrtMemcpy(outputData.data(), bufferSize, outputDeviceMem, bufferSize, ACL_MEMCPY_DEVICE_TO_HOST));
 
     // =========================================================================
     // 7. Verify result against CPU reference
@@ -148,8 +140,8 @@ int32_t main(int32_t argc, char** argv)
         float expected = SoftsignRef(inputData[i]);
         float diff = std::fabs(outputData[i] - expected);
         if (diff > tolerance) {
-            fprintf(stderr, "[FAIL] index=%ld, output=%.6f, expected=%.6f, diff=%.6f\n",
-                    i, outputData[i], expected, diff);
+            fprintf(stderr, "[FAIL] index=%ld, output=%.6f, expected=%.6f, diff=%.6f\n", i, outputData[i], expected,
+                    diff);
             pass = false;
         }
     }

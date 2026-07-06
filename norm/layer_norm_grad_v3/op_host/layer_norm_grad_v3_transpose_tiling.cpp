@@ -55,10 +55,9 @@ bool LayerNormGradV3TransposeTiling::IsCapable()
         return false;
     }
     if ((commonParams.colSize > TRANSPOSE_COL_LIMIT) || (commonParams.colSize == commonParams.colAlign)) {
-        OP_LOGI(
-            context_->GetNodeName(),
-            "LayerNormGradV3Transpose Template only support colSize <= 64 and not 32B align, colSize: %u",
-            static_cast<uint32_t>(commonParams.colSize));
+        OP_LOGI(context_->GetNodeName(),
+                "LayerNormGradV3Transpose Template only support colSize <= 64 and not 32B align, colSize: %u",
+                static_cast<uint32_t>(commonParams.colSize));
         return false;
     }
     return true;
@@ -80,8 +79,8 @@ ge::graphStatus LayerNormGradV3TransposeTiling::DoOpTiling()
     // 计算ub相关tiling data
     uint64_t curUbSize = commonParams.ubSizePlatForm - TRANSPOSE_COL_LIMIT * FLOAT_SIZE * REDUCE_BUF_NUM -
                          commonParams.colAlign * BLOCK_SIZE;
-    uint64_t maxUbFormer =
-        curUbSize / (commonParams.colSize * TRANSPOSE_DY_BUF_NUM * FLOAT_SIZE + TRANSPOSE_MEAN_BUF_NUM * FLOAT_SIZE);
+    uint64_t maxUbFormer = curUbSize / (commonParams.colSize * TRANSPOSE_DY_BUF_NUM * FLOAT_SIZE +
+                                        TRANSPOSE_MEAN_BUF_NUM * FLOAT_SIZE);
     uint64_t ubFormer = 0;
     uint64_t bFormer = 0;
     uint64_t alignB = 0;
@@ -89,8 +88,8 @@ ge::graphStatus LayerNormGradV3TransposeTiling::DoOpTiling()
     for (int64_t curUbFormer = std::min(maxUbFormer, blockFormer); curUbFormer > 0; curUbFormer--) {
         ubFormer = curUbFormer;
         bFormer = CalcBorrowFactor(ubFormer);
-        alignBAndCol =
-            (bFormer * commonParams.colSize + B16_BLOCK_ALIGN_NUM - 1) / B16_BLOCK_ALIGN_NUM * B16_BLOCK_ALIGN_NUM;
+        alignBAndCol = (bFormer * commonParams.colSize + B16_BLOCK_ALIGN_NUM - 1) / B16_BLOCK_ALIGN_NUM *
+                       B16_BLOCK_ALIGN_NUM;
         alignB = (bFormer + B16_BLOCK_ALIGN_NUM - 1) / B16_BLOCK_ALIGN_NUM * B16_BLOCK_ALIGN_NUM;
         if ((alignB * TRANSPOSE_C0_SIZE * FLOAT_SIZE * TRANSPOSE_MEAN_BUF_NUM +
              alignBAndCol * TRANSPOSE_C0_SIZE * FLOAT_SIZE * TRANSPOSE_DY_BUF_NUM) <= curUbSize) {
@@ -108,8 +107,8 @@ ge::graphStatus LayerNormGradV3TransposeTiling::DoOpTiling()
 
     float coefficient = static_cast<float>(1.0) / static_cast<float>(commonParams.colSize);
 
-    uint32_t colB32AlignSize =
-        (commonParams.colSize + B32_BLOCK_ALIGN_NUM - 1) / B32_BLOCK_ALIGN_NUM * B32_BLOCK_ALIGN_NUM * FLOAT_SIZE;
+    uint32_t colB32AlignSize = (commonParams.colSize + B32_BLOCK_ALIGN_NUM - 1) / B32_BLOCK_ALIGN_NUM *
+                               B32_BLOCK_ALIGN_NUM * FLOAT_SIZE;
     uint32_t deterministicComputeWspSize = (colB32AlignSize + GM_ALIGN - 1) / GM_ALIGN * GM_ALIGN * blockNum;
 
     td_.set_row(commonParams.rowSize);

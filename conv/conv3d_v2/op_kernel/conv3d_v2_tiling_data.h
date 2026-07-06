@@ -22,17 +22,17 @@ namespace Conv3dV2 {
 #pragma pack(push, 8)
 
 #define CONV3D_COMMON_ATTRS \
-    uint32_t strideH = 0; \
-    uint32_t strideW = 0; \
-    uint32_t strideD = 0; \
+    uint32_t strideH = 0;   \
+    uint32_t strideW = 0;   \
+    uint32_t strideD = 0;   \
     uint32_t dilationH = 0; \
     uint32_t dilationW = 0; \
     uint32_t dilationD = 0; \
-    uint32_t padHead = 0; \
-    uint32_t padTail = 0; \
-    uint32_t padTop = 0; \
+    uint32_t padHead = 0;   \
+    uint32_t padTail = 0;   \
+    uint32_t padTop = 0;    \
     uint32_t padBottom = 0; \
-    uint32_t padLeft = 0; \
+    uint32_t padLeft = 0;   \
     uint32_t padRight = 0
 
 struct TConv3DTiling {

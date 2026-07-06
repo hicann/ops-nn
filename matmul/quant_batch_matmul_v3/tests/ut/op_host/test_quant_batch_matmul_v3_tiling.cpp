@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <gtest/gtest.h>
@@ -46,8 +47,8 @@ using namespace optiling;
 
 class QuantBatchMatmulV3TilingTestParam {
 public:
-    void Prepare(QuantBatchMatmulV3CompileInfo &compileInfo) const;
-    void InvokeTilingFunc(QuantBatchMatmulV3CompileInfo &compileInfo) const;
+    void Prepare(QuantBatchMatmulV3CompileInfo& compileInfo) const;
+    void InvokeTilingFunc(QuantBatchMatmulV3CompileInfo& compileInfo) const;
     void Test() const;
     std::string socVersion;
     std::string caseName;
@@ -87,28 +88,28 @@ public:
     bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
 };
 
-
-static string TilingData2Str(const void *tilingData, size_t tilingSize)
+static string TilingData2Str(const void* tilingData, size_t tilingSize)
 {
     string result;
     for (size_t i = 0; i < tilingSize; i += sizeof(int32_t)) {
-        result += std::to_string((reinterpret_cast<const int32_t *>(tilingData)[i / sizeof(int32_t)]));
+        result += std::to_string((reinterpret_cast<const int32_t*>(tilingData)[i / sizeof(int32_t)]));
         result += " ";
     }
     return result;
 }
 
 template <typename T>
-static void SetExpectedTilingFieldIfPresent(std::vector<int32_t> &tilingDataInt, size_t fieldOffset, const T &value)
+static void SetExpectedTilingFieldIfPresent(std::vector<int32_t>& tilingDataInt, size_t fieldOffset, const T& value)
 {
     size_t tilingDataSize = tilingDataInt.size() * sizeof(int32_t);
     if (fieldOffset + sizeof(T) > tilingDataSize) {
         return;
     }
-    std::memcpy(reinterpret_cast<char *>(tilingDataInt.data()) + fieldOffset, &value, sizeof(T));
+    std::memcpy(reinterpret_cast<char*>(tilingDataInt.data()) + fieldOffset, &value, sizeof(T));
 }
 
-static gert::Shape TransNd2Nz(const gert::Shape &inShape) {
+static gert::Shape TransNd2Nz(const gert::Shape& inShape)
+{
     gert::Shape outShape;
     for (size_t idx = 0; idx < inShape.GetDimNum() - 2; ++idx) {
         outShape.AppendDim(inShape.GetDim(idx));
@@ -125,26 +126,18 @@ static gert::Shape TransNd2Nz(const gert::Shape &inShape) {
 
 class TestQuantBatchMatmulV3Tiling : public testing::TestWithParam<QuantBatchMatmulV3TilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-    }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase()
-    {
-    }
+    static void TearDownTestCase() {}
 };
 
-
-static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext *tilingContext, string &compileInfoStr,
+static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext* tilingContext, string& compileInfoStr,
                              int64_t aicNum = -1, int64_t aivNum = -1)
 {
     map<string, string> soc_version_infos = {{"SoC_version", socVersion}, {"Short_SoC_version", socVersion}};
     map<string, string> soc2Arch = {
-        {"Ascend910B2", "2201"},
-        {"Ascend910B4", "2201"},
-        {"Ascend310P3", "2002"},
-        {"Ascend950", "3510"},
-        {"MC62CM12AA", "5102"},
+        {"Ascend910B2", "2201"}, {"Ascend910B4", "2201"}, {"Ascend310P3", "2002"},
+        {"Ascend950", "3510"},   {"MC62CM12AA", "5102"},
     };
     auto soc2ArchIter = soc2Arch.find(socVersion);
     if (soc2ArchIter != soc2Arch.end()) {
@@ -231,7 +224,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 }
 
-static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string &socVersion)
+static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string& socVersion)
 {
     std::vector<QuantBatchMatmulV3TilingTestParam> params;
     std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
@@ -302,7 +295,7 @@ static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::strin
     return params;
 }
 
-void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &compileInfo) const
+void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& compileInfo) const
 {
     gert::StorageShape x1Shape;
     gert::StorageShape x2Shape;
@@ -366,9 +359,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     }
 
     pertokenShape.MutableStorageShape() = gert::Shape({m});
-    if (quantMode == 0) {  // per_tensor
+    if (quantMode == 0) { // per_tensor
         scaleShape.MutableStorageShape() = gert::Shape({1});
-    } else if (quantMode == 1) {  // per_channel
+    } else if (quantMode == 1) { // per_channel
         scaleShape.MutableStorageShape() = gert::Shape({n});
     } else if (quantMode == 2) {
         int64_t scaleK = (k + 63) / 64 * 2;
@@ -445,7 +438,7 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
     int64_t groupSize = 0;
     if (quantMode == 2) {
         groupSize = 4295032864;
@@ -454,32 +447,32 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     } else if (quantMode == 4) {
         groupSize = 4303356032;
     }
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(6, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1})
-            .InputShapes({&x1Shape, &x2Shape, &scaleShape, offsetFlag ? &scaleShape : nullptr, biasFlag ? &biasShape : nullptr, pertokenFlag ? &pertokenShape : nullptr})
-            .OutputShapes({&outputShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-            .NodeInputTd(0, x1Dtype, ge::FORMAT_ND, fmapNz ? ge::FORMAT_FRACTAL_NZ: ge::FORMAT_ND)
-            .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, weightNz ? ge::FORMAT_FRACTAL_NZ: ge::FORMAT_ND)
-            .NodeInputTd(2, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, perTokenScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)},
-                        {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                        {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                        {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, &scaleShape, offsetFlag ? &scaleShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr, pertokenFlag ? &pertokenShape : nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, x1Dtype, ge::FORMAT_ND, fmapNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, weightNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeInputTd(2, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, perTokenScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     string compileInfoStr;
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     InitPlatformInfo(socVersion, tilingContext, compileInfoStr, aicNum, aivNum);
 
     auto kernelHold = gert::KernelRunContextFaker()
@@ -493,7 +486,7 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo &c
     ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 }
 
-void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3CompileInfo &compileInfo) const
+void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3CompileInfo& compileInfo) const
 {
     gert::StorageShape x1Shape;
     gert::StorageShape x2Shape;
@@ -556,9 +549,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     }
 
     pertokenShape.MutableStorageShape() = gert::Shape({m});
-    if (quantMode == 0) {  // per_tensor
+    if (quantMode == 0) { // per_tensor
         scaleShape.MutableStorageShape() = gert::Shape({1});
-    } else if (quantMode == 1) {  // per_channel
+    } else if (quantMode == 1) { // per_channel
         scaleShape.MutableStorageShape() = gert::Shape({n});
     } else if (quantMode == 2) {
         int64_t scaleK = (k + 63) / 64;
@@ -569,7 +562,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         }
         if (transB) {
             scaleShape.MutableStorageShape() = gert::Shape({n, scaleK, 2});
-        } else{
+        } else {
             scaleShape.MutableStorageShape() = gert::Shape({scaleK, n, 2});
         }
     } else if (quantMode == 3 || quantMode == 4) {
@@ -643,7 +636,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
     int64_t groupSize = 0;
     if (quantMode == 2) {
         groupSize = 4295032864;
@@ -652,32 +645,32 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else if (quantMode == 4) {
         groupSize = 4303356032;
     }
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(6, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1})
-            .InputShapes({&x1Shape, &x2Shape, &scaleShape, offsetFlag ? &scaleShape : nullptr, biasFlag ? &biasShape : nullptr, pertokenFlag ? &pertokenShape : nullptr})
-            .OutputShapes({&outputShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-            .NodeInputTd(0, x1Dtype, ge::FORMAT_ND, fmapNz ? ge::FORMAT_FRACTAL_NZ: ge::FORMAT_ND)
-            .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, weightNz ? ge::FORMAT_FRACTAL_NZ: ge::FORMAT_ND)
-            .NodeInputTd(2, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, perTokenScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)},
-                        {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                        {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                        {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, &scaleShape, offsetFlag ? &scaleShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr, pertokenFlag ? &pertokenShape : nullptr})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, x1Dtype, ge::FORMAT_ND, fmapNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeInputTd(1, x2Dtype, ge::FORMAT_ND, weightNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+                      .NodeInputTd(2, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, perTokenScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     string compileInfoStr;
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     InitPlatformInfo(socVersion, tilingContext, compileInfoStr, aicNum, aivNum);
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -687,7 +680,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         bool isMxfp8 = quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) &&
-            (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
+                       (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
         bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
         bool isAscend950 = socVersion == "Ascend950";
         bool tensorApiCapable = IsTensorapiCapable() && isAscend950;
@@ -705,21 +698,22 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         SplitStr2Vec(tilingData, " ", tilingDataStrs);
         std::vector<int32_t> tilingDataInt;
         tilingDataInt.reserve(tilingDataStrs.size());
-        for (auto &tilingValue : tilingDataStrs) {
+        for (auto& tilingValue : tilingDataStrs) {
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
         size_t actualTilingDataSize = tilingContext->GetRawTilingData()->GetDataSize();
-        bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) &&
-            (batchC == 0 || batchC == 1) &&
-            actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
-        bool isUseBasicApiTilingData =
-            actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+        bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) && (batchC == 0 || batchC == 1) &&
+                                          actualTilingDataSize ==
+                                              sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
+        bool isUseBasicApiTilingData = actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
         if (isMxWithoutBatchTilingData) {
-            DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(tilingContext->GetRawTilingData()->GetData());
+            DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData&
+                actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(
+                    tilingContext->GetRawTilingData()->GetData());
             if (biasFlag == false) {
-                SetExpectedTilingFieldIfPresent(tilingDataInt,
-                    offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, biasDtype),
+                SetExpectedTilingFieldIfPresent(
+                    tilingDataInt, offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, biasDtype),
                     actualTilingData.biasDtype);
             }
             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
@@ -728,10 +722,13 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
                 << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         } else if (isUseBasicApiTilingData) {
-            DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
+            DequantBmm::QuantBatchMatmulV3BasicAPITilingData&
+                actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(
+                    tilingContext->GetRawTilingData()->GetData());
             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
             if (biasFlag == false) {
-                SetExpectedTilingFieldIfPresent(tilingDataInt,
+                SetExpectedTilingFieldIfPresent(
+                    tilingDataInt,
                     offsetof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, params) +
                         offsetof(DequantBmm::QuantBatchMatmulV3BasicAPIDataParams, biasDtype),
                     actualTilingData.params.biasDtype);
@@ -742,8 +739,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
                 << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         } else {
-            QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingContext->GetRawTilingData()->GetData());
-            QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(tilingDataInt.data());
+            QuantBatchMatmulV3TilingData& actualTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(
+                tilingContext->GetRawTilingData()->GetData());
+            QuantBatchMatmulV3TilingData& expectTilingData = *reinterpret_cast<QuantBatchMatmulV3TilingData*>(
+                tilingDataInt.data());
             // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
             expectTilingData.matmulTiling.shareL1Size = actualTilingData.matmulTiling.shareL1Size;
             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
@@ -769,11 +768,7 @@ void QuantBatchMatmulV3TilingTestParam::Test() const
     InvokeTilingFunc(compileInfo);
 }
 
-
-TEST_P(TestQuantBatchMatmulV3Tiling, generalTest)
-{
-    GetParam().Test();
-}
+TEST_P(TestQuantBatchMatmulV3Tiling, generalTest) { GetParam().Test(); }
 
 static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams910B2 = GetParams("Ascend910B2");
 static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams910B4 = GetParams("Ascend910B4");
@@ -789,7 +784,7 @@ INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing
 
 static mutex tilingTestMutex;
 
-static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
+static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum)
 {
     int32_t logLevel = 0;
@@ -806,8 +801,8 @@ static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t t
 
 static mutex compileMutex;
 
-static void ThreadFuncPrepare(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
-                       size_t threadNum, map<size_t, QuantBatchMatmulV3CompileInfo> &compileInfos)
+static void ThreadFuncPrepare(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum, size_t threadIdx,
+                              size_t threadNum, map<size_t, QuantBatchMatmulV3CompileInfo>& compileInfos)
 {
     if (threadIdx >= testcaseNum)
         return;
@@ -822,8 +817,8 @@ static void ThreadFuncPrepare(const QuantBatchMatmulV3TilingTestParam *params, s
     }
 }
 
-static void ThreadFuncInvokeTilingFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
-                       size_t threadNum, QuantBatchMatmulV3CompileInfo &compileInfo)
+static void ThreadFuncInvokeTilingFunc(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum,
+                                       size_t threadIdx, size_t threadNum, QuantBatchMatmulV3CompileInfo& compileInfo)
 {
     if (threadIdx >= testcaseNum)
         return;
@@ -832,7 +827,7 @@ static void ThreadFuncInvokeTilingFunc(const QuantBatchMatmulV3TilingTestParam *
     params[threadIdx].InvokeTilingFunc(compileInfo);
 }
 
-static void TestMultiThread(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThread(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum, size_t threadNum)
 {
     std::thread threads[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
@@ -844,7 +839,8 @@ static void TestMultiThread(const QuantBatchMatmulV3TilingTestParam *params, siz
     }
 }
 
-static void TestMultiThreadSeparate(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThreadSeparate(const QuantBatchMatmulV3TilingTestParam* params, size_t testcaseNum,
+                                    size_t threadNum)
 {
     std::thread threads[threadNum];
     map<size_t, QuantBatchMatmulV3CompileInfo> compileInfos;
@@ -858,7 +854,8 @@ static void TestMultiThreadSeparate(const QuantBatchMatmulV3TilingTestParam *par
 
     std::thread threadsInvoke[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
-        threadsInvoke[idx] = std::thread(ThreadFuncInvokeTilingFunc, params, testcaseNum, idx, threadNum, std::ref(compileInfos[idx]));
+        threadsInvoke[idx] = std::thread(ThreadFuncInvokeTilingFunc, params, testcaseNum, idx, threadNum,
+                                         std::ref(compileInfos[idx]));
     }
 
     for (size_t idx = 0; idx < threadNum; ++idx) {

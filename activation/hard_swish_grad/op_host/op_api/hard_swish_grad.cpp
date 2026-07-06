@@ -37,9 +37,9 @@ const aclTensor* HardSwishGrad(const aclTensor* gradOutput, const aclTensor* sel
     auto hardSwishGradOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSwishGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(hardSwishGradOut));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSwishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSwishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return hardSwishGradOut;
 }
 } // namespace l0op

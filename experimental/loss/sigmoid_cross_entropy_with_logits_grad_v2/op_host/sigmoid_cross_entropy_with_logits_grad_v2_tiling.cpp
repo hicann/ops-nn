@@ -26,8 +26,7 @@ using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t QUEUE_DEPTH = 1U;
 
-struct SigmoidCrossEntropyWithLogitsGradV2CompileInfo {
-};
+struct SigmoidCrossEntropyWithLogitsGradV2CompileInfo {};
 
 enum class ReductionType : int32_t {
     kNone = 0,
@@ -35,10 +34,12 @@ enum class ReductionType : int32_t {
     kMean = 2,
 };
 
-static ge::graphStatus CalculateCoreBlockNums(
-    uint64_t inputLengthAlgin, int64_t coreNum, uint64_t tileBlockNum, uint64_t inputBytes, uint64_t tileDataNum,
-    uint32_t sysBlockSize, uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum,
-    uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum, uint64_t& tailBlockNum)
+static ge::graphStatus CalculateCoreBlockNums(uint64_t inputLengthAlgin, int64_t coreNum, uint64_t tileBlockNum,
+                                              uint64_t inputBytes, uint64_t tileDataNum, uint32_t sysBlockSize,
+                                              uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum,
+                                              uint64_t& smallTailDataNum, uint64_t& bigTailDataNum,
+                                              uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum,
+                                              uint64_t& tailBlockNum)
 {
     if (coreNum <= 0 || tileBlockNum == 0 || inputBytes == 0 || sysBlockSize == 0) {
         OP_LOGE("SigmoidCrossEntropyWithLogitsGradV2", "CalculateCoreBlockNums invalid args.");
@@ -76,9 +77,8 @@ static int32_t GetReductionType(gert::TilingContext* context)
     auto strAttr = attrs->GetStr(0);
     if (strAttr != nullptr) {
         std::string reduction = strAttr;
-        std::transform(reduction.begin(), reduction.end(), reduction.begin(), [](unsigned char c) {
-            return static_cast<char>(std::tolower(c));
-        });
+        std::transform(reduction.begin(), reduction.end(), reduction.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         if (reduction == "none" || reduction == "n") {
             return static_cast<int32_t>(ReductionType::kNone);
         }
@@ -214,17 +214,19 @@ static ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2TilingFunc(gert::Tilin
     uint32_t inputDimNum = static_cast<uint32_t>(originShape.GetDimNum());
 
     // Preserve the previous 007 improvement as a workload-range rule (no explicit shape literals).
-    bool enableFp16FiveDimSyncOpt =
-        (inputDtype == ge::DT_FLOAT16) && hasWeight && hasPosWeight && (inputDimNum == 5U) && (reductionType == 0) &&
-        (totalLength >= FP16_5D_SYNC_OPT_MIN_ELEMS) && (totalLength <= FP16_5D_SYNC_OPT_MAX_ELEMS);
+    bool enableFp16FiveDimSyncOpt = (inputDtype == ge::DT_FLOAT16) && hasWeight && hasPosWeight &&
+                                    (inputDimNum == 5U) && (reductionType == 0) &&
+                                    (totalLength >= FP16_5D_SYNC_OPT_MIN_ELEMS) &&
+                                    (totalLength <= FP16_5D_SYNC_OPT_MAX_ELEMS);
 
     // Focus optimization on medium-large fp32 3D/4D sum workloads where loop count dominates.
     bool enableFp32HeavyCoreOpt = enableFp32PerfTune && ((inputDimNum == 3U) || (inputDimNum == 4U)) &&
                                   (reductionType == 1) && (totalLength >= FP32_3D4D_SUM_OPT_MIN_ELEMS) &&
                                   (totalLength <= FP32_3D4D_SUM_OPT_MAX_ELEMS);
-    bool enableBf16ThreeDimMeanTileCap =
-        (inputDtype == ge::DT_BF16) && hasWeight && hasPosWeight && (inputDimNum == 3U) && (reductionType == 2) &&
-        (totalLength >= BF16_3D_MEAN_OPT_MIN_ELEMS) && (totalLength <= BF16_3D_MEAN_OPT_MAX_ELEMS);
+    bool enableBf16ThreeDimMeanTileCap = (inputDtype == ge::DT_BF16) && hasWeight && hasPosWeight &&
+                                         (inputDimNum == 3U) && (reductionType == 2) &&
+                                         (totalLength >= BF16_3D_MEAN_OPT_MIN_ELEMS) &&
+                                         (totalLength <= BF16_3D_MEAN_OPT_MAX_ELEMS);
 
     if (enableFp32HeavyCoreOpt) {
         int64_t maxCoreByBlocks = static_cast<int64_t>(totalBlocks > 0 ? totalBlocks : 1);
@@ -383,9 +385,9 @@ static ge::graphStatus SigmoidCrossEntropyWithLogitsGradV2TilingFunc(gert::Tilin
     uint64_t finalBigTileNum = 0;
     uint64_t tailBlockNum = 0;
 
-    auto calcStatus = CalculateCoreBlockNums(
-        inputLengthAlgin, coreNum, tileBlockNum, inputBytes, tileDataNum, sysBlockSize, smallCoreDataNum,
-        bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum);
+    auto calcStatus = CalculateCoreBlockNums(inputLengthAlgin, coreNum, tileBlockNum, inputBytes, tileDataNum,
+                                             sysBlockSize, smallCoreDataNum, bigCoreDataNum, smallTailDataNum,
+                                             bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum);
     if (calcStatus != ge::GRAPH_SUCCESS) {
         OP_LOGE(nodeName, "CalculateCoreBlockNums failed.");
         return calcStatus;

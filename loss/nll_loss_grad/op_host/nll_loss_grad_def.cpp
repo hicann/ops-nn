@@ -18,67 +18,68 @@
 namespace ops {
 static constexpr int64_t DEFAULT_IGNORE_IDX = -100;
 class NLLLossGrad : public OpDef {
- public:
-  explicit NLLLossGrad(const char* name) : OpDef(name) {
-    this->Input("x")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("y_grad")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("target")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_UINT8, ge::DT_UINT8,
-            ge::DT_INT32, ge::DT_INT64, ge::DT_UINT8})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("weight")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("total_weight")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Output("x_grad")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16,
-            ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Attr("reduction").AttrType(OPTIONAL).String("mean");
-    this->Attr("ignore_index").AttrType(OPTIONAL).Int(DEFAULT_IGNORE_IDX);
+public:
+    explicit NLLLossGrad(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("y_grad")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("target")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_UINT8, ge::DT_UINT8, ge::DT_INT32,
+                       ge::DT_INT64, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("weight")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("total_weight")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("x_grad")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
+        this->Attr("ignore_index").AttrType(OPTIONAL).Int(DEFAULT_IGNORE_IDX);
 
-    OpAICoreConfig aicore_config;
-    aicore_config.DynamicCompileStaticFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false);
-    this->AICore().AddConfig("ascend950", aicore_config);
-  }
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false);
+        this->AICore().AddConfig("ascend950", aicore_config);
+    }
 };
 
 OP_ADD(NLLLossGrad);
-}  // namespace ops
+} // namespace ops

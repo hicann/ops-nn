@@ -23,6 +23,7 @@ __global__ __aicore__ void silu_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR dx, GM_ADDR 
     REGISTER_TILING_DEFAULT(SiluGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(SiluGradTilingData, tilingData, tiling);
     NsSiluGrad::KernelSiluGrad<DTYPE_DY> op;
-    op.Init(dy, x, dx, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.tileDataNum, tilingData.tailBlockNum, schMode);
+    op.Init(dy, x, dx, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.tileDataNum,
+            tilingData.tailBlockNum, schMode);
     op.Process();
 }

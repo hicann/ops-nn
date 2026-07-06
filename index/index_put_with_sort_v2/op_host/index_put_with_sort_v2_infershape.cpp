@@ -11,7 +11,7 @@
 /*!
  * \file index_put_with_sort_v2_infershape.cpp
  * \brief InferShape implementation for IndexPutWithSortV2 operator
- * 
+ *
  * IndexPutWithSortV2 puts values into tensor at sorted indices.
  * Output shape is same as input self tensor shape.
  */
@@ -27,13 +27,13 @@ namespace ops {
 
 /**
  * @brief InferShape for IndexPutWithSortV2
- * 
+ *
  * Input:
  *   - self (input 0): tensor to be modified
  *   - linear_index (input 1): linear index tensor
  *   - pos_idx (input 2): position index tensor
  *   - values (input 3): values to put
- * 
+ *
  * Output:
  *   - self (output 0): output tensor, shape same as input self
  */
@@ -62,7 +62,7 @@ static ge::graphStatus InferShapeForIndexPutWithSortV2(gert::InferShapeContext* 
     }
     // Output shape is same as input self shape
     *outSelfShape = *inSelfShape;
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -77,6 +77,8 @@ static graphStatus InferDataTypeForIndexPutWithSortV2(gert::InferDataTypeContext
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(IndexPutWithSortV2).InferShape(InferShapeForIndexPutWithSortV2).InferDataType(InferDataTypeForIndexPutWithSortV2);
+IMPL_OP_INFERSHAPE(IndexPutWithSortV2)
+    .InferShape(InferShapeForIndexPutWithSortV2)
+    .InferDataType(InferDataTypeForIndexPutWithSortV2);
 
-}  // namespace ops
+} // namespace ops

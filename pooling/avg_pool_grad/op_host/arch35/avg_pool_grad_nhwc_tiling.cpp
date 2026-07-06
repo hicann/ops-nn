@@ -15,17 +15,15 @@
 
 #include "avg_pool_grad_nhwc_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 
-ge::graphStatus AvgPoolGradNHWCTiling::GetPlatformInfo() {
+ge::graphStatus AvgPoolGradNHWCTiling::GetPlatformInfo()
+{
     return GetAvgPoolGradPlatformInfo(context_, ubSize, coreNum);
 }
 
-ge::graphStatus AvgPoolGradNHWCTiling::GetShapeAttrsInfo() {
-    return GetAvgPoolGradShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus AvgPoolGradNHWCTiling::GetShapeAttrsInfo() { return GetAvgPoolGradShapeAttrsInfo(context_, inputData); }
 
 REGISTER_OPS_TILING_TEMPLATE(AvgPoolGrad, AvgPoolGradNHWCTiling, 3);
 
-}  // namespace optiling
+} // namespace optiling

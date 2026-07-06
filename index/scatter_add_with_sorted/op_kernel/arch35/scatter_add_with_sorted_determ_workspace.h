@@ -22,22 +22,18 @@ using namespace AscendC;
 template <typename T, typename U>
 class ScatterAddWithSortedSimdDtermWorkspace {
 public:
-    __aicore__ inline ScatterAddWithSortedSimdDtermWorkspace(void)
-    {}
+    __aicore__ inline ScatterAddWithSortedSimdDtermWorkspace(void) {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR varRef, GM_ADDR workspace, TPipe& pipeIn,
-        const ScatterAddWithSortedSimdTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR varRef, GM_ADDR workspace, TPipe& pipeIn,
+                                const ScatterAddWithSortedSimdTilingData* tilingData);
 
     __aicore__ inline void CopyInIndicesWorkspace(LocalTensor<U>& indicesWorkspaceLocal);
 
-    __aicore__ inline void CopyIn(
-        LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-        uint32_t srcStride = 0, uint32_t dstStride = 0);
+    __aicore__ inline void CopyIn(LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst,
+                                  uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0);
 
-    __aicore__ inline void CopyOut(
-        GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-        uint32_t srcStride = 0, uint32_t dstStride = 0);
+    __aicore__ inline void CopyOut(GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst,
+                                   uint32_t copyLen, uint32_t srcStride = 0, uint32_t dstStride = 0);
 
     __aicore__ inline void Process();
 
@@ -125,17 +121,19 @@ __aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::CopyInIndic
 }
 
 template <typename T, typename U>
-__aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::CopyIn(
-    LocalTensor<T> dstLocal, GlobalTensor<T> srcGm, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-    uint32_t srcStride, uint32_t dstStride)
+__aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::CopyIn(LocalTensor<T> dstLocal,
+                                                                            GlobalTensor<T> srcGm, uint64_t offset,
+                                                                            uint32_t nBurst, uint32_t copyLen,
+                                                                            uint32_t srcStride, uint32_t dstStride)
 {
     KernelUtil::CopyIn<T>(dstLocal, srcGm, offset, nBurst, copyLen, srcStride, dstStride);
 }
 
 template <typename T, typename U>
-__aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::CopyOut(
-    GlobalTensor<T> dstGm, LocalTensor<T> srcLocal, uint64_t offset, uint32_t nBurst, uint32_t copyLen,
-    uint32_t srcStride, uint32_t dstStride)
+__aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::CopyOut(GlobalTensor<T> dstGm,
+                                                                             LocalTensor<T> srcLocal, uint64_t offset,
+                                                                             uint32_t nBurst, uint32_t copyLen,
+                                                                             uint32_t srcStride, uint32_t dstStride)
 {
     KernelUtil::CopyOut<T>(dstGm, srcLocal, offset, nBurst, copyLen, srcStride, dstStride);
 }
@@ -170,9 +168,9 @@ __aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::Process()
         if (currentHead != static_cast<U>(-1)) {
             bool handledByPrev = (rowCoreIdx_ > 0 && prevTail == currentHead);
             if (!handledByPrev) {
-                uint64_t headOffset =
-                    (static_cast<uint64_t>(rowCoreIdx_) * kDouble) * (tilingData_->vecAlignSize / sizeof(T)) +
-                    static_cast<uint64_t>(colOffset);
+                uint64_t headOffset = (static_cast<uint64_t>(rowCoreIdx_) * kDouble) *
+                                          (tilingData_->vecAlignSize / sizeof(T)) +
+                                      static_cast<uint64_t>(colOffset);
                 LocalTensor<T> upd = updatesQueue_.AllocTensor<T>();
                 CopyIn(upd, sumWorkspace_, headOffset, 1, static_cast<uint32_t>(curLoopCols));
                 updatesQueue_.EnQue(upd);
@@ -194,9 +192,9 @@ __aicore__ inline void ScatterAddWithSortedSimdDtermWorkspace<T, U>::Process()
         if (currentTail != static_cast<U>(-1)) {
             bool handledByPrev = (rowCoreIdx_ > 0 && prevTail == currentTail);
             if (!handledByPrev) {
-                uint64_t tailOffset =
-                    (static_cast<uint64_t>(rowCoreIdx_) * kDouble + 1) * (tilingData_->vecAlignSize / sizeof(T)) +
-                    static_cast<uint64_t>(colOffset);
+                uint64_t tailOffset = (static_cast<uint64_t>(rowCoreIdx_) * kDouble + 1) *
+                                          (tilingData_->vecAlignSize / sizeof(T)) +
+                                      static_cast<uint64_t>(colOffset);
 
                 LocalTensor<T> upd = updatesQueue_.AllocTensor<T>();
                 CopyIn(upd, sumWorkspace_, tailOffset, 1, static_cast<uint32_t>(curLoopCols));

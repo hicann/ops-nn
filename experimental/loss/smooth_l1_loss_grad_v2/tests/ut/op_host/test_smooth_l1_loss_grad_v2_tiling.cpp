@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- 
 #include <iostream>
 #include <gtest/gtest.h>
 #include "smooth_l1_loss_grad_v2_tiling.h"
@@ -22,15 +21,9 @@ using namespace optiling;
 
 class SmoothL1LossGradV2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "SmoothL1LossGradV2Tiling SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "SmoothL1LossGradV2Tiling SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "SmoothL1LossGradV2Tiling TearDown " << endl;
-    }
+    static void TearDownTestCase() { cout << "SmoothL1LossGradV2Tiling TearDown " << endl; }
 };
 
 TEST_F(SmoothL1LossGradV2Tiling, ascend9101_test_tiling_fp16_001)
@@ -55,17 +48,16 @@ TEST_F(SmoothL1LossGradV2Tiling, ascend9101_test_tiling_fp16_001)
 TEST_F(SmoothL1LossGradV2Tiling, ascend9101_test_tiling_bf16_002)
 {
     optiling::SmoothL1LossGradV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 2};
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossGradV2",
-        {
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossGradV2",
+                                              {
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo);
     uint64_t expectTilingKey = 0;
     std::vector<size_t> expectWorkspaces = {16777216};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectWorkspaces);
@@ -74,17 +66,16 @@ TEST_F(SmoothL1LossGradV2Tiling, ascend9101_test_tiling_bf16_002)
 TEST_F(SmoothL1LossGradV2Tiling, ascend9101_test_tiling_fp32_003)
 {
     optiling::SmoothL1LossGradV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 2};
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossGradV2",
-        {
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossGradV2",
+                                              {
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1, 64, 2, 64}, {1, 64, 2, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo);
     uint64_t expectTilingKey = 0;
     std::vector<size_t> expectWorkspaces = {16777216};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectWorkspaces);

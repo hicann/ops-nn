@@ -35,7 +35,7 @@ const static int32_t LENGTH_LIMIT = 200000;
 
 class FatreluMulTiling {
 public:
-    explicit FatreluMulTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit FatreluMulTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -111,37 +111,33 @@ ge::graphStatus FatreluMulTiling::RunBigKernelTiling()
     auto srcShape = tilingContext->GetInputShape(0);
     inputShape = srcShape->GetOriginShape();
     size_t inputShapeDim = inputShape.GetDimNum();
-    OP_CHECK_IF(
-        (inputShapeDim < static_cast<size_t>(SIZE_2)),
-        OP_LOGE(tilingContext, "Input shape dim should be no less than 2."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((inputShapeDim < static_cast<size_t>(SIZE_2)),
+                OP_LOGE(tilingContext, "Input shape dim should be no less than 2."), return ge::GRAPH_FAILED);
     lastDimSize = inputShape.GetDim(inputShapeDim - 1);
     inputShapeSize = inputShape.GetShapeSize();
-    OP_CHECK_IF(
-        (lastDimSize == 0), OP_LOGE(tilingContext, "Last dim elements can not be zero."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize == 0), OP_LOGE(tilingContext, "Last dim elements can not be zero."),
+                return ge::GRAPH_FAILED);
     batchSize = inputShapeSize / lastDimSize;
     auto thresholdShape = tilingContext->GetInputShape(1)->GetStorageShape();
-    OP_CHECK_IF(
-        (thresholdShape.GetShapeSize() != 1), OP_LOGE(tilingContext, "Threshold elements can only be one."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((thresholdShape.GetShapeSize() != 1), OP_LOGE(tilingContext, "Threshold elements can only be one."),
+                return ge::GRAPH_FAILED);
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
     uint32_t needCoreNum = GetNeedCoreNum(platformInfo.GetCoreNumAiv());
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    OP_CHECK_IF(
-        (lastDimSize > LENGTH_1024), OP_LOGE(tilingContext, "Last dim size should be no more than 1024."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize > LENGTH_1024), OP_LOGE(tilingContext, "Last dim size should be no more than 1024."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (lastDimSize % SIZE_2 == 1), OP_LOGE(tilingContext, "Last dim size should be even."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize % SIZE_2 == 1), OP_LOGE(tilingContext, "Last dim size should be even."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (batchSize > LENGTH_LIMIT), OP_LOGE(tilingContext, "Batch dim size should be no more than 200000."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((batchSize > LENGTH_LIMIT), OP_LOGE(tilingContext, "Batch dim size should be no more than 200000."),
+                return ge::GRAPH_FAILED);
     tilingData.set_lastDimSize(lastDimSize);
     tilingData.set_batchSize(batchSize);
     tilingData.set_needCoreNum(needCoreNum);
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     tilingContext->SetBlockDim(needCoreNum);
     return ge::GRAPH_SUCCESS;
@@ -149,9 +145,8 @@ ge::graphStatus FatreluMulTiling::RunBigKernelTiling()
 
 static ge::graphStatus TilingPrepare4FatreluMulTiling(gert::TilingParseContext* context)
 {
-    OP_CHECK_IF(
-        (context == nullptr), OP_LOGE(context, "TilingPrepare4FatreluMulTiling context is nullptr."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((context == nullptr), OP_LOGE(context, "TilingPrepare4FatreluMulTiling context is nullptr."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

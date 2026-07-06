@@ -20,10 +20,10 @@ namespace optiling {
 
 GruTilingOp::GruTilingOp(gert::TilingContext* context) : context_(context) {}
 
-ge::graphStatus GruTilingOp::GetOpInfo() {
+ge::graphStatus GruTilingOp::GetOpInfo()
+{
     OP_CHECK_IF(context_->GetComputeNodeInputNum() < DEFAULT_PARAMS_INPUT_SIZE,
-                    OP_LOGE(context_->GetNodeName(), "input shape error."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "input shape error."), return ge::GRAPH_FAILED);
 
     // get x shape
     auto xTensor = context_->GetInputShape(0);
@@ -35,7 +35,7 @@ ge::graphStatus GruTilingOp::GetOpInfo() {
     // get bi shape
     auto biasTensor = context_->GetOptionalInputShape(3);
     auto biasHiddenTensor = context_->GetOptionalInputShape(4);
-    gruParams_.isBias =  (biasTensor != nullptr && biasHiddenTensor != nullptr) ? 1 : 0;
+    gruParams_.isBias = (biasTensor != nullptr && biasHiddenTensor != nullptr) ? 1 : 0;
 
     auto whTensor = context_->GetInputShape(2);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, whTensor);
@@ -52,29 +52,29 @@ ge::graphStatus GruTilingOp::GetOpInfo() {
         gruParams_.timeStep = static_cast<int64_t>(xShape.GetDim(0));
         gruParams_.batch = static_cast<int64_t>(xShape.GetDim(1));
         gruParams_.inputSize = static_cast<int64_t>(xShape.GetDim(2));
-        gruParams_.totalSteps = gruParams_.timeStep * gruParams_.batch;    // T*B
+        gruParams_.totalSteps = gruParams_.timeStep * gruParams_.batch; // T*B
     } else if (xDimNum == 2) {
         //  不定长：(total_step, I)
         gruParams_.isSeqLength = 1;
         gruParams_.inputSize = static_cast<int64_t>(xShape.GetDim(1));
         //  读取batch_size
-        gruParams_.totalSteps = static_cast<int64_t>(xShape.GetDim(0));  // sum(batch_size)
+        gruParams_.totalSteps = static_cast<int64_t>(xShape.GetDim(0)); // sum(batch_size)
         auto batchSizeShape = context_->GetOptionalInputShape(5)->GetStorageShape();
         gruParams_.timeStep = batchSizeShape.GetDim(0);
-        
-        auto outputHShape = context_->GetOutputShape(1)->GetStorageShape();   //  [B,H]
+
+        auto outputHShape = context_->GetOutputShape(1)->GetStorageShape(); //  [B,H]
         gruParams_.batch = outputHShape.GetDim(0);
-        
+
     } else {
         OP_LOGE(context_->GetNodeName(), "input_x only support 2D or 3D.");
         return ge::GRAPH_FAILED;
     }
 
-
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GruTilingOp::GetAttr() {
+ge::graphStatus GruTilingOp::GetAttr()
+{
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
 
@@ -95,10 +95,11 @@ ge::graphStatus GruTilingOp::GetAttr() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GruTilingOp::GetVectorTiling() {
+ge::graphStatus GruTilingOp::GetVectorTiling()
+{
     auto usedCore = (gruParams_.usedCoreNum + DEFAULT_INDEX_TWO - 1) / DEFAULT_INDEX_TWO;
 
-    //  不定长 
+    //  不定长
     int64_t realBatch = gruParams_.batch;
 
     // cut M
@@ -125,12 +126,14 @@ ge::graphStatus GruTilingOp::GetVectorTiling() {
     auto BLOCK_SIZE = 32;
     auto partUb = ((gruParams_.ubSize / ubSplit) + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE / 4;
     gruParams_.baseN = gruParams_.singleCoreN < partUb ? gruParams_.singleCoreN : partUb;
-    gruParams_.baseM = partUb / gruParams_.baseN < gruParams_.singleCoreM ? partUb / gruParams_.baseN : gruParams_.singleCoreM;
+    gruParams_.baseM = partUb / gruParams_.baseN < gruParams_.singleCoreM ? partUb / gruParams_.baseN :
+                                                                            gruParams_.singleCoreM;
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GruTilingOp::GetMMTiling(GruTilingData& tilingData, matmul_tiling::DataType dataType) {
+ge::graphStatus GruTilingOp::GetMMTiling(GruTilingData& tilingData, matmul_tiling::DataType dataType)
+{
     int32_t hiddenBlock = 3;
     int64_t aivDouble = 2;
     matmul_tiling::MultiCoreMatmulTiling gruMatmul1;
@@ -140,37 +143,35 @@ ge::graphStatus GruTilingOp::GetMMTiling(GruTilingData& tilingData, matmul_tilin
                     return ge::GRAPH_FAILED);
     ret = gruMatmul1.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 SetBType fail."),
-                    return ge::GRAPH_FAILED);         
-    ret = gruMatmul1.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, 
-                                matmul_tiling::DataType::DT_FLOAT);
+                    return ge::GRAPH_FAILED);
+    ret = gruMatmul1.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
+                              matmul_tiling::DataType::DT_FLOAT);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 SetCType fail."),
-                    return ge::GRAPH_FAILED);  
+                    return ge::GRAPH_FAILED);
 
     if (gruParams_.isBias) {
         gruMatmul1.SetBiasType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
         ret = gruMatmul1.SetBias(true);
         OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 SetBias fail."),
-                    return ge::GRAPH_FAILED);    
+                        return ge::GRAPH_FAILED);
     }
 
     ret = gruMatmul1.SetDim(gruParams_.sysAivCoreNum);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 SetDim fail."),
-                    return ge::GRAPH_FAILED);   
-    ret = gruMatmul1.SetOrgShape(gruParams_.totalSteps,
-                                    gruParams_.hiddenSize * hiddenBlock, gruParams_.inputSize);
+                    return ge::GRAPH_FAILED);
+    ret = gruMatmul1.SetOrgShape(gruParams_.totalSteps, gruParams_.hiddenSize * hiddenBlock, gruParams_.inputSize);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 SetOrgShape fail."),
                     return ge::GRAPH_FAILED);
-    ret = gruMatmul1.SetShape(gruParams_.totalSteps,
-                                    gruParams_.hiddenSize * hiddenBlock, gruParams_.inputSize);
+    ret = gruMatmul1.SetShape(gruParams_.totalSteps, gruParams_.hiddenSize * hiddenBlock, gruParams_.inputSize);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 Set single shape fail."),
-                    return ge::GRAPH_FAILED); 
+                    return ge::GRAPH_FAILED);
     ret = gruMatmul1.SetBufferSpace(-1, -1, -1);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 SetBufferShape fail."),
-                    return ge::GRAPH_FAILED);  
+                    return ge::GRAPH_FAILED);
 
     ret = gruMatmul1.GetTiling(tilingData.inputMMParam);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm1 GetTiling fail."),
-                    return ge::GRAPH_FAILED);    
+                    return ge::GRAPH_FAILED);
 
     matmul_tiling::MultiCoreMatmulTiling gruMatmul2;
     ret = gruMatmul2.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
@@ -178,17 +179,17 @@ ge::graphStatus GruTilingOp::GetMMTiling(GruTilingData& tilingData, matmul_tilin
                     return ge::GRAPH_FAILED);
     ret = gruMatmul2.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm2 SetBType fail."),
-                    return ge::GRAPH_FAILED); 
+                    return ge::GRAPH_FAILED);
     ret = gruMatmul2.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
-                                matmul_tiling::DataType::DT_FLOAT);
+                              matmul_tiling::DataType::DT_FLOAT);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm2 SetCType fail."),
-                    return ge::GRAPH_FAILED); 
+                    return ge::GRAPH_FAILED);
 
     if (gruParams_.isBias) {
         gruMatmul2.SetBiasType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, dataType);
         ret = gruMatmul2.SetBias(true);
         OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm2 SetBias fail."),
-                    return ge::GRAPH_FAILED);    
+                        return ge::GRAPH_FAILED);
     }
 
     ret = gruMatmul2.SetDim(gruParams_.sysAivCoreNum);
@@ -202,16 +203,17 @@ ge::graphStatus GruTilingOp::GetMMTiling(GruTilingData& tilingData, matmul_tilin
                     return ge::GRAPH_FAILED);
     ret = gruMatmul2.SetBufferSpace(-1, -1, -1);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm2 SetBufferSpace fail."),
-                    return ge::GRAPH_FAILED);  
+                    return ge::GRAPH_FAILED);
 
     ret = gruMatmul2.GetTiling(tilingData.hiddenMMParam);
     OP_TILING_CHECK(ret == -1, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "mm2 GetTiling fail."),
-                    return ge::GRAPH_FAILED); 
+                    return ge::GRAPH_FAILED);
 
-    return ge::GRAPH_SUCCESS;   
+    return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GruTilingOp::CalcTilingKey() {
+ge::graphStatus GruTilingOp::CalcTilingKey()
+{
     //  判断是否需要切分L0c输出，分次搬入UB
     int64_t tilingKey = 0;
     if (gruParams_.dataType == 2) {
@@ -223,7 +225,8 @@ ge::graphStatus GruTilingOp::CalcTilingKey() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GruTilingOp::SetTilingData(GruTilingData& tilingData) {
+ge::graphStatus GruTilingOp::SetTilingData(GruTilingData& tilingData)
+{
     tilingData.tilingKey = gruParams_.tilingKey;
     tilingData.usedCoreNum = gruParams_.usedCoreNum;
     tilingData.timeStep = gruParams_.timeStep;
@@ -250,7 +253,8 @@ ge::graphStatus GruTilingOp::SetTilingData(GruTilingData& tilingData) {
     return ge::GRAPH_SUCCESS;
 }
 
-void GruTilingOp::PrintTilingData() {
+void GruTilingOp::PrintTilingData()
+{
     OP_LOGD(context_->GetNodeName(), "Start PrintTilingData");
     OP_LOGD(context_->GetNodeName(), "tilingKey is %ld.", gruParams_.tilingKey);
     OP_LOGD(context_->GetNodeName(), "ubSize is %ld.", gruParams_.ubSize);
@@ -276,7 +280,8 @@ void GruTilingOp::PrintTilingData() {
     OP_LOGD(context_->GetNodeName(), "End PrintTilingData.");
 }
 
-ge::graphStatus GruTilingOp::Init() {
+ge::graphStatus GruTilingOp::Init()
+{
     // set sync op batchmode
     context_->SetScheduleMode(SCHEDULE_MODE);
 
@@ -301,17 +306,16 @@ ge::graphStatus GruTilingOp::Init() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GruTilingOp::DoTiling() {
+ge::graphStatus GruTilingOp::DoTiling()
+{
     // 910B/C AscendC
 
     auto dataType = context_->GetInputDesc(0)->GetDataType();
 
     GruTilingData* tilingData = context_->GetTilingData<GruTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
-    OP_CHECK_IF(
-        memset_s(tilingData, sizeof(GruTilingData), 0, sizeof(GruTilingData)) != EOK,
-        OP_LOGE(context_->GetNodeName(), "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingData, sizeof(GruTilingData), 0, sizeof(GruTilingData)) != EOK,
+                OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
 
     GetMMTiling(*tilingData, static_cast<matmul_tiling::DataType>(dataType));
 
@@ -329,7 +333,8 @@ ge::graphStatus GruTilingOp::DoTiling() {
     size_t sysWorkspaceByteSize = static_cast<size_t>(ascendcPlatform.GetLibApiWorkSpaceSize());
     // 两块MM的GM空间
     int64_t inputMMWorkspaceSize = gruParams_.totalSteps * 3 * gruParams_.hiddenSize * 4;
-    int64_t hiddenMMWorkspaceSize = gruParams_.timeStep * gruParams_.batch * 3 * gruParams_.hiddenSize * 4;   //  3是门数量 4是float字节
+    int64_t hiddenMMWorkspaceSize = gruParams_.timeStep * gruParams_.batch * 3 * gruParams_.hiddenSize *
+                                    4; //  3是门数量 4是float字节
     int64_t workspaceSize = inputMMWorkspaceSize + hiddenMMWorkspaceSize;
 
     size_t* workspace_size = context_->GetWorkspaceSizes(1);
@@ -340,17 +345,14 @@ ge::graphStatus GruTilingOp::DoTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TilingForGru(gert::TilingContext* context) {
+ge::graphStatus TilingForGru(gert::TilingContext* context)
+{
     GruTilingOp tilingOp(context);
     tilingOp.Init();
     return tilingOp.DoTiling();
 }
 
-ge::graphStatus TilingPrepareForGru(gert::TilingParseContext* context) {
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepareForGru(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
-IMPL_OP_OPTILING(Gru)
-    .Tiling(TilingForGru)
-    .TilingParse<GruCompileInfo>(TilingPrepareForGru);
-}   // namespace optiling
+IMPL_OP_OPTILING(Gru).Tiling(TilingForGru).TilingParse<GruCompileInfo>(TilingPrepareForGru);
+} // namespace optiling

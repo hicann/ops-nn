@@ -26,8 +26,7 @@ namespace NN {
 namespace Conv {
 using namespace AscendC;
 
-struct BasicBlockTilingParams
-{
+struct BasicBlockTilingParams {
     uint32_t usedCoreNum = 0;
     uint64_t totalCnt = 0;
     uint32_t streamKType = 0;
@@ -52,8 +51,7 @@ struct BasicBlockTilingParams
     uint32_t coreBindOrder = 1;
 };
 
-struct MatMulInfo
-{
+struct MatMulInfo {
     uint64_t mValue = 0;
     uint64_t kValue = 0;
     uint64_t nValue = 0;
@@ -61,7 +59,10 @@ struct MatMulInfo
 
 class Conv3DDWV2BasicBlockTiling : public Conv3DBackpropFilterV2Tiling {
 public:
-    explicit Conv3DDWV2BasicBlockTiling(gert::TilingContext *context) : Conv3DBackpropFilterV2Tiling(context)  { Reset(); }
+    explicit Conv3DDWV2BasicBlockTiling(gert::TilingContext* context) : Conv3DBackpropFilterV2Tiling(context)
+    {
+        Reset();
+    }
     ~Conv3DDWV2BasicBlockTiling() override = default;
 
 protected:
@@ -107,7 +108,7 @@ protected:
     BasicBlockTilingParams blockTiling_;
     MatMulInfo mmInfo_;
 };
-}
-}
-}
-#endif  // CONV3D_DW_BASIC_BLOCK_TILING_H
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
+#endif // CONV3D_DW_BASIC_BLOCK_TILING_H

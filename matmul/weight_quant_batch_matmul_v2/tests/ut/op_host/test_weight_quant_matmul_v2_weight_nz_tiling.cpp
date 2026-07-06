@@ -37,8 +37,7 @@ struct WeightQuantBatchMatmulV2WeightNzTilingTestParam {
 
 class TestWeightQuantBatchMatmulV2WeightNzTiling
     : public testing::TestWithParam<WeightQuantBatchMatmulV2WeightNzTilingTestParam> {
-    virtual void SetUp()
-    {}
+    virtual void SetUp() {}
 };
 
 static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
@@ -168,10 +167,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2WeightNzTilingTestPar
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr, nullptr, nullptr,
-                           biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr, nullptr, nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -181,10 +179,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2WeightNzTilingTestPar
                       .NodeInputTd(3, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -218,29 +215,28 @@ TEST_P(TestWeightQuantBatchMatmulV2WeightNzTiling, generalTest)
 }
 
 static WeightQuantBatchMatmulV2WeightNzTilingTestParam casesParams[] = {
-    {"Key1_1_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 13471165448961}, //80120
+    {"Key1_1_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 13471165448961}, // 80120
     {"Key1_1_4_4096_2048_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 13471165448961},
-    {"Key1_1_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13472239190785}, //80130
-    {"BATCH_2_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139371072291585}, //180120
+    {"Key1_1_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13472239190785},    // 80130
+    {"BATCH_2_4_4096_2048_1_0_0_1_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139371072291585}, // 180120
     {"BATCH_2_4_4096_2048_1_0_0_0_0_1_-1_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139371072291585},
-    {"BATCH_2_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139372146033409}, //180130
+    {"BATCH_2_4_4096_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139372146033409}, // 180130
     {"BATCH_2_4_4097_2048_1_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 1139372146033409},
-    {"TBETILINGP3_1_21_985_55681_0_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13197361283841}}; //80030
+    {"TBETILINGP3_1_21_985_55681_0_0_0_0_0_1_32_FLOAT16_INT8_UINT64_FLOAT16", 8, 13197361283841}}; // 80030
 
-INSTANTIATE_TEST_CASE_P(
-    WeightQuantBatchMatmulV2WeightNz, TestWeightQuantBatchMatmulV2WeightNzTiling, testing::ValuesIn(casesParams));
+INSTANTIATE_TEST_CASE_P(WeightQuantBatchMatmulV2WeightNz, TestWeightQuantBatchMatmulV2WeightNzTiling,
+                        testing::ValuesIn(casesParams));
 
-static void ThreadFunc(
-    const WeightQuantBatchMatmulV2WeightNzTilingTestParam* params, size_t testcase_num, size_t thread_idx,
-    size_t thread_num)
+static void ThreadFunc(const WeightQuantBatchMatmulV2WeightNzTilingTestParam* params, size_t testcase_num,
+                       size_t thread_idx, size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
 }
 
-static void TestMultiThread(
-    const WeightQuantBatchMatmulV2WeightNzTilingTestParam* params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const WeightQuantBatchMatmulV2WeightNzTilingTestParam* params, size_t testcase_num,
+                            size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {

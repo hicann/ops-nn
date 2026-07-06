@@ -16,14 +16,14 @@
 
 namespace UnsortedSegment {
 
-struct UnsortedSegmentSimtTilingData{
+struct UnsortedSegmentSimtTilingData {
     uint64_t inputOuterDim;  // totalSampleNum_
     uint64_t outputOuterDim; // segmentNum_
     uint64_t innerDim;
     uint64_t maxThread;
 };
 
-struct UnsortedSegmentSortSimtTilingData{
+struct UnsortedSegmentSortSimtTilingData {
     uint64_t inputOuterDim;
     uint64_t outputOuterDim;
     uint64_t innerDim;
@@ -36,7 +36,7 @@ struct UnsortedSegmentSortSimtTilingData{
     uint64_t tailIndexNum;
 };
 
-struct UnsortedSegmentSimdSplitColTilingData{
+struct UnsortedSegmentSimdSplitColTilingData {
     uint64_t inputOuterDim;
     uint64_t outputOuterDim;
     uint64_t innerDim;
@@ -46,7 +46,7 @@ struct UnsortedSegmentSimdSplitColTilingData{
     uint64_t baseA;
 };
 
-struct UnsortedSegmentSimdNonSortTilingData{
+struct UnsortedSegmentSimdNonSortTilingData {
     uint64_t inputOuterDim;
     uint64_t outputOuterDim;
     uint64_t innerDim;
@@ -61,7 +61,7 @@ struct UnsortedSegmentSimdNonSortTilingData{
     uint64_t usedCoreNum;
 };
 
-struct UnsortedSegmentSimdDynSortTilingData{
+struct UnsortedSegmentSimdDynSortTilingData {
     uint64_t outputOuterDim;
     uint64_t innerDim;
     uint64_t sTileNum;
@@ -78,7 +78,7 @@ struct UnsortedSegmentSimdDynSortTilingData{
     uint64_t idCastMode;
 };
 
-struct UnsortedSegmentOutFlTilingData{
+struct UnsortedSegmentOutFlTilingData {
     uint64_t inputOuterDim;
     uint64_t outputOuterDim;
     uint64_t innerDim;
@@ -87,5 +87,5 @@ struct UnsortedSegmentOutFlTilingData{
     uint64_t rowNumUb;
 };
 
-}// namespace UnsortedSegment
+} // namespace UnsortedSegment
 #endif

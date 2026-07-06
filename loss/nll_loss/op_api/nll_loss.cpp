@@ -28,8 +28,8 @@ OP_TYPE_REGISTER(NLLLoss);
 
 static const std::initializer_list<op::DataType> ASCEND910_AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                         op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> ASCEND91095_AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
@@ -60,13 +60,14 @@ static bool IsAiCoreSupport(const aclTensor* self)
 }
 
 // AICORE算子kernel
-static std::array<const aclTensor*, 2> NLLLossAiCore(
-    const aclTensor* x, const aclTensor* target, const aclTensor* weight, const std::string& reduction,
-    int64_t ignoreIndex, const aclTensor* out, const aclTensor* targetWeightOut, aclOpExecutor* executor)
+static std::array<const aclTensor*, 2> NLLLossAiCore(const aclTensor* x, const aclTensor* target,
+                                                     const aclTensor* weight, const std::string& reduction,
+                                                     int64_t ignoreIndex, const aclTensor* out,
+                                                     const aclTensor* targetWeightOut, aclOpExecutor* executor)
 {
     L0_DFX(NLLLossAiCore, x, target, weight, out, targetWeightOut);
-    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
-        NLLLoss, OP_INPUT(x, target, weight), OP_OUTPUT(out, targetWeightOut), OP_ATTR(reduction, ignoreIndex));
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(NLLLoss, OP_INPUT(x, target, weight), OP_OUTPUT(out, targetWeightOut),
+                                                 OP_ATTR(reduction, ignoreIndex));
     if (retAicore != ACLNN_SUCCESS) {
         return {nullptr, nullptr};
     }
@@ -74,29 +75,30 @@ static std::array<const aclTensor*, 2> NLLLossAiCore(
 }
 
 // AICPU算子kernel
-static std::array<const aclTensor*, 2> NLLLossAiCpu(
-    const aclTensor* x, const aclTensor* target, const aclTensor* weight, const std::string& reduction,
-    int64_t ignoreIndex, const aclTensor* out, const aclTensor* targetWeightOut, aclOpExecutor* executor)
+static std::array<const aclTensor*, 2> NLLLossAiCpu(const aclTensor* x, const aclTensor* target,
+                                                    const aclTensor* weight, const std::string& reduction,
+                                                    int64_t ignoreIndex, const aclTensor* out,
+                                                    const aclTensor* targetWeightOut, aclOpExecutor* executor)
 {
     L0_DFX(NLLLossAiCpu, x, target, weight, out, targetWeightOut);
     static internal::AicpuTaskSpace space("NLLLoss");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        NLLLoss, OP_ATTR_NAMES({"reduction", "ignore_index"}), OP_INPUT(x, target, weight),
-        OP_OUTPUT(out, targetWeightOut), OP_ATTR(reduction, ignoreIndex));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(NLLLoss, OP_ATTR_NAMES({"reduction", "ignore_index"}),
+                                          OP_INPUT(x, target, weight), OP_OUTPUT(out, targetWeightOut),
+                                          OP_ATTR(reduction, ignoreIndex));
     if (ret != ACLNN_SUCCESS) {
         return {nullptr, nullptr};
     }
     return {out, targetWeightOut};
 }
 
-const std::array<const aclTensor*, 2> NLLLoss(
-    const aclTensor* x, const aclTensor* target, const aclTensor* weight, const std::string& reduction,
-    int64_t ignoreIndex, aclOpExecutor* executor)
+const std::array<const aclTensor*, 2> NLLLoss(const aclTensor* x, const aclTensor* target, const aclTensor* weight,
+                                              const std::string& reduction, int64_t ignoreIndex,
+                                              aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(x->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
     auto totalWeightOut = executor->AllocTensor(x->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-    auto ret = INFER_SHAPE(
-        NLLLoss, OP_INPUT(x, target, weight), OP_OUTPUT(out, totalWeightOut), OP_ATTR(reduction.c_str(), ignoreIndex));
+    auto ret = INFER_SHAPE(NLLLoss, OP_INPUT(x, target, weight), OP_OUTPUT(out, totalWeightOut),
+                           OP_ATTR(reduction.c_str(), ignoreIndex));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
         return {};

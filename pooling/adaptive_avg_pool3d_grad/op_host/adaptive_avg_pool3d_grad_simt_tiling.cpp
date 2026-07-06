@@ -22,10 +22,7 @@ static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr int64_t MAX_THREAD_NUM = 1024;
 const int64_t MAX_INT32 = 2147483647;
 
-bool AdaptiveAvgPool3dGradTilingSimt::IsCapable()
-{
-    return true; 
-}
+bool AdaptiveAvgPool3dGradTilingSimt::IsCapable() { return true; }
 
 ge::graphStatus AdaptiveAvgPool3dGradTilingSimt::DoOpTiling()
 {
@@ -59,14 +56,12 @@ bool AdaptiveAvgPool3dGradTilingSimt::NeedInt64(int64_t isize, int64_t osize) co
 uint64_t AdaptiveAvgPool3dGradTilingSimt::GetTilingKey() const
 {
     int64_t outDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
-    bool needInt64 = (outDataCount > static_cast<int64_t>(MAX_INT32) || 
-                      NeedInt64(inputData.dX, inputData.dGrad) ||
-                      NeedInt64(inputData.hX, inputData.hGrad) ||
-                      NeedInt64(inputData.wX, inputData.wGrad));
+    bool needInt64 = (outDataCount > static_cast<int64_t>(MAX_INT32) || NeedInt64(inputData.dX, inputData.dGrad) ||
+                      NeedInt64(inputData.hX, inputData.hGrad) || NeedInt64(inputData.wX, inputData.wGrad));
     uint32_t idxDtype = needInt64 ? TPL_INT64 : TPL_INT32;
     uint32_t isChannelLast = (inputData.inputFormat == ge::Format::FORMAT_NDHWC) ? 1 : 0;
     return GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, idxDtype, isChannelLast);
 }
 
 REGISTER_TILING_TEMPLATE("AdaptiveAvgPool3dGrad", AdaptiveAvgPool3dGradTilingSimt, 50);
-}  // namespace optiling
+} // namespace optiling

@@ -113,8 +113,8 @@ private:
             int64_t hwIndexCopyIn = (coreIndex * this->usedGroupBlockNum + i) % this->bUbLoop; // 计算的H和W索引
 
             // 找到offset
-            int64_t dyOffset =
-                cIndex * this->b1Dim + nIndexCopyIn * this->aDim * this->b1Dim + hwIndexCopyIn * this->cUbBlock;
+            int64_t dyOffset = cIndex * this->b1Dim + nIndexCopyIn * this->aDim * this->b1Dim +
+                               hwIndexCopyIn * this->cUbBlock;
 
             if (hwIndexCopyIn != this->bUbLoop - 1) {
                 this->cBlockLength = this->cUbBlock;
@@ -209,9 +209,8 @@ private:
         extParam.blockLen = B32_BLOCK_ALIGN_NUM * this->usedGroupCore * sizeof(float);
         DataCopyPadExtParams<float> padExtParam;
         padExtParam.isPad = false;
-        LoadOneTensor(
-            this->workSpaceGm_[wsReduceStartOffset], this->reduceUbTensor, extParam, padExtParam,
-            this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
+        LoadOneTensor(this->workSpaceGm_[wsReduceStartOffset], this->reduceUbTensor, extParam, padExtParam,
+                      this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
         float sum = 0.0;
         TPipeSetWaitFlag<HardEvent::MTE2_S>();
 
@@ -240,9 +239,8 @@ private:
         extParam.blockLen = B32_BLOCK_ALIGN_NUM * this->usedGroupCore * sizeof(float);
         DataCopyPadExtParams<float> padExtParam;
         padExtParam.isPad = false;
-        LoadOneTensor(
-            this->workSpaceGm_[wsReduceInputStartOffset], this->reduceInputUbTensor, extParam, padExtParam,
-            this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
+        LoadOneTensor(this->workSpaceGm_[wsReduceInputStartOffset], this->reduceInputUbTensor, extParam, padExtParam,
+                      this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
         TPipeSetWaitFlag<HardEvent::MTE2_S>();
         float sum = 0.0;
         for (int16_t i = 0; i < this->usedGroupCore; i++) {

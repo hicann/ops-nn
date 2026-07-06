@@ -63,16 +63,15 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3dGrad(gert::InferShapeContext*
         return ge::GRAPH_SUCCESS;
     }
 
-    // 维度数赋值    
+    // 维度数赋值
     xGradShape->SetDimNum(xDimNum);
 
     fe::PlatformInfo platform_info;
     fe::OptionalInfo optional_info;
-    OP_CHECK_IF(
-    (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
-        ge::GRAPH_SUCCESS),
-    OP_LOGE(context->GetNodeName(), "Cannot get platform info!"), return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF((fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
+                 ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "Cannot get platform info!"), return ge::GRAPH_FAILED);
+
     // 输出shape赋值+0维度校验
     for (size_t i = 0; i < xDimNum; ++i) {
         xGradShape->SetDim(i, xShape->GetDim(i));
@@ -82,25 +81,27 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3dGrad(gert::InferShapeContext*
 }
 
 static graphStatus InferDtype4AdaptiveAvgPool3dGrad(gert::InferDataTypeContext* context)
-{   
+{
     auto gradDataType = context->GetInputDataType(Y_GRAD_INDEX);
     auto xDataType = context->GetInputDataType(X_INDEX);
-    
+
     // 校验输入数据类型一致性
     OP_CHECK_IF(xDataType != gradDataType,
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, grad",
-                    (ge::TypeUtils::DataTypeToSerialString(xDataType) + ", " + ge::TypeUtils::DataTypeToSerialString(gradDataType)).c_str(),
-                    "the dtypes of x and grad must be the same"),
+                                                       (ge::TypeUtils::DataTypeToSerialString(xDataType) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradDataType))
+                                                           .c_str(),
+                                                       "the dtypes of x and grad must be the same"),
                 return GRAPH_FAILED);
-    
+
     // 校验数据类型合法性
     OP_CHECK_IF((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
-                    ge::TypeUtils::DataTypeToSerialString(xDataType).c_str(),
-                    "the dtype of x must be fp32, fp16, or bf16"),
+                                                      ge::TypeUtils::DataTypeToSerialString(xDataType).c_str(),
+                                                      "the dtype of x must be fp32, fp16, or bf16"),
                 return ge::GRAPH_FAILED);
-    
-    context->SetOutputDataType(X_GRAD_INDEX, xDataType);    
+
+    context->SetOutputDataType(X_GRAD_INDEX, xDataType);
     return GRAPH_SUCCESS;
 }
 

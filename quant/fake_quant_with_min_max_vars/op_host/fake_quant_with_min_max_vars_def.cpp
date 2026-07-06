@@ -52,12 +52,8 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("num_bits")
-            .AttrType(OPTIONAL)
-            .Int(static_cast<int64_t>(8));
-        this->Attr("narrow_range")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("num_bits").AttrType(OPTIONAL).Int(static_cast<int64_t>(8));
+        this->Attr("narrow_range").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicoreConfig950;
         aicoreConfig950.DynamicCompileStaticFlag(true)
@@ -70,4 +66,4 @@ public:
     }
 };
 OP_ADD(FakeQuantWithMinMaxVars);
-}  // namespace ops
+} // namespace ops

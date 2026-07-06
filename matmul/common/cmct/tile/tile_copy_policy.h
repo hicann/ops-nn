@@ -19,17 +19,19 @@
 namespace Cmct {
 namespace Gemm {
 namespace Tile {
-struct CopyWithParams {};                      ///< Copy policy with additional parameters
-struct CopyOutSplitMWithParams {};             ///< Copy policy for splitting output along the M dimension with parameters
-struct CopyOutSplitNWithParams {};             ///< Copy policy for splitting output along the N dimension with parameters
-struct CopyWithLayout {};                      ///< Copy policy with specific layout considerations
-struct CopyEnUnitFlagWithLayout {};            ///< Copy policy with layout and unit flag considerations
-struct CopySparseWithLayout {};                ///< Copy policy for sparse data with layout considerations
-struct CopyNoGmIn {};                          ///< Copy policy excluding global memory input
-struct CopyBasedBaseK {};                      ///< Copy policy based on base K dimension
-struct CopyInAndCopyOutSplitMWithParams {};    ///< Copy policy for splitting input and output along the M dimension with parameters
-struct CopyOutSplitMWithLayout {};             ///< Copy policy for splitting output along the M dimension with layout
-struct CopyInAndCopyOutSplitMWithLayout {};    ///< Copy policy for splitting input and output along the M dimension with layout
+struct CopyWithParams {};           ///< Copy policy with additional parameters
+struct CopyOutSplitMWithParams {};  ///< Copy policy for splitting output along the M dimension with parameters
+struct CopyOutSplitNWithParams {};  ///< Copy policy for splitting output along the N dimension with parameters
+struct CopyWithLayout {};           ///< Copy policy with specific layout considerations
+struct CopyEnUnitFlagWithLayout {}; ///< Copy policy with layout and unit flag considerations
+struct CopySparseWithLayout {};     ///< Copy policy for sparse data with layout considerations
+struct CopyNoGmIn {};               ///< Copy policy excluding global memory input
+struct CopyBasedBaseK {};           ///< Copy policy based on base K dimension
+struct CopyInAndCopyOutSplitMWithParams {
+};                                 ///< Copy policy for splitting input and output along the M dimension with parameters
+struct CopyOutSplitMWithLayout {}; ///< Copy policy for splitting output along the M dimension with layout
+struct CopyInAndCopyOutSplitMWithLayout {
+}; ///< Copy policy for splitting input and output along the M dimension with layout
 
 /**
  * @struct Copy
@@ -48,4 +50,3 @@ struct Copy {};
 } // namespace Tile
 } // namespace Gemm
 } // namespace Cmct
-

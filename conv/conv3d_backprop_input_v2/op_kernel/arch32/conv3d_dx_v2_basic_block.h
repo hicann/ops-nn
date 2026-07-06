@@ -26,15 +26,14 @@ constexpr uint32_t ROW_FIRST = 1;
 constexpr uint32_t COL_FIRST = 2;
 
 namespace AscendC {
-template <
-    typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    uint8_t b2Condition, bool enableKernelSplit = false>
+template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
+          uint8_t b2Condition, bool enableKernelSplit = false>
 class Conv3dDxBasicBlockSplitMN
     : public Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, b2Condition, enableKernelSplit> {
 public:
     __aicore__ inline Conv3dDxBasicBlockSplitMN(){};
-    __aicore__ inline void Init(
-        GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace, const Conv3DBackpropInputV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+                                const Conv3DBackpropInputV2TilingData* tilingData)
     {
         if constexpr (yFormat == FORMAT_NDC1HWC0) {
             if ASCEND_IS_AIV {
@@ -72,8 +71,8 @@ public:
 protected:
     __aicore__ inline void InitTilingData(const Conv3DBackpropInputV2TilingData* tilingData)
     {
-        Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, b2Condition, enableKernelSplit>::
-            InitTilingData(tilingData);
+        Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, b2Condition,
+                 enableKernelSplit>::InitTilingData(tilingData);
         this->usedCoreNum_ = tilingData->params.coreNum;
         this->singleShapeM_ = this->singleCoreHi_ * this->wi_;
         this->singleShapeK_ = this->k_;
@@ -129,8 +128,9 @@ protected:
             }
 
             this->curHoStartIdx_ = static_cast<int32_t>(this->mCoreIndx_ * this->singleCoreHi_) - this->backpropPadUp_;
-            this->alignedHoStartIdx_ =
-                this->curHoStartIdx_ < 0 ? 0 : ((this->curHoStartIdx_ + this->strideH_ - 1) / this->strideH_);
+            this->alignedHoStartIdx_ = this->curHoStartIdx_ < 0 ?
+                                           0 :
+                                           ((this->curHoStartIdx_ + this->strideH_ - 1) / this->strideH_);
             if (this->alignedHoStartIdx_ >= this->ho_) {
                 continue;
             }

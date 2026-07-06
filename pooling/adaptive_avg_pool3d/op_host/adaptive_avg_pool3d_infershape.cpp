@@ -55,13 +55,13 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3d(gert::InferShapeContext* con
     size_t input_dim_num = x_shape->GetDimNum();
     size_t output_size_len = output_size_ptr->GetSize();
     OP_CHECK_IF(input_dim_num != X_DIMS_4 && input_dim_num != X_DIMS_5,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                    "AdaptiveAvgPool3d", "X", std::to_string(input_dim_num).c_str(), "must be 4 or 5"),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("AdaptiveAvgPool3d", "X",
+                                                         std::to_string(input_dim_num).c_str(), "must be 4 or 5"),
                 GRAPH_FAILED);
-    OP_CHECK_IF(output_size_len != OUTPUT_SIZE_DIMS, 
-                OP_LOGE_FOR_INVALID_LISTSIZE(
-                    "AdaptiveAvgPool3d", "output_size", std::to_string(output_size_len).c_str(), "3"),
-                GRAPH_FAILED);
+    OP_CHECK_IF(
+        output_size_len != OUTPUT_SIZE_DIMS,
+        OP_LOGE_FOR_INVALID_LISTSIZE("AdaptiveAvgPool3d", "output_size", std::to_string(output_size_len).c_str(), "3"),
+        GRAPH_FAILED);
     y_shape->SetDimNum(input_dim_num);
 
     const char* data_format = attr_ptr->GetAttrPointer<char>(DATA_FORTMAT_INDEX);

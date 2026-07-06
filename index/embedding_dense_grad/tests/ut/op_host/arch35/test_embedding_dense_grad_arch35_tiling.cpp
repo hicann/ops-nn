@@ -46,15 +46,9 @@ static string to_string(void* buf, size_t size)
 
 class EmbeddingDenseGradRegBaseTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingDenseGradRegBaseTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingDenseGradRegBaseTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingDenseGradRegBaseTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingDenseGradRegBaseTiling TearDown" << std::endl; }
 };
 
 TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_bf16_scale)
@@ -92,20 +86,20 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_bf
         uint32_t maxThreadNum{0};
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -124,10 +118,9 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_bf
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(1667)},
-                           {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
-                           {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(1667)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -151,8 +144,8 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_bf
     auto tiling_data_result = to_string<int32_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     uint64_t tilingKeyValue = 801;
     ASSERT_EQ(tiling_key, tilingKeyValue);
-    std::string expectTilingData =
-        "1667 0 4 0 1 0 4096 0 579 37056 2 0 1 0 4 0 1 0 64 0 64 0 64 64 445 472 251 64 64 0 0 0 0 0 0 0 0 0 64 64 ";
+    std::string expectTilingData = "1667 0 4 0 1 0 4096 0 579 37056 2 0 1 0 4 0 1 0 64 0 64 0 64 64 445 472 251 64 64 "
+                                   "0 0 0 0 0 0 0 0 0 64 64 ";
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
@@ -191,20 +184,20 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_fp
         uint32_t maxThreadNum{0};
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -223,10 +216,9 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_fp
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(10145)},
-                           {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-9)},
-                           {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(10145)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-9)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -250,8 +242,8 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_full_load_fp
     auto tiling_data_result = to_string<int32_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     uint64_t tilingKeyValue = 102;
     ASSERT_EQ(tiling_key, tilingKeyValue);
-    std::string expectTilingData =
-        "10145 0 -9 -1 0 0 7078 0 83 59760 1 0 1 0 0 0 0 0 111 0 85 0 720 111 0 0 0 0 0 0 0 0 0 0 0 0 0 0 64 64 ";
+    std::string expectTilingData = "10145 0 -9 -1 0 0 7078 0 83 59760 1 0 1 0 0 0 0 0 111 0 85 0 720 111 0 0 0 0 0 0 0 "
+                                   "0 0 0 0 0 0 0 64 64 ";
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
@@ -290,20 +282,20 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
         uint32_t maxThreadNum{0};
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -322,10 +314,9 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(3000)},
-                           {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(10)},
-                           {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(3000)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(10)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -349,8 +340,8 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
     auto tiling_data_result = to_string<int32_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     uint64_t tilingKeyValue = 402;
     ASSERT_EQ(tiling_key, tilingKeyValue);
-    std::string expectTilingData =
-        "3000 0 10 0 0 0 5123 0 435 41760 5 0 1 0 0 0 0 0 81 0 20 0 81 81 271 0 0 0 0 0 81 426 1 0 8 0 81 18 64 64 ";
+    std::string expectTilingData = "3000 0 10 0 0 0 5123 0 435 41760 5 0 1 0 0 0 0 0 81 0 20 0 81 81 271 0 0 0 0 0 81 "
+                                   "426 1 0 8 0 81 18 64 64 ";
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
@@ -389,20 +380,20 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
         uint32_t maxThreadNum{0};
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -421,10 +412,9 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(3000)},
-                           {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(10)},
-                           {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(3000)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(10)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -448,8 +438,8 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
     auto tiling_data_result = to_string<int32_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     uint64_t tilingKeyValue = 402;
     ASSERT_EQ(tiling_key, tilingKeyValue);
-    std::string expectTilingData =
-        "3000 0 10 0 1 0 4096 0 608 38912 7 0 1 0 7 0 1 0 64 0 64 0 64 64 448 476 144 64 64 0 0 0 0 0 0 0 0 0 64 64 ";
+    std::string expectTilingData = "3000 0 10 0 1 0 4096 0 608 38912 7 0 1 0 7 0 1 0 64 0 64 0 64 64 448 476 144 64 64 "
+                                   "0 0 0 0 0 0 0 0 0 64 64 ";
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
@@ -488,20 +478,20 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
         uint32_t maxThreadNum{0};
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -520,10 +510,9 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(3000)},
-                           {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(10)},
-                           {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(3000)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(10)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -547,14 +536,13 @@ TEST_F(EmbeddingDenseGradRegBaseTiling, embedding_dense_grad_tiling_no_full_load
     auto tiling_data_result = to_string<int32_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     uint64_t tilingKeyValue = 804;
     ASSERT_EQ(tiling_key, tilingKeyValue);
-    std::string expectTilingData =
-        "3000 0 10 0 1 0 4096 0 444 28416 5 0 1 0 7 0 1 0 64 0 64 0 64 64 334 472 168 64 64 0 0 0 0 0 0 0 0 0 64 64 ";
+    std::string expectTilingData = "3000 0 10 0 1 0 4096 0 444 28416 5 0 1 0 7 0 1 0 64 0 64 0 64 64 334 472 168 64 64 "
+                                   "0 0 0 0 0 0 0 0 0 64 64 ";
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
-static void runCase(
-    int32_t freq, gert::StorageShape input0, gert::StorageShape input1, gert::StorageShape output, int64_t numWeights,
-    int64_t paddingIdx, const ge::graphStatus& expectStatus)
+static void runCase(int32_t freq, gert::StorageShape input0, gert::StorageShape input1, gert::StorageShape output,
+                    int64_t numWeights, int64_t paddingIdx, const ge::graphStatus& expectStatus)
 {
     std::string op_type("EmbeddingDenseGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -585,18 +573,18 @@ static void runCase(
     } compile_info;
     compile_info.scale_grad_by_freq = freq;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -615,10 +603,9 @@ static void runCase(
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(numWeights)},
-                           {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(paddingIdx)},
-                           {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(numWeights)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(paddingIdx)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)

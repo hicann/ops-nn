@@ -24,7 +24,8 @@ template <typename T, int32_t QUEUE_DEPTH>
 class KernelAvgPool3dSplitC {
 public:
     __aicore__ inline KernelAvgPool3dSplitC() {}
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling,
+                                TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
@@ -33,8 +34,8 @@ private:
     __aicore__ inline void CopyOut(int64_t offset, int64_t len);
     __aicore__ inline void DataCopyOutNonPad(LocalTensor<T>& outputLocal, int64_t offset, int64_t validDataLen);
     __aicore__ inline void ReduceMeanWindow(int64_t outputPointIdx);
-    __aicore__ inline void ReduceSumWindow(
-        const Index& index, LocalTensor<float>& sumBufLocal, int64_t nOffset, int64_t cOffset, int64_t len);
+    __aicore__ inline void ReduceSumWindow(const Index& index, LocalTensor<float>& sumBufLocal, int64_t nOffset,
+                                           int64_t cOffset, int64_t len);
 
     int64_t tileC;
     int64_t cTailLength;
@@ -44,12 +45,14 @@ private:
 };
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::InitTiling(const AvgPool3DTilingData* __restrict__ tiling) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::InitTiling(const AvgPool3DTilingData* __restrict__ tiling)
+{
     poolMem.inputShape = PoolShape(tiling->inN, tiling->inC, tiling->inD, tiling->inH, tiling->inW);
     poolMem.outputShape = PoolShape(tiling->inN, tiling->inC, tiling->outD, tiling->outH, tiling->outW);
 
     poolMem.poolParam = PoolParameter(tiling->kD, tiling->kH, tiling->kW, tiling->dD, tiling->dH, tiling->dW,
-                              tiling->pD, tiling->pH, tiling->pW, tiling->divisorOverride, tiling->countIncludePad);
+                                      tiling->pD, tiling->pH, tiling->pW, tiling->divisorOverride,
+                                      tiling->countIncludePad);
 
     poolMem.indexBuf.SetComputeParameter(poolMem.outputShape, poolMem.inputShape, poolMem.poolParam);
 
@@ -59,9 +62,10 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::InitTiling(const A
     poolMem.indexBufLen = tiling->indexBufLen;
 
     poolMem.outputPointNum = GetBlockIdx() < tiling->formerNum ? tiling->formerLength : tiling->tailLength;
-    poolMem.outputPointOffset = GetBlockIdx() < tiling->formerNum
-        ? tiling->formerLength * GetBlockIdx()
-        : tiling->formerNum * tiling->formerLength + tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
+    poolMem.outputPointOffset = GetBlockIdx() < tiling->formerNum ?
+                                    tiling->formerLength * GetBlockIdx() :
+                                    tiling->formerNum * tiling->formerLength +
+                                        tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
     poolMem.nextCoreAddrOffset = (poolMem.outputPointOffset + poolMem.outputPointNum) * poolMem.inC;
     poolMem.atomicAddNum = tiling->atomicAddNum;
     cTailLength = poolMem.inC % tileC;
@@ -71,7 +75,8 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::InitTiling(const A
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyIn(int64_t offset, int64_t len) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyIn(int64_t offset, int64_t len)
+{
     LocalTensor<T> inputLocal = poolMem.inputQueue.template AllocTensor<T>();
 #if __CCE_AICORE__ < 220
     if constexpr (std::is_same_v<T, float>) {
@@ -82,12 +87,12 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyIn(int64_t off
             DataCopy(inputLocal, poolMem.inputGlobal[offset], cTailAlign);
         }
     } else {
-      if (len == tileC) {
-          DataCopyParams copyParams{1, static_cast<uint16_t>(len / poolMem.numPerBlock), 0, 0};
-          DataCopy(inputLocal[tileC], poolMem.inputGlobal[offset], copyParams);
-      } else {
-          DataCopy(inputLocal[tileC], poolMem.inputGlobal[offset], cTailAlign);
-      }
+        if (len == tileC) {
+            DataCopyParams copyParams{1, static_cast<uint16_t>(len / poolMem.numPerBlock), 0, 0};
+            DataCopy(inputLocal[tileC], poolMem.inputGlobal[offset], copyParams);
+        } else {
+            DataCopy(inputLocal[tileC], poolMem.inputGlobal[offset], cTailAlign);
+        }
     }
 #else
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(len * sizeof(T)), 0, 0, 0};
@@ -102,9 +107,11 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyIn(int64_t off
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::DataCopyOutNonPad(
-    LocalTensor<T>& outputLocal, int64_t offset, int64_t validDataLen) {
-    if ((validDataLen < poolMem.numPerBlock) && (offset + validDataLen * poolMem.atomicAddNum >= poolMem.nextCoreAddrOffset)) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::DataCopyOutNonPad(LocalTensor<T>& outputLocal,
+                                                                                int64_t offset, int64_t validDataLen)
+{
+    if ((validDataLen < poolMem.numPerBlock) &&
+        (offset + validDataLen * poolMem.atomicAddNum >= poolMem.nextCoreAddrOffset)) {
         uint64_t mask0 = (1ul << poolMem.numPerBlock) - (1ul << validDataLen);
         uint64_t mask[2] = {mask0, 0};
         Duplicate<T>(outputLocal, 0, mask, 1, 1, 1);
@@ -139,14 +146,16 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::DataCopyOutNonPad(
                        rsvdCnt);
         }
         VToMTE3Sync();
-        DataCopy(poolMem.outputGlobal[poolMem.nextCoreAddrOffset - poolMem.numPerBlock], outputLocal[gatherOffset], poolMem.numPerBlock);
+        DataCopy(poolMem.outputGlobal[poolMem.nextCoreAddrOffset - poolMem.numPerBlock], outputLocal[gatherOffset],
+                 poolMem.numPerBlock);
     } else {
         DataCopy(poolMem.outputGlobal[offset], outputLocal, cTailAlign);
     }
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyOut(int64_t offset, int64_t len) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyOut(int64_t offset, int64_t len)
+{
     LocalTensor<T> outputLocal = poolMem.outputQueue.template DeQue<T>();
 #if __CCE_AICORE__ < 220
     if (len == tileC) {
@@ -163,8 +172,11 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::CopyOut(int64_t of
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceSumWindow(
-    const Index& index, LocalTensor<float>& sumBufLocal, int64_t nOffset, int64_t cOffset, int64_t len) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceSumWindow(const Index& index,
+                                                                              LocalTensor<float>& sumBufLocal,
+                                                                              int64_t nOffset, int64_t cOffset,
+                                                                              int64_t len)
+{
     int64_t dstart = index.D.start;
     int64_t dend = index.D.end;
     int64_t hstart = index.H.start;
@@ -194,12 +206,13 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceSumWindow(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceMeanWindow(int64_t outputPointIdx) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceMeanWindow(int64_t outputPointIdx)
+{
     Index index;
     poolMem.indexBuf.GetIndex(outputPointIdx, index);
 
-    int64_t poolSize = poolMem.poolParam.divisorOverride ?
-                      poolMem.poolParam.divisorOverride : index.D.poolSize * index.H.poolSize * index.W.poolSize;
+    int64_t poolSize = poolMem.poolParam.divisorOverride ? poolMem.poolParam.divisorOverride :
+                                                           index.D.poolSize * index.H.poolSize * index.W.poolSize;
     float factor = 1.0f / static_cast<float>(poolSize);
 
     SToVSync();
@@ -221,8 +234,10 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::ReduceMeanWindow(i
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe) {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                                   const AvgPool3DTilingData* __restrict__ tiling,
+                                                                   TPipe* pipe)
+{
     InitTiling(tiling);
 
     poolMem.pipe = pipe;
@@ -241,13 +256,14 @@ __aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::Init(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::Process() {
+__aicore__ inline void KernelAvgPool3dSplitC<T, QUEUE_DEPTH>::Process()
+{
 #if __CCE_AICORE__ < 220
     int64_t curOutputPointIdx = poolMem.outputPointNum + poolMem.outputPointOffset - 1;
     AvgPool3d::HandleAtomicAddWithTail(poolMem, curOutputPointIdx, cTailLength);
 #endif
     for (int64_t outputPointIdx = poolMem.outputPointOffset;
-        outputPointIdx < poolMem.outputPointOffset + poolMem.outputPointNum; ++outputPointIdx) {
+         outputPointIdx < poolMem.outputPointOffset + poolMem.outputPointNum; ++outputPointIdx) {
         ReduceMeanWindow(outputPointIdx);
     }
 }

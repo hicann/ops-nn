@@ -27,4 +27,4 @@ struct SoftsignTilingData {
     Ops::Base::EleBaseTilingData baseTiling;
 };
 
-#endif  // SOFTSIGN_STRUCT_H
+#endif // SOFTSIGN_STRUCT_H

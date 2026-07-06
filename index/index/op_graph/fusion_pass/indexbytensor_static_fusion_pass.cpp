@@ -90,14 +90,13 @@ static bool MeetRequirements(const GNode& node)
     }
 
     if (node.GetInputsSize() < kMinInputSize) {
-        OPS_LOG_D(kPassName.c_str(), "IndexByTensor should have at least %zu inputs, got %zu.",
-                  kMinInputSize, node.GetInputsSize());
+        OPS_LOG_D(kPassName.c_str(), "IndexByTensor should have at least %zu inputs, got %zu.", kMinInputSize,
+                  node.GetInputsSize());
         return false;
     }
 
     if (node.GetOutputsSize() != 1) {
-        OPS_LOG_D(kPassName.c_str(), "IndexByTensor should have exactly 1 output, got %zu.",
-                  node.GetOutputsSize());
+        OPS_LOG_D(kPassName.c_str(), "IndexByTensor should have exactly 1 output, got %zu.", node.GetOutputsSize());
         return false;
     }
 
@@ -105,8 +104,7 @@ static bool MeetRequirements(const GNode& node)
 }
 
 // 设置单个 producer 的输出描述
-static void SetProducerOutputDesc(GNode* producer, const DataType& dtype,
-                                   const Shape& shape, const Format& format)
+static void SetProducerOutputDesc(GNode* producer, const DataType& dtype, const Shape& shape, const Format& format)
 {
     if (producer == nullptr) {
         return;
@@ -175,9 +173,8 @@ static GraphUniqPtr Replacement(const GNode& matchedNode)
     std::vector<es::EsTensorHolder> rIndices;
     for (size_t i = 0; i < indicesCount; i++) {
         std::string idxName = "indices" + std::to_string(i);
-        auto rIdx = replaceGraphBuilder.CreateInput(static_cast<int64_t>(i + 1), idxName.c_str(),
-                                                     indicesInfo.dtypes[i], indicesInfo.formats[i],
-                                                     indicesInfo.shapes[i].GetDims());
+        auto rIdx = replaceGraphBuilder.CreateInput(static_cast<int64_t>(i + 1), idxName.c_str(), indicesInfo.dtypes[i],
+                                                    indicesInfo.formats[i], indicesInfo.shapes[i].GetDims());
         rIndices.push_back(rIdx);
     }
 
@@ -187,7 +184,8 @@ static GraphUniqPtr Replacement(const GNode& matchedNode)
 
     SetProducerOutputDesc(rX.GetProducer(), xDtype, xShape, xFormat);
     for (size_t i = 0; i < rIndices.size(); i++) {
-        SetProducerOutputDesc(rIndices[i].GetProducer(), indicesInfo.dtypes[i], indicesInfo.shapes[i], indicesInfo.formats[i]);
+        SetProducerOutputDesc(rIndices[i].GetProducer(), indicesInfo.dtypes[i], indicesInfo.shapes[i],
+                              indicesInfo.formats[i]);
     }
 
     GraphUniqPtr replaceGraph = replaceGraphBuilder.BuildAndReset({indexOutput});

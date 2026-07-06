@@ -25,24 +25,21 @@ using namespace AscendC;
 // static quant performance template   单个矩形块处理，满核情况下单次处理多尾轴或者非满核时切分尾轴分核
 
 template <typename T1, typename T2>
-class StaticQuantBlock : public GeluQuantBase
-{
+class StaticQuantBlock : public GeluQuantBase {
 public:
     __aicore__ inline StaticQuantBlock(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-        const GeluQuantTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const GeluQuantTilingData& tilingData);
     __aicore__ inline void ScalarCompute(int64_t loopNum);
     __aicore__ inline void Process();
-    __aicore__ inline void ProcessOptionalInput(
-        LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal, int64_t endAxisOffset_,
-        int32_t calCount);
+    __aicore__ inline void ProcessOptionalInput(LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal,
+                                                int64_t endAxisOffset_, int32_t calCount);
     __aicore__ inline void CopyIn(int64_t blockOffset, int32_t rowCount, int32_t colCount);
     __aicore__ inline void Compute(LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32);
     __aicore__ inline void CopyOut(int64_t blockOffset, int32_t rowCount, int32_t colCount);
     __aicore__ inline void ComputeGelu(LocalTensor<float>& geluRes);
-    __aicore__ inline void ComputeQuant(
-        LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32);
+    __aicore__ inline void ComputeQuant(LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32,
+                                        LocalTensor<float>& offsetLocalFp32);
 
 private:
     /* ascendc variable */
@@ -80,9 +77,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantBlock<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void StaticQuantBlock<T1, T2>::Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y,
+                                                      GM_ADDR outScale, GM_ADDR workspace,
+                                                      const GeluQuantTilingData& tilingData)
 {
     // Init tiling data
     GeluQuantBase::ParseTilingData(tilingData);
@@ -166,10 +163,9 @@ template <typename T1, typename T2>
 __aicore__ inline void StaticQuantBlock<T1, T2>::CopyIn(int64_t blockOffset, int32_t rowCount, int32_t colCount)
 {
     LocalTensor<T1> xLocal = inQueue_.AllocTensor<T1>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(rowCount), static_cast<uint32_t>(colCount * sizeof(T1)),
-        static_cast<uint32_t>((endAxisLen_ - colCount) * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(rowCount), static_cast<uint32_t>(colCount * sizeof(T1)),
+                                 static_cast<uint32_t>((endAxisLen_ - colCount) * sizeof(T1)), static_cast<uint32_t>(0),
+                                 static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T1> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
     DataCopyPad(xLocal, xGm_[blockOffset], copyParams, padParams);
@@ -178,13 +174,13 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::CopyIn(int64_t blockOffset, int
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantBlock<T1, T2>::ProcessOptionalInput(
-    LocalTensor<float>& optionalLocalFp32, GlobalTensor<T2>& optionalGlobal, int64_t endAxisOffset_, int32_t calCount)
+__aicore__ inline void StaticQuantBlock<T1, T2>::ProcessOptionalInput(LocalTensor<float>& optionalLocalFp32,
+                                                                      GlobalTensor<T2>& optionalGlobal,
+                                                                      int64_t endAxisOffset_, int32_t calCount)
 {
     LocalTensor<T2> optionalInput = inQueue_.AllocTensor<T2>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T2> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
 
@@ -203,8 +199,8 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ProcessOptionalInput(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantBlock<T1, T2>::Compute(
-    LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32)
+__aicore__ inline void StaticQuantBlock<T1, T2>::Compute(LocalTensor<float>& scaleLocalFp32,
+                                                         LocalTensor<float>& offsetLocalFp32)
 {
     LocalTensor<float> geluRes = tempQueue_.Get<float>();
     ComputeGelu(geluRes);
@@ -252,8 +248,9 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ComputeGelu(LocalTensor<float>&
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void StaticQuantBlock<T1, T2>::ComputeQuant(
-    LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, LocalTensor<float>& offsetLocalFp32)
+__aicore__ inline void StaticQuantBlock<T1, T2>::ComputeQuant(LocalTensor<float>& geluRes,
+                                                              LocalTensor<float>& scaleLocalFp32,
+                                                              LocalTensor<float>& offsetLocalFp32)
 {
     LocalTensor<half> castFp16 = castQueue_.Get<half>();
     LocalTensor<int8_t> outLocal = outQueue_.AllocTensor<int8_t>();

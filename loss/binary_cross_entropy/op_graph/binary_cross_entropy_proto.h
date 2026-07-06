@@ -23,15 +23,20 @@ namespace ge {
 
 * @par Inputs:
 * Three inputs, including:
-* @li x: A multi-dimensional tensor of type bfloat16, float16 or float32, specifying a predictive value. The value of "x" must range from 0 to 1.
-* @li y: A multi-dimensional tensor of type bfloat16, float16 or float32, indicating a tag. The value of "y" must range from 0 to 1. Shape, dtype and format are the same as "x".
-* @li weight: An optional multi-dimensional tensor, specifying the weight. If not null, shape, dtype and format are the same as "x" \n
+* @li x: A multi-dimensional tensor of type bfloat16, float16 or float32, specifying a predictive value. The value of
+"x" must range from 0 to 1.
+* @li y: A multi-dimensional tensor of type bfloat16, float16 or float32, indicating a tag. The value of "y" must range
+from 0 to 1. Shape, dtype and format are the same as "x".
+* @li weight: An optional multi-dimensional tensor, specifying the weight. If not null, shape, dtype and format are the
+same as "x" \n
 
 * @par Attributes:
-* reduction: A string specifying the reduction type to apply to the output, which must be one of: "none", "sum", or "mean". Defaults to "mean". \n
+* reduction: A string specifying the reduction type to apply to the output, which must be one of: "none", "sum", or
+"mean". Defaults to "mean". \n
 
 * @par Outputs:
-* output: Output loss. Has the same dimension with the inputs. When "reduction" is set to "none", a tensor with the same size as "x" is output. Otherwise, a scalar is output. \n
+* output: Output loss. Has the same dimension with the inputs. When "reduction" is set to "none", a tensor with the same
+size as "x" is output. Otherwise, a scalar is output. \n
 
 * @par Third-party framework compatibility
 * Compatible with PyTorch operator BCELoss.

@@ -21,15 +21,9 @@ using namespace ge;
 
 class ForeachAddcmulScalarListTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachAddcmulScalarListTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachAddcmulScalarListTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachAddcmulScalarListTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachAddcmulScalarListTiling TearDown" << std::endl; }
 };
 
 static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
@@ -42,25 +36,21 @@ TEST_F(ForeachAddcmulScalarListTiling, tiling_fp32)
     ForeachAddcmulScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 64;
     compileInfo.ubSize = 262144;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcmulScalarList",
-        {
-            {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        64,
-        262144,
-        4096);
-    uint64_t expectTilingKey = 1;  // FP32
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 1; // FP32
     // Actual output: tensorCount=1, needCoreNum=1, perCoreElements=1024
     string expectTilingData = "4294967297 1024 ";
     std::vector<size_t> expectWorkspaces = {0};
@@ -73,25 +63,21 @@ TEST_F(ForeachAddcmulScalarListTiling, tiling_fp16)
     ForeachAddcmulScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 64;
     compileInfo.ubSize = 262144;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcmulScalarList",
-        {
-            {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        64,
-        262144,
-        4096);
-    uint64_t expectTilingKey = 0;  // FP16
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{2048}, {2048}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 0; // FP16
     string expectTilingData = "8589934593 1024 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
@@ -103,25 +89,21 @@ TEST_F(ForeachAddcmulScalarListTiling, tiling_int32)
     ForeachAddcmulScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 64;
     compileInfo.ubSize = 262144;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcmulScalarList",
-        {
-            {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
-            {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
-            {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_INT32, ge::FORMAT_ND},
-        },
-        {
-            {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        64,
-        262144,
-        4096);
-    uint64_t expectTilingKey = 2;  // INT32
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                  {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                  {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{512}, {512}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 2; // INT32
     string expectTilingData = "4294967297 1024 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
@@ -133,25 +115,21 @@ TEST_F(ForeachAddcmulScalarListTiling, tiling_bf16)
     ForeachAddcmulScalarListCompileInfo compileInfo;
     compileInfo.coreNum = 64;
     compileInfo.ubSize = 262144;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachAddcmulScalarList",
-        {
-            {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        64,
-        262144,
-        4096);
-    uint64_t expectTilingKey = 3;  // BF16
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4096}, {4096}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 3; // BF16
     string expectTilingData = "17179869185 1024 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);

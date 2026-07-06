@@ -188,8 +188,8 @@ static void GetBf16TilingData(GeGluV2TilingData& tilingData, TilingParam& tiling
 static void GetFp32TilingData(GeGluV2TilingData& tilingData, TilingParam& tilingParam)
 {
     int64_t commBufSizeLimit = tilingParam.isRegbase ? COMMON_BUFFER_SIZE_LIMIT_REGBASE : COMMON_BUFFER_SIZE_LIMIT;
-    int64_t vReduceErfBufSizeLimit =
-        tilingParam.isRegbase ? FP32_BUFFER_SIZE_VREDUCE_ERF_REGBASE : FP32_BUFFER_SIZE_VREDUCE_ERF;
+    int64_t vReduceErfBufSizeLimit = tilingParam.isRegbase ? FP32_BUFFER_SIZE_VREDUCE_ERF_REGBASE :
+                                                             FP32_BUFFER_SIZE_VREDUCE_ERF;
 
     tilingParam.blockSize = FP32_BLOCK_SIZE;
 
@@ -268,13 +268,15 @@ static ge::graphStatus CheckInputParams(gert::TilingContext* context)
     auto dtype = context->GetInputDesc(INPUT_IDX)->GetDataType();
     int32_t typeSize = ge::GetSizeByDataType(dtype);
 
-    OP_CHECK_IF(
-        dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16 && dtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "input",ge::TypeUtils::DataTypeToSerialString(dtype),"DT_FLOAT16,DT_BF16,DT_FLOAT"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16 && dtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "input", ge::TypeUtils::DataTypeToSerialString(dtype),
+                                          "DT_FLOAT16,DT_BF16,DT_FLOAT"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (typeSize <= 0), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "typeSize", std::to_string(typeSize),"The value of typesize must be greater than 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((typeSize <= 0),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "typeSize", std::to_string(typeSize),
+                                                      "The value of typesize must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
     // How to check split dim is -1.
     return ge::GRAPH_SUCCESS;
@@ -296,22 +298,19 @@ static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
     }
     OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
 
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(context, "TilingPrepare4GeGluV2 fail to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context, "TilingPrepare4GeGluV2 fail to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "TilingPrepare4GeGluV2 fail to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "TilingPrepare4GeGluV2 fail to get ub size."),
+                return ge::GRAPH_FAILED);
 
     compileInfo->isAscend310P = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002;
     compileInfo->isRegbase = IsRegbaseSocVersion(context);
-    OP_LOGD(
-        context, "TilingPrepare4GeGluV2 exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
-        compileInfo->ubSizePlatForm);
+    OP_LOGD(context, "TilingPrepare4GeGluV2 exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
+            compileInfo->ubSizePlatForm);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -330,19 +329,17 @@ static size_t GetAttrSplitDim(const gert::TilingContext* context)
 
     size_t splitDimU = splitDim < 0 ? splitDim + inputShapeSize : splitDim;
 
-    OP_CHECK_IF(
-        (splitDimU >= inputShapeSize),
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "splitDim,inputShapeSize",std::to_string(splitDimU)+","+std::to_string(inputShapeSize),
-	    "The value of splitDim  must be in the range [-inputShapeSize, inputShapeSize]"),
-        return SPLIT_ERROR_STATUS);
+    OP_CHECK_IF((splitDimU >= inputShapeSize),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "splitDim,inputShapeSize",
+                    std::to_string(splitDimU) + "," + std::to_string(inputShapeSize),
+                    "The value of splitDim  must be in the range [-inputShapeSize, inputShapeSize]"),
+                return SPLIT_ERROR_STATUS);
 
-    OP_CHECK_IF(
-        (inputShape.GetDim(splitDimU) % SPLIT_FACTOR != 0),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(),"input",Ops::Base::ToString(inputShape),
-	    "splitDim of input must be an even number"),
-        return SPLIT_ERROR_STATUS);
+    OP_CHECK_IF((inputShape.GetDim(splitDimU) % SPLIT_FACTOR != 0),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "input", Ops::Base::ToString(inputShape),
+                                                      "splitDim of input must be an even number"),
+                return SPLIT_ERROR_STATUS);
 
     return splitDimU;
 }
@@ -361,10 +358,9 @@ static ge::graphStatus GetTilingAttr(const gert::TilingContext* context, TilingP
     auto* attrApproximate = attrs->GetAttrPointer<int64_t>(ATTR_APPROXIMATE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrApproximate);
     auto approximate = static_cast<int64_t>(*attrApproximate);
-    OP_CHECK_IF(
-        (approximate != 0 && approximate != 1),
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(),"approximate",std::to_string(approximate), "0,1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((approximate != 0 && approximate != 1),
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "approximate", std::to_string(approximate), "0,1"),
+                return ge::GRAPH_FAILED);
     tilingParam.approximate = approximate;
 
     return ge::GRAPH_SUCCESS;
@@ -389,7 +385,11 @@ static ge::graphStatus GetTillingParam(const gert::TilingContext* context, Tilin
         }
     }
     int64_t ny = n * y;
-    OP_CHECK_IF((x == 0 || ny == 0), OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(),"inputShape",Ops::Base::ToString(inputShape),"inputShape cannot be an empty tensor"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (x == 0 || ny == 0),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "inputShape", Ops::Base::ToString(inputShape),
+                                              "inputShape cannot be an empty tensor"),
+        return ge::GRAPH_FAILED);
 
     auto compileInfo = context->GetCompileInfo<GeGluV2CompileInfo>();
     tilingParam.x = x;
@@ -399,16 +399,14 @@ static ge::graphStatus GetTillingParam(const gert::TilingContext* context, Tilin
     tilingParam.isAscend310P = compileInfo->isAscend310P;
     tilingParam.isRegbase = compileInfo->isRegbase;
 
-    OP_CHECK_IF(
-        GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GeGluV2SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GeGluV2SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
 
-    OP_LOGI(
-        context,
-        "tilingParm is x:%ld, coreNum: %ld, ubSize: %lu splitDim: %zu, activate_left: %ld, approximate: %ld, \
+    OP_LOGI(context,
+            "tilingParm is x:%ld, coreNum: %ld, ubSize: %lu splitDim: %zu, activate_left: %ld, approximate: %ld, \
            isAscend310P: %d isRegbase: %d.",
-        tilingParam.x, tilingParam.coreNum, tilingParam.ubSize, splitDim, tilingParam.activateLeft,
-        tilingParam.approximate, tilingParam.isAscend310P, tilingParam.isRegbase);
+            tilingParam.x, tilingParam.coreNum, tilingParam.ubSize, splitDim, tilingParam.activateLeft,
+            tilingParam.approximate, tilingParam.isAscend310P, tilingParam.isRegbase);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -436,14 +434,12 @@ static ge::graphStatus Tiling4GeGluV2(gert::TilingContext* context)
 {
     OP_LOGD(context, "Tiling4GeGluV2 enter.");
     context->SetScheduleMode(BATCH_MODE);
-    OP_CHECK_IF(
-        CheckInputParams(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InputParams not valid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputParams(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InputParams not valid."),
+                return ge::GRAPH_FAILED);
 
     TilingParam tilingParam;
-    OP_CHECK_IF(
-        GetTillingParam(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Get Tiling Param Failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTillingParam(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Get Tiling Param Failed."), return ge::GRAPH_FAILED);
 
     auto dtype = context->GetInputDesc(INPUT_IDX)->GetDataType();
     GeGluV2TilingData tilingData;
@@ -454,9 +450,8 @@ static ge::graphStatus Tiling4GeGluV2(gert::TilingContext* context)
     tilingData.set_activateLeft(tilingParam.activateLeft);
     tilingData.set_approximate(tilingParam.approximate);
 
-    OP_CHECK_IF(
-        SetTilingDataForGeGluV2(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GeGluV2SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingDataForGeGluV2(context, tilingData) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GeGluV2SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
@@ -464,15 +459,14 @@ static ge::graphStatus Tiling4GeGluV2(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = WORK_SPACE_SIZE + tilingParam.coreNum * BYTES_ONE_BLOCK * FP32_DTYPE_BYTES;
 
-    OP_LOGD(
-        context,
-        "tilingData is splitSize:%ld, group:%ld, realCoreNum:%ld, numPerCore:%ld, loopNum:%ld, \
+    OP_LOGD(context, "tilingData is splitSize:%ld, group:%ld, realCoreNum:%ld, numPerCore:%ld, loopNum:%ld, \
            tailLoopNum:%ld,nLastTailGroup:%ld, lastTailGroup:%ld, tilingKey:%ld, blockSize:%ld, \
            activateLeft: %ld, ny: %ld, approximate: %ld ",
-        tilingData.get_splitSize(), tilingData.get_group(), tilingData.get_realCoreNum(), tilingData.get_numPerCore(),
-        tilingData.get_loopNum(), tilingData.get_tailLoopNum(), tilingData.get_nLastTailGroup(),
-        tilingData.get_lastTailGroup(), tilingData.get_tilingKey(), tilingData.get_blockSize(),
-        tilingData.get_activateLeft(), tilingData.get_ny(), tilingData.get_approximate());
+            tilingData.get_splitSize(), tilingData.get_group(), tilingData.get_realCoreNum(),
+            tilingData.get_numPerCore(), tilingData.get_loopNum(), tilingData.get_tailLoopNum(),
+            tilingData.get_nLastTailGroup(), tilingData.get_lastTailGroup(), tilingData.get_tilingKey(),
+            tilingData.get_blockSize(), tilingData.get_activateLeft(), tilingData.get_ny(),
+            tilingData.get_approximate());
 
     OP_LOGD(context, "Tiling4GeGluV2 exit.");
     return ge::GRAPH_SUCCESS;

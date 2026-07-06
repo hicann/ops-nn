@@ -28,15 +28,16 @@ static constexpr size_t DIM_2 = 2;
 static constexpr size_t DIM_3 = 3;
 static constexpr size_t DIM_4 = 4;
 
-static const aclTensor* AdaptiveAvgPool3dGradAiCore(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* AdaptiveAvgPool3dGradAiCore(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out,
+                                                    aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveAvgPool3dGradAiCore, gradOutput, self, out);
     std::string dataFormat = Ops::NN::AclnnUtil::IsRegbase() ? "NCDHW" : "NDHWC";
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3dGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out), OP_ATTR(dataFormat));
-    OP_CHECK(ret == ACLNN_SUCCESS, 
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool3dGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveAvgPool3dGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out),
+                                           OP_ATTR(dataFormat));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool3dGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
@@ -60,7 +61,7 @@ const aclTensor* AdaptiveAvgPool3dGrad(const aclTensor* gradOutput, const aclTen
         outShape.SetDim(DIM_1, selfShape.GetDim(dimNum - DIM_H));
         outShape.SetDim(DIM_2, selfShape.GetDim(dimNum - DIM_W));
     }
-    
+
     auto out = executor->AllocTensor(outShape, gradOutput->GetDataType(), gradOutput->GetStorageFormat());
     if (out == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "out is nullptr.");

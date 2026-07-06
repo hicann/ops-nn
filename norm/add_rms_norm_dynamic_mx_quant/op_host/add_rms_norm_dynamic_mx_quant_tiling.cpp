@@ -39,15 +39,12 @@ static ge::graphStatus TilingPrepare4AddRmsNormDynamicMxQuant(gert::TilingParseC
     compileInfoPtr->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF(
         (compileInfoPtr->totalCoreNum <= 0),
-        OP_LOGE(
-            context, "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfoPtr->totalCoreNum)),
+        OP_LOGE(context, "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfoPtr->totalCoreNum)),
         return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->totalUbSize);
     OP_CHECK_IF(
         (compileInfoPtr->totalUbSize <= 0),
-        OP_LOGE(
-            context, "Get block Size failed, block size: %u",
-            static_cast<uint32_t>(compileInfoPtr->totalUbSize)),
+        OP_LOGE(context, "Get block Size failed, block size: %u", static_cast<uint32_t>(compileInfoPtr->totalUbSize)),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

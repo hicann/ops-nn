@@ -26,23 +26,23 @@ using namespace std;
 using namespace op;
 
 class l2_FusedQuantMatmul_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { cout << "l2_FusedQuantMatmul_test SetUp" << endl; }
+protected:
+    static void SetUpTestCase() { cout << "l2_FusedQuantMatmul_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "l2_FusedQuantMatmul_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "l2_FusedQuantMatmul_test TearDown" << endl; }
 };
 
-
 TEST_F(l2_FusedQuantMatmul_test, ascend910B1_test_case_A8W8_1)
-{   
+{
     // A8W8_pertoken_perchannel_gelutanh_out_fp16
-    TensorDesc x1_desc = TensorDesc({27, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x2_desc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x1Scale_desc = TensorDesc({27}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1,1);
+    TensorDesc x1_desc = TensorDesc({27, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1Scale_desc = TensorDesc({27}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc out_desc = TensorDesc({27, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnFusedQuantMatmul, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 
-                            "gelu_tanh", 0),
+    auto ut = OP_API_UT(aclnnFusedQuantMatmul,
+                        INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, "gelu_tanh", 0),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -50,15 +50,16 @@ TEST_F(l2_FusedQuantMatmul_test, ascend910B1_test_case_A8W8_1)
 }
 
 TEST_F(l2_FusedQuantMatmul_test, ascend910B1_test_case_A8W8_2)
-{   
+{
     // A8W8_pertoken_perchannel_gelutanh_out_bf16
-    TensorDesc x1_desc = TensorDesc({27, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x2_desc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x1Scale_desc = TensorDesc({27}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1,1);
+    TensorDesc x1_desc = TensorDesc({27, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1Scale_desc = TensorDesc({27}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc out_desc = TensorDesc({27, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnFusedQuantMatmul, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 
-                            "gelu_tanh", 0),
+    auto ut = OP_API_UT(aclnnFusedQuantMatmul,
+                        INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, "gelu_tanh", 0),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -66,15 +67,16 @@ TEST_F(l2_FusedQuantMatmul_test, ascend910B1_test_case_A8W8_2)
 }
 
 TEST_F(l2_FusedQuantMatmul_test, ascend910B1_test_case_A8W8_3)
-{   
+{
     // A8W8_weightnz_pertoken_perchannel_geluerf_out_bf16
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1,1);
+    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1,1);
-    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1,1);
+    TensorDesc x1Scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnFusedQuantMatmul, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 
-                            "gelu_erf", 0),
+    auto ut = OP_API_UT(aclnnFusedQuantMatmul,
+                        INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, "gelu_erf", 0),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

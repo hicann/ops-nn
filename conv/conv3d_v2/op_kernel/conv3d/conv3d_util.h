@@ -34,5 +34,5 @@ __aicore__ inline uint64_t GetCurrentKD(uint64_t tilingKL1, uint64_t cin, uint64
 {
     return conv::CeilDIV(tilingKL1, cin * khxKw);
 }
-}  // namespace conv3d
-#endif  // __CONV3D_UTIL_H__
+} // namespace conv3d
+#endif // __CONV3D_UTIL_H__

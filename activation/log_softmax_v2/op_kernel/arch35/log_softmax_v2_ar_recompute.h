@@ -23,8 +23,7 @@
 #include "../inc/kernel_utils.h"
 #include "../../softmax_v2/arch35/softmax_v2_base.h"
 
-namespace LogSoftmaxV2Ops
-{
+namespace LogSoftmaxV2Ops {
 using namespace AscendC;
 using namespace SoftmaxV2Ops;
 
@@ -37,13 +36,9 @@ constexpr float CONST_FP32_MIN = -(__builtin_inff());
 constexpr int64_t A_IN_IN = 1;
 
 template <typename Tx, typename Ty>
-class LogSoftmaxV2ArRecompute : public SoftmaxV2OpsBase
-{
+class LogSoftmaxV2ArRecompute : public SoftmaxV2OpsBase {
 public:
-    __aicore__ inline LogSoftmaxV2ArRecompute(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline LogSoftmaxV2ArRecompute(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SoftmaxV2ArRecomputeTilingData* tilingData);
     __aicore__ inline void Process();
@@ -55,9 +50,9 @@ private:
                                           __local_mem__ float*& xMaxPtr, __local_mem__ float*& xSumPtr, uint32_t a,
                                           uint32_t ubFactor);
     __aicore__ inline void MainBlockCastSubExpVF(__local_mem__ float*& xFp32Ptr, __local_mem__ Tx*& xPtr,
-                                        __local_mem__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
+                                                 __local_mem__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
     __aicore__ inline void FoldBlockCastSubExpVF(__local_mem__ float*& dstPtr, __local_mem__ Tx*& xPtr,
-                                        __local_mem__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
+                                                 __local_mem__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
     __aicore__ inline int64_t GetCacheId(const int64_t idx);
     __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
                                        const int64_t cacheId, const int64_t stride, const int64_t count);
@@ -124,13 +119,13 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::Process()
 {
     DataCopyPadExtParams<Tx> padExtParams{false, 0, 0, 0};
 
-    int64_t xDimOffsetPerCore = tl_->aBlockFactor * blockIdx_;  // 每个核按行的偏移
+    int64_t xDimOffsetPerCore = tl_->aBlockFactor * blockIdx_; // 每个核按行的偏移
     LocalTensor<float> xMaxLocal = xMaxBuffer.Get<float>();
     LocalTensor<float> xSumLocal = xSumBuffer.Get<float>();
 
     // 每个核：对每行循环
     for (uint64_t rowIdx = 0; rowIdx < currentRowBlock_; rowIdx++) {
-        int64_t xDimOffset = (xDimOffsetPerCore + rowIdx) * tl_->r;  // 每行的偏移量
+        int64_t xDimOffset = (xDimOffsetPerCore + rowIdx) * tl_->r; // 每行的偏移量
 
         AscendC::Duplicate(xMaxLocal, CONST_FP32_MIN, AR_RECOMPUTE_MAX_BUFFER_BTYES / sizeof(float));
 
@@ -144,7 +139,7 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::Process()
         __local_mem__ float* xMaxPtr = (__local_mem__ float*)xMaxLocal.GetPhyAddr();
         // 每行：对R循环，求整行R的最大值
         for (uint64_t ubIdx = 0; ubIdx < tl_->aLoopCountCeil; ubIdx++) {
-            int64_t xUbOffset = xDimOffset + tl_->ubFactor * ubIdx;  // 每个UB循环的偏移量
+            int64_t xUbOffset = xDimOffset + tl_->ubFactor * ubIdx; // 每个UB循环的偏移量
             int64_t ubFactor = tl_->ubFactor;
             if (ubIdx == tl_->aLoopCountCeil - 1 && tl_->ubFactorTail > 0) {
                 ubFactor = tl_->ubFactorTail;
@@ -174,8 +169,8 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::Process()
         x2DataCopyExtParams.dstStride = 0;
 
         for (uint64_t basicBlockIdx = 0; basicBlockIdx < tl_->basicBlockLoop; basicBlockIdx++) {
-            int64_t xUbOffset1 = xDimOffset + tl_->ubFactor * basicBlockIdx;                          // 主块
-            int64_t xUbOffset2 = xDimOffset + tl_->ubFactor * (tl_->basicBlockLoop + basicBlockIdx);  // 被折叠块
+            int64_t xUbOffset1 = xDimOffset + tl_->ubFactor * basicBlockIdx;                         // 主块
+            int64_t xUbOffset2 = xDimOffset + tl_->ubFactor * (tl_->basicBlockLoop + basicBlockIdx); // 被折叠块
             int64_t ubFactor = tl_->ubFactor;
 
             LocalTensor<Tx> x1Local = xQueue_.AllocTensor<Tx>();
@@ -201,7 +196,7 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::Process()
             } else if ((basicBlockIdx == tl_->mainFoldCount) && (tl_->ubFactorTail > 0)) {
                 LocalTensor<Tx> x2Local = xQueue_.AllocTensor<Tx>();
                 __local_mem__ Tx* x2Ptr = (__local_mem__ Tx*)x2Local.GetPhyAddr();
-                x2DataCopyExtParams.blockLen = tl_->ubFactorTail * sizeof(Tx);  // 这里的x2为尾块
+                x2DataCopyExtParams.blockLen = tl_->ubFactorTail * sizeof(Tx); // 这里的x2为尾块
                 DataCopyPad(x2Local[0], xGm_[xUbOffset2], x2DataCopyExtParams, padExtParams);
                 xQueue_.EnQue<Tx>(x2Local);
                 x2Local = xQueue_.DeQue<Tx>();
@@ -283,7 +278,7 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::CalculateMaxVF(__local_m
 
         uint32_t constOne = 1;
         maskFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        maskOne = AscendC::MicroAPI::UpdateMask<float>(constOne);  // 用于读写1个元素
+        maskOne = AscendC::MicroAPI::UpdateMask<float>(constOne); // 用于读写1个元素
 
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
         uint16_t repeatTimesTmp = repeatTimes - 1;
@@ -372,9 +367,9 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::CalculateOutVF(__local_m
 
 template <typename Tx, typename Ty>
 __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::MainBlockCastSubExpVF(__local_mem__ float*& xFp32Ptr,
-                                                                     __local_mem__ Tx*& xPtr,
-                                                                     __local_mem__ float*& xMaxPtr, uint32_t a,
-                                                                     uint32_t ubFactor)
+                                                                              __local_mem__ Tx*& xPtr,
+                                                                              __local_mem__ float*& xMaxPtr, uint32_t a,
+                                                                              uint32_t ubFactor)
 {
     __VEC_SCOPE__
     {
@@ -408,9 +403,9 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::MainBlockCastSubExpVF(__
 
 template <typename Tx, typename Ty>
 __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::FoldBlockCastSubExpVF(__local_mem__ float*& dstPtr,
-                                                                  __local_mem__ Tx*& xPtr,
-                                                                  __local_mem__ float*& xMaxPtr, uint32_t a,
-                                                                  uint32_t ubFactor)
+                                                                              __local_mem__ Tx*& xPtr,
+                                                                              __local_mem__ float*& xMaxPtr, uint32_t a,
+                                                                              uint32_t ubFactor)
 {
     __VEC_SCOPE__
     {
@@ -457,8 +452,8 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::UpdateCache(const LocalT
                                                                     const int64_t cacheId, const int64_t stride,
                                                                     const int64_t count)
 {
-    uint16_t outerLoopTimes =
-        Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(Ops::Base::GetVRegSize()));
+    uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
+                                                 static_cast<int64_t>(Ops::Base::GetVRegSize()));
     uint16_t innerLoopTimes = cacheId;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
@@ -483,5 +478,5 @@ __aicore__ inline void LogSoftmaxV2ArRecompute<Tx, Ty>::UpdateCache(const LocalT
         }
     }
 }
-}  // namespace LogSoftmaxV2Ops
-#endif  // SOFTMAX_V2_AR_RECOMPUTE_H
+} // namespace LogSoftmaxV2Ops
+#endif // SOFTMAX_V2_AR_RECOMPUTE_H

@@ -27,15 +27,9 @@ using namespace op;
 
 class l2_embedding_bag_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "embedding_bag_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "embedding_bag_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "embedding_bag_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "embedding_bag_test TearDown" << endl; }
 };
 
 TEST_F(l2_embedding_bag_test, case_0)
@@ -52,16 +46,13 @@ TEST_F(l2_embedding_bag_test, case_0)
     auto tensorOffset2BagDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
     auto tensorBagSizeDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
     auto tensorMaxIndicesDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
-    auto ut = OP_API_UT(
-        aclnnEmbeddingBag,
-        INPUT(
-            tensorWeightDesc, tensorIndicesDesc, tensorOffsetsDesc, scaleGradByFreq, mode, sparse, (aclTensor*)nullptr,
-            includeLastOffset, paddingIdx),
-        OUTPUT(tensorOutputDesc, tensorOffset2BagDesc, tensorBagSizeDesc, tensorMaxIndicesDesc));
+    auto ut = OP_API_UT(aclnnEmbeddingBag,
+                        INPUT(tensorWeightDesc, tensorIndicesDesc, tensorOffsetsDesc, scaleGradByFreq, mode, sparse,
+                              (aclTensor*)nullptr, includeLastOffset, paddingIdx),
+                        OUTPUT(tensorOutputDesc, tensorOffset2BagDesc, tensorBagSizeDesc, tensorMaxIndicesDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-    
 }
 
 TEST_F(l2_embedding_bag_test, case_1)
@@ -78,16 +69,13 @@ TEST_F(l2_embedding_bag_test, case_1)
     auto tensorOffset2BagDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
     auto tensorBagSizeDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
     auto tensorMaxIndicesDesc = TensorDesc({2, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
-    auto ut = OP_API_UT(
-        aclnnEmbeddingBag,
-        INPUT(
-            tensorWeightDesc, tensorIndicesDesc, tensorOffsetsDesc, scaleGradByFreq, mode, sparse, (aclTensor*)nullptr,
-            includeLastOffset, paddingIdx),
-        OUTPUT(tensorOutputDesc, tensorOffset2BagDesc, tensorBagSizeDesc, tensorMaxIndicesDesc));
+    auto ut = OP_API_UT(aclnnEmbeddingBag,
+                        INPUT(tensorWeightDesc, tensorIndicesDesc, tensorOffsetsDesc, scaleGradByFreq, mode, sparse,
+                              (aclTensor*)nullptr, includeLastOffset, paddingIdx),
+                        OUTPUT(tensorOutputDesc, tensorOffset2BagDesc, tensorBagSizeDesc, tensorMaxIndicesDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-    
 }
 
 TEST_F(l2_embedding_bag_test, case_2)
@@ -105,14 +93,11 @@ TEST_F(l2_embedding_bag_test, case_2)
     auto tensorOffset2BagDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
     auto tensorBagSizeDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
     auto tensorMaxIndicesDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5);
-    auto ut = OP_API_UT(
-        aclnnEmbeddingBag,
-        INPUT(
-            tensorWeightDesc, tensorIndicesDesc, tensorOffsetsDesc, scaleGradByFreq, mode, sparse,
-            tensorperSampleWeightsDesc, includeLastOffset, paddingIdx),
-        OUTPUT(tensorOutputDesc, tensorOffset2BagDesc, tensorBagSizeDesc, tensorMaxIndicesDesc));
+    auto ut = OP_API_UT(aclnnEmbeddingBag,
+                        INPUT(tensorWeightDesc, tensorIndicesDesc, tensorOffsetsDesc, scaleGradByFreq, mode, sparse,
+                              tensorperSampleWeightsDesc, includeLastOffset, paddingIdx),
+                        OUTPUT(tensorOutputDesc, tensorOffset2BagDesc, tensorBagSizeDesc, tensorMaxIndicesDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
-    
 }

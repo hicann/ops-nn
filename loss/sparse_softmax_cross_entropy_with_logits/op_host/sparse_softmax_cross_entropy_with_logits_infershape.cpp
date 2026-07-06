@@ -27,7 +27,8 @@ constexpr uint32_t DIM_NUM_1 = 1;
 constexpr uint32_t DIM_NUM_2 = 2;
 
 namespace ops {
-static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferShapeContext* context) {
+static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferShapeContext* context)
+{
     OP_LOGD(context, "Begin to do InferShape4SparseSoftmaxCrossEntropyWithLogits.");
     const gert::Shape* featuresShape = context->GetInputShape(INPUT_FEATURES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, featuresShape);
@@ -40,10 +41,8 @@ static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferSha
     OP_CHECK_NULL_WITH_CONTEXT(context, backpropShape);
 
     if (!Ops::Base::IsUnknownRank(*featuresShape) && !Ops::Base::IsUnknownRank(*labelsShape)) {
-        OP_CHECK_IF(
-            labelsShape->GetDimNum() != (featuresShape->GetDimNum() - 1),
-            OP_LOGE(context, "Labels.dimNum must equal featuresShape.dimNum - 1."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(labelsShape->GetDimNum() != (featuresShape->GetDimNum() - 1),
+                    OP_LOGE(context, "Labels.dimNum must equal featuresShape.dimNum - 1."), return ge::GRAPH_FAILED);
 
         for (uint32_t i = 0; i < featuresShape->GetDimNum() - 1; i++) {
             if (featuresShape->GetDim(i) != labelsShape->GetDim(i)) {
@@ -51,10 +50,8 @@ static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferSha
                 return ge::GRAPH_FAILED;
             }
         }
-        OP_CHECK_IF(
-            featuresShape->GetDim(featuresShape->GetDimNum() - 1) <= 0,
-            OP_LOGE(context, "Must have at least one class"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(featuresShape->GetDim(featuresShape->GetDimNum() - 1) <= 0,
+                    OP_LOGE(context, "Must have at least one class"), return ge::GRAPH_FAILED);
     }
     *lossShape = *labelsShape;
     *backpropShape = *featuresShape;
@@ -62,15 +59,16 @@ static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferSha
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataTypeForSparseSoftmaxCrossEntropyWithLogits(gert::InferDataTypeContext *context) {
-  OP_LOGD(context, "InferDataTypeForSparseSoftmaxCrossEntropyWithLogits Begin.");
-  context->SetOutputDataType(OUTPUT_LOSS_IDX, context->GetInputDataType(INPUT_FEATURES_IDX));
-  context->SetOutputDataType(OUTPUT_BACKPROP_IDX, context->GetInputDataType(INPUT_FEATURES_IDX));
-  OP_LOGD(context, "InferDataTypeForSparseSoftmaxCrossEntropyWithLogits End.");
-  return GRAPH_SUCCESS;
+static graphStatus InferDataTypeForSparseSoftmaxCrossEntropyWithLogits(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context, "InferDataTypeForSparseSoftmaxCrossEntropyWithLogits Begin.");
+    context->SetOutputDataType(OUTPUT_LOSS_IDX, context->GetInputDataType(INPUT_FEATURES_IDX));
+    context->SetOutputDataType(OUTPUT_BACKPROP_IDX, context->GetInputDataType(INPUT_FEATURES_IDX));
+    OP_LOGD(context, "InferDataTypeForSparseSoftmaxCrossEntropyWithLogits End.");
+    return GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(SparseSoftmaxCrossEntropyWithLogits)
-  .InferShape(InferShape4SparseSoftmaxCrossEntropyWithLogits)
-  .InferDataType(InferDataTypeForSparseSoftmaxCrossEntropyWithLogits);
-}
+    .InferShape(InferShape4SparseSoftmaxCrossEntropyWithLogits)
+    .InferDataType(InferDataTypeForSparseSoftmaxCrossEntropyWithLogits);
+} // namespace ops

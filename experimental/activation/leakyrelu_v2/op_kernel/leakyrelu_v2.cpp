@@ -30,7 +30,7 @@ __global__ __aicore__ void leakyrelu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
 {
     REGISTER_TILING_DEFAULT(LeakyreluV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(LeakyreluV2TilingData, tilingData, tiling);
-    NsLeakyreluV2::LeakyreluV2<DTYPE_X> op; 
-    op.Init(x, y, &tilingData);      
-    op.Process();                    
+    NsLeakyreluV2::LeakyreluV2<DTYPE_X> op;
+    op.Init(x, y, &tilingData);
+    op.Process();
 }

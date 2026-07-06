@@ -39,20 +39,12 @@ struct ThnnFusedLstmCellGradCompileInfo {
 
 class ThnnFusedLstmCellGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ThnnFusedLstmCellGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ThnnFusedLstmCellGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ThnnFusedLstmCellGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ThnnFusedLstmCellGradTiling TearDown" << std::endl; }
 };
 
-void TestThnnFusedLstmCellGradTiling(
-    int64_t batch, int64_t hiddenSize, ge::DataType dataType,
-    uint64_t expectTilingKey)
+void TestThnnFusedLstmCellGradTiling(int64_t batch, int64_t hiddenSize, ge::DataType dataType, uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape hShape = {{batch, hiddenSize}, {batch, hiddenSize}};
@@ -123,6 +115,7 @@ void TestThnnFusedLstmCellGradTiling(
 
 TEST_F(ThnnFusedLstmCellGradTiling, thnn_fused_lstm_cell_grad_tilingkey_0)
 {
-    std::cout << "run case: " << "thnn_fused_lstm_cell_grad_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "thnn_fused_lstm_cell_grad_tilingkey_0" << std::endl;
     TestThnnFusedLstmCellGradTiling(40, 8, ge::DT_FLOAT, 0);
 }

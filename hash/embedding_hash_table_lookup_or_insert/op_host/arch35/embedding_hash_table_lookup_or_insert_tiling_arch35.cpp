@@ -107,23 +107,23 @@ inline uint32_t ComputeReservedUBSizeForSIMD(const gert::TilingContext* context,
     return useBytes;
 }
 
-inline ge::graphStatus GetCheckLookupOrInsertInputs(
-    const gert::TilingContext* context, LookupOrInsertTilingData* pTiling)
+inline ge::graphStatus GetCheckLookupOrInsertInputs(const gert::TilingContext* context,
+                                                    LookupOrInsertTilingData* pTiling)
 {
     // 获取shape信息
-    const auto *inShape = context->GetInputShape(1);
+    const auto* inShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
     const auto inShapeVal = inShape->GetStorageShape();
     int64_t keyNum = inShapeVal.GetShapeSize();
     pTiling->set_keyNum(keyNum);
 
     // 校验dtype
-    auto *keyDtypePtr = context->GetInputDesc(1);
+    auto* keyDtypePtr = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, keyDtypePtr);
     ge::DataType keyType = keyDtypePtr->GetDataType();
     if (keyType != ge::DT_INT64) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "keys",
-            ge::TypeUtils::DataTypeToSerialString(keyType).c_str(), "int64");
+                                  ge::TypeUtils::DataTypeToSerialString(keyType).c_str(), "int64");
         return ge::GRAPH_FAILED;
     }
 
@@ -167,8 +167,8 @@ inline ge::graphStatus GetSetLookupOrInsertAttrs(const gert::TilingContext* cont
 
 ge::graphStatus Tiling4LookupOrInsert(gert::TilingContext* context)
 {
-    const EmbeddingHashTableLookupOrInsertCompileInfo* compileInfo =
-        reinterpret_cast<const EmbeddingHashTableLookupOrInsertCompileInfo*>(context->GetCompileInfo());
+    const EmbeddingHashTableLookupOrInsertCompileInfo*
+        compileInfo = reinterpret_cast<const EmbeddingHashTableLookupOrInsertCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     LookupOrInsertTilingData tiling;
@@ -205,9 +205,9 @@ ge::graphStatus Tiling4LookupOrInsert(gert::TilingContext* context)
     // 设置SIMD用的UB大小
     context->SetLocalMemorySize(ComputeReservedUBSizeForSIMD(context, threadYNum));
     // 设置启动核数
-    context->SetBlockDim(std::min(
-        static_cast<uint32_t>(CeilDiv<uint32_t>(static_cast<uint32_t>(tiling.get_keyNum()), threadYNum)),
-        compileInfo->coreNumAiv));
+    context->SetBlockDim(
+        std::min(static_cast<uint32_t>(CeilDiv<uint32_t>(static_cast<uint32_t>(tiling.get_keyNum()), threadYNum)),
+                 compileInfo->coreNumAiv));
     // 保存TilingData
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
@@ -223,19 +223,17 @@ static ge::graphStatus TilingPrepare4LookupOrInsert(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     compileInfo->maxThreadNum = GetSimtMaxThreadNum(context);
-    OP_CHECK_IF(
-        (compileInfo->maxThreadNum <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to get valid maxThreadNum in TilingParse func."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->maxThreadNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get valid maxThreadNum in TilingParse func."),
+                return ge::GRAPH_FAILED);
 
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNumAiv = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNumAiv <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to get valid coreNumAiv in TilingParse func."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNumAiv <= 0),
+                OP_LOGE(context->GetNodeName(), "Failed to get valid coreNumAiv in TilingParse func."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

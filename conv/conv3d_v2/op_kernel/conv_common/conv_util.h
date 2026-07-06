@@ -52,15 +52,9 @@ constexpr uint64_t F8_NUM_IN_F16 = 2;
 constexpr uint64_t MAX_UINT16 = 65535;
 constexpr uint64_t INT32_OUT_16_FOR_8 = 2;
 
-static __aicore__ inline size_t AlignB(uint64_t a, uint64_t b)
-{
-    return ((a + b - 1) / b) * b;
-}
+static __aicore__ inline size_t AlignB(uint64_t a, uint64_t b) { return ((a + b - 1) / b) * b; }
 
-static __aicore__ inline size_t CeilDIV(uint64_t a, uint64_t b)
-{
-    return (a + b - 1) / b;
-}
+static __aicore__ inline size_t CeilDIV(uint64_t a, uint64_t b) { return (a + b - 1) / b; }
 
 template <class Intf>
 static __aicore__ inline size_t GetInputkInOneC0Block()
@@ -73,5 +67,5 @@ enum class IterateMNOrder {
     ORDER_NTERFIRST,
     UNDEF,
 };
-}  // namespace conv
-#endif  // __CONV3D_UTIL_H__
+} // namespace conv
+#endif // __CONV3D_UTIL_H__

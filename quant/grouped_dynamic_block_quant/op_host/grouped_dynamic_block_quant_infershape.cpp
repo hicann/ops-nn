@@ -37,8 +37,8 @@ void SetShapeDimTwo(gert::InferShapeContext* context, int64_t groupNum, int64_t 
     int64_t dim0 = inputXShape->GetDim(0);
     int64_t dim1 = inputXShape->GetDim(1);
 
-    OP_LOGD(
-        context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld", Ops::Base::ToString(*inputXShape).c_str(), rowBlockSize, colBlockSize);
+    OP_LOGD(context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld",
+            Ops::Base::ToString(*inputXShape).c_str(), rowBlockSize, colBlockSize);
 
     scaleShape->SetDimNum(INPUT_DIM_TWO);
     if (dim0 == UNKNOWN_DIM_VALUE || groupNum == UNKNOWN_DIM_VALUE || Ops::Base::IsUnknownRank(*inputGroupListShape)) {
@@ -68,9 +68,8 @@ void SetShapeDimThree(gert::InferShapeContext* context, int64_t groupNum, int64_
     int64_t dim1 = inputXShape->GetDim(1);
     int64_t dim2 = inputXShape->GetDim(SHAPE_INDEX_TWO);
 
-    OP_LOGD(
-        context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld",
-        Ops::Base::ToString(*inputXShape).c_str(), rowBlockSize, colBlockSize);
+    OP_LOGD(context, "GroupedDynamicBlockQuant input shape is [%s], rowBlockSize is %ld, colBlockSize is %ld",
+            Ops::Base::ToString(*inputXShape).c_str(), rowBlockSize, colBlockSize);
 
     scaleShape->SetDimNum(INPUT_DIM_THREE);
     if (dim0 == UNKNOWN_DIM_VALUE) {
@@ -139,8 +138,8 @@ ge::graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* c
     } else if (inputXShape->GetDimNum() == INPUT_DIM_THREE) {
         SetShapeDimThree(context, groupNum, *rowBlockSize, *colBlockSize);
     } else {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(inputXShape->GetDimNum()), "The shape dim of x must be within the range [2, 3]");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(inputXShape->GetDimNum()),
+                                                 "The shape dim of x must be within the range [2, 3]");
         return ge::GRAPH_FAILED;
     }
 

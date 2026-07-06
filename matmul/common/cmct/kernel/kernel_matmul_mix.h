@@ -65,9 +65,9 @@ public:
     static constexpr int64_t l1N = BlockMmadBuilder::l1N;
     static constexpr int64_t l1K = BlockMmadBuilder::l1K;
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-            typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA, transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using TileCopyParam = typename BlockMmadBuilder::TileCopyParam;
@@ -115,12 +115,12 @@ public:
         Params() = default;
     };
 
-    __aicore__ inline static TupleShape ToShapeTuple(ProblemShape const &shape)
+    __aicore__ inline static TupleShape ToShapeTuple(ProblemShape const& shape)
     {
         return {shape.m, shape.n, shape.k, shape.b};
     }
 
-    __aicore__ inline void Init(Params const &params)
+    __aicore__ inline void Init(Params const& params)
     {
         problemShape_ = ToShapeTuple(params.problemShape);
         blockMmadParams_ = params.mmadParams;
@@ -128,15 +128,15 @@ public:
         int64_t n = Get<MNK_N>(problemShape_);
         int64_t k = Get<MNK_K>(problemShape_);
         // Init Tensor
-        InitGlobalTensorA<NDLayout, AGlobalTensorType, ATensorTrait, AType>(
-            aGlobal_, blockMmadParams_.aGmAddr, transA, m, k);
-        InitGlobalTensorB<NDLayout, BGlobalTensorType, BTensorTrait, BType>(
-            bGlobal_, blockMmadParams_.bGmAddr, transB, n, k);
-        InitGlobalTensorC<NDLayout, YGlobalTensorType, YTensorTrait, YType>(
-            yGlobal_, params.epilogueParams.outGmAddr, m, n);
+        InitGlobalTensorA<NDLayout, AGlobalTensorType, ATensorTrait, AType>(aGlobal_, blockMmadParams_.aGmAddr, transA,
+                                                                            m, k);
+        InitGlobalTensorB<NDLayout, BGlobalTensorType, BTensorTrait, BType>(bGlobal_, blockMmadParams_.bGmAddr, transB,
+                                                                            n, k);
+        InitGlobalTensorC<NDLayout, YGlobalTensorType, YTensorTrait, YType>(yGlobal_, params.epilogueParams.outGmAddr,
+                                                                            m, n);
     }
 
-    __host_aicore__ static Status CheckShape(ProblemShape const &shape)
+    __host_aicore__ static Status CheckShape(ProblemShape const& shape)
     {
         int64_t m = shape.m;
         int64_t n = shape.n;
@@ -150,24 +150,24 @@ public:
             return Status::mnkErrorExceedsLimit;
         }
         // Check matrix size exceeds limit
-        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) {  // mk matrix k limit
+        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // mk matrix k limit
             return Status::mkErrorMatrixExceedsLimit;
         }
 
-        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) {  // km matrix m limit
+        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) { // km matrix m limit
             return Status::kmErrorMatrixExceedsLimit;
         }
-        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) {  // kn matrix n limit
+        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) { // kn matrix n limit
             return Status::knErrorMatrixExceedsLimit;
         }
 
-        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) {  // nk matrix k limit
+        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // nk matrix k limit
             return Status::nkErrorMatrixExceedsLimit;
         }
         return Status::success;
     }
 
-    __host_aicore__ static Status CanImplement(Arguments const &args)
+    __host_aicore__ static Status CanImplement(Arguments const& args)
     {
         // Check shape in kernel
         CHECK_AND_RETURN(CheckShape(args.problemShape));
@@ -192,7 +192,7 @@ public:
         return workSpaceSize;
     }
 
-    __host_aicore__ static Params InitParams(Arguments const &args, GM_ADDR workspace)
+    __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR workspace)
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
@@ -203,12 +203,9 @@ public:
         return params;
     }
 
-    static int64_t GetBlockNum(ProblemShape shape)
-    {
-        return BlockSchedulerOp::GetBlockNum(shape);
-    }
+    static int64_t GetBlockNum(ProblemShape shape) { return BlockSchedulerOp::GetBlockNum(shape); }
 
-    __aicore__ inline void operator()(Params const &params)
+    __aicore__ inline void operator()(Params const& params)
     {
         // Instantiate mmadOp and epilogueOp
         BlockMmadOp blockMmadOp;
@@ -216,8 +213,8 @@ public:
         // Get blockIdx
         int64_t curBlockIdx = AscendC::GetBlockIdx();
         int64_t blockNum = AscendC::GetBlockNum();
-        bool enable2UB =
-            AscendC::Std::is_same_v<TileCopyParam, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>>;
+        bool enable2UB = AscendC::Std::is_same_v<TileCopyParam,
+                                                 Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>>;
         if ASCEND_IS_AIV {
             if (!enable2UB && AscendC::GetSubBlockIdx() > 0) {
                 return;
@@ -257,11 +254,10 @@ public:
                 // Synchronize with aiv
                 if (enableCVSync) {
                     count_id = count / COUNT_ID_MAX % COUNT_FLAG;
-                    AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                        AIV_SYNC_AIC_FLAG + count_id);
+                    AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + count_id);
                     if (enable2UB) {
-                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                            AIV_SYNC_AIC_FLAG + count_id + FLAG_ID_MAX);
+                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + count_id +
+                                                                                  FLAG_ID_MAX);
                     }
                 }
                 auto aGlobalT = aGlobal_[offsetA];
@@ -272,11 +268,10 @@ public:
                 enableCVSync = true;
                 count++;
                 count_id = count / COUNT_ID_MAX % COUNT_FLAG;
-                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                    AIC_SYNC_AIV_FLAG + count_id);
+                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + count_id);
                 if (enable2UB) {
-                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                        AIC_SYNC_AIV_FLAG + count_id+ FLAG_ID_MAX);
+                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + count_id +
+                                                                             FLAG_ID_MAX);
                 }
             }
             // AIV Process
@@ -284,24 +279,21 @@ public:
                 // Synchronize with aic
                 count++;
                 count_id = count / COUNT_ID_MAX % COUNT_FLAG;
-                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(
-                    AIC_SYNC_AIV_FLAG + count_id);
+                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + count_id);
                 // Calulate epilogue
                 epilogueOp(blockShape, offsetC, enable2UB);
                 // Notify aic
-                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(
-                    AIV_SYNC_AIC_FLAG + count_id);
+                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG + count_id);
             }
         }
         // Match extra event after aic process finished
         if ASCEND_IS_AIC {
             if (enableCVSync) {
                 count_id = count / COUNT_ID_MAX % COUNT_FLAG;
-                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                    AIV_SYNC_AIC_FLAG + count_id);
+                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + count_id);
                 if (enable2UB) {
-                    AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                        AIV_SYNC_AIC_FLAG + count_id + FLAG_ID_MAX);
+                    AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + count_id +
+                                                                              FLAG_ID_MAX);
                 }
             }
         }
@@ -311,4 +303,3 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

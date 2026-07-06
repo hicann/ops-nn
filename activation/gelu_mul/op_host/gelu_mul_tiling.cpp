@@ -23,7 +23,6 @@
 
 namespace optiling {
 
-
 constexpr int32_t UB_SIZE = 192 * 1024;
 constexpr int32_t ONE_BLOCK_SIZE = 32;
 constexpr int32_t ERF_BUF_NUM = 8;
@@ -58,7 +57,8 @@ private:
     int32_t PPMaxCalNum = 0;
     const int32_t workspaceSize_ = SIZE_16 * LENGTH_1024 * LENGTH_1024;
 
-    inline int32_t CeilA2B(const int32_t a, const int32_t b) {
+    inline int32_t CeilA2B(const int32_t a, const int32_t b)
+    {
         if (b != 0) {
             return (a + b - 1) / b;
         } else {
@@ -66,7 +66,8 @@ private:
         }
     }
 
-    int32_t GetNeedCoreNum(const int32_t coreNumPlatform) {
+    int32_t GetNeedCoreNum(const int32_t coreNumPlatform)
+    {
         int32_t needCoreNum = 1;
         if (lastDimSize / SIZE_2 > PPMaxCalNum) {
             needCoreNum = batchSize;
@@ -87,23 +88,24 @@ private:
     }
 };
 
-ge::graphStatus GeluMulTiling::ShapeCheck() {
+ge::graphStatus GeluMulTiling::ShapeCheck()
+{
     OP_CHECK_IF((lastDimSize > LENGTH_1024),
-        OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be no more than 1024."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be no more than 1024."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((lastDimSize % SIZE_2 == 1),
-        OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be even."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize % SIZE_2 == 1), OP_LOGE(tilingContext->GetNodeName(), "Last dim size should be even."),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((batchSize > LENGTH_LIMIT),
-        OP_LOGE(tilingContext->GetNodeName(), "Batch dim size should be no more than 200000."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "Batch dim size should be no more than 200000."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GeluMulTiling::RunBigKernelTiling() {
+ge::graphStatus GeluMulTiling::RunBigKernelTiling()
+{
     // 获取输入矩阵
     auto srcTensor = tilingContext->GetInputTensor(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, srcTensor);
@@ -121,21 +123,20 @@ ge::graphStatus GeluMulTiling::RunBigKernelTiling() {
         PPMaxCalNum = UB_SIZE / TANH_BUF_NUM / static_cast<int32_t>(sizeof(float));
     }
     OP_CHECK_IF((approximate != "none" && approximate != "tanh"),
-        OP_LOGE(tilingContext->GetNodeName(), "Approximate can only be 'tanh' or 'none'."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "Approximate can only be 'tanh' or 'none'."),
+                return ge::GRAPH_FAILED);
     FillTilingKey();
     // 获取输入的shape
     auto srcShape = tilingContext->GetInputShape(0);
     inputShape = srcShape->GetOriginShape();
     size_t inputShapeDim = inputShape.GetDimNum();
     OP_CHECK_IF((inputShapeDim < static_cast<size_t>(SIZE_2)),
-        OP_LOGE(tilingContext->GetNodeName(), "Input shape dim should be no less than 2."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "Input shape dim should be no less than 2."),
+                return ge::GRAPH_FAILED);
     lastDimSize = inputShape.GetDim(inputShapeDim - 1);
     inputShapeSize = inputShape.GetShapeSize();
-    OP_CHECK_IF((lastDimSize == 0),
-        OP_LOGE(tilingContext->GetNodeName(), "Last dim elements can not be zero."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((lastDimSize == 0), OP_LOGE(tilingContext->GetNodeName(), "Last dim elements can not be zero."),
+                return ge::GRAPH_FAILED);
 
     batchSize = inputShapeSize / lastDimSize;
 
@@ -144,9 +145,8 @@ ge::graphStatus GeluMulTiling::RunBigKernelTiling() {
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = static_cast<size_t>(workspaceSize_);
-    OP_CHECK_IF((ShapeCheck() == ge::GRAPH_FAILED),
-        OP_LOGE(tilingContext->GetNodeName(), "ShapeCheck failed!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ShapeCheck() == ge::GRAPH_FAILED), OP_LOGE(tilingContext->GetNodeName(), "ShapeCheck failed!"),
+                return ge::GRAPH_FAILED);
     tilingData.set_lastDimSize(lastDimSize);
     tilingData.set_batchSize(batchSize);
     tilingData.set_approximateMode(approximateMode);
@@ -161,7 +161,8 @@ ge::graphStatus GeluMulTiling::RunBigKernelTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GeluMulTiling::FillTilingKey() {
+ge::graphStatus GeluMulTiling::FillTilingKey()
+{
     // 获取数据类型
     auto temp = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, temp);
@@ -183,16 +184,16 @@ ge::graphStatus GeluMulTiling::FillTilingKey() {
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4GeluMulTiling([[maybe_unused]] gert::TilingParseContext* context) {
+static ge::graphStatus TilingPrepare4GeluMulTiling([[maybe_unused]] gert::TilingParseContext* context)
+{
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingGeluMulTiling(gert::TilingContext* context) {
+static ge::graphStatus TilingGeluMulTiling(gert::TilingContext* context)
+{
     GeluMulTiling tilingObject(context);
     return tilingObject.RunBigKernelTiling();
 }
 
-IMPL_OP_OPTILING(GeluMul)
-    .Tiling(TilingGeluMulTiling)
-    .TilingParse<GeluMulCompileInfo>(TilingPrepare4GeluMulTiling);
-}
+IMPL_OP_OPTILING(GeluMul).Tiling(TilingGeluMulTiling).TilingParse<GeluMulCompileInfo>(TilingPrepare4GeluMulTiling);
+} // namespace optiling

@@ -26,8 +26,7 @@
 #define INFINITY (__builtin_inff())
 #endif
 
-namespace LogSoftmaxV2Ops
-{
+namespace LogSoftmaxV2Ops {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 using namespace SoftmaxV2Ops;
@@ -62,8 +61,7 @@ constexpr uint32_t ROW_SIX_OFFSET = 6;
 constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 
 template <typename T1, typename T2>
-class LogSoftmaxV2ARA
-{
+class LogSoftmaxV2ARA {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
 
@@ -74,10 +72,7 @@ class LogSoftmaxV2ARA
 public:
     __aicore__ inline LogSoftmaxV2ARA(){};
 
-    __aicore__ inline LogSoftmaxV2ARA(const SoftmaxV2ARATilingData* tilingDataIn)
-    {
-        tilingData_ = tilingDataIn;
-    }
+    __aicore__ inline LogSoftmaxV2ARA(const SoftmaxV2ARATilingData* tilingDataIn) { tilingData_ = tilingDataIn; }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, TPipe* pipeIn)
     {
@@ -106,8 +101,8 @@ public:
             int64_t curA0Idx = curIdx % tilingData_->a0Outer;
             int64_t curA1Idx = curIdx / tilingData_->a0Outer;
 
-            uint32_t curTileA0Len =
-                curA0Idx == (tilingData_->a0Outer - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len;
+            uint32_t curTileA0Len = curA0Idx == (tilingData_->a0Outer - 1) ? tilingData_->tileA0Tail :
+                                                                             tilingData_->tileA0Len;
 
             int64_t xOffset =
                 // a1 offset
@@ -319,10 +314,10 @@ private:
         uint16_t remainderTailCount = tilingData_->totalRLen - SCALE_COEF_FOUR;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ? validNumInXUb :
+                                                                           remainderOffset + ROW_THREE_OFFSET * aLength;
 
         uint16_t aLoopCount = Ops::Base::CeilDiv(curTileA0Len, VL_FP32);
         __VEC_SCOPE__
@@ -548,7 +543,7 @@ private:
                     // copy out
                     if constexpr (IsSameType<T2, float>::value) {
                         DataCopy(((__local_mem__ float*)yLocal) + xOffset, yReg, pregMask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         RegTensor<T2> xFp16;
                         Cast<T2, float, castTraitFp32ToFp16>(xFp16, yReg, pregMask);
                         DataCopy<T2, StoreDist::DIST_PACK_B32>(((__local_mem__ T2*)yLocal) + xOffset, xFp16, pregMask);
@@ -563,7 +558,7 @@ private:
     {
         if constexpr (IsSameType<T1, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T1> xFp16;
             DataCopy<T1, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T1*)src + offset));
             Cast<float, T1, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -596,6 +591,6 @@ private:
     GlobalTensor<T2> yGm_;
     GlobalTensor<T1> xGm_;
 };
-}  // namespace LogSoftmaxV2Ops
+} // namespace LogSoftmaxV2Ops
 
 #endif

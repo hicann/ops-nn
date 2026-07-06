@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -89,9 +89,8 @@ float bf16_to_float(uint16_t bf16)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请Device侧内存
@@ -109,9 +108,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -200,9 +198,9 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     // aclnnTransposeQuantBatchMatMul接口调用示例
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     // 调用aclnnTransposeQuantBatchMatMul第一段接口
-    ret = aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
-        x1, x2, (const aclTensor*)nullptr, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor,
-        out, &workspaceSize, &executor);
+    ret = aclnnTransposeQuantBatchMatMulGetWorkspaceSize(x1, x2, (const aclTensor*)nullptr, x1Scale, x2Scale, dtype,
+                                                         groupSize, permX1, permX2, permY, batchSplitFactor, out,
+                                                         &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMulGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -223,9 +221,8 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
     std::vector<uint16_t> resultData(size, 0); // bf16
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     float resultDataBF16 = 0;
     for (int64_t i = 0; i < size; i++) {

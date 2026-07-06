@@ -60,18 +60,10 @@ extern "C" {
  * @param executor  [out]    returned op executor.
  * @return aclnnStatus status code.
  */
-ACLNN_API aclnnStatus aclnnApplyFtrlGetWorkspaceSize(
-    aclTensor *varRef,
-    aclTensor *accumRef,
-    aclTensor *linearRef,
-    const aclTensor *grad,
-    const aclTensor *lr,
-    const aclTensor *l1,
-    const aclTensor *l2,
-    const aclTensor *lrPower,
-    bool useLocking,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnApplyFtrlGetWorkspaceSize(aclTensor* varRef, aclTensor* accumRef, aclTensor* linearRef,
+                                                     const aclTensor* grad, const aclTensor* lr, const aclTensor* l1,
+                                                     const aclTensor* l2, const aclTensor* lrPower, bool useLocking,
+                                                     uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief Second phase of aclnnApplyFtrl: execute the computation (var/accum/linear in place).
@@ -82,14 +74,11 @@ ACLNN_API aclnnStatus aclnnApplyFtrlGetWorkspaceSize(
  * @param stream        [in] execution stream.
  * @return aclnnStatus status code.
  */
-ACLNN_API aclnnStatus aclnnApplyFtrl(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnApplyFtrl(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // ACLNN_APPLY_FTRL_H_
+#endif // ACLNN_APPLY_FTRL_H_

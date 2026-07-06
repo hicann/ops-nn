@@ -97,33 +97,32 @@ const aclTensor* View3Das4D(const aclTensor* input, aclOpExecutor* executor)
     return reformatInput;
 }
 
-const aclTensor* ViewCDHWas5D(const aclTensor* input, aclOpExecutor* executor) 
- { 
-     // CDHW -> unsqueeze -> reformat -> NCDHW 
-     // unsqueeze input into 5D 
-     const int64_t dim = 0; // Unsqueeze at dimension 0 
-     auto unsqueezedInput = l0op::UnsqueezeNd(input, dim, executor); 
-     CHECK_RET(unsqueezedInput != nullptr, nullptr); 
-     // reformat to NCDHW 
-     auto reformatInput = l0op::ReFormat(unsqueezedInput, op::Format::FORMAT_NCDHW); 
-     CHECK_RET(reformatInput != nullptr, nullptr); 
- 
-     return reformatInput; 
- } 
- 
- 
-const aclTensor* View5DasCDHW(const aclTensor* input, const op::Format& format, aclOpExecutor* executor) 
- { 
-     // NCDHW -> squeeze -> reformat -> CDHW 
-     // squeeze out into 4D 
-     const int64_t dim = 0; // Squeeze out dimension 0 
-     auto squeezedInput = l0op::SqueezeNd(input, dim, executor); 
-     CHECK_RET(squeezedInput != nullptr, nullptr); 
-     // reformat to CDHW 
-     auto reformatInput = l0op::ReFormat(squeezedInput, format); 
-     CHECK_RET(reformatInput != nullptr, nullptr); 
- 
-     return reformatInput; 
- }
+const aclTensor* ViewCDHWas5D(const aclTensor* input, aclOpExecutor* executor)
+{
+    // CDHW -> unsqueeze -> reformat -> NCDHW
+    // unsqueeze input into 5D
+    const int64_t dim = 0; // Unsqueeze at dimension 0
+    auto unsqueezedInput = l0op::UnsqueezeNd(input, dim, executor);
+    CHECK_RET(unsqueezedInput != nullptr, nullptr);
+    // reformat to NCDHW
+    auto reformatInput = l0op::ReFormat(unsqueezedInput, op::Format::FORMAT_NCDHW);
+    CHECK_RET(reformatInput != nullptr, nullptr);
 
+    return reformatInput;
 }
+
+const aclTensor* View5DasCDHW(const aclTensor* input, const op::Format& format, aclOpExecutor* executor)
+{
+    // NCDHW -> squeeze -> reformat -> CDHW
+    // squeeze out into 4D
+    const int64_t dim = 0; // Squeeze out dimension 0
+    auto squeezedInput = l0op::SqueezeNd(input, dim, executor);
+    CHECK_RET(squeezedInput != nullptr, nullptr);
+    // reformat to CDHW
+    auto reformatInput = l0op::ReFormat(squeezedInput, format);
+    CHECK_RET(reformatInput != nullptr, nullptr);
+
+    return reformatInput;
+}
+
+} // namespace Pool3DCommon

@@ -18,7 +18,7 @@
 #include "register/op_impl_registry.h"
 
 namespace ops {
-static ge::graphStatus InferShape4BinaryCrossEntropyGrad(gert::InferShapeContext *context)
+static ge::graphStatus InferShape4BinaryCrossEntropyGrad(gert::InferShapeContext* context)
 {
     return Ops::Base::InferShape4Elewise(context);
 }

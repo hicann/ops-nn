@@ -37,11 +37,9 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
 __aicore__ inline float SafeDiv(float a, float b)
 {
@@ -59,24 +57,15 @@ __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     return 0;
 }
 
-__aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-{
-    return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-}
+__aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-__aicore__ inline uint32_t TWO_NUMS_MIN(uint32_t x, uint32_t y)
-{
-    return x < y ? x : y;
-}
+__aicore__ inline uint32_t TWO_NUMS_MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-__aicore__ inline uint32_t TWO_NUMS_MAX(uint32_t x, uint32_t y)
-{
-    return x > y ? x : y;
-}
+__aicore__ inline uint32_t TWO_NUMS_MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyEx(
-    const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1, const bool ubAligned = false)
+__aicore__ inline void DataCopyEx(const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
+                                  const bool ubAligned = false)
 {
     DataCopyExtParams copyParams;
     copyParams.blockCount = count;
@@ -122,7 +111,8 @@ __aicore__ inline void ReduceMaxInplace(const LocalTensor<float>& srcLocal, int3
 
     if (likely(repsFp32 > 1)) {
         // 8 is rep stride
-        Max(srcLocal, srcLocal[MultiAddRNDQ::ELEM_PER_REP_FP32], srcLocal, MultiAddRNDQ::ELEM_PER_REP_FP32, repsFp32 - 1, {1, 1, 1, 0, 8, 0});
+        Max(srcLocal, srcLocal[MultiAddRNDQ::ELEM_PER_REP_FP32], srcLocal, MultiAddRNDQ::ELEM_PER_REP_FP32,
+            repsFp32 - 1, {1, 1, 1, 0, 8, 0});
         PipeBarrier<PIPE_V>();
     }
     if (unlikely(remsFp32 > 0)) {
@@ -166,7 +156,8 @@ __aicore__ inline void ReduceSumInplace(const LocalTensor<float>& srcLocal, int3
 
     if (likely(repsFp32 > 1)) {
         // 8 is rep stride
-        Add(srcLocal, srcLocal[MultiAddRNDQ::ELEM_PER_REP_FP32], srcLocal, MultiAddRNDQ::ELEM_PER_REP_FP32, repsFp32 - 1, {1, 1, 1, 0, 8, 0});
+        Add(srcLocal, srcLocal[MultiAddRNDQ::ELEM_PER_REP_FP32], srcLocal, MultiAddRNDQ::ELEM_PER_REP_FP32,
+            repsFp32 - 1, {1, 1, 1, 0, 8, 0});
         PipeBarrier<PIPE_V>();
     }
     if (unlikely(remsFp32 > 0)) {
@@ -179,9 +170,8 @@ __aicore__ inline void ReduceSumInplace(const LocalTensor<float>& srcLocal, int3
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void DivScalarFP32(
-    LocalTensor<float>& dstTensor, LocalTensor<float>& dividendTensor, LocalTensor<float>& tmpTensor,
-    float divisorScalar, uint32_t count)
+__aicore__ inline void DivScalarFP32(LocalTensor<float>& dstTensor, LocalTensor<float>& dividendTensor,
+                                     LocalTensor<float>& tmpTensor, float divisorScalar, uint32_t count)
 {
     uint32_t repsFp32 = count >> 6;                        // 6 is devide 64
     uint32_t offsetsFp32 = count & 0xffffffc0;             // 0xffffffc0 is floor by 64

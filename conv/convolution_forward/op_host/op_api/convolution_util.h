@@ -25,29 +25,29 @@
 
 namespace Ops {
 namespace NN {
-    const bool NAMESPACE_PLACEHOLDER = true;
+const bool NAMESPACE_PLACEHOLDER = true;
 }
-}
+} // namespace Ops
 
 namespace op {
 op::FVector<int64_t> ToFVector(const op::Shape& shapeT);
 std::string FVectorToString(const op::FVector<int64_t>& vec);
-}
+} // namespace op
 
 namespace ConvolutionUtil {
-#define CHECK_PARAM_NULLPTR(entityName, param, paramName)                                                       \
-    do {                                                                                                        \
-        if ((param) == nullptr) {                                                                               \
-            OP_LOGE_FOR_INVALID_VALUE(entityName, paramName, "nullptr", "not nullptr");                         \
-            return ACLNN_ERR_PARAM_NULLPTR;                                                                     \
-        }                                                                                                       \
+#define CHECK_PARAM_NULLPTR(entityName, param, paramName)                               \
+    do {                                                                                \
+        if ((param) == nullptr) {                                                       \
+            OP_LOGE_FOR_INVALID_VALUE(entityName, paramName, "nullptr", "not nullptr"); \
+            return ACLNN_ERR_PARAM_NULLPTR;                                             \
+        }                                                                               \
     } while (0)
 
-template<typename T, typename Converter>
+template <typename T, typename Converter>
 std::string VectorsToString(const std::vector<std::vector<T>>& vecs, Converter converter, size_t skipIdx = -1)
 {
     std::string result = "[";
- 
+
     for (size_t j = 0; j < vecs.size(); ++j) {
         result += "[";
         bool needComma = false;
@@ -74,7 +74,7 @@ std::string GeFormatToString(const ge::Format& geFormat);
 
 std::string GeDtypeToString(const ge::DataType& geDtype);
 
-template<typename T>
+template <typename T>
 std::string IntToString(const T& intValue)
 {
     return std::to_string(intValue);
@@ -96,7 +96,7 @@ struct ConvolutionOpInfo {
 class Conv2DSplitWInfo {
 public:
     void InitConv2DSplitWInfo(const aclTensor* input, const aclTensor* weight, const aclIntArray* stride,
-                            const aclIntArray* padding, const aclIntArray* dilation);
+                              const aclIntArray* padding, const aclIntArray* dilation);
     bool CanSwitchSplitW(const aclTensor* bias, aclTensor* output, int64_t groups, const ConvolutionOpInfo& opInfo);
 
 private:
@@ -124,9 +124,9 @@ private:
     int64_t k0 = 0;
 };
 
-aclnnStatus ChangeConv2dAttrToConv3d(const aclIntArray* &stride, const aclIntArray* &padding,
-                                    const aclIntArray* &dilation, aclOpExecutor* executor);
-aclnnStatus ChangeConv2dInputToConv3d(const aclTensor* &input, const aclTensor* &weight, aclOpExecutor* executor);
+aclnnStatus ChangeConv2dAttrToConv3d(const aclIntArray*& stride, const aclIntArray*& padding,
+                                     const aclIntArray*& dilation, aclOpExecutor* executor);
+aclnnStatus ChangeConv2dInputToConv3d(const aclTensor*& input, const aclTensor*& weight, aclOpExecutor* executor);
 const aclTensor* View4dAs5dForInput(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* View5dAs4dForOutput(const aclTensor* input, aclOpExecutor* executor);
 aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor, bool isPad);
@@ -136,10 +136,11 @@ bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>
 void GetUbSize();
 void GetL1Size();
 bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* input, const aclTensor* weight,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias);
+                    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                    const aclTensor* bias);
 bool CheckL1SizeLimitsDma(uint32_t inputDtypeSize, uint64_t biasL1Size, uint32_t weightDtypeSize, int64_t k0);
 uint64_t Conv2DInferHiL1(uint64_t inputHoL1, uint64_t khDilated, uint64_t hi, uint64_t strideH);
 uint64_t ConvAlignB(uint64_t a, uint64_t b);
 } // namespace ConvolutionUtil
 
-#endif  // OP_API_SRC_CONVOLUTION_UTIL_H
+#endif // OP_API_SRC_CONVOLUTION_UTIL_H

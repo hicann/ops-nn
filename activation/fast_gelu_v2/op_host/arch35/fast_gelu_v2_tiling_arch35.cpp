@@ -24,24 +24,25 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 constexpr int64_t FP32_BYTE_SIZE = 4;
 constexpr int64_t FP16_BYTE_SIZE = 2;
-constexpr int64_t IO_BUF_NUM = 2;          // input + output 队列各 1 块
-constexpr int64_t TMP_BUF_FP32_NUM = 5;    // FP16/BF16 路径 5 块 fp32 中间 buffer
-constexpr int64_t FP32_BUF_NUM_DB = 7;     // FP32 路径双缓冲总块数
-constexpr int64_t FP32_BUF_NUM_SB = 5;     // FP32 路径单缓冲总块数
+constexpr int64_t IO_BUF_NUM = 2;       // input + output 队列各 1 块
+constexpr int64_t TMP_BUF_FP32_NUM = 5; // FP16/BF16 路径 5 块 fp32 中间 buffer
+constexpr int64_t FP32_BUF_NUM_DB = 7;  // FP32 路径双缓冲总块数
+constexpr int64_t FP32_BUF_NUM_SB = 5;  // FP32 路径单缓冲总块数
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -70,11 +71,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, outY);
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
-        OP_LOGE(context, "FastGeluV2: input and output shape size mismatch: x=%ld, y=%ld",
-                inputShapeX.GetShapeSize(), outShapeY.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
+                OP_LOGE(context, "FastGeluV2: input and output shape size mismatch: x=%ld, y=%ld",
+                        inputShapeX.GetShapeSize(), outShapeY.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalIdx = inputShapeX.GetShapeSize();
 
@@ -102,12 +102,12 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context, FastGeluV2Ti
     tiling = context->GetTilingData<FastGeluV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(FastGeluV2TilingData), 0, sizeof(FastGeluV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalcTilingParams(gert::TilingContext* context, FastGeluV2TilingData* tiling,
-    int64_t totalIdx, ge::DataType dataType, int64_t coreNum, uint64_t ubSize)
+static ge::graphStatus CalcTilingParams(gert::TilingContext* context, FastGeluV2TilingData* tiling, int64_t totalIdx,
+                                        ge::DataType dataType, int64_t coreNum, uint64_t ubSize)
 {
     int64_t ubBlockSize = GetUbBlockSize(context);
     bool useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
@@ -124,11 +124,11 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, FastGeluV2
     }
     tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElement), ubBlockSize);
 
-    OP_CHECK_IF(tiling->ubFactor <= 0,
+    OP_CHECK_IF(
+        tiling->ubFactor <= 0,
         OP_LOGE(context, "FastGeluV2: ubFactor is 0 (ubSize=%lu, bytesPerElement=%ld)", ubSize, bytesPerElement),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(tiling->blockFactor <= 0,
-        OP_LOGE(context, "FastGeluV2: blockFactor is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tiling->blockFactor <= 0, OP_LOGE(context, "FastGeluV2: blockFactor is 0"), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(CeilDiv(totalIdx, tiling->blockFactor));
     uint32_t doubleBufferKey = useDoubleBuffer ? 1U : 0U;
@@ -141,19 +141,19 @@ static ge::graphStatus FastGeluV2TilingFunc(gert::TilingContext* context)
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalIdx;
     ge::DataType dataType;
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     FastGeluV2TilingData* tiling = nullptr;
-    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InitTilingData error"),
+                return ge::GRAPH_FAILED);
 
     if (totalIdx == 0) {
         tiling->blockFactor = 1;

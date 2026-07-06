@@ -23,9 +23,9 @@ using namespace ApplyFtrlOp;
 using namespace ApplyFtrlOpTiling;
 
 template <uint64_t schMode>
-__global__ __aicore__ void apply_ftrl(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad,
-                                        GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lr_power,
-                                        GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling) {
+__global__ __aicore__ void apply_ftrl(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr, GM_ADDR l1,
+                                      GM_ADDR l2, GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
+{
     REGISTER_TILING_DEFAULT(ApplyFtrlRegbaseTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyFtrlRegbaseTilingData, tilingData, tiling);
     TPipe pipe;

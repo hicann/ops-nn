@@ -40,26 +40,17 @@ OP_TYPE_REGISTER(ApplyFtrl);
 //   - use_locking is NOT registered as an OpDef attribute (no effect on the math and not
 //     read by tiling/kernel), so OP_ATTR is intentionally omitted to keep the kernel arg
 //     layout (8 in + 1 out + workspace + tiling) intact.
-std::tuple<const aclTensor *, const aclTensor *, const aclTensor *> ApplyFtrl(
-    const aclTensor *varRef,
-    const aclTensor *accumRef,
-    const aclTensor *linearRef,
-    const aclTensor *grad,
-    const aclTensor *lr,
-    const aclTensor *l1,
-    const aclTensor *l2,
-    const aclTensor *lrPower,
-    aclOpExecutor *executor)
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ApplyFtrl(
+    const aclTensor* varRef, const aclTensor* accumRef, const aclTensor* linearRef, const aclTensor* grad,
+    const aclTensor* lr, const aclTensor* l1, const aclTensor* l2, const aclTensor* lrPower, aclOpExecutor* executor)
 {
     L0_DFX(ApplyFtrl, varRef, accumRef, linearRef, grad, lr, l1, l2, lrPower);
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
-        ApplyFtrl,
-        OP_INPUT(varRef, accumRef, linearRef, grad, lr, l1, l2, lrPower),
-        OP_OUTPUT(varRef));
+        ApplyFtrl, OP_INPUT(varRef, accumRef, linearRef, grad, lr, l1, l2, lrPower), OP_OUTPUT(varRef));
     if (retAicore != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyFtrl ADD_TO_LAUNCHER_LIST_AICORE failed.");
     }
-    return std::tuple<const aclTensor *, const aclTensor *, const aclTensor *>(varRef, accumRef, linearRef);
+    return std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(varRef, accumRef, linearRef);
 }
 
-}  // namespace l0op
+} // namespace l0op

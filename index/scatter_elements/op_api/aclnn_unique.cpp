@@ -55,7 +55,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
     op::DataType::DT_BF16};
 
-static int64_t GetTensorElementsNum(const aclTensor* tensor) {
+static int64_t GetTensorElementsNum(const aclTensor* tensor)
+{
     int64_t num = 1;
     auto shape = tensor->GetViewShape();
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
@@ -64,42 +65,47 @@ static int64_t GetTensorElementsNum(const aclTensor* tensor) {
     return num;
 }
 
-static const aclIntArray* GetFlattenShape(const aclTensor* self, aclOpExecutor* executor) {
+static const aclIntArray* GetFlattenShape(const aclTensor* self, aclOpExecutor* executor)
+{
     int64_t valuePerm[1] = {GetTensorElementsNum(self)};
     return executor->AllocIntArray(valuePerm, 1);
 }
 
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut) {
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);  
-  } else {
-    auto supportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_DTYPE_SUPPORT_LIST);
-    // 检查self的数据类型是否在Unique算子的支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
-  }
-  // 检查inverseOut数据类型
-  OP_CHECK_DTYPE_NOT_MATCH(inverseOut, op::DataType::DT_INT64, return false);
-  return true;
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut)
+{
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);
+    } else {
+        auto supportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST,
+                                                 ASCEND910_DTYPE_DTYPE_SUPPORT_LIST);
+        // 检查self的数据类型是否在Unique算子的支持列表内
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+    }
+    // 检查inverseOut数据类型
+    OP_CHECK_DTYPE_NOT_MATCH(inverseOut, op::DataType::DT_INT64, return false);
+    return true;
 }
 
-static bool CheckShapeValid(const aclTensor* self, bool returnInverse, const aclTensor* inverseOut) {
-  // self的数据维度不能超过8
-  OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
-  // self与inverseOut的shape必须保持一致
-  if (returnInverse) {
-    OP_CHECK_SHAPE_NOT_EQUAL(self, inverseOut, return false);
-  }
-  return true;
+static bool CheckShapeValid(const aclTensor* self, bool returnInverse, const aclTensor* inverseOut)
+{
+    // self的数据维度不能超过8
+    OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
+    // self与inverseOut的shape必须保持一致
+    if (returnInverse) {
+        OP_CHECK_SHAPE_NOT_EQUAL(self, inverseOut, return false);
+    }
+    return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* self, bool returnInverse, aclTensor* valueOut, aclTensor* inverseOut) {
-  // 1. 检查输入输出是否为nullptr
-  CHECK_RET(CheckNotNull3Tensor(self, valueOut, inverseOut), ACLNN_ERR_PARAM_NULLPTR);
-  // 2. 检查数据类型
-  CHECK_RET(CheckDtypeValid(self, inverseOut), ACLNN_ERR_PARAM_INVALID);
-  // 3. 检查数据Shape
-  CHECK_RET(CheckShapeValid(self, returnInverse, inverseOut), ACLNN_ERR_PARAM_INVALID);
-  return ACLNN_SUCCESS;
+static aclnnStatus CheckParams(const aclTensor* self, bool returnInverse, aclTensor* valueOut, aclTensor* inverseOut)
+{
+    // 1. 检查输入输出是否为nullptr
+    CHECK_RET(CheckNotNull3Tensor(self, valueOut, inverseOut), ACLNN_ERR_PARAM_NULLPTR);
+    // 2. 检查数据类型
+    CHECK_RET(CheckDtypeValid(self, inverseOut), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查数据Shape
+    CHECK_RET(CheckShapeValid(self, returnInverse, inverseOut), ACLNN_ERR_PARAM_INVALID);
+    return ACLNN_SUCCESS;
 }
 
 static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND_REGBASE = {
@@ -107,17 +113,19 @@ static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND_RE
     op::DataType::DT_UINT64, op::DataType::DT_UINT32,  op::DataType::DT_UINT16, op::DataType::DT_UINT8,
     op::DataType::DT_BF16,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-bool SupportAicore4Unique(const aclTensor* self) {
-    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(), OP_LOGW("Aicore Unique only support arch 3510."),
-             return false);
+bool SupportAicore4Unique(const aclTensor* self)
+{
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(), OP_LOGW("Aicore Unique only support arch 3510."), return false);
     OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND_REGBASE),
              OP_LOGW("Unsupport input dtype for aicore UniqueConsecutive."), return false);
     return true;
 }
 
-aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnInverse, aclTensor* valueOut, aclTensor* inverseOut, aclOpExecutor* executor) {
+aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnInverse, aclTensor* valueOut,
+                                   aclTensor* inverseOut, aclOpExecutor* executor)
+{
     constexpr int64_t NONE_N = 1000;
-    constexpr bool RET_INV_UC = false; 
+    constexpr bool RET_INV_UC = false;
     constexpr bool RET_CNT_UC = false;
 
     // 将多维输入flatten成一维
@@ -139,18 +147,22 @@ aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnI
     aclTensor* dummyInverseOut = nullptr;
     aclTensor* dummyCountsOut = nullptr;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), inverseOut->GetDataType(), Format::FORMAT_ND);
-        dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), inverseOut->GetDataType(), Format::FORMAT_ND);      
+        dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), inverseOut->GetDataType(),
+                                                Format::FORMAT_ND);
+        dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), inverseOut->GetDataType(),
+                                               Format::FORMAT_ND);
     } else {
         dummyInverseOut = executor->AllocTensor(inverseOut->GetStorageShape(), DataType::DT_INT32, Format::FORMAT_ND);
-        dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), DataType::DT_INT32, Format::FORMAT_ND);
+        dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), DataType::DT_INT32,
+                                               Format::FORMAT_ND);
     }
-    auto uniqueConsRet = l0op::UniqueConsecutive(sortedValues, RET_INV_UC, RET_CNT_UC, NONE_N, valueOut, dummyInverseOut, dummyCountsOut, executor);
+    auto uniqueConsRet = l0op::UniqueConsecutive(sortedValues, RET_INV_UC, RET_CNT_UC, NONE_N, valueOut,
+                                                 dummyInverseOut, dummyCountsOut, executor);
     CHECK_RET(uniqueConsRet == ACLNN_SUCCESS, uniqueConsRet);
 
-    //AdjDiff for inverseOut
+    // AdjDiff for inverseOut
     if (returnInverse) {
-        const aclTensor *dimTensor = nullptr;
+        const aclTensor* dimTensor = nullptr;
         int64_t firstDimOf1DTensor = 0;
         dimTensor = executor->ConvertToTensor(&firstDimOf1DTensor, 1, DataType::DT_INT64);
         auto adjDiff = l0op::AdjacentDifference(sortedValues, indicesType, executor);
@@ -158,11 +170,11 @@ aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnI
         auto newData = executor->AllocTensor(sumIdx->GetViewShape(), sumIdx->GetDataType(), sumIdx->GetViewFormat());
         CHECK_RET(newData != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto inverseIdx = l0op::ScatterElements(newData, sortedIndices, sumIdx, 0, "none", executor);
-        
+
         // 将一维inverse indices reshape回原始多维shape
         auto inverseIdxReshape = l0op::Reshape(inverseIdx, selfContiguous->GetViewShape(), executor);
         OP_CHECK_NULL(inverseIdxReshape, return ACLNN_ERR_INNER_NULLPTR);
-        
+
         const aclTensor* viewCopyInverseIdx = nullptr;
         if (Ops::NN::AclnnUtil::IsRegbase()) {
             viewCopyInverseIdx = l0op::ViewCopy(inverseIdxReshape, inverseOut, executor);
@@ -176,54 +188,57 @@ aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnI
 }
 
 aclnnStatus aclnnUniqueGetWorkspaceSize(const aclTensor* self, bool sorted, bool returnInverse, aclTensor* valueOut,
-                                         aclTensor* inverseOut, uint64_t* workspaceSize, aclOpExecutor** executor) {
-  OP_CHECK_COMM_INPUT(workspaceSize, executor);
-  
-  L2_DFX_PHASE_1(aclnnUnique, DFX_IN(self, sorted, returnInverse), DFX_OUT(valueOut, inverseOut));
+                                        aclTensor* inverseOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    L2_DFX_PHASE_1(aclnnUnique, DFX_IN(self, sorted, returnInverse), DFX_OUT(valueOut, inverseOut));
 
-  // 固定写法，参数检查
-  auto ret = CheckParams(self, returnInverse, valueOut, inverseOut);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  // 空tensor在kernel中支持，对标竞品根据算子实际情况补充
-  if (self->IsEmpty()) {
-    // 根据实际支持情况补充
-    *workspaceSize = 0;
-    uniqueExecutor.ReleaseTo(executor);
+    // 固定写法，参数检查
+    auto ret = CheckParams(self, returnInverse, valueOut, inverseOut);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 空tensor在kernel中支持，对标竞品根据算子实际情况补充
+    if (self->IsEmpty()) {
+        // 根据实际支持情况补充
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 固定写法，将输入self转换成连续的tensor
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    if (returnInverse) {
+        auto inverseViewShape = inverseOut->GetViewShape();
+        inverseOut->SetStorageShape(inverseViewShape);
+        inverseOut->SetOriginalShape(inverseViewShape);
+    }
+
+    if (SupportAicore4Unique(selfContiguous)) {
+        auto opRet = ComputeUniqueViaAicore(selfContiguous, returnInverse, valueOut, inverseOut, uniqueExecutor.get());
+        CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        // 调用UniqueWithCountsAndSorting算子
+        auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, valueOut, inverseOut,
+                                                      uniqueExecutor.get());
+        CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    }
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
     return ACLNN_SUCCESS;
-  }
-
-  // 固定写法，将输入self转换成连续的tensor
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  if (returnInverse) {
-    auto inverseViewShape = inverseOut->GetViewShape();
-    inverseOut->SetStorageShape(inverseViewShape);
-    inverseOut->SetOriginalShape(inverseViewShape);
-  }
-
-  if (SupportAicore4Unique(selfContiguous)) {
-    auto opRet = ComputeUniqueViaAicore(selfContiguous, returnInverse, valueOut, inverseOut, uniqueExecutor.get());
-    CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-  } else {
-    // 调用UniqueWithCountsAndSorting算子
-    auto opRet = l0op::UniqueWithCountsAndSorting(selfContiguous, sorted, returnInverse, valueOut, inverseOut, uniqueExecutor.get());
-    CHECK_RET(opRet == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
-  }
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnUnique(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnUnique);
-  // 固定写法，调用框架能力，完成计算
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnUnique(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnUnique);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

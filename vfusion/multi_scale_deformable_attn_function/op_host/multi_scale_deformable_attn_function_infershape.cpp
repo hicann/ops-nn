@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file multi_scale_deformable_attn_function_infershape.cpp
  * \brief
@@ -34,20 +33,20 @@ constexpr size_t INPUT_LOCAT_DIM_1 = 1;
 constexpr size_t OUTPUT_DIM_0 = 0;
 constexpr size_t OUTPUT_DIM_1 = 1;
 constexpr size_t OUTPUT_DIM_2 = 2;
-}  // namespace
+} // namespace
 
 namespace ops {
-static ge::graphStatus InferShapeForMultiScaleDeformableAttnFunction(gert::InferShapeContext *context)
+static ge::graphStatus InferShapeForMultiScaleDeformableAttnFunction(gert::InferShapeContext* context)
 {
-    const gert::Shape *valueShape = context->GetInputShape(INPUT_VALUE_INDEX);
+    const gert::Shape* valueShape = context->GetInputShape(INPUT_VALUE_INDEX);
     if (valueShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    const gert::Shape *samplingLocationsShape = context->GetInputShape(INPUT_LOCAT_INDEX);
+    const gert::Shape* samplingLocationsShape = context->GetInputShape(INPUT_LOCAT_INDEX);
     if (samplingLocationsShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    gert::Shape *yShape = context->GetOutputShape(OUTPUT_Y_INDEX);
+    gert::Shape* yShape = context->GetOutputShape(OUTPUT_Y_INDEX);
     if (yShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
@@ -70,7 +69,8 @@ static ge::graphStatus InferShapeForMultiScaleDeformableAttnFunction(gert::Infer
     if (samplingLocationsShape->GetDim(INPUT_LOCAT_DIM_1) == -1) {
         yShape->SetDim(OUTPUT_DIM_2, samplingLocationsShape->GetDim(INPUT_LOCAT_DIM_1));
     } else {
-        yShape->SetDim(OUTPUT_DIM_2, samplingLocationsShape->GetDim(numHeads) * valueShape->GetDim(INPUT_VALUE_DIM_3)); // 1: dim 2; 3: dim 3
+        yShape->SetDim(OUTPUT_DIM_2, samplingLocationsShape->GetDim(numHeads) *
+                                         valueShape->GetDim(INPUT_VALUE_DIM_3)); // 1: dim 2; 3: dim 3
     }
 
     return GRAPH_SUCCESS;
@@ -83,5 +83,7 @@ static ge::graphStatus InferDataTypeForMultiScaleDeformableAttnFunction(gert::In
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(MultiScaleDeformableAttnFunction).InferShape(InferShapeForMultiScaleDeformableAttnFunction).InferDataType(InferDataTypeForMultiScaleDeformableAttnFunction);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(MultiScaleDeformableAttnFunction)
+    .InferShape(InferShapeForMultiScaleDeformableAttnFunction)
+    .InferDataType(InferDataTypeForMultiScaleDeformableAttnFunction);
+} // namespace ops

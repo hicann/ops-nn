@@ -19,8 +19,8 @@
 
 using namespace AscendC;
 namespace ApplyTopPWithSortedOp {
-constexpr uint16_t FLOAT16_NEG_INF = 0xFC00; // -inf 64512
-constexpr uint16_t BF16_NEG_INF = 0xFF80; // -inf 65408
+constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;    // -inf 64512
+constexpr uint16_t BF16_NEG_INF = 0xFF80;       // -inf 65408
 constexpr int32_t FLOAT32_NEG_INF = 0xFF800000; // -inf -2139095040
 
 constexpr uint32_t BLOCK_BYTES = 32;
@@ -35,10 +35,12 @@ template <typename inputT, typename calT, typename outputT>
 class ApplyTopPWithSorted {
 public:
     __aicore__ inline ApplyTopPWithSorted(){};
-    __aicore__ inline void InitTilingData(
-        const ApplyTopKTopPWithSortedTilingData &__restrict tilingData, GM_ADDR sorted_value, GM_ADDR sorted_indices, GM_ADDR p, GM_ADDR k, GM_ADDR out, GM_ADDR workspace);
-    __aicore__ inline void InitBuffer(TPipe *inputPipe);
+    __aicore__ inline void InitTilingData(const ApplyTopKTopPWithSortedTilingData& __restrict tilingData,
+                                          GM_ADDR sorted_value, GM_ADDR sorted_indices, GM_ADDR p, GM_ADDR k,
+                                          GM_ADDR out, GM_ADDR workspace);
+    __aicore__ inline void InitBuffer(TPipe* inputPipe);
     __aicore__ inline void ProcessTopP();
+
 private:
     __aicore__ inline void ReduceSumWithAddsAndExpImpl(uint32_t loopDataNum);
     // topp func
@@ -52,64 +54,73 @@ private:
     __aicore__ inline void GetSoftMaxRes(uint32_t loopBatch);
     __aicore__ inline void ScatterSingleTask(uint32_t taskIndex);
 
-    __aicore__ inline void SToMTE3Sync() {
+    __aicore__ inline void SToMTE3Sync()
+    {
         event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
         WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
     }
-    __aicore__ inline void VToMTE3Sync() {
+    __aicore__ inline void VToMTE3Sync()
+    {
         event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     }
-    __aicore__ inline void VToMTE2Sync() {
+    __aicore__ inline void VToMTE2Sync()
+    {
         event_t eventIDVToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
         SetFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
         WaitFlag<HardEvent::V_MTE2>(eventIDVToMTE2);
     }
-    __aicore__ inline void MTE3ToSSync() {
+    __aicore__ inline void MTE3ToSSync()
+    {
         event_t eventIDMTE3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
         SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
         WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
     }
-    __aicore__ inline void VToSSync() {
+    __aicore__ inline void VToSSync()
+    {
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
     }
-    __aicore__ inline void SToVSync() {
+    __aicore__ inline void SToVSync()
+    {
         event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventIdSToV);
         WaitFlag<HardEvent::S_V>(eventIdSToV);
     }
-    __aicore__ inline void MTE2ToVSync() {
+    __aicore__ inline void MTE2ToVSync()
+    {
         event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     }
-    __aicore__ inline void MTE2ToSSync() {
+    __aicore__ inline void MTE2ToSSync()
+    {
         event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
         WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
     }
 
-    __aicore__ inline void MTE3ToMTE2Sync() {
+    __aicore__ inline void MTE3ToMTE2Sync()
+    {
         event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
     }
 
-    __aicore__ inline void MTE3ToVSync() {
+    __aicore__ inline void MTE3ToVSync()
+    {
         event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
     }
 
-    __aicore__ inline uint32_t CeilDiv(uint32_t x, uint32_t y) {
-        return y == 0 ? x : (x + y - 1) / y;
-    }
+    __aicore__ inline uint32_t CeilDiv(uint32_t x, uint32_t y) { return y == 0 ? x : (x + y - 1) / y; }
+
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     TBuf<TPosition::VECCALC> calBuf_;
 
     // tilingData
@@ -132,7 +143,7 @@ private:
     uint32_t lineSfLoopTimes = 1;
     uint32_t softmaxLengthTail = 1;
     uint32_t scatterLength = 1;
-    
+
     uint32_t singleCoreB = 0;
     uint32_t singleCoreBTail = 0;
     uint32_t vCnt = 0;
@@ -149,14 +160,14 @@ private:
     GlobalTensor<float> softMaxGm;
 
     LocalTensor<uint8_t> totalUb;
-    
+
     // softmax tensor
     LocalTensor<float> softMaxLocalFp32;
     LocalTensor<inputT> softMaxLocal;
     LocalTensor<float> softMaxResLocal;
     LocalTensor<float> reduceLocal;
     LocalTensor<inputT> outInfLocal;
-    
+
     // cumsum tensor
     LocalTensor<float> cumSumInput1Local;
     LocalTensor<float> cumSumInput2Local;
@@ -178,8 +189,9 @@ private:
 
 template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::InitTilingData(
-    const ApplyTopKTopPWithSortedTilingData &__restrict tilingData, GM_ADDR sorted_value, GM_ADDR sorted_indices,
-    GM_ADDR p, GM_ADDR k, GM_ADDR out, GM_ADDR workspace) {
+    const ApplyTopKTopPWithSortedTilingData& __restrict tilingData, GM_ADDR sorted_value, GM_ADDR sorted_indices,
+    GM_ADDR p, GM_ADDR k, GM_ADDR out, GM_ADDR workspace)
+{
     batchSize_ = tilingData.batchSize;
     vocabSize_ = tilingData.vocabSize;
     batchPerCore_ = tilingData.batchPerCore;
@@ -209,17 +221,18 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::InitTilingDat
     singleCoreBTail = 1;
     singleCoreV = vocabSize_ / vCnt;
     singleCoreVTail = vocabSize_ - vCnt * singleCoreV;
-    mGmSortedValue_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT *>(sorted_value));
-    mGmSortedIndices_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t *>(sorted_indices));
-    mGmP_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT *>(p));
-    mGmK_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t *>(k));
-    mGmOut_.SetGlobalBuffer(reinterpret_cast<__gm__ outputT *>(out));
+    mGmSortedValue_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT*>(sorted_value));
+    mGmSortedIndices_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(sorted_indices));
+    mGmP_.SetGlobalBuffer(reinterpret_cast<__gm__ inputT*>(p));
+    mGmK_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(k));
+    mGmOut_.SetGlobalBuffer(reinterpret_cast<__gm__ outputT*>(out));
     softMaxGm.SetGlobalBuffer((__gm__ float*)workspace, batchSize_ * vocabSize_);
 }
 
 // init used buffer
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::InitBuffer(TPipe *inputPipe) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::InitBuffer(TPipe* inputPipe)
+{
     pipe_ = inputPipe;
     pipe_->InitBuffer(calBuf_, calUbSize_);
     totalUb = calBuf_.Get<uint8_t>();
@@ -229,10 +242,10 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::InitBuffer(TP
     softMaxLocal = totalUb[softmaxLengthAligned * sizeof(inputT)].ReinterpretCast<inputT>();
     softMaxResLocal = totalUb[softmaxLengthAligned * sizeof(float)].ReinterpretCast<float>();
     reduceLocal = totalUb[softmaxLengthAligned * sizeof(float) * 2].ReinterpretCast<float>(); // 32 bytes
-    outInfLocal = totalUb.ReinterpretCast<inputT>(); // Take softmax ub
+    outInfLocal = totalUb.ReinterpretCast<inputT>();                                          // Take softmax ub
 
     // cumsum ub
-    cumSumInput1Local = totalUb.ReinterpretCast<float>(); // Take softmax local
+    cumSumInput1Local = totalUb.ReinterpretCast<float>();                                       // Take softmax local
     cumSumInput2Local = totalUb[softmaxLengthAligned * sizeof(float)].ReinterpretCast<float>(); // Take softmax res ub
 
     // scatter ub
@@ -243,7 +256,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::InitBuffer(TP
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetMaxValue(int64_t baseGmIdx) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetMaxValue(int64_t baseGmIdx)
+{
     int64_t initGmIdx = baseGmIdx + vocabSize_ - 1;
     if constexpr (IsSameType<inputT, float>::value) {
         maxValue = -mGmSortedValue_[initGmIdx].GetValue(0);
@@ -255,7 +269,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetMaxValue(i
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetPValue(uint32_t batchOffset) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetPValue(uint32_t batchOffset)
+{
     if constexpr (IsSameType<inputT, float>::value) {
         pValue = float(1.0) - mGmP_[batchOffset].GetValue(0);
     } else if constexpr (IsSameType<inputT, half>::value) {
@@ -266,7 +281,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetPValue(uin
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessPreSingleBatch(uint32_t loopBatch) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessPreSingleBatch(uint32_t loopBatch)
+{
     reduceSumValue = 0;
     GetSoftmaxSum(loopBatch);
     GetSoftMaxRes(loopBatch);
@@ -275,10 +291,11 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessPreSin
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessTopP() {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessTopP()
+{
     for (uint32_t loopBatch = 0; loopBatch < loopBatch_; loopBatch++) {
         baseGmIdx_ = batchOffset_ * vocabSize_ + loopBatch * vocabSize_;
-        GetMaxValue(baseGmIdx_); // Get max value in softmax.
+        GetMaxValue(baseGmIdx_);          // Get max value in softmax.
         ProcessPreSingleBatch(loopBatch); // Softmax and cumsum.
     }
     SyncAll();
@@ -288,7 +305,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ProcessTopP()
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ScatterSingleTask(uint32_t taskIndex) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ScatterSingleTask(uint32_t taskIndex)
+{
     if (GetBlockIdx() == taskIndex % blockNum_) {
         uint32_t bCntIndex = taskIndex / vCnt;
         uint32_t vCntIndex = taskIndex % vCnt;
@@ -300,16 +318,17 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ScatterSingle
         for (uint32_t cpIndex = 0; cpIndex < copyTimes; cpIndex++) {
             uint32_t curCopyLength = cpIndex == (copyTimes - 1) ? copyLengthTail : copyLength;
             int64_t gmOffset = vCntIndex < singleCoreVTail ?
-                bCntIndex * vocabSize_ + vCntIndex * (singleCoreV + 1) + cpIndex * copyLength :
-                bCntIndex * vocabSize_ + vCntIndex * singleCoreV + singleCoreVTail + cpIndex * copyLength;
-            DataCopyPad(cumsumLocal, softMaxGm[gmOffset], 
-                {1, static_cast<uint32_t>(curCopyLength * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-            DataCopyPad(sortedIndicesLocal, mGmSortedIndices_[gmOffset], 
-                {1, static_cast<uint32_t>(curCopyLength * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-            DataCopyPad(sortedValueLocal, mGmSortedValue_[gmOffset], 
-                    {1, static_cast<uint32_t>(curCopyLength * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+                                   bCntIndex * vocabSize_ + vCntIndex * (singleCoreV + 1) + cpIndex * copyLength :
+                                   bCntIndex * vocabSize_ + vCntIndex * singleCoreV + singleCoreVTail +
+                                       cpIndex * copyLength;
+            DataCopyPad(cumsumLocal, softMaxGm[gmOffset],
+                        {1, static_cast<uint32_t>(curCopyLength * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(sortedIndicesLocal, mGmSortedIndices_[gmOffset],
+                        {1, static_cast<uint32_t>(curCopyLength * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(sortedValueLocal, mGmSortedValue_[gmOffset],
+                        {1, static_cast<uint32_t>(curCopyLength * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToSSync();
-            
+
             if (cumsumLocal.GetValue(curCopyLength - 1) <= pValue) {
                 continue;
             }
@@ -317,18 +336,19 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ScatterSingle
             uint32_t scatterNumsTail = curCopyLength - (scatterLoop - 1) * SCATTER_PART_LENGTH;
             for (uint32_t scatterLoopIndex = 0; scatterLoopIndex < scatterLoop; scatterLoopIndex++) {
                 uint32_t curScatterNums = scatterLoopIndex == (scatterLoop - 1) ? scatterNumsTail : SCATTER_PART_LENGTH;
-                if (cumsumLocal.GetValue(scatterLoopIndex * SCATTER_PART_LENGTH +  curScatterNums - 1) <= pValue) {
+                if (cumsumLocal.GetValue(scatterLoopIndex * SCATTER_PART_LENGTH + curScatterNums - 1) <= pValue) {
                     continue;
                 }
                 for (uint32_t scatterIndex = 0; scatterIndex < curScatterNums; scatterIndex++) {
-                    int64_t scatterOffset = scatterLoopIndex * SCATTER_PART_LENGTH +  scatterIndex;
+                    int64_t scatterOffset = scatterLoopIndex * SCATTER_PART_LENGTH + scatterIndex;
                     if (cumsumLocal.GetValue(scatterOffset) <= pValue) {
                         continue;
                     }
                     scatterLocal.SetValue(0, sortedValueLocal.GetValue(scatterOffset));
                     int32_t lineIndex = sortedIndicesLocal.GetValue(scatterOffset);
                     SToMTE3Sync();
-                    DataCopyPad(mGmOut_[bCntIndex * vocabSize_ + lineIndex], scatterLocal.template ReinterpretCast<outputT>(),
+                    DataCopyPad(mGmOut_[bCntIndex * vocabSize_ + lineIndex],
+                                scatterLocal.template ReinterpretCast<outputT>(),
                                 {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
                     MTE3ToSSync();
                 }
@@ -337,7 +357,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ScatterSingle
     }
 }
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftMaxRes(uint32_t loopBatch) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftMaxRes(uint32_t loopBatch)
+{
     uint32_t loopDataNum = softmaxLength;
     for (int32_t loopInner = 0; loopInner < lineSfLoopTimes; loopInner++) {
         int64_t currentGmIdx = baseGmIdx_ + loopInner * softmaxLength;
@@ -346,15 +367,13 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftMaxRes
         }
         if constexpr (!IsSameType<inputT, float>::value) {
             DataCopyPad(softMaxLocal, mGmSortedValue_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0},
-                    {false, 0, 0, 0});
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
             Cast(softMaxLocalFp32, softMaxLocal, RoundMode::CAST_NONE, loopDataNum);
             PipeBarrier<PIPE_V>();
         } else {
             DataCopyPad(softMaxLocalFp32, mGmSortedValue_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0},
-                    {false, 0, 0, 0});
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
         }
         Adds(softMaxResLocal, softMaxLocalFp32, maxValue, loopDataNum);
@@ -371,7 +390,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftMaxRes
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CumsumKoggleStone(uint32_t loopBatch) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CumsumKoggleStone(uint32_t loopBatch)
+{
     uint32_t loopDataNum = softmaxLength;
     for (uint32_t iterateTime = 0; iterateTime < iterateTimes; iterateTime++) {
         int64_t iteratOffset = 1;
@@ -383,30 +403,30 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CumsumKoggleS
         uint32_t dataTail = addLength - innerLoopNum * softmaxLength;
         loopDataNum = softmaxLength;
         for (uint32_t innerLoopIdx = 0; innerLoopIdx < innerLoopNum; innerLoopIdx++) {
-             // Copy data from right
+            // Copy data from right
             int64_t loopInnerOffset = dataTail + (innerLoopNum - 1 - innerLoopIdx) * softmaxLength;
-            DataCopyPad(cumSumInput1Local, softMaxGm[baseGmIdx_ + loopInnerOffset], 
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-            DataCopyPad(cumSumInput2Local, softMaxGm[baseGmIdx_ + loopInnerOffset + iteratOffset], 
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(cumSumInput1Local, softMaxGm[baseGmIdx_ + loopInnerOffset],
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(cumSumInput2Local, softMaxGm[baseGmIdx_ + loopInnerOffset + iteratOffset],
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
             Add(cumSumInput1Local, cumSumInput1Local, cumSumInput2Local, loopDataNum);
             VToMTE3Sync();
-            DataCopyPad(softMaxGm[baseGmIdx_ + loopInnerOffset + iteratOffset], cumSumInput1Local, 
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0});
+            DataCopyPad(softMaxGm[baseGmIdx_ + loopInnerOffset + iteratOffset], cumSumInput1Local,
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0});
             MTE3ToMTE2Sync();
         }
         if (dataTail > 0) {
             loopDataNum = dataTail;
-            DataCopyPad(cumSumInput1Local, softMaxGm[baseGmIdx_], 
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-            DataCopyPad(cumSumInput2Local, softMaxGm[baseGmIdx_ + iteratOffset], 
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(cumSumInput1Local, softMaxGm[baseGmIdx_],
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(cumSumInput2Local, softMaxGm[baseGmIdx_ + iteratOffset],
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
             Add(cumSumInput1Local, cumSumInput1Local, cumSumInput2Local, loopDataNum);
             VToMTE3Sync();
-            DataCopyPad(softMaxGm[baseGmIdx_ + iteratOffset], cumSumInput1Local, 
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0});
+            DataCopyPad(softMaxGm[baseGmIdx_ + iteratOffset], cumSumInput1Local,
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(float)), 0, 0, 0});
             MTE3ToMTE2Sync();
         }
     }
@@ -414,10 +434,11 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CumsumKoggleS
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CopyOutLastValue(uint32_t loopBatch) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CopyOutLastValue(uint32_t loopBatch)
+{
     int64_t lastValueOffset = (static_cast<int64_t>(batchOffset_) + loopBatch + 1) * vocabSize_ - 1;
-    DataCopyPad(scatterLocal, mGmSortedValue_[lastValueOffset],
-                {1, static_cast<uint32_t>(sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
+    DataCopyPad(scatterLocal, mGmSortedValue_[lastValueOffset], {1, static_cast<uint32_t>(sizeof(inputT)), 0, 0, 0},
+                {false, 0, 0, 0});
     MTE2ToSSync();
     int32_t lineIndex = mGmSortedIndices_.GetValue(lastValueOffset);
     SToMTE3Sync();
@@ -427,8 +448,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::CopyOutLastVa
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ReduceSumWithAddsAndExpImpl(
-    uint32_t loopDataNum) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ReduceSumWithAddsAndExpImpl(uint32_t loopDataNum)
+{
     Adds(softMaxResLocal, softMaxLocalFp32, maxValue, loopDataNum);
     PipeBarrier<PIPE_V>();
     Exp(softMaxResLocal, softMaxResLocal, loopDataNum);
@@ -437,7 +458,8 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::ReduceSumWith
 }
 
 template <typename inputT, typename calT, typename outputT>
-__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftmaxSum(uint32_t loopBatch) {
+__aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftmaxSum(uint32_t loopBatch)
+{
     uint32_t loopDataNum = softmaxLength;
     for (int32_t loopInner = 0; loopInner < lineSfLoopTimes; loopInner++) {
         int64_t currentGmIdx = baseGmIdx_ + loopInner * softmaxLength;
@@ -457,15 +479,13 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftmaxSum
         MTE3ToMTE2Sync();
         if constexpr (!IsSameType<inputT, float>::value) {
             DataCopyPad(softMaxLocal, mGmSortedValue_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0},
-                    {false, 0, 0, 0});
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
             Cast(softMaxLocalFp32, softMaxLocal, RoundMode::CAST_NONE, loopDataNum);
             PipeBarrier<PIPE_V>();
         } else {
             DataCopyPad(softMaxLocalFp32, mGmSortedValue_[currentGmIdx],
-                    {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0},
-                    {false, 0, 0, 0});
+                        {1, static_cast<uint32_t>(loopDataNum * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             MTE2ToVSync();
         }
 
@@ -478,6 +498,6 @@ __aicore__ inline void ApplyTopPWithSorted<inputT, calT, outputT>::GetSoftmaxSum
     reduceSumValueInvert = 1 / reduceSumValue;
     SToVSync();
 }
-} // namespace
+} // namespace ApplyTopPWithSortedOp
 
 #endif // APPLY_TOP_P_WITH_SORTED_H_KERNEL

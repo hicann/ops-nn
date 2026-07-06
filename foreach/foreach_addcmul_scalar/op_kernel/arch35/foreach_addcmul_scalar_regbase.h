@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -35,9 +36,8 @@ public:
     using Base = ForeachRegbaseTernary<T, Tiling, ForeachAddcmulScalarRegbase<T, ScalarT, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachAddcmulScalarRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-        const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalar, GM_ADDR outputs,
+                                GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(inputs, tensor1, tensor2, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ ScalarT*)scalar, 1);
@@ -48,9 +48,8 @@ public:
         }
     }
 
-    __aicore__ inline void Compute(
-        LocalTensor<T> inLocal, LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal, LocalTensor<T> outLocal,
-        int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T> inLocal, LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal,
+                                   LocalTensor<T> outLocal, int64_t dataCount)
     {
         // input + scalar * tensor1 * tensor2
         __local_mem__ T* inUbAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
@@ -67,8 +66,8 @@ public:
         __VEC_SCOPE__
         {
             MaskReg maskReg;
-            if constexpr (
-                IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value || IsSameType<T, float>::value) {
+            if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value ||
+                          IsSameType<T, float>::value) {
                 RegTensor<float> inRegToFloat;
                 RegTensor<float> tensorOneRegToFloat;
                 RegTensor<float> tensorTwoRegToFloat;

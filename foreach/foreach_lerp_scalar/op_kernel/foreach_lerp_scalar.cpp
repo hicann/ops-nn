@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file foreach_lerp_scalar.cpp
  * \brief
@@ -18,8 +17,8 @@
 
 using namespace ForeachLerpScalar;
 
-extern "C" __global__ __aicore__ void foreach_lerp_scalar(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_lerp_scalar(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y,
+                                                          GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

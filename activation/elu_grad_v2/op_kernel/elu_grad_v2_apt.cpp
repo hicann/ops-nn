@@ -25,62 +25,61 @@ using namespace Ops::Base;
 using namespace EluGradV2Op;
 using namespace EluGradV2Ns;
 
-template<uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void elu_grad_v2(GM_ADDR grads, GM_ADDR activations, GM_ADDR y,
-                            GM_ADDR workspace, GM_ADDR tiling) 
+template <uint64_t schMode, uint64_t dType>
+__global__ __aicore__ void elu_grad_v2(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-  REGISTER_TILING_DEFAULT(EluGradV2TilingData);
-  GET_TILING_DATA_WITH_STRUCT(EluGradV2TilingData, tilingData, tiling);
-  KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-  TPipe pipe;
-  if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP16)) {
-    ElementwiseSch<schMode, EluGradV2IsResultOp<half>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-    sch.template SetVar<float, 0>(tilingData.negcoef);
-    sch.template SetVar<float, 1>(tilingData.scale);
-    sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
-    sch.Init(grads, activations, y);
-    sch.Process();
+    REGISTER_TILING_DEFAULT(EluGradV2TilingData);
+    GET_TILING_DATA_WITH_STRUCT(EluGradV2TilingData, tilingData, tiling);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    TPipe pipe;
+    if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP16)) {
+        ElementwiseSch<schMode, EluGradV2IsResultOp<half>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.template SetVar<float, 0>(tilingData.negcoef);
+        sch.template SetVar<float, 1>(tilingData.scale);
+        sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
+        sch.Init(grads, activations, y);
+        sch.Process();
+        return;
+    } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_BF16)) {
+        ElementwiseSch<schMode, EluGradV2IsResultOp<bfloat16_t>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.template SetVar<float, 0>(tilingData.negcoef);
+        sch.template SetVar<float, 1>(tilingData.scale);
+        sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
+        sch.Init(grads, activations, y);
+        sch.Process();
+        return;
+    } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP32)) {
+        ElementwiseSch<schMode, EluGradV2IsResultOp<float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.template SetVar<float, 0>(tilingData.negcoef);
+        sch.template SetVar<float, 1>(tilingData.scale);
+        sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
+        sch.Init(grads, activations, y);
+        sch.Process();
+        return;
+    } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP16_N)) {
+        ElementwiseSch<schMode, EluGradV2NoResultOp<half>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.template SetVar<float, 0>(tilingData.negcoef);
+        sch.template SetVar<float, 1>(tilingData.scale);
+        sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
+        sch.Init(grads, activations, y);
+        sch.Process();
+        return;
+    } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_BF16_N)) {
+        ElementwiseSch<schMode, EluGradV2NoResultOp<bfloat16_t>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.template SetVar<float, 0>(tilingData.negcoef);
+        sch.template SetVar<float, 1>(tilingData.scale);
+        sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
+        sch.Init(grads, activations, y);
+        sch.Process();
+        return;
+    } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP32_N)) {
+        ElementwiseSch<schMode, EluGradV2NoResultOp<float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        sch.template SetVar<float, 0>(tilingData.negcoef);
+        sch.template SetVar<float, 1>(tilingData.scale);
+        sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
+        sch.Init(grads, activations, y);
+        sch.Process();
+        return;
+    }
     return;
-  } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_BF16)) {
-    ElementwiseSch<schMode, EluGradV2IsResultOp<bfloat16_t>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-    sch.template SetVar<float, 0>(tilingData.negcoef);
-    sch.template SetVar<float, 1>(tilingData.scale);
-    sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
-    sch.Init(grads, activations, y);
-    sch.Process();
-    return;
-  } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP32)) {
-    ElementwiseSch<schMode, EluGradV2IsResultOp<float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-    sch.template SetVar<float, 0>(tilingData.negcoef);
-    sch.template SetVar<float, 1>(tilingData.scale);
-    sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
-    sch.Init(grads, activations, y);
-    sch.Process();
-    return;
-  } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP16_N)) {
-    ElementwiseSch<schMode, EluGradV2NoResultOp<half>::OpDag> sch(&(tilingData.baseTiling), &pipe); 
-    sch.template SetVar<float, 0>(tilingData.negcoef);
-    sch.template SetVar<float, 1>(tilingData.scale);
-    sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
-    sch.Init(grads, activations, y);
-    sch.Process();
-    return;
-  } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_BF16_N)) {
-    ElementwiseSch<schMode, EluGradV2NoResultOp<bfloat16_t>::OpDag> sch(&(tilingData.baseTiling), &pipe); 
-    sch.template SetVar<float, 0>(tilingData.negcoef);
-    sch.template SetVar<float, 1>(tilingData.scale);
-    sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
-    sch.Init(grads, activations, y);
-    sch.Process();
-    return;
-  } else if constexpr (dType == static_cast<uint64_t>(EluGradV2_TPL_FP32_N)) {
-    ElementwiseSch<schMode, EluGradV2NoResultOp<float>::OpDag> sch(&(tilingData.baseTiling), &pipe); 
-    sch.template SetVar<float, 0>(tilingData.negcoef);
-    sch.template SetVar<float, 1>(tilingData.scale);
-    sch.template SetVar<float, PLACEHOLDER_INDEX_2>(tilingData.inputScale);
-    sch.Init(grads, activations, y);
-    sch.Process();
-    return;
-  }
-  return;
 }

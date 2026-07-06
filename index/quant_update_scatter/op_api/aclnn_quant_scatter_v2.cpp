@@ -39,11 +39,11 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_UPDATES = {DataT
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_QUANT_SCALES = {DataType::DT_BF16, DataType::DT_FLOAT};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_QUANT_ZERO_POINTS = {
-    DataType::DT_BF16, DataType::DT_INT32};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_QUANT_ZERO_POINTS = {DataType::DT_BF16,
+                                                                                     DataType::DT_INT32};
 
-static inline bool CheckNotNull(
-    const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates, const aclTensor* quantScales)
+static inline bool CheckNotNull(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
+                                const aclTensor* quantScales)
 {
     OP_CHECK_NULL(selfRef, return false);
     OP_CHECK_NULL(indices, return false);
@@ -55,15 +55,15 @@ static inline bool CheckNotNull(
 static inline bool CheckPlatform()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(curArch),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for nprArch %u is not implemented.",
-                static_cast<uint32_t>(curArch)),
-            return false);
+    OP_CHECK(
+        Ops::NN::AclnnUtil::IsRegbase(curArch),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Support for nprArch %u is not implemented.", static_cast<uint32_t>(curArch)),
+        return false);
     return true;
 }
 
-static inline bool CheckDtypeCombineValid(
-    const aclTensor* updates, const aclTensor* quantScales, const aclTensor* quantZeroPoints)
+static inline bool CheckDtypeCombineValid(const aclTensor* updates, const aclTensor* quantScales,
+                                          const aclTensor* quantZeroPoints)
 {
     DataType updatesDtype = updates->GetDataType();
     DataType quantScalesDtype = quantScales->GetDataType();
@@ -73,9 +73,8 @@ static inline bool CheckDtypeCombineValid(
         if (updatesDtype == DataType::DT_FLOAT16 && quantScalesDtype == DataType::DT_FLOAT &&
             quantZeroPointsDtype == DataType::DT_INT32) {
             return true;
-        } else if (
-            updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16 &&
-            quantZeroPointsDtype == DataType::DT_BF16) {
+        } else if (updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16 &&
+                   quantZeroPointsDtype == DataType::DT_BF16) {
             return true;
         } else {
             OP_LOGE(
@@ -92,10 +91,10 @@ static inline bool CheckDtypeCombineValid(
         } else if (updatesDtype == DataType::DT_BF16 && quantScalesDtype == DataType::DT_BF16) {
             return true;
         } else {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "(updates,quantScales) Dtype should be (float16, float) or (bfloat16, bfloat16), but is (%s, %s).",
-                op::ToString(updates->GetDataType()).GetString(), op::ToString(quantScales->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "(updates,quantScales) Dtype should be (float16, float) or (bfloat16, bfloat16), but is (%s, %s).",
+                    op::ToString(updates->GetDataType()).GetString(),
+                    op::ToString(quantScales->GetDataType()).GetString());
             return false;
         }
     }
@@ -107,25 +106,24 @@ static bool CheckRoundMode(const aclTensor* selfRef, const char* roundMode)
     // 检查参数 roundMode 是否合法
     const std::string mode = std::string(roundMode);
     if (dstType == op::DataType::DT_HIFLOAT8) {
-      if (mode != "round" && mode != "hybrid") {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
-        return false;
-      }
+        if (mode != "round" && mode != "hybrid") {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
+            return false;
+        }
     } else {
-      if (mode != "rint") {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['rint'] for float8_e5m2/float8_e4m3fn/int8.", mode.c_str());
-        return false;
-      }
+        if (mode != "rint") {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "check roundMode failed, roundMode[%s] not in ['rint'] for float8_e5m2/float8_e4m3fn/int8.",
+                    mode.c_str());
+            return false;
+        }
     }
     return true;
 }
 
-
-static inline bool CheckDtypeValid(
-    const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates, const aclTensor* quantScales,
-    const aclTensor* quantZeroPoints)
+static inline bool CheckDtypeValid(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
+                                   const aclTensor* quantScales, const aclTensor* quantZeroPoints)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST_SELFREF_REGBASE, return false);
@@ -155,9 +153,8 @@ static inline bool CheckShape(const aclTensor* selfRef, const aclTensor* updates
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates, const aclTensor* quantScales,
-    const aclTensor* quantZeroPoints, const char* roundMode)
+static aclnnStatus CheckParams(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
+                               const aclTensor* quantScales, const aclTensor* quantZeroPoints, const char* roundMode)
 {
     // 1. 检查平台
     CHECK_RET(CheckPlatform(), ACLNN_ERR_PARAM_INVALID);
@@ -176,15 +173,17 @@ static aclnnStatus CheckParams(
 
     return ACLNN_SUCCESS;
 }
-}
-aclnnStatus aclnnInplaceQuantScatterV2GetWorkspaceSize(
-    aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates, const aclTensor* quantScales,
-    const aclTensor* quantZeroPoints, int64_t axis, int64_t quantAxis, int64_t reduction, const char* roundMode,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+} // namespace
+aclnnStatus aclnnInplaceQuantScatterV2GetWorkspaceSize(aclTensor* selfRef, const aclTensor* indices,
+                                                       const aclTensor* updates, const aclTensor* quantScales,
+                                                       const aclTensor* quantZeroPoints, int64_t axis,
+                                                       int64_t quantAxis, int64_t reduction, const char* roundMode,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(
         aclnnInplaceQuantScatterV2,
-        DFX_IN(selfRef, indices, updates, quantScales, quantZeroPoints, axis, quantAxis, reduction, roundMode), DFX_OUT(selfRef));
+        DFX_IN(selfRef, indices, updates, quantScales, quantZeroPoints, axis, quantAxis, reduction, roundMode),
+        DFX_OUT(selfRef));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -241,8 +240,8 @@ aclnnStatus aclnnInplaceQuantScatterV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnInplaceQuantScatterV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnInplaceQuantScatterV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceQuantScatterV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

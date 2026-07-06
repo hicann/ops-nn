@@ -21,38 +21,38 @@
 namespace ge {
 
 /**
-* @brief Performs SwiGLU activation followed by Block FP8, MX FP8, MX FP4, or HiFloat8 quantization.
-*
-* @par Inputs:
-* @li x: Required tensor of type float16 or bfloat16. quant_mode=3 also supports float32. The last dimension
-* is split into two equal parts for SwiGLU and must be divisible by 256.
-* @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result before quantization.
-* @li group_index: Optional int64 tensor. Count-mode group token numbers.
-* @li scale: Optional float32 tensor. Reserved for static quantization modes.
-*
-* @par Attributes:
-* @li dst_type: Optional int. Target quantized dtype. Supports FLOAT8_E4M3FN, FLOAT8_E5M2,
-* FLOAT4_E2M1, FLOAT4_E1M2 and HIFLOAT8. Defaults to FLOAT8_E4M3FN.
-* @li quant_mode: Optional int. 0 means Block FP8 quantization, 1 means MX quantization,
-* 3 means HiFloat8 dynamic quantization. Defaults to 0.
-* @li block_size: Optional int. 0 selects the mode default. Supports 128 for Block FP8 and 32 for MX.
-* Defaults to 0.
-* @li round_scale: Optional bool. MX quantization requires true. Defaults to false.
-* @li clamp_limit: Optional float. Defaults to -1.0 for quant_mode 0/1 and 0.0 for quant_mode 3,
-* both of which disable clamp. If set to a positive value, clamps SwiGLU inputs before activation.
-* @li dst_type_max: Optional float. Maximum finite value used by quant_mode=3 scale calculation.
-* @li output_origin: Optional bool. Writes the pre-quantized SwiGLU result to y_origin when supported.
-* Defaults to false.
-*
-* @par Outputs:
-* @li y: Quantized output tensor. FP8 output shape is input shape with the last dimension halved.
-* FP4 output packs two values in one byte, so its last dimension is input_last_dim / 4.
-* @li y_scale: Scale tensor. float32 for Block FP8 and HiFloat8 dynamic quantization, float8_e8m0 for MX.
-* @li y_origin: SwiGLU result before quantization, with the same dtype as x and last dimension halved.
-*
-* @par Third-party framework compatibility
-* It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
-*/
+ * @brief Performs SwiGLU activation followed by Block FP8, MX FP8, MX FP4, or HiFloat8 quantization.
+ *
+ * @par Inputs:
+ * @li x: Required tensor of type float16 or bfloat16. quant_mode=3 also supports float32. The last dimension
+ * is split into two equal parts for SwiGLU and must be divisible by 256.
+ * @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result before quantization.
+ * @li group_index: Optional int64 tensor. Count-mode group token numbers.
+ * @li scale: Optional float32 tensor. Reserved for static quantization modes.
+ *
+ * @par Attributes:
+ * @li dst_type: Optional int. Target quantized dtype. Supports FLOAT8_E4M3FN, FLOAT8_E5M2,
+ * FLOAT4_E2M1, FLOAT4_E1M2 and HIFLOAT8. Defaults to FLOAT8_E4M3FN.
+ * @li quant_mode: Optional int. 0 means Block FP8 quantization, 1 means MX quantization,
+ * 3 means HiFloat8 dynamic quantization. Defaults to 0.
+ * @li block_size: Optional int. 0 selects the mode default. Supports 128 for Block FP8 and 32 for MX.
+ * Defaults to 0.
+ * @li round_scale: Optional bool. MX quantization requires true. Defaults to false.
+ * @li clamp_limit: Optional float. Defaults to -1.0 for quant_mode 0/1 and 0.0 for quant_mode 3,
+ * both of which disable clamp. If set to a positive value, clamps SwiGLU inputs before activation.
+ * @li dst_type_max: Optional float. Maximum finite value used by quant_mode=3 scale calculation.
+ * @li output_origin: Optional bool. Writes the pre-quantized SwiGLU result to y_origin when supported.
+ * Defaults to false.
+ *
+ * @par Outputs:
+ * @li y: Quantized output tensor. FP8 output shape is input shape with the last dimension halved.
+ * FP4 output packs two values in one byte, so its last dimension is input_last_dim / 4.
+ * @li y_scale: Scale tensor. float32 for Block FP8 and HiFloat8 dynamic quantization, float8_e8m0 for MX.
+ * @li y_origin: SwiGLU result before quantization, with the same dtype as x and last dimension halved.
+ *
+ * @par Third-party framework compatibility
+ * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
+ */
 REG_OP(SwigluGroupQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT}))

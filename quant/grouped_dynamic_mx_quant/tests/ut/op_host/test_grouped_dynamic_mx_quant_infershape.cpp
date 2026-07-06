@@ -28,15 +28,9 @@
 
 class GroupedDynamicMxQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupedDynamicMxQuant SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupedDynamicMxQuant SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupedDynamicMxQuant TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupedDynamicMxQuant TearDown" << std::endl; }
 };
 
 TEST_F(GroupedDynamicMxQuant, GroupedDynamicMxQuant_infershape_case_1)
@@ -73,21 +67,21 @@ TEST_F(GroupedDynamicMxQuant, GroupedDynamicMxQuant_InferDtype_case_1)
         int64_t scaleAlg = 0;
         float dstTypeMax = 0.0;
         auto context_holder = gert::InferDataTypeContextFaker()
-                    .IrInputNum(2)
-                    .NodeIoNum(2, 2)
-                    .NodeInputTd(0, inDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, in2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(1, out2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
-                                {"dst_type", Ops::NN::AnyValue::CreateFrom((int64_t)outDtype)},
-                                {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
-                                {"scale_alg", Ops::NN::AnyValue::CreateFrom(scaleAlg)},
-                                {"dst_type_max", Ops::NN::AnyValue::CreateFrom(dstTypeMax)}})
+                                  .IrInputNum(2)
+                                  .NodeIoNum(2, 2)
+                                  .NodeInputTd(0, inDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, in2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, out2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom((int64_t)outDtype)},
+                                              {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
+                                              {"scale_alg", Ops::NN::AnyValue::CreateFrom(scaleAlg)},
+                                              {"dst_type_max", Ops::NN::AnyValue::CreateFrom(dstTypeMax)}})
 
-                    .InputDataTypes({&inDtype, &in2Dtype})
-                    .OutputDataTypes({&outDtype, &out2Dtype})
-                    .Build();
+                                  .InputDataTypes({&inDtype, &in2Dtype})
+                                  .OutputDataTypes({&outDtype, &out2Dtype})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

@@ -34,12 +34,10 @@ using namespace AscendC;
 constexpr uint32_t THREAD_NUM = 512;
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachTanhSimt(
-    __gm__ T* xPtr, __gm__ T* yPtr, int64_t elemCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanhSimt(__gm__ T* xPtr, __gm__ T* yPtr,
+                                                                              int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(
-             Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
+    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
          idx < static_cast<uint64_t>(elemCount);
          idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
         T val = xPtr[idx];
@@ -47,12 +45,10 @@ inline void OpForeachTanhSimt(
     }
 }
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachTanhHalfSimt(
-    __gm__ half* xPtr, __gm__ half* yPtr, int64_t elemCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanhHalfSimt(__gm__ half* xPtr, __gm__ half* yPtr,
+                                                                                  int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(
-             Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
+    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
          idx < static_cast<uint64_t>(elemCount);
          idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
         half val = xPtr[idx];
@@ -62,12 +58,11 @@ inline void OpForeachTanhHalfSimt(
     }
 }
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachTanhBf16Simt(
-    __gm__ bfloat16_t* xPtr, __gm__ bfloat16_t* yPtr, int64_t elemCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanhBf16Simt(__gm__ bfloat16_t* xPtr,
+                                                                                  __gm__ bfloat16_t* yPtr,
+                                                                                  int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(
-             Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
+    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
          idx < static_cast<uint64_t>(elemCount);
          idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
         bfloat16_t val = xPtr[idx];
@@ -78,8 +73,7 @@ inline void OpForeachTanhBf16Simt(
 }
 
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y, const ForeachTanhTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachTanhTilingData* tilingData)
 {
     ListTensorDesc xList(reinterpret_cast<__gm__ void*>(x));
     ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
@@ -94,14 +88,11 @@ __aicore__ inline void Process(
         __gm__ T* yPtr = yList.GetDataPtr<T>(i);
 
         if constexpr (std::is_same_v<T, float>) {
-            Simt::VF_CALL<OpForeachTanhSimt<float>>(
-                Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+            Simt::VF_CALL<OpForeachTanhSimt<float>>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
         } else if constexpr (std::is_same_v<T, half>) {
-            Simt::VF_CALL<OpForeachTanhHalfSimt>(
-                Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+            Simt::VF_CALL<OpForeachTanhHalfSimt>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
         } else if constexpr (std::is_same_v<T, bfloat16_t>) {
-            Simt::VF_CALL<OpForeachTanhBf16Simt>(
-                Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+            Simt::VF_CALL<OpForeachTanhBf16Simt>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
         }
     }
 }

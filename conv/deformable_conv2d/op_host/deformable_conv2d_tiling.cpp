@@ -46,7 +46,7 @@ constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 
 class DeformableConv2dTiling {
 public:
-    explicit DeformableConv2dTiling(gert::TilingContext *context) : tilingContext(context){};
+    explicit DeformableConv2dTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -64,19 +64,19 @@ private:
     DeformableConv2dTilingData tilingData;
 
     ge::DataType dataType = ge::DT_UNDEFINED;
-    gert::TilingContext *tilingContext = nullptr;
+    gert::TilingContext* tilingContext = nullptr;
     gert::Shape xShape;
     gert::Shape weightShape;
     gert::Shape offsetShape;
     gert::Shape biasShape;
 
-    const gert::RuntimeAttrs *attrs = nullptr;
-    const gert::ContinuousVector *kernelSizePtr = nullptr;
-    const gert::ContinuousVector *stridePtr = nullptr;
-    const gert::ContinuousVector *paddingPtr = nullptr;
-    const gert::ContinuousVector *dilationPtr = nullptr;
-    const int64_t *groups = nullptr;
-    const int64_t *deformableGroups = nullptr;
+    const gert::RuntimeAttrs* attrs = nullptr;
+    const gert::ContinuousVector* kernelSizePtr = nullptr;
+    const gert::ContinuousVector* stridePtr = nullptr;
+    const gert::ContinuousVector* paddingPtr = nullptr;
+    const gert::ContinuousVector* dilationPtr = nullptr;
+    const int64_t* groups = nullptr;
+    const int64_t* deformableGroups = nullptr;
 
     bool hasBias = false;
     uint8_t dataTypeSize = BYTE_LEN_4;
@@ -134,10 +134,10 @@ ge::graphStatus DeformableConv2dTiling::RunBigKernelTiling()
 
     // 预留workspace
     dataTypeSize = GetDataTypeSize();
-    size_t *workspaces = tilingContext->GetWorkspaceSizes(1);
+    size_t* workspaces = tilingContext->GetWorkspaceSizes(1);
     workspaces[0] = (n * outH * outW * kH * kW * inC) * dataTypeSize + WORK_SPACE_SIZE;
 
-    auto compileInfo = static_cast<const DeformableConv2dCompileInfo *>(tilingContext->GetCompileInfo());
+    auto compileInfo = static_cast<const DeformableConv2dCompileInfo*>(tilingContext->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
     int32_t coreNumPlatform = compileInfo->coreNum;
     SplitCore(coreNumPlatform);
@@ -212,8 +212,8 @@ void DeformableConv2dTiling::FillTilingData()
     tilingData.set_groups(*groups);
     tilingData.set_hasBias(hasBias);
 
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 }
 
@@ -232,15 +232,15 @@ ge::graphStatus DeformableConv2dTiling::GetAttrs()
         return ge::GRAPH_FAILED;
     }
 
-    const int64_t *kernelSize = static_cast<const int64_t *>(kernelSizePtr->GetData());
+    const int64_t* kernelSize = static_cast<const int64_t*>(kernelSizePtr->GetData());
     kH = kernelSize[0];
     kW = kernelSize[1];
     if (kH <= 0 || kW <= 0 || kH * kW > MAX_KERNEL_SIZE) {
         return ge::GRAPH_FAILED;
     }
 
-    const int64_t *stride = static_cast<const int64_t *>(stridePtr->GetData());
-    const int64_t *dilation = static_cast<const int64_t *>(dilationPtr->GetData());
+    const int64_t* stride = static_cast<const int64_t*>(stridePtr->GetData());
+    const int64_t* dilation = static_cast<const int64_t*>(dilationPtr->GetData());
     // stride和dilation前两维固定为1
     for (int i = 0; i <= 1; i++) {
         if (stride[i] != 1 || dilation[i] != 1) {
@@ -255,7 +255,7 @@ ge::graphStatus DeformableConv2dTiling::GetAttrs()
         return ge::GRAPH_FAILED;
     }
 
-    const int64_t *padding = static_cast<const int64_t *>(paddingPtr->GetData());
+    const int64_t* padding = static_cast<const int64_t*>(paddingPtr->GetData());
     padTop = padding[INDEX_ZERO];
     padBottom = padding[INDEX_ONE];
     padLeft = padding[INDEX_TWO];
@@ -284,7 +284,8 @@ ge::graphStatus DeformableConv2dTiling::GetShapes()
 
     // weight(outC, kH, kW, inC/groups)
     outC = weightShape.GetDim(INDEX_ZERO);
-    if (weightShape.GetDim(INDEX_ONE) != kH || weightShape.GetDim(INDEX_TWO) != kW || weightShape.GetDim(INDEX_THREE) != inC / *groups) {
+    if (weightShape.GetDim(INDEX_ONE) != kH || weightShape.GetDim(INDEX_TWO) != kW ||
+        weightShape.GetDim(INDEX_THREE) != inC / *groups) {
         return ge::GRAPH_FAILED;
     }
     if (kH * kW * inC / *groups > MAX_MATMUL_K) {
@@ -335,13 +336,13 @@ inline auto DeformableConv2dTiling::CeilA2B(T1 a, T2 b) const -> T1
     return (b != 0) ? (a + b - 1) / b : a;
 }
 
-static ge::graphStatus Tiling4DeformableConv2dTiling(gert::TilingContext *context)
+static ge::graphStatus Tiling4DeformableConv2dTiling(gert::TilingContext* context)
 {
     DeformableConv2dTiling tilingObject(context);
     return tilingObject.RunBigKernelTiling();
 }
 
-static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<DeformableConv2dCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -349,12 +350,12 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext *context)
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAic();
 
     OP_CHECK_IF(compileInfo->coreNum <= 0,
-        OP_LOGE(context->GetNodeName(), "DeformableConv2dTiling GetHardwareInfo Failed"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "DeformableConv2dTiling GetHardwareInfo Failed"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(DeformableConv2d)
     .Tiling(Tiling4DeformableConv2dTiling)
     .TilingParse<DeformableConv2dCompileInfo>(TilingPrepareTiling);
-}  // namespace optiling
+} // namespace optiling

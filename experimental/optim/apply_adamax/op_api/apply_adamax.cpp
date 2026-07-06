@@ -32,50 +32,31 @@ namespace l0op {
 
 OP_TYPE_REGISTER(ApplyAdamax);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static bool IsAiCoreSupport(const aclTensor* var)
-{
-    return CheckType(var->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* var) { return CheckType(var->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
-static const aclTensor* ApplyAdamaxAiCore(
-    const aclTensor* var,
-    const aclTensor* m,
-    const aclTensor* v,
-    const aclTensor* grad,
-    const aclTensor* varOut,
-    const aclTensor* mOut,
-    const aclTensor* vOut,
-    float beta1Power, float lr, float beta1, float beta2, float epsilon,
-    aclOpExecutor* executor)
+static const aclTensor* ApplyAdamaxAiCore(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                          const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
+                                          const aclTensor* vOut, float beta1Power, float lr, float beta1, float beta2,
+                                          float epsilon, aclOpExecutor* executor)
 {
     L0_DFX(ApplyAdamaxAiCore, var, m, v, grad, varOut, mOut, vOut);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdamax,
-        OP_INPUT(var, m, v, grad),
-        OP_OUTPUT(varOut, mOut, vOut),
-        OP_ATTR(beta1Power, lr, beta1, beta2, epsilon));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdamaxAiCore failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdamax, OP_INPUT(var, m, v, grad), OP_OUTPUT(varOut, mOut, vOut),
+                                           OP_ATTR(beta1Power, lr, beta1, beta2, epsilon));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdamaxAiCore failed."), return nullptr);
     return varOut;
 }
 
-ApplyAdamaxOutputs ApplyAdamax(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad,
-    float beta1Power, float lr, float beta1, float beta2, float epsilon,
-    aclOpExecutor* executor)
+ApplyAdamaxOutputs ApplyAdamax(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad,
+                               float beta1Power, float lr, float beta1, float beta2, float epsilon,
+                               aclOpExecutor* executor)
 {
     ApplyAdamaxOutputs emptyResult = {nullptr, nullptr, nullptr};
 
     if (!IsAiCoreSupport(var)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "ApplyAdamax not supported: dtype=%d.",
-                static_cast<int>(var->GetDataType()));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ApplyAdamax not supported: dtype=%d.", static_cast<int>(var->GetDataType()));
         return emptyResult;
     }
 
@@ -85,9 +66,8 @@ ApplyAdamaxOutputs ApplyAdamax(
     const aclTensor* mOut = executor->AllocTensor(varShape, var->GetDataType());
     const aclTensor* vOut = executor->AllocTensor(varShape, var->GetDataType());
 
-    const aclTensor* result = ApplyAdamaxAiCore(var, m, v, grad,
-                                varOut, mOut, vOut,
-                                beta1Power, lr, beta1, beta2, epsilon, executor);
+    const aclTensor* result = ApplyAdamaxAiCore(var, m, v, grad, varOut, mOut, vOut, beta1Power, lr, beta1, beta2,
+                                                epsilon, executor);
     if (result == nullptr) {
         return emptyResult;
     }

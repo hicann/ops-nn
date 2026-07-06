@@ -38,8 +38,8 @@ template <class T>
 inline __aicore__ void InitTilingData(const uint8_t* p_tilingdata, T* tilingdata)
 #else
 template <class T>
-__inline__ __attribute__((always_inline)) __aicore__ void InitTilingData(
-    const __gm__ uint8_t* p_tilingdata, T* tilingdata)
+__inline__ __attribute__((always_inline)) __aicore__ void InitTilingData(const __gm__ uint8_t* p_tilingdata,
+                                                                         T* tilingdata)
 #endif
 {
     memcpy(tilingdata, p_tilingdata, sizeof(QuantMatmulReduceSumTilingData));

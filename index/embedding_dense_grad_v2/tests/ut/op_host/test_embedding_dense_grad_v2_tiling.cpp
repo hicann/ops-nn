@@ -31,14 +31,10 @@ using namespace std;
 using namespace ge;
 
 class EmbeddingDenseGradV2Tiling : public testing::Test {
-  protected:
-    static void SetUpTestCase() {
-        std::cout << "EmbeddingDenseGradV2Tiling SetUp" << std::endl;
-    }
+protected:
+    static void SetUpTestCase() { std::cout << "EmbeddingDenseGradV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "EmbeddingDenseGradV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingDenseGradV2Tiling TearDown" << std::endl; }
 };
 
 // static void InitPlatForm(fe::PlatFormInfos& platFormInfo, const std::string& socVersion)
@@ -54,7 +50,8 @@ class EmbeddingDenseGradV2Tiling : public testing::Test {
 //     }
 // }
 
-TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_0) {
+TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_0)
+{
     std::string op_type("EmbeddingDenseGradV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -79,17 +76,17 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_0) {
     platform_info.Init();
     // compile info
     struct EmbeddingDenseGradV2CompileInfo {
-      int32_t totalCoreNum = 0;
-      uint64_t ubSizePlatForm = 0;
-      bool isRegbase = false;
+        int32_t totalCoreNum = 0;
+        uint64_t ubSizePlatForm = 0;
+        bool isRegbase = false;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -109,24 +106,23 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_0) {
     gert::StorageShape output_shape = {{100, 4096}, {100, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&input_0, &input_1, &input_2})
-          .OutputShapes({&output_shape})
-          .CompileInfo(&compile_info)
-          .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(100)},
-                      {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                      {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-          .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(ws_size)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_0, &input_1, &input_2})
+                      .OutputShapes({&output_shape})
+                      .CompileInfo(&compile_info)
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(100)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -142,7 +138,8 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_0) {
     ASSERT_EQ(tiling_key, 0);
 }
 
-TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_1) {
+TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_1)
+{
     std::string op_type("EmbeddingDenseGradV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -167,17 +164,17 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_1) {
     platform_info.Init();
     // compile info
     struct EmbeddingDenseGradV2CompileInfo {
-      int32_t totalCoreNum = 0;
-      uint64_t ubSizePlatForm = 0;
-      bool isRegbase = false;
+        int32_t totalCoreNum = 0;
+        uint64_t ubSizePlatForm = 0;
+        bool isRegbase = false;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -197,24 +194,23 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_1) {
     gert::StorageShape output_shape = {{100, 4096}, {100, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&input_0, &input_1, &input_2})
-          .OutputShapes({&output_shape})
-          .CompileInfo(&compile_info)
-          .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(100)},
-                      {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                      {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-          .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(ws_size)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_0, &input_1, &input_2})
+                      .OutputShapes({&output_shape})
+                      .CompileInfo(&compile_info)
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(100)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -230,7 +226,8 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_1) {
     ASSERT_EQ(tiling_key, 1);
 }
 
-TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
+TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2)
+{
     std::string op_type("EmbeddingDenseGradV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -255,17 +252,17 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
     platform_info.Init();
     // compile info
     struct EmbeddingDenseGradV2CompileInfo {
-      int32_t totalCoreNum = 0;
-      uint64_t ubSizePlatForm = 0;
-      bool isRegbase = false;
+        int32_t totalCoreNum = 0;
+        uint64_t ubSizePlatForm = 0;
+        bool isRegbase = false;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -285,24 +282,23 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
     gert::StorageShape output_shape = {{100, 256}, {100, 256}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&input_0, &input_1, &input_2})
-          .OutputShapes({&output_shape})
-          .CompileInfo(&compile_info)
-          .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(100)},
-                      {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                      {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-          .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(ws_size)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_0, &input_1, &input_2})
+                      .OutputShapes({&output_shape})
+                      .CompileInfo(&compile_info)
+                      .NodeAttrs({{"num_weights", Ops::NN::AnyValue::CreateFrom<int64_t>(100)},
+                                  {"padding_idx", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"scale_grad_by_freq", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -358,12 +354,14 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //             .Build();
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//     soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//     ge::GRAPH_SUCCESS);
 
 //     // tilingFunc simulate
 //     auto param = gert::TilingData::CreateCap(4096);
@@ -400,7 +398,8 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+//     intrinsics);
 
 //     // workspaces nullptr return failed
 //     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
@@ -458,8 +457,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                           intrinsics);
-//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//   ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//   soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//   ge::GRAPH_SUCCESS);
 
 //   // tilingFunc simulate
 //   auto param = gert::TilingData::CreateCap(4096);
@@ -554,8 +554,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                           intrinsics);
-//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//   ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//   soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//   ge::GRAPH_SUCCESS);
 
 //   // tilingFunc simulate
 //   auto param = gert::TilingData::CreateCap(4096);
@@ -646,12 +647,14 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //             .Build();
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//     soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//     ge::GRAPH_SUCCESS);
 
 //     // tilingFunc simulate
 //     auto param = gert::TilingData::CreateCap(4096);
@@ -688,7 +691,8 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+//     intrinsics);
 
 //     // workspaces nullptr return failed
 //     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
@@ -734,12 +738,14 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //             .Build();
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//     soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//     ge::GRAPH_SUCCESS);
 
 //     // tilingFunc simulate
 //     auto param = gert::TilingData::CreateCap(4096);
@@ -776,7 +782,8 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
 //     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+//     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+//     intrinsics);
 
 //     // workspaces nullptr return failed
 //     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
@@ -826,8 +833,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                           intrinsics);
-//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//   ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//   soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//   ge::GRAPH_SUCCESS);
 
 //   // tilingFunc simulate
 //   auto param = gert::TilingData::CreateCap(4096);
@@ -914,8 +922,9 @@ TEST_F(EmbeddingDenseGradV2Tiling, embedding_dense_grad_v2_tiling_2) {
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                           intrinsics);
-//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
-//   ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+//   kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+//   soc_version_infos); ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()),
+//   ge::GRAPH_SUCCESS);
 
 //   // tilingFunc simulate
 //   auto param = gert::TilingData::CreateCap(4096);

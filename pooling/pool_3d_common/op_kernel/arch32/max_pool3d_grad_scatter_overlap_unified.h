@@ -23,32 +23,28 @@ namespace MaxPool3DGradCommon {
 using namespace AscendC;
 
 // ScatterOverlap的统一实现类
-template <typename TX, typename TGrad, typename TArgmax, typename TY,
-          typename TilingData, typename ParamsType, typename BlockType,
-          template<typename, typename, typename, typename, 
-                   typename, typename, typename> class BaseClass>
-class MaxPool3DGradScatterOverlapUnified : 
-    public BaseClass<TX, TGrad, TArgmax, TY, TilingData, ParamsType, BlockType>
-{
+template <typename TX, typename TGrad, typename TArgmax, typename TY, typename TilingData, typename ParamsType,
+          typename BlockType,
+          template <typename, typename, typename, typename, typename, typename, typename> class BaseClass>
+class MaxPool3DGradScatterOverlapUnified : public BaseClass<TX, TGrad, TArgmax, TY, TilingData, ParamsType, BlockType> {
 private:
     using Base = BaseClass<TX, TGrad, TArgmax, TY, TilingData, ParamsType, BlockType>;
-    
+
     // 类型检查辅助
     template <typename T>
     using IsFloat = std::is_same<T, float>;
-    
+
     template <typename T>
     using IsHalf = std::is_same<T, half>;
-    
+
     template <typename T>
     using IsBFloat16 = std::is_same<T, bfloat16_t>;
-    
+
 public:
     __aicore__ inline MaxPool3DGradScatterOverlapUnified(TPipe* pipe) : Base(pipe) {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
-        const TilingData* __restrict__ tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
+                                const TilingData* __restrict__ tiling)
     {
         // load tiling data
         this->InitParams(tiling);
@@ -60,8 +56,7 @@ public:
         this->InitUbBuffer();
     }
 
-    __aicore__ inline void InitOutGlobalMemory(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, 
-                                               GM_ADDR y, GM_ADDR usrWorkspace)
+    __aicore__ inline void InitOutGlobalMemory(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace)
     {
         if constexpr (!IsFloat<TY>::value) {
             InitGlobalMemory(this->workspaceGm, this->params_.initLen, 0.0f);
@@ -90,7 +85,7 @@ public:
                 uint64_t gmOffset = ncOffset + (uint64_t)argmaxUb.GetValue(ubOffset);
                 float gradValueFloat;
                 DataCacheCleanAndInvalid<float, CacheLine::ENTIRE_DATA_CACHE>(this->workspaceGm);
-                
+
                 if constexpr (IsFloat<TY>::value) {
                     gradValueFloat = (this->yGm.GetValue(gmOffset) + gradUb.GetValue(ubOffset));
                     this->yGm.SetValue(gmOffset, gradValueFloat);
@@ -106,7 +101,7 @@ public:
                 }
                 DataCacheCleanAndInvalid<float, CacheLine::ENTIRE_DATA_CACHE>(this->workspaceGm);
             }
-            
+
             this->block_.ShapeSum += basedhwLen;
             if (this->block_.ShapeSum == this->params_.doDim * this->params_.hoDim * this->params_.woDim) {
                 this->block_.baseNcOffset += 1;
@@ -140,7 +135,7 @@ public:
         uint64_t maxCalcNum = this->params_.ubSize / (sizeof(half) + sizeof(float));
         uint64_t totalLoops = CeilDiv(this->params_.initLen, maxCalcNum);
         uint64_t calcTail = this->params_.initLen - (totalLoops - 1) * maxCalcNum;
-        
+
         for (uint64_t loopIndex = 0; loopIndex < totalLoops; loopIndex++) {
             uint64_t calcNum = (loopIndex == totalLoops - 1) ? calcTail : maxCalcNum;
             CopyInWorkspace(loopIndex * maxCalcNum, calcNum);
@@ -168,13 +163,13 @@ public:
     {
         LocalTensor<float> fp32Ub = this->wsQue.template DeQue<float>();
         LocalTensor<TY> b16Ub = this->yQue.template AllocTensor<TY>();
-        
+
         if constexpr (IsHalf<TY>::value) {
             Cast(b16Ub, fp32Ub, RoundMode::CAST_NONE, calcNum);
         } else if constexpr (IsBFloat16<TY>::value) {
             Cast(b16Ub, fp32Ub, RoundMode::CAST_RINT, calcNum);
         }
-        
+
         this->wsQue.template FreeTensor(fp32Ub);
         this->yQue.template EnQue(b16Ub);
     }

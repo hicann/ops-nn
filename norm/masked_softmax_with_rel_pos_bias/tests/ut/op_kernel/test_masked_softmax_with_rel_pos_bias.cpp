@@ -25,32 +25,25 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(
-    GM_ADDR x, GM_ADDR atten_mask, GM_ADDR bias, GM_ADDR y, GM_ADDR work_space, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void masked_softmax_with_rel_pos_bias(GM_ADDR x, GM_ADDR atten_mask, GM_ADDR bias,
+                                                                       GM_ADDR y, GM_ADDR work_space, GM_ADDR tiling);
 
 class masked_softmax_with_rel_pos_bias_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "masked_softmax_with_rel_pos_bias_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "masked_softmax_with_rel_pos_bias_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "masked_softmax_with_rel_pos_bias_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "masked_softmax_with_rel_pos_bias_test TearDown\n" << endl; }
 };
 
-void run_masked_softmax_with_rel_pos_bias_case(
-    uint32_t BS, uint32_t W, uint32_t N, uint32_t S1, uint32_t S2, std::string& dtype, uint32_t dtypeSize,
-    uint32_t tiling_key, uint32_t shape_index)
+void run_masked_softmax_with_rel_pos_bias_case(uint32_t BS, uint32_t W, uint32_t N, uint32_t S1, uint32_t S2,
+                                               std::string& dtype, uint32_t dtypeSize, uint32_t tiling_key,
+                                               uint32_t shape_index)
 {
-    system(
-        "cp -r "
-        "../../../../norm/masked_softmax_with_rel_pos_bias/tests/ut/op_kernel/"
-        "masked_softmax_with_rel_pos_bias_data ./ && chmod -R 755 ./masked_softmax_with_rel_pos_bias_data/");
+    system("cp -r "
+           "../../../../norm/masked_softmax_with_rel_pos_bias/tests/ut/op_kernel/"
+           "masked_softmax_with_rel_pos_bias_data ./ && chmod -R 755 ./masked_softmax_with_rel_pos_bias_data/");
     system("ls -lh ./masked_softmax_with_rel_pos_bias_data/");
     system("cd ./masked_softmax_with_rel_pos_bias_data/ && rm -rf ./*.bin");
-    
+
     std::string gen_data_cmd = "cd ./masked_softmax_with_rel_pos_bias_data/ && python3 gen_data.py " +
                                std::to_string(BS) + std::string(" ") + std::to_string(W) + std::string(" ") +
                                std::to_string(N) + std::string(" ") + std::to_string(S1) + std::string(" ") +
@@ -80,24 +73,24 @@ void run_masked_softmax_with_rel_pos_bias_case(
     uint8_t* workSpace = nullptr;
     size_t tilingSize = sizeof(MaskedSoftmaxWithRelPosBiasTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    MaskedSoftmaxWithRelPosBiasTilingData* tilingDatafromBin =
-        reinterpret_cast<MaskedSoftmaxWithRelPosBiasTilingData*>(tiling);
+    MaskedSoftmaxWithRelPosBiasTilingData* tilingDatafromBin = reinterpret_cast<MaskedSoftmaxWithRelPosBiasTilingData*>(
+        tiling);
     string curPath = "./";
     ReadFile(curPath + "masked_softmax_with_rel_pos_bias_data/x.bin", xSize, x, xSize);
-    ReadFile(
-        curPath + "masked_softmax_with_rel_pos_bias_data/atten_mask.bin", attenMaskSize, atten_mask, attenMaskSize);
+    ReadFile(curPath + "masked_softmax_with_rel_pos_bias_data/atten_mask.bin", attenMaskSize, atten_mask,
+             attenMaskSize);
     ReadFile(curPath + "masked_softmax_with_rel_pos_bias_data/bias.bin", biasSize, bias, biasSize);
     ReadFile(curPath + "masked_softmax_with_rel_pos_bias_data/tiling.bin", tilingSize, tilingDatafromBin, tilingSize);
     ReadFile(curPath + "masked_softmax_with_rel_pos_bias_data/golden_y.bin", expect_ySize, expect_y, expect_ySize);
     ICPU_SET_TILING_KEY(tiling_key);
 
     uint32_t blockDim = 48;
-    ICPU_RUN_KF(
-        masked_softmax_with_rel_pos_bias, blockDim, x, atten_mask, bias, y, workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(masked_softmax_with_rel_pos_bias, blockDim, x, atten_mask, bias, y, workSpace,
+                (uint8_t*)(tilingDatafromBin));
     WriteFile(curPath + "/masked_softmax_with_rel_pos_bias_data/y.bin", y, xSize);
 
-    std::string compare_cmd =
-        "cd ./masked_softmax_with_rel_pos_bias_data/ && python3 compare_data.py " + std::string(" ") + dtype;
+    std::string compare_cmd = "cd ./masked_softmax_with_rel_pos_bias_data/ && python3 compare_data.py " +
+                              std::string(" ") + dtype;
     EXPECT_EQ(system(compare_cmd.c_str()), 0);
     AscendC::GmFree((void*)y);
     AscendC::GmFree((void*)expect_y);

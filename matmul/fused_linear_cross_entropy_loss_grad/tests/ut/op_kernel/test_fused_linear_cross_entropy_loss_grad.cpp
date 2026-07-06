@@ -20,23 +20,21 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fused_linear_cross_entropy_loss_grad(
-    GM_ADDR grad, GM_ADDR input, GM_ADDR weight, GM_ADDR target_mask, GM_ADDR masked_target,
-    GM_ADDR logits_max, GM_ADDR sum_exp_logits, GM_ADDR softmax,
-    GM_ADDR input_grad_out, GM_ADDR weight_grad_out, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fused_linear_cross_entropy_loss_grad(GM_ADDR grad, GM_ADDR input, GM_ADDR weight,
+                                                                           GM_ADDR target_mask, GM_ADDR masked_target,
+                                                                           GM_ADDR logits_max, GM_ADDR sum_exp_logits,
+                                                                           GM_ADDR softmax, GM_ADDR input_grad_out,
+                                                                           GM_ADDR weight_grad_out, GM_ADDR workspace,
+                                                                           GM_ADDR tiling);
 
 class fused_linear_cross_entropy_loss_grad_test : public testing::Test {
-    protected:
-
-    static void SetUpTestCase() {
-        std::cout << "fused_linear_cross_entropy_loss_grad_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "fused_linear_cross_entropy_loss_grad_test TearDown\n" << std::endl;
-    }
+protected:
+    static void SetUpTestCase() { std::cout << "fused_linear_cross_entropy_loss_grad_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "fused_linear_cross_entropy_loss_grad_test TearDown\n" << std::endl; }
 };
 
-TEST_F(fused_linear_cross_entropy_loss_grad_test, test_high_perf_case) {
+TEST_F(fused_linear_cross_entropy_loss_grad_test, test_high_perf_case)
+{
     uint32_t BT = 8;
     uint32_t V = 128;
     uint32_t H = 8;
@@ -56,7 +54,8 @@ TEST_F(fused_linear_cross_entropy_loss_grad_test, test_high_perf_case) {
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    FusedLinearCrossEntropyLossGradHighPerfTilingData *tilingData = reinterpret_cast<FusedLinearCrossEntropyLossGradHighPerfTilingData *>(tiling);
+    FusedLinearCrossEntropyLossGradHighPerfTilingData*
+        tilingData = reinterpret_cast<FusedLinearCrossEntropyLossGradHighPerfTilingData*>(tiling);
 
     tilingData->mm1Tiling.usedCoreNum = 20;
     tilingData->mm1Tiling.M = 128;
@@ -109,7 +108,7 @@ TEST_F(fused_linear_cross_entropy_loss_grad_test, test_high_perf_case) {
     tilingData->mm2Tiling.dbL0A = 2;
     tilingData->mm2Tiling.dbL0B = 2;
     tilingData->mm2Tiling.dbL0C = 1;
-    
+
     tilingData->aicNum = 20;
     tilingData->aivNum = 40;
     tilingData->BT = 8;
@@ -169,7 +168,8 @@ TEST_F(fused_linear_cross_entropy_loss_grad_test, test_high_perf_case) {
     free(path_);
 }
 
-TEST_F(fused_linear_cross_entropy_loss_grad_test, test_mem_friendly_case) {
+TEST_F(fused_linear_cross_entropy_loss_grad_test, test_mem_friendly_case)
+{
     uint32_t BT = 8;
     uint32_t V = 128;
     uint32_t H = 8;
@@ -189,8 +189,9 @@ TEST_F(fused_linear_cross_entropy_loss_grad_test, test_mem_friendly_case) {
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    FusedLinearCrossEntropyLossGradMemFriendlyTilingData *tilingData = reinterpret_cast<FusedLinearCrossEntropyLossGradMemFriendlyTilingData *>(tiling);
-    
+    FusedLinearCrossEntropyLossGradMemFriendlyTilingData*
+        tilingData = reinterpret_cast<FusedLinearCrossEntropyLossGradMemFriendlyTilingData*>(tiling);
+
     tilingData->aicNum = 20;
     tilingData->aivNum = 40;
     tilingData->BT = 8;

@@ -82,14 +82,13 @@ protected:
     bool MultiCoreSplitMN(BasicBlockTilingParams& tilingParams);
     bool IsStepL1Valid(const uint32_t& stepKa, const uint32_t& stepKb, const BasicBlockTilingParams& tilingParams);
     void InitBaseMNK(BasicBlockTilingParams& tilingParams);
-    void AdjustBaseMNK(
-        const uint32_t l0abPingPong, const uint32_t l0cPingPong, uint32_t& baseM, uint32_t& baseN, uint32_t& baseK);
+    void AdjustBaseMNK(const uint32_t l0abPingPong, const uint32_t l0cPingPong, uint32_t& baseM, uint32_t& baseN,
+                       uint32_t& baseK);
     void SetSingleCoreInfo(BasicBlockTilingParams& tilingParams);
     void LegalProtection(BasicBlockTilingParams& tilingParams);
     void SetTilingData(const BasicBlockTilingParams& tilingParams);
-    bool IsL2Efficient(
-        const uint64_t singleCoreM, const uint64_t singleCoreN, const uint64_t singleCoreK,
-        const uint64_t transdataWorkSpace);
+    bool IsL2Efficient(const uint64_t singleCoreM, const uint64_t singleCoreN, const uint64_t singleCoreK,
+                       const uint64_t transdataWorkSpace);
     void ShrinkBasicBlock(BasicBlockTilingParams& tilingParams);
 
     MatMulInfo mmInfo_;

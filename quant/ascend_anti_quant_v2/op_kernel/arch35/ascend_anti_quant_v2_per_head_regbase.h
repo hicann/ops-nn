@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,13 +21,12 @@
 #include "../inc/kernel_utils.h"
 #include "ascend_anti_quant_v2_common.h"
 
-
 namespace AscendAntiQuantV2 {
 using namespace AscendC;
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
 class AscendAntiQuantV2PerHeadRegbase : public AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode> {
 public:
-     __aicore__ inline AscendAntiQuantV2PerHeadRegbase(const AscendAntiQuantV2TilingData* tilingData)
+    __aicore__ inline AscendAntiQuantV2PerHeadRegbase(const AscendAntiQuantV2TilingData* tilingData)
         : tilingData_(tilingData){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y);
     __aicore__ inline void Process();
@@ -60,25 +59,26 @@ private:
     int64_t lenLoopTail = 0;
 
 private:
-    __aicore__ inline void ProcessInputLoop(
-        int64_t nLoopLen, int64_t baseXOffset, LocalTensor<T1>& scaleLocal, LocalTensor<T2>& offsetLocal);
+    __aicore__ inline void ProcessInputLoop(int64_t nLoopLen, int64_t baseXOffset, LocalTensor<T1>& scaleLocal,
+                                            LocalTensor<T2>& offsetLocal);
     template <typename dtypeCopyIn>
-    __aicore__ inline void CopyInParam(
-        TQue<QuePosition::VECIN, bufferNum>& inQueue, GlobalTensor<dtypeCopyIn>& inGm, int64_t paramLen, int64_t paramOffset);
-    __aicore__ inline void ParseCoreBlocks(const AscendAntiQuantV2TilingData* tilingData, int32_t blockIdx, int64_t& blockN, int64_t& blockS, int64_t& blockLen);
+    __aicore__ inline void CopyInParam(TQue<QuePosition::VECIN, bufferNum>& inQueue, GlobalTensor<dtypeCopyIn>& inGm,
+                                       int64_t paramLen, int64_t paramOffset);
+    __aicore__ inline void ParseCoreBlocks(const AscendAntiQuantV2TilingData* tilingData, int32_t blockIdx,
+                                           int64_t& blockN, int64_t& blockS, int64_t& blockLen);
     __aicore__ inline void ProcessParamOneLoop(int64_t nLoopLen, int64_t baseSOffset, int64_t baseXOffset);
-    __aicore__ inline void GetXInCopyParams(const AscendAntiQuantV2TilingData* tilingData, int64_t xN, int64_t xLen, int64_t lastDimLen,
-                                            DataCopyExtParams& copyParams);
-    __aicore__ inline void GetOutCopyParams(const AscendAntiQuantV2TilingData* tilingData, int64_t yN, int64_t yLen, int64_t lastDimLen,
-                                            DataCopyExtParams& copyParams);
+    __aicore__ inline void GetXInCopyParams(const AscendAntiQuantV2TilingData* tilingData, int64_t xN, int64_t xLen,
+                                            int64_t lastDimLen, DataCopyExtParams& copyParams);
+    __aicore__ inline void GetOutCopyParams(const AscendAntiQuantV2TilingData* tilingData, int64_t yN, int64_t yLen,
+                                            int64_t lastDimLen, DataCopyExtParams& copyParams);
     __aicore__ inline void CopyInX(int64_t xN, int64_t xLen, int64_t xInOffset);
     __aicore__ inline void CopyOutY(int64_t yN, int64_t yLen, int64_t yOutOffset);
     __aicore__ inline void Compute(int64_t nRow, int64_t dataCount, LocalTensor<T1>& sLocal, LocalTensor<T2>& oLocal);
 };
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::Init(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y)
+__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::Init(GM_ADDR x, GM_ADDR scale,
+                                                                                     GM_ADDR offset, GM_ADDR y)
 {
     blockIdx_ = GetBlockIdx();
     xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(x));
@@ -112,9 +112,8 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
                      blockIdx_ % tilingData_->blockUnion * tilingData_->blockFactor * tilingData_->dim2;
         gmSOffset_ = blockIdx_ % tilingData_->blockUnion * tilingData_->blockFactor;
     } else {
-        gmXOffset_ =
-            (blockIdx_ / tilingData_->blockUnion * tilingData_->dim2 +
-                blockIdx_ % tilingData_->blockUnion * tilingData_->blockFactor);
+        gmXOffset_ = (blockIdx_ / tilingData_->blockUnion * tilingData_->dim2 +
+                      blockIdx_ % tilingData_->blockUnion * tilingData_->blockFactor);
         gmSOffset_ = blockIdx_ / tilingData_->blockUnion;
     }
 
@@ -144,7 +143,9 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::ProcessParamOneLoop(int64_t nLoopLen, int64_t baseSOffset, int64_t baseXOffset)
+__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::ProcessParamOneLoop(int64_t nLoopLen,
+                                                                                                    int64_t baseSOffset,
+                                                                                                    int64_t baseXOffset)
 {
     // copy in scale and offset
     CopyInParam<T1>(inQueueScale_, scaleGm_, nLoopLen, baseSOffset % tilingData_->dim1);
@@ -176,7 +177,8 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
 __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::ParseCoreBlocks(
-    const AscendAntiQuantV2TilingData* tilingData, int32_t blockIdx, int64_t& blockN, int64_t& blockS, int64_t& blockLen)
+    const AscendAntiQuantV2TilingData* tilingData, int32_t blockIdx, int64_t& blockN, int64_t& blockS,
+    int64_t& blockLen)
 {
     if (tilingData->blockAxis == 0) {
         // blockFactor is in [1, S]
@@ -208,7 +210,7 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
 __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::ProcessInputLoop(
-        int64_t nLoopLen, int64_t baseXOffset, LocalTensor<T1>& scaleLocal, LocalTensor<T2>& offsetLocal)
+    int64_t nLoopLen, int64_t baseXOffset, LocalTensor<T1>& scaleLocal, LocalTensor<T2>& offsetLocal)
 {
     for (auto i = 0; i < lenLoopNum; ++i) {
         CopyInX(nLoopLen, loopLen, baseXOffset);
@@ -252,8 +254,8 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::CopyInX(
-    int64_t xN, int64_t xLen, int64_t xInOffset)
+__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::CopyInX(int64_t xN, int64_t xLen,
+                                                                                        int64_t xInOffset)
 {
     if constexpr (IsSameType<T, int4b_t>::value) {
         xInOffset = xInOffset >> 1;
@@ -268,8 +270,9 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::Compute(
-    int64_t nRow, int64_t dataCount, LocalTensor<T1>& sLocal, LocalTensor<T2>& oLocal)
+__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::Compute(int64_t nRow, int64_t dataCount,
+                                                                                        LocalTensor<T1>& sLocal,
+                                                                                        LocalTensor<T2>& oLocal)
 {
     LocalTensor<xCopyDtype> xLocal = inQueueX_.DeQue<xCopyDtype>();
     LocalTensor<U> outLocal = outQueueY_.AllocTensor<U>();
@@ -315,32 +318,31 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
                     // hifp8
                     AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(
                         vregX, xLocalAddr + i * VL + j * xLocalOffset);
-                    AscendC::Reg::Cast<
-                        float, T, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HIFP8_TO_FP32>(
+                    AscendC::Reg::Cast<float, T,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HIFP8_TO_FP32>(
                         vregFloatX, vregX, mask);
                 } else if constexpr (IsSameType<T, fp8_e5m2_t>::value) {
                     // fp8_e5m2
                     AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(
                         vregX, xLocalAddr + i * VL + j * xLocalOffset);
-                    AscendC::Reg::Cast<
-                        float, T, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP8E5M2_TO_FP32>(
+                    AscendC::Reg::Cast<float, T,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP8E5M2_TO_FP32>(
                         vregFloatX, vregX, mask);
                 } else if constexpr (IsSameType<T, fp8_e4m3fn_t>::value) {
                     // fp8_e4m3
                     AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(
                         vregX, xLocalAddr + i * VL + j * xLocalOffset);
-                    AscendC::Reg::Cast<
-                        float, T, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP8E4M3_TO_FP32>(
+                    AscendC::Reg::Cast<float, T,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP8E4M3_TO_FP32>(
                         vregFloatX, vregX, mask);
                 } else if constexpr (IsSameType<T, int8_t>::value) {
                     // int8
                     AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(
                         vregX, xLocalAddr + i * VL + j * xLocalOffset);
-                    AscendC::Reg::Cast<
-                        half, T, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
+                    AscendC::Reg::Cast<half, T, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
                         vregHalfX, vregX, mask);
-                    AscendC::Reg::Cast<
-                        float, half, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
+                    AscendC::Reg::Cast<float, half,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
                         vregFloatX, vregHalfX, mask);
                 } else if constexpr (IsSameType<T, int4b_t>::value) {
                     // int4
@@ -348,39 +350,37 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
                     AscendC::Reg::RegTensor<uint16_t> vregTmpU16X;
                     AscendC::Reg::DataCopy<xCopyDtype, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(
                         vregX, xLocalAddr + i * HalfVL + j * xLocalOffset);
-                    AscendC::Reg::Cast<
-                        half, int4x2_t, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
-                        (AscendC::Reg::RegTensor<half>&)vregTmpU16X,
-                        (AscendC::Reg::RegTensor<int4x2_t>&)vregX, mask);
+                    AscendC::Reg::Cast<half, int4x2_t,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
+                        (AscendC::Reg::RegTensor<half>&)vregTmpU16X, (AscendC::Reg::RegTensor<int4x2_t>&)vregX, mask);
                     AscendC::Reg::UnPack((AscendC::Reg::RegTensor<uint32_t>&)vregTmpX, vregTmpU16X);
-                    AscendC::Reg::Cast<
-                        float, half, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
+                    AscendC::Reg::Cast<float, half,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
                         vregFloatX, vregTmpX, mask);
                 }
 
                 // ld and cast for scale
                 if constexpr (IsSameType<T1, float>::value) {
                     // fp32
-                    AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(
-                        vregFloatS, scaleLocalAddr + j);
+                    AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vregFloatS, scaleLocalAddr + j);
                 } else if constexpr (IsSameType<T1, bfloat16_t>::value) {
                     // bf16
                     AscendC::Reg::DataCopy<T1, AscendC::Reg::LoadDist::DIST_BRC_B16>(vregS, scaleLocalAddr + j);
-                    AscendC::Reg::Cast<
-                        float, T1, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
+                    AscendC::Reg::Cast<float, T1,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                         vregFloatS, vregS, mask);
                 }
 
                 // ld and cast for offset
                 if constexpr (IsSameType<T2, float>::value) {
                     // fp32
-                    AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(
-                        vregFloatO, offsetLocalAddr + j);
+                    AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vregFloatO,
+                                                                                        offsetLocalAddr + j);
                 } else if constexpr (IsSameType<T2, bfloat16_t>::value) {
                     // bf16
                     AscendC::Reg::DataCopy<T2, AscendC::Reg::LoadDist::DIST_BRC_B16>(vregO, offsetLocalAddr + j);
-                    AscendC::Reg::Cast<
-                        float, T2, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
+                    AscendC::Reg::Cast<float, T2,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                         vregFloatO, vregO, mask);
                 }
 
@@ -394,15 +394,15 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
                 // cast and sd for y
                 if constexpr (IsSameType<U, half>::value) {
                     // fp16
-                    AscendC::Reg::Cast<
-                        half, float, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP32_TO_HALF>(
+                    AscendC::Reg::Cast<half, float,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP32_TO_HALF>(
                         vregY, vregFloatY, mask);
                     AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                         outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
                 } else if constexpr (IsSameType<U, bfloat16_t>::value) {
                     // bf16
-                    AscendC::Reg::Cast<
-                        U, float, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP32_TO_BF16>(
+                    AscendC::Reg::Cast<U, float,
+                                       AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP32_TO_BF16>(
                         vregY, vregFloatY, mask);
                     AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                         outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
@@ -416,8 +416,8 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
 __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::GetOutCopyParams(
-        const AscendAntiQuantV2TilingData* tilingData, int64_t yN, int64_t yLen, int64_t lastDimLen,
-        DataCopyExtParams& copyParams)
+    const AscendAntiQuantV2TilingData* tilingData, int64_t yN, int64_t yLen, int64_t lastDimLen,
+    DataCopyExtParams& copyParams)
 {
     copyParams.blockCount = yN;
     copyParams.blockLen = yLen * sizeof(U);
@@ -434,8 +434,8 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::CopyOutY(
-    int64_t yN, int64_t yLen, int64_t yOutOffset)
+__aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::CopyOutY(int64_t yN, int64_t yLen,
+                                                                                         int64_t yOutOffset)
 {
     LocalTensor<U> outLocal = outQueueY_.DeQue<U>();
     DataCopyExtParams copyParams;
@@ -444,4 +444,4 @@ __aicore__ inline void AscendAntiQuantV2PerHeadRegbase<T, T1, T2, U, SqrtMode>::
     outQueueY_.FreeTensor(outLocal);
 }
 } // namespace AscendAntiQuantV2
-#endif //ASCEND_ANTI_QUANT_V2_PER_HEAD_REGBASE_H
+#endif // ASCEND_ANTI_QUANT_V2_PER_HEAD_REGBASE_H

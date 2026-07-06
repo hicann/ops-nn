@@ -30,12 +30,14 @@ namespace NsThresholdV2 {
 using namespace AscendC;
 
 template <typename T>
-__aicore__ inline T FloatToT(float v) {
+__aicore__ inline T FloatToT(float v)
+{
     return static_cast<T>(v);
 }
 
 template <>
-__aicore__ inline bfloat16_t FloatToT<bfloat16_t>(float v) {
+__aicore__ inline bfloat16_t FloatToT<bfloat16_t>(float v)
+{
     bfloat16_t result;
     uint32_t bits;
     *(reinterpret_cast<float*>(&bits)) = v;
@@ -49,7 +51,7 @@ class ThresholdV2 {
     static constexpr int64_t ELEMS_PER_REPEAT = 256 / sizeof(T);
 
 public:
-    __aicore__ inline ThresholdV2() {};
+    __aicore__ inline ThresholdV2(){};
 
     __aicore__ inline void Init(GM_ADDR self, GM_ADDR out, const ThresholdV2TilingData* tilingData);
     __aicore__ inline void Process();
@@ -75,8 +77,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ThresholdV2<T, BUFFER_MODE>::Init(
-    GM_ADDR self, GM_ADDR out, const ThresholdV2TilingData* tilingData)
+__aicore__ inline void ThresholdV2<T, BUFFER_MODE>::Init(GM_ADDR self, GM_ADDR out,
+                                                         const ThresholdV2TilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -113,18 +115,14 @@ __aicore__ inline void ThresholdV2<T, BUFFER_MODE>::Compute(int64_t currentNum)
     AscendC::LocalTensor<T> inputLocal = inputQueue.template DeQue<T>();
     AscendC::LocalTensor<T> outputLocal = outputQueue.template AllocTensor<T>();
 
-    uint32_t alignNum = static_cast<uint32_t>(
-        ((currentNum + ELEMS_PER_REPEAT - 1) / ELEMS_PER_REPEAT) * ELEMS_PER_REPEAT);
+    uint32_t alignNum = static_cast<uint32_t>(((currentNum + ELEMS_PER_REPEAT - 1) / ELEMS_PER_REPEAT) *
+                                              ELEMS_PER_REPEAT);
 
     AscendC::LocalTensor<uint8_t> maskLocal = maskBuf.template Get<uint8_t>();
 
-    AscendC::Compares(maskLocal,
-                      inputLocal, thresholdT_, AscendC::CMPMODE::GT, alignNum);
+    AscendC::Compares(maskLocal, inputLocal, thresholdT_, AscendC::CMPMODE::GT, alignNum);
 
-    AscendC::Select(outputLocal,
-                    maskLocal,
-                    inputLocal, valueT_,
-                    AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, alignNum);
+    AscendC::Select(outputLocal, maskLocal, inputLocal, valueT_, AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, alignNum);
 
     outputQueue.template EnQue<T>(outputLocal);
     inputQueue.FreeTensor(inputLocal);

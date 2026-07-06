@@ -46,8 +46,7 @@ constexpr float MAX_FLOAT_VALUE = 3.402823466e+38f;
 
 class DynamicQuantUpdateScatterV2Base {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterV2Base()
-    {}
+    __aicore__ inline DynamicQuantUpdateScatterV2Base() {}
 
     __aicore__ inline void ParseTilingData(const DynamicQuantUpdateScatterV2TilingData* tilingData)
     {
@@ -131,13 +130,10 @@ public:
         offset = DYNAMIC_QUANT_INT4_OFFSET - SafeDiv(max_value, scale);
     }
 
-    __aicore__ inline float GetMax(float a, float b)
-    {
-        return a > b ? a : b;
-    }
+    __aicore__ inline float GetMax(float a, float b) { return a > b ? a : b; }
 
-    __aicore__ inline uint64_t GetDstOffset(
-        uint64_t rowIndex, uint64_t coreBatchIndex, const LocalTensor<int32_t>& indicesLocal)
+    __aicore__ inline uint64_t GetDstOffset(uint64_t rowIndex, uint64_t coreBatchIndex,
+                                            const LocalTensor<int32_t>& indicesLocal)
     {
         uint64_t indexIdx = blockIdx * rowPerHeadCore + coreBatchIndex * multiRowNum + rowIndex;
         uint64_t validIdx = indicesLocal.GetValue(indexIdx);

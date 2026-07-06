@@ -33,13 +33,9 @@ using namespace OPS::NN;
 // 辅助函数：构建包含 Gather 节点的测试图
 // Gather 无 ES API，使用 CompliantNodeBuilder
 // ---------------------------------------------------------------------------
-static std::shared_ptr<Graph> BuildGatherTestGraph(
-    DataType x_dtype,
-    const std::vector<int64_t>& x_dims,
-    const std::vector<int64_t>& indices_dims,
-    int64_t batch_dims = 0,
-    bool is_preprocessed = false,
-    bool negative_index_support = false)
+static std::shared_ptr<Graph> BuildGatherTestGraph(DataType x_dtype, const std::vector<int64_t>& x_dims,
+                                                   const std::vector<int64_t>& indices_dims, int64_t batch_dims = 0,
+                                                   bool is_preprocessed = false, bool negative_index_support = false)
 {
     auto graph_builder = es::EsGraphBuilder("test_graph");
     auto x = graph_builder.CreateInput(0, "x", x_dtype, FORMAT_ND, x_dims);
@@ -48,19 +44,17 @@ static std::shared_ptr<Graph> BuildGatherTestGraph(
     ge::Graph* graph_ptr = graph_builder.GetCGraphBuilder()->GetGraph();
 
     GNode op_node = es::CompliantNodeBuilder(graph_ptr)
-        .OpType("Gather")
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .IrDefAttrs({
-            {"batch_dims", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
-             es::CreateFrom(batch_dims)},
-            {"is_preprocessed", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
-             es::CreateFrom(is_preprocessed)},
-            {"negative_index_support", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
-             es::CreateFrom(negative_index_support)}
-        })
-        .Build();
+                        .OpType("Gather")
+                        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                      {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                        .IrDefAttrs({{"batch_dims", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
+                                      es::CreateFrom(batch_dims)},
+                                     {"is_preprocessed", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
+                                      es::CreateFrom(is_preprocessed)},
+                                     {"negative_index_support", es::CompliantNodeBuilder::kEsAttrOptional, "Bool",
+                                      es::CreateFrom(negative_index_support)}})
+                        .Build();
 
     GNode x_node = *x.GetProducer();
     GNode indices_node = *indices.GetProducer();

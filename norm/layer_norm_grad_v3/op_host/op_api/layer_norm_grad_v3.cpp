@@ -21,18 +21,18 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LayerNormGradV3);
 
-const std::array<aclTensor*, GRAD_V3_OUT_NUM> LayerNormGradV3(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean,
-    const aclTensor* weight, const aclBoolArray* outputMask, const DataType gradWeightType, aclOpExecutor* executor)
+const std::array<aclTensor*, GRAD_V3_OUT_NUM> LayerNormGradV3(const aclTensor* gradOut, const aclTensor* input,
+                                                              const aclTensor* rstd, const aclTensor* mean,
+                                                              const aclTensor* weight, const aclBoolArray* outputMask,
+                                                              const DataType gradWeightType, aclOpExecutor* executor)
 {
     L0_DFX(LayerNormGradV3, gradOut, input, rstd, mean, weight, outputMask, gradWeightType);
     auto gradInputOut = executor->AllocTensor(input->GetViewShape(), input->GetDataType(), Format::FORMAT_ND);
     auto gradWeight = executor->AllocTensor(weight->GetViewShape(), gradWeightType, Format::FORMAT_ND);
     auto gradBias = executor->AllocTensor(weight->GetViewShape(), gradWeightType, Format::FORMAT_ND);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormGradV3, OP_INPUT(gradOut, input, rstd, mean, weight), OP_OUTPUT(gradInputOut, gradWeight, gradBias),
-        OP_ATTR(outputMask));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LayerNormGradV3, OP_INPUT(gradOut, input, rstd, mean, weight),
+                                           OP_OUTPUT(gradInputOut, gradWeight, gradBias), OP_ATTR(outputMask));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LayerNormGradV3AiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::array<aclTensor*, GRAD_V3_OUT_NUM>{nullptr, nullptr, nullptr};

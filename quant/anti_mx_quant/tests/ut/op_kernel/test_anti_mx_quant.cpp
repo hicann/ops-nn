@@ -23,12 +23,12 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void anti_mx_quant(
-    GM_ADDR x, GM_ADDR mxScale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void anti_mx_quant(GM_ADDR x, GM_ADDR mxScale, GM_ADDR y, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
 // Hardware / platform constants
 constexpr size_t kUbSize = 253952;
-constexpr size_t kWorkspaceSize = 1024ULL * 1024 * 16;  // 16MB
+constexpr size_t kWorkspaceSize = 1024ULL * 1024 * 16; // 16MB
 constexpr uint32_t kDstTypeFp32 = 0;
 constexpr uint32_t kTotalCoreNum = 64;
 constexpr uint32_t kScaleBytesPerRow = 32;
@@ -39,14 +39,8 @@ constexpr uint32_t kTilingKey0 = 0;
 
 class anti_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "anti_mx_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "anti_mx_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "anti_mx_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "anti_mx_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(anti_mx_quant_test, fp8_e4m3_to_fp32_basic)

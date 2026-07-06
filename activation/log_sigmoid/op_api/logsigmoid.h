@@ -18,7 +18,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *LogSigmoid(const aclTensor *x, aclOpExecutor *executor);
+const aclTensor* LogSigmoid(const aclTensor* x, aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_LOGSIGMOID_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_LOGSIGMOID_OP_H_

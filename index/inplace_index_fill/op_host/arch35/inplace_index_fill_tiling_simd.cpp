@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file inplace_index_fill_tiling_simd.cpp
  * \brief
@@ -15,26 +15,23 @@
 #ifndef INPLACE_INDEX_FILL_TILING_SIMD_CPP_
 #define INPLACE_INDEX_FILL_TILING_SIMD_CPP_
 
-
 #include "inplace_index_fill_tiling_simd.h"
 #include "../../op_kernel/arch35/inplace_index_fill_tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
 
 using namespace InplaceIndexFill;
 
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t BLOCK_SPLIT_Q_THRESHOLD = 2048;
 constexpr int64_t INDICES_UB_BUFFER_SIZE_THRESHOLD = 2048;
-constexpr int64_t BUFFER_SPLIT_FACTOR = 2;    // UB buffer均匀二分因子
+constexpr int64_t BUFFER_SPLIT_FACTOR = 2; // UB buffer均匀二分因子
 constexpr int64_t SIMD_THRESHOLD = 128;
-constexpr int64_t HALF_CORE_FACTOR = 2;       // 核心利用率阈值：至少使用一半核心
-
+constexpr int64_t HALF_CORE_FACTOR = 2; // 核心利用率阈值：至少使用一半核心
 
 bool InplaceIndexFillTilingSimd::IsCapable()
 {
     if (inputData.postDimProduct * inputData.xDtypeSize > SIMD_THRESHOLD) {
-	    return true;
+        return true;
     }
     return false;
 }
@@ -47,7 +44,7 @@ void InplaceIndexFillTilingSimd::BlockTiling()
 
     //如果无法整除，将tailBlockData数据平分到前面tailBlockData个核，每个核多处理的
     tailBlockNum_ = tailBlockData_;
-    if(perBlockData_ > 0) {
+    if (perBlockData_ > 0) {
         usedCoreNum_ = coreNum;
     } else {
         usedCoreNum_ = tailBlockNum_;
@@ -56,15 +53,17 @@ void InplaceIndexFillTilingSimd::BlockTiling()
 
     if (inputData.xDtypeSize == 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "xDtypeSize", "0",
-            "xDtypeSize must be greater than 0, cannot divide");
+                                              "xDtypeSize must be greater than 0, cannot divide");
         return;
     }
-    while (usedCoreNum_ * qUsedCoreNum_ < coreNum / HALF_CORE_FACTOR && Ops::Base::CeilDiv(inputData.postDimProduct, qUsedCoreNum_) >= (BLOCK_SPLIT_Q_THRESHOLD / inputData.xDtypeSize)) {
+    while (usedCoreNum_ * qUsedCoreNum_ < coreNum / HALF_CORE_FACTOR &&
+           Ops::Base::CeilDiv(inputData.postDimProduct, qUsedCoreNum_) >=
+               (BLOCK_SPLIT_Q_THRESHOLD / inputData.xDtypeSize)) {
         qUsedCoreNum_ += 1;
     }
     qBlockFactor_ = Ops::Base::CeilDiv(inputData.postDimProduct, qUsedCoreNum_);
     qUsedCoreNum_ = Ops::Base::CeilDiv(inputData.postDimProduct, qBlockFactor_);
-    usedCoreNum_ = usedCoreNum_ * qUsedCoreNum_; 
+    usedCoreNum_ = usedCoreNum_ * qUsedCoreNum_;
 }
 
 void InplaceIndexFillTilingSimd::UBTiling()
@@ -82,50 +81,50 @@ void InplaceIndexFillTilingSimd::UBTiling()
         qLoopSize_ = 1;
     } else {
         indicesBufferSize_ = std::min(INDICES_UB_BUFFER_SIZE_THRESHOLD, indicesAlignSize);
-        qBufferSize_ = Ops::Base::FloorAlign(static_cast<int64_t> (ubSize) - indicesBufferSize_, blockSize);
-        if (BUFFER_SPLIT_FACTOR * qBufferSize_ > qAlignSize &&  qBufferSize_ < qAlignSize) {
+        qBufferSize_ = Ops::Base::FloorAlign(static_cast<int64_t>(ubSize) - indicesBufferSize_, blockSize);
+        if (BUFFER_SPLIT_FACTOR * qBufferSize_ > qAlignSize && qBufferSize_ < qAlignSize) {
             // q刚好分块的时候，均匀分配
-            qBufferSize_ = Ops::Base::CeilAlign(Ops::Base::CeilDiv(qAlignSize, BUFFER_SPLIT_FACTOR) , blockSize);
-            indicesBufferSize_ = Ops::Base::FloorAlign(static_cast<int64_t> (ubSize)  - qBufferSize_, blockSize);
+            qBufferSize_ = Ops::Base::CeilAlign(Ops::Base::CeilDiv(qAlignSize, BUFFER_SPLIT_FACTOR), blockSize);
+            indicesBufferSize_ = Ops::Base::FloorAlign(static_cast<int64_t>(ubSize) - qBufferSize_, blockSize);
         }
         if (inputData.indicesDtypeSize == 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "indicesDtypeSize", "0",
-                "indicesDtypeSize must be greater than 0, cannot divide");
+                                                  "indicesDtypeSize must be greater than 0, cannot divide");
             return;
         }
         if (inputData.xDtypeSize == 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "xDtypeSize", "0",
-                "xDtypeSize must be greater than 0, cannot divide");
+                                                  "xDtypeSize must be greater than 0, cannot divide");
             return;
         }
         indicesUbFactor_ = indicesBufferSize_ / inputData.indicesDtypeSize;
         qUbFactor_ = qBufferSize_ / inputData.xDtypeSize;
         qLoopSize_ = Ops::Base::CeilDiv(qBlockFactor_, qUbFactor_);
-        
-        qUbTailFactor_ = qBlockFactor_ - (qLoopSize_ -1) * qUbFactor_;
+
+        qUbTailFactor_ = qBlockFactor_ - (qLoopSize_ - 1) * qUbFactor_;
     }
 }
 
 ge::graphStatus InplaceIndexFillTilingSimd::DoOpTiling()
 {
-      // 空tensor处理
+    // 空tensor处理
     if (inputData.preDimProduct == 0 || inputData.dimSize == 0 || inputData.postDimProduct == 0) {
         // 出现空tensor直接传入pnq，在kernel侧先处理空tesnor情况，出现pnq==0，return
         tilingData_->preDimProduct = inputData.preDimProduct;
         tilingData_->dimSize = inputData.dimSize;
         tilingData_->postDimProduct = inputData.postDimProduct;
-        tilingData_->usedCoreNum = 1;   // 空tensor场景核数1
+        tilingData_->usedCoreNum = 1; // 空tensor场景核数1
         return ge::GRAPH_SUCCESS;
     }
- 	BlockTiling();
+    BlockTiling();
     UBTiling();
- 	SetTilingData();
- 	return ge::GRAPH_SUCCESS;
+    SetTilingData();
+    return ge::GRAPH_SUCCESS;
 }
 
 void InplaceIndexFillTilingSimd::DumpTilingInfo()
 {
- 	std::ostringstream info;
+    std::ostringstream info;
     info << "ubSize: " << ubSize << std::endl;
     info << "coreNum: " << coreNum << std::endl;
     info << "preDimProduct: " << tilingData_->preDimProduct << std::endl;
@@ -149,10 +148,11 @@ void InplaceIndexFillTilingSimd::DumpTilingInfo()
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-void InplaceIndexFillTilingSimd::SetTilingData()  {
- 	tilingData_->preDimProduct = inputData.preDimProduct;
- 	tilingData_->dimSize = inputData.dimSize;
- 	tilingData_->postDimProduct = inputData.postDimProduct;
+void InplaceIndexFillTilingSimd::SetTilingData()
+{
+    tilingData_->preDimProduct = inputData.preDimProduct;
+    tilingData_->dimSize = inputData.dimSize;
+    tilingData_->postDimProduct = inputData.postDimProduct;
     tilingData_->indicesNum = inputData.indicesNum;
     tilingData_->perBlockData = perBlockData_;
     tilingData_->tailBlockData = tailBlockData_;
@@ -161,7 +161,7 @@ void InplaceIndexFillTilingSimd::SetTilingData()  {
     tilingData_->qUsedCoreNum = qUsedCoreNum_;
     tilingData_->usedCoreNum = usedCoreNum_;
 
-    //UB参数
+    // UB参数
     tilingData_->qBufferSize = qBufferSize_;
     tilingData_->indicesBufferSize = indicesBufferSize_;
     tilingData_->indicesUbFactor = indicesUbFactor_;
@@ -172,10 +172,10 @@ void InplaceIndexFillTilingSimd::SetTilingData()  {
     usedCoreNum = tilingData_->usedCoreNum;
 }
 
-uint64_t InplaceIndexFillTilingSimd::GetTilingKey() const{
-    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
-        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
-        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+uint64_t InplaceIndexFillTilingSimd::GetTilingKey() const
+{
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4) ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32) :
+                                                       static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
     return GET_TPL_TILING_KEY(TPL_MODE_TEMPLATE_SIMD, dtypeMode);
 }
 
@@ -202,5 +202,5 @@ ge::graphStatus InplaceIndexFillTilingSimd::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(InplaceIndexFill, InplaceIndexFillTilingSimd, 1);
-}
+} // namespace optiling
 #endif

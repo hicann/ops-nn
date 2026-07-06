@@ -34,14 +34,8 @@ extern "C" __global__ __aicore__ void silu_mul(GM_ADDR x, GM_ADDR y, GM_ADDR z, 
 
 class silu_mul_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "silu_mul SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "silu_mul TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "silu_mul SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "silu_mul TearDown\n" << endl; }
 };
 
 template <typename T>
@@ -68,9 +62,8 @@ TEST_F(silu_mul_test, test_silu_mul_dynamic)
     const char* dtypeStr = DataTypeName<DTYPE_X>::val;
     std::cout << ">>> Current Test Type: " << dtypeStr << std::endl;
 
-    system(
-        "cp -rf "
-        "../../../../activation/silu_mul/tests/ut/op_kernel/silu_mul_data ./");
+    system("cp -rf "
+           "../../../../activation/silu_mul/tests/ut/op_kernel/silu_mul_data ./");
     system("chmod -R 755 ./silu_mul_data/");
 
     std::string genCmd = std::string("cd ./silu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' '") + dtypeStr + "'";

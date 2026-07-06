@@ -39,11 +39,9 @@ constexpr int64_t WORKSPACE_SIZE = 16 * 1024 * 1024;
 
 class AvgPoolV2GradTilingSIMT : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AvgPoolV2GradTilingSIMT(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit AvgPoolV2GradTilingSIMT(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~AvgPoolV2GradTilingSIMT() override
-    {}
+    ~AvgPoolV2GradTilingSIMT() override {}
 
 protected:
     ge::graphStatus DoOpTiling() override;

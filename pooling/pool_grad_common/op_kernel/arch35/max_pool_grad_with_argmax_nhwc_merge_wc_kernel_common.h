@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool_grad_with_argmax_nhwc_merge_wc_kernel_common.h
@@ -23,9 +23,8 @@ template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE =
 class MaxPoolGradWithArgmaxKernelNHWCMergeWCBase
     : public MaxPoolGradWithArgmaxKernelNHWCBase<T1, T2, T3, IS_CHECK_RANGE, VER> {
 public:
-    __aicore__ inline void ConCMergeWProcVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
-        __local_mem__ uint32_t* helpAddr)
+    __aicore__ inline void ConCMergeWProcVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
+                                            __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr)
     {
         int64_t wOutput = this->wOutput_;
         uint16_t cOutputActual = this->cOutputActual_;
@@ -59,11 +58,10 @@ public:
         __VEC_SCOPE__
         {
             AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
-            GenInitial3DIndices(
-                (AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize, wArgmaxActual,
-                wFullBatchCount, cOutputActual, cOutputAligned);
-            AscendC::MicroAPI::MaskReg allMask =
-                AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            GenInitial3DIndices((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
+                                wArgmaxActual, wFullBatchCount, cOutputActual, cOutputAligned);
+            AscendC::MicroAPI::MaskReg
+                allMask = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::DataCopy(helpAddr, initialRegIndex, allMask);
         }
 
@@ -79,22 +77,22 @@ public:
                 AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
                 AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
 
-                AscendC::MicroAPI::MaskReg allMaskU32 =
-                    AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
                 AscendC::MicroAPI::DataCopy(initialRegIndex, helpAddr);
                 for (uint16_t hIdx = 0; hIdx < hArgmaxActual; hIdx++) {
                     for (uint16_t wRepeatIdx = 0; wRepeatIdx < repeatimes; wRepeatIdx++) {
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                            T2 offset =
-                                (wBatchIdx + wRepeatIdx * concurrencyCount * wProBatchSize + hIdx * wArgmaxActual) *
-                                    cOutputAligned +
-                                nArgmaxOffset;
+                            T2 offset = (wBatchIdx + wRepeatIdx * concurrencyCount * wProBatchSize +
+                                         hIdx * wArgmaxActual) *
+                                            cOutputAligned +
+                                        nArgmaxOffset;
 
                             AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
-                            DoMulCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(
-                                yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0, curHIndex, curWIndex,
-                                wOutputActual, hOutputActual, cOutputAligned, 0, nOffset, cOutputActual,
-                                wOutputConstReg);
+                            DoMulCNhwc<T1, T2, T3, IS_CHECK_RANGE, VER>(yAddr, gradAddr, argmaxAddr, parallelRegIndex,
+                                                                        mask0, curHIndex, curWIndex, wOutputActual,
+                                                                        hOutputActual, cOutputAligned, 0, nOffset,
+                                                                        cOutputActual, wOutputConstReg);
                         }
                     }
                 }
@@ -114,8 +112,8 @@ public:
                     AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
                     AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
 
-                    AscendC::MicroAPI::MaskReg allMaskU32 =
-                        AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+                    AscendC::MicroAPI::MaskReg
+                        allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
                     AscendC::MicroAPI::DataCopy(initialRegIndex, helpAddr);
                     // batch  mask
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
@@ -140,8 +138,8 @@ public:
             AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
             AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
 
-            AscendC::MicroAPI::MaskReg allMaskU32 =
-                AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::DataCopy(initialRegIndex, helpAddr);
 
             for (uint16_t nIdx = 0; nIdx < nOutputActual; ++nIdx) {

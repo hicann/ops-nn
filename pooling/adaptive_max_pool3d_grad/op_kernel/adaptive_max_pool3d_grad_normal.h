@@ -25,16 +25,11 @@ using namespace AscendC;
 using namespace AdaptiveMaxPool3DGradComm;
 
 template <typename TX, typename TGrad, typename TArgmax, typename TY, bool IsOverlap>
-class AdaptiveMaxPool3DGradNormal
-{
+class AdaptiveMaxPool3DGradNormal {
 public:
-    __aicore__ inline AdaptiveMaxPool3DGradNormal(TPipe* Pipe)
-    {
-        pipe = Pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
-        const AdaptiveMaxPool3DGradTilingData* __restrict__ tiling)
+    __aicore__ inline AdaptiveMaxPool3DGradNormal(TPipe* Pipe) { pipe = Pipe; }
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
+                                const AdaptiveMaxPool3DGradTilingData* __restrict__ tiling)
     {
         InitParams(tiling);
         InitInputsOutputs(x, grad, argmax, y, usrWorkspace);
@@ -79,7 +74,8 @@ public:
     __aicore__ inline void InitInputsOutputs(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace)
     {
         gradGm.SetGlobalBuffer((__gm__ TGrad*)grad, params_.ncDim * params_.doDim * params_.hoDim * params_.woDim);
-        argmaxGm.SetGlobalBuffer((__gm__ TArgmax*)argmax, params_.ncDim * params_.doDim * params_.hoDim * params_.woDim);
+        argmaxGm.SetGlobalBuffer((__gm__ TArgmax*)argmax,
+                                 params_.ncDim * params_.doDim * params_.hoDim * params_.woDim);
         yGm.SetGlobalBuffer((__gm__ TY*)y, params_.ncDim * params_.diHiWiLen);
         if constexpr (!is_same<TY, float>::value && IsOverlap) {
             workspaceGm.SetGlobalBuffer((__gm__ float*)usrWorkspace, params_.ncDim * params_.diHiWiLen);
@@ -123,16 +119,16 @@ public:
 
         if constexpr (IsOverlap) {
             uint64_t maxWAlign8 = AlignUp(params_.maxKw, BLOCK_NUM_32);
-            pipe->InitBuffer(
-                yQue, 1, params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlign8 * sizeof(float));
-            pipe->InitBuffer(
-                yTransposeBuf, params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlign8 * sizeof(float));
+            pipe->InitBuffer(yQue, 1,
+                             params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlign8 * sizeof(float));
+            pipe->InitBuffer(yTransposeBuf,
+                             params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlign8 * sizeof(float));
         } else {
             uint64_t maxWAlignDtype = AlignUp(params_.maxKw, blockNumDtype);
-            pipe->InitBuffer(
-                yQue, 1, params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlignDtype * sizeof(TGrad));
-            pipe->InitBuffer(
-                yTransposeBuf, params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlignDtype * sizeof(TGrad));
+            pipe->InitBuffer(yQue, 1,
+                             params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlignDtype * sizeof(TGrad));
+            pipe->InitBuffer(yTransposeBuf,
+                             params_.singleCoreNc * params_.maxKd * params_.maxKh * maxWAlignDtype * sizeof(TGrad));
         }
     }
 
@@ -247,9 +243,8 @@ public:
             LocalTensor<uint8_t> maskUb = maskBuf.Get<uint8_t>();
             uint64_t mask = params_.singleCoreNc;
             AscendC::BinaryRepeatParams repeatParams = {1, 1, 1, 8, 8, 0};
-            Compare(
-                maskUb, kernelIdx, indicesFloat[params_.singleCoreNc * woCntIndex], CMPMODE::EQ, mask,
-                params_.maxKdhwLen, repeatParams);
+            Compare(maskUb, kernelIdx, indicesFloat[params_.singleCoreNc * woCntIndex], CMPMODE::EQ, mask,
+                    params_.maxKdhwLen, repeatParams);
             PipeBarrier<PIPE_V>();
             // 5.2 Select
             LocalTensor<TGrad> gradSelUb = tempGradBuf.Get<TGrad>();
@@ -289,9 +284,8 @@ public:
 
         // 4. Gen kd * kh * kw * vL
         for (uint64_t dIdx = 1; dIdx < kD; dIdx++) {
-            Adds(
-                dstLocal[dIdx * kH * kW * params_.singleCoreNc], dstLocal, 1.f * (dIdx * kH * kW),
-                kH * kW * params_.singleCoreNc);
+            Adds(dstLocal[dIdx * kH * kW * params_.singleCoreNc], dstLocal, 1.f * (dIdx * kH * kW),
+                 kH * kW * params_.singleCoreNc);
         }
     }
 
@@ -301,8 +295,8 @@ public:
         DataCopyExtParams copyParamsArgmax;
         copyParamsArgmax.blockCount = core_.ncShape;
         copyParamsArgmax.blockLen = block_.dohowoShape * sizeof(TArgmax);
-        copyParamsArgmax.srcStride =
-            (params_.doDim * params_.hoDim * params_.woDim - block_.dohowoShape) * sizeof(TArgmax);
+        copyParamsArgmax.srcStride = (params_.doDim * params_.hoDim * params_.woDim - block_.dohowoShape) *
+                                     sizeof(TArgmax);
         copyParamsArgmax.dstStride = 0;
         DataCopyPadExtParams<TArgmax> padArgmax{false, 0, 0, 0};
         DataCopyPad(argmaxUb, argmaxGm[block_.offsetArgmax], copyParamsArgmax, padArgmax);
@@ -324,9 +318,9 @@ public:
         gradQue.EnQue(gradUb);
     }
 
-    __aicore__ inline void CalcIndices(
-        LocalTensor<float>& indicesD, LocalTensor<float>& indicesH, LocalTensor<float>& indicesW,
-        LocalTensor<float>& indicesFloat, LocalTensor<int32_t>& argmaxTranUb)
+    __aicore__ inline void CalcIndices(LocalTensor<float>& indicesD, LocalTensor<float>& indicesH,
+                                       LocalTensor<float>& indicesW, LocalTensor<float>& indicesFloat,
+                                       LocalTensor<int32_t>& argmaxTranUb)
     {
         // indicesD = indices / (hi * wi)
         // indicesH = indices % (hi * wi) / wi
@@ -370,9 +364,9 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CalcIndicesInWindow(
-        LocalTensor<float>& indicesD, LocalTensor<float>& indicesH, LocalTensor<float>& indicesW,
-        LocalTensor<float>& indicesFloat, uint64_t woBlockIdx)
+    __aicore__ inline void CalcIndicesInWindow(LocalTensor<float>& indicesD, LocalTensor<float>& indicesH,
+                                               LocalTensor<float>& indicesW, LocalTensor<float>& indicesFloat,
+                                               uint64_t woBlockIdx)
     {
         Adds(indicesD, indicesD, -1.f * block_.startD, params_.singleCoreNc * block_.dohowoAlign8);
         Adds(indicesH, indicesH, -1.f * block_.startH, params_.singleCoreNc * block_.dohowoAlign8);
@@ -381,9 +375,8 @@ public:
         for (uint64_t woCntIndex = 0; woCntIndex < block_.woShape; woCntIndex++) {
             uint64_t curWoBlockIdx = woBlockIdx + woCntIndex;
             block_.startW = FloorDiv(curWoBlockIdx * params_.wiDim, params_.woDim);
-            Adds(
-                indicesW[params_.singleCoreNc * woCntIndex], indicesW[params_.singleCoreNc * woCntIndex],
-                -1.f * block_.startW, params_.singleCoreNc);
+            Adds(indicesW[params_.singleCoreNc * woCntIndex], indicesW[params_.singleCoreNc * woCntIndex],
+                 -1.f * block_.startW, params_.singleCoreNc);
         }
         PipeBarrier<PIPE_V>();
 
@@ -397,8 +390,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CalcY(
-        LocalTensor<TGrad>& gradSelUb, LocalTensor<TGrad>& yTranspose, LocalTensor<float>& yTransposeFP32)
+    __aicore__ inline void CalcY(LocalTensor<TGrad>& gradSelUb, LocalTensor<TGrad>& yTranspose,
+                                 LocalTensor<float>& yTransposeFP32)
     {
         uint64_t kWAlignDtype = AlignUp(block_.deltaW, BLOCK_SIZE / sizeof(TGrad));
         uint64_t kWAlign8 = AlignUp(block_.deltaW, BLOCK_NUM_32);
@@ -410,29 +403,25 @@ public:
                         LocalTensor<half> yTransposeFp16 = yTranspose.template ReinterpretCast<half>();
                         LocalTensor<half> gradSelUbFp16 = gradSelUb.template ReinterpretCast<half>();
                         PipeBarrier<PIPE_V>();
-                        Muls(
-                            yTransposeFp16[(kD * block_.deltaH + kH) * kWAlignDtype * block_.ncShape],
-                            gradSelUbFp16[(kD * params_.maxKh + kH) * params_.maxKw * block_.ncShape],
-                            static_cast<half>(1), kWLen);
+                        Muls(yTransposeFp16[(kD * block_.deltaH + kH) * kWAlignDtype * block_.ncShape],
+                             gradSelUbFp16[(kD * params_.maxKh + kH) * params_.maxKw * block_.ncShape],
+                             static_cast<half>(1), kWLen);
                     } else {
-                        Muls(
-                            yTranspose[(kD * block_.deltaH + kH) * kWAlignDtype * block_.ncShape],
-                            gradSelUb[(kD * params_.maxKh + kH) * params_.maxKw * block_.ncShape],
-                            static_cast<TGrad>(1), kWLen);
+                        Muls(yTranspose[(kD * block_.deltaH + kH) * kWAlignDtype * block_.ncShape],
+                             gradSelUb[(kD * params_.maxKh + kH) * params_.maxKw * block_.ncShape],
+                             static_cast<TGrad>(1), kWLen);
                     }
                 }
             }
         } else {
             LocalTensor<float> gradSelFP32 = tempGradBuf.Get<float>();
-            Cast(
-                gradSelFP32, gradSelUb[params_.singleCoreNc * params_.maxKdhwLen], RoundMode::CAST_NONE,
-                params_.maxKdhwLen * params_.singleCoreNc);
+            Cast(gradSelFP32, gradSelUb[params_.singleCoreNc * params_.maxKdhwLen], RoundMode::CAST_NONE,
+                 params_.maxKdhwLen * params_.singleCoreNc);
             PipeBarrier<PIPE_V>();
             for (uint64_t kD = 0; kD < params_.maxKd; kD++) {
                 for (uint64_t kH = 0; kH < params_.maxKh; kH++) {
-                    Muls(
-                        yTransposeFP32[(kD * block_.deltaH + kH) * kWAlign8 * block_.ncShape],
-                        gradSelFP32[(kD * params_.maxKh + kH) * params_.maxKw * block_.ncShape], 1.f, kWLen);
+                    Muls(yTransposeFP32[(kD * block_.deltaH + kH) * kWAlign8 * block_.ncShape],
+                         gradSelFP32[(kD * params_.maxKh + kH) * params_.maxKw * block_.ncShape], 1.f, kWLen);
                 }
             }
         }
@@ -463,16 +452,15 @@ public:
         }
     }
 
-    __aicore__ inline void SelectGrad(
-        LocalTensor<TGrad>& dstLocal, LocalTensor<uint8_t>& maskUb, LocalTensor<TGrad>& src0Local, uint64_t woCntIndex)
+    __aicore__ inline void SelectGrad(LocalTensor<TGrad>& dstLocal, LocalTensor<uint8_t>& maskUb,
+                                      LocalTensor<TGrad>& src0Local, uint64_t woCntIndex)
     {
         uint64_t mask = core_.ncShape;
         int32_t repeat = params_.maxKdhwLen;
         AscendC::BinaryRepeatParams repeatParams = {1, 1, 1, 8, 0, 8};
         if constexpr (is_same<TGrad, float>::value) {
-            Select(
-                dstLocal, maskUb, src0Local[params_.singleCoreNc * woCntIndex], static_cast<TGrad>(0),
-                SELMODE::VSEL_TENSOR_SCALAR_MODE, mask, repeat, repeatParams);
+            Select(dstLocal, maskUb, src0Local[params_.singleCoreNc * woCntIndex], static_cast<TGrad>(0),
+                   SELMODE::VSEL_TENSOR_SCALAR_MODE, mask, repeat, repeatParams);
         } else {
             AscendC::CopyRepeatParams copyRepeatParams = {
                 1, 1, 4, 0}; // 4 represents dstStride, because datatype is 2bytes and params_.singleCoreNc is 64.
@@ -480,37 +468,31 @@ public:
                 LocalTensor<half> dstLocalFp16 = dstLocal.template ReinterpretCast<half>();
                 LocalTensor<half> src0LocalFp16 = src0Local.template ReinterpretCast<half>();
                 if constexpr (IsOverlap) {
-                    Copy(
-                        dstLocalFp16[params_.singleCoreNc * repeat], src0LocalFp16[params_.singleCoreNc * woCntIndex],
-                        mask, repeat, copyRepeatParams);
+                    Copy(dstLocalFp16[params_.singleCoreNc * repeat], src0LocalFp16[params_.singleCoreNc * woCntIndex],
+                         mask, repeat, copyRepeatParams);
                     PipeBarrier<PIPE_V>();
-                    Select(
-                        dstLocalFp16[params_.singleCoreNc * repeat], maskUb,
-                        dstLocalFp16[params_.singleCoreNc * repeat], static_cast<half>(0),
-                        SELMODE::VSEL_TENSOR_SCALAR_MODE, repeat * params_.singleCoreNc);
+                    Select(dstLocalFp16[params_.singleCoreNc * repeat], maskUb,
+                           dstLocalFp16[params_.singleCoreNc * repeat], static_cast<half>(0),
+                           SELMODE::VSEL_TENSOR_SCALAR_MODE, repeat * params_.singleCoreNc);
                 } else {
-                    Copy(
-                        dstLocalFp16, src0LocalFp16[params_.singleCoreNc * woCntIndex], mask, repeat, copyRepeatParams);
+                    Copy(dstLocalFp16, src0LocalFp16[params_.singleCoreNc * woCntIndex], mask, repeat,
+                         copyRepeatParams);
                     PipeBarrier<PIPE_V>();
-                    Select(
-                        dstLocalFp16, maskUb, dstLocalFp16, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                        repeat * params_.singleCoreNc);
+                    Select(dstLocalFp16, maskUb, dstLocalFp16, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                           repeat * params_.singleCoreNc);
                 }
             } else {
                 if constexpr (IsOverlap) {
-                    Copy(
-                        dstLocal[params_.singleCoreNc * repeat], src0Local[params_.singleCoreNc * woCntIndex], mask,
-                        repeat, copyRepeatParams);
+                    Copy(dstLocal[params_.singleCoreNc * repeat], src0Local[params_.singleCoreNc * woCntIndex], mask,
+                         repeat, copyRepeatParams);
                     PipeBarrier<PIPE_V>();
-                    Select(
-                        dstLocal[params_.singleCoreNc * repeat], maskUb, dstLocal[params_.singleCoreNc * repeat],
-                        static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, repeat * params_.singleCoreNc);
+                    Select(dstLocal[params_.singleCoreNc * repeat], maskUb, dstLocal[params_.singleCoreNc * repeat],
+                           static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, repeat * params_.singleCoreNc);
                 } else {
                     Copy(dstLocal, src0Local[params_.singleCoreNc * woCntIndex], mask, repeat, copyRepeatParams);
                     PipeBarrier<PIPE_V>();
-                    Select(
-                        dstLocal, maskUb, dstLocal, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                        repeat * params_.singleCoreNc);
+                    Select(dstLocal, maskUb, dstLocal, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                           repeat * params_.singleCoreNc);
                 }
             }
         }
@@ -533,9 +515,8 @@ public:
         copyParamsY.dstStride = (params_.wiDim - block_.deltaW) * sizeof(T);
         for (uint64_t ncIdx = 0; ncIdx < core_.ncShape; ncIdx++) {
             for (uint64_t dIdx = 0; dIdx < block_.deltaD; dIdx++) {
-                DataCopyPad(
-                    outGm[block_.offsetY + ncIdx * params_.diHiWiLen + dIdx * hiwiLen],
-                    yUb[ncIdx * block_.dihiwiAlign + dIdx * block_.deltaH * maxKwAlign], copyParamsY);
+                DataCopyPad(outGm[block_.offsetY + ncIdx * params_.diHiWiLen + dIdx * hiwiLen],
+                            yUb[ncIdx * block_.dihiwiAlign + dIdx * block_.deltaH * maxKwAlign], copyParamsY);
             }
         }
         if constexpr (IsOverlap) {

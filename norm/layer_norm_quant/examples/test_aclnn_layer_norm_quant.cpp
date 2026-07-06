@@ -47,9 +47,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -66,9 +65,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -113,9 +111,12 @@ int main()
     aclTensor* outputY = nullptr;
     aclTensor* outputScale = nullptr;
 
-    std::vector<float> xHostData = {1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2};
-    std::vector<float> gammaHostData = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
-    std::vector<float> betaHostData = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    std::vector<float> xHostData = {1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2,
+                                    1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2};
+    std::vector<float> gammaHostData = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                                        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+    std::vector<float> betaHostData = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                       1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     std::vector<float> scaleOptionalHostData = {1};
     std::vector<int8_t> zeroPointOptionalHostData = {1};
 
@@ -129,16 +130,17 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(betaHostData, betaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT16, &beta);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(scaleOptionalHostData, scaleOptionalShape, &scaleOptionalDeviceAddr, aclDataType::ACL_FLOAT16, &scaleOptional);
+    ret = CreateAclTensor(scaleOptionalHostData, scaleOptionalShape, &scaleOptionalDeviceAddr, aclDataType::ACL_FLOAT16,
+                          &scaleOptional);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(
-        zeroPointOptionalHostData, zeroPointOptionalShape, &zeroPointOptionalDeviceAddr, aclDataType::ACL_INT8, &zeroPointOptional);
+    ret = CreateAclTensor(zeroPointOptionalHostData, zeroPointOptionalShape, &zeroPointOptionalDeviceAddr,
+                          aclDataType::ACL_INT8, &zeroPointOptional);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     ret = CreateAclTensor(outputYHostData, outputYShape, &outputYDeviceAddr, aclDataType::ACL_INT8, &outputY);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(
-        outputScaleHostData, outputScaleShape, &outputScaleDeviceAddr, aclDataType::ACL_FLOAT, &outputScale);
+    ret = CreateAclTensor(outputScaleHostData, outputScaleShape, &outputScaleDeviceAddr, aclDataType::ACL_FLOAT,
+                          &outputScale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // aclnnLayerNormQuant接口调用示例
@@ -148,9 +150,10 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     LOG_PRINT("\nUse aclnnLayerNormQuant Port.");
-    ret = aclnnLayerNormQuantGetWorkspaceSize(
-        x, gamma, beta, scaleOptional, zeroPointOptional, quantMode, eps, outputY, outputScale, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLayerNormQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnLayerNormQuantGetWorkspaceSize(x, gamma, beta, scaleOptional, zeroPointOptional, quantMode, eps, outputY,
+                                              outputScale, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLayerNormQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
@@ -168,21 +171,21 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto outputYSize = GetShapeSize(outputYShape);
     std::vector<int8_t> resultDataY(outputYSize, 0);
-    ret = aclrtMemcpy(
-        resultDataY.data(), resultDataY.size() * sizeof(resultDataY[0]), outputYDeviceAddr,
-        outputYSize * sizeof(resultDataY[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataY.data(), resultDataY.size() * sizeof(resultDataY[0]), outputYDeviceAddr,
+                      outputYSize * sizeof(resultDataY[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < outputYSize; i++) {
         LOG_PRINT("result[%ld] is: %d\n", i, resultDataY[i]);
     }
 
-    if (quantMode == 1){
+    if (quantMode == 1) {
         auto outputScaleSize = GetShapeSize(outputScaleShape);
         std::vector<float> resultDataScale(outputScaleSize, 0);
-        ret = aclrtMemcpy(
-            resultDataScale.data(), resultDataScale.size() * sizeof(resultDataScale[0]), outputScaleDeviceAddr,
-            outputScaleSize * sizeof(resultDataScale[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+        ret = aclrtMemcpy(resultDataScale.data(), resultDataScale.size() * sizeof(resultDataScale[0]),
+                          outputScaleDeviceAddr, outputScaleSize * sizeof(resultDataScale[0]),
+                          ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                  return ret);
         for (int64_t i = 0; i < outputScaleSize; i++) {
             LOG_PRINT("result[%ld] is: %f\n", i, resultDataScale[i]);
         }

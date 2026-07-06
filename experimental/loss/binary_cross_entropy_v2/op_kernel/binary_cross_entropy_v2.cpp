@@ -23,16 +23,15 @@
  * \brief
  */
 
- #include "binary_cross_entropy_v2.h"
- 
- template <uint32_t schMode>
- __global__ __aicore__ void binary_cross_entropy_v2(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
- {
-     REGISTER_TILING_DEFAULT(BinaryCrossEntropyV2TilingData);
-     GET_TILING_DATA_WITH_STRUCT(BinaryCrossEntropyV2TilingData, tilingData, tiling);
- 
+#include "binary_cross_entropy_v2.h"
+
+template <uint32_t schMode>
+__global__ __aicore__ void binary_cross_entropy_v2(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
+{
+    REGISTER_TILING_DEFAULT(BinaryCrossEntropyV2TilingData);
+    GET_TILING_DATA_WITH_STRUCT(BinaryCrossEntropyV2TilingData, tilingData, tiling);
+
     NsBinaryCrossEntropyV2::BinaryCrossEntropyV2<DTYPE_X> op; // 算子kernel实例获取
-    op.Init(x, y, z, &tilingData);      // 算子kernel实例初始化
-    op.Process();                       // 算子kernel实例执行
- }
- 
+    op.Init(x, y, z, &tilingData);                            // 算子kernel实例初始化
+    op.Process();                                             // 算子kernel实例执行
+}

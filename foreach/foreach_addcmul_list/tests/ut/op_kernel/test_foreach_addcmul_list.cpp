@@ -23,26 +23,21 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_addcmul_list(GM_ADDR inputs, GM_ADDR tensor1,
-                                                            GM_ADDR tensor2, GM_ADDR scalar,
-                                                            GM_ADDR outputs,
-                                                            GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_addcmul_list(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2,
+                                                           GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                           GM_ADDR tiling);
 
 class foreach_addcmul_list_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_addcmul_list_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "foreach_addcmul_list_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_addcmul_list_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_addcmul_list_test TearDown\n" << std::endl; }
 };
 
-TEST_F(foreach_addcmul_list_test, test_case_float_1) {
+TEST_F(foreach_addcmul_list_test, test_case_float_1)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
     system("chmod -R 755 ./addcmul_list_data/");
     system("cd ./addcmul_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -61,13 +56,14 @@ TEST_F(foreach_addcmul_list_test, test_case_float_1) {
     uint8_t* tensor1 = CreateTensorListForeachAddcmulList<float>(shapeInfos, "float32", "tensor1");
     uint8_t* tensor2 = CreateTensorListForeachAddcmulList<float>(shapeInfos, "float32", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcmulList<float>(shapeInfos, "float32", "input");
-    float * scalar = (float *)AscendC::GmAlloc(sizeof(float) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (float)3;
     }
 
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcmulList<float>(out, shapeInfos, "float32");
     AscendC::GmFree((void*)x1);
@@ -80,11 +76,11 @@ TEST_F(foreach_addcmul_list_test, test_case_float_1) {
     system("cd ./addcmul_list_data/ && python3 compare_data.py 'float32'");
 }
 
-TEST_F(foreach_addcmul_list_test, test_case_float16_2) {
+TEST_F(foreach_addcmul_list_test, test_case_float16_2)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
     system("chmod -R 755 ./addcmul_list_data/");
     system("cd ./addcmul_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -103,13 +99,14 @@ TEST_F(foreach_addcmul_list_test, test_case_float16_2) {
     uint8_t* tensor1 = CreateTensorListForeachAddcmulList<half>(shapeInfos, "float16", "tensor1");
     uint8_t* tensor2 = CreateTensorListForeachAddcmulList<half>(shapeInfos, "float16", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcmulList<half>(shapeInfos, "float16", "input");
-    half * scalar = (half *)AscendC::GmAlloc(sizeof(half) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    half* scalar = (half*)AscendC::GmAlloc(sizeof(half) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (half)3;
     }
 
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcmulList<half>(out, shapeInfos, "float16");
     AscendC::GmFree((void*)x1);
@@ -122,11 +119,11 @@ TEST_F(foreach_addcmul_list_test, test_case_float16_2) {
     system("cd ./addcmul_list_data/ && python3 compare_data.py 'float16'");
 }
 
-TEST_F(foreach_addcmul_list_test, test_case_int32_3) {
+TEST_F(foreach_addcmul_list_test, test_case_int32_3)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
     system("chmod -R 755 ./addcmul_list_data/");
     system("cd ./addcmul_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -145,13 +142,14 @@ TEST_F(foreach_addcmul_list_test, test_case_int32_3) {
     uint8_t* tensor1 = CreateTensorListForeachAddcmulList<int32_t>(shapeInfos, "int32", "tensor1");
     uint8_t* tensor2 = CreateTensorListForeachAddcmulList<int32_t>(shapeInfos, "int32", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcmulList<int32_t>(shapeInfos, "int32", "input");
-    int32_t * scalar = (int32_t *)AscendC::GmAlloc(sizeof(int32_t) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    int32_t* scalar = (int32_t*)AscendC::GmAlloc(sizeof(int32_t) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (int32_t)3;
     }
 
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcmulList<int32_t>(out, shapeInfos, "int32");
     AscendC::GmFree((void*)x1);
@@ -164,11 +162,11 @@ TEST_F(foreach_addcmul_list_test, test_case_int32_3) {
     system("cd ./addcmul_list_data/ && python3 compare_data.py 'int32'");
 }
 
-TEST_F(foreach_addcmul_list_test, test_case_bloat16_4) {
+TEST_F(foreach_addcmul_list_test, test_case_bloat16_4)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
     system("chmod -R 755 ./addcmul_list_data/");
     system("cd ./addcmul_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -187,13 +185,14 @@ TEST_F(foreach_addcmul_list_test, test_case_bloat16_4) {
     uint8_t* tensor1 = CreateTensorListForeachAddcmulList<bfloat16_t>(shapeInfos, "bfloat16_t", "tensor1");
     uint8_t* tensor2 = CreateTensorListForeachAddcmulList<bfloat16_t>(shapeInfos, "bfloat16_t", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcmulList<bfloat16_t>(shapeInfos, "bfloat16_t", "input");
-    bfloat16_t * scalar = (bfloat16_t *)AscendC::GmAlloc(sizeof(bfloat16_t) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    bfloat16_t* scalar = (bfloat16_t*)AscendC::GmAlloc(sizeof(bfloat16_t) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (bfloat16_t)3;
     }
 
     ICPU_SET_TILING_KEY(4);
-    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcmulList<bfloat16_t>(out, shapeInfos, "bfloat16_t");
     AscendC::GmFree((void*)x1);
@@ -206,11 +205,11 @@ TEST_F(foreach_addcmul_list_test, test_case_bloat16_4) {
     system("cd ./addcmul_list_data/ && python3 compare_data.py 'bfloat16_t'");
 }
 
-TEST_F(foreach_addcmul_list_test, test_case_float_5_for_not_aligned) {
+TEST_F(foreach_addcmul_list_test, test_case_float_5_for_not_aligned)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{7}, {9}, {17}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_addcmul_list/tests/ut/op_kernel/addcmul_list_data ./");
     system("chmod -R 755 ./addcmul_list_data/");
     system("cd ./addcmul_list_data/ && python3 gen_data.py '{{7}, {9}, {17}}' 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -229,13 +228,14 @@ TEST_F(foreach_addcmul_list_test, test_case_float_5_for_not_aligned) {
     uint8_t* tensor1 = CreateTensorListForeachAddcmulList<float>(shapeInfos, "float32", "tensor1");
     uint8_t* tensor2 = CreateTensorListForeachAddcmulList<float>(shapeInfos, "float32", "tensor2");
     uint8_t* out = CreateTensorListForeachAddcmulList<float>(shapeInfos, "float32", "input");
-    float * scalar = (float *)AscendC::GmAlloc(sizeof(float) * 3);
-    for (int i = 0; i < 3; i ++ ) {
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
+    for (int i = 0; i < 3; i++) {
         scalar[i] = (float)3;
     }
 
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out, workspace, tiling);
+    ICPU_RUN_KF(foreach_addcmul_list, blockDim, x1, tensor1, tensor2, reinterpret_cast<uint8_t*>(scalar), out,
+                workspace, tiling);
 
     FreeTensorListForeachAddcmulList<float>(out, shapeInfos, "float32");
     AscendC::GmFree((void*)x1);

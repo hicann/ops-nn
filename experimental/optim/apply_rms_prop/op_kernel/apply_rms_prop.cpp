@@ -35,10 +35,8 @@
 #include "apply_rms_prop.h"
 
 template <typename D_T_VAR>
-__global__ __aicore__ void apply_rms_prop(
-    GM_ADDR var, GM_ADDR ms, GM_ADDR mom, GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR ms_out, GM_ADDR mom_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_rms_prop(GM_ADDR var, GM_ADDR ms, GM_ADDR mom, GM_ADDR grad, GM_ADDR var_out,
+                                          GM_ADDR ms_out, GM_ADDR mom_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 

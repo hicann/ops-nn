@@ -18,13 +18,12 @@
 namespace optiling {
 
 //////////////////////////////// AvgPoolGradNCHWTiling /////////////////////////////////
-ge::graphStatus AvgPoolGradNCHWTiling::GetPlatformInfo() {
+ge::graphStatus AvgPoolGradNCHWTiling::GetPlatformInfo()
+{
     return GetAvgPoolGradPlatformInfo(context_, ubSize, coreNum);
 }
 
-ge::graphStatus AvgPoolGradNCHWTiling::GetShapeAttrsInfo() {
-    return GetAvgPoolGradShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus AvgPoolGradNCHWTiling::GetShapeAttrsInfo() { return GetAvgPoolGradShapeAttrsInfo(context_, inputData); }
 
 REGISTER_TILING_TEMPLATE("AvgPoolGrad", AvgPoolGradNCHWTiling, 0);
 

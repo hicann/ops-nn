@@ -68,12 +68,11 @@ __aicore__ inline RoundMode ConvertRoundMode(int64_t roundModeVal)
 };
 
 template <typename T>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& dataLocal, LocalTensor<T>& outLocal, LocalTensor<float>& float32Tensor, int8_t roundModeValue,
-        uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& dataLocal, LocalTensor<T>& outLocal,
+                                   LocalTensor<float>& float32Tensor, int8_t roundModeValue, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         uint32_t castTimes = 0;
         uint32_t castTimesRemainder = 0;
@@ -90,15 +89,15 @@ public:
         }
 
         if (castTimesRemainder > 0) {
-            ComputerPerCast(
-                dataLocal, outLocal, float32Tensor, roundModeValue, maxCastDataCount, castTimes, castTimesRemainder);
+            ComputerPerCast(dataLocal, outLocal, float32Tensor, roundModeValue, maxCastDataCount, castTimes,
+                            castTimesRemainder);
         }
     }
 
 private:
-    __aicore__ inline void ComputerPerCast(
-        LocalTensor<T>& dataLocal, LocalTensor<T>& outLocal, LocalTensor<float>& float32Tensor, int8_t roundModeValue,
-        uint32_t maxCastDataCount, uint16_t index, int64_t dataCount)
+    __aicore__ inline void ComputerPerCast(LocalTensor<T>& dataLocal, LocalTensor<T>& outLocal,
+                                           LocalTensor<float>& float32Tensor, int8_t roundModeValue,
+                                           uint32_t maxCastDataCount, uint16_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -121,12 +120,11 @@ private:
 };
 
 template <>
-class InnerComputer<float>
-{
+class InnerComputer<float> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<float>& dataLocal, LocalTensor<float>& outLocal, LocalTensor<float>& float32Tensor,
-        int8_t roundModeValue, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<float>& dataLocal, LocalTensor<float>& outLocal,
+                                   LocalTensor<float>& float32Tensor, int8_t roundModeValue, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         if (roundModeValue == CAST_FRAC) {
             Cast(outLocal, dataLocal, RoundMode::CAST_TRUNC, dataCount);
@@ -139,12 +137,11 @@ public:
 };
 
 template <typename T>
-class ForeachRoundOffNumberND
-{
+class ForeachRoundOffNumberND {
 public:
     __aicore__ inline ForeachRoundOffNumberND(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -157,8 +154,8 @@ private:
     __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
     __aicore__ inline void SingleTensorProcess(int64_t dataCount, LocalTensor<float>& float32Tensor);
     __aicore__ inline void CopyIn(uint16_t index, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void ComputeAndCopyOut(
-        uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder);
+    __aicore__ inline void ComputeAndCopyOut(uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                             bool isRemainder);
     __aicore__ inline __gm__ T* GetInputTensorAddr(uint16_t index);
     __aicore__ inline __gm__ T* GetOutputTensorAddr(uint16_t index);
 
@@ -192,8 +189,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachRoundOffNumberND<T>::Init(
-    GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachRoundOffNumberND<T>::Init(GM_ADDR x, GM_ADDR roundMode, GM_ADDR y, GM_ADDR workspace,
+                                                        const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     inTensorPtr = x;
@@ -272,8 +269,8 @@ __aicore__ inline void ForeachRoundOffNumberND<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void ForeachRoundOffNumberND<T>::SingleTensorProcess(
-    int64_t dataCount, LocalTensor<float>& float32Tensor)
+__aicore__ inline void ForeachRoundOffNumberND<T>::SingleTensorProcess(int64_t dataCount,
+                                                                       LocalTensor<float>& float32Tensor)
 {
     // Batch handling and calculation.
     uint32_t copyTimes = dataCount / maxDataCount;
@@ -316,8 +313,9 @@ __aicore__ inline void ForeachRoundOffNumberND<T>::CopyIn(uint16_t index, int64_
 }
 
 template <typename T>
-__aicore__ inline void ForeachRoundOffNumberND<T>::ComputeAndCopyOut(
-    uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+__aicore__ inline void ForeachRoundOffNumberND<T>::ComputeAndCopyOut(uint16_t index, int64_t dataCount,
+                                                                     LocalTensor<float>& float32Tensor,
+                                                                     bool isRemainder)
 {
     LocalTensor<T> dataLocal = dataQueue.DeQue<T>();
     LocalTensor<T> outLocal = outQueue.AllocTensor<T>();

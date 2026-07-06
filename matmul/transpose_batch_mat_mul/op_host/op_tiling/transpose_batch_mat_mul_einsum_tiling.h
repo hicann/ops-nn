@@ -20,7 +20,6 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "pp_matmul_default.h"
 
-
 namespace optiling {
 namespace transpose_batch_mat_mul {
 
@@ -35,16 +34,12 @@ inline int64_t PermDecode(const int64_t* perm, size_t size)
     return trans_;
 }
 
-class TransposeBatchMatMulEinsumTiling : public pp_matmul::PpMatMulDefault
-{
+class TransposeBatchMatMulEinsumTiling : public pp_matmul::PpMatMulDefault {
 public:
-    explicit TransposeBatchMatMulEinsumTiling(gert::TilingContext* context)
-       : PpMatMulDefault(context) {}
-    TransposeBatchMatMulEinsumTiling(gert::TilingContext *context, bool isQuantBatchMatmulV3)
-        : PpMatMulDefault(context),
-          isQuantBatchMatmulV3_(isQuantBatchMatmulV3)
-    {
-    }
+    explicit TransposeBatchMatMulEinsumTiling(gert::TilingContext* context) : PpMatMulDefault(context) {}
+    TransposeBatchMatMulEinsumTiling(gert::TilingContext* context, bool isQuantBatchMatmulV3)
+        : PpMatMulDefault(context), isQuantBatchMatmulV3_(isQuantBatchMatmulV3)
+    {}
     ~TransposeBatchMatMulEinsumTiling() override = default;
 
     ge::graphStatus DoTiling();
@@ -53,8 +48,8 @@ public:
     ge::graphStatus PostTiling();
 
 private:
-    const gert::ContinuousVector *aPermList_ = nullptr;
-    const gert::ContinuousVector *bPermList_ = nullptr;
+    const gert::ContinuousVector* aPermList_ = nullptr;
+    const gert::ContinuousVector* bPermList_ = nullptr;
     bool isQuantBatchMatmulV3_ = false;
 };
 } // namespace transpose_batch_mat_mul

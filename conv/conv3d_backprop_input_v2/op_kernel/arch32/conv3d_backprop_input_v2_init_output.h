@@ -33,8 +33,7 @@ constexpr int32_t BEST_FIXPIPE_ELEMENTS = 32; // 128B/sizeof(float)
 constexpr int32_t CUBE_BLOCK_LEN_BITS = 4;    // 16 = 2^4
 constexpr int32_t FRACTAL_LEN_BITS = 9;       // 512 = 2^9
 
-enum class InitOutputFlag
-{
+enum class InitOutputFlag {
     NO_INIT = 0,
     L0_INIT = 1,
     L1_INIT = 2,
@@ -43,8 +42,7 @@ enum class InitOutputFlag
 template <typename yType, int yFormat, InitOutputFlag initOutputFlag>
 class Conv3dDxInitOutput {
 public:
-    __aicore__ inline Conv3dDxInitOutput()
-    {}
+    __aicore__ inline Conv3dDxInitOutput() {}
     __aicore__ inline void Init(GM_ADDR y, const Conv3DBackpropInputV2TilingData* tilingData)
     {
         InitTilingData(tilingData);
@@ -62,10 +60,7 @@ public:
     /** main logical function
      */
 
-    __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b)
-    {
-        return (a + b - 1) / b;
-    }
+    __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b) { return (a + b - 1) / b; }
 
     __aicore__ inline void SetL0CZero()
     {
@@ -232,10 +227,7 @@ public:
 #endif
     }
 
-    __aicore__ inline void Destroy()
-    {
-        pipe_.Destroy();
-    }
+    __aicore__ inline void Destroy() { pipe_.Destroy(); }
 
 protected:
     uint64_t outputSize_;

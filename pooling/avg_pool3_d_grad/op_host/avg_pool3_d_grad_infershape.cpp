@@ -19,22 +19,22 @@
 #include "graph/utils/type_utils.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 
-
 namespace {
 constexpr size_t IDX_0 = 0;
 constexpr size_t IDX_1 = 1;
 constexpr size_t kConv3dDimSizeLimit = 5;
 constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
 
-inline bool IsConstTensor(const gert::Tensor* input_tensor) {
-  if (input_tensor != nullptr) {
-    if (input_tensor->GetAddr() == nullptr) {
-      // empty tensor
-      return input_tensor->GetShapeSize() == 0;
+inline bool IsConstTensor(const gert::Tensor* input_tensor)
+{
+    if (input_tensor != nullptr) {
+        if (input_tensor->GetAddr() == nullptr) {
+            // empty tensor
+            return input_tensor->GetShapeSize() == 0;
+        }
+        return true;
     }
-    return true;
-  }
-  return false;
+    return false;
 }
 
 constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
@@ -44,13 +44,14 @@ constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
  * @param [out] output_shape: the output shape ptr
  * @return bool
  */
-inline bool IsUnknownShape(const gert::Shape* check_shape) {
-  for (size_t i = 0; i < check_shape->GetDimNum(); i++) {
-    if (check_shape->GetDim(i) == UNKNOWN_DIM_VALUE_) {
-      return true;
+inline bool IsUnknownShape(const gert::Shape* check_shape)
+{
+    for (size_t i = 0; i < check_shape->GetDimNum(); i++) {
+        if (check_shape->GetDim(i) == UNKNOWN_DIM_VALUE_) {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 using ge::GRAPH_FAILED;
@@ -60,8 +61,8 @@ using gert::InferShapeContext;
 
 namespace ops {
 
-static graphStatus InferShapeForAvg(
-    InferShapeContext* context, size_t const_tensor_idx, const char* const_tensor_name, size_t dim_num)
+static graphStatus InferShapeForAvg(InferShapeContext* context, size_t const_tensor_idx, const char* const_tensor_name,
+                                    size_t dim_num)
 {
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("", "Get %s failed.", "context"), return GRAPH_FAILED);
 
@@ -71,20 +72,18 @@ static graphStatus InferShapeForAvg(
     OP_CHECK_IF(y_shape == nullptr, CUBE_INNER_ERR_REPORT("", "Get %s failed.", "y shape"), return GRAPH_FAILED);
 
     auto const_tensor = context->GetInputTensor(const_tensor_idx);
-    OP_CHECK_IF(
-        const_tensor == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null %s tensor.", const_tensor_name),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null %s tensor.", const_tensor_name),
+                return GRAPH_FAILED);
     size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
-    OP_CHECK_IF(
-        const_tensor_dim_num != dim_num,
-        CUBE_INNER_ERR_REPORT(op_name, "%s dim num %zu invalid.", const_tensor_name, const_tensor_dim_num),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(const_tensor_dim_num != dim_num,
+                CUBE_INNER_ERR_REPORT(op_name, "%s dim num %zu invalid.", const_tensor_name, const_tensor_dim_num),
+                return GRAPH_FAILED);
     y_shape->SetDimNum(dim_num);
 
     size_t IDX = const_tensor_idx == IDX_0 ? IDX_1 : IDX_0;
     auto first_input_shape = context->GetInputShape(IDX);
-    OP_CHECK_IF(
-        first_input_shape == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null input tensor."), return GRAPH_FAILED);
+    OP_CHECK_IF(first_input_shape == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null input tensor."),
+                return GRAPH_FAILED);
     if (IsUnknownShape(first_input_shape) || !IsConstTensor(const_tensor)) {
         for (size_t idx = 0; idx < const_tensor_dim_num; ++idx) {
             y_shape->SetDim(idx, UNKNOWN_SHAPE_DIM);
@@ -104,9 +103,8 @@ static graphStatus InferShapeForAvg(
             y_shape->SetDim(idx, tensor_data[idx]);
         }
     } else {
-        CUBE_INNER_ERR_REPORT(
-            op_name, "tensor %s not support dtype %s.", const_tensor_name,
-            ge::TypeUtils::DataTypeToAscendString(datatype).GetString());
+        CUBE_INNER_ERR_REPORT(op_name, "tensor %s not support dtype %s.", const_tensor_name,
+                              ge::TypeUtils::DataTypeToAscendString(datatype).GetString());
         return GRAPH_FAILED;
     }
 

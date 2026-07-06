@@ -16,14 +16,14 @@
 #include "register/op_impl_registry.h"
 
 namespace ops {
-static constexpr int64_t IDX_0 = 0; // INPUT_VAR
-static constexpr int64_t IDX_1 = 1; // INPUT_GRAD
-static constexpr int64_t IDX_2 = 2; // INPUT_STATE_M
-static constexpr int64_t IDX_3 = 3; // INPUT_STATE_V
-static constexpr int64_t IDX_4 = 4; // INPUT_QMAP_M
-static constexpr int64_t IDX_5 = 5; // INPUT_QMAP_V
-static constexpr int64_t IDX_6 = 6; // INPUT_ABSMAX_M
-static constexpr int64_t IDX_7 = 7; // INPUT_ABSMAX_V
+static constexpr int64_t IDX_0 = 0;     // INPUT_VAR
+static constexpr int64_t IDX_1 = 1;     // INPUT_GRAD
+static constexpr int64_t IDX_2 = 2;     // INPUT_STATE_M
+static constexpr int64_t IDX_3 = 3;     // INPUT_STATE_V
+static constexpr int64_t IDX_4 = 4;     // INPUT_QMAP_M
+static constexpr int64_t IDX_5 = 5;     // INPUT_QMAP_V
+static constexpr int64_t IDX_6 = 6;     // INPUT_ABSMAX_M
+static constexpr int64_t IDX_7 = 7;     // INPUT_ABSMAX_V
 static constexpr int64_t OUT_IDX_0 = 0; // OUTPUT_VAR
 static constexpr int64_t OUT_IDX_1 = 1; // OUTPUT_STATE_M
 static constexpr int64_t OUT_IDX_2 = 2; // OUTPUT_STATE_V

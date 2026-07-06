@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_FACKER_H_
 #define NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_FACKER_H_
 
@@ -23,7 +22,7 @@
 #include "tiling_parse_context_faker.h"
 #include "op_impl_registry.h"
 
-using std::vector;
 using std::string;
+using std::vector;
 
-#endif  //NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_FACKER_H_
+#endif // NN_TESTS_UT_COMMON_KERNEL_RUN_CONTEXT_FACKER_H_

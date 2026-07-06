@@ -26,9 +26,8 @@ template <typename T, typename U, int64_t RMode>
 class GroupedDynamicBlockQuantSmallBlock {
 public:
     __aicore__ inline GroupedDynamicBlockQuantSmallBlock(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR groupList, GM_ADDR yOut, GM_ADDR scaleOut,
-        const GroupedDynamicBlockQuantTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR groupList, GM_ADDR yOut, GM_ADDR scaleOut,
+                                const GroupedDynamicBlockQuantTilingData& tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -36,8 +35,8 @@ private:
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockCount, int64_t dataLen);
     __aicore__ inline void CopyOut(int64_t xOffset, int64_t scaleOffset, int64_t blockCount, int64_t dataLen);
     __aicore__ inline void SplitMaxUbRowCompute(int64_t blockCount, int64_t dataLen);
-    __aicore__ inline void ComputeAlign(
-        int64_t blockCount, int64_t dataLen, __ubuf__ T* xAddr, __ubuf__ uint32_t* scaleOutAddr, __ubuf__ U* yOutAddr);
+    __aicore__ inline void ComputeAlign(int64_t blockCount, int64_t dataLen, __ubuf__ T* xAddr,
+                                        __ubuf__ uint32_t* scaleOutAddr, __ubuf__ U* yOutAddr);
 
 private:
     int64_t totalCoreNum_ = 0;
@@ -91,17 +90,14 @@ private:
 
     static constexpr AscendC::MicroAPI::CastTrait castTrait32to8 = []() {
         if constexpr (RMode == 1) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         } else if constexpr (RMode == 4) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         } else if constexpr (RMode == 7) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         }
     }();
     static constexpr AscendC::MicroAPI::CastTrait castTraitT2Float = {
@@ -168,24 +164,24 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::Init(
 }
 
 template <typename T, typename U, int64_t RMode>
-__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::CopyIn(
-    int64_t offset, int64_t blockCount, int64_t dataLen)
+__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::CopyIn(int64_t offset, int64_t blockCount,
+                                                                               int64_t dataLen)
 {
-    DataCopyExtParams inCopyParams_ = {
-        static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)),
-        static_cast<uint32_t>((colNum_ - dataLen) * sizeof(T)), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams inCopyParams_ = {static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                       static_cast<uint32_t>((colNum_ - dataLen) * sizeof(T)), static_cast<uint32_t>(0),
+                                       static_cast<uint32_t>(0)};
     int64_t padLeftNum = isDataLenAlign32 ? 0 : 16;
     int64_t padRightNum = (dataLen % 16 == 0) ? 0 : (16 - dataLen % 16);
-    DataCopyPadExtParams<T> padParams_ = {
-        true, static_cast<uint8_t>(padLeftNum), static_cast<uint8_t>(padRightNum), static_cast<T>(0)};
+    DataCopyPadExtParams<T> padParams_ = {true, static_cast<uint8_t>(padLeftNum), static_cast<uint8_t>(padRightNum),
+                                          static_cast<T>(0)};
     LocalTensor<T> x = inQueue_.AllocTensor<T>();
     DataCopyPad(x, xGm_[offset], inCopyParams_, padParams_);
     inQueue_.EnQue(x);
 }
 
 template <typename T, typename U, int64_t RMode>
-__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::CopyOut(
-    int64_t xOffset, int64_t scaleOffset, int64_t blockCount, int64_t dataLen)
+__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::CopyOut(int64_t xOffset, int64_t scaleOffset,
+                                                                                int64_t blockCount, int64_t dataLen)
 {
     DataCopyExtParams outCopyParams_ = {
         static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(uint8_t)), static_cast<uint32_t>(0),
@@ -227,18 +223,16 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::Process(
 
         int64_t gIdxValueStart = (gIdx > 0) ? groupListGm_.GetValue(gIdx - 1) : 0;
         int64_t gIdxValueEnd = groupListGm_.GetValue(gIdx);
-        assert(
-            (0 <= gIdxValueEnd && gIdxValueEnd <= rowNum_), "groupList %lld = %lld out of range[0 %lld]!\n", gIdx,
-            gIdxValueEnd, rowNum_);
-        assert(
-            (gIdxValueStart <= gIdxValueEnd), "groupList %lld = %lld less than previous groupIdx = %lld!\n", gIdx,
-            gIdxValueEnd, gIdxValueStart);
+        assert((0 <= gIdxValueEnd && gIdxValueEnd <= rowNum_), "groupList %lld = %lld out of range[0 %lld]!\n", gIdx,
+               gIdxValueEnd, rowNum_);
+        assert((gIdxValueStart <= gIdxValueEnd), "groupList %lld = %lld less than previous groupIdx = %lld!\n", gIdx,
+               gIdxValueEnd, gIdxValueStart);
         int64_t groupSizeIdx = gIdxValueEnd - gIdxValueStart;
         int64_t inLoopNum = ops::Ceil(groupSizeIdx, maxUbRow_);
 
         int64_t xGroupOffset = xBatchGmOffset + xTileGmOffset + gIdxValueStart * colNum_;
-        int64_t scaleGroupOffset =
-            scaleBatchGmOffset + scaleTileGmOffset + (gIdxValueStart / rowBlockSize_ + gIdx) * scaleColNum_;
+        int64_t scaleGroupOffset = scaleBatchGmOffset + scaleTileGmOffset +
+                                   (gIdxValueStart / rowBlockSize_ + gIdx) * scaleColNum_;
         for (int64_t i = 0; i < inLoopNum; i++) {
             int64_t blockCount = (i == inLoopNum - 1) ? groupSizeIdx - i * maxUbRow_ : maxUbRow_;
             int64_t xGmOffset = xGroupOffset + i * maxUbRow_ * colNum_;
@@ -251,8 +245,8 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::Process(
 }
 
 template <typename T, typename U, int64_t RMode>
-__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::SplitMaxUbRowCompute(
-    int64_t blockCount, int64_t dataLen)
+__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::SplitMaxUbRowCompute(int64_t blockCount,
+                                                                                             int64_t dataLen)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint32_t> scaleOut = this->scaleQueue_.template AllocTensor<uint32_t>();
@@ -274,8 +268,10 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::SplitMax
 }
 
 template <typename T, typename U, int64_t RMode>
-__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeAlign(
-    int64_t blockCount, int64_t dataLen, __ubuf__ T* xAddr, __ubuf__ uint32_t* scaleOutAddr, __ubuf__ U* yOutAddr)
+__aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeAlign(int64_t blockCount,
+                                                                                     int64_t dataLen, __ubuf__ T* xAddr,
+                                                                                     __ubuf__ uint32_t* scaleOutAddr,
+                                                                                     __ubuf__ U* yOutAddr)
 {
     constexpr uint32_t vfLen = platform::GetVRegSize() / sizeof(T);     // 寄存器单次能处理的长度
     constexpr uint32_t vfNum = platform::GetVRegSize() / sizeof(float); // cast到FP32后单个寄存器中的元素个数
@@ -342,8 +338,8 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         AscendC::MicroAPI::MaskReg dataLenMask16;
         AscendC::MicroAPI::MaskReg dataLenMask32;
         AscendC::MicroAPI::MaskReg scaleMaskReg;
-        AscendC::MicroAPI::MaskReg scaleMask32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            scaleMask32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
         AscendC::MicroAPI::Duplicate(absMaskRegTensor, ABS_MASK_FOR_16);
         AscendC::MicroAPI::Duplicate(oneRegTensor32, DIGIT_ONE);
@@ -359,9 +355,8 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             for (uint16_t step128 = 0; step128 < static_cast<uint16_t>(normalStep128); step128++) {
                 dataLenMask16 = AscendC::MicroAPI::UpdateMask<uint16_t>(pnum16);
                 AscendC::MicroAPI::LoadAlign(xRegTensor, xAddr + stepBlock * blockDataNumOffset + step128 * vfLen);
-                AscendC::MicroAPI::And(
-                    xAbsRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, absMaskRegTensor,
-                    dataLenMask16);
+                AscendC::MicroAPI::And(xAbsRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor,
+                                       absMaskRegTensor, dataLenMask16);
                 AscendC::MicroAPI::Max<uint16_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(
                     expMaxRegTensor, expMaxRegTensor, xAbsRegTensor, dataLenMask16);
             }
@@ -373,10 +368,10 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
 
             // scale
             AscendC::MicroAPI::Duplicate(expMaxRegTensorFp32, expMaxRegTensorFp32, scaleMask32);
-            AscendC::MicroAPI::Div(
-                (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32, fp8MaxRegTensor,
-                scaleMask32);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
+            AscendC::MicroAPI::Div((AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32,
+                                   fp8MaxRegTensor, scaleMask32);
+            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
+                scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
             // Min(input_max / FP_MAX, 1 / minScale)
             AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(
                 (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor,
@@ -392,10 +387,9 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
                     xRegTensor, xAddr + stepBlock * blockDataNumOffset + step64 * vfNum);
                 AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(
                     (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, xRegTensor, dataLenMask32);
-                AscendC::MicroAPI::Div(
-                    (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
-                    (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
-                    (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, dataLenMask32);
+                AscendC::MicroAPI::Div((AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
+                                       (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
+                                       (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, dataLenMask32);
                 AscendC::MicroAPI::Cast<U, float, castTrait32to8>(
                     yRegTensorFp8, (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, dataLenMask32);
                 AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(
@@ -409,8 +403,8 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         for (uint16_t step128 = 0; step128 < static_cast<uint16_t>(tailStep128); step128++) {
             dataLenMask16 = AscendC::MicroAPI::UpdateMask<uint16_t>(pnum16);
             AscendC::MicroAPI::LoadAlign(xRegTensor, xAddr + tailBlockIdx * blockDataNumOffset + step128 * vfLen);
-            AscendC::MicroAPI::And(
-                xAbsRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, absMaskRegTensor, dataLenMask16);
+            AscendC::MicroAPI::And(xAbsRegTensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)xRegTensor, absMaskRegTensor,
+                                   dataLenMask16);
             AscendC::MicroAPI::Max<uint16_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(
                 expMaxRegTensor, expMaxRegTensor, xAbsRegTensor, dataLenMask16);
         }
@@ -422,9 +416,10 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
 
         // scale
         AscendC::MicroAPI::Duplicate(expMaxRegTensorFp32, expMaxRegTensorFp32, scaleMask32);
-        AscendC::MicroAPI::Div(
-            (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32, fp8MaxRegTensor, scaleMask32);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
+        AscendC::MicroAPI::Div((AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32,
+                               fp8MaxRegTensor, scaleMask32);
+        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
+            scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
         // Min(input_max / FP_MAX, 1 / minScale)
         AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(
             (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor,
@@ -438,12 +433,11 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             dataLenMask32 = AscendC::MicroAPI::UpdateMask<uint32_t>(pnum32);
             AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                 xRegTensor, xAddr + tailBlockIdx * blockDataNumOffset + step64 * vfNum);
-            AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(
-                (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, xRegTensor, dataLenMask32);
-            AscendC::MicroAPI::Div(
-                (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
-                (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
-                (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, dataLenMask32);
+            AscendC::MicroAPI::Cast<float, T, castTraitT2Float>((AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
+                                                                xRegTensor, dataLenMask32);
+            AscendC::MicroAPI::Div((AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
+                                   (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32,
+                                   (AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, dataLenMask32);
             AscendC::MicroAPI::Cast<U, float, castTrait32to8>(
                 yRegTensorFp8, (AscendC::MicroAPI::RegTensor<float>&)yRegTensorFp32, dataLenMask32);
             AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(

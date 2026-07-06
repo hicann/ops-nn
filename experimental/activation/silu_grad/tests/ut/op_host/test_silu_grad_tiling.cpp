@@ -53,24 +53,23 @@ TEST_F(SiluGradTiling, silu_grad_tiling_float32_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct SiluGradTilingCompileInfo {
-    };
+    struct SiluGradTilingCompileInfo {};
     SiluGradTilingCompileInfo compileInfo;
 
     std::string opType("SiluGrad");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(1, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -116,24 +115,23 @@ TEST_F(SiluGradTiling, silu_grad_tiling_float16_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct SiluGradTilingCompileInfo {
-    };
+    struct SiluGradTilingCompileInfo {};
     SiluGradTilingCompileInfo compileInfo;
 
     std::string opType("SiluGrad");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(1, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -179,24 +177,23 @@ TEST_F(SiluGradTiling, silu_grad_tiling_bfloat16_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct SiluGradTilingCompileInfo {
-    };
+    struct SiluGradTilingCompileInfo {};
     SiluGradTilingCompileInfo compileInfo;
 
     std::string opType("SiluGrad");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(1, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);

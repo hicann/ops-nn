@@ -62,4 +62,4 @@ public:
 };
 
 OP_ADD(InplaceScatterAdd);
-}  // namespace ops
+} // namespace ops

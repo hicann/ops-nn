@@ -35,8 +35,8 @@ template <typename T, typename DTYPE>
 class EmbeddingBag {
 public:
     __aicore__ inline EmbeddingBag() = delete;
-    __aicore__ inline EmbeddingBag(
-        GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling, TPipe& pipe)
+    __aicore__ inline EmbeddingBag(GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling,
+                                   TPipe& pipe)
     {
         InitParams(inputTensors, tiling, pipe);
     }
@@ -105,8 +105,8 @@ private:
         WaitFlag<HardEvent::V_S>(eventId);
     };
 
-    __aicore__ inline void InitParams(
-        GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling, TPipe& pipe)
+    __aicore__ inline void InitParams(GM_ADDR inputTensors[TENSOR_COUNT], const EmbeddingBagTilingData& tiling,
+                                      TPipe& pipe)
     {
         pipe_ = &pipe;
         auto blockIdx_ = GetBlockIdx();
@@ -246,8 +246,8 @@ private:
     }
 
     template <typename C>
-    __aicore__ inline void GMToUB(
-        GlobalTensor<C>& gm_, LocalTensor<C>& tensor_, int64_t copyOffset_, int32_t moveLength_, int32_t realLength_)
+    __aicore__ inline void GMToUB(GlobalTensor<C>& gm_, LocalTensor<C>& tensor_, int64_t copyOffset_,
+                                  int32_t moveLength_, int32_t realLength_)
     {
 #if __CCE_AICORE__ < 220
         DataCopy(tensor_, gm_[copyOffset_], moveLength_);
@@ -259,9 +259,8 @@ private:
     }
 
     template <typename C>
-    __aicore__ inline void UBToGM(
-        GlobalTensor<C>& gm_, GlobalTensor<float>& gmFloat_, LocalTensor<C>& tensor_, int64_t copyOffset_,
-        int32_t realLength_)
+    __aicore__ inline void UBToGM(GlobalTensor<C>& gm_, GlobalTensor<float>& gmFloat_, LocalTensor<C>& tensor_,
+                                  int64_t copyOffset_, int32_t realLength_)
     {
 #if __CCE_AICORE__ < 220
         auto tensorFloat = tensor_.template ReinterpretCast<float>();

@@ -46,75 +46,74 @@ enum class IterateOrder {
 };
 
 template <class Intf>
-__aicore__ inline void CheckTiling(Intf *self)
+__aicore__ inline void CheckTiling(Intf* self)
 {
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.tiling_->batch > 0),
-        "orignal batch is %d , which should be larger than 0", self->ctx.tiling_->batch);
-    ascendc_assert((self->ctx.tiling_->cin > 0), 
-        "orignal cin is %d , which should be larger than 0", self->ctx.tiling_->cin);
-    ascendc_assert((self->ctx.tiling_->cout > 0), 
-    "orignal cout is %d , which should be larger than 0", self->ctx.tiling_->cout);
-    ascendc_assert((self->ctx.tiling_->cin1G > 0), 
-        "orignal cin1G is %d , which should be larger than 0", self->ctx.tiling_->cin1G);
-    ascendc_assert((self->ctx.tiling_->cout1G > 0), 
-        "orignal cout1G is %d , which should be larger than 0", self->ctx.tiling_->cout1G);
-    ascendc_assert((self->ctx.tiling_->dout > 0),
-        "orignal dout is %d , which should be larger than 0", self->ctx.tiling_->dout);
-    ascendc_assert((self->ctx.tiling_->ho > 0),
-        "orignal ho is %d , which should be larger than 0", self->ctx.tiling_->ho);
-    ascendc_assert((self->ctx.tiling_->wo > 0),
-        "orignal wo is %d , which should be larger than 0", self->ctx.tiling_->wo);
-    ascendc_assert((self->ctx.tiling_->di > 0),
-        "orignal di is %d , which should be larger than 0", self->ctx.tiling_->di);
-    ascendc_assert((self->ctx.tiling_->hi > 0),
-        "orignal hi is %d , which should be larger than 0", self->ctx.tiling_->hi);
-    ascendc_assert((self->ctx.tiling_->wi > 0),
-        "orignal wi is %d , which should be larger than 0", self->ctx.tiling_->wi);
-    ascendc_assert((self->ctx.tiling_->dk > 0),
-        "orignal dk is %d , which should be larger than 0", self->ctx.tiling_->dk);
-    ascendc_assert((self->ctx.tiling_->hk > 0),
-        "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk);
-    ascendc_assert((self->ctx.tiling_->wk > 0),
-        "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk);
-    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0), 
-        "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
-    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0),
-        "singleCoreCout is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCout);
-    ascendc_assert((self->ctx.tiling_->singleCoreHo > 0),
-        "singleCoreHo is %d , which should be larger than 0", self->ctx.tiling_->singleCoreHo);
-    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0), 
-        "singleCoreCin is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCin);
-    ascendc_assert((self->ctx.tiling_->baseM > 0),
-        "baseM is %d , which should be larger than 0", self->ctx.tiling_->baseM);
-    ascendc_assert((self->ctx.tiling_->baseK > 0),
-        "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK);
-    ascendc_assert((self->ctx.tiling_->baseN > 0),
-        "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN);
-    ascendc_assert((self->ctx.tiling_->stepM > 0),
-        "stepM is %d , which should be larger than 0", self->ctx.tiling_->stepM);
-    ascendc_assert((self->ctx.tiling_->stepN > 0),
-        "stepN is %d , which should be larger than 0", self->ctx.tiling_->stepN);
-    ascendc_assert((self->ctx.tiling_->stepKa > 0),
-        "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa);
-    ascendc_assert((self->ctx.tiling_->stepKb > 0),
-        "stepKb is %d , which should be larger than 0", self->ctx.tiling_->stepKb);
+    ascendc_assert((self->ctx.tiling_->batch > 0), "orignal batch is %d , which should be larger than 0",
+                   self->ctx.tiling_->batch);
+    ascendc_assert((self->ctx.tiling_->cin > 0), "orignal cin is %d , which should be larger than 0",
+                   self->ctx.tiling_->cin);
+    ascendc_assert((self->ctx.tiling_->cout > 0), "orignal cout is %d , which should be larger than 0",
+                   self->ctx.tiling_->cout);
+    ascendc_assert((self->ctx.tiling_->cin1G > 0), "orignal cin1G is %d , which should be larger than 0",
+                   self->ctx.tiling_->cin1G);
+    ascendc_assert((self->ctx.tiling_->cout1G > 0), "orignal cout1G is %d , which should be larger than 0",
+                   self->ctx.tiling_->cout1G);
+    ascendc_assert((self->ctx.tiling_->dout > 0), "orignal dout is %d , which should be larger than 0",
+                   self->ctx.tiling_->dout);
+    ascendc_assert((self->ctx.tiling_->ho > 0), "orignal ho is %d , which should be larger than 0",
+                   self->ctx.tiling_->ho);
+    ascendc_assert((self->ctx.tiling_->wo > 0), "orignal wo is %d , which should be larger than 0",
+                   self->ctx.tiling_->wo);
+    ascendc_assert((self->ctx.tiling_->di > 0), "orignal di is %d , which should be larger than 0",
+                   self->ctx.tiling_->di);
+    ascendc_assert((self->ctx.tiling_->hi > 0), "orignal hi is %d , which should be larger than 0",
+                   self->ctx.tiling_->hi);
+    ascendc_assert((self->ctx.tiling_->wi > 0), "orignal wi is %d , which should be larger than 0",
+                   self->ctx.tiling_->wi);
+    ascendc_assert((self->ctx.tiling_->dk > 0), "orignal dk is %d , which should be larger than 0",
+                   self->ctx.tiling_->dk);
+    ascendc_assert((self->ctx.tiling_->hk > 0), "orignal hk is %d , which should be larger than 0",
+                   self->ctx.tiling_->hk);
+    ascendc_assert((self->ctx.tiling_->wk > 0), "orignal wk is %d , which should be larger than 0",
+                   self->ctx.tiling_->wk);
+    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0), "singleCoreBatch is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreBatch);
+    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0), "singleCoreCout is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreCout);
+    ascendc_assert((self->ctx.tiling_->singleCoreHo > 0), "singleCoreHo is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreHo);
+    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0), "singleCoreCin is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreCin);
+    ascendc_assert((self->ctx.tiling_->baseM > 0), "baseM is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseM);
+    ascendc_assert((self->ctx.tiling_->baseK > 0), "baseK is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseK);
+    ascendc_assert((self->ctx.tiling_->baseN > 0), "baseN is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseN);
+    ascendc_assert((self->ctx.tiling_->stepM > 0), "stepM is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepM);
+    ascendc_assert((self->ctx.tiling_->stepN > 0), "stepN is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepN);
+    ascendc_assert((self->ctx.tiling_->stepKa > 0), "stepKa is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepKa);
+    ascendc_assert((self->ctx.tiling_->stepKb > 0), "stepKb is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepKb);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitStepMParams(Intf *self)
+__aicore__ inline void InitStepMParams(Intf* self)
 {
     self->ctx.mIter_ = Ceil(self->ctx.singleShapeCout_, self->ctx.tiling_->baseM);
     self->ctx.tailM_ = self->ctx.singleShapeCout_ - self->ctx.tiling_->baseM * (self->ctx.mIter_ - 1);
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.mIter_ > 0),
-        "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_);
+    ascendc_assert((self->ctx.mIter_ > 0), "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitStepKParams(Intf *self)
+__aicore__ inline void InitStepKParams(Intf* self)
 {
     uint64_t singleCoreHoWo = static_cast<uint64_t>(self->ctx.singleShapeHo_) * self->ctx.tiling_->wo;
     uint64_t kIter = Ceil(singleCoreHoWo, self->ctx.tiling_->baseK);
@@ -123,26 +122,24 @@ __aicore__ inline void InitStepKParams(Intf *self)
     self->ctx.stepKaRound = Ceil(kIter, self->ctx.tiling_->stepKa);
     self->ctx.stepKbRound = Ceil(kIter, self->ctx.tiling_->stepKb);
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.kIter_ > 0),
-        "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
+    ascendc_assert((self->ctx.kIter_ > 0), "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitStepNParams(Intf *self)
+__aicore__ inline void InitStepNParams(Intf* self)
 {
     self->ctx.nIter_ = Ceil(ShiftCeilChannelSize<Intf>(self->ctx.singleShapeCin_, self->ctx.tiling_->channelSize) *
-        self->ctx.tiling_->channelSize * self->ctx.hwK_, self->ctx.tiling_->baseN);
-    self->ctx.tailN_ =
-        self->ctx.singleShapeCin_ * self->ctx.hwK_ - self->ctx.tiling_->baseN * (self->ctx.nIter_ - 1);
+                                self->ctx.tiling_->channelSize * self->ctx.hwK_,
+                            self->ctx.tiling_->baseN);
+    self->ctx.tailN_ = self->ctx.singleShapeCin_ * self->ctx.hwK_ - self->ctx.tiling_->baseN * (self->ctx.nIter_ - 1);
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.nIter_ > 0),
-        "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
+    ascendc_assert((self->ctx.nIter_ > 0), "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitParams(Intf *self)
+__aicore__ inline void InitParams(Intf* self)
 {
     self->ctx.baseMK_ = self->ctx.tiling_->baseM * self->ctx.tiling_->baseK;
     self->ctx.baseKN_ = self->ctx.tiling_->baseK * self->ctx.tiling_->baseN;
@@ -154,8 +151,8 @@ __aicore__ inline void InitParams(Intf *self)
     self->ctx.kbl1_ = self->ctx.tiling_->stepKb * self->ctx.tiling_->baseK;
 
     // simplify the calculation of hi = (ho - 1) * strideh + (hk - 1) * dilationh + 1
-    self->ctx.strideKernelDilationH = static_cast<int64_t>(self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH
-        + 1 - self->ctx.tiling_->strideH;
+    self->ctx.strideKernelDilationH = static_cast<int64_t>(self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH +
+                                      1 - self->ctx.tiling_->strideH;
 
     self->ctx.isFirstIter_ = true;
     self->ctx.isDeterministic_ = false;
@@ -170,10 +167,10 @@ __aicore__ inline void InitParams(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void InitTque(Intf *self)
+__aicore__ inline void InitTque(Intf* self)
 {
-    uint32_t aMatrixByteSize = self->ctx.tiling_->stepM * self->ctx.tiling_->baseM *
-        self->ctx.tiling_->stepKa * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcT);
+    uint32_t aMatrixByteSize = self->ctx.tiling_->stepM * self->ctx.tiling_->baseM * self->ctx.tiling_->stepKa *
+                               self->ctx.tiling_->baseK * sizeof(typename Intf::SrcT);
     uint32_t bl1BoundByteSize = self->ctx.tiling_->bl1Bound * sizeof(typename Intf::SrcT);
     self->ctx.pipe_.InitBuffer(self->ctx.a1Ping_, 1, aMatrixByteSize);
     self->ctx.pipe_.InitBuffer(self->ctx.b1Ping_, 1, bl1BoundByteSize);
@@ -192,7 +189,7 @@ __aicore__ inline void InitTque(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void CalcParamsL12L0b(Intf *self, uint64_t kPos)
+__aicore__ inline void CalcParamsL12L0b(Intf* self, uint64_t kPos)
 {
     // load3dStepK
     self->ctx.load3dB_.kExtension = self->ctx.baseUseN_;
@@ -200,14 +197,13 @@ __aicore__ inline void CalcParamsL12L0b(Intf *self, uint64_t kPos)
     uint32_t localN = ShiftDivChannelSize<Intf>(self->ctx.tiling_->baseN, self->ctx.tiling_->channelSize);
     uint32_t localUseN = ShiftDivChannelSize<Intf>(self->ctx.baseUseN_, self->ctx.tiling_->channelSize);
     uint32_t kStartLocal = RemainderOfHkWk(self->ctx.curNL1Idx_ * localN, self->ctx.hwK_) +
-        RemainderStepN(self->ctx.curNL0Idx_, self->ctx.tiling_->stepN) * localN;
+                           RemainderStepN(self->ctx.curNL0Idx_, self->ctx.tiling_->stepN) * localN;
     self->ctx.load3dB_.kStartPt = kStartLocal * self->ctx.tiling_->channelSize;
-    self->ctx.load3dB_.channelSize =
-        CeilHkWk(kStartLocal + localUseN, self->ctx.hwK_) * self->ctx.tiling_->channelSize;
+    self->ctx.load3dB_.channelSize = CeilHkWk(kStartLocal + localUseN, self->ctx.hwK_) * self->ctx.tiling_->channelSize;
 }
 
 template <class Intf>
-__aicore__ inline void CalcParamsL12L0a(Intf *self, uint64_t kPos)
+__aicore__ inline void CalcParamsL12L0a(Intf* self, uint64_t kPos)
 {
     uint32_t alignedBaseUseM = ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
     self->ctx.load3dA_.kExtension = alignedBaseUseM;
@@ -215,17 +211,16 @@ __aicore__ inline void CalcParamsL12L0a(Intf *self, uint64_t kPos)
 }
 
 template <class Intf>
-__aicore__ inline void LoadL12L0b(Intf *self, const LocalTensor<typename Intf::SrcT> &l1BMatrix,
-                                  LocalTensor<typename Intf::SrcT> &l0b)
+__aicore__ inline void LoadL12L0b(Intf* self, const LocalTensor<typename Intf::SrcT>& l1BMatrix,
+                                  LocalTensor<typename Intf::SrcT>& l0b)
 {
     static constexpr IsResetLoad3dConfig LOAD3D_CONFIG_220 = {false, true};
-    SetFmatrix(self->ctx.load3dB_.l1H, self->ctx.load3dB_.l1W, self->ctx.load3dB_.padList,
-               FmatrixMode::FMATRIX_RIGHT);
+    SetFmatrix(self->ctx.load3dB_.l1H, self->ctx.load3dB_.l1W, self->ctx.load3dB_.padList, FmatrixMode::FMATRIX_RIGHT);
     LoadData<typename Intf::SrcT, LOAD3D_CONFIG_220>(l0b, l1BMatrix, self->ctx.load3dB_);
 }
 
 template <class Intf>
-__aicore__ inline void FreeA1Tensor(Intf *self, bool a1PingPongFlag)
+__aicore__ inline void FreeA1Tensor(Intf* self, bool a1PingPongFlag)
 {
     if (a1PingPongFlag) {
         self->ctx.a1Ping_.FreeTensor(self->ctx.cacheA1BufPing_);
@@ -241,7 +236,7 @@ __aicore__ inline void FreeA1Tensor(Intf *self, bool a1PingPongFlag)
 }
 
 template <class Intf>
-__aicore__ inline void FreeB1Tensor(Intf *self, bool b1PingPongFlag)
+__aicore__ inline void FreeB1Tensor(Intf* self, bool b1PingPongFlag)
 {
     if (b1PingPongFlag) {
         self->ctx.b1Ping_.FreeTensor(self->ctx.cacheB1BufPing_);
@@ -257,7 +252,7 @@ __aicore__ inline void FreeB1Tensor(Intf *self, bool b1PingPongFlag)
 }
 
 template <class Intf>
-__aicore__ inline void Compute(Intf *self, Out2L1ScalarParams& out2L1Params)
+__aicore__ inline void Compute(Intf* self, Out2L1ScalarParams& out2L1Params)
 {
     CalcParamsL12L0b<Intf>(self, 0);
     CalcParamsL12L0a<Intf>(self, 0);
@@ -265,7 +260,8 @@ __aicore__ inline void Compute(Intf *self, Out2L1ScalarParams& out2L1Params)
     LocalTensor<typename Intf::SrcT> l0a;
     LocalTensor<typename Intf::SrcT> l0b;
     LocalTensor<typename Intf::L0cT> l0c;
-    uint32_t curML0IdxModstepKaMulBaseM = RemainderStepM(self->ctx.curML0Idx_, self->ctx.tiling_->stepM) * self->ctx.tiling_->baseM;
+    uint32_t curML0IdxModstepKaMulBaseM = RemainderStepM(self->ctx.curML0Idx_, self->ctx.tiling_->stepM) *
+                                          self->ctx.tiling_->baseM;
     constexpr uint32_t l0aPingPongAddr = TOTAL_L0A_SIZE / 2 / sizeof(typename Intf::SrcT);
     constexpr uint32_t l0bPingPongAddr = TOTAL_L0B_SIZE / 2 / sizeof(typename Intf::SrcT);
     CalOut2L1ScalarParams(self, out2L1Params);
@@ -320,15 +316,15 @@ __aicore__ inline void Compute(Intf *self, Out2L1ScalarParams& out2L1Params)
 
         WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
 
-        uint32_t alignedBaseUseK =
-            ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0) * self->ctx.tiling_->k0;
+        uint32_t alignedBaseUseK = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0) *
+                                   self->ctx.tiling_->k0;
         l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcT>();
         if (self->ctx.l0aPingPongFlag_) {
             l0b = l0b[l0bPingPongAddr];
         }
         // posM
         self->ctx.load3dB_.mStartPt = (k - kbIdx) * self->ctx.tiling_->baseK % self->ctx.tiling_->wo +
-            kbIdx * self->ctx.tiling_->baseK;
+                                      kbIdx * self->ctx.tiling_->baseK;
         // load3dStepM
         self->ctx.load3dB_.mExtension = alignedBaseUseK;
         if (unlikely(out2L1Params.isLoad2L1B && isLoadB1)) {
@@ -366,7 +362,7 @@ __aicore__ inline void Compute(Intf *self, Out2L1ScalarParams& out2L1Params)
             } else {
                 self->ctx.cacheA1BufPong_ = self->ctx.a1Pong_.template DeQue<typename Intf::SrcT>();
             }
-	    }
+        }
 
         if (a1PingPongFlag) {
             LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPing_, k, l0a, out2L1Params, kaStepIdx);
@@ -407,23 +403,23 @@ __aicore__ inline void Compute(Intf *self, Out2L1ScalarParams& out2L1Params)
     }
 }
 template <class Intf>
-__aicore__ inline void UpdateIdxAndStep(Intf *self)
+__aicore__ inline void UpdateIdxAndStep(Intf* self)
 {
     self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
     self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-    self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM
-                                ? self->ctx.tiling_->stepM
-                                : (self->ctx.mIter_ - self->ctx.curML1Idx_);
-    self->ctx.curStepN_ = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.tiling_->stepN
-                                ? self->ctx.tiling_->stepN
-                                : (self->ctx.nIter_ - self->ctx.curNL1Idx_);
+    self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM ?
+                              self->ctx.tiling_->stepM :
+                              (self->ctx.mIter_ - self->ctx.curML1Idx_);
+    self->ctx.curStepN_ = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.tiling_->stepN ?
+                              self->ctx.tiling_->stepN :
+                              (self->ctx.nIter_ - self->ctx.curNL1Idx_);
 }
 
 template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const TConv3DDwTiling *__restrict tiling)
+    static __aicore__ inline void call(Intf* self, const TConv3DDwTiling* __restrict tiling)
     {
         self->ctx.tiling_ = tiling;
         CheckTiling<Intf>(self);
@@ -436,7 +432,7 @@ struct Init {
 template <class Intf>
 struct SetFmap {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcT> &fmap)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::SrcT>& fmap)
     {
         self->ctx.fmapGlobal_ = fmap;
     }
@@ -445,7 +441,7 @@ struct SetFmap {
 template <class Intf>
 struct SetOutBackprop {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcT> &outBackprop)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::SrcT>& outBackprop)
     {
         self->ctx.outBackPropGlobal_ = outBackprop;
     }
@@ -454,14 +450,14 @@ struct SetOutBackprop {
 template <class Intf>
 struct SetSingleShape {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, uint64_t singleShapeM, uint64_t singleShapeN, uint64_t singleShapeK,
-                                                   uint32_t hoStartIdx)
+    static __aicore__ inline void call(Intf* self, uint64_t singleShapeM, uint64_t singleShapeN, uint64_t singleShapeK,
+                                       uint32_t hoStartIdx)
     {
         self->ctx.singleShapeCout_ = singleShapeM;
         self->ctx.singleShapeCin_ = DivHkWk(singleShapeN, self->ctx.hwK_);
         // fp32场景下GM上8对齐
-        self->ctx.singleShapeCin_ =
-            Ceil(self->ctx.singleShapeCin_, self->ctx.tiling_->channelSize) * self->ctx.tiling_->channelSize;
+        self->ctx.singleShapeCin_ = Ceil(self->ctx.singleShapeCin_, self->ctx.tiling_->channelSize) *
+                                    self->ctx.tiling_->channelSize;
         self->ctx.singleShapeHo_ = singleShapeK / self->ctx.tiling_->wo;
         self->ctx.hoStartIdx_ = hoStartIdx;
         self->ctx.hiStartIdx_ = hoStartIdx * self->ctx.tiling_->strideH - self->ctx.tiling_->padUp;
@@ -474,7 +470,7 @@ struct SetSingleShape {
 template <class Intf, bool sync>
 struct Iterate {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline bool call(Intf *self, bool enPartialSum)
+    static __aicore__ inline bool call(Intf* self, bool enPartialSum)
     {
         /*
         |   <---------singleShapeM------->        |
@@ -491,22 +487,22 @@ struct Iterate {
         curNL0Idx_            ↑                   nIter_
         curNL1Idx_       next_curNL1Idx
 
-        order_N表示L1上驻留B循环A，顺序为L1A_ping * L1B_ping, L1A_pong * L1B_ping，L1A_ping * L1B_pong，L1A_pong * L1B_pong
-        L0上也是驻留B，循环A
-        order_N: L0A1*L0B1, L0A2*L0B1, L0A3*L0B1, L0A1*L0B2 ………… L0A3*L0B3，L0A4*L0B1，L0A5*L0B1 …… L0A6*L0B6
-        order_M: L0A1*L0B1, L0A1*L0B2, L0A1*L0B3, L0A2*L0B1 ………… L0A3*L0B3，L0A1*L0B4，L0A1*L0B5 …… L0A6*L0B6
+        order_N表示L1上驻留B循环A，顺序为L1A_ping * L1B_ping, L1A_pong * L1B_ping，L1A_ping * L1B_pong，L1A_pong *
+        L1B_pong L0上也是驻留B，循环A order_N: L0A1*L0B1, L0A2*L0B1, L0A3*L0B1, L0A1*L0B2 …………
+        L0A3*L0B3，L0A4*L0B1，L0A5*L0B1 …… L0A6*L0B6 order_M: L0A1*L0B1, L0A1*L0B2, L0A1*L0B3, L0A2*L0B1 …………
+        L0A3*L0B3，L0A1*L0B4，L0A1*L0B5 …… L0A6*L0B6
         */
         // 更新idx，用L1、L1step、L0三个指针控制走位和计算offset，表示计算第几个mL0 * baseN
 
-        // 以开DB为例，循环顺序NMK时，如果K方向需要两块buffer，M轴每循环到stepM最后一次时需要释放AL1上的ping pong buffer，第一次循环时载入
-        // 如果循环顺序为MNK时，如果K方向需要两块buffer，M轴最后一次循环时需要释放AL1上的ping pong buffer，第一次循环时载入
-        // 如果K方向需要的buffer数量大于bl1Pbuffer，当K循环到stepKa时就需要置换AL1
+        // 以开DB为例，循环顺序NMK时，如果K方向需要两块buffer，M轴每循环到stepM最后一次时需要释放AL1上的ping pong
+        // buffer，第一次循环时载入 如果循环顺序为MNK时，如果K方向需要两块buffer，M轴最后一次循环时需要释放AL1上的ping
+        // pong buffer，第一次循环时载入 如果K方向需要的buffer数量大于bl1Pbuffer，当K循环到stepKa时就需要置换AL1
         // B矩阵计算思路同A矩阵，区别是MN反过来
         Out2L1ScalarParams out2L1Params;
-        bool kIterCeilStepKaGreaterAl1Pbuffer =
-            self->ctx.kIter_ > self->ctx.tiling_->stepKa * self->ctx.tiling_->al1Pbuffer;
-        bool kIterCeilStepKbGreaterBl1Pbuffer =
-            self->ctx.kIter_ > self->ctx.tiling_->stepKb * self->ctx.tiling_->bl1Pbuffer;
+        bool kIterCeilStepKaGreaterAl1Pbuffer = self->ctx.kIter_ >
+                                                self->ctx.tiling_->stepKa * self->ctx.tiling_->al1Pbuffer;
+        bool kIterCeilStepKbGreaterBl1Pbuffer = self->ctx.kIter_ >
+                                                self->ctx.tiling_->stepKb * self->ctx.tiling_->bl1Pbuffer;
         out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer;
         out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer;
         out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer;
@@ -517,24 +513,22 @@ struct Iterate {
             self->ctx.curML1Idx_ = 0;
             self->ctx.curNL1Idx_ = 0;
             self->ctx.isFirstIter_ = false;
-            self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM
-                                        ? self->ctx.tiling_->stepM
-                                        : self->ctx.mIter_;
-            self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN
-                                        ? self->ctx.tiling_->stepN
-                                        : self->ctx.nIter_;
+            self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM ? self->ctx.tiling_->stepM :
+                                                                                self->ctx.mIter_;
+            self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN ? self->ctx.tiling_->stepN :
+                                                                                self->ctx.nIter_;
             bool isLastNLoop = self->ctx.nIter_ == 1;
             bool isLastMLoop = self->ctx.mIter_ == 1;
             bool isNLastStep = isLastNLoop || self->ctx.tiling_->stepN == 1;
             bool isMLastStep = isLastMLoop || self->ctx.tiling_->stepM == 1;
             out2L1Params.isLoad2L1A = true;
             out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer ||
-                (self->ctx.tiling_->iterateOrder && isMLastStep) ||                  // OrderN
-                (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep);  // OrderM
+                                     (self->ctx.tiling_->iterateOrder && isMLastStep) ||                 // OrderN
+                                     (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep); // OrderM
             out2L1Params.isLoad2L1B = true;
             out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer ||
-                (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) ||    // OrderN
-                (!(self->ctx.tiling_->iterateOrder) && isNLastStep);                  // OrderM
+                                     (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) || // OrderN
+                                     (!(self->ctx.tiling_->iterateOrder) && isNLastStep);               // OrderM
         } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
             if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
                 self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
@@ -560,10 +554,10 @@ struct Iterate {
             }
             if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) &&
                 (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
-                self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1)) {
+                 self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1)) {
                 out2L1Params.isFreeBL1 = true; // OrderN, N轴最后一次循环，需要释放BL1
             }
-        } else {  // order_M
+        } else { // order_M
             if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
                 self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
                 if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
@@ -584,7 +578,7 @@ struct Iterate {
             }
             if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) &&
                 (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
-                self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1)) {
+                 self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1)) {
                 out2L1Params.isFreeAL1 = true; // OrderM, M轴最后一次循环，需要释放AL1
             }
             if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
@@ -592,10 +586,10 @@ struct Iterate {
                 out2L1Params.isFreeBL1 = true; // OrderM, N轴最后一次循环，需要释放BL1
             }
         }
-        self->ctx.baseUseM_ =
-            (self->ctx.curML0Idx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
-        self->ctx.baseUseN_ =
-            (self->ctx.curNL0Idx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
+        self->ctx.baseUseM_ = (self->ctx.curML0Idx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ :
+                                                                               self->ctx.tiling_->baseM;
+        self->ctx.baseUseN_ = (self->ctx.curNL0Idx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ :
+                                                                               self->ctx.tiling_->baseN;
         if ASCEND_IS_AIC {
             Compute<Intf>(self, out2L1Params);
         }
@@ -606,7 +600,7 @@ struct Iterate {
 template <class Intf, bool sync>
 struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic)
     {
         while (self->template Iterate<sync>()) {
             self->template GetTensorC<sync>(output, enAtomic);
@@ -618,7 +612,7 @@ struct IterateAll {
 template <class Intf, bool sync>
 struct IterateAllDeterministic {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic)
     {
         self->ctx.isDeterministic_ = true;
         while (self->template Iterate<sync>()) {
@@ -632,8 +626,8 @@ struct IterateAllDeterministic {
 template <class Intf, bool sync>
 struct GetTensorC {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-        uint8_t enAtomic = 0, bool enSequentialWrite = false)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                       uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         LoadL0c2Gm<Intf>(self, output, enAtomic, enSequentialWrite);
     }
@@ -642,7 +636,7 @@ struct GetTensorC {
 template <class Intf>
 struct End {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         self->ctx.a1Ping_.FreeAllEvent();
         if (self->ctx.tiling_->al1Pbuffer > 1) {
@@ -662,5 +656,5 @@ struct End {
         }
     }
 };
-}  // namespace ConvolutionBackpropFunc
+} // namespace ConvolutionBackpropFunc
 #endif

@@ -38,25 +38,24 @@ using std::map;
 using std::string;
 using std::vector;
 
-#define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                     \
-    vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                    \
-    auto placeholder##inputIndex = op::Data("placeholder" + inputIndex).set_attr_index(0);                           \
-    TensorDesc placeholder##inputIndex##_desc =                                                                      \
-        TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND, inputDtype);                               \
-    placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                                 \
-    placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                             \
-    Tensor tensor_placeholder##inputIndex;                                                                           \
-    ret = GenOnesData(                                                                                               \
-        placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, inputDtype, \
-        2);                                                                                                          \
-    if (ret != SUCCESS) {                                                                                            \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                               \
-        return FAILED;                                                                                               \
-    }                                                                                                                \
-    placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                     \
-    input.push_back(tensor_placeholder##inputIndex);                                                                 \
-    graph.AddOp(placeholder##inputIndex);                                                                            \
-    add1.set_input_##inputName(placeholder##inputIndex);                                                             \
+#define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                       \
+    vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                      \
+    auto placeholder##inputIndex = op::Data("placeholder" + inputIndex).set_attr_index(0);                             \
+    TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND,      \
+                                                           inputDtype);                                                \
+    placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                                   \
+    placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                               \
+    Tensor tensor_placeholder##inputIndex;                                                                             \
+    ret = GenOnesData(placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, \
+                      inputDtype, 2);                                                                                  \
+    if (ret != SUCCESS) {                                                                                              \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                                 \
+        return FAILED;                                                                                                 \
+    }                                                                                                                  \
+    placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                       \
+    input.push_back(tensor_placeholder##inputIndex);                                                                   \
+    graph.AddOp(placeholder##inputIndex);                                                                              \
+    add1.set_input_##inputName(placeholder##inputIndex);                                                               \
     inputs.push_back(placeholder##inputIndex)
 
 #define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                       \
@@ -111,8 +110,8 @@ uint32_t GetDataTypeSize(DataType dt)
     return dilation;
 }
 
-int32_t GenOnesData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, int value)
+int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                    int value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -136,9 +135,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
     auto add1 = op::AvgPool("avg_pool");

@@ -21,16 +21,14 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormDynamicQuantSingleRow : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormDynamicQuantSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormDynamicQuantSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* smooth1, __gm__ uint8_t* smooth2, __gm__ uint8_t* zeroOffset1, __gm__ uint8_t* zeroOffset2,
-        __gm__ uint8_t* y1, __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* outScale1, __gm__ uint8_t* outScale2,
-        __gm__ uint8_t* workspace, const AddLayerNormQuantTilingData* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* smooth1, __gm__ uint8_t* smooth2,
+                                __gm__ uint8_t* zeroOffset1, __gm__ uint8_t* zeroOffset2, __gm__ uint8_t* y1,
+                                __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* outScale1,
+                                __gm__ uint8_t* outScale2, __gm__ uint8_t* workspace,
+                                const AddLayerNormQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -299,12 +297,10 @@ private:
             PipeBarrier<PIPE_V>();
             SetDeqScale((half)1.000000e+00f);
             PipeBarrier<PIPE_V>();
-            Cast(
-                yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-                this->numLastDim);
-            Cast(
-                xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-                this->numLastDim);
+            Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+                 this->numLastDim);
+            Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+                 this->numLastDim);
             PipeBarrier<PIPE_V>();
             Cast(y1Local, yLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDim);
             Cast(y2Local, xLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDim);
@@ -313,8 +309,8 @@ private:
         }
     }
 
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t idx)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                       LocalTensor<float>& scaleTensor, int32_t idx)
     {
         Abs(tmpTensor, srcTensor, this->numLastDim); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();

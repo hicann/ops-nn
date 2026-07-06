@@ -16,8 +16,8 @@ using namespace ge;
 using namespace ge::es;
 using namespace ConvBackpropFusionUtils;
 
-std::vector<int64_t> ConvBackpropFusionUtilsPass::CalcTransposeShape(
-    const std::vector<int64_t>& inputShape, const std::vector<int32_t>& perm)
+std::vector<int64_t> ConvBackpropFusionUtilsPass::CalcTransposeShape(const std::vector<int64_t>& inputShape,
+                                                                     const std::vector<int32_t>& perm)
 {
     std::vector<int64_t> retShape;
     for (size_t i = 0; i < perm.size() && i < inputShape.size(); ++i) {
@@ -28,8 +28,7 @@ std::vector<int64_t> ConvBackpropFusionUtilsPass::CalcTransposeShape(
     return retShape;
 }
 
-void ConvBackpropFusionUtilsPass::SetPlaceholderDesc(
-    EsTensorHolder& tensorHolder, int64_t idx, const TensorDesc& desc)
+void ConvBackpropFusionUtilsPass::SetPlaceholderDesc(EsTensorHolder& tensorHolder, int64_t idx, const TensorDesc& desc)
 {
     auto* producer = tensorHolder.GetProducer();
     if (producer == nullptr) {
@@ -38,14 +37,14 @@ void ConvBackpropFusionUtilsPass::SetPlaceholderDesc(
     producer->UpdateOutputDesc(static_cast<uint32_t>(idx), desc);
 }
 
-bool ConvBackpropFusionUtilsPass::InWhitelist(
-    const std::vector<int64_t>& shape, const std::vector<std::vector<int64_t>>& whitelist)
+bool ConvBackpropFusionUtilsPass::InWhitelist(const std::vector<int64_t>& shape,
+                                              const std::vector<std::vector<int64_t>>& whitelist)
 {
     return std::find(whitelist.begin(), whitelist.end(), shape) != whitelist.end();
 }
 
-bool ConvBackpropFusionUtilsPass::CheckSocAndIntrinsic(
-    const std::map<std::string, NpuArch>& supportSocList, NpuArch& npuArch)
+bool ConvBackpropFusionUtilsPass::CheckSocAndIntrinsic(const std::map<std::string, NpuArch>& supportSocList,
+                                                       NpuArch& npuArch)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
@@ -71,9 +70,9 @@ int64_t ConvBackpropFusionUtilsPass::GetAiCoreCount()
     return platformInfo.soc_info.ai_core_cnt;
 }
 
-bool ConvBackpropFusionUtilsPass::CreateTransposeNode(
-    EsGraphBuilder& builder, const TransposeNodeConfig& config,
-    EsTensorHolder& output, TensorDesc& outDesc, const AscendString& opType)
+bool ConvBackpropFusionUtilsPass::CreateTransposeNode(EsGraphBuilder& builder, const TransposeNodeConfig& config,
+                                                      EsTensorHolder& output, TensorDesc& outDesc,
+                                                      const AscendString& opType)
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     OP_CHECK_IF(graph == nullptr, OP_LOGE(opType.GetString(), "create transpose node failed"), return false);
@@ -87,20 +86,19 @@ bool ConvBackpropFusionUtilsPass::CreateTransposeNode(
     auto transposeNode = ge::es::CompliantNodeBuilder(graph)
                              .OpType("Transpose")
                              .Name(config.name.c_str())
-                             .IrDefInputs(
-                                 {{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                  {"perm", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"perm", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                              .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                              .Build();
-    OP_CHECK_IF(ge::es::AddEdgeAndUpdatePeerDesc(*graph, *producer, TENSOR_DEFAULT_OUTPUT_INDEX, 
-                transposeNode, TRANSPOSE_INPUT_X_INDEX) != GRAPH_SUCCESS,
+    OP_CHECK_IF(ge::es::AddEdgeAndUpdatePeerDesc(*graph, *producer, TENSOR_DEFAULT_OUTPUT_INDEX, transposeNode,
+                                                 TRANSPOSE_INPUT_X_INDEX) != GRAPH_SUCCESS,
                 OP_LOGE(opType.GetString(), "Add edge for transpose input failed"), return false);
     transposeNode.UpdateInputDesc(TRANSPOSE_INPUT_X_INDEX, inDesc);
     auto permTensorHolder = builder.CreateVector(config.perm);
     auto* permTensorProducer = permTensorHolder.GetProducer();
     OP_CHECK_IF(permTensorProducer == nullptr, OP_LOGE(opType.GetString(), "perm producer is nullptr"), return false);
-    OP_CHECK_IF(ge::es::AddEdgeAndUpdatePeerDesc(*graph, *permTensorProducer, TENSOR_DEFAULT_OUTPUT_INDEX, 
-                transposeNode, TRANSPOSE_INPUT_PERM_INDEX) != GRAPH_SUCCESS,
+    OP_CHECK_IF(ge::es::AddEdgeAndUpdatePeerDesc(*graph, *permTensorProducer, TENSOR_DEFAULT_OUTPUT_INDEX,
+                                                 transposeNode, TRANSPOSE_INPUT_PERM_INDEX) != GRAPH_SUCCESS,
                 OP_LOGE(opType.GetString(), "Add edge for transpose perm failed"), return false);
 
     TensorDesc permTensorDesc;
@@ -113,10 +111,10 @@ bool ConvBackpropFusionUtilsPass::CreateTransposeNode(
     outDesc.SetFormat(config.format);
     outDesc.SetOriginFormat(config.format);
     transposeNode.UpdateOutputDesc(TRANSPOSE_OUTPUT_Y_INDEX, outDesc);
-    output = EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(transposeNode, TRANSPOSE_OUTPUT_Y_INDEX));
+    output = EsTensorHolder(
+        builder.GetCGraphBuilder()->GetTensorHolderFromNode(transposeNode, TRANSPOSE_OUTPUT_Y_INDEX));
 
     return true;
 }
 
 } // namespace ops
-

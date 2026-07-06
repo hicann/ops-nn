@@ -23,22 +23,19 @@
 
 class MultiScaleDeformableAttnFunProto : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "MultiScaleDeformableAttnFunProto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MultiScaleDeformableAttnFunProto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "MultiScaleDeformableAttnFunProto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MultiScaleDeformableAttnFunProto Test TearDown" << std::endl; }
 };
 
-TEST_F(MultiScaleDeformableAttnFunProto, multi_scale_deformable_attn_function_fp32) {
+TEST_F(MultiScaleDeformableAttnFunProto, multi_scale_deformable_attn_function_fp32)
+{
     ge::op::MultiScaleDeformableAttnFunction op;
     op.UpdateInputDesc("value", create_desc({8, 2, 1, 4}, ge::DT_FLOAT));
     op.UpdateInputDesc("sampling_locations", create_desc({5, 70, 1, 1, 6, 2}, ge::DT_FLOAT));
 
     std::vector<int64_t> expectedOutShape = {8, 70, 4};
-    Runtime2TestParam param {};
+    Runtime2TestParam param{};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     auto outputTensor = op.GetOutputDesc("output");
     EXPECT_EQ(outputTensor.GetShape().GetDims(), expectedOutShape);

@@ -22,4 +22,5 @@ TEST_P(QMMV3_SUITE_NAME_test, generalTest)
 }
 
 INSTANTIATE_TEST_CASE_P(QUANTMM910B, QMMV3_SUITE_NAME_test,
-                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend910B2", "quant_batch_matmul_v3_bf16")));
+                        testing::ValuesIn(QuantBatchMatmulV3TestUtils::GetParams("Ascend910B2",
+                                                                                 "quant_batch_matmul_v3_bf16")));

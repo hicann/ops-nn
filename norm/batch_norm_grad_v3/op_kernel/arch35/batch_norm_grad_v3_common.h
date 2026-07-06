@@ -46,25 +46,19 @@ __aicore__ inline uint32_t CeilDiv(uint32_t x, uint32_t y)
     return 0;
 }
 
-__aicore__ inline uint32_t RoundUpOneBlock(uint32_t x)
-{
-    return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-}
+__aicore__ inline uint32_t RoundUpOneBlock(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-__aicore__ inline uint32_t RoundUpTwoBlock(uint32_t x)
-{
-    return (x + TWO_BLK_SIZE - 1) / TWO_BLK_SIZE * TWO_BLK_SIZE;
-}
+__aicore__ inline uint32_t RoundUpTwoBlock(uint32_t x) { return (x + TWO_BLK_SIZE - 1) / TWO_BLK_SIZE * TWO_BLK_SIZE; }
 
-static constexpr MicroAPI::CastTrait castTraitB162B32 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait castTraitB162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-static constexpr MicroAPI::CastTrait castTraitB322B16 = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait castTraitB322B16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
-__aicore__ inline void LoadOneTensor(
-    const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadOneTensor(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+                                     MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
@@ -80,8 +74,8 @@ __aicore__ inline void LoadOneTensor(
 }
 
 template <typename T>
-__aicore__ inline void LoadsTensorForDtypeT(
-    const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadsTensorForDtypeT(const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst,
+                                            MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
@@ -93,8 +87,8 @@ __aicore__ inline void LoadsTensorForDtypeT(
 }
 
 template <typename T>
-__aicore__ inline void StoreOneTensor(
-    const __local_mem__ void* output, MicroAPI::RegTensor<float>& src, MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneTensor(const __local_mem__ void* output, MicroAPI::RegTensor<float>& src,
+                                      MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
@@ -103,16 +97,16 @@ __aicore__ inline void StoreOneTensor(
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>(
-            (__local_mem__ bfloat16_t*)(output) + offset, xBf16, preg);
+        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ bfloat16_t*)(output) + offset, xBf16,
+                                                                 preg);
     } else {
         DataCopy((__local_mem__ float*)(output) + offset, src, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadOneElement(
-    const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadOneElement(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+                                      MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
@@ -128,28 +122,27 @@ __aicore__ inline void LoadOneElement(
 }
 
 template <typename T>
-__aicore__ inline void StoreOneElement(
-    const __local_mem__ void* output, MicroAPI::RegTensor<float>& src, MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneElement(const __local_mem__ void* output, MicroAPI::RegTensor<float>& src,
+                                       MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(
-            (__local_mem__ half*)(output) + offset, xFp16, preg);
+        DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ half*)(output) + offset, xFp16,
+                                                                    preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(
-            (__local_mem__ bfloat16_t*)(output) + offset, xBf16, preg);
+        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ bfloat16_t*)(output) + offset,
+                                                                          xBf16, preg);
     } else {
-        DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-            ((__local_mem__ float*)output) + offset, src, preg);
+        DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)output) + offset, src,
+                                                                     preg);
     }
 }
 
-__aicore__ inline void LoadTwoTensorSum(
-    const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg, uint32_t offset0,
-    uint32_t offset1)
+__aicore__ inline void LoadTwoTensorSum(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+                                        MicroAPI::MaskReg& preg, uint32_t offset0, uint32_t offset1)
 {
     MicroAPI::RegTensor<float> a, b;
     DataCopy(a, (__local_mem__ float*)(input) + offset0);
@@ -179,7 +172,8 @@ __aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTenso
 }
 
 template <typename T>
-__aicore__ inline void CopyInNormParam(LocalTensor<T>& localTensor, GlobalTensor<T>& globalTensor, uint64_t offset, uint64_t a)
+__aicore__ inline void CopyInNormParam(LocalTensor<T>& localTensor, GlobalTensor<T>& globalTensor, uint64_t offset,
+                                       uint64_t a)
 {
     DataCopyPadExtParams<T> padParams;
     padParams.isPad = false;
@@ -196,8 +190,8 @@ __aicore__ inline void CopyInNormParam(LocalTensor<T>& localTensor, GlobalTensor
 }
 
 template <typename T>
-__aicore__ inline void CopyOutNormParam(
-    LocalTensor<T>& localTensor, GlobalTensor<T>& globalTensor, uint64_t offset, uint64_t a)
+__aicore__ inline void CopyOutNormParam(LocalTensor<T>& localTensor, GlobalTensor<T>& globalTensor, uint64_t offset,
+                                        uint64_t a)
 {
     DataCopyExtParams copyParams;
     copyParams.blockCount = 1;
@@ -208,9 +202,10 @@ __aicore__ inline void CopyOutNormParam(
 }
 
 template <typename T2, typename T3, int32_t bufferDepth>
-__aicore__ inline void CopyInGammaVarCommon(
-    TQue<QuePosition::VECIN, bufferDepth>& gammaQueue, TQue<QuePosition::VECIN, bufferDepth>& runningVarQueue,
-    GlobalTensor<T2>& gammaGm, GlobalTensor<T3>& runningVarGm, bool needCopy, int64_t offset, int64_t curTileALen)
+__aicore__ inline void CopyInGammaVarCommon(TQue<QuePosition::VECIN, bufferDepth>& gammaQueue,
+                                            TQue<QuePosition::VECIN, bufferDepth>& runningVarQueue,
+                                            GlobalTensor<T2>& gammaGm, GlobalTensor<T3>& runningVarGm, bool needCopy,
+                                            int64_t offset, int64_t curTileALen)
 {
     LocalTensor<T2> gammaLocal = gammaQueue.template AllocTensor<T2>();
     LocalTensor<T3> varLocal = runningVarQueue.template AllocTensor<T3>();
@@ -235,9 +230,8 @@ __aicore__ inline void CopyInGammaVarCommon(
 }
 
 template <typename T>
-__aicore__ inline void CopyOut(
-    const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, int64_t rowSize, int64_t colSize,
-    int64_t dstStride, int64_t srcStride)
+__aicore__ inline void CopyOut(const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, int64_t rowSize,
+                               int64_t colSize, int64_t dstStride, int64_t srcStride)
 {
     // CopyOut
     DataCopyExtParams params;
@@ -249,9 +243,8 @@ __aicore__ inline void CopyOut(
 }
 
 template <typename T>
-__aicore__ inline void CopyIn(
-    const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, int64_t rowSize, int64_t colSize,
-    int64_t dstStride, int64_t srcStride)
+__aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, int64_t rowSize,
+                              int64_t colSize, int64_t dstStride, int64_t srcStride)
 {
     // CopyIn
     DataCopyExtParams params;
@@ -264,11 +257,7 @@ __aicore__ inline void CopyIn(
     DataCopyPad(dstTensor, srcTensor, params, padParams);
 }
 
-__aicore__ inline int64_t GetCacheID(const int64_t idx)
-{
-    return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
-}
-
+__aicore__ inline int64_t GetCacheID(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 
 } // namespace BatchNormGradV3
 #endif

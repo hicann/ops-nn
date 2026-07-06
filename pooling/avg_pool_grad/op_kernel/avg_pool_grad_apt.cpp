@@ -21,11 +21,10 @@ using namespace AscendC;
 using namespace AvgPoolV2Grad;
 using namespace AvgPoolV2GradNHWCNameSpace;
 using namespace AvgPoolV2GradNCHWNameSpace;
-template <
-    uint32_t schMode, uint32_t format, uint32_t isInt32Meet, uint32_t isPad, uint32_t isCheckRange,
-    uint32_t countIncludePad, uint32_t hasDivsor>
-__global__ __aicore__ void avg_pool_grad(
-    GM_ADDR orig_input_shape, GM_ADDR input_grad, GM_ADDR out_grad, GM_ADDR workspace, GM_ADDR tiling)
+template <uint32_t schMode, uint32_t format, uint32_t isInt32Meet, uint32_t isPad, uint32_t isCheckRange,
+          uint32_t countIncludePad, uint32_t hasDivsor>
+__global__ __aicore__ void avg_pool_grad(GM_ADDR orig_input_shape, GM_ADDR input_grad, GM_ADDR out_grad,
+                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     AscendC::TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
@@ -34,11 +33,13 @@ __global__ __aicore__ void avg_pool_grad(
         REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_SIMT_KERNEL", AvgPoolV2GradSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradSimtTilingData, tilingData, tiling);
         if constexpr (isInt32Meet == TPL_INT32) {
-            AvgPoolV2GradSimtNamespace::AvgPoolV2GradSimt<DTYPE_INPUT_GRAD, int32_t, format, countIncludePad, hasDivsor> op(&pipe, &tilingData);
+            AvgPoolV2GradSimtNamespace::AvgPoolV2GradSimt<DTYPE_INPUT_GRAD, int32_t, format, countIncludePad, hasDivsor>
+                op(&pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         } else {
-            AvgPoolV2GradSimtNamespace::AvgPoolV2GradSimt<DTYPE_INPUT_GRAD, int64_t, format, countIncludePad, hasDivsor> op(&pipe, &tilingData);
+            AvgPoolV2GradSimtNamespace::AvgPoolV2GradSimt<DTYPE_INPUT_GRAD, int64_t, format, countIncludePad, hasDivsor>
+                op(&pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         }
@@ -46,25 +47,31 @@ __global__ __aicore__ void avg_pool_grad(
         REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_NCHW_KERNEL", AvgPoolV2GradNCHWTilingData);
         if constexpr (isInt32Meet == 1) {
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNCHWTilingData, tilingData, tiling);
-            AvgPoolV2GradNCHWKernel<DTYPE_INPUT_GRAD, int32_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
+            AvgPoolV2GradNCHWKernel<DTYPE_INPUT_GRAD, int32_t, hasDivsor, isCheckRange, countIncludePad> op(
+                &pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         } else {
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNCHWTilingData, tilingData, tiling);
-            AvgPoolV2GradNCHWKernel<DTYPE_INPUT_GRAD, int64_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
+            AvgPoolV2GradNCHWKernel<DTYPE_INPUT_GRAD, int64_t, hasDivsor, isCheckRange, countIncludePad> op(
+                &pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         }
-    } else if constexpr (schMode == TPL_NHWC_KERNEL) {    //NHWC
+    } else if constexpr (schMode == TPL_NHWC_KERNEL) { // NHWC
         REGISTER_TILING_FOR_TILINGKEY("schMode == TPL_NHWC_KERNEL", AvgPoolV2GradNHWCTilingData);
-        if constexpr (isInt32Meet == TPL_INT32){
+        if constexpr (isInt32Meet == TPL_INT32) {
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNHWCTilingData, tilingData, tiling);
-            AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int32_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
+            AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int32_t, hasDivsor, isCheckRange,
+                                                                countIncludePad>
+                op(&pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         } else {
             GET_TILING_DATA_WITH_STRUCT(AvgPoolV2GradNHWCTilingData, tilingData, tiling);
-            AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int64_t, hasDivsor, isCheckRange, countIncludePad> op(&pipe, &tilingData);
+            AvgPoolV2GradNHWCNameSpace::AvgPoolV2GradKernelNHWC<DTYPE_INPUT_GRAD, int64_t, hasDivsor, isCheckRange,
+                                                                countIncludePad>
+                op(&pipe, &tilingData);
             op.Init(input_grad, out_grad);
             op.Process();
         }

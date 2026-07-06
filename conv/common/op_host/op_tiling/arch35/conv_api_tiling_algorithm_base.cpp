@@ -19,7 +19,7 @@
 using namespace std;
 
 namespace conv_tiling {
-ConvTilingAlgorithmBase::ConvTilingAlgorithmBase(ConvTilingBase *tilingIns)
+ConvTilingAlgorithmBase::ConvTilingAlgorithmBase(ConvTilingBase* tilingIns)
 {
     tilingIns_ = tilingIns;
     this->fMapDTypeSize = DTYPE_SIZE_TAB.at(tilingIns_->descInfo.fMapType.dtype);
@@ -35,20 +35,20 @@ ConvTilingAlgorithmBase::ConvTilingAlgorithmBase(ConvTilingBase *tilingIns)
 uint64_t ConvTilingAlgorithmBase::CalcAL0Size(uint64_t mL0, uint64_t kL0) const
 {
     return AlignB(mL0, tilingIns_->cubeInfo.m0) * AlignB(kL0, tilingIns_->cubeInfo.k0) * this->dbValue.pbAL0 *
-        this->fMapDTypeSize * tilingIns_->innerBatch;
+           this->fMapDTypeSize * tilingIns_->innerBatch;
 }
 
 uint64_t ConvTilingAlgorithmBase::CalcBL0Size(uint64_t kL0, uint64_t nL0) const
 {
     return AlignB(kL0, tilingIns_->cubeInfo.k0) * AlignB(nL0, tilingIns_->cubeInfo.n0) * this->dbValue.pbBL0 *
-        this->weightDTypeSize;
+           this->weightDTypeSize;
 }
 
 uint64_t ConvTilingAlgorithmBase::CalcCL0Size(uint64_t mL0, uint64_t nL0) const
 {
     // use mmad dtype size
     return AlignB(mL0, tilingIns_->cubeInfo.m0) * AlignB(nL0, tilingIns_->cubeInfo.n0) * this->dbValue.pbCL0 *
-        DTYPE_SIZE_TAB.at(tilingIns_->cubeInfo.madType) * tilingIns_->innerBatch;
+           DTYPE_SIZE_TAB.at(tilingIns_->cubeInfo.madType) * tilingIns_->innerBatch;
 }
 
 bool ConvTilingAlgorithmBase::CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0) const
@@ -56,7 +56,7 @@ bool ConvTilingAlgorithmBase::CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, 
     if (CalcAL0Size(currmL0, currkL0) > tilingIns_->platformInfo.l0ASize ||
         CalcBL0Size(currkL0, currnL0) > tilingIns_->platformInfo.l0BSize ||
         CalcCL0Size(currmL0, currnL0) > tilingIns_->platformInfo.l0CSize) {
-            return false;
+        return false;
     } else {
         return true;
     }
@@ -104,25 +104,29 @@ void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
     if (resetFlag) {
         uint64_t curAL1Size = 0;
         if (tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::M)) {
-            uint64_t curHoAL1 = min(static_cast<uint64_t>(tilingIns_->shapeInfo.orgHo),
+            uint64_t curHoAL1 = min(
+                static_cast<uint64_t>(tilingIns_->shapeInfo.orgHo),
                 static_cast<uint64_t>(tilingIns_->l1TilingInfo.mAL1 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2));
             uint64_t curHiAL1 = InferHiL1(curHoAL1, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
             curAL1Size = AlignB(curHiAL1 * tilingIns_->shapeInfo.orgWi * tilingIns_->l1TilingInfo.kAL1 /
-                tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize, C0_SIZE);
+                                    tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize,
+                                C0_SIZE);
         } else {
             uint64_t curHiAL1 = InferHiL1(tilingIns_->l1TilingInfo.hoAL1, tilingIns_->shapeInfo.orgkH,
-                tilingIns_->shapeInfo.orgHi);
+                                          tilingIns_->shapeInfo.orgHi);
             uint64_t curWiAL1 = InferWiL1(tilingIns_->l1TilingInfo.woAL1, tilingIns_->shapeInfo.orgkW,
-                tilingIns_->shapeInfo.orgWi);
-            curAL1Size = AlignB(curHiAL1 * curWiAL1 * tilingIns_->l1TilingInfo.kAL1 /
-                tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize, C0_SIZE);
+                                          tilingIns_->shapeInfo.orgWi);
+            curAL1Size = AlignB(curHiAL1 * curWiAL1 * tilingIns_->l1TilingInfo.kAL1 / tilingIns_->shapeInfo.orgkH /
+                                    tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize,
+                                C0_SIZE);
         }
 
-        uint64_t curBL1Size =
-            AlignB(tilingIns_->l1TilingInfo.kBL1 * tilingIns_->l1TilingInfo.nBL1 * this->weightDTypeSize, C0_SIZE);
+        uint64_t curBL1Size = AlignB(
+            tilingIns_->l1TilingInfo.kBL1 * tilingIns_->l1TilingInfo.nBL1 * this->weightDTypeSize, C0_SIZE);
 
         uint64_t curBiasSize = tilingIns_->hasBias ?
-            AlignB(tilingIns_->shapeInfo.orgCo * this->biasDTypeSize, C0_SIZE) : 0;
+                                   AlignB(tilingIns_->shapeInfo.orgCo * this->biasDTypeSize, C0_SIZE) :
+                                   0;
         uint64_t needL1Size = (curAL1Size + curBL1Size) * CONST_VALUE_2 + curBiasSize;
 
         if (needL1Size <= tilingIns_->platformInfo.l1Size) {
@@ -134,11 +138,11 @@ void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
 
 bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
 {
-    bool sceneFlag = tilingIns_->optGroupFlag && tilingIns_->innerBatch == 1 &&
-        !tilingIns_->isC04Flag && !tilingIns_->isDmaFlag;
+    bool sceneFlag = tilingIns_->optGroupFlag && tilingIns_->innerBatch == 1 && !tilingIns_->isC04Flag &&
+                     !tilingIns_->isDmaFlag;
 
-    uint64_t kSize = tilingIns_->shapeInfo.singleCi1 * tilingIns_->shapeInfo.singlekH *
-        tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
+    uint64_t kSize = tilingIns_->shapeInfo.singleCi1 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW *
+                     tilingIns_->cubeInfo.k0;
     bool kAL1FullloadFlag = tilingIns_->l1TilingInfo.kAL1 == kSize;
     bool kBL1FullloadFlag = tilingIns_->l1TilingInfo.kBL1 == kSize;
     bool nBL1FullloadFlag = tilingIns_->l1TilingInfo.nBL1 == static_cast<uint64_t>(tilingIns_->shapeInfo.singleCo);
@@ -150,7 +154,7 @@ bool ConvTilingAlgorithmBase::CheckOptGroupPreload() const
     bool multiMNFlag = tilingIns_->l1TilingInfo.mAL1 == tilingIns_->l0TilingInfo.mL0;
     if (tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::HW)) {
         multiMNFlag = tilingIns_->l1TilingInfo.hoAL1 == tilingIns_->l0TilingInfo.hoL0 &&
-                     tilingIns_->l1TilingInfo.woAL1 == tilingIns_->l0TilingInfo.woL0;
+                      tilingIns_->l1TilingInfo.woAL1 == tilingIns_->l0TilingInfo.woL0;
     }
     multiMNFlag = multiMNFlag && (tilingIns_->l1TilingInfo.nBL1 == tilingIns_->l0TilingInfo.nL0);
 
@@ -179,4 +183,4 @@ void ConvTilingAlgorithmBase::SetPBufferRes()
     tilingIns_->dbValue.pBufferFlag = (tilingIns_->dbValue.pBufferFlag << 1) |
                                       (tilingIns_->dbValue.pbAL0 == DOUBLE_BUFFER_NUM ? 1 : 0);
 }
-}
+} // namespace conv_tiling

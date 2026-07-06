@@ -50,7 +50,7 @@ using namespace strategy;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchBasicApiTiling, DAV_3510, ITER_BATCH_BASICAPI);
 
-//supportMmadS8S4平台
+// supportMmadS8S4平台
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchBasicApiTiling, DAV_RESV, ITER_BATCH_BASICAPI);
 
 MatMulV3L0C2Out BatchMatMulV3IterBatchBasicApiTiling::GetL0C2OutFlag() const
@@ -83,8 +83,7 @@ uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-bool BatchMatMulV3IterBatchBasicApiTiling::IsMat2TransposeNonContiguous(
-    const gert::Shape& viewShape) const
+bool BatchMatMulV3IterBatchBasicApiTiling::IsMat2TransposeNonContiguous(const gert::Shape& viewShape) const
 {
     // 获得stride 然后根据stride判断
     auto mat2ViewStride = context_->GetInputStride(1);
@@ -138,7 +137,7 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
     }
     bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
                            batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
-    if (isNotEqualBatch)  {
+    if (isNotEqualBatch) {
         return false;
     }
     if (batchInfo_->batchC <= compileInfo_.aicNum) {
@@ -162,8 +161,9 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
     iterBatchL0A_ = ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE, alignMValue_ * alignKValue_ * args_.aDtypeSize);
     iterBatchL0B_ = ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE, alignKValue_ * alignNValue_ * args_.aDtypeSize);
     iterBatchL0C_ = ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE, alignMValue_ * alignNValue_ * DATA_SIZE_FP32);
-    iterBatchL1_ = ops::FloorDiv(compileInfo_.l1Size / DB_SIZE, (alignMValue_ * alignKValue_ +
-                                 alignKValue_ * alignNValue_) * args_.aDtypeSize + alignBiasSize);
+    iterBatchL1_ = ops::FloorDiv(
+        compileInfo_.l1Size / DB_SIZE,
+        (alignMValue_ * alignKValue_ + alignKValue_ * alignNValue_) * args_.aDtypeSize + alignBiasSize);
     l0CanLoadBatch_ = (std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, iterBatchL1_}) >= 1UL);
     if (args_.hasBias) {
         uint64_t iterBatchBiasBt = ops::FloorDiv(compileInfo_.btSize / DB_SIZE, alignNValue_ * DATA_SIZE_FP32);
@@ -174,9 +174,10 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
         // if l0 can not load multi part of batch, cal to avoid formulate unbalance issue.
         double avgIterBatch = static_cast<double>(batchInfo_->batchC) / static_cast<double>(compileInfo_.aicNum);
         double actualMaxIterBatch = static_cast<double>(ops::CeilDiv(ops::CeilDiv(batchInfo_->batchC, iterBatchL1_),
-                                    compileInfo_.aicNum) * iterBatchL1_); // calculate one of the core load max batch
+                                                                     compileInfo_.aicNum) *
+                                                        iterBatchL1_); // calculate one of the core load max batch
         double balanceRateOfBatch = avgIterBatch / actualMaxIterBatch; // calculate fb rate of batch
-        if (balanceRateOfBatch < defaultBalanceOfBatch) { // balance of batch lower than 0.8
+        if (balanceRateOfBatch < defaultBalanceOfBatch) {              // balance of batch lower than 0.8
             OP_LOGI(args_.opName, "FormulateBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
             return false;
         }
@@ -185,20 +186,17 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
     return true;
 }
 
-uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
 {
-    constexpr uint64_t mmadCount = 8UL; // cube count which will cause issuequene
+    constexpr uint64_t mmadCount = 8UL;            // cube count which will cause issuequene
     constexpr uint64_t fullCopySize = 64 * 1024UL; // datasize moving once which can use full of bandwith
     if (mmadCount * (alignMValue_ * alignKValue_ + alignKValue_ * alignNValue_) * args_.aDtypeSize > fullCopySize) {
-        runInfo_.iterBatchL1 = std::min({iterBatchL1_, mmadCount, ops::CeilDiv(batchInfo_->batchC,
-                                         compileInfo_.aicNum)});
-        runInfo_.iterBatchL0 = std::max(std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, runInfo_.iterBatchL1,
-                                        mmadCount}), 1UL);
+        runInfo_.iterBatchL1 = std::min(
+            {iterBatchL1_, mmadCount, ops::CeilDiv(batchInfo_->batchC, compileInfo_.aicNum)});
+        runInfo_.iterBatchL0 = std::max(
+            std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, runInfo_.iterBatchL1, mmadCount}), 1UL);
     } else {
         runInfo_.iterBatchL1 = std::min({iterBatchL1_, ops::CeilDiv(batchInfo_->batchC, compileInfo_.aicNum)});
         runInfo_.iterBatchL0 = std::max(std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, runInfo_.iterBatchL1}),
@@ -222,8 +220,8 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
         }
         runInfo_.iterBatchL1 = iterBatchL1;
         runInfo_.innerBatch = innerBatch;
-        runInfo_.iterBatchL0 =
-            std::max(std::min({iterBatchL0A_, iterBatchL0C_, runInfo_.iterBatchL0, runInfo_.iterBatchL1}), 1UL);
+        runInfo_.iterBatchL0 = std::max(
+            std::min({iterBatchL0A_, iterBatchL0C_, runInfo_.iterBatchL0, runInfo_.iterBatchL1}), 1UL);
     }
 
     if (l0CanLoadBatch_) { // l0 can load multi batch, baseM,N,K equals to aligned ori m,n,k
@@ -257,17 +255,17 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
             runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
                                       alignMValue_);
         }
-        //baseN满足C2大小
+        // baseN满足C2大小
         if (args_.hasBias) {
             runInfo_.baseN = std::min(runInfo_.baseN, compileInfo_.btSize / DB_SIZE / DATA_SIZE_FP32);
         }
         // adjust basic block by l0c shape
         if (runInfo_.baseM >= runInfo_.baseN) {
-            runInfo_.baseM = std::min(runInfo_.baseM, ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR,
-                                      runInfo_.baseN));
+            runInfo_.baseM = std::min(runInfo_.baseM,
+                                      ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR, runInfo_.baseN));
         } else {
-            runInfo_.baseN = std::min(runInfo_.baseN, ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR,
-                                      runInfo_.baseM));
+            runInfo_.baseN = std::min(runInfo_.baseN,
+                                      ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR, runInfo_.baseM));
         }
         runInfo_.baseM = ops::FloorAlign(std::max(runInfo_.baseM, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_16);
         runInfo_.baseN = ops::FloorAlign(std::max(runInfo_.baseN, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_16);
@@ -277,13 +275,11 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
     // enable Fixpipe optimization
     l0C2Out_ = GetL0C2OutFlag();
 
-    OP_LOGI(
-        args_.opName,
-        "In IterBatchBasicApi module, temp iterBatchL0A is %lu, temp iterBatchL0B is %lu, \
+    OP_LOGI(args_.opName, "In IterBatchBasicApi module, temp iterBatchL0A is %lu, temp iterBatchL0B is %lu, \
             temp iterBatchL0C is %lu, temp iterBatchL1 is %lu, after calculation actual runInfo_.iterBatchL0 is %lu, \
             runInfo_.iterBatchL1 is %lu, runInfo_.baseM is %lu, runInfo_.baseN is %lu",
-        iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, iterBatchL1_, runInfo_.iterBatchL0, runInfo_.iterBatchL1,
-        runInfo_.baseM, runInfo_.baseN);
+            iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, iterBatchL1_, runInfo_.iterBatchL0, runInfo_.iterBatchL1,
+            runInfo_.baseM, runInfo_.baseN);
     return ge::GRAPH_SUCCESS;
 }
 

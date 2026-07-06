@@ -12,20 +12,20 @@
  * \file layer_norm_grad_v3_tiling.cc
  * \brief
  */
-#include<iostream>
-#include<string>
+#include <iostream>
+#include <string>
 #include "op_host/tiling_util.h"
 #include "layer_norm_grad_v3_tiling.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
 
-static ge::graphStatus Tiling4LayerNormGradV3(gert::TilingContext *context)
+static ge::graphStatus Tiling4LayerNormGradV3(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus TilingPrepare4LayerNormGradV3(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4LayerNormGradV3(gert::TilingParseContext* context)
 {
     OP_LOGD(context, "TilingPrepare4LayerNormGradV3 enter.");
 
@@ -40,17 +40,17 @@ static ge::graphStatus TilingPrepare4LayerNormGradV3(gert::TilingParseContext *c
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
-        static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
+                        static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
     OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
-        static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
+                        static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
+                return ge::GRAPH_FAILED);
     compileInfo->isRegBase = IsRegbaseSocVersion(context) ? true : false;
 
     OP_LOGD(context->GetNodeName(),

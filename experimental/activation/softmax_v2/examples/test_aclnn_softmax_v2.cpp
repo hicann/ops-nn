@@ -49,13 +49,12 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
 {
     auto size = GetShapeSize(shape);
     std::vector<DataType> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);       // float
-        //LOG_PRINT("mean result[%ld] is: %d\n", i, resultData[i]);       // int
+        LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]); // float
+        // LOG_PRINT("mean result[%ld] is: %d\n", i, resultData[i]);       // int
     }
 }
 
@@ -72,9 +71,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 2. 申请device侧内存
@@ -91,9 +89,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -120,20 +117,19 @@ int main()
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
-    int32_t dim=3; // 指定dim参数
+    int32_t dim = 3; // 指定dim参数
     aclOpExecutor* executor;
 
     LOG_PRINT("Before GetWorkspaceSize: selfX=%p, out=%p\n", (void*)selfX, (void*)out);
-    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, outDeviceAddr=%p\n",
-          selfXDeviceAddr,outDeviceAddr);
+    LOG_PRINT("Before GetWorkspaceSize: selfXDeviceAddr=%p, outDeviceAddr=%p\n", selfXDeviceAddr, outDeviceAddr);
     // 4. 调用aclnnSoftmaxv2Example第一段接口
-    ret = aclnnSoftmaxV2GetWorkspaceSize(selfX,  dim, out, &workspaceSize, &executor);
-    LOG_PRINT("aclnnSoftmaxV2GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n",
-          ret, (unsigned long long)workspaceSize, (void*)executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftmaxV2ExampleGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnSoftmaxV2GetWorkspaceSize(selfX, dim, out, &workspaceSize, &executor);
+    LOG_PRINT("aclnnSoftmaxV2GetWorkspaceSize returned %d, workspaceSize=%llu, executor=%p\n", ret,
+              (unsigned long long)workspaceSize, (void*)executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftmaxV2ExampleGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;

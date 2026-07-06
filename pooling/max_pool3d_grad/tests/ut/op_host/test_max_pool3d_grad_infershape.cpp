@@ -69,12 +69,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fp32_valid)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -100,12 +99,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fp16_same)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -131,12 +129,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_bf16)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -164,12 +161,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_unknown_shape)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -195,12 +191,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_unknown_rank)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -226,12 +221,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_invalid_ksize_length)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -255,12 +249,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_ksize_zero)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -284,12 +277,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_invalid_strides_lengt
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -313,12 +305,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_strides_zero)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 0, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -342,12 +333,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_invalid_padding)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("INVALID")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("INVALID")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -364,23 +354,23 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_inferdatatype_fp16)
     if (data_type_func != nullptr) {
         ge::DataType input_ref = ge::DT_FLOAT16;
         ge::DataType output_ref = ge::DT_FLOAT16;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .NodeIoNum(3, 1)
-                .IrInstanceNum({1, 1, 1})
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .InputDataTypes({&input_ref, &input_ref, &input_ref})
-                .OutputDataTypes({&output_ref})
-                .NodeAttrs(
-                    {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                     {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                     {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                     {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                     {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
-                .Build();
+        auto
+            context_holder = gert::InferDataTypeContextFaker()
+                                 .NodeIoNum(3, 1)
+                                 .IrInstanceNum({1, 1, 1})
+                                 .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                 .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                 .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                 .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                 .InputDataTypes({&input_ref, &input_ref, &input_ref})
+                                 .OutputDataTypes({&output_ref})
+                                 .NodeAttrs(
+                                     {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                      {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                      {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                                      {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                                 .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -395,23 +385,24 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_inferdatatype_bf16)
     if (data_type_func != nullptr) {
         ge::DataType input_ref = ge::DT_BF16;
         ge::DataType output_ref = ge::DT_BF16;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .NodeIoNum(3, 1)
-                .IrInstanceNum({1, 1, 1})
-                .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                .InputDataTypes({&input_ref, &input_ref, &input_ref})
-                .OutputDataTypes({&output_ref})
-                .NodeAttrs(
-                    {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                     {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                     {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                     {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                     {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .NodeIoNum(3, 1)
+                                  .IrInstanceNum({1, 1, 1})
+                                  .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                  .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                  .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                  .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref})
+                                  .OutputDataTypes({&output_ref})
+                                  .NodeAttrs(
+                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                       {"strides",
+                                        Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                       {"pads",
+                                        Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -454,12 +445,11 @@ TEST_F(MaxPool3DGradInferNon950, max_pool3d_grad_infershape_calculated_success)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 1, 0, 1, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 1, 0, 1, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -483,12 +473,11 @@ TEST_F(MaxPool3DGradInferNon950, max_pool3d_grad_infershape_ncdhw_calculated_suc
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -512,12 +501,11 @@ TEST_F(MaxPool3DGradInferNon950, max_pool3d_grad_infershape_fail_negative_pads)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, -1, 0, 1, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, -1, 0, 1, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -541,12 +529,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_ncdhw_success)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2, 2})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -572,12 +559,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_invalid_pads_length)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -601,12 +587,11 @@ TEST_F(MaxPool3DGradInferNon950, max_pool3d_grad_infershape_fail_invalid_padding
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("INVALID")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("INVALID")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -630,12 +615,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_negative_ksize)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -1, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -1, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -659,12 +643,11 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_negative_strides)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -2, 2, 2, 1})},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, -2, 2, 2, 1})},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
                       .InputShapes({&xShape, &yInShape, &gradShape})
                       .OutputShapes({&yShape})
                       .Build();

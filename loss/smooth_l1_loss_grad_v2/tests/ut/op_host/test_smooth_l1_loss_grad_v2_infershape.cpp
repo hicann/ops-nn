@@ -23,14 +23,10 @@
 using namespace ge;
 
 class smooth_l1_loss_grad_v2 : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "smooth_l1_loss_grad_v2 SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "smooth_l1_loss_grad_v2 SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "smooth_l1_loss_grad_v2 TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "smooth_l1_loss_grad_v2 TearDown" << std::endl; }
 };
 
 TEST_F(smooth_l1_loss_grad_v2, smooth_l1_loss_grad_v2_test1)
@@ -54,9 +50,8 @@ TEST_F(smooth_l1_loss_grad_v2, smooth_l1_loss_grad_v2_test1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&predictShape, &labelShape, &doutShape})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"sigma", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"sigma", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)

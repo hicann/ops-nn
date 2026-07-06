@@ -12,10 +12,10 @@
  * \file logit_grad_tiling.h
  * \brief
  *
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
  */
 
 #ifndef LOGIT_GRAD_TILING_DEF_H
@@ -25,8 +25,7 @@
 #include "tiling/tiling_api.h"
 
 namespace optiling {
-struct LogitGradCompileInfo {
-};
+struct LogitGradCompileInfo {};
 
 BEGIN_TILING_DATA_DEF(LogitGradTilingData)
 

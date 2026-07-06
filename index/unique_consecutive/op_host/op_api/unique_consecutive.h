@@ -17,8 +17,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-aclnnStatus UniqueConsecutive(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim, aclTensor* valueOut,
-                        aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor);
+aclnnStatus UniqueConsecutive(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim,
+                              aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
+                              aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_CONSECUTIVE_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_CONSECUTIVE_OP_H_

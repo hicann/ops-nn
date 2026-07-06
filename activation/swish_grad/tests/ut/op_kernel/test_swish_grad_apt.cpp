@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file in the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -23,22 +23,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void swish_grad(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void swish_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, GM_ADDR workspace,
+                                                 GM_ADDR tiling);
 
 class swish_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "swish_grad_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "swish_grad_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "swish_grad TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./swish_grad_data");
     }
 };
-
 
 TEST_F(swish_grad_test, test_case_fp32_1)
 {
@@ -52,7 +48,7 @@ TEST_F(swish_grad_test, test_case_fp32_1)
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = nullptr;
     uint8_t* grad_x = (uint8_t*)AscendC::GmAlloc(grad_xByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/swish_grad/tests/ut/op_kernel/swish_grad_data", "swish_grad_data");
@@ -74,7 +70,7 @@ TEST_F(swish_grad_test, test_case_fp32_1)
     tilingDatafromBin->baseTiling.elemNum = 256;
     tilingDatafromBin->baseTiling.scheMode = 0;
     tilingDatafromBin->scale = 1.0;
-    
+
     ReadFile(path + "/swish_grad_data/input_grad.bin", gradByteSize, grad, gradByteSize);
     ReadFile(path + "/swish_grad_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelSwishGrad = [](GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, GM_ADDR workspace, GM_ADDR tiling) {

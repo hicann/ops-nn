@@ -22,12 +22,12 @@
 #define _SOFT_MARGIN_LOSS_TILING_DATA_H_
 
 struct SoftMarginLossTilingData {
-    int64_t totalNum = 0;       // Total number of elements
-    int64_t blockFactor = 0;    // Number of elements per AI Core
-    int64_t ubFactor = 0;       // Number of elements per UB loop iteration (in float32 units)
-    int32_t reductionMode = 0;  // Reduction mode: 0=none, 1=mean, 2=sum
-    float invNumel = 0.0f;      // 1.0f / totalNum (only used in mean mode)
-    int64_t usedCoreNum = 0;    // Actual number of cores used (for cross-core reduction)
+    int64_t totalNum = 0;      // Total number of elements
+    int64_t blockFactor = 0;   // Number of elements per AI Core
+    int64_t ubFactor = 0;      // Number of elements per UB loop iteration (in float32 units)
+    int32_t reductionMode = 0; // Reduction mode: 0=none, 1=mean, 2=sum
+    float invNumel = 0.0f;     // 1.0f / totalNum (only used in mean mode)
+    int64_t usedCoreNum = 0;   // Actual number of cores used (for cross-core reduction)
 };
 
 #endif

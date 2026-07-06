@@ -13,18 +13,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/deep_norm_grad_proto.h"
 
-class DeepNormGrad : public testing::Test
-{
+class DeepNormGrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeepNormGrad Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeepNormGrad Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeepNormGrad Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeepNormGrad Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(DeepNormGrad, DeepNormGrad_infershape_case_0)
@@ -65,23 +58,24 @@ TEST_F(DeepNormGrad, DeepNormGrad_InferDtype_case_0)
         ge::DataType output_dgx_ref = ge::DT_FLOAT16;
         ge::DataType output_dbeta_ref = ge::DT_FLOAT;
         ge::DataType output_dgamma_ref = ge::DT_FLOAT;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(6)
-                .NodeIoNum(6, 4)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_ref, &input_ref, &input_ref, &input_ref, &input_mean_ref, &input_mean_ref})
-                .OutputDataTypes({&output_dx_ref, &output_dgx_ref, &output_dbeta_ref, &output_dgamma_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(6)
+                                  .NodeIoNum(6, 4)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &input_ref, &input_mean_ref,
+                                                   &input_mean_ref})
+                                  .OutputDataTypes(
+                                      {&output_dx_ref, &output_dgx_ref, &output_dbeta_ref, &output_dgamma_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

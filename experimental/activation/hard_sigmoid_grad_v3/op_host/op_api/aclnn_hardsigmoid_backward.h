@@ -18,18 +18,12 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
-    const aclTensor *gradOutput,
-    const aclTensor *self,
-    aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                               aclTensor* out, uint64_t* workspaceSize,
+                                                               aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnHardsigmoidBackward(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnHardsigmoidBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               const aclrtStream stream);
 
 #ifdef __cplusplus
 }

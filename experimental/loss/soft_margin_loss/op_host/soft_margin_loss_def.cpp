@@ -42,8 +42,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Attr("reduction")
-            .Int(1);  // default: mean (0=none, 1=mean, 2=sum)
+        this->Attr("reduction").Int(1); // default: mean (0=none, 1=mean, 2=sum)
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

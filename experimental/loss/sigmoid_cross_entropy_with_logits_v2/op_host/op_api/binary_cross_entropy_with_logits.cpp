@@ -24,22 +24,22 @@ OP_TYPE_REGISTER(SigmoidCrossEntropyWithLogitsV2);
 
 const aclTensor* SigmoidCrossEntropyWithLogitsV2(const aclTensor* self, const aclTensor* target,
                                                  const aclTensor* weightOptional, const aclTensor* posWeightOptional,
-                                                 const std::string &reduction, aclOpExecutor* executor) {
-  L0_DFX(SigmoidCrossEntropyWithLogitsV2, self, target, weightOptional, posWeightOptional, reduction);
+                                                 const std::string& reduction, aclOpExecutor* executor)
+{
+    L0_DFX(SigmoidCrossEntropyWithLogitsV2, self, target, weightOptional, posWeightOptional, reduction);
 
-  DataType outType = (self->GetDataType() == DataType::DT_FLOAT16 ||
-                      self->GetDataType() == DataType::DT_BF16) ? DataType::DT_FLOAT : self->GetDataType();
-  auto result = executor->AllocTensor(outType, op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-  INFER_SHAPE(SigmoidCrossEntropyWithLogitsV2,
-              OP_INPUT(self, target, weightOptional, posWeightOptional),
-              OP_OUTPUT(result), OP_ATTR(reduction));
+    DataType outType = (self->GetDataType() == DataType::DT_FLOAT16 || self->GetDataType() == DataType::DT_BF16) ?
+                           DataType::DT_FLOAT :
+                           self->GetDataType();
+    auto result = executor->AllocTensor(outType, op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    INFER_SHAPE(SigmoidCrossEntropyWithLogitsV2, OP_INPUT(self, target, weightOptional, posWeightOptional),
+                OP_OUTPUT(result), OP_ATTR(reduction));
 
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SigmoidCrossEntropyWithLogitsV2,
-                                               OP_INPUT(self, target, weightOptional, posWeightOptional),
-                                               OP_OUTPUT(result),
-                                               OP_ATTR(reduction));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "SigmoidCrossEntropyWithLogitsV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return result;
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SigmoidCrossEntropyWithLogitsV2,
+                                                 OP_INPUT(self, target, weightOptional, posWeightOptional),
+                                                 OP_OUTPUT(result), OP_ATTR(reduction));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "SigmoidCrossEntropyWithLogitsV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return result;
 }
-}  // namespace l0op
+} // namespace l0op

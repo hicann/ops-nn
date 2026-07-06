@@ -42,10 +42,9 @@ void PrintOutResult(const std::vector<int64_t>& shape, void** deviceAddr)
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
     }
@@ -64,9 +63,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -83,16 +81,14 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensorList(
-    const std::vector<std::vector<int64_t>>& shapes, void** deviceAddr, aclDataType dataType, aclTensorList** tensor,
-    T initVal = 1)
+int CreateAclTensorList(const std::vector<std::vector<int64_t>>& shapes, void** deviceAddr, aclDataType dataType,
+                        aclTensorList** tensor, T initVal = 1)
 {
     int size = shapes.size();
     aclTensor* tensors[size];
@@ -224,8 +220,8 @@ int main()
     ret = CreateAclTensorList<float>(outCListShape, outCListDeviceAddr, aclDataType::ACL_FLOAT, &outCList, 0.0);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    ret = CreateAclTensorList<float>(
-        outTanhCListShape, outTanhCListDeviceAddr, aclDataType::ACL_FLOAT, &outTanhCList, 0.0);
+    ret = CreateAclTensorList<float>(outTanhCListShape, outTanhCListDeviceAddr, aclDataType::ACL_FLOAT, &outTanhCList,
+                                     0.0);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
@@ -233,9 +229,9 @@ int main()
     aclOpExecutor* executor;
 
     // 调用aclnnLSTM第一段接口
-    ret = aclnnLSTMGetWorkspaceSize(
-        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, hy, cy,
-        outIList, outJList, outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
+    ret = aclnnLSTMGetWorkspaceSize(input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection,
+                                    batchFirst, output, hy, cy, outIList, outJList, outFList, outOList, outHList,
+                                    outCList, outTanhCList, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLSTMGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 

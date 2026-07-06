@@ -32,11 +32,10 @@ using AscendC::TPosition;
 #ifdef LOCAL_TEMPLATE_CLASS_PARAMS
 #undef LOCAL_TEMPLATE_CLASS_PARAMS
 #endif
-#define LOCAL_TEMPLATE_CLASS_PARAMS                                                                             \
-    template <                                                                                                  \
-        typename x1Type, typename x2Type, typename x1Level1ScaleType, typename x1Level0ScaleType,               \
-        typename x2Level1ScaleType, typename x2Level0ScaleType, typename biasType, typename yType, bool aTrans, \
-        bool bTrans, bool hasBias>
+#define LOCAL_TEMPLATE_CLASS_PARAMS                                                                                   \
+    template <typename x1Type, typename x2Type, typename x1Level1ScaleType, typename x1Level0ScaleType,               \
+              typename x2Level1ScaleType, typename x2Level0ScaleType, typename biasType, typename yType, bool aTrans, \
+              bool bTrans, bool hasBias>
 
 #ifdef LOCAL_TEMPLATE_FUNC_PARAMS
 #undef LOCAL_TEMPLATE_FUNC_PARAMS
@@ -47,8 +46,7 @@ using AscendC::TPosition;
 
 namespace DualLevelQuantBatchMatmul::Arch35 {
 
-enum SyncMode
-{
+enum SyncMode {
     SYNC_MODE0 = 0, // C/V全核同步
     SYNC_MODE1 = 1, // AIV之间的同步
     SYNC_MODE2 = 2, // CV之间的同步
@@ -60,25 +58,24 @@ class DualLevelQuantMatmulBasicBlock {
 public:
     __aicore__ inline DualLevelQuantMatmulBasicBlock() = default;
 
-    __aicore__ inline void Init(
-        __gm__ x1Type* x1, __gm__ x2Type* x2, __gm__ x1Level0ScaleType* x1Level0Scale,
-        __gm__ x1Level1ScaleType* x1Level1Scale, __gm__ x2Level0ScaleType* x2Level0Scale,
-        __gm__ x2Level1ScaleType* x2Level1Scale, __gm__ biasType* bias, __gm__ yType* y,
-        const DualLevelQuantBatchMatmulBasicTilingData* tilingData);
+    __aicore__ inline void Init(__gm__ x1Type* x1, __gm__ x2Type* x2, __gm__ x1Level0ScaleType* x1Level0Scale,
+                                __gm__ x1Level1ScaleType* x1Level1Scale, __gm__ x2Level0ScaleType* x2Level0Scale,
+                                __gm__ x2Level1ScaleType* x2Level1Scale, __gm__ biasType* bias, __gm__ yType* y,
+                                const DualLevelQuantBatchMatmulBasicTilingData* tilingData);
 
     __aicore__ inline void SetAivToAic();
 
     __aicore__ inline void WaitAivToAic();
 
-    __aicore__ inline void ComputeBasicBlock(
-        DualLevelQbmmBasicBlockOffsetParams& offsetParams, L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void ComputeBasicBlock(DualLevelQbmmBasicBlockOffsetParams& offsetParams,
+                                             L0CopyAndCalcParams& l0Params);
 
-    __aicore__ inline void ComputeAicBasicBlock(
-        DualLevelQbmmBasicBlockOffsetParams& offsetParams, L0CopyAndCalcParams& l0Params, FixL0CToDstParams& fixpParams,
-        uint64_t kGmOffset);
+    __aicore__ inline void ComputeAicBasicBlock(DualLevelQbmmBasicBlockOffsetParams& offsetParams,
+                                                L0CopyAndCalcParams& l0Params, FixL0CToDstParams& fixpParams,
+                                                uint64_t kGmOffset);
 
-    __aicore__ inline void ComputeAivBasicBlock(
-        DualLevelQbmmBasicBlockOffsetParams& offsetParams, L0CopyAndCalcParams& l0Params, uint64_t kGmOffset);
+    __aicore__ inline void ComputeAivBasicBlock(DualLevelQbmmBasicBlockOffsetParams& offsetParams,
+                                                L0CopyAndCalcParams& l0Params, uint64_t kGmOffset);
 
     __aicore__ inline void End();
 
@@ -151,9 +148,9 @@ __aicore__ inline void DualLevelQuantMatmulBasicBlock<LOCAL_TEMPLATE_FUNC_PARAMS
             CrossCoreWaitFlag<SyncMode::SYNC_MODE4, PIPE_FIX>(AIV_TO_AIC_ID);
             CrossCoreWaitFlag<SyncMode::SYNC_MODE4, PIPE_FIX>(AIV_TO_AIC_ID + AIV_SYNC_FLAG_DIST);
 
-            cubeCompute_.LaunchMatmul(
-                mL1Offset, nL1Offset, 0, kGmOffset % offsetParams.level1ScaleKL1Size,
-                cTmpFp32Ub_[cvLoopIdx_ % CV_LOOP_NUM * C_TMP_FP32_UB_OFFSET], l0Params, fixpParams);
+            cubeCompute_.LaunchMatmul(mL1Offset, nL1Offset, 0, kGmOffset % offsetParams.level1ScaleKL1Size,
+                                      cTmpFp32Ub_[cvLoopIdx_ % CV_LOOP_NUM * C_TMP_FP32_UB_OFFSET], l0Params,
+                                      fixpParams);
 
             CrossCoreSetFlag<SyncMode::SYNC_MODE4, PIPE_FIX>(AIC_TO_AIV_ID);
             CrossCoreSetFlag<SyncMode::SYNC_MODE4, PIPE_FIX>(AIC_TO_AIV_ID + AIV_SYNC_FLAG_DIST);
@@ -182,8 +179,8 @@ __aicore__ inline void DualLevelQuantMatmulBasicBlock<LOCAL_TEMPLATE_FUNC_PARAMS
         }
         for (uint64_t mL1Offset = 0; mL1Offset < l0Params.mL1Size; mL1Offset += l0Params.mL0Size) {
             CrossCoreWaitFlag<SyncMode::SYNC_MODE4, PIPE_V>(AIC_TO_AIV_ID);
-            vecCompute_.AntiQuantCompute(
-                cFp32BufId, cvLoopIdx_, mL1Offset, nL1Offset, cTmpFp32Ub_, offsetParams, l0Params);
+            vecCompute_.AntiQuantCompute(cFp32BufId, cvLoopIdx_, mL1Offset, nL1Offset, cTmpFp32Ub_, offsetParams,
+                                         l0Params);
             CrossCoreSetFlag<SyncMode::SYNC_MODE4, PIPE_V>(AIV_TO_AIC_ID);
             cvLoopIdx_++;
             if (kGmOffset + offsetParams.l0BaseK >= offsetParams.kSize) {
@@ -233,4 +230,3 @@ __aicore__ inline void DualLevelQuantMatmulBasicBlock<LOCAL_TEMPLATE_FUNC_PARAMS
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

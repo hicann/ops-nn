@@ -25,8 +25,8 @@ using namespace RotateQuantOpt;
 #define KERNEL_LINKAGE extern "C"
 #endif
 
-KERNEL_LINKAGE __global__
-    __aicore__ void rotate_quant(GM_ADDR x, GM_ADDR rot, GM_ADDR alpha, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
+KERNEL_LINKAGE __global__ __aicore__ void rotate_quant(GM_ADDR x, GM_ADDR rot, GM_ADDR alpha, GM_ADDR y, GM_ADDR scale,
+                                                       GM_ADDR workSpace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(RotateQuantTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -38,13 +38,13 @@ KERNEL_LINKAGE __global__
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     TPipe pipe;
 
-    RotateQuantOpt::InitParams params {x, rot, y, scale, userWorkspace, &pipe, &tilingData};
+    RotateQuantOpt::InitParams params{x, rot, y, scale, userWorkspace, &pipe, &tilingData};
 
     using aType = MatmulType<TPosition::GM, CubeFormat::ND, DTYPE_X>;
     using bType = MatmulType<TPosition::GM, CubeFormat::ND, DTYPE_X>;
     using cType = MatmulType<TPosition::GM, CubeFormat::ND, DTYPE_X>;
     using MT = matmul::MatmulImpl<aType, bType, cType, cType, CFG_MDL>;
-    
+
     MT mm;
     mm.Init(&tilingData.matmulTiling, &pipe);
 

@@ -25,11 +25,12 @@
 #include "kernel_tiling/kernel_tiling.h"
 using namespace std;
 
-extern "C" __global__ __aicore__ void dynamic_rnn_v2(
-    GM_ADDR inputX, GM_ADDR weightInput, GM_ADDR weightHidden, GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH,
-    GM_ADDR initC, GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo, GM_ADDR mask, GM_ADDR outputY, GM_ADDR outputH,
-    GM_ADDR outputC, GM_ADDR outputI, GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
-    GM_ADDR workspace, GM_ADDR rnnTiling);
+extern "C" __global__ __aicore__ void dynamic_rnn_v2(GM_ADDR inputX, GM_ADDR weightInput, GM_ADDR weightHidden,
+                                                     GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC,
+                                                     GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo, GM_ADDR mask,
+                                                     GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
+                                                     GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO,
+                                                     GM_ADDR outputTanhC, GM_ADDR workspace, GM_ADDR rnnTiling);
 
 class dynamic_r_n_n_v2_test : public testing::Test {
 protected:
@@ -217,10 +218,9 @@ TEST_F(dynamic_r_n_n_v2_test, test_case_1)
         *((half*)outGM2 + i) = i;
     }
     ICPU_SET_TILING_KEY(10000001);
-    ICPU_RUN_KF(
-        dynamic_rnn_v2, block_dim, aGM, b1GM, b2GM, biasGM, nullptr, initHGM, initCGM, nullptr, nullptr, nullptr,
-        nullptr, cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_rnn_v2, block_dim, aGM, b1GM, b2GM, biasGM, nullptr, initHGM, initCGM, nullptr, nullptr,
+                nullptr, nullptr, cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(aGM);
     AscendC::GmFree(b1GM);
@@ -413,10 +413,9 @@ TEST_F(dynamic_r_n_n_v2_test, test_case_2)
         *((half*)outGM2 + i) = i;
     }
     ICPU_SET_TILING_KEY(10000002);
-    ICPU_RUN_KF(
-        dynamic_rnn_v2, block_dim, aGM, b1GM, b2GM, biasGM, nullptr, initHGM, initCGM, nullptr, nullptr, nullptr,
-        nullptr, cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_rnn_v2, block_dim, aGM, b1GM, b2GM, biasGM, nullptr, initHGM, initCGM, nullptr, nullptr,
+                nullptr, nullptr, cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(aGM);
     AscendC::GmFree(b1GM);

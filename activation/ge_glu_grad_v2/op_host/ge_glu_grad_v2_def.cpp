@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class GeGluGradV2 : public OpDef
-{
+class GeGluGradV2 : public OpDef {
 public:
     explicit GeGluGradV2(const char* name) : OpDef(name)
     {

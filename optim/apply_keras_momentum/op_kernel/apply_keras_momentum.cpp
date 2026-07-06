@@ -18,11 +18,9 @@
 #include "./arch35/apply_keras_momentum.h"
 
 #ifdef __CCE_KT_TEST__
-extern "C" __global__ __aicore__ void apply_keras_momentum(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
-    GM_ADDR grad, GM_ADDR momentum,
-    GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void apply_keras_momentum(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
+                                                           GM_ADDR momentum, GM_ADDR var_out, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(ApplyKerasMomentumTilingData, tilingData, tiling);
     NsApplyKerasMomentum::ApplyKerasMomentum<DTYPE_VAR, 0> op;
@@ -30,11 +28,9 @@ extern "C" __global__ __aicore__ void apply_keras_momentum(
     op.Process();
 }
 #else
-extern "C" __global__ __aicore__ void apply_keras_momentum(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
-    GM_ADDR grad, GM_ADDR momentum,
-    GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void apply_keras_momentum(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
+                                                           GM_ADDR momentum, GM_ADDR var_out, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyKerasMomentumTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyKerasMomentumTilingData, tilingData, tiling);

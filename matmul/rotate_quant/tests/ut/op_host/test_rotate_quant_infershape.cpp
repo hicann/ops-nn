@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 #include <gtest/gtest.h>
 #include <iostream>
 #include "infershape_test_util.h"
@@ -24,15 +24,9 @@ constexpr int32_t CASE0_X_N = 64;
 
 class RotateQuantInferShape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RotateQuantInferShape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RotateQuantInferShape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RotateQuantInferShape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RotateQuantInferShape TearDown" << std::endl; }
 };
 
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_0)
@@ -62,8 +56,9 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_0)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_INT8))},
-                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .NodeAttrs(
+                          {{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_INT8))},
+                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
                       .Build();
 
     auto context = holder.GetContext<gert::InferShapeContext>();
@@ -109,8 +104,9 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_1)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_INT8))},
-                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .NodeAttrs(
+                          {{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_INT8))},
+                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
                       .Build();
 
     auto context = holder.GetContext<gert::InferShapeContext>();
@@ -154,9 +150,9 @@ TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_case_0)
                                   .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_INT8))},
-                                       {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                                  .NodeAttrs({{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(
+                                                              static_cast<int64_t>(ge::DT_INT8))},
+                                              {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
                                   .InputDataTypes({&input_x_ref, &input_rot_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();

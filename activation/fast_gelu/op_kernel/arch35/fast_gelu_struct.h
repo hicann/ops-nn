@@ -20,20 +20,20 @@ namespace FastGeluOp {
 #define FastGelu_TPL_SCH_MODE_0 0
 #define FastGelu_TPL_SCH_MODE_1 1
 
-ASCENDC_TPL_ARGS_DECL(
-    FastGelu, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0, FastGelu_TPL_SCH_MODE_1),
-    ASCENDC_TPL_DTYPE_DECL(dType, TPL_FP16, TPL_BF16, TPL_FP32));
+ASCENDC_TPL_ARGS_DECL(FastGelu,
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0,
+                                            FastGelu_TPL_SCH_MODE_1),
+                      ASCENDC_TPL_DTYPE_DECL(dType, TPL_FP16, TPL_BF16, TPL_FP32));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0, FastGelu_TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP16)),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0, FastGelu_TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_SEL(dType, TPL_BF16)),
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0, FastGelu_TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP32)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0,
+                                                          FastGelu_TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP16)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0,
+                                                          FastGelu_TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, TPL_BF16)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FastGelu_TPL_SCH_MODE_0,
+                                                          FastGelu_TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP32)));
 } // namespace FastGeluOp
 
 #endif // OPS_NN_ACTIVATION_FAST_GELU_OP_KERNEL_ARCH35_FAST_GELU_STRUCT_H

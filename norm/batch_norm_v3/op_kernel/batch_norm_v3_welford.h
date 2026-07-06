@@ -24,14 +24,11 @@ using namespace AscendC;
 template <typename T1, typename T2, int SPLIT_MODE, int R0_ALIGN_MODE>
 class BatchNormV3Welford : public BatchNormV3Base<T1, T2> {
 public:
-    __aicore__ inline BatchNormV3Welford(TPipe* pipe)
-    {
-        this->pipe_ = pipe;
-    }
+    __aicore__ inline BatchNormV3Welford(TPipe* pipe) { this->pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR var, GM_ADDR y, GM_ADDR mean_out,
-        GM_ADDR var_out, GM_ADDR save_mean, GM_ADDR save_var, const BatchNormV3WelfordTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
+                                GM_ADDR mean_out, GM_ADDR var_out, GM_ADDR save_mean, GM_ADDR save_var,
+                                const BatchNormV3WelfordTilingData* __restrict tilingData)
     {
         patternR1 = tilingData->patternR1;
         patternA = tilingData->patternA;
@@ -58,8 +55,8 @@ public:
         dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
 
         // welford algorithm: compute global memory offsets
-        uint64_t aGmBlockOffset =
-            static_cast<uint64_t>(this->blockIdx) * static_cast<uint64_t>(tilingData->blockFactor);
+        uint64_t aGmBlockOffset = static_cast<uint64_t>(this->blockIdx) *
+                                  static_cast<uint64_t>(tilingData->blockFactor);
         uint64_t aR0GmBlockOffset = aGmBlockOffset * patternR0;
         this->xGm.SetGlobalBuffer((__gm__ T1*)x + aR0GmBlockOffset);
         this->weightGm.SetGlobalBuffer((__gm__ T2*)weight + aGmBlockOffset);
@@ -206,8 +203,8 @@ public:
             } else if constexpr (SPLIT_MODE == R1_SPLIT_ALIGN_MODE) {
                 r0ProcNum = lastLoopNR0 * patternR0Align;
                 for (int64_t nR0LoopIdx = 0; nR0LoopIdx < nR0Loop; nR0LoopIdx++) {
-                    xGmOffset =
-                        nR0LoopIdx * lastLoopNR0 * patternA * patternR0 + (aUbLoopNowStartIdx + aNum) * patternR0;
+                    xGmOffset = nR0LoopIdx * lastLoopNR0 * patternA * patternR0 +
+                                (aUbLoopNowStartIdx + aNum) * patternR0;
                     xTensor = xQueue.AllocTensor<float>();
                     CopyInNR0AndCast(xTensor, lastLoopNR0, xGmOffset);
                     WelfordParallelUpdate(count, meanTensor, m2Tensor, xTensor, deltaTensor, r0ProcNum);
@@ -230,8 +227,8 @@ public:
             biasValue = biasTensor.GetValue(aNum);
             finalMean = saveMeanTensor.GetValue(aNum);
             finalVar = saveVarTensor.GetValue(aNum);
-            float weightMulInvstd =
-                static_cast<float>(weightValue) / sqrt(finalVar + static_cast<float>(this->epsilon));
+            float weightMulInvstd = static_cast<float>(weightValue) /
+                                    sqrt(finalVar + static_cast<float>(this->epsilon));
             if constexpr (SPLIT_MODE == R0_SPLIT_NOT_ALIGN_MODE || SPLIT_MODE == R0_SPLIT_ALIGN_MODE) {
                 for (int64_t r1LoopIdx = 0; r1LoopIdx < patternR1; r1LoopIdx++) {
                     r0ProcNum = r0UbFactor;
@@ -248,8 +245,8 @@ public:
                         Muls(xTensor, xTensor, weightMulInvstd, r0ProcNum);
                         PipeBarrier<PIPE_V>();
                         if constexpr (!IsSameType<T1, float>::value) {
-                            RoundMode b16RoundMode =
-                                IsSameType<T1, bfloat16_t>::value ? RoundMode::CAST_ROUND : RoundMode::CAST_NONE;
+                            RoundMode b16RoundMode = IsSameType<T1, bfloat16_t>::value ? RoundMode::CAST_ROUND :
+                                                                                         RoundMode::CAST_NONE;
                             Adds(xTensor, xTensor, biasValue, r0ProcNum);
                             PipeBarrier<PIPE_V>();
                             yTensor = yQueue.AllocTensor<T1>();
@@ -280,8 +277,8 @@ public:
                     Muls(xTensor, xTensor, weightMulInvstd, r0ProcNum);
                     PipeBarrier<PIPE_V>();
                     if constexpr (!IsSameType<T1, float>::value) {
-                        RoundMode b16RoundMode =
-                            IsSameType<T1, bfloat16_t>::value ? RoundMode::CAST_ROUND : RoundMode::CAST_NONE;
+                        RoundMode b16RoundMode = IsSameType<T1, bfloat16_t>::value ? RoundMode::CAST_ROUND :
+                                                                                     RoundMode::CAST_NONE;
                         Adds(xTensor, xTensor, biasValue, r0ProcNum);
                         PipeBarrier<PIPE_V>();
                         yTensor = yQueue.AllocTensor<T1>();
@@ -300,8 +297,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInXAndCast(
-        LocalTensor<float>& xTensor, const int64_t copyInSize, const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInXAndCast(LocalTensor<float>& xTensor, const int64_t copyInSize,
+                                          const uint64_t copyInGmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -323,8 +320,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInNR0AndCast(
-        LocalTensor<float>& xTensor, const int64_t copyInR0LineNum, const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInNR0AndCast(LocalTensor<float>& xTensor, const int64_t copyInR0LineNum,
+                                            const uint64_t copyInGmOffset)
     {
         DataCopyPadExtParams<T1> padParams = {true, 0, static_cast<uint8_t>(patternR0Align - patternR0), 0};
         if constexpr (R0_ALIGN_MODE == R0_ALIGN) {
@@ -361,8 +358,8 @@ private:
         DataCopyPad(this->yGm[copyOutGmOffset], yTensor, intriParams);
     }
 
-    __aicore__ inline void CopyOutNR0Y(
-        LocalTensor<T1>& yTensor, const int64_t copyOutLineNum, const uint64_t copyOutGmOffset)
+    __aicore__ inline void CopyOutNR0Y(LocalTensor<T1>& yTensor, const int64_t copyOutLineNum,
+                                       const uint64_t copyOutGmOffset)
     {
         DataCopyExtParams intriParams;
         intriParams.blockCount = static_cast<uint16_t>(copyOutLineNum);
@@ -374,9 +371,8 @@ private:
         DataCopyPad(this->yGm[copyOutGmOffset], yTensor, intriParams);
     }
 
-    __aicore__ inline void CopyInWeightBiasAndCast(
-        LocalTensor<float>& weightTensor, LocalTensor<float>& biasTensor, const int64_t copyInSize,
-        const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInWeightBiasAndCast(LocalTensor<float>& weightTensor, LocalTensor<float>& biasTensor,
+                                                   const int64_t copyInSize, const uint64_t copyInGmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -401,9 +397,9 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInRunningMeanVar(
-        LocalTensor<float>& runningMeanInTensor, LocalTensor<float>& runningVarInTensor, const int64_t copyInSize,
-        const uint64_t copyInGmOffset)
+    __aicore__ inline void CopyInRunningMeanVar(LocalTensor<float>& runningMeanInTensor,
+                                                LocalTensor<float>& runningVarInTensor, const int64_t copyInSize,
+                                                const uint64_t copyInGmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -419,9 +415,9 @@ private:
         runningVarInTensor = runningVarInQueue.DeQue<float>();
     }
 
-    __aicore__ inline void CopyOutRunningMeanVar(
-        LocalTensor<float>& runningMeanOutTensor, LocalTensor<float>& runningVarOutTensor, const int64_t copyOutSize,
-        const uint64_t copyOutGmOffset)
+    __aicore__ inline void CopyOutRunningMeanVar(LocalTensor<float>& runningMeanOutTensor,
+                                                 LocalTensor<float>& runningVarOutTensor, const int64_t copyOutSize,
+                                                 const uint64_t copyOutGmOffset)
     {
         DataCopyParams intriParams;
         intriParams.blockCount = 1;
@@ -436,9 +432,8 @@ private:
         DataCopyPad(this->runningVarOutGm[copyOutGmOffset], runningVarOutTensor, intriParams);
     }
 
-    __aicore__ inline void CopyOutSaveMeanVar(
-        LocalTensor<float>& saveMeanTensor, LocalTensor<float>& saveVarTensor, const int64_t copyOutSize,
-        const uint64_t copyOutGmOffset)
+    __aicore__ inline void CopyOutSaveMeanVar(LocalTensor<float>& saveMeanTensor, LocalTensor<float>& saveVarTensor,
+                                              const int64_t copyOutSize, const uint64_t copyOutGmOffset)
     {
         DataCopyParams intriParams;
         intriParams.blockCount = 1;
@@ -453,9 +448,9 @@ private:
         DataCopyPad(this->saveVarGm[copyOutGmOffset], saveVarTensor, intriParams);
     }
 
-    __aicore__ inline void WelfordParallelUpdate(
-        float& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, LocalTensor<float>& xTensor,
-        LocalTensor<float>& deltaTensor, const uint32_t& calcMask)
+    __aicore__ inline void WelfordParallelUpdate(float& count, LocalTensor<float>& meanTensor,
+                                                 LocalTensor<float>& m2Tensor, LocalTensor<float>& xTensor,
+                                                 LocalTensor<float>& deltaTensor, const uint32_t& calcMask)
     {
         count += 1;
         Sub(deltaTensor, xTensor, meanTensor, calcMask);
@@ -472,9 +467,9 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void WelfordParallelFinalizeR0NotAlign(
-        const float& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, float& finalMean,
-        float& finalVar)
+    __aicore__ inline void WelfordParallelFinalizeR0NotAlign(const float& count, LocalTensor<float>& meanTensor,
+                                                             LocalTensor<float>& m2Tensor, float& finalMean,
+                                                             float& finalVar)
     {
         float r0MulR1 = static_cast<float>(patternR0 * patternR1);
         LocalTensor<float> meanReduceTensor = yQueue.AllocTensor<float>();
@@ -499,9 +494,9 @@ private:
         finalVar = finalVar / r0MulR1;
     }
 
-    __aicore__ inline void WelfordParallelFinalizeR0Align(
-        const float& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, float& finalMean,
-        float& finalVar)
+    __aicore__ inline void WelfordParallelFinalizeR0Align(const float& count, LocalTensor<float>& meanTensor,
+                                                          LocalTensor<float>& m2Tensor, float& finalMean,
+                                                          float& finalVar)
     {
         LocalTensor<float> meanReduceTensor = yQueue.AllocTensor<float>();
         Adds(meanReduceTensor, meanTensor, float(0.0), r0UbTail);
@@ -521,9 +516,9 @@ private:
         finalVar = finalVar / float(r0UbTail * count);
     }
 
-    __aicore__ inline void WelfordParallelFinalizeR1NotAlign(
-        const float& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, float& finalMean,
-        float& finalVar)
+    __aicore__ inline void WelfordParallelFinalizeR1NotAlign(const float& count, LocalTensor<float>& meanTensor,
+                                                             LocalTensor<float>& m2Tensor, float& finalMean,
+                                                             float& finalVar)
     {
         r0ProcNum = procNR0 * patternR0Align;
         float r0MulR1 = static_cast<float>(patternR0 * patternR1);
@@ -553,9 +548,9 @@ private:
         finalVar = finalVar / r0MulR1;
     }
 
-    __aicore__ inline void WelfordParallelFinalizeR1Align(
-        const float& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, float& finalMean,
-        float& finalVar)
+    __aicore__ inline void WelfordParallelFinalizeR1Align(const float& count, LocalTensor<float>& meanTensor,
+                                                          LocalTensor<float>& m2Tensor, float& finalMean,
+                                                          float& finalVar)
     {
         r0ProcNum = lastLoopNR0 * patternR0Align;
         LocalTensor<float> meanReduceTensor = yQueue.AllocTensor<float>();
@@ -587,25 +582,22 @@ private:
         if ((r0ForLoopNum < lineNum) && (patternR0Align < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM))) {
             uint8_t repStride = patternR0Align / B32_BLOCK_ALIGN_NUM;
             for (int64_t i = 0; i < r0ForLoopNum; i++) {
-                Adds(
-                    calcTensor[i * ELEM_PER_REP_FP32], calcTensor[i * ELEM_PER_REP_FP32], -finalMean, ELEM_PER_REP_FP32,
-                    lineNum, {1, 1, repStride, repStride});
+                Adds(calcTensor[i * ELEM_PER_REP_FP32], calcTensor[i * ELEM_PER_REP_FP32], -finalMean,
+                     ELEM_PER_REP_FP32, lineNum, {1, 1, repStride, repStride});
             }
             if (r0ForRemainNum > 0) {
                 int64_t repeatForLoopNum = lineNum / UINT8_MAX_NUM;
                 for (int64_t i = 0; i < repeatForLoopNum; i++) {
-                    Adds(
-                        calcTensor[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align],
-                        calcTensor[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align], -finalMean,
-                        r0ForRemainNum, UINT8_MAX_NUM, {1, 1, repStride, repStride});
+                    Adds(calcTensor[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align],
+                         calcTensor[r0ForLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align], -finalMean,
+                         r0ForRemainNum, UINT8_MAX_NUM, {1, 1, repStride, repStride});
                 }
                 if ((lineNum % UINT8_MAX_NUM) > 0) {
-                    Adds(
-                        calcTensor
-                            [r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
-                        calcTensor
-                            [r0ForLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
-                        -finalMean, r0ForRemainNum, (lineNum % UINT8_MAX_NUM), {1, 1, repStride, repStride});
+                    Adds(calcTensor[r0ForLoopNum * ELEM_PER_REP_FP32 +
+                                    repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
+                         calcTensor[r0ForLoopNum * ELEM_PER_REP_FP32 +
+                                    repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
+                         -finalMean, r0ForRemainNum, (lineNum % UINT8_MAX_NUM), {1, 1, repStride, repStride});
                 }
             }
         } else {

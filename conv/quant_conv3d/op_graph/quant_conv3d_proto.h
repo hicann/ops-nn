@@ -151,5 +151,5 @@ REG_OP(QuantConv3D)
     .ATTR(pad_mode, String, "SPECIFIC")
     .OP_END_FACTORY_REG(QuantConv3D)
 
-}  // namespace ge
-#endif  // QUANT_CONV3D_PROTO_H
+} // namespace ge
+#endif // QUANT_CONV3D_PROTO_H

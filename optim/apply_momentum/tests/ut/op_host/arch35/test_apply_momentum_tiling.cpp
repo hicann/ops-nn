@@ -31,13 +31,14 @@ using namespace std;
 using namespace ge;
 
 class TestApplyMomentumTiling : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { std::cout << "TestApplyMomentumTiling SetUp" << std::endl; }
 
     static void TearDownTestCase() { std::cout << "TestApplyMomentumTiling TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData* tiling_data) {
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
     auto data = tiling_data->GetData();
     string result;
     for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
@@ -50,7 +51,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data) {
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
                          map<string, string>& aicoreSpec, map<string, string>& intrinsics,
-                         map<string, string>& socVersion) {
+                         map<string, string>& socVersion)
+{
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -66,12 +68,12 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-struct ApplyMomentumUtCompileInfo {
-};
+struct ApplyMomentumUtCompileInfo {};
 
 static void DoApplyMomentumTilingCase(std::initializer_list<int64_t>& inputShape, ge::DataType inputDtype,
-                                      ge::Format inputFormat, bool use_nesterov,
-                                      int64_t expectKey, std::string& expectStr) {
+                                      ge::Format inputFormat, bool use_nesterov, int64_t expectKey,
+                                      std::string& expectStr)
+{
     // init platform
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -97,22 +99,21 @@ static void DoApplyMomentumTilingCase(std::initializer_list<int64_t>& inputShape
     ApplyMomentumUtCompileInfo compileInfo;
 
     auto holder = gert::TilingContextFaker()
-                        .SetOpType(opType)
-                        .NodeIoNum(5, 1)
-                        .IrInstanceNum({1, 1, 1, 1, 1})
-                        .InputShapes({&tensorShape, &tensorShape, &oneShape, &tensorShape, &oneShape})
-                        .OutputShapes({&tensorShape})
-                        .CompileInfo(&compileInfo)
-                        .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                        .NodeInputTd(0, inputDtype, inputFormat, inputFormat)
-                        .NodeInputTd(1, inputDtype, inputFormat, inputFormat)
-                        .NodeInputTd(2, inputDtype, inputFormat, inputFormat)
-                        .NodeInputTd(3, inputDtype, inputFormat, inputFormat)
-                        .NodeInputTd(4, inputDtype, inputFormat, inputFormat)
-                        .NodeOutputTd(0, inputDtype, inputFormat, inputFormat)
-                        .NodeAttrs(
-                            {{"use_nesterov", Ops::NN::AnyValue::CreateFrom<bool>(use_nesterov)},
-                            {"use_lock", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .SetOpType(opType)
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&tensorShape, &tensorShape, &oneShape, &tensorShape, &oneShape})
+                      .OutputShapes({&tensorShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+                      .NodeInputTd(0, inputDtype, inputFormat, inputFormat)
+                      .NodeInputTd(1, inputDtype, inputFormat, inputFormat)
+                      .NodeInputTd(2, inputDtype, inputFormat, inputFormat)
+                      .NodeInputTd(3, inputDtype, inputFormat, inputFormat)
+                      .NodeInputTd(4, inputDtype, inputFormat, inputFormat)
+                      .NodeOutputTd(0, inputDtype, inputFormat, inputFormat)
+                      .NodeAttrs({{"use_nesterov", Ops::NN::AnyValue::CreateFrom<bool>(use_nesterov)},
+                                  {"use_lock", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -134,38 +135,38 @@ static void DoApplyMomentumTilingCase(std::initializer_list<int64_t>& inputShape
     ASSERT_EQ(tiling_key, expectKey);
 }
 
-TEST_F(TestApplyMomentumTiling, apply_momentum_testcase_float32) {
+TEST_F(TestApplyMomentumTiling, apply_momentum_testcase_float32)
+{
     // FLOAT
     std::initializer_list<int64_t> inputShape = {16, 26, 16, 19};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
     bool use_nesterov = true;
     auto expectKey = 3;
-    std::string expectStr =
-        "1 126464 4080 31 2816 2 2 1264 1248 2816 0 0 ";
+    std::string expectStr = "1 126464 4080 31 2816 2 2 1264 1248 2816 0 0 ";
     DoApplyMomentumTilingCase(inputShape, inputDtype, inputFormat, use_nesterov, expectKey, expectStr);
 }
 
-TEST_F(TestApplyMomentumTiling, apply_momentum_testcase_float16) {
+TEST_F(TestApplyMomentumTiling, apply_momentum_testcase_float16)
+{
     // FLOAT16
     std::initializer_list<int64_t> inputShape = {3761, 4, 44, 4};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
     bool use_nesterov = false;
     auto expectKey = 1;
-    std::string expectStr =
-        "1 2647744 41376 64 2560 17 17 416 96 2560 0 0 ";
+    std::string expectStr = "1 2647744 41376 64 2560 17 17 416 96 2560 0 0 ";
     DoApplyMomentumTilingCase(inputShape, inputDtype, inputFormat, use_nesterov, expectKey, expectStr);
 }
 
-TEST_F(TestApplyMomentumTiling, apply_momentum_testcase_bfloat16) {
+TEST_F(TestApplyMomentumTiling, apply_momentum_testcase_bfloat16)
+{
     // BFLOAT16
     std::initializer_list<int64_t> inputShape = {7, 2, 7, 8, 10};
     auto inputDtype = ge::DT_BF16;
     auto inputFormat = ge::FORMAT_ND;
     bool use_nesterov = true;
     auto expectKey = 3;
-    std::string expectStr =
-        "1 7840 3920 2 2560 2 2 1360 1360 2560 0 0 ";
+    std::string expectStr = "1 7840 3920 2 2560 2 2 1360 1360 2560 0 0 ";
     DoApplyMomentumTilingCase(inputShape, inputDtype, inputFormat, use_nesterov, expectKey, expectStr);
 }

@@ -29,23 +29,17 @@ using namespace ge;
 
 class TestSparseApplyAdadeltaTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestSparseApplyAdadeltaTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestSparseApplyAdadeltaTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestSparseApplyAdadeltaTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestSparseApplyAdadeltaTiling TearDown" << std::endl; }
 };
 
 static constexpr uint64_t TILING_KEY_INT32 = 0;
 static constexpr uint64_t TILING_KEY_INT64 = 1;
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -71,8 +65,7 @@ struct SparseApplyAdadeltaTilingResult {
 };
 
 static SparseApplyAdadeltaTilingResult DoSparseApplyAdadeltaTilingCase(
-    const std::initializer_list<int64_t>& varShape,
-    const std::initializer_list<int64_t>& indicesShape,
+    const std::initializer_list<int64_t>& varShape, const std::initializer_list<int64_t>& indicesShape,
     ge::DataType indicesDtype)
 {
     SparseApplyAdadeltaTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0};
@@ -115,9 +108,8 @@ static SparseApplyAdadeltaTilingResult DoSparseApplyAdadeltaTilingCase(
                       .SetOpType(opType)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &accumStorage, &accumUpdateStorage,
-                           &lrStorage, &rhoStorage, &epsilonStorage, &gradStorage, &indicesStorage})
+                      .InputShapes({&varStorage, &accumStorage, &accumUpdateStorage, &lrStorage, &rhoStorage,
+                                    &epsilonStorage, &gradStorage, &indicesStorage})
                       .OutputShapes({&varStorage, &accumStorage, &accumUpdateStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -149,10 +141,8 @@ static SparseApplyAdadeltaTilingResult DoSparseApplyAdadeltaTilingCase(
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(SparseApplyAdadeltaTilingData)) {
-            const auto* td = reinterpret_cast<const SparseApplyAdadeltaTilingData*>(
-                rawTilingData->GetData());
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(SparseApplyAdadeltaTilingData)) {
+            const auto* td = reinterpret_cast<const SparseApplyAdadeltaTilingData*>(rawTilingData->GetData());
             result.K = td->K;
             result.rowSize = td->rowSize;
             result.varTotalSize = td->varTotalSize;

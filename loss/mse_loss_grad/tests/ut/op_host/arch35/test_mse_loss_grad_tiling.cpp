@@ -27,14 +27,10 @@ using namespace std;
 using namespace ge;
 
 class MseLossGradTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "MseLossGradTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "MseLossGradTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "MseLossGradTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "MseLossGradTiling TearDown" << std::endl; }
 };
 
 // TEST_F(MseLossGradTiling, mse_loss_grad_testcase_001)
@@ -81,7 +77,8 @@ class MseLossGradTiling : public testing::Test {
 
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
@@ -110,7 +107,6 @@ class MseLossGradTiling : public testing::Test {
 //                       .TilingData(param.get())
 //                       .Workspace(ws_size)
 //                       .Build();
-
 
 //     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
 //     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -171,7 +167,8 @@ class MseLossGradTiling : public testing::Test {
 
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
@@ -200,7 +197,6 @@ class MseLossGradTiling : public testing::Test {
 //                       .TilingData(param.get())
 //                       .Workspace(ws_size)
 //                       .Build();
-
 
 //     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
 //     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -261,7 +257,8 @@ class MseLossGradTiling : public testing::Test {
 
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
@@ -290,7 +287,6 @@ class MseLossGradTiling : public testing::Test {
 //                       .TilingData(param.get())
 //                       .Workspace(ws_size)
 //                       .Build();
-
 
 //     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
 //     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -352,7 +348,8 @@ class MseLossGradTiling : public testing::Test {
 
 //     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+//     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+//     aicore_spec);
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
 //     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
 //                                                                                             intrinsics);
@@ -381,7 +378,6 @@ class MseLossGradTiling : public testing::Test {
 //                       .TilingData(param.get())
 //                       .Workspace(ws_size)
 //                       .Build();
-
 
 //     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
 //     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

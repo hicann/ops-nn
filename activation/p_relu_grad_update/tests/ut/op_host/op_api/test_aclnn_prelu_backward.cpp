@@ -24,14 +24,8 @@ using namespace std;
 
 class l2_prelu_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "prelu_backward Test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "prelu_backward Test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "prelu_backward Test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "prelu_backward Test TearDown" << std::endl; }
 };
 
 TEST_F(l2_prelu_backward_test, prelu_backward_testcase_001_normal_float32)
@@ -42,8 +36,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_001_normal_float32)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -63,8 +57,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_002_normal_float16_nchw)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -85,8 +79,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_003_normal_float16_nhwc)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT16, ACL_FORMAT_NHWC).Precision(0.001, 0.001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_NHWC).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -106,8 +100,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_004_normal_ndhwc)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_NDHWC).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_NDHWC).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -126,8 +120,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_005_normal_ncdhw)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_NCDHW).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -147,8 +141,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_006_normal_empty_tensor)
     auto gradInputDesc = TensorDesc({0, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -164,8 +158,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_007_exception_null_gradOu
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut =
-        OP_API_UT(aclnnPreluBackward, INPUT(nullptr, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(nullptr, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -182,8 +176,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_008_exception_null_self)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, nullptr, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, nullptr, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -201,8 +195,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_009_exception_null_weight
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut =
-        OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, nullptr), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, nullptr),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -219,8 +213,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_010_exception_null_gradIn
     auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut =
-        OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(nullptr, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(nullptr, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -238,8 +232,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_011_exception_null_gradwe
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut =
-        OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, nullptr));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -257,8 +251,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_012_exception_float64_dty
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_DOUBLE, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -276,8 +270,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_013_normal_dtype_not_the_
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -294,8 +288,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_014_normal_dtype_not_the_
     auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -312,8 +306,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_015_normal_dtype_not_the_
     auto weightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -330,8 +324,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_016_normal_dtype_not_the_
     auto weightDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -349,8 +343,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_017_normal_self_empty_ten
     auto gradInputDesc = TensorDesc({0, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -366,8 +360,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_018_exception_gradOutput_
     auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({0, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -383,8 +377,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_019_exception_weight_inva
     auto weightDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -400,8 +394,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_020_exception_different_s
     auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -418,8 +412,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_021_exception_weight_shap
     auto weightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -436,8 +430,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_022_weight_one_element)
     auto weightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 4, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -456,8 +450,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_023_weight_one_element)
     auto weightDesc = TensorDesc({1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 4, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -476,8 +470,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_024_weight_one_element_mu
     auto weightDesc = TensorDesc({1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 4, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -494,8 +488,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_025_weight_shape_multi_di
     auto weightDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2, 4, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -514,8 +508,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_026_normal_not_contiguous
     auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({3, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -533,8 +527,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_027_normal_large_dims)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -551,8 +545,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_028_normal_large_dims)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -569,8 +563,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_029_exception_gradOutput_
     auto gradInputDesc = TensorDesc({1, 2, 3, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -588,8 +582,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_030_normal_bf16)
     auto gradInputDesc = TensorDesc({2, 2, 3, 2}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
     auto gradWeightDesc = TensorDesc({2}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -605,8 +599,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_031_8d_shape)
     auto gradInputDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -622,8 +616,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_032_large_shape)
     auto gradInputDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -639,8 +633,8 @@ TEST_F(l2_prelu_backward_test, prelu_backward_testcase_033_value_range)
     auto gradInputDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto gradWeightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
 
-    auto ut = OP_API_UT(
-        aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc), OUTPUT(gradInputDesc, gradWeightDesc));
+    auto ut = OP_API_UT(aclnnPreluBackward, INPUT(gradOutputDesc, selfDesc, weightDesc),
+                        OUTPUT(gradInputDesc, gradWeightDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

@@ -26,15 +26,15 @@ namespace l0op {
 OP_TYPE_REGISTER(MaxPool3DWithArgmaxV2);
 
 static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
-static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {
-    DataType::DT_BF16, DataType::DT_FLOAT16, DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {DataType::DT_BF16, DataType::DT_FLOAT16,
+                                                                            DataType::DT_FLOAT};
 
 static const uint32_t C = 1;
 static const uint32_t NC = 2;
 static const int64_t TWO_SIDED = 2;
 static const size_t DHW_DIMS = 3;
 static const int64_t NCDHW_DIMS = 5;
-static const int64_t NCDHW_D_OFFSET = 3;  // Get D-index by totalDim - offset
+static const int64_t NCDHW_D_OFFSET = 3; // Get D-index by totalDim - offset
 static const int64_t NDHWC_D_OFFSET = 4;
 static const int32_t DTYPE_INT32 = 3;
 static const int32_t DTYPE_INT64 = 9;
@@ -53,19 +53,18 @@ static bool IsMaxPool3DWithArgmaxV2NcdhwAiCoreSupported(const aclTensor* self)
 {
     auto dtypeSupportList = GetDtypeSupportListBySocVersion();
     if (!CheckType(self->GetDataType(), dtypeSupportList)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "self dtype not supported. support list is %s",
-            op::ToString(dtypeSupportList).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dtype not supported. support list is %s",
+                op::ToString(dtypeSupportList).GetString());
         return false;
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        return true;  // Support for DHW exceeding max int32
+        return true; // Support for DHW exceeding max int32
     }
     op::Shape input_shape = self->GetViewShape();
     int64_t dims = input_shape.GetDimNum();
     const uint32_t batchesDims = dims == NCDHW_DIMS ? NC : C;
-    const int64_t oneChannelDataVolume =
-        input_shape[batchesDims] * input_shape[batchesDims + 1] * input_shape[batchesDims + NC];
+    const int64_t oneChannelDataVolume = input_shape[batchesDims] * input_shape[batchesDims + 1] *
+                                         input_shape[batchesDims + NC];
     if (oneChannelDataVolume > INT_MAX) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "product of depth, height and width can't be greater than INT_MAX");
         return false;
@@ -78,19 +77,16 @@ static const std::tuple<aclTensor*, aclTensor*> MaxPool3DWithArgmaxV2NcdhwAiCore
     const aclIntArray* dilation, bool ceilMode, std::string dataFormat, aclTensor* out, aclTensor* indices,
     aclOpExecutor* executor)
 {
-    L0_DFX(
-        MaxPool3DWithArgmaxV2NcdhwAiCore, self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, out,
-        indices);
+    L0_DFX(MaxPool3DWithArgmaxV2NcdhwAiCore, self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, out,
+           indices);
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         int32_t dtype = (indices->GetDataType() == op::DataType::DT_INT64) ? DTYPE_INT64 : DTYPE_INT32;
-        ADD_TO_LAUNCHER_LIST_AICORE(
-            MaxPool3DWithArgmaxV2, OP_INPUT(self), OP_OUTPUT(out, indices),
-            OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, dataFormat, dtype));
+        ADD_TO_LAUNCHER_LIST_AICORE(MaxPool3DWithArgmaxV2, OP_INPUT(self), OP_OUTPUT(out, indices),
+                                    OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, dataFormat, dtype));
     } else {
-        ADD_TO_LAUNCHER_LIST_AICORE(
-            MaxPool3DWithArgmaxV2, OP_INPUT(self), OP_OUTPUT(out, indices),
-            OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, dataFormat));
+        ADD_TO_LAUNCHER_LIST_AICORE(MaxPool3DWithArgmaxV2, OP_INPUT(self), OP_OUTPUT(out, indices),
+                                    OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, dataFormat));
     }
     return std::tuple<aclTensor*, aclTensor*>(out, indices);
 }
@@ -109,13 +105,13 @@ static int64_t RoundedDivision(int64_t x, int64_t y)
     return q;
 }
 
-static int64_t PoolingOutShape(
-    int64_t inputSize, int64_t kernelSize, int64_t stride, int64_t padding, int64_t dilation, bool ceilMode)
+static int64_t PoolingOutShape(int64_t inputSize, int64_t kernelSize, int64_t stride, int64_t padding, int64_t dilation,
+                               bool ceilMode)
 {
-    int64_t outputSize =
-        RoundedDivision(
-            inputSize + TWO_SIDED * padding - dilation * (kernelSize - 1) - 1 + (ceilMode ? stride - 1 : 0), stride) +
-        1;
+    int64_t outputSize = RoundedDivision(inputSize + TWO_SIDED * padding - dilation * (kernelSize - 1) - 1 +
+                                             (ceilMode ? stride - 1 : 0),
+                                         stride) +
+                         1;
 
     if (ceilMode) {
         if ((outputSize - 1) * stride >= inputSize + padding) {
@@ -125,9 +121,9 @@ static int64_t PoolingOutShape(
     return outputSize;
 }
 
-static op::Shape GetOutputShape(
-    const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, bool ceilMode, std::string dataFormat)
+static op::Shape GetOutputShape(const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
+                                const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
+                                std::string dataFormat)
 {
     op::Shape input_shape = self->GetViewShape();
     int64_t dims = input_shape.GetDimNum();
@@ -139,12 +135,12 @@ static op::Shape GetOutputShape(
     const uint32_t batchesDims = dataFormat == "NDHWC" ? dims - NDHWC_D_OFFSET : dims - NCDHW_D_OFFSET;
     int64_t curDim[DHW_DIMS];
 
-    curDim[0] = PoolingOutShape(
-        input_shape.GetDim(batchesDims), kernelRef[0], strideRef[0], paddingRef[0], dilationRef[0], ceilMode);
-    curDim[1] = PoolingOutShape(
-        input_shape.GetDim(batchesDims + 1), kernelRef[1], strideRef[1], paddingRef[1], dilationRef[1], ceilMode);
-    curDim[NC] = PoolingOutShape(
-        input_shape.GetDim(batchesDims + NC), kernelRef[NC], strideRef[NC], paddingRef[NC], dilationRef[NC], ceilMode);
+    curDim[0] = PoolingOutShape(input_shape.GetDim(batchesDims), kernelRef[0], strideRef[0], paddingRef[0],
+                                dilationRef[0], ceilMode);
+    curDim[1] = PoolingOutShape(input_shape.GetDim(batchesDims + 1), kernelRef[1], strideRef[1], paddingRef[1],
+                                dilationRef[1], ceilMode);
+    curDim[NC] = PoolingOutShape(input_shape.GetDim(batchesDims + NC), kernelRef[NC], strideRef[NC], paddingRef[NC],
+                                 dilationRef[NC], ceilMode);
 
     if (dataFormat == "NDHWC") {
         if (dims == NCDHW_DIMS) {
@@ -201,8 +197,8 @@ const std::tuple<const aclTensor*, const aclTensor*> MaxPool3DWithArgmaxV2Ncdhw(
     auto indices = executor->AllocTensor(outShape, indicesDtype, self->GetViewFormat());
 
     if (IsMaxPool3DWithArgmaxV2NcdhwAiCoreSupported(self)) {
-        return MaxPool3DWithArgmaxV2NcdhwAiCore(
-            self, kernelSize3, stride3, padding3, dilation3, ceilMode, dataFormat, out, indices, executor);
+        return MaxPool3DWithArgmaxV2NcdhwAiCore(self, kernelSize3, stride3, padding3, dilation3, ceilMode, dataFormat,
+                                                out, indices, executor);
     } else {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "no dtype support on ai cpu");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

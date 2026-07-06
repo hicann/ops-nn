@@ -132,8 +132,8 @@ static int64_t NewAxis(const int64_t axis, const DynamicQuantUpdateScatterComput
     return newAxis;
 }
 
-float GetUpdateUbRatio(
-    const DynamicQuantUpdateScatterComputeParams& computeParams, bool hasSmoothScales, bool isLittleQuant)
+float GetUpdateUbRatio(const DynamicQuantUpdateScatterComputeParams& computeParams, bool hasSmoothScales,
+                       bool isLittleQuant)
 {
     int64_t floatSize = ge::GetSizeByDataType(ge::DT_FLOAT);
     int64_t intSize = ge::GetSizeByDataType(ge::DT_INT32);
@@ -157,8 +157,8 @@ float GetUpdateUbRatio(
     return ratio;
 }
 
-void CalcTilingDataForLargeEleLargeQuant(
-    TilingParams& param, const DynamicQuantUpdateScatterComputeParams& computeParams)
+void CalcTilingDataForLargeEleLargeQuant(TilingParams& param,
+                                         const DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     // calc update can use ub
     float ratio = GetUpdateUbRatio(computeParams, true, false);
@@ -183,8 +183,8 @@ void CalcTilingDataForLargeEleLargeQuant(
     return;
 }
 
-void CalcTilingDataForLargeBatchLargeQuant(
-    TilingParams& param, const DynamicQuantUpdateScatterComputeParams& computeParams)
+void CalcTilingDataForLargeBatchLargeQuant(TilingParams& param,
+                                           const DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     // calc update can use ub
     float ratio = GetUpdateUbRatio(computeParams, true, false);
@@ -209,20 +209,20 @@ void CalcTilingDataForLargeBatchLargeQuant(
     return;
 }
 
-void CalcTilingDataForLargeEleLittleQuant(
-    TilingParams& param, const DynamicQuantUpdateScatterComputeParams& computeParams)
+void CalcTilingDataForLargeEleLittleQuant(TilingParams& param,
+                                          const DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     // calc update can use ub
-    int64_t maxInnerLoopEle =
-        computeParams.caleUbSize - computeParams.smoothScaleOrgUbsize - computeParams.smoothScaleF32Ubsize;
+    int64_t maxInnerLoopEle = computeParams.caleUbSize - computeParams.smoothScaleOrgUbsize -
+                              computeParams.smoothScaleF32Ubsize;
 
     float ratio = GetUpdateUbRatio(computeParams, false, false);
 
     maxInnerLoopEle = static_cast<int64_t>(maxInnerLoopEle * ratio);
 
-    param.innerLoopEle = static_cast<int64_t>(
-        maxInnerLoopEle / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT / computeParams.updateDtypeSize /
-        computeParams.varOrigLastDimSize * computeParams.varOrigLastDimSize);
+    param.innerLoopEle = static_cast<int64_t>(maxInnerLoopEle / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT /
+                                              computeParams.updateDtypeSize / computeParams.varOrigLastDimSize *
+                                              computeParams.varOrigLastDimSize);
     param.innerLoopEle = (param.innerLoopEle > MAX_RPT_FLOAT_NUM) ?
                              MAX_RPT_FLOAT_NUM / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT /
                                  computeParams.varOrigLastDimSize * computeParams.varOrigLastDimSize :
@@ -244,8 +244,8 @@ void CalcTilingDataForLargeEleLittleQuant(
     return;
 }
 
-void CalcTilingDataForLargeBatchLittleQuant(
-    TilingParams& param, const DynamicQuantUpdateScatterComputeParams& computeParams)
+void CalcTilingDataForLargeBatchLittleQuant(TilingParams& param,
+                                            const DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     // calc update can use ub
     int64_t floatSize = ge::GetSizeByDataType(ge::DT_FLOAT);
@@ -258,9 +258,9 @@ void CalcTilingDataForLargeBatchLittleQuant(
 
     maxInnerLoopEle = static_cast<int64_t>(maxInnerLoopEle * ratio);
 
-    param.innerLoopEle = static_cast<int64_t>(
-        maxInnerLoopEle / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT / computeParams.updateDtypeSize /
-        computeParams.varOrigLastDimSize * computeParams.varOrigLastDimSize);
+    param.innerLoopEle = static_cast<int64_t>(maxInnerLoopEle / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT /
+                                              computeParams.updateDtypeSize / computeParams.varOrigLastDimSize *
+                                              computeParams.varOrigLastDimSize);
     param.innerLoopEle = (param.innerLoopEle > MAX_RPT_FLOAT_NUM) ?
                              MAX_RPT_FLOAT_NUM / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT /
                                  computeParams.varOrigLastDimSize * computeParams.varOrigLastDimSize :
@@ -276,20 +276,20 @@ void CalcTilingDataForLargeBatchLittleQuant(
     return;
 }
 
-int64_t CalcQuantUbSize(
-    const DynamicQuantUpdateScatterComputeParams& computeParams,
-    const TilingParams& param, const int64_t batchNum)
+int64_t CalcQuantUbSize(const DynamicQuantUpdateScatterComputeParams& computeParams, const TilingParams& param,
+                        const int64_t batchNum)
 {
     int64_t floatSize = ge::GetSizeByDataType(ge::DT_FLOAT);
 
     // calc smoothScale need ubsize
     int64_t smoothScaleOrgUbsize = computeParams.smoothScalesElements * computeParams.smoothScalesDtypeSize;
-    int64_t smoothScaleF32Ubsize =
-        (computeParams.smoothScalesDtypeSize == floatSize) ? 0 : computeParams.smoothScalesElements * floatSize;
+    int64_t smoothScaleF32Ubsize = (computeParams.smoothScalesDtypeSize == floatSize) ?
+                                       0 :
+                                       computeParams.smoothScalesElements * floatSize;
     // calc updates need ubsize
     int64_t updateOriUbSize = param.srcBsStride * batchNum * computeParams.updateDtypeSize;
-    int64_t updateF32UbSize =
-        (computeParams.updateDtypeSize == floatSize) ? 0 : param.srcBsStride * batchNum * floatSize;
+    int64_t updateF32UbSize = (computeParams.updateDtypeSize == floatSize) ? 0 :
+                                                                             param.srcBsStride * batchNum * floatSize;
     // for reduce max or float16 temp calc ub
     int64_t tempF32 = param.srcBsStride * batchNum * floatSize;
     int64_t tempI32 = param.srcBsStride * batchNum * floatSize;
@@ -300,9 +300,8 @@ int64_t CalcQuantUbSize(
     // calc varscales need ubsize
     int64_t varscalesUbSize = param.srcBsStride * batchNum * floatSize / computeParams.varOrigLastDimSize;
 
-    return (
-        smoothScaleOrgUbsize + smoothScaleF32Ubsize + updateOriUbSize + updateF32UbSize + tempF32 + tempI32 +
-        varUbSize + varscalesUbSize);
+    return (smoothScaleOrgUbsize + smoothScaleF32Ubsize + updateOriUbSize + updateF32UbSize + tempF32 + tempI32 +
+            varUbSize + varscalesUbSize);
 }
 
 void SetLargeEleLitteQuantTilingMode(TilingParams& param, const DynamicQuantUpdateScatterComputeParams& computeParams)
@@ -316,9 +315,8 @@ void SetLargeEleLitteQuantTilingMode(TilingParams& param, const DynamicQuantUpda
     return;
 }
 
-ge::graphStatus GetTilingNeg2(
-    const gert::TilingContext* context, TilingParams& param,
-    const DynamicQuantUpdateScatterComputeParams& computeParams)
+ge::graphStatus GetTilingNeg2(const gert::TilingContext* context, TilingParams& param,
+                              const DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     param.sizePerHead = computeParams.varOriginShape.GetDim(DIM_3);
     param.dataAxisShape = computeParams.varOriginShape.GetDim(DIM_2);
@@ -328,9 +326,9 @@ ge::graphStatus GetTilingNeg2(
     if (CalcQuantUbSize(computeParams, param, 1) > static_cast<int64_t>(computeParams.maxUbFreeSize)) {
         // need to check updateOriginShape[0] * updateOriginShape[1] and updateOriginShape[2],  for choose different
         // tiling current use updateOriginShape[2] to cut core
-        int64_t maxInnerLoopEle = static_cast<int64_t>(
-            computeParams.caleUbSize * GetUpdateUbRatio(computeParams, true, false) / BYTES_ONE_BLOCK *
-            BYTES_ONE_BLOCK / computeParams.updateDtypeSize);
+        int64_t maxInnerLoopEle = static_cast<int64_t>(computeParams.caleUbSize *
+                                                       GetUpdateUbRatio(computeParams, true, false) / BYTES_ONE_BLOCK *
+                                                       BYTES_ONE_BLOCK / computeParams.updateDtypeSize);
 
         if (computeParams.updateOriginShape.GetDim(0) * computeParams.updateOriginShape.GetDim(1) <
             computeParams.updateOriginShape.GetDim(DIM_2)) {
@@ -355,9 +353,8 @@ ge::graphStatus GetTilingNeg2(
                 CalcTilingDataForLargeBatchLargeQuant(param, computeParams);
             }
         }
-    } else if (
-        CalcQuantUbSize(computeParams, param, param.eachCoreBsNum) >
-        static_cast<int64_t>(computeParams.maxUbFreeSize)) {
+    } else if (CalcQuantUbSize(computeParams, param, param.eachCoreBsNum) >
+               static_cast<int64_t>(computeParams.maxUbFreeSize)) {
         param.tilingMode = TILING_MODE_AXIS_NEG_2_LARGE_BATCH;
     } else {
         param.tilingMode = TILING_MODE_AXIS_NEG_2;
@@ -394,8 +391,8 @@ static void UpdateTilingParam(DynamicQuantUpdateScatterComputeParams& computePar
     return;
 }
 
-ge::graphStatus GetTilingParam(
-    gert::TilingContext* context, DynamicQuantUpdateScatterComputeParams& computeParams, TilingParams& param)
+ge::graphStatus GetTilingParam(gert::TilingContext* context, DynamicQuantUpdateScatterComputeParams& computeParams,
+                               TilingParams& param)
 {
     // # tiling policy
     auto axis = context->GetAttrs()->GetAttrPointer<int64_t>(1);
@@ -410,8 +407,8 @@ ge::graphStatus GetTilingParam(
         computeParams.actualCoreNum = 1;
     }
 
-    OP_CHECK_IF(
-        computeParams.actualCoreNum == 0, OP_LOGE(context->GetNodeName(), "coreNum is zero."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.actualCoreNum == 0, OP_LOGE(context->GetNodeName(), "coreNum is zero."),
+                return ge::GRAPH_FAILED);
 
     computeParams.varMergedLastDimSize = computeParams.updateOriginShape[DIM_3];
     computeParams.varScalesMergedLastDimSize = computeParams.varMergedLastDimSize / computeParams.varOrigLastDimSize;
@@ -420,16 +417,14 @@ ge::graphStatus GetTilingParam(
     computeParams.caleUbSize = computeParams.ubSize - computeParams.indexUbSize - static_cast<int64_t>(UB_SIZE_REV);
     computeParams.maxUbFreeSize = computeParams.caleUbSize;
 
-    OP_CHECK_IF(
-        computeParams.ubSize < static_cast<int64_t>(computeParams.indexUbSize + UB_SIZE_REV),
-        OP_LOGE(context->GetNodeName(), "index_size is larger to ub."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.ubSize < static_cast<int64_t>(computeParams.indexUbSize + UB_SIZE_REV),
+                OP_LOGE(context->GetNodeName(), "index_size is larger to ub."), return ge::GRAPH_FAILED);
 
     param.dstBsStride = computeParams.varOriginShape.GetDim(DIM_2) * computeParams.varOriginShape.GetDim(DIM_3);
     param.numHead = computeParams.varOriginShape.GetDim(1);
     if (tmpAxis == static_cast<int64_t>(DIM_2) || tmpAxis == static_cast<int64_t>(DIM_NEG_2)) {
-        OP_CHECK_IF(
-            ge::GRAPH_SUCCESS != GetTilingNeg2(context, param, computeParams),
-            OP_LOGE(context->GetNodeName(), "some case not support."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ge::GRAPH_SUCCESS != GetTilingNeg2(context, param, computeParams),
+                    OP_LOGE(context->GetNodeName(), "some case not support."), return ge::GRAPH_FAILED);
     } else {
         OP_LOGE(context->GetNodeName(), "DynamicQuantUpdateScatter not support, axis is -1");
         return ge::GRAPH_FAILED;
@@ -438,8 +433,8 @@ ge::graphStatus GetTilingParam(
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus PrepareTilingParams(
-    const gert::TilingContext* context, DynamicQuantUpdateScatterComputeParams& computeParams)
+ge::graphStatus PrepareTilingParams(const gert::TilingContext* context,
+                                    DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     // get coreNum and ubSize
     auto compileInfo = reinterpret_cast<const DynamicQuantUpdateScatterCompileInfo*>(context->GetCompileInfo());
@@ -487,10 +482,9 @@ ge::graphStatus PrepareTilingParams(
     auto updateDesc = context->GetInputDesc(INDEX_UPDATES);
     computeParams.updateDtypeSize = ge::GetSizeByDataType(updateDesc->GetDataType());
 
-    OP_CHECK_IF(
-        (computeParams.varDtypeSize == 0) || (computeParams.indexDtypeSize == 0) ||
-            (computeParams.varScalesDtypeSize == 0) || (computeParams.updateDtypeSize == 0),
-        OP_LOGE(context->GetNodeName(), "some dtpye size is Zero "), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((computeParams.varDtypeSize == 0) || (computeParams.indexDtypeSize == 0) ||
+                    (computeParams.varScalesDtypeSize == 0) || (computeParams.updateDtypeSize == 0),
+                OP_LOGE(context->GetNodeName(), "some dtpye size is Zero "), return ge::GRAPH_FAILED);
 
     auto smoothScalesDesc = context->GetOptionalInputDesc(INDEX_SMOOTH_SCALES);
     if (smoothScalesDesc != nullptr) {
@@ -504,8 +498,8 @@ ge::graphStatus PrepareTilingParams(
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus VerifyQuantParam(
-    const gert::TilingContext* context, DynamicQuantUpdateScatterComputeParams& computeParams)
+ge::graphStatus VerifyQuantParam(const gert::TilingContext* context,
+                                 DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     if (computeParams.smoothScalesElements == 0) {
         return ge::GRAPH_SUCCESS;
@@ -516,54 +510,47 @@ ge::graphStatus VerifyQuantParam(
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        computeParams.smoothScalesElements != computeParams.updateOriginShape[dimNum - 1],
-        OP_LOGE(
-            context->GetNodeName(), "smoothScalesElements is %ld, updateOriginShape[-1] is %ld",
-            computeParams.smoothScalesElements, computeParams.updateOriginShape[dimNum - 1]),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.smoothScalesElements != computeParams.updateOriginShape[dimNum - 1],
+                OP_LOGE(context->GetNodeName(), "smoothScalesElements is %ld, updateOriginShape[-1] is %ld",
+                        computeParams.smoothScalesElements, computeParams.updateOriginShape[dimNum - 1]),
+                return ge::GRAPH_FAILED);
 
     auto updatesDesc = context->GetInputDesc(INDEX_UPDATES);
     const ge::DataType updatesDtype = updatesDesc->GetDataType();
     auto smoothScalesDesc = context->GetOptionalInputDesc(INDEX_SMOOTH_SCALES);
     if (smoothScalesDesc != nullptr) {
         const ge::DataType smoothScalesDtype = smoothScalesDesc->GetDataType();
-        OP_CHECK_IF(
-            smoothScalesDtype != updatesDtype,
-            OP_LOGE(context->GetNodeName(), "updatesDtype is not the same as smoothScalesDtype"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(smoothScalesDtype != updatesDtype,
+                    OP_LOGE(context->GetNodeName(), "updatesDtype is not the same as smoothScalesDtype"),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus VerifyNullTenosr(
-    const gert::TilingContext* context, DynamicQuantUpdateScatterComputeParams& computeParams)
+ge::graphStatus VerifyNullTenosr(const gert::TilingContext* context,
+                                 DynamicQuantUpdateScatterComputeParams& computeParams)
 {
-    OP_CHECK_IF(
-        computeParams.varOriginShape.GetDimNum() != computeParams.updateOriginShape.GetDimNum(),
-        OP_LOGE(context->GetNodeName(), "date should be same dims with update."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.varOriginShape.GetDimNum() != computeParams.updateOriginShape.GetDimNum(),
+                OP_LOGE(context->GetNodeName(), "date should be same dims with update."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        computeParams.varOriginShape.GetDimNum() * computeParams.indicesShapeRank == 0,
-        OP_LOGE(context->GetNodeName(), "date or indice shouldn't be null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.varOriginShape.GetDimNum() * computeParams.indicesShapeRank == 0,
+                OP_LOGE(context->GetNodeName(), "date or indice shouldn't be null."), return ge::GRAPH_FAILED);
 
     const char* reduceAxisPtr = context->GetAttrs()->GetAttrPointer<char>(0);
     std::string reduceAxis(reduceAxisPtr);
 
-    OP_CHECK_IF(
-        reduceAxis != "update" && reduceAxis != "none" && reduceAxis != "",
-        OP_LOGE(context->GetNodeName(), "reduce is %s not supported.", reduceAxis.c_str()), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(reduceAxis != "update" && reduceAxis != "none" && reduceAxis != "",
+                OP_LOGE(context->GetNodeName(), "reduce is %s not supported.", reduceAxis.c_str()),
+                return ge::GRAPH_FAILED);
 
     int64_t dataNum = computeParams.varOriginShape.GetShapeSize();
     int64_t indicesNum = computeParams.indicesOriginShape.GetShapeSize();
     int64_t updateNum = computeParams.updateOriginShape.GetShapeSize();
-    OP_CHECK_IF(
-        dataNum == 0 || indicesNum == 0 || updateNum == 0,
-        OP_LOGE(
-            context->GetNodeName(), "date %ld or indice %ld or updata %ld shape shouldn't be zero.", dataNum,
-            indicesNum, updateNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataNum == 0 || indicesNum == 0 || updateNum == 0,
+                OP_LOGE(context->GetNodeName(), "date %ld or indice %ld or updata %ld shape shouldn't be zero.",
+                        dataNum, indicesNum, updateNum),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -578,14 +565,13 @@ ge::graphStatus MergeDims(const gert::TilingContext* context, DynamicQuantUpdate
     int64_t oldDims = computeParams.varOriginShape.GetDimNum();
     computeParams.oldDims = oldDims;
 
-    OP_CHECK_IF(
-        tmpAbsAxis < 0 || tmpAbsAxis >= oldDims, OP_LOGE(context->GetNodeName(), "axis should be less than data dims."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tmpAbsAxis < 0 || tmpAbsAxis >= oldDims,
+                OP_LOGE(context->GetNodeName(), "axis should be less than data dims."), return ge::GRAPH_FAILED);
 
     size_t absAxis = size_t(tmpAbsAxis);
-    OP_CHECK_IF(
-        absAxis == computeParams.varOriginShape.GetDimNum() - 1 || absAxis == 0,
-        OP_LOGD(context->GetNodeName(), "axis be first or last dims,connot merge dims."), return ge::GRAPH_SUCCESS);
+    OP_CHECK_IF(absAxis == computeParams.varOriginShape.GetDimNum() - 1 || absAxis == 0,
+                OP_LOGD(context->GetNodeName(), "axis be first or last dims,connot merge dims."),
+                return ge::GRAPH_SUCCESS);
     gert::Shape dataNewShape;
     gert::Shape updataNewShape;
 
@@ -622,26 +608,22 @@ ge::graphStatus MergeDims(const gert::TilingContext* context, DynamicQuantUpdate
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus VerifyTilingParams(
-    const gert::TilingContext* context, DynamicQuantUpdateScatterComputeParams& computeParams)
+ge::graphStatus VerifyTilingParams(const gert::TilingContext* context,
+                                   DynamicQuantUpdateScatterComputeParams& computeParams)
 {
-    OP_CHECK_IF(
-        computeParams.updateOriginShape[0] != computeParams.indicesOriginShape[0],
-        OP_LOGE(context->GetNodeName(), "updateOriginShape[0] should be same with indicesOriginShape[0]."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        computeParams.updateOriginShape[0] > computeParams.varOriginShape[0],
-        OP_LOGE(context->GetNodeName(), "updateOriginShape[0] should be less than varOriginShape[0]."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        computeParams.updateOriginShape[1] != computeParams.varOriginShape[1],
-        OP_LOGE(context->GetNodeName(), "updateOriginShape[1] should be same with varOriginShape[1]."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.updateOriginShape[0] != computeParams.indicesOriginShape[0],
+                OP_LOGE(context->GetNodeName(), "updateOriginShape[0] should be same with indicesOriginShape[0]."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.updateOriginShape[0] > computeParams.varOriginShape[0],
+                OP_LOGE(context->GetNodeName(), "updateOriginShape[0] should be less than varOriginShape[0]."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(computeParams.updateOriginShape[1] != computeParams.varOriginShape[1],
+                OP_LOGE(context->GetNodeName(), "updateOriginShape[1] should be same with varOriginShape[1]."),
+                return ge::GRAPH_FAILED);
     if (computeParams.indicesShapeRank == TWO_INDICES) {
-        OP_CHECK_IF(
-            computeParams.indicesOriginShape[1] != 2,
-            OP_LOGE(context->GetNodeName(), "when discrete, indicesOriginShape[1] should be 2."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.indicesOriginShape[1] != 2,
+                    OP_LOGE(context->GetNodeName(), "when discrete, indicesOriginShape[1] should be 2."),
+                    return ge::GRAPH_FAILED);
     }
 
     int64_t eleOneBlock = static_cast<int64_t>(BYTES_ONE_BLOCK / computeParams.varDtypeSize);
@@ -650,31 +632,26 @@ ge::graphStatus VerifyTilingParams(
     int64_t tmpAxis = *axis;
     tmpAxis = NewAxis(*axis, computeParams);
     if (tmpAxis == static_cast<int64_t>(DIM_2) || tmpAxis == static_cast<int64_t>(DIM_NEG_2)) {
-        OP_CHECK_IF(
-            computeParams.varOriginShape[DIM_3] % eleOneBlock != 0,
-            OP_LOGE(context->GetNodeName(), "varOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            computeParams.updateOriginShape[DIM_3] != computeParams.varOriginShape[DIM_3],
-            OP_LOGE(context->GetNodeName(), "updateOriginShape[3] should be same with varOriginShape[3]."),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            computeParams.updateOriginShape[DIM_3] % eleOneBlock != 0,
-            OP_LOGE(context->GetNodeName(), "updateOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.varOriginShape[DIM_3] % eleOneBlock != 0,
+                    OP_LOGE(context->GetNodeName(), "varOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.updateOriginShape[DIM_3] != computeParams.varOriginShape[DIM_3],
+                    OP_LOGE(context->GetNodeName(), "updateOriginShape[3] should be same with varOriginShape[3]."),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.updateOriginShape[DIM_3] % eleOneBlock != 0,
+                    OP_LOGE(context->GetNodeName(), "updateOriginShape[3] should be 32B align."),
+                    return ge::GRAPH_FAILED);
     } else if (tmpAxis == static_cast<int64_t>(DIM_3) || tmpAxis == static_cast<int64_t>(DIM_NEG_1)) {
-        OP_CHECK_IF(
-            computeParams.varOriginShape[DIM_3] % eleOneBlock != 0,
-            OP_LOGE(context->GetNodeName(), "varOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            computeParams.varOriginShape[DIM_2] % eleOneBlock != 0,
-            OP_LOGE(context->GetNodeName(), "varOriginShape[2] should be 32B align when axis is -1."),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            computeParams.updateOriginShape[DIM_2] != computeParams.varOriginShape[DIM_2],
-            OP_LOGE(context->GetNodeName(), "updateOriginShape[2] should be same with varOriginShape[2]."),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            computeParams.updateOriginShape[DIM_2] % eleOneBlock != 0,
-            OP_LOGE(context->GetNodeName(), "updateOriginShape[2] should be 32B align."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.varOriginShape[DIM_3] % eleOneBlock != 0,
+                    OP_LOGE(context->GetNodeName(), "varOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.varOriginShape[DIM_2] % eleOneBlock != 0,
+                    OP_LOGE(context->GetNodeName(), "varOriginShape[2] should be 32B align when axis is -1."),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.updateOriginShape[DIM_2] != computeParams.varOriginShape[DIM_2],
+                    OP_LOGE(context->GetNodeName(), "updateOriginShape[2] should be same with varOriginShape[2]."),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(computeParams.updateOriginShape[DIM_2] % eleOneBlock != 0,
+                    OP_LOGE(context->GetNodeName(), "updateOriginShape[2] should be 32B align."),
+                    return ge::GRAPH_FAILED);
     } else {
         OP_LOGE(context->GetNodeName(), "axis only support -1 or -2!");
         return ge::GRAPH_FAILED;
@@ -684,23 +661,21 @@ ge::graphStatus VerifyTilingParams(
 
 static void PrintDebugInfo(const gert::TilingContext* context, const TilingParams& param)
 {
-    OP_LOGD(
-        context->GetNodeName(),
-        "[DynamicQuantUpdateScatter]tilingMode:%ld, coreNum:%ld, eachCoreBsNum:%ld, lastCoreBsNum:%ld, "
-        "updateAxisShape:%ld, srcBsStride:%ld, dstBsStride:%ld, "
-        "indexElements:%ld, numHead:%ld, sizePerHead:%ld, dataAxisShape:%ld, numOneBlock:%ld, "
-        "innerLoopEle:%ld, innerLoopTimes:%ld, innerLoopTail:%ld, indices_shape_rank:%ld, varOrigLastDimSize:%ld,",
-        param.tilingMode, param.coreNum, param.eachCoreBsNum, param.lastCoreBsNum, param.updateAxisShape,
-        param.srcBsStride, param.dstBsStride, param.indexElements, param.numHead, param.sizePerHead,
-        param.dataAxisShape, param.numOneBlock, param.innerLoopEle, param.innerLoopTimes, param.innerLoopTail,
-        param.indicesShapeRank, param.varOrigLastDimSize);
-    OP_LOGD(
-        context->GetNodeName(),
-        "[DynamicQuantUpdateScatter]srcFirBsStride:%ld, dstFirSecBsStride:%ld, updateDimFirst:%ld, "
-        "varScalesElements:%ld, varElements:%ld, innerLoopFullRpt:%ld, innerLoopTimesLastCore:%ld, "
-        "innerLoopTailLastCore:%ld quantRNum:%ld",
-        param.srcFirBsStride, param.dstFirSecBsStride, param.updateDim0, param.varScalesElements, param.varElements,
-        param.innerLoopFullRpt, param.innerLoopTimesLastCore, param.innerLoopTailLastCore, param.quantReptNum);
+    OP_LOGD(context->GetNodeName(),
+            "[DynamicQuantUpdateScatter]tilingMode:%ld, coreNum:%ld, eachCoreBsNum:%ld, lastCoreBsNum:%ld, "
+            "updateAxisShape:%ld, srcBsStride:%ld, dstBsStride:%ld, "
+            "indexElements:%ld, numHead:%ld, sizePerHead:%ld, dataAxisShape:%ld, numOneBlock:%ld, "
+            "innerLoopEle:%ld, innerLoopTimes:%ld, innerLoopTail:%ld, indices_shape_rank:%ld, varOrigLastDimSize:%ld,",
+            param.tilingMode, param.coreNum, param.eachCoreBsNum, param.lastCoreBsNum, param.updateAxisShape,
+            param.srcBsStride, param.dstBsStride, param.indexElements, param.numHead, param.sizePerHead,
+            param.dataAxisShape, param.numOneBlock, param.innerLoopEle, param.innerLoopTimes, param.innerLoopTail,
+            param.indicesShapeRank, param.varOrigLastDimSize);
+    OP_LOGD(context->GetNodeName(),
+            "[DynamicQuantUpdateScatter]srcFirBsStride:%ld, dstFirSecBsStride:%ld, updateDimFirst:%ld, "
+            "varScalesElements:%ld, varElements:%ld, innerLoopFullRpt:%ld, innerLoopTimesLastCore:%ld, "
+            "innerLoopTailLastCore:%ld quantRNum:%ld",
+            param.srcFirBsStride, param.dstFirSecBsStride, param.updateDim0, param.varScalesElements, param.varElements,
+            param.innerLoopFullRpt, param.innerLoopTimesLastCore, param.innerLoopTailLastCore, param.quantReptNum);
 }
 
 static void SaveTilingDate(gert::TilingContext* context, const TilingParams& param)
@@ -737,8 +712,8 @@ static void SaveTilingDate(gert::TilingContext* context, const TilingParams& par
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
     workSpaces[0] = WORK_SPACE_SIZE;
-    dynamicQuantUpdateScatterTiling.SaveToBuffer(
-        context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    dynamicQuantUpdateScatterTiling.SaveToBuffer(context->GetRawTilingData()->GetData(),
+                                                 context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(dynamicQuantUpdateScatterTiling.GetDataSize());
     context->SetBlockDim(param.coreNum);
     context->SetTilingKey(param.tilingMode);
@@ -753,24 +728,18 @@ static ge::graphStatus Tiling4DynamicQuantUpdateScatterCache(gert::TilingContext
     (void)memset_s(&param, sizeof(param), 0, sizeof(param));
     (void)memset_s(&computeParams, sizeof(computeParams), 0, sizeof(computeParams));
 
-    OP_CHECK_IF(
-        PrepareTilingParams(context, computeParams) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "PrepareTilingParams failed!"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyNullTenosr(context, computeParams) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "VerifyNullTenosr failed!"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyQuantParam(context, computeParams) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "VerifyQuantParam failed!"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        MergeDims(context, computeParams) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "MergeDims failed!"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyTilingParams(context, computeParams) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "VerifyTilingParams failed!"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetTilingParam(context, computeParams, param) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "GetTilingParam failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(PrepareTilingParams(context, computeParams) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "PrepareTilingParams failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyNullTenosr(context, computeParams) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "VerifyNullTenosr failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyQuantParam(context, computeParams) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "VerifyQuantParam failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(MergeDims(context, computeParams) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "MergeDims failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyTilingParams(context, computeParams) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "VerifyTilingParams failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingParam(context, computeParams, param) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "GetTilingParam failed!"), return ge::GRAPH_FAILED);
 
     PrintDebugInfo(context, param);
     SaveTilingDate(context, param);
@@ -808,10 +777,9 @@ static ge::graphStatus TilingPrepareForDynamicQuantUpdateScatter(gert::TilingPar
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfoPtr->coreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "TilingPrepareForDynamicQuantUpdateScatter get core num failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfoPtr->coreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "TilingPrepareForDynamicQuantUpdateScatter get core num failed."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);

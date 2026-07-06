@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file concat_offset_tiling_arch35.cpp
  * \brief
@@ -23,33 +22,33 @@
 #include "error_util.h"
 
 namespace optiling {
-static ge::graphStatus Tiling4ConcatOffset(gert::TilingContext* context) {
-  OP_LOGD(context->GetNodeName(), "ConcatOffsetTiling running begin");
-  auto compileInfo = static_cast<const ConcatOffsetCompileParams*>(context->GetCompileInfo());
-  OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
- 
-  return ConcatOffsetTilingForAscendC(context);
+static ge::graphStatus Tiling4ConcatOffset(gert::TilingContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "ConcatOffsetTiling running begin");
+    auto compileInfo = static_cast<const ConcatOffsetCompileParams*>(context->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+
+    return ConcatOffsetTilingForAscendC(context);
 }
 
-static ge::graphStatus TilingPrepare4ConcatOffset(gert::TilingParseContext* context) {
-  OP_LOGD(context->GetNodeName(), "TilingPrepareForConcatOffset running begin");
-  auto compile_info = context->GetCompiledInfo<ConcatOffsetCompileParams>();
-  OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+static ge::graphStatus TilingPrepare4ConcatOffset(gert::TilingParseContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "TilingPrepareForConcatOffset running begin");
+    auto compile_info = context->GetCompiledInfo<ConcatOffsetCompileParams>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
 
-  auto platformInfo = context->GetPlatformInfo();
-  OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
-  auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-  compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
-  OP_TILING_CHECK((compile_info->core_num <= 0),
-      OP_LOGE(context->GetNodeName(), "core_num must be greater than 0"), 
-      return ge::GRAPH_FAILED);
-  uint64_t ubSize;
-  ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-  compile_info->ubSize = static_cast<int64_t>(ubSize);
-  OP_TILING_CHECK((compile_info->ubSize <= 0),
-      OP_LOGE(context->GetNodeName(), "ubSize must be greater than 0"), 
-      return ge::GRAPH_FAILED);
-  return ge::GRAPH_SUCCESS;
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
+    OP_TILING_CHECK((compile_info->core_num <= 0), OP_LOGE(context->GetNodeName(), "core_num must be greater than 0"),
+                    return ge::GRAPH_FAILED);
+    uint64_t ubSize;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    compile_info->ubSize = static_cast<int64_t>(ubSize);
+    OP_TILING_CHECK((compile_info->ubSize <= 0), OP_LOGE(context->GetNodeName(), "ubSize must be greater than 0"),
+                    return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
 }
 
 // register tiling interface of the ConcatOffset op.
@@ -57,4 +56,4 @@ IMPL_OP_OPTILING(ConcatOffset)
     .TilingInputsDataDependency({0})
     .Tiling(Tiling4ConcatOffset)
     .TilingParse<ConcatOffsetCompileParams>(TilingPrepare4ConcatOffset);
-}  // namespace optiling
+} // namespace optiling

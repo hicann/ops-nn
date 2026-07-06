@@ -24,12 +24,10 @@
 
 namespace BatchMatMulV3Advanced {
 
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-    uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
-__aicore__ inline void BatchMatMulBroadcastKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-    const BatchMatMulV3TilingData& tilingData)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
+          uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
+__aicore__ inline void BatchMatMulBroadcastKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                                  GM_ADDR workspaceGM, const BatchMatMulV3TilingData& tilingData)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -51,10 +49,10 @@ __aicore__ inline void BatchMatMulBroadcastKernel(
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32,
                                                                          isNDFormat>;
     // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<
-        FULL_LOAD_MODE, FUSED_OP_TYPE, Blaze::Gemm::KernelMmadMultiBlockBmmBroadcast>;
-    using BlockMmad = Blaze::Gemm::Block::BlockMmad<
-        DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutBias>;
+    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<FULL_LOAD_MODE, FUSED_OP_TYPE,
+                                                              Blaze::Gemm::KernelMmadMultiBlockBmmBroadcast>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
+                                                    BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
@@ -78,7 +76,8 @@ __aicore__ inline void BatchMatMulBroadcastKernel(
          tilingData.matMulTilingData.nTailCnt, tilingData.matMulTilingData.mBaseTailSplitCnt,
          tilingData.matMulTilingData.nBaseTailSplitCnt, tilingData.matMulTilingData.mTailMain,
          tilingData.matMulTilingData.nTailMain, static_cast<uint8_t>(tilingData.matMulTilingData.isHf32),
-         static_cast<uint32_t>(tilingData.matMulTilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride, tilingData.innerBatch},
+         static_cast<uint32_t>(tilingData.matMulTilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
+         tilingData.innerBatch},
         {tilingData.aBatchDim0, tilingData.bBatchDim0, tilingData.aBatchDim1, tilingData.bBatchDim1,
          tilingData.cBatchDim1, tilingData.aBatchDim2, tilingData.bBatchDim2, tilingData.cBatchDim2,
          tilingData.aBatchDim3, tilingData.bBatchDim3, tilingData.cBatchDim3, tilingData.biasBatchDimAll}};

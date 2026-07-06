@@ -46,17 +46,32 @@
     } while (0)
 
 struct AclTensorDeleter {
-    void operator()(aclTensor* p) const { if (p != nullptr) { aclDestroyTensor(p); } }
+    void operator()(aclTensor* p) const
+    {
+        if (p != nullptr) {
+            aclDestroyTensor(p);
+        }
+    }
 };
 struct DeviceMemDeleter {
-    void operator()(void* p) const { if (p != nullptr) { aclrtFree(p); } }
+    void operator()(void* p) const
+    {
+        if (p != nullptr) {
+            aclrtFree(p);
+        }
+    }
 };
 struct StreamDeleter {
-    void operator()(aclrtStream s) const { if (s != nullptr) { aclrtDestroyStream(s); } }
+    void operator()(aclrtStream s) const
+    {
+        if (s != nullptr) {
+            aclrtDestroyStream(s);
+        }
+    }
 };
 using AclTensorPtr = std::unique_ptr<aclTensor, AclTensorDeleter>;
 using DeviceMemPtr = std::unique_ptr<void, DeviceMemDeleter>;
-using StreamPtr    = std::unique_ptr<std::remove_pointer_t<aclrtStream>, StreamDeleter>;
+using StreamPtr = std::unique_ptr<std::remove_pointer_t<aclrtStream>, StreamDeleter>;
 
 struct AclDeviceGuard {
     int32_t deviceId{-1};
@@ -82,9 +97,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, DeviceMemPtr& deviceAddr,
-    aclDataType dataType, AclTensorPtr& tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, DeviceMemPtr& deviceAddr,
+                    aclDataType dataType, AclTensorPtr& tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     void* rawAddr = nullptr;
@@ -100,9 +114,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    aclTensor* rawTensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-        shape.data(), shape.size(), rawAddr);
+    aclTensor* rawTensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0,
+                                           aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), rawAddr);
     CHECK_RET(rawTensor != nullptr, LOG_PRINT("aclCreateTensor returned nullptr\n"); return -1);
     tensor.reset(rawTensor);
     return 0;
@@ -157,8 +170,7 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     ret = aclnnHardShrinkGetWorkspaceSize(self.get(), lambd, out.get(), &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnHardShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardShrinkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     DeviceMemPtr workspaceAddr;
     if (workspaceSize > 0) {
@@ -175,12 +187,12 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     std::vector<float> resultData(totalNum, 0.0f);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(float),
-                      outDeviceAddr.get(), totalNum * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(float), outDeviceAddr.get(),
+                      totalNum * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result failed. ERROR: %d\n", ret); return ret);
 
-    LOG_PRINT("HardShrink Large Tensor (shape=[%ld,%ld], total=%ld, lambd=%.2f):\n",
-              selfShape[0], selfShape[1], totalNum, lambd);
+    LOG_PRINT("HardShrink Large Tensor (shape=[%ld,%ld], total=%ld, lambd=%.2f):\n", selfShape[0], selfShape[1],
+              totalNum, lambd);
 
     int64_t failCount = 0;
     int64_t nonZeroCount = 0;
@@ -190,21 +202,24 @@ int main()
         float expected = (std::fabs(x) > static_cast<float>(lambd)) ? x : 0.0f;
         float actual = resultData[i];
         if (std::fabs(actual - expected) > 1e-6f) {
-            if (firstFailIdx < 0) { firstFailIdx = i; }
+            if (firstFailIdx < 0) {
+                firstFailIdx = i;
+            }
             failCount++;
         }
-        if (actual != 0.0f) { nonZeroCount++; }
+        if (actual != 0.0f) {
+            nonZeroCount++;
+        }
     }
 
     LOG_PRINT("  non-zero outputs: %ld / %ld (expect roughly 40%% > lambd=0.3)\n", nonZeroCount, totalNum);
     if (failCount == 0) {
         LOG_PRINT("  PASS: all %ld elements match reference\n", totalNum);
     } else {
-        LOG_PRINT("  FAIL: %ld elements mismatch, first at idx=%ld (input=%f, actual=%f, expected=%f)\n",
-                  failCount, firstFailIdx, selfHostData[firstFailIdx],
-                  resultData[firstFailIdx],
-                  (std::fabs(selfHostData[firstFailIdx]) > static_cast<float>(lambd))
-                      ? selfHostData[firstFailIdx] : 0.0f);
+        LOG_PRINT(
+            "  FAIL: %ld elements mismatch, first at idx=%ld (input=%f, actual=%f, expected=%f)\n", failCount,
+            firstFailIdx, selfHostData[firstFailIdx], resultData[firstFailIdx],
+            (std::fabs(selfHostData[firstFailIdx]) > static_cast<float>(lambd)) ? selfHostData[firstFailIdx] : 0.0f);
     }
 
     return (failCount == 0) ? 0 : 1;

@@ -38,8 +38,7 @@ static constexpr uint32_t WS_SYS_SIZE = 16 * 1024 * 1024;
 static constexpr uint32_t BATCH_MODE = 1;
 using namespace AscendC;
 
-namespace optiling
-{
+namespace optiling {
 
 bool MaxPoolWithArgmaxV3BigKernelMulCoreTiling::IsCapable()
 {
@@ -90,8 +89,8 @@ uint64_t MaxPoolWithArgmaxV3BigKernelMulCoreTiling::GetTilingKey() const
 
 void MaxPoolWithArgmaxV3BigKernelMulCoreTiling::DoUBTiling()
 {
-    maxCountLength =
-        (ubSize - TRIPPLE * MAX_VALUE_BUFFER_LENGTH - DOUBLE * MAX_INDEX_BUFFER_LENGTH) * MASK_RATIO / UB_CONST;
+    maxCountLength = (ubSize - TRIPPLE * MAX_VALUE_BUFFER_LENGTH - DOUBLE * MAX_INDEX_BUFFER_LENGTH) * MASK_RATIO /
+                     UB_CONST;
     maxCountLength = maxCountLength / ALIGN_VALUE * ALIGN_VALUE;
     coreNums = totalIdx;
     uint64_t coreNumRatio = coreNum / coreNums;
@@ -191,4 +190,4 @@ void MaxPoolWithArgmaxV3BigKernelMulCoreTiling::DumpTilingInfo()
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolWithArgmaxV3, MaxPoolWithArgmaxV3BigKernelMulCoreTiling, 4);
 
-}  // namespace optiling
+} // namespace optiling

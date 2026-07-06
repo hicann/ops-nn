@@ -92,8 +92,8 @@ uint64_t UnsortedSegmentOutFlTiling::GetTilingKey() const
 
 void UnsortedSegmentOutFlTiling::SetTilingData()
 {
-    UnsortedSegment::UnsortedSegmentOutFlTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentOutFlTilingData>();
+    UnsortedSegment::UnsortedSegmentOutFlTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentOutFlTilingData>();
 
     tilingData->inputOuterDim = inputOuterDim_;
     tilingData->outputOuterDim = outputOuterDim_;
@@ -113,8 +113,8 @@ ge::graphStatus UnsortedSegmentOutFlTiling::PostTiling()
 
 void UnsortedSegmentOutFlTiling::DumpTilingInfo()
 {
-    UnsortedSegment::UnsortedSegmentOutFlTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentOutFlTilingData>();
+    UnsortedSegment::UnsortedSegmentOutFlTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentOutFlTilingData>();
 
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();

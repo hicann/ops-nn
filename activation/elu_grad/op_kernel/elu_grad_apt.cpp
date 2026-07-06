@@ -24,8 +24,7 @@ using namespace Ops::Base;
 using namespace EluGradOp;
 
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void elu_grad(GM_ADDR grads, GM_ADDR activations, GM_ADDR y,
-                         GM_ADDR workspace, GM_ADDR tiling) 
+__global__ __aicore__ void elu_grad(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EleBaseTilingDataV2);
     GET_TILING_DATA_WITH_STRUCT(EleBaseTilingDataV2, tilingData, tiling);
@@ -37,13 +36,11 @@ __global__ __aicore__ void elu_grad(GM_ADDR grads, GM_ADDR activations, GM_ADDR 
         ElementwiseSch<schMode, EluGradDag<half>::OpDag> sch(&(tilingData), &pipe);
         sch.Init(grads, activations, y);
         sch.Process();
-    }
-    else if constexpr (dType == TPL_BF16) {
+    } else if constexpr (dType == TPL_BF16) {
         ElementwiseSch<schMode, EluGradDag<bfloat16_t>::OpDag> sch(&(tilingData), &pipe);
         sch.Init(grads, activations, y);
         sch.Process();
-    }
-    else if constexpr (dType == TPL_FP32) {
+    } else if constexpr (dType == TPL_FP32) {
         ElementwiseSch<schMode, EluGradDag<float>::OpDag> sch(&(tilingData), &pipe);
         sch.Init(grads, activations, y);
         sch.Process();

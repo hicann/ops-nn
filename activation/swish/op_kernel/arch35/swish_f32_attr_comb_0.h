@@ -30,13 +30,13 @@ using AscendC::MicroAPI::RegTensor;
 class SwishF32AttrComb0 {
 public:
     __aicore__ inline SwishF32AttrComb0(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const SwishTilingData *tilingDataPtr,
-        TPipe *pipePtr)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const SwishTilingData* tilingDataPtr,
+                                TPipe* pipePtr)
     {
         pipePtr_ = pipePtr;
         tilingDataPtr_ = tilingDataPtr;
-        inputGmX_.SetGlobalBuffer((__gm__ float *)x);
-        outputGmY_.SetGlobalBuffer((__gm__ float *)y);
+        inputGmX_.SetGlobalBuffer((__gm__ float*)x);
+        outputGmY_.SetGlobalBuffer((__gm__ float*)y);
         constexpr int64_t DOUBLE_BUFFER = 2;
         int64_t BUFFER_SIZE_0 = tilingDataPtr_->elemNum * sizeof(float);
         pipePtr_->InitBuffer(queIn0_, DOUBLE_BUFFER, BUFFER_SIZE_0);
@@ -65,7 +65,8 @@ private:
         AscendC::DataCopyPadExtParams<float> dataCopyPadExtParams;
         dataCopyExtParams.blockCount = 1;
         dataCopyExtParams.blockLen = i0Extent * sizeof(float);
-        AscendC::DataCopyPad(bufferIn0_[0],
+        AscendC::DataCopyPad(
+            bufferIn0_[0],
             inputGmX_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer],
             dataCopyExtParams, dataCopyPadExtParams);
         queIn0_.EnQue<float>(bufferIn0_);
@@ -85,18 +86,18 @@ private:
             MaskReg preg0;
             uint32_t size = i0Extent;
             uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) /
-                (AscendC::VECTOR_REG_WIDTH / sizeof(float));
-            __local_mem__ float *bufferIn0Addr = (__local_mem__ float *)bufferIn0_.GetPhyAddr();
-            __local_mem__ float *bufferOut0Addr = (__local_mem__ float *)bufferOut0_.GetPhyAddr();
+                                 (AscendC::VECTOR_REG_WIDTH / sizeof(float));
+            __local_mem__ float* bufferIn0Addr = (__local_mem__ float*)bufferIn0_.GetPhyAddr();
+            __local_mem__ float* bufferOut0Addr = (__local_mem__ float*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vreg0,
-                    bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
-                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg1, vreg0,
-                    static_cast<float>(-1.0) * tilingDataPtr_->scale, preg0);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                    vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
+                AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                    vreg1, vreg0, static_cast<float>(-1.0) * tilingDataPtr_->scale, preg0);
                 AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg2, vreg1, preg0);
-                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2,
-                    static_cast<float>(1.0), preg0);
+                AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                    vreg3, vreg2, static_cast<float>(1.0), preg0);
                 AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg0, vreg3, preg0);
                 AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg4, preg0);
@@ -119,8 +120,8 @@ private:
     }
 
 private:
-    TPipe *pipePtr_;
-    const SwishTilingData *tilingDataPtr_;
+    TPipe* pipePtr_;
+    const SwishTilingData* tilingDataPtr_;
     GlobalTensor<float> inputGmX_;
     GlobalTensor<float> outputGmY_;
     TQue<AscendC::QuePosition::VECIN, 1> queIn0_;

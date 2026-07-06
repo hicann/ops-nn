@@ -38,8 +38,7 @@ constexpr uint32_t TILING_ELEMENTS = 1024 * 4;
 
 class FusedCrossEntropyLossWithMaxSumTiling {
 public:
-    explicit FusedCrossEntropyLossWithMaxSumTiling(gert::TilingContext* context) : tilingContext_(context)
-    {}
+    explicit FusedCrossEntropyLossWithMaxSumTiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     ge::graphStatus TilingForMenory();
 
@@ -86,8 +85,8 @@ private:
 
 ge::graphStatus FusedCrossEntropyLossWithMaxSumTiling::Init()
 {
-    auto compileInfo =
-        reinterpret_cast<const FusedCrossEntropyLossWithMaxSumCompileInfo*>(tilingContext_->GetCompileInfo());
+    auto compileInfo = reinterpret_cast<const FusedCrossEntropyLossWithMaxSumCompileInfo*>(
+        tilingContext_->GetCompileInfo());
     coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
     ubSizePlatForm = static_cast<uint32_t>(compileInfo->ubSizePlatForm);
     sysWorkspaceSize = compileInfo->sysWorkspaceSize;
@@ -138,8 +137,8 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumTiling::Init()
         tilingKey = TILING_KEY_BFLOAT16;
     }
 
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->SetTilingKey(tilingKey);
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
 
@@ -180,8 +179,8 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumTiling::TilingForMenory()
     tilingData_.set_formerCoreReservedbtNum(formerCoreReservedbtNum);
     tilingData_.set_latterCoreReservedbtNum(latterCoreReservedbtNum);
 
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
 
     tilingContext_->SetTilingKey(TILING_KEY_FOR_MEMORY);
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
@@ -213,15 +212,13 @@ ge::graphStatus TilingPrepareForFusedCrossEntropyLossWithMaxSum(gert::TilingPars
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_CHECK_IF(
-        (compileInfo->sysWorkspaceSize < 0),
-        OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->sysWorkspaceSize < 0),
+                OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
+                return ge::GRAPH_FAILED);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
     OP_LOGD(context->GetNodeName(), "total ub size is %lu", totalUbSize);

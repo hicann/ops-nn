@@ -37,9 +37,8 @@ class AdaptiveAvgPool2dGradNCHWSmallKernel {
 public:
     __aicore__ inline AdaptiveAvgPool2dGradNCHWSmallKernel() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR gradInput, GM_ADDR y, TPipe& pipeIn,
-        const AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35& tilingData);
+    __aicore__ inline void Init(GM_ADDR gradInput, GM_ADDR y, TPipe& pipeIn,
+                                const AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35& tilingData);
 
     __aicore__ inline void Process();
     __aicore__ inline void ProcessPerLoop();
@@ -56,12 +55,13 @@ public:
     __aicore__ inline void TransposeB32(LocalTensor<I> dst, LocalTensor<I> src, uint32_t rowNum, uint32_t colNum);
 
 private:
-    __aicore__ inline void AccumulateOutputRowsForInputPointRegFp32(
-        LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, int64_t inBase, COMPUTE_TYPE scale,
-        int64_t stH, int64_t edH, int64_t stW, int64_t edW);
+    __aicore__ inline void AccumulateOutputRowsForInputPointRegFp32(LocalTensor<COMPUTE_TYPE> srcLocal,
+                                                                    LocalTensor<COMPUTE_TYPE> dstLocal, int64_t inBase,
+                                                                    COMPUTE_TYPE scale, int64_t stH, int64_t edH,
+                                                                    int64_t stW, int64_t edW);
 
-    __aicore__ inline void ComputeFp32Core(
-        LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, uint32_t dstElemCount);
+    __aicore__ inline void ComputeFp32Core(LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal,
+                                           uint32_t dstElemCount);
 
 private:
     TPipe pipe_;
@@ -135,8 +135,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Init(
         return;
     }
 
-    curCoreProcessNum_ =
-        (blockIdx_ + 1 == tiling_->usedCoreNum) ? tiling_->tailCoreProcessNum : tiling_->normalCoreProcessNum;
+    curCoreProcessNum_ = (blockIdx_ + 1 == tiling_->usedCoreNum) ? tiling_->tailCoreProcessNum :
+                                                                   tiling_->normalCoreProcessNum;
 
     gradInputGm_.SetGlobalBuffer((__gm__ T*)gradInput);
     yGm_.SetGlobalBuffer((__gm__ T*)y);
@@ -171,15 +171,15 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ScalarCom
     wAxisIndex_ = tempTail % tiling_->wOutputOuter;
     wOutputActual_ = (wAxisIndex_ == (tiling_->wOutputOuter - 1)) ? tiling_->wOutputTail : tiling_->wOutputInner;
 
-    hStLeftCornerIdx_ =
-        GetStartFromOutputInputSize(hAxisIndex_ * tiling_->hOutputInner, tiling_->hInput, tiling_->hOutput);
-    wStLeftCornerIdx_ =
-        GetStartFromOutputInputSize(wAxisIndex_ * tiling_->wOutputInner, tiling_->wInput, tiling_->wOutput);
+    hStLeftCornerIdx_ = GetStartFromOutputInputSize(hAxisIndex_ * tiling_->hOutputInner, tiling_->hInput,
+                                                    tiling_->hOutput);
+    wStLeftCornerIdx_ = GetStartFromOutputInputSize(wAxisIndex_ * tiling_->wOutputInner, tiling_->wInput,
+                                                    tiling_->wOutput);
 
-    hEndRightCornerIdx_ = GetEndFromOutputInputSize(
-        hAxisIndex_ * tiling_->hOutputInner + hOutputActual_ - 1, tiling_->hInput, tiling_->hOutput);
-    wEndRightCornerIdx_ = GetEndFromOutputInputSize(
-        wAxisIndex_ * tiling_->wOutputInner + wOutputActual_ - 1, tiling_->wInput, tiling_->wOutput);
+    hEndRightCornerIdx_ = GetEndFromOutputInputSize(hAxisIndex_ * tiling_->hOutputInner + hOutputActual_ - 1,
+                                                    tiling_->hInput, tiling_->hOutput);
+    wEndRightCornerIdx_ = GetEndFromOutputInputSize(wAxisIndex_ * tiling_->wOutputInner + wOutputActual_ - 1,
+                                                    tiling_->wInput, tiling_->wOutput);
 
     hGradInputActual_ = hEndRightCornerIdx_ - hStLeftCornerIdx_;
     wGradInputActual_ = wEndRightCornerIdx_ - wStLeftCornerIdx_;
@@ -205,10 +205,10 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::CopyIn()
 
     const int64_t gradInputGmOffset = highAxisGradInputOffset_ + hAxisGradInputOffset_ + wAxisGradInputOffset_;
 
-    DataCopyExtParams paramsIn = {
-        static_cast<uint16_t>(hGradInputActual_), static_cast<uint32_t>(wGradInputActual_ * sizeof(T)),
-        static_cast<uint32_t>((tiling_->wInput - wGradInputActual_) * sizeof(T)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams paramsIn = {static_cast<uint16_t>(hGradInputActual_),
+                                  static_cast<uint32_t>(wGradInputActual_ * sizeof(T)),
+                                  static_cast<uint32_t>((tiling_->wInput - wGradInputActual_) * sizeof(T)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T> padParams = {true, 0, 0, 0};
 
@@ -231,8 +231,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::CopyIn()
 }
 
 template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::TransposeB16(
-    LocalTensor<T> dst, LocalTensor<T> src, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::TransposeB16(LocalTensor<T> dst,
+                                                                                    LocalTensor<T> src, uint32_t rowNum,
+                                                                                    uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
     uint64_t srcList[TRANS_ADDR_LEN];
@@ -274,8 +275,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Transpose
 
 template <typename T, typename INDEX>
 template <typename I>
-__aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::TransposeB32(
-    LocalTensor<I> dst, LocalTensor<I> src, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::TransposeB32(LocalTensor<I> dst,
+                                                                                    LocalTensor<I> src, uint32_t rowNum,
+                                                                                    uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
     uint64_t srcList[TRANS_ADDR_LEN];
@@ -310,8 +312,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Transpose
 
         for (int32_t rowLoopIdx = 0; rowLoopIdx < static_cast<int32_t>(rowNum / TRANS_ADDR_LEN); rowLoopIdx++) {
             for (int32_t i = 0; i < static_cast<int32_t>(TRANS_ADDR_LEN); i++) {
-                srcList[i] =
-                    reinterpret_cast<uint64_t>(src[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
+                srcList[i] = reinterpret_cast<uint64_t>(
+                    src[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
             }
             for (int32_t i = 0; i < static_cast<int32_t>(TRANS_LEN_B32); i++) {
                 dstList[i * 2] = reinterpret_cast<uint64_t>(dst[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
@@ -374,8 +376,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                 for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                     const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                     const int64_t outBase = outRow * highAxisLocalStride_;
-                    __local_mem__ COMPUTE_TYPE* dstAddr =
-                        (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
+                    __local_mem__ COMPUTE_TYPE* dstAddr = (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed]
+                                                              .GetPhyAddr();
 
                     MicroAPI::DataCopy(dstReg, dstAddr);
                     MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
@@ -405,8 +407,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                 for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                     const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                     const int64_t outBase = outRow * highAxisLocalStride_;
-                    __local_mem__ COMPUTE_TYPE* dstAddr =
-                        (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
+                    __local_mem__ COMPUTE_TYPE* dstAddr = (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed]
+                                                              .GetPhyAddr();
 
                     MicroAPI::DataCopy(dstReg, dstAddr);
                     MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
@@ -441,8 +443,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
     __local_mem__ INDEX* coverHAddr = reinterpret_cast<__local_mem__ INDEX*>(coverHLocal.GetPhyAddr());
 
     LocalTensor<COMPUTE_TYPE> invCoverWLocal = invCoverWRegBuf_.Get<COMPUTE_TYPE>();
-    __local_mem__ COMPUTE_TYPE* invCoverWAddr =
-        reinterpret_cast<__local_mem__ COMPUTE_TYPE*>(invCoverWLocal.GetPhyAddr());
+    __local_mem__ COMPUTE_TYPE* invCoverWAddr = reinterpret_cast<__local_mem__ COMPUTE_TYPE*>(
+        invCoverWLocal.GetPhyAddr());
 
     const INDEX wTileStart = static_cast<INDEX>(wAxisIndex_ * tiling_->wOutputInner);
     const INDEX wTileEnd = static_cast<INDEX>(wTileStart + wOutputActual_);
@@ -551,7 +553,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
             for (int64_t wi = 0; wi < curBatchCount; ++wi) {
                 const int64_t cw = static_cast<int64_t>(coverWAddr[wi]);
                 invCoverWAddr[wi] = (cw > 0) ? static_cast<COMPUTE_TYPE>(1.0f / static_cast<float>(cw)) :
-                                                static_cast<COMPUTE_TYPE>(0.0f);
+                                               static_cast<COMPUTE_TYPE>(0.0f);
             }
 
             for (int64_t shLocal = 0; shLocal < curHBatchCount; ++shLocal) {

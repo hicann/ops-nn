@@ -23,16 +23,16 @@
 #include <random>
 #include <cmath>
 #include <algorithm>
-#include <inttypes.h>  // 新增：用于int64_t的格式化输出宏
+#include <inttypes.h> // 新增：用于int64_t的格式化输出宏
 #include "acl/acl.h"
 #include "aclnn_sync_bn_training_update_v2.h"
 
 constexpr float MOMENTUM = 0.9f;
 constexpr float EPS = 1e-8f;
-constexpr int64_t INPUT_N = 8;    // 输入shape[0]
-constexpr int64_t INPUT_C = 8;    // 输入shape[1]
-constexpr int64_t INPUT_H = 8;    // 输入shape[2]
-constexpr int64_t INPUT_W = 8;    // 输入shape[3]
+constexpr int64_t INPUT_N = 8; // 输入shape[0]
+constexpr int64_t INPUT_C = 8; // 输入shape[1]
+constexpr int64_t INPUT_H = 8; // 输入shape[2]
+constexpr int64_t INPUT_W = 8; // 输入shape[3]
 constexpr int64_t INPUT_NUM = INPUT_N * INPUT_C * INPUT_H * INPUT_W;
 
 #define CHECK_RET(cond, return_expr) \
@@ -60,10 +60,9 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
 {
     auto size = GetShapeSize(shape);
     std::vector<uint8_t> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
         // 修正：使用PRId64格式化int64_t类型
         LOG_PRINT("result[%" PRId64 "] is: %d\n", i, resultData[i]);
@@ -83,9 +82,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 2. 申请device侧内存
@@ -102,22 +100,21 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
-void GenerateInputData(
-    std::vector<float>& x1HostData,  // 输入特征x [8,8,8,8]
-    std::vector<float>& x2HostData,  // running_mean [C]
-    std::vector<float>& x3HostData   // running_var [C]
-) {
+void GenerateInputData(std::vector<float>& x1HostData, // 输入特征x [8,8,8,8]
+                       std::vector<float>& x2HostData, // running_mean [C]
+                       std::vector<float>& x3HostData  // running_var [C]
+)
+{
     // 随机数生成器（模拟Python的np.random.uniform）
     std::random_device rd;
-    std::mt19937 gen(rd());  // 随机种子，可固定为12345方便复现
-    std::uniform_real_distribution<float> distX(0.0f, 10.0f);    // x: [0,10]
-    std::uniform_real_distribution<float> distX1(1.0f, 5.0f);    // x1: [1,5]
+    std::mt19937 gen(rd());                                   // 随机种子，可固定为12345方便复现
+    std::uniform_real_distribution<float> distX(0.0f, 10.0f); // x: [0,10]
+    std::uniform_real_distribution<float> distX1(1.0f, 5.0f); // x1: [1,5]
 
     // 生成x [8,8,8,8]
     x1HostData.resize(INPUT_NUM);
@@ -140,25 +137,24 @@ void GenerateInputData(
     float xMin = *std::min_element(x1HostData.begin(), x1HostData.end());
     float xMax = *std::max_element(x1HostData.begin(), x1HostData.end());
 
-    LOG_PRINT("生成的 x2 (running_mean): %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f\n", 
-        x2HostData[0], x2HostData[1], x2HostData[2], x2HostData[3], x2HostData[4], x2HostData[5], x2HostData[6], x2HostData[7]);
-    LOG_PRINT("生成的 x3 (running_var): %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f\n", 
-        x3HostData[0], x3HostData[1], x3HostData[2], x3HostData[3], x3HostData[4], x3HostData[5], x3HostData[6], x3HostData[7]);    
+    LOG_PRINT("生成的 x2 (running_mean): %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f\n", x2HostData[0],
+              x2HostData[1], x2HostData[2], x2HostData[3], x2HostData[4], x2HostData[5], x2HostData[6], x2HostData[7]);
+    LOG_PRINT("生成的 x3 (running_var): %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f\n", x3HostData[0], x3HostData[1],
+              x3HostData[2], x3HostData[3], x3HostData[4], x3HostData[5], x3HostData[6], x3HostData[7]);
     // 修正：使用PRId64格式化int64_t类型，解决%lld和long int不匹配的警告
-    LOG_PRINT("输入shape: [%" PRId64 ", %" PRId64 ", %" PRId64 ", %" PRId64 "], 总元素数: %" PRId64 "\n", 
-        INPUT_N, INPUT_C, INPUT_H, INPUT_W, INPUT_NUM);
+    LOG_PRINT("输入shape: [%" PRId64 ", %" PRId64 ", %" PRId64 ", %" PRId64 "], 总元素数: %" PRId64 "\n", INPUT_N,
+              INPUT_C, INPUT_H, INPUT_W, INPUT_NUM);
     LOG_PRINT("momentum: %.1f, eps: %.1e\n", MOMENTUM, EPS);
     LOG_PRINT("x范围: [%.4f, %.4f]\n", xMin, xMax);
 }
 
-void ComputeGoldenData(
-    const std::vector<float>& xHostData,
-    const std::vector<float>& x1HostData,
-    const std::vector<float>& x2HostData,
-    std::vector<float>& goldenYHostData,  // 归一化结果y
-    std::vector<float>& goldenY1HostData, // 更新后running_mean
-    std::vector<float>& goldenY2HostData  // 更新后running_var
-) {
+void ComputeGoldenData(const std::vector<float>& xHostData, const std::vector<float>& x1HostData,
+                       const std::vector<float>& x2HostData,
+                       std::vector<float>& goldenYHostData,  // 归一化结果y
+                       std::vector<float>& goldenY1HostData, // 更新后running_mean
+                       std::vector<float>& goldenY2HostData  // 更新后running_var
+)
+{
     // 1. 按通道计算全局均值和方差
     std::vector<float> globalMean(INPUT_C, 0.0f);
     std::vector<float> globalVar(INPUT_C, 0.0f);
@@ -179,14 +175,15 @@ void ComputeGoldenData(
         }
         globalMean[c] = Sum[c] / elemPerChannel;
         globalVar[c] = (Sum2[c] / elemPerChannel) - (globalMean[c] * globalMean[c]);
-
     }
-    LOG_PRINT("Golden 通道的Sum: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n",Sum[0], Sum[1], Sum[2], Sum[3], Sum[4], Sum[5], Sum[6], Sum[7]);
-    LOG_PRINT("Golden 通道的Sum2: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n",Sum2[0], Sum2[1], Sum2[2], Sum2[3], Sum2[4], Sum2[5], Sum2[6], Sum2[7]);
-    LOG_PRINT("Golden 通道的Mean: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n", globalMean[0], globalMean[1], globalMean[2], globalMean[3],
-        globalMean[4], globalMean[5], globalMean[6], globalMean[7]);
-    LOG_PRINT("Golden 通道的Var: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n", globalVar[0], globalVar[1], globalVar[2], globalVar[3],
-        globalVar[4], globalVar[5], globalVar[6], globalVar[7]);
+    LOG_PRINT("Golden 通道的Sum: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n", Sum[0], Sum[1], Sum[2], Sum[3],
+              Sum[4], Sum[5], Sum[6], Sum[7]);
+    LOG_PRINT("Golden 通道的Sum2: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n", Sum2[0], Sum2[1], Sum2[2],
+              Sum2[3], Sum2[4], Sum2[5], Sum2[6], Sum2[7]);
+    LOG_PRINT("Golden 通道的Mean: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n", globalMean[0], globalMean[1],
+              globalMean[2], globalMean[3], globalMean[4], globalMean[5], globalMean[6], globalMean[7]);
+    LOG_PRINT("Golden 通道的Var: [%.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f]\n", globalVar[0], globalVar[1],
+              globalVar[2], globalVar[3], globalVar[4], globalVar[5], globalVar[6], globalVar[7]);
     // 2. 计算归一化结果
     goldenYHostData.resize(INPUT_NUM);
     for (int64_t c = 0; c < INPUT_C; ++c) {
@@ -214,27 +211,21 @@ void ComputeGoldenData(
     float meanMax = *std::max_element(globalMean.begin(), globalMean.end());
     float varMin = *std::min_element(globalVar.begin(), globalVar.end());
     float varMax = *std::max_element(globalVar.begin(), globalVar.end());
-    
+
     LOG_PRINT("Golden 全局均值范围: [%.4f, %.4f]\n", meanMin, meanMax);
     LOG_PRINT("Golden 全局方差范围: [%.4f, %.4f]\n", varMin, varMax);
 }
 
-int VerifyResult(
-    const std::vector<float>& goldenData,
-    const std::vector<int64_t>& shape,
-    void* deviceAddr,
-    const std::string& name
-) {
+int VerifyResult(const std::vector<float>& goldenData, const std::vector<int64_t>& shape, void* deviceAddr,
+                 const std::string& name)
+{
     int64_t dataSize = GetShapeSize(shape) * sizeof(float);
     std::vector<float> hostData(dataSize / sizeof(float));
 
     // 1. Device -> Host 拷贝结果
-    aclError ret = aclrtMemcpy(
-        hostData.data(), dataSize,
-        deviceAddr, dataSize,
-        ACL_MEMCPY_DEVICE_TO_HOST
-    );
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Copy %s from device to host failed. ERROR: %d\n", name.c_str(), ret); return ret);
+    aclError ret = aclrtMemcpy(hostData.data(), dataSize, deviceAddr, dataSize, ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Copy %s from device to host failed. ERROR: %d\n", name.c_str(), ret);
+              return ret);
 
     // 2. 计算最大误差
     float maxError = 0.0f;
@@ -271,15 +262,16 @@ int main()
     std::vector<float> goldenY1HostData;
     std::vector<float> goldenY2HostData;
     std::vector<float> goldenY3HostData;
-    ComputeGoldenData(selfX1HostData, selfX2HostData, selfX3HostData, goldenY1HostData, goldenY2HostData, goldenY3HostData);
+    ComputeGoldenData(selfX1HostData, selfX2HostData, selfX3HostData, goldenY1HostData, goldenY2HostData,
+                      goldenY3HostData);
 
-    std::vector<int64_t> selfX1Shape = {INPUT_N, INPUT_C, INPUT_H, INPUT_W}; 
-    std::vector<int64_t> selfX2Shape = {INPUT_C};     
+    std::vector<int64_t> selfX1Shape = {INPUT_N, INPUT_C, INPUT_H, INPUT_W};
+    std::vector<int64_t> selfX2Shape = {INPUT_C};
     std::vector<int64_t> selfX3Shape = {INPUT_C};
 
-    std::vector<int64_t> out1Shape = selfX1Shape;              // 归一化结果shape与x一致
-    std::vector<int64_t> out2Shape = selfX2Shape; 
-    std::vector<int64_t> out3Shape = selfX3Shape; 
+    std::vector<int64_t> out1Shape = selfX1Shape; // 归一化结果shape与x一致
+    std::vector<int64_t> out2Shape = selfX2Shape;
+    std::vector<int64_t> out3Shape = selfX3Shape;
 
     aclTensor* selfX1 = nullptr;
     aclTensor* selfX2 = nullptr;
@@ -314,10 +306,12 @@ int main()
     aclOpExecutor* executor;
 
     double moment = 0.9;
-    
+
     // 4. 调用aclnnSyncBnTrainingUpdateV2第一段接口
-    ret = aclnnSyncBnTrainingUpdateV2GetWorkspaceSize(selfX1, selfX2, selfX3, moment, out1, out2, out3, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSyncBnTrainingUpdateV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnSyncBnTrainingUpdateV2GetWorkspaceSize(selfX1, selfX2, selfX3, moment, out1, out2, out3, &workspaceSize,
+                                                      &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSyncBnTrainingUpdateV2GetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -333,7 +327,6 @@ int main()
     // 6. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
 
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     // auto size = GetShapeSize(out1Shape);
@@ -362,7 +355,7 @@ int main()
     aclDestroyTensor(out1);
     aclDestroyTensor(out2);
     aclDestroyTensor(out3);
-    
+
     // 8. 释放device资源
     aclrtFree(selfX1DeviceAddr);
     aclrtFree(selfX2DeviceAddr);
@@ -370,11 +363,11 @@ int main()
     aclrtFree(out1DeviceAddr);
     aclrtFree(out2DeviceAddr);
     aclrtFree(out3DeviceAddr);
-    
+
     if (workspaceSize > static_cast<uint64_t>(0)) {
         aclrtFree(workspaceAddr);
     }
-    
+
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
 

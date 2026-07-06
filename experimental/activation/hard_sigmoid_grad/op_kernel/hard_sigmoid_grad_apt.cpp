@@ -25,8 +25,8 @@
 #include "arch35/hard_sigmoid_grad_bf16.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void hard_sigmoid_grad(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-                                              GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hard_sigmoid_grad(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput, GM_ADDR workspace,
+                                             GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardSigmoidGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSigmoidGradTilingData, tilingData, tiling);

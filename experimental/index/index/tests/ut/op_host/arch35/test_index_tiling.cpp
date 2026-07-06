@@ -23,8 +23,7 @@
 using namespace ge;
 using namespace std;
 
-class TestIndexTiling : public testing::Test {
-};
+class TestIndexTiling : public testing::Test {};
 
 namespace {
 constexpr const char* COMPILE_INFO = R"({
@@ -59,7 +58,7 @@ void SetPlatformInfo(gert::TilingContext* context)
     context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     context->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
 }
-}  // namespace
+} // namespace
 
 TEST_F(TestIndexTiling, index_aicore_tiling_two_indices_success)
 {

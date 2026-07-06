@@ -17,15 +17,13 @@
 
 #include "inplace_update_simt.h"
 
-enum class InplaceUpdateTilingKey : uint32_t
-{
+enum class InplaceUpdateTilingKey : uint32_t {
     TILING_KEY_DEFAULT = 0,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void inplace_update(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR v,
-    GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void inplace_update(GM_ADDR x, GM_ADDR indices, GM_ADDR v, GM_ADDR y, GM_ADDR workspace,
+                                          GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(InplaceUpdateTilingData);
     GET_TILING_DATA_WITH_STRUCT(InplaceUpdateTilingData, tilingData, tiling);

@@ -50,8 +50,7 @@ struct QuantizedBatchNormWelfordTilingData {
 #pragma pack()
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, QuantizedBatchNormWelfordTilingData* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, QuantizedBatchNormWelfordTilingData* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(QuantizedBatchNormWelfordTilingData) / 4; i++)

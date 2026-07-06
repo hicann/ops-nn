@@ -22,19 +22,22 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SwishGrad);
 
-static const aclTensor *SwishGradAiCore(const aclTensor *gradOutput, const aclTensor *self,
-                                        float betaOptional, aclTensor *gradInput, aclOpExecutor *executor) {
+static const aclTensor* SwishGradAiCore(const aclTensor* gradOutput, const aclTensor* self, float betaOptional,
+                                        aclTensor* gradInput, aclOpExecutor* executor)
+{
     auto noNeed = self;
     L0_DFX(SwishGradAiCore, gradOutput, self, betaOptional, gradInput);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SwishGrad, OP_INPUT(gradOutput, self, noNeed), OP_OUTPUT(gradInput), OP_ATTR(betaOptional));
-    OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SwishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SwishGrad, OP_INPUT(gradOutput, self, noNeed), OP_OUTPUT(gradInput),
+                                           OP_ATTR(betaOptional));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SwishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return gradInput;
 }
 
-const aclTensor *SwishGrad(const aclTensor *gradOutput, const aclTensor *self,
-                           float betaOptional, aclOpExecutor *executor) {
+const aclTensor* SwishGrad(const aclTensor* gradOutput, const aclTensor* self, float betaOptional,
+                           aclOpExecutor* executor)
+{
     auto gradInput = executor->AllocTensor(gradOutput->GetViewShape(), gradOutput->GetDataType());
     return SwishGradAiCore(gradOutput, self, betaOptional, gradInput, executor);
 }
-}  // namespace l0op
+} // namespace l0op

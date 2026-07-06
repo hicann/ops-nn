@@ -37,8 +37,8 @@ struct FastGeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> x;
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> denominator;
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> result;
-            static constexpr AscendC::MicroAPI::DivSpecificMode mode = {
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, highPrecisionDiv};
+            static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING,
+                                                                        highPrecisionDiv};
             AscendC::MicroAPI::MaskReg mask;
 
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {

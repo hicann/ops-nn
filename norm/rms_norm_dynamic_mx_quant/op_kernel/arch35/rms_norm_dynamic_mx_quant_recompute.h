@@ -26,14 +26,10 @@ using namespace AscendC::MicroAPI;
 template <typename T_X, typename T_GAMMA, typename T_Y, bool isOptimizeMode = false>
 class RmsNormDynamicMxQuantRecompute {
 public:
-    __aicore__ inline RmsNormDynamicMxQuantRecompute(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline RmsNormDynamicMxQuantRecompute(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxScale, GM_ADDR rstd,
-        const RmsNormDynamicMxQuantRecomputeTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxScale, GM_ADDR rstd,
+                                const RmsNormDynamicMxQuantRecomputeTilingData* tilingData)
     {
         tilingData_ = tilingData;
         blockIdx_ = GetBlockIdx();
@@ -76,16 +72,17 @@ public:
 
         pipe_->InitBuffer(normOutBuffer_, xBufSize);
 
-        int64_t scaleBufSize =
-            ops::CeilAlign(static_cast<uint32_t>(tilingData_->baseN / tilingData_->mxBlockSize), VL_B16) * sizeof(T_X);
+        int64_t scaleBufSize = ops::CeilAlign(static_cast<uint32_t>(tilingData_->baseN / tilingData_->mxBlockSize),
+                                              VL_B16) *
+                               sizeof(T_X);
         pipe_->InitBuffer(scaleOutQueue_, DOUBLE_BUFFER, scaleBufSize);
         pipe_->InitBuffer(maxExpBuffer_, scaleBufSize);
         pipe_->InitBuffer(maxhalfScaleBuffer_, scaleBufSize);
 
         int64_t yOutBufSize;
         if constexpr (IsSameType<T_Y, fp4x2_e2m1_t>::value || IsSameType<T_Y, fp4x2_e1m2_t>::value) {
-            yOutBufSize = ops::CeilAlign(
-                static_cast<int64_t>(tilingData_->baseN / NUM_TWO * sizeof(uint8_t)), static_cast<int64_t>(VL_B16));
+            yOutBufSize = ops::CeilAlign(static_cast<int64_t>(tilingData_->baseN / NUM_TWO * sizeof(uint8_t)),
+                                         static_cast<int64_t>(VL_B16));
         } else {
             yOutBufSize = ops::CeilAlign(static_cast<int64_t>(4 * tilingData_->baseN * sizeof(uint8_t)), UB_BLOCK_SIZE);
         }
@@ -124,8 +121,8 @@ private:
             int64_t rowGmOffset = batchOffset + rowIdx * tilingData_->numN;
             ComputeOneLineXSquareSum(rstdLocal, rowGmOffset, rowIdx);
         }
-        NormCommon::ComputeRstdNewtonRaphson<false, true>(
-            rstdLocal, rstdLocal, static_cast<uint32_t>(curM), tilingData_->epsilon, tilingData_->avgFactor, VL_FP32);
+        NormCommon::ComputeRstdNewtonRaphson<false, true>(rstdLocal, rstdLocal, static_cast<uint32_t>(curM),
+                                                          tilingData_->epsilon, tilingData_->avgFactor, VL_FP32);
         rstdOutQueue_.EnQue(rstdLocal);
         rstdLocal = rstdOutQueue_.DeQue<float>();
     }
@@ -143,8 +140,8 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessNSplitLoop(
-        int64_t batchOffset, int64_t batchScaleOffset, int64_t curM, LocalTensor<float>& rstdLocal)
+    __aicore__ inline void ProcessNSplitLoop(int64_t batchOffset, int64_t batchScaleOffset, int64_t curM,
+                                             LocalTensor<float>& rstdLocal)
     {
         for (int64_t nIdx = 0; nIdx < tilingData_->nUbLoops; ++nIdx) {
             bool isLastN = nIdx == (tilingData_->nUbLoops - 1) ? true : false;
@@ -160,10 +157,10 @@ private:
 
             for (int64_t rowIdx = 0; rowIdx < curM; ++rowIdx) {
                 int64_t yOutOffset = batchOffset + rowIdx * tilingData_->numN + nOffset;
-                int64_t scaleOutOffset =
-                    batchScaleOffset + rowIdx * tilingData_->nMxblockNumAlignedTwo + nOffset / tilingData_->mxBlockSize;
-                ComputeNormAndQuantOneRow(
-                    rstdLocal, gammaLocal, betaLocal, rowIdx, isLastN, curN, yOutOffset, scaleOutOffset);
+                int64_t scaleOutOffset = batchScaleOffset + rowIdx * tilingData_->nMxblockNumAlignedTwo +
+                                         nOffset / tilingData_->mxBlockSize;
+                ComputeNormAndQuantOneRow(rstdLocal, gammaLocal, betaLocal, rowIdx, isLastN, curN, yOutOffset,
+                                          scaleOutOffset);
             }
 
             gammaInQueue_.FreeTensor(gammaLocal);
@@ -176,10 +173,7 @@ private:
     // ============================================================
     // 辅助：获取 ub 间二分合并的 cache slot id
     // ============================================================
-    __aicore__ inline int64_t GetCacheId(const int64_t idx)
-    {
-        return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
-    }
+    __aicore__ inline int64_t GetCacheId(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 
     // ============================================================
     // 搬入 gamma / beta（分块拷贝）
@@ -204,8 +198,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeOneLineXSquareSum(
-        LocalTensor<float>& rstdLocal, int64_t rowGmOffset, int64_t rowIndex)
+    __aicore__ inline void ComputeOneLineXSquareSum(LocalTensor<float>& rstdLocal, int64_t rowGmOffset,
+                                                    int64_t rowIndex)
     {
         LocalTensor<float> cacheLocal = cacheBuf_.Get<float>();
         LocalTensor<float> xFp32Tmp = xFp32TmpBuf_.Get<float>();
@@ -239,9 +233,8 @@ private:
                 DataCopyPad(xFoldLocal, xGm_[gmOff2], xFoldCopyParams, padParams);
                 xFoldInQueue_.EnQue<T_X>(xFoldLocal);
                 xFoldLocal = xFoldInQueue_.DeQue<T_X>();
-                FoldBlockVF(
-                    xLocal, xFoldLocal, xFp32Tmp, static_cast<uint32_t>(tilingData_->baseN),
-                    static_cast<uint32_t>(tilingData_->baseN));
+                FoldBlockVF(xLocal, xFoldLocal, xFp32Tmp, static_cast<uint32_t>(tilingData_->baseN),
+                            static_cast<uint32_t>(tilingData_->baseN));
                 xFoldInQueue_.FreeTensor(xFoldLocal);
             } else if (r == tilingData_->mainFoldCount && tilingData_->foldTail > 0) {
                 // 尾部非整块
@@ -250,9 +243,8 @@ private:
                 DataCopyPad(xFoldLocal, xGm_[gmOff2], xFoldCopyParams, padParams);
                 xFoldInQueue_.EnQue<T_X>(xFoldLocal);
                 xFoldLocal = xFoldInQueue_.DeQue<T_X>();
-                FoldBlockVF(
-                    xLocal, xFoldLocal, xFp32Tmp, static_cast<uint32_t>(tilingData_->foldTail),
-                    static_cast<uint32_t>(tilingData_->baseN));
+                FoldBlockVF(xLocal, xFoldLocal, xFp32Tmp, static_cast<uint32_t>(tilingData_->foldTail),
+                            static_cast<uint32_t>(tilingData_->baseN));
                 xFoldInQueue_.FreeTensor(xFoldLocal);
             } else {
                 // 无尾折，只对本块平方
@@ -261,7 +253,8 @@ private:
 
             // 块内二分归约
             NormCommon::NormCommonRegbase::CalculateReduceSum(xFp32Tmp, xFp32Tmp, binaryAddBuf_,
-                static_cast<uint32_t>(tilingData_->baseN), static_cast<uint32_t>(tilingData_->binAddQuotient));
+                                                              static_cast<uint32_t>(tilingData_->baseN),
+                                                              static_cast<uint32_t>(tilingData_->binAddQuotient));
 
             // 树形 cache 合并
             int64_t cacheId = GetCacheId(r);
@@ -272,8 +265,8 @@ private:
 
         // 从 cache 取出整行结果写入 rstdLocal[rowIndex]
         __local_mem__ float* dstPtr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* cachePtr =
-            (__local_mem__ float*)cacheLocal.GetPhyAddr() + tilingData_->resultCacheId * UB_BLOCK_SIZE_FP32;
+        __local_mem__ float* cachePtr = (__local_mem__ float*)cacheLocal.GetPhyAddr() +
+                                        tilingData_->resultCacheId * UB_BLOCK_SIZE_FP32;
         __VEC_SCOPE__
         {
             RegTensor<float> a;
@@ -304,9 +297,8 @@ private:
         }
     }
 
-    __aicore__ inline void FoldBlockVF(
-        LocalTensor<T_X>& xLocal, LocalTensor<T_X>& xFoldLocal, LocalTensor<float>& xFp32Tmp, uint32_t tailCount,
-        uint32_t count)
+    __aicore__ inline void FoldBlockVF(LocalTensor<T_X>& xLocal, LocalTensor<T_X>& xFoldLocal,
+                                       LocalTensor<float>& xFp32Tmp, uint32_t tailCount, uint32_t count)
     {
         __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
         __local_mem__ T_X* xFoldInUb = (__local_mem__ T_X*)xFoldLocal.GetPhyAddr();
@@ -346,9 +338,8 @@ private:
     // ============================================================
     // UpdateCache：树形合并，将 xFp32Tmp 中的局部和累加进 cache[cacheId]
     // ============================================================
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheId,
-        const int64_t stride)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheId, const int64_t stride)
     {
         uint16_t innerLoopTimes = cacheId;
         uint32_t innerLoopStride = stride;
@@ -370,9 +361,9 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeNormAndQuantOneRow(
-        LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
-        int64_t rowIdx, bool isLastN, int64_t curN, int64_t xOffset, int64_t scaleOutOffset)
+    __aicore__ inline void ComputeNormAndQuantOneRow(LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal,
+                                                     LocalTensor<T_GAMMA>& betaLocal, int64_t rowIdx, bool isLastN,
+                                                     int64_t curN, int64_t xOffset, int64_t scaleOutOffset)
     {
         // 搬入 x（当前N分块，curN个元素）
         DataCopyPadParams padParams{false, 0, 0, 0};
@@ -391,13 +382,11 @@ private:
         // ComputeYOneRow 内部使用 ZEROING + full mask store，最后分块可自动补0到对齐长度
         LocalTensor<T_X> normOutLocal = normOutBuffer_.Get<T_X>();
         if (tilingData_->hasInputBeta) {
-            ComputeYOneRow<true>(
-                xLocal, gammaLocal, betaLocal, rstdLocal, normOutLocal, static_cast<uint32_t>(rowIdx),
-                static_cast<uint32_t>(curN));
+            ComputeYOneRow<true>(xLocal, gammaLocal, betaLocal, rstdLocal, normOutLocal, static_cast<uint32_t>(rowIdx),
+                                 static_cast<uint32_t>(curN));
         } else {
-            ComputeYOneRow<false>(
-                xLocal, gammaLocal, betaLocal, rstdLocal, normOutLocal, static_cast<uint32_t>(rowIdx),
-                static_cast<uint32_t>(curN));
+            ComputeYOneRow<false>(xLocal, gammaLocal, betaLocal, rstdLocal, normOutLocal, static_cast<uint32_t>(rowIdx),
+                                  static_cast<uint32_t>(curN));
         }
 
         xInQueue_.FreeTensor(xLocal);
@@ -421,9 +410,9 @@ private:
     }
 
     template <bool hasInputBeta = false>
-    __aicore__ inline void ComputeYOneRow(
-        LocalTensor<T_X>& xLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
-        LocalTensor<float>& rstdLocal, LocalTensor<T_X>& yLocal, uint32_t rstdOffset, uint32_t curN)
+    __aicore__ inline void ComputeYOneRow(LocalTensor<T_X>& xLocal, LocalTensor<T_GAMMA>& gammaLocal,
+                                          LocalTensor<T_GAMMA>& betaLocal, LocalTensor<float>& rstdLocal,
+                                          LocalTensor<T_X>& yLocal, uint32_t rstdOffset, uint32_t curN)
     {
         __local_mem__ T_X* xAddr = (__local_mem__ T_X*)xLocal.GetPhyAddr();
         __local_mem__ T_GAMMA* gammaAddr = (__local_mem__ T_GAMMA*)gammaLocal.GetPhyAddr();
@@ -434,8 +423,8 @@ private:
         __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
         __local_mem__ T_X* yAddr = (__local_mem__ T_X*)yLocal.GetPhyAddr();
 
-        uint16_t nloops =
-            static_cast<uint16_t>(ops::CeilDiv(static_cast<uint64_t>(curN), static_cast<uint64_t>(VL_FP32)));
+        uint16_t nloops = static_cast<uint16_t>(
+            ops::CeilDiv(static_cast<uint64_t>(curN), static_cast<uint64_t>(VL_FP32)));
 
         __VEC_SCOPE__
         {
@@ -466,8 +455,8 @@ private:
     }
 
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeMxQuantAndOutputOneRow(
-        LocalTensor<T_X>& yLocal, int64_t xOffset, int64_t scaleOutOffset, int64_t curN, bool isLastN)
+    __aicore__ inline void ComputeMxQuantAndOutputOneRow(LocalTensor<T_X>& yLocal, int64_t xOffset,
+                                                         int64_t scaleOutOffset, int64_t curN, bool isLastN)
     {
         int64_t curNAligned = isLastN ? tilingData_->baseNTailAligned : curN;
         int64_t curNMxblockNum = ops::CeilDiv(curNAligned, static_cast<int64_t>(tilingData_->mxBlockSize));
@@ -491,11 +480,11 @@ private:
             ComputeMaxExpOCP<T_X>(srcAddr, maxExpAddr, totalCountInUB, loopNum);
             ComputeScaleOCP<T_X, T_Y>(maxExpAddr, scaleOutAddr, halfScaleAddr, totalScaleInUB, loopNumScale);
             if constexpr (isOptimizeMode) {
-                ComputeDataMxfp4Optimize<T_X, T_Y, toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB, loopNum);
+                ComputeDataMxfp4Optimize<T_X, T_Y, toBf16RoundMode, roundMode>(srcAddr, halfScaleAddr, outLocalAddr,
+                                                                               totalCountInUB, loopNum);
             } else {
-                ComputeDataMxfp4General<T_X, T_Y, toBf16RoundMode, roundMode>(
-                    srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB, loopNum);
+                ComputeDataMxfp4General<T_X, T_Y, toBf16RoundMode, roundMode>(srcAddr, halfScaleAddr, outLocalAddr,
+                                                                              totalCountInUB, loopNum);
             }
         } else {
             if (tilingData_->scaleAlg == 0) {
@@ -506,8 +495,8 @@ private:
                 ComputeMaxExpcuBLAS<T_X>(srcAddr, maxExpAddr, totalCountInUB, loopNum);
                 ComputeScalecuBLAS<T_X, T_Y>(maxExpAddr, scaleOutAddr, halfScaleAddr, totalScaleInUB, loopNumScale4NV);
             }
-            ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(
-                srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB, loopNum);
+            ComputeData<toBf16RoundMode, roundMode, T_X, T_Y>(srcAddr, halfScaleAddr, outLocalAddr, totalCountInUB,
+                                                              loopNum);
         }
 
         yOutQueue_.EnQue(yOutLocal);

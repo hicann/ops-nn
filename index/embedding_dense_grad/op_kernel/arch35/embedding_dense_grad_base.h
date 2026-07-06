@@ -33,7 +33,7 @@ constexpr uint32_t BLOCK_ALIGN_B32 = platform::GetUbBlockSize() / sizeof(float);
 
 template <typename Tp, Tp v>
 struct integral_constant {
-  static constexpr Tp value = v;
+    static constexpr Tp value = v;
 };
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
@@ -41,7 +41,6 @@ template <typename, typename>
 struct is_same : public false_type {};
 template <typename Tp>
 struct is_same<Tp, Tp> : public true_type {};
-
 
 constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
     AscendC::MicroAPI::RegLayout::ZERO,
@@ -51,11 +50,8 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
 };
 
 constexpr AscendC::MicroAPI::CastTrait castTraitI32F32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN,
-    AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT
-};
+    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 
 typedef struct {
     uint32_t segCount;
@@ -64,7 +60,7 @@ typedef struct {
     uint32_t gradWeightGmindex;
     uint32_t gradPerRowNum;
     uint32_t ubOutOffset;
-    __local_mem__ uint32_t *sortedIndiceIndexAddr;
+    __local_mem__ uint32_t* sortedIndiceIndexAddr;
 } GroupAddParams;
 
 template <typename U>
@@ -83,11 +79,13 @@ public:
 
     GlobalTensor<U> indicesGm_;
 
-    __aicore__ inline void IndicesInitBuffer(TPipe& pipe, uint32_t indicesNumber, uint32_t sortSharedBufSize, GM_ADDR indices)
+    __aicore__ inline void IndicesInitBuffer(TPipe& pipe, uint32_t indicesNumber, uint32_t sortSharedBufSize,
+                                             GM_ADDR indices)
     {
-        indicesGm_.SetGlobalBuffer((__gm__ U *)(indices));
+        indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
 
-        uint32_t indicesAlignB32 = Aligned(static_cast<uint32_t>(indicesNumber * sizeof(uint32_t)), platform::GetUbBlockSize());
+        uint32_t indicesAlignB32 = Aligned(static_cast<uint32_t>(indicesNumber * sizeof(uint32_t)),
+                                           platform::GetUbBlockSize());
         uint32_t indicesAlign = Aligned(static_cast<uint32_t>(indicesNumber * sizeof(U)), platform::GetUbBlockSize());
 
         pipe.InitBuffer(inQueueIndice_, 1, indicesAlign);
@@ -109,11 +107,11 @@ public:
         inQueueIndice_.EnQue(indicesLocalIn);
     }
 
-    __aicore__ inline void UniqueGetElm(const LocalTensor<U> &sortedIndice, LocalTensor<int32_t> &noDupRes,
-                                 uint32_t indicesFactorReal, int64_t &arNum)
+    __aicore__ inline void UniqueGetElm(const LocalTensor<U>& sortedIndice, LocalTensor<int32_t>& noDupRes,
+                                        uint32_t indicesFactorReal, int64_t& arNum)
     {
-        __local_mem__ U *sortedIndicesAddr = (__ubuf__ U *)sortedIndice.GetPhyAddr();
-        __local_mem__ int32_t *noDupResAddr = (__ubuf__ int32_t *)noDupRes.GetPhyAddr();
+        __local_mem__ U* sortedIndicesAddr = (__ubuf__ U*)sortedIndice.GetPhyAddr();
+        __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupRes.GetPhyAddr();
 
         uint16_t loopCnt = (uint16_t)((indicesFactorReal + vfIndicesNum_) / vfIndicesNum_);
 
@@ -145,26 +143,26 @@ public:
                     AscendC::MicroAPI::MaskReg maskHalf;
                     AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
                     // vSQZ
-                    AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>
-                        (selReg, orderReg, maskHalf);
+                    AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(
+                        selReg, orderReg, maskHalf);
                 } else {
                     // vSQZ
-                    AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>
-                        (selReg, orderReg, cmpMask);
+                    AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(
+                        selReg, orderReg, cmpMask);
                 }
-                AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>
-                    (noDupResAddr, selReg, ureg);
+                AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                    noDupResAddr, selReg, ureg);
                 AscendC::MicroAPI::DataCopyUnAlignPost(noDupResAddr, ureg);
             }
         }
     }
 
-    __aicore__ inline void UniqueStat(LocalTensor<int32_t> &noDupRes, int64_t &arNum)
+    __aicore__ inline void UniqueStat(LocalTensor<int32_t>& noDupRes, int64_t& arNum)
     {
         LocalTensor<int32_t> noDupResProcessLoop = noDupProcessLoopBuf_.Get<int32_t>();
 
-        __local_mem__ int32_t *noDupResAddr = (__ubuf__ int32_t *)noDupRes.GetPhyAddr();
-        __local_mem__ int32_t *noDupResProcessLoopAddr = (__ubuf__ int32_t *)noDupResProcessLoop.GetPhyAddr();
+        __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupRes.GetPhyAddr();
+        __local_mem__ int32_t* noDupResProcessLoopAddr = (__ubuf__ int32_t*)noDupResProcessLoop.GetPhyAddr();
 
         uint16_t loopCntStatFre = (arNum + perVfIndicesIdx_ - 1) / perVfIndicesIdx_;
         uint32_t counterStatFre = static_cast<uint32_t>(arNum);
@@ -176,10 +174,11 @@ public:
             AscendC::MicroAPI::RegTensor<int32_t> divReg, allFiveReg;
             AscendC::MicroAPI::MaskReg maskRegUpdate;
             AscendC::MicroAPI::UnalignReg u0;
-            AscendC::MicroAPI::MaskReg maskRegFull = 
-                AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                maskRegFull = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
-            Duplicate(allFiveReg, static_cast<int32_t>(PROCESS_GROUP), maskRegFull);    // Abs before reducemax, scaleReg >= 0
+            Duplicate(allFiveReg, static_cast<int32_t>(PROCESS_GROUP),
+                      maskRegFull); // Abs before reducemax, scaleReg >= 0
             for (uint16_t i = 0; i < loopCntStatFre; i++) {
                 auto noDupResAddrUpdate = noDupResAddr + i * perVfIndicesIdx_ + 1;
                 maskRegUpdate = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
@@ -198,7 +197,8 @@ public:
         WaitFlag<HardEvent::V_S>(eventV_S);
     }
 
-    __aicore__ inline void ProcessIndices(const LocalTensor<U> &sortedIndice, uint32_t indicesFactorReal, int64_t &arNum)
+    __aicore__ inline void ProcessIndices(const LocalTensor<U>& sortedIndice, uint32_t indicesFactorReal,
+                                          int64_t& arNum)
     {
         LocalTensor<U> indicesLocal = inQueueIndice_.DeQue<U>();
         LocalTensor<int32_t> noDupRes = noDupBuf_.Get<int32_t>();
@@ -211,7 +211,7 @@ public:
         LocalTensor<uint32_t> sortedIndexLocal = sortedIndiceIndex[0];
         static constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
         AscendC::Sort<U, false, sortConfig>(sortedDstLocal, sortedIndexLocal, indicesLocal, sharedTmpBuffer,
-            static_cast<uint32_t>(indicesFactorReal));
+                                            static_cast<uint32_t>(indicesFactorReal));
 
         Duplicate(noDupRes, 0, indicesFactorReal);
         UniqueGetElm(sortedIndice, noDupRes, indicesFactorReal, arNum);
@@ -221,9 +221,11 @@ public:
         inQueueIndice_.FreeTensor(indicesLocal);
     }
 
-    template <typename srcDtype, typename resDtype, typename VGatherIndexDType, bool isFullLoad = false, bool isScale = false>
-    __aicore__ inline void ProcessPerGradGroup(__local_mem__ srcDtype *gradLocalAddr, __local_mem__ resDtype *resBufAddr,
-                        MicroAPI::MaskReg &maskRegUpdate, MicroAPI::RegTensor<int32_t> &serReg,  GroupAddParams &params)
+    template <typename srcDtype, typename resDtype, typename VGatherIndexDType, bool isFullLoad = false,
+              bool isScale = false>
+    __aicore__ inline void ProcessPerGradGroup(__local_mem__ srcDtype* gradLocalAddr,
+                                               __local_mem__ resDtype* resBufAddr, MicroAPI::MaskReg& maskRegUpdate,
+                                               MicroAPI::RegTensor<int32_t>& serReg, GroupAddParams& params)
     {
         MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
         MicroAPI::RegTensor<srcDtype> gatherOut;
@@ -235,17 +237,19 @@ public:
         for (uint16_t pGIdx = 0; pGIdx < params.loopSegCount; ++pGIdx) {
             MicroAPI::Duplicate(tmpWeightReg, (float)0, maskReg);
             for (uint16_t pIdx = 0; pIdx < (uint16_t)PROCESS_GROUP; ++pIdx) {
-                //vlds
-                MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>((MicroAPI::RegTensor<uint32_t>&)initIdsReg,
+                // vlds
+                MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+                    (MicroAPI::RegTensor<uint32_t>&)initIdsReg,
                     params.sortedIndiceIndexAddr + (params.gradWeightGmindex + PROCESS_GROUP * pGIdx + pIdx));
                 MicroAPI::Muls(idsReg, initIdsReg, params.gradPerRowNum, maskRegUpdate);
-                MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType> &)serReg, idsReg, maskRegUpdate);
+                MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
                 MicroAPI::DataCopyGather(gatherOut, gradLocalAddr, idsReg, maskRegUpdate);
                 if constexpr (is_same<half, srcDtype>::value) {
                     Cast<float, half, EmbeddingDenseGradBase::castTraitB162B32>(gatherOutB32, gatherOut, maskRegUpdate);
                     MicroAPI::Add(tmpWeightReg, tmpWeightReg, gatherOutB32, maskRegUpdate);
                 } else if constexpr (is_same<bfloat16_t, srcDtype>::value) {
-                    Cast<float, bfloat16_t, EmbeddingDenseGradBase::castTraitB162B32>(gatherOutB32, gatherOut, maskRegUpdate);
+                    Cast<float, bfloat16_t, EmbeddingDenseGradBase::castTraitB162B32>(gatherOutB32, gatherOut,
+                                                                                      maskRegUpdate);
                     MicroAPI::Add(tmpWeightReg, tmpWeightReg, gatherOutB32, maskRegUpdate);
                 } else {
                     MicroAPI::Add(tmpWeightReg, tmpWeightReg, gatherOut, maskRegUpdate);
@@ -255,20 +259,22 @@ public:
         }
 
         MicroAPI::Duplicate(tmpWeightReg, (float)0, maskReg);
-        __local_mem__ uint32_t *sortedIndicesIndexTailAddr = params.sortedIndiceIndexAddr + params.gradWeightGmindex + params.loopSegCount * PROCESS_GROUP;
+        __local_mem__ uint32_t* sortedIndicesIndexTailAddr = params.sortedIndiceIndexAddr + params.gradWeightGmindex +
+                                                             params.loopSegCount * PROCESS_GROUP;
         // Tail
         for (uint16_t pIdxTail = 0; pIdxTail < params.loopSegCoutTail; ++pIdxTail) {
-            //vlds
+            // vlds
             MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>((MicroAPI::RegTensor<uint32_t>&)initIdsReg,
-                sortedIndicesIndexTailAddr + pIdxTail);
+                                                                           sortedIndicesIndexTailAddr + pIdxTail);
             MicroAPI::Muls(initIdsReg, initIdsReg, params.gradPerRowNum, maskRegUpdate);
-            MicroAPI::Add(initIdsReg, (MicroAPI::RegTensor<VGatherIndexDType> &)serReg, initIdsReg, maskRegUpdate);
+            MicroAPI::Add(initIdsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, initIdsReg, maskRegUpdate);
             MicroAPI::DataCopyGather(gatherOut, gradLocalAddr, initIdsReg, maskRegUpdate);
             if constexpr (is_same<half, srcDtype>::value) {
                 Cast<float, half, EmbeddingDenseGradBase::castTraitB162B32>(gatherOutB32, gatherOut, maskRegUpdate);
                 MicroAPI::Add(tmpWeightReg, tmpWeightReg, gatherOutB32, maskRegUpdate);
             } else if constexpr (is_same<bfloat16_t, srcDtype>::value) {
-                Cast<float, bfloat16_t, EmbeddingDenseGradBase::castTraitB162B32>(gatherOutB32, gatherOut, maskRegUpdate);
+                Cast<float, bfloat16_t, EmbeddingDenseGradBase::castTraitB162B32>(gatherOutB32, gatherOut,
+                                                                                  maskRegUpdate);
                 MicroAPI::Add(tmpWeightReg, tmpWeightReg, gatherOutB32, maskRegUpdate);
             } else {
                 MicroAPI::Add(tmpWeightReg, tmpWeightReg, gatherOut, maskRegUpdate);
@@ -276,21 +282,22 @@ public:
         }
 
         MicroAPI::Add(weightReg, weightReg, tmpWeightReg, maskRegUpdate);
-        
+
         if constexpr (isFullLoad) {
             if constexpr (isScale) {
                 MicroAPI::RegTensor<int32_t> scaleFreqInt;
                 MicroAPI::RegTensor<float> scaleFreqReg;
                 MicroAPI::Duplicate(scaleFreqInt, static_cast<int32_t>(params.segCount), maskReg);
-                MicroAPI::Cast<float, int32_t, EmbeddingDenseGradBase::castTraitI32F32>(scaleFreqReg, scaleFreqInt, maskReg);
+                MicroAPI::Cast<float, int32_t, EmbeddingDenseGradBase::castTraitI32F32>(scaleFreqReg, scaleFreqInt,
+                                                                                        maskReg);
                 MicroAPI::Div(weightReg, weightReg, scaleFreqReg, maskRegUpdate);
             }
             ops::StoreOneTensorForDtypeT<resDtype>(resBufAddr, weightReg, maskRegUpdate, params.ubOutOffset);
         } else {
-            MicroAPI::DataCopy(((__local_mem__ float *)resBufAddr + params.ubOutOffset), weightReg, maskRegUpdate);
+            MicroAPI::DataCopy(((__local_mem__ float*)resBufAddr + params.ubOutOffset), weightReg, maskRegUpdate);
         }
     }
 };
-}
+} // namespace EmbeddingDenseGradBase
 
 #endif

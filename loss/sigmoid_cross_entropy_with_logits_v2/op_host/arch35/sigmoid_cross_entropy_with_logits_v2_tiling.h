@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file sigmoid_cross_entropy_with_logits_v2_tiling.h
  * \brief
  */
@@ -30,10 +30,9 @@ struct SigmoidCEWithLogitsV2CompileInfo {
     uint64_t ubSize = 0;
 };
 
-class SigmoidCEWithLogitsV2TilingClass : public TilingBaseClass
-{
+class SigmoidCEWithLogitsV2TilingClass : public TilingBaseClass {
 public:
-    explicit SigmoidCEWithLogitsV2TilingClass(gert::TilingContext* context) : TilingBaseClass(context){}
+    explicit SigmoidCEWithLogitsV2TilingClass(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -60,40 +59,41 @@ protected:
 };
 
 template <typename T, typename R>
-ge::graphStatus SigmoidCEWithLogitsV2TilingClass::RunBroadcastTiling() {
+ge::graphStatus SigmoidCEWithLogitsV2TilingClass::RunBroadcastTiling()
+{
     ge::graphStatus ret = ge::GRAPH_SUCCESS;
     if (this->hasWeight && this->hasPosWeight) {
         auto brcBaseTiling = BroadcastBaseTiling<
             typename SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2HasTwoWeight<T, R>::OpDag>(context_);
-        
+
         ret = brcBaseTiling.DoTiling();
-        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, 
-                                            this->hasWeight, this->hasPosWeight);
+        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, this->hasWeight,
+                                              this->hasPosWeight);
     } else if (this->hasWeight) {
         auto brcBaseTiling = BroadcastBaseTiling<
             typename SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2WeightOnly<T, R>::OpDag>(context_);
         ret = brcBaseTiling.DoTiling();
-        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, 
-                                            this->hasWeight, this->hasPosWeight);
+        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, this->hasWeight,
+                                              this->hasPosWeight);
     } else if (this->hasPosWeight) {
         auto brcBaseTiling = BroadcastBaseTiling<
             typename SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2PosWeightOnly<T, R>::OpDag>(context_);
         ret = brcBaseTiling.DoTiling();
-        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, 
-                                            this->hasWeight, this->hasPosWeight);
+        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, this->hasWeight,
+                                              this->hasPosWeight);
     } else {
         auto brcBaseTiling = BroadcastBaseTiling<
             typename SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2<T, R>::OpDag>(context_);
         ret = brcBaseTiling.DoTiling();
-        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction,
-                                            this->hasWeight, this->hasPosWeight);
+        this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->reduction, this->hasWeight,
+                                              this->hasPosWeight);
     }
-    OP_CHECK_IF(ret == ge::GRAPH_FAILED,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        ret == ge::GRAPH_FAILED,
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+        return ge::GRAPH_FAILED);
     return ret;
 }
 
 } // namespace optiling
-#endif  // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_V2_TILING_H
+#endif // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_V2_TILING_H

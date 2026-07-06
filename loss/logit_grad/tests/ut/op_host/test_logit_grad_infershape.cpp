@@ -13,18 +13,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/logit_grad_proto.h"
 
-class LogitGrad : public testing::Test
-{
+class LogitGrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LogitGrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LogitGrad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LogitGrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LogitGrad TearDown" << std::endl; }
 };
 
 TEST_F(LogitGrad, LogitGrad_infershape_case_0)

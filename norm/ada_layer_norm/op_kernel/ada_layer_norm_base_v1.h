@@ -17,7 +17,7 @@
 using namespace AdaLayerNormNS;
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeMean(int64_t dataCount, float &meanValue)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeMean(int64_t dataCount, float& meanValue)
 {
     Muls(tmpFloat, xFloat, aveFactor, dataCount);
     PipeBarrier<PIPE_V>();
@@ -30,7 +30,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeMe
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeVar(int64_t dataCount, float meanValue, float &varValue)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeVar(int64_t dataCount, float meanValue,
+                                                                                  float& varValue)
 {
     Adds(tmpFloat, xFloat, -meanValue, dataCount);
     PipeBarrier<PIPE_V>();
@@ -47,7 +48,10 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeVa
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::BaseSliceCompute(int64_t rowIdx, int64_t batchIdx, float meanValue, float rstdValue)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::BaseSliceCompute(int64_t rowIdx,
+                                                                                        int64_t batchIdx,
+                                                                                        float meanValue,
+                                                                                        float rstdValue)
 {
     if constexpr (OP_CODE == BASE_V2_OP_CODE) {
         meanOutFloat.SetValue(batchIdx, meanValue);
@@ -69,8 +73,10 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::BaseSlice
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::QuantSliceCompute(
-    int64_t rowIdx, int64_t batchIdx, float meanValue, float rstdValue)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::QuantSliceCompute(int64_t rowIdx,
+                                                                                         int64_t batchIdx,
+                                                                                         float meanValue,
+                                                                                         float rstdValue)
 {
     int64_t offset = rowIdx * hiddenDim;
     int64_t scaleOffset = (rowIdx / seqLen) * hiddenDim;
@@ -109,7 +115,9 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::QuantSlic
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeSliceNorm(float meanValue, float rstdValue, int64_t dataCount)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeSliceNorm(float meanValue,
+                                                                                        float rstdValue,
+                                                                                        int64_t dataCount)
 {
     Adds(meanFloat, xFloat, -meanValue, dataCount);
     PipeBarrier<PIPE_V>();
@@ -128,7 +136,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeSl
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeSliceQuant(float maxValue, int64_t dataCount)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeSliceQuant(float maxValue,
+                                                                                         int64_t dataCount)
 {
     Muls(yFloat, xFloat, MAX_INT8 / maxValue, dataCount);
     PipeBarrier<PIPE_V>();
@@ -142,7 +151,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::ComputeSl
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::MultiCalMeanRstd(RowRange range, int64_t batchIdx)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::MultiCalMeanRstd(RowRange range,
+                                                                                        int64_t batchIdx)
 {
     uint32_t srcShape[2] = {static_cast<uint32_t>(range.actualRowNum), 1};
     uint32_t dstShape[2] = {static_cast<uint32_t>(range.actualRowNum), static_cast<uint32_t>(hiddenDimCeil)};
@@ -347,7 +357,9 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInOth
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInScaleShift(int64_t offset, uint16_t blockCount, int64_t len)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInScaleShift(int64_t offset,
+                                                                                        uint16_t blockCount,
+                                                                                        int64_t len)
 {
     DataCopyExtParams copyInParams{blockCount, static_cast<uint32_t>(len * sizeof(X_DTYPE)), 0, 0, 0};
     DataCopyPadExtParams<X_DTYPE> padParams{false, 0, 0, 0};
@@ -375,8 +387,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSca
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSlice(
-    int64_t offset, int64_t scaleOffset, int64_t h, int64_t len)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSlice(int64_t offset, int64_t scaleOffset,
+                                                                                   int64_t h, int64_t len)
 {
     CopyInAndCast(xFloat, xGm[offset + h], len, DATA_COUNT);
     CopyInScaleShift(scaleOffset, 1, len);
@@ -384,7 +396,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInSli
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInX(int64_t offset, uint16_t blockCount, int64_t len)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInX(int64_t offset, uint16_t blockCount,
+                                                                               int64_t len)
 {
     DataCopyExtParams copyInParams{blockCount, static_cast<uint32_t>(len * sizeof(X_DTYPE)), 0, 0, 0};
     DataCopyPadExtParams<X_DTYPE> padParams{false, 0, 0, 0};
@@ -406,7 +419,8 @@ __aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::CopyInX(i
 }
 
 template <typename X_DTYPE, typename WEIGHT_DTYPE, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::BaseCopyOut(int64_t offset, uint16_t blockCount, int64_t len)
+__aicore__ inline void AdaLayerNormND<X_DTYPE, WEIGHT_DTYPE, OP_CODE>::BaseCopyOut(int64_t offset, uint16_t blockCount,
+                                                                                   int64_t len)
 {
     if constexpr (!std::is_same_v<X_DTYPE, float>) {
         PipeBarrier<PIPE_V>();

@@ -16,8 +16,7 @@
 
 namespace ops {
 
-class LogitGrad : public OpDef
-{
+class LogitGrad : public OpDef {
 public:
     explicit LogitGrad(const char* name) : OpDef(name)
     {

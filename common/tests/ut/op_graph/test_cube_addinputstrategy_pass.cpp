@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -32,28 +32,26 @@ const std::string GRAPH_NAME = "test_graph";
 
 class cube_addinputstrategy_ut : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "cube_addinputstrategy_ut SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "cube_addinputstrategy_ut SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "cube_addinputstrategy_ut TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "cube_addinputstrategy_ut TearDown" << std::endl; }
 
-    static void DumpTestGraph(ge::Graph &graph) {
+    static void DumpTestGraph(ge::Graph& graph)
+    {
         (void)graph;
         std::cout << "cube_test : dump graph" << std::endl;
     }
 
-    static void CreateEdge(ge::Graph &graph, const ge::GNodePtr &src, int src_idx,
-                          const ge::GNodePtr &dst, int dst_idx) {
+    static void CreateEdge(ge::Graph& graph, const ge::GNodePtr& src, int src_idx, const ge::GNodePtr& dst, int dst_idx)
+    {
         auto ret = graph.AddDataEdge(*src, src_idx, *dst, dst_idx);
         if (ret != ge::GRAPH_SUCCESS) {
             std::cout << "cube_test : AddDataEdge failed" << std::endl;
         }
     }
 
-    static ge::GNodePtr CreateConstNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateConstNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc tensor_desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
         tensor_desc.SetOriginFormat(ge::FORMAT_NCHW);
@@ -73,42 +71,42 @@ protected:
         std::cout << "cube_test inputv01 size = " << data.size() << std::endl;
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Const")
-            .Name(opname.c_str())
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Const")
+                             .Name(opname.c_str())
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateOutputDesc(0, tensor_desc);
-        ge::Tensor weight_tensor(tensor_desc,
-            reinterpret_cast<const uint8_t*>(data.data()),
-            data.size() * sizeof(float));
+        ge::Tensor weight_tensor(tensor_desc, reinterpret_cast<const uint8_t*>(data.data()),
+                                 data.size() * sizeof(float));
         node.SetAttr(kAscendNameWeightAsc, weight_tensor);
 
         ge::GNodePtr node_ptr = std::make_shared<ge::GNode>(node);
         return node_ptr;
     }
 
-    static ge::GNodePtr CreatePostCubeNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreatePostCubeNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("FixPipe")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x0", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x3", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x4", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x5", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x6", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x7", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x8", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                {"x9", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("FixPipe")
+                             .Name(opname.c_str())
+                             .IrDefInputs({
+                                 {"x0", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                 {"x1", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x2", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x3", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x4", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x5", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x6", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x7", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x8", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                 {"x9", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                             })
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         for (size_t i = 0; i < 10; ++i) {
             node.UpdateInputDesc(i, desc);
@@ -118,23 +116,21 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateDequantNode(ge::Graph &graph, const std::string &opname,
-                                          bool hasattr = false,
-                                          float scale = 0.0f, float offset = 0.0f) {
+    static ge::GNodePtr CreateDequantNode(ge::Graph& graph, const std::string& opname, bool hasattr = false,
+                                          float scale = 0.0f, float offset = 0.0f)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_constinput");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendDequant")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"deq_scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendDequant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"deq_scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -150,19 +146,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateQuantNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateQuantNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendQuant")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendQuant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -176,19 +171,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateRequantNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateRequantNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendRequant")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendRequant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -200,16 +194,17 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateCastNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateCastNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Cast")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Cast")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -217,16 +212,17 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateAntiQuantNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateAntiQuantNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("AscendAntiQuant")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("AscendAntiQuant")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -242,19 +238,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateAddNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateAddNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Add")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Add")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -266,19 +261,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateAdd2Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateAdd2Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Add")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Add")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -290,20 +284,19 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateAdd3Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateAdd3Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_FRACTAL_NZ, ge::DT_FLOAT16);
         desc.SetOriginFormat(ge::FORMAT_FRACTAL_NZ);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Add")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Add")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -312,20 +305,19 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateAdd4Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateAdd4Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_FRACTAL_NZ, ge::DT_FLOAT16);
         desc.SetOriginFormat(ge::FORMAT_ND);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Add")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Add")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -334,19 +326,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateSubNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateSubNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Sub")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Sub")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x1", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"x2", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -358,16 +349,17 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateReluNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateReluNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Relu")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Relu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -375,21 +367,20 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreatePReluNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreatePReluNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_inputconstnode");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("PRelu")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("PRelu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -400,21 +391,20 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreatePRelu2Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreatePRelu2Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_inputconstnode");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("PRelu")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("PRelu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -425,19 +415,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreatePRelu3Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreatePRelu3Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("PRelu")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("PRelu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"slope", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -446,21 +435,20 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateTanhNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateTanhNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_inputconstnode");
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Tanh")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"scale", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Tanh")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"scale", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -471,16 +459,17 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateLReluNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateLReluNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("LeakyRelu")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("LeakyRelu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -491,16 +480,17 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateRelu6Node(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateRelu6Node(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Relu6")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Relu6")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -508,18 +498,19 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateTransDataNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateTransDataNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape_in({3, 4, 5, 6});
         ge::Shape shape_out({3, 4, 5, 6});
         ge::TensorDesc desc_in(shape_in, ge::FORMAT_FRACTAL_NZ, ge::DT_FLOAT16);
         ge::TensorDesc desc_out(shape_out, ge::FORMAT_ND, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("TransData")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("TransData")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc_in);
         node.UpdateOutputDesc(0, desc_out);
@@ -527,19 +518,18 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateConv2DNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateConv2DNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("Conv2d")
-            .Name(opname.c_str())
-            .IrDefInputs({
-                {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"filter", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("Conv2d")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                           {"filter", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateInputDesc(1, desc);
@@ -548,16 +538,17 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateOtherNode(ge::Graph &graph, const std::string &opname) {
+    static ge::GNodePtr CreateOtherNode(ge::Graph& graph, const std::string& opname)
+    {
         ge::Shape shape({3, 4, 5, 6});
         ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
-            .OpType("MaxPool")
-            .Name(opname.c_str())
-            .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-            .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-            .Build();
+                             .OpType("MaxPool")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
 
         node.UpdateInputDesc(0, desc);
         node.UpdateOutputDesc(0, desc);
@@ -565,8 +556,9 @@ protected:
         return std::make_shared<ge::GNode>(node);
     }
 
-    static ge::GNodePtr CreateNodeSimpleFactorTemplate(ge::Graph &graph, const std::string &opname,
-                                                        const std::string &opunittype) {
+    static ge::GNodePtr CreateNodeSimpleFactorTemplate(ge::Graph& graph, const std::string& opname,
+                                                       const std::string& opunittype)
+    {
         if (opunittype == "A") {
             return CreateConv2DNode(graph, opname);
         } else if (opunittype == "B") {
@@ -587,7 +579,8 @@ protected:
 
 // ==================== IsScalar Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, IsScalar01) {
+TEST_F(cube_addinputstrategy_ut, IsScalar01)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Shape shape{};
     bool ret = m_testpass.IsScalar(shape);
@@ -599,7 +592,8 @@ TEST_F(cube_addinputstrategy_ut, IsScalar01) {
 
 // ==================== CreateAndUpdateVectorMulsInput Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, CreateAndUpdateVectorMulsInput01) {
+TEST_F(cube_addinputstrategy_ut, CreateAndUpdateVectorMulsInput01)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -615,13 +609,15 @@ TEST_F(cube_addinputstrategy_ut, CreateAndUpdateVectorMulsInput01) {
     funtcparam->SetDataType(ge::DT_FLOAT);
 
     std::vector<ge::GNodePtr> new_nodes;
-    auto ret = m_testpass.CreateAndUpdateVectorMulsInput(graph, funtcparam, dequant_node_info, prelu_node_info, new_nodes);
+    auto ret = m_testpass.CreateAndUpdateVectorMulsInput(graph, funtcparam, dequant_node_info, prelu_node_info,
+                                                         new_nodes);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
 // ==================== CloneVectorInput Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, CloneVectorInput01) {
+TEST_F(cube_addinputstrategy_ut, CloneVectorInput01)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -641,7 +637,8 @@ TEST_F(cube_addinputstrategy_ut, CloneVectorInput01) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, CloneVectorInput02) {
+TEST_F(cube_addinputstrategy_ut, CloneVectorInput02)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -661,7 +658,8 @@ TEST_F(cube_addinputstrategy_ut, CloneVectorInput02) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, CloneVectorInput03) {
+TEST_F(cube_addinputstrategy_ut, CloneVectorInput03)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -681,7 +679,8 @@ TEST_F(cube_addinputstrategy_ut, CloneVectorInput03) {
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
 
-TEST_F(cube_addinputstrategy_ut, CloneVectorInput04) {
+TEST_F(cube_addinputstrategy_ut, CloneVectorInput04)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -703,7 +702,8 @@ TEST_F(cube_addinputstrategy_ut, CloneVectorInput04) {
 
 // ==================== CreateAndRelinkCastNode Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, CreateAndRelinkCastNode01) {
+TEST_F(cube_addinputstrategy_ut, CreateAndRelinkCastNode01)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
     ge::GNodePtr inputnode = nullptr;
@@ -716,7 +716,8 @@ TEST_F(cube_addinputstrategy_ut, CreateAndRelinkCastNode01) {
 
 // ==================== SetClipValue6 Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, SetClipValue601) {
+TEST_F(cube_addinputstrategy_ut, SetClipValue601)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -743,7 +744,8 @@ TEST_F(cube_addinputstrategy_ut, SetClipValue601) {
 
 // ==================== Strategy DoAddInput Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput22) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput22)
+{
     PostCubeAddInputStrategy22 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -770,7 +772,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput22) {
 }
 
 // dequant + relu + quant
-TEST_F(cube_addinputstrategy_ut, DoAddInput23) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput23)
+{
     PostCubeAddInputStrategy24 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -802,7 +805,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput23) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput24) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput24)
+{
     PostCubeAddInputStrategy24 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -834,7 +838,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput24) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput25) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput25)
+{
     PostCubeAddInputStrategy25 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -866,7 +871,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput25) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput25_001) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput25_001)
+{
     PostCubeAddInputStrategy25 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -901,7 +907,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput25_001) {
     EXPECT_EQ(quant_input_desc.GetShape().GetDims(), shape1.GetDims());
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput25_002) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput25_002)
+{
     PostCubeAddInputStrategy25 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -932,7 +939,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput25_002) {
     EXPECT_EQ(quant_input_desc.GetShape().GetDims(), shape2.GetDims());
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput25_003) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput25_003)
+{
     PostCubeAddInputStrategy25 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -960,7 +968,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput25_003) {
     PostCubeAddInputStrategy25::UpdatePostNodeShape(*prelu_node, *quant_node);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput25_004) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput25_004)
+{
     PostCubeAddInputStrategy25 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -978,14 +987,12 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput25_004) {
     tensor_desc2.SetOriginShape(ori_shape2);
 
     ge::GNode setquantscale_node = ge::es::CompliantNodeBuilder(&graph)
-        .OpType("SetQuantScale")
-        .Name("setquantscale")
-        .IrDefInputs({
-            {"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                                       .OpType("SetQuantScale")
+                                       .Name("setquantscale")
+                                       .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                                     {"scale", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                                       .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                                       .Build();
 
     setquantscale_node.UpdateOutputDesc(0, tensor_desc);
     setquantscale_node.UpdateInputDesc(0, tensor_desc);
@@ -999,7 +1006,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput25_004) {
     EXPECT_EQ(setquantscale_input_desc.GetShape().GetDims(), shape1.GetDims());
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput31) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput31)
+{
     PostCubeAddInputStrategy31 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1030,7 +1038,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput31) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput32) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput32)
+{
     PostCubeAddInputStrategy32 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1061,7 +1070,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput32) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput33) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput33)
+{
     PostCubeAddInputStrategy33 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1091,7 +1101,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput33) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInputStrategy52) {
+TEST_F(cube_addinputstrategy_ut, DoAddInputStrategy52)
+{
     PostCubeAddInputStrategy52 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1125,7 +1136,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInputStrategy52) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput61) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput61)
+{
     PostCubeAddInputStrategy61 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1156,7 +1168,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput61) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput43) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput43)
+{
     PostCubeAddInputStrategy43 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1198,7 +1211,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput43) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput42) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput42)
+{
     PostCubeAddInputStrategy42 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1236,7 +1250,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput42) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput62) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput62)
+{
     PostCubeAddInputStrategy62 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1266,7 +1281,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput62) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput91) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput91)
+{
     PostCubeAddInputStrategy91 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1293,7 +1309,8 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput91) {
 
 // ==================== UpdateVectorMulsOutputTensorDesc Tests ====================
 
-TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc01) {
+TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc01)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1316,7 +1333,8 @@ TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc01) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc02) {
+TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc02)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1339,7 +1357,8 @@ TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc02) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc03) {
+TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc03)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1362,7 +1381,8 @@ TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc03) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc04) {
+TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc04)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1385,7 +1405,8 @@ TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc04) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc05) {
+TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc05)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1408,7 +1429,8 @@ TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc05) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc06) {
+TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc06)
+{
     PostCubeAddInputBase m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1431,7 +1453,8 @@ TEST_F(cube_addinputstrategy_ut, UpdateVectorMulsOutputTensorDesc06) {
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
 
-TEST_F(cube_addinputstrategy_ut, DoAddInput43_1) {
+TEST_F(cube_addinputstrategy_ut, DoAddInput43_1)
+{
     PostCubeAddInputStrategy43 m_testpass{};
     ge::Graph graph(GRAPH_NAME.c_str());
 
@@ -1465,4 +1488,4 @@ TEST_F(cube_addinputstrategy_ut, DoAddInput43_1) {
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
 
-}  // namespace ops
+} // namespace ops

@@ -75,7 +75,7 @@ struct L1LossGradScalarCast {
     using OpNegOneTensor = Bind<Vec::Duplicate<T>, ConstValueNegOne>;
     using OpSign = Bind<Vec::Select<uint8_t, T, SELECT_MODE_TENSOR>, OpCompareLT, OpNegOneTensor, OpSelect>;
 
-    using OpCopyGrads = Bind<Vec::Duplicate<U>,  Placeholder::In0<U, Placeholder::ScalarAttr<true>>>;
+    using OpCopyGrads = Bind<Vec::Duplicate<U>, Placeholder::In0<U, Placeholder::ScalarAttr<true>>>;
     using OpCopyGradsCast = Bind<Vec::Cast<T, U, 0>, OpCopyGrads>;
     using OpGrads = Bind<Vec::Muls<T>, OpCopyGradsCast, Placeholder::Var<T, 0>>;
 
@@ -88,4 +88,4 @@ struct L1LossGradScalarCast {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 } // namespace L1LossGradKernel
-#endif //ASCENDC_L1_LOSS_GRAD_DAG_H_
+#endif // ASCENDC_L1_LOSS_GRAD_DAG_H_

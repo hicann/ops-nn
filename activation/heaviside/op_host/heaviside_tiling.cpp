@@ -28,7 +28,7 @@ const static int32_t LENGTH_1024 = 1024;
 
 class HeavisideTiling {
 public:
-    explicit HeavisideTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit HeavisideTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -120,8 +120,8 @@ ge::graphStatus HeavisideTiling::RunBigKernelTiling()
     tilingData.set_valuesType(valuesType);
     tilingData.set_needCoreNum(needCoreNum);
 
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
     tilingContext->SetBlockDim(needCoreNum);

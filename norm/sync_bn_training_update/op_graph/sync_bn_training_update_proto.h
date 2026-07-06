@@ -32,7 +32,8 @@ namespace ge {
 
 * @par Outputs:
 * include:
-* @li running_mean_update: A Tensor. It's moving mean of each device after the update. Must be one of the following types: float16, float32, bfloat16.\n
+* @li running_mean_update: A Tensor. It's moving mean of each device after the update. Must be one of the following
+types: float16, float32, bfloat16.\n
 
 * @par Third-party framework compatibility
 * ReduceMeanWithCount and SyncBatchNormGatherStatsWithCounts and SyncBNTrainingUpdate
@@ -44,6 +45,6 @@ REG_OP(SyncBNTrainingUpdate)
     .OUTPUT(running_mean_update, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(momentum, Float, 0.1f)
     .OP_END_FACTORY_REG(SyncBNTrainingUpdate)
-}  // namespace ge
+} // namespace ge
 
-#endif  // SYNC_BN_TRAINING_UPDATE_PROTO_H
+#endif // SYNC_BN_TRAINING_UPDATE_PROTO_H

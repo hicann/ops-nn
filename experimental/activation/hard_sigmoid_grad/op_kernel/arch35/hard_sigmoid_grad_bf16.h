@@ -46,10 +46,10 @@ class HardSigmoidGradBf16 {
     static constexpr int32_t BUFFER_NUM = 2; // double buffer
 
 public:
-    __aicore__ inline HardSigmoidGradBf16() {};
+    __aicore__ inline HardSigmoidGradBf16(){};
 
     __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-                                 const HardSigmoidGradTilingData* tilingData);
+                                const HardSigmoidGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -79,9 +79,8 @@ private:
     float beta_ = 0.5f;
 };
 
-__aicore__ inline void HardSigmoidGradBf16::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-    const HardSigmoidGradTilingData* tilingData)
+__aicore__ inline void HardSigmoidGradBf16::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                                 const HardSigmoidGradTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalLength - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -92,9 +91,11 @@ __aicore__ inline void HardSigmoidGradBf16::Init(
     alpha_ = tilingData->alpha;
     beta_ = tilingData->beta;
 
-    gmGradOutput.SetGlobalBuffer((__gm__ bfloat16_t*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    gmGradOutput.SetGlobalBuffer((__gm__ bfloat16_t*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                                 blockLength_);
     gmSelf.SetGlobalBuffer((__gm__ bfloat16_t*)self + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    gmGradInput.SetGlobalBuffer((__gm__ bfloat16_t*)gradInput + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    gmGradInput.SetGlobalBuffer((__gm__ bfloat16_t*)gradInput + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                                blockLength_);
 
     // bf16 input/output queues (bf16 element size)
     pipe.InitBuffer(inQueueGradOutput, BUFFER_NUM, ubLength_ * sizeof(bfloat16_t));
@@ -106,7 +107,8 @@ __aicore__ inline void HardSigmoidGradBf16::Init(
     pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(float));
     // mask buffer: N fp32 elements => N/8 bytes bitmask, 32-byte aligned
     int64_t maskBufSize = ((ubLength_ + 7) / 8 + 31) / 32 * 32;
-    if (maskBufSize < 32) maskBufSize = 32;
+    if (maskBufSize < 32)
+        maskBufSize = 32;
     pipe.InitBuffer(maskBuf, maskBufSize);
 }
 

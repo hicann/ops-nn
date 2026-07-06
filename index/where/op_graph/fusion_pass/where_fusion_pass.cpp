@@ -31,9 +31,8 @@ using namespace fusion;
 
 namespace ops {
 
-static const std::initializer_list<DataType> NONZERO_DTYPE_SUPPORT_LIST = {DT_FLOAT,  DT_FLOAT16, DT_INT8, DT_UINT8,
-                                                                           DT_INT16, DT_UINT16, DT_INT32, DT_UINT32,  
-                                                                           DT_BOOL, DT_BF16};
+static const std::initializer_list<DataType> NONZERO_DTYPE_SUPPORT_LIST = {
+    DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_BOOL, DT_BF16};
 
 const std::string FUSION_PASS_NAME = "WhereFusionPass";
 const int64_t CAPTURE_TENSOR_IDX_INPUT = 0l;
@@ -75,9 +74,8 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
     }
 
     NodeIo input;
-    OP_LOGE_IF(
-        match_result->GetCapturedTensor(CAPTURE_TENSOR_IDX_INPUT, input) != SUCCESS, false, FUSION_PASS_NAME,
-        "Failed to GetCaptrue tensor");
+    OP_LOGE_IF(match_result->GetCapturedTensor(CAPTURE_TENSOR_IDX_INPUT, input) != SUCCESS, false, FUSION_PASS_NAME,
+               "Failed to GetCaptrue tensor");
 
     auto inputNode = input.node;
     AscendString nodeName;
@@ -115,15 +113,15 @@ GraphUniqPtr WhereFusionPass::Replacement(const std::unique_ptr<MatchResult>& ma
     GetInputsInfo(subGraphInputs, inputShapes, inputDtpyes, inputFormats);
 
     auto replaceGraphBuilder = es::EsGraphBuilder("replacement");
-    auto nonzeroInput =
-        replaceGraphBuilder.CreateInput(0, "x", inputDtpyes[0], inputFormats[0], inputShapes[0].GetDims());
+    auto nonzeroInput = replaceGraphBuilder.CreateInput(0, "x", inputDtpyes[0], inputFormats[0],
+                                                        inputShapes[0].GetDims());
 
     ge::Graph* graphPtr = replaceGraphBuilder.GetCGraphBuilder()->GetGraph();
     GNode nonZero = es::CompliantNodeBuilder(graphPtr)
-                    .OpType("NonZero")
-                    .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-                    .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                    .Build();
+                        .OpType("NonZero")
+                        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                        .Build();
 
     GNode xNode = *nonzeroInput.GetProducer();
     es::AddEdgeAndUpdatePeerDesc(*graphPtr, xNode, 0, nonZero, 0);
@@ -147,9 +145,8 @@ GraphUniqPtr WhereFusionPass::Replacement(const std::unique_ptr<MatchResult>& ma
     return replaceGraph;
 }
 
-static void GetInputsInfo(
-    const std::vector<SubgraphInput>& subGraphInputs, std::vector<Shape>& inputShapes,
-    std::vector<DataType>& inputDtpyes, std::vector<Format>& inputFormats)
+static void GetInputsInfo(const std::vector<SubgraphInput>& subGraphInputs, std::vector<Shape>& inputShapes,
+                          std::vector<DataType>& inputDtpyes, std::vector<Format>& inputFormats)
 {
     for (const auto& subGraphInput : subGraphInputs) {
         auto matchNode = subGraphInput.GetAllInputs().at(0);

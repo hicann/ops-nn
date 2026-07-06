@@ -23,8 +23,8 @@ namespace fused_matmul {
 using namespace matmul_v3_advanced;
 using namespace strategy;
 
-MM_REGISTER_TILING_TEMPLATE(
-    FusedMatMul, FusedMatMulMergeBatchBasicApiTiling, DAV_3510, MERGE_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulMergeBatchBasicApiTiling, DAV_3510,
+                            MERGE_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
 
 bool FusedMatMulMergeBatchBasicApiTiling::IsCapable()
 {

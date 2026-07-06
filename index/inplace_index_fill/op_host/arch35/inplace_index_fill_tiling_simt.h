@@ -23,15 +23,13 @@
 namespace optiling {
 
 // SIMT 线程数常量
-const uint64_t MAX_THREAD_NUM = 2048;   // 最大线程数（每核）
-const uint64_t MIN_THREAD_NUM = 128;    // 最小线程数（每核）
+const uint64_t MAX_THREAD_NUM = 2048; // 最大线程数（每核）
+const uint64_t MIN_THREAD_NUM = 128;  // 最小线程数（每核）
 
 class InplaceIndexFillTilingSimt : public InplaceIndexFillTilingBase {
 public:
-    explicit InplaceIndexFillTilingSimt(gert::TilingContext* context) : InplaceIndexFillTilingBase(context)
-    {}
-    ~InplaceIndexFillTilingSimt()
-    {}
+    explicit InplaceIndexFillTilingSimt(gert::TilingContext* context) : InplaceIndexFillTilingBase(context) {}
+    ~InplaceIndexFillTilingSimt() {}
 
 protected:
     bool IsCapable() override;
@@ -48,7 +46,7 @@ protected:
 
 protected:
     int64_t coreNum_ = 0;
-    int64_t simtUsedCoreNum_ = 0;   // SIMT 计算估算核数
+    int64_t simtUsedCoreNum_ = 0; // SIMT 计算估算核数
 };
 
 } // namespace optiling

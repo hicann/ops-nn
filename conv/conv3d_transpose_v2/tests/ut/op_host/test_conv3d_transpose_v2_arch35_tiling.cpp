@@ -102,15 +102,9 @@ const string COMPILE_INFO_STR_910B = R"({
 
 class Conv3DTransposeV2TilingRunTime3 : public testing::TestWithParam<Conv3DTransposeV2TilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Conv3DTransposeV2TilingRunTime3 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Conv3DTransposeV2TilingRunTime3 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Conv3DTransposeV2TilingRunTime3 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Conv3DTransposeV2TilingRunTime3 TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -223,15 +217,16 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     Ops::NN::Conv::Conv3DBackpropV2CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoPtr.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs(
+                                 {const_cast<char*>(compileInfoPtr.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
-    map<string, string> soc_version_infos = {
-        {"SoC_version", param.soc_version}, {"Short_SoC_version", param.soc_version},{"NpuArch", param.short_soc_version}};
+    map<string, string> soc_version_infos = {{"SoC_version", param.soc_version},
+                                             {"Short_SoC_version", param.soc_version},
+                                             {"NpuArch", param.short_soc_version}};
 
     std::string op_type("Conv3DTransposeV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -241,10 +236,10 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     if (param.parse_result) {
         ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::TilingParseContext>()), ge::GRAPH_SUCCESS);
     } else {
@@ -263,9 +258,8 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     tensor->SetOriginFormat(param.input_size_format);
     tensor->SetStorageFormat(param.input_size_format);
 
-    (void)memcpy_s(
-        tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
-        input_size.size() * sizeof(int64_t));
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
 
     auto tiling_data = gert::TilingData::CreateCap(2048);
     ge::DataType input_size_dtype_val = ge::DT_INT64;
@@ -281,24 +275,24 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
                       .InputShapes({tensor, &x_shape, &filter_shape})
                       .OutputShapes(output_shapes_ref)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
-                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
-                           {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"offset", Ops::NN::AnyValue::CreateFrom<int64_t>(param.offset)},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
-                       .NodeInputTd(0, input_size_dtype_val, param.input_size_format, param.input_size_format)
-                       .NodeInputTd(1, ge::DT_BF16, param.x_ori_format, param.x_format)
-                       .NodeInputTd(2, ge::DT_BF16, param.filter_ori_format, param.filter_format)
-                       .NodeOutputTd(0, ge::DT_BF16, param.y_ori_format, param.y_format)
-                       .CompileInfo(&compile_info)
-                       .Workspace(workspace)
-                       .TilingData(tiling_data.get())
-                       .Build();
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
+                                  {"output_padding",
+                                   Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"offset", Ops::NN::AnyValue::CreateFrom<int64_t>(param.offset)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
+                      .NodeInputTd(0, input_size_dtype_val, param.input_size_format, param.input_size_format)
+                      .NodeInputTd(1, ge::DT_BF16, param.x_ori_format, param.x_format)
+                      .NodeInputTd(2, ge::DT_BF16, param.filter_ori_format, param.filter_format)
+                      .NodeOutputTd(0, ge::DT_BF16, param.y_ori_format, param.y_format)
+                      .CompileInfo(&compile_info)
+                      .Workspace(workspace)
+                      .TilingData(tiling_data.get())
+                      .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
 
@@ -348,7 +342,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      5,
      50331648,
-     "2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 16 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
+     "2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 "
+     "16 1 32 16 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
     {"conv3d_transpose_2_group",
      "Ascend910_95",
      "3510",
@@ -379,7 +374,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      5,
      16842754,
-     "2 2 2 2 2 1 16 4 4 16 0 0 1 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
+     "2 2 2 2 2 1 16 4 4 16 0 0 1 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 "
+     "1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
     {"conv3d_transpose_3_general_group",
      "Ascend910_95",
      "3510",
@@ -410,7 +406,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      20,
      16842754,
-     "2 2 2 2 2 1 16 4 4 4 0 0 1 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 20 0 0 "},
+     "2 2 2 2 2 1 16 4 4 4 0 0 1 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 "
+     "1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 20 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
      "3510",
      "3510",
@@ -441,7 +438,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      5,
      16777218,
-     "2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
+     "2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 "
+     "16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
      "3510",
      "3510",
@@ -472,7 +470,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      5,
      16777218,
-     "2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
+     "2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 1 1 1 1 1 2 "
+     "16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 5 0 0 "},
     {"conv3d_transpose_split_k_case1",
      "3510",
      "3510",
@@ -503,7 +502,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      32,
      16777217,
-     "2 2 1 2 2 1 16 4 4 1 0 0 1 0 0 0 153 721 553 721 553 35 46 35 46 1 6 6 1 14 13 1 9 8 1 1 1 1 1 0 0 0 0 0 0 0 8 8 7 7 1 1 1 1 553 112 1 128 96 112 12 12 1 1 128 0 448 105 32256 1 1 0 32 0 0 "},
+     "2 2 1 2 2 1 16 4 4 1 0 0 1 0 0 0 153 721 553 721 553 35 46 35 46 1 6 6 1 14 13 1 9 8 1 1 1 1 1 0 0 0 0 0 0 0 8 8 "
+     "7 7 1 1 1 1 553 112 1 128 96 112 12 12 1 1 128 0 448 105 32256 1 1 0 32 0 0 "},
     {"conv3d_transpose_split_k_case2",
      "3510",
      "3510",
@@ -534,7 +534,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      32,
      83886081,
-     "2 2 1 2 2 1 16 4 4 1 0 1 1 0 0 0 1 35 120 35 120 8 3 8 3 1 5 123 1 71 1837 1 99 98 1 1 1 15 15 0 0 93 93 94 94 0 103 103 100 100 1 2 2 1 120 32 1 1024 16 32 98 98 1 1 1837 0 80 40 7840 1 1 0 32 0 0 "},
+     "2 2 1 2 2 1 16 4 4 1 0 1 1 0 0 0 1 35 120 35 120 8 3 8 3 1 5 123 1 71 1837 1 99 98 1 1 1 15 15 0 0 93 93 94 94 0 "
+     "103 103 100 100 1 2 2 1 120 32 1 1024 16 32 98 98 1 1 1837 0 80 40 7840 1 1 0 32 0 0 "},
     {"conv3d_transpose_input_size_dtype_unsupported_float16",
      "3510",
      "3510",
@@ -630,8 +631,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      ""},
 };
 
-static void ThreadFunc(
-    const Conv3DTransposeV2TilingTestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
+static void ThreadFunc(const Conv3DTransposeV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,
+                       size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
@@ -652,16 +653,12 @@ static void TestMultiThread(const Conv3DTransposeV2TilingTestParam* params, size
 
 TEST_F(Conv3DTransposeV2TilingRunTime3, general_cases_params_multi_thread)
 {
-    TestMultiThread(
-        cases_params_950_case, sizeof(cases_params_950_case) / sizeof(Conv3DTransposeV2TilingTestParam), 3);
+    TestMultiThread(cases_params_950_case, sizeof(cases_params_950_case) / sizeof(Conv3DTransposeV2TilingTestParam), 3);
 }
 
-TEST_P(Conv3DTransposeV2TilingRunTime3, general_cases)
-{
-    TestOneParamCase(GetParam());
-}
+TEST_P(Conv3DTransposeV2TilingRunTime3, general_cases) { TestOneParamCase(GetParam()); }
 
-INSTANTIATE_TEST_CASE_P(
-    Conv3DTranpose950_case, Conv3DTransposeV2TilingRunTime3, testing::ValuesIn(cases_params_950_case));
+INSTANTIATE_TEST_CASE_P(Conv3DTranpose950_case, Conv3DTransposeV2TilingRunTime3,
+                        testing::ValuesIn(cases_params_950_case));
 
 } // namespace

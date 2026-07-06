@@ -16,7 +16,7 @@
 #define QUANT_UPDATE_SCATTER_LARGE_BATCH_LARGE_QUANT_REGBASE_H_
 
 #include "kernel_tiling/kernel_tiling.h"
-#if ASC_DEVKIT_MAJOR >=9
+#if ASC_DEVKIT_MAJOR >= 9
 #include "basic_api/kernel_vec_intf.h"
 #else
 #include "kernel_operator.h"
@@ -25,16 +25,15 @@
 namespace QuantUpdateScatter {
 using namespace AscendC;
 
-template <
-    typename VarType, typename IndicesType, typename UpdatesType, typename ScalesType, typename OffsetsType,
-    uint64_t DivMode, uint64_t CastRoundMode>
+template <typename VarType, typename IndicesType, typename UpdatesType, typename ScalesType, typename OffsetsType,
+          uint64_t DivMode, uint64_t CastRoundMode>
 class QuantUpdateScatterLargeBatchLargeQuantRegbase
-    : public QuantUpdateScatterBase<VarType, IndicesType, UpdatesType, ScalesType, OffsetsType, DivMode, CastRoundMode>
-{
+    : public QuantUpdateScatterBase<VarType, IndicesType, UpdatesType, ScalesType, OffsetsType, DivMode,
+                                    CastRoundMode> {
 public:
     __aicore__ inline QuantUpdateScatterLargeBatchLargeQuantRegbase(){};
-    using Base =
-        QuantUpdateScatterBase<VarType, IndicesType, UpdatesType, ScalesType, OffsetsType, DivMode, CastRoundMode>;
+    using Base = QuantUpdateScatterBase<VarType, IndicesType, UpdatesType, ScalesType, OffsetsType, DivMode,
+                                        CastRoundMode>;
     constexpr static int64_t BUFFER_NUM = 2;
     TPipe pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueVar_;
@@ -58,9 +57,8 @@ public:
     int64_t gmZeroPointsOffset_ = 0;
     int64_t coreBsNum_ = 0;
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR quant_scales, GM_ADDR quant_zero_points, GM_ADDR out,
-        const QuantUpdateScatterTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR quant_scales,
+                                GM_ADDR quant_zero_points, GM_ADDR out, const QuantUpdateScatterTilingData* tiling)
     {
         Base::SetFloatOverflowModeForRegbase();
         blockIdx_ = GetBlockIdx();
@@ -76,13 +74,13 @@ public:
 
         int64_t bufferSize = tilingData_.innerLoopTimes != 0 ? tilingData_.innerLoopEle : tilingData_.innerLoopTail;
         pipe_.InitBuffer(inQueueIndices_, BUFFER_NUM, this->BLOCK_SIZE);
-        pipe_.InitBuffer(
-            inQueueUpdates_, BUFFER_NUM, this->CeilAlign(bufferSize * sizeof(UpdatesType), this->BLOCK_SIZE));
-        pipe_.InitBuffer(
-            inQueueScales_, BUFFER_NUM, this->CeilAlign(bufferSize * sizeof(ScalesType), this->BLOCK_SIZE));
+        pipe_.InitBuffer(inQueueUpdates_, BUFFER_NUM,
+                         this->CeilAlign(bufferSize * sizeof(UpdatesType), this->BLOCK_SIZE));
+        pipe_.InitBuffer(inQueueScales_, BUFFER_NUM,
+                         this->CeilAlign(bufferSize * sizeof(ScalesType), this->BLOCK_SIZE));
         if constexpr (!IsSameType<OffsetsType, bool>::value) {
-            pipe_.InitBuffer(
-                inQueueZeroPoints_, BUFFER_NUM, this->CeilAlign(bufferSize * sizeof(OffsetsType), this->BLOCK_SIZE));
+            pipe_.InitBuffer(inQueueZeroPoints_, BUFFER_NUM,
+                             this->CeilAlign(bufferSize * sizeof(OffsetsType), this->BLOCK_SIZE));
         }
 
         pipe_.InitBuffer(outQueueVar_, BUFFER_NUM, this->CeilAlign(bufferSize * sizeof(VarType), this->BLOCK_SIZE));
@@ -210,8 +208,8 @@ public:
             AscendC::MicroAPI::RegTensor<VarType> vregY;
 
             AscendC::MicroAPI::MaskReg mask;
-            AscendC::MicroAPI::MaskReg mask4Int4 =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+            AscendC::MicroAPI::MaskReg
+                mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
 
             mask = AscendC::MicroAPI::CreateMask<float>();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
@@ -232,8 +230,8 @@ public:
                 // ld and cast for scale
                 if constexpr (IsSameType<ScalesType, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                        vregFloatS, scaleLocalAddr + i * VL);
+                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatS,
+                                                                                               scaleLocalAddr + i * VL);
                 } else if constexpr (IsSameType<ScalesType, bfloat16_t>::value) {
                     // bf16
                     AscendC::MicroAPI::DataCopy<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
@@ -245,8 +243,8 @@ public:
                     // int32
                     AscendC::MicroAPI::DataCopy<OffsetsType, AscendC::MicroAPI::LoadDist::DIST_NORM>(
                         vregO, offsetLocalAddr + i * VL);
-                    AscendC::MicroAPI::Cast<float, OffsetsType, Base::CAST_TRAIT_INT32_TO_FP32>(
-                        vregFloatO, vregO, mask);
+                    AscendC::MicroAPI::Cast<float, OffsetsType, Base::CAST_TRAIT_INT32_TO_FP32>(vregFloatO, vregO,
+                                                                                                mask);
                 } else if constexpr (IsSameType<OffsetsType, bfloat16_t>::value) {
                     // bf16
                     AscendC::MicroAPI::DataCopy<OffsetsType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
@@ -262,8 +260,8 @@ public:
                     AscendC::MicroAPI::Mul(vregFloatY, vregFloatX, vregFloatS, mask);
                 }
                 if constexpr (!IsSameType<OffsetsType, bool>::value) {
-                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                        vregFloatY, vregFloatY, vregFloatO, mask);
+                    AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregFloatY, vregFloatY,
+                                                                                             vregFloatO, mask);
                 }
                 // cast and sd for y
                 if constexpr (IsSameType<VarType, hifloat8_t>::value) {
@@ -283,8 +281,8 @@ public:
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, int8_t>::value) {
                     // int8
-                    AscendC::MicroAPI::Cast<int16_t, float, Base::CAST_TRAIT_FP32_TO_INT16>(
-                        vregInt16Y, vregFloatY, mask);
+                    AscendC::MicroAPI::Cast<int16_t, float, Base::CAST_TRAIT_FP32_TO_INT16>(vregInt16Y, vregFloatY,
+                                                                                            mask);
                     AscendC::MicroAPI::Cast<half, int16_t, Base::CAST_TRAIT_INT16_TO_HALF>(vregHalfY, vregInt16Y, mask);
                     AscendC::MicroAPI::Cast<int8_t, half, Base::CAST_TRAIT_HALF_TO_INT8>(vregY, vregHalfY, mask);
                     AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
@@ -329,8 +327,8 @@ public:
             AscendC::MicroAPI::RegTensor<VarType> vregY;
 
             AscendC::MicroAPI::MaskReg mask;
-            AscendC::MicroAPI::MaskReg mask4Int4 =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+            AscendC::MicroAPI::MaskReg
+                mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
 
             mask = AscendC::MicroAPI::CreateMask<float>();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
@@ -351,8 +349,8 @@ public:
                 // ld and cast for scale
                 if constexpr (IsSameType<ScalesType, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                        vregFloatS, scaleLocalAddr + i * VL);
+                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatS,
+                                                                                               scaleLocalAddr + i * VL);
                 } else if constexpr (IsSameType<ScalesType, bfloat16_t>::value) {
                     // bf16
                     AscendC::MicroAPI::DataCopy<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
@@ -386,8 +384,8 @@ public:
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, int8_t>::value) {
                     // int8
-                    AscendC::MicroAPI::Cast<int16_t, float, Base::CAST_TRAIT_FP32_TO_INT16>(
-                        vregInt16Y, vregFloatY, mask);
+                    AscendC::MicroAPI::Cast<int16_t, float, Base::CAST_TRAIT_FP32_TO_INT16>(vregInt16Y, vregFloatY,
+                                                                                            mask);
                     AscendC::MicroAPI::Cast<half, int16_t, Base::CAST_TRAIT_INT16_TO_HALF>(vregHalfY, vregInt16Y, mask);
                     AscendC::MicroAPI::Cast<int8_t, half, Base::CAST_TRAIT_HALF_TO_INT8>(vregY, vregHalfY, mask);
                     AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
@@ -410,13 +408,13 @@ public:
         copyParams.srcStride = 0;
         copyParams.rsv = 0;
         LocalTensor<IndicesType> iLocal = inQueueIndices_.AllocTensor<IndicesType>();
-        DataCopyPad<IndicesType>(
-            iLocal, indicesGm_[updateDim0Idx * tilingData_.indicesShapeRank], copyParams, {false, 0, 0, 0});
+        DataCopyPad<IndicesType>(iLocal, indicesGm_[updateDim0Idx * tilingData_.indicesShapeRank], copyParams,
+                                 {false, 0, 0, 0});
         inQueueIndices_.EnQue(iLocal);
     }
 
-    __aicore__ inline void CalcDstOffset(
-        int64_t bsIdx, int64_t quantLoopIdx, int64_t innerIdx, LocalTensor<IndicesType> iLocal)
+    __aicore__ inline void CalcDstOffset(int64_t bsIdx, int64_t quantLoopIdx, int64_t innerIdx,
+                                         LocalTensor<IndicesType> iLocal)
     {
         event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);

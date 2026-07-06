@@ -23,25 +23,17 @@
 using namespace std;
 using namespace op;
 
-class l2_mm_test : public testing::Test
-{
+class l2_mm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_mm_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_mm_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_mm_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_mm_test TearDown" << endl; }
     static void MmCommonTest(TensorDesc a_desc, TensorDesc b_desc, TensorDesc out_desc, aclnnStatus expect_status)
     {
         int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-        auto ut = OP_API_UT(
-            aclnnMm,               // host api第二段接口名称
-            INPUT(a_desc, b_desc), // host api输入
-            OUTPUT(out_desc),
-            cubeMathType); // host api输出
+        auto ut = OP_API_UT(aclnnMm,               // host api第二段接口名称
+                            INPUT(a_desc, b_desc), // host api输入
+                            OUTPUT(out_desc),
+                            cubeMathType); // host api输出
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -246,16 +238,15 @@ TEST_F(l2_mm_test, ascend910B4_mmv3ndnz_test_fp16_false_false)
 {
     // 使用**Desc描述host api输入输出
     TensorDesc a_desc = TensorDesc({1, 8192}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-    TensorDesc b_desc =
-        TensorDesc({8192, 5120}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {5120, 1}, 0, {320, 80, 16, 16}).ValueRange(0, 2);
+    TensorDesc b_desc = TensorDesc({8192, 5120}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {5120, 1}, 0, {320, 80, 16, 16})
+                            .ValueRange(0, 2);
     TensorDesc out_desc = TensorDesc({1, 5120}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
     cout << "-----------Testing MMV3_B4_NDNZ trans_x1 = false trans_x2 = false ----------" << endl;
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    auto ut = OP_API_UT(
-        aclnnMm,               // host api第二段接口名称
-        INPUT(a_desc, b_desc), // host api输入
-        OUTPUT(out_desc),
-        cubeMathType); // host api输出
+    auto ut = OP_API_UT(aclnnMm,               // host api第二段接口名称
+                        INPUT(a_desc, b_desc), // host api输入
+                        OUTPUT(out_desc),
+                        cubeMathType); // host api输出
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -403,11 +394,10 @@ TEST_F(l2_mm_test, test_null_ptr_input)
     TensorDesc b_desc = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    auto ut = OP_API_UT(
-        aclnnMm,                            // host api第二段接口名称
-        INPUT((aclTensor*)nullptr, b_desc), // host api输入
-        OUTPUT(out_desc),
-        cubeMathType); // host api输出
+    auto ut = OP_API_UT(aclnnMm,                            // host api第二段接口名称
+                        INPUT((aclTensor*)nullptr, b_desc), // host api输入
+                        OUTPUT(out_desc),
+                        cubeMathType); // host api输出
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // todo: check op graph
@@ -437,11 +427,10 @@ TEST_F(l2_mm_test, test_aligned_fp32_false_true_1D_storage_shape)
 {
     // 使用**Desc描述host api输入输出
     TensorDesc a_desc = TensorDesc({256, 192}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-    TensorDesc b_t_desc = TensorDesc(
-                              {192, 576}, ACL_FLOAT, ACL_FORMAT_ND, {1, 192}, 0,
-                              {
-                                  110592,
-                              })
+    TensorDesc b_t_desc = TensorDesc({192, 576}, ACL_FLOAT, ACL_FORMAT_ND, {1, 192}, 0,
+                                     {
+                                         110592,
+                                     })
                               .ValueRange(0, 2);
     TensorDesc out_desc = TensorDesc({256, 576}, ACL_FLOAT, ACL_FORMAT_ND);
 
@@ -1040,7 +1029,9 @@ TEST_F(l2_mm_test, ascend910B2_test_splitk_fp16_fp16_fp16_0)
 {
     auto tensor_1_desc = TensorDesc({62080, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 384}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto out_tensor_desc = TensorDesc({62080, 384}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    auto out_tensor_desc = TensorDesc({62080, 384}, ACL_FLOAT16, ACL_FORMAT_ND)
+                               .ValueRange(-2, 2)
+                               .Precision(0.005, 0.005);
     int8_t cube_math_type = 2;
     auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
 
@@ -1053,7 +1044,9 @@ TEST_F(l2_mm_test, ascend910B2_test_splitk_fp16_fp16_fp16_1)
 {
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT16, ACL_FORMAT_ND)
+                               .ValueRange(-2, 2)
+                               .Precision(0.005, 0.005);
     int8_t cube_math_type = 2;
     auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
 
@@ -1068,7 +1061,9 @@ TEST_F(l2_mm_test, mm_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     auto tensor_1_desc = TensorDesc({384, 1536}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto tensor_2_desc = TensorDesc({1536, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    auto out_tensor_desc = TensorDesc({384, 62080}, ACL_FLOAT16, ACL_FORMAT_ND)
+                               .ValueRange(-2, 2)
+                               .Precision(0.005, 0.005);
     int8_t cube_math_type = -1;
     auto ut = OP_API_UT(aclnnMm, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
 

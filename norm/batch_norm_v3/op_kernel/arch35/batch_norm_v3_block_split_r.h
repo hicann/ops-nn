@@ -22,40 +22,34 @@
 
 namespace BatchNormV3Ops {
 using namespace AscendC;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::MemType;
+using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3BlockSplitR {
 public:
-    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
-    {
-        return (y != 0) ? (x + y - 1) / y : 0;
-    }
+    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y) { return (y != 0) ? (x + y - 1) / y : 0; }
 
-    __aicore__ inline uint32_t CEIL_ALIGN(uint32_t x, uint32_t y)
-    {
-        return CEIL_DIV(x, y) * y;
-    }
+    __aicore__ inline uint32_t CEIL_ALIGN(uint32_t x, uint32_t y) { return CEIL_DIV(x, y) * y; }
 
     __aicore__ inline BatchNormV3BlockSplitR(const BatchNormV3BlockSplitRTilingData* tilingDataIn)
     {
         tilingData = tilingDataIn;
-        this->unbiasedEstimationCoeff = tilingData->patternR == 1 ?
-            AscendC::NumericLimits<float>::QuietNaN() :
-            static_cast<float>(tilingData->patternR) / static_cast<float>(tilingData->patternR - 1);
+        this->unbiasedEstimationCoeff = tilingData->patternR == 1 ? AscendC::NumericLimits<float>::QuietNaN() :
+                                                                    static_cast<float>(tilingData->patternR) /
+                                                                        static_cast<float>(tilingData->patternR - 1);
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y, GM_ADDR mean_out, GM_ADDR var_out,
-        GM_ADDR batch_mean, GM_ADDR batch_rstd, GM_ADDR workspace)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
+                                GM_ADDR mean_out, GM_ADDR var_out, GM_ADDR batch_mean, GM_ADDR batch_rstd,
+                                GM_ADDR workspace)
     {
         blockIdx = GetBlockIdx();
         usedCoreNum = GetBlockNum();
@@ -173,34 +167,35 @@ public:
                 WaitFlag<HardEvent::V_MTE2>(eIdVecToMte2);
             }
             CopyInAllMeanVarPad(allMeanTensor, alllVarTensor, workspaceGm, aLoopOffset,
-                usedCoreNum * tilingData->patternAAlign + aLoopOffset, static_cast<uint32_t>(usedCoreNum),
-                static_cast<uint32_t>(currentAAlign), static_cast<uint32_t>(tilingData->patternAAlign));
+                                usedCoreNum * tilingData->patternAAlign + aLoopOffset,
+                                static_cast<uint32_t>(usedCoreNum), static_cast<uint32_t>(currentAAlign),
+                                static_cast<uint32_t>(tilingData->patternAAlign));
             SetFlag<HardEvent::MTE2_V>(eIdMte2ToVec);
             WaitFlag<HardEvent::MTE2_V>(eIdMte2ToVec);
             LocalTensor<float> batchMeanTensor = batchMeanQueue.AllocTensor<float>();
             LocalTensor<float> batchRstdTensor = batchRstdQueue.AllocTensor<float>();
             LastFinalizeVF(batchMeanTensor, batchRstdTensor, allMeanTensor, alllVarTensor, countTensor2, tmpTensor,
-                static_cast<uint32_t>(currentAAlign), VL_F32, static_cast<uint16_t>(currentA),
-                static_cast<uint16_t>(usedCoreNum), static_cast<uint16_t>(tilingData->lastBinaryAddQuotient),
-                static_cast<uint16_t>(tilingData->lastBinaryAddK),
-                static_cast<uint16_t>(tilingData->lastBinaryAddLast), this->lastNFactor,
-                this->lastNCorrectionFactor);
+                           static_cast<uint32_t>(currentAAlign), VL_F32, static_cast<uint16_t>(currentA),
+                           static_cast<uint16_t>(usedCoreNum), static_cast<uint16_t>(tilingData->lastBinaryAddQuotient),
+                           static_cast<uint16_t>(tilingData->lastBinaryAddK),
+                           static_cast<uint16_t>(tilingData->lastBinaryAddLast), this->lastNFactor,
+                           this->lastNCorrectionFactor);
             // 反向同步，最后一次循环前，都需要set
             if (aUbLoopIdx < tilingData->aUbLoop - 1) {
                 SetFlag<HardEvent::V_MTE2>(eIdVecToMte2);
             }
             LocalTensor<T_GAMMA> gammaTensor = gammaQueue.AllocTensor<T_GAMMA>();
             LocalTensor<T_GAMMA> betaTensor = betaQueue.AllocTensor<T_GAMMA>();
-            CopyInGammaBetaPad(
-                gammaTensor, betaTensor, gammaGm, betaGm, aLoopOffset, static_cast<uint32_t>(currentA));
+            CopyInGammaBetaPad(gammaTensor, betaTensor, gammaGm, betaGm, aLoopOffset, static_cast<uint32_t>(currentA));
             gammaQueue.EnQue(gammaTensor);
             betaQueue.EnQue(betaTensor);
             if (blockIdx == 0) {
                 uint16_t aLoop = CEIL_DIV(currentA, VL_F32);
-                UpdateRunningMeanVarCommon<T_RUNNING_MEAN>(batchMeanTensor, batchRstdTensor, runningMeanInQueue,
-                    runningVarInQueue, runningMeanOutQueue, runningVarOutQueue, runningMeanGm, runningVarGm,
-                    runningMeanOutGm, runningVarOutGm, aLoopOffset, static_cast<uint32_t>(currentA), aLoop, VL_F32,
-                    this->unbiasedEstimationCoeff, tilingData->momentum, tilingData->momentumReverse);
+                UpdateRunningMeanVarCommon<T_RUNNING_MEAN>(
+                    batchMeanTensor, batchRstdTensor, runningMeanInQueue, runningVarInQueue, runningMeanOutQueue,
+                    runningVarOutQueue, runningMeanGm, runningVarGm, runningMeanOutGm, runningVarOutGm, aLoopOffset,
+                    static_cast<uint32_t>(currentA), aLoop, VL_F32, this->unbiasedEstimationCoeff, tilingData->momentum,
+                    tilingData->momentumReverse);
             }
             gammaTensor = gammaQueue.DeQue<T_GAMMA>();
             betaTensor = betaQueue.DeQue<T_GAMMA>();
@@ -234,7 +229,6 @@ public:
     }
 
 private:
-
     __aicore__ inline void CaculateCountBuf(LocalTensor<float>& tCountTensor1, LocalTensor<float>& tCountTensor2)
     {
         __local_mem__ float* tmpCountLocal1 = (__local_mem__ float*)tCountTensor1.GetPhyAddr();
@@ -245,11 +239,11 @@ private:
         uint32_t tailNum = (blockIdx == (usedCoreNum - 1)) ? tilingData->tailR : 0;
         uint16_t baseLoopCount = CEIL_DIV(baseNum, VL_F32);
         uint16_t tailLoopCount = CEIL_DIV(tailNum, VL_F32);
-        float lastCoreAddCount =
-            static_cast<float>(tilingData->tailR + tilingData->tailCoreBlockFactor * tilingData->rUbFactor);
+        float lastCoreAddCount = static_cast<float>(tilingData->tailR +
+                                                    tilingData->tailCoreBlockFactor * tilingData->rUbFactor);
         if (tilingData->tailCoreNums == 0) {
-            lastCoreAddCount =
-                static_cast<float>(tilingData->tailR + tilingData->formerCoreBlockFactor * tilingData->rUbFactor);
+            lastCoreAddCount = static_cast<float>(tilingData->tailR +
+                                                  tilingData->formerCoreBlockFactor * tilingData->rUbFactor);
         }
         float tailCoreAddCount = static_cast<float>(tilingData->tailCoreBlockFactor * tilingData->rUbFactor);
         float formerCoreAddCount = static_cast<float>(tilingData->formerCoreBlockFactor * tilingData->rUbFactor);
@@ -317,8 +311,8 @@ private:
         DataCopyPad(xInUb, xGm[offset], copyInParams, dataCopyPadExtParams);
     }
 
-    __aicore__ inline void WelfordParallelUpdate(
-        int64_t& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, int64_t xGmOffset, uint32_t len)
+    __aicore__ inline void WelfordParallelUpdate(int64_t& count, LocalTensor<float>& meanTensor,
+                                                 LocalTensor<float>& m2Tensor, int64_t xGmOffset, uint32_t len)
     {
         // copy in x
         LocalTensor<T> xTensor = xQueue.AllocTensor<T>();
@@ -367,9 +361,9 @@ private:
         xQueue.FreeTensor(xTensor);
     }
 
-    __aicore__ inline void ProcessWelfordFinalize(
-        LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, LocalTensor<float>& countTensor,
-        LocalTensor<float>& finalMeanTensor, LocalTensor<float>& finalVarTensor, LocalTensor<float>& tmpTensor)
+    __aicore__ inline void ProcessWelfordFinalize(LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor,
+                                                  LocalTensor<float>& countTensor, LocalTensor<float>& finalMeanTensor,
+                                                  LocalTensor<float>& finalVarTensor, LocalTensor<float>& tmpTensor)
 
     {
         __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
@@ -378,15 +372,16 @@ private:
         __local_mem__ float* batchMeanInUbAddr = (__local_mem__ float*)finalMeanTensor.GetPhyAddr();
         __local_mem__ float* batchRstdInUbAddr = (__local_mem__ float*)finalVarTensor.GetPhyAddr();
         __local_mem__ float* tmpUbAddr = (__local_mem__ float*)tmpTensor.GetPhyAddr();
-        WelfordFinalizeMeanVF(
-            tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr, batchRstdInUbAddr, tmpUbAddr);
+        WelfordFinalizeMeanVF(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr, batchRstdInUbAddr,
+                              tmpUbAddr);
         WelfordFinalizeVarVF(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr, batchRstdInUbAddr, tmpUbAddr);
     }
 
-    __aicore__ inline void WelfordFinalizeMeanVF(
-        __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal, __local_mem__ float* tmpCountLocal,
-        __local_mem__ float* batchMeanInUbAddr, __local_mem__ float* batchRstdInUbAddr,
-        __local_mem__ float* binaryAddTmpAddr)
+    __aicore__ inline void WelfordFinalizeMeanVF(__local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
+                                                 __local_mem__ float* tmpCountLocal,
+                                                 __local_mem__ float* batchMeanInUbAddr,
+                                                 __local_mem__ float* batchRstdInUbAddr,
+                                                 __local_mem__ float* binaryAddTmpAddr)
     {
         uint16_t rLoopCount = tilingData->rUbFactor;
         uint16_t aLoopCount = CEIL_DIV(currentA, VL_F32);
@@ -435,18 +430,17 @@ private:
                     uint32_t remCountOffset = i * SCALE_COEF_FOUR + remainderCountOffset;
                     uint32_t quotCountOffset = i * SCALE_COEF_FOUR;
                     // 前两行
-                    TwoRowAddPartialMeanWithTail(
-                        x1, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset, remOffset, quotOffset + rLoopStride,
-                        remOffset + rLoopStride, quotCountOffset, remCountOffset, quotCountOffset + 1,
-                        remCountOffset + 1, rem, nextRow, remNextRow, rowCount, nextRowCount, remCount, nextRemCount,
-                        numScale);
+                    TwoRowAddPartialMeanWithTail(x1, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset, remOffset,
+                                                 quotOffset + rLoopStride, remOffset + rLoopStride, quotCountOffset,
+                                                 remCountOffset, quotCountOffset + 1, remCountOffset + 1, rem, nextRow,
+                                                 remNextRow, rowCount, nextRowCount, remCount, nextRemCount, numScale);
                     // 后两行
-                    TwoRowAddPartialMeanWithTail(
-                        x2, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize, remOffset + twoRLoopSize,
-                        quotOffset + threeRLoopSize, remOffset + threeRLoopSize, quotCountOffset + ROW_TWO_OFFSET,
-                        remCountOffset + ROW_TWO_OFFSET, quotCountOffset + ROW_THREE_OFFSET,
-                        remCountOffset + ROW_THREE_OFFSET, rem, nextRow, remNextRow, rowCount, nextRowCount, remCount,
-                        nextRemCount, numScale);
+                    TwoRowAddPartialMeanWithTail(x2, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize,
+                                                 remOffset + twoRLoopSize, quotOffset + threeRLoopSize,
+                                                 remOffset + threeRLoopSize, quotCountOffset + ROW_TWO_OFFSET,
+                                                 remCountOffset + ROW_TWO_OFFSET, quotCountOffset + ROW_THREE_OFFSET,
+                                                 remCountOffset + ROW_THREE_OFFSET, rem, nextRow, remNextRow, rowCount,
+                                                 nextRowCount, remCount, nextRemCount, numScale);
                     Add(x1, x1, x2, pregLoop);
                     DataCopy(((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), x1, pregLoop);
                 }
@@ -454,13 +448,12 @@ private:
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
                     uint32_t baseOffset = (remainderLoopCount + i) * baseLineOffset + aLoopOffset;
                     uint32_t baseCountOffset = (remainderLoopCount + i) * SCALE_COEF_FOUR;
-                    TwoRowAddPartialMean(
-                        x1, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset, baseOffset + rLoopStride,
-                        baseCountOffset, baseCountOffset + 1, rem, rowCount, nextRowCount, numScale);
-                    TwoRowAddPartialMean(
-                        x2, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
-                        baseOffset + threeRLoopSize, baseCountOffset + ROW_TWO_OFFSET,
-                        baseCountOffset + ROW_THREE_OFFSET, rem, rowCount, nextRowCount, numScale);
+                    TwoRowAddPartialMean(x1, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset,
+                                         baseOffset + rLoopStride, baseCountOffset, baseCountOffset + 1, rem, rowCount,
+                                         nextRowCount, numScale);
+                    TwoRowAddPartialMean(x2, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
+                                         baseOffset + threeRLoopSize, baseCountOffset + ROW_TWO_OFFSET,
+                                         baseCountOffset + ROW_THREE_OFFSET, rem, rowCount, nextRowCount, numScale);
                     Add(x1, x1, x2, pregLoop);
                     DataCopy(
                         ((__local_mem__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
@@ -468,9 +461,8 @@ private:
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 // 最后对2的幂次行 二分累加
-                BinaryAddVF(
-                    binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop, pregLoop,
-                    aLoopOffset, x1, x2, x3, x4);
+                BinaryAddVF(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
+                            pregLoop, aLoopOffset, x1, x2, x3, x4);
                 DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
                 Muls(x1, x1, scaleCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)batchMeanInUbAddr + aLoopOffset), x1, pregLoop);
@@ -478,10 +470,11 @@ private:
         }
     }
 
-    __aicore__ inline void WelfordFinalizeVarVF(
-        __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal, __local_mem__ float* tmpCountLocal,
-        __local_mem__ float* batchMeanInUbAddr, __local_mem__ float* batchRstdInUbAddr,
-        __local_mem__ float* binaryAddTmpAddr)
+    __aicore__ inline void WelfordFinalizeVarVF(__local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
+                                                __local_mem__ float* tmpCountLocal,
+                                                __local_mem__ float* batchMeanInUbAddr,
+                                                __local_mem__ float* batchRstdInUbAddr,
+                                                __local_mem__ float* binaryAddTmpAddr)
     {
         uint16_t rLoopCount = tilingData->rUbFactor;
         uint16_t aLoopCount = CEIL_DIV(currentA, VL_F32);
@@ -541,13 +534,13 @@ private:
                         quotOffset + rLoopStride, remOffset + rLoopStride, quotCountOffset, remCountOffset,
                         quotCountOffset + 1, remCountOffset + 1, saveMean, rem, nextRow, remNextRow, rowCount,
                         nextRowCount, remCount, nextRemCount, rowM2, nextRowM2, remM2, nextRemM2, numScale);
-                    TwoRowAddPartialVarWithTail(
-                        x2, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize,
-                        remOffset + twoRLoopSize, quotOffset + threeRLoopSize, remOffset + threeRLoopSize,
-                        quotCountOffset + ROW_TWO_OFFSET, remCountOffset + ROW_TWO_OFFSET,
-                        quotCountOffset + ROW_THREE_OFFSET, remCountOffset + ROW_THREE_OFFSET, saveMean, rem, nextRow,
-                        remNextRow, rowCount, nextRowCount, remCount, nextRemCount, rowM2, nextRowM2, remM2, nextRemM2,
-                        numScale);
+                    TwoRowAddPartialVarWithTail(x2, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop,
+                                                quotOffset + twoRLoopSize, remOffset + twoRLoopSize,
+                                                quotOffset + threeRLoopSize, remOffset + threeRLoopSize,
+                                                quotCountOffset + ROW_TWO_OFFSET, remCountOffset + ROW_TWO_OFFSET,
+                                                quotCountOffset + ROW_THREE_OFFSET, remCountOffset + ROW_THREE_OFFSET,
+                                                saveMean, rem, nextRow, remNextRow, rowCount, nextRowCount, remCount,
+                                                nextRemCount, rowM2, nextRowM2, remM2, nextRemM2, numScale);
                     Add(x1, x1, x2, pregLoop);
                     DataCopy(((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), x1, pregLoop);
                 }
@@ -555,24 +548,21 @@ private:
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
                     uint32_t baseOffset = (remainderLoopCount + i) * baseLineOffset + aLoopOffset;
                     uint32_t baseCountOffset = (remainderLoopCount + i) * SCALE_COEF_FOUR;
-                    TwoRowAddPartialVar(
-                        x1, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset, baseOffset + rLoopStride,
-                        baseCountOffset, baseCountOffset + 1, saveMean, rem, rowCount, nextRowCount, rowM2, remM2,
-                        numScale);
-                    TwoRowAddPartialVar(
-                        x2, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
-                        baseOffset + threeRLoopSize, baseCountOffset + ROW_TWO_OFFSET,
-                        baseCountOffset + ROW_THREE_OFFSET, saveMean, rem, rowCount, nextRowCount, rowM2, remM2,
-                        numScale);
+                    TwoRowAddPartialVar(x1, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset,
+                                        baseOffset + rLoopStride, baseCountOffset, baseCountOffset + 1, saveMean, rem,
+                                        rowCount, nextRowCount, rowM2, remM2, numScale);
+                    TwoRowAddPartialVar(x2, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop,
+                                        baseOffset + twoRLoopSize, baseOffset + threeRLoopSize,
+                                        baseCountOffset + ROW_TWO_OFFSET, baseCountOffset + ROW_THREE_OFFSET, saveMean,
+                                        rem, rowCount, nextRowCount, rowM2, remM2, numScale);
                     Add(x1, x1, x2, pregLoop);
                     DataCopy(
                         ((__local_mem__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
                         x1, pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                BinaryAddVF(
-                    binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop, pregLoop,
-                    aLoopOffset, x1, x2, x3, x4);
+                BinaryAddVF(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
+                            pregLoop, aLoopOffset, x1, x2, x3, x4);
                 DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
                 Muls(x1, x1, scaleCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)batchRstdInUbAddr + aLoopOffset), x1, pregLoop);
@@ -580,9 +570,9 @@ private:
         }
     }
 
-    __aicore__ inline void NormalizeX(
-        LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<T_GAMMA>& gammaTensor,
-        LocalTensor<T_GAMMA>& betaTensor, int64_t yGmOffset)
+    __aicore__ inline void NormalizeX(LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor,
+                                      LocalTensor<T_GAMMA>& gammaTensor, LocalTensor<T_GAMMA>& betaTensor,
+                                      int64_t yGmOffset)
     {
         LocalTensor<T> xTensor = xQueue.AllocTensor<T>();
         CopyInX(xTensor, yGmOffset);
@@ -597,9 +587,9 @@ private:
         yQueue.FreeTensor(yTensor);
     }
 
-    __aicore__ inline void CalcY(
-        LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<T_GAMMA>& gammaTensor,
-        LocalTensor<T_GAMMA>& betaTensor, LocalTensor<T>& xTensor, LocalTensor<T>& yTensor)
+    __aicore__ inline void CalcY(LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor,
+                                 LocalTensor<T_GAMMA>& gammaTensor, LocalTensor<T_GAMMA>& betaTensor,
+                                 LocalTensor<T>& xTensor, LocalTensor<T>& yTensor)
     {
         __local_mem__ float* batchMeanTensorAddr = (__local_mem__ float*)batchMeanTensor.GetPhyAddr();
         __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)batchRstdTensor.GetPhyAddr();
@@ -634,13 +624,13 @@ private:
                     if constexpr (IsSameType<T, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, NormCommon::castTraitB322B16>(yFp16, y, mask0);
-                        DataCopy<half, StoreDist::DIST_PACK_B32>(
-                            yTensorAddr + i * VL_F32 + j * currentAAlign, yFp16, mask0);
+                        DataCopy<half, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32 + j * currentAAlign, yFp16,
+                                                                 mask0);
                     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                         RegTensor<bfloat16_t> xBf16;
                         Cast<bfloat16_t, float, NormCommon::castTraitB322B16>(xBf16, y, mask0);
-                        DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(
-                            yTensorAddr + i * VL_F32 + j * currentAAlign, xBf16, mask0);
+                        DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32 + j * currentAAlign,
+                                                                       xBf16, mask0);
                     } else {
                         DataCopy(yTensorAddr + i * VL_F32 + j * currentAAlign, y, mask0);
                     }
@@ -701,7 +691,7 @@ private:
     static constexpr int64_t SCALE_COEF_FOUR = 4;
     static constexpr uint32_t ROW_THREE_OFFSET = 3;
     static constexpr uint32_t ROW_TWO_OFFSET = 2;
-    static constexpr uint32_t ROW_FOUR_OFFSET = 4;    /* ascendc variable */
+    static constexpr uint32_t ROW_FOUR_OFFSET = 4; /* ascendc variable */
     TQue<QuePosition::VECIN, 1> xQueue;
     TQue<QuePosition::VECIN, 1> gammaQueue;
     TQue<QuePosition::VECIN, 1> betaQueue;

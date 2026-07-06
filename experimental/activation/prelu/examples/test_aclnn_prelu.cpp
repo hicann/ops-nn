@@ -28,7 +28,7 @@
 enum class DataType { FLOAT32, FLOAT16, BFLOAT16 };
 
 // ============ 配置切换点 ============
-constexpr DataType kTestDataType = DataType::FLOAT16;  // 可选: DataType::FLOAT32, DataType::FLOAT16, DataType::BFLOAT16
+constexpr DataType kTestDataType = DataType::FLOAT16; // 可选: DataType::FLOAT32, DataType::FLOAT16, DataType::BFLOAT16
 // ===================================
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
@@ -92,31 +92,31 @@ float Float16ToFloat(uint16_t fp16)
     return *reinterpret_cast<float*>(&floatBits);
 }
 
-template<DataType T>
+template <DataType T>
 struct DataTypeTraits;
 
-template<>
+template <>
 struct DataTypeTraits<DataType::FLOAT32> {
     using T = float;
     static constexpr aclDataType aclType = ACL_FLOAT;
     static constexpr const char* name = "float32";
 };
 
-template<>
+template <>
 struct DataTypeTraits<DataType::BFLOAT16> {
     using T = uint16_t;
     static constexpr aclDataType aclType = ACL_BF16;
     static constexpr const char* name = "bfloat16";
 };
 
-template<>
+template <>
 struct DataTypeTraits<DataType::FLOAT16> {
     using T = uint16_t;
     static constexpr aclDataType aclType = ACL_FLOAT16;
     static constexpr const char* name = "float16";
 };
 
-template<DataType dtype>
+template <DataType dtype>
 void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr,
                     const std::vector<typename DataTypeTraits<dtype>::T>& selfXHostData,
                     const std::vector<typename DataTypeTraits<dtype>::T>& selfYHostData)
@@ -124,29 +124,24 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr,
     using T = typename DataTypeTraits<dtype>::T;
     auto size = std::min(GetShapeSize(shape), static_cast<int64_t>(10));
     std::vector<T> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]),
-        *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     LOG_PRINT("Notice: Only printing the first 10 elements. If you need to print more, please modify the code.\n");
 
     for (int64_t i = 0; i < size; i++) {
         if constexpr (dtype == DataType::FLOAT32) {
-            LOG_PRINT("prelu input1[%ld] is: %f, input2[%ld] is: %f, result[%ld] is: %f\n",
-                i, static_cast<float>(selfXHostData[i]),
-                i, static_cast<float>(selfYHostData[i]),
-                i, static_cast<float>(resultData[i]));
+            LOG_PRINT("prelu input1[%ld] is: %f, input2[%ld] is: %f, result[%ld] is: %f\n", i,
+                      static_cast<float>(selfXHostData[i]), i, static_cast<float>(selfYHostData[i]), i,
+                      static_cast<float>(resultData[i]));
         } else if constexpr (dtype == DataType::BFLOAT16) {
-            LOG_PRINT("prelu input1[%ld] is: %f, input2[%ld] is: %f, result[%ld] is: %f\n",
-                i, Bfloat16ToFloat(selfXHostData[i]),
-                i, Bfloat16ToFloat(selfYHostData[i]),
-                i, Bfloat16ToFloat(resultData[i]));
+            LOG_PRINT("prelu input1[%ld] is: %f, input2[%ld] is: %f, result[%ld] is: %f\n", i,
+                      Bfloat16ToFloat(selfXHostData[i]), i, Bfloat16ToFloat(selfYHostData[i]), i,
+                      Bfloat16ToFloat(resultData[i]));
         } else {
-            LOG_PRINT("prelu input1[%ld] is: %f, input2[%ld] is: %f, result[%ld] is: %f\n",
-                i, Float16ToFloat(selfXHostData[i]),
-                i, Float16ToFloat(selfYHostData[i]),
-                i, Float16ToFloat(resultData[i]));
+            LOG_PRINT("prelu input1[%ld] is: %f, input2[%ld] is: %f, result[%ld] is: %f\n", i,
+                      Float16ToFloat(selfXHostData[i]), i, Float16ToFloat(selfYHostData[i]), i,
+                      Float16ToFloat(resultData[i]));
         }
     }
 }
@@ -163,9 +158,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape,
-    void** deviceAddr, aclDataType dataType, aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -178,13 +172,12 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0,
-        aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
-template<DataType dtype>
+template <DataType dtype>
 int RunTest()
 {
     using T = typename DataTypeTraits<dtype>::T;

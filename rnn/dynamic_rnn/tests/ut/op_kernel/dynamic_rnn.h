@@ -42,18 +42,19 @@ struct DynamicRNNTilingData {
 #pragma pack()
 
 #if defined(__CCE_KT_TEST__) || defined(__TIK2_REPLAY__)
-inline void InitTilingData(uint8_t* tiling, DynamicRNNTilingData* const_data) {
+inline void InitTilingData(uint8_t* tiling, DynamicRNNTilingData* const_data)
+{
     memcpy(const_data, tiling, sizeof(DynamicRNNTilingData));
 }
 #else
 inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, DynamicRNNTilingData* const_data) {
     for (auto i = 0; i < sizeof(DynamicRNNTilingData) / 4; i++) {
-        *(int32_t *)((int32_t *)const_data + i) = *((__gm__ int32_t *)tiling + i);
+        *(int32_t*)((int32_t*)const_data + i) = *((__gm__ int32_t*)tiling + i);
     }
 }
 #endif
 
 #define GET_TILING_DATA(tiling_data, tiling_arg) \
-DynamicRNNTilingData tiling_data; \
-InitTilingData(tiling_arg, &tiling_data)
+    DynamicRNNTilingData tiling_data;            \
+    InitTilingData(tiling_arg, &tiling_data)
 #endif

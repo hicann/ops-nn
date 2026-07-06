@@ -27,28 +27,26 @@ static es::EsTensorHolder BuildConstNode(es::EsGraphBuilder& builder)
     std::string name = "Const_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Const")
-        .Name(name.c_str())
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Const")
+                     .Name(name.c_str())
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
 
-static es::EsTensorHolder BuildReshapeNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& x, const es::EsTensorHolder& shape)
+static es::EsTensorHolder BuildReshapeNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& x,
+                                           const es::EsTensorHolder& shape)
 {
     static int counter = 0;
     std::string name = "Reshape_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Reshape")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"shape", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Reshape")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"shape", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *shape.GetProducer(), shape.GetProducerOutIndex(), node, 1);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
@@ -60,15 +58,13 @@ static es::EsTensorHolder BuildBitcastNode(es::EsGraphBuilder& builder, const es
     std::string name = "Bitcast_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Bitcast")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .IrDefAttrs({
-            {"type", es::CompliantNodeBuilder::kEsAttrRequired, "Int",
-             es::CreateFrom(static_cast<int64_t>(dt))}
-        })
-        .Build();
+                     .OpType("Bitcast")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .IrDefAttrs({{"type", es::CompliantNodeBuilder::kEsAttrRequired, "Int",
+                                   es::CreateFrom(static_cast<int64_t>(dt))}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -79,11 +75,11 @@ static es::EsTensorHolder BuildNegNode(es::EsGraphBuilder& builder, const es::Es
     std::string name = "Neg_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Neg")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Neg")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -94,11 +90,11 @@ static es::EsTensorHolder BuildUnsqueezeNode(es::EsGraphBuilder& builder, const 
     std::string name = "Unsqueeze_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Unsqueeze")
-        .Name(name.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Unsqueeze")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -115,58 +111,47 @@ static DynamicQuantV2Result BuildDynamicQuantV2Node(es::EsGraphBuilder& builder,
     std::string name = "DynamicQuantV2_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("DynamicQuantV2")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-            {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-        })
-        .IrDefOutputs({
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"offset", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .Build();
+                     .OpType("DynamicQuantV2")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                   {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"offset", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
-    return {
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 2))
-    };
+    return {es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 2))};
 }
 
-static es::EsTensorHolder BuildScatterNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& var,
-    const es::EsTensorHolder& indices, const es::EsTensorHolder& updates, const char* reduce)
+static es::EsTensorHolder BuildScatterNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& var,
+                                           const es::EsTensorHolder& indices, const es::EsTensorHolder& updates,
+                                           const char* reduce)
 {
     static int counter = 0;
     std::string name = "Scatter_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Scatter")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"var", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .IrDefOutputs({{"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .IrDefAttrs({
-            {"reduce", es::CompliantNodeBuilder::kEsAttrOptional, "String",
-             es::CreateFrom(ge::AscendString(reduce))},
-            {"axis", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
-             es::CreateFrom(static_cast<int64_t>(0))}
-        })
-        .Build();
+                     .OpType("Scatter")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"var", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .IrDefAttrs({{"reduce", es::CompliantNodeBuilder::kEsAttrOptional, "String",
+                                   es::CreateFrom(ge::AscendString(reduce))},
+                                  {"axis", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
+                                   es::CreateFrom(static_cast<int64_t>(0))}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *var.GetProducer(), var.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *indices.GetProducer(), indices.GetProducerOutIndex(), node, 1);
     es::AddEdgeAndUpdatePeerDesc(*graph, *updates.GetProducer(), updates.GetProducerOutIndex(), node, 2);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
 
-class dynamic_quant_update_scatter_v2_test : public testing::Test
-{
+class dynamic_quant_update_scatter_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -325,7 +310,7 @@ TEST_F(dynamic_quant_update_scatter_v2_test, test_h_dim_too_large)
 {
     std::cout << "DynamicQuantUpdateScatterV2FusionPass test_h_dim_too_large" << std::endl;
 
-    std::vector<int64_t> dims_x{192, 1, 14968};  // h=14968 > 14960, not aligned to 8
+    std::vector<int64_t> dims_x{192, 1, 14968}; // h=14968 > 14960, not aligned to 8
     std::vector<int64_t> dims_indices{192};
     std::vector<int64_t> dims_input0{192, 1024, 1, 1871};
     std::vector<int64_t> dims_input1{192, 1024};

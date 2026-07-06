@@ -24,16 +24,31 @@ using namespace IndexPutV2;
 
 template <uint32_t SIZE>
 struct ComputeTypeBySize;
-template <> struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B8> { using type = int8_t; };
-template <> struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B16> { using type = half; };
-template <> struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B32> { using type = float; };
-template <> struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B64> { using type = int64_t; };
-template <> struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B128> { using type = int4; };
+template <>
+struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B8> {
+    using type = int8_t;
+};
+template <>
+struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B16> {
+    using type = half;
+};
+template <>
+struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B32> {
+    using type = float;
+};
+template <>
+struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B64> {
+    using type = int64_t;
+};
+template <>
+struct ComputeTypeBySize<INDEX_PUT_V2_TPL_B128> {
+    using type = int4;
+};
 
-template <uint32_t X_DTYPE, uint32_t FULL_LOAD_TYPE, bool IS_PERF, bool IS_SIMD, bool IS_NOCON,
-    bool IS_ACCUMULATE, bool IS_OVERLENGTH>
-__global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR indexedSizes,
-    GM_ADDR indexedStrides, GM_ADDR indices, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+template <uint32_t X_DTYPE, uint32_t FULL_LOAD_TYPE, bool IS_PERF, bool IS_SIMD, bool IS_NOCON, bool IS_ACCUMULATE,
+          bool IS_OVERLENGTH>
+__global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
+                                        GM_ADDR indices, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -55,12 +70,12 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
             Index::IndexSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(Index::IndexSimtTilingData, tilingData, tiling);
         using inputComputeType = typename ComputeTypeBySize<X_DTYPE>::type;
-        Index::KernelIndex<inputComputeType, Index::IndexPutAssign<inputComputeType>, DTYPE_INDICES, indexOffsetType> op;
+        Index::KernelIndex<inputComputeType, Index::IndexPutAssign<inputComputeType>, DTYPE_INDICES, indexOffsetType>
+            op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
-    } else if constexpr (!IS_NOCON && !IS_SIMD && IS_ACCUMULATE &&
-        !std::is_same<DTYPE_X, int4>::value && !std::is_same<DTYPE_X, int8_t>::value &&
-        !std::is_same<DTYPE_X, uint8_t>::value) {
+    } else if constexpr (!IS_NOCON && !IS_SIMD && IS_ACCUMULATE && !std::is_same<DTYPE_X, int4>::value &&
+                         !std::is_same<DTYPE_X, int8_t>::value && !std::is_same<DTYPE_X, uint8_t>::value) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == 0 && IS_NOCON == false && IS_SIMD == false && IS_ACCUMULATE == true",
             Index::IndexSimtTilingData);
@@ -68,9 +83,8 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
         Index::KernelIndex<DTYPE_X, Index::IndexPutAdd<DTYPE_X>, DTYPE_INDICES, indexOffsetType> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
-    // ---------------- Non-contiguous ---------------
-    } else if constexpr (IS_NOCON && !IS_ACCUMULATE &&
-        !std::is_same<DTYPE_X, int4>::value) {
+        // ---------------- Non-contiguous ---------------
+    } else if constexpr (IS_NOCON && !IS_ACCUMULATE && !std::is_same<DTYPE_X, int4>::value) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == 0 && IS_NOCON == true && IS_SIMD == false && IS_ACCUMULATE == false",
             Index::IndexNonContinuousTilingData);
@@ -78,9 +92,8 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
         Index::KernelIndexNoContiguous<DTYPE_X, Index::IndexPutAssign<DTYPE_X>, DTYPE_INDICES, indexOffsetType> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
-    } else if constexpr (IS_NOCON && IS_ACCUMULATE &&
-        !std::is_same<DTYPE_X, int4>::value && !std::is_same<DTYPE_X, int8_t>::value &&
-        !std::is_same<DTYPE_X, uint8_t>::value) {
+    } else if constexpr (IS_NOCON && IS_ACCUMULATE && !std::is_same<DTYPE_X, int4>::value &&
+                         !std::is_same<DTYPE_X, int8_t>::value && !std::is_same<DTYPE_X, uint8_t>::value) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == 0 && IS_NOCON == true && IS_SIMD == false && IS_ACCUMULATE == true",
             Index::IndexNonContinuousTilingData);
@@ -88,7 +101,7 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
         Index::KernelIndexNoContiguous<DTYPE_X, Index::IndexPutAdd<DTYPE_X>, DTYPE_INDICES, indexOffsetType> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData, value);
         op.Process();
-    // ---------------- SIMD -------------------------
+        // ---------------- SIMD -------------------------
     } else if constexpr (IS_SIMD && !IS_ACCUMULATE) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == 0 && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == false",
@@ -97,9 +110,8 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
         IndexPutV2Simd<DTYPE_X, DTYPE_INDICES, false> op;
         op.Init(inputX, value, indexedSizes, indexedStrides, indices, tilingData);
         op.Process();
-    } else if constexpr (IS_SIMD && IS_ACCUMULATE &&
-        !std::is_same<DTYPE_X, uint8_t>::value && !std::is_same<DTYPE_X, int64_t>::value &&
-        !std::is_same<DTYPE_X, bool>::value) {
+    } else if constexpr (IS_SIMD && IS_ACCUMULATE && !std::is_same<DTYPE_X, uint8_t>::value &&
+                         !std::is_same<DTYPE_X, int64_t>::value && !std::is_same<DTYPE_X, bool>::value) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == 0 && IS_SIMD == true && IS_NOCON == false && IS_ACCUMULATE == true",
             IndexPutV2SimdTilingData);

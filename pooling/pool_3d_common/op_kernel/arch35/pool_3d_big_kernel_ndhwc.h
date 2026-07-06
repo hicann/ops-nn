@@ -20,8 +20,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 using namespace AscendC;
 
 static constexpr int32_t NO_SPLIT_KERNEL = 0;
@@ -33,8 +32,7 @@ static constexpr int64_t GATHER_THRES = 32;
 static constexpr int64_t MOV_ALIGN_THRES = 128;
 
 template <typename T, int32_t OP_TYPE>
-class Pool3DNDHWCBigKernel
-{
+class Pool3DNDHWCBigKernel {
 public:
     __aicore__ inline Pool3DNDHWCBigKernel(TPipe* pipe, const Pool3DBigKernelNDHWCTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -43,26 +41,25 @@ public:
 
 private:
     __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkD, int64_t& curkH, int64_t& curkW,
-        int64_t& curInOffset);
+                                          int64_t& curInOffset);
     template <int32_t SPLIT_MODE>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx);
     __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t dLen, int64_t hLen, int64_t wLen,
-        int64_t blockLen);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t dLen, int64_t hLen, int64_t wLen, int64_t blockLen);
     __aicore__ inline void CopyInMultiRowsContiguous(int64_t offset, int64_t dLen, int64_t hLen, int64_t wLen,
-        int64_t blockLen);
+                                                     int64_t blockLen);
     __aicore__ inline void CopyMaxOut(int64_t curIdx);
     __aicore__ inline void CopyOutSingleRow(int64_t offset, int64_t blockLen);
     __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW,
-        int64_t curInOffset);
+                                                int64_t curInOffset);
     __aicore__ inline void SplitKernelDProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW,
-        int64_t curInOffset);
+                                               int64_t curInOffset);
     __aicore__ inline void SplitKernelHProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW,
-        int64_t curInOffset);
+                                               int64_t curInOffset);
     __aicore__ inline void SplitKernelWProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW,
-        int64_t curInOffset);
+                                               int64_t curInOffset);
     __aicore__ inline void SplitChannelProcess(int32_t curIdx, int64_t curkD, int64_t curkH, int64_t curkW,
-        int64_t curInOffset);
+                                               int64_t curInOffset);
     template <bool MERGE, bool IS_LAST_LOOP>
     __aicore__ inline void ComputeSingle(int32_t localCurIdx, int64_t loop, int64_t dataCount);
     template <bool MERGE, bool IS_LAST_LOOP>
@@ -77,10 +74,7 @@ private:
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
     __aicore__ inline void ComputeSum(LocalTensor<T>& xLocal, int64_t dataCount);
     __aicore__ inline void ComputeAvg(int64_t length);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
@@ -157,7 +151,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::Process()
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CalcKernelSize(int64_t curIdx, int64_t& curkD, int64_t& curkH,
-    int64_t& curkW, int64_t& curInOffset)
+                                                                        int64_t& curkW, int64_t& curInOffset)
 {
     int64_t cur3D = curIdx % outDHW_;
     int64_t curN = curIdx / outDHW_;
@@ -168,16 +162,20 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CalcKernelSize(int64_t 
 
     int64_t curkPadD = 0;
     CalcKernelSizeCore(ParamsForDim{tilingData_->dInDim, curDo, tilingData_->kD, tilingData_->sD, tilingData_->dD,
-        tilingData_->fPad, tilingData_->backPad}, curkD, curkPadD, curOriginD_);
+                                    tilingData_->fPad, tilingData_->backPad},
+                       curkD, curkPadD, curOriginD_);
     int64_t curkPadH = 0;
     CalcKernelSizeCore(ParamsForDim{tilingData_->hInDim, curHo, tilingData_->kH, tilingData_->sH, tilingData_->dH,
-        tilingData_->tPad, tilingData_->bottomPad}, curkH, curkPadH, curOriginH_);
+                                    tilingData_->tPad, tilingData_->bottomPad},
+                       curkH, curkPadH, curOriginH_);
     int64_t curkPadW = 0;
     CalcKernelSizeCore(ParamsForDim{tilingData_->wInDim, curWo, tilingData_->kW, tilingData_->sW, tilingData_->dW,
-        tilingData_->lPad, tilingData_->rPad}, curkW, curkPadW, curOriginW_);
+                                    tilingData_->lPad, tilingData_->rPad},
+                       curkW, curkPadW, curOriginW_);
 
     curOriginIndex_ = (curOriginD_ * tilingData_->hInDim * tilingData_->wInDim + curOriginH_ * tilingData_->wInDim +
-        curOriginW_) * tilingData_->channel;
+                       curOriginW_) *
+                      tilingData_->channel;
     curInOffset = curN * inDHW_ * tilingData_->channel + curOriginIndex_;
 
     if constexpr (OP_TYPE == OP_TYPE_AVG_POOL_3D) {
@@ -211,7 +209,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::BaseCompute(int64_t beg
             InitOutLocal<true>(localCurIdx); // need init when localCurIdx is 0
             SplitKernelDProcess(localCurIdx, curkD, curkH, curkW, curInOffset);
             CopyMaxOut(idx);
-        }  else if constexpr (SPLIT_MODE == SPLIT_KERNEL_H) {
+        } else if constexpr (SPLIT_MODE == SPLIT_KERNEL_H) {
             InitOutLocal<true>(localCurIdx); // need init when localCurIdx is 0
             SplitKernelHProcess(localCurIdx, curkD, curkH, curkW, curInOffset);
             CopyMaxOut(idx);
@@ -247,7 +245,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInSingleRow(int64_t
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInMultiRows(int64_t offset, int64_t dLen, int64_t hLen,
-    int64_t wLen, int64_t blockLen)
+                                                                         int64_t wLen, int64_t blockLen)
 {
     if (tilingData_->channel * sizeof(T) < GATHER_THRES) {
         CopyInMultiRowsContiguous(offset, dLen, hLen, wLen, tilingData_->channel);
@@ -267,7 +265,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
         padExtParams.leftPadding = 0;
         padExtParams.rightPadding = 0;
         padExtParams.paddingValue = 0;
-                                                 
+
         DataCopyExtParams extParams;
         extParams.blockCount = wLen;
         extParams.blockLen = blockLen * sizeof(T);
@@ -281,7 +279,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInMultiRowsContiguous(int64_t offset, int64_t dLen,
-    int64_t hLen, int64_t wLen, int64_t blockLen)
+                                                                                   int64_t hLen, int64_t wLen,
+                                                                                   int64_t blockLen)
 {
     bool isEnableMovAlign = ((wLen * blockLen) % eleBlockSize_) == 0 && (wLen * blockLen >= MOV_ALIGN_THRES);
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
@@ -300,14 +299,14 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInMultiRowsContiguo
         padExtParams.leftPadding = 0;
         padExtParams.rightPadding = 0;
         padExtParams.paddingValue = 0;
-                                                 
+
         DataCopyExtParams extParams;
         extParams.blockCount = wLen;
         extParams.blockLen = blockLen * sizeof(T);
         extParams.srcStride = inStrideW_ * sizeof(T);
         extParams.dstStride = 0;
         DataCopyPad<T, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
-        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);        
+        ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     } else {
         MultiCopyLoopInfo<FOUR> loopInfo;
         loopInfo.loopSize[0] = blockLen;
@@ -317,11 +316,12 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::CopyInMultiRowsContiguo
         loopInfo.loopSrcStride[0] = 1;
         loopInfo.loopSrcStride[1] = tilingData_->dW * tilingData_->channel;
         loopInfo.loopSrcStride[TWO] = tilingData_->dH * tilingData_->wInDim * tilingData_->channel;
-        loopInfo.loopSrcStride[THREE] = tilingData_->dD * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel;
+        loopInfo.loopSrcStride[THREE] = tilingData_->dD * tilingData_->hInDim * tilingData_->wInDim *
+                                        tilingData_->channel;
         loopInfo.loopDstStride[0] = 1;
         loopInfo.loopDstStride[1] = blockLen;
         loopInfo.loopDstStride[TWO] = wLen * blockLen;
-        loopInfo.loopDstStride[THREE] = hLen *  wLen * blockLen;
+        loopInfo.loopDstStride[THREE] = hLen * wLen * blockLen;
         MultiCopyParams<T, FOUR> dmaParams = {loopInfo, 0};
         DataCopy(xLocal, xGm_[offset], dmaParams);
     }
@@ -372,7 +372,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeAvg(int64_t leng
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkD,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+                                                                              int64_t curkH, int64_t curkW,
+                                                                              int64_t curInOffset)
 {
     if (curkD * curkH * curkW == 0) {
         return;
@@ -383,7 +384,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::NoSplitKernelProcess(in
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelDProcess(int32_t localCurIdx, int64_t curkD,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+                                                                             int64_t curkH, int64_t curkW,
+                                                                             int64_t curInOffset)
 {
     if (curkD * curkH * curkW == 0) {
         return;
@@ -395,8 +397,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelDProcess(int
 
     for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
         int32_t curDFactor = dLoop == dLoops - 1 ? dTail : dFactor;
-        int64_t inputOffset = curInOffset +
-            dLoop * dFactor * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel * tilingData_->dD;
+        int64_t inputOffset = curInOffset + dLoop * dFactor * tilingData_->hInDim * tilingData_->wInDim *
+                                                tilingData_->channel * tilingData_->dD;
         bool isLastLoop = dLoop == dLoops - 1;
         CopyInMultiRows(inputOffset, curDFactor, curkH, curkW, tilingData_->channel);
         if (!isLastLoop) {
@@ -409,7 +411,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelDProcess(int
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelHProcess(int32_t localCurIdx, int64_t curkD,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+                                                                             int64_t curkH, int64_t curkW,
+                                                                             int64_t curInOffset)
 {
     if (curkD * curkH * curkW == 0) {
         return;
@@ -421,7 +424,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelHProcess(int
     int64_t hTail = curkH - (hLoops - 1) * hFactor;
 
     for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
-        int64_t inputOffset = curInOffset + dLoop * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel * tilingData_->dD;
+        int64_t inputOffset = curInOffset + dLoop * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel *
+                                                tilingData_->dD;
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int32_t curhFactor = hLoop == hLoops - 1 ? hTail : hFactor;
             bool isLastLoop = hLoop == hLoops - 1 && dLoop == dLoops - 1;
@@ -438,7 +442,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelHProcess(int
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelWProcess(int32_t localCurIdx, int64_t curkD,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+                                                                             int64_t curkH, int64_t curkW,
+                                                                             int64_t curInOffset)
 {
     if (curkD * curkH * curkW == 0) {
         return;
@@ -451,7 +456,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitKernelWProcess(int
     int64_t wTail = curkW - (wLoops - 1) * wFactor;
 
     for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
-        int64_t dOffset = curInOffset + dLoop * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel * tilingData_->dD;
+        int64_t dOffset = curInOffset +
+                          dLoop * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel * tilingData_->dD;
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int64_t hOffset = dOffset + hLoop * tilingData_->wInDim * tilingData_->channel * tilingData_->dH;
             for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
@@ -501,7 +507,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSum(LocalTensor<
 
 template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitChannelProcess(int32_t curIdx, int64_t curkD,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+                                                                             int64_t curkH, int64_t curkW,
+                                                                             int64_t curInOffset)
 {
     if (curkD * curkH * curkW == 0) {
         InitOutLocal<true>(0);
@@ -525,8 +532,10 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::SplitChannelProcess(int
         int32_t curFactor = cLoop == cLoops - 1 ? cTail : cFactor;
         InitOutLocal<true>(0);
         for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
-            int64_t dOffset = curInOffset + tilingData_->dD * dLoop * tilingData_->hInDim * tilingData_->wInDim *
-                tilingData_->channel + cLoop * cFactor;
+            int64_t dOffset = curInOffset +
+                              tilingData_->dD * dLoop * tilingData_->hInDim * tilingData_->wInDim *
+                                  tilingData_->channel +
+                              cLoop * cFactor;
             for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
                 int64_t hOffset = dOffset + tilingData_->dH * hLoop * tilingData_->wInDim * tilingData_->channel;
                 for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
@@ -564,7 +573,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
 
-    if constexpr (!CLEAR) {  // kerel 全载场景无需merge，因此无需初始化output
+    if constexpr (!CLEAR) { // kerel 全载场景无需merge，因此无需初始化output
         return;
     }
     if constexpr (OP_TYPE == OP_TYPE_MAX_POOL_3D || std::is_same<T, float>::value) {
@@ -574,10 +583,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
         uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
         uint32_t num = maxLocalLen;
         __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
-        __VEC_SCOPE__
-        {
-            CustomDuplicate<T, OP_TYPE>(addr, num, repeatTimes);
-        }
+        __VEC_SCOPE__ { CustomDuplicate<T, OP_TYPE>(addr, num, repeatTimes); }
     } else {
         LocalTensor<float> sumLocal = sumBuf_.Get<float>();
         __local_mem__ float* dstAddr = (__local_mem__ float*)sumLocal.GetPhyAddr();
@@ -585,17 +591,14 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
         uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
         uint32_t num = maxLocalLen;
         __local_mem__ float* addr = (__local_mem__ float*)dstAddr;
-        __VEC_SCOPE__
-        {
-            CustomDuplicate<float, OP_TYPE>(addr, num, repeatTimes);
-        }
+        __VEC_SCOPE__ { CustomDuplicate<float, OP_TYPE>(addr, num, repeatTimes); }
     }
 }
 
 template <typename T, int32_t OP_TYPE>
 template <bool MERGE, bool IS_LAST_LOOP>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNorm(int32_t localCurIdx, int64_t loop,
-    int64_t dataCount)
+                                                                           int64_t dataCount)
 {
     LocalTensor<T> maxOutLocal = outputBuf_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -647,7 +650,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNorm(int32
 template <typename T, int32_t OP_TYPE>
 template <bool MERGE, bool IS_LAST_LOOP>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNormForAvgNotFp32(int32_t localCurIdx,
-    int64_t loop, int64_t dataCount)
+                                                                                        int64_t loop, int64_t dataCount)
 {
     LocalTensor<float> sumLocal = sumBuf_.Get<float>();
     LocalTensor<T> outLocal = outputBuf_.Get<T>();
@@ -704,7 +707,8 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleNormForAvg
 template <typename T, int32_t OP_TYPE>
 template <bool MERGE, bool IS_LAST_LOOP>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGatherForAvgNotFp32(int32_t localCurIdx,
-    int64_t loop, int64_t dataCount)
+                                                                                              int64_t loop,
+                                                                                              int64_t dataCount)
 {
     LocalTensor<float> sumLocal = sumBuf_.Get<float>();
     LocalTensor<T> outLocal = outputBuf_.Get<T>();
@@ -776,7 +780,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
 template <typename T, int32_t OP_TYPE>
 template <bool MERGE, bool IS_LAST_LOOP>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather(int32_t localCurIdx, int64_t loop,
-    int64_t dataCount)
+                                                                                 int64_t dataCount)
 {
     LocalTensor<T> maxOutLocal = outputBuf_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -830,7 +834,7 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingleWithGather
 template <typename T, int32_t OP_TYPE>
 template <bool MERGE, bool IS_LAST_LOOP>
 __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingle(int32_t localCurIdx, int64_t loop,
-    int64_t dataCount)
+                                                                       int64_t dataCount)
 {
     if (tilingData_->channel * sizeof(T) < GATHER_THRES) {
         if constexpr (OP_TYPE == OP_TYPE_MAX_POOL_3D || std::is_same<T, float>::value) {
@@ -847,5 +851,5 @@ __aicore__ inline void Pool3DNDHWCBigKernel<T, OP_TYPE>::ComputeSingle(int32_t l
     }
 }
 
-}  // namespace Pool3D
-#endif  // POOL_3D_NDHWC_BIG_KERNEL_H_
+} // namespace Pool3D
+#endif // POOL_3D_NDHWC_BIG_KERNEL_H_

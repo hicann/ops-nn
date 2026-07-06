@@ -26,15 +26,9 @@ struct GroupQuantCompileInfo {
 
 class GroupQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupQuantTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tilingData)
@@ -49,9 +43,8 @@ static string TilingData2Str(const gert::TilingData* tilingData)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -66,11 +59,12 @@ static void InitPlatForm(
     platformInfo.Init();
 }
 
-void GroupQuantTilingSimpleTest(
-    const int64_t dimS, const int64_t dimE, const int64_t dimH, const ge::DataType xDtype,
-    const ge::DataType scaleDtype, const ge::DataType groupIndexDtype, const ge::DataType offsetDtype,
-    const ge::DataType yDtype, const int64_t attrDstType, const bool hasOffset, const ge::graphStatus expectStatus,
-    const uint64_t expectTilingKey, const int64_t expectBlockDim, const string expectTilingData)
+void GroupQuantTilingSimpleTest(const int64_t dimS, const int64_t dimE, const int64_t dimH, const ge::DataType xDtype,
+                                const ge::DataType scaleDtype, const ge::DataType groupIndexDtype,
+                                const ge::DataType offsetDtype, const ge::DataType yDtype, const int64_t attrDstType,
+                                const bool hasOffset, const ge::graphStatus expectStatus,
+                                const uint64_t expectTilingKey, const int64_t expectBlockDim,
+                                const string expectTilingData)
 {
     fe::PlatFormInfos platformInfo;
     map<string, string> socInfos;
@@ -109,19 +103,19 @@ void GroupQuantTilingSimpleTest(
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -177,9 +171,8 @@ TEST_F(GroupQuantTiling, tiling_demo_case)
     uint64_t expectTilingKey = 0;
     int64_t expectBlockDim = 6;
     string expectTilingData = "6 4 4 1 6 6 1 1 ";
-    GroupQuantTilingSimpleTest(
-        dimS, dimE, dimH, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT8, attrDstType, hasOffset,
-        expectStatus, expectTilingKey, expectBlockDim, expectTilingData);
+    GroupQuantTilingSimpleTest(dimS, dimE, dimH, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT8,
+                               attrDstType, hasOffset, expectStatus, expectTilingKey, expectBlockDim, expectTilingData);
 }
 
 TEST_F(GroupQuantTiling, tiling_net_case_full_s5120_e32_h1024)
@@ -193,9 +186,8 @@ TEST_F(GroupQuantTiling, tiling_net_case_full_s5120_e32_h1024)
     uint64_t expectTilingKey = 0;
     int64_t expectBlockDim = 48;
     string expectTilingData = "5120 32 1024 1 48 32 107 106 ";
-    GroupQuantTilingSimpleTest(
-        dimS, dimE, dimH, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT8, attrDstType, hasOffset,
-        expectStatus, expectTilingKey, expectBlockDim, expectTilingData);
+    GroupQuantTilingSimpleTest(dimS, dimE, dimH, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT8,
+                               attrDstType, hasOffset, expectStatus, expectTilingKey, expectBlockDim, expectTilingData);
 }
 
 TEST_F(GroupQuantTiling, tiling_net_case_incremental_s80_e32_h1024)
@@ -209,7 +201,6 @@ TEST_F(GroupQuantTiling, tiling_net_case_incremental_s80_e32_h1024)
     uint64_t expectTilingKey = 0;
     int64_t expectBlockDim = 48;
     string expectTilingData = "80 32 1024 1 48 32 2 1 ";
-    GroupQuantTilingSimpleTest(
-        dimS, dimE, dimH, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT8, attrDstType, hasOffset,
-        expectStatus, expectTilingKey, expectBlockDim, expectTilingData);
+    GroupQuantTilingSimpleTest(dimS, dimE, dimH, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT8,
+                               attrDstType, hasOffset, expectStatus, expectTilingKey, expectBlockDim, expectTilingData);
 }

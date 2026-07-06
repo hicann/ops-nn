@@ -30,7 +30,7 @@ struct AdaLayerNormV2OutputTensor {
     bool useV2;
 };
 
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> AdaLayerNormV2(AdaLayerNormV2InputTensor inputTensor, 
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> AdaLayerNormV2(AdaLayerNormV2InputTensor inputTensor,
                                                                     float epsilon, aclOpExecutor* executor);
 } // namespace l0op
 

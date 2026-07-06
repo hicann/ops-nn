@@ -30,16 +30,16 @@ ge::graphStatus Conv2dBaseTiling::CheckC04Mdc()
     if (descInfo_.weightDtype != ge::DataType::DT_FLOAT && descInfo_.weightDtype != ge::DataType::DT_FLOAT16 &&
         descInfo_.weightDtype != ge::DataType::DT_BF16) {
         std::string reasonMsg = "If the format of input filter is " + Ops::Base::ToString(descInfo_.weightFormat) +
-            ", the dtype of input filter must be float16 or float32 or bfloat16";
+                                ", the dtype of input filter must be float16 or float32 or bfloat16";
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeType(), "filter",
-            Ops::Base::ToString(descInfo_.weightDtype).c_str(), reasonMsg.c_str());
+                                              Ops::Base::ToString(descInfo_.weightDtype).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     if (attrInfo_.groups > 1) {
         std::string reasonMsg = "If the format of input filter is " + Ops::Base::ToString(descInfo_.weightFormat) +
-                    ", parameter groups must be 1";
+                                ", parameter groups must be 1";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "groups",
-            std::to_string(attrInfo_.groups).c_str(), reasonMsg.c_str());
+                                              std::to_string(attrInfo_.groups).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -47,10 +47,12 @@ ge::graphStatus Conv2dBaseTiling::CheckC04Mdc()
         stringstream ss;
         ss << "If the format of input filter is %s, ";
         ss << "the shape[%zu] of input filter must be less than or equal to %lu";
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString(ss.str().c_str(), Ops::Base::ToString(descInfo_.weightFormat).c_str(),
-            paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], C04_CIN_SIZE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], C04_CIN_SIZE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -93,7 +95,8 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
     uint64_t load3dPoskLimit = MAX_16_BIT_NUM;
     uint64_t load3dPosk = shapeInfo_.kh * shapeInfo_.kw * k0;
     if (load3dPosk > load3dPoskLimit) {
-        OP_LOGD(context_->GetNodeName(),
+        OP_LOGD(
+            context_->GetNodeName(),
             "%s AscendC: Weight shape does not satisfy Load3D's limits: kH(%lu)*kW(%lu)*k0(%u)=%lu, which must <= %lu.",
             paramInfo_.nodeType.c_str(), shapeInfo_.kh, shapeInfo_.kw, k0, load3dPosk, load3dPoskLimit);
         return ge::GRAPH_FAILED;
@@ -101,7 +104,6 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
 
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus Conv2dBaseTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
 {
@@ -113,22 +115,22 @@ ge::graphStatus Conv2dBaseTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
     uint64_t scaleUsedL1Size = ConvAlignB(
         static_cast<uint64_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE);
     uint64_t kBL1min = isC04 ? ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-        convOpsConstParams_.k0 * shapeInfo_.kh * shapeInfo_.kw;
+                               convOpsConstParams_.k0 * shapeInfo_.kh * shapeInfo_.kw;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
 
     uint64_t fmapUsedL1Size = 0;
-    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
-                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t hoAL1min = std::min(
+        shapeInfo_.wo < convOpsConstParams_.m0 ? ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
     uint64_t kAL1min = isC04 ? C04_CIN_SIZE : convOpsConstParams_.k0;
     uint64_t woAL1min = convOpsConstParams_.m0;
     uint64_t wiAL1min = ConvInferWiL1(woAL1min, shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
     fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
- 
+
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
     if (minL1LoadSize > opInfo_->l1Size) {
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+                "%s AscendC: KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
                 context_->GetNodeType(), minL1LoadSize, opInfo_->l1Size);
         return ge::GRAPH_FAILED;
     }
@@ -143,9 +145,10 @@ ge::graphStatus Conv2dBaseTiling::CheckInstructionLimits()
         uint64_t loadAL1loop1SrcStride = shapeInfo_.hi * shapeInfo_.wi * dtypeSizeTab.at(descInfo_.fMapDtype);
         if (descInfo_.fMapFormat == ge::FORMAT_NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
             OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: Fmap shape exceeds DataCopy's limits: hi(%lu)*wi(%lu)*datatype size(%u)=%lu, which must <= %lu",
-                paramInfo_.nodeType.c_str(), shapeInfo_.hi, shapeInfo_.wi, dtypeSizeTab.at(descInfo_.fMapDtype),
-                loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
+                    "%s AscendC: Fmap shape exceeds DataCopy's limits: hi(%lu)*wi(%lu)*datatype size(%u)=%lu, which "
+                    "must <= %lu",
+                    paramInfo_.nodeType.c_str(), shapeInfo_.hi, shapeInfo_.wi, dtypeSizeTab.at(descInfo_.fMapDtype),
+                    loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
             return ge::GRAPH_FAILED;
         }
     }
@@ -159,11 +162,13 @@ ge::graphStatus Conv2dBaseTiling::CheckInstructionLimits()
             ss << "If the format of input x is NCHW, ";
             ss << "the constraint of instruction %s must be met: ";
             ss << "shape[%zu] * shape [%zu] ≤ %ld";
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeType(), "y",
                 VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
                 FormatString(ss.str().c_str(), "Fixpipe",
-                    paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX],
-                    paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX]).c_str());
+                             paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX],
+                             paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX])
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -180,18 +185,20 @@ ge::graphStatus Conv2dBaseTiling::CheckDisContinuousInstrLimits()
         ss << "If input x is a non-contiguous tensor, ";
         ss << "the constraint of instruction %s must be met: ";
         ss << "shape[%zu] * shape [%zu] ≤ %ld";
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
-            FormatString(ss.str().c_str(), "ND2NZ",
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX],
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX]).c_str());
+            FormatString(ss.str().c_str(), "ND2NZ", paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX],
+                         paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX])
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckL0c2GmNZ2NDInstrLimits() {
+ge::graphStatus Conv2dBaseTiling::CheckL0c2GmNZ2NDInstrLimits()
+{
     // loop3_dst_stride limits check
     uint64_t fixpipeLoop3DstStrideLimit = MAX_32_BIT_NUM;
     uint64_t fixpipeLoop3DstStride = shapeInfo_.wo * shapeInfo_.co;
@@ -200,22 +207,24 @@ ge::graphStatus Conv2dBaseTiling::CheckL0c2GmNZ2NDInstrLimits() {
         ss << "If the format of input x is NHWC, ";
         ss << "the constraint of instruction %s must be met: ";
         ss << "shape[%zu] * shape [%zu] ≤ %ld";
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
-            FormatString(ss.str().c_str(), "Fixpipe",
-                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX],
-                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX]).c_str());
+            FormatString(ss.str().c_str(), "Fixpipe", paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX],
+                         paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX])
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckNHWCDataCopyLimits() {
+ge::graphStatus Conv2dBaseTiling::CheckNHWCDataCopyLimits()
+{
     if (paramInfo_.paramsFormat[paramInfo_.FMAP_PARAM_IDX] != ge::FORMAT_NHWC) {
         return ge::GRAPH_SUCCESS;
     }
     return CheckL0c2GmNZ2NDInstrLimits();
 }
 
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

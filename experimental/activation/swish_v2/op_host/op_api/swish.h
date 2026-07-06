@@ -15,8 +15,8 @@
 
 namespace l0op {
 
-const aclTensor *SwishV2(const aclTensor *self, float scale, aclOpExecutor *executor);
+const aclTensor* SwishV2(const aclTensor* self, float scale, aclOpExecutor* executor);
 
-}  // namespace l0op
+} // namespace l0op
 
 #endif

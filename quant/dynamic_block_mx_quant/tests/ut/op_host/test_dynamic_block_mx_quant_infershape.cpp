@@ -24,16 +24,13 @@ using namespace ge;
 
 class DynamicBlockMxQuantTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "dynamic_block_mx_quant test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "dynamic_block_mx_quant test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "dynamic_block_mx_quant test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "dynamic_block_mx_quant test TearDown" << std::endl; }
 };
 
-TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferShape_case_1) {
+TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferShape_case_1)
+{
     ge::op::DynamicBlockMxQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({128, 128});
@@ -56,7 +53,8 @@ TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferShape_case_1) {
     EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expected_scale2_shape);
 }
 
-TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferShape_case_2) {
+TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferShape_case_2)
+{
     ge::op::DynamicBlockMxQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({32, 128, 128});
@@ -94,9 +92,8 @@ TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferDtype_case_1)
                                   .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(2, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                                   .InputDataTypes({&input_x_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();
@@ -126,9 +123,8 @@ TEST_F(DynamicBlockMxQuantTest, DynamicBlockMxQuant_InferDtype_error_case)
                                   .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(2, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
+                                  .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
                                   .InputDataTypes({&input_x_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();

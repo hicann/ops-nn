@@ -33,12 +33,10 @@ static ge::graphStatus InferShape4LambApplyWeightAssign(gert::InferShapeContext*
     auto output_shape = context->GetOutputShape(OUTPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
 
-    OP_CHECK_IF(
-        !BroadcastShape(update_shape, param_shape, output_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*update_shape).c_str(),
-            ToString(*param_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(update_shape, param_shape, output_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*update_shape).c_str(),
+                        ToString(*param_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
 }

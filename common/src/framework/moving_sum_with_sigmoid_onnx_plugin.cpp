@@ -36,15 +36,12 @@ static Status ParseParamsMovingSumWithSigmoid(const Message* op_src, ge::Operato
 
 REGISTER_CUSTOM_OP("MovingSumWithSigmoid")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::MovingSumWithSigmoid"), 
-                   ge::AscendString("ai.onnx::9::MovingSumWithSigmoid"), 
-                   ge::AscendString("ai.onnx::10::MovingSumWithSigmoid"),
-                   ge::AscendString("ai.onnx::11::MovingSumWithSigmoid"), 
-                   ge::AscendString("ai.onnx::12::MovingSumWithSigmoid"), 
-                   ge::AscendString("ai.onnx::13::MovingSumWithSigmoid"),
-                   ge::AscendString("ai.onnx::14::MovingSumWithSigmoid"), 
-                   ge::AscendString("ai.onnx::15::MovingSumWithSigmoid"), 
-                   ge::AscendString("ai.onnx::16::MovingSumWithSigmoid")})
+    .OriginOpType(
+        {ge::AscendString("ai.onnx::8::MovingSumWithSigmoid"), ge::AscendString("ai.onnx::9::MovingSumWithSigmoid"),
+         ge::AscendString("ai.onnx::10::MovingSumWithSigmoid"), ge::AscendString("ai.onnx::11::MovingSumWithSigmoid"),
+         ge::AscendString("ai.onnx::12::MovingSumWithSigmoid"), ge::AscendString("ai.onnx::13::MovingSumWithSigmoid"),
+         ge::AscendString("ai.onnx::14::MovingSumWithSigmoid"), ge::AscendString("ai.onnx::15::MovingSumWithSigmoid"),
+         ge::AscendString("ai.onnx::16::MovingSumWithSigmoid")})
     .ParseParamsFn(ParseParamsMovingSumWithSigmoid)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

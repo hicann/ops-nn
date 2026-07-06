@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -37,12 +36,8 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        this->Attr("sigma")
-            .AttrType(OPTIONAL)
-            .Float();
-        this->Attr("reduction")
-            .AttrType(OPTIONAL)
-            .String();
+        this->Attr("sigma").AttrType(OPTIONAL).Float();
+        this->Attr("reduction").AttrType(OPTIONAL).String();
         this->AICore().AddConfig("ascend910b");
     }
 };

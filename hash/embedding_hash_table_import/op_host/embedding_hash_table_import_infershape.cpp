@@ -31,35 +31,33 @@ static constexpr int64_t VALUES_IDX = 6;
 
 static constexpr int64_t INPUT_NODE_NUM = 7;
 
-ge::graphStatus Infershape4EmbeddingHashTableImport(gert::InferShapeContext *context)
+ge::graphStatus Infershape4EmbeddingHashTableImport(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do EmbeddingHashTableImportInfershape.");
 
     // 获取输入值shape
-    const gert::Shape *tableHandleShape = context->GetRequiredInputShape(TABLE_HANDLES_IDX);
+    const gert::Shape* tableHandleShape = context->GetRequiredInputShape(TABLE_HANDLES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, tableHandleShape);
 
-    OP_CHECK_IF(
-        tableHandleShape->GetDimNum() > 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context->GetNodeName(), "table_handles", std::to_string(tableHandleShape->GetDimNum()).c_str(), "1D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tableHandleShape->GetDimNum() > 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "table_handles",
+                                             std::to_string(tableHandleShape->GetDimNum()).c_str(), "1D"),
+                return ge::GRAPH_FAILED);
 
-    const gert::Shape *embeddingDimShape = context->GetRequiredInputShape(EMBEDDING_DIMS_IDX);
+    const gert::Shape* embeddingDimShape = context->GetRequiredInputShape(EMBEDDING_DIMS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimShape);
     auto embeddingDimCount = embeddingDimShape->GetShapeSize();
 
-    const gert::Shape *bucketSizeShape = context->GetRequiredInputShape(BUCKET_SIZES_IDX);
+    const gert::Shape* bucketSizeShape = context->GetRequiredInputShape(BUCKET_SIZES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSizeShape);
     auto bucketSizeCount = bucketSizeShape->GetShapeSize();
 
-    OP_CHECK_IF(
-        embeddingDimCount != bucketSizeCount,
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-            context->GetNodeName(), "embedding_dims and bucket_sizes",
-            (std::to_string(embeddingDimCount) + " and " + std::to_string(bucketSizeCount)).c_str(),
-            "The shape sizes of embedding_dims and bucket_sizes must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(embeddingDimCount != bucketSizeCount,
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context->GetNodeName(), "embedding_dims and bucket_sizes",
+                    (std::to_string(embeddingDimCount) + " and " + std::to_string(bucketSizeCount)).c_str(),
+                    "The shape sizes of embedding_dims and bucket_sizes must be the same"),
+                return ge::GRAPH_FAILED);
 
     // 获取动态输入值shape
     const auto keysInfo = context->GetIrInputInstanceInfo(KEYS_IDX);
@@ -91,60 +89,52 @@ ge::graphStatus Infershape4EmbeddingHashTableImport(gert::InferShapeContext *con
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContext *context)
+ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do EmbeddingHashTableImportInferDataType.");
     auto computeNodeInfo = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfo);
-    int64_t totalInNum = computeNodeInfo->GetIrInputsNum();    
+    int64_t totalInNum = computeNodeInfo->GetIrInputsNum();
     if (!(totalInNum == INPUT_NODE_NUM)) {
         OP_LOGE(context->GetNodeName(), "Check input nums failed, actual InputNum is %ld", totalInNum);
         return GRAPH_FAILED;
     }
-    auto tableHandleDtype = context->GetInputDataType(TABLE_HANDLES_IDX);    // table_handle
-    OP_CHECK_IF(
-        tableHandleDtype != DT_INT64,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "table_handle", ge::TypeUtils::DataTypeToSerialString(tableHandleDtype).c_str(),
-            "int64"),
-        return ge::GRAPH_FAILED);
+    auto tableHandleDtype = context->GetInputDataType(TABLE_HANDLES_IDX); // table_handle
+    OP_CHECK_IF(tableHandleDtype != DT_INT64,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "table_handle",
+                                          ge::TypeUtils::DataTypeToSerialString(tableHandleDtype).c_str(), "int64"),
+                return ge::GRAPH_FAILED);
 
-    auto embeddingDimsDtype = context->GetInputDataType(EMBEDDING_DIMS_IDX);  // embedding_dims
-    OP_CHECK_IF(
-        embeddingDimsDtype != DT_INT64,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "embedding_dims", ge::TypeUtils::DataTypeToSerialString(embeddingDimsDtype).c_str(),
-            "int64"),
-        return ge::GRAPH_FAILED);
+    auto embeddingDimsDtype = context->GetInputDataType(EMBEDDING_DIMS_IDX); // embedding_dims
+    OP_CHECK_IF(embeddingDimsDtype != DT_INT64,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "embedding_dims",
+                                          ge::TypeUtils::DataTypeToSerialString(embeddingDimsDtype).c_str(), "int64"),
+                return ge::GRAPH_FAILED);
 
-    auto bucketSizesDtype = context->GetInputDataType(BUCKET_SIZES_IDX);     // bucket_sizes
-    OP_CHECK_IF(
-        bucketSizesDtype != DT_INT64,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "bucket_sizes", ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(),
-            "int64"),
-        return ge::GRAPH_FAILED);
+    auto bucketSizesDtype = context->GetInputDataType(BUCKET_SIZES_IDX); // bucket_sizes
+    OP_CHECK_IF(bucketSizesDtype != DT_INT64,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "bucket_sizes",
+                                          ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(), "int64"),
+                return ge::GRAPH_FAILED);
 
-    const auto keysInfo = context->GetIrInputInstanceInfo(KEYS_IDX);         // keys
+    const auto keysInfo = context->GetIrInputInstanceInfo(KEYS_IDX); // keys
     for (uint32_t i = 0; i < keysInfo->GetInstanceNum(); i++) {
         auto keysDtype = context->GetDynamicInputDataType(KEYS_IDX, i);
-        OP_CHECK_IF(
-            keysDtype != DT_INT64,
-            OP_LOGE_FOR_INVALID_DTYPE(
-                context->GetNodeName(), "keys", ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(),
-                "int64"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(keysDtype != DT_INT64,
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "keys",
+                                              ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(), "int64"),
+                    return ge::GRAPH_FAILED);
     }
 
     const auto countersInfo = context->GetIrInputInstanceInfo(COUNTERS_IDX); // counters
     for (uint32_t i = 0; i < countersInfo->GetInstanceNum(); i++) {
         auto countersDtype = context->GetDynamicInputDataType(COUNTERS_IDX, i);
-        if(countersDtype != DT_UINT64){
+        if (countersDtype != DT_UINT64) {
             std::string errMsg = "The dtype of " + std::to_string(i) +
-                "th tensor in tensor list counters must be uint64";
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                context->GetNodeName(), "counters", ge::TypeUtils::DataTypeToSerialString(countersDtype).c_str(),
-                errMsg.c_str());
+                                 "th tensor in tensor list counters must be uint64";
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "counters",
+                                                  ge::TypeUtils::DataTypeToSerialString(countersDtype).c_str(),
+                                                  errMsg.c_str());
         }
     }
 
@@ -153,10 +143,10 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
         auto filterFlagsDtype = context->GetDynamicInputDataType(FILTER_FLAGS_IDX, i);
         if (filterFlagsDtype != DT_UINT8) {
             std::string errMsg = "The dtype of " + std::to_string(i) +
-                "th tensor in tensor list filter_flags must be uint8";
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                context->GetNodeName(), "filter_flags", ge::TypeUtils::DataTypeToSerialString(filterFlagsDtype).c_str(),
-                errMsg.c_str());
+                                 "th tensor in tensor list filter_flags must be uint8";
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "filter_flags",
+                                                  ge::TypeUtils::DataTypeToSerialString(filterFlagsDtype).c_str(),
+                                                  errMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -165,11 +155,10 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
     for (uint32_t i = 0; i < valuesInfo->GetInstanceNum(); i++) {
         auto valuesDtype = context->GetDynamicInputDataType(VALUES_IDX, i);
         if (valuesDtype != DT_FLOAT) {
-            std::string errMsg = "The dtype of " + std::to_string(i) +
-                "th tensor in tensor list values must be float";
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                context->GetNodeName(), "values", ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(),
-                errMsg.c_str());
+            std::string errMsg = "The dtype of " + std::to_string(i) + "th tensor in tensor list values must be float";
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "values",
+                                                  ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(),
+                                                  errMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }

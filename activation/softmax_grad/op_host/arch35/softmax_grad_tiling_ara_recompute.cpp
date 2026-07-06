@@ -11,8 +11,7 @@
 #include "softmax_grad_tiling.h"
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
 constexpr int64_t DEFAULT_BIN_ADD_R_FACTOR = 128;
 
@@ -20,9 +19,9 @@ bool SoftmaxGradARARecomputeTiling::IsCapable()
 {
     // a0_为1的场景走AR模板
     OP_CHECK_IF(a0_ == DIM_NUM_ONE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA recompute template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA recompute template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
+                return false);
     return true;
 }
 
@@ -38,8 +37,9 @@ ge::graphStatus SoftmaxGradARARecomputeTiling::ComputeBinaryAddParams()
     binAddRTotalLoop_ = Ops::Base::CeilDiv(r_, binAddRFactor_);
     binAddRTail_ = r_ - (binAddRTotalLoop_ - 1) * binAddRFactor_;
     // 计算最接近binAddRTotalLoop_的2^k
-    binAddBasicBlockLoop_ =
-        binAddRTotalLoop_ > 1 ? (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binAddRTotalLoop_ - 1))) : 0;
+    binAddBasicBlockLoop_ = binAddRTotalLoop_ > 1 ?
+                                (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binAddRTotalLoop_ - 1))) :
+                                0;
     mainFoldCount_ = binAddRLoop_ - binAddBasicBlockLoop_;
     if (binAddBasicBlockLoop_ == 0) {
         binAddCacheBufferCount_ = 1;
@@ -73,11 +73,11 @@ ge::graphStatus SoftmaxGradARARecomputeTiling::DoOpTiling()
                          FLOAT32_BYTES * binAddCacheBufferCount_ + FLOAT32_BYTES);
 
     OP_CHECK_IF(factorMax <= 0,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA recompute template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
-                            "tileBase: %ld, ub factor: %ld.",
-                            a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase_, factorMax),
-                    return ge::GRAPH_PARAM_INVALID);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA recompute template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
+                        "tileBase: %ld, ub factor: %ld.",
+                        a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase_, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     // 尽量占多核
     int64_t a0FactorMax = Ops::Base::CeilDiv(a0_, a0TileBase_);
@@ -122,10 +122,7 @@ ge::graphStatus SoftmaxGradARARecomputeTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxGradARARecomputeTiling::GetTilingKey() const
-{
-    return TILINGKEY_ARA_RECOMPUTE;
-}
+uint64_t SoftmaxGradARARecomputeTiling::GetTilingKey() const { return TILINGKEY_ARA_RECOMPUTE; }
 
 ge::graphStatus SoftmaxGradARARecomputeTiling::PostTiling()
 {
@@ -139,4 +136,4 @@ ge::graphStatus SoftmaxGradARARecomputeTiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxGrad, SoftmaxGradARARecomputeTiling, TEMPLATE_ARA_RECOMPUTE_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

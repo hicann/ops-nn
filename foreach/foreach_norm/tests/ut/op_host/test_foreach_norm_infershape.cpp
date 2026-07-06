@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_norm_proto.h"
 
-class ForeachNormTest : public testing::Test
-{
+class ForeachNormTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachNorm SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachNorm SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachNorm TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachNorm TearDown" << std::endl; }
 };
 
 TEST_F(ForeachNormTest, infer_shape_known_success)

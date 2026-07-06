@@ -25,11 +25,11 @@
 
 using namespace op;
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                   DataType::DT_BF16};
 
-static bool CheckNotNull(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, const char* approximate)
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput,
+                         const char* approximate)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -50,9 +50,8 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return false);
 
     if (broadcastShape != gradInputShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(gradInputShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(gradInputShape).GetString());
         return false;
     }
     return true;
@@ -61,37 +60,34 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
 static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
     op::DataType promoteType;
-    if (!CheckPromoteTypeGeluBackward(gradOutput, self, promoteType, DTYPE_SUPPORT_LIST)){
+    if (!CheckPromoteTypeGeluBackward(gradOutput, self, promoteType, DTYPE_SUPPORT_LIST)) {
         return false;
     }
 
     // 检查promote后的dtype是否与gradInput的一致
     if (promoteType != gradInput->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Promote dtype of GradOutput and Self is %s, not matching with gradInput %s.",
-            op::ToString(promoteType).GetString(), op::ToString(gradInput->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Promote dtype of GradOutput and Self is %s, not matching with gradInput %s.",
+                op::ToString(promoteType).GetString(), op::ToString(gradInput->GetDataType()).GetString());
         return false;
     }
     return true;
 }
 
-namespace
-{
+namespace {
 static bool CheckAttrValue(const char* approximate)
 {
     std::string approximate_mode(approximate);
     if (approximate_mode != "tanh" && approximate_mode != "none") {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "approximate only supports to set none or tanh, but got %s.",
-            approximate_mode.c_str());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "approximate only supports to set none or tanh, but got %s.",
+                approximate_mode.c_str());
         return false;
     }
     return true;
 }
-}
+} // namespace
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, const char* approximate)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput,
+                               const char* approximate)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, gradInput, approximate), ACLNN_ERR_PARAM_NULLPTR);
@@ -132,9 +128,8 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
     return self;
 }
 
-aclnnStatus aclnnGeluBackwardV2GetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, char* approximate, aclTensor* gradInput,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeluBackwardV2GetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, char* approximate,
+                                                aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeluBackwardV2, DFX_IN(gradOutput, self, approximate), DFX_OUT(gradInput));
     // 固定写法，创建OpExecutor
@@ -196,8 +191,8 @@ aclnnStatus aclnnGeluBackwardV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeluBackwardV2(
-    void* workspace, uint64_t workspace_size, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnGeluBackwardV2(void* workspace, uint64_t workspace_size, aclOpExecutor* executor,
+                                const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnGeluBackwardV2);
     // 固定写法，调用框架能力，完成计算

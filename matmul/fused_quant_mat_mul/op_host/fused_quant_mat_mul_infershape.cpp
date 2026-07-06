@@ -43,7 +43,8 @@ const size_t kAttrFusedOpTypeIdx = 5;
 
 const size_t kMatmulV2MinShapeSize = 2;
 
-ge::graphStatus InferShapeForFusedQuantMatMul(InferShapeContext *context) {
+ge::graphStatus InferShapeForFusedQuantMatMul(InferShapeContext* context)
+{
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("FusedQuantMatMul", "context is null"),
                 return ge::GRAPH_FAILED);
     auto op_name = context->GetNodeName();
@@ -54,18 +55,20 @@ ge::graphStatus InferShapeForFusedQuantMatMul(InferShapeContext *context) {
     OP_CHECK_IF(shape_a == nullptr || shape_b == nullptr || shape_out == nullptr || attrs == nullptr,
                 CUBE_INNER_ERR_REPORT(op_name, "shape or attrs is null"), return ge::GRAPH_FAILED);
 
-    const bool *trans_a = attrs->GetAttrPointer<bool>(kAttrTransposeX1Idx);
-    const bool *trans_b = attrs->GetAttrPointer<bool>(kAttrTransposeX2Idx);
-    const char *fused_op_type = attrs->GetAttrPointer<char>(kAttrFusedOpTypeIdx);
+    const bool* trans_a = attrs->GetAttrPointer<bool>(kAttrTransposeX1Idx);
+    const bool* trans_b = attrs->GetAttrPointer<bool>(kAttrTransposeX2Idx);
+    const char* fused_op_type = attrs->GetAttrPointer<char>(kAttrFusedOpTypeIdx);
     OP_CHECK_IF(trans_a == nullptr || trans_b == nullptr || fused_op_type == nullptr,
                 CUBE_INNER_ERR_REPORT(op_name, "attribute is null"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(strcmp(fused_op_type, "") == 0, CUBE_INNER_ERR_REPORT(op_name, "the fused_op_type must have input!"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(strcmp(fused_op_type, "relu") != 0 && strcmp(fused_op_type, "swiglu") != 0 && 
-                strcmp(fused_op_type, "gelu_tanh") != 0 && strcmp(fused_op_type, "gelu_erf") != 0,
-                CUBE_INNER_ERR_REPORT(op_name, "the input fused_op_type:%s is illegal, only relu/swiglu/gelu_tanh/gelu_erf support", fused_op_type),
+    OP_CHECK_IF(strcmp(fused_op_type, "relu") != 0 && strcmp(fused_op_type, "swiglu") != 0 &&
+                    strcmp(fused_op_type, "gelu_tanh") != 0 && strcmp(fused_op_type, "gelu_erf") != 0,
+                CUBE_INNER_ERR_REPORT(
+                    op_name, "the input fused_op_type:%s is illegal, only relu/swiglu/gelu_tanh/gelu_erf support",
+                    fused_op_type),
                 return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "a_shape: %s, b_shape: %s, transpose_a: %d, transpose_b: %d",
@@ -77,8 +80,6 @@ ge::graphStatus InferShapeForFusedQuantMatMul(InferShapeContext *context) {
 
 } // namespace
 
-namespace Ops::NN::MatMul
-{
+namespace Ops::NN::MatMul {
 IMPL_OP_INFERSHAPE(FusedQuantMatMul).InferShape(InferShapeForFusedQuantMatMul);
-} // namespace name
-
+} // namespace Ops::NN::MatMul

@@ -107,25 +107,25 @@ bool IsRegbaseSocVersion4Scatter(const gert::TilingContext* context)
 {
     return Ops::NN::OpTiling::IsRegbaseSocVersion(context);
 }
-struct TilingDataStructScatterElementsV2310P{
-  uint64_t M = 0;
-  uint64_t varN = 0;
-  uint64_t indicesN = 0;
-  uint64_t updatesN = 0;
-  uint64_t frontCoreNum = 0;
-  uint64_t tailCoreNum = 0;
-  uint64_t frontCoreData = 0;
-  uint64_t tailCoreData = 0;
-  uint64_t computeMode = 0;
-  uint32_t usedCoreNum = 0;
-  uint64_t MLeft = 0;
+struct TilingDataStructScatterElementsV2310P {
+    uint64_t M = 0;
+    uint64_t varN = 0;
+    uint64_t indicesN = 0;
+    uint64_t updatesN = 0;
+    uint64_t frontCoreNum = 0;
+    uint64_t tailCoreNum = 0;
+    uint64_t frontCoreData = 0;
+    uint64_t tailCoreData = 0;
+    uint64_t computeMode = 0;
+    uint32_t usedCoreNum = 0;
+    uint64_t MLeft = 0;
 
-  uint32_t tilingKey = 0;
+    uint32_t tilingKey = 0;
 };
 
-void coreSplit(uint64_t coreNums, uint64_t dataNums,
-               uint64_t& frontCoreNums, uint64_t& tailCoreNums,
-               uint64_t& frontCoreDataNums, uint64_t& tailCoreDataNums) {
+void coreSplit(uint64_t coreNums, uint64_t dataNums, uint64_t& frontCoreNums, uint64_t& tailCoreNums,
+               uint64_t& frontCoreDataNums, uint64_t& tailCoreDataNums)
+{
     coreNums = coreNums == 0 ? 1 : coreNums;
     tailCoreDataNums = dataNums / coreNums;
     if (tailCoreDataNums == 0) {
@@ -149,52 +149,56 @@ void coreSplit(uint64_t coreNums, uint64_t dataNums,
 
 class ScatterElementsV2Tiling310P {
 public:
-  explicit ScatterElementsV2Tiling310P(gert::TilingContext* context_) : context(context_){};
-  ge::graphStatus Init();
+    explicit ScatterElementsV2Tiling310P(gert::TilingContext* context_) : context(context_){};
+    ge::graphStatus Init();
+
 private:
-  void SetKernelTiling();
-  void TilingDataPrint() const;
-  gert::TilingContext* context = nullptr;
-  TilingDataStructScatterElementsV2310P tilingData;
+    void SetKernelTiling();
+    void TilingDataPrint() const;
+    gert::TilingContext* context = nullptr;
+    TilingDataStructScatterElementsV2310P tilingData;
 };
 
-void ScatterElementsV2Tiling310P::TilingDataPrint() const {
-  OP_LOGD(context->GetNodeName(), "M: %ld.", tilingData.M);
-  OP_LOGD(context->GetNodeName(), "varN: %ld.", tilingData.varN);
-  OP_LOGD(context->GetNodeName(), "indicesN: %ld.", tilingData.indicesN);
-  OP_LOGD(context->GetNodeName(), "updatesN: %ld.", tilingData.updatesN);
-  OP_LOGD(context->GetNodeName(), "frontCoreNum: %ld.", tilingData.frontCoreNum);
-  OP_LOGD(context->GetNodeName(), "tailCoreNum: %ld.", tilingData.tailCoreNum);
-  OP_LOGD(context->GetNodeName(), "frontCoreData: %ld.", tilingData.frontCoreData);
-  OP_LOGD(context->GetNodeName(), "tailCoreData: %ld.", tilingData.tailCoreData);
-  OP_LOGD(context->GetNodeName(), "computeMode: %ld.", tilingData.computeMode);
-  OP_LOGD(context->GetNodeName(), "MLeft: %ld.", tilingData.MLeft);
-  OP_LOGD(context->GetNodeName(), "usedCoreNum: %d.", tilingData.usedCoreNum);
-  OP_LOGD(context->GetNodeName(), "tilingKey: %d.", tilingData.tilingKey);
+void ScatterElementsV2Tiling310P::TilingDataPrint() const
+{
+    OP_LOGD(context->GetNodeName(), "M: %ld.", tilingData.M);
+    OP_LOGD(context->GetNodeName(), "varN: %ld.", tilingData.varN);
+    OP_LOGD(context->GetNodeName(), "indicesN: %ld.", tilingData.indicesN);
+    OP_LOGD(context->GetNodeName(), "updatesN: %ld.", tilingData.updatesN);
+    OP_LOGD(context->GetNodeName(), "frontCoreNum: %ld.", tilingData.frontCoreNum);
+    OP_LOGD(context->GetNodeName(), "tailCoreNum: %ld.", tilingData.tailCoreNum);
+    OP_LOGD(context->GetNodeName(), "frontCoreData: %ld.", tilingData.frontCoreData);
+    OP_LOGD(context->GetNodeName(), "tailCoreData: %ld.", tilingData.tailCoreData);
+    OP_LOGD(context->GetNodeName(), "computeMode: %ld.", tilingData.computeMode);
+    OP_LOGD(context->GetNodeName(), "MLeft: %ld.", tilingData.MLeft);
+    OP_LOGD(context->GetNodeName(), "usedCoreNum: %d.", tilingData.usedCoreNum);
+    OP_LOGD(context->GetNodeName(), "tilingKey: %d.", tilingData.tilingKey);
 }
 
-void ScatterElementsV2Tiling310P::SetKernelTiling() {
-  ScatterElementsV2TilingData kernelTiling;
-  kernelTiling.set_M(tilingData.M);
-  kernelTiling.set_varN(tilingData.varN);
-  kernelTiling.set_indicesN(tilingData.indicesN);
-  kernelTiling.set_updatesN(tilingData.updatesN);
-  kernelTiling.set_frontCoreNum(tilingData.frontCoreNum);
-  kernelTiling.set_tailCoreNum(tilingData.tailCoreNum);
-  kernelTiling.set_frontCoreData(tilingData.frontCoreData);
-  kernelTiling.set_tailCoreData(tilingData.tailCoreData);
-  kernelTiling.set_computeMode(tilingData.computeMode);
-  kernelTiling.set_usedCoreNum(tilingData.usedCoreNum);
-  kernelTiling.set_MLeft(tilingData.MLeft);
+void ScatterElementsV2Tiling310P::SetKernelTiling()
+{
+    ScatterElementsV2TilingData kernelTiling;
+    kernelTiling.set_M(tilingData.M);
+    kernelTiling.set_varN(tilingData.varN);
+    kernelTiling.set_indicesN(tilingData.indicesN);
+    kernelTiling.set_updatesN(tilingData.updatesN);
+    kernelTiling.set_frontCoreNum(tilingData.frontCoreNum);
+    kernelTiling.set_tailCoreNum(tilingData.tailCoreNum);
+    kernelTiling.set_frontCoreData(tilingData.frontCoreData);
+    kernelTiling.set_tailCoreData(tilingData.tailCoreData);
+    kernelTiling.set_computeMode(tilingData.computeMode);
+    kernelTiling.set_usedCoreNum(tilingData.usedCoreNum);
+    kernelTiling.set_MLeft(tilingData.MLeft);
 
-  context->SetBlockDim(tilingData.usedCoreNum);
-  context->SetTilingKey(tilingData.tilingKey);
+    context->SetBlockDim(tilingData.usedCoreNum);
+    context->SetTilingKey(tilingData.tilingKey);
 
-  kernelTiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
-  context->GetRawTilingData()->SetDataSize(kernelTiling.GetDataSize());
+    kernelTiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    context->GetRawTilingData()->SetDataSize(kernelTiling.GetDataSize());
 }
 
-ge::graphStatus ScatterElementsV2Tiling310P::Init() {
+ge::graphStatus ScatterElementsV2Tiling310P::Init()
+{
     const gert::StorageShape* varShape = context->GetInputShape(0);
     const gert::StorageShape* indicesShape = context->GetInputShape(1);
     const gert::StorageShape* updatesShape = context->GetInputShape(2);
@@ -232,9 +236,8 @@ ge::graphStatus ScatterElementsV2Tiling310P::Init() {
     if (tilingData.varN >= VAR_LIMIT) {
         // 列大
         tilingData.tilingKey = 0;
-        coreSplit(tilingData.usedCoreNum, tilingData.M,
-               tilingData.frontCoreNum, tilingData.tailCoreNum,
-               tilingData.frontCoreData, tilingData.tailCoreData);
+        coreSplit(tilingData.usedCoreNum, tilingData.M, tilingData.frontCoreNum, tilingData.tailCoreNum,
+                  tilingData.frontCoreData, tilingData.tailCoreData);
         tilingData.usedCoreNum = tilingData.frontCoreNum + tilingData.tailCoreNum;
     } else {
         // 列小
@@ -245,25 +248,23 @@ ge::graphStatus ScatterElementsV2Tiling310P::Init() {
         tilingData.MLeft = tilingData.M - MAligned;
 
         if (MAligned != 0) {
-            coreSplit(tilingData.usedCoreNum, MAligned / VAR_GROUPS,
-               tilingData.frontCoreNum, tilingData.tailCoreNum,
-               tilingData.frontCoreData, tilingData.tailCoreData);
+            coreSplit(tilingData.usedCoreNum, MAligned / VAR_GROUPS, tilingData.frontCoreNum, tilingData.tailCoreNum,
+                      tilingData.frontCoreData, tilingData.tailCoreData);
         }
         tilingData.usedCoreNum = tilingData.frontCoreNum + tilingData.tailCoreNum;
         tilingData.usedCoreNum += 1;
     }
 
-    size_t *currentWorkSpace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkSpace = context->GetWorkspaceSizes(1);
     currentWorkSpace[0] = WORK_SPACE_SIZE;
     SetKernelTiling();
     TilingDataPrint();
     return ge::GRAPH_SUCCESS;
 }
 
-class ScatterElementsV2Tiling
-{
+class ScatterElementsV2Tiling {
 public:
-    explicit ScatterElementsV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ScatterElementsV2Tiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -277,20 +278,20 @@ private:
     size_t CalculateWorkspaceSize();
     void ParseAttrs();
     void ProcessUpdatesShape(gert::Shape& updatesShape, const gert::Shape& indicesShape);
-    void SetDimsForFirstAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape, 
+    void SetDimsForFirstAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape,
                              const gert::Shape& updatesShape, size_t inputDimNum);
-    void SetDimsForMiddleAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape, 
+    void SetDimsForMiddleAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape,
                               const gert::Shape& updatesShape, size_t inputDimNum);
-    void SetDimsForLastAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape, 
+    void SetDimsForLastAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape,
                             const gert::Shape& updatesShape, size_t inputDimNum);
-    void SetDimsByAxisType(const gert::Shape& inputShape, const gert::Shape& indicesShape, 
+    void SetDimsByAxisType(const gert::Shape& inputShape, const gert::Shape& indicesShape,
                            const gert::Shape& updatesShape, size_t inputDimNum);
     bool CheckCacheOpShapeLimit(const gert::Shape& xShape, const char* reduce) const;
     bool CheckCacheOpDtype(ge::DataType inputDtype, const char* reduce) const;
     bool CheckLastAxisCacheOp(size_t inputDimNum, ge::DataType inputDtype, const char* reduce) const;
     bool CheckCacheOpXDim1Limit(const gert::Shape& inputShape, const gert::Shape& indicesShape,
-                                const gert::Shape& updatesShape, size_t inputDimNum,
-                                ge::DataType inputDtype, const char* reduce);
+                                const gert::Shape& updatesShape, size_t inputDimNum, ge::DataType inputDtype,
+                                const char* reduce);
     uint64_t GetCacheOpMaxXDim1(ge::DataType inputDtype, const char* reduce) const;
     ScatterElementsV2TilingData tilingData;
     gert::TilingContext* tilingContext = nullptr;
@@ -476,13 +477,14 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     if (ge::DT_INT64 == indicesDtype) {
         indicesSize += SIZE_OF_INT32;
     }
-    if ((strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 || strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0) &&
+    if ((strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 ||
+         strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0) &&
         (ge::DT_FLOAT16 == inputDtype || ge::DT_BF16 == inputDtype)) {
         inputSize += sizeof(float) / BUFFER_NUM;
         indicesSize += sizeof(float) / BUFFER_NUM;
     }
-    if (strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 || strcmp(reduce, "max") == 0 ||
-        strcmp(reduce, "mean") == 0) {
+    if (strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 ||
+        strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0) {
         inputSize += sizeof(int) / BUFFER_NUM;
     }
 
@@ -613,8 +615,8 @@ ge::graphStatus ScatterElementsV2Tiling::RunKernelTiling()
     tilingData.set_lastIndicesLast(lastIndicesLast);
     tilingData.set_oneTime(oneTime);
     tilingData.set_lastOneTime(lastOneTime);
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(usedCoreNum);
@@ -659,7 +661,8 @@ void ScatterElementsV2Tiling::TilingDataPrint() const
     OP_LOGD(tilingContext, "max_ub: %lu.", max_ub);
 }
 
-bool ScatterElementsV2Tiling::CacheOpSupport() {
+bool ScatterElementsV2Tiling::CacheOpSupport()
+{
     if (tilingContext == nullptr) {
         OP_LOGD("ScatterElementsV2", "tilingContext is nullptr.");
         return false;
@@ -721,10 +724,8 @@ bool ScatterElementsV2Tiling::CheckLastAxisCacheOp(size_t inputDimNum, ge::DataT
 {
     auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
     if (realDim == inputDimNum - 1 && updatesShape.GetDimNum() != 0 && inputDtype != ge::DT_BOOL) {
-        bool allowLastAxisNonScalarFloat =
-            (inputDtype == ge::DT_FLOAT) &&
-            (reduce != nullptr) &&
-            (strcmp(reduce, "min") == 0 || strcmp(reduce, "mean") == 0);
+        bool allowLastAxisNonScalarFloat = (inputDtype == ge::DT_FLOAT) && (reduce != nullptr) &&
+                                           (strcmp(reduce, "min") == 0 || strcmp(reduce, "mean") == 0);
         if (!allowLastAxisNonScalarFloat) {
             OP_LOGD("ScatterElementsV2",
                     "when realDim = -1 and updates not scalar, only bool or float min/mean will use new kernel.");
@@ -802,7 +803,8 @@ uint64_t ScatterElementsV2Tiling::GetCacheOpMaxXDim1(ge::DataType inputDtype, co
     return (CACHE_OP_ALL_UB_SIZE - tailBytes) / (ubTypeSize + SIZE_OF_INT32);
 }
 
-void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling) {
+void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling)
+{
     tiling.set_batchSize(batchSize);
     tiling.set_realDim(realDim);
     tiling.set_coreNums(usedCoreNum);
@@ -816,7 +818,8 @@ void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling)
     tiling.set_updatesDim1(updatesDim1);
 }
 
-void ScatterElementsV2Tiling::LogTilingData() const {
+void ScatterElementsV2Tiling::LogTilingData() const
+{
     OP_LOGD(tilingContext, "batchSize: %lu.", batchSize);
     OP_LOGD(tilingContext, "realDim: %lu.", realDim);
     OP_LOGD(tilingContext, "mode: %d.", mode);
@@ -831,7 +834,8 @@ void ScatterElementsV2Tiling::LogTilingData() const {
     OP_LOGD(tilingContext, "updatesDim1: %lu.", updatesDim1);
 }
 
-size_t ScatterElementsV2Tiling::CalculateWorkspaceSize() {
+size_t ScatterElementsV2Tiling::CalculateWorkspaceSize()
+{
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
     size_t libApiworkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
@@ -860,7 +864,8 @@ size_t ScatterElementsV2Tiling::CalculateWorkspaceSize() {
         libApiworkspaceSize += this->updatesIsScalar ? 0 : maxSize * updatesDim0 * sizeOfVar;
         // 用于转置x indices updates时，及用于x转置回来时，转连续
         libApiworkspaceSize += ALIGN_SIZE * VAR_LIMIT * sizeof(uint32_t) * SIZE_OF_FP32;
-        // 用于整块处理时，直接使用gather做转置，无需pad/unpad，也无需TransDataTo5HD。（xForward indicesForward updatesForward xBackward）
+        // 用于整块处理时，直接使用gather做转置，无需pad/unpad，也无需TransDataTo5HD。（xForward indicesForward
+        // updatesForward xBackward）
         libApiworkspaceSize += VAR_LIMIT * VAR_LIMIT * sizeof(uint32_t) * SIZE_OF_FP32;
     }
     if (batchSize > 1 && realDim == 1) { // 中轴需要转置
@@ -879,15 +884,16 @@ size_t ScatterElementsV2Tiling::CalculateWorkspaceSize() {
     return libApiworkspaceSize;
 }
 
-ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
+ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling()
+{
     ScatterElementsV2TilingData tiling;
     SetTilingData(tiling);
     LogTilingData();
-    
+
     size_t calculateResult = CalculateWorkspaceSize();
-    size_t *currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
+    size_t* currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
     currentWorkSpace[0] = calculateResult;
-    
+
     tilingContext->SetBlockDim(usedCoreNum);
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
     auto indicesDtype = tilingContext->GetInputDesc(INPUT_1)->GetDataType();
@@ -918,7 +924,8 @@ ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-void ScatterElementsV2Tiling::ParseAttrs() {
+void ScatterElementsV2Tiling::ParseAttrs()
+{
     auto attrs = tilingContext->GetAttrs();
     const char* reduce = attrs->GetAttrPointer<char>(1);
     const bool* includeSelfAttr = attrs->GetAttrPointer<bool>(2);
@@ -940,7 +947,8 @@ void ScatterElementsV2Tiling::ParseAttrs() {
     }
 }
 
-void ScatterElementsV2Tiling::ProcessUpdatesShape(gert::Shape& updatesShape, const gert::Shape& indicesShape) {
+void ScatterElementsV2Tiling::ProcessUpdatesShape(gert::Shape& updatesShape, const gert::Shape& indicesShape)
+{
     if ((updatesShape.GetDimNum() == 1 && updatesShape.GetDim(0) == 1) || updatesShape.GetDimNum() == 0) {
         updatesIsScalar = 1;
         updatesShape = indicesShape;
@@ -949,10 +957,9 @@ void ScatterElementsV2Tiling::ProcessUpdatesShape(gert::Shape& updatesShape, con
     }
 }
 
-void ScatterElementsV2Tiling::SetDimsForFirstAxis(const gert::Shape& inputShape, 
-                                                    const gert::Shape& indicesShape, 
-                                                    const gert::Shape& updatesShape, 
-                                                    size_t inputDimNum) {
+void ScatterElementsV2Tiling::SetDimsForFirstAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape,
+                                                  const gert::Shape& updatesShape, size_t inputDimNum)
+{
     batchSize = 1;
     realDim = 1;
     xDim0 = inputShape.GetDim(0);
@@ -965,10 +972,9 @@ void ScatterElementsV2Tiling::SetDimsForFirstAxis(const gert::Shape& inputShape,
     }
 }
 
-void ScatterElementsV2Tiling::SetDimsForMiddleAxis(const gert::Shape& inputShape, 
-                                                     const gert::Shape& indicesShape, 
-                                                     const gert::Shape& updatesShape, 
-                                                     size_t inputDimNum) {
+void ScatterElementsV2Tiling::SetDimsForMiddleAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape,
+                                                   const gert::Shape& updatesShape, size_t inputDimNum)
+{
     for (size_t i = 0; i < realDim; i++) {
         batchSize *= indicesShape.GetDim(i);
     }
@@ -983,10 +989,9 @@ void ScatterElementsV2Tiling::SetDimsForMiddleAxis(const gert::Shape& inputShape
     realDim = 1;
 }
 
-void ScatterElementsV2Tiling::SetDimsForLastAxis(const gert::Shape& inputShape, 
-                                                   const gert::Shape& indicesShape, 
-                                                   const gert::Shape& updatesShape, 
-                                                   size_t inputDimNum) {
+void ScatterElementsV2Tiling::SetDimsForLastAxis(const gert::Shape& inputShape, const gert::Shape& indicesShape,
+                                                 const gert::Shape& updatesShape, size_t inputDimNum)
+{
     batchSize = 1;
     realDim = 2;
     xDim1 = inputShape.GetDim(inputDimNum - 1);
@@ -999,10 +1004,9 @@ void ScatterElementsV2Tiling::SetDimsForLastAxis(const gert::Shape& inputShape,
     }
 }
 
-void ScatterElementsV2Tiling::SetDimsByAxisType(const gert::Shape& inputShape, 
-                                                  const gert::Shape& indicesShape, 
-                                                  const gert::Shape& updatesShape, 
-                                                  size_t inputDimNum) {
+void ScatterElementsV2Tiling::SetDimsByAxisType(const gert::Shape& inputShape, const gert::Shape& indicesShape,
+                                                const gert::Shape& updatesShape, size_t inputDimNum)
+{
     if (realDim == 0) {
         SetDimsForFirstAxis(inputShape, indicesShape, updatesShape, inputDimNum);
     } else if (realDim > 0 && realDim < inputDimNum - 1) {
@@ -1012,22 +1016,23 @@ void ScatterElementsV2Tiling::SetDimsByAxisType(const gert::Shape& inputShape,
     }
 }
 
-ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling() {
+ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling()
+{
     ParseAttrs();
-    
+
     auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
     auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
     auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
-    
+
     ProcessUpdatesShape(updatesShape, indicesShape);
-    
+
     auto inputDimNum = inputShape.GetDimNum();
     auto attrs = tilingContext->GetAttrs();
     const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
-    
+
     SetDimsByAxisType(inputShape, indicesShape, updatesShape, inputDimNum);
-    
+
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
     usedCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(tilingContext, "ascendcPlatform CoreNum is: %d.", usedCoreNum);
@@ -1048,7 +1053,7 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
     if (socVersion == platform_ascendc::SocVersion::ASCEND310P) {
         ScatterElementsV2Tiling310P tilingObject(context);
         return tilingObject.Init();
-    }  else {
+    } else {
         ScatterElementsV2Tiling tilingObject(context);
         if (tilingObject.CacheOpSupport()) {
             return tilingObject.RunCacheOpTiling();
@@ -1074,8 +1079,8 @@ ge::graphStatus TilingPrepareForScatterElementsV2(gert::TilingParseContext* cont
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

@@ -23,8 +23,7 @@ using namespace AscendC;
 template <typename T, typename ScalarT, typename Tiling>
 class ForeachSubListInplaceRegbase
     : public ForeachBinaryAlphaCastInplaceRegbase<T, ScalarT, Tiling,
-          ForeachSubListInplaceRegbase<T, ScalarT, Tiling>>
-{
+                                                  ForeachSubListInplaceRegbase<T, ScalarT, Tiling>> {
 public:
     template <typename U>
     __aicore__ inline void ApplyBinaryOp(LocalTensor<U> dst, LocalTensor<U> a, LocalTensor<U> b, int64_t dataCount)

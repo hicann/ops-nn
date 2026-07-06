@@ -22,10 +22,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
-using Ops::Base::FloorAlign;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
+using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -58,11 +58,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
 }
 
 // Get shape and attribute information
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-                                          int64_t& totalNum,
-                                          ge::DataType& dataType,
-                                          float& negativeSlope,
-                                          float& scale)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalNum, ge::DataType& dataType,
+                                         float& negativeSlope, float& scale)
 {
     // Get input shape
     auto inputX = context->GetInputShape(0);
@@ -78,12 +75,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
 
     // Shape validation: ensure x and bias shapes match
-    OP_CHECK_IF(
-        inputShapeX.GetShapeSize() != inputShapeBias.GetShapeSize() ||
-            inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
-        OP_LOGE(context, "FusedBiasLeakyRelu: shape size mismatch: x=%ld, bias=%ld, y=%ld",
-                inputShapeX.GetShapeSize(), inputShapeBias.GetShapeSize(), outShapeY.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShapeX.GetShapeSize() != inputShapeBias.GetShapeSize() ||
+                    inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
+                OP_LOGE(context, "FusedBiasLeakyRelu: shape size mismatch: x=%ld, bias=%ld, y=%ld",
+                        inputShapeX.GetShapeSize(), inputShapeBias.GetShapeSize(), outShapeY.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalNum = inputShapeX.GetShapeSize();
 
@@ -124,37 +120,30 @@ static ge::graphStatus FusedBiasLeakyReluTilingFunc(gert::TilingContext* context
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and attribute info
     int64_t totalNum;
     ge::DataType dataType;
     float negativeSlope;
     float scale;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType, negativeSlope, scale) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType, negativeSlope, scale) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace size
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Compute tiling parameters
     FusedBiasLeakyReluTilingData* tiling = context->GetTilingData<FusedBiasLeakyReluTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(FusedBiasLeakyReluTilingData), 0, sizeof(FusedBiasLeakyReluTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(FusedBiasLeakyReluTilingData), 0, sizeof(FusedBiasLeakyReluTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Compute type-dependent parameters
     int64_t typeSize = (dataType == ge::DT_FLOAT16) ? 2 : 4;
-    int64_t ubBlockSize = BLOCK_ALIGN / typeSize;  // float32: 8 elements, float16: 16 elements
+    int64_t ubBlockSize = BLOCK_ALIGN / typeSize; // float32: 8 elements, float16: 16 elements
 
     // Multi-core split: divide total elements evenly across cores
     int64_t blockFactor = CeilAlign(CeilDiv(totalNum, coreNum), ubBlockSize);
@@ -165,7 +154,7 @@ static ge::graphStatus FusedBiasLeakyReluTilingFunc(gert::TilingContext* context
     uint64_t useDoubleBuffer = (loopCountIfDouble >= 2) ? 1 : 0;
 
     // UB split
-    int64_t bufferNum = TENSOR_NUM * (useDoubleBuffer ? 2 : 1);  // 6 or 3
+    int64_t bufferNum = TENSOR_NUM * (useDoubleBuffer ? 2 : 1); // 6 or 3
     int64_t ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, bufferNum), ubBlockSize);
 
     // 5. Fill TilingData (order matches struct layout)

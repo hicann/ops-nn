@@ -42,4 +42,4 @@ static ge::graphStatus InferShapeSparseApplyProximalAdagrad(gert::InferShapeCont
 
 IMPL_OP_INFERSHAPE(SparseApplyProximalAdagrad).InferShape(InferShapeSparseApplyProximalAdagrad);
 
-}  // namespace ops
+} // namespace ops

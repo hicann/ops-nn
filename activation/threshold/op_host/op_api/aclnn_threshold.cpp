@@ -47,8 +47,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static bool CheckNotNull(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* value, const aclTensor* out)
+static bool CheckNotNull(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                         const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
@@ -81,8 +81,8 @@ static bool CheckShape(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* value, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                               const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, threshold, value, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -96,9 +96,8 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus ExecThresholdGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus ExecThresholdGetWorkspaceSize(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                                          aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -143,9 +142,8 @@ aclnnStatus ExecThresholdGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnThresholdGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnThresholdGetWorkspaceSize(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                                           aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -160,9 +158,9 @@ aclnnStatus aclnnThreshold(void* workspace, uint64_t workspaceSize, aclOpExecuto
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceThresholdGetWorkspaceSize(
-    aclTensor* selfRef, const aclScalar* threshold, const aclScalar* value, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnInplaceThresholdGetWorkspaceSize(aclTensor* selfRef, const aclScalar* threshold,
+                                                  const aclScalar* value, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

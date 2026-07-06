@@ -44,17 +44,13 @@ static constexpr uint32_t THREAD_NUM = 512;
 // SIMT VF kernel: Copy all input rows to output (var→varOut, accum→accumOut, linear→linearOut)
 // Ensures unindexed rows retain their original values after FTRL update.
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpSparseApplyFtrlCopyKernel(
-    int64_t totalElements,
-    const __gm__ T* src1, const __gm__ T* src2, const __gm__ T* src3,
-    __gm__ T* dst1, __gm__ T* dst2, __gm__ T* dst3)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpSparseApplyFtrlCopyKernel(
+    int64_t totalElements, const __gm__ T* src1, const __gm__ T* src2, const __gm__ T* src3, __gm__ T* dst1,
+    __gm__ T* dst2, __gm__ T* dst3)
 {
-    uint64_t globalTid = static_cast<uint64_t>(blockIdx.x) *
-                         static_cast<uint64_t>(blockDim.x) +
+    uint64_t globalTid = static_cast<uint64_t>(blockIdx.x) * static_cast<uint64_t>(blockDim.x) +
                          static_cast<uint64_t>(threadIdx.x);
-    uint64_t stride = static_cast<uint64_t>(blockDim.x) *
-                      static_cast<uint64_t>(gridDim.x);
+    uint64_t stride = static_cast<uint64_t>(blockDim.x) * static_cast<uint64_t>(gridDim.x);
     uint64_t totalU64 = static_cast<uint64_t>(totalElements);
 
     for (uint64_t idx = globalTid; idx < totalU64; idx += stride) {
@@ -65,12 +61,12 @@ inline void OpSparseApplyFtrlCopyKernel(
 }
 
 template <typename T, typename IdxT>
-__simt_callee__ inline void OpSparseApplyFtrlComputeElement(
-    int64_t i, int64_t j, int64_t innerSize,
-    float lr, float l1, float l2, float negLrPower, float twoL2,
-    const __gm__ T* var, const __gm__ T* accum, const __gm__ T* linear,
-    const __gm__ T* grad, const __gm__ IdxT* indices,
-    __gm__ T* varOut, __gm__ T* accumOut, __gm__ T* linearOut)
+__simt_callee__ inline void OpSparseApplyFtrlComputeElement(int64_t i, int64_t j, int64_t innerSize, float lr, float l1,
+                                                            float l2, float negLrPower, float twoL2,
+                                                            const __gm__ T* var, const __gm__ T* accum,
+                                                            const __gm__ T* linear, const __gm__ T* grad,
+                                                            const __gm__ IdxT* indices, __gm__ T* varOut,
+                                                            __gm__ T* accumOut, __gm__ T* linearOut)
 {
     int64_t rowIdx = static_cast<int64_t>(indices[i]);
     int64_t rowOffset = rowIdx * innerSize + j;
@@ -106,45 +102,35 @@ __simt_callee__ inline void OpSparseApplyFtrlComputeElement(
 // Uses flat index over totalElements with int64 division/modulo for
 // row/column decomposition. Correctly distributes work across cores.
 template <typename T, typename IdxT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpSparseApplyFtrlSimtKernel(
-    int64_t numIndices, int64_t innerSize,
-    float lr, float l1, float l2, float lrPower,
-    const __gm__ T* var, const __gm__ T* accum, const __gm__ T* linear,
-    const __gm__ T* grad, const __gm__ IdxT* indices,
-    __gm__ T* varOut, __gm__ T* accumOut, __gm__ T* linearOut)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpSparseApplyFtrlSimtKernel(
+    int64_t numIndices, int64_t innerSize, float lr, float l1, float l2, float lrPower, const __gm__ T* var,
+    const __gm__ T* accum, const __gm__ T* linear, const __gm__ T* grad, const __gm__ IdxT* indices, __gm__ T* varOut,
+    __gm__ T* accumOut, __gm__ T* linearOut)
 {
     int64_t totalElements = numIndices * innerSize;
     float negLrPower = -lrPower;
     float twoL2 = 2.0f * l2;
 
-    uint64_t globalTid = static_cast<uint64_t>(blockIdx.x) *
-                         static_cast<uint64_t>(blockDim.x) +
+    uint64_t globalTid = static_cast<uint64_t>(blockIdx.x) * static_cast<uint64_t>(blockDim.x) +
                          static_cast<uint64_t>(threadIdx.x);
-    uint64_t stride = static_cast<uint64_t>(blockDim.x) *
-                      static_cast<uint64_t>(gridDim.x);
+    uint64_t stride = static_cast<uint64_t>(blockDim.x) * static_cast<uint64_t>(gridDim.x);
     uint64_t totalU64 = static_cast<uint64_t>(totalElements);
 
     for (uint64_t idx = globalTid; idx < totalU64; idx += stride) {
         int64_t i = static_cast<int64_t>(idx) / innerSize;
         int64_t j = static_cast<int64_t>(idx) % innerSize;
 
-        OpSparseApplyFtrlComputeElement<T, IdxT>(
-            i, j, innerSize, lr, l1, l2, negLrPower, twoL2,
-            var, accum, linear, grad, indices,
-            varOut, accumOut, linearOut);
+        OpSparseApplyFtrlComputeElement<T, IdxT>(i, j, innerSize, lr, l1, l2, negLrPower, twoL2, var, accum, linear,
+                                                 grad, indices, varOut, accumOut, linearOut);
     }
 }
 
 // Process entry function (aicore scope)
 // lr/l1/l2/lrPower are read from GM scalar tensors at runtime
 template <typename T, typename IdxT>
-__aicore__ inline void Process(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR linear,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower,
-    GM_ADDR varOut, GM_ADDR accumOut, GM_ADDR linearOut,
-    const SparseApplyFtrlTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR indices, GM_ADDR lr,
+                               GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower, GM_ADDR varOut, GM_ADDR accumOut,
+                               GM_ADDR linearOut, const SparseApplyFtrlTilingData* tilingData)
 {
     int64_t numIndices = tilingData->numIndices;
     int64_t innerSize = tilingData->innerSize;
@@ -161,11 +147,8 @@ __aicore__ inline void Process(
 
     // Phase 1: Copy all input rows to output (preserves unindexed rows)
     int64_t totalVarElements = varDim0 * innerSize;
-    asc_vf_call<OpSparseApplyFtrlCopyKernel<T>>(
-        dim3(THREAD_NUM),
-        totalVarElements,
-        varGm, accumGm, linearGm,
-        varOutGm, accumOutGm, linearOutGm);
+    asc_vf_call<OpSparseApplyFtrlCopyKernel<T>>(dim3(THREAD_NUM), totalVarElements, varGm, accumGm, linearGm, varOutGm,
+                                                accumOutGm, linearOutGm);
 
     if (numIndices == 0) {
         return;
@@ -177,11 +160,9 @@ __aicore__ inline void Process(
     float l2Val = *((__gm__ float*)l2);
     float lrPowerVal = *((__gm__ float*)lrPower);
 
-    asc_vf_call<OpSparseApplyFtrlSimtKernel<T, IdxT>>(
-        dim3(THREAD_NUM),
-        numIndices, innerSize, lrVal, l1Val, l2Val, lrPowerVal,
-        varGm, accumGm, linearGm, gradGm, indicesGm,
-        varOutGm, accumOutGm, linearOutGm);
+    asc_vf_call<OpSparseApplyFtrlSimtKernel<T, IdxT>>(dim3(THREAD_NUM), numIndices, innerSize, lrVal, l1Val, l2Val,
+                                                      lrPowerVal, varGm, accumGm, linearGm, gradGm, indicesGm, varOutGm,
+                                                      accumOutGm, linearOutGm);
 }
 
 } // namespace NsSparseApplyFtrl

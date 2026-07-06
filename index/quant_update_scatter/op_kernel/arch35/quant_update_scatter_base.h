@@ -16,7 +16,7 @@
 #define QUANT_UPDATE_SCATTER_BASE_H_
 
 #include "kernel_tiling/kernel_tiling.h"
-#if ASC_DEVKIT_MAJOR >=9
+#if ASC_DEVKIT_MAJOR >= 9
 #include "basic_api/kernel_vec_intf.h"
 #else
 #include "kernel_operator.h"
@@ -28,8 +28,7 @@ constexpr int8_t FLOAT_OVERFLOW_MODE_CTRL = 60;
 // SatMode::NO_SAT下为单指令非饱和模式
 constexpr int64_t FLOAT_OVERFLOW_MODE_SATURATE = 0;
 
-namespace QuantUpdateScatter
-{
+namespace QuantUpdateScatter {
 using namespace AscendC;
 
 /**
@@ -54,16 +53,14 @@ struct TypeFromEnum<TPL_NONE> {
 
 template <typename VarType, typename IndicesType, typename UpdatesType, typename ScalesType, typename OffsetsType,
           uint64_t DivMode, uint64_t CastRoundMode>
-class QuantUpdateScatterBase
-{
+class QuantUpdateScatterBase {
 public:
     __aicore__ inline QuantUpdateScatterBase(){};
     __aicore__ inline void SetFloatOverflowModeForRegbase()
     {
 #if (__NPU_ARCH__ == 3510)
-        if constexpr (
-            IsSameType<VarType, hifloat8_t>::value || IsSameType<VarType, fp8_e5m2_t>::value ||
-            IsSameType<VarType, fp8_e4m3fn_t>::value) {
+        if constexpr (IsSameType<VarType, hifloat8_t>::value || IsSameType<VarType, fp8_e5m2_t>::value ||
+                      IsSameType<VarType, fp8_e4m3fn_t>::value) {
             AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(FLOAT_OVERFLOW_MODE_SATURATE);
         }
 #endif
@@ -171,5 +168,5 @@ protected:
     }
 };
 
-}  // namespace QuantUpdateScatter
-#endif  // QUANT_UPDATE_SCATTER_BASE_H_
+} // namespace QuantUpdateScatter
+#endif // QUANT_UPDATE_SCATTER_BASE_H_

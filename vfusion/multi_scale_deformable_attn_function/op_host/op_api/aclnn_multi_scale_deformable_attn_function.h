@@ -50,10 +50,10 @@ ACLNN_API aclnnStatus aclnnMultiScaleDeformableAttnFunctionGetWorkspaceSize(
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnMultiScaleDeformableAttnFunction(void* workspace, uint64_t workspaceSize,
-                                                             aclOpExecutor* executor, aclrtStream stream);
+                                                            aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_MULTI_SCALE_DEFORMABLE_ATTN_FUNCTION_H_
+#endif // OP_API_INC_MULTI_SCALE_DEFORMABLE_ATTN_FUNCTION_H_

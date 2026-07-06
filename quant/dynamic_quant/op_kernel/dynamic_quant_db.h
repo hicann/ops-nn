@@ -21,17 +21,12 @@ using namespace AscendC;
 
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <typename xDtype, typename yDtype>
-class DynamicQuantDbOpt : public DynamicQuantBase
-{
+class DynamicQuantDbOpt : public DynamicQuantBase {
 public:
-    __aicore__ inline DynamicQuantDbOpt(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantDbOpt(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitParams(offset);
@@ -93,19 +88,16 @@ private:
             inGm.SetGlobalBuffer(
                 (__gm__ xDtype*)x + tilingData_.headCoreNum * lenHead + (blockIdx - tilingData_.headCoreNum) * lenTail,
                 lenTail);
-            outGm.SetGlobalBuffer(
-                (__gm__ yDtype*)y + tilingData_.headCoreNum * outLenHead +
-                    (blockIdx - tilingData_.headCoreNum) * outLenTail,
-                outLenTail);
-            scaleGm.SetGlobalBuffer(
-                (__gm__ float*)scale + tilingData_.headCoreNum * rowPerHeadCore +
-                    (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
-                rowPerTailCore);
+            outGm.SetGlobalBuffer((__gm__ yDtype*)y + tilingData_.headCoreNum * outLenHead +
+                                      (blockIdx - tilingData_.headCoreNum) * outLenTail,
+                                  outLenTail);
+            scaleGm.SetGlobalBuffer((__gm__ float*)scale + tilingData_.headCoreNum * rowPerHeadCore +
+                                        (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
+                                    rowPerTailCore);
             if (isAsymmetrical) {
-                offsetGm.SetGlobalBuffer(
-                    (__gm__ float*)offset + tilingData_.headCoreNum * rowPerHeadCore +
-                        (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
-                    rowPerTailCore);
+                offsetGm.SetGlobalBuffer((__gm__ float*)offset + tilingData_.headCoreNum * rowPerHeadCore +
+                                             (blockIdx - tilingData_.headCoreNum) * rowPerTailCore,
+                                         rowPerTailCore);
             }
         }
         if (isAsymmetrical) {
@@ -172,7 +164,7 @@ private:
         SetFlag<HardEvent::MTE3_V>(event_mte3_v);
         for (uint32_t i = 0; i < multiRow; i++) {
             ComputeRowMinMax(i, inLocal, tempCast, temp, smoothLocal, max_value, min_value);
-            
+
             if constexpr (IsSameType<yDtype, int4b_t>::value) {
                 scale = GetMax((max_value - min_value) / DYNAMIC_QUANT_INT4_SCALE, DYNAMIC_QUANT_EPSINON);
                 offset = DYNAMIC_QUANT_INT4_OFFSET - max_value / scale;
@@ -205,10 +197,9 @@ private:
         CopyOutData(multiRow, loopNum, outLocal, scaleLocal, &offsetLocal);
     }
 
-    __aicore__ inline void ComputeRowMinMax(uint32_t rowIndex, const LocalTensor<xDtype>& inLocal, 
-                                           LocalTensor<float>& tempCast, LocalTensor<float>& temp, 
-                                           const LocalTensor<float>& smoothLocal, float& max_value, 
-                                           float& min_value)
+    __aicore__ inline void ComputeRowMinMax(uint32_t rowIndex, const LocalTensor<xDtype>& inLocal,
+                                            LocalTensor<float>& tempCast, LocalTensor<float>& temp,
+                                            const LocalTensor<float>& smoothLocal, float& max_value, float& min_value)
     {
         // cast to fp32
         Cast(tempCast, inLocal[rowIndex * sizeHalfLen], RoundMode::CAST_NONE, tilingData_.rowLen);
@@ -230,7 +221,7 @@ private:
     }
 
     __aicore__ inline void CopyOutData(uint32_t multiRow, uint32_t loopNum, const LocalTensor<yDtype>& outLocal,
-                                        const LocalTensor<float>& scaleLocal, const LocalTensor<float>* offsetLocal)
+                                       const LocalTensor<float>& scaleLocal, const LocalTensor<float>* offsetLocal)
     {
         event_t event_v_mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(event_v_mte3);
@@ -307,9 +298,9 @@ private:
     }
 
     __aicore__ inline void QuantizeRow(LocalTensor<float>& tempCast, LocalTensor<float>& temp,
-                                        LocalTensor<int16_t>& tempInt16, LocalTensor<half>& tempHalf,
-                                        LocalTensor<float>& scaleLocal, LocalTensor<yDtype>& outLocal,
-                                        int32_t rowIndex, event_t event_mte3_v)
+                                       LocalTensor<int16_t>& tempInt16, LocalTensor<half>& tempHalf,
+                                       LocalTensor<float>& scaleLocal, LocalTensor<yDtype>& outLocal, int32_t rowIndex,
+                                       event_t event_mte3_v)
     {
         Brcb(brcbTmp, temp, 1, {1, 8});
         PipeBarrier<PIPE_V>();
@@ -324,7 +315,7 @@ private:
         if (unlikely(rowIndex == 0)) {
             WaitFlag<HardEvent::MTE3_V>(event_mte3_v);
         }
-        uint64_t mask[DOUBLE] = { 1ULL<<(rowIndex & 7), 0ULL};
+        uint64_t mask[DOUBLE] = {1ULL << (rowIndex & 7), 0ULL};
         Mul(scaleLocal[rowIndex & ~7], brcbTmp, constInvScale, mask, 1, {1, 1, 0, 8, 8, 0});
         Cast(outLocal[rowIndex * outAlignLen], tempHalf, RoundMode::CAST_TRUNC, tilingData_.rowLen);
     }

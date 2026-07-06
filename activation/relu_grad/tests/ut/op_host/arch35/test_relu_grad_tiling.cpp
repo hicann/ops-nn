@@ -24,18 +24,11 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class ReluGradDavidTiling : public testing::Test
-{
+class ReluGradDavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReluGradDavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReluGradDavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReluGradDavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReluGradDavidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -51,7 +44,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 }
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
-                         map<string, string>& aicoreSpec, map<string, string>& intrinsics, map<string, string>& socVersion)
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -67,8 +61,10 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-static void DoReluGradTilingCase(std::initializer_list<int64_t>& inputShape1, std::initializer_list<int64_t>& inputShape2,
-                                     std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype, std::string& expectStr)
+static void DoReluGradTilingCase(std::initializer_list<int64_t>& inputShape1,
+                                 std::initializer_list<int64_t>& inputShape2,
+                                 std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype,
+                                 std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -133,14 +129,14 @@ static void DoReluGradTilingCase(std::initializer_list<int64_t>& inputShape1, st
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
-    //EXPECT_EQ(tilingFunc(tiling_context), ge::GRAPH_SUCCESS);
+    // EXPECT_EQ(tilingFunc(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    //EXPECT_EQ(tiling_data_result, expectStr);
+    // EXPECT_EQ(tiling_data_result, expectStr);
 }
 
-
-TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_0) {
+TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_0)
+{
     std::string op_type("ReluGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -174,7 +170,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_0) {
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_1) {
+TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_1)
+{
     std::string op_type("ReluGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -209,7 +206,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_1) {
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_2) {
+TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_failed_2)
+{
     std::string op_type("ReluGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -249,8 +247,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling1)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 30720 1 256 1 1 1 30720 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 30720 1 256 1 1 1 30720 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 "
+                            "256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_UINT8 /*inputdtype*/, expectStr);
 }
 
@@ -260,8 +258,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling3)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 30720 1 256 1 1 1 30720 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 30720 1 256 1 1 1 30720 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 "
+                            "256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_INT8 /*inputdtype*/, expectStr);
 }
 
@@ -271,8 +269,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling4)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 15360 1 256 1 1 1 15360 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 15360 1 256 1 1 1 15360 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 "
+                            "256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_BF16 /*inputdtype*/, expectStr);
 }
 
@@ -282,8 +280,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling5)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 15360 1 256 1 1 1 15360 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 15360 1 256 1 1 1 15360 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 "
+                            "256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT16 /*inputdtype*/, expectStr);
 }
 
@@ -293,8 +291,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling6)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 7680 1 256 1 1 1 7680 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 7680 1 256 1 1 1 7680 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 "
+                            "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
 
@@ -304,8 +302,8 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling9)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 7680 1 256 1 1 1 7680 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 7680 1 256 1 1 1 7680 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 "
+                            "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_INT32 /*inputdtype*/, expectStr);
 }
 
@@ -315,7 +313,7 @@ TEST_F(ReluGradDavidTiling, relu_grad_david_tiling_int64)
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {1};
     std::initializer_list<int64_t> outputShape = {2, 128};
-    std::string expectStr =
-        "0 1 7680 1 256 1 1 1 7680 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string expectStr = "0 1 7680 1 256 1 1 1 7680 1 256 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 256 "
+                            "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoReluGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_INT64 /*inputdtype*/, expectStr);
 }

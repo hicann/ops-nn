@@ -18,7 +18,8 @@
 #include "mat_mul_nd2nz.h"
 #include "mat_mul_deterministic_splitk_kernel.h"
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, FIXPIPE_OPT_SELECT FIXPIPE_OPT = FIXPIPE_OPT_SELECT::BASE>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE,
+          FIXPIPE_OPT_SELECT FIXPIPE_OPT = FIXPIPE_OPT_SELECT::BASE>
 __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM,
                                                                 const MatmulTilingData& matmulTilingData,
                                                                 GM_ADDR workspaceGM, uint8_t enAtomic = 0)
@@ -46,8 +47,10 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
     uint64_t alignedSingleCoreM = MMV3CeilAlign(tiling.singleCoreM, 16); // 384
     uint64_t alignedM = MMV3CeilAlign(tiling.M, 16);
     uint64_t alignedN = MMV3CeilAlign(tiling.N, 16);
-    alignedM = alignedM > static_cast<uint64_t>(tiling.singleCoreM)? alignedM : static_cast<uint64_t>(tiling.singleCoreM);
-    alignedN = alignedN > static_cast<uint64_t>(tiling.singleCoreN)? alignedN : static_cast<uint64_t>(tiling.singleCoreN);
+    alignedM = alignedM > static_cast<uint64_t>(tiling.singleCoreM) ? alignedM :
+                                                                      static_cast<uint64_t>(tiling.singleCoreM);
+    alignedN = alignedN > static_cast<uint64_t>(tiling.singleCoreN) ? alignedN :
+                                                                      static_cast<uint64_t>(tiling.singleCoreN);
     uint64_t alignedSingleCoreNForNz = MMV3CeilAlign(static_cast<uint64_t>(tiling.singleCoreN), ALIGNED_H);
     uint64_t alignedNForNz = MMV3CeilAlign(static_cast<uint64_t>(tiling.N), ALIGNED_H);
 
@@ -60,8 +63,9 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
         } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
             singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreNForNz;
         }
-        coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_TWO) * tiling.singleCoreN; // 无论MK还是NK都按照M方向进行分AIV核
-    } else { // 不切L2cache
+        coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_TWO) *
+                   tiling.singleCoreN; // 无论MK还是NK都按照M方向进行分AIV核
+    } else {                           // 不切L2cache
         if (orderFlag) {
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreN) * static_cast<uint64_t>(tiling.M);
@@ -92,8 +96,8 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
         alignedOriN = MMV3CeilAlign(tiling.N, ALIGNED_H);
         alignedKbSize = MMV3CeilAlign(tiling.Kb, c0Size);
     }
-    GM_ADDR alignedworkspaceGM = reinterpret_cast<GM_ADDR>(mmGM +
-                                 tiling.usedCoreNum * singleSize * NUM_TWO * sizeof(float)); // NUM_TWO for DB
+    GM_ADDR alignedworkspaceGM = reinterpret_cast<GM_ADDR>(mmGM + tiling.usedCoreNum * singleSize * NUM_TWO *
+                                                                      sizeof(float)); // NUM_TWO for DB
     if ASCEND_IS_AIV {
         if (GetBlockIdx() >= (tiling.usedCoreNum * NUM_TWO)) {
             NotifyEvent<PIPE_MTE3>(ND2NZ_AIV_SYNC_AIC_FLAG);
@@ -130,15 +134,19 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
         }
         if (isL2cacheSplit) {
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-                ReduceKInUbNzL2cache<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, mCnt, nCnt, tiling.singleCoreN, tiling.N, tmpBuf, orderNMFlag, tiling, originM);
+                ReduceKInUbNzL2cache<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, mCnt, nCnt,
+                                             tiling.singleCoreN, tiling.N, tmpBuf, orderNMFlag, tiling, originM);
             } else {
-                ReduceKInUbL2cache<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, mCnt, nCnt, tiling.singleCoreN, tiling.N, tmpBuf, orderNMFlag, tiling);
+                ReduceKInUbL2cache<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, mCnt, nCnt,
+                                           tiling.singleCoreN, tiling.N, tmpBuf, orderNMFlag, tiling);
             }
         } else {
             if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
-                ReduceKNzInUb<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, cnt, tiling.singleCoreN, tiling.N, tmpBuf, orderFlag, tiling, mCnt, nCnt, originM);
+                ReduceKNzInUb<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, cnt, tiling.singleCoreN,
+                                      tiling.N, tmpBuf, orderFlag, tiling, mCnt, nCnt, originM);
             } else {
-                ReduceKInUb<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, cnt, tiling.singleCoreN, tiling.N, tmpBuf, orderFlag, tiling);
+                ReduceKInUb<C_TYPE>(cGM, mmGM, coreSize, singleSize, totalSize, outSize, cnt, tiling.singleCoreN,
+                                    tiling.N, tmpBuf, orderFlag, tiling);
             }
         }
         if (enAtomic) {
@@ -161,83 +169,71 @@ __aicore__ inline void MatMulUnAlignedKernelDeterministicSplitK(GM_ADDR aGM, GM_
             return;
         }
         using cType = MatmulType<C_TYPE::pos, C_TYPE::format, float, C_TYPE::isTrans>;
-        if (isL2cacheSplit) {	 
-             if (matmulTilingData.matmulRunInfo.nd2nzA && !matmulTilingData.matmulRunInfo.nd2nzB) {	 
-                 using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;	 
-                 if (matmulTilingData.matmulRunInfo.isNzB) {	 
-                     using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;	 
-                     MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(alignedworkspaceGM, bGM, biasGM, mmOffsetGM,	 
-                                                                         singleSize,	 
-                                                                         matmulTilingData.matmulRunInfo.isHf32,	 
-                                                                         &que, tiling, tiling.isBias);	 
-                 } else { 
-                     MatMulMultiCoreSplitKDivideL2cache<aType, B_TYPE, cType, BIAS_TYPE>(alignedworkspaceGM, bGM, biasGM, mmOffsetGM, 
-                                                                         singleSize, 
-                                                                         matmulTilingData.matmulRunInfo.isHf32, 
-                                                                         &que, tiling, tiling.isBias); 
-                 } 
-             } else if (!matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) { 
-                 using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;	 
-                 if (matmulTilingData.matmulRunInfo.isNzA) {	 
-                     using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;	 
-                     MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(aGM, alignedworkspaceGM,	 
-                                                                         biasGM, mmOffsetGM, singleSize,	 
-                                                                         matmulTilingData.matmulRunInfo.isHf32,	 
-                                                                         &que, tiling, tiling.isBias); 
-                 } else { 
-                     MatMulMultiCoreSplitKDivideL2cache<A_TYPE, bType, cType, BIAS_TYPE>(aGM, alignedworkspaceGM, 
-                                                                         biasGM, mmOffsetGM, singleSize, 
-                                                                         matmulTilingData.matmulRunInfo.isHf32, 
-                                                                         &que, tiling, tiling.isBias); 
-                } 
-            } else if (matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) { 
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;	 
+        if (isL2cacheSplit) {
+            if (matmulTilingData.matmulRunInfo.nd2nzA && !matmulTilingData.matmulRunInfo.nd2nzB) {
+                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+                if (matmulTilingData.matmulRunInfo.isNzB) {
+                    using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+                    MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(
+                        alignedworkspaceGM, bGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                } else {
+                    MatMulMultiCoreSplitKDivideL2cache<aType, B_TYPE, cType, BIAS_TYPE>(
+                        alignedworkspaceGM, bGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                }
+            } else if (!matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) {
+                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+                if (matmulTilingData.matmulRunInfo.isNzA) {
+                    using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+                    MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(
+                        aGM, alignedworkspaceGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                } else {
+                    MatMulMultiCoreSplitKDivideL2cache<A_TYPE, bType, cType, BIAS_TYPE>(
+                        aGM, alignedworkspaceGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                }
+            } else if (matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) {
+                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
                 using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
 
-                MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(alignedworkspaceGM, alignedworkspaceGM +
-                                                                        alignedOriM * alignedKaSize * sizeof(A_T),	 
-                                                                        biasGM, mmOffsetGM, singleSize,	 
-                                                                        matmulTilingData.matmulRunInfo.isHf32,	 
-                                                                        &que, tiling, tiling.isBias); 
-            } 
-        } else {	 
-            if (matmulTilingData.matmulRunInfo.nd2nzA && !matmulTilingData.matmulRunInfo.nd2nzB) {	 
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;	 
-                if (matmulTilingData.matmulRunInfo.isNzB) {	 
-                    using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>; 
-                    MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(alignedworkspaceGM, bGM, biasGM, mmOffsetGM, 
-                                                                        singleSize, 
-                                                                        matmulTilingData.matmulRunInfo.isHf32, 
-                                                                        &que, tiling, tiling.isBias); 
-                } else { 
-                    MatMulMultiCoreSplitKDivide<aType, B_TYPE, cType, BIAS_TYPE>(alignedworkspaceGM, bGM, biasGM, mmOffsetGM, 
-                                                                        singleSize, 
-                                                                        matmulTilingData.matmulRunInfo.isHf32, 
-                                                                        &que, tiling, tiling.isBias); 
-                } 
-            } else if (!matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) { 
-                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>; 
-                if (matmulTilingData.matmulRunInfo.isNzA) { 
-                    using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>; 
-                    MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(aGM, alignedworkspaceGM, 
-                                                                        biasGM, mmOffsetGM, singleSize, 
-                                                                        matmulTilingData.matmulRunInfo.isHf32, 
-                                                                        &que, tiling, tiling.isBias); 
-                } else { 
-                    MatMulMultiCoreSplitKDivide<A_TYPE, bType, cType, BIAS_TYPE>(aGM, alignedworkspaceGM, 
-                                                                        biasGM, mmOffsetGM, singleSize, 
-                                                                        matmulTilingData.matmulRunInfo.isHf32, 
-                                                                        &que, tiling, tiling.isBias); 
-                } 
-            } else if (matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) { 
-                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>; 
-                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>; 
-                MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(alignedworkspaceGM, alignedworkspaceGM + 
-                                                                        alignedOriM * alignedKaSize * sizeof(A_T), 
-                                                                        biasGM, mmOffsetGM, singleSize, 
-                                                                        matmulTilingData.matmulRunInfo.isHf32, 
-                                                                        &que, tiling, tiling.isBias); 
-            } 
+                MatMulMultiCoreSplitKDivideL2cache<aType, bType, cType, BIAS_TYPE>(
+                    alignedworkspaceGM, alignedworkspaceGM + alignedOriM * alignedKaSize * sizeof(A_T), biasGM,
+                    mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32, &que, tiling, tiling.isBias);
+            }
+        } else {
+            if (matmulTilingData.matmulRunInfo.nd2nzA && !matmulTilingData.matmulRunInfo.nd2nzB) {
+                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+                if (matmulTilingData.matmulRunInfo.isNzB) {
+                    using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+                    MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(
+                        alignedworkspaceGM, bGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                } else {
+                    MatMulMultiCoreSplitKDivide<aType, B_TYPE, cType, BIAS_TYPE>(
+                        alignedworkspaceGM, bGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                }
+            } else if (!matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) {
+                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+                if (matmulTilingData.matmulRunInfo.isNzA) {
+                    using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+                    MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(
+                        aGM, alignedworkspaceGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                } else {
+                    MatMulMultiCoreSplitKDivide<A_TYPE, bType, cType, BIAS_TYPE>(
+                        aGM, alignedworkspaceGM, biasGM, mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32,
+                        &que, tiling, tiling.isBias);
+                }
+            } else if (matmulTilingData.matmulRunInfo.nd2nzA && matmulTilingData.matmulRunInfo.nd2nzB) {
+                using aType = MatmulType<A_TYPE::pos, CubeFormat::NZ, typename A_TYPE::T, A_TYPE::isTrans>;
+                using bType = MatmulType<B_TYPE::pos, CubeFormat::NZ, typename B_TYPE::T, B_TYPE::isTrans>;
+                MatMulMultiCoreSplitKDivide<aType, bType, cType, BIAS_TYPE>(
+                    alignedworkspaceGM, alignedworkspaceGM + alignedOriM * alignedKaSize * sizeof(A_T), biasGM,
+                    mmOffsetGM, singleSize, matmulTilingData.matmulRunInfo.isHf32, &que, tiling, tiling.isBias);
+            }
         }
         return;
     }

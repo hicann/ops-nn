@@ -25,10 +25,7 @@ class KernelAddLayerNormBetterUB {
 #define IS_BIAS_BROADCAST ((TILING_KEY % 10) == 2)
 
 public:
-    __aicore__ inline KernelAddLayerNormBetterUB(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormBetterUB(TPipe* pipe) { Ppipe = pipe; }
 
     __aicore__ inline uint32_t CEIL_DIV(uint32_t x1, uint32_t y)
     {
@@ -38,25 +35,16 @@ public:
         return 0;
     }
 
-    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-    {
-        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-    }
+    __aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
-    {
-        return x > y ? x : y;
-    }
+    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
-    {
-        return x < y ? x : y;
-    }
+    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-    __aicore__ inline void InitVar(
-        uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
-        uint32_t l_first_dim_per_core_, uint32_t first_dim_per_time_, uint32_t last_dim_per_time_, float eps_,
-        float aveNum_, uint32_t col_move_cnt_, uint32_t col_tail_)
+    __aicore__ inline void InitVar(uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_,
+                                   uint32_t nl_first_dim_per_core_, uint32_t l_first_dim_per_core_,
+                                   uint32_t first_dim_per_time_, uint32_t last_dim_per_time_, float eps_, float aveNum_,
+                                   uint32_t col_move_cnt_, uint32_t col_tail_)
     {
         numCore = num_core_;
         numLastDim = num_Last_dim_;
@@ -71,16 +59,16 @@ public:
         colTail = col_tail_;
     }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x, __gm__ uint8_t* workspace,
-        uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
-        uint32_t l_first_dim_per_core_, uint32_t first_dim_per_time_, uint32_t last_dim_per_time_, float eps_,
-        float aveNum_, uint32_t col_move_cnt_, uint32_t col_tail_, uint32_t workspace_size)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* x, __gm__ uint8_t* workspace, uint32_t num_core_,
+                                uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                uint32_t l_first_dim_per_core_, uint32_t first_dim_per_time_,
+                                uint32_t last_dim_per_time_, float eps_, float aveNum_, uint32_t col_move_cnt_,
+                                uint32_t col_tail_, uint32_t workspace_size)
     {
-        InitVar(
-            num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_, l_first_dim_per_core_,
-            first_dim_per_time_, last_dim_per_time_, eps_, aveNum_, col_move_cnt_, col_tail_);
+        InitVar(num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_, l_first_dim_per_core_,
+                first_dim_per_time_, last_dim_per_time_, eps_, aveNum_, col_move_cnt_, col_tail_);
         if (block_idx != numCore - 1) {
             rowWork = nlFirstDimPerCore;
             rowStep = firstDimPerTime;
@@ -222,8 +210,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInAndAddBroadCast(
-        int32_t procId, int32_t rowCount, LocalTensor<T>& biasLocal, LocalTensor<T>& x1x2Local, uint32_t elementCount)
+    __aicore__ inline void CopyInAndAddBroadCast(int32_t procId, int32_t rowCount, LocalTensor<T>& biasLocal,
+                                                 LocalTensor<T>& x1x2Local, uint32_t elementCount)
     {
         LocalTensor<float> addBufLocal = xBufFp32.Get<float>();
         LocalTensor<float> yBufLocalSpecial = yBufFp32.Get<float>();
@@ -255,9 +243,8 @@ private:
         x1x2Que.FreeTensor(x1x2Local);
     }
 
-    __aicore__ inline void precisionCompute(
-        int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal, LocalTensor<T>& x_out,
-        uint32_t elementCount)
+    __aicore__ inline void precisionCompute(int32_t nums, LocalTensor<float>& gammaLocal, LocalTensor<float>& betaLocal,
+                                            LocalTensor<T>& x_out, uint32_t elementCount)
     {
 #if OUTPUT_MEAN_RSTD == 1
         LocalTensor<float> meanLocal = meanQue.template AllocTensor<float>();
@@ -277,9 +264,8 @@ private:
 #endif
             SetFlag<HardEvent::S_V>(EVENT_ID0);
             WaitFlag<HardEvent::S_V>(EVENT_ID0);
-            Adds(
-                yLocalFp32[rid * numLastDimAligned], xLocalFp32[rid * numLastDimAligned], aveLocalTemp * -1,
-                numLastDim);
+            Adds(yLocalFp32[rid * numLastDimAligned], xLocalFp32[rid * numLastDimAligned], aveLocalTemp * -1,
+                 numLastDim);
         }
         PipeBarrier<PIPE_V>();
 

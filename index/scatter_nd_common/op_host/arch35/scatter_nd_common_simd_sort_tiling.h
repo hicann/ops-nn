@@ -20,13 +20,10 @@
 
 namespace optiling {
 
-class ScatterNdCommonSimdSortTiling : public ScatterNdCommonBaseTiling
-{
+class ScatterNdCommonSimdSortTiling : public ScatterNdCommonBaseTiling {
 public:
-    explicit ScatterNdCommonSimdSortTiling(gert::TilingContext* context) : ScatterNdCommonBaseTiling(context)
-    {}
-    ~ScatterNdCommonSimdSortTiling() override
-    {}
+    explicit ScatterNdCommonSimdSortTiling(gert::TilingContext* context) : ScatterNdCommonBaseTiling(context) {}
+    ~ScatterNdCommonSimdSortTiling() override {}
 
 protected:
     bool IsCapable() override;

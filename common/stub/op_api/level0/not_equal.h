@@ -13,7 +13,7 @@
 
 #include "opdev/op_executor.h"
 namespace l0op {
-const aclTensor *NotEqual(const aclTensor *self, const aclTensor *other, aclOpExecutor *executor);
+const aclTensor* NotEqual(const aclTensor* self, const aclTensor* other, aclOpExecutor* executor);
 
 }
 

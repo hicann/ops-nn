@@ -10,7 +10,7 @@
 
 /*!
  * \file bidirection_lstm.h
- * \brief 
+ * \brief
  */
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_LSTM_BIDIRCTION_H
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_LSTM_BIDIRCTION_H
@@ -18,9 +18,9 @@
 #include "log/log.h"                           // 如果涉及LOG日志打印
 #include "register/op_impl_registry.h"         // 必需
 #include "register/tilingdata_base.h"          // 必需
-#include "op_host/tiling_base.h"                // 如果涉及TilingBaseClass类继承
+#include "op_host/tiling_base.h"               // 如果涉及TilingBaseClass类继承
 #include "op_host/tiling_templates_registry.h" // 如果涉及TilingBaseClass类继承
-#include "util/math_util.h"                   // 如果涉及CeilDiv等对齐运算
+#include "util/math_util.h"                    // 如果涉及CeilDiv等对齐运算
 
 namespace optiling {
 
@@ -47,130 +47,127 @@ constexpr uint32_t MAX_SEQ = 256;
 constexpr float A_FACTOR = 1.1;
 constexpr float B_FACTOR = 0.04;
 
-enum class BidirectionLSTMTilingKey : uint64_t {
-  FP16_BIDIR = 10000001,
-  UNDFINED = 10000099
-};
+enum class BidirectionLSTMTilingKey : uint64_t { FP16_BIDIR = 10000001, UNDFINED = 10000099 };
 
 struct BidirectionLSTMCompileInfo {};
 struct BidirectionLSTMParam {
-  //platform
-  uint64_t CoreNum;
-  uint64_t UBSize;
-  uint64_t L1Size;
-  uint64_t L0ASize;
-  uint64_t L0BSize;
-  uint64_t L0CSize;
+    // platform
+    uint64_t CoreNum;
+    uint64_t UBSize;
+    uint64_t L1Size;
+    uint64_t L0ASize;
+    uint64_t L0BSize;
+    uint64_t L0CSize;
 
-  //attr
-  uint64_t inputSize;
-  uint64_t hiddenSize;
-  uint64_t numLayers;
-  bool isBias;
-  bool batchFirst;
-  uint32_t bidirection;
-  bool activeMat;
-  float dropout;    //reserved
-  uint64_t projSize; //reserved
+    // attr
+    uint64_t inputSize;
+    uint64_t hiddenSize;
+    uint64_t numLayers;
+    bool isBias;
+    bool batchFirst;
+    uint32_t bidirection;
+    bool activeMat;
+    float dropout;     // reserved
+    uint64_t projSize; // reserved
 
-  // addition attr
-  uint64_t sequenceLength;
-  uint64_t batchSize;
-  ge::DataType dataType;
+    // addition attr
+    uint64_t sequenceLength;
+    uint64_t batchSize;
+    ge::DataType dataType;
 
-  // tilingdata
-  // workspace buff
-  uint64_t batchSizeAligned;
-  uint64_t inputSizeAligned;
-  uint64_t hiddenSizeAligned;
-  uint64_t workspaceWihN;
-  uint64_t workspaceWhhN;
-  uint64_t workspaceBN;
-  uint64_t workspaceGateN;
-  uint64_t workspaceInOutStep;
-  uint64_t workspaceInOutN;
-  uint64_t workspaceTmpN;
-  // pad
-  uint64_t padBaseN;
-  uint64_t padInnerBaseN;
-  uint64_t padInputBaseM;
-  uint64_t padInputInnerLoop;
-  uint64_t padInputInnerTailN;
-  uint64_t padHiddenBaseM;
-  uint64_t padHiddenInnerLoop;
-  uint64_t padHiddenInnerTailN;
-  uint64_t padInputLoop;
-  uint64_t padInputTailM;
-  uint64_t padWeightIHLoop;
-  uint64_t padWeightIHTailM;
-  uint64_t padWeightHHLoop;
-  uint64_t padWeightHHTailM;
-  uint64_t padInitLoop;
-  uint64_t padInitTailM;
-  uint64_t padOutputLoop;
-  uint64_t padOutputTailM;
-  uint64_t padInOutTailCoreNum;
-  uint64_t padWeightTailCoreNum;
-  uint64_t padInitTailCoreNum;
-  uint64_t padInputMask;
-  uint64_t padHiddenMask;
+    // tilingdata
+    // workspace buff
+    uint64_t batchSizeAligned;
+    uint64_t inputSizeAligned;
+    uint64_t hiddenSizeAligned;
+    uint64_t workspaceWihN;
+    uint64_t workspaceWhhN;
+    uint64_t workspaceBN;
+    uint64_t workspaceGateN;
+    uint64_t workspaceInOutStep;
+    uint64_t workspaceInOutN;
+    uint64_t workspaceTmpN;
+    // pad
+    uint64_t padBaseN;
+    uint64_t padInnerBaseN;
+    uint64_t padInputBaseM;
+    uint64_t padInputInnerLoop;
+    uint64_t padInputInnerTailN;
+    uint64_t padHiddenBaseM;
+    uint64_t padHiddenInnerLoop;
+    uint64_t padHiddenInnerTailN;
+    uint64_t padInputLoop;
+    uint64_t padInputTailM;
+    uint64_t padWeightIHLoop;
+    uint64_t padWeightIHTailM;
+    uint64_t padWeightHHLoop;
+    uint64_t padWeightHHTailM;
+    uint64_t padInitLoop;
+    uint64_t padInitTailM;
+    uint64_t padOutputLoop;
+    uint64_t padOutputTailM;
+    uint64_t padInOutTailCoreNum;
+    uint64_t padWeightTailCoreNum;
+    uint64_t padInitTailCoreNum;
+    uint64_t padInputMask;
+    uint64_t padHiddenMask;
 
-  uint64_t clearInOutLoop;
-  uint64_t clearInOutTailN;
-  uint64_t clearInOutTailCoreNum;
-  uint64_t clearInitLoop;
-  uint64_t clearInitTailN;
-  uint64_t clearInitTailCoreNum;
-  // trans
-  uint64_t transBaseN;
-  uint64_t transInOutLoopBatch;
-  uint64_t transInOutLoop;
-  uint64_t transInOutTailCoreNum;
-  uint64_t transWeightLoopBatch;
-  uint64_t transWeightLoop;
-  uint64_t transWeightTailCoreNum;
-  uint64_t transInitLoop;
-  uint64_t transInitTailCoreNum;
-  uint64_t transInnerBaseN;
-  uint64_t transInputInnerLoop;
-  uint64_t transInputInnerTailN;
-  uint64_t transHiddenInnerLoop;
-  uint64_t transHiddenInnerTailN;
-  // mm
-  uint64_t baseMKN;
-  uint64_t BaseMNFractalN;
-  uint64_t BaseNKFractalN;
-  uint64_t BaseMKFractalN;
-  uint64_t matUBBaseN;
-  uint64_t l1BaseN;
-  uint64_t IHM;
-  uint64_t IHK;
-  uint64_t IHN;
-  uint64_t IHSingleCoreM;
-  uint64_t IHSingleCoreK;
-  uint64_t IHSingleCoreN;
-  uint64_t IHBaseMNum;
-  uint64_t IHBaseNNum;
-  uint64_t IHBaseKNum;
-  uint64_t HHM;
-  uint64_t HHK;
-  uint64_t HHN;
-  uint64_t HHSingleCoreM;
-  uint64_t HHSingleCoreK;
-  uint64_t HHSingleCoreN;
-  uint64_t HHBaseMNum;
-  uint64_t HHBaseNNum;
-  uint64_t HHBaseKNum;
-  // vec
-  uint64_t vecLoop;
-  uint64_t vecBaseN;
-  uint64_t vecTailCoreNum;
-  uint64_t vecTailN;
+    uint64_t clearInOutLoop;
+    uint64_t clearInOutTailN;
+    uint64_t clearInOutTailCoreNum;
+    uint64_t clearInitLoop;
+    uint64_t clearInitTailN;
+    uint64_t clearInitTailCoreNum;
+    // trans
+    uint64_t transBaseN;
+    uint64_t transInOutLoopBatch;
+    uint64_t transInOutLoop;
+    uint64_t transInOutTailCoreNum;
+    uint64_t transWeightLoopBatch;
+    uint64_t transWeightLoop;
+    uint64_t transWeightTailCoreNum;
+    uint64_t transInitLoop;
+    uint64_t transInitTailCoreNum;
+    uint64_t transInnerBaseN;
+    uint64_t transInputInnerLoop;
+    uint64_t transInputInnerTailN;
+    uint64_t transHiddenInnerLoop;
+    uint64_t transHiddenInnerTailN;
+    // mm
+    uint64_t baseMKN;
+    uint64_t BaseMNFractalN;
+    uint64_t BaseNKFractalN;
+    uint64_t BaseMKFractalN;
+    uint64_t matUBBaseN;
+    uint64_t l1BaseN;
+    uint64_t IHM;
+    uint64_t IHK;
+    uint64_t IHN;
+    uint64_t IHSingleCoreM;
+    uint64_t IHSingleCoreK;
+    uint64_t IHSingleCoreN;
+    uint64_t IHBaseMNum;
+    uint64_t IHBaseNNum;
+    uint64_t IHBaseKNum;
+    uint64_t HHM;
+    uint64_t HHK;
+    uint64_t HHN;
+    uint64_t HHSingleCoreM;
+    uint64_t HHSingleCoreK;
+    uint64_t HHSingleCoreN;
+    uint64_t HHBaseMNum;
+    uint64_t HHBaseNNum;
+    uint64_t HHBaseKNum;
+    // vec
+    uint64_t vecLoop;
+    uint64_t vecBaseN;
+    uint64_t vecTailCoreNum;
+    uint64_t vecTailN;
 
-  //seq
-  bool isSeq;
-  bool packed;
-  uint64_t totalBatchSizes;
+    // seq
+    bool isSeq;
+    bool packed;
+    uint64_t totalBatchSizes;
 };
 
 BEGIN_TILING_DATA_DEF(BidirectionLSTMTilingData)
@@ -280,64 +277,65 @@ REGISTER_TILING_DATA_CLASS(BidirectionLSTMV2, BidirectionLSTMTilingData)
 
 class BidirectionLSTMTiling {
 public:
-  ge::graphStatus runTiling(gert::TilingContext* context);
+    ge::graphStatus runTiling(gert::TilingContext* context);
+
 protected:
-  uint64_t GetDtypeSize(ge::DataType dtype);
+    uint64_t GetDtypeSize(ge::DataType dtype);
 
-  uint64_t GetTilingKey();
+    uint64_t GetTilingKey();
 
-  bool GetPlatformInfo(gert::TilingContext* context);
+    bool GetPlatformInfo(gert::TilingContext* context);
 
-  bool CheckTensorShape(gert::TilingContext* context, gert::Shape& shape, uint64_t ndim, std::vector<uint64_t> dims);
+    bool CheckTensorShape(gert::TilingContext* context, gert::Shape& shape, uint64_t ndim, std::vector<uint64_t> dims);
 
-  bool CheckInputShapes(gert::TilingContext* context);
+    bool CheckInputShapes(gert::TilingContext* context);
 
-  bool CheckOptionalInputShapes(gert::TilingContext* context);
+    bool CheckOptionalInputShapes(gert::TilingContext* context);
 
-  bool CheckOutputShapes(gert::TilingContext* context);
+    bool CheckOutputShapes(gert::TilingContext* context);
 
-  bool CheckInOutShapes(gert::TilingContext* context);
+    bool CheckInOutShapes(gert::TilingContext* context);
 
-  bool CheckBatchSizeShape(gert::TilingContext* context);
+    bool CheckBatchSizeShape(gert::TilingContext* context);
 
-  bool CheckXInputShape(gert::TilingContext* context);
+    bool CheckXInputShape(gert::TilingContext* context);
 
-  bool CheckInitHInputShape(gert::TilingContext* context);
+    bool CheckInitHInputShape(gert::TilingContext* context);
 
-  bool GetCheckAttr(gert::TilingContext* context);
+    bool GetCheckAttr(gert::TilingContext* context);
 
-  void GetIntraCoreMMTilingData(uint32_t BaseMNFractalN, uint32_t &BaseMNum, uint32_t &BaseNNum);
+    void GetIntraCoreMMTilingData(uint32_t BaseMNFractalN, uint32_t& BaseMNum, uint32_t& BaseNNum);
 
-  bool ChooseMMStrategy(uint32_t BaseMNumA, uint32_t BaseNNumA, uint32_t BaseMNumB, uint32_t BaseNNumB);
+    bool ChooseMMStrategy(uint32_t BaseMNumA, uint32_t BaseNNumA, uint32_t BaseMNumB, uint32_t BaseNNumB);
 
-  void GetMMTilingDataBaseMN();
+    void GetMMTilingDataBaseMN();
 
-  void GetMMTilingDataBaseK();
+    void GetMMTilingDataBaseK();
 
-  void GetMMTilingData();
+    void GetMMTilingData();
 
-  void GetPaddataTilingData();
+    void GetPaddataTilingData();
 
-  void GetCleardataTilingData();
+    void GetCleardataTilingData();
 
-  void GetTransdataTilingData();
+    void GetTransdataTilingData();
 
-  void GetPadAndTransdataTilingData();
+    void GetPadAndTransdataTilingData();
 
-  void GetVecTilingData();
+    void GetVecTilingData();
 
-  bool SetLaunchInfo(gert::TilingContext* context);
+    bool SetLaunchInfo(gert::TilingContext* context);
 
-  void _SetTilingDataA();
+    void _SetTilingDataA();
 
-  void _SetTilingDataB();
+    void _SetTilingDataB();
 
-  bool SetTilingData(gert::TilingContext* context);
+    bool SetTilingData(gert::TilingContext* context);
 
 private:
-  BidirectionLSTMTilingData tilingData;
-  BidirectionLSTMParam _Params;
+    BidirectionLSTMTilingData tilingData;
+    BidirectionLSTMParam _Params;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_LSTM_BIDIRCTION_H
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_LSTM_BIDIRCTION_H

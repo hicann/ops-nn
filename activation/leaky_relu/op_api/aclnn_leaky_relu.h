@@ -83,4 +83,4 @@ ACLNN_API aclnnStatus aclnnInplaceLeakyRelu(void* workspace, uint64_t workspaceS
 }
 #endif
 
-#endif  // OP_API_INC_LEAKY_RELU_H_
+#endif // OP_API_INC_LEAKY_RELU_H_

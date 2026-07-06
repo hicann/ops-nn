@@ -29,33 +29,33 @@
 namespace ge {
 
 /**
-* @brief Update '*var' according to the AdaMax algorithm.
-*
-*   m_new   = beta1 * m + (1 - beta1) * grad
-*   v_new   = max(beta2 * v, abs(grad))
-*   var_new = var - lr * m_new / ((1 - beta1^t) * (v_new + epsilon))
-*
-* @par Inputs:
-*  9 Tensor inputs (m, v shared with output via in-place semantics):
-*   @li var:          A Tensor of type float16 or float32. Weight to update.
-*   @li m:            A Tensor of type float16 or float32. First moment (in-place updated).
-*   @li v:            A Tensor of type float16 or float32. Inf-norm (in-place updated).
-*   @li beta1_power:  Scalar Tensor ([1]) with beta1^t.
-*   @li lr:           Scalar Tensor ([1]) learning rate.
-*   @li beta1:        Scalar Tensor ([1]).
-*   @li beta2:        Scalar Tensor ([1]).
-*   @li epsilon:      Scalar Tensor ([1]).
-*   @li grad:         A Tensor, same shape/dtype as var.
-*
-* @par Outputs:
-*   @li var: Updated var (in-place; m / v are also in-place updated through input GM addresses).
-*
-* @par Attributes:
-*   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.
-*
-* @par Third-party framework compatibility
-* Compatible with the TensorFlow operator ApplyAdaMax.
-*/
+ * @brief Update '*var' according to the AdaMax algorithm.
+ *
+ *   m_new   = beta1 * m + (1 - beta1) * grad
+ *   v_new   = max(beta2 * v, abs(grad))
+ *   var_new = var - lr * m_new / ((1 - beta1^t) * (v_new + epsilon))
+ *
+ * @par Inputs:
+ *  9 Tensor inputs (m, v shared with output via in-place semantics):
+ *   @li var:          A Tensor of type float16 or float32. Weight to update.
+ *   @li m:            A Tensor of type float16 or float32. First moment (in-place updated).
+ *   @li v:            A Tensor of type float16 or float32. Inf-norm (in-place updated).
+ *   @li beta1_power:  Scalar Tensor ([1]) with beta1^t.
+ *   @li lr:           Scalar Tensor ([1]) learning rate.
+ *   @li beta1:        Scalar Tensor ([1]).
+ *   @li beta2:        Scalar Tensor ([1]).
+ *   @li epsilon:      Scalar Tensor ([1]).
+ *   @li grad:         A Tensor, same shape/dtype as var.
+ *
+ * @par Outputs:
+ *   @li var: Updated var (in-place; m / v are also in-place updated through input GM addresses).
+ *
+ * @par Attributes:
+ *   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.
+ *
+ * @par Third-party framework compatibility
+ * Compatible with the TensorFlow operator ApplyAdaMax.
+ */
 REG_OP(ApplyAdaMax)
     .INPUT(var, TensorType::NumberType())
     .INPUT(m, TensorType::NumberType())

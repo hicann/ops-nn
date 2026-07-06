@@ -60,10 +60,9 @@ static ge::graphStatus InferShape4AddRmsNormCast(gert::InferShapeContext* contex
         OP_LOGD(context, "End to do InferShape4AddRmsNormCast with unknown rank.");
         return GRAPH_SUCCESS;
     }
- 
-    OP_CHECK_IF(
-        xDimNum < gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
-        return GRAPH_FAILED);
+
+    OP_CHECK_IF(xDimNum < gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
+                return GRAPH_FAILED);
 
     rstdShape->SetDimNum(xDimNum);
     for (size_t i = 0; i < xDimNum; i++) {

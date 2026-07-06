@@ -14,12 +14,12 @@
 namespace ops {
 class ScatterElements : public OpDef {
 public:
-    explicit ScatterElements(const char *name) : OpDef(name)
+    explicit ScatterElements(const char* name) : OpDef(name)
     {
-        const std::vector<ge::DataType> data_types = {
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_INT8, ge::DT_INT16,
-            ge::DT_INT32, ge::DT_INT64, ge::DT_UINT8, ge::DT_UINT16, ge::DT_UINT32, ge::DT_UINT64,
-            ge::DT_BOOL, ge::DT_COMPLEX64, ge::DT_COMPLEX128};
+        const std::vector<ge::DataType> data_types = {ge::DT_FLOAT16, ge::DT_BF16,      ge::DT_FLOAT,     ge::DT_DOUBLE,
+                                                      ge::DT_INT8,    ge::DT_INT16,     ge::DT_INT32,     ge::DT_INT64,
+                                                      ge::DT_UINT8,   ge::DT_UINT16,    ge::DT_UINT32,    ge::DT_UINT64,
+                                                      ge::DT_BOOL,    ge::DT_COMPLEX64, ge::DT_COMPLEX128};
         this->Input("data").ParamType(REQUIRED).DataType(data_types);
         this->Input("indices").ParamType(REQUIRED).DataType({ge::DT_INT32, ge::DT_INT64});
         this->Input("updates").ParamType(REQUIRED).DataType(data_types);
@@ -30,4 +30,4 @@ public:
 };
 
 OP_ADD(ScatterElements);
-}  // namespace ops
+} // namespace ops

@@ -9,20 +9,20 @@
  */
 
 /*!
-* \file broadcast_to.h
-* \brief
-*/
+ * \file broadcast_to.h
+ * \brief
+ */
 
 #ifndef OP_API_INC_LEVEL0_BROADCAST_TO_H
 #define OP_API_INC_LEVEL0_BROADCAST_TO_H
 
-# include "opdev/op_def.h"
+#include "opdev/op_def.h"
 
 namespace l0op {
 
-const aclTensor *BroadcastTo(const aclTensor *x, const aclTensor *y, const aclTensor *shape, aclOpExecutor *executor);
-const aclTensor *BroadcastTo(const aclTensor *x, const aclIntArray *shape, aclOpExecutor *executor);
+const aclTensor* BroadcastTo(const aclTensor* x, const aclTensor* y, const aclTensor* shape, aclOpExecutor* executor);
+const aclTensor* BroadcastTo(const aclTensor* x, const aclIntArray* shape, aclOpExecutor* executor);
 
-} // l0op
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_BROADCAST_TO_H
+#endif // OP_API_INC_LEVEL0_BROADCAST_TO_H

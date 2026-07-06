@@ -22,8 +22,8 @@
 using namespace AscendC;
 using namespace Common::OpKernel;
 
-extern "C" __global__ __aicore__ void foreach_div_list(
-    GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_div_list(GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR outputs,
+                                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

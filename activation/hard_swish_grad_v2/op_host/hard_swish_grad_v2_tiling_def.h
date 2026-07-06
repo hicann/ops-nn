@@ -30,6 +30,6 @@ TILING_DATA_FIELD_DEF(int64_t, elementNumEachCore);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(HardSwishGradV2, HardSwishGradV2TilingData)
-}  // namespace optiling
+} // namespace optiling
 
 #endif

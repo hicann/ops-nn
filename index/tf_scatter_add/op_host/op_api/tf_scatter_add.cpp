@@ -29,8 +29,8 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_950 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8,
-    op::DataType::DT_UINT8, op::DataType::DT_BF16};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
+    op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_BF16};
 
 inline static bool IsAiCoreSupport(const aclTensor* varRef)
 {
@@ -41,36 +41,33 @@ inline static bool IsAiCoreSupport(const aclTensor* varRef)
     }
 }
 // AiCore的执行逻辑
-const aclTensor* ScatterAddAiCore(
-    const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, bool use_locking,
-    aclOpExecutor* executor)
+const aclTensor* ScatterAddAiCore(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
+                                  bool use_locking, aclOpExecutor* executor)
 {
     L0_DFX(ScatterAddAiCore, varRef, indices, updates, use_locking);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        ScatterAdd, OP_INPUT(varRef, indices, updates), OP_OUTPUT(varRef), OP_ATTR(use_locking));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterAdd, OP_INPUT(varRef, indices, updates), OP_OUTPUT(varRef),
+                                           OP_ATTR(use_locking));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
     return varRef;
 }
 
 // AiCPU的执行逻辑
-const aclTensor* ScatterAddAiCPU(
-    const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, bool use_locking,
-    aclOpExecutor* executor)
+const aclTensor* ScatterAddAiCPU(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
+                                 bool use_locking, aclOpExecutor* executor)
 {
     L0_DFX(ScatterAddAiCPU, varRef, indices, updates, use_locking);
 
     static internal::AicpuTaskSpace space("ScatterAdd", ge::DEPEND_IN_SHAPE, true);
     space.SetRef(0);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        ScatterAdd, OP_ATTR_NAMES({"Tindices", "T", "use_locking"}), OP_INPUT(varRef, indices, updates),
-        OP_OUTPUT(varRef), OP_ATTR(indices->GetDataType(), updates->GetDataType(), use_locking));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(ScatterAdd, OP_ATTR_NAMES({"Tindices", "T", "use_locking"}),
+                                          OP_INPUT(varRef, indices, updates), OP_OUTPUT(varRef),
+                                          OP_ATTR(indices->GetDataType(), updates->GetDataType(), use_locking));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
     return varRef;
 }
 
-const aclTensor* ScatterAdd(
-    const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, bool use_locking,
-    aclOpExecutor* executor)
+const aclTensor* ScatterAdd(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
+                            bool use_locking, aclOpExecutor* executor)
 {
     if (IsAiCoreSupport(varRef)) {
         return ScatterAddAiCore(varRef, indices, updates, use_locking, executor);

@@ -26,27 +26,27 @@
 
 struct FakeQuantWithMinMaxVarsTilingData {
     // 15-field standard (PT subset)
-    int32_t numCore = 1;           // actual core count
-    int32_t blockAxis = 1;         // PT: always 1 (dim1)
-    int32_t ubAxis = 1;            // PT: always 1 (dim1)
-    int64_t dim0 = 1;              // PT: 1 (placeholder)
-    int64_t dim1 = 0;              // PT: N (flattened)
-    int64_t dim2 = 1;              // PT: 1 (placeholder)
-    int32_t blockUnion = 1;        // PT: always 1
-    int32_t blockFactor = 0;       // per-core elements (first cores)
-    int32_t blockTailFactor = 0;   // per-core elements (last core)
-    int32_t baseN = 1;             // PT: always 1
-    int32_t baseLen = 0;           // UB tile column count
-    bool hasZeroPoint = false;     // no explicit zp input (nudge is kernel-internal)
-    int32_t axis = 0;              // unused (PT)
-    int32_t roundMode = 0;         // 0 = CAST_RINT
-    int32_t sqrtMode = 0;          // unused (no sqrt)
+    int32_t numCore = 1;         // actual core count
+    int32_t blockAxis = 1;       // PT: always 1 (dim1)
+    int32_t ubAxis = 1;          // PT: always 1 (dim1)
+    int64_t dim0 = 1;            // PT: 1 (placeholder)
+    int64_t dim1 = 0;            // PT: N (flattened)
+    int64_t dim2 = 1;            // PT: 1 (placeholder)
+    int32_t blockUnion = 1;      // PT: always 1
+    int32_t blockFactor = 0;     // per-core elements (first cores)
+    int32_t blockTailFactor = 0; // per-core elements (last core)
+    int32_t baseN = 1;           // PT: always 1
+    int32_t baseLen = 0;         // UB tile column count
+    bool hasZeroPoint = false;   // no explicit zp input (nudge is kernel-internal)
+    int32_t axis = 0;            // unused (PT)
+    int32_t roundMode = 0;       // 0 = CAST_RINT
+    int32_t sqrtMode = 0;        // unused (no sqrt)
 
     // Extension: total length for multi-core partitioning
-    uint64_t totalLength = 0;      // N (also = dim1)
+    uint64_t totalLength = 0; // N (also = dim1)
     // Operator attrs (kernel needs these to compute nudge on-device)
-    uint32_t numBits = 8;          // num_bits attr
-    bool narrowRange = false;      // narrow_range attr
+    uint32_t numBits = 8;     // num_bits attr
+    bool narrowRange = false; // narrow_range attr
 };
 
 #endif

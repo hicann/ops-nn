@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -16,7 +17,7 @@
 #define CHECK_RET(cond, return_expr) \
     do {                             \
         if (!(cond)) {               \
-        return_expr;                 \
+            return_expr;             \
         }                            \
     } while (0)
 
@@ -25,7 +26,8 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
     for (auto i : shape) {
         shapeSize *= i;
@@ -33,7 +35,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
     return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream* stream) {
+int Init(int32_t deviceId, aclrtStream* stream)
+{
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
@@ -46,7 +49,8 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -63,11 +67,12 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                                shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
-int main() {
+int main()
+{
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
@@ -107,10 +112,10 @@ int main() {
     ret = CreateAclTensor(vecHostData, vecShape, &vecDeviceAddr, aclDataType::ACL_FLOAT, &vec);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建alpha aclScalar
-    alpha = aclCreateScalar(&alphaValue,aclDataType::ACL_FLOAT);
+    alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
     CHECK_RET(alpha != nullptr, return ret);
     // 创建beta aclScalar
-    beta = aclCreateScalar(&betaValue,aclDataType::ACL_FLOAT);
+    beta = aclCreateScalar(&betaValue, aclDataType::ACL_FLOAT);
     CHECK_RET(beta != nullptr, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
@@ -141,7 +146,7 @@ int main() {
     auto size = GetShapeSize(outShape);
     std::vector<float> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
-                        size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);

@@ -34,20 +34,13 @@
 
 namespace PpMatMulNS {
 
+using AscendC::HardEvent;
+using AscendC::PipeBarrier;
 using AscendC::SetFlag;
 using AscendC::WaitFlag;
-using AscendC::PipeBarrier;
-using AscendC::HardEvent;
 
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA = DataFormat::ND,
-          DataFormat formatB = DataFormat::ND>
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA = DataFormat::ND, DataFormat formatB = DataFormat::ND>
 class GemmV3BaseKernel {
     static constexpr uint8_t UNIT_FLAG_MODE_2 = 2;
     static constexpr uint8_t UNIT_FLAG_MODE_3 = 3;
@@ -76,12 +69,9 @@ class GemmV3BaseKernel {
 
 public:
     __aicore__ explicit GemmV3BaseKernel(){};
-    __aicore__ FORCE_INLINE void Init(__gm__ uint8_t* __restrict__ a,
-                                      __gm__ uint8_t* __restrict__ b,
-                                      __gm__ uint8_t* __restrict__ c,
-                                      __gm__ uint8_t* __restrict__ y,
-                                      __gm__ uint8_t* __restrict__ workspace,
-                                      const GemmV3TilingData& tilingData);
+    __aicore__ FORCE_INLINE void Init(__gm__ uint8_t* __restrict__ a, __gm__ uint8_t* __restrict__ b,
+                                      __gm__ uint8_t* __restrict__ c, __gm__ uint8_t* __restrict__ y,
+                                      __gm__ uint8_t* __restrict__ workspace, const GemmV3TilingData& tilingData);
     __aicore__ FORCE_INLINE void GetBlockIdx(const uint64_t index, MatCoord& tidx);
     __aicore__ FORCE_INLINE void RunCube();
     __aicore__ FORCE_INLINE void RunVector();
@@ -90,8 +80,7 @@ private:
     __aicore__ FORCE_INLINE void InitBufferCube(const OcBuffer& buf);
     __aicore__ FORCE_INLINE void InitBufferVector(const OcBuffer& buf);
 
-    __aicore__ FORCE_INLINE uint64_t GetOffsetA(const uint64_t batchIdx,
-                                                const uint64_t mTileIdx,
+    __aicore__ FORCE_INLINE uint64_t GetOffsetA(const uint64_t batchIdx, const uint64_t mTileIdx,
                                                 const uint64_t kTileIdx)
     {
         if constexpr (formatA == DataFormat::ND) {
@@ -109,8 +98,7 @@ private:
         }
     }
 
-    __aicore__ FORCE_INLINE uint64_t GetOffsetB(const uint64_t batchIdx,
-                                                const uint64_t kTileIdx,
+    __aicore__ FORCE_INLINE uint64_t GetOffsetB(const uint64_t batchIdx, const uint64_t kTileIdx,
                                                 const uint64_t nTileIdx)
     {
         if constexpr (formatB == DataFormat::ND) {
@@ -129,58 +117,54 @@ private:
     }
 
     __aicore__ FORCE_INLINE void CopyTileA(const AscendC::LocalTensor<InDtype>& dst,
-                                           const AscendC::GlobalTensor<InDtype>& src,
-                                           const uint64_t mTileActual,
-                                           const uint64_t mTileAlign,
-                                           const uint64_t kTileActual,
+                                           const AscendC::GlobalTensor<InDtype>& src, const uint64_t mTileActual,
+                                           const uint64_t mTileAlign, const uint64_t kTileActual,
                                            const uint64_t kTileAlign)
     {
         if constexpr (formatA == DataFormat::ND) {
             if ((m_ == 1) || (mTileActual == 1 && !transA)) {
-                CopyGmToCbuf<formatA, DataFormat::ND>(
-                    dst, src, mTileActual, mTileAlign, m_, kTileActual, kTileAlign, k_);
+                CopyGmToCbuf<formatA, DataFormat::ND>(dst, src, mTileActual, mTileAlign, m_, kTileActual, kTileAlign,
+                                                      k_);
             } else {
                 if constexpr (transA) {
-                    CopyGmToCbuf<formatA, DataFormat::NZ>(
-                        dst, src, kTileActual, kTileAlign, k_, mTileActual, mTileAlign, m_);
+                    CopyGmToCbuf<formatA, DataFormat::NZ>(dst, src, kTileActual, kTileAlign, k_, mTileActual,
+                                                          mTileAlign, m_);
                 } else {
-                    CopyGmToCbuf<formatA, DataFormat::NZ>(
-                        dst, src, mTileActual, mTileAlign, m_, kTileActual, kTileAlign, k_);
+                    CopyGmToCbuf<formatA, DataFormat::NZ>(dst, src, mTileActual, mTileAlign, m_, kTileActual,
+                                                          kTileAlign, k_);
                 }
             }
         } else {
             if constexpr (transA) {
-                CopyGmToCbuf<formatA, DataFormat::NZ>(
-                    dst, src, kTileActual, kTileAlign, kAlign_, mTileActual, mTileAlign, mAlign_);
+                CopyGmToCbuf<formatA, DataFormat::NZ>(dst, src, kTileActual, kTileAlign, kAlign_, mTileActual,
+                                                      mTileAlign, mAlign_);
             } else {
-                CopyGmToCbuf<formatA, DataFormat::NZ>(
-                    dst, src, mTileActual, mTileAlign, mAlign_, kTileActual, kTileAlign, kAlign_);
+                CopyGmToCbuf<formatA, DataFormat::NZ>(dst, src, mTileActual, mTileAlign, mAlign_, kTileActual,
+                                                      kTileAlign, kAlign_);
             }
         }
     }
 
     __aicore__ FORCE_INLINE void CopyTileB(const AscendC::LocalTensor<InDtype>& dst,
-                                           const AscendC::GlobalTensor<InDtype>& src,
-                                           const uint64_t kTileActual,
-                                           const uint64_t kTileAlign,
-                                           const uint64_t nTileActual,
+                                           const AscendC::GlobalTensor<InDtype>& src, const uint64_t kTileActual,
+                                           const uint64_t kTileAlign, const uint64_t nTileActual,
                                            const uint64_t nTileAlign)
     {
         if constexpr (formatB == DataFormat::ND) {
             if constexpr (transB) {
-                CopyGmToCbuf<formatB, DataFormat::NZ>(
-                    dst, src, nTileActual, nTileAlign, n_, kTileActual, kTileAlign, k_);
+                CopyGmToCbuf<formatB, DataFormat::NZ>(dst, src, nTileActual, nTileAlign, n_, kTileActual, kTileAlign,
+                                                      k_);
             } else {
-                CopyGmToCbuf<formatB, DataFormat::NZ>(
-                    dst, src, kTileActual, kTileAlign, k_, nTileActual, nTileAlign, n_);
+                CopyGmToCbuf<formatB, DataFormat::NZ>(dst, src, kTileActual, kTileAlign, k_, nTileActual, nTileAlign,
+                                                      n_);
             }
         } else {
             if constexpr (transB) {
-                CopyGmToCbuf<formatB, DataFormat::NZ>(
-                    dst, src, nTileActual, nTileAlign, nAlign_, kTileActual, kTileAlign, kAlign_);
+                CopyGmToCbuf<formatB, DataFormat::NZ>(dst, src, nTileActual, nTileAlign, nAlign_, kTileActual,
+                                                      kTileAlign, kAlign_);
             } else {
-                CopyGmToCbuf<formatB, DataFormat::NZ>(
-                    dst, src, kTileActual, kTileAlign, kAlign_, nTileActual, nTileAlign, nAlign_);
+                CopyGmToCbuf<formatB, DataFormat::NZ>(dst, src, kTileActual, kTileAlign, kAlign_, nTileActual,
+                                                      nTileAlign, nAlign_);
             }
         }
     }
@@ -224,23 +208,12 @@ private:
     bool enShuffleK_{false};
 };
 
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA,
-          DataFormat formatB>
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
 __aicore__ FORCE_INLINE void
 GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype, formatA, formatB>::Init(
-    __gm__ uint8_t* __restrict__ a,
-    __gm__ uint8_t* __restrict__ b,
-    __gm__ uint8_t* __restrict__ c,
-    __gm__ uint8_t* __restrict__ y,
-    __gm__ uint8_t* __restrict__ workspace,
-    const GemmV3TilingData& tilingData)
+    __gm__ uint8_t* __restrict__ a, __gm__ uint8_t* __restrict__ b, __gm__ uint8_t* __restrict__ c,
+    __gm__ uint8_t* __restrict__ y, __gm__ uint8_t* __restrict__ workspace, const GemmV3TilingData& tilingData)
 {
     numBatchA_ = tilingData.numBatchA;
     numBatchB_ = tilingData.numBatchB;
@@ -282,26 +255,10 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
     InitBufferVector(buf);
 }
 
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA,
-          DataFormat formatB>
-__aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect,
-                 transA,
-                 transB,
-                 InDtype,
-                 BiasDtype,
-                 OutDtype,
-                 AccumDtype,
-                 formatA,
-                 formatB>::GetBlockIdx(
-    const uint64_t index, MatCoord& tidx)
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::GetBlockIdx(const uint64_t index, MatCoord& tidx)
 {
     uint64_t in_batch_idx = index % (tileDim_.m * tileDim_.n);
     if constexpr (swizzleDirect == 0) { // Zn
@@ -335,15 +292,8 @@ GemmV3BaseKernel<swizzleDirect,
     }
 }
 
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA,
-          DataFormat formatB>
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
 __aicore__ FORCE_INLINE void
 GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype, formatA, formatB>::RunCube()
 {
@@ -465,8 +415,7 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
                 }
                 WaitFlag<HardEvent::M_MTE1>(eventFrag);
                 if ((m_ == 1) || (mTileActual == 1 && !transA)) {
-                    LoadCbufToCaVec(l0BufA,
-                                    l1BufA[fragIdx.k * kFrag],
+                    LoadCbufToCaVec(l0BufA, l1BufA[fragIdx.k * kFrag],
                                     0,                              // mTileCeil
                                     CeilDiv<CONST_256>(kFragRound), // kPartCeil
                                     0,                              // mSrcStride
@@ -529,8 +478,8 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
                 WaitFlag<HardEvent::MTE1_M>(eventFrag);
 
                 bool initC = (tileIdx.k == 0 && fragIdx.k == 0);
-                uint8_t unitFlag = (fragIdx.k == (fragDim_.k - 1) && tileIdx.k == (tileDim_.k - 1)) ? UNIT_FLAG_MODE_3
-                                                                                                    : UNIT_FLAG_MODE_2;
+                uint8_t unitFlag = (fragIdx.k == (fragDim_.k - 1) && tileIdx.k == (tileDim_.k - 1)) ? UNIT_FLAG_MODE_3 :
+                                                                                                      UNIT_FLAG_MODE_2;
 
                 if (m_ != 1 && mTileActual == 1 && transA) {
                     AscendC::Mmad(l0BaseC_,                        // C
@@ -585,15 +534,8 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
 }
 
 // vector 数据搬运
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA,
-          DataFormat formatB>
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
 __aicore__ FORCE_INLINE void
 GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype, formatA, formatB>::RunVector()
 {
@@ -636,11 +578,11 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             for (uint32_t i = 0; i < count; ++i) {
                 if constexpr (!std::is_same_v<BiasDtype, AccumDtype>) {
-                    AscendC::Cast<AccumDtype, BiasDtype, false>(ubSum_[i * VEC_ITER_NUMEL],     // dst
-                                                                ubC_[i * VEC_ITER_NUMEL],       // src
-                                                                AscendC::RoundMode::CAST_NONE,  // mode
-                                                                (uint64_t)0,                    // mask
-                                                                VEC_ITER_REPEAT,                // repeat
+                    AscendC::Cast<AccumDtype, BiasDtype, false>(ubSum_[i * VEC_ITER_NUMEL],    // dst
+                                                                ubC_[i * VEC_ITER_NUMEL],      // src
+                                                                AscendC::RoundMode::CAST_NONE, // mode
+                                                                (uint64_t)0,                   // mask
+                                                                VEC_ITER_REPEAT,               // repeat
                                                                 AscendC::UnaryRepeatParams(1, 1, 8, 4));
                     AscendC::PipeBarrier<PIPE_V>();
                 }
@@ -700,7 +642,7 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
                               nTileActual * sizeof(OutDtype),         // lenBurst
                               0,                                      // leftPaddingNum
                               0,                                      // rightPaddingNum
-                              sumSrcGap,                                      // srcGap
+                              sumSrcGap,                              // srcGap
                               (n_ - nTileActual) * sizeof(OutDtype)); // dstGap
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
         } else {
@@ -712,25 +654,10 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
 #endif
 }
 
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA,
-          DataFormat formatB>
-__aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect,
-                 transA,
-                 transB,
-                 InDtype,
-                 BiasDtype,
-                 OutDtype,
-                 AccumDtype,
-                 formatA,
-                 formatB>::InitBufferCube(const OcBuffer& buf)
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::InitBufferCube(const OcBuffer& buf)
 {
 #ifdef __DAV_C220_CUBE__
     l1BaseA_ = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(0);
@@ -740,25 +667,10 @@ GemmV3BaseKernel<swizzleDirect,
 #endif
 }
 
-template <uint32_t swizzleDirect,
-          bool transA,
-          bool transB,
-          typename InDtype,
-          typename BiasDtype,
-          typename OutDtype,
-          typename AccumDtype,
-          DataFormat formatA,
-          DataFormat formatB>
-__aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect,
-                 transA,
-                 transB,
-                 InDtype,
-                 BiasDtype,
-                 OutDtype,
-                 AccumDtype,
-                 formatA,
-                 formatB>::InitBufferVector(const OcBuffer& buf)
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::InitBufferVector(const OcBuffer& buf)
 {
 #ifdef __DAV_C220_VEC__
     uint64_t sizeUbProd = 65536;

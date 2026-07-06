@@ -26,24 +26,23 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LogSigmoidGrad);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                              op::DataType::DT_FLOAT16,
-                                                                              op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor *self) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* self) { return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
 // AICORE算子kernel
-static const aclTensor *LogSigmoidGradAiCore(const aclTensor *gradOuput, const aclTensor *self, aclTensor *gradInput,
-                                             aclOpExecutor *executor) {
+static const aclTensor* LogSigmoidGradAiCore(const aclTensor* gradOuput, const aclTensor* self, aclTensor* gradInput,
+                                             aclOpExecutor* executor)
+{
     L0_DFX(LogSigmoidGradAiCore, gradOuput, self, gradInput);
 
     ADD_TO_LAUNCHER_LIST_AICORE(LogSigmoidGrad, OP_INPUT(gradOuput, self), OP_OUTPUT(gradInput));
     return gradInput;
 }
 
-const aclTensor *LogSigmoidGrad(const aclTensor *gradOutput, const aclTensor *self, aclOpExecutor *executor) {
+const aclTensor* LogSigmoidGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
+{
     auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
 
     if (IsAiCoreSupport(self)) {
@@ -53,4 +52,4 @@ const aclTensor *LogSigmoidGrad(const aclTensor *gradOutput, const aclTensor *se
         return nullptr;
     }
 }
-}  // namespace l0op
+} // namespace l0op

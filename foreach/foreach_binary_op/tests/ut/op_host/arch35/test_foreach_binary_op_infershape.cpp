@@ -28,7 +28,8 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachBinaryOpInferShape TearDown" << std::endl; }
 };
 
-TEST_F(ForeachBinaryOpInferShapeTest, infer_shape_known_success) {
+TEST_F(ForeachBinaryOpInferShapeTest, infer_shape_known_success)
+{
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachBinaryOp")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
     // x1 (3 tensors)
@@ -72,7 +73,8 @@ TEST_F(ForeachBinaryOpInferShapeTest, infer_shape_known_success) {
     EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(2)), "[3]");
 }
 
-TEST_F(ForeachBinaryOpInferShapeTest, infer_dtype_float16) {
+TEST_F(ForeachBinaryOpInferShapeTest, infer_dtype_float16)
+{
     auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachBinaryOp")->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);
     ge::DataType x1_dtype_0 = ge::DT_FLOAT16;
@@ -102,7 +104,8 @@ TEST_F(ForeachBinaryOpInferShapeTest, infer_dtype_float16) {
     EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT16);
 }
 
-TEST_F(ForeachBinaryOpInferShapeTest, infer_dtype_bf16) {
+TEST_F(ForeachBinaryOpInferShapeTest, infer_dtype_bf16)
+{
     auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachBinaryOp")->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);
     ge::DataType x1_dtype_0 = ge::DT_BF16;

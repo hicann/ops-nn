@@ -59,15 +59,14 @@ static ge::graphStatus CheckComputeNodeNum(gert::InferShapeContext* context)
 {
     size_t inputNum = context->GetComputeNodeInputNum();
     if (inputNum < INPUT_NUM_MIN_ROTATE_QUANT || inputNum > INPUT_NUM_MAX_ROTATE_QUANT) {
-        OP_LOGE(
-            context, "Input num must be in [%u, %u], but got %zu", INPUT_NUM_MIN_ROTATE_QUANT,
-            INPUT_NUM_MAX_ROTATE_QUANT, inputNum);
+        OP_LOGE(context, "Input num must be in [%u, %u], but got %zu", INPUT_NUM_MIN_ROTATE_QUANT,
+                INPUT_NUM_MAX_ROTATE_QUANT, inputNum);
         return ge::GRAPH_FAILED;
     }
 
     if (context->GetComputeNodeOutputNum() != OUTPUT_NUM_ROTATE_QUANT) {
-        OP_LOGE(
-            context, "Output num must be %u, but got %zu", OUTPUT_NUM_ROTATE_QUANT, context->GetComputeNodeOutputNum());
+        OP_LOGE(context, "Output num must be %u, but got %zu", OUTPUT_NUM_ROTATE_QUANT,
+                context->GetComputeNodeOutputNum());
         return ge::GRAPH_FAILED;
     }
 
@@ -158,17 +157,15 @@ static ge::graphStatus CheckInputShape4Mx(gert::InferShapeContext* context)
 
     size_t xDimNum = xShape->GetDimNum();
     if (xDimNum < MIN_X_DIM_NUM || xDimNum > MAX_X_DIM_NUM) {
-        OP_LOGE(
-            context, "For mxfp8, x shape dimension must be in [%d, %d], but got %zu", MIN_X_DIM_NUM, MAX_X_DIM_NUM,
-            xDimNum);
+        OP_LOGE(context, "For mxfp8, x shape dimension must be in [%d, %d], but got %zu", MIN_X_DIM_NUM, MAX_X_DIM_NUM,
+                xDimNum);
         return ge::GRAPH_FAILED;
     }
 
     size_t rotDimNum = rotShape->GetDimNum();
     if (rotDimNum < MIN_ROT_DIM_NUM || rotDimNum > MAX_ROT_DIM_NUM) {
-        OP_LOGE(
-            context, "For mxfp8, rot shape dimension must be in [%d, %d], but got %zu", MIN_ROT_DIM_NUM,
-            MAX_ROT_DIM_NUM, rotDimNum);
+        OP_LOGE(context, "For mxfp8, rot shape dimension must be in [%d, %d], but got %zu", MIN_ROT_DIM_NUM,
+                MAX_ROT_DIM_NUM, rotDimNum);
         return ge::GRAPH_FAILED;
     }
 
@@ -260,23 +257,19 @@ static ge::graphStatus RotateQuantInferShape(gert::InferShapeContext* context)
 
     if (IsRotateQuant950Support()) {
         if (yDtype == ge::DT_FLOAT4_E2M1 || yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2) {
-            OP_CHECK_IF(
-                CheckInputShape4Mx(context) == ge::GRAPH_FAILED, OP_LOGE(context, "Invalid input shape for mxfp8"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(CheckInputShape4Mx(context) == ge::GRAPH_FAILED,
+                        OP_LOGE(context, "Invalid input shape for mxfp8"), return ge::GRAPH_FAILED);
             return InferShape4Mx(context);
         } else {
-            OP_LOGE(
-                context, "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, or float8_e5m2, but got %d",
-                static_cast<int32_t>(yDtype));
+            OP_LOGE(context, "For ascend950, y_dtype must be float4_e2m1, float8_e4m3fn, or float8_e5m2, but got %d",
+                    static_cast<int32_t>(yDtype));
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_CHECK_IF(
-            std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
-            OP_LOGE(context, "For ascend910b, y_dtype only support int4, int8"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            CheckInputShape4Int(context) == ge::GRAPH_FAILED, OP_LOGE(context, "Invalid input shape for int"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
+                    OP_LOGE(context, "For ascend910b, y_dtype only support int4, int8"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(CheckInputShape4Int(context) == ge::GRAPH_FAILED, OP_LOGE(context, "Invalid input shape for int"),
+                    return ge::GRAPH_FAILED);
         return InferShape4Int(context);
     }
 }
@@ -310,9 +303,8 @@ static ge::graphStatus RotateQuantInferDataType(gert::InferDataTypeContext* cont
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_CHECK_IF(
-            std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
-            OP_LOGE(context, "For ascend910b, y_dtype only support int4, int8"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(std::find(INT_OUT_TYPE_LIST.begin(), INT_OUT_TYPE_LIST.end(), yDtype) == INT_OUT_TYPE_LIST.end(),
+                    OP_LOGE(context, "For ascend910b, y_dtype only support int4, int8"), return ge::GRAPH_FAILED);
         context->SetOutputDataType(Y_INDEX, yDtype);
         context->SetOutputDataType(SCALE_INDEX, ge::DT_FLOAT);
     }

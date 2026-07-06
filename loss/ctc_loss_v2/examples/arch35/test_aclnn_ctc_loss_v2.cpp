@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -52,9 +52,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -72,9 +71,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -186,22 +184,20 @@ int main()
     CHECK_RET(targetLengths != nullptr, return ACL_ERROR_BAD_ALLOC);
 
     // 创建negLoglikelihoodOut aclTensor
-    ret = CreateAclTensor(
-        negLoglikelihoodOutHostData, negLoglikelihoodOutShape, &negLoglikelihoodOutDeviceAddr, aclDataType::ACL_FLOAT,
-        &negLoglikelihoodOut);
+    ret = CreateAclTensor(negLoglikelihoodOutHostData, negLoglikelihoodOutShape, &negLoglikelihoodOutDeviceAddr,
+                          aclDataType::ACL_FLOAT, &negLoglikelihoodOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建logAlphaOut aclTensor
-    ret = CreateAclTensor(
-        logAlphaOutHostData, logAlphaOutShape, &logAlphaOutDeviceAddr, aclDataType::ACL_FLOAT, &logAlphaOut);
+    ret = CreateAclTensor(logAlphaOutHostData, logAlphaOutShape, &logAlphaOutDeviceAddr, aclDataType::ACL_FLOAT,
+                          &logAlphaOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的API
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnCtcLoss第一段接口
-    ret = aclnnCtcLossGetWorkspaceSize(
-        logProbs, targets, inputLengths, targetLengths, 0, false, negLoglikelihoodOut, logAlphaOut, &workspaceSize,
-        &executor);
+    ret = aclnnCtcLossGetWorkspaceSize(logProbs, targets, inputLengths, targetLengths, 0, false, negLoglikelihoodOut,
+                                       logAlphaOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCtcLossGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -218,9 +214,8 @@ int main()
     // 5. 获取输出的negLoglikelihoodOut值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(negLoglikelihoodOutShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), negLoglikelihoodOutDeviceAddr,
-        size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), negLoglikelihoodOutDeviceAddr,
+                      size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("negLoglikelihoodOut result[%ld] is: %f\n", i, resultData[i]);
@@ -229,9 +224,8 @@ int main()
     // 6. 获取输出的logAlphaOut值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size1 = GetShapeSize(logAlphaOutShape);
     std::vector<float> resultData1(size1, 0);
-    ret = aclrtMemcpy(
-        resultData1.data(), resultData1.size() * sizeof(resultData1[0]), logAlphaOutDeviceAddr, size1 * sizeof(float),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData1.data(), resultData1.size() * sizeof(resultData1[0]), logAlphaOutDeviceAddr,
+                      size1 * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size1; i++) {
         LOG_PRINT("logAlphaOut result[%ld] is: %f\n", i, resultData1[i]);

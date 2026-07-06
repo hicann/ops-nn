@@ -25,21 +25,20 @@ template <typename T, uint32_t schMode>
 class GroupNorm {
 public:
     __aicore__ inline GroupNorm() {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        GroupNormTilingData* tiling);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, GroupNormTilingData* tiling);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ProcessSingleElementGroups();
     __aicore__ inline void ProcessOneGroup(uint32_t groupIndex);
-    __aicore__ inline void CalcMeanAndVariance(
-        uint64_t groupOffset, uint64_t dataCount, float& meanVal, float& meanOutVal, float& rstdVal);
-    __aicore__ inline void NormalizeAndCopyOut(
-        uint64_t groupOffset, uint32_t channelBase, uint64_t dataCount, float meanVal, float rstdVal);
-    __aicore__ inline void NormalizeFloatTile(
-        LocalTensor<float>& srcLocal, LocalTensor<float>& dstLocal, uint64_t offset, uint32_t channelBase,
-        uint32_t currentCount, float meanVal, float rstdVal);
+    __aicore__ inline void CalcMeanAndVariance(uint64_t groupOffset, uint64_t dataCount, float& meanVal,
+                                               float& meanOutVal, float& rstdVal);
+    __aicore__ inline void NormalizeAndCopyOut(uint64_t groupOffset, uint32_t channelBase, uint64_t dataCount,
+                                               float meanVal, float rstdVal);
+    __aicore__ inline void NormalizeFloatTile(LocalTensor<float>& srcLocal, LocalTensor<float>& dstLocal,
+                                              uint64_t offset, uint32_t channelBase, uint32_t currentCount,
+                                              float meanVal, float rstdVal);
     __aicore__ inline float LoadScalarAsFloat(GlobalTensor<T>& gm, uint32_t index);
     __aicore__ inline void CopyInPad(LocalTensor<T>& dstLocal, uint64_t gmOffset, uint32_t count);
     __aicore__ inline void CopyOutPad(GlobalTensor<T>& gm, uint64_t gmOffset, LocalTensor<T>& srcLocal, uint32_t count);
@@ -67,9 +66,8 @@ private:
 };
 
 template <typename T, uint32_t schMode>
-__aicore__ inline void GroupNorm<T, schMode>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-    GroupNormTilingData* tiling)
+__aicore__ inline void GroupNorm<T, schMode>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                   GM_ADDR rstd, GM_ADDR workspace, GroupNormTilingData* tiling)
 {
     (void)workspace;
     tilingData = *tiling;
@@ -239,16 +237,16 @@ __aicore__ inline void GroupNorm<T, schMode>::CopyInPad(LocalTensor<T>& dstLocal
 }
 
 template <typename T, uint32_t schMode>
-__aicore__ inline void GroupNorm<T, schMode>::CopyOutPad(
-    GlobalTensor<T>& gm, uint64_t gmOffset, LocalTensor<T>& srcLocal, uint32_t count)
+__aicore__ inline void GroupNorm<T, schMode>::CopyOutPad(GlobalTensor<T>& gm, uint64_t gmOffset,
+                                                         LocalTensor<T>& srcLocal, uint32_t count)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     DataCopyPad(gm[gmOffset], srcLocal, copyParams);
 }
 
 template <typename T, uint32_t schMode>
-__aicore__ inline void GroupNorm<T, schMode>::CalcMeanAndVariance(
-    uint64_t groupOffset, uint64_t dataCount, float& meanVal, float& meanOutVal, float& rstdVal)
+__aicore__ inline void GroupNorm<T, schMode>::CalcMeanAndVariance(uint64_t groupOffset, uint64_t dataCount,
+                                                                  float& meanVal, float& meanOutVal, float& rstdVal)
 {
     float sum = 0.0f;
     float sumComp = 0.0f;
@@ -302,9 +300,10 @@ __aicore__ inline void GroupNorm<T, schMode>::CalcMeanAndVariance(
 }
 
 template <typename T, uint32_t schMode>
-__aicore__ inline void GroupNorm<T, schMode>::NormalizeFloatTile(
-    LocalTensor<float>& srcLocal, LocalTensor<float>& dstLocal, uint64_t offset, uint32_t channelBase,
-    uint32_t currentCount, float meanVal, float rstdVal)
+__aicore__ inline void GroupNorm<T, schMode>::NormalizeFloatTile(LocalTensor<float>& srcLocal,
+                                                                 LocalTensor<float>& dstLocal, uint64_t offset,
+                                                                 uint32_t channelBase, uint32_t currentCount,
+                                                                 float meanVal, float rstdVal)
 {
     for (uint32_t i = 0; i < currentCount;) {
         uint32_t channelInGroup = static_cast<uint32_t>((offset + i) / tilingData.hxw);
@@ -325,8 +324,8 @@ __aicore__ inline void GroupNorm<T, schMode>::NormalizeFloatTile(
 }
 
 template <typename T, uint32_t schMode>
-__aicore__ inline void GroupNorm<T, schMode>::NormalizeAndCopyOut(
-    uint64_t groupOffset, uint32_t channelBase, uint64_t dataCount, float meanVal, float rstdVal)
+__aicore__ inline void GroupNorm<T, schMode>::NormalizeAndCopyOut(uint64_t groupOffset, uint32_t channelBase,
+                                                                  uint64_t dataCount, float meanVal, float rstdVal)
 {
     for (uint64_t offset = 0; offset < dataCount; offset += tilingData.tileLength) {
         uint64_t currentCount64 = tilingData.tileLength;

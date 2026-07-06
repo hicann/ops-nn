@@ -29,24 +29,22 @@ struct L1TilingData {
     uint64_t scaleFactorB_ = 1UL;
 };
 
-enum class L1TilingMode
-{
-    DEFAULT = 0,                // 默认模式：A和B均不全载，标准L1切分策略
-    A_L1_FULL_LOAD,             // A矩阵L1全载，根据剩余L1空间切分B
-    B_L1_FULL_LOAD,             // B矩阵L1全载，根据剩余L1空间切分A
-    PASS_OPTIMIZED,             // 多遍优化模式：搬运数据量+stepK平衡+cacheline对齐三轮pass优化，A和B均不全载
-    PASS_OPTIMIZED_A_FULL_LOAD, // 多遍优化模式 + A矩阵全载
-    PASS_OPTIMIZED_B_FULL_LOAD, // 多遍优化模式 + B矩阵全载
-    PASS_OPTIMIZED_AB_FULL_LOAD,// 多遍优化模式 + A和B均全载，stepK和depthK均为1
-    DEPTH_MAXIMIZED,            // depth最大化模式：LUT查表场景，stepK固定为1，depth尽可能用满L1空间
+enum class L1TilingMode {
+    DEFAULT = 0,    // 默认模式：A和B均不全载，标准L1切分策略
+    A_L1_FULL_LOAD, // A矩阵L1全载，根据剩余L1空间切分B
+    B_L1_FULL_LOAD, // B矩阵L1全载，根据剩余L1空间切分A
+    PASS_OPTIMIZED, // 多遍优化模式：搬运数据量+stepK平衡+cacheline对齐三轮pass优化，A和B均不全载
+    PASS_OPTIMIZED_A_FULL_LOAD,  // 多遍优化模式 + A矩阵全载
+    PASS_OPTIMIZED_B_FULL_LOAD,  // 多遍优化模式 + B矩阵全载
+    PASS_OPTIMIZED_AB_FULL_LOAD, // 多遍优化模式 + A和B均全载，stepK和depthK均为1
+    DEPTH_MAXIMIZED, // depth最大化模式：LUT查表场景，stepK固定为1，depth尽可能用满L1空间
     DEPTH_MAXIMIZED_A_FULL_LOAD // depth最大化模式 + A矩阵全载，剩余L1空间用于最大化B的depth
 };
 
 class L1TilingDataCalculator {
 public:
-    L1TilingDataCalculator(
-        const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t baseM,
-        uint64_t baseN, uint64_t baseK);
+    L1TilingDataCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
+                           uint64_t baseM, uint64_t baseN, uint64_t baseK);
     virtual ~L1TilingDataCalculator() = default;
 
     bool Compute(L1TilingMode mode);
@@ -72,8 +70,8 @@ private:
     void BalanceStepKPass(uint64_t leftL1Size);
     void PostCacheLinePass(uint64_t leftL1Size, uint64_t maxStepK);
     void L1FullLoadCacheLinePass(uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
-    void NONL1FullLoadCacheLinePass(
-        uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
+    void NONL1FullLoadCacheLinePass(uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine,
+                                    uint64_t bCacheLine);
     uint64_t GetSingleCoreAFullLoadSize() const;
     uint64_t GetSingleCoreBFullLoadSize() const;
 

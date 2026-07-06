@@ -20,12 +20,11 @@
 using namespace AscendC;
 
 template <typename T, typename Tiling, typename Predicate>
-class ForeachRegbaseBinary
-{
+class ForeachRegbaseBinary {
 public:
     __aicore__ inline ForeachRegbaseBinary(Predicate& p) : pred_(p){};
-    __aicore__ inline void Init(
-        GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         blockIdx_ = GetBlockIdx();
         tensorOneDesc_ = ListTensorDesc((__gm__ void*)tensor1);
@@ -73,8 +72,8 @@ public:
         // Batch handling and calculation.
         int64_t quotient = CeilDivision(dataCount, maxDataCount_);
         for (int64_t i = 0; i < quotient; i++) {
-            int64_t currentDataCount =
-                (i == (quotient - 1)) ? (dataCount - (quotient - 1) * maxDataCount_) : maxDataCount_;
+            int64_t currentDataCount = (i == (quotient - 1)) ? (dataCount - (quotient - 1) * maxDataCount_) :
+                                                               maxDataCount_;
             CopyIn(i, currentDataCount);
             Compute(currentDataCount);
             CopyOut(i, currentDataCount);

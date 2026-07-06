@@ -49,17 +49,14 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr,
-                    const std::vector<float>& gradHost, const std::vector<float>& featHost)
+void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr, const std::vector<float>& gradHost,
+                    const std::vector<float>& featHost)
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]),
-        *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS,
-        LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
 
     for (int64_t i = 0; i < size && i < 10; i++) {
         float expected = gradHost[i] / std::pow(1.0f + std::fabs(featHost[i]), 2.0f);
@@ -81,9 +78,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape,
-    void** deviceAddr, aclDataType dataType, aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -96,10 +92,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType,
-        strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-        shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -117,7 +111,7 @@ int main()
     // 输入 gradients
     std::vector<float> gradHost(numElements);
     for (int64_t i = 0; i < numElements; i++) {
-        gradHost[i] = 1.0f;  // 均匀梯度
+        gradHost[i] = 1.0f; // 均匀梯度
     }
     aclTensor* gradients = nullptr;
     void* gradDeviceAddr = nullptr;
@@ -127,7 +121,7 @@ int main()
     // 输入 features
     std::vector<float> featHost(numElements);
     for (int64_t i = 0; i < numElements; i++) {
-        featHost[i] = static_cast<float>(i) * 0.1f - 3.0f;  // [-3.0, 3.3]
+        featHost[i] = static_cast<float>(i) * 0.1f - 3.0f; // [-3.0, 3.3]
     }
     aclTensor* features = nullptr;
     void* featDeviceAddr = nullptr;
@@ -145,8 +139,8 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     ret = aclnnSoftsignBackwardGetWorkspaceSize(gradients, features, out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-        LOG_PRINT("aclnnSoftsignBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftsignBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     void* workspaceAddr = nullptr;
     if (workspaceSize > static_cast<uint64_t>(0)) {
@@ -156,8 +150,7 @@ int main()
 
     // 调用 aclnnSoftsignBackward 第二段
     ret = aclnnSoftsignBackward(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS,
-        LOG_PRINT("aclnnSoftsignBackward failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftsignBackward failed. ERROR: %d\n", ret); return ret);
 
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);

@@ -35,9 +35,8 @@ __global__ __aicore__ void mse_loss(GM_ADDR predict, GM_ADDR label, GM_ADDR y, G
     TPipe pipe;
     using PromoteType = __reduceType::GetPromoteType<DTYPE_PREDICT>::T;
     if constexpr (Reduction == 0) {
-        ElementwiseSch<0UL, MseLoss::MseLossOp<DTYPE_PREDICT>::OpDag> sch(
-            &(tilingData.baseTiling),
-            &pipe); // 获取Schedule
+        ElementwiseSch<0UL, MseLoss::MseLossOp<DTYPE_PREDICT>::OpDag> sch(&(tilingData.baseTiling),
+                                                                          &pipe); // 获取Schedule
         sch.Init(predict, label, y);
         sch.Process();
     } else if constexpr (Reduction == 1) {

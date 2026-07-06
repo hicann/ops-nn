@@ -27,17 +27,16 @@ public:
     ConvTilingRegistry() = default;
 
 #ifdef ASCENDC_OP_TEST
-    static ConvTilingRegistry &GetInstance();
+    static ConvTilingRegistry& GetInstance();
 #else
-    static ConvTilingRegistry &GetInstance()
+    static ConvTilingRegistry& GetInstance()
     {
         static ConvTilingRegistry registry_impl_;
         return registry_impl_;
     }
 #endif
 
-    std::shared_ptr<Ops::NN::Optiling::TilingCases> RegisterOp(const std::string &op_type,
-                                                               int32_t soc_version)
+    std::shared_ptr<Ops::NN::Optiling::TilingCases> RegisterOp(const std::string& op_type, int32_t soc_version)
     {
         auto soc_iter = registry_map_.find(soc_version);
         if (soc_iter == registry_map_.end()) {
@@ -56,11 +55,11 @@ public:
         return registry_map_[soc_version][op_type];
     }
 
-    ge::graphStatus DoTilingImpl(gert::TilingContext *context)
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context)
     {
         int32_t soc_version = static_cast<int32_t>(NpuArch::DAV_RESV);
-        const char *op_type = context->GetNodeType();
-        fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+        const char* op_type = context->GetNodeType();
+        fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
         if (platformInfoPtr == nullptr) {
             OPS_LOG_E(context, "platformInfoPtr is nullptr");
             return ge::GRAPH_FAILED;
@@ -92,7 +91,7 @@ public:
         return ge::GRAPH_FAILED;
     }
 
-    const std::map<int32_t, Ops::NN::Optiling::TilingClassCase> &GetTilingTemplates(const std::string &op_type,
+    const std::map<int32_t, Ops::NN::Optiling::TilingClassCase>& GetTilingTemplates(const std::string& op_type,
                                                                                     int32_t soc_version)
     {
         auto soc_iter = registry_map_.find(soc_version);
@@ -108,17 +107,17 @@ public:
     }
 
 private:
-    std::map<int32_t, std::map<std::string, std::shared_ptr<Ops::NN::Optiling::TilingCases>>> registry_map_; // key is socversion
+    std::map<int32_t, std::map<std::string, std::shared_ptr<Ops::NN::Optiling::TilingCases>>>
+        registry_map_; // key is socversion
     const std::map<int32_t, Ops::NN::Optiling::TilingClassCase> empty_tiling_case_{};
 };
 
 class ConvRegisterNew {
 public:
-    explicit ConvRegisterNew(std::string op_type) : op_type_(std::move(op_type))
-    {
-    }
+    explicit ConvRegisterNew(std::string op_type) : op_type_(std::move(op_type)) {}
 
-    template <typename T> ConvRegisterNew &tiling(int32_t priority, int32_t soc_version)
+    template <typename T>
+    ConvRegisterNew& tiling(int32_t priority, int32_t soc_version)
     {
         auto tilingCases = ConvTilingRegistry::GetInstance().RegisterOp(op_type_, soc_version);
         OPS_ERR_IF(tilingCases == nullptr,
@@ -132,33 +131,31 @@ private:
     const std::string op_type_;
 };
 
-#define CONV_REGISTER_TILING_TEMPLATE(op_type, class_name, soc_version, priority)        \
-    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
-    static ConvRegisterNew VAR_UNUSED##op_type##class_name##priority##_register =        \
-        ConvRegisterNew(#op_type).tiling<class_name>(priority, soc_version)
-        
+#define CONV_REGISTER_TILING_TEMPLATE(op_type, class_name, soc_version, priority)                                   \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                                   \
+    static ConvRegisterNew VAR_UNUSED##op_type##class_name##priority##_register = ConvRegisterNew(#op_type)         \
+                                                                                      .tiling<class_name>(priority, \
+                                                                                                          soc_version)
+
 inline ge::graphStatus ConvTilingFunc(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(context == nullptr,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "context is null"),
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "context is null"),
                     return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeType(), "Begin process ConvTilingFunc");
     return ConvTilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-inline ge::graphStatus TilingPrepareForConv(gert::TilingParseContext *context) {
-    OP_TILING_CHECK(context == nullptr,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "context is null"),
-    return ge::GRAPH_FAILED);
+inline ge::graphStatus TilingPrepareForConv(gert::TilingParseContext* context)
+{
+    OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "context is null"),
+                    return ge::GRAPH_FAILED);
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
-    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
+                    return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<ConvTilingParseInfo>();
-    OP_TILING_CHECK(compileInfoPtr == nullptr,
-                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfoPtr is null"),
-    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfoPtr is null"),
+                    return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     platformInfo->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersion);
     compileInfoPtr->aicoreNum = ascendcPlatform.GetCoreNumAic();
@@ -174,16 +171,11 @@ inline ge::graphStatus TilingPrepareForConv(gert::TilingParseContext *context) {
             "compileInfoPtr->socVersion %s"
             " l1Size:%lu, l2Size:%lu, coreNum:%u"
             "%lu, %lu, %lu, %lu",
-            compileInfoPtr->socVersion.c_str(),
-            compileInfoPtr->l1Size,
-            compileInfoPtr->l2Size,
-            compileInfoPtr->aicoreNum,
-            compileInfoPtr->l0aSize,
-            compileInfoPtr->l0bSize,
-            compileInfoPtr->l0cSize,
+            compileInfoPtr->socVersion.c_str(), compileInfoPtr->l1Size, compileInfoPtr->l2Size,
+            compileInfoPtr->aicoreNum, compileInfoPtr->l0aSize, compileInfoPtr->l0bSize, compileInfoPtr->l0cSize,
             compileInfoPtr->l2Rate);
     return ge::GRAPH_SUCCESS;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

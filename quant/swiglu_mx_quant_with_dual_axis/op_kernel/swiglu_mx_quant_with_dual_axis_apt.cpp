@@ -46,11 +46,9 @@ struct RoundModeMapper {
 } // namespace
 
 template <uint64_t mode, uint64_t roundMode, uint64_t scaleAlg, uint64_t isGroupIdx>
-__global__ __aicore__ void swiglu_mx_quant_with_dual_axis(
-    GM_ADDR x, GM_ADDR group_index,
-    GM_ADDR y1, GM_ADDR mx_scale1,
-    GM_ADDR y2, GM_ADDR mx_scale2,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void swiglu_mx_quant_with_dual_axis(GM_ADDR x, GM_ADDR group_index, GM_ADDR y1, GM_ADDR mx_scale1,
+                                                          GM_ADDR y2, GM_ADDR mx_scale2, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
@@ -63,8 +61,8 @@ __global__ __aicore__ void swiglu_mx_quant_with_dual_axis(
 
     TPipe pipe;
     constexpr AscendC::RoundMode ascendcRoundMode = RoundModeMapper<roundMode>::value;
-    SwigluMxQuantWithDualAxisBase<DTYPE_X, DTYPE_Y1, mode, ascendcRoundMode, scaleAlg, isGroupIdx> op(
-        &tilingData, &pipe);
+    SwigluMxQuantWithDualAxisBase<DTYPE_X, DTYPE_Y1, mode, ascendcRoundMode, scaleAlg, isGroupIdx> op(&tilingData,
+                                                                                                      &pipe);
     op.Init(x, group_index, y1, mx_scale1, y2, mx_scale2);
     op.Process();
 

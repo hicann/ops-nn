@@ -24,13 +24,15 @@ using namespace ApplyAdamWV2RegbaseOp;
 
 template <uint64_t schMode, uint64_t amsgrad>
 __global__ __aicore__ void apply_adam_w_v2(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR grad, GM_ADDR step,
-                                           GM_ADDR max_grad_norm, GM_ADDR workspace, GM_ADDR tiling) {
+                                           GM_ADDR max_grad_norm, GM_ADDR workspace, GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(ApplyAdamWV2RegbaseTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdamWV2RegbaseTilingData, tilingData, tiling);
     TPipe pipe;
     if constexpr (static_cast<int>(amsgrad) == 0) {
-        ElementwiseSch<schMode, ApplyAdamWV2DAG<DTYPE_VAR, DTYPE_GRAD, DTYPE_STEP, float>::OpDag> sch(&(tilingData.elewiseTiling), &pipe);
+        ElementwiseSch<schMode, ApplyAdamWV2DAG<DTYPE_VAR, DTYPE_GRAD, DTYPE_STEP, float>::OpDag> sch(
+            &(tilingData.elewiseTiling), &pipe);
         sch.template SetVar<float, 0>(static_cast<float>(tilingData.lr));
         sch.template SetVar<float, 1>(static_cast<float>(tilingData.beta1));
         sch.template SetVar<float, 2>(static_cast<float>(tilingData.beta2));
@@ -40,7 +42,8 @@ __global__ __aicore__ void apply_adam_w_v2(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM
         sch.Init(var, m, v, grad, step, var, m, v);
         sch.Process();
     } else if constexpr (static_cast<int>(amsgrad) == 1) {
-        ElementwiseSch<schMode, ApplyAdamWV2AmsGradDAG<DTYPE_VAR, DTYPE_GRAD, DTYPE_STEP, float>::OpDag> sch(&(tilingData.elewiseTiling), &pipe);
+        ElementwiseSch<schMode, ApplyAdamWV2AmsGradDAG<DTYPE_VAR, DTYPE_GRAD, DTYPE_STEP, float>::OpDag> sch(
+            &(tilingData.elewiseTiling), &pipe);
         sch.template SetVar<float, 0>(static_cast<float>(tilingData.lr));
         sch.template SetVar<float, 1>(static_cast<float>(tilingData.beta1));
         sch.template SetVar<float, 2>(static_cast<float>(tilingData.beta2));

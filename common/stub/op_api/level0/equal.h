@@ -13,9 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Equal(const aclTensor *self,
-                     const aclTensor *other,
-                     aclOpExecutor *executor);
+const aclTensor* Equal(const aclTensor* self, const aclTensor* other, aclOpExecutor* executor);
 
 }
 

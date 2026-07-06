@@ -46,10 +46,8 @@ struct AdaptiveAvgPool2dGradInputInfo {
 
 class AdaptiveAvgPool2dGradTilingBase : public TilingBaseClass {
 public:
-    explicit AdaptiveAvgPool2dGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptiveAvgPool2dGradTilingBase() override
-    {}
+    explicit AdaptiveAvgPool2dGradTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptiveAvgPool2dGradTilingBase() override {}
     bool CheckInputShape();
     ge::graphStatus CheckInputDtype();
     void SetOtherInputParams();

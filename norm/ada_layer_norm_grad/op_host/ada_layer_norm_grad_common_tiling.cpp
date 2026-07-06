@@ -43,11 +43,10 @@ bool AdaLayerNormGradCommonTiling::IsCapable()
     int64_t bscoreNum = (commonParams.rowSize + bsblockNum - 1) / bsblockNum;
 
     if (commonParams.colSize > COMMON_LNG_MAX_COL || bscoreNum > coreNum) {
-        OP_LOGI(
-            context_,
-            "AdaLayerNormGradCommonTiling: col value(=%ld) is not support now, "
-            "please check.",
-            commonParams.colSize);
+        OP_LOGI(context_,
+                "AdaLayerNormGradCommonTiling: col value(=%ld) is not support now, "
+                "please check.",
+                commonParams.colSize);
         return false;
     }
     return true;
@@ -61,7 +60,7 @@ uint64_t AdaLayerNormGradCommonTiling::GetTilingKey() const
 }
 
 ge::graphStatus AdaLayerNormGradCommonTiling::DoOpTiling()
-{   
+{
     batch_ = static_cast<int64_t>(commonParams.batchSize);
     seq_ = static_cast<int64_t>(commonParams.seqSize);
     row_ = static_cast<int64_t>(commonParams.rowSize);
@@ -90,14 +89,12 @@ ge::graphStatus AdaLayerNormGradCommonTiling::DoOpTiling()
 
     // calculate ub tiling, row split ub
     int64_t ubFormer = CalculateUbFormer();
-    OP_CHECK_IF(
-        (ubFormer <= 0),
-        OP_LOGE(
-            context_,
-            "TilingForAdaLayerNormGrad: ub former(=%ld) is not greater than 0 "
-            "in common tiling, please check",
-            ubFormer),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubFormer <= 0),
+                OP_LOGE(context_,
+                        "TilingForAdaLayerNormGrad: ub former(=%ld) is not greater than 0 "
+                        "in common tiling, please check",
+                        ubFormer),
+                return ge::GRAPH_FAILED);
     int64_t ubLoopOfFormerBlock = Ops::Base::CeilDiv(blockFormer * seq_, ubFormer);
     int64_t ubLoopOfTailBlock = Ops::Base::CeilDiv(blockTail * seq_, ubFormer);
     td_.set_ubFormer(ubFormer);
@@ -112,18 +109,22 @@ ge::graphStatus AdaLayerNormGradCommonTiling::DoOpTiling()
 
 int64_t AdaLayerNormGradCommonTiling::CalculateUbFormer()
 {
-    int64_t maxUBSize = commonParams.ubSizePlatForm - td_.get_nlastRBufferBytes() * COMMON_LNG_NLAST_R_BUFFER_NUM - 1024;//除缓冲区外的内存
+    int64_t maxUBSize = commonParams.ubSizePlatForm - td_.get_nlastRBufferBytes() * COMMON_LNG_NLAST_R_BUFFER_NUM -
+                        1024; //除缓冲区外的内存
     int64_t coff = colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE * COMMON_LNG_WHOLE_BUFFER_NUM +
                    COMMON_LNG_B32_DTYPE_SIZE * COMMON_LNG_LAST_R_BUFFER_NUM + COMMON_LNG_BLOCK_BYTES;
     int64_t curUbFormer = maxUBSize / coff;
-    for (; curUbFormer >= 0; curUbFormer--) {//迭代搜优
+    for (; curUbFormer >= 0; curUbFormer--) { //迭代搜优
         int64_t wholeBufferBytes = curUbFormer * colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE;
-        int64_t lastRBufferBytes =
-            CommonCeilDiv(curUbFormer * COMMON_LNG_B32_DTYPE_SIZE, COMMON_LNG_BLOCK_BYTES) * COMMON_LNG_BLOCK_BYTES;
+        int64_t lastRBufferBytes = CommonCeilDiv(curUbFormer * COMMON_LNG_B32_DTYPE_SIZE, COMMON_LNG_BLOCK_BYTES) *
+                                   COMMON_LNG_BLOCK_BYTES;
         int64_t lastBrcbBufferBytes = CommonCeilDiv(curUbFormer, COMMON_LNG_BRCB_ALIGN_FACTOR) *
-                                      COMMON_LNG_BRCB_ALIGN_FACTOR * COMMON_LNG_BLOCK_BYTES;//BRCB
-        int64_t blockFormerScaleBufferBytes = (CommonCeilDiv(curUbFormer, seq_) + 1) * colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE;
-        int64_t curUBSize = wholeBufferBytes * COMMON_LNG_WHOLE_BUFFER_NUM + lastRBufferBytes * COMMON_LNG_LAST_R_BUFFER_NUM + lastBrcbBufferBytes + blockFormerScaleBufferBytes * COMMON_LNG_SCALE_BUFFER_NUM;
+                                      COMMON_LNG_BRCB_ALIGN_FACTOR * COMMON_LNG_BLOCK_BYTES; // BRCB
+        int64_t blockFormerScaleBufferBytes = (CommonCeilDiv(curUbFormer, seq_) + 1) * colAlignM_ *
+                                              COMMON_LNG_B32_DTYPE_SIZE;
+        int64_t curUBSize = wholeBufferBytes * COMMON_LNG_WHOLE_BUFFER_NUM +
+                            lastRBufferBytes * COMMON_LNG_LAST_R_BUFFER_NUM + lastBrcbBufferBytes +
+                            blockFormerScaleBufferBytes * COMMON_LNG_SCALE_BUFFER_NUM;
         if (curUBSize <= maxUBSize && lastBrcbBufferBytes <= wholeBufferBytes) {
             td_.set_wholeBufferBytes(wholeBufferBytes);
             td_.set_lastRBufferBytes(lastRBufferBytes);
@@ -149,7 +150,9 @@ ge::graphStatus AdaLayerNormGradCommonTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     // workspace size is coreNum * colAlignV * 4 * 2
-    workspaces[0] = td_.get_blockNum() * colAlignV_ * COMMON_LNG_B32_DTYPE_SIZE * (COMMON_LNG_WORKSPACE_NUM + 2 * td_.get_blockFormer() / td_.get_seq()) + COMMON_LNG_WORKSPACE_RESERVED;
+    workspaces[0] = td_.get_blockNum() * colAlignV_ * COMMON_LNG_B32_DTYPE_SIZE *
+                        (COMMON_LNG_WORKSPACE_NUM + 2 * td_.get_blockFormer() / td_.get_seq()) +
+                    COMMON_LNG_WORKSPACE_RESERVED;
 
     return ge::GRAPH_SUCCESS;
 }

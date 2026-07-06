@@ -20,8 +20,8 @@
 #include "rms_norm_grad_split_n_high_precision.h"
 #endif
 
-extern "C" __global__ __aicore__ void rms_norm_grad(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void rms_norm_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                                    GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
@@ -52,9 +52,8 @@ extern "C" __global__ __aicore__ void rms_norm_grad(
 }
 
 #ifndef __CCE_KT_TEST__
-void rms_norm_grad_do(
-    uint32_t numBlocks, void* l2ctrl, void* stream, uint8_t* dy, uint8_t* x, uint8_t* rstd, uint8_t* gamma, uint8_t* dx,
-    uint8_t* dgamma, uint8_t* workspace, uint8_t* tiling)
+void rms_norm_grad_do(uint32_t numBlocks, void* l2ctrl, void* stream, uint8_t* dy, uint8_t* x, uint8_t* rstd,
+                      uint8_t* gamma, uint8_t* dx, uint8_t* dgamma, uint8_t* workspace, uint8_t* tiling)
 {
     rms_norm_grad<<<numBlocks, l2ctrl, stream>>>(dy, x, rstd, gamma, dx, dgamma, workspace, tiling);
 }

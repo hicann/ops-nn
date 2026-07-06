@@ -52,10 +52,10 @@ constexpr uint32_t MAX_MOCK_ATTR_NUM = 4;
 
 constexpr uint64_t L1_DESCALE_BUFFER_SIZE_MAX = 6144;
 constexpr uint64_t L0AB_PINGPONG_BUFFER_LEN_FP16 = 131072;
-constexpr uint64_t L1AB_PINGPONG_BUFFER_LEN_INT8_SPARSE = 160*1024;
+constexpr uint64_t L1AB_PINGPONG_BUFFER_LEN_INT8_SPARSE = 160 * 1024;
 constexpr uint32_t TRANS_B_MASK = 0b1000;
 
-}
+} // namespace
 
 namespace optiling {
 namespace matmul_compress {
@@ -77,46 +77,55 @@ bool MatmulCompressTilingBase::GetMatMulInfo()
     auto aShape = context_->GetInputShape(INDEX_X1)->GetOriginShape();
     auto cShape = context_->GetOutputShape(INDEX_Y)->GetOriginShape();
     params_.batchSize = 1;
-    params_.m = params_.transA ? aShape[DIM_1] : aShape[DIM_0];;
-    params_.k = params_.transA ? aShape[DIM_0] : aShape[DIM_1];;
+    params_.m = params_.transA ? aShape[DIM_1] : aShape[DIM_0];
+    ;
+    params_.k = params_.transA ? aShape[DIM_0] : aShape[DIM_1];
+    ;
     params_.n = cShape[DIM_1];
 
     auto attrs = context_->GetAttrs();
     size_t numAttrs = attrs->GetAttrNum();
-    if(numAttrs <= MAX_MOCK_ATTR_NUM){
-        OP_TILING_CHECK(context_->GetAttrs()->GetAttrPointer<uint32_t>(INDEX_ATTR_TILING_K) == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), 
-                        "Attr tilingK should not be nullptr!"),  return false);
+    if (numAttrs <= MAX_MOCK_ATTR_NUM) {
+        OP_TILING_CHECK(context_->GetAttrs()->GetAttrPointer<uint32_t>(INDEX_ATTR_TILING_K) == nullptr,
+                        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "Attr tilingK should not be nullptr!"),
+                        return false);
         params_.tilingK = *context_->GetAttrs()->GetAttrPointer<uint32_t>(INDEX_ATTR_TILING_K);
-        OP_TILING_CHECK(context_->GetAttrs()->GetAttrPointer<uint32_t>(INDEX_ATTR_TILING_N) == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), 
-                        "Attr tilingN should not be nullptr!"),  return false);
+        OP_TILING_CHECK(context_->GetAttrs()->GetAttrPointer<uint32_t>(INDEX_ATTR_TILING_N) == nullptr,
+                        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "Attr tilingN should not be nullptr!"),
+                        return false);
         params_.tilingN = *context_->GetAttrs()->GetAttrPointer<uint32_t>(INDEX_ATTR_TILING_N);
     }
-    OP_TILING_CHECK(params_.batchSize == 0 || params_.m == 0 || params_.k == 0 || params_.n == 0, 
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "Shape value(b, m, k, n) of matmul should not be zero!"), 
-                    return false);
+    OP_TILING_CHECK(
+        params_.batchSize == 0 || params_.m == 0 || params_.k == 0 || params_.n == 0,
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "Shape value(b, m, k, n) of matmul should not be zero!"),
+        return false);
     tilingData_.tilingK = params_.tilingK;
     tilingData_.tilingN = params_.tilingN;
     params_.isCompress = (params_.tilingK > 0 && params_.tilingN > 0);
     return true;
 }
 
-bool MatmulCompressTilingBase::GetTilingKey() {
-    uint64_t ppMatmulMode = 1;  // PpMatmulMode
-    uint64_t TRANS = 2;         // B Trans
+bool MatmulCompressTilingBase::GetTilingKey()
+{
+    uint64_t ppMatmulMode = 1; // PpMatmulMode
+    uint64_t TRANS = 2;        // B Trans
     tilingKey_ = GET_TPL_TILING_KEY(ppMatmulMode, TRANS);
     tilingData_.tilingKey = tilingKey_;
     OP_LOGI(context_->GetNodeName(), "tilingKey: %ld.", tilingKey_);
     return true;
 }
 
-ge::graphStatus MatmulCompressTilingBase::DoTiling() {
-    OP_TILING_CHECK(context_->GetInputDesc(0) == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), 
-                    "Desc of input matmul A should not be nullptr!"), return ge::GRAPH_FAILED);
+ge::graphStatus MatmulCompressTilingBase::DoTiling()
+{
+    OP_TILING_CHECK(context_->GetInputDesc(0) == nullptr,
+                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "Desc of input matmul A should not be nullptr!"),
+                    return ge::GRAPH_FAILED);
     auto inputDType = context_->GetInputDesc(0)->GetDataType();
-    params_.sizeInDtype = ge::GetSizeByDataType(inputDType);;
+    params_.sizeInDtype = ge::GetSizeByDataType(inputDType);
+    ;
     tiling_.GetHardwareInfo();
-    if (!(GetMatMulInfo() && GetTilingKey())){
-         return ge::GRAPH_FAILED;
+    if (!(GetMatMulInfo() && GetTilingKey())) {
+        return ge::GRAPH_FAILED;
     }
     if (!tiling_.GetMatMulTilingData()) {
         return ge::GRAPH_FAILED;
@@ -129,7 +138,8 @@ ge::graphStatus MatmulCompressTilingBase::DoTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-void MatmulCompressTilingBase::PrintTiling() {
+void MatmulCompressTilingBase::PrintTiling()
+{
     OP_LOGD(context_->GetNodeName(), "tilingKey: %ld.", tilingKey_);
     OP_LOGD(context_->GetNodeName(), "batchSize: %ld.", tilingData_.opShape.batchSize);
     OP_LOGD(context_->GetNodeName(), "m: %ld.", tilingData_.opShape.m);
@@ -152,7 +162,8 @@ void MatmulCompressTilingBase::PrintTiling() {
     OP_LOGD(context_->GetNodeName(), "compressOverlapN: %d.", tilingData_.compressOverlapN);
 }
 
-ge::graphStatus MatmulCompressTilingBase::PostTiling() {
+ge::graphStatus MatmulCompressTilingBase::PostTiling()
+{
     // TilingData
     matmulCompressTilingDataArch20_.batch = tilingData_.opShape.batchSize;
     matmulCompressTilingDataArch20_.m = tilingData_.opShape.m;
@@ -175,9 +186,8 @@ ge::graphStatus MatmulCompressTilingBase::PostTiling() {
     matmulCompressTilingDataArch20_.compressOverlapN = tilingData_.compressOverlapN;
     // TilingData Memory Copy
     size_t tilingDataSize = sizeof(MatmulCompressTilingDataArch20);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        static_cast<void*>(&matmulCompressTilingDataArch20_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           static_cast<void*>(&matmulCompressTilingDataArch20_), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

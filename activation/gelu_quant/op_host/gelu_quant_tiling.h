@@ -67,8 +67,7 @@ struct GeluQuantSplitCoreParams {
 
 class GeluQuantTiling {
 public:
-    explicit GeluQuantTiling(gert::TilingContext* context) : context_(context), nodeName_(context->GetNodeName())
-    {}
+    explicit GeluQuantTiling(gert::TilingContext* context) : context_(context), nodeName_(context->GetNodeName()) {}
     ~GeluQuantTiling() = default;
 
     GeluQuantTilingData tilingData;

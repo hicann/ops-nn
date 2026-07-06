@@ -35,24 +35,27 @@ constexpr uint32_t THIRD = 3;
 constexpr uint32_t TWO_NUMBER = 2;
 constexpr uint32_t FOUR_NUMBER = 4;
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtZeroPadTo256B(
-    const uint64_t start, const uint64_t padSize, __ubuf__ float* outBuffer)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtZeroPadTo256B(const uint64_t start,
+                                                                              const uint64_t padSize,
+                                                                              __ubuf__ float* outBuffer)
 {
     for (uint32_t ubIdx = threadIdx.x; ubIdx < padSize; ubIdx += blockDim.x) {
         outBuffer[start + ubIdx] = static_cast<float>(0);
     }
 }
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValueGm(
-    int64_t blockId_, __ubuf__ float* srcBuffer, __gm__ volatile float* dstBuffer)
+__simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValueGm(int64_t blockId_,
+                                                                             __ubuf__ float* srcBuffer,
+                                                                             __gm__ volatile float* dstBuffer)
 {
     if (threadIdx.x == 0) {
         dstBuffer[blockId_] = srcBuffer[0];
     }
 }
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValue(
-    uint32_t level1Idx, __ubuf__ float* srcBuffer, __ubuf__ float* dstBuffer)
+__simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValue(uint32_t level1Idx,
+                                                                           __ubuf__ float* srcBuffer,
+                                                                           __ubuf__ float* dstBuffer)
 {
     if (threadIdx.x == 0) {
         dstBuffer[level1Idx] = srcBuffer[0];
@@ -60,9 +63,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValue(
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetRes(
-    uint32_t reduction_, __gm__ T* yGm_, __gm__ T* totalWeight_, __ubuf__ float* midOutResUB_,
-    __ubuf__ float* midWeightResUB_)
+__simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetRes(uint32_t reduction_, __gm__ T* yGm_,
+                                                                   __gm__ T* totalWeight_, __ubuf__ float* midOutResUB_,
+                                                                   __ubuf__ float* midWeightResUB_)
 {
     if (threadIdx.x == 0) {
         if (reduction_ == 1) {
@@ -120,12 +123,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtMeanModeCompute4
 template <typename T, typename U>
 class KernelNLLLossSimd {
 public:
-    __aicore__ inline KernelNLLLossSimd()
-    {}
+    __aicore__ inline KernelNLLLossSimd() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight, GM_ADDR workSpace,
-        NLLLossACTilingData tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight,
+                                GM_ADDR workSpace, NLLLossACTilingData tilingData)
     {
         xGm_.SetGlobalBuffer((__gm__ T*)(x));
         yGm_.SetGlobalBuffer((__gm__ T*)(y));
@@ -196,9 +197,8 @@ public:
         workspaceWeightGm_.SetGlobalBuffer((__gm__ float*)workSpace + coreNum_, coreNum_);
     }
 
-    __aicore__ inline void ReduceSumInCore(
-        const LocalTensor<float>& reduceBuf, const LocalTensor<float>& midRes, uint32_t mainReduceLength,
-        uint32_t tailReduceLength)
+    __aicore__ inline void ReduceSumInCore(const LocalTensor<float>& reduceBuf, const LocalTensor<float>& midRes,
+                                           uint32_t mainReduceLength, uint32_t tailReduceLength)
     {
         __local_mem__ float* mainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr();
         __local_mem__ float* tailAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr(mainReduceLength);
@@ -213,8 +213,8 @@ public:
         __VEC_SCOPE__
         {
             AscendC::MicroAPI::RegTensor<float> main1, main2, tail1, tail2, res;
-            AscendC::MicroAPI::MaskReg pregMain =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg pregLoop;
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(tailLoop); ++i) {
@@ -230,8 +230,8 @@ public:
                 ReduceSum(res, main1, pregLoop);
                 DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < static_cast<uint16_t>(mainLoop); ++i) {
                 uint32_t sreg0 = mainReduceLength - tailReduceLength;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
@@ -239,11 +239,11 @@ public:
                 DataCopy(main2, remainAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
                 ReduceSum(res, main1, pregLoop);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    midResAddr + tailLoop + i, res, pregMain);
+                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + tailLoop + i, res,
+                                                                                      pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < static_cast<uint16_t>(restLoop); ++i) {
                 uint32_t sreg0 = tailLoop + mainLoop;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
@@ -253,21 +253,21 @@ public:
                 ReduceSum(res, main1, pregLoop);
                 DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
             {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(lengthBeforeLastReduce);
                 DataCopy(main1, midResAddr);
                 ReduceSum(res, main1, pregLoop);
                 DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(mainAddr, res, pregMain);
             }
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
         }
     }
 
-    __aicore__ inline void ReduceSum256(
-        const LocalTensor<float>& reduceBuf, const LocalTensor<float>& nextLevelReduceBuf, uint32_t idx)
+    __aicore__ inline void ReduceSum256(const LocalTensor<float>& reduceBuf,
+                                        const LocalTensor<float>& nextLevelReduceBuf, uint32_t idx)
     {
         __local_mem__ float* mainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr();
         __local_mem__ float* outAddr = (__ubuf__ float*)nextLevelReduceBuf.GetPhyAddr();
@@ -276,8 +276,8 @@ public:
             AscendC::MicroAPI::RegTensor<float> main1, main2, main3, main4, res;
             uint32_t sreg0 = vfFloatNum_;
             AscendC::MicroAPI::MaskReg pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-            AscendC::MicroAPI::MaskReg pregMain =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             DataCopy(main1, mainAddr);
             DataCopy(main2, mainAddr + vfFloatNum_);
             DataCopy(main3, mainAddr + DOUBLE * vfFloatNum_);
@@ -288,30 +288,29 @@ public:
             Add(main1, main1, main3, pregLoop);
             ReduceSum(res, main1, pregLoop);
             DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + idx, res, pregMain);
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
         }
     }
 
-    __aicore__ inline void FinalCoreRes2Worksapce(
-        const LocalTensor<float>& outBuffer, const GlobalTensor<float>& workspace)
+    __aicore__ inline void FinalCoreRes2Worksapce(const LocalTensor<float>& outBuffer,
+                                                  const GlobalTensor<float>& workspace)
     {
         ReduceSum256(outBuffer, outBuffer, 0);
         PipeBarrier<PIPE_ALL>();
 
-        asc_vf_call<GetReduceValueGm>(
-            dim3{static_cast<uint32_t>(MIN_THREAD)}, blockId_, (__ubuf__ float*)outBuffer.GetPhyAddr(),
-            (__gm__ volatile float*)workspace.GetPhyAddr());
+        asc_vf_call<GetReduceValueGm>(dim3{static_cast<uint32_t>(MIN_THREAD)}, blockId_,
+                                      (__ubuf__ float*)outBuffer.GetPhyAddr(),
+                                      (__gm__ volatile float*)workspace.GetPhyAddr());
     }
 
     __aicore__ inline void MeanModeSubProcess(uint32_t& level1Idx, uint32_t& level2Idx, uint32_t& level3Idx)
     {
-        asc_vf_call<GetReduceValue>(
-            dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
-            (__ubuf__ float*)level1OutUB_.GetPhyAddr());
-        asc_vf_call<GetReduceValue>(
-            dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)weightUB_.GetPhyAddr(),
-            (__ubuf__ float*)level1WeightUB_.GetPhyAddr());
+        asc_vf_call<GetReduceValue>(dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx,
+                                    (__ubuf__ float*)outUB_.GetPhyAddr(), (__ubuf__ float*)level1OutUB_.GetPhyAddr());
+        asc_vf_call<GetReduceValue>(dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx,
+                                    (__ubuf__ float*)weightUB_.GetPhyAddr(),
+                                    (__ubuf__ float*)level1WeightUB_.GetPhyAddr());
         ++level1Idx;
         PipeBarrier<PIPE_ALL>();
         if (level1Idx == MAX_UINT8) {
@@ -338,9 +337,8 @@ public:
 
     __aicore__ inline void SumModeSubProcess(uint32_t& level1Idx, uint32_t& level2Idx, uint32_t& level3Idx)
     {
-        asc_vf_call<GetReduceValue>(
-            dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
-            (__ubuf__ float*)level1OutUB_.GetPhyAddr());
+        asc_vf_call<GetReduceValue>(dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx,
+                                    (__ubuf__ float*)outUB_.GetPhyAddr(), (__ubuf__ float*)level1OutUB_.GetPhyAddr());
         ++level1Idx;
         PipeBarrier<PIPE_ALL>();
         if (level1Idx == MAX_UINT8) {
@@ -386,12 +384,10 @@ public:
                     mainReduceLen = tailMainReduceSize_;
                     tailLen = tailRemainSize_;
                     if (tailSize_ % MID_RES_128 != 0) {
-                        asc_vf_call<SimtZeroPadTo256B>(
-                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
-                            (__ubuf__ float*)outUB_.GetPhyAddr());
-                        asc_vf_call<SimtZeroPadTo256B>(
-                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
-                            (__ubuf__ float*)weightUB_.GetPhyAddr());
+                        asc_vf_call<SimtZeroPadTo256B>(dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                                                       (__ubuf__ float*)outUB_.GetPhyAddr());
+                        asc_vf_call<SimtZeroPadTo256B>(dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                                                       (__ubuf__ float*)weightUB_.GetPhyAddr());
                     }
                 }
 
@@ -427,8 +423,8 @@ public:
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         } else {
-            uint64_t offset =
-                ((blockId_ + 1 - fullIndex_) * loopInCore_ + (fullIndex_ - 1) * (loopInCore_ + 1)) * mainReduceSize_;
+            uint64_t offset = ((blockId_ + 1 - fullIndex_) * loopInCore_ + (fullIndex_ - 1) * (loopInCore_ + 1)) *
+                              mainReduceSize_;
             for (uint64_t i = 0; i < loopNum3_; ++i) {
                 if (i == loopNum3_ - tailNum3_) {
                     simtMoveSize += mainReduceSize_;
@@ -486,18 +482,16 @@ public:
                     mainReduceLen = tailMainReduceSize_;
                     tailLen = tailRemainSize_;
                     if (tailSize_ % MID_RES_128 != 0) {
-                        asc_vf_call<SimtZeroPadTo256B>(
-                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
-                            (__ubuf__ float*)outUB_.GetPhyAddr());
-                        asc_vf_call<SimtZeroPadTo256B>(
-                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
-                            (__ubuf__ float*)weightUB_.GetPhyAddr());
+                        asc_vf_call<SimtZeroPadTo256B>(dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                                                       (__ubuf__ float*)outUB_.GetPhyAddr());
+                        asc_vf_call<SimtZeroPadTo256B>(dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                                                       (__ubuf__ float*)weightUB_.GetPhyAddr());
                     }
                 }
 
                 asc_vf_call<SimtMeanModeCompute4d<U, T>>(
-                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
-                    xDimN_, xDimH_, xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_, xDimN_, xDimH_,
+                    xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
                     (__ubuf__ float*)weightUB_.GetPhyAddr(), (__gm__ U*)targetGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
 
@@ -516,8 +510,8 @@ public:
                 }
 
                 asc_vf_call<SimtMeanModeCompute4d<U, T>>(
-                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
-                    xDimN_, xDimH_, xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_, xDimN_, xDimH_,
+                    xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
                     (__ubuf__ float*)weightUB_.GetPhyAddr(), (__gm__ U*)targetGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
 
@@ -529,16 +523,16 @@ public:
                 MeanModeSubProcess(level1Idx, level2Idx, level3Idx);
             }
         } else {
-            uint64_t offset =
-                ((blockId_ + 1 - fullIndex_) * loopInCore_ + (fullIndex_ - 1) * (loopInCore_ + 1)) * mainReduceSize_;
+            uint64_t offset = ((blockId_ + 1 - fullIndex_) * loopInCore_ + (fullIndex_ - 1) * (loopInCore_ + 1)) *
+                              mainReduceSize_;
             for (uint64_t i = 0; i < loopNum3_; ++i) {
                 if (i == loopNum3_ - tailNum3_) {
                     simtMoveSize += mainReduceSize_;
                 }
 
                 asc_vf_call<SimtMeanModeCompute4d<U, T>>(
-                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
-                    xDimN_, xDimH_, xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_, xDimN_, xDimH_,
+                    xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
                     (__ubuf__ float*)weightUB_.GetPhyAddr(), (__gm__ U*)targetGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
 
@@ -564,8 +558,8 @@ public:
         SyncAll();
     }
 
-    __aicore__ inline void ReduceSumAmongCores(
-        const LocalTensor<float>& outBuffer, const LocalTensor<float>& tmpBuffer, const GlobalTensor<float>& workspace)
+    __aicore__ inline void ReduceSumAmongCores(const LocalTensor<float>& outBuffer, const LocalTensor<float>& tmpBuffer,
+                                               const GlobalTensor<float>& workspace)
     {
         DataCopyExtParams extParams{static_cast<uint16_t>(1), static_cast<uint32_t>(coreNum_ * sizeof(float)), 0, 0, 0};
         DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
@@ -588,10 +582,9 @@ public:
             ReduceSumAmongCores(midOutResUB_, level2OutUB_, workspaceOutGm_);
             ReduceSumAmongCores(midWeightResUB_, level3OutUB_, workspaceWeightGm_);
             PipeBarrier<PIPE_ALL>();
-            asc_vf_call<GetRes<T>>(
-                dim3{static_cast<uint32_t>(MIN_THREAD)}, reduction_, (__gm__ T*)yGm_.GetPhyAddr(),
-                (__gm__ T*)totalWeight_.GetPhyAddr(), (__ubuf__ float*)midOutResUB_.GetPhyAddr(),
-                (__ubuf__ float*)midWeightResUB_.GetPhyAddr());
+            asc_vf_call<GetRes<T>>(dim3{static_cast<uint32_t>(MIN_THREAD)}, reduction_, (__gm__ T*)yGm_.GetPhyAddr(),
+                                   (__gm__ T*)totalWeight_.GetPhyAddr(), (__ubuf__ float*)midOutResUB_.GetPhyAddr(),
+                                   (__ubuf__ float*)midWeightResUB_.GetPhyAddr());
         }
     }
 

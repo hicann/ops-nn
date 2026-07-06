@@ -18,20 +18,17 @@ namespace {
 // x支持10种数据类型，indices支持int32/int64两种，共10x2=20种合法组合
 // 前10组：x各类型 + indices=INT32，后10组：x各类型 + indices=INT64
 static const std::vector<ge::DataType> xDataType = {
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8,
-    ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL,
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8,
-    ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL};
+    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8,   ge::DT_UINT8,   ge::DT_INT16,
+    ge::DT_INT32, ge::DT_INT64,  ge::DT_BOOL,    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_INT8,  ge::DT_UINT8,  ge::DT_INT16,   ge::DT_INT32, ge::DT_INT64,  ge::DT_BOOL};
 static const std::vector<ge::Format> formatList = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 static const std::vector<ge::DataType> indicesDataType = {
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 } // namespace
 
 namespace ops {
@@ -39,26 +36,14 @@ class InplaceIndexFill : public OpDef {
 public:
     explicit InplaceIndexFill(const char* name) : OpDef(name)
     {
-        this->Input("x")
-            .ParamType(REQUIRED)
-            .DataType(xDataType)
-            .Format(formatList)
-            .UnknownShapeFormat(formatList);
+        this->Input("x").ParamType(REQUIRED).DataType(xDataType).Format(formatList).UnknownShapeFormat(formatList);
         this->Input("indices")
             .ParamType(REQUIRED)
             .DataType(indicesDataType)
             .Format(formatList)
             .UnknownShapeFormat(formatList);
-        this->Input("value")
-            .ParamType(REQUIRED)
-            .DataType(xDataType)
-            .Format(formatList)
-            .UnknownShapeFormat(formatList);
-        this->Output("x")
-            .ParamType(REQUIRED)
-            .DataType(xDataType)
-            .Format(formatList)
-            .UnknownShapeFormat(formatList);
+        this->Input("value").ParamType(REQUIRED).DataType(xDataType).Format(formatList).UnknownShapeFormat(formatList);
+        this->Output("x").ParamType(REQUIRED).DataType(xDataType).Format(formatList).UnknownShapeFormat(formatList);
         this->Attr("dim").AttrType(REQUIRED).Int();
 
         OpAICoreConfig aicore_config;

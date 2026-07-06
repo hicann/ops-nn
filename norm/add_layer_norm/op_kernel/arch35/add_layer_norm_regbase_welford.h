@@ -21,21 +21,18 @@
 #include "add_layer_norm_regbase_common.h"
 
 namespace AddLayerNorm {
-template <
-    typename X1_TYPE, typename X2_TYPE, typename GAMMA_TYPE, typename BETA_TYPE, typename BIAS_TYPE, int TILING_KEY,
-    int BUFFER_NUM = 1>
+template <typename X1_TYPE, typename X2_TYPE, typename GAMMA_TYPE, typename BETA_TYPE, typename BIAS_TYPE,
+          int TILING_KEY, int BUFFER_NUM = 1>
 class RegbaseWelford {
 public:
-    static constexpr bool isMix =
-        !(IsSameType<X1_TYPE, X2_TYPE>::value && IsSameType<X1_TYPE, GAMMA_TYPE>::value &&
-          IsSameType<X1_TYPE, BETA_TYPE>::value && IsSameType<X1_TYPE, BIAS_TYPE>::value);
+    static constexpr bool isMix = !(IsSameType<X1_TYPE, X2_TYPE>::value && IsSameType<X1_TYPE, GAMMA_TYPE>::value &&
+                                    IsSameType<X1_TYPE, BETA_TYPE>::value && IsSameType<X1_TYPE, BIAS_TYPE>::value);
 
-    __aicore__ inline RegbaseWelford(const AddLayerNormRegbaseTilingData* tilingData) : tiling_(tilingData)
-    {}
+    __aicore__ inline RegbaseWelford(const AddLayerNormRegbaseTilingData* tilingData) : tiling_(tilingData) {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* x)
     {
         uint32_t coreIdx = GetBlockIdx();
         if (coreIdx >= tiling_->usedCoreNum) {
@@ -128,9 +125,9 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInputsToUB(
-        LocalTensor<X1_TYPE> x1Local, LocalTensor<X2_TYPE> x2Local, LocalTensor<BIAS_TYPE> biasLocal,
-        int64_t inputOffset, int64_t biasOffset, int32_t copyLen)
+    __aicore__ inline void CopyInputsToUB(LocalTensor<X1_TYPE> x1Local, LocalTensor<X2_TYPE> x2Local,
+                                          LocalTensor<BIAS_TYPE> biasLocal, int64_t inputOffset, int64_t biasOffset,
+                                          int32_t copyLen)
     {
         if constexpr (isMix) {
             {
@@ -271,8 +268,8 @@ public:
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
                 ReduceSum(mean, sumMean, pregMain);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    dichotomyAddLocal + i, mean, pregMerge);
+                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
+                                                                                      pregMerge);
             }
 
             // PART2: 整块剩余部分vcadd回刷UB
@@ -312,8 +309,8 @@ public:
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
                 ReduceSum(var, sumVar, pregMain);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    dichotomyAddLocal + i, var, pregMerge);
+                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
+                                                                                      pregMerge);
             }
 
             // PART2: 整块剩余部分vcadd回刷UB
@@ -365,10 +362,10 @@ public:
 
     // 场景3：welford整块小于二分累加整块，并且大于二分累加尾块向上对齐
 
-    __aicore__ inline void VFCalcY(
-        __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, __local_mem__ BIAS_TYPE* biasAddr,
-        __local_mem__ BETA_TYPE* betaAddr, __local_mem__ GAMMA_TYPE* gammaAddr, float mean, float rstd,
-        __local_mem__ BIAS_TYPE* yOutAddr, uint32_t colsCount)
+    __aicore__ inline void VFCalcY(__local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr,
+                                   __local_mem__ BIAS_TYPE* biasAddr, __local_mem__ BETA_TYPE* betaAddr,
+                                   __local_mem__ GAMMA_TYPE* gammaAddr, float mean, float rstd,
+                                   __local_mem__ BIAS_TYPE* yOutAddr, uint32_t colsCount)
     {
         uint32_t vlFp32 = vlFp32_;
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
@@ -384,8 +381,8 @@ public:
             uint32_t sreg0 = colsCount;
             for (uint16_t i = 0; i < colsLoopCount; i++) {
                 pregLoop = UpdateMask<float>(sreg0);
-                LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                    x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32, i * vlFp32, i * vlFp32);
+                LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(x1Addr, x2Addr, biasAddr, x, pregLoop,
+                                                                         i * vlFp32, i * vlFp32, i * vlFp32);
                 LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
                 Adds(x, x, mean, pregLoop);
                 Muls(y, x, rstd, pregLoop);
@@ -487,14 +484,14 @@ public:
 
             float reduceScale = float(1.0) / static_cast<float>(cols_);
             if (colsTail_ != colsPerLoop_) {
-                VFWelfordParallelFinalizeNonAlign(
-                    meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, binaryAddAddr, colsPerLoop_, binaryAddNum_,
-                    binaryAddK_, binaryAddLastNum_, 0, colsTail_, reduceScale, count - 1, eps_);
+                VFWelfordParallelFinalizeNonAlign(meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, binaryAddAddr,
+                                                  colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0,
+                                                  colsTail_, reduceScale, count - 1, eps_);
             } else {
                 float scale = float(1.0) / static_cast<float>(colsPerLoop_);
-                VFWelfordParallelFinalizeAlign(
-                    meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, binaryAddAddr, colsPerLoop_, binaryAddNum_,
-                    binaryAddK_, binaryAddLastNum_, 0, reduceScale, scale, count, eps_);
+                VFWelfordParallelFinalizeAlign(meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, binaryAddAddr, colsPerLoop_,
+                                               binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0, reduceScale, scale,
+                                               count, eps_);
             }
 
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));

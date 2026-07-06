@@ -37,11 +37,10 @@ static inline int64_t CommonCeilDiv(int64_t value, int64_t factor)
 bool AdaLayerNormGradMergeBSCommonTiling::IsCapable()
 {
     if (commonParams.colSize > MERGE_BS_COMMON_LNG_MAX_COL) {
-        OP_LOGI(
-            context_,
-            "AdaLayerNormGradMergeBSCommonTiling: col value(=%ld) is not support now, "
-            "please check.",
-            commonParams.colSize);
+        OP_LOGI(context_,
+                "AdaLayerNormGradMergeBSCommonTiling: col value(=%ld) is not support now, "
+                "please check.",
+                commonParams.colSize);
         return false;
     }
     return true;
@@ -55,7 +54,7 @@ uint64_t AdaLayerNormGradMergeBSCommonTiling::GetTilingKey() const
 }
 
 ge::graphStatus AdaLayerNormGradMergeBSCommonTiling::DoOpTiling()
-{   
+{
     batch_ = static_cast<int64_t>(commonParams.batchSize);
     seq_ = static_cast<int64_t>(commonParams.seqSize);
     row_ = static_cast<int64_t>(commonParams.rowSize);
@@ -84,14 +83,12 @@ ge::graphStatus AdaLayerNormGradMergeBSCommonTiling::DoOpTiling()
 
     // calculate ub tiling, row split ub
     int64_t ubFormer = CalculateUbFormer();
-    OP_CHECK_IF(
-        (ubFormer <= 0),
-        OP_LOGE(
-            context_,
-            "TilingForAdaLayerNormGrad: ub former(=%ld) is not greater than 0 "
-            "in common tiling, please check",
-            ubFormer),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubFormer <= 0),
+                OP_LOGE(context_,
+                        "TilingForAdaLayerNormGrad: ub former(=%ld) is not greater than 0 "
+                        "in common tiling, please check",
+                        ubFormer),
+                return ge::GRAPH_FAILED);
     int64_t ubLoopOfFormerBlock = Ops::Base::CeilDiv(blockFormer, ubFormer);
     int64_t ubLoopOfTailBlock = Ops::Base::CeilDiv(blockTail, ubFormer);
     td_.set_ubFormer(ubFormer);
@@ -106,18 +103,24 @@ ge::graphStatus AdaLayerNormGradMergeBSCommonTiling::DoOpTiling()
 
 int64_t AdaLayerNormGradMergeBSCommonTiling::CalculateUbFormer()
 {
-    int64_t maxUBSize = commonParams.ubSizePlatForm - td_.get_nlastRBufferBytes() * MERGE_BS_COMMON_LNG_NLAST_R_BUFFER_NUM - 1024;//除缓冲区外的内存
+    int64_t maxUBSize = commonParams.ubSizePlatForm -
+                        td_.get_nlastRBufferBytes() * MERGE_BS_COMMON_LNG_NLAST_R_BUFFER_NUM - 1024; //除缓冲区外的内存
     int64_t coff = colAlignM_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE * MERGE_BS_COMMON_LNG_WHOLE_BUFFER_NUM +
-                   MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE * MERGE_BS_COMMON_LNG_LAST_R_BUFFER_NUM + MERGE_BS_COMMON_LNG_BLOCK_BYTES;
+                   MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE * MERGE_BS_COMMON_LNG_LAST_R_BUFFER_NUM +
+                   MERGE_BS_COMMON_LNG_BLOCK_BYTES;
     int64_t curUbFormer = maxUBSize / coff;
-    for (; curUbFormer >= 0; curUbFormer--) {//迭代搜优
+    for (; curUbFormer >= 0; curUbFormer--) { //迭代搜优
         int64_t wholeBufferBytes = curUbFormer * colAlignM_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE;
-        int64_t blockFormerScaleBufferBytes = (CommonCeilDiv(curUbFormer, seq_) + 1) * colAlignM_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE;
-        int64_t lastRBufferBytes =
-            CommonCeilDiv(curUbFormer * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE, MERGE_BS_COMMON_LNG_BLOCK_BYTES) * MERGE_BS_COMMON_LNG_BLOCK_BYTES;
+        int64_t blockFormerScaleBufferBytes = (CommonCeilDiv(curUbFormer, seq_) + 1) * colAlignM_ *
+                                              MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE;
+        int64_t lastRBufferBytes = CommonCeilDiv(curUbFormer * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE,
+                                                 MERGE_BS_COMMON_LNG_BLOCK_BYTES) *
+                                   MERGE_BS_COMMON_LNG_BLOCK_BYTES;
         int64_t lastBrcbBufferBytes = CommonCeilDiv(curUbFormer, MERGE_BS_COMMON_LNG_BRCB_ALIGN_FACTOR) *
-                                      MERGE_BS_COMMON_LNG_BRCB_ALIGN_FACTOR * MERGE_BS_COMMON_LNG_BLOCK_BYTES;//BRCB
-        int64_t curUBSize = wholeBufferBytes * MERGE_BS_COMMON_LNG_WHOLE_BUFFER_NUM + lastRBufferBytes * MERGE_BS_COMMON_LNG_LAST_R_BUFFER_NUM + lastBrcbBufferBytes + blockFormerScaleBufferBytes * MERGE_BS_COMMON_LNG_SCALE_BUFFER_NUM;
+                                      MERGE_BS_COMMON_LNG_BRCB_ALIGN_FACTOR * MERGE_BS_COMMON_LNG_BLOCK_BYTES; // BRCB
+        int64_t curUBSize = wholeBufferBytes * MERGE_BS_COMMON_LNG_WHOLE_BUFFER_NUM +
+                            lastRBufferBytes * MERGE_BS_COMMON_LNG_LAST_R_BUFFER_NUM + lastBrcbBufferBytes +
+                            blockFormerScaleBufferBytes * MERGE_BS_COMMON_LNG_SCALE_BUFFER_NUM;
         if (curUBSize <= maxUBSize && lastBrcbBufferBytes <= wholeBufferBytes) {
             td_.set_wholeBufferBytes(wholeBufferBytes);
             td_.set_blockFormerScaleBufferBytes(blockFormerScaleBufferBytes);
@@ -143,7 +146,9 @@ ge::graphStatus AdaLayerNormGradMergeBSCommonTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     // workspace size is coreNum * colAlignV * 4 * 2
-    workspaces[0] = td_.get_blockNum() * colAlignV_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE * (MERGE_BS_COMMON_LNG_WORKSPACE_NUM + 2 * td_.get_batch()) + MERGE_BS_COMMON_LNG_WORKSPACE_RESERVED;
+    workspaces[0] = td_.get_blockNum() * colAlignV_ * MERGE_BS_COMMON_LNG_B32_DTYPE_SIZE *
+                        (MERGE_BS_COMMON_LNG_WORKSPACE_NUM + 2 * td_.get_batch()) +
+                    MERGE_BS_COMMON_LNG_WORKSPACE_RESERVED;
 
     return ge::GRAPH_SUCCESS;
 }

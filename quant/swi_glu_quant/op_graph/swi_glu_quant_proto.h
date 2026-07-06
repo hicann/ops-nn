@@ -34,14 +34,14 @@ namespace ge {
 *     'false' (activate right) or 'true' (activate left), defalut is 'false' (activate right).
 * @li quant_mode: Optional parameter, which formula used for quantized computation.
       Type is String, the value must be "dynamic" or "static" or "dynamic_msd", "static" indicates static quantization,
-      "dynamic" indicates dynamic quantization, and "dynamic_msd" indicates dynamic mean squared displacement quantization, defaults to dynamic.
-      Now only support "dynamic" and "static" mode.
+      "dynamic" indicates dynamic quantization, and "dynamic_msd" indicates dynamic mean squared displacement
+quantization, defaults to dynamic. Now only support "dynamic" and "static" mode.
 * @li group_list_type: Optional parameter, which used to describe group_index mode.
       Type is Int, the value must be 0 or 1, 0 indicates "cumsum" mode, 1 indicates "count" mode.
       Now only support "cumsum" and "count" mode.
 * @li dst_type: Optional parameter, which used to describe quant output mode.
-      Type is Int, the value must be 2(DT_INT8 enum value) or 29(DT_INT4 enum value), 2 indicates "int8 quant output" mode, 29 indicates "int4 quant output" mode.
-      Now only support "int8 quant output" and "int4 quant output" mode.
+      Type is Int, the value must be 2(DT_INT8 enum value) or 29(DT_INT4 enum value), 2 indicates "int8 quant output"
+mode, 29 indicates "int4 quant output" mode. Now only support "int8 quant output" and "int4 quant output" mode.
 
 * @par Outputs:
 * @li y: A tensor ,type is int8 or int4, the size of the last dimension of output y is half of the size of input x.
@@ -61,6 +61,6 @@ REG_OP(SwiGluQuant)
     .ATTR(group_list_type, Int, 0)
     .ATTR(dst_type, Int, DT_INT8)
     .OP_END_FACTORY_REG(SwiGluQuant)
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_QUANT_SWI_GLU_QUANT_PROTO_H_
+#endif // OPS_QUANT_SWI_GLU_QUANT_PROTO_H_

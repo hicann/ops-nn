@@ -34,8 +34,10 @@ namespace ge {
 
 * @par Attributes:
 * Four attributes, including:
-* @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication, the default value is no permutation.
-* @li perm_x2: A list int. "x2" is permuted to shape [B, K, N] before multiplication, the default value is no permutation.
+* @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication, the default value is no
+permutation.
+* @li perm_x2: A list int. "x2" is permuted to shape [B, K, N] before multiplication, the default value is no
+permutation.
 * @li perm_y: A list int. "y" is permuted after multiplication.
 * @li enable_hf32: An optional bool. If True, enable enable_hi_float_32_execution.
 * @li batch_split_factor: An optional int. Declares factor of output_batch. Default to be 1.

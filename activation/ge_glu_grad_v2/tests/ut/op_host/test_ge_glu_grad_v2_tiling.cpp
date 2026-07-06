@@ -51,10 +51,7 @@ protected:
         tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     }
 
-    static void TearDownTestSuite()
-    {
-        cout << "GeGluGradV2Tiling TearDownTestSuite" << endl;
-    }
+    static void TearDownTestSuite() { cout << "GeGluGradV2Tiling TearDownTestSuite" << endl; }
 
 protected:
     static map<string, string> socInfos;
@@ -94,8 +91,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_parse_func)
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 }
@@ -121,10 +118,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_001)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -138,8 +134,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_001)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 101);
 }
@@ -166,10 +162,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_002)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -183,8 +178,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_002)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 102);
 }
@@ -211,10 +206,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_003)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -228,8 +222,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_003)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 103);
 }
@@ -255,10 +249,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_004)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -272,8 +265,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_004)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 701);
 }
@@ -299,10 +292,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_001)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -316,8 +308,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_001)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 201);
 }
@@ -343,10 +335,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_002)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -360,8 +351,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_002)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 202);
 }
@@ -387,10 +378,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_003)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -404,8 +394,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_003)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 203);
 }
@@ -431,10 +421,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_004)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -448,8 +437,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp16_004)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 801);
 }
@@ -475,10 +464,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_001)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -492,8 +480,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_001)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 301);
 }
@@ -519,10 +507,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_002)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -536,8 +523,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_002)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 302);
 }
@@ -563,10 +550,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_003)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -580,8 +566,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_003)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 303);
 }
@@ -607,10 +593,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_004)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -624,8 +609,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_004)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 901);
 }
@@ -651,10 +636,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_005)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -668,8 +652,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_fp32_005)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
     ASSERT_EQ(tilingContext->GetTilingKey(), 901);
 }
@@ -695,10 +679,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_310p_erf)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -712,8 +695,8 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_310p_erf)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
 }
 
@@ -738,10 +721,9 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_310p)
                             .OutputShapes({&xShape})
                             .CompileInfo(&compileInfo)
                             .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                            .NodeAttrs(
-                                {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
-                                 {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
-                                 {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
+                            .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(dimAttr)},
+                                        {"approximate", Ops::NN::AnyValue::CreateFrom<int64_t>(approximateAttr)},
+                                        {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activateLeftAttr)}})
                             .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                             .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -755,7 +737,7 @@ TEST_F(GeGluGradV2Tiling, ge_glu_grad_v2_tiling_bfp16_310p)
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    tilingHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                      intrinsics);
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_FAILED);
 }

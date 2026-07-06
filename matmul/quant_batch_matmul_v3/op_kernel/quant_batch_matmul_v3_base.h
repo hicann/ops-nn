@@ -30,11 +30,14 @@
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"
 
-#define TemplateBasicTypeForClass typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, \
-    int x2Format, bool aTrans, bool bTrans, class UPDATE_TYPE, class EpilogueType = EpilogueDequant
-#define TemplateBasicType typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, \
-    int x2Format, bool aTrans, bool bTrans, class UPDATE_TYPE, class EpilogueType
-#define TemplateBasicValue x1Type, x2Type, scaleType, yType, x1Format, x2Format, aTrans, bTrans, UPDATE_TYPE, EpilogueType
+#define TemplateBasicTypeForClass                                                                                  \
+    typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, int x2Format, bool aTrans, \
+        bool bTrans, class UPDATE_TYPE, class EpilogueType = EpilogueDequant
+#define TemplateBasicType                                                                                          \
+    typename x1Type, typename x2Type, typename scaleType, typename yType, int x1Format, int x2Format, bool aTrans, \
+        bool bTrans, class UPDATE_TYPE, class EpilogueType
+#define TemplateBasicValue \
+    x1Type, x2Type, scaleType, yType, x1Format, x2Format, aTrans, bTrans, UPDATE_TYPE, EpilogueType
 
 constexpr uint32_t BMM_BLOCK_NUM = 16;
 constexpr uint32_t K0_INT4 = 64;
@@ -72,17 +75,19 @@ constexpr uint8_t B_NEED_BROADCAST = 2;
 constexpr MatmulConfigMode configMode = MatmulConfigMode::CONFIG_NORM;
 constexpr MatmulBatchParams batchParams{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::MULTI_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams);
-constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
+constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false,
+                                                  BatchOutMode::SINGLE_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
-    GetMDLConfig(false, false, 0, false, false, false, true, true, false, false, false, true);
-constexpr MatmulConfig MM_DEFAULT_MDL_CFG =
-    GetMDLConfig(true, false, 0, false, false, false, false, true, true, false, false, true);
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG = GetMDLConfig(false, false, 0, false, false, false, true, true,
+                                                                       false, false, false, true);
+constexpr MatmulConfig MM_DEFAULT_MDL_CFG = GetMDLConfig(true, false, 0, false, false, false, false, true, true, false,
+                                                         false, true);
 #else
-constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
-    GetMDLConfig(false, false, 0, false, false, false, true, true, false, false, false);
+constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG = GetMDLConfig(false, false, 0, false, false, false, true, true,
+                                                                       false, false, false);
 constexpr MatmulConfig MM_DEFAULT_MDL_CFG = GetMDLConfig();
 #endif
 
@@ -122,35 +127,30 @@ struct QBmmBaseBlockArgs {
     uint64_t nTileAddrOffset;
 };
 
-enum class FusedOpType : uint32_t {
-    NONE = 0U,
-    RELU = 1U,
-    SWIGLU = 2U,
-    GELU_TANH = 3UL,
-    GELU_ERF = 4UL
-};
+enum class FusedOpType : uint32_t { NONE = 0U, RELU = 1U, SWIGLU = 2U, GELU_TANH = 3UL, GELU_ERF = 4UL };
 
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-template<typename yType, typename scaleType>
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+template <typename yType, typename scaleType>
 struct EpilogueParams {
-    AscendC::GlobalTensor<int32_t> &curMmOutGm;
-    AscendC::GlobalTensor<yType> &yGm;
-    AscendC::GlobalTensor<bfloat16_t> &biasGmBf16;
-    AscendC::GlobalTensor<half> &biasGmFp16;
-    AscendC::GlobalTensor<float> &biasGmFp32;
-    AscendC::GlobalTensor<scaleType> &scaleGm;
-    AscendC::GlobalTensor<float> &pertokenScaleGm;
+    AscendC::GlobalTensor<int32_t>& curMmOutGm;
+    AscendC::GlobalTensor<yType>& yGm;
+    AscendC::GlobalTensor<bfloat16_t>& biasGmBf16;
+    AscendC::GlobalTensor<half>& biasGmFp16;
+    AscendC::GlobalTensor<float>& biasGmFp32;
+    AscendC::GlobalTensor<scaleType>& scaleGm;
+    AscendC::GlobalTensor<float>& pertokenScaleGm;
 
-    AscendC::TBuf<AscendC::TPosition::VECCALC> &outFp32Tmp;
-    AscendC::TBuf<AscendC::TPosition::VECCALC> &vecQueTmp;
-    AscendC::TBuf<AscendC::TPosition::VECCALC> &biasFp32Tmp;
-    AscendC::TBuf<AscendC::TPosition::VECCALC> &broadcastFp32Tmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC>& outFp32Tmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC>& vecQueTmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC>& biasFp32Tmp;
+    AscendC::TBuf<AscendC::TPosition::VECCALC>& broadcastFp32Tmp;
 
-    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueSrc;
-    AscendC::TQue<AscendC::QuePosition::VECOUT, 1> &vecQueOut;
-    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueBias;
-    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueScale;
-    AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQuePertokenScale;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQueSrc;
+    AscendC::TQue<AscendC::QuePosition::VECOUT, 1>& vecQueOut;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQueBias;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQueScale;
+    AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQuePertokenScale;
 
     uint32_t curAicM;
     uint32_t curAicN;
@@ -165,67 +165,54 @@ struct EpilogueParams {
     QBmmBlockOffset offset;
     uint32_t n;
 
-    __aicore__ EpilogueParams(
-        AscendC::GlobalTensor<int32_t> &curMmOutGm,
-        AscendC::GlobalTensor<yType> &yGm,
-        AscendC::GlobalTensor<bfloat16_t> &biasGmBf16,
-        AscendC::GlobalTensor<half> &biasGmFp16,
-        AscendC::GlobalTensor<float> &biasGmFp32,
-        AscendC::GlobalTensor<scaleType> &scaleGm,
-        AscendC::GlobalTensor<float> &pertokenScaleGm,
+    __aicore__ EpilogueParams(AscendC::GlobalTensor<int32_t>& curMmOutGm, AscendC::GlobalTensor<yType>& yGm,
+                              AscendC::GlobalTensor<bfloat16_t>& biasGmBf16, AscendC::GlobalTensor<half>& biasGmFp16,
+                              AscendC::GlobalTensor<float>& biasGmFp32, AscendC::GlobalTensor<scaleType>& scaleGm,
+                              AscendC::GlobalTensor<float>& pertokenScaleGm,
 
-        AscendC::TBuf<AscendC::TPosition::VECCALC> &outFp32Tmp,
-        AscendC::TBuf<AscendC::TPosition::VECCALC> &vecQueTmp,
-        AscendC::TBuf<AscendC::TPosition::VECCALC> &biasFp32Tmp,
-        AscendC::TBuf<AscendC::TPosition::VECCALC> &broadcastFp32Tmp,
+                              AscendC::TBuf<AscendC::TPosition::VECCALC>& outFp32Tmp,
+                              AscendC::TBuf<AscendC::TPosition::VECCALC>& vecQueTmp,
+                              AscendC::TBuf<AscendC::TPosition::VECCALC>& biasFp32Tmp,
+                              AscendC::TBuf<AscendC::TPosition::VECCALC>& broadcastFp32Tmp,
 
-        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueSrc,
-        AscendC::TQue<AscendC::QuePosition::VECOUT, 1> &vecQueOut,
-        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueBias,
-        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQueScale,
-        AscendC::TQue<AscendC::QuePosition::VECIN, 1> &vecQuePertokenScale,
+                              AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQueSrc,
+                              AscendC::TQue<AscendC::QuePosition::VECOUT, 1>& vecQueOut,
+                              AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQueBias,
+                              AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQueScale,
+                              AscendC::TQue<AscendC::QuePosition::VECIN, 1>& vecQuePertokenScale,
 
-        uint32_t curAicM,
-        uint32_t curAicN,
-        uint32_t subBlockIdx,
-        uint32_t ubCalcM,
-        uint32_t ubCalcN,
-        uint64_t offsetWorkspaceC,
-        uint32_t biasDtype,
-        uint32_t biasDtypeSize,
-        bool isPerTensor,
-        scaleType scaleScalar,
-        QBmmBlockOffset offset,
-        uint32_t n
-    ):curMmOutGm(curMmOutGm),
-      yGm(yGm), 
-      biasGmBf16(biasGmBf16), 
-      biasGmFp16(biasGmFp16),
-      biasGmFp32(biasGmFp32),
-      scaleGm(scaleGm),
-      pertokenScaleGm(pertokenScaleGm),
-      outFp32Tmp(outFp32Tmp),
-      vecQueTmp(vecQueTmp),
-      biasFp32Tmp(biasFp32Tmp),
-      broadcastFp32Tmp(broadcastFp32Tmp),
-      vecQueSrc(vecQueSrc),
-      vecQueOut(vecQueOut),
-      vecQueBias(vecQueBias),
-      vecQueScale(vecQueScale),
-      vecQuePertokenScale(vecQuePertokenScale),
-      curAicM(curAicM),
-      curAicN(curAicN),
-      subBlockIdx(subBlockIdx),
-      ubCalcM(ubCalcM),
-      ubCalcN(ubCalcN),
-      offsetWorkspaceC(offsetWorkspaceC),
-      biasDtype(biasDtype),
-      biasDtypeSize(biasDtypeSize),
-      isPerTensor(isPerTensor),
-      scaleScalar(scaleScalar),
-      offset(offset),
-      n(n)
-      {}
+                              uint32_t curAicM, uint32_t curAicN, uint32_t subBlockIdx, uint32_t ubCalcM,
+                              uint32_t ubCalcN, uint64_t offsetWorkspaceC, uint32_t biasDtype, uint32_t biasDtypeSize,
+                              bool isPerTensor, scaleType scaleScalar, QBmmBlockOffset offset, uint32_t n)
+        : curMmOutGm(curMmOutGm),
+          yGm(yGm),
+          biasGmBf16(biasGmBf16),
+          biasGmFp16(biasGmFp16),
+          biasGmFp32(biasGmFp32),
+          scaleGm(scaleGm),
+          pertokenScaleGm(pertokenScaleGm),
+          outFp32Tmp(outFp32Tmp),
+          vecQueTmp(vecQueTmp),
+          biasFp32Tmp(biasFp32Tmp),
+          broadcastFp32Tmp(broadcastFp32Tmp),
+          vecQueSrc(vecQueSrc),
+          vecQueOut(vecQueOut),
+          vecQueBias(vecQueBias),
+          vecQueScale(vecQueScale),
+          vecQuePertokenScale(vecQuePertokenScale),
+          curAicM(curAicM),
+          curAicN(curAicN),
+          subBlockIdx(subBlockIdx),
+          ubCalcM(ubCalcM),
+          ubCalcN(ubCalcN),
+          offsetWorkspaceC(offsetWorkspaceC),
+          biasDtype(biasDtype),
+          biasDtypeSize(biasDtypeSize),
+          isPerTensor(isPerTensor),
+          scaleScalar(scaleScalar),
+          offset(offset),
+          n(n)
+    {}
 };
 #endif
 
@@ -252,10 +239,7 @@ __aicore__ inline T Min(T a, T b)
     return a > b ? b : a;
 }
 
-__aicore__ inline uint64_t Align(uint64_t a, uint64_t b = 16)
-{
-    return (a + b - 1) / b * b;
-}
+__aicore__ inline uint64_t Align(uint64_t a, uint64_t b = 16) { return (a + b - 1) / b * b; }
 
 __aicore__ inline uint64_t FloorAlign(uint64_t a, uint64_t b = 16)
 {
@@ -273,20 +257,11 @@ __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b)
     return (a + b - 1) / b;
 }
 
-__aicore__ inline uint64_t Align16(uint64_t num)
-{
-    return (num + 15UL) & 0xFFFFFFFFFFFFFFF0UL;
-}
+__aicore__ inline uint64_t Align16(uint64_t num) { return (num + 15UL) & 0xFFFFFFFFFFFFFFF0UL; }
 
-__aicore__ inline uint64_t Align32(uint64_t num)
-{
-    return (num + 31UL) & 0xFFFFFFFFFFFFFFE0UL;
-}
+__aicore__ inline uint64_t Align32(uint64_t num) { return (num + 31UL) & 0xFFFFFFFFFFFFFFE0UL; }
 
-__aicore__ inline uint64_t Align64(uint64_t num)
-{
-    return (num + 31UL) & 0xFFFFFFFFFFFFFFC0UL;
-}
+__aicore__ inline uint64_t Align64(uint64_t num) { return (num + 31UL) & 0xFFFFFFFFFFFFFFC0UL; }
 
 __aicore__ inline constexpr CubeFormat GetFormat(int format)
 {
@@ -309,7 +284,8 @@ __aicore__ inline constexpr uint32_t GetC0Size()
 #endif
     } else if constexpr (AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         return K0_INT4;
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || __CUBE_S8S4_S4S4__
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
+    __CUBE_S8S4_S4S4__
     } else if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value) {
         return K0_INT4;
 #endif
@@ -330,12 +306,13 @@ __aicore__ inline constexpr uint64_t GetSizeWithDataType(uint64_t shapeSize)
     if constexpr (isLut) {
         // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
 #if __LUT_SUPPORT__
-        is4BitInput =
-            (AscendC::IsSameType<T, AscendC::int2b_t>::value || AscendC::IsSameType<T, AscendC::uint1b_t>::value);
+        is4BitInput = (AscendC::IsSameType<T, AscendC::int2b_t>::value ||
+                       AscendC::IsSameType<T, AscendC::uint1b_t>::value);
 #endif
         is8BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
     } else {
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || __CUBE_S8S4_S4S4__
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
+    __CUBE_S8S4_S4S4__
         is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value || AscendC::IsSameType<T, fp4x2_e2m1_t>::value);
 #else
         is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
@@ -378,8 +355,8 @@ __aicore__ inline constexpr uint32_t GetTaskRation()
 #endif
 }
 
-
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || __CUBE_S8S4_S4S4__
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
+    __CUBE_S8S4_S4S4__
 template <typename T>
 __aicore__ inline constexpr bool IsMxType()
 {
@@ -393,15 +370,16 @@ __aicore__ inline constexpr bool IsFp4()
 }
 #endif
 
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-__aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams &dequantParams,
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+__aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams& dequantParams,
                                          bool needUpdate = true)
 {
     if (!needUpdate) {
         return;
     }
-    uint32_t computedAivN = Align(curAivN, 8U);  // 8: 32B aligned for int32_t
-    uint32_t ubResAlignedN = Align(curAivN);     // 16: sizeof(yType) is 2, 32B / 2
+    uint32_t computedAivN = Align(curAivN, 8U); // 8: 32B aligned for int32_t
+    uint32_t ubResAlignedN = Align(curAivN);    // 16: sizeof(yType) is 2, 32B / 2
     if (computedAivN == ubResAlignedN) {
         // choose ddequat high performance
         dequantParams.m = 1;
@@ -415,15 +393,15 @@ __aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, Asc
     }
 }
 
-__aicore__ inline void SetGm2UbParams(AscendC::DataCopyParams &gm2UbParams, uint32_t curAivM, uint32_t curAivN)
+__aicore__ inline void SetGm2UbParams(AscendC::DataCopyParams& gm2UbParams, uint32_t curAivM, uint32_t curAivN)
 {
     gm2UbParams.blockLen = curAivN * sizeof(int32_t);
     gm2UbParams.blockCount = curAivM;
     gm2UbParams.srcStride = 0;
 }
 
-template<typename yType>
-__aicore__ inline void SetUb2GmParams(AscendC::DataCopyExtParams &ub2GmParams, uint32_t curAivM, uint32_t curAivN,
+template <typename yType>
+__aicore__ inline void SetUb2GmParams(AscendC::DataCopyExtParams& ub2GmParams, uint32_t curAivM, uint32_t curAivN,
                                       uint32_t n)
 {
     ub2GmParams.blockLen = curAivN * sizeof(yType);
@@ -431,8 +409,9 @@ __aicore__ inline void SetUb2GmParams(AscendC::DataCopyExtParams &ub2GmParams, u
     ub2GmParams.dstStride = (n - curAivN) * sizeof(yType);
 }
 
-__aicore__ inline void CopyMmOutToLocal(AscendC::LocalTensor<int32_t> &srcLocal, AscendC::GlobalTensor<int32_t> &curMmOutGm,
-                                        AscendC::DataCopyParams &gm2UbParams, AscendC::DataCopyPadParams &padParams,
+__aicore__ inline void CopyMmOutToLocal(AscendC::LocalTensor<int32_t>& srcLocal,
+                                        AscendC::GlobalTensor<int32_t>& curMmOutGm,
+                                        AscendC::DataCopyParams& gm2UbParams, AscendC::DataCopyPadParams& padParams,
                                         uint32_t curAicAivOffset)
 {
     DataCopyPad(srcLocal, curMmOutGm[curAicAivOffset], gm2UbParams, padParams);
@@ -440,17 +419,19 @@ __aicore__ inline void CopyMmOutToLocal(AscendC::LocalTensor<int32_t> &srcLocal,
     AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
 }
 
-template<typename yType>
-__aicore__ inline void CopyUbToGm(uint64_t yGmOffset, AscendC::DataCopyExtParams &ub2GmParams, AscendC::LocalTensor<yType> &dstLocal,
-                                  AscendC::GlobalTensor<yType> &yGm, AscendC::TQue<AscendC::QuePosition::VECOUT, 1> &vecQueOut)
+template <typename yType>
+__aicore__ inline void CopyUbToGm(uint64_t yGmOffset, AscendC::DataCopyExtParams& ub2GmParams,
+                                  AscendC::LocalTensor<yType>& dstLocal, AscendC::GlobalTensor<yType>& yGm,
+                                  AscendC::TQue<AscendC::QuePosition::VECOUT, 1>& vecQueOut)
 {
     DataCopyPad(yGm[yGmOffset], dstLocal, ub2GmParams);
     vecQueOut.FreeTensor(dstLocal);
 }
 
-template<typename scaleType>
-__aicore__ inline void Bf16ScaleGm2Ub(AscendC::LocalTensor<scaleType> &scaleLocal, AscendC::GlobalTensor<scaleType> &scaleGm,
-                                      AscendC::DataCopyPadParams &padParams, uint32_t curAivN, uint64_t offsetScale)
+template <typename scaleType>
+__aicore__ inline void Bf16ScaleGm2Ub(AscendC::LocalTensor<scaleType>& scaleLocal,
+                                      AscendC::GlobalTensor<scaleType>& scaleGm, AscendC::DataCopyPadParams& padParams,
+                                      uint32_t curAivN, uint64_t offsetScale)
 {
     AscendC::DataCopyParams scale2UbParams{1, 0, 0, 0};
     scale2UbParams.blockLen = curAivN * sizeof(scaleType);
@@ -459,6 +440,6 @@ __aicore__ inline void Bf16ScaleGm2Ub(AscendC::LocalTensor<scaleType> &scaleLoca
     AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID1);
 }
 #endif
-}  // namespace DequantBmm
+} // namespace DequantBmm
 
-#endif  // QUANT_BATCH_MATMUL_V3_BASE_H
+#endif // QUANT_BATCH_MATMUL_V3_BASE_H

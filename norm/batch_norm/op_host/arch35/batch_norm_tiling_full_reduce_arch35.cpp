@@ -16,8 +16,7 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_FULL_REDUCE = 200000;
 
 constexpr int64_t SMALL_BUFFER_NUM = 8;
@@ -26,16 +25,12 @@ constexpr int64_t SMALL_BUFFER_NUM_T = 0;
 constexpr int64_t LARGE_BUFFER_NUM = 2;
 constexpr int64_t BINARY_ADD_COEF = 2;
 
-}  // namespace
+} // namespace
 
-namespace optiling
-{
-class BatchNormFullReduceTilingBase : public BatchNormRegbaseTilingBase
-{
+namespace optiling {
+class BatchNormFullReduceTilingBase : public BatchNormRegbaseTilingBase {
 public:
-    explicit BatchNormFullReduceTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context)
-    {
-    }
+    explicit BatchNormFullReduceTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context) {}
     ~BatchNormFullReduceTilingBase() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -61,21 +56,22 @@ protected:
         }
         binaryAddQuotient /= BINARY_ADD_COEF;
         int64_t quotientVcaddNum = binaryAddQuotient / vlFp32_;
-        int64_t quotientVcaddSizeAlign = ((quotientVcaddNum * FLOAT32_BYTES + blockSize_ - 1) / blockSize_) * blockSize_;
+        int64_t quotientVcaddSizeAlign = ((quotientVcaddNum * FLOAT32_BYTES + blockSize_ - 1) / blockSize_) *
+                                         blockSize_;
         if (static_cast<uint64_t>(quotientVcaddSizeAlign) >= aicoreParams_.ubSize) {
             return false;
         }
         // reserve 8 block for 8 A tensor alignment
-        int64_t ubCanUseSize =
-            ((((aicoreParams_.ubSize - quotientVcaddSizeAlign) / DOUBLE_BUFFER) / blockSize_) * blockSize_);
+        int64_t ubCanUseSize = ((((aicoreParams_.ubSize - quotientVcaddSizeAlign) / DOUBLE_BUFFER) / blockSize_) *
+                                blockSize_);
         if (static_cast<int64_t>(SMALL_BUFFER_NUM * blockSize_) >= ubCanUseSize) {
             return false;
         }
         ubCanUseSize -= SMALL_BUFFER_NUM * blockSize_;
         int64_t r1r0Align = (((r1r0 * elemSize + blockSize_ - 1) / blockSize_) * blockSize_) / elemSize;
         // two AR tensor, two A tensor, six fp32 A tensor
-        int64_t ubSizePerA =
-            LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * elemSize + SMALL_BUFFER_NUM_FP32 * FLOAT32_BYTES;
+        int64_t ubSizePerA = LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * elemSize +
+                             SMALL_BUFFER_NUM_FP32 * FLOAT32_BYTES;
         int64_t aFactor = ubCanUseSize / ubSizePerA;
         if (aFactor >= 1) {
             batchNormTilingData.set_aFactor(aFactor);
@@ -124,12 +120,12 @@ ge::graphStatus BatchNormFullReduceTilingBase::DoOpTiling()
     batchNormTilingData.set_r1r0LoopCount(r1r0LoopCount);
 
     // binary add k
-    int64_t vcaddNum = binaryAddQuotient / vlFp32_;  // 2的幂次方的数据要做二分
+    int64_t vcaddNum = binaryAddQuotient / vlFp32_; // 2的幂次方的数据要做二分
     if (vcaddNum <= static_cast<int64_t>(vlFp32_)) {
         batchNormTilingData.set_binaryAddK(0);
         batchNormTilingData.set_binaryAddLastNum(vcaddNum);
     } else {
-        int64_t binaryAddNum = vcaddNum / vlFp32_;  // vl为一块，要累加的块，当前肯定是2的幂次方
+        int64_t binaryAddNum = vcaddNum / vlFp32_; // vl为一块，要累加的块，当前肯定是2的幂次方
         int64_t binaryAddK = 0;
         int64_t curBinaryAddNum = 1;
         while (curBinaryAddNum < binaryAddNum) {
@@ -144,10 +140,7 @@ ge::graphStatus BatchNormFullReduceTilingBase::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormFullReduceTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_FULL_REDUCE;
-}
+uint64_t BatchNormFullReduceTilingBase::GetTilingKey() const { return TILINGKEY_FULL_REDUCE; }
 
 ge::graphStatus BatchNormFullReduceTilingBase::PostTiling()
 {
@@ -161,4 +154,4 @@ ge::graphStatus BatchNormFullReduceTilingBase::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormFullReduceTilingBase, 20000);
-}  // namespace optiling
+} // namespace optiling

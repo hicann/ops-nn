@@ -27,37 +27,19 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> dataType = {
-    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT
-};
+static const std::vector<ge::DataType> dataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> dataFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
-static const std::vector<ge::Format> paraFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> paraFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class ApplyAdamD : public OpDef {
 public:
     explicit ApplyAdamD(const char* name) : OpDef(name)
     {
-        this->Input("var")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
-        this->Input("m")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
-        this->Input("v")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
+        this->Input("var").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Input("m").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Input("v").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
         this->Input("beta1_power")
             .ParamType(REQUIRED)
             .DataType(dataType)
@@ -68,46 +50,14 @@ public:
             .DataType(dataType)
             .Format(paraFormat)
             .UnknownShapeFormat(paraFormat);
-        this->Input("lr")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(paraFormat)
-            .UnknownShapeFormat(paraFormat);
-        this->Input("beta1")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(paraFormat)
-            .UnknownShapeFormat(paraFormat);
-        this->Input("beta2")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(paraFormat)
-            .UnknownShapeFormat(paraFormat);
-        this->Input("epsilon")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(paraFormat)
-            .UnknownShapeFormat(paraFormat);
-        this->Input("grad")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
-        this->Output("var")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
-        this->Output("m")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
-        this->Output("v")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat)
-            .UnknownShapeFormat(dataFormat);
+        this->Input("lr").ParamType(REQUIRED).DataType(dataType).Format(paraFormat).UnknownShapeFormat(paraFormat);
+        this->Input("beta1").ParamType(REQUIRED).DataType(dataType).Format(paraFormat).UnknownShapeFormat(paraFormat);
+        this->Input("beta2").ParamType(REQUIRED).DataType(dataType).Format(paraFormat).UnknownShapeFormat(paraFormat);
+        this->Input("epsilon").ParamType(REQUIRED).DataType(dataType).Format(paraFormat).UnknownShapeFormat(paraFormat);
+        this->Input("grad").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Output("var").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Output("m").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Output("v").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
 
         this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
         this->Attr("use_nesterov").AttrType(OPTIONAL).Bool(false);
@@ -124,4 +74,4 @@ public:
 };
 
 OP_ADD(ApplyAdamD);
-}  // namespace ops
+} // namespace ops

@@ -30,8 +30,8 @@ public:
     __aicore__ inline ~DequantSwigluQuantDynamicBiasFloat(){};
 
     __aicore__ inline void Init(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-        GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-        GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
+                                GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
+                                GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
     __aicore__ inline void Process();
 
 private:
@@ -44,15 +44,15 @@ __aicore__ inline void DequantSwigluQuantDynamicBiasFloat<TEMPLATE_ARGS>::Init(
     GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm, GM_ADDR userspace, const SwiGluTilingData* tilingData,
     TPipe* pipe_)
 {
-    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm, scale_gm, userspace, tilingData, pipe_);
+    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm,
+                     scale_gm, userspace, tilingData, pipe_);
     this->weightScaleGm.SetGlobalBuffer((__gm__ float*)weight_scale_gm, this->colNum);
     if (this->biasIsEmpty == 0) {
         this->biasGm.SetGlobalBuffer((__gm__ BiasType*)bias_gm, this->colNum);
     }
 
     if (this->activateScaleIsEmpty == 0) {
-        this->activationScaleGm.SetGlobalBuffer((__gm__ float*) activation_scale_gm + this->biasOffset,
-            this->numRound);
+        this->activationScaleGm.SetGlobalBuffer((__gm__ float*)activation_scale_gm + this->biasOffset, this->numRound);
     }
 
     this->InitUbBufferCommon(this->baseColLen, this->numRound);
@@ -61,13 +61,11 @@ __aicore__ inline void DequantSwigluQuantDynamicBiasFloat<TEMPLATE_ARGS>::Init(
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicBiasFloat<TEMPLATE_ARGS>::Process() {
-    this->BaseProcess();
-}
+__aicore__ inline void DequantSwigluQuantDynamicBiasFloat<TEMPLATE_ARGS>::Process() { this->BaseProcess(); }
 
 TEMPLATE_DECLARE
 __aicore__ inline void DequantSwigluQuantDynamicBiasFloat<TEMPLATE_ARGS>::InitUbBuffer(uint64_t tileLength,
-    uint32_t realRowLen)
+                                                                                       uint32_t realRowLen)
 {
     uint64_t alignTileLength = tileLength;
     if (!this->isOut32BAligned) {
@@ -90,5 +88,5 @@ __aicore__ inline void DequantSwigluQuantDynamicBiasFloat<TEMPLATE_ARGS>::InitUb
         this->pipe->InitBuffer(this->inQueueActivationScale, 1, this->baseRowLen * sizeof(float));
     }
 }
-}  // namespace DequantSwigluQuant
-#endif  // CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BIAS_FLOAT_HPP
+} // namespace DequantSwigluQuant
+#endif // CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BIAS_FLOAT_HPP

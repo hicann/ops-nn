@@ -21,8 +21,7 @@
 #include <cstdint>
 #endif
 
-enum class L2CacheMode : std::uint32_t
-{
+enum class L2CacheMode : std::uint32_t {
     L2_CACHE_DEFAULT = 0,
     A_L2_CACHE_DISABLE = 1,
     B_L2_CACHE_DISABLE = 2,

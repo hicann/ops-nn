@@ -56,25 +56,25 @@ const int64_t DYNAMIC_INT_X_BFLOAT16_BIAS_QUANT_ONE = 30004;
 const int64_t DYNAMIC_INT_X_BFLOAT16_BIAS_QUANT_D = 30008;
 
 BEGIN_TILING_DATA_DEF(SwiGluTilingData)
-    TILING_DATA_FIELD_DEF(uint32_t, is32BAligned);
-    TILING_DATA_FIELD_DEF(uint32_t, isDoubleBuffer);
-    TILING_DATA_FIELD_DEF(uint64_t, rowLen);
-    TILING_DATA_FIELD_DEF(uint64_t, colLen);
-    TILING_DATA_FIELD_DEF(uint32_t, baseRowLen);
-    TILING_DATA_FIELD_DEF(uint32_t, baseColLen);
-    TILING_DATA_FIELD_DEF(uint32_t, activateLeft);
-    TILING_DATA_FIELD_DEF(uint32_t, biasIsEmpty);
-    TILING_DATA_FIELD_DEF(uint32_t, quantScaleIsEmpty);
-    TILING_DATA_FIELD_DEF(uint32_t, activateScaleIsEmpty);
-    TILING_DATA_FIELD_DEF(uint64_t, swiColLen);
-    TILING_DATA_FIELD_DEF(uint64_t, perRowLen);
-    TILING_DATA_FIELD_DEF(uint64_t, modRowLen);
-    TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
+TILING_DATA_FIELD_DEF(uint32_t, is32BAligned);
+TILING_DATA_FIELD_DEF(uint32_t, isDoubleBuffer);
+TILING_DATA_FIELD_DEF(uint64_t, rowLen);
+TILING_DATA_FIELD_DEF(uint64_t, colLen);
+TILING_DATA_FIELD_DEF(uint32_t, baseRowLen);
+TILING_DATA_FIELD_DEF(uint32_t, baseColLen);
+TILING_DATA_FIELD_DEF(uint32_t, activateLeft);
+TILING_DATA_FIELD_DEF(uint32_t, biasIsEmpty);
+TILING_DATA_FIELD_DEF(uint32_t, quantScaleIsEmpty);
+TILING_DATA_FIELD_DEF(uint32_t, activateScaleIsEmpty);
+TILING_DATA_FIELD_DEF(uint64_t, swiColLen);
+TILING_DATA_FIELD_DEF(uint64_t, perRowLen);
+TILING_DATA_FIELD_DEF(uint64_t, modRowLen);
+TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(SwiGlu, SwiGluTilingData)
 REGISTER_TILING_DATA_CLASS(SwiGluGrad, SwiGluTilingData)
 REGISTER_TILING_DATA_CLASS(DequantSwigluQuant, SwiGluTilingData)
 
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SWIGLU_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SWIGLU_H_

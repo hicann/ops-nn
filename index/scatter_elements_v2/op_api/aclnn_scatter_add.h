@@ -29,22 +29,26 @@ extern "C" {
  *
  * 算子功能： 将源tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入输出tensor中，
  * 若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加
- * @param [in] self: npu device侧的aclTensor, 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16, 支持非连续的Tensor，数据格式支持ND,
+ * @param [in] self: npu device侧的aclTensor,
+ * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128, Atlas
+ * 训练系列产品数据类型不支持BFLOAT16, 支持非连续的Tensor，数据格式支持ND,
  * @param [in] dim: host侧的num, 数据类型支持INT64。
  * @param [in] index: npu device侧的aclTensor，数据类型支持INT32, int64类型，dim反向的维度数量需要与src相同。
  * 支持非连续的Tensor，数据格式支持ND。
- * @param [in] src: npu device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16，dim反向的维度数量需要与src相同。 支持非连续的Tensor，数据格式支持ND，且数据类型与self保持一致。
- * @param [in] out: npu device侧的aclTensor, 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16,数据格式,tensor shape需要与self保持一致
+ * @param [in] src: npu
+ * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
+ * Atlas 训练系列产品数据类型不支持BFLOAT16，dim反向的维度数量需要与src相同。
+ * 支持非连续的Tensor，数据格式支持ND，且数据类型与self保持一致。
+ * @param [in] out: npu device侧的aclTensor,
+ * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128, Atlas
+ * 训练系列产品数据类型不支持BFLOAT16,数据格式,tensor shape需要与self保持一致
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnScatterAddGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnScatterAddGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                                      const aclTensor* src, aclTensor* out, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor);
 
 /**
  * @brief: aclnnScatterAdd的第二段接口，用于执行计算
@@ -57,8 +61,8 @@ ACLNN_API aclnnStatus aclnnScatterAddGetWorkspaceSize(
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnScatterAdd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnScatterAdd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      const aclrtStream stream);
 
 #ifdef __cplusplus
 }

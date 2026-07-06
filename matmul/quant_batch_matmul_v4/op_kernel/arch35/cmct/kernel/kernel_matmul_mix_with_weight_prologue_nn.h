@@ -33,9 +33,9 @@ public:
     using Params = typename KernelCmct::Params;
 
     __aicore__ inline KernelMatmulMixWeightPrologueNN() = default;
-    __aicore__ inline KernelMatmulMixWeightPrologueNN(const Params &params) : KernelCmct(params) {}
-    __host_aicore__ static Params ToUnderlyingArguments(
-        Arguments const& args, const qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tiling)
+    __aicore__ inline KernelMatmulMixWeightPrologueNN(const Params& params) : KernelCmct(params) {}
+    __host_aicore__ static Params ToUnderlyingArguments(Arguments const& args,
+                                                        const qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* tiling)
     {
         return {.problemShape = args.problemShape,
                 .mmad = BlockMmad::ToUnderlyingArguments(args.problemShape, args.mmad, tiling),
@@ -43,6 +43,5 @@ public:
                 .scheduler = BlockScheduler::ToUnderlyingArguments(args.problemShape, args.scheduler, tiling)};
     }
 };
-}  // namespace Kernel
-}  // namespace QuantBatchMatmulV4
-
+} // namespace Kernel
+} // namespace QuantBatchMatmulV4

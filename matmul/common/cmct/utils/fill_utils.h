@@ -72,4 +72,3 @@ __aicore__ inline void InitOutputWithZero(AscendC::GlobalTensor<T> yInitGlobal, 
 #endif
 } // namespace Gemm
 } // namespace Cmct
-

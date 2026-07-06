@@ -21,22 +21,22 @@
 namespace ge {
 
 /**
-*@brief Init EmbeddingHashTable.
-*
-*@par Inputs:
-*Inputs include:
-* table_handle: A Tensor. Dtype support: int64
-* sampled_values: A Tensor. Dtype support: float32
-*
-*@par Attributes:
-* @li bucket_size: An required attribute indicates hashtable size.
-* @li embedding_dim: An required attribute indicates hashtable value size.
-* @li initializer_mode: An optional attribute indicates init hashtable mode.
-* @li constant_value: An optional attribute indicates hashtable constant mode const value.
-*
-*@attention Constraints:
-* Only support value's dtype is float32.
-*/
+ *@brief Init EmbeddingHashTable.
+ *
+ *@par Inputs:
+ *Inputs include:
+ * table_handle: A Tensor. Dtype support: int64
+ * sampled_values: A Tensor. Dtype support: float32
+ *
+ *@par Attributes:
+ * @li bucket_size: An required attribute indicates hashtable size.
+ * @li embedding_dim: An required attribute indicates hashtable value size.
+ * @li initializer_mode: An optional attribute indicates init hashtable mode.
+ * @li constant_value: An optional attribute indicates hashtable constant mode const value.
+ *
+ *@attention Constraints:
+ * Only support value's dtype is float32.
+ */
 REG_OP(InitEmbeddingHashTable)
     .INPUT(table_handle, TensorType({DT_INT64}))
     .OPTIONAL_INPUT(sampled_values, TensorType({DT_FLOAT}))
@@ -47,4 +47,4 @@ REG_OP(InitEmbeddingHashTable)
     .OP_END_FACTORY_REG(InitEmbeddingHashTable)
 
 } // namespace ge
-#endif  // INIT_EMBEDDING_HASH_TABLE_PROTO_H_
+#endif // INIT_EMBEDDING_HASH_TABLE_PROTO_H_

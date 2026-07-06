@@ -31,13 +31,14 @@ using namespace std;
 using namespace ge;
 
 class TestSigmoidCrossEntropyWithLogitsTiling : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { std::cout << "TestSigmoidCrossEntropyWithLogitsTiling SetUp" << std::endl; }
 
     static void TearDownTestCase() { std::cout << "TestSigmoidCrossEntropyWithLogitsTiling TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData* tiling_data) {
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
     auto data = tiling_data->GetData();
     string result;
     for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
@@ -50,7 +51,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data) {
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
                          map<string, string>& aicoreSpec, map<string, string>& intrinsics,
-                         map<string, string>& socVersion) {
+                         map<string, string>& socVersion)
+{
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -66,11 +68,12 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-struct SigmoidCrossEntropyWithLogitsUtCompileInfo {
-};
+struct SigmoidCrossEntropyWithLogitsUtCompileInfo {};
 
-static void DoSigmoidCrossEntropyWithLogitsTilingCase(std::initializer_list<int64_t>& inputShape, ge::DataType inputDtype,
-                                      ge::Format inputFormat, int64_t expectKey, std::string& expectStr) {
+static void DoSigmoidCrossEntropyWithLogitsTilingCase(std::initializer_list<int64_t>& inputShape,
+                                                      ge::DataType inputDtype, ge::Format inputFormat,
+                                                      int64_t expectKey, std::string& expectStr)
+{
     // init platform
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -95,16 +98,16 @@ static void DoSigmoidCrossEntropyWithLogitsTilingCase(std::initializer_list<int6
     SigmoidCrossEntropyWithLogitsUtCompileInfo compileInfo;
 
     auto holder = gert::TilingContextFaker()
-                        .SetOpType(opType)
-                        .NodeIoNum(2, 1)
-                        .IrInstanceNum({1, 1})
-                        .InputShapes({&tensorShape, &tensorShape})
-                        .OutputShapes({&tensorShape})
-                        .CompileInfo(&compileInfo)
-                        .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                        .NodeInputTd(0, inputDtype, inputFormat, inputFormat)
-                        .NodeInputTd(1, inputDtype, inputFormat, inputFormat)
-                        .NodeOutputTd(0, inputDtype, inputFormat, inputFormat)
+                      .SetOpType(opType)
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&tensorShape, &tensorShape})
+                      .OutputShapes({&tensorShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+                      .NodeInputTd(0, inputDtype, inputFormat, inputFormat)
+                      .NodeInputTd(1, inputDtype, inputFormat, inputFormat)
+                      .NodeOutputTd(0, inputDtype, inputFormat, inputFormat)
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -126,132 +129,146 @@ static void DoSigmoidCrossEntropyWithLogitsTilingCase(std::initializer_list<int6
 }
 
 // FP32: TPL_FP32=3, tilingKey=3
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32)
+{
     std::initializer_list<int64_t> inputShape = {16, 26, 16, 19};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 3;  // TPL_FP32
+    auto expectKey = 3; // TPL_FP32
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_1d) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_1d)
+{
     std::initializer_list<int64_t> inputShape = {1024};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 3;  // TPL_FP32
+    auto expectKey = 3; // TPL_FP32
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_2d) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_2d)
+{
     std::initializer_list<int64_t> inputShape = {128, 256};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 3;  // TPL_FP32
+    auto expectKey = 3; // TPL_FP32
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
 // FP16: TPL_FP16=1, tilingKey=1
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16)
+{
     std::initializer_list<int64_t> inputShape = {3761, 4, 44, 4};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 1;  // TPL_FP16
+    auto expectKey = 1; // TPL_FP16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_1d) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_1d)
+{
     std::initializer_list<int64_t> inputShape = {2048};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 1;  // TPL_FP16
+    auto expectKey = 1; // TPL_FP16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_3d) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_3d)
+{
     std::initializer_list<int64_t> inputShape = {32, 64, 128};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 1;  // TPL_FP16
+    auto expectKey = 1; // TPL_FP16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
 // BF16: TPL_BF16=2, tilingKey=2
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16)
+{
     std::initializer_list<int64_t> inputShape = {7, 2, 7, 8, 10};
     auto inputDtype = ge::DT_BF16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 2;  // TPL_BF16
+    auto expectKey = 2; // TPL_BF16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16_1d) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16_1d)
+{
     std::initializer_list<int64_t> inputShape = {512};
     auto inputDtype = ge::DT_BF16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 2;  // TPL_BF16
+    auto expectKey = 2; // TPL_BF16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16_4d) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16_4d)
+{
     std::initializer_list<int64_t> inputShape = {16, 32, 64, 128};
     auto inputDtype = ge::DT_BF16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 2;  // TPL_BF16
+    auto expectKey = 2; // TPL_BF16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
 // Large shape test
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_large) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_large)
+{
     std::initializer_list<int64_t> inputShape = {1024, 1024};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 3;  // TPL_FP32
+    auto expectKey = 3; // TPL_FP32
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_large) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_large)
+{
     std::initializer_list<int64_t> inputShape = {2048, 2048};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 1;  // TPL_FP16
+    auto expectKey = 1; // TPL_FP16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16_large) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_bfloat16_large)
+{
     std::initializer_list<int64_t> inputShape = {512, 512, 512};
     auto inputDtype = ge::DT_BF16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 2;  // TPL_BF16
+    auto expectKey = 2; // TPL_BF16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
 // Small shape test
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_small) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float32_small)
+{
     std::initializer_list<int64_t> inputShape = {8, 8};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 3;  // TPL_FP32
+    auto expectKey = 3; // TPL_FP32
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }
 
-TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_small) {
+TEST_F(TestSigmoidCrossEntropyWithLogitsTiling, sigmoid_cross_entropy_with_logits_testcase_float16_small)
+{
     std::initializer_list<int64_t> inputShape = {4, 4};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
-    auto expectKey = 1;  // TPL_FP16
+    auto expectKey = 1; // TPL_FP16
     std::string expectStr = "";
     DoSigmoidCrossEntropyWithLogitsTilingCase(inputShape, inputDtype, inputFormat, expectKey, expectStr);
 }

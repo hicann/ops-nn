@@ -38,16 +38,16 @@ constexpr CubeFormat format_x2 = CubeFormat::NZ;
 constexpr CubeFormat format_x2 = CubeFormat::ND;
 #endif
 
-#define TBMM_IMPL_CLASS_COMMON_TRNAS(transA, transB, Mode, templateClass, ...)                                         \
-    do {                                                                                                               \
-        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;                                           \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                               \
-        TPipe pipe;                                                                                                    \
-        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;                                 \
-        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;                                 \
-        templateClass<aType, bType, cType, biasType, Mode, __VA_ARGS__> op;                                            \
-        op.Init(aGM, bGM, cGM, biasGM, scalesGM, user, &tilingData, &pipe);                                            \
-        op.Process();                                                                                                  \
+#define TBMM_IMPL_CLASS_COMMON_TRNAS(transA, transB, Mode, templateClass, ...)           \
+    do {                                                                                 \
+        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;             \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>; \
+        TPipe pipe;                                                                      \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;   \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;   \
+        templateClass<aType, bType, cType, biasType, Mode, __VA_ARGS__> op;              \
+        op.Init(aGM, bGM, cGM, biasGM, scalesGM, user, &tilingData, &pipe);              \
+        op.Process();                                                                    \
     } while (0)
 
 template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT>

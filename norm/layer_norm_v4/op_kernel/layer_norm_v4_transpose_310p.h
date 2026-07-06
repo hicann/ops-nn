@@ -25,11 +25,9 @@ using namespace AscendC;
 template <typename Tfm, typename Tweight>
 class LayerNormV4Transpose {
 public:
-    __aicore__ inline LayerNormV4Transpose()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const LayerNormV4TilingDataTranspose* __restrict tilingData)
+    __aicore__ inline LayerNormV4Transpose() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const LayerNormV4TilingDataTranspose* __restrict tilingData)
     {
         // load tiling data
         col = tilingData->col;
@@ -58,10 +56,10 @@ public:
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx * blockFormer);
 
         // pipe init buffer
-        uint64_t inQueueXSize =
-            (bFormer * row + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK * TRANSPOSE_C0_SIZE * FLOAT_SIZE;
-        uint64_t inQueueGammaSize =
-            (row + GAMMA_NUM_PER_BLOCK - 1) / GAMMA_NUM_PER_BLOCK * GAMMA_NUM_PER_BLOCK * FLOAT_SIZE;
+        uint64_t inQueueXSize = (bFormer * row + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK *
+                                TRANSPOSE_C0_SIZE * FLOAT_SIZE;
+        uint64_t inQueueGammaSize = (row + GAMMA_NUM_PER_BLOCK - 1) / GAMMA_NUM_PER_BLOCK * GAMMA_NUM_PER_BLOCK *
+                                    FLOAT_SIZE;
         uint64_t alignB = (bFormer + TRANSPOSE_C0_SIZE - 1) / TRANSPOSE_C0_SIZE * TRANSPOSE_C0_SIZE;
         pipe.InitBuffer(inQueueX, QUEUE_DEPTH, inQueueXSize);
         pipe.InitBuffer(inQueueGamma, 1, inQueueGammaSize);
@@ -253,34 +251,30 @@ private:
         if (formerLoops < TRANSPOSE_C0_SIZE) {
             if (repeatTimes) {
                 uint64_t maskDup[2] = {formerMask, formerMask};
-                Duplicate(
-                    srcTensor[(bFormerFactor - 1) * TRANSPOSE_C0_SIZE * row], static_cast<Tfm>(0.0), maskDup,
-                    repeatTimes, 1, BLOCK_NUM_PER_REP);
+                Duplicate(srcTensor[(bFormerFactor - 1) * TRANSPOSE_C0_SIZE * row], static_cast<Tfm>(0.0), maskDup,
+                          repeatTimes, 1, BLOCK_NUM_PER_REP);
             }
             if (remainRepeat) {
                 uint64_t maskDup[2] = {remainMaskLow, remainMaskHigh};
-                Duplicate(
-                    srcTensor[(bFormerFactor - 1) * TRANSPOSE_C0_SIZE * row + repeatTimes * ELEM_PER_REP_FP16],
-                    static_cast<Tfm>(0.0), maskDup, 1, 1, 0);
+                Duplicate(srcTensor[(bFormerFactor - 1) * TRANSPOSE_C0_SIZE * row + repeatTimes * ELEM_PER_REP_FP16],
+                          static_cast<Tfm>(0.0), maskDup, 1, 1, 0);
             }
             PipeBarrier<PIPE_V>();
         }
         if ((bFormerFactor * BLOCK_NUM_PER_REP) < MAX_REP_NUM) {
             if (repeatTimes) {
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
-                    Adds(
-                        dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE * row], static_cast<Tfm>(0.0),
-                        mask, repeatTimes,
-                        {(uint16_t)bFormerFactor, 1, (uint8_t)(bFormerFactor * BLOCK_NUM_PER_REP), BLOCK_NUM_PER_REP});
+                    Adds(dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE * row],
+                         static_cast<Tfm>(0.0), mask, repeatTimes,
+                         {(uint16_t)bFormerFactor, 1, (uint8_t)(bFormerFactor * BLOCK_NUM_PER_REP), BLOCK_NUM_PER_REP});
                 }
             }
             if (remainRepeat) {
                 mask = remainRepeat * TRANSPOSE_C0_SIZE;
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
-                    Adds(
-                        dstTensor[i * TRANSPOSE_C0_SIZE + repeatTimes * ELEM_PER_REP_FP16 * bFormerFactor],
-                        srcTensor[i * TRANSPOSE_C0_SIZE * row + repeatTimes * ELEM_PER_REP_FP16], static_cast<Tfm>(0.0),
-                        mask, 1, {(uint16_t)bFormerFactor, 1, 0, 0});
+                    Adds(dstTensor[i * TRANSPOSE_C0_SIZE + repeatTimes * ELEM_PER_REP_FP16 * bFormerFactor],
+                         srcTensor[i * TRANSPOSE_C0_SIZE * row + repeatTimes * ELEM_PER_REP_FP16],
+                         static_cast<Tfm>(0.0), mask, 1, {(uint16_t)bFormerFactor, 1, 0, 0});
                 }
             }
         } else {
@@ -290,8 +284,8 @@ private:
             copyParams.srcStride = row - 1;
             copyParams.dstStride = 0;
             for (uint32_t i = 0; i < row; i++) {
-                DataCopy(
-                    dstTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE], copyParams);
+                DataCopy(dstTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE], srcTensor[i * TRANSPOSE_C0_SIZE],
+                         copyParams);
             }
         }
     }
@@ -355,8 +349,8 @@ private:
         }
     }
 
-    __aicore__ inline void DoDiv(
-        LocalTensor<float>& dstTensor, LocalTensor<float>& src0Tensor, LocalTensor<float>& src1Tensor)
+    __aicore__ inline void DoDiv(LocalTensor<float>& dstTensor, LocalTensor<float>& src0Tensor,
+                                 LocalTensor<float>& src1Tensor)
     {
         /*
         src0Tensor为置1的一个block的tensor
@@ -435,19 +429,17 @@ private:
         if ((bFormerFactor * BLOCK_NUM_PER_REP) < MAX_REP_NUM) {
             if (repeatTimes) {
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
-                    Adds(
-                        dstTensor[i * TRANSPOSE_C0_SIZE * row], srcTensor[i * TRANSPOSE_C0_SIZE], static_cast<Tfm>(0.0),
-                        mask, repeatTimes,
-                        {1, (uint16_t)bFormerFactor, BLOCK_NUM_PER_REP, (uint8_t)(bFormerFactor * BLOCK_NUM_PER_REP)});
+                    Adds(dstTensor[i * TRANSPOSE_C0_SIZE * row], srcTensor[i * TRANSPOSE_C0_SIZE],
+                         static_cast<Tfm>(0.0), mask, repeatTimes,
+                         {1, (uint16_t)bFormerFactor, BLOCK_NUM_PER_REP, (uint8_t)(bFormerFactor * BLOCK_NUM_PER_REP)});
                 }
             }
             if (remainRows) {
                 mask = remainRows * TRANSPOSE_C0_SIZE;
                 for (uint32_t i = 0; i < bFormerFactor; i++) {
-                    Adds(
-                        dstTensor[i * TRANSPOSE_C0_SIZE * row + repeatTimes * ELEM_PER_REP_FP16],
-                        srcTensor[i * TRANSPOSE_C0_SIZE + repeatTimes * ELEM_PER_REP_FP16 * bFormerFactor],
-                        static_cast<Tfm>(0.0), mask, 1, {1, (uint16_t)bFormerFactor, 0, 0});
+                    Adds(dstTensor[i * TRANSPOSE_C0_SIZE * row + repeatTimes * ELEM_PER_REP_FP16],
+                         srcTensor[i * TRANSPOSE_C0_SIZE + repeatTimes * ELEM_PER_REP_FP16 * bFormerFactor],
+                         static_cast<Tfm>(0.0), mask, 1, {1, (uint16_t)bFormerFactor, 0, 0});
                 }
             }
         } else {
@@ -457,8 +449,8 @@ private:
             copyParams.srcStride = 0;
             copyParams.dstStride = row - 1;
             for (uint64_t i = 0; i < row; i++) {
-                DataCopy(
-                    dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE], copyParams);
+                DataCopy(dstTensor[i * TRANSPOSE_C0_SIZE], srcTensor[i * bFormerFactor * TRANSPOSE_C0_SIZE],
+                         copyParams);
             }
         }
     }
@@ -512,20 +504,23 @@ private:
                 srcLocalList[j] = srcAddr + FP32_TRANSPOSE_DST_SIZE * i + TRANSPOSE_C0_SIZE * j;
             }
             for (uint32_t k = 0; k < FP32_TRANSPOSE_DST_SIZE; k++) {
-                dstLocalList[(FLOAT_SIZE / HALF_SIZE) * k] =
-                    dstAddr + transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * k +
-                    transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * FP32_TRANSPOSE_DST_SIZE * i;
-                dstLocalList[(FLOAT_SIZE / HALF_SIZE) * k + 1] =
-                    dstAddr + transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * k + FP32_TRANSPOSE_DST_SIZE +
-                    transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * FP32_TRANSPOSE_DST_SIZE * i;
+                dstLocalList[(FLOAT_SIZE / HALF_SIZE) * k] = dstAddr +
+                                                             transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * k +
+                                                             transDataParams.repeatTimes * TRANSPOSE_C0_SIZE *
+                                                                 FP32_TRANSPOSE_DST_SIZE * i;
+                dstLocalList[(FLOAT_SIZE / HALF_SIZE) * k + 1] = dstAddr +
+                                                                 transDataParams.repeatTimes * TRANSPOSE_C0_SIZE * k +
+                                                                 FP32_TRANSPOSE_DST_SIZE +
+                                                                 transDataParams.repeatTimes * TRANSPOSE_C0_SIZE *
+                                                                     FP32_TRANSPOSE_DST_SIZE * i;
             }
             TransDataTo5HDImpl(dstLocalList, srcLocalList, transDataParams);
         }
     }
 
     template <typename T>
-    __aicore__ inline void GetLastBlockTensor(
-        LocalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, uint32_t rowNum, uint32_t lineLength)
+    __aicore__ inline void GetLastBlockTensor(LocalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, uint32_t rowNum,
+                                              uint32_t lineLength)
     {
         /*
         rowNum 表示一行中一个有效元素组的元素个数
@@ -604,9 +599,8 @@ private:
 
         if (gmOffset < colLength) {
             LocalTensor<float> lastBlockTensor = overLapBuf.Get<float>();
-            GetLastBlockTensor<float>(
-                lastBlockTensor, srcTensor, 1,
-                (bFormerFactor + TRANSPOSE_C0_SIZE - 1) / TRANSPOSE_C0_SIZE * TRANSPOSE_C0_SIZE);
+            GetLastBlockTensor<float>(lastBlockTensor, srcTensor, 1,
+                                      (bFormerFactor + TRANSPOSE_C0_SIZE - 1) / TRANSPOSE_C0_SIZE * TRANSPOSE_C0_SIZE);
             DataCopy(outGm[meanGmOffset + colLength - B32_BLOCK_ALIGN_NUM], lastBlockTensor, B32_BLOCK_ALIGN_NUM);
         }
     }

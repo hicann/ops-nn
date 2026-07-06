@@ -20,9 +20,9 @@ class LambNextMV : public OpDef {
 public:
     explicit LambNextMV(const char* name) : OpDef(name)
     {
-        static const char* kIn[] = {"input_mul3", "input_mul2", "input_realdiv1", "input_mul1", "input_mul0",
-                                    "input_realdiv0", "input_mul4", "mul0_x", "mul1_sub", "mul2_x", "mul3_sub1",
-                                    "mul4_x", "add2_y"};
+        static const char* kIn[] = {"input_mul3",     "input_mul2", "input_realdiv1", "input_mul1", "input_mul0",
+                                    "input_realdiv0", "input_mul4", "mul0_x",         "mul1_sub",   "mul2_x",
+                                    "mul3_sub1",      "mul4_x",     "add2_y"};
         for (auto n : kIn) {
             this->Input(n)
                 .ParamType(REQUIRED)

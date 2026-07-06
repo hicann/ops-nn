@@ -16,8 +16,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class ForeachNorm : public OpDef
-{
+class ForeachNorm : public OpDef {
 public:
     explicit ForeachNorm(const char* name) : OpDef(name)
     {
@@ -46,9 +45,7 @@ public:
         this->AICore().AddConfig("ascend910_93");
 
         OpAICoreConfig regbaseCfg;
-        regbaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", regbaseCfg);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

@@ -13,10 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ThresholdGradV2D(const aclTensor *gradOutput,
-                                  const aclTensor *self,
-                                  float threshold,
-                                  aclOpExecutor *executor);
+const aclTensor* ThresholdGradV2D(const aclTensor* gradOutput, const aclTensor* self, float threshold,
+                                  aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_THRESHOLD_GRAD_H_

@@ -17,7 +17,8 @@
 
 namespace Conv3dApiTiling {
 
-int64_t LCM(int64_t numL, int64_t numR) {
+int64_t LCM(int64_t numL, int64_t numR)
+{
     if (numR == 0 || numL == 0) {
         return 1;
     }
@@ -53,7 +54,7 @@ uint64_t Gcd(uint64_t a, uint64_t b)
     return b;
 }
 
-void FindDivisorsUpTo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList)
+void FindDivisorsUpTo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList)
 {
     uint64_t sqrtMax = static_cast<uint64_t>(sqrt(num));
     for (uint64_t i = 1; i <= sqrtMax; ++i) {
@@ -69,7 +70,7 @@ void FindDivisorsUpTo(const uint64_t num, const uint64_t numMax, std::vector<uin
     }
 }
 
-void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList)
+void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList)
 {
     FindDivisorsUpTo(num, numMax, resList);
     for (uint64_t i = CONST_VALUE_2; i <= std::min(num, numMax); i *= CONST_VALUE_2) {
@@ -80,7 +81,7 @@ void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std
     sort(resList.begin(), resList.end());
 }
 
-void CalcFactorPointWise(uint64_t numMax, std::vector<uint64_t> &resList)
+void CalcFactorPointWise(uint64_t numMax, std::vector<uint64_t>& resList)
 {
     numMax = numMax < CONST_VALUE_2 ? CONST_VALUE_2 : numMax;
     for (uint64_t i = CONST_VALUE_2; i <= numMax; i = i + CONST_VALUE_2) {

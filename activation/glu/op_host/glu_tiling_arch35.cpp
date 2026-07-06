@@ -33,8 +33,8 @@ ge::graphStatus GluRegbaseTiling::RunFusionKernelTiling(gert::TilingContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     int64_t ubSizePlatForm = compileInfo->ubSizePlatForm - RESERVED_SIZE_8K;
-    OP_CHECK_IF(
-        (ubSizePlatForm <= 0), OP_LOGE(context, "RunFusionKernelTiling fail to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSizePlatForm <= 0), OP_LOGE(context, "RunFusionKernelTiling fail to get ub size."),
+                return ge::GRAPH_FAILED);
 
     int64_t commonBufferSize = ubSizePlatForm / (BUFFER_SIZE_FACTOR * sizeof(float));
     auto dtype = context->GetInputDesc(INPUT_IDX)->GetDataType();

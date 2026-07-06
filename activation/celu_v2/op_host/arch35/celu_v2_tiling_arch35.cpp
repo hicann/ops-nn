@@ -92,8 +92,8 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
         return ge::GRAPH_SUCCESS;
     }
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     CeluV2TilingData* tiling = context->GetTilingData<CeluV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -130,12 +130,15 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
     }
 
     uint32_t tileDataNum = static_cast<uint32_t>((static_cast<uint64_t>(tileBlockNum) * BLOCK_SIZE) / inputBytes);
-    if (tileDataNum == 0U) tileDataNum = 1U;
+    if (tileDataNum == 0U)
+        tileDataNum = 1U;
 
     uint64_t blocksTotal = (inputLengthBytes + BLOCK_SIZE - 1ULL) / BLOCK_SIZE;
     uint64_t coreNum64 = static_cast<uint64_t>(coreNum);
-    if (coreNum64 > blocksTotal) coreNum64 = blocksTotal;
-    if (coreNum64 == 0ULL) coreNum64 = 1ULL;
+    if (coreNum64 > blocksTotal)
+        coreNum64 = blocksTotal;
+    if (coreNum64 == 0ULL)
+        coreNum64 = 1ULL;
     uint32_t finalCoreNum = static_cast<uint32_t>(coreNum64);
 
     uint64_t everyCoreInputBlockNum = blocksTotal / coreNum64;
@@ -146,7 +149,8 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
 
     uint32_t smallTileNum = static_cast<uint32_t>(everyCoreInputBlockNum / static_cast<uint64_t>(tileBlockNum));
     uint32_t finalSmallTileNum = ((everyCoreInputBlockNum % tileBlockNum) == 0) ? smallTileNum : (smallTileNum + 1);
-    int64_t smallTailDataNum_i = static_cast<int64_t>(smallCoreDataNum) - static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(smallTileNum);
+    int64_t smallTailDataNum_i = static_cast<int64_t>(smallCoreDataNum) -
+                                 static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(smallTileNum);
     uint32_t smallTailDataNum = (smallTailDataNum_i <= 0) ? tileDataNum : static_cast<uint32_t>(smallTailDataNum_i);
 
     uint64_t bigEveryCoreBlockNum = everyCoreInputBlockNum + 1ULL;
@@ -154,7 +158,8 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
     uint32_t bigCoreDataNum = static_cast<uint32_t>(bigCoreDataNum_u);
     uint32_t bigTileNum = static_cast<uint32_t>(bigEveryCoreBlockNum / static_cast<uint64_t>(tileBlockNum));
     uint32_t finalBigTileNum = ((bigEveryCoreBlockNum % tileBlockNum) == 0) ? bigTileNum : (bigTileNum + 1);
-    int64_t bigTailDataNum_i = static_cast<int64_t>(bigCoreDataNum) - static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(bigTileNum);
+    int64_t bigTailDataNum_i = static_cast<int64_t>(bigCoreDataNum) -
+                               static_cast<int64_t>(tileDataNum) * static_cast<int64_t>(bigTileNum);
     uint32_t bigTailDataNum = (bigTailDataNum_i <= 0) ? tileDataNum : static_cast<uint32_t>(bigTailDataNum_i);
 
     tiling->smallCoreDataNum = static_cast<int64_t>(smallCoreDataNum);
@@ -172,7 +177,6 @@ static ge::graphStatus CeluV2TilingFunc(gert::TilingContext* context)
     context->SetBlockDim(finalCoreNum);
     return ge::GRAPH_SUCCESS;
 }
-
 
 static ge::graphStatus TilingParseForCeluV2([[maybe_unused]] gert::TilingParseContext* context)
 {

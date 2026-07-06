@@ -23,15 +23,9 @@
 namespace {
 class DynamicMxQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicMxQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicMxQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicMxQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicMxQuantTiling TearDown" << std::endl; }
 };
 
 TEST_F(DynamicMxQuant, DynamicMxQuant_infershape_case_0)
@@ -133,12 +127,11 @@ TEST_F(DynamicMxQuant, DynamicMxQuant_InferDtype_case_1)
                                   .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)},
-                                       {"blocksize", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                                       {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                                  .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                              {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)},
+                                              {"blocksize", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                              {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                                   .InputDataTypes({&input_x_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();
@@ -168,12 +161,11 @@ TEST_F(DynamicMxQuant, DynamicMxQuant_InferDtype_case_2)
                                   .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
-                                       {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                       {"blocksize", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
-                                       {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                                  .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                              {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("rint")},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                              {"blocksize", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                              {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                                   .InputDataTypes({&input_x_ref})
                                   .OutputDataTypes({&output_y_ref, &output_scale_ref})
                                   .Build();

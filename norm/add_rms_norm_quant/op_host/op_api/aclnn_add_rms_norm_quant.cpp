@@ -35,9 +35,10 @@ constexpr int IDX_INT8_QUANT = 2;
 constexpr int IDX_HIFLOAT8_QUANT = 34;
 constexpr int IDX_FLOAT8_E5M2_QUANT = 35;
 constexpr int IDX_FLOAT8_E4M3FN_QUANT = 36;
-static std::map<op::DataType, int> dstTypeMapQuant = {{op::DataType::DT_INT8, IDX_INT8_QUANT}, 
-       {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8_QUANT}, {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2_QUANT}, 
-       {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN_QUANT}};
+static std::map<op::DataType, int> dstTypeMapQuant = {{op::DataType::DT_INT8, IDX_INT8_QUANT},
+                                                      {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8_QUANT},
+                                                      {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2_QUANT},
+                                                      {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN_QUANT}};
 namespace AddRmsNormQuantACLNN {
 constexpr int IDX_0 = 0;
 constexpr int IDX_1 = 1;
@@ -53,9 +54,8 @@ static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_ZERO
 static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_Y = {
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8, op::DataType::DT_INT8};
 
-static bool CheckNotNull(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1, aclTensor* y1Out,
-    aclTensor* y2Out, const aclTensor* xOut)
+static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
+                         aclTensor* y1Out, aclTensor* y2Out, const aclTensor* xOut)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
@@ -67,10 +67,9 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
-    const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
-    aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
+static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
+                            const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional,
+                            const aclTensor* zeroPoints2Optional, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, REGBASE_DTYPE_SUPPORT_LIST_X_SCALE, return false);
@@ -93,10 +92,9 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckShapeDim(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
-    const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
-    aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
+static bool CheckShapeDim(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
+                          const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional,
+                          const aclTensor* zeroPoints2Optional, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
 {
     OP_CHECK_MAX_DIM(x1, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(x2, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -142,46 +140,44 @@ static bool CheckShapeDim(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
-    const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
-    aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
+static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                               const aclTensor* scales1, const aclTensor* scales2Optional,
+                               const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
+                               aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut)
 {
     // 1. 检查必选输入/输出是否为空指针
     CHECK_RET(CheckNotNull(x1, x2, gamma, scales1, y1Out, y2Out, xOut), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入/输出的数据类型是否合法
-    CHECK_RET(
-        CheckDtypeValid(
-            x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, y1Out, y2Out, xOut),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, y1Out,
+                              y2Out, xOut),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入/输出的shape大小
-    CHECK_RET(
-        CheckShapeDim(
-            x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, y1Out, y2Out, xOut),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeDim(x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, y1Out,
+                            y2Out, xOut),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 } // namespace AddRmsNormQuantACLNN
 
-aclnnStatus ComputeAddRmsNormQuant(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
-    const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
-    int64_t axis, double epsilon, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
-    aclOpExecutor* executor)
+aclnnStatus ComputeAddRmsNormQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                   const aclTensor* scales1, const aclTensor* scales2Optional,
+                                   const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
+                                   int64_t axis, double epsilon, bool divMode, aclTensor* y1Out, aclTensor* y2Out,
+                                   aclTensor* xOut, aclOpExecutor* executor)
 {
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* y2ComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
     bool isDual = (nullptr != scales2Optional);
-    
+
     int dstType = dstTypeMapQuant[y1Out->GetDataType()];
 
-    auto addRmsNormQuantOuts = l0op::AddRmsNormQuant(
-        x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, nullptr, axis, epsilon,
-        divMode, dstType, executor);
+    auto addRmsNormQuantOuts = l0op::AddRmsNormQuant(x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional,
+                                                     zeroPoints2Optional, nullptr, axis, epsilon, divMode, dstType,
+                                                     executor);
     y1ComputeOut = std::get<AddRmsNormQuantACLNN::IDX_0>(addRmsNormQuantOuts);
     y2ComputeOut = std::get<AddRmsNormQuantACLNN::IDX_1>(addRmsNormQuantOuts);
     xComputeOut = std::get<AddRmsNormQuantACLNN::IDX_2>(addRmsNormQuantOuts);
@@ -213,26 +209,26 @@ const aclTensor* GetTensorContiguous(const aclTensor* opt, aclOpExecutor* execut
     return l0op::Contiguous(opt, executor);
 }
 
-aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
-    const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
-    int64_t axis, double epsilon, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                                 const aclTensor* scales1, const aclTensor* scales2Optional,
+                                                 const aclTensor* zeroPoints1Optional,
+                                                 const aclTensor* zeroPoints2Optional, int64_t axis, double epsilon,
+                                                 bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
+                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGD("Enter aclnnAddRmsNormQuantGetWorkspaceSize.");
-    L2_DFX_PHASE_1(
-        aclnnAddRmsNormQuant,
-        DFX_IN(
-            x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, axis, epsilon, divMode),
-        DFX_OUT(y1Out, y2Out, xOut));
+    L2_DFX_PHASE_1(aclnnAddRmsNormQuant,
+                   DFX_IN(x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, axis,
+                          epsilon, divMode),
+                   DFX_OUT(y1Out, y2Out, xOut));
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 参数检查
-    auto ret = AddRmsNormQuantACLNN::CheckParams(
-        x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional, y1Out, y2Out, xOut);
+    auto ret = AddRmsNormQuantACLNN::CheckParams(x1, x2, gamma, scales1, scales2Optional, zeroPoints1Optional,
+                                                 zeroPoints2Optional, y1Out, y2Out, xOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 支持空tensor
@@ -258,9 +254,8 @@ aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
     auto z1Cont = GetTensorContiguous(zeroPoints1Optional, uniqueExecutor.get());
     auto z2Cont = GetTensorContiguous(zeroPoints2Optional, uniqueExecutor.get());
 
-    ret = ComputeAddRmsNormQuant(
-        x1ContQuant, x2ContQuant, gammaContQuant, s1Cont, s2Cont, z1Cont, z2Cont, axis, epsilon, divMode, y1Out, y2Out, xOut,
-        uniqueExecutor.get());
+    ret = ComputeAddRmsNormQuant(x1ContQuant, x2ContQuant, gammaContQuant, s1Cont, s2Cont, z1Cont, z2Cont, axis,
+                                 epsilon, divMode, y1Out, y2Out, xOut, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 获取计算过程中需要使用的workspace大小

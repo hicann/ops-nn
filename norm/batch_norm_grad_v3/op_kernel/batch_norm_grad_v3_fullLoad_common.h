@@ -24,8 +24,7 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3>
 class BatchNormGradV3FullLoadBase : public BatchNormGradV3Base<T1, T2, T3> {
 public:
-    __aicore__ inline BatchNormGradV3FullLoadBase()
-    {}
+    __aicore__ inline BatchNormGradV3FullLoadBase() {}
 
 protected:
     TQue<QuePosition::VECIN, BUFFER_DEPTH> dyQueue_;
@@ -111,12 +110,10 @@ protected:
         for (int32_t i = 0; i < this->cBlockLength; i++) {
             int64_t dyGmOffsetForLoop = dyGmOffset + i * this->b1Dim;
             int64_t dyLocalOffset = i * this->b0Dim * this->b1DimAlign;
-            LoadOneTensor(
-                this->dyGm_[dyGmOffsetForLoop], dyLocal[dyLocalOffset], copyInParams, dataCopyPadExtParams,
-                this->b0Dim * this->b1DimAlign);
-            LoadOneTensor(
-                this->xGm_[dyGmOffsetForLoop], xLocal[dyLocalOffset], copyInParams, dataCopyPadExtParams,
-                this->b0Dim * this->b1DimAlign);
+            LoadOneTensor(this->dyGm_[dyGmOffsetForLoop], dyLocal[dyLocalOffset], copyInParams, dataCopyPadExtParams,
+                          this->b0Dim * this->b1DimAlign);
+            LoadOneTensor(this->xGm_[dyGmOffsetForLoop], xLocal[dyLocalOffset], copyInParams, dataCopyPadExtParams,
+                          this->b0Dim * this->b1DimAlign);
         }
         dyQueue_.EnQue(dyLocal);
         inputQueue.EnQue(xLocal);
@@ -159,8 +156,8 @@ protected:
         for (int32_t i = 0; i < this->cBlockLength; i++) {
             int64_t dxGmOffsetForLoop = dxGmOffset + i * this->b1Dim;
             int64_t dxUbOffset = i * this->b1DimAlign * this->b0Dim;
-            StoreOneTensor(
-                this->dxGm_[dxGmOffsetForLoop], dx[dxUbOffset], copyInParams, this->b0Dim * this->b1DimAlign);
+            StoreOneTensor(this->dxGm_[dxGmOffsetForLoop], dx[dxUbOffset], copyInParams,
+                           this->b0Dim * this->b1DimAlign);
         }
         dyQueue_.FreeTensor(dx);
     }

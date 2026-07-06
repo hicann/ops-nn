@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -55,43 +56,43 @@ struct ScatterElementsV2TilingDataDef {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                   \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                      \
     ScatterElementsV2TilingDataDef tilingData;                                          \
     INIT_TILING_DATA(ScatterElementsV2TilingDataDef, tilingDataPointer, tilingPointer); \
-    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                       \
-    (tilingData).eachNum = tilingDataPointer->eachNum;                               \
-    (tilingData).modeFlag = tilingDataPointer->modeFlag;                             \
-    (tilingData).extraTaskCore = tilingDataPointer->extraTaskCore;                   \
-    (tilingData).inputCount = tilingDataPointer->inputCount;                         \
-    (tilingData).indicesCount = tilingDataPointer->indicesCount;                     \
-    (tilingData).updatesCount = tilingDataPointer->updatesCount;                     \
-    (tilingData).inputOneTime = tilingDataPointer->inputOneTime;                     \
-    (tilingData).indicesOneTime = tilingDataPointer->indicesOneTime;                 \
-    (tilingData).updatesOneTime = tilingDataPointer->updatesOneTime;                 \
-    (tilingData).inputEach = tilingDataPointer->inputEach;                           \
-    (tilingData).indicesEach = tilingDataPointer->indicesEach;                       \
-    (tilingData).updatesEach = tilingDataPointer->updatesEach;                       \
-    (tilingData).inputLast = tilingDataPointer->inputLast;                           \
-    (tilingData).indicesLast = tilingDataPointer->indicesLast;                       \
-    (tilingData).updatesLast = tilingDataPointer->updatesLast;                       \
-    (tilingData).inputLoop = tilingDataPointer->inputLoop;                           \
-    (tilingData).indicesLoop = tilingDataPointer->indicesLoop;                       \
-    (tilingData).updatesLoop = tilingDataPointer->updatesLoop;                       \
-    (tilingData).eachPiece = tilingDataPointer->eachPiece;                           \
-    (tilingData).inputOnePiece = tilingDataPointer->inputOnePiece;                   \
-    (tilingData).inputAlign = tilingDataPointer->inputAlign;                         \
-    (tilingData).indicesAlign = tilingDataPointer->indicesAlign;                     \
-    (tilingData).updatesAlign = tilingDataPointer->updatesAlign;                     \
-    (tilingData).lastIndicesLoop = tilingDataPointer->lastIndicesLoop;               \
-    (tilingData).lastIndicesEach = tilingDataPointer->lastIndicesEach;               \
-    (tilingData).lastIndicesLast = tilingDataPointer->lastIndicesLast;               \
-    (tilingData).oneTime = tilingDataPointer->oneTime;                               \
+    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                          \
+    (tilingData).eachNum = tilingDataPointer->eachNum;                                  \
+    (tilingData).modeFlag = tilingDataPointer->modeFlag;                                \
+    (tilingData).extraTaskCore = tilingDataPointer->extraTaskCore;                      \
+    (tilingData).inputCount = tilingDataPointer->inputCount;                            \
+    (tilingData).indicesCount = tilingDataPointer->indicesCount;                        \
+    (tilingData).updatesCount = tilingDataPointer->updatesCount;                        \
+    (tilingData).inputOneTime = tilingDataPointer->inputOneTime;                        \
+    (tilingData).indicesOneTime = tilingDataPointer->indicesOneTime;                    \
+    (tilingData).updatesOneTime = tilingDataPointer->updatesOneTime;                    \
+    (tilingData).inputEach = tilingDataPointer->inputEach;                              \
+    (tilingData).indicesEach = tilingDataPointer->indicesEach;                          \
+    (tilingData).updatesEach = tilingDataPointer->updatesEach;                          \
+    (tilingData).inputLast = tilingDataPointer->inputLast;                              \
+    (tilingData).indicesLast = tilingDataPointer->indicesLast;                          \
+    (tilingData).updatesLast = tilingDataPointer->updatesLast;                          \
+    (tilingData).inputLoop = tilingDataPointer->inputLoop;                              \
+    (tilingData).indicesLoop = tilingDataPointer->indicesLoop;                          \
+    (tilingData).updatesLoop = tilingDataPointer->updatesLoop;                          \
+    (tilingData).eachPiece = tilingDataPointer->eachPiece;                              \
+    (tilingData).inputOnePiece = tilingDataPointer->inputOnePiece;                      \
+    (tilingData).inputAlign = tilingDataPointer->inputAlign;                            \
+    (tilingData).indicesAlign = tilingDataPointer->indicesAlign;                        \
+    (tilingData).updatesAlign = tilingDataPointer->updatesAlign;                        \
+    (tilingData).lastIndicesLoop = tilingDataPointer->lastIndicesLoop;                  \
+    (tilingData).lastIndicesEach = tilingDataPointer->lastIndicesEach;                  \
+    (tilingData).lastIndicesLast = tilingDataPointer->lastIndicesLast;                  \
+    (tilingData).oneTime = tilingDataPointer->oneTime;                                  \
     (tilingData).lastOneTime = tilingDataPointer->lastOneTime;
 #endif // _FAST_OP_TEST_SCATTER_ELEMENTS_V2_TILING_H_

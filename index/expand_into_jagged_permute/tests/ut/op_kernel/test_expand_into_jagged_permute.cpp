@@ -32,9 +32,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void expand_into_jagged_permute(
-    GM_ADDR permute, GM_ADDR inputOffsets, GM_ADDR outputOffsets, GM_ADDR outputPermute, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void expand_into_jagged_permute(GM_ADDR permute, GM_ADDR inputOffsets,
+                                                                 GM_ADDR outputOffsets, GM_ADDR outputPermute,
+                                                                 GM_ADDR workspace, GM_ADDR tiling);
 
 class expand_into_jagged_permute_test : public testing::Test {
 protected:
@@ -63,8 +63,8 @@ TEST_F(expand_into_jagged_permute_test, test_int32)
 
     string path = kernel_ut::GetTestWorkDir();
 
-    ExpandIntoJaggedPermuteTilingDataDef* tilingDatafromBin =
-        reinterpret_cast<ExpandIntoJaggedPermuteTilingDataDef*>(tiling);
+    ExpandIntoJaggedPermuteTilingDataDef* tilingDatafromBin = reinterpret_cast<ExpandIntoJaggedPermuteTilingDataDef*>(
+        tiling);
     tilingDatafromBin->realCoreNum = 48;
     tilingDatafromBin->frontCoreNum = 1;
     tilingDatafromBin->blockFactor = 1;
@@ -79,8 +79,8 @@ TEST_F(expand_into_jagged_permute_test, test_int32)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        expand_into_jagged_permute, blockDim, permute, inputOffsets, outputOffsets, outputPermute, workspace, tiling);
+    ICPU_RUN_KF(expand_into_jagged_permute, blockDim, permute, inputOffsets, outputOffsets, outputPermute, workspace,
+                tiling);
 
     AscendC::GmFree(permute);
     AscendC::GmFree(inputOffsets);

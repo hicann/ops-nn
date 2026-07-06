@@ -18,16 +18,12 @@
 
 #include "../op_kernel/arch35/adaptive_avg_pool2d_struct.h"
 #include "adaptive_avg_pool2d_base_tiling.h"
-namespace optiling
-{
-class AdaptiveAvgPool2DTilingSimt : public AdaptivePool2dBaseTiling
-{
+namespace optiling {
+class AdaptiveAvgPool2DTilingSimt : public AdaptivePool2dBaseTiling {
 public:
-    explicit AdaptiveAvgPool2DTilingSimt(gert::TilingContext* context) : AdaptivePool2dBaseTiling(context)
-    {}
-    ~AdaptiveAvgPool2DTilingSimt() override
-    {}
-    
+    explicit AdaptiveAvgPool2DTilingSimt(gert::TilingContext* context) : AdaptivePool2dBaseTiling(context) {}
+    ~AdaptiveAvgPool2DTilingSimt() override {}
+
 protected:
     void SetTilingData();
     bool IsCapable() override;
@@ -38,11 +34,11 @@ protected:
     void DumpTilingInfo() override;
     ge::graphStatus GetDataFormatAttrInfo();
 
-    AdaptiveAvgPool2dOp::AdaptivePool2DSimtTilingData* tilingData_ = 
-        context_->GetTilingData<AdaptiveAvgPool2dOp::AdaptivePool2DSimtTilingData>();
+    AdaptiveAvgPool2dOp::AdaptivePool2DSimtTilingData*
+        tilingData_ = context_->GetTilingData<AdaptiveAvgPool2dOp::AdaptivePool2DSimtTilingData>();
     int64_t maxDivUseNum_ = 0;
     int64_t threads_ = 0;
 };
 
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_AVG_POOL2D_SIMT_TILING_H
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPATIVE_AVG_POOL2D_SIMT_TILING_H

@@ -71,9 +71,9 @@ void BatchNormGradV3InferBase::CalcBasicInfo()
         bytesPerWeight_ = FLOAT16_BYTES;
     }
 
-    OP_LOGD(
-        context_->GetNodeName(), "aTileBase_: %ld, bytesPerDy_: %ld, bytesPerWeight_: %ld,bytesPerRunningVar_: %ld.",
-        aTileBase_, bytesPerDy_, bytesPerWeight_, bytesPerRunningVar_);
+    OP_LOGD(context_->GetNodeName(),
+            "aTileBase_: %ld, bytesPerDy_: %ld, bytesPerWeight_: %ld,bytesPerRunningVar_: %ld.", aTileBase_,
+            bytesPerDy_, bytesPerWeight_, bytesPerRunningVar_);
 }
 
 ge::graphStatus BatchNormGradV3InferBase::GetPlatformInfo()
@@ -112,23 +112,23 @@ ge::graphStatus BatchNormGradV3InferBase::GetShapeAttrsInfo()
 
     const bool* isTrainingPtr = attrs->GetBool(0);
     bool isTraining = (isTrainingPtr == nullptr) ? true : *isTrainingPtr;
-    OP_TILING_CHECK(
-        isTraining == true, OP_LOGI(context_->GetNodeName(), "This node only support inference."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(isTraining == true, OP_LOGI(context_->GetNodeName(), "This node only support inference."),
+                    return ge::GRAPH_PARAM_INVALID);
 
     const float* epsilonPtr = attrs->GetFloat(PARAM_ATTRS_EPSILON_INDEX);
     epsilon_ = (epsilonPtr == nullptr) ? DEFAULT_EPSILON_VAL : *epsilonPtr;
 
     auto ret = GetDyInfo();
-    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS, OP_LOGW(context_->GetNodeName(), "GetShapeAttrsInfo failed."), return ret);
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS, OP_LOGW(context_->GetNodeName(), "GetShapeAttrsInfo failed."),
+                    return ret);
 
-    OP_TILING_CHECK(
-        GetWeightRunningVarDxInfo() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Inputs are invalid."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetWeightRunningVarDxInfo() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Inputs are invalid."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        CheckInputValid() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Inputs are invalid."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckInputValid() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Inputs are invalid."),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -146,8 +146,8 @@ ge::graphStatus BatchNormGradV3InferBase::GetDyInfo()
     if (dyFormat_ == FORMAT_NHWC) {
         OP_CHECK_IF(
             dyDimNum_ != DIM_NUM_4,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy",
-                std::to_string(dyDimNum_).c_str(), "dy should be 4D with NHWC format"),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy", std::to_string(dyDimNum_).c_str(),
+                                                     "dy should be 4D with NHWC format"),
             return ge::GRAPH_FAILED);
         fusedALen_ = dyStorageShape.GetDim(DIM_3);
         fusedB0Len_ = dyStorageShape.GetDim(DIM_0) * dyStorageShape.GetDim(DIM_1) * dyStorageShape.GetDim(DIM_2);
@@ -155,25 +155,27 @@ ge::graphStatus BatchNormGradV3InferBase::GetDyInfo()
     } else if (dyFormat_ == FORMAT_NDHWC) {
         OP_CHECK_IF(
             dyDimNum_ != DIM_NUM_5,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy",
-                std::to_string(dyDimNum_).c_str(), "dy should be 5D with NDHWC format"),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy", std::to_string(dyDimNum_).c_str(),
+                                                     "dy should be 5D with NDHWC format"),
             return ge::GRAPH_FAILED);
         fusedALen_ = dyStorageShape.GetDim(DIM_4);
         fusedB0Len_ = dyStorageShape.GetDim(DIM_0) * dyStorageShape.GetDim(DIM_1) * dyStorageShape.GetDim(DIM_2) *
                       dyStorageShape.GetDim(DIM_3);
         fusedB1Len_ = 1;
     } else if (dyFormat_ == FORMAT_NCHW) {
-        OP_CHECK_IF(dyDimNum_ != DIM_NUM_4,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy",
-                std::to_string(dyDimNum_).c_str(), "dy should be 4D with NCHW format"),
+        OP_CHECK_IF(
+            dyDimNum_ != DIM_NUM_4,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy", std::to_string(dyDimNum_).c_str(),
+                                                     "dy should be 4D with NCHW format"),
             return ge::GRAPH_FAILED);
         fusedB1Len_ = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3);
         fusedALen_ = dyStorageShape.GetDim(DIM_1);
         fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
     } else if (dyFormat_ == FORMAT_NCDHW) {
-        OP_CHECK_IF(dyDimNum_ != DIM_NUM_5,
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy",
-                std::to_string(dyDimNum_).c_str(), "dy should be 5D with NCDHW format"),
+        OP_CHECK_IF(
+            dyDimNum_ != DIM_NUM_5,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy", std::to_string(dyDimNum_).c_str(),
+                                                     "dy should be 5D with NCDHW format"),
             return ge::GRAPH_FAILED);
         fusedB1Len_ = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3) * dyStorageShape.GetDim(DIM_4);
         fusedALen_ = dyStorageShape.GetDim(DIM_1);
@@ -225,12 +227,12 @@ ge::graphStatus BatchNormGradV3InferBase::GetWeightRunningVarDxInfo()
 
 ge::graphStatus BatchNormGradV3InferBase::CheckInputValid()
 {
-    OP_CHECK_IF(
-        dyDtype_ != dxDtype_,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy and dx",
-            (Ops::Base::ToString(dyDtype_) + " and " + Ops::Base::ToString(dxDtype_)).c_str(),
-            "dy and dx should have the same dtype"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dyDtype_ != dxDtype_,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context_->GetNodeName(), "dy and dx",
+                    (Ops::Base::ToString(dyDtype_) + " and " + Ops::Base::ToString(dxDtype_)).c_str(),
+                    "dy and dx should have the same dtype"),
+                return ge::GRAPH_FAILED);
 
     bool inputDtypeValid = false;
     for (uint32_t i = 0; i < validInputDtypes.size(); i++) {
@@ -244,29 +246,29 @@ ge::graphStatus BatchNormGradV3InferBase::CheckInputValid()
 
     OP_CHECK_IF(
         !inputDtypeValid,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, weight and running_var",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dy, weight and running_var",
             (Ops::Base::ToString(dyDtype_) + ", " + Ops::Base::ToString(weightDtype_) + " and " +
-             Ops::Base::ToString(runningVarDtype_)).c_str(),
+             Ops::Base::ToString(runningVarDtype_))
+                .c_str(),
             "The dtypes of dy, weight and running_var are not within the supported (all float, all bf16, all fp16, "
             "(fp16, float, float), (bf16, float, float), (fp16, fp16, float) or (bf16, bf16, float)) combination "
             "range"),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        !(weightDimNum_ == runningVarDimNum_ && weightDimNum_ == 1),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context_->GetNodeName(), "weight and running_var",
-            (std::to_string(weightDimNum_) + " and " + std::to_string(runningVarDimNum_)).c_str(),
-            "The Shapes of weight and running_var must be 1D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(weightDimNum_ == runningVarDimNum_ && weightDimNum_ == 1),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "weight and running_var",
+                    (std::to_string(weightDimNum_) + " and " + std::to_string(runningVarDimNum_)).c_str(),
+                    "The Shapes of weight and running_var must be 1D"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (dyDimNum_ != dxDimNum_),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context_->GetNodeName(), "dy and dx",
-            (std::to_string(dyDimNum_) + " and " + std::to_string(dxDimNum_)).c_str(),
-            "The shape dims of dy and dx must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dyDimNum_ != dxDimNum_),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "dy and dx",
+                    (std::to_string(dyDimNum_) + " and " + std::to_string(dxDimNum_)).c_str(),
+                    "The shape dims of dy and dx must be the same"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         !(weightDimLen_ == runningVarDimLen_ && weightDimLen_ == fusedALen_),
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
@@ -279,10 +281,7 @@ ge::graphStatus BatchNormGradV3InferBase::CheckInputValid()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchNormGradV3InferBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BatchNormGradV3InferBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus BatchNormGradV3InferBase::GetWorkspaceSize()
 {

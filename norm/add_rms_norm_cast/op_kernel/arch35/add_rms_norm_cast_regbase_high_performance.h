@@ -42,13 +42,9 @@ __aicore__ inline T Min(T a, T b)
 template <typename T>
 class KernelAddRmsNormCastRegBaseHighPerformance {
 public:
-    __aicore__ inline KernelAddRmsNormCastRegBaseHighPerformance(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRmsNormCastRegbaseTilingData* tiling)
+    __aicore__ inline KernelAddRmsNormCastRegBaseHighPerformance(TPipe* pipe) { pPipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRmsNormCastRegbaseTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         numRow = tiling->numM;
@@ -63,8 +59,8 @@ public:
         numColB32Align = CeilAlign(numCol, AddRmsNormCast::B32_BLOCK_NUM);
         uint64_t rstdUbSizeAlignSize = CeilAlign(rowFactor, static_cast<uint64_t>(VL_FP32)) * sizeof(float);
         uint16_t binaryAddQuotientLoop = (binAddQuotient + VL_FP32 - 1) / VL_FP32;
-        uint32_t binaryAddBufLen =
-            (binaryAddQuotientLoop + BLK_B32 - 1) / BLK_B32 * BLK_B32 * sizeof(float) * rowFactor;
+        uint32_t binaryAddBufLen = (binaryAddQuotientLoop + BLK_B32 - 1) / BLK_B32 * BLK_B32 * sizeof(float) *
+                                   rowFactor;
 
         xGm1.SetGlobalBuffer((__gm__ T*)x1 + GetBlockIdx() * blockFactor * numCol, rowWork * numCol);
         xGm2.SetGlobalBuffer((__gm__ T*)x2 + GetBlockIdx() * blockFactor * numCol, rowWork * numCol);
@@ -100,8 +96,7 @@ public:
     }
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t rowRepeat, LocalTensor<T> gammaLocal, uint32_t curRows, uint64_t offset)
+    __aicore__ inline void Compute(uint32_t rowRepeat, LocalTensor<T> gammaLocal, uint32_t curRows, uint64_t offset)
     {
         CopyInXMutiMoveAlign(offset, numColAlign, curRows);
         LocalTensor<T> xLocal1 = inQueueX1.DeQue<T>();
@@ -120,18 +115,12 @@ private:
         NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(
             xFp32Local, xReduceLocal, binaryAddBuf, static_cast<uint16_t>(curRows), numColAlign, numCol,
             static_cast<uint32_t>(binAddQuotient), static_cast<uint32_t>(BLK_B32));
-        NormCommon::ComputeRstdNewtonRaphson<true, true>(
-            xReduceLocal, rstdLocal, curRows, epsilon, avgFactor, VL_FP32);
+        NormCommon::ComputeRstdNewtonRaphson<true, true>(xReduceLocal, rstdLocal, curRows, epsilon, avgFactor, VL_FP32);
         outQueueRstd.EnQue<float>(rstdLocal);
 
         rstdLocal = outQueueRstd.DeQue<float>();
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(1),
-            static_cast<uint32_t>(curRows * sizeof(float)),
-            static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0),
-            0
-        };
+        DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(curRows * sizeof(float)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), 0};
         DataCopyPad(rstdGm[rowRepeat * rowFactor], rstdLocal, copyParams);
 
         LocalTensor<float> y1Local = outQueueY1.AllocTensor<float>();
@@ -143,9 +132,8 @@ private:
         CopyOutY1Y2(offset, curRows, numColAlign);
     }
 
-    __aicore__ inline void CalculateXAdd(
-        LocalTensor<T>& xLocal1, LocalTensor<T>& xLocal2, LocalTensor<T>& xOutLocal, LocalTensor<float>& xFp32Local,
-        uint32_t curRows, uint32_t numColAlign)
+    __aicore__ inline void CalculateXAdd(LocalTensor<T>& xLocal1, LocalTensor<T>& xLocal2, LocalTensor<T>& xOutLocal,
+                                         LocalTensor<float>& xFp32Local, uint32_t curRows, uint32_t numColAlign)
     {
         __local_mem__ T* x1InUb = (__local_mem__ T*)xLocal1.GetPhyAddr();
         __local_mem__ T* x2InUb = (__local_mem__ T*)xLocal2.GetPhyAddr();
@@ -173,9 +161,10 @@ private:
         }
     }
 
-    __aicore__ inline void CalculateY1Y2(
-        LocalTensor<float>& xFp32Local, LocalTensor<T>& gammaLocal, LocalTensor<float>& y1Local, LocalTensor<T>& y2Local,
-        LocalTensor<float>& rstdLocal, uint32_t curRows, uint32_t numColAlign, uint32_t reduceNum)
+    __aicore__ inline void CalculateY1Y2(LocalTensor<float>& xFp32Local, LocalTensor<T>& gammaLocal,
+                                         LocalTensor<float>& y1Local, LocalTensor<T>& y2Local,
+                                         LocalTensor<float>& rstdLocal, uint32_t curRows, uint32_t numColAlign,
+                                         uint32_t reduceNum)
     {
         __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
         __local_mem__ T* gammaInUb = (__local_mem__ T*)gammaLocal.GetPhyAddr();
@@ -188,7 +177,8 @@ private:
         uint16_t loopRowsFold = loopRows / 2;
         uint16_t loopRowsHasLast = loopRows % 2;
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             RegTensor<float> x1Reg;
             RegTensor<float> x2Reg;
             RegTensor<float> rstd1Reg;
@@ -287,11 +277,11 @@ private:
         uint32_t srcStride1 = (numColAlign - numColB32Align) * sizeof(float) / ALIGN_32_FACTOR;
         uint32_t srcStride2 = (numColAlign - colAlign) * sizeof(T) / ALIGN_32_FACTOR;
         DataCopyExtParams copyParams1{
-            static_cast<uint16_t>(curRows),            // blockCount
+            static_cast<uint16_t>(curRows),                // blockCount
             static_cast<uint32_t>(numCol * sizeof(float)), // blockLen
-            static_cast<uint32_t>(srcStride1),         // srcStride
-            static_cast<uint32_t>(0),                  // dstStride
-            0                                          // rsv
+            static_cast<uint32_t>(srcStride1),             // srcStride
+            static_cast<uint32_t>(0),                      // dstStride
+            0                                              // rsv
         };
         DataCopyExtParams copyParams2{
             static_cast<uint16_t>(curRows),            // blockCount

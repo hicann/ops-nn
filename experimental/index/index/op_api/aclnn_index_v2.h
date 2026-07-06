@@ -17,15 +17,14 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnIndexGetWorkspaceSize(
-    const aclTensor* self, const aclTensorList* indices, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorList* indices, aclTensor* out,
+                                                 uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnIndex(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnIndex(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                 const aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_INDEX_V2_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_INDEX_V2_H_

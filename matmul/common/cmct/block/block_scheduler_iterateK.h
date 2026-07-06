@@ -49,8 +49,8 @@ public:
     static constexpr int64_t l0K = GetIntegralConstant<MNK_K, L0TileShape_>();
 
 public:
-    __aicore__ inline BlockSchedulerIterateK(ProblemShape shape, int64_t blockIdx, int64_t blockNum) :
-        blockIdx_(blockIdx), blockNum_(blockNum)
+    __aicore__ inline BlockSchedulerIterateK(ProblemShape shape, int64_t blockIdx, int64_t blockNum)
+        : blockIdx_(blockIdx), blockNum_(blockNum)
     {
         m_ = shape.m;
         n_ = shape.n;
@@ -63,10 +63,7 @@ public:
         totalTileNum_ = mTileNum_ * nTileNum_ * b_;
     }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return totalTileNum_;
-    }
+    __aicore__ inline int64_t GetTileNum() { return totalTileNum_; }
 
     __aicore__ inline BlockShape GetBlockShape(int64_t tileIdx)
     {
@@ -94,15 +91,9 @@ public:
         return {mTileIdx * l1M, nTileIdx * l1N, 0, batchTileIdx};
     }
 
-    static int64_t GetBlockNum(ProblemShape shape)
-    {
-        return DoGetBlockNum(l1M, l1N, shape);
-    }
+    static int64_t GetBlockNum(ProblemShape shape) { return DoGetBlockNum(l1M, l1N, shape); }
 
-    __host_aicore__ static size_t GetWorkspaceSize(ProblemShape shape)
-    {
-        return 0;
-    }
+    __host_aicore__ static size_t GetWorkspaceSize(ProblemShape shape) { return 0; }
 
     __host_aicore__ static Status CanImplement(ProblemShape shape)
     {
@@ -125,4 +116,3 @@ struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::G
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

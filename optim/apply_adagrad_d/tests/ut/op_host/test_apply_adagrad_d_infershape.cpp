@@ -21,21 +21,17 @@
 #include "../../../../../tests/ut/common/any_value.h"
 
 class ApplyAdagradDTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ApplyAdagradD SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ApplyAdagradD SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ApplyAdagradD TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ApplyAdagradD TearDown" << std::endl; }
 };
 
-TEST_F(ApplyAdagradDTest, scewlg_infer_shape_fp16) {
+TEST_F(ApplyAdagradDTest, scewlg_infer_shape_fp16)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradD")->infer_shape;
     gert::StorageShape Shape1 = {{64}, {-1}};
     gert::StorageShape Shape2 = {{1}, {-1}};
-
 
     gert::StorageShape varShape = {{}, {}};
     gert::StorageShape accumShape = {{}, {}};
@@ -43,7 +39,7 @@ TEST_F(ApplyAdagradDTest, scewlg_infer_shape_fp16) {
                       .NodeIoNum(4, 2)
                       .IrInstanceNum({4, 1})
                       .InputShapes({&Shape1, &Shape1, &Shape2, &Shape1})
-                      .OutputShapes({&varShape,&accumShape})
+                      .OutputShapes({&varShape, &accumShape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)

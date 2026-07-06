@@ -17,9 +17,9 @@
 
 using namespace AdaLayerNormNS;
 
-extern "C" __global__ __aicore__ void ada_layer_norm_quant(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR weight, GM_ADDR bias, GM_ADDR smooth_scales, GM_ADDR out,
-    GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void ada_layer_norm_quant(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR weight,
+                                                           GM_ADDR bias, GM_ADDR smooth_scales, GM_ADDR out,
+                                                           GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

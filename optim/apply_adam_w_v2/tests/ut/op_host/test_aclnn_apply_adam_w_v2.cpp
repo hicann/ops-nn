@@ -19,18 +19,11 @@
 using namespace op;
 using namespace std;
 
-class l2_apply_adam_w_v2_test : public testing::Test
-{
+class l2_apply_adam_w_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_apply_adam_w_v2_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_apply_adam_w_v2_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_apply_adam_w_v2_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_apply_adam_w_v2_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_apply_adam_w_v2_test, case_nullptr)
@@ -69,9 +62,9 @@ TEST_F(l2_apply_adam_w_v2_test, case_nullptr)
     aclRet = ut2.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut3 = OP_API_UT(
-        aclnnApplyAdamWV2, INPUT(var, m, v, nullptr, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize),
-        OUTPUT());
+    auto ut3 = OP_API_UT(aclnnApplyAdamWV2,
+                         INPUT(var, m, v, nullptr, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize),
+                         OUTPUT());
     aclRet = ut3.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
@@ -204,9 +197,9 @@ TEST_F(l2_apply_adam_w_v2_test, case_maxGradNorm_is_null)
     float eps = 0.000001f;
     bool amsgrad = false;
     bool maximize = true;
-    auto ut = OP_API_UT(
-        aclnnApplyAdamWV2, INPUT(var, m, v, nullptr, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnApplyAdamWV2,
+                        INPUT(var, m, v, nullptr, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize),
+                        OUTPUT());
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -249,9 +242,9 @@ TEST_F(l2_apply_adam_w_v2_test, case_diff_dtype_and_maxGradNorm_is_null)
     float eps = 0.000001f;
     bool amsgrad = false;
     bool maximize = true;
-    auto ut = OP_API_UT(
-        aclnnApplyAdamWV2, INPUT(var, m, v, nullptr, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize),
-        OUTPUT());
+    auto ut = OP_API_UT(aclnnApplyAdamWV2,
+                        INPUT(var, m, v, nullptr, grad, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize),
+                        OUTPUT());
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);

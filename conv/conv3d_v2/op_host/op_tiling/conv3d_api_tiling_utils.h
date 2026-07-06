@@ -29,7 +29,7 @@
 namespace Conv3dApiTiling {
 
 #ifdef ASC_OP_DEBUG_TEST
-#define TILING_CUBE_LOG(level, format, ...)                               \
+#define TILING_CUBE_LOG(level, format, ...)                             \
     do {                                                                \
         fprintf(stdout, "[LOG] %s " format "\n", level, ##__VA_ARGS__); \
     } while (0)
@@ -89,102 +89,71 @@ enum class TPosition : std::uint8_t {
     MAX
 };
 
-enum class IterateMNOrder : std::uint8_t {
-    ITER_M_FST = 0,
-    ITER_N_FST,
-    INVALID
-};
+enum class IterateMNOrder : std::uint8_t { ITER_M_FST = 0, ITER_N_FST, INVALID };
 
-enum class PadIndex : std::uint8_t {
-    PAD_HEAD = 0,
-    PAD_TAIL,
-    PAD_TOP,
-    PAD_BOTTOM,
-    PAD_LEFT,
-    PAD_RIGHT
-};
+enum class PadIndex : std::uint8_t { PAD_HEAD = 0, PAD_TAIL, PAD_TOP, PAD_BOTTOM, PAD_LEFT, PAD_RIGHT };
 
 const std::map<ConvDtype, std::string> g_dtypeToStr = {
-    {ConvDtype::FLOAT16, "float16"},
-    {ConvDtype::FLOAT32, "float32"},
-    {ConvDtype::BF16, "bfloat16"},
-    {ConvDtype::INT4, "int4"},
-    {ConvDtype::INT8, "int8"},
-    {ConvDtype::UINT8, "uint8"},
-    {ConvDtype::INT64, "int64"},
-    {ConvDtype::UINT64, "uint64"},
-    {ConvDtype::INT32, "int32"},
+    {ConvDtype::FLOAT16, "float16"}, {ConvDtype::FLOAT32, "float32"}, {ConvDtype::BF16, "bfloat16"},
+    {ConvDtype::INT4, "int4"},       {ConvDtype::INT8, "int8"},       {ConvDtype::UINT8, "uint8"},
+    {ConvDtype::INT64, "int64"},     {ConvDtype::UINT64, "uint64"},   {ConvDtype::INT32, "int32"},
 };
 
-const std::map<ConvFormat, std::string> g_formatToStr = {
-    {ConvFormat::NCHW, "NCHW"},
-    {ConvFormat::NHWC, "NHWC"},
-    {ConvFormat::HWCN, "HWCN"},
-    {ConvFormat::DHWNC, "DHWNC"},
-    {ConvFormat::DHWCN, "DHWCN"},
-    {ConvFormat::NDHWC, "NDHWC"},
-    {ConvFormat::NCDHW, "NCDHW"},
-    {ConvFormat::NC1HWC0, "NC1HWC0"},
-    {ConvFormat::NDC1HWC0, "NDC1HWC0"},
-    {ConvFormat::FRACTAL_Z_3D, "FRACTAL_Z_3D"},
-    {ConvFormat::ND, "ND"}
-};
+const std::map<ConvFormat, std::string> g_formatToStr = {{ConvFormat::NCHW, "NCHW"},
+                                                         {ConvFormat::NHWC, "NHWC"},
+                                                         {ConvFormat::HWCN, "HWCN"},
+                                                         {ConvFormat::DHWNC, "DHWNC"},
+                                                         {ConvFormat::DHWCN, "DHWCN"},
+                                                         {ConvFormat::NDHWC, "NDHWC"},
+                                                         {ConvFormat::NCDHW, "NCDHW"},
+                                                         {ConvFormat::NC1HWC0, "NC1HWC0"},
+                                                         {ConvFormat::NDC1HWC0, "NDC1HWC0"},
+                                                         {ConvFormat::FRACTAL_Z_3D, "FRACTAL_Z_3D"},
+                                                         {ConvFormat::ND, "ND"}};
 
 const std::map<ConvDtype, uint32_t> g_dtypeSizeTab = {
-    {ConvDtype::FLOAT16, 2},
-    {ConvDtype::FLOAT32, 4},
-    {ConvDtype::BF16, 2},
-    {ConvDtype::INT8, 1},
-    {ConvDtype::UINT8, 1},
-    {ConvDtype::INT64, 8},
-    {ConvDtype::UINT64, 8},
-    {ConvDtype::INT32, 4}
-};
+    {ConvDtype::FLOAT16, 2}, {ConvDtype::FLOAT32, 4}, {ConvDtype::BF16, 2},   {ConvDtype::INT8, 1},
+    {ConvDtype::UINT8, 1},   {ConvDtype::INT64, 8},   {ConvDtype::UINT64, 8}, {ConvDtype::INT32, 4}};
 
 constexpr uint32_t COUNT_PARAMS_BIAS_SCALE = 5; // [fmap, weight, bias, scale, output]
-constexpr uint32_t COUNT_PARAMS_BIAS = 4; // [fmap, weight, bias, output]
-constexpr uint32_t COUNT_PARAMS_NO_BIAS = 3; // [fmap, weight, output]
+constexpr uint32_t COUNT_PARAMS_BIAS = 4;       // [fmap, weight, bias, output]
+constexpr uint32_t COUNT_PARAMS_NO_BIAS = 3;    // [fmap, weight, output]
 
 const std::vector<std::vector<ConvDtype>> SUPPORTED_TYPES_WITH_BIAS_SCALE = {
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::BF16},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::BF16, ConvDtype::FLOAT32, ConvDtype::BF16},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT32, ConvDtype::FLOAT16}
-};
+    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT32, ConvDtype::FLOAT16}};
 
 const std::vector<std::vector<ConvDtype>> SUPPORTED_TYPES_WITH_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::FLOAT16},
-    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, ConvDtype::BF16}
-};
+    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, ConvDtype::BF16}};
 const std::vector<std::vector<ConvDtype>> SUPPORTED_TYPES_WITHOUT_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16},
-    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16}
-};
+    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16}};
 
 const std::vector<std::vector<ConvDtype>> POINTWISE_SUPPORTED_TYPES_WITH_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, ConvDtype::BF16}
-};
+    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::FLOAT32, ConvDtype::BF16}};
 const std::vector<std::vector<ConvDtype>> POINTWISE_SUPPORTED_TYPES_WITHOUT_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16}
-};
+    {ConvDtype::BF16, ConvDtype::BF16, ConvDtype::BF16}};
 
 constexpr uint64_t DOUBLE_BUFFER_NUM = 2;
 constexpr int8_t M_Mode = 0;
 constexpr int8_t HW_Mode = 1;
 
 using ::Conv3dCommon::C0_BYTE_SIZE;
-using ::Conv3dCommon::LOAD3D_MAX_STRIDE_H_W;
 using ::Conv3dCommon::LOAD3D_MAX_DILATION_H_W;
-using ::Conv3dCommon::LOAD3D_MAX_PAD;
 using ::Conv3dCommon::LOAD3D_MAX_FILTER_H_W;
+using ::Conv3dCommon::LOAD3D_MAX_PAD;
+using ::Conv3dCommon::LOAD3D_MAX_STRIDE_H_W;
 constexpr uint32_t MIN_BURST_SIZE = 128;
 constexpr uint32_t LOAD3D_MAX_DDR2L1_SIZE = 65535;
 
@@ -192,9 +161,9 @@ using ::Conv3dCommon::CUBE_UNIT;
 using ::Conv3dCommon::FP16_CUBE_UNIT;
 using ::Conv3dCommon::FP32_CUBE_UNIT;
 using ::Conv3dCommon::INT8_CUBE_UNIT;
-using ::Conv3dCommon::MKN_MAX_SIZE;
-using ::Conv3dCommon::MKN_M_INDEX;
 using ::Conv3dCommon::MKN_K_INDEX;
+using ::Conv3dCommon::MKN_M_INDEX;
+using ::Conv3dCommon::MKN_MAX_SIZE;
 using ::Conv3dCommon::MKN_N_INDEX;
 using ::Conv3dCommon::MKN_VALUE_DEFAULT;
 
@@ -269,17 +238,10 @@ public:
         ConvDtype madType;
         ConvDtype biasType;
     } typeMaps[static_cast<uint8_t>(ConvDtype::CONVDTYPEMAX) + 1] = {
-        {ConvDtype::CONVDTYPEMAX, ConvDtype::CONVDTYPEMAX}
-    };
+        {ConvDtype::CONVDTYPEMAX, ConvDtype::CONVDTYPEMAX}};
 
-    ConvDtype ToBiasType(ConvDtype type) const
-    {
-        return typeMaps[static_cast<uint8_t>(type)].biasType;
-    }
-    ConvDtype ToMadType(ConvDtype type) const
-    {
-        return typeMaps[static_cast<uint8_t>(type)].madType;
-    }
+    ConvDtype ToBiasType(ConvDtype type) const { return typeMaps[static_cast<uint8_t>(type)].biasType; }
+    ConvDtype ToMadType(ConvDtype type) const { return typeMaps[static_cast<uint8_t>(type)].madType; }
 
     AscendApiCubeTypeMap()
     {
@@ -303,7 +265,7 @@ struct AscendApiMknMap {
     uint32_t GetByIndex(uint32_t idx) const
     {
         if (idx > MKN_MAX_SIZE - 1) {
-        return MKN_VALUE_DEFAULT;
+            return MKN_VALUE_DEFAULT;
         }
         return map[idx];
     }
@@ -312,8 +274,8 @@ struct AscendApiMknMap {
 
 struct AscendApiCubeMkn {
     int8_t toIdx[static_cast<uint8_t>(ConvDtype::CONVDTYPEMAX) + 1] = {0};
-    AscendApiMknMap maps[3] = {{CUBE_UNIT, FP16_CUBE_UNIT, CUBE_UNIT}, // fp16
-                               {CUBE_UNIT, FP32_CUBE_UNIT, CUBE_UNIT}, // fp32
+    AscendApiMknMap maps[3] = {{CUBE_UNIT, FP16_CUBE_UNIT, CUBE_UNIT},  // fp16
+                               {CUBE_UNIT, FP32_CUBE_UNIT, CUBE_UNIT},  // fp32
                                {CUBE_UNIT, INT8_CUBE_UNIT, CUBE_UNIT}}; // int8
     uint32_t GetMKN(ConvDtype dType, uint32_t idx) const
     {
@@ -333,19 +295,19 @@ const AscendApiCubeMkn CUBE_MKN_TAB = AscendApiCubeMkn();
 
 int64_t LCM(int64_t numL, int64_t numR);
 
-using Conv3dCommon::CeilDiv;
 using Conv3dCommon::AlignUp;
+using Conv3dCommon::CeilDiv;
 
 uint64_t Gcd(uint64_t a, uint64_t b);
-void FindDivisorsUpTo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
-void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
+void FindDivisorsUpTo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList);
+void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList);
 using Conv3dCommon::CalcCommFactor;
-void CalcFactorPointWise(uint64_t numMax, std::vector<uint64_t> &resList);
-void VectorElementMultip(std::vector<uint64_t> &range, const uint64_t value);
+void CalcFactorPointWise(uint64_t numMax, std::vector<uint64_t>& resList);
+void VectorElementMultip(std::vector<uint64_t>& range, const uint64_t value);
 using Conv3dCommon::IsArrayEqual;
 
 template <typename T>
-bool AddWithOverflowCheck(T &res, T a, T b)
+bool AddWithOverflowCheck(T& res, T a, T b)
 {
     T tmpRes = a + b;
     if (tmpRes < a || tmpRes < b) {

@@ -65,21 +65,18 @@ constexpr int32_t NUM_HUNDRED = 100;
 
 static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_TANH = {
     {ge::DT_BF16, TANH_BUF_CNT_BFP16}, {ge::DT_FLOAT16, TANH_BUF_CNT_FP16}, {ge::DT_FLOAT, TANH_BUF_CNT_FP32}};
-static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_TANH_950 = {
-    {ge::DT_BF16, TANH_BUF_CNT_BFP16_950},
-    {ge::DT_FLOAT16, TANH_BUF_CNT_FP16_950},
-    {ge::DT_FLOAT, TANH_BUF_CNT_FP32_950}};
+static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_TANH_950 = {{ge::DT_BF16, TANH_BUF_CNT_BFP16_950},
+                                                                           {ge::DT_FLOAT16, TANH_BUF_CNT_FP16_950},
+                                                                           {ge::DT_FLOAT, TANH_BUF_CNT_FP32_950}};
 
 static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF = {
     {ge::DT_BF16, ERF_BUF_CNT_BFP16}, {ge::DT_FLOAT16, ERF_BUF_CNT_FP16}, {ge::DT_FLOAT, ERF_BUF_CNT_FP32}};
 static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF_950 = {
-    {ge::DT_BF16, ERF_BUF_CNT_BFP16_950},
-    {ge::DT_FLOAT16, ERF_BUF_CNT_FP16_950},
-    {ge::DT_FLOAT, ERF_BUF_CNT_FP32_950}};
+    {ge::DT_BF16, ERF_BUF_CNT_BFP16_950}, {ge::DT_FLOAT16, ERF_BUF_CNT_FP16_950}, {ge::DT_FLOAT, ERF_BUF_CNT_FP32_950}};
 
 class GeGluGradV2Tiling {
 public:
-    explicit GeGluGradV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit GeGluGradV2Tiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling4GeGluGradV2();
 
 private:
@@ -144,12 +141,10 @@ ge::graphStatus GeGluGradV2Tiling::RunTiling4GeGluGradV2()
     OP_CHECK_IF(Init() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "Init failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckParams() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "CheckParams failed."), return ge::GRAPH_FAILED);
     CalcValueNM();
-    OP_LOGD(
-        NODE_NAME, "Platform info, ubSizePlatForm:%lu, totalCoreNum:%d, curSocVersion:%u.", ubSizePlatForm_,
-        ptrCompileInfo->totalCoreNum, static_cast<int32_t>(ptrCompileInfo->curSocVersion));
-    OP_CHECK_IF(
-        CaclMaxProcessCount() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "CaclMaxProcessCount failed."),
-        return ge::GRAPH_FAILED);
+    OP_LOGD(NODE_NAME, "Platform info, ubSizePlatForm:%lu, totalCoreNum:%d, curSocVersion:%u.", ubSizePlatForm_,
+            ptrCompileInfo->totalCoreNum, static_cast<int32_t>(ptrCompileInfo->curSocVersion));
+    OP_CHECK_IF(CaclMaxProcessCount() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "CaclMaxProcessCount failed."),
+                return ge::GRAPH_FAILED);
 
     ProcessTilingCore();
 
@@ -191,55 +186,54 @@ ge::graphStatus GeGluGradV2Tiling::Init()
     const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, ptrApproximate);
     approximateAttr = *ptrApproximate;
-    OP_CHECK_IF(
-        approximateAttr == 0 && is310p, OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            tilingContext->GetNodeName(), "approximate", std::to_string(approximateAttr),
-            "If the platform is 310P, parameter approximate must be 1(Tanh)"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(approximateAttr == 0 && is310p,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "approximate",
+                                                      std::to_string(approximateAttr),
+                                                      "If the platform is 310P, parameter approximate must be 1(Tanh)"),
+                return ge::GRAPH_FAILED);
     const bool* ptrActivateLeft = attrs->GetAttrPointer<bool>(ACTIVATE_LEFT_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, ptrActivateLeft);
     activateLeftAttr = *ptrActivateLeft;
 
-    OP_LOGD(
-        NODE_NAME, "Attr info: dimAttr: %ld, approximateAttr: %ld, activateLeftAttr: %s, dyDtype: %d.", dimAttr,
-        approximateAttr, activateLeftAttr ? "true" : "false", static_cast<int32_t>(dyDtype));
+    OP_LOGD(NODE_NAME, "Attr info: dimAttr: %ld, approximateAttr: %ld, activateLeftAttr: %s, dyDtype: %d.", dimAttr,
+            approximateAttr, activateLeftAttr ? "true" : "false", static_cast<int32_t>(dyDtype));
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GeGluGradV2Tiling::CheckParams()
 {
-    OP_CHECK_IF(
-        dyDtype != ge::DT_BF16 && dyDtype != ge::DT_FLOAT16 && dyDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            tilingContext->GetNodeName(), "dy",
-            ge::TypeUtils::DataTypeToSerialString(dyDtype),
-            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dyDtype != ge::DT_BF16 && dyDtype != ge::DT_FLOAT16 && dyDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "dy",
+                                                      ge::TypeUtils::DataTypeToSerialString(dyDtype),
+                                                      "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
+                return ge::GRAPH_FAILED);
 
     // 310P donot support bfloat16 and erf mode
     const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
-    OP_CHECK_IF(
-        dyDtype == ge::DT_BF16 && is310p, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            tilingContext->GetNodeName(), "dy",
-            ge::TypeUtils::DataTypeToSerialString(dyDtype),
-            "The dtype of dy must not be DT_BF16 on 310P"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dyDtype == ge::DT_BF16 && is310p,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "dy",
+                                                      ge::TypeUtils::DataTypeToSerialString(dyDtype),
+                                                      "The dtype of dy must not be DT_BF16 on 310P"),
+                return ge::GRAPH_FAILED);
     dtypeSize = ge::GetSizeByDataType(dyDtype);
     OP_CHECK_IF(dtypeSize <= 0,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            tilingContext->GetNodeName(), "dy",
-            ge::TypeUtils::DataTypeToSerialString(dyDtype),
-            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "dy",
+                                                      ge::TypeUtils::DataTypeToSerialString(dyDtype),
+                                                      "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
+                return ge::GRAPH_FAILED);
 
     auto xDtype = tilingContext->GetInputDesc(X_INDEX)->GetDataType();
     auto geluDtype = tilingContext->GetInputDesc(GELU_INDEX)->GetDataType();
     auto dxDtype = tilingContext->GetInputDesc(DX_INDEX)->GetDataType();
-    OP_CHECK_IF(
-        dyDtype != geluDtype || xDtype != dxDtype || dyDtype != xDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            tilingContext->GetNodeName(), "dy, x, gelu, dx",
-            ge::TypeUtils::DataTypeToSerialString(dyDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(geluDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(dxDtype),
-            "The dtypes of dy, x, gelu, and dx must be the same"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dyDtype != geluDtype || xDtype != dxDtype || dyDtype != xDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "dy, x, gelu, dx",
+                                                       ge::TypeUtils::DataTypeToSerialString(dyDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(geluDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(dxDtype),
+                                                       "The dtypes of dy, x, gelu, and dx must be the same"),
+                return ge::GRAPH_FAILED);
 
     size_t xDimNum = xShape.GetDimNum();
     dimAttr = dimAttr < 0 ? static_cast<int64_t>(xDimNum) + dimAttr : dimAttr;
@@ -252,26 +246,28 @@ ge::graphStatus GeGluGradV2Tiling::CheckParams()
 
     size_t dyDimNum = dyShape.GetDimNum();
     size_t geluDimNum = geluShape.GetDimNum();
-    OP_CHECK_IF(
-        dyDimNum != xDimNum || geluDimNum != xDimNum,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            tilingContext->GetNodeName(), "dy, x, gelu",
-            std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + ", " + std::to_string(geluDimNum),
-            "The shape dims of dy, x, and gelu must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dyDimNum != xDimNum || geluDimNum != xDimNum,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    tilingContext->GetNodeName(), "dy, x, gelu",
+                    std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + ", " + std::to_string(geluDimNum),
+                    "The shape dims of dy, x, and gelu must be the same"),
+                return ge::GRAPH_FAILED);
 
     int64_t xShapeSize = xShape.GetShapeSize();
-    OP_CHECK_IF(
-        xShapeSize == 0, OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            tilingContext->GetNodeName(), "x", "0", "x does not support empty tensor"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShapeSize == 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(tilingContext->GetNodeName(), "x", "0",
+                                                          "x does not support empty tensor"),
+                return ge::GRAPH_FAILED);
 
     gert::Shape tempShape = dyShape;
     tempShape.SetDim(dimAttr, NUM_TWO * dyShape.GetDim(dimAttr));
     if (dyShape != geluShape || xShape != dxShape || tempShape != xShape) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            tilingContext->GetNodeName(), "dy, gelu, x, dx",
-            Ops::Base::ToString(dyShape) + ", " + Ops::Base::ToString(geluShape) + ", " + Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(dxShape),
-            "These parameters must meet the following conditions:the shapes of dy, gelu, x, and dx must satisfy the operator constraint");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "dy, gelu, x, dx",
+                                               Ops::Base::ToString(dyShape) + ", " + Ops::Base::ToString(geluShape) +
+                                                   ", " + Ops::Base::ToString(xShape) + ", " +
+                                                   Ops::Base::ToString(dxShape),
+                                               "These parameters must meet the following conditions:the shapes of dy, "
+                                               "gelu, x, and dx must satisfy the operator constraint");
         return ge::GRAPH_FAILED;
     }
 
@@ -291,16 +287,15 @@ void GeGluGradV2Tiling::FillTilingData()
     tilingData.set_tailUbLoopNum(tailUbLoopNum);
     tilingData.set_groupNum(groupNum);
 
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
-    OP_LOGD(
-        NODE_NAME,
-        "Tiling data is maxProcCount:%ld, valueN:%ld, valueM:%ld, needCoreNum:%ld, loopNumPerCore:%ld, "
-        "tailCoreIndex:%ld, tailUbLoopNum:%ld, groupNum:%ld, tilingKey:%lu.",
-        tilingData.get_maxProcCount(), tilingData.get_valueN(), tilingData.get_valueM(), tilingData.get_needCoreNum(),
-        tilingData.get_loopNumPerCore(), tilingData.get_tailCoreIndex(), tilingData.get_tailUbLoopNum(),
-        tilingData.get_groupNum(), static_cast<uint64_t>(tilingKey));
+    OP_LOGD(NODE_NAME,
+            "Tiling data is maxProcCount:%ld, valueN:%ld, valueM:%ld, needCoreNum:%ld, loopNumPerCore:%ld, "
+            "tailCoreIndex:%ld, tailUbLoopNum:%ld, groupNum:%ld, tilingKey:%lu.",
+            tilingData.get_maxProcCount(), tilingData.get_valueN(), tilingData.get_valueM(),
+            tilingData.get_needCoreNum(), tilingData.get_loopNumPerCore(), tilingData.get_tailCoreIndex(),
+            tilingData.get_tailUbLoopNum(), tilingData.get_groupNum(), static_cast<uint64_t>(tilingKey));
 }
 
 void GeGluGradV2Tiling::CalcValueNM()
@@ -317,12 +312,12 @@ ge::graphStatus GeGluGradV2Tiling::CaclMaxProcessCount()
 {
     if (approximateAttr == NUM_ONE) {
         const auto iter = ptrCompileInfo->isRegbase ? DTYPE_BUF_CNT_MAP_TANH_950.find(dyDtype) :
-                                                           DTYPE_BUF_CNT_MAP_TANH.find(dyDtype);
+                                                      DTYPE_BUF_CNT_MAP_TANH.find(dyDtype);
         maxProcCount = AlignA2B(ubSizePlatForm_ / iter->second, BLOCK_SIZE) / dtypeSize;
         tilingKey = GeGluGradV2TilingKey::TILING_KEY_TANH_101;
     } else {
         const auto iter = ptrCompileInfo->isRegbase ? DTYPE_BUF_CNT_MAP_ERF_950.find(dyDtype) :
-                                                           DTYPE_BUF_CNT_MAP_ERF.find(dyDtype);
+                                                      DTYPE_BUF_CNT_MAP_ERF.find(dyDtype);
         maxProcCount = AlignA2B(ubSizePlatForm_ / iter->second, BLOCK_SIZE) / dtypeSize;
         tilingKey = GeGluGradV2TilingKey::TILING_KEY_ERF_701;
     }
@@ -341,15 +336,14 @@ void GeGluGradV2Tiling::ProcessTilingCore()
     int64_t ubLoopNum = 0;
     int64_t repeatDataCount = static_cast<int64_t>(TRANSPOSE_REPEAT_SIZE / dtypeSize);
     int64_t maxPerfCount = maxProcCount / repeatDataCount;
-    if ((ptrCompileInfo->curSocVersion == NpuArch::DAV_2201 || ptrCompileInfo->isRegbase) &&
-        valueM <= maxPerfCount) {
+    if ((ptrCompileInfo->curSocVersion == NpuArch::DAV_2201 || ptrCompileInfo->isRegbase) && valueM <= maxPerfCount) {
         tilingKey = static_cast<GeGluGradV2TilingKey>(static_cast<int32_t>(tilingKey) + NUM_TWO);
         groupNum = AlignA2B(maxProcCount / valueM, repeatDataCount);
         ubLoopNum = Ops::Base::CeilDiv(valueN, groupNum);
         tailUbLoopNum = groupNum == 0 ? valueN : valueN % groupNum;
     } else if (valueM <= maxProcCount) {
-        int64_t alignValueM =
-            Ops::Base::CeilDiv(valueM, static_cast<int64_t>((BLOCK_SIZE / dtypeSize))) * (BLOCK_SIZE / dtypeSize);
+        int64_t alignValueM = Ops::Base::CeilDiv(valueM, static_cast<int64_t>((BLOCK_SIZE / dtypeSize))) *
+                              (BLOCK_SIZE / dtypeSize);
         groupNum = maxProcCount / alignValueM;
         ubLoopNum = Ops::Base::CeilDiv(valueN, groupNum);
         tailUbLoopNum = groupNum == 0 ? valueN : valueN % groupNum;
@@ -380,9 +374,8 @@ ge::graphStatus Tiling4GeGluGradV2(gert::TilingContext* context)
     OP_LOGD(NODE_NAME, "Tiling4GeGluGradV2 tiling begin.");
     context->SetScheduleMode(BATCH_MODE);
     GeGluGradV2Tiling tilingObject(context);
-    OP_CHECK_IF(
-        tilingObject.RunTiling4GeGluGradV2() != ge::GRAPH_SUCCESS, OP_LOGE(NODE_NAME, "RunTiling4GeGluGradV2 failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingObject.RunTiling4GeGluGradV2() != ge::GRAPH_SUCCESS,
+                OP_LOGE(NODE_NAME, "RunTiling4GeGluGradV2 failed."), return ge::GRAPH_FAILED);
     OP_LOGD(NODE_NAME, "Tiling4GeGluGradV2 tiling end.");
     return ge::GRAPH_SUCCESS;
 }
@@ -395,16 +388,14 @@ ge::graphStatus TilingPrepare4GeGluGradV2(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(NODE_NAME, "TilingPrepare4GeGluGradV2 get core num failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(NODE_NAME, "TilingPrepare4GeGluGradV2 get core num failed."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(NODE_NAME, "TilingPrepare4GeGluGradV2 get ub size failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(NODE_NAME, "TilingPrepare4GeGluGradV2 get ub size failed."),
+                return ge::GRAPH_FAILED);
 
     compileInfo->curSocVersion = ascendcPlatform.GetCurNpuArch();
     compileInfo->isRegbase = IsRegbaseSocVersion(context);

@@ -27,63 +27,51 @@
 namespace optiling {
 
 // ---------------------------UnsortedSegmentMax Simt Tiling---------------------------
-class UnsortedSegmentMaxSimtTiling : public UnsortedSegmentSimtTiling
-{
+class UnsortedSegmentMaxSimtTiling : public UnsortedSegmentSimtTiling {
 public:
-    explicit UnsortedSegmentMaxSimtTiling(gert::TilingContext* context) : UnsortedSegmentSimtTiling(context)
-    {}
-    ~UnsortedSegmentMaxSimtTiling() override
-    {}
+    explicit UnsortedSegmentMaxSimtTiling(gert::TilingContext* context) : UnsortedSegmentSimtTiling(context) {}
+    ~UnsortedSegmentMaxSimtTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMax Simt Sort Tiling---------------------------
-class UnsortedSegmentMaxSortSimtTiling : public UnsortedSegmentSortSimtTiling
-{
+class UnsortedSegmentMaxSortSimtTiling : public UnsortedSegmentSortSimtTiling {
 public:
-    explicit UnsortedSegmentMaxSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSortSimtTiling(context)
-    {}
-    ~UnsortedSegmentMaxSortSimtTiling() override
-    {}
+    explicit UnsortedSegmentMaxSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentSortSimtTiling(context) {}
+    ~UnsortedSegmentMaxSortSimtTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMax Simd Split Column Tiling---------------------------
-class UnsortedSegmentMaxSimdSplitColTiling : public UnsortedSegmentSimdSplitColTiling
-{
+class UnsortedSegmentMaxSimdSplitColTiling : public UnsortedSegmentSimdSplitColTiling {
 public:
-    explicit UnsortedSegmentMaxSimdSplitColTiling(gert::TilingContext* context) : UnsortedSegmentSimdSplitColTiling(context)
+    explicit UnsortedSegmentMaxSimdSplitColTiling(gert::TilingContext* context)
+        : UnsortedSegmentSimdSplitColTiling(context)
     {}
-    ~UnsortedSegmentMaxSimdSplitColTiling() override
-    {}
+    ~UnsortedSegmentMaxSimdSplitColTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMax Simd Non Sort Tiling---------------------------
-class UnsortedSegmentMaxSimdNonSortTiling : public UnsortedSegmentSimdNonSortTiling
-{
+class UnsortedSegmentMaxSimdNonSortTiling : public UnsortedSegmentSimdNonSortTiling {
 public:
-    explicit UnsortedSegmentMaxSimdNonSortTiling(gert::TilingContext* context) : UnsortedSegmentSimdNonSortTiling(context)
+    explicit UnsortedSegmentMaxSimdNonSortTiling(gert::TilingContext* context)
+        : UnsortedSegmentSimdNonSortTiling(context)
     {}
-    ~UnsortedSegmentMaxSimdNonSortTiling() override
-    {}
+    ~UnsortedSegmentMaxSimdNonSortTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMax Simd Dynamic Sort Tiling---------------------------
-class UnsortedSegmentMaxSimdDynSortTiling : public UnsortedSegmentSimdDynSortTiling
-{
+class UnsortedSegmentMaxSimdDynSortTiling : public UnsortedSegmentSimdDynSortTiling {
 public:
-    explicit UnsortedSegmentMaxSimdDynSortTiling(gert::TilingContext* context) : UnsortedSegmentSimdDynSortTiling(context)
+    explicit UnsortedSegmentMaxSimdDynSortTiling(gert::TilingContext* context)
+        : UnsortedSegmentSimdDynSortTiling(context)
     {}
-    ~UnsortedSegmentMaxSimdDynSortTiling() override
-    {}
+    ~UnsortedSegmentMaxSimdDynSortTiling() override {}
 };
 
 // ---------------------------UnsortedSegmentMax Out Full Load Tiling---------------------------
-class UnsortedSegmentMaxOutFlTiling : public UnsortedSegmentOutFlTiling
-{
+class UnsortedSegmentMaxOutFlTiling : public UnsortedSegmentOutFlTiling {
 public:
-    explicit UnsortedSegmentMaxOutFlTiling(gert::TilingContext* context) : UnsortedSegmentOutFlTiling(context)
-    {}
-    ~UnsortedSegmentMaxOutFlTiling() override
-    {}
+    explicit UnsortedSegmentMaxOutFlTiling(gert::TilingContext* context) : UnsortedSegmentOutFlTiling(context) {}
+    ~UnsortedSegmentMaxOutFlTiling() override {}
 };
 
 } // namespace optiling

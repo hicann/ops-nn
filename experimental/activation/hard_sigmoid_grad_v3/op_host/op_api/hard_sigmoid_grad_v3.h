@@ -15,7 +15,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *HardSigmoidGradV3(const aclTensor *gradOutput, const aclTensor *self, aclOpExecutor *executor);
+const aclTensor* HardSigmoidGradV3(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor);
 }
 
 #endif

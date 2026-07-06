@@ -21,16 +21,15 @@
 using namespace ge;
 
 using namespace Ops::Base;
-namespace optiling
-{
+namespace optiling {
 
 bool SoftmaxV2ARATiling::IsCapable()
 {
     // a0_为1的场景走AR模板
     OP_CHECK_IF(a0_ == DIM_NUM_ONE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA full load template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA full load template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
+                return false);
     return true;
 }
 
@@ -64,18 +63,22 @@ ge::graphStatus SoftmaxV2ARATiling::BinaryAddTiling()
     uint32_t remainderTailOffset = quotientTailOffset + remainderOffset;
     uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderTailOffset;
     uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderTailOffset + tileA0Len_;
-    uint32_t remainderTailOffset2 =
-        (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_TWO_OFFSET * tileA0Len_;
-    uint32_t remainderTailOffset3 =
-        (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_THREE_OFFSET * tileA0Len_;
-    uint32_t remainderTailOffset4 =
-        (ROW_FOUR > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FOUR_OFFSET * tileA0Len_;
-    uint32_t remainderTailOffset5 =
-        (ROW_FIVE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FIVE_OFFSET * tileA0Len_;
-    uint32_t remainderTailOffset6 =
-        (ROW_SIX > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SIX_OFFSET * tileA0Len_;
-    uint32_t remainderTailOffset7 =
-        (ROW_SEVEN > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SEVEN_OFFSET * tileA0Len_;
+    uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                     remainderTailOffset + ROW_TWO_OFFSET * tileA0Len_;
+    uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ?
+                                        validNumInXUb :
+                                        remainderTailOffset + ROW_THREE_OFFSET * tileA0Len_;
+    uint32_t remainderTailOffset4 = (ROW_FOUR > remainderTailCount) ?
+                                        validNumInXUb :
+                                        remainderTailOffset + ROW_FOUR_OFFSET * tileA0Len_;
+    uint32_t remainderTailOffset5 = (ROW_FIVE > remainderTailCount) ?
+                                        validNumInXUb :
+                                        remainderTailOffset + ROW_FIVE_OFFSET * tileA0Len_;
+    uint32_t remainderTailOffset6 = (ROW_SIX > remainderTailCount) ? validNumInXUb :
+                                                                     remainderTailOffset + ROW_SIX_OFFSET * tileA0Len_;
+    uint32_t remainderTailOffset7 = (ROW_SEVEN > remainderTailCount) ?
+                                        validNumInXUb :
+                                        remainderTailOffset + ROW_SEVEN_OFFSET * tileA0Len_;
 
     tilingData_.set_binaryAddK(binaryAddK);
     tilingData_.set_binaryAddLast(binaryAddLast);
@@ -113,11 +116,11 @@ ge::graphStatus SoftmaxV2ARATiling::DoOpTiling()
                          FLOAT32_BYTES + FLOAT32_BYTES) /
                         a0TileBase_;
     OP_CHECK_IF(factorMax <= 0,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA full load template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
-                            "tileBase: %ld, ub factor: %ld.",
-                            a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase_, factorMax),
-                    return ge::GRAPH_PARAM_INVALID);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA full load template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
+                        "tileBase: %ld, ub factor: %ld.",
+                        a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase_, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     int64_t a0FactorMax = CeilDiv(a0_, a0TileBase_);
     int64_t totalTilesMax = a1_ * a0FactorMax;
@@ -156,10 +159,7 @@ ge::graphStatus SoftmaxV2ARATiling::DoOpTiling()
     return BinaryAddTiling();
 }
 
-uint64_t SoftmaxV2ARATiling::GetTilingKey() const
-{
-    return TILINGKEY_ARA;
-}
+uint64_t SoftmaxV2ARATiling::GetTilingKey() const { return TILINGKEY_ARA; }
 
 ge::graphStatus SoftmaxV2ARATiling::PostTiling()
 {
@@ -173,4 +173,4 @@ ge::graphStatus SoftmaxV2ARATiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxV2, SoftmaxV2ARATiling, TEMPLATE_ARA_FULL_LOAD_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

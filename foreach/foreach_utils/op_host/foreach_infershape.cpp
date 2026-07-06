@@ -30,12 +30,10 @@ static ge::graphStatus InferShape4ForeachCommon(gert::InferShapeContext* context
         return ge::GRAPH_FAILED;
     }
 
-    std::string errMsg = optiling::ConcatString(
-        "num of dynamic input0 ", inputInfoInferShape->GetInstanceNum(), "not equal num of dynamic output0 ",
-        outputNumInferShape);
-    OP_CHECK_IF(
-        inputInfoInferShape->GetInstanceNum() != outputNumInferShape,
-        OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
+    std::string errMsg = optiling::ConcatString("num of dynamic input0 ", inputInfoInferShape->GetInstanceNum(),
+                                                "not equal num of dynamic output0 ", outputNumInferShape);
+    OP_CHECK_IF(inputInfoInferShape->GetInstanceNum() != outputNumInferShape,
+                OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
 
     for (uint32_t i = 0; i < inputInfoInferShape->GetInstanceNum(); i++) {
         auto xShape = context->GetDynamicInputShape(0, i);
@@ -56,12 +54,10 @@ static ge::graphStatus InferDataType4ForeachCommon(gert::InferDataTypeContext* c
         return ge::GRAPH_FAILED;
     }
 
-    std::string errMsg = optiling::ConcatString(
-        "num of dynamic input0 ", inputInfoDataType->GetInstanceNum(), "not equal num of dynamic output0 ",
-        outputNumDataType);
-    OP_CHECK_IF(
-        inputInfoDataType->GetInstanceNum() != outputNumDataType, OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()),
-        return ge::GRAPH_FAILED);
+    std::string errMsg = optiling::ConcatString("num of dynamic input0 ", inputInfoDataType->GetInstanceNum(),
+                                                "not equal num of dynamic output0 ", outputNumDataType);
+    OP_CHECK_IF(inputInfoDataType->GetInstanceNum() != outputNumDataType,
+                OP_LOGE(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
 
     for (uint32_t i = 0; i < inputInfoDataType->GetInstanceNum(); i++) {
         auto xDtype = context->GetDynamicInputDataType(0, i);
@@ -76,7 +72,6 @@ static ge::graphStatus InferShape4ForeachInplace(gert::InferShapeContext* contex
     (void)context;
     return ge::GRAPH_SUCCESS;
 }
-
 
 static ge::graphStatus InferDataType4ForeachInplace(gert::InferDataTypeContext* context)
 {
@@ -280,25 +275,17 @@ IMPL_OP_INFERSHAPE(ForeachNonFiniteCheckAndUnscale)
     .InferShape(ops::InferShape4ForeachInplace)
     .InferDataType(ops::InferDataType4ForeachInplace);
 
-IMPL_OP_INFERSHAPE(ForeachSigmoid)
-    .InferShape(InferShape4ForeachCommon)
-    .InferDataType(InferDataType4ForeachCommon);
+IMPL_OP_INFERSHAPE(ForeachSigmoid).InferShape(InferShape4ForeachCommon).InferDataType(InferDataType4ForeachCommon);
 
-IMPL_OP_INFERSHAPE(ForeachSinh)
-    .InferShape(InferShape4ForeachCommon)
-    .InferDataType(InferDataType4ForeachCommon);
+IMPL_OP_INFERSHAPE(ForeachSinh).InferShape(InferShape4ForeachCommon).InferDataType(InferDataType4ForeachCommon);
 
-IMPL_OP_INFERSHAPE(ForeachSubList)
-    .InferShape(InferShape4ForeachCommon)
-    .InferDataType(InferDataType4ForeachCommon);
+IMPL_OP_INFERSHAPE(ForeachSubList).InferShape(InferShape4ForeachCommon).InferDataType(InferDataType4ForeachCommon);
 
 IMPL_OP_INFERSHAPE(ForeachSubScalarList)
     .InferShape(InferShape4ForeachCommon)
     .InferDataType(InferDataType4ForeachCommon);
 
-IMPL_OP_INFERSHAPE(ForeachSubScalar)
-    .InferShape(InferShape4ForeachCommon)
-    .InferDataType(InferDataType4ForeachCommon);
+IMPL_OP_INFERSHAPE(ForeachSubScalar).InferShape(InferShape4ForeachCommon).InferDataType(InferDataType4ForeachCommon);
 
 IMPL_OP_INFERSHAPE(ForeachReciprocal)
     .InferShape(ops::InferShape4ForeachCommon)

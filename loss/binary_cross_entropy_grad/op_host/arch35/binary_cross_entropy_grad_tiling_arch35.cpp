@@ -40,10 +40,8 @@ static const size_t REDUCTION_INDEX = 0;
 static const size_t REDUCTION_SUM = 1;
 static const size_t REDUCTION_MEAN = 2;
 static const size_t BCEG_HAS_WEIGHT = 1;
-static const map<std::string, uint32_t> STR_2_INT = { { "none", 0 }, { "sum", 1 }, { "mean", 2 } };
-static const map<ge::DataType, uint32_t> DTYEP_2_INT_KEY{ { ge::DT_FLOAT16, 10 },
-    { ge::DT_FLOAT, 20 },
-    { ge::DT_BF16, 30 } };
+static const map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1}, {"mean", 2}};
+static const map<ge::DataType, uint32_t> DTYEP_2_INT_KEY{{ge::DT_FLOAT16, 10}, {ge::DT_FLOAT, 20}, {ge::DT_BF16, 30}};
 
 ge::graphStatus BinaryCrossEntropyGradTiling::CalcInputDtype()
 {
@@ -52,26 +50,26 @@ ge::graphStatus BinaryCrossEntropyGradTiling::CalcInputDtype()
     this->inputXDtype = inputXDesc->GetDataType();
     OP_CHECK_IF(
         this->inputXDtype != ge::DT_FLOAT16 && this->inputXDtype != ge::DT_BF16 && this->inputXDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            Ops::Base::ToString(this->inputXDtype).c_str(), "float16, bfloat16 and float"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(this->inputXDtype).c_str(),
+                                  "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     auto inputYDesc = context_->GetInputDesc(INPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputYDesc);
     this->inputYDtype = inputYDesc->GetDataType();
     OP_CHECK_IF(
         this->inputYDtype != ge::DT_FLOAT16 && this->inputYDtype != ge::DT_BF16 && this->inputYDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y",
-            Ops::Base::ToString(this->inputYDtype).c_str(), "float16, bfloat16 and float"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y", Ops::Base::ToString(this->inputYDtype).c_str(),
+                                  "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     auto inputGradOutputDesc = context_->GetInputDesc(INPUT_GRAD_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGradOutputDesc);
     this->inputGradOutputDtype = inputGradOutputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->inputGradOutputDtype != ge::DT_FLOAT16 && this->inputGradOutputDtype != ge::DT_BF16 &&
-        this->inputGradOutputDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad_output",
-            Ops::Base::ToString(this->inputGradOutputDtype).c_str(), "float16, bfloat16 and float"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->inputGradOutputDtype != ge::DT_FLOAT16 && this->inputGradOutputDtype != ge::DT_BF16 &&
+                    this->inputGradOutputDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad_output",
+                                          Ops::Base::ToString(this->inputGradOutputDtype).c_str(),
+                                          "float16, bfloat16 and float"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -82,14 +80,14 @@ ge::graphStatus BinaryCrossEntropyGradTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "output",
-            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "output", Ops::Base::ToString(this->outputDtype).c_str(),
+                                  "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     if (this->outputDtype != this->inputXDtype) {
         std::string dtypeMsg = Ops::Base::ToString(this->outputDtype) + " and " +
                                Ops::Base::ToString(this->inputXDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "output and x",
-            dtypeMsg.c_str(), "output and x should have the same dtype");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "output and x", dtypeMsg.c_str(),
+                                               "output and x should have the same dtype");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -129,11 +127,11 @@ ge::graphStatus BinaryCrossEntropyGradTiling::DoOpTiling()
     }
 
     // check input dtype
-    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get input dtype failed"),
+                return ge::GRAPH_FAILED);
     // check output dtype
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "get output dtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get output dtype failed"),
+                return ge::GRAPH_FAILED);
 
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
@@ -151,8 +149,7 @@ ge::graphStatus BinaryCrossEntropyGradTiling::DoOpTiling()
     auto iter = STR_2_INT.find(this->reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE_FOR_INVALID_VALUE(
-            context_->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->isReductionNone = strcmp(this->reductionStr, "none") == 0;
     this->isReductionMean = strcmp(this->reductionStr, "mean") == 0;
@@ -161,132 +158,109 @@ ge::graphStatus BinaryCrossEntropyGradTiling::DoOpTiling()
     this->meanCof_ = CalcMeanCof();
     if (input0DType == ge::DT_FLOAT16 || input0DType == ge::DT_BF16) {
         OP_CHECK_IF(RunFp16BroadcastTiling(this->meanCof_) == ge::GRAPH_FAILED,
-                        OP_LOGE(context_->GetNodeName(), "get input dtype failed"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
     } else if (input0DType == ge::DT_FLOAT) {
         OP_CHECK_IF(RunFp32BroadcastTiling(this->meanCof_) == ge::GRAPH_FAILED,
-                        OP_LOGE(context_->GetNodeName(), "get input dtype failed"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            Ops::Base::ToString(input0DType).c_str(), "float16, bfloat16 and float");
-            return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(input0DType).c_str(),
+                                  "float16, bfloat16 and float");
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::RunFp16BroadcastTiling(float meanCof) {
-    if (this->isReductionMean){
+ge::graphStatus BinaryCrossEntropyGradTiling::RunFp16BroadcastTiling(float meanCof)
+{
+    if (this->isReductionMean) {
         OP_LOGD(context_->GetNodeName(), "use reductionStr mean");
         if (this->hasWeight_ == static_cast<uint64_t>(1)) {
             BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGMeanHasWeight<half, float>::OpDag> brcBaseTiling(context_);
             brcBaseTiling.SetScalar(meanCof);
             OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                            OP_LOGE(context_->GetNodeName(),
-                            "Do tiling failed. Please check the detailed log."),
-                            return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_MEAN, BCEG_HAS_WEIGHT);
         } else {
-            BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGMeanHasNoWeight<half, float>::OpDag> brcBaseTiling(context_);
+            BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGMeanHasNoWeight<half, float>::OpDag> brcBaseTiling(
+                context_);
             brcBaseTiling.SetScalar(meanCof);
             OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                            OP_LOGE(context_->GetNodeName(),
-                            "Do tiling failed. Please check the detailed log."),
-                            return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_MEAN, 0);
         }
     } else if (this->isReductionNone || this->isReductionSum) {
         OP_LOGD(context_->GetNodeName(), "use reducation none or sum");
-            if (this->hasWeight_ == static_cast<uint64_t>(1)) {
-                BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGSumHasWeight<half, float>::OpDag> brcBaseTiling(context_);
-                OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                                OP_LOGE(context_->GetNodeName(),
-                                "Do tiling failed. Please check the detailed log."),
-                                return ge::GRAPH_FAILED);
-                this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_SUM, BCEG_HAS_WEIGHT);
-            } else {
-                BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGSumHasNoWeight<half, float>::OpDag> brcBaseTiling(context_);
-                OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                                OP_LOGE(context_->GetNodeName(),
-                                "Do tiling failed. Please check the detailed log."),
-                                return ge::GRAPH_FAILED);
-                this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_SUM, 0);
-            }
+        if (this->hasWeight_ == static_cast<uint64_t>(1)) {
+            BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGSumHasWeight<half, float>::OpDag> brcBaseTiling(context_);
+            OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
+            this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_SUM, BCEG_HAS_WEIGHT);
+        } else {
+            BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGSumHasNoWeight<half, float>::OpDag> brcBaseTiling(context_);
+            OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
+            this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_SUM, 0);
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::RunFp32BroadcastTiling(float meanCof) {
+ge::graphStatus BinaryCrossEntropyGradTiling::RunFp32BroadcastTiling(float meanCof)
+{
     if (this->isReductionNone || this->isReductionSum) {
         OP_LOGD(context_->GetNodeName(), "use reducation none or sum");
         if (this->hasWeight_ == static_cast<uint64_t>(1)) {
             BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGSumHasWeight<half, float>::OpDag> brcBaseTiling(context_);
             OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                            OP_LOGE(context_->GetNodeName(),
-                            "Do tiling failed. Please check the detailed log."), return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_SUM, BCEG_HAS_WEIGHT);
         } else {
             BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGSumHasNoWeight<half, float>::OpDag> brcBaseTiling(context_);
             OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                            OP_LOGE(context_->GetNodeName(),
-                            "Do tiling failed. Please check the detailed log."), return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_SUM, 0);
         }
-    } else if (this->isReductionMean){
+    } else if (this->isReductionMean) {
         OP_LOGD(context_->GetNodeName(), "use reductionStr mean");
         if (this->hasWeight_ == static_cast<uint64_t>(0)) {
-            BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGMeanHasNoWeight<float, float>::OpDag> brcBaseTiling(context_);
+            BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGMeanHasNoWeight<float, float>::OpDag> brcBaseTiling(
+                context_);
             brcBaseTiling.SetScalar(meanCof);
             OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                            OP_LOGE(context_->GetNodeName(),
-                            "Do tiling failed. Please check the detailed log."), return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_MEAN, 0);
         } else {
             BroadcastBaseTiling<BinaryCrossEntropyGrad::BCEGMeanHasWeight<float, float>::OpDag> brcBaseTiling(context_);
             brcBaseTiling.SetScalar(meanCof);
             OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                            OP_LOGE(context_->GetNodeName(),
-                            "Do tiling failed. Please check the detailed log."), return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                        return ge::GRAPH_FAILED);
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), REDUCTION_MEAN, BCEG_HAS_WEIGHT);
         }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BinaryCrossEntropyGradTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
-bool BinaryCrossEntropyGradTiling::IsCapable()
-{
-    return true;
-}
+bool BinaryCrossEntropyGradTiling::IsCapable() { return true; }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BinaryCrossEntropyGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t BinaryCrossEntropyGradTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t BinaryCrossEntropyGradTiling::GetTilingKey() const { return tilingKey_; }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BinaryCrossEntropyGradTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BinaryCrossEntropyGradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus BinaryCrossEntropyGradTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BinaryCrossEntropyGradTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus BinaryCrossEntropyGradTilingAscendC(gert::TilingContext* context)
 {
@@ -309,7 +283,7 @@ ge::graphStatus Tiling4BinaryCrossEntropyGrad(gert::TilingContext* context)
 
 ge::graphStatus BinaryCrossEntropyGradTilingPrepareAscendC(gert::TilingParseContext* context)
 {
-    fe::PlatFormInfos *platformInfo = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
     auto compileInfo = context->GetCompiledInfo<BinaryCrossEntropyGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
 
@@ -341,5 +315,5 @@ IMPL_OP_OPTILING(BinaryCrossEntropyGrad)
     .TilingParse<BinaryCrossEntropyGradCompileInfo>(TilingPrepare4BinaryCrossEntropyGrad);
 
 REGISTER_OPS_TILING_TEMPLATE(BinaryCrossEntropyGrad, BinaryCrossEntropyGradTiling,
-    BINARY_CROSS_ENTROPY_GRAD_COMMON_TILING_PRIORITY);
-}  // namespace optiling
+                             BINARY_CROSS_ENTROPY_GRAD_COMMON_TILING_PRIORITY);
+} // namespace optiling

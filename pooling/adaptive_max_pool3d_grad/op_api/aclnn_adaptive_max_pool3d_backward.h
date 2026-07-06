@@ -41,9 +41,9 @@ extern "C" {
  * @return aclnnStatus: Return the status code.
  */
 
-ACLNN_API aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                                     const aclTensor* indices, aclTensor* gradInput,
+                                                                     uint64_t* workspaceSize, aclOpExecutor** executor);
 /**
  * @brief A second interface of aclnnAdaptiveMaxPool3dBackward, used to perform calculation.
  * @param [in] workspace: start address of the workspace memory allocated on the NPU device.
@@ -54,8 +54,8 @@ ACLNN_API aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(
  * @return aclnnStatus: returned status code
  */
 
-ACLNN_API aclnnStatus
-aclnnAdaptiveMaxPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnAdaptiveMaxPool3dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                     aclrtStream stream);
 
 #ifdef __cplusplus
 }

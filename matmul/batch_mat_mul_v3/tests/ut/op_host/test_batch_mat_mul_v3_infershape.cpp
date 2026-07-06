@@ -16,499 +16,518 @@
 #include "log/log.h"
 
 namespace {
-class TestBatchMatMulV3InferShape : public testing::Test {
-};
+class TestBatchMatMulV3InferShape : public testing::Test {};
 
-TEST_F(TestBatchMatMulV3InferShape, Basic) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, Basic)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{4, 8, 16, 32, 64}, {4, 8, 16, 4, 2, 16, 16}};
-  gert::StorageShape x2_shape = {{16, 64, 64}, {16, 4, 4, 16, 16}};
-  gert::StorageShape bias_shape = {{64}, {64}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{4, 8, 16, 32, 64}, {4, 8, 16, 4, 2, 16, 16}};
+    gert::StorageShape x2_shape = {{16, 64, 64}, {16, 4, 4, 16, 16}};
+    gert::StorageShape bias_shape = {{64}, {64}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[4, 8, 16, 32, 64]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[4, 8, 16, 32, 64]");
 }
 
-TEST_F(TestBatchMatMulV3InferShape, BiasZeroTensor) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, BiasZeroTensor)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{4, 8, 16, 32, 64}, {4, 8, 16, 4, 2, 16, 16}};
-  gert::StorageShape x2_shape = {{16, 64, 64}, {16, 4, 4, 16, 16}};
-  gert::StorageShape bias_shape = {{0}, {0}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{4, 8, 16, 32, 64}, {4, 8, 16, 4, 2, 16, 16}};
+    gert::StorageShape x2_shape = {{16, 64, 64}, {16, 4, 4, 16, 16}};
+    gert::StorageShape bias_shape = {{0}, {0}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[4, 8, 16, 32, 64]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[4, 8, 16, 32, 64]");
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase01) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase01)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {4, 3, 5};
-  gert::Shape x2_shape = {-2};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {4, 3, 5};
+    gert::Shape x2_shape = {-2};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase02) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase02)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase03) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase03)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {5, -1};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {5, -1};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase04) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase04)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, 13, 16};
-  gert::Shape x2_shape = {-1, 13, 16};
-  gert::Shape expect_output_shape = {-1, 16, 16};
+    gert::Shape x1_shape = {-1, 13, 16};
+    gert::Shape x2_shape = {-1, 13, 16};
+    gert::Shape expect_output_shape = {-1, 16, 16};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase05) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase05)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {1024, 8, -1, -1};
-  gert::Shape x2_shape = {1024, 8, -1, 64};
-  gert::Shape expect_output_shape = {1024, 8, -1, 64};
+    gert::Shape x1_shape = {1024, 8, -1, -1};
+    gert::Shape x2_shape = {1024, 8, -1, 64};
+    gert::Shape expect_output_shape = {1024, 8, -1, 64};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase06) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase06)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, 13, 16};
-  gert::Shape x2_shape = {-1, 13, 16};
+    gert::Shape x1_shape = {-1, 13, 16};
+    gert::Shape x2_shape = {-1, 13, 16};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase07) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase07)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, -1, -1};
-  gert::Shape x2_shape = {2048, 64, 300};
-  gert::Shape expect_output_shape = {2048, -1, 64};
+    gert::Shape x1_shape = {-1, -1, -1};
+    gert::Shape x2_shape = {2048, 64, 300};
+    gert::Shape expect_output_shape = {2048, -1, 64};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase08) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase08)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, -1, -1, 512};
-  gert::Shape x2_shape = {512, -1};
-  gert::Shape expect_output_shape = {-1, -1, -1, -1};
+    gert::Shape x1_shape = {-1, -1, -1, 512};
+    gert::Shape x2_shape = {512, -1};
+    gert::Shape expect_output_shape = {-1, -1, -1, -1};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase09) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase09)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-3, 10};
-  gert::Shape x2_shape = {10, 20};
+    gert::Shape x1_shape = {-3, 10};
+    gert::Shape x2_shape = {10, 20};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase10) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimCase10)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {0, 10}; // 0代表这个维度是0，整个tensor本质是一个空tensor
-  gert::Shape x2_shape = {10, 20};
-  gert::Shape expect_output_shape = {0, 20};
+    gert::Shape x1_shape = {0, 10}; // 0代表这个维度是0，整个tensor本质是一个空tensor
+    gert::Shape x2_shape = {10, 20};
+    gert::Shape expect_output_shape = {0, 20};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase01) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase01)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {4, 3, 5};
-  gert::Shape bias_shape = {5};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {4, 3, 5};
+    gert::Shape bias_shape = {5};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase02) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase02)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape bias_shape = {5};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape bias_shape = {5};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase03) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase03)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape bias_shape = {-2};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape bias_shape = {-2};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase04) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase04)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, 3, -1, -1};
-  gert::Shape x2_shape = {-1, -1, -1, -1};
-  gert::Shape bias_shape = {5};
-  gert::Shape expect_output_shape = {-1, 3, -1, 5};
+    gert::Shape x1_shape = {-1, 3, -1, -1};
+    gert::Shape x2_shape = {-1, -1, -1, -1};
+    gert::Shape bias_shape = {5};
+    gert::Shape expect_output_shape = {-1, 3, -1, 5};
 
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase05) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase05)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, 3, -1, -1};
-  gert::Shape x2_shape = {-1, -1, -1, -1};
-  gert::Shape bias_shape = {-1};
-  gert::Shape expect_output_shape = {-1, 3, -1, -1};
+    gert::Shape x1_shape = {-1, 3, -1, -1};
+    gert::Shape x2_shape = {-1, -1, -1, -1};
+    gert::Shape bias_shape = {-1};
+    gert::Shape expect_output_shape = {-1, 3, -1, -1};
 
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase06) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, UnknownDimWithBiasCase06)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-1, -1};
-  gert::Shape x2_shape = {1024, 2048};
-  gert::Shape bias_shape = {-1};
-  gert::Shape expect_output_shape = {-1, 2048};
+    gert::Shape x1_shape = {-1, -1};
+    gert::Shape x2_shape = {1024, 2048};
+    gert::Shape bias_shape = {-1};
+    gert::Shape expect_output_shape = {-1, 2048};
 
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, BatchOneWithDynamic) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, BatchOneWithDynamic)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {1, 3, 4};
-  gert::Shape x2_shape = {-1, 4, 5};
-  gert::Shape expect_output_shape = {-1, 3, 5};
+    gert::Shape x1_shape = {1, 3, 4};
+    gert::Shape x2_shape = {-1, 4, 5};
+    gert::Shape expect_output_shape = {-1, 3, 5};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, BiasBatchOneWithDynamic) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, BiasBatchOneWithDynamic)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {1, 3, 4};
-  gert::Shape x2_shape = {4, 5};
-  gert::Shape bias_shape = {-1, 1, 5};
-  gert::Shape expect_output_shape = {-1, 3, 5};
+    gert::Shape x1_shape = {1, 3, 4};
+    gert::Shape x2_shape = {4, 5};
+    gert::Shape bias_shape = {-1, 1, 5};
+    gert::Shape expect_output_shape = {-1, 3, 5};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestBatchMatMulV3InferShape, BiasBatchOneWithDynamic2) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
+TEST_F(TestBatchMatMulV3InferShape, BiasBatchOneWithDynamic2)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {1, 1, 3, 4};
-  gert::Shape x2_shape = {1, 1, 4, 5};
-  gert::Shape bias_shape = {-1, 1, 5};
-  gert::Shape expect_output_shape = {1, -1, 3, 5};
+    gert::Shape x1_shape = {1, 1, 3, 4};
+    gert::Shape x2_shape = {1, 1, 4, 5};
+    gert::Shape bias_shape = {-1, 1, 5};
+    gert::Shape expect_output_shape = {1, -1, 3, 5};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-class TestBatchMatMulV3InferShapeRange : public testing::Test {
-};
+class TestBatchMatMulV3InferShapeRange : public testing::Test {};
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case01) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case01)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {4, 1, 1};
     gert::Shape x1_shape_max = {9, -1, -1};
     gert::Shape x2_shape_min = {2, 1, 7};
@@ -520,13 +539,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case01) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {4, 1, 7};
@@ -535,10 +554,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case01) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case02) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case02)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 1, 1};
     gert::Shape x1_shape_max = {8, -1, -1};
     gert::Shape x2_shape_min = {1, 1, 7};
@@ -550,13 +569,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case02) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {1, 1, 7};
@@ -565,10 +584,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case02) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case03) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case03)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 1, 1};
     gert::Shape x1_shape_max = {1, -1, -1};
     gert::Shape x2_shape_min = {2, 1, 7};
@@ -580,13 +599,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case03) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {2, 1, 7};
@@ -595,10 +614,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case03) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case04) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case04)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {2, 1, 1};
     gert::Shape x1_shape_max = {5, -1, -1};
     gert::Shape x2_shape_min = {1, 1, 7};
@@ -610,13 +629,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case04) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {2, 1, 7};
@@ -625,10 +644,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case04) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case05) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case05)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {8, 13, 16};
     gert::Shape x1_shape_max = {-1, 13, 16};
     gert::Shape x2_shape_min = {8, 13, 16};
@@ -640,13 +659,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case05) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {8, 16, 16};
@@ -655,10 +674,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case05) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case06) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case06)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {-1, 13, 16};
     gert::Shape x1_shape_max = {-1, 13, 16};
     gert::Shape x2_shape_min = {-1, 13, 16};
@@ -670,21 +689,21 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case06) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case07) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case07)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {0, 0, 0};
     gert::Shape x1_shape_max = {-1, -1, -1};
     gert::Shape x2_shape_min = {2048, 64, 300};
@@ -696,13 +715,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case07) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {2048, 0, 64};
@@ -711,10 +730,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case07) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case08) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case08)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 2, 1, 512};
     gert::Shape x1_shape_max = {-1, 3, 2, 512};
     gert::Shape x2_shape_min = {512, 3};
@@ -726,13 +745,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case08) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {1, 2, 1, 3};
@@ -741,10 +760,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case08) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Case09) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Case09)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1024, 8, 1, 1};
     gert::Shape x1_shape_max = {1024, 8, 536870912, -1};
     gert::Shape x2_shape_min = {1024, 8, 2, 64};
@@ -756,13 +775,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case09) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {1024, 8, 1, 64};
@@ -771,10 +790,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Case09) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, ChatGLM2) {
+TEST_F(TestBatchMatMulV3InferShapeRange, ChatGLM2)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {0, 0};
     gert::Shape x1_shape_max = {-1, -1};
     gert::Shape x2_shape_min = {4096, 4096};
@@ -786,13 +805,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, ChatGLM2) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {0, 4096};
@@ -801,10 +820,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, ChatGLM2) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase01) {
+TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase01)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {4, 7, 1};
     gert::Shape x1_shape_max = {9, 7, -1};
     gert::Shape x2_shape_min = {1, 7};
@@ -819,13 +838,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase01) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {4, 7, 8};
@@ -834,10 +853,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase01) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase02) {
+TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase02)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 3, 1, 1};
     gert::Shape x1_shape_max = {5, 3, 5, 5};
     gert::Shape x2_shape_min = {2, 2, 2, 2};
@@ -852,13 +871,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase02) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {2, 3, 1, 5};
@@ -867,10 +886,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasCase02) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, BiasWithBatch) {
+TEST_F(TestBatchMatMulV3InferShapeRange, BiasWithBatch)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {3, 4};
     gert::Shape x1_shape_max = {3, 4};
     gert::Shape x2_shape_min = {4, 5};
@@ -885,13 +904,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasWithBatch) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {2, 3, 3, 5};
@@ -900,10 +919,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasWithBatch) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, X1OneDim) {
+TEST_F(TestBatchMatMulV3InferShapeRange, X1OneDim)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {4};
     gert::Shape x1_shape_max = {4};
     gert::Shape x2_shape_min = {4, 5};
@@ -918,13 +937,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, X1OneDim) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {5};
@@ -933,10 +952,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, X1OneDim) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, X2OneDim) {
+TEST_F(TestBatchMatMulV3InferShapeRange, X2OneDim)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {3, 4};
     gert::Shape x1_shape_max = {3, 4};
     gert::Shape x2_shape_min = {4};
@@ -948,13 +967,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, X2OneDim) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {3};
@@ -963,10 +982,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, X2OneDim) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, BatchOneWithDynamic) {
+TEST_F(TestBatchMatMulV3InferShapeRange, BatchOneWithDynamic)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 3, 4};
     gert::Shape x1_shape_max = {1, 3, 4};
     gert::Shape x2_shape_min = {0, 4, 5};
@@ -978,13 +997,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BatchOneWithDynamic) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInputNum(2)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInputNum(2)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {0, 3, 5};
@@ -993,10 +1012,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BatchOneWithDynamic) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic) {
+TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 3, 4};
     gert::Shape x1_shape_max = {1, 3, 4};
     gert::Shape x2_shape_min = {4, 5};
@@ -1011,13 +1030,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {0, 3, 5};
@@ -1026,10 +1045,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic2) {
+TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic2)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {1, 1, 3, 4};
     gert::Shape x1_shape_max = {1, 1, 3, 4};
     gert::Shape x2_shape_min = {1, 1, 4, 5};
@@ -1044,13 +1063,13 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic2) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {1, 0, 3, 5};
@@ -1059,10 +1078,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, BiasBatchOneWithDynamic2) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasDyn) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasDyn)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {0, 0};
     gert::Shape x1_shape_max = {-1, -1};
     gert::Shape x2_shape_min = {1664, 1664};
@@ -1077,15 +1096,15 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasDyn) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {0, 1664};
@@ -1094,10 +1113,10 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasDyn) {
     EXPECT_EQ(*(holder.GetContext<gert::InferShapeRangeContext>()->GetOutputShapeRange(0)), target_out_shape_range);
 }
 
-TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasLen0) {
+TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasLen0)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
-    auto infer_shape_range_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
+    auto infer_shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->infer_shape_range;
     gert::Shape x1_shape_min = {0, 0};
     gert::Shape x1_shape_max = {-1, -1};
     gert::Shape x2_shape_min = {1664, 1664};
@@ -1112,15 +1131,15 @@ TEST_F(TestBatchMatMulV3InferShapeRange, Gpt2200BBiasLen0) {
     gert::Range<gert::Shape> out_shape_range(&out_shape_min, &out_shape_max);
 
     auto holder = gert::InferShapeRangeContextFaker()
-        .NodeIoNum(3, 1)
-        .IrInputNum(3)
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
-        .OutputShapeRanges({&out_shape_range})
-        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-        .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapeRanges({&x1_shape_range, &x2_shape_range, &bias_shape_range})
+                      .OutputShapeRanges({&out_shape_range})
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
     EXPECT_EQ(infer_shape_range_func(holder.GetContext<gert::InferShapeRangeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape target_shape_min = {0, 1664};

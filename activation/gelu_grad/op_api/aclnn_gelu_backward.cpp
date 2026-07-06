@@ -27,8 +27,8 @@
 
 using namespace op;
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                   DataType::DT_BF16};
 
 static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
@@ -49,9 +49,8 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, shapeBroadcast, return false);
 
     if (shapeBroadcast != gradInputShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(shapeBroadcast).GetString(), op::ToString(gradInputShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(shapeBroadcast).GetString(), op::ToString(gradInputShape).GetString());
         return false;
     }
     return true;
@@ -106,12 +105,11 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
     return self;
 }
 
-static aclnnStatus RunGeluGradAndCopy(
-    const aclTensor* gradOutputCasted, const aclTensor* selfCasted, const aclTensor* gradInputCasted,
-    const aclTensor* gradInput, aclOpExecutor* executor)
+static aclnnStatus RunGeluGradAndCopy(const aclTensor* gradOutputCasted, const aclTensor* selfCasted,
+                                      const aclTensor* gradInputCasted, const aclTensor* gradInput,
+                                      aclOpExecutor* executor)
 {
-    auto GeluBackwardResult =
-        l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, executor);
+    auto GeluBackwardResult = l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, executor);
     CHECK_RET(GeluBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto castOut = l0op::Cast(GeluBackwardResult, gradInput->GetDataType(), executor);
@@ -122,9 +120,9 @@ static aclnnStatus RunGeluGradAndCopy(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ComputeGeluGradRegbase(
-    const aclTensor* gradOutputContiguous, const aclTensor* selfContiguous, const aclTensor* gradInputCasted,
-    const aclTensor* gradInput, op::DataType promoteType, aclOpExecutor* executor)
+static aclnnStatus ComputeGeluGradRegbase(const aclTensor* gradOutputContiguous, const aclTensor* selfContiguous,
+                                          const aclTensor* gradInputCasted, const aclTensor* gradInput,
+                                          op::DataType promoteType, aclOpExecutor* executor)
 {
     auto selfCasted = l0op::Cast(selfContiguous, promoteType, executor);
     CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -135,9 +133,10 @@ static aclnnStatus ComputeGeluGradRegbase(
     return RunGeluGradAndCopy(gradOutputCasted, selfCasted, gradInputCasted, gradInput, executor);
 }
 
-static aclnnStatus ComputeGeluGradBroadcast(
-    const aclTensor* gradOutputContiguous, const aclTensor* selfContiguous, const aclTensor* gradInputCasted,
-    const aclTensor* gradInput, op::DataType promoteType, const op::Shape& broadcastShape, aclOpExecutor* executor)
+static aclnnStatus ComputeGeluGradBroadcast(const aclTensor* gradOutputContiguous, const aclTensor* selfContiguous,
+                                            const aclTensor* gradInputCasted, const aclTensor* gradInput,
+                                            op::DataType promoteType, const op::Shape& broadcastShape,
+                                            aclOpExecutor* executor)
 {
     auto gradOutputBroadcast = BroadcastTensor(gradOutputContiguous, broadcastShape, executor);
     CHECK_RET(gradOutputBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -154,9 +153,9 @@ static aclnnStatus ComputeGeluGradBroadcast(
     return RunGeluGradAndCopy(gradOutputCasted, selfCasted, gradInputCasted, gradInput, executor);
 }
 
-aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnGeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                              const aclTensor* gradInput, uint64_t* workspaceSize,
+                                              aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeluBackward, DFX_IN(gradOutput, self), DFX_OUT(gradInput));
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -189,11 +188,11 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
 
     aclnnStatus status;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        status = ComputeGeluGradRegbase(gradOutputContiguous, selfContiguous, gradInputCasted,
-                                        gradInput, promoteType, uniqueExecutor.get());
+        status = ComputeGeluGradRegbase(gradOutputContiguous, selfContiguous, gradInputCasted, gradInput, promoteType,
+                                        uniqueExecutor.get());
     } else {
-        status = ComputeGeluGradBroadcast(gradOutputContiguous, selfContiguous, gradInputCasted,
-                                          gradInput, promoteType, broadcastShape, uniqueExecutor.get());
+        status = ComputeGeluGradBroadcast(gradOutputContiguous, selfContiguous, gradInputCasted, gradInput, promoteType,
+                                          broadcastShape, uniqueExecutor.get());
     }
     CHECK_RET(status == ACLNN_SUCCESS, status);
 
@@ -202,8 +201,8 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeluBackward(
-    void* workspace, uint64_t workspace_size, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnGeluBackward(void* workspace, uint64_t workspace_size, aclOpExecutor* executor,
+                              const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnGeluBackward);
     // 固定写法，调用框架能力，完成计算

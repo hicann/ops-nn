@@ -64,20 +64,20 @@ static inline bool CheckNotNull(AclnnAddmmTensor& addmmTensor)
 }
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> dtypeSupportList = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
-static const std::initializer_list<op::DataType> dtypeSupportListMat1AndMat2 = {
- 	op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> dtypeSupportList = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                     op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {op::DataType::DT_FLOAT,
+                                                                                op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> dtypeSupportListMat1AndMat2 = {op::DataType::DT_FLOAT16,
+                                                                                op::DataType::DT_BF16};
 static inline bool CheckNpuArchIsSupportBf16(void)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     return (npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series();
 }
 
-static inline bool CheckWeightNzDtypeValid(
-    const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out)
+static inline bool CheckWeightNzDtypeValid(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2,
+                                           const aclTensor* out)
 {
     bool bf16flag = CheckNpuArchIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
@@ -115,8 +115,7 @@ static inline bool CheckMatmul(const aclTensor* self, const aclTensor* mat1, con
     }
 
     if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The formats of self should be ND, but the actual formats are [%s]",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The formats of self should be ND, but the actual formats are [%s]",
                 op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
@@ -151,9 +150,8 @@ static inline bool CheckOutShape(const aclTensor* mat1, const aclTensor* mat2, c
         return out->IsEmpty();
     }
     if (n != out_n || p != out_p) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be [%ld,%ld], but the current is %s.", n, p,
-            op::ToString(out->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be [%ld,%ld], but the current is %s.", n, p,
+                op::ToString(out->GetViewShape()).GetString());
         return false;
     }
     return true;
@@ -175,9 +173,8 @@ static aclnnStatus CheckInputParams(AclnnAddmmTensor& addmmTensor, int8_t cubeMa
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        archRule -> CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule->CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查self, mat1和mat2是否满足matmul条件
     CHECK_RET(CheckMatmul(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
@@ -204,8 +201,8 @@ static inline bool CheckMulResIsEmpty(const aclTensor* mat1, const aclTensor* ma
 }
 
 // mat1 * mat2结果为空tensor，返回 beta * self 并且broadcast成out的shape
-static aclnnStatus AddmmMulEmptyProcess(
-    const aclTensor* self, const aclScalar* beta, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus AddmmMulEmptyProcess(const aclTensor* self, const aclScalar* beta, aclTensor* out,
+                                        aclOpExecutor* executor)
 {
     auto selfContiguous = l0op::Contiguous(self, executor);
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -230,8 +227,8 @@ static aclnnStatus AddmmMulEmptyProcess(
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* AddProcess(
-    const aclTensor* mulOut, const aclTensor* matmulOut, const aclScalar* alpha, bool isInplace, aclOpExecutor* executor)
+static const aclTensor* AddProcess(const aclTensor* mulOut, const aclTensor* matmulOut, const aclScalar* alpha,
+                                   bool isInplace, aclOpExecutor* executor)
 {
     // Add算子需要对self和mat1两个输入做隐式数据类型转换，根据具体算子语义按需调用
     auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), matmulOut->GetDataType());
@@ -246,17 +243,19 @@ static const aclTensor* AddProcess(
     const aclTensor* addOut = nullptr;
     if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
         addOut = reinterpret_cast<void*>(l0op::AddInplace) != nullptr && !isInplace ?
-            l0op::AddInplace(mulOutCasted, matmulOutCasted, executor) :
-            l0op::Add(mulOutCasted, matmulOutCasted, executor);
+                     l0op::AddInplace(mulOutCasted, matmulOutCasted, executor) :
+                     l0op::Add(mulOutCasted, matmulOutCasted, executor);
     } else {
         addOut = reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && !isInplace ?
-            l0op::AxpyInplace(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor) :
-            l0op::Axpy(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor);
+                     l0op::AxpyInplace(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor) :
+                     l0op::Axpy(mulOutCasted, matmulOutCasted, alpha->ToFloat(), executor);
     }
     return addOut;
 }
 
-static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scalar, bool isMulsInplace, aclOpExecutor* executor){
+static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scalar, bool isMulsInplace,
+                                    aclOpExecutor* executor)
+{
     const aclTensor* mulsOut = nullptr;
     auto matContiguous = l0op::Contiguous(mat, executor);
     CHECK_RET(matContiguous != nullptr, nullptr);
@@ -264,19 +263,22 @@ static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scala
         mulsOut = matContiguous;
     } else {
         mulsOut = (reinterpret_cast<void*>(l0op::MulsInplace) != nullptr && isMulsInplace) ?
-            l0op::MulsInplace(matContiguous, scalar->ToFloat(), executor) :
-            l0op::Muls(matContiguous, scalar->ToFloat(), executor);
+                      l0op::MulsInplace(matContiguous, scalar->ToFloat(), executor) :
+                      l0op::Muls(matContiguous, scalar->ToFloat(), executor);
         CHECK_RET(mulsOut != nullptr, nullptr);
     }
     return mulsOut;
 }
 
-static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out,
+                                      int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
 {
     return MatmulCommonProcess(mat1, mat2, nullptr, out, cubeMathType, mmOpInfo, executor, false, true);
 }
 
-static const aclTensor* MatmulWithBiasProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+static const aclTensor* MatmulWithBiasProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
+                                              const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo,
+                                              aclOpExecutor* executor)
 {
     return MatmulCommonProcess(mat1, mat2, self, out, cubeMathType, mmOpInfo, executor, false, true);
 }
@@ -293,16 +295,16 @@ static const aclTensor* MatmulMulProcess(AclnnAddmmTensor& addmmTensor, int8_t c
         mulOut = matmulOut;
     } else {
         mulOut = reinterpret_cast<void*>(l0op::MulsInplace) != nullptr ?
-            l0op::MulsInplace(matmulOut, addmmTensor.alpha->ToFloat(), executor) :
-            l0op::Muls(matmulOut, addmmTensor.alpha->ToFloat(), executor);
+                     l0op::MulsInplace(matmulOut, addmmTensor.alpha->ToFloat(), executor) :
+                     l0op::Muls(matmulOut, addmmTensor.alpha->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, nullptr);
     }
     auto castOut = l0op::Cast(mulOut, addmmTensor.out->GetDataType(), executor);
     return castOut;
 }
 
-static const aclTensor* AddMatmulProcess(
-    AclnnAddmmTensor& addmmTensor, int8_t cubeMathType, aclOpExecutor* uniqueExecutor)
+static const aclTensor* AddMatmulProcess(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType,
+                                         aclOpExecutor* uniqueExecutor)
 {
     auto selfContiguous = l0op::Contiguous(addmmTensor.self, uniqueExecutor);
     CHECK_RET(selfContiguous != nullptr, nullptr);
@@ -386,9 +388,8 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
 {
     if (mat1->GetDataType() == op::DataType::DT_FLOAT || mat2->GetDataType() == op::DataType::DT_FLOAT ||
         mat1->GetDataType() != mat2->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "invalid mat1 dtype [%s] or mat2 dtype [%s] ",
-            op::ToString(mat1->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "invalid mat1 dtype [%s] or mat2 dtype [%s] ",
+                op::ToString(mat1->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
         return false;
     }
     auto storageShape = mat2->GetStorageShape();
@@ -430,35 +431,32 @@ static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool isSupportNpuArch = ((npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series());
     if (!isSupportNpuArch) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
-            op::ToString(socVersion).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
+                op::ToString(socVersion).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(addmmTensor), ACLNN_ERR_PARAM_NULLPTR);
-    
+
     // 仅支持 self ND， mat1 Nd，mat2 Nz排布
     if (addmmTensor.self->GetStorageFormat() != Format::FORMAT_ND ||
         addmmTensor.mat1->GetStorageFormat() != Format::FORMAT_ND ||
         addmmTensor.mat2->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Invalid format, Format of self is [%s], mat1 is [%s], mat2 is [%s].",
-            op::ToString(addmmTensor.self->GetStorageFormat()).GetString(),
-            op::ToString(addmmTensor.mat1->GetStorageFormat()).GetString(),
-            op::ToString(addmmTensor.mat2->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid format, Format of self is [%s], mat1 is [%s], mat2 is [%s].",
+                op::ToString(addmmTensor.self->GetStorageFormat()).GetString(),
+                op::ToString(addmmTensor.mat1->GetStorageFormat()).GetString(),
+                op::ToString(addmmTensor.mat2->GetStorageFormat()).GetString());
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckWeightNzDtypeValid(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2,
-        addmmTensor.out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckWeightNzDtypeValid(addmmTensor.self, addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out),
+              ACLNN_ERR_PARAM_INVALID);
 
     auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        archRule->CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule->CheckInput(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.self, addmmTensor.out, cubeMathType),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查mat1和mat2是否满足matmulweightNz条件
     CHECK_RET(CheckMatmulWeightNz(addmmTensor.mat1, addmmTensor.mat2), ACLNN_ERR_PARAM_INVALID);
@@ -491,8 +489,7 @@ static bool check16In32Output(const aclTensor* mat1, const aclTensor* mat2, cons
     return true;
 }
 
-static bool ProcessEmptyTensor(
-   AclnnAddmmTensor& addmmTensor, uint64_t* workspaceSize, aclOpExecutor* executor)
+static bool ProcessEmptyTensor(AclnnAddmmTensor& addmmTensor, uint64_t* workspaceSize, aclOpExecutor* executor)
 {
     // 如果self是空tensor，返回空tensor。如果mat1 a*b 和mat2 b*c是空tensor，a*c也是空tensor，返回空tensor
     if (addmmTensor.self->IsEmpty() || CheckMulResIsEmpty(addmmTensor.mat1, addmmTensor.mat2)) {
@@ -513,19 +510,20 @@ static bool ProcessEmptyTensor(
 
 // =============================================================================================================================
 
-class AddmmMatmulGraph : public Ops::NN::MatmulGraphImpl{
+class AddmmMatmulGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
-        bool enable16In32Out = NeedEnableFp32Output(
-            matA->GetDataType(), matB->GetDataType(), output->GetDataType(), cubeMathType);
+        bool enable16In32Out = NeedEnableFp32Output(matA->GetDataType(), matB->GetDataType(), output->GetDataType(),
+                                                    cubeMathType);
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
-        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
-            (enable16In32Out && !needBroadcast)) && isSupportNpuArch) {
+        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || (enable16In32Out && !needBroadcast)) &&
+            isSupportNpuArch) {
             auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor, enable16In32Out);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
@@ -542,8 +540,8 @@ public:
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Matmul: out2 = mat1 @ mat2
         // 为了提升addmm的精度，如果输入是fp16或者bf16时，输出需要是fp32类型
-        if (((matA->GetDataType() == DataType::DT_FLOAT16 && matB->GetDataType() == DataType::DT_FLOAT16) || 
-            (matA->GetDataType() == DataType::DT_BF16 && matB->GetDataType() == DataType::DT_BF16)) &&
+        if (((matA->GetDataType() == DataType::DT_FLOAT16 && matB->GetDataType() == DataType::DT_FLOAT16) ||
+             (matA->GetDataType() == DataType::DT_BF16 && matB->GetDataType() == DataType::DT_BF16)) &&
             (cubeMathType == KEEP_DTYPE || cubeMathType == USE_HF32) && isSupportNpuArch) {
             cubeMathType = USE_FP32_ADD;
             OP_LOGD("AddmmMatmulGraph: cubeMathType now transfers to USE_FP32_ADD");
@@ -561,27 +559,27 @@ public:
     ~AddmmMatmulGraph() override = default;
 };
 
-class AddmmEmptyTensorGraph : public Ops::NN::MatmulGraphImpl{
+class AddmmEmptyTensorGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 空Tensor 不做处理
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return ACLNN_SUCCESS;
-    };
+    aclnnStatus PostProcess() override { return ACLNN_SUCCESS; };
 
     ~AddmmEmptyTensorGraph() override = default;
 };
 
-class AddmmAlpha0Graph : public Ops::NN::MatmulGraphImpl{
+class AddmmAlpha0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 Muls: out1 = beta * bias
         // 非inplace接口不能改变输入tensor，isMulsInplace=false
         const aclTensor* out1 = MulsProcess(bias, beta, false, executor);
@@ -590,7 +588,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 执行broadCast操作, broadcast成和out一个shape
         if (convOut->GetViewShape() != output->GetViewShape()) {
             int64_t tensorSize = static_cast<int64_t>(output->GetViewShape().GetDimNum());
@@ -616,11 +615,12 @@ public:
     ~AddmmAlpha0Graph() override = default;
 };
 
-class AddmmBeta0Graph : public Ops::NN::MatmulGraphImpl{
+class AddmmBeta0Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
         if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
@@ -643,11 +643,12 @@ public:
     ~AddmmBeta0Graph() override = default;
 };
 
-class AddmmMmOpWithBiasGraph : public Ops::NN::MatmulGraphImpl{
+class AddmmMmOpWithBiasGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 MatmulWithBias: out = mat1 @ mat2 + self
         const aclTensor* out = MatmulWithBiasProcess(matA, matB, bias, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -658,11 +659,12 @@ public:
     ~AddmmMmOpWithBiasGraph() override = default;
 };
 
-class AddmmGemmV3Graph : public Ops::NN::MatmulGraphImpl{
+class AddmmGemmV3Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 Gemmv3 流程, mmOpInfo需要提前获取
         const aclTensor* out = ExecGemmV3Op(matA, matB, bias, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -674,20 +676,22 @@ public:
 };
 
 // 创建计算图
-std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(
-    const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta, const aclScalar* alpha,
-    aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor, bool isAclnnWeightNz = false)
+std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(const aclTensor* self, const aclTensor* mat1,
+                                                      const aclTensor* mat2, const aclScalar* beta,
+                                                      const aclScalar* alpha, aclTensor* out, int8_t cubeMathType,
+                                                      aclOpExecutor* executor, bool isAclnnWeightNz = false)
 {
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
 
     // 空tensor处理: 如果self是空tensor，返回空tensor。如果mat1 a*b 和mat2 b*c是空tensor，a*c也是空tensor，返回空tensor
     if (self->IsEmpty() || CheckMulResIsEmpty(mat1, mat2)) {
-        matmulGraph = std::make_shared<AddmmEmptyTensorGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
+        matmulGraph = std::make_shared<AddmmEmptyTensorGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType,
+                                                              executor);
         return matmulGraph;
     }
 
     // 空tensor处理与判断: 如果mat1 a*b 和mat2 b*c是空tensor，但是a*c不是空tensor, 返回Beta self
-    if (!CheckMulResIsEmpty(mat1, mat2) && (mat1->IsEmpty() || mat2->IsEmpty())){
+    if (!CheckMulResIsEmpty(mat1, mat2) && (mat1->IsEmpty() || mat2->IsEmpty())) {
         matmulGraph = std::make_shared<AddmmAlpha0Graph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
         return matmulGraph;
     }
@@ -699,7 +703,7 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(
     }
 
     // alpha != 0 && beta == 0
-    if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()){
+    if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()) {
         matmulGraph = std::make_shared<AddmmBeta0Graph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
         return matmulGraph;
     }
@@ -707,18 +711,20 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(
 
     if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32Output(mat1, mat2, out)) {
         OP_LOGI("run in NeedToConvertBias branch");
-        matmulGraph = std::make_shared<AddmmMmOpWithBiasGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
+        matmulGraph = std::make_shared<AddmmMmOpWithBiasGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType,
+                                                               executor);
         return matmulGraph;
     }
 
-    if(!isAclnnWeightNz) {
+    if (!isAclnnWeightNz) {
         MmOpInfo mmOpInfo;
         if (fabs(alpha->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon() &&
-                    fabs(beta->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon() && out->GetData() == self->GetData() &&
-                    out->GetDataType() == op::DataType::DT_FLOAT && CheckGemmV3Support(mat1, mat2, mmOpInfo, cubeMathType)) {
+            fabs(beta->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon() && out->GetData() == self->GetData() &&
+            out->GetDataType() == op::DataType::DT_FLOAT && CheckGemmV3Support(mat1, mat2, mmOpInfo, cubeMathType)) {
             // 切换GemmV3算子条件：判断alpha和beta等于1 && self和out共地址 && shape属于支持范围 && 输出类型dtype=fp32
-            matmulGraph = std::make_shared<AddmmGemmV3Graph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
-            matmulGraph -> SetOpInfo (mmOpInfo); // 将CheckGemmV3Support计算出的mmOpInfo 直接赋值;
+            matmulGraph = std::make_shared<AddmmGemmV3Graph>(mat1, mat2, self, out, alpha, beta, cubeMathType,
+                                                             executor);
+            matmulGraph->SetOpInfo(mmOpInfo); // 将CheckGemmV3Support计算出的mmOpInfo 直接赋值;
             return matmulGraph;
         }
     }
@@ -730,9 +736,9 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(
 
 } // namespace
 
-aclnnStatus aclnnAddmmGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta, const aclScalar* alpha,
-    aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAddmmGetWorkspaceSize(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2,
+                                       const aclScalar* beta, const aclScalar* alpha, aclTensor* out,
+                                       int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAddmm, DFX_IN(self, mat1, mat2, beta, alpha, cubeMathType), DFX_OUT(out));
 
@@ -740,7 +746,8 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
     AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
     auto ret = CheckInputParams(addmmTensor, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    CHECK_RET(Check16In32OutWithBiasValid(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), self), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(Check16In32OutWithBiasValid(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), self),
+              ACLNN_ERR_PARAM_INVALID);
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -754,11 +761,12 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
     }
 
     // 根据不同的输入选择不同的计算图
-    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddmmGraphImpl(self, mat1, mat2, beta, alpha, out, cubeMathType, uniqueExecutor.get(), false);
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddmmGraphImpl(self, mat1, mat2, beta, alpha, out,
+                                                                        cubeMathType, uniqueExecutor.get(), false);
     CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行计算图
-    auto executeStatus = matmulGraph -> Execute();
+    auto executeStatus = matmulGraph->Execute();
     CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // return
@@ -775,25 +783,25 @@ aclnnStatus aclnnAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* e
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(
-    const aclTensor* selfRef, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta,
-    const aclScalar* alpha, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceAddmmGetWorkspaceSize(const aclTensor* selfRef, const aclTensor* mat1, const aclTensor* mat2,
+                                              const aclScalar* beta, const aclScalar* alpha, int8_t cubeMathType,
+                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     auto out = const_cast<aclTensor*>(selfRef);
     return aclnnAddmmGetWorkspaceSize(selfRef, mat1, mat2, beta, alpha, out, cubeMathType, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceAddmm(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnInplaceAddmm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     // 固定写法，调用框架能力，完成计算
     L2_DFX_PHASE_2(aclnnInplaceAddmm);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta, const aclScalar* alpha,
-    aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(const aclTensor* self, const aclTensor* mat1,
+                                                         const aclTensor* mat2, const aclScalar* beta,
+                                                         const aclScalar* alpha, aclTensor* out, int8_t cubeMathType,
+                                                         uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAddmmWeightNz, DFX_IN(self, mat1, mat2, beta, alpha, cubeMathType), DFX_OUT(out));
 
@@ -812,8 +820,8 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    bool enable16In32Out = NeedEnableFp32Output(
-        mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), cubeMathType);
+    bool enable16In32Out = NeedEnableFp32Output(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(),
+                                                cubeMathType);
     bool addmmNeedBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
 
     const aclTensor* castOut = nullptr;
@@ -825,8 +833,7 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
         castOut = ExecGemmV3WithAlphaBetaOp(self, mat1, mat2, alpha, beta, uniqueExecutor.get(), enable16In32Out);
     } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32Output(mat1, mat2, out)) {
         OP_LOGD("aclnnAddmmWeightNz run in NeedToConvertBias branch");
-        auto biasMmOut = ExecMmOpWithBias(
-            mat1, mat2, self, out, cubeMathType, uniqueExecutor.get(), false, false);
+        auto biasMmOut = ExecMmOpWithBias(mat1, mat2, self, out, cubeMathType, uniqueExecutor.get(), false, false);
         CHECK_RET(biasMmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         castOut = l0op::Cast(biasMmOut, out->GetDataType(), uniqueExecutor.get());
     } else {
@@ -843,8 +850,8 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-ACLNN_API aclnnStatus
-aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+ACLNN_API aclnnStatus aclnnAddmmWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAddmmWeightNz);
     // 固定写法，调用框架能力，完成计算

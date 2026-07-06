@@ -42,20 +42,20 @@ TILING_DATA_FIELD_DEF(uint32_t, hasZeroPoints2);
 END_TILING_DATA_DEF;
 
 BEGIN_TILING_DATA_DEF(AddRmsNormQuantRegbaseTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, numM);  //A
-TILING_DATA_FIELD_DEF(uint64_t, numN);  //R
-TILING_DATA_FIELD_DEF(uint64_t, baseM);  //ubfactor ub处理a的大小
-TILING_DATA_FIELD_DEF(uint64_t, baseN);  //全载时=R
+TILING_DATA_FIELD_DEF(uint64_t, numM);  // A
+TILING_DATA_FIELD_DEF(uint64_t, numN);  // R
+TILING_DATA_FIELD_DEF(uint64_t, baseM); // ubfactor ub处理a的大小
+TILING_DATA_FIELD_DEF(uint64_t, baseN); //全载时=R
 TILING_DATA_FIELD_DEF(uint64_t, baseNReduceAlign);
-TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign);  //R对32B对齐的个数
+TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign); // R对32B对齐的个数
 TILING_DATA_FIELD_DEF(uint64_t, powerLoop);
-TILING_DATA_FIELD_DEF(uint64_t, powerSplit);  //binaryAdd 二分折叠点
-TILING_DATA_FIELD_DEF(uint64_t, mPerCore); //blockFactor 单核处理a的大小
-TILING_DATA_FIELD_DEF(uint64_t, mLastCore); //blockTail 尾核处理a的大小
+TILING_DATA_FIELD_DEF(uint64_t, powerSplit); // binaryAdd 二分折叠点
+TILING_DATA_FIELD_DEF(uint64_t, mPerCore);   // blockFactor 单核处理a的大小
+TILING_DATA_FIELD_DEF(uint64_t, mLastCore);  // blockTail 尾核处理a的大小
 TILING_DATA_FIELD_DEF(float, avgFactor);
 TILING_DATA_FIELD_DEF(float, epsilon);
-TILING_DATA_FIELD_DEF(uint32_t, divMode);  //add divMode
-TILING_DATA_FIELD_DEF(uint32_t, hasResOut);  //V2: whether resOut is present
+TILING_DATA_FIELD_DEF(uint32_t, divMode);   // add divMode
+TILING_DATA_FIELD_DEF(uint32_t, hasResOut); // V2: whether resOut is present
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AddRmsNormQuant, AddRMSNormQuantTilingData)
@@ -282,37 +282,36 @@ struct AddRmsNormQuantRegbaseTilingParams {
 
 class AddRmsNormQuantRegbaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AddRmsNormQuantRegbaseTiling(gert::TilingContext* tilingContext) : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    explicit AddRmsNormQuantRegbaseTiling(gert::TilingContext* tilingContext)
+        : Ops::NN::Optiling::TilingBaseClass(tilingContext)
     {}
-    ~AddRmsNormQuantRegbaseTiling() override
-    {}
+    ~AddRmsNormQuantRegbaseTiling() override {}
 
     const string nodeName = "AddRmsNormQuantRegbase";
     AddRmsNormQuantRegbaseTilingData tilingData;
     AddRmsNormQuantRegbaseTilingParams tilingParams;
 
-    bool CheckShapeBC(
-        const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape, string srcBcName, string srcName);
-    ge::graphStatus CheckDtypeVaild(
-        ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
+    bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape, string srcBcName,
+                      string srcName);
+    ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList,
+                                    string srcName);
     bool CheckShapeNull();
     void CheckOptionalInput();
     bool CheckInputShapeDim();
-    bool CheckMainInputShapes(
-        const gert::StorageShape* x1Shape, const gert::StorageShape* x2Shape,
-        const gert::StorageShape* y1Shape, const gert::StorageShape* y2Shape,
-        const gert::StorageShape* xShape);
-    bool CheckQuantParamShapes(
-        const gert::StorageShape* gammaShape, const gert::StorageShape* scales1Shape,
-        const gert::StorageShape* scales2Shape, const gert::StorageShape* zeroPoints1Shape,
-        const gert::StorageShape* zeroPoints2Shape);
+    bool CheckMainInputShapes(const gert::StorageShape* x1Shape, const gert::StorageShape* x2Shape,
+                              const gert::StorageShape* y1Shape, const gert::StorageShape* y2Shape,
+                              const gert::StorageShape* xShape);
+    bool CheckQuantParamShapes(const gert::StorageShape* gammaShape, const gert::StorageShape* scales1Shape,
+                               const gert::StorageShape* scales2Shape, const gert::StorageShape* zeroPoints1Shape,
+                               const gert::StorageShape* zeroPoints2Shape);
     bool CheckInputShapeValue();
     bool CheckInputDtype();
     bool CheckOutputDtype();
     ge::graphStatus SetInputParams();
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
     int64_t CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower);
-    uint64_t CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, int64_t tmpPower, int64_t firstVcaddLength);
+    uint64_t CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, int64_t tmpPower,
+                         int64_t firstVcaddLength);
     ge::graphStatus SetTilingParams();
     void SetTilingData();
     void PrintTilingData();

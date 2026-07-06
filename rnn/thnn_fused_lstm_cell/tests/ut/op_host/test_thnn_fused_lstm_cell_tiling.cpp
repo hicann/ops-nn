@@ -35,19 +35,12 @@ struct ThnnFusedLstmCellCompileInfo {};
 
 class ThnnFusedLstmCellTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ThnnFusedLstmCellTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ThnnFusedLstmCellTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ThnnFusedLstmCellTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ThnnFusedLstmCellTiling TearDown" << std::endl; }
 };
 
-void TestThnnFusedLstmCellTiling(
-    int64_t batchSize, int64_t hiddenSize, ge::DataType dataType)
+void TestThnnFusedLstmCellTiling(int64_t batchSize, int64_t hiddenSize, ge::DataType dataType)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape commonShape = {{batchSize, hiddenSize}, {batchSize, hiddenSize}};
@@ -113,6 +106,7 @@ void TestThnnFusedLstmCellTiling(
 
 TEST_F(ThnnFusedLstmCellTiling, thnn_fused_lstm_cell_float_succ)
 {
-    std::cout << "run case: " << "thnn_fused_lstm_cell_float_succ" << std::endl;
+    std::cout << "run case: "
+              << "thnn_fused_lstm_cell_float_succ" << std::endl;
     TestThnnFusedLstmCellTiling(40, 8, ge::DT_FLOAT);
 }

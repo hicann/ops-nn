@@ -49,4 +49,4 @@ ACLNN_API aclnnStatus aclnnInplaceIndexFillTensor(void* workspace, uint64_t work
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_INDEX_FILL_TENSOR_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_INDEX_FILL_TENSOR_H_

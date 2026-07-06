@@ -19,14 +19,8 @@
 #include "kernel_operator.h"
 using namespace AscendC;
 
-__aicore__ inline uint64_t start_index(uint64_t a, uint64_t b, uint64_t c)
-{
-    return (a / b) * c + ((a % b) * c) / b;
-}
+__aicore__ inline uint64_t start_index(uint64_t a, uint64_t b, uint64_t c) { return (a / b) * c + ((a % b) * c) / b; }
 
-__aicore__ inline uint64_t end_index(uint64_t a, uint64_t b, uint64_t c)
-{
-    return 1 + ((a + 1) * c - 1) / b;
-}
+__aicore__ inline uint64_t end_index(uint64_t a, uint64_t b, uint64_t c) { return 1 + ((a + 1) * c - 1) / b; }
 
 #endif // ADAPTIVE_AVG_POOL3D_GRAD_COMMON_H

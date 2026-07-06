@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file sorted_sparse_segment_mean_grad_simt_base.h
  * \brief
  */
@@ -20,8 +20,7 @@
 #include "../inc/platform.h"
 
 #include "simt_api/asc_simt.h"
-namespace SparseSegmentMeanGradNameSpace
-{
+namespace SparseSegmentMeanGradNameSpace {
 using namespace AscendC;
 
 #ifdef __DAV_FPGA__
@@ -32,23 +31,18 @@ constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 1024;
 constexpr uint32_t SIMPLE_THREAD_NUM_LAUNCH_BOUND = 2048;
 #endif
 
-
 template <typename SEGMENTIDS_T>
 __simt_callee__ __aicore__ inline SEGMENTIDS_T Clip(SEGMENTIDS_T id, SEGMENTIDS_T segmentNum)
 {
-    return min(
-        static_cast<SEGMENTIDS_T>(max(SEGMENTIDS_T(-1), id)),
-        static_cast<SEGMENTIDS_T>(segmentNum)
-    );
+    return min(static_cast<SEGMENTIDS_T>(max(SEGMENTIDS_T(-1), id)), static_cast<SEGMENTIDS_T>(segmentNum));
 }
 
 template <typename SEGMENTIDS_T, typename OUTTER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMPLE_THREAD_NUM_LAUNCH_BOUND) inline void SimtGetSegmentOffset(uint32_t blockId, OUTTER_T outterSize, uint32_t blockNums, SEGMENTIDS_T segmentNum,
-                                                                                              __gm__ OUTTER_T* segment_offset, __gm__ SEGMENTIDS_T* segment_ids)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMPLE_THREAD_NUM_LAUNCH_BOUND) inline void SimtGetSegmentOffset(
+    uint32_t blockId, OUTTER_T outterSize, uint32_t blockNums, SEGMENTIDS_T segmentNum, __gm__ OUTTER_T* segment_offset,
+    __gm__ SEGMENTIDS_T* segment_ids)
 {
-    for (OUTTER_T i = blockId * blockDim.y + threadIdx.y; i < outterSize + 1;
-            i = i + blockNums * blockDim.y) {
-        
+    for (OUTTER_T i = blockId * blockDim.y + threadIdx.y; i < outterSize + 1; i = i + blockNums * blockDim.y) {
         const SEGMENTIDS_T curId = (i < outterSize) ? Clip(segment_ids[i], segmentNum) : segmentNum;
         const SEGMENTIDS_T prevId = (i == 0) ? SEGMENTIDS_T(-1) : Clip(segment_ids[i - 1], segmentNum);
 
@@ -59,15 +53,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMPLE_THREAD_NUM_LAUNCH_BOUND) inline void 
 }
 
 template <typename SEGMENTIDS_T, typename OUTTER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMPLE_THREAD_NUM_LAUNCH_BOUND) inline void SimtCalcWeight(uint32_t blockId, uint32_t blockNums, SEGMENTIDS_T segmentNum,
-                                                                                        __gm__ OUTTER_T* segment_offset, __gm__ float* weight)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMPLE_THREAD_NUM_LAUNCH_BOUND) inline void SimtCalcWeight(
+    uint32_t blockId, uint32_t blockNums, SEGMENTIDS_T segmentNum, __gm__ OUTTER_T* segment_offset,
+    __gm__ float* weight)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
     }
     asc_syncthreads();
-    for (SEGMENTIDS_T i = blockId * blockDim.x + threadIdx.x + 1; i < segmentNum + 1;
-            i = i + blockNums * blockDim.x) {
+    for (SEGMENTIDS_T i = blockId * blockDim.x + threadIdx.x + 1; i < segmentNum + 1; i = i + blockNums * blockDim.x) {
         OUTTER_T seg_size = segment_offset[i] - segment_offset[i - 1];
         seg_size = (seg_size > 0) ? seg_size : 1;
         weight[i - 1] = static_cast<float>(1.0) / static_cast<float>(seg_size);
@@ -75,11 +69,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMPLE_THREAD_NUM_LAUNCH_BOUND) inline void 
 }
 
 template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices, uint32_t threadNumY,
-                                                                                                INNER_T innerSize, SEGMENTIDS_T segmentNum, __gm__ X_T* x, __gm__ volatile X_T* y,
-                                                                                                __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
-                                                                                                __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0,
-                                                                                                INNER_T srcColOffset, INNER_T processCols)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeInnerComputer(
+    uint32_t indicesBase, uint32_t curCoreIndices, uint32_t threadNumY, INNER_T innerSize, SEGMENTIDS_T segmentNum,
+    __gm__ X_T* x, __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
+    __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0, INNER_T srcColOffset, INNER_T processCols)
 {
     if (threadIdx.x + threadIdx.y == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -106,18 +99,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
             }
             bool empty = (begin >= end);
             res = empty ? static_cast<X_T>(0) : res;
-            int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) + static_cast<int64_t>(colOffset);
+            int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) +
+                                static_cast<int64_t>(colOffset);
             y[outputIdx] = static_cast<X_T>(res);
         }
     }
 }
 
 template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeMinInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize, 
-                                                                                                  SEGMENTIDS_T segmentNum, __gm__ X_T* x, __gm__ volatile X_T* y,
-                                                                                                  __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
-                                                                                                  __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0,
-                                                                                                  INNER_T srcColOffset)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeMinInnerComputer(
+    uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize, SEGMENTIDS_T segmentNum, __gm__ X_T* x,
+    __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
+    __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0, INNER_T srcColOffset)
 {
     if (threadIdx.x + threadIdx.y == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -134,23 +127,25 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
         for (OUTTER_T locaOffset = begin; locaOffset < end; locaOffset += 1) {
             SEGMENTIDS_T seg = segmentIds[location[locaOffset]];
             bool segValid = (seg >= 0) && (seg < segmentNum);
-            int64_t inputIdx = seg * static_cast<int64_t>(innerSize) + static_cast<int64_t>(threadIdx.x) + static_cast<int64_t>(srcColOffset);
+            int64_t inputIdx = seg * static_cast<int64_t>(innerSize) + static_cast<int64_t>(threadIdx.x) +
+                               static_cast<int64_t>(srcColOffset);
             float value = segValid ? static_cast<float>(x[inputIdx]) : float(0);
             res += segValid ? (value * weight[seg]) : float(0);
         }
         bool empty = (begin >= end);
         res = empty ? static_cast<X_T>(0) : res;
-        int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) + static_cast<int64_t>(threadIdx.x) + static_cast<int64_t>(srcColOffset);
+        int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) +
+                            static_cast<int64_t>(threadIdx.x) + static_cast<int64_t>(srcColOffset);
         y[outputIdx] = static_cast<X_T>(res);
     }
 }
 
 template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeUBInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices,
-                                                                                                INNER_T innerSize, SEGMENTIDS_T segmentNum, __gm__ X_T* x, __gm__ volatile X_T* y,
-                                                                                                __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
-                                                                                                __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0,
-                                                                                                __local_mem__ float* tmpLocal, INNER_T srcColOffset, INNER_T processCols)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeUBInnerComputer(
+    uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize, SEGMENTIDS_T segmentNum, __gm__ X_T* x,
+    __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
+    __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0, __local_mem__ float* tmpLocal,
+    INNER_T srcColOffset, INNER_T processCols)
 {
     if (threadIdx.x + threadIdx.y == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -179,12 +174,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
         INNER_T colStride = blockDim.x;
         if (empty) {
             for (; colOffset < processCols; colOffset += colStride) {
-                int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) + static_cast<int64_t>(colOffset);
+                int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) +
+                                    static_cast<int64_t>(colOffset);
                 y[outputIdx] = static_cast<X_T>(0);
             }
         } else {
             for (; colOffset < processCols; colOffset += colStride) {
-                int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) + static_cast<int64_t>(colOffset);
+                int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) +
+                                    static_cast<int64_t>(colOffset);
                 y[outputIdx] = static_cast<X_T>(tmpLocal[colOffset]);
                 tmpLocal[colOffset] = 0.0f;
             }
@@ -193,8 +190,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
 }
 
 // 这里进行二分累加，实际是按y线程数量按照 inner逐列累加，按 0与(numY/2)处依次累加
-__simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t smallThreadIdxY,
-                                  uint32_t smallThreadIdxX, uint32_t threadNumX, __local_mem__ float* tmpLocal)
+__simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid,
+                                                  uint32_t smallThreadIdxY, uint32_t smallThreadIdxX,
+                                                  uint32_t threadNumX, __local_mem__ float* tmpLocal)
 {
     // Binary add in the thread_y
     for (uint32_t k = threadNumY / 2; k > 0; k /= 2) {
@@ -213,10 +211,11 @@ __simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNu
 }
 
 template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSmallInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices, uint32_t threadNumY, INNER_T innerSize,
-                                                                                                SEGMENTIDS_T segmentNum, uint32_t threadNumX, __local_mem__ float* tmpLocal, __gm__ X_T* x, 
-                                                                                                __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
-                                                                                                __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSmallInnerComputer(
+    uint32_t indicesBase, uint32_t curCoreIndices, uint32_t threadNumY, INNER_T innerSize, SEGMENTIDS_T segmentNum,
+    uint32_t threadNumX, __local_mem__ float* tmpLocal, __gm__ X_T* x, __gm__ volatile X_T* y,
+    __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds, __gm__ LOCATION_T* location, __gm__ float* weight,
+    uint32_t outputDim0)
 {
     if (threadIdx.x + threadIdx.y == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -252,11 +251,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSma
         if (smallThreadIdxY == 0 && xValid) {
             bool empty = (begin >= end);
             res = empty ? 0 : res;
-            int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) + static_cast<int64_t>(smallThreadIdxX);
+            int64_t outputIdx = static_cast<int64_t>(globalIndex) * static_cast<int64_t>(innerSize) +
+                                static_cast<int64_t>(smallThreadIdxX);
             y[outputIdx] = static_cast<X_T>(res);
         }
     }
 }
 
-}  // namespace SparseSegmentMeanGradNameSpace
-#endif  // SORTED_SPARSE_SEGMENT_MEAN_GRAD_SIMT_BASE_H
+} // namespace SparseSegmentMeanGradNameSpace
+#endif // SORTED_SPARSE_SEGMENT_MEAN_GRAD_SIMT_BASE_H

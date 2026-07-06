@@ -29,18 +29,19 @@ using namespace AscendC;
 
 #if __CCE_AICORE__ == 310
 template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW, bool groupEnlarge>
-__global__ __aicore__ void conv3d_backprop_filter_v2(
-    GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void conv3d_backprop_filter_v2(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y,
+                                                     GM_ADDR workSpace, GM_ADDR tiling)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId, isSplitKernelHW, groupEnlarge>(x, filter_size, out_backprop, y, workSpace, tiling);
+    conv3d_backprop_filter_v2_arch35<conv3DDWTemplateId, isSplitKernelHW, groupEnlarge>(x, filter_size, out_backprop, y,
+                                                                                        workSpace, tiling);
     return;
 #endif
 }
 #else
 template <uint32_t conv3DDWTemplateId>
-__global__ __aicore__ void conv3d_backprop_filter_v2(
-    GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void conv3d_backprop_filter_v2(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop, GM_ADDR y,
+                                                     GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -74,7 +75,8 @@ __global__ __aicore__ void conv3d_backprop_filter_v2(
 #else
         op.Process();
 #endif
-    } else if (conv3DDWTemplateId == TPL_SPLIT_M_K || conv3DDWTemplateId == TPL_SPLIT_K_N || conv3DDWTemplateId == TPL_SPLIT_M_N || conv3DDWTemplateId == TPL_SPLIT_M_N_STREAMK) {
+    } else if (conv3DDWTemplateId == TPL_SPLIT_M_K || conv3DDWTemplateId == TPL_SPLIT_K_N ||
+               conv3DDWTemplateId == TPL_SPLIT_M_N || conv3DDWTemplateId == TPL_SPLIT_M_N_STREAMK) {
         Conv3dDwInitOutput<DTYPE_Y> opInitOutput;
         opInitOutput.Init(y, &tilingData);
         opInitOutput.Process();
@@ -96,7 +98,9 @@ __global__ __aicore__ void conv3d_backprop_filter_v2(
             op.Process();
         } else if (conv3DDWTemplateId == TPL_SPLIT_M_N_STREAMK) {
             // 基本块Tiling模板, M和N绑核，且当绑核后存在尾核时，尾核继续切K维进行streamk计算
-            Conv3dDwBasicBlockSplitMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y> op;
+            Conv3dDwBasicBlockSplitMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y,
+                                             FORMAT_Y>
+                op;
             op.Init(x, out_backprop, y, user1, &tilingData);
             op.Process();
         }

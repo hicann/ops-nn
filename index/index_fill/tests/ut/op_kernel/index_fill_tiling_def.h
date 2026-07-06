@@ -23,7 +23,7 @@ struct IndexFillTilingData {
     uint64_t indicesProcessMode = 0;
     uint64_t frontCoreNumTaskIndices = 0;
     uint64_t tailCoreNumTaskIndices = 0;
-    uint64_t frontCoreDataTaskIndices = 0; 
+    uint64_t frontCoreDataTaskIndices = 0;
     uint64_t tailCoreDataTaskIndices = 0;
     uint64_t ubSize = 0;
     uint64_t P = 0;
@@ -36,8 +36,8 @@ inline void InitIndexFillTilingData(uint8_t* tiling, IndexFillTilingData* const_
     memcpy(const_data, tiling, sizeof(IndexFillTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                       \
-    IndexFillTilingData tiling_data;                                           \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    IndexFillTilingData tiling_data;             \
     InitIndexFillTilingData(tiling_arg, &tiling_data)
 #define DTYPE_X float
 #define DTYPE_INDICES int32_t

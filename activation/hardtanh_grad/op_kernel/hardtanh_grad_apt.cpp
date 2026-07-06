@@ -23,15 +23,16 @@ using namespace AscendC;
 using namespace HardtanhGradOp;
 
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void hardtanh_grad(GM_ADDR result, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace,
-                                                  GM_ADDR tiling) {
+__global__ __aicore__ void hardtanh_grad(GM_ADDR result, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+{
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(HardtanhGradTilingData);
 
     TPipe pipe;
     if constexpr (dType == static_cast<uint64_t>(HardtanhGrad_TPL)) {
-        ElementwiseSch<schMode, HardtanhGradOp::HardtanhGradDag<DTYPE_RESULT>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+        ElementwiseSch<schMode, HardtanhGradOp::HardtanhGradDag<DTYPE_RESULT>::OpDag> sch(&(tilingData.baseTiling),
+                                                                                          &pipe);
         sch.template SetVar<float, 0>(static_cast<float>(tilingData.minVal));
         sch.template SetVar<float, 1>(static_cast<float>(tilingData.maxVal));
         sch.Init(result, grad, y);

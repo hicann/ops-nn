@@ -29,10 +29,7 @@
 
 class FakeQuantWithMinMaxVarsPerChannelInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsPerChannel infershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FakeQuantWithMinMaxVarsPerChannel infershape SetUp" << std::endl; }
 
     static void TearDownTestCase()
     {
@@ -104,8 +101,9 @@ TEST_F(FakeQuantWithMinMaxVarsPerChannelInferShapeTest, infer_shape_large_c)
 TEST_F(FakeQuantWithMinMaxVarsPerChannelInferShapeTest, infer_dtype_float)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsPerChannel"), nullptr);
-    auto infer_dtype_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsPerChannel")->infer_datatype;
+    auto infer_dtype_func = gert::OpImplRegistry::GetInstance()
+                                .GetOpImpl("FakeQuantWithMinMaxVarsPerChannel")
+                                ->infer_datatype;
     ASSERT_NE(infer_dtype_func, nullptr);
 
     ge::DataType x_ref = ge::DT_FLOAT;

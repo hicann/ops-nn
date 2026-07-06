@@ -1,12 +1,12 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -18,9 +18,11 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void sync_batch_norm_backward_elemt(
-    GM_ADDR grad_output, GM_ADDR save_input, GM_ADDR mean, GM_ADDR invstd, GM_ADDR weight, GM_ADDR mean_dy,
-    GM_ADDR mean_dy_xmu, GM_ADDR grad_input, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void sync_batch_norm_backward_elemt(GM_ADDR grad_output, GM_ADDR save_input,
+                                                                     GM_ADDR mean, GM_ADDR invstd, GM_ADDR weight,
+                                                                     GM_ADDR mean_dy, GM_ADDR mean_dy_xmu,
+                                                                     GM_ADDR grad_input, GM_ADDR workspace,
+                                                                     GM_ADDR tiling);
 
 struct EleBaseTilingData {
     int64_t dim0;
@@ -40,19 +42,12 @@ struct SyncBatchNormBackwardElemtTilingData {
     EleBaseTilingData baseTiling;
 };
 
-class sync_batch_norm_backward_elemt_test : public testing::Test
-{
+class sync_batch_norm_backward_elemt_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sync_batch_norm_backward_elemt_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sync_batch_norm_backward_elemt_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sync_batch_norm_backward_elemt_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sync_batch_norm_backward_elemt_test TearDown\n" << endl; }
 };
- 	 
+
 TEST_F(sync_batch_norm_backward_elemt_test, test_case_fp32_1)
 {
     size_t dataLen = 100;
@@ -74,12 +69,12 @@ TEST_F(sync_batch_norm_backward_elemt_test, test_case_fp32_1)
     uint8_t* mean_dy = (uint8_t*)AscendC::GmAlloc(meanDyByteSize);
     uint8_t* mean_dy_xmu = (uint8_t*)AscendC::GmAlloc(meanDyXmuByteSize);
     uint8_t* grad_input = (uint8_t*)AscendC::GmAlloc(gradInputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
     uint32_t blockDim = 1;
 
-    SyncBatchNormBackwardElemtTilingData* tilingDatafromBin = 
-        reinterpret_cast<SyncBatchNormBackwardElemtTilingData*>(tiling);
+    SyncBatchNormBackwardElemtTilingData* tilingDatafromBin = reinterpret_cast<SyncBatchNormBackwardElemtTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTiling.dim0 = 100;
     tilingDatafromBin->baseTiling.coreNum = 1;

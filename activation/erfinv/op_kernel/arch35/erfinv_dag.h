@@ -33,8 +33,8 @@ constexpr uint32_t THREAD_NUM = 1024;
 
 #ifdef __CCE_AICORE__
 template <typename T>
-__simt_vf__ __aicore__
-LAUNCH_BOUND(THREAD_NUM) inline void ErfinvSimtCompute(__ubuf__ T* x, __ubuf__ T* y, const int64_t totalNum)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ErfinvSimtCompute(__ubuf__ T* x, __ubuf__ T* y,
+                                                                              const int64_t totalNum)
 {
     for (int64_t i = threadIdx.x; i < totalNum; i += blockDim.x) {
         y[i] = erfinvf(x[i]);

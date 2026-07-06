@@ -44,7 +44,8 @@ template <class ProblemShape, class BlockMmadBuilder, class BlockEpilogue, class
 class KernelMatmulMixWithoutQue;
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
-class KernelMatmulMixWithoutQue<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+class KernelMatmulMixWithoutQue<
+    ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
     AscendC::Std::enable_if_t<!AscendC::Std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
     // CV SYNC FLAG
@@ -54,10 +55,8 @@ public:
     const static int16_t FLAG_ID_MAX = 16;
     const static int16_t COUNT_ID_MAX = 15;
     const static int16_t COUNT_FLAG = 3;
-    __aicore__ inline KernelMatmulMixWithoutQue()
-    {}
-    __aicore__ inline ~KernelMatmulMixWithoutQue()
-    {}
+    __aicore__ inline KernelMatmulMixWithoutQue() {}
+    __aicore__ inline ~KernelMatmulMixWithoutQue() {}
 
     using BlockMmadBuilder = BlockMmadBuilder_;
     using ProblemShape = ProblemShape_;
@@ -67,9 +66,9 @@ public:
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-            typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA, transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -114,29 +113,28 @@ public:
         Params() = default;
     };
 
-    __aicore__ inline static TupleShape ToShapeTuple(ProblemShape const &shape)
+    __aicore__ inline static TupleShape ToShapeTuple(ProblemShape const& shape)
     {
         return {shape.m, shape.n, shape.k, shape.b};
     }
 
-    __aicore__ inline void RunEpilogue(
-        BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape, int64_t offsetC, int64_t flagId,
-        bool useWorkspace)
+    __aicore__ inline void RunEpilogue(BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape, int64_t offsetC,
+                                       int64_t flagId, bool useWorkspace)
     {
         BlockShape epilogueShape = {Get<MNK_M0>(blockShape), Get<MNK_N0>(blockShape), 1, 1};
         // With GM workspace, epilogue reloads the MMAD result from the same C offset.
         epilogueOp(epilogueShape, offsetC, workspaceGlobal_, offsetC, useWorkspace, flagId);
     }
 
-    __aicore__ inline void RunMmad(
-        BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape, int64_t offsetA,
-        int64_t offsetB, int64_t offsetC, int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, bool useWorkspace)
+    __aicore__ inline void RunMmad(BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp,
+                                   const TupleL1L0Shape& blockShape, int64_t offsetA, int64_t offsetB, int64_t offsetC,
+                                   int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, bool useWorkspace)
     {
         if (useWorkspace) {
             // Store MMAD output in GM when the paired AIV epilogue cannot hold the aligned tile in UB.
             blockMmadOp.template operator()<AscendC::GlobalTensor<CType>, BlockMmadBuilder::formatB>(
-                workspaceGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
-                blockShape, mOffset, nOffset, false, true);
+                workspaceGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape,
+                mOffset, nOffset, false, true);
             return;
         }
         auto cLocal = epilogueOp.GetTensor();
@@ -145,29 +143,30 @@ public:
             true);
     }
 
-    __aicore__ inline void Init(Params const &params)
+    __aicore__ inline void Init(Params const& params)
     {
         problemShape_ = ToShapeTuple(params.problemShape);
         BlockMmadParams blockMmadParams_ = params.mmadParams;
         // Init GlobalTensor
-        aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType *>(blockMmadParams_.aGmAddr));
-        bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType *>(blockMmadParams_.bGmAddr));
-        cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType *>(blockMmadParams_.cGmAddr));
+        aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType*>(blockMmadParams_.aGmAddr));
+        bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType*>(blockMmadParams_.bGmAddr));
+        cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
         if (params.workspaceGmAddr != nullptr) {
-            workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType *>(params.workspaceGmAddr));
+            workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(params.workspaceGmAddr));
         }
         // Support bias
         if (blockMmadParams_.biasGmAddr != nullptr) {
             isBias_ = true;
-            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType *>(blockMmadParams_.biasGmAddr));
+            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType*>(blockMmadParams_.biasGmAddr));
         }
     }
 
-     __aicore__ inline void  UnsetHf32(bool isHf32) {
+    __aicore__ inline void UnsetHf32(bool isHf32)
+    {
         if (isHf32) {
             AscendC::SetHF32Mode(0);
         }
-     }
+    }
 
     __aicore__ inline void operator()(Params const& params)
     {
@@ -198,16 +197,15 @@ public:
         }
         uint64_t curML1 = Get<MNK_M>(tileL1);
         uint64_t curNL1 = Get<MNK_N>(tileL1);
-        epilogueOp.Init(
-            params.epilogueParams, Cmct::Gemm::CeilDiv(Get<0>(tileL0), AscendC::GetTaskRation()), Get<1>(tileL0),
-            problemShape_);
+        epilogueOp.Init(params.epilogueParams, Cmct::Gemm::CeilDiv(Get<0>(tileL0), AscendC::GetTaskRation()),
+                        Get<1>(tileL0), problemShape_);
         if ASCEND_IS_AIC {
-            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
-                problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
-                bs.GetNonContinuousParams());
+            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
+                                                                      bs.GetL1BuferNum_(), bs.GetL0cDB(),
+                                                                      bs.GetNonContinuousParams());
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
-                blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(
-                    bGlobal_, Get<MNK_N>(problemShape_), Get<MNK_K>(problemShape_));
+                blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),
+                                                                         Get<MNK_K>(problemShape_));
                 blockMmadOp.CopyInC1(biasGlobal_, Get<MNK_N>(problemShape_));
             } else if constexpr (BlockScheduler::FULL_LOAD_MODE == A_FULL_LOAD_MODE) {
                 blockMmadOp.CopyInA1(aGlobal_, Get<MNK_M>(problemShape_), Get<MNK_K>(problemShape_));
@@ -225,15 +223,15 @@ public:
             for (uint64_t mOffset = 0; mOffset < curML1; mOffset += Get<0>(tileL0)) {
                 // nIter
                 for (uint64_t nOffset = 0; nOffset < curNL1; nOffset += Get<1>(tileL0)) {
-                    TupleL1L0Shape blockShape =
-                        bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(tileIdx, mOffset, nOffset);
+                    TupleL1L0Shape blockShape = bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(
+                        tileIdx, mOffset, nOffset);
                     auto blockCoord = bs.GetBlockCoord(tileIdx);
                     if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
                         blockCoord = bs.GetSingleBlockCoord(tileIdx);
                     }
                     auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
-                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(),
-                        blockShape, tileL1, bs.GetSplitOffset(), bs.GetTailParams());
+                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape,
+                        tileL1, bs.GetSplitOffset(), bs.GetTailParams());
                     // calculate block-level offset
                     if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
                         UnsetHf32(isHf32);
@@ -252,11 +250,11 @@ public:
                             countId = count / COUNT_ID_MAX % COUNT_FLAG;
                             AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
                             // AIV1 wait AIC FixPipe
-                            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                                AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
+                            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId +
+                                                                                      FLAG_ID_MAX);
                         }
                         RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset,
-                            nOffset, useWorkspace);
+                                nOffset, useWorkspace);
 
                         enableCVSync = true;
                         count++;
@@ -264,8 +262,8 @@ public:
                         // Finish Fixpipe then Notify AIV0
                         AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId);
                         // Finish Fixpipe then Notify AIV1
-                        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                            AIC_SYNC_AIV_FLAG + countId + FLAG_ID_MAX);
+                        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId +
+                                                                                 FLAG_ID_MAX);
                     }
                     // AIV Process
                     if ASCEND_IS_AIV {
@@ -292,6 +290,6 @@ public:
     }
 };
 
-}  // namespace Kernel
-}  // namespace Gemm
-}  // namespace Cmct
+} // namespace Kernel
+} // namespace Gemm
+} // namespace Cmct

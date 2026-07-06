@@ -71,8 +71,7 @@ struct MaxPoolGradNCHWSplitInfo {
 
 class MaxPoolGradNCHWTilingCommon {
 public:
-    MaxPoolGradNCHWTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input) : inputData(input)
-    {}
+    MaxPoolGradNCHWTilingCommon(MaxPoolGradWithArgmaxInputInfoCommon* input) : inputData(input) {}
     void InitializationVars(gert::TilingContext* context_, MaxPoolGradWithArgmaxHardwareInfo* hardwareData);
     ge::graphStatus DoOpTiling(gert::TilingContext* context, uint64_t key);
     ge::graphStatus PostTiling(gert::TilingContext* context_);

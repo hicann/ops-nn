@@ -38,9 +38,11 @@ namespace ge {
 * @li lr: A Tensor, dtype is the same as "beta1_power". 1-D. Indicates the learning rate. Range is [0.0, INF).
 * @li weight_decay: A Tensor, dtype is the same as "beta1_power". 1-D. Indicates the weight decay. Range is [0.0, INF).
 * @li beta1: A Tensor, dtype is the same as "beta1_power". 1-D. Indicates the first order momentum. Range is [0.0, 1.0).
-* @li beta2: A Tensor, dtype is the same as "beta1_power". 1-D. Indicates the second order momentum. Range is [0.0, 1.0).
+* @li beta2: A Tensor, dtype is the same as "beta1_power". 1-D. Indicates the second order momentum. Range is
+[0.0, 1.0).
 * @li epsilon: A Tensor, dtype is the same as "beta1_power". 1-D. Indicates the small value param. Range is [0.0, 1.0).
-* @li grad: A Tensor, dtype is the same as "beta1_power". 2-D. Indicates the grad. Shape is (keys number, embedding_dim).
+* @li grad: A Tensor, dtype is the same as "beta1_power". 2-D. Indicates the grad. Shape is (keys number,
+embedding_dim).
 * @li max_grad_norm: A mutable Tensor of the same type as "m". Indicates the gradient parameter.
 *                    Shape is (bucket_size, embedding_dim).
 
@@ -87,4 +89,4 @@ REG_OP(EmbeddingHashTableApplyAdamW)
     .OP_END_FACTORY_REG(EmbeddingHashTableApplyAdamW)
 
 } // namespace ge
-#endif  // EMBEDDING_HASH_TABLE_APPLY_ADAM_W_PROTO_H_
+#endif // EMBEDDING_HASH_TABLE_APPLY_ADAM_W_PROTO_H_

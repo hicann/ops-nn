@@ -27,18 +27,13 @@ using namespace ge;
 
 class SwishTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwishTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwishTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwishTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwishTiling TearDown" << std::endl; }
 };
 
-TEST_F(SwishTiling, swish_float32_success) {
+TEST_F(SwishTiling, swish_float32_success)
+{
     gert::StorageShape x_shape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
     gert::StorageShape y_shape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
     string compile_info_string = R"({
@@ -62,12 +57,12 @@ TEST_F(SwishTiling, swish_float32_success) {
     std::string op_type("Swish");
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(3, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(3, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -79,25 +74,26 @@ TEST_F(SwishTiling, swish_float32_success) {
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("Swish")
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1})
-                        .InputShapes({&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("Swish")
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context, nullptr);
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(SwishTiling, swish_float16_success) {
+TEST_F(SwishTiling, swish_float16_success)
+{
     gert::StorageShape x_shape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
     gert::StorageShape y_shape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
     string compile_info_string = R"({
@@ -121,12 +117,12 @@ TEST_F(SwishTiling, swish_float16_success) {
     std::string op_type("Swish");
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(3, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(3, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -138,19 +134,19 @@ TEST_F(SwishTiling, swish_float16_success) {
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("Swish")
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1})
-                        .InputShapes({&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
-                        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("Swish")
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context, nullptr);
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);

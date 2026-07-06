@@ -19,26 +19,28 @@
 
 namespace optiling {
 
-ge::graphStatus Tiling4Scatter(gert::TilingContext* context) {
-  auto compileInfoPtr = static_cast<const ScatterKvCompileInfo*>(context->GetCompileInfo());
-  ScatterTiling scatterTiling(context);
-  return scatterTiling.DoTiling();
+ge::graphStatus Tiling4Scatter(gert::TilingContext* context)
+{
+    auto compileInfoPtr = static_cast<const ScatterKvCompileInfo*>(context->GetCompileInfo());
+    ScatterTiling scatterTiling(context);
+    return scatterTiling.DoTiling();
 }
 
-static ge::graphStatus TilingPrepareForScatter(gert::TilingParseContext* context) {
-  OP_LOGD(context->GetNodeName(), "TilingPrepareForScatter running");
-  auto compile_info = GetCompileInfoPtr<ScatterKvCompileInfo>(context);
-  OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
-  auto platform_info = context->GetPlatformInfo();
-  OP_CHECK_NULL_WITH_CONTEXT(context, platform_info);
-  auto ascendc_platform = platform_ascendc::PlatformAscendC(platform_info);
-  compile_info->core_num = ascendc_platform.GetCoreNumAiv();
-  uint64_t ub_size;
-  ascendc_platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub_size);
-  compile_info->ub_size = ub_size;
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus TilingPrepareForScatter(gert::TilingParseContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "TilingPrepareForScatter running");
+    auto compile_info = GetCompileInfoPtr<ScatterKvCompileInfo>(context);
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+    auto platform_info = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platform_info);
+    auto ascendc_platform = platform_ascendc::PlatformAscendC(platform_info);
+    compile_info->core_num = ascendc_platform.GetCoreNumAiv();
+    uint64_t ub_size;
+    ascendc_platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub_size);
+    compile_info->ub_size = ub_size;
+    return ge::GRAPH_SUCCESS;
 }
 
 // register tiling interface of the Scatter op.
 IMPL_OP_OPTILING(Scatter).Tiling(Tiling4Scatter).TilingParse<ScatterKvCompileInfo>(TilingPrepareForScatter);
-}  // namespace optiling
+} // namespace optiling

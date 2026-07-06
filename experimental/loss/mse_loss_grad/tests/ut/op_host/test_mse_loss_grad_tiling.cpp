@@ -25,18 +25,11 @@
 using namespace std;
 using namespace ge;
 
-class MseLossGradTiling : public testing::Test
-{
+class MseLossGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MseLossGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MseLossGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MseLossGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MseLossGradTiling TearDown" << std::endl; }
 };
 
 TEST_F(MseLossGradTiling, test_tiling_mean_fp16_001)
@@ -44,7 +37,7 @@ TEST_F(MseLossGradTiling, test_tiling_mean_fp16_001)
     std::string op_type("MseLossGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    
+
     string compile_info_string = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                                                        "Intrinsic_fix_pipe_l0c2out": false,
                                                        "Intrinsic_data_move_l12ub": true,
@@ -63,24 +56,23 @@ TEST_F(MseLossGradTiling, test_tiling_mean_fp16_001)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct MseLossGradCompileInfo {
-    };
+    struct MseLossGradCompileInfo {};
     MseLossGradCompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(1024 * 1024);

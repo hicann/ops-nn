@@ -12,9 +12,8 @@
 #define OP_API_INC_LEVEL0_ADAPTIVE_AVG_POOL2D_ASSIST_MATRIX_H
 #include "opdev/op_executor.h"
 namespace l0op {
-const std::array<aclTensor *, 3> AdaptiveAvgPool2dAssistMatrix(const aclTensor *input, const aclTensor *origin_input,
-                                                               const aclIntArray *output_size,
-                                                               aclOpExecutor *executor);
+const std::array<aclTensor*, 3> AdaptiveAvgPool2dAssistMatrix(const aclTensor* input, const aclTensor* origin_input,
+                                                              const aclIntArray* output_size, aclOpExecutor* executor);
 }
 
 #endif

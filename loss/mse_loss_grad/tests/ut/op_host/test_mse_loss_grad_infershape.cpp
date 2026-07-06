@@ -27,34 +27,31 @@
 
 class MseLossGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "MseLossGrad Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MseLossGrad Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "MseLossGrad Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MseLossGrad Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(MseLossGradTest, mse_loss_grad_infer_shape_test1) {
-  ge::op::MseLossGrad op;
+TEST_F(MseLossGradTest, mse_loss_grad_infer_shape_test1)
+{
+    ge::op::MseLossGrad op;
 
-  ge::DataType dtype = ge::DT_FLOAT;
-  ge::Format format = ge::FORMAT_ND;
-  
-  auto input_tensor = create_desc_with_ori({182,4}, dtype, format, {182,4}, format);
-  
-  op.UpdateInputDesc("predict", input_tensor);
-  op.UpdateInputDesc("label", input_tensor);
-  op.UpdateInputDesc("dout", input_tensor);
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::Format format = ge::FORMAT_ND;
 
-  op.SetAttr("reduction", "mean");
-  Runtime2TestParam param{{"reduction"}};
-  EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    auto input_tensor = create_desc_with_ori({182, 4}, dtype, format, {182, 4}, format);
 
-  auto output_desc = op.GetOutputDescByName("y");
+    op.UpdateInputDesc("predict", input_tensor);
+    op.UpdateInputDesc("label", input_tensor);
+    op.UpdateInputDesc("dout", input_tensor);
 
-  EXPECT_EQ(output_desc.GetShape().GetDimNum(), 2);
+    op.SetAttr("reduction", "mean");
+    Runtime2TestParam param{{"reduction"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_desc = op.GetOutputDescByName("y");
+
+    EXPECT_EQ(output_desc.GetShape().GetDimNum(), 2);
 }
 
 TEST_F(MseLossGradTest, mse_loss_grad_infer_data_type)

@@ -19,91 +19,89 @@ namespace ops {
 
 class HardSwishGradV2 : public OpDef {
 public:
-  explicit HardSwishGradV2(const char* name) : OpDef(name)
-  {
-    this->Input("gradOutput")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+    explicit HardSwishGradV2(const char* name) : OpDef(name)
+    {
+        this->Input("gradOutput")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    this->Input("self")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        this->Input("self")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    this->Output("out")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        this->Output("out")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    this->AICore().AddConfig("ascend910b");
-    this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
 
-    OpAICoreConfig config910A;
-    config910A.Input("gradOutput")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        OpAICoreConfig config910A;
+        config910A.Input("gradOutput")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    config910A.Input("self")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        config910A.Input("self")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    config910A.Output("out")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        config910A.Output("out")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    config910A.DynamicCompileStaticFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true);
+        config910A.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
 
-    this->AICore().AddConfig("ascend910", config910A);
+        this->AICore().AddConfig("ascend910", config910A);
 
-    OpAICoreConfig config950;
-    config950.Input("gradOutput")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
-    config950.Input("self")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
-    config950.Output("out")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        OpAICoreConfig config950;
+        config950.Input("gradOutput")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config950.Input("self")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config950.Output("out")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    config950.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(false)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .PrecisionReduceFlag(true)
-        .ExtendCfgInfo("opFile.value", "hard_swish_grad_v2");
-    this->AICore().AddConfig("mc62", config950);    
-    this->AICore().AddConfig("ascend950", config950);
-  }
+        config950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "hard_swish_grad_v2");
+        this->AICore().AddConfig("mc62", config950);
+        this->AICore().AddConfig("ascend950", config950);
+    }
 };
 
 OP_ADD(HardSwishGradV2);
-}  // namespace ops
+} // namespace ops

@@ -26,7 +26,7 @@ using Ops::NN::Optiling::TilingRegistry;
 namespace {
 // aiv和aic核数比例
 constexpr uint32_t CORE_RATIO = 2U;
-}  // namespace
+} // namespace
 
 namespace optiling {
 using dual_level_quant_batch_matmul::DualLevelQuantBatchMatmulTilingASW;
@@ -64,9 +64,9 @@ static ge::graphStatus TilingParseForDualLevelQuantBatchMatmul(gert::TilingParse
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     OP_LOGE_IF(compileInfoPtr->aicNum == 0, ge::GRAPH_FAILED, context->GetNodeName(), "aicNum is 0");
     OP_LOGE_IF(compileInfoPtr->aivNum == 0, ge::GRAPH_FAILED, context->GetNodeName(), "aivNum is 0");
-    OP_LOGE_IF(
-        compileInfoPtr->aivNum != CORE_RATIO * compileInfoPtr->aicNum, ge::GRAPH_FAILED, context->GetNodeName(),
-        "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", compileInfoPtr->aicNum, compileInfoPtr->aivNum);
+    OP_LOGE_IF(compileInfoPtr->aivNum != CORE_RATIO * compileInfoPtr->aicNum, ge::GRAPH_FAILED, context->GetNodeName(),
+               "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", compileInfoPtr->aicNum,
+               compileInfoPtr->aivNum);
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr->l1Size);

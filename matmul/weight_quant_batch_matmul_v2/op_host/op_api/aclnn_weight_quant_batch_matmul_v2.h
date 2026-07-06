@@ -28,7 +28,8 @@ extern "C" {
  * @param [in] quantScaleOptional: 预留参数，固定传入空指针。
  * @param [in] quantOffsetOptional: 预留参数，固定传入空指针。
  * @param [in] biasOptional: 偏置，数据类型支持：float16, float, bfloat16。
- * @param [in] antiquantGroupSize: 伪量化pergroup和mx下，对输入weight进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。
+ * @param [in] antiquantGroupSize:
+ * 伪量化pergroup和mx下，对输入weight进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。
  * @param [in] y: 计算结果，数据类型支持：float16, bfloat16。
  * @param [in] workspaceSize: 返回需要在npu device侧申请的workspace大小。
  * @param [in] executor: 返回op执行器，包含了算子计算流程。
@@ -43,13 +44,14 @@ ACLNN_API aclnnStatus aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
 /**
  * @brief aclnnWeightQuantBatchMatmulV2的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnWeightQuantBatchMatmulV2GetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnWeightQuantBatchMatmulV2GetWorkspaceSize获取。
  * @param [in] exector: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus
-aclnnWeightQuantBatchMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnWeightQuantBatchMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

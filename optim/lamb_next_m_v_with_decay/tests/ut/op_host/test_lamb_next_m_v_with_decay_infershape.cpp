@@ -38,7 +38,8 @@ TEST_F(LambNextMVWithDecayProtoTest, lamb_next_mv_with_decay_case_2d)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(13, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape})
+                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape,
+                                    &inShape, &inShape, &inShape, &inShape, &inShape})
                       .OutputShapes({&outShape, &outShape, &outShape, &outShape})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -78,7 +79,8 @@ TEST_F(LambNextMVWithDecayProtoTest, lamb_next_mv_with_decay_case_fp16_4d)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(13, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape})
+                      .InputShapes({&inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape, &inShape,
+                                    &inShape, &inShape, &inShape, &inShape, &inShape})
                       .OutputShapes({&outShape, &outShape, &outShape, &outShape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -108,4 +110,3 @@ TEST_F(LambNextMVWithDecayProtoTest, lamb_next_mv_with_decay_case_fp16_4d)
     auto od3 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(3);
     ASSERT_EQ(Ops::Base::ToString(*od3), Ops::Base::ToString(expShape));
 }
-

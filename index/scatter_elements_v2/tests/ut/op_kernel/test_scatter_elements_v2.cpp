@@ -30,8 +30,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void scatter_elements_v2(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
+                                                          GM_ADDR workspace, GM_ADDR tiling);
 class scatter_elements_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase() { cout << "scatter_elements_v2_test SetUp\n" << endl; }
@@ -60,8 +60,8 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 32;
 
-    kernel_ut::SetupTestEnvironment(
-        "index/scatter_elements_v2/tests/ut/op_kernel/scatter_elements_v2_data", "scatter_elements_v2_data");
+    kernel_ut::SetupTestEnvironment("index/scatter_elements_v2/tests/ut/op_kernel/scatter_elements_v2_data",
+                                    "scatter_elements_v2_data");
     kernel_ut::RunGenData("./scatter_elements_v2_data", {"float32"});
     kernel_ut::RunGenTiling("./scatter_elements_v2_data", {});
 

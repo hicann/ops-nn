@@ -55,13 +55,13 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
 //     .ATTR(ceil_mode, Bool, false)
 //     .ATTR(exclusive, Bool, true)
 //     .OP_END_FACTORY_REG(AvgPoolUpdate)
-const aclTensor *AvgPoolUpdate5Hd(const aclTensor *x1, const aclTensor *x2, const aclIntArray *ksize,
-                                  const aclIntArray *strides, const char *paddingMode,
-                                  const aclIntArray *pads, const char *dataFormat,
-                                  const bool ceilMode, const bool exclusive, aclOpExecutor *executor)
+const aclTensor* AvgPoolUpdate5Hd(const aclTensor* x1, const aclTensor* x2, const aclIntArray* ksize,
+                                  const aclIntArray* strides, const char* paddingMode, const aclIntArray* pads,
+                                  const char* dataFormat, const bool ceilMode, const bool exclusive,
+                                  aclOpExecutor* executor)
 {
     L0_DFX(AvgPoolUpdate5Hd, x1, x2, ksize, strides, paddingMode, pads, dataFormat, ceilMode, exclusive);
-    
+
     FVector<int64_t> newKsizes{(*ksize)[0], (*ksize)[1], (*ksize)[2], (*ksize)[3]};
     auto ksize4 = executor->AllocIntArray(newKsizes.data(), 4);
 
@@ -72,10 +72,10 @@ const aclTensor *AvgPoolUpdate5Hd(const aclTensor *x1, const aclTensor *x2, cons
     auto pads4 = executor->AllocIntArray(newPad.data(), 4);
 
     auto avgPoolUpdateOut = executor->AllocTensor(x1->GetDataType(), op::Format::FORMAT_NC1HWC0,
-        op::Format::FORMAT_NCHW);
+                                                  op::Format::FORMAT_NCHW);
 
     auto ret = INFER_SHAPE(AvgPoolUpdate, OP_INPUT(x1, x2), OP_OUTPUT(avgPoolUpdateOut),
-                            OP_ATTR(ksize4, stride4, paddingMode, pads4, dataFormat, ceilMode, exclusive));
+                           OP_ATTR(ksize4, stride4, paddingMode, pads4, dataFormat, ceilMode, exclusive));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
         return nullptr;
@@ -97,15 +97,11 @@ const aclTensor *AvgPoolUpdate5Hd(const aclTensor *x1, const aclTensor *x2, cons
                              avgPoolUpdateOut->GetViewShape().GetDim(NCHW_W_IDX), c0};
     avgPoolUpdateOut->SetStorageShape(shape);
 
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(AvgPoolUpdate,
-                                      op::AI_CORE,
-                                      OP_INPUT(x1, x2),
-                                      OP_OUTPUT(avgPoolUpdateOut),
-                                      OP_ATTR(ksize4, stride4, paddingMode, pads4, dataFormat, ceilMode, exclusive)
-                                      );
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(AvgPoolUpdate, op::AI_CORE, OP_INPUT(x1, x2), OP_OUTPUT(avgPoolUpdateOut),
+                                      OP_ATTR(ksize4, stride4, paddingMode, pads4, dataFormat, ceilMode, exclusive));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
                                          "AvgPoolUpdate ADD_TO_LAUNCHER_LIST_AICORE failed.");
 
     return avgPoolUpdateOut;
 }
-}  // namespace l0op
+} // namespace l0op

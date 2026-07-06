@@ -25,9 +25,8 @@
 #include "hard_sigmoid_grad_v3.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void hard_sigmoid_grad_v3(
-    GM_ADDR grad_output, GM_ADDR self, GM_ADDR grad_input,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hard_sigmoid_grad_v3(GM_ADDR grad_output, GM_ADDR self, GM_ADDR grad_input,
+                                                GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardSigmoidGradV3TilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSigmoidGradV3TilingData, tilingData, tiling);

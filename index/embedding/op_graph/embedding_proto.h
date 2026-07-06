@@ -40,7 +40,7 @@ REG_OP(Embedding)
                           DT_INT8, DT_UINT16, DT_UINT32, DT_UINT64, DT_UINT8, DT_BOOL, DT_BF16}))
     .INPUT(indices, TensorType::IndexNumberType())
     .OUTPUT(y, TensorType({DT_COMPLEX64, DT_COMPLEX32, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
-                          DT_INT8, DT_UINT16, DT_UINT32, DT_UINT64, DT_UINT8, DT_BOOL, DT_BF16}))
+                           DT_INT8, DT_UINT16, DT_UINT32, DT_UINT64, DT_UINT8, DT_BOOL, DT_BF16}))
     .OP_END_FACTORY_REG(Embedding)
 } // namespace ge
 

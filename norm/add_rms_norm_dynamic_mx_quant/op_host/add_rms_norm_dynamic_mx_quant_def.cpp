@@ -18,51 +18,39 @@ namespace ops {
 
 // x1/x2 dtype: 16 combinations (4 output types × 2 input types × 2 gamma types)
 static const std::vector<ge::DataType> xDataType = {
-    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
-    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,
-    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
-    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16
-};
+    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16};
 
 // gamma/beta dtype: first 8 match x dtype, last 8 are FP32
-static const std::vector<ge::DataType> gammaDataType = {
-    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
-    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT
-};
+static const std::vector<ge::DataType> gammaDataType = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                                        ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,    ge::DT_BF16,
+                                                        ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
+                                                        ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT};
 
 // y output dtype: E2M1, E1M2, E4M3FN, E5M2 cycling
 static const std::vector<ge::DataType> yDataType = {
-    ge::DT_FLOAT4_E2M1,   ge::DT_FLOAT4_E1M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
-    ge::DT_FLOAT4_E2M1,   ge::DT_FLOAT4_E1M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
-    ge::DT_FLOAT4_E2M1,   ge::DT_FLOAT4_E1M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
-    ge::DT_FLOAT4_E2M1,   ge::DT_FLOAT4_E1M2,   ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2
-};
+    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 
 // mxscale output dtype: all FP8_E8M0
 static const std::vector<ge::DataType> mxscaleDataType = {
     ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
     ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
     ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
-    ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0
-};
+    ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0};
 
 // rstd output dtype: all FP32
 static const std::vector<ge::DataType> rstdDataType = {
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT
-};
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
 
 // format: all ND
-static const std::vector<ge::Format> formatND = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> formatND = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class AddRmsNormDynamicMxQuant : public OpDef {
 public:
@@ -122,10 +110,10 @@ public:
 
         // Attributes
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
-        this->Attr("scale_alg").AttrType(OPTIONAL).Int(0);     // default: standard MX
+        this->Attr("scale_alg").AttrType(OPTIONAL).Int(0); // default: standard MX
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");
-        this->Attr("dst_type").AttrType(OPTIONAL).Int(40);     // default: FP4_E2M1
-        this->Attr("output_rstd").AttrType(OPTIONAL).Bool(false);     // default: false
+        this->Attr("dst_type").AttrType(OPTIONAL).Int(40);        // default: FP4_E2M1
+        this->Attr("output_rstd").AttrType(OPTIONAL).Bool(false); // default: false
 
         OpAICoreConfig config950;
         config950.DynamicCompileStaticFlag(true)

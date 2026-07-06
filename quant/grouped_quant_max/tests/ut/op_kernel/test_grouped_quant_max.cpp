@@ -44,21 +44,14 @@ struct TestGroupedQuantMaxTilingData {
     int64_t numGroups;
 };
 
-class grouped_quant_max_test : public testing::Test
-{
+class grouped_quant_max_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "grouped_quant_max_test SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "grouped_quant_max_test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "grouped_quant_max_test SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "grouped_quant_max_test TearDown" << std::endl; }
 };
 
 // Helper function to generate test data
-template<typename T>
+template <typename T>
 void GenerateGroupedInputData(void* buffer, size_t size, float minValue = -1.0f, float maxValue = 1.0f)
 {
     T* data = static_cast<T*>(buffer);
@@ -76,9 +69,8 @@ void GenerateGroupedInputData(void* buffer, size_t size, float minValue = -1.0f,
 }
 
 // Compute per-group amax (golden reference)
-template<typename T>
-void ComputeGroupedAmax(const T* data, const int64_t* groupList, int64_t numGroups,
-                        int64_t blockSize, float* amaxOut)
+template <typename T>
+void ComputeGroupedAmax(const T* data, const int64_t* groupList, int64_t numGroups, int64_t blockSize, float* amaxOut)
 {
     for (int64_t g = 0; g < numGroups; ++g) {
         int64_t groupStart = (g == 0) ? 0 : groupList[g - 1] * blockSize;
@@ -110,7 +102,7 @@ TEST_F(grouped_quant_max_test, test_fp32_to_fp8_e5m2_3groups)
     int64_t blockSize = 128;
     int64_t totalElements = 6 * 128;
     size_t xSize = totalElements * sizeof(float);
-    size_t ySize = totalElements * sizeof(uint8_t);  // FP8
+    size_t ySize = totalElements * sizeof(uint8_t); // FP8
     size_t scaleSize = numGroups * sizeof(float);
     size_t groupListSize = numGroups * sizeof(int64_t);
     size_t amaxSize = numGroups * sizeof(float);
@@ -148,27 +140,25 @@ TEST_F(grouped_quant_max_test, test_fp32_to_fp8_e5m2_3groups)
     tilingData.blockTailFactor = totalElements;
     tilingData.ubFactor = 256;
     tilingData.dim1 = blockSize;
-    tilingData.roundMode = 0;  // Rint
+    tilingData.roundMode = 0; // Rint
     tilingData.numGroups = numGroups;
     memcpy(tiling, &tilingData, tilingSize);
 
     ICPU_SET_TILING_KEY(0);
-    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y,
-                            GM_ADDR amax, GM_ADDR workspace, GM_ADDR tiling) {
+    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace,
+                            GM_ADDR tiling) {
         ::grouped_quant_max<0>(x, scale, groupList, y, amax, workspace, tiling);
     };
     ICPU_RUN_KF(kernel_lambda, blockDim, x, scale, groupList, y, amax, workspace, tiling);
 
     // Verify per-group amax
     float expectedAmax[3];
-    ComputeGroupedAmax(reinterpret_cast<float*>(x),
-                       reinterpret_cast<int64_t*>(groupList),
-                       numGroups, blockSize, expectedAmax);
+    ComputeGroupedAmax(reinterpret_cast<float*>(x), reinterpret_cast<int64_t*>(groupList), numGroups, blockSize,
+                       expectedAmax);
 
     float* amaxOut = reinterpret_cast<float*>(amax);
     for (int64_t g = 0; g < numGroups; ++g) {
-        EXPECT_NEAR(amaxOut[g], expectedAmax[g], 0.01f)
-            << "Group " << g << " amax mismatch";
+        EXPECT_NEAR(amaxOut[g], expectedAmax[g], 0.01f) << "Group " << g << " amax mismatch";
     }
 
     AscendC::GmFree((void*)x);
@@ -227,21 +217,19 @@ TEST_F(grouped_quant_max_test, test_fp32_to_fp8_e5m2_4groups_multicore)
     memcpy(tiling, &tilingData, tilingSize);
 
     ICPU_SET_TILING_KEY(0);
-    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y,
-                            GM_ADDR amax, GM_ADDR workspace, GM_ADDR tiling) {
+    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace,
+                            GM_ADDR tiling) {
         ::grouped_quant_max<0>(x, scale, groupList, y, amax, workspace, tiling);
     };
     ICPU_RUN_KF(kernel_lambda, blockDim, x, scale, groupList, y, amax, workspace, tiling);
 
     float expectedAmax[4];
-    ComputeGroupedAmax(reinterpret_cast<float*>(x),
-                       reinterpret_cast<int64_t*>(groupList),
-                       numGroups, blockSize, expectedAmax);
+    ComputeGroupedAmax(reinterpret_cast<float*>(x), reinterpret_cast<int64_t*>(groupList), numGroups, blockSize,
+                       expectedAmax);
 
     float* amaxOut = reinterpret_cast<float*>(amax);
     for (int64_t g = 0; g < numGroups; ++g) {
-        EXPECT_NEAR(amaxOut[g], expectedAmax[g], 0.01f)
-            << "Group " << g << " amax mismatch";
+        EXPECT_NEAR(amaxOut[g], expectedAmax[g], 0.01f) << "Group " << g << " amax mismatch";
     }
 
     AscendC::GmFree((void*)x);
@@ -281,7 +269,7 @@ TEST_F(grouped_quant_max_test, test_fp32_single_group)
     float scaleVal = 0.5f;
     memcpy(scale, &scaleVal, scaleSize);
 
-    int64_t groupListVal = 4;  // All 4 rows in one group
+    int64_t groupListVal = 4; // All 4 rows in one group
     memcpy(groupList, &groupListVal, groupListSize);
 
     size_t tilingSize = sizeof(TestGroupedQuantMaxTilingData);
@@ -299,16 +287,15 @@ TEST_F(grouped_quant_max_test, test_fp32_single_group)
     memcpy(tiling, &tilingData, tilingSize);
 
     ICPU_SET_TILING_KEY(0);
-    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y,
-                            GM_ADDR amax, GM_ADDR workspace, GM_ADDR tiling) {
+    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace,
+                            GM_ADDR tiling) {
         ::grouped_quant_max<0>(x, scale, groupList, y, amax, workspace, tiling);
     };
     ICPU_RUN_KF(kernel_lambda, blockDim, x, scale, groupList, y, amax, workspace, tiling);
 
     float expectedAmax[1];
-    ComputeGroupedAmax(reinterpret_cast<float*>(x),
-                       reinterpret_cast<int64_t*>(groupList),
-                       numGroups, blockSize, expectedAmax);
+    ComputeGroupedAmax(reinterpret_cast<float*>(x), reinterpret_cast<int64_t*>(groupList), numGroups, blockSize,
+                       expectedAmax);
 
     float* amaxOut = reinterpret_cast<float*>(amax);
     EXPECT_NEAR(amaxOut[0], expectedAmax[0], 0.01f);
@@ -369,21 +356,19 @@ TEST_F(grouped_quant_max_test, test_fp32_uneven_groups)
     memcpy(tiling, &tilingData, tilingSize);
 
     ICPU_SET_TILING_KEY(0);
-    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y,
-                            GM_ADDR amax, GM_ADDR workspace, GM_ADDR tiling) {
+    auto kernel_lambda = [](GM_ADDR x, GM_ADDR scale, GM_ADDR groupList, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace,
+                            GM_ADDR tiling) {
         ::grouped_quant_max<0>(x, scale, groupList, y, amax, workspace, tiling);
     };
     ICPU_RUN_KF(kernel_lambda, blockDim, x, scale, groupList, y, amax, workspace, tiling);
 
     float expectedAmax[3];
-    ComputeGroupedAmax(reinterpret_cast<float*>(x),
-                       reinterpret_cast<int64_t*>(groupList),
-                       numGroups, blockSize, expectedAmax);
+    ComputeGroupedAmax(reinterpret_cast<float*>(x), reinterpret_cast<int64_t*>(groupList), numGroups, blockSize,
+                       expectedAmax);
 
     float* amaxOut = reinterpret_cast<float*>(amax);
     for (int64_t g = 0; g < numGroups; ++g) {
-        EXPECT_NEAR(amaxOut[g], expectedAmax[g], 0.01f)
-            << "Group " << g << " amax mismatch";
+        EXPECT_NEAR(amaxOut[g], expectedAmax[g], 0.01f) << "Group " << g << " amax mismatch";
     }
 
     AscendC::GmFree((void*)x);

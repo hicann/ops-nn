@@ -23,25 +23,13 @@ constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t BLOCK_NUM_16 = BLOCK_SIZE / sizeof(half);
 constexpr uint64_t BLOCK_NUM_32 = BLOCK_SIZE / sizeof(float);
 
-__aicore__ inline int64_t min(int64_t a, int64_t b)
-{
-    return a <= b ? a : b;
-}
+__aicore__ inline int64_t min(int64_t a, int64_t b) { return a <= b ? a : b; }
 
-__aicore__ inline int64_t max(int64_t a, int64_t b)
-{
-    return a >= b ? a : b;
-}
+__aicore__ inline int64_t max(int64_t a, int64_t b) { return a >= b ? a : b; }
 
-__aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : (x + y - 1) / y;
-}
+__aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y) { return y == 0 ? x : (x + y - 1) / y; }
 
-__aicore__ inline uint64_t FloorDiv(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : (uint64_t)(x / y);
-}
+__aicore__ inline uint64_t FloorDiv(uint64_t x, uint64_t y) { return y == 0 ? x : (uint64_t)(x / y); }
 
 // only support float/int32_t
 // [row, col] -> [col, row]: row:align16, col:align8
@@ -79,11 +67,11 @@ __aicore__ inline void TransposeBase8M16(LocalTensor<T>& dstUb, LocalTensor<T>& 
     transDataParams.repeatTimes = rowNum / BLOCK_NUM_32;
     for (uint64_t r = 0; r < colNum / TRANS_ADDR_LEN; r++) {
         for (uint64_t i = 0; i < TRANS_ADDR_LEN; i++) {
-            srcAddrList[i] =
-                (uint64_t)(srcUb[r * TRANS_ADDR_LEN + i % BLOCK_NUM_32 * colNum + i / BLOCK_NUM_32 * BLOCK_NUM_32]
-                               .GetPhyAddr());
-            dstAddrList[i] =
-                (uint64_t)(dstUb[r * TRANS_ADDR_LEN * rowNum + (i % 2 * BLOCK_NUM_32 + i / 2) * rowNum].GetPhyAddr());
+            srcAddrList[i] = (uint64_t)(srcUb[r * TRANS_ADDR_LEN + i % BLOCK_NUM_32 * colNum +
+                                              i / BLOCK_NUM_32 * BLOCK_NUM_32]
+                                            .GetPhyAddr());
+            dstAddrList[i] = (uint64_t)(dstUb[r * TRANS_ADDR_LEN * rowNum + (i % 2 * BLOCK_NUM_32 + i / 2) * rowNum]
+                                            .GetPhyAddr());
         }
         if (transDataParams.repeatTimes == 1) {
             transDataParams.srcRepStride = 0;
@@ -99,8 +87,8 @@ __aicore__ inline void TransposeBase8M16(LocalTensor<T>& dstUb, LocalTensor<T>& 
 // only support float16/bfloat16
 // [row, col] -> [col, row]: row:align16, col:align16
 template <typename T>
-__aicore__ inline void TransposeBase16M16(
-    LocalTensor<T>& dstUb, LocalTensor<T>& srcUb, uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeBase16M16(LocalTensor<T>& dstUb, LocalTensor<T>& srcUb, uint64_t rowNum,
+                                          uint64_t colNum)
 {
     uint64_t srcAddrList[TRANS_ADDR_LEN];
     uint64_t dstAddrList[TRANS_ADDR_LEN];
@@ -176,8 +164,7 @@ public:
     LocalTensor<float> TranUbFp32;
     LocalTensor<float> castUb;
 
-    __aicore__ inline AvgPool3DGradBase()
-    {}
+    __aicore__ inline AvgPool3DGradBase() {}
 
     __aicore__ inline int64_t min(int64_t a, int64_t b);
 

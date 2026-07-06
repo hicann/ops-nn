@@ -32,71 +32,76 @@ static constexpr size_t OUPUT_VALUES_DIM_NUM = 2;
 static constexpr size_t DYNAMIC_OUTPUT_NUM = 4;
 
 // ----------------EmbeddingHashTableExport InferShape Begin-------------------
-graphStatus CheckEmbeddingHashTableExportParams(
-    const gert::InferShapeContext* context, int64_t numTable, int64_t numEmbeddingDim)
+graphStatus CheckEmbeddingHashTableExportParams(const gert::InferShapeContext* context, int64_t numTable,
+                                                int64_t numEmbeddingDim)
 {
     if (numTable < 0) {
         std::string errMsg = "The shape size of table_sizes must be greater than or equal to 0";
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "table_sizes", std::to_string(numTable).c_str(), errMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "table_sizes",
+                                                  std::to_string(numTable).c_str(), errMsg.c_str());
         return GRAPH_FAILED;
     }
 
     if (numEmbeddingDim != numTable) {
-        std::string errMsg = "The shape sizes of embedding_dims and table_sizes must be the same, got shape size of table_sizes is " +
+        std::string errMsg = "The shape sizes of embedding_dims and table_sizes must be the same, got shape size of "
+                             "table_sizes is " +
                              std::to_string(numTable);
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "embedding_dims", std::to_string(numEmbeddingDim).c_str(), errMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "embedding_dims",
+                                                  std::to_string(numEmbeddingDim).c_str(), errMsg.c_str());
         return GRAPH_FAILED;
     }
     auto tableHandleShape = context->GetInputShape(INPUT_TABLE_HANDLE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, tableHandleShape);
     int64_t tableHandleNum = tableHandleShape->GetShapeSize();
     if (tableHandleNum != numTable) {
-        std::string errMsg = "The shape sizes of table_handles and table_sizes must be the same, got shape size of table_sizes is " +
+        std::string errMsg = "The shape sizes of table_handles and table_sizes must be the same, got shape size of "
+                             "table_sizes is " +
                              std::to_string(numTable);
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "table_handles", std::to_string(tableHandleNum).c_str(), errMsg.c_str());
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "table_handles",
+                                                  std::to_string(tableHandleNum).c_str(), errMsg.c_str());
         return GRAPH_FAILED;
     }
     auto bucketSizeShape = context->GetInputShape(INPUT_BUCKET_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSizeShape);
     int64_t bucketSizeNum = bucketSizeShape->GetShapeSize();
-    if(bucketSizeNum != numTable){
-        std::string errMsg = "The shape sizes of bucket_sizes and table_sizes must be the same, got shape size of table_sizes is " + std::to_string(numTable);
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context->GetNodeName(), "bucket_sizes", std::to_string(bucketSizeNum).c_str(), errMsg.c_str());
+    if (bucketSizeNum != numTable) {
+        std::string errMsg = "The shape sizes of bucket_sizes and table_sizes must be the same, got shape size of "
+                             "table_sizes is " +
+                             std::to_string(numTable);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "bucket_sizes",
+                                                  std::to_string(bucketSizeNum).c_str(), errMsg.c_str());
         return GRAPH_FAILED;
     }
     int64_t totalOutNum = context->GetComputeNodeOutputNum();
     int64_t exceptOutNum = static_cast<int64_t>(numTable * DYNAMIC_OUTPUT_NUM);
     OP_CHECK_IF(totalOutNum != exceptOutNum,
-        OP_LOGE(context->GetNodeName(), "Expected the number of total outputs is %ld but actual is %ld", exceptOutNum, totalOutNum),
-        return GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Expected the number of total outputs is %ld but actual is %ld",
+                        exceptOutNum, totalOutNum),
+                return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
 }
 
-graphStatus InferShape4EmbeddingHashTableExportNull(gert::InferShapeContext *context)
+graphStatus InferShape4EmbeddingHashTableExportNull(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferShape4EmbeddingHashTableExportNull start");
     auto embeddingDimTensor = context->GetInputTensor(INPUT_EMBEDDING_DIMS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimTensor);
     int64_t numTable = embeddingDimTensor->GetShapeSize();
     for (int64_t i = 0; i < numTable; i++) {
-        gert::Shape *outKeyShape = context->GetOutputShape(OUPUT_KEYS_IDX * numTable + i);
+        gert::Shape* outKeyShape = context->GetOutputShape(OUPUT_KEYS_IDX * numTable + i);
         OP_CHECK_NULL_WITH_CONTEXT(context, outKeyShape);
         outKeyShape->SetDimNum(0);
         outKeyShape->AppendDim(-1);
-        gert::Shape *outCounterShape = context->GetOutputShape(OUPUT_COUNTERS_IDX * numTable + i);
+        gert::Shape* outCounterShape = context->GetOutputShape(OUPUT_COUNTERS_IDX * numTable + i);
         OP_CHECK_NULL_WITH_CONTEXT(context, outCounterShape);
         outCounterShape->SetDimNum(0);
         outCounterShape->AppendDim(-1);
-        gert::Shape *outFilterFlagShape = context->GetOutputShape(OUPUT_FILTER_FLAGS_IDX * numTable + i);
+        gert::Shape* outFilterFlagShape = context->GetOutputShape(OUPUT_FILTER_FLAGS_IDX * numTable + i);
         OP_CHECK_NULL_WITH_CONTEXT(context, outFilterFlagShape);
         outFilterFlagShape->SetDimNum(0);
         outFilterFlagShape->AppendDim(-1);
-        gert::Shape *outValueShape = context->GetOutputShape(OUPUT_VALUES_IDX * numTable + i);
+        gert::Shape* outValueShape = context->GetOutputShape(OUPUT_VALUES_IDX * numTable + i);
         OP_CHECK_NULL_WITH_CONTEXT(context, outValueShape);
         outValueShape->SetDimNum(0);
         outValueShape->AppendDim(-1);
@@ -107,65 +112,68 @@ graphStatus InferShape4EmbeddingHashTableExportNull(gert::InferShapeContext *con
     return GRAPH_SUCCESS;
 }
 
-graphStatus InferShape4EmbeddingHashTableExport(gert::InferShapeContext* context) {
-  auto tableSizeTensor = context->GetInputTensor(INPUT_TABLE_SIZE_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, tableSizeTensor);
-  const int64_t*  tableSizeValue = tableSizeTensor->GetData<int64_t>();
-  if (tableSizeValue == nullptr){
+graphStatus InferShape4EmbeddingHashTableExport(gert::InferShapeContext* context)
+{
+    auto tableSizeTensor = context->GetInputTensor(INPUT_TABLE_SIZE_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, tableSizeTensor);
+    const int64_t* tableSizeValue = tableSizeTensor->GetData<int64_t>();
+    if (tableSizeValue == nullptr) {
         return InferShape4EmbeddingHashTableExportNull(context);
-  }
+    }
 
-  OP_CHECK_NULL_WITH_CONTEXT(context, tableSizeValue);
-  int64_t numTable = tableSizeTensor->GetShapeSize();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tableSizeValue);
+    int64_t numTable = tableSizeTensor->GetShapeSize();
 
-  auto embeddingDimTensor = context->GetInputTensor(INPUT_EMBEDDING_DIMS_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimTensor);
-  const int64_t*  embeddingDimValue = embeddingDimTensor->GetData<int64_t>();
-  OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimValue);
-  int64_t numEmbeddingDim = embeddingDimTensor->GetShapeSize();
-  OP_CHECK_IF(CheckEmbeddingHashTableExportParams(context, numTable, numEmbeddingDim) == GRAPH_FAILED,
-           OP_LOGE(context->GetNodeName(), "check split params failed."),
-           return GRAPH_FAILED);
-  for (int64_t i = 0; i < numTable; i++) {
-      gert::Shape*  outKeyShape = context->GetOutputShape(OUPUT_KEYS_IDX * numTable + i);
-      OP_CHECK_NULL_WITH_CONTEXT(context, outKeyShape);
-      outKeyShape->SetDimNum(0);
-      outKeyShape->AppendDim(tableSizeValue[i]);
-      gert::Shape*  outCounterShape = context->GetOutputShape(OUPUT_COUNTERS_IDX * numTable + i);
-      OP_CHECK_NULL_WITH_CONTEXT(context, outCounterShape);
-      outCounterShape->SetDimNum(0);
-      outCounterShape->AppendDim(tableSizeValue[i]);
-      gert::Shape*  outFilterFlagShape = context->GetOutputShape(OUPUT_FILTER_FLAGS_IDX * numTable + i);
-      OP_CHECK_NULL_WITH_CONTEXT(context, outFilterFlagShape);
-      outFilterFlagShape->SetDimNum(0);
-      outFilterFlagShape->AppendDim(tableSizeValue[i]);
-      gert::Shape*  outValueShape = context->GetOutputShape(OUPUT_VALUES_IDX * numTable + i);
-      OP_CHECK_NULL_WITH_CONTEXT(context, outValueShape);
-      outValueShape->SetDimNum(0);
-      outValueShape->AppendDim(tableSizeValue[i]);
-      outValueShape->AppendDim(embeddingDimValue[i]);
-  }
+    auto embeddingDimTensor = context->GetInputTensor(INPUT_EMBEDDING_DIMS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimTensor);
+    const int64_t* embeddingDimValue = embeddingDimTensor->GetData<int64_t>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDimValue);
+    int64_t numEmbeddingDim = embeddingDimTensor->GetShapeSize();
+    OP_CHECK_IF(CheckEmbeddingHashTableExportParams(context, numTable, numEmbeddingDim) == GRAPH_FAILED,
+                OP_LOGE(context->GetNodeName(), "check split params failed."), return GRAPH_FAILED);
+    for (int64_t i = 0; i < numTable; i++) {
+        gert::Shape* outKeyShape = context->GetOutputShape(OUPUT_KEYS_IDX * numTable + i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outKeyShape);
+        outKeyShape->SetDimNum(0);
+        outKeyShape->AppendDim(tableSizeValue[i]);
+        gert::Shape* outCounterShape = context->GetOutputShape(OUPUT_COUNTERS_IDX * numTable + i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outCounterShape);
+        outCounterShape->SetDimNum(0);
+        outCounterShape->AppendDim(tableSizeValue[i]);
+        gert::Shape* outFilterFlagShape = context->GetOutputShape(OUPUT_FILTER_FLAGS_IDX * numTable + i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outFilterFlagShape);
+        outFilterFlagShape->SetDimNum(0);
+        outFilterFlagShape->AppendDim(tableSizeValue[i]);
+        gert::Shape* outValueShape = context->GetOutputShape(OUPUT_VALUES_IDX * numTable + i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outValueShape);
+        outValueShape->SetDimNum(0);
+        outValueShape->AppendDim(tableSizeValue[i]);
+        outValueShape->AppendDim(embeddingDimValue[i]);
+    }
 
-  return GRAPH_SUCCESS;
+    return GRAPH_SUCCESS;
 }
 
-graphStatus InferDataType4EmbeddingHashTableExport(gert::InferDataTypeContext *context) {
-  OP_LOGD(context->GetNodeName(), "InferDataType4EmbeddingHashTableExport start");
-  int64_t totalOutNum = context->GetComputeNodeOutputNum();;
-  int64_t numTable = static_cast<int64_t>(totalOutNum / DYNAMIC_OUTPUT_NUM);
-  for (int64_t i = 0; i < numTable; i++) {
-      context->SetOutputDataType(OUPUT_KEYS_IDX * numTable + i, DT_INT64);     // keys
-      context->SetOutputDataType(OUPUT_COUNTERS_IDX * numTable + i, DT_UINT64);    // counters
-      context->SetOutputDataType(OUPUT_FILTER_FLAGS_IDX * numTable + i, DT_UINT8);     // filter_flags
-      context->SetOutputDataType(OUPUT_VALUES_IDX * numTable + i, DT_FLOAT);     // values
-  }
-  OP_LOGD(context->GetNodeName(), "InferDataType4EmbeddingHashTableExport end");
-  return GRAPH_SUCCESS;
+graphStatus InferDataType4EmbeddingHashTableExport(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "InferDataType4EmbeddingHashTableExport start");
+    int64_t totalOutNum = context->GetComputeNodeOutputNum();
+    ;
+    int64_t numTable = static_cast<int64_t>(totalOutNum / DYNAMIC_OUTPUT_NUM);
+    for (int64_t i = 0; i < numTable; i++) {
+        context->SetOutputDataType(OUPUT_KEYS_IDX * numTable + i, DT_INT64);         // keys
+        context->SetOutputDataType(OUPUT_COUNTERS_IDX * numTable + i, DT_UINT64);    // counters
+        context->SetOutputDataType(OUPUT_FILTER_FLAGS_IDX * numTable + i, DT_UINT8); // filter_flags
+        context->SetOutputDataType(OUPUT_VALUES_IDX * numTable + i, DT_FLOAT);       // values
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4EmbeddingHashTableExport end");
+    return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(EmbeddingHashTableExport).InferShape(InferShape4EmbeddingHashTableExport)
-              .InputsDataDependency({INPUT_TABLE_SIZE_IDX, INPUT_EMBEDDING_DIMS_IDX})
-              .InferDataType(InferDataType4EmbeddingHashTableExport);
+IMPL_OP_INFERSHAPE(EmbeddingHashTableExport)
+    .InferShape(InferShape4EmbeddingHashTableExport)
+    .InputsDataDependency({INPUT_TABLE_SIZE_IDX, INPUT_EMBEDDING_DIMS_IDX})
+    .InferDataType(InferDataType4EmbeddingHashTableExport);
 // ----------------EmbeddingHashTableExport InferShape End----------------------
 
-}  // namespace ops
+} // namespace ops

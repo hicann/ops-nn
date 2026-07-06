@@ -22,18 +22,16 @@
 #include "op_host/tiling_base.h"
 #include "error_util.h"
 namespace optiling {
-const std::initializer_list<NpuArch> AdvancedNpuArch = {
-    NpuArch::DAV_3510,
-    NpuArch::DAV_RESV};  // supportMmadS8S4平台
+const std::initializer_list<NpuArch> AdvancedNpuArch = {NpuArch::DAV_3510, NpuArch::DAV_RESV}; // supportMmadS8S4平台
 
 template <typename T>
-inline typename std::enable_if<
-    std::is_same<T, gert::TilingParseContext>::value || std::is_same<T, gert::TilingContext>::value,
-    ge::graphStatus>::type
-GetSocVersion(const T *context, NpuArch &npuArch)
+inline typename std::enable_if<std::is_same<T, gert::TilingParseContext>::value ||
+                                   std::is_same<T, gert::TilingContext>::value,
+                               ge::graphStatus>::type
+GetSocVersion(const T* context, NpuArch& npuArch)
 {
     OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatMulV3", "context is null"), return ge::GRAPH_FAILED);
-    fe::PlatFormInfos *platformInfo = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
     OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -47,12 +45,12 @@ GetSocVersion(const T *context, NpuArch &npuArch)
 template <typename T>
 inline typename std::enable_if<
     std::is_same<T, gert::TilingParseContext>::value || std::is_same<T, gert::TilingContext>::value, bool>::type
-IsAdvancedSocVersion(T *context) {
+IsAdvancedSocVersion(T* context)
+{
     NpuArch npuArch;
-    OP_TILING_CHECK(
-        GetSocVersion(context, npuArch) == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT("MatMulV3", "fail to get npu arch"), return false);
+    OP_TILING_CHECK(GetSocVersion(context, npuArch) == ge::GRAPH_FAILED,
+                    CUBE_INNER_ERR_REPORT("MatMulV3", "fail to get npu arch"), return false);
     return std::find(AdvancedNpuArch.begin(), AdvancedNpuArch.end(), npuArch) != AdvancedNpuArch.end();
 }
-}
+} // namespace optiling
 #endif // __OP_HOST_MATMUL_V3_PLATFORM_COMMON_H__

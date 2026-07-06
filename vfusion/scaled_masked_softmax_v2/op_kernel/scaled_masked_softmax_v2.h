@@ -22,8 +22,7 @@ namespace AscendC {
 constexpr float MASK_VAL = -10000.0f;
 
 template <typename T>
-class ScaledMaskedSoftmaxV2
-{
+class ScaledMaskedSoftmaxV2 {
 public:
     struct MaskOffset {
         uint64_t batchOffset = 0;
@@ -85,8 +84,8 @@ public:
 
         this->linePerBatch = this->xChannel * this->xHeight;
         this->linesPerIter = tilingData.lineHeadIter;
-        this->linesLastIter =
-            this->blockIdx >= tilingData.headCoreNum ? tilingData.lineLastTailIter : tilingData.lineLastHeadIter;
+        this->linesLastIter = this->blockIdx >= tilingData.headCoreNum ? tilingData.lineLastTailIter :
+                                                                         tilingData.lineLastHeadIter;
 
         this->maskBatchOffset = tilingData.nStep * tilingData.maskChannel * this->xHeight * this->xWidth;
         this->maskChannelOffset = tilingData.cStep * this->xHeight * this->xWidth;
@@ -123,8 +122,8 @@ private:
     __aicore__ inline void CopyXIn(uint64_t idx, uint64_t linePerIter)
     {
         LocalTensor<T> xTensor = inQueueX.AllocTensor<T>();
-        DataCopyExtParams params = {
-            static_cast<uint16_t>(linePerIter), static_cast<uint32_t>(tilingData.width * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams params = {static_cast<uint16_t>(linePerIter),
+                                    static_cast<uint32_t>(tilingData.width * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> extParams = {true, 0, static_cast<uint8_t>(tilingData.paddingNum), 0.0};
         DataCopyPad(xTensor, gmX[idx * gmOffsetPerIdx], params, extParams);
         inQueueX.EnQue(xTensor);
@@ -185,27 +184,27 @@ private:
         inQueueMask.EnQue(maskTensor);
     }
 
-    __aicore__ inline void MoveMaskLines(
-        LocalTensor<bool>& maskTensor, uint64_t& lineCnt, MaskOffset& maskOffset, uint64_t lines)
+    __aicore__ inline void MoveMaskLines(LocalTensor<bool>& maskTensor, uint64_t& lineCnt, MaskOffset& maskOffset,
+                                         uint64_t lines)
     {
         uint64_t gmOffset = maskOffset.GetOffset(maskBatchOffset, maskChannelOffset, tilingData.maskWidth);
-        DataCopyExtParams paramsMask = {
-            static_cast<uint16_t>(lines), static_cast<uint32_t>(tilingData.maskWidth * sizeof(bool)), 0, 0, 0};
+        DataCopyExtParams paramsMask = {static_cast<uint16_t>(lines),
+                                        static_cast<uint32_t>(tilingData.maskWidth * sizeof(bool)), 0, 0, 0};
         DataCopyPadExtParams<bool> extParamsMask = {true, 0, static_cast<uint8_t>(tilingData.alignedMaskPadding), 0};
         DataCopyPad(maskTensor[lineCnt * tilingData.alignedMaskWidth], gmMask[gmOffset], paramsMask, extParamsMask);
         lineCnt += lines;
     }
 
-    __aicore__ inline void CalcCurPos(
-        uint64_t curLine, uint64_t& curBatch, uint64_t& curChannel, uint64_t& curLineInChannel)
+    __aicore__ inline void CalcCurPos(uint64_t curLine, uint64_t& curBatch, uint64_t& curChannel,
+                                      uint64_t& curLineInChannel)
     {
         curBatch = curLine / this->linePerBatch;
         curChannel = (curLine - curBatch * this->linePerBatch) / this->xHeight;
         curLineInChannel = curLine % this->xHeight;
     }
 
-    __aicore__ inline void CalcEndPos(
-        uint64_t curLine, uint64_t lines, uint64_t& endBatch, uint64_t& endChannel, uint64_t& endLineInChannel)
+    __aicore__ inline void CalcEndPos(uint64_t curLine, uint64_t lines, uint64_t& endBatch, uint64_t& endChannel,
+                                      uint64_t& endLineInChannel)
     {
         // 为了计算batch和channel的时候不进位 减一
         uint64_t endLine = curLine + lines - 1;
@@ -232,17 +231,17 @@ private:
         if constexpr (std::is_same<T, bfloat16_t>::value) {
             Cast(scaledMaskedX, xTensor, RoundMode::CAST_NONE, this->elePerIter);
             Muls(scaledMaskedX, scaledMaskedX, static_cast<float>(scale), this->elePerIter);
-            AscendC::SelectWithBytesMask(
-                scaledMaskedX, scaledMaskedX, MASK_VAL, maskTensor, sharedBuffer, selectShapeInfo);
+            AscendC::SelectWithBytesMask(scaledMaskedX, scaledMaskedX, MASK_VAL, maskTensor, sharedBuffer,
+                                         selectShapeInfo);
         } else {
             Muls(xTensor, xTensor, static_cast<T>(scale), this->elePerIter);
             if constexpr (std::is_same<T, half>::value) {
-                AscendC::SelectWithBytesMask(
-                    xTensor, xTensor, static_cast<T>(MASK_VAL), maskTensor, sharedBuffer, selectShapeInfo);
+                AscendC::SelectWithBytesMask(xTensor, xTensor, static_cast<T>(MASK_VAL), maskTensor, sharedBuffer,
+                                             selectShapeInfo);
                 Cast(scaledMaskedX, xTensor, RoundMode::CAST_NONE, this->elePerIter);
             } else {
-                AscendC::SelectWithBytesMask(
-                    scaledMaskedX, xTensor, MASK_VAL, maskTensor, sharedBuffer, selectShapeInfo);
+                AscendC::SelectWithBytesMask(scaledMaskedX, xTensor, MASK_VAL, maskTensor, sharedBuffer,
+                                             selectShapeInfo);
             }
         }
 
@@ -260,8 +259,8 @@ private:
         outQueueY.EnQue(yTensor);
     }
 
-    __aicore__ inline void SoftmaxX(
-        LocalTensor<float>& dstTensor, LocalTensor<float>& srcTensor, LocalTensor<uint8_t> sharedBuffer, uint64_t lines)
+    __aicore__ inline void SoftmaxX(LocalTensor<float>& dstTensor, LocalTensor<float>& srcTensor,
+                                    LocalTensor<uint8_t> sharedBuffer, uint64_t lines)
     {
         SoftMaxTiling softmaxTilingData = tilingData.softmaxTilingData;
         SoftMaxShapeInfo softmaxShapeInfoData = {
@@ -277,8 +276,8 @@ private:
     __aicore__ inline void CopyOut(uint64_t idx, uint64_t linePerIter)
     {
         LocalTensor<T> yTensor = outQueueY.DeQue<T>();
-        DataCopyExtParams params = {
-            static_cast<uint16_t>(linePerIter), static_cast<uint32_t>(this->xWidth * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams params = {static_cast<uint16_t>(linePerIter), static_cast<uint32_t>(this->xWidth * sizeof(T)),
+                                    0, 0, 0};
         DataCopyPad(gmY[idx * gmOffsetPerIdx], yTensor, params);
         outQueueY.FreeTensor(yTensor);
     }

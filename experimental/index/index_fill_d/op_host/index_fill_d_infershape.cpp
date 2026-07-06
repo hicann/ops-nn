@@ -12,8 +12,7 @@
 #include "log/log.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 static constexpr int64_t IDX_0 = 0;
 
 static ge::graphStatus InferShapeIndexFillD(gert::InferShapeContext* context)
@@ -34,4 +33,4 @@ static ge::graphStatus InferShapeIndexFillD(gert::InferShapeContext* context)
     return GRAPH_SUCCESS;
 }
 IMPL_OP_INFERSHAPE(IndexFillD).InferShape(InferShapeIndexFillD);
-}  // namespace ops
+} // namespace ops

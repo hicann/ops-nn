@@ -68,10 +68,9 @@ class Softshrink {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline Softshrink() {};
+    __aicore__ inline Softshrink(){};
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y,
-        const SoftshrinkTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SoftshrinkTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -82,13 +81,13 @@ private:
     TPipe pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQueue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueue;
-    TBuf<QuePosition::VECCALC> lambdBuf;       // lambd 常量 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> negLambdBuf;    // -lambd 常量 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> xSubBuf;        // x - lambd 中间结果 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> xAddBuf;        // x + lambd 中间结果 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> tmpBuf;         // 两次 Select 之间的中间结果 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> floatInBuf;     // 升精路径的 fp32 输入缓冲 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> cmpMaskBuf;     // Compare 输出 bit mask
+    TBuf<QuePosition::VECCALC> lambdBuf;    // lambd 常量 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> negLambdBuf; // -lambd 常量 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> xSubBuf;     // x - lambd 中间结果 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> xAddBuf;     // x + lambd 中间结果 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> tmpBuf;      // 两次 Select 之间的中间结果 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> floatInBuf;  // 升精路径的 fp32 输入缓冲 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> cmpMaskBuf;  // Compare 输出 bit mask
 
     GlobalTensor<IO_T> xGM;
     GlobalTensor<IO_T> yGM;
@@ -99,8 +98,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Init(
-    GM_ADDR x, GM_ADDR y, const SoftshrinkTilingData* tilingData)
+__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Init(GM_ADDR x, GM_ADDR y,
+                                                                     const SoftshrinkTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -135,8 +134,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Init(
 }
 
 template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::CopyIn(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template AllocTensor<IO_T>();
     AscendC::DataCopyParams copyParams;
@@ -149,8 +147,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::CopyIn(
 }
 
 template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(
-    int64_t currentNum)
+__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template DeQue<IO_T>();
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template AllocTensor<IO_T>();
@@ -191,8 +188,8 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(
 
         // Step 2: mask = (x < -lambd), out_fp32 = mask ? (x + lambd) : tmp
         AscendC::Compare(maskLocal, floatInLocal, negLambdLocal, AscendC::CMPMODE::LT, alignedNum);
-        AscendC::Select(tmpLocal, maskLocal, xAddLocal, tmpLocal,
-                        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
+        AscendC::Select(tmpLocal, maskLocal, xAddLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                        alignedNum);
 
         // Cast fp32 result → IO_T output
         // 对 bfloat16_t 使用 CAST_RINT（round-to-nearest-even），对 half 使用 CAST_NONE（默认 RTNE）
@@ -215,8 +212,8 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(
 
         // Step 2: mask = (x < -lambd), out = mask ? (x + lambd) : tmp
         AscendC::Compare(maskLocal, inputLocal, negLambdLocal, AscendC::CMPMODE::LT, alignedNum);
-        AscendC::Select(outputLocal, maskLocal, xAddLocal, tmpLocal,
-                        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
+        AscendC::Select(outputLocal, maskLocal, xAddLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                        alignedNum);
     }
 
     outputQueue.template EnQue<IO_T>(outputLocal);
@@ -224,8 +221,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(
 }
 
 template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::CopyOut(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template DeQue<IO_T>();
     AscendC::DataCopyParams copyParams;
@@ -241,7 +237,7 @@ template <typename T, int BUFFER_MODE, int NEED_UPCAST>
 __aicore__ inline void Softshrink<T, BUFFER_MODE, NEED_UPCAST>::Process()
 {
     if (blockLength_ <= 0) {
-        return;  // 空 Tensor 或当前核无任务
+        return; // 空 Tensor 或当前核无任务
     }
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {

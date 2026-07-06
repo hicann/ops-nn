@@ -27,9 +27,9 @@ using SyncBatchNormBackwardElemtNs::SyncBatchNormBackwardElemtTilingData;
 
 class SyncBatchNormBackwardElemtTiling {
 public:
-    explicit SyncBatchNormBackwardElemtTiling(gert::TilingContext *context) : tilingContext(context){};
+    explicit SyncBatchNormBackwardElemtTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
-    SyncBatchNormBackwardElemtTilingData *tiling;
+    SyncBatchNormBackwardElemtTilingData* tiling;
 
 protected:
     ge::graphStatus CalcOutputDtype();
@@ -38,7 +38,7 @@ protected:
     ge::graphStatus SetTilingData();
 
 private:
-    gert::TilingContext *tilingContext;
+    gert::TilingContext* tilingContext;
     ge::DataType outputDtype;
     ge::DataType gradOutputDtype;
     ge::DataType saveInputDtype;
@@ -49,5 +49,5 @@ private:
     ge::DataType invstdDtype;
 };
 
-}  // namespace optiling
-#endif  // SYNC_BATCH_NORM_BACKWARD_ELEMT_TILING_ARCH35_H
+} // namespace optiling
+#endif // SYNC_BATCH_NORM_BACKWARD_ELEMT_TILING_ARCH35_H

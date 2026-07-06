@@ -36,25 +36,20 @@ namespace {
 constexpr int64_t DIM_ZERO = 0;
 constexpr int64_t DIM_ONE = 1;
 constexpr int64_t DIM_TWO = 2;
-constexpr int64_t GATE_COUNT = 4;  // i, f, j, o 四个门
+constexpr int64_t GATE_COUNT = 4; // i, f, j, o 四个门
 constexpr int64_t BATCH_DIM = 0;
 constexpr int64_t HIDDEN_DIM = 1;
 constexpr int64_t OUT_DC_PREV_INDEX = 1;
 constexpr int64_t OUT_DGATES_INDEX = 0;
 constexpr int64_t OUT_DB_INDEX = 2;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
-}
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                       op::DataType::DT_FLOAT16};
+} // namespace
 
-static bool CheckNotNull(const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    const aclTensor *gradGates,
-    const aclTensor *gradCx,
-    const aclTensor *gradBias)
+static bool CheckNotNull(const aclTensor* gradHyOptional, const aclTensor* gradCOptional, const aclTensor* cx,
+                         const aclTensor* cy, const aclTensor* storage, const aclTensor* gradGates,
+                         const aclTensor* gradCx, const aclTensor* gradBias)
 {
     OP_CHECK_NULL(gradHyOptional, return false);
     OP_CHECK_NULL(gradCOptional, return false);
@@ -67,14 +62,9 @@ static bool CheckNotNull(const aclTensor *gradHyOptional,
     return true;
 }
 
-static bool CheckFormatValid(const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    const aclTensor *gradGates,
-    const aclTensor *gradCx,
-    const aclTensor *gradBias)
+static bool CheckFormatValid(const aclTensor* gradHyOptional, const aclTensor* gradCOptional, const aclTensor* cx,
+                             const aclTensor* cy, const aclTensor* storage, const aclTensor* gradGates,
+                             const aclTensor* gradCx, const aclTensor* gradBias)
 {
     if (gradHyOptional->GetStorageFormat() != Format::FORMAT_ND) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradHyOptional format only support ND");
@@ -112,70 +102,64 @@ static bool CheckFormatValid(const aclTensor *gradHyOptional,
 }
 
 // 检查单个张量的数据类型支持和一致性
-static bool CheckSingleTensorDtype(const aclTensor* tensor, const char* tensorName,
-                                   ge::DataType baseDtype)
+static bool CheckSingleTensorDtype(const aclTensor* tensor, const char* tensorName, ge::DataType baseDtype)
 {
     // 检查是否在支持的数据类型列表中
     OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
     // 检查数据类型一致性
     if (tensor->GetDataType() != baseDtype) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
-            "%s tensor dtype inconsistent, expected: %s, actual: %s.", 
-            tensorName,
-            op::ToString(baseDtype).GetString(),
-            op::ToString(tensor->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s tensor dtype inconsistent, expected: %s, actual: %s.", tensorName,
+                op::ToString(baseDtype).GetString(), op::ToString(tensor->GetDataType()).GetString());
         return false;
     }
-    
+
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    const aclTensor *gradGates,
-    const aclTensor *gradCx,
-    const aclTensor *gradBias)
+static bool CheckDtypeValid(const aclTensor* gradHyOptional, const aclTensor* gradCOptional, const aclTensor* cx,
+                            const aclTensor* cy, const aclTensor* storage, const aclTensor* gradGates,
+                            const aclTensor* gradCx, const aclTensor* gradBias)
 {
     ge::DataType baseDtype = gradHyOptional->GetDataType();
     // 检查所有单个张量
-    if (!CheckSingleTensorDtype(gradCOptional, "gradCOptional", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(cx, "cx", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(cy, "cy", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(storage, "storage", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(gradGates, "gradGates", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(gradBias, "gradBias", baseDtype)) return false;
-    if (!CheckSingleTensorDtype(gradCx, "gradCx", baseDtype)) return false;
+    if (!CheckSingleTensorDtype(gradCOptional, "gradCOptional", baseDtype))
+        return false;
+    if (!CheckSingleTensorDtype(cx, "cx", baseDtype))
+        return false;
+    if (!CheckSingleTensorDtype(cy, "cy", baseDtype))
+        return false;
+    if (!CheckSingleTensorDtype(storage, "storage", baseDtype))
+        return false;
+    if (!CheckSingleTensorDtype(gradGates, "gradGates", baseDtype))
+        return false;
+    if (!CheckSingleTensorDtype(gradBias, "gradBias", baseDtype))
+        return false;
+    if (!CheckSingleTensorDtype(gradCx, "gradCx", baseDtype))
+        return false;
     return true;
 }
 
-static bool ValidateInputShape(const aclTensor *input, const std::vector<int64_t>& expected_dims, const char* tensorName) {
-  auto shape = input->GetViewShape();
-  if (shape.GetDimNum() != expected_dims.size()) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count.", tensorName);
-      return false;
-  }
-
-  for (size_t i = 0; i < expected_dims.size(); ++i) {
-      if (expected_dims[i] != shape.GetDim(i)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s dim %zu mismatch.", tensorName, i);
+static bool ValidateInputShape(const aclTensor* input, const std::vector<int64_t>& expected_dims,
+                               const char* tensorName)
+{
+    auto shape = input->GetViewShape();
+    if (shape.GetDimNum() != expected_dims.size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count.", tensorName);
         return false;
-      }
-  }
-  return true;
+    }
+
+    for (size_t i = 0; i < expected_dims.size(); ++i) {
+        if (expected_dims[i] != shape.GetDim(i)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s dim %zu mismatch.", tensorName, i);
+            return false;
+        }
+    }
+    return true;
 };
 
-static bool CheckShapeValid(const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    bool hasBias,
-    const aclTensor *gradGates,
-    const aclTensor *gradCx,
-    const aclTensor *gradBias)
+static bool CheckShapeValid(const aclTensor* gradHyOptional, const aclTensor* gradCOptional, const aclTensor* cx,
+                            const aclTensor* cy, const aclTensor* storage, bool hasBias, const aclTensor* gradGates,
+                            const aclTensor* gradCx, const aclTensor* gradBias)
 {
     OP_CHECK_WRONG_DIMENSION(gradHyOptional, DIM_TWO, return false);
     auto dhyShape = gradHyOptional->GetViewShape();
@@ -187,8 +171,7 @@ static bool CheckShapeValid(const aclTensor *gradHyOptional,
     std::vector<int64_t> hiddenDim = {batch, hiddenSize};
 
     bool ret = ValidateInputShape(gradCOptional, hiddenDim, "gradCOptional") &&
-               ValidateInputShape(cx, hiddenDim, "cx") &&
-               ValidateInputShape(cy, hiddenDim, "cy") &&
+               ValidateInputShape(cx, hiddenDim, "cx") && ValidateInputShape(cy, hiddenDim, "cy") &&
                ValidateInputShape(storage, storageDim, "storage") &&
                ValidateInputShape(gradGates, storageDim, "gradGates") &&
                ValidateInputShape(gradCx, hiddenDim, "gradCx");
@@ -196,36 +179,31 @@ static bool CheckShapeValid(const aclTensor *gradHyOptional,
     return ret;
 }
 
-static aclnnStatus CheckParams(const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    bool hasBias,
-    const aclTensor *gradGates,
-    const aclTensor *gradCx,
-    const aclTensor *gradBias)
+static aclnnStatus CheckParams(const aclTensor* gradHyOptional, const aclTensor* gradCOptional, const aclTensor* cx,
+                               const aclTensor* cy, const aclTensor* storage, bool hasBias, const aclTensor* gradGates,
+                               const aclTensor* gradCx, const aclTensor* gradBias)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(gradHyOptional, gradCOptional, cx, cy, storage, gradGates, gradCx, gradBias), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(gradHyOptional, gradCOptional, cx, cy, storage, gradGates, gradCx, gradBias),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(gradHyOptional, gradCOptional, cx, cy, storage, gradGates, gradCx, gradBias), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(gradHyOptional, gradCOptional, cx, cy, storage, gradGates, gradCx, gradBias),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查shape是否满足约束
-    CHECK_RET(CheckShapeValid(gradHyOptional, gradCOptional, cx, cy, storage, hasBias, gradGates, gradCx, gradBias), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeValid(gradHyOptional, gradCOptional, cx, cy, storage, hasBias, gradGates, gradCx, gradBias),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查format是否满足约束
-    CHECK_RET(CheckFormatValid(gradHyOptional, gradCOptional, cx, cy, storage, gradGates, gradCx, gradBias), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormatValid(gradHyOptional, gradCOptional, cx, cy, storage, gradGates, gradCx, gradBias),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-static bool CheckInputsNotEmpty(const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage)
+static bool CheckInputsNotEmpty(const aclTensor* gradHyOptional, const aclTensor* gradCOptional, const aclTensor* cx,
+                                const aclTensor* cy, const aclTensor* storage)
 {
     if (gradHyOptional->IsEmpty() || gradCOptional->IsEmpty() || cx->IsEmpty() || cy->IsEmpty() || storage->IsEmpty()) {
         return false;
@@ -233,25 +211,19 @@ static bool CheckInputsNotEmpty(const aclTensor *gradHyOptional,
     return true;
 }
 
-aclnnStatus aclnnThnnFusedLstmCellBackwardGetWorkspaceSize(
-    const aclTensor *gradHyOptional,
-    const aclTensor *gradCOptional,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    bool hasBias,
-    aclTensor *gradGatesOut,
-    aclTensor *gradCxOut,
-    aclTensor *gradBiasOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+aclnnStatus aclnnThnnFusedLstmCellBackwardGetWorkspaceSize(const aclTensor* gradHyOptional,
+                                                           const aclTensor* gradCOptional, const aclTensor* cx,
+                                                           const aclTensor* cy, const aclTensor* storage, bool hasBias,
+                                                           aclTensor* gradGatesOut, aclTensor* gradCxOut,
+                                                           aclTensor* gradBiasOut, uint64_t* workspaceSize,
+                                                           aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnThnnFusedLstmCellBackward,
-        DFX_IN(gradHyOptional, gradCOptional, cx, cy, storage, hasBias),
-        DFX_OUT(gradGatesOut, gradCxOut, gradBiasOut));
+    L2_DFX_PHASE_1(aclnnThnnFusedLstmCellBackward, DFX_IN(gradHyOptional, gradCOptional, cx, cy, storage, hasBias),
+                   DFX_OUT(gradGatesOut, gradCxOut, gradBiasOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    auto ret = CheckParams(gradHyOptional, gradCOptional, cx, cy, storage, hasBias, gradGatesOut, gradCxOut, gradBiasOut);
+    auto ret = CheckParams(gradHyOptional, gradCOptional, cx, cy, storage, hasBias, gradGatesOut, gradCxOut,
+                           gradBiasOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (!CheckInputsNotEmpty(gradHyOptional, gradCOptional, cx, cy, storage)) {
         *workspaceSize = 0;
@@ -269,9 +241,9 @@ aclnnStatus aclnnThnnFusedLstmCellBackwardGetWorkspaceSize(
     CHECK_RET(cyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto storageContiguous = l0op::Contiguous(storage, uniqueExecutor.get());
     CHECK_RET(storageContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    
-    auto out = l0op::ThnnFusedLstmCellGrad(gradHyOptionalContiguous,
-        gradCOptionalContiguous, cxContiguous, cyContiguous, storageContiguous, hasBias, uniqueExecutor.get());
+
+    auto out = l0op::ThnnFusedLstmCellGrad(gradHyOptionalContiguous, gradCOptionalContiguous, cxContiguous,
+                                           cyContiguous, storageContiguous, hasBias, uniqueExecutor.get());
     CHECK_RET(out[OUT_DGATES_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(out[OUT_DC_PREV_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto gradGatesCopyResult = l0op::ViewCopy(out[OUT_DGATES_INDEX], gradGatesOut, uniqueExecutor.get());
@@ -288,7 +260,8 @@ aclnnStatus aclnnThnnFusedLstmCellBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnThnnFusedLstmCellBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)
+aclnnStatus aclnnThnnFusedLstmCellBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnThnnFusedLstmCellBackward);
     //  固定写法，调用框架能力，完成计算

@@ -59,9 +59,8 @@ protected:
     static void TearDownTestCase() { std::cout << "AdaptiveAvgPool2dGradTilingTest TearDown" << std::endl; }
 };
 
-static void SetPlatformResource(
-    gert::TilingParseContext* parseContext, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void SetPlatformResource(gert::TilingParseContext* parseContext, map<string, string>& socInfos,
+                                map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     ASSERT_NE(parseContext, nullptr);
     ASSERT_NE(parseContext->GetPlatformInfo(), nullptr);
@@ -72,9 +71,8 @@ static void SetPlatformResource(
     parseContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 }
 
-static void SetPlatformResource(
-    gert::TilingContext* tilingContext, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void SetPlatformResource(gert::TilingContext* tilingContext, map<string, string>& socInfos,
+                                map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     ASSERT_NE(tilingContext, nullptr);
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -84,8 +82,8 @@ static void SetPlatformResource(
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 }
 
-static void PrepareAdaptiveAvgPool2dGradCompileInfo(
-    AdaptiveAvgPool2dGradCompileInfo& compileInfo, fe::PlatFormInfos& platformInfo)
+static void PrepareAdaptiveAvgPool2dGradCompileInfo(AdaptiveAvgPool2dGradCompileInfo& compileInfo,
+                                                    fe::PlatFormInfos& platformInfo)
 {
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -94,12 +92,12 @@ static void PrepareAdaptiveAvgPool2dGradCompileInfo(
 
     platformInfo.Init();
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_STRING.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(COMPILE_INFO_STRING.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     SetPlatformResource(kernelHolder.GetContext<gert::TilingParseContext>(), socInfos, aicoreSpec, intrinsics);
 
@@ -124,9 +122,10 @@ static gert::StorageShape MakeStorageShape(const std::vector<int64_t>& shape)
     return storageShape;
 }
 
-static void ExecuteAdaptiveAvgPool2dGradTilingCase(
-    const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& xShapeVec, ge::DataType dtype,
-    ge::Format format, uint64_t* actualTilingKey, uint64_t* actualBlockDim)
+static void ExecuteAdaptiveAvgPool2dGradTilingCase(const std::vector<int64_t>& yGradShapeVec,
+                                                   const std::vector<int64_t>& xShapeVec, ge::DataType dtype,
+                                                   ge::Format format, uint64_t* actualTilingKey,
+                                                   uint64_t* actualBlockDim)
 {
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -184,9 +183,9 @@ static void ExecuteAdaptiveAvgPool2dGradTilingCase(
     }
 }
 
-static void ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-    const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& xShapeVec, ge::DataType dtype,
-    ge::Format format, uint64_t expectTilingKey)
+static void ExecuteAdaptiveAvgPool2dGradTilingKeyCase(const std::vector<int64_t>& yGradShapeVec,
+                                                      const std::vector<int64_t>& xShapeVec, ge::DataType dtype,
+                                                      ge::Format format, uint64_t expectTilingKey)
 {
     uint64_t actualTilingKey = 0;
     uint64_t actualBlockDim = 0;
@@ -195,9 +194,9 @@ static void ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
     EXPECT_GT(actualBlockDim, 0u);
 }
 
-static void ExecuteAdaptiveAvgPool2dGradNotSmallKernelCase(
-    const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& xShapeVec, ge::DataType dtype,
-    ge::Format format)
+static void ExecuteAdaptiveAvgPool2dGradNotSmallKernelCase(const std::vector<int64_t>& yGradShapeVec,
+                                                           const std::vector<int64_t>& xShapeVec, ge::DataType dtype,
+                                                           ge::Format format)
 {
     uint64_t actualTilingKey = 0;
     uint64_t actualBlockDim = 0;
@@ -229,12 +228,12 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_parse_success)
     platformInfo.Init();
     AdaptiveAvgPool2dGradCompileInfo compileInfo;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_STRING.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(COMPILE_INFO_STRING.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     SetPlatformResource(kernelHolder.GetContext<gert::TilingParseContext>(), socInfos, aicoreSpec, intrinsics);
 
@@ -251,34 +250,32 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_parse_success)
 
 TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_key_simt_kernel_nchw_fp32)
 {
-    ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-        {1, 4, 8, 8}, {1, 4, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW, GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, TPL_INT32, 0));
+    ExecuteAdaptiveAvgPool2dGradTilingKeyCase({1, 4, 8, 8}, {1, 4, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW,
+                                              GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, TPL_INT32, 0));
 }
 
 TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_key_simt_kernel_chw_fp16)
 {
-    ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-        {4, 8, 8}, {4, 16, 16}, ge::DT_FLOAT16, ge::FORMAT_NCL, GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, TPL_INT32, 0));
+    ExecuteAdaptiveAvgPool2dGradTilingKeyCase({4, 8, 8}, {4, 16, 16}, ge::DT_FLOAT16, ge::FORMAT_NCL,
+                                              GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, TPL_INT32, 0));
 }
 
 TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_key_big_kernel_nchw_fp32_large_w_window)
 {
-    ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-        {1, 128, 16, 1}, {1, 128, 16, 512}, ge::DT_FLOAT, ge::FORMAT_NCHW,
-        GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32, 0));
+    ExecuteAdaptiveAvgPool2dGradTilingKeyCase({1, 128, 16, 1}, {1, 128, 16, 512}, ge::DT_FLOAT, ge::FORMAT_NCHW,
+                                              GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32, 0));
 }
 
 TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_key_big_kernel_nchw_fp16_large_w_window)
 {
-    ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-        {1, 128, 16, 1}, {1, 128, 16, 1024}, ge::DT_FLOAT16, ge::FORMAT_NCHW,
-        GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32, 0));
+    ExecuteAdaptiveAvgPool2dGradTilingKeyCase({1, 128, 16, 1}, {1, 128, 16, 1024}, ge::DT_FLOAT16, ge::FORMAT_NCHW,
+                                              GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32, 0));
 }
 
 TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_key_big_kernel_chw_fp32_large_w_window)
 {
-    ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-        {128, 16, 1}, {128, 16, 512}, ge::DT_FLOAT, ge::FORMAT_NCL, GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32, 0));
+    ExecuteAdaptiveAvgPool2dGradTilingKeyCase({128, 16, 1}, {128, 16, 512}, ge::DT_FLOAT, ge::FORMAT_NCL,
+                                              GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32, 0));
 }
 
 // ============ Small Kernel Positive Branch Coverage ============
@@ -431,16 +428,15 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_positive_branch_matrix)
 
     for (const auto& item : cases) {
         SCOPED_TRACE(item.name);
-ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-            item.yGradShape, item.xShape, item.dtype, item.format, item.expectTilingKey);
+        ExecuteAdaptiveAvgPool2dGradTilingKeyCase(item.yGradShape, item.xShape, item.dtype, item.format,
+                                                  item.expectTilingKey);
     }
 }
 
 // ==================== OP_LOGE_FOR Error Branch UT Cases ====================
 
-static void ExecuteErrorTestCase(
-    const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& xShapeVec,
-    const std::vector<int64_t>& outputSizeAttr, ge::DataType dtype, ge::Format format)
+static void ExecuteErrorTestCase(const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& xShapeVec,
+                                 const std::vector<int64_t>& outputSizeAttr, ge::DataType dtype, ge::Format format)
 {
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -648,7 +644,7 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_more_irregular_shapes_smoke
 
     for (const auto& item : cases) {
         SCOPED_TRACE(item.name);
-        ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
-            item.yGradShape, item.xShape, item.dtype, item.format, item.expectTilingKey);
+        ExecuteAdaptiveAvgPool2dGradTilingKeyCase(item.yGradShape, item.xShape, item.dtype, item.format,
+                                                  item.expectTilingKey);
     }
 }

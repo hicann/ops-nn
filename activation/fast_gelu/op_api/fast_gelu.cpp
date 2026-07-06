@@ -29,8 +29,8 @@ const aclTensor* FastGelu(const aclTensor* self, aclOpExecutor* executor)
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FastGelu ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
     }
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return nullptr, "FastGelu ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "FastGelu ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 }
 } // namespace l0op

@@ -111,8 +111,7 @@ struct DynamicMxQuantTilingParam {
     bool isFp32Input{false};
 };
 
-enum class RoundModeList
-{
+enum class RoundModeList {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -127,8 +126,7 @@ public:
     explicit DynamicMxQuantOptimzieTiling(gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
         : context_(context), tilingParam_(tilingParam), tilingData{}
     {}
-    ~DynamicMxQuantOptimzieTiling()
-    {}
+    ~DynamicMxQuantOptimzieTiling() {}
     ge::graphStatus DoTiling();
 
 private:
@@ -150,8 +148,7 @@ public:
     explicit DynamicMxQuantTailAxisTiling(gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
         : context_(context), tilingParam_(tilingParam), tilingData_{}
     {}
-    ~DynamicMxQuantTailAxisTiling()
-    {}
+    ~DynamicMxQuantTailAxisTiling() {}
     ge::graphStatus DoTiling();
 
 private:

@@ -37,4 +37,4 @@ ACLNN_API aclnnStatus aclnnMaxPool(void* workspace, uint64_t workspaceSize, aclO
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_MAX_POOL_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_MAX_POOL_H_

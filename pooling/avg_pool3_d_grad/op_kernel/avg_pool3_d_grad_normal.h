@@ -27,11 +27,10 @@ using namespace AvgPool3DGradUtils;
 template <typename T>
 class AvgPool3DGradNormal : public AvgPool3DGradBase<T> {
 public:
-    __aicore__ inline AvgPool3DGradNormal()
-    {}
+    __aicore__ inline AvgPool3DGradNormal() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace);
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData,
+                                GM_ADDR workspace);
 
     __aicore__ inline void InitUbBuffer(GM_ADDR grads, GM_ADDR output, GM_ADDR workspace);
 
@@ -49,8 +48,8 @@ public:
 };
 
 template <typename T>
-__aicore__ inline void AvgPool3DGradNormal<T>::Init(
-    GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
+__aicore__ inline void AvgPool3DGradNormal<T>::Init(GM_ADDR grads, GM_ADDR output,
+                                                    const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
 {
     this->InitParams(tilingData);
     this->InitUbBuffer(grads, output, workspace);
@@ -117,8 +116,8 @@ __aicore__ inline void AvgPool3DGradNormal<T>::CalcIndexW(int64_t indexW)
     if (this->divisorOverride) {
         this->mulsFactor = 1.0f / static_cast<float>(this->divisorOverride);
     } else if (this->countIncludePad) {
-        this->poolSize =
-            (this->dEndPad - this->dStartPad) * (this->hEndPad - this->hStartPad) * (this->wEndPad - this->wStartPad);
+        this->poolSize = (this->dEndPad - this->dStartPad) * (this->hEndPad - this->hStartPad) *
+                         (this->wEndPad - this->wStartPad);
         this->mulsFactor = 1.0f / static_cast<float>(this->poolSize);
     } else {
         this->kernelSize = (this->dEnd - this->dStart) * (this->hEnd - this->hStart) * (this->wEnd - this->wStart);
@@ -220,16 +219,14 @@ __aicore__ inline void AvgPool3DGradNormal<T>::CalcBlock(uint64_t doBlockIdx, ui
     this->VToSSync();
 
     if (std::is_same<T, float>::value) {
-        TransposeBase8M16<T>(
-            this->inputGradUb, this->outputGradUb, CeilDiv(this->wEnd - this->blockWStart, 8) * 8, this->singleCoreNc);
+        TransposeBase8M16<T>(this->inputGradUb, this->outputGradUb, CeilDiv(this->wEnd - this->blockWStart, 8) * 8,
+                             this->singleCoreNc);
     } else if (!std::is_same<T, float>::value && this->IsOverlap == false) {
-        TransposeBase16M16<T>(
-            this->inputGradUb, this->outputGradUb, CeilDiv(this->wEnd - this->blockWStart, 16) * 16,
-            this->singleCoreNc);
+        TransposeBase16M16<T>(this->inputGradUb, this->outputGradUb, CeilDiv(this->wEnd - this->blockWStart, 16) * 16,
+                              this->singleCoreNc);
     } else {
-        TransposeBase8M16<float>(
-            this->inputGradUbFp32, this->outputGradUbFp32, CeilDiv(this->wEnd - this->blockWStart, 8) * 8,
-            this->singleCoreNc);
+        TransposeBase8M16<float>(this->inputGradUbFp32, this->outputGradUbFp32,
+                                 CeilDiv(this->wEnd - this->blockWStart, 8) * 8, this->singleCoreNc);
     }
 
     this->VToSSync();

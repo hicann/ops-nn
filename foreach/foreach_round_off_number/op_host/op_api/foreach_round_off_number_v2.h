@@ -19,8 +19,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensorList* ForeachRoundOffNumberV2(
-    const aclTensorList* x, const aclTensor* roundMode, const aclTensorList* out, aclOpExecutor* executor);
+const aclTensorList* ForeachRoundOffNumberV2(const aclTensorList* x, const aclTensor* roundMode,
+                                             const aclTensorList* out, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_FOREACH_ROUND_OFF_NUMBER_V2_OP_H

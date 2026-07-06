@@ -75,13 +75,9 @@ public:
             .AutoContiguous();
         // ATTR 定义与 SE §5.2 REG_OP 严格匹配
         // REG_OP: .ATTR(update_slots, Bool, true) → AttrType(OPTIONAL)
-        this->Attr("update_slots")
-            .AttrType(OPTIONAL)
-            .Bool(true);
+        this->Attr("update_slots").AttrType(OPTIONAL).Bool(true);
         // REG_OP: .ATTR(use_locking, Bool, false) → AttrType(OPTIONAL)
-        this->Attr("use_locking")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

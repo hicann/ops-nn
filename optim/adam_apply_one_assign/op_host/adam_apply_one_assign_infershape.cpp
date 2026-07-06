@@ -9,7 +9,7 @@
  */
 /*!
  * \file adam_apply_one_assign_infershape.cpp
- * \brief 
+ * \brief
  */
 #include "infershape_broadcast_util.h"
 #include "log/log.h"

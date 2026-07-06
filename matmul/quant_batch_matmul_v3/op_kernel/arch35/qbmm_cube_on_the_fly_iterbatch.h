@@ -20,7 +20,7 @@
 
 #define LOCAL_TEMPLATE_CLASS_PARAMS_V2                                                                            \
     template <class x1Type, class x2Type, class inputScaleType, class biasType, class yType, CubeFormat formatX1, \
-              CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, const MatmulConfig &mmCfg,       \
+              CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, const MatmulConfig& mmCfg,       \
               FusedOpType fusedOpType>
 #define LOCAL_TEMPLATE_FUNC_PARAMS_V2 \
     x1Type, x2Type, inputScaleType, biasType, yType, formatX1, formatX2, formatY, aTrans, bTrans, mmCfg, fusedOpType
@@ -30,7 +30,7 @@ using namespace AscendC;
 using namespace matmul;
 
 namespace IterBatch {
-template <const MatmulConfig &mmCfg, FusedOpType fusedOpType>
+template <const MatmulConfig& mmCfg, FusedOpType fusedOpType>
 constexpr auto cfg_v = [] {
     auto cfg = mmCfg;
     if constexpr (fusedOpType == FusedOpType::RELU) {
@@ -41,15 +41,13 @@ constexpr auto cfg_v = [] {
 }
 
 template <class x1Type, class x2Type, class inputScaleType, class biasType, class yType, CubeFormat formatX1,
-          CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, const MatmulConfig &mmCfg,
+          CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, const MatmulConfig& mmCfg,
           FusedOpType fusedOpType = FusedOpType::NONE>
 class QbmmIterBatchKernel {
 public:
-    __aicore__ inline QbmmIterBatchKernel()
-    {
-    }
+    __aicore__ inline QbmmIterBatchKernel() {}
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale,
-                                GM_ADDR cGM, GM_ADDR workSpace, const void *tilingData, TPipe *que);
+                                GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData, TPipe* que);
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale,
                                             GM_ADDR perTokenScale, GM_ADDR cGM, GM_ADDR workSpace);
     __aicore__ inline void Process();
@@ -58,7 +56,7 @@ protected:
     __aicore__ inline void CalcMmWithBatch();
 
     uint32_t blockIdx_;
-    const DequantBmm::QuantBatchMatmulV3TilingDataParams *quantBmmTilingData_;
+    const DequantBmm::QuantBatchMatmulV3TilingDataParams* quantBmmTilingData_;
 
     GlobalTensor<x1Type> aGlobal_;
     GlobalTensor<x2Type> bGlobal_;
@@ -67,8 +65,8 @@ protected:
     QuantBatchMatmulV3::QbmmMultiBatchBaseBlock block_;
 
     GlobalTensor<uint64_t> scaleGlobal_;
-    using scaleType =
-        typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t, inputScaleType>::type;
+    using scaleType = typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t,
+                                                    inputScaleType>::type;
     using aType = matmul::MatmulType<AscendC::TPosition::GM, formatX1, x1Type, aTrans, LayoutMode::NORMAL>;
     using bType = matmul::MatmulType<AscendC::TPosition::GM, formatX2, x2Type, bTrans, LayoutMode::NORMAL>;
     using cType = matmul::MatmulType<AscendC::TPosition::GM, formatY, yType, false, LayoutMode::NORMAL>;
@@ -80,12 +78,12 @@ LOCAL_TEMPLATE_CLASS_PARAMS_V2
 __aicore__ inline void QbmmIterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS_V2>::Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias,
                                                                                 GM_ADDR scale, GM_ADDR perTokenScale,
                                                                                 GM_ADDR cGM, GM_ADDR workSpace,
-                                                                                const void *tilingData, TPipe *que)
+                                                                                const void* tilingData, TPipe* que)
 {
     if ASCEND_IS_AIV {
         return;
     }
-    quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
     bool isWeightNz = formatX2 == CubeFormat::NZ;
     block_.Init(quantBmmTilingData_, bTrans, isWeightNz);
     blockIdx_ = GetBlockIdx();
@@ -98,29 +96,29 @@ LOCAL_TEMPLATE_CLASS_PARAMS_V2
 __aicore__ inline void QbmmIterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS_V2>::UpdateGlobalAddr(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale, GM_ADDR cGM, GM_ADDR workSpace)
 {
-    if (static_cast<bool>(block_.tilingData_->params.isPerTensor)) {  // pertensor
+    if (static_cast<bool>(block_.tilingData_->params.isPerTensor)) { // pertensor
         if constexpr (!IsSameType<scaleType, uint64_t>::value) {
             uint32_t uint32Scale = 0;
             if constexpr (IsSameType<scaleType, bfloat16_t>::value) {
-                uint16_t uint16Scale = *((__gm__ uint16_t *)scale);
+                uint16_t uint16Scale = *((__gm__ uint16_t*)scale);
                 uint32Scale = uint16Scale << 16;
             } else {
-                uint32Scale = *((__gm__ uint32_t *)scale);
+                uint32Scale = *((__gm__ uint32_t*)scale);
             }
             block_.offset_.scaleScalar = uint32Scale & DEQ_SCALE_MUL;
         } else {
-            block_.offset_.scaleScalar = *((__gm__ uint64_t *)scale);
+            block_.offset_.scaleScalar = *((__gm__ uint64_t*)scale);
         }
     } else {
-        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t *)scale);
+        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t*)scale);
     }
     // update global buffer
-    aGlobal_.SetGlobalBuffer((__gm__ x1Type *)aGM);
-    bGlobal_.SetGlobalBuffer((__gm__ x2Type *)bGM);
+    aGlobal_.SetGlobalBuffer((__gm__ x1Type*)aGM);
+    bGlobal_.SetGlobalBuffer((__gm__ x2Type*)bGM);
     if (static_cast<bool>(block_.tilingData_->matmulTiling.isBias)) {
-        biasGlobal_.SetGlobalBuffer((__gm__ biasType *)bias);
+        biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
     }
-    cGlobal_.SetGlobalBuffer((__gm__ yType *)cGM);
+    cGlobal_.SetGlobalBuffer((__gm__ yType*)cGM);
 }
 
 LOCAL_TEMPLATE_CLASS_PARAMS_V2
@@ -171,5 +169,4 @@ __aicore__ inline void QbmmIterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS_V2>::Proce
         }
     }
 }
-}  // namespace QuantBatchMatmulV3
-
+} // namespace QuantBatchMatmulV3

@@ -50,12 +50,8 @@ public:
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Attr("update_slots")
-            .AttrType(OPTIONAL)
-            .Bool(true);
-        this->Attr("use_locking")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("update_slots").AttrType(OPTIONAL).Bool(true);
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         this->AICore().AddConfig("ascend910b");
     }

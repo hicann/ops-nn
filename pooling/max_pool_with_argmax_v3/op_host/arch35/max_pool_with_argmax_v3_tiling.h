@@ -75,11 +75,9 @@ struct MaxPoolWithArgmaxV3CompileInfo {
 
 class MaxPoolWithArgmaxV3BaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPoolWithArgmaxV3BaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit MaxPoolWithArgmaxV3BaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~MaxPoolWithArgmaxV3BaseTiling() override
-    {}
+    ~MaxPoolWithArgmaxV3BaseTiling() override {}
 
 protected:
     bool IsCapable() override;

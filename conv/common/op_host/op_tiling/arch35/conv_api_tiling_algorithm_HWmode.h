@@ -40,7 +40,7 @@ struct L0TilingParams {
     uint64_t woL0Index = 0;
     uint64_t kL0Index = 0;
     uint64_t nL0Index = 0;
- 
+
     uint64_t hoL0 = 0;
     uint64_t woL0 = 0;
     uint64_t kL0 = 0;
@@ -115,18 +115,19 @@ struct L1TilingFlag {
 
 class ConvTilingAlgorithmHWmode : public ConvTilingAlgorithmBase {
 public:
-    explicit ConvTilingAlgorithmHWmode(ConvTilingBase *tilingIns) : ConvTilingAlgorithmBase(tilingIns)
+    explicit ConvTilingAlgorithmHWmode(ConvTilingBase* tilingIns) : ConvTilingAlgorithmBase(tilingIns)
     {
         this->minBurstNum = MIN_BURST_SIZE / DTYPE_SIZE_TAB.at(tilingIns_->descInfo.fMapType.dtype);
     };
-    ~ConvTilingAlgorithmHWmode() override {};
+    ~ConvTilingAlgorithmHWmode() override{};
     int64_t Process() override;
     void SetL1TilingRes() override;
     void SetL0TilingRes() override;
+
 private:
     // L1 tiling
     void InitPingPong();
-    uint64_t CalcCurL1Size(const L1TilingParams &inputTiling, uint64_t biasFixpParamNB);
+    uint64_t CalcCurL1Size(const L1TilingParams& inputTiling, uint64_t biasFixpParamNB);
     uint64_t CalcCurUbSize(uint64_t hoL1, uint64_t woL1, uint64_t curKh, uint64_t curKw) const;
     void GetL1Tiling();
     void InitCalcL1Params();
@@ -153,23 +154,23 @@ private:
     bool CheckWinOverLoad3dv2Limit(uint64_t wout) const;
     bool IsBL1FullLoadFirst();
     bool IsKBL1FullLoadFirst();
-    void KAL1FullLoadFirst(uint64_t &tmpKAL1, uint64_t &tmpKBL1, uint64_t &tmpHoAL1,
-                           uint64_t &tmpWoAL1, uint64_t &tmpNBL1);
-    void KBL1FullLoadFirst(uint64_t &tmpKAL1, uint64_t &tmpKBL1, uint64_t &tmpHoAL1,
-                           uint64_t &tmpWoAL1, uint64_t &tmpNBL1);
+    void KAL1FullLoadFirst(uint64_t& tmpKAL1, uint64_t& tmpKBL1, uint64_t& tmpHoAL1, uint64_t& tmpWoAL1,
+                           uint64_t& tmpNBL1);
+    void KBL1FullLoadFirst(uint64_t& tmpKAL1, uint64_t& tmpKBL1, uint64_t& tmpHoAL1, uint64_t& tmpWoAL1,
+                           uint64_t& tmpNBL1);
     bool CheckKL1FullLoad(uint64_t kAL1, uint64_t kBL1);
     bool CheckWoL0FullLoadC04Mode() const;
 
-    void RestrictRange(const std::vector<uint64_t> &inputRange, std::vector<uint64_t> &strictRange,
+    void RestrictRange(const std::vector<uint64_t>& inputRange, std::vector<uint64_t>& strictRange,
                        uint64_t restriction) const;
     void InitABL1TilingMode();
 
-    void IterKAL1(uint64_t &kAL1, uint64_t kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t nBL1);
-    void IterKBL1(uint64_t kAL1, uint64_t &kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t nBL1);
-    void IterNBL1(uint64_t kAL1, uint64_t kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t &nBL1);
-    void IterHoAL1(uint64_t &hoAL1Res, const std::vector<uint64_t> &inputHoAL1Range, L1TilingParams &inputTiling);
-    void IterWoAL1(uint64_t &woAL1Res, const std::vector<uint64_t> &inputWoAL1Range, L1TilingParams &inputTiling);
-    void IterHoWoAL1(uint64_t kAL1, uint64_t kBL1, uint64_t &hoAL1, uint64_t &woAL1, uint64_t nBL1);
+    void IterKAL1(uint64_t& kAL1, uint64_t kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t nBL1);
+    void IterKBL1(uint64_t kAL1, uint64_t& kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t nBL1);
+    void IterNBL1(uint64_t kAL1, uint64_t kBL1, uint64_t hoAL1, uint64_t woAL1, uint64_t& nBL1);
+    void IterHoAL1(uint64_t& hoAL1Res, const std::vector<uint64_t>& inputHoAL1Range, L1TilingParams& inputTiling);
+    void IterWoAL1(uint64_t& woAL1Res, const std::vector<uint64_t>& inputWoAL1Range, L1TilingParams& inputTiling);
+    void IterHoWoAL1(uint64_t kAL1, uint64_t kBL1, uint64_t& hoAL1, uint64_t& woAL1, uint64_t nBL1);
     void IterKABL1(uint64_t& tmpKAL1, uint64_t& tmpKBL1, uint64_t tmpHoAL1, uint64_t tmpWoAL1, uint64_t tmpNBL1);
     uint64_t IterKwL1();
     uint64_t IterKhL1(uint64_t kwL1Res);
@@ -181,7 +182,7 @@ private:
     void SetHoL0ForC04();
     void GetKL0Tiling();
     uint64_t CalcL1SizeForL0Tiling(uint64_t currHoL0, uint64_t currWoL0, uint64_t currNL0);
-     // L0 tiling
+    // L0 tiling
     void UpdateNL0();
     void UpdateHoL0WoL0(uint64_t& value, uint64_t& index, std::vector<uint64_t>& range, uint64_t valueMax,
                         uint64_t anotherValue);

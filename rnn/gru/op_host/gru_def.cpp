@@ -16,97 +16,91 @@
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "graph/operator.h"
 
-namespace ops
-{
-  class Gru : public OpDef
-  {
-  public:
-    explicit Gru(const char *name) : OpDef(name)
+namespace ops {
+class Gru : public OpDef {
+public:
+    explicit Gru(const char* name) : OpDef(name)
     {
-      this->Input("x")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Input("wi")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Input("wh")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Input("bi")
-          .ParamType(OPTIONAL)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Input("bh")
-          .ParamType(OPTIONAL)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Input("batch_sizes")
-          .ParamType(OPTIONAL)
-          .DataType({ge::DT_INT64, ge::DT_INT64})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Input("init_h")
-          .ParamType(OPTIONAL)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Output("y")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Output("output_h")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Output("r")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Output("z")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Output("n")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Output("n_h")
-          .ParamType(REQUIRED)
-          .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-          .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-          .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-      this->Attr("direction")
-          .AttrType(REQUIRED)
-          .String("UNIDIRECTIONAL");
-      this->Attr("is_training")
-          .AttrType(REQUIRED)
-          .Bool(true);
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("wi")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("wh")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("bi")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("bh")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("batch_sizes")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_INT64, ge::DT_INT64})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("init_h")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("output_h")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("r")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("z")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("n")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("n_h")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("direction").AttrType(REQUIRED).String("UNIDIRECTIONAL");
+        this->Attr("is_training").AttrType(REQUIRED).Bool(true);
 
-      OpAICoreConfig aicore_config;
-      aicore_config.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .ExtendCfgInfo("opInterface.value", "gru")
-        .ExtendCfgInfo("opFile.value", "gru");
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opInterface.value", "gru")
+            .ExtendCfgInfo("opFile.value", "gru");
 
-      this->AICore().AddConfig("ascend910b", aicore_config);
-      this->AICore().AddConfig("ascend910_93", aicore_config);
+        this->AICore().AddConfig("ascend910b", aicore_config);
+        this->AICore().AddConfig("ascend910_93", aicore_config);
     }
-  };
+};
 
-  OP_ADD(Gru);
+OP_ADD(Gru);
 } // namespace ops

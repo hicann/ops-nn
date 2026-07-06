@@ -27,14 +27,13 @@ static constexpr int RSTD_IDX = 1;
 using namespace ge;
 namespace ops {
 
-static ge::graphStatus InferShape4GemmaRmsNorm(gert::InferShapeContext *context)
+static ge::graphStatus InferShape4GemmaRmsNorm(gert::InferShapeContext* context)
 {
     if (context == nullptr) {
         OP_LOGE("InferShape4GemmaRmsNorm", "Context is nullptr, check failed.");
         return GRAPH_FAILED;
     }
-    if (context->GetComputeNodeInputNum() != INPUT_NODE_NUM ||
-        context->GetComputeNodeOutputNum() != OUTPUT_NODE_NUM) {
+    if (context->GetComputeNodeInputNum() != INPUT_NODE_NUM || context->GetComputeNodeOutputNum() != OUTPUT_NODE_NUM) {
         return GRAPH_FAILED;
     }
 
@@ -88,8 +87,6 @@ static ge::graphStatus InferDataType4GemmaRmsNorm(gert::InferDataTypeContext* co
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(GemmaRmsNorm)
-    .InferShape(InferShape4GemmaRmsNorm)
-    .InferDataType(InferDataType4GemmaRmsNorm);
+IMPL_OP_INFERSHAPE(GemmaRmsNorm).InferShape(InferShape4GemmaRmsNorm).InferDataType(InferDataType4GemmaRmsNorm);
 
 } // namespace ops

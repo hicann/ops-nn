@@ -1,13 +1,12 @@
 /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
-
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 #ifndef OPS_POOLING_MAX_POOL_WITH_ARGMAX_V1_PROTO_H_
 #define OPS_POOLING_MAX_POOL_WITH_ARGMAX_V1_PROTO_H_
@@ -38,9 +37,10 @@ namespace ge {
 
 * @par Outputs:
 * @li y: A tensor. Has the same type and format as input "x".
-* @li argmax:  A tensor. type:uint16, int32. 
+* @li argmax:  A tensor. type:uint16, int32.
 * Format NCHW can only support int32, format NC1HWC0 can only support uint16,
-* specifying when the dtype of argmax is int32, argmax must be index; when the dtype of argmax is uint16, argmax must be mask. \n
+* specifying when the dtype of argmax is int32, argmax must be index; when the dtype of argmax is uint16, argmax must be
+mask. \n
 
 * @attention Constraints:
 * @li The MaxPoolWithArgmaxV2 operator has the same function, and it is recommended to use the V2 operator.

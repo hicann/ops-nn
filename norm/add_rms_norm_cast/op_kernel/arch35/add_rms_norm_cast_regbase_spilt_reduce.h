@@ -20,14 +20,10 @@ namespace AddRmsNormCast {
 template <typename T_X>
 class KernelAddRmsNormCastRegBaseSpiltReduce {
 public:
-    __aicore__ inline KernelAddRmsNormCastRegBaseSpiltReduce(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormCastRegBaseSpiltReduce(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRmsNormCastRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRmsNormCastRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -61,8 +57,8 @@ public:
         reduceSumBufAlign_ = CeilAlign(reduceSumBufLen, AddRmsNormCast::B32_BLOCK_NUM);
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
+                                      GM_ADDR x, GM_ADDR workspace)
     {
         // Init GM
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
@@ -110,8 +106,8 @@ public:
 
             // Process rstd & Copy out xOut(x1+x2)
             LocalTensor<float> rstdLocal = outQueueRstd_.AllocTensor<float>();
-            SubProcessRstd<true>(
-                rstdLocal, 0, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_, epsilon_);
+            SubProcessRstd<true>(rstdLocal, 0, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_,
+                                 epsilon_);
             // Copy out y
             PipeBarrier<PIPE_V>();
             SubProcessY(rstdLocal, mIdx);
@@ -123,9 +119,8 @@ public:
 
 private:
     template <typename T>
-    __aicore__ inline void CopyInX(
-        TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T>& srcGm, uint64_t gmOffset, uint32_t blockLen,
-        uint32_t left = 0, uint32_t right = 0)
+    __aicore__ inline void CopyInX(TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T>& srcGm, uint64_t gmOffset,
+                                   uint32_t blockLen, uint32_t left = 0, uint32_t right = 0)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         DataCopyPadExtParams<T> padParams{
@@ -146,8 +141,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyOutXY(
-        GlobalTensor<T>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset, uint64_t blockLen)
+    __aicore__ inline void CopyOutXY(GlobalTensor<T>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset,
+                                     uint64_t blockLen)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         RmsNorm::DataCopyImpl<T>(yGm[gmOffset], yLocal, 1, blockLen);
@@ -164,9 +159,8 @@ private:
     /**
      * @brief Copy in xGm_[srcGmOffset:srcGmOffset+count] and reduce to dst[dstOffset].
      */
-    __aicore__ inline void ComputeFormerHandle(
-        LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset, uint64_t workSpaceOffset,
-        uint64_t count, uint64_t powerSplit)
+    __aicore__ inline void ComputeFormerHandle(LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset,
+                                               uint64_t workSpaceOffset, uint64_t count, uint64_t powerSplit)
     {
         LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
         uint32_t calCount = CeilAlign((uint64_t)(count * sizeof(T_X)), ALIGN_32_FACTOR) / sizeof(T_X);
@@ -184,8 +178,8 @@ private:
         }
 
         LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
-        NormCommon::ReduceSumRstd<T_X, true, true, false>(
-            dstLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local, workLocal, dstOffset, calNum, powerSplit);
+        NormCommon::ReduceSumRstd<T_X, true, true, false>(dstLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local,
+                                                          workLocal, dstOffset, calNum, powerSplit);
         outQueueX_.EnQue<T_X>(xOutLocal);
         inQueueX1_.FreeTensor(x1Local);
         inQueueX2_.FreeTensor(x2Local);
@@ -202,9 +196,9 @@ private:
     }
 
     template <bool IS_RSTD>
-    __aicore__ inline void SubProcessRstd(
-        LocalTensor<float>& dstLocal, uint64_t position, uint64_t curRow, uint64_t masterLoop, uint64_t tailLoop,
-        uint64_t tail, float avgFactor = 1.0f, float epsilon = 0.0f)
+    __aicore__ inline void SubProcessRstd(LocalTensor<float>& dstLocal, uint64_t position, uint64_t curRow,
+                                          uint64_t masterLoop, uint64_t tailLoop, uint64_t tail, float avgFactor = 1.0f,
+                                          float epsilon = 0.0f)
     {
         uint64_t workspaceOffset{0};
         uint64_t offset{curRow};
@@ -269,8 +263,8 @@ private:
             level1Idx += 1;
             RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1Idx, level2Idx, level3Idx);
         }
-        ComputeMultiLevelRstd<IS_RSTD>(
-            dstLocal, position, level1Local, level2Local, level3Local, level1Idx, level2Idx, avgFactor, epsilon);
+        ComputeMultiLevelRstd<IS_RSTD>(dstLocal, position, level1Local, level2Local, level3Local, level1Idx, level2Idx,
+                                       avgFactor, epsilon);
     }
 
     __aicore__ inline void SubProcessY(LocalTensor<float>& rstdLocal, uint64_t mIdx)
@@ -299,8 +293,8 @@ private:
 
             LocalTensor<float> y1Local = outQueueY1_.AllocTensor<float>();
             LocalTensor<T_X> y2Local = outQueueY2_.AllocTensor<T_X>();
-            AddRmsNormCast::ComputeY<T_X, T_X>(
-                y1Local, y2Local, xOutTmpLocal, gammaLocal, rstdLocal, 0, baseNDtypeAlign_);
+            AddRmsNormCast::ComputeY<T_X, T_X>(y1Local, y2Local, xOutTmpLocal, gammaLocal, rstdLocal, 0,
+                                               baseNDtypeAlign_);
 
             inQueueGamma_.FreeTensor(gammaLocal);
             outQueueY1_.EnQue<float>(y1Local);

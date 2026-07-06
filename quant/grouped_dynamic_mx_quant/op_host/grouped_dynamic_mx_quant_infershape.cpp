@@ -28,7 +28,8 @@ static const int32_t DTYPE_FLOAT8_E5M2 = 35;
 static const int32_t DTYPE_FLOAT8_E4M3FN = 36;
 
 template <typename T>
-static std::string Shape2String(const T& shape) {
+static std::string Shape2String(const T& shape)
+{
     std::ostringstream oss;
     oss << "[";
     if (shape.GetDimNum() > 0) {
@@ -41,7 +42,8 @@ static std::string Shape2String(const T& shape) {
     return oss.str();
 }
 
-graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context) {
+graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeForGroupedDynamicMxQuant");
     const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -58,24 +60,26 @@ graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context)
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
 
-    const int32_t *blockSize = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_BLOCK_SIZE);
+    const int32_t* blockSize = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, blockSize);
     OP_CHECK_IF(static_cast<int64_t>(*blockSize) != 32,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "blockSize",
-            std::to_string(*blockSize), "The value of blockSize must be 32"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "blockSize", std::to_string(*blockSize),
+                                                      "The value of blockSize must be 32"),
+                return ge::GRAPH_FAILED);
 
     size_t xShapeSize = xShape->GetDimNum();
     size_t groupIdxShapeSize = groupIdxShape->GetDimNum();
     OP_CHECK_IF(groupIdxShapeSize != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_index",
-            std::to_string(groupIdxShapeSize), "The shape dim of group_index must be 1"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_index",
+                                                         std::to_string(groupIdxShapeSize),
+                                                         "The shape dim of group_index must be 1"),
+                return ge::GRAPH_FAILED);
     int64_t groupIdxDim0 = groupIdxShape->GetDim(0);
     OP_CHECK_IF(groupIdxDim0 == 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "group_index",
-            Ops::Base::ToString(*groupIdxShape), "Shape[0] of this parameter must be greater than 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "group_index",
+                                                      Ops::Base::ToString(*groupIdxShape),
+                                                      "Shape[0] of this parameter must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
     // dynamic -2 (input x)
     if (Ops::Base::IsUnknownRank(*xShape)) {
@@ -84,9 +88,9 @@ graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context)
         return ge::GRAPH_SUCCESS;
     } else {
         OP_CHECK_IF(xShapeSize != 2,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(xShapeSize), "The shape dim of x must be 2"),
-        return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xShapeSize),
+                                                             "The shape dim of x must be 2"),
+                    return ge::GRAPH_FAILED);
     }
 
     int64_t dim0Size = (xShape->GetDim(0) / (static_cast<int64_t>(*blockSize) * 2) + groupIdxDim0); // 不带起始0
@@ -104,17 +108,19 @@ graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForGroupedDynamicMxQuant(gert::InferDataTypeContext *context) {
+static ge::graphStatus InferDataTypeForGroupedDynamicMxQuant(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForGroupedDynamicMxQuant");
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
     ge::DataType yDtype = ge::DT_FLOAT8_E5M2;
-    const int32_t *pDstDtype = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_DST_TYPE);
+    const int32_t* pDstDtype = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_DST_TYPE);
     if (pDstDtype != nullptr) {
         int32_t dstDtype = *pDstDtype;
-        OP_CHECK_IF(dstDtype != DTYPE_FLOAT8_E5M2 && dstDtype != DTYPE_FLOAT8_E4M3FN,
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
-                ge::TypeUtils::DataTypeToSerialString(yDtype), "DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
+        OP_CHECK_IF(
+            dstDtype != DTYPE_FLOAT8_E5M2 && dstDtype != DTYPE_FLOAT8_E4M3FN,
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type", ge::TypeUtils::DataTypeToSerialString(yDtype),
+                                      "DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
             return ge::GRAPH_FAILED);
         yDtype = static_cast<ge::DataType>(dstDtype);
     }
@@ -127,4 +133,4 @@ static ge::graphStatus InferDataTypeForGroupedDynamicMxQuant(gert::InferDataType
 IMPL_OP_INFERSHAPE(GroupedDynamicMxQuant)
     .InferShape(InferShapeForGroupedDynamicMxQuant)
     .InferDataType(InferDataTypeForGroupedDynamicMxQuant);
-}  // namespace ops
+} // namespace ops

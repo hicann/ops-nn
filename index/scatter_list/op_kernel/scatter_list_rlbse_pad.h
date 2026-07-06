@@ -24,21 +24,19 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListRLBSEPad : public ScatterListBase<T1>
-{
+class ScatterListRLBSEPad : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListRLBSEPad(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ProcessEqLen(const int64_t& eachCoreBatchNum);
     __aicore__ inline void ProcessNotEqLen(const int64_t& eachCoreBatchNum);
     __aicore__ inline void CopyIn(const int64_t& eachCoreBatchIdx);
-    __aicore__ inline void CopyOutPad(
-        const int64_t& copyCount, const int64_t& copyCountAlign, LocalTensor<T1>& updatesUb);
+    __aicore__ inline void CopyOutPad(const int64_t& copyCount, const int64_t& copyCountAlign,
+                                      LocalTensor<T1>& updatesUb);
     __aicore__ inline void CopyOutEqLen(const int64_t& eachCoreBatchIdx);
     __aicore__ inline void CopyOutNotEqLen(const int64_t& eachCoreBatchIdx);
 
@@ -78,9 +76,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBSEPad<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListRLBSEPad<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                         GM_ADDR varOut, GM_ADDR workspace,
+                                                         const ScatterListTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     varPtr = var;
@@ -144,9 +142,8 @@ template <typename T1, typename T2>
 __aicore__ inline void ScatterListRLBSEPad<T1, T2>::CopyIn(const int64_t& eachCoreBatchIdx)
 {
     LocalTensor<T1> updatesUb = updatesInQueue.AllocTensor<T1>();
-    DataCopy(
-        updatesUb, updatesGm[(preCoreBatchIdx + eachCoreBatchIdx) * m_tilingData.srcBatchStride],
-        m_tilingData.updatesCount);
+    DataCopy(updatesUb, updatesGm[(preCoreBatchIdx + eachCoreBatchIdx) * m_tilingData.srcBatchStride],
+             m_tilingData.updatesCount);
     updatesInQueue.EnQue(updatesUb);
 
     LocalTensor<T2> indiceUb = indiceInQueue.AllocTensor<T2>();
@@ -161,8 +158,8 @@ __aicore__ inline void ScatterListRLBSEPad<T1, T2>::CopyIn(const int64_t& eachCo
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBSEPad<T1, T2>::CopyOutPad(
-    const int64_t& copyCount, const int64_t& copyCountAlign, LocalTensor<T1>& updatesUb)
+__aicore__ inline void ScatterListRLBSEPad<T1, T2>::CopyOutPad(const int64_t& copyCount, const int64_t& copyCountAlign,
+                                                               LocalTensor<T1>& updatesUb)
 {
     if constexpr (IsDataCopyPadSupport()) {
         if (copyCountAlign > m_tilingData.updatesOneBlock) {

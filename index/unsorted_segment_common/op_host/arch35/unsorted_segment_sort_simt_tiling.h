@@ -19,13 +19,11 @@
 
 namespace optiling {
 
-class UnsortedSegmentSortSimtTiling : public UnsortedSegmentBaseTiling
-{
+class UnsortedSegmentSortSimtTiling : public UnsortedSegmentBaseTiling {
 public:
-    explicit UnsortedSegmentSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context)
-    {}
-    ~UnsortedSegmentSortSimtTiling() override
-    {}
+    explicit UnsortedSegmentSortSimtTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context) {}
+    ~UnsortedSegmentSortSimtTiling() override {}
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;

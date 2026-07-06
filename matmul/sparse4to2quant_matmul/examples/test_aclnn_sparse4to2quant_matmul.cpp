@@ -40,13 +40,13 @@
 #define CREATE_TENSOR(hostData, shape, deviceAddr, dtype, tensor)                                        \
     ret = CreateAclTensor(hostData, shape, &deviceAddr, dtype, &tensor);                                 \
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> tensor##Ptr(tensor, aclDestroyTensor); \
-    std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                  \
+    std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                   \
     CHECK_RET(ret == ACL_SUCCESS, return ret)
 
 #define CREATE_SPARSE_TENSOR(hostData, weightShape, storageShape, deviceAddr, dataType, tensor)          \
     ret = CreateSparseTensor(hostData, weightShape, storageShape, &deviceAddr, dataType, &tensor);       \
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> tensor##Ptr(tensor, aclDestroyTensor); \
-    std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                  \
+    std::unique_ptr<void, aclError (*)(void*)> deviceAddr##Ptr(deviceAddr, aclrtFree);                   \
     CHECK_RET(ret == ACL_SUCCESS, return ret)
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
@@ -71,9 +71,9 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateSparseTensor(
-    const T* sparseWeightData, const std::vector<int64_t>& viewShape, const std::vector<int64_t>& storageShape,
-    void** deviceAddr, aclDataType dataType, aclTensor** tensor)
+int CreateSparseTensor(const T* sparseWeightData, const std::vector<int64_t>& viewShape,
+                       const std::vector<int64_t>& storageShape, void** deviceAddr, aclDataType dataType,
+                       aclTensor** tensor)
 {
     auto size = static_cast<uint64_t>(GetShapeSize(storageShape)) * sizeof(T);
 
@@ -91,16 +91,14 @@ int CreateSparseTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        viewShape.data(), viewShape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, storageShape.data(),
-        storageShape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(viewShape.data(), viewShape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              storageShape.data(), storageShape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -119,9 +117,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -207,9 +204,8 @@ int aclnnSparse4to2QuantMatmulTest(int32_t deviceId, aclrtStream& stream)
     int64_t* indexDims = nullptr;
     uint64_t indexDimsNum = 0UL;
     aclIntArray* weightShapeArray = aclCreateIntArray(weightShape.data(), weightShape.size());
-    ret = aclnnTransSparse4to2Para(
-        weightHostData.data(), weightShapeArray, &sparseWeightHostData, &sparseWeightDims, &sparseWeightDimsNum,
-        &indexHostData, &indexDims, &indexDimsNum);
+    ret = aclnnTransSparse4to2Para(weightHostData.data(), weightShapeArray, &sparseWeightHostData, &sparseWeightDims,
+                                   &sparseWeightDimsNum, &indexHostData, &indexDims, &indexDimsNum);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransSparse4to2Para failed. ERROR: %d\n", ret); return ret);
     std::unique_ptr<int8_t[]> sparseWeightHostDataPtr(sparseWeightHostData);
     std::unique_ptr<uint8_t[]> indexHostDataPtr(indexHostData);
@@ -220,9 +216,8 @@ int aclnnSparse4to2QuantMatmulTest(int32_t deviceId, aclrtStream& stream)
 
     weightShape.back() = (weightShape.back() + 7) / 8 * 8 / 2; // 4选2后 K轴向上8对齐后减半
     auto sparseWeightStorageShape = GenStorageShape(sparseWeightDims, sparseWeightDimsNum);
-    CREATE_SPARSE_TENSOR(
-        sparseWeightHostData, weightShape, sparseWeightStorageShape, sparseWeightDeviceAddr, aclDataType::ACL_INT8,
-        sparseWeight);
+    CREATE_SPARSE_TENSOR(sparseWeightHostData, weightShape, sparseWeightStorageShape, sparseWeightDeviceAddr,
+                         aclDataType::ACL_INT8, sparseWeight);
 
     auto indexStorageShape = GenStorageShape(indexDims, indexDimsNum);
     CREATE_SPARSE_TENSOR(indexHostData, indexShape, indexStorageShape, indexDeviceAddr, aclDataType::ACL_UINT8, index);
@@ -236,12 +231,12 @@ int aclnnSparse4to2QuantMatmulTest(int32_t deviceId, aclrtStream& stream)
     void* workspaceAddr = nullptr;
 
     // 调用aclnnSparse4to2QuantMatmul第一段接口
-    ret = aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
-        x, sparseWeight, index, xScale, weightScale, bias, out, &workspaceSize, &executor);
+    ret = aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(x, sparseWeight, index, xScale, weightScale, bias, out,
+                                                             &workspaceSize, &executor);
 
-    CHECK_RET(
-        ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
-        return ret);
+    CHECK_RET(ret == ACL_SUCCESS,
+              LOG_PRINT("aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtrTrans(nullptr, aclrtFree);
     if (workspaceSize > 0) {
@@ -261,9 +256,8 @@ int aclnnSparse4to2QuantMatmulTest(int32_t deviceId, aclrtStream& stream)
     auto size = GetShapeSize(outShape);
     // C语言中无法直接打印bf16的数据，需要用uint16读出来，自行通过二进制转成bf16
     std::vector<uint16_t> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %u\n", i, resultData[i]);
@@ -278,8 +272,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = aclnnSparse4to2QuantMatmulTest(deviceId, stream);
-    CHECK_FREE_RET(
-        ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulTest failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulTest failed. ERROR: %d\n", ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

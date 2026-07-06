@@ -21,22 +21,26 @@ class SoftMarginLossGrad : public OpDef {
 public:
     explicit SoftMarginLossGrad(const char* name) : OpDef(name)
     {
-        this->Input("predict").ParamType(REQUIRED)
+        this->Input("predict")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Input("label").ParamType(REQUIRED)
+        this->Input("label")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Input("dout").ParamType(REQUIRED)
+        this->Input("dout")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("gradient").ParamType(REQUIRED)
+        this->Output("gradient")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  *
  * NOTE: Portions of this code were AI-generated and have been
@@ -25,9 +25,8 @@ using namespace AscendC;
 
 #ifdef DTYPE_X
 // UT entry: non-template, DTYPE_X set via compile flag -DDTYPE_X=float/half
-extern "C" __global__ __aicore__ void hard_swish_grad(
-    GM_ADDR grad_output, GM_ADDR self, GM_ADDR grad_input,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void hard_swish_grad(GM_ADDR grad_output, GM_ADDR self, GM_ADDR grad_input,
+                                                      GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     NsHardSwishGrad::HardSwishGrad<DTYPE_X, 0> op;
@@ -37,9 +36,8 @@ extern "C" __global__ __aicore__ void hard_swish_grad(
 #else
 // Device entry: template for TilingKey dispatch
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void hard_swish_grad(
-    GM_ADDR grad_output, GM_ADDR self, GM_ADDR grad_input,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hard_swish_grad(GM_ADDR grad_output, GM_ADDR self, GM_ADDR grad_input, GM_ADDR workspace,
+                                           GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardSwishGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSwishGradTilingData, tilingData, tiling);

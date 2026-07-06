@@ -23,9 +23,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ScatterAddWithSorted);
 
-const aclTensor* ScatterAddWithSorted(
-    const aclTensor* self, const aclTensor* value, const aclTensor* sorted_index, const aclTensor* pos,
-    const std::string& reduction, aclOpExecutor* executor)
+const aclTensor* ScatterAddWithSorted(const aclTensor* self, const aclTensor* value, const aclTensor* sorted_index,
+                                      const aclTensor* pos, const std::string& reduction, aclOpExecutor* executor)
 {
     L0_DFX(ScatterAddWithSorted, self, value, sorted_index, pos);
     // ASCEND950平台支持DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16
@@ -37,12 +36,11 @@ const aclTensor* ScatterAddWithSorted(
     }
 
     auto selfOut = const_cast<aclTensor*>(self);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        ScatterAddWithSorted, OP_INPUT(selfOut, value, sorted_index, pos), OP_OUTPUT(selfOut), OP_ATTR(reduction));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterAddWithSortedAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterAddWithSorted, OP_INPUT(selfOut, value, sorted_index, pos),
+                                           OP_OUTPUT(selfOut), OP_ATTR(reduction));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterAddWithSortedAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return selfOut;
 }
 } // namespace l0op

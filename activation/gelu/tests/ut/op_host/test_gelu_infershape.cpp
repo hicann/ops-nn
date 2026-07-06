@@ -25,15 +25,9 @@
 
 class GeluProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "gelu Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "gelu Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "gelu Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "gelu Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(GeluProtoTest, gelu_infershape_diff_test)

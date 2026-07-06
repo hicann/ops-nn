@@ -17,13 +17,12 @@
 #include "pooling/avg_pool/op_host/avg_pool_tiling_common.h"
 
 using namespace AscendC;
-using  Ops::NN::Optiling::TilingRegistry;
-namespace optiling
-{
+using Ops::NN::Optiling::TilingRegistry;
+namespace optiling {
 
 ge::graphStatus Tiling4AvgPoolRegBase(gert::TilingContext* context)
 {
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-}  // namespace optiling
+} // namespace optiling

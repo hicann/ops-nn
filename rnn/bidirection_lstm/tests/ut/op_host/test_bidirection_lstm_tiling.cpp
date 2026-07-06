@@ -22,16 +22,13 @@
 
 class BidirectionLSTMTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "BidirectionLSTMTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "BidirectionLSTMTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "BidirectionLSTMTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "BidirectionLSTMTiling TearDown" << std::endl; }
 };
 
-TEST_F(BidirectionLSTMTiling, test_tiling_float16_1) {
+TEST_F(BidirectionLSTMTiling, test_tiling_float16_1)
+{
     std::string op_type("BidirectionLSTM");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -66,12 +63,12 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_1) {
     } compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -104,9 +101,9 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_1) {
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&xShapes, &initHShapes, &initCShapes,
-                                    &wHIShapes, &wHHShapes, &biasHIShapes, &biasHHShapes,
-                                    &wHIReverseShapes, &wHHReverseShapes, &biasHIReverseShapes, &biasHHReverseShapes})
+                      .InputShapes({&xShapes, &initHShapes, &initCShapes, &wHIShapes, &wHHShapes, &biasHIShapes,
+                                    &biasHHShapes, &wHIReverseShapes, &wHHReverseShapes, &biasHIReverseShapes,
+                                    &biasHHReverseShapes})
                       .OutputShapes({&outShape, &outHShape, &outCShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -125,9 +122,9 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_1) {
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"num_layers", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"isbias", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_first", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"bidirection", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                                  {"isbias", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_first", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"bidirection", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -146,7 +143,8 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_1) {
     ASSERT_EQ(tiling_key, 10000001);
 }
 
-TEST_F(BidirectionLSTMTiling, test_tiling_float16_2) {
+TEST_F(BidirectionLSTMTiling, test_tiling_float16_2)
+{
     std::string op_type("BidirectionLSTM");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -182,12 +180,12 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_2) {
     } compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -220,9 +218,9 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_2) {
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&xShapes, &initHShapes, &initCShapes,
-                                    &wHIShapes, &wHHShapes, &biasHIShapes, &biasHHShapes,
-                                    &wHIReverseShapes, &wHHReverseShapes, &biasHIReverseShapes, &biasHHReverseShapes})
+                      .InputShapes({&xShapes, &initHShapes, &initCShapes, &wHIShapes, &wHHShapes, &biasHIShapes,
+                                    &biasHHShapes, &wHIReverseShapes, &wHHReverseShapes, &biasHIReverseShapes,
+                                    &biasHHReverseShapes})
                       .OutputShapes({&outShape, &outHShape, &outCShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -241,9 +239,9 @@ TEST_F(BidirectionLSTMTiling, test_tiling_float16_2) {
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"num_layers", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                {"isbias", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                                {"batch_first", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"bidirection", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                                  {"isbias", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"batch_first", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"bidirection", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

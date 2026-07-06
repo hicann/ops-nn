@@ -13,18 +13,14 @@
 
 #include "unsorted_segment_base.h"
 
-namespace UnsortedSegment
-{
+namespace UnsortedSegment {
 using namespace AscendC;
 
-template <typename TX, typename Index, typename SimtGatherFunc, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc>
-class KernelUnsortedSegmentFL
-{
+template <typename TX, typename Index, typename SimtGatherFunc, typename InitValueType, typename GmInitFunc,
+          typename VectorComputeFunc, typename SetAtomicModeFunc>
+class KernelUnsortedSegmentFL {
 public:
-    __aicore__ inline KernelUnsortedSegmentFL(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelUnsortedSegmentFL(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output,
                                 const UnsortedSegmentOutFlTilingData* tiling)
@@ -58,17 +54,17 @@ public:
     {
         LocalTensor<Index> indexLocal = inQueueIndex.AllocTensor<Index>();
         DataCopyExtParams extParams{
-            static_cast<uint16_t>(1),                       // blockCount
-            static_cast<uint32_t>(extent * sizeof(Index)),  // blockLen
-            0,                                              // srcStride
-            0,                                              // dstStride
-            0                                               // rsv
+            static_cast<uint16_t>(1),                      // blockCount
+            static_cast<uint32_t>(extent * sizeof(Index)), // blockLen
+            0,                                             // srcStride
+            0,                                             // dstStride
+            0                                              // rsv
         };
         DataCopyPadExtParams<Index> padParams{
-            false,  // isPad
-            0,      // leftPadding
-            0,      // rightPadding
-            0       // paddingValue
+            false, // isPad
+            0,     // leftPadding
+            0,     // rightPadding
+            0      // paddingValue
         };
         DataCopyPad(indexLocal, segmentIdsGm[offset], extParams, padParams);
         inQueueIndex.EnQue(indexLocal);
@@ -130,9 +126,9 @@ public:
             __local_mem__ TX* midResPtr = (__local_mem__ TX*)midRes.GetPhyAddr();
             DataSyncBarrier<MemDsbT::UB>();
             asc_vf_call<SimtGatherValue<TX, Index, SimtGatherFunc>>(
-                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)},
-                midResPtr, xUbLocalPtr, (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize,
-                needIndexOneUb, oneRowOutNumAlign);
+                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)}, midResPtr, xUbLocalPtr,
+                (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize, needIndexOneUb,
+                oneRowOutNumAlign);
             inQueueX.FreeTensor(xUbLocal);
             inQueueIndex.FreeTensor(indexUb);
         }
@@ -151,11 +147,11 @@ public:
         WaitFlag<HardEvent::V_MTE3>(eventId);
         SetAtomicModeFunc()();
         DataCopyExtParams extParams{
-            static_cast<uint16_t>(1),         // blockCount
-            static_cast<uint32_t>(oneRowOutNum * sizeof(TX)),  // blockLen
-            0,                                                 // srcStride
-            0,                                                 // dstStride
-            0                                                  // rsv
+            static_cast<uint16_t>(1),                         // blockCount
+            static_cast<uint32_t>(oneRowOutNum * sizeof(TX)), // blockLen
+            0,                                                // srcStride
+            0,                                                // dstStride
+            0                                                 // rsv
         };
         DataCopyPad(outputGm, midRes, extParams);
         SetAtomicNone();
@@ -178,5 +174,5 @@ private:
     uint32_t oneCoreUbLoop{1};
     uint32_t rowNumOneUb{1};
 };
-}  // namespace UnsortedSegmentFL
+} // namespace UnsortedSegment
 #endif

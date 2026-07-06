@@ -21,20 +21,20 @@ namespace Modulate {
 using namespace AscendC;
 
 // tiling 切 L
-template<typename T, bool isScale, bool isShift>
-class ModulateL : public ModulateBaseKernel<T, isScale, isShift>
-{
+template <typename T, bool isScale, bool isShift>
+class ModulateL : public ModulateBaseKernel<T, isScale, isShift> {
 public:
-    __aicore__ inline ModulateL(TPipe &tpipe, const ModulateRegbaseTilingData &tilingData) :
-                                ModulateBaseKernel<T, isScale, isShift>(tpipe, tilingData){};
+    __aicore__ inline ModulateL(TPipe& tpipe, const ModulateRegbaseTilingData& tilingData)
+        : ModulateBaseKernel<T, isScale, isShift>(tpipe, tilingData){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y);
     __aicore__ inline void Process();
+
 protected:
     __aicore__ inline void InitParams();
     __aicore__ inline void SetGmAddr(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y);
 };
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateL<T, isScale, isShift>::Init(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y)
 {
     InitParams();
@@ -42,7 +42,7 @@ __aicore__ inline void ModulateL<T, isScale, isShift>::Init(GM_ADDR x, GM_ADDR s
     SetGmAddr(x, scale, shift, y);
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateL<T, isScale, isShift>::InitParams()
 {
     // 初始化基本参数
@@ -61,7 +61,7 @@ __aicore__ inline void ModulateL<T, isScale, isShift>::InitParams()
     this->batchEndId_ = (this->currentL_ + this->dataNum_ - 1) / this->inputL_;
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateL<T, isScale, isShift>::SetGmAddr(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y)
 {
     uint64_t baseOffset = this->currentL_ * this->inputD_;
@@ -73,7 +73,7 @@ __aicore__ inline void ModulateL<T, isScale, isShift>::SetGmAddr(GM_ADDR x, GM_A
     this->xGm_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateL<T, isScale, isShift>::Process()
 {
     this->maxCopyRows_ = this->dataNum_ < this->maxCopyRows_ ? this->dataNum_ : this->maxCopyRows_;
@@ -104,22 +104,23 @@ __aicore__ inline void ModulateL<T, isScale, isShift>::Process()
 }
 
 // tiling 切 D
-template<typename T, bool isScale, bool isShift>
-class ModulateD : public ModulateBaseKernel<T, isScale, isShift>
-{
+template <typename T, bool isScale, bool isShift>
+class ModulateD : public ModulateBaseKernel<T, isScale, isShift> {
 public:
-    __aicore__ inline ModulateD(TPipe &tpipe, const ModulateRegbaseTilingData &tilingData) :
-                                ModulateBaseKernel<T, isScale, isShift>(tpipe, tilingData){};
+    __aicore__ inline ModulateD(TPipe& tpipe, const ModulateRegbaseTilingData& tilingData)
+        : ModulateBaseKernel<T, isScale, isShift>(tpipe, tilingData){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y);
     __aicore__ inline void Process();
+
 protected:
     __aicore__ inline void InitParams();
     __aicore__ inline void SetGmAddr(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y);
+
 private:
     uint64_t currentD_;
 };
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateD<T, isScale, isShift>::Init(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y)
 {
     InitParams();
@@ -127,7 +128,7 @@ __aicore__ inline void ModulateD<T, isScale, isShift>::Init(GM_ADDR x, GM_ADDR s
     SetGmAddr(x, scale, shift, y);
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateD<T, isScale, isShift>::InitParams()
 {
     // 初始化基本参数
@@ -140,14 +141,14 @@ __aicore__ inline void ModulateD<T, isScale, isShift>::InitParams()
     } else {
         this->dataNum_ = this->tailDataNum_;
         currentD_ = this->formerCoreNum_ * this->formerDataNum_ +
-                          (this->blockIdx_ - this->formerCoreNum_) * this->tailDataNum_;
+                    (this->blockIdx_ - this->formerCoreNum_) * this->tailDataNum_;
     }
     this->batchStartId_ = 0;
     this->batchEndId_ = this->inputB_;
     this->maxCalcNum_ = this->dataNum_ < this->maxCalcNum_ ? this->dataNum_ : this->maxCalcNum_;
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateD<T, isScale, isShift>::SetGmAddr(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR y)
 {
     this->xGm_.SetGlobalBuffer((__gm__ T*)x + currentD_);
@@ -157,7 +158,7 @@ __aicore__ inline void ModulateD<T, isScale, isShift>::SetGmAddr(GM_ADDR x, GM_A
     this->xGm_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
 }
 
-template<typename T, bool isScale, bool isShift>
+template <typename T, bool isScale, bool isShift>
 __aicore__ inline void ModulateD<T, isScale, isShift>::Process()
 {
     for (uint64_t BId = 0; BId < this->inputB_; BId++) {
@@ -178,5 +179,5 @@ __aicore__ inline void ModulateD<T, isScale, isShift>::Process()
         }
     }
 }
-}
+} // namespace Modulate
 #endif // MODULATE_REGBASE_H

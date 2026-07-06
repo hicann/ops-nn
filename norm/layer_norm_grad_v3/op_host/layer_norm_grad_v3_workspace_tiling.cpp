@@ -56,8 +56,8 @@ ge::graphStatus LayerNormGradV3WorkspaceTiling::PostTiling()
 
 ge::graphStatus LayerNormGradV3WorkspaceTiling::DoOpTiling()
 {
-    int64_t colAlignV =
-        CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B16_ALIGN_FACTOR) * LNG_B16_ALIGN_FACTOR;
+    int64_t colAlignV = CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B16_ALIGN_FACTOR) *
+                        LNG_B16_ALIGN_FACTOR;
     int64_t colAlignM = 0;
     if (commonParams.dyDtype == ge::DataType::DT_FLOAT) {
         colAlignM = colAlignV;
@@ -70,8 +70,8 @@ ge::graphStatus LayerNormGradV3WorkspaceTiling::DoOpTiling()
     td_.set_colAlignV(colAlignV);
     td_.set_colAlignM(colAlignM);
     // calculate block tiling, row split block
-    int64_t blockFormer =
-        CeilDiv(static_cast<int64_t>(commonParams.rowSize), static_cast<int64_t>(commonParams.coreNum));
+    int64_t blockFormer = CeilDiv(static_cast<int64_t>(commonParams.rowSize),
+                                  static_cast<int64_t>(commonParams.coreNum));
     int64_t blockNum = CeilDiv(static_cast<int64_t>(commonParams.rowSize), blockFormer);
     int64_t blockTail = commonParams.rowSize - (blockNum - 1) * blockFormer;
     td_.set_blockFormer(blockFormer);

@@ -23,17 +23,15 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 struct LpNormV2TilingKey {
     ReduceTilingKey reduceTiling;
     uint32_t templateNum = 0;
 };
 
-class LpNormV2Tiling
-{
+class LpNormV2Tiling {
 public:
-    explicit LpNormV2Tiling(gert::TilingContext* context) : tilingContext_(context) {};
+    explicit LpNormV2Tiling(gert::TilingContext* context) : tilingContext_(context){};
     ge::graphStatus RunTiling(const ReduceOpCompileInfo* compileInfo);
 
 private:
@@ -69,5 +67,5 @@ private:
     bool dypeXEqualY = false;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_LP_NORM_V2_H_
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_LP_NORM_V2_H_

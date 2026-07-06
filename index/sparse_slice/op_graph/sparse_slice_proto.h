@@ -42,16 +42,14 @@ namespace ge {
 */
 REG_OP(SparseSlice)
     .INPUT(indices, TensorType({DT_INT64}))
-    .INPUT(values, TensorType({ DT_INT64, DT_INT32, DT_UINT16, DT_INT16, DT_UINT8,
-                                DT_INT8, DT_FLOAT16, DT_FLOAT, DT_DOUBLE, DT_COMPLEX64,
-                                DT_COMPLEX128, DT_BOOL, DT_STRING, DT_RESOURCE, DT_BF16}))
+    .INPUT(values, TensorType({DT_INT64, DT_INT32, DT_UINT16, DT_INT16, DT_UINT8, DT_INT8, DT_FLOAT16, DT_FLOAT,
+                               DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128, DT_BOOL, DT_STRING, DT_RESOURCE, DT_BF16}))
     .INPUT(shape, TensorType({DT_INT64}))
     .INPUT(start, TensorType({DT_INT64}))
     .INPUT(size, TensorType({DT_INT64}))
     .OUTPUT(y_indices, TensorType({DT_INT64}))
-    .OUTPUT(y_values, TensorType({  DT_INT64, DT_INT32, DT_UINT16, DT_INT16,
-                                    DT_UINT8, DT_INT8, DT_FLOAT16, DT_FLOAT, DT_DOUBLE,
-                                    DT_COMPLEX64, DT_COMPLEX128, DT_BOOL, DT_STRING, DT_RESOURCE, DT_BF16}))
+    .OUTPUT(y_values, TensorType({DT_INT64, DT_INT32, DT_UINT16, DT_INT16, DT_UINT8, DT_INT8, DT_FLOAT16, DT_FLOAT,
+                                  DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128, DT_BOOL, DT_STRING, DT_RESOURCE, DT_BF16}))
     .OUTPUT(y_shape, TensorType({DT_INT64}))
     .OP_END_FACTORY_REG(SparseSlice)
 } // namespace ge

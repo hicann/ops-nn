@@ -25,8 +25,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
 namespace l0op {
 OP_TYPE_REGISTER(GatherElementsV2);
 
-const aclTensor* GatherElementsV2(
-    const aclTensor* self, const aclTensor* index, const int64_t dim, aclOpExecutor* executor)
+const aclTensor* GatherElementsV2(const aclTensor* self, const aclTensor* index, const int64_t dim,
+                                  aclOpExecutor* executor)
 {
     L0_DFX(GatherElementsV2, self, index, dim);
     CHECK_RET(self != nullptr, nullptr);
@@ -44,7 +44,7 @@ const aclTensor* GatherElementsV2(
     }
 
     if (!(index->GetDataType() == op::DataType::DT_INT32)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[GatherElementsV2] index must be int32"); 
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[GatherElementsV2] index must be int32");
         return nullptr;
     }
 
@@ -52,10 +52,9 @@ const aclTensor* GatherElementsV2(
     auto ret = ACL_SUCCESS;
 
     ret = ADD_TO_LAUNCHER_LIST_AICORE(GatherElementsV2, OP_INPUT(self, index), OP_OUTPUT(out), OP_ATTR(dim));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GatherElementsV2 AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GatherElementsV2 AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
 
     return out;
 }

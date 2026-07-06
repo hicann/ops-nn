@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file sparse_segment_mean_simt_large_inner.h
  * \brief
  */
@@ -33,14 +33,13 @@ constexpr uint32_t MAX_THREAD_NUM = 2048;
 namespace SparseSegmentMeanNameSpace {
 using namespace AscendC;
 
-
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
 class SparseSegmentMeanSimtLargeInner {
 public:
-  __aicore__ inline SparseSegmentMeanSimtLargeInner(){};
-  __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
-                              GM_ADDR workspace, const SparseSegmentMeanSimtTilingData* tilingData);
-  __aicore__ inline void Process();
+    __aicore__ inline SparseSegmentMeanSimtLargeInner(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
+                                const SparseSegmentMeanSimtTilingData* tilingData);
+    __aicore__ inline void Process();
 
 private:
     GlobalTensor<X_T> xGm_;
@@ -48,7 +47,7 @@ private:
     GlobalTensor<SEGMENTIDS_T> segmentIdsGm_;
     GlobalTensor<X_T> yGm_;
     GlobalTensor<uint32_t> workspaceSegmentOffset_;
-    
+
     const SparseSegmentMeanSimtTilingData* tilingData_ = nullptr;
 
     uint32_t segOffsetBase_ = 0;
@@ -58,10 +57,10 @@ private:
     uint32_t blockNums_ = 0;
 };
 
-
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
-__aicore__ inline void SparseSegmentMeanSimtLargeInner<X_T, INDICES_T, SEGMENTIDS_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
-                                                                                GM_ADDR workspace, const SparseSegmentMeanSimtTilingData* tilingData) 
+__aicore__ inline void SparseSegmentMeanSimtLargeInner<X_T, INDICES_T, SEGMENTIDS_T>::Init(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
+    const SparseSegmentMeanSimtTilingData* tilingData)
 {
     tilingData_ = tilingData;
     xGm_.SetGlobalBuffer((__gm__ X_T*)x);
@@ -84,7 +83,6 @@ __aicore__ inline void SparseSegmentMeanSimtLargeInner<X_T, INDICES_T, SEGMENTID
     }
 }
 
-
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
 __aicore__ inline void SparseSegmentMeanSimtLargeInner<X_T, INDICES_T, SEGMENTIDS_T>::Process()
 {
@@ -98,16 +96,17 @@ __aicore__ inline void SparseSegmentMeanSimtLargeInner<X_T, INDICES_T, SEGMENTID
     int64_t xDim0 = static_cast<uint32_t>(tilingData_->gatherSize);
     uint32_t innerSize = static_cast<uint32_t>(tilingData_->innerSize);
 
-    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
-                                                               (__gm__ uint32_t*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()));
-    
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(
+        dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
+        (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()));
+
     SyncAll();
 
-    asc_vf_call<SimtLargeInnerComputer<X_T, INDICES_T>>(dim3{threadNumX, threadNumY}, segOffsetBase_, curCoreSegments_, innerSize, xDim0,
-                                                                   (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
-                                                                   (__gm__ uint32_t*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()));
+    asc_vf_call<SimtLargeInnerComputer<X_T, INDICES_T>>(
+        dim3{threadNumX, threadNumY}, segOffsetBase_, curCoreSegments_, innerSize, xDim0,
+        (__gm__ X_T*)(xGm_.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
+        (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()), (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()));
 }
 
-
-}  // namespace SparseSegmentMeanNameSpace
-#endif  // SPARSE_SEGMENT_MEAN_SIMT_LARGE_INNER_H
+} // namespace SparseSegmentMeanNameSpace
+#endif // SPARSE_SEGMENT_MEAN_SIMT_LARGE_INNER_H

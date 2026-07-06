@@ -13,7 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* MaskedScatterWithPosition(const aclTensor* x, const aclTensor* mask, const aclTensor* position, const aclTensor* updates, aclOpExecutor* executor);
+const aclTensor* MaskedScatterWithPosition(const aclTensor* x, const aclTensor* mask, const aclTensor* position,
+                                           const aclTensor* updates, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif

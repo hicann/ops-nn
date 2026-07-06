@@ -33,9 +33,8 @@ using namespace SparseSegmentMeanNameSpace;
 #define FULL_LOAD_SMALL_INNER_TILING_KEY 11
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void invokeTemplateMeanSimtLarge(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
-    const SparseSegmentMeanSimtTilingData& tilingData)
+__aicore__ inline void invokeTemplateMeanSimtLarge(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
+                                                   GM_ADDR workspace, const SparseSegmentMeanSimtTilingData& tilingData)
 {
     SparseSegmentMeanSimtLargeInner<T1, T2, T3> op;
     op.Init(x, indices, segment_ids, y, workspace, &tilingData);
@@ -43,9 +42,8 @@ __aicore__ inline void invokeTemplateMeanSimtLarge(
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void invokeTemplateMeanSimtSmall(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
-    const SparseSegmentMeanSimtTilingData& tilingData)
+__aicore__ inline void invokeTemplateMeanSimtSmall(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
+                                                   GM_ADDR workspace, const SparseSegmentMeanSimtTilingData& tilingData)
 {
     SparseSegmentMeanSimtSmallInner<T1, T2, T3> op;
     op.Init(x, indices, segment_ids, y, workspace, &tilingData);
@@ -53,9 +51,8 @@ __aicore__ inline void invokeTemplateMeanSimtSmall(
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void invokeTemplateMeanSimtLoop(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
-    const SparseSegmentMeanSimtTilingData& tilingData)
+__aicore__ inline void invokeTemplateMeanSimtLoop(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
+                                                  GM_ADDR workspace, const SparseSegmentMeanSimtTilingData& tilingData)
 {
     SparseSegmentMeanSimtLoop<T1, T2, T3> op;
     op.Init(x, indices, segment_ids, y, workspace, &tilingData);
@@ -63,8 +60,8 @@ __aicore__ inline void invokeTemplateMeanSimtLoop(
 }
 
 template <typename T>
-__aicore__ inline void invokeTemplateAllClear(
-    GM_ADDR output, const SparseSegmentMeanSimdTilingData* tilingData, AscendC::TPipe& pipeIn)
+__aicore__ inline void invokeTemplateAllClear(GM_ADDR output, const SparseSegmentMeanSimdTilingData* tilingData,
+                                              AscendC::TPipe& pipeIn)
 {
     AllClear<T> allClearInstance;
     allClearInstance.Init(output, tilingData, pipeIn);
@@ -74,9 +71,9 @@ __aicore__ inline void invokeTemplateAllClear(
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void invokeTemplateMeanSimd(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace,
-    const SparseSegmentMeanSimdTilingData* tilingData, AscendC::TPipe& pipeIn)
+__aicore__ inline void invokeTemplateMeanSimd(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
+                                              GM_ADDR workspace, const SparseSegmentMeanSimdTilingData* tilingData,
+                                              AscendC::TPipe& pipeIn)
 {
     SparseSegmentMeanSimdKernel<T1, T2, T3> op;
     op.Init(x, indices, segment_ids, y, workspace, pipeIn, tilingData);
@@ -86,8 +83,9 @@ __aicore__ inline void invokeTemplateMeanSimd(
 }
 
 template <typename T1>
-__aicore__ inline void invokeTemplateMultiCoreAdd(
-    GM_ADDR y, GM_ADDR workspace, const SparseSegmentMeanSimdTilingData* tilingData, AscendC::TPipe& pipeIn)
+__aicore__ inline void invokeTemplateMultiCoreAdd(GM_ADDR y, GM_ADDR workspace,
+                                                  const SparseSegmentMeanSimdTilingData* tilingData,
+                                                  AscendC::TPipe& pipeIn)
 {
     SparseSegmentMeanMultiCoreKernel<T1> op;
     op.Init(y, workspace, pipeIn, tilingData);
@@ -95,8 +93,8 @@ __aicore__ inline void invokeTemplateMultiCoreAdd(
     pipeIn.Reset();
 }
 
-extern "C" __global__ __aicore__ void sparse_segment_mean(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sparse_segment_mean(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y,
+                                                          GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseSegmentMeanSimtTilingData);
     REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 10", SparseSegmentMeanFullLoadTilingData);
@@ -118,17 +116,21 @@ extern "C" __global__ __aicore__ void sparse_segment_mean(
         op.Process();
     } else if (TILING_KEY_IS(SIMT_LARGE_INNER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SparseSegmentMeanSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace, tilingData);
+        invokeTemplateMeanSimtLarge<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace,
+                                                                               tilingData);
     } else if (TILING_KEY_IS(SIMT_SMALL_INNER_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SparseSegmentMeanSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtSmall<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace, tilingData);
+        invokeTemplateMeanSimtSmall<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace,
+                                                                               tilingData);
     } else if (TILING_KEY_IS(SIMT_LOOP_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SparseSegmentMeanSimtTilingData, tilingData, tiling);
-        invokeTemplateMeanSimtLoop<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace, tilingData);
+        invokeTemplateMeanSimtLoop<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace,
+                                                                              tilingData);
     } else if (TILING_KEY_IS(SIMD_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SparseSegmentMeanSimdTilingData, tilingData, tiling);
         invokeTemplateAllClear<DTYPE_X>(y, &tilingData, pipeIn);
-        invokeTemplateMeanSimd<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace, &tilingData, pipeIn);
+        invokeTemplateMeanSimd<DTYPE_X, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(x, indices, segment_ids, y, workspace,
+                                                                          &tilingData, pipeIn);
         invokeTemplateMultiCoreAdd<DTYPE_X>(y, workspace, &tilingData, pipeIn);
     }
 }

@@ -45,10 +45,7 @@ __aicore__ inline uint64_t MMFp32CeilDiv(uint64_t a, uint64_t b)
 /**
  * if b is 0, return 0
  */
-__aicore__ inline uint64_t MMFp32CeilAlign(uint64_t a, uint64_t b)
-{
-    return MMFp32CeilDiv(a, b) * b;
-}
+__aicore__ inline uint64_t MMFp32CeilAlign(uint64_t a, uint64_t b) { return MMFp32CeilDiv(a, b) * b; }
 
 __aicore__ inline uint64_t GetCurrentBlockIdx()
 {

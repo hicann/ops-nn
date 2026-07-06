@@ -38,17 +38,17 @@ protected:
         system(cmd.c_str());
         system("chmod -R 755 ./sparse_apply_adadelta_data/");
     }
-    static void TearDownTestCase()
-    {
-        cout << "SparseApplyAdadeltaTest TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "SparseApplyAdadeltaTest TearDown" << endl; }
+
 private:
     const static std::string rootPath;
     const static std::string dataPath;
 };
 
 const std::string SparseApplyAdadeltaTest::rootPath = "../../../../";
-const std::string SparseApplyAdadeltaTest::dataPath = rootPath + "optim/sparse_apply_adadelta/tests/ut/op_kernel/sparse_apply_adadelta_data";
+const std::string
+    SparseApplyAdadeltaTest::dataPath = rootPath +
+                                        "optim/sparse_apply_adadelta/tests/ut/op_kernel/sparse_apply_adadelta_data";
 
 // Test case: var=(4,8), grad=(2,8), indices=(2,), int32 indices
 TEST_F(SparseApplyAdadeltaTest, test_case_int32)
@@ -69,33 +69,42 @@ TEST_F(SparseApplyAdadeltaTest, test_case_int32)
     ReadFile("./sparse_apply_adadelta_data/float32_var_sparse_apply_adadelta.bin", varByteSize, varBuf, varByteSize);
 
     uint8_t* accumBuf = (uint8_t*)AscendC::GmAlloc(varByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_accum_sparse_apply_adadelta.bin", varByteSize, accumBuf, varByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_accum_sparse_apply_adadelta.bin", varByteSize, accumBuf,
+             varByteSize);
 
     uint8_t* accumUpdateBuf = (uint8_t*)AscendC::GmAlloc(varByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_accum_update_sparse_apply_adadelta.bin", varByteSize, accumUpdateBuf, varByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_accum_update_sparse_apply_adadelta.bin", varByteSize, accumUpdateBuf,
+             varByteSize);
 
     uint8_t* lrBuf = (uint8_t*)AscendC::GmAlloc(scalarByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_lr_sparse_apply_adadelta.bin", scalarByteSize, lrBuf, scalarByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_lr_sparse_apply_adadelta.bin", scalarByteSize, lrBuf,
+             scalarByteSize);
 
     uint8_t* rhoBuf = (uint8_t*)AscendC::GmAlloc(scalarByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_rho_sparse_apply_adadelta.bin", scalarByteSize, rhoBuf, scalarByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_rho_sparse_apply_adadelta.bin", scalarByteSize, rhoBuf,
+             scalarByteSize);
 
     uint8_t* epsilonBuf = (uint8_t*)AscendC::GmAlloc(scalarByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_epsilon_sparse_apply_adadelta.bin", scalarByteSize, epsilonBuf, scalarByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_epsilon_sparse_apply_adadelta.bin", scalarByteSize, epsilonBuf,
+             scalarByteSize);
 
     uint8_t* gradBuf = (uint8_t*)AscendC::GmAlloc(gradByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_grad_sparse_apply_adadelta.bin", gradByteSize, gradBuf, gradByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_grad_sparse_apply_adadelta.bin", gradByteSize, gradBuf,
+             gradByteSize);
 
     uint8_t* indicesBuf = (uint8_t*)AscendC::GmAlloc(indicesByteSize);
-    ReadFile("./sparse_apply_adadelta_data/int32_indices_sparse_apply_adadelta.bin", indicesByteSize, indicesBuf, indicesByteSize);
+    ReadFile("./sparse_apply_adadelta_data/int32_indices_sparse_apply_adadelta.bin", indicesByteSize, indicesBuf,
+             indicesByteSize);
 
     // Output buffers - initialize with input data (inplace-style operator)
     uint8_t* varOutBuf = (uint8_t*)AscendC::GmAlloc(varByteSize);
     ReadFile("./sparse_apply_adadelta_data/float32_var_sparse_apply_adadelta.bin", varByteSize, varOutBuf, varByteSize);
     uint8_t* accumOutBuf = (uint8_t*)AscendC::GmAlloc(varByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_accum_sparse_apply_adadelta.bin", varByteSize, accumOutBuf, varByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_accum_sparse_apply_adadelta.bin", varByteSize, accumOutBuf,
+             varByteSize);
     uint8_t* accumUpdateOutBuf = (uint8_t*)AscendC::GmAlloc(varByteSize);
-    ReadFile("./sparse_apply_adadelta_data/float32_accum_update_sparse_apply_adadelta.bin", varByteSize, accumUpdateOutBuf, varByteSize);
+    ReadFile("./sparse_apply_adadelta_data/float32_accum_update_sparse_apply_adadelta.bin", varByteSize,
+             accumUpdateOutBuf, varByteSize);
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(32);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
@@ -105,28 +114,17 @@ TEST_F(SparseApplyAdadeltaTest, test_case_int32)
     tilingDatafromBin->rowSize = D1;
     tilingDatafromBin->varTotalSize = D0 * D1;
 
-    ICPU_SET_TILING_KEY(0);  // TILING_KEY_IDX_INT32 = 0
+    ICPU_SET_TILING_KEY(0); // TILING_KEY_IDX_INT32 = 0
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-    ICPU_RUN_KF(sparse_apply_adadelta<0>,
-        numBlocks,
-        varBuf,
-        accumBuf,
-        accumUpdateBuf,
-        lrBuf,
-        rhoBuf,
-        epsilonBuf,
-        gradBuf,
-        indicesBuf,
-        varOutBuf,
-        accumOutBuf,
-        accumUpdateOutBuf,
-        workspace,
-        (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(sparse_apply_adadelta<0>, numBlocks, varBuf, accumBuf, accumUpdateBuf, lrBuf, rhoBuf, epsilonBuf,
+                gradBuf, indicesBuf, varOutBuf, accumOutBuf, accumUpdateOutBuf, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     WriteFile("./sparse_apply_adadelta_data/float32_var_output_sparse_apply_adadelta.bin", varOutBuf, varByteSize);
     WriteFile("./sparse_apply_adadelta_data/float32_accum_output_sparse_apply_adadelta.bin", accumOutBuf, varByteSize);
-    WriteFile("./sparse_apply_adadelta_data/float32_accum_update_output_sparse_apply_adadelta.bin", accumUpdateOutBuf, varByteSize);
+    WriteFile("./sparse_apply_adadelta_data/float32_accum_update_output_sparse_apply_adadelta.bin", accumUpdateOutBuf,
+              varByteSize);
 
     AscendC::GmFree(varBuf);
     AscendC::GmFree(accumBuf);

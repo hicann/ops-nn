@@ -22,9 +22,9 @@
 
 namespace ConvolutionBackprop {
 // 注册，通过别名定义用户接口
-#define REGISTER_DW_IMPL(name, context, impl, intf)             \
-    template <class X_T, class W_TYPE, class DEDY_T, class Y_T,  \
-    const Conv3ddwConfig& CONV3DDW_CONFIG = CONV3DDW_CFG_DEFAULT> \
+#define REGISTER_DW_IMPL(name, context, impl, intf)                         \
+    template <class X_T, class W_TYPE, class DEDY_T, class Y_T,             \
+              const Conv3ddwConfig& CONV3DDW_CONFIG = CONV3DDW_CFG_DEFAULT> \
     using name = intf<context<X_T, W_TYPE, DEDY_T, Y_T, CONV3DDW_CONFIG>, impl>
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 #endif

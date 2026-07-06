@@ -18,9 +18,11 @@ using namespace op;
 namespace l0op {
 constexpr size_t GRAD_OUT_NUM = 5;
 
-const std::array<aclTensor*, GRAD_OUT_NUM> AdaLayerNormGrad(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean, const aclTensor* scale, const aclTensor* shift,
-    const aclTensor* weight, const aclTensor* bias, aclOpExecutor* executor);
+const std::array<aclTensor*, GRAD_OUT_NUM> AdaLayerNormGrad(const aclTensor* gradOut, const aclTensor* input,
+                                                            const aclTensor* rstd, const aclTensor* mean,
+                                                            const aclTensor* scale, const aclTensor* shift,
+                                                            const aclTensor* weight, const aclTensor* bias,
+                                                            aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_ADA_LAYER_NORM_GRAD_H_

@@ -20,20 +20,19 @@ namespace l0op {
 
 OP_TYPE_REGISTER(QuantMax);
 
-static const aclTensor* QuantMaxAiCore(
-    const aclTensor* x, const aclTensor* scale, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, aclOpExecutor* executor)
+static const aclTensor* QuantMaxAiCore(const aclTensor* x, const aclTensor* scale, const char* roundMode,
+                                       int64_t dstType, const aclTensor* y, const aclTensor* amax,
+                                       aclOpExecutor* executor)
 {
     L0_DFX(QuantMaxAiCore, x, scale, roundMode, dstType, y, amax);
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(QuantMax, OP_INPUT(x, scale), OP_OUTPUT(y, amax), OP_ATTR(roundMode, dstType));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantMax, OP_INPUT(x, scale), OP_OUTPUT(y, amax),
+                                           OP_ATTR(roundMode, dstType));
     OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "QuantMaxAiCore failed."), return nullptr);
     return y;
 }
 
-const aclTensor* QuantMax(
-    const aclTensor* x, const aclTensor* scale, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, aclOpExecutor* executor)
+const aclTensor* QuantMax(const aclTensor* x, const aclTensor* scale, const char* roundMode, int64_t dstType,
+                          const aclTensor* y, const aclTensor* amax, aclOpExecutor* executor)
 {
     return QuantMaxAiCore(x, scale, roundMode, dstType, y, amax, executor);
 }

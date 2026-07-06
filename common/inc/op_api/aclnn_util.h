@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -32,20 +32,18 @@ using namespace op;
 inline static bool IsRegbase()
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    const static std::set<NpuArch> regbaseNpuArchs = {
-        NpuArch::DAV_3510};
+    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510};
     return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
 }
 
 inline static bool IsRegbase(NpuArch npuArch)
 {
-    const static std::set<NpuArch> regbaseNpuArchs = {
-        NpuArch::DAV_3510};
+    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510};
     return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
 }
 
-} // namespace OpTiling
-} // namespace NN
 } // namespace AclnnUtil
+} // namespace NN
+} // namespace Ops
 
-#endif  // COMMON_NN_ACLNN_UTIL_H
+#endif // COMMON_NN_ACLNN_UTIL_H

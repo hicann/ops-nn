@@ -21,14 +21,8 @@ using namespace std;
 
 class l2_quant_matmul_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_quant_matmul_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_quant_matmul_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_quant_matmul_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_quant_matmul_test TearDown" << endl; }
 };
 
 TEST_F(l2_quant_matmul_test, ascend910B2_test_normal_input)
@@ -82,8 +76,8 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_normal_input_perchannel)
     bool adjX2 = false;
     auto out_desc = TensorDesc({5, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -105,8 +99,8 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_abnormal_input_x1)
     bool adjX2 = false;
     auto out_desc = TensorDesc({5, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -128,8 +122,8 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_abnormal_input_x2)
     bool adjX2 = false;
     auto out_desc = TensorDesc({5, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -151,8 +145,8 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_abnormal_input_bias)
     bool adjX2 = false;
     auto out_desc = TensorDesc({5, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -174,8 +168,8 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_abnormal_input_deqScale)
     bool adjX2 = false;
     auto out_desc = TensorDesc({5, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -412,8 +406,8 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_non_contiguous_v2)
     bool adjX2 = false;
     auto out_desc = TensorDesc({32, 8}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnQuantMatmulV2, INPUT(x1_desc, x2_desc, bias_desc, deqScale_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

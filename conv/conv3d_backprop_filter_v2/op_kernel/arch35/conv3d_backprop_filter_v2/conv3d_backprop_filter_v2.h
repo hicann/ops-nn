@@ -36,21 +36,16 @@ __aicore__ inline constexpr ConvolutionBackprop::CubeFormat GetFormat(int format
 }
 
 template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    bool isSplitKernelHW, bool groupEnlarge>
+          bool isSplitKernelHW, bool groupEnlarge>
 class Conv3dDw {
 public:
-    __aicore__ inline Conv3dDw()
-    {
-    };
+    __aicore__ inline Conv3dDw(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-        const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
-    {
-    }
+                                const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
+    {}
 
-    __aicore__ inline void Process()
-    {
-    }
+    __aicore__ inline void Process() {}
 
 protected:
     static constexpr ConvolutionBackprop::CubeFormat xCubeFormat = GetFormat(xFormat);
@@ -124,11 +119,13 @@ protected:
         if constexpr (dedyCubeFormat == ConvolutionBackprop::CubeFormat::NCDHW) {
             if (groupFlag_) {
                 // group将cin和cout分为多个组，每轮处理一组cin和cout，因此，每轮group的偏移计算仅算分组扩维后的cinG或coutG
-                groupOffsetA = static_cast<uint64_t>(groupIdx) * tiling_->cout1G * tiling_->dout * tiling_->ho * tiling_->wo;
+                groupOffsetA = static_cast<uint64_t>(groupIdx) * tiling_->cout1G * tiling_->dout * tiling_->ho *
+                               tiling_->wo;
             }
             hoOffset = hoCal * tiling_->wo;
             doOffset = static_cast<uint64_t>(doutIdx) * tiling_->ho * tiling_->wo;
-            coutOffset = static_cast<uint64_t>(mCoreIndx_) * tiling_->singleCoreCout * tiling_->dout * tiling_->ho * tiling_->wo;
+            coutOffset = static_cast<uint64_t>(mCoreIndx_) * tiling_->singleCoreCout * tiling_->dout * tiling_->ho *
+                         tiling_->wo;
             batchOffsetA = static_cast<uint64_t>(batchIdx) * tiling_->cout * tiling_->dout * tiling_->ho * tiling_->wo;
         } else {
             // ndhwc, cout is last axis
@@ -144,8 +141,8 @@ protected:
         offsetA_ = batchOffsetA + groupOffsetA + coutOffset + doOffset + hoOffset;
     }
 
-    __aicore__ inline void CalcBlockOffsetB(uint64_t batchIdx, uint64_t doutIdx,
-        uint32_t groupIdx, uint32_t dkIdx, uint64_t hoCal, uint64_t& dinCurIdx)
+    __aicore__ inline void CalcBlockOffsetB(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx,
+                                            uint64_t hoCal, uint64_t& dinCurIdx)
     {
         uint64_t groupOffsetB = 0;
         dinCurIdx = static_cast<uint64_t>(doutIdx) * tiling_->strideD;
@@ -165,12 +162,14 @@ protected:
         uint64_t batchOffsetB = 0;
         if constexpr (xCubeFormat == ConvolutionBackprop::CubeFormat::NCDHW) {
             if (groupFlag_) {
-                groupOffsetB = static_cast<uint64_t>(groupIdx) * tiling_->cin1G * tiling_->di * tiling_->hi * tiling_->wi;
+                groupOffsetB = static_cast<uint64_t>(groupIdx) * tiling_->cin1G * tiling_->di * tiling_->hi *
+                               tiling_->wi;
             }
             hiOffset = hiIdx * tiling_->wi;
             dinDkOffset = dinIdx * tiling_->hi * tiling_->wi;
             //分组卷积时，需注意nCoreIndx_就是cinCoreIndx_，其他情况nCoreIndx_为cinIndx和dkIndx
-            cinOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin * tiling_->di * tiling_->hi * tiling_->wi;
+            cinOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin * tiling_->di * tiling_->hi *
+                        tiling_->wi;
             batchOffsetB = static_cast<uint64_t>(batchIdx) * tiling_->cin * tiling_->di * tiling_->hi * tiling_->wi;
         } else {
             if (groupFlag_) {
@@ -204,27 +203,34 @@ protected:
                 // C矩阵的GM排布为group cout/group cin/group dk hk wk，而每轮处理的group都是经过扩维的
                 // 因此可以将enlarge_看成扩维前singleCoreGroup，而enlarge * cout/group等于coutG_，因此偏移计算如下
                 // group与cout绑定，而ncdhw和ndhwc格式的排布cout并未发生变化，因此groupOffsetC和coutOffsetC都无需发生变化
-                groupOffsetC = static_cast<uint64_t>(groupIdx) * tiling_->cout1G * (tiling_->cin / tiling_->group) * tiling_->dk * tiling_->hk * tiling_->wk;
-                // 当分组卷积时，C矩阵的shape由cout cin dk hk wk变为cout cin/group dk hk wk，因此offset计算偏移也发生变化
-                coutOffsetC = static_cast<uint64_t>(mCoreIndx_) * tiling_->singleCoreCout * (tiling_->cin / tiling_->group) * tiling_->dk * tiling_->hk * tiling_->wk;
+                groupOffsetC = static_cast<uint64_t>(groupIdx) * tiling_->cout1G * (tiling_->cin / tiling_->group) *
+                               tiling_->dk * tiling_->hk * tiling_->wk;
+                // 当分组卷积时，C矩阵的shape由cout cin dk hk wk变为cout cin/group dk hk
+                // wk，因此offset计算偏移也发生变化
+                coutOffsetC = static_cast<uint64_t>(mCoreIndx_) * tiling_->singleCoreCout *
+                              (tiling_->cin / tiling_->group) * tiling_->dk * tiling_->hk * tiling_->wk;
             }
         }
 
         if constexpr (yCubeFormat == ConvolutionBackprop::CubeFormat::NCDHW) {
-            uint64_t cinDkOffset = cinCoreIndx_ * tiling_->singleCoreCin * tiling_->dk * tiling_->hk * tiling_->wk + dkIdx * tiling_->hk * tiling_->wk;
+            uint64_t cinDkOffset = cinCoreIndx_ * tiling_->singleCoreCin * tiling_->dk * tiling_->hk * tiling_->wk +
+                                   dkIdx * tiling_->hk * tiling_->wk;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
         } else if constexpr (yCubeFormat == ConvolutionBackprop::CubeFormat::NDHWC) {
             // NDHWC格式，C在最内轴，考虑到group，需要使用cinG计算偏移
-            uint64_t cinDkOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin + dkIdx * tiling_->hk * tiling_->wk * tiling_->cin1G;
+            uint64_t cinDkOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin +
+                                   dkIdx * tiling_->hk * tiling_->wk * tiling_->cin1G;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
         } else {
             // DHWCN
-            uint64_t cinDkOffset = cinCoreIndx_ * tiling_->singleCoreCin * tiling_->cout + dkIdx * tiling_->hk * tiling_->wk * (tiling_->cin / tiling_->group) * tiling_->cout;
+            uint64_t cinDkOffset = cinCoreIndx_ * tiling_->singleCoreCin * tiling_->cout +
+                                   dkIdx * tiling_->hk * tiling_->wk * (tiling_->cin / tiling_->group) * tiling_->cout;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
         }
     }
 
-    __aicore__ inline void CalcOffset(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx, uint64_t hoCal)
+    __aicore__ inline void CalcOffset(uint64_t batchIdx, uint64_t doutIdx, uint32_t groupIdx, uint32_t dkIdx,
+                                      uint64_t hoCal)
     {
         CalcBlockOffsetA(batchIdx, doutIdx, groupIdx, hoCal);
         uint64_t dinCurIdx = 0;
@@ -319,6 +325,6 @@ protected:
         WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
     }
 };
-}
+} // namespace AscendC
 
 #endif // CONV3D_BACKPROP_FILTER_H

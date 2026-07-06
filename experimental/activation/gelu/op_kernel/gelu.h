@@ -76,8 +76,8 @@ __aicore__ inline void KernelGelu<TYPE_X, TYPE_Y>::Init(GM_ADDR x, GM_ADDR y, co
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -=
-            (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (coreId - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (coreId - tilingData->tailBlockNum);
     }
     xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
     yGm.SetGlobalBuffer((__gm__ TYPE_Y*)y + globalBufferIndex, this->coreDataNum);

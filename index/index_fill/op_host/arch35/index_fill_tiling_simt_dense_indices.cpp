@@ -23,8 +23,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "index_fill_tiling_simt_dense_indices.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace IndexFill;
 
 constexpr uint64_t DCACHE_SIZE_SIMT = 128 * 1024;
@@ -40,13 +39,16 @@ bool IndexFillSimtDenseIndicesTiling::IsCapable()
         return false;
     }
 
-    if (inputData.Q * inputData.dtypeSize <= SIMD_THRESHOLD && inputData.P * inputData.Q * inputData.indicesNum > 2048 && inputData.indicesNum >= inputData.N * INDICES_DENSE_THRESHOLD) {
+    if (inputData.Q * inputData.dtypeSize <= SIMD_THRESHOLD &&
+        inputData.P * inputData.Q * inputData.indicesNum > 2048 &&
+        inputData.indicesNum >= inputData.N * INDICES_DENSE_THRESHOLD) {
         return true;
     }
     return false;
 }
 
-int64_t IndexFillSimtDenseIndicesTiling::GetOptimalIndiceUBFactor(int64_t indicesUbFactor, int64_t indicesNum, int64_t n)
+int64_t IndexFillSimtDenseIndicesTiling::GetOptimalIndiceUBFactor(int64_t indicesUbFactor, int64_t indicesNum,
+                                                                  int64_t n)
 {
     // indicesUbFactor进一步细化设置，indicesUbFactor要尽量大，如此才能更有效的达到去重和防同地址写冲突的效果；同时，尽量多的核并行处理。
     int64_t indicesFactor = std::min(indicesUbFactor, indicesNum);
@@ -62,7 +64,7 @@ int64_t IndexFillSimtDenseIndicesTiling::GetOptimalIndiceUBFactor(int64_t indice
 
 uint32_t IndexFillSimtDenseIndicesTiling::GetSortTmpSize(ge::DataType indicesDtype, uint32_t shapeSize, bool isDescend)
 {
-    std::vector<int64_t> shapeVec = { shapeSize };
+    std::vector<int64_t> shapeVec = {shapeSize};
     ge::Shape srcShape(shapeVec);
     AscendC::SortConfig config;
     config.type = AscendC::SortType::RADIX_SORT;
@@ -81,12 +83,15 @@ int64_t IndexFillSimtDenseIndicesTiling::CalcUsedBufSize(int64_t indicesUbFactor
 {
     int64_t indicesDtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(indicesDtype));
     int64_t vfLen = Ops::Base::GetVRegSize(context_) / indicesDtypeSize;
-    int64_t indicesBuffSize = Ops::Base::CeilDiv(indicesUbFactor + 1, vfLen) * vfLen * indicesDtypeSize + UB_AGLIN_VALUE;
+    int64_t indicesBuffSize = Ops::Base::CeilDiv(indicesUbFactor + 1, vfLen) * vfLen * indicesDtypeSize +
+                              UB_AGLIN_VALUE;
     int64_t sortNeedTmpSize = static_cast<int64_t>(GetSortTmpSize(indicesDtype, indicesUbFactor, false));
-    int64_t calcBufSize = (Ops::Base::CeilAlign(indicesUbFactor * indicesDtypeSize, UB_AGLIN_VALUE) * N_BUFFER)            // indicesQueue占用的大小
-        + Ops::Base::CeilAlign(indicesBuffSize, UB_AGLIN_VALUE)                                                            // indicesBuff占用的大小
-        + Ops::Base::CeilAlign(static_cast<int64_t>(indicesUbFactor * sizeof(int32_t)), UB_AGLIN_VALUE)                    // uniqueIdBuff占用的大小
-        + Ops::Base::CeilAlign(sortNeedTmpSize, UB_AGLIN_VALUE);                                                           // sort排序占用的tmp大小
+    int64_t calcBufSize = (Ops::Base::CeilAlign(indicesUbFactor * indicesDtypeSize, UB_AGLIN_VALUE) *
+                           N_BUFFER)                                              // indicesQueue占用的大小
+                          + Ops::Base::CeilAlign(indicesBuffSize, UB_AGLIN_VALUE) // indicesBuff占用的大小
+                          + Ops::Base::CeilAlign(static_cast<int64_t>(indicesUbFactor * sizeof(int32_t)),
+                                                 UB_AGLIN_VALUE)                   // uniqueIdBuff占用的大小
+                          + Ops::Base::CeilAlign(sortNeedTmpSize, UB_AGLIN_VALUE); // sort排序占用的tmp大小
     return calcBufSize;
 }
 
@@ -97,7 +102,8 @@ void IndexFillSimtDenseIndicesTiling::DoIndicesTilingTask()
     int64_t oneBlockNum = Ops::Base::GetUbBlockSize(context_) / indicesDtypeSize;
 
     int64_t indicesNum = static_cast<int64_t>(inputData.indicesNum);
-    int64_t maxUbAvailable = Ops::Base::FloorAlign(static_cast<int64_t>(availableUb), static_cast<int64_t>(UB_AGLIN_VALUE));
+    int64_t maxUbAvailable = Ops::Base::FloorAlign(static_cast<int64_t>(availableUb),
+                                                   static_cast<int64_t>(UB_AGLIN_VALUE));
     int64_t nBuffer = static_cast<int64_t>(N_BUFFER + 1);
     int64_t maxUbIndicesNum = Ops::Base::FloorAlign(maxUbAvailable / nBuffer / indicesDtypeSize, oneBlockNum);
     int64_t indicesUbFactor = maxUbIndicesNum;
@@ -139,7 +145,8 @@ ge::graphStatus IndexFillSimtDenseIndicesTiling::GetWorkspaceSize()
 {
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = (inputData.N * sizeof(int8_t)) + sysWorkspaceSize_; // workspace上申请额外申请一片内存，用于存放索引位图
+    currentWorkspace[0] = (inputData.N * sizeof(int8_t)) +
+                          sysWorkspaceSize_; // workspace上申请额外申请一片内存，用于存放索引位图
 
     // 涉及到核间同步，需要设置该模式.
     context_->SetScheduleMode(1);
@@ -148,7 +155,8 @@ ge::graphStatus IndexFillSimtDenseIndicesTiling::GetWorkspaceSize()
 
 void IndexFillSimtDenseIndicesTiling::SetTilingData()
 {
-    IndexFill::IndexFillSimtDenseIndicesTilingData* tilingData = context_->GetTilingData<IndexFill::IndexFillSimtDenseIndicesTilingData>();
+    IndexFill::IndexFillSimtDenseIndicesTilingData*
+        tilingData = context_->GetTilingData<IndexFill::IndexFillSimtDenseIndicesTilingData>();
     tilingData->p = static_cast<int64_t>(inputData.P);
     tilingData->q = static_cast<int64_t>(inputData.Q);
     tilingData->n = static_cast<int64_t>(inputData.N);
@@ -185,9 +193,10 @@ uint64_t IndexFillSimtDenseIndicesTiling::GetTilingKey() const
 
 void IndexFillSimtDenseIndicesTiling::DumpTilingInfo()
 {
-    IndexFill::IndexFillSimtDenseIndicesTilingData* tilingData = context_->GetTilingData<IndexFill::IndexFillSimtDenseIndicesTilingData>();
+    IndexFill::IndexFillSimtDenseIndicesTilingData*
+        tilingData = context_->GetTilingData<IndexFill::IndexFillSimtDenseIndicesTilingData>();
     OP_LOGI(context_->GetNodeName(), "IndexFill tilingInfo is: %s", tilingData->ToString().c_str());
 }
 
 REGISTER_OPS_TILING_TEMPLATE(IndexFill, IndexFillSimtDenseIndicesTiling, 6);
-}  // namespace optiling
+} // namespace optiling

@@ -25,14 +25,12 @@
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
-enum class TilingRegbaseStrategy
-{
+enum class TilingRegbaseStrategy {
     TilingL = 0,
     TilingD = 1,
 };
 
-class ModulateTilingForRegbase : public TilingBaseClass
-{
+class ModulateTilingForRegbase : public TilingBaseClass {
 public:
     explicit ModulateTilingForRegbase(gert::TilingContext* context)
         : TilingBaseClass(context), opName_(context->GetNodeName())
@@ -56,8 +54,8 @@ protected:
     ge::graphStatus PostTiling() override;
 
     TilingRegbaseStrategy SelectStrategy();
-    void CalcTilingParamL(const uint64_t &dataNum);
-    void CalcTilingParamD(const uint64_t &dataNum);
+    void CalcTilingParamL(const uint64_t& dataNum);
+    void CalcTilingParamD(const uint64_t& dataNum);
     void PrintTilingData();
 
 private:
@@ -71,8 +69,6 @@ private:
     bool isShift_{false};
     TilingRegbaseStrategy tilingStrategy_{0};
     ModulateRegbaseTilingData tilingData_;
-    
-
 
     void SetTilingData();
 };

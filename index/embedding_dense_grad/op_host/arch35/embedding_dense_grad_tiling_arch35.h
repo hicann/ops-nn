@@ -22,7 +22,6 @@
 
 namespace optiling {
 
-
 BEGIN_TILING_DATA_DEF(EmbeddingDenseGradSimdTilingData)
 TILING_DATA_FIELD_DEF(int64_t, numWeights);
 TILING_DATA_FIELD_DEF(int64_t, paddingIdx);
@@ -56,7 +55,7 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(EmbeddingDenseGrad, EmbeddingDenseGradSimdTilingData)
 
-ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint32_t maxCoreNum,
+ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext* context, uint32_t maxCoreNum,
                                               uint32_t ubSizePlatform, uint32_t maxThreadNum);
 
 struct EmbeddingDenseGradACTilingParam {
@@ -106,10 +105,10 @@ struct EmbeddingDenseGradACTilingParam {
     uint32_t gradDtypeSize{0};
     uint32_t indicesDtypeSize{0};
     uint32_t sortSharedBufSize{0};
-    uint32_t blockSize {32};
-    ge::DataType gradDataType {ge::DT_FLOAT};
+    uint32_t blockSize{32};
+    ge::DataType gradDataType{ge::DT_FLOAT};
     bool isFullLoad{false};
 };
 
-}  // namespace optiling
-#endif  // EMBEDDING_DENSE_GRAD_TILING_ARCH35_H
+} // namespace optiling
+#endif // EMBEDDING_DENSE_GRAD_TILING_ARCH35_H

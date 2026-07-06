@@ -12,28 +12,24 @@
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsMish(const Message* op_src, ge::Operator& op_dest) {
-  const NodeProto* node = reinterpret_cast<const NodeProto*>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
+static Status ParseParamsMish(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = reinterpret_cast<const NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
+    }
 
-  return SUCCESS;
+    return SUCCESS;
 }
 // register Mish op info to GE
 REGISTER_CUSTOM_OP("Mish")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("ai.onnx::18::Mish"),
-                 ge::AscendString("npu::1::NPUMish"),
-                 ge::AscendString("ai.onnx::11::NPUMish"),
-                 ge::AscendString("ai.onnx::12::NPUMish"),
-                 ge::AscendString("ai.onnx::13::NPUMish"),
-                 ge::AscendString("ai.onnx::14::NPUMish"),
-                 ge::AscendString("ai.onnx::15::NPUMish"),
-                 ge::AscendString("ai.onnx::16::NPUMish"),
-                 ge::AscendString("ai.onnx::17::NPUMish"),
-                 ge::AscendString("ai.onnx::18::NPUMish")})
-  .ParseParamsFn(ParseParamsMish)
-  .ImplyType(ImplyType::TVM);
-}  // namespace domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("ai.onnx::18::Mish"), ge::AscendString("npu::1::NPUMish"),
+                   ge::AscendString("ai.onnx::11::NPUMish"), ge::AscendString("ai.onnx::12::NPUMish"),
+                   ge::AscendString("ai.onnx::13::NPUMish"), ge::AscendString("ai.onnx::14::NPUMish"),
+                   ge::AscendString("ai.onnx::15::NPUMish"), ge::AscendString("ai.onnx::16::NPUMish"),
+                   ge::AscendString("ai.onnx::17::NPUMish"), ge::AscendString("ai.onnx::18::NPUMish")})
+    .ParseParamsFn(ParseParamsMish)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

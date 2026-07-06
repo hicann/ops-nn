@@ -18,17 +18,14 @@
 using namespace ge;
 
 class gather_elements : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "gather_elements SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "gather_elements SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "gather_elements TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "gather_elements TearDown" << std::endl; }
 };
 
-TEST_F(gather_elements, gather_elements_test_1) {
+TEST_F(gather_elements, gather_elements_test_1)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -58,7 +55,8 @@ TEST_F(gather_elements, gather_elements_test_1) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(gather_elements, gather_elements_test_4) {
+TEST_F(gather_elements, gather_elements_test_4)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;

@@ -39,4 +39,3 @@ protected:
 };
 } // namespace gemmv3
 } // namespace optiling
-

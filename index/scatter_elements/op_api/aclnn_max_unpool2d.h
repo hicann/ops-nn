@@ -35,4 +35,4 @@ ACLNN_API aclnnStatus aclnnMaxUnpool2d(void* workspace, uint64_t workspaceSize, 
 }
 #endif
 
-#endif  // OP_API_INC_MAX_UNPOOL2D_H_
+#endif // OP_API_INC_MAX_UNPOOL2D_H_

@@ -20,8 +20,7 @@
 
 namespace MSELossV2Namespace {
 template <typename T>
-class MSELossV2Base
-{
+class MSELossV2Base {
 public:
     __aicore__ inline MSELossV2Base(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : pipe(pipe),
@@ -54,9 +53,8 @@ public:
     __aicore__ void Process();
 
 protected:
-    __aicore__ inline void CopyIn(
-        const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1, uint64_t offset,
-        uint64_t length)
+    __aicore__ inline void CopyIn(const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1,
+                                  uint64_t offset, uint64_t length)
     {
         AscendC::LocalTensor<T> src0Local = this->inQue0.template AllocTensor<T>();
         AscendC::DataCopy<T>(src0Local, this->src0Global[offset], length);
@@ -98,8 +96,7 @@ protected:
 };
 
 template <>
-class MSELossV2Base<float>
-{
+class MSELossV2Base<float> {
 public:
     __aicore__ inline MSELossV2Base(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : pipe(pipe),

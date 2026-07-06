@@ -20,16 +20,17 @@ namespace SegmentSum {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class SegmentSumMultiCoreAdd
-{
+class SegmentSumMultiCoreAdd {
 public:
     __aicore__ inline SegmentSumMultiCoreAdd(void){};
-    __aicore__ inline void Init(GM_ADDR y, GM_ADDR workspace, TPipe& pipeIn, const SegmentSumSimdTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR y, GM_ADDR workspace, TPipe& pipeIn,
+                                const SegmentSumSimdTilingData* tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void CopyInIds(LocalTensor<T2>& segmentIdsLocal);
     __aicore__ inline void CopyInSum(int32_t burstLen, int64_t colOffset);
     __aicore__ inline void CopyOutY(LocalTensor<T1>& yLocal, int32_t burstLen, T2 id, int64_t colOffset);
-    __aicore__ inline void ComputeAndCopyOut(LocalTensor<T2> segmentIdsLocal, LocalTensor<T1>& yLocal, int32_t curLoopInners, int32_t curLoopInnersAlign, int64_t colOffset);
+    __aicore__ inline void ComputeAndCopyOut(LocalTensor<T2> segmentIdsLocal, LocalTensor<T1>& yLocal,
+                                             int32_t curLoopInners, int32_t curLoopInnersAlign, int64_t colOffset);
 
 private:
     GlobalTensor<T1> yGm_;
@@ -51,13 +52,14 @@ private:
     int64_t colUbLoop_ = 0; // 当前核的ub在列上的循环次数
 
     int64_t normalLoopInners_ = 0; // 当前核ub正常循环一次处理的列数
-    int64_t tailLoopInners_ = 0; // 当前核ub尾循环一次处理的列数
+    int64_t tailLoopInners_ = 0;   // 当前核ub尾循环一次处理的列数
 
     constexpr static int32_t blockNumT1_ = platform::GetUbBlockSize() / sizeof(T1);
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Init(GM_ADDR y, GM_ADDR workspace, AscendC::TPipe& pipeIn, const SegmentSumSimdTilingData* tilingData)
+__aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Init(GM_ADDR y, GM_ADDR workspace, AscendC::TPipe& pipeIn,
+                                                            const SegmentSumSimdTilingData* tilingData)
 {
     tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
@@ -68,11 +70,18 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Init(GM_ADDR y, GM_ADDR w
 
     colGmOffset_ = blockIdx_ * tilingData_->normalCoreMultAddInners;
     rowUbLoop_ = DOUBLE * tilingData_->blockNumInRow; // no need
-    colUbLoop_ = blockIdx_ == tilingData_->usedCoreNumForMultAdd - 1 ? tilingData_->tailCoreMultAddInnerLoop : tilingData_->normalCoreMultAddInnerLoop;
+    colUbLoop_ = blockIdx_ == tilingData_->usedCoreNumForMultAdd - 1 ? tilingData_->tailCoreMultAddInnerLoop :
+                                                                       tilingData_->normalCoreMultAddInnerLoop;
 
-    normalLoopInners_ = blockIdx_ == tilingData_->usedCoreNumForMultAdd - 1 ? tilingData_->tailCoreMultAddNormalLoopInners : tilingData_->normalCoreMultAddNormalLoopInners;
-    tailLoopInners_ = blockIdx_ == tilingData_->usedCoreNumForMultAdd - 1 ? tilingData_->tailCoreMultAddTailLoopInners : tilingData_->normalCoreMultAddTailLoopInners;
-    uint32_t segIdAddrOffset = (tilingData_->blockNumInRow * DOUBLE * tilingData_->innerDim * sizeof(T1) + sizeof(T2) - 1) / sizeof(T2);
+    normalLoopInners_ = blockIdx_ == tilingData_->usedCoreNumForMultAdd - 1 ?
+                            tilingData_->tailCoreMultAddNormalLoopInners :
+                            tilingData_->normalCoreMultAddNormalLoopInners;
+    tailLoopInners_ = blockIdx_ == tilingData_->usedCoreNumForMultAdd - 1 ?
+                          tilingData_->tailCoreMultAddTailLoopInners :
+                          tilingData_->normalCoreMultAddTailLoopInners;
+    uint32_t segIdAddrOffset = (tilingData_->blockNumInRow * DOUBLE * tilingData_->innerDim * sizeof(T1) + sizeof(T2) -
+                                1) /
+                               sizeof(T2);
 
     yGm_.SetGlobalBuffer((__gm__ T1*)y + colGmOffset_);
     sumWorkspace_.SetGlobalBuffer((__gm__ T1*)workspace + colGmOffset_);
@@ -83,7 +92,6 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Init(GM_ADDR y, GM_ADDR w
     pipeIn.InitBuffer(segmentIdsBuf_, tilingData_->multAddIdsBufferSize);
     pipeIn.InitBuffer(yBuf_, tilingData_->multAddYBufferSize);
 }
-
 
 template <typename T1, typename T2>
 __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyInIds(LocalTensor<T2>& segmentIdsLocal)
@@ -101,7 +109,6 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyInIds(LocalTensor<T2>
     dataCoptExtParams.dstStride = 0;
     DataCopyPad(segmentIdsLocal, segIdWorkspace_, dataCoptExtParams, dataCopyPadExtParams);
 }
-
 
 template <typename T1, typename T2>
 __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyInSum(int32_t burstLen, int64_t colOffset)
@@ -123,9 +130,9 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyInSum(int32_t burstLe
     xQue_.EnQue(xLocal);
 }
 
-
 template <typename T1, typename T2>
-__aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyOutY(LocalTensor<T1>& yLocal, int32_t burstLen, T2 id, int64_t colOffset)
+__aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyOutY(LocalTensor<T1>& yLocal, int32_t burstLen, T2 id,
+                                                                int64_t colOffset)
 {
     DataCopyExtParams dataCoptExtParams;
     dataCoptExtParams.blockCount = 1;
@@ -135,13 +142,14 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::CopyOutY(LocalTensor<T1>&
     DataCopyPad(yGm_[id * tilingData_->innerDim + colOffset], yLocal, dataCoptExtParams);
 }
 
-
 template <typename T1, typename T2>
-__aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::ComputeAndCopyOut(LocalTensor<T2> segmentIdsLocal, LocalTensor<T1>& yLocal, int32_t curLoopInners, int32_t curLoopInnersAlign, int64_t colOffset)
+__aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::ComputeAndCopyOut(LocalTensor<T2> segmentIdsLocal,
+                                                                         LocalTensor<T1>& yLocal, int32_t curLoopInners,
+                                                                         int32_t curLoopInnersAlign, int64_t colOffset)
 {
     LocalTensor<T1> xLocal = xQue_.DeQue<T1>();
     Copy(yLocal, xLocal[curLoopInnersAlign], curLoopInners);
-    
+
     // GetValue获取id前需要插同步
     event_t eventId1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventId1);
@@ -171,11 +179,10 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::ComputeAndCopyOut(LocalTe
     event_t eventId4 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventId4);
     WaitFlag<HardEvent::V_MTE3>(eventId4);
-    
+
     CopyOutY(yLocal, curLoopInners, preId, colOffset);
     xQue_.FreeTensor(xLocal);
 }
-
 
 template <typename T1, typename T2>
 __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Process()
@@ -202,5 +209,5 @@ __aicore__ inline void SegmentSumMultiCoreAdd<T1, T2>::Process()
     }
 }
 
-}
+} // namespace SegmentSum
 #endif

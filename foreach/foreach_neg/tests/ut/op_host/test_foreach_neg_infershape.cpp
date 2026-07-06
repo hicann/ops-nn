@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_neg_proto.h"
 
-class ForeachNegTest : public testing::Test
-{
+class ForeachNegTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachNeg SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachNeg SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachNeg TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachNeg TearDown" << std::endl; }
 };
 
 TEST_F(ForeachNegTest, infer_shape_known_success)

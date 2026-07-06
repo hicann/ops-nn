@@ -14,8 +14,8 @@
 
 namespace l0op {
 
-const aclTensor *MaskedFill(const aclTensor *self, const aclTensor *mask,
-                            const aclTensor *value, aclOpExecutor *executor);
+const aclTensor* MaskedFill(const aclTensor* self, const aclTensor* mask, const aclTensor* value,
+                            aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_MASKED_FILL_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_MASKED_FILL_OP_H_

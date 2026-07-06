@@ -47,15 +47,9 @@ using namespace ut_util;
 
 class FakeQuantWithMinMaxVarsPerChannelTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsPerChannelTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FakeQuantWithMinMaxVarsPerChannelTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FakeQuantWithMinMaxVarsPerChannelTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FakeQuantWithMinMaxVarsPerChannelTiling TearDown" << std::endl; }
 };
 
 // CompileInfo 占位（本算子 TilingParse 为空，但 facker 需要一个输出 holder）
@@ -76,66 +70,66 @@ static const char* kCompileInfoStr = R"({
 // 测试宏：每个 case 直接展开，保证 holder 作用域贯穿整个 case
 // =============================================================================
 
-#define SETUP_TILING_CTX(xShapeVar, mnShapeVar, mxShapeVar, yShapeVar, numBitsVal, narrowRangeVal)        \
-    fe::PlatFormInfos platform_info;                                                                       \
-    map<string, string> soc_infos;                                                                         \
-    map<string, string> aicore_spec;                                                                       \
-    map<string, string> intrinsics;                                                                        \
-    GetPlatFormInfos(kCompileInfoStr, soc_infos, aicore_spec, intrinsics);                                 \
-    platform_info.Init();                                                                                  \
-                                                                                                             \
-    std::string op_type("FakeQuantWithMinMaxVarsPerChannel");                                              \
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);                    \
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;             \
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse; \
-                                                                                                             \
-    FakeQuantWithMinMaxVarsPerChannelCompileInfo compile_info;                                             \
-    auto kernel_holder = gert::KernelRunContextFaker()                                                     \
-        .KernelIONum(2, 1)                                                                                 \
-        .Inputs({const_cast<char*>(kCompileInfoStr), reinterpret_cast<void*>(&platform_info)})             \
-        .Outputs({&compile_info})                                                                          \
-        .Build();                                                                                          \
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());          \
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);    \
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);\
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");          \
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(                          \
-        "AICoreintrinsicDtypeMap", intrinsics);                                                                       \
-    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);                 \
-                                                                                                             \
-    auto param = gert::TilingData::CreateCap(4096);                                                        \
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);                              \
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());                  \
-    ASSERT_NE(param, nullptr);                                                                              \
-    auto holder = gert::TilingContextFaker()                                                                \
-        .NodeIoNum(3, 1)                                                                                    \
-        .IrInstanceNum({1, 1, 1})                                                                           \
-        .InputShapes({&(xShapeVar), &(mnShapeVar), &(mxShapeVar)})                                         \
-        .OutputShapes({&(yShapeVar)})                                                                       \
-        .CompileInfo(&compile_info)                                                                         \
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))                                              \
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                         \
-        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                         \
-        .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                         \
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                        \
-        .NodeAttrs({                                                                                        \
-            {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(numBitsVal)},                              \
-            {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(narrowRangeVal)},                         \
-        })                                                                                                  \
-        .TilingData(param.get())                                                                            \
-        .Workspace(ws_size)                                                                                 \
-        .Build();                                                                                            \
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();                        \
-    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);                                                  \
-    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);                               \
-    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);                          \
-    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");                                     \
-    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);              \
+#define SETUP_TILING_CTX(xShapeVar, mnShapeVar, mxShapeVar, yShapeVar, numBitsVal, narrowRangeVal)                     \
+    fe::PlatFormInfos platform_info;                                                                                   \
+    map<string, string> soc_infos;                                                                                     \
+    map<string, string> aicore_spec;                                                                                   \
+    map<string, string> intrinsics;                                                                                    \
+    GetPlatFormInfos(kCompileInfoStr, soc_infos, aicore_spec, intrinsics);                                             \
+    platform_info.Init();                                                                                              \
+                                                                                                                       \
+    std::string op_type("FakeQuantWithMinMaxVarsPerChannel");                                                          \
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);                                \
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;                         \
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;             \
+                                                                                                                       \
+    FakeQuantWithMinMaxVarsPerChannelCompileInfo compile_info;                                                         \
+    auto kernel_holder = gert::KernelRunContextFaker()                                                                 \
+                             .KernelIONum(2, 1)                                                                        \
+                             .Inputs({const_cast<char*>(kCompileInfoStr), reinterpret_cast<void*>(&platform_info)})    \
+                             .Outputs({&compile_info})                                                                 \
+                             .Build();                                                                                 \
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());                      \
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);     \
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",              \
+                                                                                            aicore_spec);              \
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");           \
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", \
+                                                                                            intrinsics);               \
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);                  \
+                                                                                                                       \
+    auto param = gert::TilingData::CreateCap(4096);                                                                    \
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);                                          \
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());                              \
+    ASSERT_NE(param, nullptr);                                                                                         \
+    auto holder = gert::TilingContextFaker()                                                                           \
+                      .NodeIoNum(3, 1)                                                                                 \
+                      .IrInstanceNum({1, 1, 1})                                                                        \
+                      .InputShapes({&(xShapeVar), &(mnShapeVar), &(mxShapeVar)})                                       \
+                      .OutputShapes({&(yShapeVar)})                                                                    \
+                      .CompileInfo(&compile_info)                                                                      \
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))                                           \
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                      \
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                      \
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                      \
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)                                     \
+                      .NodeAttrs({                                                                                     \
+                          {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(numBitsVal)},                            \
+                          {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(narrowRangeVal)},                       \
+                      })                                                                                               \
+                      .TilingData(param.get())                                                                         \
+                      .Workspace(ws_size)                                                                              \
+                      .Build();                                                                                        \
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();                                    \
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);                                                             \
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);                                           \
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);                                      \
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");                                                 \
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);                          \
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
 // 从 RawTilingData 读出我们关心的字段
-static const FakeQuantWithMinMaxVarsPerChannelTilingData* ExtractTilingData(
-    gert::TilingContext* ctx)
+static const FakeQuantWithMinMaxVarsPerChannelTilingData* ExtractTilingData(gert::TilingContext* ctx)
 {
     auto* raw = ctx->GetRawTilingData();
     EXPECT_NE(raw, nullptr);
@@ -169,13 +163,13 @@ TEST_F(FakeQuantWithMinMaxVarsPerChannelTiling, tiling_block_axis_1_small_n)
     EXPECT_FLOAT_EQ(td->quantMin, 0.0f);
     EXPECT_FLOAT_EQ(td->quantMax, 255.0f);
 
-    EXPECT_EQ(td->blockAxis, 1);    // 切 N 维
+    EXPECT_EQ(td->blockAxis, 1); // 切 N 维
     EXPECT_GT(td->numCore, 1);
     EXPECT_GT(td->blockFactor, 0);
     EXPECT_GT(td->blockTailFactor, 0);
     EXPECT_GT(td->baseN, 0);
     EXPECT_GT(td->baseLen, 0);
-    EXPECT_EQ(td->baseLen % 64, 0);  // 64 对齐
+    EXPECT_EQ(td->baseLen % 64, 0); // 64 对齐
     EXPECT_EQ(static_cast<uint32_t>(td->numCore), tiling_context->GetBlockDim());
 }
 

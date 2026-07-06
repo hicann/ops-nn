@@ -28,7 +28,7 @@ using namespace op;
 
 static constexpr size_t MIN_DIM_LEN_MXSCALE = 2;
 static constexpr size_t MAX_DIM_LEN = 7;
-static constexpr size_t MAX_DIM_LEN_MXSCALE= 8;
+static constexpr size_t MAX_DIM_LEN_MXSCALE = 8;
 static constexpr int64_t FP4_NUMS_IN_UINT8 = 2;
 static constexpr int64_t NUM_FLOAT32 = 0;
 static constexpr int64_t NUM_FLOAT16 = 1;
@@ -40,8 +40,8 @@ static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<DataType> MXSCALE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT8_E8M0};
 
-static const std::initializer_list<DataType> Y_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
+static const std::initializer_list<DataType> Y_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
+                                                                     op::DataType::DT_FLOAT};
 
 static inline bool CheckNotNull(const aclTensor* x, const aclTensor* mxscale, const aclTensor* y)
 {
@@ -154,7 +154,8 @@ aclnnStatus aclnnAntiMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor
     }
 
     // input参数如果非连续，需要转连续
-    if ((x->GetDataType() == op::DataType::DT_FLOAT4_E2M1 || x->GetDataType() == op::DataType::DT_FLOAT4_E1M2) && !IsContiguous(x)) {
+    if ((x->GetDataType() == op::DataType::DT_FLOAT4_E2M1 || x->GetDataType() == op::DataType::DT_FLOAT4_E1M2) &&
+        !IsContiguous(x)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the data type of x is float4, it must be contiguous");
         return ACLNN_ERR_PARAM_INVALID;
     }

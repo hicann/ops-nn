@@ -23,9 +23,8 @@ class KernelConv3DV2PointWise : public KernelConv3DV2<A_TYPE, B_TYPE, C_TYPE, BI
 public:
     __aicore__ inline KernelConv3DV2PointWise() = default;
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR y, GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData* allTilingData)
     {
         this->InitTilingData(allTilingData);
         this->InitC1N1();
@@ -47,30 +46,28 @@ public:
 protected:
     __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y)
     {
-        this->fmapOneBatchSize = this->conv3dRunInfo->cin * this->conv3dRunInfo->din *
-                                this->conv3dRunInfo->hin * this->conv3dRunInfo->win;
-        this->outputOneBatchSize = this->conv3dRunInfo->cout * this->conv3dRunInfo->dout *
-                                    this->conv3dRunInfo->hout * this->conv3dRunInfo->wout;
+        this->fmapOneBatchSize = this->conv3dRunInfo->cin * this->conv3dRunInfo->din * this->conv3dRunInfo->hin *
+                                 this->conv3dRunInfo->win;
+        this->outputOneBatchSize = this->conv3dRunInfo->cout * this->conv3dRunInfo->dout * this->conv3dRunInfo->hout *
+                                   this->conv3dRunInfo->wout;
 
         uint64_t fmStartAddr = this->batchIdxStart * this->fmapOneBatchSize +
-                                this->doIdxStart * this->conv3dRunInfo->hin * this->conv3dRunInfo->win +
-                                this->mIdxStart;
+                               this->doIdxStart * this->conv3dRunInfo->hin * this->conv3dRunInfo->win + this->mIdxStart;
         uint64_t weightStartAddr = this->nIdxStart * this->conv3dRunInfo->cin;
-        uint64_t outputStartAddr = this->batchIdxStart * this->outputOneBatchSize + this->nIdxStart *
-                                this->conv3dRunInfo->dout * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout +
-                                this->doIdxStart * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout +
-                                this->mIdxStart;
-        ASC_OP_LOGD("[Conv3DV2PointWise] fmStartAddr %d weightStartAddr %d outputStartAddr %d.\n",
-            fmStartAddr,
-            weightStartAddr,
-            outputStartAddr);
+        uint64_t outputStartAddr = this->batchIdxStart * this->outputOneBatchSize +
+                                   this->nIdxStart * this->conv3dRunInfo->dout * this->conv3dRunInfo->hout *
+                                       this->conv3dRunInfo->wout +
+                                   this->doIdxStart * this->conv3dRunInfo->hout * this->conv3dRunInfo->wout +
+                                   this->mIdxStart;
+        ASC_OP_LOGD("[Conv3DV2PointWise] fmStartAddr %d weightStartAddr %d outputStartAddr %d.\n", fmStartAddr,
+                    weightStartAddr, outputStartAddr);
 
-        this->fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(x + fmStartAddr * sizeof(A_T)));
-        this->filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(filter + weightStartAddr * sizeof(B_T)));
-        this->outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(y + outputStartAddr * sizeof(C_T)));
+        this->fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(x + fmStartAddr * sizeof(A_T)));
+        this->filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ B_T*>(filter + weightStartAddr * sizeof(B_T)));
+        this->outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ C_T*>(y + outputStartAddr * sizeof(C_T)));
         if (this->conv3dRunInfo->hasBias) {
             ASC_OP_LOGD("[Conv3DV2PointWise] biasStartAddr %d.\n", this->nIdxStart);
-            this->biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_T *>(bias + this->nIdxStart * sizeof(BIAS_T)));
+            this->biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_T*>(bias + this->nIdxStart * sizeof(BIAS_T)));
         }
     }
 

@@ -18,7 +18,7 @@
 namespace ops {
 class MatmulCompress : public OpDef {
 public:
-    explicit MatmulCompress(const char *name) : OpDef(name)
+    explicit MatmulCompress(const char* name) : OpDef(name)
     {
         this->Input("A")
             .ParamType(REQUIRED)
@@ -58,16 +58,16 @@ public:
 
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(false)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .NeedCheckSupportFlag(false)
-                .ExtendCfgInfo("opFile.value", "matmul_compress")
-                .ExtendCfgInfo("opInterface.value", "matmul_compress");
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .ExtendCfgInfo("opFile.value", "matmul_compress")
+            .ExtendCfgInfo("opInterface.value", "matmul_compress");
 
         this->AICore().AddConfig("ascend310p", aicore_config);
     }
 };
 
-OP_ADD(MatmulCompress);   
-}  // namespace ops
+OP_ADD(MatmulCompress);
+} // namespace ops

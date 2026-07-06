@@ -31,15 +31,9 @@ using namespace ge;
 
 class GatherV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GatherV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GatherV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GatherV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GatherV2Tiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -69,20 +63,18 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 }
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
     static int64_t offset = 0;
-    gert::Tensor tensor(
-        {{data_size}, {data_size}},         // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        dtype,                              // dt
-        nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dt
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     offset += sizeof(T) * data_size;
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
@@ -150,9 +142,8 @@ TEST_F(GatherV2TilingTest, gather_v2_simt_tiling_1)
                       .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, params_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .ConstInput(axis_tensors)
-                      .NodeAttrs(
-                          {{"batch_dims", Ops::NN::AnyValue::CreateFrom<int64_t>(batch_dims)},
-                           {"negative_index_support", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"batch_dims", Ops::NN::AnyValue::CreateFrom<int64_t>(batch_dims)},
+                                  {"negative_index_support", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -230,9 +221,8 @@ TEST_F(GatherV2TilingTest, gather_v2_simt_tiling_2)
                       .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, params_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .ConstInput(axis_tensors)
-                      .NodeAttrs(
-                          {{"batch_dims", Ops::NN::AnyValue::CreateFrom<int64_t>(batch_dims)},
-                           {"negative_index_support", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"batch_dims", Ops::NN::AnyValue::CreateFrom<int64_t>(batch_dims)},
+                                  {"negative_index_support", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

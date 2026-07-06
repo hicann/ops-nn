@@ -105,14 +105,14 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeGroupFitUb
         int32_t isAlign = (cGIdx * this->eleNumPerChannel) % this->floatPerBlock;
         if (isAlign == 0) {
             uint32_t offset = cGIdx * this->eleNumPerChannel;
-            SwishGradMulXReduceTemplate(
-                temp1Local, temp2Local, dyNew, dswishRes, xLocal[offset], dyLocal[offset], gammaLocal, betaLocal,
-                static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
+            SwishGradMulXReduceTemplate(temp1Local, temp2Local, dyNew, dswishRes, xLocal[offset], dyLocal[offset],
+                                        gammaLocal, betaLocal, static_cast<uint32_t>(cGIdx), swishScaleValue,
+                                        this->eleNumPerChannel);
         } else {
             uint32_t offset = cGIdx * this->eleNumPerChannel;
-            SwishGradMulXReduceUnAlignTemplate(
-                temp1Local, temp2Local, dyNew, dswishRes, xLocal[offset], dyLocal[offset], gammaLocal, betaLocal,
-                static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
+            SwishGradMulXReduceUnAlignTemplate(temp1Local, temp2Local, dyNew, dswishRes, xLocal[offset],
+                                               dyLocal[offset], gammaLocal, betaLocal, static_cast<uint32_t>(cGIdx),
+                                               swishScaleValue, this->eleNumPerChannel);
         }
     }
     event_t eventIdVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -129,18 +129,18 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeGroupFitUb
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         if (isAlign == 0) {
             uint32_t offset = cGIdx * this->eleNumPerChannel;
-            SwishDxTemplate(
-                tempHxwLocal, xLocal[offset], dyLocal[offset], gammaLocal, betaLocal, temp1Local, temp2Local,
-                meanRstdLocal, static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
+            SwishDxTemplate(tempHxwLocal, xLocal[offset], dyLocal[offset], gammaLocal, betaLocal, temp1Local,
+                            temp2Local, meanRstdLocal, static_cast<uint32_t>(cGIdx), swishScaleValue,
+                            this->eleNumPerChannel);
             event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             CustomDataCopyOut(tempHxwLocal, gmOffset, outQueueDxT, eleNumPerChannel);
         } else {
             uint32_t offset = cGIdx * this->eleNumPerChannel;
-            SwishDxUnAlignTemplate(
-                tempHxwLocal, xLocal[offset], dyLocal[offset], gammaLocal, betaLocal, temp1Local, temp2Local,
-                meanRstdLocal, static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
+            SwishDxUnAlignTemplate(tempHxwLocal, xLocal[offset], dyLocal[offset], gammaLocal, betaLocal, temp1Local,
+                                   temp2Local, meanRstdLocal, static_cast<uint32_t>(cGIdx), swishScaleValue,
+                                   this->eleNumPerChannel);
             event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
@@ -176,9 +176,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRedu
     __ubuf__ float* gammaPtr = (__ubuf__ float*)gammaLocal.GetPhyAddr();
     __ubuf__ float* betaPtr = (__ubuf__ float*)betaLocal.GetPhyAddr();
     PipeBarrier<PIPE_V>();
-    SwishGradMulXReduceUnAlignVf(
-        temp1Ptr, temp2Ptr, dyNewSumPtr, xMulDySumPtr, xPtr, dyPtr, gammaPtr, betaPtr, cGIdx, swishScaleValue,
-        calCount);
+    SwishGradMulXReduceUnAlignVf(temp1Ptr, temp2Ptr, dyNewSumPtr, xMulDySumPtr, xPtr, dyPtr, gammaPtr, betaPtr, cGIdx,
+                                 swishScaleValue, calCount);
     PipeBarrier<PIPE_V>();
 }
 
@@ -198,8 +197,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxUnAlignTem
     __ubuf__ float* c2Ptr = (__ubuf__ float*)c2Local.GetPhyAddr();
     __ubuf__ float* meanRstdPtr = (__ubuf__ float*)meanRstdLocal.GetPhyAddr();
     PipeBarrier<PIPE_V>();
-    SwishDxUnAlignVf(
-        dxPtr, xPtr, dyPtr, gammaPtr, betaPtr, c1Ptr, c2Ptr, meanRstdPtr, cGIdx, swishScaleValue, calCount);
+    SwishDxUnAlignVf(dxPtr, xPtr, dyPtr, gammaPtr, betaPtr, c1Ptr, c2Ptr, meanRstdPtr, cGIdx, swishScaleValue,
+                     calCount);
     PipeBarrier<PIPE_V>();
 }
 
@@ -224,8 +223,8 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxUnAlignVf
     AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vBeta, betaPtr + cGIdx);
     AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vC1, c1Ptr);
     AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vC2, c2Ptr);
-    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
-        vRstd, meanRstdPtr + rstdValueOffset);
+    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vRstd,
+                                                                                   meanRstdPtr + rstdValueOffset);
     for (uint16_t i = 0; i < pairRepeatTimes; i++) {
         uint32_t offset0 = i * 2 * oneRepeatSizeB32;
         uint32_t offset1 = offset0 + oneRepeatSizeB32;

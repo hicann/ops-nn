@@ -143,10 +143,9 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, EuclideanNo
 
     ctx.blockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context));
     ctx.cacheLineSize = static_cast<int64_t>(Ops::Base::GetCacheLineSize(context));
-    OP_CHECK_IF(
-        ctx.blockSize == 0 || ctx.cacheLineSize == 0,
-        OP_LOGE(context, "blockSize=%ld or cacheLineSize=%ld is 0", ctx.blockSize, ctx.cacheLineSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ctx.blockSize == 0 || ctx.cacheLineSize == 0,
+                OP_LOGE(context, "blockSize=%ld or cacheLineSize=%ld is 0", ctx.blockSize, ctx.cacheLineSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -174,10 +173,9 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, EuclideanN
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     ctx.xDtype = xDesc->GetDataType();
     const std::set<ge::DataType> kSupported = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT32};
-    OP_CHECK_IF(
-        kSupported.count(ctx.xDtype) == 0,
-        OP_LOGE(context, "unsupported x dtype %d (expect fp16/bf16/fp32/int32)", static_cast<int>(ctx.xDtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(kSupported.count(ctx.xDtype) == 0,
+                OP_LOGE(context, "unsupported x dtype %d (expect fp16/bf16/fp32/int32)", static_cast<int>(ctx.xDtype)),
+                return ge::GRAPH_FAILED);
     ctx.dtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(ctx.xDtype));
     return ge::GRAPH_SUCCESS;
 }
@@ -205,13 +203,12 @@ static ge::graphStatus ParseAxesTensor(gert::TilingContext* context, EuclideanNo
     // op_def 中 axes 支持 DT_INT32 / DT_INT64（IndexNumberType），两条解析分支必须并存。
     std::set<int64_t> seen;
     auto pushOne = [&](int64_t v, int64_t idx) -> ge::graphStatus {
-        OP_CHECK_IF(
-            v < -xRank || v >= xRank, OP_LOGE(context, "axes[%ld]=%ld out of range [-%ld, %ld)", idx, v, xRank, xRank),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(v < -xRank || v >= xRank,
+                    OP_LOGE(context, "axes[%ld]=%ld out of range [-%ld, %ld)", idx, v, xRank, xRank),
+                    return ge::GRAPH_FAILED);
         const int64_t norm = (v < 0) ? (v + xRank) : v;
-        OP_CHECK_IF(
-            !seen.insert(norm).second, OP_LOGE(context, "duplicate axis %ld in axes (input idx=%ld)", norm, idx),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!seen.insert(norm).second,
+                    OP_LOGE(context, "duplicate axis %ld in axes (input idx=%ld)", norm, idx), return ge::GRAPH_FAILED);
         ctx.reduceAxes.push_back(norm);
         return ge::GRAPH_SUCCESS;
     };
@@ -373,21 +370,18 @@ static ge::graphStatus PreprocessPattern(gert::TilingContext* context, Euclidean
     PadRIfPureA(ctx);
 
     ctx.axisNum = static_cast<int32_t>(ctx.axisShape.size());
-    OP_CHECK_IF(
-        ctx.axisNum < kMinAxisNum || ctx.axisNum > kMaxAxisNum,
-        OP_LOGE(
-            context, "axisNum=%d out of [%d, %d] after pattern preprocessing", ctx.axisNum, kMinAxisNum, kMaxAxisNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ctx.axisNum < kMinAxisNum || ctx.axisNum > kMaxAxisNum,
+                OP_LOGE(context, "axisNum=%d out of [%d, %d] after pattern preprocessing", ctx.axisNum, kMinAxisNum,
+                        kMaxAxisNum),
+                return ge::GRAPH_FAILED);
 
     // pattern 必形如 A R A R … 严格交替、由 A 起头
     for (int32_t i = 0; i < ctx.axisNum; ++i) {
         const bool wantR = (i % 2 == 1);
-        OP_CHECK_IF(
-            ctx.isReduceAxis[static_cast<size_t>(i)] != wantR,
-            OP_LOGE(
-                context, "axis[%d] type mismatch after preprocessing (isR=%d, want=%d)", i,
-                static_cast<int>(ctx.isReduceAxis[i]), static_cast<int>(wantR)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ctx.isReduceAxis[static_cast<size_t>(i)] != wantR,
+                    OP_LOGE(context, "axis[%d] type mismatch after preprocessing (isR=%d, want=%d)", i,
+                            static_cast<int>(ctx.isReduceAxis[i]), static_cast<int>(wantR)),
+                    return ge::GRAPH_FAILED);
     }
     ctx.isTailR = (ctx.axisNum % 2 == 0);
     return ge::GRAPH_SUCCESS;
@@ -532,12 +526,10 @@ static ge::graphStatus ComputeRUbFactor(gert::TilingContext* context, EuclideanN
     OP_CHECK_IF(lastR < 0, OP_LOGE(context, "no R axis after preprocessing"), return ge::GRAPH_FAILED);
 
     const int64_t rIMax = ComputeRiMax(ctx);
-    OP_CHECK_IF(
-        rIMax < 1,
-        OP_LOGE(
-            context, "r_i_max < 1 (UB cannot hold one R element): aUFA=%ld iAPA=%ld", ctx.aUbFactorAlign,
-            ctx.innerAProdAlign),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rIMax < 1,
+                OP_LOGE(context, "r_i_max < 1 (UB cannot hold one R element): aUFA=%ld iAPA=%ld", ctx.aUbFactorAlign,
+                        ctx.innerAProdAlign),
+                return ge::GRAPH_FAILED);
 
     // 从最内 R 向外 climb
     ctx.innerRProd = 1;
@@ -570,10 +562,9 @@ static ge::graphStatus ComputeRUbFactor(gert::TilingContext* context, EuclideanN
     // 仅「切在最内 R 且 tail R 且实际切 chunk」时 rUbFactor 自身 FloorAlign（守卫条件）
     if (ctx.isTailR && ctx.rSplitAxisIdx == lastR && ctx.rUbFactor < rAxisSize) {
         ctx.rUbFactor = Ops::Base::FloorAlign(ctx.rUbFactor, bsAElem);
-        OP_CHECK_IF(
-            ctx.rUbFactor == 0,
-            OP_LOGE(context, "rUbFactor floor-aligned to 0 (block=%ld elem rIMax=%ld)", bsAElem, rIMax),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ctx.rUbFactor == 0,
+                    OP_LOGE(context, "rUbFactor floor-aligned to 0 (block=%ld elem rIMax=%ld)", bsAElem, rIMax),
+                    return ge::GRAPH_FAILED);
     }
 
     // rUbFactorAlign：仅「切在最内 R 且 tail R」时 rUbFactor 自身是 burst tail 行宽 → 需按 block CeilAlign
@@ -806,9 +797,8 @@ static ge::graphStatus FillAndLogTilingData(gert::TilingContext* context, const 
 {
     EuclideanNormTilingData* td = context->GetTilingData<EuclideanNormTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, td);
-    OP_CHECK_IF(
-        memset_s(td, sizeof(EuclideanNormTilingData), 0, sizeof(EuclideanNormTilingData)) != EOK,
-        OP_LOGE(context, "memset tilingdata error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(td, sizeof(EuclideanNormTilingData), 0, sizeof(EuclideanNormTilingData)) != EOK,
+                OP_LOGE(context, "memset tilingdata error"), return ge::GRAPH_FAILED);
 
     int64_t axisStride[MAX_PATTERN_RANK] = {0};
     EuclideanNormCtx tmpForStride = ctx;
@@ -842,28 +832,23 @@ static ge::graphStatus FillAndLogTilingData(gert::TilingContext* context, const 
     td->cacheBufUbSize = kCacheBufBytes;
     td->rGroupCnt = ctx.rGroupCnt;
 
-    OP_LOGI(
-        context, "EuclideanNorm tiling: dtype=%d axisNum=%d isTailR=%d usedCoreNum=%d isGroup=%d",
-        static_cast<int>(ctx.xDtype), ctx.axisNum, static_cast<int>(ctx.isTailR), ctx.usedCoreNum,
-        static_cast<int>(ctx.isGroup));
-    OP_LOGI(
-        context, "  axisShape=[%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld]", td->axisShape[0], td->axisShape[1],
-        td->axisShape[2], td->axisShape[3], td->axisShape[4], td->axisShape[5], td->axisShape[6], td->axisShape[7],
-        td->axisShape[8]);
-    OP_LOGI(
-        context, "  aLoopCntTotal=%ld aSplitChunkCnt=%ld | bigCore=%ld*%d smallCore=%ld*%d", td->aLoopCntTotal,
-        td->aSplitChunkCnt, td->aBigCoreLoopCnt, td->aBigCoreCnt, td->aSmallCoreLoopCnt,
-        td->usedCoreNum - td->aBigCoreCnt);
-    OP_LOGI(
-        context, "  aSplit=%d aUbFactor=%ld aUbFactorAlign=%ld", td->aSplitAxisIdx, td->aUbFactor, td->aUbFactorAlign);
-    OP_LOGI(
-        context,
-        "  rSplit=%d rUbFactor=%ld rUbFactorAlign=%ld | innerAProd=%ld iAPAlign=%ld innerRProd=%ld iRPAlign=%ld",
-        td->rSplitAxisIdx, td->rUbFactor, td->rUbFactorAlign, td->innerAProd, td->innerAProdAlign, td->innerRProd,
-        td->innerRProdAlign);
-    OP_LOGI(
-        context, "  rLoopCntTotal=%ld | UB: preRed=%ld postRed=%ld tmp=%ld cache=%ld", td->rLoopCntTotal,
-        td->preReduceUbSize, td->postReduceUbSize, td->tmpBufUbSize, td->cacheBufUbSize);
+    OP_LOGI(context, "EuclideanNorm tiling: dtype=%d axisNum=%d isTailR=%d usedCoreNum=%d isGroup=%d",
+            static_cast<int>(ctx.xDtype), ctx.axisNum, static_cast<int>(ctx.isTailR), ctx.usedCoreNum,
+            static_cast<int>(ctx.isGroup));
+    OP_LOGI(context, "  axisShape=[%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld]", td->axisShape[0], td->axisShape[1],
+            td->axisShape[2], td->axisShape[3], td->axisShape[4], td->axisShape[5], td->axisShape[6], td->axisShape[7],
+            td->axisShape[8]);
+    OP_LOGI(context, "  aLoopCntTotal=%ld aSplitChunkCnt=%ld | bigCore=%ld*%d smallCore=%ld*%d", td->aLoopCntTotal,
+            td->aSplitChunkCnt, td->aBigCoreLoopCnt, td->aBigCoreCnt, td->aSmallCoreLoopCnt,
+            td->usedCoreNum - td->aBigCoreCnt);
+    OP_LOGI(context, "  aSplit=%d aUbFactor=%ld aUbFactorAlign=%ld", td->aSplitAxisIdx, td->aUbFactor,
+            td->aUbFactorAlign);
+    OP_LOGI(context,
+            "  rSplit=%d rUbFactor=%ld rUbFactorAlign=%ld | innerAProd=%ld iAPAlign=%ld innerRProd=%ld iRPAlign=%ld",
+            td->rSplitAxisIdx, td->rUbFactor, td->rUbFactorAlign, td->innerAProd, td->innerAProdAlign, td->innerRProd,
+            td->innerRProdAlign);
+    OP_LOGI(context, "  rLoopCntTotal=%ld | UB: preRed=%ld postRed=%ld tmp=%ld cache=%ld", td->rLoopCntTotal,
+            td->preReduceUbSize, td->postReduceUbSize, td->tmpBufUbSize, td->cacheBufUbSize);
     if (ctx.isGroup) {
         OP_LOGI(context, "  group: rGroupCnt=%ld usedCoreNum=%d", td->rGroupCnt, td->usedCoreNum);
     }
@@ -927,14 +912,13 @@ static ge::graphStatus FillEmptyTilingData(gert::TilingContext* context, const E
 {
     EuclideanNormTilingData* td = context->GetTilingData<EuclideanNormTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, td);
-    OP_CHECK_IF(
-        memset_s(td, sizeof(EuclideanNormTilingData), 0, sizeof(EuclideanNormTilingData)) != EOK,
-        OP_LOGE(context, "memset tilingdata error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(td, sizeof(EuclideanNormTilingData), 0, sizeof(EuclideanNormTilingData)) != EOK,
+                OP_LOGE(context, "memset tilingdata error"), return ge::GRAPH_FAILED);
 
     if (ctx.emptyKind == EuclideanNormEmptyKind::EMPTY_A) {
         // usedCoreNum=0 → kernel 全核早退；其余字段 0，kernel 不读
-        OP_LOGI(
-            context, "EuclideanNorm EMPTY_A: dtype=%d usedCoreNum=0 (kernel early-exit)", static_cast<int>(ctx.xDtype));
+        OP_LOGI(context, "EuclideanNorm EMPTY_A: dtype=%d usedCoreNum=0 (kernel early-exit)",
+                static_cast<int>(ctx.xDtype));
         return ge::GRAPH_SUCCESS;
     }
 
@@ -952,12 +936,11 @@ static ge::graphStatus FillEmptyTilingData(gert::TilingContext* context, const E
     //   rUbFactor / rUbFactorAlign / innerAProd* / innerRProd* / rLoopCntTotal /
     //   preReduceUbSize / tmpBufUbSize / cacheBufUbSize）保持 0、kernel 不读
 
-    OP_LOGI(
-        context,
-        "EuclideanNorm EMPTY_R: dtype=%d aTotal=%ld aUbFactor=%ld usedCoreNum=%d | "
-        "bigCore=%ld*%d smallCore=%ld*%d | postRed=%ld",
-        static_cast<int>(ctx.xDtype), ctx.aTotalEmpty, td->aUbFactor, td->usedCoreNum, td->aBigCoreLoopCnt,
-        td->aBigCoreCnt, td->aSmallCoreLoopCnt, td->usedCoreNum - td->aBigCoreCnt, td->postReduceUbSize);
+    OP_LOGI(context,
+            "EuclideanNorm EMPTY_R: dtype=%d aTotal=%ld aUbFactor=%ld usedCoreNum=%d | "
+            "bigCore=%ld*%d smallCore=%ld*%d | postRed=%ld",
+            static_cast<int>(ctx.xDtype), ctx.aTotalEmpty, td->aUbFactor, td->usedCoreNum, td->aBigCoreLoopCnt,
+            td->aBigCoreCnt, td->aSmallCoreLoopCnt, td->usedCoreNum - td->aBigCoreCnt, td->postReduceUbSize);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -973,10 +956,9 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, Euclidean
     }
     OP_CHECK_IF(FillEmptyTilingData(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(0U),  // templateType
-        static_cast<uint64_t>(1U),  // isEmptyTensor
-        static_cast<uint64_t>(0U)); // isTailR
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(static_cast<uint64_t>(0U),  // templateType
+                                                  static_cast<uint64_t>(1U),  // isEmptyTensor
+                                                  static_cast<uint64_t>(0U)); // isTailR
     context->SetTilingKey(tilingKey);
     const uint32_t blockDim = static_cast<uint32_t>(std::max(ctx.usedCoreNum, 1));
     context->SetBlockDim(blockDim);
@@ -1016,17 +998,16 @@ static ge::graphStatus EuclideanNormTilingFunc(gert::TilingContext* context)
     // Group 模板触发判定
     if (ShouldUseGroup(ctx)) {
         ComputeGroupSplit(ctx);
-        OP_CHECK_IF(
-            context->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
-            OP_LOGE(context->GetNodeName(), "Failed to set ScheduleMode!"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(context->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context->GetNodeName(), "Failed to set ScheduleMode!"), return ge::GRAPH_FAILED);
     }
     ComputeUbSizes(ctx);
 
     OP_CHECK_IF(FillAndLogTilingData(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(ctx.isGroup ? 1U : 0U), static_cast<uint64_t>(0U),
-        static_cast<uint64_t>(ctx.isTailR ? 1U : 0U));
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(static_cast<uint64_t>(ctx.isGroup ? 1U : 0U),
+                                                  static_cast<uint64_t>(0U),
+                                                  static_cast<uint64_t>(ctx.isTailR ? 1U : 0U));
     context->SetTilingKey(tilingKey);
     context->SetBlockDim(static_cast<uint32_t>(std::max(ctx.usedCoreNum, 1)));
 

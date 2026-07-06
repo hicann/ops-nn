@@ -18,8 +18,8 @@ namespace l0op {
 
 OP_TYPE_REGISTER(HardShrinkGrad);
 
-const aclTensor* HardShrinkGrad(
-    const aclTensor* gradOutput, const aclTensor* self, float lambd, aclOpExecutor* executor)
+const aclTensor* HardShrinkGrad(const aclTensor* gradOutput, const aclTensor* self, float lambd,
+                                aclOpExecutor* executor)
 {
     L0_DFX(HardShrinkGrad, gradOutput, self, lambd);
     op::Shape resultShape;
@@ -28,11 +28,11 @@ const aclTensor* HardShrinkGrad(
 
     // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将HardShrinkGrad算子加入任务队列
     // HardShrinkGrad是算子的OpType，gradOutput, self是算子的输入，result是算子的输出
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(HardShrinkGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(result), OP_ATTR(lambd));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardShrinkGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardShrinkGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(result),
+                                           OP_ATTR(lambd));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardShrinkGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
 
     return result;
 }

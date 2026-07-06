@@ -28,7 +28,8 @@ template <typename T>
 class MseLossGrad {
 public:
     __aicore__ inline MseLossGrad(){};
-    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, const MseLossGradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y,
+                                const MseLossGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -56,7 +57,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void MseLossGrad<T>::Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, const MseLossGradTilingData* tilingData)
+__aicore__ inline void MseLossGrad<T>::Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y,
+                                            const MseLossGradTilingData* tilingData)
 {
     this->cof = tilingData->cof;
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -70,12 +72,13 @@ __aicore__ inline void MseLossGrad<T>::Init(GM_ADDR predict, GM_ADDR label, GM_A
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     this->bufferNum = 1;
     if (static_cast<int32_t>(tilingData->usedDb) == 1) {
         this->bufferNum = 2;
-    }  
+    }
     xGm.SetGlobalBuffer((__gm__ T*)predict + globalBufferIndex, this->coreDataNum);
     yGm.SetGlobalBuffer((__gm__ T*)label + globalBufferIndex, this->coreDataNum);
     zGm.SetGlobalBuffer((__gm__ T*)dout + globalBufferIndex, this->coreDataNum);
@@ -86,7 +89,7 @@ __aicore__ inline void MseLossGrad<T>::Init(GM_ADDR predict, GM_ADDR label, GM_A
     if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
         pipe.InitBuffer(resultTmpBuf, this->tileDataNum * sizeof(float));
         pipe.InitBuffer(calcValueLocal, this->tileDataNum * 3 * sizeof(float));
-    }    
+    }
 }
 
 template <typename T>
@@ -174,12 +177,12 @@ __aicore__ inline void MseLossGrad<T>::Process()
     CopyOut(loopCount - 1);
 }
 
-
 template <typename T>
 class MseLossGradScale {
 public:
     __aicore__ inline MseLossGradScale(){};
-    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, const MseLossGradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y,
+                                const MseLossGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -208,9 +211,9 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void MseLossGradScale<T>::Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, const MseLossGradTilingData* tilingData)
+__aicore__ inline void MseLossGradScale<T>::Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y,
+                                                 const MseLossGradTilingData* tilingData)
 {
-    
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     this->cof = tilingData->cof;
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -224,15 +227,16 @@ __aicore__ inline void MseLossGradScale<T>::Init(GM_ADDR predict, GM_ADDR label,
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     this->bufferNum = 1;
     if (static_cast<int32_t>(tilingData->usedDb) == 1) {
         this->bufferNum = 2;
-    }  
+    }
     xGm.SetGlobalBuffer((__gm__ T*)predict + globalBufferIndex, this->coreDataNum);
     yGm.SetGlobalBuffer((__gm__ T*)label + globalBufferIndex, this->coreDataNum);
-    
+
     outGm.SetGlobalBuffer((__gm__ T*)y + globalBufferIndex, this->coreDataNum);
 
     zGm.SetGlobalBuffer((__gm__ T*)dout, 1); // dout标量
@@ -242,7 +246,7 @@ __aicore__ inline void MseLossGradScale<T>::Init(GM_ADDR predict, GM_ADDR label,
     } else if constexpr (IsSameType<T, half>::value) {
         T scaleValue = zGm.GetValue(0);
         this->doutScaleValue = (float)scaleValue;
-    }else {
+    } else {
         this->doutScaleValue = (float)(zGm.GetValue(0));
     }
 
@@ -251,7 +255,7 @@ __aicore__ inline void MseLossGradScale<T>::Init(GM_ADDR predict, GM_ADDR label,
     if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
         pipe.InitBuffer(resultTmpBuf, this->tileDataNum * sizeof(float));
         pipe.InitBuffer(calcValueLocal, this->tileDataNum * 2 * sizeof(float));
-    }    
+    }
 }
 
 template <typename T>

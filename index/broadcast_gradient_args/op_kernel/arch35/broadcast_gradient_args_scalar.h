@@ -21,14 +21,12 @@ namespace BroadcastGradientArgs {
 using namespace AscendC;
 
 template <typename T>
-class BroadcastGradientArgsScalar : public BroadcastGradientArgsBase<T>
-{
+class BroadcastGradientArgsScalar : public BroadcastGradientArgsBase<T> {
 public:
     __aicore__ inline BroadcastGradientArgsScalar(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR y1, GM_ADDR y2, GM_ADDR outShape,
-        const BroadcastGradientArgsTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y1, GM_ADDR y2, GM_ADDR outShape,
+                                const BroadcastGradientArgsTilingData* __restrict tilingData)
     {
         // init global memory
         tilingData_ = tilingData;
@@ -64,8 +62,8 @@ public:
         }
 
         if (tilingData_->x1Len == tilingData_->x2Len && equal_flag) {
-            AscendC::DataCacheCleanAndInvalid<
-                uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(this->outShapeGm);
+            AscendC::DataCacheCleanAndInvalid<uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE,
+                                              AscendC::DcciDst::CACHELINE_OUT>(this->outShapeGm);
             return;
         }
 
@@ -107,8 +105,8 @@ public:
             this->y1Gm);
         AscendC::DataCacheCleanAndInvalid<T, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(
             this->y2Gm);
-        AscendC::DataCacheCleanAndInvalid<
-            uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE, AscendC::DcciDst::CACHELINE_OUT>(this->outShapeGm);
+        AscendC::DataCacheCleanAndInvalid<uint64_t, AscendC::CacheLine::ENTIRE_DATA_CACHE,
+                                          AscendC::DcciDst::CACHELINE_OUT>(this->outShapeGm);
     }
 
 private:

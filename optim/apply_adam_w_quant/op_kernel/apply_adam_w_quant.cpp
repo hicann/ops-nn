@@ -18,31 +18,27 @@
 
 using namespace ApplyAdamWQuantNS;
 
-extern "C" __global__ __aicore__ void apply_adam_w_quant(
-    GM_ADDR var, GM_ADDR grad, GM_ADDR m, GM_ADDR v, GM_ADDR qmap_m, GM_ADDR qmap_v, GM_ADDR absmax_m, GM_ADDR absmax_v,
-    GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref, GM_ADDR v_ref, GM_ADDR absmax_m_ref, GM_ADDR absmax_v_ref,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void apply_adam_w_quant(GM_ADDR var, GM_ADDR grad, GM_ADDR m, GM_ADDR v,
+                                                         GM_ADDR qmap_m, GM_ADDR qmap_v, GM_ADDR absmax_m,
+                                                         GM_ADDR absmax_v, GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref,
+                                                         GM_ADDR v_ref, GM_ADDR absmax_m_ref, GM_ADDR absmax_v_ref,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data_in, tiling);
-        if (TILING_KEY_IS(100)) {
-            ApplyAdamWQuant<float, int64_t> op;
-            op.Init(
-                var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, var_ref, m_ref, v_ref, absmax_m_ref,
+    if (TILING_KEY_IS(100)) {
+        ApplyAdamWQuant<float, int64_t> op;
+        op.Init(var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, var_ref, m_ref, v_ref, absmax_m_ref,
                 absmax_v_ref, &tiling_data_in);
-            op.Process();
-        }
-        else if (TILING_KEY_IS(200)) {
-            ApplyAdamWQuant16<float, int64_t, half> op;
-            op.Init(
-                var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, var_ref, m_ref, v_ref, absmax_m_ref,
+        op.Process();
+    } else if (TILING_KEY_IS(200)) {
+        ApplyAdamWQuant16<float, int64_t, half> op;
+        op.Init(var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, var_ref, m_ref, v_ref, absmax_m_ref,
                 absmax_v_ref, &tiling_data_in);
-            op.Process();
-        }
-        else if (TILING_KEY_IS(300)) {
-            ApplyAdamWQuant16<float, int64_t, bfloat16_t> op;
-            op.Init(
-                var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, var_ref, m_ref, v_ref, absmax_m_ref,
+        op.Process();
+    } else if (TILING_KEY_IS(300)) {
+        ApplyAdamWQuant16<float, int64_t, bfloat16_t> op;
+        op.Init(var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, var_ref, m_ref, v_ref, absmax_m_ref,
                 absmax_v_ref, &tiling_data_in);
-            op.Process();
-        }
+        op.Process();
+    }
 }

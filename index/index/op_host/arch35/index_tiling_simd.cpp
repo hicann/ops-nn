@@ -85,9 +85,8 @@ ge::graphStatus IndexTilingSimd::GetShapeAttrsInfo()
     // 获取 tiling 数据
     simdTilingData_ = context_->GetTilingData<IndexSimdTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, simdTilingData_);
-    OP_CHECK_IF(
-        memset_s(simdTilingData_, sizeof(IndexSimdTilingData), 0, sizeof(IndexSimdTilingData)) != EOK,
-        OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(simdTilingData_, sizeof(IndexSimdTilingData), 0, sizeof(IndexSimdTilingData)) != EOK,
+                OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (CheckShapeInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -150,9 +149,9 @@ void IndexTilingSimd::CalcSimdTiling()
     int64_t blockFactor = static_cast<int64_t>(outputLength_) /
                           static_cast<int64_t>(mergeOutputShape_[mergeOutputShapeDim_ - 1]) /
                           static_cast<int64_t>(coreNum_);
-    int64_t tailBlockFactor =
-        static_cast<int64_t>(outputLength_) / static_cast<int64_t>(mergeOutputShape_[mergeOutputShapeDim_ - 1]) -
-        blockFactor * static_cast<int64_t>(coreNum_);
+    int64_t tailBlockFactor = static_cast<int64_t>(outputLength_) /
+                                  static_cast<int64_t>(mergeOutputShape_[mergeOutputShapeDim_ - 1]) -
+                              blockFactor * static_cast<int64_t>(coreNum_);
     int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     int64_t ubAvailable = (static_cast<int64_t>(ubSize_) - static_cast<int64_t>(indexedDimNum_) * INDICES_SIZE) /
                           ubBlockSize * ubBlockSize / static_cast<int64_t>(inputDtypeSize_) / BUFFER_NUM;
@@ -252,17 +251,13 @@ ge::graphStatus IndexTilingSimd::MargeOutputAxis()
 
 ge::graphStatus IndexTilingSimd::DoOpTiling()
 {
-    OP_CHECK_IF(
-        MargeOutputAxis() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Marge axis error!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(MargeOutputAxis() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Marge axis error!"),
+                return ge::GRAPH_FAILED);
     CalcSimdTiling();
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t IndexTilingSimd::GetTilingKey() const
-{
-    return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, 0, 0);
-}
+uint64_t IndexTilingSimd::GetTilingKey() const { return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, 0, 0); }
 
 ge::graphStatus IndexTilingSimd::PostTiling()
 {

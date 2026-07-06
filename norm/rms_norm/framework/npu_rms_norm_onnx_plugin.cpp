@@ -17,29 +17,26 @@
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status ParseParamsNpuRmsNorm(const Message *op_src, ge::Operator &op_dest) {
-  const NodeProto *node = dynamic_cast<const NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-  float epsilon = 1e-6;
-  op_dest.SetAttr("epsilon", epsilon);
-  return SUCCESS;
+static Status ParseParamsNpuRmsNorm(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
+    }
+    float epsilon = 1e-6;
+    op_dest.SetAttr("epsilon", epsilon);
+    return SUCCESS;
 }
 
 // register npu_rms_norm op info to GE
 REGISTER_CUSTOM_OP("RmsNorm")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::11::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::12::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::13::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::14::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::15::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::16::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::17::NPURmsNorm"),
-                 ge::AscendString("ai.onnx::18::NPURmsNorm")})
-  .ParseParamsFn(ParseParamsNpuRmsNorm)
-  .ImplyType(ImplyType::TVM);
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("npu::1::NPURmsNorm"), ge::AscendString("ai.onnx::11::NPURmsNorm"),
+                   ge::AscendString("ai.onnx::12::NPURmsNorm"), ge::AscendString("ai.onnx::13::NPURmsNorm"),
+                   ge::AscendString("ai.onnx::14::NPURmsNorm"), ge::AscendString("ai.onnx::15::NPURmsNorm"),
+                   ge::AscendString("ai.onnx::16::NPURmsNorm"), ge::AscendString("ai.onnx::17::NPURmsNorm"),
+                   ge::AscendString("ai.onnx::18::NPURmsNorm")})
+    .ParseParamsFn(ParseParamsNpuRmsNorm)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

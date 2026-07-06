@@ -16,7 +16,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static constexpr int DEAF_DST_TYPE = 40;  // ge::DT_FLOAT4_E2M1
+static constexpr int DEAF_DST_TYPE = 40; // ge::DT_FLOAT4_E2M1
 static const std::vector<ge::DataType> xDataTypeRegbase = {
     ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
     ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16};

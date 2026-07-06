@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -99,14 +99,15 @@ private:
                         static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
         } else if constexpr (AscendC::Impl::Detail::MatmulFeatureTrait<MM_CFG>::IsSupportL0CToUB() &&
                              PhyPosIsUB(C_TYPE::pos) && FIXPIPE_MODE == McgShfMode::DUAL_DST_SPLIT_N) {
-            dstOffset =
-                static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() * stride) +
-                static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN() * baseHeight);
+            dstOffset = static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() *
+                                             stride) +
+                        static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN() *
+                                             baseHeight);
             dstOffset = dstOffset >> 1;
         } else {
-            dstOffset =
-                static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() * stride) +
-                static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
+            dstOffset = static_cast<int64_t>(curRow * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseM() *
+                                             stride) +
+                        static_cast<int64_t>(curCol * MATMUL_MODULE(MatmulShapeTiling)->GetTiling().GetBaseN());
         }
         return dstOffset;
     }
@@ -204,4 +205,3 @@ private:
 };
 
 } // namespace AscendC
-

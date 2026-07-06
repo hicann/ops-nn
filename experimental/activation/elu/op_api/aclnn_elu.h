@@ -59,9 +59,9 @@ extern "C" {
  * @param [out] executor: 执行器。
  * @return aclnnStatus。
  */
-ACLNN_API aclnnStatus aclnnEluGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnEluGetWorkspaceSize(const aclTensor* self, const aclScalar* alpha, const aclScalar* scale,
+                                               const aclScalar* inputScale, aclTensor* out, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor);
 
 /**
  * @brief aclnnElu 第二段接口：在指定 stream 上执行计算。

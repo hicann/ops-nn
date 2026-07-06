@@ -33,8 +33,7 @@ class BatchNormGradV3SplitLoadCrossCoreTiling : public BatchNormGradV3Base {
     static constexpr int64_t CONST_ONE = 1;
 
 public:
-    explicit BatchNormGradV3SplitLoadCrossCoreTiling(gert::TilingContext* context) : BatchNormGradV3Base(context)
-    {}
+    explicit BatchNormGradV3SplitLoadCrossCoreTiling(gert::TilingContext* context) : BatchNormGradV3Base(context) {}
     ~BatchNormGradV3SplitLoadCrossCoreTiling() override = default;
 
 protected:
@@ -54,10 +53,9 @@ protected:
             return false;
         }
 
-        OP_LOGD(
-            context_->GetNodeName(),
-            "BatchNormGradV3SplitLoadCrossCoreTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)",
-            fusedB0Len_, fusedALen_, fusedB1Len_);
+        OP_LOGD(context_->GetNodeName(),
+                "BatchNormGradV3SplitLoadCrossCoreTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)",
+                fusedB0Len_, fusedALen_, fusedB1Len_);
         return true;
     }
 

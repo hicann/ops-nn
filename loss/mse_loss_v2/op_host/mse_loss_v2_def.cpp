@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class MSELossV2 : public OpDef
-{
+class MSELossV2 : public OpDef {
 public:
     explicit MSELossV2(const char* name) : OpDef(name)
     {

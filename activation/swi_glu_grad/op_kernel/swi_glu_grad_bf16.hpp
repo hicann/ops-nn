@@ -17,12 +17,12 @@
 #include "kernel_operator.h"
 
 using namespace AscendC;
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 class SwiGluGradBF16 {
-  public:
+public:
     __aicore__ inline SwiGluGradBF16() {}
 
-  protected:
+protected:
     __aicore__ inline void InitUbBuffer(uint64_t tileLength);
     __aicore__ inline void Compute(uint64_t curTileLen);
     __aicore__ inline void ComputeSigLocal(uint64_t curTileLen);
@@ -60,7 +60,7 @@ class SwiGluGradBF16 {
 #endif
 };
 
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::InitUbBuffer(uint64_t tileLength)
 {
     // pipe alloc memory to queue, the unit is Bytes
@@ -83,12 +83,12 @@ __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::Ini
     lLocal = lTempBuffer.Get<calcType>();
 }
 
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::Compute(uint64_t tileLength)
 {
     // tbuf::templocaltensor
     // deque input tensors from VECIN queue
-    //calc sigLocal
+    // calc sigLocal
     ComputeSigLocal(tileLength);
     //----------------N
     Mul(nLocal, sigLocal, aLocal, tileLength);
@@ -128,13 +128,13 @@ __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::Com
     outQueueM.template EnQue<outType>(mLocal_);
 }
 
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::ComputeSigLocal(uint64_t tileLength)
 {
     // tbuf::templocaltensor
     // deque input tensors from VECIN queue
-    //calc sigLocal
-    LocalTensor<inType> aLocal_ = inQueueA.template DeQue<inType>(); //input a
+    // calc sigLocal
+    LocalTensor<inType> aLocal_ = inQueueA.template DeQue<inType>(); // input a
 
     Cast(aLocal, aLocal_, RoundMode::CAST_NONE, tileLength);
     PipeBarrier<PIPE_V>();
@@ -152,7 +152,7 @@ __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::Com
     PipeBarrier<PIPE_V>();
 }
 
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 __aicore__ inline void SwiGluGradBF16<inType, calcType, outType, bufferNum>::ComputeGradN(uint64_t tileLength)
 {
     LocalTensor<inType> lLocal_ = inQueueL.template DeQue<inType>(); // input l

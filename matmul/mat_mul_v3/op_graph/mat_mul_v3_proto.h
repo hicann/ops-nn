@@ -40,7 +40,7 @@ namespace ge {
 * @li offset_x: An optional integer for quantized MatMulV2Compress.
 * The negative offset added to the input x1 for int8 type. Ensure offset_x
 * within the effective range of int8 [-128, 127]. Defaults to "0".
-* @li opImplMode: An optional integer for MatMulV3. op_impl_mode_enum: 0x1: default 
+* @li opImplMode: An optional integer for MatMulV3. op_impl_mode_enum: 0x1: default
 * 0x2: high_performance 0x4: high_precision 0x8: super_performance
 * 0x10: support_of_bound_index 0x20: enable_float_32_execution 0x40: enable_hi_float_32_execution
 * before multiplication. \n

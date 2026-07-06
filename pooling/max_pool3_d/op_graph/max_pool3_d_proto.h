@@ -20,8 +20,9 @@ namespace ge {
 
 * @par Inputs:
 * One input:
-* x: A 5D tensor. Supported type:float16, float32. Additional support for bfloat16 in Ascend 950 AI Processor. 
-* The double type is reserved but currently unsupported. Support format: NHDWC, NCDHW. Additional support for ND in Ascend 950 AI Processor.
+* x: A 5D tensor. Supported type:float16, float32. Additional support for bfloat16 in Ascend 950 AI Processor.
+* The double type is reserved but currently unsupported. Support format: NHDWC, NCDHW. Additional support for ND in
+Ascend 950 AI Processor.
 
 * @par Attributes:
 * @li ksize: A required list of int8, int16, int32, or int64 values,
@@ -36,8 +37,8 @@ namespace ge {
 * The pads should be greater than or equal to 0 and smaller than the corresponding kernel size.
 * It only takes effect when padding is "CALCULATED". Default value is {0,0,0,0,0,0}.
 * @li dilation: Dilation of kernel. default value is {1,1,1,1,1}.
-* @li ceil_mode: Use the floor or ceil function to calculate output depth, height and width. 
-* It support 0(floor) or 1(ceil). Default value is 0. 
+* @li ceil_mode: Use the floor or ceil function to calculate output depth, height and width.
+* It support 0(floor) or 1(ceil). Default value is 0.
 * It can be set to 1 only when padding is "CALCULATED".
 * @li data_format: An optional string, specify the data format of the input and
 * output data. It support "NDHWC"(default), "NCDHW"". \n
@@ -75,16 +76,12 @@ namespace ge {
                   out_height = (in_height + pad_top + pad_bottom - ((ksize_h - 1) * dilation_h + 1)) / stride_h + 1
                   out_width = (in_width + pad_left + pad_right - ((ksize_w - 1) * dilation_w + 1)) / stride_w + 1
           else :
-                  out_depth = (in_depth + pad_front + pad_backend - ((ksize_d - 1) * dilation_d + 1) + stride_d - 1) / stride_d + 1
-                  out_height = (in_height + pad_top + pad_bottom - ((ksize_h - 1) * dilation_h + 1) + stride_h - 1) / stride_h + 1
-                  out_width = (in_width + in_width + pad_right - ((ksize_w - 1) * dilation_w + 1) + stride_w - 1) / stride_w + 1
-                  if  (out_depth - 1) * stride_d >= in_depth + pad_front :
-                          out_depth = out_depth - 1
-                  if  (out_height - 1) * stride_h >= in_height + pad_top :
-                          out_height = out_height - 1
-                  if  (out_width - 1) * stride_w >= in_width + in_width :
-                          out_width = out_width - 1
-  It not support out_height < 0 or out_width < 0.
+                  out_depth = (in_depth + pad_front + pad_backend - ((ksize_d - 1) * dilation_d + 1) + stride_d - 1) /
+stride_d + 1 out_height = (in_height + pad_top + pad_bottom - ((ksize_h - 1) * dilation_h + 1) + stride_h - 1) /
+stride_h + 1 out_width = (in_width + in_width + pad_right - ((ksize_w - 1) * dilation_w + 1) + stride_w - 1) / stride_w
++ 1 if  (out_depth - 1) * stride_d >= in_depth + pad_front : out_depth = out_depth - 1 if  (out_height - 1) * stride_h
+>= in_height + pad_top : out_height = out_height - 1 if  (out_width - 1) * stride_w >= in_width + in_width : out_width =
+out_width - 1 It not support out_height < 0 or out_width < 0.
 * @endcode
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator MaxPool3D.
@@ -95,12 +92,12 @@ REG_OP(MaxPool3D)
     .REQUIRED_ATTR(ksize, ListInt)
     .REQUIRED_ATTR(strides, ListInt)
     .REQUIRED_ATTR(padding, String)
-    .ATTR(pads, ListInt, {0,0,0,0,0,0})
+    .ATTR(pads, ListInt, {0, 0, 0, 0, 0, 0})
     .ATTR(dilation, ListInt, {1, 1, 1, 1, 1})
     .ATTR(ceil_mode, Int, 0)
     .ATTR(data_format, String, "NDHWC")
     .OP_END_FACTORY_REG(MaxPool3D)
 
-}  // namespace ge
+} // namespace ge
 
 #endif

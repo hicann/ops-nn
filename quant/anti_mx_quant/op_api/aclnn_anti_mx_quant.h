@@ -45,7 +45,7 @@ __attribute__((visibility("default"))) aclnnStatus aclnnAntiMxQuantGetWorkspaceS
  * @return aclnnStatus: 返回状态码。
  */
 __attribute__((visibility("default"))) aclnnStatus aclnnAntiMxQuant(void* workspace, uint64_t workspaceSize,
-                                                                      aclOpExecutor* executor, aclrtStream stream);
+                                                                    aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

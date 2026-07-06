@@ -32,10 +32,10 @@ using namespace std;
 static int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 static int8_t cubeMathTypeHF32 = USE_HF32;
 class conv_tbc_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { cout << "conv_tbc_test SetUp" << endl; }
+protected:
+    static void SetUpTestCase() { cout << "conv_tbc_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "conv_tbc_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "conv_tbc_test TearDown" << endl; }
 };
 
 // TEST_F(conv_tbc_test, test_convTbc_dtype_error) {
@@ -63,94 +63,99 @@ class conv_tbc_test : public testing::Test {
 //   }
 // }
 
-TEST_F(conv_tbc_test, test_convTbc_bias_dim_error) {
-  vector<int64_t> inp_dims = {16, 16, 8};
-  vector<int64_t> weight_dims = {3, 8, 16};
-  vector<int64_t> bias_dims = {1, 1, 16};
-  vector<int64_t> output_dims = {16, 16, 16};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_bias_dim_error)
+{
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {1, 1, 16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_1) {
-  vector<int64_t> inp_dims = {0, 0, 0};
-  vector<int64_t> weight_dims = {0, 0, 0};
-  vector<int64_t> bias_dims = {0};
-  vector<int64_t> output_dims = {3, 0, 0};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_1)
+{
+    vector<int64_t> inp_dims = {0, 0, 0};
+    vector<int64_t> weight_dims = {0, 0, 0};
+    vector<int64_t> bias_dims = {0};
+    vector<int64_t> output_dims = {3, 0, 0};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_2) {
-  vector<int64_t> inp_dims = {16, 16, 0};
-  vector<int64_t> weight_dims = {3, 0, 16};
-  vector<int64_t> bias_dims = {16};
-  vector<int64_t> output_dims = {16, 16, 16};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACL_SUCCESS); // input zero output not zero
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_2)
+{
+    vector<int64_t> inp_dims = {16, 16, 0};
+    vector<int64_t> weight_dims = {3, 0, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACL_SUCCESS);                                // input zero output not zero
 }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_3) {
-  vector<int64_t> inp_dims = {1, 16, 8};
-  vector<int64_t> weight_dims = {4, 8, 16};
-  vector<int64_t> bias_dims = {16};
-  vector<int64_t> output_dims = {0, 16, 16};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_3)
+{
+    vector<int64_t> inp_dims = {1, 16, 8};
+    vector<int64_t> weight_dims = {4, 8, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {0, 16, 16};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_4) {
-  vector<int64_t> inp_dims = {32, 2, 16};
-  vector<int64_t> weight_dims = {3, 16, 64};
-  vector<int64_t> bias_dims = {0};
-  vector<int64_t> output_dims = {30, 2, 64};
-  int64_t pad = 0;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_4)
+{
+    vector<int64_t> inp_dims = {32, 2, 16};
+    vector<int64_t> weight_dims = {3, 16, 64};
+    vector<int64_t> bias_dims = {0};
+    vector<int64_t> output_dims = {30, 2, 64};
+    int64_t pad = 0;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // TEST_F(conv_tbc_test, test_convTbc_empty_tensor_5) {
@@ -171,131 +176,138 @@ TEST_F(conv_tbc_test, test_convTbc_empty_tensor_4) {
 //   EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 // }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_6) {
-  vector<int64_t> inp_dims = {0, 2, 16};
-  vector<int64_t> weight_dims = {1, 16, 64};
-  vector<int64_t> bias_dims = {64};
-  vector<int64_t> output_dims = {0, 2, 64};
-  int64_t pad = 0;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  // EXPECT_EQ(aclRet, ACL_SUCCESS);
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_6)
+{
+    vector<int64_t> inp_dims = {0, 2, 16};
+    vector<int64_t> weight_dims = {1, 16, 64};
+    vector<int64_t> bias_dims = {64};
+    vector<int64_t> output_dims = {0, 2, 64};
+    int64_t pad = 0;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+                                                                   // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_7) {
-  vector<int64_t> inp_dims = {32, 2, 0};
-  vector<int64_t> weight_dims = {3, 16, 64};
-  vector<int64_t> bias_dims = {64};
-  vector<int64_t> output_dims = {30, 2, 64};
-  int64_t pad = 0;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_7)
+{
+    vector<int64_t> inp_dims = {32, 2, 0};
+    vector<int64_t> weight_dims = {3, 16, 64};
+    vector<int64_t> bias_dims = {64};
+    vector<int64_t> output_dims = {30, 2, 64};
+    int64_t pad = 0;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_empty_tensor_10) {
-  vector<int64_t> inp_dims = {32, 2, 16};
-  vector<int64_t> weight_dims = {0, 16, 64};
-  vector<int64_t> bias_dims = {64};
-  vector<int64_t> output_dims = {30, 2, 64};
-  int64_t pad = 0;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_empty_tensor_10)
+{
+    vector<int64_t> inp_dims = {32, 2, 16};
+    vector<int64_t> weight_dims = {0, 16, 64};
+    vector<int64_t> bias_dims = {64};
+    vector<int64_t> output_dims = {30, 2, 64};
+    int64_t pad = 0;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_dim_error) {
-  vector<int64_t> inp_dims = {16, 16, 8, 4};
-  vector<int64_t> weight_dims = {3, 8, 16, 4};
-  vector<int64_t> bias_dims = {16};
-  vector<int64_t> output_dims = {16, 16, 16, 4};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_dim_error)
+{
+    vector<int64_t> inp_dims = {16, 16, 8, 4};
+    vector<int64_t> weight_dims = {3, 8, 16, 4};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16, 4};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_dim_error_channel_1) {
-  vector<int64_t> inp_dims = {16, 16, 8};
-  vector<int64_t> weight_dims = {3, 10, 16};
-  vector<int64_t> bias_dims = {16};
-  vector<int64_t> output_dims = {16, 16, 16};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_NE(aclRet, ACLNN_SUCCESS);
+TEST_F(conv_tbc_test, test_convTbc_dim_error_channel_1)
+{
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 10, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_NE(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_dim_error_channel_2) {
-  vector<int64_t> inp_dims = {16, 16, 8};
-  vector<int64_t> weight_dims = {3, 8, 16};
-  vector<int64_t> bias_dims = {8};
-  vector<int64_t> output_dims = {16, 16, 16};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                                  // host api第二段接口名称
-                      INPUT(inp_desc, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+TEST_F(conv_tbc_test, test_convTbc_dim_error_channel_2)
+{
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {8};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                 // host api第二段接口名称
+                        INPUT(inp_desc, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(conv_tbc_test, test_convTbc_nullptr_error) {
-  vector<int64_t> inp_dims = {16, 16, 8};
-  vector<int64_t> weight_dims = {3, 8, 16};
-  vector<int64_t> bias_dims = {16};
-  vector<int64_t> output_dims = {16, 16, 16};
-  int64_t pad = 1;
-  auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16,   ACL_FORMAT_ND).ValueRange(0, 2);
-  auto output_desc = TensorDesc(output_dims, ACL_FLOAT16,   ACL_FORMAT_ND).Precision(0.01, 0.01);
-  auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
-  auto ut = OP_API_UT(aclnnConvTbc,                           // host api第二段接口名称
-                      INPUT((aclTensor *)nullptr, weight_desc, bias_desc, pad),  // host api输入
-                      OUTPUT(output_desc), cubeMathType);
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);  // check op graph
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
-  // ut.TestPrecision();
+TEST_F(conv_tbc_test, test_convTbc_nullptr_error)
+{
+    vector<int64_t> inp_dims = {16, 16, 8};
+    vector<int64_t> weight_dims = {3, 8, 16};
+    vector<int64_t> bias_dims = {16};
+    vector<int64_t> output_dims = {16, 16, 16};
+    int64_t pad = 1;
+    auto inp_desc = TensorDesc(inp_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto weight_desc = TensorDesc(weight_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto output_desc = TensorDesc(output_dims, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto bias_desc = TensorDesc(bias_dims, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto ut = OP_API_UT(aclnnConvTbc,                                            // host api第二段接口名称
+                        INPUT((aclTensor*)nullptr, weight_desc, bias_desc, pad), // host api输入
+                        OUTPUT(output_desc), cubeMathType);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // ut.TestPrecision();
 }
 
 // TEST_F(conv_tbc_test, test_convTbc_cubeMathTypeHF32) {

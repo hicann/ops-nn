@@ -33,16 +33,11 @@ static Status ParseParamsAdaCast(const Message* op_src, ge::Operator& op_dst)
 
 REGISTER_CUSTOM_OP("AdaCast")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::AdaCast"), 
-                   ge::AscendString("ai.onnx::9::AdaCast"), 
-                   ge::AscendString("ai.onnx::10::AdaCast"), 
-                   ge::AscendString("ai.onnx::11::AdaCast"),
-                   ge::AscendString("ai.onnx::12::AdaCast"), 
-                   ge::AscendString("ai.onnx::13::AdaCast"), 
-                   ge::AscendString("ai.onnx::14::AdaCast"), 
-                   ge::AscendString("ai.onnx::15::AdaCast"),
-                   ge::AscendString("ai.onnx::16::AdaCast"), 
-                   ge::AscendString("ai.onnx::17::AdaCast"), 
+    .OriginOpType({ge::AscendString("ai.onnx::8::AdaCast"), ge::AscendString("ai.onnx::9::AdaCast"),
+                   ge::AscendString("ai.onnx::10::AdaCast"), ge::AscendString("ai.onnx::11::AdaCast"),
+                   ge::AscendString("ai.onnx::12::AdaCast"), ge::AscendString("ai.onnx::13::AdaCast"),
+                   ge::AscendString("ai.onnx::14::AdaCast"), ge::AscendString("ai.onnx::15::AdaCast"),
+                   ge::AscendString("ai.onnx::16::AdaCast"), ge::AscendString("ai.onnx::17::AdaCast"),
                    ge::AscendString("ai.onnx::18::AdaCast")})
     .ParseParamsFn(ParseParamsAdaCast)
     .ImplyType(ImplyType::TVM);

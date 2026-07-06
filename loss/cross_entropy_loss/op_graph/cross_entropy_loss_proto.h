@@ -23,7 +23,7 @@ namespace ge {
 
 * @par Inputs:
 * Three inputs, including:
-* @li input: A ND tensor of type float16 or float32 or bfloat16, 
+* @li input: A ND tensor of type float16 or float32 or bfloat16,
 * Shape only support 2D [N, C], where N is batch size, C is class.
 * @li target: A ND tensor of type int32 or int64, specifying the target value.
 * Shape is [N].
@@ -33,18 +33,19 @@ namespace ge {
 * @par Attributes:
 * @li reduction: An optional string attr from ["none", "mean", "sum"],
 *  specifying the reduction type to be applied to the output. Defaults to "mean".
-* @li ignore_index: An optional int attr. Specifies a target value that is ignored and does not contribute to the input gradient.
+* @li ignore_index: An optional int attr. Specifies a target value that is ignored and does not contribute to the input
+gradient.
 * Note that ignore_index is only applicable when the target contains class indices. Defaults to "-100".
 * @li label_smoothing: An optional float attr in [0.0, 1.0]. Specifies the amount of smoothing when computing the loss,
 * where 0.0 means no smoothing. The targets become a mixture of the original ground truth and a uniform distribution as
 * described in Rethinking the Inception Architecture for Computer Vision. Default: 0.0
-* @li lse_square_scale_for_zloss: An optional float attr, Default: 0.0, 
+* @li lse_square_scale_for_zloss: An optional float attr, Default: 0.0,
 * If is 0 and return_zloss is true, output all 0 tensors.
-* @li return_zloss: An optional bool attr. Default: false, Control whether zloss outputs, when true zloss outputs, 
+* @li return_zloss: An optional bool attr. Default: false, Control whether zloss outputs, when true zloss outputs,
 * when false zloss dose not output.
 
 * @par Outputs:
-* @li loss: A ND tensor, Has the same dtype as input, Specifying the cross entropy loss, 
+* @li loss: A ND tensor, Has the same dtype as input, Specifying the cross entropy loss,
 * When reduction is "none", shape is [N], When reduction is "sum" or "mean"， shape is [1].
 * @li log_prob: A ND tensor, Has the same dtype and shape as input,  Specifying the result of logsoftmax.
 * @li zloss: A ND tensor, Has the same dtype as input. shape is [N], Benchmarking Triton kernel implementation.

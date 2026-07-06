@@ -18,7 +18,8 @@ extern "C" {
 #endif
 
 /**
- * @brief aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize的第一段接口，根据具体的计算流程，计算workspace大小
+ * @brief
+ * aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize的第一段接口，根据具体的计算流程，计算workspace大小
  * @domain aclnn_ops_train
  * 算子功能：求二元交叉熵关于target反向传播的梯度值
  */
@@ -31,10 +32,10 @@ ACLNN_API aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspac
  * @brief aclnnBinaryCrossEntropyWithLogitsTargetBackward的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(void* workspace, uint64_t workspaceSize,
-                                                                aclOpExecutor* executor, aclrtStream stream);
+                                                                      aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_BINARY_CROSS_ENTROPY_WITH_LOGITS_TARGET_BACKEARD_H_
+#endif // OP_API_INC_BINARY_CROSS_ENTROPY_WITH_LOGITS_TARGET_BACKEARD_H_

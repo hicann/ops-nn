@@ -35,9 +35,8 @@ static inline bool IsUnknownRank(const gert::Shape* check_shape)
 
 static inline ge::graphStatus SetUnknownRank(gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetUnknownRank", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetUnknownRank", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(0);
     output_shape->AppendDim(UNKNOWN_RANK_DIM_VALUE_);
 
@@ -64,10 +63,10 @@ static ge::graphStatus InferShapeForNLLLoss(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attr_reduction);
 
     if (!IsUnknownRank(x_shape)) {
-        OP_CHECK_IF(
-            (x_shape->GetDimNum() != 1) && (x_shape->GetDimNum() != INPUT_SIZE_TWO) &&
-                (x_shape->GetDimNum() != INPUT_SIZE_FOUR),
-            OP_LOGE(context->GetNodeName(), "x_shape->GetDimNum() only support 1, 2 and 4"), return GRAPH_FAILED);
+        OP_CHECK_IF((x_shape->GetDimNum() != 1) && (x_shape->GetDimNum() != INPUT_SIZE_TWO) &&
+                        (x_shape->GetDimNum() != INPUT_SIZE_FOUR),
+                    OP_LOGE(context->GetNodeName(), "x_shape->GetDimNum() only support 1, 2 and 4"),
+                    return GRAPH_FAILED);
     }
 
     if (strcmp(attr_reduction, "none") == 0) {
@@ -101,14 +100,14 @@ graphStatus InferDtypeForNLLLoss(gert::InferDataTypeContext* context)
 {
     OP_LOGI(context->GetNodeName(), "inferdtype is begin");
     auto x_dtype = context->GetInputDataType(IDX_ZERO);
-    OP_CHECK_IF(
-        (x_dtype != ge::DT_FLOAT) && (x_dtype != ge::DT_FLOAT16) && (x_dtype != ge::DT_BF16),
-        OP_LOGE(context->GetNodeName(), "x_dtype only support float, float16 and bfloat16"), return GRAPH_FAILED);
+    OP_CHECK_IF((x_dtype != ge::DT_FLOAT) && (x_dtype != ge::DT_FLOAT16) && (x_dtype != ge::DT_BF16),
+                OP_LOGE(context->GetNodeName(), "x_dtype only support float, float16 and bfloat16"),
+                return GRAPH_FAILED);
 
     auto target_dtype = context->GetInputDataType(IDX_ONE);
-    OP_CHECK_IF(
-        (target_dtype != ge::DT_INT32) && (target_dtype != ge::DT_INT64) && (target_dtype != ge::DT_UINT8),
-        OP_LOGE(context->GetNodeName(), "target_dtype only support int32, int64 and uint8"), return GRAPH_FAILED);
+    OP_CHECK_IF((target_dtype != ge::DT_INT32) && (target_dtype != ge::DT_INT64) && (target_dtype != ge::DT_UINT8),
+                OP_LOGE(context->GetNodeName(), "target_dtype only support int32, int64 and uint8"),
+                return GRAPH_FAILED);
 
     context->SetOutputDataType(IDX_ZERO, x_dtype);
 

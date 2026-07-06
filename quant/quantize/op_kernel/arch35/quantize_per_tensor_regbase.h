@@ -24,13 +24,13 @@ template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, ui
 class QuantizePerTensorRegbase : public QuantizeBase<T, T1, T2, U, DivMode, RoundMode, SqrtMode> {
 public:
     __aicore__ inline QuantizePerTensorRegbase(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, const QuantizeTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                const QuantizeTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CopyXAndCompute(
-        int64_t dataCount, int64_t offset, LocalTensor<T1>& sLocal, LocalTensor<T2>& oLocal);
+    __aicore__ inline void CopyXAndCompute(int64_t dataCount, int64_t offset, LocalTensor<T1>& sLocal,
+                                           LocalTensor<T2>& oLocal);
     __aicore__ inline void CopyInScale();
     __aicore__ inline void CopyInOffset();
     __aicore__ inline void CopyInX(int64_t xN, int64_t xLen, int64_t xInOffset);
@@ -161,8 +161,9 @@ __aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t DivMode, uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CopyInX(
-    int64_t xN, int64_t xLen, int64_t xInOffset)
+__aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode, SqrtMode>::CopyInX(int64_t xN,
+                                                                                                     int64_t xLen,
+                                                                                                     int64_t xInOffset)
 {
     LocalTensor<T> xLocal = inQueueX_.AllocTensor<T>();
     DataCopyExtParams copyParams;
@@ -209,8 +210,8 @@ __aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode
 
         AscendC::MicroAPI::RegTensor<float> vregTmp1;
         AscendC::MicroAPI::MaskReg mask;
-        AscendC::MicroAPI::MaskReg mask4Int4 =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
+        AscendC::MicroAPI::MaskReg
+            mask4Int4 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
 
         mask = AscendC::MicroAPI::CreateMask<float>();
         for (uint16_t j = 0; j < static_cast<uint16_t>(nRow); ++j) {
@@ -242,8 +243,8 @@ __aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode
                 // ld and cast for scale
                 if constexpr (IsSameType<T1, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
-                        vregFloatS, scaleLocalAddr);
+                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregFloatS,
+                                                                                                  scaleLocalAddr);
                 } else if constexpr (IsSameType<T1, half>::value) {
                     // fp16
                     AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(vregS, scaleLocalAddr);
@@ -297,8 +298,8 @@ __aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode
                         vregFloatO, vregO, mask);
                 } else if constexpr (IsSameType<T2, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
-                        vregFloatO, offsetLocalAddr);
+                    AscendC::MicroAPI::DataCopy<T2, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregFloatO,
+                                                                                               offsetLocalAddr);
                 }
                 if constexpr (SqrtMode == TPL_SQRT_MODE) {
                     AscendC::MicroAPI::Mul(vregFloatS, vregFloatS, vregFloatS, mask);
@@ -310,8 +311,8 @@ __aicore__ inline void QuantizePerTensorRegbase<T, T1, T2, U, DivMode, RoundMode
                 } else {
                     AscendC::MicroAPI::Mul(vregTmp1, vregFloatX, vregFloatS, mask);
                 }
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vregFloatY, vregTmp1, vregFloatO, mask);
+                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregFloatY, vregTmp1,
+                                                                                         vregFloatO, mask);
 
                 // cast and sd for y
                 if constexpr (IsSameType<U, hifloat8_t>::value) {

@@ -122,9 +122,8 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::PostTiling()
     qbmmTilingDataArch20_.swizzleCount = tilingData_.swizzleCount;
     // TilingData Memory Copy
     size_t tilingDataSize = sizeof(QuantMatmulPertokenTilingDataArch20);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        static_cast<void*>(&qbmmTilingDataArch20_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           static_cast<void*>(&qbmmTilingDataArch20_), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

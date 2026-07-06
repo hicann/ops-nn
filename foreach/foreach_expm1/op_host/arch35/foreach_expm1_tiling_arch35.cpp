@@ -50,10 +50,8 @@ static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -67,10 +65,8 @@ static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
 
     ForeachExpm1TilingData* tiling = context->GetTilingData<ForeachExpm1TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachExpm1TilingData), 0, sizeof(ForeachExpm1TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachExpm1TilingData), 0, sizeof(ForeachExpm1TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;

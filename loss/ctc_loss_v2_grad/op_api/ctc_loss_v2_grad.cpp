@@ -92,8 +92,8 @@ static bool IsAscend91055iCoreSupport(const aclTensor* logProbs, const aclTensor
 }
 
 // 根据size判断算子是否支持走aicore CTCLossV2Grad
-static bool IsV2AiCoreSupport(
-    const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets, const aclTensor* inputLengthsTensor)
+static bool IsV2AiCoreSupport(const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets,
+                              const aclTensor* inputLengthsTensor)
 {
     if (targets->IsEmpty()) {
         return false;
@@ -110,9 +110,9 @@ static bool IsV2AiCoreSupport(
     int64_t symbleSet = logProbsShape.GetDim(SYMBOL_SET_INDEX);
     int64_t batchSize = logProbsShape.GetDim(BATCH_INDEX);
     int64_t timeStep = logProbsShape.GetDim(TIME_INDEX);
-    int64_t allDataSize =
-        symbleSet * (C_UB_NUM + ONE_FLOAT / C_LOOP_BLOCK + ONE_FLOAT / C_LOOP_SUM_BLOCK) * FP32_BYTES +
-        timeStep * inputLengthsDsize + maxLabel * (TARGETS_UB_NUM * FP32_BYTES + targetsDsize);
+    int64_t allDataSize = symbleSet * (C_UB_NUM + ONE_FLOAT / C_LOOP_BLOCK + ONE_FLOAT / C_LOOP_SUM_BLOCK) *
+                              FP32_BYTES +
+                          timeStep * inputLengthsDsize + maxLabel * (TARGETS_UB_NUM * FP32_BYTES + targetsDsize);
     int64_t ubSize = (socVersion >= SocVersion::ASCEND910B) ? SMALL_UB_SIZE : UB_SIZE;
     int64_t availableUbSize = ubSize - RESERVED_UB_SIZE;
     if (batchSize * (targetsDsize + FP32_BYTES) >= availableUbSize) {
@@ -125,8 +125,8 @@ static bool IsV2AiCoreSupport(
 }
 
 // 根据size判断算子是否支持走aicore CTCLossV3Grad
-static bool IsV3AiCoreSupport(
-    const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets, bool is910bSocVersion)
+static bool IsV3AiCoreSupport(const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets,
+                              bool is910bSocVersion)
 {
     if (targets->IsEmpty()) {
         return false;
@@ -156,56 +156,53 @@ static bool IsV3AiCoreSupport(
 }
 
 // AICORE算子kernel
-const aclTensor* CtcLossV2GradAiCore(
-    const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclTensor* result, aclOpExecutor* executor)
+const aclTensor* CtcLossV2GradAiCore(const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets,
+                                     const aclTensor* inputLengthsTensor, const aclTensor* targetLengthsTensor,
+                                     const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
+                                     bool zeroInfinity, aclTensor* result, aclOpExecutor* executor)
 {
-    L0_DFX(
-        CtcLossV2GradAiCore, gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
-        logAlpha, blank, zeroInfinity, result);
+    L0_DFX(CtcLossV2GradAiCore, gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
+           logAlpha, blank, zeroInfinity, result);
 
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         CTCLossV2Grad,
         OP_INPUT(gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha),
         OP_OUTPUT(result), OP_ATTR(blank, REDUCTION_MEAN, zeroInfinity));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossV2GradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossV2GradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return result;
 }
 
 // CTCLossV3Grad AICORE算子kernel
-const aclTensor* CtcLossV3GradAiCore(
-    const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclTensor* result, aclOpExecutor* executor)
+const aclTensor* CtcLossV3GradAiCore(const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets,
+                                     const aclTensor* inputLengthsTensor, const aclTensor* targetLengthsTensor,
+                                     const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
+                                     bool zeroInfinity, aclTensor* result, aclOpExecutor* executor)
 {
-    L0_DFX(
-        CtcLossV3GradAiCore, gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
-        logAlpha, blank, zeroInfinity, result);
+    L0_DFX(CtcLossV3GradAiCore, gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
+           logAlpha, blank, zeroInfinity, result);
 
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         CTCLossV3Grad,
         OP_INPUT(gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha),
         OP_OUTPUT(result), OP_ATTR(blank, REDUCTION_MEAN, zeroInfinity));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossV3GradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossV3GradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return result;
 }
 
 // AICPU算子kernel
-const aclTensor* CtcLossV2GradAiCpu(
-    const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclTensor* result, aclOpExecutor* executor)
+const aclTensor* CtcLossV2GradAiCpu(const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets,
+                                    const aclTensor* inputLengthsTensor, const aclTensor* targetLengthsTensor,
+                                    const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
+                                    bool zeroInfinity, aclTensor* result, aclOpExecutor* executor)
 {
-    L0_DFX(
-        CtcLossV2GradAiCpu, gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
-        logAlpha, blank, zeroInfinity, result);
+    L0_DFX(CtcLossV2GradAiCpu, gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
+           logAlpha, blank, zeroInfinity, result);
 
     static internal::AicpuTaskSpace space("CTCLossV2Grad");
 
@@ -214,44 +211,35 @@ const aclTensor* CtcLossV2GradAiCpu(
         CTCLossV2Grad, OP_ATTR_NAMES({"blank", "reduction", "zero_infinity"}),
         OP_INPUT(gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha),
         OP_OUTPUT(result), OP_ATTR(blank, REDUCTION_MEAN, zeroInfinity));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossV2GradAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
-        return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossV2GradAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
     return result;
 }
 
-const op::Shape CtcLossV2GradNpuOutputShape(const aclTensor* logProbs)
-{
-    return logProbs->GetViewShape();
-}
+const op::Shape CtcLossV2GradNpuOutputShape(const aclTensor* logProbs) { return logProbs->GetViewShape(); }
 
-const aclTensor* CtcLossV2Grad(
-    const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclOpExecutor* executor)
+const aclTensor* CtcLossV2Grad(const aclTensor* gradOut, const aclTensor* logProbs, const aclTensor* targets,
+                               const aclTensor* inputLengthsTensor, const aclTensor* targetLengthsTensor,
+                               const aclTensor* negLogLikelihood, const aclTensor* logAlpha, int64_t blank,
+                               bool zeroInfinity, aclOpExecutor* executor)
 {
     // 计算输出Tensor的Shape
     auto outputShape = CtcLossV2GradNpuOutputShape(logProbs);
 
     // 申请输出tensor的空间
     auto result = executor->AllocTensor(outputShape, logProbs->GetDataType(), op::Format::FORMAT_ND);
-    bool is910bSocVersion =
-        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
+    bool is910bSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+                             GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
     if (IsV3AiCoreSupport(logProbs, logAlpha, targets, is910bSocVersion)) {
-        return CtcLossV3GradAiCore(
-            gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
-            zeroInfinity, result, executor);
-    } else if (
-        IsV2AiCoreSupport(logProbs, logAlpha, targets, inputLengthsTensor) ||
-        IsAscend91055iCoreSupport(logProbs, targets)) {
-        return CtcLossV2GradAiCore(
-            gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
-            zeroInfinity, result, executor);
+        return CtcLossV3GradAiCore(gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor,
+                                   negLogLikelihood, logAlpha, blank, zeroInfinity, result, executor);
+    } else if (IsV2AiCoreSupport(logProbs, logAlpha, targets, inputLengthsTensor) ||
+               IsAscend91055iCoreSupport(logProbs, targets)) {
+        return CtcLossV2GradAiCore(gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor,
+                                   negLogLikelihood, logAlpha, blank, zeroInfinity, result, executor);
     } else {
-        return CtcLossV2GradAiCpu(
-            gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
-            zeroInfinity, result, executor);
+        return CtcLossV2GradAiCpu(gradOut, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood,
+                                  logAlpha, blank, zeroInfinity, result, executor);
     }
 }
 } // namespace l0op

@@ -20,12 +20,7 @@
 #include "arch35/fused_bias_leaky_relu.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void fused_bias_leaky_relu(
-    GM_ADDR x,
-    GM_ADDR bias,
-    GM_ADDR y,
-    GM_ADDR workspace,
-    GM_ADDR tiling)
+__global__ __aicore__ void fused_bias_leaky_relu(GM_ADDR x, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(FusedBiasLeakyReluTilingData);
     GET_TILING_DATA_WITH_STRUCT(FusedBiasLeakyReluTilingData, tilingData, tiling);

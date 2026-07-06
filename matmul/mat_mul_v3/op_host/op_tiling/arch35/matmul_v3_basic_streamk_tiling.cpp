@@ -88,10 +88,7 @@ const static std::map<NpuArch, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFun
 };
 
 // ------------------------------ GetL0C2OutFlag -------------------------------------------//
-MatMulV3L0C2Out GetL0C2OutFlagDefault(const MatMulV3Args& /* args */)
-{
-    return MatMulV3L0C2Out::ON_THE_FLY;
-}
+MatMulV3L0C2Out GetL0C2OutFlagDefault(const MatMulV3Args& /* args */) { return MatMulV3L0C2Out::ON_THE_FLY; }
 
 MatMulV3L0C2Out GetL0C2OutFlagDav3510(const MatMulV3Args& args)
 {
@@ -189,8 +186,8 @@ ge::graphStatus MatMulV3BasicStreamKTiling::DoOpTiling()
             runInfo_.singleCoreK = ops::CeilAlign(runInfo_.singleCoreK, BASIC_BLOCK_SIZE_16 / NUM_TWO);
         }
     }
-    uint64_t baseKAlignValue =
-        !args_.isATrans || args_.isBTrans ? BASIC_BLOCK_SIZE_128 / args_.aDtypeSize : BASIC_BLOCK_SIZE_16;
+    uint64_t baseKAlignValue = !args_.isATrans || args_.isBTrans ? BASIC_BLOCK_SIZE_128 / args_.aDtypeSize :
+                                                                   BASIC_BLOCK_SIZE_16;
     uint64_t kValueMax = ops::FloorAlign(
         L0A_SIZE_2 / DB_SIZE / args_.aDtypeSize / std::max(runInfo_.baseM, runInfo_.baseN), baseKAlignValue);
     runInfo_.baseK = std::min(runInfo_.singleCoreK, kValueMax);
@@ -211,8 +208,8 @@ ge::graphStatus MatMulV3BasicStreamKTiling::DoOpTiling()
 
 std::vector<size_t> MatMulV3BasicStreamKTiling::GetWorkspaceSize() const
 {
-    size_t workspaceSize =
-        compileInfo_.aicNum * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 * DATA_SIZE_FP32 + RPC_WORKSIZE * MB_SIZE;
+    size_t workspaceSize = compileInfo_.aicNum * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 * DATA_SIZE_FP32 +
+                           RPC_WORKSIZE * MB_SIZE;
     OP_LOGI(args_.opName, "MatMulV3 tiling workspace size is %lu", workspaceSize);
     return {workspaceSize};
 }
@@ -223,8 +220,8 @@ uint64_t MatMulV3BasicStreamKTiling::GetTilingKey() const
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     // fusedMatMul and fp32 splitK do not checkout to tensor api
     bool basicApi = std::string_view(context_->GetNodeType()) == "FusedMatMul" ||
-                     (runInfo_.singleCoreK > SK_SPLITK_THRESHOLD && args_.aDtypeSize == DATA_SIZE_FP32) ||
-                     args_.isAvoidTensorApi;
+                    (runInfo_.singleCoreK > SK_SPLITK_THRESHOLD && args_.aDtypeSize == DATA_SIZE_FP32) ||
+                    args_.isAvoidTensorApi;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(MatMulV3Model::STREAM_K)
         .SetL0C2Out(l0C2Out_)

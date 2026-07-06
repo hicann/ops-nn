@@ -26,21 +26,21 @@ constexpr uint32_t MAX_TENSOR_NUM = 128;
 
 struct ForeachDivScalarTilingData {
     // ---- Global info ----
-    uint32_t tensorNum = 0;           // Number of tensors in TensorList
+    uint32_t tensorNum = 0; // Number of tensors in TensorList
 
     // ---- Scalar info ----
-    uint32_t scalarDtype = 0;         // 0=float, 1=float16, 2=double (kernel reads scalar from GM directly)
+    uint32_t scalarDtype = 0; // 0=float, 1=float16, 2=double (kernel reads scalar from GM directly)
 
     // ---- Multi-core split info ----
-    int64_t totalElements = 0;        // Total elements across all tensors
-    int64_t blockFactor = 0;          // Elements per core (element-granularity multi-core splitting)
+    int64_t totalElements = 0; // Total elements across all tensors
+    int64_t blockFactor = 0;   // Elements per core (element-granularity multi-core splitting)
 
     // ---- UB split info ----
-    int64_t ubFactor = 0;             // Elements per UB loop iteration
+    int64_t ubFactor = 0; // Elements per UB loop iteration
 
     // ---- Per-tensor descriptors ----
     // Use int32_t to keep struct size compact (each tensor up to 2B elements is sufficient)
-    int32_t tensorLengths[MAX_TENSOR_NUM] = {0};  // Element count of each tensor
+    int32_t tensorLengths[MAX_TENSOR_NUM] = {0}; // Element count of each tensor
 };
 
 #endif

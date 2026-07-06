@@ -27,48 +27,50 @@ namespace l0op {
 OP_TYPE_REGISTER(InplaceIndexAdd);
 OP_TYPE_REGISTER(InplaceIndexAddWithSorted);
 // AICORE算子kernel
-const aclTensor *InplaceIndexAddAiCore(const aclTensor *self, const int64_t dim, const aclTensor *index,
-                                       const aclTensor *source, const aclTensor *alphaTensor,
-                                       aclOpExecutor *executor) {
-  L0_DFX(InplaceIndexAddAiCore, self, dim, index, source, alphaTensor);
-  auto indexAddOut = const_cast<aclTensor*>(self);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexAdd,
-                                         OP_INPUT(self, index, source, alphaTensor),
-                                         OP_OUTPUT(indexAddOut),
-                                         OP_ATTR(dim));
-  OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexAddAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
-  return indexAddOut;
+const aclTensor* InplaceIndexAddAiCore(const aclTensor* self, const int64_t dim, const aclTensor* index,
+                                       const aclTensor* source, const aclTensor* alphaTensor, aclOpExecutor* executor)
+{
+    L0_DFX(InplaceIndexAddAiCore, self, dim, index, source, alphaTensor);
+    auto indexAddOut = const_cast<aclTensor*>(self);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexAdd, OP_INPUT(self, index, source, alphaTensor),
+                                           OP_OUTPUT(indexAddOut), OP_ATTR(dim));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexAddAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return indexAddOut;
 }
 
 // AICPU算子kernel
-const aclTensor *InplaceIndexAddAiCpu(const aclTensor *self, const int64_t dim, const aclTensor *index,
-                                      const aclTensor *source, const aclTensor *alphaTensor,
-                                      aclOpExecutor *executor) {
-  L0_DFX(InplaceIndexAddAiCpu, self, dim, index, source, alphaTensor);
-  auto indexAddOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-  OP_CHECK(indexAddOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexAddOut allocated is nullptr."), return nullptr);
-  static internal::AicpuTaskSpace space("InplaceIndexAdd");
-  auto ret = ADD_TO_LAUNCHER_LIST_AICPU(InplaceIndexAdd,
-                                        OP_ATTR_NAMES({"axis"}),
-                                        OP_INPUT(self, index, source, alphaTensor),
-                                        OP_OUTPUT(indexAddOut),
-                                        OP_ATTR(dim));
-  OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexAddAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
-  return indexAddOut;
+const aclTensor* InplaceIndexAddAiCpu(const aclTensor* self, const int64_t dim, const aclTensor* index,
+                                      const aclTensor* source, const aclTensor* alphaTensor, aclOpExecutor* executor)
+{
+    L0_DFX(InplaceIndexAddAiCpu, self, dim, index, source, alphaTensor);
+    auto indexAddOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    OP_CHECK(indexAddOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexAddOut allocated is nullptr."),
+             return nullptr);
+    static internal::AicpuTaskSpace space("InplaceIndexAdd");
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(InplaceIndexAdd, OP_ATTR_NAMES({"axis"}),
+                                          OP_INPUT(self, index, source, alphaTensor), OP_OUTPUT(indexAddOut),
+                                          OP_ATTR(dim));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexAddAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
+             return nullptr);
+    return indexAddOut;
 }
 
 // 排序后AICORE算子kernel
-const aclTensor *InplaceIndexAddWithSorted(const aclTensor *self, const int64_t dim, const aclTensor *sortedIndices,
-                                           const aclTensor *pos, const aclTensor *value, const aclTensor *alphaTensor,
-                                           aclOpExecutor *executor) {
+const aclTensor* InplaceIndexAddWithSorted(const aclTensor* self, const int64_t dim, const aclTensor* sortedIndices,
+                                           const aclTensor* pos, const aclTensor* value, const aclTensor* alphaTensor,
+                                           aclOpExecutor* executor)
+{
     L0_DFX(InplaceIndexAddWithSorted, self, dim, value, sortedIndices, pos, alphaTensor);
     auto indexAddOut = const_cast<aclTensor*>(self);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexAddWithSorted,
                                            OP_INPUT(self, value, sortedIndices, pos, alphaTensor),
-                                           OP_OUTPUT(indexAddOut),
-                                           OP_ATTR(dim));
-    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "InplaceIndexAddWithSortedAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+                                           OP_OUTPUT(indexAddOut), OP_ATTR(dim));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexAddWithSortedAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return indexAddOut;
 }
-}  // namespace l0op
+} // namespace l0op

@@ -30,14 +30,8 @@ using namespace ut_util;
 
 class ForeachRoundOffNumberTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachRoundOffNumberTilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachRoundOffNumberTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachRoundOffNumberTilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ForeachRoundOffNumberTilingTest TearDown" << std::endl; }
 };
 
 static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
@@ -57,9 +51,11 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     ASSERT_NE(tilingParseFn, nullptr);
 
     std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -72,15 +68,19 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     gert::StorageShape scalar = {{1}, {1}};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
-    auto th = gert::TilingContextFaker().NodeIoNum(2, 1).IrInstanceNum({1, 1})
-        .InputShapes({&xS, &scalar}).OutputShapes({&yS})
-        .CompileInfo(&ci).PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
-        .Build();
+    auto th = gert::TilingContextFaker()
+                  .NodeIoNum(2, 1)
+                  .IrInstanceNum({1, 1})
+                  .InputShapes({&xS, &scalar})
+                  .OutputShapes({&yS})
+                  .CompileInfo(&ci)
+                  .PlatformInfo(reinterpret_cast<char*>(&pf))
+                  .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .TilingData(param.get())
+                  .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
+                  .Build();
     auto* ctx = th.GetContext<gert::TilingContext>();
     ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
@@ -90,17 +90,8 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     EXPECT_EQ(ctx->GetTilingKey(), expectKey);
 }
 
-TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float32)
-{
-    DoCase({32, 4, 4, 4}, ge::DT_FLOAT, 0);
-}
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float32) { DoCase({32, 4, 4, 4}, ge::DT_FLOAT, 0); }
 
-TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float16)
-{
-    DoCase({32, 4, 4, 4}, ge::DT_FLOAT16, 1);
-}
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float16) { DoCase({32, 4, 4, 4}, ge::DT_FLOAT16, 1); }
 
-TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_bf16)
-{
-    DoCase({32, 4, 4, 4}, ge::DT_BF16, 2);
-}
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_bf16) { DoCase({32, 4, 4, 4}, ge::DT_BF16, 2); }

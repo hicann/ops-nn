@@ -22,14 +22,14 @@
 class FakeQuantWithMinMaxVarsGradientTilingData {
 public:
     // ---- shape/tiling parameters ----
-    int64_t totalLen;          // total element count (gradients/x)
-    int64_t numCore;           // actual core count used
-    int64_t blockFactor;       // elements per normal core (aligned)
-    int64_t blockTailFactor;   // elements for tail core
-    int64_t baseLen;           // single Compute tile size (UB unit)
+    int64_t totalLen;        // total element count (gradients/x)
+    int64_t numCore;         // actual core count used
+    int64_t blockFactor;     // elements per normal core (aligned)
+    int64_t blockTailFactor; // elements for tail core
+    int64_t baseLen;         // single Compute tile size (UB unit)
     // ---- attributes (from Tiling, NOT tensor values) ----
-    int64_t numBits;           // quantization bit width [2, 16]
-    bool    narrowRange;       // narrow range flag
+    int64_t numBits;  // quantization bit width [2, 16]
+    bool narrowRange; // narrow range flag
 };
 
 #endif // FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_TILINGDATA_H_

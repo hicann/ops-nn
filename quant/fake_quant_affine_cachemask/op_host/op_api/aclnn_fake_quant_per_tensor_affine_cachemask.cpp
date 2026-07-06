@@ -27,12 +27,11 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_FLOAT};
 
-static bool CheckNotNull(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, const aclTensor* out,
-    const aclTensor* mask)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint,
+                         const aclTensor* out, const aclTensor* mask)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(scale, return false);
@@ -42,9 +41,8 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, const aclTensor* out,
-    const aclTensor* mask)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint,
+                            const aclTensor* out, const aclTensor* mask)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(scale, DTYPE_SUPPORT_LIST, return false);
@@ -52,18 +50,16 @@ static bool CheckDtypeValid(
 
     op::DataType promoteType = op::PromoteType(self->GetDataType(), scale->GetDataType());
     if (!CanCast(DataType(out->GetDataType()), promoteType)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Promote dtype %s can't be cast to the desired output type %s.",
-            op::ToString(promoteType).GetString(), op::ToString(DataType(out->GetDataType())).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Promote dtype %s can't be cast to the desired output type %s.",
+                op::ToString(promoteType).GetString(), op::ToString(DataType(out->GetDataType())).GetString());
         return false;
     }
     OP_CHECK_DTYPE_NOT_MATCH(mask, op::DataType::DT_BOOL, return false);
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, const aclTensor* out,
-    const aclTensor* mask)
+static bool CheckShape(const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, const aclTensor* out,
+                       const aclTensor* mask)
 {
     auto scaleShape = scale->GetViewShape();
     auto zeroPointShape = zeroPoint->GetViewShape();
@@ -85,8 +81,8 @@ static bool CheckShape(
         totalSize *= tmpVal;
     }
     if (totalSize != 1) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "zeroPoint: a Tensor with %ld elements cannot be converted to Scalar", totalSize);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "zeroPoint: a Tensor with %ld elements cannot be converted to Scalar",
+                totalSize);
         return false;
     }
 
@@ -104,9 +100,8 @@ static bool CheckQuantValue(int64_t quantMin, int64_t quantMax)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, int64_t quantMin, int64_t quantMax,
-    const aclTensor* out, const aclTensor* mask)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint,
+                               int64_t quantMin, int64_t quantMax, const aclTensor* out, const aclTensor* mask)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scale, zeroPoint, out, mask), ACLNN_ERR_INNER_NULLPTR);
@@ -137,15 +132,16 @@ static const aclTensor* GetOutputTensorWithValueTrue(const aclTensor* out, aclOp
     return trueTensor;
 }
 
-aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, float fakeQuantEnbled, int64_t quantMin,
-    int64_t quantMax, aclTensor* out, aclTensor* mask, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(const aclTensor* self, const aclTensor* scale,
+                                                                   const aclTensor* zeroPoint, float fakeQuantEnbled,
+                                                                   int64_t quantMin, int64_t quantMax, aclTensor* out,
+                                                                   aclTensor* mask, uint64_t* workspaceSize,
+                                                                   aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnFakeQuantPerTensorAffineCachemask, DFX_IN(self, scale, zeroPoint, fakeQuantEnbled, quantMin, quantMax),
-        DFX_OUT(out, mask));
+    L2_DFX_PHASE_1(aclnnFakeQuantPerTensorAffineCachemask,
+                   DFX_IN(self, scale, zeroPoint, fakeQuantEnbled, quantMin, quantMax), DFX_OUT(out, mask));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -161,10 +157,12 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    const auto& [selfContiguous, scaleContiguous, zeroPointContiguous] = GetContiguousInput(self, scale, zeroPoint, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr && scaleContiguous!= nullptr && zeroPointContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const auto& [selfContiguous, scaleContiguous, zeroPointContiguous] = GetContiguousInput(self, scale, zeroPoint,
+                                                                                            uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr && scaleContiguous != nullptr && zeroPointContiguous != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
 
-    aclTensor* fakeQuantOut = nullptr, *fakeQuantMask = nullptr;
+    aclTensor *fakeQuantOut = nullptr, *fakeQuantMask = nullptr;
     if (fakeQuantEnbled < 1.0) {
         // 将结果values_transpose进行transpose，转换成正确的shape
         fakeQuantOut = const_cast<aclTensor*>(selfContiguous);
@@ -181,17 +179,16 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(
         auto zeroPointBroadcast = l0op::BroadcastTo(zeroPointContiguous, expectShape, uniqueExecutor.get());
         CHECK_RET(zeroPointBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        auto result = l0op::FakeQuantAffineCachemask(
-            selfContiguous, scaleBroadcast, zeroPointBroadcast, 0, quantMin, quantMax, uniqueExecutor.get());
+        auto result = l0op::FakeQuantAffineCachemask(selfContiguous, scaleBroadcast, zeroPointBroadcast, 0, quantMin,
+                                                     quantMax, uniqueExecutor.get());
         fakeQuantOut = std::get<0>(result);
         fakeQuantMask = std::get<1>(result);
     }
-    return FinalizeOutput(fakeQuantOut, fakeQuantMask, out, mask,
-                          workspaceSize, executor, uniqueExecutor);
+    return FinalizeOutput(fakeQuantOut, fakeQuantMask, out, mask, workspaceSize, executor, uniqueExecutor);
 }
 
-aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                   aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFakeQuantPerTensorAffineCachemask);
     // 固定写法，调用框架能力，完成计算

@@ -37,17 +37,12 @@ using namespace std;
 
 class renorm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "renorm_kernel_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "renorm_kernel_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "renorm_kernel_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "renorm_kernel_test TearDown\n" << endl; }
 };
 
-std::string Shape2Str(const std::vector<int64_t>& shape) {
+std::string Shape2Str(const std::vector<int64_t>& shape)
+{
     std::ostringstream oss;
     oss << "[";
     for (size_t i = 0; i < shape.size(); ++i) {
@@ -60,16 +55,17 @@ std::string Shape2Str(const std::vector<int64_t>& shape) {
     return oss.str();
 }
 
-static inline int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+static inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
-    for(auto i : shape) {
+    for (auto i : shape) {
         shapeSize *= i;
     }
     return shapeSize;
 }
 
-void ExcuteTestCase(const std::vector<int64_t> &xShape, const std::string &dtype,
-                    int64_t tilingKey, uint32_t blockNum, uint8_t *tiling, uint32_t templateNum)
+void ExcuteTestCase(const std::vector<int64_t>& xShape, const std::string& dtype, int64_t tilingKey, uint32_t blockNum,
+                    uint8_t* tiling, uint32_t templateNum)
 {
     uint32_t typeSize = 4;
     uint32_t fp32TypeSize = 4;
@@ -82,9 +78,9 @@ void ExcuteTestCase(const std::vector<int64_t> &xShape, const std::string &dtype
 
     size_t workspaceFileSize = 16 * 1024 * 1024;
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc((xFileSize + 31)/32*32);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc((xFileSize + 31)/32*32);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc((xFileSize + 31) / 32 * 32);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc((xFileSize + 31) / 32 * 32);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     auto KernelRenorm = [](GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -105,7 +101,7 @@ TEST_F(renorm_test, test_p1)
     uint64_t tilingKey = 33559615;
     uint32_t blockNum = 1;
     size_t tilingSize = sizeof(RenormTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     RenormTilingData* tilingDatafromBin = reinterpret_cast<RenormTilingData*>(tiling);
 
     tilingDatafromBin->ReduceOpTilingData.factorACntPerCore = 5;
@@ -125,5 +121,5 @@ TEST_F(renorm_test, test_p1)
     tilingDatafromBin->p = 0;
     tilingDatafromBin->recp = 0;
     tilingDatafromBin->maxnorm = 0;
-    ExcuteTestCase(xShape, wShape, dtype, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }

@@ -30,13 +30,10 @@ namespace Tile {
  * @param [in] InputType: the type of the input tensor
  */
 template <class OutputType, class InputType>
-struct Copy<
-    Arch::DAV3510, CopyOutSplitMWithParams, void, OutputType, InputType,
-    AscendC::Std::enable_if_t<
-        PosIsUB<OutputType::pos>() && IsNDOrAlign<OutputType>() &&       // UB ND/ND_ALIGN
-        !IsQuantSenario<typename OutputType::T, typename InputType::T>() // no quant
-    >
-> {
+struct Copy<Arch::DAV3510, CopyOutSplitMWithParams, void, OutputType, InputType,
+            AscendC::Std::enable_if_t<PosIsUB<OutputType::pos>() && IsNDOrAlign<OutputType>() &&       // UB ND/ND_ALIGN
+                                      !IsQuantSenario<typename OutputType::T, typename InputType::T>() // no quant
+                                      > > {
 public:
     using DstT = typename OutputType::T;
     using SrcT = typename AscendC::GetMmDstType<typename InputType::T>::Type;
@@ -57,8 +54,8 @@ public:
      * @param [in] id: blcok id, default is 0
      */
     __aicore__ inline void operator()(const AscendC::LocalTensor<DstT>& dstLocal, const AscendC::LocalTensor<SrcT>& src,
-        int32_t curRow, int32_t curCol, int32_t l0CTileH, int32_t l0CTileW, int32_t baseM, int32_t baseN,
-        int32_t orgM, int32_t orgN, int32_t orgKc, uint8_t id = 0)
+                                      int32_t curRow, int32_t curCol, int32_t l0CTileH, int32_t l0CTileW, int32_t baseM,
+                                      int32_t baseN, int32_t orgM, int32_t orgN, int32_t orgKc, uint8_t id = 0)
     {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         l0CTileH = AscendC::Align(l0CTileH, 2); // 2 means SplitM scenario aligned to 2
@@ -68,9 +65,9 @@ public:
             dimN = AscendC::Ceil(dimN, blockCount) * blockCount;
         }
         auto stride = dimN;
-        int64_t dstOffset =
-            static_cast<int64_t>(static_cast<int64_t>(static_cast<int64_t>(curRow * baseM) * stride) >> 1) +
-            static_cast<int64_t>(curCol * baseN);
+        int64_t dstOffset = static_cast<int64_t>(static_cast<int64_t>(static_cast<int64_t>(curRow * baseM) * stride) >>
+                                                 1) +
+                            static_cast<int64_t>(curCol * baseN);
 
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> params;
         params.nSize = static_cast<uint16_t>(l0CTileW);
@@ -106,13 +103,10 @@ public:
  * @param [in] InputType: the type of the input tensor
  */
 template <class OutputType, class InputType>
-struct Copy<
-    Arch::DAV3510, CopyOutSplitMWithParams, void, OutputType, InputType,
-    AscendC::Std::enable_if_t<
-        PosIsUB<OutputType::pos>() && IsNz<OutputType>() &&              // UB NZ
-        !IsQuantSenario<typename OutputType::T, typename InputType::T>() // no quant
-    >
-> {
+struct Copy<Arch::DAV3510, CopyOutSplitMWithParams, void, OutputType, InputType,
+            AscendC::Std::enable_if_t<PosIsUB<OutputType::pos>() && IsNz<OutputType>() &&              // UB NZ
+                                      !IsQuantSenario<typename OutputType::T, typename InputType::T>() // no quant
+                                      > > {
 public:
     using DstT = typename OutputType::T;
     using SrcT = typename AscendC::GetMmDstType<typename InputType::T>::Type;
@@ -133,15 +127,14 @@ public:
      * @param [in] id: blcok id, default is 0
      * @note Calculate the destination offset, set up copy parameters, and perform the data copy using Fixpipe
      */
-    __aicore__ inline void operator()(const AscendC::LocalTensor<DstT>& dst,
-                                      const AscendC::LocalTensor<SrcT>& src, int curRow, int curCol,
-                                      int32_t l0CTileH, int32_t l0CTileW, int32_t baseM, int32_t baseN,
-                                      int orgM, int orgN, int orgKc, uint8_t id = 0)
+    __aicore__ inline void operator()(const AscendC::LocalTensor<DstT>& dst, const AscendC::LocalTensor<SrcT>& src,
+                                      int curRow, int curCol, int32_t l0CTileH, int32_t l0CTileW, int32_t baseM,
+                                      int32_t baseN, int orgM, int orgN, int orgKc, uint8_t id = 0)
     {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         uint32_t stride = static_cast<uint32_t>(orgM * AscendC::BLOCK_CUBE);
-        int64_t dstOffset =
-            static_cast<int64_t>(curCol * baseN) * orgM + static_cast<int64_t>(curRow * baseM) * AscendC::BLOCK_CUBE;
+        int64_t dstOffset = static_cast<int64_t>(curCol * baseN) * orgM +
+                            static_cast<int64_t>(curRow * baseM) * AscendC::BLOCK_CUBE;
         dstOffset = dstOffset >> 1; // splitM or splitN
 
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::NZ> params;
@@ -175,13 +168,10 @@ public:
  * @param [in] InputType: the type of the input tensor
  */
 template <class OutputType, class InputType>
-struct Copy<
-    Arch::DAV3510, CopyOutSplitMWithParams, void, OutputType, InputType,
-    AscendC::Std::enable_if_t<
-        PosIsUB<OutputType::pos>() && IsNDOrAlign<OutputType>() &&      // UB ND/ND_ALIGN
-        IsQuantSenario<typename OutputType::T, typename InputType::T>() // quant
-    >
-> {
+struct Copy<Arch::DAV3510, CopyOutSplitMWithParams, void, OutputType, InputType,
+            AscendC::Std::enable_if_t<PosIsUB<OutputType::pos>() && IsNDOrAlign<OutputType>() &&      // UB ND/ND_ALIGN
+                                      IsQuantSenario<typename OutputType::T, typename InputType::T>() // quant
+                                      > > {
 public:
     using DstT = typename OutputType::T;
     using SrcT = typename AscendC::GetMmDstType<typename InputType::T>::Type;
@@ -201,10 +191,9 @@ public:
      * @param [in] orgKc: original Kc value
      * @param [in] id: blcok id, default is 0
      */
-    __aicore__ inline void operator()(const AscendC::LocalTensor<DstT>& dst,
-                                      const AscendC::LocalTensor<SrcT>& src, int32_t curRow, int32_t curCol,
-                                      int32_t l0CTileH, int32_t l0CTileW, int32_t baseM, int32_t baseN,
-                                      int32_t orgM, int32_t orgN, int32_t orgKc, uint8_t id = 0)
+    __aicore__ inline void operator()(const AscendC::LocalTensor<DstT>& dst, const AscendC::LocalTensor<SrcT>& src,
+                                      int32_t curRow, int32_t curCol, int32_t l0CTileH, int32_t l0CTileW, int32_t baseM,
+                                      int32_t baseN, int32_t orgM, int32_t orgN, int32_t orgKc, uint8_t id = 0)
     {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         l0CTileH = AscendC::Align(l0CTileH, 2); // 2 means SplitM scenario aligned to 2
@@ -214,8 +203,8 @@ public:
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> params;
         params.nSize = static_cast<uint16_t>(l0CTileW);
         if constexpr (OutputType::format == CubeFormat::ND_ALIGN) {
-            params.nSize =
-                AscendC::Ceil(static_cast<uint64_t>(params.nSize), static_cast<uint64_t>(blockCount)) * blockCount;
+            params.nSize = AscendC::Ceil(static_cast<uint64_t>(params.nSize), static_cast<uint64_t>(blockCount)) *
+                           blockCount;
             stride = AscendC::Ceil(static_cast<uint64_t>(stride), static_cast<uint64_t>(blockCount)) * blockCount;
         }
         params.mSize = static_cast<uint16_t>(l0CTileH);
@@ -237,4 +226,3 @@ public:
 } // namespace Tile
 } // namespace Gemm
 } // namespace Cmct
-

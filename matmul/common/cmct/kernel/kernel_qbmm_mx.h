@@ -43,10 +43,8 @@ using namespace AscendC;
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
 class QuantMmBatchMX {
 public:
-    __aicore__ inline QuantMmBatchMX()
-    {}
-    __aicore__ inline ~QuantMmBatchMX()
-    {}
+    __aicore__ inline QuantMmBatchMX() {}
+    __aicore__ inline ~QuantMmBatchMX() {}
 
     static constexpr bool transA = BlockMmad::transA;
     static constexpr bool transB = BlockMmad::transB;
@@ -54,9 +52,9 @@ public:
     using BlockMmadParams = typename BlockMmad::Params;
     using L1Params = typename BlockMmad::L1Params;
     using AType = typename BlockMmad::AType;
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
-        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
-        transB, AType>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmad::L1TileShape,
+                                                                    typename BlockMmad::L0TileShape, BlockScheduler,
+                                                                    transA, transB, AType>::SchedulerOp;
     using BType = typename BlockMmad::BType;
     using CType = typename BlockMmad::CType;
     using BiasType = typename BlockMmad::BiasType;
@@ -103,20 +101,17 @@ public:
 public:
     __aicore__ inline void Init(const Params& params);
     __aicore__ inline void Run(const Params& params);
-    __aicore__ inline void operator()(const Params& params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(const Params& params) { Run(params); }
 
 private:
-    __aicore__ inline void ProcessSingleBatch(
-        const Params& params, BlockSchedulerOp& bs, uint64_t batchCnt, bool isTailRound);
+    __aicore__ inline void ProcessSingleBatch(const Params& params, BlockSchedulerOp& bs, uint64_t batchCnt,
+                                              bool isTailRound);
     __aicore__ inline void ProcessWithBatch(const Params& params, BlockSchedulerOp& bs);
     __aicore__ inline TupleShape ToShapeTuple(const ProblemShape& problemShape)
     {
         return {problemShape.m, problemShape.n, problemShape.k};
     }
-    __aicore__ inline void AddBatchOffset(const Params &params);
+    __aicore__ inline void AddBatchOffset(const Params& params);
     __aicore__ inline void SetL2Cache(const ProblemShape& problemShape, uint64_t curBaseM, uint64_t baseN);
 
 private:
@@ -155,8 +150,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Run(const 
     if (params.problemShape.b == 1) {
         ProcessSingleBatch(params, bs, 0, true);
         if constexpr (isAtomicAdd) {
- 	        AscendC::SetAtomicNone();
- 	    }
+            AscendC::SetAtomicNone();
+        }
         return;
     }
 
@@ -176,7 +171,7 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::SetL2Cache
             x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_NORMAL);
         }
     } else {
-        if constexpr(transB) {
+        if constexpr (transB) {
             if (curBaseM >= problemShape.m && (problemShape.k & 0xff) == 0) {
                 bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
                 x2scaleGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
@@ -220,8 +215,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::Init(const
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(
-    const Params& params, BlockSchedulerOp& bs)
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(const Params& params,
+                                                                                       BlockSchedulerOp& bs)
 {
     uint64_t batchC3C4 = static_cast<uint64_t>(params.qbmmParams.batchC3) * params.qbmmParams.batchC4;
     uint64_t batchC2C3C4 = params.qbmmParams.batchC2 * batchC3C4;
@@ -256,8 +251,8 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
                 batchAOffset_ = batchA3Offset;
                 batchBOffset_ = batchB3Offset;
                 for (uint64_t b4Index = 0; b4Index < params.qbmmParams.batchC4; ++b4Index) {
-                    bool isTailRound =
-                        curBatchC * bs.GetTotalCnt() > (totalCnt / AscendC::GetBlockNum()) * AscendC::GetBlockNum();
+                    bool isTailRound = curBatchC * bs.GetTotalCnt() >
+                                       (totalCnt / AscendC::GetBlockNum()) * AscendC::GetBlockNum();
                     ProcessSingleBatch(params, bs, (params.problemShape.b - curBatchC), isTailRound);
                     curBatchC++;
                     batchCOffset_ += 1;
@@ -279,24 +274,25 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessWit
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOffset(const Params &params)
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOffset(const Params& params)
 {
     Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
     if constexpr (FormatB == CubeFormat::NZ) {
-        int64_t c0Size =
-                AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? C0_SIZE_B4 : C0_SIZE_B8;
+        int64_t c0Size = AscendC::IsSameType<AType, fp4x2_e2m1_t>::value ? C0_SIZE_B4 : C0_SIZE_B8;
         if constexpr (transB) {
-            Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
-                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.k, c0Size) *
-                Cmct::Gemm::CeilDiv(params.problemShape.n, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * c0Size;
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(
+                blockOffset_) += batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.k, c0Size) *
+                                 Cmct::Gemm::CeilDiv(params.problemShape.n, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE *
+                                 c0Size;
         } else {
-            Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
-                batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.n, c0Size) *
-                Cmct::Gemm::CeilDiv(params.problemShape.k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE * c0Size;
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(
+                blockOffset_) += batchBOffset_ * Cmct::Gemm::CeilDiv(params.problemShape.n, c0Size) *
+                                 Cmct::Gemm::CeilDiv(params.problemShape.k, AscendC::BLOCK_CUBE) * AscendC::BLOCK_CUBE *
+                                 c0Size;
         }
     } else {
-        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) +=
-            batchBOffset_ * params.problemShape.n * params.problemShape.k;
+        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) += batchBOffset_ * params.problemShape.n *
+                                                             params.problemShape.k;
     }
     Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.m * params.problemShape.n;
     if (isBiasThreeDim_) {
@@ -305,12 +301,13 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBatchOf
 }
 
 QBMM_MX_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(
-    const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
+__aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(const Params& params,
+                                                                                         BlockSchedulerOp& bs,
+                                                                                         uint64_t restBatch,
+                                                                                         bool isTailRound)
 {
-    CoordClass coord(
-        params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
-        params.qbmmParams.baseN, params.qbmmParams.baseK);
+    CoordClass coord(params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
+                     params.qbmmParams.baseN, params.qbmmParams.baseK);
     BlockCoord blockIdx;
     auto& mTailTile = params.schParams.mTailTile;
     auto& nTailTile = params.schParams.nTailTile;
@@ -323,9 +320,9 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
     }
     SetL2Cache(params.problemShape, params.qbmmParams.baseM, params.qbmmParams.baseN);
     while (bs.GetTileIdx(blockIdx)) {
-        BlockShape singleShape =
-            bs.template GetBlockShape<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE,
-                                      QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, FormatB>(blockIdx);
+        BlockShape singleShape = bs.template GetBlockShape<QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE,
+                                                           QuantBatchMatmul::QuantMode::MX_PERGROUP_MODE, FormatB>(
+            blockIdx);
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
@@ -336,13 +333,12 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
             Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);
 
         AddBatchOffset(params);
-        mmadOp_(
-            aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
-            bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],
-            x1scaleGlobal_[Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)],
-            x2scaleGlobal_[Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)],
-            biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
-            cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
+        mmadOp_(aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
+                bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],
+                x1scaleGlobal_[Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(blockOffset_)],
+                x2scaleGlobal_[Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)],
+                biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
+                cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
     }
     bs.UpdateNextBatchBlockRoundParams();
 }
@@ -350,4 +346,3 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

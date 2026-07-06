@@ -29,16 +29,14 @@
 using namespace ge;
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 static const int64_t ASCEND_WORKSPACE = 16 * 1024 * 1024;
 static const uint32_t REDUCTION_MEAN = 2;
 static const map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1}, {"mean", 2}};
 static const map<ge::DataType, uint32_t> DTYEP_2_INT_KEY{{ge::DT_FLOAT16, 10}, {ge::DT_FLOAT, 20}, {ge::DT_BF16, 30}};
-class LpLossTiling
-{
+class LpLossTiling {
 public:
-    explicit LpLossTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit LpLossTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling(const ReduceOpCompileInfo* compileInfo);
 
 protected:
@@ -72,19 +70,19 @@ ge::graphStatus LpLossTiling::CheckShape()
     this->outputDtype = outputDesc->GetDataType();
     auto iter = DTYEP_2_INT_KEY.find(this->outputDtype);
     OP_CHECK_IF(iter == DTYEP_2_INT_KEY.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
-            "FLOAT, FLOAT16 or BF16"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
     if (inputPDesc->GetDataType() != inputLDesc->GetDataType()) {
         std::string dtypeMsg = ToString(inputPDesc->GetDataType()) + " and " + ToString(inputLDesc->GetDataType());
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
-            dtypeMsg.c_str(), "The dtypes of input predict and input label must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
     if (inputPShape != inputLShape) {
         std::string shapeMsg = ToString(inputPShape) + " and " + ToString(inputLShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
-            shapeMsg.c_str(), "The shapes of input predict and input label must be the same");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label", shapeMsg.c_str(),
+                                               "The shapes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -115,15 +113,13 @@ ge::graphStatus LpLossTiling::TilingEle()
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         // fp16需要cast成fp32处理
         OP_CHECK_IF(eleBaseTiling.DoTiling<LpLoss::LpLossOp<half>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp16"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp16"), return ge::GRAPH_FAILED);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         OP_CHECK_IF(eleBaseTiling.DoTiling<LpLoss::LpLossOp<float>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
-            "FLOAT, FLOAT16 or BF16");
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -133,8 +129,7 @@ ge::graphStatus LpLossTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
 {
     ReduceOpInputParam opInput;
     OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext, opInput, 0) == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext->GetNodeName(), "ReduceOp get x dtype failed"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "ReduceOp get x dtype failed"), return ge::GRAPH_FAILED);
 
     opInput.axes.resize(opInput.shape.size());
     for (size_t i = 0; i < opInput.shape.size(); i++) {
@@ -143,26 +138,26 @@ ge::graphStatus LpLossTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossSumDag<half, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
-                            OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
-                            return ge::GRAPH_FAILED);
+                             tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
+                         ge::GRAPH_FAILED),
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossMeanDag<half, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
-                            OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
-                            return ge::GRAPH_FAILED);
+                             tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
+                         ge::GRAPH_FAILED),
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
         }
     } else {
         if (static_cast<int32_t>(this->reduction) == 1) {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossSumDag<float, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
-                            OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
-                            return ge::GRAPH_FAILED);
+                             tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
+                         ge::GRAPH_FAILED),
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF((Tiling4ReduceOp<LpLoss::LpLossMeanDag<float, float>::OpDag>(
-                                 tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) == ge::GRAPH_FAILED),
-                            OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"),
-                            return ge::GRAPH_FAILED);
+                             tilingContext, opInput, key.ReduceTiling, compileInfo, &(tiling->reduceTiling)) ==
+                         ge::GRAPH_FAILED),
+                        OP_LOGE(tilingContext->GetNodeName(), "LpLoss Tiling failed"), return ge::GRAPH_FAILED);
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -171,31 +166,29 @@ ge::graphStatus LpLossTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
 ge::graphStatus LpLossTiling::RunTiling(const ReduceOpCompileInfo* compileInfo)
 {
     OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
-               return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     tiling = tilingContext->GetTilingData<LpLossTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
     auto P = attrs->GetAttrPointer<int>(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, P);
-    OP_CHECK_IF(*P != 1,
-        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "p", std::to_string(*P).c_str(), "1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*P != 1, OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "p", std::to_string(*P).c_str(), "1"),
+                return ge::GRAPH_FAILED);
     const string reductionStr = string(attrs->GetAttrPointer<char>(1));
     auto iter = STR_2_INT.find(reductionStr);
-    OP_CHECK_IF(iter == STR_2_INT.end(),
+    OP_CHECK_IF(
+        iter == STR_2_INT.end(),
         OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction", reductionStr.c_str(), "none, sum or mean"),
         return ge::GRAPH_FAILED);
     this->reduction = iter->second;
     key.Reduction = this->reduction;
     if (reductionStr == "none") {
         OP_CHECK_IF(TilingEle() != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for elewise"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for elewise"), return ge::GRAPH_FAILED);
     } else if (reductionStr == "mean" || reductionStr == "sum") {
         OP_CHECK_IF(TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"), return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction", reductionStr.c_str(), "none, sum or mean");
         return ge::GRAPH_FAILED;
@@ -228,40 +221,35 @@ ge::graphStatus TilingPrepareForLpLoss(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum == 0UL),
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
-                                        compileInfo->vectorCoreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum == 0UL),
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
+                        compileInfo->vectorCoreNum),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(ubSize <= CACHE_BUF_SIZE,
-                    OP_LOGE(context->GetNodeName(),
-                                                    "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
-                                                    compileInfo->ubSize, CACHE_BUF_SIZE),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
+                        compileInfo->ubSize, CACHE_BUF_SIZE),
+                return ge::GRAPH_FAILED);
     compileInfo->ubSize = ubSize;
 
     compileInfo->cacheLineSize = Ops::Base::GetCacheLineSize(context);
-    OP_CHECK_IF(
-        compileInfo->cacheLineSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
-                                        compileInfo->cacheLineSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->cacheLineSize == 0UL,
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
+                        compileInfo->cacheLineSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->ubBlockSize = Ops::Base::GetUbBlockSize(context);
     OP_CHECK_IF(
         compileInfo->ubBlockSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.",
-                                        compileInfo->ubBlockSize),
+        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.", compileInfo->ubBlockSize),
         return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = Ops::Base::GetVRegSize(context);
     OP_CHECK_IF(
         compileInfo->vRegSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.",
-                                        compileInfo->vRegSize),
+        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.", compileInfo->vRegSize),
         return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%lu, ubSize:%lu, cacheLineSize:%lu, ubBlockSize:%lu, vRegSize:%lu",
@@ -272,4 +260,4 @@ ge::graphStatus TilingPrepareForLpLoss(gert::TilingParseContext* context)
 }
 
 IMPL_OP_OPTILING(LpLoss).Tiling(TilingForLpLoss).TilingParse<ReduceOpCompileInfo>(TilingPrepareForLpLoss);
-}  // namespace optiling
+} // namespace optiling

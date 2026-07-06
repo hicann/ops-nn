@@ -28,7 +28,7 @@ using namespace ConvFunc;
 using namespace conv;
 
 template <class Intf>
-__aicore__ inline void DeQuantCalcFixpTimes(Intf *self)
+__aicore__ inline void DeQuantCalcFixpTimes(Intf* self)
 {
     self->ctx.fixpTimesTotal = self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopN * self->ctx.l12l0LoopN *
                                self->ctx.ddr2l1LoopD;
@@ -40,10 +40,9 @@ __aicore__ inline void DeQuantCalcFixpTimes(Intf *self)
         if constexpr (Intf::hasWL0IterFlag) {
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2UbLoopW = (self->ctx.ddr2l1LoopW - W_TAIL_NUM) *
-                    CeilDiv(self->ctx.convTilingData->woL1,
-                            self->ctx.convTilingData->mUB) +
-                    CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->mUB) +
-                    CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->mUB);
+                                  CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->mUB) +
+                              CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->mUB) +
+                              CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->mUB);
             } else {
                 ddr2UbLoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->mUB);
             }
@@ -55,10 +54,10 @@ __aicore__ inline void DeQuantCalcFixpTimes(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void DeQuantInitBuf(Intf *self)
+__aicore__ inline void DeQuantInitBuf(Intf* self)
 {
     self->ctx.pipe.InitBuffer(self->ctx.mmadResUbBuf,
-        self->ctx.convTilingData->mUB * self->ctx.convTilingData->nUB * Intf::sizeOfL0c);
+                              self->ctx.convTilingData->mUB * self->ctx.convTilingData->nUB * Intf::sizeOfL0c);
     self->ctx.mmadResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::L0cT>();
     self->ctx.outputResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::OutputT>();
 
@@ -66,21 +65,18 @@ __aicore__ inline void DeQuantInitBuf(Intf *self)
     self->ctx.scaleTensor = self->ctx.scaleUbBuf.template Get<typename Intf::ScaleT>();
 
     if constexpr (AscendC::IsSameType<typename Intf::BiasT, float>::value) {
-        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf,
-            self->ctx.convTilingData->nUB * Intf::sizeOfBias);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTilingData->nUB * Intf::sizeOfBias);
     } else {
-        self->ctx.pipe.InitBuffer(self->ctx.biasB16UbBuf,
-            self->ctx.convTilingData->nUB * Intf::sizeOfBias);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB16UbBuf, self->ctx.convTilingData->nUB * Intf::sizeOfBias);
         self->ctx.biasB16Tensor = self->ctx.biasB16UbBuf.template Get<typename Intf::BiasT>();
 
-        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf,
-            self->ctx.convTilingData->nUB * DTYPE_SIZE_B32);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTilingData->nUB * DTYPE_SIZE_B32);
     }
     self->ctx.biasB32Tensor = self->ctx.biasB32UbBuf.template Get<float>();
 }
 
 template <class Intf>
-__aicore__ inline void DeQuantVecInit(Intf *self)
+__aicore__ inline void DeQuantVecInit(Intf* self)
 {
     self->ctx.vecId = GetSubBlockIdx();
 
@@ -100,9 +96,8 @@ __aicore__ inline void DeQuantVecInit(Intf *self)
     }
     InitCoDirectionValue<Intf>(self);
 
-    self->ctx.outputOneBatchSize = 
-        self->ctx.convTilingData->orgCo * self->ctx.convTilingData->orgHo *
-        self->ctx.convTilingData->orgWo * self->ctx.convTilingData->orgDo;
+    self->ctx.outputOneBatchSize = self->ctx.convTilingData->orgCo * self->ctx.convTilingData->orgHo *
+                                   self->ctx.convTilingData->orgWo * self->ctx.convTilingData->orgDo;
 
     DeQuantInitBuf<Intf>(self);
 
@@ -113,38 +108,38 @@ __aicore__ inline void DeQuantVecInit(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void DeQuantUBParamsUpdate(Intf *self)
+__aicore__ inline void DeQuantUBParamsUpdate(Intf* self)
 {
     uint32_t mUbTail = 0;
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-        uint64_t currentML0 =
-            self->ctx.mAL1Iter == self->ctx.maxMAL1Iter && self->ctx.mL0Iter == self->ctx.maxML0Iter ?
-            self->ctx.mAL0Tail : self->ctx.mL0;
+        uint64_t currentML0 = self->ctx.mAL1Iter == self->ctx.maxMAL1Iter && self->ctx.mL0Iter == self->ctx.maxML0Iter ?
+                                  self->ctx.mAL0Tail :
+                                  self->ctx.mL0;
         self->ctx.l0C2UbLoopM = CeilDiv(currentML0, self->ctx.convTilingData->mUB);
         self->ctx.maxMUbIter = self->ctx.l0C2UbLoopM - 1;
         mUbTail = currentML0 % self->ctx.convTilingData->mUB;
         mUbTail = mUbTail == 0 ? self->ctx.convTilingData->mUB : mUbTail;
-        self->ctx.currentMUb = self->ctx.mUbIter == self->ctx.maxMUbIter ?
-                               mUbTail : self->ctx.convTilingData->mUB;
+        self->ctx.currentMUb = self->ctx.mUbIter == self->ctx.maxMUbIter ? mUbTail : self->ctx.convTilingData->mUB;
     } else {
-        self->ctx.currentHoL0 = self->ctx.hoL0Iter == self->ctx.maxHoL0Iter ?
-            self->ctx.hoL0Tail : self->ctx.convTilingData->hoL0;
-        self->ctx.currentWoL0 = self->ctx.woL0Iter == self->ctx.maxWoL0Iter ?
-            self->ctx.woL0Tail : self->ctx.convTilingData->woL0;
+        self->ctx.currentHoL0 = self->ctx.hoL0Iter == self->ctx.maxHoL0Iter ? self->ctx.hoL0Tail :
+                                                                              self->ctx.convTilingData->hoL0;
+        self->ctx.currentWoL0 = self->ctx.woL0Iter == self->ctx.maxWoL0Iter ? self->ctx.woL0Tail :
+                                                                              self->ctx.convTilingData->woL0;
         self->ctx.l0C2UbLoopWo = CeilDiv(self->ctx.currentWoL0, self->ctx.convTilingData->mUB);
         self->ctx.l0C2UbLoopM = self->ctx.l0C2UbLoopWo * self->ctx.currentHoL0;
         self->ctx.maxMUbIter = self->ctx.l0C2UbLoopM - 1;
         mUbTail = self->ctx.currentWoL0 % self->ctx.convTilingData->mUB;
         mUbTail = mUbTail == 0 ? self->ctx.convTilingData->mUB : mUbTail;
         self->ctx.currentMUb = (self->ctx.mUbIter % self->ctx.l0C2UbLoopWo) == (self->ctx.l0C2UbLoopWo - 1) ?
-            mUbTail : self->ctx.convTilingData->mUB;
+                                   mUbTail :
+                                   self->ctx.convTilingData->mUB;
     }
 
     self->ctx.currentNUb = CalcCurrentNL0<Intf>(self);
 }
 
 template <class Intf>
-__aicore__ inline void DeQuantIterInit(Intf *self)
+__aicore__ inline void DeQuantIterInit(Intf* self)
 {
     self->ctx.batchIter = 0;
     self->ctx.dOutIter = 0;
@@ -174,7 +169,7 @@ __aicore__ inline void DeQuantIterInit(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline bool DeQuantIterUpdate(Intf *self)
+__aicore__ inline bool DeQuantIterUpdate(Intf* self)
 {
     self->ctx.fixpTimes++;
 
@@ -208,9 +203,8 @@ __aicore__ inline bool DeQuantIterUpdate(Intf *self)
     return false;
 }
 
-
 template <class Intf>
-__aicore__ inline bool DeQuantVecImpl(Intf *self)
+__aicore__ inline bool DeQuantVecImpl(Intf* self)
 {
     bool loadParamsFlag = false;
     DeQuantIterInit<Intf>(self);
@@ -220,13 +214,14 @@ __aicore__ inline bool DeQuantVecImpl(Intf *self)
         if constexpr (Intf::iterateMFirstFlag) {
             if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
                 loadParamsFlag = loadParamsFlag ||
-                    (self->ctx.isFirstIterate || (self->ctx.mUbIter == 0 && self->ctx.mL0Iter == 0));
+                                 (self->ctx.isFirstIterate || (self->ctx.mUbIter == 0 && self->ctx.mL0Iter == 0));
             } else {
-                loadParamsFlag = loadParamsFlag || (self->ctx.isFirstIterate ||
-                    (self->ctx.mUbIter == 0 && self->ctx.hoL0Iter == 0 && self->ctx.woL0Iter == 0));
+                loadParamsFlag = loadParamsFlag ||
+                                 (self->ctx.isFirstIterate ||
+                                  (self->ctx.mUbIter == 0 && self->ctx.hoL0Iter == 0 && self->ctx.woL0Iter == 0));
             }
         } else {
-                loadParamsFlag = loadParamsFlag || (self->ctx.isFirstIterate || self->ctx.mUbIter == 0);
+            loadParamsFlag = loadParamsFlag || (self->ctx.isFirstIterate || self->ctx.mUbIter == 0);
         }
 
         if (self->ctx.pingPongFlag != self->ctx.vecId) {

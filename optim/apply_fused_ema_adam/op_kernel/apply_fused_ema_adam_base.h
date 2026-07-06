@@ -30,14 +30,12 @@ constexpr int32_t INDEX_S = 3;
 constexpr int32_t INDEX_GRAD = 4;
 
 template <typename T>
-class FusedEmaAdamBase
-{
+class FusedEmaAdamBase {
 public:
     __aicore__ inline FusedEmaAdamBase(){};
     __aicore__ inline void InitData(const ApplyFusedEmaAdamTilingData& tiling);
-    __aicore__ inline float ScalarPow(
-        TBuf<QuePosition::VECCALC> powTBuf1, TBuf<QuePosition::VECCALC> powTBuf2, TQue<QuePosition::VECIN, 1> inQue,
-        float x, float y);
+    __aicore__ inline float ScalarPow(TBuf<QuePosition::VECCALC> powTBuf1, TBuf<QuePosition::VECCALC> powTBuf2,
+                                      TQue<QuePosition::VECIN, 1> inQue, float x, float y);
     __aicore__ inline void PipeVM2();
     __aicore__ inline void PipeM2V();
     __aicore__ inline void PipeVM3();
@@ -83,9 +81,9 @@ __aicore__ inline void FusedEmaAdamBase<T>::InitData(const ApplyFusedEmaAdamTili
 }
 
 template <typename T>
-__aicore__ inline float FusedEmaAdamBase<T>::ScalarPow(
-    TBuf<QuePosition::VECCALC> powTBuf1, TBuf<QuePosition::VECCALC> powTBuf2, TQue<QuePosition::VECIN, 1> inQue,
-    float x, float y)
+__aicore__ inline float FusedEmaAdamBase<T>::ScalarPow(TBuf<QuePosition::VECCALC> powTBuf1,
+                                                       TBuf<QuePosition::VECCALC> powTBuf2,
+                                                       TQue<QuePosition::VECIN, 1> inQue, float x, float y)
 {
     LocalTensor<T> inLocal = inQue.AllocTensor<T>();
     LocalTensor<uint8_t> interpreTensor = inLocal.template ReinterpretCast<uint8_t>();

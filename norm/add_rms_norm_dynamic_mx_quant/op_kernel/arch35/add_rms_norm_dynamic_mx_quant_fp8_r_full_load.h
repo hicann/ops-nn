@@ -22,19 +22,15 @@ namespace AddRmsNormDynamicMxQuant {
 template <typename T_X, typename T_GAMMA, typename T_Y>
 class AddRmsNormDynamicMxQuantFP8RFullLoad {
 public:
-    __aicore__ inline AddRmsNormDynamicMxQuantFP8RFullLoad(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline AddRmsNormDynamicMxQuantFP8RFullLoad(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, 
-        GM_ADDR x, GM_ADDR mxscale, GM_ADDR workspace, GM_ADDR rstd,
-        const AddRmsNormDynamicMxQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR x,
+                                GM_ADDR mxscale, GM_ADDR workspace, GM_ADDR rstd,
+                                const AddRmsNormDynamicMxQuantTilingData* tiling)
     {
-    #if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
-    #endif
+#endif
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
 
         numRow_ = tiling->numRow;
@@ -45,8 +41,7 @@ public:
         epsilon_ = tiling->epsilon;
         numColAlign_ = tiling->numColAlign;
         avgFactor_ = tiling->avgFactor;
-        rowWork = (GetBlockIdx() < GetBlockNum() - 1) ? blockFactor_
-                                                       : numRow_ - (GetBlockNum() - 1) * blockFactor_;
+        rowWork = (GetBlockIdx() < GetBlockNum() - 1) ? blockFactor_ : numRow_ - (GetBlockNum() - 1) * blockFactor_;
         roundMode_ = tiling->roundMode;
         mxBlockSize_ = tiling->mxBlockSize;
         scaleAlg_ = tiling->scaleAlg;
@@ -70,34 +65,42 @@ public:
         }
 
         yFp8Gm.SetGlobalBuffer((__gm__ uint8_t*)y + blockOffset, rowWork * numCol_);
-        mxScaleGm.SetGlobalBuffer(
-            (__gm__ uint8_t*)mxscale + GetBlockIdx() * blockFactor_ * mxScaleSize_, rowWork * mxScaleSize_);
+        mxScaleGm.SetGlobalBuffer((__gm__ uint8_t*)mxscale + GetBlockIdx() * blockFactor_ * mxScaleSize_,
+                                  rowWork * mxScaleSize_);
 
         // === Compute buffer sizes ===
         uint64_t rstdUbSizeAlignSize = CeilAlign(rowFactor_, static_cast<uint64_t>(VL_F32)) * sizeof(float);
         uint32_t binaryAddQuotientLoop = CeilDiv(binAddQuotient_, VL_F32);
-        uint32_t binaryAddBufLen = CeilAlign(CeilAlign(binaryAddQuotientLoop, BLOCK_F32_ALIGN_NUM) * sizeof(float), UB_BLOCK_SIZE) * rowFactor_;
+        uint32_t binaryAddBufLen = CeilAlign(CeilAlign(binaryAddQuotientLoop, BLOCK_F32_ALIGN_NUM) * sizeof(float),
+                                             UB_BLOCK_SIZE) *
+                                   rowFactor_;
 
         // MxQuant buffer sizes
         uint64_t maxExpBufSize = CeilAlign(blockNumInColAxis_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_;
         uint64_t halfScaleBufSize = maxExpBufSize;
 
         // outQueueQuantY
-        uint64_t quantYBufSize = CeilAlign(CeilDiv(numColAlign_ * rowFactor_, MX_STEP_PROCESS_NUM), DIGIT_FOUR) * MX_STEP_PROCESS_NUM;
+        uint64_t quantYBufSize = CeilAlign(CeilDiv(numColAlign_ * rowFactor_, MX_STEP_PROCESS_NUM), DIGIT_FOUR) *
+                                 MX_STEP_PROCESS_NUM;
 
         // MxScale output
         uint64_t scaleBufPerIter = CeilAlign(mxScaleSize_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_;
 
         // === Init buffers ===
         // AddRmsNorm buffers
-        pPipe->InitBuffer(inQueueX1, DOUBLE_BUFFER_NUM, CeilAlign(numColAlign_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_);
-        pPipe->InitBuffer(inQueueX2, DOUBLE_BUFFER_NUM, CeilAlign(numColAlign_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_);
+        pPipe->InitBuffer(inQueueX1, DOUBLE_BUFFER_NUM,
+                          CeilAlign(numColAlign_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_);
+        pPipe->InitBuffer(inQueueX2, DOUBLE_BUFFER_NUM,
+                          CeilAlign(numColAlign_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_);
         if (betaFlag_ != 0) {
-            pPipe->InitBuffer(inQueueGammabeta, 1, DIGIT_TWO * CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA));
+            pPipe->InitBuffer(inQueueGammabeta, 1,
+                              DIGIT_TWO * CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA));
         } else {
-            pPipe->InitBuffer(inQueueGammabeta, 1, CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA));
+            pPipe->InitBuffer(inQueueGammabeta, 1,
+                              CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA));
         }
-        pPipe->InitBuffer(outQueueX, DOUBLE_BUFFER_NUM, CeilAlign(numColAlign_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_);
+        pPipe->InitBuffer(outQueueX, DOUBLE_BUFFER_NUM,
+                          CeilAlign(numColAlign_ * sizeof(T_X), UB_BLOCK_SIZE) * rowFactor_);
         pPipe->InitBuffer(outQueueRstd, DOUBLE_BUFFER_NUM, rstdUbSizeAlignSize);
         pPipe->InitBuffer(xReduceBuff, rstdUbSizeAlignSize);
         pPipe->InitBuffer(xFp32Buff, CeilAlign(numColAlign_ * sizeof(float), UB_BLOCK_SIZE) * rowFactor_);
@@ -127,8 +130,7 @@ public:
     }
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t rowRepeat, uint32_t curRows, uint64_t offset)
+    __aicore__ inline void Compute(uint32_t rowRepeat, uint32_t curRows, uint64_t offset)
     {
         // Phase 1: AddRmsNorm
         // --- CopyIn x1, x2 ---
@@ -151,13 +153,13 @@ private:
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         LocalTensor<float> xReduceLocal = xReduceBuff.Get<float>();
         NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(
-            xFp32Local, xReduceLocal, binaryAddBuf, static_cast<uint16_t>(curRows),
-            static_cast<uint32_t>(numColAlign_), static_cast<uint32_t>(numCol_),
-            static_cast<uint32_t>(binAddQuotient_), static_cast<uint32_t>(BLOCK_F32_ALIGN_NUM));
+            xFp32Local, xReduceLocal, binaryAddBuf, static_cast<uint16_t>(curRows), static_cast<uint32_t>(numColAlign_),
+            static_cast<uint32_t>(numCol_), static_cast<uint32_t>(binAddQuotient_),
+            static_cast<uint32_t>(BLOCK_F32_ALIGN_NUM));
 
         // --- Rstd = 1/sqrt(mean + epsilon_) ---
-        NormCommon::ComputeRstdNewtonRaphson<true, true>(
-            xReduceLocal, rstdLocal, curRows, epsilon_, avgFactor_, VL_F32);
+        NormCommon::ComputeRstdNewtonRaphson<true, true>(xReduceLocal, rstdLocal, curRows, epsilon_, avgFactor_,
+                                                         VL_F32);
         outQueueRstd.EnQue<float>(rstdLocal);
 
         // --- CopyOut rstd ---
@@ -193,9 +195,8 @@ private:
         CopyOutMxScale(rowRepeat, curRows);
     }
 
-    __aicore__ inline void CalculateXAdd(
-        LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xOutLocal, LocalTensor<float>& xFp32Local,
-        uint32_t curRows)
+    __aicore__ inline void CalculateXAdd(LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2,
+                                         LocalTensor<T_X>& xOutLocal, LocalTensor<float>& xFp32Local, uint32_t curRows)
     {
         __local_mem__ T_X* x1InUb = (__local_mem__ T_X*)xLocal1.GetPhyAddr();
         __local_mem__ T_X* x2InUb = (__local_mem__ T_X*)xLocal2.GetPhyAddr();
@@ -222,7 +223,8 @@ private:
     }
 
     template <bool hasBeta>
-    __aicore__ inline void CalculateY(LocalTensor<float>& xFp32Local, LocalTensor<T_X>& yLocal, LocalTensor<float>& rstdLocal, uint32_t curRows)
+    __aicore__ inline void CalculateY(LocalTensor<float>& xFp32Local, LocalTensor<T_X>& yLocal,
+                                      LocalTensor<float>& rstdLocal, uint32_t curRows)
     {
         uint32_t numColAlign = static_cast<uint32_t>(numColAlign_);
         uint32_t numCol = static_cast<uint32_t>(numCol_);
@@ -231,7 +233,7 @@ private:
         __local_mem__ T_X* yInUb = (__local_mem__ T_X*)yLocal.GetPhyAddr();
         __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
         __local_mem__ T_GAMMA* betaInUb;
-        if constexpr(hasBeta) {
+        if constexpr (hasBeta) {
             betaInUb = (__local_mem__ T_GAMMA*)betaLocal.GetPhyAddr();
         }
 
@@ -240,8 +242,10 @@ private:
         uint16_t loopRowsFold = loopRows / 2;
         uint16_t loopRowsHasLast = loopRows % 2;
 
-        __VEC_SCOPE__ {
-            RegTensor<float> x1Reg, x2Reg, gammaReg, betaReg, rstd1Reg, rstd2Reg, mul1Reg, mul1UnrollReg, mul2Reg, mul2UnrollReg;
+        __VEC_SCOPE__
+        {
+            RegTensor<float> x1Reg, x2Reg, gammaReg, betaReg, rstd1Reg, rstd2Reg, mul1Reg, mul1UnrollReg, mul2Reg,
+                mul2UnrollReg;
 
             for (uint16_t i = 0; i < loopRowsFold; ++i) {
                 uint32_t sregCount = numCol;
@@ -258,7 +262,7 @@ private:
                     LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaReg, regCurLoop, r * VL_F32);
                     AscendC::MicroAPI::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
                     AscendC::MicroAPI::Mul(mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
-                    if constexpr(hasBeta) {
+                    if constexpr (hasBeta) {
                         LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
                         AscendC::MicroAPI::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
                         AscendC::MicroAPI::Add(mul2UnrollReg, mul2UnrollReg, betaReg, regCurLoop);
@@ -277,7 +281,7 @@ private:
                     AscendC::MicroAPI::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
                     LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaReg, regCurLoop, r * VL_F32);
                     AscendC::MicroAPI::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
-                    if constexpr(hasBeta) {
+                    if constexpr (hasBeta) {
                         LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
                         AscendC::MicroAPI::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
                     }
@@ -316,7 +320,8 @@ private:
             MxQuantComputeScaleOCP<T_Y>(maxExpAddr, mxScaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale);
         } else {
             MxQuantComputeMaxExpcuBLAS<T_X>(srcAddr, maxExpAddr, loopNum);
-            MxQuantComputeScalecuBLAS<T_X, T_Y>(maxExpAddr, mxScaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale4NV);
+            MxQuantComputeScalecuBLAS<T_X, T_Y>(maxExpAddr, mxScaleLocalAddr, halfScaleLocalAddr, totalScaleInUB,
+                                                loopNumScale4NV);
         }
 
         srcAddr = reinterpret_cast<__ubuf__ T_X*>(yLocal.GetPhyAddr());
@@ -329,10 +334,9 @@ private:
         return;
     }
 
-
-    __aicore__ inline void MxQuantDeletePadData(
-        __ubuf__ int8_t* outLocalAddr, __ubuf__ int8_t* outBufferLocalAddr, uint16_t loopNum, uint32_t inputUpdateStride,
-        uint32_t outputUpdateStride)
+    __aicore__ inline void MxQuantDeletePadData(__ubuf__ int8_t* outLocalAddr, __ubuf__ int8_t* outBufferLocalAddr,
+                                                uint16_t loopNum, uint32_t inputUpdateStride,
+                                                uint32_t outputUpdateStride)
     {
         __VEC_SCOPE__
         {
@@ -355,15 +359,11 @@ private:
     {
         LocalTensor<T_X> xLocal1 = inQueueX1.AllocTensor<T_X>();
         LocalTensor<T_X> xLocal2 = inQueueX2.AllocTensor<T_X>();
-        
-        DataCopyExtParams extParams{
-            static_cast<uint16_t>(curRows),
-            static_cast<uint32_t>(numCol_ * sizeof(T_X)),
-            static_cast<uint32_t>(0),
-            static_cast<uint32_t>(dstStrideUbBlocks_),
-            0
-        };
-        DataCopyPadExtParams<T_X> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T_X>(0.0)};
+
+        DataCopyExtParams extParams{static_cast<uint16_t>(curRows), static_cast<uint32_t>(numCol_ * sizeof(T_X)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(dstStrideUbBlocks_), 0};
+        DataCopyPadExtParams<T_X> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                            static_cast<T_X>(0.0)};
 
         DataCopyPad(xLocal1, x1Gm[offset], extParams, padParams);
         DataCopyPad(xLocal2, x2Gm[offset], extParams, padParams);
@@ -373,18 +373,15 @@ private:
 
     __aicore__ inline void CopyInGammabeta(LocalTensor<uint8_t> gammabetaLocal)
     {
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(1),
-            static_cast<uint32_t>(numCol_ * sizeof(T_GAMMA)),
-            static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0),
-            0
-        };
-        DataCopyPadExtParams<T_GAMMA> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T_GAMMA>(0.0)};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(numCol_ * sizeof(T_GAMMA)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), 0};
+        DataCopyPadExtParams<T_GAMMA> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                                static_cast<T_GAMMA>(0.0)};
         gammaLocal = gammabetaLocal.ReinterpretCast<T_GAMMA>();
         DataCopyPad<T_GAMMA>(gammaLocal, gammaGm, copyParams, padParams);
         if (betaFlag_ != 0) {
-            betaLocal = gammabetaLocal[CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA)].ReinterpretCast<T_GAMMA>();
+            betaLocal = gammabetaLocal[CeilAlign(numCol_, UB_BLOCK_SIZE / sizeof(T_GAMMA)) * sizeof(T_GAMMA)]
+                            .ReinterpretCast<T_GAMMA>();
             DataCopyPad<T_GAMMA>(betaLocal, betaGm, copyParams, padParams);
         }
     }
@@ -393,13 +390,8 @@ private:
     {
         LocalTensor<T_X> xLocal = outQueueX.DeQue<T_X>();
         uint32_t srcStride = (numColAlign_ - numCol_) * sizeof(T_X) / UB_BLOCK_SIZE;
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(curRows),
-            static_cast<uint32_t>(numCol_ * sizeof(T_X)),
-            static_cast<uint32_t>(srcStride),
-            static_cast<uint32_t>(0),
-            0
-        };
+        DataCopyExtParams copyParams{static_cast<uint16_t>(curRows), static_cast<uint32_t>(numCol_ * sizeof(T_X)),
+                                     static_cast<uint32_t>(srcStride), static_cast<uint32_t>(0), 0};
         DataCopyPad(xOutGm[offset], xLocal, copyParams);
         outQueueX.FreeTensor(xLocal);
     }
@@ -409,13 +401,8 @@ private:
         LocalTensor<uint8_t> quantYLocal = outQueueQuantY.DeQue<uint8_t>();
         // FP8 output
         uint32_t srcStride = (numColAlign_ - numCol_) * sizeof(uint8_t) / UB_BLOCK_SIZE;
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(curRows),
-            static_cast<uint32_t>(numCol_),
-            static_cast<uint32_t>(srcStride),
-            static_cast<uint32_t>(0),
-            0
-        };
+        DataCopyExtParams copyParams{static_cast<uint16_t>(curRows), static_cast<uint32_t>(numCol_),
+                                     static_cast<uint32_t>(srcStride), static_cast<uint32_t>(0), 0};
         DataCopyPad<uint8_t>(yFp8Gm[gmOffset], quantYLocal, copyParams);
         outQueueQuantY.FreeTensor(quantYLocal);
     }
@@ -423,16 +410,13 @@ private:
     __aicore__ inline void CopyOutMxScale(uint32_t rowRepeat, uint32_t curRows)
     {
         LocalTensor<uint8_t> mxScaleLocal = mxScaleQueue.DeQue<uint8_t>();
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(curRows),
-            static_cast<uint32_t>(mxScaleSize_),
-            static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0),
-            0
-        };
-        DataCopyPad<uint8_t, PaddingMode::Compact>(mxScaleGm[rowRepeat * rowFactor_ * mxScaleSize_], mxScaleLocal, copyParams);
+        DataCopyExtParams copyParams{static_cast<uint16_t>(curRows), static_cast<uint32_t>(mxScaleSize_),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), 0};
+        DataCopyPad<uint8_t, PaddingMode::Compact>(mxScaleGm[rowRepeat * rowFactor_ * mxScaleSize_], mxScaleLocal,
+                                                   copyParams);
         mxScaleQueue.FreeTensor(mxScaleLocal);
     }
+
 private:
     TPipe* pPipe = nullptr;
 
@@ -462,8 +446,8 @@ private:
     GlobalTensor<T_GAMMA> betaGm;
     GlobalTensor<T_X> xOutGm;
     GlobalTensor<float> rstdGm;
-    GlobalTensor<uint8_t> yFp8Gm;      // FP8 quantized output
-    GlobalTensor<uint8_t> mxScaleGm;   // MX scale output
+    GlobalTensor<uint8_t> yFp8Gm;    // FP8 quantized output
+    GlobalTensor<uint8_t> mxScaleGm; // MX scale output
 
     // tiling parameters
     uint64_t numRow_;

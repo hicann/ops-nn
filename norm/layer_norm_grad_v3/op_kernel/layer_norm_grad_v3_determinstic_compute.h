@@ -30,9 +30,9 @@ static constexpr int64_t MAX_REPEAT_TIMES = 255;
 class LayerNormGradV3DeterminsticCompute {
 public:
     __aicore__ inline LayerNormGradV3DeterminsticCompute(){};
-    __aicore__ inline void initBuffer(
-        TPipe& pipe, GlobalTensor<float>& pdGammaOutTensorGM, GlobalTensor<float>& pdBetaOutTensorGM,
-        GlobalTensor<float>& workspaceGM, int64_t workspaceNum)
+    __aicore__ inline void initBuffer(TPipe& pipe, GlobalTensor<float>& pdGammaOutTensorGM,
+                                      GlobalTensor<float>& pdBetaOutTensorGM, GlobalTensor<float>& workspaceGM,
+                                      int64_t workspaceNum)
     {
         pipe_ = pipe;
         pipe_.InitBuffer(queueGammaIn_, DOUBLE_BUFFER, ROW_TEMPLATE * COL_TEMPLATE * sizeof(float));

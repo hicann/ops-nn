@@ -14,7 +14,7 @@
 
 namespace l0op {
 
-const aclTensor *LogSoftmaxV2(const aclTensor *x, int64_t dim, aclOpExecutor *executor);
+const aclTensor* LogSoftmaxV2(const aclTensor* x, int64_t dim, aclOpExecutor* executor);
 
 }
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_LOGSOFTMAX_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_LOGSOFTMAX_OP_H_

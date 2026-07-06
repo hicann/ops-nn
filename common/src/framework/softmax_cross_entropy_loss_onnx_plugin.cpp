@@ -16,36 +16,37 @@
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsSoftmaxCrossEntropyLoss(const Message *op_src, ge::Operator &op_dest) {
-  const NodeProto *node = dynamic_cast<const NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  for (const auto &attr : node->attribute()) {
-    if (attr.name() == "ignore_index" && attr.type() == ge::onnx::AttributeProto::INT) {
-      int64_t ignore_index = attr.i();
-      op_dest.SetAttr("ignore_index", ignore_index);
-    } 
-    if (attr.name() == "reduction" && attr.type() == ge::onnx::AttributeProto::STRING) {
-      std::string reduction = attr.s();
-      op_dest.SetAttr("reduction", reduction);
+static Status ParseParamsSoftmaxCrossEntropyLoss(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
 
-  return SUCCESS;
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "ignore_index" && attr.type() == ge::onnx::AttributeProto::INT) {
+            int64_t ignore_index = attr.i();
+            op_dest.SetAttr("ignore_index", ignore_index);
+        }
+        if (attr.name() == "reduction" && attr.type() == ge::onnx::AttributeProto::STRING) {
+            std::string reduction = attr.s();
+            op_dest.SetAttr("reduction", reduction);
+        }
+    }
+
+    return SUCCESS;
 }
 // register SoftmaxCrossEntropyLoss op info to GE
 REGISTER_CUSTOM_OP("SoftmaxCrossEntropyLoss")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("ai.onnx::12::SoftmaxCrossEntropyLoss"),
-                 ge::AscendString("ai.onnx::13::SoftmaxCrossEntropyLoss"),
-                 ge::AscendString("ai.onnx::14::SoftmaxCrossEntropyLoss"),
-                 ge::AscendString("ai.onnx::15::SoftmaxCrossEntropyLoss"),
-                 ge::AscendString("ai.onnx::16::SoftmaxCrossEntropyLoss"),
-                 ge::AscendString("ai.onnx::17::SoftmaxCrossEntropyLoss"),
-                 ge::AscendString("ai.onnx::18::SoftmaxCrossEntropyLoss")})
-  .ParseParamsFn(ParseParamsSoftmaxCrossEntropyLoss)
-  .ImplyType(ImplyType::TVM);
-}  // namespace domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("ai.onnx::12::SoftmaxCrossEntropyLoss"),
+                   ge::AscendString("ai.onnx::13::SoftmaxCrossEntropyLoss"),
+                   ge::AscendString("ai.onnx::14::SoftmaxCrossEntropyLoss"),
+                   ge::AscendString("ai.onnx::15::SoftmaxCrossEntropyLoss"),
+                   ge::AscendString("ai.onnx::16::SoftmaxCrossEntropyLoss"),
+                   ge::AscendString("ai.onnx::17::SoftmaxCrossEntropyLoss"),
+                   ge::AscendString("ai.onnx::18::SoftmaxCrossEntropyLoss")})
+    .ParseParamsFn(ParseParamsSoftmaxCrossEntropyLoss)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

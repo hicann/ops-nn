@@ -11,7 +11,7 @@
 /*!
  * \file gelu_grad_v2_infershape.cpp
  * \brief
-*/
+ */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -40,4 +40,4 @@ static ge::graphStatus InferShapeGeluGradV2(gert::InferShapeContext* context)
 }
 
 IMPL_OP_INFERSHAPE(GeluGradV2).InferShape(InferShapeGeluGradV2);
-}
+} // namespace ops

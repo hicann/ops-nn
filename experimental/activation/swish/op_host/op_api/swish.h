@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Swish(const aclTensor *self, float scale, aclOpExecutor *executor);
-}  // namespace l0op
+const aclTensor* Swish(const aclTensor* self, float scale, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif

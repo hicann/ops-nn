@@ -27,10 +27,7 @@ namespace Conv {
 
 class Conv3DDXV2FullLoadTiling : public Conv3DDXV2InnerProductTiling {
 public:
-    explicit Conv3DDXV2FullLoadTiling(gert::TilingContext* context) : Conv3DDXV2InnerProductTiling(context)
-    {
-        Reset();
-    }
+    explicit Conv3DDXV2FullLoadTiling(gert::TilingContext* context) : Conv3DDXV2InnerProductTiling(context) { Reset(); }
     ~Conv3DDXV2FullLoadTiling() override = default;
 
 protected:

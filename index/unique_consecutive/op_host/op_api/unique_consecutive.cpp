@@ -36,20 +36,19 @@ static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND950
     op::DataType::DT_UINT64, op::DataType::DT_UINT32,  op::DataType::DT_UINT16, op::DataType::DT_UINT8,
     op::DataType::DT_BF16,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> IDX_DTYPE_SUPPORT_LIST_ASCEND950 = {op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> IDX_DTYPE_SUPPORT_LIST_ASCEND950 = {op::DataType::DT_INT32,
+                                                                                     op::DataType::DT_INT64};
 
 bool CheckAttr4Aicore(bool returnInverse, int64_t dim)
 {
     // Add Soc check for future....
-    OP_CHECK(!returnInverse,
-             OP_LOGW("UniqueConsecutive4Aicore only support returnInverse=False."),
-             return false);
-    OP_CHECK(NoneN == dim, OP_LOGW("UniqueConsecutive4Aicore only support flatten case."),
-             return false);
+    OP_CHECK(!returnInverse, OP_LOGW("UniqueConsecutive4Aicore only support returnInverse=False."), return false);
+    OP_CHECK(NoneN == dim, OP_LOGW("UniqueConsecutive4Aicore only support flatten case."), return false);
     return true;
 }
 
-bool CheckTensorDtype4Aicore(const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut, const aclTensor* countsOut)
+bool CheckTensorDtype4Aicore(const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut,
+                             const aclTensor* countsOut)
 {
     OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND950),
              OP_LOGW("Unsupport input dtype for aicore UniqueConsecutive."), return false);
@@ -74,8 +73,9 @@ bool CheckSupport4Aicore(const aclTensor* self, bool returnInverse, int64_t dim,
     return true;
 }
 
-aclnnStatus UniqueConsecutiveAiCore(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim, aclTensor* valueOut,
-                                    aclTensor* inverseOut, aclTensor* countsOut, op::DataType outIdx, aclOpExecutor* executor)
+aclnnStatus UniqueConsecutiveAiCore(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim,
+                                    aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
+                                    op::DataType outIdx, aclOpExecutor* executor)
 {
     L0_DFX(UniqueConsecutiveAiCore, self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut, outIdx);
 
@@ -83,41 +83,40 @@ aclnnStatus UniqueConsecutiveAiCore(const aclTensor* self, bool returnInverse, b
     auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
 
     aclnnStatus ret = ACLNN_SUCCESS;
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(UniqueConsecutive,
-                                      OP_INPUT(self),
-                                      OP_OUTPUT(valueOut, inverseOut, countsOut),
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(UniqueConsecutive, OP_INPUT(self), OP_OUTPUT(valueOut, inverseOut, countsOut),
                                       OP_ATTR(returnInverse, returnCounts, NoneN, outIdx),
-                                      OP_OUTSHAPE({outShapeTensor, 0}),
-                                      OP_OUTSHAPE({outShapeTensor, 1}),
-                                      OP_OUTSHAPE({outShapeTensor, 2})
-    );
+                                      OP_OUTSHAPE({outShapeTensor, 0}), OP_OUTSHAPE({outShapeTensor, 1}),
+                                      OP_OUTSHAPE({outShapeTensor, 2}));
     return ret;
 }
 
-aclnnStatus UniqueConsecutive(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim, aclTensor* valueOut,
-                        aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor) {
-  L0_DFX(UniqueConsecutive, self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut);
+aclnnStatus UniqueConsecutive(const aclTensor* self, bool returnInverse, bool returnCounts, int64_t dim,
+                              aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor)
+{
+    L0_DFX(UniqueConsecutive, self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut);
 
-  if (CheckSupport4Aicore(self, returnInverse, dim, valueOut, inverseOut, countsOut)) {
-    op::DataType outIdxType = op::DataType::DT_INT64;
-    if (returnInverse) {
-        outIdxType = inverseOut->GetDataType();
-    } else if (returnCounts) {
-        outIdxType = countsOut->GetDataType();
+    if (CheckSupport4Aicore(self, returnInverse, dim, valueOut, inverseOut, countsOut)) {
+        op::DataType outIdxType = op::DataType::DT_INT64;
+        if (returnInverse) {
+            outIdxType = inverseOut->GetDataType();
+        } else if (returnCounts) {
+            outIdxType = countsOut->GetDataType();
+        }
+        return UniqueConsecutiveAiCore(self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut,
+                                       outIdxType, executor);
     }
-    return UniqueConsecutiveAiCore(self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut, outIdxType, executor);
-  }
 
-  static internal::AicpuTaskSpace space("UniqueConsecutive", ge::DEPEND_SHAPE_RANGE);
-  aclnnStatus ret = ACLNN_SUCCESS;
-  if (dim == NoneN) {
-    ret = ADD_TO_LAUNCHER_LIST_AICPU(UniqueConsecutive, OP_ATTR_NAMES({"return_idx", "return_counts"}), OP_INPUT(self),
-                                     OP_OUTPUT(valueOut, inverseOut, countsOut), OP_ATTR(returnInverse, returnCounts));
-  } else {
-    ret = ADD_TO_LAUNCHER_LIST_AICPU(UniqueConsecutive, OP_ATTR_NAMES({"return_idx", "return_counts", "axis"}),
-                                     OP_INPUT(self), OP_OUTPUT(valueOut, inverseOut, countsOut),
-                                     OP_ATTR(returnInverse, returnCounts, dim));
-  }
-  return ret;
+    static internal::AicpuTaskSpace space("UniqueConsecutive", ge::DEPEND_SHAPE_RANGE);
+    aclnnStatus ret = ACLNN_SUCCESS;
+    if (dim == NoneN) {
+        ret = ADD_TO_LAUNCHER_LIST_AICPU(UniqueConsecutive, OP_ATTR_NAMES({"return_idx", "return_counts"}),
+                                         OP_INPUT(self), OP_OUTPUT(valueOut, inverseOut, countsOut),
+                                         OP_ATTR(returnInverse, returnCounts));
+    } else {
+        ret = ADD_TO_LAUNCHER_LIST_AICPU(UniqueConsecutive, OP_ATTR_NAMES({"return_idx", "return_counts", "axis"}),
+                                         OP_INPUT(self), OP_OUTPUT(valueOut, inverseOut, countsOut),
+                                         OP_ATTR(returnInverse, returnCounts, dim));
+    }
+    return ret;
 }
-}  // namespace l0op
+} // namespace l0op

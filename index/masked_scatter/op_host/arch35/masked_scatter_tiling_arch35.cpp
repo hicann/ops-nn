@@ -31,20 +31,16 @@ constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_TEN = 10;
 constexpr int64_t MIN_DATA_SIZE = 1024;
 constexpr int64_t DCACHE_SIZE = 32768;
-static const std::set<ge::DataType> SUPPORT_DTYPE = {
-    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8, ge::DT_INT8,
-    ge::DT_INT16, ge::DT_INT32, ge::DT_INT64, ge::DT_BOOL, ge::DT_BF16
-};
+static const std::set<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8,
+                                                     ge::DT_INT8,  ge::DT_INT16,   ge::DT_INT32,  ge::DT_INT64,
+                                                     ge::DT_BOOL,  ge::DT_BF16};
 
-inline static bool IsSupportDtype(const std::set<ge::DataType> &supportDtype, const ge::DataType dtype)
+inline static bool IsSupportDtype(const std::set<ge::DataType>& supportDtype, const ge::DataType dtype)
 {
     return (supportDtype.count(dtype) != 0);
 }
 
-bool MaskedScatterTiling::IsCapable()
-{
-    return true;
-}
+bool MaskedScatterTiling::IsCapable() { return true; }
 
 ge::graphStatus MaskedScatterTiling::GetPlatformInfo()
 {
@@ -69,8 +65,8 @@ ge::graphStatus MaskedScatterTiling::CheckDataType()
     auto maskDtype = inputMaskPtr->GetDataType();
     if (maskDtype != ge::DT_BOOL) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "mask",
-            ge::TypeUtils::DataTypeToSerialString(maskDtype).c_str(),
-            "The dtype of mask must be BOOL");
+                                              ge::TypeUtils::DataTypeToSerialString(maskDtype).c_str(),
+                                              "The dtype of mask must be BOOL");
         return ge::GRAPH_FAILED;
     }
     auto inputUpdatesPtr = context_->GetRequiredInputDesc(INPUT_UPDATES_IDX);
@@ -80,23 +76,25 @@ ge::graphStatus MaskedScatterTiling::CheckDataType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
     if (dType_ != updatesDtype || dType_ != yDtype) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, updates, y",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x, updates, y",
             Ops::NN::FormatString("%s, %s, %s", ge::TypeUtils::DataTypeToSerialString(dType_).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(updatesDtype).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(yDtype).c_str()).c_str(),
+                                  ge::TypeUtils::DataTypeToSerialString(updatesDtype).c_str(),
+                                  ge::TypeUtils::DataTypeToSerialString(yDtype).c_str())
+                .c_str(),
             "The dtype of x, updates and y must be the same");
         return ge::GRAPH_FAILED;
     }
     if (!IsSupportDtype(SUPPORT_DTYPE, dType_)) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(dType_).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dType_).c_str(),
             "The dtype of x must be in [FLOAT32, FLOAT16, DOUBLE, UINT8, INT8, INT16, INT32, INT64, BOOL, BFLOAT16]");
         return ge::GRAPH_FAILED;
     }
     dataTypeSize_ = ge::GetSizeByDataType(dType_);
     if (dataTypeSize_ == -1) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dataTypeSize",
-            "-1", "Get the size of dtype failed");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dataTypeSize", "-1",
+                                              "Get the size of dtype failed");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -118,9 +116,11 @@ ge::graphStatus MaskedScatterTiling::CheckOutputShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
     if (xShape != maskShape || xShape != yShape) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, mask, y",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x, mask, y",
             Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(xShape).c_str(),
-                Ops::Base::ToString(maskShape).c_str(), Ops::Base::ToString(yShape).c_str()).c_str(),
+                                  Ops::Base::ToString(maskShape).c_str(), Ops::Base::ToString(yShape).c_str())
+                .c_str(),
             "The shape of x, mask and y must be the same");
         return ge::GRAPH_FAILED;
     }
@@ -142,7 +142,7 @@ ge::graphStatus MaskedScatterTiling::DoOpTiling()
     xEleNums_ = inputShape_.GetShapeSize();
     isInt64Mask_ = xEleNums_ > INT32_MAX;
     int64_t prefixSumDtypeSize = isInt64Mask_ ? static_cast<int64_t>(sizeof(int64_t)) :
-        static_cast<int64_t>(sizeof(int32_t));
+                                                static_cast<int64_t>(sizeof(int32_t));
     int64_t maxUbAvailable = ubSize_ / (DOUBLE_BUFFER + DIGIT_TWO * prefixSumDtypeSize);
     normalCoreData_ = std::max(Ops::Base::CeilDiv(xEleNums_, totalCoreNum_), MIN_DATA_SIZE);
     usedCoreNum_ = Ops::Base::CeilDiv(xEleNums_, normalCoreData_);
@@ -166,10 +166,7 @@ ge::graphStatus MaskedScatterTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaskedScatterTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaskedScatterTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t MaskedScatterTiling::GetTilingKey() const
 {
@@ -180,7 +177,7 @@ uint64_t MaskedScatterTiling::GetTilingKey() const
 ge::graphStatus MaskedScatterTiling::GetWorkspaceSize()
 {
     int64_t maskDataTypeSize = isInt64Mask_ ? static_cast<int64_t>(sizeof(int64_t)) :
-        static_cast<int64_t>(sizeof(int32_t));
+                                              static_cast<int64_t>(sizeof(int32_t));
     workspaceSize_ = ASCENDC_TOOLS_WORKSPACE + usedCoreNum_ * maskDataTypeSize + xEleNums_ * maskDataTypeSize;
     return ge::GRAPH_SUCCESS;
 }
@@ -226,17 +223,19 @@ void MaskedScatterTiling::DumpTilingInfo()
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-static ge::graphStatus Tiling4MaskedScatter(gert::TilingContext* context) {
+static ge::graphStatus Tiling4MaskedScatter(gert::TilingContext* context)
+{
     MaskedScatterTiling tiling(context);
     return tiling.DoTiling();
 }
 
-static ge::graphStatus TilingPrepare4MaskedScatter(gert::TilingParseContext* context) {
-    (void) context;
+static ge::graphStatus TilingPrepare4MaskedScatter(gert::TilingParseContext* context)
+{
+    (void)context;
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(MaskedScatter)
-  .Tiling(Tiling4MaskedScatter)
-  .TilingParse<MaskedScatterCompileInfo>(TilingPrepare4MaskedScatter);
+    .Tiling(Tiling4MaskedScatter)
+    .TilingParse<MaskedScatterCompileInfo>(TilingPrepare4MaskedScatter);
 } // namespace optiling

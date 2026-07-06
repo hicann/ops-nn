@@ -38,22 +38,14 @@ constexpr uint8_t PAD_DOUBLE_DIM = 2;
 constexpr uint8_t C0_B16 = 16;
 constexpr uint8_t BF16_SIZE = 2;
 
-class KernelConv3DV2PointWise_test : public testing::Test
-{
+class KernelConv3DV2PointWise_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "KernelConv3DV2PointWise_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "KernelConv3DV2PointWise_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "KernelConv3DV2PointWise_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "KernelConv3DV2PointWise_test TearDown\n" << std::endl; }
 };
 
-uint32_t CountOutShape(
-    const uint32_t& inShape, const uint32_t& padFirst, const uint32_t& padSecond, const uint32_t& dilation,
-    const uint32_t& kernelSize, const uint32_t& stride)
+uint32_t CountOutShape(const uint32_t& inShape, const uint32_t& padFirst, const uint32_t& padSecond,
+                       const uint32_t& dilation, const uint32_t& kernelSize, const uint32_t& stride)
 {
     return float((inShape + padFirst + padSecond - dilation * (kernelSize - 1) - 1) / float(stride)) + 1;
 }
@@ -71,9 +63,8 @@ static uint64_t CeilDivUT(uint64_t a, uint64_t b)
     return (a + b - 1) / b;
 }
 
-void CallSimpleKernel(
-    const std::vector<uint32_t>& inputShape, const std::vector<uint32_t>& weightShape,
-    const std::vector<uint32_t>& dimConfig)
+void CallSimpleKernel(const std::vector<uint32_t>& inputShape, const std::vector<uint32_t>& weightShape,
+                      const std::vector<uint32_t>& dimConfig)
 {
     AscendC::SetKernelMode(KernelMode::AIC_MODE);
     const uint32_t numBlocks = 24;
@@ -91,9 +82,9 @@ void CallSimpleKernel(
     const uint32_t& mDim = dimConfig[3];
 
     for (uint8_t curDim = 0; curDim < DIM3_NUM; ++curDim) {
-        outputShape.emplace_back(CountOutShape(
-            inputShape[KERNEL_DIM_IDX + curDim], pad[PAD_DOUBLE_DIM * curDim], pad[PAD_DOUBLE_DIM * curDim + 1],
-            dilation[curDim], weightShape[KERNEL_DIM_IDX + curDim], stride[curDim]));
+        outputShape.emplace_back(CountOutShape(inputShape[KERNEL_DIM_IDX + curDim], pad[PAD_DOUBLE_DIM * curDim],
+                                               pad[PAD_DOUBLE_DIM * curDim + 1], dilation[curDim],
+                                               weightShape[KERNEL_DIM_IDX + curDim], stride[curDim]));
     }
 
     std::vector<uint32_t> inputShapeNew(inputShape);
@@ -115,7 +106,8 @@ void CallSimpleKernel(
 
     std::string path = kernel_ut::GetTestWorkDir();
 
-    Ops::NN::Conv3dV2::Conv3DV2TilingData* tilingDataFromBin = reinterpret_cast<Ops::NN::Conv3dV2::Conv3DV2TilingData*>(tiling);
+    Ops::NN::Conv3dV2::Conv3DV2TilingData* tilingDataFromBin = reinterpret_cast<Ops::NN::Conv3dV2::Conv3DV2TilingData*>(
+        tiling);
 
     tilingDataFromBin->convRunInfo.batch = inputShapeNew[0];
     tilingDataFromBin->convRunInfo.din = inputShapeNew[2];
@@ -187,8 +179,8 @@ void CallSimpleKernel(
     tilingDataFromBin->convApiTiling.mAL1 = 16;
     tilingDataFromBin->convApiTiling.pBufferFlag = 0;
     tilingDataFromBin->convApiTiling.kernelHxkernelW = weightShape[3] * weightShape[4];
-    tilingDataFromBin->convApiTiling.cin1xOriHixOriWixk0 =
-        CeilDivUT(inputShapeNew[1], 16) * inputShapeNew[3] * inputShapeNew[4] * 16;
+    tilingDataFromBin->convApiTiling.cin1xOriHixOriWixk0 = CeilDivUT(inputShapeNew[1], 16) * inputShapeNew[3] *
+                                                           inputShapeNew[4] * 16;
     tilingDataFromBin->convApiTiling.oriHixOriWixk0 = inputShapeNew[3] * inputShapeNew[4] * 16;
     tilingDataFromBin->convApiTiling.oriWixk0 = inputShapeNew[4] * 16;
     tilingDataFromBin->convApiTiling.orgHixWi = inputShapeNew[3] * inputShapeNew[4];
@@ -198,11 +190,10 @@ void CallSimpleKernel(
     tilingDataFromBin->convApiTiling.cin1InAL1 = 1;
     tilingDataFromBin->convApiTiling.kAL1Tail = inputShape[2] * inputShape[3] * inputShape[4];
     tilingDataFromBin->convApiTiling.cin1InAL1Tail = 1;
-    tilingDataFromBin->convApiTiling.KBL1Divk0 =
-        weightShape[1] * weightShape[2] * weightShape[3] * weightShape[4] / 16;
+    tilingDataFromBin->convApiTiling.KBL1Divk0 = weightShape[1] * weightShape[2] * weightShape[3] * weightShape[4] / 16;
     tilingDataFromBin->convApiTiling.kBL1Tail = weightShape[1] * weightShape[2] * weightShape[3] * weightShape[4];
-    tilingDataFromBin->convApiTiling.KBL1TailDivk0 =
-        weightShape[1] * weightShape[2] * weightShape[3] * weightShape[4] / 16;
+    tilingDataFromBin->convApiTiling.KBL1TailDivk0 = weightShape[1] * weightShape[2] * weightShape[3] * weightShape[4] /
+                                                     16;
     tilingDataFromBin->convApiTiling.nL0xk0 = 16 * 16;
     tilingDataFromBin->convApiTiling.kL0xorgCoAlignN0 = 16 * outputShapeNew[1] * C0_B16;
     tilingDataFromBin->convApiTiling.offsetx = 0;
@@ -218,12 +209,11 @@ void CallSimpleKernel(
     tilingDataFromBin->convApiTiling.coutOpt = outputShapeNew[1];
 
     auto Conv3dv2Kernel = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset, GM_ADDR offset_w,
-                              GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+                             GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         ::conv3dv2<0, 0, 0, 0>(x, filter, bias, scale, offset, offset_w, y, workspace, tiling);
     };
-    ICPU_RUN_KF(
-        Conv3dv2Kernel, numBlocks, input, weight, nullptr, nullptr, nullptr, nullptr, output, workspace,
-        (uint8_t*)(tilingDataFromBin));
+    ICPU_RUN_KF(Conv3dv2Kernel, numBlocks, input, weight, nullptr, nullptr, nullptr, nullptr, output, workspace,
+                (uint8_t*)(tilingDataFromBin));
 
     AscendC::GmFree(input);
     AscendC::GmFree(weight);

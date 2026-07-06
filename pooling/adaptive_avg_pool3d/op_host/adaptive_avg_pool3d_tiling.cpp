@@ -107,10 +107,10 @@ static void ComputeUBTilingStrategy(TilingParams& params, int32_t& mode)
     params.maxWindowWLength = (params.outW + params.inW + params.outW - 1UL) / params.outW;
 
     uint64_t alignNum = static_cast<uint64_t>(BLOCK_SIZE) / dataTypeSize;
-    uint64_t tileLen =
-        static_cast<uint64_t>(params.ubSize) /
-        (2UL * static_cast<uint64_t>(dataTypeSize) + sizeof(float) * static_cast<uint64_t>(1 + needCast)) / alignNum *
-        alignNum;
+    uint64_t tileLen = static_cast<uint64_t>(params.ubSize) /
+                       (2UL * static_cast<uint64_t>(dataTypeSize) +
+                        sizeof(float) * static_cast<uint64_t>(1 + needCast)) /
+                       alignNum * alignNum;
     uint64_t alignC = (params.dimC + alignNum - 1UL) / alignNum * alignNum;
 
     uint64_t doubleC = 2UL * alignC;
@@ -173,8 +173,8 @@ static void SetTiling(const TilingParams& params, AdaptiveAvgPool3dTilingData& t
     tiling.set_atomicAddNum(params.atomicAddNum);
 }
 
-static void PrintTiling(
-    const gert::TilingContext* context, AdaptiveAvgPool3dTilingData& tiling, uint32_t tilingKey, int32_t usedCoreNum)
+static void PrintTiling(const gert::TilingContext* context, AdaptiveAvgPool3dTilingData& tiling, uint32_t tilingKey,
+                        int32_t usedCoreNum)
 {
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "tilingKey:          %d.", tilingKey);
@@ -217,8 +217,8 @@ static bool GetDataTypeKey(ge::DataType dataType, int32_t& dataTypeKey)
     return true;
 }
 
-static ge::graphStatus KernelTiling(
-    gert::TilingContext* context, const AdaptiveAvgPool3dCompileInfo* compileInfo, TilingParams& params)
+static ge::graphStatus KernelTiling(gert::TilingContext* context, const AdaptiveAvgPool3dCompileInfo* compileInfo,
+                                    TilingParams& params)
 {
     auto nodeName = context->GetNodeName();
     OP_LOGD(nodeName, "Tiling start.");
@@ -267,28 +267,26 @@ static ge::graphStatus Tiling4AdaptiveAvgPool3d(gert::TilingContext* context)
     auto compileInfo = static_cast<const AdaptiveAvgPool3dCompileInfo*>(context->GetCompileInfo());
 
     const gert::Shape xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
-    OP_CHECK_IF(
-        xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal 5."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDimNum() != X_DIMS, OP_LOGE(nodeName, "Check x shape failed, the dims of x not equal 5."),
+                return ge::GRAPH_FAILED);
 
     auto dataType = context->GetInputDesc(X_INDEX)->GetDataType();
     int32_t dataTypeKey = FP32_DTYPE_KEY;
-    OP_CHECK_IF(
-        GetDataTypeKey(dataType, dataTypeKey) == false,
-        OP_LOGE(nodeName, "The dtype of input must be in [float32, float16, bfloat16]."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetDataTypeKey(dataType, dataTypeKey) == false,
+                OP_LOGE(nodeName, "The dtype of input must be in [float32, float16, bfloat16]."),
+                return ge::GRAPH_FAILED);
 
     auto attrPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrPtr);
     auto outputSizePtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(OUTPUT_SIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputSizePtr);
-    OP_CHECK_IF(
-        outputSizePtr->GetSize() != OUTPUT_SIZE_DIMS,
-        OP_LOGE(nodeName, "Check output_size failed, the size of output_size not equal 3."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSizePtr->GetSize() != OUTPUT_SIZE_DIMS,
+                OP_LOGE(nodeName, "Check output_size failed, the size of output_size not equal 3."),
+                return ge::GRAPH_FAILED);
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());
-    OP_CHECK_IF(
-        outputSize[DIM0] <= 0 || outputSize[DIM1] <= 0 || outputSize[DIM2] <= 0,
-        OP_LOGE(nodeName, "Check output_size failed, the value of output_size should be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSize[DIM0] <= 0 || outputSize[DIM1] <= 0 || outputSize[DIM2] <= 0,
+                OP_LOGE(nodeName, "Check output_size failed, the value of output_size should be greater than 0."),
+                return ge::GRAPH_FAILED);
 
     TilingParams params;
     params.dimN = xShape.GetDim(DIM0);
@@ -318,14 +316,14 @@ static ge::graphStatus TilingPrepare4AdaptiveAvgPool3d(gert::TilingParseContext*
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(nodeName, "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(nodeName, "Failed to get core num."),
+                return ge::GRAPH_FAILED);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(nodeName, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(nodeName, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(nodeName, "TilingPrepare4AdaptiveAvgPool3d end.");
 
     return ge::GRAPH_SUCCESS;

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -23,21 +23,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void elu_grad(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void elu_grad(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, GM_ADDR workspace,
+                                               GM_ADDR tiling);
 
 class elu_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "elu_grad_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "elu_grad_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "elu_grad TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./elu_grad_data");
     }
 };
-
 
 TEST_F(elu_grad_test, test_case_fp32_1)
 {
@@ -49,7 +46,7 @@ TEST_F(elu_grad_test, test_case_fp32_1)
     uint8_t* grads = (uint8_t*)AscendC::GmAlloc(gradsByteSize);
     uint8_t* activations = (uint8_t*)AscendC::GmAlloc(activationsByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/elu_grad/tests/ut/op_kernel/elu_grad_data", "elu_grad_data");

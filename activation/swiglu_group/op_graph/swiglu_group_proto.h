@@ -21,24 +21,24 @@
 namespace ge {
 
 /**
-* @brief Performs SwiGLU activation.
-*
-* @par Inputs:
-* @li x: Required tensor of type float16, bfloat16 or float32. The last dimension is split into two
-* equal parts for SwiGLU and must be divisible by 2.
-* @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result.
-* @li group_index: Optional int64 tensor. Count-mode group token numbers.
-*
-* @par Attributes:
-* @li clamp_limit: Optional float. Defaults to -1.0, which disables clamp. If set to a positive value,
-* clamps SwiGLU inputs before activation.
-*
-* @par Outputs:
-* @li y: SwiGLU result tensor with the same dtype as x and last dimension halved.
-*
-* @par Third-party framework compatibility
-* It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
-*/
+ * @brief Performs SwiGLU activation.
+ *
+ * @par Inputs:
+ * @li x: Required tensor of type float16, bfloat16 or float32. The last dimension is split into two
+ * equal parts for SwiGLU and must be divisible by 2.
+ * @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result.
+ * @li group_index: Optional int64 tensor. Count-mode group token numbers.
+ *
+ * @par Attributes:
+ * @li clamp_limit: Optional float. Defaults to -1.0, which disables clamp. If set to a positive value,
+ * clamps SwiGLU inputs before activation.
+ *
+ * @par Outputs:
+ * @li y: SwiGLU result tensor with the same dtype as x and last dimension halved.
+ *
+ * @par Third-party framework compatibility
+ * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
+ */
 REG_OP(SwigluGroup)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT}))

@@ -11,22 +11,21 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
 static constexpr int64_t UB_RESERVED_BYTE = 1024;
-static constexpr int64_t R_MAX_VALUE = 16384;  // 二分累加支持最大值
+static constexpr int64_t R_MAX_VALUE = 16384; // 二分累加支持最大值
 static constexpr int64_t BINARY_TMP_LOCAL_SHAPE = 512;
 
 bool SoftmaxGradTilingAR::IsCapable()
 {
     OP_CHECK_IF(a0_ != DIM_NUM_ONE, OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "),
-                    return false);
+                return false);
 
     OP_CHECK_IF(r_ > R_MAX_VALUE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
+                return false);
     return true;
 }
 
@@ -60,10 +59,7 @@ ge::graphStatus SoftmaxGradTilingAR::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxGradTilingAR::GetTilingKey() const
-{
-    return TILINGKEY_AR;
-}
+uint64_t SoftmaxGradTilingAR::GetTilingKey() const { return TILINGKEY_AR; }
 
 ge::graphStatus SoftmaxGradTilingAR::PostTiling()
 {
@@ -78,4 +74,4 @@ ge::graphStatus SoftmaxGradTilingAR::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxGrad, SoftmaxGradTilingAR, TEMPLATE_AR_FULL_LOAD_PRIORITY);
 
-}  // namespace optiling
+} // namespace optiling

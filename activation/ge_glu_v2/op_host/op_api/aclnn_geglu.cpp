@@ -29,16 +29,14 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> dtype_support_list = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<DataType> dtype_support_list = {op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 
 static const std::initializer_list<DataType> dtype_support_list_with_bf16 = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
-        Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return dtype_support_list_with_bf16;
     }
     return dtype_support_list;
@@ -74,37 +72,34 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out, const a
     return true;
 }
 
-static bool CheckSliceDimSizes(
-    const aclTensor* self, const aclTensor* out, const aclTensor* outGelu, int64_t sliceDim)
+static bool CheckSliceDimSizes(const aclTensor* self, const aclTensor* out, const aclTensor* outGelu, int64_t sliceDim)
 {
     auto selfSliceDimSize = self->GetViewShape().GetDim(sliceDim);
     auto outSliceDimSize = out->GetViewShape().GetDim(sliceDim);
     auto outGeluSliceDimSize = outGelu->GetViewShape().GetDim(sliceDim);
     const int64_t SLICE_NUM = 2;
-    OP_CHECK(
-        selfSliceDimSize % SLICE_NUM == 0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "selfSliceDimSize[%ld] must be even number.", selfSliceDimSize), return false);
+    OP_CHECK(selfSliceDimSize % SLICE_NUM == 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "selfSliceDimSize[%ld] must be even number.", selfSliceDimSize),
+             return false);
 
     if (outSliceDimSize != selfSliceDimSize / SLICE_NUM) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Expected aclnnGeGlu out slice dim size %ld to be equal to %ld but check failed.",
-            outSliceDimSize, selfSliceDimSize / SLICE_NUM);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnGeGlu out slice dim size %ld to be equal to %ld but check failed.", outSliceDimSize,
+                selfSliceDimSize / SLICE_NUM);
         return false;
     }
 
     if (outGeluSliceDimSize != selfSliceDimSize / SLICE_NUM) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnGeGlu outGelu slice dim size %ld to be equal to %ld but check failed.", outGeluSliceDimSize,
-            selfSliceDimSize / SLICE_NUM);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnGeGlu outGelu slice dim size %ld to be equal to %ld but check failed.",
+                outGeluSliceDimSize, selfSliceDimSize / SLICE_NUM);
         return false;
     }
     return true;
 }
 
-static bool CheckOtherDimsMatch(
-    const aclTensor* self, const aclTensor* out, const aclTensor* outGelu, int64_t dimNum, int64_t sliceDim,
-    int64_t dim)
+static bool CheckOtherDimsMatch(const aclTensor* self, const aclTensor* out, const aclTensor* outGelu, int64_t dimNum,
+                                int64_t sliceDim, int64_t dim)
 {
     for (int64_t idx = 0; idx < dimNum; idx++) {
         if (idx == sliceDim) {
@@ -113,12 +108,11 @@ static bool CheckOtherDimsMatch(
         OP_CHECK(
             self->GetViewShape().GetDim(idx) == out->GetViewShape().GetDim(idx) &&
                 out->GetViewShape().GetDim(idx) == outGelu->GetViewShape().GetDim(idx),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Except the slice dim[%ld], all other shape dim must be the same, but got input shape: %s, "
-                "out shape: %s, out gelu shape: %s",
-                dim, op::ToString(self->GetViewShape()).GetString(), op::ToString(out->GetViewShape()).GetString(),
-                op::ToString(outGelu->GetViewShape()).GetString()),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Except the slice dim[%ld], all other shape dim must be the same, but got input shape: %s, "
+                    "out shape: %s, out gelu shape: %s",
+                    dim, op::ToString(self->GetViewShape()).GetString(), op::ToString(out->GetViewShape()).GetString(),
+                    op::ToString(outGelu->GetViewShape()).GetString()),
             return false);
     }
     return true;
@@ -136,9 +130,9 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
     }
 
     if ((-dimNum > dim) || ((dimNum - 1) < dim)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_NULLPTR, "Expected aclnnGeGlu dim value %ld to be in range [%ld, %ld] but check failed.",
-            dim, -dimNum, dimNum - 1);
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR,
+                "Expected aclnnGeGlu dim value %ld to be in range [%ld, %ld] but check failed.", dim, -dimNum,
+                dimNum - 1);
         return false;
     }
 
@@ -151,12 +145,11 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
     int64_t outDimNum = out->GetViewShape().GetDimNum();
     int64_t outGeluDimNum = outGelu->GetViewShape().GetDimNum();
 
-    OP_CHECK(
-        outDimNum == outGeluDimNum && outDimNum == dimNum,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "outDimNum[%ld] and outGeluDimNum[%ld] must be the same with inputDimNum[%ld].",
-            outDimNum, outGeluDimNum, dimNum),
-        return false);
+    OP_CHECK(outDimNum == outGeluDimNum && outDimNum == dimNum,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "outDimNum[%ld] and outGeluDimNum[%ld] must be the same with inputDimNum[%ld].", outDimNum,
+                     outGeluDimNum, dimNum),
+             return false);
 
     return CheckOtherDimsMatch(self, out, outGelu, dimNum, sliceDim, dim);
 }
@@ -171,8 +164,8 @@ static bool checkApproximate(int64_t approximate)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, int64_t dim, int64_t approximate, const aclTensor* out, const aclTensor* outGelu)
+static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, int64_t approximate, const aclTensor* out,
+                               const aclTensor* outGelu)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, out, outGelu), ACLNN_ERR_PARAM_NULLPTR);
@@ -187,9 +180,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus ExecGeGluGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft, aclTensor* out, aclTensor* outGelu,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus ExecGeGluGetWorkspaceSize(const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft,
+                                      aclTensor* out, aclTensor* outGelu, uint64_t* workspaceSize,
+                                      aclOpExecutor** executor)
 {
     // 固定写法，参数检查
     auto ret = CheckParams(self, dim, approximate, out, outGelu);
@@ -228,17 +221,16 @@ aclnnStatus ExecGeGluGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeGluGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, int64_t approximate, aclTensor* out, aclTensor* outGelu,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeGluGetWorkspaceSize(const aclTensor* self, int64_t dim, int64_t approximate, aclTensor* out,
+                                       aclTensor* outGelu, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeGlu, DFX_IN(self, dim, approximate), DFX_OUT(out, outGelu));
     return ExecGeGluGetWorkspaceSize(self, dim, approximate, false, out, outGelu, workspaceSize, executor);
 }
 
-aclnnStatus aclnnGeGluV3GetWorkspaceSize(
-    const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft, aclTensor* out, aclTensor* outGelu,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeGluV3GetWorkspaceSize(const aclTensor* self, int64_t dim, int64_t approximate, bool activateLeft,
+                                         aclTensor* out, aclTensor* outGelu, uint64_t* workspaceSize,
+                                         aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeGluV3, DFX_IN(self, dim, approximate, activateLeft), DFX_OUT(out, outGelu));
     return ExecGeGluGetWorkspaceSize(self, dim, approximate, activateLeft, out, outGelu, workspaceSize, executor);

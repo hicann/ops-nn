@@ -17,8 +17,8 @@
 #include "masked_scatter_exceed.h"
 
 template <uint32_t updatesMode>
-__global__ __aicore__ void masked_scatter(
-    GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void masked_scatter(GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                          GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(MaskedScatterV1TilingData);
     GET_TILING_DATA_WITH_STRUCT(MaskedScatterV1TilingData, tilingData, tiling);

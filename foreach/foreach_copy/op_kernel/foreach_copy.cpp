@@ -23,13 +23,12 @@ using namespace ForeachCast;
     op.Init(x, y, userWS, &tilingData); \
     op.Process()
 
-#define FOREACH_COPY_OP(T) \
-    do{ \
-        ForeachCopyND<T> op; \
+#define FOREACH_COPY_OP(T)                  \
+    do {                                    \
+        ForeachCopyND<T> op;                \
         op.Init(x, y, userWS, &tilingData); \
-        op.Process(); \
+        op.Process();                       \
     } while (0)
-    
 
 extern "C" __global__ __aicore__ void foreach_copy(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {

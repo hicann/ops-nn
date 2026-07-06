@@ -1,18 +1,18 @@
- /**
-   * Copyright (c) 2025 Huawei Technologies Co., Ltd.
-   * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-   * CANN Open Software License Agreement Version 2.0 (the "License").
-   * Please refer to the License for details. You may not use this file except in compliance with the License.
-   * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-   * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-   * See LICENSE in the root of the software repository for the full text of the License.
-   */
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool3d_grad_proto.h
  * \brief
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_MAX_POOL3D_GRAD_PROTO_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_MAX_POOL3D_GRAD_PROTO_H_
 
@@ -43,7 +43,8 @@ namespace ge {
 * A required list of int8, int16, int32, or int64 values,
 * specifying the strides of the sliding window for each dimension (D/H/W) of the input tensor.
 * The stride of the N and C dimensions should be 1.  \n
-* @li padding: A string specifying the padding algorithm for the input feature map. Defaults to "SAME", it support SAME and VALID.
+* @li padding: A string specifying the padding algorithm for the input feature map. Defaults to "SAME", it support SAME
+and VALID.
 * when padding_mode is "SAME": pads 0 to ensure output shape equal to ceil(input shape / stride) ,
 * (output shape equal to input shape when stride=1). \n
 * when padding_mode is "VALID": no padding. The kernel slides only over valid regions, resulting in smaller output . \n
@@ -69,5 +70,5 @@ REG_OP(MaxPool3DGrad)
     .REQUIRED_ATTR(pads, ListInt)
     .ATTR(data_format, String, "NDHWC")
     .OP_END_FACTORY_REG(MaxPool3DGrad)
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_MAX_POOL3D_GRAD_PROTO_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_MAX_POOL3D_GRAD_PROTO_H_

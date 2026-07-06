@@ -34,15 +34,9 @@ using namespace ut_util;
 
 class GroupedDynamicBlockQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupedDynamicBlockQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupedDynamicBlockQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupedDynamicBlockQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupedDynamicBlockQuantTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -58,10 +52,10 @@ static string to_string(void* buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape, gert::StorageShape listShape,
-    gert::StorageShape scaleShape, float minScale, string roundMode, int64_t rowBlockSize, int64_t colBlockSize,
-    int64_t groupListType, float dstTypeMax, string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
+                            gert::StorageShape listShape, gert::StorageShape scaleShape, float minScale,
+                            string roundMode, int64_t rowBlockSize, int64_t colBlockSize, int64_t groupListType,
+                            float dstTypeMax, string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -96,19 +90,18 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 2)
-            .Inputs({compile_info_string.data(), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 2)
+                             .Inputs({compile_info_string.data(), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -117,10 +110,7 @@ static void ExecuteTestCase(
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
 
-    string_view sv(
-        reinterpret_cast<const char*>(&platform_info),
-        sizeof(platform_info)
-    );
+    string_view sv(reinterpret_cast<const char*>(&platform_info), sizeof(platform_info));
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 2)
                       .IrInstanceNum({2})
@@ -132,14 +122,13 @@ static void ExecuteTestCase(
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"min_scale", Ops::NN::AnyValue::CreateFrom<float>(minScale)},
-                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
-                           {"row_block_size", Ops::NN::AnyValue::CreateFrom(rowBlockSize)},
-                           {"col_block_size", Ops::NN::AnyValue::CreateFrom(colBlockSize)},
-                           {"group_list_type", Ops::NN::AnyValue::CreateFrom(groupListType)},
-                           {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
+                      .NodeAttrs({{"min_scale", Ops::NN::AnyValue::CreateFrom<float>(minScale)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
+                                  {"row_block_size", Ops::NN::AnyValue::CreateFrom(rowBlockSize)},
+                                  {"col_block_size", Ops::NN::AnyValue::CreateFrom(colBlockSize)},
+                                  {"group_list_type", Ops::NN::AnyValue::CreateFrom(groupListType)},
+                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -180,9 +169,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e4m3fn)
@@ -201,9 +189,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_hifloat8_round)
@@ -222,9 +209,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_hifloat8_hybrid)
@@ -243,9 +229,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_bfloat16_fp8e5m2)
@@ -264,9 +249,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_bfloat16_fp8e4m3fn)
@@ -285,9 +269,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_bfloat16_hifloat8_round)
@@ -306,9 +289,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_bfloat16_hifloat8_hybrid)
@@ -327,9 +309,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 // =============================================================================================================
@@ -349,9 +330,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_float16_fp8e4m3fn)
@@ -370,9 +350,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_float16_hifloat8_round)
@@ -391,9 +370,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_float16_hifloat8_hybrid)
@@ -412,9 +390,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_bfloat16_fp8e5m2)
@@ -433,9 +410,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_bfloat16_fp8e4m3fn)
@@ -454,9 +430,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_bfloat16_hifloat8_round)
@@ -475,9 +450,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_block_bfloat16_hifloat8_hybrid)
@@ -496,9 +470,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 // =============================================================================================================
@@ -518,9 +491,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_row_block_size)
@@ -539,9 +511,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_col_block_size)
@@ -560,9 +531,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }
 
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_round_mode)
@@ -581,7 +551,6 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
-    ExecuteTestCase(
-        inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-        group_list_type, dstTypeMax, expectTilingData, status);
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status);
 }

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file adaptive_avg_pool3d_grad_simt.h
  * \brief adaptive_avg_pool3d_grad implied by simt
@@ -39,20 +39,19 @@ constexpr static uint32_t MAGIC_OSIZE_W_IDX = 12;
 template <typename VALUE_T, typename OFFSET_T, int64_t CHANNEL_LAST>
 class AdaptiveAvgPool3dGradSimt {
 public:
-    __aicore__ inline AdaptiveAvgPool3dGradSimt(
-        TPipe *pipe, const AdaptiveAvgPool3dGradTilingDataV35 *__restrict__ tilingData)
+    __aicore__ inline AdaptiveAvgPool3dGradSimt(TPipe* pipe,
+                                                const AdaptiveAvgPool3dGradTilingDataV35* __restrict__ tilingData)
         : pipe_(pipe), tilingData_(tilingData)
-    {
-    }
+    {}
 
     __aicore__ inline void Init(GM_ADDR yGrad, GM_ADDR xGrad);
     __aicore__ inline void Process();
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     AscendC::GlobalTensor<VALUE_T> yGrad_;
     AscendC::GlobalTensor<VALUE_T> xGrad_;
-    const AdaptiveAvgPool3dGradTilingDataV35 *tilingData_;
+    const AdaptiveAvgPool3dGradTilingDataV35* tilingData_;
     TBuf<TPosition::VECCALC> paramBuf_;
 };
 
@@ -60,7 +59,8 @@ template <typename OFFSET_T>
 using SimtDivT = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ inline static DIV_T FloorDivMul(DIV_T numerator, DIV_T mulFactor, DIV_T divisorMagic, DIV_T divisorShift)
+__simt_callee__ __aicore__ inline static DIV_T FloorDivMul(DIV_T numerator, DIV_T mulFactor, DIV_T divisorMagic,
+                                                           DIV_T divisorShift)
 {
     DIV_T wideNumerator = numerator * mulFactor;
     DIV_T quotient = Simt::UintDiv<DIV_T>(wideNumerator, divisorMagic, divisorShift);
@@ -68,8 +68,8 @@ __simt_callee__ __aicore__ inline static DIV_T FloorDivMul(DIV_T numerator, DIV_
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ inline static DIV_T CeilDivMul(
-    DIV_T numerator, DIV_T mulFactor, DIV_T ceilAddend, DIV_T divisorMagic, DIV_T divisorShift)
+__simt_callee__ __aicore__ inline static DIV_T CeilDivMul(DIV_T numerator, DIV_T mulFactor, DIV_T ceilAddend,
+                                                          DIV_T divisorMagic, DIV_T divisorShift)
 {
     DIV_T wideNumerator = numerator * mulFactor + ceilAddend;
     DIV_T quotient = Simt::UintDiv<DIV_T>(wideNumerator, divisorMagic, divisorShift);
@@ -77,44 +77,39 @@ __simt_callee__ __aicore__ inline static DIV_T CeilDivMul(
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ inline static DIV_T StartIndexIn2Out(DIV_T inIdx, DIV_T osize, DIV_T magicIsize, DIV_T shiftIsize)
+__simt_callee__ __aicore__ inline static DIV_T StartIndexIn2Out(DIV_T inIdx, DIV_T osize, DIV_T magicIsize,
+                                                                DIV_T shiftIsize)
 {
     return FloorDivMul<DIV_T>(inIdx, osize, magicIsize, shiftIsize);
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ inline static DIV_T EndIndexIn2Out(
-    DIV_T inIdx, DIV_T isize, DIV_T osize, DIV_T magicIsize, DIV_T shiftIsize)
+__simt_callee__ __aicore__ inline static DIV_T EndIndexIn2Out(DIV_T inIdx, DIV_T isize, DIV_T osize, DIV_T magicIsize,
+                                                              DIV_T shiftIsize)
 {
     return CeilDivMul<DIV_T>(inIdx + 1, osize, isize - 1, magicIsize, shiftIsize);
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ inline static DIV_T StartIndexOut2In(DIV_T outIdx, DIV_T isize, DIV_T magicOsize, DIV_T shiftOsize)
+__simt_callee__ __aicore__ inline static DIV_T StartIndexOut2In(DIV_T outIdx, DIV_T isize, DIV_T magicOsize,
+                                                                DIV_T shiftOsize)
 {
     return FloorDivMul<DIV_T>(outIdx, isize, magicOsize, shiftOsize);
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ inline static DIV_T EndIndexOut2In(
-    DIV_T outIdx, DIV_T osize, DIV_T isize, DIV_T magicOsize, DIV_T shiftOsize)
+__simt_callee__ __aicore__ inline static DIV_T EndIndexOut2In(DIV_T outIdx, DIV_T osize, DIV_T isize, DIV_T magicOsize,
+                                                              DIV_T shiftOsize)
 {
     return CeilDivMul<DIV_T>(outIdx + 1, isize, osize - 1, magicOsize, shiftOsize);
 }
 
 template <typename VALUE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGradNcdhw(
-    __ubuf__ OFFSET_T* simtParams,
-    const __gm__ VALUE_T* gradY,
-    const SimtDivT<OFFSET_T> nDims,
-    const SimtDivT<OFFSET_T> cDims,
-    const SimtDivT<OFFSET_T> inD,
-    const SimtDivT<OFFSET_T> inH,
-    const SimtDivT<OFFSET_T> inW,
-    const SimtDivT<OFFSET_T> outD,
-    const SimtDivT<OFFSET_T> outH,
-    const SimtDivT<OFFSET_T> outW,
-    __gm__ VALUE_T* gradX)
+    __ubuf__ OFFSET_T* simtParams, const __gm__ VALUE_T* gradY, const SimtDivT<OFFSET_T> nDims,
+    const SimtDivT<OFFSET_T> cDims, const SimtDivT<OFFSET_T> inD, const SimtDivT<OFFSET_T> inH,
+    const SimtDivT<OFFSET_T> inW, const SimtDivT<OFFSET_T> outD, const SimtDivT<OFFSET_T> outH,
+    const SimtDivT<OFFSET_T> outW, __gm__ VALUE_T* gradX)
 {
     using DIV_T = SimtDivT<OFFSET_T>;
     using INDEX_T = uint64_t;
@@ -135,18 +130,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
     DIV_T magicOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX]);
     DIV_T shiftOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX + 1]);
 
-    const INDEX_T count =
-        static_cast<INDEX_T>(nDims) *
-        static_cast<INDEX_T>(cDims) *
-        static_cast<INDEX_T>(inD) *
-        static_cast<INDEX_T>(inH) *
-        static_cast<INDEX_T>(inW);
+    const INDEX_T count = static_cast<INDEX_T>(nDims) * static_cast<INDEX_T>(cDims) * static_cast<INDEX_T>(inD) *
+                          static_cast<INDEX_T>(inH) * static_cast<INDEX_T>(inW);
 
-    const INDEX_T threadStart =
-        static_cast<INDEX_T>(blockIdx.x) * static_cast<INDEX_T>(blockDim.x) +
-        static_cast<INDEX_T>(threadIdx.x);
-    const INDEX_T threadStride =
-        static_cast<INDEX_T>(gridDim.x) * static_cast<INDEX_T>(blockDim.x);
+    const INDEX_T threadStart = static_cast<INDEX_T>(blockIdx.x) * static_cast<INDEX_T>(blockDim.x) +
+                                static_cast<INDEX_T>(threadIdx.x);
+    const INDEX_T threadStride = static_cast<INDEX_T>(gridDim.x) * static_cast<INDEX_T>(blockDim.x);
 
     for (INDEX_T index = threadStart; index < count; index += threadStride) {
         const INDEX_T temp1 = index / static_cast<INDEX_T>(inW);
@@ -181,16 +170,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
                     DIV_T kW = iw1 - iw0;
                     DIV_T div = kD * kH * kW;
 
-                    const INDEX_T outputIdx =
-                        static_cast<INDEX_T>(n) * static_cast<INDEX_T>(cDims) *
-                            static_cast<INDEX_T>(outD) * static_cast<INDEX_T>(outH) *
-                            static_cast<INDEX_T>(outW) +
-                        static_cast<INDEX_T>(c) * static_cast<INDEX_T>(outD) *
-                            static_cast<INDEX_T>(outH) * static_cast<INDEX_T>(outW) +
-                        static_cast<INDEX_T>(od) * static_cast<INDEX_T>(outH) *
-                            static_cast<INDEX_T>(outW) +
-                        static_cast<INDEX_T>(oh) * static_cast<INDEX_T>(outW) +
-                        static_cast<INDEX_T>(ow);
+                    const INDEX_T outputIdx = static_cast<INDEX_T>(n) * static_cast<INDEX_T>(cDims) *
+                                                  static_cast<INDEX_T>(outD) * static_cast<INDEX_T>(outH) *
+                                                  static_cast<INDEX_T>(outW) +
+                                              static_cast<INDEX_T>(c) * static_cast<INDEX_T>(outD) *
+                                                  static_cast<INDEX_T>(outH) * static_cast<INDEX_T>(outW) +
+                                              static_cast<INDEX_T>(od) * static_cast<INDEX_T>(outH) *
+                                                  static_cast<INDEX_T>(outW) +
+                                              static_cast<INDEX_T>(oh) * static_cast<INDEX_T>(outW) +
+                                              static_cast<INDEX_T>(ow);
 
                     gradient += static_cast<float>(gradY[outputIdx]) / static_cast<float>(div);
                 }
@@ -202,17 +190,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
 
 template <typename VALUE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGradNdhwc(
-    __ubuf__ OFFSET_T* simtParams,
-    const __gm__ VALUE_T* gradY,
-    const SimtDivT<OFFSET_T> nDims,
-    const SimtDivT<OFFSET_T> cDims,
-    const SimtDivT<OFFSET_T> inD,
-    const SimtDivT<OFFSET_T> inH,
-    const SimtDivT<OFFSET_T> inW,
-    const SimtDivT<OFFSET_T> outD,
-    const SimtDivT<OFFSET_T> outH,
-    const SimtDivT<OFFSET_T> outW,
-    __gm__ VALUE_T* gradX)
+    __ubuf__ OFFSET_T* simtParams, const __gm__ VALUE_T* gradY, const SimtDivT<OFFSET_T> nDims,
+    const SimtDivT<OFFSET_T> cDims, const SimtDivT<OFFSET_T> inD, const SimtDivT<OFFSET_T> inH,
+    const SimtDivT<OFFSET_T> inW, const SimtDivT<OFFSET_T> outD, const SimtDivT<OFFSET_T> outH,
+    const SimtDivT<OFFSET_T> outW, __gm__ VALUE_T* gradX)
 {
     using DIV_T = SimtDivT<OFFSET_T>;
     using INDEX_T = uint64_t;
@@ -233,18 +214,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
     DIV_T magicOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX]);
     DIV_T shiftOsizeW = static_cast<DIV_T>(simtParams[MAGIC_OSIZE_W_IDX + 1]);
 
-    const INDEX_T count =
-        static_cast<INDEX_T>(nDims) *
-        static_cast<INDEX_T>(inD) *
-        static_cast<INDEX_T>(inH) *
-        static_cast<INDEX_T>(inW) *
-        static_cast<INDEX_T>(cDims);
+    const INDEX_T count = static_cast<INDEX_T>(nDims) * static_cast<INDEX_T>(inD) * static_cast<INDEX_T>(inH) *
+                          static_cast<INDEX_T>(inW) * static_cast<INDEX_T>(cDims);
 
-    const INDEX_T threadStart =
-        static_cast<INDEX_T>(blockIdx.x) * static_cast<INDEX_T>(blockDim.x) +
-        static_cast<INDEX_T>(threadIdx.x);
-    const INDEX_T threadStride =
-        static_cast<INDEX_T>(gridDim.x) * static_cast<INDEX_T>(blockDim.x);
+    const INDEX_T threadStart = static_cast<INDEX_T>(blockIdx.x) * static_cast<INDEX_T>(blockDim.x) +
+                                static_cast<INDEX_T>(threadIdx.x);
+    const INDEX_T threadStride = static_cast<INDEX_T>(gridDim.x) * static_cast<INDEX_T>(blockDim.x);
 
     for (INDEX_T index = threadStart; index < count; index += threadStride) {
         const INDEX_T temp1 = index / static_cast<INDEX_T>(cDims);
@@ -279,16 +254,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
                     DIV_T kW = iw1 - iw0;
                     DIV_T div = kD * kH * kW;
 
-                    const INDEX_T outputIdx =
-                        static_cast<INDEX_T>(n) * static_cast<INDEX_T>(outD) *
-                            static_cast<INDEX_T>(outH) * static_cast<INDEX_T>(outW) *
-                            static_cast<INDEX_T>(cDims) +
-                        static_cast<INDEX_T>(od) * static_cast<INDEX_T>(outH) *
-                            static_cast<INDEX_T>(outW) * static_cast<INDEX_T>(cDims) +
-                        static_cast<INDEX_T>(oh) * static_cast<INDEX_T>(outW) *
-                            static_cast<INDEX_T>(cDims) +
-                        static_cast<INDEX_T>(ow) * static_cast<INDEX_T>(cDims) +
-                        static_cast<INDEX_T>(c);
+                    const INDEX_T outputIdx = static_cast<INDEX_T>(n) * static_cast<INDEX_T>(outD) *
+                                                  static_cast<INDEX_T>(outH) * static_cast<INDEX_T>(outW) *
+                                                  static_cast<INDEX_T>(cDims) +
+                                              static_cast<INDEX_T>(od) * static_cast<INDEX_T>(outH) *
+                                                  static_cast<INDEX_T>(outW) * static_cast<INDEX_T>(cDims) +
+                                              static_cast<INDEX_T>(oh) * static_cast<INDEX_T>(outW) *
+                                                  static_cast<INDEX_T>(cDims) +
+                                              static_cast<INDEX_T>(ow) * static_cast<INDEX_T>(cDims) +
+                                              static_cast<INDEX_T>(c);
 
                     gradient += static_cast<float>(gradY[outputIdx]) / static_cast<float>(div);
                 }
@@ -299,34 +273,27 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
 }
 
 template <int64_t CHANNEL_LAST, typename VALUE_T, typename OFFSET_T>
-__aicore__ inline void LaunchAdaptiveAvgPool3dGradSimtKernel(
-    __ubuf__ OFFSET_T* simtParams,
-    const __gm__ VALUE_T* gradY,
-    SimtDivT<OFFSET_T> nDims,
-    SimtDivT<OFFSET_T> cDims,
-    SimtDivT<OFFSET_T> inD,
-    SimtDivT<OFFSET_T> inH,
-    SimtDivT<OFFSET_T> inW,
-    SimtDivT<OFFSET_T> outD,
-    SimtDivT<OFFSET_T> outH,
-    SimtDivT<OFFSET_T> outW,
-    __gm__ VALUE_T* gradX)
+__aicore__ inline void LaunchAdaptiveAvgPool3dGradSimtKernel(__ubuf__ OFFSET_T* simtParams, const __gm__ VALUE_T* gradY,
+                                                             SimtDivT<OFFSET_T> nDims, SimtDivT<OFFSET_T> cDims,
+                                                             SimtDivT<OFFSET_T> inD, SimtDivT<OFFSET_T> inH,
+                                                             SimtDivT<OFFSET_T> inW, SimtDivT<OFFSET_T> outD,
+                                                             SimtDivT<OFFSET_T> outH, SimtDivT<OFFSET_T> outW,
+                                                             __gm__ VALUE_T* gradX)
 {
     if constexpr (CHANNEL_LAST == 1) {
-        asc_vf_call<AdaptiveAvgPool3dGradNdhwc<VALUE_T, OFFSET_T>>(
-            dim3(THREAD_DIM), simtParams, gradY, nDims, cDims, inD, inH, inW, outD, outH, outW, gradX);
+        asc_vf_call<AdaptiveAvgPool3dGradNdhwc<VALUE_T, OFFSET_T>>(dim3(THREAD_DIM), simtParams, gradY, nDims, cDims,
+                                                                   inD, inH, inW, outD, outH, outW, gradX);
     } else {
-        asc_vf_call<AdaptiveAvgPool3dGradNcdhw<VALUE_T, OFFSET_T>>(
-            dim3(THREAD_DIM), simtParams, gradY, nDims, cDims, inD, inH, inW, outD, outH, outW, gradX);
+        asc_vf_call<AdaptiveAvgPool3dGradNcdhw<VALUE_T, OFFSET_T>>(dim3(THREAD_DIM), simtParams, gradY, nDims, cDims,
+                                                                   inD, inH, inW, outD, outH, outW, gradX);
     }
 }
 
 template <typename VALUE_T, typename OFFSET_T, int64_t CHANNEL_LAST>
-__aicore__ inline void AdaptiveAvgPool3dGradSimt<VALUE_T, OFFSET_T, CHANNEL_LAST>::Init(
-    GM_ADDR yGrad, GM_ADDR xGrad)
+__aicore__ inline void AdaptiveAvgPool3dGradSimt<VALUE_T, OFFSET_T, CHANNEL_LAST>::Init(GM_ADDR yGrad, GM_ADDR xGrad)
 {
-    yGrad_.SetGlobalBuffer((__gm__ VALUE_T *)(yGrad));
-    xGrad_.SetGlobalBuffer((__gm__ VALUE_T *)(xGrad));
+    yGrad_.SetGlobalBuffer((__gm__ VALUE_T*)(yGrad));
+    xGrad_.SetGlobalBuffer((__gm__ VALUE_T*)(xGrad));
     pipe_->InitBuffer(paramBuf_, SIMT_PARAMS_NUM * sizeof(OFFSET_T));
 }
 
@@ -336,7 +303,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradSimt<VALUE_T, OFFSET_T, CHANNEL_LAST
     using DIV_T = SimtDivT<OFFSET_T>;
 
     LocalTensor<OFFSET_T> simtParam = paramBuf_.Get<OFFSET_T>();
-    const int64_t *tilingPtr = reinterpret_cast<const int64_t *>(tilingData_);
+    const int64_t* tilingPtr = reinterpret_cast<const int64_t*>(tilingData_);
 
     const DIV_T nDims = static_cast<DIV_T>(tilingPtr[0]);
     const DIV_T cDims = static_cast<DIV_T>(tilingPtr[1]);
@@ -389,23 +356,14 @@ __aicore__ inline void AdaptiveAvgPool3dGradSimt<VALUE_T, OFFSET_T, CHANNEL_LAST
 
     DataSyncBarrier<MemDsbT::UB>();
 
-    auto gradData = (__gm__ VALUE_T *)yGrad_.GetPhyAddr();
-    auto outputData = (__gm__ VALUE_T *)xGrad_.GetPhyAddr();
+    auto gradData = (__gm__ VALUE_T*)yGrad_.GetPhyAddr();
+    auto outputData = (__gm__ VALUE_T*)xGrad_.GetPhyAddr();
 
-    LaunchAdaptiveAvgPool3dGradSimtKernel<CHANNEL_LAST, VALUE_T, OFFSET_T>(
-        (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(),
-        gradData,
-        nDims,
-        cDims,
-        inD,
-        inH,
-        inW,
-        outD,
-        outH,
-        outW,
-        outputData);
+    LaunchAdaptiveAvgPool3dGradSimtKernel<CHANNEL_LAST, VALUE_T, OFFSET_T>((__ubuf__ OFFSET_T*)simtParam.GetPhyAddr(),
+                                                                           gradData, nDims, cDims, inD, inH, inW, outD,
+                                                                           outH, outW, outputData);
 }
 
 } // namespace AdaptiveAvgPool3dGradOp
 
-#endif  // ADAPTIVE_AVG_POOL3D_GRAD_SIMT_H
+#endif // ADAPTIVE_AVG_POOL3D_GRAD_SIMT_H

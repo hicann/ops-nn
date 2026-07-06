@@ -42,9 +42,8 @@ class BnInferGradContiguous {
 public:
     __aicore__ inline BnInferGradContiguous() {}
 
-    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR scale, GM_ADDR batchVariance,
-                                 GM_ADDR xBackprop, GM_ADDR workspace,
-                                 const BnInferGradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR scale, GM_ADDR batchVariance, GM_ADDR xBackprop,
+                                GM_ADDR workspace, const BnInferGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -62,8 +61,8 @@ private:
     TQue<QuePosition::VECOUT, 2> outQueueResult;
     TBuf<QuePosition::VECCALC> invStdBuf;
     TBuf<QuePosition::VECCALC> invStdExpandBuf;
-    TBuf<QuePosition::VECCALC> scaleBuf;        // scale 数据
-    TBuf<QuePosition::VECCALC> varianceBuf;     // batch_variance 数据
+    TBuf<QuePosition::VECCALC> scaleBuf;    // scale 数据
+    TBuf<QuePosition::VECCALC> varianceBuf; // batch_variance 数据
     // 以下仅在混合精度路径（fp16/bf16）中使用
     TBuf<QuePosition::VECCALC> castBuf;
     TBuf<QuePosition::VECCALC> resultFp32Buf;
@@ -91,8 +90,8 @@ private:
 
 template <typename T>
 __aicore__ inline void BnInferGradContiguous<T>::Init(GM_ADDR grads, GM_ADDR scale, GM_ADDR batchVariance,
-                                                       GM_ADDR xBackprop, GM_ADDR workspace,
-                                                       const BnInferGradTilingData* tilingData)
+                                                      GM_ADDR xBackprop, GM_ADDR workspace,
+                                                      const BnInferGradTilingData* tilingData)
 {
     totalElements_ = tilingData->totalElements;
     channelSize_ = tilingData->channelSize;

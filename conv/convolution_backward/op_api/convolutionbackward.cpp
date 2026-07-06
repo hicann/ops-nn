@@ -67,960 +67,982 @@ constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 256;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
 static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackward";
 
-static void AddAclIntArrayToCaseInfo(const aclIntArray &seg, vector<int64_t> &caseInfo)
+static void AddAclIntArrayToCaseInfo(const aclIntArray& seg, vector<int64_t>& caseInfo)
 {
-  size_t len = seg.Size();
-  for (size_t i = 0; i < len; i++) {
-    caseInfo.push_back(seg[i]);
-  }
+    size_t len = seg.Size();
+    for (size_t i = 0; i < len; i++) {
+        caseInfo.push_back(seg[i]);
+    }
 }
 
-static void AddTensorShapeToCaseInfo(const aclTensor &seg, vector<int64_t> &caseInfo)
+static void AddTensorShapeToCaseInfo(const aclTensor& seg, vector<int64_t>& caseInfo)
 {
-  auto segShape = seg.GetViewShape();
-  size_t dimNum = segShape.GetDimNum();
-  for (size_t i=0; i < dimNum; i++) {
-    caseInfo.push_back(segShape.GetDim(i));
-  }
+    auto segShape = seg.GetViewShape();
+    size_t dimNum = segShape.GetDimNum();
+    for (size_t i = 0; i < dimNum; i++) {
+        caseInfo.push_back(segShape.GetDim(i));
+    }
 }
 
-static void ConstructCaseInfo(const ConvBackpropParams &params, vector<int64_t> &caseInfo)
+static void ConstructCaseInfo(const ConvBackpropParams& params, vector<int64_t>& caseInfo)
 {
-  caseInfo.reserve(CONV3D_BACKPROP_WHITE_LIST_CASE_SIZE);
-  auto inputDataType = params.input->GetDataType();
-  caseInfo.push_back(static_cast<int64_t>(inputDataType));
-  AddTensorShapeToCaseInfo(*(params.input), caseInfo);
-  AddTensorShapeToCaseInfo(*(params.weight), caseInfo);
-  AddTensorShapeToCaseInfo(*(params.outBackprop), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.stride), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
-  caseInfo.push_back(params.groups);
+    caseInfo.reserve(CONV3D_BACKPROP_WHITE_LIST_CASE_SIZE);
+    auto inputDataType = params.input->GetDataType();
+    caseInfo.push_back(static_cast<int64_t>(inputDataType));
+    AddTensorShapeToCaseInfo(*(params.input), caseInfo);
+    AddTensorShapeToCaseInfo(*(params.weight), caseInfo);
+    AddTensorShapeToCaseInfo(*(params.outBackprop), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.stride), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
+    caseInfo.push_back(params.groups);
 }
 
-static bool IsConv3DV2WhiteListCase(const vector<int64_t> &caseInfo, const vector<vector<int64_t>> &whiteList)
+static bool IsConv3DV2WhiteListCase(const vector<int64_t>& caseInfo, const vector<vector<int64_t>>& whiteList)
 {
-  if (caseInfo[0] != DataType::DT_BF16 && caseInfo[0] != DataType::DT_FLOAT16) {
+    if (caseInfo[0] != DataType::DT_BF16 && caseInfo[0] != DataType::DT_FLOAT16) {
+        return false;
+    }
+    vector<int64_t> caseInfoShape(caseInfo);
+    caseInfoShape.erase(caseInfoShape.begin());
+    for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
+        vector<int64_t> itShape(*it);
+        itShape.erase(itShape.begin());
+        if (caseInfoShape == itShape) {
+            return true;
+        }
+    }
     return false;
-  }
-  vector<int64_t> caseInfoShape(caseInfo);
-  caseInfoShape.erase(caseInfoShape.begin());
-  for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
-    vector<int64_t> itShape(*it);
-    itShape.erase(itShape.begin());
-    if (caseInfoShape == itShape) {
-      return true;
-    }
-  }
-  return false;
 }
 
-static bool CheckV2Dilation(const ConvBackpropParams &params)
+static bool CheckV2Dilation(const ConvBackpropParams& params)
 {
-  const aclIntArray &dilation = *(params.dilation);
-  for (size_t i = 0; i < dilation.Size(); i++) {
-    if (dilation[i] > 1) {
-      return true;
+    const aclIntArray& dilation = *(params.dilation);
+    for (size_t i = 0; i < dilation.Size(); i++) {
+        if (dilation[i] > 1) {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
-static bool IsConv2DV2WhiteListCase(const vector<int64_t> &caseInfo, const vector<vector<int64_t>> &whiteList)
+static bool IsConv2DV2WhiteListCase(const vector<int64_t>& caseInfo, const vector<vector<int64_t>>& whiteList)
 {
-  for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
-    if (*it == caseInfo) {
-      return true;
+    for (auto it = whiteList.begin(); it != whiteList.end(); ++it) {
+        if (*it == caseInfo) {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 // Construct case info for D-H swap white list from ConvolutionBackwardInputTensor and ConvolutionBackwardParams
-static void ConstructDHSwapCaseInfo(const ConvolutionBackwardInputTensor &inputTensor,
-                                    const ConvolutionBackwardParams &params,
-                                    vector<int64_t> &caseInfo)
+static void ConstructDHSwapCaseInfo(const ConvolutionBackwardInputTensor& inputTensor,
+                                    const ConvolutionBackwardParams& params, vector<int64_t>& caseInfo)
 {
-  caseInfo.reserve(CONV3D_BACKPROP_WHITE_LIST_CASE_SIZE);
-  auto inputDataType = inputTensor.input->GetDataType();
-  caseInfo.push_back(static_cast<int64_t>(inputDataType));
-  AddTensorShapeToCaseInfo(*(inputTensor.input), caseInfo);
-  AddTensorShapeToCaseInfo(*(inputTensor.weight), caseInfo);
-  AddTensorShapeToCaseInfo(*(inputTensor.gradOutput), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.stride), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
-  AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
-  caseInfo.push_back(params.groups);
+    caseInfo.reserve(CONV3D_BACKPROP_WHITE_LIST_CASE_SIZE);
+    auto inputDataType = inputTensor.input->GetDataType();
+    caseInfo.push_back(static_cast<int64_t>(inputDataType));
+    AddTensorShapeToCaseInfo(*(inputTensor.input), caseInfo);
+    AddTensorShapeToCaseInfo(*(inputTensor.weight), caseInfo);
+    AddTensorShapeToCaseInfo(*(inputTensor.gradOutput), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.stride), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
+    AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
+    caseInfo.push_back(params.groups);
 }
 
 // Check if need to swap D and H dimensions for Conv3D backward
-bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor &inputTensor,
-                                 const ConvolutionBackwardParams &params)
+bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor& inputTensor,
+                                 const ConvolutionBackwardParams& params)
 {
-  NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (npuArch != NpuArch::DAV_2201) {
-    return false;
-  }
-  
-  // Check format - all tensors must be NCDHW
-  if (inputTensor.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-    OP_LOGD("Conv3DBackward: NeedSwapDH skip: input format is not NCDHW");
-    return false;
-  }
-  if (inputTensor.weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-    OP_LOGD("Conv3DBackward: NeedSwapDH skip: weight format is not NCDHW");
-    return false;
-  }
-  if (inputTensor.gradOutput->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-    OP_LOGD("Conv3DBackward: NeedSwapDH skip: gradOutput format is not NCDHW");
-    return false;
-  }
-  
-  vector<int64_t> caseInfo;
-  ConstructDHSwapCaseInfo(inputTensor, params, caseInfo);
-  
-  // Use IsConv2DV2WhiteListCase for exact match
-  return IsConv2DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_DH_SWAP_WHITE_LIST);
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_2201) {
+        return false;
+    }
+
+    // Check format - all tensors must be NCDHW
+    if (inputTensor.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        OP_LOGD("Conv3DBackward: NeedSwapDH skip: input format is not NCDHW");
+        return false;
+    }
+    if (inputTensor.weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        OP_LOGD("Conv3DBackward: NeedSwapDH skip: weight format is not NCDHW");
+        return false;
+    }
+    if (inputTensor.gradOutput->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        OP_LOGD("Conv3DBackward: NeedSwapDH skip: gradOutput format is not NCDHW");
+        return false;
+    }
+
+    vector<int64_t> caseInfo;
+    ConstructDHSwapCaseInfo(inputTensor, params, caseInfo);
+
+    // Use IsConv2DV2WhiteListCase for exact match
+    return IsConv2DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_DH_SWAP_WHITE_LIST);
 }
 
-static bool CheckV2Stride(const ConvBackpropParams &params)
+static bool CheckV2Stride(const ConvBackpropParams& params)
 {
-  const aclIntArray &stride = *(params.stride);
-  for (size_t i = 0; i < stride.Size(); i++) {
-    if (stride[i] > 2) { // 2: stride threshold for v2
-      OP_LOGD("Conv3ddx v2 not support stride > 2");
-      return false;
+    const aclIntArray& stride = *(params.stride);
+    for (size_t i = 0; i < stride.Size(); i++) {
+        if (stride[i] > 2) { // 2: stride threshold for v2
+            OP_LOGD("Conv3ddx v2 not support stride > 2");
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
-static bool CheckOutputPadding(const ConvBackpropParams &params)
+static bool CheckOutputPadding(const ConvBackpropParams& params)
 {
-  auto outputShape = params.outBackprop->GetViewShape();
-  auto kernelShape = params.weight->GetViewShape();
-  auto inputShape = params.input->GetViewShape();
-  const aclIntArray &dilation = *(params.dilation);
-  const aclIntArray &padding = *(params.padding);
-  const aclIntArray &stride = *(params.stride);
+    auto outputShape = params.outBackprop->GetViewShape();
+    auto kernelShape = params.weight->GetViewShape();
+    auto inputShape = params.input->GetViewShape();
+    const aclIntArray& dilation = *(params.dilation);
+    const aclIntArray& padding = *(params.padding);
+    const aclIntArray& stride = *(params.stride);
 
-  for (size_t i = D_DIM_NCDHW_INDEX; i < kernelShape.GetDimNum(); i++) {
-    auto sizeOut = outputShape.GetDim(i);
-    auto sizeIn = inputShape.GetDim(i);
-    auto kernelSize = kernelShape.GetDim(i);
-    auto strideLocal = stride[i - D_DIM_NCDHW_INDEX];
-    auto paddingLocal = padding[i - D_DIM_NCDHW_INDEX];
-    auto dilationLocal = dilation[i - D_DIM_NCDHW_INDEX];
-    auto outputPadding = sizeIn - ((sizeOut - 1) * strideLocal + (kernelSize - 1) * dilationLocal - 2 * paddingLocal + 1);
-    if (outputPadding > 0) {
-      OP_LOGD("outputPadding is: %ld which is greater than 0. Routing to V2", outputPadding);
-      return true;
+    for (size_t i = D_DIM_NCDHW_INDEX; i < kernelShape.GetDimNum(); i++) {
+        auto sizeOut = outputShape.GetDim(i);
+        auto sizeIn = inputShape.GetDim(i);
+        auto kernelSize = kernelShape.GetDim(i);
+        auto strideLocal = stride[i - D_DIM_NCDHW_INDEX];
+        auto paddingLocal = padding[i - D_DIM_NCDHW_INDEX];
+        auto dilationLocal = dilation[i - D_DIM_NCDHW_INDEX];
+        auto outputPadding = sizeIn -
+                             ((sizeOut - 1) * strideLocal + (kernelSize - 1) * dilationLocal - 2 * paddingLocal + 1);
+        if (outputPadding > 0) {
+            OP_LOGD("outputPadding is: %ld which is greater than 0. Routing to V2", outputPadding);
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
-static bool CheckV2Pad(const ConvBackpropParams &params)
+static bool CheckV2Pad(const ConvBackpropParams& params)
 {
-  const aclIntArray &padding = *(params.padding);
-  for (size_t i = 0; i < padding.Size(); i++) {
-    if (padding[i] > 2) { // 2: padding threshold for v2
-      OP_LOGD("Conv3ddx v2 not support pad > 2");
-      return false;
+    const aclIntArray& padding = *(params.padding);
+    for (size_t i = 0; i < padding.Size(); i++) {
+        if (padding[i] > 2) { // 2: padding threshold for v2
+            OP_LOGD("Conv3ddx v2 not support pad > 2");
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
-static bool CheckV2Kernel(const ConvBackpropParams &params)
+static bool CheckV2Kernel(const ConvBackpropParams& params)
 {
-  const aclTensor &kernel = *(params.weight);
-  auto kernelShape = kernel.GetViewShape();
-  for (size_t i = D_DIM_NCDHW_INDEX; i < kernelShape.GetDimNum(); i++) {
-    if (kernelShape.GetDim(i) > 4) { // 4: kernel threshold for v2
-      OP_LOGD("Conv3ddx v2 not support kernel > 4");
-      return false;
+    const aclTensor& kernel = *(params.weight);
+    auto kernelShape = kernel.GetViewShape();
+    for (size_t i = D_DIM_NCDHW_INDEX; i < kernelShape.GetDimNum(); i++) {
+        if (kernelShape.GetDim(i) > 4) { // 4: kernel threshold for v2
+            OP_LOGD("Conv3ddx v2 not support kernel > 4");
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
 static bool CheckV1Functionality()
 {
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return false;
-  }
-
-  return true;
-}
-
-static bool CheckV2Functionality(const ConvBackpropParams &params)
-{
-  if (params.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-    OP_LOGD("Conv3d transpose v2 not support format except FORMAT_NCDHW");
-    return false;
-  }
-
-  const aclIntArray &stride = *(params.stride);
-  const aclIntArray &dilation = *(params.dilation);
-  auto kernelShape = params.weight->GetViewShape();
-  if (stride[0] > kernelShape[D_DIM_NCDHW_INDEX]) {
-    OP_LOGD("Conv3ddx v2 not support stride_d > kernel_d");
-    return false;
-  }
-
-  const aclIntArray &padding = *(params.padding);
-  for (size_t i = 0; i < padding.Size(); i++) {
-    if (((i + D_DIM_NCDHW_INDEX) >= kernelShape.GetDimNum()) || (padding[i] >= kernelShape[i + D_DIM_NCDHW_INDEX])) {
-      OP_LOGD("Conv3ddx v2 not support pad >= kernel");
-      return false;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return false;
     }
-  }
 
-  // 参考CUBE算子规格梳理
-  NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (npuArch == NpuArch::DAV_2201) {
-    auto outputShape = params.outBackprop->GetViewShape();
-    // fmapH = min((2+(kernel_h-1)*dilation_h), ((Ho-1)*stride_h+1))
-    int64_t fmapH = (outputShape[H_DIM_NCDHW_INDEX] - 1) * stride[1] + 1;
-    // 2为待装载数据头尾存在跨行的情况
-    fmapH = min(fmapH, 2 + (kernelShape[H_DIM_NCDHW_INDEX] - 1) * dilation[DIM_1]);
-    int64_t l1SizeLimit = fmapH * outputShape[W_DIM_NCDHW_INDEX] * stride[DIM_2];
-    if (l1SizeLimit > 4096) { // 4096: l1SizeLimit
-      OP_LOGD("Conv3ddx v2 not support because L1 size limit is not meet");
-      return false;
+    return true;
+}
+
+static bool CheckV2Functionality(const ConvBackpropParams& params)
+{
+    if (params.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        OP_LOGD("Conv3d transpose v2 not support format except FORMAT_NCDHW");
+        return false;
     }
-  }
 
-  return true;
+    const aclIntArray& stride = *(params.stride);
+    const aclIntArray& dilation = *(params.dilation);
+    auto kernelShape = params.weight->GetViewShape();
+    if (stride[0] > kernelShape[D_DIM_NCDHW_INDEX]) {
+        OP_LOGD("Conv3ddx v2 not support stride_d > kernel_d");
+        return false;
+    }
+
+    const aclIntArray& padding = *(params.padding);
+    for (size_t i = 0; i < padding.Size(); i++) {
+        if (((i + D_DIM_NCDHW_INDEX) >= kernelShape.GetDimNum()) ||
+            (padding[i] >= kernelShape[i + D_DIM_NCDHW_INDEX])) {
+            OP_LOGD("Conv3ddx v2 not support pad >= kernel");
+            return false;
+        }
+    }
+
+    // 参考CUBE算子规格梳理
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch == NpuArch::DAV_2201) {
+        auto outputShape = params.outBackprop->GetViewShape();
+        // fmapH = min((2+(kernel_h-1)*dilation_h), ((Ho-1)*stride_h+1))
+        int64_t fmapH = (outputShape[H_DIM_NCDHW_INDEX] - 1) * stride[1] + 1;
+        // 2为待装载数据头尾存在跨行的情况
+        fmapH = min(fmapH, 2 + (kernelShape[H_DIM_NCDHW_INDEX] - 1) * dilation[DIM_1]);
+        int64_t l1SizeLimit = fmapH * outputShape[W_DIM_NCDHW_INDEX] * stride[DIM_2];
+        if (l1SizeLimit > 4096) { // 4096: l1SizeLimit
+            OP_LOGD("Conv3ddx v2 not support because L1 size limit is not meet");
+            return false;
+        }
+    }
+
+    return true;
 }
 
-static bool CheckV2Perf(const ConvBackpropParams &params)
+static bool CheckV2Perf(const ConvBackpropParams& params)
 {
-  // 网络泛化case规格，测试结果 V2平均性能好于TBE
-  if (!CheckV2Stride(params) || !CheckV2Pad(params) || !CheckV2Kernel(params)) {
-    return false;
-  }
+    // 网络泛化case规格，测试结果 V2平均性能好于TBE
+    if (!CheckV2Stride(params) || !CheckV2Pad(params) || !CheckV2Kernel(params)) {
+        return false;
+    }
 
-  // 对网络泛化case中，V1性能劣化的场景进行拦截(din不能分核，分核集中在M方向，M又比较小，导致用不满核或者拖尾严重)
-  // 从劣化的shape中分析出来的条件为: din不能分核 && (m<5500 || dout>85)
-  auto inputShape = params.input->GetViewShape();
-  int64_t m = inputShape[H_DIM_NCDHW_INDEX] * inputShape[W_DIM_NCDHW_INDEX];
-  const int64_t mThreshold = 5500;
-  const int64_t dinThreshold = 85;
-  int64_t din = inputShape[D_DIM_NCDHW_INDEX];
-  if (m < mThreshold || din > dinThreshold) {
-    OP_LOGD("Conv3ddx v2 not support because shapes are not suitable");
-    return false;
-  }
+    // 对网络泛化case中，V1性能劣化的场景进行拦截(din不能分核，分核集中在M方向，M又比较小，导致用不满核或者拖尾严重)
+    // 从劣化的shape中分析出来的条件为: din不能分核 && (m<5500 || dout>85)
+    auto inputShape = params.input->GetViewShape();
+    int64_t m = inputShape[H_DIM_NCDHW_INDEX] * inputShape[W_DIM_NCDHW_INDEX];
+    const int64_t mThreshold = 5500;
+    const int64_t dinThreshold = 85;
+    int64_t din = inputShape[D_DIM_NCDHW_INDEX];
+    if (m < mThreshold || din > dinThreshold) {
+        OP_LOGD("Conv3ddx v2 not support because shapes are not suitable");
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
-static bool IsConv3DBackpropInputUseV2(const ConvBackpropParams &params)
+static bool IsConv3DBackpropInputUseV2(const ConvBackpropParams& params)
 {
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return true;
-  }
-  // 1. 以下检查为V1功能上不支持的场景或规格，走V2
-  if (!CheckV1Functionality()) {
-    return true;
-  }
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return true;
+    }
+    // 1. 以下检查为V1功能上不支持的场景或规格，走V2
+    if (!CheckV1Functionality()) {
+        return true;
+    }
 
-  // 2. 以下检查为V2功能上不支持的场景或规格，走TBE
-  if (!CheckV2Functionality(params)) {
-    return false;
-  }
+    // 2. 以下检查为V2功能上不支持的场景或规格，走TBE
+    if (!CheckV2Functionality(params)) {
+        return false;
+    }
 
-  // 3. OutputPadding > 0 与 dilation > 1的规格，走V2
-  if (CheckOutputPadding(params) || CheckV2Dilation(params)) {
-    return true;
-  }
+    // 3. OutputPadding > 0 与 dilation > 1的规格，走V2
+    if (CheckOutputPadding(params) || CheckV2Dilation(params)) {
+        return true;
+    }
 
-  // 4. V1V2都支持的场景，根据性能指标决定通路，默认走V2
-  return CheckV2Perf(params);
+    // 4. V1V2都支持的场景，根据性能指标决定通路，默认走V2
+    return CheckV2Perf(params);
 }
 
-bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams &params) {
-  vector<int64_t> caseInfo;
-  ConstructCaseInfo(params, caseInfo);
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return true;
-  }
-  return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_INPUT_V2_WHITE_LIST);
+bool IsConv2DBackpropInputTo3DCase(const ConvBackpropParams& params)
+{
+    vector<int64_t> caseInfo;
+    ConstructCaseInfo(params, caseInfo);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return true;
+    }
+    return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_INPUT_V2_WHITE_LIST);
 }
 
-bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams &params) {
-  vector<int64_t> caseInfo;
-  ConstructCaseInfo(params, caseInfo);
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return false;
-  }
-  return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_INPUT_CAST_WHITE_LIST);
+bool IsConv2DBackpropInputToCastCase(const ConvBackpropParams& params)
+{
+    vector<int64_t> caseInfo;
+    ConstructCaseInfo(params, caseInfo);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return false;
+    }
+    return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_INPUT_CAST_WHITE_LIST);
 }
 
-bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams &params) {
-  vector<int64_t> caseInfo;
-  ConstructCaseInfo(params, caseInfo);
+bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams& params)
+{
+    vector<int64_t> caseInfo;
+    ConstructCaseInfo(params, caseInfo);
 
-  int64_t deterministicValue = 0;
-  aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
-  if (aclRet != ACL_SUCCESS) {
-    deterministicValue = 0;
-  }
-  if (static_cast<bool>(deterministicValue) && 
-      IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_FILTER_DETERMINISTIC_WHITE_LIST)) {
-    return true;
-  }
-  return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_FILTER_V3_WHITE_LIST);
+    int64_t deterministicValue = 0;
+    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (aclRet != ACL_SUCCESS) {
+        deterministicValue = 0;
+    }
+    if (static_cast<bool>(deterministicValue) &&
+        IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_FILTER_DETERMINISTIC_WHITE_LIST)) {
+        return true;
+    }
+    return IsConv2DV2WhiteListCase(caseInfo, CONV2D_BACKPROP_FILTER_V3_WHITE_LIST);
 }
 
-bool IsConv3DBackpropInputV2(const ConvBackpropParams &params) {
-  // 按是否支持TBE划分
-  if (params.groups > 1 || params.input->GetDataType() == DataType::DT_FLOAT) {
-    return true;
-  }
-  vector<int64_t> caseInfo;
-  ConstructCaseInfo(params, caseInfo);
-  return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_INPUT_V2_WHITE_LIST) || IsConv3DBackpropInputUseV2(params);
+bool IsConv3DBackpropInputV2(const ConvBackpropParams& params)
+{
+    // 按是否支持TBE划分
+    if (params.groups > 1 || params.input->GetDataType() == DataType::DT_FLOAT) {
+        return true;
+    }
+    vector<int64_t> caseInfo;
+    ConstructCaseInfo(params, caseInfo);
+    return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_INPUT_V2_WHITE_LIST) || IsConv3DBackpropInputUseV2(params);
 }
 
-static const aclTensor *GetOutputSize(const aclTensor *tensor, aclOpExecutor *executor) {
-  auto tensorOriginalShape = op::ToShapeVector(tensor->GetOriginalShape());
-  auto tensorSizeArry = executor->AllocIntArray(tensorOriginalShape.data(), tensorOriginalShape.size());
-  OP_CHECK(tensorSizeArry != nullptr, OP_LOGD("tensorOriginalShape alloc failed."), return nullptr);
-  auto outputSize = executor->ConvertToTensor(tensorSizeArry, DataType::DT_INT32);
-  op::Format inputFormat = tensorOriginalShape.size() == CONV3D_DIM ? Format::FORMAT_NCDHW : Format::FORMAT_NCHW;
-  const_cast<aclTensor *>(outputSize)->SetStorageFormat(inputFormat);
-  const_cast<aclTensor *>(outputSize)->SetViewFormat(inputFormat);
-  const_cast<aclTensor *>(outputSize)->SetOriginalFormat(inputFormat);
+static const aclTensor* GetOutputSize(const aclTensor* tensor, aclOpExecutor* executor)
+{
+    auto tensorOriginalShape = op::ToShapeVector(tensor->GetOriginalShape());
+    auto tensorSizeArry = executor->AllocIntArray(tensorOriginalShape.data(), tensorOriginalShape.size());
+    OP_CHECK(tensorSizeArry != nullptr, OP_LOGD("tensorOriginalShape alloc failed."), return nullptr);
+    auto outputSize = executor->ConvertToTensor(tensorSizeArry, DataType::DT_INT32);
+    op::Format inputFormat = tensorOriginalShape.size() == CONV3D_DIM ? Format::FORMAT_NCDHW : Format::FORMAT_NCHW;
+    const_cast<aclTensor*>(outputSize)->SetStorageFormat(inputFormat);
+    const_cast<aclTensor*>(outputSize)->SetViewFormat(inputFormat);
+    const_cast<aclTensor*>(outputSize)->SetOriginalFormat(inputFormat);
 
-  return outputSize;
+    return outputSize;
 }
 
 OP_TYPE_REGISTER(Conv2DBackpropInput);
-static aclnnStatus Conv2DBackpropInputWithFlag(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              int64_t useHf32Flag, aclTensor *&output, aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag);
-  FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
-  FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1]};
-  FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1]};
-  // padding为四维, [up, down, left, right]
-  if (padding->Size() == PAD_DIM_4) {
-    newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3]};
-  }
-  auto stride4 = executor->AllocIntArray(newStrides.data(), 4);
-  OP_CHECK(stride4 != nullptr, OP_LOGD("newStrides alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-  auto dilation4 = executor->AllocIntArray(newDilation.data(), 4);
-  OP_CHECK(dilation4 != nullptr, OP_LOGD("newDilation alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-  auto pad4 = executor->AllocIntArray(newPad.data(), 4);
-  OP_CHECK(pad4 != nullptr, OP_LOGD("newPad alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-  const char *dataFormat = "NCHW";
-  const char *paddingString = "";
+static aclnnStatus Conv2DBackpropInputWithFlag(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               int64_t useHf32Flag, aclTensor*& output, aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag);
+    FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
+    FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1]};
+    FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1]};
+    // padding为四维, [up, down, left, right]
+    if (padding->Size() == PAD_DIM_4) {
+        newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3]};
+    }
+    auto stride4 = executor->AllocIntArray(newStrides.data(), 4);
+    OP_CHECK(stride4 != nullptr, OP_LOGD("newStrides alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+    auto dilation4 = executor->AllocIntArray(newDilation.data(), 4);
+    OP_CHECK(dilation4 != nullptr, OP_LOGD("newDilation alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+    auto pad4 = executor->AllocIntArray(newPad.data(), 4);
+    OP_CHECK(pad4 != nullptr, OP_LOGD("newPad alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+    const char* dataFormat = "NCHW";
+    const char* paddingString = "";
 
-  auto inputSize = GetOutputSize(input, executor);
-  OP_LOGD("inputSize is: %s", inputSize->ToString().GetString());
-  auto ret = INFER_SHAPE(Conv2DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-                         OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv2DBackpropInput InferShape failed.");
-    return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
-  }
-  // useHf32Flag的值为0x40 : 表示HF32
-  uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
-  ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv2DBackpropInput, OP_INPUT(inputSize, weight, outBackprop),
-    OP_OUTPUT(output), OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag),
-    OP_MODE(execMode));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                      "Conv2DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return ACLNN_SUCCESS;
+    auto inputSize = GetOutputSize(input, executor);
+    OP_LOGD("inputSize is: %s", inputSize->ToString().GetString());
+    auto ret = INFER_SHAPE(Conv2DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
+                           OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv2DBackpropInput InferShape failed.");
+        return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
+    }
+    // useHf32Flag的值为0x40 : 表示HF32
+    uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv2DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
+                                      OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag),
+                                      OP_MODE(execMode));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                         "Conv2DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return ACLNN_SUCCESS;
 }
 // fp16输入fp16输出
-const aclTensor *Conv2DBackpropInputFp162Fp16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropInputFp162Fp16, input, weight, outBackprop, stride, padding, dilation, groups);
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  int64_t useHf32Flag = 0x0;
-  aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropInputFp162Fp16 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropInputFp162Fp16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropInputFp162Fp16, input, weight, outBackprop, stride, padding, dilation, groups);
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    int64_t useHf32Flag = 0x0;
+    aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                  useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropInputFp162Fp16 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
 // fp32输入fp32输出, 仅Ascend910B系列支持
-const aclTensor *Conv2DBackpropInputFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropInputFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  int64_t useHf32Flag = 0x0;
-  aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropInputFp322Fp32 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropInputFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropInputFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    int64_t useHf32Flag = 0x0;
+    aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                  useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropInputFp322Fp32 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
 // fp32输入fp32输出, 使用HF32计算
-const aclTensor *Conv2DBackpropInputHf32(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropInputHf32, input, weight, outBackprop, stride, padding, dilation, groups);
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  int64_t useHf32Flag = 0x40;
-  aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropInputHf32 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropInputHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                         const aclIntArray* stride, const aclIntArray* padding,
+                                         const aclIntArray* dilation, int groups, aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropInputHf32, input, weight, outBackprop, stride, padding, dilation, groups);
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    int64_t useHf32Flag = 0x40;
+    aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                  useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropInputHf32 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
-const aclTensor *Conv2DBackpropInputBf162Bf16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropInputBf162Bf16, input, weight, outBackprop, stride, padding, dilation, groups);
-  auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  int64_t useHf32Flag = 0x0;
-  aclnnStatus ret =  Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropInputBf162Bf16 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropInputBf162Bf16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropInputBf162Bf16, input, weight, outBackprop, stride, padding, dilation, groups);
+    auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    int64_t useHf32Flag = 0x0;
+    aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                  useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropInputBf162Bf16 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
-const aclTensor *Conv2DBackpropInput(const aclTensor *input, const aclTensor *weight,
-                                     const aclTensor *outBackprop, const aclIntArray *stride,
-                                     const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                     aclOpExecutor *executor, bool useHf32Flag, op::DataType dataType) {
-  L0_DFX(Conv2DBackpropInput, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, dataType);
-  op::Format outputFormat = input->GetStorageFormat();
-  auto output = executor->AllocTensor(dataType, outputFormat, input->GetOriginalFormat());
-  int64_t useHf32 = useHf32Flag == true ? 0x40 : 0;
-  aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32,
-    output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropInput get aclTensor output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropInput(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                                     int groups, aclOpExecutor* executor, bool useHf32Flag, op::DataType dataType)
+{
+    L0_DFX(Conv2DBackpropInput, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, dataType);
+    op::Format outputFormat = input->GetStorageFormat();
+    auto output = executor->AllocTensor(dataType, outputFormat, input->GetOriginalFormat());
+    int64_t useHf32 = useHf32Flag == true ? 0x40 : 0;
+    aclnnStatus ret = Conv2DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                  useHf32, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropInput get aclTensor output failed."), return nullptr);
+    return output;
 }
 OP_TYPE_REGISTER(Conv2DBackpropFilter);
-static aclnnStatus Conv2DBackpropFilterWithFlag(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               int64_t useHf32Flag, aclTensor *&output, aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag);
-  FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
-  FVector<int64_t> newDalition{1, 1, (*dilation)[0], (*dilation)[1]};
-  FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1]};
-  if (padding->Size() == PAD_DIM_4) {
-    newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3]};
-  }
-  auto stride4 = executor->AllocIntArray(newStrides.data(), 4);
-  OP_CHECK(stride4 != nullptr, OP_LOGD("newStrides alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
-  auto dilation4 = executor->AllocIntArray(newDalition.data(), 4);
-  OP_CHECK(dilation4 != nullptr, OP_LOGD("newDalition alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
-  auto pad4 = executor->AllocIntArray(newPad.data(), 4);
-  OP_CHECK(pad4 != nullptr, OP_LOGD("newPad alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
-  const char *dataFormat = "NCHW";
-  const char *paddingString = "";
-  const bool fromDepthwise = false;
-  auto weightSize = GetOutputSize(weight, executor);
-  OP_LOGD("weightSize is: %s", weightSize->ToString().GetString());
-  auto ret =
-      INFER_SHAPE(Conv2DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-                  OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv2DBackpropFilter InferShape failed.");
-    return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
-  }
-  // useHf32Flag的值为0x40 : 表示HF32
-  uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
-  ret = ADD_TO_LAUNCHER_LIST_AICORE(
-      Conv2DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag),
-      OP_MODE(execMode));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                      "Conv2DBackpropFilter ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return ACLNN_SUCCESS;
+static aclnnStatus Conv2DBackpropFilterWithFlag(const aclTensor* input, const aclTensor* weight,
+                                                const aclTensor* outBackprop, const aclIntArray* stride,
+                                                const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                                int64_t useHf32Flag, aclTensor*& output, aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag);
+    FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
+    FVector<int64_t> newDalition{1, 1, (*dilation)[0], (*dilation)[1]};
+    FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1]};
+    if (padding->Size() == PAD_DIM_4) {
+        newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3]};
+    }
+    auto stride4 = executor->AllocIntArray(newStrides.data(), 4);
+    OP_CHECK(stride4 != nullptr, OP_LOGD("newStrides alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
+    auto dilation4 = executor->AllocIntArray(newDalition.data(), 4);
+    OP_CHECK(dilation4 != nullptr, OP_LOGD("newDalition alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
+    auto pad4 = executor->AllocIntArray(newPad.data(), 4);
+    OP_CHECK(pad4 != nullptr, OP_LOGD("newPad alloc failed."), return ACLNN_ERR_INNER_NULLPTR);
+    const char* dataFormat = "NCHW";
+    const char* paddingString = "";
+    const bool fromDepthwise = false;
+    auto weightSize = GetOutputSize(weight, executor);
+    OP_LOGD("weightSize is: %s", weightSize->ToString().GetString());
+    auto ret = INFER_SHAPE(
+        Conv2DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
+        OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv2DBackpropFilter InferShape failed.");
+        return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
+    }
+    // useHf32Flag的值为0x40 : 表示HF32
+    uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        Conv2DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
+        OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag),
+        OP_MODE(execMode));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                         "Conv2DBackpropFilter ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return ACLNN_SUCCESS;
 }
 
 // fp16输入fp32输出
-const aclTensor *Conv2DBackpropFilterFp162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropFilterFp162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropFilterFp162Fp32 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropFilterFp162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropFilterFp162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                   useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropFilterFp162Fp32 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
 // fp16输入fp32输出
-const aclTensor *Conv2DBackpropFilterFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropFilterFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropFilterFp322Fp32 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropFilterFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropFilterFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                   useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropFilterFp322Fp32 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
 // fp32输入fp32输出, 使用HF32计算
-const aclTensor *Conv2DBackpropFilterHf32(const aclTensor *input, const aclTensor *weight,
-                                          const aclTensor *outBackprop, const aclIntArray *stride,
-                                          const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                          aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropFilterHf32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x40;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropFilterHf32 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropFilterHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                          const aclIntArray* stride, const aclIntArray* padding,
+                                          const aclIntArray* dilation, int groups, aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropFilterHf32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x40;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                   useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropFilterHf32 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
 // Bf16输入fp32输出
-const aclTensor *Conv2DBackpropFilterBf162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv2DBackpropFilterBf162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
-  aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-    useHf32Flag, output, executor);
-  OP_CHECK(ret == ACLNN_SUCCESS,
-    OP_LOGE(ret, "Conv2DBackpropFilterBf162Fp32 get aclTensor* output failed."), return nullptr);
-  return output;
+const aclTensor* Conv2DBackpropFilterBf162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor)
+{
+    L0_DFX(Conv2DBackpropFilterBf162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCHW);
+    aclnnStatus ret = Conv2DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
+                                                   useHf32Flag, output, executor);
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ret, "Conv2DBackpropFilterBf162Fp32 get aclTensor* output failed."),
+             return nullptr);
+    return output;
 }
 
 OP_TYPE_REGISTER(Conv3DBackpropFilter);
 OP_TYPE_REGISTER(Conv3DBackpropFilterV2);
-void GetConv3DBackpropAdapterParam(const aclTensor *input, const aclIntArray *stride,
-                                          const aclIntArray *padding, const aclIntArray *dilation,
-                                          aclOpExecutor *executor, AdaptParam *params)
+void GetConv3DBackpropAdapterParam(const aclTensor* input, const aclIntArray* stride, const aclIntArray* padding,
+                                   const aclIntArray* dilation, aclOpExecutor* executor, AdaptParam* params)
 {
-  if (stride->Size() == DIM_3) {
-    FVector<int64_t> newStrides {1, 1, 1, 1, 1};
-    FVector<int64_t> newDilation {1, 1, 1, 1, 1};
-    if (input->GetStorageFormat() == op::Format::FORMAT_NCDHW || (!Ops::NN::AclnnUtil::IsRegbase())) {
-      newStrides = {1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
-      newDilation = {1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
+    if (stride->Size() == DIM_3) {
+        FVector<int64_t> newStrides{1, 1, 1, 1, 1};
+        FVector<int64_t> newDilation{1, 1, 1, 1, 1};
+        if (input->GetStorageFormat() == op::Format::FORMAT_NCDHW || (!Ops::NN::AclnnUtil::IsRegbase())) {
+            newStrides = {1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
+            newDilation = {1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
+        } else {
+            newStrides = {1, (*stride)[0], (*stride)[1], (*stride)[2], 1};
+            newDilation = {1, (*dilation)[0], (*dilation)[1], (*dilation)[2], 1};
+        }
+
+        FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1],
+                                (*padding)[1], (*padding)[2], (*padding)[2]};
+        if (padding->Size() == 6) { // pad dim = 6
+            newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3], (*padding)[4], (*padding)[5]};
+        }
+        params->adaptStride = executor->AllocIntArray(newStrides.data(), 5); // conv3D stride dim = 5
+        OP_CHECK(params->adaptStride != nullptr, OP_LOGD("newStrides alloc failed."), return );
+        params->adaptDilation = executor->AllocIntArray(newDilation.data(), 5); // conv3D Dilation dim = 5;
+        OP_CHECK(params->adaptDilation != nullptr, OP_LOGD("newDilation alloc failed."), return );
+        params->adaptPad = executor->AllocIntArray(newPad.data(), 6); // conv3D Pad dim = 6;
+        OP_CHECK(params->adaptPad != nullptr, OP_LOGD("newPad alloc failed."), return );
     } else {
-      newStrides = {1, (*stride)[0], (*stride)[1], (*stride)[2], 1};
-      newDilation = {1, (*dilation)[0], (*dilation)[1], (*dilation)[2], 1};
+        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONV_TBC_BACKWARD_NAME, "stride", std::to_string(stride->Size()).c_str(),
+                                     std::to_string(DIM_3).c_str());
+    }
+}
+
+static bool CheckV2BasicBlockSupport(const ConvBackpropParams& params)
+{
+    const aclTensor& kernel = *(params.weight);
+    const aclTensor& outBackprop = *(params.outBackprop);
+    const aclTensor& input = *(params.input);
+    if (outBackprop.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM ||
+        input.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM) {
+        OP_LOGD("The storage dim of input is: %lu", input.GetStorageShape().GetDimNum());
+        return false;
+    }
+    auto kernelShape = kernel.GetViewShape();
+    auto outBackpropShape = outBackprop.GetStorageShape();
+    auto inputShape = input.GetStorageShape();
+    uint64_t kernelHW = kernelShape.GetDim(H_DIM_NCDHW_INDEX) * kernelShape.GetDim(W_DIM_NCDHW_INDEX);
+    uint64_t mValue = outBackpropShape.GetDim(C1_DIM_NDC1HWC0_INDEX) * inputShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
+    uint64_t nValue = kernelShape.GetDim(D_DIM_NCDHW_INDEX) * kernelShape.GetDim(H_DIM_NCDHW_INDEX) *
+                      kernelShape.GetDim(W_DIM_NCDHW_INDEX) * inputShape.GetDim(C1_DIM_NDC1HWC0_INDEX) *
+                      inputShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
+    bool isKernelSupport = (kernelHW == 1) ||
+                           ((kernelHW == KERNEL_HW_4 || kernelHW == KERNEL_HW_9 || kernelHW == KERNEL_HW_16) &&
+                            mValue >= BASIC_BLOCK_SIZE_128 && nValue >= BASIC_BLOCK_SIZE_128);
+    bool isDataTypeSuport = (GetSizeByDataType(params.input->GetDataType()) == GetSizeByDataType(DataType::DT_BF16));
+    return isKernelSupport && isDataTypeSuport;
+}
+
+static bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams& params)
+{
+    const aclTensor& outBackprop = *(params.outBackprop);
+    const aclTensor& input = *(params.input);
+    if (outBackprop.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM ||
+        input.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM) {
+        return false;
     }
 
-    FVector<int64_t> newPad {(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1], (*padding)[2], (*padding)[2]};
-    if (padding->Size() == 6) { // pad dim = 6
-      newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3], (*padding)[4], (*padding)[5]};
-    }
-    params->adaptStride = executor->AllocIntArray(newStrides.data(), 5); // conv3D stride dim = 5
-    OP_CHECK(params->adaptStride != nullptr, OP_LOGD("newStrides alloc failed."), return);
-    params->adaptDilation = executor->AllocIntArray(newDilation.data(), 5); // conv3D Dilation dim = 5;
-    OP_CHECK(params->adaptDilation != nullptr, OP_LOGD("newDilation alloc failed."), return);
-    params->adaptPad = executor->AllocIntArray(newPad.data(), 6); // conv3D Pad dim = 6;
-    OP_CHECK(params->adaptPad != nullptr, OP_LOGD("newPad alloc failed."), return);
-  } else {
-    OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONV_TBC_BACKWARD_NAME, "stride", 
-        std::to_string(stride->Size()).c_str(), std::to_string(DIM_3).c_str()
-    );
-  }
-}
-
-static bool CheckV2BasicBlockSupport(const ConvBackpropParams &params) {
-  const aclTensor &kernel = *(params.weight);
-  const aclTensor &outBackprop = *(params.outBackprop);
-  const aclTensor &input = *(params.input);
-  if (outBackprop.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM
-    || input.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM) {
-    OP_LOGD("The storage dim of input is: %lu", input.GetStorageShape().GetDimNum());
-    return false;
-  }
-  auto kernelShape = kernel.GetViewShape();
-  auto outBackpropShape = outBackprop.GetStorageShape();
-  auto inputShape = input.GetStorageShape();
-  uint64_t kernelHW = kernelShape.GetDim(H_DIM_NCDHW_INDEX) * kernelShape.GetDim(W_DIM_NCDHW_INDEX);
-  uint64_t mValue = outBackpropShape.GetDim(C1_DIM_NDC1HWC0_INDEX) * inputShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
-  uint64_t nValue = kernelShape.GetDim(D_DIM_NCDHW_INDEX) * kernelShape.GetDim(H_DIM_NCDHW_INDEX)
-                      * kernelShape.GetDim(W_DIM_NCDHW_INDEX) * inputShape.GetDim(C1_DIM_NDC1HWC0_INDEX)
-                      * inputShape.GetDim(C0_DIM_NDC1HWC0_INDEX);
-  bool isKernelSupport = (kernelHW == 1)
-        || ((kernelHW == KERNEL_HW_4 || kernelHW == KERNEL_HW_9 || kernelHW == KERNEL_HW_16)
-            && mValue >= BASIC_BLOCK_SIZE_128 && nValue >= BASIC_BLOCK_SIZE_128);
-  bool isDataTypeSuport = (GetSizeByDataType(params.input->GetDataType()) == GetSizeByDataType(DataType::DT_BF16));
-  return isKernelSupport && isDataTypeSuport;
-}
-
-static bool IsConv3DBackpropFilterToV2WithDeterministic(const ConvBackpropParams &params) {
-  const aclTensor &outBackprop = *(params.outBackprop);
-  const aclTensor &input = *(params.input);
-  if (outBackprop.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM ||
-      input.GetStorageShape().GetDimNum() != FORMAT_6HD_DIM) {
-    return false;
-  }
-
-  return true;
-}
-
-bool IsConv3DBackpropFilterV2(const ConvBackpropParams &params) {
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
     return true;
-  }
-  if (params.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-    OP_LOGD("Conv3d filter v2 not support except FORMAT_NCDHW");
-    return false;
-  }
-
-  if (params.input->GetDataType() == DataType::DT_FLOAT) {
-    return true;
-  }
-
-  // dilation > 1, 走V2
-  if (CheckV2Dilation(params)) {
-    return true;
-  }
-
-  vector<int64_t> caseInfo;
-  ConstructCaseInfo(params, caseInfo);
-  if (params.groups > 1 || IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_WHITE_LIST)
-    || IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST)) {
-    return true;
-  }
-
-  int64_t deterministicValue = 0;
-  aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
-  if (aclRet != ACL_SUCCESS) {
-    deterministicValue = 0;
-  }
-  if (static_cast<bool>(deterministicValue)) {
-    return IsConv3DBackpropFilterToV2WithDeterministic(params);
-  }
-
-  return CheckV2BasicBlockSupport(params);
 }
 
-bool IsInputTransdataWhiteListCase(const ConvBackpropParams &params) {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    return false;
-  }
+bool IsConv3DBackpropFilterV2(const ConvBackpropParams& params)
+{
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return true;
+    }
+    if (params.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        OP_LOGD("Conv3d filter v2 not support except FORMAT_NCDHW");
+        return false;
+    }
 
-  int64_t deterministicValue = 0;
-  aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
-  if (aclRet != ACL_SUCCESS) {
-    deterministicValue = 0;
-  }
-  if (static_cast<bool>(deterministicValue)) {
-    return false;
-  }
+    if (params.input->GetDataType() == DataType::DT_FLOAT) {
+        return true;
+    }
 
-  vector<int64_t> caseInfo;
-  ConstructCaseInfo(params, caseInfo);
-  return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST);
+    // dilation > 1, 走V2
+    if (CheckV2Dilation(params)) {
+        return true;
+    }
+
+    vector<int64_t> caseInfo;
+    ConstructCaseInfo(params, caseInfo);
+    if (params.groups > 1 || IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_WHITE_LIST) ||
+        IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST)) {
+        return true;
+    }
+
+    int64_t deterministicValue = 0;
+    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (aclRet != ACL_SUCCESS) {
+        deterministicValue = 0;
+    }
+    if (static_cast<bool>(deterministicValue)) {
+        return IsConv3DBackpropFilterToV2WithDeterministic(params);
+    }
+
+    return CheckV2BasicBlockSupport(params);
 }
 
-static bool CheckPreNHTransposeEnable(const aclTensor *input, const aclTensor *outBackprop,const aclIntArray *stride5,
- 	                                                 const aclIntArray *pad6, const aclIntArray *dilation5, int groups){
-  OP_LOGD("enter CheckPreNHTransposeEnable");
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (!Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    OP_LOGD("unsupported soc, NH transpose disable.");
-    return false;
-  }
-
-  if (groups > 1 || input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
-    OP_LOGD("groups > 1 or unsupported format , NH transpose disable.");
-    return false;
-  }
-
-  auto xDataType = input->GetDataType();
-  if (xDataType != op::DataType::DT_FLOAT) {
-    OP_LOGD("unsupported dataType , NH transpose disable.");
-    return false;
-  }
-
-  auto inputShape = input->GetOriginalShape();
-  auto dedyShape = outBackprop->GetOriginalShape();
-  uint64_t inputN = inputShape[N_DIM_NCDHW_INDEX];
-  uint64_t inputC = inputShape[C_DIM_NCDHW_INDEX];
-  uint64_t inputD = inputShape[D_DIM_NCDHW_INDEX];
-  uint64_t inputH = inputShape[H_DIM_NCDHW_INDEX];
-  uint64_t inputW = inputShape[W_DIM_NCDHW_INDEX];
-  uint64_t dedyW = dedyShape[W_DIM_NCDHW_INDEX];
-  uint64_t dedyC = dedyShape[C_DIM_NCDHW_INDEX];
-
-  if (dedyW == 0) {
-    OP_LOGD("unsupported dataType , NH transpose disable.");
-    return false;
-  }
-  // check input
-  if (inputD != 1 || inputH != 1) {
-    OP_LOGD("inputD or inputH is 1, NH transpose disable.");
-    return false;
-  }
-  // check stride,dilation,padding
-  if (stride5->Size() == CONV3D_DIM) {
-    auto strideData = stride5->GetData();
-    auto strideD = strideData[D_DIM_NCDHW_INDEX];
-    auto strideH = strideData[H_DIM_NCDHW_INDEX];
-    auto strideW = strideData[W_DIM_NCDHW_INDEX];
-    if (strideD != 1 || strideH != 1 || strideW >63) {
-      OP_LOGD("strideD=%d, strideH=%d, strideW=%d (max=63), NH transpose disable.", strideD, strideH, strideW);
-      return false;
+bool IsInputTransdataWhiteListCase(const ConvBackpropParams& params)
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return false;
     }
-  }
-  if (dilation5->Size() == CONV3D_DIM) {
-    auto dilationData = dilation5->GetData();
-    auto dilationD = dilationData[D_DIM_NCDHW_INDEX];
-    auto dilationH = dilationData[H_DIM_NCDHW_INDEX];
-    auto dilationW = dilationData[W_DIM_NCDHW_INDEX];
-    if (dilationD != 1 || dilationH != 1 || dilationW >255) {
-      OP_LOGD("dilationD=%d, dilationH=%d, dilationW=%d (max=255), NH transpose disable.", dilationD, dilationH, dilationW);
-      return false;
-    }
-  }
-  auto padData = pad6->GetData();
-  for (uint64_t i = 0; i < pad6->Size(); i++) {
-    if (padData[i] != 0){
-      OP_LOGD("pad[%d]=[%d] (must equal to 0), NH transpose disable.", i, padData[i]);
-      return false;
-    }
-  }
 
-  // check input and output, prevent Transpose cost excessive time
-  if (inputN < 1500 || inputN > 4096 || dedyC > 128 || inputW > 128 || inputC > 128 || (inputW*inputC)>2000 || (inputN/dedyW < 65)) {
-    OP_LOGD(
-    "inputN=%d (max=4096,min=1500), dedyC=%d (max=128), inputW=%d (max=128), inputC=%d (max=128), inputW*inputC=%d (min=2000), "
-    "inputN/dedyW=%d (max=65), NH transpose disable.",
-    inputN, dedyC, inputW, inputC, inputW*inputC, inputN/dedyW);
-    return false;
-  }
-  OP_LOGD("NH transpose enable.");
-  return true;
+    int64_t deterministicValue = 0;
+    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (aclRet != ACL_SUCCESS) {
+        deterministicValue = 0;
+    }
+    if (static_cast<bool>(deterministicValue)) {
+        return false;
+    }
+
+    vector<int64_t> caseInfo;
+    ConstructCaseInfo(params, caseInfo);
+    return IsConv3DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERGE_WHITE_LIST);
 }
 
-static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const aclTensor *weight,
-                                                const aclTensor *outBackprop, const aclIntArray *stride,
-                                                const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                                int64_t useHf32, aclTensor *&output, aclOpExecutor *executor) {
-  AdaptParam adptParams = {0};
-  GetConv3DBackpropAdapterParam(input, stride, padding, dilation, executor, &adptParams);
-  aclIntArray *stride5 = adptParams.adaptStride;
-  aclIntArray *dilation5 = adptParams.adaptDilation;
-  aclIntArray *pad6 = adptParams.adaptPad;
-  const char *dataFormat = "NCDHW";
-  const char *paddingString = "";
+static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* outBackprop, const aclIntArray* stride5,
+                                      const aclIntArray* pad6, const aclIntArray* dilation5, int groups)
+{
+    OP_LOGD("enter CheckPreNHTransposeEnable");
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (!Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        OP_LOGD("unsupported soc, NH transpose disable.");
+        return false;
+    }
 
-  auto weightSize = GetOutputSize(weight, executor);
-  OP_LOGD("weightSize is: %s", weightSize->ToString().GetString());
-  auto ret =
-      INFER_SHAPE(Conv3DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-                  OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv3DBackpropFilter InferShape failed.");
-    output = nullptr;
-    return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
-  }
+    if (groups > 1 || input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+        OP_LOGD("groups > 1 or unsupported format , NH transpose disable.");
+        return false;
+    }
 
-  // check and permute(0, 2, 3, 4, 1) then permute(3, 2, 0, 4, 1)
-  if (CheckPreNHTransposeEnable(input,outBackprop,stride5,pad6,dilation5,groups)) {
-      FVector<int64_t> newShapeDims = {3, 2, 0, 4, 1};
-      auto permAfter = executor->AllocIntArray(newShapeDims.data(), newShapeDims.size());
-      OP_CHECK(permAfter != nullptr,  OP_LOGD("permAfter alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-      // change input format
-      input = l0op::Transpose(input, permAfter, executor);
-      OP_CHECK(input != nullptr,  OP_LOGD("input transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-      const_cast<aclTensor*>(input)->SetOriginalFormat(Format::FORMAT_NDHWC);
-      const_cast<aclTensor*>(input)->SetStorageFormat(Format::FORMAT_NDHWC);
-      const_cast<aclTensor*>(input)->SetViewFormat(Format::FORMAT_NDHWC);
-      // change output format
-      outBackprop = l0op::Transpose(outBackprop, permAfter, executor);
-      OP_CHECK(outBackprop != nullptr,  OP_LOGD("outBackprop transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
-      const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
-      const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
-      const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
-      // change stride
-      if (stride5->Size() == CONV3D_DIM) {
-        auto oriStrideData = stride5->GetData();
-        FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX],oriStrideData[D_DIM_NCDHW_INDEX],
-        oriStrideData[N_DIM_NCDHW_INDEX],oriStrideData[W_DIM_NCDHW_INDEX],oriStrideData[C_DIM_NCDHW_INDEX]};
-        stride5 = executor->AllocIntArray(newStrides.data(),CONV3D_DIM);
-      }
-      // change dilation
-      if (dilation5->Size() == CONV3D_DIM) {
-        auto oriDilationData = dilation5->GetData();
-        FVector<int64_t> newDilations = {oriDilationData[H_DIM_NCDHW_INDEX],oriDilationData[D_DIM_NCDHW_INDEX],
-        oriDilationData[N_DIM_NCDHW_INDEX],oriDilationData[W_DIM_NCDHW_INDEX],oriDilationData[C_DIM_NCDHW_INDEX]};
-        dilation5 = executor->AllocIntArray(newDilations.data(),CONV3D_DIM);
-      }
-  }
-  L0_DFX(Conv3DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32);
-  ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
-  bool useV2Flag = IsConv3DBackpropFilterV2(params);
-  // useHf32Flag的值为0x40 : 表示HF32
-  uint32_t execMode = useHf32 == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
-  if (useV2Flag) {
-    bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32 == 0x40);
- 	  OP_LOGD("conv3ddw: enableHf32 is: %d, useHf32 is %ld", enableHf32, useHf32);
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DBackpropFilterV2, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-    OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, enableHf32, paddingString, useHf32), OP_MODE(execMode));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                       "Conv3DBackpropFilterV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  } else {
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-      Conv3DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32),
-      OP_MODE(execMode));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                       "Conv3DBackpropFilter ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  }
-  return ACLNN_SUCCESS;
+    auto xDataType = input->GetDataType();
+    if (xDataType != op::DataType::DT_FLOAT) {
+        OP_LOGD("unsupported dataType , NH transpose disable.");
+        return false;
+    }
+
+    auto inputShape = input->GetOriginalShape();
+    auto dedyShape = outBackprop->GetOriginalShape();
+    uint64_t inputN = inputShape[N_DIM_NCDHW_INDEX];
+    uint64_t inputC = inputShape[C_DIM_NCDHW_INDEX];
+    uint64_t inputD = inputShape[D_DIM_NCDHW_INDEX];
+    uint64_t inputH = inputShape[H_DIM_NCDHW_INDEX];
+    uint64_t inputW = inputShape[W_DIM_NCDHW_INDEX];
+    uint64_t dedyW = dedyShape[W_DIM_NCDHW_INDEX];
+    uint64_t dedyC = dedyShape[C_DIM_NCDHW_INDEX];
+
+    if (dedyW == 0) {
+        OP_LOGD("unsupported dataType , NH transpose disable.");
+        return false;
+    }
+    // check input
+    if (inputD != 1 || inputH != 1) {
+        OP_LOGD("inputD or inputH is 1, NH transpose disable.");
+        return false;
+    }
+    // check stride,dilation,padding
+    if (stride5->Size() == CONV3D_DIM) {
+        auto strideData = stride5->GetData();
+        auto strideD = strideData[D_DIM_NCDHW_INDEX];
+        auto strideH = strideData[H_DIM_NCDHW_INDEX];
+        auto strideW = strideData[W_DIM_NCDHW_INDEX];
+        if (strideD != 1 || strideH != 1 || strideW > 63) {
+            OP_LOGD("strideD=%d, strideH=%d, strideW=%d (max=63), NH transpose disable.", strideD, strideH, strideW);
+            return false;
+        }
+    }
+    if (dilation5->Size() == CONV3D_DIM) {
+        auto dilationData = dilation5->GetData();
+        auto dilationD = dilationData[D_DIM_NCDHW_INDEX];
+        auto dilationH = dilationData[H_DIM_NCDHW_INDEX];
+        auto dilationW = dilationData[W_DIM_NCDHW_INDEX];
+        if (dilationD != 1 || dilationH != 1 || dilationW > 255) {
+            OP_LOGD("dilationD=%d, dilationH=%d, dilationW=%d (max=255), NH transpose disable.", dilationD, dilationH,
+                    dilationW);
+            return false;
+        }
+    }
+    auto padData = pad6->GetData();
+    for (uint64_t i = 0; i < pad6->Size(); i++) {
+        if (padData[i] != 0) {
+            OP_LOGD("pad[%d]=[%d] (must equal to 0), NH transpose disable.", i, padData[i]);
+            return false;
+        }
+    }
+
+    // check input and output, prevent Transpose cost excessive time
+    if (inputN < 1500 || inputN > 4096 || dedyC > 128 || inputW > 128 || inputC > 128 || (inputW * inputC) > 2000 ||
+        (inputN / dedyW < 65)) {
+        OP_LOGD("inputN=%d (max=4096,min=1500), dedyC=%d (max=128), inputW=%d (max=128), inputC=%d (max=128), "
+                "inputW*inputC=%d (min=2000), "
+                "inputN/dedyW=%d (max=65), NH transpose disable.",
+                inputN, dedyC, inputW, inputC, inputW * inputC, inputN / dedyW);
+        return false;
+    }
+    OP_LOGD("NH transpose enable.");
+    return true;
+}
+
+static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor* input, const aclTensor* weight,
+                                                const aclTensor* outBackprop, const aclIntArray* stride,
+                                                const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                                int64_t useHf32, aclTensor*& output, aclOpExecutor* executor)
+{
+    AdaptParam adptParams = {0};
+    GetConv3DBackpropAdapterParam(input, stride, padding, dilation, executor, &adptParams);
+    aclIntArray* stride5 = adptParams.adaptStride;
+    aclIntArray* dilation5 = adptParams.adaptDilation;
+    aclIntArray* pad6 = adptParams.adaptPad;
+    const char* dataFormat = "NCDHW";
+    const char* paddingString = "";
+
+    auto weightSize = GetOutputSize(weight, executor);
+    OP_LOGD("weightSize is: %s", weightSize->ToString().GetString());
+    auto ret = INFER_SHAPE(Conv3DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
+                           OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv3DBackpropFilter InferShape failed.");
+        output = nullptr;
+        return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
+    }
+
+    // check and permute(0, 2, 3, 4, 1) then permute(3, 2, 0, 4, 1)
+    if (CheckPreNHTransposeEnable(input, outBackprop, stride5, pad6, dilation5, groups)) {
+        FVector<int64_t> newShapeDims = {3, 2, 0, 4, 1};
+        auto permAfter = executor->AllocIntArray(newShapeDims.data(), newShapeDims.size());
+        OP_CHECK(permAfter != nullptr, OP_LOGD("permAfter alloc failed."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+        // change input format
+        input = l0op::Transpose(input, permAfter, executor);
+        OP_CHECK(input != nullptr, OP_LOGD("input transpose return null."), return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+        const_cast<aclTensor*>(input)->SetOriginalFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(input)->SetStorageFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(input)->SetViewFormat(Format::FORMAT_NDHWC);
+        // change output format
+        outBackprop = l0op::Transpose(outBackprop, permAfter, executor);
+        OP_CHECK(outBackprop != nullptr, OP_LOGD("outBackprop transpose return null."),
+                 return ACLNN_ERR_INNER_INFERSHAPE_ERROR);
+        const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
+        const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
+        // change stride
+        if (stride5->Size() == CONV3D_DIM) {
+            auto oriStrideData = stride5->GetData();
+            FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX], oriStrideData[D_DIM_NCDHW_INDEX],
+                                           oriStrideData[N_DIM_NCDHW_INDEX], oriStrideData[W_DIM_NCDHW_INDEX],
+                                           oriStrideData[C_DIM_NCDHW_INDEX]};
+            stride5 = executor->AllocIntArray(newStrides.data(), CONV3D_DIM);
+        }
+        // change dilation
+        if (dilation5->Size() == CONV3D_DIM) {
+            auto oriDilationData = dilation5->GetData();
+            FVector<int64_t> newDilations = {oriDilationData[H_DIM_NCDHW_INDEX], oriDilationData[D_DIM_NCDHW_INDEX],
+                                             oriDilationData[N_DIM_NCDHW_INDEX], oriDilationData[W_DIM_NCDHW_INDEX],
+                                             oriDilationData[C_DIM_NCDHW_INDEX]};
+            dilation5 = executor->AllocIntArray(newDilations.data(), CONV3D_DIM);
+        }
+    }
+    L0_DFX(Conv3DBackpropFilterWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32);
+    ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
+    bool useV2Flag = IsConv3DBackpropFilterV2(params);
+    // useHf32Flag的值为0x40 : 表示HF32
+    uint32_t execMode = useHf32 == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+    if (useV2Flag) {
+        bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32 == 0x40);
+        OP_LOGD("conv3ddw: enableHf32 is: %d, useHf32 is %ld", enableHf32, useHf32);
+        ret = ADD_TO_LAUNCHER_LIST_AICORE(
+            Conv3DBackpropFilterV2, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
+            OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, enableHf32, paddingString, useHf32),
+            OP_MODE(execMode));
+        OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                             "Conv3DBackpropFilterV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    } else {
+        ret = ADD_TO_LAUNCHER_LIST_AICORE(
+            Conv3DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
+            OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32), OP_MODE(execMode));
+        OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                             "Conv3DBackpropFilter ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    }
+    return ACLNN_SUCCESS;
 }
 
 // fp16输入fp32输出
-const aclTensor *Conv3DBackpropFilterFp162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv3DBackpropFilterFp162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32 = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
-                                 dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterFp162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
-    return nullptr
-  );
-  return output;
+const aclTensor* Conv3DBackpropFilterFp162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor)
+{
+    L0_DFX(Conv3DBackpropFilterFp162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32 = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32,
+                                          output, executor) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                     "Conv3DBackpropFilterFp162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
+             return nullptr);
+    return output;
 }
 
 // fp16输入fp32输出
-const aclTensor *Conv3DBackpropFilterFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv3DBackpropFilterFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32 = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
-                                 dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterWithFlag failed."),
-    return nullptr
-  );
-  return output;
+const aclTensor* Conv3DBackpropFilterFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor)
+{
+    L0_DFX(Conv3DBackpropFilterFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32 = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32,
+                                          output, executor) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterWithFlag failed."), return nullptr);
+    return output;
 }
 
 // fp32输入fp32输出, 使用HF32计算
-const aclTensor *Conv3DBackpropFilterHf32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv3DBackpropFilterHf32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32 = 0x40;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
-                                 dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterHf32 fail due to Conv3DBackpropFilterWithFlag error."),
-    return nullptr
-  );
-  return output;
+const aclTensor* Conv3DBackpropFilterHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                          const aclIntArray* stride, const aclIntArray* padding,
+                                          const aclIntArray* dilation, int groups, aclOpExecutor* executor)
+{
+    L0_DFX(Conv3DBackpropFilterHf32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32 = 0x40;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(
+        Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32, output,
+                                     executor) == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterHf32 fail due to Conv3DBackpropFilterWithFlag error."),
+        return nullptr);
+    return output;
 }
 
 // Bf16输入fp32输出
-const aclTensor *Conv3DBackpropFilterBf162Fp32(const aclTensor *input, const aclTensor *weight,
-                                               const aclTensor *outBackprop, const aclIntArray *stride,
-                                               const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                               aclOpExecutor *executor) {
-  L0_DFX(Conv3DBackpropFilterBf162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32 = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
-                                 dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
-    return nullptr
-  );
-  return output;
+const aclTensor* Conv3DBackpropFilterBf162Fp32(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               aclOpExecutor* executor)
+{
+    L0_DFX(Conv3DBackpropFilterBf162Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32 = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, weight->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32,
+                                          output, executor) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                     "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
+             return nullptr);
+    return output;
 }
 
 // 1971: 6HD->FZ
 // arch 3510: 5HD->FZ
-const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTensor, ConvolutionBackwardParams &params,
-                                    aclOpExecutor *executor, bool hf32Flag)
+const aclTensor* Conv3DBackpropFilter(ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardParams& params,
+                                      aclOpExecutor* executor, bool hf32Flag)
 {
-  L0_DFX(Conv3DBackpropFilter, inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
-        params.stride, params.padding, params.dilation, params.groups);
-  int64_t useHf32 = hf32Flag == true ? 0x40 : 0;
-  op::Format outputFormat = inputTensor.weight->GetStorageFormat();
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, outputFormat, inputTensor.weight->GetOriginalFormat());
-  OP_CHECK(
-    Conv3DBackpropFilterWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
-                               params.stride, params.padding, params.dilation, params.groups,
-                               useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
-    return nullptr
-  );
-  return output;
+    L0_DFX(Conv3DBackpropFilter, inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
+           params.padding, params.dilation, params.groups);
+    int64_t useHf32 = hf32Flag == true ? 0x40 : 0;
+    op::Format outputFormat = inputTensor.weight->GetStorageFormat();
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, outputFormat, inputTensor.weight->GetOriginalFormat());
+    OP_CHECK(Conv3DBackpropFilterWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
+                                          params.padding, params.dilation, params.groups, useHf32, output,
+                                          executor) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                     "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
+             return nullptr);
+    return output;
 }
 
 OP_TYPE_REGISTER(Conv3DBackpropInput);
 OP_TYPE_REGISTER(Conv3DBackpropInputV2);
 
-static bool CheckN2HAttrAvailable(const aclIntArray *stride5, const aclIntArray *dilation5, const aclIntArray *pad6) {
-  if (stride5 == nullptr) {
-    return false;
-  }
-  if (stride5->Size() == CONV3D_DIM) {
-      auto strideData = stride5->GetData();
-      auto strideD = strideData[D_DIM_NCDHW_INDEX];
-      auto strideH = strideData[H_DIM_NCDHW_INDEX];
-      auto strideW = strideData[W_DIM_NCDHW_INDEX];
-      if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > STRIDE_TRANSPOSE_N2H_RULE_MAX) {
-          return false;
-      }
-  }
+static bool CheckN2HAttrAvailable(const aclIntArray* stride5, const aclIntArray* dilation5, const aclIntArray* pad6)
+{
+    if (stride5 == nullptr) {
+        return false;
+    }
+    if (stride5->Size() == CONV3D_DIM) {
+        auto strideData = stride5->GetData();
+        auto strideD = strideData[D_DIM_NCDHW_INDEX];
+        auto strideH = strideData[H_DIM_NCDHW_INDEX];
+        auto strideW = strideData[W_DIM_NCDHW_INDEX];
+        if (strideD != 1 || strideH != 1 || strideW < 1 || strideW > STRIDE_TRANSPOSE_N2H_RULE_MAX) {
+            return false;
+        }
+    }
 
-  if (pad6 == nullptr) {
-    return false;
-  }
-  auto padData = pad6->GetData();
-  for (uint64_t i = 0; i < pad6->Size(); i++) {
-      if (padData[i] != 0) {
-          return false;
-      }
-  }
+    if (pad6 == nullptr) {
+        return false;
+    }
+    auto padData = pad6->GetData();
+    for (uint64_t i = 0; i < pad6->Size(); i++) {
+        if (padData[i] != 0) {
+            return false;
+        }
+    }
 
-  if (dilation5 == nullptr) {
-    return false;
-  }
-  auto dilationData = dilation5->GetData();
-  for (uint64_t i = 0; i < dilation5->Size(); i++) {
-      if (dilationData[i] != 1) {
-          return false;
-      }
-  }
-  return true;
+    if (dilation5 == nullptr) {
+        return false;
+    }
+    auto dilationData = dilation5->GetData();
+    for (uint64_t i = 0; i < dilation5->Size(); i++) {
+        if (dilationData[i] != 1) {
+            return false;
+        }
+    }
+    return true;
 }
 
-static bool CheckN2HAttrCriteria(int64_t wi, int64_t cin) {
+static bool CheckN2HAttrCriteria(int64_t wi, int64_t cin)
+{
     if (wi >= N2H_W_IN_SIXTY && ((wi > cin && wi < 2 * cin) || (wi < cin && cin < 1.5f * wi))) {
         return false;
     }
@@ -1030,7 +1052,8 @@ static bool CheckN2HAttrCriteria(int64_t wi, int64_t cin) {
     return true;
 }
 
-static bool CheckN2HNativeAttrAvailable(const aclTensor *weight, const aclTensor *&output) {
+static bool CheckN2HNativeAttrAvailable(const aclTensor* weight, const aclTensor*& output)
+{
     auto outputShape = output->GetStorageShape();
     auto batch = outputShape[N_DIM_NCDHW_INDEX];
     auto hi = outputShape[H_DIM_NCDHW_INDEX];
@@ -1047,7 +1070,8 @@ static bool CheckN2HNativeAttrAvailable(const aclTensor *weight, const aclTensor
         return false;
     }
     // To satisfy the requirements for 1D convolution backward
-    if (di != 1 || dk != 1 || hi != 1 || hk != 1 || wi < 1 || wi > W_IN_TRANSPOSE_N2H_RULE_MAX || wk < 1 || wk > W_K_TRANSPOSE_N2H_RULE_MAX) {
+    if (di != 1 || dk != 1 || hi != 1 || hk != 1 || wi < 1 || wi > W_IN_TRANSPOSE_N2H_RULE_MAX || wk < 1 ||
+        wk > W_K_TRANSPOSE_N2H_RULE_MAX) {
         return false;
     }
     if (cout < 1 || cout > WEIGHT_TRANSPOSE_C_LIMIT || cin < 1 || cin > WEIGHT_TRANSPOSE_C_LIMIT) {
@@ -1056,8 +1080,9 @@ static bool CheckN2HNativeAttrAvailable(const aclTensor *weight, const aclTensor
     return CheckN2HAttrCriteria(wi, cin);
 }
 
-bool CheckN2HEnable(const aclTensor *weight, const aclTensor *&output,
-                           aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6, int groups) {
+bool CheckN2HEnable(const aclTensor* weight, const aclTensor*& output, aclIntArray* stride5, aclIntArray* dilation5,
+                    aclIntArray* pad6, int groups)
+{
     OP_LOGD("Check N2H attribute.");
     if (groups != 1) {
         return false;
@@ -1070,18 +1095,21 @@ bool CheckN2HEnable(const aclTensor *weight, const aclTensor *&output,
     return CheckN2HNativeAttrAvailable(weight, output);
 }
 
-bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input,
-                                          const aclIntArray *stride5, int groups) {
+bool CheckWeightPreTransposeEnable(const aclTensor* weight, const aclTensor* input, const aclIntArray* stride5,
+                                   int groups)
+{
     OP_LOGD("Enter CheckWeightPreTransposeEnable.");
     if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         return false;
     }
-    if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW || input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+    if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW ||
+        input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
         return false;
     }
 
     auto dataType = weight->GetDataType();
-    if (dataType != op::DataType::DT_FLOAT && dataType != op::DataType::DT_FLOAT16 && dataType != op::DataType::DT_BF16) {
+    if (dataType != op::DataType::DT_FLOAT && dataType != op::DataType::DT_FLOAT16 &&
+        dataType != op::DataType::DT_BF16) {
         return false;
     }
 
@@ -1123,10 +1151,12 @@ bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *inp
     return (cout > cin) ? (cout < MAX_CIN_MULTIPLIER * cin) : (cin < MAX_CIN_MULTIPLIER * cout);
 }
 
-aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop,
-                              AdaptParam *adptParams, aclOpExecutor *executor) {
+aclnnStatus N2HOptimize(const aclTensor*& weight, const aclTensor*& outBackprop, AdaptParam* adptParams,
+                        aclOpExecutor* executor)
+{
     OP_LOGD("Enable N2H optimize.");
-    auto permOutputBackprop = executor->AllocIntArray(OUTPUT_BACKPROP_N2H_SHAPE_DIMS.data(), OUTPUT_BACKPROP_N2H_SHAPE_DIMS.size());
+    auto permOutputBackprop = executor->AllocIntArray(OUTPUT_BACKPROP_N2H_SHAPE_DIMS.data(),
+                                                      OUTPUT_BACKPROP_N2H_SHAPE_DIMS.size());
     CHECK_RET(permOutputBackprop != nullptr, ACLNN_ERR_INNER_NULLPTR);
     outBackprop = l0op::Transpose(outBackprop, permOutputBackprop, executor);
     // change outBackprop format
@@ -1137,7 +1167,8 @@ aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop,
     const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NCDHW);
     // change weight format
     auto weightShape = weight->GetStorageShape();
-    if (weightShape[N_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_N_LIMIT && weightShape[C_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_C_LIMIT) {
+    if (weightShape[N_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_N_LIMIT &&
+        weightShape[C_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_C_LIMIT) {
         auto permWeight = executor->AllocIntArray(WEIGHT_N2H_SHAPE_DIMS.data(), WEIGHT_N2H_SHAPE_DIMS.size());
         CHECK_RET(permWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
         weight = l0op::Transpose(weight, permWeight, executor);
@@ -1155,11 +1186,12 @@ aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop,
                                        oriStrideData[C_DIM_NCDHW_INDEX]};
         adptParams->adaptStride = executor->AllocIntArray(newStrides.data(), CONV3D_DIM);
     }
-    
+
     return ACLNN_SUCCESS;
 }
 
-static void N2HChangeOutput(aclTensor *&output){
+static void N2HChangeOutput(aclTensor*& output)
+{
     // change output shape and format
     auto oriShape = output->GetStorageShape();
     Shape outShape({oriShape[H_DIM_NCDHW_INDEX], oriShape[D_DIM_NCDHW_INDEX], oriShape[N_DIM_NCDHW_INDEX],
@@ -1173,144 +1205,142 @@ static void N2HChangeOutput(aclTensor *&output){
     output->SetViewFormat(Format::FORMAT_NCDHW);
 }
 
-static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              int64_t useHf32Flag, aclTensor *&output, aclOpExecutor *executor, AdaptParam *adptParams)
+static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor* input, const aclTensor* weight,
+                                               const aclTensor* outBackprop, const aclIntArray* stride,
+                                               const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                               int64_t useHf32Flag, aclTensor*& output, aclOpExecutor* executor,
+                                               AdaptParam* adptParams)
 {
-  L0_DFX(Conv3DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, output);
+    L0_DFX(Conv3DBackpropInputWithFlag, input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag,
+           output);
 
-  aclIntArray *stride5 = adptParams->adaptStride;   
-  aclIntArray *dilation5 = adptParams->adaptDilation; 
-  aclIntArray *pad6 = adptParams->adaptPad;          
-  const char *dataFormat = "NCDHW";
-  const char *paddingString = "";
+    aclIntArray* stride5 = adptParams->adaptStride;
+    aclIntArray* dilation5 = adptParams->adaptDilation;
+    aclIntArray* pad6 = adptParams->adaptPad;
+    const char* dataFormat = "NCDHW";
+    const char* paddingString = "";
 
-  ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
-  bool useV2Flag = IsConv3DBackpropInputV2(params);
-  if (useV2Flag && useHf32Flag == 0x0 && weight->GetDataType() != DataType::DT_FLOAT && (!Ops::NN::AclnnUtil::IsRegbase())) {
-    output->SetStorageFormat(op::Format::FORMAT_NCDHW);
-  }
-  auto inputSize = GetOutputSize(input, executor);
-  OP_LOGD("inputSize is: %s", inputSize->ToString().GetString());
-  auto ret =
-      INFER_SHAPE(Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-                  OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv3DBackpropInput InferShape failed.");
-    output = nullptr;
-    return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
-  }
-  // useHf32Flag的值为0x40 : 表示HF32
-  uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+    ConvBackpropParams params = {input, weight, outBackprop, stride, padding, dilation, groups};
+    bool useV2Flag = IsConv3DBackpropInputV2(params);
+    if (useV2Flag && useHf32Flag == 0x0 && weight->GetDataType() != DataType::DT_FLOAT &&
+        (!Ops::NN::AclnnUtil::IsRegbase())) {
+        output->SetStorageFormat(op::Format::FORMAT_NCDHW);
+    }
+    auto inputSize = GetOutputSize(input, executor);
+    OP_LOGD("inputSize is: %s", inputSize->ToString().GetString());
+    auto ret = INFER_SHAPE(Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
+                           OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv3DBackpropInput InferShape failed.");
+        output = nullptr;
+        return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
+    }
+    // useHf32Flag的值为0x40 : 表示HF32
+    uint32_t execMode = useHf32Flag == 0x40 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
 
-  // View format acts only as a flag for N2H optimization. A mismatch between original and view format indicates N2H optimization has been executed
-  if (outBackprop->GetOriginalFormat() != outBackprop->GetViewFormat()) {
-      N2HChangeOutput(output);
-      const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
-  }
+    // View format acts only as a flag for N2H optimization. A mismatch between original and view format indicates N2H
+    // optimization has been executed
+    if (outBackprop->GetOriginalFormat() != outBackprop->GetViewFormat()) {
+        N2HChangeOutput(output);
+        const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
+    }
 
-  if (useV2Flag) {
-    bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32Flag == 0x40);
- 	  OP_LOGD("conv3ddx: enableHf32 is: %d, useHf32Flag is %ld", enableHf32, useHf32Flag);
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-      Conv3DBackpropInputV2, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, enableHf32, paddingString, useHf32Flag), OP_MODE(execMode));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                       "Conv3DBackpropInputV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  } else {
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-      Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
-      OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag), OP_MODE(execMode));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
-                                       "Conv3DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  }
-  return ACLNN_SUCCESS;
+    if (useV2Flag) {
+        bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32Flag == 0x40);
+        OP_LOGD("conv3ddx: enableHf32 is: %d, useHf32Flag is %ld", enableHf32, useHf32Flag);
+        ret = ADD_TO_LAUNCHER_LIST_AICORE(
+            Conv3DBackpropInputV2, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
+            OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, enableHf32, paddingString, useHf32Flag),
+            OP_MODE(execMode));
+        OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                             "Conv3DBackpropInputV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    } else {
+        ret = ADD_TO_LAUNCHER_LIST_AICORE(
+            Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
+            OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag), OP_MODE(execMode));
+        OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return ACLNN_ERR_INNER_NULLPTR,
+                                             "Conv3DBackpropInput ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    }
+    return ACLNN_SUCCESS;
 }
 
-const aclTensor *Conv3DBackpropInputFp162Fp16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor, AdaptParam *adptParams)
+const aclTensor* Conv3DBackpropInputFp162Fp16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor, AdaptParam* adptParams)
 {
-  L0_DFX(Conv3DBackpropInputFp162Fp16, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-                                useHf32Flag, output, executor, adptParams) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputFp162Fp16 fail due to Conv3DBackpropInputWithFlag error."),
-    return nullptr
-  );
-  return output;
+    L0_DFX(Conv3DBackpropInputFp162Fp16, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(
+        Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, output,
+                                    executor, adptParams) == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputFp162Fp16 fail due to Conv3DBackpropInputWithFlag error."),
+        return nullptr);
+    return output;
 }
 // 1971 6HD->FZ with Fp32
-const aclTensor *Conv3DBackpropInputFp322Fp32(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor, AdaptParam *adptParams)
+const aclTensor* Conv3DBackpropInputFp322Fp32(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor, AdaptParam* adptParams)
 {
-  L0_DFX(Conv3DBackpropInputFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-                                useHf32Flag, output, executor, adptParams) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputFp322Fp32 due to Conv3DBackpropInputWithFlag error."),
-    return nullptr
-  );
-  return output;
+    L0_DFX(Conv3DBackpropInputFp322Fp32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag,
+                                         output, executor, adptParams) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputFp322Fp32 due to Conv3DBackpropInputWithFlag error."),
+             return nullptr);
+    return output;
 }
 // 1971 6HD->FZ with Hf32
-const aclTensor *Conv3DBackpropInputHf32(const aclTensor *input, const aclTensor *weight, const aclTensor *outBackprop,
-                                         const aclIntArray *stride, const aclIntArray *padding,
-                                         const aclIntArray *dilation, int groups, aclOpExecutor *executor, AdaptParam *adptParams)
+const aclTensor* Conv3DBackpropInputHf32(const aclTensor* input, const aclTensor* weight, const aclTensor* outBackprop,
+                                         const aclIntArray* stride, const aclIntArray* padding,
+                                         const aclIntArray* dilation, int groups, aclOpExecutor* executor,
+                                         AdaptParam* adptParams)
 {
-  L0_DFX(Conv3DBackpropInputHf32, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x40;
-  auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-                                useHf32Flag, output, executor, adptParams) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputHf32 fail due to Conv3DBackpropInputWithFlag error."),
-    return nullptr
-  );
-  return output;
+    L0_DFX(Conv3DBackpropInputHf32, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x40;
+    auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag,
+                                         output, executor, adptParams) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputHf32 fail due to Conv3DBackpropInputWithFlag error."),
+             return nullptr);
+    return output;
 }
 // 1971 6HD->FZ with Bf16
-const aclTensor *Conv3DBackpropInputBf162Bf16(const aclTensor *input, const aclTensor *weight,
-                                              const aclTensor *outBackprop, const aclIntArray *stride,
-                                              const aclIntArray *padding, const aclIntArray *dilation, int groups,
-                                              aclOpExecutor *executor, AdaptParam *adptParams)
+const aclTensor* Conv3DBackpropInputBf162Bf16(const aclTensor* input, const aclTensor* weight,
+                                              const aclTensor* outBackprop, const aclIntArray* stride,
+                                              const aclIntArray* padding, const aclIntArray* dilation, int groups,
+                                              aclOpExecutor* executor, AdaptParam* adptParams)
 {
-  L0_DFX(Conv3DBackpropInputBf162Bf16, input, weight, outBackprop, stride, padding, dilation, groups);
-  int64_t useHf32Flag = 0x0;
-  auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
-  OP_CHECK(
-    Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
-                                useHf32Flag, output, executor, adptParams) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputBf162Bf16 fail due to Conv3DBackpropInputWithFlag error."),
-    return nullptr
-  );
-  return output;
+    L0_DFX(Conv3DBackpropInputBf162Bf16, input, weight, outBackprop, stride, padding, dilation, groups);
+    int64_t useHf32Flag = 0x0;
+    auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), op::Format::FORMAT_NCDHW);
+    OP_CHECK(
+        Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups, useHf32Flag, output,
+                                    executor, adptParams) == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputBf162Bf16 fail due to Conv3DBackpropInputWithFlag error."),
+        return nullptr);
+    return output;
 }
 
 // 1982: 5HD->FZ
-const aclTensor *Conv3DBackpropInput(ConvolutionBackwardInputTensor &inputTensor, ConvolutionBackwardParams &params,
-                                    aclOpExecutor *executor, bool hf32Flag, AdaptParam *adptParams)
+const aclTensor* Conv3DBackpropInput(ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardParams& params,
+                                     aclOpExecutor* executor, bool hf32Flag, AdaptParam* adptParams)
 {
-  L0_DFX(Conv3DBackpropInput, inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-         params.padding, params.dilation, params.groups);
-  op::Format outputFormat = inputTensor.input->GetStorageFormat();
-  int64_t useHf32 = hf32Flag == true ? 0x40 : 0;
-  auto output = executor->AllocTensor(inputTensor.input->GetDataType(), outputFormat, inputTensor.input->GetOriginalFormat());
-  OP_CHECK(
-    Conv3DBackpropInputWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
-                              params.stride, params.padding, params.dilation, params.groups,
-                              useHf32, output, executor, adptParams) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInput fail due to Conv3DBackpropInputWithFlag error."),
-    return nullptr
-  );
-  return output;
+    L0_DFX(Conv3DBackpropInput, inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
+           params.padding, params.dilation, params.groups);
+    op::Format outputFormat = inputTensor.input->GetStorageFormat();
+    int64_t useHf32 = hf32Flag == true ? 0x40 : 0;
+    auto output = executor->AllocTensor(inputTensor.input->GetDataType(), outputFormat,
+                                        inputTensor.input->GetOriginalFormat());
+    OP_CHECK(Conv3DBackpropInputWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
+                                         params.padding, params.dilation, params.groups, useHf32, output, executor,
+                                         adptParams) == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInput fail due to Conv3DBackpropInputWithFlag error."),
+             return nullptr);
+    return output;
 }
-}  // namespace l0op
+} // namespace l0op

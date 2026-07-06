@@ -35,13 +35,15 @@ ge::graphStatus GeluQuantTiling::GetPlatformInfo()
     baseInfoOp.vectorCoreNum = compileInfo->vectorCoreNum;
     OP_CHECK_IF(
         (baseInfoOp.vectorCoreNum <= 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_,"vectorCoreNum",std::to_string(baseInfoOp.vectorCoreNum), "The value of vectorCoreNum must be greate than 0"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "vectorCoreNum", std::to_string(baseInfoOp.vectorCoreNum),
+                                              "The value of vectorCoreNum must be greate than 0"),
         return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize = compileInfo->ubSize;
-    OP_CHECK_IF(
-        (baseInfoOp.ubSize <= 0), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_,"ubSize",std::to_string(baseInfoOp.ubSize), "The value of ubSize must be greate than 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.ubSize <= 0),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "ubSize", std::to_string(baseInfoOp.ubSize),
+                                                      "The value of ubSize must be greate than 0"),
+                return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize -= RESERVED_UB_SIZE; // 可用UB空间
 
@@ -61,8 +63,10 @@ ge::graphStatus GeluQuantTiling::ProcessAttrsInfo()
     } else if (strcmp(approximate, "tanh") == 0) {
         baseInfoOp.approximate = APPROXIMATE_TANH;
     } else {
-        OP_CHECK_IF(
-            (true), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "approximate", approximate, "The value of approximate must be [none, tanh]"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF((true),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "approximate", approximate,
+                                                          "The value of approximate must be [none, tanh]"),
+                    return ge::GRAPH_FAILED);
     }
 
     const char* quantMode = attrs->GetAttrPointer<char>(QUANT_MODE_ATTR_INDEX);
@@ -72,8 +76,10 @@ ge::graphStatus GeluQuantTiling::ProcessAttrsInfo()
     } else if (strcmp(quantMode, "dynamic") == 0) {
         baseInfoOp.quantMode = DYNAMIC_QUANT_MODE;
     } else {
-        OP_CHECK_IF(
-            (true), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "quant_mode", quantMode, "The value of quant_mode must be [static, dynamic]"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF((true),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "quant_mode", quantMode,
+                                                          "The value of quant_mode must be [static, dynamic]"),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -86,22 +92,25 @@ ge::graphStatus GeluQuantTiling::ProcessRequiredInfo()
     auto xInputDesc = context_->GetInputDesc(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     baseInfoOp.xInputDtype = xInputDesc->GetDataType();
-    OP_CHECK_IF(
-        (baseInfoOp.xInputDtype != ge::DT_FLOAT && baseInfoOp.xInputDtype != ge::DT_FLOAT16 &&
-         baseInfoOp.xInputDtype != ge::DT_BF16),
-        OP_LOGE_FOR_INVALID_DTYPE(nodeName_, "x", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.xInputDtype), "[DT_FLOAT, DT_FLOAT16, DT_BF16]"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.xInputDtype != ge::DT_FLOAT && baseInfoOp.xInputDtype != ge::DT_FLOAT16 &&
+                 baseInfoOp.xInputDtype != ge::DT_BF16),
+                OP_LOGE_FOR_INVALID_DTYPE(nodeName_, "x", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.xInputDtype),
+                                          "[DT_FLOAT, DT_FLOAT16, DT_BF16]"),
+                return ge::GRAPH_FAILED);
 
     auto xInputShapePtr = context_->GetInputShape(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputShapePtr);
     auto xInputShape = xInputShapePtr->GetStorageShape();
     baseInfoOp.xDimNum = xInputShape.GetDimNum();
-    OP_CHECK_IF(
-        (baseInfoOp.xDimNum > INPUT_MAX_DIMENSIONS),
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_, "x", std::to_string(baseInfoOp.xDimNum), "The shape dim of x must be no more than 8"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (baseInfoOp.xDimNum < INPUT_MIN_DIMENSIONS && baseInfoOp.quantMode == DYNAMIC_QUANT_MODE),
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_, "x", std::to_string(baseInfoOp.xDimNum), "When quant_mode is dynamic, the shape dim of x must be greater than or equal to 2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.xDimNum > INPUT_MAX_DIMENSIONS),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_, "x", std::to_string(baseInfoOp.xDimNum),
+                                                         "The shape dim of x must be no more than 8"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.xDimNum < INPUT_MIN_DIMENSIONS && baseInfoOp.quantMode == DYNAMIC_QUANT_MODE),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    nodeName_, "x", std::to_string(baseInfoOp.xDimNum),
+                    "When quant_mode is dynamic, the shape dim of x must be greater than or equal to 2"),
+                return ge::GRAPH_FAILED);
 
     baseInfoOp.endAxisLen = xInputShape.GetDim(baseInfoOp.xDimNum - 1);
     baseInfoOp.endAxisLenAligned = AlignToCeil(baseInfoOp.endAxisLen, FP32_BLOCK_NUM);
@@ -115,9 +124,11 @@ ge::graphStatus GeluQuantTiling::ProcessRequiredInfo()
     auto yOutputShapePtr = context_->GetOutputShape(Y_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputShapePtr);
     auto yOutputShape = yOutputShapePtr->GetStorageShape();
-    OP_CHECK_IF(
-        (xInputShape != yOutputShape), OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "x, y", Ops::Base::ToString(xInputShape) + ", " + Ops::Base::ToString(yOutputShape), "The shapes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xInputShape != yOutputShape),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    nodeName_, "x, y", Ops::Base::ToString(xInputShape) + ", " + Ops::Base::ToString(yOutputShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -139,30 +150,39 @@ ge::graphStatus GeluQuantTiling::ProcessOptionalOffsetInfo()
     auto offsetInputDesc = context_->GetOptionalInputDesc(OFFSET_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, offsetInputDesc);
     baseInfoOp.offsetInputDtype = offsetInputDesc->GetDataType();
-    OP_CHECK_IF(
-        (baseInfoOp.scaleInputDtype != baseInfoOp.offsetInputDtype),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_, "input_scale, input_offset", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(baseInfoOp.offsetInputDtype), "The dtype of input_scale must be the same as the dtype of input_offset"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.scaleInputDtype != baseInfoOp.offsetInputDtype),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    nodeName_, "input_scale, input_offset",
+                    ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype) + ", " +
+                        ge::TypeUtils::DataTypeToSerialString(baseInfoOp.offsetInputDtype),
+                    "The dtype of input_scale must be the same as the dtype of input_offset"),
+                return ge::GRAPH_FAILED);
 
     if (offsetInputShapePtr->GetStorageShape().GetShapeSize() == 1) {
         baseInfoOp.inputOffsetType = SCALAR_TENSOR;
         OP_CHECK_IF(
             (baseInfoOp.inputScaleType != SCALAR_TENSOR),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "input_scale, input_offset", "normal, scalar", "The shapes of input_scale and input_offset must be the same"), return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "input_scale, input_offset", "normal, scalar",
+                                                   "The shapes of input_scale and input_offset must be the same"),
+            return ge::GRAPH_FAILED);
     } else {
         baseInfoOp.inputOffsetType = NORMAL_TENSOR;
         OP_CHECK_IF(
             (baseInfoOp.inputScaleType != NORMAL_TENSOR),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "input_scale, input_offset", "scalar, normal", "The shapes of input_scale and input_offset must be the same"), return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "input_scale, input_offset", "scalar, normal",
+                                                   "The shapes of input_scale and input_offset must be the same"),
+            return ge::GRAPH_FAILED);
         auto offsetInputDimNum = offsetInputShapePtr->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(
-            (offsetInputDimNum != 1),
-            OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName_, "input_offset", std::to_string(offsetInputDimNum), "1"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((offsetInputDimNum != 1),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName_, "input_offset", std::to_string(offsetInputDimNum), "1"),
+                    return ge::GRAPH_FAILED);
         auto offsetInputDim0 = offsetInputShapePtr->GetStorageShape().GetDim(0);
-        OP_CHECK_IF(
-            (offsetInputDim0 != baseInfoOp.endAxisLen),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "input_offset,x", std::to_string(offsetInputDim0)+","+std::to_string(baseInfoOp.endAxisLen), "Shape[0] of input_offset must be equal to shape[-1] of x"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((offsetInputDim0 != baseInfoOp.endAxisLen),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        nodeName_, "input_offset,x",
+                        std::to_string(offsetInputDim0) + "," + std::to_string(baseInfoOp.endAxisLen),
+                        "Shape[0] of input_offset must be equal to shape[-1] of x"),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -177,7 +197,8 @@ ge::graphStatus GeluQuantTiling::ProcessOptionalScaleInfo()
         baseInfoOp.inputScaleType = EMPTY_TENSOR;
         OP_CHECK_IF(
             (baseInfoOp.quantMode == STATIC_QUANT_MODE),
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(nodeName_, "input_scale", "0", "input_scale does not support empty tensor when quantization is static"),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                nodeName_, "input_scale", "0", "input_scale does not support empty tensor when quantization is static"),
             return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
@@ -185,32 +206,35 @@ ge::graphStatus GeluQuantTiling::ProcessOptionalScaleInfo()
     auto scaleInputDesc = context_->GetOptionalInputDesc(SCALE_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleInputDesc);
     baseInfoOp.scaleInputDtype = scaleInputDesc->GetDataType();
-    OP_CHECK_IF(
-        (baseInfoOp.xInputDtype == ge::DT_FLOAT && baseInfoOp.scaleInputDtype != ge::DT_FLOAT),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype), "The dtype of input_scale must be ge::DT_FLOAT when the dype of input_x is DT_FLOAT"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (baseInfoOp.xInputDtype == ge::DT_FLOAT16 && baseInfoOp.scaleInputDtype == ge::DT_BF16),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype), "The dtype of input_scale must not be DT_BF16 when the dtype of x is DT_FLOAT16"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (baseInfoOp.xInputDtype == ge::DT_BF16 && baseInfoOp.scaleInputDtype == ge::DT_FLOAT16),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype), "The dtype of input_scale must not be DT_FLOAT16 when the dtype of x is DT_BF16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.xInputDtype == ge::DT_FLOAT && baseInfoOp.scaleInputDtype != ge::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype),
+                    "The dtype of input_scale must be ge::DT_FLOAT when the dype of input_x is DT_FLOAT"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.xInputDtype == ge::DT_FLOAT16 && baseInfoOp.scaleInputDtype == ge::DT_BF16),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype),
+                    "The dtype of input_scale must not be DT_BF16 when the dtype of x is DT_FLOAT16"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((baseInfoOp.xInputDtype == ge::DT_BF16 && baseInfoOp.scaleInputDtype == ge::DT_FLOAT16),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    nodeName_, "input_scale", ge::TypeUtils::DataTypeToSerialString(baseInfoOp.scaleInputDtype),
+                    "The dtype of input_scale must not be DT_FLOAT16 when the dtype of x is DT_BF16"),
+                return ge::GRAPH_FAILED);
 
     if (scaleInputShapePtr->GetStorageShape().GetShapeSize() == 1) {
         baseInfoOp.inputScaleType = SCALAR_TENSOR;
     } else {
         baseInfoOp.inputScaleType = NORMAL_TENSOR;
         auto scaleInputDimNum = scaleInputShapePtr->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(
-            (scaleInputDimNum != 1),
-            OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName_, "input_scale", std::to_string(scaleInputDimNum), "1"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((scaleInputDimNum != 1),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName_, "input_scale", std::to_string(scaleInputDimNum), "1"),
+                    return ge::GRAPH_FAILED);
         auto scaleInputDim0 = scaleInputShapePtr->GetStorageShape().GetDim(0);
         OP_CHECK_IF(
             (scaleInputDim0 != baseInfoOp.endAxisLen),
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_, "input_scale", std::to_string(scaleInputDim0), "The last dim of input_scale must equal the last dim of x"),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName_, "input_scale", std::to_string(scaleInputDim0),
+                                                     "The last dim of input_scale must equal the last dim of x"),
             return ge::GRAPH_FAILED);
     }
 
@@ -249,9 +273,8 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantPerTensorTiling()
     OP_LOGD(nodeName_, "[GeluQuant] DoStaticQuantPerTensorTiling start running.");
     splitCoreOp.coexistentNodeNum = STATIC_QUANT_PER_TENSOR_COEXISTING_QUANTITY;
     splitCoreOp.coexistentNodeElementNum = AlignToFloor(
-        (SafeDivide(
-            static_cast<int64_t>(baseInfoOp.ubSize),
-            static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum)),
+        (SafeDivide(static_cast<int64_t>(baseInfoOp.ubSize),
+                    static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum)),
         FP32_BLOCK_NUM);
 
     if (baseInfoOp.fusedAllAxis <= SINGLE_CORE_PROCESS_MIN_NUM) {
@@ -264,8 +287,8 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantPerTensorTiling()
                                                SINGLE_CORE_PROCESS_MIN_NUM :
                                                splitCoreOp.normalCoreProcessNum;
         splitCoreOp.usedCoreNum = CeilDivide(baseInfoOp.fusedAllAxis, splitCoreOp.normalCoreProcessNum);
-        splitCoreOp.tailCoreProcessNum =
-            baseInfoOp.fusedAllAxis - splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
+        splitCoreOp.tailCoreProcessNum = baseInfoOp.fusedAllAxis -
+                                         splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -297,8 +320,8 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantFullKernelSmallEndAxis()
 
     splitCoreOp.normalCoreProcessNum = CeilDivide(splitCoreOp.rowOuter, baseInfoOp.vectorCoreNum);
     splitCoreOp.usedCoreNum = CeilDivide(splitCoreOp.rowOuter, splitCoreOp.normalCoreProcessNum);
-    splitCoreOp.tailCoreProcessNum =
-        splitCoreOp.rowOuter - splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
+    splitCoreOp.tailCoreProcessNum = splitCoreOp.rowOuter -
+                                     splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -321,11 +344,11 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantNotFullKernelSplitEndAxis()
     int64_t colTailTmp = colInnerTmp == 0 ? baseInfoOp.endAxisLen : baseInfoOp.endAxisLen % colInnerTmp;
     splitCoreOp.colTail = colTailTmp == 0 ? splitCoreOp.colInner : colTailTmp;
 
-    splitCoreOp.normalCoreProcessNum =
-        CeilDivide(splitCoreOp.rowOuter * splitCoreOp.colOuter, baseInfoOp.vectorCoreNum);
+    splitCoreOp.normalCoreProcessNum = CeilDivide(splitCoreOp.rowOuter * splitCoreOp.colOuter,
+                                                  baseInfoOp.vectorCoreNum);
     splitCoreOp.usedCoreNum = CeilDivide(splitCoreOp.rowOuter * splitCoreOp.colOuter, splitCoreOp.normalCoreProcessNum);
-    splitCoreOp.tailCoreProcessNum =
-        splitCoreOp.rowOuter * splitCoreOp.colOuter - splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
+    splitCoreOp.tailCoreProcessNum = splitCoreOp.rowOuter * splitCoreOp.colOuter -
+                                     splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -339,15 +362,14 @@ ge::graphStatus GeluQuantTiling::DoStaticQuantTiling()
 
     splitCoreOp.coexistentNodeNum = STATIC_QUANT_COEXISTING_QUANTITY;
     splitCoreOp.coexistentNodeElementNum = AlignToFloor(
-        (SafeDivide(
-            static_cast<int64_t>(baseInfoOp.ubSize),
-            static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum)),
+        (SafeDivide(static_cast<int64_t>(baseInfoOp.ubSize),
+                    static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum)),
         FP32_BLOCK_NUM);
 
     splitCoreOp.normalCoreProcessNum = CeilDivide(baseInfoOp.fusedFrontAxis, baseInfoOp.vectorCoreNum);
     splitCoreOp.usedCoreNum = CeilDivide(baseInfoOp.fusedFrontAxis, splitCoreOp.normalCoreProcessNum);
-    splitCoreOp.tailCoreProcessNum =
-        baseInfoOp.fusedFrontAxis - splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
+    splitCoreOp.tailCoreProcessNum = baseInfoOp.fusedFrontAxis -
+                                     splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
 
     int64_t mulRowsInUb = splitCoreOp.coexistentNodeElementNum / baseInfoOp.endAxisLenAligned;
     if (baseInfoOp.fusedFrontAxis >= baseInfoOp.vectorCoreNum && mulRowsInUb < TWO_END_AXIS) {
@@ -370,14 +392,13 @@ ge::graphStatus GeluQuantTiling::DoDynamicQuantTiling()
     OP_LOGD(nodeName_, "[GeluQuant] DoDynamicQuantTiling start running.");
     splitCoreOp.normalCoreProcessNum = CeilDivide(baseInfoOp.fusedFrontAxis, baseInfoOp.vectorCoreNum);
     splitCoreOp.usedCoreNum = CeilDivide(baseInfoOp.fusedFrontAxis, splitCoreOp.normalCoreProcessNum);
-    splitCoreOp.tailCoreProcessNum =
-        baseInfoOp.fusedFrontAxis - splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
+    splitCoreOp.tailCoreProcessNum = baseInfoOp.fusedFrontAxis -
+                                     splitCoreOp.normalCoreProcessNum * (splitCoreOp.usedCoreNum - 1);
 
     splitCoreOp.coexistentNodeNum = DYNAMIC_QUANT_COEXISTING_QUANTITY;
     splitCoreOp.coexistentNodeElementNum = AlignToFloor(
-        (SafeDivide(
-            static_cast<int64_t>(baseInfoOp.ubSize),
-            static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum)),
+        (SafeDivide(static_cast<int64_t>(baseInfoOp.ubSize),
+                    static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum)),
         FP32_BLOCK_NUM);
 
     int64_t mulRowsInUb = splitCoreOp.coexistentNodeElementNum / baseInfoOp.endAxisLenAligned;
@@ -386,9 +407,8 @@ ge::graphStatus GeluQuantTiling::DoDynamicQuantTiling()
         splitCoreOp.templateMode = DYNAMIC_WORKSPACE_TEMPLATE;
         splitCoreOp.coexistentNodeNum = DYNAMIC_QUANT_WORKSPACE_COEXISTING_QUANTITY;
         splitCoreOp.coexistentNodeElementNum = AlignToFloor(
-            SafeDivide(
-                static_cast<int64_t>(baseInfoOp.ubSize),
-                static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum),
+            SafeDivide(static_cast<int64_t>(baseInfoOp.ubSize),
+                       static_cast<int64_t>(sizeof(float)) * splitCoreOp.coexistentNodeNum),
             FP32_BLOCK_NUM);
     } else {
         splitCoreOp.templateMode = DYNAMIC_NORMAL_TEMPLATE;
@@ -590,11 +610,12 @@ ge::graphStatus TilingPrepareForGeluQuant(gert::TilingParseContext* context)
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context->GetNodeName(), "vectorCoreNum,ubSize",std::to_string(compileInfo->vectorCoreNum)+","+std::to_string(compileInfo->ubSize),"The value of vectorCoreNum,ubSize must be greater than 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "vectorCoreNum,ubSize",
+                    std::to_string(compileInfo->vectorCoreNum) + "," + std::to_string(compileInfo->ubSize),
+                    "The value of vectorCoreNum,ubSize must be greater than 0"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
     return ge::GRAPH_SUCCESS;
 }

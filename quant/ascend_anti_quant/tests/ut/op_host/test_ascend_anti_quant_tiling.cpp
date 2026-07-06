@@ -26,15 +26,9 @@ using namespace ut_util;
 
 class AscendAntiQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AscendAntiQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AscendAntiQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AscendAntiQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AscendAntiQuantTiling TearDown" << std::endl; }
 };
 
 struct AscendAntiQuantCompileInfo {
@@ -42,9 +36,8 @@ struct AscendAntiQuantCompileInfo {
     uint64_t ubSize = 0;
 };
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platform_info, map<string, string>& soc_infos, map<string, string>& aicore_spec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platform_info, map<string, string>& soc_infos,
+                         map<string, string>& aicore_spec, map<string, string>& intrinsics)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -60,9 +53,8 @@ static void InitPlatForm(
     platform_info.Init();
 }
 
-static void DoTilingCase(
-    ge::DataType inDtype, ge::DataType outDtype, int64_t dstTypeAttr, bool sqrtMode,
-    const gert::StorageShape& xShape, ge::graphStatus expected)
+static void DoTilingCase(ge::DataType inDtype, ge::DataType outDtype, int64_t dstTypeAttr, bool sqrtMode,
+                         const gert::StorageShape& xShape, ge::graphStatus expected)
 {
     fe::PlatFormInfos platform_info;
     map<string, string> soc_infos;
@@ -89,19 +81,19 @@ static void DoTilingCase(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 

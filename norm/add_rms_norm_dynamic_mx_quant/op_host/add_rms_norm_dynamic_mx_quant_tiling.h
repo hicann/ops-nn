@@ -37,15 +37,13 @@ namespace optiling {
 
 namespace add_rms_norm_dynamic_mx_quant {
 
-enum class ComputeMode : uint64_t
-{
+enum class ComputeMode : uint64_t {
     FULL_LOAD = 0,
     SPLIT_R = 1,
     REDUCE_EMPTY = 2,
 };
 
-enum class YDataType : uint64_t
-{
+enum class YDataType : uint64_t {
     FP8 = 0,
     FP4 = 1,
 };
@@ -124,7 +122,8 @@ constexpr int64_t DST_TYPE_E1M2 = 41;
 
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
-const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN,
+                                                    ge::DT_FLOAT8_E5M2};
 
 struct AddRmsNormDynamicMxQuantCompileInfo {
     uint64_t totalCoreNum = 0;
@@ -150,10 +149,7 @@ public:
     {}
     ~AddRmsNormDynamicMxQuantRegbaseTilingBase() override {}
 
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
 
     const string nodeName = "AddRmsNormDynamicMxQuantRegbaseTiling";
 
@@ -180,24 +176,24 @@ protected:
     // Platform
     uint64_t totalCoreNum_{0};
     uint64_t maxUbSize_{0};
-    uint64_t vecLengthFP32_{0};       // vector register length (elements of FP32)
-    uint64_t ubBlockSize_{0};     // UB block size in bytes
+    uint64_t vecLengthFP32_{0}; // vector register length (elements of FP32)
+    uint64_t ubBlockSize_{0};   // UB block size in bytes
 
     // Shape
-    uint64_t numRow_{0};          // A dimension
-    uint64_t numCol_{0};          // R dimension
-    uint64_t numColAlign_{0};     // R aligned
+    uint64_t numRow_{0};      // A dimension
+    uint64_t numCol_{0};      // R dimension
+    uint64_t numColAlign_{0}; // R aligned
 
     // Dtype sizes
-    uint64_t xDtypeSize_{2};      // 2 for FP16/BF16
-    uint64_t gammaDtypeSize_{2};  // 2 for FP16/BF16, 4 for FP32
+    uint64_t xDtypeSize_{2};     // 2 for FP16/BF16
+    uint64_t gammaDtypeSize_{2}; // 2 for FP16/BF16, 4 for FP32
     ge::DataType xDtype_{ge::DT_FLOAT16};
     ge::DataType gammaDtype_{ge::DT_FLOAT16};
     ge::DataType yDtype_{ge::DT_FLOAT8_E4M3FN};
 
     // Tiling results
-    uint64_t blockFactor_{0};     // rows per core
-    uint64_t rowFactor_{0};       // rows per UB iteration
+    uint64_t blockFactor_{0}; // rows per core
+    uint64_t rowFactor_{0};   // rows per UB iteration
     uint64_t usedCoreNum_{0};
     uint64_t mPerCore_{0};
     uint64_t mLastCore_{0};
@@ -206,11 +202,11 @@ protected:
     // Attributes
     float epsilon_{1e-6};
     float avgFactor_{0.0};
-    uint64_t roundMode_{4};        // default: RINT
-    int64_t scaleAlg_{0};         // default: standard MX
+    uint64_t roundMode_{4}; // default: RINT
+    int64_t scaleAlg_{0};   // default: standard MX
 
     // MX Quant derived params
-    uint64_t mxBlockSize_{32};       // MX block size
+    uint64_t mxBlockSize_{32}; // MX block size
     uint64_t blockNumInColAxis_{0};
     uint64_t tailBlockSize_{0};
     uint64_t mxScaleSize_{0};
@@ -223,13 +219,12 @@ protected:
 
 class AddRmsNormDynamicMxQuantRFullLoadTiling : public AddRmsNormDynamicMxQuantRegbaseTilingBase {
 public:
-    explicit AddRmsNormDynamicMxQuantRFullLoadTiling(gert::TilingContext* context) : AddRmsNormDynamicMxQuantRegbaseTilingBase(context)
+    explicit AddRmsNormDynamicMxQuantRFullLoadTiling(gert::TilingContext* context)
+        : AddRmsNormDynamicMxQuantRegbaseTilingBase(context)
     {}
     ~AddRmsNormDynamicMxQuantRFullLoadTiling() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context); }
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -242,6 +237,7 @@ protected:
     void PrintTilingData();
 
     uint64_t dstStrideUbBlocks_{0};
+
 private:
     AddRmsNormDynamicMxQuantTilingData tilingData;
 };
@@ -252,16 +248,15 @@ public:
         : AddRmsNormDynamicMxQuantRegbaseTilingBase(context)
     {}
     ~AddRmsNormDynamicMxQuantReduceEmptyTiling() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context); }
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
+
 private:
     AddRmsNormDynamicMxQuantReduceEmptyTilingData td_;
 };
@@ -272,10 +267,8 @@ public:
         : AddRmsNormDynamicMxQuantRegbaseTilingBase(context)
     {}
     ~AddRmsNormDynamicMxQuantSplitRTiling() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context); }
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -289,8 +282,8 @@ protected:
     void PrintTilingData();
 
 private:
-    uint64_t baseN_{64};        // initial baseN, power of 2
-    uint64_t baseM_{128};       // 32-byte aligned, for rstd batch alignment
+    uint64_t baseN_{64};  // initial baseN, power of 2
+    uint64_t baseM_{128}; // 32-byte aligned, for rstd batch alignment
     uint64_t nUbLoops_{0};
     uint64_t powerSplit_{0};
     uint64_t mainFoldCount_{0};

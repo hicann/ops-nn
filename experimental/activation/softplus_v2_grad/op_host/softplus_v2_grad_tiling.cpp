@@ -16,33 +16,37 @@
 #include "tiling/platform/platform_ascendc.h"
 
 namespace optiling {
-static const uint32_t BLOCK_SIZE = 512;  // 改为512字节对齐
+static const uint32_t BLOCK_SIZE = 512; // 改为512字节对齐
 static const uint32_t BUFFER_NUM = 2;
-static const uint32_t DATA_COPY_ALIGNMENT = 512;  // DataCopy改为512字节对齐
-static const uint32_t COMPUTE_ALIGNMENT = 256;    // 计算操作保持256字节对齐
+static const uint32_t DATA_COPY_ALIGNMENT = 512; // DataCopy改为512字节对齐
+static const uint32_t COMPUTE_ALIGNMENT = 256;   // 计算操作保持256字节对齐
 
 // 对齐计算函数（保留，用于host侧对齐计算）
-static uint32_t AlignSize(uint32_t size, uint32_t alignment) {
+static uint32_t AlignSize(uint32_t size, uint32_t alignment)
+{
     if (alignment == 0) {
-        return size;  // 避免除0
+        return size; // 避免除0
     }
     return (size + alignment - 1) / alignment * alignment;
 }
 
 struct SoftplusV2GradCompileInfo {};
 
-static ge::graphStatus TilingParseForSoftplusV2Grad([[maybe_unused]] gert::TilingParseContext* context) {
+static ge::graphStatus TilingParseForSoftplusV2Grad([[maybe_unused]] gert::TilingParseContext* context)
+{
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum) {
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+{
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     coreNum = ascendcPlatform.GetCoreNumAiv();
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context) {
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+{
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
 
     // 计算Workspace大小，确保512字节对齐
@@ -57,7 +61,8 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context) {
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SoftplusV2GradTilingFunc(gert::TilingContext* context) {
+static ge::graphStatus SoftplusV2GradTilingFunc(gert::TilingContext* context)
+{
     SoftplusV2GradTilingData* tiling = context->GetTilingData<SoftplusV2GradTilingData>();
     if (tiling == nullptr) {
         return ge::GRAPH_FAILED;
@@ -106,9 +111,9 @@ static ge::graphStatus SoftplusV2GradTilingFunc(gert::TilingContext* context) {
     if (tileDataNum >= inputNum) {
         coreNum = 1;
     } else {
-        coreNum = (static_cast<uint64_t>(coreNum) < inputLengthAlign512 / BLOCK_SIZE)
-                      ? coreNum
-                      : inputLengthAlign512 / BLOCK_SIZE;
+        coreNum = (static_cast<uint64_t>(coreNum) < inputLengthAlign512 / BLOCK_SIZE) ?
+                      coreNum :
+                      inputLengthAlign512 / BLOCK_SIZE;
     }
 
     uint32_t everyCoreInputBlockNum = inputLengthAlign512 / BLOCK_SIZE / coreNum;
@@ -122,8 +127,8 @@ static ge::graphStatus SoftplusV2GradTilingFunc(gert::TilingContext* context) {
 
     // 计算对齐长度使用512字节对齐
     uint32_t smallprocessDataNum_computes = AlignSize(tileDataNum * inputBytes, COMPUTE_ALIGNMENT) / inputBytes;
-    uint32_t tailsmallprocessDataNum_computes =
-        AlignSize(smallTailDataNum * inputBytes, COMPUTE_ALIGNMENT) / inputBytes;
+    uint32_t tailsmallprocessDataNum_computes = AlignSize(smallTailDataNum * inputBytes, COMPUTE_ALIGNMENT) /
+                                                inputBytes;
 
     everyCoreInputBlockNum += 1;
     uint32_t bigCoreDataNum = everyCoreInputBlockNum * BLOCK_SIZE / inputBytes;
@@ -155,9 +160,11 @@ static ge::graphStatus SoftplusV2GradTilingFunc(gert::TilingContext* context) {
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const float* beta_ptr = attrs->GetFloat(0);
-        if (beta_ptr != nullptr) beta = *beta_ptr;
+        if (beta_ptr != nullptr)
+            beta = *beta_ptr;
         const float* threshold_ptr = attrs->GetFloat(1);
-        if (threshold_ptr != nullptr) threshold = *threshold_ptr;
+        if (threshold_ptr != nullptr)
+            threshold = *threshold_ptr;
     }
     tiling->beta = beta;
     tiling->threshold = threshold;
@@ -175,4 +182,4 @@ static ge::graphStatus SoftplusV2GradTilingFunc(gert::TilingContext* context) {
 IMPL_OP_OPTILING(SoftplusV2Grad)
     .Tiling(SoftplusV2GradTilingFunc)
     .TilingParse<SoftplusV2GradCompileInfo>(TilingParseForSoftplusV2Grad);
-}  // namespace optiling
+} // namespace optiling

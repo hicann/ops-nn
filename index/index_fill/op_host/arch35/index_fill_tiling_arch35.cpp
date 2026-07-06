@@ -40,19 +40,20 @@ constexpr uint32_t COMPARE_ALIGNED = 128;
 
 class IndexFillTilingArch35 {
 public:
-  explicit IndexFillTilingArch35(gert::TilingContext* context_) : context(context_){};
-  void Init();
+    explicit IndexFillTilingArch35(gert::TilingContext* context_) : context(context_){};
+    void Init();
+
 private:
-  gert::TilingContext* context = nullptr;
-  TilingDataStructIndexFillArch35 tilingData;
+    gert::TilingContext* context = nullptr;
+    TilingDataStructIndexFillArch35 tilingData;
 };
 
 static ge::graphStatus IndexFillTilingForArch35(gert::TilingContext* context)
 {
-  OP_LOGD(context->GetNodeName(), "Tiling for IndexFill start.");
-  ge::graphStatus result = optiling::Tiling4IndexFillArch35(context);
-  OP_LOGD(context->GetNodeName(), "Tiling for IndexFill end.");
-  return result;
+    OP_LOGD(context->GetNodeName(), "Tiling for IndexFill start.");
+    ge::graphStatus result = optiling::Tiling4IndexFillArch35(context);
+    OP_LOGD(context->GetNodeName(), "Tiling for IndexFill end.");
+    return result;
 }
 
 ge::graphStatus TilingArch35PrepareForIndexFill(gert::TilingParseContext* context)
@@ -69,7 +70,8 @@ ge::graphStatus TilingArch35PrepareForIndexFill(gert::TilingParseContext* contex
     compileInfo->ubSizePlatForm = static_cast<uint64_t>(ubSizePlatForm);
     if (compileInfo->ubSizePlatForm <= 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "UB size", std::to_string(static_cast<uint64_t>(compileInfo->ubSizePlatForm)).c_str(), 
+            context->GetNodeName(), "UB size",
+            std::to_string(static_cast<uint64_t>(compileInfo->ubSizePlatForm)).c_str(),
             "platform UB size must be greater than 0");
         return ge::GRAPH_FAILED;
     }
@@ -86,4 +88,4 @@ ge::graphStatus TilingArch35PrepareForIndexFill(gert::TilingParseContext* contex
 IMPL_OP_OPTILING(IndexFill)
     .Tiling(IndexFillTilingForArch35)
     .TilingParse<IndexFillCompileInfoArch35>(TilingArch35PrepareForIndexFill);
-}
+} // namespace optiling

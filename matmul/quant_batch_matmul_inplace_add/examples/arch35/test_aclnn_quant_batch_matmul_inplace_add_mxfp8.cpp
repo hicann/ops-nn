@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -61,9 +61,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -80,9 +79,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -133,12 +131,12 @@ int AclnnQuantBatchMatmulInplaceAddTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* x1Scale = nullptr;
     aclTensor* yOutput = nullptr;
 
-    std::vector<uint8_t> x1HostData(M * K, 1);                 // 0b00111000 为 fp8_e4m3fn的1.0
+    std::vector<uint8_t> x1HostData(M * K, 1); // 0b00111000 为 fp8_e4m3fn的1.0
     std::vector<uint8_t> x2HostData(N * K, 1); // 0b0010为fp4_e2m1的1.0，这里用uint8代表2个fp4
-    std::vector<uint8_t> x2ScaleHostData(CeilDiv(K, 64) * N * 2, 1); 
-    std::vector<float> yInputHostData(M * N, 1);                        // fp32的1.0
+    std::vector<uint8_t> x2ScaleHostData(CeilDiv(K, 64) * N * 2, 1);
+    std::vector<float> yInputHostData(M * N, 1); // fp32的1.0
     std::vector<uint8_t> x1ScaleHostData(M * CeilDiv(K, 64) * 2, 1);
-    std::vector<float> yOutputHostData(M * N, 1); 
+    std::vector<float> yOutputHostData(M * N, 1);
 
     // 创建x1 aclTensor
     ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT8_E4M3FN, &x1);
@@ -180,7 +178,8 @@ int AclnnQuantBatchMatmulInplaceAddTest(int32_t deviceId, aclrtStream& stream)
     void* workspaceAddr = nullptr;
 
     // 调用aclnnQuantBatchMatmulInplaceAdd第一段接口
-    ret = aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(x1, x2, x1Scale, x2Scale, yInput, transposeX1, transposeX2, groupSize, &workspaceSize, &executor);
+    ret = aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(x1, x2, x1Scale, x2Scale, yInput, transposeX1, transposeX2,
+                                                          groupSize, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -199,8 +198,8 @@ int AclnnQuantBatchMatmulInplaceAddTest(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yInputShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), size * sizeof(uint32_t), yInputDeviceAddr,
-                    size * sizeof(uint32_t), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), size * sizeof(uint32_t), yInputDeviceAddr, size * sizeof(uint32_t),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t j = 0; j < size; j++) {
         LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
@@ -215,7 +214,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = AclnnQuantBatchMatmulInplaceAddTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantBatchMatmulInplaceAddTest failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantBatchMatmulInplaceAddTest failed. ERROR: %d\n", ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

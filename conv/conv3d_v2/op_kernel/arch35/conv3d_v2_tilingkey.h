@@ -12,7 +12,7 @@
  * \file conv3d_v2_tilingkey.h
  * \brief
  */
- 
+
 #ifndef CONV3D_V2_TILINGKEY_H
 #define CONV3D_V2_TILINGKEY_H
 
@@ -23,28 +23,27 @@
 namespace Conv3DV2Key {
 using namespace ConvKey;
 
-ASCENDC_TPL_ARGS_DECL(Conv3DV2,
-ASCENDC_TPL_UINT_DECL(FmapTiling, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_FMAP_TILING_FULLLOAD_AL1, CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_FMAP_TILING_OTHER),
-ASCENDC_TPL_UINT_DECL(WeightTiling, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_WEIGHT_TILING_FULLLOAD_BL1, CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_WEIGHT_TILING_OTHER),
-ASCENDC_TPL_UINT_DECL(L1PingPong, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_L1_PINGPONG_ALL_CLOSE, CONV_L1_PINGPONG_AL1_OPEN, CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),
-ASCENDC_TPL_UINT_DECL(L0PingPong, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),
-ASCENDC_TPL_UINT_DECL(OutputOrder, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
-    CONV_OUTPUT_ORDER_HW_MODE, CONV_OUTPUT_ORDER_M_MODE),
-ASCENDC_TPL_UINT_DECL(IterOrder, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
-    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),
-ASCENDC_TPL_UINT_DECL(GroupType, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_GROUP_TYPE_NORMAL_CONV, CONV_GROUP_TYPE_ORI_GROUP_CONV, CONV_GROUP_TYPE_OPT_GROUP_CONV),
-ASCENDC_TPL_UINT_DECL(BigKernel, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
-    CONV_NORMAL_KERNEL, CONV_BIG_KERNEL)
-);
+ASCENDC_TPL_ARGS_DECL(
+    Conv3DV2,
+    ASCENDC_TPL_UINT_DECL(FmapTiling, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_FULLLOAD_AL1,
+                          CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0, CONV_FMAP_TILING_OTHER),
+    ASCENDC_TPL_UINT_DECL(WeightTiling, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_FULLLOAD_BL1,
+                          CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0, CONV_WEIGHT_TILING_OTHER),
+    ASCENDC_TPL_UINT_DECL(L1PingPong, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE,
+                          CONV_L1_PINGPONG_AL1_OPEN, CONV_L1_PINGPONG_BL1_OPEN, CONV_L1_PINGPONG_ALL_OPEN),
+    ASCENDC_TPL_UINT_DECL(L0PingPong, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_CLOSE,
+                          CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),
+    ASCENDC_TPL_UINT_DECL(OutputOrder, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE,
+                          CONV_OUTPUT_ORDER_M_MODE),
+    ASCENDC_TPL_UINT_DECL(IterOrder, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST,
+                          CONV_ITER_ORDER_NITER_FIRST),
+    ASCENDC_TPL_UINT_DECL(GroupType, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV,
+                          CONV_GROUP_TYPE_ORI_GROUP_CONV, CONV_GROUP_TYPE_OPT_GROUP_CONV),
+    ASCENDC_TPL_UINT_DECL(BigKernel, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL, CONV_BIG_KERNEL));
 
 // Weight Ub Trans Mode TilingKey SEL
-#if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X == DT_INT8 && defined(ORIG_DTYPE_BIAS) &&                                  \
-    (ORIG_DTYPE_BIAS == DT_FLOAT16 || ORIG_DTYPE_BIAS == DT_BF16 || ORIG_DTYPE_BIAS == DT_FLOAT) &&                  \
+#if defined(ORIG_DTYPE_X) && ORIG_DTYPE_X == DT_INT8 && defined(ORIG_DTYPE_BIAS) &&                 \
+    (ORIG_DTYPE_BIAS == DT_FLOAT16 || ORIG_DTYPE_BIAS == DT_BF16 || ORIG_DTYPE_BIAS == DT_FLOAT) && \
     defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_Y) && FORMAT_Y == FORMAT_NDHWC
 #define CONV3D_KERNEL_TYPE_SEL ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2)
 #define CONV3D_OPT_GROUP_SEL()
@@ -52,92 +51,64 @@ ASCENDC_TPL_UINT_DECL(BigKernel, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
 
 #else
 #define CONV3D_KERNEL_TYPE_SEL ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY)
-#define CONV3D_OPT_GROUP_SEL()                                                                                       \
-ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
-CONV_COMMON_OPT_GROUP_SEL(),                                                                                         \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_OPT_GROUP_SEL()                                                         \
+    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), CONV_COMMON_OPT_GROUP_SEL(), \
+        ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_ORI_GROUP_SEL()                                                                                       \
-ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
-CONV_COMMON_ORI_GROUP_SEL(),                                                                                         \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_ORI_GROUP_SEL()                                                      \
+    ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY), CONV_COMMON_ORI_GROUP_SEL(), \
+        ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
 #endif
 
 #define CONV3D_BIG_KERNEL_SEL()                                                                                      \
-ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_FMAP_TILING_OTHER),                                                                                         \
-ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
-    CONV_WEIGHT_TILING_OTHER),                                                                                      \
-ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L1_PINGPONG_ALL_OPEN),                                                                                      \
-ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),    \
-ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
-    CONV_OUTPUT_ORDER_HW_MODE),                                                                                      \
-ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
-ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_GROUP_TYPE_NORMAL_CONV, CONV_GROUP_TYPE_ORI_GROUP_CONV),                                                    \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                 \
-    CONV_BIG_KERNEL)
+    ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_OTHER),                                   \
+        ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_OTHER),                           \
+        ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_OPEN),                            \
+        ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST, CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, \
+                             CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                  \
+        ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_HW_MODE),                           \
+        ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST,                            \
+                             CONV_ITER_ORDER_NITER_FIRST),                                                           \
+        ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV,                            \
+                             CONV_GROUP_TYPE_ORI_GROUP_CONV),                                                        \
+        ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_BIG_KERNEL)
 
-#define CONV3D_COMMON_ONLY_MN_FULLLOAD_SEL()                                                                        \
-CONV_COMMON_ONLY_MN_FULLLOAD_SEL(),                                                                                 \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_ONLY_MN_FULLLOAD_SEL() \
+    CONV_COMMON_ONLY_MN_FULLLOAD_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_NO_FULLLOAD_AL0_OPEN_SEL()                                                                    \
-CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL(),                                                                             \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_NO_FULLLOAD_AL0_OPEN_SEL() \
+    CONV_COMMON_NO_FULLLOAD_AL0_OPEN_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_NO_FULLLOAD_BL0_OPEN_SEL()                                                                    \
-CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL(),                                                                             \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_NO_FULLLOAD_BL0_OPEN_SEL() \
+    CONV_COMMON_NO_FULLLOAD_BL0_OPEN_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_NO_FULLLOAD_ALL_OPEN_SEL()                                                                    \
-CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL(),                                                                             \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_NO_FULLLOAD_ALL_OPEN_SEL() \
+    CONV_COMMON_NO_FULLLOAD_ALL_OPEN_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_ONLY_AL1_FULLLOAD_SEL()                                                                       \
-CONV_COMMON_ONLY_AL1_FULLLOAD_SEL(),                                                                                \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_ONLY_AL1_FULLLOAD_SEL() \
+    CONV_COMMON_ONLY_AL1_FULLLOAD_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_ONLY_BL1_FULLLOAD_SEL()                                                                       \
-CONV_COMMON_ONLY_BL1_FULLLOAD_SEL(),                                                                                \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_ONLY_BL1_FULLLOAD_SEL() \
+    CONV_COMMON_ONLY_BL1_FULLLOAD_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_ABL1_FULLLOAD_M_FIRST_SEL()                                                                   \
-CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL(),                                                                            \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_ABL1_FULLLOAD_M_FIRST_SEL() \
+    CONV_COMMON_ABL1_FULLLOAD_M_FIRST_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-#define CONV3D_COMMON_ABL1_FULLLOAD_N_FIRST_SEL()                                                                   \
-CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL(),                                                                            \
-ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST,                                                                \
-    CONV_NORMAL_KERNEL)
+#define CONV3D_COMMON_ABL1_FULLLOAD_N_FIRST_SEL() \
+    CONV_COMMON_ABL1_FULLLOAD_N_FIRST_SEL(), ASCENDC_TPL_UINT_SEL(BigKernel, ASCENDC_TPL_UI_LIST, CONV_NORMAL_KERNEL)
 
-ASCENDC_TPL_SEL(
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ONLY_MN_FULLLOAD_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_NO_FULLLOAD_AL0_OPEN_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_NO_FULLLOAD_BL0_OPEN_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_NO_FULLLOAD_ALL_OPEN_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ONLY_AL1_FULLLOAD_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ONLY_BL1_FULLLOAD_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ABL1_FULLLOAD_M_FIRST_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ABL1_FULLLOAD_N_FIRST_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_OPT_GROUP_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_ORI_GROUP_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_BIG_KERNEL_SEL())
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ONLY_MN_FULLLOAD_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_NO_FULLLOAD_AL0_OPEN_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_NO_FULLLOAD_BL0_OPEN_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_NO_FULLLOAD_ALL_OPEN_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ONLY_AL1_FULLLOAD_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ONLY_BL1_FULLLOAD_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ABL1_FULLLOAD_M_FIRST_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_COMMON_ABL1_FULLLOAD_N_FIRST_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_OPT_GROUP_SEL()), ASCENDC_TPL_ARGS_SEL(CONV3D_ORI_GROUP_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CONV3D_KERNEL_TYPE_SEL, CONV3D_BIG_KERNEL_SEL()));
 
-}
+} // namespace Conv3DV2Key
 
-#endif  // CONV3D_V2_TILINGKEY_H
+#endif // CONV3D_V2_TILINGKEY_H

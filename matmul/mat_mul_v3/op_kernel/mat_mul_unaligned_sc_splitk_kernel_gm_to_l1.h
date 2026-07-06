@@ -22,9 +22,8 @@
 using namespace AscendC;
 using namespace matmul;
 
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulSingleCoreSplitKBaseBlock,
-    const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulSingleCoreSplitKBaseBlock,
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD>
 class MatMulUnAlignedSingleCoreSplitKKernelGmToL1
     : public MatMulUnAlignedSingleCoreSplitKKernelBase<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG> {
 public:

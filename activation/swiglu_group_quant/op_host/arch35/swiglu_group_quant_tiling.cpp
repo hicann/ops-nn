@@ -29,15 +29,14 @@ int64_t CeilDiv(int64_t x, int64_t y)
     }
     return x;
 }
-int64_t DownAlign(int64_t x, int64_t y) {
+int64_t DownAlign(int64_t x, int64_t y)
+{
     if (y == 0) {
         return x;
     }
     return (x / y) * y;
 }
-int64_t RoundUp(int64_t x, int64_t y) {
-    return CeilDiv(x, y) * y;
-}
+int64_t RoundUp(int64_t x, int64_t y) { return CeilDiv(x, y) * y; }
 
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t REPEAT_SIZE = 256;
@@ -82,10 +81,10 @@ int64_t ShapeElementNum(const gert::Shape& shape)
     }
     return elementNum;
 }
-}
+} // namespace
 
-ge::graphStatus SwigluGroupQuantTiling::GetPlatformInfoCommon(gert::TilingContext* context,
-                                                               uint64_t& coreNum, uint64_t& ubSize)
+ge::graphStatus SwigluGroupQuantTiling::GetPlatformInfoCommon(gert::TilingContext* context, uint64_t& coreNum,
+                                                              uint64_t& ubSize)
 {
     auto platformInfo = context->GetPlatformInfo();
     if (platformInfo == nullptr) {
@@ -102,9 +101,8 @@ ge::graphStatus SwigluGroupQuantTiling::GetPlatformInfoCommon(gert::TilingContex
         ubSize = ubSizePlatForm;
     }
     OP_CHECK_IF((coreNum == 0 || ubSize == 0),
-        OP_LOGE(context->GetNodeName(), "GetPlatformInfo failed, coreNum=%lu, ubSize=%lu.",
-                  coreNum, ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "GetPlatformInfo failed, coreNum=%lu, ubSize=%lu.", coreNum, ubSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -128,9 +126,9 @@ ge::graphStatus SwigluGroupQuantTiling::GetClampLimitAttr(const gert::RuntimeAtt
         // DEFAULT_CLAMP_LIMIT means user did not pass clamp_limit.
         if (*clampLimitAttr != DEFAULT_CLAMP_LIMIT) {
             OP_CHECK_IF(!(*clampLimitAttr > 0.0f),
-                OP_LOGE(context_->GetNodeName(), "attr clamp_limit should be greater than 0.0, got %f.",
-                          *clampLimitAttr),
-                return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(), "attr clamp_limit should be greater than 0.0, got %f.",
+                                *clampLimitAttr),
+                        return ge::GRAPH_FAILED);
             clampLimit_ = *clampLimitAttr;
             hasClampLimit_ = 1;
         }
@@ -145,34 +143,33 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
 
     auto dstTypeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
     dstType_ = dstTypeAttr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypeAttr);
-    OP_CHECK_IF((dstType_ != ge::DT_FLOAT8_E4M3FN && dstType_ != ge::DT_FLOAT8_E5M2 &&
-                dstType_ != ge::DT_FLOAT4_E2M1 && dstType_ != ge::DT_FLOAT4_E1M2),
-        OP_LOGE(context_->GetNodeName(),
-            "attr dst_type only support (FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2), got %d.",
-            static_cast<int>(dstType_)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dstType_ != ge::DT_FLOAT8_E4M3FN && dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT4_E2M1 &&
+                 dstType_ != ge::DT_FLOAT4_E1M2),
+                OP_LOGE(context_->GetNodeName(),
+                        "attr dst_type only support (FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2), got %d.",
+                        static_cast<int>(dstType_)),
+                return ge::GRAPH_FAILED);
     isMxFp4Quant_ = dstType_ == ge::DT_FLOAT4_E2M1 || dstType_ == ge::DT_FLOAT4_E1M2;
 
     auto quantModeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     quantMode_ = quantModeAttr == nullptr ? BLOCK_QUANT : *quantModeAttr;
     OP_CHECK_IF((quantMode_ != BLOCK_QUANT && quantMode_ != MX_QUANT),
-        OP_LOGE(context_->GetNodeName(), "attr quant_mode only support 0(block_quant) or 1(mx_quant), got %ld.",
-                  quantMode_),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((isMxFp4Quant_ && quantMode_ != MX_QUANT),
+                OP_LOGE(context_->GetNodeName(), "attr quant_mode only support 0(block_quant) or 1(mx_quant), got %ld.",
+                        quantMode_),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (isMxFp4Quant_ && quantMode_ != MX_QUANT),
         OP_LOGE(context_->GetNodeName(),
-                  "attr quant_mode must be 1(mx_quant) when dst_type is FLOAT4_E2M1/FLOAT4_E1M2, got %ld.",
-                  quantMode_),
+                "attr quant_mode must be 1(mx_quant) when dst_type is FLOAT4_E2M1/FLOAT4_E1M2, got %ld.", quantMode_),
         return ge::GRAPH_FAILED);
 
     auto blockSizeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_BLOCK_SIZE);
     int64_t blockSize = blockSizeAttr == nullptr ? 0 : *blockSizeAttr;
     int64_t expectedBlockSize = quantMode_ == MX_QUANT ? PER_MX_FP16 : PER_BLOCK_FP16;
     OP_CHECK_IF((blockSize != 0 && blockSize != expectedBlockSize),
-        OP_LOGE(context_->GetNodeName(),
-                  "attr block_size should be 0 or %ld when quant_mode is %ld, got %ld.",
-                  expectedBlockSize, quantMode_, blockSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "attr block_size should be 0 or %ld when quant_mode is %ld, got %ld.",
+                        expectedBlockSize, quantMode_, blockSize),
+                return ge::GRAPH_FAILED);
 
     splitFactor_ = expectedBlockSize;
 
@@ -181,8 +178,8 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
         roundScale_ = (*roundScaleAttr) ? 1 : 0;
     }
     OP_CHECK_IF((quantMode_ == MX_QUANT && roundScale_ != 1),
-        OP_LOGE(context_->GetNodeName(), "attr round_scale should be true when quant_mode is 1."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "attr round_scale should be true when quant_mode is 1."),
+                return ge::GRAPH_FAILED);
 
     auto outputOriginAttr = attrs->GetAttrPointer<bool>(ATTR_INDEX_OUTPUT_ORIGIN);
     if (outputOriginAttr != nullptr) {
@@ -202,19 +199,19 @@ ge::graphStatus SwigluGroupQuantTiling::CheckWeightInfo()
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
         OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %d.",
-                      static_cast<int>(weightDtype)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %d.",
+                            static_cast<int>(weightDtype)),
+                    return ge::GRAPH_FAILED);
         auto weightShape = context_->GetOptionalInputShape(INPUT_INDEX_WEIGHT);
         if (weightShape != nullptr) {
             auto weightStorageShape = weightShape->GetStorageShape();
             auto weightElementNum = ShapeElementNum(weightStorageShape);
             OP_CHECK_IF((weightElementNum != bs_),
-                OP_LOGE(context_->GetNodeName(),
-                          "input weight element num should be equal to input x outer dim product, got %ld, "
-                          "expected %ld.",
-                          weightElementNum, bs_),
-                return ge::GRAPH_FAILED);
+                        OP_LOGE(context_->GetNodeName(),
+                                "input weight element num should be equal to input x outer dim product, got %ld, "
+                                "expected %ld.",
+                                weightElementNum, bs_),
+                        return ge::GRAPH_FAILED);
             hasWeight_ = true;
         }
     }
@@ -227,9 +224,9 @@ ge::graphStatus SwigluGroupQuantTiling::CheckGroupIndexInfo()
     if (groupIndexDesc != nullptr) {
         auto groupIndexDtype = groupIndexDesc->GetDataType();
         OP_CHECK_IF((groupIndexDtype != ge::DT_INT64),
-            OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %d.",
-                      static_cast<int>(groupIndexDtype)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %d.",
+                            static_cast<int>(groupIndexDtype)),
+                    return ge::GRAPH_FAILED);
         auto groupIndexShape = context_->GetOptionalInputShape(INPUT_INDEX_GROUP_INDEX);
         if (groupIndexShape != nullptr) {
             auto groupIndexStorageShape = groupIndexShape->GetStorageShape();
@@ -248,9 +245,10 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype)
     auto yDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
-    OP_CHECK_IF((yDtype != dstType_),
+    OP_CHECK_IF(
+        (yDtype != dstType_),
         OP_LOGE(context_->GetNodeName(), "output y dtype should be same as dst_type, got y dtype %d, dst_type %d.",
-                  static_cast<int>(yDtype), static_cast<int>(dstType_)),
+                static_cast<int>(yDtype), static_cast<int>(dstType_)),
         return ge::GRAPH_FAILED);
 
     auto yScaleDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE);
@@ -258,19 +256,18 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype)
     auto yScaleDtype = yScaleDesc->GetDataType();
     auto expectedYScaleDtype = quantMode_ == MX_QUANT ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT;
     OP_CHECK_IF((yScaleDtype != expectedYScaleDtype),
-        OP_LOGE(context_->GetNodeName(),
-                  "output y_scale dtype should be %d when quant_mode is %ld, got %d.",
-                  static_cast<int>(expectedYScaleDtype), quantMode_, static_cast<int>(yScaleDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "output y_scale dtype should be %d when quant_mode is %ld, got %d.",
+                        static_cast<int>(expectedYScaleDtype), quantMode_, static_cast<int>(yScaleDtype)),
+                return ge::GRAPH_FAILED);
 
     auto yOriginDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_ORIGIN);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOriginDesc);
     auto yOriginDtype = yOriginDesc->GetDataType();
     OP_CHECK_IF((yOriginDtype != xDtype),
-        OP_LOGE(context_->GetNodeName(),
-                  "output y_origin dtype should be same as input x, got y_origin dtype %d, x dtype %d.",
-                  static_cast<int>(yOriginDtype), static_cast<int>(xDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(),
+                        "output y_origin dtype should be same as input x, got y_origin dtype %d, x dtype %d.",
+                        static_cast<int>(yOriginDtype), static_cast<int>(xDtype)),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -285,23 +282,22 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     auto xDtype = xDesc->GetDataType();
     OP_CHECK_IF((xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
-        OP_LOGE(context_->GetNodeName(), "input x dtype only support FLOAT16 or BFLOAT16, got %d.",
-                  static_cast<int>(xDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "input x dtype only support FLOAT16 or BFLOAT16, got %d.",
+                        static_cast<int>(xDtype)),
+                return ge::GRAPH_FAILED);
     auto xDimNum = xStorageShape.GetDimNum();
-    OP_CHECK_IF((xDimNum == 0),
-        OP_LOGE(context_->GetNodeName(), "input x dim num should be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDimNum == 0), OP_LOGE(context_->GetNodeName(), "input x dim num should be greater than 0."),
+                return ge::GRAPH_FAILED);
     bs_ = 1;
     for (size_t i = 0; i < xDimNum - 1; i++) {
         bs_ = bs_ * xStorageShape.GetDim(i);
     }
     d_ = xStorageShape.GetDim(xDimNum - 1);
     OP_CHECK_IF((d_ < D_LIMIT || d_ % D_LIMIT != 0),
-        OP_LOGE(context_->GetNodeName(),
-                  "input x last dim should be greater than or equal to %ld and divisible by %ld, got %ld.",
-                  D_LIMIT, D_LIMIT, d_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(),
+                        "input x last dim should be greater than or equal to %ld and divisible by %ld, got %ld.",
+                        D_LIMIT, D_LIMIT, d_),
+                return ge::GRAPH_FAILED);
 
     if (CheckWeightInfo() == ge::GRAPH_FAILED || CheckGroupIndexInfo() == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
@@ -431,15 +427,13 @@ int64_t SwigluGroupQuantTiling::CalcMxFp4QuantTotalSize(int64_t rowFactor, int64
     int64_t swigluSize = rowFactor * RoundUp(dFactor, B16_ALIGN_NUM) * B16_BYTES;
     int64_t maxExpSize = rowFactor * RoundUp(tryScaleCol, B16_ALIGN_NUM) * B16_BYTES;
     int64_t invScaleSize = rowFactor * RoundUp(tryScaleCol, B16_ALIGN_NUM) * B16_BYTES;
-    int64_t ySize = rowFactor * RoundUp(CeilDiv(dFactor, FP4_PACK_NUM), FP8_ALIGN_NUM) *
-        FP8_BYTES * DOUBLE_BUFFER;
+    int64_t ySize = rowFactor * RoundUp(CeilDiv(dFactor, FP4_PACK_NUM), FP8_ALIGN_NUM) * FP8_BYTES * DOUBLE_BUFFER;
     int64_t scaleSize = rowFactor * RoundUp(tryScaleCol, FP8_ALIGN_NUM) * FP8_BYTES * DOUBLE_BUFFER;
     int64_t totalSize = x0Size + x1Size + swigluSize + maxExpSize + invScaleSize + ySize + scaleSize;
     return AddWeightSize(totalSize, rowFactor);
 }
 
-void SwigluGroupQuantTiling::CalcDAndRowFactorTiling(
-    int64_t rowOnceLoop, int64_t dStep, TotalSizeFunc calcTotalSize)
+void SwigluGroupQuantTiling::CalcDAndRowFactorTiling(int64_t rowOnceLoop, int64_t dStep, TotalSizeFunc calcTotalSize)
 {
     rowFactor_ = rowOnceLoop;
     if ((this->*calcTotalSize)(rowOnceLoop, splitD_) <= static_cast<int64_t>(ubSize_)) {
@@ -539,7 +533,8 @@ void SwigluGroupQuantTiling::SetTilingData()
     tilingData_.set_hasClampLimit(hasClampLimit_);
 }
 
-ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling() {
+ge::graphStatus SwigluGroupQuantTiling::CalcOpTiling()
+{
     ge::graphStatus status;
     status = CalcGroupIndexTiling();
     if (status == ge::GRAPH_FAILED) {
@@ -624,4 +619,4 @@ ge::graphStatus SwigluGroupQuantTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

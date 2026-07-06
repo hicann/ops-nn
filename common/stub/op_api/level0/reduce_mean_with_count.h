@@ -18,9 +18,8 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* ReduceMeanWithCount(
-    const aclTensor* input, const aclTensor* count, const aclTensor* countSum, const aclIntArray* axes, bool keepDims,
-    aclOpExecutor* executor);
+const aclTensor* ReduceMeanWithCount(const aclTensor* input, const aclTensor* count, const aclTensor* countSum,
+                                     const aclIntArray* axes, bool keepDims, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif

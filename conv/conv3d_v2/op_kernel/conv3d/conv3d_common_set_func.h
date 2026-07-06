@@ -27,7 +27,7 @@ namespace Conv3dFunc {
 
 template <class Intf, uint32_t ImplType>
 struct SetOrgFmapShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCi, uint64_t orgDi, uint64_t orgHi, uint64_t orgWi)
+    static __aicore__ inline void call(Intf* self, uint64_t orgCi, uint64_t orgDi, uint64_t orgHi, uint64_t orgWi)
     {
         self->ctx.oriCi = orgCi;
         self->ctx.orgDi = orgDi;
@@ -38,8 +38,8 @@ struct SetOrgFmapShape {
 
 template <class Intf, uint32_t ImplType>
 struct SetOrgWeightShape {
-    static __aicore__ inline void call(
-        Intf *self, uint64_t orgCo, uint64_t orgCi, uint64_t orgKd, uint64_t orgKh, uint64_t orgKw)
+    static __aicore__ inline void call(Intf* self, uint64_t orgCo, uint64_t orgCi, uint64_t orgKd, uint64_t orgKh,
+                                       uint64_t orgKw)
     {
         self->ctx.orgCo = orgCo;
         self->ctx.orgCi = orgCi;
@@ -51,7 +51,7 @@ struct SetOrgWeightShape {
 
 template <class Intf, uint32_t ImplType>
 struct SetOrgOutputShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCo, uint64_t orgDo, uint64_t orgHo, uint64_t orgWo)
+    static __aicore__ inline void call(Intf* self, uint64_t orgCo, uint64_t orgDo, uint64_t orgHo, uint64_t orgWo)
     {
         self->ctx.orgCo = orgCo;
         self->ctx.orgDo = orgDo;
@@ -62,8 +62,8 @@ struct SetOrgOutputShape {
 
 template <class Intf, uint32_t ImplType>
 struct SetSingleFmapShape {
-    static __aicore__ inline void call(
-        Intf *self, uint64_t singleCi, uint64_t singleDi, uint64_t singleHi, uint64_t singleWi)
+    static __aicore__ inline void call(Intf* self, uint64_t singleCi, uint64_t singleDi, uint64_t singleHi,
+                                       uint64_t singleWi)
     {
         self->ctx.singleCoreCin = singleCi;
         InitKDirectionBaseValue<Intf>(self);
@@ -72,9 +72,8 @@ struct SetSingleFmapShape {
 
 template <class Intf, uint32_t ImplType>
 struct SetSingleOutputShape {
-    static __aicore__ inline void call(
-        Intf *self, uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo, uint64_t singleHo,
-        uint64_t singleWo, uint64_t singleGroupOpt)
+    static __aicore__ inline void call(Intf* self, uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo,
+                                       uint64_t singleHo, uint64_t singleWo, uint64_t singleGroupOpt)
     {
         self->ctx.singleCoreCo = singleCo;
         self->ctx.singleCoreDo = singleDo;
@@ -86,9 +85,8 @@ struct SetSingleOutputShape {
         InitGroupOptDirectionValue<Intf>(self);
     }
 
-    static __aicore__ inline void call(
-        Intf *self, uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo, uint64_t singleCoreM,
-        uint64_t singleGroupOpt)
+    static __aicore__ inline void call(Intf* self, uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo,
+                                       uint64_t singleCoreM, uint64_t singleGroupOpt)
     {
         self->ctx.singleCoreCo = singleCo;
         self->ctx.singleCoreDo = singleDo;
@@ -103,14 +101,14 @@ struct SetSingleOutputShape {
 
 template <class Intf, uint32_t ImplType>
 struct SetFmapStartPosition {
-    static __aicore__ inline void call(
-        Intf *self, int64_t diStartPos, int64_t hiStartPos, int64_t wiStartPos, int64_t ciStartPos)
+    static __aicore__ inline void call(Intf* self, int64_t diStartPos, int64_t hiStartPos, int64_t wiStartPos,
+                                       int64_t ciStartPos)
     {
         self->ctx.diStartPos = diStartPos;
         self->ctx.hiStartPos = hiStartPos;
     }
 
-    static __aicore__ inline void call(Intf *self, int64_t diStartPos, int64_t mStartPos, int64_t ciStartPos)
+    static __aicore__ inline void call(Intf* self, int64_t diStartPos, int64_t mStartPos, int64_t ciStartPos)
     {
         self->ctx.diStartPos = diStartPos;
         self->ctx.mStartPos = mStartPos;
@@ -119,7 +117,7 @@ struct SetFmapStartPosition {
 
 template <class Intf, uint32_t ImplType>
 struct BeginSetCrossFlag {
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             if ASCEND_IS_AIV {
@@ -134,7 +132,7 @@ struct BeginSetCrossFlag {
 
 template <class Intf, uint32_t ImplType>
 struct EndWaitCrossFlag {
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             if ASCEND_IS_AIC {
@@ -147,10 +145,9 @@ struct EndWaitCrossFlag {
     }
 };
 
-
 template <class Intf, uint32_t ImplType>
 struct SetWorkspace {
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::L0cT> &workspace)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::L0cT>& workspace)
     {
         self->ctx.workspacegm.SetGlobalBuffer(workspace.GetPhyAddr(0), workspace.GetSize());
     }
@@ -158,7 +155,7 @@ struct SetWorkspace {
 
 template <class Intf, uint32_t ImplType>
 struct SetVecScale {
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::FP32T> &scale)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::FP32T>& scale)
     {
         self->ctx.scalegm.SetGlobalBuffer(scale.GetPhyAddr(0), scale.GetSize());
     }
@@ -166,31 +163,32 @@ struct SetVecScale {
 
 template <class Intf, uint32_t ImplType>
 struct SetSubBlockIdx {
-    static __aicore__ inline void call(Intf *self, uint32_t subblockIdx)
-    {
-        self->ctx.subblockIdx = subblockIdx;
-    }
+    static __aicore__ inline void call(Intf* self, uint32_t subblockIdx) { self->ctx.subblockIdx = subblockIdx; }
 };
 
 template <class Intf, uint32_t ImplType>
 struct LoadTotalCoreChannel {
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             if ASCEND_IS_AIV {
-                if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::LOAD_TOTAL_CORE)) {
+                if (self->ctx.conv3dTiling->scaleAndBiasLoadType ==
+                    static_cast<int8_t>(LoadChannelType::LOAD_TOTAL_CORE)) {
                     uint64_t singleco = AlignB(self->ctx.singleCoreCo, BLOCK_L0_N);
                     DataCopyParams copyinParams;
                     copyinParams.blockCount = 1;
-                    copyinParams.blockLen =  singleco * sizeof(typename Intf::BiasT) / 32;
-                    LocalTensor<typename Intf::BiasT> bias = self->ctx.queueUBbias.template AllocTensor<typename Intf::BiasT>();
+                    copyinParams.blockLen = singleco * sizeof(typename Intf::BiasT) / 32;
+                    LocalTensor<typename Intf::BiasT> bias = self->ctx.queueUBbias
+                                                                 .template AllocTensor<typename Intf::BiasT>();
                     DataCopy(bias, self->ctx.biasgm, copyinParams);
 
                     self->ctx.queueUBbias.EnQue(bias);
 
-                    LocalTensor<typename Intf::BiasT> biasLocal = self->ctx.queueUBbias.template DeQue<typename Intf::BiasT>();
+                    LocalTensor<typename Intf::BiasT> biasLocal = self->ctx.queueUBbias
+                                                                      .template DeQue<typename Intf::BiasT>();
 
-                    if constexpr (IsSameType<typename Intf::BiasT, bfloat16_t>::value || IsSameType<typename Intf::BiasT, half>::value) {
+                    if constexpr (IsSameType<typename Intf::BiasT, bfloat16_t>::value ||
+                                  IsSameType<typename Intf::BiasT, half>::value) {
                         self->ctx.ubbias = self->ctx.fp32BiasBuf.template Get<typename Intf::FP32T>();
                         Cast(self->ctx.ubbias, biasLocal, RoundMode::CAST_NONE, singleco);
                         self->ctx.queueUBbias.FreeTensor(biasLocal);
@@ -198,8 +196,9 @@ struct LoadTotalCoreChannel {
                         self->ctx.ubbias = biasLocal;
                     }
 
-                    copyinParams.blockLen =  singleco * sizeof(typename Intf::FP32T) / 32;
-                    LocalTensor<typename Intf::FP32T> scale = self->ctx.queueUBscale.template AllocTensor<typename Intf::FP32T>();
+                    copyinParams.blockLen = singleco * sizeof(typename Intf::FP32T) / 32;
+                    LocalTensor<typename Intf::FP32T> scale = self->ctx.queueUBscale
+                                                                  .template AllocTensor<typename Intf::FP32T>();
                     DataCopy(scale, self->ctx.scalegm, copyinParams);
                     self->ctx.queueUBscale.EnQue(scale);
                     self->ctx.ubscale = self->ctx.queueUBscale.template DeQue<typename Intf::FP32T>();
@@ -211,12 +210,14 @@ struct LoadTotalCoreChannel {
 
 template <class Intf, uint32_t ImplType>
 struct FreeTotalCoreChannel {
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             if ASCEND_IS_AIV {
-                if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::LOAD_TOTAL_CORE)) {
-                    if constexpr (!(IsSameType<typename Intf::BiasT, bfloat16_t>::value || IsSameType<typename Intf::BiasT, half>::value)) {
+                if (self->ctx.conv3dTiling->scaleAndBiasLoadType ==
+                    static_cast<int8_t>(LoadChannelType::LOAD_TOTAL_CORE)) {
+                    if constexpr (!(IsSameType<typename Intf::BiasT, bfloat16_t>::value ||
+                                    IsSameType<typename Intf::BiasT, half>::value)) {
                         self->ctx.queueUBbias.FreeTensor(self->ctx.ubbias);
                     }
                     self->ctx.queueUBscale.FreeTensor(self->ctx.ubscale);
@@ -228,8 +229,8 @@ struct FreeTotalCoreChannel {
 
 template <class Intf, uint32_t ImplType>
 struct SetGroupOptInfo {
-    static __aicore__ inline void call(
-        Intf *self, uint64_t singleCoreCinTail, uint64_t singleCoreCoutTail, bool isGroupOptDimTail = false)
+    static __aicore__ inline void call(Intf* self, uint64_t singleCoreCinTail, uint64_t singleCoreCoutTail,
+                                       bool isGroupOptDimTail = false)
     {
         self->ctx.singleCoreCinTail = singleCoreCinTail;
         self->ctx.singleCoreCoutTail = singleCoreCoutTail;
@@ -237,6 +238,6 @@ struct SetGroupOptInfo {
     }
 };
 
-}  // namespace Conv3dFunc
+} // namespace Conv3dFunc
 
 #endif

@@ -48,9 +48,8 @@ class ApplyProximalGradientDescent {
 public:
     __aicore__ inline ApplyProximalGradientDescent() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2, GM_ADDR delta,
-        GM_ADDR varOut, const ApplyProximalGradientDescentTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2, GM_ADDR delta, GM_ADDR varOut,
+                                const ApplyProximalGradientDescentTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -62,8 +61,8 @@ private:
 
 private:
     TPipe pipe;
-    TQue<QuePosition::VECIN,  BUFFER_NUM> inQueueVar;
-    TQue<QuePosition::VECIN,  BUFFER_NUM> inQueueDelta;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueVar;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueDelta;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueVar;
 
     // FP32 中间量（FP16 场景也是 FP32 buffer）
@@ -83,19 +82,18 @@ private:
     GlobalTensor<T> varOutGm;
 
     int64_t blockLength_ = 0;
-    int64_t ubLength_    = 0;
+    int64_t ubLength_ = 0;
 
     // 组合后的 host-like 标量（FP32 计算口径）
-    float alphaS_   = 0.f;
-    float alphaL1_  = 0.f;
+    float alphaS_ = 0.f;
+    float alphaL1_ = 0.f;
     float invScale_ = 1.f;
 };
 
 // ------------------------------ Init ------------------------------
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::LoadScalars(
-    GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2)
+__aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::LoadScalars(GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2)
 {
     // 将 3 个标量分别搬到 UB，GetValue 读取，再组合成 host-like scalar
     GlobalTensor<T> alphaGm;
@@ -106,17 +104,17 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::LoadScalars
     l2Gm.SetGlobalBuffer((__gm__ T*)l2, 1);
 
     AscendC::LocalTensor<T> alphaUb = scalarAlphaBuf.Get<T>();
-    AscendC::LocalTensor<T> l1Ub    = scalarL1Buf.Get<T>();
-    AscendC::LocalTensor<T> l2Ub    = scalarL2Buf.Get<T>();
+    AscendC::LocalTensor<T> l1Ub = scalarL1Buf.Get<T>();
+    AscendC::LocalTensor<T> l2Ub = scalarL2Buf.Get<T>();
 
     AscendC::DataCopyParams scalarParams;
     scalarParams.blockCount = 1;
-    scalarParams.blockLen   = sizeof(T);   // 读 1 个元素
-    scalarParams.srcStride  = 0;
-    scalarParams.dstStride  = 0;
+    scalarParams.blockLen = sizeof(T); // 读 1 个元素
+    scalarParams.srcStride = 0;
+    scalarParams.dstStride = 0;
     AscendC::DataCopyPad(alphaUb, alphaGm, scalarParams, {false, 0, 0, 0});
-    AscendC::DataCopyPad(l1Ub,    l1Gm,    scalarParams, {false, 0, 0, 0});
-    AscendC::DataCopyPad(l2Ub,    l2Gm,    scalarParams, {false, 0, 0, 0});
+    AscendC::DataCopyPad(l1Ub, l1Gm, scalarParams, {false, 0, 0, 0});
+    AscendC::DataCopyPad(l2Ub, l2Gm, scalarParams, {false, 0, 0, 0});
 
     // 等待 DMA 完成
     AscendC::PipeBarrier<PIPE_ALL>();
@@ -126,22 +124,22 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::LoadScalars
     float l2F;
     if constexpr (IS_HALF) {
         alphaF = static_cast<float>(alphaUb.GetValue(0));
-        l1F    = static_cast<float>(l1Ub.GetValue(0));
-        l2F    = static_cast<float>(l2Ub.GetValue(0));
+        l1F = static_cast<float>(l1Ub.GetValue(0));
+        l2F = static_cast<float>(l2Ub.GetValue(0));
     } else {
         alphaF = alphaUb.GetValue(0);
-        l1F    = l1Ub.GetValue(0);
-        l2F    = l2Ub.GetValue(0);
+        l1F = l1Ub.GetValue(0);
+        l2F = l2Ub.GetValue(0);
     }
-    alphaS_   = alphaF;
-    alphaL1_  = alphaF * l1F;
+    alphaS_ = alphaF;
+    alphaL1_ = alphaF * l1F;
     invScale_ = 1.0f / (1.0f + alphaF * l2F);
 }
 
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Init(
-    GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2, GM_ADDR delta,
-    GM_ADDR varOut, const ApplyProximalGradientDescentTilingData* tilingData)
+    GM_ADDR var, GM_ADDR alpha, GM_ADDR l1, GM_ADDR l2, GM_ADDR delta, GM_ADDR varOut,
+    const ApplyProximalGradientDescentTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -159,12 +157,12 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Init(
     deltaGm.SetGlobalBuffer((__gm__ T*)delta + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
     varOutGm.SetGlobalBuffer((__gm__ T*)varOut + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
-    pipe.InitBuffer(inQueueVar,   BUFFER_NUM, ubLength_ * sizeof(T));
+    pipe.InitBuffer(inQueueVar, BUFFER_NUM, ubLength_ * sizeof(T));
     pipe.InitBuffer(inQueueDelta, BUFFER_NUM, ubLength_ * sizeof(T));
-    pipe.InitBuffer(outQueueVar,  BUFFER_NUM, ubLength_ * sizeof(T));
+    pipe.InitBuffer(outQueueVar, BUFFER_NUM, ubLength_ * sizeof(T));
 
     pipe.InitBuffer(tmpProxBuf, ubLength_ * sizeof(float));
-    pipe.InitBuffer(tmpAbsBuf,  ubLength_ * sizeof(float));
+    pipe.InitBuffer(tmpAbsBuf, ubLength_ * sizeof(float));
     pipe.InitBuffer(tmpSignBuf, ubLength_ * sizeof(float));
     if constexpr (IS_HALF) {
         pipe.InitBuffer(tmpVarF32Buf, ubLength_ * sizeof(float));
@@ -173,8 +171,8 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Init(
 
     // 标量 UB buffer：每个 32B（容纳 FP16 或 FP32 单元素）
     pipe.InitBuffer(scalarAlphaBuf, SCALAR_BYTES);
-    pipe.InitBuffer(scalarL1Buf,    SCALAR_BYTES);
-    pipe.InitBuffer(scalarL2Buf,    SCALAR_BYTES);
+    pipe.InitBuffer(scalarL1Buf, SCALAR_BYTES);
+    pipe.InitBuffer(scalarL2Buf, SCALAR_BYTES);
 
     LoadScalars(alpha, l1, l2);
 }
@@ -182,18 +180,17 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Init(
 // ------------------------------ CopyIn ------------------------------
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
-    AscendC::LocalTensor<T> varLocal   = inQueueVar.template AllocTensor<T>();
+    AscendC::LocalTensor<T> varLocal = inQueueVar.template AllocTensor<T>();
     AscendC::LocalTensor<T> deltaLocal = inQueueDelta.template AllocTensor<T>();
 
     AscendC::DataCopyParams copyParams;
     copyParams.blockCount = 1;
-    copyParams.blockLen   = currentNum * sizeof(T);
-    copyParams.srcStride  = 0;
-    copyParams.dstStride  = 0;
-    AscendC::DataCopyPad(varLocal,   varGm[progress * ubLength_],   copyParams, {false, 0, 0, 0});
+    copyParams.blockLen = currentNum * sizeof(T);
+    copyParams.srcStride = 0;
+    copyParams.dstStride = 0;
+    AscendC::DataCopyPad(varLocal, varGm[progress * ubLength_], copyParams, {false, 0, 0, 0});
     AscendC::DataCopyPad(deltaLocal, deltaGm[progress * ubLength_], copyParams, {false, 0, 0, 0});
 
     inQueueVar.EnQue(varLocal);
@@ -205,12 +202,12 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::CopyIn(
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Compute(int64_t currentNum)
 {
-    AscendC::LocalTensor<T> varLocal   = inQueueVar.template DeQue<T>();
+    AscendC::LocalTensor<T> varLocal = inQueueVar.template DeQue<T>();
     AscendC::LocalTensor<T> deltaLocal = inQueueDelta.template DeQue<T>();
-    AscendC::LocalTensor<T> outLocal   = outQueueVar.template AllocTensor<T>();
+    AscendC::LocalTensor<T> outLocal = outQueueVar.template AllocTensor<T>();
 
     AscendC::LocalTensor<float> tmpProx = tmpProxBuf.Get<float>();
-    AscendC::LocalTensor<float> tmpAbs  = tmpAbsBuf.Get<float>();
+    AscendC::LocalTensor<float> tmpAbs = tmpAbsBuf.Get<float>();
     AscendC::LocalTensor<float> tmpSign = tmpSignBuf.Get<float>();
 
     // 准备 FP32 源
@@ -219,7 +216,7 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Compute(int
     if constexpr (IS_HALF) {
         AscendC::LocalTensor<float> varF32 = tmpVarF32Buf.Get<float>();
         AscendC::LocalTensor<float> delF32 = tmpDelF32Buf.Get<float>();
-        AscendC::Cast(varF32, varLocal,   AscendC::RoundMode::CAST_NONE, currentNum);
+        AscendC::Cast(varF32, varLocal, AscendC::RoundMode::CAST_NONE, currentNum);
         AscendC::Cast(delF32, deltaLocal, AscendC::RoundMode::CAST_NONE, currentNum);
         srcVarF32 = varF32;
         srcDelF32 = delF32;
@@ -230,8 +227,8 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Compute(int
     }
 
     // prox = var - alpha * delta
-    AscendC::Muls(tmpProx, srcDelF32, alphaS_, currentNum);       // α·δ
-    AscendC::Sub (tmpProx, srcVarF32, tmpProx, currentNum);       // prox = var - α·δ
+    AscendC::Muls(tmpProx, srcDelF32, alphaS_, currentNum); // α·δ
+    AscendC::Sub(tmpProx, srcVarF32, tmpProx, currentNum);  // prox = var - α·δ
 
     // |prox|
     AscendC::Abs(tmpAbs, tmpProx, currentNum);
@@ -265,15 +262,14 @@ __aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::Compute(int
 // ------------------------------ CopyOut ------------------------------
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void ApplyProximalGradientDescent<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<T> outLocal = outQueueVar.template DeQue<T>();
     AscendC::DataCopyParams copyParams;
     copyParams.blockCount = 1;
-    copyParams.blockLen   = currentNum * sizeof(T);
-    copyParams.srcStride  = 0;
-    copyParams.dstStride  = 0;
+    copyParams.blockLen = currentNum * sizeof(T);
+    copyParams.srcStride = 0;
+    copyParams.dstStride = 0;
     AscendC::DataCopyPad(varOutGm[progress * ubLength_], outLocal, copyParams);
     outQueueVar.FreeTensor(outLocal);
 }

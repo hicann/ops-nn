@@ -14,8 +14,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class InplaceIndexAddWithSorted : public OpDef
-{
+class InplaceIndexAddWithSorted : public OpDef {
 public:
     explicit InplaceIndexAddWithSorted(const char* name) : OpDef(name)
     {

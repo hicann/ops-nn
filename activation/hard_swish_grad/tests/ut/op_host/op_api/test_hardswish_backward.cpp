@@ -15,15 +15,9 @@
 
 class l2_hardswish_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_hardswish_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_hardswish_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_hardswish_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_hardswish_backward_test TearDown" << std::endl; }
 };
 
 // 正常场景_float32_nd

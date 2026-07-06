@@ -110,4 +110,4 @@ public:
     }
 };
 OP_ADD(ApplyFtrl);
-}  // namespace ops
+} // namespace ops

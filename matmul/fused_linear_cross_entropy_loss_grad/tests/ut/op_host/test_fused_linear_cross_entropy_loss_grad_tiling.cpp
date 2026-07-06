@@ -22,24 +22,21 @@ using namespace std;
 using namespace ge;
 
 class FusedLinearCrossEntropyLossGradTiling : public testing::Test {
-  protected:
-    static void SetUpTestCase() {
-        std::cout << "FusedLinearCrossEntropyLossGradTiling SetUp" << std::endl;
-    }
+protected:
+    static void SetUpTestCase() { std::cout << "FusedLinearCrossEntropyLossGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "FusedLinearCrossEntropyLossGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FusedLinearCrossEntropyLossGradTiling TearDown" << std::endl; }
 };
 
-void TilingTest(std::string opName, bool isMemFriendly,  // false: high-perf, true: mem
+void TilingTest(std::string opName, bool isMemFriendly, // false: high-perf, true: mem
                 std::initializer_list<int64_t>& input, std::initializer_list<int64_t>& weight,
                 std::initializer_list<int64_t>& softmax, std::initializer_list<int64_t>& target_mask,
                 std::initializer_list<int64_t>& masked_target, std::initializer_list<int64_t>& grad_output,
                 std::initializer_list<int64_t>& logits_max, std::initializer_list<int64_t>& sum_exp_logits,
                 std::initializer_list<int64_t>& grad_input, std::initializer_list<int64_t>& grad_weight,
                 ge::DataType dataTypeFp, ge::DataType dataTypeInt, ge::DataType dataTypeBool,
-                const ge::graphStatus status) {
+                const ge::graphStatus status)
+{
     std::string op_type(opName);
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -69,7 +66,8 @@ void TilingTest(std::string opName, bool isMemFriendly,  // false: high-perf, tr
     //         .Build();
     // ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     // kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    // kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    // kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+    // aicore_spec);
     // kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     // kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
     //                                                                                         intrinsics);
@@ -80,7 +78,7 @@ void TilingTest(std::string opName, bool isMemFriendly,  // false: high-perf, tr
     // workspace_size_holer不可太大
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    
+
     gert::StorageShape input_ss = {input, input};
     gert::StorageShape weight_ss = {weight, weight};
     gert::StorageShape softmax_ss = {softmax, softmax};
@@ -95,29 +93,29 @@ void TilingTest(std::string opName, bool isMemFriendly,  // false: high-perf, tr
 
     // tilingParseFunc simulate
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(8, 2)
-        .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})  // 输入数量个"1"
-        .InputShapes({&grad_output_ss, &input_ss, &weight_ss, &target_mask_ss, &masked_target_ss,
-                      (isMemFriendly) ? &logits_max_ss : nullptr,
-                      (isMemFriendly) ? &sum_exp_logits_ss : nullptr,
-                      (isMemFriendly) ? nullptr : &softmax_ss})
-        .OutputShapes({&grad_input_ss, &grad_weight_ss})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(3, dataTypeBool, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(4, dataTypeInt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(1, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(8, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1}) // 输入数量个"1"
+                      .InputShapes({&grad_output_ss, &input_ss, &weight_ss, &target_mask_ss, &masked_target_ss,
+                                    (isMemFriendly) ? &logits_max_ss : nullptr,
+                                    (isMemFriendly) ? &sum_exp_logits_ss : nullptr,
+                                    (isMemFriendly) ? nullptr : &softmax_ss})
+                      .OutputShapes({&grad_input_ss, &grad_weight_ss})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, dataTypeBool, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, dataTypeInt, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, dataTypeFp, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -128,7 +126,8 @@ void TilingTest(std::string opName, bool isMemFriendly,  // false: high-perf, tr
     EXPECT_EQ(tiling_func(tiling_context), status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_fp16_int32_bool_success) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_fp16_int32_bool_success)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
     int64_t v = 19392;
@@ -145,14 +144,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_bf16_int32_bool_success) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_bf16_int32_bool_success)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
     int64_t v = 19392;
@@ -169,14 +167,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL,
+               status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_bt_gt_boundary_succcess) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_bt_gt_boundary_succcess)
+{
     int64_t bt = 32768;
     int64_t h = 4096;
     int64_t v = 19392;
@@ -193,14 +190,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_bt_gt_65536_failed) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_bt_gt_65536_failed)
+{
     int64_t bt = 77568;
     int64_t h = 4096;
     int64_t v = 19392;
@@ -217,14 +213,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_FAILED;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_v_lt_512B_failed) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_v_lt_512B_failed)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
     int64_t v = 100;
@@ -241,14 +236,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_FAILED;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_v_gt_65280_failed) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_v_gt_65280_failed)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
     int64_t v = 77568;
@@ -265,14 +259,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_FAILED;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_h_gt_65535_failed) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_h_gt_65535_failed)
+{
     int64_t bt = 8192;
     int64_t h = 77568;
     int64_t v = 19392;
@@ -289,17 +282,17 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_FAILED;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_tiling_partial_branch_not_implement_failed) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling,
+       fused_linear_cross_entropy_loss_grad_tiling_partial_branch_not_implement_failed)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
-    int64_t v = 32768;  // 196608->24572
+    int64_t v = 32768; // 196608->24572
     std::initializer_list<int64_t> input = {bt, h};
     std::initializer_list<int64_t> weight = {v, h};
     std::initializer_list<int64_t> softmax = {bt, v};
@@ -313,14 +306,14 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_FAILED;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", false,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", false, input, weight, softmax, target_mask, masked_target,
+               grad_output, logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32,
+               ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_fp16_int32_bool_success) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling,
+       fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_fp16_int32_bool_success)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
     int64_t v = 19392;
@@ -337,14 +330,13 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", true,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
+               logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_bf16_int32_bool_success) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling,
+       fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_bf16_int32_bool_success)
+{
     int64_t bt = 8192;
     int64_t h = 4096;
     int64_t v = 19392;
@@ -361,14 +353,12 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", true,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
+               logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status);
 }
 
-TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_big_H_success) {
+TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_grad_mem_friendly_tiling_big_H_success)
+{
     int64_t bt = 8192;
     int64_t h = 65535;
     int64_t v = 19392;
@@ -385,9 +375,6 @@ TEST_F(FusedLinearCrossEntropyLossGradTiling, fused_linear_cross_entropy_loss_gr
     std::initializer_list<int64_t> grad_weight = {v, h};
 
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
-    TilingTest(
-        "FusedLinearCrossEntropyLossGrad", true,
-        input, weight, softmax, target_mask, masked_target, grad_output, logits_max, sum_exp_logits, grad_input, grad_weight,
-        ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status
-    );
+    TilingTest("FusedLinearCrossEntropyLossGrad", true, input, weight, softmax, target_mask, masked_target, grad_output,
+               logits_max, sum_exp_logits, grad_input, grad_weight, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL, status);
 }

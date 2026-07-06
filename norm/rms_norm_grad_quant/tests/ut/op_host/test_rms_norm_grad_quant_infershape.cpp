@@ -16,15 +16,9 @@
 
 class RmsNormGradQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RmsNormGradQuant Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RmsNormGradQuant Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RmsNormGradQuant Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RmsNormGradQuant Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(RmsNormGradQuant, RmsNormGradQuant_infershape_case_0)
@@ -59,7 +53,7 @@ TEST_F(RmsNormGradQuant, RmsNormGradQuant_infershape_case_1_with_optional)
     op.SetAttr("quant_mode", "static");
     op.SetAttr("div_mode", true);
     op.SetAttr("dst_type", static_cast<int>(ge::DT_HIFLOAT8));
-    Runtime2TestParam param{{"quant_mode", "div_mode", "dst_type"},{},{}};
+    Runtime2TestParam param{{"quant_mode", "div_mode", "dst_type"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
     auto output_dx_desc = op.GetOutputDesc(0);
@@ -116,7 +110,7 @@ TEST_F(RmsNormGradQuant, RmsNormGradQuant_InferDtype_with_dst_type_attr)
     op.SetAttr("quant_mode", "static");
     op.SetAttr("div_mode", true);
     op.SetAttr("dst_type", static_cast<int>(ge::DT_HIFLOAT8));
-    Runtime2TestParam param{{"quant_mode", "div_mode", "dst_type"},{},{}};
+    Runtime2TestParam param{{"quant_mode", "div_mode", "dst_type"}, {}, {}};
     EXPECT_EQ(InferDataTypeTest(op, param), ge::GRAPH_SUCCESS);
 }
 

@@ -28,42 +28,41 @@
 #include "error_util.h"
 #include "op_host/tiling_util.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::NN::Optiling;
 // ar小尾轴
 BEGIN_TILING_DATA_DEF(SoftmaxGradExtARSmallRTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);              // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);              // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);       // ub内单次计算允许运算的最大行数（切分A）
-TILING_DATA_FIELD_DEF(int64_t, aPerHeadCore);   // 大核处理的A轴行数
-TILING_DATA_FIELD_DEF(int64_t, aPerTailCore);   // 小核处理的A轴行数
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNums);   // 总共使用的核数
-TILING_DATA_FIELD_DEF(int64_t, x2IsScalar);     // x2是否为单点输入
+TILING_DATA_FIELD_DEF(int64_t, a);            // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);            // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);     // ub内单次计算允许运算的最大行数（切分A）
+TILING_DATA_FIELD_DEF(int64_t, aPerHeadCore); // 大核处理的A轴行数
+TILING_DATA_FIELD_DEF(int64_t, aPerTailCore); // 小核处理的A轴行数
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNums); // 总共使用的核数
+TILING_DATA_FIELD_DEF(int64_t, x2IsScalar);   // x2是否为单点输入
 END_TILING_DATA_DEF;
 
 // ar全载
 BEGIN_TILING_DATA_DEF(SoftmaxGradExtARTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);             // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);             // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, rAligned);      // x输入列数，对齐后R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);      // UB内一次循环处理的a_in_in
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);  // 单核处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, rLoopCount);    // r / VL_Len
-TILING_DATA_FIELD_DEF(int64_t, x2IsScalar);     // x2是否为单点输入
+TILING_DATA_FIELD_DEF(int64_t, a);            // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);            // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, rAligned);     // x输入列数，对齐后R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);     // UB内一次循环处理的a_in_in
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor); // 单核处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, rLoopCount);   // r / VL_Len
+TILING_DATA_FIELD_DEF(int64_t, x2IsScalar);   // x2是否为单点输入
 END_TILING_DATA_DEF;
 
 // ar重计算
 BEGIN_TILING_DATA_DEF(SoftmaxGradExtARRecomputeTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);               // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);               // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);        // UB处理的r_in
-TILING_DATA_FIELD_DEF(int64_t, ubFactorTail);    // UB处理的r_in的尾块，值可能为0
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);    // 每个AIV处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, aLoopCountCeil);  // CeilDiv(r, r_in)
-TILING_DATA_FIELD_DEF(int64_t, basicBlockLoop);  // 二分累加：循环次数，折叠点左半部分的block数量
-TILING_DATA_FIELD_DEF(int64_t, mainFoldCount);   // 二分累加：折叠的块数，折叠点右半部分的block数量减1
-TILING_DATA_FIELD_DEF(int64_t, x2IsScalar);     // x2是否为单点输入
+TILING_DATA_FIELD_DEF(int64_t, a);              // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);              // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);       // UB处理的r_in
+TILING_DATA_FIELD_DEF(int64_t, ubFactorTail);   // UB处理的r_in的尾块，值可能为0
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);   // 每个AIV处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, aLoopCountCeil); // CeilDiv(r, r_in)
+TILING_DATA_FIELD_DEF(int64_t, basicBlockLoop); // 二分累加：循环次数，折叠点左半部分的block数量
+TILING_DATA_FIELD_DEF(int64_t, mainFoldCount); // 二分累加：折叠的块数，折叠点右半部分的block数量减1
+TILING_DATA_FIELD_DEF(int64_t, x2IsScalar);    // x2是否为单点输入
 // 二分累加
 TILING_DATA_FIELD_DEF(int64_t, binAddRFactor);
 TILING_DATA_FIELD_DEF(int64_t, binAddRLoop);
@@ -75,11 +74,9 @@ TILING_DATA_FIELD_DEF(int64_t, binAddCacheBufferCount);
 TILING_DATA_FIELD_DEF(int64_t, binAddResultCacheID);
 END_TILING_DATA_DEF;
 
-
 constexpr int32_t TEMPLATE_AR_SMALL_R_PRIORITY = 50;
 constexpr int32_t TEMPLATE_AR_FULL_LOAD_PRIORITY = 100;
 constexpr int32_t TEMPLATE_AR_RECOMPUTE_PRIORITY = 200;
-
 
 constexpr int64_t TILINGKEY_AR_SMALL_R = 500;
 constexpr int64_t TILINGKEY_AR = 1000;
@@ -89,7 +86,6 @@ constexpr int64_t TILINGKEY_AR_RECOMPUTE = 2000;
 REGISTER_TILING_DATA_CLASS(SoftmaxGradExt, SoftmaxGradExtARSmallRTilingData);
 REGISTER_TILING_DATA_CLASS(SoftmaxGradExt_1000, SoftmaxGradExtARTilingData);
 REGISTER_TILING_DATA_CLASS(SoftmaxGradExt_2000, SoftmaxGradExtARRecomputeTilingData);
-
 
 struct SoftmaxGradExtCompileInfo {
     // std::shared_ptr<AutoTilingCompileInfo> dslCompileInfo;
@@ -147,43 +143,25 @@ constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
 constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 
-class SoftmaxGradExtTilingBase : virtual public TilingBaseClass
-{
+class SoftmaxGradExtTilingBase : virtual public TilingBaseClass {
 public:
-    explicit SoftmaxGradExtTilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    explicit SoftmaxGradExtTilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
     ~SoftmaxGradExtTilingBase() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return false;
-    }
+    bool IsCapable() override { return false; }
 
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     // 5、计算TilingKey
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    }
+    uint64_t GetTilingKey() const override { return 0; }
     // 6、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override
     {
@@ -192,10 +170,7 @@ protected:
         return ge::GRAPH_SUCCESS;
     }
     // 7、保存Tiling数据
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }
 
     ge::graphStatus CheckFormatValid();
     virtual ge::graphStatus GetAndCheckDtypes();
@@ -228,19 +203,14 @@ protected:
 };
 
 // ar小尾轴
-class SoftmaxGradExtTilingARSmallR : virtual public SoftmaxGradExtTilingBase
-{
+class SoftmaxGradExtTilingARSmallR : virtual public SoftmaxGradExtTilingBase {
 public:
     explicit SoftmaxGradExtTilingARSmallR(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradExtTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradExtTilingARSmallR() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        SoftmaxGradExtTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { SoftmaxGradExtTilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override;
@@ -253,19 +223,14 @@ protected:
 };
 
 // ar全载
-class SoftmaxGradExtTilingAR : virtual public SoftmaxGradExtTilingBase
-{
+class SoftmaxGradExtTilingAR : virtual public SoftmaxGradExtTilingBase {
 public:
     explicit SoftmaxGradExtTilingAR(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradExtTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradExtTilingAR() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        SoftmaxGradExtTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { SoftmaxGradExtTilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override;
@@ -278,13 +243,11 @@ protected:
 };
 
 // ar重计算
-class SoftmaxGradExtTilingARRecompute : virtual public SoftmaxGradExtTilingBase
-{
+class SoftmaxGradExtTilingARRecompute : virtual public SoftmaxGradExtTilingBase {
 public:
     explicit SoftmaxGradExtTilingARRecompute(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradExtTilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxGradExtTilingARRecompute() override = default;
 
 protected:
@@ -312,11 +275,11 @@ private:
     int64_t mainFoldCount_{0};
     int64_t binAddCacheBufferCount_{0};
     int64_t binAddResultCacheID_{0};
-}; 
+};
 
 extern ge::graphStatus TilingForSoftmaxGradExt(gert::TilingContext* context);
 extern ge::graphStatus TilingPrepareForSoftmaxGradExt(gert::TilingParseContext* context);
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SOFTMAX_GRAD_EXT_TILING_BASE_H_
+#endif // SOFTMAX_GRAD_EXT_TILING_BASE_H_

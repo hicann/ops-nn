@@ -27,15 +27,9 @@ using namespace ge;
 
 class L2LossTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "L2LossTiling SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "L2LossTiling SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "L2LossTiling TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "L2LossTiling TearDown" << endl; }
 };
 
 static const string kCompileInfoString = R"({
@@ -65,12 +59,12 @@ static ge::graphStatus RunL2LossTiling(ge::DataType dtype)
 
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("L2Loss")->tiling;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(kCompileInfoString.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(1, 1)
+                             .Inputs({const_cast<char*>(kCompileInfoString.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -81,18 +75,18 @@ static ge::graphStatus RunL2LossTiling(ge::DataType dtype)
     auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("L2Loss")
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1})
-                        .InputShapes({&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("L2Loss")
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     if (tiling_context == nullptr) {
         return ge::GRAPH_FAILED;
@@ -100,17 +94,8 @@ static ge::graphStatus RunL2LossTiling(ge::DataType dtype)
     return tiling_func(tiling_context);
 }
 
-TEST_F(L2LossTiling, l2_loss_tiling_fp32_success)
-{
-    EXPECT_EQ(RunL2LossTiling(ge::DT_FLOAT), ge::GRAPH_SUCCESS);
-}
+TEST_F(L2LossTiling, l2_loss_tiling_fp32_success) { EXPECT_EQ(RunL2LossTiling(ge::DT_FLOAT), ge::GRAPH_SUCCESS); }
 
-TEST_F(L2LossTiling, l2_loss_tiling_fp16_success)
-{
-    EXPECT_EQ(RunL2LossTiling(ge::DT_FLOAT16), ge::GRAPH_SUCCESS);
-}
+TEST_F(L2LossTiling, l2_loss_tiling_fp16_success) { EXPECT_EQ(RunL2LossTiling(ge::DT_FLOAT16), ge::GRAPH_SUCCESS); }
 
-TEST_F(L2LossTiling, l2_loss_tiling_bf16_success)
-{
-    EXPECT_EQ(RunL2LossTiling(ge::DT_BF16), ge::GRAPH_SUCCESS);
-}
+TEST_F(L2LossTiling, l2_loss_tiling_bf16_success) { EXPECT_EQ(RunL2LossTiling(ge::DT_BF16), ge::GRAPH_SUCCESS); }

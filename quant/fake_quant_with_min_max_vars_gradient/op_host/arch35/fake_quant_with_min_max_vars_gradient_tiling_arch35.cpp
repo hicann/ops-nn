@@ -45,11 +45,11 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::GetCompileInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     coreNum_ = compileInfo->vectorCoreNum;
     ubSize_ = compileInfo->ubSize;
-    OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
-                OP_LOGE(context_->GetNodeName(),
-                        "FakeQuantWithMinMaxVarsGradient GetCompileInfo Failed, coreNum:%ld, ubSize:%lu.",
-                        coreNum_, ubSize_),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (coreNum_ <= 0 || ubSize_ <= 0),
+        OP_LOGE(context_->GetNodeName(),
+                "FakeQuantWithMinMaxVarsGradient GetCompileInfo Failed, coreNum:%ld, ubSize:%lu.", coreNum_, ubSize_),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -74,8 +74,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::GetOpParam()
     OP_CHECK_NULL_WITH_CONTEXT(context_, gDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     OP_CHECK_IF((gDesc->GetDataType() != ge::DT_FLOAT || xDesc->GetDataType() != ge::DT_FLOAT),
-                OP_LOGE(context_->GetNodeName(),
-                        "FakeQuantWithMinMaxVarsGradient only supports float32 inputs."),
+                OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxVarsGradient only supports float32 inputs."),
                 return ge::GRAPH_FAILED);
 
     // Read attributes (NOT tensor values)
@@ -90,8 +89,8 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::GetOpParam()
 
     // Validate num_bits range [2, 16]
     OP_CHECK_IF((numBits_ < 2 || numBits_ > 16),
-                OP_LOGE(context_->GetNodeName(),
-                        "FakeQuantWithMinMaxVarsGradient num_bits must be in [2,16], got %ld.", numBits_),
+                OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxVarsGradient num_bits must be in [2,16], got %ld.",
+                        numBits_),
                 return ge::GRAPH_FAILED);
 
     // NOTE: min/max are tensor inputs, NOT read here.
@@ -116,8 +115,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::CalcTiling()
     int64_t maxBaseLen = ubAvail / (7 * static_cast<int64_t>(sizeof(float)));
     maxBaseLen = (maxBaseLen / BLOCK_ALIGN_FP32) * BLOCK_ALIGN_FP32;
     if (maxBaseLen <= 0) {
-        OP_LOGE(context_->GetNodeName(),
-                "UB size %lu too small for fake_quant_with_min_max_vars_gradient.", ubSize_);
+        OP_LOGE(context_->GetNodeName(), "UB size %lu too small for fake_quant_with_min_max_vars_gradient.", ubSize_);
         return ge::GRAPH_FAILED;
     }
     baseLen_ = (DEFAULT_BASE_LEN < maxBaseLen) ? DEFAULT_BASE_LEN : maxBaseLen;
@@ -147,8 +145,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::CalcTiling()
     blockTailFactor_ = totalLen_ - blockFactor_ * (numCore_ - 1);
 
     OP_CHECK_IF((blockTailFactor_ <= 0 || blockTailFactor_ > blockFactor_),
-                OP_LOGE(context_->GetNodeName(),
-                        "tiling not conservative: totalLen=%ld numCore=%ld bf=%ld bt=%ld",
+                OP_LOGE(context_->GetNodeName(), "tiling not conservative: totalLen=%ld numCore=%ld bf=%ld bt=%ld",
                         totalLen_, numCore_, blockFactor_, blockTailFactor_),
                 return ge::GRAPH_FAILED);
 
@@ -187,8 +184,8 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::WriteTilingData()
     const size_t dataSize = sizeof(tilingData_);
     auto rawTiling = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, rawTiling);
-    errno_t ret = memcpy_s(rawTiling->GetData(), rawTiling->GetCapacity(),
-                           reinterpret_cast<void*>(&tilingData_), dataSize);
+    errno_t ret = memcpy_s(rawTiling->GetData(), rawTiling->GetCapacity(), reinterpret_cast<void*>(&tilingData_),
+                           dataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s tiling failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -198,25 +195,20 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::WriteTilingData()
     OP_LOGD(context_->GetNodeName(),
             "FakeQuantWithMinMaxVarsGradient tiling: totalLen=%ld numCore=%ld blockFactor=%ld blockTail=%ld "
             "baseLen=%ld numBits=%ld narrowRange=%d tilingKey=%lu",
-            totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_,
-            numBits_, narrowRange_ ? 1 : 0, tilingKey_);
+            totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_, numBits_, narrowRange_ ? 1 : 0, tilingKey_);
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::DoTiling()
 {
-    OP_CHECK_IF((GetCompileInfo() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "GetCompileInfo failed."),
+    OP_CHECK_IF((GetCompileInfo() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "GetCompileInfo failed."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((GetOpParam() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "GetOpParam failed."),
+    OP_CHECK_IF((GetOpParam() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "GetOpParam failed."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((CalcTiling() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "CalcTiling failed."),
+    OP_CHECK_IF((CalcTiling() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalcTiling failed."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((CalcWorkspace() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "CalcWorkspace failed."),
+    OP_CHECK_IF((CalcWorkspace() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalcWorkspace failed."),
                 return ge::GRAPH_FAILED);
     return WriteTilingData();
 }
@@ -224,8 +216,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::DoTiling()
 static ge::graphStatus TilingForFakeQuantWithMinMaxVarsGradient(gert::TilingContext* context)
 {
     OP_LOGD("FakeQuantWithMinMaxVarsGradientTiling", "Enter TilingForFakeQuantWithMinMaxVarsGradient");
-    OP_CHECK_IF(context == nullptr,
-                OP_LOGE("FakeQuantWithMinMaxVarsGradientTiling", "Tiling context is null."),
+    OP_CHECK_IF(context == nullptr, OP_LOGE("FakeQuantWithMinMaxVarsGradientTiling", "Tiling context is null."),
                 return ge::GRAPH_FAILED);
     FakeQuantWithMinMaxVarsGradientTiling tiling(context);
     return tiling.DoTiling();
@@ -234,8 +225,7 @@ static ge::graphStatus TilingForFakeQuantWithMinMaxVarsGradient(gert::TilingCont
 static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxVarsGradient(gert::TilingParseContext* context)
 {
     OP_LOGD("FakeQuantWithMinMaxVarsGradientTiling", "Enter TilingPrepareForFakeQuantWithMinMaxVarsGradient");
-    OP_CHECK_IF(context == nullptr,
-                OP_LOGE("FakeQuantWithMinMaxVarsGradientTiling", "TilingParse context is null."),
+    OP_CHECK_IF(context == nullptr, OP_LOGE("FakeQuantWithMinMaxVarsGradientTiling", "TilingParse context is null."),
                 return ge::GRAPH_FAILED);
 
     auto compileInfo = context->GetCompiledInfo<FakeQuantWithMinMaxVarsGradientCompileInfo>();
@@ -248,8 +238,7 @@ static ge::graphStatus TilingPrepareForFakeQuantWithMinMaxVarsGradient(gert::Til
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
     OP_CHECK_IF((compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-                OP_LOGE(context->GetNodeName(),
-                        "GetHardwareInfo failed, vectorCoreNum:%d, ubSize:%lu.",
+                OP_LOGE(context->GetNodeName(), "GetHardwareInfo failed, vectorCoreNum:%d, ubSize:%lu.",
                         compileInfo->vectorCoreNum, compileInfo->ubSize),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

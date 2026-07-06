@@ -14,7 +14,7 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <gtest/gtest.h>    
+#include <gtest/gtest.h>
 #include "../../../op_kernel/log_softmax_v2_tiling_data.h"
 #include "log/log.h"
 #include "ut_op_common.h"
@@ -34,18 +34,13 @@ using namespace ge;
 
 class LogSoftmaxV2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LogSoftmaxV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LogSoftmaxV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LogSoftmaxV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LogSoftmaxV2Tiling TearDown" << std::endl; }
 };
 
-TEST_F(LogSoftmaxV2Tiling, log_softmax_v2_float32_success) {
+TEST_F(LogSoftmaxV2Tiling, log_softmax_v2_float32_success)
+{
     // input
     gert::StorageShape x_shape({2, 2}, {2, 2});
     // output
@@ -77,13 +72,13 @@ TEST_F(LogSoftmaxV2Tiling, log_softmax_v2_float32_success) {
     // auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
-    
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(1, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -97,18 +92,18 @@ TEST_F(LogSoftmaxV2Tiling, log_softmax_v2_float32_success) {
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("AddExample")
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1})
-                        .InputShapes({&x_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("AddExample")
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);

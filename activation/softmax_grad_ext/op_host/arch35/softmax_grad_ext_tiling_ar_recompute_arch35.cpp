@@ -28,13 +28,11 @@ constexpr int64_t UB_RESERVED_BYTE = 1024 * 8;
 bool SoftmaxGradExtTilingARRecompute::IsCapable()
 {
     // a0_为1的场景走AR模板
-    OP_TILING_CHECK(
-        a0_ != DIM_NUM_ONE,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "AR recompute template is not capable. axes is: %ld, merged shape is (%ld, %ld, %ld).", reduceAxes_, a1_,
-            r_, a0_),
-        return false);
+    OP_TILING_CHECK(a0_ != DIM_NUM_ONE,
+                    OP_LOGI(context_->GetNodeName(),
+                            "AR recompute template is not capable. axes is: %ld, merged shape is (%ld, %ld, %ld).",
+                            reduceAxes_, a1_, r_, a0_),
+                    return false);
     return true;
 }
 
@@ -55,15 +53,14 @@ int64_t SoftmaxGradExtTilingARRecompute::FindNearestPower2(const int64_t value)
 
 ge::graphStatus SoftmaxGradExtTilingARRecompute::BinarySummationTiling()
 {
-    int64_t basicBlockLoop =
-        FindNearestPower2(aLoopCountCeil_); // 获取不大于aLoopCountCeil_的最大2的幂次，赋值给basicBlockLoop
+    int64_t basicBlockLoop = FindNearestPower2(
+        aLoopCountCeil_); // 获取不大于aLoopCountCeil_的最大2的幂次，赋值给basicBlockLoop
     int64_t mainFoldCount = aLoopCountFloor_ - basicBlockLoop; // 剩余的循环次数
 
     tilingData_.set_basicBlockLoop(basicBlockLoop);
     tilingData_.set_mainFoldCount(mainFoldCount);
-    OP_LOGI(
-        context_->GetNodeName(), "BinarySummation Tiling Finished. basicBlockLoop: %ld, mainFoldCount: %ld",
-        basicBlockLoop, mainFoldCount);
+    OP_LOGI(context_->GetNodeName(), "BinarySummation Tiling Finished. basicBlockLoop: %ld, mainFoldCount: %ld",
+            basicBlockLoop, mainFoldCount);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -83,20 +80,17 @@ ge::graphStatus SoftmaxGradExtTilingARRecompute::DoOpTiling()
                   AR_RECOMPUTE_BINARY_CACHE_BTYES; // 表示可用的UB内存大小
     baseFactor_ = xDtypeSize_ * DOUBLE_BUFFER * CONST_THREE + FLOAT32_BYTES * DOUBLE_BUFFER;
 
-    OP_TILING_CHECK(
-        (baseFactor_ > ubFlexible_),
-        OP_LOGI(
-            context_->GetNodeName(),
-            "AR recompute template is not capable. original shape is:(%s), axes is: %ld, merged "
-            "shape is (%ld, %ld, %ld), ub size: %ldB",
-            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_, aicoreParams_.ubSize),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK((baseFactor_ > ubFlexible_),
+                    OP_LOGI(context_->GetNodeName(),
+                            "AR recompute template is not capable. original shape is:(%s), axes is: %ld, merged "
+                            "shape is (%ld, %ld, %ld), ub size: %ldB",
+                            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_, aicoreParams_.ubSize),
+                    return ge::GRAPH_PARAM_INVALID);
 
-    OP_LOGI(
-        context_->GetNodeName(),
-        "AR recompute template is capable. original shape is:(%s), axes is: %ld, merged shape is "
-        "(%ld, %ld, %ld).",
-        VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_);
+    OP_LOGI(context_->GetNodeName(),
+            "AR recompute template is capable. original shape is:(%s), axes is: %ld, merged shape is "
+            "(%ld, %ld, %ld).",
+            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_);
 
     // 1、切a：按核均分
     int64_t coreNum = static_cast<int64_t>(aicoreParams_.blockDim); // 表示可用的核数量
@@ -121,10 +115,7 @@ ge::graphStatus SoftmaxGradExtTilingARRecompute::DoOpTiling()
     return BinarySummationTiling();
 }
 
-uint64_t SoftmaxGradExtTilingARRecompute::GetTilingKey() const
-{
-    return TILINGKEY_AR_RECOMPUTE;
-}
+uint64_t SoftmaxGradExtTilingARRecompute::GetTilingKey() const { return TILINGKEY_AR_RECOMPUTE; }
 
 ge::graphStatus SoftmaxGradExtTilingARRecompute::PostTiling()
 {

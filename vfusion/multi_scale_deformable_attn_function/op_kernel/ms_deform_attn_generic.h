@@ -20,11 +20,11 @@ using namespace AscendC;
 
 class KernelMultiScaleDeformableAttn {
 public:
-
     __aicore__ inline KernelMultiScaleDeformableAttn() {}
     __aicore__ inline void Init(GM_ADDR value, GM_ADDR valueSpatialShapes, GM_ADDR valuLevelStartIndex,
-        GM_ADDR samplingLocations, GM_ADDR attentionWeights, GM_ADDR output,
-        const MultiScaleDeformableAttnFunctionTilingData* __restrict tiling_data, TPipe* tmpPipe)
+                                GM_ADDR samplingLocations, GM_ADDR attentionWeights, GM_ADDR output,
+                                const MultiScaleDeformableAttnFunctionTilingData* __restrict tiling_data,
+                                TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();
@@ -41,8 +41,8 @@ public:
 
         numLevelsAlign = AlignUp(numLevels, dataAlign);
 
-        maxUbNum = (useUbSize / sizeof(DTYPE_VALUE) - threeBuffer * numLevelsAlign
-                                     - fourBuffer * embedDims) / (numQuerieBuffer + numEmbedBuffer * embedDims);
+        maxUbNum = (useUbSize / sizeof(DTYPE_VALUE) - threeBuffer * numLevelsAlign - fourBuffer * embedDims) /
+                   (numQuerieBuffer + numEmbedBuffer * embedDims);
         maxUbNum = maxUbNum / dataAlign * dataAlign;
         numQueriesper = DivCeil(numQueries, maxUbNum);
         numQueriestail = numQueries - (numQueriesper - 1) * maxUbNum;
@@ -80,18 +80,18 @@ public:
         eventIdVToMte2 = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE2>());
         eventIdVToMte3 = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
 
-        valueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(value),
+        valueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(value),
                                 batchSize * numKeys * numHeads * embedDims);
-        valueSpatialShapesGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE_SPATIAL_SHAPES *>(valueSpatialShapes),
+        valueSpatialShapesGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE_SPATIAL_SHAPES*>(valueSpatialShapes),
                                              numLevels * TWO);
-        valueLevelStartIndexGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE_SPATIAL_SHAPES *>(valuLevelStartIndex),
-                                               numLevels);
-        locationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(samplingLocations),
+        valueLevelStartIndexGm.SetGlobalBuffer(
+            reinterpret_cast<__gm__ DTYPE_VALUE_SPATIAL_SHAPES*>(valuLevelStartIndex), numLevels);
+        locationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(samplingLocations),
                                    batchSize * numQueries * numHeads * numLevels * numPoints * TWO);
-        attentionWeightsGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(attentionWeights),
+        attentionWeightsGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(attentionWeights),
                                            batchSize * numQueries * numHeads * numLevels * numPoints);
-        outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(output),
-                                    batchSize * numQueries * numHeads * embedDims);
+        outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(output),
+                                 batchSize * numQueries * numHeads * embedDims);
     }
 
     __aicore__ inline void InitBuffer()
@@ -161,8 +161,10 @@ public:
         head = startIdx % numHeads;
         batch = startIdx / numHeads;
 
-        DataCopyPad(shapesLocal, valueSpatialShapesGm, {1, (uint32_t)(TWO * numLevels * sizeof(DTYPE_VALUE_SPATIAL_SHAPES)), 0, 0, 0}, padParamsInt);
-        DataCopyPad(offsetLocal, valueLevelStartIndexGm, {1, (uint32_t)(numLevels * sizeof(DTYPE_VALUE_SPATIAL_SHAPES)), 0, 0, 0}, padParamsInt);
+        DataCopyPad(shapesLocal, valueSpatialShapesGm,
+                    {1, (uint32_t)(TWO * numLevels * sizeof(DTYPE_VALUE_SPATIAL_SHAPES)), 0, 0, 0}, padParamsInt);
+        DataCopyPad(offsetLocal, valueLevelStartIndexGm,
+                    {1, (uint32_t)(numLevels * sizeof(DTYPE_VALUE_SPATIAL_SHAPES)), 0, 0, 0}, padParamsInt);
 
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
@@ -182,36 +184,35 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputeGradSeparate(DTYPE_VALUE distHH, DTYPE_VALUE distHW,
-                                               DTYPE_VALUE distLH, DTYPE_VALUE distLW,
-                                               DTYPE_VALUE w1, DTYPE_VALUE w2,
-                                               DTYPE_VALUE w3, DTYPE_VALUE w4,
-                                               DTYPE_VALUE attentionWeight)
+    __aicore__ inline void ComputeGradSeparate(DTYPE_VALUE distHH, DTYPE_VALUE distHW, DTYPE_VALUE distLH,
+                                               DTYPE_VALUE distLW, DTYPE_VALUE w1, DTYPE_VALUE w2, DTYPE_VALUE w3,
+                                               DTYPE_VALUE w4, DTYPE_VALUE attentionWeight)
     {
         if (hLow >= 0 && wLow >= 0) {
-            DataCopyPad(zerosLocal[v1Id * embedDims + queryOffsetv], valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset],
-                        copyInParamsV3, padParamsFloat);
+            DataCopyPad(zerosLocal[v1Id * embedDims + queryOffsetv],
+                        valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset], copyInParamsV3, padParamsFloat);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Muls(wv1Local, zerosLocal[v1Id * embedDims + queryOffsetv], w1, embedDims);
         }
         if (hLow >= 0 && wLow < w - 1) {
-            DataCopyPad(zerosLocal[v2Id * embedDims + queryOffsetv], valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride],
-            copyInParamsV3, padParamsFloat);
+            DataCopyPad(zerosLocal[v2Id * embedDims + queryOffsetv],
+                        valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride], copyInParamsV3, padParamsFloat);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Muls(wv2Local, zerosLocal[v2Id * embedDims + queryOffsetv], w2, embedDims);
         }
         if (hLow < h - 1 && wLow >= 0) {
-            DataCopyPad(zerosLocal[v3Id * embedDims + queryOffsetv], valueGm[offsetValue + hLowPtrOffset + hStride + wLowPtrOffset],
-            copyInParamsV3, padParamsFloat);
+            DataCopyPad(zerosLocal[v3Id * embedDims + queryOffsetv],
+                        valueGm[offsetValue + hLowPtrOffset + hStride + wLowPtrOffset], copyInParamsV3, padParamsFloat);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Muls(wv3Local, zerosLocal[v3Id * embedDims + queryOffsetv], w3, embedDims);
         }
         if (hLow < h - 1 && wLow < w - 1) {
-            DataCopyPad(zerosLocal[v4Id * embedDims + queryOffsetv], valueGm[offsetValue + hLowPtrOffset + hStride + wLowPtrOffset + wStride],
-            copyInParamsV3, padParamsFloat);
+            DataCopyPad(zerosLocal[v4Id * embedDims + queryOffsetv],
+                        valueGm[offsetValue + hLowPtrOffset + hStride + wLowPtrOffset + wStride], copyInParamsV3,
+                        padParamsFloat);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Muls(wv4Local, zerosLocal[v4Id * embedDims + queryOffsetv], w4, embedDims);
@@ -225,15 +226,16 @@ private:
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
 
-        DataCopyPad(outputGm[batch * outputStride2 + (nqloop * maxUbNum + query) * outputStride1 + head * outputStride0], outputLocal[queryOffset], copyOutParams);
+        DataCopyPad(
+            outputGm[batch * outputStride2 + (nqloop * maxUbNum + query) * outputStride1 + head * outputStride0],
+            outputLocal[queryOffset], copyOutParams);
     }
 
-    __aicore__ inline void ComputeGradTogether(DTYPE_VALUE distLH, DTYPE_VALUE distLW,
-                                               DTYPE_VALUE w1, DTYPE_VALUE w2, DTYPE_VALUE w3, DTYPE_VALUE w4,
-                                               DTYPE_VALUE attentionWeight)
+    __aicore__ inline void ComputeGradTogether(DTYPE_VALUE distLH, DTYPE_VALUE distLW, DTYPE_VALUE w1, DTYPE_VALUE w2,
+                                               DTYPE_VALUE w3, DTYPE_VALUE w4, DTYPE_VALUE attentionWeight)
     {
-        DataCopyPad(zerosLocal[queryOffsetv], valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset],
-            copyInParamsV1, padParamsFloat);
+        DataCopyPad(zerosLocal[queryOffsetv], valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset], copyInParamsV1,
+                    padParamsFloat);
 
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -249,7 +251,9 @@ private:
 
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-        DataCopyPad(outputGm[batch * outputStride2 + (nqloop * maxUbNum + query) * outputStride1 + head * outputStride0], outputLocal[queryOffset], copyOutParams);
+        DataCopyPad(
+            outputGm[batch * outputStride2 + (nqloop * maxUbNum + query) * outputStride1 + head * outputStride0],
+            outputLocal[queryOffset], copyOutParams);
     }
 
     __aicore__ inline void GridSampleCompute()
@@ -306,13 +310,14 @@ private:
         h = shapesLocal.GetValue(level * TWO);
         w = shapesLocal.GetValue(level * TWO + 1);
 
-        offsetWeight = batch * weightStride3 + head * weightStride2 + level * weightStride1 + point  * weightStride0;
+        offsetWeight = batch * weightStride3 + head * weightStride2 + level * weightStride1 + point * weightStride0;
         offsetLocation = TWO * offsetWeight;
-        thisCycleNumAlign = (nqloop == numQueriesper -1) ? numQueriestail : maxUbNum;
-        thisCycleNum = (nqloop == numQueriesper -1) ? (numQueries - (numQueriesper - 1) * maxUbNum) : maxUbNum;
+        thisCycleNumAlign = (nqloop == numQueriesper - 1) ? numQueriestail : maxUbNum;
+        thisCycleNum = (nqloop == numQueriesper - 1) ? (numQueries - (numQueriesper - 1) * maxUbNum) : maxUbNum;
         offsetValue = batch * valueStride2 + head * valueStride1 + levelStartId * valueStride0;
         hStride = w * wStride;
-        copyInParamsV1 = {2, (uint32_t)(2 * embedDims * sizeof(DTYPE_VALUE)), (uint32_t)((hStride - 2 * embedDims) * sizeof(DTYPE_VALUE)), 0, 0};
+        copyInParamsV1 = {2, (uint32_t)(2 * embedDims * sizeof(DTYPE_VALUE)),
+                          (uint32_t)((hStride - 2 * embedDims) * sizeof(DTYPE_VALUE)), 0, 0};
         copyInParamsV2 = {1, (uint32_t)(thisCycleNum * sizeof(DTYPE_VALUE)), 0, 0, 0};
     }
 
@@ -321,18 +326,20 @@ private:
         ScalarUpdate(taskIdx);
 
         Duplicate(zerosLocal, (DTYPE_VALUE)0, fourBuffer * numQueriesAlign * embedDims);
-        DataCopyPad(locWLocal, locationGm[offsetLocation + nqloop * maxUbNum],  copyInParamsV2, padParamsFloat);
+        DataCopyPad(locWLocal, locationGm[offsetLocation + nqloop * maxUbNum], copyInParamsV2, padParamsFloat);
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         Muls(imLocal, locWLocal, (DTYPE_VALUE)w, thisCycleNumAlign);
 
-        DataCopyPad(locHLocal, locationGm[offsetLocation + numQueries + nqloop * maxUbNum], copyInParamsV2, padParamsFloat);
+        DataCopyPad(locHLocal, locationGm[offsetLocation + numQueries + nqloop * maxUbNum], copyInParamsV2,
+                    padParamsFloat);
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         Muls(imLocal[thisCycleNumAlign], locHLocal, (DTYPE_VALUE)h, thisCycleNumAlign);
 
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-        DataCopyPad(attentionWeightLocal, attentionWeightsGm[offsetWeight + nqloop * maxUbNum], copyInParamsV2, padParamsFloat);
+        DataCopyPad(attentionWeightLocal, attentionWeightsGm[offsetWeight + nqloop * maxUbNum], copyInParamsV2,
+                    padParamsFloat);
 
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         Adds(imLocal, imLocal, CONV_CONSTANT, TWO * thisCycleNumAlign);
@@ -346,7 +353,7 @@ private:
     }
 
 private:
-    TPipe *pipe;
+    TPipe* pipe;
     GlobalTensor<DTYPE_VALUE> valueGm, locationGm, attentionWeightsGm, outputGm;
     GlobalTensor<DTYPE_VALUE_SPATIAL_SHAPES> valueSpatialShapesGm, valueLevelStartIndexGm;
 
@@ -363,7 +370,7 @@ private:
     uint32_t v1Id = 0, v2Id = 1, v3Id = 2, v4Id = 3;
     uint32_t thisCycleNum, thisCycleNumAlign, maxUbNum;
     uint32_t twoBuffer = 2, TWO = 2, threeBuffer = 3, fourBuffer = 4, eightBuffer = 8;
-    uint32_t numQuerieBuffer= 12, numEmbedBuffer = 5;
+    uint32_t numQuerieBuffer = 12, numEmbedBuffer = 5;
     uint32_t useUbSize = 190 * 1024;
     uint64_t batchSize, numKeys, numHeads, embedDims, numLevels, numQueries, numPoints;
     uint64_t numQueriesAlign, numQueriesper, numQueriestail, numLevelsAlign;
@@ -393,8 +400,8 @@ private:
     LocalTensor<DTYPE_VALUE_SPATIAL_SHAPES> lowLocal;
 
     DataCopyExtParams copyInParamsV1, copyInParamsV2, copyInParamsV3, copyOutParams;
-    DataCopyPadExtParams<DTYPE_VALUE_SPATIAL_SHAPES> padParamsInt {false, 0, 0, 0};
-    DataCopyPadExtParams<DTYPE_VALUE> padParamsFloat {false, 0, 0, 0};
+    DataCopyPadExtParams<DTYPE_VALUE_SPATIAL_SHAPES> padParamsInt{false, 0, 0, 0};
+    DataCopyPadExtParams<DTYPE_VALUE> padParamsFloat{false, 0, 0, 0};
     event_t eventIdVToMte2, eventIdVToMte3, eventIdMte2ToV, eventIdMte3ToV;
 };
 

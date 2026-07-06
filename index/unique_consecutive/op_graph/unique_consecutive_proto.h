@@ -27,9 +27,11 @@ namespace ge {
 * x: A ND tensor of BasicType, bool or bfloat16. \n
 
 * @par Attributes:
-* @li return_idx: An optional bool. Whether to also return the indices. The default value is False. Currently only False is supported.
+* @li return_idx: An optional bool. Whether to also return the indices. The default value is False. Currently only False
+is supported.
 * @li return_count: An optional bool. Whether to also return the counts for each element. The default is False.
-* @li axis: An optional int. Which one axis to apply unique. The default is 1000, which means None. Currently only 1000 is supported.
+* @li axis: An optional int. Which one axis to apply unique. The default is 1000, which means None. Currently only 1000
+is supported.
 * @li out_idx: Output index/count's datatype. The default is DT_INT64.
 
 * @par Outputs:
@@ -58,4 +60,3 @@ REG_OP(UniqueConsecutive)
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_UNIQUE_CONSECUTIVE_H_
-

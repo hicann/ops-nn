@@ -36,4 +36,4 @@ struct SoftplusV2GradTilingData {
     float threshold;
 };
 
-#endif  // SOFTPLUS_BACKWARD_TILING_KERNEL_H
+#endif // SOFTPLUS_BACKWARD_TILING_KERNEL_H

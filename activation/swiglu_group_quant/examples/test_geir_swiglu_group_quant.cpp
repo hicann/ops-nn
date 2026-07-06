@@ -106,13 +106,13 @@ void PrintTensorInfo(const char* caseName, const vector<Tensor>& tensors, const 
     for (size_t i = 0; i < tensors.size(); ++i) {
         const TensorDesc& desc = tensors[i].GetTensorDesc();
         std::cout << caseName << " " << prefix << " " << i << " dtype: " << desc.GetDataType() << std::endl;
-        std::cout << caseName << " " << prefix << " " << i
-                  << " shape size = " << desc.GetShape().GetShapeSize() << std::endl;
+        std::cout << caseName << " " << prefix << " " << i << " shape size = " << desc.GetShape().GetShapeSize()
+                  << std::endl;
     }
 }
 
 int CreateSwigluGroupQuantGraph(const SwigluGroupQuantCase& testCase, Graph& graph, vector<Tensor>& input,
-    vector<Operator>& inputs, vector<Operator>& outputs)
+                                vector<Operator>& inputs, vector<Operator>& outputs)
 {
     Status ret = SUCCESS;
     auto swigluGroupQuant = op::SwigluGroupQuant("swiglu_group_quant");

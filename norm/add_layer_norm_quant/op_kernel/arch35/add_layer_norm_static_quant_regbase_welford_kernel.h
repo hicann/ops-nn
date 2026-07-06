@@ -24,15 +24,11 @@ namespace AddLayerNormQuantRegbase {
 template <typename X1_TYPE, typename SCALE_TYPE, int32_t TILING_KEY, int32_t OPT_CODE, int32_t BUFFER_NUM = 1>
 class KernelAddLayerNormStaticQuantRegbaseWelford {
 public:
-    __aicore__ inline KernelAddLayerNormStaticQuantRegbaseWelford(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormStaticQuantRegbaseWelford(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scale1, GM_ADDR scale2,
-        GM_ADDR zeroOffset1, GM_ADDR zeroOffset2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR workspace,
-        const AddLayerNormQuantRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scale1,
+                                GM_ADDR scale2, GM_ADDR zeroOffset1, GM_ADDR zeroOffset2, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR workspace, const AddLayerNormQuantRegbaseTilingData* tilingData)
     {
         uint32_t coreIdx = GetBlockIdx();
 
@@ -91,16 +87,14 @@ public:
         pipe_->InitBuffer(gammaQueue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
         pipe_->InitBuffer(scale1Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE)));
 
-        CONST_CONDITIONAL_EXPR(
-            IS_SCALE2_EXIST, pipe_->InitBuffer(y2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(int8_t))));
-        CONST_CONDITIONAL_EXPR(
-            IS_SCALE2_EXIST, pipe_->InitBuffer(scale2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
-        CONST_CONDITIONAL_EXPR(
-            IS_OFFSET1_EXIST,
-            pipe_->InitBuffer(zeroOffset1Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
-        CONST_CONDITIONAL_EXPR(
-            IS_OFFSET2_EXIST,
-            pipe_->InitBuffer(zeroOffset2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
+        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST,
+                               pipe_->InitBuffer(y2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(int8_t))));
+        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST,
+                               pipe_->InitBuffer(scale2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
+        CONST_CONDITIONAL_EXPR(IS_OFFSET1_EXIST, pipe_->InitBuffer(zeroOffset1Queue_, BUFFER_NUM,
+                                                                   (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
+        CONST_CONDITIONAL_EXPR(IS_OFFSET2_EXIST, pipe_->InitBuffer(zeroOffset2Queue_, BUFFER_NUM,
+                                                                   (colsPerLoopAlign_ * sizeof(SCALE_TYPE))));
 
         pipe_->InitBuffer(meanBuf_, colsPerLoopAlign_ * sizeof(float));
         pipe_->InitBuffer(varBuf_, colsPerLoopAlign_ * sizeof(float));
@@ -114,9 +108,9 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInputsToUB(
-        LocalTensor<X1_TYPE> x1Local, LocalTensor<X1_TYPE> x2Local, LocalTensor<X1_TYPE> biasLocal, int64_t inputOffset,
-        int64_t biasOffset, int32_t copyLen)
+    __aicore__ inline void CopyInputsToUB(LocalTensor<X1_TYPE> x1Local, LocalTensor<X1_TYPE> x2Local,
+                                          LocalTensor<X1_TYPE> biasLocal, int64_t inputOffset, int64_t biasOffset,
+                                          int32_t copyLen)
     {
         DataCopyPadExtParams<X1_TYPE> padParams = MakeZeroPadParams<X1_TYPE>(copyLen, blockSize_);
         DataCopyExtParams dataCopyParams = MakeDataCopyParams<X1_TYPE>(copyLen);
@@ -141,8 +135,8 @@ public:
         DataCopyPad(xGm_[xOffset], xLocal, dataCopyParams);
     }
 
-    __aicore__ inline void CopyYToGm(
-        LocalTensor<int8_t> y1Local, LocalTensor<int8_t> y2Local, int64_t yOffset, int32_t copyLen)
+    __aicore__ inline void CopyYToGm(LocalTensor<int8_t> y1Local, LocalTensor<int8_t> y2Local, int64_t yOffset,
+                                     int32_t copyLen)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
@@ -154,9 +148,9 @@ public:
         CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, DataCopyPad(y2Gm_[yOffset], y2Local, dataCopyParams));
     }
 
-    __aicore__ inline void CopyQuantParams2UB(
-        LocalTensor<SCALE_TYPE> scale1Local, LocalTensor<SCALE_TYPE> scale2Local, LocalTensor<SCALE_TYPE> offset1Local,
-        LocalTensor<SCALE_TYPE> offset2Local, int64_t offset, int32_t copyLen)
+    __aicore__ inline void CopyQuantParams2UB(LocalTensor<SCALE_TYPE> scale1Local, LocalTensor<SCALE_TYPE> scale2Local,
+                                              LocalTensor<SCALE_TYPE> offset1Local,
+                                              LocalTensor<SCALE_TYPE> offset2Local, int64_t offset, int32_t copyLen)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
@@ -179,12 +173,14 @@ public:
         }
     }
 
-    static __aicore__ inline void VFCalcYQuant(
-        LocalTensor<X1_TYPE>& x1Local, LocalTensor<X1_TYPE>& x2Local, LocalTensor<X1_TYPE>& biasLocal,
-        LocalTensor<X1_TYPE>& betaLocal, LocalTensor<X1_TYPE>& gammaLocal, LocalTensor<SCALE_TYPE>& scale1Local,
-        LocalTensor<SCALE_TYPE>& scale2Local, LocalTensor<SCALE_TYPE>& offset1Local,
-        LocalTensor<SCALE_TYPE>& offset2Local, float mean, float rstd, LocalTensor<X1_TYPE>& yOutLocal,
-        LocalTensor<int8_t>& y1Local, LocalTensor<int8_t>& y2Local, uint32_t colsCount, uint32_t vlFp32)
+    static __aicore__ inline void VFCalcYQuant(LocalTensor<X1_TYPE>& x1Local, LocalTensor<X1_TYPE>& x2Local,
+                                               LocalTensor<X1_TYPE>& biasLocal, LocalTensor<X1_TYPE>& betaLocal,
+                                               LocalTensor<X1_TYPE>& gammaLocal, LocalTensor<SCALE_TYPE>& scale1Local,
+                                               LocalTensor<SCALE_TYPE>& scale2Local,
+                                               LocalTensor<SCALE_TYPE>& offset1Local,
+                                               LocalTensor<SCALE_TYPE>& offset2Local, float mean, float rstd,
+                                               LocalTensor<X1_TYPE>& yOutLocal, LocalTensor<int8_t>& y1Local,
+                                               LocalTensor<int8_t>& y2Local, uint32_t colsCount, uint32_t vlFp32)
     {
         __local_mem__ X1_TYPE* x1Addr = (__local_mem__ X1_TYPE*)x1Local[0].GetPhyAddr();
         __local_mem__ X1_TYPE* x2Addr = (__local_mem__ X1_TYPE*)x2Local[0].GetPhyAddr();
@@ -204,10 +200,10 @@ public:
         }
         CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, quant2OutAddr, (__local_mem__ int8_t*)y2Local[0].GetPhyAddr());
         CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, scale2Addr, (__local_mem__ SCALE_TYPE*)scale2Local[0].GetPhyAddr());
-        CONST_CONDITIONAL_ASSIGN(
-            IS_OFFSET1_EXIST, offset1Addr, (__local_mem__ SCALE_TYPE*)offset1Local[0].GetPhyAddr());
-        CONST_CONDITIONAL_ASSIGN(
-            IS_OFFSET2_EXIST, offset2Addr, (__local_mem__ SCALE_TYPE*)offset2Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_OFFSET1_EXIST, offset1Addr,
+                                 (__local_mem__ SCALE_TYPE*)offset1Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_OFFSET2_EXIST, offset2Addr,
+                                 (__local_mem__ SCALE_TYPE*)offset2Local[0].GetPhyAddr());
 
         // uint32_t vlFp32 = vlFp32_;
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
@@ -230,8 +226,8 @@ public:
             uint32_t sreg0 = colsCount;
             for (uint16_t i = 0; i < colsLoopCount; i++) {
                 pregLoop = UpdateMask<float>(sreg0);
-                LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
-                    x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32, i * vlFp32, i * vlFp32);
+                LoadInputsToReg<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(x1Addr, x2Addr, biasAddr, x, pregLoop,
+                                                                       i * vlFp32, i * vlFp32, i * vlFp32);
                 LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
                 LoadQuantParams(scale1Addr, scale1, pregLoop, i * vlFp32);
                 CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, LoadQuantParams(scale2Addr, scale2, pregLoop, i * vlFp32));
@@ -257,11 +253,11 @@ public:
                 Round2Int8(quantOut1, x, pregLoop);
                 CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Round2Int8(quantOut2, y, pregLoop));
 
-                DataCopy<int8_t, StoreDist::DIST_PACK4_B32>(
-                    (__local_mem__ int8_t*)quant1OutAddr + i * vlFp32, quantOut1, pregLoop);
-                CONST_CONDITIONAL_EXPR(
-                    IS_SCALE2_EXIST, (DataCopy<int8_t, StoreDist::DIST_PACK4_B32>(
-                                         (__local_mem__ int8_t*)quant2OutAddr + i * vlFp32, quantOut2, pregLoop)));
+                DataCopy<int8_t, StoreDist::DIST_PACK4_B32>((__local_mem__ int8_t*)quant1OutAddr + i * vlFp32,
+                                                            quantOut1, pregLoop);
+                CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST,
+                                       (DataCopy<int8_t, StoreDist::DIST_PACK4_B32>(
+                                           (__local_mem__ int8_t*)quant2OutAddr + i * vlFp32, quantOut2, pregLoop)));
             }
         }
     }
@@ -343,14 +339,14 @@ public:
 
             float reduceScale = float(1.0) / static_cast<float>(cols_);
             if (colsTail_ != colsPerLoop_) {
-                VFWelfordParallelFinalizeNonAlign(
-                    meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal, colsPerLoop_, binaryAddNum_,
-                    binaryAddK_, binaryAddLastNum_, 0, colsTail_, reduceScale, count - 1, eps_);
+                VFWelfordParallelFinalizeNonAlign(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal,
+                                                  colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0,
+                                                  colsTail_, reduceScale, count - 1, eps_);
             } else {
                 float scale = float(1.0) / static_cast<float>(colsPerLoop_);
-                VFWelfordParallelFinalizeAlign(
-                    meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal, colsPerLoop_, binaryAddNum_,
-                    binaryAddK_, binaryAddLastNum_, 0, reduceScale, scale, count, eps_);
+                VFWelfordParallelFinalizeAlign(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, binaryAddLocal,
+                                               colsPerLoop_, binaryAddNum_, binaryAddK_, binaryAddLastNum_, 0,
+                                               reduceScale, scale, count, eps_);
             }
 
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -383,16 +379,16 @@ public:
                 LocalTensor<SCALE_TYPE> offset1Local;
                 LocalTensor<SCALE_TYPE> offset2Local;
                 CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, scale2Local, scale2Queue_.template AllocTensor<SCALE_TYPE>());
-                CONST_CONDITIONAL_ASSIGN(
-                    IS_OFFSET1_EXIST, offset1Local, zeroOffset1Queue_.template AllocTensor<SCALE_TYPE>());
-                CONST_CONDITIONAL_ASSIGN(
-                    IS_OFFSET2_EXIST, offset2Local, zeroOffset2Queue_.template AllocTensor<SCALE_TYPE>());
+                CONST_CONDITIONAL_ASSIGN(IS_OFFSET1_EXIST, offset1Local,
+                                         zeroOffset1Queue_.template AllocTensor<SCALE_TYPE>());
+                CONST_CONDITIONAL_ASSIGN(IS_OFFSET2_EXIST, offset2Local,
+                                         zeroOffset2Queue_.template AllocTensor<SCALE_TYPE>());
 
                 // copy in x1, x2, bias
                 CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
                 // copy in gamma, beta
                 CopyGammaAndBetaToUBCommon(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_,
-                    inputOffsetGamma, copyLen, blockSize_);
+                                           inputOffsetGamma, copyLen, blockSize_);
                 // copy in scale/offset
                 CopyQuantParams2UB(scale1Local, scale2Local, offset1Local, offset2Local, inputOffsetGamma, copyLen);
 
@@ -408,18 +404,17 @@ public:
 
                 scale1Local = scale1Queue_.template DeQue<SCALE_TYPE>();
                 CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, scale2Local, scale2Queue_.template DeQue<SCALE_TYPE>());
-                CONST_CONDITIONAL_ASSIGN(
-                    IS_OFFSET1_EXIST, offset1Local, zeroOffset1Queue_.template DeQue<SCALE_TYPE>());
-                CONST_CONDITIONAL_ASSIGN(
-                    IS_OFFSET2_EXIST, offset2Local, zeroOffset2Queue_.template DeQue<SCALE_TYPE>());
+                CONST_CONDITIONAL_ASSIGN(IS_OFFSET1_EXIST, offset1Local,
+                                         zeroOffset1Queue_.template DeQue<SCALE_TYPE>());
+                CONST_CONDITIONAL_ASSIGN(IS_OFFSET2_EXIST, offset2Local,
+                                         zeroOffset2Queue_.template DeQue<SCALE_TYPE>());
 
                 LocalTensor<int8_t> y1Local = y1Queue_.template AllocTensor<int8_t>();
                 LocalTensor<int8_t> y2Local;
                 CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, y2Local, y2Queue_.template AllocTensor<int8_t>());
 
-                VFCalcYQuant(
-                    x1Local, x2Local, biasLocal, betaLocal, gammaLocal, scale1Local, scale2Local, offset1Local,
-                    offset2Local, mean, rstd, x1Local, y1Local, y2Local, copyLen, vlFp32_);
+                VFCalcYQuant(x1Local, x2Local, biasLocal, betaLocal, gammaLocal, scale1Local, scale2Local, offset1Local,
+                             offset2Local, mean, rstd, x1Local, y1Local, y2Local, copyLen, vlFp32_);
 
                 // copy out y
                 y1Queue_.EnQue(y1Local);

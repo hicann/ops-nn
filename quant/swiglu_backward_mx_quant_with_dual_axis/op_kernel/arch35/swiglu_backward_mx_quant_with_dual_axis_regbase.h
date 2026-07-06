@@ -68,75 +68,87 @@ constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t DOUBLE_BLOCK_SIZE = 64;
 constexpr int64_t UB_BLOCK_SIZE = platform::GetUbBlockSize();
 
-static constexpr MicroAPI::CastTrait CAST_X_TO_FP32_ZERO = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN };
-static constexpr MicroAPI::CastTrait CAST_X_TO_FP32_ONE = { MicroAPI::RegLayout::ONE, MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN };
-static constexpr MicroAPI::CastTrait CAST_HALF_TO_BF16 = { MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC };
+static constexpr MicroAPI::CastTrait CAST_X_TO_FP32_ZERO = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                            MicroAPI::MaskMergeMode::ZEROING,
+                                                            AscendC::RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait CAST_X_TO_FP32_ONE = {MicroAPI::RegLayout::ONE, MicroAPI::SatMode::UNKNOWN,
+                                                           MicroAPI::MaskMergeMode::ZEROING,
+                                                           AscendC::RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait CAST_HALF_TO_BF16 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN,
+                                                          MicroAPI::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_TRUNC};
 
-static constexpr MicroAPI::CastTrait CAST_FP32_TO_FP16_BF16 = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-    MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
-static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_80 = { AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
-static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_81 = { AscendC::MicroAPI::RegLayout::ONE,
-    AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
-static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_82 = { AscendC::MicroAPI::RegLayout::TWO,
-    AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
-static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_83 = { AscendC::MicroAPI::RegLayout::THREE,
-    AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT };
+static constexpr MicroAPI::CastTrait CAST_FP32_TO_FP16_BF16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                               MicroAPI::MaskMergeMode::ZEROING,
+                                                               AscendC::RoundMode::CAST_RINT};
+static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_80 = {
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
+static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_81 = {
+    AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
+static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_82 = {
+    AscendC::MicroAPI::RegLayout::TWO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
+static constexpr AscendC::MicroAPI::CastTrait CAST_32_TO_83 = {
+    AscendC::MicroAPI::RegLayout::THREE, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 class SwigluBackwardMxQuantWithDualAxisBase {
 public:
-    __aicore__ inline SwigluBackwardMxQuantWithDualAxisBase(const SwigluBackwardMxQuantWithDualAxisTilingData *tilingData, TPipe *pipe)
+    __aicore__ inline SwigluBackwardMxQuantWithDualAxisBase(
+        const SwigluBackwardMxQuantWithDualAxisTilingData* tilingData, TPipe* pipe)
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR yGrad, GM_ADDR groupIndex, GM_ADDR y1, GM_ADDR mxScale1, GM_ADDR y2,
-        GM_ADDR mxScale2);
+                                GM_ADDR mxScale2);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void InitParams();
     __aicore__ inline void CopyIn(int64_t absRowStart, int64_t colOffsetAB, int64_t calcRow, int64_t calcColAB);
     __aicore__ inline void CopyInYGrad(int64_t absRowStart, int64_t colOffsetAB, int64_t calcRow, int64_t calcColAB);
-    __aicore__ inline void ComputeSwigluBackward(uint16_t dataLenAB, uint16_t blockCount, __ubuf__ xDtype *actAddr,
-        __ubuf__ xDtype *gateAddr, __ubuf__ xDtype *yGradAddr, __ubuf__ xDtype *gradXAddr, uint32_t rowWidth);
-    __aicore__ inline void PadZeroM(__ubuf__ xDtype *gradXAddr, uint32_t num);
-    __aicore__ inline void ComputeScaleOcp(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-        __ubuf__ uint8_t *mxScale1Addr, __ubuf__ uint16_t *mxScale1ReciprocalAddr, __ubuf__ uint8_t *mxScale2Addr,
-        __ubuf__ uint16_t *mxScale2ReciprocalAddr);
-    __aicore__ inline void ComputeScaleCuBLAS(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-        __ubuf__ uint8_t *mxScaleA1Addr, __ubuf__ uint8_t *mxScaleA2Addr, __ubuf__ uint16_t *mxScale1ReciprocalAddr,
-        __ubuf__ uint8_t *mxScale2Addr, __ubuf__ uint16_t *mxScale2ReciprocalAddr, int64_t dataLenAB,
-        __ubuf__ uint8_t *y1Addr);
+    __aicore__ inline void ComputeSwigluBackward(uint16_t dataLenAB, uint16_t blockCount, __ubuf__ xDtype* actAddr,
+                                                 __ubuf__ xDtype* gateAddr, __ubuf__ xDtype* yGradAddr,
+                                                 __ubuf__ xDtype* gradXAddr, uint32_t rowWidth);
+    __aicore__ inline void PadZeroM(__ubuf__ xDtype* gradXAddr, uint32_t num);
+    __aicore__ inline void ComputeScaleOcp(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                           __ubuf__ uint8_t* mxScale1Addr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
+                                           __ubuf__ uint8_t* mxScale2Addr, __ubuf__ uint16_t* mxScale2ReciprocalAddr);
+    __aicore__ inline void ComputeScaleCuBLAS(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                              __ubuf__ uint8_t* mxScaleA1Addr, __ubuf__ uint8_t* mxScaleA2Addr,
+                                              __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+                                              __ubuf__ uint16_t* mxScale2ReciprocalAddr, int64_t dataLenAB,
+                                              __ubuf__ uint8_t* y1Addr);
     __aicore__ inline void ComputeScaleCuBLASSecondLast(uint16_t dataLen, uint32_t localInvDtypeMax,
-        __ubuf__ uint16_t *mxScale2ReciprocalAddr, __ubuf__ uint8_t *mxScale2Addr);
-    __aicore__ inline void ComputeY1ToFP8(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-        __ubuf__ uint16_t *mxScale1ReciprocalAddr, __ubuf__ uint8_t *y1Addr);
-    __aicore__ inline void ComputeY1ToFP4(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-        __ubuf__ uint16_t *mxScale1ReciprocalAddr, __ubuf__ uint8_t *y1Addr);
-    __aicore__ inline void ComputeY2ToFP8(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-        __ubuf__ uint16_t *mxScale2ReciprocalAddr, __ubuf__ uint8_t *y2Addr);
-    __aicore__ inline void ComputeY2ToFP4(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-        __ubuf__ uint16_t *mxScale2ReciprocalAddr, __ubuf__ uint8_t *y2Addr);
-    __aicore__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float> &Reg);
+                                                        __ubuf__ uint16_t* mxScale2ReciprocalAddr,
+                                                        __ubuf__ uint8_t* mxScale2Addr);
+    __aicore__ inline void ComputeY1ToFP8(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                          __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* y1Addr);
+    __aicore__ inline void ComputeY1ToFP4(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                          __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* y1Addr);
+    __aicore__ inline void ComputeY2ToFP8(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                          __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y2Addr);
+    __aicore__ inline void ComputeY2ToFP4(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
+                                          __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y2Addr);
+    __aicore__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float>& Reg);
     __aicore__ inline void CopyOut(int64_t yOffsetA, int64_t yOffsetB, int64_t scale1OutOffset,
-        int64_t scale2OutOffsetA, int64_t scale2OutOffsetB, int64_t blockCount, int64_t blockCountAlign,
-        int64_t dataLenAB, int64_t rowWidth);
+                                   int64_t scale2OutOffsetA, int64_t scale2OutOffsetB, int64_t blockCount,
+                                   int64_t blockCountAlign, int64_t dataLenAB, int64_t rowWidth);
 
 protected:
-    static constexpr MicroAPI::CastTrait castTraitBF16toFp4 = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-        MicroAPI::MaskMergeMode::ZEROING, roundMode };
-    static constexpr MicroAPI::CastTrait castTraitFp32toBF16 = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-        MicroAPI::MaskMergeMode::ZEROING, roundMode };
-    static constexpr MicroAPI::CastTrait castTraitFp32toYdtype = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
-        MicroAPI::MaskMergeMode::ZEROING, roundMode };
+    static constexpr MicroAPI::CastTrait castTraitBF16toFp4 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
+                                                               MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    static constexpr MicroAPI::CastTrait castTraitFp32toBF16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                                MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    static constexpr MicroAPI::CastTrait castTraitFp32toYdtype = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
+                                                                  MicroAPI::MaskMergeMode::ZEROING, roundMode};
 
 private:
-    const SwigluBackwardMxQuantWithDualAxisTilingData *tilingData_;
+    const SwigluBackwardMxQuantWithDualAxisTilingData* tilingData_;
 
-    TPipe *pipe_;
+    TPipe* pipe_;
     TQue<QuePosition::VECIN, DB_BUFFER> inQueue_;
     TQue<QuePosition::VECIN, DB_BUFFER> yGradQueue_;
     TBuf<TPosition::VECCALC> gradXBuf_;
@@ -159,7 +171,7 @@ private:
     int64_t blockIdx_ = 0;
     int64_t ubRowLen_ = 0;
     int64_t ubRowLenTail_ = 0;
-    int64_t ubRowCount_ = 0; 
+    int64_t ubRowCount_ = 0;
     int64_t dimNeg1ScaleNum_ = 0;
     uint32_t invDtypeMax_ = 0;
     uint16_t dtypeYMaxExp_ = 0;
@@ -173,7 +185,7 @@ private:
 };
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::InitParams()
 {
@@ -197,8 +209,8 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void 
+          uint64_t isGroupIdx>
+__aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::Init(
     GM_ADDR x, GM_ADDR yGrad, GM_ADDR groupIndex, GM_ADDR y1, GM_ADDR mxScale1, GM_ADDR y2, GM_ADDR mxScale2)
 {
@@ -208,26 +220,26 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 
     InitParams();
 
-    xGm_.SetGlobalBuffer((__gm__ xDtype *)(x));
-    yGradGm_.SetGlobalBuffer((__gm__ xDtype *)(yGrad));
+    xGm_.SetGlobalBuffer((__gm__ xDtype*)(x));
+    yGradGm_.SetGlobalBuffer((__gm__ xDtype*)(yGrad));
     if constexpr (isGroupIdx == static_cast<uint64_t>(1)) {
-        groupIndexGm_.SetGlobalBuffer((__gm__ int64_t *)(groupIndex));
+        groupIndexGm_.SetGlobalBuffer((__gm__ int64_t*)(groupIndex));
         groupIndexGm_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
     }
     xGm_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
     yGradGm_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
-    yGm1_.SetGlobalBuffer((__gm__ uint8_t *)(y1));
-    mxScaleGm1_.SetGlobalBuffer((__gm__ uint8_t *)(mxScale1));
-    yGm2_.SetGlobalBuffer((__gm__ uint8_t *)(y2));
-    mxScaleGm2_.SetGlobalBuffer((__gm__ uint8_t *)(mxScale2));
+    yGm1_.SetGlobalBuffer((__gm__ uint8_t*)(y1));
+    mxScaleGm1_.SetGlobalBuffer((__gm__ uint8_t*)(mxScale1));
+    yGm2_.SetGlobalBuffer((__gm__ uint8_t*)(y2));
+    mxScaleGm2_.SetGlobalBuffer((__gm__ uint8_t*)(mxScale2));
 
     inHalfSize_ = ubRowLen_ * ubRowCount_;
     int64_t inBufferSize = inHalfSize_ * static_cast<int64_t>(sizeof(xDtype));
     int64_t gradXBufferSize = inHalfSize_ * DIGIT_TWO * static_cast<int64_t>(sizeof(xDtype));
     int64_t mxScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_THREE);
     int64_t mxScale1BufferSize = ubRowCount_ * UB_BLOCK_SIZE;
-    int64_t tmpScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_TWO)
-        * static_cast<int64_t>(sizeof(xDtype));
+    int64_t tmpScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_TWO) *
+                                  static_cast<int64_t>(sizeof(xDtype));
     pipe_->InitBuffer(inQueue_, DB_BUFFER, inBufferSize * DIGIT_TWO);
     pipe_->InitBuffer(yGradQueue_, DB_BUFFER, inBufferSize);
     pipe_->InitBuffer(gradXBuf_, gradXBufferSize);
@@ -241,8 +253,8 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void 
+          uint64_t isGroupIdx>
+__aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::Process()
 {
     int64_t numGroups = 1;
@@ -348,25 +360,25 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             LocalTensor<xDtype> yGradLocal = yGradQueue_.template DeQue<xDtype>();
             LocalTensor<xDtype> gradXLocal = gradXBuf_.template Get<xDtype>();
 
-            auto actAddr = (__ubuf__ xDtype *)xLocal.GetPhyAddr();
-            auto gateAddr = (__ubuf__ xDtype *)xLocal[inHalfSize_].GetPhyAddr();
+            auto actAddr = (__ubuf__ xDtype*)xLocal.GetPhyAddr();
+            auto gateAddr = (__ubuf__ xDtype*)xLocal[inHalfSize_].GetPhyAddr();
             if (activateLeft_ == 0) {
-                actAddr = (__ubuf__ xDtype *)xLocal[inHalfSize_].GetPhyAddr();
-                gateAddr = (__ubuf__ xDtype *)xLocal.GetPhyAddr();
+                actAddr = (__ubuf__ xDtype*)xLocal[inHalfSize_].GetPhyAddr();
+                gateAddr = (__ubuf__ xDtype*)xLocal.GetPhyAddr();
             }
-            auto yGradAddr = (__ubuf__ xDtype *)yGradLocal.GetPhyAddr();
-            auto gradXAddr = (__ubuf__ xDtype *)gradXLocal.GetPhyAddr();
+            auto yGradAddr = (__ubuf__ xDtype*)yGradLocal.GetPhyAddr();
+            auto gradXAddr = (__ubuf__ xDtype*)gradXLocal.GetPhyAddr();
             uint32_t calcPadRowAlgin = ops::CeilDiv(calcRow, DOUBLE_BLOCK_SIZE) * DOUBLE_BLOCK_SIZE;
             uint32_t rowWidth = ops::CeilDiv(calcColAB * DIGIT_TWO, static_cast<int64_t>(VF_LEN_B16)) * VF_LEN_B16;
 
             ComputeSwigluBackward(static_cast<uint16_t>(calcColAB), static_cast<uint16_t>(calcRow), actAddr, gateAddr,
-                yGradAddr, gradXAddr, rowWidth);
+                                  yGradAddr, gradXAddr, rowWidth);
             inQueue_.template FreeTensor(xLocal);
             yGradQueue_.template FreeTensor(yGradLocal);
             if (calcRow % DOUBLE_BLOCK_SIZE != 0) {
                 uint32_t calcPadRow = calcPadRowAlgin - calcRow;
                 uint32_t allNumZero = calcPadRow * rowWidth;
-                auto gradXAddrPadZero = (__ubuf__ xDtype *)gradXLocal[calcRow * rowWidth].GetPhyAddr();
+                auto gradXAddrPadZero = (__ubuf__ xDtype*)gradXLocal[calcRow * rowWidth].GetPhyAddr();
                 PadZeroM(gradXAddrPadZero, allNumZero);
             }
 
@@ -378,13 +390,13 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             LocalTensor<uint16_t> mxScale1Reciprocal = mxScale1ReciprocalBuf_.template Get<uint16_t>();
             LocalTensor<uint16_t> mxScale2Reciprocal = mxScale2ReciprocalBuf_.template Get<uint16_t>();
 
-            auto y1Addr = (__ubuf__ uint8_t *)y1.GetPhyAddr();
-            auto y2Addr = (__ubuf__ uint8_t *)y2.GetPhyAddr();
-            auto msA1Addr = (__ubuf__ uint8_t *)mxScaleA1.GetPhyAddr();
-            auto msB1Addr = (__ubuf__ uint8_t *)mxScaleB1.GetPhyAddr();
-            auto ms2Addr = (__ubuf__ uint8_t *)mxScale2.GetPhyAddr();
-            auto ms1RecipAddr = (__ubuf__ uint16_t *)mxScale1Reciprocal.GetPhyAddr();
-            auto ms2RecipAddr = (__ubuf__ uint16_t *)mxScale2Reciprocal.GetPhyAddr();
+            auto y1Addr = (__ubuf__ uint8_t*)y1.GetPhyAddr();
+            auto y2Addr = (__ubuf__ uint8_t*)y2.GetPhyAddr();
+            auto msA1Addr = (__ubuf__ uint8_t*)mxScaleA1.GetPhyAddr();
+            auto msB1Addr = (__ubuf__ uint8_t*)mxScaleB1.GetPhyAddr();
+            auto ms2Addr = (__ubuf__ uint8_t*)mxScale2.GetPhyAddr();
+            auto ms1RecipAddr = (__ubuf__ uint16_t*)mxScale1Reciprocal.GetPhyAddr();
+            auto ms2RecipAddr = (__ubuf__ uint16_t*)mxScale2Reciprocal.GetPhyAddr();
 
             int64_t calcBlockLoop = calcPadRowAlgin / BLOCK_SIZE;
             uint32_t dataLenGradX = rowWidth;
@@ -402,43 +414,42 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 
                 if constexpr (scaleAlg == TPL_SCALE_ALG_0) {
                     ComputeScaleOcp(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                        gradXAddr + sOff, msA1Addr + s1Off, ms1RecipAddr + r1Off, ms2Addr + s2Off,
-                        ms2RecipAddr + r2Off);
+                                    gradXAddr + sOff, msA1Addr + s1Off, ms1RecipAddr + r1Off, ms2Addr + s2Off,
+                                    ms2RecipAddr + r2Off);
                 } else {
                     ComputeScaleCuBLAS(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                        gradXAddr + sOff, msA1Addr + s1Off, msB1Addr + s1Off, ms1RecipAddr + r1Off, ms2Addr + s2Off,
-                        ms2RecipAddr + r2Off, calcColAB, y1Addr + yOff);
+                                       gradXAddr + sOff, msA1Addr + s1Off, msB1Addr + s1Off, ms1RecipAddr + r1Off,
+                                       ms2Addr + s2Off, ms2RecipAddr + r2Off, calcColAB, y1Addr + yOff);
                 }
                 if constexpr (IsSameType<y1Dtype, fp4x2_e2m1_t>::value || IsSameType<y1Dtype, fp4x2_e1m2_t>::value) {
                     if constexpr (scaleAlg == TPL_SCALE_ALG_0) {
                         ComputeY1ToFP4(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                            gradXAddr + sOff, ms1RecipAddr + r1Off, y1Addr + yOff);
+                                       gradXAddr + sOff, ms1RecipAddr + r1Off, y1Addr + yOff);
                     }
-                    ComputeY2ToFP4(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                        gradXAddr + sOff, ms2RecipAddr + r2Off, y2Addr + yOff);
+                    ComputeY2ToFP4(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE), gradXAddr + sOff,
+                                   ms2RecipAddr + r2Off, y2Addr + yOff);
                     if (rowWidth > VF_LEN_B16) {
                         ComputeY2ToFP4(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                            gradXAddr + sOff + VF_LEN_B16, ms2RecipAddr + r2Off + VF_LEN_B16,
-                            y2Addr + yOff + VF_LEN_B16 / DIGIT_TWO);
+                                       gradXAddr + sOff + VF_LEN_B16, ms2RecipAddr + r2Off + VF_LEN_B16,
+                                       y2Addr + yOff + VF_LEN_B16 / DIGIT_TWO);
                     }
                 } else {
                     if constexpr (scaleAlg == TPL_SCALE_ALG_0) {
                         ComputeY1ToFP8(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                            gradXAddr + sOff, ms1RecipAddr + r1Off, y1Addr + yOff);
+                                       gradXAddr + sOff, ms1RecipAddr + r1Off, y1Addr + yOff);
                     }
-                    ComputeY2ToFP8(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                        gradXAddr + sOff, ms2RecipAddr + r2Off, y2Addr + yOff);
+                    ComputeY2ToFP8(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE), gradXAddr + sOff,
+                                   ms2RecipAddr + r2Off, y2Addr + yOff);
                     if (rowWidth > VF_LEN_B16) {
                         ComputeY2ToFP8(static_cast<uint16_t>(rowWidth), static_cast<uint16_t>(BLOCK_SIZE),
-                            gradXAddr + sOff + VF_LEN_B16, ms2RecipAddr + r2Off + VF_LEN_B16,
-                            y2Addr + yOff + VF_LEN_B16);
+                                       gradXAddr + sOff + VF_LEN_B16, ms2RecipAddr + r2Off + VF_LEN_B16,
+                                       y2Addr + yOff + VF_LEN_B16);
                     }
                 }
             }
             for (int64_t blk = 1; blk < calcBlockLoop; blk += 2) {
-                Interleave(mxScale2[(blk - 1) * rowWidth], mxScale2[blk * rowWidth],
-                    mxScale2[(blk - 1) * rowWidth], mxScale2[blk * rowWidth],
-                    rowWidth);
+                Interleave(mxScale2[(blk - 1) * rowWidth], mxScale2[blk * rowWidth], mxScale2[(blk - 1) * rowWidth],
+                           mxScale2[blk * rowWidth], rowWidth);
             }
 
             mxScaleAQueue1_.template EnQue(mxScaleA1);
@@ -451,28 +462,29 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             int64_t yGmOffsetB = absRowStart * dimGradX_ + dimN_ + colOffsetAB;
             int64_t scale1GmOffset = absRowStart * dimNeg1ScaleNum_ + colOffsetAB / BLOCK_SIZE;
             int64_t scale2RowIdx = scale2GmRowOffset + rowBlockIdx * ubRowCount_ / BLOCK_SIZE;
-            
+
             int64_t scale2GmOffsetA = scale2RowIdx * dimGradX_ + colOffsetGradX;
             int64_t scale2GmOffsetB = scale2RowIdx * dimGradX_ + colOffsetGradX + dimN_ * 2;
 
             CopyOut(yGmOffsetA, yGmOffsetB, scale1GmOffset, scale2GmOffsetA, scale2GmOffsetB, calcRow, calcPadRowAlgin,
-                calcColAB, rowWidth);
+                    calcColAB, rowWidth);
         }
     }
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void
-SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::CopyIn(
-    int64_t absRowStart, int64_t colOffsetAB, int64_t calcRow, int64_t calcColAB)
+          uint64_t isGroupIdx>
+__aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg,
+                                                             isGroupIdx>::CopyIn(int64_t absRowStart,
+                                                                                 int64_t colOffsetAB, int64_t calcRow,
+                                                                                 int64_t calcColAB)
 {
     int64_t xRowStride = DIGIT_TWO * dimN_;
 
     LocalTensor<xDtype> xLocal = inQueue_.template AllocTensor<xDtype>();
 
-    DataCopyExtParams copyParams = { 0, 0, 0, 0, 0 };
-    DataCopyPadExtParams<xDtype> padParams = { false, 0, 0, 0 };
+    DataCopyExtParams copyParams = {0, 0, 0, 0, 0};
+    DataCopyPadExtParams<xDtype> padParams = {false, 0, 0, 0};
     copyParams.blockCount = static_cast<uint16_t>(calcRow);
     copyParams.blockLen = static_cast<uint32_t>(calcColAB * static_cast<int64_t>(sizeof(xDtype)));
     copyParams.srcStride = static_cast<uint32_t>((xRowStride - calcColAB) * static_cast<int64_t>(sizeof(xDtype)));
@@ -487,7 +499,7 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::CopyInYGrad(
     int64_t absRowStart, int64_t colOffsetAB, int64_t calcRow, int64_t calcColAB)
@@ -496,8 +508,8 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 
     LocalTensor<xDtype> yGradLocal = yGradQueue_.template AllocTensor<xDtype>();
 
-    DataCopyExtParams copyParams = { 0, 0, 0, 0, 0 };
-    DataCopyPadExtParams<xDtype> padParams = { false, 0, 0, 0 };
+    DataCopyExtParams copyParams = {0, 0, 0, 0, 0};
+    DataCopyPadExtParams<xDtype> padParams = {false, 0, 0, 0};
     copyParams.blockCount = static_cast<uint16_t>(calcRow);
     copyParams.blockLen = static_cast<uint32_t>(calcColAB * static_cast<int64_t>(sizeof(xDtype)));
     copyParams.srcStride = static_cast<uint32_t>((yGradRowStride - calcColAB) * static_cast<int64_t>(sizeof(xDtype)));
@@ -509,11 +521,11 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeSwigluBackward(
-    uint16_t dataLenAB, uint16_t blockCount, __ubuf__ xDtype *actAddr, __ubuf__ xDtype *gateAddr,
-    __ubuf__ xDtype *yGradAddr, __ubuf__ xDtype *gradXAddr, uint32_t rowWidth)
+    uint16_t dataLenAB, uint16_t blockCount, __ubuf__ xDtype* actAddr, __ubuf__ xDtype* gateAddr,
+    __ubuf__ xDtype* yGradAddr, __ubuf__ xDtype* gradXAddr, uint32_t rowWidth)
 {
     uint32_t localOneBlockNum = oneBlockCountB16_;
     uint32_t outAllNum = rowWidth;
@@ -544,8 +556,8 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             uint32_t length = dataLenAB;
             for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes + dim1TailTimes; dim1vfLoopIdx++) {
                 mask = MicroAPI::UpdateMask<float>(length);
-                MicroAPI::AddrReg srcIdxOffset =
-                    MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, VF_LEN_FP32);
+                MicroAPI::AddrReg srcIdxOffset = MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, alignDim1In,
+                                                                                 dim1vfLoopIdx, VF_LEN_FP32);
                 MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(regHalf, actAddr, srcIdxOffset);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(regA, regHalf, mask);
                 MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(regHalf, gateAddr, srcIdxOffset);
@@ -567,8 +579,8 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 MicroAPI::Mul(regOut, regOut, regSig, mask);
                 MicroAPI::Mul(regOut, regOut, regGrad, mask);
 
-                MicroAPI::AddrReg outOffsetA =
-                    MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, outAllNum, dim1vfLoopIdx, VF_LEN_FP32);
+                MicroAPI::AddrReg outOffsetA = MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, outAllNum, dim1vfLoopIdx,
+                                                                               VF_LEN_FP32);
                 MicroAPI::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(regHalf, regOut, mask);
                 DataCopy<xDtype, MicroAPI::StoreDist::DIST_PACK_B32>(gradXAddr, regHalf, outOffsetA, mask);
 
@@ -583,10 +595,10 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void
-SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::PadZeroM(
-    __ubuf__ xDtype *swigluOutAddr, uint32_t num)
+          uint64_t isGroupIdx>
+__aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg,
+                                                             isGroupIdx>::PadZeroM(__ubuf__ xDtype* swigluOutAddr,
+                                                                                   uint32_t num)
 {
     uint16_t times = CeilDivision(num, 128);
     uint32_t size = num;
@@ -604,11 +616,12 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeScaleOcp(
-    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr, __ubuf__ uint8_t *mxScale1Addr,
-    __ubuf__ uint16_t *mxScale1ReciprocalAddr, __ubuf__ uint8_t *mxScale2Addr, __ubuf__ uint16_t *mxScale2ReciprocalAddr)
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+    __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+    __ubuf__ uint16_t* mxScale2ReciprocalAddr)
 {
     int64_t localVlForHalfNumber = VF_LEN_B16;
     int64_t localUBBlockSize = UB_BLOCK_SIZE;
@@ -671,22 +684,22 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         for (uint16_t i = 0; i < blockCount; i++) {
             MicroAPI::Duplicate(x0, static_cast<xDtype>(0));
             MicroAPI::Duplicate(x1, static_cast<xDtype>(0));
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(x0,
-                x1, xAddr, dataLen);
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, dataLen);
             if constexpr (IsSameType<xDtype, half>::value) {
-                MicroAPI::And(x0ExpFP16, (MicroAPI::RegTensor<uint16_t> &)x0, expMaskFP16, maskAll);
-                MicroAPI::And(x1ExpFP16, (MicroAPI::RegTensor<uint16_t> &)x1, expMaskFP16, maskAll);
+                MicroAPI::And(x0ExpFP16, (MicroAPI::RegTensor<uint16_t>&)x0, expMaskFP16, maskAll);
+                MicroAPI::And(x1ExpFP16, (MicroAPI::RegTensor<uint16_t>&)x1, expMaskFP16, maskAll);
                 MicroAPI::Compare<uint16_t, CMPMODE::NE>(infNanDataMask0, x0ExpFP16, expMaskFP16, maskAll);
                 MicroAPI::Compare<uint16_t, CMPMODE::NE>(infNanDataMask1, x1ExpFP16, expMaskFP16, maskAll);
                 MicroAPI::Cast<bfloat16_t, xDtype, CAST_HALF_TO_BF16>(x0BF16, x0, maskAll);
                 MicroAPI::Cast<bfloat16_t, xDtype, CAST_HALF_TO_BF16>(x1BF16, x1, maskAll);
-                MicroAPI::And(x0ExpBF16, (MicroAPI::RegTensor<uint16_t> &)x0BF16, expMaskBF16, maskAll);
-                MicroAPI::And(x1ExpBF16, (MicroAPI::RegTensor<uint16_t> &)x1BF16, expMaskBF16, maskAll);
+                MicroAPI::And(x0ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x0BF16, expMaskBF16, maskAll);
+                MicroAPI::And(x1ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x1BF16, expMaskBF16, maskAll);
                 MicroAPI::Select<uint16_t>(x0ExpBF16, x0ExpBF16, expMaskBF16, infNanDataMask0);
                 MicroAPI::Select<uint16_t>(x1ExpBF16, x1ExpBF16, expMaskBF16, infNanDataMask1);
             } else {
-                MicroAPI::And(x0ExpBF16, (MicroAPI::RegTensor<uint16_t> &)x0, expMaskBF16, maskAll);
-                MicroAPI::And(x1ExpBF16, (MicroAPI::RegTensor<uint16_t> &)x1, expMaskBF16, maskAll);
+                MicroAPI::And(x0ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x0, expMaskBF16, maskAll);
+                MicroAPI::And(x1ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x1, expMaskBF16, maskAll);
             }
 
             MicroAPI::Max(expMaxDim1, x0ExpBF16, x1ExpBF16, maskAll);
@@ -707,7 +720,7 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
 
             MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, mxScale1B16);
             MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, mxScale1B8, 32,
-                maskReduceB8);
+                                                                                 maskReduceB8);
             MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, expMaxDim1, biasE8M0, maskAll);
 
             MicroAPI::Sub(reversedShareExp1, biasE8M0, expMaxDim1, maskAll);
@@ -715,7 +728,7 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, zero, zeroMask);
             MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
             MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1ReciprocalAddr,
-                reversedShareExp1, 16, maskReduceB16);
+                                                                                  reversedShareExp1, 16, maskReduceB16);
         }
 
         MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expMax1Dim2, expMaskBF16, maskAll);
@@ -734,8 +747,7 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         MicroAPI::Sub(reversedShareExp2Zero, biasE8M0, expMax1Dim2, maskAll);
         MicroAPI::Select<uint16_t>(reversedShareExp2Zero, reversedShareExp2Zero, nanBF16, infMask);
         MicroAPI::Select<uint16_t>(reversedShareExp2Zero, reversedShareExp2Zero, zero, zeroMask);
-        MicroAPI::Select<uint16_t>(reversedShareExp2Zero, specialExp, reversedShareExp2Zero,
-            invalidDataMask);
+        MicroAPI::Select<uint16_t>(reversedShareExp2Zero, specialExp, reversedShareExp2Zero, invalidDataMask);
 
         MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expMax2Dim2, expMaskBF16, maskAll);
         MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMax2Dim2, zero, maskAll);
@@ -755,20 +767,20 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         MicroAPI::Select<uint16_t>(reversedShareExp2One, specialExp, reversedShareExp2One, invalidDataMask);
 
         MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScale2Addr, mxScale2ZeroB8, mxScale2OneB8,
-            maskB8);
+                                                                        maskB8);
         MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, reversedShareExp2Zero,
-            reversedShareExp2One, maskAll);
+                                                                          reversedShareExp2One, maskAll);
     }
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg,
-    isGroupIdx>::ComputeScaleCuBLASSecondLast(uint16_t dataLen, uint32_t localInvDtypeMax,
-    __ubuf__ uint16_t *mxScale2ReciprocalAddr, __ubuf__ uint8_t *mxScale2Addr)
+          uint64_t isGroupIdx>
+__aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::
+    ComputeScaleCuBLASSecondLast(uint16_t dataLen, uint32_t localInvDtypeMax, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
+                                 __ubuf__ uint8_t* mxScale2Addr)
 {
     uint16_t times = dataLen / VF_LEN_FP32;
-    __ubuf__ uint16_t *mxScale2ReciprocalOutAddr = mxScale2ReciprocalAddr;
+    __ubuf__ uint16_t* mxScale2ReciprocalOutAddr = mxScale2ReciprocalAddr;
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<uint16_t> max16Reg;
@@ -797,13 +809,14 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
         MicroAPI::Duplicate(nan32Reg, static_cast<uint32_t>(NAN_CUSTOMIZATION));
         for (uint16_t i = 0; i < times; i++) {
             MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16Reg, mxScale2ReciprocalAddr, VF_LEN_FP32);
-            MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>((MicroAPI::RegTensor<float> &)max32Reg,
-                (MicroAPI::RegTensor<xDtype> &)max16Reg, maskAll);
+                               AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16Reg, mxScale2ReciprocalAddr,
+                                                                             VF_LEN_FP32);
+            MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>((MicroAPI::RegTensor<float>&)max32Reg,
+                                                               (MicroAPI::RegTensor<xDtype>&)max16Reg, maskAll);
             MicroAPI::Compare<uint32_t, CMPMODE::LT>(cmpResult, max32Reg, expMaskReg, maskAll32);
             MicroAPI::Compare<uint32_t, CMPMODE::NE>(zeroMask, max32Reg, zero32Reg, maskAll32);
-            MicroAPI::Mul((MicroAPI::RegTensor<float> &)max32Reg, (MicroAPI::RegTensor<float> &)max32Reg,
-                (MicroAPI::RegTensor<float> &)invMax, maskAll32);
+            MicroAPI::Mul((MicroAPI::RegTensor<float>&)max32Reg, (MicroAPI::RegTensor<float>&)max32Reg,
+                          (MicroAPI::RegTensor<float>&)invMax, maskAll32);
             MicroAPI::ShiftRights(exp32Reg, max32Reg, SHR_NUM_FOR_FP32, maskAll32);
             MicroAPI::And(man32Reg, max32Reg, manMaskReg, maskAll32);
             MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32Reg, static_cast<uint32_t>(0), maskAll32);
@@ -828,27 +841,27 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
             MicroAPI::Select<uint32_t>(halfScale, halfScale, zero32Reg, zeroMask);
             MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(recip16Zero, halfScale);
             MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale2Addr, scale8Zero,
-                VF_LEN_FP32, maskB8);
+                                                                                          VF_LEN_FP32, maskB8);
 
-            MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale2ReciprocalOutAddr,
-                recip16Zero, VF_LEN_FP32, maskB16);
+            MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                mxScale2ReciprocalOutAddr, recip16Zero, VF_LEN_FP32, maskB16);
         }
     }
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg,
-    isGroupIdx>::ComputeScaleCuBLAS(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr,
-    __ubuf__ uint8_t *mxScaleA1Addr, __ubuf__ uint8_t *mxScaleA2Addr, __ubuf__ uint16_t *mxScale1ReciprocalAddr,
-    __ubuf__ uint8_t *mxScale2Addr, __ubuf__ uint16_t *mxScale2ReciprocalAddr, int64_t dataLenAB,
-    __ubuf__ uint8_t *y1Addr)
+          uint64_t isGroupIdx>
+__aicore__ inline void
+SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeScaleCuBLAS(
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScaleA1Addr,
+    __ubuf__ uint8_t* mxScaleA2Addr, __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+    __ubuf__ uint16_t* mxScale2ReciprocalAddr, int64_t dataLenAB, __ubuf__ uint8_t* y1Addr)
 {
     uint32_t localInvDtypeMax = invDtypeMax_;
     uint32_t scale1BIdx = ops::CeilDiv(dataLenAB, BLOCK_SIZE);
-    __ubuf__ uint16_t *tempMaxAddr = mxScale2ReciprocalAddr;
-    __ubuf__ xDtype *xAddrBase = xAddr;
-    __ubuf__ uint16_t *recipBase = mxScale1ReciprocalAddr;
+    __ubuf__ uint16_t* tempMaxAddr = mxScale2ReciprocalAddr;
+    __ubuf__ xDtype* xAddrBase = xAddr;
+    __ubuf__ uint16_t* recipBase = mxScale1ReciprocalAddr;
 
     __VEC_SCOPE__
     {
@@ -881,8 +894,8 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
             MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 regA, regB, xAddr, dataLen);
 
-            MicroAPI::And(regU16_0, (MicroAPI::RegTensor<uint16_t> &)regA, absMask, maskAll);
-            MicroAPI::And(regU16_1, (MicroAPI::RegTensor<uint16_t> &)regB, absMask, maskAll);
+            MicroAPI::And(regU16_0, (MicroAPI::RegTensor<uint16_t>&)regA, absMask, maskAll);
+            MicroAPI::And(regU16_1, (MicroAPI::RegTensor<uint16_t>&)regB, absMask, maskAll);
 
             MicroAPI::Max(regU16_2, regU16_0, regU16_1, maskAll);
             MicroAPI::ReduceMaxWithDataBlock(regU16_2, regU16_2, maskAll);
@@ -904,45 +917,44 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
 
         MicroAPI::Arange(indexShiftS8, static_cast<int8_t>(scale1BIdx));
 
-        __ubuf__ uint16_t *readMaxAddr = mxScale2ReciprocalAddr;
+        __ubuf__ uint16_t* readMaxAddr = mxScale2ReciprocalAddr;
         // 8: 每次处理的数据元素个数=32 * 8
-        uint16_t batchCount = ops::CeilDiv(static_cast<uint16_t>(blockCount * 8),
-            static_cast<uint16_t>(VF_LEN_FP32));
+        uint16_t batchCount = ops::CeilDiv(static_cast<uint16_t>(blockCount * 8), static_cast<uint16_t>(VF_LEN_FP32));
 
         for (uint16_t j = 0; j < batchCount; j++) {
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                MicroAPI::LoadDist::DIST_UNPACK_B16>(regU16_0, readMaxAddr, VF_LEN_FP32);
-            MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(
-                (MicroAPI::RegTensor<float> &)regA, (MicroAPI::RegTensor<xDtype> &)regU16_0, maskAll);
+            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                regU16_0, readMaxAddr, VF_LEN_FP32);
+            MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>((MicroAPI::RegTensor<float>&)regA,
+                                                               (MicroAPI::RegTensor<xDtype>&)regU16_0, maskAll);
 
-            MicroAPI::Compare<uint32_t, CMPMODE::LT>(cmpResult,
-                (MicroAPI::RegTensor<uint32_t> &)regA, expMaskReg, maskAll32);
-            MicroAPI::Compare<uint32_t, CMPMODE::NE>(zeroMask,
-                (MicroAPI::RegTensor<uint32_t> &)regA, zeroReg32, maskAll32);
-            MicroAPI::Mul((MicroAPI::RegTensor<float> &)regA, (MicroAPI::RegTensor<float> &)regA,
-                (MicroAPI::RegTensor<float> &)invMax, maskAll32);
-            MicroAPI::ShiftRights((MicroAPI::RegTensor<uint32_t> &)regB,
-                (MicroAPI::RegTensor<uint32_t> &)regA, SHR_NUM_FOR_FP32, maskAll32);
-            MicroAPI::And((MicroAPI::RegTensor<uint32_t> &)regU16_1,
-                (MicroAPI::RegTensor<uint32_t> &)regA, manMaskReg, maskAll32);
+            MicroAPI::Compare<uint32_t, CMPMODE::LT>(cmpResult, (MicroAPI::RegTensor<uint32_t>&)regA, expMaskReg,
+                                                     maskAll32);
+            MicroAPI::Compare<uint32_t, CMPMODE::NE>(zeroMask, (MicroAPI::RegTensor<uint32_t>&)regA, zeroReg32,
+                                                     maskAll32);
+            MicroAPI::Mul((MicroAPI::RegTensor<float>&)regA, (MicroAPI::RegTensor<float>&)regA,
+                          (MicroAPI::RegTensor<float>&)invMax, maskAll32);
+            MicroAPI::ShiftRights((MicroAPI::RegTensor<uint32_t>&)regB, (MicroAPI::RegTensor<uint32_t>&)regA,
+                                  SHR_NUM_FOR_FP32, maskAll32);
+            MicroAPI::And((MicroAPI::RegTensor<uint32_t>&)regU16_1, (MicroAPI::RegTensor<uint32_t>&)regA, manMaskReg,
+                          maskAll32);
 
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0,
-                (MicroAPI::RegTensor<uint32_t> &)regB, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p1,
-                (MicroAPI::RegTensor<uint32_t> &)regB, EXP_254, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2,
-                (MicroAPI::RegTensor<uint32_t> &)regU16_1, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, (MicroAPI::RegTensor<uint32_t>&)regB,
+                                                           static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p1, (MicroAPI::RegTensor<uint32_t>&)regB, EXP_254,
+                                                           maskAll32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, (MicroAPI::RegTensor<uint32_t>&)regU16_1,
+                                                           static_cast<uint32_t>(0), maskAll32);
             MicroAPI::MaskAnd(p0, p0, p1, maskAll32);
             MicroAPI::MaskAnd(p0, p0, p2, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1,
-                (MicroAPI::RegTensor<uint32_t> &)regB, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2,
-                (MicroAPI::RegTensor<uint32_t> &)regU16_1, HALF_FOR_MAN, maskAll32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, (MicroAPI::RegTensor<uint32_t>&)regB,
+                                                           static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, (MicroAPI::RegTensor<uint32_t>&)regU16_1, HALF_FOR_MAN,
+                                                           maskAll32);
             MicroAPI::MaskAnd(p1, p1, p2, maskAll32);
             MicroAPI::MaskOr(p0, p0, p1, maskAll32);
 
-            MicroAPI::Adds(expAddOne32, (MicroAPI::RegTensor<uint32_t> &)regB, 1, maskAll32);
-            MicroAPI::Select(extractExp, expAddOne32, (MicroAPI::RegTensor<uint32_t> &)regB, p0);
+            MicroAPI::Adds(expAddOne32, (MicroAPI::RegTensor<uint32_t>&)regB, 1, maskAll32);
+            MicroAPI::Select(extractExp, expAddOne32, (MicroAPI::RegTensor<uint32_t>&)regB, p0);
             MicroAPI::Select<uint32_t>(extractExp, extractExp, fp8NanReg32, cmpResult);
             MicroAPI::Select<uint32_t>(extractExp, extractExp, zeroReg32, zeroMask);
 
@@ -959,21 +971,21 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
             for (uint16_t k = 0; k < 8; k++) {
                 // 8: scale1的搬运, 每次循环索引值的更新步长为8
                 MicroAPI::Arange(extractIdx, static_cast<int8_t>(k * 8));
-                MicroAPI::Gather(scale8Row, scale8Reg, (MicroAPI::RegTensor<uint8_t> &)extractIdx);
-                MicroAPI::Gather(scale8Swapped, scale8Row, (MicroAPI::RegTensor<uint8_t> &)indexShiftS8);
+                MicroAPI::Gather(scale8Row, scale8Reg, (MicroAPI::RegTensor<uint8_t>&)extractIdx);
+                MicroAPI::Gather(scale8Swapped, scale8Row, (MicroAPI::RegTensor<uint8_t>&)indexShiftS8);
 
                 // 32: 偏移32字节
-                MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    mxScaleA1Addr, scale8Row, 32, maskReduceB8);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    mxScaleA2Addr, scale8Swapped, 32, maskReduceB8);
+                MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScaleA1Addr, scale8Row, 32,
+                                                                                     maskReduceB8);
+                MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScaleA2Addr, scale8Swapped, 32,
+                                                                                     maskReduceB8);
 
                 // 16: 1/scale1的搬运, 每次循环索引值的更新步长为16
                 MicroAPI::Arange(extractIdx, static_cast<int8_t>(k * 16));
-                MicroAPI::Gather((MicroAPI::RegTensor<uint8_t> &)recip16Row,
-                    (MicroAPI::RegTensor<uint8_t> &)regU16_2, (MicroAPI::RegTensor<uint8_t> &)extractIdx);
-                MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    mxScale1ReciprocalAddr, recip16Row, 16, maskReduceB16);
+                MicroAPI::Gather((MicroAPI::RegTensor<uint8_t>&)recip16Row, (MicroAPI::RegTensor<uint8_t>&)regU16_2,
+                                 (MicroAPI::RegTensor<uint8_t>&)extractIdx);
+                MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1ReciprocalAddr,
+                                                                                      recip16Row, 16, maskReduceB16);
             }
         }
 
@@ -983,20 +995,20 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
         MicroAPI::RegTensor<float> x0ZeroFP32, x0OneFP32, x1ZeroFP32, x1OneFP32;
         MicroAPI::RegTensor<y1Dtype> fp8Part0, fp8Part1, fp8Part2, fp8Part3;
 
-        __ubuf__ xDtype *xReadAddr = xAddrBase;
-        __ubuf__ uint16_t *recipReadAddr = recipBase;
+        __ubuf__ xDtype* xReadAddr = xAddrBase;
+        __ubuf__ uint16_t* recipReadAddr = recipBase;
 
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                MicroAPI::LoadDist::DIST_DINTLV_B16>(regA, regB, xReadAddr, dataLen);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                MicroAPI::LoadDist::DIST_E2B_B16>(scaleForMulFP16, recipReadAddr, 16); // 1/scale1每次偏移16个元素
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                regA, regB, xReadAddr, dataLen);
+            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
+                scaleForMulFP16, recipReadAddr, 16); // 1/scale1每次偏移16个元素
 
             if constexpr (IsSameType<xDtype, half>::value) {
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0ZeroFP32, regA, maskAll);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x0OneFP32, regA, maskAll);
-                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(scaleForMulFP32,
-                    (MicroAPI::RegTensor<bfloat16_t> &)scaleForMulFP16, maskAll);
+                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(
+                    scaleForMulFP32, (MicroAPI::RegTensor<bfloat16_t>&)scaleForMulFP16, maskAll);
                 MicroAPI::Mul(x0ZeroFP32, x0ZeroFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Mul(x0OneFP32, x0OneFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x1ZeroFP32, regB, maskAll);
@@ -1004,8 +1016,8 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
                 MicroAPI::Mul(x1ZeroFP32, x1ZeroFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Mul(x1OneFP32, x1OneFP32, scaleForMulFP32, maskAll);
             } else {
-                MicroAPI::Mul(regA, regA, (MicroAPI::RegTensor<xDtype> &)scaleForMulFP16, maskAll);
-                MicroAPI::Mul(regB, regB, (MicroAPI::RegTensor<xDtype> &)scaleForMulFP16, maskAll);
+                MicroAPI::Mul(regA, regA, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, maskAll);
+                MicroAPI::Mul(regB, regB, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, maskAll);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0ZeroFP32, regA, maskAll);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x0OneFP32, regA, maskAll);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x1ZeroFP32, regB, maskAll);
@@ -1015,29 +1027,29 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
             AscendC::MicroAPI::Cast<y1Dtype, float, CAST_32_TO_82>(fp8Part1, x0OneFP32, maskAll);
             AscendC::MicroAPI::Cast<y1Dtype, float, CAST_32_TO_81>(fp8Part2, x1ZeroFP32, maskAll);
             AscendC::MicroAPI::Cast<y1Dtype, float, CAST_32_TO_83>(fp8Part3, x1OneFP32, maskAll);
-            AscendC::MicroAPI::Add((MicroAPI::RegTensor<uint8_t> &)fp8Part0,
-                (MicroAPI::RegTensor<uint8_t> &)fp8Part0, (MicroAPI::RegTensor<uint8_t> &)fp8Part1, maskAllB8);
-            AscendC::MicroAPI::Add((MicroAPI::RegTensor<uint8_t> &)fp8Part0,
-                (MicroAPI::RegTensor<uint8_t> &)fp8Part0, (MicroAPI::RegTensor<uint8_t> &)fp8Part2, maskAllB8);
-            AscendC::MicroAPI::Add((MicroAPI::RegTensor<uint8_t> &)fp8Part0,
-                (MicroAPI::RegTensor<uint8_t> &)fp8Part0, (MicroAPI::RegTensor<uint8_t> &)fp8Part3, maskAllB8);
+            AscendC::MicroAPI::Add((MicroAPI::RegTensor<uint8_t>&)fp8Part0, (MicroAPI::RegTensor<uint8_t>&)fp8Part0,
+                                   (MicroAPI::RegTensor<uint8_t>&)fp8Part1, maskAllB8);
+            AscendC::MicroAPI::Add((MicroAPI::RegTensor<uint8_t>&)fp8Part0, (MicroAPI::RegTensor<uint8_t>&)fp8Part0,
+                                   (MicroAPI::RegTensor<uint8_t>&)fp8Part2, maskAllB8);
+            AscendC::MicroAPI::Add((MicroAPI::RegTensor<uint8_t>&)fp8Part0, (MicroAPI::RegTensor<uint8_t>&)fp8Part0,
+                                   (MicroAPI::RegTensor<uint8_t>&)fp8Part3, maskAllB8);
             AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(y1Addr,
-                (MicroAPI::RegTensor<uint8_t> &)fp8Part0, dataLen, maskAllB8);
+                                        AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)fp8Part0, dataLen, maskAllB8);
         }
 
         MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, absMax1Dim2,
-            absMax2Dim2, maskAll);
+                                                                          absMax2Dim2, maskAll);
     }
     ComputeScaleCuBLASSecondLast(dataLen, localInvDtypeMax, mxScale2ReciprocalAddr, mxScale2Addr);
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeY1ToFP8(
-    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr, __ubuf__ uint16_t *mxScale1ReciprocalAddr,
-    __ubuf__ uint8_t *y1Addr)
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
+    __ubuf__ uint8_t* y1Addr)
 {
     int64_t localVlForHalfNumber = VF_LEN_B16;
     int64_t localUBBlockSize = UB_BLOCK_SIZE;
@@ -1062,16 +1074,16 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         MicroAPI::RegTensor<y1Dtype> x1OneFP8;
 
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(x0,
-                x1, xAddr, dataLen);
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, dataLen);
             MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
                 scaleForMulFP16, mxScale1ReciprocalAddr, 16);
 
             if constexpr (IsSameType<xDtype, half>::value) {
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0ZeroFP32, x0, maskAll);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x0OneFP32, x0, maskAll);
-                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(scaleForMulFP32,
-                    (MicroAPI::RegTensor<bfloat16_t> &)scaleForMulFP16, maskAll);
+                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(
+                    scaleForMulFP32, (MicroAPI::RegTensor<bfloat16_t>&)scaleForMulFP16, maskAll);
 
                 MicroAPI::Mul(x0ZeroFP32, x0ZeroFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Mul(x0OneFP32, x0OneFP32, scaleForMulFP32, maskAll);
@@ -1081,8 +1093,8 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 MicroAPI::Mul(x1ZeroFP32, x1ZeroFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Mul(x1OneFP32, x1OneFP32, scaleForMulFP32, maskAll);
             } else {
-                MicroAPI::Mul(x0, x0, (MicroAPI::RegTensor<xDtype> &)scaleForMulFP16, maskAll);
-                MicroAPI::Mul(x1, x1, (MicroAPI::RegTensor<xDtype> &)scaleForMulFP16, maskAll);
+                MicroAPI::Mul(x0, x0, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, maskAll);
+                MicroAPI::Mul(x1, x1, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, maskAll);
 
                 AscendC::MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0ZeroFP32, x0, maskAll);
                 AscendC::MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x0OneFP32, x0, maskAll);
@@ -1094,28 +1106,28 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             AscendC::MicroAPI::Cast<y1Dtype, float, CAST_32_TO_81>(x1ZeroFP8, x1ZeroFP32, maskAll);
             AscendC::MicroAPI::Cast<y1Dtype, float, CAST_32_TO_83>(x1OneFP8, x1OneFP32, maskAll);
 
-            AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8,
-                (AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8, (AscendC::MicroAPI::RegTensor<uint8_t> &)x0OneFP8,
-                maskAllB8);
-            AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8,
-                (AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8, (AscendC::MicroAPI::RegTensor<uint8_t> &)x1ZeroFP8,
-                maskAllB8);
-            AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8,
-                (AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8, (AscendC::MicroAPI::RegTensor<uint8_t> &)x1OneFP8,
-                maskAllB8);
+            AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
+                                   (AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
+                                   (AscendC::MicroAPI::RegTensor<uint8_t>&)x0OneFP8, maskAllB8);
+            AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
+                                   (AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
+                                   (AscendC::MicroAPI::RegTensor<uint8_t>&)x1ZeroFP8, maskAllB8);
+            AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
+                                   (AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
+                                   (AscendC::MicroAPI::RegTensor<uint8_t>&)x1OneFP8, maskAllB8);
             AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(y1Addr, (AscendC::MicroAPI::RegTensor<uint8_t> &)x0ZeroFP8,
-                dataLen, maskAllB8);
+                                        AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(
+                y1Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8, dataLen, maskAllB8);
         }
     }
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeY1ToFP4(
-    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr, __ubuf__ uint16_t *mxScale1ReciprocalAddr,
-    __ubuf__ uint8_t *y1Addr)
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
+    __ubuf__ uint8_t* y1Addr)
 {
     int64_t localVlForHalfNumber = VF_LEN_B16;
     int64_t localUBBlockSize = UB_BLOCK_SIZE;
@@ -1147,14 +1159,14 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         for (uint16_t i = 0; i < blockCount; i++) {
             MicroAPI::Duplicate(x0, static_cast<xDtype>(0));
             MicroAPI::Duplicate(x1, static_cast<xDtype>(0));
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(x0,
-                x1, xAddr, dataLen);
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, dataLen);
             MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
                 scaleForMulFP16, mxScale1ReciprocalAddr, 16);
 
             if constexpr (IsSameType<xDtype, half>::value) {
-                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(scaleForMulZeroFP32,
-                    (MicroAPI::RegTensor<bfloat16_t> &)scaleForMulFP16, dataMaskB16);
+                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(
+                    scaleForMulZeroFP32, (MicroAPI::RegTensor<bfloat16_t>&)scaleForMulFP16, dataMaskB16);
 
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0ZeroFP32, x0, dataMaskB16);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x0OneFP32, x0, dataMaskB16);
@@ -1166,9 +1178,9 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x0ZeroBF16, x0ZeroFP32, dataMaskB32);
                 MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x0OneBF16, x0OneFP32, dataMaskB32);
                 MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t> &)x0ZeroBF16, (MicroAPI::RegTensor<uint32_t> &)x0ZeroBF16);
+                    (MicroAPI::RegTensor<uint16_t>&)x0ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)x0ZeroBF16);
                 MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t> &)x0OneBF16, (MicroAPI::RegTensor<uint32_t> &)x0OneBF16);
+                    (MicroAPI::RegTensor<uint16_t>&)x0OneBF16, (MicroAPI::RegTensor<uint32_t>&)x0OneBF16);
                 MicroAPI::Interleave(x0ZeroBF16, x0OneBF16, x0ZeroBF16, x0OneBF16);
 
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x1ZeroFP32, x1, dataMaskB16);
@@ -1181,37 +1193,37 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1ZeroBF16, x1ZeroFP32, dataMaskB32);
                 MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1OneBF16, x1OneFP32, dataMaskB32);
                 MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t> &)x1ZeroBF16, (MicroAPI::RegTensor<uint32_t> &)x1ZeroBF16);
+                    (MicroAPI::RegTensor<uint16_t>&)x1ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)x1ZeroBF16);
                 MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t> &)x1OneBF16, (MicroAPI::RegTensor<uint32_t> &)x1OneBF16);
+                    (MicroAPI::RegTensor<uint16_t>&)x1OneBF16, (MicroAPI::RegTensor<uint32_t>&)x1OneBF16);
                 MicroAPI::Interleave(x1ZeroBF16, x1OneBF16, x1ZeroBF16, x1OneBF16);
 
                 MicroAPI::Interleave(x0ZeroBF16, x1ZeroBF16, x0ZeroBF16, x1ZeroBF16);
                 MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(x0FP4, x0ZeroBF16, dataMaskB16);
                 MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(x1FP4, x1ZeroBF16, dataMaskB16);
             } else {
-                MicroAPI::Mul(x0, x0, (MicroAPI::RegTensor<xDtype> &)scaleForMulFP16, dataMaskB16);
-                MicroAPI::Mul(x1, x1, (MicroAPI::RegTensor<xDtype> &)scaleForMulFP16, dataMaskB16);
+                MicroAPI::Mul(x0, x0, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, dataMaskB16);
+                MicroAPI::Mul(x1, x1, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, dataMaskB16);
                 MicroAPI::Interleave(x0, x1, x0, x1);
                 MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(x0FP4, x0, dataMaskB16);
                 MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(x1FP4, x1, dataMaskB16);
             }
 
             MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t> &)x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
             MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t> &)x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
         }
     }
     return;
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeY2ToFP8(
-    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr, __ubuf__ uint16_t *mxScale2ReciprocalAddr,
-    __ubuf__ uint8_t *y2Addr)
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
+    __ubuf__ uint8_t* y2Addr)
 {
     int64_t localUbRowLen = dataLen;
 
@@ -1231,10 +1243,10 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
 
         MicroAPI::DataCopy<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
-        MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(reversedShareExp0FP32,
-            (MicroAPI::RegTensor<bfloat16_t> &)reversedShareExp, pregAll16);
-        MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ONE>(reversedShareExp1FP32,
-            (MicroAPI::RegTensor<bfloat16_t> &)reversedShareExp, pregAll16);
+        MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(
+            reversedShareExp0FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
+        MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ONE>(
+            reversedShareExp1FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
 
         for (uint16_t j = 0; j < blockCount; j++) {
             MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * localUbRowLen);
@@ -1244,33 +1256,33 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
             MicroAPI::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
             MicroAPI::Mul(x1FP32, x1FP32, reversedShareExp1FP32, pregAll32);
 
-            MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(yZeroFP8, (MicroAPI::RegTensor<float> &)x0FP32,
-                pregAll32);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint16_t> &)yZeroFP8,
-                (MicroAPI::RegTensor<uint32_t> &)yZeroFP8);
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(yZeroFP8, (MicroAPI::RegTensor<float>&)x0FP32,
+                                                                  pregAll32);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint16_t>&)yZeroFP8,
+                                                                              (MicroAPI::RegTensor<uint32_t>&)yZeroFP8);
 
-            MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(yOneFP8, (MicroAPI::RegTensor<float> &)x1FP32,
-                pregAll32);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint16_t> &)yOneFP8,
-                (MicroAPI::RegTensor<uint32_t> &)yOneFP8);
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(yOneFP8, (MicroAPI::RegTensor<float>&)x1FP32,
+                                                                  pregAll32);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint16_t>&)yOneFP8,
+                                                                              (MicroAPI::RegTensor<uint32_t>&)yOneFP8);
 
-            MicroAPI::Interleave((MicroAPI::RegTensor<uint16_t> &)yZeroFP8, (MicroAPI::RegTensor<uint16_t> &)yOneFP8,
-                (MicroAPI::RegTensor<uint16_t> &)yZeroFP8, (MicroAPI::RegTensor<uint16_t> &)yOneFP8);
+            MicroAPI::Interleave((MicroAPI::RegTensor<uint16_t>&)yZeroFP8, (MicroAPI::RegTensor<uint16_t>&)yOneFP8,
+                                 (MicroAPI::RegTensor<uint16_t>&)yZeroFP8, (MicroAPI::RegTensor<uint16_t>&)yOneFP8);
 
-            MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint8_t> &)yZeroFP8,
-                (MicroAPI::RegTensor<uint16_t> &)yZeroFP8);
+            MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint8_t>&)yZeroFP8,
+                                                                             (MicroAPI::RegTensor<uint16_t>&)yZeroFP8);
 
-            DataCopy(y2Addr + (j * localUbRowLen), (MicroAPI::RegTensor<uint8_t> &)yZeroFP8, pregAll8);
+            DataCopy(y2Addr + (j * localUbRowLen), (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
         }
     }
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeY2ToFP4(
-    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype *xAddr, __ubuf__ uint16_t *mxScale2ReciprocalAddr,
-    __ubuf__ uint8_t *y2Addr)
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
+    __ubuf__ uint8_t* y2Addr)
 {
     int64_t localUbRowLen = dataLen;
 
@@ -1300,11 +1312,11 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0FP32, x, pregAll16);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x1FP32, x, pregAll16);
 
-                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(reversedShareExp0FP32,
-                    (MicroAPI::RegTensor<bfloat16_t> &)reversedShareExp, pregAll16);
+                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(
+                    reversedShareExp0FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
 
-                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ONE>(reversedShareExp1FP32,
-                    (MicroAPI::RegTensor<bfloat16_t> &)reversedShareExp, pregAll16);
+                MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ONE>(
+                    reversedShareExp1FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
 
                 MicroAPI::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
                 MicroAPI::Mul(x1FP32, x1FP32, reversedShareExp1FP32, pregAll32);
@@ -1312,35 +1324,36 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
                 ComputeFP4FromHalf(x0FP32);
                 ComputeFP4FromHalf(x1FP32);
 
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>((MicroAPI::RegTensor<bfloat16_t> &)x0BF16,
-                    x0FP32, pregAll32);
+                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>((MicroAPI::RegTensor<bfloat16_t>&)x0BF16, x0FP32,
+                                                                       pregAll32);
                 MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t> &)x0BF16, (MicroAPI::RegTensor<uint32_t> &)x0BF16);
+                    (MicroAPI::RegTensor<uint16_t>&)x0BF16, (MicroAPI::RegTensor<uint32_t>&)x0BF16);
 
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>((MicroAPI::RegTensor<bfloat16_t> &)x1BF16,
-                    x1FP32, pregAll32);
+                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>((MicroAPI::RegTensor<bfloat16_t>&)x1BF16, x1FP32,
+                                                                       pregAll32);
 
                 MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t> &)x1BF16, (MicroAPI::RegTensor<uint32_t> &)x1BF16);
+                    (MicroAPI::RegTensor<uint16_t>&)x1BF16, (MicroAPI::RegTensor<uint32_t>&)x1BF16);
 
                 MicroAPI::Interleave(x0BF16, x1BF16, x0BF16, x1BF16);
-                MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(yZeroFP4,
-                    (MicroAPI::RegTensor<bfloat16_t> &)x0BF16, pregAll16);
+                MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(
+                    yZeroFP4, (MicroAPI::RegTensor<bfloat16_t>&)x0BF16, pregAll16);
             } else {
-                MicroAPI::Mul(xBF16, x, (MicroAPI::RegTensor<bfloat16_t> &)reversedShareExp, pregAll16);
+                MicroAPI::Mul(xBF16, x, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
                 MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(yZeroFP4, xBF16, pregAll16);
             }
 
             DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(y2Addr + (j * dataLen / DIGIT_TWO),
-                (MicroAPI::RegTensor<uint8_t> &)yZeroFP4, pregAll8);
+                                                                   (MicroAPI::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
         }
     }
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
-__aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg,
-    isGroupIdx>::ComputeFP4FromHalf(MicroAPI::RegTensor<float> &Reg)
+          uint64_t isGroupIdx>
+__aicore__ inline void
+SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeFP4FromHalf(
+    MicroAPI::RegTensor<float>& Reg)
 {
     MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
     MicroAPI::MaskReg zeroMask;
@@ -1354,7 +1367,7 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
 
     MicroAPI::Duplicate(negZero, NEG_ZERO);
 
-    MicroAPI::Compare<int32_t, CMPMODE::EQ>(negInfMask, (MicroAPI::RegTensor<int32_t> &)Reg, negZero, pregAll32);
+    MicroAPI::Compare<int32_t, CMPMODE::EQ>(negInfMask, (MicroAPI::RegTensor<int32_t>&)Reg, negZero, pregAll32);
     if constexpr (IsSameType<y1Dtype, fp4x2_e1m2_t>::value) {
         MicroAPI::Muls(Reg, Reg, FOUR, pregAll32);
         MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
@@ -1362,7 +1375,7 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
         MicroAPI::Muls(Reg, Reg, ONE_FOURTH, pregAll32);
     } else {
         MicroAPI::Duplicate(maxExpFP32, MAX_EXP_FOR_FP32);
-        MicroAPI::And(exp0FP32, (MicroAPI::RegTensor<int32_t> &)Reg, maxExpFP32, pregAll32);
+        MicroAPI::And(exp0FP32, (MicroAPI::RegTensor<int32_t>&)Reg, maxExpFP32, pregAll32);
         MicroAPI::ShiftRights(exp0FP32, exp0FP32, SHR_NUM_FOR_FP32, pregAll32);
         MicroAPI::Adds(exp0FP32, exp0FP32, FP32_BIAS_NEG, pregAll32);
         MicroAPI::Maxs(exp0FP32, exp0FP32, 0, pregAll32);
@@ -1371,22 +1384,22 @@ __aicore__ inline void SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mo
         MicroAPI::Adds(exp1FP32, exp1FP32, FP32_BIAS, pregAll32);
         MicroAPI::ShiftLefts(exp1FP32, exp1FP32, SHR_NUM_FOR_FP32, pregAll32);
 
-        MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float> &)exp1FP32, pregAll32);
+        MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp1FP32, pregAll32);
         MicroAPI::Adds(exp0FP32, exp0FP32, FP32_BIAS, pregAll32);
         MicroAPI::ShiftLefts(exp0FP32, exp0FP32, SHR_NUM_FOR_FP32, pregAll32);
         MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         MicroAPI::Truncate<float, roundMode>(Reg, Reg, pregAll32);
-        MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float> &)exp0FP32, pregAll32);
+        MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp0FP32, pregAll32);
     }
     MicroAPI::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
     MicroAPI::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
     MicroAPI::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
-    MicroAPI::Select<int32_t>((MicroAPI::RegTensor<int32_t> &)Reg, negZero, (MicroAPI::RegTensor<int32_t> &)Reg,
-        zeroMask);
+    MicroAPI::Select<int32_t>((MicroAPI::RegTensor<int32_t>&)Reg, negZero, (MicroAPI::RegTensor<int32_t>&)Reg,
+                              zeroMask);
 }
 
 template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
-    uint64_t isGroupIdx>
+          uint64_t isGroupIdx>
 __aicore__ inline void
 SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::CopyOut(
     int64_t yOffsetA, int64_t yOffsetB, int64_t scale1OutOffset, int64_t scale2OutOffsetA, int64_t scale2OutOffsetB,
@@ -1423,18 +1436,19 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
     }
 
     uint32_t scale1OutLen = ops::CeilDiv(dataLenAB, BLOCK_SIZE);
-    DataCopyExtParams scale1CopyOutParams = { outBurst, static_cast<uint32_t>(scale1OutLen * sizeof(uint8_t)),
-        static_cast<uint32_t>(0),
+    DataCopyExtParams scale1CopyOutParams = {
+        outBurst, static_cast<uint32_t>(scale1OutLen * sizeof(uint8_t)), static_cast<uint32_t>(0),
         static_cast<uint32_t>(ops::CeilAlign(dimGradX_, DOUBLE_BLOCK_SIZE) / BLOCK_SIZE - scale1OutLen),
-        static_cast<uint32_t>(0) };
+        static_cast<uint32_t>(0)};
 
     uint32_t scale2BlockLen = dataLenAB * DIGIT_TWO * sizeof(uint8_t);
     uint32_t scale2GroupSize = scale2BlockLen * DIGIT_TWO;
     uint32_t scale2SrcStride = (scale2GroupSize - scale2BlockLen) / UB_BLOCK_SIZE;
     uint32_t scale2DstStride = (dimGradX_ - dataLenAB * DIGIT_TWO) * sizeof(uint8_t);
 
-    DataCopyExtParams scale2CopyOutParamsA = { static_cast<uint16_t>(blockCountAlign / DOUBLE_BLOCK_SIZE),
-        scale2BlockLen, scale2SrcStride, scale2DstStride, static_cast<uint32_t>(0) };
+    DataCopyExtParams scale2CopyOutParamsA = {static_cast<uint16_t>(blockCountAlign / DOUBLE_BLOCK_SIZE),
+                                              scale2BlockLen, scale2SrcStride, scale2DstStride,
+                                              static_cast<uint32_t>(0)};
 
     LocalTensor<uint8_t> y1Local = outQueue1_.template DeQue<uint8_t>();
     if (yRowByRow) {
@@ -1442,13 +1456,13 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         if constexpr (IsSameType<y1Dtype, fp4x2_e2m1_t>::value || IsSameType<y1Dtype, fp4x2_e1m2_t>::value) {
             gmRowStride = dimGradX_ / DIGIT_TWO;
         }
-        DataCopyExtParams rowParams = { 1, outBlockLen, 0, 0, 0 };
+        DataCopyExtParams rowParams = {1, outBlockLen, 0, 0, 0};
         for (int64_t row = 0; row < blockCount; row++) {
             DataCopyPad(yGm1_[yOffsetA + row * gmRowStride], y1Local[row * yRowPitch], rowParams);
             DataCopyPad(yGm1_[yOffsetB + row * gmRowStride], y1Local[row * yRowPitch + gradBOffset], rowParams);
         }
     } else {
-        DataCopyExtParams yCopyOutParams = { outBurst, outBlockLen, srcStride, dstStride, 0 };
+        DataCopyExtParams yCopyOutParams = {outBurst, outBlockLen, srcStride, dstStride, 0};
         DataCopyPad(yGm1_[yOffsetA], y1Local, yCopyOutParams);
         DataCopyPad(yGm1_[yOffsetB], y1Local[gradBOffset], yCopyOutParams);
     }
@@ -1460,13 +1474,13 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
         if constexpr (IsSameType<y1Dtype, fp4x2_e2m1_t>::value || IsSameType<y1Dtype, fp4x2_e1m2_t>::value) {
             gmRowStride = dimGradX_ / DIGIT_TWO;
         }
-        DataCopyExtParams rowParams = { 1, outBlockLen, 0, 0, 0 };
+        DataCopyExtParams rowParams = {1, outBlockLen, 0, 0, 0};
         for (int64_t row = 0; row < blockCount; row++) {
             DataCopyPad(yGm2_[yOffsetA + row * gmRowStride], y2Local[row * yRowPitch], rowParams);
             DataCopyPad(yGm2_[yOffsetB + row * gmRowStride], y2Local[row * yRowPitch + gradBOffset], rowParams);
         }
     } else {
-        DataCopyExtParams yCopyOutParams = { outBurst, outBlockLen, srcStride, dstStride, 0 };
+        DataCopyExtParams yCopyOutParams = {outBurst, outBlockLen, srcStride, dstStride, 0};
         DataCopyPad(yGm2_[yOffsetA], y2Local, yCopyOutParams);
         DataCopyPad(yGm2_[yOffsetB], y2Local[gradBOffset], yCopyOutParams);
     }
@@ -1482,7 +1496,7 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
     LocalTensor<uint8_t> mxScale2Local = mxScaleQueue2_.template DeQue<uint8_t>();
     DataCopyPad(mxScaleGm2_[scale2OutOffsetA], mxScale2Local, scale2CopyOutParamsA);
     DataCopyPad(mxScaleGm2_[scale2OutOffsetB], mxScale2Local[scale2BlockLen], scale2CopyOutParamsA);
-    
+
     mxScaleQueue2_.FreeTensor(mxScale2Local);
 }
 } // namespace SwigluBackwardMxQuantWithDualAxis

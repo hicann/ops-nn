@@ -18,8 +18,7 @@
 
 #include "max_pool_grad_with_argmax_v3_tiling_base.h"
 
-namespace optiling
-{
+namespace optiling {
 struct MaxPoolGradWithArgmaxV3NHWCBaseInfo {
     int64_t vRegSize{0};
     int64_t ubBlockSize{0};
@@ -37,17 +36,13 @@ struct MaxPoolGradWithArgmaxV3NHWCBaseInfo {
     int64_t moveDataNumCacheLineT2{0};
 };
 
-class MaxPoolGradWithArgmaxV3KsizeOneTiling : public MaxPoolGradWithArgmaxV3BaseTiling
-{
+class MaxPoolGradWithArgmaxV3KsizeOneTiling : public MaxPoolGradWithArgmaxV3BaseTiling {
 public:
     explicit MaxPoolGradWithArgmaxV3KsizeOneTiling(gert::TilingContext* context)
         : MaxPoolGradWithArgmaxV3BaseTiling(context)
-    {
-    }
+    {}
 
-    ~MaxPoolGradWithArgmaxV3KsizeOneTiling() override
-    {
-    }
+    ~MaxPoolGradWithArgmaxV3KsizeOneTiling() override {}
 
 private:
     void DoUBTiling();
@@ -73,6 +68,6 @@ private:
     MaxPoolGradWithArgmaxV3NHWCBaseInfo baseData_;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

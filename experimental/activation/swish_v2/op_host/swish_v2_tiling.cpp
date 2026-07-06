@@ -32,7 +32,7 @@ struct SwishV2CompileInfo {};
 
 static const gert::Shape SCALAR_SHAPE = {1};
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &shape)
+static const gert::Shape& EnsureNotScalar(const gert::Shape& shape)
 {
     if (shape.GetDimNum() == 0) {
         return SCALAR_SHAPE;
@@ -40,9 +40,9 @@ static const gert::Shape &EnsureNotScalar(const gert::Shape &shape)
     return shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext *context, uint64_t &ubSize, int64_t &coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
-    auto *platformInfoPtr = context->GetPlatformInfo();
+    auto* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
@@ -52,23 +52,23 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext *context, uint64_t &u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext *context, int64_t &totalLength, ge::DataType &dataType, float &scale)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType,
+                                         float& scale)
 {
-    auto *inputX = context->GetInputShape(0);
+    auto* inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     totalLength = EnsureNotScalar(inputX->GetStorageShape()).GetShapeSize();
 
-    auto *inputDesc = context->GetInputDesc(0);
+    auto* inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     OP_CHECK_IF(supportedDtype.count(dataType) == 0, OP_LOGE(context, "invalid dtype"), return ge::GRAPH_FAILED);
 
     scale = 1.0f;
-    auto *attrs = context->GetAttrs();
+    auto* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const float *scaleAttr = attrs->GetAttrPointer<float>(SCALE_ATTR_INDEX);
+    const float* scaleAttr = attrs->GetAttrPointer<float>(SCALE_ATTR_INDEX);
     if (scaleAttr != nullptr) {
         scale = *scaleAttr;
     }
@@ -76,23 +76,23 @@ static ge::graphStatus GetShapeAttrsInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetWorkspaceSize(gert::TilingContext *context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
 
-static void SetTemplateParam(gert::TilingContext *context, ge::DataType dataType)
+static void SetTemplateParam(gert::TilingContext* context, ge::DataType dataType)
 {
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX);
 }
 
-static void FillDefaultTiling(SwishV2TilingData *tiling, ge::DataType dataType, gert::TilingContext *context)
+static void FillDefaultTiling(SwishV2TilingData* tiling, ge::DataType dataType, gert::TilingContext* context)
 {
     tiling->formerNum = 0;
     tiling->formerLength = 0;
@@ -102,9 +102,8 @@ static void FillDefaultTiling(SwishV2TilingData *tiling, ge::DataType dataType, 
     SetTemplateParam(context, dataType);
 }
 
-static ge::graphStatus FillNormalTiling(
-    gert::TilingContext *context, SwishV2TilingData *tiling, int64_t totalLength, ge::DataType dataType, uint64_t ubSize,
-    int64_t coreNum)
+static ge::graphStatus FillNormalTiling(gert::TilingContext* context, SwishV2TilingData* tiling, int64_t totalLength,
+                                        ge::DataType dataType, uint64_t ubSize, int64_t coreNum)
 {
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(dataType, typeLength);
@@ -118,8 +117,7 @@ static ge::graphStatus FillNormalTiling(
 
     int64_t cacheLineElements = std::max<int64_t>(1, CACHE_LINE_BYTE_LENGTH / dtypeSize);
     int64_t totalLengthCore = (totalLength + targetCoreNum - 1) / targetCoreNum;
-    int64_t totalLengthCoreAlign =
-        ((totalLengthCore + cacheLineElements - 1) / cacheLineElements) * cacheLineElements;
+    int64_t totalLengthCoreAlign = ((totalLengthCore + cacheLineElements - 1) / cacheLineElements) * cacheLineElements;
 
     int64_t usedCoreNum = (totalLength + totalLengthCoreAlign - 1) / totalLengthCoreAlign;
     usedCoreNum = std::max<int64_t>(1, usedCoreNum);
@@ -140,7 +138,7 @@ static ge::graphStatus FillNormalTiling(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SwishV2TilingFunc(gert::TilingContext *context)
+static ge::graphStatus SwishV2TilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
@@ -153,10 +151,10 @@ static ge::graphStatus SwishV2TilingFunc(gert::TilingContext *context)
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType, scale) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
-    auto *tiling = context->GetTilingData<SwishV2TilingData>();
+    auto* tiling = context->GetTilingData<SwishV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(SwishV2TilingData), 0, sizeof(SwishV2TilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
@@ -170,10 +168,10 @@ static ge::graphStatus SwishV2TilingFunc(gert::TilingContext *context)
     return FillNormalTiling(context, tiling, totalLength, dataType, ubSize, coreNum);
 }
 
-static ge::graphStatus TilingParseForSwishV2([[maybe_unused]] gert::TilingParseContext *context)
+static ge::graphStatus TilingParseForSwishV2([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(SwishV2).Tiling(SwishV2TilingFunc).TilingParse<SwishV2CompileInfo>(TilingParseForSwishV2);
-}  // namespace optiling
+} // namespace optiling

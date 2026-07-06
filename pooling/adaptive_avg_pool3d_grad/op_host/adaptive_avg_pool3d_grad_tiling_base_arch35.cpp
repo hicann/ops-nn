@@ -26,7 +26,7 @@ constexpr uint64_t X_INDEX = 1;
 constexpr size_t DATA_FORMAT_ATTR_INDEX = 0U;
 constexpr uint64_t NCDHW_DIM_NUM = 5;
 constexpr size_t NC_DIM_NUM = 2;
-constexpr size_t C_DIM_OFFSET = 4;  // pos = dim - offset
+constexpr size_t C_DIM_OFFSET = 4; // pos = dim - offset
 constexpr size_t D_DIM_OFFSET = 3;
 constexpr size_t H_DIM_OFFSET = 2;
 constexpr size_t W_DIM_OFFSET = 1;
@@ -47,46 +47,58 @@ bool AdaptiveAvgPool3dGradTilingBaseV35::CheckInputShape()
     std::string data_formatStr = data_format;
 
     // data_format should be NCDHW or NDHWC or CDHW or DHWC
-    OP_CHECK_IF(!(data_formatStr == "NCDHW" || data_formatStr == "NDHWC" ||
-                  data_formatStr == "CDHW" || data_formatStr == "DHWC"),
+    OP_CHECK_IF(!(data_formatStr == "NCDHW" || data_formatStr == "NDHWC" || data_formatStr == "CDHW" ||
+                  data_formatStr == "DHWC"),
                 OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "data_format", data_formatStr.c_str(),
-                        "NCDHW, NDHWC, CDHW, or DHWC"), return false);
+                                           "NCDHW, NDHWC, CDHW, or DHWC"),
+                return false);
 
     // xDimNum should be 5 or 4, and gradDimNum should be the same rank as xDimNum.
-    OP_CHECK_IF(((xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM)) &&
-                ((xDimNum != CDHW_DIM_NUM) || (gradDimNum != CDHW_DIM_NUM)),
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x, grad",
-                        ("xDim=" + std::to_string(xDimNum) + ", gradDim=" + std::to_string(gradDimNum)).c_str(),
-                        ("the dims of x and grad must be " + std::to_string(NCDHW_DIM_NUM) + " or " + std::to_string(CDHW_DIM_NUM)).c_str()),
-                return false);
+    OP_CHECK_IF(
+        ((xDimNum != NCDHW_DIM_NUM) || (gradDimNum != NCDHW_DIM_NUM)) &&
+            ((xDimNum != CDHW_DIM_NUM) || (gradDimNum != CDHW_DIM_NUM)),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "x, grad",
+            ("xDim=" + std::to_string(xDimNum) + ", gradDim=" + std::to_string(gradDimNum)).c_str(),
+            ("the dims of x and grad must be " + std::to_string(NCDHW_DIM_NUM) + " or " + std::to_string(CDHW_DIM_NUM))
+                .c_str()),
+        return false);
 
     for (uint32_t i = 0; i < xDimNum; i++) {
         uint64_t xDimVal = xShape->GetStorageShape().GetDim(i);
         OP_CHECK_IF(xDimVal == 0,
-                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xDimVal).c_str(),
-                        ("the dim" + std::to_string(i) + " of x should not be 0").c_str()), return false);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context_->GetNodeName(), "x", std::to_string(xDimVal).c_str(),
+                        ("the dim" + std::to_string(i) + " of x should not be 0").c_str()),
+                    return false);
     }
 
     for (uint32_t i = 0; i < gradDimNum; i++) {
         uint64_t gDimVal = gradShape->GetStorageShape().GetDim(i);
         OP_CHECK_IF(gDimVal == 0,
-                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "grad", std::to_string(gDimVal).c_str(),
-                        ("the dim" + std::to_string(i) + " of grad should not be 0").c_str()), return false);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context_->GetNodeName(), "grad", std::to_string(gDimVal).c_str(),
+                        ("the dim" + std::to_string(i) + " of grad should not be 0").c_str()),
+                    return false);
     }
 
     uint32_t cPosIdx = (data_formatStr == "NCDHW" || data_formatStr == "CDHW") ?
-        static_cast<uint32_t>(xDimNum - C_DIM_OFFSET) : static_cast<uint32_t>(xDimNum - W_DIM_OFFSET);
+                           static_cast<uint32_t>(xDimNum - C_DIM_OFFSET) :
+                           static_cast<uint32_t>(xDimNum - W_DIM_OFFSET);
 
     uint64_t xNDim = (xDimNum == CDHW_DIM_NUM) ? 1 : xShape->GetStorageShape().GetDim(0);
     uint64_t gradNDim = (gradDimNum == CDHW_DIM_NUM) ? 1 : gradShape->GetStorageShape().GetDim(0);
     uint64_t xCDim = xShape->GetStorageShape().GetDim(cPosIdx);
     uint64_t gradCDim = gradShape->GetStorageShape().GetDim(cPosIdx);
 
-    OP_CHECK_IF((xNDim != gradNDim) || (xCDim != gradCDim),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "grad, x",
-                        ("N=" + std::to_string(gradNDim) + "," + std::to_string(gradCDim) + " and N=" + std::to_string(xNDim) + "," + std::to_string(xCDim)).c_str(),
-                        "the N,C dims of grad and x must be equal"),
-                return false);
+    OP_CHECK_IF(
+        (xNDim != gradNDim) || (xCDim != gradCDim),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "grad, x",
+                                               ("N=" + std::to_string(gradNDim) + "," + std::to_string(gradCDim) +
+                                                " and N=" + std::to_string(xNDim) + "," + std::to_string(xCDim))
+                                                   .c_str(),
+                                               "the N,C dims of grad and x must be equal"),
+        return false);
 
     return true;
 }
@@ -99,19 +111,19 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::CheckInputDtype()
     auto gradDataType = context_->GetInputDesc(GRAD_INDEX)->GetDataType();
     auto xDataType = context_->GetInputDesc(X_INDEX)->GetDataType();
 
-    OP_CHECK_IF(
-        xDataType != gradDataType,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, grad",
-            (ge::TypeUtils::DataTypeToSerialString(xDataType) + ", " + ge::TypeUtils::DataTypeToSerialString(gradDataType)).c_str(),
-            "the dtypes of x and grad must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDataType != gradDataType,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, grad",
+                                                       (ge::TypeUtils::DataTypeToSerialString(xDataType) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradDataType))
+                                                           .c_str(),
+                                                       "the dtypes of x and grad must be the same"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDataType).c_str(),
-            "the dtype of x must be fp32, fp16, or bf16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDataType).c_str(),
+                                                      "the dtype of x must be fp32, fp16, or bf16"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -196,45 +208,31 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::GetShapeAttrsInfo()
 
     OP_LOGD(context_->GetNodeName(), "Enter AdaptiveAvgPool3dGradTilingBaseV35 GetShapeAttrsInfo.");
 
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputDtype(),
-                OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(!CheckInputShape(),
-                OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
+    OP_CHECK_IF(!CheckInputShape(), OP_LOGE(context_->GetNodeName(), "The input relationship is invalid."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(),
-                OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
                 return ge::GRAPH_FAILED);
 
     SetOtherInputParams();
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdaptiveAvgPool3dGradTilingBaseV35::IsCapable()
-{
-    return false;
-}
+bool AdaptiveAvgPool3dGradTilingBaseV35::IsCapable() { return false; }
 
-ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr =
-            static_cast<const AdaptiveAvgPool3dGradCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr,
-                    OP_LOGE(context_->GetNodeName(), "compile info is null"),
+        auto compileInfoPtr = static_cast<const AdaptiveAvgPool3dGradCompileInfo*>(context_->GetCompileInfo());
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
                     return ge::GRAPH_FAILED);
         coreNum_ = compileInfoPtr->coreNum;
         ubSize_ = compileInfoPtr->ubSizePlatForm;
@@ -247,9 +245,7 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::GetPlatformInfo()
         ubSize_ = static_cast<int64_t>(ubSizePlatform);
     }
 
-    OP_CHECK_IF(coreNum_ == 0,
-                OP_LOGE(context_->GetNodeName(), "coreNum is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum_ == 0, OP_LOGE(context_->GetNodeName(), "coreNum is 0"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -263,14 +259,8 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool3dGradTilingBaseV35::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdaptiveAvgPool3dGradTilingBaseV35::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t AdaptiveAvgPool3dGradTilingBaseV35::GetTilingKey() const { return 0; }
 
 } // namespace optiling

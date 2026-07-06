@@ -24,10 +24,9 @@ using namespace AscendC;
 template <typename T>
 class KernelAvgPool3DGradTCast : public KernelAvgPool3DGradBaseT<T> {
 public:
-    __aicore__ inline KernelAvgPool3DGradTCast()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace);
+    __aicore__ inline KernelAvgPool3DGradTCast() {}
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData,
+                                GM_ADDR workspace);
     __aicore__ inline void Process();
 
 private:
@@ -52,8 +51,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void KernelAvgPool3DGradTCast<T>::Init(
-    GM_ADDR grads, GM_ADDR output, const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
+__aicore__ inline void KernelAvgPool3DGradTCast<T>::Init(GM_ADDR grads, GM_ADDR output,
+                                                         const AvgPool3dGradTilingParam& tilingData, GM_ADDR workspace)
 {
     // Get all required params
     this->thisCoreIdx = GetBlockIdx();
@@ -231,8 +230,8 @@ __aicore__ inline void KernelAvgPool3DGradTCast<T>::Compute(int64_t ubIndex)
 }
 
 template <typename T>
-__aicore__ inline void KernelAvgPool3DGradTCast<T>::CopyOut(
-    int64_t n, int64_t c, int64_t d, int64_t hw, int64_t ubIndex)
+__aicore__ inline void KernelAvgPool3DGradTCast<T>::CopyOut(int64_t n, int64_t c, int64_t d, int64_t hw,
+                                                            int64_t ubIndex)
 {
     auto srcUbOffset = ubIndex * this->hwAlign;
     auto dstGmOffset = n * (this->C * this->inD * this->hwTotal) + c * (this->inD * this->hwTotal) + d * this->hwTotal +

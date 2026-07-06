@@ -25,6 +25,6 @@ protected:
 
     std::unique_ptr<Graph> Replacement(const std::unique_ptr<MatchResult>& match_result) override;
 };
-}  // namespace ops
+} // namespace ops
 
-#endif  // OPS_NORM_LAYER_NORM_OP_GRAPH_FUSION_PASS_LAYER_NORM_REMOVE_BROADCAST_FUSION_PASS_H_
+#endif // OPS_NORM_LAYER_NORM_OP_GRAPH_FUSION_PASS_LAYER_NORM_REMOVE_BROADCAST_FUSION_PASS_H_

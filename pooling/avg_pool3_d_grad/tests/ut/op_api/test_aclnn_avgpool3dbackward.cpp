@@ -24,14 +24,8 @@ using namespace std;
 
 class l2_avgpool3dbackward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "avgpool3dbackward_test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "avgpool3dbackward_test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "avgpool3dbackward_test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "avgpool3dbackward_test TearDown" << std::endl; }
 };
 
 // 正常场景
@@ -55,12 +49,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_1)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -88,12 +80,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_2)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -121,12 +111,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_3)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -154,12 +142,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_4)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     aclTensor* output = nullptr;
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -187,12 +173,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_5)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -220,12 +204,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_6)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -253,12 +235,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_7)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -286,12 +266,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_8)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -319,12 +297,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_9)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -352,12 +328,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_10)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -385,12 +359,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_11)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -418,12 +390,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_12)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -451,12 +421,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_13)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -484,12 +452,10 @@ TEST_F(l2_avgpool3dbackward_test, Ascend910B2_case_14)
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_ND);
     auto output = TensorDesc(vector_output, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool3dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
-            count_include_pad, divisor_override), // host api输入
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnAvgPool3dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, grad_input_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override), // host api输入
+                        OUTPUT(output));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph

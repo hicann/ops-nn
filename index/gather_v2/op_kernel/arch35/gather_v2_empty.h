@@ -15,7 +15,7 @@
 #ifndef GATHER_V2_EMPTY
 #define GATHER_V2_EMPTY
 
-#if ASC_DEVKIT_MAJOR >=9
+#if ASC_DEVKIT_MAJOR >= 9
 #include "basic_api/kernel_vec_intf.h"
 #else
 #include "kernel_operator.h"
@@ -26,8 +26,7 @@ namespace gatherv2 {
 using namespace AscendC;
 
 template <typename T>
-class Gatherv2Empty
-{
+class Gatherv2Empty {
 public:
     __aicore__ inline Gatherv2Empty(){};
     __aicore__ inline void Init(GM_ADDR y, const GatherV2TilingDataEmptyInput* tilingData);

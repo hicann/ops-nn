@@ -18,23 +18,21 @@
 #include "matmul_config.h"
 using namespace AscendC;
 
-#define GENERAL_OP_IMPL(templateClass, ...)                  \
-    do {                                                     \
-        templateClass<__VA_ARGS__> op;                       \
-        REGIST_MATMUL_OBJ(&pipe, GetSysWorkSpacePtr(),       \
-                          op.dwMM, dwMMTiling,               \
-                          op.dgateMM, dgateMMTiling);        \
-        op.Init(x, w, b, y, init_h, init_c, h, c, dy, dh,    \
-                dc, i, j, f, o, tanhct, seq_length, dw,      \
-                db, dx, dh_prev, dc_prev, &tiling_data,      \
-                workspace, &pipe);                           \
-        op.Process();                                        \
+#define GENERAL_OP_IMPL(templateClass, ...)                                                                        \
+    do {                                                                                                           \
+        templateClass<__VA_ARGS__> op;                                                                             \
+        REGIST_MATMUL_OBJ(&pipe, GetSysWorkSpacePtr(), op.dwMM, dwMMTiling, op.dgateMM, dgateMMTiling);            \
+        op.Init(x, w, b, y, init_h, init_c, h, c, dy, dh, dc, i, j, f, o, tanhct, seq_length, dw, db, dx, dh_prev, \
+                dc_prev, &tiling_data, workspace, &pipe);                                                          \
+        op.Process();                                                                                              \
     } while (0)
 
 extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR y, GM_ADDR init_h,
-    GM_ADDR init_c, GM_ADDR h, GM_ADDR c, GM_ADDR dy, GM_ADDR dh, GM_ADDR dc, GM_ADDR i, GM_ADDR j, GM_ADDR f,
-    GM_ADDR o, GM_ADDR tanhct, GM_ADDR seq_length, GM_ADDR dw, GM_ADDR db, GM_ADDR dx, GM_ADDR dh_prev, GM_ADDR dc_prev,
-    GM_ADDR workspace, GM_ADDR rnnGradTiling)
+                                                             GM_ADDR init_c, GM_ADDR h, GM_ADDR c, GM_ADDR dy,
+                                                             GM_ADDR dh, GM_ADDR dc, GM_ADDR i, GM_ADDR j, GM_ADDR f,
+                                                             GM_ADDR o, GM_ADDR tanhct, GM_ADDR seq_length, GM_ADDR dw,
+                                                             GM_ADDR db, GM_ADDR dx, GM_ADDR dh_prev, GM_ADDR dc_prev,
+                                                             GM_ADDR workspace, GM_ADDR rnnGradTiling)
 {
     GET_TILING_DATA(tiling_data, rnnGradTiling);
     const SingleLayerLstmGradTilingData* __restrict tilingData = &tiling_data;
@@ -75,7 +73,7 @@ extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR 
         GENERAL_OP_IMPL(RNNGrad, DTYPE_X, MM_HUGE_CFG, MM_HUGE_CFG, true, true);
     }
 
-    #ifdef __CCE_KT_TEST__
+#ifdef __CCE_KT_TEST__
     EmptyTestFunc();
-    #endif  // __CCE_KT_TEST__
+#endif // __CCE_KT_TEST__
 }

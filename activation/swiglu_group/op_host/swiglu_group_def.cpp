@@ -21,7 +21,7 @@ constexpr float DEFAULT_CLAMP_LIMIT = -1.0f;
 
 class SwigluGroup : public OpDef {
 public:
-    explicit SwigluGroup(const char *name) : OpDef(name)
+    explicit SwigluGroup(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)

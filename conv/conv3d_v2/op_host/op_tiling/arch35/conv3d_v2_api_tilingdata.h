@@ -17,6 +17,5 @@
 #define CONV_OP_TILING_CONV3D_V2_TILINGDATA_H
 
 // sizeof(TConv3DTiling) must algin with 8Byte, type sort
-namespace optiling {
-}  // namespace optiling
+namespace optiling {} // namespace optiling
 #endif

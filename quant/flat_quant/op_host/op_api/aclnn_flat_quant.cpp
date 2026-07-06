@@ -50,19 +50,19 @@ static constexpr double TWELVE = 12.0;
 
 static const std::initializer_list<op::DataType> EMPTY_LIST = {};
 
-static const std::initializer_list<op::DataType> IN_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> IN_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                          op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT4};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                           op::DataType::DT_INT4};
 
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_REGBASE = {
     op::DataType::DT_INT32, op::DataType::DT_INT4, op::DataType::DT_FLOAT4_E2M1};
 
 static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_REGBASE = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT8_E8M0};
+static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_REGBASE = {op::DataType::DT_FLOAT,
+                                                                                     op::DataType::DT_FLOAT8_E8M0};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &IN_DTYPE_SUPPORT_LIST}};
@@ -73,9 +73,7 @@ static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_O
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_REGBASE}};
 
-static bool IsDoubleEqual(double a, double b) {
-    return std::abs(a - b) <= std::numeric_limits<double>::epsilon();
-}
+static bool IsDoubleEqual(double a, double b) { return std::abs(a - b) <= std::numeric_limits<double>::epsilon(); }
 
 static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     const std::map<NpuArch, const std::initializer_list<op::DataType>*>& socSupportDtypes)
@@ -89,12 +87,11 @@ static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     return EMPTY_LIST;
 }
 
-static aclnnStatus Int42Int32PackedTensor(
-    const aclTensor* y, const aclTensor*& outTensor, const op::DataType& outDtype, aclOpExecutor* executor)
+static aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTensor, const op::DataType& outDtype,
+                                          aclOpExecutor* executor)
 {
-    OP_CHECK(
-        outDtype == op::DataType::DT_INT32, OP_LOGD("aclnnFlatQuant output do not need to pack."),
-        return ACLNN_SUCCESS);
+    OP_CHECK(outDtype == op::DataType::DT_INT32, OP_LOGD("aclnnFlatQuant output do not need to pack."),
+             return ACLNN_SUCCESS);
 
     // if outType is int32, pack output
     auto viewShape = y->GetViewShape();
@@ -116,48 +113,40 @@ static bool CheckSpecialIOShape(const aclTensor* x, const aclTensor* out, const 
     auto dimNum = static_cast<int64_t>(x->GetViewShape().GetDimNum());
     OP_CHECK(dimNum == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x tensor should be 3D."), return false);
 
-    OP_CHECK(
-        out->GetViewShape().GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 3D."),
-        return false);
+    OP_CHECK(out->GetViewShape().GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 3D."),
+             return false);
 
     // other dims should be same
     for (int64_t i = 0; i < dimNum - 1; ++i) {
-        OP_CHECK(
-            x->GetViewShape().GetDim(i) == out->GetViewShape().GetDim(i),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "the dim(%ld) of x must be same with out, x is (%ld), out is (%ld).", i,
-                x->GetViewShape().GetDim(i), out->GetViewShape().GetDim(i)),
-            return false);
+        OP_CHECK(x->GetViewShape().GetDim(i) == out->GetViewShape().GetDim(i),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the dim(%ld) of x must be same with out, x is (%ld), out is (%ld).",
+                         i, x->GetViewShape().GetDim(i), out->GetViewShape().GetDim(i)),
+                 return false);
     }
 
     // check last dim
     auto xLastDim = x->GetViewShape().GetDim(dimNum - 1);
     auto outLastDim = out->GetViewShape().GetDim(dimNum - 1);
     if (outDtype == op::DataType::DT_INT32) {
-        OP_CHECK(
-            xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int32, the out last dim must be 1/8 of x last dim,"
-                " x last dim is (%ld), out last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
+        OP_CHECK(xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "if outType is int32, the out last dim must be 1/8 of x last dim,"
+                         " x last dim is (%ld), out last dim is (%ld).",
+                         xLastDim, outLastDim),
+                 return false);
     } else {
-        OP_CHECK(
-            xLastDim == outLastDim,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "if outType is int4, x last dim must be equal with out last dim. "
-                "x last dim is (%ld), out last dim is (%ld).",
-                xLastDim, outLastDim),
-            return false);
+        OP_CHECK(xLastDim == outLastDim,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "if outType is int4, x last dim must be equal with out last dim. "
+                         "x last dim is (%ld), out last dim is (%ld).",
+                         xLastDim, outLastDim),
+                 return false);
     }
     return true;
 }
 
-static bool CheckDim(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, const aclTensor* out,
-    const aclTensor* quantScale)
+static bool CheckDim(const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2,
+                     const aclTensor* out, const aclTensor* quantScale)
 {
     auto xShape = x->GetViewShape();
     auto p1Shape = kroneckerP1->GetViewShape();
@@ -165,84 +154,67 @@ static bool CheckDim(
     auto outShape = out->GetViewShape();
     auto quantScaleShape = quantScale->GetViewShape();
     if (out->GetDataType() == op::DataType::DT_INT32 || out->GetDataType() == op::DataType::DT_INT4) {
-        OP_CHECK(
-            quantScaleShape.GetDimNum() == SCALE_DIM_NUM,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScaleShape dim should be 1."), return false);
-        OP_CHECK(
-            p2Shape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 tensor should be 2D."),
-            return false);
+        OP_CHECK(quantScaleShape.GetDimNum() == SCALE_DIM_NUM,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScaleShape dim should be 1."), return false);
+        OP_CHECK(p2Shape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 tensor should be 2D."),
+                 return false);
     }
-    OP_CHECK(
-        p1Shape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 tensor should be 2D."),
-        return false);
+    OP_CHECK(p1Shape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 tensor should be 2D."),
+             return false);
     OP_CHECK(xShape.GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x tensor should be 3D."), return false);
     if (out->GetDataType() == DataType::DT_FLOAT4_E2M1) {
         // mxfp4的out是2维，scale是3维
-        OP_CHECK(
-            outShape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 2D."),
-            return false);
-        OP_CHECK(
-            quantScaleShape.GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale tensor should be 3D."),
-            return false);
+        OP_CHECK(outShape.GetDimNum() == P_DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 2D."),
+                 return false);
+        OP_CHECK(quantScaleShape.GetDimNum() == DIM_NUM,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale tensor should be 3D."), return false);
     } else {
-        OP_CHECK(
-            outShape.GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 3D."),
-            return false);
-        OP_CHECK(
-            quantScaleShape.GetDimNum() == SCALE_DIM_NUM,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale tensor should be 1D."), return false);
+        OP_CHECK(outShape.GetDimNum() == DIM_NUM, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out tensor should be 3D."),
+                 return false);
+        OP_CHECK(quantScaleShape.GetDimNum() == SCALE_DIM_NUM,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale tensor should be 1D."), return false);
     }
     int64_t K = xShape.GetDim(K_INDEX);
     int64_t M = xShape.GetDim(M_INDEX);
     int64_t N = xShape.GetDim(N_INDEX);
     OP_CHECK(K > 0 && M > 0 && N > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x sizes should greater than 0."), return false);
-    OP_CHECK(
-        K <= MAX_K_SIZE && M <= MAX_MN_SIZE && N <= MAX_MN_SIZE,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "x dim0 should not exceed %ld, x dim1 and dim2 should not exceed %ld.", MAX_K_SIZE,
-            MAX_MN_SIZE),
-        return false);
+    OP_CHECK(K <= MAX_K_SIZE && M <= MAX_MN_SIZE && N <= MAX_MN_SIZE,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x dim0 should not exceed %ld, x dim1 and dim2 should not exceed %ld.",
+                     MAX_K_SIZE, MAX_MN_SIZE),
+             return false);
     if (out->GetDataType() == op::DataType::DT_INT32) {
-        OP_CHECK(
-            N % INT4_NUMS_IN_INT32_SPACE == 0,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "if outType is int32, x last dim must be divisible by %ld.",
-                INT4_NUMS_IN_INT32_SPACE),
-            return false);
+        OP_CHECK(N % INT4_NUMS_IN_INT32_SPACE == 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if outType is int32, x last dim must be divisible by %ld.",
+                         INT4_NUMS_IN_INT32_SPACE),
+                 return false);
     } else {
-        OP_CHECK(
-            N % P_DIM_NUM == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x last dim must be divisible by %ld.", P_DIM_NUM),
-            return false);
+        OP_CHECK(N % P_DIM_NUM == 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x last dim must be divisible by %ld.", P_DIM_NUM), return false);
     }
-    OP_CHECK(
-        p1Shape.GetDim(INDEX_0) == M && p1Shape.GetDim(INDEX_1) == M,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 dim0 and dim1 should be same with x dim1."), return false);
+    OP_CHECK(p1Shape.GetDim(INDEX_0) == M && p1Shape.GetDim(INDEX_1) == M,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP1 dim0 and dim1 should be same with x dim1."), return false);
     if (out->GetDataType() != DataType::DT_FLOAT4_E2M1) {
-        OP_CHECK(
-            p2Shape.GetDim(INDEX_0) == N && p2Shape.GetDim(INDEX_1) == N,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 dim0 and dim1 should be same with x dim2."), return false);
+        OP_CHECK(p2Shape.GetDim(INDEX_0) == N && p2Shape.GetDim(INDEX_1) == N,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kroneckerP2 dim0 and dim1 should be same with x dim2."),
+                 return false);
     }
-    OP_CHECK(
-        quantScaleShape.GetDim(INDEX_0) == K,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale dim0 should be same with x dim0."), return false);
+    OP_CHECK(quantScaleShape.GetDim(INDEX_0) == K,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quantScale dim0 should be same with x dim0."), return false);
 
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, const aclTensor* out,
-    const aclTensor* quantScale)
+static bool CheckShape(const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2,
+                       const aclTensor* out, const aclTensor* quantScale)
 {
     // 维度限制校验
-    OP_CHECK(
-        CheckDim(x, kroneckerP1, kroneckerP2, out, quantScale),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check input / output shape failed."), return false);
+    OP_CHECK(CheckDim(x, kroneckerP1, kroneckerP2, out, quantScale),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check input / output shape failed."), return false);
 
     auto outputDtype = out->GetDataType();
     if (outputDtype != DataType::DT_FLOAT4_E2M1) {
-        OP_CHECK(
-            CheckSpecialIOShape(x, out, outputDtype), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check output shape failed."),
-            return false);
+        OP_CHECK(CheckSpecialIOShape(x, out, outputDtype),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check output shape failed."), return false);
     }
     return true;
 }
@@ -252,9 +224,8 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* out, const aclTenso
     auto xFormat = x->GetStorageFormat();
     auto outFormat = out->GetStorageFormat();
     auto quantScaleFormat = quantScale->GetStorageFormat();
-    bool noSupportFormat =
-        ((xFormat == Format::FORMAT_FRACTAL_NZ) || (outFormat == Format::FORMAT_FRACTAL_NZ) ||
-         (quantScaleFormat == Format::FORMAT_FRACTAL_NZ));
+    bool noSupportFormat = ((xFormat == Format::FORMAT_FRACTAL_NZ) || (outFormat == Format::FORMAT_FRACTAL_NZ) ||
+                            (quantScaleFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, " op [flat_quant] currently only supports ND format.");
         return false;
@@ -262,9 +233,8 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* out, const aclTenso
     return true;
 }
 
-static bool CheckNotNull(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, const aclTensor* out,
-    const aclTensor* quantScale)
+static bool CheckNotNull(const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2,
+                         const aclTensor* out, const aclTensor* quantScale)
 {
     OP_CHECK_NULL(x, return false);
     OP_CHECK_NULL(kroneckerP1, return false);
@@ -274,9 +244,8 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, const aclTensor* out,
-    const aclTensor* quantScale)
+static bool CheckDtypeValid(const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2,
+                            const aclTensor* out, const aclTensor* quantScale)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x, GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES), return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(kroneckerP1, GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES), return false);
@@ -284,18 +253,14 @@ static bool CheckDtypeValid(
 
     auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
     auto scaleList = GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
-    OP_CHECK(
-        std::find(outList.begin(), outList.end(), out->GetDataType()) != outList.end(),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Tensor out should be in dtype support list %s",
-            op::ToString(outList).GetString()),
-        return false);
-    OP_CHECK(
-        std::find(scaleList.begin(), scaleList.end(), quantScale->GetDataType()) != scaleList.end(),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Tensor scale should be in dtype support list %s",
-            op::ToString(scaleList).GetString()),
-        return false);
+    OP_CHECK(std::find(outList.begin(), outList.end(), out->GetDataType()) != outList.end(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor out should be in dtype support list %s",
+                     op::ToString(outList).GetString()),
+             return false);
+    OP_CHECK(std::find(scaleList.begin(), scaleList.end(), quantScale->GetDataType()) != scaleList.end(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor scale should be in dtype support list %s",
+                     op::ToString(scaleList).GetString()),
+             return false);
     OP_CHECK_DTYPE_NOT_SAME(x, kroneckerP1, return false);
     OP_CHECK_DTYPE_NOT_SAME(x, kroneckerP2, return false);
     return true;
@@ -312,16 +277,14 @@ static bool CheckRatioValid(double clipRatio)
 
 static bool CheckMaxValid(double dstTypeMax)
 {
-    OP_CHECK(
-        IsDoubleEqual(dstTypeMax, ZERO) || (dstTypeMax >= SIX && dstTypeMax <= TWELVE),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax must be 0 or in range [6, 12], dstTypeMax [%f].", dstTypeMax),
-        return false);
+    OP_CHECK(IsDoubleEqual(dstTypeMax, ZERO) || (dstTypeMax >= SIX && dstTypeMax <= TWELVE),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax must be 0 or in range [6, 12], dstTypeMax [%f].", dstTypeMax),
+             return false);
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, const aclTensor* out,
-    const aclTensor* quantScale)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2,
+                               const aclTensor* out, const aclTensor* quantScale)
 {
     CHECK_RET(CheckNotNull(x, kroneckerP1, kroneckerP2, out, quantScale), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(x, kroneckerP1, kroneckerP2, out, quantScale), ACLNN_ERR_PARAM_INVALID);
@@ -331,9 +294,9 @@ static aclnnStatus CheckParams(
 }
 }; // namespace
 
-aclnnStatus aclnnFlatQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, double clipRatio, aclTensor* out,
-    aclTensor* quantScale, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnFlatQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* kroneckerP1,
+                                           const aclTensor* kroneckerP2, double clipRatio, aclTensor* out,
+                                           aclTensor* quantScale, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFlatQuant, DFX_IN(x, kroneckerP1, kroneckerP2), DFX_OUT(out, quantScale));
     // 固定写法，创建OpExecutor
@@ -356,9 +319,9 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(
     CHECK_RET(p2Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto outputDtype = out->GetDataType();
-    std::tuple<aclTensor*, aclTensor*> result = l0op::FlatQuant(
-        selfContiguous, p1Contiguous, p2Contiguous, static_cast<float>(clipRatio), outputDtype, 0.0f, out, quantScale,
-        uniqueExecutor.get());
+    std::tuple<aclTensor*, aclTensor*> result = l0op::FlatQuant(selfContiguous, p1Contiguous, p2Contiguous,
+                                                                static_cast<float>(clipRatio), outputDtype, 0.0f, out,
+                                                                quantScale, uniqueExecutor.get());
 
     const aclTensor* resultTensor = std::get<0>(result);
     const aclTensor* quantScaleTensor = std::get<1>(result);
@@ -381,9 +344,10 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFlatQuantV2GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, double clipRatio, double dstTypeMax,
-    aclTensor* out, aclTensor* quantScale, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnFlatQuantV2GetWorkspaceSize(const aclTensor* x, const aclTensor* kroneckerP1,
+                                             const aclTensor* kroneckerP2, double clipRatio, double dstTypeMax,
+                                             aclTensor* out, aclTensor* quantScale, uint64_t* workspaceSize,
+                                             aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFlatQuantV2, DFX_IN(x, kroneckerP1, kroneckerP2), DFX_OUT(out, quantScale));
     // 固定写法，创建OpExecutor

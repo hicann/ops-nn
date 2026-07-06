@@ -24,8 +24,8 @@ constexpr int64_t FP32_BYTE = 4;
 constexpr int64_t FP16_BYTE = 2;
 constexpr uint32_t MINIMAL_WORKSPACE = 32;
 
-bool LayerNormV4RegBaseTwoPassTiling::CanFitInBuffer(
-    int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse, int64_t xElemSize)
+bool LayerNormV4RegBaseTwoPassTiling::CanFitInBuffer(int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize,
+                                                     int64_t& tmpBufferUse, int64_t xElemSize)
 {
     uint32_t minValue;
     uint32_t maxValue;
@@ -34,11 +34,11 @@ bool LayerNormV4RegBaseTwoPassTiling::CanFitInBuffer(
     AscendC::GetLayerNormMaxMinTmpSize(inputShape, xElemSize, true, true, false, maxValue, minValue);
     tmpBufferUse = maxValue;
     int64_t ubCanUseSize = commonParams.ubSizePlatForm;
-    int64_t bufferUse =
-        curA * largeBufferMemPerA +
-        Ops::Base::CeilAlign(static_cast<int64_t>(curA * FP32_BYTE), static_cast<int64_t>(commonParams.blockSize)) *
-            SMALL_BUFFER_NUM * DOUBLE_BUFFER +
-        baseMemSize;
+    int64_t bufferUse = curA * largeBufferMemPerA +
+                        Ops::Base::CeilAlign(static_cast<int64_t>(curA * FP32_BYTE),
+                                             static_cast<int64_t>(commonParams.blockSize)) *
+                            SMALL_BUFFER_NUM * DOUBLE_BUFFER +
+                        baseMemSize;
     return (bufferUse + tmpBufferUse) <= ubCanUseSize;
 }
 

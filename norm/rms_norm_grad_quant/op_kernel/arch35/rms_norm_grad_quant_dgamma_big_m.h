@@ -25,8 +25,7 @@
 namespace RmsNormGradQuant {
 
 template <typename T>
-class RmsNormGradQuantDgammaBigM
-{
+class RmsNormGradQuantDgammaBigM {
     static constexpr uint32_t VECTOR_LENGTH = platform::GetVRegSize();
     static constexpr uint32_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
     static constexpr int64_t BLOCK_SIZE = platform::GetUbBlockSize();
@@ -35,9 +34,8 @@ class RmsNormGradQuantDgammaBigM
 
 public:
     __aicore__ inline RmsNormGradQuantDgammaBigM(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR pdGamma, GM_ADDR workspace,
-        const RmsNormGradQuantRegbaseBigMTilingData* tilingData, TPipe* pipeIn)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR pdGamma, GM_ADDR workspace,
+                                const RmsNormGradQuantRegbaseBigMTilingData* tilingData, TPipe* pipeIn)
     {
         td_ = tilingData;
         blockIdx_ = GetBlockIdx();
@@ -45,8 +43,8 @@ public:
             return;
         }
 
-        const int64_t startM =
-            (blockIdx_ * td_->dgammaMPerBlock) + (blockIdx_ < td_->dgammaMReminder ? blockIdx_ : td_->dgammaMReminder);
+        const int64_t startM = (blockIdx_ * td_->dgammaMPerBlock) +
+                               (blockIdx_ < td_->dgammaMReminder ? blockIdx_ : td_->dgammaMReminder);
 
         if (blockIdx_ < td_->dgammaMReminder) {
             M = td_->dgammaMToProcessMainBlock;
@@ -152,8 +150,8 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+    __aicore__ inline void ProcessMainBlock(const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor)
     {
         int64_t dyOffset = ni * td_->dgammaNfactorBlockAligned +
                            basicBlockIdx * td_->dgammaMfactorBlockAligned * td_->dxTilingData.cols;
@@ -173,8 +171,8 @@ private:
         inQueueRstd_.FreeTensor(rstdTensor);
     }
 
-    __aicore__ inline void ProcessFoldBlock(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+    __aicore__ inline void ProcessFoldBlock(const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor)
     {
         int64_t dyOffset = ni * td_->dgammaNfactorBlockAligned +
                            (basicBlockIdx + BasicBlockLoop) * td_->dgammaMfactorBlockAligned * td_->dxTilingData.cols;
@@ -192,21 +190,21 @@ private:
         inQueueRstd_.FreeTensor(rstdTensor);
     }
 
-    __aicore__ inline void ProcessSummation(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor)
+    __aicore__ inline void ProcessSummation(const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor)
     {
         int64_t cacheID = GetCacheID(basicBlockIdx);
         uint32_t srcShape[2] = {static_cast<uint32_t>(mfactor), static_cast<uint32_t>(nfactor)};
 
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(
-            reduceOutTmpTensor_, dgammaCalcTensor_, srcShape, false);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(reduceOutTmpTensor_, dgammaCalcTensor_, srcShape,
+                                                                      false);
 
         UpdateCache(reduceCacheTensor_, reduceOutTmpTensor_, cacheID, td_->dgammaNfactorBlockAligned, nfactor);
     }
 
-    __aicore__ inline void ComputeDgammaTmpMain(
-        const LocalTensor<float>& dstTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor,
-        const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize)
+    __aicore__ inline void ComputeDgammaTmpMain(const LocalTensor<float>& dstTensor, const LocalTensor<T>& dyTensor,
+                                                const LocalTensor<T>& xTensor, const LocalTensor<float>& rstdTensor,
+                                                const int64_t rowSize, const int64_t colSize)
     {
         uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
         uint16_t innerLoopTimes = ops::CeilDiv(colSize, static_cast<int64_t>(VL_FP32));
@@ -242,9 +240,9 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeDgammaTmpFold(
-        const LocalTensor<float>& dstTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor,
-        const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize)
+    __aicore__ inline void ComputeDgammaTmpFold(const LocalTensor<float>& dstTensor, const LocalTensor<T>& dyTensor,
+                                                const LocalTensor<T>& xTensor, const LocalTensor<float>& rstdTensor,
+                                                const int64_t rowSize, const int64_t colSize)
     {
         uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
         uint16_t innerLoopTimes = ops::CeilDiv(colSize, static_cast<int64_t>(VL_FP32));
@@ -283,8 +281,8 @@ private:
     }
 
     template <typename T1>
-    __aicore__ inline void LoadOneTensor(
-        MicroAPI::RegTensor<float>& dst, const __local_mem__ void* input, MicroAPI::MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadOneTensor(MicroAPI::RegTensor<float>& dst, const __local_mem__ void* input,
+                                         MicroAPI::MaskReg& preg, uint32_t offset)
     {
         if constexpr (!IsSameType<T1, float>::value) {
             MicroAPI::RegTensor<T1> xFp16;
@@ -308,9 +306,8 @@ private:
         dgammaTmpOutQueue_.FreeTensor(dgammaTmp);
     }
 
-    __aicore__ inline void CopyInDyAndX(
-        const int64_t gmOffset, const int64_t nburst, const int64_t burstLen, const int64_t dstStride,
-        const int64_t srcStride)
+    __aicore__ inline void CopyInDyAndX(const int64_t gmOffset, const int64_t nburst, const int64_t burstLen,
+                                        const int64_t dstStride, const int64_t srcStride)
     {
         DataCopyExtParams params;
         params.blockCount = nburst;
@@ -344,9 +341,8 @@ private:
         inQueueRstd_.EnQue(rstdTensor);
     }
 
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-        const int64_t stride, const int64_t count)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheID, const int64_t stride, const int64_t count)
     {
         uint16_t outerLoopTimes = ops::CeilDiv(static_cast<uint32_t>(count), VL_FP32);
         uint16_t innerLoopTimes = cacheID;
@@ -364,9 +360,8 @@ private:
                 pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
                 DataCopy(aReg, (__local_mem__ float*)src + static_cast<uint32_t>(i * outerLoopStride));
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    DataCopy(
-                        bReg,
-                        (__local_mem__ float*)dst + static_cast<uint32_t>(i * outerLoopStride + j * innerLoopStride));
+                    DataCopy(bReg, (__local_mem__ float*)dst +
+                                       static_cast<uint32_t>(i * outerLoopStride + j * innerLoopStride));
                     Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
                 DataCopy((__local_mem__ float*)cah + static_cast<uint32_t>(i * outerLoopStride), aReg, pMask);
@@ -374,12 +369,11 @@ private:
         }
     }
 
-    __aicore__ inline void CopyUB2UB(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count)
+    __aicore__ inline void CopyUB2UB(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                     const int64_t count)
     {
-        DataCopy(
-            dstTensor, srcTensor,
-            ops::Aligned(static_cast<int64_t>(count), static_cast<int64_t>(BLOCK_SIZE / sizeof(float))));
+        DataCopy(dstTensor, srcTensor,
+                 ops::Aligned(static_cast<int64_t>(count), static_cast<int64_t>(BLOCK_SIZE / sizeof(float))));
     }
 
     // 核间累加
@@ -395,8 +389,8 @@ private:
     __aicore__ inline void ProcessStg1()
     {
         for (int64_t i = 0; i < td_->dgammaAOuterStg1; i++) {
-            uint16_t curAInnerLen =
-                i != (td_->dgammaAOuterStg1 - 1) ? td_->dgammaAInnerAlignedStg1 : td_->dgammaATailStg1;
+            uint16_t curAInnerLen = i != (td_->dgammaAOuterStg1 - 1) ? td_->dgammaAInnerAlignedStg1 :
+                                                                       td_->dgammaATailStg1;
 
             int64_t offset = i * td_->dgammaAInnerAlignedStg1;
             CopyInDgammaTmp(offset, curAInnerLen);
@@ -404,8 +398,8 @@ private:
             LocalTensor<float> dgammaTmpIn = dgammaTmpInQue_.template DeQue<float>();
             LocalTensor<float> dgammaOut = dgammaOutQue_.AllocTensor<float>();
 
-            uint32_t srcShape[2] = {
-                static_cast<uint32_t>(td_->dgammaUsedCoreNum), static_cast<uint32_t>(td_->dgammaAInnerAlignedStg1)};
+            uint32_t srcShape[2] = {static_cast<uint32_t>(td_->dgammaUsedCoreNum),
+                                    static_cast<uint32_t>(td_->dgammaAInnerAlignedStg1)};
 
             ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(dgammaOut, dgammaTmpIn, srcShape, false);
             dgammaTmpInQue_.FreeTensor(dgammaTmpIn);
@@ -429,8 +423,8 @@ private:
         copyInParams.dstStride = (td_->dgammaAInnerAlignedStg1 - curALen) * sizeof(float) / BLOCK_SIZE;
 
         LocalTensor<float> dgammaTmpTensor = dgammaTmpInQue_.AllocTensor<float>();
-        DataCopyPad<float, PaddingMode::Normal>(
-            dgammaTmpTensor, dgammaTmpGm_[offset], copyInParams, dataCopyPadExtParams);
+        DataCopyPad<float, PaddingMode::Normal>(dgammaTmpTensor, dgammaTmpGm_[offset], copyInParams,
+                                                dataCopyPadExtParams);
         dgammaTmpInQue_.EnQue(dgammaTmpTensor);
     }
 

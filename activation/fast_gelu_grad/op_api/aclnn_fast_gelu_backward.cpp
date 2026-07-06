@@ -25,8 +25,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                             DataType::DT_BF16};
 
 static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
 
@@ -74,19 +74,18 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, cons
 {
     // self、gradInput的数据格式必须相同
     if (self->GetStorageFormat() != gradInput->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of self and gradInput can't be different, self [%s], gradInput [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(),
-            op::ToString(gradInput->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and gradInput can't be different, self [%s], gradInput [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(gradInput->GetStorageFormat()).GetString());
         return false;
     }
 
     // self、gradOutput的数据格式必须相同
     if (self->GetStorageFormat() != gradOutput->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of self and gradOutput can't be different, self [%s], gradOutput [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(),
-            op::ToString(gradOutput->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format of self and gradOutput can't be different, self [%s], gradOutput [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(gradOutput->GetStorageFormat()).GetString());
         return false;
     }
     return true;
@@ -109,9 +108,9 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFastGeluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnFastGeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                  aclTensor* gradInput, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFastGeluBackward, DFX_IN(gradOutput, self), DFX_OUT(gradInput));
     // 固定写法，创建OpExecutor

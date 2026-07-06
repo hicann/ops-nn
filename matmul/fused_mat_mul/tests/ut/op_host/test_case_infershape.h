@@ -20,14 +20,11 @@
 
 #define OP_TUPLE std::tuple<std::vector<int64_t>, ge::DataType, std::vector<std::pair<int64_t, int64_t>>>
 #define RES_TUPLE std::tuple<std::vector<int64_t>, std::vector<std::pair<int64_t, int64_t>>, ge::DataType, bool>
-#define CASE_TUPLE \
-  std::tuple<OP_TUPLE, OP_TUPLE, OP_TUPLE, OP_TUPLE, bool, bool, bool, std::string, RES_TUPLE>
+#define CASE_TUPLE std::tuple<OP_TUPLE, OP_TUPLE, OP_TUPLE, OP_TUPLE, bool, bool, bool, std::string, RES_TUPLE>
 
-ge::op::FusedMatMul CreateFusedMatmulOp(OP_TUPLE x1, OP_TUPLE x2, OP_TUPLE bias, OP_TUPLE x3,
-                                                          const bool &transpose_x1,
-                                                          const bool &transpose_x2,
-                                                          const bool &enable_hf32,
-                                                          const std::string &fused_op_type);
+ge::op::FusedMatMul CreateFusedMatmulOp(OP_TUPLE x1, OP_TUPLE x2, OP_TUPLE bias, OP_TUPLE x3, const bool& transpose_x1,
+                                        const bool& transpose_x2, const bool& enable_hf32,
+                                        const std::string& fused_op_type);
 
 // x1 x2 bias x3 transpose_x1 transpose_x2 enable_hf32 fused_op_type
 const static std::vector<CASE_TUPLE> testcase_fusedmatmul_runtime = {

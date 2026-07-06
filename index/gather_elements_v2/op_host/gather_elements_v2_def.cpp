@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class GatherElementsV2 : public OpDef
-{
+class GatherElementsV2 : public OpDef {
 public:
     explicit GatherElementsV2(const char* name) : OpDef(name)
     {

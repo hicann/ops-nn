@@ -58,14 +58,14 @@ constexpr CubeFormat format_y = CubeFormat::ND;
             op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                      \
             op.Process();                                                                                             \
         } else if (tilingData.matmulTiling.matmulRunInfo.transA == 1 &&                                               \
-            tilingData.matmulTiling.matmulRunInfo.transB == 0) {                                                      \
+                   tilingData.matmulTiling.matmulRunInfo.transB == 0) {                                               \
             using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, true, LayoutMode::NORMAL>;          \
             using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false, LayoutMode::NORMAL>;         \
             templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                             \
             op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                      \
             op.Process();                                                                                             \
         } else if (tilingData.matmulTiling.matmulRunInfo.transA == 0 &&                                               \
-            tilingData.matmulTiling.matmulRunInfo.transB == 1) {                                                      \
+                   tilingData.matmulTiling.matmulRunInfo.transB == 1) {                                               \
             using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, false, LayoutMode::NORMAL>;         \
             using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true, LayoutMode::NORMAL>;          \
             templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                             \
@@ -80,17 +80,17 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         }                                                                                                             \
     } while (0)
 
-#define BMMV3_IMPL_CLASS_TRANS(transA, transB, templateClass, ...)                                                    \
-    do {                                                                                                              \
-        GET_TILING_DATA(tilingData, tilingGM);                                                                        \
-        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y, false, LayoutMode::NORMAL>;               \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS, false, LayoutMode::NORMAL>;   \
-        TPipe pipe;                                                                                                   \
-        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA, LayoutMode::NORMAL>;            \
-        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB, LayoutMode::NORMAL>;            \
-        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                                 \
-        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                          \
-        op.Process();                                                                                                 \
+#define BMMV3_IMPL_CLASS_TRANS(transA, transB, templateClass, ...)                                                  \
+    do {                                                                                                            \
+        GET_TILING_DATA(tilingData, tilingGM);                                                                      \
+        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y, false, LayoutMode::NORMAL>;             \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS, false, LayoutMode::NORMAL>; \
+        TPipe pipe;                                                                                                 \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA, LayoutMode::NORMAL>;          \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB, LayoutMode::NORMAL>;          \
+        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                               \
+        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                        \
+        op.Process();                                                                                               \
     } while (0)
 
 #define BMMV3_IMPL_CLASS_COMMON(templateClass, ...)                                                                   \
@@ -105,14 +105,14 @@ constexpr CubeFormat format_y = CubeFormat::ND;
             op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                      \
             op.Process();                                                                                             \
         } else if (tilingData.matmulTiling.matmulRunInfo.transA == 1 &&                                               \
-            tilingData.matmulTiling.matmulRunInfo.transB == 0) {                                                      \
+                   tilingData.matmulTiling.matmulRunInfo.transB == 0) {                                               \
             using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, true>;                              \
             using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                             \
             templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                             \
             op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                      \
             op.Process();                                                                                             \
         } else if (tilingData.matmulTiling.matmulRunInfo.transA == 0 &&                                               \
-            tilingData.matmulTiling.matmulRunInfo.transB == 1) {                                                      \
+                   tilingData.matmulTiling.matmulRunInfo.transB == 1) {                                               \
             using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, false>;                             \
             using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                              \
             templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                             \
@@ -127,99 +127,111 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         }                                                                                                             \
     } while (0)
 
-#define BMMV3_IMPL_CLASS_COMMON_TRNAS(transA, transB, templateClass, ...)                                             \
-    do {                                                                                                              \
-        GET_TILING_DATA(tilingData, tilingGM);                                                                        \
-        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;                                          \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                              \
-        TPipe pipe;                                                                                                   \
-        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;                                \
-        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;                                \
-        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                                 \
-        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                          \
-        op.Process();                                                                                                 \
+#define BMMV3_IMPL_CLASS_COMMON_TRNAS(transA, transB, templateClass, ...)                \
+    do {                                                                                 \
+        GET_TILING_DATA(tilingData, tilingGM);                                           \
+        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;             \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>; \
+        TPipe pipe;                                                                      \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;   \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;   \
+        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                    \
+        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);             \
+        op.Process();                                                                    \
     } while (0)
 
-#define BMMV3_IMPL_VECTOR_CLASS(templateClass)                                                                        \
-    do {                                                                                                              \
-        using aType = MatmulType<AscendC::TPosition::GM, format_x1, float, false, LayoutMode::NORMAL>;             \
-        using bType = MatmulType<AscendC::TPosition::GM, format_x2, float, false, LayoutMode::NORMAL>;             \
-        using cType = MatmulType<AscendC::TPosition::GM, format_y, float, false, LayoutMode::NORMAL>;               \
-        TPipe pipe;                                                                                                   \
-        templateClass<aType, bType, cType> op;                                                                        \
-        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, workspaceGM, &tilingData, &pipe);                                   \
-        op.Process();                                                                                                 \
+#define BMMV3_IMPL_VECTOR_CLASS(templateClass)                                                         \
+    do {                                                                                               \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, float, false, LayoutMode::NORMAL>; \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, float, false, LayoutMode::NORMAL>; \
+        using cType = MatmulType<AscendC::TPosition::GM, format_y, float, false, LayoutMode::NORMAL>;  \
+        TPipe pipe;                                                                                    \
+        templateClass<aType, bType, cType> op;                                                         \
+        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, workspaceGM, &tilingData, &pipe);                    \
+        op.Process();                                                                                  \
     } while (0)
 
-template<int MULTIBATCHL1FULLLOAD, int MULTIBATCH, int LOADMODE, int ISMULTIBATCHOUT, int MIXND2NZ>
-__global__ __aicore__ void batch_mat_mul_v3(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+template <int MULTIBATCHL1FULLLOAD, int MULTIBATCH, int LOADMODE, int ISMULTIBATCHOUT, int MIXND2NZ>
+__global__ __aicore__ void batch_mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM,
+                                            GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     REGISTER_TILING_DEFAULT(BatchMatmulTilingData);
-    __gm__ uint8_t *user = GetUserWorkspace(workspaceGM);
+    __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ < 220
     GET_TILING_DATA(tilingData, tilingGM);
     if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+                  MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                  ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                  MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS_COMMON(BatchMatMulCommonKernel, BatchMatMulCommonBaseBlock, MM_CFG_VEC_ND2NZ);
     }
 #else
     GET_TILING_DATA(tilingData, tilingGM);
     if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
+                  MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                  ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                  MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
         BMMV3_IMPL_CLASS_COMMON(BatchMatMulUnalignedKernel, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS_COMMON(BatchMatMulCommonKernel, BatchMatMulCommonBaseBlock, MM_CFG_NO_PRELOAD);
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_AL1_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_AL1_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS_COMMON(BatchMatMulCommonKernel, BatchMatMulCommonBaseBlock, MM_CFG_NO_PRELOAD,
                                 MatmulCallBackFunc<nullptr, BmmCopyAL1, nullptr>);
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BL1_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BL1_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS_COMMON(BatchMatMulCommonKernel, BatchMatMulCommonBaseBlock, MM_CFG_NO_PRELOAD,
                                 MatmulCallBackFunc<nullptr, nullptr, BmmCopyBL1>);
 #if defined(FORMAT_X2) && FORMAT_X2 != FORMAT_FRACTAL_NZ
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE && // need to be set
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE && // need to be set
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS(BatchMatMulMultiBatchKernel, BatchMatMulMultiBatchBaseBlock);
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
         BMMV3_IMPL_CLASS(BatchMatMulUnalignedMultiBatchKernel, BatchMatMulUnalignedMultiBatchBaseBlock);
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_TRUE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_TRUE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS(BatchMatMulMultiBatchKernel, BatchMatMulMultiBatchBaseBlock, MM_CFG_MULTI_BATCH_OUT);
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_TRUE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
-        BMMV3_IMPL_CLASS(BatchMatMulUnalignedMultiBatchKernel, BatchMatMulUnalignedMultiBatchBaseBlock, MM_CFG_MULTI_BATCH_OUT);
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_TRUE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
+        BMMV3_IMPL_CLASS(BatchMatMulUnalignedMultiBatchKernel, BatchMatMulUnalignedMultiBatchBaseBlock,
+                         MM_CFG_MULTI_BATCH_OUT);
 #if defined(ORIG_DTYPE_X1) && ORIG_DTYPE_X1 == DT_FLOAT
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_VECTOR_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_VECTOR_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_VECTOR_CLASS(BatchMatmulVectorKernel);
 #endif
-    } else if constexpr (
-        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_TRUE &&
-        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
-        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
+    } else if constexpr (MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_TRUE &&
+                         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE &&
+                         LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
+                         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE &&
+                         MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS(BatchMatMulMultiBatchFullLoadKernel, BatchMatMulMultiBatchFullLoadBlock);
 #endif
 #endif

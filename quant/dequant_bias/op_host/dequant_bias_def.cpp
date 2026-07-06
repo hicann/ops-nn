@@ -19,87 +19,102 @@ namespace ops {
 
 class DequantBias : public OpDef {
 public:
-  explicit DequantBias(const char* name) : OpDef(name) {
-    this->Input("x")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("weight_scale")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("activate_scale")
-        .ParamType(OPTIONAL)
-        .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Input("bias")
-        .ParamType(OPTIONAL)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Output("y")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    this->Attr("output_dtype").AttrType(REQUIRED).Int();//输出类型，传入
-    this->AICore().AddConfig("ascend910b");
-    this->AICore().AddConfig("ascend910_93");
-    OpAICoreConfig config_950;
-    config_950.DynamicCompileStaticFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .ExtendCfgInfo("opFile.value", "dequant_bias_apt");
-    this->AICore().AddConfig("ascend950", config_950);
+    explicit DequantBias(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                       ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("weight_scale")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("activate_scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                       ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                       ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("output_dtype").AttrType(REQUIRED).Int(); //输出类型，传入
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .ExtendCfgInfo("opFile.value", "dequant_bias_apt");
+        this->AICore().AddConfig("ascend950", config_950);
 
-    OpAICoreConfig config_kirin = GetKirinCoreConfig();
-    this->AICore().AddConfig("kirinx90", config_kirin);
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
-  }
+    }
 
 private:
-
-  OpAICoreConfig GetKirinCoreConfig() const
-  {
-    OpAICoreConfig config_kirin;
-    config_kirin.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .PrecisionReduceFlag(true);
-    config_kirin.Input("x")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    config_kirin.Input("weight_scale")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    config_kirin.Input("activate_scale")
-        .ParamType(OPTIONAL)
-        .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    config_kirin.Input("bias")
-        .ParamType(OPTIONAL)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    config_kirin.Output("y")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-    return config_kirin;
-  }
+    OpAICoreConfig GetKirinCoreConfig() const
+    {
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Input("weight_scale")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Input("activate_scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_kirin.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        return config_kirin;
+    }
 };
 
 OP_ADD(DequantBias);
-}  // namespace ops
+} // namespace ops

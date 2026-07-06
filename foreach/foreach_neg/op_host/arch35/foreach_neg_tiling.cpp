@@ -48,10 +48,8 @@ static ge::graphStatus ForeachNegTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -65,10 +63,8 @@ static ge::graphStatus ForeachNegTilingFunc(gert::TilingContext* context)
 
     ForeachNegTilingData* tiling = context->GetTilingData<ForeachNegTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachNegTilingData), 0, sizeof(ForeachNegTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachNegTilingData), 0, sizeof(ForeachNegTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
@@ -121,8 +117,6 @@ static ge::graphStatus TilingParseForForeachNeg([[maybe_unused]] gert::TilingPar
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ForeachNeg)
-    .Tiling(ForeachNegTilingFunc)
-    .TilingParse<ForeachNegCompileInfo>(TilingParseForForeachNeg);
+IMPL_OP_OPTILING(ForeachNeg).Tiling(ForeachNegTilingFunc).TilingParse<ForeachNegCompileInfo>(TilingParseForForeachNeg);
 
 } // namespace optiling

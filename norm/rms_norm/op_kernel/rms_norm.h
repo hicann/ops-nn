@@ -22,9 +22,9 @@ using namespace AscendC;
 template <typename T, typename T_GAMMA>
 class KernelRmsNorm : KernelRmsNormBase<T, T_GAMMA> {
 public:
-    __aicore__ inline KernelRmsNorm()
-    {}
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling, GM_ADDR usrWorkspace)
+    __aicore__ inline KernelRmsNorm() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling,
+                                GM_ADDR usrWorkspace)
     {
         ASSERT(GetBlockNum() != 0 && "block dim2 can not be zero!");
         InitVar(tiling);
@@ -36,9 +36,11 @@ public:
             this->row_work = num_row - (GetBlockNum() - 1) * block_factor;
         }
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * block_factor * num_col, static_cast<uint64_t>(row_work) * num_col);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * block_factor * num_col,
+                            static_cast<uint64_t>(row_work) * num_col);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, num_col);
-        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * block_factor * num_col, static_cast<uint64_t>(row_work) * num_col);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * block_factor * num_col,
+                            static_cast<uint64_t>(row_work) * num_col);
         rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * block_factor, block_factor);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
         InitRstdData(usrWorkspace);
@@ -58,7 +60,7 @@ public:
 
     __aicore__ inline void InitRstdData(GM_ADDR usrWorkspace)
     {
-        uint32_t row_factor_align = ROUND_UP(row_factor, NUM_PER_BLK_FP32);	 
+        uint32_t row_factor_align = ROUND_UP(row_factor, NUM_PER_BLK_FP32);
         pipe.InitBuffer(outTmpZeroBuf, row_factor_align * sizeof(float));
         LocalTensor<float> temp_zero_tensor = outTmpZeroBuf.Get<float>();
         Duplicate(temp_zero_tensor, (float)0.0, row_factor_align);
@@ -68,7 +70,8 @@ public:
         for (uint64_t i_o = 0; i_o < i_o_max - 1; i_o++) {
             DataCopy(rstdGm[i_o * row_factor], temp_zero_tensor, row_factor_align);
         }
-        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor, ROUND_UP(static_cast<uint32_t>(row_tail), NUM_PER_BLK_FP32));	 
+        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor,
+                 ROUND_UP(static_cast<uint32_t>(row_tail), NUM_PER_BLK_FP32));
         PipeBarrier<PIPE_ALL>();
     }
 
@@ -108,7 +111,8 @@ public:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
-        Duplicate(rstdLocal, (float)0.0, static_cast<uint32_t>((calc_row_num + NUM_PER_BLK_FP32 - 1) / NUM_PER_BLK_FP32 * NUM_PER_BLK_FP32));
+        Duplicate(rstdLocal, (float)0.0,
+                  static_cast<uint32_t>((calc_row_num + NUM_PER_BLK_FP32 - 1) / NUM_PER_BLK_FP32 * NUM_PER_BLK_FP32));
 #endif
 
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
@@ -174,8 +178,8 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void Compute(
-        uint32_t innerProgress, LocalTensor<T_GAMMA> gammaLocal, LocalTensor<float> rstdLocal)
+    __aicore__ inline void Compute(uint32_t innerProgress, LocalTensor<T_GAMMA> gammaLocal,
+                                   LocalTensor<float> rstdLocal)
     {
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -220,7 +224,8 @@ private:
     __aicore__ inline void CopyOutRstd(uint64_t outer_progress, uint64_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
-        uint32_t copyRstdNumAlgin32 = static_cast<uint32_t>((num + NUM_PER_BLK_FP32 - 1) / NUM_PER_BLK_FP32 * NUM_PER_BLK_FP32);
+        uint32_t copyRstdNumAlgin32 = static_cast<uint32_t>((num + NUM_PER_BLK_FP32 - 1) / NUM_PER_BLK_FP32 *
+                                                            NUM_PER_BLK_FP32);
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyCustom<float>(rstdGm[outer_progress * row_factor], rstdLocal, num);
 #else

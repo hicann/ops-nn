@@ -63,11 +63,11 @@ struct UniqueDimCompileInfo {
 
 class UniqueDimTilingHelper {
 public:
-    explicit UniqueDimTilingHelper(gert::TilingContext *context) : context_(context) {}
+    explicit UniqueDimTilingHelper(gert::TilingContext* context) : context_(context) {}
     ~UniqueDimTilingHelper() = default;
 
     bool DoTiling();
-    void SetTilingData(UniqueDimTilingData *tiling);
+    void SetTilingData(UniqueDimTilingData* tiling);
 
 private:
     bool GetPlatformInfo();
@@ -76,7 +76,7 @@ private:
     bool DoBlockTiling();
     bool ComputeWorkspaces();
 
-    gert::TilingContext *context_;
+    gert::TilingContext* context_;
 
     // platform info
     uint64_t ubSize_ = 0;

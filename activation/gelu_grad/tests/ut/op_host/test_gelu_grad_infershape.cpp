@@ -22,15 +22,9 @@
 
 class gelugrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "gelugrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "gelugrad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "gelugrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "gelugrad TearDown" << std::endl; }
 };
 
 TEST_F(gelugrad, gelugrad_infershape_95_test)
@@ -47,13 +41,13 @@ TEST_F(gelugrad, gelugrad_infershape_95_test)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
 
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                               shape_range);
 
     std::vector<std::pair<int64_t, int64_t>> shape_range2 = {{1, 1}, {1, 16}};
 
-    auto tensor_desc2 =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {1, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc2 = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {1, 16}, ge::FORMAT_ND,
+                                                shape_range);
     op.UpdateInputDesc("dy", tensor_desc2);
     op.UpdateInputDesc("x", tensor_desc);
     op.UpdateInputDesc("y", tensor_desc2);

@@ -30,7 +30,7 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT32};
 
-static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -42,14 +42,14 @@ static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
     return ASCEND910_DTYPE_SUPPORT_LIST;
 }
 
-static bool CheckNotNull(const aclTensor *self, const aclTensor *out)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
@@ -58,7 +58,7 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static bool CheckShape(const aclTensor *self, const aclTensor *out)
+static bool CheckShape(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -66,7 +66,7 @@ static bool CheckShape(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
@@ -74,7 +74,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckInplaceParams(const aclTensor *self)
+static aclnnStatus CheckInplaceParams(const aclTensor* self)
 {
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
     auto supportList = GetDtypeSupportList();
@@ -83,8 +83,8 @@ static aclnnStatus CheckInplaceParams(const aclTensor *self)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecHardSigmoidV2GetWorkspaceSize(
-    const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+static aclnnStatus ExecHardSigmoidV2GetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                                     aclOpExecutor** executor)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -112,16 +112,16 @@ static aclnnStatus ExecHardSigmoidV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardsigmoidV2GetWorkspaceSize(
-    const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnHardsigmoidV2GetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnHardsigmoidV2, DFX_IN(self), DFX_OUT(out));
     return ExecHardSigmoidV2GetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceHardsigmoidV2GetWorkspaceSize(
-    const aclTensor *self, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnInplaceHardsigmoidV2GetWorkspaceSize(const aclTensor* self, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnInplaceHardsigmoidV2, DFX_IN(self), DFX_OUT(self));
@@ -129,19 +129,19 @@ aclnnStatus aclnnInplaceHardsigmoidV2GetWorkspaceSize(
     auto ret = CheckInplaceParams(self);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    auto *out = const_cast<aclTensor *>(self);
+    auto* out = const_cast<aclTensor*>(self);
     return ExecHardSigmoidV2GetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnHardsigmoidV2(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnHardsigmoidV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                               const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnHardsigmoidV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceHardsigmoidV2(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnInplaceHardsigmoidV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceHardsigmoidV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

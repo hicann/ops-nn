@@ -23,21 +23,18 @@
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
-class LogSoftmaxV2TilingBase : virtual public SoftmaxV2TilingBase
-{
+namespace optiling {
+class LogSoftmaxV2TilingBase : virtual public SoftmaxV2TilingBase {
 public:
     explicit LogSoftmaxV2TilingBase(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxV2TilingBase(context)
-    {
-    }
+    {}
     ~LogSoftmaxV2TilingBase() override = default;
 
 protected:
     ge::graphStatus GetAndCheckDtypes() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // LOGSOFTMAX_V2_TILING_BASE_H_
+#endif // LOGSOFTMAX_V2_TILING_BASE_H_

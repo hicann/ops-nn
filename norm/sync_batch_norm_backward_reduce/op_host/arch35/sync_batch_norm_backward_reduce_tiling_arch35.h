@@ -25,12 +25,11 @@
 namespace optiling {
 using SyncBatchNormBackwardReduceNs::SyncBatchNormBackwardReduceTilingData;
 
-class SyncBatchNormBackwardReduceTiling
-{
+class SyncBatchNormBackwardReduceTiling {
 public:
     explicit SyncBatchNormBackwardReduceTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
-    SyncBatchNormBackwardReduceTilingData *tiling;
+    SyncBatchNormBackwardReduceTilingData* tiling;
 
 protected:
     ge::graphStatus CalcOutputDtype();

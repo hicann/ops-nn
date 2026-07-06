@@ -47,11 +47,12 @@ ge::graphStatus LogSigmoidTiling::CheckDtype()
     auto inputDtype = inputDesc->GetDataType();
     this->outputDtype = outputDesc->GetDataType();
 
-    OP_CHECK_IF(
-        inputDtype != this->outputDtype, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "The dtypes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputDtype != this->outputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+                                                       ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                                       "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -64,33 +65,33 @@ ge::graphStatus LogSigmoidTiling::CheckShape()
     const gert::Shape& inputShape = Ops::NN::OpTiling::EnsureNotScalar(inputStorageShape->GetStorageShape());
     const gert::Shape& outputShape = Ops::NN::OpTiling::EnsureNotScalar(outputStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputShape != outputShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
-            Ops::Base::ToString(inputShape) + ", " + Ops::Base::ToString(outputShape),
-            "The shapes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape != outputShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputShape) + ", " + Ops::Base::ToString(outputShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus LogSigmoidTiling::RunTiling()
 {
-    OP_CHECK_IF(
-        tilingContext == nullptr, OP_LOGE("CheckContextValid", "tilingContext is nullptr!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingContext == nullptr, OP_LOGE("CheckContextValid", "tilingContext is nullptr!"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(tilingContext->GetNodeName(), "LogSigmoidTiling RunTiling enter.");
 
     // check type and shape
     ElewiseBaseTiling eleBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CheckDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check dtype failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
 
     auto tiling = tilingContext->GetTilingData<EleBaseTilingDataV2>();
-    OP_CHECK_IF(
-        (tiling == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get LogSigmoidTiling from GE context failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling == nullptr),
+                OP_LOGE(tilingContext->GetNodeName(), "Get LogSigmoidTiling from GE context failed"),
+                return ge::GRAPH_FAILED);
 
     // do tiling
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
@@ -105,13 +106,12 @@ ge::graphStatus LogSigmoidTiling::RunTiling()
         baseTilingResult = eleBaseTiling.DoTiling<LogSigmoidDag::LogSigmoidNoCast<float>::OpDag>(*tiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "DT_FLOAT16, DT_BF16, DT_FLOAT");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        baseTilingResult != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
     // set workspace, tilingkey and blocknum
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
@@ -128,7 +128,7 @@ static ge::graphStatus Tiling4LogSigmoid(gert::TilingContext* tilingContext)
 {
     auto compileInfo = tilingContext->GetCompileInfo<ElewiseCompileInfo>();
     OPS_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
-    
+
     OP_LOGD(tilingContext->GetNodeName(), "START LogSigmoid AscendC Tiling \n");
     LogSigmoidTiling LogSigmoidTiling(tilingContext);
     return LogSigmoidTiling.RunTiling();
@@ -139,6 +139,5 @@ ge::graphStatus TilingPrepareForLogSigmoid([[maybe_unused]] gert::TilingParseCon
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(LogSigmoid).Tiling(Tiling4LogSigmoid)
-                            .TilingParse<ElewiseCompileInfo>(TilingPrepareForLogSigmoid);
+IMPL_OP_OPTILING(LogSigmoid).Tiling(Tiling4LogSigmoid).TilingParse<ElewiseCompileInfo>(TilingPrepareForLogSigmoid);
 } // namespace optiling

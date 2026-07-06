@@ -24,12 +24,10 @@ using namespace AscendC;
 template <typename T0, typename T1, typename T2>
 class SwigluMxFp4QuantPerf {
 public:
-    __aicore__ inline SwigluMxFp4QuantPerf()
-    {}
+    __aicore__ inline SwigluMxFp4QuantPerf() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR topkWeight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
-        const SwigluGroupQuantTilingData* tilingDataPtr, TPipe* pipePtr)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR topkWeight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
+                                GM_ADDR workspace, const SwigluGroupQuantTilingData* tilingDataPtr, TPipe* pipePtr)
     {
         pipe = pipePtr;
         tilingData = tilingDataPtr;
@@ -42,25 +40,25 @@ public:
 
         pipe->InitBufPool(tBufPool, tilingData->ubSize);
         ProcessGroupIndexTiling(groupIndex, tilingData, tBufPool, groupIndexQue, groupIndexSumBuf, groupIndexGm,
-            groupSumLocal, hasGroupIndex_, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
-            rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+                                groupSumLocal, hasGroupIndex_, usedCoreNums, rowOfFormerBlock, rowOfTailBlock,
+                                rowLoopOfFormerBlock, rowLoopOfTailBlock, tailRowFactorOfFormerBlock,
+                                tailRowFactorOfTailBlock);
 
         if (topkWeight != nullptr) {
             hasTopkWeight_ = true;
             topkWeightGm.SetGlobalBuffer((__gm__ float*)topkWeight);
-            tBufPool.InitBuffer(
-                topkWeightQue, DOUBLE_BUFFER_NUM, RoundUp<float>(tilingData->rowFactor) * sizeof(float));
+            tBufPool.InitBuffer(topkWeightQue, DOUBLE_BUFFER_NUM,
+                                RoundUp<float>(tilingData->rowFactor) * sizeof(float));
         }
 
-        tBufPool.InitBuffer(
-            xQue, DOUBLE_BUFFER_NUM,
-            tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0) * DIGIT_TWO);
+        tBufPool.InitBuffer(xQue, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0) * DIGIT_TWO);
         // fp4 output is packed 2 elements per byte: per-row valid bytes = CeilDiv(dFactor, FP4_PACK_NUM)
-        tBufPool.InitBuffer(yQue, DOUBLE_BUFFER_NUM,
+        tBufPool.InitBuffer(
+            yQue, DOUBLE_BUFFER_NUM,
             tilingData->rowFactor * RoundUp<int8_t>(CeilDiv(tilingData->dFactor, FP4_PACK_NUM)) * sizeof(T1));
         scaleColNum = CeilDiv(tilingData->dFactor, PER_MX_FP16);
-        tBufPool.InitBuffer(
-            scaleQue, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T2>(scaleColNum) * sizeof(T2));
+        tBufPool.InitBuffer(scaleQue, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T2>(scaleColNum) * sizeof(T2));
 
         tBufPool.InitBuffer(swigluBuf, tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
         tBufPool.InitBuffer(maxExpBuf, tilingData->rowFactor * RoundUp<uint16_t>(scaleColNum) * sizeof(uint16_t));
@@ -82,10 +80,9 @@ public:
         }
         SetMaxValue();
         int64_t curBlockIdx = GetBlockIdx();
-        int64_t rowOuterLoop =
-            (curBlockIdx == usedCoreNums - 1) ? rowLoopOfTailBlock :rowLoopOfFormerBlock;
+        int64_t rowOuterLoop = (curBlockIdx == usedCoreNums - 1) ? rowLoopOfTailBlock : rowLoopOfFormerBlock;
         int64_t tailRowFactor = (curBlockIdx == usedCoreNums - 1) ? tailRowFactorOfTailBlock :
-                                                                     tailRowFactorOfFormerBlock;
+                                                                    tailRowFactorOfFormerBlock;
         int64_t x0GmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->d;
         int64_t x1GmBaseOffset = x0GmBaseOffset + tilingData->splitD;
         int64_t yGmBaseOffset = curBlockIdx * rowOfFormerBlock * (tilingData->splitD / FP4_PACK_NUM);
@@ -96,72 +93,71 @@ public:
             // copy in topkWeight
             if (hasTopkWeight_) {
                 topkWeightLocal = topkWeightQue.template AllocTensor<float>();
-                CopyIn(topkWeightGm[topkWeightGmBaseOffset + rowOuterIdx * tilingData->rowFactor],
-                    topkWeightLocal, 1, curRowFactor);
+                CopyIn(topkWeightGm[topkWeightGmBaseOffset + rowOuterIdx * tilingData->rowFactor], topkWeightLocal, 1,
+                       curRowFactor);
                 topkWeightQue.template EnQue(topkWeightLocal);
                 topkWeightLocal = topkWeightQue.template DeQue<float>();
             }
             for (int64_t dLoopIdx = 0; dLoopIdx < tilingData->dLoop; dLoopIdx++) {
-                int64_t curDFactor =
-                    (dLoopIdx == tilingData->dLoop - 1) ? tilingData->tailDFactor : tilingData->dFactor;
+                int64_t curDFactor = (dLoopIdx == tilingData->dLoop - 1) ? tilingData->tailDFactor :
+                                                                           tilingData->dFactor;
                 int64_t scaleDFactor = CeilDiv(curDFactor, PER_MX_FP16);
-                int64_t xBaseOffset =
-                    rowOuterIdx * tilingData->rowFactor * tilingData->d + dLoopIdx * tilingData->dFactor;
+                int64_t xBaseOffset = rowOuterIdx * tilingData->rowFactor * tilingData->d +
+                                      dLoopIdx * tilingData->dFactor;
                 xLocal = xQue.template AllocTensor<T0>();
-                CopyIn(
-                    xGm[x0GmBaseOffset + xBaseOffset],
-                    xLocal, curRowFactor, curDFactor, tilingData->d - curDFactor);
+                CopyIn(xGm[x0GmBaseOffset + xBaseOffset], xLocal, curRowFactor, curDFactor, tilingData->d - curDFactor);
 
-                CopyIn(
-                    xGm[x1GmBaseOffset + xBaseOffset],
-                    xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
-                    curRowFactor, curDFactor, tilingData->d - curDFactor);
+                CopyIn(xGm[x1GmBaseOffset + xBaseOffset], xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                       curRowFactor, curDFactor, tilingData->d - curDFactor);
                 xQue.template EnQue(xLocal);
                 xLocal = xQue.template DeQue<T0>();
                 if (hasTopkWeight_) {
                     if (hasClampValue_) {
                         VFProcessSwiglu<T0, true, true>(swigluLocal, xLocal,
-                            xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)], topkWeightLocal,
-                            curRowFactor, curDFactor, clampValue_);
+                                                        xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                                                        topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     } else {
                         VFProcessSwiglu<T0, true, false>(swigluLocal, xLocal,
-                            xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)], topkWeightLocal,
-                            curRowFactor, curDFactor, clampValue_);
+                                                         xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                                                         topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     }
                 } else {
                     if (hasClampValue_) {
                         VFProcessSwiglu<T0, false, true>(swigluLocal, xLocal,
-                            xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)], topkWeightLocal,
-                            curRowFactor, curDFactor, clampValue_);
+                                                         xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                                                         topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     } else {
                         VFProcessSwiglu<T0, false, false>(swigluLocal, xLocal,
-                            xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)], topkWeightLocal,
-                            curRowFactor, curDFactor, clampValue_);
+                                                          xLocal[curRowFactor * RoundUp<T0>(tilingData->dFactor)],
+                                                          topkWeightLocal, curRowFactor, curDFactor, clampValue_);
                     }
                 }
                 VFComputeMaxExpMXFP4(swigluLocal, maxExpLocal, curRowFactor, curDFactor);
                 scaleLocal = scaleQue.template AllocTensor<T2>();
-                VFComputeScaleMXFP4(maxExpLocal, scaleLocal.template ReinterpretCast<uint16_t>(),
-                    invScaleLocal, curRowFactor, curDFactor, maxValue);
+                VFComputeScaleMXFP4(maxExpLocal, scaleLocal.template ReinterpretCast<uint16_t>(), invScaleLocal,
+                                    curRowFactor, curDFactor, maxValue);
 
                 scaleQue.template EnQue(scaleLocal);
                 scaleLocal = scaleQue.template DeQue<T2>();
                 // e8m0 scale is written contiguously (packed, scaleDFactor bytes/row, not 32B-aligned) in UB,
                 // so it must be copied out with PaddingMode::Compact (same as the fp8-mx path). Default
                 // (Normal) mode assumes each row starts at a 32B UB block boundary and misreads rows > 0.
-                CopyOut<T2, AscendC::PaddingMode::Compact>(scaleLocal,
+                CopyOut<T2, AscendC::PaddingMode::Compact>(
+                    scaleLocal,
                     scaleGm[scaleGmBaseOffset + rowOuterIdx * tilingData->rowFactor * tilingData->scaleCol +
-                        dLoopIdx * CeilDiv(tilingData->dFactor, PER_MX_FP16)],
+                            dLoopIdx * CeilDiv(tilingData->dFactor, PER_MX_FP16)],
                     curRowFactor, scaleDFactor, tilingData->scaleCol - scaleDFactor);
                 scaleQue.template FreeTensor(scaleLocal);
 
                 yLocal = yQue.template AllocTensor<T1>();
                 if constexpr (IsSameType<T1, fp4x2_e2m1_t>::value) {
                     VFComputeDataMXFP4<T0, fp4x2_e2m1_t>(swigluLocal, invScaleLocal,
-                        yLocal.template ReinterpretCast<int8_t>(), curRowFactor, curDFactor);
+                                                         yLocal.template ReinterpretCast<int8_t>(), curRowFactor,
+                                                         curDFactor);
                 } else {
                     VFComputeDataMXFP4<T0, fp4x2_e1m2_t>(swigluLocal, invScaleLocal,
-                        yLocal.template ReinterpretCast<int8_t>(), curRowFactor, curDFactor);
+                                                         yLocal.template ReinterpretCast<int8_t>(), curRowFactor,
+                                                         curDFactor);
                 }
 
                 xQue.template FreeTensor(xLocal);
@@ -173,10 +169,10 @@ public:
                 // indexing yGm as T1 would double every offset/length and overrun adjacent rows. The
                 // official swiglu_mx_quant uses a uint8 y GM for exactly this reason.
                 CopyOut(yLocal.template ReinterpretCast<int8_t>(),
-                    yGm[yGmBaseOffset + rowOuterIdx * tilingData->rowFactor * (tilingData->splitD / FP4_PACK_NUM) +
-                        dLoopIdx * (tilingData->dFactor / FP4_PACK_NUM)],
-                    curRowFactor, CeilDiv(curDFactor, FP4_PACK_NUM),
-                    tilingData->splitD / FP4_PACK_NUM - CeilDiv(curDFactor, FP4_PACK_NUM));
+                        yGm[yGmBaseOffset + rowOuterIdx * tilingData->rowFactor * (tilingData->splitD / FP4_PACK_NUM) +
+                            dLoopIdx * (tilingData->dFactor / FP4_PACK_NUM)],
+                        curRowFactor, CeilDiv(curDFactor, FP4_PACK_NUM),
+                        tilingData->splitD / FP4_PACK_NUM - CeilDiv(curDFactor, FP4_PACK_NUM));
                 yQue.template FreeTensor(yLocal);
             }
             if (hasTopkWeight_) {

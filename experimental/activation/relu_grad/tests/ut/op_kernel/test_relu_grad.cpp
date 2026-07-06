@@ -27,14 +27,8 @@ using namespace std;
 
 class relu_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "relu_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "relu_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "relu_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "relu_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(relu_grad_test, test_case_0)
@@ -66,13 +60,12 @@ TEST_F(relu_grad_test, test_case_0)
     tilingDatafromBin->finalBigTileNum = 1;
     tilingDatafromBin->tailBlockNum = 0;
 
-    auto KernelReluGrad = [](GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling) {
-        ::relu_grad<0>(gradients, features, backprops, workspace, tiling);
-    };
+    auto KernelReluGrad = [](GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                             GM_ADDR tiling) { ::relu_grad<0>(gradients, features, backprops, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelReluGrad, blockDim, gradients, features, backprops, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelReluGrad, blockDim, gradients, features, backprops, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(gradients);
     AscendC::GmFree(features);

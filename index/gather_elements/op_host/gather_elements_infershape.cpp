@@ -16,9 +16,9 @@
 #include "register/op_impl_registry.h"
 
 using namespace ge;
-namespace ops
-{
-ge::graphStatus CopyShapeInput2OutputWithIdxForGatherElements(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
+namespace ops {
+ge::graphStatus CopyShapeInput2OutputWithIdxForGatherElements(gert::InferShapeContext* context, int64_t input_idx,
+                                                              int64_t output_idx)
 {
     auto in_shape = context->GetInputShape(input_idx);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
@@ -28,7 +28,6 @@ ge::graphStatus CopyShapeInput2OutputWithIdxForGatherElements(gert::InferShapeCo
     return ge::GRAPH_SUCCESS;
 }
 
-
 static ge::graphStatus InferShape4InIdx1AndOutIdx0(gert::InferShapeContext* context)
 {
     constexpr size_t input_index = 1;
@@ -37,4 +36,4 @@ static ge::graphStatus InferShape4InIdx1AndOutIdx0(gert::InferShapeContext* cont
 }
 
 IMPL_OP_INFERSHAPE(GatherElements).InferShape(InferShape4InIdx1AndOutIdx0);
-}  // namespace ops
+} // namespace ops

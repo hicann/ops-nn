@@ -16,20 +16,20 @@
 #include "aclnnop/aclnn_swish.h"
 
 #define CHECK_RET(cond, expr) \
-    do { \
-        if (!(cond)) { \
-            expr; \
-        } \
+    do {                      \
+        if (!(cond)) {        \
+            expr;             \
+        }                     \
     } while (0)
 
-#define LOG_PRINT(message, ...) \
-    do { \
+#define LOG_PRINT(message, ...)              \
+    do {                                     \
         std::printf(message, ##__VA_ARGS__); \
     } while (0)
 
 namespace {
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
     for (int64_t dim : shape) {
@@ -38,7 +38,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return shapeSize;
 }
 
-std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
+std::vector<int64_t> MakeStrides(const std::vector<int64_t>& shape)
 {
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = static_cast<int64_t>(shape.size()) - 2; i >= 0; --i) {
@@ -47,23 +47,15 @@ std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
     return strides;
 }
 
-aclError CreateAclTensor(
-    const std::vector<int64_t> &shape, aclDataType dtype, void *deviceAddr, aclTensor **tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* deviceAddr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
-    *tensor = aclCreateTensor(shape.data(),
-                              shape.size(),
-                              dtype,
-                              strides.data(),
-                              0,
-                              ACL_FORMAT_ND,
-                              shape.data(),
-                              shape.size(),
-                              deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dtype, strides.data(), 0, ACL_FORMAT_ND, shape.data(),
+                              shape.size(), deviceAddr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
 
-}  // namespace
+} // namespace
 
 int main()
 {
@@ -74,20 +66,20 @@ int main()
     const size_t bytes = static_cast<size_t>(GetShapeSize(shape)) * sizeof(float);
 
     aclrtStream stream = nullptr;
-    void *selfDeviceAddr = nullptr;
-    void *outDeviceAddr = nullptr;
-    void *workspaceAddr = nullptr;
-    aclTensor *self = nullptr;
-    aclTensor *out = nullptr;
-    aclScalar *betaOptional = nullptr;
-    aclOpExecutor *executor = nullptr;
+    void* selfDeviceAddr = nullptr;
+    void* outDeviceAddr = nullptr;
+    void* workspaceAddr = nullptr;
+    aclTensor* self = nullptr;
+    aclTensor* out = nullptr;
+    aclScalar* betaOptional = nullptr;
+    aclOpExecutor* executor = nullptr;
     uint64_t workspaceSize = 0;
     int finalRet = 0;
     bool aclInitialized = false;
     bool deviceSet = false;
 
     int32_t deviceId = 0;
-    if (const char *deviceIdEnv = std::getenv("ASCEND_DEVICE_ID")) {
+    if (const char* deviceIdEnv = std::getenv("ASCEND_DEVICE_ID")) {
         deviceId = std::atoi(deviceIdEnv);
     }
 

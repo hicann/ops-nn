@@ -19,9 +19,9 @@
 
 namespace optiling {
 struct ScatterElementsV2CompileInfoArch35 {
-  int32_t totalCoreNum = 0;
-  uint64_t ubSizePlatForm = 0;
-  uint32_t workspaceSize = 0;
+    int32_t totalCoreNum = 0;
+    uint64_t ubSizePlatForm = 0;
+    uint32_t workspaceSize = 0;
 };
-}
+} // namespace optiling
 #endif // SCATTER_ELEMENTS_V2_BASE_TILING_H

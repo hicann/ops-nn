@@ -18,8 +18,7 @@
 #include "op_host/infershape_elewise_util.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 static graphStatus InferDataType4ReverseSequence(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferDataType4ReverseSequence enter");
@@ -29,5 +28,7 @@ static graphStatus InferDataType4ReverseSequence(gert::InferDataTypeContext* con
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ReverseSequence).InferShape(Ops::Base::InferShape4Elewise).InferDataType(InferDataType4ReverseSequence);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(ReverseSequence)
+    .InferShape(Ops::Base::InferShape4Elewise)
+    .InferDataType(InferDataType4ReverseSequence);
+} // namespace ops

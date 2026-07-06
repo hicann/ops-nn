@@ -96,11 +96,9 @@ static void ComputeAdadeltaCoreNum(int64_t K, int64_t coreNum, gert::TilingConte
 static ge::graphStatus SetLocalMemory(gert::TilingContext* context, uint64_t ubSize)
 {
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize), return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -108,9 +106,8 @@ static ge::graphStatus SparseApplyAdadeltaTilingFunc(gert::TilingContext* contex
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto varInput = context->GetInputShape(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
@@ -142,19 +139,16 @@ static ge::graphStatus SparseApplyAdadeltaTilingFunc(gert::TilingContext* contex
     tiling->indicesDType = indicesDType;
 
     ComputeAdadeltaCoreNum(K, coreNum, context);
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(SetLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetLocalMemory error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetLocalMemory error"),
+                return ge::GRAPH_FAILED);
 
-    context->SetTilingKey(GET_TPL_TILING_KEY(
-        (indicesDType == 0) ? TILING_KEY_IDX_INT32 : TILING_KEY_IDX_INT64));
+    context->SetTilingKey(GET_TPL_TILING_KEY((indicesDType == 0) ? TILING_KEY_IDX_INT32 : TILING_KEY_IDX_INT64));
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForSparseApplyAdadelta(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForSparseApplyAdadelta([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
@@ -163,4 +157,4 @@ IMPL_OP_OPTILING(SparseApplyAdadelta)
     .Tiling(SparseApplyAdadeltaTilingFunc)
     .TilingParse<SparseApplyAdadeltaCompileInfo>(TilingParseForSparseApplyAdadelta);
 
-}  // namespace optiling
+} // namespace optiling

@@ -34,8 +34,8 @@ constexpr int64_t INDEX_OUTPUT_SCALE1 = 1;
 constexpr int64_t INDEX_OUTPUT_Y2 = 2;
 constexpr int64_t INDEX_OUTPUT_SCALE2 = 3;
 
-static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
+                                                                        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 
 graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* context)
 {
@@ -54,7 +54,7 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
 
     gert::Shape* scaleShape2 = context->GetOutputShape(INDEX_OUTPUT_SCALE2);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape2);
- 
+
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "x shape is UnknownRank, set y, scale shape to (-2, )");
         Ops::Base::SetUnknownRank(*yShape1);
@@ -66,8 +66,8 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
 
     OP_CHECK_IF(
         xShape->GetDimNum() < 2 || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(xShape->GetDimNum()), "The shape dim of x must be within the range [2, 7]"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xShape->GetDimNum()),
+                                                 "The shape dim of x must be within the range [2, 7]"),
         return ge::GRAPH_FAILED);
 
     *yShape1 = *xShape;
@@ -89,9 +89,8 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
     scaleShape1->SetDim(dim1, dimSize1);
     scaleShape1->AppendDim(ALIGN_NUM);
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, mxscale1 shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*scaleShape1).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, mxscale1 shape is %s.", Shape2String(*xShape).c_str(),
+            Shape2String(*scaleShape1).c_str());
 
     size_t dim2 = static_cast<size_t>(xShape->GetDimNum() - 2);
     int64_t dimSize2 = 0;
@@ -106,9 +105,8 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
     scaleShape2->SetDim(dim2, dimSize2);
     scaleShape2->AppendDim(ALIGN_NUM);
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, mxscale2 shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*scaleShape2).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, mxscale2 shape is %s.", Shape2String(*xShape).c_str(),
+            Shape2String(*scaleShape2).c_str());
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForDynamicMxQuantWithDualAxis");
     return ge::GRAPH_SUCCESS;

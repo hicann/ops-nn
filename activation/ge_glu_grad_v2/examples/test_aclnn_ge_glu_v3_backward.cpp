@@ -46,9 +46,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** selfOrResult)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** selfOrResult)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -65,9 +64,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *selfOrResult = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *selfOrResult = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                    shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -100,8 +98,8 @@ int main()
     int64_t approximate = 1;
     std::vector<float> gradInputHostData = {0, 0, 0, 0};
     // 创建gradOutput aclTensor
-    ret = CreateAclTensor(
-        gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT16, &gradOutput);
+    ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT16,
+                          &gradOutput);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT16, &self);
@@ -110,8 +108,8 @@ int main()
     ret = CreateAclTensor(geluHostData, geluShape, &geluDeviceAddr, aclDataType::ACL_FLOAT16, &gelu);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建gradInput aclTensor
-    ret =
-        CreateAclTensor(gradInputHostData, gradInputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT16, &gradInput);
+    ret = CreateAclTensor(gradInputHostData, gradInputShape, &gradInputDeviceAddr, aclDataType::ACL_FLOAT16,
+                          &gradInput);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
@@ -119,10 +117,10 @@ int main()
     aclOpExecutor* executor;
     bool activateLeft = false;
     // 调用aclnnGeGluV3Backward第一段接口
-    ret = aclnnGeGluV3BackwardGetWorkspaceSize(
-        gradOutput, self, gelu, dim, approximate, activateLeft, gradInput, &workspaceSize, &executor);
-    CHECK_RET(
-        ret == ACL_SUCCESS, LOG_PRINT("aclnnGeGluV3BackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnGeGluV3BackwardGetWorkspaceSize(gradOutput, self, gelu, dim, approximate, activateLeft, gradInput,
+                                               &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGeGluV3BackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
@@ -140,9 +138,8 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(gradInputShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), gradInputDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), gradInputDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);

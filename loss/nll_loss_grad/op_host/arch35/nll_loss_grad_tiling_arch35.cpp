@@ -28,8 +28,7 @@
 using namespace AscendC;
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 // tilingkey
 constexpr int64_t DTYPE_BF16 = 3;
 constexpr int64_t DTYPE_F32 = 5;
@@ -77,7 +76,8 @@ ge::graphStatus NLLLossGradSimtTiling::GetShapeAttrsInfo()
     return GenerateTilingKey();
 }
 
-ge::graphStatus NLLLossGradSimtTiling::ProcessShapeInfo() {
+ge::graphStatus NLLLossGradSimtTiling::ProcessShapeInfo()
+{
     auto const inShape = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inShape);
     auto const inShapeVal = inShape->GetStorageShape();
@@ -91,34 +91,33 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessShapeInfo() {
         batchNum_ = inShapeVal.GetDim(0);
         tilingData_.set_batchNum(batchNum_);
         tilingData_.set_classNum(inShapeVal.GetDim(1));
-    } else if(inputRank == INPUT_X_FOUR_DIM){
+    } else if (inputRank == INPUT_X_FOUR_DIM) {
         batchNum_ = inShapeVal.GetDim(0);
         height_ = inShapeVal.GetDim(NUMBER_TWO);
         width_ = inShapeVal.GetDim(NUMBER_THREE);
-        OP_CHECK_IF(
-            (height_ <= 0U),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
-                "The H-dimension of input x must be a positive number, where H is the 2nd axis"),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            (width_ <= 0U),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
-                "The W-dimension of input x must be a positive number, where W is the 3rd axis"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((height_ <= 0U),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
+                        "The H-dimension of input x must be a positive number, where H is the 2nd axis"),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF((width_ <= 0U),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
+                        "The W-dimension of input x must be a positive number, where W is the 3rd axis"),
+                    return ge::GRAPH_FAILED);
         tilingData_.set_batchNum(batchNum_);
         tilingData_.set_classNum(inShapeVal.GetDim(1));
         tilingData_.set_height(height_);
         tilingData_.set_width(width_);
-    }
-    else {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-            std::to_string(inputRank).c_str(), "1D, 2D or 4D");
+    } else {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputRank).c_str(), "1D, 2D or 4D");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo() {
+ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo()
+{
     auto const attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     auto* reduction = attrs->GetAttrPointer<char>(0);
@@ -130,8 +129,7 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo() {
     } else if (strcmp(reduction, "sum") == 0) {
         tilingData_.set_reductionMode(SUM_MODE);
     } else {
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reduction,
-            "mean, sum or none");
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reduction, "mean, sum or none");
         return ge::GRAPH_FAILED;
     }
 
@@ -144,9 +142,8 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo() {
 ge::graphStatus NLLLossGradSimtTiling::GetPlatformInfo()
 {
     auto platformInfo = this->context_->GetPlatformInfo();
-    OP_CHECK_IF(
-        nullptr == platformInfo, OP_LOGE(context_->GetNodeName(), "platform info is null"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == platformInfo, OP_LOGE(context_->GetNodeName(), "platform info is null"),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     this->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
 
@@ -160,18 +157,17 @@ ge::graphStatus NLLLossGradSimtTiling::DoOpTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outShape);
 
     int64_t totalOutElements = outShape->GetStorageShape().GetShapeSize();
-    this->notVeryImportantProcessCoreNums_ = totalOutElements < this->aivCoreNum_ ? totalOutElements : this->aivCoreNum_;
+    this->notVeryImportantProcessCoreNums_ = totalOutElements < this->aivCoreNum_ ? totalOutElements :
+                                                                                    this->aivCoreNum_;
     this->blockPerCore_ = Ops::Base::FloorDiv(totalOutElements, this->notVeryImportantProcessCoreNums_);
     this->blockTailCore_ = totalOutElements - this->blockPerCore_ * this->notVeryImportantProcessCoreNums_;
-    OP_LOGD("NLLLossGrad Simt", "Get totalOutElements=%ld, notVeryImportantProcessCoreNums_=%ld, blockPerCore_=%ld, blockTailCore_=%ld",
-        totalOutElements, this->notVeryImportantProcessCoreNums_, this->blockPerCore_, this->blockTailCore_);
+    OP_LOGD("NLLLossGrad Simt",
+            "Get totalOutElements=%ld, notVeryImportantProcessCoreNums_=%ld, blockPerCore_=%ld, blockTailCore_=%ld",
+            totalOutElements, this->notVeryImportantProcessCoreNums_, this->blockPerCore_, this->blockTailCore_);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus NLLLossGradSimtTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus NLLLossGradSimtTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus NLLLossGradSimtTiling::GenerateTilingKey()
 {
@@ -183,14 +179,14 @@ ge::graphStatus NLLLossGradSimtTiling::GenerateTilingKey()
     } else if (paramsDtype == ge::DT_FLOAT16) {
         tilingKey_ = DTYPE_F16;
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            ToString(paramsDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ToString(paramsDtype).c_str(),
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     auto targetDtype = context_->GetInputDesc(INPUT_TARGET_IDX)->GetDataType();
     if (targetDtype != ge::DT_INT64 && targetDtype != ge::DT_INT32 && targetDtype != ge::DT_UINT8) {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "target",
-            ToString(targetDtype).c_str(), "INT32, INT64 or UINT8");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "target", ToString(targetDtype).c_str(),
+                                  "INT32, INT64 or UINT8");
         return ge::GRAPH_FAILED;
     }
     // no need of tiingkey
@@ -198,10 +194,7 @@ ge::graphStatus NLLLossGradSimtTiling::GenerateTilingKey()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t NLLLossGradSimtTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t NLLLossGradSimtTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus NLLLossGradSimtTiling::GetWorkspaceSize()
 {
@@ -215,7 +208,8 @@ ge::graphStatus NLLLossGradSimtTiling::PostTiling()
     uint64_t usedThread = std::min(maxThread_, MAX_THREAD);
     OP_LOGD("NLLLossGrad Simt", "usedThread: %lu", usedThread);
     tilingData_.set_usedThread(usedThread);
-    int64_t veryImportantProcessCoreNums = std::min(Ops::Base::CeilDiv(batchNum_ * height_ * width_, usedThread), coreNum_);
+    int64_t veryImportantProcessCoreNums = std::min(Ops::Base::CeilDiv(batchNum_ * height_ * width_, usedThread),
+                                                    coreNum_);
     tilingData_.set_veryImportantProcessCoreNums(veryImportantProcessCoreNums);
     tilingData_.set_notVeryImportantProcessCoreNums(this->notVeryImportantProcessCoreNums_);
     tilingData_.set_blockPerCore(this->blockPerCore_);
@@ -229,14 +223,15 @@ ge::graphStatus NLLLossGradSimtTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus NLLLossGradTiling(gert::TilingContext *context) {
-  auto compile_info = static_cast<const NLLLossGradCompileInfo *>(context->GetCompileInfo());
-  OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
-  OP_LOGD(context->GetNodeName(), "Tiling4NLLLossGrad dsl compile_info is Null, running Simt tiling.");
-  NLLLossGradSimtTiling tilingObj(context);
-  tilingObj.maxThread_ = compile_info->max_thread;
-  tilingObj.coreNum_ = compile_info->core_num;
-  return tilingObj.DoTiling();
+static ge::graphStatus NLLLossGradTiling(gert::TilingContext* context)
+{
+    auto compile_info = static_cast<const NLLLossGradCompileInfo*>(context->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+    OP_LOGD(context->GetNodeName(), "Tiling4NLLLossGrad dsl compile_info is Null, running Simt tiling.");
+    NLLLossGradSimtTiling tilingObj(context);
+    tilingObj.maxThread_ = compile_info->max_thread;
+    tilingObj.coreNum_ = compile_info->core_num;
+    return tilingObj.DoTiling();
 }
 
 ge::graphStatus TilingPrepareNLLLossGradForAscendC(gert::TilingParseContext* context)
@@ -248,27 +243,26 @@ ge::graphStatus TilingPrepareNLLLossGradForAscendC(gert::TilingParseContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compile_info->core_num <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compile_info->core_num <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compile_info->ub_size = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compile_info->ub_size <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compile_info->ub_size <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus NLLLossGradParse(gert::TilingParseContext *context) {
-  auto compile_info = context->GetCompiledInfo<NLLLossGradCompileInfo>();
-  OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
-  compile_info->max_thread = Ops::Base::GetSimtMaxThreadNum<gert::TilingParseContext>(context);
-  TilingPrepareNLLLossGradForAscendC(context);
-  OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4NLLLossGrad Simt Mode success!");
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus NLLLossGradParse(gert::TilingParseContext* context)
+{
+    auto compile_info = context->GetCompiledInfo<NLLLossGradCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+    compile_info->max_thread = Ops::Base::GetSimtMaxThreadNum<gert::TilingParseContext>(context);
+    TilingPrepareNLLLossGradForAscendC(context);
+    OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4NLLLossGrad Simt Mode success!");
+    return ge::GRAPH_SUCCESS;
 }
 
 // register tiling interface of the NLLLossGrad op.
 IMPL_OP_OPTILING(NLLLossGrad).Tiling(NLLLossGradTiling).TilingParse<NLLLossGradCompileInfo>(NLLLossGradParse);
-}  // namespace optiling
+} // namespace optiling

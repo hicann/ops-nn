@@ -21,15 +21,9 @@ struct AvgPoolV2TilingParseInfo {};
 
 namespace gert {
 
-ge::graphStatus TilingPrepareForAvgPoolV2([[maybe_unused]] TilingParseContext* context)
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepareForAvgPoolV2([[maybe_unused]] TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus TilingForAvgPoolV2(TilingContext* context)
-{
-    return optiling::Tiling4AvgPoolV2RegBase(context);
-}
+ge::graphStatus TilingForAvgPoolV2(TilingContext* context) { return optiling::Tiling4AvgPoolV2RegBase(context); }
 
 // register op tiling interface of AvgPoolV2 (runtime2.0)
 IMPL_OP_OPTILING(AvgPoolV2).Tiling(TilingForAvgPoolV2).TilingParse<AvgPoolV2TilingParseInfo>(TilingPrepareForAvgPoolV2);

@@ -1,4 +1,4 @@
- /**
+/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /**
+/**
  * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
@@ -43,9 +43,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("lambd")
-            .AttrType(OPTIONAL)
-            .Float(0.5f);
+        this->Attr("lambd").AttrType(OPTIONAL).Float(0.5f);
 
         OpAICoreConfig aicoreConfig910B;
         aicoreConfig910B.DynamicCompileStaticFlag(true)

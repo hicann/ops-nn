@@ -18,17 +18,14 @@
 #include "arch35/sparse_apply_rms_prop_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_apply_rms_prop(
-    GM_ADDR var, GM_ADDR ms, GM_ADDR mom,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR var_out, GM_ADDR ms_out, GM_ADDR mom_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_apply_rms_prop(GM_ADDR var, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr, GM_ADDR rho,
+                                                 GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR indices,
+                                                 GM_ADDR var_out, GM_ADDR ms_out, GM_ADDR mom_out, GM_ADDR workspace,
+                                                 GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseApplyRMSPropTilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseApplyRMSPropTilingData, tilingData, tiling);
 
-    ops::sparse_apply_rms_prop::Process<DTYPE_VAR, DTYPE_INDICES>(
-        var, ms, mom, lr, rho, momentum, epsilon, grad, indices,
-        var_out, ms_out, mom_out, &tilingData);
+    ops::sparse_apply_rms_prop::Process<DTYPE_VAR, DTYPE_INDICES>(var, ms, mom, lr, rho, momentum, epsilon, grad,
+                                                                  indices, var_out, ms_out, mom_out, &tilingData);
 }

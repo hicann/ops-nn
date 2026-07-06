@@ -14,11 +14,11 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_max_pool3d_with_argmax.h"
 
-#define CHECK_RET(cond, return_expr)  \
-    do {                              \
-        if (!(cond)) {                \
-            return_expr;              \
-        }                             \
+#define CHECK_RET(cond, return_expr) \
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
     } while (0)
 
 #define LOG_PRINT(message, ...)         \
@@ -26,14 +26,16 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
     for (auto i : shape) {
         shapeSize *= i;
     }
     return shapeSize;
 }
-int Init(int32_t deviceId, aclrtStream* stream) {
+int Init(int32_t deviceId, aclrtStream* stream)
+{
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
@@ -44,7 +46,8 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 }
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请Device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -66,7 +69,8 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     return 0;
 }
 
-int main() {
+int main()
+{
     // 1.（固定写法）device/stream初始化，参考acl API
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
@@ -115,8 +119,10 @@ int main() {
 
     // aclnnMaxPool3dWithArgmax接口调用示例
     // 3. 调用aclnnMaxPool3dWithArgmax第一段接口
-    ret = aclnnMaxPool3dWithArgmaxGetWorkspaceSize(self, kernelSize, stride, padding, dilation, ceilMode, out, indices, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxPool3dWithArgmaxGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnMaxPool3dWithArgmaxGetWorkspaceSize(self, kernelSize, stride, padding, dilation, ceilMode, out, indices,
+                                                   &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxPool3dWithArgmaxGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
@@ -136,16 +142,18 @@ int main() {
     std::vector<float> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy output result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy output result from device to host failed. ERROR: %d\n", ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("output[%ld] is: %f\n", i, resultData[i]);
     }
 
     size = GetShapeSize(indicesShape);
     std::vector<int> indicesResultData(size, 0);
-    ret = aclrtMemcpy(indicesResultData.data(), indicesResultData.size() * sizeof(indicesResultData[0]), indicesDeviceAddr,
-                      size * sizeof(indicesResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy indices result from device to host failed. ERROR: %d\n", ret); return ret);
+    ret = aclrtMemcpy(indicesResultData.data(), indicesResultData.size() * sizeof(indicesResultData[0]),
+                      indicesDeviceAddr, size * sizeof(indicesResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy indices result from device to host failed. ERROR: %d\n", ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("indices[%ld] is: %d\n", i, indicesResultData[i]);
     }

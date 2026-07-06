@@ -48,4 +48,4 @@ REG_OP(Shrink)
     .OP_END_FACTORY_REG(Shrink)
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SHRINK_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SHRINK_OPS_H_

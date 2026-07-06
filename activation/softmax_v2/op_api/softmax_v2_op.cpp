@@ -20,34 +20,34 @@ namespace l0op {
 
 OP_TYPE_REGISTER(SoftmaxV2);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                              op::DataType::DT_FLOAT16,
-                                                                              op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor *self) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* self) { return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
 // AICORE算子kernel
-static const aclTensor *SoftmaxAiCore(const aclTensor *self, aclIntArray *dimList, aclTensor *out,
-                                      aclOpExecutor *executor) {
+static const aclTensor* SoftmaxAiCore(const aclTensor* self, aclIntArray* dimList, aclTensor* out,
+                                      aclOpExecutor* executor)
+{
     L0_DFX(SoftmaxAiCore);
     ADD_TO_LAUNCHER_LIST_AICORE(SoftmaxV2, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(dimList, false));
     return out;
 }
 
 // AICPU算子kernel
-static const aclTensor *SoftmaxAiCpu(const aclTensor *self, aclIntArray *dimList, aclTensor *out,
-                                     aclOpExecutor *executor) {
+static const aclTensor* SoftmaxAiCpu(const aclTensor* self, aclIntArray* dimList, aclTensor* out,
+                                     aclOpExecutor* executor)
+{
     L0_DFX(SoftmaxAiCpu);
     static internal::AicpuTaskSpace space("SoftmaxV2", ge::DEPEND_IN_SHAPE, false);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(SoftmaxV2, OP_ATTR_NAMES({"axes"}), OP_INPUT(self),
-                                          OP_OUTPUT(out), OP_ATTR(dimList));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(SoftmaxV2, OP_ATTR_NAMES({"axes"}), OP_INPUT(self), OP_OUTPUT(out),
+                                          OP_ATTR(dimList));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
     return out;
 }
 
-const aclTensor *SoftmaxV2(const aclTensor *self, int64_t dim, aclOpExecutor *executor) {
+const aclTensor* SoftmaxV2(const aclTensor* self, int64_t dim, aclOpExecutor* executor)
+{
     // 输出shape和self shape一致
     auto out = executor->AllocTensor(self->GetStorageShape(), self->GetDataType());
     FVector<int64_t> newdim{dim};
@@ -60,5 +60,4 @@ const aclTensor *SoftmaxV2(const aclTensor *self, int64_t dim, aclOpExecutor *ex
     }
 }
 
-}
-
+} // namespace l0op

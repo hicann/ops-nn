@@ -32,15 +32,9 @@ using namespace ge;
 
 class TestApplyAdamTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyAdamTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyAdamTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyAdamTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyAdamTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -55,9 +49,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -76,9 +70,8 @@ static void InitPlatForm(
 
 struct ApplyAdamUtCompileInfo {};
 
-static void DoApplyAdamTilingCase(
-    std::initializer_list<int64_t>& inputShape, ge::DataType tensorDtype, ge::Format inputFormat, bool use_nesterov,
-    int64_t expectKey, std::string& expectStr)
+static void DoApplyAdamTilingCase(std::initializer_list<int64_t>& inputShape, ge::DataType tensorDtype,
+                                  ge::Format inputFormat, bool use_nesterov, int64_t expectKey, std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -111,9 +104,8 @@ static void DoApplyAdamTilingCase(
                       .SetOpType(opType)
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&tensorShape, &tensorShape, &tensorShape, &oneShape, &oneShape, &oneShape, &oneShape,
-                           &oneShape, &oneShape, &tensorShape})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &oneShape, &oneShape, &oneShape,
+                                    &oneShape, &oneShape, &oneShape, &tensorShape})
                       .OutputShapes({&tensorShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -128,9 +120,8 @@ static void DoApplyAdamTilingCase(
                       .NodeInputTd(8, scalarDtype, inputFormat, inputFormat)
                       .NodeInputTd(9, tensorDtype, inputFormat, inputFormat)
                       .NodeOutputTd(0, tensorDtype, inputFormat, inputFormat)
-                      .NodeAttrs(
-                          {{"use_nesterov", Ops::NN::AnyValue::CreateFrom<bool>(use_nesterov)},
-                           {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"use_nesterov", Ops::NN::AnyValue::CreateFrom<bool>(use_nesterov)},
+                                  {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

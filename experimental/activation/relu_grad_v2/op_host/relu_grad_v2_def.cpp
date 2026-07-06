@@ -13,12 +13,12 @@
 namespace ops {
 class ReluGradV2 : public OpDef {
 public:
-    explicit ReluGradV2(const char *name) : OpDef(name)
+    explicit ReluGradV2(const char* name) : OpDef(name)
     {
         this->Input("gradients")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32,
-                       ge::DT_INT64})
+            .DataType(
+                {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32, ge::DT_INT64})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -26,8 +26,8 @@ public:
             .AutoContiguous();
         this->Input("features")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32,
-                       ge::DT_INT64})
+            .DataType(
+                {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32, ge::DT_INT64})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -35,8 +35,8 @@ public:
             .AutoContiguous();
         this->Output("backprops")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32,
-                       ge::DT_INT64})
+            .DataType(
+                {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32, ge::DT_INT64})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -56,4 +56,4 @@ public:
 };
 
 OP_ADD(ReluGradV2);
-}  // namespace ops
+} // namespace ops

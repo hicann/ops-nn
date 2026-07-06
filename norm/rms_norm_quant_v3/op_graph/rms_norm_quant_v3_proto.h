@@ -33,7 +33,7 @@ namespace ge {
 *    y2 = round(rmsnorm_out * scales2 + zero_points2) \n
 
 * @par Inputs
-* @li x: A tensor. Support dtype: float32/float16/bfloat16, support format: ND. 
+* @li x: A tensor. Support dtype: float32/float16/bfloat16, support format: ND.
 *        The shape supports at least 1 dimension, and at most 8 dimensions.
 * @li gamma: A tensor. Describing the weight of the rmsnorm operation.
 *            Support dtype: float32/float16/bfloat16, support format: ND.
@@ -57,9 +57,11 @@ namespace ge {
 * @par Attributes
 * @li epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
 *              The type is float. Defaults to 1e-6.
-* @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses multiplication.
+* @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses
+multiplication.
 *               The type is bool. Defaults to true.
-* @li dst_type: An optional attribute. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FP8_E5M2,
+* @li dst_type: An optional attribute. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8,
+DT_FP8_E5M2,
 *               DT_FP8_E4M3FN. Defaults to DT_INT8.
 * @li output_rstd: An optional attribute. Whether to output rstd. The type is bool. Defaults to false.
 

@@ -21,14 +21,11 @@
 using namespace AscendC;
 
 template <typename T>
-class KernelAdaptiveAvgPool3DGradCast
-{
+class KernelAdaptiveAvgPool3DGradCast {
 public:
-    __aicore__ inline KernelAdaptiveAvgPool3DGradCast()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data,
-        TPipe* tmpPipe)
+    __aicore__ inline KernelAdaptiveAvgPool3DGradCast() {}
+    __aicore__ inline void Init(GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace,
+                                const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data, TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();
@@ -197,9 +194,8 @@ private:
                 clearCopyNum = clearTaskNumLastLoop * ncNum;
             }
             WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-            DataCopyPad(
-                outputLocalFloat, workspaceGm[clearOffset], {1, (uint32_t)(clearCopyNum * sizeof(float)), 0, 0, 0},
-                {false, 0, 0, 0});
+            DataCopyPad(outputLocalFloat, workspaceGm[clearOffset],
+                        {1, (uint32_t)(clearCopyNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
             WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
@@ -209,8 +205,8 @@ private:
             SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
 
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-            DataCopyPad(
-                outputGradGm[clearOffset], outputLocal, {(uint16_t)1, (uint32_t)(clearCopyNum * sizeof(T)), 0, 0, 0});
+            DataCopyPad(outputGradGm[clearOffset], outputLocal,
+                        {(uint16_t)1, (uint32_t)(clearCopyNum * sizeof(T)), 0, 0, 0});
             SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         }
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
@@ -220,13 +216,11 @@ private:
     __aicore__ inline void DataCopyOut(uint64_t kd, uint64_t kh, uint64_t kw, uint64_t yNum)
     {
         if (isAtomicAdd == 1) {
-            DataCopyPad(
-                workspaceGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncNum], outputLocalFloat[yNum * ncAlign],
-                {(uint16_t)1, (uint32_t)(ncNum * sizeof(float)), 0, 0, 0});
+            DataCopyPad(workspaceGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncNum],
+                        outputLocalFloat[yNum * ncAlign], {(uint16_t)1, (uint32_t)(ncNum * sizeof(float)), 0, 0, 0});
         } else {
-            DataCopyPad(
-                outputGradGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncNum], outputLocal[yNum * ncAlign],
-                {(uint16_t)1, (uint32_t)(ncNum * sizeof(T)), 0, 0, 0});
+            DataCopyPad(outputGradGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncNum],
+                        outputLocal[yNum * ncAlign], {(uint16_t)1, (uint32_t)(ncNum * sizeof(T)), 0, 0, 0});
         }
     }
 

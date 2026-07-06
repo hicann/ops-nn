@@ -29,35 +29,36 @@ using namespace std;
 using namespace AscendC;
 
 class conv3d_transpose_v2_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "conv3d_transpose_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "conv3d_transpose_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "conv3d_transpose_v2_test TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./conv3d_transpose_v2_data");
     }
 };
 
-
-TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17) {
-    size_t input_shape_size = 5 * sizeof(int32_t); // 5 len of input shape
-    size_t filter_size = 32 * 32 * 16 * 16 * sizeof(int16_t); // [dk*cin1*hk*wk, cout1, 16, 16] bf16
+TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17)
+{
+    size_t input_shape_size = 5 * sizeof(int32_t);               // 5 len of input shape
+    size_t filter_size = 32 * 32 * 16 * 16 * sizeof(int16_t);    // [dk*cin1*hk*wk, cout1, 16, 16] bf16
     size_t x_size = 1 * 5 * 32 * 32 * 32 * 16 * sizeof(int16_t); // NDC1HW0 bf16
     size_t y_size = 1 * 5 * 32 * 32 * 32 * 16 * sizeof(int16_t); // NDC1HWC0 bf16
     size_t tiling_data_size = sizeof(Conv3DBackpropInputV2TilingData);
 
-    uint8_t *input_shape = (uint8_t *)AscendC::GmAlloc(input_shape_size);
-    uint8_t *filter = (uint8_t *)AscendC::GmAlloc(filter_size);
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(x_size);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(y_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* input_shape = (uint8_t*)AscendC::GmAlloc(input_shape_size);
+    uint8_t* filter = (uint8_t*)AscendC::GmAlloc(filter_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data", "conv3d_transpose_v2_data");
-    kernel_ut::RunGenData("./conv3d_transpose_v2_data", {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data",
+                                    "conv3d_transpose_v2_data");
+    kernel_ut::RunGenData("./conv3d_transpose_v2_data",
+                          {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
     kernel_ut::RunGenTiling("./conv3d_transpose_v2_data", "test_conv3d_dx_17");
 
     string path = kernel_ut::GetTestWorkDir();
@@ -66,8 +67,9 @@ TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17) {
     ReadFile(path + "/conv3d_transpose_v2_data/x.bin", x_size, x, x_size);
     ReadFile(path + "/conv3d_transpose_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_transpose_v2<0,0,0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+    auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w,
+                                     GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+        ::conv3d_transpose_v2<0, 0, 0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(Conv3DTrransposeKernel, 24, input_shape, x, filter, nullptr, nullptr, y, workspace, tiling);
@@ -119,24 +121,27 @@ TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
-    size_t input_shape_size = 5 * sizeof(int32_t); // 5 len of input shape
-    size_t filter_size = 32 * 32 * 16 * 16 * sizeof(int16_t); // [dk*cin1*hk*wk, cout1, 16, 16] bf16
+TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32)
+{
+    size_t input_shape_size = 5 * sizeof(int32_t);               // 5 len of input shape
+    size_t filter_size = 32 * 32 * 16 * 16 * sizeof(int16_t);    // [dk*cin1*hk*wk, cout1, 16, 16] bf16
     size_t x_size = 1 * 5 * 32 * 32 * 32 * 16 * sizeof(int16_t); // NDC1HW0 bf16
     size_t y_size = 1 * 5 * 32 * 32 * 32 * 16 * sizeof(int16_t); // NDC1HWC0 bf16
     size_t tiling_data_size = sizeof(Conv3DBackpropInputV2TilingData);
 
-    uint8_t *input_shape = (uint8_t *)AscendC::GmAlloc(input_shape_size);
-    uint8_t *filter = (uint8_t *)AscendC::GmAlloc(filter_size);
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(x_size);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(y_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* input_shape = (uint8_t*)AscendC::GmAlloc(input_shape_size);
+    uint8_t* filter = (uint8_t*)AscendC::GmAlloc(filter_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data", "conv3d_transpose_v2_data");
-    kernel_ut::RunGenData("./conv3d_transpose_v2_data", {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data",
+                                    "conv3d_transpose_v2_data");
+    kernel_ut::RunGenData("./conv3d_transpose_v2_data",
+                          {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
     kernel_ut::RunGenTiling("./conv3d_transpose_v2_data", "params_conv3d_dx_17_hf32");
 
     string path = kernel_ut::GetTestWorkDir();
@@ -145,8 +150,9 @@ TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
     ReadFile(path + "/conv3d_transpose_v2_data/x.bin", x_size, x, x_size);
     ReadFile(path + "/conv3d_transpose_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_transpose_v2<0,0,0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+    auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w,
+                                     GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+        ::conv3d_transpose_v2<0, 0, 0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(Conv3DTrransposeKernel, 24, input_shape, x, filter, nullptr, nullptr, y, workspace, tiling);
@@ -198,24 +204,27 @@ TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(conv3d_transpose_v2_test, test_group_1) {
-    size_t input_shape_size = 5 * sizeof(int32_t); // 5 len of input shape
-    size_t filter_size = 64 * 1 * 16 * 16 * sizeof(int16_t); // [dk*cin1*hk*wk, cout1, 16, 16] bf16
+TEST_F(conv3d_transpose_v2_test, test_group_1)
+{
+    size_t input_shape_size = 5 * sizeof(int32_t);             // 5 len of input shape
+    size_t filter_size = 64 * 1 * 16 * 16 * sizeof(int16_t);   // [dk*cin1*hk*wk, cout1, 16, 16] bf16
     size_t x_size = 2 * 1 * 16 * 4 * 4 * 16 * sizeof(int16_t); // NDC1HW0 bf16
     size_t y_size = 2 * 1 * 16 * 8 * 8 * 16 * sizeof(int16_t); // NDC1HWC0 bf16
     size_t tiling_data_size = sizeof(Conv3DBackpropInputV2TilingData);
 
-    uint8_t *input_shape = (uint8_t *)AscendC::GmAlloc(input_shape_size);
-    uint8_t *filter = (uint8_t *)AscendC::GmAlloc(filter_size);
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(x_size);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(y_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* input_shape = (uint8_t*)AscendC::GmAlloc(input_shape_size);
+    uint8_t* filter = (uint8_t*)AscendC::GmAlloc(filter_size);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data", "conv3d_transpose_v2_data");
-    kernel_ut::RunGenData("./conv3d_transpose_v2_data", {"2", "256", "256", "1", "4", "4", "1", "8", "8", "1", "2", "2"});
+    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data",
+                                    "conv3d_transpose_v2_data");
+    kernel_ut::RunGenData("./conv3d_transpose_v2_data",
+                          {"2", "256", "256", "1", "4", "4", "1", "8", "8", "1", "2", "2"});
     kernel_ut::RunGenTiling("./conv3d_transpose_v2_data", "test_group_1");
 
     string path = kernel_ut::GetTestWorkDir();
@@ -224,8 +233,9 @@ TEST_F(conv3d_transpose_v2_test, test_group_1) {
     ReadFile(path + "/conv3d_transpose_v2_data/x.bin", x_size, x, x_size);
     ReadFile(path + "/conv3d_transpose_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_transpose_v2<0,0,0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+    auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w,
+                                     GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
+        ::conv3d_transpose_v2<0, 0, 0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(Conv3DTrransposeKernel, 8, input_shape, x, filter, nullptr, nullptr, y, workspace, tiling);

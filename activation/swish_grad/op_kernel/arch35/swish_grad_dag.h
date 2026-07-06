@@ -38,8 +38,8 @@ constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
 namespace SwishGradDag1 {
 template <class T>
 struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float> {
-    __aicore__ inline SwishGradCustom(
-        LocalTensor<T>& dst, LocalTensor<T>& src, LocalTensor<T>& src2, float scale1, uint32_t count)
+    __aicore__ inline SwishGradCustom(LocalTensor<T>& dst, LocalTensor<T>& src, LocalTensor<T>& src2, float scale1,
+                                      uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(float);
@@ -77,8 +77,8 @@ struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float
                     MicroAPI::Mul(vregOutput, vregOutput, vregInput2, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy(
-                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), (MicroAPI::RegTensor<T>&)vregOutput, mask);
+                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), (MicroAPI::RegTensor<T>&)vregOutput,
+                                       mask);
                 }
             }
         } else {
@@ -111,8 +111,8 @@ struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float
 
                     MicroAPI::Cast<T, float, castTrait1>(vregOutput16, vregOutput, mask);
                     // OpCopyOut
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(
-                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput16, mask);
+                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                              vregOutput16, mask);
                 }
             }
         }

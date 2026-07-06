@@ -24,20 +24,18 @@ using namespace QUANT_MATMUL_REDUCE_SUM;
 namespace AscendC {
 __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b)
 {
-  if (unlikely(b == 0)) {
-    return a;
-  }
-  return (a + b - 1) / b;
+    if (unlikely(b == 0)) {
+        return a;
+    }
+    return (a + b - 1) / b;
 }
 
 template <typename yType>
-class QuantMatmulReduceSumInitOutput
-{
+class QuantMatmulReduceSumInitOutput {
 public:
-    __aicore__ inline QuantMatmulReduceSumInitOutput()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR y, GM_ADDR workSpace, const QuantMatmulReduceSumTilingData* tilingData, TPipe* tPipe)
+    __aicore__ inline QuantMatmulReduceSumInitOutput() {}
+    __aicore__ inline void Init(GM_ADDR y, GM_ADDR workSpace, const QuantMatmulReduceSumTilingData* tilingData,
+                                TPipe* tPipe)
     {
         InitTilingData(tilingData);
         // init global buffer
@@ -69,8 +67,8 @@ public:
             auto globalTensorRef = yGm_[dstOffset];
             SafeDataCopy(globalTensorRef, tmpBuf, realClearSize);
         } else {
-            dataCopyParams.blockLen =
-                QUANT_MATMUL_REDUCE_SUM::Min<uint64_t>(tmpBuf.GetSize() * sizeof(yType) / ONE_BLK_SIZE, clearBlkNum);
+            dataCopyParams.blockLen = QUANT_MATMUL_REDUCE_SUM::Min<uint64_t>(
+                tmpBuf.GetSize() * sizeof(yType) / ONE_BLK_SIZE, clearBlkNum);
             uint64_t burstItemNum = dataCopyParams.blockLen * ONE_BLK_ITEM_NUM;
             ClearLocalTensor(tmpBuf, burstItemNum);
             uint64_t loop = clearBlkNum / dataCopyParams.blockLen;

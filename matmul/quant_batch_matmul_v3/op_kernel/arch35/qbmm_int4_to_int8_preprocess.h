@@ -28,14 +28,13 @@ constexpr uint64_t ALIGN_SIZE_128 = 128u;
 constexpr uint64_t TILE_ELEMS_16K = 16 * 1024u;
 constexpr uint32_t ELEM_ALIGN_64 = 64u;
 constexpr uint64_t NUM_2 = 2u;
-}
+} // namespace
 
 class QbmmInt4ToInt8Preprocess {
 public:
     __aicore__ inline QbmmInt4ToInt8Preprocess() {}
 
-    __aicore__ inline void Init(GM_ADDR x1In, GM_ADDR x2In, GM_ADDR workspace,
-                                TPipe& pipe,  uint64_t m, uint64_t n,
+    __aicore__ inline void Init(GM_ADDR x1In, GM_ADDR x2In, GM_ADDR workspace, TPipe& pipe, uint64_t m, uint64_t n,
                                 uint64_t k, uint64_t batchC);
     __aicore__ inline void Process();
 
@@ -46,9 +45,9 @@ private:
 
 private:
     // Queues
-    TQue<QuePosition::VECIN,   BUFFER_NUM> inQueueInt4_;
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueInt4_;
     TQue<QuePosition::VECCALC, BUFFER_NUM> computeQueueHalf_;
-    TQue<QuePosition::VECOUT,  BUFFER_NUM> outQueueInt8_;
+    TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueInt8_;
 
     GlobalTensor<int8_t> srcInt4Global_;
     GlobalTensor<int8_t> dstInt8Global_;
@@ -56,14 +55,13 @@ private:
     GM_ADDR x1Out_;
     GM_ADDR x2Out_;
 
-    bool    isX1Core_;
+    bool isX1Core_;
     uint64_t blockLength_ = 0;
     uint32_t ubLength_ = 0;
 };
 
-__aicore__ inline void QbmmInt4ToInt8Preprocess::Init(GM_ADDR x1In, GM_ADDR x2In, GM_ADDR workspace,
-                                                        TPipe& pipe, uint64_t m, uint64_t n, uint64_t k,
-                                                        uint64_t batchC)
+__aicore__ inline void QbmmInt4ToInt8Preprocess::Init(GM_ADDR x1In, GM_ADDR x2In, GM_ADDR workspace, TPipe& pipe,
+                                                      uint64_t m, uint64_t n, uint64_t k, uint64_t batchC)
 {
     uint64_t x1TotalElems = batchC * m * k;
     uint64_t x2TotalElems = k * n;
@@ -77,8 +75,10 @@ __aicore__ inline void QbmmInt4ToInt8Preprocess::Init(GM_ADDR x1In, GM_ADDR x2In
         totalCores = totalCores * NUM_2;
     }
     uint64_t coresForX1 = (totalCores * batchC * m + (batchC * m + n) / NUM_2) / (batchC * m + n);
-    if (coresForX1 < 1)           coresForX1 = 1;
-    if (coresForX1 >= totalCores) coresForX1 = totalCores - 1;
+    if (coresForX1 < 1)
+        coresForX1 = 1;
+    if (coresForX1 >= totalCores)
+        coresForX1 = totalCores - 1;
     uint64_t coresForX2 = totalCores - coresForX1;
 
     uint64_t coreIdx = GetBlockIdx();
@@ -89,8 +89,8 @@ __aicore__ inline void QbmmInt4ToInt8Preprocess::Init(GM_ADDR x1In, GM_ADDR x2In
 
     // ---- compute this core's element range ----
     uint64_t totalElems = isX1Core_ ? x1TotalElems : x2TotalElems;
-    uint64_t groupCores = isX1Core_ ? coresForX1   : coresForX2;
-    uint64_t localId    = isX1Core_ ? coreIdx       : coreIdx - coresForX1;
+    uint64_t groupCores = isX1Core_ ? coresForX1 : coresForX2;
+    uint64_t localId = isX1Core_ ? coreIdx : coreIdx - coresForX1;
 
     uint64_t totalBlocks = DequantBmm::Align(totalElems, static_cast<uint64_t>(ELEM_ALIGN_64));
     uint64_t numChunks = totalBlocks / ELEM_ALIGN_64;
@@ -101,7 +101,7 @@ __aicore__ inline void QbmmInt4ToInt8Preprocess::Init(GM_ADDR x1In, GM_ADDR x2In
     uint64_t chunkEnd = chunkStart + baseChunks + (localId < remainChunks ? 1u : 0u);
 
     uint64_t elemStart = chunkStart * ELEM_ALIGN_64;
-    uint64_t elemEnd   = chunkEnd * ELEM_ALIGN_64;
+    uint64_t elemEnd = chunkEnd * ELEM_ALIGN_64;
 
     blockLength_ = elemEnd - elemStart;
 
@@ -111,30 +111,32 @@ __aicore__ inline void QbmmInt4ToInt8Preprocess::Init(GM_ADDR x1In, GM_ADDR x2In
 
     // ---- bind global buffers to this core's slice ----
     if (isX1Core_) {
-        srcInt4Global_.SetGlobalBuffer((__gm__ int8_t*)x1In   + elemStart / NUM_2, blockLength_ / NUM_2);
+        srcInt4Global_.SetGlobalBuffer((__gm__ int8_t*)x1In + elemStart / NUM_2, blockLength_ / NUM_2);
         dstInt8Global_.SetGlobalBuffer((__gm__ int8_t*)x1Out_ + elemStart, blockLength_);
     } else {
-        srcInt4Global_.SetGlobalBuffer((__gm__ int8_t*)x2In   + elemStart / NUM_2, blockLength_ / NUM_2);
+        srcInt4Global_.SetGlobalBuffer((__gm__ int8_t*)x2In + elemStart / NUM_2, blockLength_ / NUM_2);
         dstInt8Global_.SetGlobalBuffer((__gm__ int8_t*)x2Out_ + elemStart, blockLength_);
     }
 
     // ---- init queues ----
-    pipe.InitBuffer(inQueueInt4_,      BUFFER_NUM, static_cast<uint32_t>(ubLength_) / NUM_2);
+    pipe.InitBuffer(inQueueInt4_, BUFFER_NUM, static_cast<uint32_t>(ubLength_) / NUM_2);
     pipe.InitBuffer(computeQueueHalf_, BUFFER_NUM, static_cast<uint32_t>(ubLength_) * sizeof(half));
-    pipe.InitBuffer(outQueueInt8_,     BUFFER_NUM, static_cast<uint32_t>(ubLength_) * sizeof(int8_t));
+    pipe.InitBuffer(outQueueInt8_, BUFFER_NUM, static_cast<uint32_t>(ubLength_) * sizeof(int8_t));
 }
 
 __aicore__ inline void QbmmInt4ToInt8Preprocess::Process()
 {
-    if (blockLength_ == 0) return;
+    if (blockLength_ == 0)
+        return;
 
     uint64_t loopCount = DequantBmm::CeilDiv(blockLength_, static_cast<uint64_t>(ubLength_));
     for (uint32_t i = 0; i < loopCount; i++) {
-        uint64_t remaining  = blockLength_ - ubLength_ * i;
+        uint64_t remaining = blockLength_ - ubLength_ * i;
         uint32_t currentNum = DequantBmm::Min(static_cast<uint32_t>(remaining), ubLength_);
 
         currentNum = DequantBmm::FloorAlign(currentNum, ELEM_ALIGN_64);
-        if (currentNum == 0) break;
+        if (currentNum == 0)
+            break;
 
         CopyIn(i, currentNum);
         Compute(currentNum);
@@ -174,4 +176,3 @@ __aicore__ inline void QbmmInt4ToInt8Preprocess::CopyOut(uint32_t progress, uint
     DataCopy(dstInt8Global_[progress * ubLength_], int8Local, static_cast<uint32_t>(currentNum * sizeof(int8_t)));
     outQueueInt8_.FreeTensor(int8Local);
 }
-

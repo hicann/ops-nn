@@ -22,13 +22,11 @@ namespace ScaledMaskedSoftmaxGradV2 {
 using namespace AscendC;
 
 template <typename T>
-class ScaledMaskedSoftmaxGradV2NormHeadDim : public ScaledMaskedSoftmaxGradV2Base<T>
-{
+class ScaledMaskedSoftmaxGradV2NormHeadDim : public ScaledMaskedSoftmaxGradV2Base<T> {
 public:
-    __aicore__ inline ScaledMaskedSoftmaxGradV2NormHeadDim()
-    {}
-    __aicore__ inline void Init(
-        const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData, TPipe* pipeIn);
+    __aicore__ inline ScaledMaskedSoftmaxGradV2NormHeadDim() {}
+    __aicore__ inline void Init(const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData,
+                                TPipe* pipeIn);
     __aicore__ inline void Process();
 
 protected:
@@ -41,8 +39,8 @@ protected:
     __aicore__ inline void CopyInMask(const uint64_t& currentLoop);
     __aicore__ inline void CopyOut(const uint64_t& offset);
     __aicore__ inline void ComputeSoftmaxGrad();
-    __aicore__ inline void DoSoftmaxGrad(
-        LocalTensor<float>& xGradLocal, LocalTensor<float>& yGradLocal, LocalTensor<float>& yLocal);
+    __aicore__ inline void DoSoftmaxGrad(LocalTensor<float>& xGradLocal, LocalTensor<float>& yGradLocal,
+                                         LocalTensor<float>& yLocal);
     __aicore__ inline void DoScaleAndMask(LocalTensor<float>& tmpOutLocal);
 
 private:
@@ -137,13 +135,13 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2NormHeadDim<T>::ComputeSoftmaxGr
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2NormHeadDim<T>::DoSoftmaxGrad(
-    LocalTensor<float>& xGradLocal, LocalTensor<float>& yGradLocal, LocalTensor<float>& yLocal)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2NormHeadDim<T>::DoSoftmaxGrad(LocalTensor<float>& xGradLocal,
+                                                                              LocalTensor<float>& yGradLocal,
+                                                                              LocalTensor<float>& yLocal)
 {
     LocalTensor<uint8_t> softmaxGradTmpBuf = this->sharedBuffer.template Get<uint8_t>();
-    SoftMaxShapeInfo srcShape = {
-        static_cast<uint32_t>(this->lineNum), static_cast<uint32_t>(this->paddedHeadDim_),
-        static_cast<uint32_t>(this->lineNum), static_cast<uint32_t>(this->paddedHeadDim_)};
+    SoftMaxShapeInfo srcShape = {static_cast<uint32_t>(this->lineNum), static_cast<uint32_t>(this->paddedHeadDim_),
+                                 static_cast<uint32_t>(this->lineNum), static_cast<uint32_t>(this->paddedHeadDim_)};
     if (this->dupNum != 0) {
         for (uint64_t i = 0; i < this->lineNum; ++i) {
             Duplicate(yGradLocal[i * this->paddedHeadDim_ + this->alignedHeadDim], MASK_VALUE, this->dupNum);
@@ -151,8 +149,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2NormHeadDim<T>::DoSoftmaxGrad(
         }
         PipeBarrier<PIPE_V>();
     }
-    SoftmaxGrad<float, false, false>(
-        xGradLocal, yGradLocal, yLocal, softmaxGradTmpBuf, softmaxTiling_, false, srcShape);
+    SoftmaxGrad<float, false, false>(xGradLocal, yGradLocal, yLocal, softmaxGradTmpBuf, softmaxTiling_, false,
+                                     srcShape);
 }
 
 template <typename T>

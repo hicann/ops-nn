@@ -29,22 +29,16 @@ using namespace ge;
 
 class TestScatterNdSubTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestScatterNdSubTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestScatterNdSubTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestScatterNdSubTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestScatterNdSubTiling TearDown" << std::endl; }
 };
 
 static constexpr uint64_t TILING_KEY_DEFAULT = 0;
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -69,11 +63,9 @@ struct ScatterNdSubTilingResult {
     int64_t sliceSize;
 };
 
-static ScatterNdSubTilingResult DoScatterNdSubTilingCase(
-    const std::initializer_list<int64_t>& varShape,
-    const std::initializer_list<int64_t>& indicesShape,
-    ge::DataType varDtype,
-    ge::DataType indicesDtype)
+static ScatterNdSubTilingResult DoScatterNdSubTilingCase(const std::initializer_list<int64_t>& varShape,
+                                                         const std::initializer_list<int64_t>& indicesShape,
+                                                         ge::DataType varDtype, ge::DataType indicesDtype)
 {
     ScatterNdSubTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0};
 
@@ -135,10 +127,8 @@ static ScatterNdSubTilingResult DoScatterNdSubTilingCase(
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ScatterNdSubTilingData)) {
-            const auto* td = reinterpret_cast<const ScatterNdSubTilingData*>(
-                rawTilingData->GetData());
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ScatterNdSubTilingData)) {
+            const auto* td = reinterpret_cast<const ScatterNdSubTilingData*>(rawTilingData->GetData());
             result.totalVarElements = td->totalVarElements;
             result.numSlices = td->numSlices;
             result.sliceSize = td->sliceSize;

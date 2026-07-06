@@ -51,9 +51,8 @@ static const int64_t BIG_KERNEL_SINGLE_LIMIT = 1024;
 static const int64_t BIG_KERNEL_CALC_LIMIT = 1.0e+10;
 static const int64_t BIG_KERNEL_CHANNEL_LIMIT = 64;
 
-static bool CheckNotNullPtr(
-    const aclTensor *self, const aclIntArray *kernel, const aclIntArray *stride, const aclIntArray *padding,
-    const aclTensor *out)
+static bool CheckNotNullPtr(const aclTensor* self, const aclIntArray* kernel, const aclIntArray* stride,
+                            const aclIntArray* padding, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(kernel, return false);
@@ -65,21 +64,23 @@ static bool CheckNotNullPtr(
 }
 
 static const std::initializer_list<op::DataType> ASCEND910BC_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16 };
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                  op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType>& GetDtypeSupportListV2(const std::initializer_list<op::DataType>& l1, const std::initializer_list<op::DataType>& l2) {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    return l1;
-  } else {
-    return l2;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportListV2(const std::initializer_list<op::DataType>& l1,
+                                                                    const std::initializer_list<op::DataType>& l2)
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return l1;
+    } else {
+        return l2;
+    }
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     // 根据API定义，需要列出所能支持的所有dtype
     auto dtypeSupportList = GetDtypeSupportListV2(ASCEND910BC_DTYPE_SUPPORT_LIST, ASCEND310P_DTYPE_SUPPORT_LIST);
@@ -93,18 +94,18 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static bool CheckFormat(const aclTensor *self, const aclTensor *out)
+static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     // 检查self和out的format是否一致
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self and out format should be same. Actual: self is [%s], out is [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(self->GetStorageFormat())) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support format [%s].",
-            op::ToString(self->GetStorageFormat()).GetString());
+                op::ToString(self->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -112,10 +113,11 @@ static bool CheckFormat(const aclTensor *self, const aclTensor *out)
 }
 
 // 计算经过avgpool3d后的shape的d和h和w（n,c与input一致，不用计算）
-static inline int64_t PoolingOutShape(
-    const int64_t inputSize, const int64_t kernelSize, const int64_t padL, const int64_t stride, const bool ceilMode) {
+static inline int64_t PoolingOutShape(const int64_t inputSize, const int64_t kernelSize, const int64_t padL,
+                                      const int64_t stride, const bool ceilMode)
+{
     int64_t outputSize = (stride == 0) ? -1 :
-                         (inputSize + padL * 2 - kernelSize + (ceilMode ? stride - 1 : 0)) / stride + 1;
+                                         (inputSize + padL * 2 - kernelSize + (ceilMode ? stride - 1 : 0)) / stride + 1;
 
     if (ceilMode) {
         if ((outputSize - 1) * stride >= inputSize + padL) {
@@ -145,9 +147,8 @@ static bool CheckAttrValue(const int64_t kernel, const int64_t stride, const int
     return true;
 }
 
-static bool CheckOutputShape(
-    const aclTensor *self, const aclIntArray *kernel, const aclIntArray *stride, const aclIntArray *padding,
-    const bool ceilMode, const aclTensor *out)
+static bool CheckOutputShape(const aclTensor* self, const aclIntArray* kernel, const aclIntArray* stride,
+                             const aclIntArray* padding, const bool ceilMode, const aclTensor* out)
 {
     const bool is4d = self->GetViewShape().GetDimNum() == DIM_NUM_4D;
     const int64_t nBatch = is4d ? 1 : self->GetViewShape().GetDim(0);
@@ -176,25 +177,26 @@ static bool CheckOutputShape(
     const int64_t outHeight = PoolingOutShape(height, kH, padH, sH, ceilMode);
     const int64_t outWidth = PoolingOutShape(width, kW, padW, sW, ceilMode);
 
-    OP_CHECK((outDepth >= 0 && outHeight >= 0 && outWidth >= 0),
+    OP_CHECK(
+        (outDepth >= 0 && outHeight >= 0 && outWidth >= 0),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-        "Given input size [%ld,%ld,%ld,%ld], calc out size [%ld,%ld,%ld,%ld] dim value should be non negative",
-        nInputPlane, depth, height, width, nInputPlane, outDepth, outHeight, outWidth), return false);
+                "Given input size [%ld,%ld,%ld,%ld], calc out size [%ld,%ld,%ld,%ld] dim value should be non negative",
+                nInputPlane, depth, height, width, nInputPlane, outDepth, outHeight, outWidth),
+        return false);
 
-    const op::Shape calcOutShape = is4d ? op::Shape({nInputPlane, outDepth, outHeight, outWidth})
-                                        : op::Shape({nBatch, nInputPlane, outDepth, outHeight, outWidth});
+    const op::Shape calcOutShape = is4d ? op::Shape({nInputPlane, outDepth, outHeight, outWidth}) :
+                                          op::Shape({nBatch, nInputPlane, outDepth, outHeight, outWidth});
     // 判断out的shape与推导出的输出shape是否相等
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, calcOutShape, return false);
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor *self, const aclIntArray *kernel, const aclIntArray *stride, const aclIntArray *padding,
-    const bool ceilmode, const aclTensor *out)
+static bool CheckShape(const aclTensor* self, const aclIntArray* kernel, const aclIntArray* stride,
+                       const aclIntArray* padding, const bool ceilmode, const aclTensor* out)
 {
     // 检查self/out是否是4D或5D
     if (!((self->GetViewShape().GetDimNum() == DIM_NUM_5D || self->GetViewShape().GetDimNum() == DIM_NUM_4D) &&
-        (self->GetViewShape().GetDimNum() == out->GetViewShape().GetDimNum()))) {
+          (self->GetViewShape().GetDimNum() == out->GetViewShape().GetDimNum()))) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self and out must maintain same format, support 4D or 5D.");
         return false;
     }
@@ -220,9 +222,8 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor *self, const aclIntArray *kernelSize, const aclIntArray *stride, const aclIntArray *padding,
-    const bool ceilMode, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
+                               const aclIntArray* padding, const bool ceilMode, const aclTensor* out)
 {
     // 检查参数是否为空指针
     CHECK_RET(CheckNotNullPtr(self, kernelSize, stride, padding, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -239,7 +240,7 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static bool IsDimDDownsamping(const aclIntArray *kernelSize, const aclIntArray *stride)
+static bool IsDimDDownsamping(const aclIntArray* kernelSize, const aclIntArray* stride)
 {
     const int64_t kD = (*kernelSize)[0];
     const int64_t kH = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM1];
@@ -252,29 +253,30 @@ static bool IsDimDDownsamping(const aclIntArray *kernelSize, const aclIntArray *
     return kH == 1 && kW == 1 && sH == 1 && sW == 1;
 }
 
-static bool CheckGlobalPool(const aclIntArray *kernelSize, const aclIntArray *pad, const aclTensor *avgpoolIn)
+static bool CheckGlobalPool(const aclIntArray* kernelSize, const aclIntArray* pad, const aclTensor* avgpoolIn)
 {
-    if ((*pad)[DIM0] != 0 || (*pad)[DIM1] != 0 || (*pad)[DIM2] != 0){
+    if ((*pad)[DIM0] != 0 || (*pad)[DIM1] != 0 || (*pad)[DIM2] != 0) {
         return false;
     }
     auto avgpoolInShape = avgpoolIn->GetViewShape();
-    if ((avgpoolInShape.GetDim(DIM2) == (*kernelSize)[DIM0]) &&
-        (avgpoolInShape.GetDim(DIM3) == (*kernelSize)[DIM1]) &&
+    if ((avgpoolInShape.GetDim(DIM2) == (*kernelSize)[DIM0]) && (avgpoolInShape.GetDim(DIM3) == (*kernelSize)[DIM1]) &&
         (avgpoolInShape.GetDim(DIM4) == (*kernelSize)[DIM2])) {
         return true;
     }
     return false;
 }
 
-static bool CheckBigKernel(const aclIntArray *kernelSize, const aclIntArray *pad, const aclTensor *avgpoolIn, const aclTensor *out)
+static bool CheckBigKernel(const aclIntArray* kernelSize, const aclIntArray* pad, const aclTensor* avgpoolIn,
+                           const aclTensor* out)
 {
-    if (CheckGlobalPool(kernelSize, pad, avgpoolIn)){
+    if (CheckGlobalPool(kernelSize, pad, avgpoolIn)) {
         return false;
     }
 
     int64_t sumK = (*kernelSize)[DIM0] * (*kernelSize)[DIM1] * (*kernelSize)[DIM2];
     bool bigKernel = ((*kernelSize)[DIM0] > BIG_KERNEL_SINGLE_LIMIT || (*kernelSize)[DIM1] > BIG_KERNEL_SINGLE_LIMIT ||
-                        (*kernelSize)[DIM2] > BIG_KERNEL_SINGLE_LIMIT) && sumK > BIG_KERNEL_SUM_LIMIT;
+                      (*kernelSize)[DIM2] > BIG_KERNEL_SINGLE_LIMIT) &&
+                     sumK > BIG_KERNEL_SUM_LIMIT;
 
     auto avgpoolInShape = avgpoolIn->GetViewShape();
     int64_t channel = avgpoolInShape.GetDim(DIM1);
@@ -284,17 +286,17 @@ static bool CheckBigKernel(const aclIntArray *kernelSize, const aclIntArray *pad
     int64_t oD = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM1) : avgpoolOutShape.GetDim(DIM2);
     int64_t oH = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM2) : avgpoolOutShape.GetDim(DIM3);
     int64_t oW = outDimNum == DIM_NUM_4D ? avgpoolOutShape.GetDim(DIM3) : avgpoolOutShape.GetDim(DIM4);
-    int64_t windowsCalc = oD * oH *  oW * sumK;
+    int64_t windowsCalc = oD * oH * oW * sumK;
     // 非全局平均池化下，kernel较大，C通道小于64，且达到一定计算数据量时走Big Kernel分支
-    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && channel < BIG_KERNEL_CHANNEL_LIMIT){
+    if (bigKernel && windowsCalc > BIG_KERNEL_CALC_LIMIT && channel < BIG_KERNEL_CHANNEL_LIMIT) {
         return true;
     }
     return false;
 }
 
-static bool IsEnableNCDHW(
-    const aclIntArray *kernelSize, const int64_t divisorOverride, const aclIntArray *pad, const bool countIncludePad,
-    const bool ceilMode,const aclTensor *avgpoolIn, const aclTensor *out)
+static bool IsEnableNCDHW(const aclIntArray* kernelSize, const int64_t divisorOverride, const aclIntArray* pad,
+                          const bool countIncludePad, const bool ceilMode, const aclTensor* avgpoolIn,
+                          const aclTensor* out)
 {
     const int64_t kD = (*kernelSize)[0];
     const int64_t kH = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM1];
@@ -315,10 +317,10 @@ static bool IsEnableNCDHW(
 }
 
 // 构建averagepool3d计算图, 通过Vector实现
-static aclnnStatus BuildAvgPool3dGraph(
-    UniqueExecutor &uniqueExecutor, const aclTensor *self, const aclIntArray *kernelSize, const aclIntArray *stride,
-    const aclIntArray *pad, const bool ceilMode, const bool countIncludePad, const int64_t divisorOverride,
-    const aclTensor *out)
+static aclnnStatus BuildAvgPool3dGraph(UniqueExecutor& uniqueExecutor, const aclTensor* self,
+                                       const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* pad,
+                                       const bool ceilMode, const bool countIncludePad, const int64_t divisorOverride,
+                                       const aclTensor* out)
 {
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
@@ -347,7 +349,7 @@ static aclnnStatus BuildAvgPool3dGraph(
     if ((!isDimDDownsamping && !isEnableNCDHW) or is310pFlag) {
         dataFormat = "NDHWC";
         // Transpose N,C,D,H,W -> N,D,H,W,C
-        FVector<int64_t> inputDims = { 0, 2, 3, 4, 1 };
+        FVector<int64_t> inputDims = {0, 2, 3, 4, 1};
         auto permPre = uniqueExecutor->AllocIntArray(inputDims.data(), inputDims.size());
         CHECK_RET(permPre != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -356,15 +358,15 @@ static aclnnStatus BuildAvgPool3dGraph(
     }
 
     // 执行L0算子
-    auto avgpoolOut = l0op::AvgPool3D(avgpoolIn, kernelSize, stride, pad, ceilMode,
-        countIncludePad, divisorOverride, dataFormat, uniqueExecutor.get());
+    auto avgpoolOut = l0op::AvgPool3D(avgpoolIn, kernelSize, stride, pad, ceilMode, countIncludePad, divisorOverride,
+                                      dataFormat, uniqueExecutor.get());
     CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if ((!isDimDDownsamping && !isEnableNCDHW) or is310pFlag) {
         // Transpose N,D,H,W,C -> N,C,D,H,W
-        FVector<int64_t> outputDims = { 0, 4, 1, 2, 3 };
+        FVector<int64_t> outputDims = {0, 4, 1, 2, 3};
         auto permPost = uniqueExecutor->AllocIntArray(outputDims.data(), outputDims.size());
-        CHECK_RET(permPost!= nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(permPost != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         avgpoolOut = l0op::Transpose(avgpoolOut, permPost, uniqueExecutor.get());
         CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -386,15 +388,15 @@ static aclnnStatus BuildAvgPool3dGraph(
 }
 } // namespace
 
-aclnnStatus aclnnAvgPool3dGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
-    bool ceilMode, bool countIncludePad, int64_t divisorOverride, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnAvgPool3dGetWorkspaceSize(const aclTensor* self, const aclIntArray* kernelSize,
+                                           const aclIntArray* stride, const aclIntArray* padding, bool ceilMode,
+                                           bool countIncludePad, int64_t divisorOverride, aclTensor* out,
+                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(aclnnAvgPool3d, DFX_IN(self, kernelSize, stride, padding,\
-        ceilMode, countIncludePad, divisorOverride), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnAvgPool3d,
+                   DFX_IN(self, kernelSize, stride, padding, ceilMode, countIncludePad, divisorOverride), DFX_OUT(out));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -414,24 +416,25 @@ aclnnStatus aclnnAvgPool3dGetWorkspaceSize(
     const int64_t kD = (*kernelSize)[0];
     const int64_t kH = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM1];
     const int64_t kW = kernelSize->Size() == 1 ? kD : (*kernelSize)[DIM2];
-    FVector<int64_t> newKernel { kD, kH, kW };
-    const aclIntArray *kernelList = uniqueExecutor.get()->AllocIntArray(newKernel.data(), KERNEL_SIZE);
+    FVector<int64_t> newKernel{kD, kH, kW};
+    const aclIntArray* kernelList = uniqueExecutor.get()->AllocIntArray(newKernel.data(), KERNEL_SIZE);
 
     const int64_t sD = stride->Size() == 0 ? kD : (*stride)[0];
     const int64_t sH = stride->Size() == 0 ? kH : stride->Size() == 1 ? sD : (*stride)[DIM1];
     const int64_t sW = stride->Size() == 0 ? kW : stride->Size() == 1 ? sD : (*stride)[DIM2];
-    FVector<int64_t> newStride { sD, sH, sW };
-    const aclIntArray *strideList = uniqueExecutor.get()->AllocIntArray(newStride.data(), STRIDE_SIZE);
+    FVector<int64_t> newStride{sD, sH, sW};
+    const aclIntArray* strideList = uniqueExecutor.get()->AllocIntArray(newStride.data(), STRIDE_SIZE);
 
     const int64_t padD = (*padding)[0];
     const int64_t padH = padding->Size() == 1 ? padD : (*padding)[DIM1];
     const int64_t padW = padding->Size() == 1 ? padD : (*padding)[DIM2];
-    FVector<int64_t> newPad { padD, padH, padW };
-    const aclIntArray *padList = uniqueExecutor.get()->AllocIntArray(newPad.data(), PAD_SIZE);
+    FVector<int64_t> newPad{padD, padH, padW};
+    const aclIntArray* padList = uniqueExecutor.get()->AllocIntArray(newPad.data(), PAD_SIZE);
 
     // 构建常规averagepool3d计算图, 通过Vector实现
-    CHECK_RET(ACLNN_SUCCESS == BuildAvgPool3dGraph(uniqueExecutor, self, kernelList, strideList, padList,
-        ceilMode, countIncludePad, divisorOverride, out), ACLNN_ERR_INNER);
+    CHECK_RET(ACLNN_SUCCESS == BuildAvgPool3dGraph(uniqueExecutor, self, kernelList, strideList, padList, ceilMode,
+                                                   countIncludePad, divisorOverride, out),
+              ACLNN_ERR_INNER);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

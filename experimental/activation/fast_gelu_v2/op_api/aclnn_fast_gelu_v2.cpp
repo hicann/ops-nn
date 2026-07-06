@@ -28,14 +28,10 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool HasEmptyTensor(const aclTensor* x)
-{
-    return x->IsEmpty();
-}
+static bool HasEmptyTensor(const aclTensor* x) { return x->IsEmpty(); }
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* out)
 {
@@ -49,8 +45,7 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* out)
     OP_CHECK_DTYPE_NOT_MATCH(out, x->GetDataType(), return false);
 
     if (!CheckType(x->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Dtype not supported: dtype=%d. Supported: FLOAT, FLOAT16, BF16.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dtype not supported: dtype=%d. Supported: FLOAT, FLOAT16, BF16.",
                 static_cast<int>(x->GetDataType()));
         return false;
     }
@@ -63,9 +58,8 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* out)
     auto formatOut = out->GetStorageFormat();
 
     if (IsPrivateFormat(formatX) || IsPrivateFormat(formatOut)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Private format not supported: x=%d, out=%d",
-                static_cast<int>(formatX), static_cast<int>(formatOut));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Private format not supported: x=%d, out=%d", static_cast<int>(formatX),
+                static_cast<int>(formatOut));
         return false;
     }
     return true;
@@ -80,16 +74,14 @@ static bool CheckShape(const aclTensor* x, const aclTensor* out)
     auto xShape = x->GetViewShape();
     auto outShape = out->GetViewShape();
     if (xShape.GetDimNum() != outShape.GetDimNum()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Shape rank mismatch: x has %zu dims, out has %zu dims",
-                xShape.GetDimNum(), outShape.GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape rank mismatch: x has %zu dims, out has %zu dims", xShape.GetDimNum(),
+                outShape.GetDimNum());
         return false;
     }
     for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
         if (xShape.GetDim(i) != outShape.GetDim(i)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "Shape mismatch at dim %zu: x=%ld, out=%ld",
-                    i, xShape.GetDim(i), outShape.GetDim(i));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape mismatch at dim %zu: x=%ld, out=%ld", i, xShape.GetDim(i),
+                    outShape.GetDim(i));
             return false;
         }
     }
@@ -112,18 +104,15 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* out)
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (!CheckShape(x, out)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckShape failed: x_dim=%zu, out_dim=%zu",
-                x->GetViewShape().GetDimNum(), out->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckShape failed: x_dim=%zu, out_dim=%zu", x->GetViewShape().GetDimNum(),
+                out->GetViewShape().GetDimNum());
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnFastGeluV2GetWorkspaceSize(
-    const aclTensor* x,
-    const aclTensor* out,
-    uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+extern "C" aclnnStatus aclnnFastGeluV2GetWorkspaceSize(const aclTensor* x, const aclTensor* out,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFastGeluV2, DFX_IN(x), DFX_OUT(out));
 
@@ -163,11 +152,8 @@ extern "C" aclnnStatus aclnnFastGeluV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnFastGeluV2(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnFastGeluV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFastGeluV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

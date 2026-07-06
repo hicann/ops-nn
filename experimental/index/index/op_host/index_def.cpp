@@ -10,23 +10,20 @@
 #include "register/op_def_registry.h"
 
 namespace {
-const std::vector<ge::DataType> VALUE_TYPES = {
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT16,
-    ge::DT_INT32, ge::DT_INT64, ge::DT_INT8, ge::DT_UINT8, ge::DT_BOOL};
-const std::vector<ge::DataType> INDEX_TYPES = {
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32};
+const std::vector<ge::DataType> VALUE_TYPES = {ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT16,
+                                               ge::DT_INT32, ge::DT_INT64,  ge::DT_INT8,    ge::DT_UINT8, ge::DT_BOOL};
+const std::vector<ge::DataType> INDEX_TYPES = {ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                                               ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                                               ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                                               ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32};
 const std::vector<ge::Format> FORMATS(VALUE_TYPES.size(), ge::FORMAT_ND);
 const std::vector<ge::DataType> VALUE_TYPES_WITH_INT32_INDEX = {
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT16,
-    ge::DT_INT32, ge::DT_INT64, ge::DT_INT8, ge::DT_UINT8, ge::DT_BOOL,
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT16,
-    ge::DT_INT32, ge::DT_INT64, ge::DT_INT8, ge::DT_UINT8, ge::DT_BOOL};
+    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64,
+    ge::DT_INT8,  ge::DT_UINT8,  ge::DT_BOOL,    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_INT16, ge::DT_INT32,  ge::DT_INT64,   ge::DT_INT8,  ge::DT_UINT8,  ge::DT_BOOL};
 const std::vector<ge::DataType> SIZE_TYPES_WITH_INT32_INDEX(VALUE_TYPES_WITH_INT32_INDEX.size(), ge::DT_INT64);
 const std::vector<ge::Format> FORMATS_WITH_INT32_INDEX(VALUE_TYPES_WITH_INT32_INDEX.size(), ge::FORMAT_ND);
-}  // namespace
+} // namespace
 
 namespace ops {
 class IndexAiCore : public OpDef {
@@ -74,4 +71,4 @@ public:
 };
 
 OP_ADD(IndexAiCore);
-}  // namespace ops
+} // namespace ops

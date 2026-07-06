@@ -72,13 +72,11 @@ static ge::graphStatus GeluQuantInferDataType(gert::InferDataTypeContext* contex
         const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(DST_TYPE_ATTR_INDEX);
         if (pDstDtype != nullptr) {
             int32_t dstDtype = *pDstDtype;
-            OP_CHECK_IF(
-                dstDtype != DTYPE_INT8 && dstDtype != DTYPE_HIFLOAT8 && dstDtype != DTYPE_FLOAT8_E5M2 &&
-                    dstDtype != DTYPE_FLOAT8_E4M3,
-                OP_LOGE_FOR_INVALID_DTYPE(
-                    context->GetNodeName(), "dst_type",
-                    std::to_string(dstDtype), "DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(dstDtype != DTYPE_INT8 && dstDtype != DTYPE_HIFLOAT8 && dstDtype != DTYPE_FLOAT8_E5M2 &&
+                            dstDtype != DTYPE_FLOAT8_E4M3,
+                        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type", std::to_string(dstDtype),
+                                                  "DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3"),
+                        return ge::GRAPH_FAILED);
             inferDstType = static_cast<ge::DataType>(dstDtype);
         }
     }

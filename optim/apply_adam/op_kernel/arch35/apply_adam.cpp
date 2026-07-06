@@ -21,9 +21,10 @@
 
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void apply_adam(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR beta1_power, GM_ADDR beta2_power, GM_ADDR lr, GM_ADDR beta1,
-    GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void apply_adam(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR beta1_power,
+                                                 GM_ADDR beta2_power, GM_ADDR lr, GM_ADDR beta1, GM_ADDR beta2,
+                                                 GM_ADDR epsilon, GM_ADDR grad, GM_ADDR var_out, GM_ADDR workspace,
+                                                 GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAdamTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdamTilingData, tilingData, tiling);

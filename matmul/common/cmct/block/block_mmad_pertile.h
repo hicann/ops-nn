@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -36,10 +36,9 @@ struct PertileMmParam {
     uint64_t ndNum;
 };
 
-#define QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS                                                                 \
-    template <                                                                                                     \
-        class AType_, class LayoutA_, class BType_, class LayoutB_, class CType_, class LayoutC_, class BiasType_, \
-        class LayoutBias_, class L1TileShape_, class L0TileShape_, class TileCopyParam_>
+#define QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS                                                      \
+    template <class AType_, class LayoutA_, class BType_, class LayoutB_, class CType_, class LayoutC_, \
+              class BiasType_, class LayoutBias_, class L1TileShape_, class L0TileShape_, class TileCopyParam_>
 
 #define QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS                                                               \
     MmadCAccOnUb<>, AType_, LayoutA_, BType_, LayoutB_, CType_, LayoutC_, BiasType_, LayoutBias_, L1TileShape_, \
@@ -87,9 +86,9 @@ public:
 
 public:
     __aicore__ inline BlockMmadPertile();
-    __aicore__ inline void Init(
-        const TupleShape& l0Shape, const TupleTileShape& tileL12L0, AscendC::LocalTensor<CType>* ping,
-        AscendC::LocalTensor<CType>* pong, uint8_t l1BufNum = 2);
+    __aicore__ inline void Init(const TupleShape& l0Shape, const TupleTileShape& tileL12L0,
+                                AscendC::LocalTensor<CType>* ping, AscendC::LocalTensor<CType>* pong,
+                                uint8_t l1BufNum = 2);
     __aicore__ inline void operator()(const TupleShape& actualSingleShape, const AscendC::GlobalTensor<AType>& aGlobal,
                                       const AscendC::GlobalTensor<BType>& bGlobal);
     __aicore__ inline void UpdateParamsForNextProblem(const TupleShape& problemShape);
@@ -97,12 +96,12 @@ public:
     __aicore__ inline ~BlockMmadPertile();
 
 private:
-    __aicore__ inline void StepDifferentKL1(
-        const AscendC::GlobalTensor<AType>& aGlobal, const AscendC::GlobalTensor<BType>& bGlobal);
-    __aicore__ inline void StepSameKL1(
-        const AscendC::GlobalTensor<AType>& aGlobal, const AscendC::GlobalTensor<BType>& bGlobal);
-    __aicore__ inline void AicBaseMadProcess(
-        uint64_t kInner, uint64_t kAL1Offset, bool isTailAL1, uint64_t kBL1Offset, bool isTailBL1);
+    __aicore__ inline void StepDifferentKL1(const AscendC::GlobalTensor<AType>& aGlobal,
+                                            const AscendC::GlobalTensor<BType>& bGlobal);
+    __aicore__ inline void StepSameKL1(const AscendC::GlobalTensor<AType>& aGlobal,
+                                       const AscendC::GlobalTensor<BType>& bGlobal);
+    __aicore__ inline void AicBaseMadProcess(uint64_t kInner, uint64_t kAL1Offset, bool isTailAL1, uint64_t kBL1Offset,
+                                             bool isTailBL1);
     __aicore__ inline void CopyInA1Nd2Nz(const AscendC::GlobalTensor<AType>& aGlobal, uint64_t kOffset, bool isTailAL1);
     __aicore__ inline void CopyInB1Nd2Nz(const AscendC::GlobalTensor<BType>& bGlobal, uint64_t kOffset, bool isTailBL1);
     __aicore__ inline void CopyInA2(uint64_t mAL1Offset, uint64_t kAL1Offset, uint64_t kOffset, bool isTailAL1);
@@ -112,14 +111,14 @@ private:
     __aicore__ inline void WaitForVector(uint16_t crossPingPongID)
     {
         AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID);
-        AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(
-            QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID + QBMM_FLAG_ID_MAX);
+        AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID +
+                                                                     QBMM_FLAG_ID_MAX);
     }
     __aicore__ inline void NotifyVector(uint16_t crossPingPongID)
     {
         AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID);
         AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID +
-                                                                   QBMM_FLAG_ID_MAX);
+                                                                    QBMM_FLAG_ID_MAX);
     }
 
 public:
@@ -164,7 +163,7 @@ QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
 __aicore__ inline BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::BlockMmadPertile()
 {
     if ASCEND_IS_AIC {
-        #pragma unroll
+#pragma unroll
         for (uint8_t i = 0; i < MTE1_MTE2_EVENT_ID_NUM; ++i) {
             AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(i);
         }
@@ -243,13 +242,14 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
                              Align(Get<MNK_M>(actualSingleShape_), static_cast<uint64_t>(GetAicAivTaskRation()));
     if (mmParams_.fixpipeSplitN) {
         mmParams_.ndNum = Get<MNK_N>(actualSingleShape_) > UB_TWO_BANK_ELEMS_B32 ? 2 : 1; // 2: 2 ND
-        int64_t alignedNBase =
-            Get<MNK_N>(actualSingleShape_) > PER_BLOCK_SIZE ? PER_BLOCK_SIZE : AscendC::ONE_BLK_SIZE * mmParams_.ndNum;
+        int64_t alignedNBase = Get<MNK_N>(actualSingleShape_) > PER_BLOCK_SIZE ?
+                                   PER_BLOCK_SIZE :
+                                   AscendC::ONE_BLK_SIZE * mmParams_.ndNum;
         mmParams_.fixpipeN = Align(Get<MNK_N>(actualSingleShape_), static_cast<uint64_t>(alignedNBase));
     } else {
         mmParams_.ndNum = Get<MNK_N>(actualSingleShape_) > UB_SUB_BANK_ELEMS_B32 ? 2 : 1;
-        mmParams_.fixpipeN =
-            Align(Get<MNK_N>(actualSingleShape_), static_cast<uint64_t>(AscendC::BLOCK_CUBE) * mmParams_.ndNum);
+        mmParams_.fixpipeN = Align(Get<MNK_N>(actualSingleShape_),
+                                   static_cast<uint64_t>(AscendC::BLOCK_CUBE) * mmParams_.ndNum);
     }
     mmParams_.fixpipeN /= mmParams_.ndNum;
 }
@@ -280,7 +280,7 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
             isTailAL1 = (kOuter + maxKL1_) >= Get<MNK_K>(problemShape_);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(aL1BufferID_);
             CopyInA1Nd2Nz(aGlobal, kOuter, isTailAL1);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_); 
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_);
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_);
             for (uint64_t kInner = kOuter;
                  kInner < AscendC::Std::min(kOuter + maxKL1_, static_cast<uint64_t>(Get<MNK_K>(problemShape_)));
@@ -310,7 +310,7 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
                 isTailAL1 = (kInner + minKL1_) >= Get<MNK_K>(problemShape_);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(aL1BufferID_);
                 CopyInA1Nd2Nz(aGlobal, kInner, isTailAL1);
-                AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_); 
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(aL1BufferID_);
                 AicBaseMadProcess(kInner, 0UL, isTailAL1, kInner - kOuter, isTailBL1);
                 AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(aL1BufferID_);
@@ -381,27 +381,29 @@ __aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAM
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::CopyInA2(
-    uint64_t mAL1Offset, uint64_t kAL1Offset, uint64_t kOffset, bool isTailAL1)
+__aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::CopyInA2(uint64_t mAL1Offset,
+                                                                                             uint64_t kAL1Offset,
+                                                                                             uint64_t kOffset,
+                                                                                             bool isTailAL1)
 {
     uint64_t offsetAL1 = matmulParam_.CalcAL1Offset(mAL1Offset, kAL1Offset, isTailAL1);
     AscendC::LoadData2DParamsV2 loadData2dParams;
     matmulParam_.LoadData2dParamsA(loadData2dParams, kOffset, isTailAL1);
-    AscendC::LoadData(
-        l0PingPongID_ == 0 ? aL0Ping_ : aL0Pong_, al1Local_[l1BufferAOffset_[aL1BufferID_] + offsetAL1],
-        loadData2dParams);
+    AscendC::LoadData(l0PingPongID_ == 0 ? aL0Ping_ : aL0Pong_, al1Local_[l1BufferAOffset_[aL1BufferID_] + offsetAL1],
+                      loadData2dParams);
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
-__aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::CopyInB2(
-    uint64_t nBL1Offset, uint64_t kBL1Offset, uint64_t kOffset, bool isTailBL1)
+__aicore__ inline void BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::CopyInB2(uint64_t nBL1Offset,
+                                                                                             uint64_t kBL1Offset,
+                                                                                             uint64_t kOffset,
+                                                                                             bool isTailBL1)
 {
     uint64_t offsetBL1 = matmulParam_.CalcBL1Offset(nBL1Offset, kBL1Offset, isTailBL1);
     AscendC::LoadData2DParamsV2 loadData2dParams;
     matmulParam_.LoadData2dParamsB(loadData2dParams, kOffset, isTailBL1);
-    AscendC::LoadData(
-        l0PingPongID_ == 0 ? bL0Ping_ : bL0Pong_, bL1Local_[l1BufferBOffset_[bL1BufferID_] + offsetBL1],
-        loadData2dParams);
+    AscendC::LoadData(l0PingPongID_ == 0 ? bL0Ping_ : bL0Pong_, bL1Local_[l1BufferBOffset_[bL1BufferID_] + offsetBL1],
+                      loadData2dParams);
 }
 
 QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
@@ -462,8 +464,8 @@ QBMM_BLOCK_MMAD_PERTILE_CLASS_LOCAL_PARAMS
 __aicore__ inline BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::~BlockMmadPertile()
 {
     if ASCEND_IS_AIC {
-        #pragma unroll
-        for(uint8_t i = 0; i < MTE1_MTE2_EVENT_ID_NUM; ++i) {
+#pragma unroll
+        for (uint8_t i = 0; i < MTE1_MTE2_EVENT_ID_NUM; ++i) {
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(i);
         }
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(0 + QBMM_CUBE_SYNC_MTE1_FLAG);
@@ -475,4 +477,3 @@ __aicore__ inline BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::~
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

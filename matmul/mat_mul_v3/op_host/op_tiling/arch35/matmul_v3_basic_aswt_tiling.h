@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_basic_aswt_tiling.h
  * \brief
@@ -22,8 +21,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 class MatMulV3BasicAswtTiling : public MatMulV3AswTiling {
 public:
-    MatMulV3BasicAswtTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3AswTiling(context, cfg) {};
+    MatMulV3BasicAswtTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3AswTiling(context, cfg){};
     ~MatMulV3BasicAswtTiling() override = default;
     void CheckTensorApiSupport();
 
@@ -34,10 +32,10 @@ protected:
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
     void DoBL1FullLoad();
     void DoAL1FullLoad();
-    MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
-    MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
-    MatMulV3ApiLevel apiLevel_ {MatMulV3ApiLevel::BASIC_LEVEL};
-    MatMulV3Model model_ {MatMulV3Model::BASIC};
+    MatMulV3FullLoad fullLoad_{MatMulV3FullLoad::NONE_FULL_LOAD};
+    MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
+    MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::BASIC_LEVEL};
+    MatMulV3Model model_{MatMulV3Model::BASIC};
 
 private:
     void ResetFullLoadLoadBalance();
@@ -47,6 +45,5 @@ private:
     bool CheckBL1FullLoad() const;
     bool CheckAL1FullLoad() const;
 };
-} // namespace matmul_v3
+} // namespace matmul_v3_advanced
 } // namespace optiling
-

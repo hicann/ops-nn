@@ -22,20 +22,20 @@ namespace l0op {
 
 OP_TYPE_REGISTER(QuantBatchMatmul);
 
-const aclTensor* QuantBatchMatmul(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, const bool adjX1,
-    const bool adjX2, aclOpExecutor* executor)
+const aclTensor* QuantBatchMatmul(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                  const aclTensor* deqScale, const bool adjX1, const bool adjX2,
+                                  aclOpExecutor* executor)
 {
     L0_DFX(QuantBatchMatmul, x1, x2, deqScale, bias, adjX1, adjX2);
     auto quant_mm_out = executor->AllocTensor(DataType::DT_FLOAT16, Format::FORMAT_ND, Format::FORMAT_ND);
     // 当前暂时不支持input size和hiddenSize两个参数的设置
-    auto ret = INFER_SHAPE(
-        QuantBatchMatmul, OP_INPUT(x1, x2, deqScale, bias), OP_OUTPUT(quant_mm_out), OP_ATTR(adjX1, adjX2, -1L, 0L));
+    auto ret = INFER_SHAPE(QuantBatchMatmul, OP_INPUT(x1, x2, deqScale, bias), OP_OUTPUT(quant_mm_out),
+                           OP_ATTR(adjX1, adjX2, -1L, 0L));
     OP_CHECK_INFERSHAPE(ret != ACLNN_SUCCESS, return nullptr, "QuantBatchMatmul InferShape failed.");
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        QuantBatchMatmul, OP_INPUT(x1, x2, deqScale, bias), OP_OUTPUT(quant_mm_out), OP_ATTR(adjX1, adjX2, -1L, 0L));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        ret != ACLNN_SUCCESS, return nullptr, "QuantBatchMatmul ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantBatchMatmul, OP_INPUT(x1, x2, deqScale, bias), OP_OUTPUT(quant_mm_out),
+                                      OP_ATTR(adjX1, adjX2, -1L, 0L));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
+                                         "QuantBatchMatmul ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return quant_mm_out;
 };
 } // namespace l0op

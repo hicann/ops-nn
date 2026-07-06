@@ -20,21 +20,14 @@
 
 using namespace std;
 
-extern "C" void ctc_loss_v3_grad(
-    GM_ADDR grad_out, GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths, GM_ADDR target_lengths,
-    GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR grad, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" void ctc_loss_v3_grad(GM_ADDR grad_out, GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths,
+                                 GM_ADDR target_lengths, GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR grad,
+                                 GM_ADDR workspace, GM_ADDR tiling);
 
-class CTCLossV3GradKernel : public testing::Test
-{
+class CTCLossV3GradKernel : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "CTCLossV3Grad Kernel SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "CTCLossV3Grad Kernel TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "CTCLossV3Grad Kernel SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "CTCLossV3Grad Kernel TearDown\n" << endl; }
 };
 
 TEST_F(CTCLossV3GradKernel, ctc_loss_v3_grad_case_float_0)
@@ -82,9 +75,8 @@ TEST_F(CTCLossV3GradKernel, ctc_loss_v3_grad_case_float_0)
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
-    ICPU_RUN_KF(
-        ctc_loss_v3_grad, blockDim, gradoutput, logProbs, targets, inputLengths, targetLength, loss, logAlpha, grad,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(ctc_loss_v3_grad, blockDim, gradoutput, logProbs, targets, inputLengths, targetLength, loss, logAlpha,
+                grad, workspace, (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(gradoutput);
     AscendC::GmFree(logProbs);
     AscendC::GmFree(targets);

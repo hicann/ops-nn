@@ -26,8 +26,7 @@ using namespace Index;
 
 class IndexSimtTiling : public IndexTilingCommon {
 public:
-    explicit IndexSimtTiling(gert::TilingContext* context) : IndexTilingCommon(context)
-    {}
+    explicit IndexSimtTiling(gert::TilingContext* context) : IndexTilingCommon(context) {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

@@ -18,8 +18,7 @@ TilingContextFaker& TilingContextFaker::operator=(TilingContextFaker&& faker)
     return *this;
 }
 
-TilingContextFaker::TilingContextFaker(TilingContextFaker&& faker) : KernelRunContextHolder(std::move(faker))
-{}
+TilingContextFaker::TilingContextFaker(TilingContextFaker&& faker) : KernelRunContextHolder(std::move(faker)) {}
 
 TilingContextFaker& TilingContextFaker::SetOpType(const std::string opType)
 {
@@ -36,8 +35,8 @@ TilingContextFaker& TilingContextFaker::NodeIoNum(size_t inputNum, size_t output
     return *this;
 }
 
-TilingContextFaker& TilingContextFaker::IrInstanceNum(
-    const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum)
+TilingContextFaker& TilingContextFaker::IrInstanceNum(const std::vector<uint32_t>& inputInstanceNum,
+                                                      const std::vector<uint32_t>& outputInstanceNum)
 {
     inputInstanceNum_ = inputInstanceNum;
     outputInstanceNum_ = outputInstanceNum;
@@ -56,8 +55,8 @@ TilingContextFaker& TilingContextFaker::IrInstanceNum(const std::vector<uint32_t
     return *this;
 }
 
-TilingContextFaker& TilingContextFaker::NodeInputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
+TilingContextFaker& TilingContextFaker::NodeInputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                                    ge::Format storageFormat)
 {
     int32_t lowTensorIdx = 0;
     int32_t highTensorIdx = 0;
@@ -90,8 +89,8 @@ TilingContextFaker& TilingContextFaker::NodeInputTd(
     return *this;
 }
 
-TilingContextFaker& TilingContextFaker::NodeOutputTd(
-    int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat)
+TilingContextFaker& TilingContextFaker::NodeOutputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                                     ge::Format storageFormat)
 {
     // 暂时没有输出TensorList的场景
     while (outputTensors_.size() <= index) {
@@ -264,7 +263,7 @@ TilingContextFaker& TilingContextFaker::DeterministicInfo(int32_t deterministicI
 TilingContextFaker& TilingContextFaker::ConstInput(
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& constTensors)
 {
-    for (auto& constPair: constTensors) {
+    for (auto& constPair : constTensors) {
         while (inputTensors_.size() <= constPair.first) {
             inputTensors_.emplace_back(Tensor());
         }

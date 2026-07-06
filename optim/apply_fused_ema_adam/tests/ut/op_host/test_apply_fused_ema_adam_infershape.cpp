@@ -14,28 +14,22 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/apply_fused_ema_adam_proto.h"
 
-std::vector<int64_t> ToVectorForFused(const gert::Shape& shape) {
-  size_t shape_size = shape.GetDimNum();
-  std::vector<int64_t> shape_vec(shape_size, 0);
+std::vector<int64_t> ToVectorForFused(const gert::Shape& shape)
+{
+    size_t shape_size = shape.GetDimNum();
+    std::vector<int64_t> shape_vec(shape_size, 0);
 
-  for (size_t i = 0; i < shape_size; i++) {
-    shape_vec[i] = shape.GetDim(i);
-  }
-  return shape_vec;
+    for (size_t i = 0; i < shape_size; i++) {
+        shape_vec[i] = shape.GetDim(i);
+    }
+    return shape_vec;
 }
 
-class ApplyFusedEmaAdam : public testing::Test
-{
+class ApplyFusedEmaAdam : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyFusedEmaAdam Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyFusedEmaAdam Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyFusedEmaAdam Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyFusedEmaAdam Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(ApplyFusedEmaAdam, apply_fused_ema_dam_infershape_case0)
@@ -63,15 +57,14 @@ TEST_F(ApplyFusedEmaAdam, apply_fused_ema_dam_infershape_case0)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
-                           {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
-                           {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
-                           {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
-                           {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
-                           {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"bias_correction", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
+                      .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
+                                  {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
+                                  {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
+                                  {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
+                                  {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"bias_correction", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
@@ -99,23 +92,23 @@ TEST_F(ApplyFusedEmaAdam, apply_fused_ema_dam_infershape_bf16_case0)
         ge::DataType input_ref = ge::DT_BF16;
         ge::DataType input_step_ref = ge::DT_INT64;
         ge::DataType output_ref = ge::DT_BF16;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .NodeIoNum(6, 4)
-                .IrInstanceNum({1, 1, 1, 1, 1, 1})
-                .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_ref, &input_ref, &input_ref, &input_ref, &input_ref, &input_step_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &output_ref, &output_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .NodeIoNum(6, 4)
+                                  .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                                  .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes(
+                                      {&input_ref, &input_ref, &input_ref, &input_ref, &input_ref, &input_step_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &output_ref, &output_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

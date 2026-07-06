@@ -31,18 +31,11 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class L2LossDavidTiling : public testing::Test
-{
+class L2LossDavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "L2LossDavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "L2LossDavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "L2LossDavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "L2LossDavidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -68,7 +61,7 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-static void DoL2LossTilingCase(std::initializer_list<int64_t>& inputShape, std::initializer_list<int64_t>& outputShape, 
+static void DoL2LossTilingCase(std::initializer_list<int64_t>& inputShape, std::initializer_list<int64_t>& outputShape,
                                ge::DataType inputDtype, std::string& expectStr)
 {
     // init platform
@@ -76,7 +69,7 @@ static void DoL2LossTilingCase(std::initializer_list<int64_t>& inputShape, std::
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    std::map<std::string, std::string> soc_version_infos = { { "Short_SoC_version", "Ascend950" } };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     InitPlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics);
 
     Ops::Base::ReduceOpCompileInfo compileInfo;
@@ -142,8 +135,8 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling1)
     std::initializer_list<int64_t> inputShape = {2048, 1, 48};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 1 55 1792 55 1 44032 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 1 55 1792 55 1 44032 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 "
+                            "0 1 1 0 0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
 
@@ -153,8 +146,8 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling2)
     std::initializer_list<int64_t> inputShape = {2048, 1, 48};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 1 55 1792 55 1 26624 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 1 55 1792 55 1 26624 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 "
+                            "0 1 1 0 0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT16 /*inputdtype*/, expectStr);
 }
 
@@ -164,8 +157,8 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling3)
     std::initializer_list<int64_t> inputShape = {2048, 1, 48};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 1 55 1792 55 1 26624 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 1 55 1792 55 1 26624 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 "
+                            "0 1 1 0 0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_BF16 /*inputdtype*/, expectStr);
 }
 
@@ -175,8 +168,8 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling4)
     std::initializer_list<int64_t> inputShape = {32, 48};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 1 1 1 1 1 44032 4191350054637797440 1 1536 0 0 0 0 0 0 0 1536 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 1 1 1 1 1 44032 4191350054637797440 1 1536 0 0 0 0 0 0 0 1536 1 0 0 0 0 0 0 0 1 1 0 "
+                            "0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
 
@@ -186,8 +179,8 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling5)
     std::initializer_list<int64_t> inputShape = {32, 48, 32, 32};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 3 164 9600 55 1 44032 3831062084448157760 1 1572864 0 0 0 0 0 0 0 1572864 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 3 164 9600 55 1 44032 3831062084448157760 1 1572864 0 0 0 0 0 0 0 1572864 1 0 0 0 0 "
+                            "0 0 0 1 1 0 0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
 
@@ -197,22 +190,23 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling6)
     std::initializer_list<int64_t> inputShape = {32, 48, 32, 32, 1};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 3 164 9600 55 1 44032 3831062084448157760 1 1572864 0 0 0 0 0 0 0 1572864 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 3 164 9600 55 1 44032 3831062084448157760 1 1572864 0 0 0 0 0 0 0 1572864 1 0 0 0 0 "
+                            "0 0 0 1 1 0 0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
 
 TEST_F(L2LossDavidTiling, l2_loss_david_tiling7)
 {
     // A
-    std::initializer_list<int64_t> inputShape = {88,};
+    std::initializer_list<int64_t> inputShape = {
+        88,
+    };
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 1 1 1 1 1 44032 4339832369755193408 1 88 0 0 0 0 0 0 0 88 1 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 ";
+    std::string expectStr = "1 1 1 1 1 1 1 1 44032 4339832369755193408 1 88 0 0 0 0 0 0 0 88 1 0 0 0 0 0 0 0 1 1 0 0 0 "
+                            "0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
-
 
 TEST_F(L2LossDavidTiling, l2_loss_david_tiling8)
 {
@@ -220,7 +214,7 @@ TEST_F(L2LossDavidTiling, l2_loss_david_tiling8)
     std::initializer_list<int64_t> inputShape = {};
     std::initializer_list<int64_t> outputShape = {};
 
-    std::string expectStr =
-        "1 1 1 1 1 1 1 1 33792 4575657221408424000 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
+    std::string
+        expectStr = "1 1 1 1 1 1 1 1 33792 4575657221408424000 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 ";
     DoL2LossTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }

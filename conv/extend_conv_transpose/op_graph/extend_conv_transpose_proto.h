@@ -25,7 +25,8 @@ namespace ge {
 *@par Inputs:
  * @li input_size: A tensor of type int32 or int64. An integer vector
  * representing the shape of input.
- * @li x: A tensor of the following types, DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT8. Only support DT_FLOAT16 and DT_INT8 right now.
+ * @li x: A tensor of the following types, DT_FLOAT16, DT_FLOAT, DT_BF16, DT_INT8. Only support DT_FLOAT16 and DT_INT8
+right now.
  * The format is NCDHW.
  * @li filter: A 5D tensor.
  * The format is NCDHW，and NDHWC.
@@ -72,7 +73,7 @@ namespace ge {
  * Specify the data format of the x and y.
  * @li output_padding: Optional. The size will be added in the output shape.
  * Defaults to [0, 0, 0, 0, 0]. The N and C dimensions must be 0.
- * @li offset_x: Optional. Defaults to 0. Reserved. 
+ * @li offset_x: Optional. Defaults to 0. Reserved.
  * @li fusion_mode: Optional. Only support 0 or 1, Indicates whether relu is enabled for the output. Defaults to 0.
 * If 0, relu is disable for the output.
 * @li y_quant_mode: Optional. Defaults to 0. Reserved. \n

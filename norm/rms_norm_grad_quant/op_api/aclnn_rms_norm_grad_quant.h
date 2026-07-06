@@ -38,11 +38,12 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
-    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
-    const aclTensor* scalesX, const aclTensor* offsetXOptional,
-    const char* quantMode, bool divMode,
-    aclTensor* dxOut, aclTensor* dgammaOut, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(const aclTensor* dy, const aclTensor* x,
+                                                            const aclTensor* rstd, const aclTensor* gamma,
+                                                            const aclTensor* scalesX, const aclTensor* offsetXOptional,
+                                                            const char* quantMode, bool divMode, aclTensor* dxOut,
+                                                            aclTensor* dgammaOut, uint64_t* workspaceSize,
+                                                            aclOpExecutor** executor);
 
 /**
  * @brief aclnnRmsNormGradQuant的第二段接口，用于执行计算。
@@ -53,8 +54,8 @@ ACLNN_API aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnRmsNormGradQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnRmsNormGradQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                            aclrtStream stream);
 
 #ifdef __cplusplus
 }

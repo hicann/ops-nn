@@ -17,7 +17,7 @@
 namespace ops {
 class LeakyRelu : public OpDef {
 public:
-    explicit LeakyRelu(const char *name) : OpDef(name)
+    explicit LeakyRelu(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -40,4 +40,4 @@ public:
     }
 };
 OP_ADD(LeakyRelu);
-}  // namespace ops
+} // namespace ops

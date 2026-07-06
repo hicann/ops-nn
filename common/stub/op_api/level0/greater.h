@@ -15,9 +15,7 @@
 
 namespace l0op {
 
-const aclTensor *Greater(const aclTensor *self,
-                     const aclTensor *other,
-                     aclOpExecutor *executor);
+const aclTensor* Greater(const aclTensor* self, const aclTensor* other, aclOpExecutor* executor);
 
 }
 

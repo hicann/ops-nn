@@ -58,8 +58,8 @@ __aicore__ inline void PipeVToS()
     WaitFlag<HardEvent::V_S>(eventID);
 }
 
-__aicore__ inline uint64_t ComputeViewedRowOffset(
-    uint64_t linearIndex, uint64_t firstDimStrideRows, uint64_t varStride0Elements, uint64_t scatterLength)
+__aicore__ inline uint64_t ComputeViewedRowOffset(uint64_t linearIndex, uint64_t firstDimStrideRows,
+                                                  uint64_t varStride0Elements, uint64_t scatterLength)
 {
     if (firstDimStrideRows == 0) {
         return linearIndex * scatterLength;
@@ -71,9 +71,8 @@ __aicore__ inline uint64_t ComputeViewedRowOffset(
 
 // 统一处理 view-stride0 与连续两条路径的输出偏移计算。
 template <bool isViewStride0>
-__aicore__ inline uint64_t ResolveOutOffset(
-    uint64_t linearIndex, uint64_t scatterLength, uint64_t firstDimStrideRows, uint64_t varStride0Elements,
-    uint64_t tileOffsetElements)
+__aicore__ inline uint64_t ResolveOutOffset(uint64_t linearIndex, uint64_t scatterLength, uint64_t firstDimStrideRows,
+                                            uint64_t varStride0Elements, uint64_t tileOffsetElements)
 {
     if constexpr (isViewStride0) {
         return ComputeViewedRowOffset(linearIndex, firstDimStrideRows, varStride0Elements, scatterLength) +
@@ -84,8 +83,8 @@ __aicore__ inline uint64_t ResolveOutOffset(
 }
 
 // 计算 block 分布参数
-__aicore__ inline void CalcBlockDistribution(
-    uint64_t blockIdx, uint64_t frontNum, uint64_t frontRow, uint64_t tailRow, uint64_t& computeRow, uint64_t& start)
+__aicore__ inline void CalcBlockDistribution(uint64_t blockIdx, uint64_t frontNum, uint64_t frontRow, uint64_t tailRow,
+                                             uint64_t& computeRow, uint64_t& start)
 {
     if (blockIdx >= frontNum) {
         computeRow = tailRow;
@@ -96,9 +95,10 @@ __aicore__ inline void CalcBlockDistribution(
     }
 }
 
-__aicore__ inline void ComputeLinearIndexFromIndices(
-    LocalTensor<int>& indicesLocal, LocalTensor<int>& indicesOriginLocal, LocalTensor<int>& addTmpLocal,
-    LocalTensor<int>& rangeLocal, const uint64_t* indicesMask, uint64_t indexDim, uint64_t rows)
+__aicore__ inline void ComputeLinearIndexFromIndices(LocalTensor<int>& indicesLocal,
+                                                     LocalTensor<int>& indicesOriginLocal,
+                                                     LocalTensor<int>& addTmpLocal, LocalTensor<int>& rangeLocal,
+                                                     const uint64_t* indicesMask, uint64_t indexDim, uint64_t rows)
 {
     int32_t mulValue = static_cast<int32_t>(indexDim * sizeof(int));
     Duplicate<int>(indicesLocal, 0, rows);
@@ -122,19 +122,19 @@ __aicore__ inline void ComputeLinearIndexFromIndices(
 }
 
 template <typename T, bool isViewStride0>
-__aicore__ inline void DoScatterCopy(
-    LocalTensor<T>& updateLocal, GlobalTensor<T>& updatesGm, GlobalTensor<T>& outputGm, uint64_t gmOffset,
-    uint64_t tileLength, int64_t linearIndex, uint64_t tileIdx, uint64_t scatterTileLength, uint64_t firstDimStrideRows,
-    uint64_t varStride0Elements, uint64_t scatterLength)
+__aicore__ inline void DoScatterCopy(LocalTensor<T>& updateLocal, GlobalTensor<T>& updatesGm, GlobalTensor<T>& outputGm,
+                                     uint64_t gmOffset, uint64_t tileLength, int64_t linearIndex, uint64_t tileIdx,
+                                     uint64_t scatterTileLength, uint64_t firstDimStrideRows,
+                                     uint64_t varStride0Elements, uint64_t scatterLength)
 {
     DataCopyExtParams updateCopyParams{1, static_cast<uint32_t>(tileLength * sizeof(T)), 0, 0, 0};
     DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
     DataCopyPad(updateLocal, updatesGm[gmOffset], updateCopyParams, padParams);
     PipeMte2ToS();
 
-    uint64_t outOffset = ResolveOutOffset<isViewStride0>(
-        static_cast<uint64_t>(linearIndex), scatterLength, firstDimStrideRows, varStride0Elements,
-        tileIdx * scatterTileLength);
+    uint64_t outOffset = ResolveOutOffset<isViewStride0>(static_cast<uint64_t>(linearIndex), scatterLength,
+                                                         firstDimStrideRows, varStride0Elements,
+                                                         tileIdx * scatterTileLength);
     DataCopyExtParams outParams{1, static_cast<uint32_t>(tileLength * sizeof(T)), 0, 0, 0};
     DataCopyPad(outputGm[outOffset], updateLocal, outParams);
     PipeMte3ToS();

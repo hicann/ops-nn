@@ -93,7 +93,8 @@ __aicore__ inline void PIPE_V_MTE3()
 }
 
 // count <= 64 * 256(16K)
-__aicore__ inline void ReduceMaxCustom(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, int64_t count)
+__aicore__ inline void ReduceMaxCustom(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                       int64_t count)
 {
     int64_t repeatTimes = count >> LOG2_64;
     int64_t tailCount = count & MOD_64_MASK;
@@ -107,7 +108,8 @@ __aicore__ inline void ReduceMaxCustom(const LocalTensor<float>& dstLocal, const
         Max(srcLocal, srcLocal[repeatTimes << LOG2_64], srcLocal, tailCount, 1, repeatParams);
         PipeBarrier<PIPE_V>();
     }
-    WholeReduceMax(dstLocal, srcLocal, repeatTimes > 0 ? NUM_PER_REP_FP32 : count, 1, 0, 1, 0, ReduceOrder::ORDER_ONLY_VALUE);
+    WholeReduceMax(dstLocal, srcLocal, repeatTimes > 0 ? NUM_PER_REP_FP32 : count, 1, 0, 1, 0,
+                   ReduceOrder::ORDER_ONLY_VALUE);
 }
 
 template <typename T>
@@ -119,7 +121,8 @@ __aicore__ inline void CopyOut(const GlobalTensor<T>& dst, const LocalTensor<T>&
 }
 
 template <typename T>
-__aicore__ inline void CopyInAndCast(const LocalTensor<float>& dst, const GlobalTensor<T>& src, int64_t len, int64_t midOffset)
+__aicore__ inline void CopyInAndCast(const LocalTensor<float>& dst, const GlobalTensor<T>& src, int64_t len,
+                                     int64_t midOffset)
 {
     DataCopyExtParams copyInParams{1, static_cast<uint32_t>(len * sizeof(T)), 0, 0, 0};
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -137,4 +140,4 @@ __aicore__ inline void CopyInAndCast(const LocalTensor<float>& dst, const Global
 
 } // namespace AdaLayerNormNS
 
-#endif  // ADA_LAYER_NORM_UTIL_H
+#endif // ADA_LAYER_NORM_UTIL_H

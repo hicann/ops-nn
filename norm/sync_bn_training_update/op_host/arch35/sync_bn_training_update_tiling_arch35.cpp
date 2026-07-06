@@ -36,12 +36,10 @@ constexpr float DEFAULT_MOMENTUM = 0.1;
 ge::graphStatus SyncBNTrainingUpdateTiling::SetTilingData()
 {
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
-    OP_CHECK_IF(
-        currentWorkspace == nullptr,
-        OP_LOGE(tilingContext, "GetWorkspaceSizes failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(currentWorkspace == nullptr, OP_LOGE(tilingContext, "GetWorkspaceSizes failed"),
+                return ge::GRAPH_FAILED);
 
-    fe::PlatFormInfos *platformInfoPtr = tilingContext->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = tilingContext->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     currentWorkspace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -78,30 +76,31 @@ ge::graphStatus SyncBNTrainingUpdateTiling::CheckTensorDtype()
     runningMeanDtype = runningMeanDesc->GetDataType();
     runningMeanUpdateDtype = runningMeanUpdateDesc->GetDataType();
 
-    OP_LOGD(opName, "SyncBNTrainingUpdateTiling CheckTensorDtype proc meanDtype meanDtype[%s], runningMeanDtype[%s], runningMeanUpdateDtype[%s]",
-        ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str(),
-        ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str());
+    OP_LOGD(opName,
+            "SyncBNTrainingUpdateTiling CheckTensorDtype proc meanDtype meanDtype[%s], runningMeanDtype[%s], "
+            "runningMeanUpdateDtype[%s]",
+            ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str());
 
-    OP_CHECK_IF(
-        meanDtype != ge::DT_FLOAT16 && meanDtype != ge::DT_BF16 && meanDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "float16, bfloat16 and float"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(meanDtype != ge::DT_FLOAT16 && meanDtype != ge::DT_BF16 && meanDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(),
+                                          "float16, bfloat16 and float"),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         runningMeanDtype != ge::DT_FLOAT16 && runningMeanDtype != ge::DT_BF16 && runningMeanDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName, "running_mean", ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str(),
-            "float16, bfloat16 and float"),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "running_mean",
+                                  ge::TypeUtils::DataTypeToSerialString(runningMeanDtype).c_str(),
+                                  "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        runningMeanUpdateDtype != ge::DT_FLOAT16 && runningMeanUpdateDtype != ge::DT_BF16 &&
-            runningMeanUpdateDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName, "running_mean_update", ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str(),
-            "float16, bfloat16 and float"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(runningMeanUpdateDtype != ge::DT_FLOAT16 && runningMeanUpdateDtype != ge::DT_BF16 &&
+                    runningMeanUpdateDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "running_mean_update",
+                                          ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype).c_str(),
+                                          "float16, bfloat16 and float"),
+                return ge::GRAPH_FAILED);
 
     if (meanDtype != runningMeanDtype || meanDtype != runningMeanUpdateDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(meanDtype) + ", " +
@@ -132,14 +131,14 @@ ge::graphStatus SyncBNTrainingUpdateTiling::RunTiling()
 {
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
     OP_CHECK_IF(CheckTensorDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "CheckTensorDtype failed"),
-        return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus res = ge::GRAPH_FAILED;
     tiling = tilingContext->GetTilingData<SyncBNTrainingUpdateTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
 
     OP_LOGD(opName, "SyncBNTrainingUpdateTiling RunTiling proc meanDtype is[%s]",
-        ge::TypeUtils::DataTypeToSerialString(this->meanDtype).c_str());
+            ge::TypeUtils::DataTypeToSerialString(this->meanDtype).c_str());
     if (this->meanDtype == ge::DT_FLOAT16) {
         res = elewiseBaseTiling.DoTiling<SyncBNTrainingUpdateDag<half>::OpDag>(tiling->baseTiling);
     } else if (this->meanDtype == ge::DT_FLOAT) {
@@ -147,13 +146,12 @@ ge::graphStatus SyncBNTrainingUpdateTiling::RunTiling()
     } else if (this->meanDtype == ge::DT_BF16) {
         res = elewiseBaseTiling.DoTiling<SyncBNTrainingUpdateDag<bfloat16_t>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "float16, bfloat16 and float");
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "mean", ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(),
+                                  "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "DoTiling failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "DoTiling failed"), return ge::GRAPH_FAILED);
 
     SetAttr();
     ge::graphStatus result = SetTilingData();
@@ -163,7 +161,7 @@ ge::graphStatus SyncBNTrainingUpdateTiling::RunTiling()
     return result;
 }
 
-ge::graphStatus Tiling4SyncBNTrainingUpdate(gert::TilingContext *context)
+ge::graphStatus Tiling4SyncBNTrainingUpdate(gert::TilingContext* context)
 {
     OP_LOGD(context, "Tiling4SyncBNTrainingUpdate is running");
     auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(context->GetCompileInfo());
@@ -172,10 +170,12 @@ ge::graphStatus Tiling4SyncBNTrainingUpdate(gert::TilingContext *context)
     return SyncBNTrainingUpdateTiling.RunTiling();
 }
 
-ge::graphStatus TilingPrepare4SyncBNTrainingUpdate([[maybe_unused]] gert::TilingParseContext *context)
+ge::graphStatus TilingPrepare4SyncBNTrainingUpdate([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(SyncBNTrainingUpdate).Tiling(Tiling4SyncBNTrainingUpdate).TilingParse<ElewiseCompileInfo>(TilingPrepare4SyncBNTrainingUpdate);
-}  // namespace optiling
+IMPL_OP_OPTILING(SyncBNTrainingUpdate)
+    .Tiling(Tiling4SyncBNTrainingUpdate)
+    .TilingParse<ElewiseCompileInfo>(TilingPrepare4SyncBNTrainingUpdate);
+} // namespace optiling

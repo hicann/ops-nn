@@ -24,8 +24,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -39,7 +39,8 @@ static const gert::Shape g_vec_1_shape = {1};
 
 // 0-dim scalar tensors are treated as 1-dim with 1 element for Tiling.
 // The inferShape preserves the original 0-dim shape, so output shape matches input.
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -58,11 +59,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-                                         int64_t& totalIdx,
-                                         ge::DataType& dataType,
-                                         float& lambd,
-                                         float& bias)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalIdx, ge::DataType& dataType,
+                                         float& lambd, float& bias)
 {
     auto input = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, input);
@@ -72,11 +70,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, output);
     auto outShape = EnsureNotScalar(output->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputShape.GetShapeSize() != outShape.GetShapeSize(),
-        OP_LOGE(context, "Shrink: shape size mismatch: input=%ld, out=%ld",
-                inputShape.GetShapeSize(), outShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape.GetShapeSize() != outShape.GetShapeSize(),
+                OP_LOGE(context, "Shrink: shape size mismatch: input=%ld, out=%ld", inputShape.GetShapeSize(),
+                        outShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalIdx = inputShape.GetShapeSize();
 
@@ -110,8 +107,8 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static int64_t CalcUbFactor(int64_t totalIdx, ge::DataType dataType, uint64_t ubSize,
-                            int64_t ubBlockSize, uint64_t useDoubleBuffer)
+static int64_t CalcUbFactor(int64_t totalIdx, ge::DataType dataType, uint64_t ubSize, int64_t ubBlockSize,
+                            uint64_t useDoubleBuffer)
 {
     int64_t typeSize = (dataType == ge::DT_FLOAT16) ? 2 : 4;
     int64_t computeAlignment = 256 / typeSize;
@@ -148,31 +145,23 @@ static ge::graphStatus ShrinkTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalIdx;
     ge::DataType dataType;
     float lambd;
     float bias;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalIdx, dataType, lambd, bias) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType, lambd, bias) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ShrinkTilingData* tiling = context->GetTilingData<ShrinkTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ShrinkTilingData), 0, sizeof(ShrinkTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ShrinkTilingData), 0, sizeof(ShrinkTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = totalIdx;
     tiling->blockFactor = CeilDiv(totalIdx, coreNum);
@@ -199,8 +188,6 @@ static ge::graphStatus TilingParseForShrink([[maybe_unused]] gert::TilingParseCo
 
 struct ShrinkCompileInfo {};
 
-IMPL_OP_OPTILING(Shrink)
-    .Tiling(ShrinkTilingFunc)
-    .TilingParse<ShrinkCompileInfo>(TilingParseForShrink);
+IMPL_OP_OPTILING(Shrink).Tiling(ShrinkTilingFunc).TilingParse<ShrinkCompileInfo>(TilingParseForShrink);
 
 } // namespace optiling

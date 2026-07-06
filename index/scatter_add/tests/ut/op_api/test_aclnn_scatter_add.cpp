@@ -25,23 +25,23 @@ protected:
     static void TearDownTestCase() { cout << "Scatter Add Test TearDown" << endl; }
 
 public:
-    aclTensor *CreateAclTensor(vector<int64_t> view_shape, vector<int64_t> stride,
-                               int64_t offset,vector<int64_t> storage_shape, aclDataType dataType=ACL_FLOAT) {
-    return aclCreateTensor(view_shape.data(), view_shape.size(), dataType, stride.data(), offset,
-                           ACL_FORMAT_ND, storage_shape.data(), storage_shape.size(), nullptr);
-  }
+    aclTensor* CreateAclTensor(vector<int64_t> view_shape, vector<int64_t> stride, int64_t offset,
+                               vector<int64_t> storage_shape, aclDataType dataType = ACL_FLOAT)
+    {
+        return aclCreateTensor(view_shape.data(), view_shape.size(), dataType, stride.data(), offset, ACL_FORMAT_ND,
+                               storage_shape.data(), storage_shape.size(), nullptr);
+    }
 };
 
 TEST_F(l2_scatter_add_test, case_1)
 {
     auto self_desc = TensorDesc({3, 3}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
-        .Precision(0.0001, 0.0001);
+                         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
+                         .Precision(0.0001, 0.0001);
     int64_t dim = 0;
-    auto index_desc = TensorDesc({1,3}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int>{0, 1, 2});
+    auto index_desc = TensorDesc({1, 3}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int>{0, 1, 2});
     auto src_desc = TensorDesc({3, 4}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+                        .Value(vector<double>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
     auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(self_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -54,8 +54,7 @@ TEST_F(l2_scatter_add_test, case_1)
 // 空tensor
 TEST_F(l2_scatter_add_test, case_2)
 {
-    auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Precision(0.0001, 0.0001);
+    auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     int64_t dim = 0;
     auto index_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
     auto src_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -71,8 +70,7 @@ TEST_F(l2_scatter_add_test, case_2)
 // checkNotNull self index src
 TEST_F(l2_scatter_add_test, case_3)
 {
-    auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Precision(0.0001, 0.0001);
+    auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     int64_t dim = 0;
     auto index_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
     auto src_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -98,8 +96,7 @@ TEST_F(l2_scatter_add_test, case_3)
 // checkNotNull out
 TEST_F(l2_scatter_add_test, case_4)
 {
-    auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Precision(0.0001, 0.0001);
+    auto self_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     int64_t dim = 0;
     auto index_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
     auto src_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -114,13 +111,12 @@ TEST_F(l2_scatter_add_test, case_4)
 TEST_F(l2_scatter_add_test, case_7)
 {
     auto self_desc = TensorDesc({3, 3}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
-        .Precision(0.0001, 0.0001);
+                         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
+                         .Precision(0.0001, 0.0001);
     int64_t dim = 0;
-    auto index_desc = TensorDesc({1, 3}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int>{0, 1, 2});
+    auto index_desc = TensorDesc({1, 3}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int>{0, 1, 2});
     auto src_desc = TensorDesc({3, 4}, ACL_FLOAT, ACL_FORMAT_ND)
-        .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+                        .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
     auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(self_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -132,13 +128,12 @@ TEST_F(l2_scatter_add_test, case_7)
 TEST_F(l2_scatter_add_test, case_9)
 {
     auto self_desc = TensorDesc({3, 3}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
-        .Precision(0.0001, 0.0001);
+                         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1})
+                         .Precision(0.0001, 0.0001);
     int64_t dim = 0;
-    auto index_desc = TensorDesc({1, 4}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int>{0, 1, 2, 2});
+    auto index_desc = TensorDesc({1, 4}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int>{0, 1, 2, 2});
     auto src_desc = TensorDesc({3, 4}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+                        .Value(vector<double>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
     auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(self_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -150,13 +145,11 @@ TEST_F(l2_scatter_add_test, case_9)
 TEST_F(l2_scatter_add_test, case_10)
 {
     auto self_desc = TensorDesc({3, 4}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-        .Precision(0.0001, 0.0001);
+                         .Value(vector<double>{1.111131123123, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                         .Precision(0.0001, 0.0001);
     int64_t dim = 0;
-    auto index_desc = TensorDesc({1, 4}, ACL_INT64, ACL_FORMAT_ND)
-        .Value(vector<int>{0, 1, 2, 2});
-    auto src_desc = TensorDesc({3, 2}, ACL_DOUBLE, ACL_FORMAT_ND)
-        .Value(vector<double>{1, 2, 3, 4, 5, 6});
+    auto index_desc = TensorDesc({1, 4}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int>{0, 1, 2, 2});
+    auto src_desc = TensorDesc({3, 2}, ACL_DOUBLE, ACL_FORMAT_ND).Value(vector<double>{1, 2, 3, 4, 5, 6});
     auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(self_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -166,8 +159,7 @@ TEST_F(l2_scatter_add_test, case_10)
 
 TEST_F(l2_scatter_add_test, ascend910B2_case_bf16)
 {
-    auto self_desc = TensorDesc({3, 3}, ACL_BF16, ACL_FORMAT_ND)
-        .Precision(0.0001, 0.0001);
+    auto self_desc = TensorDesc({3, 3}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     int64_t dim = -1;
     auto index_desc = TensorDesc({1, 3}, ACL_INT64, ACL_FORMAT_ND);
     auto src_desc = TensorDesc({3, 4}, ACL_BF16, ACL_FORMAT_ND);
@@ -180,8 +172,7 @@ TEST_F(l2_scatter_add_test, ascend910B2_case_bf16)
 
 TEST_F(l2_scatter_add_test, ascend910B2_case_fp16)
 {
-    auto self_desc = TensorDesc({3, 3}, ACL_FLOAT16, ACL_FORMAT_ND)
-        .Precision(0.0001, 0.0001);
+    auto self_desc = TensorDesc({3, 3}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     int64_t dim = -1;
     auto index_desc = TensorDesc({3, 1}, ACL_INT64, ACL_FORMAT_ND);
     auto src_desc = TensorDesc({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -192,28 +183,40 @@ TEST_F(l2_scatter_add_test, ascend910B2_case_fp16)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_scatter_add_test, ascend910B2_case_expand) {
-  auto selfTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
-  auto indexTensor = CreateAclTensor({2076, 6144}, {1, 0}, 0, {2076,}, ACL_INT64);
-  auto srcTensor = CreateAclTensor({2076, 6144}, {6144, 1}, 0, {2076, 6144});
-  auto outTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+TEST_F(l2_scatter_add_test, ascend910B2_case_expand)
+{
+    auto selfTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+    auto indexTensor = CreateAclTensor({2076, 6144}, {1, 0}, 0,
+                                       {
+                                           2076,
+                                       },
+                                       ACL_INT64);
+    auto srcTensor = CreateAclTensor({2076, 6144}, {6144, 1}, 0, {2076, 6144});
+    auto outTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
 
-  uint64_t workspaceSize = 0U;
-  aclOpExecutor* exe = nullptr;
-  auto aclRet = aclnnScatterAddGetWorkspaceSize(selfTensor, 0, indexTensor, srcTensor, outTensor, &workspaceSize, &exe);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-  EXPECT_NE(exe, nullptr);
+    uint64_t workspaceSize = 0U;
+    aclOpExecutor* exe = nullptr;
+    auto aclRet = aclnnScatterAddGetWorkspaceSize(selfTensor, 0, indexTensor, srcTensor, outTensor, &workspaceSize,
+                                                  &exe);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_NE(exe, nullptr);
 }
 
-TEST_F(l2_scatter_add_test, ascend910B2_case_expand_same) {
-  auto selfTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
-  auto indexTensor = CreateAclTensor({4096, 6144}, {1, 0}, 0, {4096,}, ACL_INT64);
-  auto srcTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
-  auto outTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+TEST_F(l2_scatter_add_test, ascend910B2_case_expand_same)
+{
+    auto selfTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+    auto indexTensor = CreateAclTensor({4096, 6144}, {1, 0}, 0,
+                                       {
+                                           4096,
+                                       },
+                                       ACL_INT64);
+    auto srcTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
+    auto outTensor = CreateAclTensor({4096, 6144}, {6144, 1}, 0, {4096, 6144});
 
-  uint64_t workspaceSize = 0U;
-  aclOpExecutor* exe = nullptr;
-  auto aclRet = aclnnScatterAddGetWorkspaceSize(selfTensor, 0, indexTensor, srcTensor, outTensor, &workspaceSize, &exe);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-  EXPECT_NE(exe, nullptr);
+    uint64_t workspaceSize = 0U;
+    aclOpExecutor* exe = nullptr;
+    auto aclRet = aclnnScatterAddGetWorkspaceSize(selfTensor, 0, indexTensor, srcTensor, outTensor, &workspaceSize,
+                                                  &exe);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_NE(exe, nullptr);
 }

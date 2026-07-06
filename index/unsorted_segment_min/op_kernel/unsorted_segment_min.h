@@ -21,8 +21,7 @@ using namespace platform;
 // SIMT gather: return min of two values
 template <typename T>
 struct SimtGatherMinValue {
-    __simt_callee__ __aicore__ inline SimtGatherMinValue()
-    {}
+    __simt_callee__ __aicore__ inline SimtGatherMinValue() {}
     __simt_callee__ __aicore__ inline T operator()(T midResP, T xUbLocalRes)
     {
         return midResP < xUbLocalRes ? midResP : xUbLocalRes;
@@ -32,8 +31,7 @@ struct SimtGatherMinValue {
 // SIMT atomic: write min to GM
 template <typename T>
 struct SimtComputeSegmentMin {
-    __simt_callee__ __aicore__ inline SimtComputeSegmentMin()
-    {}
+    __simt_callee__ __aicore__ inline SimtComputeSegmentMin() {}
     __simt_callee__ __aicore__ inline void operator()(__gm__ T* outputGm, const uint64_t outputIndex, T value)
     {
         Simt::AtomicMin(outputGm + outputIndex, value);
@@ -43,17 +41,13 @@ struct SimtComputeSegmentMin {
 // Identity value for min reduction (max of type), used as F0/F3
 template <typename T>
 struct GetInitMaxValue {
-    static __aicore__ inline constexpr T Get()
-    {
-        return GetDtypeMax<T>();
-    }
+    static __aicore__ inline constexpr T Get() { return GetDtypeMax<T>(); }
 };
 
 // GM initialization: fill with max value (F4)
 template <typename T>
 struct InitGmMaxValue {
-    __aicore__ inline InitGmMaxValue()
-    {}
+    __aicore__ inline InitGmMaxValue() {}
     __aicore__ inline void operator()(GlobalTensor<T> yGmInit, uint64_t initCoreReal)
     {
         InitGlobalMemory(yGmInit, initCoreReal, GetDtypeMax<T>());
@@ -63,8 +57,7 @@ struct InitGmMaxValue {
 // Vector Min operation (F5)
 template <typename T, typename D>
 struct ComputeMin {
-    __aicore__ inline ComputeMin()
-    {}
+    __aicore__ inline ComputeMin() {}
     __aicore__ inline void operator()(LocalTensor<T>& yLocal, LocalTensor<T>& xLocal, D dstOffset, D srcOffset, D cols)
     {
         AscendC::Min(yLocal[dstOffset], yLocal[dstOffset], xLocal[srcOffset], cols);
@@ -74,14 +67,10 @@ struct ComputeMin {
 // Set atomic min mode (F6)
 template <typename T>
 struct SetAtomicMinOp {
-    __aicore__ inline SetAtomicMinOp()
-    {}
-    __aicore__ inline void operator()()
-    {
-        AscendC::SetAtomicMin<T>();
-    }
+    __aicore__ inline SetAtomicMinOp() {}
+    __aicore__ inline void operator()() { AscendC::SetAtomicMin<T>(); }
 };
 
-}
+} // namespace UnsortedSegment
 
 #endif // UNSORTED_SEGMENT_MIN_H

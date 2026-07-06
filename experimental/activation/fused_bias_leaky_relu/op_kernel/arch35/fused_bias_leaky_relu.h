@@ -37,8 +37,7 @@ class FusedBiasLeakyRelu {
 public:
     __aicore__ inline FusedBiasLeakyRelu(){};
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR bias, GM_ADDR y,
-                                 const FusedBiasLeakyReluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR bias, GM_ADDR y, const FusedBiasLeakyReluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -56,18 +55,17 @@ private:
     GlobalTensor<T> inputGMBias;
     GlobalTensor<T> outputGMY;
 
-    int64_t blockLength_ = 0;   // Number of elements this core processes
-    int64_t ubLength_ = 0;      // Number of elements per UB loop iteration (= ubFactor)
-    int64_t loopCount_ = 0;     // Number of full UB loop iterations
-    int64_t tailNum_ = 0;       // Remaining elements in the tail iteration
-    T negativeSlope_;            // Type-converted negative_slope
-    T scale_;                    // Type-converted scale
+    int64_t blockLength_ = 0; // Number of elements this core processes
+    int64_t ubLength_ = 0;    // Number of elements per UB loop iteration (= ubFactor)
+    int64_t loopCount_ = 0;   // Number of full UB loop iterations
+    int64_t tailNum_ = 0;     // Remaining elements in the tail iteration
+    T negativeSlope_;         // Type-converted negative_slope
+    T scale_;                 // Type-converted scale
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::Init(
-    GM_ADDR x, GM_ADDR bias, GM_ADDR y,
-    const FusedBiasLeakyReluTilingData* tilingData)
+__aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR bias, GM_ADDR y,
+                                                                const FusedBiasLeakyReluTilingData* tilingData)
 {
     // 1. Compute GM offset and processing length for this core
     int64_t blockOffset = GetBlockIdx() * tilingData->blockFactor;
@@ -116,8 +114,7 @@ __aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::Process()
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T> xLocal = inputQueueX.template AllocTensor<T>();
     LocalTensor<T> biasLocal = inputQueueBias.template AllocTensor<T>();
@@ -152,8 +149,7 @@ __aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::Compute(int64_t curre
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void FusedBiasLeakyRelu<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T> yLocal = outputQueueY.template DeQue<T>();
     DataCopyParams copyParams;

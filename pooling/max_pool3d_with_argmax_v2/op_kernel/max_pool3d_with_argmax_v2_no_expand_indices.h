@@ -21,66 +21,52 @@
 
 using namespace AscendC;
 
-__aicore__ inline uint64_t FloorValue(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : x / y * y;
-}
-__aicore__ inline uint64_t CeilValue(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : (x + y - 1) / y * y;
-}
-__aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : (x + y - 1) / y;
-}
+__aicore__ inline uint64_t FloorValue(uint64_t x, uint64_t y) { return y == 0 ? x : x / y * y; }
+__aicore__ inline uint64_t CeilValue(uint64_t x, uint64_t y) { return y == 0 ? x : (x + y - 1) / y * y; }
+__aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y) { return y == 0 ? x : (x + y - 1) / y; }
 template <typename T1, typename T2, const uint32_t IS_PAD = 0>
 class MaxPool3DWithArgmaxV2NoExpandIndices {
 public:
     __aicore__ inline MaxPool3DWithArgmaxV2NoExpandIndices(void){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR indices, TPipe* pipe_in,
-        const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tiling);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, TPipe* pipe_in,
+                                const MaxPool3DWithArgmaxV2NoExpandIndicesTilingData* __restrict tiling);
     __aicore__ inline void Process(void);
     __aicore__ inline void CalNextIdxData(uint64_t idx);
     __aicore__ inline void CalCurIdxData(uint64_t idx);
     __aicore__ inline void BaseCompute(uint64_t idx, uint64_t endIdx);
 #if ORIG_DTYPE_X == DT_BF16
-    __aicore__ inline void CastBF16ToF32(
-        LocalTensor<T2> xLocal, LocalTensor<T1> origXLocal, uint8_t castRepeateTimes, uint8_t castRepeateStride);
+    __aicore__ inline void CastBF16ToF32(LocalTensor<T2> xLocal, LocalTensor<T1> origXLocal, uint8_t castRepeateTimes,
+                                         uint8_t castRepeateStride);
 #endif
     __aicore__ inline void ExtPadInput(LocalTensor<T2> xLocal, uint8_t padRepeatTimes, uint8_t padRepeatStride);
-    __aicore__ inline void CopyInputNcRepeat(
-        LocalTensor<T2> xLocal, uint64_t xGmOffset, DataCopyExtParams& extParams,
-        DataCopyPadExtParams<T1>& padExtParams);
-    __aicore__ inline void CopyInputDxRepeat(
-        LocalTensor<T2> xLocal, uint64_t xGmOffset, DataCopyExtParams& extParams,
-        DataCopyPadExtParams<T1>& padExtParams);
-    __aicore__ inline void CopyInputHxRepeat(
-        LocalTensor<T2> xLocal, uint64_t xGmOffset, DataCopyExtParams& extParams,
-        DataCopyPadExtParams<T1>& padExtParams);
+    __aicore__ inline void CopyInputNcRepeat(LocalTensor<T2> xLocal, uint64_t xGmOffset, DataCopyExtParams& extParams,
+                                             DataCopyPadExtParams<T1>& padExtParams);
+    __aicore__ inline void CopyInputDxRepeat(LocalTensor<T2> xLocal, uint64_t xGmOffset, DataCopyExtParams& extParams,
+                                             DataCopyPadExtParams<T1>& padExtParams);
+    __aicore__ inline void CopyInputHxRepeat(LocalTensor<T2> xLocal, uint64_t xGmOffset, DataCopyExtParams& extParams,
+                                             DataCopyPadExtParams<T1>& padExtParams);
     __aicore__ inline void CopyInput(LocalTensor<T2> xLocal);
     template <typename U>
     __aicore__ inline void Transpose(LocalTensor<U> xTLocal, LocalTensor<U> xLocal, uint64_t rowNum, uint64_t colNum);
-    __aicore__ inline void PoolMaxAndIndices(
-        LocalTensor<T2> maxLocal, LocalTensor<int32_t> indicesLocal, LocalTensor<T2> inputLocal);
+    __aicore__ inline void PoolMaxAndIndices(LocalTensor<T2> maxLocal, LocalTensor<int32_t> indicesLocal,
+                                             LocalTensor<T2> inputLocal);
 #if ORIG_DTYPE_X == DT_BF16
-    __aicore__ inline void CastF32ToBF16(
-        LocalTensor<T1> origMaxOutLocal, LocalTensor<T2> maxOutLocal, uint8_t castRepeateTimes,
-        uint8_t castRepeateStride);
+    __aicore__ inline void CastF32ToBF16(LocalTensor<T1> origMaxOutLocal, LocalTensor<T2> maxOutLocal,
+                                         uint8_t castRepeateTimes, uint8_t castRepeateStride);
 #endif
-    __aicore__ inline void CopyMaxOutNcRepeat(
-        LocalTensor<T2> maxTransLocal, uint64_t maxGmOffset, DataCopyExtParams& extParams);
-    __aicore__ inline void CopyMaxOutDyRepeat(
-        LocalTensor<T2> maxTransLocal, uint64_t maxGmOffset, DataCopyExtParams& extParams);
-    __aicore__ inline void CopyMaxOutHyRepeat(
-        LocalTensor<T2> maxTransLocal, uint64_t maxGmOffset, DataCopyExtParams& extParams);
+    __aicore__ inline void CopyMaxOutNcRepeat(LocalTensor<T2> maxTransLocal, uint64_t maxGmOffset,
+                                              DataCopyExtParams& extParams);
+    __aicore__ inline void CopyMaxOutDyRepeat(LocalTensor<T2> maxTransLocal, uint64_t maxGmOffset,
+                                              DataCopyExtParams& extParams);
+    __aicore__ inline void CopyMaxOutHyRepeat(LocalTensor<T2> maxTransLocal, uint64_t maxGmOffset,
+                                              DataCopyExtParams& extParams);
     __aicore__ inline void CopyMaxOut(LocalTensor<T2> maxTransLocal);
-    __aicore__ inline void CopyIndicesOutNcRepeat(
-        LocalTensor<int32_t> indicesTransLocal, uint64_t indicesGmOffset, DataCopyExtParams& extParams);
-    __aicore__ inline void CopyIndicesOutDyRepeat(
-        LocalTensor<int32_t> indicesTransLocal, uint64_t indicesGmOffset, DataCopyExtParams& extParams);
-    __aicore__ inline void CopyIndicesOutHyRepeat(
-        LocalTensor<int32_t> indicesTransLocal, uint64_t indicesGmOffset, DataCopyExtParams& extParams);
+    __aicore__ inline void CopyIndicesOutNcRepeat(LocalTensor<int32_t> indicesTransLocal, uint64_t indicesGmOffset,
+                                                  DataCopyExtParams& extParams);
+    __aicore__ inline void CopyIndicesOutDyRepeat(LocalTensor<int32_t> indicesTransLocal, uint64_t indicesGmOffset,
+                                                  DataCopyExtParams& extParams);
+    __aicore__ inline void CopyIndicesOutHyRepeat(LocalTensor<int32_t> indicesTransLocal, uint64_t indicesGmOffset,
+                                                  DataCopyExtParams& extParams);
     __aicore__ inline void CopyIndicesOut(LocalTensor<int32_t> indicesTransLocal);
 
     TPipe* pipe;
@@ -539,8 +525,10 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Bas
 
 #if ORIG_DTYPE_X == DT_BF16
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::CastBF16ToF32(
-    LocalTensor<T2> xLocal, LocalTensor<T1> origXLocal, uint8_t castRepeateTimes, uint8_t castRepeateStride)
+__aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::CastBF16ToF32(LocalTensor<T2> xLocal,
+                                                                                           LocalTensor<T1> origXLocal,
+                                                                                           uint8_t castRepeateTimes,
+                                                                                           uint8_t castRepeateStride)
 {
     event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
@@ -550,22 +538,21 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cas
     uint64_t xLocalCastOffset = 0;
     UnaryRepeatParams castParams = {1, 1, castRepeateStride, castRepeateStride};
     for (uint64_t i = 0; i < castLoopNum; i++) {
-        Cast(
-            xLocal[xLocalCastOffset], origXLocal[nextWxFactorAlign + xLocalCastOffset], RoundMode::CAST_NONE,
-            VEC_INST_CAL_DATA_NUM, castRepeateTimes, castParams);
+        Cast(xLocal[xLocalCastOffset], origXLocal[nextWxFactorAlign + xLocalCastOffset], RoundMode::CAST_NONE,
+             VEC_INST_CAL_DATA_NUM, castRepeateTimes, castParams);
         xLocalCastOffset += VEC_INST_CAL_DATA_NUM;
     }
     if (castTailNum != 0) {
-        Cast(
-            xLocal[xLocalCastOffset], origXLocal[nextWxFactorAlign + xLocalCastOffset], RoundMode::CAST_NONE,
-            castTailNum, castRepeateTimes, castParams);
+        Cast(xLocal[xLocalCastOffset], origXLocal[nextWxFactorAlign + xLocalCastOffset], RoundMode::CAST_NONE,
+             castTailNum, castRepeateTimes, castParams);
     }
 }
 #endif
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::ExtPadInput(
-    LocalTensor<T2> xLocal, uint8_t padRepeatTimes, uint8_t padRepeatStride)
+__aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::ExtPadInput(LocalTensor<T2> xLocal,
+                                                                                         uint8_t padRepeatTimes,
+                                                                                         uint8_t padRepeatStride)
 {
     event_t eventIDMTE2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
@@ -578,9 +565,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Ext
         uint64_t padTailNum = nextExtPlPadFactor % VEC_INST_CAL_DATA_NUM;
         uint64_t xLocalPadOffset = 0;
         for (uint64_t i = 0; i < padLoopNum; i++) {
-            Duplicate(
-                xLocal[xLocalPadOffset], *((T2*)&NEG_INF_T2), VEC_INST_CAL_DATA_NUM, padRepeatTimes, 1,
-                padRepeatStride);
+            Duplicate(xLocal[xLocalPadOffset], *((T2*)&NEG_INF_T2), VEC_INST_CAL_DATA_NUM, padRepeatTimes, 1,
+                      padRepeatStride);
             xLocalPadOffset += VEC_INST_CAL_DATA_NUM;
         }
         if (padTailNum != 0) {
@@ -590,9 +576,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Ext
         padTailNum = nextExtPrPadFactor % VEC_INST_CAL_DATA_NUM;
         xLocalPadOffset = CeilValue(nextPlPadFactor + nextCopyInWxFactor, BLOCK_ALIGN_T2);
         for (uint64_t i = 0; i < padLoopNum; i++) {
-            Duplicate(
-                xLocal[xLocalPadOffset], *((T2*)&NEG_INF_T2), VEC_INST_CAL_DATA_NUM, padRepeatTimes, 1,
-                padRepeatStride);
+            Duplicate(xLocal[xLocalPadOffset], *((T2*)&NEG_INF_T2), VEC_INST_CAL_DATA_NUM, padRepeatTimes, 1,
+                      padRepeatStride);
             xLocalPadOffset += VEC_INST_CAL_DATA_NUM;
         }
         if (padTailNum != 0) {
@@ -613,9 +598,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
     uint64_t mteDstStride = 0;
     if constexpr (IS_PAD == ENABLE) {
         mteSrcStride = (ncDimStride - nextCopyInWxFactor) * BYTE_T1;
-        mteDstStride =
-            (vecStride / BLOCK_ALIGN_T2) -
-            CeilDiv(padExtParams.leftPadding + nextCopyInWxFactor + padExtParams.rightPadding, BLOCK_ALIGN_T1);
+        mteDstStride = (vecStride / BLOCK_ALIGN_T2) -
+                       CeilDiv(padExtParams.leftPadding + nextCopyInWxFactor + padExtParams.rightPadding,
+                               BLOCK_ALIGN_T1);
     } else {
         mteSrcStride = (ncDimStride - nextWxFactor) * BYTE_T1;
         mteDstStride = (vecStride / BLOCK_ALIGN_T2) - CeilDiv(nextWxFactor, BLOCK_ALIGN_T1);
@@ -637,12 +622,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             for (uint64_t m = 0; m < mteLoopNum; m++) {
 #if ORIG_DTYPE_X == DT_BF16
                 LocalTensor<T1> origXLocal = xLocal[xLocalMteOffsetTmp].template ReinterpretCast<T1>();
-                DataCopyPad(
-                    origXLocal[nextWxFactorAlign + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams, padExtParams);
+                DataCopyPad(origXLocal[nextWxFactorAlign + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams,
+                            padExtParams);
                 CastBF16ToF32(xLocal[xLocalMteOffsetTmp], origXLocal, extParams.blockCount, vecStride / BLOCK_ALIGN_T2);
 #else
-                DataCopyPad(
-                    xLocal[xLocalMteOffsetTmp + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams, padExtParams);
+                DataCopyPad(xLocal[xLocalMteOffsetTmp + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams,
+                            padExtParams);
 #endif
                 if constexpr (IS_PAD == ENABLE) {
                     ExtPadInput(xLocal[xLocalMteOffsetTmp], extParams.blockCount, vecStride / BLOCK_ALIGN_T2);
@@ -670,9 +655,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
     uint64_t mteDstStride = 0;
     if constexpr (IS_PAD == ENABLE) {
         mteSrcStride = (hx * wx - nextCopyInWxFactor) * BYTE_T1;
-        mteDstStride =
-            (vecStride / BLOCK_ALIGN_T2) -
-            CeilDiv(padExtParams.leftPadding + nextCopyInWxFactor + padExtParams.rightPadding, BLOCK_ALIGN_T1);
+        mteDstStride = (vecStride / BLOCK_ALIGN_T2) -
+                       CeilDiv(padExtParams.leftPadding + nextCopyInWxFactor + padExtParams.rightPadding,
+                               BLOCK_ALIGN_T1);
     } else {
         mteSrcStride = (hx * wx - nextWxFactor) * BYTE_T1;
         mteDstStride = (vecStride / BLOCK_ALIGN_T2) - CeilDiv(nextWxFactor, BLOCK_ALIGN_T1);
@@ -694,12 +679,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             for (uint64_t m = 0; m < mteLoopNum; m++) {
 #if ORIG_DTYPE_X == DT_BF16
                 LocalTensor<T1> origXLocal = xLocal[xLocalMteOffsetTmp].template ReinterpretCast<T1>();
-                DataCopyPad(
-                    origXLocal[nextWxFactorAlign + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams, padExtParams);
+                DataCopyPad(origXLocal[nextWxFactorAlign + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams,
+                            padExtParams);
                 CastBF16ToF32(xLocal[xLocalMteOffsetTmp], origXLocal, extParams.blockCount, vecStride / BLOCK_ALIGN_T2);
 #else
-                DataCopyPad(
-                    xLocal[xLocalMteOffsetTmp + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams, padExtParams);
+                DataCopyPad(xLocal[xLocalMteOffsetTmp + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams,
+                            padExtParams);
 #endif
                 if constexpr (IS_PAD == ENABLE) {
                     ExtPadInput(xLocal[xLocalMteOffsetTmp], extParams.blockCount, vecStride / BLOCK_ALIGN_T2);
@@ -727,9 +712,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
     uint64_t mteDstStride = 0;
     if constexpr (IS_PAD == ENABLE) {
         mteSrcStride = (wx - nextCopyInWxFactor) * BYTE_T1;
-        mteDstStride =
-            (vecStride / BLOCK_ALIGN_T2) -
-            CeilDiv(padExtParams.leftPadding + nextCopyInWxFactor + padExtParams.rightPadding, BLOCK_ALIGN_T1);
+        mteDstStride = (vecStride / BLOCK_ALIGN_T2) -
+                       CeilDiv(padExtParams.leftPadding + nextCopyInWxFactor + padExtParams.rightPadding,
+                               BLOCK_ALIGN_T1);
     } else {
         mteSrcStride = (wx - nextWxFactor) * BYTE_T1;
         mteDstStride = (vecStride / BLOCK_ALIGN_T2) - CeilDiv(nextWxFactor, BLOCK_ALIGN_T1);
@@ -751,12 +736,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             for (uint64_t m = 0; m < mteLoopNum; m++) {
 #if ORIG_DTYPE_X == DT_BF16
                 LocalTensor<T1> origXLocal = xLocal[xLocalMteOffsetTmp].template ReinterpretCast<T1>();
-                DataCopyPad(
-                    origXLocal[nextWxFactorAlign + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams, padExtParams);
+                DataCopyPad(origXLocal[nextWxFactorAlign + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams,
+                            padExtParams);
                 CastBF16ToF32(xLocal[xLocalMteOffsetTmp], origXLocal, extParams.blockCount, vecStride / BLOCK_ALIGN_T2);
 #else
-                DataCopyPad(
-                    xLocal[xLocalMteOffsetTmp + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams, padExtParams);
+                DataCopyPad(xLocal[xLocalMteOffsetTmp + nextExtPlPadFactor], xGm[xGmMteOffsetTmp], extParams,
+                            padExtParams);
 #endif
                 if constexpr (IS_PAD == ENABLE) {
                     ExtPadInput(xLocal[xLocalMteOffsetTmp], extParams.blockCount, vecStride / BLOCK_ALIGN_T2);
@@ -835,8 +820,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
 template <typename U>
-__aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Transpose(
-    LocalTensor<U> xTLocal, LocalTensor<U> xLocal, uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Transpose(LocalTensor<U> xTLocal,
+                                                                                       LocalTensor<U> xLocal,
+                                                                                       uint64_t rowNum, uint64_t colNum)
 {
     uint64_t blockAlign = BLOCK_DATA / sizeof(U);
     uint64_t int32DivUSize = sizeof(int32_t) / sizeof(U);
@@ -995,9 +981,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Poo
             }
             for (uint64_t v = 0; v < vecLoopNum; v++) {
                 // init indicesLocal
-                Duplicate(
-                    indicesLocal[indicesDhVecOffset], curDhVecValue, mask, vecRepeatTimes * INT32_DIV_T2_SIZE, 1,
-                    indicesRepeatStride);
+                Duplicate(indicesLocal[indicesDhVecOffset], curDhVecValue, mask, vecRepeatTimes * INT32_DIV_T2_SIZE, 1,
+                          indicesRepeatStride);
                 PipeBarrier<PIPE_V>();
                 Add(indicesLocal[indicesDhVecOffset], indicesLocal[indicesDhVecOffset], indicesTemplateLocal, mask,
                     vecRepeatTimes * INT32_DIV_T2_SIZE,
@@ -1013,23 +998,22 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Poo
                     kdOffset = k / (kh_ * kw);
                     khOffset = k % (kh_ * kw) / kw;
                     kwOffset = k % kw;
-                    uint64_t inputKenelOffset =
-                        (inputDhVecOffset) + (kdOffset * curHxFactor * curWxFactorAlign * curNcFactorAlign) +
-                        (khOffset * curWxFactorAlign * curNcFactorAlign) + (kwOffset * curNcFactorAlign);
+                    uint64_t inputKenelOffset = (inputDhVecOffset) +
+                                                (kdOffset * curHxFactor * curWxFactorAlign * curNcFactorAlign) +
+                                                (khOffset * curWxFactorAlign * curNcFactorAlign) +
+                                                (kwOffset * curNcFactorAlign);
 
                     int32_t indicesKernelOffset = (curDhVecValue) + (kdOffset * hx * wx) + (khOffset * wx) + (kwOffset);
-                    Duplicate(
-                        indicesUpdateLocal, indicesKernelOffset, mask, vecRepeatTimes * INT32_DIV_T2_SIZE, 1,
-                        indicesRepeatStride);
+                    Duplicate(indicesUpdateLocal, indicesKernelOffset, mask, vecRepeatTimes * INT32_DIV_T2_SIZE, 1,
+                              indicesRepeatStride);
                     PipeBarrier<PIPE_V>();
                     Add(indicesUpdateLocal, indicesUpdateLocal, indicesTemplateLocal, mask,
                         vecRepeatTimes * INT32_DIV_T2_SIZE,
                         {1, 1, 1, indicesRepeatStride, indicesRepeatStride, indicesRepeatStride});
                     // cmp_gt
-                    Compare(
-                        gtMaskUb.template ReinterpretCast<uint8_t>(), inputLocal[inputKenelOffset],
-                        maxLocal[maxDhVecOffset], CMPMODE::GT, mask, vecRepeatTimes,
-                        {1, 1, 1, 1, kernelRepeatStride, maxRepeatStride});
+                    Compare(gtMaskUb.template ReinterpretCast<uint8_t>(), inputLocal[inputKenelOffset],
+                            maxLocal[maxDhVecOffset], CMPMODE::GT, mask, vecRepeatTimes,
+                            {1, 1, 1, 1, kernelRepeatStride, maxRepeatStride});
                     if constexpr (IS_PAD == ENABLE) {
                         /*
                           For avoiding to select -inf, we must set gtmask when for loop from the padding -inf to normal
@@ -1066,10 +1050,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Poo
                         }
                     }
                     // cmp_ge
-                    Compare(
-                        geMaskUb.template ReinterpretCast<uint8_t>(), inputLocal[inputKenelOffset],
-                        inputLocal[inputKenelOffset], CMPMODE::EQ, mask, vecRepeatTimes,
-                        {1, 1, 1, 1, kernelRepeatStride, kernelRepeatStride});
+                    Compare(geMaskUb.template ReinterpretCast<uint8_t>(), inputLocal[inputKenelOffset],
+                            inputLocal[inputKenelOffset], CMPMODE::EQ, mask, vecRepeatTimes,
+                            {1, 1, 1, 1, kernelRepeatStride, kernelRepeatStride});
                     PipeBarrier<PIPE_V>();
                     // not
                     Not(geMaskUb, geMaskUb, curWyFactorAlign * VEC_INST_CAL_MASK_NUM);
@@ -1078,12 +1061,11 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Poo
                     Or(gtMaskUb, gtMaskUb, geMaskUb, curWyFactorAlign * VEC_INST_CAL_MASK_NUM);
                     PipeBarrier<PIPE_V>();
                     // update indices
-                    Select(
-                        indicesLocal[indicesDhVecOffset].ReinterpretCast<float>(), gtMaskUb,
-                        indicesUpdateLocal.ReinterpretCast<float>(),
-                        indicesLocal[indicesDhVecOffset].ReinterpretCast<float>(), SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                        mask, vecRepeatTimes * INT32_DIV_T2_SIZE,
-                        {1, 1, 1, indicesRepeatStride, indicesRepeatStride, indicesRepeatStride});
+                    Select(indicesLocal[indicesDhVecOffset].ReinterpretCast<float>(), gtMaskUb,
+                           indicesUpdateLocal.ReinterpretCast<float>(),
+                           indicesLocal[indicesDhVecOffset].ReinterpretCast<float>(), SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                           mask, vecRepeatTimes * INT32_DIV_T2_SIZE,
+                           {1, 1, 1, indicesRepeatStride, indicesRepeatStride, indicesRepeatStride});
                     Max(maxLocal[maxDhVecOffset], maxLocal[maxDhVecOffset], inputLocal[inputKenelOffset], mask,
                         vecRepeatTimes, {1, 1, 1, maxRepeatStride, maxRepeatStride, kernelRepeatStride});
                 }
@@ -1127,15 +1109,13 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cas
     uint64_t maxOutLocalCastOffset = 0;
     UnaryRepeatParams castParams = {1, 1, castRepeateStride, castRepeateStride};
     for (uint64_t i = 0; i < castLoopNum; i++) {
-        Cast(
-            origMaxOutLocal[maxOutLocalCastOffset], maxOutLocal[maxOutLocalCastOffset], RoundMode::CAST_ROUND,
-            VEC_INST_CAL_DATA_NUM, castRepeateTimes, castParams);
+        Cast(origMaxOutLocal[maxOutLocalCastOffset], maxOutLocal[maxOutLocalCastOffset], RoundMode::CAST_ROUND,
+             VEC_INST_CAL_DATA_NUM, castRepeateTimes, castParams);
         maxOutLocalCastOffset += VEC_INST_CAL_DATA_NUM;
     }
     if (castTailNum != 0) {
-        Cast(
-            origMaxOutLocal[maxOutLocalCastOffset], maxOutLocal[maxOutLocalCastOffset], RoundMode::CAST_ROUND,
-            castTailNum, castRepeateTimes, castParams);
+        Cast(origMaxOutLocal[maxOutLocalCastOffset], maxOutLocal[maxOutLocalCastOffset], RoundMode::CAST_ROUND,
+             castTailNum, castRepeateTimes, castParams);
     }
     event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
@@ -1170,9 +1150,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             for (uint64_t m = 0; m < mteLoopNum; m++) {
 #if ORIG_DTYPE_X == DT_BF16
                 LocalTensor<T1> origMaxOutLocal = maxOutLocal[maxOutLocalMteOffsetTmp].template ReinterpretCast<T1>();
-                CastF32ToBF16(
-                    origMaxOutLocal, maxOutLocal[maxOutLocalMteOffsetTmp], extParams.blockCount,
-                    vecStride / BLOCK_ALIGN_T2);
+                CastF32ToBF16(origMaxOutLocal, maxOutLocal[maxOutLocalMteOffsetTmp], extParams.blockCount,
+                              vecStride / BLOCK_ALIGN_T2);
                 DataCopyPad(maxGm[maxGmMteOffsetTmp], origMaxOutLocal, extParams);
 #else
                 DataCopyPad(maxGm[maxGmMteOffsetTmp], maxOutLocal[maxOutLocalMteOffsetTmp], extParams);
@@ -1215,9 +1194,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             for (uint64_t m = 0; m < mteLoopNum; m++) {
 #if ORIG_DTYPE_X == DT_BF16
                 LocalTensor<T1> origMaxOutLocal = maxOutLocal[maxOutLocalMteOffsetTmp].template ReinterpretCast<T1>();
-                CastF32ToBF16(
-                    origMaxOutLocal, maxOutLocal[maxOutLocalMteOffsetTmp], extParams.blockCount,
-                    vecStride / BLOCK_ALIGN_T2);
+                CastF32ToBF16(origMaxOutLocal, maxOutLocal[maxOutLocalMteOffsetTmp], extParams.blockCount,
+                              vecStride / BLOCK_ALIGN_T2);
                 DataCopyPad(maxGm[maxGmMteOffsetTmp], origMaxOutLocal, extParams);
 #else
                 DataCopyPad(maxGm[maxGmMteOffsetTmp], maxOutLocal[maxOutLocalMteOffsetTmp], extParams);
@@ -1259,9 +1237,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             for (uint64_t m = 0; m < mteLoopNum; m++) {
 #if ORIG_DTYPE_X == DT_BF16
                 LocalTensor<T1> origMaxOutLocal = maxOutLocal[maxOutLocalMteOffsetTmp].template ReinterpretCast<T1>();
-                CastF32ToBF16(
-                    origMaxOutLocal, maxOutLocal[maxOutLocalMteOffsetTmp], extParams.blockCount,
-                    vecStride / BLOCK_ALIGN_T2);
+                CastF32ToBF16(origMaxOutLocal, maxOutLocal[maxOutLocalMteOffsetTmp], extParams.blockCount,
+                              vecStride / BLOCK_ALIGN_T2);
                 DataCopyPad(maxGm[maxGmMteOffsetTmp], origMaxOutLocal, extParams);
 #else
                 DataCopyPad(maxGm[maxGmMteOffsetTmp], maxOutLocal[maxOutLocalMteOffsetTmp], extParams);
@@ -1328,8 +1305,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             uint64_t indicesGmMteOffsetTmp = indicesGmOffsetTmp;
             uint64_t indicesTransLocalMteOffsetTmp = indicesTransLocalOffsetTmp;
             for (uint64_t m = 0; m < mteLoopNum; m++) {
-                DataCopyPad(
-                    indicesGm[indicesGmMteOffsetTmp], indicesTransLocal[indicesTransLocalMteOffsetTmp], extParams);
+                DataCopyPad(indicesGm[indicesGmMteOffsetTmp], indicesTransLocal[indicesTransLocalMteOffsetTmp],
+                            extParams);
                 indicesGmMteOffsetTmp += ncDimStride;
                 indicesTransLocalMteOffsetTmp += vecStride;
             }
@@ -1366,8 +1343,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             uint64_t indicesGmMteOffsetTmp = indicesGmOffsetTmp;
             uint64_t indicesTransLocalMteOffsetTmp = indicesTransLocalOffsetTmp;
             for (uint64_t m = 0; m < mteLoopNum; m++) {
-                DataCopyPad(
-                    indicesGm[indicesGmMteOffsetTmp], indicesTransLocal[indicesTransLocalMteOffsetTmp], extParams);
+                DataCopyPad(indicesGm[indicesGmMteOffsetTmp], indicesTransLocal[indicesTransLocalMteOffsetTmp],
+                            extParams);
                 indicesGmMteOffsetTmp += hy * wy;
                 indicesTransLocalMteOffsetTmp += vecStride;
             }
@@ -1404,8 +1381,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NoExpandIndices<T1, T2, IS_PAD>::Cop
             uint64_t indicesGmMteOffsetTmp = indicesGmOffsetTmp;
             uint64_t indicesTransLocalMteOffsetTmp = indicesTransLocalOffsetTmp;
             for (uint64_t m = 0; m < mteLoopNum; m++) {
-                DataCopyPad(
-                    indicesGm[indicesGmMteOffsetTmp], indicesTransLocal[indicesTransLocalMteOffsetTmp], extParams);
+                DataCopyPad(indicesGm[indicesGmMteOffsetTmp], indicesTransLocal[indicesTransLocalMteOffsetTmp],
+                            extParams);
                 indicesGmMteOffsetTmp += hy * wy;
                 indicesTransLocalMteOffsetTmp += vecStride;
             }

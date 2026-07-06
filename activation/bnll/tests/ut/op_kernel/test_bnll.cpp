@@ -23,8 +23,7 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void bnll(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void bnll(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 class BNLLKernelTest : public testing::Test {
 protected:

@@ -14,18 +14,14 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include <string>
 
-inline void InitFusedMatMulTilingData(void* tiling, void* const_data, size_t size)
-{
-    memcpy(const_data, tiling, size);
-}
+inline void InitFusedMatMulTilingData(void* tiling, void* const_data, size_t size) { memcpy(const_data, tiling, size); }
 
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
-    tiling_struct tiling_data; \
+    tiling_struct tiling_data;                                              \
     InitFusedMatMulTilingData(tiling_arg, &tiling_data, sizeof(tiling_struct));
 
 #define X_LOG(format, ...)
 
 #define KERNEL_LOG_KERNEL_EORROR(format, ...)
 
-#endif  // _TEST_FUSED_MAT_MUL_TILING_H_
-
+#endif // _TEST_FUSED_MAT_MUL_TILING_H_

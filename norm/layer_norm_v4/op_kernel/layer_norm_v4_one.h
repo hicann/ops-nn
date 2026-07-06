@@ -1,17 +1,17 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
-* \file layer_norm_v4_one.h
-* \brief
-*/
+ * \file layer_norm_v4_one.h
+ * \brief
+ */
 
 #ifndef LAYER_NORM_V4_ONE_H
 #define LAYER_NORM_V4_ONE_H
@@ -26,18 +26,17 @@ using namespace AscendC;
 
 template <typename TfmOne, typename Tweight>
 class LayerNormCustomOne {
-static constexpr int32_t BLOCK_ALIGN_SIZE = 64;
-static constexpr int32_t FLOAT32_SIZE = 4;
-static constexpr int32_t BLOCK_SIZE = 32;
-static constexpr int32_t FLOAT_TO_BLOCK = 8;
-static constexpr int32_t NUM_THREE = 3;
-static constexpr int32_t NUM_EIGHT = 8;
+    static constexpr int32_t BLOCK_ALIGN_SIZE = 64;
+    static constexpr int32_t FLOAT32_SIZE = 4;
+    static constexpr int32_t BLOCK_SIZE = 32;
+    static constexpr int32_t FLOAT_TO_BLOCK = 8;
+    static constexpr int32_t NUM_THREE = 3;
+    static constexpr int32_t NUM_EIGHT = 8;
 
 public:
-    __aicore__ inline LayerNormCustomOne()
-    {}
+    __aicore__ inline LayerNormCustomOne() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-        GM_ADDR workspace, const LayerNormV4MergeNTilingData *__restrict tilingData)
+                                GM_ADDR workspace, const LayerNormV4MergeNTilingData* __restrict tilingData)
     {
         InitTiling(tilingData);
         // calculate xGm and paramGm offset and size
@@ -62,22 +61,23 @@ public:
         pipe.InitBuffer(outQueueY, 1, tilingData->blockLength * sizeof(float));
 
         // set global buffer
-        xGm.SetGlobalBuffer((__gm__ TfmOne *)x + xGmOffset, xGmSize);
-        yGm.SetGlobalBuffer((__gm__ TfmOne *)y + xGmOffset, xGmSize);
-        meanGm.SetGlobalBuffer((__gm__ float *)mean + paramGmOffset, paramGmSize);
-        rstdGm.SetGlobalBuffer((__gm__ float *)rstd + paramGmOffset, paramGmSize);
-        gammaGm.SetGlobalBuffer((__gm__ Tweight *)gamma, rowAlign);
-        betaGm.SetGlobalBuffer((__gm__ Tweight *)beta, rowAlign);
+        xGm.SetGlobalBuffer((__gm__ TfmOne*)x + xGmOffset, xGmSize);
+        yGm.SetGlobalBuffer((__gm__ TfmOne*)y + xGmOffset, xGmSize);
+        meanGm.SetGlobalBuffer((__gm__ float*)mean + paramGmOffset, paramGmSize);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + paramGmOffset, paramGmSize);
+        gammaGm.SetGlobalBuffer((__gm__ Tweight*)gamma, rowAlign);
+        betaGm.SetGlobalBuffer((__gm__ Tweight*)beta, rowAlign);
     }
 
     __aicore__ inline void BigCoreInit(uint32_t& xGmOffset, uint32_t& xGmSize, uint32_t& paramGmOffset,
-            uint32_t& paramGmSize, uint32_t& reulstGmSize) {
+                                       uint32_t& paramGmSize, uint32_t& reulstGmSize)
+    {
         uint32_t alignNum = NUM_EIGHT;
         if constexpr (sizeof(TfmOne) == FLOAT16_SIZE) {
             alignNum = NUM_EIGHT * NUM_TWO;
         }
         blockLength = nRow * rowSize;
-        uint32_t formerBlockLength = loopCount * blockLength  + formerRemainNum * rowSize;
+        uint32_t formerBlockLength = loopCount * blockLength + formerRemainNum * rowSize;
         xGmOffset = formerBlockLength * GetBlockIdx();
         xGmSize = formerBlockLength;
         // calculate paramGm offset、size
@@ -103,14 +103,16 @@ public:
     }
 
     __aicore__ inline void SmallCoreInit(uint32_t& xGmOffset, uint32_t& xGmSize, uint32_t& paramGmOffset,
-            uint32_t& paramGmSize, uint32_t& reulstGmSize) {
+                                         uint32_t& paramGmSize, uint32_t& reulstGmSize)
+    {
         uint32_t alignNum = NUM_EIGHT;
         if constexpr (sizeof(TfmOne) == FLOAT16_SIZE) {
             alignNum = NUM_EIGHT * NUM_TWO;
         }
         blockLength = tailNRow * rowSize;
         uint32_t tailTileLength = tailLoop * blockLength + tailRemainNum * rowSize;
-        xGmOffset = (loopCount * nRow * rowSize  + formerRemainNum * rowSize) * formerNum + tailTileLength * (GetBlockIdx() - formerNum);
+        xGmOffset = (loopCount * nRow * rowSize + formerRemainNum * rowSize) * formerNum +
+                    tailTileLength * (GetBlockIdx() - formerNum);
         xGmSize = tailTileLength;
 
         paramGmSize = tailLoop * tailNRow + tailRemainNum;
@@ -118,7 +120,7 @@ public:
         paramGmOffset = (loopCount * nRow + formerRemainNum) * formerNum + (paramGmSize) * (GetBlockIdx() - formerNum);
         if (tailLoop < alignNum) {
             tailNRow = tailNRow * tailLoop + tailRemainNum;
-            tileLength = (tailNRow + alignNum - 1)  / alignNum * alignNum;
+            tileLength = (tailNRow + alignNum - 1) / alignNum * alignNum;
             remainTileLength = 0;
             reulstGmSize = tailNRow;
             blockLength = tailNRow;
@@ -135,7 +137,8 @@ public:
         }
     }
 
-    __aicore__ inline void InitTiling(const LayerNormV4MergeNTilingData *__restrict tilingData) {
+    __aicore__ inline void InitTiling(const LayerNormV4MergeNTilingData* __restrict tilingData)
+    {
         // load tiling data
         colSize = tilingData->colSize;
         numBlocks = tilingData->numBlocks;
@@ -146,7 +149,7 @@ public:
         tailNRow = tilingData->tailNRow;
         nRow = tilingData->nRow;
         nullptrGamma = tilingData->nullptrGamma;
-        nullptrBeta = tilingData->nullptrBeta;   
+        nullptrBeta = tilingData->nullptrBeta;
         loopCount = tilingData->loopCount;
         tileLength = tilingData->tileLength;
         tailLoop = tilingData->tailLoop;
@@ -201,9 +204,16 @@ private:
         LocalTensor<float> yLocal = outQueueY.AllocTensor<float>();
 
         // load xGm to xLocal
-        DataCopyStruct dataCopyStruct{1, static_cast<uint32_t>(rowNum * rowSize * sizeof(TfmOne)), 0, 0, false, 0, static_cast<uint8_t>(rowAlign - rowSize)};
+        DataCopyStruct dataCopyStruct{1,
+                                      static_cast<uint32_t>(rowNum * rowSize * sizeof(TfmOne)),
+                                      0,
+                                      0,
+                                      false,
+                                      0,
+                                      static_cast<uint8_t>(rowAlign - rowSize)};
         SetEvtFlag<HardEvent::MTE3_MTE2>();
-        DataCopyInContiguous<TfmOne>(xLocal.ReinterpretCast<TfmOne>(), xGm[currentBlockOffset], dataCopyStruct, tileLength);
+        DataCopyInContiguous<TfmOne>(xLocal.ReinterpretCast<TfmOne>(), xGm[currentBlockOffset], dataCopyStruct,
+                                     tileLength);
         inQueueX.EnQue(xLocal);
         xLocal = inQueueX.DeQue<float>();
 
@@ -224,7 +234,8 @@ private:
             Duplicate(xLocal.ReinterpretCast<Tweight>(), static_cast<Tweight>(0.0f), rowNum);
         } else {
             SetEvtFlag<HardEvent::MTE3_MTE2>();
-            DataCopyStruct dataCopyStruct2{1, static_cast<uint32_t>(rowSize * sizeof(Tweight)), 0, 0, true, 0, static_cast<uint8_t>(rowAlign - rowSize)};
+            DataCopyStruct dataCopyStruct2{1, static_cast<uint32_t>(rowSize * sizeof(Tweight)), 0, 0, true,
+                                           0, static_cast<uint8_t>(rowAlign - rowSize)};
             DataCopyInContiguous(xLocal.ReinterpretCast<Tweight>(), betaGm, dataCopyStruct2, 0);
 
             SetEvtFlag<HardEvent::MTE2_S>();
@@ -234,7 +245,7 @@ private:
         }
         PipeBarrier<PIPE_V>();
         if constexpr (!std::is_same<TfmOne, Tweight>::value) {
-            Cast(xLocal.ReinterpretCast<TfmOne>(),xLocal.ReinterpretCast<Tweight>(), RoundMode::CAST_NONE, rowNum);
+            Cast(xLocal.ReinterpretCast<TfmOne>(), xLocal.ReinterpretCast<Tweight>(), RoundMode::CAST_NONE, rowNum);
             PipeBarrier<PIPE_V>();
         }
 
@@ -284,17 +295,17 @@ private:
     uint32_t tailLoop = 0;
     uint32_t tileLength = 0;
     uint32_t remainTileLength = 0;
-    uint32_t blockLength = 0;   
+    uint32_t blockLength = 0;
     uint32_t formerRemainNum = 0;
     uint32_t tailRemainNum = 0;
     uint32_t rowParts = 0;
     uint32_t tailNum = 0;
     uint32_t rowTailOffset = 0;
     uint32_t nullptrGamma = 0;
-    uint32_t nullptrBeta = 0;    
+    uint32_t nullptrBeta = 0;
     uint32_t rowTailMask = 0;
 };
 
-}  // namespace LayerNormCustomOne
+} // namespace LayerNormV4
 
-#endif  // LAYER_NORM_CUSTOM_ONE_H
+#endif // LAYER_NORM_CUSTOM_ONE_H

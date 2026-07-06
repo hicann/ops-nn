@@ -17,31 +17,31 @@
 
 namespace ops {
 class Softplus : public OpDef {
-    public:
-        explicit Softplus(const char* name) : OpDef(name)
-        {
-            this->Input("x")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("y")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+public:
+    explicit Softplus(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(false)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .NeedCheckSupportFlag(false)
-                .PrecisionReduceFlag(true)
-                .ExtendCfgInfo("opFile.value", "softplus_apt");
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "softplus_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
 
 OP_ADD(Softplus);
-}  // namespace ops
+} // namespace ops

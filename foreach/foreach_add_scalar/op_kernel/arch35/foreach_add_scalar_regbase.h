@@ -25,8 +25,8 @@ public:
     using Base = ForeachRegbaseUnary<T, Tiling, ForeachAddScalarRegbase<T, ScalarT, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachAddScalarRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(inputs, outputs, workspace, tilingData, tPipe);
         inScalarGM.SetGlobalBuffer((__gm__ ScalarT*)scalar, 1);

@@ -49,8 +49,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
-    int64_t& M, int64_t& innerSize, int64_t& N)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& M, int64_t& innerSize, int64_t& N)
 {
     // var is input 0
     auto varShape = context->GetInputShape(0);
@@ -64,8 +63,8 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesStorageShape = Ops::NN::OpTiling::EnsureNotScalar(indicesShape->GetStorageShape());
 
-    N  = varStorageShape.GetDim(0);
-    M  = indicesStorageShape.GetDim(0);
+    N = varStorageShape.GetDim(0);
+    M = indicesStorageShape.GetDim(0);
 
     innerSize = 1;
     for (size_t i = 1; i < varStorageShape.GetDimNum(); i++) {
@@ -90,8 +89,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 // capped at the physical core count, clamped to a minimum of 1.
 static int32_t CalcNeedCoreNum(int64_t totalElements, int64_t coreNum)
 {
-    int32_t calcCoreNum = static_cast<int32_t>(
-        (totalElements + MIN_ELEMENTS_PER_CORE - 1) / MIN_ELEMENTS_PER_CORE);
+    int32_t calcCoreNum = static_cast<int32_t>((totalElements + MIN_ELEMENTS_PER_CORE - 1) / MIN_ELEMENTS_PER_CORE);
     int32_t maxCoreNum = static_cast<int32_t>(coreNum);
     int32_t needCoreNum = (calcCoreNum < maxCoreNum) ? calcCoreNum : maxCoreNum;
     needCoreNum = (needCoreNum < 1) ? 1 : needCoreNum;
@@ -101,8 +99,8 @@ static int32_t CalcNeedCoreNum(int64_t totalElements, int64_t coreNum)
 // Set local (UB) memory size after reserving the DCACHE region.
 static ge::graphStatus SetUbLocalMemory(gert::TilingContext* context, uint64_t ubSize)
 {
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE", ubSize), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE), OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE", ubSize),
+                return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -114,31 +112,30 @@ static uint64_t GetTilingKey()
 }
 
 // Populate the tiling data struct.
-static void FillTilingData(SparseApplyFtrlV2TilingData* tiling, int32_t needCoreNum,
-    int64_t totalElements, int64_t innerSize, int64_t N, int64_t M)
+static void FillTilingData(SparseApplyFtrlV2TilingData* tiling, int32_t needCoreNum, int64_t totalElements,
+                           int64_t innerSize, int64_t N, int64_t M)
 {
-    tiling->needCoreNum    = needCoreNum;
-    tiling->totalElements  = totalElements;
-    tiling->innerSize      = innerSize;
-    tiling->N              = N;
-    tiling->M              = M;
+    tiling->needCoreNum = needCoreNum;
+    tiling->totalElements = totalElements;
+    tiling->innerSize = innerSize;
+    tiling->N = N;
+    tiling->M = M;
 }
 
 // Gather platform/shape/workspace info and initialize the tiling data buffer.
-static ge::graphStatus PrepareTiling(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum,
-    int64_t& M, int64_t& innerSize, int64_t& N, SparseApplyFtrlV2TilingData*& tiling)
+static ge::graphStatus PrepareTiling(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum, int64_t& M,
+                                     int64_t& innerSize, int64_t& N, SparseApplyFtrlV2TilingData*& tiling)
 {
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetShapeInfo(context, M, innerSize, N) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeInfo(context, M, innerSize, N) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeInfo error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     tiling = context->GetTilingData<SparseApplyFtrlV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SparseApplyFtrlV2TilingData), 0, sizeof(SparseApplyFtrlV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SparseApplyFtrlV2TilingData), 0, sizeof(SparseApplyFtrlV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -150,9 +147,8 @@ static ge::graphStatus SparseApplyFtrlV2TilingFunc(gert::TilingContext* context)
     int64_t innerSize = 0;
     int64_t N = 0;
     SparseApplyFtrlV2TilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        PrepareTiling(context, ubSize, coreNum, M, innerSize, N, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "PrepareTiling error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(PrepareTiling(context, ubSize, coreNum, M, innerSize, N, tiling) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "PrepareTiling error"), return ge::GRAPH_FAILED);
 
     int64_t totalElements = M * innerSize;
 
@@ -160,8 +156,8 @@ static ge::graphStatus SparseApplyFtrlV2TilingFunc(gert::TilingContext* context)
     if (totalElements == 0) {
         FillTilingData(tiling, 1, 0, innerSize, N, M);
         context->SetBlockDim(1);
-        OP_CHECK_IF(SetUbLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS,
-            OP_LOGE(context, "SetUbLocalMemory error"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(SetUbLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetUbLocalMemory error"),
+                    return ge::GRAPH_FAILED);
         context->SetTilingKey(GET_TPL_TILING_KEY(SPARSE_APPLY_FTRL_V2_TPL_SCH_MODE_0));
         return ge::GRAPH_SUCCESS;
     }
@@ -170,8 +166,8 @@ static ge::graphStatus SparseApplyFtrlV2TilingFunc(gert::TilingContext* context)
     int32_t needCoreNum = CalcNeedCoreNum(totalElements, coreNum);
     FillTilingData(tiling, needCoreNum, totalElements, innerSize, N, M);
     context->SetBlockDim(needCoreNum);
-    OP_CHECK_IF(SetUbLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetUbLocalMemory error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetUbLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetUbLocalMemory error"),
+                return ge::GRAPH_FAILED);
 
     context->SetTilingKey(GetTilingKey());
     return ge::GRAPH_SUCCESS;
@@ -186,4 +182,4 @@ IMPL_OP_OPTILING(SparseApplyFtrlV2)
     .Tiling(SparseApplyFtrlV2TilingFunc)
     .TilingParse<SparseApplyFtrlV2CompileInfo>(TilingParseForSparseApplyFtrlV2);
 
-}  // namespace optiling
+} // namespace optiling

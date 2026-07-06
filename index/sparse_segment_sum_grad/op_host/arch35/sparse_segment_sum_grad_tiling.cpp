@@ -41,9 +41,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
-                                     int64_t& n, int64_t& innerSize,
-                                     int64_t& outputDim0, int64_t& totalOutputElements)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& n, int64_t& innerSize, int64_t& outputDim0,
+                                    int64_t& totalOutputElements)
 {
     auto gradShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
@@ -68,10 +67,9 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
     innerSize = (gradDim0 > 0) ? (gradTotalSize / gradDim0) : 0;
 
     outputDim0 = outputStorageShape.GetDim(0);
-    if(outputDim0 < 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "outputDim0", std::to_string(outputDim0).c_str(),
-            "outputDim0 should be greater than or equal to 0");
+    if (outputDim0 < 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "outputDim0", std::to_string(outputDim0).c_str(),
+                                              "outputDim0 should be greater than or equal to 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -100,21 +98,15 @@ static ge::graphStatus SparseSegmentSumGradTilingFunc(gert::TilingContext* conte
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t n, innerSize, outputDim0, totalOutputElements;
-    OP_CHECK_IF(
-        GetShapeInfo(context, n, innerSize, outputDim0, totalOutputElements) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeInfo(context, n, innerSize, outputDim0, totalOutputElements) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     int64_t needCoreNum64 = (n == 0) ? 1 : std::min(coreNum, n);
     if (needCoreNum64 > static_cast<int64_t>(coreNum)) {
@@ -144,13 +136,12 @@ static ge::graphStatus SparseSegmentSumGradTilingFunc(gert::TilingContext* conte
     context->SetTilingKey(tilingKey);
 
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize), return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed, ubSize=%lu, DCACHE_SIZE=%u, STATIC_UB_ESTIMATE=%u",
-            ubSize, DCACHE_SIZE, STATIC_UB_ESTIMATE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "SetLocalMemorySize failed, ubSize=%lu, DCACHE_SIZE=%u, STATIC_UB_ESTIMATE=%u", ubSize,
+                        DCACHE_SIZE, STATIC_UB_ESTIMATE),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -160,5 +151,7 @@ static ge::graphStatus TilingParseForSparseSegmentSumGrad([[maybe_unused]] gert:
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(SparseSegmentSumGrad).Tiling(SparseSegmentSumGradTilingFunc).TilingParse<SparseSegmentSumGradCompileInfo>(TilingParseForSparseSegmentSumGrad);
+IMPL_OP_OPTILING(SparseSegmentSumGrad)
+    .Tiling(SparseSegmentSumGradTilingFunc)
+    .TilingParse<SparseSegmentSumGradCompileInfo>(TilingParseForSparseSegmentSumGrad);
 } // namespace optiling

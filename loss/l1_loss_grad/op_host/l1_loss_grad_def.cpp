@@ -17,39 +17,39 @@
 
 namespace ops {
 class L1LossGrad : public OpDef {
-    public:
-        explicit L1LossGrad(const char* name) : OpDef(name)
-        {
-            this->Input("grads")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("predict")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("label")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("y")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Attr("reduction").AttrType(OPTIONAL).String("mean");
+public:
+    explicit L1LossGrad(const char* name) : OpDef(name)
+    {
+        this->Input("grads")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("predict")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("label")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
 
 OP_ADD(L1LossGrad);
-}  // namespace ops
+} // namespace ops

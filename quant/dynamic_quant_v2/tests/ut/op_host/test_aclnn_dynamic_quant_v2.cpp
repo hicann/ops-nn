@@ -21,18 +21,11 @@
 using namespace op;
 using namespace std;
 
-class l2_dynamic_quant_v2_test : public testing::Test
-{
+class l2_dynamic_quant_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_dynamic_quant_v2_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_dynamic_quant_v2_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_dynamic_quant_v2_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_dynamic_quant_v2_test TearDown" << endl; }
 };
 
 TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16)
@@ -45,8 +38,8 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16)
     TensorDesc offset_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
     int64_t dstType = 2;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
@@ -62,8 +55,8 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int4)
     TensorDesc offset_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
     int64_t dstType = 29;
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
@@ -79,8 +72,8 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32)
     TensorDesc offset_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
     int64_t dstType = static_cast<int32_t>(ACL_INT32);
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -96,8 +89,8 @@ TEST_F(l2_dynamic_quant_v2_test, ascend910B2_dynamic_quant_v2_bf16_int32_1)
     TensorDesc offset_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
     int64_t dstType = static_cast<int32_t>(ACL_INT32);
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
@@ -113,8 +106,8 @@ TEST_F(l2_dynamic_quant_v2_test, ascend950PR_9589_dynamic_quant_v2_bf16_int32_01
     TensorDesc offset_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
     int64_t dstType = static_cast<int32_t>(ACL_INT32);
 
-    auto ut = OP_API_UT(
-        aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType), OUTPUT(y_desc, scale_desc, offset_desc));
+    auto ut = OP_API_UT(aclnnDynamicQuantV2, INPUT(x_desc, smooth_desc, moe_desc, dstType),
+                        OUTPUT(y_desc, scale_desc, offset_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);

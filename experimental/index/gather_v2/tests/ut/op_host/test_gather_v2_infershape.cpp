@@ -22,15 +22,9 @@
 
 class GatherV2InfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GatherV2InfershapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GatherV2InfershapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GatherV2InfershapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GatherV2InfershapeTest TearDown" << std::endl; }
 };
 
 TEST_F(GatherV2InfershapeTest, gather_v2_infershape_test_1)
@@ -64,7 +58,7 @@ TEST_F(GatherV2InfershapeTest, gather_v2_infershape_test_1)
 
     auto context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_SUCCESS);
-    const auto *outShape = context->GetOutputShape(0);
+    const auto* outShape = context->GetOutputShape(0);
     ASSERT_NE(outShape, nullptr);
     ASSERT_EQ(outShape->GetDimNum(), input_x_shape.GetDimNum());
     for (size_t idx = 0; idx < input_x_shape.GetDimNum(); ++idx) {

@@ -52,13 +52,9 @@ constexpr int32_t BUFFER_NUM = 2;
 // selfF32:    self values in float32
 // targetF32:  target values in float32
 // ============================================================================
-__aicore__ inline void ComputeLossCore(
-    LocalTensor<float>& outputF32,
-    LocalTensor<float>& txLocal,
-    LocalTensor<float>& negTxLocal,
-    LocalTensor<float>& selfF32,
-    LocalTensor<float>& targetF32,
-    int64_t currentNum)
+__aicore__ inline void ComputeLossCore(LocalTensor<float>& outputF32, LocalTensor<float>& txLocal,
+                                       LocalTensor<float>& negTxLocal, LocalTensor<float>& selfF32,
+                                       LocalTensor<float>& targetF32, int64_t currentNum)
 {
     // Step 1: tx = target * self
     AscendC::Mul(txLocal, targetF32, selfF32, currentNum);
@@ -91,7 +87,7 @@ public:
     __aicore__ inline SoftMarginLossNone() {}
 
     __aicore__ inline void Init(GM_ADDR selfGm, GM_ADDR targetGm, GM_ADDR outputGm,
-                                 const SoftMarginLossTilingData* tilingData);
+                                const SoftMarginLossTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -104,9 +100,9 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> selfQueue;
     TQue<QuePosition::VECIN, BUFFER_NUM> targetQueue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf1;   // float: tx / abs / exp / log
-    TBuf<QuePosition::VECCALC> tmpBuf2;   // float: neg_tx / max_val
-    TBuf<QuePosition::VECCALC> castBuf;   // float: Cast workspace (half path only)
+    TBuf<QuePosition::VECCALC> tmpBuf1; // float: tx / abs / exp / log
+    TBuf<QuePosition::VECCALC> tmpBuf2; // float: neg_tx / max_val
+    TBuf<QuePosition::VECCALC> castBuf; // float: Cast workspace (half path only)
 
     GlobalTensor<T> selfGM;
     GlobalTensor<T> targetGM;
@@ -119,7 +115,7 @@ private:
 // ---- Init ----
 template <typename T>
 __aicore__ inline void SoftMarginLossNone<T>::Init(GM_ADDR selfGm, GM_ADDR targetGm, GM_ADDR outputGm,
-                                                    const SoftMarginLossTilingData* tilingData)
+                                                   const SoftMarginLossTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -214,8 +210,8 @@ __aicore__ inline void SoftMarginLossNone<T>::Compute(int64_t currentNum)
         // But wait, ComputeLossCore signature: (output, txBuf, negTxBuf, selfF32, targetF32)
         // We need: output=negTxLocal, txBuf=txLocal, negTxBuf=castLocal, selfF32=castLocal, targetF32=txLocal
         // negTxBuf and selfF32 are both castLocal - step 1 reads selfF32, step 2 writes negTxBuf.
-        // Inside ComputeLossCore step 1: Mul(txLocal, targetF32=txLocal, selfF32=castLocal) - reads both, writes txLocal
-        // Step 2: Muls(negTxLocal=castLocal, txLocal, -1) - reads txLocal (from step 1), writes castLocal. OK!
+        // Inside ComputeLossCore step 1: Mul(txLocal, targetF32=txLocal, selfF32=castLocal) - reads both, writes
+        // txLocal Step 2: Muls(negTxLocal=castLocal, txLocal, -1) - reads txLocal (from step 1), writes castLocal. OK!
         // Step 9: Add(output=negTxLocal, negTxLocal=castLocal, txLocal) -> writes negTxLocal. OK!
         // This works correctly.
         ComputeLossCore(negTxLocal, txLocal, castLocal, castLocal, txLocal, currentNum);
@@ -273,8 +269,8 @@ class SoftMarginLossReduce {
 public:
     __aicore__ inline SoftMarginLossReduce() {}
 
-    __aicore__ inline void Init(GM_ADDR selfGm, GM_ADDR targetGm, GM_ADDR outputGm,
-                                 GM_ADDR workspaceGm, const SoftMarginLossTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR selfGm, GM_ADDR targetGm, GM_ADDR outputGm, GM_ADDR workspaceGm,
+                                const SoftMarginLossTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -288,12 +284,12 @@ private:
     TPipe pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> selfQueue;
     TQue<QuePosition::VECIN, BUFFER_NUM> targetQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf1;       // float: tx / abs / exp / log
-    TBuf<QuePosition::VECCALC> tmpBuf2;       // float: neg_tx / max_val
-    TBuf<QuePosition::VECCALC> tmpBuf3;       // float: loss result (ReduceSum input)
-    TBuf<QuePosition::VECCALC> castBuf;       // float: Cast workspace (half path only)
-    TBuf<QuePosition::VECCALC> reduceTmpBuf;  // float: ReduceSum temporary buffer
-    TBuf<QuePosition::VECCALC> resultBuf;     // small buffer for partial sum / final result
+    TBuf<QuePosition::VECCALC> tmpBuf1;      // float: tx / abs / exp / log
+    TBuf<QuePosition::VECCALC> tmpBuf2;      // float: neg_tx / max_val
+    TBuf<QuePosition::VECCALC> tmpBuf3;      // float: loss result (ReduceSum input)
+    TBuf<QuePosition::VECCALC> castBuf;      // float: Cast workspace (half path only)
+    TBuf<QuePosition::VECCALC> reduceTmpBuf; // float: ReduceSum temporary buffer
+    TBuf<QuePosition::VECCALC> resultBuf;    // small buffer for partial sum / final result
 
     GlobalTensor<T> selfGM;
     GlobalTensor<T> targetGM;
@@ -310,8 +306,7 @@ private:
 // ---- Init ----
 template <typename T>
 __aicore__ inline void SoftMarginLossReduce<T>::Init(GM_ADDR selfGm, GM_ADDR targetGm, GM_ADDR outputGm,
-                                                      GM_ADDR workspaceGm,
-                                                      const SoftMarginLossTilingData* tilingData)
+                                                     GM_ADDR workspaceGm, const SoftMarginLossTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;

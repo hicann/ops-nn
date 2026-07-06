@@ -11,17 +11,16 @@
 /*!
  * \file sigmoid_grad.cpp
  * \brief
-*/
+ */
 
 #include "sigmoid_grad.h"
-
 
 template <uint32_t schMode>
 __global__ __aicore__ void sigmoid_grad(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
 {
-     REGISTER_TILING_DEFAULT(SigmoidGradTilingData);
-     GET_TILING_DATA_WITH_STRUCT(SigmoidGradTilingData, tilingData, tiling);
-     NsSigmoidGrad::KernelSigmoidGrad<DTYPE_X> op; 
-     op.Init(x, y, z, &tilingData);      // 算子kernel实例初始化
-     op.Process();                       
+    REGISTER_TILING_DEFAULT(SigmoidGradTilingData);
+    GET_TILING_DATA_WITH_STRUCT(SigmoidGradTilingData, tilingData, tiling);
+    NsSigmoidGrad::KernelSigmoidGrad<DTYPE_X> op;
+    op.Init(x, y, z, &tilingData); // 算子kernel实例初始化
+    op.Process();
 }

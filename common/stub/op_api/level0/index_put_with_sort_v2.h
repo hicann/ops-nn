@@ -18,10 +18,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *IndexPutWithSortV2(const aclTensor *self, const aclTensor *linearIndex, const aclTensor *posIdx,
-                                    const aclTensor *values, const aclIntArray* indexed_sizes, const bool accumulate,
-                                    aclTensor *out, aclOpExecutor *executor);
+const aclTensor* IndexPutWithSortV2(const aclTensor* self, const aclTensor* linearIndex, const aclTensor* posIdx,
+                                    const aclTensor* values, const aclIntArray* indexed_sizes, const bool accumulate,
+                                    aclTensor* out, aclOpExecutor* executor);
 
 }
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_INDEX_PUT_WITH_SORT_V2_OP_H_
-

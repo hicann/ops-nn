@@ -27,21 +27,15 @@ using namespace ut_util;
 
 class ApplyAdamWTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyAdamWTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyAdamWTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyAdamWTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyAdamWTilingTest TearDown" << std::endl; }
 };
 
 TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1000)
 {
     std::string op_type("ApplyAdamW");
-    
+
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
@@ -92,9 +86,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1000)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&outputShape, &outputShape, &outputShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -113,9 +106,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1000)
                       .NodeOutputTd(0, varDtype, format, format)
                       .NodeOutputTd(1, varDtype, format, format)
                       .NodeOutputTd(2, varDtype, format, format)
-                      .NodeAttrs(
-                          {{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
+                      .NodeAttrs({{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -184,9 +176,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1001)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&outputShape, &outputShape, &outputShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -205,9 +196,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1001)
                       .NodeOutputTd(0, varDtype, format, format)
                       .NodeOutputTd(1, varDtype, format, format)
                       .NodeOutputTd(2, varDtype, format, format)
-                      .NodeAttrs(
-                          {{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
+                      .NodeAttrs({{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -276,9 +266,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1002)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&outputShape, &outputShape, &outputShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -297,9 +286,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1002)
                       .NodeOutputTd(0, varDtype, format, format)
                       .NodeOutputTd(1, varDtype, format, format)
                       .NodeOutputTd(2, varDtype, format, format)
-                      .NodeAttrs(
-                          {{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
+                      .NodeAttrs({{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -368,9 +356,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1003)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&outputShape, &outputShape, &outputShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -389,9 +376,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1003)
                       .NodeOutputTd(0, varDtype, format, format)
                       .NodeOutputTd(1, varDtype, format, format)
                       .NodeOutputTd(2, varDtype, format, format)
-                      .NodeAttrs(
-                          {{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
+                      .NodeAttrs({{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -460,9 +446,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1004)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(12, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
-                           &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
+                      .InputShapes({&inputShape1, &inputShape1, &inputShape1, &inputShape2, &inputShape2, &inputShape2,
+                                    &inputShape2, &inputShape2, &inputShape2, &inputShape2, &inputShape1, &inputShape1})
                       .OutputShapes({&outputShape, &outputShape, &outputShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -481,9 +466,8 @@ TEST_F(ApplyAdamWTilingTest, apply_adam_w_tiling_1004)
                       .NodeOutputTd(0, varDtype, format, format)
                       .NodeOutputTd(1, varDtype, format, format)
                       .NodeOutputTd(2, varDtype, format, format)
-                      .NodeAttrs(
-                          {{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
-                           {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
+                      .NodeAttrs({{"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(amsgrad)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(maximize)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

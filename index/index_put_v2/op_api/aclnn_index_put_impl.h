@@ -50,4 +50,4 @@ ACLNN_API aclnnStatus aclnnIndexPutImpl(void* workspace, uint64_t workspaceSize,
 }
 #endif
 
-#endif  // OP_API_INC_ADD_H_
+#endif // OP_API_INC_ADD_H_

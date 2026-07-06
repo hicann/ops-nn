@@ -14,27 +14,23 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 
-
 using namespace op;
 
 namespace l0op {
 OP_TYPE_REGISTER(PReluGradUpdate);
 
 //无Aicpu分支
-const std::tuple<aclTensor*, aclTensor*> PReluGradUpdate(const aclTensor *gradOutput,
-                                                          const aclTensor *self,
-                                                          const aclTensor *weight,
-                                                          aclOpExecutor *executor) {
-  // AICORE算子kernel
-  L0_DFX(PReluGradUpdate, gradOutput, self, weight);
+const std::tuple<aclTensor*, aclTensor*> PReluGradUpdate(const aclTensor* gradOutput, const aclTensor* self,
+                                                         const aclTensor* weight, aclOpExecutor* executor)
+{
+    // AICORE算子kernel
+    L0_DFX(PReluGradUpdate, gradOutput, self, weight);
 
-  auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-  auto update = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    auto update = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
 
-  // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore PReluGradUpdate算子加入任务队列
-  ADD_TO_LAUNCHER_LIST_AICORE(PReluGradUpdate,
-                              OP_INPUT(gradOutput, self, weight),
-                              OP_OUTPUT(gradInput, update));
-  return std::tie(gradInput, update);
+    // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore PReluGradUpdate算子加入任务队列
+    ADD_TO_LAUNCHER_LIST_AICORE(PReluGradUpdate, OP_INPUT(gradOutput, self, weight), OP_OUTPUT(gradInput, update));
+    return std::tie(gradInput, update);
 }
-}  // namespace l0op
+} // namespace l0op

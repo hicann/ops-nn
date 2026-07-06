@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class AdaptiveAvgPool3dGrad : public OpDef
-{
+class AdaptiveAvgPool3dGrad : public OpDef {
 public:
     explicit AdaptiveAvgPool3dGrad(const char* name) : OpDef(name)
     {
@@ -36,7 +35,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("data_format").AttrType(OPTIONAL).String("NDHWC");
-        
+
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

@@ -36,15 +36,9 @@ std::string Shape2String(const T& shape)
 
 class MaxPoolWithArgmaxV3Infer : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolWithArgmaxV3InferTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolWithArgmaxV3InferTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPoolWithArgmaxV3InferTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPoolWithArgmaxV3InferTest TearDown" << std::endl; }
 };
 
 TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_1)
@@ -60,14 +54,13 @@ TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_1)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();
@@ -92,14 +85,13 @@ TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_2)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({9, 5})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({9, 5})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();
@@ -124,14 +116,13 @@ TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_3)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({9, 5})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({9, 5})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();
@@ -156,14 +147,13 @@ TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_4)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();
@@ -188,14 +178,13 @@ TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_5)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, ge::Format::FORMAT_NHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();
@@ -231,14 +220,13 @@ TEST_F(MaxPoolWithArgmaxV3Infer, max_pool_with_argmax_v3_inferdtype_success_01)
                       })
                       .InputDataTypes({&x_dtype})
                       .OutputDataTypes({&y_dtype, &argmax_dtype})
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)

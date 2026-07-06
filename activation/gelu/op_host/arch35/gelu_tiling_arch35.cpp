@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -18,8 +18,7 @@
 #include "op_host/tiling_util.h"
 #include <iostream>
 
-namespace optiling
-{
+namespace optiling {
 const size_t ASCEND_WORKSPACE = 16777216; // 16M
 const gert::Shape g_vec_1_shape = {1};
 
@@ -39,11 +38,12 @@ ge::graphStatus GeluTiling::CalcInputDtype()
     return ge::GRAPH_SUCCESS;
 }
 
-static inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
-  if (in_shape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return in_shape;
+static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
 }
 
 ge::graphStatus GeluTiling::CheckShape()
@@ -58,10 +58,11 @@ ge::graphStatus GeluTiling::CheckShape()
     const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(inputYShape != outputZShape,
-               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                   tilingContext->GetNodeName(), "x, y", Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
-                   "The shapes of x and y must be the same"),
-               return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -72,11 +73,12 @@ ge::graphStatus GeluTiling::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
-               OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                   tilingContext->GetNodeName(), "x, y",
-                   ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
-                   "The dtypes of x and y must be the same"),
-               return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " +
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -86,12 +88,12 @@ ge::graphStatus GeluTiling::RunTiling()
 
     OP_LOGD(tilingContext->GetNodeName(), "GeluTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "get input dtype failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "get output dtype failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
-               return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
@@ -105,13 +107,13 @@ ge::graphStatus GeluTiling::RunTiling()
         baseTilingResult = elewiseBaseTiling.DoTiling<GeluOp::GeluDAG<float>::OpDag>(*tiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-        tilingContext->GetNodeName(), "y",
-        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
-        "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
+            tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
-               OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
@@ -147,4 +149,4 @@ ge::graphStatus TilingPrepareForGelu(gert::TilingParseContext* context)
 }
 
 IMPL_OP_OPTILING(Gelu).Tiling(Tiling4Gelu).TilingParse<GeluCompileInfo>(TilingPrepareForGelu);
-}  // namespace optiling
+} // namespace optiling

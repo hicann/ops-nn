@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file test_foreach_lerp_scalar.cpp
  * \brief
@@ -24,28 +23,20 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "foreach_lerp_scalar_tensorlist.h"
 
-extern "C" __global__ __aicore__ void foreach_lerp_scalar(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_lerp_scalar(GM_ADDR x1, GM_ADDR x2, GM_ADDR weight, GM_ADDR y,
+                                                          GM_ADDR workspace, GM_ADDR tiling);
 
-class foreach_lerp_scalar_test : public testing::Test
-{
+class foreach_lerp_scalar_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_lerp_scalar_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_lerp_scalar_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_lerp_scalar_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_lerp_scalar_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_lerp_scalar_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_lerp_scalar/tests/ut/op_kernel/lerp_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_lerp_scalar/tests/ut/op_kernel/lerp_scalar_data ./");
     system("chmod -R 755 ./lerp_scalar_data/");
     system("cd ./lerp_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -82,9 +73,8 @@ TEST_F(foreach_lerp_scalar_test, test_case_float_1)
 TEST_F(foreach_lerp_scalar_test, test_case_float16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_lerp_scalar/tests/ut/op_kernel/lerp_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_lerp_scalar/tests/ut/op_kernel/lerp_scalar_data ./");
     system("chmod -R 755 ./lerp_scalar_data/");
     system("cd ./lerp_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -121,9 +111,8 @@ TEST_F(foreach_lerp_scalar_test, test_case_float16_2)
 TEST_F(foreach_lerp_scalar_test, test_case_bfloat16_3)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_lerp_scalar/tests/ut/op_kernel/lerp_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_lerp_scalar/tests/ut/op_kernel/lerp_scalar_data ./");
     system("chmod -R 755 ./lerp_scalar_data/");
     system("cd ./lerp_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

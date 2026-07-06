@@ -37,15 +37,9 @@ constexpr uint32_t TILING_BEYOND_LIMIT_OFFSET = 4;
 constexpr uint32_t TILING_ISFP32_OFFSET = 2;
 constexpr uint32_t TILING_ISFP16_OFFSET = 1;
 
-static uint32_t CEIL_DIV(uint32_t x, uint32_t y)
-{
-    return y == 0U ? x : (x + y - 1U) / y;
-}
+static uint32_t CEIL_DIV(uint32_t x, uint32_t y) { return y == 0U ? x : (x + y - 1U) / y; }
 
-static uint32_t ROUND_UP(uint32_t x, uint32_t blockNumEl)
-{
-    return CEIL_DIV(x, blockNumEl) * blockNumEl;
-}
+static uint32_t ROUND_UP(uint32_t x, uint32_t blockNumEl) { return CEIL_DIV(x, blockNumEl) * blockNumEl; }
 
 static bool CheckInputOutputShapeDim(const gert::TilingContext* context)
 {
@@ -74,30 +68,22 @@ static bool CheckInputOutputShapeDim(const gert::TilingContext* context)
     size_t yDimNum = yShape->GetStorageShape().GetDimNum();
 
     // Check shape dim range
-    OP_CHECK_IF(
-        (xDimNum > MAX_DIM_X) || (xDimNum < MIN_DIM_X),
-        OP_LOGE(
-            context, "Input x shape invaild, dim num should in range[%lu, %lu].", MIN_DIM_X, MAX_DIM_X),
-        return false);
+    OP_CHECK_IF((xDimNum > MAX_DIM_X) || (xDimNum < MIN_DIM_X),
+                OP_LOGE(context, "Input x shape invaild, dim num should in range[%lu, %lu].", MIN_DIM_X, MAX_DIM_X),
+                return false);
     OP_CHECK_IF(
         (gammaDimNum > MAX_DIM_GAMMA) || (gammaDimNum < MIN_DIM_GAMMA),
-        OP_LOGE(
-            context, "Input gamma shape invaild, dim num should in range[%lu, %lu].", MIN_DIM_GAMMA,
-            MAX_DIM_GAMMA),
+        OP_LOGE(context, "Input gamma shape invaild, dim num should in range[%lu, %lu].", MIN_DIM_GAMMA, MAX_DIM_GAMMA),
         return false);
     // Check shape dim relationship
-    OP_CHECK_IF(
-        gxDimNum != xDimNum, OP_LOGE(context, "Input gx shape invaild, dim num is not equal x dim."),
-        return false);
-    OP_CHECK_IF(
-        (yDimNum != xDimNum) || (meanDimNum != xDimNum) || (rstdDimNum != xDimNum),
-        OP_LOGE(context, "Output y/mean/rstd shape invaild, dim num is not equal x dim."), return false);
-    OP_CHECK_IF(
-        betaDimNum != gammaDimNum,
-        OP_LOGE(context, "Input beta shape invaild, dim num is not equal gamma dim."), return false);
-    OP_CHECK_IF(
-        xDimNum <= gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
-        return false);
+    OP_CHECK_IF(gxDimNum != xDimNum, OP_LOGE(context, "Input gx shape invaild, dim num is not equal x dim."),
+                return false);
+    OP_CHECK_IF((yDimNum != xDimNum) || (meanDimNum != xDimNum) || (rstdDimNum != xDimNum),
+                OP_LOGE(context, "Output y/mean/rstd shape invaild, dim num is not equal x dim."), return false);
+    OP_CHECK_IF(betaDimNum != gammaDimNum,
+                OP_LOGE(context, "Input beta shape invaild, dim num is not equal gamma dim."), return false);
+    OP_CHECK_IF(xDimNum <= gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
+                return false);
     return true;
 }
 
@@ -116,36 +102,30 @@ static bool CheckInputOutputShapeValue(const gert::TilingContext* context)
 
     // Check shape value
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_CHECK_IF(
-            xShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "Input x shape can not be 0."),
-            return false);
-        OP_CHECK_IF(
-            gxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-            OP_LOGE(context, "Input gx shape invaild, shape is not equal x shape."), return false);
-        OP_CHECK_IF(
-            (yShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
-            OP_LOGE(context, "Input y shape invaild, shape is not equal x shape."), return false);
+        OP_CHECK_IF(xShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "Input x shape can not be 0."),
+                    return false);
+        OP_CHECK_IF(gxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
+                    OP_LOGE(context, "Input gx shape invaild, shape is not equal x shape."), return false);
+        OP_CHECK_IF((yShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
+                    OP_LOGE(context, "Input y shape invaild, shape is not equal x shape."), return false);
     }
     for (uint32_t i = 0; i < xDimNum - gammaDimNum; i++) {
-        OP_CHECK_IF(
-            (rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
-                (meanShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
-            OP_LOGE(context, "Output rstd/mean shape invaild, shape is not equal x first few dim."),
-            return false);
+        OP_CHECK_IF((rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
+                        (meanShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
+                    OP_LOGE(context, "Output rstd/mean shape invaild, shape is not equal x first few dim."),
+                    return false);
     }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
             (gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)) ||
                 (betaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)),
-            OP_LOGE(context, "Input gamma shape invaild, gamma shape is not equal x last few dim."),
-            return false);
+            OP_LOGE(context, "Input gamma shape invaild, gamma shape is not equal x last few dim."), return false);
     }
     return true;
 }
 
-static void SetTilingKey4DeepNorm(
-    gert::TilingContext* context, uint32_t& numCol, uint32_t& shortLimit, uint32_t& limitLastDim,
-    uint32_t& limitLastDim2, ge::DataType& dataType)
+static void SetTilingKey4DeepNorm(gert::TilingContext* context, uint32_t& numCol, uint32_t& shortLimit,
+                                  uint32_t& limitLastDim, uint32_t& limitLastDim2, ge::DataType& dataType)
 {
     uint32_t isShort = numCol <= shortLimit ? 1U : 0U;
     uint32_t upperLimit = limitLastDim2 < numCol ? 1U : 0U;
@@ -165,12 +145,10 @@ static void SetTilingKey4DeepNorm(
 static ge::graphStatus Tiling4DeepNorm(gert::TilingContext* context)
 {
     DeepNormTilingData tiling;
-    OP_CHECK_IF(
-        !CheckInputOutputShapeDim(context), OP_LOGE(context, "Input shape dim invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckInputOutputShapeValue(context), OP_LOGE(context, "Input shape value invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShapeDim(context), OP_LOGE(context, "Input shape dim invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShapeValue(context), OP_LOGE(context, "Input shape value invalid."),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint64_t maxUbSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, maxUbSize);
@@ -216,13 +194,14 @@ static ge::graphStatus Tiling4DeepNorm(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
     const float* tempAlphaPtr = attrs->GetFloat(0);
-    OP_CHECK_IF(nullptr == tempAlphaPtr, OP_LOGE(context, "Get required attr tempAlphaPtr failed. "), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == tempAlphaPtr, OP_LOGE(context, "Get required attr tempAlphaPtr failed. "),
+                return ge::GRAPH_FAILED);
     float tempAlpha = *tempAlphaPtr;
     float tempAve = numCol == 0U ? 1 : float(1.0 / numCol);
     const float* epsPtr = attrs->GetFloat(1);
     OP_CHECK_IF(nullptr == epsPtr, OP_LOGE(context, "Get required attr epsPtr failed. "), return ge::GRAPH_FAILED);
     float eps = *epsPtr;
-    
+
     // About tiling
     uint32_t usedLastDim = numCol;
     if (limitLastDim < numCol) {
@@ -313,7 +292,6 @@ static ge::graphStatus TilingPrepare4DeepNorm(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-struct DeepNormCompileInfo {
-};
+struct DeepNormCompileInfo {};
 IMPL_OP_OPTILING(DeepNorm).Tiling(Tiling4DeepNorm).TilingParse<DeepNormCompileInfo>(TilingPrepare4DeepNorm);
 } // namespace optiling

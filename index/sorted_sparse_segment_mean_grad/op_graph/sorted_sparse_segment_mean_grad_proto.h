@@ -30,7 +30,7 @@ gradient propagated to the SparseSegmentMean op.
 *@li sorted_indices: A Tensor. Must be one of the following types: int32, int64.
 indices passed to the corresponding SparseSegmentMean op. The input must be sorted.
 *@li pre_location_indices: A Tensor. Must be one of the following types: int32, int64.
-The original positions of the indices before sorting. 
+The original positions of the indices before sorting.
 *@li segment_ids: A Tensor. Must be one of the following types: int32, int64. segment_ids passed to the
 corresponding SparseSegmentMean op. The input must be sorted.
 *@li output_dim0: A Tensor of type int32. dimension 0 of "x" passed to
@@ -51,5 +51,5 @@ REG_OP(SortedSparseSegmentMeanGrad)
     .INPUT(output_dim0, TensorType({DT_INT32}))
     .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BFLOAT16}))
     .OP_END_FACTORY_REG(SortedSparseSegmentMeanGrad)
-}
+} // namespace ge
 #endif // OPS_OP_PROTO_INC_SORTED_SPARSE_SEGMENT_MEAN_GRAD_H_

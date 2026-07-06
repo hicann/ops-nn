@@ -32,13 +32,12 @@ constexpr int32_t PP_ELEMENT_NUM = 8 * 1024;
 constexpr int32_t ONE_REPEAT_BYTES = 256;
 
 template <typename T>
-class HeavisideND
-{
+class HeavisideND {
 public:
     TPipe pipe;
     __aicore__ inline HeavisideND(){};
-    __aicore__ inline void Init(
-        GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace, const HeavisideTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace,
+                                const HeavisideTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -77,8 +76,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void HeavisideND<T>::Init(
-    GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace, const HeavisideTilingData* tilingData)
+__aicore__ inline void HeavisideND<T>::Init(GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace,
+                                            const HeavisideTilingData* tilingData)
 {
     inputGm.SetGlobalBuffer((__gm__ T*)input);
     valuesGm.SetGlobalBuffer((__gm__ T*)values);
@@ -147,8 +146,8 @@ __aicore__ inline void HeavisideND<T>::CopyInAndCast(int64_t inputOffset, int64_
 {
     int32_t elementByte = PP_ELEMENT_NUM * sizeof(float);
     x1Tensor = pingPongFlag ? tmpTensor[elementByte * 2].ReinterpretCast<T>() : tmpTensor[0].ReinterpretCast<T>();
-    x2Tensor =
-        pingPongFlag ? tmpTensor[elementByte * 3].ReinterpretCast<T>() : tmpTensor[elementByte].ReinterpretCast<T>();
+    x2Tensor = pingPongFlag ? tmpTensor[elementByte * 3].ReinterpretCast<T>() :
+                              tmpTensor[elementByte].ReinterpretCast<T>();
     WaitFlag<HardEvent::MTE3_MTE2>(eventId);
 
     DataCopyExtParams dataCopyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
@@ -193,8 +192,8 @@ template <typename T>
 __aicore__ inline void HeavisideND<T>::Compute(int64_t dataCount)
 {
     int32_t maskStartByte = PP_ELEMENT_NUM * sizeof(float) * 4;
-    selMaskOne =
-        pingPongFlag ? tmpTensor[maskStartByte + PP_ELEMENT_NUM * sizeof(uint8_t) * 2] : tmpTensor[maskStartByte];
+    selMaskOne = pingPongFlag ? tmpTensor[maskStartByte + PP_ELEMENT_NUM * sizeof(uint8_t) * 2] :
+                                tmpTensor[maskStartByte];
     selMaskTwo = pingPongFlag ? tmpTensor[maskStartByte + PP_ELEMENT_NUM * sizeof(uint8_t) * 3] :
                                 tmpTensor[maskStartByte + PP_ELEMENT_NUM * sizeof(uint8_t)];
 
@@ -222,8 +221,8 @@ __aicore__ inline void HeavisideND<T>::Compute(int64_t dataCount)
         if (valuesType == false) {
             Select(x1TensorCast, selMaskOne, x1TensorCast, x2TensorCast, SELMODE::VSEL_TENSOR_TENSOR_MODE, dataCount);
         } else {
-            Select(
-                x1TensorCast, selMaskOne, x1TensorCast, ToFloat(values), SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
+            Select(x1TensorCast, selMaskOne, x1TensorCast, ToFloat(values), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                   dataCount);
         }
         PipeBarrier<PIPE_V>();
     } else {

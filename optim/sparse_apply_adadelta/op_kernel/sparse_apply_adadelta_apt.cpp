@@ -18,29 +18,19 @@
 #include "arch35/sparse_apply_adadelta_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_apply_adadelta(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR var_out, GM_ADDR accum_out, GM_ADDR accum_update_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_apply_adadelta(GM_ADDR var, GM_ADDR accum, GM_ADDR accum_update, GM_ADDR lr,
+                                                 GM_ADDR rho, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR indices,
+                                                 GM_ADDR var_out, GM_ADDR accum_out, GM_ADDR accum_update_out,
+                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseApplyAdadeltaTilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseApplyAdadeltaTilingData, tilingData, tiling);
 
     if constexpr (schMode == TILING_KEY_IDX_INT32) {
-        NsSparseApplyAdadelta::Process<float, int32_t>(
-            var, accum, accum_update,
-            lr, rho, epsilon,
-            grad, indices,
-            var_out, accum_out, accum_update_out,
-            &tilingData);
+        NsSparseApplyAdadelta::Process<float, int32_t>(var, accum, accum_update, lr, rho, epsilon, grad, indices,
+                                                       var_out, accum_out, accum_update_out, &tilingData);
     } else if constexpr (schMode == TILING_KEY_IDX_INT64) {
-        NsSparseApplyAdadelta::Process<float, int64_t>(
-            var, accum, accum_update,
-            lr, rho, epsilon,
-            grad, indices,
-            var_out, accum_out, accum_update_out,
-            &tilingData);
+        NsSparseApplyAdadelta::Process<float, int64_t>(var, accum, accum_update, lr, rho, epsilon, grad, indices,
+                                                       var_out, accum_out, accum_update_out, &tilingData);
     }
 }

@@ -30,15 +30,9 @@ using namespace LogSigmoidGradOp;
 namespace optiling {
 static constexpr uint64_t LOGSIGMOID_GRAD_COMMON_TILING_PRIORITY = 0;
 
-ge::graphStatus LogSigmoidGradTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LogSigmoidGradTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
-bool LogSigmoidGradTiling::IsCapable()
-{
-    return true;
-}
+bool LogSigmoidGradTiling::IsCapable() { return true; }
 
 ge::graphStatus LogSigmoidGradTiling::DoOpTiling()
 {
@@ -53,8 +47,10 @@ ge::graphStatus LogSigmoidGradTiling::DoOpTiling()
     ge::DataType outputDtype = outputDesc->GetDataType();
     if ((input0DType != input1DType) || (outputDtype != input0DType)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gradOutput, self, gradInput",
-            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " + ge::TypeUtils::DataTypeToSerialString(input1DType) + ", " + ge::TypeUtils::DataTypeToSerialString(outputDtype),
-            "The dtypes of gradOutput, self and gradInput must be the same");
+                                               ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " +
+                                                   ge::TypeUtils::DataTypeToSerialString(input1DType) + ", " +
+                                                   ge::TypeUtils::DataTypeToSerialString(outputDtype),
+                                               "The dtypes of gradOutput, self and gradInput must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -72,43 +68,29 @@ ge::graphStatus LogSigmoidGradTiling::DoOpTiling()
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gradOutput, self",
-            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " + ge::TypeUtils::DataTypeToSerialString(input1DType),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "gradOutput, self",
+            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " +
+                ge::TypeUtils::DataTypeToSerialString(input1DType),
             "The dtypes of gradOutput and self must be DT_FLOAT16, DT_BF16 or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        status != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling do tiling failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(status != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling do tiling failed."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LogSigmoidGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LogSigmoidGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t LogSigmoidGradTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t LogSigmoidGradTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus LogSigmoidGradTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LogSigmoidGradTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LogSigmoidGradTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LogSigmoidGradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LogSigmoidGradTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LogSigmoidGradTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus TilingForLogSigmoidGrad(gert::TilingContext* context)
 {

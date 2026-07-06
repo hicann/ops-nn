@@ -13,9 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* GeGluGradV2(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    bool activateLeft, aclOpExecutor* executor);
+const aclTensor* GeGluGradV2(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim,
+                             int64_t approximate, bool activateLeft, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_GEGLU_GRAD_V2_H_

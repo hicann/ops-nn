@@ -37,11 +37,17 @@ using namespace AscendC;
 
 // Helper trait: compute type is float for half/bfloat16 (promote to FP32), T otherwise
 template <typename T>
-struct ComputeType { using type = T; };
+struct ComputeType {
+    using type = T;
+};
 template <>
-struct ComputeType<half> { using type = float; };
+struct ComputeType<half> {
+    using type = float;
+};
 template <>
-struct ComputeType<bfloat16_t> { using type = float; };
+struct ComputeType<bfloat16_t> {
+    using type = float;
+};
 
 template <typename T, int BUFFER_MODE>
 class FastGeluV2 {
@@ -50,7 +56,7 @@ class FastGeluV2 {
     static constexpr bool NEED_CAST = !std::is_same<T, CT>::value;
 
 public:
-    __aicore__ inline FastGeluV2() {};
+    __aicore__ inline FastGeluV2(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const FastGeluV2TilingData* tilingData);
     __aicore__ inline void Process();
@@ -79,8 +85,7 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void FastGeluV2<T, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR y,
-                                                         const FastGeluV2TilingData* tilingData)
+__aicore__ inline void FastGeluV2<T, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR y, const FastGeluV2TilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;

@@ -22,12 +22,10 @@ using AscendC::SetFlag;
 using AscendC::TEventID;
 using AscendC::WaitFlag;
 
-namespace QuantBatchMatmulV4
-{
+namespace QuantBatchMatmulV4 {
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
-class MatmulCustomImpl
-{
+class MatmulCustomImpl {
     using bL1DataType = typename inputWType::T;
     using aL0DataType = typename AscendC::GetL0DataType<xType, true>::Type;
     using bL0DataType = typename AscendC::GetL0DataType<typename inputWType::T, true>::Type;
@@ -36,13 +34,13 @@ public:
     __aicore__ inline MatmulCustomImpl(){};
 
     __aicore__ inline void Init(const TCubeTiling* __restrict matmulTiling, AscendC::TPipe* tpipe);
-    __aicore__ inline void SetTensorA(const LocalTensor<xType> &aL1Tensor);
-    __aicore__ inline void SetTensorB(const LocalTensor<bL1DataType> &bL1Tensor);
-    __aicore__ inline void SetTensorScaleA(const LocalTensor<scaleType> &scaleAL1Tensor);
-    __aicore__ inline void SetTensorScaleB(const LocalTensor<scaleType> &scaleBL1Tensor);
-    __aicore__ inline void SetBias(const LocalTensor<biasType> &biasL1Tensor);
+    __aicore__ inline void SetTensorA(const LocalTensor<xType>& aL1Tensor);
+    __aicore__ inline void SetTensorB(const LocalTensor<bL1DataType>& bL1Tensor);
+    __aicore__ inline void SetTensorScaleA(const LocalTensor<scaleType>& scaleAL1Tensor);
+    __aicore__ inline void SetTensorScaleB(const LocalTensor<scaleType>& scaleBL1Tensor);
+    __aicore__ inline void SetBias(const LocalTensor<biasType>& biasL1Tensor);
     __aicore__ inline void Iterate(bool enPartialSum);
-    __aicore__ inline void GetTensorC(const GlobalTensor<yType> &outTensor);
+    __aicore__ inline void GetTensorC(const GlobalTensor<yType>& outTensor);
     __aicore__ inline void SetTail(int64_t singleM, int64_t singleN, int64_t singleK);
     __aicore__ inline void SetOrgShape(int64_t mSize, int64_t nSize, int64_t kASize, int64_t kBSize,
                                        int64_t originNSize);
@@ -79,14 +77,14 @@ private:
     static constexpr int32_t BUFFER_HALF_SHL = 15;
 
     int64_t madLoopIdx_ = 0;
-    int64_t totalKLoopIdx_ = 0;  // 第几次K的循环，由外部控制, 用于获取当前iterate实际的K方向计算量
-    int64_t kIterNum_ = 0;       // k方向L1外的总计循环次数
-    int64_t mAL1Size_ = 0;       // 根据当前tiling策略，等于baseM
-    int64_t nBL1Size_ = 0;       // 根据当前tiling策略，等于baseN
+    int64_t totalKLoopIdx_ = 0; // 第几次K的循环，由外部控制, 用于获取当前iterate实际的K方向计算量
+    int64_t kIterNum_ = 0;      // k方向L1外的总计循环次数
+    int64_t mAL1Size_ = 0;      // 根据当前tiling策略，等于baseM
+    int64_t nBL1Size_ = 0;      // 根据当前tiling策略，等于baseN
     int64_t kAL1Size_ = 0;
     int64_t kBL1Size_ = 0;
     int64_t originNSize_ = 0;
-    int64_t scaleAFactor_ = 1;   // x1Scale相对与AL1在K方向的载入倍数
+    int64_t scaleAFactor_ = 1; // x1Scale相对与AL1在K方向的载入倍数
     int64_t scaleBFactor_ = 1;
     int64_t singleM_;
     int64_t singleN_;
@@ -160,17 +158,17 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 {
     AscendC::LoadData2DParamsV2 aL0Load2dParams;
     aL0Load2dParams.mStartPosition = 0;
-    aL0Load2dParams.kStartPosition =
-        CeilDiv(static_cast<int64_t>(kL0Idx * matmulTiling_->baseK * sizeof(xType)), 32L);  // 单位32B
-    aL0Load2dParams.mStep = CeilDiv(singleM_, static_cast<int64_t>(AscendC::BLOCK_CUBE));   // 单位16元素
-    aL0Load2dParams.kStep = CeilDiv(baseK, 32);                                             // 单位32B
-    aL0Load2dParams.srcStride = CeilDiv(mAL1Size_ * 32, 512L);  // 32为K0，stride单位为512B
-    aL0Load2dParams.dstStride = aL0Load2dParams.srcStride;      // L1和L0 M大小一样，k方向stride也一样
+    aL0Load2dParams.kStartPosition = CeilDiv(static_cast<int64_t>(kL0Idx * matmulTiling_->baseK * sizeof(xType)),
+                                             32L);                                        // 单位32B
+    aL0Load2dParams.mStep = CeilDiv(singleM_, static_cast<int64_t>(AscendC::BLOCK_CUBE)); // 单位16元素
+    aL0Load2dParams.kStep = CeilDiv(baseK, 32);                                           // 单位32B
+    aL0Load2dParams.srcStride = CeilDiv(mAL1Size_ * 32, 512L); // 32为K0，stride单位为512B
+    aL0Load2dParams.dstStride = aL0Load2dParams.srcStride;     // L1和L0 M大小一样，k方向stride也一样
     AscendC::LoadData2DMxParams aL0Load2dMx;
     aL0Load2dMx.xStartPosition = 0;
-    aL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * matmulTiling_->baseK, 64);  // 单位是32B
-    aL0Load2dMx.xStep = CeilDiv(singleM_, static_cast<int64_t>(AscendC::BLOCK_CUBE));  // 单位是1个32B分形，
-    aL0Load2dMx.yStep = CeilDiv(baseK, 64);                                   // baseK / 32 / 2
+    aL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * matmulTiling_->baseK, 64);          // 单位是32B
+    aL0Load2dMx.xStep = CeilDiv(singleM_, static_cast<int64_t>(AscendC::BLOCK_CUBE)); // 单位是1个32B分形，
+    aL0Load2dMx.yStep = CeilDiv(baseK, 64);                                           // baseK / 32 / 2
     aL0Load2dMx.srcStride = CeilDiv(matmulTiling_->baseK * matmulTiling_->stepKa * scaleAFactor_, 64L);
     aL0Load2dMx.dstStride = CeilDiv(baseK, 64);
     AscendC::LoadData(aL0Tensor, aL1Tensor_, scaleAL1Tensor_, aL0Load2dParams, aL0Load2dMx);
@@ -184,17 +182,17 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 {
     AscendC::LoadData2DParamsV2 bL0Load2dParams;
     bL0Load2dParams.mStartPosition = 0;
-    bL0Load2dParams.kStartPosition =
-        CeilDiv(static_cast<int64_t>(kL0Idx * matmulTiling_->baseK * sizeof(xType)), 32L);  // 单位32B
-    bL0Load2dParams.mStep =  CeilDiv(singleN_, static_cast<int64_t>(AscendC::BLOCK_CUBE));  // 单位16元素
-    bL0Load2dParams.kStep = CeilDiv(baseK, 32);                                             // 单位32B
-    bL0Load2dParams.srcStride = CeilDiv(nBL1Size_ * 32, 512L);  // 32为K0，stride单位为512B
-    bL0Load2dParams.dstStride = bL0Load2dParams.srcStride;      // L1和L0 N方向大小一样，k方向stride也一样
+    bL0Load2dParams.kStartPosition = CeilDiv(static_cast<int64_t>(kL0Idx * matmulTiling_->baseK * sizeof(xType)),
+                                             32L);                                        // 单位32B
+    bL0Load2dParams.mStep = CeilDiv(singleN_, static_cast<int64_t>(AscendC::BLOCK_CUBE)); // 单位16元素
+    bL0Load2dParams.kStep = CeilDiv(baseK, 32);                                           // 单位32B
+    bL0Load2dParams.srcStride = CeilDiv(nBL1Size_ * 32, 512L); // 32为K0，stride单位为512B
+    bL0Load2dParams.dstStride = bL0Load2dParams.srcStride;     // L1和L0 N方向大小一样，k方向stride也一样
     AscendC::LoadData2DMxParams bL0Load2dMx;
     bL0Load2dMx.xStartPosition = 0;
-    bL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * matmulTiling_->baseK, 64);  // 单位是32B
-    bL0Load2dMx.xStep =  CeilDiv(singleN_, static_cast<int64_t>(AscendC::BLOCK_CUBE));   // 单位是1个32B分形，
-    bL0Load2dMx.yStep = CeilDiv(baseK, 64);                                   // baseK / 32 / 2
+    bL0Load2dMx.yStartPosition = CeilDiv(kL0Idx * matmulTiling_->baseK, 64);          // 单位是32B
+    bL0Load2dMx.xStep = CeilDiv(singleN_, static_cast<int64_t>(AscendC::BLOCK_CUBE)); // 单位是1个32B分形，
+    bL0Load2dMx.yStep = CeilDiv(baseK, 64);                                           // baseK / 32 / 2
     bL0Load2dMx.srcStride = CeilDiv(matmulTiling_->baseK * matmulTiling_->stepKb * scaleBFactor_, 64L);
     bL0Load2dMx.dstStride = CeilDiv(baseK, 64);
     AscendC::LoadData(bL0Tensor, bL1Tensor_, scaleBL1Tensor_, bL0Load2dParams, bL0Load2dMx);
@@ -205,8 +203,8 @@ template <typename xType, typename wType, typename biasType, typename yType, typ
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans,
                                         inputWType>::CopyBiasL1ToBT(LocalTensor<float> biasBtTensor)
 {
-    constexpr auto biasDataType = IsSameType<float, biasType>::value ? 2 : 1;  // 2::fp32, 1:fp16/bf16
-    uint16_t lenBurst = CeilDiv(singleN_* biasDataType * 2, 32L);
+    constexpr auto biasDataType = IsSameType<float, biasType>::value ? 2 : 1; // 2::fp32, 1:fp16/bf16
+    uint16_t lenBurst = CeilDiv(singleN_ * biasDataType * 2, 32L);
     if constexpr (IsSameType<float, biasType>::value) {
         lenBurst = CeilAlign(lenBurst, static_cast<uint16_t>(2));
     }
@@ -229,7 +227,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
     mmadParams.n = CeilAlign(singleN_, static_cast<int64_t>(AscendC::BLOCK_CUBE));
     mmadParams.cmatrixInitVal = !enPartialSum;
     mmadParams.cmatrixSource = false;
-    int32_t kFractalIdx = totalKLoopIdx_ * matmulTiling_->stepKa;  // 正在计算第几个基本块，用于选择pingpong
+    int32_t kFractalIdx = totalKLoopIdx_ * matmulTiling_->stepKa; // 正在计算第几个基本块，用于选择pingpong
     int32_t stepK = CeilDiv(kAL1Size_, static_cast<int64_t>(matmulTiling_->baseK));
     bool needPipeM = mmadParams.m * mmadParams.n < 2560; // baseM/16 * baseN/16 < 10时，需要插入同步保证精度
     for (int32_t kL0Idx = 0; kL0Idx < stepK; kL0Idx++) {
@@ -271,7 +269,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans,
-                                        inputWType>::GetTensorC(const GlobalTensor<yType> &outTensor)
+                                        inputWType>::GetTensorC(const GlobalTensor<yType>& outTensor)
 {
     LocalTensor<float> cL0Tensor = cL0Tensor_[(madLoopIdx_ & 1) << BUFFER_HALF_SHL];
     AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixParams;
@@ -295,7 +293,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans,
-                                        inputWType>::SetTensorA(const LocalTensor<xType> &aL1Tensor)
+                                        inputWType>::SetTensorA(const LocalTensor<xType>& aL1Tensor)
 {
     aL1Tensor_ = aL1Tensor;
 }
@@ -303,7 +301,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans,
-                                        inputWType>::SetTensorB(const LocalTensor<bL1DataType> &bL1Tensor)
+                                        inputWType>::SetTensorB(const LocalTensor<bL1DataType>& bL1Tensor)
 {
     bL1Tensor_ = bL1Tensor;
 }
@@ -311,7 +309,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans,
-                                        inputWType>::SetTensorScaleA(const LocalTensor<scaleType> &scaleAL1Tensor)
+                                        inputWType>::SetTensorScaleA(const LocalTensor<scaleType>& scaleAL1Tensor)
 {
     scaleAL1Tensor_ = scaleAL1Tensor;
 }
@@ -319,7 +317,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans,
-                                        inputWType>::SetTensorScaleB(const LocalTensor<scaleType> &scaleBL1Tensor)
+                                        inputWType>::SetTensorScaleB(const LocalTensor<scaleType>& scaleBL1Tensor)
 {
     scaleBL1Tensor_ = scaleBL1Tensor;
 }
@@ -327,7 +325,7 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 template <typename xType, typename wType, typename biasType, typename yType, typename scaleType, bool aTrans,
           bool bTrans, typename inputWType>
 __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType, aTrans, bTrans, inputWType>::SetBias(
-    const LocalTensor<biasType> &biasTensor)
+    const LocalTensor<biasType>& biasTensor)
 {
     biasL1Tensor_ = biasTensor;
 }
@@ -351,5 +349,4 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
     GetTPipePtr()->ReleaseEventID<HardEvent::M_FIX>(eventIdsMToFix_[1]);
 }
 
-}  // namespace QuantBatchMatmulV4
-
+} // namespace QuantBatchMatmulV4

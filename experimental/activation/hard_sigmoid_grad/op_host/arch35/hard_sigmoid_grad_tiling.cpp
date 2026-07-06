@@ -28,8 +28,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -42,7 +42,8 @@ constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -61,8 +62,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalLength,
-                                          ge::DataType& dataType, float& alpha, float& beta)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType,
+                                         float& alpha, float& beta)
 {
     auto inputGrad = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
@@ -72,11 +73,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputSelf);
     auto selfShape = EnsureNotScalar(inputSelf->GetStorageShape());
 
-    OP_CHECK_IF(
-        gradShape.GetShapeSize() != selfShape.GetShapeSize(),
-        OP_LOGE(context, "HardSigmoidGrad: input shape mismatch: grad=%ld, self=%ld",
-                gradShape.GetShapeSize(), selfShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradShape.GetShapeSize() != selfShape.GetShapeSize(),
+                OP_LOGE(context, "HardSigmoidGrad: input shape mismatch: grad=%ld, self=%ld", gradShape.GetShapeSize(),
+                        selfShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalLength = gradShape.GetShapeSize();
 
@@ -106,33 +106,26 @@ static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and attr info
     int64_t totalLength;
     ge::DataType dataType;
     float alpha, beta;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalLength, dataType, alpha, beta) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType, alpha, beta) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Handle empty tensor (0 elements)
     if (totalLength == 0) {
         HardSigmoidGradTilingData* tiling = context->GetTilingData<HardSigmoidGradTilingData>();
         OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-        OP_CHECK_IF(
-            memset_s(tiling, sizeof(HardSigmoidGradTilingData), 0, sizeof(HardSigmoidGradTilingData)) != EOK,
-            OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(memset_s(tiling, sizeof(HardSigmoidGradTilingData), 0, sizeof(HardSigmoidGradTilingData)) != EOK,
+                    OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
         context->SetBlockDim(1);
         uint32_t schMode = HARD_SIGMOID_GRAD_MODE_FLOAT32;
         ASCENDC_TPL_SEL_PARAM(context, schMode);
@@ -142,9 +135,8 @@ static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
     // 5. Compute tiling parameters
     HardSigmoidGradTilingData* tiling = context->GetTilingData<HardSigmoidGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardSigmoidGradTilingData), 0, sizeof(HardSigmoidGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardSigmoidGradTilingData), 0, sizeof(HardSigmoidGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Multi-core split
     tiling->blockFactor = CeilDiv(totalLength, coreNum);
@@ -176,9 +168,7 @@ static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
         typeSize = 4;
     }
 
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / typeSize, bufferNum),
-        ubBlockSize);
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, bufferNum), ubBlockSize);
 
     tiling->totalLength = totalLength;
     tiling->alpha = alpha;

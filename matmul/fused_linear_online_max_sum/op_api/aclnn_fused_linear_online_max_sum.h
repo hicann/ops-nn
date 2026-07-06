@@ -31,7 +31,8 @@ extern "C" {
  * @param [in] predictedLogitsLocalOut: npu device侧的aclTensor，数据类型支持FLOAT，支持非连续的Tensor，数据格式支持ND。
  * @param [in] targetMaskOut: npu device侧的aclTensor，数据类型支持UINT8，支持非连续的Tensor，数据格式支持ND。
  * @param [in] maskedTargetOut: npu device侧的aclTensor，数据类型支持INT32、INT64，支持非连续的Tensor，数据格式支持ND。
- * @param [in] vocabParallelLogitsOutOptional: npu device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [in] vocabParallelLogitsOutOptional: npu
+ * device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -45,7 +46,8 @@ ACLNN_API aclnnStatus aclnnFusedLinearOnlineMaxSumGetWorkspaceSize(
 /**
  * @brief aclnnFusedLinearOnlineMaxSum的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnFusedLinearOnlineMaxSumGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnFusedLinearOnlineMaxSumGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -57,4 +59,4 @@ ACLNN_API aclnnStatus aclnnFusedLinearOnlineMaxSum(void* workspace, uint64_t wor
 }
 #endif
 
-#endif  // OP_API_INC_ACLNN_FUSED_LINEAR_ONLINE_MAX_SUM_H_
+#endif // OP_API_INC_ACLNN_FUSED_LINEAR_ONLINE_MAX_SUM_H_

@@ -67,24 +67,13 @@ constexpr size_t BIAS_IDX = 2;
 constexpr uint64_t NMK_N_THERS = 64;
 constexpr uint64_t NMK_M_THERS = 1920;
 
-enum class CalcType : int32_t
-{
-  M_BY_BASE_NK,
-  MN_BY_BASE_K
-};
+enum class CalcType : int32_t { M_BY_BASE_NK, MN_BY_BASE_K };
 
-enum class MatmulV3Trans : int32_t
-{
-    NO_TRANS = 0,
-    A_TRANS = 1,
-    B_TRANS = 2,
-    AB_TRANS = 3
-};
+enum class MatmulV3Trans : int32_t { NO_TRANS = 0, A_TRANS = 1, B_TRANS = 2, AB_TRANS = 3 };
 
-enum class MixNd2NzType : int32_t
-{
-    V_HEAD_ND2NZ = 0, // 所有核在头部做nd2nz
-    NO_ND2NZ = 1, // 不做nd2nz
+enum class MixNd2NzType : int32_t {
+    V_HEAD_ND2NZ = 0,    // 所有核在头部做nd2nz
+    NO_ND2NZ = 1,        // 不做nd2nz
     V_PARALELL_ND2NZ = 2 // vect和cube并行做nd2nz
 };
 
@@ -126,8 +115,8 @@ enum class TilingEnableFixOpti : int32_t // 互斥flag, 对应不同输出优化
 enum class TilingEnableSpecialOpti : int32_t // 互斥flag, 对应不同的优化方法
 {
     BASE = 0,
-    ENABLE_K_SHIFT = 1,  // K轴错峰
-    MAX = 10 //模板类别不能超过10个
+    ENABLE_K_SHIFT = 1, // K轴错峰
+    MAX = 10            //模板类别不能超过10个
 };
 
 enum class TilingEnableFp32Addmm : int32_t // 是否使能GemmV3内存优化
@@ -137,18 +126,16 @@ enum class TilingEnableFp32Addmm : int32_t // 是否使能GemmV3内存优化
     MAX = 10 // 模板类别不能超过10个
 };
 
-struct TilingEnable
-{
-    TilingEnableSplitCore tilingEnableSplitCore = TilingEnableSplitCore::BASE; //aoetilingenable的个位
-    TilingEnableFullLoad tilingEnableFullLoad = TilingEnableFullLoad::BASE; //aoetilingenable的十位
-    TilingEnableFixOpti tilingEnableFixOpti = TilingEnableFixOpti::BASE; //aoetilingenable的千位
+struct TilingEnable {
+    TilingEnableSplitCore tilingEnableSplitCore = TilingEnableSplitCore::BASE; // aoetilingenable的个位
+    TilingEnableFullLoad tilingEnableFullLoad = TilingEnableFullLoad::BASE;    // aoetilingenable的十位
+    TilingEnableFixOpti tilingEnableFixOpti = TilingEnableFixOpti::BASE;       // aoetilingenable的千位
     TilingEnableSpecialOpti tilingEnableSpecialOpti = TilingEnableSpecialOpti::BASE;
     TilingEnableFp32Addmm tilingFp32Addmm = TilingEnableFp32Addmm::FALSE;
 };
 
-struct MatmulV3Args
-{
-    const char *opName = nullptr;
+struct MatmulV3Args {
+    const char* opName = nullptr;
     bool isATrans = false;
     bool isBTrans = false;
     bool isHf32 = false;
@@ -174,8 +161,7 @@ struct MatmulV3Args
     double l2Ratio = 0;
 };
 
-struct MatmulV3L2RunInfo
-{
+struct MatmulV3L2RunInfo {
     uint64_t mTile = 1;
     uint64_t nTile = 1;
     uint64_t mTileBlock = 0;
@@ -183,8 +169,7 @@ struct MatmulV3L2RunInfo
     uint64_t calOrder = 0;
 };
 
-struct MatmulV3RunInfo
-{
+struct MatmulV3RunInfo {
     bool needUpdate = false;
     uint64_t usedCoreNum = 1;
     uint64_t singleCoreM = 1;
@@ -208,8 +193,7 @@ struct MatmulV3RunInfo
     MatmulV3L2RunInfo l2Info;
 };
 
-struct MatmulV3L2SplitParams
-{
+struct MatmulV3L2SplitParams {
     uint64_t outBase = 0;
     uint64_t innerBase = 0;
     uint64_t outValue = 0;
@@ -222,39 +206,42 @@ struct MatmulV3L2SplitParams
     uint64_t innerTailCnt = 0;
 };
 
-const std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP =
-{
+const std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
     {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
     {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
     {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},
     {ge::DT_INT8, matmul_tiling::DataType::DT_INT8},
 };
 
-template<typename T>
-inline bool Is256BAlign(T base, uint64_t dTypeSize) {
+template <typename T>
+inline bool Is256BAlign(T base, uint64_t dTypeSize)
+{
     if (base * dTypeSize % 256 == 0) { // 256: align byte size
         return true;
     }
     return false;
 };
 
-template<typename T>
-inline bool Is32BAlign(T base, uint64_t dTypeSize) {
+template <typename T>
+inline bool Is32BAlign(T base, uint64_t dTypeSize)
+{
     if (base * dTypeSize % 32 == 0) { // 32: align byte size
         return true;
     }
     return false;
 };
 
-template<typename T>
-inline bool Is16Align(T base) {
+template <typename T>
+inline bool Is16Align(T base)
+{
     if (base % BASIC_ALIGN_16 == 0) {
         return true;
     }
     return false;
 };
 
-inline uint64_t GetSizeC0(const uint64_t& dataTypeSize) {
+inline uint64_t GetSizeC0(const uint64_t& dataTypeSize)
+{
     uint64_t c0Size = BASIC_ALIGN_16;
     if (dataTypeSize == sizeof(float)) {
         c0Size = BASIC_ALIGN_8;
@@ -264,8 +251,9 @@ inline uint64_t GetSizeC0(const uint64_t& dataTypeSize) {
     return c0Size;
 }
 
-template<typename T>
-inline bool IsNumAlign(T base, uint64_t size) {
+template <typename T>
+inline bool IsNumAlign(T base, uint64_t size)
+{
     if (size == 0UL) {
         return false;
     }
@@ -276,19 +264,21 @@ inline bool IsNumAlign(T base, uint64_t size) {
     return false;
 };
 
-template<typename T>
-inline bool CheckNumberIsValid(const T &number, const std::string &opName, const std::string &description) {
+template <typename T>
+inline bool CheckNumberIsValid(const T& number, const std::string& opName, const std::string& description)
+{
     if (number > static_cast<uint64_t>(UINT32_MAX)) {
         OP_LOGW(opName, "%s size is greater than UINT32_MAX or less than 0, number: %s", description.c_str(),
-                 std::to_string(number).c_str());
+                std::to_string(number).c_str());
         return true;
     }
     return false;
 };
 
 // 需要对齐16的参数需要判断是否大于floorAlign(uint32_max, 16)
-template<typename T>
-inline bool CheckNumberIsValid2(const T &number, const std::string &opName, const std::string &description) {
+template <typename T>
+inline bool CheckNumberIsValid2(const T& number, const std::string& opName, const std::string& description)
+{
     if (number > Ops::Base::FloorAlign(static_cast<uint64_t>(UINT32_MAX), BASIC_ALIGN_16)) {
         OP_LOGW(opName, "%s size is greater than floorAlign(UINT32_MAX, 16) or less than 0, number: %s",
                 description.c_str(), std::to_string(number).c_str());
@@ -296,6 +286,6 @@ inline bool CheckNumberIsValid2(const T &number, const std::string &opName, cons
     }
     return false;
 };
-}
-}
+} // namespace matmul_v3
+} // namespace optiling
 #endif // __OP_HOST_MATMUL_V3_COMMON_H__

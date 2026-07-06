@@ -26,7 +26,7 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
 class GroupQuantBase {
 public:
-    __aicore__ inline GroupQuantBase() {};
+    __aicore__ inline GroupQuantBase(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR groupIndex, GM_ADDR offset, GM_ADDR y,
                                 const GroupQuantTilingData* tilingData);
     __aicore__ inline void Process();
@@ -44,10 +44,9 @@ private:
                                                 int64_t grpIdxGmOffset, int64_t loadElems);
     __aicore__ inline void LoadGrpIdxMoreBatch(LocalTensor<T3> grpIdxUb, LocalTensor<T3> xRowCntUb,
                                                int64_t grpIdxGmOffset, int64_t loadElems);
-    __aicore__ inline void CheckGrpIdxOneBatch(LocalTensor<T3> grpIdxUb, int64_t loadElems,
-                                               LocalTensor<T3> xRowCntUb, LocalTensor<T3> grpIdxInt32TmpUb,
-                                               LocalTensor<float> grpIdxFp32Ub, LocalTensor<float> grpIdxDiffUb,
-                                               LocalTensor<float> grpIdxWorkLocalUb);
+    __aicore__ inline void CheckGrpIdxOneBatch(LocalTensor<T3> grpIdxUb, int64_t loadElems, LocalTensor<T3> xRowCntUb,
+                                               LocalTensor<T3> grpIdxInt32TmpUb, LocalTensor<float> grpIdxFp32Ub,
+                                               LocalTensor<float> grpIdxDiffUb, LocalTensor<float> grpIdxWorkLocalUb);
     __aicore__ inline void CheckGrpIdxLastValue(LocalTensor<T3> grpIdxUb);
     __aicore__ inline void CheckGrpIdxAllValue();
     __aicore__ inline void CheckGrpIdxAll(int64_t grpIdxGmOffset, int64_t loadElems, LocalTensor<T3> grpIdxUb,
@@ -60,7 +59,7 @@ private:
 
 private:
     TPipe pipe;
-    TBuf<QuePosition::VECCALC> tmpBuf1_;   // 每块tensor的大小 预期留32k
+    TBuf<QuePosition::VECCALC> tmpBuf1_; // 每块tensor的大小 预期留32k
     TBuf<QuePosition::VECCALC> tmpBuf2_;
     TBuf<QuePosition::VECCALC> tmpBuf3_;
     TBuf<QuePosition::VECCALC> scaleBuf_;  // 装scale的大小 预期留32k
@@ -95,10 +94,10 @@ private:
     constexpr static int64_t BLOCK_SIZE = 32;
     constexpr static int64_t ALIGN_SIZE = 64;
     constexpr static int64_t INT4_NUMS_IN_INT8_SPACE = 2;
-    constexpr static int64_t GROUP_INDEX_UB_SIZE = 1024;  // lookup expert index and x row counts
+    constexpr static int64_t GROUP_INDEX_UB_SIZE = 1024; // lookup expert index and x row counts
 
     int64_t blockIdx = 0;
-    int64_t currExpertIdx = -1;  // response to current row of input_scale and current index of input_group_index
+    int64_t currExpertIdx = -1; // response to current row of input_scale and current index of input_group_index
     int64_t xRowCntOfCurrExpert = 0;
     int64_t grpIdxUbCursor = 0;
 
@@ -119,7 +118,8 @@ private:
 };
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::ParseTilingData(const GroupQuantTilingData* tilingData) {
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::ParseTilingData(const GroupQuantTilingData* tilingData)
+{
     dimS_ = tilingData->dimS;
     dimE_ = tilingData->dimE;
     dimH_ = tilingData->dimH;
@@ -133,44 +133,43 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::ParseTilingData(const
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Init(GM_ADDR x,
-                                                                GM_ADDR scale,
-                                                                GM_ADDR groupIndex,
-                                                                GM_ADDR offset,
-                                                                GM_ADDR y,
-                                                                const GroupQuantTilingData* tilingData) {
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Init(GM_ADDR x, GM_ADDR scale, GM_ADDR groupIndex,
+                                                                GM_ADDR offset, GM_ADDR y,
+                                                                const GroupQuantTilingData* tilingData)
+{
     blockIdx = GetBlockIdx();
-    ParseTilingData(tilingData);  // initialize tiling data
+    ParseTilingData(tilingData); // initialize tiling data
 
-    gmX_.SetGlobalBuffer((__gm__ T1 *)x);
-    gmScale_.SetGlobalBuffer((__gm__ T2 *)scale);
-    gmGrpIdx_.SetGlobalBuffer((__gm__ T3 *)groupIndex);
-    gmOffset_.SetGlobalBuffer((__gm__ T4 *)offset);
-    gmY_.SetGlobalBuffer((__gm__ int8_t *)y);
+    gmX_.SetGlobalBuffer((__gm__ T1*)x);
+    gmScale_.SetGlobalBuffer((__gm__ T2*)scale);
+    gmGrpIdx_.SetGlobalBuffer((__gm__ T3*)groupIndex);
+    gmOffset_.SetGlobalBuffer((__gm__ T4*)offset);
+    gmY_.SetGlobalBuffer((__gm__ int8_t*)y);
 
-    pipe.InitBuffer(tmpBuf1_, UB_TENSOE_BUF);            // 32KB
+    pipe.InitBuffer(tmpBuf1_, UB_TENSOE_BUF); // 32KB
     pipe.InitBuffer(tmpBuf2_, UB_TENSOE_BUF);
     pipe.InitBuffer(tmpBuf3_, UB_TENSOE_BUF);
-    pipe.InitBuffer(scaleBuf_, UB_TENSOE_BUF);           // 32KB
-    pipe.InitBuffer(mulBuf_, UB_TENSOE_BUF);             // 32KB
-    pipe.InitBuffer(outBuf_, PEER_H);                    //  8KB
+    pipe.InitBuffer(scaleBuf_, UB_TENSOE_BUF); // 32KB
+    pipe.InitBuffer(mulBuf_, UB_TENSOE_BUF);   // 32KB
+    pipe.InitBuffer(outBuf_, PEER_H);          //  8KB
     if (hasOffset_) {
-        pipe.InitBuffer(offsetBuf_, OFFEST_TENSOE_BUF);  // 256B
+        pipe.InitBuffer(offsetBuf_, OFFEST_TENSOE_BUF); // 256B
     }
 
-    pipe.InitBuffer(grpIdxBuf, GROUP_INDEX_UB_SIZE);           // 1KB
-    pipe.InitBuffer(xRowCntBuf, GROUP_INDEX_UB_SIZE);          // 1KB
-    pipe.InitBuffer(grpIdxInt32TmpBuf, GROUP_INDEX_UB_SIZE);   // 1KB
-    pipe.InitBuffer(grpIdxFp32Buf, GROUP_INDEX_UB_SIZE);       // 1KB
-    pipe.InitBuffer(grpIdxDiffBuf, GROUP_INDEX_UB_SIZE);       // 1KB
-    pipe.InitBuffer(grpIdxWorkLocalBuf, GROUP_INDEX_UB_SIZE);  // 1KB
+    pipe.InitBuffer(grpIdxBuf, GROUP_INDEX_UB_SIZE);          // 1KB
+    pipe.InitBuffer(xRowCntBuf, GROUP_INDEX_UB_SIZE);         // 1KB
+    pipe.InitBuffer(grpIdxInt32TmpBuf, GROUP_INDEX_UB_SIZE);  // 1KB
+    pipe.InitBuffer(grpIdxFp32Buf, GROUP_INDEX_UB_SIZE);      // 1KB
+    pipe.InitBuffer(grpIdxDiffBuf, GROUP_INDEX_UB_SIZE);      // 1KB
+    pipe.InitBuffer(grpIdxWorkLocalBuf, GROUP_INDEX_UB_SIZE); // 1KB
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
 __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::LoadGrpIdxFirstBatch(LocalTensor<T3> grpIdxUb,
                                                                                 LocalTensor<T3> xRowCntUb,
                                                                                 int64_t grpIdxGmOffset,
-                                                                                int64_t loadElems) {
+                                                                                int64_t loadElems)
+{
     event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
     WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
@@ -206,7 +205,8 @@ template <typename T1, typename T2, typename T3, typename T4, typename T5>
 __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::LoadGrpIdxMoreBatch(LocalTensor<T3> grpIdxUb,
                                                                                LocalTensor<T3> xRowCntUb,
                                                                                int64_t grpIdxGmOffset,
-                                                                               int64_t loadElems) {
+                                                                               int64_t loadElems)
+{
     event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
     WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
@@ -229,15 +229,12 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::LoadGrpIdxMoreBatch(L
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxOneBatch(LocalTensor<T3> grpIdxUb,
-                                                                               int64_t loadElems,
-                                                                               LocalTensor<T3> xRowCntUb,
-                                                                               LocalTensor<T3> grpIdxInt32TmpUb,
-                                                                               LocalTensor<float> grpIdxFp32Ub,
-                                                                               LocalTensor<float> grpIdxDiffUb,
-                                                                               LocalTensor<float> grpIdxWorkLocalUb) {
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxOneBatch(
+    LocalTensor<T3> grpIdxUb, int64_t loadElems, LocalTensor<T3> xRowCntUb, LocalTensor<T3> grpIdxInt32TmpUb,
+    LocalTensor<float> grpIdxFp32Ub, LocalTensor<float> grpIdxDiffUb, LocalTensor<float> grpIdxWorkLocalUb)
+{
     // group_index values are in the range [0, S], and the sequence is non-decreasing
-    if constexpr (IsSameType<T3, int32_t>::value) {  // group_index data type is int32_t
+    if constexpr (IsSameType<T3, int32_t>::value) { // group_index data type is int32_t
         event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -289,7 +286,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxOneBatch(L
         if (grpIdxDiffUb.GetValue(0) < 0.0f) {
             Trap(); // "input group_index should be an non-decreasing sequence"
         }
-    } else {                                          // group_index data type is int64_t
+    } else { // group_index data type is int64_t
         event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
         WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -299,7 +296,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxOneBatch(L
             // "input group_index value should be less than or equal x shape[0]"
             // "input group_index should be an non-decreasing sequence"
             int64_t valueOfGroupIndex = grpIdxUb.GetValue(i);
-            if ((valueOfGroupIndex < 0) || (valueOfGroupIndex > dimS_) || (valueOfGroupIndex - xRowCntUb.GetValue(i) < 0)) {
+            if ((valueOfGroupIndex < 0) || (valueOfGroupIndex > dimS_) ||
+                (valueOfGroupIndex - xRowCntUb.GetValue(i) < 0)) {
                 Trap();
             }
         }
@@ -307,7 +305,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxOneBatch(L
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxLastValue(LocalTensor<T3> grpIdxUb) {
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxLastValue(LocalTensor<T3> grpIdxUb)
+{
     PipeBarrier<PIPE_ALL>();
 
     DataCopyExtParams copyParams0;
@@ -330,7 +329,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxLastValue(
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAllValue() {
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAllValue()
+{
     LocalTensor<T3> grpIdxUb = grpIdxBuf.Get<T3>();
     if (dimE_ > 1) {
         LocalTensor<T3> xRowCntUb = xRowCntBuf.Get<T3>();
@@ -347,24 +347,24 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAllValue()
             loadElems = dimE_;
         }
         LoadGrpIdxFirstBatch(grpIdxUb, xRowCntUb, grpIdxGmOffset, loadElems);
-        CheckGrpIdxOneBatch(grpIdxUb, loadElems, xRowCntUb,
-                            grpIdxInt32TmpUb, grpIdxFp32Ub, grpIdxDiffUb, grpIdxWorkLocalUb);
+        CheckGrpIdxOneBatch(grpIdxUb, loadElems, xRowCntUb, grpIdxInt32TmpUb, grpIdxFp32Ub, grpIdxDiffUb,
+                            grpIdxWorkLocalUb);
 
         if (dimE_ > grpIdxBaseNum) {
             int64_t loopTimes = dimE_ / grpIdxBaseNum;
             for (int64_t i = 1; i < loopTimes; ++i) {
                 grpIdxGmOffset = i * grpIdxBaseNum;
                 loadElems = grpIdxBaseNum;
-                CheckGrpIdxAll(grpIdxGmOffset, loadElems, grpIdxUb, xRowCntUb,
-                               grpIdxInt32TmpUb, grpIdxFp32Ub, grpIdxDiffUb, grpIdxWorkLocalUb);
+                CheckGrpIdxAll(grpIdxGmOffset, loadElems, grpIdxUb, xRowCntUb, grpIdxInt32TmpUb, grpIdxFp32Ub,
+                               grpIdxDiffUb, grpIdxWorkLocalUb);
             }
 
             int64_t tailE = dimE_ % grpIdxBaseNum;
             if (tailE > 0) {
                 grpIdxGmOffset = dimE_ / grpIdxBaseNum * grpIdxBaseNum;
                 loadElems = tailE;
-                CheckGrpIdxAll(grpIdxGmOffset, loadElems, grpIdxUb, xRowCntUb,
-                               grpIdxInt32TmpUb, grpIdxFp32Ub, grpIdxDiffUb, grpIdxWorkLocalUb);
+                CheckGrpIdxAll(grpIdxGmOffset, loadElems, grpIdxUb, xRowCntUb, grpIdxInt32TmpUb, grpIdxFp32Ub,
+                               grpIdxDiffUb, grpIdxWorkLocalUb);
             }
         }
     }
@@ -372,15 +372,12 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAllValue()
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAll(int64_t grpIdxGmOffset,
-                                                                          int64_t loadElems,
-                                                                          LocalTensor<T3> grpIdxUb,
-                                                                          LocalTensor<T3> xRowCntUb,
-                                                                          LocalTensor<T3> grpIdxInt32TmpUb,
-                                                                          LocalTensor<float> grpIdxFp32Ub,
-                                                                          LocalTensor<float> grpIdxDiffUb,
-                                                                          LocalTensor<float> grpIdxWorkLocalUb) {
-    if constexpr (IsSameType<T3, int32_t>::value) {   // group_index data type is int32_t
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAll(
+    int64_t grpIdxGmOffset, int64_t loadElems, LocalTensor<T3> grpIdxUb, LocalTensor<T3> xRowCntUb,
+    LocalTensor<T3> grpIdxInt32TmpUb, LocalTensor<float> grpIdxFp32Ub, LocalTensor<float> grpIdxDiffUb,
+    LocalTensor<float> grpIdxWorkLocalUb)
+{
+    if constexpr (IsSameType<T3, int32_t>::value) { // group_index data type is int32_t
         event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
@@ -390,15 +387,15 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CheckGrpIdxAll(int64_
         WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
     }
     LoadGrpIdxMoreBatch(grpIdxUb, xRowCntUb, grpIdxGmOffset, loadElems);
-    CheckGrpIdxOneBatch(grpIdxUb, loadElems, xRowCntUb,
-                        grpIdxInt32TmpUb, grpIdxFp32Ub, grpIdxDiffUb, grpIdxWorkLocalUb);
+    CheckGrpIdxOneBatch(grpIdxUb, loadElems, xRowCntUb, grpIdxInt32TmpUb, grpIdxFp32Ub, grpIdxDiffUb,
+                        grpIdxWorkLocalUb);
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CalcGrpCnt(LocalTensor<T3> grpIdxUb,
-                                                                      int64_t loadElems,
-                                                                      LocalTensor<T3> xRowCntUb) {
-    if constexpr (IsSameType<T3, int32_t>::value) {  // group_index data type is int32_t
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CalcGrpCnt(LocalTensor<T3> grpIdxUb, int64_t loadElems,
+                                                                      LocalTensor<T3> xRowCntUb)
+{
+    if constexpr (IsSameType<T3, int32_t>::value) { // group_index data type is int32_t
         event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
@@ -408,7 +405,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CalcGrpCnt(LocalTenso
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
-    } else {                                          // group_index data type is int64_t
+    } else { // group_index data type is int64_t
         event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
         WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -421,7 +418,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CalcGrpCnt(LocalTenso
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
 __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::WalkGrpIdx(LocalTensor<T3> grpIdxUb,
-                                                                      LocalTensor<T3> xRowCntUb) {
+                                                                      LocalTensor<T3> xRowCntUb)
+{
     if (currExpertIdx < 0) {
         // load the first part of group_index data
         int64_t grpIdxGmOffset = 0;
@@ -454,7 +452,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::WalkGrpIdx(LocalTenso
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
 __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::LookupExpertStateful(int64_t xStartRowCurrCore,
-                                                                                int64_t xRowNumCurrCore) {
+                                                                                int64_t xRowNumCurrCore)
+{
     // This function is stateful.
     // When called for the first time, currExpertIdx shoulde be initialzed to -1.
     // When called again, the value of currExpertIdx updated last time is used.
@@ -516,7 +515,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CopyInOffset()
         if constexpr (IsSameType<DTYPE_SCALE, bfloat16_t>::value) {
             offset_ = ToFloat(offsetLocal.GetValue(0));
         } else {
-            offset_ = static_cast<float>(*((__ubuf__ T4 *)offsetLocal.GetPhyAddr()));
+            offset_ = static_cast<float>(*((__ubuf__ T4*)offsetLocal.GetPhyAddr()));
         }
     }
 }
@@ -567,7 +566,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::VecCompute(uint32_t d
 
     LocalTensor<float> xLocal;
     LocalTensor<float> scaleLocal;
-    LocalTensor<float> mulLocal = mulBuf_.Get<float>();;
+    LocalTensor<float> mulLocal = mulBuf_.Get<float>();
+    ;
 
     // 将x cast成fp32 放在xLocal
     if constexpr (IsSameType<T1, float>::value) {
@@ -622,9 +622,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::VecCompute(uint32_t d
 
     // fp16->in8/int4
     if (ORIG_DTYPE_Y == DT_INT4) {
-        Cast(outputLocal.ReinterpretCast<int4b_t>(),
-        mulLocal.ReinterpretCast<half>(),
-        RoundMode::CAST_RINT, dataCount);
+        Cast(outputLocal.ReinterpretCast<int4b_t>(), mulLocal.ReinterpretCast<half>(), RoundMode::CAST_RINT, dataCount);
         return;
     }
     Cast(outputLocal, mulLocal.ReinterpretCast<half>(), RoundMode::CAST_RINT, dataCount);
@@ -645,7 +643,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::CopyOutY(int64_t xAdd
 
     DataCopyExtParams copyParams;
     copyParams.blockCount = (uint16_t)perSSize;
-    copyParams.blockLen = yLenReal *  sizeof(int8_t);
+    copyParams.blockLen = yLenReal * sizeof(int8_t);
 
     if (ORIG_DTYPE_Y == DT_INT4) {
         copyParams.srcStride = (calHBlock / INT4_NUMS_IN_INT8_SPACE - yLenReal) * sizeof(int8_t) / BLOCK_SIZE;
@@ -674,10 +672,10 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::PerLoopCompute(int64_
         LookupExpertStateful(xRowIndex_, xRowNum_);
         cumSum += xRowCntOfCurrExpert;
 
-        int64_t eSize = currExpertIdx;  // 这个专家策略在scale[E,H]中的行数 $$
-        int64_t hNumPerE = xRowCntOfCurrExpert;  // 这个专家策略对应的行数 $$
+        int64_t eSize = currExpertIdx;            // 这个专家策略在scale[E,H]中的行数 $$
+        int64_t hNumPerE = xRowCntOfCurrExpert;   // 这个专家策略对应的行数 $$
         int64_t loopS = Ceil(hNumPerE, maxSSize); // 这个专家策略需要几次循环做完
-        int64_t perSSize = maxSSize; // 一次处理的S维度的行数
+        int64_t perSSize = maxSSize;              // 一次处理的S维度的行数
         int64_t lastSSize = hNumPerE - (loopS - 1) * maxSSize;
         int64_t scaleAddr = eSize * dimH_ + hIdx * PEER_H; // scale的起始地址偏移
 
@@ -686,7 +684,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::PerLoopCompute(int64_
         WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
 
         CopyInScale(scaleAddr);
-        for (int64_t loopSIdx = 0; loopSIdx < loopS; loopSIdx ++) {
+        for (int64_t loopSIdx = 0; loopSIdx < loopS; loopSIdx++) {
             if (loopSIdx == loopS - 1) {
                 perSSize = lastSSize;
             }
@@ -718,7 +716,7 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Compute()
     CopyInOffset();
 
     // 切H的循环
-    for (int64_t loopIdx = 0; loopIdx < loopH; loopIdx ++) {
+    for (int64_t loopIdx = 0; loopIdx < loopH; loopIdx++) {
         if (loopIdx == loopH - 1) {
             calH = lastH;
         }
@@ -733,7 +731,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Compute()
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Process() {
+__aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Process()
+{
     if (blockIdx >= needCoreNum_) {
         return;
     }
@@ -744,9 +743,8 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Process() {
     }
     int64_t firstDimOfScaleShape = dimE_;
     if (firstDimOfScaleShape <= 0) {
-      Trap(); // "op GroupQuant no support for scale shape[0] is 0"
+        Trap(); // "op GroupQuant no support for scale shape[0] is 0"
     }
-
 
     // Need to check all group_index value on each core to defense exception when group_index being used.
     // If group_index is int32, calculate by vector instructions for high performance.
@@ -760,10 +758,10 @@ __aicore__ inline void GroupQuantBase<T1, T2, T3, T4, T5>::Process() {
     }
     // xRowIndex_是每个核中 S维度起始的行号
     xRowIndex_ = (blockIdx < preCoreNum_) ? blockIdx * xRowNumPreCore_ :
-        preCoreNum_ * xRowNumPreCore_ + (blockIdx - preCoreNum_) * xRowNumPostCore_;
+                                            preCoreNum_ * xRowNumPreCore_ + (blockIdx - preCoreNum_) * xRowNumPostCore_;
 
     Compute();
 }
 
-}  // namespace GroupQuant
-#endif  // ASCENDC_GROUP_QUANT
+} // namespace GroupQuant
+#endif // ASCENDC_GROUP_QUANT

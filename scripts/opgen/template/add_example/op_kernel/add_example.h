@@ -47,23 +47,19 @@ private:
 
 template <typename T>
 __aicore__ inline void AddExample<T>::Init(/*参数列表*/)
-{
-}
+{}
 
 template <typename T>
 __aicore__ inline void AddExample<T>::CopyIn(/*参数列表*/)
-{
-}
+{}
 
 template <typename T>
 __aicore__ inline void AddExample<T>::CopyOut(/*参数列表*/)
-{
-}
+{}
 
 template <typename T>
 __aicore__ inline void AddExample<T>::Compute(/*参数列表*/)
-{
-}
+{}
 
 template <typename T>
 __aicore__ inline void AddExample<T>::Process()

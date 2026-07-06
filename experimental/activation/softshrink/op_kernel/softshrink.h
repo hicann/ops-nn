@@ -1,11 +1,11 @@
-/** 
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd. 
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
- * CANN Open Software License Agreement Version 2.0 (the "License"). 
- * Please refer to the License for details. You may not use this file except in compliance with the License. 
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
- * See LICENSE in the root of the software repository for the full text of the License. 
+/**
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  *
  * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
@@ -35,9 +35,8 @@ class Softshrink {
     using ComputeType = std::conditional_t<NEED_CAST, float, T>;
 
 public:
-    __aicore__ inline Softshrink() {};
-    __aicore__ inline void Init(GM_ADDR inputX, GM_ADDR outputY,
-        const SoftshrinkTilingData* tilingData);
+    __aicore__ inline Softshrink(){};
+    __aicore__ inline void Init(GM_ADDR inputX, GM_ADDR outputY, const SoftshrinkTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -61,14 +60,11 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void Softshrink<T, BUFFER_MODE>::Init(
-    GM_ADDR inputX, GM_ADDR outputY,
-    const SoftshrinkTilingData* tilingData)
+__aicore__ inline void Softshrink<T, BUFFER_MODE>::Init(GM_ADDR inputX, GM_ADDR outputY,
+                                                        const SoftshrinkTilingData* tilingData)
 {
-    int64_t remainderLength =
-        tilingData->totalNum - tilingData->blockFactor * GetBlockIdx();
-    blockLength_ = (remainderLength > tilingData->blockFactor)
-        ? tilingData->blockFactor : remainderLength;
+    int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * GetBlockIdx();
+    blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
     ubLength_ = tilingData->ubFactor;
     lambd_ = tilingData->lambd;
 
@@ -94,8 +90,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Init(
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void Softshrink<T, BUFFER_MODE>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void Softshrink<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T> inputLocal = inputQueue.template AllocTensor<T>();
 
@@ -105,15 +100,13 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::CopyIn(
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
 
-    DataCopyPad(inputLocal, inputGM[progress * ubLength_], copyParams,
-        {false, 0, 0, 0});
+    DataCopyPad(inputLocal, inputGM[progress * ubLength_], copyParams, {false, 0, 0, 0});
 
     inputQueue.EnQue(inputLocal);
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
-    int64_t currentNum)
+__aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
 {
     LocalTensor<T> inputLocal = inputQueue.template DeQue<T>();
     LocalTensor<T> resultLocal = outputQueue.template AllocTensor<T>();
@@ -138,16 +131,14 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
         Compares(maskLocal, fp32Buf, lambd_, CMPMODE::GT, alignedNum);
         Adds(fp32Tmp, fp32Buf, -lambd_, alignedNum);
         PipeBarrier<PIPE_V>();
-        Select(fp32Tmp, maskLocal, fp32Tmp, 0.0f,
-            SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
+        Select(fp32Tmp, maskLocal, fp32Tmp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         PipeBarrier<PIPE_V>();
 
         // Step 2: Negative branch — mask = x < -lambd; fp32Buf = x + lambd; select
         Compares(maskLocal, fp32Buf, -lambd_, CMPMODE::LT, alignedNum);
         Adds(fp32Buf, fp32Buf, lambd_, alignedNum);
         PipeBarrier<PIPE_V>();
-        Select(fp32Buf, maskLocal, fp32Buf, 0.0f,
-            SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
+        Select(fp32Buf, maskLocal, fp32Buf, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         PipeBarrier<PIPE_V>();
 
         // Step 3: Merge — result = positive_branch + negative_branch
@@ -159,8 +150,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
         PipeBarrier<PIPE_V>();
         Compare(maskLocal, fp32Tmp, fp32Tmp, CMPMODE::NE, alignedNum);
         PipeBarrier<PIPE_V>();
-        Select(fp32Buf, maskLocal, fp32Tmp, fp32Buf,
-            SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
+        Select(fp32Buf, maskLocal, fp32Tmp, fp32Buf, SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
         PipeBarrier<PIPE_V>();
 
         // Cast back to original type
@@ -174,16 +164,14 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
         Compares(maskLocal, inputLocal, lambd_, CMPMODE::GT, alignedNum);
         Adds(tmpLocal, inputLocal, (T)(-lambd_), alignedNum);
         PipeBarrier<PIPE_V>();
-        Select(tmpLocal, maskLocal, tmpLocal, (T)0.0,
-            SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
+        Select(tmpLocal, maskLocal, tmpLocal, (T)0.0, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         PipeBarrier<PIPE_V>();
 
         // Step 2: Negative branch — mask = x < -lambd; result = x + lambd; select
         Compares(maskLocal, inputLocal, (T)(-lambd_), CMPMODE::LT, alignedNum);
         Adds(resultLocal, inputLocal, (T)(lambd_), alignedNum);
         PipeBarrier<PIPE_V>();
-        Select(resultLocal, maskLocal, resultLocal, (T)0.0,
-            SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
+        Select(resultLocal, maskLocal, resultLocal, (T)0.0, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         PipeBarrier<PIPE_V>();
 
         // Step 3: Merge — result = positive_branch + negative_branch
@@ -201,8 +189,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void Softshrink<T, BUFFER_MODE>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void Softshrink<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T> resultLocal = outputQueue.template DeQue<T>();
     DataCopyParams copyParams;
@@ -224,10 +211,10 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Process()
         if (loopCount >= 2) {
             CopyIn(0, curNum0);
             for (int64_t i = 1; i < loopCount; i++) {
-                int64_t prevNum = (i == 1) ? curNum0 :
-                    ((i - 1 == loopCount - 1) ? (blockLength_ - ubLength_ * (i - 1)) : ubLength_);
-                int64_t curNum = (i == loopCount - 1)
-                    ? (blockLength_ - ubLength_ * i) : ubLength_;
+                int64_t prevNum = (i == 1) ?
+                                      curNum0 :
+                                      ((i - 1 == loopCount - 1) ? (blockLength_ - ubLength_ * (i - 1)) : ubLength_);
+                int64_t curNum = (i == loopCount - 1) ? (blockLength_ - ubLength_ * i) : ubLength_;
                 CopyIn(i, curNum);
                 Compute(prevNum);
                 CopyOut(i - 1, prevNum);
@@ -242,8 +229,7 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Process()
         }
     } else {
         for (int64_t i = 0; i < loopCount; i++) {
-            int64_t currentNum = (i == (loopCount - 1))
-                ? (blockLength_ - ubLength_ * i) : ubLength_;
+            int64_t currentNum = (i == (loopCount - 1)) ? (blockLength_ - ubLength_ * i) : ubLength_;
             CopyIn(i, currentNum);
             Compute(currentNum);
             CopyOut(i, currentNum);

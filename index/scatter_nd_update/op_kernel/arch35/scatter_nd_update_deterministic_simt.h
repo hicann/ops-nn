@@ -31,24 +31,25 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtComputeData(
     for (uint32_t i = threadIdx.x; i < updateCount; i += blockDim.x) {
         TYPE_T globalUpdateIdx = updateOffSet + i;
         TYPE_T quotient = Simt::UintDiv(globalUpdateIdx, magic, shift);
-        
+
         // indice中对应行号
         TYPE_T currIndiceIdx = quotient;
         TYPE_T scatterAxisIdx = globalUpdateIdx - quotient * sliceSize;
         OFFSET_T idx = varIdxGmAddr[currIndiceIdx];
-       
+
         if (idx >= 0 && idx < varSize && maskGmAddr[idx / sliceSize] == currIndiceIdx) {
             uint64_t dst = static_cast<uint64_t>(idx + scatterAxisIdx);
             outputGmAddr[dst] = updateLocalAddr[i];
-        } 
+        }
     }
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T = INDICES_T>
-class ScatterNdUpdateDeterministicSimt : public ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>
-{
+class ScatterNdUpdateDeterministicSimt
+    : public ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T> {
 public:
-    __aicore__ inline ScatterNdUpdateDeterministicSimt(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe) : ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>(tilingData, pipe){};
+    __aicore__ inline ScatterNdUpdateDeterministicSimt(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe)
+        : ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>(tilingData, pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void Process();
 
@@ -65,8 +66,9 @@ private:
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y ,GM_ADDR workspace)
-{    
+__aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+{
     this->InitBase(x, indices, updates, y, workspace);
 }
 
@@ -87,9 +89,9 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
     GetUintDivMagicAndShift(magic, shift, sliceSize);
     asc_vf_call<SimtComputeData<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
         dim3(THREAD_NUM), (__ubuf__ PARAMS_T*)updateLocal.GetPhyAddr(), (__gm__ PARAMS_T*)(this->outputGm.GetPhyAddr()),
-        (__gm__ TYPE_T*)this->maskGm.GetPhyAddr(), (__gm__ TYPE_T*)this->varIdxGm.GetPhyAddr(), updateCount, updateOffSet,
-        sliceSize, rankSize, varSize, magic, shift);
-    this->inQueX. template FreeTensor(updateLocal);
+        (__gm__ TYPE_T*)this->maskGm.GetPhyAddr(), (__gm__ TYPE_T*)this->varIdxGm.GetPhyAddr(), updateCount,
+        updateOffSet, sliceSize, rankSize, varSize, magic, shift);
+    this->inQueX.template FreeTensor(updateLocal);
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
@@ -111,7 +113,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
         this->currBlockHandleIdx = this->tiling_.eachCoreIndexCount;
     }
     this->InitUpdateBuffer();
-   
+
     this->idxLoopSize = Ops::Base::CeilDiv(this->currBlockHandleIdx, static_cast<TYPE_T>(this->tiling_.indicesFactor));
     this->indiceBlockOffSet = this->blockIdx * this->tiling_.eachCoreIndexCount;
     int64_t tailLoopIndices = this->currBlockHandleIdx - this->tiling_.indicesFactor * (this->idxLoopSize - 1);
@@ -132,7 +134,8 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CopyInUpdate(LocalTensor<PARAMS_T>& updateLocal)
+__aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CopyInUpdate(
+    LocalTensor<PARAMS_T>& updateLocal)
 {
     DataCopyExtParams xCopyParams{1, static_cast<uint32_t>(this->updateCount * sizeof(PARAMS_T)), 0, 0, 0};
     DataCopyPadExtParams<PARAMS_T> xPadParams{false, 0, 0, 0};

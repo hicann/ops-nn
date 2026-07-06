@@ -25,7 +25,8 @@ constexpr static uint64_t DEFAULT_NUM = 0;
 bool AddRmsNormDynamicMxQuantReduceEmptyTiling::IsCapable()
 {
     if (numCol_ != 0 && numRow_ != 0) {
-        OP_LOGI(context_->GetNodeName(), "ReduceEmptyTiling not applicable: numCol=%lu != 0 or numRow=%lu != 0.", numCol_, numRow_);
+        OP_LOGI(context_->GetNodeName(), "ReduceEmptyTiling not applicable: numCol=%lu != 0 or numRow=%lu != 0.",
+                numCol_, numRow_);
         return false;
     }
     OP_LOGI(context_->GetNodeName(), "ReduceEmptyTiling IsCapable: true (numCol=%lu, numRow=%lu).", numCol_, numRow_);
@@ -56,8 +57,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
     int64_t totalLength = static_cast<int64_t>(numRow_);
     int64_t elemSize = FP32_SIZE;
     int64_t aivNum = static_cast<int64_t>(totalCoreNum_);
-    int64_t perLoopMaxElements =
-        static_cast<int64_t>(maxUbSize_) / elemSize / BUFFER_NUM;
+    int64_t perLoopMaxElements = static_cast<int64_t>(maxUbSize_) / elemSize / BUFFER_NUM;
 
     // Core splitting
     int64_t blockNum = Ops::Base::CeilDiv(totalLength * elemSize, SINGLE_AIV_CORE_THRESHOLD_BYTES);
@@ -75,8 +75,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
 
     // Intra-core loop splitting (non-last core)
     int64_t ubAlignElems = static_cast<int64_t>(ubBlockSize_) / elemSize;
-    int64_t perCorePerLoopElements = Ops::Base::FloorAlign(
-        std::min(perLoopMaxElements, perCoreElements), ubAlignElems);
+    int64_t perCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxElements, perCoreElements), ubAlignElems);
 
     int64_t perCoreLoops = Ops::Base::CeilDiv(perCoreElements, perCorePerLoopElements);
     int64_t perCoreLastLoopElements = perCoreElements - (perCoreLoops - 1) * perCorePerLoopElements;
@@ -86,8 +85,8 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
     td_.perCoreLastLoopElements = static_cast<uint64_t>(perCoreLastLoopElements);
 
     // Intra-core loop splitting (last core)
-    int64_t lastCorePerLoopElements = Ops::Base::FloorAlign(
-        std::min(perLoopMaxElements, lastCoreElements), ubAlignElems);
+    int64_t lastCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxElements, lastCoreElements),
+                                                            ubAlignElems);
     if (lastCorePerLoopElements < 1) {
         lastCorePerLoopElements = lastCoreElements;
     }
@@ -102,17 +101,14 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
             "ReduceEmpty DoOpTiling: blockNum=%lu, perCoreElements=%lu, lastCoreElements=%lu, "
             "perCoreLoops=%lu, perCorePerLoopElements=%lu, perCoreLastLoopElements=%lu, "
             "lastCoreLoops=%lu, lastCorePerLoopElements=%lu, lastCoreLastLoopElements=%lu, rstdFlag=%u.",
-            usedCoreNum_, td_.perCoreElements, td_.lastCoreElements,
-            td_.perCoreLoops, td_.perCorePerLoopElements, td_.perCoreLastLoopElements,
-            td_.lastCoreLoops, td_.lastCorePerLoopElements, td_.lastCoreLastLoopElements, td_.rstdFlag);
+            usedCoreNum_, td_.perCoreElements, td_.lastCoreElements, td_.perCoreLoops, td_.perCorePerLoopElements,
+            td_.perCoreLastLoopElements, td_.lastCoreLoops, td_.lastCorePerLoopElements, td_.lastCoreLastLoopElements,
+            td_.rstdFlag);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t AddRmsNormDynamicMxQuantReduceEmptyTiling::GetTilingKey() const
 {
@@ -129,16 +125,16 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::PostTiling()
 
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
-        OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-                sizeof(td_), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(td_), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&td_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
     OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(td_));
 
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
@@ -147,5 +143,6 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantReduceEmptyTiling, ARND_REDUCE_EMPTY_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantReduceEmptyTiling,
+                             ARND_REDUCE_EMPTY_PRIORITY);
 } // namespace optiling

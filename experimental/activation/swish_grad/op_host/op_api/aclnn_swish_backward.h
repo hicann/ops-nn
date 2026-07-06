@@ -35,8 +35,8 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSwishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
-                                                     const aclScalar* betaOptional, aclTensor* gradInput,
-                                                     uint64_t* workspaceSize, aclOpExecutor** executor);
+                                                         const aclScalar* betaOptional, aclTensor* gradInput,
+                                                         uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnSwishBackward的第二段接口，用于执行计算。
@@ -47,10 +47,10 @@ ACLNN_API aclnnStatus aclnnSwishBackwardGetWorkspaceSize(const aclTensor* gradOu
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnSwishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                     aclrtStream stream);
+                                         aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_SWISH_BACKWARD_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_SWISH_BACKWARD_H_

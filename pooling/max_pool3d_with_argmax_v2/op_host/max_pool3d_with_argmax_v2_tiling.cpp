@@ -34,18 +34,14 @@ static ge::graphStatus TilingPrepare4MaxPool3DWithArgmaxV2(gert::TilingParseCont
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNum();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
 
-    OP_CHECK_IF(
-        compileInfoPtr->coreNum <= 0,
-        OP_LOGE(
-            context->GetNodeName(), "MaxPool3DWithArgmaxV2: coreNum = %zu, should be greater than 0",
-            compileInfoPtr->coreNum),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        compileInfoPtr->ubSize <= 0,
-        OP_LOGE(
-            context->GetNodeName(), "MaxPool3DWithArgmaxV2: ubSize = %zu, should be greater than 0",
-            compileInfoPtr->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr->coreNum <= 0,
+                OP_LOGE(context->GetNodeName(), "MaxPool3DWithArgmaxV2: coreNum = %zu, should be greater than 0",
+                        compileInfoPtr->coreNum),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr->ubSize <= 0,
+                OP_LOGE(context->GetNodeName(), "MaxPool3DWithArgmaxV2: ubSize = %zu, should be greater than 0",
+                        compileInfoPtr->ubSize),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

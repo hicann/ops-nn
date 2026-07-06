@@ -26,24 +26,24 @@ OP_TYPE_REGISTER(SigmoidCrossEntropyWithLogitsGradV2);
 const aclTensor* SigmoidCrossEntropyWithLogitsGradV2(const aclTensor* gradOutput, const aclTensor* self,
                                                      const aclTensor* target, const aclTensor* weightOptional,
                                                      const aclTensor* posWeightOptional, const std::string& reduction,
-                                                     aclOpExecutor* executor) {
-  L0_DFX(SigmoidCrossEntropyWithLogitsGradV2, gradOutput, self, target, weightOptional, posWeightOptional, reduction);
+                                                     aclOpExecutor* executor)
+{
+    L0_DFX(SigmoidCrossEntropyWithLogitsGradV2, gradOutput, self, target, weightOptional, posWeightOptional, reduction);
 
-  auto out = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-  auto ret = INFER_SHAPE(SigmoidCrossEntropyWithLogitsGradV2,
-                         OP_INPUT(self, target, gradOutput, weightOptional, posWeightOptional), OP_OUTPUT(out),
-                         OP_ATTR(reduction.c_str()));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
-    return nullptr;
-  }
+    auto out = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    auto ret = INFER_SHAPE(SigmoidCrossEntropyWithLogitsGradV2,
+                           OP_INPUT(self, target, gradOutput, weightOptional, posWeightOptional), OP_OUTPUT(out),
+                           OP_ATTR(reduction.c_str()));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
+        return nullptr;
+    }
 
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SigmoidCrossEntropyWithLogitsGradV2,
-                                               OP_INPUT(self, target, gradOutput, weightOptional, posWeightOptional),
-                                               OP_OUTPUT(out),
-                                               OP_ATTR(reduction));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "SigmoidCrossEntropyWithLogitsGradV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return out;
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(SigmoidCrossEntropyWithLogitsGradV2,
+                                                 OP_INPUT(self, target, gradOutput, weightOptional, posWeightOptional),
+                                                 OP_OUTPUT(out), OP_ATTR(reduction));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "SigmoidCrossEntropyWithLogitsGradV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return out;
 }
-}  // namespace l0op
+} // namespace l0op

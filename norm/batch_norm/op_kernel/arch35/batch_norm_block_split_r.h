@@ -18,39 +18,31 @@
 #include "batch_norm_base.h"
 #include "../../norm_common/reduce_common_regbase.h"
 
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::MemType;
+using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
 template <typename T1, typename T2>
-class BatchNormBlockSplitR
-{
+class BatchNormBlockSplitR {
 public:
-    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
-    {
-        return (x + y - 1) / y;
-    }
+    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y) { return (x + y - 1) / y; }
 
-    __aicore__ inline uint32_t CEIL_ALIGN(uint32_t x, uint32_t y)
-    {
-        return (x + y - 1) / y * y;
-    }
+    __aicore__ inline uint32_t CEIL_ALIGN(uint32_t x, uint32_t y) { return (x + y - 1) / y * y; }
 
     __aicore__ inline BatchNormBlockSplitR(const BatchNormBlockSplitRTilingData* tilingDataIn, TPipe* pipeIn)
     {
         this->pipe = pipeIn;
         tilingData = tilingDataIn;
-        this->unbiasedEstimationCoeff =
-            static_cast<float>(tilingData->patternR) / static_cast<float>(tilingData->patternR - 1);
+        this->unbiasedEstimationCoeff = static_cast<float>(tilingData->patternR) /
+                                        static_cast<float>(tilingData->patternR - 1);
     }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
@@ -69,8 +61,8 @@ public:
                             tilingData->tailCoreBlockFactor * (blockIdx - tilingData->formerCoreNums)) *
                            tilingData->rUbFactor;
         }
-        uint32_t nowCoreRConut = (blockIdx == (usedCoreNum - 1)) ? tilingData->rUbFactor * rLoop + tilingData->tailR
-                                                                 : tilingData->rUbFactor * rLoop;
+        uint32_t nowCoreRConut = (blockIdx == (usedCoreNum - 1)) ? tilingData->rUbFactor * rLoop + tilingData->tailR :
+                                                                   tilingData->rUbFactor * rLoop;
         uint32_t nowCoreRConutPowOfTow = FindCofFactor(nowCoreRConut);
         uint32_t rPowOfTow = FindCofFactor(tilingData->patternR);
         this->nFactor = static_cast<float>(1) / static_cast<float>(nowCoreRConutPowOfTow);
@@ -276,11 +268,11 @@ private:
         uint32_t tailNum = (blockIdx == (usedCoreNum - 1)) ? tilingData->tailR : 0;
         uint16_t baseLoopCount = CEIL_DIV(baseNum, VL_F32);
         uint16_t tailLoopCount = CEIL_DIV(tailNum, VL_F32);
-        float lastCoreAddCount =
-            static_cast<float>(tilingData->tailR + tilingData->tailCoreBlockFactor * tilingData->rUbFactor);
+        float lastCoreAddCount = static_cast<float>(tilingData->tailR +
+                                                    tilingData->tailCoreBlockFactor * tilingData->rUbFactor);
         if (tilingData->tailCoreNums == 0) {
-            lastCoreAddCount =
-                static_cast<float>(tilingData->tailR + tilingData->formerCoreBlockFactor * tilingData->rUbFactor);
+            lastCoreAddCount = static_cast<float>(tilingData->tailR +
+                                                  tilingData->formerCoreBlockFactor * tilingData->rUbFactor);
         }
         float tailCoreAddCount = static_cast<float>(tilingData->tailCoreBlockFactor * tilingData->rUbFactor);
         float formerCoreAddCount = static_cast<float>(tilingData->formerCoreBlockFactor * tilingData->rUbFactor);
@@ -481,7 +473,6 @@ private:
         uint32_t threeRLoopSize = ROW_THREE_OFFSET * rLoopStride;
         __VEC_SCOPE__
         {
-
             RegTensor<float> x1;
             RegTensor<float> x2;
             RegTensor<float> x3;
@@ -495,7 +486,6 @@ private:
             RegTensor<float> nextRowCount;
             RegTensor<float> remCount;
             RegTensor<float> nextRemCount;
-
 
             MaskReg pregLoop;
             uint32_t sreg0 = currentA;
@@ -1202,6 +1192,6 @@ private:
     TBuf<TPosition::VECCALC> countTbuf1;
     TBuf<TPosition::VECCALC> countTbuf2;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_BLOCK_SPLIT_R_H

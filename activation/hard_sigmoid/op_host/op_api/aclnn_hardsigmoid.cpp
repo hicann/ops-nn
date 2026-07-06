@@ -74,8 +74,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardsigmoidGetWorkspaceSize(
-    const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnHardsigmoidGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                             aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -120,15 +120,15 @@ aclnnStatus aclnnHardsigmoid(void* workspace, uint64_t workspaceSize, aclOpExecu
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceHardsigmoidGetWorkspaceSize(
-    const aclTensor* self, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceHardsigmoidGetWorkspaceSize(const aclTensor* self, uint64_t* workspaceSize,
+                                                    aclOpExecutor** executor)
 {
     auto out = const_cast<aclTensor*>(self);
     return aclnnHardsigmoidGetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceHardsigmoid(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnInplaceHardsigmoid(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceHardsigmoid);
     // 固定写法，调用框架能力，完成计算

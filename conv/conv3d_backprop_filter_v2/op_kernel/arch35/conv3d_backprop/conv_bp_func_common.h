@@ -19,7 +19,7 @@
 namespace ConvolutionBackpropFunc {
 
 template <class Intf>
-__aicore__ inline void FreeA1Tensor(Intf *self, bool a1PingPongFlag)
+__aicore__ inline void FreeA1Tensor(Intf* self, bool a1PingPongFlag)
 {
     if (a1PingPongFlag) {
         self->ctx.a1Ping_.FreeTensor(self->ctx.cacheA1BufPing_);
@@ -36,7 +36,7 @@ __aicore__ inline void FreeA1Tensor(Intf *self, bool a1PingPongFlag)
 }
 
 template <class Intf>
-__aicore__ inline void FreeB1Tensor(Intf *self, bool b1PingPongFlag)
+__aicore__ inline void FreeB1Tensor(Intf* self, bool b1PingPongFlag)
 {
     if (b1PingPongFlag) {
         self->ctx.b1Ping_.FreeTensor(self->ctx.cacheB1BufPing_);
@@ -52,7 +52,9 @@ __aicore__ inline void FreeB1Tensor(Intf *self, bool b1PingPongFlag)
 }
 
 template <class Intf>
-__aicore__ inline void updateParasForSplitW(Intf *self, Out2L1ScalarParams& out2L1Params, int32_t startWo, uint64_t out2A1SrcAddrStart, uint64_t out2B1SrcAddrStart) {
+__aicore__ inline void updateParasForSplitW(Intf* self, Out2L1ScalarParams& out2L1Params, int32_t startWo,
+                                            uint64_t out2A1SrcAddrStart, uint64_t out2B1SrcAddrStart)
+{
     uint64_t singleCoreHoWo = static_cast<uint64_t>(self->ctx.singleShapeHo_) * self->ctx.singleShapeWo_;
     uint64_t kIter = Ceil(singleCoreHoWo, self->ctx.tiling_->baseK);
     self->ctx.kIter_ = kIter;
@@ -67,19 +69,19 @@ __aicore__ inline void updateParasForSplitW(Intf *self, Out2L1ScalarParams& out2
     }
     self->ctx.load3d_.padList[1] = 0;
     int64_t b1SrcWiRightOffGm = static_cast<int64_t>(startWo + self->ctx.singleShapeWo_) * self->ctx.tiling_->strideW +
-        self->ctx.strideKernelDilationW - (self->ctx.tiling_->padLeft + self->ctx.tiling_->wi);
+                                self->ctx.strideKernelDilationW - (self->ctx.tiling_->padLeft + self->ctx.tiling_->wi);
     if (b1SrcWiRightOffGm > 0) {
         self->ctx.load3d_.padList[1] = b1SrcWiRightOffGm;
     }
 
-    //A矩阵不用做LOAD3D操作，不存在交叠；
+    // A矩阵不用做LOAD3D操作，不存在交叠；
     if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
         out2L1Params.out2A1SrcAddr = out2A1SrcAddrStart + startWo;
     } else if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
         out2L1Params.out2A1SrcAddr = out2A1SrcAddrStart + startWo * self->ctx.tiling_->cout;
     }
 
-    //B矩阵考虑卷积操作，导致前后两个split交叠问题；
+    // B矩阵考虑卷积操作，导致前后两个split交叠问题；
     if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
         if (self->ctx.load3d_.padList[0]) {
             out2L1Params.out2B1SrcAddr = out2B1SrcAddrStart;
@@ -95,14 +97,16 @@ __aicore__ inline void updateParasForSplitW(Intf *self, Out2L1ScalarParams& out2
     }
 
     if (out2L1Params.singleShapeWi > (self->ctx.load3d_.padList[0] + self->ctx.load3d_.padList[1])) {
-        self->ctx.load3d_.l1W = out2L1Params.singleShapeWi - self->ctx.load3d_.padList[0] - self->ctx.load3d_.padList[1];
+        self->ctx.load3d_.l1W = out2L1Params.singleShapeWi - self->ctx.load3d_.padList[0] -
+                                self->ctx.load3d_.padList[1];
     } else {
         self->ctx.load3d_.l1W = 0;
     }
 }
 
 template <class Intf>
-__aicore__ inline void calculateWoIterTimes(Intf *self, int32_t &woIterateTimes, const int32_t splitWo) {
+__aicore__ inline void calculateWoIterTimes(Intf* self, int32_t& woIterateTimes, const int32_t splitWo)
+{
     if (splitWo == 0) {
         woIterateTimes = 1;
         return;
@@ -111,8 +115,9 @@ __aicore__ inline void calculateWoIterTimes(Intf *self, int32_t &woIterateTimes,
 }
 
 template <class Intf>
-__aicore__ inline void updateSingleShapeWoI(Intf *self, Out2L1ScalarParams& out2L1Params, const int32_t woIterateTimes,
-                                            const int32_t splitWoIdx, const int32_t splitWo) {
+__aicore__ inline void updateSingleShapeWoI(Intf* self, Out2L1ScalarParams& out2L1Params, const int32_t woIterateTimes,
+                                            const int32_t splitWoIdx, const int32_t splitWo)
+{
     if (woIterateTimes > 1) {
         if ((splitWoIdx + 1) == woIterateTimes) {
             self->ctx.singleShapeWo_ = self->ctx.tiling_->wo - splitWoIdx * splitWo;
@@ -120,22 +125,26 @@ __aicore__ inline void updateSingleShapeWoI(Intf *self, Out2L1ScalarParams& out2
             self->ctx.singleShapeWo_ = splitWo;
         }
         // 包含pad等在内，所以singleShapeWi可能大于wi。关注特殊case，当singleShapeWi > wi时是否能够正常运行；
-        out2L1Params.singleShapeWi = self->ctx.singleShapeWo_ * self->ctx.tiling_->strideW + self->ctx.strideKernelDilationW;
+        out2L1Params.singleShapeWi = self->ctx.singleShapeWo_ * self->ctx.tiling_->strideW +
+                                     self->ctx.strideKernelDilationW;
     } else {
         self->ctx.singleShapeWo_ = self->ctx.tiling_->wo;
-        uint64_t singleShapeWi = self->ctx.singleShapeWo_ * self->ctx.tiling_->strideW + self->ctx.strideKernelDilationW;
+        uint64_t singleShapeWi = self->ctx.singleShapeWo_ * self->ctx.tiling_->strideW +
+                                 self->ctx.strideKernelDilationW;
         out2L1Params.singleShapeWi = singleShapeWi;
     }
 }
 
 template <class Intf>
-static __aicore__ inline void CalcParamsMmad(Intf* self) {
+static __aicore__ inline void CalcParamsMmad(Intf* self)
+{
     self->ctx.mmad_.m = self->ctx.baseUseM_;
     self->ctx.mmad_.n = self->ctx.baseUseN_;
 }
 
 template <class Intf>
-__aicore__ inline void ClearL0CLoad3dParams(Intf *self, LocalTensor<typename Intf::SrcT> &l0b) {
+__aicore__ inline void ClearL0CLoad3dParams(Intf* self, LocalTensor<typename Intf::SrcT>& l0b)
+{
     constexpr uint32_t DEFAULT_MEXTENSION = 16;
     constexpr uint32_t DEFAULT_PAD_DOWN = 255;
 
@@ -160,26 +169,27 @@ __aicore__ inline void ClearL0CLoad3dParams(Intf *self, LocalTensor<typename Int
     load3d.dilationFilterH = 1;
 
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
-    LoadDataRepeatParamWithStride repeatParam = {0, 1, 0,
-        static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
+    LoadDataRepeatParamWithStride repeatParam = {
+        0, 1, 0, static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
     SetLoadDataRepeatWithStride(repeatParam);
     LoadDataWithStride(l0b[0], self->ctx.cacheB1BufPing_, load3d);
 #else
-    LoadDataRepeatParam repeatParam = {0, 1, 0,
-        static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
+    LoadDataRepeatParam repeatParam = {
+        0, 1, 0, static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
     SetLoadDataRepeat(repeatParam);
     LoadData(l0b[0], self->ctx.cacheB1BufPing_, load3d);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void ClearL0CLoad2dParams(Intf *self, LocalTensor<typename Intf::SrcT> &l0a) {
+__aicore__ inline void ClearL0CLoad2dParams(Intf* self, LocalTensor<typename Intf::SrcT>& l0a)
+{
     LoadData2DParamsV2 load2d;
     load2d.mStartPosition = 0;
     load2d.kStartPosition = 0;
     load2d.mStep = Ceil(self->ctx.tiling_->baseM, self->ctx.tiling_->m0);
     if (IsSameType<typename Intf::SrcT, float>::value) {
-        load2d.kStep = 2;    //fp32类型，kstep一定是2的倍数
+        load2d.kStep = 2; // fp32类型，kstep一定是2的倍数
     } else {
         load2d.kStep = 1;
     }
@@ -190,7 +200,8 @@ __aicore__ inline void ClearL0CLoad2dParams(Intf *self, LocalTensor<typename Int
 }
 
 template <class Intf>
-__aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0cT> &l0c) {
+__aicore__ inline void ClearBaseMNL0C(Intf* self, LocalTensor<typename Intf::L0cT>& l0c)
+{
     LocalTensor<typename Intf::SrcT> l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcT>();
     LocalTensor<typename Intf::SrcT> l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcT>();
 
@@ -217,7 +228,7 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
 
     ClearL0CLoad3dParams<Intf>(self, l0b);
     ClearL0CLoad2dParams<Intf>(self, l0a);
-    
+
     FreeB1Tensor(self, 1);
     FreeA1Tensor(self, 1);
     MmadParams mmad_;
@@ -230,7 +241,7 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
     WaitFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
 
     Mmad(l0c[0], l0a[0], l0b[0], mmad_);
-    if (mmad_.m * mmad_.n <2560) {
+    if (mmad_.m * mmad_.n < 2560) {
         PipeBarrier<PIPE_M>();
     }
 
@@ -238,9 +249,8 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
     self->ctx.l0aPingPongFlag_ ^= self->ctx.useL0PingPong_;
 }
 
-__aicore__ inline void UpdateIdx(
-    bool isLastStepKa, bool isLastStepKb, uint32_t& kaIdx, uint32_t& kbIdx,
-    uint64_t& kaStepIdx, uint64_t& kbStepIdx)
+__aicore__ inline void UpdateIdx(bool isLastStepKa, bool isLastStepKb, uint32_t& kaIdx, uint32_t& kbIdx,
+                                 uint64_t& kaStepIdx, uint64_t& kbStepIdx)
 {
     if (isLastStepKa) {
         ++kaStepIdx;
@@ -256,5 +266,5 @@ __aicore__ inline void UpdateIdx(
     }
 }
 
-}  // namespace ConvolutionBackpropFunc
+} // namespace ConvolutionBackpropFunc
 #endif

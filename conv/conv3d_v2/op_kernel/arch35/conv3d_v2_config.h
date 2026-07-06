@@ -22,22 +22,19 @@ namespace conv3d {
 using namespace conv;
 
 struct Conv3dParam : public ConvParam {
-    __aicore__ inline Conv3dParam()
-    {};
+    __aicore__ inline Conv3dParam(){};
 };
 
 template <class ConvDataType>
 struct Conv3dCfg : public ConvConfig<ConvDataType> {
 public:
-    __aicore__ inline Conv3dCfg()
-    {}
+    __aicore__ inline Conv3dCfg() {}
 
     using ContextData = struct _ : public ConvConfig<ConvDataType>::ContextData {
-        __aicore__ inline _()
-        {}
+        __aicore__ inline _() {}
     };
 };
 
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif // CONV3D_V2_CONFIG_H

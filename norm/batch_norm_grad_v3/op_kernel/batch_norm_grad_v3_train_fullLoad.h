@@ -104,9 +104,8 @@ private:
     __aicore__ inline void computeDBias()
     {
         LocalTensor dBiasTensor = dBiasQueue.AllocTensor<float>();
-        this->DoNormalReduce(
-            this->dyTensor, this->reduceUbTensor, this->reduceUbTensor, this->cBlockLength,
-            this->b0Dim * this->b1DimAlign, this->b0Dim * this->b1DimAlign);
+        this->DoNormalReduce(this->dyTensor, this->reduceUbTensor, this->reduceUbTensor, this->cBlockLength,
+                             this->b0Dim * this->b1DimAlign, this->b0Dim * this->b1DimAlign);
         int64_t copyNum = GetAlignValue<T2>(this->cBlockLength);
         DataCopy(dBiasTensor, this->reduceUbTensor, copyNum);
         PipeBarrier<PIPE_V>();
@@ -115,16 +114,15 @@ private:
 
     __aicore__ inline void computeDWeight()
     {
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         CALC_TWO_TENSOR_REPEAT(Sub, Adds, this->xTensor, this->meanBrcbTensor, CALC_SUB_FLAG, "dyMulx_mul_x");
         PipeBarrier<PIPE_V>();
-        CALC_TWO_TENSOR(
-            Mul, dyMulInputTensor, this->xTensor, this->dyTensor, this->cBlockLength, this->b1DimAlign * this->b0Dim,
-            "x_mul_dy");
+        CALC_TWO_TENSOR(Mul, dyMulInputTensor, this->xTensor, this->dyTensor, this->cBlockLength,
+                        this->b1DimAlign * this->b0Dim, "x_mul_dy");
         PipeBarrier<PIPE_V>();
-        this->DoNormalReduce(
-            dyMulInputTensor, dyMulInputTensor, dyMulInputTensor, this->cBlockLength, this->b0Dim * this->b1DimAlign,
-            this->b0Dim * this->b1DimAlign);
+        this->DoNormalReduce(dyMulInputTensor, dyMulInputTensor, dyMulInputTensor, this->cBlockLength,
+                             this->b0Dim * this->b1DimAlign, this->b0Dim * this->b1DimAlign);
         PipeBarrier<PIPE_V>();
         Div(this->meanTensor, dyMulInputTensor, this->varTensor, this->cBlockLength);
         PipeBarrier<PIPE_V>();
@@ -134,30 +132,40 @@ private:
     {
         uint8_t repeatTime = CeilDiv(this->cBlockLength, B32_BLOCK_ALIGN_NUM);
         Brcb(this->meanBrcbTensor, dyMulInputTensor, repeatTime, {1, 8});
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         Div(this->meanBrcbTensor, this->meanBrcbTensor, this->varBrcbTensor, B32_BLOCK_ALIGN_NUM * this->cBlockLength);
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         Div(this->meanBrcbTensor, this->meanBrcbTensor, this->varBrcbTensor, B32_BLOCK_ALIGN_NUM * this->cBlockLength);
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         Muls(this->meanBrcbTensor, this->meanBrcbTensor, meanDenominator, B32_BLOCK_ALIGN_NUM * this->cBlockLength);
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         // 计算dx需要
         CALC_TWO_TENSOR_REPEAT(Mul, Muls, this->xTensor, this->meanBrcbTensor, 0, "x_sub_mean");
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         Muls(this->reduceUbTensor, this->reduceUbTensor, meanDenominator, this->cBlockLength);
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         Brcb(this->meanBrcbTensor, this->reduceUbTensor, repeatTime, {1, 8});
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         CALC_TWO_TENSOR_REPEAT(Sub, Adds, this->dyTensor, this->meanBrcbTensor, CALC_SUB_FLAG, "gradOut_sub_reduceUb");
-        PipeBarrier<PIPE_ALL>();;
-        CALC_TWO_TENSOR(
-            Sub, this->dyTensor, this->dyTensor, this->xTensor, this->cBlockLength, this->b1DimAlign * this->b0Dim,
-            "gradOut_sub_x");
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
+        CALC_TWO_TENSOR(Sub, this->dyTensor, this->dyTensor, this->xTensor, this->cBlockLength,
+                        this->b1DimAlign * this->b0Dim, "gradOut_sub_x");
+        PipeBarrier<PIPE_ALL>();
+        ;
         CALC_TWO_TENSOR_REPEAT(Div, Muls, this->dyTensor, this->varBrcbTensor, CALC_DIV_FLAG, "gradOut_div_var3");
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         CALC_TWO_TENSOR_REPEAT(Mul, Muls, this->dyTensor, this->weightBrcbTensor, 0, "gradOut_mul_var");
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         this->dyQueue_.template EnQue(this->dyTensor);
     }
 

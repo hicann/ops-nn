@@ -11,9 +11,9 @@
 /*!
  * \file mse_loss_v2_tiling.h
  * \brief
- * 
- * 
- * 
+ *
+ *
+ *
  */
 
 #ifndef MSE_LOSS_V2_TILING_DEF_H

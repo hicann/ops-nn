@@ -13,8 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SoftplusV2Grad(const aclTensor *grad_output, const aclTensor *self, float beta, float threshold,
-                                aclOpExecutor *executor);
+const aclTensor* SoftplusV2Grad(const aclTensor* grad_output, const aclTensor* self, float beta, float threshold,
+                                aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_SOFTPLUS_V2_GRAD_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SOFTPLUS_V2_GRAD_OP_H_

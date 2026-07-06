@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OP_API_INC_TOPK_H_
 #define OP_API_INC_TOPK_H_
 
@@ -38,4 +38,4 @@ ACLNN_API aclnnStatus aclnnTopk(void* workspace, uint64_t workspaceSize, aclOpEx
 }
 #endif
 
-#endif  // OP_API_INC_TOPK_H_
+#endif // OP_API_INC_TOPK_H_

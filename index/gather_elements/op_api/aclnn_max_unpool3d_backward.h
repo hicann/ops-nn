@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OP_API_INC_MAX_UNPOOL3D_BACKWARD_H_
 #define OP_API_INC_MAX_UNPOOL3D_BACKWARD_H_
 
@@ -38,4 +38,4 @@ ACLNN_API aclnnStatus aclnnMaxUnpool3dBackward(void* workspace, uint64_t workspa
 }
 #endif
 
-#endif  // OP_API_INC_MAX_UNPOOL3D_BACKWARD_H_
+#endif // OP_API_INC_MAX_UNPOOL3D_BACKWARD_H_

@@ -14,8 +14,8 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* LeakyReluGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const float negativeSlope, aclOpExecutor* executor);
+const aclTensor* LeakyReluGrad(const aclTensor* gradOutput, const aclTensor* self, const float negativeSlope,
+                               aclOpExecutor* executor);
 }
 
 #endif // OP_API_OP_API_INC_LEVEL0_OP_LEAKY_RELU_GRAD_H_

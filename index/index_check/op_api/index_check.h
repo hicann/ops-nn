@@ -26,9 +26,8 @@ namespace l0op {
  * \param indices List of index tensors
  * \param executor Op executor
  */
-void IndexCheck(
-    const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor);
+void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor);
 
-}
+} // namespace l0op
 
 #endif // ACLNN_INDEX_CHECK_H

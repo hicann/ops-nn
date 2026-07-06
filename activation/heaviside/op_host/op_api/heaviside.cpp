@@ -35,14 +35,13 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     return CheckType(input->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
-static const aclTensor* HeavisideAiCore(
-    const aclTensor* input, const aclTensor* values, const aclTensor* output, aclOpExecutor* executor)
+static const aclTensor* HeavisideAiCore(const aclTensor* input, const aclTensor* values, const aclTensor* output,
+                                        aclOpExecutor* executor)
 {
     L0_DFX(HeavisideAiCore, input, values, output);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Heaviside, OP_INPUT(input, values), OP_OUTPUT(output));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HeavisideAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HeavisideAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return output;
 }
 

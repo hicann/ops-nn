@@ -17,8 +17,7 @@
 
 #include "op_common/op_host/util/platform_util.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t FLOAT16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
 static constexpr int64_t INT32_SIZE = 4;
@@ -67,7 +66,8 @@ bool MaxPoolWithArgmaxNhwcTiling::InitializationVars()
 
     // 并发度按照索引类型计算  索引类型位宽 >= 输入类型位宽
     baseData_.concurrentCount = Ops::Base::GetVRegSize(context_) / baseData_.indexBytes;
-    baseData_.templateMode = DOUBLE * baseData_.cInput > baseData_.concurrentCount ?  TEMPLATE_MODE_LARGE_C : TEMPLATE_MODE_SMALL_C;
+    baseData_.templateMode = DOUBLE * baseData_.cInput > baseData_.concurrentCount ? TEMPLATE_MODE_LARGE_C :
+                                                                                     TEMPLATE_MODE_SMALL_C;
     if (baseData_.templateMode == TEMPLATE_MODE_SMALL_C && baseData_.isPad == 1 && baseData_.nanProp == 1) {
         return false;
     }
@@ -123,13 +123,15 @@ void MaxPoolWithArgmaxNhwcTiling::DoBufferCalculate()
     int64_t maxDataNumInOneBlock = std::max(oneBlockNumT1, oneBlockNumT2);
     int64_t cOutputInnerAligned = Ops::Base::CeilAlign(splitData_.cOutputInner, maxDataNumInOneBlock);
 
-    splitData_.inputBufferSize =
-        splitData_.nOutputInner * splitData_.hInputInner * splitData_.wInputInner * cOutputInnerAligned * baseData_.inputBytes;
-    splitData_.maxValueBufferSize = splitData_.nOutputInner * splitData_.hOutputInner * splitData_.wOutputInner * cOutputInnerAligned * baseData_.inputBytes;
-    splitData_.argmaxBufferSize = splitData_.nOutputInner * splitData_.hOutputInner * splitData_.wOutputInner * cOutputInnerAligned * baseData_.indexBytes;
+    splitData_.inputBufferSize = splitData_.nOutputInner * splitData_.hInputInner * splitData_.wInputInner *
+                                 cOutputInnerAligned * baseData_.inputBytes;
+    splitData_.maxValueBufferSize = splitData_.nOutputInner * splitData_.hOutputInner * splitData_.wOutputInner *
+                                    cOutputInnerAligned * baseData_.inputBytes;
+    splitData_.argmaxBufferSize = splitData_.nOutputInner * splitData_.hOutputInner * splitData_.wOutputInner *
+                                  cOutputInnerAligned * baseData_.indexBytes;
 
-    int64_t tmpTotalBufferSize =
-        splitData_.inputBufferSize + splitData_.maxValueBufferSize + splitData_.argmaxBufferSize + Ops::Base::GetVRegSize(context_) * HELPER_BUFFER_NODE;
+    int64_t tmpTotalBufferSize = splitData_.inputBufferSize + splitData_.maxValueBufferSize +
+                                 splitData_.argmaxBufferSize + Ops::Base::GetVRegSize(context_) * HELPER_BUFFER_NODE;
     splitData_.totalBufferSize = tmpTotalBufferSize * DOUBLE;
 }
 
@@ -139,7 +141,8 @@ bool MaxPoolWithArgmaxNhwcTiling::IsMeetTargetCoreNum() const
     int64_t tmpHOutputOuter = Ops::Base::CeilDiv(baseData_.hOutput, splitData_.hOutputInner);
     int64_t tmpNOutputOuter = Ops::Base::CeilDiv(baseData_.nInput, splitData_.nOutputInner);
     int64_t tmpCOutputOuter = Ops::Base::CeilDiv(baseData_.cInput, splitData_.cOutputInner);
-    return tmpWOutputOuter * tmpHOutputOuter * tmpNOutputOuter * tmpCOutputOuter >= baseData_.coreUsedForBestPerformance;
+    return tmpWOutputOuter * tmpHOutputOuter * tmpNOutputOuter * tmpCOutputOuter >=
+           baseData_.coreUsedForBestPerformance;
 }
 
 bool MaxPoolWithArgmaxNhwcTiling::IsMeetUBSize()
@@ -148,8 +151,7 @@ bool MaxPoolWithArgmaxNhwcTiling::IsMeetUBSize()
     return splitData_.totalBufferSize <= baseData_.availableUb;
 }
 
-
-void MaxPoolWithArgmaxNhwcTiling::BinarySearch(int64_t start, int64_t end, int64_t *value, int64_t rate)
+void MaxPoolWithArgmaxNhwcTiling::BinarySearch(int64_t start, int64_t end, int64_t* value, int64_t rate)
 {
     int64_t left = start;
     int64_t right = end;
@@ -228,11 +230,11 @@ void MaxPoolWithArgmaxNhwcTiling::SplitC()
     splitData_.hOutputInner = 1;
     splitData_.wOutputInner = 1;
 
-    int64_t tmpC =
-        baseData_.cInput < baseData_.concurrentCount ? baseData_.cInput : baseData_.concurrentCount;
+    int64_t tmpC = baseData_.cInput < baseData_.concurrentCount ? baseData_.cInput : baseData_.concurrentCount;
     splitData_.cOutputInner = tmpC;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        BinarySearch(1,  Ops::Base::CeilDiv(baseData_.cInput / DOUBLE, baseData_.concurrentCount), &splitData_.cOutputInner, baseData_.concurrentCount);
+        BinarySearch(1, Ops::Base::CeilDiv(baseData_.cInput / DOUBLE, baseData_.concurrentCount),
+                     &splitData_.cOutputInner, baseData_.concurrentCount);
     }
 }
 
@@ -316,11 +318,12 @@ void MaxPoolWithArgmaxNhwcTiling::DoUBTiling()
 
 void MaxPoolWithArgmaxNhwcTiling::DoBlockTiling()
 {
-    splitData_.totalBaseBlockNum = splitData_.nOutputOuter * splitData_.cOutputOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
+    splitData_.totalBaseBlockNum = splitData_.nOutputOuter * splitData_.cOutputOuter * splitData_.hOutputOuter *
+                                   splitData_.wOutputOuter;
     splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
     splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
-    splitData_.tailCoreProcessNum =
-        splitData_.totalBaseBlockNum - splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
+                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
 }
 
 void MaxPoolWithArgmaxNhwcTiling::RerouteTemplateBySplit()
@@ -333,8 +336,8 @@ void MaxPoolWithArgmaxNhwcTiling::RerouteTemplateBySplit()
 
 void MaxPoolWithArgmaxNhwcTiling::SetTilingData()
 {
-    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData>();
+    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData>();
     tilingData->cInput = baseData_.cInput;
     tilingData->hInput = baseData_.hInput;
     tilingData->wInput = baseData_.wInput;
@@ -388,12 +391,12 @@ ge::graphStatus MaxPoolWithArgmaxNhwcTiling::DoOpTiling()
 
 ge::graphStatus MaxPoolWithArgmaxNhwcTiling::PostTiling()
 {
-    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData>();
+    MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData* tilingData = context_->GetTilingData<
+        MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData>();
     context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 
 REGISTER_TILING_TEMPLATE("MaxPoolWithArgmax", MaxPoolWithArgmaxNhwcTiling, 20);
 
-}  // namespace optiling
+} // namespace optiling

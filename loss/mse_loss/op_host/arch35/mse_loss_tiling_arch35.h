@@ -36,7 +36,7 @@ struct MseLossTilingKey {
 };
 class MseLossTiling {
 public:
-    explicit MseLossTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit MseLossTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling(const MseLossCompileInfo* compileInfo);
 
 protected:

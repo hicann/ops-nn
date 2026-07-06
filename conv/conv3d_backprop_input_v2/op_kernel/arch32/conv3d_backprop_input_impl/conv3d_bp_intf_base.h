@@ -38,8 +38,7 @@ public:
     constexpr static Conv3dConfig conv3dConfig = Config::conv3dConfig_;
 
 public:
-    __aicore__ inline ConvBpIntf()
-    {}
+    __aicore__ inline ConvBpIntf() {}
 
     __aicore__ inline void Init(const TConv3DInputV2Tiling* __restrict tiling)
     {
@@ -74,13 +73,12 @@ public:
         }
     }
 
-    __aicore__ inline void SetSingleShape(
-        uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN, uint32_t singleShapeD)
+    __aicore__ inline void SetSingleShape(uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN,
+                                          uint32_t singleShapeD)
     {
         using Local = typename Ext::SetSingleShape;
-        if constexpr (CHECK_FUN(
-                          Local, Convolution3DBackpropFunc, this, singleShapeM, singleShapeK, singleShapeN,
-                          singleShapeD)) {
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, singleShapeM, singleShapeK, singleShapeN,
+                                singleShapeD)) {
             Local::call(this, singleShapeM, singleShapeK, singleShapeN, singleShapeD);
         }
     }
@@ -112,8 +110,8 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void GetTensorC(
-        const GlobalTensor<DstT>& output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
+    __aicore__ inline void GetTensorC(const GlobalTensor<DstT>& output, uint8_t enAtomic = 0,
+                                      bool enSequentialWrite = false)
     {
         using Local = typename Ext::template GetTensorC<sync>;
         if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, enSequentialWrite)) {

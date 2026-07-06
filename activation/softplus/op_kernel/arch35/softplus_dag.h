@@ -56,6 +56,6 @@ struct SoftplusDag {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
-}
+} // namespace SoftplusOp
 
-#endif  // _ACTIVATION_KERNEL_SOFTPLUS_DAG_H_
+#endif // _ACTIVATION_KERNEL_SOFTPLUS_DAG_H_

@@ -99,35 +99,19 @@ struct QuantizedBatchNormCompileInfo {
 
 class QuantizedBatchNormTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit QuantizedBatchNormTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit QuantizedBatchNormTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
     ~QuantizedBatchNormTilingBase() override = default;
     ParamsQuantizedBatchNorm commonParams;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
+    bool IsCapable() override { return true; };
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    };
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    };
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    };
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; };
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; };
+    uint64_t GetTilingKey() const override { return 0; };
     ge::graphStatus GetWorkspaceSize() override;
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    };
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; };
     bool CheckInputDtype();
     bool CheckInputShape();
     bool CheckOthersInputShape();
@@ -135,8 +119,7 @@ protected:
 
 class QuantizedBatchNormWelfordTiling : public QuantizedBatchNormTilingBase {
 public:
-    explicit QuantizedBatchNormWelfordTiling(gert::TilingContext* context) : QuantizedBatchNormTilingBase(context)
-    {}
+    explicit QuantizedBatchNormWelfordTiling(gert::TilingContext* context) : QuantizedBatchNormTilingBase(context) {}
     ~QuantizedBatchNormWelfordTiling() override = default;
     QuantizedBatchNormWelfordTilingData td_;
 

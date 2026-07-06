@@ -69,99 +69,110 @@ static const int kPadding4RightIdx = 3;
 static const int NUM2 = 2;
 static const int NUM4 = 4;
 
-
-static bool IsPreInsertDilation(const ConvolutionBackwardInputTensorForAvgPool2d &inputTensor,
-                                const ConvolutionBackwardParamsForAvgPool2d &params) {
-  // In order to prevent the workspaceSize from being too large, dilation will not be inserted with special case.
-  op::Shape gradOutputSpecialShape = op::Shape({8, 1280, 64, 64});
-  op::Shape inputSpecialShape = op::Shape({8, 3, 896, 896});
-  op::Shape weightSpecialShape = op::Shape({1280, 3, 14, 14});
-  bool isPreInserDiationSpecialFlag = (inputTensor.gradOutput->GetViewShape() == gradOutputSpecialShape &&
-                                       inputTensor.input->GetViewShape() == inputSpecialShape &&
-                                       inputTensor.weight->GetViewShape() == weightSpecialShape &&
-                                       ((*params.stride)[kSTRIDEHIdx] == 14 && (*params.stride)[kSTRIDEWIdx] == 14));
-  // When the stride == 2, using set2d yields superior performance, so there is no need for predilation
-  return (inputTensor.weight->GetViewShape().GetDim(kHDimNCHWIdx) > 1 ||
-          inputTensor.weight->GetViewShape().GetDim(kWDimNCHWIdx) > 1) &&
-         ((*params.stride)[kSTRIDEHIdx] > NUM2 || (*params.stride)[kSTRIDEWIdx] > NUM2) && !isPreInserDiationSpecialFlag;
+static bool IsPreInsertDilation(const ConvolutionBackwardInputTensorForAvgPool2d& inputTensor,
+                                const ConvolutionBackwardParamsForAvgPool2d& params)
+{
+    // In order to prevent the workspaceSize from being too large, dilation will not be inserted with special case.
+    op::Shape gradOutputSpecialShape = op::Shape({8, 1280, 64, 64});
+    op::Shape inputSpecialShape = op::Shape({8, 3, 896, 896});
+    op::Shape weightSpecialShape = op::Shape({1280, 3, 14, 14});
+    bool isPreInserDiationSpecialFlag = (inputTensor.gradOutput->GetViewShape() == gradOutputSpecialShape &&
+                                         inputTensor.input->GetViewShape() == inputSpecialShape &&
+                                         inputTensor.weight->GetViewShape() == weightSpecialShape &&
+                                         ((*params.stride)[kSTRIDEHIdx] == 14 && (*params.stride)[kSTRIDEWIdx] == 14));
+    // When the stride == 2, using set2d yields superior performance, so there is no need for predilation
+    return (inputTensor.weight->GetViewShape().GetDim(kHDimNCHWIdx) > 1 ||
+            inputTensor.weight->GetViewShape().GetDim(kWDimNCHWIdx) > 1) &&
+           ((*params.stride)[kSTRIDEHIdx] > NUM2 || (*params.stride)[kSTRIDEWIdx] > NUM2) &&
+           !isPreInserDiationSpecialFlag;
 }
 
-static bool IsInputSupportInsertDilation() {
-  // 判断当前SOC版本是否支持前后插Dilation
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201) {
-    OP_LOGD("The soc version is Ascend910B or ASCEND910_93, ConvolutionBackward supports dilation");
-    return true;
-  }
-  return false;
-}
-
-static bool IsPostInsertDilation(const aclTensor *weight, const ConvolutionBackwardParamsForAvgPool2d &params) {
-  return (weight->GetViewShape().GetDim(kHDimNCHWIdx) == 1 && weight->GetViewShape().GetDim(kWDimNCHWIdx) == 1) &&
-         ((*params.stride)[kSTRIDEHIdx] > 1 || (*params.stride)[kSTRIDEWIdx] > 1);
-}
-
-static const aclTensor *PreDilation(ConvolutionBackwardInputTensorForAvgPool2d &inputTensor, ConvolutionBackwardParamsForAvgPool2d &params,
-                                    aclOpExecutor *executor) {
-  const aclTensor *preDilationGradOutputNC1HWC0 = nullptr;
-  int64_t preDilationDilationsVector[] = {1, 1, (*params.stride)[kSTRIDEHIdx], (*params.stride)[kSTRIDEWIdx], 1};
-  int64_t preDilationPadUp = 0;
-  int64_t preDilationPadLeft = 0;
-  int64_t preDilationPadH = 0;
-  int64_t preDilationPadW = 0;
-  if (params.padding->Size() == NUM4) {
-    preDilationPadH = (*params.padding)[kPadding4UpIdx] + (*params.padding)[kPadding4DownIdx];
-    preDilationPadW = (*params.padding)[kPadding4LeftIdx] + (*params.padding)[kPadding4RightIdx];
-  } else {
-    preDilationPadH = NUM2 * (*params.padding)[kPADDINGUPIdx];
-    preDilationPadW = NUM2 * (*params.padding)[kPADDINGLEFTIdx];
-  }
-
-  /* 当输出的h/w为1时，把传给Dilation算子的dilation值修正为fmap_h/w + pad，避免在dilation值超大时，Dilation算子超时 */
-  if (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) == 1 &&
-      (*params.stride)[kSTRIDEHIdx] > inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + preDilationPadH) {
-    preDilationDilationsVector[kHDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + preDilationPadH;
-  }
-  if (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) == 1 &&
-      (*params.stride)[kSTRIDEWIdx] > inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + preDilationPadW) {
-    preDilationDilationsVector[kWDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + preDilationPadW;
-  }
-  aclIntArray *preDilationDilations = executor->AllocIntArray(preDilationDilationsVector, 5);
-  CHECK_RET(preDilationDilations != nullptr, nullptr);
-
-  int64_t preDilationPadDown =
-      inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) -
-      (inputTensor.weight->GetViewShape().GetDim(kHDimNCHWIdx) - 1) * (*params.dilation)[kDILATIONHIdx] +
-      preDilationPadH -
-      (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) - 1) * (*params.stride)[kSTRIDEHIdx] - 1;
-  int64_t preDilationPadRight =
-      inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) -
-      (inputTensor.weight->GetViewShape().GetDim(kWDimNCHWIdx) - 1) * (*params.dilation)[kDILATIONWIdx] +
-      preDilationPadW -
-      (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) - 1) * (*params.stride)[kSTRIDEWIdx] - 1;
-
-  int64_t preDilationPadsVector[] = {preDilationPadUp, preDilationPadDown, preDilationPadLeft, preDilationPadRight};
-  aclIntArray *preDilationPads = executor->AllocIntArray(preDilationPadsVector, 4);
-  CHECK_RET(preDilationPads != nullptr, nullptr);
-
-  float paddingValue = 0;
-
-  preDilationGradOutputNC1HWC0 =
-      l0op::Dilation(inputTensor.gradOutput, preDilationDilations, preDilationPads, paddingValue, executor);
-  return preDilationGradOutputNC1HWC0;
-}
-
-inline bool IsCubeSupportHf32() {
+static bool IsInputSupportInsertDilation()
+{
+    // 判断当前SOC版本是否支持前后插Dilation
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch != NpuArch::DAV_2201 &&
-        (!Ops::NN::AclnnUtil::IsRegbase(curArch))) {
+    if (curArch == NpuArch::DAV_2201) {
+        OP_LOGD("The soc version is Ascend910B or ASCEND910_93, ConvolutionBackward supports dilation");
+        return true;
+    }
+    return false;
+}
+
+static bool IsPostInsertDilation(const aclTensor* weight, const ConvolutionBackwardParamsForAvgPool2d& params)
+{
+    return (weight->GetViewShape().GetDim(kHDimNCHWIdx) == 1 && weight->GetViewShape().GetDim(kWDimNCHWIdx) == 1) &&
+           ((*params.stride)[kSTRIDEHIdx] > 1 || (*params.stride)[kSTRIDEWIdx] > 1);
+}
+
+static const aclTensor* PreDilation(ConvolutionBackwardInputTensorForAvgPool2d& inputTensor,
+                                    ConvolutionBackwardParamsForAvgPool2d& params, aclOpExecutor* executor)
+{
+    const aclTensor* preDilationGradOutputNC1HWC0 = nullptr;
+    int64_t preDilationDilationsVector[] = {1, 1, (*params.stride)[kSTRIDEHIdx], (*params.stride)[kSTRIDEWIdx], 1};
+    int64_t preDilationPadUp = 0;
+    int64_t preDilationPadLeft = 0;
+    int64_t preDilationPadH = 0;
+    int64_t preDilationPadW = 0;
+    if (params.padding->Size() == NUM4) {
+        preDilationPadH = (*params.padding)[kPadding4UpIdx] + (*params.padding)[kPadding4DownIdx];
+        preDilationPadW = (*params.padding)[kPadding4LeftIdx] + (*params.padding)[kPadding4RightIdx];
+    } else {
+        preDilationPadH = NUM2 * (*params.padding)[kPADDINGUPIdx];
+        preDilationPadW = NUM2 * (*params.padding)[kPADDINGLEFTIdx];
+    }
+
+    /* 当输出的h/w为1时，把传给Dilation算子的dilation值修正为fmap_h/w + pad，避免在dilation值超大时，Dilation算子超时 */
+    if (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) == 1 &&
+        (*params.stride)[kSTRIDEHIdx] > inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + preDilationPadH) {
+        preDilationDilationsVector[kHDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) +
+                                                      preDilationPadH;
+    }
+    if (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) == 1 &&
+        (*params.stride)[kSTRIDEWIdx] > inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + preDilationPadW) {
+        preDilationDilationsVector[kWDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) +
+                                                      preDilationPadW;
+    }
+    aclIntArray* preDilationDilations = executor->AllocIntArray(preDilationDilationsVector, 5);
+    CHECK_RET(preDilationDilations != nullptr, nullptr);
+
+    int64_t preDilationPadDown = inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) -
+                                 (inputTensor.weight->GetViewShape().GetDim(kHDimNCHWIdx) - 1) *
+                                     (*params.dilation)[kDILATIONHIdx] +
+                                 preDilationPadH -
+                                 (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) - 1) *
+                                     (*params.stride)[kSTRIDEHIdx] -
+                                 1;
+    int64_t preDilationPadRight = inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) -
+                                  (inputTensor.weight->GetViewShape().GetDim(kWDimNCHWIdx) - 1) *
+                                      (*params.dilation)[kDILATIONWIdx] +
+                                  preDilationPadW -
+                                  (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) - 1) *
+                                      (*params.stride)[kSTRIDEWIdx] -
+                                  1;
+
+    int64_t preDilationPadsVector[] = {preDilationPadUp, preDilationPadDown, preDilationPadLeft, preDilationPadRight};
+    aclIntArray* preDilationPads = executor->AllocIntArray(preDilationPadsVector, 4);
+    CHECK_RET(preDilationPads != nullptr, nullptr);
+
+    float paddingValue = 0;
+
+    preDilationGradOutputNC1HWC0 = l0op::Dilation(inputTensor.gradOutput, preDilationDilations, preDilationPads,
+                                                  paddingValue, executor);
+    return preDilationGradOutputNC1HWC0;
+}
+
+inline bool IsCubeSupportHf32()
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch != NpuArch::DAV_2201 && (!Ops::NN::AclnnUtil::IsRegbase(curArch))) {
         return false;
     }
     return true;
 }
 
 // 根据promoteType + cubeMathType 判断是否要走HF32分支
-static bool Avg_NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cubeMathType) {
+static bool Avg_NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cubeMathType)
+{
     // USE_HF32场景，如果promoteType为BF16或FP16时，提示不支持该选项
     constexpr int8_t USE_HF32 = 3;
     constexpr int8_t ALLOW_FP32_DOWN_PRECISION = 1;
@@ -183,153 +194,164 @@ static bool Avg_NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cube
     return false;
 }
 
-static bool ConvBackGoHf32(const ConvolutionBackwardInputTensorForAvgPool2d& inputTensor, int8_t cubeMathType) {
-  auto promoteType = op::PromoteType(inputTensor.input->GetDataType(), inputTensor.weight->GetDataType());
-  promoteType = op::PromoteType(promoteType, inputTensor.gradOutput->GetDataType());
-  return Avg_NeedCubeGoHF32(promoteType, cubeMathType);
+static bool ConvBackGoHf32(const ConvolutionBackwardInputTensorForAvgPool2d& inputTensor, int8_t cubeMathType)
+{
+    auto promoteType = op::PromoteType(inputTensor.input->GetDataType(), inputTensor.weight->GetDataType());
+    promoteType = op::PromoteType(promoteType, inputTensor.gradOutput->GetDataType());
+    return Avg_NeedCubeGoHF32(promoteType, cubeMathType);
 }
 
-static const aclTensor *PerformConv2DBackpropInput(ConvolutionBackwardInputTensorForAvgPool2d &inputTensor,
-                                            ConvolutionBackwardParamsForAvgPool2d &params, aclOpExecutor *executor) {
-  const aclTensor *gradInputNC1HWC0 = nullptr;
-  bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
-      gradInputNC1HWC0 =
-        l0op::Conv2DBackpropInput(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-                                  params.padding, params.dilation, params.groups, executor,
-                                  useHf32, inputTensor.weight->GetDataType());
-      return gradInputNC1HWC0;
-  }
-  // other platform
-  if (useHf32) {
-    gradInputNC1HWC0 =
-        l0op::Conv2DBackpropInputHf32(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-                                      params.padding, params.dilation, params.groups, executor);
-  } else if (inputTensor.weight->GetDataType() == DataType::DT_FLOAT) {
-    gradInputNC1HWC0 =
-        l0op::Conv2DBackpropInputFp322Fp32(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-                                           params.padding, params.dilation, params.groups, executor);
-  } else if (inputTensor.weight->GetDataType() == DataType::DT_BF16) {
-    gradInputNC1HWC0 =
-        l0op::Conv2DBackpropInputBf162Bf16(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-                                           params.padding, params.dilation, params.groups, executor);
-  } else {
-    gradInputNC1HWC0 =
-        l0op::Conv2DBackpropInputFp162Fp16(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-                                           params.padding, params.dilation, params.groups, executor);
-  }
-  return gradInputNC1HWC0;
+static const aclTensor* PerformConv2DBackpropInput(ConvolutionBackwardInputTensorForAvgPool2d& inputTensor,
+                                                   ConvolutionBackwardParamsForAvgPool2d& params,
+                                                   aclOpExecutor* executor)
+{
+    const aclTensor* gradInputNC1HWC0 = nullptr;
+    bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        gradInputNC1HWC0 = l0op::Conv2DBackpropInput(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
+                                                     params.stride, params.padding, params.dilation, params.groups,
+                                                     executor, useHf32, inputTensor.weight->GetDataType());
+        return gradInputNC1HWC0;
+    }
+    // other platform
+    if (useHf32) {
+        gradInputNC1HWC0 = l0op::Conv2DBackpropInputHf32(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
+                                                         params.stride, params.padding, params.dilation, params.groups,
+                                                         executor);
+    } else if (inputTensor.weight->GetDataType() == DataType::DT_FLOAT) {
+        gradInputNC1HWC0 = l0op::Conv2DBackpropInputFp322Fp32(inputTensor.input, inputTensor.weight,
+                                                              inputTensor.gradOutput, params.stride, params.padding,
+                                                              params.dilation, params.groups, executor);
+    } else if (inputTensor.weight->GetDataType() == DataType::DT_BF16) {
+        gradInputNC1HWC0 = l0op::Conv2DBackpropInputBf162Bf16(inputTensor.input, inputTensor.weight,
+                                                              inputTensor.gradOutput, params.stride, params.padding,
+                                                              params.dilation, params.groups, executor);
+    } else {
+        gradInputNC1HWC0 = l0op::Conv2DBackpropInputFp162Fp16(inputTensor.input, inputTensor.weight,
+                                                              inputTensor.gradOutput, params.stride, params.padding,
+                                                              params.dilation, params.groups, executor);
+    }
+    return gradInputNC1HWC0;
 }
 
-static const aclTensor *PostDilation(const aclTensor *dxGradInputNC1HWC0, ConvolutionBackwardInputTensorForAvgPool2d &inputTensor,
-                                     ConvolutionBackwardParamsForAvgPool2d &params, aclOpExecutor *executor) {
-  const aclTensor *postDilationGradInputNC1HWC0 = nullptr;
-  int64_t postDilationDilationsVector[] = {1, 1, (*params.stride)[kSTRIDEHIdx], (*params.stride)[kSTRIDEWIdx], 1};
-  int64_t postDilationPadUp = 0;
-  int64_t postDilationPadLeft = 0;
-  int64_t padUp = 0;
-  int64_t padLeft = 0;
-  int64_t padH = 0;
-  int64_t padW = 0;
-  if (params.padding->Size() == NUM4) {
-    postDilationPadUp = -(*params.padding)[kPadding4UpIdx];
-    postDilationPadLeft = -(*params.padding)[kPadding4LeftIdx];
-    padUp = (*params.padding)[kPadding4UpIdx];
-    padLeft = (*params.padding)[kPadding4LeftIdx];
-    padH = (*params.padding)[kPadding4UpIdx] + (*params.padding)[kPadding4DownIdx];
-    padW = (*params.padding)[kPadding4LeftIdx] + (*params.padding)[kPadding4RightIdx];
-  } else {
-    postDilationPadUp = -(*params.padding)[kPADDINGUPIdx];
-    postDilationPadLeft = -(*params.padding)[kPADDINGLEFTIdx];
-    padUp = (*params.padding)[kPADDINGUPIdx];
-    padLeft = (*params.padding)[kPADDINGLEFTIdx];
-    padH = NUM2 * (*params.padding)[kPADDINGUPIdx];
-    padW = NUM2 * (*params.padding)[kPADDINGLEFTIdx];
-  }
-  /* 当输出的h/w为1时，把传给Dilation算子的dilation值修正为fmap_h/w + pad，避免在dilation值超大时，Dilation算子超时 */
-  if (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) == 1 &&
-      (*params.stride)[kSTRIDEHIdx] > inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + padH) {
-    postDilationDilationsVector[kHDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + padH;
-  }
-  if (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) == 1 &&
-      (*params.stride)[kSTRIDEWIdx] > inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + padW) {
-    postDilationDilationsVector[kWDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + padW;
-  }
-  aclIntArray *post_dilation_dilations = executor->AllocIntArray(postDilationDilationsVector, 5);
-  CHECK_RET(post_dilation_dilations != nullptr, nullptr);
+static const aclTensor* PostDilation(const aclTensor* dxGradInputNC1HWC0,
+                                     ConvolutionBackwardInputTensorForAvgPool2d& inputTensor,
+                                     ConvolutionBackwardParamsForAvgPool2d& params, aclOpExecutor* executor)
+{
+    const aclTensor* postDilationGradInputNC1HWC0 = nullptr;
+    int64_t postDilationDilationsVector[] = {1, 1, (*params.stride)[kSTRIDEHIdx], (*params.stride)[kSTRIDEWIdx], 1};
+    int64_t postDilationPadUp = 0;
+    int64_t postDilationPadLeft = 0;
+    int64_t padUp = 0;
+    int64_t padLeft = 0;
+    int64_t padH = 0;
+    int64_t padW = 0;
+    if (params.padding->Size() == NUM4) {
+        postDilationPadUp = -(*params.padding)[kPadding4UpIdx];
+        postDilationPadLeft = -(*params.padding)[kPadding4LeftIdx];
+        padUp = (*params.padding)[kPadding4UpIdx];
+        padLeft = (*params.padding)[kPadding4LeftIdx];
+        padH = (*params.padding)[kPadding4UpIdx] + (*params.padding)[kPadding4DownIdx];
+        padW = (*params.padding)[kPadding4LeftIdx] + (*params.padding)[kPadding4RightIdx];
+    } else {
+        postDilationPadUp = -(*params.padding)[kPADDINGUPIdx];
+        postDilationPadLeft = -(*params.padding)[kPADDINGLEFTIdx];
+        padUp = (*params.padding)[kPADDINGUPIdx];
+        padLeft = (*params.padding)[kPADDINGLEFTIdx];
+        padH = NUM2 * (*params.padding)[kPADDINGUPIdx];
+        padW = NUM2 * (*params.padding)[kPADDINGLEFTIdx];
+    }
+    /* 当输出的h/w为1时，把传给Dilation算子的dilation值修正为fmap_h/w + pad，避免在dilation值超大时，Dilation算子超时 */
+    if (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) == 1 &&
+        (*params.stride)[kSTRIDEHIdx] > inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + padH) {
+        postDilationDilationsVector[kHDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + padH;
+    }
+    if (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) == 1 &&
+        (*params.stride)[kSTRIDEWIdx] > inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + padW) {
+        postDilationDilationsVector[kWDimNC1HWC0Idx] = inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + padW;
+    }
+    aclIntArray* post_dilation_dilations = executor->AllocIntArray(postDilationDilationsVector, 5);
+    CHECK_RET(post_dilation_dilations != nullptr, nullptr);
 
-  int64_t postDilationPadDown =
-      inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + padUp -
-      (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) - 1) * (*params.stride)[kSTRIDEHIdx] - 1;
-  int64_t postDilationPadRight =
-      inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + padLeft -
-      (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) - 1) * (*params.stride)[kSTRIDEWIdx] - 1;
-  int64_t postDilationPadsVector[] = {postDilationPadUp, postDilationPadDown, postDilationPadLeft,
-                                      postDilationPadRight};
-  aclIntArray *postDilationPads = executor->AllocIntArray(postDilationPadsVector, 4);
-  CHECK_RET(postDilationPads != nullptr, nullptr);
-  float paddingValue = 0;
+    int64_t postDilationPadDown = inputTensor.input->GetViewShape().GetDim(kHDimNCHWIdx) + padUp -
+                                  (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) - 1) *
+                                      (*params.stride)[kSTRIDEHIdx] -
+                                  1;
+    int64_t postDilationPadRight = inputTensor.input->GetViewShape().GetDim(kWDimNCHWIdx) + padLeft -
+                                   (inputTensor.gradOutput->GetViewShape().GetDim(kWDimNCHWIdx) - 1) *
+                                       (*params.stride)[kSTRIDEWIdx] -
+                                   1;
+    int64_t postDilationPadsVector[] = {postDilationPadUp, postDilationPadDown, postDilationPadLeft,
+                                        postDilationPadRight};
+    aclIntArray* postDilationPads = executor->AllocIntArray(postDilationPadsVector, 4);
+    CHECK_RET(postDilationPads != nullptr, nullptr);
+    float paddingValue = 0;
 
-  postDilationGradInputNC1HWC0 =
-      l0op::Dilation(dxGradInputNC1HWC0, post_dilation_dilations, postDilationPads, paddingValue, executor);
-  return postDilationGradInputNC1HWC0;
+    postDilationGradInputNC1HWC0 = l0op::Dilation(dxGradInputNC1HWC0, post_dilation_dilations, postDilationPads,
+                                                  paddingValue, executor);
+    return postDilationGradInputNC1HWC0;
 }
 
-const aclTensor *CalculateConv2DBackpropInputForAvgPool2d(ConvolutionBackwardInputTensorForAvgPool2d &inputTensor,
-                                                     ConvolutionBackwardParamsForAvgPool2d &params, aclOpExecutor *executor) {
-  const aclTensor *dxGradInputNC1HWC0Res = nullptr;
-  if (IsPreInsertDilation(inputTensor, params) && IsInputSupportInsertDilation() &&
-      inputTensor.input->GetDataType() != DataType::DT_BF16) {
-    const aclTensor *preDilationGradOutputNC1HWC0 = nullptr;
-    preDilationGradOutputNC1HWC0 = PreDilation(inputTensor, params, executor);
-    int64_t newstrideVector[] = {1, 1};
-    aclIntArray *newstride = executor->AllocIntArray(newstrideVector, 2);
-    CHECK_RET(newstride != nullptr, nullptr);
-    ConvolutionBackwardInputTensorForAvgPool2d newInputTensor = {preDilationGradOutputNC1HWC0, inputTensor.input,
-                                                     inputTensor.weight};
-    ConvolutionBackwardParamsForAvgPool2d newparams = {params.biasSizes, newstride,         params.padding,
-                                           params.dilation,  params.transposed, params.outputPadding,
-                                           params.groups,    params.outputMask, params.cubeMathType};
-    dxGradInputNC1HWC0Res = PerformConv2DBackpropInput(newInputTensor, newparams, executor);
-  } else if (IsPostInsertDilation(inputTensor.weight, params) && IsInputSupportInsertDilation() &&
-             inputTensor.input->GetDataType() != DataType::DT_BF16) {
-    const aclTensor *dxGradInputNC1HWC0 = nullptr;
-    int64_t newstrideVector[] = {1, 1};
-    int64_t newpaddingVector[] = {0, 0, 0, 0};
-    aclIntArray *newstride = executor->AllocIntArray(newstrideVector, 2);
-    CHECK_RET(newstride != nullptr, nullptr);
-    // 4: newpaddingVector 数组分配的空间大小
-    aclIntArray *newpadding = executor->AllocIntArray(newpaddingVector, 4);
-    CHECK_RET(newpadding != nullptr, nullptr);
-    op::Shape newInputStorageShape;
-    op::Shape newInputOrishape;
-    for (size_t i = 0; i < inputTensor.input->GetStorageShape().GetDimNum(); i++) {
-      newInputStorageShape.AppendDim(i == kHDimNC1HWC0Idx || i == kWDimNC1HWC0Idx
-                                         ? inputTensor.gradOutput->GetStorageShape().GetDim(i)
-                                         : inputTensor.input->GetStorageShape().GetDim(i));}
-    for (size_t i = 0; i < inputTensor.input->GetViewShape().GetDimNum(); i++) {
-      newInputOrishape.AppendDim(i == kHDimNCHWIdx || i == kWDimNCHWIdx
-                                     ? inputTensor.gradOutput->GetViewShape().GetDim(i)
-                                     : inputTensor.input->GetViewShape().GetDim(i));}
-    auto newInput =
-        executor->AllocTensor(newInputStorageShape, newInputOrishape, inputTensor.weight->GetDataType(),
-                              inputTensor.input->GetStorageFormat(), inputTensor.input->GetOriginalFormat());
-    ConvolutionBackwardInputTensorForAvgPool2d newInputTensor = {inputTensor.gradOutput, newInput, inputTensor.weight};
-    ConvolutionBackwardParamsForAvgPool2d newparams = {params.biasSizes, newstride,         newpadding,
-                                           params.dilation,  params.transposed, params.outputPadding,
-                                           params.groups,    params.outputMask, params.cubeMathType};
-    dxGradInputNC1HWC0 = PerformConv2DBackpropInput(newInputTensor, newparams, executor);
-    OP_CHECK(dxGradInputNC1HWC0 != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                     "The calculation with PerformConv2DBackpropInput failed, Conv2dBackpropInput return nullptr."),
+const aclTensor* CalculateConv2DBackpropInputForAvgPool2d(ConvolutionBackwardInputTensorForAvgPool2d& inputTensor,
+                                                          ConvolutionBackwardParamsForAvgPool2d& params,
+                                                          aclOpExecutor* executor)
+{
+    const aclTensor* dxGradInputNC1HWC0Res = nullptr;
+    if (IsPreInsertDilation(inputTensor, params) && IsInputSupportInsertDilation() &&
+        inputTensor.input->GetDataType() != DataType::DT_BF16) {
+        const aclTensor* preDilationGradOutputNC1HWC0 = nullptr;
+        preDilationGradOutputNC1HWC0 = PreDilation(inputTensor, params, executor);
+        int64_t newstrideVector[] = {1, 1};
+        aclIntArray* newstride = executor->AllocIntArray(newstrideVector, 2);
+        CHECK_RET(newstride != nullptr, nullptr);
+        ConvolutionBackwardInputTensorForAvgPool2d newInputTensor = {preDilationGradOutputNC1HWC0, inputTensor.input,
+                                                                     inputTensor.weight};
+        ConvolutionBackwardParamsForAvgPool2d newparams = {params.biasSizes, newstride,         params.padding,
+                                                           params.dilation,  params.transposed, params.outputPadding,
+                                                           params.groups,    params.outputMask, params.cubeMathType};
+        dxGradInputNC1HWC0Res = PerformConv2DBackpropInput(newInputTensor, newparams, executor);
+    } else if (IsPostInsertDilation(inputTensor.weight, params) && IsInputSupportInsertDilation() &&
+               inputTensor.input->GetDataType() != DataType::DT_BF16) {
+        const aclTensor* dxGradInputNC1HWC0 = nullptr;
+        int64_t newstrideVector[] = {1, 1};
+        int64_t newpaddingVector[] = {0, 0, 0, 0};
+        aclIntArray* newstride = executor->AllocIntArray(newstrideVector, 2);
+        CHECK_RET(newstride != nullptr, nullptr);
+        // 4: newpaddingVector 数组分配的空间大小
+        aclIntArray* newpadding = executor->AllocIntArray(newpaddingVector, 4);
+        CHECK_RET(newpadding != nullptr, nullptr);
+        op::Shape newInputStorageShape;
+        op::Shape newInputOrishape;
+        for (size_t i = 0; i < inputTensor.input->GetStorageShape().GetDimNum(); i++) {
+            newInputStorageShape.AppendDim(i == kHDimNC1HWC0Idx || i == kWDimNC1HWC0Idx ?
+                                               inputTensor.gradOutput->GetStorageShape().GetDim(i) :
+                                               inputTensor.input->GetStorageShape().GetDim(i));
+        }
+        for (size_t i = 0; i < inputTensor.input->GetViewShape().GetDimNum(); i++) {
+            newInputOrishape.AppendDim(i == kHDimNCHWIdx || i == kWDimNCHWIdx ?
+                                           inputTensor.gradOutput->GetViewShape().GetDim(i) :
+                                           inputTensor.input->GetViewShape().GetDim(i));
+        }
+        auto newInput = executor->AllocTensor(newInputStorageShape, newInputOrishape, inputTensor.weight->GetDataType(),
+                                              inputTensor.input->GetStorageFormat(),
+                                              inputTensor.input->GetOriginalFormat());
+        ConvolutionBackwardInputTensorForAvgPool2d newInputTensor = {inputTensor.gradOutput, newInput,
+                                                                     inputTensor.weight};
+        ConvolutionBackwardParamsForAvgPool2d newparams = {params.biasSizes, newstride,         newpadding,
+                                                           params.dilation,  params.transposed, params.outputPadding,
+                                                           params.groups,    params.outputMask, params.cubeMathType};
+        dxGradInputNC1HWC0 = PerformConv2DBackpropInput(newInputTensor, newparams, executor);
+        OP_CHECK(dxGradInputNC1HWC0 != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                         "The calculation with PerformConv2DBackpropInput failed, Conv2dBackpropInput return nullptr."),
+                 return nullptr);
+        dxGradInputNC1HWC0Res = PostDilation(dxGradInputNC1HWC0, inputTensor, params, executor);
+    } else {
+        dxGradInputNC1HWC0Res = PerformConv2DBackpropInput(inputTensor, params, executor);
+    }
+    OP_CHECK(dxGradInputNC1HWC0Res != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The calculation with dxGradInputNC1HWC0Res failed, return nullptr."),
              return nullptr);
-    dxGradInputNC1HWC0Res = PostDilation(dxGradInputNC1HWC0, inputTensor, params, executor);
-  } else {
-    dxGradInputNC1HWC0Res = PerformConv2DBackpropInput(inputTensor, params, executor);
-  }
-  OP_CHECK(dxGradInputNC1HWC0Res != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The calculation with dxGradInputNC1HWC0Res failed, return nullptr."),
-           return nullptr);
-  return dxGradInputNC1HWC0Res;
+    return dxGradInputNC1HWC0Res;
 }
-}
+} // namespace avgpool2d_conv2d_input_util

@@ -26,11 +26,15 @@ OP_TYPE_REGISTER(AdaLayerNorm);
 
 const aclTensor* AdaLayerNorm(AdaLayerNormInputTensor inputTensor, float epsilon, aclOpExecutor* executor)
 {
-    L0_DFX(AdaLayerNorm, inputTensor.x, inputTensor.scale, inputTensor.shift, inputTensor.weightOptional, inputTensor.biasOptional, epsilon);
-    auto out = executor->AllocTensor(inputTensor.x->GetViewShape(), inputTensor.x->GetDataType(), inputTensor.x->GetViewFormat());
+    L0_DFX(AdaLayerNorm, inputTensor.x, inputTensor.scale, inputTensor.shift, inputTensor.weightOptional,
+           inputTensor.biasOptional, epsilon);
+    auto out = executor->AllocTensor(inputTensor.x->GetViewShape(), inputTensor.x->GetDataType(),
+                                     inputTensor.x->GetViewFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AdaLayerNorm, OP_INPUT(inputTensor.x, inputTensor.scale, inputTensor.shift, inputTensor.weightOptional, inputTensor.biasOptional), OP_OUTPUT(out), OP_ATTR(epsilon));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaLayerNorm,
+                                           OP_INPUT(inputTensor.x, inputTensor.scale, inputTensor.shift,
+                                                    inputTensor.weightOptional, inputTensor.biasOptional),
+                                           OP_OUTPUT(out), OP_ATTR(epsilon));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaLayerNormAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;

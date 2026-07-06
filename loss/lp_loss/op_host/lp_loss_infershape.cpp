@@ -17,28 +17,29 @@
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShape4LpLoss(gert::InferShapeContext *context) {
-  gert::Shape* out_shape = context->GetOutputShape(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-  const gert::RuntimeAttrs* attrs = context->GetAttrs();
-  OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-  const char *reduction = attrs->GetAttrPointer<char>(1);
-  OP_CHECK_NULL_WITH_CONTEXT(context, reduction);
-  if (strcmp(reduction, "none") == 0) {
-    // if reduction == "none" , output shape = x shape
-    const gert::Shape* in_shape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
-    const size_t input_rank = in_shape->GetDimNum();
-    out_shape->SetDimNum(input_rank);
-    for (size_t i = 0; i < input_rank; ++i) {
-      out_shape->SetDim(i, in_shape->GetDim(i));
+static ge::graphStatus InferShape4LpLoss(gert::InferShapeContext* context)
+{
+    gert::Shape* out_shape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const char* reduction = attrs->GetAttrPointer<char>(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, reduction);
+    if (strcmp(reduction, "none") == 0) {
+        // if reduction == "none" , output shape = x shape
+        const gert::Shape* in_shape = context->GetInputShape(0);
+        OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
+        const size_t input_rank = in_shape->GetDimNum();
+        out_shape->SetDimNum(input_rank);
+        for (size_t i = 0; i < input_rank; ++i) {
+            out_shape->SetDim(i, in_shape->GetDim(i));
+        }
+    } else {
+        // if reduction == "mean" or reduction == "sum" , output a scalar
+        out_shape->SetDimNum(0);
     }
-  } else {
-    // if reduction == "mean" or reduction == "sum" , output a scalar
-    out_shape->SetDimNum(0);
-  }
-  return GRAPH_SUCCESS;
+    return GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(LpLoss).InferShape(InferShape4LpLoss);
-}  // namespace ops
+} // namespace ops

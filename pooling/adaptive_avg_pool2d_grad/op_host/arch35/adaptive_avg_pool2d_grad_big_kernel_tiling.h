@@ -87,8 +87,7 @@ public:
         : AdaptiveAvgPool2dGradTilingBase(context)
     {}
 
-    ~AdaptiveAvgPool2dGradTilingBigKernel() override
-    {}
+    ~AdaptiveAvgPool2dGradTilingBigKernel() override {}
 
 protected:
     ge::graphStatus DoOpTiling() override;
@@ -114,7 +113,6 @@ protected:
     ge::graphStatus SetTilingData();
 
 public:
-
     int64_t gradInputN_;
     int64_t gradInputC_;
     int64_t gradInputH_;

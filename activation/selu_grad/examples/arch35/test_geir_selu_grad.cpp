@@ -35,56 +35,52 @@ using std::map;
 using std::string;
 using std::vector;
 
-#define ADD_INPUT_GRAD(intputIndex, intputName, intputDtype, inputShape)                       \
-    vector<int64_t> placeholder##intputIndex##_shape = inputShape;                             \
-    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);   \
-    TensorDesc placeholder##intputIndex##_desc =                                               \
-        TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, intputDtype);       \
-    placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                          \
-    placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                      \
-    Tensor tensor_placeholder##intputIndex;                                                    \
-    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape,                                 \
-        tensor_placeholder##intputIndex,                                                       \
-        placeholder##intputIndex##_desc,                                                       \
-        1);                                                                                    \
-    if (ret != SUCCESS) {                                                                      \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());         \
-        return FAILED;                                                                         \
-    }                                                                                          \
-    placeholder##intputIndex.update_input_desc_gradients(placeholder##intputIndex##_desc);     \
-    placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);            \
-    input.push_back(tensor_placeholder##intputIndex);                                          \
-    graph.AddOp(placeholder##intputIndex);                                                     \
-    selu_grad_op.set_input_##intputName(placeholder##intputIndex);                             \
+#define ADD_INPUT_GRAD(intputIndex, intputName, intputDtype, inputShape)                                            \
+    vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
+    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                        \
+    TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
+                                                            intputDtype);                                           \
+    placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
+    placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                                           \
+    Tensor tensor_placeholder##intputIndex;                                                                         \
+    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                     \
+                             placeholder##intputIndex##_desc, 1);                                                   \
+    if (ret != SUCCESS) {                                                                                           \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
+        return FAILED;                                                                                              \
+    }                                                                                                               \
+    placeholder##intputIndex.update_input_desc_gradients(placeholder##intputIndex##_desc);                          \
+    placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);                                 \
+    input.push_back(tensor_placeholder##intputIndex);                                                               \
+    graph.AddOp(placeholder##intputIndex);                                                                          \
+    selu_grad_op.set_input_##intputName(placeholder##intputIndex);                                                  \
     inputs.push_back(placeholder##intputIndex);
 
-#define ADD_INPUT_OUT(intputIndex, intputName, intputDtype, inputShape)                        \
-    vector<int64_t> placeholder##intputIndex##_shape = inputShape;                             \
-    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);   \
-    TensorDesc placeholder##intputIndex##_desc =                                               \
-        TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, intputDtype);       \
-    placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                          \
-    placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                      \
-    Tensor tensor_placeholder##intputIndex;                                                    \
-    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape,                                 \
-        tensor_placeholder##intputIndex,                                                       \
-        placeholder##intputIndex##_desc,                                                       \
-        2);                                                                                    \
-    if (ret != SUCCESS) {                                                                      \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());         \
-        return FAILED;                                                                         \
-    }                                                                                          \
-    placeholder##intputIndex.update_input_desc_outputs(placeholder##intputIndex##_desc);       \
-    placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);            \
-    input.push_back(tensor_placeholder##intputIndex);                                          \
-    graph.AddOp(placeholder##intputIndex);                                                     \
-    selu_grad_op.set_input_##intputName(placeholder##intputIndex);                             \
+#define ADD_INPUT_OUT(intputIndex, intputName, intputDtype, inputShape)                                             \
+    vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
+    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                        \
+    TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
+                                                            intputDtype);                                           \
+    placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
+    placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                                           \
+    Tensor tensor_placeholder##intputIndex;                                                                         \
+    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                     \
+                             placeholder##intputIndex##_desc, 2);                                                   \
+    if (ret != SUCCESS) {                                                                                           \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
+        return FAILED;                                                                                              \
+    }                                                                                                               \
+    placeholder##intputIndex.update_input_desc_outputs(placeholder##intputIndex##_desc);                            \
+    placeholder##intputIndex.update_output_desc_y(placeholder##intputIndex##_desc);                                 \
+    input.push_back(tensor_placeholder##intputIndex);                                                               \
+    graph.AddOp(placeholder##intputIndex);                                                                          \
+    selu_grad_op.set_input_##intputName(placeholder##intputIndex);                                                  \
     inputs.push_back(placeholder##intputIndex);
 
-#define LOG_PRINT(message, ...)     \
-  do {                              \
-    printf(message, ##__VA_ARGS__); \
-  } while (0)
+#define LOG_PRINT(message, ...)         \
+    do {                                \
+        printf(message, ##__VA_ARGS__); \
+    } while (0)
 
 string GetTime()
 {
@@ -97,16 +93,22 @@ string GetTime()
 
 uint32_t GetDataTypeSize(DataType dt)
 {
-    if (dt == ge::DT_FLOAT) return 4;
-    if (dt == ge::DT_FLOAT16) return 2;
-    if (dt == ge::DT_BF16) return 2;
-    if (dt == ge::DT_INT32) return 4;
-    if (dt == ge::DT_INT64) return 8;
-    if (dt == ge::DT_INT8) return 1;
+    if (dt == ge::DT_FLOAT)
+        return 4;
+    if (dt == ge::DT_FLOAT16)
+        return 2;
+    if (dt == ge::DT_BF16)
+        return 2;
+    if (dt == ge::DT_INT32)
+        return 4;
+    if (dt == ge::DT_INT64)
+        return 8;
+    if (dt == ge::DT_INT8)
+        return 1;
     return 4;
 }
 
-int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor &input_tensor, TensorDesc &input_tensor_desc, float value)
+int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, float value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -114,29 +116,30 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor &input_tensor, TensorD
         size *= shapes[i];
     }
     uint32_t data_len = size * 4;
-    float *pData = new (std::nothrow) float[size];
+    float* pData = new (std::nothrow) float[size];
     if (pData == nullptr) {
         return FAILED;
     }
     for (size_t i = 0; i < size; ++i) {
         *(pData + i) = value;
     }
-    input_tensor = Tensor(input_tensor_desc, (uint8_t *)pData, data_len);
+    input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
     delete[] pData;
     return SUCCESS;
 }
 
-int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t *inputData)
+int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 {
-    FILE *fp = fopen(bin_file.c_str(), "w");
-    if (fp == nullptr) return FAILED;
+    FILE* fp = fopen(bin_file.c_str(), "w");
+    if (fp == nullptr)
+        return FAILED;
     fwrite(inputData, sizeof(uint8_t), data_size, fp);
     fclose(fp);
     return SUCCESS;
 }
 
-int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor> &input, std::vector<Operator> &inputs,
-    std::vector<Operator> &outputs, Graph &graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
     auto selu_grad_op = op::SeluGrad("selu_grad");
@@ -148,9 +151,9 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor> &input, std::vect
     return SUCCESS;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    const char *graph_name = "tc_ge_irrun_test";
+    const char* graph_name = "tc_ge_irrun_test";
     Graph graph(graph_name);
     std::vector<ge::Tensor> input;
 
@@ -179,7 +182,7 @@ int main(int argc, char *argv[])
     }
 
     std::map<AscendString, AscendString> build_options = {};
-    ge::Session *session = new Session(build_options);
+    ge::Session* session = new Session(build_options);
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create session failed\n", GetTime().c_str());
         return FAILED;
@@ -203,11 +206,11 @@ int main(int argc, char *argv[])
     for (int i = 0; i < output_num; i++) {
         std::cout << "output " << i << " dtype :  " << output[i].GetTensorDesc().GetDataType() << std::endl;
         string output_file = "./tc_ge_irrun_test_selu_grad_output_" + std::to_string(i) + ".bin";
-        uint8_t *output_data_i = output[i].GetData();
+        uint8_t* output_data_i = output[i].GetData();
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char *)output_file.c_str(), data_size, output_data_i);
-        float *resultData = (float*)output_data_i;
+        WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
+        float* resultData = (float*)output_data_i;
         for (int64_t j = 0; j < output_shape; j++) {
             LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
         }

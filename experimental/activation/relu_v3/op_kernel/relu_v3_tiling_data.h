@@ -10,7 +10,6 @@
 
 #pragma once
 
-struct ReluV3TilingData
-{
+struct ReluV3TilingData {
     int size;
 };

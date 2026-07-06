@@ -18,7 +18,7 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-class ForeachReciprocal: public OpDef {
+class ForeachReciprocal : public OpDef {
 public:
     explicit ForeachReciprocal(const char* name) : OpDef(name)
     {

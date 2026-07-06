@@ -15,21 +15,19 @@
 #include "cpu_kernel.h"
 namespace aicpu {
 class AssertCpuKernel : public CpuKernel {
- public:
-  AssertCpuKernel() = default;
-  ~AssertCpuKernel() = default;
-  uint32_t Compute(CpuKernelContext &ctx) override;
+public:
+    AssertCpuKernel() = default;
+    ~AssertCpuKernel() = default;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 
- private:
-  std::string SummarizeValue(const Tensor &t, int64_t max_entries);
-  template <typename T>
-  std::string SummarizeArray(const int64_t limit, const int64_t num_elts,
-                             const Tensor &t);
-  template <typename T>
-  void PrintOneDim(int dim_index, std::shared_ptr<TensorShape> shape,
-                   int64_t limit, int shape_size, const T *data,
-                   int64_t *data_index, std::string &result);
+private:
+    std::string SummarizeValue(const Tensor& t, int64_t max_entries);
+    template <typename T>
+    std::string SummarizeArray(const int64_t limit, const int64_t num_elts, const Tensor& t);
+    template <typename T>
+    void PrintOneDim(int dim_index, std::shared_ptr<TensorShape> shape, int64_t limit, int shape_size, const T* data,
+                     int64_t* data_index, std::string& result);
 };
-}
+} // namespace aicpu
 
-#endif  // AICPU_KERNELS_ASSERT_H_
+#endif // AICPU_KERNELS_ASSERT_H_

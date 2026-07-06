@@ -19,8 +19,9 @@
 
 namespace l0op {
 
-const std::tuple<const aclTensor *, const aclTensor *> ReduceVar(const aclTensor* self, const aclIntArray* dim,
-    int64_t correction, bool keepdim, bool isMeanOut, aclOpExecutor* executor);
+const std::tuple<const aclTensor*, const aclTensor*> ReduceVar(const aclTensor* self, const aclIntArray* dim,
+                                                               int64_t correction, bool keepdim, bool isMeanOut,
+                                                               aclOpExecutor* executor);
 }
 
 #endif

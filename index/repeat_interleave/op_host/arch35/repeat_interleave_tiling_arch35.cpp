@@ -20,7 +20,6 @@
 #include "op_api/runtime2_util.h"
 #include "../../../../matmul/common/op_host/op_tiling/hash.h"
 
-
 namespace optiling {
 constexpr size_t ATTR_AXIS_IDX = 0;
 constexpr size_t INPUT_INDEX_X = 0;
@@ -32,8 +31,8 @@ constexpr size_t SUPPORT_VECTOR_DUP = 11;
 
 ge::graphStatus RepeatInterleaveTilingForAscendC(gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        (context == nullptr), OP_LOGE("RepeatInterleave", "context should not be nullptr."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((context == nullptr), OP_LOGE("RepeatInterleave", "context should not be nullptr."),
+                return ge::GRAPH_FAILED);
     RepeatInterleaveTilingKernelNorm tiling(context);
     return tiling.DoTiling();
 }
@@ -48,16 +47,18 @@ ge::graphStatus TilingPrepareRepeatInterleaveForAscendC(gert::TilingParseContext
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNumAscendc = ascendcPlatform.GetCoreNumAiv();
     if (compileInfo->coreNumAscendc <= 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "coreNum", std::to_string(compileInfo->coreNumAscendc).c_str(), "failed to get core num");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "coreNum",
+                                              std::to_string(compileInfo->coreNumAscendc).c_str(),
+                                              "failed to get core num");
         return ge::GRAPH_FAILED;
     }
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSizeAscendc = static_cast<int64_t>(ubSize);
     if (compileInfo->ubSizeAscendc <= 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "ubSize", std::to_string(compileInfo->ubSizeAscendc).c_str(), "failed to get ub size");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubSize",
+                                              std::to_string(compileInfo->ubSizeAscendc).c_str(),
+                                              "failed to get ub size");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

@@ -14,9 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* AscendQuantV2(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode, const char* roundMode,
-    int32_t dstType, int32_t axis, aclOpExecutor* executor);
+const aclTensor* AscendQuantV2(const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode,
+                               const char* roundMode, int32_t dstType, int32_t axis, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_ASCEND_QUANT_V2_H_

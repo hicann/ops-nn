@@ -36,9 +36,9 @@ template <typename TensorTrait>
 constexpr bool in_l0c = TensorTrait::tPos == AscendC::TPosition::CO1;
 
 template <typename TensorTrait>
-constexpr bool in_ub =
-    TensorTrait::tPos == AscendC::TPosition::VECIN || TensorTrait::tPos == AscendC::TPosition::VECOUT ||
-    TensorTrait::tPos == AscendC::TPosition::VECCALC;
+constexpr bool in_ub = TensorTrait::tPos == AscendC::TPosition::VECIN ||
+                       TensorTrait::tPos == AscendC::TPosition::VECOUT ||
+                       TensorTrait::tPos == AscendC::TPosition::VECCALC;
 
 template <bool isNz, typename T, AscendC::TPosition TPos>
 struct TensorTraitL1 {};
@@ -50,8 +50,8 @@ struct TensorTraitL1<true, T, TPos> {
         T, TPos,
         AscendC::Layout<
             AscendC::Shape<AscendC::Shape<Cmct::Gemm::_16, uint64_t>, AscendC::Shape<Cmct::Gemm::_16, uint64_t>>,
-            AscendC::Stride<
-                AscendC::Stride<Cmct::Gemm::_1, uint64_t>, AscendC::Stride<Cmct::Gemm::_16, Cmct::Gemm::_256>>>>;
+            AscendC::Stride<AscendC::Stride<Cmct::Gemm::_1, uint64_t>,
+                            AscendC::Stride<Cmct::Gemm::_16, Cmct::Gemm::_256>>>>;
 };
 
 template <typename T, AscendC::TPosition TPos>
@@ -61,8 +61,7 @@ struct TensorTraitL1<false, T, TPos> {
         T, TPos,
         AscendC::Layout<
             AscendC::Shape<AscendC::Shape<Cmct::Gemm::_16, uint64_t>, AscendC::Shape<Cmct::Gemm::_16, uint64_t>>,
-            AscendC::Stride<
-                AscendC::Stride<Cmct::Gemm::_16, Cmct::Gemm::_256>, AscendC::Stride<Cmct::Gemm::_1, uint64_t>>>>;
+            AscendC::Stride<AscendC::Stride<Cmct::Gemm::_16, Cmct::Gemm::_256>,
+                            AscendC::Stride<Cmct::Gemm::_1, uint64_t>>>>;
 };
 } // namespace Cmct::Gemm
-

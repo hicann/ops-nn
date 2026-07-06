@@ -19,17 +19,15 @@
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
 
-template <
-    typename xType, typename wType, typename antiQuantScaleType, typename biasType, typename yType,
-    const WqmmConfig& wqmmCfg, const VecAntiQuantConfig& vecCfg>
-class WeightQuantBatchMatmulV2BasicBlockController
-{
+template <typename xType, typename wType, typename antiQuantScaleType, typename biasType, typename yType,
+          const WqmmConfig& wqmmCfg, const VecAntiQuantConfig& vecCfg>
+class WeightQuantBatchMatmulV2BasicBlockController {
 public:
     __aicore__ inline WeightQuantBatchMatmulV2BasicBlockController(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
-        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-        const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams* tilingData, TPipe* tPipe);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams* tilingData,
+                                TPipe* tPipe);
     __aicore__ inline void Process();
 
 private:
@@ -41,9 +39,8 @@ private:
     BasicBlockOffsetParam basicBlockOffsetParam_;
 };
 
-template <
-    typename xType, typename wType, typename antiQuantScaleType, typename biasType, typename yType,
-    const WqmmConfig& wqmmCfg, const VecAntiQuantConfig& vecCfg>
+template <typename xType, typename wType, typename antiQuantScaleType, typename biasType, typename yType,
+          const WqmmConfig& wqmmCfg, const VecAntiQuantConfig& vecCfg>
 __aicore__ inline void
 WeightQuantBatchMatmulV2BasicBlockController<xType, wType, antiQuantScaleType, biasType, yType, wqmmCfg, vecCfg>::Init(
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
@@ -72,11 +69,10 @@ WeightQuantBatchMatmulV2BasicBlockController<xType, wType, antiQuantScaleType, b
     nDimIdx_ = curBlockIdx_ % tiling_->cubeNumBlocksN;
 }
 
-template <
-    typename xType, typename wType, typename antiQuantScaleType, typename biasType, typename yType,
-    const WqmmConfig& wqmmCfg, const VecAntiQuantConfig& vecCfg>
-__aicore__ inline void WeightQuantBatchMatmulV2BasicBlockController<
-    xType, wType, antiQuantScaleType, biasType, yType, wqmmCfg, vecCfg>::Process()
+template <typename xType, typename wType, typename antiQuantScaleType, typename biasType, typename yType,
+          const WqmmConfig& wqmmCfg, const VecAntiQuantConfig& vecCfg>
+__aicore__ inline void WeightQuantBatchMatmulV2BasicBlockController<xType, wType, antiQuantScaleType, biasType, yType,
+                                                                    wqmmCfg, vecCfg>::Process()
 {
     if (unlikely(curBlockIdx_ >= tiling_->cubeNumBlocksM * tiling_->cubeNumBlocksN)) {
         return;
@@ -104,27 +100,26 @@ __aicore__ inline void WeightQuantBatchMatmulV2BasicBlockController<
         uint64_t tailBasicBlockIdx = nDimIdx_;
         for (; tailBasicBlockIdx < tiling_->firstTailBlockCount; tailBasicBlockIdx += tiling_->cubeNumBlocksN) {
             basicBlockOffsetParam_.nOffset = mainBlockNOffset + tailBasicBlockIdx * tiling_->firstTailBlockL1Size;
-            basicBlockOffsetParam_.nL1Size =
-                (basicBlockOffsetParam_.nOffset + tiling_->firstTailBlockL1Size) > tiling_->nSize ?
-                    tiling_->nSize - basicBlockOffsetParam_.nOffset :
-                    tiling_->firstTailBlockL1Size;
+            basicBlockOffsetParam_.nL1Size = (basicBlockOffsetParam_.nOffset + tiling_->firstTailBlockL1Size) >
+                                                     tiling_->nSize ?
+                                                 tiling_->nSize - basicBlockOffsetParam_.nOffset :
+                                                 tiling_->firstTailBlockL1Size;
             wqmmBasicBlock_.ComputeBasicBlock(basicBlockOffsetParam_);
         }
         // 第一段尾块的最后位置，也是第二段尾块的起点
-        uint64_t firstTailBlockNOffset =
-            mainBlockNOffset + tiling_->firstTailBlockCount * tiling_->firstTailBlockL1Size;
+        uint64_t firstTailBlockNOffset = mainBlockNOffset +
+                                         tiling_->firstTailBlockCount * tiling_->firstTailBlockL1Size;
         for (; tailBasicBlockIdx < totalTailBlockCount; tailBasicBlockIdx += tiling_->cubeNumBlocksN) {
-            basicBlockOffsetParam_.nOffset =
-                firstTailBlockNOffset +
-                (tailBasicBlockIdx - tiling_->firstTailBlockCount) * tiling_->secondTailBlockL1Size;
-            basicBlockOffsetParam_.nL1Size =
-                (basicBlockOffsetParam_.nOffset + tiling_->secondTailBlockL1Size) > tiling_->nSize ?
-                    tiling_->nSize - basicBlockOffsetParam_.nOffset :
-                    tiling_->secondTailBlockL1Size;
+            basicBlockOffsetParam_.nOffset = firstTailBlockNOffset +
+                                             (tailBasicBlockIdx - tiling_->firstTailBlockCount) *
+                                                 tiling_->secondTailBlockL1Size;
+            basicBlockOffsetParam_.nL1Size = (basicBlockOffsetParam_.nOffset + tiling_->secondTailBlockL1Size) >
+                                                     tiling_->nSize ?
+                                                 tiling_->nSize - basicBlockOffsetParam_.nOffset :
+                                                 tiling_->secondTailBlockL1Size;
             wqmmBasicBlock_.ComputeBasicBlock(basicBlockOffsetParam_);
         }
     }
     wqmmBasicBlock_.End();
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

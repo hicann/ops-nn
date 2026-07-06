@@ -53,4 +53,4 @@ ACLNN_API aclnnStatus aclnnSigmoidBackward(void* workspace, uint64_t workspaceSi
 }
 #endif
 
-#endif  // OP_API_INC_SIGMOID_BACKWARD_H_
+#endif // OP_API_INC_SIGMOID_BACKWARD_H_

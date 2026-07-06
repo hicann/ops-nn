@@ -25,44 +25,51 @@ using namespace aicpu;
 class TEST_ASSERT_UT : public testing::Test {};
 
 #define CREATE_NODEDEF(shapes, data_types, datas, sum)                  \
-  auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef();      \
-  NodeDefBuilder(node_def.get(), "Assert", "Assert")                    \
-      .Input({"input_condition", data_types[0], shapes[0], datas[0]})   \
-      .Input({"input_data", data_types[1], shapes[1], datas[1]})        \
-      .Attr("summarize", sum);
+    auto node_def = CpuKernelUtils::CpuKernelUtils::CreateNodeDef();    \
+    NodeDefBuilder(node_def.get(), "Assert", "Assert")                  \
+        .Input({"input_condition", data_types[0], shapes[0], datas[0]}) \
+        .Input({"input_data", data_types[1], shapes[1], datas[1]})      \
+        .Attr("summarize", sum);
 
-#define ADD_CASE(base_type, aicpu_type, condition, shapes, num, sum_attr)    \
-  TEST_F(TEST_ASSERT_UT, Test_##aicpu_type##condition##num##sum_attr) {      \
-    size_t input0 = shapes[0].size();                                        \
-    size_t dims = shapes[1].size();                                          \
-    vector<DataType> data_types = {DT_BOOL, aicpu_type};                     \
-    base_type input[num];                                                    \
-    SetRandomValue<base_type>(input, num);                                   \
-    vector<void *> datas = {(void *)&condition, (void *)input};              \
-    CREATE_NODEDEF(shapes, data_types, datas, sum_attr);                     \
-    uint32_t re = KERNEL_STATUS_OK;                                          \
-    if (!condition) { re = KERNEL_STATUS_PARAM_INVALID; }                    \
-    if (input0 != 0) { re = KERNEL_STATUS_PARAM_INVALID; }                   \
-    RUN_KERNEL(node_def, HOST, re);                                          \
-  }
+#define ADD_CASE(base_type, aicpu_type, condition, shapes, num, sum_attr) \
+    TEST_F(TEST_ASSERT_UT, Test_##aicpu_type##condition##num##sum_attr)   \
+    {                                                                     \
+        size_t input0 = shapes[0].size();                                 \
+        size_t dims = shapes[1].size();                                   \
+        vector<DataType> data_types = {DT_BOOL, aicpu_type};              \
+        base_type input[num];                                             \
+        SetRandomValue<base_type>(input, num);                            \
+        vector<void*> datas = {(void*)&condition, (void*)input};          \
+        CREATE_NODEDEF(shapes, data_types, datas, sum_attr);              \
+        uint32_t re = KERNEL_STATUS_OK;                                   \
+        if (!condition) {                                                 \
+            re = KERNEL_STATUS_PARAM_INVALID;                             \
+        }                                                                 \
+        if (input0 != 0) {                                                \
+            re = KERNEL_STATUS_PARAM_INVALID;                             \
+        }                                                                 \
+        RUN_KERNEL(node_def, HOST, re);                                   \
+    }
 
-TEST_F(TEST_ASSERT_UT, ExpInputNull) {
-  vector<DataType> data_types = {DT_BOOL, DT_INT32};
-  bool input0 = false;
-  vector<vector<int64_t>> shapes = {{}, {2, 11}};
-  vector<void *> datas = {(void *)&input0, (void *)nullptr};
-  CREATE_NODEDEF(shapes, data_types, datas, 3);
-  RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
+TEST_F(TEST_ASSERT_UT, ExpInputNull)
+{
+    vector<DataType> data_types = {DT_BOOL, DT_INT32};
+    bool input0 = false;
+    vector<vector<int64_t>> shapes = {{}, {2, 11}};
+    vector<void*> datas = {(void*)&input0, (void*)nullptr};
+    CREATE_NODEDEF(shapes, data_types, datas, 3);
+    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
 }
 
-TEST_F(TEST_ASSERT_UT, InputString) {
-  vector<DataType> data_types = {DT_BOOL, DT_STRING};
-  bool input0 = false;
-  string input1[4] = {"input","is","string","type"};
-  vector<vector<int64_t>> shapes = {{}, {2, 2}};
-  vector<void *> datas = {(void *)&input0, (void *)input1};
-  CREATE_NODEDEF(shapes, data_types, datas, 3);
-  RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);
+TEST_F(TEST_ASSERT_UT, InputString)
+{
+    vector<DataType> data_types = {DT_BOOL, DT_STRING};
+    bool input0 = false;
+    string input1[4] = {"input", "is", "string", "type"};
+    vector<vector<int64_t>> shapes = {{}, {2, 2}};
+    vector<void*> datas = {(void*)&input0, (void*)input1};
+    CREATE_NODEDEF(shapes, data_types, datas, 3);
+    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);
 }
 
 bool input_condition_true = true;

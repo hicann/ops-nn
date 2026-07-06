@@ -22,7 +22,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
-namespace AdaptivePool3d{
+namespace AdaptivePool3d {
 using namespace AscendC;
 
 constexpr int32_t USE_BUFFER_NUM = 2;
@@ -47,20 +47,21 @@ constexpr int32_t HALF_OVERFLOW_MODE_CTRL = 48;
 constexpr int32_t ALIGNBLOCK = 32;
 
 constexpr MicroAPI::CastTrait CASTB4TOB2 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                  MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 constexpr MicroAPI::CastTrait CASTB2TOB4 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 constexpr MicroAPI::CastTrait CASTB4TOB8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <typename T>
-class AdaptivePool3dBigKernel
-{
+class AdaptivePool3dBigKernel {
 public:
-    __aicore__ inline AdaptivePool3dBigKernel(const AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData &tilingData, TPipe &pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline AdaptivePool3dBigKernel(const AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData& tilingData,
+                                              TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
-    __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount, T padValue = static_cast<T>(0));
+    __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount,
+                                  T padValue = static_cast<T>(0));
     __aicore__ inline void CalcWindowSize(int64_t curIdx);
     __aicore__ inline void CopyOut(int64_t copyCount, int64_t offset);
     __aicore__ inline void CalcBatchWindowSize(int64_t startOutIdx, int64_t endOutIdx);
@@ -123,11 +124,11 @@ __aicore__ inline U AdaptivePool3dBigKernel<T>::GetDtypeMinValue()
 }
 
 template <typename T>
-__aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(
-    int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount, T padValue)
+__aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount,
+                                                          int64_t loopCount, T padValue)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    AlignBlockLen = ops::CeilAlign(blockLen, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
+    AlignBlockLen = ops::CeilAlign(blockLen, static_cast<int64_t>(ALIGNBLOCK / sizeof(T)));
     LoopModeParams loopModeParams;
     loopModeParams.loop1Size = loopCount;
     loopModeParams.loop2Size = 1;
@@ -136,8 +137,8 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(
     loopModeParams.loop1DstStride = AlignBlockLen * blockCount * sizeof(T);
     loopModeParams.loop2DstStride = loopCount * AlignBlockLen * blockCount * sizeof(T);
 
-    DataCopyPadExtParams<T> padParams =
-        DataCopyPadExtParams<T>(true, 0, static_cast<uint8_t>(AlignBlockLen - blockLen), padValue);
+    DataCopyPadExtParams<T> padParams = DataCopyPadExtParams<T>(true, 0, static_cast<uint8_t>(AlignBlockLen - blockLen),
+                                                                padValue);
 
     DataCopyExtParams copyParams;
     copyParams.blockCount = blockCount;
@@ -151,7 +152,6 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     inputQue_.EnQue(xLocal);
 }
-
 
 template <typename T>
 __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyOut(int64_t copyCount, int64_t offset)
@@ -196,7 +196,7 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CalcWindowSize(int64_t curOut
         curkDHW_ = curkD_ * curkHW_;
         curInOffset_ = curNc_ * inDHW_;
 
-        AlignW = ops::CeilAlign(curkW_, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
+        AlignW = ops::CeilAlign(curkW_, static_cast<int64_t>(ALIGNBLOCK / sizeof(T)));
         AlignHW = curkH_ * AlignW;
         AlignDHW = AlignHW * curkD_;
 
@@ -218,7 +218,7 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CalcWindowSize(int64_t curOut
     curkH_ = CalEndIdx(curHo, tilingData_.hInDim, tilingData_.hOutDim) - curOriginH;
     curkW_ = CalEndIdx(curWo, tilingData_.wInDim, tilingData_.wOutDim) - curOriginW;
 
-    AlignW = ops::CeilAlign(curkW_, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
+    AlignW = ops::CeilAlign(curkW_, static_cast<int64_t>(ALIGNBLOCK / sizeof(T)));
     AlignHW = curkH_ * AlignW;
     AlignDHW = AlignHW * curkD_;
 

@@ -18,7 +18,6 @@
 
 #include "unsorted_segment_sum_tiling.h"
 
-
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(UnsortedSegmentSumSimdDynSortTilingData)
@@ -40,13 +39,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_7000, UnsortedSegmentSumSimdDynSortTilingData);
 
-class UnsortedSegmentSumSimdDynSortTiling : public UnsortedSegmentSumBaseTiling
-{
+class UnsortedSegmentSumSimdDynSortTiling : public UnsortedSegmentSumBaseTiling {
 public:
     explicit UnsortedSegmentSumSimdDynSortTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
     {}
-    ~UnsortedSegmentSumSimdDynSortTiling() override
-    {}
+    ~UnsortedSegmentSumSimdDynSortTiling() override {}
 
 private:
     bool IsCapable() override;

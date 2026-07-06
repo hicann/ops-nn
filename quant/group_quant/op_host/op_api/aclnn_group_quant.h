@@ -37,8 +37,8 @@ extern "C" {
  */
 ACLNN_API aclnnStatus aclnnGroupQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* scale,
                                                       const aclTensor* groupIndex, const aclTensor* offsetOptional,
-                                                      int32_t dstType, aclTensor* y,
-                                                      uint64_t* workspaceSize, aclOpExecutor** executor);
+                                                      int32_t dstType, aclTensor* y, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor);
 
 /**
  * @brief aclnnGroupQuant的第二段接口，用于执行计算。
@@ -48,11 +48,11 @@ ACLNN_API aclnnStatus aclnnGroupQuantGetWorkspaceSize(const aclTensor* x, const 
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGroupQuant(void* workspace, uint64_t workspaceSize,
-                                      aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGroupQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_GROUP_QUANT_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_GROUP_QUANT_H_

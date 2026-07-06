@@ -21,13 +21,11 @@
 namespace GroupNormSilu {
 using namespace AscendC;
 template <typename T1, typename T2, int32_t BUFFER_NUM = 2>
-class GroupNormSiluTwoPassGeneralized
-{
+class GroupNormSiluTwoPassGeneralized {
 public:
     __aicore__ inline GroupNormSiluTwoPassGeneralized(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluRegbaseTilingData* tilingData)
     {
         tiling = tilingData;
         blockIdx = GetBlockIdx();
@@ -70,13 +68,11 @@ public:
             if constexpr (sizeof(T2) == sizeof(float)) {
                 LocalTensor<T2> meanOutTensorNew = meanOutTensor.template ReinterpretCast<T2>();
                 LocalTensor<T2> rstdOutTensorNew = rstdOutTensor.template ReinterpretCast<T2>();
-                ProcessMeanAndRstd<T2>(
-                    meanTensor, meanOutTensorNew, meanT2Gm, rstdTensor, rstdOutTensorNew, rstdT2Gm,
-                    blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
+                ProcessMeanAndRstd<T2>(meanTensor, meanOutTensorNew, meanT2Gm, rstdTensor, rstdOutTensorNew, rstdT2Gm,
+                                       blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
             } else {
-                ProcessMeanAndRstd<T1>(
-                    meanTensor, meanOutTensor, meanGm, rstdTensor, rstdOutTensor, rstdGm,
-                    blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
+                ProcessMeanAndRstd<T1>(meanTensor, meanOutTensor, meanGm, rstdTensor, rstdOutTensor, rstdGm,
+                                       blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
             }
             if (i < numPerCoreLoop - 1) {
                 SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
@@ -120,9 +116,8 @@ private:
             if (i > 1) {
                 WaitFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
             }
-            CalMeanAndRstd<T1>(
-                xLocal, meanLocal, rstdLocal, dichotomyAddLocal, numPerCoreProcess, dichotomyAddPower, dichotomyAddK,
-                dichotomyAddLastNum, powerOfTwoForReduce, elemNum, eps);
+            CalMeanAndRstd<T1>(xLocal, meanLocal, rstdLocal, dichotomyAddLocal, numPerCoreProcess, dichotomyAddPower,
+                               dichotomyAddK, dichotomyAddLastNum, powerOfTwoForReduce, elemNum, eps);
             if (i > 0) {
                 WaitFlag<HardEvent::V_MTE2>(eventIDVToMte2);
             }
@@ -151,8 +146,8 @@ private:
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventIDMte3ToVPong);
     }
 
-    __aicore__ inline void NormalizeAndSwish(
-        uint32_t xUbOffset, uint32_t numPerCoreoffset, int64_t numPerCoreProcess, uint32_t numPerCoreLoop)
+    __aicore__ inline void NormalizeAndSwish(uint32_t xUbOffset, uint32_t numPerCoreoffset, int64_t numPerCoreProcess,
+                                             uint32_t numPerCoreLoop)
     {
         int64_t outputUbOffset = xUbOffset;
         auto eventIDMte2ToV = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>());
@@ -162,22 +157,21 @@ private:
             uint64_t betaOffset = gammaOffset;
             __local_mem__ T1* xLocal = (__local_mem__ T1*)xTensor[xUbOffset + i * elemNumAlign].GetPhyAddr();
             __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[outputUbOffset + i * elemNumAlign].GetPhyAddr();
-            __local_mem__ float* meanLocal =
-                (__local_mem__ float*)meanTensor[numPerCoreLoop * onceNumPerCore + i].GetPhyAddr();
-            __local_mem__ float* rstdLocal =
-                (__local_mem__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore + i].GetPhyAddr();
+            __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[numPerCoreLoop * onceNumPerCore + i]
+                                                 .GetPhyAddr();
+            __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore + i]
+                                                 .GetPhyAddr();
             __local_mem__ T2* gammaLocal = hasGamma ? (__local_mem__ T2*)gammaTensor.GetPhyAddr() : nullptr;
             __local_mem__ T2* betaLocal = hasBeta ? (__local_mem__ T2*)betaTensor.GetPhyAddr() : nullptr;
             if (i > 0) {
                 WaitFlag<HardEvent::V_MTE2>(eventIDVToMte2);
             }
-            CopyGammaAndBeta2UB<T2>(
-                gammaGm[gammaOffset], betaGm[betaOffset], gammaTensor, betaTensor, 1, shapeD, hasGamma, hasBeta);
+            CopyGammaAndBeta2UB<T2>(gammaGm[gammaOffset], betaGm[betaOffset], gammaTensor, betaTensor, 1, shapeD,
+                                    hasGamma, hasBeta);
             SetFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
-            VFNormalizeAndSwishUnAlign<T1, T2>(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, shapeD, hwNum, activateSilu, hasGamma,
-                hasBeta);
+            VFNormalizeAndSwishUnAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, shapeD,
+                                               hwNum, activateSilu, hasGamma, hasBeta);
             if (i < numPerCoreProcess - 1) {
                 SetFlag<HardEvent::V_MTE2>(eventIDVToMte2);
             }

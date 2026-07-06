@@ -30,15 +30,9 @@ using namespace ge;
 
 class ClippedSwigluTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ClippedSwigluTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ClippedSwigluTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ClippedSwigluTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ClippedSwigluTiling TearDown" << std::endl; }
 };
 
 TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_ungrouped)
@@ -72,20 +66,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_ungrouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -106,12 +100,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_ungrouped)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -165,20 +158,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_half_ungrouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -199,12 +192,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_half_ungrouped)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -258,20 +250,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_half_ungrouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -292,12 +284,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_half_ungrouped)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -351,20 +342,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_interleaved_ungrouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -385,12 +376,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_interleaved_ungrouped)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -444,20 +434,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_interleaved_ungrouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -478,12 +468,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_interleaved_ungrouped)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -537,20 +526,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_interleaved_ungrouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -571,12 +560,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_interleaved_ungrouped)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -631,20 +619,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_grouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -665,12 +653,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_half_grouped)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -725,20 +712,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_half_grouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -759,12 +746,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_half_grouped)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -819,20 +805,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_half_grouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -853,12 +839,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_half_grouped)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -913,20 +898,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_interleaved_grouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -947,12 +932,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp16_interleaved_grouped)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1007,20 +991,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_interleaved_grouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1041,12 +1025,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_fp32_interleaved_grouped)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1101,20 +1084,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_interleaved_grouped)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1135,12 +1118,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_bf16_interleaved_grouped)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1195,20 +1177,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_is_None_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1229,12 +1211,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_is_None_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1284,20 +1265,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_dim_div2_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1318,12 +1299,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_dim_div2_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1373,20 +1353,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_dtpye_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1407,12 +1387,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_x_dtpye_wrong)
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1462,20 +1441,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_groupindex_dtpye_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1496,12 +1475,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_groupindex_dtpye_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1551,20 +1529,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_groupindex_dims_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1585,12 +1563,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_groupindex_dims_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1640,20 +1617,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_y_dims_diff_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1674,12 +1651,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_y_dims_diff_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1729,20 +1705,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_y_dim_equal_x_dim_div2_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1763,12 +1739,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_y_dim_equal_x_dim_div2_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1818,20 +1793,20 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_dim_value_wrong)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1852,12 +1827,11 @@ TEST_F(ClippedSwigluTiling, test_ClippedSwiglu_dim_value_wrong)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                           {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
-                           {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
-                           {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.702)},
+                                  {"limit", Ops::NN::AnyValue::CreateFrom<float>(7.0)},
+                                  {"bias", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"interleaved", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

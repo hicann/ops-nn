@@ -50,4 +50,4 @@ REG_OP(HardSigmoidGrad)
     .OP_END_FACTORY_REG(HardSigmoidGrad)
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_HARD_SIGMOID_GRAD_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_HARD_SIGMOID_GRAD_OPS_H_

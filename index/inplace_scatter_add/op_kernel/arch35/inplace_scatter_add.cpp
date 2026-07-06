@@ -13,13 +13,11 @@
 #include "inplace_scatter_add_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void inplace_scatter_add(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-    GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void inplace_scatter_add(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR var_out,
+                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(InplaceScatterAddTilingData);
     GET_TILING_DATA_WITH_STRUCT(InplaceScatterAddTilingData, tilingData, tiling);
 
-    NsInplaceScatterAdd::Process<DTYPE_VAR, DTYPE_INDICES>(
-        var, indices, updates, &tilingData);
+    NsInplaceScatterAdd::Process<DTYPE_VAR, DTYPE_INDICES>(var, indices, updates, &tilingData);
 }

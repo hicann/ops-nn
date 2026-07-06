@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <array>
@@ -22,19 +23,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void rms_norm_grad(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void rms_norm_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                                    GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling);
 
 class rms_norm_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "rms_norm_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(rms_norm_grad_test, test_case_221)

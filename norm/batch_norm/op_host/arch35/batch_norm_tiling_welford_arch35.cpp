@@ -16,8 +16,7 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_WELFORD_REDUCE = 300000;
 
 constexpr int64_t SMALL_BUFFER_NUM = 9;
@@ -28,12 +27,10 @@ constexpr int64_t MAX_COMMON_PARELLEL = 256;
 // 6 for large case, 1 for extra
 constexpr int64_t BLOCK_RESERVE_NUMBER = 7;
 
-}  // namespace
+} // namespace
 
-namespace optiling
-{
-class BatchNormWelfordReduceTilingBase : public BatchNormRegbaseTilingBase
-{
+namespace optiling {
+class BatchNormWelfordReduceTilingBase : public BatchNormRegbaseTilingBase {
 public:
     explicit BatchNormWelfordReduceTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context)
     {
@@ -48,10 +45,7 @@ public:
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
@@ -74,10 +68,7 @@ void BatchNormWelfordReduceTilingBase::Reset()
     return;
 }
 
-inline static int64_t RoundUp(int64_t a, int64_t b)
-{
-    return Ops::Base::CeilDiv(a, b) * b;
-}
+inline static int64_t RoundUp(int64_t a, int64_t b) { return Ops::Base::CeilDiv(a, b) * b; }
 
 ge::graphStatus BatchNormWelfordReduceTilingBase::DoOpTiling()
 {
@@ -97,23 +88,23 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::DoOpTiling()
     int64_t elemAlignNum = blockSize_ / elemSize;
 
     // ub tiling
-    int64_t aGatherLimit =
-        tilingData.get_aBlockFactor() > MAX_COMMON_PARELLEL ? MAX_COMMON_PARELLEL : tilingData.get_aBlockFactor();
+    int64_t aGatherLimit = tilingData.get_aBlockFactor() > MAX_COMMON_PARELLEL ? MAX_COMMON_PARELLEL :
+                                                                                 tilingData.get_aBlockFactor();
     tilingData.set_aGatherLimit(aGatherLimit);
 
     int32_t totalUBSize = aicoreParams_.ubSize;
     uint64_t smallUbNum = RoundUp(tilingData.get_aGatherLimit() * FLOAT32_BYTES, blockSize_);
     uint64_t smallUbSize = (smallUbNum * SMALL_BUFFER_NUM * DOUBLE_BUFFER) * FLOAT32_BYTES;
 
-    int64_t binaryAddBufNum =
-        (totalUBSize / (DOUBLE_BUFFER * LARGE_BUFFER_NUM_QUEUE * elemSize)) / tilingData.get_vlLenFp32();
+    int64_t binaryAddBufNum = (totalUBSize / (DOUBLE_BUFFER * LARGE_BUFFER_NUM_QUEUE * elemSize)) /
+                              tilingData.get_vlLenFp32();
     int64_t binaryAddBufSize = ((binaryAddBufNum * FLOAT32_BYTES + blockSize_ - 1) / blockSize_) * blockSize_;
 
     uint64_t ubRemain = totalUBSize - smallUbSize - binaryAddBufSize - blockSize_ * BLOCK_RESERVE_NUMBER;
 
     // processSize is max ub size.
-    int64_t ubSize =
-        ubRemain / (DOUBLE_BUFFER * elemSize * LARGE_BUFFER_NUM_QUEUE + FLOAT32_BYTES * LARGE_BUFFER_NUM_TMP);
+    int64_t ubSize = ubRemain /
+                     (DOUBLE_BUFFER * elemSize * LARGE_BUFFER_NUM_QUEUE + FLOAT32_BYTES * LARGE_BUFFER_NUM_TMP);
     int64_t ubSizeAlign = ubSize / elemAlignNum * elemAlignNum;
 
     if (r0_ >= ubSizeAlign) {
@@ -152,8 +143,7 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::DoOpTiling()
     binaryAddQuotient = binaryAddQuotient / BINARY_ADD_COEF;
     tilingData.set_binaryAddQuotient(binaryAddQuotient);
 
-    OP_CHECK_IF(vlLenFp32 == 0, OP_LOGE(opName, "vlLenFp32 should not be 0."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(vlLenFp32 == 0, OP_LOGE(opName, "vlLenFp32 should not be 0."), return ge::GRAPH_FAILED);
     int64_t vcaddNum = binaryAddQuotient / vlLenFp32;
     if (vcaddNum <= vlLenFp32) {
         tilingData.set_binaryAddK(0);
@@ -179,10 +169,7 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormWelfordReduceTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_WELFORD_REDUCE;
-}
+uint64_t BatchNormWelfordReduceTilingBase::GetTilingKey() const { return TILINGKEY_WELFORD_REDUCE; }
 
 ge::graphStatus BatchNormWelfordReduceTilingBase::PostTiling()
 {
@@ -191,9 +178,8 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::PostTiling()
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(tilingData.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    tilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        tilingData.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData.GetDataSize());
@@ -202,4 +188,4 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormWelfordReduceTilingBase, 30000);
-}  // namespace optiling
+} // namespace optiling

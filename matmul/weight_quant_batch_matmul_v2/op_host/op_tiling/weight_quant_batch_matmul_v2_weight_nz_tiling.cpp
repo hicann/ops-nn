@@ -21,9 +21,9 @@
 #include "platform/platform_infos_def.h"
 #include "../../op_kernel/weight_quant_batch_matmul_v2_kernel_tiling_key.h"
 
-using Ops::NN::Optiling::RecursiveSum;
 using Ops::NN::GenTiling;
 using Ops::NN::TilingPrepareForOpCache;
+using Ops::NN::Optiling::RecursiveSum;
 
 namespace {
 constexpr uint64_t MAX_SHAPE_DIM = 65535UL;
@@ -56,21 +56,16 @@ constexpr uint64_t THREE_BATCH_SHAPE_DIM = 5;
 constexpr uint64_t FOUR_BATCH_SHAPE_DIM = 6;
 constexpr uint64_t ND_NZ_DIM_DIFF = 2;
 
-class WhiteListShape
-{
+class WhiteListShape {
 public:
-    bool operator<(const WhiteListShape& right) const
-    {
-        return memcmp(this, &right, sizeof(WhiteListShape)) < 0;
-    }
+    bool operator<(const WhiteListShape& right) const { return memcmp(this, &right, sizeof(WhiteListShape)) < 0; }
 
     uint64_t mSize_;
     uint64_t nSize_;
     uint64_t kSize_;
 };
 
-class WeightNzTilingCache
-{
+class WeightNzTilingCache {
 public:
     uint8_t cubeBlockDimN_;
     uint8_t cubeBlockDimM_;
@@ -217,14 +212,13 @@ bool WeightQuantBatchMatmulV2WeightNz::IsCapable()
         "weightNz template only support right matrix weight >= 4 or <= 8 dims Tensor,now is %ld", weightDimNum);
 
     // weightNz模板只支持weight矩阵是转置的场景
-    OP_LOGI_IF_RETURN(
-        !inputParams_.transB, false, inputParams_.opName, "weightNz template only support right matrix is transposed.");
+    OP_LOGI_IF_RETURN(!inputParams_.transB, false, inputParams_.opName,
+                      "weightNz template only support right matrix is transposed.");
 
     // weightNz模板只支持weight矩阵的format是FRACTAL_NZ的
     auto weightFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(1)->GetStorageFormat()));
-    OP_LOGI_IF_RETURN(
-        weightFormat != ge::FORMAT_FRACTAL_NZ, false, inputParams_.opName,
-        "weightNz template only support right matrix format is NZ.");
+    OP_LOGI_IF_RETURN(weightFormat != ge::FORMAT_FRACTAL_NZ, false, inputParams_.opName,
+                      "weightNz template only support right matrix format is NZ.");
 
     return true;
 }
@@ -249,13 +243,11 @@ void WeightQuantBatchMatmulV2WeightNz::SetMatmulTiling()
     mmtiling.stepN = 1;
     mmtiling.shareL0CSize = 0;
     mmtiling.shareL1Size = 0;
-    uint64_t singleMLoop = ops::CeilDiv(
-        ops::CeilDiv(tilingData_->mSize, tilingData_->mAL1Size),
-        static_cast<uint64_t>(tilingData_->cubeBlockDimM));
+    uint64_t singleMLoop = ops::CeilDiv(ops::CeilDiv(tilingData_->mSize, tilingData_->mAL1Size),
+                                        static_cast<uint64_t>(tilingData_->cubeBlockDimM));
     auto mDim = ops::CeilDiv(tilingData_->mSize, singleMLoop * tilingData_->mAL1Size);
-    uint64_t singleNLoop = ops::CeilDiv(
-        ops::CeilDiv(tilingData_->nSize, tilingData_->nBL1Size),
-        static_cast<uint64_t>(tilingData_->cubeBlockDimN));
+    uint64_t singleNLoop = ops::CeilDiv(ops::CeilDiv(tilingData_->nSize, tilingData_->nBL1Size),
+                                        static_cast<uint64_t>(tilingData_->cubeBlockDimN));
     auto nDim = ops::CeilDiv(tilingData_->nSize, singleNLoop * tilingData_->nBL1Size);
     tilingData_->cubeBlockDimN = nDim;
     tilingData_->cubeBlockDimM = mDim;
@@ -265,15 +257,14 @@ void WeightQuantBatchMatmulV2WeightNz::GetubFactorTiling()
 {
     auto& mmtiling = tilingData_->matmulTiling;
     uint64_t mmUsedUbSize = mmtiling.baseM * mmtiling.baseN * GetSizeByDataType(ge::DT_FLOAT16);
-    uint64_t ubLength =
-        inputParams_.hasBias ? aicoreParams_.ubSize - mmtiling.baseN * sizeof(float) : aicoreParams_.ubSize;
+    uint64_t ubLength = inputParams_.hasBias ? aicoreParams_.ubSize - mmtiling.baseN * sizeof(float) :
+                                               aicoreParams_.ubSize;
     ubLength -= ANTIQUANT_BUF_NUM * tilingData_->matmulTiling.baseN;
     uint64_t bubUsedSize = CalBubFactorTiling(ubLength);
     uint64_t aubUsedSize = CalAubFactorTiling(ubLength - bubUsedSize);
     uint64_t cubNz2NdCanUseSize = CalCubFactorTiling(ubLength - mmUsedUbSize);
-    OP_LOGD(
-        "WeightQuantBatchmatmul", "cubUseSize %lu, bubusedsize %lu, aubusedsize %lu, cubnd2nzusedsize %lu",
-        mmUsedUbSize, bubUsedSize, aubUsedSize, cubNz2NdCanUseSize);
+    OP_LOGD("WeightQuantBatchmatmul", "cubUseSize %lu, bubusedsize %lu, aubusedsize %lu, cubnd2nzusedsize %lu",
+            mmUsedUbSize, bubUsedSize, aubUsedSize, cubNz2NdCanUseSize);
 }
 
 ge::graphStatus WeightQuantBatchMatmulV2WeightNz::GetPlatformInfo()
@@ -294,10 +285,9 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::GetPlatformInfo()
     aicoreParams_.l1Size = compileInfoPtr->l1Size;
     aicoreParams_.l0cSize = compileInfoPtr->l0cSize;
 
-    OP_LOGI(
-        inputParams_.opName, "get platform: aivNum(%u) aicNum(%u) ubSize(%lu) l1Size(%lu) l0cSize(%lu)",
-        compileInfoPtr->aivNum, compileInfoPtr->aicNum, aicoreParams_.ubSize, aicoreParams_.l1Size,
-        aicoreParams_.l0cSize);
+    OP_LOGI(inputParams_.opName, "get platform: aivNum(%u) aicNum(%u) ubSize(%lu) l1Size(%lu) l0cSize(%lu)",
+            compileInfoPtr->aivNum, compileInfoPtr->aicNum, aicoreParams_.ubSize, aicoreParams_.l1Size,
+            aicoreParams_.l0cSize);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -330,8 +320,8 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::CheckContext() const
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
     // 不支持C8场景
     OP_LOGE_IF(quantScaleShape != nullptr, ge::GRAPH_FAILED, context_->GetNodeName(), "quant scale is not supported.");
-    OP_LOGE_IF(
-        quantOffsetShape != nullptr, ge::GRAPH_FAILED, context_->GetNodeName(), "quant offset is not supported.");
+    OP_LOGE_IF(quantOffsetShape != nullptr, ge::GRAPH_FAILED, context_->GetNodeName(),
+               "quant offset is not supported.");
 
     return ge::GRAPH_SUCCESS;
 }
@@ -343,10 +333,9 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeBiasDtype(const gert::CompileTimeT
 
         OP_TILING_CHECK(
             (inputParams_.biasDtype != inputParams_.aDtype),
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "bias[%s] dtype should same as x[%s]",
-                ge::TypeUtils::DataTypeToAscendString(inputParams_.biasDtype).GetString(),
-                ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "bias[%s] dtype should same as x[%s]",
+                                            ge::TypeUtils::DataTypeToAscendString(inputParams_.biasDtype).GetString(),
+                                            ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
             return false);
     }
 
@@ -363,26 +352,23 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeDtype()
     auto biasDesc = context_->GetOptionalInputDesc(BIAS_INDEX);
     OP_TILING_CHECK(
         (inputParams_.aDtype != ge::DT_FLOAT16),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "x only support DT_FLOAT16 dtype, get actual dtype[%s]",
-            ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "x only support DT_FLOAT16 dtype, get actual dtype[%s]",
+                                        ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
         return false);
 
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
     OP_TILING_CHECK(
         (inputParams_.bDtype != ge::DT_INT8),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "weight only support DT_INT8 dtype, get actual dtype[%s]",
-            ge::TypeUtils::DataTypeToAscendString(inputParams_.bDtype).GetString()),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "weight only support DT_INT8 dtype, get actual dtype[%s]",
+                                        ge::TypeUtils::DataTypeToAscendString(inputParams_.bDtype).GetString()),
         return false);
 
-    OP_TILING_CHECK(
-        (inputParams_.cDtype != inputParams_.aDtype),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName,
-            "y dtype should same as x or be DT_INT8 if quant param is provided, get actual dtype[%s]",
-            ge::TypeUtils::DataTypeToAscendString(inputParams_.cDtype).GetString()),
-        return false);
+    OP_TILING_CHECK((inputParams_.cDtype != inputParams_.aDtype),
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        inputParams_.opName,
+                        "y dtype should same as x or be DT_INT8 if quant param is provided, get actual dtype[%s]",
+                        ge::TypeUtils::DataTypeToAscendString(inputParams_.cDtype).GetString()),
+                    return false);
     return AnalyzeBiasDtype(biasDesc) && AnalyzeAntiQuantDtype(antiQuantScaleDtype, antiQuantOffsetDesc);
 }
 
@@ -391,19 +377,17 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeAntiQuantDtype(
 {
     OP_TILING_CHECK(
         antiQuantScaleDtype != inputParams_.aDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "antiquant_scale[%s] dtype should same as x[%s]",
-            ge::TypeUtils::DataTypeToAscendString(antiQuantScaleDtype).GetString(),
-            ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "antiquant_scale[%s] dtype should same as x[%s]",
+                                        ge::TypeUtils::DataTypeToAscendString(antiQuantScaleDtype).GetString(),
+                                        ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
         return false);
     if (antiQuantOffsetDesc != nullptr) {
         auto antiQuantOffsetDtype = antiQuantOffsetDesc->GetDataType();
         OP_TILING_CHECK(
             antiQuantOffsetDtype != inputParams_.aDtype,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "antiquant_offset[%s] dtype should same as x[%s]",
-                ge::TypeUtils::DataTypeToAscendString(antiQuantOffsetDtype).GetString(),
-                ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "antiquant_offset[%s] dtype should same as x[%s]",
+                                            ge::TypeUtils::DataTypeToAscendString(antiQuantOffsetDtype).GetString(),
+                                            ge::TypeUtils::DataTypeToAscendString(inputParams_.aDtype).GetString()),
             return false);
     }
 
@@ -438,9 +422,8 @@ bool WeightQuantBatchMatmulV2WeightNz::SetAntiQuantType(const gert::StorageShape
     size_t antiQuantScaleShapeSize = static_cast<size_t>(antiQuantScaleShape->GetStorageShape().GetShapeSize());
     OP_TILING_CHECK(
         antiQuantScaleShapeSize == 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "antiquant_scale %s cannot be empty tensor",
-            Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str()),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "antiquant_scale %s cannot be empty tensor",
+                                        Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str()),
         return false);
 
     if (antiQuantScaleShapeSize == 1) {
@@ -448,12 +431,11 @@ bool WeightQuantBatchMatmulV2WeightNz::SetAntiQuantType(const gert::StorageShape
     } else if (inputParams_.groupSize > 0) {
         inputParams_.antiQuantType = QuantType::PER_GROUP;
     } else {
-        OP_TILING_CHECK(
-            antiQuantScaleShapeSize != inputParams_.nSize,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "antiquant_scale %s shape size should same as N[%lu]",
-                Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str(), inputParams_.nSize),
-            return false);
+        OP_TILING_CHECK(antiQuantScaleShapeSize != inputParams_.nSize,
+                        VECTOR_INNER_ERR_REPORT_TILIING(
+                            inputParams_.opName, "antiquant_scale %s shape size should same as N[%lu]",
+                            Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str(), inputParams_.nSize),
+                        return false);
         inputParams_.antiQuantType = QuantType::PER_CHANNEL;
     }
     return true;
@@ -471,13 +453,12 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeBiasShape(const gert::StorageShape
         }
         if (biasDims <= NO_BATCH_SHAPE_DIM) {
             inputParams_.biasWithBatch = false;
-            OP_TILING_CHECK(
-                biasShapeSize != inputParams_.nSize && biasShapeSize != 0,
-                VECTOR_INNER_ERR_REPORT_TILIING(
-                    inputParams_.opName,
-                    "when bias without batch, bias shape size[%ld] is not equal nSize[%lu] or zero",
-                    biasShape->GetStorageShape().GetShapeSize(), inputParams_.nSize),
-                return false);
+            OP_TILING_CHECK(biasShapeSize != inputParams_.nSize && biasShapeSize != 0,
+                            VECTOR_INNER_ERR_REPORT_TILIING(
+                                inputParams_.opName,
+                                "when bias without batch, bias shape size[%ld] is not equal nSize[%lu] or zero",
+                                biasShape->GetStorageShape().GetShapeSize(), inputParams_.nSize),
+                            return false);
             OP_TILING_CHECK(
                 biasShape->GetStorageShape().GetDimNum() > 1 && biasShape->GetStorageShape().GetDim(0) != 1,
                 VECTOR_INNER_ERR_REPORT_TILIING(
@@ -502,22 +483,18 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeBiasShape(const gert::StorageShape
                     Ops::Base::ToString(biasShape->GetStorageShape()).c_str()),
                 return false);
 
-            uint64_t biasWithBatch3 =
-                biasDims > NO_BATCH_SHAPE_DIM ?
-                    static_cast<uint64_t>(biasStorageShape.GetDim(biasDims - ONE_BATCH_SHAPE_DIM)) :
-                    1;
-            uint64_t biasWithBatch2 =
-                biasDims > ONE_BATCH_SHAPE_DIM ?
-                    static_cast<uint64_t>(biasStorageShape.GetDim(biasDims - TWO_BATCH_SHAPE_DIM)) :
-                    1;
-            uint64_t biasWithBatch1 =
-                biasDims > TWO_BATCH_SHAPE_DIM ?
-                    static_cast<uint64_t>(biasStorageShape.GetDim(biasDims - THREE_BATCH_SHAPE_DIM)) :
-                    1;
-            uint64_t biasWithBatch0 =
-                biasDims > THREE_BATCH_SHAPE_DIM ?
-                    static_cast<uint64_t>(biasStorageShape.GetDim(biasDims - FOUR_BATCH_SHAPE_DIM)) :
-                    1;
+            uint64_t biasWithBatch3 = biasDims > NO_BATCH_SHAPE_DIM ? static_cast<uint64_t>(biasStorageShape.GetDim(
+                                                                          biasDims - ONE_BATCH_SHAPE_DIM)) :
+                                                                      1;
+            uint64_t biasWithBatch2 = biasDims > ONE_BATCH_SHAPE_DIM ? static_cast<uint64_t>(biasStorageShape.GetDim(
+                                                                           biasDims - TWO_BATCH_SHAPE_DIM)) :
+                                                                       1;
+            uint64_t biasWithBatch1 = biasDims > TWO_BATCH_SHAPE_DIM ? static_cast<uint64_t>(biasStorageShape.GetDim(
+                                                                           biasDims - THREE_BATCH_SHAPE_DIM)) :
+                                                                       1;
+            uint64_t biasWithBatch0 = biasDims > THREE_BATCH_SHAPE_DIM ? static_cast<uint64_t>(biasStorageShape.GetDim(
+                                                                             biasDims - FOUR_BATCH_SHAPE_DIM)) :
+                                                                         1;
             bool biasBatchValid = biasWithBatch3 == inputParams_.batchY3 && biasWithBatch2 == inputParams_.batchY2 &&
                                   biasWithBatch1 == inputParams_.batchY1 && biasWithBatch0 == inputParams_.batchY0;
             if (!biasBatchValid) {
@@ -543,39 +520,36 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeInputs()
            AnalyzeBiasShape(outShape);
 }
 
-bool WeightQuantBatchMatmulV2WeightNz::AnalyzeInputShape(
-    const gert::StorageShape* xShape, const gert::StorageShape* weightShape, const gert::StorageShape* outShape)
+bool WeightQuantBatchMatmulV2WeightNz::AnalyzeInputShape(const gert::StorageShape* xShape,
+                                                         const gert::StorageShape* weightShape,
+                                                         const gert::StorageShape* outShape)
 {
     auto xStorageShape = xShape->GetStorageShape();
     auto weightStorageShape = weightShape->GetStorageShape();
     auto outStorageShape = outShape->GetStorageShape();
-    OP_TILING_CHECK(
-        xShape->GetStorageShape().GetShapeSize() == 0 || weightShape->GetStorageShape().GetShapeSize() == 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "not support empty tensor, x %s, weight %s",
-            Ops::Base::ToString(xShape->GetStorageShape()).c_str(),
-            Ops::Base::ToString(weightShape->GetStorageShape()).c_str()),
-        return false);
+    OP_TILING_CHECK(xShape->GetStorageShape().GetShapeSize() == 0 || weightShape->GetStorageShape().GetShapeSize() == 0,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "not support empty tensor, x %s, weight %s",
+                                                    Ops::Base::ToString(xShape->GetStorageShape()).c_str(),
+                                                    Ops::Base::ToString(weightShape->GetStorageShape()).c_str()),
+                    return false);
     auto xDims = xStorageShape.GetDimNum();
     auto weightDims = weightStorageShape.GetDimNum();
     auto outDims = outStorageShape.GetDimNum();
 
     OP_TILING_CHECK(
         (xDims < MM_SHAPE_LEN_ND_MIN || xDims > MM_SHAPE_LEN_ND_MAX),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "left matrix X dim support >=2 and <=6, now is %s",
-            Ops::Base::ToString(xShape->GetStorageShape()).c_str()),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "left matrix X dim support >=2 and <=6, now is %s",
+                                        Ops::Base::ToString(xShape->GetStorageShape()).c_str()),
         return false);
-    inputParams_.mSize = static_cast<uint64_t>(
-        inputParams_.transA ? xShape->GetStorageShape().GetDim(xDims - 1) :
-                              xShape->GetStorageShape().GetDim(xDims - MM_SHAPE_LEN_ND));
-    inputParams_.kSize = static_cast<uint64_t>(
-        inputParams_.transA ? xShape->GetStorageShape().GetDim(xDims - MM_SHAPE_LEN_ND) :
-                              xShape->GetStorageShape().GetDim(xDims - 1));
+    inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ?
+                                                   xShape->GetStorageShape().GetDim(xDims - 1) :
+                                                   xShape->GetStorageShape().GetDim(xDims - MM_SHAPE_LEN_ND));
+    inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ?
+                                                   xShape->GetStorageShape().GetDim(xDims - MM_SHAPE_LEN_ND) :
+                                                   xShape->GetStorageShape().GetDim(xDims - 1));
     inputParams_.nSize = static_cast<uint64_t>(outStorageShape.GetDim(outDims - 1));
-    uint64_t kBSize = static_cast<uint64_t>(
-        weightShape->GetStorageShape().GetDim(weightDims - MM_SHAPE_LEN_NZ) *
-        weightShape->GetStorageShape().GetDim(weightDims - 1));
+    uint64_t kBSize = static_cast<uint64_t>(weightShape->GetStorageShape().GetDim(weightDims - MM_SHAPE_LEN_NZ) *
+                                            weightShape->GetStorageShape().GetDim(weightDims - 1));
     // OP_LOG_FULL
     OPS_LOG_W(inputParams_.opName, "kSize_[%lu] ,KBSize[%lu]", inputParams_.kSize, kBSize);
 
@@ -584,14 +558,18 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeInputShape(
     inputParams_.batchX2 = xDims > ONE_BATCH_SHAPE_DIM ? xStorageShape.GetDim(xDims - TWO_BATCH_SHAPE_DIM) : 1;
     inputParams_.batchX1 = xDims > TWO_BATCH_SHAPE_DIM ? xStorageShape.GetDim(xDims - THREE_BATCH_SHAPE_DIM) : 1;
     inputParams_.batchX0 = xDims > THREE_BATCH_SHAPE_DIM ? xStorageShape.GetDim(xDims - FOUR_BATCH_SHAPE_DIM) : 1;
-    inputParams_.batchWeight3 =
-        weightDims > NO_BATCH_SHAPE_DIM ? weightStorageShape.GetDim(weightDims - ONE_BATCH_SHAPE_DIM) : 1;
-    inputParams_.batchWeight2 =
-        weightDims > ONE_BATCH_SHAPE_DIM ? weightStorageShape.GetDim(weightDims - TWO_BATCH_SHAPE_DIM) : 1;
-    inputParams_.batchWeight1 =
-        weightDims > TWO_BATCH_SHAPE_DIM ? weightStorageShape.GetDim(weightDims - THREE_BATCH_SHAPE_DIM) : 1;
-    inputParams_.batchWeight0 =
-        weightDims > THREE_BATCH_SHAPE_DIM ? weightStorageShape.GetDim(weightDims - FOUR_BATCH_SHAPE_DIM) : 1;
+    inputParams_.batchWeight3 = weightDims > NO_BATCH_SHAPE_DIM ?
+                                    weightStorageShape.GetDim(weightDims - ONE_BATCH_SHAPE_DIM) :
+                                    1;
+    inputParams_.batchWeight2 = weightDims > ONE_BATCH_SHAPE_DIM ?
+                                    weightStorageShape.GetDim(weightDims - TWO_BATCH_SHAPE_DIM) :
+                                    1;
+    inputParams_.batchWeight1 = weightDims > TWO_BATCH_SHAPE_DIM ?
+                                    weightStorageShape.GetDim(weightDims - THREE_BATCH_SHAPE_DIM) :
+                                    1;
+    inputParams_.batchWeight0 = weightDims > THREE_BATCH_SHAPE_DIM ?
+                                    weightStorageShape.GetDim(weightDims - FOUR_BATCH_SHAPE_DIM) :
+                                    1;
     inputParams_.batchY3 = outDims > NO_BATCH_SHAPE_DIM ? outStorageShape.GetDim(outDims - ONE_BATCH_SHAPE_DIM) : 1;
     inputParams_.batchY2 = outDims > ONE_BATCH_SHAPE_DIM ? outStorageShape.GetDim(outDims - TWO_BATCH_SHAPE_DIM) : 1;
     inputParams_.batchY1 = outDims > TWO_BATCH_SHAPE_DIM ? outStorageShape.GetDim(outDims - THREE_BATCH_SHAPE_DIM) : 1;
@@ -611,8 +589,8 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeInputShape(
     return true;
 }
 
-bool WeightQuantBatchMatmulV2WeightNz::AnalyzeAntiQuantShape(
-    const gert::StorageShape* antiQuantScaleShape, const gert::StorageShape* antiQuantOffsetShape)
+bool WeightQuantBatchMatmulV2WeightNz::AnalyzeAntiQuantShape(const gert::StorageShape* antiQuantScaleShape,
+                                                             const gert::StorageShape* antiQuantOffsetShape)
 {
     if (inputParams_.groupSize > 0) {
         gert::Shape expectShape;
@@ -621,30 +599,28 @@ bool WeightQuantBatchMatmulV2WeightNz::AnalyzeAntiQuantShape(
         expectShape.AppendDim(static_cast<int64_t>(inputParams_.nSize));
         OP_TILING_CHECK(
             expectShape != antiQuantScaleShape->GetStorageShape(),
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "Antiquant shape expect %s, but is %s", Ops::Base::ToString(expectShape).c_str(),
-                Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str()),
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Antiquant shape expect %s, but is %s",
+                                            Ops::Base::ToString(expectShape).c_str(),
+                                            Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str()),
             return false);
     } else {
-        OP_TILING_CHECK(
-            antiQuantScaleShape->GetStorageShape().GetDimNum() > VALID_INPUT_DIM_NUM ||
-                (antiQuantScaleShape->GetStorageShape().GetDimNum() == VALID_INPUT_DIM_NUM &&
-                 antiQuantScaleShape->GetStorageShape().GetDim(1) != 1),
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName,
-                "per-channel antiquant_scale shape only support [n, 1] or [n,], actual input shape is %s",
-                Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str()),
-            return false);
+        OP_TILING_CHECK(antiQuantScaleShape->GetStorageShape().GetDimNum() > VALID_INPUT_DIM_NUM ||
+                            (antiQuantScaleShape->GetStorageShape().GetDimNum() == VALID_INPUT_DIM_NUM &&
+                             antiQuantScaleShape->GetStorageShape().GetDim(1) != 1),
+                        VECTOR_INNER_ERR_REPORT_TILIING(
+                            inputParams_.opName,
+                            "per-channel antiquant_scale shape only support [n, 1] or [n,], actual input shape is %s",
+                            Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str()),
+                        return false);
     }
 
     if (CheckOptionalInputByShape(antiQuantOffsetShape)) {
-        OP_TILING_CHECK(
-            antiQuantScaleShape->GetStorageShape() != antiQuantOffsetShape->GetStorageShape(),
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "antiquant_scale %s and antiquant_offset %s should have same shape",
-                Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str(),
-                Ops::Base::ToString(antiQuantOffsetShape->GetStorageShape()).c_str()),
-            return false);
+        OP_TILING_CHECK(antiQuantScaleShape->GetStorageShape() != antiQuantOffsetShape->GetStorageShape(),
+                        VECTOR_INNER_ERR_REPORT_TILIING(
+                            inputParams_.opName, "antiquant_scale %s and antiquant_offset %s should have same shape",
+                            Ops::Base::ToString(antiQuantScaleShape->GetStorageShape()).c_str(),
+                            Ops::Base::ToString(antiQuantOffsetShape->GetStorageShape()).c_str()),
+                        return false);
         inputParams_.hasAntiQuantOffset = true;
     }
     return true;
@@ -655,36 +631,32 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::GetShapeAttrsInfo()
     inputParams_.opName = context_->GetNodeName();
     // OP_LOG_FULL
     OPS_LOG_I(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    auto compileInfoPtr = compileInfoPtr_ ?
-                              compileInfoPtr_.get() :
-                              context_->GetCompileInfo<WeightQuantBatchMatmulV2CompileInfo>();
+    auto compileInfoPtr = compileInfoPtr_ ? compileInfoPtr_.get() :
+                                            context_->GetCompileInfo<WeightQuantBatchMatmulV2CompileInfo>();
     OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context_->GetNodeName(), "compileInfoPtr is null");
     // OP_LOG_FULL
     OPS_LOG_D(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(
-        CheckContext() != ge::GRAPH_SUCCESS, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "invalid context"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "invalid context"), return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        !AnalyzeDtype() || !AnalyzeAttrs() || !AnalyzeInputs(),
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "fail to analyze context info"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeDtype() || !AnalyzeAttrs() || !AnalyzeInputs(),
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "fail to analyze context info"),
+                    return ge::GRAPH_FAILED);
 
     bool maxDimCheck = inputParams_.kSize > MAX_SHAPE_DIM || inputParams_.nSize > MAX_SHAPE_DIM;
     // A矩阵转置场景，m需要小于65535
     if (inputParams_.transA) {
         maxDimCheck |= inputParams_.mSize > MAX_SHAPE_DIM;
     }
-    OP_TILING_CHECK(
-        maxDimCheck,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "only support MKN in range [1, %lu], get actual value[%lu, %lu, %lu]", MAX_SHAPE_DIM,
-            inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(maxDimCheck,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        inputParams_.opName, "only support MKN in range [1, %lu], get actual value[%lu, %lu, %lu]",
+                        MAX_SHAPE_DIM, inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
+                    return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        inputParams_.opName, "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s]", inputParams_.mSize,
-        inputParams_.kSize, inputParams_.nSize, inputParams_.transA ? "true" : "false",
-        inputParams_.transB ? "true" : "false", inputParams_.hasBias ? "true" : "false");
+    OP_LOGD(inputParams_.opName, "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s]",
+            inputParams_.mSize, inputParams_.kSize, inputParams_.nSize, inputParams_.transA ? "true" : "false",
+            inputParams_.transB ? "true" : "false", inputParams_.hasBias ? "true" : "false");
 
     return ge::GRAPH_SUCCESS;
 }
@@ -696,26 +668,23 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::InstantiateTilingData()
             new (std::nothrow) WeightQuantBatchMatmulV2NzTilingData());
         tilingData_ = tilingDataManager_.get();
     }
-    OP_TILING_CHECK(
-        tilingData_ == nullptr,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "failed to instantiate tilingData"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(tilingData_ == nullptr,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "failed to instantiate tilingData"),
+                    return ge::GRAPH_FAILED);
     size_t tilingDataSize = sizeof(WeightQuantBatchMatmulV2NzTilingData);
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "tiling data capacity %zu < actual tiling data size %zu",
-            context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "tiling data capacity %zu < actual tiling data size %zu",
+                                        context_->GetRawTilingData()->GetCapacity(), tilingDataSize),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus WeightQuantBatchMatmulV2WeightNz::DoOpTiling()
 {
-    OP_TILING_CHECK(
-        InstantiateTilingData() == ge::GRAPH_FAILED,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "unable to get pointer of tiling data"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "unable to get pointer of tiling data"),
+                    return ge::GRAPH_FAILED);
 
     // 优先从cache中获取Tiling
     if (inputParams_.groupSize > 0) {
@@ -751,12 +720,10 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::DoOpTiling()
     tilingData_->batchWeight3 = inputParams_.batchWeight3;
 
     tilingData_->biasWithBatch = static_cast<uint32_t>(inputParams_.biasWithBatch);
-    OP_CHECK_IF(
-        !GetMatMulTiling(),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "failed to get mm tiling for mnk[%lu, %lu, %lu]", inputParams_.mSize,
-            inputParams_.nSize, inputParams_.kSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!GetMatMulTiling(),
+                VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "failed to get mm tiling for mnk[%lu, %lu, %lu]",
+                                                inputParams_.mSize, inputParams_.nSize, inputParams_.kSize),
+                return ge::GRAPH_FAILED);
     GetL1tiling();
     GetL1Pingpong(); // 判断A/B在L1上是否开DB_BUFFER
     GetubFactorTiling();
@@ -790,10 +757,10 @@ uint64_t WeightQuantBatchMatmulV2WeightNz::GetTilingKey() const
     bool isWeightNz = false;
     uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
     uint64_t fullLoadMode = static_cast<uint64_t>(L1FullloadMode_);
-    return GET_TPL_TILING_KEY(
-        socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
-        innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
-        hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+    return GET_TPL_TILING_KEY(socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm,
+                              subAlgorithmCustom, innerPrecise, templateCustom, apiConstexpr, transA, transB,
+                              antiquantType, quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz,
+                              templateExtra, fullLoadMode, batch);
 }
 
 void WeightQuantBatchMatmulV2WeightNz::Reset()
@@ -840,11 +807,11 @@ void WeightQuantBatchMatmulV2WeightNz::InitCompileInfo()
         return;
     }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    compileInfoPtr_ =
-        std::unique_ptr<WeightQuantBatchMatmulV2CompileInfo>(new (std::nothrow) WeightQuantBatchMatmulV2CompileInfo());
-    OP_TILING_CHECK(
-        compileInfoPtr_ == nullptr,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to instantiate compile info"), return);
+    compileInfoPtr_ = std::unique_ptr<WeightQuantBatchMatmulV2CompileInfo>(new (std::nothrow)
+                                                                               WeightQuantBatchMatmulV2CompileInfo());
+    OP_TILING_CHECK(compileInfoPtr_ == nullptr,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to instantiate compile info"),
+                    return );
 
     compileInfoPtr_->aivNum = ascendcPlatform.GetCoreNumAiv();
     compileInfoPtr_->aicNum = ascendcPlatform.GetCoreNumAic();
@@ -863,7 +830,8 @@ void WeightQuantBatchMatmulV2WeightNz::InitCompileInfo()
     OP_LOGD(context_->GetNodeName(), "MatmulAllReduce Init Quant Tiling Compile Info Success");
 }
 
-static void GetMatmulTilingFromCache(AscendC::tiling::TCubeTiling& matmulTiling, const WeightNzTilingCache& weightNzTilingCache)
+static void GetMatmulTilingFromCache(AscendC::tiling::TCubeTiling& matmulTiling,
+                                     const WeightNzTilingCache& weightNzTilingCache)
 {
     matmulTiling.M = weightNzTilingCache.m_;
     matmulTiling.N = weightNzTilingCache.n_;
@@ -971,8 +939,8 @@ bool WeightQuantBatchMatmulV2WeightNz::GetMmTilingInput(MmTilingInput& mmTilingI
         return false;
     }
     mmTilingInput.bPosition = matmul_tiling::TPosition::GM;
-    mmTilingInput.biasPosition =
-        inputParams_.biasDtype == ge::DT_FLOAT ? matmul_tiling::TPosition::GM : matmul_tiling::TPosition::VECCALC;
+    mmTilingInput.biasPosition = inputParams_.biasDtype == ge::DT_FLOAT ? matmul_tiling::TPosition::GM :
+                                                                          matmul_tiling::TPosition::VECCALC;
     return true;
 }
 
@@ -982,20 +950,19 @@ bool WeightQuantBatchMatmulV2WeightNz::CheckUBSize()
     uint64_t mmUsedUbSize = mmtiling.baseM * mmtiling.baseN * GetSizeByDataType(ge::DT_FLOAT16);
     if (inputParams_.hasBias) {
         if (inputParams_.biasDtype == ge::DT_FLOAT16) {
-            mmUsedUbSize +=
-                mmtiling.baseN * (GetSizeByDataType(ge::DT_FLOAT16) + GetSizeByDataType(ge::DT_FLOAT));
+            mmUsedUbSize += mmtiling.baseN * (GetSizeByDataType(ge::DT_FLOAT16) + GetSizeByDataType(ge::DT_FLOAT));
         } else {
             mmUsedUbSize += mmtiling.baseN * GetSizeByDataType(ge::DT_FLOAT);
         }
     }
     // cub 至少占用的空间
-    uint64_t cubNz2NdCanUseSize =
-        std::min(mmtiling.baseM, mmtiling.baseN) * GetSizeByDataType(ge::DT_FLOAT16) * BLOCK_CUBE;
+    uint64_t cubNz2NdCanUseSize = std::min(mmtiling.baseM, mmtiling.baseN) * GetSizeByDataType(ge::DT_FLOAT16) *
+                                  BLOCK_CUBE;
     return mmUsedUbSize + cubNz2NdCanUseSize < aicoreParams_.ubSize;
 }
 
-MatrixTraverse WeightQuantBatchMatmulV2WeightNz::GetIteratorOrder(
-    const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN, int32_t singleCoreK) const
+MatrixTraverse WeightQuantBatchMatmulV2WeightNz::GetIteratorOrder(const CacheTilingData& tbeTiling, int32_t singleCoreM,
+                                                                  int32_t singleCoreN, int32_t singleCoreK) const
 {
     int32_t reduceSize = static_cast<int32_t>((inputParams_.aDtype));
     bool fullkAL1Load = singleCoreK <= (tbeTiling.kal1_16 * reduceSize);
@@ -1018,13 +985,13 @@ MatrixTraverse WeightQuantBatchMatmulV2WeightNz::GetIteratorOrder(
     }
 }
 
-void WeightQuantBatchMatmulV2WeightNz::Convert2AscendCTiling(
-    const CacheTilingData& tbeTiling, AscendC::tiling::TCubeTiling& matmulTiling)
+void WeightQuantBatchMatmulV2WeightNz::Convert2AscendCTiling(const CacheTilingData& tbeTiling,
+                                                             AscendC::tiling::TCubeTiling& matmulTiling)
 {
-    auto mDim =
-        ops::CeilDiv(inputParams_.mSize, ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(tbeTiling.m_dim)));
-    auto nDim =
-        ops::CeilDiv(inputParams_.nSize, ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling.n_dim)));
+    auto mDim = ops::CeilDiv(inputParams_.mSize,
+                             ops::CeilDiv(inputParams_.mSize, static_cast<uint64_t>(tbeTiling.m_dim)));
+    auto nDim = ops::CeilDiv(inputParams_.nSize,
+                             ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling.n_dim)));
     tilingData_->cubeBlockDimM = static_cast<uint64_t>(mDim);
     tilingData_->cubeBlockDimN = static_cast<uint64_t>(nDim);
 
@@ -1053,15 +1020,15 @@ void WeightQuantBatchMatmulV2WeightNz::Convert2AscendCTiling(
 
     matmulTiling.transLength = std::max(std::max(a1Length, b1Length), c1Length);
     // MatrixTraverse枚举值和matmul api使用的枚举值相差1
-    matmulTiling.iterateOrder =
-        static_cast<int32_t>(GetIteratorOrder(
-            tbeTiling, matmulTiling.singleCoreM, matmulTiling.singleCoreN,
-            matmulTiling.singleCoreK)) - 1;
+    matmulTiling.iterateOrder = static_cast<int32_t>(GetIteratorOrder(tbeTiling, matmulTiling.singleCoreM,
+                                                                      matmulTiling.singleCoreN,
+                                                                      matmulTiling.singleCoreK)) -
+                                1;
     matmulTiling.dbL0C = tbeTiling.db_l0c;
     int32_t aL1Size = a1Length * matmulTiling.depthA1;
-    int32_t biasL1Size =
-        inputParams_.hasBias ?
-            GetShapeSizeWithDataType(matmulTiling.baseN, inputParams_.biasDtype) * tbeTiling.n_bl1 : 0;
+    int32_t biasL1Size = inputParams_.hasBias ?
+                             GetShapeSizeWithDataType(matmulTiling.baseN, inputParams_.biasDtype) * tbeTiling.n_bl1 :
+                             0;
     int32_t bL1Size = b1Length * matmulTiling.depthB1;
     matmulTiling.shareL1Size = aL1Size + bL1Size + biasL1Size;
     matmulTiling.shareL0CSize = c1Length;
@@ -1131,10 +1098,9 @@ bool WeightQuantBatchMatmulV2WeightNz::InvokeCacheTiling()
     CacheTilingData tiling;
     tiling.tiling_id = std::numeric_limits<uint64_t>::max();
     GenTiling("WeightQuantBatchMatmulV2", compileParams, runParams, tiling, context_);
-    OP_LOGI_IF_RETURN(
-        tiling.tiling_id == std::numeric_limits<uint64_t>::max(), false, inputParams_.opName,
-        "cannot get tiling from cachetiling, mnk[%lu, %lu, %lu]", inputParams_.mSize, inputParams_.nSize,
-        inputParams_.kSize);
+    OP_LOGI_IF_RETURN(tiling.tiling_id == std::numeric_limits<uint64_t>::max(), false, inputParams_.opName,
+                      "cannot get tiling from cachetiling, mnk[%lu, %lu, %lu]", inputParams_.mSize, inputParams_.nSize,
+                      inputParams_.kSize);
     Convert2AscendCTiling(tiling, tilingData_->matmulTiling);
 
     return true;
@@ -1168,14 +1134,14 @@ bool WeightQuantBatchMatmulV2WeightNz::GetLoopOrder()
     uint64_t singleCoreN = ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tilingData_->cubeBlockDimN));
     uint64_t nLoop = ops::CeilDiv(singleCoreN, static_cast<uint64_t>(tilingData_->nBL1Size));
     // 额外重复载入及重复计算代价，搬运加权暂定为1，计算加权按照指令条数。
-    uint64_t extraAub =
-        (nLoop - 1) * (mteWeight * singleCoreN * inputParams_.kSize * GetSizeByDataType(inputParams_.aDtype) +
-                       vecWeight * singleCoreM * inputParams_.kSize);
+    uint64_t extraAub = (nLoop - 1) *
+                        (mteWeight * singleCoreN * inputParams_.kSize * GetSizeByDataType(inputParams_.aDtype) +
+                         vecWeight * singleCoreM * inputParams_.kSize);
 
     // cast (add) mul nd2nz 4条指令， add可选
-    uint64_t extraBub =
-        (mLoop - 1) * (mteWeight * singleCoreN * inputParams_.kSize * GetSizeByDataType(inputParams_.bDtype) +
-                       vecWeight * singleCoreN * inputParams_.kSize * ANTI_QUANT_TENSOR);
+    uint64_t extraBub = (mLoop - 1) *
+                        (mteWeight * singleCoreN * inputParams_.kSize * GetSizeByDataType(inputParams_.bDtype) +
+                         vecWeight * singleCoreN * inputParams_.kSize * ANTI_QUANT_TENSOR);
 
     return extraAub >= extraBub;
 }
@@ -1192,24 +1158,21 @@ void WeightQuantBatchMatmulV2WeightNz::GetL1Pingpong()
     uint64_t pingPongA = std::min(static_cast<uint64_t>(DB_BUFFER), loopM * depthAk);
     // if L1fullload both loopN, depthBk is 1
     uint64_t pingPongB = std::min(static_cast<uint64_t>(DB_BUFFER), loopN * depthBk);
-    uint64_t aL1Size =
-        tilingData_->mAL1Size * tilingData_->kAL1Size * GetSizeByDataType(inputParams_.aDtype);
-    uint64_t bL1Size =
-        tilingData_->kBL1Size * tilingData_->nBL1Size * GetSizeByDataType(inputParams_.aDtype);
+    uint64_t aL1Size = tilingData_->mAL1Size * tilingData_->kAL1Size * GetSizeByDataType(inputParams_.aDtype);
+    uint64_t bL1Size = tilingData_->kBL1Size * tilingData_->nBL1Size * GetSizeByDataType(inputParams_.aDtype);
     if (pingPongA * aL1Size + pingPongB * bL1Size <= aicoreParams_.l1Size) {
         tilingData_->AL1Pingpong = pingPongA;
         tilingData_->BL1Pingpong = pingPongB;
-    } else if (
-        pingPongA * aL1Size + bL1Size <= aicoreParams_.l1Size && aL1Size + pingPongB * bL1Size > aicoreParams_.l1Size) {
+    } else if (pingPongA * aL1Size + bL1Size <= aicoreParams_.l1Size &&
+               aL1Size + pingPongB * bL1Size > aicoreParams_.l1Size) {
         tilingData_->AL1Pingpong = pingPongA;
         tilingData_->BL1Pingpong = 1;
-    } else if (
-        aL1Size + pingPongB * bL1Size <= aicoreParams_.l1Size && pingPongA * aL1Size + bL1Size > aicoreParams_.l1Size) {
+    } else if (aL1Size + pingPongB * bL1Size <= aicoreParams_.l1Size &&
+               pingPongA * aL1Size + bL1Size > aicoreParams_.l1Size) {
         tilingData_->AL1Pingpong = 1;
         tilingData_->BL1Pingpong = pingPongB;
-    } else if (
-        pingPongA * aL1Size + bL1Size <= aicoreParams_.l1Size &&
-        aL1Size + pingPongB * bL1Size <= aicoreParams_.l1Size) {
+    } else if (pingPongA * aL1Size + bL1Size <= aicoreParams_.l1Size &&
+               aL1Size + pingPongB * bL1Size <= aicoreParams_.l1Size) {
         // according M/N choose pingPong
         tilingData_->AL1Pingpong = mmtiling.singleCoreN >= mmtiling.singleCoreM ? 1 : pingPongA;
         tilingData_->BL1Pingpong = mmtiling.singleCoreN >= mmtiling.singleCoreM ? pingPongB : 1;
@@ -1348,9 +1311,8 @@ void WeightQuantBatchMatmulV2WeightNz::PrintCVTilingData(bool debugLevel)
 int64_t WeightQuantBatchMatmulV2WeightNz::PrintCVTilingDataImpl(bool debugLevel)
 {
     std::stringstream ss;
-    ss << "kAlign: " << tilingData_->kAlign << " kSize: " << tilingData_->kSize
-       << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
-       << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->cubeBlockDimN)
+    ss << "kAlign: " << tilingData_->kAlign << " kSize: " << tilingData_->kSize << " nSize: " << tilingData_->nSize
+       << " mSize: " << tilingData_->mSize << " cubeBlockDimN: " << static_cast<uint32_t>(tilingData_->cubeBlockDimN)
        << " cubeBlockDimM: " << static_cast<uint32_t>(tilingData_->cubeBlockDimM)
        << " mAubSize: " << tilingData_->mAubSize << " kAubSize: " << tilingData_->kAubSize
        << " nBubSize: " << tilingData_->nBubSize << " kBubSize: " << tilingData_->kBubSize
@@ -1380,8 +1342,7 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::PostTiling()
     OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingDataSize);
     OP_CHECK_IF(
         tilingDataSize % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingDataSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingDataSize),
         return ge::GRAPH_FAILED);
 
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
@@ -1389,8 +1350,9 @@ ge::graphStatus WeightQuantBatchMatmulV2WeightNz::PostTiling()
     context_->SetBlockDim(usedAicNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     workspaces[0] = workspaceSize_;
-    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), tilingData_, tilingDataSize);
-    if (ret != EOK){
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           tilingData_, tilingDataSize);
+    if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
     }

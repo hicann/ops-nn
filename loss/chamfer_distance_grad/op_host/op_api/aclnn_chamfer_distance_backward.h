@@ -20,17 +20,19 @@ extern "C" {
 /**
  * @brief aclnnChamferDistanceBackward的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus
-aclnnChamferDistanceBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnChamferDistanceBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                   aclrtStream stream);
 
 /**
  * @brief aclnnChamferDistanceBackward的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  */
-ACLNN_API aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, aclTensor* gradXyz1, aclTensor* gradXyz2,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(const aclTensor* xyz1, const aclTensor* xyz2,
+                                                                   const aclTensor* idx1, const aclTensor* idx2,
+                                                                   const aclTensor* gradDist1,
+                                                                   const aclTensor* gradDist2, aclTensor* gradXyz1,
+                                                                   aclTensor* gradXyz2, uint64_t* workspaceSize,
+                                                                   aclOpExecutor** executor);
 #ifdef __cplusplus
 }
 #endif

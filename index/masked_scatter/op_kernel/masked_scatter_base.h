@@ -66,7 +66,8 @@ protected:
             maskBlockLength = blockIdx < remainNum ? loopNum + 1 : loopNum;
             maskBlockOffset = blockIdx <= remainNum ? (loopNum + 1) * blockIdx : loopNum * blockIdx + remainNum;
             xBlockLength = blockIdx < remainNum ? (loopNum + 1) * updatesLineNum : loopNum * updatesLineNum;
-            xBlockOffset = blockIdx <= remainNum ? (loopNum + 1) * blockIdx * updatesLineNum : (loopNum * blockIdx + remainNum) * updatesLineNum;
+            xBlockOffset = blockIdx <= remainNum ? (loopNum + 1) * blockIdx * updatesLineNum :
+                                                   (loopNum * blockIdx + remainNum) * updatesLineNum;
         }
 
         // prepare preMask compute
@@ -82,17 +83,21 @@ protected:
     }
 
     template <typename T>
-    __aicore__ inline void CommonCopyIn(LocalTensor<T>& selfLocal, GlobalTensor<T>& selfGm, uint32_t offset, uint16_t blockCount, uint32_t blockLen)
+    __aicore__ inline void CommonCopyIn(LocalTensor<T>& selfLocal, GlobalTensor<T>& selfGm, uint32_t offset,
+                                        uint16_t blockCount, uint32_t blockLen)
     {
-        DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount), static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount), static_cast<uint32_t>(blockLen * sizeof(T)), 0,
+                                     0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
         DataCopyPad(selfLocal, selfGm[offset], copyParams, padParams);
     }
 
     template <typename T>
-    __aicore__ inline void CommonCopyOut(GlobalTensor<T>& selfGm, uint32_t offset, LocalTensor<T>& selfLocal, uint16_t blockCount, uint32_t blockLen)
+    __aicore__ inline void CommonCopyOut(GlobalTensor<T>& selfGm, uint32_t offset, LocalTensor<T>& selfLocal,
+                                         uint16_t blockCount, uint32_t blockLen)
     {
-        DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount), static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount), static_cast<uint32_t>(blockLen * sizeof(T)), 0,
+                                     0, 0};
         DataCopyPad(selfGm[offset], selfLocal, copyParams);
     }
 
@@ -149,8 +154,9 @@ protected:
     LocalTensor<DTYPE_X> updatesLocal;
 
     uint32_t xBlockOffset, xBlockLength, maskBlockOffset, maskBlockLength, alignedUpdatesLineNum, alignedMaskLengthB,
-        alignedMaskLengthFp32, alignedMaskLengthHf, circleNum, loopNum, remainNum, alignedPreMaskTileLength, totalUpdatesNum,
-        preMaskLoopNum, preMaskComputeNum, tailPreMaskNum, tailMaskTileLength, updatesLineNum, totalPreMaskLength, updatesNum, remainUpdates;
+        alignedMaskLengthFp32, alignedMaskLengthHf, circleNum, loopNum, remainNum, alignedPreMaskTileLength,
+        totalUpdatesNum, preMaskLoopNum, preMaskComputeNum, tailPreMaskNum, tailMaskTileLength, updatesLineNum,
+        totalPreMaskLength, updatesNum, remainUpdates;
     uint32_t updatesIndex = 0;
     uint32_t aviUpdates = 0;
 };

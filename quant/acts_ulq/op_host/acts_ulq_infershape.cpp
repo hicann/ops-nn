@@ -22,13 +22,12 @@ using namespace ge;
 
 namespace ops {
 
-static bool BroadcastInferShape3(
-    const gert::Shape& s0, const gert::Shape& s1, const gert::Shape& s2,
-    gert::Shape& out)
+static bool BroadcastInferShape3(const gert::Shape& s0, const gert::Shape& s1, const gert::Shape& s2, gert::Shape& out)
 {
     int64_t r0 = s0.GetDimNum(), r1 = s1.GetDimNum(), r2 = s2.GetDimNum();
     int64_t maxR = std::max({r0, r1, r2});
-    if (maxR > 8) return false;
+    if (maxR > 8)
+        return false;
 
     std::vector<int64_t> result(maxR, 1);
     auto merge = [&](const gert::Shape& s) {
@@ -37,15 +36,19 @@ static bool BroadcastInferShape3(
         for (int64_t d = 0; d < r; d++) {
             int64_t dim = s.GetDim(d);
             int64_t cur = result[d + offset];
-            if (cur == 1) result[d + offset] = dim;
-            else if (dim != 1 && dim != cur) return false;
+            if (cur == 1)
+                result[d + offset] = dim;
+            else if (dim != 1 && dim != cur)
+                return false;
         }
         return true;
     };
-    if (!merge(s0) || !merge(s1) || !merge(s2)) return false;
+    if (!merge(s0) || !merge(s1) || !merge(s2))
+        return false;
 
     out.SetDimNum(maxR);
-    for (int64_t d = 0; d < maxR; d++) out.SetDim(d, result[d]);
+    for (int64_t d = 0; d < maxR; d++)
+        out.SetDim(d, result[d]);
     return true;
 }
 
@@ -59,10 +62,8 @@ static ge::graphStatus InferShape4ActsUlq(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, cmax_shape);
 
     gert::Shape out_shape;
-    OP_CHECK_IF(
-        !BroadcastInferShape3(*data_shape, *cmin_shape, *cmax_shape, out_shape),
-        OP_LOGE(context, "ActsULQ: broadcast shape incompatible"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastInferShape3(*data_shape, *cmin_shape, *cmax_shape, out_shape),
+                OP_LOGE(context, "ActsULQ: broadcast shape incompatible"), return ge::GRAPH_FAILED);
 
     for (int i = 0; i < 4; i++) {
         gert::Shape* output_shape = context->GetOutputShape(i);

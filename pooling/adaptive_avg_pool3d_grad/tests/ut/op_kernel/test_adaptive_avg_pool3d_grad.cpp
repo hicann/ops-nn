@@ -44,18 +44,11 @@ struct AdaptiveAvgPool3dGradTestParam {
     AdaptiveAvgPool3dGradTilingData tiling;
 };
 
-class AdaptiveAvgPool3dGradTest : public testing::TestWithParam<AdaptiveAvgPool3dGradTestParam>
-{
+class AdaptiveAvgPool3dGradTest : public testing::TestWithParam<AdaptiveAvgPool3dGradTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dGradTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3dGradTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dGradTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dGradTest TearDown" << std::endl; }
 };
 
 TEST_P(AdaptiveAvgPool3dGradTest, test_case_adaptive_avg_pool3d_grad)

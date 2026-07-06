@@ -70,15 +70,9 @@ using namespace ge;
 
 class TestApplyAdadeltaTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyAdadeltaTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyAdadeltaTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyAdadeltaTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyAdadeltaTiling TearDown" << std::endl; }
 };
 
 // TilingKey encoding constants
@@ -87,9 +81,9 @@ static constexpr uint64_t TILING_KEY_FP32_DOUBLE = 256;
 static constexpr uint64_t TILING_KEY_FP16_SINGLE = 1;
 static constexpr uint64_t TILING_KEY_FP16_DOUBLE = 257;
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -125,16 +119,10 @@ struct ApplyAdadeltaTilingResult {
 };
 
 static ApplyAdadeltaTilingResult DoApplyAdadeltaTilingCase(
-    const std::initializer_list<int64_t>& varShape,
-    const std::initializer_list<int64_t>& accumShape,
-    const std::initializer_list<int64_t>& accumUpdateShape,
-    const std::initializer_list<int64_t>& lrShape,
-    const std::initializer_list<int64_t>& rhoShape,
-    const std::initializer_list<int64_t>& epsilonShape,
-    const std::initializer_list<int64_t>& gradShape,
-    ge::DataType tensorDtype,
-    ge::Format inputFormat,
-    bool useLocking)
+    const std::initializer_list<int64_t>& varShape, const std::initializer_list<int64_t>& accumShape,
+    const std::initializer_list<int64_t>& accumUpdateShape, const std::initializer_list<int64_t>& lrShape,
+    const std::initializer_list<int64_t>& rhoShape, const std::initializer_list<int64_t>& epsilonShape,
+    const std::initializer_list<int64_t>& gradShape, ge::DataType tensorDtype, ge::Format inputFormat, bool useLocking)
 {
     ApplyAdadeltaTilingResult result{ge::GRAPH_FAILED, 0, 0, 0};
 
@@ -177,9 +165,8 @@ static ApplyAdadeltaTilingResult DoApplyAdadeltaTilingCase(
                       .SetOpType(opType)
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &accumStorage, &accumUpdateStorage,
-                           &lrStorage, &rhoStorage, &epsilonStorage, &gradStorage})
+                      .InputShapes({&varStorage, &accumStorage, &accumUpdateStorage, &lrStorage, &rhoStorage,
+                                    &epsilonStorage, &gradStorage})
                       .OutputShapes({&varStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -191,8 +178,7 @@ static ApplyAdadeltaTilingResult DoApplyAdadeltaTilingCase(
                       .NodeInputTd(5, tensorDtype, inputFormat, inputFormat)  // epsilon
                       .NodeInputTd(6, tensorDtype, inputFormat, inputFormat)  // grad
                       .NodeOutputTd(0, tensorDtype, inputFormat, inputFormat) // var
-                      .NodeAttrs(
-                          {{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
+                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -214,10 +200,8 @@ static ApplyAdadeltaTilingResult DoApplyAdadeltaTilingCase(
         // from CreateCap. We still parse it the same way; consumers should
         // not interpret these fields for the empty path.
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ApplyAdadeltaTilingData)) {
-            const auto* td = reinterpret_cast<const ApplyAdadeltaTilingData*>(
-                rawTilingData->GetData());
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ApplyAdadeltaTilingData)) {
+            const auto* td = reinterpret_cast<const ApplyAdadeltaTilingData*>(rawTilingData->GetData());
             result.useLocking = td->useLocking;
             result.totalNum = td->totalNum;
         }
@@ -227,16 +211,11 @@ static ApplyAdadeltaTilingResult DoApplyAdadeltaTilingCase(
 
 // Convenience wrapper: build a "valid" context where all 4 tensor inputs share
 // the same shape and lr/rho/epsilon are shape {1}. Returns the tiling result.
-static ApplyAdadeltaTilingResult DoApplyAdadeltaValidCase(
-    const std::initializer_list<int64_t>& tensorShape,
-    ge::DataType tensorDtype,
-    bool useLocking = false)
+static ApplyAdadeltaTilingResult DoApplyAdadeltaValidCase(const std::initializer_list<int64_t>& tensorShape,
+                                                          ge::DataType tensorDtype, bool useLocking = false)
 {
-    return DoApplyAdadeltaTilingCase(
-        tensorShape, tensorShape, tensorShape,
-        {1}, {1}, {1},
-        tensorShape,
-        tensorDtype, ge::FORMAT_ND, useLocking);
+    return DoApplyAdadeltaTilingCase(tensorShape, tensorShape, tensorShape, {1}, {1}, {1}, tensorShape, tensorDtype,
+                                     ge::FORMAT_ND, useLocking);
 }
 
 // =====================================================================
@@ -323,8 +302,7 @@ TEST_F(TestApplyAdadeltaTiling, apply_adadelta_c1_accum_shape_mismatch)
 {
     auto result = DoApplyAdadeltaTilingCase(
         /*var=*/{2048}, /*accum=*/{1024}, /*accum_update=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -335,8 +313,7 @@ TEST_F(TestApplyAdadeltaTiling, apply_adadelta_c1_accum_update_shape_mismatch)
 {
     auto result = DoApplyAdadeltaTilingCase(
         /*var=*/{2048}, /*accum=*/{2048}, /*accum_update=*/{1024},
-        /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -347,8 +324,7 @@ TEST_F(TestApplyAdadeltaTiling, apply_adadelta_c1_grad_shape_mismatch)
 {
     auto result = DoApplyAdadeltaTilingCase(
         /*var=*/{2048}, /*accum=*/{2048}, /*accum_update=*/{2048},
-        /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{1024},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{1024}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -359,8 +335,7 @@ TEST_F(TestApplyAdadeltaTiling, apply_adadelta_c3_lr_not_scalar)
 {
     auto result = DoApplyAdadeltaTilingCase(
         /*var=*/{2048}, /*accum=*/{2048}, /*accum_update=*/{2048},
-        /*lr=*/{2}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*lr=*/{2}, /*rho=*/{1}, /*epsilon=*/{1}, /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -394,8 +369,7 @@ TEST_F(TestApplyAdadeltaTiling, apply_adadelta_rank_9_invalid)
         /*accum=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
         /*accum_update=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
         /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{2, 1, 1, 1, 1, 1, 1, 1, 2},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*grad=*/{2, 1, 1, 1, 1, 1, 1, 1, 2}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -421,12 +395,11 @@ TEST_F(TestApplyAdadeltaTiling, apply_adadelta_rank_8_boundary)
 TEST_F(TestApplyAdadeltaTiling, apply_adadelta_rank_0_invalid)
 {
     auto result = DoApplyAdadeltaTilingCase(
-        /*var=*/{},          // 0-dim scalar var
+        /*var=*/{}, // 0-dim scalar var
         /*accum=*/{},
         /*accum_update=*/{},
         /*lr=*/{1}, /*rho=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*grad=*/{}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     // var rank == 0 must be rejected (rank must be in [1, 8])
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }

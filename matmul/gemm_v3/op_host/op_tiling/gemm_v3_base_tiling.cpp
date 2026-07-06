@@ -90,8 +90,7 @@ bool GemmV3BaseTiling::IsCapable()
         OP_LOGW(params_.opName,
                 "Expected self dtype(%s) to be equal to mat dtype or out dtype(%s) in 16in32out scenario. or"
                 "Expected self dtype(%s) to be equal to out dtype(%s).",
-                Ops::Base::ToString(dtypeC).c_str(),
-                Ops::Base::ToString(dtypeY).c_str());
+                Ops::Base::ToString(dtypeC).c_str(), Ops::Base::ToString(dtypeY).c_str());
         return false;
     }
     bool isValidOutput = (dtypeY == ge::DT_FLOAT16 || dtypeY == ge::DT_BF16 ||
@@ -130,12 +129,10 @@ ge::graphStatus GemmV3BaseTiling::DoOpTiling()
         return ge::GRAPH_FAILED;
     }
     using namespace optiling::matmul_v3;
-    tilingKey_ = GET_TPL_TILING_KEY(static_cast<uint64_t>(TilingEnableFullLoad::BASE),
-                                    static_cast<uint64_t>(TilingEnableSplitCore::BASE),
-                                    static_cast<uint64_t>(TilingEnableFixOpti::BASE),
-                                    static_cast<uint64_t>(MixNd2NzType::NO_ND2NZ),
-                                    static_cast<uint64_t>(TilingEnableSpecialOpti::BASE),
-                                    static_cast<uint64_t>(TilingEnableFp32Addmm::TRUE));
+    tilingKey_ = GET_TPL_TILING_KEY(
+        static_cast<uint64_t>(TilingEnableFullLoad::BASE), static_cast<uint64_t>(TilingEnableSplitCore::BASE),
+        static_cast<uint64_t>(TilingEnableFixOpti::BASE), static_cast<uint64_t>(MixNd2NzType::NO_ND2NZ),
+        static_cast<uint64_t>(TilingEnableSpecialOpti::BASE), static_cast<uint64_t>(TilingEnableFp32Addmm::TRUE));
     return ge::GRAPH_SUCCESS;
 }
 ge::graphStatus GemmV3BaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
@@ -145,9 +142,9 @@ uint64_t GemmV3BaseTiling::GetTilingKey() const { return tilingKey_; }
 ge::graphStatus GemmV3BaseTiling::GetWorkspaceSize()
 {
     auto platformInfo = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
-    workspaceSize_ =
-        NUM_BUFFER * tilingData_.opShape.m0 * tilingData_.opShape.n0 * tilingData_.blockDim * sizeof(float) +
-        platformInfo.GetLibApiWorkSpaceSize();
+    workspaceSize_ = NUM_BUFFER * tilingData_.opShape.m0 * tilingData_.opShape.n0 * tilingData_.blockDim *
+                         sizeof(float) +
+                     platformInfo.GetLibApiWorkSpaceSize();
     OP_LOGD(params_.opName, "workspaceSize: %llu", workspaceSize_);
     return ge::GRAPH_SUCCESS;
 }
@@ -164,8 +161,7 @@ ge::graphStatus GemmV3BaseTiling::PostTiling()
     context_->SetBlockDim(tilingData_.blockDim);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    OP_TILING_CHECK(workspaces == nullptr,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspaces is null"),
+    OP_TILING_CHECK(workspaces == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "workspaces is null"),
                     return ge::GRAPH_FAILED);
     workspaces[0] = workspaceSize_;
 

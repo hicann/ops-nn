@@ -25,21 +25,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void apply_adam_w_v2(
-    GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void apply_adam_w_v2(GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad,
+                                                      GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
+                                                      GM_ADDR tiling);
 
-class apply_adam_w_v2_test : public testing::Test
-{
+class apply_adam_w_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "apply_adam_w_v2_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "apply_adam_w_v2_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "apply_adam_w_v2_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "apply_adam_w_v2_test TearDown\n" << std::endl; }
 };
 
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
@@ -53,9 +46,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
 
 TEST_F(apply_adam_w_v2_test, test_case_float32_amsgrad_true_maximize_true)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float32' 'true' 'true' ");
     system("ls -l apply_adam_w_v2_data");
@@ -130,9 +122,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float32_amsgrad_true_maximize_true)
 
 TEST_F(apply_adam_w_v2_test, test_case_float32_amsgrad_false_maximize_false)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float32' 'false' 'false' 'float32' 'int64' ");
     system("ls -l apply_adam_w_v2_data");
@@ -207,9 +198,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float32_amsgrad_false_maximize_false)
 
 TEST_F(apply_adam_w_v2_test, test_case_float16_amsgrad_true_maximize_true)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float16' 'true' 'true' ");
     system("ls -l apply_adam_w_v2_data");
@@ -284,9 +274,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float16_amsgrad_true_maximize_true)
 
 TEST_F(apply_adam_w_v2_test, test_case_float16_amsgrad_false_maximize_true)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float16' 'false' 'true' 'float16' 'int64' ");
     system("ls -l apply_adam_w_v2_data");
@@ -361,9 +350,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float16_amsgrad_false_maximize_true)
 
 TEST_F(apply_adam_w_v2_test, test_case_bfloat16_amsgrad_true_maximize_true)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'bfloat16' 'true' 'true' ");
     system("ls -l apply_adam_w_v2_data");
@@ -438,9 +426,8 @@ TEST_F(apply_adam_w_v2_test, test_case_bfloat16_amsgrad_true_maximize_true)
 
 TEST_F(apply_adam_w_v2_test, test_case_bfloat16_amsgrad_false_maximize_false)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'bfloat16' 'false' 'false' 'bfloat16' 'int64' ");
     system("ls -l apply_adam_w_v2_data");
@@ -515,9 +502,8 @@ TEST_F(apply_adam_w_v2_test, test_case_bfloat16_amsgrad_false_maximize_false)
 
 TEST_F(apply_adam_w_v2_test, test_case_float32_float16_amsgrad_true_maximize_true)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float32' 'true' 'true' 'float16' ");
     system("ls -l apply_adam_w_v2_data");
@@ -594,9 +580,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float32_float16_amsgrad_true_maximize_tru
 
 TEST_F(apply_adam_w_v2_test, test_case_float32_float16_amsgrad_true_maximize_true_step_int64)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float32' 'true' 'true' 'float16' 'int64' ");
     system("ls -l apply_adam_w_v2_data");
@@ -674,9 +659,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float32_float16_amsgrad_true_maximize_tru
 
 TEST_F(apply_adam_w_v2_test, test_case_float32_bfloat16_amsgrad_false_maximize_false)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float32' 'false' 'false' 'bfloat16' ");
     system("ls -l apply_adam_w_v2_data");
@@ -753,9 +737,8 @@ TEST_F(apply_adam_w_v2_test, test_case_float32_bfloat16_amsgrad_false_maximize_f
 
 TEST_F(apply_adam_w_v2_test, test_case_float32_bfloat16_amsgrad_false_maximize_false_step_int64)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
+    system("cp -rf "
+           "../../../../optim/apply_adam_w_v2/tests/ut/op_kernel/apply_adam_w_v2_data ./");
     system("chmod -R 755 ./apply_adam_w_v2_data/");
     system("cd ./apply_adam_w_v2_data/ && python3 gen_data.py 'float32' 'false' 'false' 'bfloat16' 'int64' ");
     system("ls -l apply_adam_w_v2_data");

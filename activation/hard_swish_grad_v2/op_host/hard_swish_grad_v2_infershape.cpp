@@ -12,46 +12,48 @@
  * \file hard_swish_grad_v2_infershape.cpp
  * \brief
  */
- #include "register/op_impl_registry.h"
- #include "log/log.h"
+#include "register/op_impl_registry.h"
+#include "log/log.h"
 
- using namespace ge;
+using namespace ge;
 
- namespace ops {
+namespace ops {
 
- static constexpr int64_t IDX_0 = 0;
+static constexpr int64_t IDX_0 = 0;
 
- static ge::graphStatus InferShape4HardSwishGradV2(gert::InferShapeContext* context) {
-   OP_LOGD(context->GetNodeName(), "Begin to do InferShape4HardSwishGradV2");
+static ge::graphStatus InferShape4HardSwishGradV2(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferShape4HardSwishGradV2");
 
-   // get input shapes
-   auto xShape = context->GetInputShape(IDX_0);
-   OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    // get input shapes
+    auto xShape = context->GetInputShape(IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
 
-   // get output shapes
-   auto yShape = context->GetOutputShape(IDX_0);
-   OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+    // get output shapes
+    auto yShape = context->GetOutputShape(IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-   size_t xDimNum = xShape->GetDimNum();
-   yShape->SetDimNum(xDimNum);
+    size_t xDimNum = xShape->GetDimNum();
+    yShape->SetDimNum(xDimNum);
 
-   *yShape = *xShape;
+    *yShape = *xShape;
 
-   OP_LOGD(context->GetNodeName(), "End to do InferShape4HardSwishGradV2");
-   return GRAPH_SUCCESS;
- }
+    OP_LOGD(context->GetNodeName(), "End to do InferShape4HardSwishGradV2");
+    return GRAPH_SUCCESS;
+}
 
- static graphStatus InferDataType4HardSwishGradV2(gert::InferDataTypeContext* context) {
-   OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4HardSwishGradV2");
+static graphStatus InferDataType4HardSwishGradV2(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4HardSwishGradV2");
 
-   auto input_dtype = context->GetInputDataType(IDX_0);
+    auto input_dtype = context->GetInputDataType(IDX_0);
 
-   context->SetOutputDataType(IDX_0, input_dtype);
+    context->SetOutputDataType(IDX_0, input_dtype);
 
-   OP_LOGD(context->GetNodeName(), "End to do InferDataType4HardSwishGradV2");
+    OP_LOGD(context->GetNodeName(), "End to do InferDataType4HardSwishGradV2");
 
-   return GRAPH_SUCCESS;
- }
+    return GRAPH_SUCCESS;
+}
 
- IMPL_OP_INFERSHAPE(HardSwishGradV2).InferShape(InferShape4HardSwishGradV2).InferDataType(InferDataType4HardSwishGradV2);
- }  // namespace ops
+IMPL_OP_INFERSHAPE(HardSwishGradV2).InferShape(InferShape4HardSwishGradV2).InferDataType(InferDataType4HardSwishGradV2);
+} // namespace ops

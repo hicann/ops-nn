@@ -13,11 +13,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *WeightQuantBatchmatmul(const aclTensor *x1, const aclTensor *x2, const aclTensor *bias,
-                                        const aclTensor *diagonalMatrix, const aclTensor *deqOffset, 
-                                        const aclTensor *deqScale, const bool adjX1, const bool adjX2,
-                                        aclOpExecutor *executor);
+const aclTensor* WeightQuantBatchmatmul(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                        const aclTensor* diagonalMatrix, const aclTensor* deqOffset,
+                                        const aclTensor* deqScale, const bool adjX1, const bool adjX2,
+                                        aclOpExecutor* executor);
 
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_WEIGHT_QUANT_MATMUL_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_WEIGHT_QUANT_MATMUL_OP_H_

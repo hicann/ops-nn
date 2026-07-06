@@ -17,9 +17,10 @@
 using namespace AscendC;
 using namespace ThnnFusedLstmCellNS;
 
-extern "C" __global__ __aicore__ void thnn_fused_lstm_cell(
-    GM_ADDR inputGates, GM_ADDR hiddenGates, GM_ADDR cx, GM_ADDR inputBias, GM_ADDR hiddenBias,
-    GM_ADDR hy, GM_ADDR cy, GM_ADDR storage, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void thnn_fused_lstm_cell(GM_ADDR inputGates, GM_ADDR hiddenGates, GM_ADDR cx,
+                                                           GM_ADDR inputBias, GM_ADDR hiddenBias, GM_ADDR hy,
+                                                           GM_ADDR cy, GM_ADDR storage, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     ThnnFusedLstmCell<DTYPE_HY> op(tilingData);

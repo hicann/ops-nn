@@ -35,7 +35,7 @@ struct TopKTopPSampleTilingData {
     uint32_t eightKPartTail;
     uint32_t eightKPartTailPad;
     uint32_t mrgMode;
-    uint32_t  isNeedLogits;
+    uint32_t isNeedLogits;
     float eps;
     uint32_t topKGuess;
 };
@@ -46,6 +46,6 @@ inline void InitTopKTopPSampleTilingData(uint8_t* tiling, TopKTopPSampleTilingDa
 }
 
 #define GET_TILING_DATA(tiling_data, tiling_arg) \
-TopKTopPSampleTilingData tiling_data; \
-InitTopKTopPSampleTilingData(tiling_arg, &tiling_data);
+    TopKTopPSampleTilingData tiling_data;        \
+    InitTopKTopPSampleTilingData(tiling_arg, &tiling_data);
 #endif

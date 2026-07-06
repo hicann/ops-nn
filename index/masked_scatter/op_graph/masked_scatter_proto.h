@@ -35,13 +35,13 @@ namespace ge {
 *  @li y: A tensor with the same type as x. \n
 */
 REG_OP(MaskedScatter)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8,
-                          DT_INT16, DT_INT32, DT_INT64, DT_BOOL, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_INT16, DT_INT32, DT_INT64, DT_BOOL,
+                          DT_BF16}))
     .INPUT(mask, TensorType({DT_BOOL}))
-    .INPUT(updates, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8,
-                                DT_INT8, DT_INT16, DT_INT32, DT_INT64, DT_BOOL, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8,
-                           DT_INT16, DT_INT32, DT_INT64, DT_BOOL, DT_BF16}))
+    .INPUT(updates, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_INT16, DT_INT32, DT_INT64,
+                                DT_BOOL, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_UINT8, DT_INT8, DT_INT16, DT_INT32, DT_INT64, DT_BOOL,
+                           DT_BF16}))
     .OP_END_FACTORY_REG(MaskedScatter)
 
 } // namespace ge

@@ -22,136 +22,137 @@ using namespace ScatterNdDeterministic;
 using namespace ScatterNdEmpty;
 
 namespace {
-#define INT_INT_INT32_TILING_KEY     101
-#define INT_HALF_INT32_TILING_KEY    102
-#define INT_FLOAT_INT32_TILING_KEY   103
-#define INT64_INT_INT32_TILING_KEY   201
-#define INT64_HALF_INT32_TILING_KEY  202
+#define INT_INT_INT32_TILING_KEY 101
+#define INT_HALF_INT32_TILING_KEY 102
+#define INT_FLOAT_INT32_TILING_KEY 103
+#define INT64_INT_INT32_TILING_KEY 201
+#define INT64_HALF_INT32_TILING_KEY 202
 #define INT64_FLOAT_INT32_TILING_KEY 203
 
-#define INT_INT_INT64_TILING_KEY     121
-#define INT_HALF_INT64_TILING_KEY    122
-#define INT_FLOAT_INT64_TILING_KEY   123
-#define INT64_INT_INT64_TILING_KEY   221
-#define INT64_HALF_INT64_TILING_KEY  222
+#define INT_INT_INT64_TILING_KEY 121
+#define INT_HALF_INT64_TILING_KEY 122
+#define INT_FLOAT_INT64_TILING_KEY 123
+#define INT64_INT_INT64_TILING_KEY 221
+#define INT64_HALF_INT64_TILING_KEY 222
 #define INT64_FLOAT_INT64_TILING_KEY 223
 
-#define EMPTY_TENSOR_TILING_KEY      999
-}
+#define EMPTY_TENSOR_TILING_KEY 999
+} // namespace
 
 extern "C" __global__ __aicore__ void scatter_nd(GM_ADDR indices, GM_ADDR x, GM_ADDR shape, GM_ADDR y,
-                                                  GM_ADDR workspace, GM_ADDR tiling) {
-  if (workspace == nullptr) {
-    return;
-  }
-  SetSysWorkspace(workspace);
-  GM_ADDR userWS = GetUserWorkspace(workspace);
-  if (userWS == nullptr) {
-    return;
-  }
-  GET_TILING_DATA(tilingData, tiling);
+                                                 GM_ADDR workspace, GM_ADDR tiling)
+{
+    if (workspace == nullptr) {
+        return;
+    }
+    SetSysWorkspace(workspace);
+    GM_ADDR userWS = GetUserWorkspace(workspace);
+    if (userWS == nullptr) {
+        return;
+    }
+    GET_TILING_DATA(tilingData, tiling);
 
-  TPipe pipe;
-  KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    TPipe pipe;
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
-  if (TILING_KEY_IS(INT_INT_INT32_TILING_KEY)) {
-    ScatterNd<int32_t, int32_t, uint32_t> op;
-    op.Init(indices, x, shape, y, &tilingData, &pipe);
-    op.Process(&tilingData);
-  } else if (TILING_KEY_IS(INT_HALF_INT32_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<half, int32_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {    
-      ScatterNd<int32_t, half, uint32_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
+    if (TILING_KEY_IS(INT_INT_INT32_TILING_KEY)) {
+        ScatterNd<int32_t, int32_t, uint32_t> op;
+        op.Init(indices, x, shape, y, &tilingData, &pipe);
+        op.Process(&tilingData);
+    } else if (TILING_KEY_IS(INT_HALF_INT32_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<half, int32_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int32_t, half, uint32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT_FLOAT_INT32_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<float, int32_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int32_t, float, uint32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT64_INT_INT32_TILING_KEY)) {
+        ScatterNd<int64_t, int32_t, uint32_t> op;
+        op.Init(indices, x, shape, y, &tilingData, &pipe);
+        op.Process(&tilingData);
+    } else if (TILING_KEY_IS(INT64_HALF_INT32_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<half, int64_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int64_t, half, uint32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT64_FLOAT_INT32_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<float, int64_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int64_t, float, uint32_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT_INT_INT64_TILING_KEY)) {
+        ScatterNd<int32_t, int32_t, uint64_t> op;
+        op.Init(indices, x, shape, y, &tilingData, &pipe);
+        op.Process(&tilingData);
+    } else if (TILING_KEY_IS(INT_HALF_INT64_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<half, int32_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int32_t, half, uint64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT_FLOAT_INT64_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<float, int32_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int32_t, float, uint64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT64_INT_INT64_TILING_KEY)) {
+        ScatterNd<int64_t, int32_t, uint64_t> op;
+        op.Init(indices, x, shape, y, &tilingData, &pipe);
+        op.Process(&tilingData);
+    } else if (TILING_KEY_IS(INT64_HALF_INT64_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<half, int64_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int64_t, half, uint64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(INT64_FLOAT_INT64_TILING_KEY)) {
+        if (tilingData.isDeterminTemplate) {
+            ScatterNdDeterministicImpl<float, int64_t> op(tilingData, pipe);
+            op.Init(indices, x, y, userWS);
+            op.Process();
+        } else {
+            ScatterNd<int64_t, float, uint64_t> op;
+            op.Init(indices, x, shape, y, &tilingData, &pipe);
+            op.Process(&tilingData);
+        }
+    } else if (TILING_KEY_IS(EMPTY_TENSOR_TILING_KEY)) {
+        ScatterNdEmptyImpl<DTYPE_X> op(tilingData);
+        op.Init(y);
     }
-  } else if (TILING_KEY_IS(INT_FLOAT_INT32_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<float, int32_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int32_t, float, uint32_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(INT64_INT_INT32_TILING_KEY)) {
-    ScatterNd<int64_t, int32_t, uint32_t> op;
-    op.Init(indices, x, shape, y, &tilingData, &pipe);
-    op.Process(&tilingData);
-  } else if (TILING_KEY_IS(INT64_HALF_INT32_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<half, int64_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int64_t, half, uint32_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(INT64_FLOAT_INT32_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<float, int64_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int64_t, float, uint32_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(INT_INT_INT64_TILING_KEY)) {
-    ScatterNd<int32_t, int32_t, uint64_t> op;
-    op.Init(indices, x, shape, y, &tilingData, &pipe);
-    op.Process(&tilingData);
-  } else if (TILING_KEY_IS(INT_HALF_INT64_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<half, int32_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int32_t, half, uint64_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(INT_FLOAT_INT64_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<float, int32_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int32_t, float, uint64_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(INT64_INT_INT64_TILING_KEY)) {
-    ScatterNd<int64_t, int32_t, uint64_t> op;
-    op.Init(indices, x, shape, y, &tilingData, &pipe);
-    op.Process(&tilingData);
-  } else if (TILING_KEY_IS(INT64_HALF_INT64_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<half, int64_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int64_t, half, uint64_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(INT64_FLOAT_INT64_TILING_KEY)) {
-    if (tilingData.isDeterminTemplate) {
-      ScatterNdDeterministicImpl<float, int64_t> op(tilingData, pipe);
-      op.Init(indices, x, y, userWS);
-      op.Process();
-    } else {
-      ScatterNd<int64_t, float, uint64_t> op;
-      op.Init(indices, x, shape, y, &tilingData, &pipe);
-      op.Process(&tilingData);
-    }
-  } else if (TILING_KEY_IS(EMPTY_TENSOR_TILING_KEY)) {
-      ScatterNdEmptyImpl<DTYPE_X> op(tilingData);
-      op.Init(y);
-  }
 }

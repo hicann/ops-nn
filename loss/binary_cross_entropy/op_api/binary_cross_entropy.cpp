@@ -24,22 +24,18 @@ namespace l0op {
 
 OP_TYPE_REGISTER(BinaryCrossEntropy);
 
-const aclTensor *BinaryCrossEntropy(const aclTensor *self,
-                      const aclTensor *target,
-                      const aclTensor *weight,
-                      const std::string &reduction,
-                      aclOpExecutor *executor) {
-  L0_DFX(BinaryCrossEntropy, self, target, weight, reduction);
-  auto result = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-  INFER_SHAPE(BinaryCrossEntropy, OP_INPUT(self, target, weight), OP_OUTPUT(result), OP_ATTR(reduction));
+const aclTensor* BinaryCrossEntropy(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                                    const std::string& reduction, aclOpExecutor* executor)
+{
+    L0_DFX(BinaryCrossEntropy, self, target, weight, reduction);
+    auto result = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    INFER_SHAPE(BinaryCrossEntropy, OP_INPUT(self, target, weight), OP_OUTPUT(result), OP_ATTR(reduction));
 
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(BinaryCrossEntropy,
-                                               OP_INPUT(self, target, weight),
-                                               OP_OUTPUT(result),
-                                               OP_ATTR(reduction));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "BinaryCrossEntropy ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return result;
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(BinaryCrossEntropy, OP_INPUT(self, target, weight), OP_OUTPUT(result),
+                                                 OP_ATTR(reduction));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "BinaryCrossEntropy ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return result;
 }
 
-}
+} // namespace l0op

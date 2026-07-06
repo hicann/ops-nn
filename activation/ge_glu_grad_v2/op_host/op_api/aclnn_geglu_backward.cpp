@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include "aclnn_geglu_backward.h"
 #include "geglu_grad_v2.h"
 #include "aclnn_kernels/contiguous.h"
@@ -34,13 +33,11 @@ extern "C" {
 static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
 
-static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT};
+static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
-        Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
         return DTYPE_DTYPE_SUPPORT_LIST;
@@ -52,8 +49,8 @@ static const int64_t APPROXIMATE_NONE_NUM = 0;
 static const int64_t APPROXIMATE_TANH_NUM = 1;
 static constexpr int64_t SPLIT_FACTOR = 2;
 
-static inline bool CheckNotNull(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, const aclTensor* gradInput)
+static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu,
+                                const aclTensor* gradInput)
 {
     // gradOutput、self、gelu、gradInput不能为空指针
     OP_CHECK_NULL(gradOutput, return false);
@@ -63,8 +60,8 @@ static inline bool CheckNotNull(
     return true;
 }
 
-static inline bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, const aclTensor* gradInput)
+static inline bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu,
+                                   const aclTensor* gradInput)
 {
     // 检查gradOutput的数据类型是否在GeGluGradV2算子的支持列表内
     const auto& supportList = GetDtypeSupportList();
@@ -81,51 +78,47 @@ static inline bool CheckDtypeValid(
 static inline bool CheckDimInRange(int64_t dim, int64_t selfDimNum)
 {
     if (dim >= selfDimNum || dim < -selfDimNum) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "expected dim to be in range of [%ld, %ld], but got %ld.", -selfDimNum,
-            selfDimNum - 1, dim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected dim to be in range of [%ld, %ld], but got %ld.", -selfDimNum,
+                selfDimNum - 1, dim);
         return false;
     }
     return true;
 }
 
-static inline bool CheckGradOutputDims(
-    const aclTensor* gradOutput, const aclTensor* self, size_t splitDim, size_t selfDimNum)
+static inline bool CheckGradOutputDims(const aclTensor* gradOutput, const aclTensor* self, size_t splitDim,
+                                       size_t selfDimNum)
 {
     for (size_t i = 0; i < splitDim; ++i) {
         if (gradOutput->GetViewShape().GetDim(i) != self->GetViewShape().GetDim(i)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
-                op::ToString(gradOutput->GetViewShape()).GetString(),
-                op::ToString(self->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
+                    op::ToString(gradOutput->GetViewShape()).GetString(),
+                    op::ToString(self->GetViewShape()).GetString());
             return false;
         }
     }
 
     if (gradOutput->GetViewShape().GetDim(splitDim) * SPLIT_FACTOR != self->GetViewShape().GetDim(splitDim)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "the last dimension of gradOutput: %s must be the half of the last dimension of self: %s",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "the last dimension of gradOutput: %s must be the half of the last dimension of self: %s",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
     for (size_t i = splitDim + 1; i < selfDimNum; ++i) {
         if (gradOutput->GetViewShape().GetDim(i) != self->GetViewShape().GetDim(i)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
-                op::ToString(gradOutput->GetViewShape()).GetString(),
-                op::ToString(self->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
+                    op::ToString(gradOutput->GetViewShape()).GetString(),
+                    op::ToString(self->GetViewShape()).GetString());
             return false;
         }
     }
     return true;
 }
 
-static inline bool CheckShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, const aclTensor* gradInput, int64_t dim)
+static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu,
+                              const aclTensor* gradInput, int64_t dim)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(gelu, gradOutput, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(gradInput, self, return false);
@@ -145,9 +138,8 @@ static inline bool CheckShape(
 
     auto gradOutputDimNum = gradOutput->GetViewShape().GetDimNum();
     if (gradOutputDimNum != selfDimNum) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "gradOutput: %s and self: %s must have same dimensions",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput: %s and self: %s must have same dimensions",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
@@ -165,9 +157,8 @@ static inline bool CheckAttributeValue(int64_t approximate)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, const aclTensor* gradInput, int64_t dim,
-    int64_t approximate)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu,
+                               const aclTensor* gradInput, int64_t dim, int64_t approximate)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, gelu, gradInput), ACLNN_ERR_PARAM_NULLPTR);
@@ -184,9 +175,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus ExecGeGluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    bool activateLeft, aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus ExecGeGluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu,
+                                              int64_t dim, int64_t approximate, bool activateLeft, aclTensor* gradInput,
+                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -216,8 +207,8 @@ aclnnStatus ExecGeGluBackwardGetWorkspaceSize(
     CHECK_RET(contiguousGelu != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 调用GeGluGradV2算子kernel
-    auto GeGluGradV2Out = l0op::GeGluGradV2(
-        contiguousGradOutput, contiguousSelf, contiguousGelu, dim, approximate, activateLeft, uniqueExecutor.get());
+    auto GeGluGradV2Out = l0op::GeGluGradV2(contiguousGradOutput, contiguousSelf, contiguousGelu, dim, approximate,
+                                            activateLeft, uniqueExecutor.get());
     CHECK_RET(GeGluGradV2Out != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出gradInput上，gradInput可能是非连续的tensor
@@ -230,23 +221,24 @@ aclnnStatus ExecGeGluBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeGluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeGluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                               const aclTensor* gelu, int64_t dim, int64_t approximate,
+                                               aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeGluBackward, DFX_IN(gradOutput, self, gelu, dim, approximate), DFX_OUT(gradInput));
-    return ExecGeGluBackwardGetWorkspaceSize(
-        gradOutput, self, gelu, dim, approximate, false, gradInput, workspaceSize, executor);
+    return ExecGeGluBackwardGetWorkspaceSize(gradOutput, self, gelu, dim, approximate, false, gradInput, workspaceSize,
+                                             executor);
 }
 
-aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    bool activateLeft, aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                 const aclTensor* gelu, int64_t dim, int64_t approximate,
+                                                 bool activateLeft, aclTensor* gradInput, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnGeGluV3Backward, DFX_IN(gradOutput, self, gelu, dim, approximate, activateLeft), DFX_OUT(gradInput));
-    return ExecGeGluBackwardGetWorkspaceSize(
-        gradOutput, self, gelu, dim, approximate, activateLeft, gradInput, workspaceSize, executor);
+    L2_DFX_PHASE_1(aclnnGeGluV3Backward, DFX_IN(gradOutput, self, gelu, dim, approximate, activateLeft),
+                   DFX_OUT(gradInput));
+    return ExecGeGluBackwardGetWorkspaceSize(gradOutput, self, gelu, dim, approximate, activateLeft, gradInput,
+                                             workspaceSize, executor);
 }
 
 aclnnStatus aclnnGeGluBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)

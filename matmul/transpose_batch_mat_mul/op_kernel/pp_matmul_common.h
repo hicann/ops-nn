@@ -44,10 +44,7 @@ struct MatCoord {
     uint64_t n{0};
 };
 
-__aicore__ FORCE_INLINE uint64_t RoundUp16(const uint64_t val)
-{
-    return (val + CONST_16 - 1) / CONST_16 * CONST_16;
-}
+__aicore__ FORCE_INLINE uint64_t RoundUp16(const uint64_t val) { return (val + CONST_16 - 1) / CONST_16 * CONST_16; }
 
 __aicore__ FORCE_INLINE uint64_t RoundUp256(const uint64_t val)
 {
@@ -56,12 +53,9 @@ __aicore__ FORCE_INLINE uint64_t RoundUp256(const uint64_t val)
 
 __aicore__ FORCE_INLINE uint64_t RoundDown16(const uint64_t val) { return val / CONST_16 * CONST_16; }
 
-__aicore__ FORCE_INLINE uint64_t CeilDiv256(const uint64_t dividend)
-{
-    return (dividend + CONST_256 - 1) / CONST_256;
-}
+__aicore__ FORCE_INLINE uint64_t CeilDiv256(const uint64_t dividend) { return (dividend + CONST_256 - 1) / CONST_256; }
 
 __aicore__ FORCE_INLINE uint64_t Max(const uint64_t a, const uint64_t b) { return a > b ? a : b; }
 
-}
+} // namespace PpMatMulNS
 #endif // __PP_MATMUL_COMMON_H__

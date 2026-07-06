@@ -33,19 +33,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void log_softmax_v2(
-    GM_ADDR logits, GM_ADDR logsoftmax, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void log_softmax_v2(GM_ADDR logits, GM_ADDR logsoftmax, GM_ADDR workspace,
+                                                     GM_ADDR tiling);
 
 class log_softmax_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "log_softmax_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "log_softmax_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "log_softmax_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "log_softmax_v2_test TearDown\n" << endl; }
 };
 
 std::string Shape2Str(const std::vector<int64_t>& shape)
@@ -71,8 +65,8 @@ static inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void ExcuteTestCase(
-    const std::vector<int64_t>& xShape, const std::string& dtype, int64_t tilingKey, uint32_t blockNum, uint8_t* tiling)
+void ExcuteTestCase(const std::vector<int64_t>& xShape, const std::string& dtype, int64_t tilingKey, uint32_t blockNum,
+                    uint8_t* tiling)
 {
     uint32_t typeSize = 4;
     if (dtype != "float") {

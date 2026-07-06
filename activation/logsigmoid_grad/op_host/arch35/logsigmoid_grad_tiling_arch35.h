@@ -20,8 +20,7 @@ namespace optiling {
 using namespace Ops::NN::Optiling;
 class LogSigmoidGradTiling : public TilingBaseClass {
 public:
-    explicit LogSigmoidGradTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LogSigmoidGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

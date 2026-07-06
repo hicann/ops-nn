@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file nonlinear_fuc_ops.h
  * \brief
@@ -41,4 +40,4 @@ REG_OP(Swish)
     .ATTR(scale, Float, 1.0)
     .OP_END_FACTORY_REG(Swish)
 } // namespace ge
-#endif  // OPS_ACTIVATION_SWISH_OPS_H_
+#endif // OPS_ACTIVATION_SWISH_OPS_H_

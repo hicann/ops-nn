@@ -24,7 +24,8 @@
  */
 #include "soft_plus_v2.h"
 
-extern "C" __global__ __aicore__ void soft_plus_v2(GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void soft_plus_v2(GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
+{
     REGISTER_TILING_DEFAULT(SoftPlusV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftPlusV2TilingData, tilingData, tiling);
     NsSoftPlusV2::SoftPlusV2 op;

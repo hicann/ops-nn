@@ -38,10 +38,9 @@ struct IndexFillDCompileInfo {
     uint64_t ubSize = 0;
 };
 
-class IndexFillDTiling : public TilingBaseClass
-{
+class IndexFillDTiling : public TilingBaseClass {
 public:
-    explicit IndexFillDTiling(gert::TilingContext* context) : TilingBaseClass(context) {};
+    explicit IndexFillDTiling(gert::TilingContext* context) : TilingBaseClass(context){};
 
 protected:
     bool IsCapable() override;
@@ -69,12 +68,12 @@ private:
     int64_t usedCoreNum_ = 0;
     int64_t ubFactor_ = 0;
     int64_t tailUbFactor_ = 0;
-    int64_t tailCoreTailUbFactor_ =0;
+    int64_t tailCoreTailUbFactor_ = 0;
     int64_t normalCoreLoop_ = 0;
     int64_t tailCoreLoop_ = 0;
     int64_t dataTypeSize_ = 1;
     IndexFillDTilingData tilingData_;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_FILL_D_TILING_H
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_FILL_D_TILING_H

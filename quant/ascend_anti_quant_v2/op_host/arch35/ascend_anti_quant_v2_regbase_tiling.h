@@ -45,8 +45,8 @@ public:
 protected:
     ge::graphStatus GetCompileInfo();
     ge::graphStatus GetOpParam();
-    ge::graphStatus CheckInputValid(
-        const gert::Shape& input1, const gert::Shape& input2, const std::string& param) const;
+    ge::graphStatus CheckInputValid(const gert::Shape& input1, const gert::Shape& input2,
+                                    const std::string& param) const;
     ge::graphStatus CheckOutputValid(const gert::Shape& input, const gert::Shape& output) const;
     ge::graphStatus CheckAttrs(const gert::Shape& xShape);
     ge::graphStatus WriteTilingData();

@@ -35,16 +35,15 @@ static constexpr int32_t BLOCK_FP32_NUMS = BLOCK_SIZE / sizeof(float);
 template <typename DY_DTYPE, typename WEIGHT_DTYPE>
 class BatchNormGradV3RARSplitCoreR1 {
 public:
-    __aicore__ inline BatchNormGradV3RARSplitCoreR1(
-        TPipe* pipeIn, const BatchNormGradV3RARSplitCoreR1TilingData* tilingDataIn)
+    __aicore__ inline BatchNormGradV3RARSplitCoreR1(TPipe* pipeIn,
+                                                    const BatchNormGradV3RARSplitCoreR1TilingData* tilingDataIn)
     {
         pipe_ = pipeIn;
         tilingData_ = tilingDataIn;
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-        GM_ADDR workspace)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace)
     {
         blkIdx_ = GetBlockIdx();
         isLastCore_ = blkIdx_ == (tilingData_->usedCoreNums - 1) ? true : false;
@@ -56,8 +55,8 @@ public:
         dbetaGm_.SetGlobalBuffer((__gm__ WEIGHT_DTYPE*)(dbeta));
 
         dbetaTmpGm_.SetGlobalBuffer((__gm__ float*)(workspace));
-        dgammaTmpGm_.SetGlobalBuffer(
-            (__gm__ float*)(workspace) + tilingData_->usedCoreNums * tilingData_->aDimAligned * sizeof(float));
+        dgammaTmpGm_.SetGlobalBuffer((__gm__ float*)(workspace) +
+                                     tilingData_->usedCoreNums * tilingData_->aDimAligned * sizeof(float));
 
         // stg0、stg2相同
         int64_t dyOffset = blkIdx_ * tilingData_->r1Inner * tilingData_->r0Dim * tilingData_->aDim;
@@ -151,8 +150,8 @@ public:
     __aicore__ inline void CalcDbetaDgammaInCore()
     {
         for (int64_t i = 0; i < tilingData_->aOuterStg0; i++) {
-            uint32_t curAInnerLen =
-                i != (tilingData_->aOuterStg0 - 1) ? tilingData_->aInnerStg0 : tilingData_->aTailStg0;
+            uint32_t curAInnerLen = i != (tilingData_->aOuterStg0 - 1) ? tilingData_->aInnerStg0 :
+                                                                         tilingData_->aTailStg0;
             int64_t aOffset = i * tilingData_->aInnerStg0;
 
             CopyInMeanAndRstd(aOffset, curAInnerLen);
@@ -170,8 +169,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalcReduceSum(
-        uint32_t curAInnerLen, int64_t aOffset, __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal)
+    __aicore__ inline void CalcReduceSum(uint32_t curAInnerLen, int64_t aOffset, __local_mem__ float* meanLocal,
+                                         __local_mem__ float* rstdLocal)
     {
         LocalTensor<float> dbetaCacheTensor = dbetaCacheBuffer_.Get<float>();
         LocalTensor<float> dgammaCacheTensor = dgammaCacheBuffer_.Get<float>();
@@ -227,50 +226,46 @@ public:
                     curR0AlignedLenFold = tilingData_->r0TailAlignedStg0;
                 }
 
-                ProcessFoldBlock(
-                    meanLocal, rstdLocal, curAInnerLen, curR1LenFold, curR0LenFold, curR0AlignedLenFold, dyOffsetFold);
+                ProcessFoldBlock(meanLocal, rstdLocal, curAInnerLen, curR1LenFold, curR0LenFold, curR0AlignedLenFold,
+                                 dyOffsetFold);
             }
             int64_t cacheID = GetCacheID(basicBlockIdx);
-            UpdateCache(
-                dbetaCacheTensor, dbetaMainTmpTensor_, cacheID, tilingData_->aInnerAlignedStg0,
-                tilingData_->aInnerAlignedStg0);
-            UpdateCache(
-                dgammaCacheTensor, dgammaMainTmpTensor_, cacheID, tilingData_->aInnerAlignedStg0,
-                tilingData_->aInnerAlignedStg0);
+            UpdateCache(dbetaCacheTensor, dbetaMainTmpTensor_, cacheID, tilingData_->aInnerAlignedStg0,
+                        tilingData_->aInnerAlignedStg0);
+            UpdateCache(dgammaCacheTensor, dgammaMainTmpTensor_, cacheID, tilingData_->aInnerAlignedStg0,
+                        tilingData_->aInnerAlignedStg0);
         }
 
         if (basicLoop == 0) { // 直接输出到dbetaMainTmpTensor_，dgammaMainTmpTensor_
             int64_t dyOffset = aOffset * tilingData_->r0Dim;
-            ProcessMainBlock(
-                meanLocal, rstdLocal, curAInnerLen, r1TailIncore, tilingData_->r0TailStg0,
-                tilingData_->r0TailAlignedStg0, dyOffset);
+            ProcessMainBlock(meanLocal, rstdLocal, curAInnerLen, r1TailIncore, tilingData_->r0TailStg0,
+                             tilingData_->r0TailAlignedStg0, dyOffset);
         } else {
             // ub to ub copy
-            uint32_t resCacheId =
-                isLastCore_ ? tilingData_->lastCoreBinAddResultCacheID : tilingData_->binAddResultCacheID;
-            DataCopy(
-                dbetaMainTmpTensor_, dbetaCacheTensor[resCacheId * tilingData_->aInnerAlignedStg0],
-                tilingData_->aInnerAlignedStg0); // curAInnerLen < tilingData_->aInnerAlignedStg0
-            DataCopy(
-                dgammaMainTmpTensor_, dgammaCacheTensor[resCacheId * tilingData_->aInnerAlignedStg0],
-                tilingData_->aInnerAlignedStg0);
+            uint32_t resCacheId = isLastCore_ ? tilingData_->lastCoreBinAddResultCacheID :
+                                                tilingData_->binAddResultCacheID;
+            DataCopy(dbetaMainTmpTensor_, dbetaCacheTensor[resCacheId * tilingData_->aInnerAlignedStg0],
+                     tilingData_->aInnerAlignedStg0); // curAInnerLen < tilingData_->aInnerAlignedStg0
+            DataCopy(dgammaMainTmpTensor_, dgammaCacheTensor[resCacheId * tilingData_->aInnerAlignedStg0],
+                     tilingData_->aInnerAlignedStg0);
         }
 
         dbetaTmpOutQue_.EnQue(dbetaMainTmpTensor_);
         dgammaTmpOutQue_.EnQue(dgammaMainTmpTensor_);
     }
 
-    __aicore__ inline void ProcessMainBlock(
-        __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal, const uint32_t curAInnerLen,
-        const uint32_t curR1Len, const uint32_t curR0Len, const uint32_t curR0AlignedLen, const int64_t dyOffset)
+    __aicore__ inline void ProcessMainBlock(__local_mem__ float* meanLocal, __local_mem__ float* rstdLocal,
+                                            const uint32_t curAInnerLen, const uint32_t curR1Len,
+                                            const uint32_t curR0Len, const uint32_t curR0AlignedLen,
+                                            const int64_t dyOffset)
     {
         CopyInDyAndX(curAInnerLen, curR1Len, curR0Len, curR0AlignedLen, dyOffset);
 
         LocalTensor<DY_DTYPE> dyTensor = dyInQue_.DeQue<DY_DTYPE>();
         LocalTensor<DY_DTYPE> xTensor = xInQue_.DeQue<DY_DTYPE>();
 
-        CalcDyAndX(
-            dyTensor, xTensor, reduceInTmpTensor_, meanLocal, rstdLocal, curR0AlignedLen, curAInnerLen, curR1Len);
+        CalcDyAndX(dyTensor, xTensor, reduceInTmpTensor_, meanLocal, rstdLocal, curR0AlignedLen, curAInnerLen,
+                   curR1Len);
         xInQue_.FreeTensor(xTensor);
         if constexpr (!IsSameType<DY_DTYPE, float>::value) {
             dyInQue_.FreeTensor(dyTensor);
@@ -284,30 +279,31 @@ public:
         Duplicate(dgammaMainTmpTensor_, float(0.0), tilingData_->aInnerAlignedStg0);
 
         if constexpr (IsSameType<DY_DTYPE, float>::value) {
-            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
-                dbetaMainTmpTensor_, dyTensor, srcShape, false);
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(dbetaMainTmpTensor_, dyTensor, srcShape,
+                                                                          false);
             dyInQue_.FreeTensor(dyTensor);
         } else {
             AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
                 dbetaMainTmpTensor_, reduceInTmpTensor_[reduceTmpBufOffset_], srcShape, false);
         }
 
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
-            dgammaMainTmpTensor_, reduceInTmpTensor_[0], srcShape, false);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(dgammaMainTmpTensor_, reduceInTmpTensor_[0],
+                                                                      srcShape, false);
     }
 
     // fold cast fp32 加到main
-    __aicore__ inline void ProcessFoldBlock(
-        __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal, const uint32_t curAInnerLen,
-        const uint32_t curR1Len, const uint32_t curR0Len, const uint32_t curR0AlignedLen, const int64_t dyOffset)
+    __aicore__ inline void ProcessFoldBlock(__local_mem__ float* meanLocal, __local_mem__ float* rstdLocal,
+                                            const uint32_t curAInnerLen, const uint32_t curR1Len,
+                                            const uint32_t curR0Len, const uint32_t curR0AlignedLen,
+                                            const int64_t dyOffset)
     {
         CopyInDyAndX(curAInnerLen, curR1Len, curR0Len, curR0AlignedLen, dyOffset);
 
         LocalTensor<DY_DTYPE> dyTensor = dyInQue_.DeQue<DY_DTYPE>();
         LocalTensor<DY_DTYPE> xTensor = xInQue_.DeQue<DY_DTYPE>();
 
-        CalcDyAndX(
-            dyTensor, xTensor, reduceInTmpTensor_, meanLocal, rstdLocal, curR0AlignedLen, curAInnerLen, curR1Len);
+        CalcDyAndX(dyTensor, xTensor, reduceInTmpTensor_, meanLocal, rstdLocal, curR0AlignedLen, curAInnerLen,
+                   curR1Len);
 
         xInQue_.FreeTensor(xTensor);
         if constexpr (!IsSameType<DY_DTYPE, float>::value) {
@@ -325,16 +321,16 @@ public:
         Duplicate(dgammaFoldTmpTensor, float(0.0), tilingData_->aInnerAlignedStg0);
 
         if constexpr (IsSameType<DY_DTYPE, float>::value) {
-            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
-                dbetaFoldTmpTensor, dyTensor, srcShape, false);
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(dbetaFoldTmpTensor, dyTensor, srcShape,
+                                                                          false);
             dyInQue_.FreeTensor(dyTensor);
         } else {
             AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
                 dbetaFoldTmpTensor, reduceInTmpTensor_[reduceTmpBufOffset_], srcShape, false);
         }
 
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
-            dgammaFoldTmpTensor, reduceInTmpTensor_[0], srcShape, false);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(dgammaFoldTmpTensor, reduceInTmpTensor_[0],
+                                                                      srcShape, false);
 
         Add(dbetaMainTmpTensor_, dbetaMainTmpTensor_, dbetaFoldTmpTensor, tilingData_->aInnerAlignedStg0);
         Add(dgammaMainTmpTensor_, dgammaMainTmpTensor_, dgammaFoldTmpTensor, tilingData_->aInnerAlignedStg0);
@@ -343,17 +339,17 @@ public:
         dgammaTmpOutQue_.FreeTensor(dgammaFoldTmpTensor);
     }
 
-    __aicore__ inline void CalcDyAndX(
-        LocalTensor<DY_DTYPE>& dyTensor, LocalTensor<DY_DTYPE>& xTensor, LocalTensor<float>& reduceTmpBufferTensor,
-        __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal, uint32_t curR0AlignedLen, uint16_t curAInnerLen,
-        uint16_t curR1Len)
+    __aicore__ inline void CalcDyAndX(LocalTensor<DY_DTYPE>& dyTensor, LocalTensor<DY_DTYPE>& xTensor,
+                                      LocalTensor<float>& reduceTmpBufferTensor, __local_mem__ float* meanLocal,
+                                      __local_mem__ float* rstdLocal, uint32_t curR0AlignedLen, uint16_t curAInnerLen,
+                                      uint16_t curR1Len)
     {
         __local_mem__ DY_DTYPE* dyLocal = (__local_mem__ DY_DTYPE*)dyTensor.GetPhyAddr();
         __local_mem__ DY_DTYPE* xLocal = (__local_mem__ DY_DTYPE*)xTensor.GetPhyAddr();
         __local_mem__ float* dgammaReduceTmpLocal = (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr();
 
-        __local_mem__ float* dbetaReduceTmpLocal =
-            (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr() + reduceTmpBufOffset_;
+        __local_mem__ float* dbetaReduceTmpLocal = (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr() +
+                                                   reduceTmpBufOffset_;
 
         uint16_t loopNum = ops::CeilDiv(curR0AlignedLen, VL_FP32);
 
@@ -411,9 +407,8 @@ public:
         return ScalarGetCountOfValue<1>(idx ^ (idx + CONST_ONE)) - CONST_ONE;
     }
 
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-        const uint32_t stride, const uint32_t count)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheID, const uint32_t stride, const uint32_t count)
     {
         uint16_t outerLoopTimes = ops::CeilDiv(count, VL_FP32);
         uint16_t innerLoopTimes = cacheID;
@@ -445,8 +440,8 @@ public:
     __aicore__ inline void CalcDbetaDgamma()
     {
         for (int64_t i = 0; i < tilingData_->aOuterStg1; i++) {
-            uint16_t curAInnerLen =
-                i != (tilingData_->aOuterStg1 - 1) ? tilingData_->aInnerStg1 : tilingData_->aTailStg1;
+            uint16_t curAInnerLen = i != (tilingData_->aOuterStg1 - 1) ? tilingData_->aInnerStg1 :
+                                                                         tilingData_->aTailStg1;
 
             int64_t offset = i * tilingData_->aInnerStg1;
             CopyInDbetaDgammaTmp(offset, curAInnerLen);
@@ -456,8 +451,8 @@ public:
             LocalTensor<float> dbetaTmpOutTensor = dbetaTmpOutQue_.AllocTensor<float>();
             LocalTensor<float> dgammaTmpOutTensor = dgammaTmpOutQue_.AllocTensor<float>();
 
-            uint32_t srcShape[2] = {
-                static_cast<uint32_t>(tilingData_->usedCoreNums), static_cast<uint32_t>(tilingData_->aInnerStg1)};
+            uint32_t srcShape[2] = {static_cast<uint32_t>(tilingData_->usedCoreNums),
+                                    static_cast<uint32_t>(tilingData_->aInnerStg1)};
 
             ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(dbetaTmpOutTensor, dbetaTmpIn, srcShape, false);
             ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(dgammaTmpOutTensor, dgammaTmpIn, srcShape, false);
@@ -517,13 +512,13 @@ public:
         copyInParams.dstStride = (tilingData_->aInnerStg1 - curALen) * sizeof(float) / BLOCK_SIZE;
 
         LocalTensor<float> dbetaTmpTensor = dbetaTmpInQue_.AllocTensor<float>();
-        DataCopyPad<float, PaddingMode::Normal>(
-            dbetaTmpTensor, dbetaTmpGm_[offset], copyInParams, dataCopyPadExtParams);
+        DataCopyPad<float, PaddingMode::Normal>(dbetaTmpTensor, dbetaTmpGm_[offset], copyInParams,
+                                                dataCopyPadExtParams);
         dbetaTmpInQue_.EnQue(dbetaTmpTensor);
 
         LocalTensor<float> dgammaTmpTensor = dgammaTmpInQue_.AllocTensor<float>();
-        DataCopyPad<float, PaddingMode::Normal>(
-            dgammaTmpTensor, dgammaTmpGm_[offset], copyInParams, dataCopyPadExtParams);
+        DataCopyPad<float, PaddingMode::Normal>(dgammaTmpTensor, dgammaTmpGm_[offset], copyInParams,
+                                                dataCopyPadExtParams);
         dgammaTmpInQue_.EnQue(dgammaTmpTensor);
     }
 
@@ -564,8 +559,8 @@ public:
     __aicore__ inline void CalcOutput()
     {
         for (int64_t i = 0; i < tilingData_->aOuterStg2; i++) {
-            uint16_t curAInnerLen =
-                i != (tilingData_->aOuterStg2 - 1) ? tilingData_->aInnerStg2 : tilingData_->aTailStg2;
+            uint16_t curAInnerLen = i != (tilingData_->aOuterStg2 - 1) ? tilingData_->aInnerStg2 :
+                                                                         tilingData_->aTailStg2;
             int64_t aOffset = i * tilingData_->aInnerStg2;
             CopyInSmallShapes(aOffset, curAInnerLen);
 
@@ -617,8 +612,8 @@ public:
 
                     __VEC_SCOPE__
                     {
-                        MaskReg pregMaskAll =
-                            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                        MaskReg
+                            pregMaskAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
 
                         MaskReg pregMask;
 
@@ -635,8 +630,8 @@ public:
                             for (uint16_t j = 0; j < loopNum; j++) { // r0
                                 pregMask = UpdateMask<float>(sreg);
                                 for (uint16_t k = 0; k < curR1Len; k++) {
-                                    uint32_t offset =
-                                        i * curR1Len * curR0AlignedLen + k * curR0AlignedLen + j * VL_FP32;
+                                    uint32_t offset = i * curR1Len * curR0AlignedLen + k * curR0AlignedLen +
+                                                      j * VL_FP32;
                                     LoadOneTensor<DY_DTYPE>(dyLocal, regDy, pregMask, offset);
                                     LoadOneTensor<DY_DTYPE>(xLocal, regX, pregMask, offset);
 
@@ -670,8 +665,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInDyAndX(
-        uint32_t curAInnerLen, uint32_t curR1Len, uint32_t curR0Len, uint32_t curR0AlignedLen, int64_t gmOffset)
+    __aicore__ inline void CopyInDyAndX(uint32_t curAInnerLen, uint32_t curR1Len, uint32_t curR0Len,
+                                        uint32_t curR0AlignedLen, int64_t gmOffset)
     {
         // RAR -> AR
         LoopModeParams loopParams;
@@ -707,8 +702,8 @@ public:
         dyInQue_.EnQue(dy);
     }
 
-    __aicore__ inline void CopyOutDx(
-        uint32_t curAInnerLen, uint32_t curR1Len, uint32_t curR0Len, uint32_t curR0AlignedLen, int64_t offset)
+    __aicore__ inline void CopyOutDx(uint32_t curAInnerLen, uint32_t curR1Len, uint32_t curR0Len,
+                                     uint32_t curR0AlignedLen, int64_t offset)
     {
         // AR-> RAR
         LoopModeParams loopParams;

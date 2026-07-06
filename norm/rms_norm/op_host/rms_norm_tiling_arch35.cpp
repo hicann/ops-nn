@@ -16,9 +16,10 @@
 #include "rms_norm_tiling.h"
 
 namespace optiling {
-ge::graphStatus TilingArch354RmsNorm(
-    gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore, uint64_t ubSize,
-    ge::DataType xDataType, ge::DataType gammaDataType, float epsilon, uint8_t isGemma, RMSNormTilingData& rmsNormTilingData, RMSNormArch35TilingData& rmsNormArch35TilingData)
+ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore,
+                                     uint64_t ubSize, ge::DataType xDataType, ge::DataType gammaDataType, float epsilon,
+                                     uint8_t isGemma, RMSNormTilingData& rmsNormTilingData,
+                                     RMSNormArch35TilingData& rmsNormArch35TilingData)
 {
     uint64_t blockFactor = 1ULL;
     uint64_t tileNum = CeilDiv(numRow, static_cast<uint64_t>(numCore));
@@ -27,23 +28,21 @@ ge::graphStatus TilingArch354RmsNorm(
     context->SetBlockDim(useCoreNum);
 
     auto dtypeByteIterator_x = dTypeByteMap.find(xDataType);
-    OP_TILING_CHECK(
-        dtypeByteIterator_x == dTypeByteMap.end(), OPS_REPORT_VECTOR_INNER_ERR(context, "Fail to get dtype factor."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(dtypeByteIterator_x == dTypeByteMap.end(),
+                    OPS_REPORT_VECTOR_INNER_ERR(context, "Fail to get dtype factor."), return ge::GRAPH_FAILED);
     uint32_t curElementByteX = dtypeByteIterator_x->second;
     auto dtypeByteIterator_gamma = dTypeByteMap.find(gammaDataType);
-    OP_TILING_CHECK(
-        dtypeByteIterator_gamma == dTypeByteMap.end(),
-        OPS_REPORT_VECTOR_INNER_ERR(context, "Fail to get dtype factor."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(dtypeByteIterator_gamma == dTypeByteMap.end(),
+                    OPS_REPORT_VECTOR_INNER_ERR(context, "Fail to get dtype factor."), return ge::GRAPH_FAILED);
     uint32_t curElementByteGamma = dtypeByteIterator_gamma->second;
 
     auto curElementByte = std::max(curElementByteX, curElementByteGamma);
-    OP_TILING_CHECK(
-        curElementByte == 0, OPS_REPORT_VECTOR_INNER_ERR(context, "curElementByte is zero."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(curElementByte == 0, OPS_REPORT_VECTOR_INNER_ERR(context, "curElementByte is zero."),
+                    return ge::GRAPH_FAILED);
     uint64_t blockSize = Ops::Base::GetUbBlockSize(context);
     uint64_t vectorLength = Ops::Base::GetVRegSize(context) / FLOAT_BYTE_SIZE;
-    uint64_t numColAlignFullLoad =
-        CeilDiv(numCol * curElementByteX, static_cast<uint64_t>(blockSize)) * blockSize / curElementByteX;
+    uint64_t numColAlignFullLoad = CeilDiv(numCol * curElementByteX, static_cast<uint64_t>(blockSize)) * blockSize /
+                                   curElementByteX;
 
     uint64_t powerFactor = std::floor(std::log(numColAlignFullLoad - 1) / std::log(2));
     powerFactor = std::pow(LOG_2, powerFactor); // 公式保持一致add_rms_norm
@@ -52,10 +51,9 @@ ge::graphStatus TilingArch354RmsNorm(
 
     uint32_t tilingKey;
     // RETAINED_SIZE_1K : outQue_rstd and x_reduce_tmp align to blockSize
-    ubFactor =
-        (ubSize - RETAINED_SIZE_1K - numColAlignFullLoad * curElementByteGamma) /
-        (numColAlignFullLoad * curElementByteX * MULTI_FACTOR_2 * DOUBLE_BUFFER_NUM +
-         FLOAT_BYTE_SIZE * (DOUBLE_BUFFER_NUM + X_REDUCE_TMP_NUM) + firstVcaddLength);
+    ubFactor = (ubSize - RETAINED_SIZE_1K - numColAlignFullLoad * curElementByteGamma) /
+               (numColAlignFullLoad * curElementByteX * MULTI_FACTOR_2 * DOUBLE_BUFFER_NUM +
+                FLOAT_BYTE_SIZE * (DOUBLE_BUFFER_NUM + X_REDUCE_TMP_NUM) + firstVcaddLength);
     if (ubFactor >= 1 && numColAlignFullLoad <= FULL_LOAD_R_MAX) {
         float avgFactor = (numCol == 0ULL) ? 0.0f : 1.0f / static_cast<float>(numCol);
         uint64_t colFlodFactor = powerFactor; // 二分累加折叠点
@@ -76,22 +74,22 @@ ge::graphStatus TilingArch354RmsNorm(
             context,
             "TilingData[%u] numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlignFullLoad: %lu "
             "blockFactor: %lu, colFlodFactor: %lu, ubFactor: %u, epsilon: %f, avgFactor: %f, lastBlockFactor: %ld. ",
-            tilingKey, useCoreNum, ubSize, numRow, numCol, numColAlignFullLoad, blockFactor, colFlodFactor, ubFactor, epsilon,
-            avgFactor, lastBlockFactor);
+            tilingKey, useCoreNum, ubSize, numRow, numCol, numColAlignFullLoad, blockFactor, colFlodFactor, ubFactor,
+            epsilon, avgFactor, lastBlockFactor);
         context->SetTilingKey(tilingKey);
-        rmsNormArch35TilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+        rmsNormArch35TilingData.SaveToBuffer(context->GetRawTilingData()->GetData(),
+                                             context->GetRawTilingData()->GetCapacity());
         context->GetRawTilingData()->SetDataSize(rmsNormArch35TilingData.GetDataSize());
     } else {
         uint64_t rowFactor = FLOAT_PER_REAPEAT;
         uint64_t numColAlign = CeilDiv(numCol * curElementByte, static_cast<uint64_t>(ALING_FACTOR_512)) *
                                ALING_FACTOR_512 / curElementByte;
-        ComputeTotalBufSizeParam computeTotalBufSizeParam{
-            .bufferNum = DOUBLE_BUFFER_NUM,
-            .dtype = xDataType,
-            .dtypeSizeX = curElementByteX,
-            .dtypeSizeGamma = curElementByteGamma,
-            .length = static_cast<uint32_t>(numColAlign),
-            .split = false};
+        ComputeTotalBufSizeParam computeTotalBufSizeParam{.bufferNum = DOUBLE_BUFFER_NUM,
+                                                          .dtype = xDataType,
+                                                          .dtypeSizeX = curElementByteX,
+                                                          .dtypeSizeGamma = curElementByteGamma,
+                                                          .length = static_cast<uint32_t>(numColAlign),
+                                                          .split = false};
         uint32_t total = ComputeTotalBufSize(computeTotalBufSizeParam);
         uint32_t multiNNum = static_cast<uint32_t>(ubSize) / static_cast<uint32_t>(total);
         uint64_t colBufferLength{0};
@@ -127,16 +125,19 @@ ge::graphStatus TilingArch354RmsNorm(
         rmsNormTilingData.set_is_nddma(isNddma);
         rmsNormTilingData.set_is_gemma(isGemma);
 
-        OP_LOGD(
-            context,
-            "TilingData[%u] numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlign: %lu, col_buffer_length: %u, "
-            "blockFactor: %lu, rowFactor: %u, ubFactor: %u, epsilon: %f, ubLoop: %u, multi_n_num: %u, isNddma: %u.",
-            tilingKey, numCore, ubSize, rmsNormTilingData.get_num_row(), rmsNormTilingData.get_num_col(), rmsNormTilingData.get_num_col_align(),
-            rmsNormTilingData.get_col_buffer_length(), rmsNormTilingData.get_block_factor(), rmsNormTilingData.get_row_factor(), rmsNormTilingData.get_ub_factor(),
-            rmsNormTilingData.get_epsilon(), rmsNormTilingData.get_ub_loop(), rmsNormTilingData.get_multi_n_num(), rmsNormTilingData.get_is_nddma());
+        OP_LOGD(context,
+                "TilingData[%u] numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlign: %lu, "
+                "col_buffer_length: %u, "
+                "blockFactor: %lu, rowFactor: %u, ubFactor: %u, epsilon: %f, ubLoop: %u, multi_n_num: %u, isNddma: %u.",
+                tilingKey, numCore, ubSize, rmsNormTilingData.get_num_row(), rmsNormTilingData.get_num_col(),
+                rmsNormTilingData.get_num_col_align(), rmsNormTilingData.get_col_buffer_length(),
+                rmsNormTilingData.get_block_factor(), rmsNormTilingData.get_row_factor(),
+                rmsNormTilingData.get_ub_factor(), rmsNormTilingData.get_epsilon(), rmsNormTilingData.get_ub_loop(),
+                rmsNormTilingData.get_multi_n_num(), rmsNormTilingData.get_is_nddma());
 
         context->SetTilingKey(tilingKey);
-        rmsNormTilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+        rmsNormTilingData.SaveToBuffer(context->GetRawTilingData()->GetData(),
+                                       context->GetRawTilingData()->GetCapacity());
         context->GetRawTilingData()->SetDataSize(rmsNormTilingData.GetDataSize());
     }
     return ge::GRAPH_SUCCESS;

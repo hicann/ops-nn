@@ -19,16 +19,14 @@
 #include "op_kernel/math_util.h"
 #include "avg_pool_struct.h"
 
-namespace AvgPool
-{
+namespace AvgPool {
 using namespace AscendC;
 
 constexpr int32_t OUT_BUFFER_LEN = 1024;
 constexpr int32_t NUM128 = 128;
 
 template <typename T>
-class AvgPoolBigKernel
-{
+class AvgPoolBigKernel {
 public:
     __aicore__ inline AvgPoolBigKernel(TPipe* pipe, const AvgPoolBigKernelTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -51,10 +49,7 @@ private:
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
     __aicore__ inline void ComputeSum(int64_t length);
     __aicore__ inline void ComputeAvg();
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -121,7 +116,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::Process()
 
 template <typename T>
 __aicore__ inline void AvgPoolBigKernel<T>::CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW,
-                                                             int64_t& curInOffset)
+                                                           int64_t& curInOffset)
 {
     int64_t cur2D = curIdx % outHW_;
     int64_t curNc = curIdx / outHW_;
@@ -129,11 +124,13 @@ __aicore__ inline void AvgPoolBigKernel<T>::CalcKernelSize(int64_t curIdx, int64
     int64_t curWo = cur2D % tilingData_->wOutDim;
 
     int64_t curkPadH = 0;
-    CalcKernelSizeCore(PoolParamsForDim{tilingData_->hInDim, curHo, tilingData_->kH, tilingData_->sH,
-        tilingData_->tPad, tilingData_->bPad}, curkH, curkPadH, curOriginH_);
+    CalcKernelSizeCore(PoolParamsForDim{tilingData_->hInDim, curHo, tilingData_->kH, tilingData_->sH, tilingData_->tPad,
+                                        tilingData_->bPad},
+                       curkH, curkPadH, curOriginH_);
     int64_t curkPadW = 0;
-    CalcKernelSizeCore(PoolParamsForDim{tilingData_->wInDim, curWo, tilingData_->kW, tilingData_->sW,
-        tilingData_->lPad, tilingData_->rPad}, curkW, curkPadW, curOriginW_);
+    CalcKernelSizeCore(PoolParamsForDim{tilingData_->wInDim, curWo, tilingData_->kW, tilingData_->sW, tilingData_->lPad,
+                                        tilingData_->rPad},
+                       curkW, curkPadW, curOriginW_);
 
     curOriginIndex_ = curOriginH_ * tilingData_->wInDim + curOriginW_;
     curInOffset = curNc * inHW_ + curOriginIndex_;
@@ -255,7 +252,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::CopyAvgOut(int64_t curIdx)
 
 template <typename T>
 __aicore__ inline void AvgPoolBigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
-                                                                   int64_t curInOffset, int64_t maxCount)
+                                                                 int64_t curInOffset, int64_t maxCount)
 {
     CopyInMultiRows(curInOffset, curkW, curkH);
     ComputeSum(curkW * curkH);
@@ -264,7 +261,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::NoSplitKernelProcess(int32_t localCu
 
 template <typename T>
 __aicore__ inline void AvgPoolBigKernel<T>::SplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
-                                                                 int64_t curInOffset, int64_t maxCount)
+                                                               int64_t curInOffset, int64_t maxCount)
 {
     int64_t realIndex = 0;
     int64_t inputOffset = curInOffset;
@@ -282,7 +279,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::SplitKernelProcess(int32_t localCurI
             inputOffset += curhFactor * tilingData_->wInDim;
             kernelOffset += curhFactor * tilingData_->wInDim;
         }
-    // 单行很大，单行循环搬
+        // 单行很大，单行循环搬
     } else {
         int64_t hLoops = curkH;
         int64_t wFactor = maxCount;
@@ -351,7 +348,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::InitOutLocal(int32_t localCurIdx)
 template <typename T>
 __aicore__ inline void AvgPoolBigKernel<T>::ComputeAvg()
 {
-    if constexpr (std::is_same<T, float>::value) {  
+    if constexpr (std::is_same<T, float>::value) {
         LocalTensor<T> loopReduce = ubLoopReduce_.Get<T>();
         LocalTensor<T> resultLocal = ubLoopResult_.Get<T>();
         Muls(resultLocal, loopReduce, mulsFactor_, ONE);
@@ -381,5 +378,5 @@ __aicore__ inline void AvgPoolBigKernel<T>::ComputeSum(int64_t length)
     inputQue_.FreeTensor<T>(xLocal);
 }
 
-}  // namespace AvgPool
-#endif  // AVG_POOL_BIG_KERNEL_H_
+} // namespace AvgPool
+#endif // AVG_POOL_BIG_KERNEL_H_

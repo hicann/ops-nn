@@ -77,7 +77,7 @@ public:
     bool weightNz;
 
     // output
-    bool result; // false means tiling fail
+    bool result;            // false means tiling fail
     bool tilingParseResult; // false means tiling parse fail
     uint64_t blockDim;
     uint64_t tilingKey;
@@ -87,11 +87,9 @@ public:
 
 class TestDualLevelQuantBatchMatmulTiling : public testing::TestWithParam<DualLevelQuantBatchMatmulTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {}
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase()
-    {}
+    static void TearDownTestCase() {}
 };
 
 static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
@@ -184,14 +182,13 @@ static gert::Shape TransNd2Nz(const gert::Shape& inShape)
 
 static void SetNpuArch(DualLevelQuantBatchMatmulCompileInfo& compileInfo, const std::string& npuArch)
 {
-    static std::unordered_map<std::string, NpuArch> npuArchMap{
-        {"DAV_3510", NpuArch::DAV_3510}, {"UnknowNpuArch", NpuArch::DAV_RESV}};
+    static std::unordered_map<std::string, NpuArch> npuArchMap{{"DAV_3510", NpuArch::DAV_3510},
+                                                               {"UnknowNpuArch", NpuArch::DAV_RESV}};
     compileInfo.npuArch = npuArchMap.count(npuArch) > 0 ? npuArchMap[npuArch] : NpuArch::DAV_RESV;
 }
 
-static void InitPlatformInfo(
-    const std::string& npuArch, gert::TilingContext* tilingContext, string& compileInfoStr, int64_t aicNum = -1,
-    int64_t aivNum = -1)
+static void InitPlatformInfo(const std::string& npuArch, gert::TilingContext* tilingContext, string& compileInfoStr,
+                             int64_t aicNum = -1, int64_t aivNum = -1)
 {
     map<string, string> npuArchInfos = {
         {"SoC_version", npuArch},
@@ -254,21 +251,20 @@ static std::vector<DualLevelQuantBatchMatmulTilingTestParam> GetParams(const std
         return params;
     }
 
-    map<string, ge::DataType> dtypeMap = {
-        {"FLOAT16", ge::DT_FLOAT16},
-        {"FLOAT", ge::DT_FLOAT},
-        {"BF16", ge::DT_BF16},
-        {"INT8", ge::DT_INT8},
-        {"INT4", ge::DT_INT4},
-        {"UINT64", ge::DT_UINT64},
-        {"INT32", ge::DT_INT32},
-        {"INT64", ge::DT_INT64},
-        {"FLOAT8-E8M0", ge::DT_FLOAT8_E8M0},
-        {"HIFLOAT8", ge::DT_HIFLOAT8},
-        {"FLOAT8-E5M2", ge::DT_FLOAT8_E5M2},
-        {"FLOAT8-E4M3", ge::DT_FLOAT8_E4M3FN},
-        {"FLOAT4-E2M1", ge::DT_FLOAT4_E2M1},
-        {"FLOAT4-E1M2", ge::DT_FLOAT4_E1M2}};
+    map<string, ge::DataType> dtypeMap = {{"FLOAT16", ge::DT_FLOAT16},
+                                          {"FLOAT", ge::DT_FLOAT},
+                                          {"BF16", ge::DT_BF16},
+                                          {"INT8", ge::DT_INT8},
+                                          {"INT4", ge::DT_INT4},
+                                          {"UINT64", ge::DT_UINT64},
+                                          {"INT32", ge::DT_INT32},
+                                          {"INT64", ge::DT_INT64},
+                                          {"FLOAT8-E8M0", ge::DT_FLOAT8_E8M0},
+                                          {"HIFLOAT8", ge::DT_HIFLOAT8},
+                                          {"FLOAT8-E5M2", ge::DT_FLOAT8_E5M2},
+                                          {"FLOAT8-E4M3", ge::DT_FLOAT8_E4M3FN},
+                                          {"FLOAT4-E2M1", ge::DT_FLOAT4_E2M1},
+                                          {"FLOAT4-E1M2", ge::DT_FLOAT4_E1M2}};
 
     std::string line;
     while (std::getline(csvData, line)) {
@@ -380,9 +376,8 @@ void DualLevelQuantBatchMatmulTilingTestParam::Prepare(DualLevelQuantBatchMatmul
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x1Shape, &x2Shape, &x1Level0Shape, &x1Level1Shape, &x2Level0Shape, &x2Level1Shape,
-                           hasBias ? &biasShape : nullptr})
+                      .InputShapes({&x1Shape, &x2Shape, &x1Level0Shape, &x1Level1Shape, &x2Level0Shape, &x2Level1Shape,
+                                    hasBias ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -394,12 +389,11 @@ void DualLevelQuantBatchMatmulTilingTestParam::Prepare(DualLevelQuantBatchMatmul
                       .NodeInputTd(5, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(ge::DT_FLOAT16)},
-                           {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transposeX1)},
-                           {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transposeX2)},
-                           {"level0_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level0GroupSize)},
-                           {"level1_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level1GroupSize)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(ge::DT_FLOAT16)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transposeX1)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transposeX2)},
+                                  {"level0_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level0GroupSize)},
+                                  {"level1_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level1GroupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -477,9 +471,8 @@ void DualLevelQuantBatchMatmulTilingTestParam::InvokeTilingFunc(DualLevelQuantBa
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x1Shape, &x2Shape, &x1Level0Shape, &x1Level1Shape, &x2Level0Shape, &x2Level1Shape,
-                           hasBias ? &biasShape : nullptr})
+                      .InputShapes({&x1Shape, &x2Shape, &x1Level0Shape, &x1Level1Shape, &x2Level0Shape, &x2Level1Shape,
+                                    hasBias ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -491,12 +484,11 @@ void DualLevelQuantBatchMatmulTilingTestParam::InvokeTilingFunc(DualLevelQuantBa
                       .NodeInputTd(5, x2Level1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(ge::DT_FLOAT16)},
-                           {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transposeX1)},
-                           {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transposeX2)},
-                           {"level0_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level0GroupSize)},
-                           {"level1_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level1GroupSize)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(ge::DT_FLOAT16)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transposeX1)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transposeX2)},
+                                  {"level0_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level0GroupSize)},
+                                  {"level1_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(level1GroupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -517,8 +509,9 @@ void DualLevelQuantBatchMatmulTilingTestParam::InvokeTilingFunc(DualLevelQuantBa
         EXPECT_EQ(tilingContext->GetTilingKey(), hasBias ? 0x38D0000 : 0x28D0000);
         EXPECT_EQ(tilingContext->GetBlockDim(), blockDim);
 
-        DualLevelQuantBatchMatmulBasicTilingData& actualTilingData =
-            *reinterpret_cast<DualLevelQuantBatchMatmulBasicTilingData*>(tilingContext->GetRawTilingData()->GetData());
+        DualLevelQuantBatchMatmulBasicTilingData&
+            actualTilingData = *reinterpret_cast<DualLevelQuantBatchMatmulBasicTilingData*>(
+                tilingContext->GetRawTilingData()->GetData());
         // 这里通过重置预期结果里的部分字段来忽略不关心的tiling字段，后续有新增的话可以仿照这个方法来忽略其他字段
         // expectTilingData.shareL1Size = actualTilingData.shareL1Size;
         string actualTilingDataStr = TilingData2Str(actualTilingData, tilingContext->GetRawTilingData()->GetDataSize());
@@ -537,8 +530,8 @@ void DualLevelQuantBatchMatmulTilingTestParam::Test() const
     }
 }
 
-static void ThreadFunc(
-    const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx, size_t threadNum)
+static void ThreadFunc(const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx,
+                       size_t threadNum)
 {
     int32_t logLevel = 0;
     int32_t enableEvent = 0;
@@ -547,8 +540,8 @@ static void ThreadFunc(
     }
 }
 
-static void TestMultiThread(
-    const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThread(const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum,
+                            size_t threadNum)
 {
     std::thread threads[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
@@ -560,18 +553,15 @@ static void TestMultiThread(
     }
 }
 
-TEST_P(TestDualLevelQuantBatchMatmulTiling, generalTest)
-{
-    GetParam().Test();
-}
+TEST_P(TestDualLevelQuantBatchMatmulTiling, generalTest) { GetParam().Test(); }
 
 INSTANTIATE_TEST_CASE_P(DLQBMM_DAV_3510, TestDualLevelQuantBatchMatmulTiling, testing::ValuesIn(GetParams("DAV_3510")));
 
 static mutex compileMutex;
 
-static void ThreadFuncInvokeTilingFunc(
-    const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx, size_t threadNum,
-    DualLevelQuantBatchMatmulCompileInfo& compileInfo)
+static void ThreadFuncInvokeTilingFunc(const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum,
+                                       size_t threadIdx, size_t threadNum,
+                                       DualLevelQuantBatchMatmulCompileInfo& compileInfo)
 {
     if (threadIdx >= testcaseNum)
         return;
@@ -580,9 +570,9 @@ static void ThreadFuncInvokeTilingFunc(
     params[threadIdx].InvokeTilingFunc(compileInfo);
 }
 
-static void ThreadFuncPrepare(
-    const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx, size_t threadNum,
-    map<size_t, DualLevelQuantBatchMatmulCompileInfo>& compileInfos)
+static void ThreadFuncPrepare(const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum,
+                              size_t threadIdx, size_t threadNum,
+                              map<size_t, DualLevelQuantBatchMatmulCompileInfo>& compileInfos)
 {
     if (threadIdx >= testcaseNum)
         return;
@@ -597,8 +587,8 @@ static void ThreadFuncPrepare(
     }
 }
 
-static void TestMultiThreadSeparate(
-    const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThreadSeparate(const DualLevelQuantBatchMatmulTilingTestParam* params, size_t testcaseNum,
+                                    size_t threadNum)
 {
     std::thread threads[threadNum];
     map<size_t, DualLevelQuantBatchMatmulCompileInfo> compileInfos;
@@ -612,8 +602,8 @@ static void TestMultiThreadSeparate(
 
     std::thread threadsInvoke[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
-        threadsInvoke[idx] =
-            std::thread(ThreadFuncInvokeTilingFunc, params, testcaseNum, idx, threadNum, std::ref(compileInfos[idx]));
+        threadsInvoke[idx] = std::thread(ThreadFuncInvokeTilingFunc, params, testcaseNum, idx, threadNum,
+                                         std::ref(compileInfos[idx]));
     }
 
     for (size_t idx = 0; idx < threadNum; ++idx) {

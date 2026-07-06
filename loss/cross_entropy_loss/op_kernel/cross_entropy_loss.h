@@ -21,26 +21,24 @@ using namespace AscendC;
 namespace CrossEntropyLossCustom {
 
 template <typename OriT>
-class CrossEntropyLoss : public CrossEntropyLossBase<OriT>
-{
+class CrossEntropyLoss : public CrossEntropyLossBase<OriT> {
 public:
     __aicore__ inline CrossEntropyLoss(){};
-    __aicore__ inline void Init(
-        GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR zloss,
-        GM_ADDR lseForZloss, GM_ADDR workspace, const CrossEntropyLossTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb,
+                                GM_ADDR zloss, GM_ADDR lseForZloss, GM_ADDR workspace,
+                                const CrossEntropyLossTilingData& tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessFp32();
 
 protected:
     __aicore__ inline void GetRowMax(const LocalTensor<float>& inputBuf, uint64_t offset);
-    __aicore__ inline void GetExpSum(
-        const LocalTensor<float>& inputBuf, uint64_t offset, float& batchSum, const float& rowMax);
-    __aicore__ inline void GetLogProbOut(
-        const LocalTensor<float>& inputBuf, uint64_t& offset, const float& logBatchSum, float& batchLogProb,
-        const uint64_t& target, float& smoothingLoss, bool isIgnore);
-    __aicore__ inline void GetSmoothingLoss(
-        const LocalTensor<float>& inputBuf, const LocalTensor<float>& workLocal, float& smoothingLoss,
-        const uint64_t len, const uint64_t offset);
+    __aicore__ inline void GetExpSum(const LocalTensor<float>& inputBuf, uint64_t offset, float& batchSum,
+                                     const float& rowMax);
+    __aicore__ inline void GetLogProbOut(const LocalTensor<float>& inputBuf, uint64_t& offset, const float& logBatchSum,
+                                         float& batchLogProb, const uint64_t& target, float& smoothingLoss,
+                                         bool isIgnore);
+    __aicore__ inline void GetSmoothingLoss(const LocalTensor<float>& inputBuf, const LocalTensor<float>& workLocal,
+                                            float& smoothingLoss, const uint64_t len, const uint64_t offset);
     __aicore__ inline void GetSmoothingLossSum();
     __aicore__ inline void GetLnWeightSum(const LocalTensor<float>& inputBuf);
     __aicore__ inline void CalcMeanLoss();
@@ -51,9 +49,9 @@ protected:
 };
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLoss<OriT>::Init(
-    GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR zloss, GM_ADDR lseForZloss,
-    GM_ADDR workspace, const CrossEntropyLossTilingData& tilingData)
+__aicore__ inline void CrossEntropyLoss<OriT>::Init(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss,
+                                                    GM_ADDR logProb, GM_ADDR zloss, GM_ADDR lseForZloss,
+                                                    GM_ADDR workspace, const CrossEntropyLossTilingData& tilingData)
 {
     CrossEntropyLossBase<OriT>::InitTiling(tilingData);
     CrossEntropyLossBase<OriT>::InitGlobalTensor(input, target, weight, loss, logProb, workspace);
@@ -125,11 +123,11 @@ template <typename OriT>
 __aicore__ inline void CrossEntropyLoss<OriT>::GetSumLoss()
 {
     uint32_t len = this->batchNum;
-    AscendC::LocalTensor<float> workLocal =
-        this->calcBuf.template GetWithOffset<float>(this->lnTmpBufSize, this->workLocalOffset);
+    AscendC::LocalTensor<float> workLocal = this->calcBuf.template GetWithOffset<float>(this->lnTmpBufSize,
+                                                                                        this->workLocalOffset);
     this->GetReduceSum(this->lnLocal, workLocal, this->reduceRes, len);
-    this->reduceRes(0) =
-        (len > NUM_4096 && len < FP32_128_REPEAT) ? this->reduceRes(0) + this->reduceRes(1) : this->reduceRes(0);
+    this->reduceRes(0) = (len > NUM_4096 && len < FP32_128_REPEAT) ? this->reduceRes(0) + this->reduceRes(1) :
+                                                                     this->reduceRes(0);
     event_t eventVMTE3 = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventVMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
@@ -172,8 +170,8 @@ __aicore__ inline void CrossEntropyLoss<OriT>::GetNoneLoss()
 template <typename OriT>
 __aicore__ inline void CrossEntropyLoss<OriT>::GetRowMax(const LocalTensor<float>& inputBuf, uint64_t offset)
 {
-    AscendC::LocalTensor<float> workLocal =
-        this->calcBuf.template GetWithOffset<float>(NUM_1024, this->workLocalOffset);
+    AscendC::LocalTensor<float> workLocal = this->calcBuf.template GetWithOffset<float>(NUM_1024,
+                                                                                        this->workLocalOffset);
     for (size_t i = 0; i < this->ubLoopNum; ++i) {
         this->CopyIn(inputBuf, offset, uint32_t(this->inputUbSize));
         offset += this->inputUbSize;
@@ -195,18 +193,18 @@ __aicore__ inline void CrossEntropyLoss<OriT>::GetRowMax(const LocalTensor<float
             tailOffset += FP32_128_REPEAT;
         }
         if (this->tailVecTailNum != 0) {
-            this->GetReduceMax(
-                inputBuf[tailOffset], workLocal, this->reduceRes, this->reduceCalc, this->tailVecTailNum);
+            this->GetReduceMax(inputBuf[tailOffset], workLocal, this->reduceRes, this->reduceCalc,
+                               this->tailVecTailNum);
         }
     }
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLoss<OriT>::GetExpSum(
-    const LocalTensor<float>& inputBuf, uint64_t offset, float& batchSum, const float& rowMax)
+__aicore__ inline void CrossEntropyLoss<OriT>::GetExpSum(const LocalTensor<float>& inputBuf, uint64_t offset,
+                                                         float& batchSum, const float& rowMax)
 {
-    AscendC::LocalTensor<float> workLocal =
-        this->calcBuf.template GetWithOffset<float>(NUM_1024, this->workLocalOffset);
+    AscendC::LocalTensor<float> workLocal = this->calcBuf.template GetWithOffset<float>(NUM_1024,
+                                                                                        this->workLocalOffset);
     for (size_t i = 0; i < this->ubLoopNum; ++i) {
         this->CopyIn(inputBuf, offset, uint32_t(this->inputUbSize));
         offset += this->inputUbSize;
@@ -252,19 +250,20 @@ __aicore__ inline void CrossEntropyLoss<OriT>::GetExpSum(
             event_t eventVS = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_S));
             SetFlag<HardEvent::V_S>(eventVS);
             WaitFlag<HardEvent::V_S>(eventVS);
-            batchSum +=
-                this->tailVecTailNum > NUM_4096 ? this->reduceCalc(0) + this->reduceCalc(1) : this->reduceCalc(0);
+            batchSum += this->tailVecTailNum > NUM_4096 ? this->reduceCalc(0) + this->reduceCalc(1) :
+                                                          this->reduceCalc(0);
         }
     }
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLoss<OriT>::GetLogProbOut(
-    const LocalTensor<float>& inputBuf, uint64_t& offset, const float& logBatchSum, float& batchLogProb,
-    const uint64_t& target, float& smoothingLoss, bool isIgnore)
+__aicore__ inline void CrossEntropyLoss<OriT>::GetLogProbOut(const LocalTensor<float>& inputBuf, uint64_t& offset,
+                                                             const float& logBatchSum, float& batchLogProb,
+                                                             const uint64_t& target, float& smoothingLoss,
+                                                             bool isIgnore)
 {
-    AscendC::LocalTensor<float> workLocal =
-        this->calcBuf.template GetWithOffset<float>(NUM_1024, this->workLocalOffset);
+    AscendC::LocalTensor<float> workLocal = this->calcBuf.template GetWithOffset<float>(NUM_1024,
+                                                                                        this->workLocalOffset);
     uint64_t weightOffset = 0;
     for (size_t i = 0; i < this->ubLoopNum; ++i) {
         this->CopyIn(inputBuf, offset, uint32_t(this->inputUbSize));
@@ -300,9 +299,10 @@ __aicore__ inline void CrossEntropyLoss<OriT>::GetLogProbOut(
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLoss<OriT>::GetSmoothingLoss(
-    const LocalTensor<float>& inputBuf, const LocalTensor<float>& workLocal, float& smoothingLoss, const uint64_t len,
-    const uint64_t weightOffset)
+__aicore__ inline void CrossEntropyLoss<OriT>::GetSmoothingLoss(const LocalTensor<float>& inputBuf,
+                                                                const LocalTensor<float>& workLocal,
+                                                                float& smoothingLoss, const uint64_t len,
+                                                                const uint64_t weightOffset)
 {
     if (this->defaultWeight == 0) {
         this->CopyWeightIn(weightOffset, uint32_t(len));
@@ -326,8 +326,8 @@ template <typename OriT>
 __aicore__ inline void CrossEntropyLoss<OriT>::GetLnWeightSum(const LocalTensor<float>& inputBuf)
 {
     AscendC::DataCopyExtParams copyParams{1, 4, 0, 0, 0};
-    AscendC::LocalTensor<float> weightCalcLocal =
-        this->calcBuf.template GetWithOffset<float>(NUM_1024, this->workLocalOffset);
+    AscendC::LocalTensor<float> weightCalcLocal = this->calcBuf.template GetWithOffset<float>(NUM_1024,
+                                                                                              this->workLocalOffset);
     this->GetReduceSum(this->lnLocal, inputBuf, this->reduceRes, this->batchNum);
     this->reduceRes(0) = (this->batchNum > NUM_4096 && this->batchNum < FP32_128_REPEAT) ?
                              this->reduceRes(0) + this->reduceRes(1) :

@@ -26,10 +26,9 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 using namespace BinaryCrossEntropy;
-const size_t ASCEND_WORKSPACE = 16777216;  // 16MB
+const size_t ASCEND_WORKSPACE = 16777216; // 16MB
 
 static const size_t INPUT_X_INDEX = 0;
 static const size_t INPUT_Y_INDEX = 1;
@@ -46,16 +45,16 @@ ge::graphStatus BinaryCrossEntropyTiling::CalcInputDtype()
     this->inputXDtype = inputXDesc->GetDataType();
     OP_CHECK_IF(
         this->inputXDtype != ge::DT_FLOAT16 && this->inputXDtype != ge::DT_BF16 && this->inputXDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
-            Ops::Base::ToString(this->inputXDtype).c_str(), "float16, bfloat16 and float"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x", Ops::Base::ToString(this->inputXDtype).c_str(),
+                                  "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     auto inputYDesc = tilingContext->GetInputDesc(INPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputYDesc);
     this->inputYDtype = inputYDesc->GetDataType();
     OP_CHECK_IF(
         this->inputYDtype != ge::DT_FLOAT16 && this->inputYDtype != ge::DT_BF16 && this->inputYDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            Ops::Base::ToString(this->inputYDtype).c_str(), "float16, bfloat16 and float"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", Ops::Base::ToString(this->inputYDtype).c_str(),
+                                  "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -68,13 +67,13 @@ ge::graphStatus BinaryCrossEntropyTiling::CalcOutputDtype()
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
-            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float"),
+                                  Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     if (this->outputDtype != this->inputXDtype) {
         std::string dtypeMsg = Ops::Base::ToString(this->outputDtype) + " and " +
                                Ops::Base::ToString(this->inputXDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "output and x",
-            dtypeMsg.c_str(), "output and x should have the same dtype");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "output and x", dtypeMsg.c_str(),
+                                               "output and x should have the same dtype");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -91,20 +90,18 @@ ge::graphStatus BinaryCrossEntropyTiling::CheckInputShape()
     const gert::Shape& inputXShape = Ops::Base::EnsureNotScalar(xStorageShape->GetStorageShape());
 
     if (inputYShape != inputXShape) {
-        std::string shapesMsg = Ops::Base::ToString(inputXShape) + " and " +
-                                Ops::Base::ToString(inputYShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x and y",
-            shapesMsg.c_str(), "x and y should have the same shape");
+        std::string shapesMsg = Ops::Base::ToString(inputXShape) + " and " + Ops::Base::ToString(inputYShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x and y", shapesMsg.c_str(),
+                                               "x and y should have the same shape");
         return ge::GRAPH_FAILED;
     }
     auto weightStorageShape = tilingContext->GetOptionalInputShape(INPUT_WEIGHT_INDEX);
     if (weightStorageShape != nullptr) {
         const gert::Shape& inputWeightShape = Ops::Base::EnsureNotScalar(weightStorageShape->GetStorageShape());
         if (inputWeightShape != inputXShape) {
-            std::string shapesMsg = Ops::Base::ToString(inputXShape) + " and " +
-                                    Ops::Base::ToString(inputWeightShape);
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x and weight",
-                shapesMsg.c_str(), "weight and x should have the same shape");
+            std::string shapesMsg = Ops::Base::ToString(inputXShape) + " and " + Ops::Base::ToString(inputWeightShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x and weight", shapesMsg.c_str(),
+                                                   "weight and x should have the same shape");
             return ge::GRAPH_FAILED;
         }
         bceTilingKey.hasWeight = static_cast<uint32_t>(1);
@@ -135,7 +132,7 @@ ge::graphStatus BinaryCrossEntropyTiling::DoElewiseTiling()
         }
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
-            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
+                                  Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
     return eleBaseTilingResult;
@@ -147,34 +144,28 @@ ge::graphStatus BinaryCrossEntropyTiling::RunFp16ReduceTiling(ReduceOpInputParam
     bool hasWeight = static_cast<int32_t>(bceTilingKey.hasWeight) == 1;
     if (this->isReductionSum && !hasWeight) {
         // reducesum and optional input weight is null
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<BCESumDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
-                                                            &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<BCESumDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
+                                                                    &compileInfo->opInfo,
+                                                                    &tiling->reduceTiling) == ge::GRAPH_FAILED),
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionSum && hasWeight) {
         // reducesum and optional input weight is not null
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<BCEHasWeightSumDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
-                                                                     &compileInfo->opInfo,
-                                                                     &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<BCEHasWeightSumDag<half, float>::OpDag>(
+                         tilingContext, opInput, bceTilingKey.reduceTiling, &compileInfo->opInfo,
+                         &tiling->reduceTiling) == ge::GRAPH_FAILED),
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionMean && !hasWeight) {
         // reducemean and optional input weight is null
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<BCEMeanDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
-                                                             &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<BCEMeanDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
+                                                                     &compileInfo->opInfo,
+                                                                     &tiling->reduceTiling) == ge::GRAPH_FAILED),
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionMean && hasWeight) {
         // reducemean and optional input weight is not null
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<BCEHasWeightMeanDag<half, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
-                                                                      &compileInfo->opInfo,
-                                                                      &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<BCEHasWeightMeanDag<half, float>::OpDag>(
+                         tilingContext, opInput, bceTilingKey.reduceTiling, &compileInfo->opInfo,
+                         &tiling->reduceTiling) == ge::GRAPH_FAILED),
+                    OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -187,32 +178,30 @@ ge::graphStatus BinaryCrossEntropyTiling::RunFp32ReduceTiling(ReduceOpInputParam
         OP_CHECK_IF(
             // reducesum and optional input weight is null
             (Tiling4ReduceOp<BCESumDag<float, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
-                                                             &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+                                                             &compileInfo->opInfo,
+                                                             &tiling->reduceTiling) == ge::GRAPH_FAILED),
+            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionSum && hasWeight) {
         OP_CHECK_IF(
             // reducesum and optional input weight is not null
             (Tiling4ReduceOp<BCEHasWeightSumDag<float, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
                                                                       &compileInfo->opInfo,
                                                                       &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionMean && !hasWeight) {
         OP_CHECK_IF(
             // reducemean and optional input weight is null
             (Tiling4ReduceOp<BCEMeanDag<float, float>::OpDag>(tilingContext, opInput, bceTilingKey.reduceTiling,
-                                                              &compileInfo->opInfo, &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+                                                              &compileInfo->opInfo,
+                                                              &tiling->reduceTiling) == ge::GRAPH_FAILED),
+            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionMean && hasWeight) {
         OP_CHECK_IF(
             // reducemean and optional input weight is not null
             (Tiling4ReduceOp<BCEHasWeightMeanDag<float, float>::OpDag>(tilingContext, opInput,
                                                                        bceTilingKey.reduceTiling, &compileInfo->opInfo,
                                                                        &tiling->reduceTiling) == ge::GRAPH_FAILED),
-            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"),
-            return ge::GRAPH_FAILED);
+            OP_LOGE(tilingContext->GetNodeName(), "BinaryCrossEntropy tiling failed"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -221,23 +210,20 @@ ge::graphStatus BinaryCrossEntropyTiling::DoReduceTiling(const BinaryCrossEntrop
 {
     ReduceOpInputParam opInput;
     OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext, opInput, 0) == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext->GetNodeName(), "ReduceOp get x input failed"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "ReduceOp get x input failed"), return ge::GRAPH_FAILED);
     opInput.axes.resize(opInput.shape.size());
     for (size_t i = 0; i < opInput.shape.size(); i++) {
         opInput.axes[i] = i;
     }
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
         OP_CHECK_IF(RunFp16ReduceTiling(opInput, compileInfo) == ge::GRAPH_FAILED,
-                        OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         OP_CHECK_IF(RunFp32ReduceTiling(opInput, compileInfo) == ge::GRAPH_FAILED,
-                        OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"), return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
-            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
+                                  Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -250,8 +236,8 @@ ge::graphStatus BinaryCrossEntropyTiling::SetTilingData()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
 
     uint64_t tilingKey;
-    GEN_REDUCE_TILING_KEY(tilingKey, bceTilingKey.reduceTiling, bceTilingKey.reduction,
-                          bceTilingKey.hasWeight, bceTilingKey.dType);
+    GEN_REDUCE_TILING_KEY(tilingKey, bceTilingKey.reduceTiling, bceTilingKey.reduction, bceTilingKey.hasWeight,
+                          bceTilingKey.dType);
     OP_LOGI(tilingContext->GetNodeName(),
             "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, reduction is : %u, hasWeight is : "
             "%u, Dtype is %u",
@@ -275,17 +261,14 @@ ge::graphStatus BinaryCrossEntropyTiling::RunTiling(const BinaryCrossEntropyComp
     }
     OP_LOGD(tilingContext->GetNodeName(), "BinaryCrossEntropyTiling RunTiling enter.");
     // check input dtype
-    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED,
-                    OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"),
+                return ge::GRAPH_FAILED);
     // check output dtype
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED,
-                    OP_LOGE(tilingContext->GetNodeName(), "get output dtype failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext->GetNodeName(), "get output dtype failed"),
+                return ge::GRAPH_FAILED);
     // check input shape
-    OP_CHECK_IF(CheckInputShape() == ge::GRAPH_FAILED,
-                    OP_LOGE(tilingContext->GetNodeName(), "get output dtype failed"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext->GetNodeName(), "get output dtype failed"),
+                return ge::GRAPH_FAILED);
 
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
@@ -294,8 +277,7 @@ ge::graphStatus BinaryCrossEntropyTiling::RunTiling(const BinaryCrossEntropyComp
     auto iter = STR_2_INT.find(this->reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE_FOR_INVALID_VALUE(
-            tilingContext->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->isReductionNone = strcmp(this->reductionStr, "none") == 0;
     this->isReductionMean = strcmp(this->reductionStr, "mean") == 0;
@@ -305,13 +287,11 @@ ge::graphStatus BinaryCrossEntropyTiling::RunTiling(const BinaryCrossEntropyComp
     if (this->isReductionNone) {
         OP_LOGD(tilingContext->GetNodeName(), "use elewise pattern");
         OP_CHECK_IF(DoElewiseTiling() == ge::GRAPH_FAILED,
-                        OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
     } else if (this->isReductionMean || this->isReductionSum) {
         OP_LOGD(tilingContext->GetNodeName(), "use reduce pattern");
         OP_CHECK_IF(DoReduceTiling(compileInfo) == ge::GRAPH_FAILED,
-                        OP_LOGE(tilingContext->GetNodeName(), "reduceTiling failed"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "reduceTiling failed"), return ge::GRAPH_FAILED);
     }
     return SetTilingData();
 }
@@ -333,4 +313,4 @@ ge::graphStatus TilingPrepare4BinaryCrossEntropy([[maybe_unused]] gert::TilingPa
 IMPL_OP_OPTILING(BinaryCrossEntropy)
     .Tiling(Tiling4BinaryCrossEntropy)
     .TilingParse<BinaryCrossEntropyCompileInfo>(TilingPrepare4BinaryCrossEntropy);
-}  // namespace optiling
+} // namespace optiling

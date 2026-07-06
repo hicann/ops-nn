@@ -21,18 +21,11 @@
 using namespace op;
 using namespace std;
 
-class l2BnBackwardReduceTest : public testing::Test
-{
+class l2BnBackwardReduceTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "bn_backward_reduce_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "bn_backward_reduce_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "bn_backward_reduce_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "bn_backward_reduce_test TearDown" << std::endl; }
 };
 
 // *** tensor dtype test ***
@@ -55,10 +48,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_float_type)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -84,10 +76,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_float16_type)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -113,10 +104,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_bfloat16_type)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -143,10 +133,9 @@ TEST_F(l2BnBackwardReduceTest, Ascend910B2_case_bn_backward_recude_for_bfloat16_
         auto gradWeightDesc = TensorDesc(invstdDesc);
         auto gradBiasDesc = TensorDesc(meanDesc);
 
-        auto ut = OP_API_UT(
-            aclnnBatchNormReduceBackward,
-            INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-            OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+        auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                            INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                            OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -173,10 +162,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_invalid_type)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -202,10 +190,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_invalid_type_with_fal
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -232,10 +219,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_nchw_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -261,10 +247,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_nhwc_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -290,10 +275,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_hwcn_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -319,10 +303,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_ndhwc_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -348,10 +331,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_ncdhw_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -377,10 +359,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_invalid_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -406,10 +387,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_invalid_format_with_f
     auto gradWeightDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_NC1HWC0);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -436,10 +416,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_empty_input)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -465,10 +444,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_gradout_over_rank_ran
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -493,10 +471,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_input_over_rank_range
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -523,10 +500,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_with_diff_dtype)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -552,10 +528,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_with_diff_format)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -581,10 +556,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_out_shape_invalid)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -610,10 +584,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_null_input)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT((aclTensor*)nullptr, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT((aclTensor*)nullptr, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -638,10 +611,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_null_output)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, (aclTensor*)nullptr, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, (aclTensor*)nullptr, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -668,10 +640,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_precision_for_float_type)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -698,10 +669,9 @@ TEST_F(l2BnBackwardReduceTest, case_bn_backward_recude_for_contiguous)
     auto gradWeightDesc = TensorDesc(invstdDesc);
     auto gradBiasDesc = TensorDesc(meanDesc);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduceBackward,
-        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
-        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
+    auto ut = OP_API_UT(aclnnBatchNormReduceBackward,
+                        INPUT(gradOutDesc, inputDesc, meanDesc, invstdDesc, weightDesc, inputG, weightG, biasG),
+                        OUTPUT(sumDyDesc, sumDyXmuDesc, gradWeightDesc, gradBiasDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

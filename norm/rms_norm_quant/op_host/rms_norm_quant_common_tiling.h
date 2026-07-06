@@ -20,27 +20,11 @@
 
 namespace optiling {
 
-enum class NormInputIndex : int32_t
-{
-    X = 0,
-    GAMMA = 1,
-    BETA = 2,
-    RES_IN = 3
-};
+enum class NormInputIndex : int32_t { X = 0, GAMMA = 1, BETA = 2, RES_IN = 3 };
 
-enum class NormOutputIndex : int32_t
-{
-    Y = 0,
-    RES_OUT
-};
+enum class NormOutputIndex : int32_t { Y = 0, RES_OUT };
 
-enum class NormAttrIndex : int32_t
-{
-    EPSILON = 0,
-    HIGH_PRECISION_MODE = 1,
-    GEMMA_MODE = 2,
-    DST_TYPE = 3
-};
+enum class NormAttrIndex : int32_t { EPSILON = 0, HIGH_PRECISION_MODE = 1, GEMMA_MODE = 2, DST_TYPE = 3 };
 
 // compile info defination
 struct NormCommonCompileInfo {

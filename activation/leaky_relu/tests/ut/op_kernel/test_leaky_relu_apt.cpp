@@ -30,17 +30,13 @@ extern "C" __global__ __aicore__ void leaky_relu(GM_ADDR x, GM_ADDR y, GM_ADDR w
 
 class leaky_relu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "leaky_relu_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "leaky_relu_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "leaky_relu TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./leaky_relu_data");
     }
 };
-
 
 TEST_F(leaky_relu_test, test_case_fp32_1)
 {
@@ -52,7 +48,7 @@ TEST_F(leaky_relu_test, test_case_fp32_1)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     kernel_ut::SetupTestEnvironment("activation/leaky_relu/tests/ut/op_kernel/leaky_relu_data", "leaky_relu_data");
@@ -61,7 +57,7 @@ TEST_F(leaky_relu_test, test_case_fp32_1)
     std::string path = kernel_ut::GetTestWorkDir();
 
     LeakyReluTilingData* tilingDatafromBin = reinterpret_cast<LeakyReluTilingData*>(tiling);
-    
+
     tilingDatafromBin->baseTiling.dim0 = inputNum;
     tilingDatafromBin->baseTiling.coreNum = 1;
     tilingDatafromBin->baseTiling.ubFormer = 1024;
@@ -74,13 +70,13 @@ TEST_F(leaky_relu_test, test_case_fp32_1)
     tilingDatafromBin->baseTiling.elemNum = inputNum;
     tilingDatafromBin->baseTiling.scheMode = 0;
     tilingDatafromBin->negativeSlope = 0.01f;
-    
+
     ReadFile(path + "/leaky_relu_data/input_x.bin", xByteSize, x, xByteSize);
-    
+
     auto KernelLeakyRelu = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         ::leaky_relu<201, TPL_FP32>(x, y, workspace, tiling);
     };
-    
+
     ICPU_SET_TILING_KEY(1003);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelLeakyRelu, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));

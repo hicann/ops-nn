@@ -20,7 +20,6 @@
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct ApplyFusedEmaAdamUtTilingData {
     float lr = 1e-3;
     float beta1 = 0.9;

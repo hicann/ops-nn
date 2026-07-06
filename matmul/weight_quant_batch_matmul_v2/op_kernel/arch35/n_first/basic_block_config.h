@@ -91,91 +91,86 @@ struct UbBufferInfo {
 template <const VecAntiQuantConfig& vecConfig>
 __aicore__ constexpr UbBufferInfo GetNzBufferInfo()
 {
-    return {
-        .ubWeightOutputHighBitBufferNum = QUADRUPLE_BUFFER_NUM,
-        .weightInputLowbitUbTotalSize = 112 * GetKBUnit<int8_t>(), // 112KB
-        .highBitDataUbTotalSize = 128 * GetKBUnit<half>(),         // 128KB
-        .antiQuantScaleUbTotalSize = 4 * GetKBUnit<half>(),        // 4KB
-        .antiQuantScaleAfterCastUbTotalSize = 0,
-        .antiQuantOffsetUbTotalSize = 4 * GetKBUnit<half>(), // 4KB
-        .weightInputLowBitUbSingleBufferSize = 112 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleAfterCastUbSingleBufferSize = 0,
-        .antiQuantOffsetUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
-        .highBitDataUbSingleBufferSize = 128 * GetKBUnit<half>() / QUADRUPLE_BUFFER_NUM,
-        .antiQuantScaleMaskBufferSize = 0};
+    return {.ubWeightOutputHighBitBufferNum = QUADRUPLE_BUFFER_NUM,
+            .weightInputLowbitUbTotalSize = 112 * GetKBUnit<int8_t>(), // 112KB
+            .highBitDataUbTotalSize = 128 * GetKBUnit<half>(),         // 128KB
+            .antiQuantScaleUbTotalSize = 4 * GetKBUnit<half>(),        // 4KB
+            .antiQuantScaleAfterCastUbTotalSize = 0,
+            .antiQuantOffsetUbTotalSize = 4 * GetKBUnit<half>(), // 4KB
+            .weightInputLowBitUbSingleBufferSize = 112 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleAfterCastUbSingleBufferSize = 0,
+            .antiQuantOffsetUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
+            .highBitDataUbSingleBufferSize = 128 * GetKBUnit<half>() / QUADRUPLE_BUFFER_NUM,
+            .antiQuantScaleMaskBufferSize = 0};
 }
 
 template <const VecAntiQuantConfig& vecConfig>
 __aicore__ constexpr UbBufferInfo GetS8S4NzBufferInfo()
 {
-    return {
-        .ubWeightOutputHighBitBufferNum = QUADRUPLE_BUFFER_NUM,
-        .weightInputLowbitUbTotalSize = 96 * GetKBUnit<int8_t>(), // 96KB
-        .highBitDataUbTotalSize = 128 * GetKBUnit<int8_t>(),      // 128KB
-        .antiQuantScaleUbTotalSize = 12 * GetKBUnit<half>(),      // 12KB
-        .antiQuantScaleAfterCastUbTotalSize = 0,
-        .antiQuantOffsetUbTotalSize = 0,
-        .weightInputLowBitUbSingleBufferSize = 96 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum, // 32KB
-        .antiQuantScaleUbSingleBufferSize = 12 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,      // 4KB
-        .antiQuantScaleAfterCastUbSingleBufferSize = 0,
-        .antiQuantOffsetUbSingleBufferSize = 0,
-        .highBitDataUbSingleBufferSize = 128 * GetKBUnit<int8_t>() / QUADRUPLE_BUFFER_NUM, // 32KB
-        .antiQuantScaleMaskBufferSize = 32 / sizeof(uint64_t)};                            // 32B (4个uint64)
+    return {.ubWeightOutputHighBitBufferNum = QUADRUPLE_BUFFER_NUM,
+            .weightInputLowbitUbTotalSize = 96 * GetKBUnit<int8_t>(), // 96KB
+            .highBitDataUbTotalSize = 128 * GetKBUnit<int8_t>(),      // 128KB
+            .antiQuantScaleUbTotalSize = 12 * GetKBUnit<half>(),      // 12KB
+            .antiQuantScaleAfterCastUbTotalSize = 0,
+            .antiQuantOffsetUbTotalSize = 0,
+            .weightInputLowBitUbSingleBufferSize = 96 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum, // 32KB
+            .antiQuantScaleUbSingleBufferSize = 12 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,      // 4KB
+            .antiQuantScaleAfterCastUbSingleBufferSize = 0,
+            .antiQuantOffsetUbSingleBufferSize = 0,
+            .highBitDataUbSingleBufferSize = 128 * GetKBUnit<int8_t>() / QUADRUPLE_BUFFER_NUM, // 32KB
+            .antiQuantScaleMaskBufferSize = 32 / sizeof(uint64_t)};                            // 32B (4个uint64)
 }
 
 template <const VecAntiQuantConfig& vecConfig>
 __aicore__ constexpr UbBufferInfo GetNdBufferInfo()
 {
-    return {
-        .ubWeightOutputHighBitBufferNum = DOUBLE_BUFFER_NUM,
-        .weightInputLowbitUbTotalSize = 174 * GetKBUnit<int8_t>(), // 174KB
-        .highBitDataUbTotalSize = 66 * GetKBUnit<half>(),          // 66KB
-        .antiQuantScaleUbTotalSize = 4 * GetKBUnit<half>(),        // 4KB
-        .antiQuantScaleAfterCastUbTotalSize = 0,
-        .antiQuantOffsetUbTotalSize = 4 * GetKBUnit<half>(), // 4KB
-        .weightInputLowBitUbSingleBufferSize = 174 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleAfterCastUbSingleBufferSize = 0,
-        .antiQuantOffsetUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
-        .highBitDataUbSingleBufferSize = 66 * GetKBUnit<half>() / DOUBLE_BUFFER_NUM,
-        .antiQuantScaleMaskBufferSize = 0};
+    return {.ubWeightOutputHighBitBufferNum = DOUBLE_BUFFER_NUM,
+            .weightInputLowbitUbTotalSize = 174 * GetKBUnit<int8_t>(), // 174KB
+            .highBitDataUbTotalSize = 66 * GetKBUnit<half>(),          // 66KB
+            .antiQuantScaleUbTotalSize = 4 * GetKBUnit<half>(),        // 4KB
+            .antiQuantScaleAfterCastUbTotalSize = 0,
+            .antiQuantOffsetUbTotalSize = 4 * GetKBUnit<half>(), // 4KB
+            .weightInputLowBitUbSingleBufferSize = 174 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleAfterCastUbSingleBufferSize = 0,
+            .antiQuantOffsetUbSingleBufferSize = 4 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
+            .highBitDataUbSingleBufferSize = 66 * GetKBUnit<half>() / DOUBLE_BUFFER_NUM,
+            .antiQuantScaleMaskBufferSize = 0};
 }
 
 template <const VecAntiQuantConfig& vecConfig>
 __aicore__ constexpr UbBufferInfo GetMxFp4NdBufferInfo()
 {
-    return {
-        .ubWeightOutputHighBitBufferNum = DOUBLE_BUFFER_NUM,
-        .weightInputLowbitUbTotalSize = 128 * GetKBUnit<int8_t>(),    // 128KB
-        .highBitDataUbTotalSize = 66 * GetKBUnit<half>(),             // 66KB
-        .antiQuantScaleUbTotalSize = 8 * GetKBUnit<int8_t>(),         // 8KB
-        .antiQuantScaleAfterCastUbTotalSize = 32 * GetKBUnit<half>(), // 32KB
-        .antiQuantOffsetUbTotalSize = 0,
-        .weightInputLowBitUbSingleBufferSize = 128 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleUbSingleBufferSize = 8 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleAfterCastUbSingleBufferSize = 32 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
-        .antiQuantOffsetUbSingleBufferSize = 0,
-        .highBitDataUbSingleBufferSize = 66 * GetKBUnit<half>() / DOUBLE_BUFFER_NUM,
-        .antiQuantScaleMaskBufferSize = 0};
+    return {.ubWeightOutputHighBitBufferNum = DOUBLE_BUFFER_NUM,
+            .weightInputLowbitUbTotalSize = 128 * GetKBUnit<int8_t>(),    // 128KB
+            .highBitDataUbTotalSize = 66 * GetKBUnit<half>(),             // 66KB
+            .antiQuantScaleUbTotalSize = 8 * GetKBUnit<int8_t>(),         // 8KB
+            .antiQuantScaleAfterCastUbTotalSize = 32 * GetKBUnit<half>(), // 32KB
+            .antiQuantOffsetUbTotalSize = 0,
+            .weightInputLowBitUbSingleBufferSize = 128 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleUbSingleBufferSize = 8 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleAfterCastUbSingleBufferSize = 32 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
+            .antiQuantOffsetUbSingleBufferSize = 0,
+            .highBitDataUbSingleBufferSize = 66 * GetKBUnit<half>() / DOUBLE_BUFFER_NUM,
+            .antiQuantScaleMaskBufferSize = 0};
 }
 
 template <const VecAntiQuantConfig& vecConfig>
 __aicore__ constexpr UbBufferInfo GetMxFp4NzBufferInfo()
 {
-    return {
-        .ubWeightOutputHighBitBufferNum = QUADRUPLE_BUFFER_NUM,
-        .weightInputLowbitUbTotalSize = 64 * GetKBUnit<int8_t>(),     // 64KB
-        .highBitDataUbTotalSize = 128 * GetKBUnit<half>(),            // 128KB
-        .antiQuantScaleUbTotalSize = 8 * GetKBUnit<int8_t>(),         // 8KB
-        .antiQuantScaleAfterCastUbTotalSize = 16 * GetKBUnit<half>(), // 16KB
-        .antiQuantOffsetUbTotalSize = 0,
-        .weightInputLowBitUbSingleBufferSize = 64 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleUbSingleBufferSize = 8 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
-        .antiQuantScaleAfterCastUbSingleBufferSize = 16 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
-        .antiQuantOffsetUbSingleBufferSize = 0,
-        .highBitDataUbSingleBufferSize = 128 * GetKBUnit<half>() / QUADRUPLE_BUFFER_NUM,
-        .antiQuantScaleMaskBufferSize = 0};
+    return {.ubWeightOutputHighBitBufferNum = QUADRUPLE_BUFFER_NUM,
+            .weightInputLowbitUbTotalSize = 64 * GetKBUnit<int8_t>(),     // 64KB
+            .highBitDataUbTotalSize = 128 * GetKBUnit<half>(),            // 128KB
+            .antiQuantScaleUbTotalSize = 8 * GetKBUnit<int8_t>(),         // 8KB
+            .antiQuantScaleAfterCastUbTotalSize = 16 * GetKBUnit<half>(), // 16KB
+            .antiQuantOffsetUbTotalSize = 0,
+            .weightInputLowBitUbSingleBufferSize = 64 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleUbSingleBufferSize = 8 * GetKBUnit<int8_t>() / vecConfig.ubMte2BufferNum,
+            .antiQuantScaleAfterCastUbSingleBufferSize = 16 * GetKBUnit<half>() / vecConfig.ubMte2BufferNum,
+            .antiQuantOffsetUbSingleBufferSize = 0,
+            .highBitDataUbSingleBufferSize = 128 * GetKBUnit<half>() / QUADRUPLE_BUFFER_NUM,
+            .antiQuantScaleMaskBufferSize = 0};
 }
 
 template <typename xType, const WqmmConfig& wqmmConfig, const VecAntiQuantConfig& vecConfig>
@@ -215,9 +210,8 @@ __aicore__ constexpr VfConfig GetVfConfig()
     } else {
         // NZ transB=False
         if constexpr (wqmmConfig.antiQuantType == QuantType::MX) {
-            return {
-                .vfNStandardLen = 32 * GetKBUnit<half>() / vecConfig.ubMte2InnerSize,
-                .vfKStandardLen = vecConfig.ubMte2InnerSize};
+            return {.vfNStandardLen = 32 * GetKBUnit<half>() / vecConfig.ubMte2InnerSize,
+                    .vfKStandardLen = vecConfig.ubMte2InnerSize};
         } else if constexpr (IsSameType<xType, int8_t>::value) {
             return {.vfNStandardLen = 64, .vfKStandardLen = 512};
         } else {
@@ -226,4 +220,3 @@ __aicore__ constexpr VfConfig GetVfConfig()
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

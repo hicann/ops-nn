@@ -29,11 +29,13 @@ using namespace EmbeddingDenseGradBase;
 template <typename T, typename U, typename VGatherIndexDType, bool isScale>
 class KernelEmbeddingDenseGradFullLoad : public EmbeddingDenseGradProcessIndices<U> {
 public:
-    __aicore__ inline KernelEmbeddingDenseGradFullLoad(TPipe& pipe, const EmbeddingDenseGradSimdTilingData& tilingData) : pipe_(pipe), tiling_(tilingData){};
+    __aicore__ inline KernelEmbeddingDenseGradFullLoad(TPipe& pipe, const EmbeddingDenseGradSimdTilingData& tilingData)
+        : pipe_(pipe), tiling_(tilingData){};
 
     __aicore__ inline void InitGmBuffer(GM_ADDR gradWeight)
     {
-        uint64_t initPerCore = ops::Ceil(tiling_.embeddingDim * tiling_.numWeights, static_cast<uint64_t>(tiling_.clearBlock));
+        uint64_t initPerCore = ops::Ceil(tiling_.embeddingDim * tiling_.numWeights,
+                                         static_cast<uint64_t>(tiling_.clearBlock));
         uint64_t initLastCore = tiling_.embeddingDim * tiling_.numWeights - (tiling_.clearBlock - 1) * initPerCore;
         uint64_t initCoreReal = blockId_ == (tiling_.clearBlock - 1) ? initLastCore : initPerCore;
         if (blockId_ >= tiling_.clearBlock) {
@@ -41,14 +43,14 @@ public:
         }
 
         GlobalTensor<T> gradWeightGmInit;
-        gradWeightGmInit.SetGlobalBuffer((__gm__ T *)gradWeight + blockId_ * initPerCore);
+        gradWeightGmInit.SetGlobalBuffer((__gm__ T*)gradWeight + blockId_ * initPerCore);
         InitGlobalMemory(gradWeightGmInit, initCoreReal, (T)0);
     }
 
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR indices, GM_ADDR gradWeight, GM_ADDR workspace)
     {
-        gradGm_.SetGlobalBuffer((__gm__ T *)(grad));
-        gradWeightGm_.SetGlobalBuffer((__gm__ T *)(gradWeight));
+        gradGm_.SetGlobalBuffer((__gm__ T*)(grad));
+        gradWeightGm_.SetGlobalBuffer((__gm__ T*)(gradWeight));
 
         blockId_ = GetBlockIdx();
         blockNums_ = GetBlockNum();
@@ -57,7 +59,8 @@ public:
         gradFactorPerRow_ = tiling_.gradFactorPerRow;
         gradFactorPerRowTail_ = tiling_.gradFactorPerRowTail;
         if (blockId_ == tiling_.processBlock - 1) {
-            gradFactorPerRow_ = tiling_.embeddingDimLastCore < gradFactorPerRow_ ? tiling_.embeddingDimLastCore : gradFactorPerRow_;
+            gradFactorPerRow_ = tiling_.embeddingDimLastCore < gradFactorPerRow_ ? tiling_.embeddingDimLastCore :
+                                                                                   gradFactorPerRow_;
             loopPerCoreGrad_ = (tiling_.embeddingDimLastCore + gradFactorPerRow_ - 1) / gradFactorPerRow_;
             gradFactorPerRowTail_ = tiling_.embeddingDimLastCore - (loopPerCoreGrad_ - 1) * gradFactorPerRow_;
         }
@@ -65,7 +68,7 @@ public:
         InitGmBuffer(gradWeight);
         PipeBarrier<PIPE_ALL>();
         SyncAll();
-        
+
         if (tiling_.indicesFactor == 0) {
             return;
         }
@@ -83,8 +86,7 @@ public:
         DataCopyExtParams copyExtParamsGrad;
         copyExtParamsGrad.blockCount = static_cast<uint16_t>(tiling_.indicesFactor);
         copyExtParamsGrad.blockLen = static_cast<uint32_t>(gradPerRowNum * sizeof(T));
-        copyExtParamsGrad.srcStride = \
-            static_cast<uint32_t>((tiling_.embeddingDim - gradPerRowNum) * sizeof(T));
+        copyExtParamsGrad.srcStride = static_cast<uint32_t>((tiling_.embeddingDim - gradPerRowNum) * sizeof(T));
         copyExtParamsGrad.dstStride = 0;
         DataCopyPadExtParams<T> padParamsGrad{false, 0, 0, 0};
         DataCopyPad<T, PaddingMode::Compact>(gradLocal, gradGm_[gradOffset], copyExtParamsGrad, padParamsGrad);
@@ -98,9 +100,9 @@ public:
         LocalTensor<int32_t> noDupRes = this->noDupBuf_.template Get<int32_t>();
         LocalTensor<T> resLocal = outQueueRes_.AllocTensor<T>();
         LocalTensor<T> gradLocal = inQueueGrad_.DeQue<T>();
-        __local_mem__ T * gradLocalAddr = (__ubuf__ T *)gradLocal.GetPhyAddr();
-        __local_mem__ T *resBufAddr = (__ubuf__ T *)resLocal.GetPhyAddr();
-        __local_mem__ T *resBufBaseAddr = resBufAddr;
+        __local_mem__ T* gradLocalAddr = (__ubuf__ T*)gradLocal.GetPhyAddr();
+        __local_mem__ T* resBufAddr = (__ubuf__ T*)resLocal.GetPhyAddr();
+        __local_mem__ T* resBufBaseAddr = resBufAddr;
 
         int32_t sclar0 = 0;
 
@@ -111,9 +113,9 @@ public:
         GroupAddParams gradParams;
         gradParams.gradPerRowNum = gradPerRowNum;
         gradParams.gradWeightGmindex = 0;
-        gradParams.sortedIndiceIndexAddr = (__ubuf__ uint32_t *)sortedIndiceIndex.GetPhyAddr();
+        gradParams.sortedIndiceIndexAddr = (__ubuf__ uint32_t*)sortedIndiceIndex.GetPhyAddr();
         gradParams.ubOutOffset = 0;
- 
+
         __VEC_SCOPE__
         {
             for (uint16_t i = 0; i < (uint16_t)arNum; ++i) {
@@ -124,15 +126,15 @@ public:
 
                 gradParams.segCount = static_cast<uint32_t>(noDupRes(i));
                 gradParams.loopSegCount = static_cast<uint32_t>(noDupResProcessLoop(i));
-                gradParams.loopSegCoutTail = gradParams.segCount - gradParams.loopSegCount  * PROCESS_GROUP;
+                gradParams.loopSegCoutTail = gradParams.segCount - gradParams.loopSegCount * PROCESS_GROUP;
                 gradParams.ubOutOffset = 0;
                 colCount = gradPerRowNum;
                 resBufAddr = resBufBaseAddr + i * gradFactorPerRowAlign_;
                 for (uint16_t j = 0; j < (uint16_t)loopPerGradRow; ++j) {
                     MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<uint32_t>(colCount);
                     MicroAPI::Adds(serReg, serRegBase, perVfIndicesIdx_ * j, maskRegUpdate);
-                    this->template ProcessPerGradGroup<T, T, VGatherIndexDType, true, isScale>(gradLocalAddr,
-                                                                    resBufAddr, maskRegUpdate, serReg, gradParams);                   
+                    this->template ProcessPerGradGroup<T, T, VGatherIndexDType, true, isScale>(
+                        gradLocalAddr, resBufAddr, maskRegUpdate, serReg, gradParams);
                     gradParams.ubOutOffset = gradParams.ubOutOffset + vfLengthFp32_;
                 }
                 gradParams.gradWeightGmindex = gradParams.segCount + gradParams.gradWeightGmindex;
@@ -142,12 +144,12 @@ public:
         outQueueRes_.EnQue(resLocal);
     }
 
-    __aicore__ inline void CopyGradToGm(const LocalTensor<U> &sortedIndice, const LocalTensor<int32_t> &noDupRes, uint32_t gradPerRowNum,
-                                        uint64_t gradOffset, int64_t &arNum)
+    __aicore__ inline void CopyGradToGm(const LocalTensor<U>& sortedIndice, const LocalTensor<int32_t>& noDupRes,
+                                        uint32_t gradPerRowNum, uint64_t gradOffset, int64_t& arNum)
     {
         LocalTensor<T> resLocal = outQueueRes_.DeQue<T>();
 
-        DataCopyExtParams copyParam {1, static_cast<uint32_t>(gradPerRowNum * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParam{1, static_cast<uint32_t>(gradPerRowNum * sizeof(T)), 0, 0, 0};
         int32_t gradWeightGmOutIndex = shiftOffset_;
 
         uint32_t idxOffset = 0;
@@ -156,7 +158,8 @@ public:
             int64_t gradWeightGmOffset = gradWeightGmIndice * tiling_.embeddingDim + gradOffset;
             gradWeightGmOutIndex = gradWeightGmOutIndex + noDupRes(i);
 
-            if (gradWeightGmIndice == tiling_.paddingIdx || gradWeightGmIndice < 0 || gradWeightGmIndice >= tiling_.numWeights) {
+            if (gradWeightGmIndice == tiling_.paddingIdx || gradWeightGmIndice < 0 ||
+                gradWeightGmIndice >= tiling_.numWeights) {
                 continue;
             }
 
@@ -192,18 +195,18 @@ public:
     }
 
 private:
-    TPipe &pipe_;
+    TPipe& pipe_;
     TQue<QuePosition::VECIN, 1> inQueueGrad_;
     TQue<QuePosition::VECOUT, 1> outQueueRes_;
-    
+
     GlobalTensor<T> gradGm_;
     GlobalTensor<T> gradWeightGm_;
 
-    uint32_t blockId_ {0};
-    uint32_t blockNums_ {0};
+    uint32_t blockId_{0};
+    uint32_t blockNums_{0};
     uint32_t gradFactorPerRow_{0};
     uint32_t gradFactorPerRowTail_{0};
-    uint32_t gradFactorPerRowAlign_ {0};
+    uint32_t gradFactorPerRowAlign_{0};
     uint64_t loopPerCoreGrad_{0};
 
     // tilingData
@@ -214,5 +217,5 @@ private:
     static constexpr uint32_t gradNumAlignPerBlock_ = platform::GetUbBlockSize() / sizeof(T);
     static constexpr uint32_t shiftOffset_ = platform::GetUbBlockSize() / sizeof(U);
 };
-}
+} // namespace EmbeddingDenseGrad
 #endif

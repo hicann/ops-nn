@@ -15,15 +15,17 @@
 
 #include "index_put_with_sort_gather_data.h"
 
-extern "C" __global__ __aicore__ void index_put_with_sort(GM_ADDR self, GM_ADDR linear_index, GM_ADDR pos_idx, 
-                                                          GM_ADDR values, GM_ADDR self_ref, GM_ADDR workspace, GM_ADDR tiling) {
+extern "C" __global__ __aicore__ void index_put_with_sort(GM_ADDR self, GM_ADDR linear_index, GM_ADDR pos_idx,
+                                                          GM_ADDR values, GM_ADDR self_ref, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
+{
     if (workspace == nullptr) {
         return;
     }
     GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
     GET_TILING_DATA(tiling_data, tiling);
     AscendC::TPipe tpipe;
-# if (defined(DTYPE_SELF))
+#if (defined(DTYPE_SELF))
     if (TILING_KEY_IS(0)) {
         IndexPutWithSort::ScatterDataBetweenKernelOp<DTYPE_SELF, float> op;
         op.Init(self, linear_index, pos_idx, values, userWorkspace, &tiling_data, &tpipe);

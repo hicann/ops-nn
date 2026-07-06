@@ -13,7 +13,7 @@
 namespace ops {
 class MishGradV2 : public OpDef {
 public:
-    explicit MishGradV2(const char *name) : OpDef(name)
+    explicit MishGradV2(const char* name) : OpDef(name)
     {
         this->Input("grad")
             .ParamType(REQUIRED)
@@ -53,4 +53,4 @@ public:
 };
 
 OP_ADD(MishGradV2);
-}  // namespace ops
+} // namespace ops

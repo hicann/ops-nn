@@ -79,6 +79,6 @@ REG_OP(ApplyAdamD)
     .ATTR(use_locking, Bool, false)
     .ATTR(use_nesterov, Bool, false)
     .OP_END_FACTORY_REG(ApplyAdamD)
-}  // namespace ge
+} // namespace ge
 
-#endif  // GE_OP_APPLY_ADAM_D_PROTO_H
+#endif // GE_OP_APPLY_ADAM_D_PROTO_H

@@ -23,11 +23,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_
->
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_>
 class BlockSchedulerIterBatchBuiltIn {
 public:
     int64_t m_{0};
@@ -73,30 +69,18 @@ public:
         batchX3_ = params.tilingData->batchX3;
     }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return MMV3DivCeil(b_, iterBatchL1_);
-    }
+    __aicore__ inline int64_t GetTileNum() { return MMV3DivCeil(b_, iterBatchL1_); }
 
-    __aicore__ inline int64_t GetInnerBatch()
-    {
-        return innerBatch_;
-    }
+    __aicore__ inline int64_t GetInnerBatch() { return innerBatch_; }
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetIterBatchTuple()
     {
         return {iterBatchL1_, iterBatchL0_, 0, 0};
     }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Tuple()
-    {
-        return {baseM_, baseN_, baseK_, 0};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Tuple() { return {baseM_, baseN_, baseK_, 0}; }
 
-    __aicore__ inline int64_t GetHf32Flag()
-    {
-        return isHf32_;
-    }
+    __aicore__ inline int64_t GetHf32Flag() { return isHf32_; }
 
     __aicore__ inline int64_t GetBlockNum(ProblemShape shape, int64_t blockNum)
     {
@@ -109,15 +93,9 @@ public:
         return tilingBlockNum;
     }
 
-    __aicore__ inline BlockShape GetBlockShape(int64_t tileIdx)
-    {
-        return {m_, n_, k_, b_};
-    }
+    __aicore__ inline BlockShape GetBlockShape(int64_t tileIdx) { return {m_, n_, k_, b_}; }
 
-    __aicore__ inline BlockCoord GetBlockCoord(int64_t tileIdx)
-    {
-        return {0, 0, 0, tileIdx * iterBatchL1_};
-    }
+    __aicore__ inline BlockCoord GetBlockCoord(int64_t tileIdx) { return {0, 0, 0, tileIdx * iterBatchL1_}; }
 
     __aicore__ inline bool GetAL2CacheDisable()
     {
@@ -131,35 +109,17 @@ public:
                 l2CacheDisable_ == L2CacheMode::B_L2_CACHE_DISABLE);
     }
 
-    __aicore__ inline bool GetNeedNdDma()
-    {
-        return needNdDma_;
-    }
+    __aicore__ inline bool GetNeedNdDma() { return needNdDma_; }
 
-    __aicore__ inline int64_t GetBatchX3()
-    {
-        return batchX3_;
-    }
+    __aicore__ inline int64_t GetBatchX3() { return batchX3_; }
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInIterBatchScheduler,
-    TransA_,
-    TransB_
-> {
-  using SchedulerOp = BlockSchedulerIterBatchBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInIterBatchScheduler, TransA_,
+                              TransB_> {
+    using SchedulerOp = BlockSchedulerIterBatchBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

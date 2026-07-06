@@ -37,8 +37,7 @@ static constexpr uint32_t THREAD_NUM = 512;
 
 // ========== Helper: extract raw address from ListTensorDesc ==========
 
-__aicore__ inline uint64_t GetListTensorAddrValue(
-    GM_ADDR tensorListPtr, int64_t idx)
+__aicore__ inline uint64_t GetListTensorAddrValue(GM_ADDR tensorListPtr, int64_t idx)
 {
     __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
     uint64_t tensorPtrOffset = *dataAddr;
@@ -48,9 +47,8 @@ __aicore__ inline uint64_t GetListTensorAddrValue(
 
 // ========== Populate workspace with tensor metadata ==========
 
-__aicore__ inline void PopulateWorkspace(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-    GM_ADDR workspace, const ForeachDivListTilingData* tilingData)
+__aicore__ inline void PopulateWorkspace(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace,
+                                         const ForeachDivListTilingData* tilingData)
 {
     __gm__ int64_t* ws = reinterpret_cast<__gm__ int64_t*>(workspace);
     int32_t tensorCount = tilingData->tensorCount;
@@ -66,26 +64,25 @@ __aicore__ inline void PopulateWorkspace(
     __gm__ int64_t* elementCounts = ws + 1;
     __gm__ int64_t* x1Addrs = ws + 1 + tensorCount;
     __gm__ int64_t* x2Addrs = ws + 1 + 2 * tensorCount;
-    __gm__ int64_t* yAddrs  = ws + 1 + 3 * tensorCount;
+    __gm__ int64_t* yAddrs = ws + 1 + 3 * tensorCount;
 
     for (int32_t i = 0; i < tensorCount; i++) {
         elementCounts[i] = tilingData->elementCounts[i];
         x1Addrs[i] = static_cast<int64_t>(GetListTensorAddrValue(x1, i));
         x2Addrs[i] = static_cast<int64_t>(GetListTensorAddrValue(x2, i));
-        yAddrs[i]  = static_cast<int64_t>(GetListTensorAddrValue(y, i));
+        yAddrs[i] = static_cast<int64_t>(GetListTensorAddrValue(y, i));
     }
 }
 
 // ========== SIMT VF: generic div (float16 / float32) ==========
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachDivListComputeSimt(
-    int64_t elementCount,
-    __gm__ T* x1, __gm__ T* x2, __gm__ T* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachDivListComputeSimt(int64_t elementCount,
+                                                                                      __gm__ T* x1, __gm__ T* x2,
+                                                                                      __gm__ T* y)
 {
-    for (uint64_t index = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * THREAD_NUM + AscendC::Simt::GetThreadIdx());
+    for (uint64_t index =
+             static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * THREAD_NUM + AscendC::Simt::GetThreadIdx());
          index < static_cast<uint64_t>(elementCount);
          index += static_cast<uint64_t>(THREAD_NUM * AscendC::Simt::GetBlockNum())) {
         // IEEE 754: 0/0=NaN, non-zero/0=Inf, NaN propagation
@@ -95,13 +92,13 @@ inline void ForeachDivListComputeSimt(
 
 // ========== SIMT VF: bfloat16 div (float32 intermediate) ==========
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachDivListBf16ComputeSimt(
-    int64_t elementCount,
-    __gm__ bfloat16_t* x1, __gm__ bfloat16_t* x2, __gm__ bfloat16_t* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachDivListBf16ComputeSimt(int64_t elementCount,
+                                                                                          __gm__ bfloat16_t* x1,
+                                                                                          __gm__ bfloat16_t* x2,
+                                                                                          __gm__ bfloat16_t* y)
 {
-    for (uint64_t index = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * THREAD_NUM + AscendC::Simt::GetThreadIdx());
+    for (uint64_t index =
+             static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * THREAD_NUM + AscendC::Simt::GetThreadIdx());
          index < static_cast<uint64_t>(elementCount);
          index += static_cast<uint64_t>(THREAD_NUM * AscendC::Simt::GetBlockNum())) {
         bfloat16_t x1_val = x1[index];
@@ -117,9 +114,7 @@ inline void ForeachDivListBf16ComputeSimt(
 // ========== Process: float16 / float32 ==========
 
 template <typename T>
-__aicore__ inline void ProcessDiv(
-    GM_ADDR workspace,
-    const ForeachDivListTilingData* tilingData)
+__aicore__ inline void ProcessDiv(GM_ADDR workspace, const ForeachDivListTilingData* tilingData)
 {
     __gm__ int64_t* ws = reinterpret_cast<__gm__ int64_t*>(workspace);
     int32_t tensorCount = tilingData->tensorCount;
@@ -127,27 +122,27 @@ __aicore__ inline void ProcessDiv(
     __gm__ int64_t* elementCounts = ws + 1;
     __gm__ int64_t* x1Addrs = ws + 1 + tensorCount;
     __gm__ int64_t* x2Addrs = ws + 1 + 2 * tensorCount;
-    __gm__ int64_t* yAddrs  = ws + 1 + 3 * tensorCount;
+    __gm__ int64_t* yAddrs = ws + 1 + 3 * tensorCount;
 
     // Sequential traversal: iterate tensor pairs, call VF per pair
     for (int32_t i = 0; i < tensorCount; i++) {
         int64_t elemCount = elementCounts[i];
-        if (elemCount == 0) { continue; }  // skip empty tensor
+        if (elemCount == 0) {
+            continue;
+        } // skip empty tensor
 
         __gm__ T* x1_gm = reinterpret_cast<__gm__ T*>(x1Addrs[i]);
         __gm__ T* x2_gm = reinterpret_cast<__gm__ T*>(x2Addrs[i]);
-        __gm__ T* y_gm  = reinterpret_cast<__gm__ T*>(yAddrs[i]);
+        __gm__ T* y_gm = reinterpret_cast<__gm__ T*>(yAddrs[i]);
 
-        AscendC::Simt::VF_CALL<ForeachDivListComputeSimt<T>>(
-            AscendC::Simt::Dim3(THREAD_NUM), elemCount, x1_gm, x2_gm, y_gm);
+        AscendC::Simt::VF_CALL<ForeachDivListComputeSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), elemCount, x1_gm, x2_gm,
+                                                             y_gm);
     }
 }
 
 // ========== Process: bfloat16 ==========
 
-__aicore__ inline void ProcessDivBf16(
-    GM_ADDR workspace,
-    const ForeachDivListTilingData* tilingData)
+__aicore__ inline void ProcessDivBf16(GM_ADDR workspace, const ForeachDivListTilingData* tilingData)
 {
     __gm__ int64_t* ws = reinterpret_cast<__gm__ int64_t*>(workspace);
     int32_t tensorCount = tilingData->tensorCount;
@@ -155,18 +150,20 @@ __aicore__ inline void ProcessDivBf16(
     __gm__ int64_t* elementCounts = ws + 1;
     __gm__ int64_t* x1Addrs = ws + 1 + tensorCount;
     __gm__ int64_t* x2Addrs = ws + 1 + 2 * tensorCount;
-    __gm__ int64_t* yAddrs  = ws + 1 + 3 * tensorCount;
+    __gm__ int64_t* yAddrs = ws + 1 + 3 * tensorCount;
 
     for (int32_t i = 0; i < tensorCount; i++) {
         int64_t elemCount = elementCounts[i];
-        if (elemCount == 0) { continue; }
+        if (elemCount == 0) {
+            continue;
+        }
 
         __gm__ bfloat16_t* x1_gm = reinterpret_cast<__gm__ bfloat16_t*>(x1Addrs[i]);
         __gm__ bfloat16_t* x2_gm = reinterpret_cast<__gm__ bfloat16_t*>(x2Addrs[i]);
-        __gm__ bfloat16_t* y_gm  = reinterpret_cast<__gm__ bfloat16_t*>(yAddrs[i]);
+        __gm__ bfloat16_t* y_gm = reinterpret_cast<__gm__ bfloat16_t*>(yAddrs[i]);
 
-        AscendC::Simt::VF_CALL<ForeachDivListBf16ComputeSimt>(
-            AscendC::Simt::Dim3(THREAD_NUM), elemCount, x1_gm, x2_gm, y_gm);
+        AscendC::Simt::VF_CALL<ForeachDivListBf16ComputeSimt>(AscendC::Simt::Dim3(THREAD_NUM), elemCount, x1_gm, x2_gm,
+                                                              y_gm);
     }
 }
 

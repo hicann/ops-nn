@@ -29,15 +29,15 @@ struct SwigluMxQuantTilingData {
     int64_t inputDim2;
 
     // 3D block distribution (axis=-2 path)
-    int64_t dimNBlockNum;        // CeilDiv(N, 256)
-    int64_t dimNTail;            // N % 256 (0→256 tail)
-    int64_t dimMBlockNum;        // CeilDiv(M, 64)
-    int64_t dimMTail;            // M % 64 (0→64 tail)
-    int64_t blockCountPerBatch;  // dimMBlockNum * dimNBlockNum
+    int64_t dimNBlockNum;       // CeilDiv(N, 256)
+    int64_t dimNTail;           // N % 256 (0→256 tail)
+    int64_t dimMBlockNum;       // CeilDiv(M, 64)
+    int64_t dimMTail;           // M % 64 (0→64 tail)
+    int64_t blockCountPerBatch; // dimMBlockNum * dimNBlockNum
     // 3D grid core distribution (act=-2, axis=-1 path)
-    int64_t nCoreNum;            // cores in N direction
-    int64_t bCoreNum;            // cores in B (batch) direction
-    int64_t mCorePerB;           // M-cores per B-core
+    int64_t nCoreNum;  // cores in N direction
+    int64_t bCoreNum;  // cores in B (batch) direction
+    int64_t mCorePerB; // M-cores per B-core
 
     // Memory allocation parameters (axis=-1 path)
     // axis = -1, basicDim1 = 1, basicDim2 = 256

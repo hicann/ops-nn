@@ -45,27 +45,17 @@
 #define MAT_MUL_1V1_ND_ALIG_FIXPIPE 1
 #define MAT_MUL_1V2_ND_ALIG_FIXPIPE 2
 
-enum class MatMulV3ATrans : std::uint8_t
-{
-    A_NO_TRANS = MAT_MUL_NO_TRANS,
-    A_TRANS = MAT_MUL_TRANS
-};
+enum class MatMulV3ATrans : std::uint8_t { A_NO_TRANS = MAT_MUL_NO_TRANS, A_TRANS = MAT_MUL_TRANS };
 
-enum class MatMulV3BTrans : std::uint8_t
-{
-    B_NO_TRANS = MAT_MUL_NO_TRANS,
-    B_TRANS = MAT_MUL_TRANS
-};
+enum class MatMulV3BTrans : std::uint8_t { B_NO_TRANS = MAT_MUL_NO_TRANS, B_TRANS = MAT_MUL_TRANS };
 
-enum class MatMulV3ApiLevel : std::uint8_t
-{
+enum class MatMulV3ApiLevel : std::uint8_t {
     HIGH_LEVEL = MAT_MUL_HIGH_LEVEL,
     BASIC_LEVEL = MAT_MUL_BASIC_LEVEL,
     TENSOR_LEVEL = MAT_MUL_TENSOR_LEVEL
 };
 
-enum class MatMulV3BatchModel : std::uint8_t
-{
+enum class MatMulV3BatchModel : std::uint8_t {
     BATCH_MODEL = MAT_MUL_FOR_BATCH,
     SINGLE_BIAS_MODEL = MAT_MUL_ITER_BATCH_SINGLE_BIAS,
     BATCH_MATMUL_TO_MUL = MAT_MUL_BATCH_MATMUL_TO_MUL,
@@ -74,8 +64,7 @@ enum class MatMulV3BatchModel : std::uint8_t
     BROADCAST_BATCH_MODEL = MAT_MUL_BROADCAST_BATCH // 只用于BatchMatMul广播场景
 };
 
-enum class MatMulV3Model : std::uint8_t
-{
+enum class MatMulV3Model : std::uint8_t {
     BASIC = MAT_MUL_BASIC,
     STREAM_K = MAT_MUL_STREAM_K,
     K_EQUAL_ZERO = MAT_MUL_K_EQUAL_ZERO,
@@ -84,18 +73,15 @@ enum class MatMulV3Model : std::uint8_t
     SLICE = MAT_MUL_SLICE
 };
 
-enum class MatMulV3FullLoad : std::uint8_t
-{
+enum class MatMulV3FullLoad : std::uint8_t {
     NONE_FULL_LOAD = MAT_MUL_NO_FULL_LOAD,
     A_FULL_LOAD = MAT_MUL_A_FULL_LOAD,
     B_FULL_LOAD = MAT_MUL_B_FULL_LOAD,
     AB_FULL_LOAD = MAT_MUL_AB_FULL_LOAD
 };
 
-enum class MatMulV3L0C2Out : std::uint8_t
-{
+enum class MatMulV3L0C2Out : std::uint8_t {
     ON_THE_FLY = MAT_MUL_ON_THE_FLY,
     ND_FIXPIPE_1_1 = MAT_MUL_1V1_ND_ALIG_FIXPIPE,
     ND_FIXPIPE_1_2 = MAT_MUL_1V2_ND_ALIG_FIXPIPE
 };
-

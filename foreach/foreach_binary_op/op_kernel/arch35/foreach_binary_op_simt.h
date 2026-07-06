@@ -70,38 +70,30 @@ __simt_callee__ inline T BinaryApply(T a, T b)
 }
 
 // ========== Cast helpers (required for VF callee chain) ==========
-__simt_callee__ inline float CastBf16ToFloat(bfloat16_t val)
-{
-    return __bfloat162float(val);
-}
+__simt_callee__ inline float CastBf16ToFloat(bfloat16_t val) { return __bfloat162float(val); }
 
-__simt_callee__ inline bfloat16_t CastFloatToBf16(float val)
-{
-    return __float2bfloat16_rn(val);
-}
+__simt_callee__ inline bfloat16_t CastFloatToBf16(float val) { return __float2bfloat16_rn(val); }
 
 // ========== Direct compute kernel (float32, int32) ==========
 template <typename T, typename IDX_T, uint32_t OP>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachBinaryDirectSimt(
-    IDX_T count, __gm__ T* x1, __gm__ T* x2, __gm__ T* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachBinaryDirectSimt(IDX_T count,
+                                                                                                __gm__ T* x1,
+                                                                                                __gm__ T* x2,
+                                                                                                __gm__ T* y)
 {
-    for (IDX_T index = static_cast<IDX_T>(threadIdx.x);
-         index < count;
-         index += static_cast<IDX_T>(blockDim.x)) {
+    for (IDX_T index = static_cast<IDX_T>(threadIdx.x); index < count; index += static_cast<IDX_T>(blockDim.x)) {
         y[index] = BinaryApply<T, OP>(x1[index], x2[index]);
     }
 }
 
 // ========== FP16 compute kernel (via FP32 intermediate for precision) ==========
 template <typename IDX_T, uint32_t OP>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachBinaryFp16CastSimt(
-    IDX_T count, __gm__ half* x1, __gm__ half* x2, __gm__ half* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachBinaryFp16CastSimt(IDX_T count,
+                                                                                                  __gm__ half* x1,
+                                                                                                  __gm__ half* x2,
+                                                                                                  __gm__ half* y)
 {
-    for (IDX_T index = static_cast<IDX_T>(threadIdx.x);
-         index < count;
-         index += static_cast<IDX_T>(blockDim.x)) {
+    for (IDX_T index = static_cast<IDX_T>(threadIdx.x); index < count; index += static_cast<IDX_T>(blockDim.x)) {
         float x1_val = __half2float(x1[index]);
         float x2_val = __half2float(x2[index]);
         float result = BinaryApply<float, OP>(x1_val, x2_val);
@@ -111,13 +103,12 @@ inline void OpForeachBinaryFp16CastSimt(
 
 // ========== BF16 compute kernel (via FP32 intermediate) ==========
 template <typename IDX_T, uint32_t OP>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachBinaryBf16CastSimt(
-    IDX_T count, __gm__ bfloat16_t* x1, __gm__ bfloat16_t* x2, __gm__ bfloat16_t* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachBinaryBf16CastSimt(IDX_T count,
+                                                                                                  __gm__ bfloat16_t* x1,
+                                                                                                  __gm__ bfloat16_t* x2,
+                                                                                                  __gm__ bfloat16_t* y)
 {
-    for (IDX_T index = static_cast<IDX_T>(threadIdx.x);
-         index < count;
-         index += static_cast<IDX_T>(blockDim.x)) {
+    for (IDX_T index = static_cast<IDX_T>(threadIdx.x); index < count; index += static_cast<IDX_T>(blockDim.x)) {
         float x1_val = CastBf16ToFloat(x1[index]);
         float x2_val = CastBf16ToFloat(x2[index]);
         float result = BinaryApply<float, OP>(x1_val, x2_val);
@@ -128,8 +119,8 @@ inline void OpForeachBinaryBf16CastSimt(
 // ========== Process: per-core multi-tensor iteration with 32/64-bit dispatch ==========
 
 template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessFp16(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachBinaryOpTilingData* tilingData)
+__aicore__ inline void ForeachBinaryOpProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachBinaryOpTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
@@ -152,20 +143,19 @@ __aicore__ inline void ForeachBinaryOpProcessFp16(
         if (localCount > 0) {
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 asc_vf_call<OpForeachBinaryFp16CastSimt<int32_t, OP>>(
-                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, y_t + localStart);
             } else {
                 asc_vf_call<OpForeachBinaryFp16CastSimt<int64_t, OP>>(
-                    dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
             }
         }
     }
 }
 
 template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessFp32(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachBinaryOpTilingData* tilingData)
+__aicore__ inline void ForeachBinaryOpProcessFp32(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachBinaryOpTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
@@ -188,20 +178,19 @@ __aicore__ inline void ForeachBinaryOpProcessFp32(
         if (localCount > 0) {
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 asc_vf_call<OpForeachBinaryDirectSimt<float, int32_t, OP>>(
-                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, y_t + localStart);
             } else {
                 asc_vf_call<OpForeachBinaryDirectSimt<float, int64_t, OP>>(
-                    dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
             }
         }
     }
 }
 
 template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessInt32(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachBinaryOpTilingData* tilingData)
+__aicore__ inline void ForeachBinaryOpProcessInt32(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                   const ForeachBinaryOpTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
@@ -224,20 +213,19 @@ __aicore__ inline void ForeachBinaryOpProcessInt32(
         if (localCount > 0) {
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 asc_vf_call<OpForeachBinaryDirectSimt<int32_t, int32_t, OP>>(
-                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, y_t + localStart);
             } else {
                 asc_vf_call<OpForeachBinaryDirectSimt<int32_t, int64_t, OP>>(
-                    dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
             }
         }
     }
 }
 
 template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessBf16(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachBinaryOpTilingData* tilingData)
+__aicore__ inline void ForeachBinaryOpProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachBinaryOpTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
@@ -260,12 +248,11 @@ __aicore__ inline void ForeachBinaryOpProcessBf16(
         if (localCount > 0) {
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 asc_vf_call<OpForeachBinaryBf16CastSimt<int32_t, OP>>(
-                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, y_t + localStart);
             } else {
                 asc_vf_call<OpForeachBinaryBf16CastSimt<int64_t, OP>>(
-                    dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, y_t + localStart);
+                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
             }
         }
     }

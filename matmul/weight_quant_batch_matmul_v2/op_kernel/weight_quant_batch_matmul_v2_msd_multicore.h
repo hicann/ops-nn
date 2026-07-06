@@ -96,20 +96,19 @@ __aicore__ inline void CheckDataCopyParams(uint32_t blockCount, uint32_t blockLe
     ascendc_assert(blockLen >= BLOCK_LEN_MIN, "blockLen should >= 1");
     ascendc_assert(blockLen <= BLOCK_LEN_MAX, "blockLen should <= 65535");
 }
-__aicore__ inline void CheckDataCopyNd2nzParams(
-    uint32_t nValue, uint32_t dValue, uint32_t srcDValue, uint32_t dstNzC0Stride)
+__aicore__ inline void CheckDataCopyNd2nzParams(uint32_t nValue, uint32_t dValue, uint32_t srcDValue,
+                                                uint32_t dstNzC0Stride)
 {
     ascendc_assert(nValue <= NVALUE_MAX, "nValue should <= 16384");
     ascendc_assert(dValue <= DVALUE_MAX, "dValue should <= 65535");
     ascendc_assert(srcDValue >= SRC_DVALUE_MIN, "srcDValue should >= 1 ");
     ascendc_assert(srcDValue <= SRC_DVALUE_MAX, "srcDValue should <= 65535");
     ascendc_assert(dstNzC0Stride >= DST_NZ_C0_STRIDE_MIN, "dstNzC0Stride should >= 1");
-    ascendc_assert(
-        dstNzC0Stride <= DST_NZ_C0_STRIDE_MAX, "dstNzC0Stride should <= 16384");
+    ascendc_assert(dstNzC0Stride <= DST_NZ_C0_STRIDE_MAX, "dstNzC0Stride should <= 16384");
 }
 
-__aicore__ inline void SetDataCopyNd2nzParams(
-    Nd2NzParams& nd2nzParams, uint32_t nValue, uint32_t dValue, uint32_t srcDValue, uint32_t dstNzC0Stride)
+__aicore__ inline void SetDataCopyNd2nzParams(Nd2NzParams& nd2nzParams, uint32_t nValue, uint32_t dValue,
+                                              uint32_t srcDValue, uint32_t dstNzC0Stride)
 {
     nd2nzParams.ndNum = 1;
     nd2nzParams.nValue = nValue;
@@ -122,8 +121,8 @@ __aicore__ inline void SetDataCopyNd2nzParams(
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(
-    const LocalTensor<T> dst, const GlobalTensor<T> src, uint32_t dim1, uint32_t dim0, uint32_t fullDim0)
+__aicore__ inline void DataCopyPad2D(const LocalTensor<T> dst, const GlobalTensor<T> src, uint32_t dim1, uint32_t dim0,
+                                     uint32_t fullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
@@ -136,31 +135,28 @@ __aicore__ inline void DataCopyPad2D(
         padParams.rightPadding = CeilAlign(dim0, static_cast<uint32_t>(32 / sizeof(T))) - dim0;
         padParams.paddingValue = 0;
     }
-    SHORT_MIX_LOG(
-        "blockCount %d blockLen %d srcStride %d dstStride %d rightPadding %d", params.blockCount, params.blockLen,
-        params.srcStride, params.dstStride, padParams.rightPadding);
+    SHORT_MIX_LOG("blockCount %d blockLen %d srcStride %d dstStride %d rightPadding %d", params.blockCount,
+                  params.blockLen, params.srcStride, params.dstStride, padParams.rightPadding);
     DataCopyPad(dst, src, params, padParams);
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(
-    const GlobalTensor<T> dst, const LocalTensor<T> src, uint32_t dim1, uint32_t dim0, uint32_t srcFullDim0,
-    uint32_t dstFullDim0)
+__aicore__ inline void DataCopyPad2D(const GlobalTensor<T> dst, const LocalTensor<T> src, uint32_t dim1, uint32_t dim0,
+                                     uint32_t srcFullDim0, uint32_t dstFullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
     params.blockLen = dim0 * sizeof(T);
     params.srcStride = CeilDiv((srcFullDim0 - dim0) * sizeof(T), static_cast<uint64_t>(ONE_BLK_SIZE));
     params.dstStride = (dstFullDim0 - dim0) * sizeof(T);
-    SHORT_MIX_LOG(
-        "dim1 %d dim0 %d dstFullDim0 %d blockCount %d blockLen %d srcStride %d dstStride %d", dim1, dim0, dstFullDim0,
-        params.blockCount, params.blockLen, params.srcStride, params.dstStride);
+    SHORT_MIX_LOG("dim1 %d dim0 %d dstFullDim0 %d blockCount %d blockLen %d srcStride %d dstStride %d", dim1, dim0,
+                  dstFullDim0, params.blockCount, params.blockLen, params.srcStride, params.dstStride);
     DataCopyPad(dst, src, params);
 }
 
 template <typename T>
-__aicore__ inline void RowMaxFixTmpTensor(
-    const LocalTensor<T>& dst, const LocalTensor<T>& src, const LocalTensor<T>& tmpTensor, uint32_t m, uint32_t k)
+__aicore__ inline void RowMaxFixTmpTensor(const LocalTensor<T>& dst, const LocalTensor<T>& src,
+                                          const LocalTensor<T>& tmpTensor, uint32_t m, uint32_t k)
 {
     // 假设k已对齐
     constexpr uint32_t elemsPerRepeat = 256 / sizeof(T);
@@ -202,8 +198,8 @@ __aicore__ inline void RowMaxFixTmpTensor(
 }
 
 template <typename T>
-__aicore__ inline void RowSumFixTmpTensor(
-    const LocalTensor<T>& dst, const LocalTensor<T>& src, const LocalTensor<T>& tmpTensor, uint32_t m, uint32_t k)
+__aicore__ inline void RowSumFixTmpTensor(const LocalTensor<T>& dst, const LocalTensor<T>& src,
+                                          const LocalTensor<T>& tmpTensor, uint32_t m, uint32_t k)
 {
     // 假设k已对齐
     for (uint32_t idxM = 0; idxM < m; ++idxM) {
@@ -341,8 +337,8 @@ __aicore__ inline void RowSumInplace(const LocalTensor<T>& dst, const LocalTenso
 }
 
 template <typename T>
-__aicore__ inline void DivMC(
-    const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1, uint32_t dim0, uint32_t dim1)
+__aicore__ inline void DivMC(const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1,
+                             uint32_t dim0, uint32_t dim1)
 {
     constexpr uint32_t elemsPerRepeat = 256 / sizeof(T);
     uint32_t mainRepeatN = dim1 / elemsPerRepeat;
@@ -377,8 +373,8 @@ __aicore__ inline void DivMC(
 }
 
 template <typename T>
-__aicore__ inline void MulMC(
-    const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1, uint32_t dim0, uint32_t dim1)
+__aicore__ inline void MulMC(const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1,
+                             uint32_t dim0, uint32_t dim1)
 {
     // (m, n) <- (m, n) * (m, 8)
     constexpr uint32_t elemsPerRepeat = 256 / sizeof(T);
@@ -400,8 +396,8 @@ __aicore__ inline void MulMC(
 }
 
 template <typename T>
-__aicore__ inline void AddMV(
-    const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1, uint32_t dim0, uint32_t dim1)
+__aicore__ inline void AddMV(const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1,
+                             uint32_t dim0, uint32_t dim1)
 {
     // (m, n) <- (m, n) * (1, n)
     constexpr uint32_t elemsPerRepeat = 256 / sizeof(T);
@@ -426,8 +422,8 @@ __aicore__ inline void AddMV(
 }
 
 template <typename T>
-__aicore__ inline void MulMV(
-    const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1, uint32_t dim0, uint32_t dim1)
+__aicore__ inline void MulMV(const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1,
+                             uint32_t dim0, uint32_t dim1)
 {
     // (m, n) <- (m, n) * (1, n)
     constexpr uint32_t elemsPerRepeat = 256 / sizeof(T);
@@ -452,8 +448,8 @@ __aicore__ inline void MulMV(
 }
 
 template <typename T>
-__aicore__ inline void OuterProduct(
-    const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1, uint32_t dim0, uint32_t dim1)
+__aicore__ inline void OuterProduct(const LocalTensor<T> dst, const LocalTensor<T> src0, const LocalTensor<T> src1,
+                                    uint32_t dim0, uint32_t dim1)
 {
     // (m, 8) (1, n) -> (m, n)
     constexpr uint32_t elemsPerRepeat = 256 / sizeof(T);
@@ -512,13 +508,11 @@ __aicore__ inline void WaitForCube()
 }
 
 template <typename T, PrecisionType precisionType = PrecisionType::NONE>
-class PreprocessKernel
-{
+class PreprocessKernel {
 public:
-    __aicore__ inline PreprocessKernel()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR workspace, const WeightQuantBatchMatmulV2MsdTilingData* tilingData, TPipe* tPipe);
+    __aicore__ inline PreprocessKernel() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR workspace, const WeightQuantBatchMatmulV2MsdTilingData* tilingData,
+                                TPipe* tPipe);
     __aicore__ inline void Process();
 
     TQue<QuePosition::VECIN, 1> inQue_;
@@ -551,8 +545,9 @@ public:
 };
 
 template <typename T, PrecisionType precisionType>
-__aicore__ inline void PreprocessKernel<T, precisionType>::Init(
-    GM_ADDR x, GM_ADDR workspace, const WeightQuantBatchMatmulV2MsdTilingData* tilingData, TPipe* tPipe)
+__aicore__ inline void PreprocessKernel<T, precisionType>::Init(GM_ADDR x, GM_ADDR workspace,
+                                                                const WeightQuantBatchMatmulV2MsdTilingData* tilingData,
+                                                                TPipe* tPipe)
 {
     pipe = tPipe;
     tiling_ = tilingData;
@@ -699,8 +694,8 @@ __aicore__ inline void PreprocessKernel<T, precisionType>::Process()
         PipeBarrier<PIPE_V>();
         outQueA1A2_.EnQue<int8_t>(a2S8);
         a2S8 = outQueA1A2_.DeQue<int8_t>();
-        DataCopyPad(
-            workspaceXS8Global_[mSize_ * kSize_ + (singleM * curBlockIdx_ + offsetM) * kSize_], a2S8, aOutParams);
+        DataCopyPad(workspaceXS8Global_[mSize_ * kSize_ + (singleM * curBlockIdx_ + offsetM) * kSize_], a2S8,
+                    aOutParams);
         outQueA1A2_.FreeTensor(a2S8);
 
         outQueMax_.EnQue(xMax);
@@ -724,19 +719,15 @@ __aicore__ inline void PreprocessKernel<T, precisionType>::Process()
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType = PrecisionType::NONE>
-class WeightQuantBatchMatmulV2MsdMultiCoreKernel
-{
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType = PrecisionType::NONE>
+class WeightQuantBatchMatmulV2MsdMultiCoreKernel {
 public:
-    __aicore__ inline WeightQuantBatchMatmulV2MsdMultiCoreKernel()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
-        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-        const WeightQuantBatchMatmulV2MsdTilingData* tilingData, TPipe* tPipe);
+    __aicore__ inline WeightQuantBatchMatmulV2MsdMultiCoreKernel() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset,
+                                GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                const WeightQuantBatchMatmulV2MsdTilingData* tilingData, TPipe* tPipe);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessCube(uint32_t cubeSingleCoreN, uint32_t curCubeSingleCoreN);
     __aicore__ inline void LoadMaxSumToUb(uint32_t m);
@@ -799,17 +790,14 @@ public:
     uint32_t elemsC1C2;
 };
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
 __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    precisionType>::
-    Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
-        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
-        const WeightQuantBatchMatmulV2MsdTilingData* tilingData, TPipe* tPipe)
+    precisionType>::Init(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
+                         GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                         const WeightQuantBatchMatmulV2MsdTilingData* tilingData, TPipe* tPipe)
 {
     tiling_ = tilingData;
     PreprocessKernel<xType, precisionType> op;
@@ -846,10 +834,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     reduceSumWorkspaceGm_.SetGlobalBuffer((__gm__ float*)(workspace + alignedOffset));
 
     alignedOffset += alignedSize;
-    alignedSize =
-        tiling_->cubeBlockDimN * CeilAlign(
-                                     static_cast<uint64_t>(2 * m * tiling_->matmulTiling.singleCoreN * sizeof(int32_t)),
-                                     static_cast<uint64_t>(512));
+    alignedSize = tiling_->cubeBlockDimN *
+                  CeilAlign(static_cast<uint64_t>(2 * m * tiling_->matmulTiling.singleCoreN * sizeof(int32_t)),
+                            static_cast<uint64_t>(512));
     elemsC1C2 = alignedSize / tiling_->cubeBlockDimN / sizeof(float);
     workspaceCS32Global_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(workspace + alignedOffset), alignedSize);
 
@@ -873,8 +860,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     // 初始化UB Tbuffer，3 为 offset、scale、bias
     pipe_->InitBuffer(bufFix_, 3 * antiQuantOffsetCalcShape * sizeof(float));
     tnsAntiQuantOffsetF32_ = bufFix_.Get<float>();
-    tnsAntiQuantScaleF32_ =
-        bufFix_.GetWithOffset<float>(antiQuantOffsetCalcShape, antiQuantOffsetCalcShape * sizeof(float));
+    tnsAntiQuantScaleF32_ = bufFix_.GetWithOffset<float>(antiQuantOffsetCalcShape,
+                                                         antiQuantOffsetCalcShape * sizeof(float));
     tnsBiasF32_ = bufFix_.GetWithOffset<float>(antiQuantOffsetCalcShape, 2 * antiQuantOffsetCalcShape * sizeof(float));
 
     pipe_->InitBuffer(bufOuterProductF32_, ubCalcShape_ * sizeof(float));
@@ -899,13 +886,12 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     pipe_->InitBuffer(outQue_, 1, ubCalcShape_ * sizeof(half));
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
-__aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    precisionType>::BL1PreLoad(TPipe* tPipe)
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
+__aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<xType, wType, biasType, yType, aTrans, bTrans,
+                                                                  antiQuantType, hasAntiQuantOffset, quantType,
+                                                                  weightFormat, precisionType>::BL1PreLoad(TPipe* tPipe)
 {
     if ASCEND_IS_AIV {
         return;
@@ -924,10 +910,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
 __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     precisionType>::BL1PreLoadNd(TPipe* tPipe)
@@ -984,10 +969,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     }
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
 __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     precisionType>::BL1PreLoadNz(TPipe* tPipe)
@@ -1038,10 +1022,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     PipeBarrier<PIPE_MTE2>(); // matmul开始的时候,preload可能还未完成，造成精度问题。实测不加同步会有随机精度问题
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
 __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     precisionType>::ProcessCube(uint32_t cubeSingleCoreN, uint32_t curCubeSingleCoreN)
@@ -1074,10 +1057,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     mmObj.IterateAll(workspaceCS32Global_[curBlockIdx_ * cubeSingleCoreN]);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
 __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     precisionType>::LoadMaxSumToUb(uint32_t n)
@@ -1096,10 +1078,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     inQueMaxSum_.EnQue(tnsMax_);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
 __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
     precisionType>::LoadAntiQuantOffsetScaleToUb(uint32_t offsetN, uint32_t n)
@@ -1125,13 +1106,12 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
     inQueAntiQuantScale_.FreeTensor(tnsAntiQuantScaleB16_);
 }
 
-template <
-    typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
-    QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
-    PrecisionType precisionType>
-__aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
-    xType, wType, biasType, yType, aTrans, bTrans, antiQuantType, hasAntiQuantOffset, quantType, weightFormat,
-    precisionType>::Process()
+template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans,
+          QuantType antiQuantType, bool hasAntiQuantOffset, QuantType quantType, CubeFormat weightFormat,
+          PrecisionType precisionType>
+__aicore__ inline void
+WeightQuantBatchMatmulV2MsdMultiCoreKernel<xType, wType, biasType, yType, aTrans, bTrans, antiQuantType,
+                                           hasAntiQuantOffset, quantType, weightFormat, precisionType>::Process()
 {
     if constexpr (IsSameType<wType, int4b_t>::value) {
         return;
@@ -1197,9 +1177,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
 
             offsetGm = curCubeBlockIdx * cubeSingleCoreN + offsetM * n;
             if constexpr (hasAntiQuantOffset) {
-                OuterProduct(
-                    tnsAntiQuantOffsetMnF32_, tnsSum_[offsetM * 8], tnsAntiQuantOffsetF32_, curBaseM,
-                    cubeSingleCoreNAligned);
+                OuterProduct(tnsAntiQuantOffsetMnF32_, tnsSum_[offsetM * 8], tnsAntiQuantOffsetF32_, curBaseM,
+                             cubeSingleCoreNAligned);
             }
 
             if (offsetM == startM) {
@@ -1207,9 +1186,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
             }
 
             tnsC1S32_ = inQueC1_.AllocTensor<int32_t>();
-            SHORT_MIX_LOG(
-                "offsetGm %d curCubeBlockIdx %d elemsC1C2 %d offsetM %d curCubeSingleCoreN %d", offsetGm,
-                curCubeBlockIdx, elemsC1C2, offsetM, curCubeSingleCoreN);
+            SHORT_MIX_LOG("offsetGm %d curCubeBlockIdx %d elemsC1C2 %d offsetM %d curCubeSingleCoreN %d", offsetGm,
+                          curCubeBlockIdx, elemsC1C2, offsetM, curCubeSingleCoreN);
             DataCopyPad2D(tnsC1S32_, workspaceCS32Global_[offsetGm], curBaseM, curCubeSingleCoreN, n);
             inQueC1_.EnQue(tnsC1S32_);
             inQueC1_.DeQue<int32_t>();
@@ -1269,9 +1247,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2MsdMultiCoreKernel<
                 PipeBarrier<PIPE_V>();
                 outQue_.EnQue(tnsCB16);
                 tnsCB16 = outQue_.DeQue<yType>();
-                DataCopyPad2D(
-                    yGlobal_[offsetM * n + curCubeBlockIdx * cubeSingleCoreN], tnsCB16, curBaseM, curCubeSingleCoreN,
-                    cubeSingleCoreNAligned, n);
+                DataCopyPad2D(yGlobal_[offsetM * n + curCubeBlockIdx * cubeSingleCoreN], tnsCB16, curBaseM,
+                              curCubeSingleCoreN, cubeSingleCoreNAligned, n);
                 outQue_.FreeTensor(tnsCB16);
             }
         }

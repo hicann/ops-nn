@@ -34,11 +34,8 @@ extern "C" {
  * @param executor [out] Executor handle
  * @return aclnnStatus
  */
-ACLNN_API aclnnStatus aclnnFastGeluV2GetWorkspaceSize(
-    const aclTensor *x,
-    const aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnFastGeluV2GetWorkspaceSize(const aclTensor* x, const aclTensor* out, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor);
 
 /**
  * @brief Execute FastGeluV2 computation
@@ -48,11 +45,8 @@ ACLNN_API aclnnStatus aclnnFastGeluV2GetWorkspaceSize(
  * @param stream [in] ACL stream
  * @return aclnnStatus
  */
-ACLNN_API aclnnStatus aclnnFastGeluV2(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFastGeluV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      aclrtStream stream);
 
 #ifdef __cplusplus
 }

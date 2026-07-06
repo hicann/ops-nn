@@ -26,8 +26,7 @@
 #endif
 #include "log_softmax_grad_base.h"
 
-namespace LogSoftmaxGradOps
-{
+namespace LogSoftmaxGradOps {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 
@@ -38,8 +37,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T>
-class LogSoftmaxGradARSmallR
-{
+class LogSoftmaxGradARSmallR {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
     static constexpr int64_t DATA_BLOCK_COUNT = 16;
@@ -51,10 +49,7 @@ class LogSoftmaxGradARSmallR
 public:
     __aicore__ inline LogSoftmaxGradARSmallR(){};
 
-    __aicore__ inline LogSoftmaxGradARSmallR(TPipe* pipeIn)
-    {
-        pipe_ = pipeIn;
-    }
+    __aicore__ inline LogSoftmaxGradARSmallR(TPipe* pipeIn) { pipe_ = pipeIn; }
 
     __aicore__ inline void Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y, const SoftmaxGradARSmallRTilingData* tilingDataIn)
     {
@@ -64,7 +59,7 @@ public:
         x1Gm_.SetGlobalBuffer((__gm__ T*)x1);
         yGm_.SetGlobalBuffer((__gm__ T*)y);
 
-        int64_t xShapeLen = tilingData_->tileA0Len * tilingData_->rAligned; 
+        int64_t xShapeLen = tilingData_->tileA0Len * tilingData_->rAligned;
         pipe_->InitBuffer(x0Queue_, BUFFER_NUM, xShapeLen * sizeof(T));
         pipe_->InitBuffer(x1Queue_, BUFFER_NUM, xShapeLen * sizeof(T));
         pipe_->InitBuffer(yQueue_, BUFFER_NUM, xShapeLen * sizeof(T));
@@ -82,7 +77,9 @@ public:
         tmpLocal_ = xTmpBuf_.Get<float>();
 
         int64_t xOffset = beginIdx * tilingData_->tileA0Len * tilingData_->totalRLen;
-        CopyInAndTransPose(xOffset, (beginIdx == tilingData_->totalTiles - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len, tilingData_->totalRLen);
+        CopyInAndTransPose(xOffset,
+                           (beginIdx == tilingData_->totalTiles - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len,
+                           tilingData_->totalRLen);
         int curIdx;
         uint32_t curTileA0Len = tilingData_->tileA0Len;
         uint32_t nextTileA0Len = tilingData_->tileA0Len;
@@ -127,7 +124,8 @@ private:
     __aicore__ inline void CalcReduceSum(const __local_mem__ T* gradLocal, uint32_t curTileA0Len)
     {
         __local_mem__ float* tmpAddr = (__local_mem__ float*)tmpLocal_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned].GetPhyAddr();
+        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
+                                            .GetPhyAddr();
 
         uint32_t tileA0Len = tilingData_->tileA0Len;
         uint16_t curTileRLenVl = static_cast<uint16_t>(tilingData_->totalRLen);
@@ -154,15 +152,15 @@ private:
 
         xSumTensor_ = xSumBuffer_.Get<float>();
         uint32_t srcShape[CONST_TWO] = {uint32_t(tilingData_->totalRLen), uint32_t(tilingData_->tileA0Len)};
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(xSumTensor_, tmpLocal_, srcShape,
-                                                                      false);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(xSumTensor_, tmpLocal_, srcShape, false);
     }
 
     __aicore__ inline void CalcOutput(const __local_mem__ T* gradLocal, const __local_mem__ T* xLocal,
                                       uint32_t curTileA0Len)
     {
         __local_mem__ float* xSumLocal = (__local_mem__ float*)xSumTensor_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned].GetPhyAddr();
+        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
+                                            .GetPhyAddr();
         tmpLocalTy_ = tmpLocal_.template ReinterpretCast<T>();
         __local_mem__ T* tmpAddrTy = (__local_mem__ T*)tmpLocalTy_.GetPhyAddr();
 
@@ -193,7 +191,7 @@ private:
 
                     if constexpr (xToFp32_) {
                         MicroAPI::DataCopy(tmpAddrTy + xOffset, gradReg, pregMask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, gradReg, pregMask);
                         MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16, pregMask);
@@ -223,7 +221,8 @@ private:
             for (int j = 0; j < DATA_BLOCK_COUNT_HALF; j++) {
                 uint32_t offset = DATA_BLOCK_COUNT_HALF * i + DATA_BLOCK_COUNT_HALF * rRepeartTimes * j;
                 dstLocalList[j * CONST_TWO] = yLocal[offset];
-                dstLocalList[j * CONST_TWO + 1] = yLocal[offset + DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
+                dstLocalList[j * CONST_TWO + 1] = yLocal[offset +
+                                                         DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
             }
 
             AscendC::TransDataTo5HD(dstLocalList, srcLocalList, params);
@@ -272,7 +271,7 @@ private:
     {
         if constexpr (xToFp32_) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
             Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -314,7 +313,7 @@ private:
     {
         DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = curTileA0Len;
-        copyOutParams.blockLen =  tilingData_->totalRLen * sizeof(T);
+        copyOutParams.blockLen = tilingData_->totalRLen * sizeof(T);
         copyOutParams.srcStride = 0;
         copyOutParams.dstStride = 0;
         DataCopyPad(yGm_[yGmOffset], yLocal[0], copyOutParams);
@@ -357,6 +356,6 @@ private:
 
     static constexpr bool xToFp32_ = IsSameType<T, float>::value;
 };
-}  // namespace LogSoftmaxGradOps
+} // namespace LogSoftmaxGradOps
 
 #endif

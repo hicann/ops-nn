@@ -23,19 +23,13 @@
 #include "avg_pool_common.h"
 #include "pooling/avg_pool/op_kernel/arch35/avg_pool_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 
-class AvgPoolCommonNHWCSmallKernelTiling : public TilingBaseClass
-{
+class AvgPoolCommonNHWCSmallKernelTiling : public TilingBaseClass {
 public:
-    explicit AvgPoolCommonNHWCSmallKernelTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit AvgPoolCommonNHWCSmallKernelTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~AvgPoolCommonNHWCSmallKernelTiling() override
-    {
-    }
+    ~AvgPoolCommonNHWCSmallKernelTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -55,13 +49,12 @@ public:
     uint64_t ubSize_ = 0;
 
 private:
-    
     void InitializationVars();
     bool IsBufferCapable();
     void DoUBTilingSingle();
     void DoBlockTiling();
-    int64_t CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows,
-                           int64_t outCols, bool isPadding, bool needCalCDivisorBuffer = false);
+    int64_t CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols, bool isPadding,
+                           bool needCalCDivisorBuffer = false);
     void CalcSplitMaxCols(int64_t minInRows);
     void CalcSplitMaxRows(int64_t maxInCols);
     void CalcSplitMaxBatch(int64_t oneBacthBuffer, int64_t oneBatchInputSize);
@@ -103,31 +96,21 @@ private:
     int64_t divisor_{1};
 };
 
-
-class AvgPoolNHWCSmallKernelTiling : public AvgPoolCommonNHWCSmallKernelTiling
-{
+class AvgPoolNHWCSmallKernelTiling : public AvgPoolCommonNHWCSmallKernelTiling {
 public:
-    explicit AvgPoolNHWCSmallKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCSmallKernelTiling(context)
-    {
-    }
-    ~AvgPoolNHWCSmallKernelTiling() override
-    {
-    }
+    explicit AvgPoolNHWCSmallKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCSmallKernelTiling(context) {}
+    ~AvgPoolNHWCSmallKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class AvgPoolV2NHWCSmallKernelTiling : public AvgPoolCommonNHWCSmallKernelTiling
-{
+class AvgPoolV2NHWCSmallKernelTiling : public AvgPoolCommonNHWCSmallKernelTiling {
 public:
     explicit AvgPoolV2NHWCSmallKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCSmallKernelTiling(context)
-    {
-    }
-    ~AvgPoolV2NHWCSmallKernelTiling() override
-    {
-    }
+    {}
+    ~AvgPoolV2NHWCSmallKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;

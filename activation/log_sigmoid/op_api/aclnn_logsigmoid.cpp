@@ -27,19 +27,20 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                            op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCENDBF16_INPUT_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                           op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> OUT_BF16_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-inline static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) {
+inline static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor)
+{
     auto shape = x->GetViewShape();
     size_t dimSize = x->GetViewShape().GetDimNum();
 

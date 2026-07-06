@@ -33,8 +33,10 @@ class KernelMishGrad {
 public:
     __aicore__ inline KernelMishGrad(){};
 
-    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t haveTanhx);
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, uint64_t smallCoreDataNum,
+                                uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                uint64_t tailBlockNum, uint64_t haveTanhx);
     __aicore__ inline void Process();
 
 private:
@@ -46,7 +48,8 @@ private:
     AscendC::TPipe pipe;
     AscendC::TQue<AscendC::TPosition::VECIN, BUFFER_NUM> inQueueGrad, inQueueX, inQueueTanhx;
     AscendC::TQue<AscendC::TPosition::VECOUT, BUFFER_NUM> outQueueGrad;
-    AscendC::TBuf<AscendC::TPosition::VECCALC> tmpQueue0, tmpQueue1, tmpQueue2, tmpQueue3, tmpQueue4, tmpQueue5, tmpQueueMask1, tmpQueueMask2, tmpQueueMask3, tmpQueueMask4;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> tmpQueue0, tmpQueue1, tmpQueue2, tmpQueue3, tmpQueue4, tmpQueue5,
+        tmpQueueMask1, tmpQueueMask2, tmpQueueMask3, tmpQueueMask4;
 
     AscendC::GlobalTensor<TYPE_X> gradGm, xGm, tanhxGm, outputGm;
     uint64_t coreDataNum;
@@ -58,8 +61,11 @@ private:
 };
 
 template <typename TYPE_X>
-__aicore__ inline void KernelMishGrad<TYPE_X>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t haveTanhx)
+__aicore__ inline void KernelMishGrad<TYPE_X>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad,
+                                                    uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                                    uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                                    uint64_t tileDataNum, uint64_t smallTailDataNum,
+                                                    uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t haveTanhx)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     this->haveTanhx = haveTanhx;
@@ -76,11 +82,11 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Init(GM_ADDR grad, GM_ADDR x, GM_
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    gradGm.SetGlobalBuffer((__gm__ TYPE_X *)grad + globalBufferIndex, this->coreDataNum);
-    xGm.SetGlobalBuffer((__gm__ TYPE_X *)x + globalBufferIndex, this->coreDataNum);
-    outputGm.SetGlobalBuffer((__gm__ TYPE_X *)x_grad + globalBufferIndex, this->coreDataNum);
+    gradGm.SetGlobalBuffer((__gm__ TYPE_X*)grad + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
+    outputGm.SetGlobalBuffer((__gm__ TYPE_X*)x_grad + globalBufferIndex, this->coreDataNum);
     if (this->haveTanhx == 1) {
-        tanhxGm.SetGlobalBuffer((__gm__ TYPE_X *)tanhx + globalBufferIndex, this->coreDataNum);
+        tanhxGm.SetGlobalBuffer((__gm__ TYPE_X*)tanhx + globalBufferIndex, this->coreDataNum);
         pipe.InitBuffer(inQueueTanhx, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));
         if constexpr (!std::is_same_v<TYPE_X, float32_t>) {
             pipe.InitBuffer(tmpQueue2, this->tileDataNum * sizeof(float));
@@ -110,7 +116,7 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::CopyIn(int32_t progress)
 {
     AscendC::LocalTensor<TYPE_X> gradLocal = inQueueGrad.AllocTensor<TYPE_X>();
     AscendC::LocalTensor<TYPE_X> xLocal = inQueueX.AllocTensor<TYPE_X>();
-    if (this->haveTanhx == 1){
+    if (this->haveTanhx == 1) {
         AscendC::LocalTensor<TYPE_X> tanhxLocal = inQueueTanhx.AllocTensor<TYPE_X>();
         AscendC::DataCopy(tanhxLocal, tanhxGm[progress * this->tileDataNum], this->processDataNum);
         inQueueTanhx.EnQue(tanhxLocal);
@@ -148,7 +154,8 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Compute(int32_t progress)
             AscendC::LocalTensor<half> tmpMask1Local = tmpQueueMask3.AllocTensor<half>();
             AscendC::LocalTensor<half> tmpMask2Local = tmpQueueMask4.AllocTensor<half>();
             AscendC::Cast(tmp4Local, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-            AscendC::CompareScalar(mask1Local, tmp4Local, static_cast<float>(0), AscendC::CMPMODE::GT, this->processDataNum);
+            AscendC::CompareScalar(mask1Local, tmp4Local, static_cast<float>(0), AscendC::CMPMODE::GT,
+                                   this->processDataNum);
             AscendC::Muls(tmp1Local, tmp4Local, static_cast<float>(-1.0), this->processDataNum);
             AscendC::Muls(tmp2Local, tmp4Local, static_cast<float>(-2.0), this->processDataNum);
             AscendC::Exp(tmp1Local, tmp1Local, this->processDataNum);
@@ -166,8 +173,10 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Compute(int32_t progress)
             AscendC::Sub(tmp0Local, tmp3Local, tmp0Local, this->processDataNum);
             AscendC::Mul(tmp0Local, tmp1Local, tmp0Local, this->processDataNum);
             AscendC::Add(tmp0Local, tmp5Local, tmp0Local, this->processDataNum);
-            AscendC::Select(tmp5Local, mask1Local, tmp0Local, static_cast<float>(0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
-            AscendC::CompareScalar(mask2Local, tmp4Local, static_cast<float>(0), AscendC::CMPMODE::LE, this->processDataNum);
+            AscendC::Select(tmp5Local, mask1Local, tmp0Local, static_cast<float>(0),
+                            AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+            AscendC::CompareScalar(mask2Local, tmp4Local, static_cast<float>(0), AscendC::CMPMODE::LE,
+                                   this->processDataNum);
             AscendC::Muls(tmp0Local, tmp4Local, static_cast<float>(2.0), this->processDataNum);
             AscendC::Exp(tmp1Local, tmp4Local, this->processDataNum);
             AscendC::Muls(tmp2Local, tmp1Local, static_cast<float>(2.0), this->processDataNum);
@@ -182,13 +191,15 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Compute(int32_t progress)
             AscendC::Sub(tmp1Local, tmp3Local, tmp1Local, this->processDataNum);
             AscendC::Mul(tmp1Local, tmp0Local, tmp1Local, this->processDataNum);
             AscendC::Add(tmp1Local, tmp2Local, tmp1Local, this->processDataNum);
-            AscendC::Select(tmp1Local, mask2Local, tmp1Local, static_cast<float>(0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+            AscendC::Select(tmp1Local, mask2Local, tmp1Local, static_cast<float>(0),
+                            AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
             AscendC::Add(tmp5Local, tmp5Local, tmp1Local, this->processDataNum);
             AscendC::Cast(tmpMask1Local, mask1Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
             AscendC::Cast(tmpMask2Local, mask2Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
             AscendC::Add(tmpMask2Local, tmpMask1Local, tmpMask2Local, this->processDataNum);
             AscendC::Cast(mask2Local, tmpMask2Local, AscendC::RoundMode::CAST_RINT, this->processDataNum);
-            AscendC::Select(tmp5Local, mask2Local, tmp5Local, tmp4Local, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, this->processDataNum);
+            AscendC::Select(tmp5Local, mask2Local, tmp5Local, tmp4Local, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                            this->processDataNum);
             AscendC::Cast(tmp4Local, gradLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
             AscendC::Mul(tmp5Local, tmp5Local, tmp4Local, this->processDataNum);
             AscendC::Cast(outLocal, tmp5Local, AscendC::RoundMode::CAST_RINT, this->processDataNum);
@@ -225,7 +236,8 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Compute(int32_t progress)
             AscendC::LocalTensor<uint8_t> mask2Local = tmpQueueMask2.AllocTensor<uint8_t>();
             AscendC::LocalTensor<half> tmpMask1Local = tmpQueueMask3.AllocTensor<half>();
             AscendC::LocalTensor<half> tmpMask2Local = tmpQueueMask4.AllocTensor<half>();
-            AscendC::CompareScalar(mask1Local, xLocal, static_cast<float>(0), AscendC::CMPMODE::GT, this->processDataNum);
+            AscendC::CompareScalar(mask1Local, xLocal, static_cast<float>(0), AscendC::CMPMODE::GT,
+                                   this->processDataNum);
             AscendC::Muls(tmp1Local, xLocal, static_cast<float>(-1.0), this->processDataNum);
             AscendC::Muls(tmp2Local, xLocal, static_cast<float>(-2.0), this->processDataNum);
             AscendC::Exp(tmp1Local, tmp1Local, this->processDataNum);
@@ -243,8 +255,10 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Compute(int32_t progress)
             AscendC::Sub(tmp0Local, tmp3Local, tmp0Local, this->processDataNum);
             AscendC::Mul(tmp0Local, tmp1Local, tmp0Local, this->processDataNum);
             AscendC::Add(tmp0Local, outLocal, tmp0Local, this->processDataNum);
-            AscendC::Select(outLocal, mask1Local, tmp0Local, static_cast<float>(0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
-            AscendC::CompareScalar(mask2Local, xLocal, static_cast<float>(0), AscendC::CMPMODE::LE, this->processDataNum);
+            AscendC::Select(outLocal, mask1Local, tmp0Local, static_cast<float>(0),
+                            AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+            AscendC::CompareScalar(mask2Local, xLocal, static_cast<float>(0), AscendC::CMPMODE::LE,
+                                   this->processDataNum);
             AscendC::Muls(tmp0Local, xLocal, static_cast<float>(2.0), this->processDataNum);
             AscendC::Exp(tmp1Local, xLocal, this->processDataNum);
             AscendC::Muls(tmp2Local, tmp1Local, static_cast<float>(2.0), this->processDataNum);
@@ -259,13 +273,15 @@ __aicore__ inline void KernelMishGrad<TYPE_X>::Compute(int32_t progress)
             AscendC::Sub(tmp1Local, tmp3Local, tmp1Local, this->processDataNum);
             AscendC::Mul(tmp1Local, tmp0Local, tmp1Local, this->processDataNum);
             AscendC::Add(tmp1Local, tmp2Local, tmp1Local, this->processDataNum);
-            AscendC::Select(tmp1Local, mask2Local, tmp1Local, static_cast<float>(0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+            AscendC::Select(tmp1Local, mask2Local, tmp1Local, static_cast<float>(0),
+                            AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
             AscendC::Add(outLocal, outLocal, tmp1Local, this->processDataNum);
             AscendC::Cast(tmpMask1Local, mask1Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
             AscendC::Cast(tmpMask2Local, mask2Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
             AscendC::Add(tmpMask2Local, tmpMask1Local, tmpMask2Local, this->processDataNum);
             AscendC::Cast(mask2Local, tmpMask2Local, AscendC::RoundMode::CAST_RINT, this->processDataNum);
-            AscendC::Select(outLocal, mask2Local, outLocal, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, this->processDataNum);
+            AscendC::Select(outLocal, mask2Local, outLocal, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                            this->processDataNum);
             AscendC::Mul(outLocal, outLocal, gradLocal, this->processDataNum);
         } else {
             AscendC::LocalTensor<float> tanhxLocal = inQueueTanhx.DeQue<float>();

@@ -8,13 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- #ifndef OP_API_INC_LEVEL0_MEDIAN_DIM_H_
- #define OP_API_INC_LEVEL0_MEDIAN_DIM_H_
+#ifndef OP_API_INC_LEVEL0_MEDIAN_DIM_H_
+#define OP_API_INC_LEVEL0_MEDIAN_DIM_H_
 
- #include "opdev/op_executor.h"
+#include "opdev/op_executor.h"
 
- namespace l0op {
- const std::tuple<aclTensor*, aclTensor*> MedianDim(const aclTensor *self, int64_t dim, bool keepDim, aclOpExecutor *executor);
- }  // namespace l0op
+namespace l0op {
+const std::tuple<aclTensor*, aclTensor*> MedianDim(const aclTensor* self, int64_t dim, bool keepDim,
+                                                   aclOpExecutor* executor);
+} // namespace l0op
 
- #endif
+#endif

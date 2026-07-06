@@ -20,9 +20,8 @@
 
 using namespace AdaptiveAvgPool2dOp;
 template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t DTYPE_MODE = TPL_INT32_UINT32, uint64_t NC_FACTOR,
-    uint64_t BIG_KERNEL_COPY_MODE = TPL_BIG_KERNEL_NDDMA>
-__global__ __aicore__ void adaptive_avg_pool2d(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+          uint64_t BIG_KERNEL_COPY_MODE = TPL_BIG_KERNEL_NDDMA>
+__global__ __aicore__ void adaptive_avg_pool2d(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr || g_coreType == AIC) {
         return;
@@ -49,7 +48,7 @@ __global__ __aicore__ void adaptive_avg_pool2d(
             AdaptiveAvgPool2dSimt<DTYPE_X, uint32_t> op(&pipe, &tilingData);
             op.Init(x, y);
             op.Process();
-        }else {
+        } else {
             AdaptiveAvgPool2dSimt<DTYPE_X, uint64_t> op(&pipe, &tilingData);
             op.Init(x, y);
             op.Process();

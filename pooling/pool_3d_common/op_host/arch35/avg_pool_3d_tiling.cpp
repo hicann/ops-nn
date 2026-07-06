@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file avg_pool_3d_tiling.cpp
  * \brief
@@ -18,12 +18,11 @@
 
 using namespace AscendC;
 using optiling::PoolTilingRegistry;
-namespace optiling
-{
+namespace optiling {
 
 ge::graphStatus Tiling4AvgPool3DRegBase(gert::TilingContext* context)
 {
     return PoolTilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-}  // namespace optiling
+} // namespace optiling

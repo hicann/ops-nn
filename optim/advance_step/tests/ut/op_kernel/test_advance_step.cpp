@@ -20,27 +20,21 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void advance_step(
-    GM_ADDR input_tokens, GM_ADDR sampled_token_ids, GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
-    GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void advance_step(GM_ADDR input_tokens, GM_ADDR sampled_token_ids,
+                                                   GM_ADDR input_positions, GM_ADDR seq_lens, GM_ADDR slot_mapping,
+                                                   GM_ADDR block_tables, GM_ADDR spec_token, GM_ADDR accepted_num,
+                                                   GM_ADDR workspace, GM_ADDR tiling);
 class advance_step_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "advance_step SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "advance_step TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "advance_step SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "advance_step TearDown\n" << endl; }
 };
 
 TEST_F(advance_step_test, test_advance_step_int_0)
 {
-    system(
-        "cp -rf "
-        "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
-        
+    system("cp -rf "
+           "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
+
     system("chmod -R 755 ./advance_step_data/");
     system("cd ./advance_step_data/ && python3 gen_data.py '(16, 1)' '(8, 1)' 'int64'");
     size_t M = 16;
@@ -91,9 +85,8 @@ TEST_F(advance_step_test, test_advance_step_int_0)
     tilingDatafromBin->blockSize = blockSize;
 
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(
-        advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables,
-         nullptr, nullptr, workspace, (uint8_t*)tilingDatafromBin);
+    ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+                block_tables, nullptr, nullptr, workspace, (uint8_t*)tilingDatafromBin);
     fileName1 = "./advance_step_data/1_output_advance_step.bin";
     fileName2 = "./advance_step_data/2_output_advance_step.bin";
     fileName3 = "./advance_step_data/3_output_advance_step.bin";
@@ -158,9 +151,8 @@ TEST_F(advance_step_test, test_advance_step_int_2)
     tilingDatafromBin->specNum = 2;
 
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(
-        advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables,
-        spec_token, accepted_num, workspace, (uint8_t*)tilingDatafromBin);
+    ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+                block_tables, spec_token, accepted_num, workspace, (uint8_t*)tilingDatafromBin);
 
     AscendC::GmFree((void*)input_tokens);
     AscendC::GmFree((void*)sampled_token_ids);

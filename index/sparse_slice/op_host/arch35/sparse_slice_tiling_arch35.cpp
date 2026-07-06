@@ -12,7 +12,7 @@
  * \file sparse_slice_tiling_arch35.cpp
  * \brief
  */
- 
+
 #include <cmath>
 #include "sparse_slice_tiling_arch35.h"
 #include <graph/utils/type_utils.h>
@@ -65,20 +65,18 @@ static void GetConstValueToShape(const gert::Tensor* tensor, size_t size, gert::
 bool SparseSliceTiling::UseSIMT()
 {
     bool rank2 = tilingParams.rankNumbers > DIGIT_TWO;
-    bool dataSizeUB =
-        tilingParams.valueNumbers * tilingParams.rankNumbers / tilingParams.totalCoreNum <= INDICES_NUM_MAX_SIMT;
+    bool dataSizeUB = tilingParams.valueNumbers * tilingParams.rankNumbers / tilingParams.totalCoreNum <=
+                      INDICES_NUM_MAX_SIMT;
     return rank2 && dataSizeUB;
 }
 
 ge::graphStatus SparseSliceTiling::GetShapeAttrsInfo()
 {
     OP_LOGD(context_->GetNodeName(), "Enter SparseSliceTiling GetShapeAttrsInfo.");
-    OP_TILING_CHECK(
-        CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Check datatype failed. "),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Check shape failed. "),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Check datatype failed. "),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Check shape failed. "),
+                    return ge::GRAPH_FAILED);
     OP_LOGD(context_->GetNodeName(), "End SparseSliceTiling GetShapeAttrsInfo.");
 
     return ge::GRAPH_SUCCESS;
@@ -91,15 +89,13 @@ ge::graphStatus SparseSliceTiling::GetPlatformInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_TILING_CHECK(
-        (tilingParams.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to core num."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((tilingParams.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to core num."),
+                    return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParams.ubSize = static_cast<int64_t>(ubSize) - RESERVED_UB_SIZE;
-    OP_TILING_CHECK(
-        (tilingParams.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((tilingParams.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
+                    return ge::GRAPH_FAILED);
     tilingParams.vfLen = Ops::Base::GetVRegSize(context_);
     tilingParams.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     OP_LOGD(context_->GetNodeName(), "End SparseSliceTiling GetPlatformInfo.");
@@ -107,18 +103,14 @@ ge::graphStatus SparseSliceTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool SparseSliceTiling::IsCapable()
-{
-    return true;
-}
+bool SparseSliceTiling::IsCapable() { return true; }
 
 ge::graphStatus SparseSliceTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Enter SparseSliceTiling DoOpTiling.");
     ge::graphStatus res = SetTilingParams();
-    OP_TILING_CHECK(
-        res != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "SparseSliceTiling SetTilingParams Failed"),
-        return res);
+    OP_TILING_CHECK(res != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context_->GetNodeName(), "SparseSliceTiling SetTilingParams Failed"), return res);
 
     SetTilingData();
     PrintTilingData();
@@ -126,15 +118,9 @@ ge::graphStatus SparseSliceTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SparseSliceTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SparseSliceTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus SparseSliceTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SparseSliceTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus SparseSliceTiling::PostTiling()
 {
@@ -161,10 +147,10 @@ ge::graphStatus SparseSliceTiling::PostTiling()
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     OP_LOGD(nodeName.c_str(), "Tiling workspaceSize is %ld.", tilingParams.workspaceSize);
-    auto workspaceSizeAlign =
-        ((tilingParams.valueNumbers * sizeof(int8_t) + WORKSPACE_SIZE_ALIGN - 1) / WORKSPACE_SIZE_ALIGN) *
-            WORKSPACE_SIZE_ALIGN +
-        WORKSPACE_SIZE_ALIGN * 65;
+    auto workspaceSizeAlign = ((tilingParams.valueNumbers * sizeof(int8_t) + WORKSPACE_SIZE_ALIGN - 1) /
+                               WORKSPACE_SIZE_ALIGN) *
+                                  WORKSPACE_SIZE_ALIGN +
+                              WORKSPACE_SIZE_ALIGN * 65;
     workspaces[0] = tilingParams.workspaceSize + workspaceSizeAlign;
 
     return ge::GRAPH_SUCCESS;
@@ -183,52 +169,44 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
     auto indicesPtr = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesPtr);
     auto indicesDtype = indicesPtr->GetDataType();
-    OP_TILING_CHECK(
-        INDICES_SUPPORT_DTYPE_SET.count(indicesDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_indices",
-            ge::TypeUtils::DataTypeToSerialString(indicesDtype),
-            "DT_INT64"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(INDICES_SUPPORT_DTYPE_SET.count(indicesDtype) == 0,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_indices",
+                                              ge::TypeUtils::DataTypeToSerialString(indicesDtype), "DT_INT64"),
+                    return ge::GRAPH_FAILED);
 
     auto valuesPtr = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, valuesPtr);
     auto valuesDtype = valuesPtr->GetDataType();
     OP_TILING_CHECK(
         VALUE_SUPPORT_DTYPE_SET.count(valuesDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_values",
-            ge::TypeUtils::DataTypeToSerialString(valuesDtype),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x_values", ge::TypeUtils::DataTypeToSerialString(valuesDtype),
             "DT_FLOAT, DT_FLOAT16, DT_BF16, DT_UINT8, DT_INT8, DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_BOOL"),
         return ge::GRAPH_FAILED);
 
     auto shapePtr = context_->GetInputDesc(DIGIT_TWO);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapePtr);
     auto shapeDtype = shapePtr->GetDataType();
-    OP_TILING_CHECK(
-        INDICES_SUPPORT_DTYPE_SET.count(shapeDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_shape",
-            ge::TypeUtils::DataTypeToSerialString(shapeDtype),
-            "DT_INT64"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(INDICES_SUPPORT_DTYPE_SET.count(shapeDtype) == 0,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_shape",
+                                              ge::TypeUtils::DataTypeToSerialString(shapeDtype), "DT_INT64"),
+                    return ge::GRAPH_FAILED);
 
     auto startPtr = context_->GetInputDesc(DIGIT_THREE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, startPtr);
     auto startDtype = startPtr->GetDataType();
-    OP_TILING_CHECK(
-        INDICES_SUPPORT_DTYPE_SET.count(startDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_start",
-            ge::TypeUtils::DataTypeToSerialString(startDtype),
-            "DT_INT64"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(INDICES_SUPPORT_DTYPE_SET.count(startDtype) == 0,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_start",
+                                              ge::TypeUtils::DataTypeToSerialString(startDtype), "DT_INT64"),
+                    return ge::GRAPH_FAILED);
 
     auto sizePtr = context_->GetInputDesc(DIGIT_FOUR);
     OP_CHECK_NULL_WITH_CONTEXT(context_, sizePtr);
     auto sizeDtype = sizePtr->GetDataType();
-    OP_TILING_CHECK(
-        INDICES_SUPPORT_DTYPE_SET.count(sizeDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_size",
-            ge::TypeUtils::DataTypeToSerialString(sizeDtype),
-            "DT_INT64"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(INDICES_SUPPORT_DTYPE_SET.count(sizeDtype) == 0,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_size",
+                                              ge::TypeUtils::DataTypeToSerialString(sizeDtype), "DT_INT64"),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -236,65 +214,61 @@ ge::graphStatus SparseSliceTiling::CheckShape()
 {
     auto indicesPtr = context_->GetInputShape(0);
     auto indicesShape = indicesPtr->GetStorageShape();
-    OP_TILING_CHECK(
-        static_cast<int64_t>(indicesShape.GetDimNum()) != DIGIT_TWO,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_indices",
-            std::to_string(static_cast<int64_t>(indicesShape.GetDimNum())),
-            std::to_string(DIGIT_TWO)),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(static_cast<int64_t>(indicesShape.GetDimNum()) != DIGIT_TWO,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_indices",
+                                                 std::to_string(static_cast<int64_t>(indicesShape.GetDimNum())),
+                                                 std::to_string(DIGIT_TWO)),
+                    return ge::GRAPH_FAILED);
     auto valueNumbers = static_cast<int64_t>(indicesShape.GetDim(0));
     auto rankNumbers = static_cast<int64_t>(indicesShape.GetDim(1));
     OP_TILING_CHECK(
         rankNumbers > DIGIT_TWENTYFOUR || rankNumbers < DIGIT_ONE,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "x_indices[1]",
-            std::to_string(rankNumbers),
-            "The value of x_indices[1] must be in range [1, 24]"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "x_indices[1]", std::to_string(rankNumbers),
+                                              "The value of x_indices[1] must be in range [1, 24]"),
         return ge::GRAPH_FAILED);
     auto valuesPtr = context_->GetInputShape(1);
     auto valuesShape = valuesPtr->GetStorageShape();
-    OP_TILING_CHECK(
-        static_cast<int64_t>(valuesShape.GetDimNum()) != DIGIT_ONE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_values",
-            std::to_string(static_cast<int64_t>(valuesShape.GetDimNum())),
-            std::to_string(DIGIT_ONE)),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(static_cast<int64_t>(valuesShape.GetDimNum()) != DIGIT_ONE,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_values",
+                                                 std::to_string(static_cast<int64_t>(valuesShape.GetDimNum())),
+                                                 std::to_string(DIGIT_ONE)),
+                    return ge::GRAPH_FAILED);
     auto actualValueNumbers = static_cast<int64_t>(valuesShape.GetDim(0));
-    OP_TILING_CHECK(
-        valueNumbers != actualValueNumbers,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_values, x_indices",
-            Ops::Base::ToString(valuesShape) + ", " + Ops::Base::ToString(indicesShape),
-            "The shapes of x_values and x_indices must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(valueNumbers != actualValueNumbers,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "x_values, x_indices",
+                        Ops::Base::ToString(valuesShape) + ", " + Ops::Base::ToString(indicesShape),
+                        "The shapes of x_values and x_indices must be the same"),
+                    return ge::GRAPH_FAILED);
     auto shapePtr = context_->GetInputShape(DIGIT_TWO);
     auto shapeShape = shapePtr->GetStorageShape();
-    OP_TILING_CHECK(
-        static_cast<int64_t>(shapeShape.GetDimNum()) != DIGIT_ONE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_shape",
-            std::to_string(static_cast<int64_t>(shapeShape.GetDimNum())),
-            std::to_string(DIGIT_ONE)),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(static_cast<int64_t>(shapeShape.GetDimNum()) != DIGIT_ONE,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_shape",
+                                                 std::to_string(static_cast<int64_t>(shapeShape.GetDimNum())),
+                                                 std::to_string(DIGIT_ONE)),
+                    return ge::GRAPH_FAILED);
     auto shapeRankNumbers = static_cast<int64_t>(shapeShape.GetDim(0));
-    OP_TILING_CHECK(
-        rankNumbers != shapeRankNumbers,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_shape, x_indices",
-            Ops::Base::ToString(shapeShape) + ", " + Ops::Base::ToString(indicesShape),
-            "The shapes of x_shape and x_indices must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(rankNumbers != shapeRankNumbers,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "x_shape, x_indices",
+                        Ops::Base::ToString(shapeShape) + ", " + Ops::Base::ToString(indicesShape),
+                        "The shapes of x_shape and x_indices must be the same"),
+                    return ge::GRAPH_FAILED);
     auto startPtr = context_->GetInputShape(DIGIT_THREE);
     auto startShape = startPtr->GetStorageShape();
     OP_TILING_CHECK(
         startShape != shapeShape,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_start, x_shape",
-            Ops::Base::ToString(startShape) + ", " + Ops::Base::ToString(shapeShape),
-            "The shapes of x_start and x_shape must be the same"),
+                                               Ops::Base::ToString(startShape) + ", " + Ops::Base::ToString(shapeShape),
+                                               "The shapes of x_start and x_shape must be the same"),
         return ge::GRAPH_FAILED);
     auto sizePtr = context_->GetInputShape(DIGIT_FOUR);
     auto sizeShape = sizePtr->GetStorageShape();
     OP_TILING_CHECK(
         sizeShape != shapeShape,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_size, x_shape",
-            Ops::Base::ToString(sizeShape) + ", " + Ops::Base::ToString(shapeShape),
-            "The shapes of x_size and x_shape must be the same"),
+                                               Ops::Base::ToString(sizeShape) + ", " + Ops::Base::ToString(shapeShape),
+                                               "The shapes of x_size and x_shape must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -312,11 +286,10 @@ ge::graphStatus SparseSliceTiling::SetTilingParams()
     int64_t valuesDataTypeSize = GetSizeByDataType(valuesDtype);
     OP_LOGD(context_->GetNodeName(), "The data type size of input values is %ld. ", valuesDataTypeSize);
 
-    OP_TILING_CHECK(
-        CalcYShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Calc y shape failed. "),
-        return ge::GRAPH_FAILED);
-    auto sizePerCalc =
-        (tilingParams.rankNumbers * SIZE_OF_INT64 * DIGIT_SEVEN + valuesDataTypeSize * DIGIT_TWO) * DOUBLE_BUFFER;
+    OP_TILING_CHECK(CalcYShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Calc y shape failed. "),
+                    return ge::GRAPH_FAILED);
+    auto sizePerCalc = (tilingParams.rankNumbers * SIZE_OF_INT64 * DIGIT_SEVEN + valuesDataTypeSize * DIGIT_TWO) *
+                       DOUBLE_BUFFER;
 
     tilingParams.templateType = DIGIT_ONE;
     if (tilingParams.valueNumbers == DIGIT_ZERO) {
@@ -344,10 +317,10 @@ ge::graphStatus SparseSliceTiling::SetTilingParams()
     tilingParams.tilingKey = tilingParams.templateType * DIGIT_TEN_THOUSAND;
 
     tilingParams.valuePerUb = tilingParams.ubSize / sizePerCalc;
-    tilingParams.valuePerCore =
-        (tilingParams.valueNumbers + tilingParams.totalCoreNum - DIGIT_ONE) / tilingParams.totalCoreNum;
-    tilingParams.usedCoreNum =
-        (tilingParams.valueNumbers + tilingParams.valuePerCore - DIGIT_ONE) / tilingParams.valuePerCore;
+    tilingParams.valuePerCore = (tilingParams.valueNumbers + tilingParams.totalCoreNum - DIGIT_ONE) /
+                                tilingParams.totalCoreNum;
+    tilingParams.usedCoreNum = (tilingParams.valueNumbers + tilingParams.valuePerCore - DIGIT_ONE) /
+                               tilingParams.valuePerCore;
     tilingParams.valuePerTail = tilingParams.valuePerCore * tilingParams.usedCoreNum == tilingParams.valueNumbers ?
                                     tilingParams.valuePerCore :
                                     tilingParams.valueNumbers % tilingParams.valuePerCore;
@@ -367,12 +340,11 @@ void SparseSliceTiling::SetTilingData()
 
 void SparseSliceTiling::PrintTilingData()
 {
-    OP_LOGD(
-        context_->GetNodeName(),
-        "PrintTilingData usedCoreNum: %ld, valueNumbers: %ld, rankNumbers: %ld, "
-        "valuePerUb: %ld, valuePerCore: %ld, valuePerTail: %ld. ",
-        tilingData.get_usedCoreNum(), tilingData.get_valueNumbers(), tilingData.get_rankNumbers(),
-        tilingData.get_valuePerUb(), tilingData.get_valuePerCore(), tilingData.get_valuePerTail());
+    OP_LOGD(context_->GetNodeName(),
+            "PrintTilingData usedCoreNum: %ld, valueNumbers: %ld, rankNumbers: %ld, "
+            "valuePerUb: %ld, valuePerCore: %ld, valuePerTail: %ld. ",
+            tilingData.get_usedCoreNum(), tilingData.get_valueNumbers(), tilingData.get_rankNumbers(),
+            tilingData.get_valuePerUb(), tilingData.get_valuePerCore(), tilingData.get_valuePerTail());
 }
 
 ge::graphStatus SparseSliceTiling::CalcYShape()
@@ -440,8 +412,8 @@ void SparseSliceTiling::GetValueList(size_t idx, const gert::Tensor* tensor, int
 
 static ge::graphStatus Tiling4SparseSlice(gert::TilingContext* context_)
 {
-    OP_TILING_CHECK(
-        context_ == nullptr, OP_LOGE("SparseSlice", "context_ should not be nullptr."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context_ == nullptr, OP_LOGE("SparseSlice", "context_ should not be nullptr."),
+                    return ge::GRAPH_FAILED);
 
     if (IsRegbaseSocVersion(context_)) {
         SparseSliceTiling tiling(context_);
@@ -463,12 +435,10 @@ ge::graphStatus TilingPrepare4SparseSlice(gert::TilingParseContext* context_)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
-    OP_TILING_CHECK(
-        (compileInfo->coreNum <= 0 || compileInfo->ubSize <= 0),
-        OP_LOGE(
-            context_->GetNodeName(), "SparseSlice GetHardwareInfo Failed, coreNum:%d, ubSize:%ld.",
-            compileInfo->coreNum, compileInfo->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((compileInfo->coreNum <= 0 || compileInfo->ubSize <= 0),
+                    OP_LOGE(context_->GetNodeName(), "SparseSlice GetHardwareInfo Failed, coreNum:%d, ubSize:%ld.",
+                            compileInfo->coreNum, compileInfo->ubSize),
+                    return ge::GRAPH_FAILED);
     OP_LOGD(context_->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfo->coreNum, compileInfo->ubSize);
 
     return ge::GRAPH_SUCCESS;

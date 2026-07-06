@@ -29,15 +29,9 @@ using namespace ge;
 
 class AdamApplyOneWithDecayTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdamApplyOneWithDecayTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdamApplyOneWithDecayTiling TearDown" << std::endl; }
 };
 
 TEST_F(AdamApplyOneWithDecayTiling, AdamApplyOneWithDecayTiling_01)
@@ -88,17 +82,17 @@ TEST_F(AdamApplyOneWithDecayTiling, AdamApplyOneWithDecayTiling_01)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(11, 3)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(11, 3)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -109,9 +103,9 @@ TEST_F(AdamApplyOneWithDecayTiling, AdamApplyOneWithDecayTiling_01)
                       .SetOpType("AdamApplyOneWithDecay")
                       .NodeIoNum(11, 3)
                       //   .IrInstanceNum({1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &mul0_x_shape,
-                           &mul1_x_shape, &mul2_x_shape, &mul3_x_shape, &mul4_x_shape, &add2_y_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &mul0_x_shape, &mul1_x_shape, &mul2_x_shape, &mul3_x_shape, &mul4_x_shape,
+                                    &add2_y_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))

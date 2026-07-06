@@ -48,24 +48,24 @@ class KernelMatmulMixFixpipeOpti;
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
           uint64_t FUSED_OP_TYPE_, class OutType_, class FusionOp_>
-class KernelMatmulMixFixpipeOpti<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-    FUSED_OP_TYPE_, OutType_, FusionOp_,
+class KernelMatmulMixFixpipeOpti<
+    ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_, FUSED_OP_TYPE_, OutType_, FusionOp_,
     AscendC::Std::enable_if_t<!AscendC::Std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
     __aicore__ inline KernelMatmulMixFixpipeOpti()
     {
         if ASCEND_IS_AIV {
-            CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG);      // ping
-            CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG + 1);  // pong
+            CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG);     // ping
+            CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG + 1); // pong
         }
     }
     __aicore__ inline ~KernelMatmulMixFixpipeOpti()
     {
         if ASCEND_IS_AIC {
-            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG);                    // ping
-            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + FLAG_ID_MAX);      // ping
-            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + 1);                // pong
-            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + 1 + FLAG_ID_MAX);  // pong
+            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG);                   // ping
+            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + FLAG_ID_MAX);     // ping
+            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + 1);               // pong
+            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + 1 + FLAG_ID_MAX); // pong
         }
     }
 
@@ -80,9 +80,9 @@ public:
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-            typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA, transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -128,12 +128,12 @@ public:
         Params() = default;
     };
 
-    __aicore__ inline static TupleShape ToShapeTuple(ProblemShape const &shape)
+    __aicore__ inline static TupleShape ToShapeTuple(ProblemShape const& shape)
     {
         return {shape.m, shape.n, shape.k, shape.b};
     }
 
-    __aicore__ inline void Init(Params const &params)
+    __aicore__ inline void Init(Params const& params)
     {
         problemShape_ = ToShapeTuple(params.problemShape);
         BlockMmadParams blockMmadParams_ = params.mmadParams;
@@ -141,16 +141,16 @@ public:
         int64_t n = Get<MNK_N>(problemShape_);
         int64_t k = Get<MNK_K>(problemShape_);
         // Init GlobalTensor
-        aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType *>(blockMmadParams_.aGmAddr));
-        bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType *>(blockMmadParams_.bGmAddr));
-        cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType *>(blockMmadParams_.cGmAddr));
+        aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType*>(blockMmadParams_.aGmAddr));
+        bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType*>(blockMmadParams_.bGmAddr));
+        cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
         if (blockMmadParams_.biasGmAddr != nullptr) {
             isBias_ = true;
-            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType *>(blockMmadParams_.biasGmAddr));
+            biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasType*>(blockMmadParams_.biasGmAddr));
         }
     }
 
-    __aicore__ inline void Run(Params const &params)
+    __aicore__ inline void Run(Params const& params)
     {
         // Instantiate epilogueOp
         BlockEpilogue epilogueOp;
@@ -187,13 +187,13 @@ public:
         }
         epilogueOp.Init(params.epilogueParams, problemShape_);
         if ASCEND_IS_AIC {
-            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
-                problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
-                bs.GetNonContinuousParams());
+            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
+                                                                      bs.GetL1BuferNum_(), bs.GetL0cDB(),
+                                                                      bs.GetNonContinuousParams());
             blockMmadOp.SetDualParam(enable2UB);
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
-                blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(
-                    bGlobal_, Get<MNK_N>(problemShape_), Get<MNK_K>(problemShape_));
+                blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),
+                                                                         Get<MNK_K>(problemShape_));
                 blockMmadOp.CopyInC1(biasGlobal_, Get<MNK_N>(problemShape_));
             } else if constexpr (BlockScheduler::FULL_LOAD_MODE == A_FULL_LOAD_MODE) {
                 blockMmadOp.CopyInA1(aGlobal_, Get<MNK_M>(problemShape_), Get<MNK_K>(problemShape_));
@@ -211,15 +211,15 @@ public:
             for (uint64_t mOffset = 0; mOffset < curML1; mOffset += Get<0>(tileL0)) {
                 // nIter
                 for (uint64_t nOffset = 0; nOffset < curNL1; nOffset += Get<1>(tileL0)) {
-                    TupleL1L0Shape blockShape =
-                        bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(tileIdx, mOffset, nOffset);
+                    TupleL1L0Shape blockShape = bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(
+                        tileIdx, mOffset, nOffset);
                     auto blockCoord = bs.GetBlockCoord(tileIdx);
                     if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
                         blockCoord = bs.GetSingleBlockCoord(tileIdx);
                     }
                     auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
-                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(),
-                        blockShape, tileL1, bs.GetSplitOffset(), bs.GetTailParams());
+                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape,
+                        tileL1, bs.GetSplitOffset(), bs.GetTailParams());
                     // calculate block-level offset
                     if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
                         if (isHf32) {
@@ -238,16 +238,16 @@ public:
                     if ASCEND_IS_AIC {
                         CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + (pingPongIdx));
                         if (enable2UB) {
-                            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                                AIV_SYNC_AIC_FLAG + (pingPongIdx) + FLAG_ID_MAX);
+                            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + (pingPongIdx) +
+                                                                             FLAG_ID_MAX);
                         }
                         blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
                             cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape, mOffset,
                             nOffset);
                         CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + (pingPongIdx));
                         if (enable2UB) {
-                            CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
-                                AIC_SYNC_AIV_FLAG + (pingPongIdx) + FLAG_ID_MAX);
+                            CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + (pingPongIdx) +
+                                                                            FLAG_ID_MAX);
                         }
                     }
                     if ASCEND_IS_AIV {
@@ -271,7 +271,7 @@ public:
         }
     }
 
-    __host_aicore__ static Status CheckShape(ProblemShape const &shape)
+    __host_aicore__ static Status CheckShape(ProblemShape const& shape)
     {
         int64_t m = shape.m;
         int64_t n = shape.n;
@@ -285,24 +285,24 @@ public:
             return Status::mnkErrorExceedsLimit;
         }
         // Check matrix size exceeds limit
-        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) {  // mk matrix k limit
+        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // mk matrix k limit
             return Status::mkErrorMatrixExceedsLimit;
         }
 
-        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) {  // km matrix m limit
+        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) { // km matrix m limit
             return Status::kmErrorMatrixExceedsLimit;
         }
-        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) {  // kn matrix n limit
+        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) { // kn matrix n limit
             return Status::knErrorMatrixExceedsLimit;
         }
 
-        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) {  // nk matrix k limit
+        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // nk matrix k limit
             return Status::nkErrorMatrixExceedsLimit;
         }
         return Status::success;
     }
 
-    __host_aicore__ static Status CanImplement(Arguments const &args)
+    __host_aicore__ static Status CanImplement(Arguments const& args)
     {
         // Check shape in kernel
         CHECK_AND_RETURN(CheckShape(args.problemShape));
@@ -321,7 +321,7 @@ public:
         return workSpaceSize;
     }
 
-    __host_aicore__ static Params InitParams(Arguments const &args, GM_ADDR workspace)
+    __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR workspace)
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
@@ -329,12 +329,9 @@ public:
         return params;
     }
 
-    __aicore__ inline void operator()(Params const &params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(Params const& params) { Run(params); }
 };
 
-}  // namespace Kernel
-}  // namespace Gemm
-}  // namespace Cmct
+} // namespace Kernel
+} // namespace Gemm
+} // namespace Cmct

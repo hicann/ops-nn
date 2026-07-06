@@ -22,23 +22,23 @@
 
 namespace RmsNormGradQuant {
 using namespace AscendC;
-template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DX, typename T_DGAMMA, typename T_SCALES_X, typename T_OFFSET_X, bool HAS_OFFSET_X, bool DIV_MODE>
+template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DX, typename T_DGAMMA, typename T_SCALES_X,
+          typename T_OFFSET_X, bool HAS_OFFSET_X, bool DIV_MODE>
 class RegbaseDxFullLoad {
 public:
-     __aicore__ inline RegbaseDxFullLoad(TPipe* pipe, const RmsNormGradQuantRegbaseDxTilingData* tilingData)
+    __aicore__ inline RegbaseDxFullLoad(TPipe* pipe, const RmsNormGradQuantRegbaseDxTilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma, __gm__ uint8_t* scales_x,
-        __gm__ uint8_t* offset_x, __gm__ uint8_t* dx, __gm__ uint8_t* dgamma)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma,
+                                __gm__ uint8_t* scales_x, __gm__ uint8_t* offset_x, __gm__ uint8_t* dx,
+                                __gm__ uint8_t* dgamma)
     {
-    #if (__NPU_ARCH__ == 3510)
-        if constexpr (
-            IsSameType<T_DX, hifloat8_t>::value) {
+#if (__NPU_ARCH__ == 3510)
+        if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
             AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
         }
-    #endif
+#endif
         usedCoreNum_ = tiling_->usedCoreNumDx;
         uint32_t coreIdx = GetBlockIdx();
         if (coreIdx >= usedCoreNum_) {
@@ -48,8 +48,8 @@ public:
         cols_ = tiling_->cols;
         blockFactor_ = tiling_->blockFactorDx;
 
-        colsAlignBlock_ =
-            IsSameType<T_X, float>::value ? AlignUp(cols_, FLOAT_NUM_BLOCK) : AlignUp(cols_, HALF_NUM_BLOCK);
+        colsAlignBlock_ = IsSameType<T_X, float>::value ? AlignUp(cols_, FLOAT_NUM_BLOCK) :
+                                                          AlignUp(cols_, HALF_NUM_BLOCK);
         if constexpr (IsSameType<T_DX, hifloat8_t>::value || IsSameType<T_DX, int8_t>::value) {
             colsAlignHiFP8_ = AlignUp(cols_, HIFP8_NUM_BLOCK);
         }
@@ -200,15 +200,16 @@ public:
                     } else {
                         Mul(scalesXResultReg, dxReg, scalesXReg, maskReg);
                     }
-                    if constexpr (HAS_OFFSET_X){
+                    if constexpr (HAS_OFFSET_X) {
                         LoadTensorForDtypeTIn(offsetXAddr, offsetXReg, maskReg);
                         Add(scalesXResultReg, scalesXResultReg, offsetXReg, maskReg);
                     }
-                    if constexpr(IsSameType<T_DX, hifloat8_t>::value){
+                    if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
                         RegTensor<T_DX> dxRegHif8;
                         Cast<T_DX, float, castTraitFp322Hifp8>(dxRegHif8, scalesXResultReg, maskReg);
-                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegHif8, maskReg);
-                    } else if constexpr(IsSameType<T_DX, int8_t>::value){
+                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(
+                            dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegHif8, maskReg);
+                    } else if constexpr (IsSameType<T_DX, int8_t>::value) {
                         RegTensor<T_DX> dxRegInt8;
                         RegTensor<half> dxRegFp16;
                         RegTensor<int32_t> dxRegInt32;
@@ -216,7 +217,8 @@ public:
                         Cast<float, int32_t, castTraitInt322Fp32>(scalesXResultReg, dxRegInt32, maskReg);
                         Cast<half, float, castTraitFp322Fp16>(dxRegFp16, scalesXResultReg, maskReg);
                         Cast<T_DX, half, castTraitFp162Int8>(dxRegInt8, dxRegFp16, maskReg);
-                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegInt8, maskReg);
+                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(
+                            dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegInt8, maskReg);
                     }
                 }
             }
@@ -262,11 +264,11 @@ public:
     {
         LocalTensor<T_SCALES_X> scalesXLocal = inQueueScalesX_.AllocTensor<T_SCALES_X>();
         DataCopyExtParams copyParams{
-            1,                                              // blockCount
+            1,                                             // blockCount
             static_cast<uint32_t>(1 * sizeof(T_SCALES_X)), // blockLen
-            0,                                              // srcStride
-            0,                                              // dstStride
-            0                                               // rsv
+            0,                                             // srcStride
+            0,                                             // dstStride
+            0                                              // rsv
         };
 
         DataCopyPad(scalesXLocal, scalesXGm_, copyParams, {true, 0, 0, 0});
@@ -278,11 +280,11 @@ public:
     {
         LocalTensor<T_OFFSET_X> offsetXLocal = inQueueOffsetX_.AllocTensor<T_OFFSET_X>();
         DataCopyExtParams copyParams{
-            1,                                                 // blockCount
+            1,                                             // blockCount
             static_cast<uint32_t>(1 * sizeof(T_OFFSET_X)), // blockLen
-            0,                                                 // srcStride
-            0,                                                 // dstStride
-            0                                                  // rsv
+            0,                                             // srcStride
+            0,                                             // dstStride
+            0                                              // rsv
         };
 
         DataCopyPad(offsetXLocal, offsetXGm_, copyParams, {true, 0, 0, 0});
@@ -340,11 +342,12 @@ public:
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
                     DataCopy(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL));
                     // 利用shiftleft将非对齐位置补0
-                    ShiftLefts(
-                        (RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg, static_cast<int16_t>(0),
-                        pregTail);
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL), xTailRegshiftLeft, maskRegAll);
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg, maskRegAll);
+                    ShiftLefts((RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg,
+                               static_cast<int16_t>(0), pregTail);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL), xTailRegshiftLeft,
+                             maskRegAll);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
+                             maskRegAll);
                 }
             }
         } else if (colsTail == V_LENGTH) {
@@ -356,7 +359,8 @@ public:
                 MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 Duplicate(srcReg, 0.0f, maskRegAll);
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg, maskRegAll);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
+                             maskRegAll);
                 }
             }
         } else if (colsTail > 0) {
@@ -372,10 +376,10 @@ public:
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
                     DataCopy(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL));
                     // 利用shiftleft将非对齐位置补0
-                    ShiftLefts(
-                        (RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg, static_cast<int16_t>(0),
-                        pregTail);
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), xTailRegshiftLeft, maskRegAll);
+                    ShiftLefts((RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg,
+                               static_cast<int16_t>(0), pregTail);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), xTailRegshiftLeft,
+                             maskRegAll);
                 }
             }
         }
@@ -384,8 +388,7 @@ public:
     }
 
     template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(
-        __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg)
+    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg)
     {
         if constexpr (IsSameType<T_IN, float>::value) {
             DataCopy<float, LoadDist::DIST_BRC_B32>(dst, src);
@@ -404,11 +407,11 @@ public:
     {
         LocalTensor<T_DX> dxLocal = outQueueDx_.DeQue<T_DX>();
         DataCopyExtParams copyParams{
-            static_cast<uint16_t>(calcRow),             // blockCount
+            static_cast<uint16_t>(calcRow),              // blockCount
             static_cast<uint32_t>(cols_ * sizeof(T_DX)), // blockLen
-            0,                                          // srcStride
-            0,                                          // dstStride
-            0                                           // rsv
+            0,                                           // srcStride
+            0,                                           // dstStride
+            0                                            // rsv
         };
         DataCopyPad(dxGm_[rowIdx * cols_], dxLocal, copyParams);
         outQueueDx_.FreeTensor(dxLocal);

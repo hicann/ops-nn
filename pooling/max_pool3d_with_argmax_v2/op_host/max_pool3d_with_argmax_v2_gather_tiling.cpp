@@ -86,9 +86,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = static_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                    return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;
 
         ubSize = compileInfoPtr->ubSize;
@@ -118,23 +117,21 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
     if (inputShape.GetDimNum() != NCDHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(),
-            std::to_string(NCDHW_DIMS).c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(),
+                                     std::to_string(NCDHW_DIMS).c_str());
         return ge::GRAPH_FAILED;
     }
     if (inputShape.GetShapeSize() <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE(
-            context_->GetNodeName(), "x", std::to_string(inputShape.GetShapeSize()).c_str(), "greater than 0");
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x", std::to_string(inputShape.GetShapeSize()).c_str(),
+                                      "greater than 0");
         return ge::GRAPH_FAILED;
     }
     auto inputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
-            "BFLOAT16, FLOAT16 or FLOAT32");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                  "BFLOAT16, FLOAT16 or FLOAT32");
         return ge::GRAPH_FAILED;
     }
 
@@ -146,9 +143,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetShapeAttrsInfo()
     auto indicesShape = EnsureNotScalar(indicesX->GetStorageShape());
     if (indicesShape != outShape) {
         std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "indicesShape and outShape", shapeMsg.c_str(),
-            "The shape of indices must be the same as the shape of out");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indicesShape and outShape", shapeMsg.c_str(),
+                                               "The shape of indices must be the same as the shape of out");
         return ge::GRAPH_FAILED;
     }
     auto runtimeAttrs = context_->GetAttrs();
@@ -175,27 +171,25 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetShapeAttrsInfo()
         std::string dimMsg = "{" + std::to_string(outShape.GetDim(d_dim)) + ", " +
                              std::to_string(outShape.GetDim(h_dim)) + ", " + std::to_string(outShape.GetDim(w_dim)) +
                              "}";
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context_->GetNodeName(), "outShape", dimMsg.c_str(), "all axes of out must be greater than or equal to 1");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "outShape", dimMsg.c_str(),
+                                                  "all axes of out must be greater than or equal to 1");
         return ge::GRAPH_FAILED;
     }
 
     inputData.inputShape = array<uint64_t, DHW_DIMS>{
         uint64_t(inputShape.GetDim(d_dim)), uint64_t(inputShape.GetDim(h_dim)), uint64_t(inputShape.GetDim(w_dim))};
-    inputData.outShape = array<uint64_t, DHW_DIMS>{
-        uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)), uint64_t(outShape.GetDim(w_dim))};
+    inputData.outShape = array<uint64_t, DHW_DIMS>{uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)),
+                                                   uint64_t(outShape.GetDim(w_dim))};
 
     auto outputIndicesDesc = context_->GetOutputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputIndicesDesc);
     auto indicesDtype = outputIndicesDesc->GetDataType();
-    OP_CHECK_IF(
-        inputShape.GetDim(d_dim) * inputShape.GetDim(h_dim) * inputShape.GetDim(w_dim) >
-                static_cast<int64_t>(std::numeric_limits<int32_t>::max()) &&
-            indicesDtype != ge::DT_INT64,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "The value of D*H*W exceeds INT32_MAX, the data type of indices should be DT_INT64"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape.GetDim(d_dim) * inputShape.GetDim(h_dim) * inputShape.GetDim(w_dim) >
+                        static_cast<int64_t>(std::numeric_limits<int32_t>::max()) &&
+                    indicesDtype != ge::DT_INT64,
+                OP_LOGI(context_->GetNodeName(),
+                        "The value of D*H*W exceeds INT32_MAX, the data type of indices should be DT_INT64"),
+                return ge::GRAPH_FAILED);
     int32_t dValue = 0;
     int32_t hValue = 0;
     int32_t wValue = 0;
@@ -206,11 +200,10 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetShapeAttrsInfo()
     wValue = *(kernelSize->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.kernelSize = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
     if (dValue <= 0 || hValue <= 0 || wValue <= 0) {
-        std::string attrMsg =
-            "{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " + std::to_string(wValue) + "}";
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context_->GetNodeName(), "ksize", attrMsg.c_str(),
-            "all values of ksize must be greater than or equal to 1");
+        std::string attrMsg = "{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " +
+                              std::to_string(wValue) + "}";
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "ksize", attrMsg.c_str(),
+                                               "all values of ksize must be greater than or equal to 1");
         return ge::GRAPH_FAILED;
     }
 
@@ -224,11 +217,10 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetShapeAttrsInfo()
     wValue = *(stride->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.stride = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
     if (hValue <= 0 || wValue <= 0 || dValue <= 0) {
-        std::string attrMsg =
-            "{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " + std::to_string(wValue) + "}";
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            context_->GetNodeName(), "strides", attrMsg.c_str(),
-            "all values of strides must be greater than or equal to 1");
+        std::string attrMsg = "{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " +
+                              std::to_string(wValue) + "}";
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "strides", attrMsg.c_str(),
+                                               "all values of strides must be greater than or equal to 1");
         return ge::GRAPH_FAILED;
     }
 
@@ -260,11 +252,10 @@ ge::graphStatus MaxPool3DWithArgmaxV2GatherTiling::GetShapeAttrsInfo()
         wValue = *(dilation->GetData() + MP_MAX_3D_DIM_TWO);
         inputData.dilation = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
         if (dValue <= 0 || hValue <= 0 || wValue <= 0) {
-            std::string attrMsg =
-                "{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " + std::to_string(wValue) + "}";
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                context_->GetNodeName(), "dilation", attrMsg.c_str(),
-                "all values of dilation must be greater than or equal to 1");
+            std::string attrMsg = "{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " +
+                                  std::to_string(wValue) + "}";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "dilation", attrMsg.c_str(),
+                                                   "all values of dilation must be greater than or equal to 1");
             return ge::GRAPH_FAILED;
         }
     }
@@ -372,17 +363,16 @@ bool MaxPool3DWithArgmaxV2GatherTiling::IsBasicConfigUnsupported() const
     return false;
 }
 
-bool MaxPool3DWithArgmaxV2GatherTiling::IsExcludedByDegenerateCheck(
-    int64_t noOverlapCount, int64_t degenerateCount, bool wDegenerate, int64_t kernelElements) const
+bool MaxPool3DWithArgmaxV2GatherTiling::IsExcludedByDegenerateCheck(int64_t noOverlapCount, int64_t degenerateCount,
+                                                                    bool wDegenerate, int64_t kernelElements) const
 {
     bool allNonOverlap = (noOverlapCount == DHW_DIMS);
 
     if (degenerateCount >= NUM_TWO_THRESHOLD && allNonOverlap) {
         return true;
     }
-    bool hwDegenerate =
-        (inputData.outShape[H_DIM] == 1 && inputData.inputShape[H_DIM] < inputData.kernelSize[H_DIM] &&
-         inputData.outShape[W_DIM] == 1 && inputData.inputShape[W_DIM] < inputData.kernelSize[W_DIM]);
+    bool hwDegenerate = (inputData.outShape[H_DIM] == 1 && inputData.inputShape[H_DIM] < inputData.kernelSize[H_DIM] &&
+                         inputData.outShape[W_DIM] == 1 && inputData.inputShape[W_DIM] < inputData.kernelSize[W_DIM]);
     if (hwDegenerate && dtype != ge::DataType::DT_FLOAT) {
         return true;
     }
@@ -395,9 +385,9 @@ bool MaxPool3DWithArgmaxV2GatherTiling::IsExcludedByDegenerateCheck(
     return false;
 }
 
-bool MaxPool3DWithArgmaxV2GatherTiling::IsExcludedByKernelHeuristics(
-    int64_t noOverlapCount, int64_t strictNoOverlap, int64_t kernelElements, bool allNonOverlap,
-    int64_t degenerateCount) const
+bool MaxPool3DWithArgmaxV2GatherTiling::IsExcludedByKernelHeuristics(int64_t noOverlapCount, int64_t strictNoOverlap,
+                                                                     int64_t kernelElements, bool allNonOverlap,
+                                                                     int64_t degenerateCount) const
 {
     int64_t conversionCost = baseData_.indexBytes / baseData_.inputBytes;
     int64_t padPenalty = (inputData.ceilMode && baseData_.isPad == 1) ? PADDING_THRESHOLD : 1;
@@ -408,8 +398,8 @@ bool MaxPool3DWithArgmaxV2GatherTiling::IsExcludedByKernelHeuristics(
     bool smallKernel = (kernelElements > effectiveCost) && (kernelElements / effectiveCost < smallKernelThreshold);
     bool sparseKernel = false;
 
-    int64_t sparseLimit =
-        (!allNonOverlap && isFp16OrBf16 && degenerateCount == 0) ? OVERLAP_SPARSE_LIMIT : KERNEL_ELEMENTS_LIMIT;
+    int64_t sparseLimit = (!allNonOverlap && isFp16OrBf16 && degenerateCount == 0) ? OVERLAP_SPARSE_LIMIT :
+                                                                                     KERNEL_ELEMENTS_LIMIT;
     if (isFp16OrBf16) {
         sparseKernel = (strictNoOverlap >= NUM_TWO_THRESHOLD) && (kernelElements < sparseLimit);
     } else {
@@ -500,12 +490,12 @@ uint64_t MaxPool3DWithArgmaxV2GatherTiling::GetTilingKey() const
 
 void MaxPool3DWithArgmaxV2GatherTiling::DoBufferCalculate()
 {
-    splitData_.dInputInner =
-        (splitData_.dOutputInner - 1) * baseData_.dStride + (baseData_.dKernel - 1) * baseData_.dDilation + 1;
-    splitData_.hInputInner =
-        (splitData_.hOutputInner - 1) * baseData_.hStride + (baseData_.hKernel - 1) * baseData_.hDilation + 1;
-    splitData_.wInputInner =
-        (splitData_.wOutputInner - 1) * baseData_.wStride + (baseData_.wKernel - 1) * baseData_.wDilation + 1;
+    splitData_.dInputInner = (splitData_.dOutputInner - 1) * baseData_.dStride +
+                             (baseData_.dKernel - 1) * baseData_.dDilation + 1;
+    splitData_.hInputInner = (splitData_.hOutputInner - 1) * baseData_.hStride +
+                             (baseData_.hKernel - 1) * baseData_.hDilation + 1;
+    splitData_.wInputInner = (splitData_.wOutputInner - 1) * baseData_.wStride +
+                             (baseData_.wKernel - 1) * baseData_.wDilation + 1;
     int64_t maxDataNumInOneBlock = std::max(baseData_.oneBlockNumT1, baseData_.oneBlockNumT2);
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(splitData_.wInputInner, baseData_.oneBlockNumT1);
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData_.wOutputInner, maxDataNumInOneBlock);
@@ -516,13 +506,13 @@ void MaxPool3DWithArgmaxV2GatherTiling::DoBufferCalculate()
     if (baseData_.isPad == 1) {
         inputBufferSize *= DOUBLE;
     }
-    int64_t outputDataSize =
-        splitData_.highAxisInner * splitData_.dOutputInner * splitData_.hOutputInner * wOutputInnerAligned;
+    int64_t outputDataSize = splitData_.highAxisInner * splitData_.dOutputInner * splitData_.hOutputInner *
+                             wOutputInnerAligned;
     splitData_.maxValueBufferSize = outputDataSize * baseData_.inputBytes;
     splitData_.argmaxBufferSize = outputDataSize * baseData_.indexBytes;
 
-    int64_t tmpTotalBufferSize =
-        inputBufferSize + splitData_.maxValueBufferSize + splitData_.argmaxBufferSize + HELPER_BUFFER_SIZE;
+    int64_t tmpTotalBufferSize = inputBufferSize + splitData_.maxValueBufferSize + splitData_.argmaxBufferSize +
+                                 HELPER_BUFFER_SIZE;
 
     splitData_.totalBufferSize = tmpTotalBufferSize * DOUBLE;
     if (baseData_.isPad == 1) {
@@ -671,12 +661,12 @@ void MaxPool3DWithArgmaxV2GatherTiling::DoUBTiling()
 
 void MaxPool3DWithArgmaxV2GatherTiling::DoBlockTiling()
 {
-    splitData_.totalBaseBlockNum =
-        splitData_.highAxisOuter * splitData_.dOutputOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
+    splitData_.totalBaseBlockNum = splitData_.highAxisOuter * splitData_.dOutputOuter * splitData_.hOutputOuter *
+                                   splitData_.wOutputOuter;
     splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
     splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
-    splitData_.tailCoreProcessNum =
-        splitData_.totalBaseBlockNum - splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
+                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
 }
 
 void MaxPool3DWithArgmaxV2GatherTiling::PrintBaseData() const

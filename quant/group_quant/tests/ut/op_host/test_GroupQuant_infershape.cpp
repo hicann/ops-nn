@@ -18,15 +18,9 @@ using namespace op;
 
 class GroupQuantProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupQuantProto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupQuantProto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupQuantProto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupQuantProto TearDown" << std::endl; }
 };
 
 TEST_F(GroupQuantProto, inferDtype_case_1)
@@ -40,21 +34,21 @@ TEST_F(GroupQuantProto, inferDtype_case_1)
         ge::DataType input_group_index_ref = ge::DT_INT32;
         ge::DataType input_offset_ref = ge::DT_FLOAT;
         ge::DataType output_y_ref = ge::DT_INT8;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(1)
-                .NodeIoNum(4, 1)
-                .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeAttrs({
-                    {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                })
-                .InputDataTypes({&input_x_ref, &input_scale_ref, &input_group_index_ref, &input_offset_ref})
-                .OutputDataTypes({&output_y_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(1)
+                                  .NodeIoNum(4, 1)
+                                  .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  })
+                                  .InputDataTypes(
+                                      {&input_x_ref, &input_scale_ref, &input_group_index_ref, &input_offset_ref})
+                                  .OutputDataTypes({&output_y_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -73,20 +67,18 @@ TEST_F(GroupQuantProto, infershape_case_1)
     int64_t dimH = 4;
     gert::StorageShape xShape = {{dimS, dimH}, {dimS, dimH}};
     gert::StorageShape scaleShape = {{dimE, dimH}, {dimE, dimH}};
-    gert::StorageShape groupIndexShape = {
-        {
-            dimE,
-        },
-        {
-            dimE,
-        }};
-    gert::StorageShape offsetShape = {
-        {
-            1,
-        },
-        {
-            1,
-        }};
+    gert::StorageShape groupIndexShape = {{
+                                              dimE,
+                                          },
+                                          {
+                                              dimE,
+                                          }};
+    gert::StorageShape offsetShape = {{
+                                          1,
+                                      },
+                                      {
+                                          1,
+                                      }};
     gert::StorageShape yShape = {{dimS, dimH}, {dimS, dimH}};
 
     auto holder = gert::InferShapeContextFaker()

@@ -27,9 +27,8 @@ constexpr uint64_t INVALID_INDICES = 1;
 
 template <typename T>
 __simt_vf__ LAUNCH_BOUND(THREAD_DIM)
-__aicore__ inline void SimtLinearIndexProcess(
-    int tensorId, __gm__ int* strideAddr, __gm__ int* valueSizeAddr, __gm__ T* indexAddr, __ubuf__ T* outputUbAddr,
-    uint64_t calcNum)
+__aicore__ inline void SimtLinearIndexProcess(int tensorId, __gm__ int* strideAddr, __gm__ int* valueSizeAddr,
+                                              __gm__ T* indexAddr, __ubuf__ T* outputUbAddr, uint64_t calcNum)
 {
     for (int64_t i = threadIdx.x; i < calcNum; i = i + blockDim.x) {
         T indexValue = indexAddr[i];
@@ -40,13 +39,11 @@ __aicore__ inline void SimtLinearIndexProcess(
 }
 
 template <typename T>
-class LinearIndexSimtKernelV2
-{
+class LinearIndexSimtKernelV2 {
 public:
     __aicore__ inline LinearIndexSimtKernelV2() = delete;
-    __aicore__ inline LinearIndexSimtKernelV2(
-        GM_ADDR indexList, GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output, GM_ADDR workSpace,
-        const LinearIndexV2TilingData& tiling, TPipe& pipe)
+    __aicore__ inline LinearIndexSimtKernelV2(GM_ADDR indexList, GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output,
+                                              GM_ADDR workSpace, const LinearIndexV2TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling, indexList);
         SetGmAddr(stride, valueSize, output, tiling);
@@ -80,8 +77,8 @@ private:
             }
             indexGm_.SetGlobalBuffer(GetTensorAddr(indexList_, i) + idxAddrOffset_ + loopIdx * ubThres_);
             __gm__ T* indexAddr = (__gm__ T*)indexGm_.GetPhyAddr();
-            asc_vf_call<SimtLinearIndexProcess<T>>(
-                dim3(THREAD_DIM), i, strideAddr, valueSizeAddr, indexAddr, outputUbAddr, calcNum);
+            asc_vf_call<SimtLinearIndexProcess<T>>(dim3(THREAD_DIM), i, strideAddr, valueSizeAddr, indexAddr,
+                                                   outputUbAddr, calcNum);
         }
         auto mte3WaitVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(mte3WaitVEventID);
@@ -111,13 +108,10 @@ private:
         loopTail_ = dataNum_ % ubThres_;
     }
 
-    __aicore__ inline void InitBuffers(TPipe& pipe)
-    {
-        pipe.InitBuffer(outputUb_, ubThres_ * sizeof(T));
-    }
+    __aicore__ inline void InitBuffers(TPipe& pipe) { pipe.InitBuffer(outputUb_, ubThres_ * sizeof(T)); }
 
-    __aicore__ inline void SetGmAddr(
-        GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output, const LinearIndexV2TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output,
+                                     const LinearIndexV2TilingData& tiling)
     {
         valueSizeGm_.SetGlobalBuffer((__gm__ int*)valueSize);
         strideGm_.SetGlobalBuffer((__gm__ int*)stride);

@@ -32,26 +32,22 @@ constexpr uint8_t COPY_SPACE_MULTIPLE = 9;
 
 constexpr uint8_t INPUT_PARAMETER_COUNT = 3;
 template <typename T>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& outLocal,
-        LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor, uint32_t maxCastDataCount,
-        int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& outLocal,
+                                   LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor,
+                                   uint32_t maxCastDataCount, int64_t dataCount)
     {
         Power<T, false>(outLocal, inLocal_1, inLocal_2, bufferTensor, dataCount);
     }
 };
 
 template <>
-class InnerComputer<bfloat16_t>
-{
+class InnerComputer<bfloat16_t> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, LocalTensor<bfloat16_t>& outLocal,
-        LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor, uint32_t maxCastDataCount,
-        int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                   LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
+                                   LocalTensor<uint8_t>& bufferTensor, uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = 0;
         uint32_t castTimesRemainder = 0;
@@ -64,46 +60,42 @@ public:
         }
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            ComputerPerCast(
-                inLocal_1, inLocal_2, outLocal, float32Tensor, bufferTensor, maxCastDataCount, i, maxCastDataCount);
+            ComputerPerCast(inLocal_1, inLocal_2, outLocal, float32Tensor, bufferTensor, maxCastDataCount, i,
+                            maxCastDataCount);
         }
 
         if (castTimesRemainder > 0) {
-            ComputerPerCast(
-                inLocal_1, inLocal_2, outLocal, float32Tensor, bufferTensor, maxCastDataCount, castTimes,
-                castTimesRemainder);
+            ComputerPerCast(inLocal_1, inLocal_2, outLocal, float32Tensor, bufferTensor, maxCastDataCount, castTimes,
+                            castTimesRemainder);
         }
     }
 
 private:
-    __aicore__ inline void ComputerPerCast(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, LocalTensor<bfloat16_t>& outLocal,
-        LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor, uint32_t maxCastDataCount,
-        uint16_t index, int64_t dataCount)
+    __aicore__ inline void ComputerPerCast(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                           LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
+                                           LocalTensor<uint8_t>& bufferTensor, uint32_t maxCastDataCount,
+                                           uint16_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor[maxCastDataCount], inLocal_2[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
-        Power<float, false>(
-            float32Tensor[BUFFER_NUM * maxCastDataCount], float32Tensor, float32Tensor[maxCastDataCount], bufferTensor,
-            dataCount);
+        Power<float, false>(float32Tensor[BUFFER_NUM * maxCastDataCount], float32Tensor,
+                            float32Tensor[maxCastDataCount], bufferTensor, dataCount);
         PipeBarrier<PIPE_V>();
-        Cast(
-            outLocal[index * maxCastDataCount], float32Tensor[BUFFER_NUM * maxCastDataCount], RoundMode::CAST_RINT,
-            dataCount);
+        Cast(outLocal[index * maxCastDataCount], float32Tensor[BUFFER_NUM * maxCastDataCount], RoundMode::CAST_RINT,
+             dataCount);
         PipeBarrier<PIPE_V>();
     }
 };
 
 template <typename T>
-class ForeachPowList
-{
+class ForeachPowList {
 public:
     __aicore__ inline ForeachPowList(){};
-    __aicore__ inline void Init(
-        GM_ADDR self, GM_ADDR exponent, GM_ADDR outputs, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR self, GM_ADDR exponent, GM_ADDR outputs, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -115,11 +107,11 @@ private:
     };
 
     __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
-    __aicore__ inline void SingleTensorProcess(
-        int64_t dataCount, LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor);
+    __aicore__ inline void SingleTensorProcess(int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                               LocalTensor<uint8_t>& bufferTensor);
     __aicore__ inline void CopyIn(uint32_t offset, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void Compute(
-        uint32_t offset, int64_t dataCount, LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor);
+    __aicore__ inline void Compute(uint32_t offset, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   LocalTensor<uint8_t>& bufferTensor);
     __aicore__ inline void CopyOut(uint32_t offset, int64_t dataCount, bool isRemainder);
     __aicore__ inline __gm__ T* GetTensorAddr(GM_ADDR TensorsPtr, uint16_t index, int64_t offset);
     __aicore__ inline __gm__ uint64_t GetTmpBufferUBSize();
@@ -160,8 +152,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachPowList<T>::Init(
-    GM_ADDR self, GM_ADDR exponent, GM_ADDR outputs, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachPowList<T>::Init(GM_ADDR self, GM_ADDR exponent, GM_ADDR outputs, GM_ADDR workspace,
+                                               const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -225,8 +217,8 @@ __aicore__ inline void ForeachPowList<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void ForeachPowList<T>::SingleTensorProcess(
-    int64_t dataCount, LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor)
+__aicore__ inline void ForeachPowList<T>::SingleTensorProcess(int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                                              LocalTensor<uint8_t>& bufferTensor)
 {
     // Batch handling and calculation.
     uint32_t copyTimes = dataCount / maxDataCount;
@@ -278,8 +270,8 @@ __aicore__ inline void ForeachPowList<T>::CopyIn(uint32_t offset, int64_t dataCo
 }
 
 template <typename T>
-__aicore__ inline void ForeachPowList<T>::Compute(
-    uint32_t offset, int64_t dataCount, LocalTensor<float>& float32Tensor, LocalTensor<uint8_t>& bufferTensor)
+__aicore__ inline void ForeachPowList<T>::Compute(uint32_t offset, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                                  LocalTensor<uint8_t>& bufferTensor)
 {
     LocalTensor<T> inLocal_1 = InQueue_1.DeQue<T>();
     LocalTensor<T> inLocal_2 = InQueue_2.DeQue<T>();

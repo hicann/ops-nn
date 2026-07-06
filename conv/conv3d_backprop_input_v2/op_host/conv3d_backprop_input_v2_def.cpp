@@ -23,54 +23,43 @@ public:
     {
         this->Input("input_size")
             .ParamType(REQUIRED)
-            .DataType(
-                {ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
-                 ge::DT_INT64, ge::DT_INT32, ge::DT_INT64})
-            .Format(
-                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat(
-                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
+                       ge::DT_INT64, ge::DT_INT32, ge::DT_INT64})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("filter")
             .ParamType(REQUIRED)
-            .DataType(
-                {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16,
-                 ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format(
-                {ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
-                 ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
-                 ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D})
-            .UnknownShapeFormat(
-                {ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
-                 ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
-                 ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D});
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
+                     ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
+                     ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D})
+            .UnknownShapeFormat({ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
+                                 ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
+                                 ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D,
+                                 ge::FORMAT_FRACTAL_Z_3D});
         this->Input("out_backprop")
             .ParamType(REQUIRED)
-            .DataType(
-                {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16,
-                 ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format(
-                {ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0})
-            .UnknownShapeFormat(
-                {ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0});
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
+                     ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
+                     ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0})
+            .UnknownShapeFormat({ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
+                                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
+                                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0});
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType(
-                {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16,
-                 ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format(
-                {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0})
-            .UnknownShapeFormat(
-                {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
-                 ge::FORMAT_NDC1HWC0});
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDC1HWC0,
+                     ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
+                     ge::FORMAT_NDC1HWC0})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0,
+                                 ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0});
 
         this->Attr("strides").AttrType(REQUIRED).ListInt();
         this->Attr("pads").AttrType(REQUIRED).ListInt();
@@ -107,108 +96,100 @@ public:
         aicore_config_950.Input("input_size")
             .ParamType(REQUIRED)
             .ValueDepend(OPTIONAL)
-            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                       ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-                       ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
-                       ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                       ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                       ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicore_config_950.Input("filter")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
-                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_BF16,          ge::DT_FLOAT16,
-                       ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,  ge::DT_FLOAT,         ge::DT_BF16,
-                       ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,
-                       ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,     ge::DT_FLOAT16,       ge::DT_FLOAT,
-                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,
-                       ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT,         ge::DT_FLOAT,
-                       ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_BF16,     ge::DT_FLOAT16,       ge::DT_FLOAT16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+            .DataType({ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+                       ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_BF16,  ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
+                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
+                     ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_DHWCN,
                      ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
-                     ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN})
-            .UnknownShapeFormat(
-                {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
-                 ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
-                 ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN});
+                     ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
+                     ge::FORMAT_DHWCN})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
+                                 ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
+                                 ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN});
         aicore_config_950.Input("out_backprop")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
-                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_BF16,          ge::DT_FLOAT16,
-                       ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,  ge::DT_FLOAT,         ge::DT_BF16,
-                       ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,
-                       ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,     ge::DT_FLOAT16,       ge::DT_FLOAT,
-                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,
-                       ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT,         ge::DT_FLOAT,
-                       ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_BF16,     ge::DT_FLOAT16,       ge::DT_FLOAT16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+            .DataType({ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+                       ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_BF16,  ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                     ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
                      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                      ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC})
-            .UnknownShapeFormat(
-                {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC});
+                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                     ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
+                     ge::FORMAT_NDHWC})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC});
         aicore_config_950.Output("y")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
-                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_BF16,          ge::DT_FLOAT16,
-                       ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,  ge::DT_FLOAT,         ge::DT_BF16,
-                       ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,
-                       ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,     ge::DT_FLOAT16,       ge::DT_FLOAT,
-                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,
-                       ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT,         ge::DT_FLOAT,
-                       ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_BF16,     ge::DT_FLOAT16,       ge::DT_FLOAT16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+            .DataType({ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+                       ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+                       ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_BF16,  ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT16})
+            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                     ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
                      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
                      ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC})
-            .UnknownShapeFormat(
-                {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
-                 ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC});
+                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                     ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW,
+                     ge::FORMAT_NDHWC})
+            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC,
+                                 ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC});
 
         this->AICore().AddConfig("ascend950", aicore_config_950);
     }

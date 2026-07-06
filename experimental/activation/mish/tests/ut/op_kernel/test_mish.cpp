@@ -38,10 +38,7 @@ protected:
         system(cmd.c_str());
         system("chmod -R 755 ./mish_data/");
     }
-    static void TearDownTestCase()
-    {
-        std::cout << "mish_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "mish_test TearDown" << std::endl; }
 
 private:
     const static std::string rootPath;
@@ -60,15 +57,14 @@ inline T1 CeilAlign(T1 a, T2 b)
 TEST_F(MishTest, test_case_float16_1)
 {
     optiling::MishCompileInfo compileInfo = {64, 262144, false};
-    gert::TilingContextPara tilingContextPara(
-        "Mish",
-        {
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("Mish",
+                                              {
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -104,15 +100,14 @@ TEST_F(MishTest, test_case_float16_1)
 TEST_F(MishTest, test_case_float32_1)
 {
     optiling::MishCompileInfo compileInfo = {64, 262144, false};
-    gert::TilingContextPara tilingContextPara(
-        "Mish",
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("Mish",
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);

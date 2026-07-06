@@ -52,9 +52,9 @@ protected:
 };
 
 template <typename T, uint64_t TEMPLATE_MODE>
-void ExcuteTestCase(
-    const std::vector<int64_t>& inputShape, const std::vector<int64_t>& outputShape, const std::string& inputType,
-    const std::string& caseName, uint64_t tilingKey, size_t tilingDataSize, uint32_t blockDim)
+void ExcuteTestCase(const std::vector<int64_t>& inputShape, const std::vector<int64_t>& outputShape,
+                    const std::string& inputType, const std::string& caseName, uint64_t tilingKey,
+                    size_t tilingDataSize, uint32_t blockDim)
 {
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
@@ -112,13 +112,12 @@ void ExcuteTestCase(
 
 TEST_F(AdaptiveAvgPool2dGradKernelTest, test_simt_fp32_small)
 {
-    ExcuteTestCase<float, TPL_SIMT_KERNEL>(
-        {1, 2, 4, 4}, {1, 2, 8, 8}, "float32", "test_simt_fp32_small", 200, sizeof(AdaptiveAvgPool2dGradSimtTiling), 1);
+    ExcuteTestCase<float, TPL_SIMT_KERNEL>({1, 2, 4, 4}, {1, 2, 8, 8}, "float32", "test_simt_fp32_small", 200,
+                                           sizeof(AdaptiveAvgPool2dGradSimtTiling), 1);
 }
 
 TEST_F(AdaptiveAvgPool2dGradKernelTest, test_simt_fp32_medium)
 {
-    ExcuteTestCase<float, TPL_SIMT_KERNEL>(
-        {1, 2, 2, 2}, {1, 2, 8, 8}, "float32", "test_simt_fp32_medium", 210, sizeof(AdaptiveAvgPool2dGradSimtTiling),
-        1);
+    ExcuteTestCase<float, TPL_SIMT_KERNEL>({1, 2, 2, 2}, {1, 2, 8, 8}, "float32", "test_simt_fp32_medium", 210,
+                                           sizeof(AdaptiveAvgPool2dGradSimtTiling), 1);
 }

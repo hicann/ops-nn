@@ -77,35 +77,20 @@ public:
         mainTailBlock_ = remainderBatch % blockNum_;
     }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return CeilAlign(CeilDiv(k_, iterBatch_), blockNum_);
-    }
+    __aicore__ inline int64_t GetTileNum() { return CeilAlign(CeilDiv(k_, iterBatch_), blockNum_); }
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape()
     {
         return {mL1_, nL1_, kL1_, iterBatch_};
     }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape()
-    {
-        return {baseM_, baseN_, baseK_, 1};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape() { return {baseM_, baseN_, baseK_, 1}; }
 
-    __aicore__ inline bool GetP2Flag()
-    {
-        return hasP2_;
-    }
+    __aicore__ inline bool GetP2Flag() { return hasP2_; }
 
-    __aicore__ inline float GetDstTypeMax()
-    {
-        return dstTypeMax_;
-    }
+    __aicore__ inline float GetDstTypeMax() { return dstTypeMax_; }
 
-    __aicore__ inline float GetInvDstTypeMax()
-    {
-        return invDstTypeMax_;
-    }
+    __aicore__ inline float GetInvDstTypeMax() { return invDstTypeMax_; }
 
     __aicore__ inline int64_t GetBlockNum(int64_t blockNum)
     {
@@ -163,17 +148,14 @@ public:
         return tileIdx * iterBatch_;
     }
 
-    __aicore__ inline BlockCoord GetBlockCoord(int tileIdx)
-    {
-        return {0, 0, 0, 0};
-    }
+    __aicore__ inline BlockCoord GetBlockCoord(int tileIdx) { return {0, 0, 0, 0}; }
 
 private:
 };
 
 template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInFlatQuantScheduler, TransA_, TransB_> {
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInFlatQuantScheduler, TransA_,
+                              TransB_> {
     using SchedulerOp = BlockSchedulerFlatQuantBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 } // namespace Block

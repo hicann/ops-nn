@@ -39,7 +39,7 @@ struct ReluGradV2TilingInfo {
 
 static const gert::Shape SCALAR_SHAPE = {1};
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &shape)
+static const gert::Shape& EnsureNotScalar(const gert::Shape& shape)
 {
     if (shape.GetDimNum() == 0) {
         return SCALAR_SHAPE;
@@ -47,9 +47,9 @@ static const gert::Shape &EnsureNotScalar(const gert::Shape &shape)
     return shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext *context, uint64_t &ubSize, int64_t &coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
-    auto *platformInfoPtr = context->GetPlatformInfo();
+    auto* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
@@ -59,43 +59,43 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext *context, uint64_t &u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext *context, int64_t &totalLength, ge::DataType &dataType)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType)
 {
-    auto *gradientsShape = context->GetInputShape(0);
-    auto *featuresShape = context->GetInputShape(1);
+    auto* gradientsShape = context->GetInputShape(0);
+    auto* featuresShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradientsShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, featuresShape);
 
-    const gert::Shape &gradientsStorageShape = EnsureNotScalar(gradientsShape->GetStorageShape());
-    const gert::Shape &featuresStorageShape = EnsureNotScalar(featuresShape->GetStorageShape());
+    const gert::Shape& gradientsStorageShape = EnsureNotScalar(gradientsShape->GetStorageShape());
+    const gert::Shape& featuresStorageShape = EnsureNotScalar(featuresShape->GetStorageShape());
     OP_CHECK_IF(gradientsStorageShape != featuresStorageShape, OP_LOGE(context, "shape mismatch"),
                 return ge::GRAPH_FAILED);
     totalLength = gradientsStorageShape.GetShapeSize();
 
-    auto *gradientsDesc = context->GetInputDesc(0);
-    auto *featuresDesc = context->GetInputDesc(1);
+    auto* gradientsDesc = context->GetInputDesc(0);
+    auto* featuresDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradientsDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context, featuresDesc);
     dataType = gradientsDesc->GetDataType();
 
-    const std::set<ge::DataType> supportedDtype = {
-        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT32, ge::DT_INT64};
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8,
+                                                   ge::DT_UINT8, ge::DT_INT32,   ge::DT_INT64};
     OP_CHECK_IF(supportedDtype.count(dataType) == 0, OP_LOGE(context, "invalid dtype"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(featuresDesc->GetDataType() != dataType, OP_LOGE(context, "dtype mismatch"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetWorkspaceSize(gert::TilingContext *context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
 
-static void SetEmptyTiling(ReluGradV2TilingData *tiling)
+static void SetEmptyTiling(ReluGradV2TilingData* tiling)
 {
     tiling->formerNum = 0;
     tiling->formerLength = 0;
@@ -136,7 +136,7 @@ static int64_t GetAlignElements(ge::DataType dataType, int64_t dtypeSize)
 }
 
 static ge::graphStatus BuildTilingData(int64_t totalLength, ge::DataType dataType, uint64_t ubSize, int64_t coreNum,
-                                       ReluGradV2TilingInfo &info)
+                                       ReluGradV2TilingInfo& info)
 {
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(dataType, typeLength);
@@ -177,8 +177,8 @@ static ge::graphStatus BuildTilingData(int64_t totalLength, ge::DataType dataTyp
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetTilingData(gert::TilingContext *context, const ReluGradV2TilingInfo &info,
-                                     ReluGradV2TilingData *tiling)
+static ge::graphStatus SetTilingData(gert::TilingContext* context, const ReluGradV2TilingInfo& info,
+                                     ReluGradV2TilingData* tiling)
 {
     tiling->formerNum = info.formerNum;
     tiling->formerLength = info.formerLength;
@@ -188,7 +188,7 @@ static ge::graphStatus SetTilingData(gert::TilingContext *context, const ReluGra
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ReluGradV2TilingFunc(gert::TilingContext *context)
+static ge::graphStatus ReluGradV2TilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
@@ -200,10 +200,10 @@ static ge::graphStatus ReluGradV2TilingFunc(gert::TilingContext *context)
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
-    auto *tiling = context->GetTilingData<ReluGradV2TilingData>();
+    auto* tiling = context->GetTilingData<ReluGradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(ReluGradV2TilingData), 0, sizeof(ReluGradV2TilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
@@ -219,18 +219,16 @@ static ge::graphStatus ReluGradV2TilingFunc(gert::TilingContext *context)
     ReluGradV2TilingInfo info;
     OP_CHECK_IF(BuildTilingData(totalLength, dataType, ubSize, coreNum, info) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "BuildTilingData error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(SetTilingData(context, info, tiling) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "SetTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingData(context, info, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetTilingData error"),
+                return ge::GRAPH_FAILED);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForReluGradV2([[maybe_unused]] gert::TilingParseContext *context)
+static ge::graphStatus TilingParseForReluGradV2([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ReluGradV2)
-    .Tiling(ReluGradV2TilingFunc)
-    .TilingParse<ReluGradV2CompileInfo>(TilingParseForReluGradV2);
-}  // namespace optiling
+IMPL_OP_OPTILING(ReluGradV2).Tiling(ReluGradV2TilingFunc).TilingParse<ReluGradV2CompileInfo>(TilingParseForReluGradV2);
+} // namespace optiling

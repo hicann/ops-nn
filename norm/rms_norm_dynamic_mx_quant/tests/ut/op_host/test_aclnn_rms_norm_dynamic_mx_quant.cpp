@@ -29,15 +29,9 @@ constexpr int64_t GE_DT_FLOAT4_E1M2 = 41;
 
 class l2_rms_norm_dynamic_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_dynamic_mx_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_dynamic_mx_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_dynamic_mx_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "rms_norm_dynamic_mx_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_rms_norm_dynamic_mx_quant_test, ascend950_case_fp16_fp8_e4m3fn)

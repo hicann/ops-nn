@@ -62,7 +62,7 @@ __aicore__ inline void MatMulStreamKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bia
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
         {aGM, bGM, cGM, biasGM, nullptr, workspaceGM, tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM,
          tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB}, // gm addr
-        {cGM, workspaceGM}, // epilogue args
+        {cGM, workspaceGM},                                                             // epilogue args
         {tilingData.usedCoreNum, tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.skSingleCoreK,
          tilingData.kL1, tilingData.isHf32, static_cast<uint32_t>(tilingData.l2CacheDisable)}}; // schedule params
     MatmulKernel mm;

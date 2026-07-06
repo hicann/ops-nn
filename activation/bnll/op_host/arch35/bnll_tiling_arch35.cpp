@@ -19,18 +19,18 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t COMPUTE_TYPE_SIZE = 4;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
-constexpr int64_t BUFFER_NUM_DB = 9;   // 双缓冲 UB 划分份数
-constexpr int64_t BUFFER_NUM_SB = 7;   // 单缓冲 UB 划分份数
+constexpr int64_t BUFFER_NUM_DB = 9; // 双缓冲 UB 划分份数
+constexpr int64_t BUFFER_NUM_SB = 7; // 单缓冲 UB 划分份数
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -59,7 +59,7 @@ static ge::graphStatus BNLLTilingFunc(gert::TilingContext* context)
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
@@ -72,7 +72,7 @@ static ge::graphStatus BNLLTilingFunc(gert::TilingContext* context)
     BNLLTilingData* tiling = context->GetTilingData<BNLLTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(BNLLTilingData), 0, sizeof(BNLLTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -88,8 +88,7 @@ static ge::graphStatus BNLLTilingFunc(gert::TilingContext* context)
         useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
         int64_t bufferNum = useDoubleBuffer ? BUFFER_NUM_DB : BUFFER_NUM_SB;
         int64_t alignUnit = (ubBlockSize > COMPARE_ALIGN_ELEMENTS) ? ubBlockSize : COMPARE_ALIGN_ELEMENTS;
-        tiling->ubFactor = FloorAlign(
-            FloorDiv(static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
+        tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
         currentWorkspace[0] = WS_SYS_SIZE;
     } else {
         currentWorkspace[0] = 0;

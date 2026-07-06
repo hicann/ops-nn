@@ -10,12 +10,9 @@
 
 #include "relu_v3.h"
 
-enum class ReluV3TilingKey : uint32_t
-{
-    TILING_KEY = 0
-};
+enum class ReluV3TilingKey : uint32_t { TILING_KEY = 0 };
 
-template<uint32_t schMode>
+template <uint32_t schMode>
 __global__ __aicore__ void relu_v3(GM_ADDR x, GM_ADDR y, GM_ADDR mask, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);

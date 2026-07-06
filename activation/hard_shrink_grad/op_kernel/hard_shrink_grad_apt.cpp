@@ -22,9 +22,8 @@
 #include "arch35/hard_shrink_grad.h"
 
 template <typename D_T_X, int BUFFER_MODE>
-__global__ __aicore__ void hard_shrink_grad(
-    GM_ADDR selfGrad, GM_ADDR self, GM_ADDR out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hard_shrink_grad(GM_ADDR selfGrad, GM_ADDR self, GM_ADDR out, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardShrinkGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(HardShrinkGradTilingData, tilingData, tiling);

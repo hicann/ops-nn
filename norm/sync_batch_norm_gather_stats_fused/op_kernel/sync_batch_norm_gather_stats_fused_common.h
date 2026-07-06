@@ -35,10 +35,10 @@ class SyncBatchNormGatherStatsFusedCommon {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedCommon(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar, GM_ADDR meanAllOut,
-        GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut, GM_ADDR workspace,
-        const SyncBatchNormGatherStatsFusedTilingDataCommon* tilingData, TPipe& pipeIn)
+    __aicore__ inline void Init(GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar,
+                                GM_ADDR meanAllOut, GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut,
+                                GM_ADDR workspace, const SyncBatchNormGatherStatsFusedTilingDataCommon* tilingData,
+                                TPipe& pipeIn)
     {
         pipe = pipeIn;
         nLength = tilingData->nLength;
@@ -151,9 +151,8 @@ public:
         queue0_.EnQue(buffer0_);
         buffer0_ = queue0_.DeQue<float>();
         if constexpr (!IsSameType<T, float>::value) {
-            Cast(
-                buffer0_, buffer0_.ReinterpretCast<T>()[wholeBufferElemNums], RoundMode::CAST_NONE,
-                wholeBufferElemNums);
+            Cast(buffer0_, buffer0_.ReinterpretCast<T>()[wholeBufferElemNums], RoundMode::CAST_NONE,
+                 wholeBufferElemNums);
             PipeBarrier<PIPE_V>();
         }
     }
@@ -185,9 +184,8 @@ public:
         queue1_.EnQue(buffer1_);
         buffer1_ = queue1_.DeQue<float>();
         if constexpr (!IsSameType<T, float>::value) {
-            Cast(
-                buffer1_, buffer1_.ReinterpretCast<T>()[wholeBufferElemNums], RoundMode::CAST_NONE,
-                wholeBufferElemNums);
+            Cast(buffer1_, buffer1_.ReinterpretCast<T>()[wholeBufferElemNums], RoundMode::CAST_NONE,
+                 wholeBufferElemNums);
             PipeBarrier<PIPE_V>();
         }
     }
@@ -402,50 +400,46 @@ public:
 
 private:
     template <typename dType>
-    __aicore__ inline void BlockBroadcast(
-        const LocalTensor<dType>& dst, const LocalTensor<dType>& src, const int64_t curRowsNum);
+    __aicore__ inline void BlockBroadcast(const LocalTensor<dType>& dst, const LocalTensor<dType>& src,
+                                          const int64_t curRowsNum);
 
-    __aicore__ inline void BinElemNLastBrcLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+    __aicore__ inline void BinElemNLastBrcLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                                      const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                                      void (*func)(const LocalTensor<float>&, const LocalTensor<float>&,
+                                                                   const LocalTensor<float>&, uint64_t, uint8_t,
+                                                                   const BinaryRepeatParams&));
 
-    __aicore__ inline void BinElemWithInlinedNLastBrcFP32(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+    __aicore__ inline void BinElemWithInlinedNLastBrcFP32(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                                          const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                                          void (*func)(const LocalTensor<float>&,
+                                                                       const LocalTensor<float>&,
+                                                                       const LocalTensor<float>&, uint64_t, uint8_t,
+                                                                       const BinaryRepeatParams&));
 
-    __aicore__ inline void LastBrcFP32LargeStride(
-        const LocalTensor<float>& output, const LocalTensor<float>& input0, const LocalTensor<float>& input1,
-        const int64_t curRowsNum,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+    __aicore__ inline void LastBrcFP32LargeStride(const LocalTensor<float>& output, const LocalTensor<float>& input0,
+                                                  const LocalTensor<float>& input1, const int64_t curRowsNum,
+                                                  void (*func)(const LocalTensor<float>&, const LocalTensor<float>&,
+                                                               const LocalTensor<float>&, uint64_t, uint8_t,
+                                                               const BinaryRepeatParams&));
 
     __aicore__ inline void BinElemWithInlinedLastBrcFP32(
         const LocalTensor<float>& output, const LocalTensor<float>& input0, const LocalTensor<float>& input1,
         const int64_t rows,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
+                     const BinaryRepeatParams&));
 
-    __aicore__ inline void NlastReduceSumLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum);
+    __aicore__ inline void NlastReduceSumLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                                     const int64_t curRowsNum);
 
-    __aicore__ inline void NlastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum);
+    __aicore__ inline void NlastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                          const int64_t curRowsNum);
 
-    __aicore__ inline void LastReduceSumLargeStride(
-        const LocalTensor<float>& tmp, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const int64_t curColNum);
+    __aicore__ inline void LastReduceSumLargeStride(const LocalTensor<float>& tmp, const LocalTensor<float>& src,
+                                                    const int64_t curRowsNum, const int64_t curColNum);
 
-    __aicore__ inline void LastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const LocalTensor<float>& tmp,
-        const int64_t curRowsNum, const int64_t curColNum);
+    __aicore__ inline void LastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                         const LocalTensor<float>& tmp, const int64_t curRowsNum,
+                                         const int64_t curColNum);
 
 private:
     TPipe pipe;

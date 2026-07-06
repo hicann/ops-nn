@@ -21,31 +21,29 @@ namespace l0op {
 
 OP_TYPE_REGISTER(GatherNd);
 
-const aclTensor *GatherNd(const aclTensor *self, const aclTensor *indices, aclOpExecutor *executor,
-                          bool negativeIndexSupport) {
-  L0_DFX(GatherNd, self, indices, negativeIndexSupport);
-  // 根据算子语义，推导算子输出shape
-  op::Shape outShape;
-  int64_t rankSelf = self->GetViewShape().GetDimNum();
-  int64_t rankIndices = indices->GetViewShape().GetDimNum();
-  int64_t indicesLastElement = indices->GetViewShape().GetDim(rankIndices - 1);
+const aclTensor* GatherNd(const aclTensor* self, const aclTensor* indices, aclOpExecutor* executor,
+                          bool negativeIndexSupport)
+{
+    L0_DFX(GatherNd, self, indices, negativeIndexSupport);
+    // 根据算子语义，推导算子输出shape
+    op::Shape outShape;
+    int64_t rankSelf = self->GetViewShape().GetDimNum();
+    int64_t rankIndices = indices->GetViewShape().GetDimNum();
+    int64_t indicesLastElement = indices->GetViewShape().GetDim(rankIndices - 1);
 
-  for (int64_t i = 0; i < rankIndices - 1; ++i) {
-    outShape.AppendDim(indices->GetViewShape().GetDim(i));
-  }
-  for (int64_t i = indicesLastElement; i < rankSelf; ++i) {
-    outShape.AppendDim(self->GetViewShape().GetDim(i));
-  }
+    for (int64_t i = 0; i < rankIndices - 1; ++i) {
+        outShape.AppendDim(indices->GetViewShape().GetDim(i));
+    }
+    for (int64_t i = indicesLastElement; i < rankSelf; ++i) {
+        outShape.AppendDim(self->GetViewShape().GetDim(i));
+    }
 
-  // 根据推导出的输出shape申请输出tensor
-  auto gatherNdOut = executor->AllocTensor(outShape, self->GetDataType(), op::Format::FORMAT_ND);
-  auto retAicore = 
-    ADD_TO_LAUNCHER_LIST_AICORE(GatherNd,
-                                OP_INPUT(self, indices),
-                                OP_OUTPUT(gatherNdOut),
-                                OP_ATTR(negativeIndexSupport));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "GatherNd add to aicore launch list failed.");
-  return gatherNdOut;
+    // 根据推导出的输出shape申请输出tensor
+    auto gatherNdOut = executor->AllocTensor(outShape, self->GetDataType(), op::Format::FORMAT_ND);
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(GatherNd, OP_INPUT(self, indices), OP_OUTPUT(gatherNdOut),
+                                                 OP_ATTR(negativeIndexSupport));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "GatherNd add to aicore launch list failed.");
+    return gatherNdOut;
 }
-} // l0op
+} // namespace l0op

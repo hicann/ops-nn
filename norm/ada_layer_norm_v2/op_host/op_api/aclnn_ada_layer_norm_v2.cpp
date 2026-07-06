@@ -27,8 +27,8 @@ namespace {
 static constexpr int32_t MIN_X_DIM = 2;
 static constexpr int32_t MAX_X_DIM = 8;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
 static bool CheckNotNull(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::AdaLayerNormV2OutputTensor& outputTensor)
 {
@@ -39,11 +39,12 @@ static bool CheckNotNull(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::Ada
     return true;
 }
 
-static bool CheckDtypeValid(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::AdaLayerNormV2OutputTensor& outputTensor)
+static bool CheckDtypeValid(l0op::AdaLayerNormV2InputTensor& inputTensor,
+                            l0op::AdaLayerNormV2OutputTensor& outputTensor)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_MATCH(inputTensor.shift, inputTensor.x->GetDataType(), return false);
-    OP_CHECK_DTYPE_NOT_MATCH(inputTensor.scale, inputTensor.x->GetDataType(), return false); 
+    OP_CHECK_DTYPE_NOT_MATCH(inputTensor.scale, inputTensor.x->GetDataType(), return false);
     if (inputTensor.weightOptional != nullptr && inputTensor.biasOptional != nullptr) {
         // weight和bias都不为空时，数据类型保持一致
         OP_CHECK_DTYPE_NOT_MATCH(inputTensor.weightOptional, inputTensor.biasOptional->GetDataType(), return false);
@@ -58,7 +59,7 @@ static bool CheckDtypeValid(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::
             OP_CHECK_DTYPE_NOT_MATCH(inputTensor.weightOptional, inputTensor.x->GetDataType(), return false);
         }
     }
-    
+
     OP_CHECK_DTYPE_NOT_MATCH(outputTensor.out, inputTensor.x->GetDataType(), return false);
     if (outputTensor.rstdOutOptional != nullptr) {
         OP_CHECK_DTYPE_NOT_MATCH(outputTensor.rstdOutOptional, inputTensor.x->GetDataType(), return false);
@@ -72,9 +73,8 @@ static bool CheckDtypeValid(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::
 static bool CheckShape(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::AdaLayerNormV2OutputTensor& outputTensor)
 {
     int64_t xDim = inputTensor.x->GetViewShape().GetDimNum();
-    OP_CHECK(
-        xDim >= MIN_X_DIM && xDim <= MAX_X_DIM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be between 2 and 8."), return false);
+    OP_CHECK(xDim >= MIN_X_DIM && xDim <= MAX_X_DIM,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be between 2 and 8."), return false);
 
     op::Shape xShape = inputTensor.x->GetViewShape();
     int64_t S = xShape[xDim - MIN_X_DIM];
@@ -119,7 +119,8 @@ static bool CheckShape(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::AdaLa
     return true;
 }
 
-static aclnnStatus CheckParams(l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::AdaLayerNormV2OutputTensor& outputTensor)
+static aclnnStatus CheckParams(l0op::AdaLayerNormV2InputTensor& inputTensor,
+                               l0op::AdaLayerNormV2OutputTensor& outputTensor)
 {
     // 1. 检查参数是否为空指针
     CHECK_COND(CheckNotNull(inputTensor, outputTensor), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
@@ -133,14 +134,16 @@ static aclnnStatus CheckParams(l0op::AdaLayerNormV2InputTensor& inputTensor, l0o
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus AdaLayerNormV2Calculate(
-    l0op::AdaLayerNormV2InputTensor& inputTensor, l0op::AdaLayerNormV2OutputTensor& outputTensor, double epsilon, aclOpExecutor* executor)
+static aclnnStatus AdaLayerNormV2Calculate(l0op::AdaLayerNormV2InputTensor& inputTensor,
+                                           l0op::AdaLayerNormV2OutputTensor& outputTensor, double epsilon,
+                                           aclOpExecutor* executor)
 {
     // 如果非连续，需要转连续
     inputTensor.x = l0op::Contiguous(inputTensor.x, executor);
     inputTensor.scale = l0op::Contiguous(inputTensor.scale, executor);
     inputTensor.shift = l0op::Contiguous(inputTensor.shift, executor);
-    CHECK_RET(inputTensor.x != nullptr && inputTensor.scale != nullptr && inputTensor.shift != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(inputTensor.x != nullptr && inputTensor.scale != nullptr && inputTensor.shift != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
     if (inputTensor.biasOptional != nullptr) {
         inputTensor.biasOptional = l0op::Contiguous(inputTensor.biasOptional, executor);
         CHECK_RET(inputTensor.biasOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -150,11 +153,11 @@ static aclnnStatus AdaLayerNormV2Calculate(
         CHECK_RET(inputTensor.weightOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    std::tuple<aclTensor *, aclTensor *, aclTensor *> result = l0op::AdaLayerNormV2(
-        inputTensor, static_cast<float>(epsilon), executor);
-    const aclTensor *resultTensor = std::get<0>(result);
-    const aclTensor *meanTensor = std::get<1>(result);
-    const aclTensor *rstdTensor = std::get<2>(result);
+    std::tuple<aclTensor*, aclTensor*, aclTensor*> result = l0op::AdaLayerNormV2(inputTensor,
+                                                                                 static_cast<float>(epsilon), executor);
+    const aclTensor* resultTensor = std::get<0>(result);
+    const aclTensor* meanTensor = std::get<1>(result);
+    const aclTensor* rstdTensor = std::get<2>(result);
     CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto outResult = l0op::ViewCopy(resultTensor, outputTensor.out, executor);
     CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -172,12 +175,14 @@ static aclnnStatus AdaLayerNormV2Calculate(
 }
 }; // namespace
 
-aclnnStatus aclnnAdaLayerNormV2GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, double epsilon, aclTensor* out, aclTensor* meanOutOptional,
-    aclTensor* rstdOutOptional, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAdaLayerNormV2GetWorkspaceSize(const aclTensor* x, const aclTensor* scale, const aclTensor* shift,
+                                                const aclTensor* weightOptional, const aclTensor* biasOptional,
+                                                double epsilon, aclTensor* out, aclTensor* meanOutOptional,
+                                                aclTensor* rstdOutOptional, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnAdaLayerNormV2, DFX_IN(x, scale, shift, weightOptional, biasOptional, epsilon), DFX_OUT(out, meanOutOptional, rstdOutOptional));
+    L2_DFX_PHASE_1(aclnnAdaLayerNormV2, DFX_IN(x, scale, shift, weightOptional, biasOptional, epsilon),
+                   DFX_OUT(out, meanOutOptional, rstdOutOptional));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

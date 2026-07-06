@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
@@ -23,10 +22,10 @@ namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3IterBatchTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3IterBatchTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    BatchMatMulV3IterBatchTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BaseTiling(context, cfg){};
 
-    ~BatchMatMulV3IterBatchTiling() override {};
+    ~BatchMatMulV3IterBatchTiling() override{};
 
 protected:
     bool IsCapable() override;
@@ -37,7 +36,7 @@ protected:
 
     uint64_t GetNumBlocks() const override;
 
-    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
 private:
     uint64_t iterBatch_{1};
@@ -46,6 +45,5 @@ private:
     uint64_t inputSizeOneBatch_{1};
     MatMulV3BatchModel iterBatchBiasModel_{MatMulV3BatchModel::SINGLE_BIAS_MODEL};
 };
-}
-}
-
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

@@ -41,13 +41,10 @@ class BatchNormV3Infer {
 public:
     __aicore__ inline BatchNormV3Infer(){};
 
-    __aicore__ inline BatchNormV3Infer(const BatchNormV3InferTilingData* tilingDataIn)
-    {
-        tilingData_ = tilingDataIn;
-    }
+    __aicore__ inline BatchNormV3Infer(const BatchNormV3InferTilingData* tilingDataIn) { tilingData_ = tilingDataIn; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y, TPipe* pipeIn)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
+                                TPipe* pipeIn)
     {
         pipe_ = pipeIn;
 
@@ -89,12 +86,12 @@ public:
             bool needCopy = (curIdx <= beginIdx + 1) || (curIdx % (tilingData_->b0Outer * tilingData_->b1Outer) <= 1);
 
             // Tile整尾块
-            int64_t curTileB0Len =
-                curB0Idx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail : tilingData_->tileBlockB0Len;
-            int64_t curTileALen =
-                curAIdx == (tilingData_->aOuter - 1) ? tilingData_->tileBlockATail : tilingData_->tileBlockALen;
-            int64_t curTileB1Len =
-                curB1Idx == (tilingData_->b1Outer - 1) ? tilingData_->tileBlockB1Tail : tilingData_->tileBlockB1Len;
+            int64_t curTileB0Len = curB0Idx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail :
+                                                                            tilingData_->tileBlockB0Len;
+            int64_t curTileALen = curAIdx == (tilingData_->aOuter - 1) ? tilingData_->tileBlockATail :
+                                                                         tilingData_->tileBlockALen;
+            int64_t curTileB1Len = curB1Idx == (tilingData_->b1Outer - 1) ? tilingData_->tileBlockB1Tail :
+                                                                            tilingData_->tileBlockB1Len;
 
             int64_t ubStrideT = 0;
             int64_t ubStrideFloat = 0;
@@ -121,8 +118,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX(
-        int64_t xGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len, int64_t ubStrideT)
+    __aicore__ inline void CopyInX(int64_t xGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len,
+                                   int64_t ubStrideT)
     {
         LocalTensor<T> xLocal = xQueue_.AllocTensor<T>();
         LoopModeParams loopParams;
@@ -199,8 +196,8 @@ private:
         __local_mem__ T_RUNNING_MEAN* varLocal = (__local_mem__ T_RUNNING_MEAN*)var.GetPhyAddr();
         __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
 
-        VFNormalize(
-            xLocal, gammaLocal, betaLocal, meanLocal, varLocal, yLocal, curTileB0Len, curTileALen, curTileB1Len);
+        VFNormalize(xLocal, gammaLocal, betaLocal, meanLocal, varLocal, yLocal, curTileB0Len, curTileALen,
+                    curTileB1Len);
 
         yQueue_.EnQue(y);
 
@@ -211,10 +208,10 @@ private:
         varQueue_.FreeTensor<T_RUNNING_MEAN>(var);
     }
 
-    __aicore__ inline void VFNormalize(
-        __local_mem__ T* xLocal, __local_mem__ T_GAMMA* gammaLocal, __local_mem__ T_GAMMA* betaLocal,
-        __local_mem__ T_RUNNING_MEAN* meanLocal, __local_mem__ T_RUNNING_MEAN* varLocal, __local_mem__ T* yLocal,
-        uint16_t curTileB0Len, uint16_t curTileALen, uint16_t curTileB1Len)
+    __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ T_GAMMA* gammaLocal,
+                                       __local_mem__ T_GAMMA* betaLocal, __local_mem__ T_RUNNING_MEAN* meanLocal,
+                                       __local_mem__ T_RUNNING_MEAN* varLocal, __local_mem__ T* yLocal,
+                                       uint16_t curTileB0Len, uint16_t curTileALen, uint16_t curTileB1Len)
     {
         __VEC_SCOPE__
         {
@@ -237,13 +234,14 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(
                         runningVarTmp, ((__local_mem__ T_RUNNING_MEAN*)(varLocal) + i));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp, pregMask);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp,
+                                                                                                 pregMask);
                 } else {
-                    AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(
-                        var, ((__local_mem__ float*)(varLocal) + i));
+                    AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(var,
+                                                                               ((__local_mem__ float*)(varLocal) + i));
                 }
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
                 // load mean
                 DataCopy<float, LoadDist::DIST_BRC_B32>(mean, ((__local_mem__ float*)(meanLocal) + i));
@@ -252,10 +250,11 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(
                         runningMeanTmp, ((__local_mem__ T_RUNNING_MEAN*)(meanLocal) + i));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp, pregMask);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp,
+                                                                                                 pregMask);
                 } else {
-                    AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(
-                        mean, ((__local_mem__ float*)(meanLocal) + i));
+                    AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(mean,
+                                                                               ((__local_mem__ float*)(meanLocal) + i));
                 }
                 // load gamma、beta  1->64
                 LoadsTensorForDtypeT(gammaLocal, gamma, pregMask, i);
@@ -282,8 +281,8 @@ private:
                         } else { // fp16、bf16
                             RegTensor<T> xFp16;
                             Cast<T, float, NormCommon::castTraitB322B16>(xFp16, y, pregMask);
-                            DataCopy<T, StoreDist::DIST_PACK_B32>(
-                                ((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMask);
+                            DataCopy<T, StoreDist::DIST_PACK_B32>(((__local_mem__ T*)yLocal) + xOffset, xFp16,
+                                                                  pregMask);
                         }
                     }
                 }
@@ -292,8 +291,8 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadsTensorForDtypeT(
-        __local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadsTensorForDtypeT(__local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
+                                                uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
             DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
@@ -304,8 +303,8 @@ private:
         }
     }
 
-    __aicore__ inline void LoadTensorForDtypeT(
-        __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadTensorForDtypeT(__local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg,
+                                               uint32_t offset)
     {
         if constexpr (IsSameType<T, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
@@ -316,8 +315,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyOutY(
-        int64_t yGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len, int64_t ubStrideT)
+    __aicore__ inline void CopyOutY(int64_t yGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len,
+                                    int64_t ubStrideT)
     {
         LocalTensor<T> y = yQueue_.DeQue<T>();
         LoopModeParams loopParams;

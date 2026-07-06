@@ -46,7 +46,7 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr, aclDataType 
     if (dtype == ACL_FLOAT) {
         std::vector<float> resultData(size, 0);
         aclrtMemcpy(resultData.data(), size * sizeof(float), *deviceAddr, size * sizeof(float),
-                     ACL_MEMCPY_DEVICE_TO_HOST);
+                    ACL_MEMCPY_DEVICE_TO_HOST);
         for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
         }
@@ -54,7 +54,7 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr, aclDataType 
         // fp16: 拷回 uint16_t 再转 float 显示
         std::vector<uint16_t> resultData(size, 0);
         aclrtMemcpy(resultData.data(), size * sizeof(uint16_t), *deviceAddr, size * sizeof(uint16_t),
-                     ACL_MEMCPY_DEVICE_TO_HOST);
+                    ACL_MEMCPY_DEVICE_TO_HOST);
         for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("result[%ld] is: 0x%04x\n", i, resultData[i]);
         }
@@ -73,9 +73,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto elemCount = hostData.size();
     auto size = elemCount * sizeof(T);
@@ -89,9 +88,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -110,23 +108,17 @@ int main()
     int64_t totalNum = GetShapeSize(selfShape);
 
     // self: 输入预测值
-    std::vector<float> selfHostData = {
-         0.5f,  1.0f, -0.3f,  2.0f,  0.1f, -1.5f,  0.8f, -0.2f,
-        -1.0f,  0.7f,  1.5f, -0.5f,  0.3f,  0.9f, -0.8f,  1.2f,
-         0.4f, -0.6f,  1.1f, -1.3f,  0.6f, -0.4f,  1.4f,  0.2f,
-        -0.9f,  1.3f, -0.1f,  0.0f,  1.6f, -1.1f,  0.5f, -0.7f
-    };
+    std::vector<float> selfHostData = {0.5f,  1.0f, -0.3f, 2.0f,  0.1f,  -1.5f, 0.8f,  -0.2f, -1.0f, 0.7f, 1.5f,
+                                       -0.5f, 0.3f, 0.9f,  -0.8f, 1.2f,  0.4f,  -0.6f, 1.1f,  -1.3f, 0.6f, -0.4f,
+                                       1.4f,  0.2f, -0.9f, 1.3f,  -0.1f, 0.0f,  1.6f,  -1.1f, 0.5f,  -0.7f};
 
     // target: 标签值（+1 或 -1）
-    std::vector<float> targetHostData = {
-         1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,  1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
-         1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  1.0f
-    };
+    std::vector<float> targetHostData = {1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,
+                                         1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,
+                                         -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f};
 
     // 3. 计算 CPU golden (reduction=mean)
-    int64_t reduction = 1;  // mean
+    int64_t reduction = 1; // mean
     {
         double totalLoss = 0.0;
         LOG_PRINT("=== CPU Golden (reduction=mean) ===\n");
@@ -162,12 +154,12 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    ret = aclnnSoftMarginLossGetWorkspaceSize(selfTensor, targetTensor, reduction, outTensor,
-                                              &workspaceSize, &executor);
-    LOG_PRINT("aclnnSoftMarginLossGetWorkspaceSize returned %d, workspaceSize=%llu\n",
-              ret, (unsigned long long)workspaceSize);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnSoftMarginLossGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnSoftMarginLossGetWorkspaceSize(selfTensor, targetTensor, reduction, outTensor, &workspaceSize,
+                                              &executor);
+    LOG_PRINT("aclnnSoftMarginLossGetWorkspaceSize returned %d, workspaceSize=%llu\n", ret,
+              (unsigned long long)workspaceSize);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftMarginLossGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {

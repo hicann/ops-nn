@@ -78,7 +78,8 @@ void IndexFillSimdTiling::CalcUBBlock()
         blockFactorUbFactorQ_ = blockFactorAlignQ;
     } else {
         blockFactorUbBufferMask_ = std::min(MAX_MASK_SIZE, blockFactorAlignMask);
-        blockFactorUbFactorQ_ = Ops::Base::FloorAlign((ubSize_ - blockFactorUbBufferMask_) / nBuffer / inputData.dtypeSize, oneBlockNum);
+        blockFactorUbFactorQ_ = Ops::Base::FloorAlign(
+            (ubSize_ - blockFactorUbBufferMask_) / nBuffer / inputData.dtypeSize, oneBlockNum);
         if (blockFactorUbFactorQ_ * TWO > blockFactorQ_) {
             blockFactorUbFactorQ_ = Ops::Base::CeilAlign(Ops::Base::CeilDiv(blockFactorQ_, TWO), oneBlockNum);
         }
@@ -95,7 +96,8 @@ void IndexFillSimdTiling::CalcUBBlock()
         blockTailUbFactorQ_ = blockTailAlignQ;
     } else {
         blockTailUbBufferMask_ = std::min(MAX_MASK_SIZE, blockTailAlignMask);
-        blockTailUbFactorQ_ = Ops::Base::FloorAlign((ubSize_ - blockTailUbBufferMask_) / nBuffer / inputData.dtypeSize, oneBlockNum);
+        blockTailUbFactorQ_ = Ops::Base::FloorAlign((ubSize_ - blockTailUbBufferMask_) / nBuffer / inputData.dtypeSize,
+                                                    oneBlockNum);
         if (blockTailUbFactorQ_ * TWO > blockTailQ_) {
             blockTailUbFactorQ_ = Ops::Base::CeilAlign(Ops::Base::CeilDiv(blockTailQ_, TWO), oneBlockNum);
         }
@@ -119,7 +121,8 @@ ge::graphStatus IndexFillSimdTiling::GetWorkspaceSize()
     uint32_t sysWorkspace = WS_SYS_SIZE;
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = (inputData.N * sizeof(int8_t)) + sysWorkspace; // workspace上申请额外申请一片内存，用于存放索引位图
+    currentWorkspace[0] = (inputData.N * sizeof(int8_t)) +
+                          sysWorkspace; // workspace上申请额外申请一片内存，用于存放索引位图
 
     // 涉及到核间同步，需要设置该模式.
     context_->SetScheduleMode(1);

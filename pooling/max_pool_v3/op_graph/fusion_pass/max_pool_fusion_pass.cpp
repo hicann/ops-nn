@@ -41,7 +41,7 @@ using namespace fusion;
 namespace ops {
 namespace {
 const std::string kPassName = "MaxPoolFusionPass";
-const std::array<const char *, 1> kSourceOpTypes = {"MaxPool"};
+const std::array<const char*, 1> kSourceOpTypes = {"MaxPool"};
 const int64_t kCaptureInput = 0L;
 const int64_t kCapturePool = 1L;
 const size_t kShapeAttrSize = 4U;
@@ -50,9 +50,8 @@ inline static bool IsRegbasePlatform()
 {
     PlatformInfo info;
     OptionalInfo optInfo;
-    OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS,
-        false, kPassName.c_str(), "Get platform_info failed.");
+    OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS, false,
+               kPassName.c_str(), "Get platform_info failed.");
     const std::string socVersion = info.str_info.short_soc_version;
     bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbasePlatform);
@@ -61,12 +60,12 @@ inline static bool IsRegbasePlatform()
 
 bool IsSupportedDtype(const DataType dtype)
 {
-    static const std::initializer_list<DataType> kSupportedDtypes = {DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8,
-        DT_INT16, DT_INT32, DT_INT64, DT_UINT8, DT_UINT16};
+    static const std::initializer_list<DataType> kSupportedDtypes = {DT_FLOAT, DT_FLOAT16, DT_BF16,  DT_INT8,  DT_INT16,
+                                                                     DT_INT32, DT_INT64,   DT_UINT8, DT_UINT16};
     return std::find(kSupportedDtypes.begin(), kSupportedDtypes.end(), dtype) != kSupportedDtypes.end();
 }
 
-bool GetAttrVector4(const GNode &node, const char *attrName, std::vector<int64_t> &values)
+bool GetAttrVector4(const GNode& node, const char* attrName, std::vector<int64_t>& values)
 {
     if (node.GetAttr(attrName, values) != SUCCESS) {
         OPS_LOG_D(kPassName.c_str(), "Get attr %s failed.", attrName);
@@ -79,10 +78,10 @@ bool GetAttrVector4(const GNode &node, const char *attrName, std::vector<int64_t
     return true;
 }
 
-es::EsTensorHolder CreatePatternPool(es::EsGraphBuilder &graphBuilder, const char *opType,
-    const std::string &nodeName, const es::EsTensorHolder &x)
+es::EsTensorHolder CreatePatternPool(es::EsGraphBuilder& graphBuilder, const char* opType, const std::string& nodeName,
+                                     const es::EsTensorHolder& x)
 {
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto pool = es::CompliantNodeBuilder(graph)
                     .OpType(opType)
                     .Name(nodeName.c_str())
@@ -94,7 +93,7 @@ es::EsTensorHolder CreatePatternPool(es::EsGraphBuilder &graphBuilder, const cha
         es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), pool, 0) != GRAPH_SUCCESS,
         es::EsTensorHolder(), kPassName.c_str(), "AddEdgeAndUpdatePeerDesc failed.");
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(pool, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(pool, 0);
     return es::EsTensorHolder(yHolder);
 }
 } // namespace
@@ -102,7 +101,7 @@ es::EsTensorHolder CreatePatternPool(es::EsGraphBuilder &graphBuilder, const cha
 std::vector<PatternUniqPtr> MaxPoolFusionPass::Patterns()
 {
     std::vector<PatternUniqPtr> patterns;
-    for (const char *opType : kSourceOpTypes) {
+    for (const char* opType : kSourceOpTypes) {
         auto graphBuilder = es::EsGraphBuilder(opType);
         auto x = graphBuilder.CreateInput(0, "x");
         auto y = CreatePatternPool(graphBuilder, opType, std::string(opType) + "Pattern", x);
@@ -122,17 +121,17 @@ bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& mat
 
     NodeIo inputIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, false, kPassName.c_str(),
-        "Get captured input failed.");
+               "Get captured input failed.");
     TensorDesc inputDesc;
     OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, false, kPassName.c_str(),
-        "Get input desc failed.");
+               "Get input desc failed.");
     if (!IsSupportedDtype(inputDesc.GetDataType())) {
         return false;
     }
 
     NodeIo poolIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCapturePool, poolIo) != SUCCESS, false, kPassName.c_str(),
-        "Get captured pool failed.");
+               "Get captured pool failed.");
     GNode sourceNode = poolIo.node;
 
     std::vector<int64_t> ksize;
@@ -165,14 +164,14 @@ GraphUniqPtr MaxPoolFusionPass::Replacement(const std::unique_ptr<MatchResult>& 
 
     NodeIo inputIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, nullptr, kPassName.c_str(),
-        "Get captured input failed.");
+               "Get captured input failed.");
     TensorDesc inputDesc;
     OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, nullptr, kPassName.c_str(),
-        "Get input desc failed.");
+               "Get input desc failed.");
 
     NodeIo poolIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCapturePool, poolIo) != SUCCESS, nullptr, kPassName.c_str(),
-        "Get captured pool failed.");
+               "Get captured pool failed.");
     GNode sourceNode = poolIo.node;
 
     std::vector<int64_t> ksize;
@@ -182,21 +181,22 @@ GraphUniqPtr MaxPoolFusionPass::Replacement(const std::unique_ptr<MatchResult>& 
 
     AscendString paddingMode;
     OP_LOGE_IF(sourceNode.GetAttr("padding", paddingMode) != SUCCESS, nullptr, kPassName.c_str(),
-        "Get padding failed.");
+               "Get padding failed.");
 
     std::vector<int64_t> pads = {0, 0, 0, 0};
-    const char *dataFormat = "NCHW";
+    const char* dataFormat = "NCHW";
     if (inputDesc.GetFormat() == FORMAT_NHWC) {
         dataFormat = "NHWC";
     }
 
     auto graphBuilder = es::EsGraphBuilder("replacement");
     auto repX = graphBuilder.CreateInput(0, "x", inputDesc.GetDataType(), inputDesc.GetFormat(),
-        inputDesc.GetShape().GetDims());
+                                         inputDesc.GetShape().GetDims());
     auto repY = es::MaxPoolV3(repX, ksize, strides, paddingMode.GetString(), pads, dataFormat, false, false);
 
     TensorDesc outputDesc;
-    OP_LOGE_IF(sourceNode.GetOutputDesc(0, outputDesc) != SUCCESS, nullptr, kPassName.c_str(), "Get output desc failed.");
+    OP_LOGE_IF(sourceNode.GetOutputDesc(0, outputDesc) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get output desc failed.");
     auto outNode = repY.GetProducer();
     outNode->UpdateOutputDesc(0, outputDesc);
     outNode->UpdateInputDesc(0, inputDesc);

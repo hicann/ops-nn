@@ -19,8 +19,7 @@
 #include "../inc/kernel_utils.h"
 #include "inplace_index_add_common.h"
 
-namespace InplaceIndexAdd
-{
+namespace InplaceIndexAdd {
 using namespace AscendC;
 
 #ifdef __DAV_FPGA__
@@ -32,8 +31,7 @@ constexpr int64_t DB_BUFFER = 1;
 constexpr int64_t LEAST_DEAL_SIZE = 512;
 
 template <typename VAR_T, typename IDX_T, typename COMP_T, typename CAST_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-class InplaceIndexAddSimt
-{
+class InplaceIndexAddSimt {
 public:
     __aicore__ inline InplaceIndexAddSimt(const InplaceIndexAddSimtTilingData& tilingData, TPipe& pipe)
         : td_(tilingData), pipe_(pipe){};
@@ -46,10 +44,11 @@ public:
 
 private:
     static __simt_vf__ __aicore__ inline void SimtCompute(COMP_T varInAxis, COMP_T afterAxis, COMP_T updatesStride0,
-                                              COMP_T updatesAxis, COMP_T m0, COMP_T shift0, COMP_T m1, COMP_T shift1,
-                                              __gm__ VAR_T* var, __gm__ IDX_T* indices, __gm__ VAR_T* updates,
-                                              __gm__ VAR_T* alpha, __gm__ CAST_T* varWorkspaceGm, COMP_T blockIdx,
-                                              COMP_T blockNum, COMP_T indicesStride);
+                                                          COMP_T updatesAxis, COMP_T m0, COMP_T shift0, COMP_T m1,
+                                                          COMP_T shift1, __gm__ VAR_T* var, __gm__ IDX_T* indices,
+                                                          __gm__ VAR_T* updates, __gm__ VAR_T* alpha,
+                                                          __gm__ CAST_T* varWorkspaceGm, COMP_T blockIdx,
+                                                          COMP_T blockNum, COMP_T indicesStride);
 
 private:
     GlobalTensor<VAR_T> var_;
@@ -71,10 +70,8 @@ private:
 };
 
 template <typename VAR_T, typename IDX_T, typename COMP_T, typename CAST_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__aicore__ inline void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS>::Init(GM_ADDR var, GM_ADDR indices,
-                                                                                           GM_ADDR updates,
-                                                                                           GM_ADDR alpha,
-                                                                                           GM_ADDR workspace)
+__aicore__ inline void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS>::Init(
+    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace)
 {
     blockIdx_ = GetBlockIdx();
     blockNum_ = GetBlockNum();
@@ -196,11 +193,16 @@ __aicore__ inline void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_AL
 }
 
 template <typename VAR_T, typename IDX_T, typename COMP_T, typename CAST_T, bool WITH_ALPHA, bool IS_CONTIGUOUS>
-__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline
-void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtCompute(
-    COMP_T varInAxis, COMP_T afterAxis, COMP_T updatesStride0, COMP_T updatesAxis, COMP_T m0, COMP_T shift0, COMP_T m1,
-    COMP_T shift1, __gm__ VAR_T* var, __gm__ IDX_T* indices, __gm__ VAR_T* updates, __gm__ VAR_T* alpha,
-    __gm__ CAST_T* varWorkspaceGm, COMP_T blockIdx, COMP_T blockNum, COMP_T indicesStride)
+__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void InplaceIndexAddSimt<
+    VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtCompute(COMP_T varInAxis, COMP_T afterAxis,
+                                                                          COMP_T updatesStride0, COMP_T updatesAxis,
+                                                                          COMP_T m0, COMP_T shift0, COMP_T m1,
+                                                                          COMP_T shift1, __gm__ VAR_T* var,
+                                                                          __gm__ IDX_T* indices, __gm__ VAR_T* updates,
+                                                                          __gm__ VAR_T* alpha,
+                                                                          __gm__ CAST_T* varWorkspaceGm,
+                                                                          COMP_T blockIdx, COMP_T blockNum,
+                                                                          COMP_T indicesStride)
 {
     COMP_T varStride0 = varInAxis * afterAxis;
     VAR_T alphaValue = 1;
@@ -208,8 +210,7 @@ void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS
         alphaValue = alpha[0];
     }
 
-    for (COMP_T i = blockIdx * blockDim.x + threadIdx.x; i < updatesAxis;
-         i += blockNum * blockDim.x) {
+    for (COMP_T i = blockIdx * blockDim.x + threadIdx.x; i < updatesAxis; i += blockNum * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * updatesStride0;
 
@@ -227,9 +228,11 @@ void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS
         if constexpr (WITH_ALPHA) {
             if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value ||
                           IsSameType<VAR_T, int16_t>::value) {
-                asc_atomic_add(varWorkspaceGm + varOffset, static_cast<CAST_T>(static_cast<float>(updates[i]) * static_cast<float>(alphaValue)));
-            } else if constexpr (IsSameType<VAR_T, bfloat16_t>::value || IsSameType<VAR_T, half>::value)  {
-                asc_atomic_add(var + varOffset, static_cast<VAR_T>(static_cast<float>(updates[i]) * static_cast<float>(alphaValue)));
+                asc_atomic_add(varWorkspaceGm + varOffset,
+                               static_cast<CAST_T>(static_cast<float>(updates[i]) * static_cast<float>(alphaValue)));
+            } else if constexpr (IsSameType<VAR_T, bfloat16_t>::value || IsSameType<VAR_T, half>::value) {
+                asc_atomic_add(var + varOffset,
+                               static_cast<VAR_T>(static_cast<float>(updates[i]) * static_cast<float>(alphaValue)));
             } else {
                 asc_atomic_add(var + varOffset, updates[i] * alphaValue);
             }
@@ -267,11 +270,11 @@ __aicore__ inline void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_AL
     GetUintDivMagicAndShift(m0, shift0, updatesStride0);
     GetUintDivMagicAndShift(m1, shift1, afterAxis);
 
-    asc_vf_call<InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtCompute>(dim3(USED_THREAD), 
-                        varInAxis, afterAxis, updatesStride0, updatesAxis, m0, shift0, m1, shift1,
-                        (__gm__ VAR_T*)(var_.GetPhyAddr()), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
-                        (__gm__ VAR_T*)(updates_.GetPhyAddr()), (__gm__ VAR_T*)(alpha_.GetPhyAddr()),
-                        (__gm__ CAST_T*)(varWorkspaceGm_.GetPhyAddr()), blockIdx_, blockNum_, indicesStride);
+    asc_vf_call<InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_ALPHA, IS_CONTIGUOUS>::SimtCompute>(
+        dim3(USED_THREAD), varInAxis, afterAxis, updatesStride0, updatesAxis, m0, shift0, m1, shift1,
+        (__gm__ VAR_T*)(var_.GetPhyAddr()), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+        (__gm__ VAR_T*)(updates_.GetPhyAddr()), (__gm__ VAR_T*)(alpha_.GetPhyAddr()),
+        (__gm__ CAST_T*)(varWorkspaceGm_.GetPhyAddr()), blockIdx_, blockNum_, indicesStride);
     if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value ||
                   IsSameType<VAR_T, int16_t>::value) {
         SyncAll();
@@ -280,6 +283,6 @@ __aicore__ inline void InplaceIndexAddSimt<VAR_T, IDX_T, COMP_T, CAST_T, WITH_AL
         }
     }
 }
-}  // namespace InplaceIndexAdd
+} // namespace InplaceIndexAdd
 
 #endif

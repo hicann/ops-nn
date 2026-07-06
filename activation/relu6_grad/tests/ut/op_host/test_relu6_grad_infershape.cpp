@@ -22,15 +22,9 @@
 
 class relu6grad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "relu6grad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "relu6grad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "relu6grad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "relu6grad TearDown" << std::endl; }
 };
 
 TEST_F(relu6grad, relu6grad_infer_shape_same_fp32)

@@ -50,14 +50,8 @@ using namespace std;
 
 class fake_quant_with_min_max_vars_per_channel_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "fake_quant_with_min_max_vars_per_channel_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "fake_quant_with_min_max_vars_per_channel_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "fake_quant_with_min_max_vars_per_channel_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "fake_quant_with_min_max_vars_per_channel_test TearDown\n" << endl; }
 };
 
 // =============================================================================
@@ -65,35 +59,32 @@ protected:
 // 的简化版本（单核场景），让 UT 自给自足，不依赖 TilingFunc 流程。
 // =============================================================================
 namespace {
-constexpr int64_t kVL = 64;          // VL = 64 (fp32 = 256B)
+constexpr int64_t kVL = 64; // VL = 64 (fp32 = 256B)
 constexpr int64_t kBufNum = 2;
 constexpr int64_t kReservedUB = 1 * 1024;
 constexpr int64_t kUbSize = 192 * 1024;
 constexpr int64_t kCacheLineBytes = 32;
 
-static inline int64_t CeilDiv64(int64_t a, int64_t b) {
-    return (b <= 0) ? 0 : (a + b - 1) / b;
-}
-static inline int64_t AlignUp64(int64_t a, int64_t b) {
-    return (b <= 0) ? a : ((a + b - 1) / b) * b;
-}
-static inline int64_t GetCoreNumLike(int64_t taskNum, int64_t coreNum) {
-    if (taskNum <= 0 || coreNum <= 0) return 1;
+static inline int64_t CeilDiv64(int64_t a, int64_t b) { return (b <= 0) ? 0 : (a + b - 1) / b; }
+static inline int64_t AlignUp64(int64_t a, int64_t b) { return (b <= 0) ? a : ((a + b - 1) / b) * b; }
+static inline int64_t GetCoreNumLike(int64_t taskNum, int64_t coreNum)
+{
+    if (taskNum <= 0 || coreNum <= 0)
+        return 1;
     int64_t perCore = CeilDiv64(taskNum, coreNum);
-    if (perCore <= 0) perCore = 1;
+    if (perCore <= 0)
+        perCore = 1;
     return CeilDiv64(taskNum, perCore);
 }
 
 // 简化 tiling 计算：固定 coreNum，仅供 UT 使用，路径与 host tiling 一致
-void ComputeTiling(FakeQuantWithMinMaxVarsPerChannelTilingData* td,
-                   int64_t M, int64_t N,
-                   int32_t numBits, bool narrowRange,
-                   int64_t coreNum = 48)
+void ComputeTiling(FakeQuantWithMinMaxVarsPerChannelTilingData* td, int64_t M, int64_t N, int32_t numBits,
+                   bool narrowRange, int64_t coreNum = 48)
 {
     int64_t dtypeSize = sizeof(float);
 
     // 1) Block 划分（二路竞争）
-    int64_t elemPerCacheLine = kCacheLineBytes / dtypeSize;  // 8
+    int64_t elemPerCacheLine = kCacheLineBytes / dtypeSize; // 8
     int64_t cacheLineNumN = CeilDiv64(N, elemPerCacheLine);
     int64_t actCoreNum0 = GetCoreNumLike(M, coreNum);
     int64_t actCoreNum1 = GetCoreNumLike(cacheLineNumN, coreNum);
@@ -102,39 +93,49 @@ void ComputeTiling(FakeQuantWithMinMaxVarsPerChannelTilingData* td,
     if (actCoreNum0 >= actCoreNum1) {
         blockAxis = 0;
         numCore = actCoreNum0;
-        if (numCore <= 0) numCore = 1;
+        if (numCore <= 0)
+            numCore = 1;
         blockFactor = CeilDiv64(M, numCore);
-        if (blockFactor <= 0) blockFactor = 1;
+        if (blockFactor <= 0)
+            blockFactor = 1;
         int64_t consumed = blockFactor * (numCore - 1);
         blockTailFactor = M - consumed;
         if (blockTailFactor <= 0) {
-            numCore = 1; blockFactor = M; blockTailFactor = M;
+            numCore = 1;
+            blockFactor = M;
+            blockTailFactor = M;
         }
     } else {
         blockAxis = 1;
         numCore = actCoreNum1;
-        if (numCore <= 0) numCore = 1;
+        if (numCore <= 0)
+            numCore = 1;
         int64_t cellsPerCore = CeilDiv64(cacheLineNumN, numCore);
-        if (cellsPerCore <= 0) cellsPerCore = 1;
+        if (cellsPerCore <= 0)
+            cellsPerCore = 1;
         blockFactor = cellsPerCore * elemPerCacheLine;
         int64_t consumed = blockFactor * (numCore - 1);
         blockTailFactor = N - consumed;
         if (blockTailFactor <= 0) {
-            numCore = 1; blockFactor = N; blockTailFactor = N;
+            numCore = 1;
+            blockFactor = N;
+            blockTailFactor = N;
         }
     }
 
     // 2) UB 切分（v2.2 方案 A）
     int64_t available = kUbSize - kReservedUB;
-    int64_t bytesPerLen_single = (1 + 1) * kBufNum * 1   // x + y DB (baseN=1)
-                               + (1 + 1) * kBufNum;      // min + max DB
+    int64_t bytesPerLen_single = (1 + 1) * kBufNum * 1 // x + y DB (baseN=1)
+                                 + (1 + 1) * kBufNum;  // min + max DB
     bytesPerLen_single *= dtypeSize;
     int64_t maxBaseRaw = available / bytesPerLen_single;
     int64_t maxBase = (maxBaseRaw / kVL) * kVL;
-    if (maxBase < kVL) maxBase = kVL;
+    if (maxBase < kVL)
+        maxBase = kVL;
 
     int64_t blockBase = (blockAxis == 0) ? N : blockFactor;
-    if (blockBase <= 0) blockBase = 1;
+    if (blockBase <= 0)
+        blockBase = 1;
     int64_t blockBaseAligned = AlignUp64(blockBase, kVL);
 
     int64_t ubAxis, baseN, baseLen;
@@ -143,50 +144,53 @@ void ComputeTiling(FakeQuantWithMinMaxVarsPerChannelTilingData* td,
         baseLen = blockBaseAligned;
         int64_t channelBytes = (1 + 1) * kBufNum * baseLen * dtypeSize;
         int64_t leftBytes = available - channelBytes;
-        if (leftBytes <= 0) leftBytes = 0;
+        if (leftBytes <= 0)
+            leftBytes = 0;
         int64_t rowBytesPerN = (1 + 1) * kBufNum * baseLen * dtypeSize;
         int64_t maxN = (rowBytesPerN > 0) ? (leftBytes / rowBytesPerN) : 1;
-        if (maxN < 1) maxN = 1;
+        if (maxN < 1)
+            maxN = 1;
         int64_t blockInnerSize = (blockAxis == 0) ? blockFactor : M;
-        if (blockInnerSize <= 0) blockInnerSize = 1;
+        if (blockInnerSize <= 0)
+            blockInnerSize = 1;
         ubAxis = 0;
         baseN = std::min<int64_t>(maxN, blockInnerSize);
     } else {
         ubAxis = 1;
         baseN = 1;
         baseLen = std::min<int64_t>(blockBaseAligned, maxBase);
-        if (baseLen <= 0) baseLen = kVL;
+        if (baseLen <= 0)
+            baseLen = kVL;
     }
 
     float quantMin = narrowRange ? 1.0f : 0.0f;
     float quantMax = static_cast<float>((1LL << numBits) - 1);
 
-    td->numCore         = numCore;
-    td->blockAxis       = blockAxis;
-    td->blockFactor     = blockFactor;
+    td->numCore = numCore;
+    td->blockAxis = blockAxis;
+    td->blockFactor = blockFactor;
     td->blockTailFactor = blockTailFactor;
-    td->blockUnion      = 1;
-    td->ubAxis          = ubAxis;
-    td->baseN           = baseN;
-    td->baseLen         = baseLen;
-    td->axis            = -1;
-    td->dim0            = M;
-    td->dim1            = N;
-    td->dim2            = 0;
-    td->hasZeroPoint    = 0;
-    td->headNum         = M;
-    td->tailDim         = N;
-    td->quantMin        = quantMin;
-    td->quantMax        = quantMax;
-    td->numBits         = numBits;
-    td->narrowRange     = narrowRange ? 1 : 0;
+    td->blockUnion = 1;
+    td->ubAxis = ubAxis;
+    td->baseN = baseN;
+    td->baseLen = baseLen;
+    td->axis = -1;
+    td->dim0 = M;
+    td->dim1 = N;
+    td->dim2 = 0;
+    td->hasZeroPoint = 0;
+    td->headNum = M;
+    td->tailDim = N;
+    td->quantMin = quantMin;
+    td->quantMax = quantMax;
+    td->numBits = numBits;
+    td->narrowRange = narrowRange ? 1 : 0;
 }
 
 // =============================================================================
 // Golden: 与 tests/ttk/fake_quant_with_min_max_vars_per_channel_golden.py 一致
 // =============================================================================
-void GoldenFakeQuant(const float* x, const float* minV, const float* maxV,
-                     float* y, int64_t M, int64_t N,
+void GoldenFakeQuant(const float* x, const float* minV, const float* maxV, float* y, int64_t M, int64_t N,
                      int32_t numBits, bool narrowRange)
 {
     float quantMin = narrowRange ? 1.0f : 0.0f;
@@ -227,14 +231,14 @@ int CompareWithGolden(const float* actual, const float* expected, int64_t total,
         float a = actual[i];
         float e = expected[i];
         // NaN safe: 两边都 NaN 算 PASS
-        if (std::isnan(a) && std::isnan(e)) continue;
+        if (std::isnan(a) && std::isnan(e))
+            continue;
         float diff = std::fabs(a - e);
         if (!(diff <= atol)) {
             ++mismatches;
             if (reported < reportLimit) {
-                std::cerr << "  mismatch[" << i << "]: actual=" << a
-                          << " expected=" << e
-                          << " diff=" << diff << std::endl;
+                std::cerr << "  mismatch[" << i << "]: actual=" << a << " expected=" << e << " diff=" << diff
+                          << std::endl;
                 ++reported;
             }
         }
@@ -244,16 +248,20 @@ int CompareWithGolden(const float* actual, const float* expected, int64_t total,
 
 void FillLinspace(float* p, int64_t n, float lo, float hi)
 {
-    if (n <= 1) { if (n == 1) p[0] = lo; return; }
+    if (n <= 1) {
+        if (n == 1)
+            p[0] = lo;
+        return;
+    }
     float step = (hi - lo) / static_cast<float>(n - 1);
-    for (int64_t i = 0; i < n; ++i) p[i] = lo + step * static_cast<float>(i);
+    for (int64_t i = 0; i < n; ++i)
+        p[i] = lo + step * static_cast<float>(i);
 }
 
 // 通用执行函数：构造数据 → 调 kernel → 校验
-void RunCase(int64_t M, int64_t N, int32_t numBits, bool narrowRange,
-             const std::vector<float>& minVec, const std::vector<float>& maxVec,
-             float xLo = -1.0f, float xHi = 1.0f,
-             bool zeroOut = false, float atol = 1e-4f)
+void RunCase(int64_t M, int64_t N, int32_t numBits, bool narrowRange, const std::vector<float>& minVec,
+             const std::vector<float>& maxVec, float xLo = -1.0f, float xHi = 1.0f, bool zeroOut = false,
+             float atol = 1e-4f)
 {
     ASSERT_EQ(static_cast<int64_t>(minVec.size()), N);
     ASSERT_EQ(static_cast<int64_t>(maxVec.size()), N);
@@ -284,10 +292,8 @@ void RunCase(int64_t M, int64_t N, int32_t numBits, bool narrowRange,
 
     // 3) 跑 kernel（模板入口，固定 D_T_X=FQ_TPL_DT_FP32, MODE=2, HAS_ZP=0, ROUND_MODE=0）
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    auto fq_kernel = [](GM_ADDR x_, GM_ADDR mi_, GM_ADDR ma_, GM_ADDR y_,
-                         GM_ADDR ws_, GM_ADDR tiling_) {
-        ::fake_quant_with_min_max_vars_per_channel<FQ_TPL_DT_FP32, 2, 0, 0>(
-            x_, mi_, ma_, y_, ws_, tiling_);
+    auto fq_kernel = [](GM_ADDR x_, GM_ADDR mi_, GM_ADDR ma_, GM_ADDR y_, GM_ADDR ws_, GM_ADDR tiling_) {
+        ::fake_quant_with_min_max_vars_per_channel<FQ_TPL_DT_FP32, 2, 0, 0>(x_, mi_, ma_, y_, ws_, tiling_);
     };
     ICPU_RUN_KF(fq_kernel, blockDim, x, mi, ma, y, workspace, tiling);
 
@@ -297,14 +303,11 @@ void RunCase(int64_t M, int64_t N, int32_t numBits, bool narrowRange,
         // min==max==0 兜底场景：golden 全 0
         std::fill(goldenY.begin(), goldenY.end(), 0.0f);
     } else {
-        GoldenFakeQuant(xF, minVec.data(), maxVec.data(),
-                        goldenY.data(), M, N, numBits, narrowRange);
+        GoldenFakeQuant(xF, minVec.data(), maxVec.data(), goldenY.data(), M, N, numBits, narrowRange);
     }
     float* yF = reinterpret_cast<float*>(y);
     int mismatches = CompareWithGolden(yF, goldenY.data(), M * N, atol);
-    EXPECT_EQ(mismatches, 0) << "M=" << M << " N=" << N
-                             << " num_bits=" << numBits
-                             << " narrow_range=" << narrowRange;
+    EXPECT_EQ(mismatches, 0) << "M=" << M << " N=" << N << " num_bits=" << numBits << " narrow_range=" << narrowRange;
 
     AscendC::GmFree(x);
     AscendC::GmFree(mi);
@@ -313,7 +316,7 @@ void RunCase(int64_t M, int64_t N, int32_t numBits, bool narrowRange,
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
-}  // namespace
+} // namespace
 
 // =============================================================================
 // 测试用例
@@ -343,7 +346,7 @@ TEST_F(fake_quant_with_min_max_vars_per_channel_test, case_2d_multi_channel)
     for (int64_t i = 0; i < N; ++i) {
         // 不同通道使用不同 min/max
         mn[i] = -1.0f - 0.1f * static_cast<float>(i);
-        mx[i] =  1.0f + 0.1f * static_cast<float>(i);
+        mx[i] = 1.0f + 0.1f * static_cast<float>(i);
     }
     // x 范围放宽 atol：与 TTK 标杆同一组用例下做过 296/300 PASS，剩余 4 个为
     // step 边界 / NaN 语义差异，这里用更宽松的 atol=2e-2 覆盖最大 step（quant step ≈

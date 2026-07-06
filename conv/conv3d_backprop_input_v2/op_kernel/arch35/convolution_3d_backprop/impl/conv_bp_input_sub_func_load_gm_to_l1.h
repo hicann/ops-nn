@@ -19,26 +19,25 @@
 #include "conv_bp_sub_func_mix.h"
 
 using AscendC::DivCeil;
+using AscendC::Dn2NzParams;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
-using AscendC::Dn2NzParams;
 using AscendC::Nd2NzParams;
 
 namespace Convolution3DBackpropFunc {
 template <class Intf, typename SrcType>
-__aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<SrcType> &buf, bool useOffsetX = false)
+__aicore__ inline void InitZeroValue(Intf* self, const LocalTensor<SrcType>& buf, bool useOffsetX = false)
 {
     uint32_t len = buf.GetSize() * sizeof(SrcType);
     uint16_t padValue = 0;
-    if constexpr(std::is_same<SrcType, int8_t>::value) {
+    if constexpr (std::is_same<SrcType, int8_t>::value) {
         if (useOffsetX) {
             uint8_t offsetX = static_cast<uint8_t>(self->ctx.tiling_->offsetX);
             padValue = (static_cast<uint16_t>(offsetX)) << 8 | (static_cast<uint16_t>(offsetX));
         }
     }
-    if constexpr(std::is_same<SrcType, hifloat8_t>::value ||
-        std::is_same<SrcType, fp8_e4m3fn_t>::value ||
-        std::is_same<SrcType, int8_t>::value) {
+    if constexpr (std::is_same<SrcType, hifloat8_t>::value || std::is_same<SrcType, fp8_e4m3fn_t>::value ||
+                  std::is_same<SrcType, int8_t>::value) {
         InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, padValue});
     } else {
         AscendC::InitConstValueParams<SrcType> initConstValueParams;
@@ -52,8 +51,8 @@ __aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<SrcType> &buf
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Dn2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Dn2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                     uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCout1Cout0Size = AlignUp16(curCoutSize);
     if (curCout1Cout0Size != curCoutSize) {
@@ -65,22 +64,22 @@ __aicore__ inline void LoadToB1Dn2Nz(Intf *self, uint32_t curCinSize, uint32_t c
     // DN (B, D, N) -> (D1, N, B, D0)
     Dn2NzParams dn2NzParams;
 
-    dn2NzParams.dnNum = curCoutSize; // B: cout
+    dn2NzParams.dnNum = curCoutSize;                                             // B: cout
     dn2NzParams.srcDnMatrixStride = self->ctx.tiling_->cinG * self->ctx.dkHkWk_; // src B stride (unit: element)
-    dn2NzParams.dstNzMatrixStride = self->ctx.tiling_->c0; // dst B stride (unit: element)
+    dn2NzParams.dstNzMatrixStride = self->ctx.tiling_->c0;                       // dst B stride (unit: element)
 
-    dn2NzParams.dValue = curCinSize; // D: cin
-    dn2NzParams.srcDValue = self->ctx.dkHkWk_; // src D stride (unit: element)
+    dn2NzParams.dValue = curCinSize;                                           // D: cin
+    dn2NzParams.srcDValue = self->ctx.dkHkWk_;                                 // src D stride (unit: element)
     dn2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCout1Cout0Size; // dst D stride (unit: 32B)
-    dn2NzParams.nValue = self->ctx.singleShapeHWk_; // N: hkwk
-    dn2NzParams.dstNzNStride = curCout1Cout0Size; // dst N stride (unit: 32B)
+    dn2NzParams.nValue = self->ctx.singleShapeHWk_;                            // N: hkwk
+    dn2NzParams.dstNzNStride = curCout1Cout0Size;                              // dst N stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dn2NzParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Nd2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Nd2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                     uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCout1Cout0Size = AlignUp16(curCoutSize);
     if (curCout1Cout0Size != curCoutSize) {
@@ -92,22 +91,23 @@ __aicore__ inline void LoadToB1Nd2Nz(Intf *self, uint32_t curCinSize, uint32_t c
     // ND (B, N, D) -> (D1, N, B, D0)
     Nd2NzParams nd2NzParams;
 
-    nd2NzParams.ndNum = curCoutSize; // B: cout
+    nd2NzParams.ndNum = curCoutSize;                                             // B: cout
     nd2NzParams.srcNdMatrixStride = self->ctx.tiling_->cinG * self->ctx.dkHkWk_; // src B stride (unit: element)
-    nd2NzParams.dstNzMatrixStride = self->ctx.tiling_->c0; // dst B stride (unit: element)
+    nd2NzParams.dstNzMatrixStride = self->ctx.tiling_->c0;                       // dst B stride (unit: element)
 
-    nd2NzParams.dValue = curCinSize; // D: cin
-    nd2NzParams.srcDValue = self->ctx.tiling_->cinG; // src N stride (unit: element)
+    nd2NzParams.dValue = curCinSize;                                           // D: cin
+    nd2NzParams.srcDValue = self->ctx.tiling_->cinG;                           // src N stride (unit: element)
     nd2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCout1Cout0Size; // dst D stride (unit: 32B)
-    nd2NzParams.nValue = self->ctx.singleShapeHWk_; // N: hkwk
-    nd2NzParams.dstNzNStride = curCout1Cout0Size; // dst N stride (unit: 32B)
+    nd2NzParams.nValue = self->ctx.singleShapeHWk_;                            // N: hkwk
+    nd2NzParams.dstNzNStride = curCout1Cout0Size;                              // dst N stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], nd2NzParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1TransposeForDkHkWkIsOne(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1TransposeForDkHkWkIsOne(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                                       uint64_t out2B1SrcAddrOffset,
+                                                       const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
@@ -118,22 +118,23 @@ __aicore__ inline void LoadToB1TransposeForDkHkWkIsOne(Intf *self, uint32_t curC
     // B: 1, D: cout, N: cin
     // DN (B, D, N) -> (D1, N, B, D0)
     Dn2NzParams dn2NzParams;
-    dn2NzParams.dnNum = 1; // B: 1
+    dn2NzParams.dnNum = 1;             // B: 1
     dn2NzParams.srcDnMatrixStride = 1; // src B stride (unit: element)
     dn2NzParams.dstNzMatrixStride = 1; // dst B stride (unit: element)
 
-    dn2NzParams.dValue = curCoutSize; // D: cout
+    dn2NzParams.dValue = curCoutSize;                // D: cout
     dn2NzParams.srcDValue = self->ctx.tiling_->cinG; // src D stride (unit: element)
-    dn2NzParams.dstNzC0Stride = curCin1Cin0Size; // dst D stride (unit: 32B)
-    dn2NzParams.nValue = curCinSize; // N: cin
-    dn2NzParams.dstNzNStride = 1; // dst N stride (unit: 32B)
+    dn2NzParams.dstNzC0Stride = curCin1Cin0Size;     // dst D stride (unit: 32B)
+    dn2NzParams.nValue = curCinSize;                 // N: cin
+    dn2NzParams.dstNzNStride = 1;                    // dst N stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dn2NzParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Dn2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Dn2NzTranspose(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                              uint64_t out2B1SrcAddrOffset,
+                                              const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
@@ -145,43 +146,44 @@ __aicore__ inline void LoadToB1Dn2NzTranspose(Intf *self, uint32_t curCinSize, u
     // DN (B, D, N) -> (D1, N, B, D0)
     Dn2NzParams dn2NzParams;
 
-    dn2NzParams.dnNum = curCinSize; // B: cin
-    dn2NzParams.srcDnMatrixStride = self->ctx.dkHkWk_; // src B stride (unit: element)
+    dn2NzParams.dnNum = curCinSize;                        // B: cin
+    dn2NzParams.srcDnMatrixStride = self->ctx.dkHkWk_;     // src B stride (unit: element)
     dn2NzParams.dstNzMatrixStride = self->ctx.tiling_->c0; // dst B stride (unit: element)
 
-    dn2NzParams.dValue = curCoutSize; // D: cout
-    dn2NzParams.srcDValue = self->ctx.tiling_->cinG * self->ctx.dkHkWk_; // src D stride (unit: element)
+    dn2NzParams.dValue = curCoutSize;                                        // D: cout
+    dn2NzParams.srcDValue = self->ctx.tiling_->cinG * self->ctx.dkHkWk_;     // src D stride (unit: element)
     dn2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCin1Cin0Size; // dst D stride (unit: 32B)
-    dn2NzParams.nValue = self->ctx.singleShapeHWk_; // N: hkwk
-    dn2NzParams.dstNzNStride = curCin1Cin0Size; // dst N stride (unit: 32B)
+    dn2NzParams.nValue = self->ctx.singleShapeHWk_;                          // N: hkwk
+    dn2NzParams.dstNzNStride = curCin1Cin0Size;                              // dst N stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dn2NzParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitH(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitH(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                                             uint64_t out2B1SrcAddrOffset,
+                                                             const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
         InitZeroValue(self, useB1Buf);
     }
 
-    // DN (cout, cin, dk, hk, wk) -> NZ (cout1, splitHk, splitwk, cin1, cin0, cout0) = (cout1, splithkwk, cin_align, cout0)
-    // B: cin, D: cout, N: hkwk
-    // DN (B, D, N) -> (D1, N, B, D0)
+    // DN (cout, cin, dk, hk, wk) -> NZ (cout1, splitHk, splitwk, cin1, cin0, cout0) = (cout1, splithkwk, cin_align,
+    // cout0) B: cin, D: cout, N: hkwk DN (B, D, N) -> (D1, N, B, D0)
     uint32_t cinOffset = self->ctx.tiling_->cinG;
     Dn2NzParams dn2NzParams;
-    dn2NzParams.dnNum = curCinSize; // B: cin
-    dn2NzParams.srcDnMatrixStride = self->ctx.dkHkWk_; // src B stride (unit: element)
+    dn2NzParams.dnNum = curCinSize;                                  // B: cin
+    dn2NzParams.srcDnMatrixStride = self->ctx.dkHkWk_;               // src B stride (unit: element)
     dn2NzParams.dstNzMatrixStride = 1 << self->ctx.tiling_->c0BitsB; // dst B stride (unit: element)
 
-    dn2NzParams.dValue = curCoutSize; // D: cout
+    dn2NzParams.dValue = curCoutSize;                      // D: cout
     dn2NzParams.srcDValue = cinOffset * self->ctx.dkHkWk_; // src D stride (unit: element)
-    dn2NzParams.dstNzC0Stride = self->ctx.splitHkWkList_[self->ctx.splitIndex_] * curCin1Cin0Size; // dst D stride (unit: 32B)
+    dn2NzParams.dstNzC0Stride = self->ctx.splitHkWkList_[self->ctx.splitIndex_] *
+                                curCin1Cin0Size; // dst D stride (unit: 32B)
 
     dn2NzParams.nValue = self->ctx.splitWkList_[self->ctx.splitIndex_]; // N: splitWk
-    dn2NzParams.dstNzNStride = curCin1Cin0Size; // dst N stride (unit: 32B)
+    dn2NzParams.dstNzNStride = curCin1Cin0Size;                         // dst N stride (unit: 32B)
 
     uint64_t srcGmOffset = 0;
     uint32_t dstB1Offset = 0;
@@ -189,13 +191,15 @@ __aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitH(Intf *self, uint32_
     for (uint32_t i = 0; i < self->ctx.splitHkList_[self->ctx.splitIndex_]; i++) {
         DataCopy(useB1Buf[dstB1Offset], self->ctx.weightGlobal_[out2B1SrcAddrOffset + srcGmOffset], dn2NzParams);
         srcGmOffset += static_cast<uint64_t>(self->ctx.tiling_->wk) * self->ctx.tiling_->strideH;
-        dstB1Offset += self->ctx.splitWkList_[self->ctx.splitIndex_] * (dn2NzParams.dstNzNStride << self->ctx.tiling_->c0BitsB);
+        dstB1Offset += self->ctx.splitWkList_[self->ctx.splitIndex_] *
+                       (dn2NzParams.dstNzNStride << self->ctx.tiling_->c0BitsB);
     }
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Nd2NzForDkHkWkIsOne(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Nd2NzForDkHkWkIsOne(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                                   uint64_t out2B1SrcAddrOffset,
+                                                   const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCout1Cout0Size = AlignUp16(curCoutSize);
     if (curCout1Cout0Size != curCoutSize) {
@@ -211,18 +215,19 @@ __aicore__ inline void LoadToB1Nd2NzForDkHkWkIsOne(Intf *self, uint32_t curCinSi
     nd2NzParams.srcNdMatrixStride = 0;
     nd2NzParams.dstNzMatrixStride = 0;
 
-    nd2NzParams.nValue = curCoutSize; // N: cout
+    nd2NzParams.nValue = curCoutSize;                                    // N: cout
     nd2NzParams.srcDValue = self->ctx.tiling_->cinG * self->ctx.dkHkWk_; // src N stride (unit: element)
-    nd2NzParams.dstNzNStride = 1; // dst N stride (unit: 32B)
-    nd2NzParams.dValue = curCinSize; // D: cin
-    nd2NzParams.dstNzC0Stride = curCout1Cout0Size; // dst D stride (unit: 32B)
+    nd2NzParams.dstNzNStride = 1;                                        // dst N stride (unit: 32B)
+    nd2NzParams.dValue = curCinSize;                                     // D: cin
+    nd2NzParams.dstNzC0Stride = curCout1Cout0Size;                       // dst D stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], nd2NzParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Nd2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Nd2NzTranspose(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                              uint64_t out2B1SrcAddrOffset,
+                                              const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
@@ -234,30 +239,30 @@ __aicore__ inline void LoadToB1Nd2NzTranspose(Intf *self, uint32_t curCinSize, u
     // ND (B, N, D) -> (D1, N, B, D0)
     Dn2NzParams dn2NzParams;
     dn2NzParams.dnNum = self->ctx.singleShapeHWk_; // B: hkwk
-    dn2NzParams.dValue = curCoutSize; // D: cout
+    dn2NzParams.dValue = curCoutSize;              // D: cout
     if (self->ctx.tiling_->enableVecTrans) {
-        dn2NzParams.srcDnMatrixStride = AlignUp16(self->ctx.tiling_->cinG); // Cout, Dk, Hk, Wk, Cin1, Cin0
+        dn2NzParams.srcDnMatrixStride = AlignUp16(self->ctx.tiling_->cinG);             // Cout, Dk, Hk, Wk, Cin1, Cin0
         dn2NzParams.srcDValue = AlignUp16(self->ctx.tiling_->cinG) * self->ctx.dkHkWk_; // Cout, Dk, Hk, Wk, Cin1, Cin0
     } else {
-        dn2NzParams.srcDnMatrixStride = self->ctx.tiling_->cinG; // src B stride (unit: element)
+        dn2NzParams.srcDnMatrixStride = self->ctx.tiling_->cinG;             // src B stride (unit: element)
         dn2NzParams.srcDValue = self->ctx.tiling_->cinG * self->ctx.dkHkWk_; // src D stride (unit: element)
     }
     dn2NzParams.dstNzMatrixStride = curCin1Cin0Size << self->ctx.tiling_->c0BitsB; // dst B stride (unit: element)
-    dn2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCin1Cin0Size; // dst D stride (unit: 32B)
+    dn2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCin1Cin0Size;       // dst D stride (unit: 32B)
 
     dn2NzParams.nValue = curCinSize; // N: cin
-    dn2NzParams.dstNzNStride = 1; // dst N stride (unit: 32B)
+    dn2NzParams.dstNzNStride = 1;    // dst N stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dn2NzParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                                   uint64_t out2B1SrcAddrOffset,
+                                                   const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
-    // ND (cout, dk, hk, wk, cin) -> NZ (cout1, splithk, splitwk, cin1, cin0, cout0) = (cout1, splithkwk, cin_align, cout0)
-    // B: splitwk, D: cout, N: cin
-    // ND (B, N, D) -> (D1, N, B, D0)
+    // ND (cout, dk, hk, wk, cin) -> NZ (cout1, splithk, splitwk, cin1, cin0, cout0) = (cout1, splithkwk, cin_align,
+    // cout0) B: splitwk, D: cout, N: cin ND (B, N, D) -> (D1, N, B, D0)
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
         InitZeroValue<Intf, typename Intf::SrcBT>(self, useB1Buf);
@@ -274,16 +279,17 @@ __aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf *self, uint32_t curCinSi
     }
 
     Dn2NzParams dn2NzParams;
-    dn2NzParams.dnNum = self->ctx.splitWkList_[self->ctx.splitIndex_]; // B: hkwk
-    dn2NzParams.srcDnMatrixStride = cinOffset * strideW; // src B stride (unit: element)
+    dn2NzParams.dnNum = self->ctx.splitWkList_[self->ctx.splitIndex_];             // B: hkwk
+    dn2NzParams.srcDnMatrixStride = cinOffset * strideW;                           // src B stride (unit: element)
     dn2NzParams.dstNzMatrixStride = curCin1Cin0Size << self->ctx.tiling_->c0BitsB; // dst B stride (unit: element)
 
-    dn2NzParams.dValue = curCoutSize; // D: cout
+    dn2NzParams.dValue = curCoutSize;                      // D: cout
     dn2NzParams.srcDValue = cinOffset * self->ctx.dkHkWk_; // src D stride (unit: element)
-    dn2NzParams.dstNzC0Stride = self->ctx.splitHkWkList_[self->ctx.splitIndex_] * curCin1Cin0Size; // dst D stride (unit: 32B)
+    dn2NzParams.dstNzC0Stride = self->ctx.splitHkWkList_[self->ctx.splitIndex_] *
+                                curCin1Cin0Size; // dst D stride (unit: 32B)
 
     dn2NzParams.nValue = curCinSize; // N: cin
-    dn2NzParams.dstNzNStride = 1; // dst N stride (unit: 32B)
+    dn2NzParams.dstNzNStride = 1;    // dst N stride (unit: 32B)
 
     uint64_t srcGmOffset = 0;
     uint32_t dstB1Offset = 0;
@@ -296,8 +302,9 @@ __aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf *self, uint32_t curCinSi
 }
 
 template <class Intf>
-__aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                              uint64_t out2B1SrcAddrOffset,
+                                              const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_TRANSPOSE_ONLY) {
         LoadToB1Nd2NzForDkHkWkIsOne(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
@@ -317,8 +324,9 @@ __aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf *self, uint32_t curCinSize, u
 }
 
 template <class Intf, bool ksCoutFullLoad>
-__aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                              uint64_t out2B1SrcAddrOffset,
+                                              const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_TRANSPOSE_ONLY) {
         LoadToB1Nd2NzForDkHkWkIsOne(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
@@ -344,26 +352,33 @@ __aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, u
 }
 
 template <class Intf>
-__aicore__ inline void LoadGmDataToB1ForFz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-                                              uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadGmDataToB1ForFz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                           uint64_t out2B1SrcAddrOffset,
+                                           const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     DataCopyPadExtParams<typename Intf::SrcBT> padParams;
     DataCopyExtParams dataCopyParams;
     if (self->ctx.tiling_->cinG == curCinSize) {
         dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = AlignUp16(curCinSize) * AlignUp(curCoutSize, self->ctx.tiling_->c0) * self->ctx.hkWk_ * sizeof(typename Intf::SrcBT);
+        dataCopyParams.blockLen = AlignUp16(curCinSize) * AlignUp(curCoutSize, self->ctx.tiling_->c0) *
+                                  self->ctx.hkWk_ * sizeof(typename Intf::SrcBT);
         dataCopyParams.srcStride = 0;
     } else {
-        dataCopyParams.blockCount = DivCeil(AlignUp(curCoutSize, self->ctx.tiling_->c0) * self->ctx.hkWk_, self->ctx.tiling_->c0);
-        dataCopyParams.blockLen = static_cast<uint64_t>(AlignUp16(curCinSize)) * self->ctx.tiling_->c0 * sizeof(typename Intf::SrcBT);
-        dataCopyParams.srcStride = (self->ctx.tiling_->cinG - AlignUp16(curCinSize)) * self->ctx.tiling_->c0 * sizeof(typename Intf::SrcBT);
+        dataCopyParams.blockCount = DivCeil(AlignUp(curCoutSize, self->ctx.tiling_->c0) * self->ctx.hkWk_,
+                                            self->ctx.tiling_->c0);
+        dataCopyParams.blockLen = static_cast<uint64_t>(AlignUp16(curCinSize)) * self->ctx.tiling_->c0 *
+                                  sizeof(typename Intf::SrcBT);
+        dataCopyParams.srcStride = (self->ctx.tiling_->cinG - AlignUp16(curCinSize)) * self->ctx.tiling_->c0 *
+                                   sizeof(typename Intf::SrcBT);
     }
-    DataCopyPad<typename Intf::SrcBT>(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dataCopyParams, padParams);
+    DataCopyPad<typename Intf::SrcBT>(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dataCopyParams,
+                                      padParams);
 }
 
 template <class Intf>
-__aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
-    uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+__aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                                       uint64_t out2B1SrcAddrOffset,
+                                                       const LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
     if (curCin1Cin0Size != curCinSize) {
@@ -375,21 +390,21 @@ __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf *self, uint32_t curC
     // DHWCN (B, N, D) -> (D1, N, B, D0)
     Nd2NzParams nd2NzParams;
     nd2NzParams.ndNum = self->ctx.singleShapeHWk_; // B: hkwk
-    nd2NzParams.dValue = curCoutSize; // D: cout
-    nd2NzParams.nValue = curCinSize; // N: cin
+    nd2NzParams.dValue = curCoutSize;              // D: cout
+    nd2NzParams.nValue = curCinSize;               // N: cin
 
     nd2NzParams.srcNdMatrixStride = self->ctx.tiling_->cinG * self->ctx.tiling_->cout; // src B stride (unit: element)
-    nd2NzParams.srcDValue = self->ctx.tiling_->cout; // src N stride (unit: element)
+    nd2NzParams.srcDValue = self->ctx.tiling_->cout;                                   // src N stride (unit: element)
 
     nd2NzParams.dstNzMatrixStride = curCin1Cin0Size << self->ctx.tiling_->c0BitsB; // dst B stride (unit: element)
-    nd2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCin1Cin0Size; // dst D stride (unit: 32B)
-    nd2NzParams.dstNzNStride = 1; // dst N stride (unit: 32B)
+    nd2NzParams.dstNzC0Stride = self->ctx.singleShapeHWk_ * curCin1Cin0Size;       // dst D stride (unit: 32B)
+    nd2NzParams.dstNzNStride = 1;                                                  // dst N stride (unit: 32B)
 
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], nd2NzParams);
 }
 
 template <class Intf, class src1_T, bool ksCoutFullLoad>
-__aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkIdx)
+__aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkIdx)
 {
     LocalTensor<typename Intf::SrcBT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcBT>();
 
@@ -403,8 +418,9 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
     // because l1 not cut hk and wk, so,
     // srcAddrOffset = coutIdx * coutStride + cinIdx * cinStride + dkIdx *  dkStride
     if (self->ctx.tiling_->enableVecTrans) {
-        uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * AlignUp16(self->ctx.tiling_->cinG) * self->ctx.dkHkWk_ +
-            curCinIdx + curDkIdx * self->ctx.hkWk_ * AlignUp16(self->ctx.tiling_->cinG);
+        uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * AlignUp16(self->ctx.tiling_->cinG) *
+                                           self->ctx.dkHkWk_ +
+                                       curCinIdx + curDkIdx * self->ctx.hkWk_ * AlignUp16(self->ctx.tiling_->cinG);
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
             LoadToB1Nd2NzTranspose(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else {
@@ -412,23 +428,31 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
         }
     } else {
         if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
-            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->cinG * self->ctx.dkHkWk_ +
-                curCinIdx * self->ctx.dkHkWk_ + curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_;
+            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->cinG *
+                                               self->ctx.dkHkWk_ +
+                                           curCinIdx * self->ctx.dkHkWk_ + curDkIdx * self->ctx.hkWk_ +
+                                           self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_;
             LoadGmDataToB1ForDn2Nz(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::DHWCN) {
             uint64_t out2B1SrcAddrOffset = curCoutIdx + static_cast<uint64_t>(curCinIdx) * self->ctx.tiling_->cout +
-                (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *
-                self->ctx.tiling_->cinG * self->ctx.tiling_->cout;
+                                           (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk +
+                                            self->ctx.curWkIdx_) *
+                                               self->ctx.tiling_->cinG * self->ctx.tiling_->cout;
             LoadGmDataToB1DHWCN2NzTranspose(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::FRACTALZ) {
-            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.hkWk_ * AlignUp16(self->ctx.tiling_->cinG) +
-                (self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) * self->ctx.tiling_->cinG * self->ctx.tiling_->c0 +
-                curCinIdx * self->ctx.tiling_->c0;
+            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.hkWk_ *
+                                               AlignUp16(self->ctx.tiling_->cinG) +
+                                           (self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *
+                                               self->ctx.tiling_->cinG * self->ctx.tiling_->c0 +
+                                           curCinIdx * self->ctx.tiling_->c0;
             LoadGmDataToB1ForFz(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else { // NDHWC
-            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->cinG * self->ctx.dkHkWk_ +
-                curCinIdx + (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *
-                self->ctx.tiling_->cinG;
+            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->cinG *
+                                               self->ctx.dkHkWk_ +
+                                           curCinIdx +
+                                           (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk +
+                                            self->ctx.curWkIdx_) *
+                                               self->ctx.tiling_->cinG;
             LoadGmDataToB1ForNd2Nz<Intf, ksCoutFullLoad>(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         }
     }
@@ -437,7 +461,7 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
 }
 
 template <class Intf, class src1_T, bool ksCoutFullLoad>
-__aicore__ inline void LoadToB1(Intf *self, uint64_t kIdx, uint32_t curDkIdx, bool loadFlag)
+__aicore__ inline void LoadToB1(Intf* self, uint64_t kIdx, uint32_t curDkIdx, bool loadFlag)
 {
     if (!loadFlag || unlikely(kIdx >= self->ctx.kIter_ || (self->ctx.isB1FullLoadFlag_ && !self->ctx.isLoadB1_))) {
         return;
@@ -459,6 +483,6 @@ __aicore__ inline void LoadToB1(Intf *self, uint64_t kIdx, uint32_t curDkIdx, bo
         }
     }
 }
-}  // namespace Convolution3DBackpropFunc
+} // namespace Convolution3DBackpropFunc
 
 #endif

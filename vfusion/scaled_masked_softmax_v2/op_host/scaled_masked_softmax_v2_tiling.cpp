@@ -53,10 +53,9 @@ constexpr uint64_t SOFTMAX_BUF_SIZE_D = 64 * 1024;
 namespace optiling {
 using namespace Ops::NN::OpTiling;
 
-class ScaledMaskedSoftmaxV2Tiling
-{
+class ScaledMaskedSoftmaxV2Tiling {
 public:
-    explicit ScaledMaskedSoftmaxV2Tiling(gert::TilingContext* tilingContext) : context(tilingContext) {};
+    explicit ScaledMaskedSoftmaxV2Tiling(gert::TilingContext* tilingContext) : context(tilingContext){};
     ge::graphStatus Init();
     ge::graphStatus DoTiling();
     void TilingDataPrint();
@@ -96,10 +95,7 @@ bool ScaledMaskedSoftmaxV2Tiling::InitInputDtype()
     auto inputDtype = context->GetInputDesc(X_INDEX)->GetDataType();
     xDtypeSize = getDataTypeSize(inputDtype);
 
-    OP_CHECK_IF(
-        xDtypeSize == 0,
-        OP_LOGE(context, "[ScaledMaskedSoftmaxV2Tiling] X Dtype invalid."),
-        return false);
+    OP_CHECK_IF(xDtypeSize == 0, OP_LOGE(context, "[ScaledMaskedSoftmaxV2Tiling] X Dtype invalid."), return false);
 
     return true;
 }
@@ -135,17 +131,10 @@ bool ScaledMaskedSoftmaxV2Tiling::InitPlatformInfo()
 
 ge::graphStatus ScaledMaskedSoftmaxV2Tiling::Init()
 {
-    OP_CHECK_IF(
-        !InitPlatformInfo(), OP_LOGE(context, "InitPlatformInfo failed."),
-        return false);
-    OP_CHECK_IF(
-        !InitAttr(), OP_LOGE(context, "InitAttr failed."), return false);
-    OP_CHECK_IF(
-        !InitInputDtype(), OP_LOGE(context, "InitInputDtype failed."),
-        return false);
-    OP_CHECK_IF(
-        !InitInputShape(), OP_LOGE(context, "InitInputShape failed."),
-        return false);
+    OP_CHECK_IF(!InitPlatformInfo(), OP_LOGE(context, "InitPlatformInfo failed."), return false);
+    OP_CHECK_IF(!InitAttr(), OP_LOGE(context, "InitAttr failed."), return false);
+    OP_CHECK_IF(!InitInputDtype(), OP_LOGE(context, "InitInputDtype failed."), return false);
+    OP_CHECK_IF(!InitInputShape(), OP_LOGE(context, "InitInputShape failed."), return false);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -156,9 +145,8 @@ bool ScaledMaskedSoftmaxV2Tiling::InitInputShape()
     auto const maskShape = context->GetInputShape(MASK_INDEX);
     auto maskShapeVal = maskShape->GetStorageShape();
 
-    OP_CHECK_IF(
-        xShapeVal.GetDimNum() != DIM_NUM || maskShapeVal.GetDimNum() != DIM_NUM,
-        OP_LOGE(context, "x or mask DimNum is not 4."), return false);
+    OP_CHECK_IF(xShapeVal.GetDimNum() != DIM_NUM || maskShapeVal.GetDimNum() != DIM_NUM,
+                OP_LOGE(context, "x or mask DimNum is not 4."), return false);
 
     batch = xShapeVal.GetDim(DIM_0);
     channel = xShapeVal.GetDim(DIM_1);
@@ -172,23 +160,18 @@ bool ScaledMaskedSoftmaxV2Tiling::InitInputShape()
     if (IsRegbaseSocVersion(context)) {
         maxDimLimit = MAX_DIM_NUM_D;
     }
-    OP_CHECK_IF(
-        width > maxDimLimit || width <= 0,
-        OP_LOGE(context, "x dim 3 should in (0, 4096]."), return false);
+    OP_CHECK_IF(width > maxDimLimit || width <= 0, OP_LOGE(context, "x dim 3 should in (0, 4096]."), return false);
 
     maskBatch = maskShapeVal.GetDim(DIM_0);
     maskChannel = maskShapeVal.GetDim(DIM_1);
     uint64_t maskHeight = maskShapeVal.GetDim(DIM_2);
     uint64_t maskWidth = maskShapeVal.GetDim(DIM_3);
 
-    OP_CHECK_IF(
-        maskHeight != height || maskWidth != width,
-        OP_LOGE(context, "x and mask height or width not equal."), return false);
+    OP_CHECK_IF(maskHeight != height || maskWidth != width, OP_LOGE(context, "x and mask height or width not equal."),
+                return false);
 
-    OP_CHECK_IF(
-        (batch != maskBatch && maskBatch != 1) || (channel != maskChannel && maskChannel != 1),
-        OP_LOGE(context, "x and mask batch or channel can't broadcast."),
-        return false);
+    OP_CHECK_IF((batch != maskBatch && maskBatch != 1) || (channel != maskChannel && maskChannel != 1),
+                OP_LOGE(context, "x and mask batch or channel can't broadcast."), return false);
     return true;
 }
 
@@ -298,8 +281,8 @@ bool ScaledMaskedSoftmaxV2Tiling::SetUbSplitInfo()
 
 void ScaledMaskedSoftmaxV2Tiling::SetSoftmaxTiling()
 {
-    auto shape =
-        ge::Shape({static_cast<int64_t>(tiling.get_lineHeadIter()), static_cast<int64_t>(tiling.get_padLineNum())});
+    auto shape = ge::Shape(
+        {static_cast<int64_t>(tiling.get_lineHeadIter()), static_cast<int64_t>(tiling.get_padLineNum())});
     auto size = AscendC::GetSoftMaxMaxTmpSize(shape, FP32_SIZE, false);
     if (size > SOFTMAX_BUF_SIZE) {
         size = SOFTMAX_BUF_SIZE;
@@ -387,8 +370,7 @@ void ScaledMaskedSoftmaxV2Tiling::TilingDataPrint()
     OP_LOGD(context, ">>>>>>>>>>>>>>> Print ScaledMaskedSoftmaxV2 tiling data end <<<<<<<<<<<<<<<<");
 }
 
-struct ScaledMaskedSoftmaxV2CompileInfo {
-};
+struct ScaledMaskedSoftmaxV2CompileInfo {};
 
 IMPL_OP_OPTILING(ScaledMaskedSoftmaxV2)
     .Tiling(TilingScaledMaskedSoftmaxV2)

@@ -14,18 +14,11 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
 
-class l2BatchNormReduceTest : public testing::Test
-{
+class l2BatchNormReduceTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2l2BatchNormReduceTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2l2BatchNormReduceTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2l2BatchNormReduceTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2l2BatchNormReduceTest TearDown" << std::endl; }
 };
 
 TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_bfloat16)
@@ -34,10 +27,7 @@ TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_bfloat16)
     auto sum = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
     auto squareSum = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnBatchNormReduce,
-        INPUT(x),
-        OUTPUT(sum, squareSum));
+    auto ut = OP_API_UT(aclnnBatchNormReduce, INPUT(x), OUTPUT(sum, squareSum));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

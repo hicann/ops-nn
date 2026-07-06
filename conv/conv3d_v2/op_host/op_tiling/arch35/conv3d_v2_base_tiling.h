@@ -42,14 +42,12 @@ public:
 
 class Conv3dBaseTilingV2 : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit Conv3dBaseTilingV2(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {};
-    ~Conv3dBaseTilingV2() override {};
+    explicit Conv3dBaseTilingV2(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){};
+    ~Conv3dBaseTilingV2() override{};
 
 protected:
-    bool IsCapable() override {
-        return true;
-    };
-    ge::graphStatus GetPlatformInfo() override {return ge::GRAPH_SUCCESS;};
+    bool IsCapable() override { return true; };
+    ge::graphStatus GetPlatformInfo() override { return ge::GRAPH_SUCCESS; };
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
@@ -59,10 +57,10 @@ protected:
 
     ge::graphStatus Conv3DInfoInitAndCheck();
     bool GetTilingFromRepo();
-    bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
+    bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& tuningTiling);
     void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
-    void GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size_t &size);
+    void GetTilingInputArgs(std::shared_ptr<void>& inputArgs, size_t& size);
     void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     bool CheckSupportCacheTiling();
@@ -132,8 +130,8 @@ private:
     ge::graphStatus CheckL1SizeLimits();
     ge::graphStatus CheckQuantScaleDesc();
     ge::graphStatus CheckQuantScaleDtype();
-    bool GetPosByFormat(const ge::Format format, const std::string &pos, const std::string &inputStr,
-        size_t &posIdx) const;
+    bool GetPosByFormat(const ge::Format format, const std::string& pos, const std::string& inputStr,
+                        size_t& posIdx) const;
     void GetDescInfo();
     void PrintTilingInfo();
     void PrintOpTilingData();
@@ -168,6 +166,6 @@ private:
     void SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void PrintInputArgs(shared_ptr<tuningtiling::Conv3DV2InputArgs> conv3DInput);
 };
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

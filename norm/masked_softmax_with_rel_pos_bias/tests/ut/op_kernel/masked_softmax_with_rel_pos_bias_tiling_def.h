@@ -53,8 +53,8 @@ struct MaskedSoftmaxWithRelPosBiasTilingData {
 };
 #pragma pack()
 
-inline void InitMaskedSoftmaxWithRelPosBiasTilingData(
-    uint8_t* tiling, MaskedSoftmaxWithRelPosBiasTilingData* const_data)
+inline void InitMaskedSoftmaxWithRelPosBiasTilingData(uint8_t* tiling,
+                                                      MaskedSoftmaxWithRelPosBiasTilingData* const_data)
 {
     memcpy(const_data, tiling, sizeof(MaskedSoftmaxWithRelPosBiasTilingData));
 }

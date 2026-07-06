@@ -19,11 +19,10 @@
 #include "arch35/fused_quant_mat_mul_tiling_data.h"
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_base.h"
 
-#define FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS                                                                                    \
-    template <class x1Type, class x2Type, class biasType, class yType, CubeFormat formatX1, CubeFormat formatX2,              \
+#define FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS                                                                       \
+    template <class x1Type, class x2Type, class biasType, class yType, CubeFormat formatX1, CubeFormat formatX2, \
               CubeFormat formatY, bool aTrans, bool bTrans>
-#define FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS                                                                                     \
-    x1Type, x2Type, biasType, yType, formatX1, formatX2, formatY, aTrans, bTrans
+#define FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS x1Type, x2Type, biasType, yType, formatX1, formatX2, formatY, aTrans, bTrans
 
 namespace AscendC {
 
@@ -36,8 +35,8 @@ FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
 class FusedQuantMatmulSwiglu {
 public:
     __aicore__ inline FusedQuantMatmulSwiglu() {}
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR deQuantScale, GM_ADDR quantScale,
-                                GM_ADDR y, GM_ADDR workSpace, const FusedQuantMatmulSwigluTilingData *tiling, TPipe *pipe);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR deQuantScale, GM_ADDR quantScale, GM_ADDR y,
+                                GM_ADDR workSpace, const FusedQuantMatmulSwigluTilingData* tiling, TPipe* pipe);
     __aicore__ inline void Process();
 
 protected:
@@ -113,36 +112,37 @@ protected:
 
     __aicore__ inline void initTilingData();
     __aicore__ inline void CalcParams();
-    __aicore__ inline void Iterate(LocalTensor<half> &result);
+    __aicore__ inline void Iterate(LocalTensor<half>& result);
     __aicore__ inline void SwishCompute(uint32_t size);
     __aicore__ inline void MulCompute(uint64_t offset, uint32_t curAicM, uint32_t curAicN);
     __aicore__ inline void MulQuantCompute(uint64_t offset, uint32_t curAicM, uint32_t curAicN);
-    __aicore__ inline void CopyIn(LocalTensor<x1Type> &aL1Local, uint32_t curAicM, uint64_t xOffset);
+    __aicore__ inline void CopyIn(LocalTensor<x1Type>& aL1Local, uint32_t curAicM, uint64_t xOffset);
     __aicore__ inline void CopyOut(uint64_t xOffset, uint64_t wOffset, uint32_t curAicM, uint32_t curAicN);
 };
 
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
+using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
-using AscendC::TBuf;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::Init(GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR deQuantScale, GM_ADDR quantScale,
-                                                                                GM_ADDR y, GM_ADDR workSpace, const FusedQuantMatmulSwigluTilingData *tiling, TPipe *pipe)
+__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::Init(
+    GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR deQuantScale, GM_ADDR quantScale, GM_ADDR y, GM_ADDR workSpace,
+    const FusedQuantMatmulSwigluTilingData* tiling, TPipe* pipe)
 {
     curBlockIdx = GetBlockIdx();
     tilingData = tiling;
     initTilingData();
 
-    xGm.SetGlobalBuffer((__gm__ x1Type *)x);
-    wGm.SetGlobalBuffer((__gm__ x2Type *)w);
-    bGm.SetGlobalBuffer((__gm__ biasType *)b);
-    deQuantScaleGm.SetGlobalBuffer((__gm__ uint64_t *)deQuantScale);
+    xGm.SetGlobalBuffer((__gm__ x1Type*)x);
+    wGm.SetGlobalBuffer((__gm__ x2Type*)w);
+    bGm.SetGlobalBuffer((__gm__ biasType*)b);
+    deQuantScaleGm.SetGlobalBuffer((__gm__ uint64_t*)deQuantScale);
     quantScaleGm.SetGlobalBuffer((__gm__ float*)quantScale);
-    yGm.SetGlobalBuffer((__gm__ yType *)y);
+    yGm.SetGlobalBuffer((__gm__ yType*)y);
 
     // vector without db, not a performance bottleneck, and calc more data
     pipe->InitBuffer(l1AQueue, 1, baseM * k * sizeof(x1Type));
@@ -211,26 +211,32 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         RegTensor<half> vreg6;
         MaskReg preg0;
 
-        __local_mem__ half *bufferAddr = (__local_mem__ half *)buffer.GetPhyAddr();
-        __local_mem__ half *swishResAddr = (__local_mem__ half *)swishRes.GetPhyAddr();
+        __local_mem__ half* bufferAddr = (__local_mem__ half*)buffer.GetPhyAddr();
+        __local_mem__ half* swishResAddr = (__local_mem__ half*)swishRes.GetPhyAddr();
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, bufferAddr + i * calSize);
+            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0,
+                                                                                            bufferAddr + i * calSize);
             AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
-            AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg2, vreg1, static_cast<float>(-1.0), preg0);
+            AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                vreg2, vreg1, static_cast<float>(-1.0), preg0);
             AscendC::MicroAPI::Exp<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2, preg0);
-            AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg3, static_cast<float>(1.0), preg0);
+            AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                vreg4, vreg3, static_cast<float>(1.0), preg0);
             AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg5, vreg1, vreg4, preg0);
             AscendC::MicroAPI::Cast<half, float, castTraitFloat2Half>(vreg6, vreg5, preg0);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swishResAddr + i * calSize, vreg6, preg0);
+            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swishResAddr + i * calSize,
+                                                                                           vreg6, preg0);
         }
     }
     AscendC::PipeBarrier<PIPE_V>();
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::MulQuantCompute(uint64_t offset, uint32_t curAicM, uint32_t curAicN)
+__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::MulQuantCompute(uint64_t offset,
+                                                                                                  uint32_t curAicM,
+                                                                                                  uint32_t curAicN)
 {
     auto scale = quantScaleQueue.AllocTensor<float>();
     auto left = outBuf.Get<half>();
@@ -255,28 +261,32 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         RegTensor<int8_t> vreg8;
         MaskReg preg0;
 
-        __local_mem__ half *leftAddr = (__local_mem__ half *)left.GetPhyAddr();
-        __local_mem__ half *rightAddr = (__local_mem__ half *)right.GetPhyAddr();
-        __local_mem__ float *scaleAddr = (__local_mem__ float *)scale.GetPhyAddr();
-        __local_mem__ int8_t *outAddr = (__local_mem__ int8_t *)left.GetPhyAddr(); // out复用swish计算结果内存
+        __local_mem__ half* leftAddr = (__local_mem__ half*)left.GetPhyAddr();
+        __local_mem__ half* rightAddr = (__local_mem__ half*)right.GetPhyAddr();
+        __local_mem__ float* scaleAddr = (__local_mem__ float*)scale.GetPhyAddr();
+        __local_mem__ int8_t* outAddr = (__local_mem__ int8_t*)left.GetPhyAddr(); // out复用swish计算结果内存
         for (uint16_t j = 0; j < static_cast<uint16_t>(curAicM); j++) {
             uint32_t count = curAicN;
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(count);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, leftAddr + j * curAicN + i * calSize);
+                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    vreg0, leftAddr + j * curAicN + i * calSize);
                 AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2, rightAddr + j * curAicN + i * calSize);
+                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    vreg2, rightAddr + j * curAicN + i * calSize);
                 AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg3, vreg2, preg0);
 
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg1, vreg3, preg0);
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vreg5, scaleAddr + i * calSize);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vreg5,
+                                                                                           scaleAddr + i * calSize);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg6, vreg4, vreg5, preg0);
 
                 AscendC::MicroAPI::Cast<half, float, castTraitFloat2Half>(vreg7, vreg6, preg0);
                 AscendC::MicroAPI::Cast<int8_t, half, castTraitHalf2Int8>(vreg8, vreg7, preg0);
 
-                AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr + j * curAicN + i * calSize, vreg8, preg0);
+                AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    outAddr + j * curAicN + i * calSize, vreg8, preg0);
             }
         }
     }
@@ -288,7 +298,9 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::MulCompute(uint64_t offset, uint32_t curAicM, uint32_t curAicN)
+__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::MulCompute(uint64_t offset,
+                                                                                             uint32_t curAicM,
+                                                                                             uint32_t curAicN)
 {
     auto left = outBuf.Get<half>();
     auto right = matmulRightOutQueue.DeQue<half>();
@@ -306,21 +318,24 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         RegTensor<half> vreg5;
         MaskReg preg0;
 
-        __local_mem__ half *leftAddr = (__local_mem__ half *)left.GetPhyAddr();
-        __local_mem__ half *rightAddr = (__local_mem__ half *)right.GetPhyAddr();
-        __local_mem__ half *outAddr = (__local_mem__ half *)left.GetPhyAddr(); // out复用swish计算结果内存
+        __local_mem__ half* leftAddr = (__local_mem__ half*)left.GetPhyAddr();
+        __local_mem__ half* rightAddr = (__local_mem__ half*)right.GetPhyAddr();
+        __local_mem__ half* outAddr = (__local_mem__ half*)left.GetPhyAddr(); // out复用swish计算结果内存
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, leftAddr + i * calSize);
+            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0,
+                                                                                            leftAddr + i * calSize);
             AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg1, vreg0, preg0);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2, rightAddr + i * calSize);
+            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
+                                                                                            rightAddr + i * calSize);
             AscendC::MicroAPI::Cast<float, half, castTraitHalf2Float>(vreg3, vreg2, preg0);
 
             AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg1, vreg3, preg0);
 
             AscendC::MicroAPI::Cast<half, float, castTraitFloat2Half>(vreg5, vreg4, preg0);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * calSize, vreg5, preg0);
+            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(outAddr + i * calSize, vreg5,
+                                                                                           preg0);
         }
     }
     AscendC::TEventID eventID = GetTPipePtr()->AllocEventID<AscendC::HardEvent::V_MTE3>();
@@ -330,7 +345,9 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::CopyIn(LocalTensor<x1Type> &aL1Local, uint32_t curAicM, uint64_t xOffset)
+__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::CopyIn(LocalTensor<x1Type>& aL1Local,
+                                                                                         uint32_t curAicM,
+                                                                                         uint64_t xOffset)
 {
     uint64_t offsetA = 0;
     constexpr int64_t int4Factor = (AscendC::IsSameType<x1Type, AscendC::int4b_t>::value) ? 2 : 1;
@@ -349,7 +366,7 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
         params.dstNzC0Stride = DequantBmm::Align(nDim, c0Size);
     } else {
         offsetA = xOffset * k;
-        params.srcDValue =  DequantBmm::CeilDiv(k, int4Factor);
+        params.srcDValue = DequantBmm::CeilDiv(k, int4Factor);
         params.dstNzC0Stride = DequantBmm::Align(nDim, BMM_BLOCK_NUM);
     }
 
@@ -361,7 +378,7 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
     params.dstNzMatrixStride = 0;
     if constexpr (AscendC::IsSameType<x1Type, AscendC::int4b_t>::value) {
         GlobalTensor<int8_t> aGlobalInt8;
-        aGlobalInt8.SetGlobalBuffer((__gm__ int8_t *)(xGm.GetPhyAddr()), (nDim * dDim) >> 1);
+        aGlobalInt8.SetGlobalBuffer((__gm__ int8_t*)(xGm.GetPhyAddr()), (nDim * dDim) >> 1);
         auto al1LocalImpl = aL1Local.template ReinterpretCast<int8_t>();
         DataCopy(al1LocalImpl, aGlobalInt8[offsetA >> 1], params);
     } else {
@@ -370,7 +387,10 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::CopyOut(uint64_t xOffset, uint64_t wOffset, uint32_t curAicM, uint32_t curAicN)
+__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::CopyOut(uint64_t xOffset,
+                                                                                          uint64_t wOffset,
+                                                                                          uint32_t curAicM,
+                                                                                          uint32_t curAicN)
 {
     DataCopyParams dataCopyParams;
 
@@ -384,7 +404,7 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
 }
 
 FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::Iterate(LocalTensor<half> &result)
+__aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>::Iterate(LocalTensor<half>& result)
 {
     while (mm.Iterate()) {
         mm.GetTensorC(result, 0, true);
@@ -450,5 +470,5 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
     }
     mm.End();
 }
-}
+} // namespace AscendC
 #endif // FUSED_QUANT_MAT_MUL_SWIGLU_H

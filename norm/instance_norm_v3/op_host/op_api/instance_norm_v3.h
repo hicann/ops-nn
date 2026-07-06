@@ -14,9 +14,9 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*, aclTensor*> InstanceNormV3(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const char* dataFormat, double eps,
-    aclOpExecutor* executor);
+std::tuple<aclTensor*, aclTensor*, aclTensor*> InstanceNormV3(const aclTensor* x, const aclTensor* gamma,
+                                                              const aclTensor* beta, const char* dataFormat, double eps,
+                                                              aclOpExecutor* executor);
 }
 
 #endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_INSTANCE_NORM_V3_H_

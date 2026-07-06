@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_tiling_advanced.h
  * \brief
@@ -22,7 +21,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 class MatMulV3Tiling {
 public:
-    explicit MatMulV3Tiling(gert::TilingContext *context) : context_(context){};
+    explicit MatMulV3Tiling(gert::TilingContext* context) : context_(context){};
     virtual ~MatMulV3Tiling() = default;
     virtual ge::graphStatus DoTiling();
 
@@ -44,11 +43,11 @@ protected:
     virtual ge::graphStatus CheckInputTranspose(int64_t (&dims)[2], int64_t idx);
 
     virtual bool CheckIsNonContiguous(int64_t (&mkDims)[2], int64_t (&knDims)[2]);
+
 protected:
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     MatMulV3Args args_;
     bool isSelfSlice_ = false;
 };
-}
-}
-
+} // namespace matmul_v3_advanced
+} // namespace optiling

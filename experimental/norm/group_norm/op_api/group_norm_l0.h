@@ -15,13 +15,15 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t n, int64_t numGroups, float eps,
-    aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(const aclTensor* x, const aclTensor* gamma,
+                                                               const aclTensor* beta, int64_t n, int64_t numGroups,
+                                                               float eps, aclOpExecutor* executor);
 
-inline const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormExperimental(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t n, int64_t numGroups, float eps,
-    aclOpExecutor* executor)
+inline const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormExperimental(const aclTensor* x,
+                                                                                  const aclTensor* gamma,
+                                                                                  const aclTensor* beta, int64_t n,
+                                                                                  int64_t numGroups, float eps,
+                                                                                  aclOpExecutor* executor)
 {
     return GroupNorm(x, gamma, beta, n, numGroups, eps, executor);
 }

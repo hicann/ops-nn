@@ -57,7 +57,7 @@ public:
         BlockShape blockShape;
     };
 
-    __aicore__ inline BlockSchedulerSwizzleInMnCore(Params const &params)
+    __aicore__ inline BlockSchedulerSwizzleInMnCore(Params const& params)
     {
         mSize_ = Get<0>(params.problemShape);
         nSize_ = Get<1>(params.problemShape);
@@ -89,7 +89,7 @@ public:
     __aicore__ inline uint64_t GetCoreLoops() const { return coreLoops_; }
 
     template <class Coord>
-    __aicore__ inline auto GetActualBlockShape(const Coord &blockCoord)
+    __aicore__ inline auto GetActualBlockShape(const Coord& blockCoord)
     {
         auto mCoord = Get<0>(blockCoord);
         auto nCoord = Get<1>(blockCoord);
@@ -125,7 +125,6 @@ private:
     uint64_t blockDim_;
     static constexpr uint64_t ORDER_N = 1;
 };
-}  // namespace Block
-}  // namespace Gemm
-}  // namespace Cmct
-
+} // namespace Block
+} // namespace Gemm
+} // namespace Cmct

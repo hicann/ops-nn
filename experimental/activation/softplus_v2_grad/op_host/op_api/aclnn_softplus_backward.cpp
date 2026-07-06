@@ -42,7 +42,8 @@ static const std::initializer_list<op::DataType> SELF_ASCEND910B_DTYPE_SUPPORT_L
 static const std::initializer_list<op::DataType> KERNEL_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> &GetDtypeSupportList() {
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
     auto socVersion = GetCurrentPlatformInfo().GetCurNpuArch();
     if (socVersion == NpuArch::DAV_2201 || socVersion == NpuArch::DAV_3510) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
@@ -51,7 +52,8 @@ static const std::initializer_list<DataType> &GetDtypeSupportList() {
     }
 }
 
-static const std::initializer_list<DataType> &GetSelfDtypeSupportList() {
+static const std::initializer_list<DataType>& GetSelfDtypeSupportList()
+{
     auto socVersion = GetCurrentPlatformInfo().GetCurNpuArch();
     if (socVersion == NpuArch::DAV_2201 || socVersion == NpuArch::DAV_3510) {
         return SELF_ASCEND910B_DTYPE_SUPPORT_LIST;
@@ -60,14 +62,16 @@ static const std::initializer_list<DataType> &GetSelfDtypeSupportList() {
     }
 }
 
-static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *gradInput) {
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
+{
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(gradInput, return false);
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *gradInput) {
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
+{
     auto DTYPE_SUPPORT_LIST = GetDtypeSupportList();
     auto SELF_DTYPE_SUPPORT_LIST = GetSelfDtypeSupportList();
     // 输入在支持的范围内
@@ -85,7 +89,8 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, 
     return true;
 }
 
-static bool CheckShape(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *gradInput) {
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
+{
     OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(gradInput, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -95,7 +100,8 @@ static bool CheckShape(const aclTensor *gradOutput, const aclTensor *self, const
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *gradInput) {
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, gradInput), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -108,10 +114,11 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *sel
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSoftplusBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self,
-                                                  const aclScalar *beta, const aclScalar *threshold,
-                                                  aclTensor *gradInput, uint64_t *workspaceSize,
-                                                  aclOpExecutor **executor) {
+aclnnStatus aclnnSoftplusBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                  const aclScalar* beta, const aclScalar* threshold,
+                                                  aclTensor* gradInput, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
     L2_DFX_PHASE_1(aclnnSoftplusBackward, DFX_IN(gradOutput, self, beta, threshold), DFX_OUT(gradInput));
@@ -141,8 +148,8 @@ aclnnStatus aclnnSoftplusBackwardGetWorkspaceSize(const aclTensor *gradOutput, c
     float thresholdVal = threshold->ToFloat();
 
     // 直接传入原始类型的连续tensor，kernel内部处理类型转换
-    auto SoftplusV2GradOut =
-        l0op::SoftplusV2Grad(gradOutputContiguous, selfContiguous, betaVal, thresholdVal, uniqueExecutor.get());
+    auto SoftplusV2GradOut = l0op::SoftplusV2Grad(gradOutputContiguous, selfContiguous, betaVal, thresholdVal,
+                                                  uniqueExecutor.get());
     CHECK_RET(SoftplusV2GradOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 仅将输出转换为gradInput的目标类型（必要的输出类型对齐）
@@ -157,8 +164,8 @@ aclnnStatus aclnnSoftplusBackwardGetWorkspaceSize(const aclTensor *gradOutput, c
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSoftplusBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-                                  aclrtStream stream) {
+aclnnStatus aclnnSoftplusBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnSoftplusBackward);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

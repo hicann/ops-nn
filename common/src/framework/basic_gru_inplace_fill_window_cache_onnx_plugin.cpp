@@ -30,8 +30,9 @@ struct BasicGRUInplaceFillWindowCacheAttr {
     std::string direction = "forward";
 };
 
-static Status BasicGRUInplaceFillWindowCacheAttrFromOnnx(
-    const NodeProto* node, BasicGRUInplaceFillWindowCacheAttr& nodeAttr, ge::Operator& op_dest)
+static Status BasicGRUInplaceFillWindowCacheAttrFromOnnx(const NodeProto* node,
+                                                         BasicGRUInplaceFillWindowCacheAttr& nodeAttr,
+                                                         ge::Operator& op_dest)
 {
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "hidden_size" && attr.type() == ge::onnx::AttributeProto::INT) {
@@ -63,8 +64,8 @@ static Status BasicGRUInplaceFillWindowCacheAttrFromOnnx(
     return SUCCESS;
 }
 
-static Status QuantUpdateAttrFromOnnx(
-    const NodeProto* node, BasicGRUInplaceFillWindowCacheAttr& nodeAttr, ge::Operator& op_dest)
+static Status QuantUpdateAttrFromOnnx(const NodeProto* node, BasicGRUInplaceFillWindowCacheAttr& nodeAttr,
+                                      ge::Operator& op_dest)
 {
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "quant_scale_x" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
@@ -108,18 +109,17 @@ static Status ParseParamBasicGRUInplaceFillWindowCache(const Message* op_src, ge
 
 REGISTER_CUSTOM_OP("BasicGRUInplaceFillWindowCache")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::8::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::9::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::10::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::11::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::12::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::13::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::14::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::15::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::16::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::17::BasicGRUInplaceFillWindowCache"),
-         ge::AscendString("ai.onnx::18::BasicGRUInplaceFillWindowCache")})
+    .OriginOpType({ge::AscendString("ai.onnx::8::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::9::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::10::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::11::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::12::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::13::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::14::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::15::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::16::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::17::BasicGRUInplaceFillWindowCache"),
+                   ge::AscendString("ai.onnx::18::BasicGRUInplaceFillWindowCache")})
     .ParseParamsFn(ParseParamBasicGRUInplaceFillWindowCache)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

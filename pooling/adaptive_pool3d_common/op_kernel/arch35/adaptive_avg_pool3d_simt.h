@@ -27,42 +27,48 @@
 #define LAUNCH_BOUND(threads)
 #endif
 
-namespace AdaptivePool3DWithSimt{
-    using namespace AscendC;
+namespace AdaptivePool3DWithSimt {
+using namespace AscendC;
 
-    constexpr uint32_t USE_THREAD_NUM = 1024;
-    constexpr size_t UINT_DIV_NUM = 8;
-    constexpr size_t TILING_DATA_NUM = 8;
-    constexpr static uint32_t IDX0 = 0;
-    constexpr static uint32_t IDX1 = 1;
-    constexpr static uint32_t IDX2 = 2;
-    constexpr static uint32_t IDX3 = 3;
-    constexpr static uint32_t IDX4 = 4;
-    constexpr static uint32_t IDX5 = 5;
-    constexpr static uint32_t IDX6 = 6;
-    constexpr static uint32_t IDX7 = 7;
+constexpr uint32_t USE_THREAD_NUM = 1024;
+constexpr size_t UINT_DIV_NUM = 8;
+constexpr size_t TILING_DATA_NUM = 8;
+constexpr static uint32_t IDX0 = 0;
+constexpr static uint32_t IDX1 = 1;
+constexpr static uint32_t IDX2 = 2;
+constexpr static uint32_t IDX3 = 3;
+constexpr static uint32_t IDX4 = 4;
+constexpr static uint32_t IDX5 = 5;
+constexpr static uint32_t IDX6 = 6;
+constexpr static uint32_t IDX7 = 7;
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalStartIdx(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalStartIdx(DIV_T outIdx,
+                                                                                          DIV_T magicOutLen,
+                                                                                          DIV_T shiftOutLen,
+                                                                                          DIV_T inLen)
 {
     DIV_T pStart = outIdx * inLen;
     return Simt::UintDiv<DIV_T>(pStart, magicOutLen, shiftOutLen);
 }
 
 template <typename DIV_T>
-__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalEndIdx(DIV_T outIdx, DIV_T magicOutLen, DIV_T shiftOutLen,  DIV_T inLen, DIV_T outLen)
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline static DIV_T CalEndIdx(DIV_T outIdx, DIV_T magicOutLen,
+                                                                                        DIV_T shiftOutLen, DIV_T inLen,
+                                                                                        DIV_T outLen)
 {
     DIV_T pEnd = ((outIdx + 1) * inLen + outLen - 1);
     return Simt::UintDiv<DIV_T>(pEnd, magicOutLen, shiftOutLen);
 }
 
 template <typename X_T, typename DIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3DNcSimtCompute(__gm__ X_T* x, __gm__ X_T* y,
-    __ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData, __ubuf__ DIV_T* uintDivData)
+__simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3DNcSimtCompute(
+    __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData,
+    __ubuf__ DIV_T* uintDivData)
 {
-    DIV_T outputSize = tilingData->nDim * tilingData->cDim * tilingData->dOutDim * tilingData->hOutDim * tilingData->wOutDim;
-    for (DIV_T idxOut = blockIdx.x * blockDim.x + threadIdx.x; idxOut < outputSize;
-        idxOut += gridDim.x * blockDim.x) {
+    DIV_T outputSize = tilingData->nDim * tilingData->cDim * tilingData->dOutDim * tilingData->hOutDim *
+                       tilingData->wOutDim;
+    for (DIV_T idxOut = blockIdx.x * blockDim.x + threadIdx.x; idxOut < outputSize; idxOut += gridDim.x * blockDim.x) {
         DIV_T divW = Simt::UintDiv<DIV_T>(idxOut, uintDivData[IDX0], uintDivData[IDX1]);
         DIV_T divH = Simt::UintDiv<DIV_T>(divW, uintDivData[IDX2], uintDivData[IDX3]);
         DIV_T divD = Simt::UintDiv<DIV_T>(divH, uintDivData[IDX4], uintDivData[IDX5]);
@@ -71,11 +77,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3
         DIV_T curDOutIdx = divH - divD * tilingData->dOutDim;
 
         DIV_T startInD = CalStartIdx<DIV_T>(curDOutIdx, uintDivData[IDX4], uintDivData[IDX5], tilingData->dInDim);
-        DIV_T endInD = CalEndIdx<DIV_T>(curDOutIdx, uintDivData[IDX4], uintDivData[IDX5], tilingData->dInDim, tilingData->dOutDim);
+        DIV_T endInD = CalEndIdx<DIV_T>(curDOutIdx, uintDivData[IDX4], uintDivData[IDX5], tilingData->dInDim,
+                                        tilingData->dOutDim);
         DIV_T startInH = CalStartIdx<DIV_T>(curHOutIdx, uintDivData[IDX2], uintDivData[IDX3], tilingData->hInDim);
-        DIV_T endInH = CalEndIdx<DIV_T>(curHOutIdx, uintDivData[IDX2], uintDivData[IDX3], tilingData->hInDim, tilingData->hOutDim);
+        DIV_T endInH = CalEndIdx<DIV_T>(curHOutIdx, uintDivData[IDX2], uintDivData[IDX3], tilingData->hInDim,
+                                        tilingData->hOutDim);
         DIV_T startInW = CalStartIdx<DIV_T>(curWOutIdx, uintDivData[IDX0], uintDivData[IDX1], tilingData->wInDim);
-        DIV_T endInW = CalEndIdx<DIV_T>(curWOutIdx, uintDivData[IDX0], uintDivData[IDX1], tilingData->wInDim, tilingData->wOutDim);
+        DIV_T endInW = CalEndIdx<DIV_T>(curWOutIdx, uintDivData[IDX0], uintDivData[IDX1], tilingData->wInDim,
+                                        tilingData->wOutDim);
 
         DIV_T windowsSize = (endInD - startInD) * (endInH - startInH) * (endInW - startInW);
         auto curX = x + divD * tilingData->dInDim * tilingData->hInDim * tilingData->wInDim;
@@ -93,12 +102,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3
 }
 
 template <typename X_T, typename DIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3DNdSimtCompute(__gm__ X_T* x, __gm__ X_T* y,
-    __ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData, __ubuf__ DIV_T* uintDivData)
+__simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3DNdSimtCompute(
+    __gm__ X_T* x, __gm__ X_T* y, __ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData,
+    __ubuf__ DIV_T* uintDivData)
 {
-    DIV_T outputSize = tilingData->nDim * tilingData->cDim * tilingData->dOutDim * tilingData->hOutDim * tilingData->wOutDim;
-    for (DIV_T idxOut = blockIdx.x * blockDim.x + threadIdx.x; idxOut < outputSize;
-        idxOut += gridDim.x * blockDim.x) {
+    DIV_T outputSize = tilingData->nDim * tilingData->cDim * tilingData->dOutDim * tilingData->hOutDim *
+                       tilingData->wOutDim;
+    for (DIV_T idxOut = blockIdx.x * blockDim.x + threadIdx.x; idxOut < outputSize; idxOut += gridDim.x * blockDim.x) {
         DIV_T divC = Simt::UintDiv<DIV_T>(idxOut, uintDivData[IDX6], uintDivData[IDX7]);
         DIV_T divW = Simt::UintDiv<DIV_T>(divC, uintDivData[IDX0], uintDivData[IDX1]);
         DIV_T divH = Simt::UintDiv<DIV_T>(divW, uintDivData[IDX2], uintDivData[IDX3]);
@@ -109,11 +119,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3
         DIV_T curDOutIdx = divH - divD * tilingData->dOutDim;
 
         DIV_T startInD = CalStartIdx<DIV_T>(curDOutIdx, uintDivData[IDX4], uintDivData[IDX5], tilingData->dInDim);
-        DIV_T endInD = CalEndIdx<DIV_T>(curDOutIdx, uintDivData[IDX4], uintDivData[IDX5], tilingData->dInDim, tilingData->dOutDim);
+        DIV_T endInD = CalEndIdx<DIV_T>(curDOutIdx, uintDivData[IDX4], uintDivData[IDX5], tilingData->dInDim,
+                                        tilingData->dOutDim);
         DIV_T startInH = CalStartIdx<DIV_T>(curHOutIdx, uintDivData[IDX2], uintDivData[IDX3], tilingData->hInDim);
-        DIV_T endInH = CalEndIdx<DIV_T>(curHOutIdx, uintDivData[IDX2], uintDivData[IDX3], tilingData->hInDim, tilingData->hOutDim);
+        DIV_T endInH = CalEndIdx<DIV_T>(curHOutIdx, uintDivData[IDX2], uintDivData[IDX3], tilingData->hInDim,
+                                        tilingData->hOutDim);
         DIV_T startInW = CalStartIdx<DIV_T>(curWOutIdx, uintDivData[IDX0], uintDivData[IDX1], tilingData->wInDim);
-        DIV_T endInW = CalEndIdx<DIV_T>(curWOutIdx, uintDivData[IDX0], uintDivData[IDX1], tilingData->wInDim, tilingData->wOutDim);
+        DIV_T endInW = CalEndIdx<DIV_T>(curWOutIdx, uintDivData[IDX0], uintDivData[IDX1], tilingData->wInDim,
+                                        tilingData->wOutDim);
 
         DIV_T windowsSize = (endInD - startInD) * (endInH - startInH) * (endInW - startInW);
         auto curX = x + divD * tilingData->dInDim * tilingData->hInDim * tilingData->wInDim * tilingData->cDim;
@@ -131,17 +144,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3
 }
 
 template <typename X_T, typename DIV_T, uint64_t FORMAT_TYPE>
-class AdaptiveAvgPool3DSimt
-{
+class AdaptiveAvgPool3DSimt {
 public:
-    __aicore__ inline AdaptiveAvgPool3DSimt(TPipe *pipe, const AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* __restrict tilingData) 
-        : pipe_(pipe), tilingData_(tilingData) {}
-    
+    __aicore__ inline AdaptiveAvgPool3DSimt(
+        TPipe* pipe, const AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* __restrict tilingData)
+        : pipe_(pipe), tilingData_(tilingData)
+    {}
+
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     AscendC::GlobalTensor<X_T> x_;
     AscendC::GlobalTensor<X_T> y_;
 
@@ -193,16 +207,16 @@ __aicore__ inline void AdaptiveAvgPool3DSimt<X_T, DIV_T, FORMAT_TYPE>::Process()
         GetUintDivMagicAndShift<DIV_T>(magicC, shiftC, tilingDataLocal(IDX1));
         uintDivLocal.SetValue(IDX6, static_cast<DIV_T>(magicC));
         uintDivLocal.SetValue(IDX7, static_cast<DIV_T>(shiftC));
-        asc_vf_call<AdaptiveAvgPool3DNdSimtCompute<X_T, DIV_T>>(dim3(USE_THREAD_NUM), 
-            (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), 
+        asc_vf_call<AdaptiveAvgPool3DNdSimtCompute<X_T, DIV_T>>(
+            dim3(USE_THREAD_NUM), (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(),
             (__ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData*)(tilingDataLocal.GetPhyAddr()),
             (__ubuf__ DIV_T*)(uintDivLocal.GetPhyAddr()));
     } else if constexpr (FORMAT_TYPE == 1) {
-        asc_vf_call<AdaptiveAvgPool3DNcSimtCompute<X_T, DIV_T>>(dim3(USE_THREAD_NUM), 
-            (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), 
+        asc_vf_call<AdaptiveAvgPool3DNcSimtCompute<X_T, DIV_T>>(
+            dim3(USE_THREAD_NUM), (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(),
             (__ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData*)(tilingDataLocal.GetPhyAddr()),
             (__ubuf__ DIV_T*)(uintDivLocal.GetPhyAddr()));
     }
 }
 } // namespace AdaptivePool3DWithSimt
-#endif //ADAPTIVE_AVG_POOL_3D_SIMT_H
+#endif // ADAPTIVE_AVG_POOL_3D_SIMT_H

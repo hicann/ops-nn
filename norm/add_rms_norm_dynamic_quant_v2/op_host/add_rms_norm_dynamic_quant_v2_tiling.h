@@ -23,7 +23,6 @@
 #include "platform/platform_infos_def.h"
 #include "op_host/tiling_templates_registry.h"
 
-
 namespace optiling {
 BEGIN_TILING_DATA_DEF(AddRmsNormDynamicQuantV2TilingData)
 TILING_DATA_FIELD_DEF(uint64_t, useCore);
@@ -48,16 +47,11 @@ struct AddRmsNormDynamicQuantV2CompileInfo {
     int64_t ubSize = 0;
 };
 
-enum class UB_TILING_POLICY {
-    NORMAL,
-    SINGLE_ROW,
-    SLICE_D
-};
+enum class UB_TILING_POLICY { NORMAL, SINGLE_ROW, SLICE_D };
 
 class AddRmsNormDynamicQuantV2TilingHelper {
 public:
-    explicit AddRmsNormDynamicQuantV2TilingHelper(gert::TilingContext* context) : context_(context)
-    {}
+    explicit AddRmsNormDynamicQuantV2TilingHelper(gert::TilingContext* context) : context_(context) {}
 
     ~AddRmsNormDynamicQuantV2TilingHelper() = default;
     bool DoTiling();

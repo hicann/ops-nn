@@ -20,8 +20,7 @@
 #include "atvoss/util/placeholder.h"
 #include "atvoss/reduce/reduce_operator.h"
 
-namespace LpLoss
-{
+namespace LpLoss {
 using namespace AscendC;
 
 template <typename T, typename PromteT = float>
@@ -40,7 +39,7 @@ struct LpLossOp {
     using OpResultCast = Ops::Base::Bind<Ops::Base::Vec::Cast<T, PromteT, 1>, OpAbs>;
     using OpCopyOut = Ops::Base::Bind<Ops::Base::Vec::CopyOut<T>, Ops::Base::Placeholder::Out0<T>, OpResultCast>;
     // 指定输出节点
-    using Outputs = Ops::Base::Elems<OpCopyOut>;  // 设置输出
+    using Outputs = Ops::Base::Elems<OpCopyOut>; // 设置输出
     // 指定计算顺序
     using OpDag = Ops::Base::DAGSch<Outputs>;
 };
@@ -76,6 +75,6 @@ struct LpLossMeanDag {
     using MemCfg = Ops::Base::MemOptCfg<Ops::Base::MemLevel::LEVEL_2>;
     using OpDag = Ops::Base::DAGSch<Outputs, void, MemCfg>;
 };
-}  // namespace LpLoss
+} // namespace LpLoss
 
-#endif  // CANN_CUSTOM_OPS_LP_LOSS_DAG_H
+#endif // CANN_CUSTOM_OPS_LP_LOSS_DAG_H

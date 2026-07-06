@@ -24,8 +24,7 @@
 namespace optiling {
 using namespace Ops::NN::Optiling;
 
-class KlDivLossGradTiling : public TilingBaseClass
-{
+class KlDivLossGradTiling : public TilingBaseClass {
 public:
     explicit KlDivLossGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
@@ -47,8 +46,9 @@ protected:
 
     ge::graphStatus RunFp16BroadcastTiling(float reducationCof);
     ge::graphStatus RunFp32BroadcastTiling(float reducationCof);
+
 private:
-    const char *reducationStr = "";  
+    const char* reducationStr = "";
     ge::DataType outputYDtype;
     ge::DataType inputGradDtype;
     ge::DataType inputInputDtype;
@@ -57,5 +57,5 @@ private:
     bool logTarget_ = false;
     float reducationCof_ = 0.0f;
 };
-}  // namespace optiling
-#endif  // KL_DIV_LOSS_GRAD_TILING_H_
+} // namespace optiling
+#endif // KL_DIV_LOSS_GRAD_TILING_H_

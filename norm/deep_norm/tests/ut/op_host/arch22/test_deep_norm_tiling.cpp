@@ -23,39 +23,30 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class DeepNormTiling : public testing::Test
-{
+class DeepNormTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeepNormTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeepNormTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeepNormTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeepNormTiling TearDown" << std::endl; }
 };
 
 TEST_F(DeepNormTiling, Deep_norm_tiling_001)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_x_shape = {{24, 1, 2560}, {24, 1, 2560}};
     gert::StorageShape input_gx_shape = {{24, 1, 2560}, {24, 1, 2560}};
-    gert::StorageShape beta_shape = {
-        {
-            2560,
-        },
-        {
-            2560,
-        }};
-    gert::StorageShape gamma_shape = {
-        {
-            2560,
-        },
-        {
-            2560,
-        }};
+    gert::StorageShape beta_shape = {{
+                                         2560,
+                                     },
+                                     {
+                                         2560,
+                                     }};
+    gert::StorageShape gamma_shape = {{
+                                          2560,
+                                      },
+                                      {
+                                          2560,
+                                      }};
     gert::StorageShape mean_shape = {{24, 1, 1}, {24, 1, 1}};
     gert::StorageShape rstd_shape = {{24, 1, 1}, {24, 1, 1}};
     gert::StorageShape output_y_shape = {{24, 1, 2560}, {24, 1, 2560}};
@@ -76,8 +67,7 @@ TEST_F(DeepNormTiling, Deep_norm_tiling_001)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct DeepNormCompileInfo {
-    };
+    struct DeepNormCompileInfo {};
     DeepNormCompileInfo compile_info;
 
     std::string op_type("DeepNorm");
@@ -86,19 +76,19 @@ TEST_F(DeepNormTiling, Deep_norm_tiling_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -122,9 +112,8 @@ TEST_F(DeepNormTiling, Deep_norm_tiling_001)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.000001)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.000001)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -141,5 +130,5 @@ TEST_F(DeepNormTiling, Deep_norm_tiling_001)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }

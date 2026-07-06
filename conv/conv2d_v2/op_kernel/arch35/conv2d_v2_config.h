@@ -22,7 +22,7 @@ namespace conv2d {
 using namespace conv;
 
 struct Conv2dParam : public ConvParam {
-    __aicore__ inline Conv2dParam() {};
+    __aicore__ inline Conv2dParam(){};
     constexpr static int8_t enableSmallChannel = 0;
     constexpr static int8_t weightUbTrans = 0;
     constexpr static int8_t fmapCopyMode = 0;
@@ -40,6 +40,6 @@ public:
     };
 };
 
-}  // namespace conv2d
+} // namespace conv2d
 
 #endif // CONV2D_V2_CONFIG_H

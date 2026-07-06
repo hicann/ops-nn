@@ -22,15 +22,9 @@
 
 class EluGradV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "elu_grad_v2 test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "elu_grad_v2 test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "elu_grad_v2 test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "elu_grad_v2 test TearDown" << std::endl; }
 };
 
 TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_fp16_1)
@@ -46,11 +40,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_fp16_1)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -71,11 +64,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_fp16_2)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -96,11 +88,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_bf16_3)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -121,11 +112,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_empty_4)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -146,11 +136,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_scalar_5)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -171,11 +160,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_alpha_2_6)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -196,11 +184,10 @@ TEST_F(EluGradV2Test, elu_grad_v2_infershape_success_is_result_false_7)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);

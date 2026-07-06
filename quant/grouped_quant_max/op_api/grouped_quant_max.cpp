@@ -21,20 +21,22 @@ namespace l0op {
 OP_TYPE_REGISTER(GroupedQuantMax);
 
 const std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM> GroupedQuantMaxAiCore(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, aclOpExecutor* executor)
+    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType,
+    const aclTensor* y, const aclTensor* amax, aclOpExecutor* executor)
 {
     L0_DFX(GroupedQuantMaxAiCore, x, scale, groupList, roundMode, dstType, y, amax);
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(GroupedQuantMax, OP_INPUT(x, scale, groupList), OP_OUTPUT(y, amax), OP_ATTR(roundMode, dstType));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(GroupedQuantMax, OP_INPUT(x, scale, groupList), OP_OUTPUT(y, amax),
+                                           OP_ATTR(roundMode, dstType));
     OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GroupedQuantMaxAiCore failed."),
-        return (std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM>{nullptr, nullptr}));
+             return (std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM>{nullptr, nullptr}));
     return std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM>{const_cast<aclTensor*>(y), const_cast<aclTensor*>(amax)};
 }
 
-const std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM> GroupedQuantMax(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, aclOpExecutor* executor)
+const std::array<aclTensor*, GROUPED_QUANT_MAX_OUT_NUM> GroupedQuantMax(const aclTensor* x, const aclTensor* scale,
+                                                                        const aclTensor* groupList,
+                                                                        const char* roundMode, int64_t dstType,
+                                                                        const aclTensor* y, const aclTensor* amax,
+                                                                        aclOpExecutor* executor)
 {
     return GroupedQuantMaxAiCore(x, scale, groupList, roundMode, dstType, y, amax, executor);
 }

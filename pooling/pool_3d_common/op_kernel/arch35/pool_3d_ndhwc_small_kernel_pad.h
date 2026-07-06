@@ -23,13 +23,11 @@
 #include "gather_index_impl.h"
 #include "scatter_index_impl.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 using namespace AscendC;
 
-template <typename T, int32_t OP_TYPE, bool OUT_DIV=false>
-class Pool3dNDHWCSmallKernelPad
-{
+template <typename T, int32_t OP_TYPE, bool OUT_DIV = false>
+class Pool3dNDHWCSmallKernelPad {
 public:
     __aicore__ inline Pool3dNDHWCSmallKernelPad(TPipe* pipe, const Pool3DSmallKernelNDHWCTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -41,31 +39,35 @@ private:
     __aicore__ inline void BaseCompute();
     __aicore__ inline void InitDivisor();
     template <typename M, typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenIndexInfo(CopyPad::CopyPadShapeInfo &padInfo, uint32_t &realOneRowElements, uint32_t &realOnePlaneElements, uint32_t &realOneBatchElements);
+    __aicore__ inline void GenIndexInfo(CopyPad::CopyPadShapeInfo& padInfo, uint32_t& realOneRowElements,
+                                        uint32_t& realOnePlaneElements, uint32_t& realOneBatchElements);
     __aicore__ inline void CopyInMultiRows(int64_t offset, const TensorDescInfo& inputInfo);
     __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
                                       int64_t channels);
     template <typename M, typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeMultiRow(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo, const Pool3dParam& paramInfo);
+    __aicore__ inline void ComputeMultiRow(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
+                                           const Pool3dParam& paramInfo);
     template <typename M, typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeSingleRow(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo, const Pool3dParam& paramInfo);
+    __aicore__ inline void ComputeSingleRow(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
+                                            const Pool3dParam& paramInfo);
     template <typename M, typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeMultiDep(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo, const Pool3dParam& paramInfo);
+    __aicore__ inline void ComputeMultiDep(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
+                                           const Pool3dParam& paramInfo);
     template <typename M, typename U, bool USE_TRAIT_TWO>
-    __aicore__ inline void ComputeMultiBatch(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo, const Pool3dParam& paramInfo);
+    __aicore__ inline void ComputeMultiBatch(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
+                                             const Pool3dParam& paramInfo);
     template <typename U, int32_t GATHER_MODE>
     __aicore__ inline void GenGatherIndex(const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal,
                                           uint16_t loopNum = 1);
     template <typename M, typename U>
-    __aicore__ inline void CopyPadData(LocalTensor<T>& inLocal, LocalTensor<T>& outLocal, const CopyPad::CopyPadShapeInfo &padInfo);
+    __aicore__ inline void CopyPadData(LocalTensor<T>& inLocal, LocalTensor<T>& outLocal,
+                                       const CopyPad::CopyPadShapeInfo& padInfo);
     template <typename M, typename U, int32_t GATHER_MODE, bool USE_TRAIT_TWO>
-    __aicore__ inline void Compute(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo, const Pool3dParam& paramInfo);
-    __aicore__ inline void ComputeDivisor(int64_t start, int64_t num) ;
-    __aicore__ inline void DivCompute(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr, uint32_t num) ;
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline void Compute(const CopyPad::CopyPadShapeInfo dstUbInfo, const ShapeInfo& outInfo,
+                                   const Pool3dParam& paramInfo);
+    __aicore__ inline void ComputeDivisor(int64_t start, int64_t num);
+    __aicore__ inline void DivCompute(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr, uint32_t num);
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -123,7 +125,6 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::InitDivis
     }
 }
 
-
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::Process()
 {
@@ -160,23 +161,25 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenIndexI
     uint32_t inDim2Size = static_cast<uint32_t>(tilingData_->dInDim);
     uint32_t inDim3Size = static_cast<uint32_t>(tilingData_->ubFactorN);
 
-    CopyPad::CopyPadShapeInfo padModeInfo = {
-        {inDim0Size, inDim1Size, inDim2Size, inDim3Size, 1}};
+    CopyPad::CopyPadShapeInfo padModeInfo = {{inDim0Size, inDim1Size, inDim2Size, inDim3Size, 1}};
     copyMode_ = CopyPad::GetCopyMode<T>(padModeInfo, tilingData_->splitMode);
-    
+
     uint32_t expectOneRowElements = ((outUbFactorW - 1) * sW + effectiveKw_) * channels;
     uint32_t expectOnePlaneElements = realOneRowElements * ((outUbFactorH - 1) * sH + effectiveKh_);
     uint32_t expectOneBatchElements = realOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
-    if (tilingData_->splitMode == SPLIT_COLS || copyMode_ == CopyPad::COPY_SINGLE_ROW || copyMode_ == CopyPad::SCATTER_ONE_DIM) {
+    if (tilingData_->splitMode == SPLIT_COLS || copyMode_ == CopyPad::COPY_SINGLE_ROW ||
+        copyMode_ == CopyPad::SCATTER_ONE_DIM) {
         expectOneRowElements = realOneRowElements;
-        uint32_t maxColsElement = min(static_cast<int64_t>(realOneRowElements), static_cast<int64_t>(tilingData_->wInDim * channels));
+        uint32_t maxColsElement = min(static_cast<int64_t>(realOneRowElements),
+                                      static_cast<int64_t>(tilingData_->wInDim * channels));
         realOneRowElements = ops::Aligned(maxColsElement, eleInBlk_);
         expectOnePlaneElements = expectOneRowElements * ((outUbFactorH - 1) * sH + effectiveKh_);
         realOnePlaneElements = realOneRowElements * ((outUbFactorH - 1) * sH + effectiveKh_);
         expectOneBatchElements = expectOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
         realOneBatchElements = realOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
     } else if (tilingData_->splitMode == SPLIT_ROWS) {
-        expectOneRowElements = max(expectOneRowElements, static_cast<uint32_t>((tilingData_->wInDim + tilingData_->lPad) * channels));
+        expectOneRowElements = max(expectOneRowElements,
+                                   static_cast<uint32_t>((tilingData_->wInDim + tilingData_->lPad) * channels));
         realOneRowElements = tilingData_->wInDim * channels;
         expectOnePlaneElements = expectOneRowElements * ((outUbFactorH - 1) * sH + effectiveKh_);
         realOnePlaneElements = realOneRowElements * ((outUbFactorH - 1) * sH + effectiveKh_);
@@ -184,29 +187,35 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenIndexI
         expectOneBatchElements = expectOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
         realOneBatchElements = realOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
     } else if (tilingData_->splitMode == SPLIT_DEPTHS) {
-        expectOneRowElements = max(expectOneRowElements, static_cast<uint32_t>((tilingData_->wInDim + tilingData_->lPad) * channels));
+        expectOneRowElements = max(expectOneRowElements,
+                                   static_cast<uint32_t>((tilingData_->wInDim + tilingData_->lPad) * channels));
         realOneRowElements = tilingData_->wInDim * channels;
-        expectOnePlaneElements = expectOneRowElements * max(static_cast<uint32_t>((outUbFactorH - 1) * sH + effectiveKh_), 
-                                                            static_cast<uint32_t>(tilingData_->hInDim + tilingData_->tPad));
-        realOnePlaneElements = tilingData_->wInDim * tilingData_->hInDim  * channels;
+        expectOnePlaneElements = expectOneRowElements *
+                                 max(static_cast<uint32_t>((outUbFactorH - 1) * sH + effectiveKh_),
+                                     static_cast<uint32_t>(tilingData_->hInDim + tilingData_->tPad));
+        realOnePlaneElements = tilingData_->wInDim * tilingData_->hInDim * channels;
         expectOneBatchElements = expectOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
         realOneBatchElements = realOnePlaneElements * ((outUbFactorD - 1) * sD + effectiveKd_);
         realOneBatchElements = ops::Aligned(realOneBatchElements, eleInBlk_);
     } else {
-        expectOneRowElements = max(expectOneRowElements, static_cast<uint32_t>((tilingData_->wInDim + tilingData_->lPad) * channels));
+        expectOneRowElements = max(expectOneRowElements,
+                                   static_cast<uint32_t>((tilingData_->wInDim + tilingData_->lPad) * channels));
         realOneRowElements = tilingData_->wInDim * channels;
-        expectOnePlaneElements = expectOneRowElements * max(static_cast<uint32_t>((outUbFactorH - 1) * sH + effectiveKh_), 
-                                                    static_cast<uint32_t>(tilingData_->hInDim + tilingData_->tPad));
+        expectOnePlaneElements = expectOneRowElements *
+                                 max(static_cast<uint32_t>((outUbFactorH - 1) * sH + effectiveKh_),
+                                     static_cast<uint32_t>(tilingData_->hInDim + tilingData_->tPad));
         realOnePlaneElements = tilingData_->wInDim * tilingData_->hInDim * channels;
-        expectOneBatchElements = expectOnePlaneElements * max(static_cast<uint32_t>((outUbFactorD - 1) * sD + effectiveKd_), 
-                                                        static_cast<uint32_t>(tilingData_->dInDim + tilingData_->fPad));
+        expectOneBatchElements = expectOnePlaneElements *
+                                 max(static_cast<uint32_t>((outUbFactorD - 1) * sD + effectiveKd_),
+                                     static_cast<uint32_t>(tilingData_->dInDim + tilingData_->fPad));
         realOneBatchElements = realOnePlaneElements * tilingData_->dInDim;
     }
 
     GatherIndexImpl::ShapeInfo info = {
-        {1, channels, expectOneRowElements, expectOnePlaneElements, expectOneBatchElements},  // input stride
-        {channels, outUbFactorW, outUbFactorH, outUbFactorD, static_cast<uint32_t>(tilingData_->ubFactorN)}, // gather size
-        {1, sW, sH, sD, 1}  // stride
+        {1, channels, expectOneRowElements, expectOnePlaneElements, expectOneBatchElements}, // input stride
+        {channels, outUbFactorW, outUbFactorH, outUbFactorD,
+         static_cast<uint32_t>(tilingData_->ubFactorN)}, // gather size
+        {1, sW, sH, sD, 1}                               // stride
     };
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     GenGatherIndex<U, GATHER_MODE>(info, indexLocal, 2);
@@ -236,7 +245,6 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenIndexI
     padInfo.dstStride[3] = expectOneBatchElements;
     padInfo.totalSize = tilingData_->ubFactorN * expectOneBatchElements;
 }
-
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 template <typename M, typename U, int32_t GATHER_MODE>
@@ -279,42 +287,44 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::BaseCompu
         int64_t dIdx = (idx - nIdx * tilingData_->dLoop * tilingData_->hLoop * tilingData_->wLoop) /
                        (tilingData_->hLoop * tilingData_->wLoop);
         int64_t hIdx = (idx - nIdx * tilingData_->dLoop * tilingData_->hLoop * tilingData_->wLoop -
-                        dIdx * tilingData_->hLoop * tilingData_->wLoop) / tilingData_->wLoop;
+                        dIdx * tilingData_->hLoop * tilingData_->wLoop) /
+                       tilingData_->wLoop;
         int64_t wIdx = idx % tilingData_->wLoop;
-        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                   : tilingData_->ubFactorN;
-        uint32_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD
-                                                     : tilingData_->outUbFactorD;
+        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                      tilingData_->ubFactorN;
+        uint32_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD :
+                                                         tilingData_->outUbFactorD;
         uint32_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * outUbFactorH : outUbFactorH;
         uint32_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
         int64_t expectDepStart = dIdx * sD * outUbFactorD;
         int64_t expectRowStart = hIdx * sH * outUbFactorH;
         int64_t expectColStart = wIdx * sW * outUbFactorW;
 
-        int64_t dUpper =
-            min(dIdx * sD * outUbFactorD + (deps - 1) * sD + effectiveKd_ - tilingData_->fPad, tilingData_->dInDim);
+        int64_t dUpper = min(dIdx * sD * outUbFactorD + (deps - 1) * sD + effectiveKd_ - tilingData_->fPad,
+                             tilingData_->dInDim);
         int64_t dLower = max(dIdx * sD * outUbFactorD - tilingData_->fPad, (int64_t)0);
-        int64_t hUpper =
-            min(hIdx * sH * outUbFactorH + (rows - 1) * sH + effectiveKh_ - tilingData_->tPad, tilingData_->hInDim);
+        int64_t hUpper = min(hIdx * sH * outUbFactorH + (rows - 1) * sH + effectiveKh_ - tilingData_->tPad,
+                             tilingData_->hInDim);
         int64_t hLower = max(hIdx * sH * outUbFactorH - tilingData_->tPad, (int64_t)0);
-        int64_t wUpper =
-            min(wIdx * sW * outUbFactorW + (cols - 1) * sW + effectiveKw_ - tilingData_->lPad, tilingData_->wInDim);
+        int64_t wUpper = min(wIdx * sW * outUbFactorW + (cols - 1) * sW + effectiveKw_ - tilingData_->lPad,
+                             tilingData_->wInDim);
         int64_t wLower = max(wIdx * sW * outUbFactorW - tilingData_->lPad, (int64_t)0);
         uint32_t realDeps = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : dUpper - dLower;
         uint32_t realRows = tilingData_->splitMode == SPLIT_BATCHS || tilingData_->splitMode == SPLIT_DEPTHS ?
-                            tilingData_->hInDim : hUpper - hLower;
+                                tilingData_->hInDim :
+                                hUpper - hLower;
         uint32_t realCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : wUpper - wLower;
 
-        int64_t srcOffset =
-            nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels +
-            dLower * tilingData_->hInDim * tilingData_->wInDim * channels +
-            hLower * tilingData_->wInDim * channels + wLower * channels;
+        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim *
+                                tilingData_->wInDim * channels +
+                            dLower * tilingData_->hInDim * tilingData_->wInDim * channels +
+                            hLower * tilingData_->wInDim * channels + wLower * channels;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim *
                                 tilingData_->wOutDim * channels +
                             dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim * channels +
                             hIdx * outUbFactorH * tilingData_->wOutDim * channels + wIdx * outUbFactorW * channels;
-        curOffsetInBatch_ = dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim
-                            + hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
+        curOffsetInBatch_ = dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim +
+                            hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
 
         uint32_t expectDeps = (deps - 1) * sD + effectiveKd_;
         uint32_t expectRows = (rows - 1) * sH + effectiveKh_;
@@ -327,8 +337,7 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::BaseCompu
             {realCols * channels, realRows, realDeps, n},
             {1, realOneRowElements, realOnePlaneElements, realOneBatchElements},
             {1, tilingData_->wInDim * channels, tilingData_->wInDim * tilingData_->hInDim * channels,
-             tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels}
-        };
+             tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels}};
         padInfo.inSize[0] = inputInfo.size[0];
         padInfo.inSize[1] = inputInfo.size[1];
         padInfo.inSize[2] = inputInfo.size[2];
@@ -369,7 +378,7 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::Compute(
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMultiRows(int64_t offset,
-                                                                           const TensorDescInfo& inputInfo)
+                                                                                       const TensorDescInfo& inputInfo)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyPadExtParams<T> padExtParams;
@@ -379,7 +388,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMul
     padExtParams.paddingValue = 0;
     LoopModeParams loopParams;
     DataCopyExtParams extParams;
-    if (tilingData_->splitMode == SPLIT_COLS || copyMode_ == CopyPad::COPY_SINGLE_ROW || copyMode_ == CopyPad::SCATTER_ONE_DIM) {
+    if (tilingData_->splitMode == SPLIT_COLS || copyMode_ == CopyPad::COPY_SINGLE_ROW ||
+        copyMode_ == CopyPad::SCATTER_ONE_DIM) {
         extParams.blockCount = inputInfo.size[1];
         extParams.blockLen = inputInfo.size[0] * sizeof(T);
         extParams.srcStride = (inputInfo.srcStride[1] - inputInfo.size[0]) * sizeof(T);
@@ -395,9 +405,10 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMul
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     } else if (tilingData_->splitMode == SPLIT_ROWS) {
         extParams.blockCount = inputInfo.size[2];
-        extParams.blockLen = inputInfo .size[0] * inputInfo.size[1] * sizeof(T);
+        extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * sizeof(T);
         extParams.srcStride = (inputInfo.srcStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T);
-        extParams.dstStride = ((inputInfo.dstStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T)) / platform::GetUbBlockSize();
+        extParams.dstStride = ((inputInfo.dstStride[2] - inputInfo.size[0] * inputInfo.size[1]) * sizeof(T)) /
+                              platform::GetUbBlockSize();
         loopParams.loop2Size = 1;
         loopParams.loop1Size = inputInfo.size[3];
         loopParams.loop1SrcStride = inputInfo.srcStride[3] * sizeof(T);
@@ -408,9 +419,11 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMul
     } else if (tilingData_->splitMode == SPLIT_DEPTHS) {
         extParams.blockCount = inputInfo.size[3];
         extParams.blockLen = inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2] * sizeof(T);
-        extParams.srcStride =
-            (inputInfo.srcStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) * sizeof(T);
-        extParams.dstStride = ((inputInfo.dstStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) * sizeof(T)) / platform::GetUbBlockSize();
+        extParams.srcStride = (inputInfo.srcStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) *
+                              sizeof(T);
+        extParams.dstStride = ((inputInfo.dstStride[3] - inputInfo.size[0] * inputInfo.size[1] * inputInfo.size[2]) *
+                               sizeof(T)) /
+                              platform::GetUbBlockSize();
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
     } else {
         DataCopyExtParams extParams;
@@ -424,8 +437,9 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyInMul
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
-                                                                      int64_t blockLen, int64_t channels)
+__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyMaxOut(int64_t offset, int64_t n,
+                                                                                  int64_t blockCount, int64_t blockLen,
+                                                                                  int64_t channels)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -439,9 +453,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyMaxOu
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenGatherIndex(const GatherIndexImpl::ShapeInfo& param,
-                                                                          LocalTensor<U>& indexLocal,
-                                                                          uint16_t loopNum)
+__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenGatherIndex(
+    const GatherIndexImpl::ShapeInfo& param, LocalTensor<U>& indexLocal, uint16_t loopNum)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         GatherIndexImpl::GenGatherIndex<U, GatherIndexImpl::TWO>(param, indexLocal, loopNum);
@@ -456,12 +469,11 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::GenGather
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 template <typename M, typename U>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyPadData(LocalTensor<T>& inLocal,
-                                                                                   LocalTensor<T>& outLocal,
-                                                                                   const CopyPad::CopyPadShapeInfo& padInfo)
+__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::CopyPadData(
+    LocalTensor<T>& inLocal, LocalTensor<T>& outLocal, const CopyPad::CopyPadShapeInfo& padInfo)
 {
     LocalTensor<U> scatterLocal = scatterIndexBuf_.Get<U>();
-    if constexpr(OP_TYPE == Pool3D::OP_TYPE_MAX_POOL_3D) {
+    if constexpr (OP_TYPE == Pool3D::OP_TYPE_MAX_POOL_3D) {
         CopyPad::CopyAndPad<M, U, CopyPad::DEFAULT_MODE_NEG_INF>(inLocal, outLocal, scatterLocal, padInfo, copyMode_);
     } else {
         CopyPad::CopyAndPad<M, U, CopyPad::DEFAULT_MODE_ZERO>(inLocal, outLocal, scatterLocal, padInfo, copyMode_);
@@ -479,14 +491,15 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeMu
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    using Z = typename std::conditional<sizeof(T)==B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
-                                    T>::type;
+    using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
+                                        T>::type;
     __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
 
     CopyPadData<M, U>(inLocal, xLocal, dstUbInfo);
     uint16_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint16_t channels = tilingData_->channels;
-    uint16_t nFactor = static_cast<uint16_t>(repeatElm / (outInfo.depth * outInfo.width * outInfo.height * outInfo.channel));
+    uint16_t nFactor = static_cast<uint16_t>(repeatElm /
+                                             (outInfo.depth * outInfo.width * outInfo.height * outInfo.channel));
     uint16_t loopN = static_cast<uint16_t>(outInfo.n / nFactor);
     uint16_t tailN = static_cast<uint16_t>(outInfo.n - loopN * nFactor);
 
@@ -524,8 +537,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeMu
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    using Z = typename std::conditional<sizeof(T)==B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
-                                    T>::type;   
+    using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
+                                        T>::type;
     __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
 
     CopyPadData<M, U>(inLocal, xLocal, dstUbInfo);
@@ -550,9 +563,9 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeMu
     for (int i = 0; i < outInfo.n; i++) {
         __local_mem__ T* srcAddr = xLocalAddr + i * dstUbInfo.dstStride[3];
         __local_mem__ Z* dstAddr = dstLocalAddr + i * outInfo.depth * outInfo.height * outInfo.width;
-        Pool3DWithOneLoop<T, U, Z, OP_TYPE, OUT_DIV, USE_TRAIT_TWO>(dstAddr, xLocalAddr, indexAddr, kD, kH, kW, depStrideInUb,
-                                                 rowStrideInUb, colStrideInUb, oneLoopElements, tailLoopElements,
-                                                 oneLoopStride, loopD, paramInfo.divisor);
+        Pool3DWithOneLoop<T, U, Z, OP_TYPE, OUT_DIV, USE_TRAIT_TWO>(
+            dstAddr, xLocalAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb, oneLoopElements,
+            tailLoopElements, oneLoopStride, loopD, paramInfo.divisor);
     }
     if constexpr (OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D) {
         __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
@@ -574,8 +587,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeMu
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    using Z = typename std::conditional<sizeof(T)==B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
-                                    T>::type;   
+    using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
+                                        T>::type;
     __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
 
     CopyPadData<M, U>(inLocal, xLocal, dstUbInfo);
@@ -601,18 +614,18 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeMu
     uint32_t tailLoopElements = static_cast<uint32_t>(tailH * outInfo.width * channels);
     for (uint16_t nIdx = 0; nIdx < outInfo.n; nIdx++) {
         for (uint16_t dIdx = 0; dIdx < outInfo.depth; dIdx++) {
-            __local_mem__ T*  srcAddr = xLocalAddr + nIdx * oneBatchElements + dIdx * oneLoopStrideD;
-            __local_mem__ Z*  dstAddr = dstLocalAddr + nIdx * oneBatchOutElements + dIdx * oneDepOutElements;
-            Pool3DWithOneLoop<T, U, Z, OP_TYPE, OUT_DIV, USE_TRAIT_TWO>(dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb,
-                                                     rowStrideInUb, colStrideInUb, oneLoopElements,
-                                                     tailLoopElements, oneLoopStrideH, loopH, paramInfo.divisor);
+            __local_mem__ T* srcAddr = xLocalAddr + nIdx * oneBatchElements + dIdx * oneLoopStrideD;
+            __local_mem__ Z* dstAddr = dstLocalAddr + nIdx * oneBatchOutElements + dIdx * oneDepOutElements;
+            Pool3DWithOneLoop<T, U, Z, OP_TYPE, OUT_DIV, USE_TRAIT_TWO>(
+                dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb, oneLoopElements,
+                tailLoopElements, oneLoopStrideH, loopH, paramInfo.divisor);
         }
     }
     if constexpr (OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D) {
         __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = outInfo.n * outInfo.depth * outInfo.width * outInfo.height;
         DivCompute(newDstAddr, dstLocalAddr, totalOut);
-    }   
+    }
     inputQue_.FreeTensor<M>(inLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
@@ -628,8 +641,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeSi
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    using Z = typename std::conditional<sizeof(T)==B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
-                                    T>::type;   
+    using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D, float32_t,
+                                        T>::type;
     __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
 
     CopyPadData<M, U>(inLocal, xLocal, dstUbInfo);
@@ -656,8 +669,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeSi
                 __local_mem__ T* srcAddr = xLocalAddr + i * dstUbInfo.dstStride[3] +
                                            dIdx * paramInfo.stride[2] * dstUbInfo.dstStride[2] +
                                            hIdx * paramInfo.stride[1] * dstUbInfo.dstStride[1];
-                __local_mem__ Z* dstAddr =
-                    dstLocalAddr + i * oneBatchOutElements + dIdx * oneDepOutElements + hIdx * outInfo.width * outInfo.channel;
+                __local_mem__ Z* dstAddr = dstLocalAddr + i * oneBatchOutElements + dIdx * oneDepOutElements +
+                                           hIdx * outInfo.width * outInfo.channel;
                 Pool3DWithOneLoop<T, U, Z, OP_TYPE, OUT_DIV, USE_TRAIT_TWO>(
                     dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb,
                     oneLoopElements, tailLoopElements, oneLoopStrideW, loopW, paramInfo.divisor);
@@ -668,31 +681,29 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeSi
         __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = outInfo.n * outInfo.depth * outInfo.width * outInfo.height;
         DivCompute(newDstAddr, dstLocalAddr, totalOut);
-    }   
+    }
     inputQue_.FreeTensor<M>(inLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeDivisor(int64_t start, int64_t num)   {
-
+__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::ComputeDivisor(int64_t start, int64_t num)
+{
     Pool3D::CalcDivisorParam param = {
-        tilingData_->kD, tilingData_->kH, tilingData_->kW,
-        tilingData_->sD, tilingData_->sH, tilingData_->sW,
-        tilingData_->fPad, tilingData_->backPad, tilingData_->tPad,
-        tilingData_->bottomPad, tilingData_->lPad, tilingData_->rPad,
-        tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim,
-        tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim
-    };
+        tilingData_->kD,     tilingData_->kH,     tilingData_->kW,      tilingData_->sD,      tilingData_->sH,
+        tilingData_->sW,     tilingData_->fPad,   tilingData_->backPad, tilingData_->tPad,    tilingData_->bottomPad,
+        tilingData_->lPad,   tilingData_->rPad,   tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim,
+        tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim};
     LocalTensor<float> divisorLocal = divisorBuf_.Get<float>();
     auto dstAddr = (__local_mem__ float*)divisorLocal.GetPhyAddr();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
     ComputeDivisorCommon(tilingData_->divisorMode, dstAddr, param, start, num);
 }
 
-
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::DivCompute(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr, uint32_t num)  
+__aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::DivCompute(__local_mem__ T* dstAddr,
+                                                                                  __local_mem__ float32_t* srcAddr,
+                                                                                  uint32_t num)
 {
     if constexpr (OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D) {
         LocalTensor<float> divisorLocal = divisorBuf_.Get<float>();
@@ -713,5 +724,5 @@ __aicore__ inline void Pool3dNDHWCSmallKernelPad<T, OP_TYPE, OUT_DIV>::DivComput
     }
 }
 
-}  // namespace Pool3D
-#endif  // MAX_POOL_V3_NDHWC_SMALL_KERNEL_PAD_H_
+} // namespace Pool3D
+#endif // MAX_POOL_V3_NDHWC_SMALL_KERNEL_PAD_H_

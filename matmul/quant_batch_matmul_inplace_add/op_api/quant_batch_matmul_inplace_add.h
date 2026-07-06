@@ -16,7 +16,7 @@
 
 namespace l0op {
 aclTensor* QuantBatchMatmulInplaceAdd(const aclTensor* x1, const aclTensor* x2, const aclTensor* x2Scale,
-                                      aclTensor* yRef, const aclTensor* x1ScaleOptional, bool transposeX1, 
+                                      aclTensor* yRef, const aclTensor* x1ScaleOptional, bool transposeX1,
                                       bool transposeX2, int64_t groupSize, aclOpExecutor* executor);
 }
 

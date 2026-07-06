@@ -108,9 +108,8 @@ bool CopyDirectory(const std::string& srcDir, const std::string& destDir)
     int copyResult = system(copyCmd.c_str());
 
     if (copyResult != 0) {
-        KERNEL_UT_LOG_ERROR(
-            "[KernelUTHelper] CopyDirectory failed: %s -> %s, system() returned %d", srcDir.c_str(), destDir.c_str(),
-            copyResult);
+        KERNEL_UT_LOG_ERROR("[KernelUTHelper] CopyDirectory failed: %s -> %s, system() returned %d", srcDir.c_str(),
+                            destDir.c_str(), copyResult);
         return false;
     }
 
@@ -123,8 +122,8 @@ bool SetDirectoryPermissions(const std::string& dirPath)
     mode_t mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
     if (chmod(dirPath.c_str(), mode) != 0) {
-        KERNEL_UT_LOG_ERROR(
-            "[KernelUTHelper] SetDirectoryPermissions failed for %s, errno: %d", dirPath.c_str(), errno);
+        KERNEL_UT_LOG_ERROR("[KernelUTHelper] SetDirectoryPermissions failed for %s, errno: %d", dirPath.c_str(),
+                            errno);
         return false;
     }
 

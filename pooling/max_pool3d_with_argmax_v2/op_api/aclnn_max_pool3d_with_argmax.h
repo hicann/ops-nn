@@ -24,16 +24,17 @@ extern "C" {
  * output contains 2 tensors: out and indices
  */
 
-ACLNN_API aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, bool ceilMode, aclTensor* out, aclTensor* indices, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(const aclTensor* self, const aclIntArray* kernelSize,
+                                                               const aclIntArray* stride, const aclIntArray* padding,
+                                                               const aclIntArray* dilation, bool ceilMode,
+                                                               aclTensor* out, aclTensor* indices,
+                                                               uint64_t* workspaceSize, aclOpExecutor** executor);
 /**
  * @brief A second interface of aclnnMaxPool3dWithArgmax, used to perform calculation.
  */
 
-ACLNN_API aclnnStatus
-aclnnMaxPool3dWithArgmax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnMaxPool3dWithArgmax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream);
 
 #ifdef __cplusplus
 }

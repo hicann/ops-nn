@@ -31,13 +31,9 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-class SigmoidCrossEntropyWithLogitsV2AscendCTiling : public testing::Test
-{
+class SigmoidCrossEntropyWithLogitsV2AscendCTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SigmoidCrossEntropyWithLogitsV2AscendCTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SigmoidCrossEntropyWithLogitsV2AscendCTiling SetUp" << std::endl; }
 
     static void TearDownTestCase()
     {
@@ -57,10 +53,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
-    map<string, string>& aicoreSpec, map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string hardwareInfo = R"({
       "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64}
@@ -70,9 +64,10 @@ static void InitPlatForm(
     platFormInfo.Init();
 }
 
-static void DoSigmoidCEWithLogitsV2AscendcTilingCase(
-    std::initializer_list<int64_t>& inputShape, std::initializer_list<int64_t>& outputShape,
-    ge::DataType inputDtype, ge::DataType outputDtype, std::string& reduction, std::string& expectStr)
+static void DoSigmoidCEWithLogitsV2AscendcTilingCase(std::initializer_list<int64_t>& inputShape,
+                                                     std::initializer_list<int64_t>& outputShape,
+                                                     ge::DataType inputDtype, ge::DataType outputDtype,
+                                                     std::string& reduction, std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -99,10 +94,10 @@ static void DoSigmoidCEWithLogitsV2AscendcTilingCase(
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                           soc_version_infos);
 
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -160,8 +155,8 @@ TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_
     std::string reduction = "none";
 
     std::string expectStr = "0 13194139536384 32 1 1 0 0 ";
-    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape,
-        ge::DT_FLOAT /*inputdtype*/, ge::DT_FLOAT /*outputdtype*/, reduction, expectStr);
+    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                                             ge::DT_FLOAT /*outputdtype*/, reduction, expectStr);
 }
 
 TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_logits_v2_david_tiling2)
@@ -172,8 +167,8 @@ TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_
     std::string reduction = "none";
 
     std::string expectStr = "0 13194139536384 32 1 1 0 0 ";
-    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape,
-        ge::DT_FLOAT16 /*inputdtype*/, ge::DT_FLOAT /*outputdtype*/, reduction, expectStr);
+    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape, ge::DT_FLOAT16 /*inputdtype*/,
+                                             ge::DT_FLOAT /*outputdtype*/, reduction, expectStr);
 }
 
 TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_logits_v2_david_tiling3)
@@ -184,8 +179,8 @@ TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_
     std::string reduction = "none";
 
     std::string expectStr = "0 13194139536384 32 1 1 0 0 ";
-    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape,
-        ge::DT_BF16 /*inputdtype*/, ge::DT_BF16 /*outputdtype*/, reduction, expectStr);
+    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape, ge::DT_BF16 /*inputdtype*/,
+                                             ge::DT_BF16 /*outputdtype*/, reduction, expectStr);
 }
 
 TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_logits_v2_david_tiling4)
@@ -196,8 +191,8 @@ TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_
     std::string reduction = "none";
 
     std::string expectStr = "0 549755814016 12 1 1 0 0 ";
-    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape,
-        ge::DT_FLOAT16 /*inputdtype*/, ge::DT_FLOAT16 /*outputdtype*/, reduction, expectStr);
+    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape, ge::DT_FLOAT16 /*inputdtype*/,
+                                             ge::DT_FLOAT16 /*outputdtype*/, reduction, expectStr);
 }
 
 TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_logits_v2_david_tiling5)
@@ -208,6 +203,6 @@ TEST_F(SigmoidCrossEntropyWithLogitsV2AscendCTiling, sigmoid_cross_entropy_with_
     std::string reduction = "none";
 
     std::string expectStr = "0 6597069770624 57 7 5 0 0 ";
-    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape,
-        ge::DT_FLOAT /*inputdtype*/, ge::DT_FLOAT /*outputdtype*/, reduction, expectStr);
+    DoSigmoidCEWithLogitsV2AscendcTilingCase(inputShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                                             ge::DT_FLOAT /*outputdtype*/, reduction, expectStr);
 }

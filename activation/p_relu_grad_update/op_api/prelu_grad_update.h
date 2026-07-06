@@ -14,10 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> PReluGradUpdate(const aclTensor *gradOutput,
-                                                         const aclTensor *self,
-                                                         const aclTensor *weight,
-                                                         aclOpExecutor *executor);
-} // l0op
+const std::tuple<aclTensor*, aclTensor*> PReluGradUpdate(const aclTensor* gradOutput, const aclTensor* self,
+                                                         const aclTensor* weight, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_PRELU_GRAD_UPDATE_H_

@@ -33,10 +33,12 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void adam_apply_one_with_decay(
-    GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x,
-    GM_ADDR mul2_x, GM_ADDR mul3_x, GM_ADDR mul4_x, GM_ADDR add2_y, GM_ADDR output0, GM_ADDR output1, GM_ADDR output2,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void adam_apply_one_with_decay(GM_ADDR input0, GM_ADDR input1, GM_ADDR input2,
+                                                                GM_ADDR input3, GM_ADDR input4, GM_ADDR mul0_x,
+                                                                GM_ADDR mul1_x, GM_ADDR mul2_x, GM_ADDR mul3_x,
+                                                                GM_ADDR mul4_x, GM_ADDR add2_y, GM_ADDR output0,
+                                                                GM_ADDR output1, GM_ADDR output2, GM_ADDR workspace,
+                                                                GM_ADDR tiling);
 
 class adam_apply_one_with_decay_test : public testing::Test {
 protected:
@@ -83,16 +85,14 @@ TEST_F(adam_apply_one_with_decay_test, test_adam_apply_one_with_decay_dynamic)
                                           GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x, GM_ADDR mul2_x,
                                           GM_ADDR mul3_x, GM_ADDR mul4_x, GM_ADDR add2_y, GM_ADDR output0,
                                           GM_ADDR output1, GM_ADDR output2, GM_ADDR workspace, GM_ADDR tiling) {
-        ::adam_apply_one_with_decay<0>(
-            input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x, mul3_x, mul4_x, add2_y, output0, output1,
-            output2, workspace, tiling);
+        ::adam_apply_one_with_decay<0>(input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x, mul3_x, mul4_x,
+                                       add2_y, output0, output1, output2, workspace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        AdamApplyOneWithDecayKernel, blockDim, input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x, mul3_x,
-        mul4_x, add2_y, output0, output1, output2, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(AdamApplyOneWithDecayKernel, blockDim, input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x,
+                mul3_x, mul4_x, add2_y, output0, output1, output2, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(input0);
     AscendC::GmFree(input1);

@@ -22,7 +22,7 @@ namespace optiling {
 
 class BatchNormGradTilingRASplitR : public BatchNormGradTilingBase {
 public:
-    explicit BatchNormGradTilingRASplitR(gert::TilingContext *context)
+    explicit BatchNormGradTilingRASplitR(gert::TilingContext* context)
         : BatchNormGradTilingBase(context, baseTilingData_)
     {}
 
@@ -43,28 +43,28 @@ private:
     ge::graphStatus Stage2UbTiling();
 
 private:
-    int64_t usedCoreNum_ { 0 };
-    int64_t rLoopFactor_ { 0 };
-    int64_t blockFactor_{ 0 };
-    int64_t tailBlockFactor_{ 0 };
-    int64_t binaryBlockCnt_ { 0 };
-    int64_t binaryFoldPoint_ { 0 };
-    int64_t binaryBlockTail_ { 0 };
-    int64_t lastCoreBlockCnt_ { 0 };
-    int64_t lastCoreFoldPoint_ { 0 };
-    int64_t lastCoreLoopTail_ { 0 };
-    int64_t aFactor_ { 0 };
-    int64_t aFactorAlign_ { 0 };
-    int64_t aFactorTail_ { 0 };
-    int64_t aLoopTimes_ { 0 };
-    int64_t dxLoopFactor_ { 0 };
-    int64_t dxLoopTail_ { 0 };
-    int64_t dxLoopTimes_ { 0 };
-    int64_t dxLastCoreFactor_ { 0 };
-    int64_t dxLastCoreTail_ { 0 };
-    int64_t dxLastCoreTimes_ { 0 };
-    int64_t cacheBuffCnt_ { 0 };
-    int64_t dyTypeSize_ { 0 };
+    int64_t usedCoreNum_{0};
+    int64_t rLoopFactor_{0};
+    int64_t blockFactor_{0};
+    int64_t tailBlockFactor_{0};
+    int64_t binaryBlockCnt_{0};
+    int64_t binaryFoldPoint_{0};
+    int64_t binaryBlockTail_{0};
+    int64_t lastCoreBlockCnt_{0};
+    int64_t lastCoreFoldPoint_{0};
+    int64_t lastCoreLoopTail_{0};
+    int64_t aFactor_{0};
+    int64_t aFactorAlign_{0};
+    int64_t aFactorTail_{0};
+    int64_t aLoopTimes_{0};
+    int64_t dxLoopFactor_{0};
+    int64_t dxLoopTail_{0};
+    int64_t dxLoopTimes_{0};
+    int64_t dxLastCoreFactor_{0};
+    int64_t dxLastCoreTail_{0};
+    int64_t dxLastCoreTimes_{0};
+    int64_t cacheBuffCnt_{0};
+    int64_t dyTypeSize_{0};
     BatchNormGradBaseTilingData baseTilingData_;
     BatchNormGradRASplitRTilingData tilingData_;
 };

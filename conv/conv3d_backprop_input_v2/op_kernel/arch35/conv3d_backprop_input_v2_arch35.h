@@ -21,16 +21,17 @@
 
 using namespace AscendC;
 
-#define CONV3D_DX_INPUT_RUN_OP(...)                    \
-    do {                                                        \
-        __VA_ARGS__ op;                                             \
-        op.Init(filter, out_backprop, y, usrWsp, &tilingData);  \
-        op.Process();                                           \
-    } while (0)                             
+#define CONV3D_DX_INPUT_RUN_OP(...)                            \
+    do {                                                       \
+        __VA_ARGS__ op;                                        \
+        op.Init(filter, out_backprop, y, usrWsp, &tilingData); \
+        op.Process();                                          \
+    } while (0)
 
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling, uint8_t loadB1Condition>
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
+          uint8_t loadB1Condition>
 __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop,
-                                                               GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+                                                           GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -64,19 +65,18 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
         }
     }
 
-
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
-        CONV3D_DX_INPUT_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
-                                               FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                               loadB2Condition, kernelSplitMode, groupConvMode>);
+        CONV3D_DX_INPUT_RUN_OP(
+            Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y,
+                            DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode, groupConvMode>);
     } else if constexpr ((isBasicBlockTiling == true) && (loadB1Condition == TPL_VEC_TO_L1_C04)) {
-        CONV3D_DX_INPUT_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
-                                                FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                                loadB2Condition, kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true>);
+        CONV3D_DX_INPUT_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
+                                                DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS, loadB2Condition,
+                                                kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true>);
     } else {
-        CONV3D_DX_INPUT_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
-                                                FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                                loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition>);
+        CONV3D_DX_INPUT_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
+                                                DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS, loadB2Condition,
+                                                kernelSplitMode, groupConvMode, loadB1Condition>);
     }
 }
-#endif  // CONV3D_BACKPROP_INPUT_V2_ARCH_35_H
+#endif // CONV3D_BACKPROP_INPUT_V2_ARCH_35_H

@@ -52,17 +52,13 @@ static Status ParseParamsBatchNorm(const Message* op_src, ge::Operator& op_dest)
 // register ReduceMean op info to GE
 REGISTER_CUSTOM_OP("BatchNorm")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::9::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::10::BatchNormalization"),
-                   ge::AscendString("ai.onnx::11::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::12::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::13::BatchNormalization"),
-                   ge::AscendString("ai.onnx::14::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::15::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::16::BatchNormalization"),
-                   ge::AscendString("ai.onnx::17::BatchNormalization"), 
-                   ge::AscendString("ai.onnx::18::BatchNormalization")})
+    .OriginOpType(
+        {ge::AscendString("ai.onnx::8::BatchNormalization"), ge::AscendString("ai.onnx::9::BatchNormalization"),
+         ge::AscendString("ai.onnx::10::BatchNormalization"), ge::AscendString("ai.onnx::11::BatchNormalization"),
+         ge::AscendString("ai.onnx::12::BatchNormalization"), ge::AscendString("ai.onnx::13::BatchNormalization"),
+         ge::AscendString("ai.onnx::14::BatchNormalization"), ge::AscendString("ai.onnx::15::BatchNormalization"),
+         ge::AscendString("ai.onnx::16::BatchNormalization"), ge::AscendString("ai.onnx::17::BatchNormalization"),
+         ge::AscendString("ai.onnx::18::BatchNormalization")})
     .ParseParamsFn(ParseParamsBatchNorm)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

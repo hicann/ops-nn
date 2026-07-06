@@ -21,13 +21,11 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListNegDim2Large : public ScatterListBase<T1>
-{
+class ScatterListNegDim2Large : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListNegDim2Large(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR update, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR update, GM_ADDR mask, GM_ADDR tempOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -46,8 +44,8 @@ private:
     __aicore__ inline void CopyOut(const int64_t& numPerCore);
     __aicore__ inline void CopyLast(copyDim2LargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb);
     __aicore__ inline void CopyOnce(copyDim2LargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb);
-    __aicore__ inline void CopyOutDim2(
-        copyDim2LargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb);
+    __aicore__ inline void CopyOutDim2(copyDim2LargeParams& params, LocalTensor<T1>& updatesUb,
+                                       LocalTensor<T2>& indiceUb);
     __aicore__ inline void ProcessPerCore(const int64_t& numPerCore);
 
     constexpr static int32_t bufferNum = 1;
@@ -68,9 +66,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegDim2Large<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListNegDim2Large<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                             GM_ADDR tempOut, GM_ADDR workspace,
+                                                             const ScatterListTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     this->ParseTilingData(tilingData, m_tilingData);
@@ -125,8 +123,8 @@ __aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyIn(const int64_t& nu
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOnce(
-    copyDim2LargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
+__aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOnce(copyDim2LargeParams& params,
+                                                                 LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
 {
     if constexpr (IsDataCopyPadSupport()) {
         this->Mte3ToMte2();
@@ -148,8 +146,9 @@ __aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOnce(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOutDim2(
-    copyDim2LargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
+__aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOutDim2(copyDim2LargeParams& params,
+                                                                    LocalTensor<T1>& updatesUb,
+                                                                    LocalTensor<T2>& indiceUb)
 {
     if (params.dim2UpdateLenAlign <= m_tilingData.eachPreLoopEle) {
         params.inner_loop_idx = 0;
@@ -157,12 +156,13 @@ __aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOutDim2(
         params.copyOutNum = params.dim2UpdateLen;
         CopyOnce(params, updatesUb, indiceUb);
     } else {
-        int64_t eachBatchLoopNum =
-            (params.dim2UpdateLen + m_tilingData.eachPreLoopEle - 1) / m_tilingData.eachPreLoopEle - 1;
+        int64_t eachBatchLoopNum = (params.dim2UpdateLen + m_tilingData.eachPreLoopEle - 1) /
+                                       m_tilingData.eachPreLoopEle -
+                                   1;
         int64_t eachBatchLast = params.dim2UpdateLen - m_tilingData.eachPreLoopEle * eachBatchLoopNum;
-        int64_t eachBatchLastAlign =
-            ((eachBatchLast + m_tilingData.updatesOneBlock - 1) / m_tilingData.updatesOneBlock) *
-            m_tilingData.updatesOneBlock;
+        int64_t eachBatchLastAlign = ((eachBatchLast + m_tilingData.updatesOneBlock - 1) /
+                                      m_tilingData.updatesOneBlock) *
+                                     m_tilingData.updatesOneBlock;
 
         for (int64_t inner_loop_idx = 0; inner_loop_idx < eachBatchLoopNum; inner_loop_idx++) {
             params.inner_loop_idx = inner_loop_idx;
@@ -178,8 +178,8 @@ __aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOutDim2(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyLast(
-    copyDim2LargeParams& params, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
+__aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyLast(copyDim2LargeParams& params,
+                                                                 LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb)
 {
     if constexpr (IsDataCopyPadSupport()) {
         this->Mte3ToMte2();
@@ -218,9 +218,9 @@ __aicore__ inline void ScatterListNegDim2Large<T1, T2>::CopyOut(const int64_t& e
         }
         int64_t dim2OffsetIdx = indiceUb.GetValue(dim0Idx * 2);
         int64_t dim2UpdateLen = indiceUb.GetValue(dim0Idx * 2 + 1);
-        int64_t dim2UpdateLenAlign =
-            ((dim2UpdateLen + m_tilingData.updatesOneBlock - 1) / m_tilingData.updatesOneBlock) *
-            m_tilingData.updatesOneBlock;
+        int64_t dim2UpdateLenAlign = ((dim2UpdateLen + m_tilingData.updatesOneBlock - 1) /
+                                      m_tilingData.updatesOneBlock) *
+                                     m_tilingData.updatesOneBlock;
         int64_t dim1Idx = allCoreBatchIdx % m_tilingData.dim1Count;
         varGm.SetGlobalBuffer(this->GetTensorAddr(varPtr, dim0Idx));
         copyDim2LargeParams params;

@@ -24,12 +24,8 @@ using namespace AscendC;
 using namespace AdaptiveMaxPool3DGradComm;
 
 template <typename TX, typename TGrad, typename TArgmax, typename TY>
-using AdaptiveMaxPool3DGradScatterBase = 
-    MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate<
-        TX, TGrad, TArgmax, TY, 
-        AdaptiveMaxPool3DGradTilingData,
-        TilingParams,
-        BlockParams>;
+using AdaptiveMaxPool3DGradScatterBase = MaxPool3DGradScatterInternal::MaxPool3DGradScatterBaseTemplate<
+    TX, TGrad, TArgmax, TY, AdaptiveMaxPool3DGradTilingData, TilingParams, BlockParams>;
 
 } // namespace AdaptiveMaxPool3DGrad
 #endif // ADAPTIVE_MAX_POOL3D_GRAD_SCATTER_BASE_H

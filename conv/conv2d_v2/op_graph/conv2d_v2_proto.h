@@ -135,5 +135,5 @@ REG_OP(Conv2DV2)
     .ATTR(enable_hf32, Bool, false)
     .OP_END_FACTORY_REG(Conv2DV2)
 
-}  // namespace ge
-#endif  // CONV2D_V2_PROTO_H
+} // namespace ge
+#endif // CONV2D_V2_PROTO_H

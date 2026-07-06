@@ -28,15 +28,9 @@ using namespace ut_util;
 
 class LogSigmoidGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LogSigmoidGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LogSigmoidGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LogSigmoidGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LogSigmoidGradTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -51,9 +45,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -69,9 +63,10 @@ static void InitPlatForm(
     platFormInfo.Init();
 }
 
-static void DoLogSigmoidGradTilingCase(
-    std::initializer_list<int64_t>& inputShape1, std::initializer_list<int64_t>& inputShape2,
-    std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype, std::string& expectStr)
+static void DoLogSigmoidGradTilingCase(std::initializer_list<int64_t>& inputShape1,
+                                       std::initializer_list<int64_t>& inputShape2,
+                                       std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype,
+                                       std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -98,8 +93,8 @@ static void DoLogSigmoidGradTilingCase(
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 

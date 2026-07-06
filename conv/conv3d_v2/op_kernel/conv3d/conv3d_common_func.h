@@ -41,28 +41,28 @@ using TypeFalse = const struct {
 template <class Intf, uint32_t ImplType>
 struct Iterate {
     template <bool sync = true>
-    static __aicore__ inline bool call(Intf *self, bool enPartialSum = false)
+    static __aicore__ inline bool call(Intf* self, bool enPartialSum = false)
     {
         return IterateImpl(self, enPartialSum);
     }
 
-    static __aicore__ inline uint64_t CalcL0CurrentN(Intf *self)
+    static __aicore__ inline uint64_t CalcL0CurrentN(Intf* self)
     {
-        uint64_t n = (self->ctx.nBL1Iter == self->ctx.maxNBL1Iter && self->ctx.nBL0Iter == self->ctx.maxNL0Iter)
-                         ? self->ctx.nL0Tail
-                         : self->ctx.conv3dTiling->nL0;
+        uint64_t n = (self->ctx.nBL1Iter == self->ctx.maxNBL1Iter && self->ctx.nBL0Iter == self->ctx.maxNL0Iter) ?
+                         self->ctx.nL0Tail :
+                         self->ctx.conv3dTiling->nL0;
         return n;
     }
 
-    static __aicore__ inline uint64_t CalcL0CurrentM(Intf *self)
+    static __aicore__ inline uint64_t CalcL0CurrentM(Intf* self)
     {
-        uint64_t m = (self->ctx.mAL1Iter == self->ctx.maxMAL1Iter && self->ctx.mAL0Iter == self->ctx.maxML0Iter)
-                         ? self->ctx.mAL0Tail
-                         : self->ctx.conv3dTiling->mL0;
+        uint64_t m = (self->ctx.mAL1Iter == self->ctx.maxMAL1Iter && self->ctx.mAL0Iter == self->ctx.maxML0Iter) ?
+                         self->ctx.mAL0Tail :
+                         self->ctx.conv3dTiling->mL0;
         return m;
     }
 
-    static __aicore__ void inline FirstIterateImpl(Intf *self)
+    static __aicore__ void inline FirstIterateImpl(Intf* self)
     {
         // 先更新index再load，就需要加第一次处理。
         self->ctx.nBL0Iter = 0;
@@ -86,7 +86,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline UpdateIterators(Intf *self)
+    static __aicore__ void inline UpdateIterators(Intf* self)
     {
         if constexpr (Intf::outputOrder) {
             if (self->ctx.mAL1Iter == self->ctx.ddr2l1LoopM) {
@@ -105,7 +105,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ bool inline IterateMFirst(Intf *self)
+    static __aicore__ bool inline IterateMFirst(Intf* self)
     {
         // ReorderN: 先往M轴方向偏移再往N轴方向偏移。Fmap复用Weight。
         //    M
@@ -135,7 +135,7 @@ struct Iterate {
         return true;
     }
 
-    static __aicore__ bool inline IterateNFirst(Intf *self)
+    static __aicore__ bool inline IterateNFirst(Intf* self)
     {
         // ReorderM: 先往N轴方向偏移再往M轴方向偏移。Weight复用Fmap。
         //    ----------N-------->
@@ -167,7 +167,8 @@ struct Iterate {
         return true;
     }
 
-    static __aicore__ void inline ReduceKNoPingPongBL1ByPass(Intf *self) {
+    static __aicore__ void inline ReduceKNoPingPongBL1ByPass(Intf* self)
+    {
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID0);
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
         self->ctx.loadAL0Ins.LoadAL0();
@@ -186,7 +187,8 @@ struct Iterate {
         AscendC::SetFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID0);
     }
 
-    static __aicore__ void inline ReduceKNoPingPongBL1NoByPass(Intf *self) {
+    static __aicore__ void inline ReduceKNoPingPongBL1NoByPass(Intf* self)
+    {
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID0);
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
         self->ctx.loadAL0Ins.LoadAL0();
@@ -200,7 +202,8 @@ struct Iterate {
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID0);
     }
 
-    static __aicore__ void inline ReduceKL0APingPongBL1ByPass(Intf *self, const uint16_t& l0aFlag) {
+    static __aicore__ void inline ReduceKL0APingPongBL1ByPass(Intf* self, const uint16_t& l0aFlag)
+    {
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(l0aFlag);
         self->ctx.al0 = l0aFlag ? self->ctx.al0Pong : self->ctx.al0Ping;
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
@@ -223,7 +226,8 @@ struct Iterate {
         AscendC::SetFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID2);
     }
 
-    static __aicore__ void inline ReduceKL0APingPongBL1NoByPass(Intf *self, const uint16_t& l0aFlag) {
+    static __aicore__ void inline ReduceKL0APingPongBL1NoByPass(Intf* self, const uint16_t& l0aFlag)
+    {
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(l0aFlag);
         self->ctx.al0 = l0aFlag ? self->ctx.al0Pong : self->ctx.al0Ping;
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
@@ -239,7 +243,8 @@ struct Iterate {
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(l0aFlag);
     }
 
-    static __aicore__ void inline ReduceKL0BPingPongBL1ByPass(Intf *self, const uint16_t& l0bFlag) {
+    static __aicore__ void inline ReduceKL0BPingPongBL1ByPass(Intf* self, const uint16_t& l0bFlag)
+    {
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID2);
         if (self->ctx.loadAL0Flag) {
             self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
@@ -263,7 +268,8 @@ struct Iterate {
         AscendC::SetFlag<AscendC::HardEvent::M_MTE2>(l0bFlag);
     }
 
-    static __aicore__ void inline ReduceKL0BPingPongBL1NoByPass(Intf *self, const uint16_t& l0bFlag) {
+    static __aicore__ void inline ReduceKL0BPingPongBL1NoByPass(Intf* self, const uint16_t& l0bFlag)
+    {
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID2);
         if (self->ctx.loadAL0Flag) {
             self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
@@ -288,7 +294,8 @@ struct Iterate {
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(l0bFlag);
     }
 
-    static __aicore__ void inline ReduceKL0AL0BPingPong(Intf *self, const uint16_t& l0abFlag) {
+    static __aicore__ void inline ReduceKL0AL0BPingPong(Intf* self, const uint16_t& l0abFlag)
+    {
         if (l0abFlag) {
             self->ctx.al0 = self->ctx.al0Pong;
             self->ctx.bl0 = self->ctx.bl0Pong;
@@ -325,29 +332,29 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline LoadAL1Process(Intf *self, uint64_t kAL1Iter)
+    static __aicore__ void inline LoadAL1Process(Intf* self, uint64_t kAL1Iter)
     {
         self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
         self->ctx.kAL1Iter = kAL1Iter;
         self->ctx.loadAl1Ins.LoadAL1();
         self->ctx.queueAL1.EnQue(self->ctx.al1);
         self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
-        self->ctx.loadAL1Flag = false;  // LoopK中只有K方向可能重新载入。
+        self->ctx.loadAL1Flag = false; // LoopK中只有K方向可能重新载入。
         self->ctx.freeAL1TensorFlag = true;
     }
 
-    static __aicore__ void inline LoadBL1Process(Intf *self, uint64_t kBL1Iter)
+    static __aicore__ void inline LoadBL1Process(Intf* self, uint64_t kBL1Iter)
     {
         self->ctx.bl1 = self->ctx.queueBL1.template AllocTensor<typename Intf::WeightT>();
         self->ctx.kBL1Iter = kBL1Iter;
         self->ctx.loadBL1Ins.LoadBL1();
         self->ctx.queueBL1.EnQue(self->ctx.bl1);
         self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
-        self->ctx.loadBL1Flag = false;  // LoopK中只有K方向可能重新载入。
+        self->ctx.loadBL1Flag = false; // LoopK中只有K方向可能重新载入。
         self->ctx.freeBL1TensorFlag = true;
     }
 
-    static __aicore__ void inline LoadAL1PreloadProcess(Intf *self, uint64_t kAL1Iter)
+    static __aicore__ void inline LoadAL1PreloadProcess(Intf* self, uint64_t kAL1Iter)
     {
         self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
         self->ctx.kAL1Iter = kAL1Iter;
@@ -357,7 +364,7 @@ struct Iterate {
         self->ctx.freeAL1TensorFlag = false;
     }
 
-    static __aicore__ void inline LoadBL1PreloadProcess(Intf *self, uint64_t kBL1Iter)
+    static __aicore__ void inline LoadBL1PreloadProcess(Intf* self, uint64_t kBL1Iter)
     {
         self->ctx.bl1 = self->ctx.queueBL1.template AllocTensor<typename Intf::WeightT>();
         self->ctx.kBL1Iter = kBL1Iter;
@@ -368,9 +375,9 @@ struct Iterate {
     }
 
     // K方向迭代首次(iter==0)加载L0A, L0B
-    static __aicore__ void inline ReduceKFirstIterLoadL0(Intf *self)
+    static __aicore__ void inline ReduceKFirstIterLoadL0(Intf* self)
     {
-        if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_CLOSE)) {
+        if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_CLOSE)) {
             // for L0PingPong::ALL_CLOSE, BL1ByPass is always ON
             self->ctx.al0 = self->ctx.al0Ping;
             self->ctx.bl0 = self->ctx.bl0Ping;
@@ -380,7 +387,7 @@ struct Iterate {
             } else {
                 ReduceKNoPingPongBL1NoByPass(self);
             }
-        } else if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0A_OPEN)) {
+        } else if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0A_OPEN)) {
             // for L0PingPong::L0A_OPEN, BL1ByPass is always ON
             self->ctx.bl0 = self->ctx.bl0Ping;
             if constexpr (Intf::bl1bypass) {
@@ -389,7 +396,7 @@ struct Iterate {
             } else {
                 ReduceKL0APingPongBL1NoByPass(self, event_t::EVENT_ID0);
             }
-        } else if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) {
+        } else if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) {
             self->ctx.al0 = self->ctx.al0Ping;
             if constexpr (Intf::bl1bypass) {
                 AscendC::SetFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID0);
@@ -400,7 +407,7 @@ struct Iterate {
             } else {
                 ReduceKL0BPingPongBL1NoByPass(self, event_t::EVENT_ID0);
             }
-        } else if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_OPEN)) {
+        } else if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_OPEN)) {
             if constexpr (Intf::bl1bypass) {
                 AscendC::SetFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID0);
                 AscendC::SetFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID1);
@@ -413,7 +420,7 @@ struct Iterate {
     }
 
     // K方向迭代(iter>0)加载L0A, L0B
-    static __aicore__ void inline ReduceKIterLoadL0(Intf *self, const uint16_t& isOdd)
+    static __aicore__ void inline ReduceKIterLoadL0(Intf* self, const uint16_t& isOdd)
     {
         if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_CLOSE)) {
             if constexpr (Intf::bl1bypass) {
@@ -421,24 +428,24 @@ struct Iterate {
             } else {
                 ReduceKNoPingPongBL1NoByPass(self);
             }
-        } else if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0A_OPEN)) {
+        } else if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0A_OPEN)) {
             if constexpr (Intf::bl1bypass) {
                 ReduceKL0APingPongBL1ByPass(self, isOdd);
             } else {
                 ReduceKL0APingPongBL1NoByPass(self, isOdd);
             }
-        } else if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) {
+        } else if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) {
             if constexpr (Intf::bl1bypass) {
                 ReduceKL0BPingPongBL1ByPass(self, isOdd);
             } else {
                 ReduceKL0BPingPongBL1NoByPass(self, isOdd);
             }
-        } else if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_OPEN)) {
+        } else if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_OPEN)) {
             ReduceKL0AL0BPingPong(self, isOdd);
         }
     }
 
-    static __aicore__ void inline ReduceKIterLoadL1(Intf *self)
+    static __aicore__ void inline ReduceKIterLoadL1(Intf* self)
     {
         if (self->ctx.loadAL1Flag || (!self->ctx.kAL1fullload && self->ctx.kIter % self->ctx.multiKAL1 == 0)) {
             self->ctx.queueAL1.FreeTensor(self->ctx.al1);
@@ -455,18 +462,21 @@ struct Iterate {
     }
 
     // K方向迭代的后处理, 当前只对bl1bypass需要添加wait_flag
-    static __aicore__ void inline ReduceKPostProcessLoadL0(Intf *self)
+    static __aicore__ void inline ReduceKPostProcessLoadL0(Intf* self)
     {
-        if constexpr((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_CLOSE)) && Intf::bl1bypass) {
+        if constexpr ((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_CLOSE)) && Intf::bl1bypass) {
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID0);
-        } else if constexpr((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0A_OPEN)) && Intf::bl1bypass) {
+        } else if constexpr ((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0A_OPEN)) &&
+                             Intf::bl1bypass) {
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID2);
-        } else if constexpr((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) && Intf::bl1bypass) {
+        } else if constexpr ((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) &&
+                             Intf::bl1bypass) {
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID0);
             if (self->ctx.ddr2l1LoopD > 1) {
                 AscendC::WaitFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID1);
             }
-        } else if constexpr((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_OPEN)) && Intf::bl1bypass) {
+        } else if constexpr ((Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::ALL_OPEN)) &&
+                             Intf::bl1bypass) {
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID0);
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE2>(event_t::EVENT_ID1);
             if (self->ctx.ddr2l1LoopD > 1) {
@@ -475,7 +485,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline ReduceK(Intf *self)
+    static __aicore__ void inline ReduceK(Intf* self)
     {
         ASC_OP_LOGD("no preload in ReduceK: loadAl1Flag: %d, kAL1fullload: %d, freeAL1TensorFlag: %d\n",
                     self->ctx.loadAL1Flag, self->ctx.kAL1fullload, self->ctx.freeAL1TensorFlag);
@@ -510,13 +520,14 @@ struct Iterate {
         ReduceKPostProcessLoadL0(self);
     }
 
-    static __aicore__ void inline ReduceKPreloadDbAllLoadL1(Intf *self, const uint64_t& maxKAL1PreloadIter, const uint64_t& maxKBL1PreloadIter)
+    static __aicore__ void inline ReduceKPreloadDbAllLoadL1(Intf* self, const uint64_t& maxKAL1PreloadIter,
+                                                            const uint64_t& maxKBL1PreloadIter)
     {
         if (self->ctx.kIter == maxKAL1PreloadIter) {
             self->ctx.queueAL1.FreeTensor(self->ctx.al1);
             self->ctx.al1 = self->ctx.queueAL1.template DeQue<typename Intf::FmapT>();
         } else if (self->ctx.kIter < maxKAL1PreloadIter &&
-            (self->ctx.loadAL1Flag || (!self->ctx.kAL1fullload && self->ctx.kIter % self->ctx.multiKAL1 == 0))) {
+                   (self->ctx.loadAL1Flag || (!self->ctx.kAL1fullload && self->ctx.kIter % self->ctx.multiKAL1 == 0))) {
             self->ctx.queueAL1.FreeTensor(self->ctx.al1);
             LoadAL1Process(self, (self->ctx.kIter / self->ctx.multiKAL1) + 1);
         }
@@ -525,13 +536,13 @@ struct Iterate {
             self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
             self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
         } else if (self->ctx.kIter < maxKBL1PreloadIter &&
-            (self->ctx.loadBL1Flag || (!self->ctx.kBL1fullload && self->ctx.kIter % self->ctx.multiKBL1 == 0))) {
+                   (self->ctx.loadBL1Flag || (!self->ctx.kBL1fullload && self->ctx.kIter % self->ctx.multiKBL1 == 0))) {
             self->ctx.queueBL1.FreeTensor(self->ctx.bl1);
             LoadBL1Process(self, (self->ctx.kIter / self->ctx.multiKBL1) + 1);
         }
     }
 
-    static __aicore__ void inline ReduceKPreloadDbAll(Intf *self)
+    static __aicore__ void inline ReduceKPreloadDbAll(Intf* self)
     {
         ASC_OP_LOGD("AL1 and BL1 db case, preload reduce k\n");
 
@@ -565,7 +576,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline ReduceKPreloadDbFmapLoadL1(Intf *self,  const uint64_t& maxKAL1PreloadIter)
+    static __aicore__ void inline ReduceKPreloadDbFmapLoadL1(Intf* self, const uint64_t& maxKAL1PreloadIter)
     {
         if (self->ctx.kIter == maxKAL1PreloadIter) {
             self->ctx.queueAL1.FreeTensor(self->ctx.al1);
@@ -583,7 +594,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline ReduceKPreloadDbFmap(Intf *self)
+    static __aicore__ void inline ReduceKPreloadDbFmap(Intf* self)
     {
         ASC_OP_LOGD("AL1 db case, preload reduce k\n");
 
@@ -617,9 +628,9 @@ struct Iterate {
         ReduceKPostProcessLoadL0(self);
     }
 
-    static __aicore__ void inline CalcBias(Intf *self)
+    static __aicore__ void inline CalcBias(Intf* self)
     {
-        if constexpr(Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) {
+        if constexpr (Intf::l0pingpong == static_cast<int8_t>(conv3d::ConvL0PingPong::L0B_OPEN)) {
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID0);
             AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(event_t::EVENT_ID2);
             self->ctx.loadBiasBTIns.LoadBiasL0WithBroadcast();
@@ -640,7 +651,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline InitBiasWithPointWise(Intf *self, uint64_t m, uint64_t n)
+    static __aicore__ void inline InitBiasWithPointWise(Intf* self, uint64_t m, uint64_t n)
     {
         if (self->ctx.enableBias) {
             self->ctx.loadBiasL1Ins.SetN(AlignB(n, BLOCK_L0_M));
@@ -655,7 +666,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline InitBiasWithNormal(Intf *self, uint64_t m, uint64_t n)
+    static __aicore__ void inline InitBiasWithNormal(Intf* self, uint64_t m, uint64_t n)
     {
         if (self->ctx.enableBias) {
             self->ctx.loadBiasL1Ins.SetN(n);
@@ -673,7 +684,7 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline IterateK(Intf *self)
+    static __aicore__ void inline IterateK(Intf* self)
     {
         // in each iterate k, cal current m,n value
         uint64_t n = CalcL0CurrentN(self);
@@ -714,31 +725,33 @@ struct Iterate {
         }
     }
 
-    static __aicore__ void inline UpdateL1TailLoop(Intf *self)
+    static __aicore__ void inline UpdateL1TailLoop(Intf* self)
     {
-        self->ctx.l12l0LoopM = self->ctx.mAL1Iter == self->ctx.maxMAL1Iter
-                                   ? CeilDIV(self->ctx.mAL1Tail, self->ctx.conv3dTiling->mL0)
-                                   : self->ctx.conv3dTiling->mAL1DivmL0;
+        self->ctx.l12l0LoopM = self->ctx.mAL1Iter == self->ctx.maxMAL1Iter ?
+                                   CeilDIV(self->ctx.mAL1Tail, self->ctx.conv3dTiling->mL0) :
+                                   self->ctx.conv3dTiling->mAL1DivmL0;
         self->ctx.maxML0Iter = self->ctx.l12l0LoopM - 1;
 
         if constexpr (Intf::bl1bypass) {
             return;
         }
-        self->ctx.l12l0LoopN = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter
-                                   ? CeilDIV(self->ctx.nBL1Tail, self->ctx.conv3dTiling->nL0)
-                                   : self->ctx.conv3dTiling->nBL1DivnL0;
+        self->ctx.l12l0LoopN = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
+                                   CeilDIV(self->ctx.nBL1Tail, self->ctx.conv3dTiling->nL0) :
+                                   self->ctx.conv3dTiling->nBL1DivnL0;
         self->ctx.maxNL0Iter = self->ctx.l12l0LoopN - 1;
     }
 
-    static __aicore__ bool inline IterateImpl(Intf *self, bool enPartialSum)
+    static __aicore__ bool inline IterateImpl(Intf* self, bool enPartialSum)
     {
         if (self->ctx.isFirstIterate) {
             FirstIterateImpl(self);
-        } else if (likely(self->ctx.conv3dTiling->iterateMNOrder == static_cast<int>(IterateMNOrder::ORDER_MTERFIRST))) {
+        } else if (likely(self->ctx.conv3dTiling->iterateMNOrder ==
+                          static_cast<int>(IterateMNOrder::ORDER_MTERFIRST))) {
             if (IterateMFirst(self) == false) {
                 return false;
             }
-        } else if (likely(self->ctx.conv3dTiling->iterateMNOrder == static_cast<int>(IterateMNOrder::ORDER_NTERFIRST))) {
+        } else if (likely(self->ctx.conv3dTiling->iterateMNOrder ==
+                          static_cast<int>(IterateMNOrder::ORDER_NTERFIRST))) {
             if (IterateNFirst(self) == false) {
                 return false;
             }
@@ -752,8 +765,8 @@ struct Iterate {
 template <class Intf, uint32_t ImplType>
 struct GetTensorC {
     template <bool sync = true>
-    static __aicore__ inline bool call(
-        Intf *self, const GlobalTensor<typename Intf::OutputT> &output, bool enSequentialWrite = false)
+    static __aicore__ inline bool call(Intf* self, const GlobalTensor<typename Intf::OutputT>& output,
+                                       bool enSequentialWrite = false)
     {
         if constexpr (Intf::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             CrossCoreWaitFlag(self->ctx.V2CEvent + self->ctx.workspaceDbFlag);
@@ -779,8 +792,8 @@ struct GetTensorC {
 template <class Intf, uint32_t ImplType>
 struct IterateAll {
     template <bool sync = true>
-    static __aicore__ inline bool call(
-        Intf *self, const GlobalTensor<typename Intf::OutputT> &output, bool enPartialSum = false)
+    static __aicore__ inline bool call(Intf* self, const GlobalTensor<typename Intf::OutputT>& output,
+                                       bool enPartialSum = false)
     {
         self->ctx.loadBiasL1Ins.SetParams(self);
         self->ctx.loadBL1Ins.SetParams(self);
@@ -802,8 +815,8 @@ struct IterateAll {
         return false;
     }
 
-    static __aicore__ void inline IterateAllBase(
-        Intf *self, const GlobalTensor<typename Intf::OutputT> &output, bool enPartialSum = false)
+    static __aicore__ void inline IterateAllBase(Intf* self, const GlobalTensor<typename Intf::OutputT>& output,
+                                                 bool enPartialSum = false)
     {
         if ASCEND_IS_AIC {
             if (self->ctx.biasFullLoadFlag && self->ctx.enableBias) {
@@ -841,14 +854,14 @@ struct IterateAll {
         self->ctx.nBL1Iter = 0;
     }
 
-    static __aicore__ void inline ReCalculationKTilingWithGroups(
-        Intf *self, uint64_t &updateKAL1, uint64_t &updateKBL1, uint64_t &updateKL0)
+    static __aicore__ void inline ReCalculationKTilingWithGroups(Intf* self, uint64_t& updateKAL1, uint64_t& updateKBL1,
+                                                                 uint64_t& updateKL0)
     {
         // Update kaL1/kbL1/kL0 when singleCoreCin changes.
-        uint64_t curKAL1Kd = GetCurrentKD(
-            self->ctx.conv3dTiling->kAL1, AlignB(self->ctx.orgCi, self->ctx.cin0), self->ctx.kernelHxkernelW);
-        uint64_t curKBL1Kd = GetCurrentKD(
-            self->ctx.conv3dTiling->kBL1, AlignB(self->ctx.orgCi, self->ctx.cin0), self->ctx.kernelHxkernelW);
+        uint64_t curKAL1Kd = GetCurrentKD(self->ctx.conv3dTiling->kAL1, AlignB(self->ctx.orgCi, self->ctx.cin0),
+                                          self->ctx.kernelHxkernelW);
+        uint64_t curKBL1Kd = GetCurrentKD(self->ctx.conv3dTiling->kBL1, AlignB(self->ctx.orgCi, self->ctx.cin0),
+                                          self->ctx.kernelHxkernelW);
         uint64_t curCinxKhxKw = AlignB(self->ctx.singleCoreCin, self->ctx.cin0) * self->ctx.kernelHxkernelW;
         updateKAL1 = curCinxKhxKw > self->ctx.conv3dTiling->kAL1 ? 0 : curCinxKhxKw;
         updateKBL1 = curCinxKhxKw > self->ctx.conv3dTiling->kBL1 ? 0 : curCinxKhxKw;
@@ -858,8 +871,8 @@ struct IterateAll {
         }
         if (updateKAL1 == 0) {
             // To ensure that kAL1/kBL1 is the factor of cin1, 1 is used as kAL1, which can be optimized in the future.
-            updateKAL1 =
-                curCinxKhxKw % self->ctx.conv3dTiling->kAL1 == 0 ? 0 : self->ctx.cin0 * self->ctx.kernelHxkernelW;
+            updateKAL1 = curCinxKhxKw % self->ctx.conv3dTiling->kAL1 == 0 ? 0 :
+                                                                            self->ctx.cin0 * self->ctx.kernelHxkernelW;
         }
         if (curKBL1Kd > 1) {
             // The kAL1/kBL1 is calculated by multiplying the new cin by the kd of the previous tiling decision.
@@ -867,8 +880,8 @@ struct IterateAll {
         }
         if (updateKBL1 == 0) {
             // To ensure that kAL1/kBL1 is the factor of cin1, 1 is used as kAL1, which can be optimized in the future.
-            updateKBL1 =
-                curCinxKhxKw % self->ctx.conv3dTiling->kBL1 == 0 ? 0 : self->ctx.cin0 * self->ctx.kernelHxkernelW;
+            updateKBL1 = curCinxKhxKw % self->ctx.conv3dTiling->kBL1 == 0 ? 0 :
+                                                                            self->ctx.cin0 * self->ctx.kernelHxkernelW;
         }
         if (updateKAL1 % self->ctx.conv3dTiling->kL0 != 0 || updateKBL1 % self->ctx.conv3dTiling->kL0 != 0) {
             // To ensure that kL0 is the factor of kAL1/kBL1, cin0 is used as kL0, which can be optimized in the future.
@@ -876,16 +889,15 @@ struct IterateAll {
         }
     }
 
-    static __aicore__ void inline PreProcessGroupOptDimTail(Intf *self)
+    static __aicore__ void inline PreProcessGroupOptDimTail(Intf* self)
     {
         if (!self->ctx.isGroupOptDimTail) {
             return;
         }
 
         if (self->ctx.singleCoreCinTail != 0) {
-            ASC_OP_LOGD("[IterateAllWithGroups] singleCoreCin %d update to %d \n",
-                self->ctx.singleCoreCin,
-                self->ctx.singleCoreCinTail);
+            ASC_OP_LOGD("[IterateAllWithGroups] singleCoreCin %d update to %d \n", self->ctx.singleCoreCin,
+                        self->ctx.singleCoreCinTail);
             self->ctx.singleCoreCin = self->ctx.singleCoreCinTail;
             uint64_t updateKAL1 = 0;
             uint64_t updateKBL1 = 0;
@@ -894,22 +906,20 @@ struct IterateAll {
             InitKDirectionBaseValue<Intf>(self, updateKAL1, updateKBL1, updateKL0);
             self->ctx.preloadAL1DbFlag = false;
             self->ctx.preloadABL1DbFlag = false;
-            ASC_OP_LOGD("[IterateAllWithGroups] updateKAL1 %d updateKBL1 %d updateKL0 %d \n",
-                updateKAL1,
-                updateKBL1,
-                updateKL0);
+            ASC_OP_LOGD("[IterateAllWithGroups] updateKAL1 %d updateKBL1 %d updateKL0 %d \n", updateKAL1, updateKBL1,
+                        updateKL0);
         }
         if (self->ctx.singleCoreCoutTail != 0) {
-            ASC_OP_LOGD("[IterateAllWithGroups] singleCoreCo %d update to %d \n",
-                self->ctx.singleCoreCo,
-                self->ctx.singleCoreCoutTail);
+            ASC_OP_LOGD("[IterateAllWithGroups] singleCoreCo %d update to %d \n", self->ctx.singleCoreCo,
+                        self->ctx.singleCoreCoutTail);
             self->ctx.singleCoreCo = self->ctx.singleCoreCoutTail;
             InitCoutDirectionBaseValue<Intf>(self);
         }
     }
 
-    static __aicore__ void inline PostProcessGroupOptDimTail(Intf *self, const uint64_t &tmpSingleCoreCo,
-        const uint8_t &tmpPreloadAL1DbFlag, const uint8_t &tmpPreloadABL1DbFlag)
+    static __aicore__ void inline PostProcessGroupOptDimTail(Intf* self, const uint64_t& tmpSingleCoreCo,
+                                                             const uint8_t& tmpPreloadAL1DbFlag,
+                                                             const uint8_t& tmpPreloadABL1DbFlag)
     {
         if (!self->ctx.isGroupOptDimTail) {
             return;
@@ -928,11 +938,11 @@ struct IterateAll {
         self->ctx.isGroupOptDimTail = false;
     }
 
-    static __aicore__ void inline IterateAllWithGroups(
-        Intf *self, const GlobalTensor<typename Intf::OutputT> &output, bool enPartialSum = false)
+    static __aicore__ void inline IterateAllWithGroups(Intf* self, const GlobalTensor<typename Intf::OutputT>& output,
+                                                       bool enPartialSum = false)
     {
-        uint64_t weightOneGroupOptSize =
-            self->ctx.conv3dTiling->cinOpt * self->ctx.kernelHxkernelWxkernelD * self->ctx.conv3dTiling->coutOpt;
+        uint64_t weightOneGroupOptSize = self->ctx.conv3dTiling->cinOpt * self->ctx.kernelHxkernelWxkernelD *
+                                         self->ctx.conv3dTiling->coutOpt;
         while (self->ctx.groupOptIter < self->ctx.maxGroupOptIter - 1) {
             IterateAllBase(self, output, enPartialSum);
             self->SetWeight(self->ctx.bgm[weightOneGroupOptSize]);
@@ -951,6 +961,6 @@ struct IterateAll {
     }
 };
 
-}  // namespace Conv3dFunc
+} // namespace Conv3dFunc
 
 #endif

@@ -18,7 +18,7 @@ namespace Ops {
 namespace NN {
 constexpr std::size_t FORMAT_STRING_BUFFER_SIZE = 1024U;
 
-inline std::string FormatString(const char *format, ...)
+inline std::string FormatString(const char* format, ...)
 {
     char buffer[FORMAT_STRING_BUFFER_SIZE] = {};
     va_list args;
@@ -31,12 +31,9 @@ inline std::string FormatString(const char *format, ...)
     return std::string(buffer);
 }
 
-inline const char *BoolToString(bool value)
-{
-    return value ? "true" : "false";
-}
+inline const char* BoolToString(bool value) { return value ? "true" : "false"; }
 
-inline std::string StripEnclosingSquareBrackets(const char *value)
+inline std::string StripEnclosingSquareBrackets(const char* value)
 {
     if (value == nullptr) {
         return {};

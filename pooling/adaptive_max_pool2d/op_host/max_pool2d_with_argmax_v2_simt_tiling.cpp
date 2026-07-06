@@ -27,7 +27,6 @@
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
 
-
 using namespace ge;
 
 constexpr uint64_t CAL_KER_THRESHOLD = 10000;
@@ -36,21 +35,19 @@ constexpr int64_t C_IDX = 1;
 constexpr int64_t H_IDX = 2;
 constexpr int64_t W_IDX = 3;
 
-namespace optiling{
+namespace optiling {
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static const gert::Shape& EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
-bool AdaMaxPool2dTilingSIMT::IsCapable()
-{
-    return true;
-}
+bool AdaMaxPool2dTilingSIMT::IsCapable() { return true; }
 
 ge::graphStatus AdaMaxPool2dTilingSIMT::GetPlatformInfo()
 {
@@ -62,7 +59,8 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaMaxPool2dTilingSIMT::CheckPlatformAndGetShapes() {
+ge::graphStatus AdaMaxPool2dTilingSIMT::CheckPlatformAndGetShapes()
+{
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto inputX = context_->GetInputShape(FIRPOS);
@@ -80,31 +78,31 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::CheckPlatformAndGetShapes() {
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(
-        inputShape.GetDim(N_IDX) < 1 || inputShape.GetDim(C_IDX) < 1 ||
-        inputShape.GetDim(H_IDX) < 1 || inputShape.GetDim(W_IDX) < 1,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(inputShape).c_str(),
-            "The dimensions N, C, Hi, Wi must be at least 1"),
+        inputShape.GetDim(N_IDX) < 1 || inputShape.GetDim(C_IDX) < 1 || inputShape.GetDim(H_IDX) < 1 ||
+            inputShape.GetDim(W_IDX) < 1,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(inputShape).c_str(),
+                                              "The dimensions N, C, Hi, Wi must be at least 1"),
         return ge::GRAPH_FAILED);
 
-    inputData.inputShape =
-        array<uint64_t, NCHW_DIMS>{uint64_t(inputShape.GetDim(N_IDX)), uint64_t(inputShape.GetDim(C_IDX)),
-                                    uint64_t(inputShape.GetDim(H_IDX)), uint64_t(inputShape.GetDim(W_IDX))};
-    inputData.outShape =
-        array<uint64_t, NCHW_DIMS>{uint64_t(inputShape.GetDim(N_IDX)), uint64_t(inputShape.GetDim(C_IDX)),
-                                    uint64_t(outShape.GetDim(H_IDX)), uint64_t(outShape.GetDim(W_IDX))};
+    inputData.inputShape = array<uint64_t, NCHW_DIMS>{
+        uint64_t(inputShape.GetDim(N_IDX)), uint64_t(inputShape.GetDim(C_IDX)), uint64_t(inputShape.GetDim(H_IDX)),
+        uint64_t(inputShape.GetDim(W_IDX))};
+    inputData.outShape = array<uint64_t, NCHW_DIMS>{uint64_t(inputShape.GetDim(N_IDX)),
+                                                    uint64_t(inputShape.GetDim(C_IDX)),
+                                                    uint64_t(outShape.GetDim(H_IDX)), uint64_t(outShape.GetDim(W_IDX))};
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaMaxPool2dTilingSIMT::CheckDataTypeAndAttrs() {
+ge::graphStatus AdaMaxPool2dTilingSIMT::CheckDataTypeAndAttrs()
+{
     auto inputDesc = context_->GetInputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), 
-            "AdaptiveMaxPool2d: invalid dtype %s, should be BFloat16、Float16 or Float32",
-            Ops::Base::ToString(dtype).c_str());
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                        "AdaptiveMaxPool2d: invalid dtype %s, should be BFloat16、Float16 or Float32",
+                                        Ops::Base::ToString(dtype).c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -118,12 +116,8 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::CheckDataTypeAndAttrs() {
         return ge::GRAPH_FAILED;
     }
 
-    array<uint64_t, NCHW_DIMS> indicesArray{
-        uint64_t(indicesShape.GetDim(N_IDX)),
-        uint64_t(indicesShape.GetDim(C_IDX)),
-        uint64_t(indicesShape.GetDim(H_IDX)),
-        uint64_t(indicesShape.GetDim(W_IDX))
-    };
+    array<uint64_t, NCHW_DIMS> indicesArray{uint64_t(indicesShape.GetDim(N_IDX)), uint64_t(indicesShape.GetDim(C_IDX)),
+                                            uint64_t(indicesShape.GetDim(H_IDX)), uint64_t(indicesShape.GetDim(W_IDX))};
     if (indicesArray != inputData.outShape) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
                                         "AdaptiveMaxPool2d: indices shape and values shape is different");
@@ -134,25 +128,25 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::CheckDataTypeAndAttrs() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrPtr);
     auto outputSizePtr = attrPtr->GetAttrPointer<gert::ContinuousVector>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputSizePtr);
-    OP_CHECK_IF(
-        outputSizePtr->GetSize() != DOUB,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "output_size",
-            std::to_string(outputSizePtr->GetSize()).c_str(), "2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSizePtr->GetSize() != DOUB,
+                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "output_size",
+                                          std::to_string(outputSizePtr->GetSize()).c_str(), "2"),
+                return ge::GRAPH_FAILED);
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());
-    OP_CHECK_IF(
-        outputSize[0] <= 0 || outputSize[1] <= 0,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "output_size",
-            (std::to_string(outputSize[0]) + ", " + std::to_string(outputSize[1])).c_str(),
-            "> 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputSize[0] <= 0 || outputSize[1] <= 0,
+                OP_LOGE_WITH_INVALID_ATTR(
+                    context_->GetNodeName(), "output_size",
+                    (std::to_string(outputSize[0]) + ", " + std::to_string(outputSize[1])).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaMaxPool2dTilingSIMT::GetShapeAttrsInfo() {
+ge::graphStatus AdaMaxPool2dTilingSIMT::GetShapeAttrsInfo()
+{
     auto status = CheckPlatformAndGetShapes();
-    if (status != ge::GRAPH_SUCCESS) return status;
+    if (status != ge::GRAPH_SUCCESS)
+        return status;
     return CheckDataTypeAndAttrs();
 }
 
@@ -191,10 +185,7 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t AdaMaxPool2dTilingSIMT::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t AdaMaxPool2dTilingSIMT::GetTilingKey() const { return 0; }
 
 ge::graphStatus AdaMaxPool2dTilingSIMT::GetWorkspaceSize()
 {
@@ -230,4 +221,4 @@ void AdaMaxPool2dTilingSIMT::DumpTilingInfo()
     str += " kMaxSizeW:" + std::to_string(tiling.get_kMaxSizeW());
 }
 REGISTER_TILING_TEMPLATE("AdaptiveMaxPool2d", AdaMaxPool2dTilingSIMT, 0);
-}  // namespace optiling
+} // namespace optiling

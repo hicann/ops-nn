@@ -36,7 +36,7 @@ class BatchNormInferSmallAB1 {
     static constexpr uint16_t VECTOR_LENGTH = BatchNormOps::VECTOR_LENGTH;
     static constexpr uint32_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
     static constexpr int64_t BLOCK_SIZE = BatchNormOps::BLOCK_SIZE;
-    static constexpr int32_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
+    static constexpr int32_t MEAN_VAR_OUTPUT_COUNT = 2; // mean, var
 
     constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
@@ -100,8 +100,8 @@ public:
         PrepareSmallAB1ParamCache();
 
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {
-            int64_t curTileB0Len =
-                curIdx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail : tilingData_->tileBlockB0Len;
+            int64_t curTileB0Len = curIdx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail :
+                                                                          tilingData_->tileBlockB0Len;
             int64_t xOffset = curIdx * tilingData_->tileBlockB0Len * tilingData_->totalALen * tilingData_->totalB1Len;
 
             CopyInX(xOffset, curTileB0Len);
@@ -111,10 +111,7 @@ public:
     }
 
 private:
-    __aicore__ inline int64_t AlignUp(int64_t value, int64_t base) const
-    {
-        return (value + base - 1) / base * base;
-    }
+    __aicore__ inline int64_t AlignUp(int64_t value, int64_t base) const { return (value + base - 1) / base * base; }
 
     __aicore__ inline void InitSmallAB1ParamOffset()
     {
@@ -203,7 +200,7 @@ private:
         __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
 
         VFPrepareSmallAB1ParamCache(gammaLocal, betaLocal, meanLocal, varLocal, offsetLocal, gammaFp32Local,
-            betaFp32Local, meanFp32Local, rstdFp32Local);
+                                    betaFp32Local, meanFp32Local, rstdFp32Local);
         CopyOutMeanVar(tilingData_->totalALen);
 
         betaQueue_.FreeTensor<T_GAMMA>(beta);
@@ -214,7 +211,9 @@ private:
 
     __aicore__ inline void CopyOutMeanVar(int64_t curTileALen)
     {
-        if (GetBlockIdx() != 0) { return; }
+        if (GetBlockIdx() != 0) {
+            return;
+        }
 
         DataCopyExtParams extParams;
         extParams.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
@@ -232,8 +231,8 @@ private:
 
         meanVarOutQueue_.EnQue<QuePosition::GM, QuePosition::VECIN, T_RUNNING_MEAN>(meanVarBuf);
 
-        LocalTensor<T_RUNNING_MEAN> meanVarOut =
-            meanVarOutQueue_.DeQue<QuePosition::VECOUT, QuePosition::GM, T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> meanVarOut = meanVarOutQueue_
+                                                     .DeQue<QuePosition::VECOUT, QuePosition::GM, T_RUNNING_MEAN>();
 
         DataCopyPad(batchMeanGm_[0], meanVarOut, extParams);
         DataCopyPad(reserveSpace1Gm_[0], meanVarOut, extParams);
@@ -266,8 +265,8 @@ private:
         xQueue_.FreeTensor<T>(x);
     }
 
-    __aicore__ inline void VFPrepareSmallAB1ParamCache(__local_mem__ T_GAMMA* gammaLocal,
-        __local_mem__ T_GAMMA* betaLocal, __local_mem__ T_RUNNING_MEAN* meanLocal,
+    __aicore__ inline void VFPrepareSmallAB1ParamCache(
+        __local_mem__ T_GAMMA* gammaLocal, __local_mem__ T_GAMMA* betaLocal, __local_mem__ T_RUNNING_MEAN* meanLocal,
         __local_mem__ T_RUNNING_MEAN* varLocal, __ubuf__ uint32_t* offsetLocal, __local_mem__ float* gammaFp32Local,
         __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local, __local_mem__ float* rstdFp32Local)
     {
@@ -299,8 +298,9 @@ private:
     }
 
     __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ float* gammaFp32Local,
-        __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local, __local_mem__ float* rstdFp32Local,
-        __local_mem__ T* yLocal, uint16_t curTileB0Len)
+                                       __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local,
+                                       __local_mem__ float* rstdFp32Local, __local_mem__ T* yLocal,
+                                       uint16_t curTileB0Len)
     {
         __VEC_SCOPE__
         {
@@ -311,8 +311,7 @@ private:
             RegTensor<float> rstd;
             RegTensor<float> y;
 
-            uint32_t elemLen = static_cast<uint32_t>(
-                curTileB0Len * tilingData_->totalALen * tilingData_->totalB1Len);
+            uint32_t elemLen = static_cast<uint32_t>(curTileB0Len * tilingData_->totalALen * tilingData_->totalB1Len);
             uint32_t paramCacheElemLen = GetSmallAB1ParamCacheElemLen();
             uint16_t loopNum = ops::CeilDiv(elemLen, paramCacheElemLen);
             __local_mem__ T* xLocalTmp = xLocal;
@@ -326,7 +325,8 @@ private:
             DataCopy<float, LoadDist::DIST_NORM>(rstd, rstdFp32Local);
             for (uint16_t i = 0; i < loopNum; i++) {
                 uint32_t elemOffset = i * paramCacheElemLen;
-                uint32_t activeLen = elemLen - elemOffset > paramCacheElemLen ? paramCacheElemLen : elemLen - elemOffset;
+                uint32_t activeLen = elemLen - elemOffset > paramCacheElemLen ? paramCacheElemLen :
+                                                                                elemLen - elemOffset;
                 uint32_t maskLen = activeLen;
                 MaskReg pregMask = AscendC::MicroAPI::UpdateMask<float>(maskLen);
 
@@ -345,9 +345,8 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void GatherParamForDtypeT(
-        __local_mem__ T_SRC* src, RegTensor<float>& dst, RegTensor<uint32_t>& paramOffset, MaskReg& preg,
-        uint32_t calcLen)
+    __aicore__ inline void GatherParamForDtypeT(__local_mem__ T_SRC* src, RegTensor<float>& dst,
+                                                RegTensor<uint32_t>& paramOffset, MaskReg& preg, uint32_t calcLen)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
             AscendC::MicroAPI::DataCopyGather(dst, (__local_mem__ float*)src, paramOffset, preg);
@@ -363,9 +362,9 @@ private:
         }
     }
 
-    __aicore__ inline void GatherRunningParamForDtypeT(
-        __local_mem__ T_RUNNING_MEAN* src, RegTensor<float>& dst, RegTensor<uint32_t>& paramOffset, MaskReg& preg,
-        uint32_t calcLen)
+    __aicore__ inline void GatherRunningParamForDtypeT(__local_mem__ T_RUNNING_MEAN* src, RegTensor<float>& dst,
+                                                       RegTensor<uint32_t>& paramOffset, MaskReg& preg,
+                                                       uint32_t calcLen)
     {
         if constexpr (IsSameType<T_RUNNING_MEAN, float>::value) {
             AscendC::MicroAPI::DataCopyGather(dst, (__local_mem__ float*)src, paramOffset, preg);

@@ -24,8 +24,8 @@
 // Kernel 侧辅助函数
 // ============================================================
 
-__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail,
-    int64_t& start, int64_t& end)
+__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail, int64_t& start,
+                                    int64_t& end)
 {
     if (core_id < cores_tail) {
         start = core_id * (tiles_main + 1);
@@ -36,14 +36,13 @@ __aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t
     }
 }
 
-__aicore__ inline int64_t GetUBSplitRange(
-    int64_t a_o_off, int64_t a_o, int64_t a_i, int64_t a_i_tail)
+__aicore__ inline int64_t GetUBSplitRange(int64_t a_o_off, int64_t a_o, int64_t a_i, int64_t a_i_tail)
 {
     return (a_o_off == a_o - 1) ? a_i_tail : a_i;
 }
 
-__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape,
-    int64_t rank, int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
+__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape, int64_t rank,
+                                            int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
 {
     for (int64_t d = 0; d < rank; d++)
         eff_coord[d] = 0;
@@ -57,8 +56,7 @@ __aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro
     return true;
 }
 
-__aicore__ inline int64_t CalcInputOffset(
-    const int64_t* eff_coord, const int64_t* strides, int64_t rank)
+__aicore__ inline int64_t CalcInputOffset(const int64_t* eff_coord, const int64_t* strides, int64_t rank)
 {
     int64_t offset = 0;
     for (int64_t d = 0; d < rank; d++)
@@ -66,8 +64,7 @@ __aicore__ inline int64_t CalcInputOffset(
     return offset;
 }
 
-__aicore__ inline int64_t CalcOutputOffset(
-    const int64_t* eff_coord, const int64_t* strides, int64_t rank)
+__aicore__ inline int64_t CalcOutputOffset(const int64_t* eff_coord, const int64_t* strides, int64_t rank)
 {
     int64_t offset = 0;
     for (int64_t d = 0; d < rank; d++)
@@ -75,8 +72,8 @@ __aicore__ inline int64_t CalcOutputOffset(
     return offset;
 }
 
-__aicore__ inline int64_t CalcOutputTransferCount(
-    const int64_t* normal_shape, int64_t rank, int64_t split_axis, int64_t a_i_seg)
+__aicore__ inline int64_t CalcOutputTransferCount(const int64_t* normal_shape, int64_t rank, int64_t split_axis,
+                                                  int64_t a_i_seg)
 {
     int64_t split_elems = (normal_shape[split_axis] == 1) ? 1 : a_i_seg;
     int64_t inner_elems = 1;
@@ -91,78 +88,61 @@ __aicore__ inline int64_t CalcOutputTransferCount(
 
 // S1: ori_clip_min = min(clamp_min, 0.0) [fixed_min=false]
 template <typename T>
-__simd_vf__ inline void MinsVF(
-    __ubuf__ T* dstAddr, T scalar,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void MinsVF(__ubuf__ T* dstAddr, T scalar, uint32_t count, uint32_t oneRepeatSize,
+                               uint16_t repeatTimes);
 
 // S2: ori_clip_max = max(clamp_max, 255*eps)
 template <typename T>
-__simd_vf__ inline void MaxsVF(
-    __ubuf__ T* dstAddr, T scalar,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void MaxsVF(__ubuf__ T* dstAddr, T scalar, uint32_t count, uint32_t oneRepeatSize,
+                               uint16_t repeatTimes);
 
 // S3: scale = (ori_clip_max - ori_clip_min) * inv_step
 template <typename T>
-__simd_vf__ inline void ScaleVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* srcMinAddr, __ubuf__ T* srcMaxAddr,
-    T invStep,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void ScaleVF(__ubuf__ T* dstAddr, __ubuf__ T* srcMinAddr, __ubuf__ T* srcMaxAddr, T invStep,
+                                uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // S4-S6: offset/clip_min/clip_max
 template <typename T>
-__simd_vf__ inline void ClipBoundsVF(
-    __ubuf__ T* clipMinAddr, __ubuf__ T* clipMaxAddr,
-    __ubuf__ T* oriClipMinAddr, __ubuf__ T* scaleAddr,
-    T step,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void ClipBoundsVF(__ubuf__ T* clipMinAddr, __ubuf__ T* clipMaxAddr, __ubuf__ T* oriClipMinAddr,
+                                     __ubuf__ T* scaleAddr, T step, uint32_t count, uint32_t oneRepeatSize,
+                                     uint16_t repeatTimes);
 
 // VF_Cc: S12b→S12c→S12d loss_m
 template <typename T>
-__simd_vf__ inline void LossMVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* oriClipMinAddr, __ubuf__ T* scaleAddr,
-    T invStep,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void LossMVF(__ubuf__ T* dstAddr, __ubuf__ T* oriClipMinAddr, __ubuf__ T* scaleAddr, T invStep,
+                                uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // VF_Ca: S7a→S7b clamped_x = min(max(data, clip_min), clip_max)
 template <typename T>
-__simd_vf__ inline void ClampVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* dataAddr,
-    __ubuf__ T* clipMinAddr, __ubuf__ T* clipMaxAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void ClampVF(__ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMinAddr,
+                                __ubuf__ T* clipMaxAddr, uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // S8: clamp_min_mask = (data >= clip_min) ? 1.0 : 0.0
 template <typename T>
-__simd_vf__ inline void MaskMinVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMinAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void MaskMinVF(__ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMinAddr, uint32_t count,
+                                  uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // S9: clamp_max_mask = (data <= clip_max) ? 1.0 : 0.0
 template <typename T>
-__simd_vf__ inline void MaskMaxVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMaxAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void MaskMaxVF(__ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMaxAddr, uint32_t count,
+                                  uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // VF_Cb: S10→S11→S12a quant
 template <typename T>
-__simd_vf__ inline void QuantVF(
-    __ubuf__ T* roundXAddr, __ubuf__ T* clampedLossAddr,
-    __ubuf__ T* clampedXAddr, __ubuf__ T* scaleAddr,
-    T invStep,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void QuantVF(__ubuf__ T* roundXAddr, __ubuf__ T* clampedLossAddr, __ubuf__ T* clampedXAddr,
+                                __ubuf__ T* scaleAddr, T invStep, uint32_t count, uint32_t oneRepeatSize,
+                                uint16_t repeatTimes);
 
 // VF_Cd: S13a→S13b select loss
 template <typename T>
-__simd_vf__ inline void SelectLossVF(
-    __ubuf__ T* dstAddr,
-    __ubuf__ T* clampMinMaskAddr, __ubuf__ T* clampMaxMaskAddr,
-    __ubuf__ T* clampedLossAddr, __ubuf__ T* lossMAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void SelectLossVF(__ubuf__ T* dstAddr, __ubuf__ T* clampMinMaskAddr, __ubuf__ T* clampMaxMaskAddr,
+                                     __ubuf__ T* clampedLossAddr, __ubuf__ T* lossMAddr, uint32_t count,
+                                     uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // S14: output = round_x * scale
 template <typename T>
-__simd_vf__ inline void OutputVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* roundXAddr, __ubuf__ T* scaleAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes);
+__simd_vf__ inline void OutputVF(__ubuf__ T* dstAddr, __ubuf__ T* roundXAddr, __ubuf__ T* scaleAddr, uint32_t count,
+                                 uint32_t oneRepeatSize, uint16_t repeatTimes);
 
 // ============================================================
 // Kernel 类
@@ -172,8 +152,7 @@ template <typename T, int64_t RANK>
 class ActsUlqKernel {
     static constexpr int64_t ND = (RANK <= 5) ? RANK : 5;
     static constexpr uint32_t VL = AscendC::GetVecLen() / sizeof(float);
-    static constexpr int64_t kNumBufs = std::is_same_v<T, half>
-        ? (kPhysNodes + kCastBufs) : kPhysNodes;
+    static constexpr int64_t kNumBufs = std::is_same_v<T, half> ? (kPhysNodes + kCastBufs) : kPhysNodes;
 
     AscendC::TPipe pipe_;
     const ActsUlqTilingData<RANK>* td_;
@@ -203,20 +182,20 @@ public:
             int64_t inner = 1;
             int64_t nd = 0;
             for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {
-                nddmaParams_[inp].loopInfo.loopSize[nd]      = (d == k) ? 0 : dstShape[d];
+                nddmaParams_[inp].loopInfo.loopSize[nd] = (d == k) ? 0 : dstShape[d];
                 nddmaParams_[inp].loopInfo.loopSrcStride[nd] = td_->input_strides[inp][d];
                 nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd]     = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd]     = 0;
+                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
                 inner *= (d == k) ? td_->split.a_i : dstShape[d];
                 nd++;
             }
             for (; nd < ND; nd++) {
-                nddmaParams_[inp].loopInfo.loopSize[nd]      = 1;
+                nddmaParams_[inp].loopInfo.loopSize[nd] = 1;
                 nddmaParams_[inp].loopInfo.loopSrcStride[nd] = 0;
                 nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd]     = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd]     = 0;
+                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
             }
             nddmaOuterIters_[inp] = 1;
             for (int64_t d = k; d < RANK - nddma_dims_; d++)
@@ -226,34 +205,25 @@ public:
 
     __aicore__ inline void Process()
     {
-        int32_t evMTE2toV    = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
-        int32_t evVtoMTE2    = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
-        int32_t evVtoMTE3    = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
-        int32_t evMTE3toMTE2 = static_cast<int32_t>(
-            GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+        int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+        int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
+        int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+        int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
         // fp16 CopyOut 路径需要独立的 V_MTE3 事件 ID（每个输出一个）
         int32_t evCast0 = 0, evCast1 = 0, evCast2 = 0, evCast3 = 0;
         if constexpr (std::is_same_v<T, half>) {
-            evCast0 = static_cast<int32_t>(
-                GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
-            evCast1 = static_cast<int32_t>(
-                GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
-            evCast2 = static_cast<int32_t>(
-                GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
-            evCast3 = static_cast<int32_t>(
-                GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+            evCast0 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+            evCast1 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+            evCast2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+            evCast3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         }
 
         int64_t start, end;
-        GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main,
-                     td_->multicore.cores_tail, start, end);
+        GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main, td_->multicore.cores_tail, start, end);
 
         // Buffer 角色分配（来自 DESIGN.md §3.5 P trace）
         constexpr int B0 = 0, B1 = 1, B2 = 2, B3 = 3, B4 = 4, B5 = 5;
-        constexpr int BC = kPhysNodes;  // Cast 临时 buffer（仅 fp16 路径使用）
+        constexpr int BC = kPhysNodes; // Cast 临时 buffer（仅 fp16 路径使用）
         // B0: data → round_x → output
         // B1: ori_clip_max → loss_m
         // B2: scale
@@ -275,16 +245,17 @@ public:
 
         int64_t coord[8] = {};
         for (int64_t flat = start; flat < end; flat++) {
-            int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o,
-                                              td_->split.a_i, td_->split.a_i_tail);
+            int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o, td_->split.a_i,
+                                              td_->split.a_i_tail);
             int64_t count = a_i_seg * inner_count;
-            FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK,
-                                 td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
+            FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK, td_->split.axis, td_->split.a_i, td_->split.a_o,
+                                 coord);
 
             uint16_t repeatTimes = (uint16_t)AscendC::CeilDivision(count, (int64_t)VL);
 
             // 跨迭代反向同步
-            if (flat != start) AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+            if (flat != start)
+                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
 
             // === 阶段 1: 计算 scale/clip_min/clip_max/loss_m ===
 
@@ -293,10 +264,8 @@ public:
                 CopyInBrc(coord, IN_CLAMP_MIN, BC, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::Cast<float, half>(
-                    buf_[B0].template Get<float>(),
-                    buf_[BC].template Get<half>(),
-                    AscendC::RoundMode::CAST_NONE, (uint32_t)count);
+                AscendC::Cast<float, half>(buf_[B0].template Get<float>(), buf_[BC].template Get<half>(),
+                                           AscendC::RoundMode::CAST_NONE, (uint32_t)count);
             } else {
                 CopyInBrc(coord, IN_CLAMP_MIN, B0, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
@@ -309,9 +278,8 @@ public:
                 AscendC::Duplicate(buf_[B0].template Get<float>(), 0.0f, count);
             } else {
                 // ori_clip_min = min(clamp_min, 0)
-                asc_vf_call<MinsVF<float>>(
-                    (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(), 0.0f,
-                    count, VL, repeatTimes);
+                asc_vf_call<MinsVF<float>>((__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(), 0.0f, count,
+                                           VL, repeatTimes);
             }
 
             // CopyIn clamp_max → B1（fp16: 先到 BC，再 Cast 到 B1）
@@ -319,10 +287,8 @@ public:
                 CopyInBrc(coord, IN_CLAMP_MAX, BC, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::Cast<float, half>(
-                    buf_[B1].template Get<float>(),
-                    buf_[BC].template Get<half>(),
-                    AscendC::RoundMode::CAST_NONE, (uint32_t)count);
+                AscendC::Cast<float, half>(buf_[B1].template Get<float>(), buf_[BC].template Get<half>(),
+                                           AscendC::RoundMode::CAST_NONE, (uint32_t)count);
             } else {
                 CopyInBrc(coord, IN_CLAMP_MAX, B1, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
@@ -334,31 +300,27 @@ public:
             // hardware vmaxs scalar encoding issues with very small values on dav_3510.
             // B2 is used as temporary (will be overwritten by ScaleVF next).
             AscendC::Duplicate(buf_[B2].template Get<float>(), step * eps, count);
-            AscendC::Max(buf_[B1].template Get<float>(),
-                         buf_[B1].template Get<float>(),
-                         buf_[B2].template Get<float>(), count);
+            AscendC::Max(buf_[B1].template Get<float>(), buf_[B1].template Get<float>(), buf_[B2].template Get<float>(),
+                         count);
 
             // S3: scale = (ori_clip_max - ori_clip_min) * inv_step → B2
-            asc_vf_call<ScaleVF<float>>(
-                (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
-                inv_step, count, VL, repeatTimes);
+            asc_vf_call<ScaleVF<float>>((__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(), inv_step, count,
+                                        VL, repeatTimes);
 
             // S4-S6: offset/clip_min/clip_max → B3(clip_min), B4(clip_max)
-            asc_vf_call<ClipBoundsVF<float>>(
-                (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                step, count, VL, repeatTimes);
+            asc_vf_call<ClipBoundsVF<float>>((__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(), step, count,
+                                             VL, repeatTimes);
 
             // VF_Cc: S12b→S12c→S12d → loss_m → B1（复用）
-            asc_vf_call<LossMVF<float>>(
-                (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                inv_step, count, VL, repeatTimes);
+            asc_vf_call<LossMVF<float>>((__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(), inv_step, count,
+                                        VL, repeatTimes);
 
             // WAR(B0): V 读 B0 结束 → MTE2 可覆写 B0(data)
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
@@ -371,10 +333,8 @@ public:
                 CopyInBrc(coord, IN_DATA, BC, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::Cast<float, half>(
-                    buf_[B0].template Get<float>(),
-                    buf_[BC].template Get<half>(),
-                    AscendC::RoundMode::CAST_NONE, (uint32_t)count);
+                AscendC::Cast<float, half>(buf_[B0].template Get<float>(), buf_[BC].template Get<half>(),
+                                           AscendC::RoundMode::CAST_NONE, (uint32_t)count);
             } else {
                 CopyInBrc(coord, IN_DATA, B0, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
@@ -382,50 +342,44 @@ public:
             }
 
             // VF_Ca: S7a→S7b → clamped_x → B5
-            asc_vf_call<ClampVF<float>>(
-                (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
-                count, VL, repeatTimes);
+            asc_vf_call<ClampVF<float>>((__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(), count, VL,
+                                        repeatTimes);
 
             // S8: clamp_min_mask → B3（覆写 clip_min）
-            asc_vf_call<MaskMinVF<float>>(
-                (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
-                count, VL, repeatTimes);
+            asc_vf_call<MaskMinVF<float>>((__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
+                                          (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                          (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(), count, VL,
+                                          repeatTimes);
 
             // S9: clamp_max_mask → B4（覆写 clip_max）
-            asc_vf_call<MaskMaxVF<float>>(
-                (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
-                count, VL, repeatTimes);
+            asc_vf_call<MaskMaxVF<float>>((__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
+                                          (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                          (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(), count, VL,
+                                          repeatTimes);
 
             // VF_Cb: S10→S11→S12a → round_x→B0, clamped_loss→B5
-            asc_vf_call<QuantVF<float>>(
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                inv_step, count, VL, repeatTimes);
+            asc_vf_call<QuantVF<float>>((__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
+                                        (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(), inv_step, count,
+                                        VL, repeatTimes);
 
             // VF_Cd: S13a→S13b → x_clamped_loss→B5
-            asc_vf_call<SelectLossVF<float>>(
-                (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
-                count, VL, repeatTimes);
+            asc_vf_call<SelectLossVF<float>>((__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B4].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B5].template Get<float>().GetPhyAddr(),
+                                             (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(), count, VL,
+                                             repeatTimes);
 
             // S14: output = round_x * scale → B0（覆写 round_x）
-            asc_vf_call<OutputVF<float>>(
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-                (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                count, VL, repeatTimes);
+            asc_vf_call<OutputVF<float>>((__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                         (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                         (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(), count, VL,
+                                         repeatTimes);
 
             // === CopyOut: 4 个输出 ===
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
@@ -435,22 +389,14 @@ public:
                 // fp16 路径：Cast fp32→fp16 到 BC，再从 BC CopyOut
                 // 关键同步: PipeBarrier<PIPE_V> 确保 Cast 完成 → SetFlag → WaitFlag → CopyOut
                 // 尝试：所有 Cast 一次性完成，然后统一同步，再 CopyOut
-                AscendC::Cast<half, float>(
-                    buf_[BC].template Get<half>(),
-                    buf_[B0].template Get<float>(),
-                    AscendC::RoundMode::CAST_RINT, (uint32_t)count);
-                AscendC::Cast<half, float>(
-                    buf_[B1].template Get<half>(),
-                    buf_[B3].template Get<float>(),
-                    AscendC::RoundMode::CAST_RINT, (uint32_t)count);
-                AscendC::Cast<half, float>(
-                    buf_[B2].template Get<half>(),
-                    buf_[B4].template Get<float>(),
-                    AscendC::RoundMode::CAST_RINT, (uint32_t)count);
-                AscendC::Cast<half, float>(
-                    buf_[B3].template Get<half>(),
-                    buf_[B5].template Get<float>(),
-                    AscendC::RoundMode::CAST_RINT, (uint32_t)count);
+                AscendC::Cast<half, float>(buf_[BC].template Get<half>(), buf_[B0].template Get<float>(),
+                                           AscendC::RoundMode::CAST_RINT, (uint32_t)count);
+                AscendC::Cast<half, float>(buf_[B1].template Get<half>(), buf_[B3].template Get<float>(),
+                                           AscendC::RoundMode::CAST_RINT, (uint32_t)count);
+                AscendC::Cast<half, float>(buf_[B2].template Get<half>(), buf_[B4].template Get<float>(),
+                                           AscendC::RoundMode::CAST_RINT, (uint32_t)count);
+                AscendC::Cast<half, float>(buf_[B3].template Get<half>(), buf_[B5].template Get<float>(),
+                                           AscendC::RoundMode::CAST_RINT, (uint32_t)count);
                 // 统一同步：所有 V 操作（Cast）完成
                 AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evCast0);
                 AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evCast0);
@@ -460,10 +406,10 @@ public:
                 CopyOutCast(coord, OUT_MAX_MASK, B2, a_i_seg);
                 CopyOutCast(coord, OUT_LOSS, B3, a_i_seg);
             } else {
-                CopyOutOne(coord, OUT_OUTPUT,   B0, a_i_seg);
+                CopyOutOne(coord, OUT_OUTPUT, B0, a_i_seg);
                 CopyOutOne(coord, OUT_MIN_MASK, B3, a_i_seg);
                 CopyOutOne(coord, OUT_MAX_MASK, B4, a_i_seg);
-                CopyOutOne(coord, OUT_LOSS,     B5, a_i_seg);
+                CopyOutOne(coord, OUT_LOSS, B5, a_i_seg);
             }
 
             if (flat != end - 1)
@@ -472,8 +418,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInBrc(
-        const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg)
+    __aicore__ inline void CopyInBrc(const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg)
     {
         int64_t k = td_->split.axis;
         int64_t off = CalcInputOffset(coord, td_->input_strides[inputIdx], RANK);
@@ -483,17 +428,17 @@ private:
         int64_t k_nd = RANK - 1 - k;
         int64_t inner = 1;
         for (int64_t nd = 0; nd < ND; nd++) {
-            if (nd == k_nd) params.loopInfo.loopSize[nd] = a_i_seg;
+            if (nd == k_nd)
+                params.loopInfo.loopSize[nd] = a_i_seg;
             params.loopInfo.loopDstStride[nd] = inner;
             inner *= params.loopInfo.loopSize[nd];
         }
 
-        static constexpr AscendC::NdDmaConfig cfg = { false, AscendC::NdDmaConfig::unsetPad,
-                                                       AscendC::NdDmaConfig::unsetPad, false };
+        static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad,
+                                                     AscendC::NdDmaConfig::unsetPad, false};
 
         if constexpr (RANK <= 5) {
-            AscendC::DataCopy<T, ND, cfg>(
-                buf_[slot].template Get<T>(), gmIn_[inputIdx][off], params);
+            AscendC::DataCopy<T, ND, cfg>(buf_[slot].template Get<T>(), gmIn_[inputIdx][off], params);
         } else {
             AscendC::LocalTensor<T> buf = buf_[slot].template Get<T>();
             int64_t elem_base = off;
@@ -504,38 +449,33 @@ private:
                     elem_adj += (tmp % sz) * td_->input_strides[inputIdx][d];
                     tmp /= sz;
                 }
-                AscendC::DataCopy<T, ND, cfg>(
-                    buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
+                AscendC::DataCopy<T, ND, cfg>(buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
             }
         }
     }
 
-    __aicore__ inline void CopyOutOne(
-        const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
+    __aicore__ inline void CopyOutOne(const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
     {
         int64_t off = CalcOutputOffset(coord, td_->output_strides[outputIdx], RANK);
-        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK,
-                                              td_->split.axis, a_i_seg);
+        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK, td_->split.axis, a_i_seg);
         AscendC::DataCopyExtParams extParams;
         extParams.blockCount = 1;
-        extParams.blockLen   = cnt * sizeof(T);
-        extParams.srcStride  = 0;
-        extParams.dstStride  = 0;
+        extParams.blockLen = cnt * sizeof(T);
+        extParams.srcStride = 0;
+        extParams.dstStride = 0;
         AscendC::DataCopyPad(gmOut_[outputIdx][off], buf_[slot].template Get<T>(), extParams);
     }
 
     // fp16 路径专用：从 Cast buffer（已含 fp16 数据）CopyOut 到 GM
-    __aicore__ inline void CopyOutCast(
-        const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
+    __aicore__ inline void CopyOutCast(const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
     {
         int64_t off = CalcOutputOffset(coord, td_->output_strides[outputIdx], RANK);
-        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK,
-                                              td_->split.axis, a_i_seg);
+        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK, td_->split.axis, a_i_seg);
         AscendC::DataCopyExtParams extParams;
         extParams.blockCount = 1;
-        extParams.blockLen   = cnt * sizeof(half);
-        extParams.srcStride  = 0;
-        extParams.dstStride  = 0;
+        extParams.blockLen = cnt * sizeof(half);
+        extParams.srcStride = 0;
+        extParams.dstStride = 0;
         AscendC::DataCopyPad(gmOut_[outputIdx][off], buf_[slot].template Get<half>(), extParams);
     }
 };
@@ -546,9 +486,8 @@ private:
 
 // S1: ori_clip_min = min(src, 0.0) in-place
 template <typename T>
-__simd_vf__ inline void MinsVF(
-    __ubuf__ T* dstAddr, T scalar,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void MinsVF(__ubuf__ T* dstAddr, T scalar, uint32_t count, uint32_t oneRepeatSize,
+                               uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> srcReg, dstReg;
     AscendC::Reg::MaskReg mask;
@@ -567,9 +506,8 @@ __simd_vf__ inline void MinsVF(
 // to avoid hardware vmaxs scalar encoding limitations on dav_3510 that cause
 // very small scalar values (e.g. step*eps ≈ 3.04e-5) to be incorrectly applied.
 template <typename T>
-__simd_vf__ inline void MaxsVF(
-    __ubuf__ T* dstAddr, T scalar,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void MaxsVF(__ubuf__ T* dstAddr, T scalar, uint32_t count, uint32_t oneRepeatSize,
+                               uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> srcReg, dstReg, scalarReg;
     AscendC::Reg::MaskReg mask;
@@ -586,10 +524,8 @@ __simd_vf__ inline void MaxsVF(
 
 // S3: scale = (ori_clip_max - ori_clip_min) * inv_step
 template <typename T>
-__simd_vf__ inline void ScaleVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* srcMinAddr, __ubuf__ T* srcMaxAddr,
-    T invStep,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void ScaleVF(__ubuf__ T* dstAddr, __ubuf__ T* srcMinAddr, __ubuf__ T* srcMaxAddr, T invStep,
+                                uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> minReg, maxReg, diffReg, dstReg;
     AscendC::Reg::MaskReg mask;
@@ -607,11 +543,9 @@ __simd_vf__ inline void ScaleVF(
 
 // S4-S6: offset = round(ori_clip_min / scale), clip_min = scale * offset, clip_max = scale * (offset + step)
 template <typename T>
-__simd_vf__ inline void ClipBoundsVF(
-    __ubuf__ T* clipMinAddr, __ubuf__ T* clipMaxAddr,
-    __ubuf__ T* oriClipMinAddr, __ubuf__ T* scaleAddr,
-    T step,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void ClipBoundsVF(__ubuf__ T* clipMinAddr, __ubuf__ T* clipMaxAddr, __ubuf__ T* oriClipMinAddr,
+                                     __ubuf__ T* scaleAddr, T step, uint32_t count, uint32_t oneRepeatSize,
+                                     uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> minReg, scaleReg, divReg, roundReg, cmReg, cxReg;
     AscendC::Reg::MaskReg mask;
@@ -636,10 +570,8 @@ __simd_vf__ inline void ClipBoundsVF(
 
 // VF_Cc: S12b→S12c→S12d loss_m = (round(ori_clip_min/scale) - ori_clip_min/scale) / step
 template <typename T>
-__simd_vf__ inline void LossMVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* oriClipMinAddr, __ubuf__ T* scaleAddr,
-    T invStep,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void LossMVF(__ubuf__ T* dstAddr, __ubuf__ T* oriClipMinAddr, __ubuf__ T* scaleAddr, T invStep,
+                                uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> minReg, scaleReg, divReg, roundReg, diffReg, dstReg;
     AscendC::Reg::MaskReg mask;
@@ -662,10 +594,8 @@ __simd_vf__ inline void LossMVF(
 
 // VF_Ca: S7a→S7b clamped_x = min(max(data, clip_min), clip_max)
 template <typename T>
-__simd_vf__ inline void ClampVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* dataAddr,
-    __ubuf__ T* clipMinAddr, __ubuf__ T* clipMaxAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void ClampVF(__ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMinAddr,
+                                __ubuf__ T* clipMaxAddr, uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> dataReg, cmReg, cxReg, tmpReg, dstReg;
     AscendC::Reg::MaskReg mask;
@@ -684,9 +614,8 @@ __simd_vf__ inline void ClampVF(
 
 // S8: clamp_min_mask = (data >= clip_min) ? 1.0 : 0.0
 template <typename T>
-__simd_vf__ inline void MaskMinVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMinAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void MaskMinVF(__ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMinAddr, uint32_t count,
+                                  uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> dataReg, cmReg, dstReg;
     AscendC::Reg::RegTensor<T> oneReg, zeroReg;
@@ -707,9 +636,8 @@ __simd_vf__ inline void MaskMinVF(
 
 // S9: clamp_max_mask = (data <= clip_max) ? 1.0 : 0.0
 template <typename T>
-__simd_vf__ inline void MaskMaxVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMaxAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void MaskMaxVF(__ubuf__ T* dstAddr, __ubuf__ T* dataAddr, __ubuf__ T* clipMaxAddr, uint32_t count,
+                                  uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> dataReg, cxReg, dstReg;
     AscendC::Reg::RegTensor<T> oneReg, zeroReg;
@@ -731,11 +659,9 @@ __simd_vf__ inline void MaskMaxVF(
 // VF_Cb: S10→S11→S12a
 // raw_x = clamped_x / scale, round_x = round(raw_x), clamped_loss = (round_x - raw_x) * inv_step
 template <typename T>
-__simd_vf__ inline void QuantVF(
-    __ubuf__ T* roundXAddr, __ubuf__ T* clampedLossAddr,
-    __ubuf__ T* clampedXAddr, __ubuf__ T* scaleAddr,
-    T invStep,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void QuantVF(__ubuf__ T* roundXAddr, __ubuf__ T* clampedLossAddr, __ubuf__ T* clampedXAddr,
+                                __ubuf__ T* scaleAddr, T invStep, uint32_t count, uint32_t oneRepeatSize,
+                                uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> cxReg, scaleReg, rawReg, roundReg, diffReg, lossReg;
     AscendC::Reg::MaskReg mask;
@@ -762,11 +688,9 @@ __simd_vf__ inline void QuantVF(
 // x_clamped_loss = (clamp_min_mask > 0.5) ? clamped_loss : loss_m
 // x_clamped_loss = (clamp_max_mask > 0.5) ? x_clamped_loss : loss_m
 template <typename T>
-__simd_vf__ inline void SelectLossVF(
-    __ubuf__ T* dstAddr,
-    __ubuf__ T* clampMinMaskAddr, __ubuf__ T* clampMaxMaskAddr,
-    __ubuf__ T* clampedLossAddr, __ubuf__ T* lossMAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void SelectLossVF(__ubuf__ T* dstAddr, __ubuf__ T* clampMinMaskAddr, __ubuf__ T* clampMaxMaskAddr,
+                                     __ubuf__ T* clampedLossAddr, __ubuf__ T* lossMAddr, uint32_t count,
+                                     uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> minMaskReg, maxMaskReg, clReg, lmReg, dstReg;
     AscendC::Reg::RegTensor<T> halfReg;
@@ -792,9 +716,8 @@ __simd_vf__ inline void SelectLossVF(
 
 // S14: output = round_x * scale
 template <typename T>
-__simd_vf__ inline void OutputVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* roundXAddr, __ubuf__ T* scaleAddr,
-    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void OutputVF(__ubuf__ T* dstAddr, __ubuf__ T* roundXAddr, __ubuf__ T* scaleAddr, uint32_t count,
+                                 uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> rxReg, scaleReg, dstReg;
     AscendC::Reg::MaskReg mask;

@@ -36,17 +36,13 @@ static Status ParseParamsInstanceNormalization(const Message* op_src, ge::Operat
 // register Add op info to GE
 REGISTER_CUSTOM_OP("InstanceNorm")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::InstanceNormalization"), 
-                   ge::AscendString("ai.onnx::9::InstanceNormalization"), 
-                   ge::AscendString("ai.onnx::10::InstanceNormalization"),
-                   ge::AscendString("ai.onnx::11::InstanceNormalization"), 
-                   ge::AscendString("ai.onnx::12::InstanceNormalization"),
-                   ge::AscendString("ai.onnx::13::InstanceNormalization"), 
-                   ge::AscendString("ai.onnx::14::InstanceNormalization"),
-                   ge::AscendString("ai.onnx::15::InstanceNormalization"), 
-                   ge::AscendString("ai.onnx::16::InstanceNormalization"),
-                   ge::AscendString("ai.onnx::17::InstanceNormalization"), 
-                   ge::AscendString("ai.onnx::18::InstanceNormalization")})
+    .OriginOpType(
+        {ge::AscendString("ai.onnx::8::InstanceNormalization"), ge::AscendString("ai.onnx::9::InstanceNormalization"),
+         ge::AscendString("ai.onnx::10::InstanceNormalization"), ge::AscendString("ai.onnx::11::InstanceNormalization"),
+         ge::AscendString("ai.onnx::12::InstanceNormalization"), ge::AscendString("ai.onnx::13::InstanceNormalization"),
+         ge::AscendString("ai.onnx::14::InstanceNormalization"), ge::AscendString("ai.onnx::15::InstanceNormalization"),
+         ge::AscendString("ai.onnx::16::InstanceNormalization"), ge::AscendString("ai.onnx::17::InstanceNormalization"),
+         ge::AscendString("ai.onnx::18::InstanceNormalization")})
     .ParseParamsFn(ParseParamsInstanceNormalization)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

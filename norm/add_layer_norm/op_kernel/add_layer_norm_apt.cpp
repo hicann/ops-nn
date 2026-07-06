@@ -25,9 +25,9 @@
 #define TILING_WELFORD_BIAS_ELEWISE 8101
 #define TILING_WELFORD_BIAS_BRC 8102
 
-extern "C" __global__ __aicore__ void add_layer_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_layer_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias,
+                                                     GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
+                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA_WITH_STRUCT(AddLayerNormRegbaseTilingData, tilingDataIn, tiling);
@@ -39,8 +39,8 @@ extern "C" __global__ __aicore__ void add_layer_norm(
         op.Init(x1, x2, gamma, beta, bias, y, mean, rstd, x);
         op.Process();
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_ELEWISE)) {
-        AddLayerNorm::RegbaseFullLoad<
-            DTYPE_X1, DTYPE_X2, DTYPE_GAMMA, DTYPE_BETA, DTYPE_Y, TILING_FULL_LOAD_BIAS_ELEWISE>
+        AddLayerNorm::RegbaseFullLoad<DTYPE_X1, DTYPE_X2, DTYPE_GAMMA, DTYPE_BETA, DTYPE_Y,
+                                      TILING_FULL_LOAD_BIAS_ELEWISE>
             op(tilingData);
         op.Init(x1, x2, gamma, beta, bias, y, mean, rstd, x);
         op.Process();

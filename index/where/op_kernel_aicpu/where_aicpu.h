@@ -13,14 +13,14 @@
 
 namespace aicpu {
 class WhereCpuKernel : public CpuKernel {
- public:
-  WhereCpuKernel() = default;
-  ~WhereCpuKernel() override = default;
-  uint32_t Compute(CpuKernelContext &ctx) override;
+public:
+    WhereCpuKernel() = default;
+    ~WhereCpuKernel() override = default;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 
- private:
-  template <typename T>
-  uint32_t WhereCompute(CpuKernelContext &ctx);
+private:
+    template <typename T>
+    uint32_t WhereCompute(CpuKernelContext& ctx);
 };
 } // namespace aicpu
 #endif

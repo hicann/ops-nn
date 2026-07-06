@@ -18,14 +18,13 @@
 #include <cstring>
 #include "register/op_def_registry.h"
 #include "common/op_host/op_tiling/conv_tiling_templates_registry.h"
- 
+
 using namespace platform_ascendc;
 using namespace optiling::conv_ops_tiling;
- 
+
 namespace optiling {
 
-CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2,
-    static_cast<int32_t>(NpuArch::DAV_3510), 0);
+CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_3510), 0);
 
 namespace conv_ops_tiling {
 ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
@@ -53,7 +52,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
     SetApiInputPlatformInfo();
     return ge::GRAPH_SUCCESS;
 }
- 
+
 void Conv3dBaseTilingV2::SetApiInputPlatformInfo()
 {
     apiInputPlatformInfo_.npuArch = opInfo_->npuArch;
@@ -65,9 +64,10 @@ void Conv3dBaseTilingV2::SetApiInputPlatformInfo()
     apiInputPlatformInfo_.btSize = opInfo_->btSize;
     apiInputPlatformInfo_.fbSize = opInfo_->fbSize;
     OP_LOGD(context_->GetNodeName(),
-        "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld " \
-        "btSize: %ld, fbSize: %ld.", paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize,
-        opInfo_->l0aSize, opInfo_->l0bSize, opInfo_->ubSize, opInfo_->btSize, opInfo_->fbSize);
+            "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld "
+            "btSize: %ld, fbSize: %ld.",
+            paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize, opInfo_->l0aSize, opInfo_->l0bSize,
+            opInfo_->ubSize, opInfo_->btSize, opInfo_->fbSize);
 }
 
 ge::graphStatus Conv3dBaseTilingV2::ApiTilingGetPlatformInfo()
@@ -81,14 +81,14 @@ ge::graphStatus Conv3dBaseTilingV2::ApiTilingGetPlatformInfo()
 
 void Conv3dBaseTilingV2::GetDescInfo()
 {
-    descInfo_.fMapFormat =
-        static_cast<ge::Format>(GetPrimaryFormat(context_->GetInputDesc(INPUT_FMAP_INDEX)->GetStorageFormat()));
+    descInfo_.fMapFormat = static_cast<ge::Format>(
+        GetPrimaryFormat(context_->GetInputDesc(INPUT_FMAP_INDEX)->GetStorageFormat()));
     descInfo_.fMapDtype = context_->GetInputDesc(INPUT_FMAP_INDEX)->GetDataType();
-    descInfo_.weightFormat =
-        static_cast<ge::Format>(GetPrimaryFormat(context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetStorageFormat()));
+    descInfo_.weightFormat = static_cast<ge::Format>(
+        GetPrimaryFormat(context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetStorageFormat()));
     descInfo_.weightDtype = context_->GetInputDesc(INPUT_WEIGHT_INDEX)->GetDataType();
-    descInfo_.outFormat =
-        static_cast<ge::Format>(GetPrimaryFormat(context_->GetOutputDesc(OUTPUT_INDEX)->GetStorageFormat()));
+    descInfo_.outFormat = static_cast<ge::Format>(
+        GetPrimaryFormat(context_->GetOutputDesc(OUTPUT_INDEX)->GetStorageFormat()));
     descInfo_.outDtype = context_->GetOutputDesc(OUTPUT_INDEX)->GetDataType();
     if (flagInfo_.hasBias) {
         uint32_t biasIdx = flagInfo_.quantFlag ? QUANT_INPUT_BIAS_INDEX : INPUT_BIAS_INDEX;
@@ -103,7 +103,7 @@ void Conv3dBaseTilingV2::GetDescInfo()
     flagInfo_.isConv3dDequant = !flagInfo_.quantFlag && descInfo_.fMapDtype == ge::DataType::DT_INT8;
     paramInfo_.paramsFormat = {descInfo_.fMapFormat, GetWeightFormat(), descInfo_.outFormat};
 }
- 
+
 ge::graphStatus Conv3dBaseTilingV2::CheckNullPtr()
 {
     if (context_->GetAttrs() == nullptr) {
@@ -174,11 +174,9 @@ ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
     if (ParseQuantDtypeLegal() != ge::GRAPH_SUCCESS || ParseStrideLegal() != ge::GRAPH_SUCCESS ||
-        ParseDilationLegal() != ge::GRAPH_SUCCESS ||
-        ParsePadLegal() != ge::GRAPH_SUCCESS || ParseGroupLegal() != ge::GRAPH_SUCCESS ||
-        ParseQuantDataFormatLegal() != ge::GRAPH_SUCCESS ||
-        ParseQuantOffsetXLegal() != ge::GRAPH_SUCCESS ||
-        ParseQuantRoundModeLegal() != ge::GRAPH_SUCCESS) {
+        ParseDilationLegal() != ge::GRAPH_SUCCESS || ParsePadLegal() != ge::GRAPH_SUCCESS ||
+        ParseGroupLegal() != ge::GRAPH_SUCCESS || ParseQuantDataFormatLegal() != ge::GRAPH_SUCCESS ||
+        ParseQuantOffsetXLegal() != ge::GRAPH_SUCCESS || ParseQuantRoundModeLegal() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     optiling::conv_ops_tiling::InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
@@ -205,10 +203,7 @@ void Conv3dBaseTilingV2::SetScaleBiasFlag()
     flagInfo_.hasScale = context_->GetOptionalInputShape(tmpScaleIdx) != nullptr;
 }
 
-void Conv3dBaseTilingV2::SetQuantFlag()
-{
-    flagInfo_.quantFlag = isQuantConv3D(context_->GetNodeType());
-}
+void Conv3dBaseTilingV2::SetQuantFlag() { flagInfo_.quantFlag = isQuantConv3D(context_->GetNodeType()); }
 
 ge::Format Conv3dBaseTilingV2::GetWeightFormat() const
 {
@@ -234,7 +229,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3DAxisPosInfo()
 {
     auto fMapDesc = context_->GetInputDesc(INPUT_FMAP_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapDesc);
-    string fmapOriFormat = ge::TypeUtils::FormatToSerialString(fMapDesc->GetOriginFormat());    
+    string fmapOriFormat = ge::TypeUtils::FormatToSerialString(fMapDesc->GetOriginFormat());
     OP_TILING_CHECK(fmapOriFormat != "NCDHW" && fmapOriFormat != "NDHWC",
                     OP_LOGE(context_->GetNodeName(), "%s AscendC: unsupported fmapOriFormat %s.",
                             paramInfo_.nodeType.c_str(), fmapOriFormat.c_str()),
@@ -270,8 +265,9 @@ ConvGroupType Conv3dBaseTilingV2::GetGroupsInfo()
     auto n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_N_IDX);
 
     bool enableOptGroup = ConvAlignB(optGroupInfo_.cinOpt, k0) * shapeInfo_.kd * shapeInfo_.kh * shapeInfo_.kw *
-        ConvAlignB(optGroupInfo_.coutOpt, n0) * WEIGHT_UB_NUMS * dtypeSizeTab.at(descInfo_.weightDtype) <=
-        apiInputPlatformInfo_.ubSize - OPT_GROUP_RESERVED_SIZE;
+                              ConvAlignB(optGroupInfo_.coutOpt, n0) * WEIGHT_UB_NUMS *
+                              dtypeSizeTab.at(descInfo_.weightDtype) <=
+                          apiInputPlatformInfo_.ubSize - OPT_GROUP_RESERVED_SIZE;
     if (enableOptGroup) {
         OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Opt Group.", paramInfo_.nodeType.c_str());
         return ConvGroupType::OPT_GROUP_CONV;
@@ -368,11 +364,10 @@ ge::graphStatus Conv3dBaseTilingV2::GetWorkspaceSize()
 
 ge::graphStatus Conv3dBaseTilingV2::PostTiling()
 {
-    void *tilingBuf = context_->GetRawTilingData()->GetData();
+    void* tilingBuf = context_->GetRawTilingData()->GetData();
     size_t tilingBufCap = context_->GetRawTilingData()->GetCapacity();
     if (tilingBuf == nullptr || tilingBufCap < sizeof(tilingData_)) {
-        OP_LOGE(context_->GetNodeName(),
-                "Conv3D AscendC: tiling buffer null or capacity too small, cap=%zu need=%zu.",
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: tiling buffer null or capacity too small, cap=%zu need=%zu.",
                 tilingBufCap, sizeof(tilingData_));
         return ge::GRAPH_FAILED;
     }
@@ -384,12 +379,12 @@ ge::graphStatus Conv3dBaseTilingV2::PostTiling()
     context_->GetRawTilingData()->SetDataSize(sizeof(tilingData_));
     if (flagInfo_.mSplitModeFlag) {
         context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.doDim * numBlocksRes.mDim * numBlocksRes.nDim *
-            numBlocksRes.groupDim);
+                              numBlocksRes.groupDim);
     } else {
         context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.doDim * numBlocksRes.nDim * numBlocksRes.hoDim *
-            numBlocksRes.groupDim);
+                              numBlocksRes.groupDim);
     }
     return ge::GRAPH_SUCCESS;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

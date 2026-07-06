@@ -44,10 +44,7 @@ template <typename Tp>
 struct is_same<Tp, Tp> : public true_type {};
 
 // 公共函数
-__aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : (x + y - 1) / y;
-}
+__aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y) { return y == 0 ? x : (x + y - 1) / y; }
 
 // 公共结构体
 struct BlockParamsCommon {
@@ -119,8 +116,8 @@ struct TilingParamsCommon {
 // [row, col] -> [col, row]: row:align16, col:align8
 // only support float/int32_t
 template <typename T>
-__aicore__ inline void TransposeBase16M8(
-    const LocalTensor<T>& dstUb, const LocalTensor<T>& srcUb, uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeBase16M8(const LocalTensor<T>& dstUb, const LocalTensor<T>& srcUb, uint64_t rowNum,
+                                         uint64_t colNum)
 {
     uint64_t srcAddrList[TRANS_ADDR_LEN];
     uint64_t dstAddrList[TRANS_ADDR_LEN];
@@ -147,19 +144,19 @@ __aicore__ inline void TransposeBase16M8(
 // [row, col] -> [col, row]: row:align8, col:align16
 // only support float/int32_t
 template <typename T>
-__aicore__ inline void TransposeBase8M16(
-    const LocalTensor<T>& dstUb, const LocalTensor<T>& srcUb, uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeBase8M16(const LocalTensor<T>& dstUb, const LocalTensor<T>& srcUb, uint64_t rowNum,
+                                         uint64_t colNum)
 {
     uint64_t srcAddrList[TRANS_ADDR_LEN];
     uint64_t dstAddrList[TRANS_ADDR_LEN];
 
     for (uint64_t r = 0; r < colNum / TRANS_ADDR_LEN; r++) {
         for (uint64_t i = 0; i < TRANS_ADDR_LEN; i++) {
-            srcAddrList[i] =
-                (uint64_t)(srcUb[r * TRANS_ADDR_LEN + i % BLOCK_NUM_32 * colNum + i / BLOCK_NUM_32 * BLOCK_NUM_32]
-                               .GetPhyAddr());
-            dstAddrList[i] =
-                (uint64_t)(dstUb[r * TRANS_ADDR_LEN * rowNum + (i % 2 * BLOCK_NUM_32 + i / 2) * rowNum].GetPhyAddr());
+            srcAddrList[i] = (uint64_t)(srcUb[r * TRANS_ADDR_LEN + i % BLOCK_NUM_32 * colNum +
+                                              i / BLOCK_NUM_32 * BLOCK_NUM_32]
+                                            .GetPhyAddr());
+            dstAddrList[i] = (uint64_t)(dstUb[r * TRANS_ADDR_LEN * rowNum + (i % 2 * BLOCK_NUM_32 + i / 2) * rowNum]
+                                            .GetPhyAddr());
         }
         struct TransDataTo5HDParams transDataParams;
         transDataParams.repeatTimes = rowNum / BLOCK_NUM_32;
@@ -178,8 +175,8 @@ __aicore__ inline void TransposeBase8M16(
 // [row, col] -> [col, row]: row:align16, col:align16
 // only support float16/bfloat16
 template <typename T>
-__aicore__ inline void TransposeBase16M16(
-    const LocalTensor<T>& dstUb, const LocalTensor<T>& srcUb, uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeBase16M16(const LocalTensor<T>& dstUb, const LocalTensor<T>& srcUb, uint64_t rowNum,
+                                          uint64_t colNum)
 {
     uint64_t srcAddrList[TRANS_ADDR_LEN];
     uint64_t dstAddrList[TRANS_ADDR_LEN];
@@ -211,37 +208,32 @@ __aicore__ inline void ProcessCommon(DerivedClass* self, uint64_t ncIndex)
             break;
         }
         self->block_.ncCntIndex = ncIndex;
-        self->block_.ncShape =
-            self->block_.ncCntIndex >= (self->params_.ncCnt - 1UL) ? 
-            self->params_.ncTail : self->params_.baseNc;
-            
+        self->block_.ncShape = self->block_.ncCntIndex >= (self->params_.ncCnt - 1UL) ? self->params_.ncTail :
+                                                                                        self->params_.baseNc;
+
         for (uint64_t j = 0; j < self->params_.doCnt; j++) {
             self->block_.doCntIndex = j;
-            self->block_.doShape = 
-                self->block_.doCntIndex >= (self->params_.doCnt - 1) ? 
-                self->params_.doTail : self->params_.baseDo;
-                
+            self->block_.doShape = self->block_.doCntIndex >= (self->params_.doCnt - 1) ? self->params_.doTail :
+                                                                                          self->params_.baseDo;
+
             for (uint64_t k = 0; k < self->params_.hoCnt; k++) {
                 self->block_.hoCntIndex = k;
-                self->block_.hoShape = 
-                    self->block_.hoCntIndex >= (self->params_.hoCnt - 1) ?
-                    self->params_.hoTail : self->params_.baseHo;
-                    
+                self->block_.hoShape = self->block_.hoCntIndex >= (self->params_.hoCnt - 1) ? self->params_.hoTail :
+                                                                                              self->params_.baseHo;
+
                 for (uint64_t l = 0; l < self->params_.woCnt; l++) {
                     self->block_.woCntIndex = l;
-                    self->block_.woShape = 
-                        self->block_.woCntIndex >= (self->params_.woCnt - 1) ?
-                        self->params_.woTail : self->params_.baseWo;
-                        
-                    self->block_.offsetGrad =
-                        self->block_.ncCntIndex * self->params_.baseNc * self->params_.doDim *
-                            self->params_.hoDim * self->params_.woDim +
-                        self->block_.doCntIndex * self->params_.baseDo * self->params_.hoDim *
-                            self->params_.woDim +
-                        self->block_.hoCntIndex * self->params_.baseHo * self->params_.woDim +
-                        self->block_.woCntIndex * self->params_.baseWo;
+                    self->block_.woShape = self->block_.woCntIndex >= (self->params_.woCnt - 1) ? self->params_.woTail :
+                                                                                                  self->params_.baseWo;
+
+                    self->block_.offsetGrad = self->block_.ncCntIndex * self->params_.baseNc * self->params_.doDim *
+                                                  self->params_.hoDim * self->params_.woDim +
+                                              self->block_.doCntIndex * self->params_.baseDo * self->params_.hoDim *
+                                                  self->params_.woDim +
+                                              self->block_.hoCntIndex * self->params_.baseHo * self->params_.woDim +
+                                              self->block_.woCntIndex * self->params_.baseWo;
                     self->block_.offsetArgmax = self->block_.offsetGrad;
-                    
+
                     // 调用派生类的CalcBlock函数
                     self->CalcBlock();
                 }

@@ -30,16 +30,16 @@ public:
 
     InferDataTypeContextFaker& NodeIoNum(size_t inputNum, size_t outputNum);
 
-    InferDataTypeContextFaker& IrInstanceNum(
-        const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum);
+    InferDataTypeContextFaker& IrInstanceNum(const std::vector<uint32_t>& inputInstanceNum,
+                                             const std::vector<uint32_t>& outputInstanceNum);
 
     InferDataTypeContextFaker& IrInstanceNum(const std::vector<uint32_t>& instanceNum);
 
-    InferDataTypeContextFaker& NodeInputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
+    InferDataTypeContextFaker& NodeInputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                           ge::Format storageFormat);
 
-    InferDataTypeContextFaker& NodeOutputTd(
-        int32_t index, ge::DataType dtype, ge::Format originFormat, ge::Format storageFormat);
+    InferDataTypeContextFaker& NodeOutputTd(int32_t index, ge::DataType dtype, ge::Format originFormat,
+                                            ge::Format storageFormat);
 
     template <typename T>
     InferDataTypeContextFaker& Attr(const std::string& attrName, T attr)

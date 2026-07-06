@@ -44,8 +44,7 @@ constexpr uint8_t TILING_KEY_ONE = 1;
 constexpr uint8_t TILING_KEY_TWO = 2;
 constexpr uint8_t TILING_KEY_FACTOR = 10;
 
-class AdaLayerNormTiling
-{
+class AdaLayerNormTiling {
 public:
     explicit AdaLayerNormTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus Init(uint8_t theCode);
@@ -217,8 +216,8 @@ void AdaLayerNormTiling::FillTilingData()
     tilingData.set_hasBias(hasBias);
     tilingData.set_hasSmooth(hasSmooth);
 
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 }
 
@@ -266,10 +265,9 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
     compileInfo->ubSizePlatForm = ubSizePlatForm;
     compileInfo->isRegBase = IsRegbaseSocVersion(context);
 
-    OP_TILING_CHECK(
-        compileInfo->coreNum <= 0,
-        OP_LOGE(context->GetNodeName(), "AdaLayerNormTiling GetHardwareInfo Failed"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(compileInfo->coreNum <= 0,
+                    OP_LOGE(context->GetNodeName(), "AdaLayerNormTiling GetHardwareInfo Failed"),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

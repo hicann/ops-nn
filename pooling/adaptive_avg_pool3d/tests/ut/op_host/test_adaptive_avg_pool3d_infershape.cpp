@@ -16,18 +16,11 @@
 
 using namespace ge;
 
-class AdaptiveAvgPool3dInferShapeTest : public testing::Test
-{
+class AdaptiveAvgPool3dInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3d InferShape Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3d InferShape Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3d InferShape Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3d InferShape Test TearDown" << std::endl; }
 };
 
 TEST_F(AdaptiveAvgPool3dInferShapeTest, adaptive_avg_pool3d_infershape_test1)

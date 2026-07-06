@@ -67,10 +67,9 @@ public:
     static constexpr int64_t l1N = BlockMmadBuilder::l1N;
     static constexpr int64_t l1K = BlockMmadBuilder::l1K;
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-                                               typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA,
-                                               transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -195,10 +194,7 @@ public:
         return params;
     }
 
-    static int64_t GetBlockNum(ProblemShape shape)
-    {
-        return BlockSchedulerOp::GetBlockNum(shape);
-    }
+    static int64_t GetBlockNum(ProblemShape shape) { return BlockSchedulerOp::GetBlockNum(shape); }
 
     __aicore__ inline void operator()(Params const& params)
     {
@@ -244,4 +240,3 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

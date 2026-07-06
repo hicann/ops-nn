@@ -26,6 +26,6 @@ public:
     __aicore__ inline Conv3DBpFilterIntf() {}
 };
 
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 
 #endif

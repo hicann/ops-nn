@@ -26,7 +26,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})             // 支持format格式
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND}) // 未确定大小shape对应format格式
             .AutoContiguous();                                  // 内存自动连续化
-        
+
         /* ...此处补充其他输入输出参数说明 */
 
         // 输出参数说明

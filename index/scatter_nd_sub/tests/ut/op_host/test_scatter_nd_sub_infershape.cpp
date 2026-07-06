@@ -14,32 +14,24 @@
 #include <iostream>
 #include "infershape_case_executor.h"
 
-class ScatterNdSubInfershape : public testing::Test
-{
+class ScatterNdSubInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ScatterNdSubInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ScatterNdSubInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ScatterNdSubInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ScatterNdSubInfershape TearDown" << std::endl; }
 };
 
 TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_test1)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "ScatterNdSub",
-        {
-            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{2, 1}, {2, 1}}, ge::DT_INT32, ge::FORMAT_ND},
-            {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                          {{{2, 1}, {2, 1}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                          {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {4, 8},
     };
@@ -48,16 +40,15 @@ TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_test1)
 
 TEST_F(ScatterNdSubInfershape, scatter_nd_sub_infershape_test2)
 {
-    gert::InfershapeContextPara infershapeContextPara(
-        "ScatterNdSub",
-        {
-            {{{8, 16}, {8, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{4, 1}, {4, 1}}, ge::DT_INT64, ge::FORMAT_ND},
-            {{{4, 16}, {4, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        });
+    gert::InfershapeContextPara infershapeContextPara("ScatterNdSub",
+                                                      {
+                                                          {{{8, 16}, {8, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                          {{{4, 1}, {4, 1}}, ge::DT_INT64, ge::FORMAT_ND},
+                                                          {{{4, 16}, {4, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                      },
+                                                      {
+                                                          {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {
         {8, 16},
     };

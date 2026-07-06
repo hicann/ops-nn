@@ -16,33 +16,34 @@
 #include "op_api_ut_common/tensor_desc.h"
 
 using namespace std;
-namespace{
+namespace {
 class convolution_tbc_backward_test : public testing::Test {
- protected:
-  static void SetUpTestCase() { std::cout << "convolution_tbc_backward_test SetUp" << std::endl; }
+protected:
+    static void SetUpTestCase() { std::cout << "convolution_tbc_backward_test SetUp" << std::endl; }
 
-  static void TearDownTestCase() { std::cout << "convolution_tbc_backward_test TearDown" << std::endl; }
+    static void TearDownTestCase() { std::cout << "convolution_tbc_backward_test TearDown" << std::endl; }
 };
 
-TEST_F(convolution_tbc_backward_test, case_normal) {
-  auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto bias_desc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
-  int64_t pad = 0;
-  int8_t cubeMathType = 1;
-  auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(convolution_tbc_backward_test, case_normal)
+{
+    auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto bias_desc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t pad = 0;
+    int8_t cubeMathType = 1;
+    auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                         bias_desc, pad, cubeMathType),
-                      OUTPUT(gradInput, gradWeight, gradBias));
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
+                        OUTPUT(gradInput, gradWeight, gradBias));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 // check NULLPTR
@@ -59,32 +60,32 @@ TEST_F(convolution_tbc_backward_test, case_nullptr)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(nullptr, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(nullptr, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut2 = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, nullptr, weight_tensor_desc,
-                                                            bias_desc, pad, cubeMathType),
+    auto ut2 = OP_API_UT(aclnnConvTbcBackward,
+                         INPUT(self_desc, nullptr, weight_tensor_desc, bias_desc, pad, cubeMathType),
                          OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut2.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut3 = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, nullptr,
-                                                            bias_desc, pad, cubeMathType),
+    auto ut3 = OP_API_UT(aclnnConvTbcBackward,
+                         INPUT(self_desc, input_tensor_desc, nullptr, bias_desc, pad, cubeMathType),
                          OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut3.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut4 = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                            nullptr, pad, cubeMathType),
+    auto ut4 = OP_API_UT(aclnnConvTbcBackward,
+                         INPUT(self_desc, input_tensor_desc, weight_tensor_desc, nullptr, pad, cubeMathType),
                          OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
@@ -106,8 +107,8 @@ TEST_F(convolution_tbc_backward_test, case_empty_tensor)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -115,34 +116,31 @@ TEST_F(convolution_tbc_backward_test, case_empty_tensor)
     // EXPECT_EQ(aclRet, ACLNN_SUCCESS);  // CI芯片切换导致UT异常，临时下线
 }
 
-TEST_F(convolution_tbc_backward_test, case_dtype_support) {
-  auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto bias_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
-  int64_t pad = 0;
-  int8_t cubeMathType = 1;
-  auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(convolution_tbc_backward_test, case_dtype_support)
+{
+    auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto bias_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t pad = 0;
+    int8_t cubeMathType = 1;
+    auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                         bias_desc, pad, cubeMathType),
-                      OUTPUT(gradInput, gradWeight, gradBias));
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
+                        OUTPUT(gradInput, gradWeight, gradBias));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_tbc_backward_test, case_dtype_not_support) {
-    vector<aclDataType> ValidList = {
-        ACL_DOUBLE,
-        ACL_INT32,
-        ACL_COMPLEX64,
-        ACL_COMPLEX128,
-        ACL_DT_UNDEFINED};
+TEST_F(convolution_tbc_backward_test, case_dtype_not_support)
+{
+    vector<aclDataType> ValidList = {ACL_DOUBLE, ACL_INT32, ACL_COMPLEX64, ACL_COMPLEX128, ACL_DT_UNDEFINED};
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
         // input(TBC1) weight(LC1C0) bias(c0), pad
@@ -156,8 +154,8 @@ TEST_F(convolution_tbc_backward_test, case_dtype_not_support) {
         auto gradWeight = TensorDesc({1, 2, 2}, ValidList[i], ACL_FORMAT_NCL);
         auto gradBias = TensorDesc({2}, ValidList[i], ACL_FORMAT_ND);
 
-        auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                               bias_desc, pad, cubeMathType),
+        auto ut = OP_API_UT(aclnnConvTbcBackward,
+                            INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                             OUTPUT(gradInput, gradWeight, gradBias));
 
         // SAMPLE: only test GetWorkspaceSize
@@ -202,8 +200,8 @@ TEST_F(convolution_tbc_backward_test, case_format_failed)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_NCL);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -223,8 +221,8 @@ TEST_F(convolution_tbc_backward_test, case_format_succ_0)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -244,8 +242,8 @@ TEST_F(convolution_tbc_backward_test, case_format_succ_1)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -265,8 +263,8 @@ TEST_F(convolution_tbc_backward_test, case_shape_0)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -274,25 +272,26 @@ TEST_F(convolution_tbc_backward_test, case_shape_0)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend950_test_case_normal) {
-  auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto bias_desc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
-  int64_t pad = 0;
-  int8_t cubeMathType = 1;
-  auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
-  auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_normal)
+{
+    auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto bias_desc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t pad = 0;
+    int8_t cubeMathType = 1;
+    auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
+    auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                         bias_desc, pad, cubeMathType),
-                      OUTPUT(gradInput, gradWeight, gradBias));
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
+                        OUTPUT(gradInput, gradWeight, gradBias));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 // check NULLPTR
@@ -309,32 +308,32 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_nullptr)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(nullptr, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(nullptr, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut2 = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, nullptr, weight_tensor_desc,
-                                                            bias_desc, pad, cubeMathType),
+    auto ut2 = OP_API_UT(aclnnConvTbcBackward,
+                         INPUT(self_desc, nullptr, weight_tensor_desc, bias_desc, pad, cubeMathType),
                          OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut2.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut3 = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, nullptr,
-                                                            bias_desc, pad, cubeMathType),
+    auto ut3 = OP_API_UT(aclnnConvTbcBackward,
+                         INPUT(self_desc, input_tensor_desc, nullptr, bias_desc, pad, cubeMathType),
                          OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
     aclRet = ut3.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut4 = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                            nullptr, pad, cubeMathType),
+    auto ut4 = OP_API_UT(aclnnConvTbcBackward,
+                         INPUT(self_desc, input_tensor_desc, weight_tensor_desc, nullptr, pad, cubeMathType),
                          OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     workspaceSize = 0;
@@ -356,8 +355,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_empty_tensor)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -365,34 +364,31 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_empty_tensor)
     // EXPECT_EQ(aclRet, ACLNN_SUCCESS);  // CI芯片切换导致UT异常，临时下线
 }
 
-TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_support) {
-  auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto bias_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
-  int64_t pad = 0;
-  int8_t cubeMathType = 1;
-  auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
-  auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_support)
+{
+    auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto self_desc = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto bias_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t pad = 0;
+    int8_t cubeMathType = 1;
+    auto gradInput = TensorDesc({5, 1, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gradBias = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                         bias_desc, pad, cubeMathType),
-                      OUTPUT(gradInput, gradWeight, gradBias));
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
+                        OUTPUT(gradInput, gradWeight, gradBias));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_not_support) {
-    vector<aclDataType> ValidList = {
-        ACL_DOUBLE,
-        ACL_INT32,
-        ACL_COMPLEX64,
-        ACL_COMPLEX128,
-        ACL_DT_UNDEFINED};
+TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_not_support)
+{
+    vector<aclDataType> ValidList = {ACL_DOUBLE, ACL_INT32, ACL_COMPLEX64, ACL_COMPLEX128, ACL_DT_UNDEFINED};
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
         // input(TBC1) weight(LC1C0) bias(c0), pad
@@ -406,8 +402,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_dtype_not_support) {
         auto gradWeight = TensorDesc({1, 2, 2}, ValidList[i], ACL_FORMAT_NCL);
         auto gradBias = TensorDesc({2}, ValidList[i], ACL_FORMAT_ND);
 
-        auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                               bias_desc, pad, cubeMathType),
+        auto ut = OP_API_UT(aclnnConvTbcBackward,
+                            INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                             OUTPUT(gradInput, gradWeight, gradBias));
 
         // SAMPLE: only test GetWorkspaceSize
@@ -452,8 +448,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_format_failed)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_NCL);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -473,8 +469,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_format_succ_0)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -494,8 +490,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_format_succ_1)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -515,8 +511,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_case_shape_0)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -536,8 +532,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_8bit_test_case)
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_HIFLOAT8, ACL_FORMAT_ND);
     auto gradBias = TensorDesc({2}, ACL_HIFLOAT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     // SAMPLE: only test GetworkspaceSize
     uint64_t workspaceSize = 0;
@@ -545,7 +541,8 @@ TEST_F(convolution_tbc_backward_test, ascend950_8bit_test_case)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(convolution_tbc_backward_test, ascend950_test_self_size_zero_error) {
+TEST_F(convolution_tbc_backward_test, ascend950_test_self_size_zero_error)
+{
     auto input_tensor_desc = TensorDesc({5, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto weight_tensor_desc = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto self_desc = TensorDesc({0, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
@@ -556,11 +553,11 @@ TEST_F(convolution_tbc_backward_test, ascend950_test_self_size_zero_error) {
     auto gradWeight = TensorDesc({1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCL);
     auto gradBias = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnConvTbcBackward, INPUT(self_desc, input_tensor_desc, weight_tensor_desc,
-                                                           bias_desc, pad, cubeMathType),
+    auto ut = OP_API_UT(aclnnConvTbcBackward,
+                        INPUT(self_desc, input_tensor_desc, weight_tensor_desc, bias_desc, pad, cubeMathType),
                         OUTPUT(gradInput, gradWeight, gradBias));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-}
+} // namespace

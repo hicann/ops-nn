@@ -24,12 +24,11 @@ constexpr int32_t SIGN_BIT_SHIFT = 31;
 constexpr uint32_t MAX_TENSOR_NUM = 8;
 
 template <typename T>
-class IndexCheckKernel
-{
+class IndexCheckKernel {
 public:
     __aicore__ inline IndexCheckKernel() = delete;
-    __aicore__ inline IndexCheckKernel(
-        GM_ADDR bounds, GM_ADDR indexList, GM_ADDR workSpace, const IndexCheckTilingData& tiling, TPipe& pipe)
+    __aicore__ inline IndexCheckKernel(GM_ADDR bounds, GM_ADDR indexList, GM_ADDR workSpace,
+                                       const IndexCheckTilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling, indexList);
         InitBounds(bounds);
@@ -56,8 +55,7 @@ public:
                 idxAddrOffset = formerCoreDataNum * blockIdx_;
             } else {
                 dataNum = tailCoreDataNum;
-                idxAddrOffset = formerCoreDataNum * formerCoreNum +
-                                tailCoreDataNum * (blockIdx_ - formerCoreNum);
+                idxAddrOffset = formerCoreDataNum * formerCoreNum + tailCoreDataNum * (blockIdx_ - formerCoreNum);
             }
 
             if (dataNum == 0) {
@@ -123,11 +121,10 @@ private:
                 idx += bound;
             }
             ascendc_assert((idx >= 0),
-                "Index out of range in dimension %lu: index value %ld is too negative for bounds %ld!\n",
-                tensorIdx, static_cast<int64_t>(idxVal), bound);
-            ascendc_assert((idx < bound),
-                "Index out of range in dimension %lu: index value %ld exceeds bounds %ld!\n",
-                tensorIdx, static_cast<int64_t>(idxVal), bound);
+                           "Index out of range in dimension %lu: index value %ld is too negative for bounds %ld!\n",
+                           tensorIdx, static_cast<int64_t>(idxVal), bound);
+            ascendc_assert((idx < bound), "Index out of range in dimension %lu: index value %ld exceeds bounds %ld!\n",
+                           tensorIdx, static_cast<int64_t>(idxVal), bound);
         }
     }
 
@@ -177,8 +174,8 @@ private:
         WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
         ascendc_assert((minValue >= 0.0f),
-               "Index out of range in dimension %lu: index value %f is too negative for bounds %ld!\n",
-               tensorIdx, minValue, bounds_[tensorIdx]);
+                       "Index out of range in dimension %lu: index value %f is too negative for bounds %ld!\n",
+                       tensorIdx, minValue, bounds_[tensorIdx]);
 
         CheckUpperBound(floatLocal, workLocal, workingLocal, boundsLocal, tensorIdx, count);
 
@@ -190,9 +187,9 @@ private:
         boundsQue_.FreeTensor(boundsLocal);
     }
 
-    __aicore__ inline void CheckUpperBound(LocalTensor<float>& floatLocal,
-        LocalTensor<float>& workLocal, LocalTensor<int32_t>& workingLocal,
-        LocalTensor<int32_t>& boundsLocal, uint64_t tensorIdx, uint32_t count)
+    __aicore__ inline void CheckUpperBound(LocalTensor<float>& floatLocal, LocalTensor<float>& workLocal,
+                                           LocalTensor<int32_t>& workingLocal, LocalTensor<int32_t>& boundsLocal,
+                                           uint64_t tensorIdx, uint32_t count)
     {
         Duplicate(boundsLocal, static_cast<int32_t>(bounds_[tensorIdx]), count);
         PipeBarrier<PIPE_V>();
@@ -210,9 +207,8 @@ private:
         SetFlag<HardEvent::S_V>(EVENT_ID0);
         WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
-        ascendc_assert((maxValue < 0.0f),
-               "Index out of range in dimension %lu: index value %f exceeds bounds %ld!\n",
-               tensorIdx, maxValue, bounds_[tensorIdx]);
+        ascendc_assert((maxValue < 0.0f), "Index out of range in dimension %lu: index value %f exceeds bounds %ld!\n",
+                       tensorIdx, maxValue, bounds_[tensorIdx]);
     }
 
     __aicore__ inline __gm__ T* GetTensorAddr(GM_ADDR indexListPtr, const uint64_t offset)

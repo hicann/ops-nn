@@ -19,11 +19,11 @@
 #include <map>
 using namespace std;
 
-void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_infos, map<string, string> &aicore_spec,
-                      map<string, string> &intrinsics);
+void GetPlatFormInfos(const char* compile_info_str, map<string, string>& soc_infos, map<string, string>& aicore_spec,
+                      map<string, string>& intrinsics);
 
-void GetPlatFormInfos(const char *compile_info_str, map<string, string> &soc_infos, map<string, string> &aicore_spec,
-                      map<string, string> &intrinsics, map<string, string> &version);
+void GetPlatFormInfos(const char* compile_info_str, map<string, string>& soc_infos, map<string, string>& aicore_spec,
+                      map<string, string>& intrinsics, map<string, string>& version);
 
 std::string GetExeDirPath();
 

@@ -29,8 +29,7 @@ __global__ __aicore__ void foreach_expm1(GM_ADDR x, GM_ADDR y, GM_ADDR workspace
     REGISTER_TILING_DEFAULT(ForeachExpm1TilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachExpm1TilingData, tilingData, tiling);
 
-    const __gm__ ForeachExpm1TilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachExpm1TilingData*>(tiling);
+    const __gm__ ForeachExpm1TilingData* tilingGm = reinterpret_cast<const __gm__ ForeachExpm1TilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_FLOAT)) {
         NsForeachExpm1::Process<float>(x, y, tilingGm);

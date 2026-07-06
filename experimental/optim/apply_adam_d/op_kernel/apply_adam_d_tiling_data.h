@@ -24,9 +24,9 @@
 #define APPLY_ADAM_D_TILING_DATA_H_
 
 struct ApplyAdamDTilingData {
-    int64_t totalNum = 0;      // var 元素总数(= GetShapeSize，rank 拍平后)
-    int64_t blockFactor = 0;   // 每核元素数(按 32B/sizeof(T) 对齐)
-    int64_t ubFactor = 0;      // 单次 UB loop 元素数(tileLen)
+    int64_t totalNum = 0;    // var 元素总数(= GetShapeSize，rank 拍平后)
+    int64_t blockFactor = 0; // 每核元素数(按 32B/sizeof(T) 对齐)
+    int64_t ubFactor = 0;    // 单次 UB loop 元素数(tileLen)
 };
 
-#endif  // APPLY_ADAM_D_TILING_DATA_H_
+#endif // APPLY_ADAM_D_TILING_DATA_H_

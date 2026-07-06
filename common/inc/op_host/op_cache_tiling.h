@@ -33,16 +33,15 @@ const std::string WQBMM_CUSTOM = "wqbmm_custom";
 bool TilingPrepareForOpCache(gert::TilingContext* context);
 bool TilingPrepareForOpCache(gert::TilingParseContext* context);
 
-bool GenTiling(
-    const std::string& op_type, const optiling::BatchmatmulCompileParas& compile_params,
-    optiling::BatchmatmulRunParas& run_params, optiling::CacheTilingData& tiling, gert::TilingContext* context);
+bool GenTiling(const std::string& op_type, const optiling::BatchmatmulCompileParas& compile_params,
+               optiling::BatchmatmulRunParas& run_params, optiling::CacheTilingData& tiling,
+               gert::TilingContext* context);
 
-bool CheckSupportConditionQbmm(
-    optiling::QbmmType type, optiling::QuantBatchMatmulRunParas& inputParams, uint64_t aicNum, bool supportL0c2Out);
+bool CheckSupportConditionQbmm(optiling::QbmmType type, optiling::QuantBatchMatmulRunParas& inputParams,
+                               uint64_t aicNum, bool supportL0c2Out);
 
-bool GenWqbmmTiling(
-    const std::string& op_type, const optiling::WeightQuantBatchMatmulCacheTilingParas& compile_params,
-    optiling::WeightQuantBatchMatmulCacheTilingData& cacheTiling);
+bool GenWqbmmTiling(const std::string& op_type, const optiling::WeightQuantBatchMatmulCacheTilingParas& compile_params,
+                    optiling::WeightQuantBatchMatmulCacheTilingData& cacheTiling);
 } // namespace NN
 } // namespace Ops
 #else
@@ -52,26 +51,24 @@ const std::string WQBMM_CUSTOM = "wqbmm_custom";
 bool TilingPrepareForOpCache(gert::TilingContext* context);
 bool TilingPrepareForOpCache(gert::TilingParseContext* context);
 
-bool GenTiling(
-    const std::string& op_type, const BatchmatmulCompileParas& compile_params, BatchmatmulRunParas& run_params,
-    CacheTilingData& tiling, gert::TilingContext* context);
+bool GenTiling(const std::string& op_type, const BatchmatmulCompileParas& compile_params,
+               BatchmatmulRunParas& run_params, CacheTilingData& tiling, gert::TilingContext* context);
 
-bool CheckSupportConditionQbmm(
-    QbmmType type, QuantBatchMatmulRunParas& inputParams, uint64_t aicNum, bool supportL0c2Out);
+bool CheckSupportConditionQbmm(QbmmType type, QuantBatchMatmulRunParas& inputParams, uint64_t aicNum,
+                               bool supportL0c2Out);
 
-bool GenWqbmmTiling(
-    const std::string& op_type, const WeightQuantBatchMatmulCacheTilingParas& compile_params,
-    WeightQuantBatchMatmulCacheTilingData& cacheTiling);
+bool GenWqbmmTiling(const std::string& op_type, const WeightQuantBatchMatmulCacheTilingParas& compile_params,
+                    WeightQuantBatchMatmulCacheTilingData& cacheTiling);
 } // namespace optiling
 
 namespace Ops {
 namespace NN {
-using optiling::WQBMM_MSD;
-using optiling::WQBMM_CUSTOM;
-using optiling::TilingPrepareForOpCache;
-using optiling::GenTiling;
 using optiling::CheckSupportConditionQbmm;
+using optiling::GenTiling;
 using optiling::GenWqbmmTiling;
+using optiling::TilingPrepareForOpCache;
+using optiling::WQBMM_CUSTOM;
+using optiling::WQBMM_MSD;
 } // namespace NN
 } // namespace Ops
 #endif

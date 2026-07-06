@@ -116,7 +116,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     OP_CHECK_IF(
         *epsilon < 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(*epsilon).c_str(),
-            "epsilon should not be less than zero"),
+                                              "epsilon should not be less than zero"),
         return ge::GRAPH_FAILED);
     uint64_t numCol = gammaShape.GetShapeSize();
     float avgFactor = (numCol == 0U) ? 0.0f : 1.0f / static_cast<float>(numCol);
@@ -161,9 +161,8 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     context->SetBlockDim(useCoreNum);
 
     auto dtypeByteIterator = dTypeByteMap.find(dataType);
-    OP_CHECK_IF(
-        dtypeByteIterator == dTypeByteMap.end(), OP_LOGE(context, "Fail to get dtype factor."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtypeByteIterator == dTypeByteMap.end(), OP_LOGE(context, "Fail to get dtype factor."),
+                return ge::GRAPH_FAILED);
     uint32_t curElementByte = dtypeByteIterator->second;
     numColAlign = CeilDiv(numCol * curElementByte, ubBlockSize) * ubBlockSize / curElementByte;
 
@@ -173,8 +172,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     uint64_t binAddBufferOneline = Ops::Base::CeilAlign((binAddQuotient + vlfp32 - 1) / vlfp32, ubfp32);
 
     // 可以全载的行数
-    int64_t tmpSize = static_cast<int64_t>(ubSize) - UB_RESERVE_FOR_RSTDALIGN -
-                      (numColAlign * curElementByte);
+    int64_t tmpSize = static_cast<int64_t>(ubSize) - UB_RESERVE_FOR_RSTDALIGN - (numColAlign * curElementByte);
     if (tmpSize > 0 && numColAlign <= binaryAddElemtMaxLen) {
         rowFactor = tmpSize / (numColAlign * curElementByte * DOUBLE_BUFFER_NUM * QUE_MODE_NORMAL_NUM +
                                numColAlign * sizeof(float) + sizeof(float) * (DOUBLE_BUFFER_NUM + 1) +
@@ -182,7 +180,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     }
     if (rowFactor >= 1) {
         // R能够全载
-        rowFactor = std::min(rowFactor, blockFactor);   // 实际需要全载的行数
+        rowFactor = std::min(rowFactor, blockFactor); // 实际需要全载的行数
         AddRMSNormRegbaseRFullLoadTilingData tiling;
         tiling.set_numRow(numRow);
         tiling.set_numCol(numCol);
@@ -192,14 +190,13 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
         tiling.set_binAddQuotient(binAddQuotient);
         tiling.set_epsilon(*epsilon);
         tiling.set_avgFactor(avgFactor);
-        OP_LOGI(
-            context,
-            "TilingData numCore: %u, ubSize: %lu, numRow: %u, numCol: %u, numColAlign: %u, "
-            "blockFactor: %u, rowFactor: %u, binAddQuotient: %u, "
-            "epsilon: %f, avgFactor: %f",
-            numCore, ubSize, tiling.get_numRow(), tiling.get_numCol(), tiling.get_numColAlign(), 
-            tiling.get_blockFactor(), tiling.get_rowFactor(), tiling.get_binAddQuotient(),
-            tiling.get_epsilon(), tiling.get_avgFactor());
+        OP_LOGI(context,
+                "TilingData numCore: %u, ubSize: %lu, numRow: %u, numCol: %u, numColAlign: %u, "
+                "blockFactor: %u, rowFactor: %u, binAddQuotient: %u, "
+                "epsilon: %f, avgFactor: %f",
+                numCore, ubSize, tiling.get_numRow(), tiling.get_numCol(), tiling.get_numColAlign(),
+                tiling.get_blockFactor(), tiling.get_rowFactor(), tiling.get_binAddQuotient(), tiling.get_epsilon(),
+                tiling.get_avgFactor());
 
         tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
         context->SetTilingKey(MODE_NORMAL);
@@ -232,15 +229,14 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
         tiling.set_colBuferLength(colBuferLength);
         tiling.set_multiNNum(multiNNum);
         tiling.set_isNddma(isNddma);
-        OP_LOGI(
-            context,
-            "TilingData numCore: %u, ubSize: %lu, numRow: %u, numCol: %u, numColAlign: %u, colBuferLength: %u, "
-            "blockFactor: %u, rowFactor: %u, ubFactor: %u, "
-            "epsilon: %f, avgFactor: %f, ubLoop: %u, multiNNum: %u, isNddma: %u.",
-            numCore, ubSize, tiling.get_numRow(), tiling.get_numCol(), tiling.get_numColAlign(),
-            tiling.get_colBuferLength(), tiling.get_blockFactor(), tiling.get_rowFactor(), tiling.get_ubFactor(),
-            tiling.get_epsilon(), tiling.get_avgFactor(), tiling.get_ubLoop(), tiling.get_multiNNum(),
-            tiling.get_isNddma());
+        OP_LOGI(context,
+                "TilingData numCore: %u, ubSize: %lu, numRow: %u, numCol: %u, numColAlign: %u, colBuferLength: %u, "
+                "blockFactor: %u, rowFactor: %u, ubFactor: %u, "
+                "epsilon: %f, avgFactor: %f, ubLoop: %u, multiNNum: %u, isNddma: %u.",
+                numCore, ubSize, tiling.get_numRow(), tiling.get_numCol(), tiling.get_numColAlign(),
+                tiling.get_colBuferLength(), tiling.get_blockFactor(), tiling.get_rowFactor(), tiling.get_ubFactor(),
+                tiling.get_epsilon(), tiling.get_avgFactor(), tiling.get_ubLoop(), tiling.get_multiNNum(),
+                tiling.get_isNddma());
 
         tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
         context->SetTilingKey(MODE_SPLIT_D);

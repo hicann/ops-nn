@@ -22,7 +22,7 @@
 
 using namespace ge;
 namespace {
-const std::string  OP_NAME = "MultiScaleDeformableAttn";
+const std::string OP_NAME = "MultiScaleDeformableAttn";
 const uint64_t INPUT_VALUE = 0;
 const uint64_t INPUT_SPATIAL_SHAPE = 1;
 const uint64_t INPUT_ATTN_WEIGHT = 4;
@@ -48,7 +48,7 @@ const uint64_t NUM_POINTS_EIGHT = 8;
 const uint64_t NUM_POINTS_FOUR = 4;
 const uint64_t NUM_POINTS_TWO = 2;
 const uint64_t EMBEDDIMS_SIXTEEN = 16;
-const uint64_t sysWorkspaceSize = 16 * 1024 *1024;
+const uint64_t sysWorkspaceSize = 16 * 1024 * 1024;
 const uint64_t TILING_KEY_WEIGHT = 1000;
 
 const uint64_t NUM_QUERIES_MIN = 32;
@@ -79,7 +79,8 @@ std::tuple<uint64_t, uint64_t> GroupPoints(uint64_t numPoints)
 
 namespace optiling {
 
-static void MultiScaleDeformableAttnPrintParam(MultiScaleDeformableAttnFunctionTilingData &tiling, const gert::TilingContext* context)
+static void MultiScaleDeformableAttnPrintParam(MultiScaleDeformableAttnFunctionTilingData& tiling,
+                                               const gert::TilingContext* context)
 {
     OP_LOGD(OP_NAME, "MultiScaleDeformableAttn Tiling Data Print:");
     OP_LOGD(context, "batchSize = %lu", tiling.get_batchSize());
@@ -94,7 +95,7 @@ static void MultiScaleDeformableAttnPrintParam(MultiScaleDeformableAttnFunctionT
     OP_LOGD(context, "realLevels = %lu", tiling.get_realLevels());
 }
 
-static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext *context)
+static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext* context)
 {
     OP_LOGD(OP_NAME, "TilingFuncForMultiScaleDeformableAttn Tiling start.");
     MultiScaleDeformableAttnFunctionTilingData tiling;
@@ -160,7 +161,8 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
     }
 
     if (numQueries < NUM_QUERIES_MIN) {
-        OP_LOGE(context->GetNodeName(), "numQueries must be greater than or equal to 32, bug got input %lu", numQueries);
+        OP_LOGE(context->GetNodeName(), "numQueries must be greater than or equal to 32, bug got input %lu",
+                numQueries);
         return ge::GRAPH_FAILED;
     }
 
@@ -180,7 +182,8 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
     }
 
     if (!((embedDims % EMBED_DIMS_DIV_EIGHT == 0) && (embedDims <= EMBED_DIMS_MAX))) {
-        OP_LOGE(context->GetNodeName(), "embedDims must be divisible by 8 and less than or equal to 256, bug got input %lu", embedDims);
+        OP_LOGE(context->GetNodeName(),
+                "embedDims must be divisible by 8 and less than or equal to 256, bug got input %lu", embedDims);
         return ge::GRAPH_FAILED;
     }
 
@@ -209,38 +212,37 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
 
     OP_LOGD(OP_NAME, "TilingFuncForMultiScaleDeformableAttn Tiling end.");
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4MultiScaleDeformableAttnFunction(gert::TilingParseContext* context) {
-  OP_LOGD("MultiScaleDeformableAttnFunction:", "TilingPrepare4MultiScaleDeformableAttnFunction start.");
-  auto compileInfo = context->GetCompiledInfo<MultiScaleDeformableAttnFunctionCompileInfo>();
-  OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-  auto platformInfo = context->GetPlatformInfo();
-  OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
-  auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-  compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-  auto socVersion = ascendcPlatform.GetSocVersion();
-  compileInfo->isInfBase = (socVersion == platform_ascendc::SocVersion::ASCEND310P) ? true : false;
-  OP_CHECK_IF((compileInfo->totalCoreNum <= 0), // 0 negative number
-                    OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-                    return false);
+static ge::graphStatus TilingPrepare4MultiScaleDeformableAttnFunction(gert::TilingParseContext* context)
+{
+    OP_LOGD("MultiScaleDeformableAttnFunction:", "TilingPrepare4MultiScaleDeformableAttnFunction start.");
+    auto compileInfo = context->GetCompiledInfo<MultiScaleDeformableAttnFunctionCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    auto socVersion = ascendcPlatform.GetSocVersion();
+    compileInfo->isInfBase = (socVersion == platform_ascendc::SocVersion::ASCEND310P) ? true : false;
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), // 0 negative number
+                OP_LOGE(context->GetNodeName(), "Failed to get core num."), return false);
 
-  uint64_t ubSizePlatform = 0U; // 0, init
-  ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
-  compileInfo->ubSizePlatform = static_cast<int64_t>(ubSizePlatform);
-  OP_CHECK_IF((compileInfo->ubSizePlatform <= 0), // 0
-                    OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-                    return false);
-  OP_LOGD("MultiScaleDeformableAttnFunction:", "TilingPrepare4MultiScaleDeformableAttnFunction end.");
-  return ge::GRAPH_SUCCESS;
+    uint64_t ubSizePlatform = 0U; // 0, init
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
+    compileInfo->ubSizePlatform = static_cast<int64_t>(ubSizePlatform);
+    OP_CHECK_IF((compileInfo->ubSizePlatform <= 0), // 0
+                OP_LOGE(context->GetNodeName(), "Failed to get ub size"), return false);
+    OP_LOGD("MultiScaleDeformableAttnFunction:", "TilingPrepare4MultiScaleDeformableAttnFunction end.");
+    return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(MultiScaleDeformableAttnFunction)
     .Tiling(TilingFuncForMultiScaleDeformableAttn)
     .TilingParse<MultiScaleDeformableAttnFunctionCompileInfo>(TilingPrepare4MultiScaleDeformableAttnFunction);
-}  // namespace optiling
+} // namespace optiling

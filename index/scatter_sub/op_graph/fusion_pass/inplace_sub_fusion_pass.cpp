@@ -65,8 +65,8 @@ const size_t kInplaceSubInputNum = 3;
 // ScatterSub var/updates 支持的 dtype,与 ScatterSub IR 定义对齐
 static bool IsSupportedDataDtype(const DataType dtype)
 {
-    static const std::initializer_list<DataType> kSupportedDataDtypes = {
-        DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16};
+    static const std::initializer_list<DataType> kSupportedDataDtypes = {DT_FLOAT16, DT_FLOAT, DT_INT32,
+                                                                         DT_INT8,    DT_UINT8, DT_BF16};
     return std::find(kSupportedDataDtypes.begin(), kSupportedDataDtypes.end(), dtype) != kSupportedDataDtypes.end();
 }
 
@@ -82,11 +82,8 @@ static bool IsSupportedIndicesDtype(const DataType dtype)
 // 工具函数
 // ---------------------------------------------------------------------------
 
-static void GetInputsInfo(
-    const std::vector<SubgraphInput>& subgraphInputs,
-    std::vector<Shape>& inputShapes,
-    std::vector<DataType>& inputDtypes,
-    std::vector<Format>& inputFormats)
+static void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,
+                          std::vector<DataType>& inputDtypes, std::vector<Format>& inputFormats)
 {
     for (const auto& subgraphInput : subgraphInputs) {
         auto matchNode = subgraphInput.GetAllInputs().at(0);
@@ -154,12 +151,12 @@ std::vector<PatternUniqPtr> AInplaceSubFusionPass::Patterns()
     ge::Graph* graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     GNode opNode = es::CompliantNodeBuilder(graphPtr)
-        .OpType(MATCHED_OP_TYPE.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                       .OpType(MATCHED_OP_TYPE.c_str())
+                       .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                       .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                       .Build();
 
     GNode xNode = *x.GetProducer();
     GNode indicesNode = *indices.GetProducer();
@@ -187,8 +184,7 @@ bool AInplaceSubFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     // 运行时兼容(D1 整体静默):9.x 编译包跑在 8.5.0 运行时上时,
     // kCompatibleInherited 调度点不存在,直接空跑,不做融合
     if (GetRuntimeGeCompilerVersion() < kGeCompilerVersion900) {
-        OPS_LOG_D(PASS_NAME.c_str(),
-                  "Runtime ge_compiler version < 9.0.0, skip fusion (compat silent).");
+        OPS_LOG_D(PASS_NAME.c_str(), "Runtime ge_compiler version < 9.0.0, skip fusion (compat silent).");
         return false;
     }
 
@@ -197,9 +193,8 @@ bool AInplaceSubFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     }
 
     NodeIo captured;
-    OP_LOGE_IF(
-        matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS,
-        false, PASS_NAME.c_str(), "Failed to get captured tensor.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS, false, PASS_NAME.c_str(),
+               "Failed to get captured tensor.");
 
     AscendString nodeType;
     captured.node.GetType(nodeType);
@@ -212,16 +207,16 @@ bool AInplaceSubFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
     // 融合后的 ScatterSub 必须支持 var(x)/indices/updates(v) 的 dtype
     GNode sourceNode = captured.node;
     if (sourceNode.GetInputsSize() != kInplaceSubInputNum) {
-        OPS_LOG_D(PASS_NAME.c_str(), "InplaceSub input num %zu is not %zu, skip.",
-                  sourceNode.GetInputsSize(), kInplaceSubInputNum);
+        OPS_LOG_D(PASS_NAME.c_str(), "InplaceSub input num %zu is not %zu, skip.", sourceNode.GetInputsSize(),
+                  kInplaceSubInputNum);
         return false;
     }
 
     TensorDesc xDesc;
     OP_LOGE_IF(sourceNode.GetInputDesc(0, xDesc) != SUCCESS, false, PASS_NAME.c_str(), "Get input x desc failed.");
     TensorDesc indicesDesc;
-    OP_LOGE_IF(
-        sourceNode.GetInputDesc(1, indicesDesc) != SUCCESS, false, PASS_NAME.c_str(), "Get input indices desc failed.");
+    OP_LOGE_IF(sourceNode.GetInputDesc(1, indicesDesc) != SUCCESS, false, PASS_NAME.c_str(),
+               "Get input indices desc failed.");
     TensorDesc vDesc;
     OP_LOGE_IF(sourceNode.GetInputDesc(2, vDesc) != SUCCESS, false, PASS_NAME.c_str(), "Get input v desc failed.");
 
@@ -253,24 +248,21 @@ GraphUniqPtr AInplaceSubFusionPass::Replacement(const std::unique_ptr<MatchResul
 
     // 2. 创建替换图输入
     auto builder = es::EsGraphBuilder("replacement");
-    auto rX = builder.CreateInput(
-        0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
-    auto rIndices = builder.CreateInput(
-        1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
-    auto rUpdates = builder.CreateInput(
-        2, "updates", inputDtypes[2], inputFormats[2], inputShapes[2].GetDims());
+    auto rX = builder.CreateInput(0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
+    auto rIndices = builder.CreateInput(1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
+    auto rUpdates = builder.CreateInput(2, "updates", inputDtypes[2], inputFormats[2], inputShapes[2].GetDims());
 
     ge::Graph* graphPtr = builder.GetCGraphBuilder()->GetGraph();
 
     // 3. TensorMove 节点(仓内无 ES API,使用 CompliantNodeBuilder)
     GNode tensorMoveNode = es::CompliantNodeBuilder(graphPtr)
-        .OpType("TensorMove")
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .InstanceOutputShape("y", inputShapes[0].GetDims())
-        .InstanceOutputDataType("y", inputDtypes[0])
-        .InstanceOutputFormat("y", inputFormats[0])
-        .Build();
+                               .OpType("TensorMove")
+                               .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                               .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                               .InstanceOutputShape("y", inputShapes[0].GetDims())
+                               .InstanceOutputDataType("y", inputDtypes[0])
+                               .InstanceOutputFormat("y", inputFormats[0])
+                               .Build();
 
     // 4. 连边:x -> TensorMove
     GNode xNode = *rX.GetProducer();
@@ -280,8 +272,7 @@ GraphUniqPtr AInplaceSubFusionPass::Replacement(const std::unique_ptr<MatchResul
     UpdateInputFormat(tensorMoveNode, 0, inputFormats[0]);
 
     // 5. TensorMove 输出转为 EsTensorHolder,用于 ScatterSub ES API
-    es::EsTensorHolder tensorMoveOutput(
-        builder.GetCGraphBuilder()->GetTensorHolderFromNode(tensorMoveNode, 0));
+    es::EsTensorHolder tensorMoveOutput(builder.GetCGraphBuilder()->GetTensorHolderFromNode(tensorMoveNode, 0));
 
     // 6. ScatterSub 节点(使用 ES API),use_locking=false 与原融合规则一致
     auto scatterSubOutput = es::ScatterSub(tensorMoveOutput, rIndices, rUpdates, false);
@@ -326,7 +317,7 @@ CustomPassStage GetRegisterStage()
     }
     return CustomPassStage::kBeforeInferShape;
 }
-}  // namespace
+} // namespace
 REG_FUSION_PASS(AInplaceSubFusionPass).Stage(GetRegisterStage());
 #else
 // 8.5.0 编译:kCompatibleInherited 枚举不存在,注册到 8.5.0 已有的 kAfterInferShape。

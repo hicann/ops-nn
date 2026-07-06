@@ -21,22 +21,23 @@
 using namespace std;
 
 class l2_softplus_backward_test : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { std::cout << "l2_softplus_backward_test SetUp" << std::endl; }
 
     static void TearDownTestCase() { std::cout << "l2_softplus_backward_test TearDown" << std::endl; }
 };
 
-TEST_F(l2_softplus_backward_test, case_01_float) {
-    auto gradOutputDesc =
-        TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1.023, 2023.08, 3.14, 10987654321.0});
-    auto selfDesc =
-        TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1.023, 2023.08, 3.14, 10987654321.0});
+TEST_F(l2_softplus_backward_test, case_01_float)
+{
+    auto gradOutputDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)
+                              .Value(vector<float>{-1.023, 2023.08, 3.14, 10987654321.0});
+    auto selfDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)
+                        .Value(vector<float>{-1.023, 2023.08, 3.14, 10987654321.0});
     auto outDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
     auto betaDesc = ScalarDesc(0.0f);
     auto threholdDesc = ScalarDesc(20.0f);
-    auto ut =
-        OP_API_UT(aclnnSoftplusBackward, INPUT(gradOutputDesc, selfDesc, betaDesc, threholdDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnSoftplusBackward, INPUT(gradOutputDesc, selfDesc, betaDesc, threholdDesc),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

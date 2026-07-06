@@ -65,23 +65,23 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto compileInfoPtr = reinterpret_cast<const BatchNormV3CompileInfo*>(context_->GetCompileInfo());
-    OP_CHECK_IF(
-        compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                return ge::GRAPH_FAILED);
     vl = compileInfoPtr->vectorLength / sizeof(float);
     blockSize = compileInfoPtr->blockSize;
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        aicoreParams_.numBlocks <= 0, OP_LOGE(context_->GetNodeName(), "numBlocks should not be less than or equal to zero."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(aicoreParams_.numBlocks <= 0,
+                OP_LOGE(context_->GetNodeName(), "numBlocks should not be less than or equal to zero."),
+                return ge::GRAPH_FAILED);
     arch = ascendcPlatform.GetCurNpuArch();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     aicoreParams_.ubSize = ubSizePlatForm;
-    OP_CHECK_IF(
-        aicoreParams_.ubSize <= 0, OP_LOGE(context_->GetNodeName(), "ubSize should not be less than or equal to zero."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(aicoreParams_.ubSize <= 0,
+                OP_LOGE(context_->GetNodeName(), "ubSize should not be less than or equal to zero."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -123,11 +123,11 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
     weightDataType = weightDesc->GetDataType();
     format = xDesc->GetFormat().GetStorageFormat();
     if (format == FORMAT_ND) {
-        OP_CHECK_IF(
-            xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "at least 2D with ND format"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                                                 std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "at least 2D with ND format"),
+                    return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0);
         a = xStorageShape.GetDim(DIM_1);
         r0 = 1;
@@ -138,7 +138,8 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"), return ge::GRAPH_FAILED);
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
+            return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0);
         a = xStorageShape.GetDim(DIM_1);
         r0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
@@ -146,7 +147,8 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCDHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"), return ge::GRAPH_FAILED);
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
+            return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0);
         a = xStorageShape.GetDim(DIM_1);
         r0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
@@ -154,7 +156,8 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NHWC_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NHWC format"), return ge::GRAPH_FAILED);
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NHWC format"),
+            return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
         a = xStorageShape.GetDim(DIM_3);
         r0 = 0;
@@ -162,14 +165,15 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NDHWC format"), return ge::GRAPH_FAILED);
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NDHWC format"),
+            return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) *
              xStorageShape.GetDim(DIM_3);
         a = xStorageShape.GetDim(DIM_4);
         r0 = 0;
     } else {
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
-            ge::TypeUtils::FormatToSerialString(format).c_str(), "ND, NCHW, NCDHW, NHWC or NDHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(format).c_str(),
+                                   "ND, NCHW, NCDHW, NHWC or NDHWC");
         return ge::GRAPH_FAILED;
     }
 
@@ -189,45 +193,45 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
 ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOneInputShape(int64_t idx)
 {
     static const std::vector<std::string> inputNames = {"x", "weight", "bias", "running_mean", "running_var"};
-    std::string inputName = (idx >= 0 && idx < static_cast<int64_t>(inputNames.size())) ? inputNames[idx] : "input" + std::to_string(idx);
+    std::string inputName = (idx >= 0 && idx < static_cast<int64_t>(inputNames.size())) ? inputNames[idx] :
+                                                                                          "input" + std::to_string(idx);
     auto inputShape = context_->GetInputShape(idx);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto inputStorageShape = inputShape->GetStorageShape();
-    OP_CHECK_IF(
-        inputStorageShape.GetDimNum() != 1, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputName.c_str(),
-            std::to_string(inputStorageShape.GetDimNum()).c_str(), "1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputStorageShape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputName.c_str(),
+                                             std::to_string(inputStorageShape.GetDimNum()).c_str(), "1"),
+                return ge::GRAPH_FAILED);
     int64_t actualA = inputStorageShape.GetDim(DIM_0);
-    OP_CHECK_IF(
-        a != actualA,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputName.c_str(),
-            Ops::Base::ToString(inputStorageShape).c_str(),
-            ("the first dim of " + inputName + " expect [" + std::to_string(a) + "], but got [" + std::to_string(actualA) + "]").c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(a != actualA,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), inputName.c_str(), Ops::Base::ToString(inputStorageShape).c_str(),
+                    ("the first dim of " + inputName + " expect [" + std::to_string(a) + "], but got [" +
+                     std::to_string(actualA) + "]")
+                        .c_str()),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOneOutputShape(int64_t idx)
 {
-    static const std::vector<std::string> outputNames = {"y", "running_mean", "running_var",
-                                                          "save_mean", "save_rstd"};
-    std::string outputName = (idx >= 0 && idx < static_cast<int64_t>(outputNames.size()))
-                                 ? outputNames[idx]
-                                 : "output" + std::to_string(idx);
+    static const std::vector<std::string> outputNames = {"y", "running_mean", "running_var", "save_mean", "save_rstd"};
+    std::string outputName = (idx >= 0 && idx < static_cast<int64_t>(outputNames.size())) ?
+                                 outputNames[idx] :
+                                 "output" + std::to_string(idx);
     auto outputShape = context_->GetOutputShape(idx);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto outputStorageShape = outputShape->GetStorageShape();
-    OP_CHECK_IF(
-        outputStorageShape.GetDimNum() != 1, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), outputName.c_str(),
-            std::to_string(outputStorageShape.GetDimNum()).c_str(), "1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputStorageShape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), outputName.c_str(),
+                                             std::to_string(outputStorageShape.GetDimNum()).c_str(), "1"),
+                return ge::GRAPH_FAILED);
     int64_t actualA = outputStorageShape.GetDim(DIM_0);
-    OP_CHECK_IF(
-        a != actualA,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputName.c_str(),
-            Ops::Base::ToString(outputStorageShape).c_str(),
-            ("The first dim of " + outputName + " must be " + std::to_string(a)).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(a != actualA,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), outputName.c_str(), Ops::Base::ToString(outputStorageShape).c_str(),
+                    ("The first dim of " + outputName + " must be " + std::to_string(a)).c_str()),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -240,29 +244,30 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
     }
     OP_CHECK_IF(
         std::find(DTYPE_LIST.begin(), DTYPE_LIST.end(), dataType) == DTYPE_LIST.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(dataType).c_str(), "DT_FLOAT16, DT_BF16 or DT_FLOAT"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
+                                  "DT_FLOAT16, DT_BF16 or DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         // 支持weight和x的混合数据类型
         (weightDataType != dataType) && (weightDataType != ge::DT_FLOAT),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and x",
-            (ge::TypeUtils::DataTypeToSerialString(weightDataType) + " and " +
-             ge::TypeUtils::DataTypeToSerialString(dataType)).c_str(),
-            "weight's dtype must be same as x's dtype or DT_FLOAT"),
+                                               (ge::TypeUtils::DataTypeToSerialString(weightDataType) + " and " +
+                                                ge::TypeUtils::DataTypeToSerialString(dataType))
+                                                   .c_str(),
+                                               "weight's dtype must be same as x's dtype or DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto biasDesc = context_->GetInputDesc(BIAS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, biasDesc);
     ge::DataType biasDataType = biasDesc->GetDataType();
-    OP_CHECK_IF(
-        (biasDataType != weightDataType),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "bias and weight",
-            (ge::TypeUtils::DataTypeToSerialString(biasDataType) + " and " +
-             ge::TypeUtils::DataTypeToSerialString(weightDataType)).c_str(),
-            "The dtypes of bias and weight must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((biasDataType != weightDataType),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "bias and weight",
+                                                       (ge::TypeUtils::DataTypeToSerialString(biasDataType) + " and " +
+                                                        ge::TypeUtils::DataTypeToSerialString(weightDataType))
+                                                           .c_str(),
+                                                       "The dtypes of bias and weight must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto runningMeanDesc = context_->GetInputDesc(RUNNING_MEAN_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningMeanDesc);
@@ -271,20 +276,22 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
         // 支持runningMean和x的混合数据类型
         (runningMeanDataType != dataType) && (runningMeanDataType != ge::DT_FLOAT),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "running_mean and x",
-            (ge::TypeUtils::DataTypeToSerialString(runningMeanDataType) + " and " +
-             ge::TypeUtils::DataTypeToSerialString(dataType)).c_str(),
-            "running_mean's dtype must be same as x's dtype or DT_FLOAT"),
+                                               (ge::TypeUtils::DataTypeToSerialString(runningMeanDataType) + " and " +
+                                                ge::TypeUtils::DataTypeToSerialString(dataType))
+                                                   .c_str(),
+                                               "running_mean's dtype must be same as x's dtype or DT_FLOAT"),
         return ge::GRAPH_FAILED);
-    
+
     auto runningVarDesc = context_->GetInputDesc(RUNNING_VAR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningVarDesc);
     ge::DataType runningVarDataType = runningVarDesc->GetDataType();
     OP_CHECK_IF(
         runningMeanDataType != runningVarDataType,
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "running_mean and running_var",
-            (ge::TypeUtils::DataTypeToSerialString(runningMeanDataType) + " and " +
-             ge::TypeUtils::DataTypeToSerialString(runningVarDataType)).c_str(),
-            "The dtypes of running_mean and running_var must be the same"),
+                                               (ge::TypeUtils::DataTypeToSerialString(runningMeanDataType) + " and " +
+                                                ge::TypeUtils::DataTypeToSerialString(runningVarDataType))
+                                                   .c_str(),
+                                               "The dtypes of running_mean and running_var must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -300,7 +307,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOutputValid()
         OP_LOGE(context_->GetNodeName(), "Not supported output shape info.");
         return ge::GRAPH_FAILED;
     }
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -310,13 +317,12 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOutputDtypeValid()
     auto yDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDataType = yDesc->GetDataType();
-    OP_CHECK_IF(
-        dataType != yDataType,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "output_y",
-            ge::TypeUtils::DataTypeToSerialString(yDataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(dataType).c_str()),
-        return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(dataType != yDataType,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "output_y",
+                                          ge::TypeUtils::DataTypeToSerialString(yDataType).c_str(),
+                                          ge::TypeUtils::DataTypeToSerialString(dataType).c_str()),
+                return ge::GRAPH_FAILED);
+
     // Step2：校验输出runningMean/Var参数的类型与输入runningMean是否一致
     auto runningMeanDesc = context_->GetInputDesc(RUNNING_MEAN_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, runningMeanDesc);
@@ -331,8 +337,8 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOutputDtypeValid()
             // 校验输出runningMean/Var参数类型是否与输入一致
             subDataType != runningMeanDataType,
             OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), runningOutputNames[i].c_str(),
-                ge::TypeUtils::DataTypeToSerialString(subDataType).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(runningMeanDataType).c_str()),
+                                      ge::TypeUtils::DataTypeToSerialString(subDataType).c_str(),
+                                      ge::TypeUtils::DataTypeToSerialString(runningMeanDataType).c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -342,12 +348,11 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOutputDtypeValid()
         auto outputDesc = context_->GetOutputDesc(i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
         ge::DataType subDataType = outputDesc->GetDataType();
-        OP_CHECK_IF(
-            subDataType != ge::DT_FLOAT,
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), saveOutputNames[i].c_str(),
-                ge::TypeUtils::DataTypeToSerialString(subDataType).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(ge::DT_FLOAT).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(subDataType != ge::DT_FLOAT,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), saveOutputNames[i].c_str(),
+                                              ge::TypeUtils::DataTypeToSerialString(subDataType).c_str(),
+                                              ge::TypeUtils::DataTypeToSerialString(ge::DT_FLOAT).c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -370,27 +375,27 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOutputShapeValid()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     ge::Format yFormat = yDesc->GetFormat().GetStorageFormat();
 
-    OP_CHECK_IF(
-        (xShapeSize != yShapeSize),
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y",
-            std::to_string(yShapeSize).c_str(), std::to_string(xShapeSize).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xShapeSize != yShapeSize),
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y", std::to_string(yShapeSize).c_str(),
+                                             std::to_string(xShapeSize).c_str()),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (format != yFormat),
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "y",
-            ge::TypeUtils::FormatToSerialString(yFormat).c_str(),
-            ge::TypeUtils::FormatToSerialString(format).c_str()),
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "y", ge::TypeUtils::FormatToSerialString(yFormat).c_str(),
+                                   ge::TypeUtils::FormatToSerialString(format).c_str()),
         return ge::GRAPH_FAILED);
 
     for (int64_t i = 0; i < xShapeSize; i++) {
         OP_CHECK_IF((xStorageShape.GetDim(i) != yStorageShape.GetDim(i)),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
-                Ops::Base::ToString(yStorageShape).c_str(),
-                (std::string("The dim ") + std::to_string(i) + " of y must be " + std::to_string(xStorageShape.GetDim(i))).c_str()),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
+                                                          Ops::Base::ToString(yStorageShape).c_str(),
+                                                          (std::string("The dim ") + std::to_string(i) +
+                                                           " of y must be " + std::to_string(xStorageShape.GetDim(i)))
+                                                              .c_str()),
+                    return ge::GRAPH_FAILED);
     }
     OP_LOGI(context_->GetNodeName(), "CheckXYShapeValid success.");
-    
+
     // Step2：校验其他输出的shape
     for (int64_t i = 1; i < OUTPUT_NUM; i++) {
         if (CheckOneOutputShape(i) != ge::GRAPH_SUCCESS) {
@@ -407,18 +412,14 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckShapeAllPositive(gert::Shape&
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(
             shape.GetDim(i) <= 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-                (Ops::Base::ToString(shape)).c_str(),
-                "All dims of x should be positive numbers"),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", (Ops::Base::ToString(shape)).c_str(),
+                                                  "All dims of x should be positive numbers"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchNormV3RegbaseTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BatchNormV3RegbaseTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus BatchNormV3RegbaseTilingBase::GetWorkspaceSize()
 {
@@ -429,8 +430,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetWorkspaceSize()
 
 class BatchNormV3FullReduceTilingBase : public BatchNormV3RegbaseTilingBase {
 public:
-    explicit BatchNormV3FullReduceTilingBase(gert::TilingContext* context) : BatchNormV3RegbaseTilingBase(context)
-    {}
+    explicit BatchNormV3FullReduceTilingBase(gert::TilingContext* context) : BatchNormV3RegbaseTilingBase(context) {}
     ~BatchNormV3FullReduceTilingBase() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -466,16 +466,16 @@ protected:
             return false;
         }
         // reserve 8 block for 8 A tensor alignment
-        int64_t ubCanUseSize =
-            ((((aicoreParams_.ubSize - quotientVcaddSizeAlign) / DOUBLE_BUFFER) / blockSize) * blockSize);
+        int64_t ubCanUseSize = ((((aicoreParams_.ubSize - quotientVcaddSizeAlign) / DOUBLE_BUFFER) / blockSize) *
+                                blockSize);
         if (SMALL_BUFFER_NUM * blockSize >= ubCanUseSize) {
             return false;
         }
         ubCanUseSize -= SMALL_BUFFER_NUM * blockSize;
         int64_t r1r0Align = (((r1r0 * elemSize + blockSize - 1) / blockSize) * blockSize) / elemSize;
         // two AR tensor, two A tensor, six fp32 A tensor
-        int64_t ubSizePerA =
-            LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * weightElemSize + SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
+        int64_t ubSizePerA = LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * weightElemSize +
+                             SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
         int64_t aFactor = ubCanUseSize / ubSizePerA;
         if (aFactor >= 1) {
             batchNormV3TilingData.set_aFactor(aFactor);
@@ -544,26 +544,22 @@ ge::graphStatus BatchNormV3FullReduceTilingBase::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormV3FullReduceTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_FULL_REDUCE;
-}
+uint64_t BatchNormV3FullReduceTilingBase::GetTilingKey() const { return TILINGKEY_FULL_REDUCE; }
 
 ge::graphStatus BatchNormV3FullReduceTilingBase::PostTiling()
 {
     context_->SetBlockDim(blockNum);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    batchNormV3TilingData.SaveToBuffer(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    batchNormV3TilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                       context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(batchNormV3TilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
 
 class BatchNormV3RAFullReduceTilingBase : public BatchNormV3RegbaseTilingBase {
 public:
-    explicit BatchNormV3RAFullReduceTilingBase(gert::TilingContext* context) : BatchNormV3RegbaseTilingBase(context)
-    {}
+    explicit BatchNormV3RAFullReduceTilingBase(gert::TilingContext* context) : BatchNormV3RegbaseTilingBase(context) {}
     ~BatchNormV3RAFullReduceTilingBase() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -592,8 +588,8 @@ protected:
         }
 
         int64_t ubCanUseSize = (((aicoreParams_.ubSize / DOUBLE_BUFFER) / blockSize) * blockSize);
-        int64_t ubSizePerA =
-            (LARGE_BUFFER_NUM * r1 + 1) * elemSize + SMALL_BUFFER_NUM_T * weightElemSize + SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
+        int64_t ubSizePerA = (LARGE_BUFFER_NUM * r1 + 1) * elemSize + SMALL_BUFFER_NUM_T * weightElemSize +
+                             SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
         if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
             ubSizePerA = LARGE_BUFFER_NUM * r1 * elemSize + (r1 + 1) * FP32_BYTE + SMALL_BUFFER_NUM_T * elemSize +
                          SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
@@ -687,10 +683,7 @@ ge::graphStatus BatchNormV3RAFullReduceTilingBase::DoOpTiling()
     return BinaryAddTiling();
 }
 
-uint64_t BatchNormV3RAFullReduceTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_RA_FULL_REDUCE;
-}
+uint64_t BatchNormV3RAFullReduceTilingBase::GetTilingKey() const { return TILINGKEY_RA_FULL_REDUCE; }
 
 ge::graphStatus BatchNormV3RAFullReduceTilingBase::PostTiling()
 {
@@ -698,12 +691,10 @@ ge::graphStatus BatchNormV3RAFullReduceTilingBase::PostTiling()
     auto rawTilingData = context_->GetRawTilingData();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    OP_CHECK_IF(
-        batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     batchNormV3TilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormV3TilingData.GetDataSize());
 

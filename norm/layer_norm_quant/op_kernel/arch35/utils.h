@@ -19,30 +19,24 @@ using namespace AscendC;
 using AscendC::HardEvent;
 
 namespace {
-  static constexpr uint32_t BLOCK_SIZE = 32;
-  static constexpr uint32_t BUFFER_NUM = 1;
-  static constexpr uint32_t BLOCK_NUMEL = 32;
-  static constexpr uint32_t TAIL_BUFFER_SIZE = 32;
-  static constexpr uint32_t MAX_UB_SIZE_NUM = 98304;
-  static constexpr uint32_t INT8_DATA_BYTE = 1;
-  static constexpr float QUANT_MIN = -128;
-}
+static constexpr uint32_t BLOCK_SIZE = 32;
+static constexpr uint32_t BUFFER_NUM = 1;
+static constexpr uint32_t BLOCK_NUMEL = 32;
+static constexpr uint32_t TAIL_BUFFER_SIZE = 32;
+static constexpr uint32_t MAX_UB_SIZE_NUM = 98304;
+static constexpr uint32_t INT8_DATA_BYTE = 1;
+static constexpr float QUANT_MIN = -128;
+} // namespace
 
 __aicore__ inline uint32_t RoundUp(uint32_t x, uint32_t y = 32)
 {
-  if (y == 0) {
-    return x;
-  }
-  return (x + y - 1) / y * y;
+    if (y == 0) {
+        return x;
+    }
+    return (x + y - 1) / y * y;
 }
-__aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) 
-{ 
-    return x < y ? x : y; 
-}
-__aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) 
-{ 
-    return x > y ? x : y; 
-}
+__aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
+__aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
 {
     if (y > 0) {
@@ -52,43 +46,44 @@ __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
 }
 
 template <typename T>
-__aicore__ inline void ComputeNormalLayerNorm(AscendC::LocalTensor<float>& x_local_fp32, AscendC::LocalTensor<float>& y_local_fp32, 
-        AscendC::LocalTensor<T>& gamma_local, AscendC::LocalTensor<T>& beta_local, AscendC::LocalTensor<float>& z_local_fp32,
-        uint32_t num)
-    {
-        Mul(x_local_fp32, z_local_fp32, y_local_fp32, num);
-        PipeBarrier<PIPE_V>();
-        if constexpr (IsSameType<T, half>::value ||IsSameType<T, bfloat16_t>::value){
-            Cast(z_local_fp32, gamma_local, AscendC::RoundMode::CAST_NONE, num);
-        } else {
-            Adds(z_local_fp32, gamma_local, 0, num);
-        }
-        PipeBarrier<PIPE_V>();
-        Mul(y_local_fp32, x_local_fp32, z_local_fp32, num);
-        PipeBarrier<PIPE_V>();
-        if constexpr (IsSameType<T, half>::value ||IsSameType<T, bfloat16_t>::value){
-            Cast(x_local_fp32, beta_local, AscendC::RoundMode::CAST_NONE, num);
-        } else {
-            Adds(x_local_fp32, beta_local, 0, num);
-        }
-        PipeBarrier<PIPE_V>();
-        Add(z_local_fp32, y_local_fp32, x_local_fp32, num);
+__aicore__ inline void ComputeNormalLayerNorm(AscendC::LocalTensor<float>& x_local_fp32,
+                                              AscendC::LocalTensor<float>& y_local_fp32,
+                                              AscendC::LocalTensor<T>& gamma_local, AscendC::LocalTensor<T>& beta_local,
+                                              AscendC::LocalTensor<float>& z_local_fp32, uint32_t num)
+{
+    Mul(x_local_fp32, z_local_fp32, y_local_fp32, num);
+    PipeBarrier<PIPE_V>();
+    if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+        Cast(z_local_fp32, gamma_local, AscendC::RoundMode::CAST_NONE, num);
+    } else {
+        Adds(z_local_fp32, gamma_local, 0, num);
     }
+    PipeBarrier<PIPE_V>();
+    Mul(y_local_fp32, x_local_fp32, z_local_fp32, num);
+    PipeBarrier<PIPE_V>();
+    if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+        Cast(x_local_fp32, beta_local, AscendC::RoundMode::CAST_NONE, num);
+    } else {
+        Adds(x_local_fp32, beta_local, 0, num);
+    }
+    PipeBarrier<PIPE_V>();
+    Add(z_local_fp32, y_local_fp32, x_local_fp32, num);
+}
 
 template <typename T>
-__aicore__ inline void CastFrom32To16(const AscendC::LocalTensor<T> &out, const AscendC::LocalTensor<float> &in,
-    uint32_t count)
+__aicore__ inline void CastFrom32To16(const AscendC::LocalTensor<T>& out, const AscendC::LocalTensor<float>& in,
+                                      uint32_t count)
 {
     if constexpr (AscendC::IsSameType<T, half>::value) {
         Cast(out, in, AscendC::RoundMode::CAST_NONE, count); // 310p cast fp32->half 只能用CAST_NONE，这里拉齐310p和910b
-    } else { // bf16
+    } else {                                                 // bf16
         Cast(out, in, AscendC::RoundMode::CAST_RINT, count);
     }
     AscendC::PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t> &out, const AscendC::LocalTensor<half> &in,
-    half quantMin, uint32_t count)
+__aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t>& out, const AscendC::LocalTensor<half>& in,
+                                       half quantMin, uint32_t count)
 {
     Maxs(in, in, quantMin, count);
     AscendC::PipeBarrier<PIPE_V>();

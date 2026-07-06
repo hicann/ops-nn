@@ -22,7 +22,7 @@ namespace l0op {
 
 OP_TYPE_REGISTER(MishGradV2);
 
-const aclTensor *MishGradV2(const aclTensor *grad, const aclTensor *x, const aclTensor *tanhx, aclOpExecutor *executor)
+const aclTensor* MishGradV2(const aclTensor* grad, const aclTensor* x, const aclTensor* tanhx, aclOpExecutor* executor)
 {
     L0_DFX(MishGradV2, grad, x, tanhx);
     auto out = executor->AllocTensor(grad->GetStorageShape(), grad->GetDataType(), grad->GetStorageFormat());
@@ -30,9 +30,8 @@ const aclTensor *MishGradV2(const aclTensor *grad, const aclTensor *x, const acl
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGradV2, OP_INPUT(grad, x, tanhx), OP_OUTPUT(out));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return out;
 }
 
-}  // namespace l0op
+} // namespace l0op

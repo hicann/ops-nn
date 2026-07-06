@@ -28,7 +28,8 @@
  *
  * TilingKey_0 (FP32 direct):
  *   - 5 buffers + cmpMask
- *   - Compute chain: Muls(beta*x) -> Duplicate+Compare(<=threshold) -> Exp -> Adds(+1) -> Log -> Muls(invBeta) -> Select
+ *   - Compute chain: Muls(beta*x) -> Duplicate+Compare(<=threshold) -> Exp -> Adds(+1) -> Log -> Muls(invBeta) ->
+ * Select
  *
  * TilingKey_1 (FP16 cast to FP32) / TilingKey_2 (BF16 cast to FP32):
  *   - 4 buffers (in/out depth=2 at sizeof(T)=2) + castBuf(fp32) + tmpBuf(fp32) + cmpMask
@@ -67,14 +68,12 @@ private:
     __aicore__ inline void CopyOut(int64_t progress, int64_t currentNum);
 
     // FP32 direct compute path (TilingKey_0)
-    __aicore__ inline void ComputeFp32(AscendC::LocalTensor<float>& xLocal,
-                                       AscendC::LocalTensor<float>& yLocal,
+    __aicore__ inline void ComputeFp32(AscendC::LocalTensor<float>& xLocal, AscendC::LocalTensor<float>& yLocal,
                                        int64_t currentNum);
 
     // FP16/BF16 cast-to-fp32 compute path (TilingKey_1 / TilingKey_2)
     // Uses two-pass Cast approach validated by probe results
-    __aicore__ inline void ComputeCast(AscendC::LocalTensor<T>& xLocal,
-                                       AscendC::LocalTensor<T>& yLocal,
+    __aicore__ inline void ComputeCast(AscendC::LocalTensor<T>& xLocal, AscendC::LocalTensor<T>& yLocal,
                                        int64_t currentNum);
 
 private:
@@ -83,7 +82,7 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueue;
     TBuf<TPosition::VECCALC> tmpBuf;
     TBuf<TPosition::VECCALC> cmpMaskBuf;
-    TBuf<TPosition::VECCALC> castBuf;  // FP16/BF16 only: fp32 workspace for Cast results
+    TBuf<TPosition::VECCALC> castBuf; // FP16/BF16 only: fp32 workspace for Cast results
 
     GlobalTensor<T> xGm;
     GlobalTensor<T> yGm;
@@ -163,16 +162,14 @@ __aicore__ inline void SoftplusV2<T>::CopyOut(int64_t progress, int64_t currentN
 
 template <typename T>
 __aicore__ inline void SoftplusV2<T>::ComputeFp32(AscendC::LocalTensor<float>& xLocal,
-                                                   AscendC::LocalTensor<float>& yLocal,
-                                                   int64_t currentNum)
+                                                  AscendC::LocalTensor<float>& yLocal, int64_t currentNum)
 {
     AscendC::LocalTensor<float> tmp = tmpBuf.Get<float>();
     AscendC::LocalTensor<uint8_t> cmpMask = cmpMaskBuf.Get<uint8_t>();
 
     // Align count to 64 elements for Compare 256B alignment
     int64_t alignedCount = ((currentNum + 63) / 64) * 64;
-    uint32_t computeCount = static_cast<uint32_t>(
-        (alignedCount > tileLength_) ? tileLength_ : alignedCount);
+    uint32_t computeCount = static_cast<uint32_t>((alignedCount > tileLength_) ? tileLength_ : alignedCount);
 
     // Step 1: tmp = beta * x
     AscendC::Muls<float>(tmp, xLocal, beta_, computeCount);
@@ -197,15 +194,12 @@ __aicore__ inline void SoftplusV2<T>::ComputeFp32(AscendC::LocalTensor<float>& x
     // Step 7: y = Select(cmpMask ? tmp : x)
     // Compare LE: bit=1 when beta*x <= threshold -> select softplus (src0=tmp)
     //             bit=0 when beta*x >  threshold -> select x (src1=xLocal)
-    AscendC::Select<float>(yLocal, cmpMask, tmp, xLocal,
-                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                           computeCount);
+    AscendC::Select<float>(yLocal, cmpMask, tmp, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
 }
 
 template <typename T>
-__aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLocal,
-                                                   AscendC::LocalTensor<T>& yLocal,
-                                                   int64_t currentNum)
+__aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLocal, AscendC::LocalTensor<T>& yLocal,
+                                                  int64_t currentNum)
 {
     // FP16/BF16 path: Cast to fp32, compute in fp32, Cast back
     // Validated by fp16_cast_probe and bf16_cast_probe (both successful)
@@ -222,8 +216,7 @@ __aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLoca
 
     // Align count to 64 elements for Compare 256B alignment (fp32 compute)
     int64_t alignedCount = ((currentNum + 63) / 64) * 64;
-    uint32_t computeCount = static_cast<uint32_t>(
-        (alignedCount > tileLength_) ? tileLength_ : alignedCount);
+    uint32_t computeCount = static_cast<uint32_t>((alignedCount > tileLength_) ? tileLength_ : alignedCount);
 
     // Step 1: Cast T -> fp32
     AscendC::Cast<float, T>(castLocal, xLocal, AscendC::RoundMode::CAST_NONE, computeCount);
@@ -257,9 +250,7 @@ __aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLoca
     // Step 10: Select in fp32 space
     // Probe finding: Select<bfloat16_t> not available on dav_c220, must do Select in fp32
     // bit=1 -> src0(tmp, softplus result), bit=0 -> src1(castLocal, original x)
-    AscendC::Select<float>(castLocal, cmpMask, tmp, castLocal,
-                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                           computeCount);
+    AscendC::Select<float>(castLocal, cmpMask, tmp, castLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
 
     // Step 11: Cast fp32 -> T (output)
     AscendC::Cast<T, float>(yLocal, castLocal, AscendC::RoundMode::CAST_ROUND, computeCount);

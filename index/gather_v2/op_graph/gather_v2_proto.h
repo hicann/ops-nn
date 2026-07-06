@@ -27,7 +27,8 @@ namespace ge {
 * will be set as 0. Otherwise, an aic_error will occur.
 
 * @par Inputs:
-* @li x: A ND (Support 1D~8D) tensor. Must be one of the following types: complex128, complex64, float64, float32, float16,
+* @li x: A ND (Support 1D~8D) tensor. Must be one of the following types: complex128, complex64, float64, float32,
+float16,
 *     int16, int32, int64, int8, qint16, qint32, qint8, quint16, quint8, uint16, uint32, uint64, uint8,
 *     bool, FLOAT8_E5M2, FLOAT8_E8M0, FLOAT8_E4M3FN, string, bfloat16.
 * @li indices: A ND (Support 1D~8D) tensor of type int32 or int64.
@@ -35,8 +36,10 @@ namespace ge {
 
 * @par Attributes:
 * @li batch_dims: An optional int which means the number of data to be deal with. Defaults to 0.
-* @li is_preprocessed: An optional bool. Whether to preprocess, wihch is true means need to be preprocess and false means not. Defaults to false.
-* @li negative_index_support: An optional bool, which is true means support index is negative, and false means not. Defaults to false.
+* @li is_preprocessed: An optional bool. Whether to preprocess, wihch is true means need to be preprocess and false
+means not. Defaults to false.
+* @li negative_index_support: An optional bool, which is true means support index is negative, and false means not.
+Defaults to false.
 
 * @par Outputs:
 * y: A ND Tensor which has the same type as "x".
@@ -44,9 +47,11 @@ namespace ge {
 * @attention Constraints:
 * @li Value in indices must be in range [0, x.shape[axis]).
 * @li Default mode is HIGH_PERCISION.
-      Only HIGH_PERCISION mode support negative index, and negative index in HIGH_PERFORMANCE mode may cause precision abnormal or aicore error.
+      Only HIGH_PERCISION mode support negative index, and negative index in HIGH_PERFORMANCE mode may cause precision
+abnormal or aicore error.
 * @li Batch_dims must be in the range [max(-rank(input_tensor),-rank(indices)), min(rank(input_tensor), rank(indices))).
-* @li (batch_dims + rank(input_tensor)) % rank(input_tensor) must be less than or equal to (axis + rank(input_tensor)) % rank(input_tensor).
+* @li (batch_dims + rank(input_tensor)) % rank(input_tensor) must be less than or equal to (axis + rank(input_tensor)) %
+rank(input_tensor).
 * @li The first batch_dims dimensions of params and indices are same.
 
 * @par Third-party framework compatibility
@@ -54,14 +59,16 @@ namespace ge {
 
 */
 REG_OP(GatherV2)
-    .INPUT(x, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
-                          DT_INT8, DT_QINT16, DT_QINT32, DT_QINT8, DT_QUINT16, DT_QUINT8, DT_UINT16, DT_UINT32,
-                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
+    .INPUT(x, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT,       DT_FLOAT16,     DT_INT16,
+                          DT_INT32,      DT_INT64,     DT_INT8,   DT_QINT16,      DT_QINT32,      DT_QINT8,
+                          DT_QUINT16,    DT_QUINT8,    DT_UINT16, DT_UINT32,      DT_UINT64,      DT_UINT8,
+                          DT_BOOL,       DT_STRING,    DT_BF16,   DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
     .INPUT(indices, TensorType::IndexNumberType())
     .INPUT(axis, TensorType::IndexNumberType())
-    .OUTPUT(y, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
-                          DT_INT8, DT_QINT16, DT_QINT32, DT_QINT8, DT_QUINT16, DT_QUINT8, DT_UINT16, DT_UINT32,
-                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
+    .OUTPUT(y, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT,       DT_FLOAT16,     DT_INT16,
+                           DT_INT32,      DT_INT64,     DT_INT8,   DT_QINT16,      DT_QINT32,      DT_QINT8,
+                           DT_QUINT16,    DT_QUINT8,    DT_UINT16, DT_UINT32,      DT_UINT64,      DT_UINT8,
+                           DT_BOOL,       DT_STRING,    DT_BF16,   DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
     .ATTR(batch_dims, Int, 0)
     .ATTR(is_preprocessed, Bool, false)
     .ATTR(negative_index_support, Bool, false)

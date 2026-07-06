@@ -78,13 +78,12 @@ ge::graphStatus EluTiling::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
 
-    OP_CHECK_IF(
-        inputDtype != this->outputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            tilingContext->GetNodeName(), "x, y",
-            Ops::Base::ToString(inputDtype) + ", " + Ops::Base::ToString(this->outputDtype),
-            "The dtypes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputDtype != this->outputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputDtype) + ", " + Ops::Base::ToString(this->outputDtype),
+                    "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -99,28 +98,25 @@ ge::graphStatus EluTiling::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
     const gert::Shape& outputShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputShape != outputShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            tilingContext->GetNodeName(), "x, y", ToString(inputShape) + ", " + ToString(outputShape),
-            "The shapes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape != outputShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+                                                       ToString(inputShape) + ", " + ToString(outputShape),
+                                                       "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus EluTiling::RunTiling()
 {
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
 
     tiling = tilingContext->GetTilingData<EluTilingData>();
-    OP_CHECK_IF(
-        (tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
@@ -130,9 +126,9 @@ ge::graphStatus EluTiling::RunTiling()
     } else if (this->outputDtype == ge::DT_BF16) {
         res = elewiseBaseTiling.DoTiling<EluOp::EluDag<bfloat16_t, float>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            tilingContext->GetNodeName(), "x", ToString(static_cast<ge::DataType>(this->outputDtype)),
-            "The dtype of x must be DT_FLOAT16, DT_FLOAT, or DT_BF16");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+                                              ToString(static_cast<ge::DataType>(this->outputDtype)),
+                                              "The dtype of x must be DT_FLOAT16, DT_FLOAT, or DT_BF16");
         return ge::GRAPH_FAILED;
     }
 

@@ -23,15 +23,16 @@ namespace optiling {
 using namespace Ops::NN::OpTiling;
 using namespace Ops::Base;
 
-const uint32_t UB_RESERVED_BUFF = 0; // reserve 0k
+const uint32_t UB_RESERVED_BUFF = 0;     // reserve 0k
 const uint32_t L2_CACHE_LINE_SIZE = 512; // pack unit in cache 512B
-const uint32_t UB_MIN_BLOCK_SIZE = 32; // align unit in cache 32B
-const uint32_t BLOCK_SIZE_OF_64B = 64; // align unit in cache 64B
+const uint32_t UB_MIN_BLOCK_SIZE = 32;   // align unit in cache 32B
+const uint32_t BLOCK_SIZE_OF_64B = 64;   // align unit in cache 64B
 const uint32_t DEFAULT_BUFFER_NUM = 2;
 const uint32_t MAX_BLOCK_COUNT = 4095; // datacopy指令包含的连续传输数据块的最大个数
-const uint32_t MAX_BLOCK_LEN = static_cast<uint32_t>(65535 * 32); // datacopy指令每个连续传输数据块的最长长度为65535，单位为32bytes
+const uint32_t MAX_BLOCK_LEN = static_cast<uint32_t>(
+    65535 * 32); // datacopy指令每个连续传输数据块的最长长度为65535，单位为32bytes
 const uint32_t MAX_UINT32 = 4294967295;
-const uint16_t DISCONTINE_COPY_MAX_BLOCKCNT = 4095; // 非连续拷贝，blockCount最大值,AscendC接口限制
+const uint16_t DISCONTINE_COPY_MAX_BLOCKCNT = 4095;  // 非连续拷贝，blockCount最大值,AscendC接口限制
 const uint16_t DISCONTINE_COPY_MAX_BLOCKLEN = 65535; // 非连续拷贝，blockLen最大值,AscendC接口限制
 const uint16_t DISCONTINE_COPY_MAX_STRIDE = 65535; // 非连续拷贝，srcStride/dstStride最大值,AscendC接口限制
 
@@ -48,70 +49,69 @@ const int64_t WORKSPACE_BUFFER = static_cast<int64_t>(16 * 1024 * 1024);
 const int64_t INPUT_OUTPUT_IDX = 0;
 const int64_t TILING_KEY_EMPTY = 100;
 
-template<typename T>
+template <typename T>
 inline auto AlignUp(T num, T rnd) -> T
 {
-    return (((rnd) == 0) ? 0 : (((num) + (rnd) - 1) / (rnd) * (rnd)));
+    return (((rnd) == 0) ? 0 : (((num) + (rnd)-1) / (rnd) * (rnd)));
 }
 // align num to multiples of rnd, round down
-template<typename T>
+template <typename T>
 inline auto AlignDown(T num, T rnd) -> T
 {
     return ((((rnd) == 0) || ((num) < (rnd))) ? 0 : ((num) / (rnd) * (rnd)));
 }
-template<typename T>
+template <typename T>
 inline auto DivCeil(T num, T div) -> T
 {
-    return (((div) == 0) ? 0 : (((num) + (div) - 1) / (div)));
+    return (((div) == 0) ? 0 : (((num) + (div)-1) / (div)));
 }
 
-enum GLU_FLAG : uint8_t {
-    SWIGLU_SINGLE,
-    SWIGLU_GRAD_SINGLE
-};
+enum GLU_FLAG : uint8_t { SWIGLU_SINGLE, SWIGLU_GRAD_SINGLE };
 
 // Tiling优选参数
 struct GluSingleTilingOptParam {
     // Maximum amount of data that can be transferred by an operator UB at a time. Unit:element
     uint32_t maxTileLen = 0;
-    uint32_t optBaseRowLen = 0; // 最优的BaseRowLen
-    uint32_t optBaseColLen = 0; // 最优的BaseColLen
+    uint32_t optBaseRowLen = 0;   // 最优的BaseRowLen
+    uint32_t optBaseColLen = 0;   // 最优的BaseColLen
     uint64_t optTotalTileNum = 0; // 最优的分割后的数据块数量
     uint64_t optBaseSize = 0; // 最优的分割后的base shape数据块的大小， optBaseRowLen*optBaseColLen, Unit:element
     uint64_t optBaseTileNum = 0; // 最优的分割后的base shape数据块数量，不包含尾块
 
     uint32_t totalUsedCoreNum = 0; // 最终实际使用的核数
-    uint64_t tileNumPerCore = 0; // 每个核需要处理的TileNum，如果不均匀，按照多的计算
+    uint64_t tileNumPerCore = 0;   // 每个核需要处理的TileNum，如果不均匀，按照多的计算
 };
 
 struct GluSingleTilingCalculator {
 public:
-    explicit GluSingleTilingCalculator(SwiGluTilingData *iTilingData, const std::string& opName) : tilingData(iTilingData), opName_(opName) {}
+    explicit GluSingleTilingCalculator(SwiGluTilingData* iTilingData, const std::string& opName)
+        : tilingData(iTilingData), opName_(opName)
+    {}
 
-    template<GLU_FLAG Glu_Flag>
+    template <GLU_FLAG Glu_Flag>
     bool CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype, NpuArch npuArch);
 
     template <GLU_FLAG Glu_Flag>
-    bool SetTotalShape(const gert::Shape &inShape, const int32_t inDim);
+    bool SetTotalShape(const gert::Shape& inShape, const int32_t inDim);
 
-    void SaveTilingData(gert::TilingContext *context);
+    void SaveTilingData(gert::TilingContext* context);
     inline bool isSupportSocV(uint32_t dtype, NpuArch npuArch) const;
-    SwiGluTilingData *tilingData;
+    SwiGluTilingData* tilingData;
 
     uint32_t totalUsedCoreNum_ = 0; // 最终实际使用的核数
 private:
-    template<GLU_FLAG Glu_Flag, uint16_t bufferNum>
-    bool CalcOptTiling(uint64_t ubSize, int32_t dtype, GluSingleTilingOptParam &optTiling) const;
+    template <GLU_FLAG Glu_Flag, uint16_t bufferNum>
+    bool CalcOptTiling(uint64_t ubSize, int32_t dtype, GluSingleTilingOptParam& optTiling) const;
 
-    template<GLU_FLAG Glu_Flag, uint16_t bufferNum>
-    bool GetBufferNumAndDataLenPerUB(uint64_t ubSize, int32_t dtype, uint64_t &dataLenPerUB) const;
+    template <GLU_FLAG Glu_Flag, uint16_t bufferNum>
+    bool GetBufferNumAndDataLenPerUB(uint64_t ubSize, int32_t dtype, uint64_t& dataLenPerUB) const;
 
-    template<GLU_FLAG Glu_Flag, uint16_t bufferNum>
-    inline bool CalcUbMaxTileLen(uint64_t ubSize, int32_t dtype, GluSingleTilingOptParam &optTiling) const;
+    template <GLU_FLAG Glu_Flag, uint16_t bufferNum>
+    inline bool CalcUbMaxTileLen(uint64_t ubSize, int32_t dtype, GluSingleTilingOptParam& optTiling) const;
 
-    inline void SaveOptBaseShape(uint32_t baseRowLen_, uint32_t baseColLen_, GluSingleTilingOptParam &optTiling) const;
+    inline void SaveOptBaseShape(uint32_t baseRowLen_, uint32_t baseColLen_, GluSingleTilingOptParam& optTiling) const;
 
-    inline uint32_t getBaseColLenUpBound(GluSingleTilingOptParam &optTiling) const;
+    inline uint32_t getBaseColLenUpBound(GluSingleTilingOptParam& optTiling) const;
 
     inline uint32_t getBaseRowLenUpBound() const;
 
@@ -120,8 +120,8 @@ private:
     inline bool isInvalidBaseShape(uint32_t baseRowlen_, uint32_t baseColLen_) const;
     inline bool isValidTailCol(uint32_t baseRowlen_, uint32_t baseColLen_) const;
 
-    template<GLU_FLAG Glu_Flag>
-    inline bool CalcOptBaseShape(GluSingleTilingOptParam &optTiling) const;
+    template <GLU_FLAG Glu_Flag>
+    inline bool CalcOptBaseShape(GluSingleTilingOptParam& optTiling) const;
 
     uint32_t inputDTypeLen = 2;
     // Indicates the minimum processing data unit of the UB. Unit:element.
@@ -137,7 +137,8 @@ private:
     std::string opName_;
 };
 
-inline bool GetLengthByType(int32_t dtype, uint32_t& dsize) {
+inline bool GetLengthByType(int32_t dtype, uint32_t& dsize)
+{
     switch (dtype) {
         case ge::DT_FLOAT16:
         case ge::DT_INT16:
@@ -160,73 +161,81 @@ inline bool GetLengthByType(int32_t dtype, uint32_t& dsize) {
     }
 }
 
-    template <GLU_FLAG Glu_Flag>
-    inline uint32_t GetSelfIdx()
-    {
-        auto idx = Glu_Flag == GLU_FLAG::SWIGLU_GRAD_SINGLE ? 1 : 0;
-        return static_cast<uint32_t>(idx);
+template <GLU_FLAG Glu_Flag>
+inline uint32_t GetSelfIdx()
+{
+    auto idx = Glu_Flag == GLU_FLAG::SWIGLU_GRAD_SINGLE ? 1 : 0;
+    return static_cast<uint32_t>(idx);
+}
+
+template <GLU_FLAG Glu_Flag>
+inline bool GluSingleTilingCalculator::SetTotalShape(const gert::Shape& inShape, const int32_t inDim)
+{
+    int64_t shapeBefore = 1;
+    int64_t shapeAfter = 1;
+    int64_t dimNum = inShape.GetDimNum();
+    if (inDim < -dimNum || inDim >= dimNum) {
+        std::string reasonMsg = "The value of attribute dim depends on the number of shape axes of input x";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_.c_str(), "dim", std::to_string(inDim).c_str(), reasonMsg.c_str());
+        return false;
+    }
+    int64_t splitDim = inDim < 0 ? dimNum + inDim : inDim; // inDim default -1
+    for (int64_t i = 0; i < splitDim; i++) {
+        shapeBefore *= inShape.GetDim(i);
+    }
+    for (int64_t j = splitDim; j < dimNum; j++) {
+        shapeAfter *= inShape.GetDim(j);
+    }
+    // 如果shape不是2的倍数,返回
+    if (shapeAfter % 2 != 0) {
+        std::string reasonMsg = "The split axis of input x must be an even number, "
+                                "where split axis is the " +
+                                std::to_string(splitDim) + "th axis of input x";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_.c_str(), "x", ToString(inShape).c_str(), reasonMsg.c_str());
+        return false;
     }
 
-    template <GLU_FLAG Glu_Flag>
-    inline bool GluSingleTilingCalculator::SetTotalShape(const gert::Shape& inShape, const int32_t inDim)
-    {
-        int64_t shapeBefore = 1;
-        int64_t shapeAfter = 1;
-        int64_t dimNum = inShape.GetDimNum();
-        if (inDim < -dimNum || inDim >= dimNum) {
-            std::string reasonMsg =
-                "The value of attribute dim depends on the number of shape axes of input x";
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_.c_str(), "dim",
-                std::to_string(inDim).c_str(), reasonMsg.c_str());
-            return false;
-        }
-        int64_t splitDim = inDim < 0 ? dimNum + inDim : inDim; // inDim default -1
-        for (int64_t i = 0; i < splitDim; i++) {
-            shapeBefore *= inShape.GetDim(i);
-        }
-        for (int64_t j = splitDim; j < dimNum; j++) {
-            shapeAfter *= inShape.GetDim(j);
-        }
-        // 如果shape不是2的倍数,返回
-        if (shapeAfter % 2 != 0) {
-            std::string reasonMsg = "The split axis of input x must be an even number, "
-                "where split axis is the " + std::to_string(splitDim) + "th axis of input x";
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_.c_str(), "x", ToString(inShape).c_str(),
-                reasonMsg.c_str());
-            return false;
-        }
+    tilingData->set_rowLen(shapeBefore);
+    // colLen为原shape除以2
+    tilingData->set_colLen(shapeAfter / 2);
+    return true;
+}
 
-        tilingData->set_rowLen(shapeBefore);
-        // colLen为原shape除以2
-        tilingData->set_colLen(shapeAfter / 2);
-        return true;
-    }
-
-    template <GLU_FLAG Glu_Flag, uint16_t bufferNum>
-    bool GluSingleTilingCalculator::GetBufferNumAndDataLenPerUB(uint64_t ubSize, int32_t dtype, uint64_t& dataLenPerUB) const
-    {
-        uint32_t singleDataSize = 0;
-        switch (Glu_Flag) {
+template <GLU_FLAG Glu_Flag, uint16_t bufferNum>
+bool GluSingleTilingCalculator::GetBufferNumAndDataLenPerUB(uint64_t ubSize, int32_t dtype,
+                                                            uint64_t& dataLenPerUB) const
+{
+    uint32_t singleDataSize = 0;
+    switch (Glu_Flag) {
         case GLU_FLAG::SWIGLU_SINGLE:
             if (dtype == ge::DT_FLOAT16) {
-                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_TQUE_NUM * sizeof(int16_t) + SWIGLU_TBUF_NUM_HALF * sizeof(int32_t));
+                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_TQUE_NUM *
+                                                           sizeof(int16_t) +
+                                                       SWIGLU_TBUF_NUM_HALF * sizeof(int32_t));
             } else if (dtype == ge::DT_BF16) {
-                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_TQUE_NUM * sizeof(int16_t) + SWIGLU_TBUF_NUM_BF16 * sizeof(int32_t));
+                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_TQUE_NUM *
+                                                           sizeof(int16_t) +
+                                                       SWIGLU_TBUF_NUM_BF16 * sizeof(int32_t));
             } else {
-                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_TQUE_NUM * sizeof(int32_t) + SWIGLU_TBUF_NUM_FLOAT * sizeof(int32_t));
+                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_TQUE_NUM *
+                                                           sizeof(int32_t) +
+                                                       SWIGLU_TBUF_NUM_FLOAT * sizeof(int32_t));
             }
             dataLenPerUB = ubSize / singleDataSize;
             return true;
         case GLU_FLAG::SWIGLU_GRAD_SINGLE:
             if (dtype == ge::DT_FLOAT16) {
-            singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_BW_TQUE_NUM * sizeof(int16_t) +
-                             SWIGLU_BW_TBUF_NUM_HALF * sizeof(int32_t));
+                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_BW_TQUE_NUM *
+                                                           sizeof(int16_t) +
+                                                       SWIGLU_BW_TBUF_NUM_HALF * sizeof(int32_t));
             } else if (dtype == ge::DT_BF16) {
-            singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_BW_TQUE_NUM * sizeof(int16_t) +
-                             SWIGLU_BW_TBUF_NUM_BF16 * sizeof(int32_t));
+                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_BW_TQUE_NUM *
+                                                           sizeof(int16_t) +
+                                                       SWIGLU_BW_TBUF_NUM_BF16 * sizeof(int32_t));
             } else {
-            singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_BW_TQUE_NUM * sizeof(int32_t) +
-                             SWIGLU_BW_TBUF_NUM_FLOAT * sizeof(int32_t));
+                singleDataSize = static_cast<uint32_t>(static_cast<uint64_t>(bufferNum) * XXGLU_BW_TQUE_NUM *
+                                                           sizeof(int32_t) +
+                                                       SWIGLU_BW_TBUF_NUM_FLOAT * sizeof(int32_t));
             }
             dataLenPerUB = ubSize / singleDataSize;
             return true;
@@ -236,7 +245,8 @@ inline bool GetLengthByType(int32_t dtype, uint32_t& dsize) {
 }
 
 template <GLU_FLAG Glu_Flag, uint16_t bufferNum>
-inline bool GluSingleTilingCalculator::CalcUbMaxTileLen(uint64_t ubSize, int32_t dtype, GluSingleTilingOptParam& optTiling) const
+inline bool GluSingleTilingCalculator::CalcUbMaxTileLen(uint64_t ubSize, int32_t dtype,
+                                                        GluSingleTilingOptParam& optTiling) const
 {
     // get buffernum and maxTileLen
     uint64_t maxTileLenPerUB = 1;
@@ -245,13 +255,16 @@ inline bool GluSingleTilingCalculator::CalcUbMaxTileLen(uint64_t ubSize, int32_t
         return false;
     }
     optTiling.maxTileLen = AlignDown<uint64_t>(maxTileLenPerUB, ubMinBlockLen);
-    OP_LOGI(opName_, "CalcTiling ubSize:%lu, bufferNum:%d, maxTileLenPerUB:%u", ubSize, bufferNum, optTiling.maxTileLen);
+    OP_LOGI(opName_, "CalcTiling ubSize:%lu, bufferNum:%d, maxTileLenPerUB:%u", ubSize, bufferNum,
+            optTiling.maxTileLen);
     return true;
 }
 
-inline void GluSingleTilingCalculator::SaveOptBaseShape(uint32_t baseRowLen_, uint32_t baseColLen_, GluSingleTilingOptParam& optTiling) const
+inline void GluSingleTilingCalculator::SaveOptBaseShape(uint32_t baseRowLen_, uint32_t baseColLen_,
+                                                        GluSingleTilingOptParam& optTiling) const
 {
-    uint64_t totalTileNum = DivCeil<uint64_t>(tilingData->get_rowLen(), (baseRowLen_)) * DivCeil<uint64_t>(tilingData->get_colLen(), (baseColLen_));
+    uint64_t totalTileNum = DivCeil<uint64_t>(tilingData->get_rowLen(), (baseRowLen_)) *
+                            DivCeil<uint64_t>(tilingData->get_colLen(), (baseColLen_));
     uint64_t baseSize = static_cast<uint64_t>(baseRowLen_) * baseColLen_;
     if (baseRowLen_ == static_cast<uint32_t>(0) || baseColLen_ == static_cast<uint32_t>(0)) {
         OP_LOGE(opName_, "SaveOptBaseShape devide by 0 baseRowLen_:%u baseColLen_:%u", baseRowLen_, baseColLen_);
@@ -259,18 +272,20 @@ inline void GluSingleTilingCalculator::SaveOptBaseShape(uint32_t baseRowLen_, ui
     }
     uint64_t baseTileNum = (tilingData->get_rowLen() / baseRowLen_) * (tilingData->get_colLen() / baseColLen_);
     uint32_t totalUsedCoreNum = std::min(totalTileNum, static_cast<uint64_t>(totalAvailableCore));
-    if ((optTiling.optTotalTileNum == static_cast<uint64_t>(0)) ||
-        (totalUsedCoreNum > optTiling.totalUsedCoreNum) ||
+    if ((optTiling.optTotalTileNum == static_cast<uint64_t>(0)) || (totalUsedCoreNum > optTiling.totalUsedCoreNum) ||
         ((totalUsedCoreNum == optTiling.totalUsedCoreNum) && (totalTileNum < optTiling.optTotalTileNum)) ||
-        ((totalUsedCoreNum == optTiling.totalUsedCoreNum) && (totalTileNum == optTiling.optTotalTileNum) && (baseSize > optTiling.optBaseSize)) ||
-        ((totalUsedCoreNum == optTiling.totalUsedCoreNum) && (totalTileNum == optTiling.optTotalTileNum) && (baseSize == optTiling.optBaseSize) && (baseTileNum > optTiling.optBaseTileNum))) {
+        ((totalUsedCoreNum == optTiling.totalUsedCoreNum) && (totalTileNum == optTiling.optTotalTileNum) &&
+         (baseSize > optTiling.optBaseSize)) ||
+        ((totalUsedCoreNum == optTiling.totalUsedCoreNum) && (totalTileNum == optTiling.optTotalTileNum) &&
+         (baseSize == optTiling.optBaseSize) && (baseTileNum > optTiling.optBaseTileNum))) {
         optTiling.optBaseRowLen = baseRowLen_;
         optTiling.optBaseColLen = baseColLen_;
         optTiling.optTotalTileNum = totalTileNum;
         optTiling.optBaseSize = baseSize;
         optTiling.optBaseTileNum = baseTileNum;
         optTiling.totalUsedCoreNum = totalUsedCoreNum;
-        optTiling.tileNumPerCore = DivCeil<uint64_t>(totalTileNum, totalUsedCoreNum);;
+        optTiling.tileNumPerCore = DivCeil<uint64_t>(totalTileNum, totalUsedCoreNum);
+        ;
     }
 }
 
@@ -318,7 +333,8 @@ inline bool GluSingleTilingCalculator::MustBeSingleBaseRowLen(uint32_t baseColLe
  */
 inline bool GluSingleTilingCalculator::isInvalidBaseShape(uint32_t baseRowlen_, uint32_t baseColLen_) const
 {
-    return ((baseRowlen_ < static_cast<uint32_t>(1)) || (baseRowlen_ > static_cast<uint32_t>(1) && MustBeSingleBaseRowLen(baseColLen_)));
+    return ((baseRowlen_ < static_cast<uint32_t>(1)) ||
+            (baseRowlen_ > static_cast<uint32_t>(1) && MustBeSingleBaseRowLen(baseColLen_)));
 }
 
 inline bool GluSingleTilingCalculator::isValidTailCol(uint32_t baseRowlen_, uint32_t baseColLen_) const
@@ -333,7 +349,7 @@ inline bool GluSingleTilingCalculator::isValidTailCol(uint32_t baseRowlen_, uint
 inline bool GluSingleTilingCalculator::isSupportSocV(uint32_t dtype, NpuArch npuArch) const
 {
     if ((npuArch == NpuArch::DAV_2002) && (dtype == ge::DT_BF16)) {
-        return false; //310p dont support BF16
+        return false; // 310p dont support BF16
     } else {
         return true;
     }
@@ -348,9 +364,10 @@ inline bool GluSingleTilingCalculator::CalcOptBaseShape(GluSingleTilingOptParam&
         return true;
     }
 
-    while(true) {
+    while (true) {
         // colLen非32B对齐时，数据copy到ub时，每一行的尾部会补齐32B
-        uint32_t baseRowlen_ = std::min(optTiling.maxTileLen / AlignUp<uint32_t>(baseColLen_, ubMinBlockLen), getBaseRowLenUpBound());
+        uint32_t baseRowlen_ = std::min(optTiling.maxTileLen / AlignUp<uint32_t>(baseColLen_, ubMinBlockLen),
+                                        getBaseRowLenUpBound());
         if (isInvalidBaseShape(baseRowlen_, baseColLen_)) {
             OP_LOGI(opName_, "CalcOptBaseShape baseRowln:%u or baseColLen:%u is invalid. optTotalTileNum:%lu end",
                     baseRowlen_, baseColLen_, optTiling.optTotalTileNum);
@@ -393,7 +410,7 @@ bool GluSingleTilingCalculator::CalcOptTiling(uint64_t ubSize, int32_t dtype, Gl
 }
 
 template <GLU_FLAG Glu_Flag>
-bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype,  NpuArch npuArch)
+bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, int32_t dtype, NpuArch npuArch)
 {
     totalAvailableCore = totalCore;
     if (!GetLengthByType(dtype, inputDTypeLen)) {
@@ -402,8 +419,9 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
     }
     ubMinBlockLen = UB_MIN_BLOCK_SIZE / inputDTypeLen; // min block size
     cacheLineLen = L2_CACHE_LINE_SIZE / inputDTypeLen; // bandwidth max efficiency
-    alignPackLen = cacheLineLen; // 默认512对齐，策略可调整
-    OP_LOGI(opName_, "CalcTiling GetLengthByType:%u ubMinBlockLen:%u cacheLineLen:%u alignPackLen:%u", inputDTypeLen, ubMinBlockLen, cacheLineLen, alignPackLen);
+    alignPackLen = cacheLineLen;                       // 默认512对齐，策略可调整
+    OP_LOGI(opName_, "CalcTiling GetLengthByType:%u ubMinBlockLen:%u cacheLineLen:%u alignPackLen:%u", inputDTypeLen,
+            ubMinBlockLen, cacheLineLen, alignPackLen);
     // Is 32-byte aligned for split colLen?
     tilingData->set_is32BAligned(tilingData->get_colLen() % ubMinBlockLen == 0);
     // 310p not support Non-64B
@@ -419,14 +437,15 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
     if (!CalcOptTiling<Glu_Flag, 2>(ubSize, dtype, optTilingDb)) {
         return false;
     }
-    GluSingleTilingOptParam *optTiling = &optTilingDb;
+    GluSingleTilingOptParam* optTiling = &optTilingDb;
     // 如果double buffer开启的tiling参数中，每个核需要处理的tileNum等于2，尝试关闭double buffer;
     // 若关闭double buffer后只需要搬运1次数据，且使用的核没有减少, 则使用关闭double buffer的tiling
     // 判断tileNumPerCoer是否为2
     if (optTilingDb.tileNumPerCore == static_cast<uint64_t>(2)) {
         GluSingleTilingOptParam optTilingNoDb;
         if (CalcOptTiling<Glu_Flag, 1>(ubSize, dtype, optTilingNoDb) &&
-            (optTilingNoDb.tileNumPerCore == static_cast<uint64_t>(1)) && (optTilingNoDb.totalUsedCoreNum >= optTilingDb.totalUsedCoreNum)) {
+            (optTilingNoDb.tileNumPerCore == static_cast<uint64_t>(1)) &&
+            (optTilingNoDb.totalUsedCoreNum >= optTilingDb.totalUsedCoreNum)) {
             optTiling = &optTilingNoDb;
             tilingData->set_isDoubleBuffer(0);
         }
@@ -439,7 +458,8 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
     return true;
 }
 
-inline static int64_t CeilDiv(int64_t value, int64_t factor) {
+inline static int64_t CeilDiv(int64_t value, int64_t factor)
+{
     int64_t valueNum = 0;
     if (factor == 0) {
         return value;
@@ -452,9 +472,7 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor) {
     return valueNum;
 }
 
-static ge::graphStatus TilingPrepare4SwiGlu(gert::TilingParseContext* /*context*/) {
-    return ge::GRAPH_SUCCESS;
-}
+static ge::graphStatus TilingPrepare4SwiGlu(gert::TilingParseContext* /*context*/) { return ge::GRAPH_SUCCESS; }
 
 inline ge::graphStatus processEmptyTensor(gert::TilingContext* context, const uint32_t& totalCore)
 {
@@ -462,12 +480,11 @@ inline ge::graphStatus processEmptyTensor(gert::TilingContext* context, const ui
     auto outputShape = context->GetOutputShape(INPUT_OUTPUT_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context, outputShape);
     auto yTotalLength = outputShape->GetStorageShape().GetShapeSize();
-    OP_TILING_CHECK(
-        yTotalLength != 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context->GetNodeName(), "y", ToString(outputShape->GetStorageShape()).c_str(),
-            "Output y must be an empty tensor when input x is an empty tensor"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(yTotalLength != 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), "y", ToString(outputShape->GetStorageShape()).c_str(),
+                        "Output y must be an empty tensor when input x is an empty tensor"),
+                    return ge::GRAPH_FAILED);
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(totalCore);
     context->SetTilingKey(TILING_KEY_EMPTY);
@@ -475,7 +492,8 @@ inline ge::graphStatus processEmptyTensor(gert::TilingContext* context, const ui
 }
 
 template <GLU_FLAG Glu_Flag>
-ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
+ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Tiling4SwiGlu enter.");
     auto platformInfo = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t totalCore = platformInfo.GetCoreNumAiv();
@@ -487,7 +505,8 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     }
     uint64_t ubSize = 0;
     platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_TILING_CHECK((static_cast<int>(totalCore) < 0 || ubSize <= UB_RESERVED_BUFF),
+    OP_TILING_CHECK(
+        (static_cast<int>(totalCore) < 0 || ubSize <= UB_RESERVED_BUFF),
         OP_LOGE(context->GetNodeName(), "Compile Info is invalid, coreNum:%u, ubSize:%lu", totalCore, ubSize),
         return ge::GRAPH_PARAM_INVALID);
     ubSize -= UB_RESERVED_BUFF;
@@ -506,7 +525,7 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     auto inTensor = context->GetInputTensor(GetSelfIdx<Glu_Flag>());
     OPS_CHECK_NULL_WITH_CONTEXT(context, inTensor);
     auto inShape = inTensor->GetOriginShape();
-    const gert::RuntimeAttrs *attrs = context->GetAttrs();
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
     OP_LOGE_IF(attrs == nullptr, false, context->GetNodeName(), "Get op attrs failed.");
@@ -528,7 +547,7 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
     context->SetBlockDim(tilingCalculator.totalUsedCoreNum_);
     context->SetTilingKey(dataType);
 
-    size_t *userWorkspaceSize = context->GetWorkspaceSizes(1);
+    size_t* userWorkspaceSize = context->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, userWorkspaceSize);
     size_t workspaceSize = WORKSPACE_BUFFER;
     userWorkspaceSize[0] = workspaceSize;
@@ -538,6 +557,8 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context) {
 struct SwiGluCompileInfo {};
 
 IMPL_OP_OPTILING(SwiGlu).Tiling(Tiling4SwiGlu<SWIGLU_SINGLE>).TilingParse<SwiGluCompileInfo>(TilingPrepare4SwiGlu);
-IMPL_OP_OPTILING(SwiGluGrad).Tiling(Tiling4SwiGlu<SWIGLU_GRAD_SINGLE>).TilingParse<SwiGluCompileInfo>(TilingPrepare4SwiGlu);
+IMPL_OP_OPTILING(SwiGluGrad)
+    .Tiling(Tiling4SwiGlu<SWIGLU_GRAD_SINGLE>)
+    .TilingParse<SwiGluCompileInfo>(TilingPrepare4SwiGlu);
 
-}  // namespace optiling
+} // namespace optiling

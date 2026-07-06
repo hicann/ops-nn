@@ -33,8 +33,7 @@ using namespace AntiMxQuant;
  * They map to the 12 dtype combinations declared in anti_mx_quant_binary.json.
  */
 template <uint64_t axisMode>
-__global__ __aicore__ void anti_mx_quant(
-    GM_ADDR x, GM_ADDR mxScale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void anti_mx_quant(GM_ADDR x, GM_ADDR mxScale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(AntiMxQuantTilingData);

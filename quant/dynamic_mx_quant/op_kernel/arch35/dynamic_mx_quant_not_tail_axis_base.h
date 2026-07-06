@@ -30,14 +30,14 @@ public:
     __aicore__ inline DynamicMxQuantBase(){};
 
 protected:
-    __aicore__ inline void BaseInit(
-        GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData);
+    __aicore__ inline void BaseInit(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace,
+                                    const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void ParseTilingData(const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void InitCopyParams(int64_t blockCount, int64_t dataLen);
     __aicore__ inline void CopyIn(int64_t offset);
     __aicore__ inline void CopyOut(int64_t xOffset, int64_t scaleOffset, int64_t dataLen);
-    __aicore__ inline int64_t CalcDataLen(
-        int64_t curLoopBlockSizeNum, int64_t blockSizeNumHandled, int64_t scaleDataLen);
+    __aicore__ inline int64_t CalcDataLen(int64_t curLoopBlockSizeNum, int64_t blockSizeNumHandled,
+                                          int64_t scaleDataLen);
     __aicore__ inline int64_t BlockCountInCurCompute(int64_t blockSizeIdx);
     template <typename ComType>
     __aicore__ inline void LoadData(__ubuf__ T* xAddr, uint64_t offset, Reg::RegTensor<ComType>& x, Reg::MaskReg& mask);
@@ -88,8 +88,9 @@ protected:
 };
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::BaseInit(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
+__aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::BaseInit(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                                                  GM_ADDR workspace,
+                                                                  const DynamicMxQuantTilingData* tilingData)
 {
 #if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
@@ -144,9 +145,9 @@ __aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::CopyIn(int64_t offset)
 template <typename T, typename U, const bool ISTAIL>
 __aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::CopyOut(int64_t xOffset, int64_t scaleOffset, int64_t dataLen)
 {
-    DataCopyExtParams scaleCopyOutParams = {
-        static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(uint8_t)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams scaleCopyOutParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(uint8_t)),
+                                            static_cast<uint32_t>(0), static_cast<uint32_t>(0),
+                                            static_cast<uint32_t>(0)};
     LocalTensor<uint8_t> mxScale = mxScaleQueue_.DeQue<uint8_t>();
     DataCopyPad(workspaceGm_[scaleOffset], mxScale, scaleCopyOutParams);
     mxScaleQueue_.FreeTensor(mxScale);
@@ -160,29 +161,29 @@ template <typename T, typename U, const bool ISTAIL>
 __aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::InitCopyParams(int64_t blockCount, int64_t dataLen)
 {
     if (ubDim_ == DIM2) {
-        inCopyParams_ = {
-            static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)),
-            static_cast<uint32_t>((postAxisSize_) * sizeof(T)), static_cast<uint32_t>(dataLen * sizeof(T)),
-            static_cast<uint32_t>(0)};
-        outCopyParams_ = {
-            static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen / DIGIT_TWO * sizeof(uint8_t)),
-            static_cast<uint32_t>(0), static_cast<uint32_t>((postAxisSize_ - dataLen) / DIGIT_TWO * sizeof(uint8_t)),
-            static_cast<uint32_t>(0)};
+        inCopyParams_ = {static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)),
+                         static_cast<uint32_t>((postAxisSize_) * sizeof(T)), static_cast<uint32_t>(dataLen * sizeof(T)),
+                         static_cast<uint32_t>(0)};
+        outCopyParams_ = {static_cast<uint16_t>(blockCount),
+                          static_cast<uint32_t>(dataLen / DIGIT_TWO * sizeof(uint8_t)), static_cast<uint32_t>(0),
+                          static_cast<uint32_t>((postAxisSize_ - dataLen) / DIGIT_TWO * sizeof(uint8_t)),
+                          static_cast<uint32_t>(0)};
     } else {
-        inCopyParams_ = {
-            static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)), static_cast<uint32_t>(0),
-            static_cast<uint32_t>(dataLen * sizeof(T)), static_cast<uint32_t>(0)};
-        outCopyParams_ = {
-            static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen / DIGIT_TWO * sizeof(uint8_t)),
-            static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+        inCopyParams_ = {static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)),
+                         static_cast<uint32_t>(0), static_cast<uint32_t>(dataLen * sizeof(T)),
+                         static_cast<uint32_t>(0)};
+        outCopyParams_ = {static_cast<uint16_t>(blockCount),
+                          static_cast<uint32_t>(dataLen / DIGIT_TWO * sizeof(uint8_t)), static_cast<uint32_t>(0),
+                          static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     }
     inCopyParams_.srcStride -= inCopyParams_.blockLen;
     padParams_ = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
 }
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline int64_t DynamicMxQuantBase<T, U, ISTAIL>::CalcDataLen(
-    int64_t curLoopBlockSizeNum, int64_t blockSizeNumHandled, int64_t scaleDataLen)
+__aicore__ inline int64_t DynamicMxQuantBase<T, U, ISTAIL>::CalcDataLen(int64_t curLoopBlockSizeNum,
+                                                                        int64_t blockSizeNumHandled,
+                                                                        int64_t scaleDataLen)
 {
     if (!isPad_) {
         return scaleDataLen * blockSize_;
@@ -210,16 +211,16 @@ __aicore__ inline int64_t DynamicMxQuantBase<T, U, ISTAIL>::BlockCountInCurCompu
 
 template <typename T, typename U, const bool ISTAIL>
 template <typename ComType>
-__aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::LoadData(
-    __ubuf__ T* xAddr, uint64_t offset, Reg::RegTensor<ComType>& x, Reg::MaskReg& mask)
+__aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::LoadData(__ubuf__ T* xAddr, uint64_t offset,
+                                                                  Reg::RegTensor<ComType>& x, Reg::MaskReg& mask)
 {
     Reg::UnalignReg uReg;
     if constexpr (IsSame<T, half>::value) {
         Reg::RegTensor<T> xFP16;
         Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
         Reg::DataCopyUnAlign(xFP16, uReg, xAddr + offset);
-        static constexpr Reg::CastTrait castTraitHalf2Fp32 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitHalf2Fp32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
         Reg::UnPack((Reg::RegTensor<uint32_t>&)xFP16, (Reg::RegTensor<uint16_t>&)xFP16);
         Reg::Cast<ComType, T, castTraitHalf2Fp32>(x, xFP16, mask);
     } else {

@@ -18,8 +18,7 @@
 
 namespace optiling {
 
-class DynamicQuantTiling310P
-{
+class DynamicQuantTiling310P {
 public:
     DynamicQuantTiling310P() = default;
     ~DynamicQuantTiling310P() = default;

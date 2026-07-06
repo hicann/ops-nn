@@ -22,7 +22,7 @@ constexpr float DEFAULT_DST_TYPE_MAX = 15.0f;
 
 class SwigluGroupQuant : public OpDef {
 public:
-    explicit SwigluGroupQuant(const char *name) : OpDef(name)
+    explicit SwigluGroupQuant(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -72,8 +72,8 @@ public:
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2,
                        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2,
-                       ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT4_E1M2,
-                       ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8})
+                       ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT4_E1M2, ge::DT_HIFLOAT8,
+                       ge::DT_HIFLOAT8, ge::DT_HIFLOAT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})

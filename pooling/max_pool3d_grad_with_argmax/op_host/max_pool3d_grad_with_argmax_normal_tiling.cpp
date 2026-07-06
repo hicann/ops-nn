@@ -39,8 +39,8 @@ bool MaxPool3DGradWithArgmaxNormalTiling::IsCapable()
     return false;
 }
 
-uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalUBTotalSize(
-    uint64_t baseDo, uint64_t baseHo, uint64_t baseWo, bool isCoreOverLap)
+uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalUBTotalSize(uint64_t baseDo, uint64_t baseHo, uint64_t baseWo,
+                                                             bool isCoreOverLap)
 {
     const uint64_t vl = maxPoolGradParams.vl;
     uint64_t baseDi = (baseDo - 1UL) * maxPoolGradParams.sd + maxPoolGradParams.kd;
@@ -67,10 +67,11 @@ uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalUBTotalSize(
                                  1UL * vl * diHiWiDtypeAlign * DTYPE_LEN_B32 +               // yTransposeBuf
                                  1UL * vl * diHiWiDtypeAlign * maxPoolGradParams.xDtypeSize; // yQue
     }
-    uint64_t normalDoHoWoTensorSize =
-        Ops::Base::CeilDiv(1 * vl * doHoWo, b8BlockAlignNum) * b8BlockAlignNum * DTYPE_LEN_B8 + // maskBuf
-        2 * vl * doHoWoB32Align * DTYPE_LEN_B32 +                 // argmaxQue&argmaxTransposeBuf
-        2 * vl * doHoWoDtypeAlign * maxPoolGradParams.xDtypeSize; // gradQue&gradTransposeBuf
+    uint64_t normalDoHoWoTensorSize = Ops::Base::CeilDiv(1 * vl * doHoWo, b8BlockAlignNum) * b8BlockAlignNum *
+                                          DTYPE_LEN_B8 +                        // maskBuf
+                                      2 * vl * doHoWoB32Align * DTYPE_LEN_B32 + // argmaxQue&argmaxTransposeBuf
+                                      2 * vl * doHoWoDtypeAlign *
+                                          maxPoolGradParams.xDtypeSize; // gradQue&gradTransposeBuf
     return normalDiHiWiTensorSize + normalDoHoWoTensorSize + SELECT_RESERVED_UB_SIZE;
 }
 
@@ -78,9 +79,8 @@ void MaxPool3DGradWithArgmaxNormalTiling::CalcBaseNc()
 {
     maxPoolGradParams.vl = NUM_PER_REP_B32;
     if (maxPoolGradParams.ncDim >= maxPoolGradParams.vl * maxPoolGradParams.totalCoreNum) {
-        if (CalUBTotalSize(
-                maxPoolGradParams.doDim, maxPoolGradParams.hoDim, maxPoolGradParams.woDim,
-                maxPoolGradParams.isOverLap) <= maxPoolGradParams.maxUbSize) {
+        if (CalUBTotalSize(maxPoolGradParams.doDim, maxPoolGradParams.hoDim, maxPoolGradParams.woDim,
+                           maxPoolGradParams.isOverLap) <= maxPoolGradParams.maxUbSize) {
             return;
         }
     } else if (maxPoolGradParams.ncDim >= maxPoolGradParams.vl) {
@@ -92,9 +92,8 @@ void MaxPool3DGradWithArgmaxNormalTiling::CalcBaseNc()
     if (maxPoolGradParams.ncDim <= maxPoolGradParams.vl - minVL) {
         maxPoolGradParams.vl = Ops::Base::CeilAlign(maxPoolGradParams.ncDim, minVL);
     }
-    if (CalUBTotalSize(
-            maxPoolGradParams.doDim, maxPoolGradParams.hoDim, maxPoolGradParams.woDim, maxPoolGradParams.isOverLap) >
-        maxPoolGradParams.maxUbSize) {
+    if (CalUBTotalSize(maxPoolGradParams.doDim, maxPoolGradParams.hoDim, maxPoolGradParams.woDim,
+                       maxPoolGradParams.isOverLap) > maxPoolGradParams.maxUbSize) {
         maxPoolGradParams.vl = minVL;
     }
     return;
@@ -103,8 +102,8 @@ void MaxPool3DGradWithArgmaxNormalTiling::CalcBaseNc()
 /* *
  * @brief Find best baseSize in range [baseXoStart, baseXoEnd], use dichotomy algorithm.
  */
-uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalBestBaseSize(
-    uint64_t baseXoStart, uint64_t baseXoEnd, const uint32_t ubCutAxis)
+uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd,
+                                                              const uint32_t ubCutAxis)
 {
     uint64_t baseXoMid;
     uint64_t tmpTotalSize = 0;
@@ -112,14 +111,14 @@ uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalBestBaseSize(
     while (baseXoEnd - baseXoStart > 1UL) {
         baseXoMid = (baseXoStart + baseXoEnd) / 2UL;
         if (ubCutAxis == TILING_UB_CUT_DO) {
-            tmpTotalSize = CalUBTotalSize(
-                baseXoMid, maxPoolGradParams.baseHo, maxPoolGradParams.baseWo, maxPoolGradParams.isOverLap);
+            tmpTotalSize = CalUBTotalSize(baseXoMid, maxPoolGradParams.baseHo, maxPoolGradParams.baseWo,
+                                          maxPoolGradParams.isOverLap);
         } else if (ubCutAxis == TILING_UB_CUT_HO) {
-            tmpTotalSize = CalUBTotalSize(
-                maxPoolGradParams.baseDo, baseXoMid, maxPoolGradParams.baseWo, maxPoolGradParams.isOverLap);
+            tmpTotalSize = CalUBTotalSize(maxPoolGradParams.baseDo, baseXoMid, maxPoolGradParams.baseWo,
+                                          maxPoolGradParams.isOverLap);
         } else if (ubCutAxis == TILING_UB_CUT_WO) {
-            tmpTotalSize = CalUBTotalSize(
-                maxPoolGradParams.baseDo, maxPoolGradParams.baseHo, baseXoMid, maxPoolGradParams.isOverLap);
+            tmpTotalSize = CalUBTotalSize(maxPoolGradParams.baseDo, maxPoolGradParams.baseHo, baseXoMid,
+                                          maxPoolGradParams.isOverLap);
         }
         if (tmpTotalSize <= maxPoolGradParams.maxUbSize) {
             baseXoStart = baseXoMid;
@@ -132,8 +131,8 @@ uint64_t MaxPool3DGradWithArgmaxNormalTiling::CalBestBaseSize(
 
 bool MaxPool3DGradWithArgmaxNormalTiling::SetNormalParamsNotCutUB(const uint32_t ubCutAxis, bool isCoreOverLap)
 {
-    uint64_t noCutSize = CalUBTotalSize(
-        maxPoolGradParams.singleCoreDo, maxPoolGradParams.singleCoreHo, maxPoolGradParams.singleCoreWo, isCoreOverLap);
+    uint64_t noCutSize = CalUBTotalSize(maxPoolGradParams.singleCoreDo, maxPoolGradParams.singleCoreHo,
+                                        maxPoolGradParams.singleCoreWo, isCoreOverLap);
     if (noCutSize <= maxPoolGradParams.maxUbSize) {
         maxPoolGradParams.baseDo = maxPoolGradParams.singleCoreDo;
         maxPoolGradParams.baseHo = maxPoolGradParams.singleCoreHo;
@@ -147,8 +146,8 @@ bool MaxPool3DGradWithArgmaxNormalTiling::SetNormalParamsNotCutUB(const uint32_t
 bool MaxPool3DGradWithArgmaxNormalTiling::SetNormalParamsCutUB()
 {
     // 1. Cut d
-    uint64_t perDoSize = CalUBTotalSize(
-        1UL, maxPoolGradParams.singleCoreHo, maxPoolGradParams.singleCoreWo, maxPoolGradParams.isOverLap);
+    uint64_t perDoSize = CalUBTotalSize(1UL, maxPoolGradParams.singleCoreHo, maxPoolGradParams.singleCoreWo,
+                                        maxPoolGradParams.isOverLap);
     if (perDoSize <= maxPoolGradParams.maxUbSize) {
         maxPoolGradParams.baseHo = maxPoolGradParams.singleCoreHo;
         maxPoolGradParams.baseWo = maxPoolGradParams.singleCoreWo;
@@ -283,16 +282,16 @@ void MaxPool3DGradWithArgmaxNormalTiling::SetOtherTilingParams()
     maxPoolGradParams.doCnt = Ops::Base::CeilDiv(maxPoolGradParams.doDim, maxPoolGradParams.singleCoreDo);
     maxPoolGradParams.hoCnt = Ops::Base::CeilDiv(maxPoolGradParams.hoDim, maxPoolGradParams.singleCoreHo);
     maxPoolGradParams.woCnt = Ops::Base::CeilDiv(maxPoolGradParams.woDim, maxPoolGradParams.singleCoreWo);
-    maxPoolGradParams.ncTail =
-        maxPoolGradParams.ncDim - (maxPoolGradParams.ncCnt - 1UL) * maxPoolGradParams.singleCoreNc;
-    maxPoolGradParams.doTail =
-        maxPoolGradParams.doDim - (maxPoolGradParams.doCnt - 1UL) * maxPoolGradParams.singleCoreDo;
-    maxPoolGradParams.hoTail =
-        maxPoolGradParams.hoDim - (maxPoolGradParams.hoCnt - 1UL) * maxPoolGradParams.singleCoreHo;
-    maxPoolGradParams.woTail =
-        maxPoolGradParams.woDim - (maxPoolGradParams.woCnt - 1UL) * maxPoolGradParams.singleCoreWo;
-    maxPoolGradParams.totalCnt =
-        maxPoolGradParams.ncCnt * maxPoolGradParams.doCnt * maxPoolGradParams.hoCnt * maxPoolGradParams.woCnt;
+    maxPoolGradParams.ncTail = maxPoolGradParams.ncDim -
+                               (maxPoolGradParams.ncCnt - 1UL) * maxPoolGradParams.singleCoreNc;
+    maxPoolGradParams.doTail = maxPoolGradParams.doDim -
+                               (maxPoolGradParams.doCnt - 1UL) * maxPoolGradParams.singleCoreDo;
+    maxPoolGradParams.hoTail = maxPoolGradParams.hoDim -
+                               (maxPoolGradParams.hoCnt - 1UL) * maxPoolGradParams.singleCoreHo;
+    maxPoolGradParams.woTail = maxPoolGradParams.woDim -
+                               (maxPoolGradParams.woCnt - 1UL) * maxPoolGradParams.singleCoreWo;
+    maxPoolGradParams.totalCnt = maxPoolGradParams.ncCnt * maxPoolGradParams.doCnt * maxPoolGradParams.hoCnt *
+                                 maxPoolGradParams.woCnt;
     maxPoolGradParams.usedCoreNum = std::min(maxPoolGradParams.totalCnt, maxPoolGradParams.totalCoreNum);
     maxPoolGradParams.isNeedWorkspace = maxPoolGradParams.xDtypeSize != DTYPE_LEN_B32 && maxPoolGradParams.isOverLap;
     if (maxPoolGradParams.isNeedWorkspace) {
@@ -313,18 +312,16 @@ void MaxPool3DGradWithArgmaxNormalTiling::SetNormalTilingData()
 
 void MaxPool3DGradWithArgmaxNormalTiling::PrintNormalTilingData()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "TilingData singleCoreNc: %lu, singleCoreDo: %lu, singleCoreHo: %lu, singleCoreWo: %lu.",
-        tilingData.get_singleCoreNc(), tilingData.get_singleCoreDo(), tilingData.get_singleCoreHo(),
-        tilingData.get_singleCoreWo());
+    OP_LOGI(context_->GetNodeName(),
+            "TilingData singleCoreNc: %lu, singleCoreDo: %lu, singleCoreHo: %lu, singleCoreWo: %lu.",
+            tilingData.get_singleCoreNc(), tilingData.get_singleCoreDo(), tilingData.get_singleCoreHo(),
+            tilingData.get_singleCoreWo());
 }
 
 ge::graphStatus MaxPool3DGradWithArgmaxNormalTiling::DoOpTiling()
 {
     bool res = SetNormalTilingParams();
-    OP_CHECK_IF(
-        !res, OP_LOGE(context_->GetNodeName(), "Normal cal tiling params failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!res, OP_LOGE(context_->GetNodeName(), "Normal cal tiling params failed."), return ge::GRAPH_FAILED);
     maxPoolGradParams.tilingType = TILING_TYPE_NORMAL;
     SetOtherTilingParams();
     SetBaseTilingData();

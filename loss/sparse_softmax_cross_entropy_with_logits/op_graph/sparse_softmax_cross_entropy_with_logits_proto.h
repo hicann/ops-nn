@@ -40,10 +40,10 @@ Has the same type as "features" . \n
 *Compatible with the TensorFlow operator SparseSoftmaxCrossEntropyWithLogits.
 */
 REG_OP(SparseSoftmaxCrossEntropyWithLogits)
-    .INPUT(features, TensorType({DT_DOUBLE,DT_FLOAT16,DT_FLOAT,DT_BFLOAT16}))
+    .INPUT(features, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BFLOAT16}))
     .INPUT(labels, TensorType({DT_INT32, DT_INT64}))
-    .OUTPUT(loss, TensorType({DT_DOUBLE,DT_FLOAT16,DT_FLOAT,DT_BFLOAT16}))
-    .OUTPUT(backprop, TensorType({DT_DOUBLE,DT_FLOAT16,DT_FLOAT,DT_BFLOAT16}))
+    .OUTPUT(loss, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BFLOAT16}))
+    .OUTPUT(backprop, TensorType({DT_DOUBLE, DT_FLOAT16, DT_FLOAT, DT_BFLOAT16}))
     .OP_END_FACTORY_REG(SparseSoftmaxCrossEntropyWithLogits)
 
 } // namespace ge

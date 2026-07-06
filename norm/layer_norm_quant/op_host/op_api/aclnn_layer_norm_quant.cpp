@@ -44,22 +44,21 @@ constexpr int64_t MIN_GRAD_REDUCE_AXIS = 1024;
 constexpr int64_t MAX_GRAD_REDUCE_AXIS = 4096;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<DataType> DTYPE_SUPPORT_REGBASE_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
-static const std::initializer_list<DataType> DTYPE_SUPPORT_910B_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<DataType> DTYPE_SUPPORT_310P_LIST = {
-    DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_REGBASE_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                           DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_910B_LIST = {DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_310P_LIST = {DataType::DT_FLOAT16};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList(){
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    
+
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return DTYPE_SUPPORT_REGBASE_LIST;
-    } else if(socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93){
+    } else if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
         return DTYPE_SUPPORT_910B_LIST;
-    } else if (socVersion == SocVersion::ASCEND310P){
+    } else if (socVersion == SocVersion::ASCEND310P) {
         return DTYPE_SUPPORT_310P_LIST;
     } else {
         return DTYPE_SUPPORT_910B_LIST;
@@ -76,9 +75,9 @@ static inline bool CheckPlatform()
     return true;
 }
 
-inline static bool CheckNotNull(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, aclTensor* res)
+inline static bool CheckNotNull(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta,
+                                const aclTensor* scale, const aclTensor* zeroPointsOptional, int quantMode,
+                                aclTensor* res)
 {
     // 校验输入是否为空指针
     OP_CHECK_NULL(x, return false);
@@ -86,7 +85,7 @@ inline static bool CheckNotNull(
     OP_CHECK_NULL(beta, return false);
     OP_CHECK_NULL(scale, return false);
     OP_CHECK_NULL(res, return false);
-    if (quantMode == 0){
+    if (quantMode == 0) {
         OP_CHECK_NULL(zeroPointsOptional, return false);
     }
     return true;
@@ -101,25 +100,23 @@ static inline bool CheckOptInputDtype(const aclTensor* tensorPtr, op::DataType d
     return true;
 }
 
-static bool CheckDtype(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, const aclTensor* res)
+static bool CheckDtype(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
+                       const aclTensor* zeroPointsOptional, const aclTensor* res)
 {
     // 检查 x 的数据类型是否在 AddLayerNormQuant 算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(x, GetDtypeSupportList(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(gamma, x->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(beta, x->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(scale, x->GetDataType(), return false);
-    
+
     CHECK_RET(CheckOptInputDtype(zeroPointsOptional, op::DataType::DT_INT8), false);
 
     OP_CHECK_DTYPE_NOT_MATCH(res, op::DataType::DT_INT8, return false);
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, const aclTensor* res)
+static bool CheckShape(const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
+                       const aclTensor* zeroPointsOptional, int quantMode, const aclTensor* res)
 {
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(gamma, GAMMA_STATIC_DIM, return false);
@@ -129,59 +126,48 @@ static bool CheckShape(
 
     // 当前只支持quantMode = 0
     OP_CHECK((quantMode == 0),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support static mode quant currently, quantMode should be 0"), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support static mode quant currently, quantMode should be 0"),
+             return false);
 
-    OP_CHECK(
-        (x->GetViewShape().GetDim(xDimNums - 1) == gamma->GetViewShape().GetDim(gammaDimNums - 1)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of gamma should be equal to last dims of shape x"), return false);
-    OP_CHECK(
-        (gamma->GetViewShape() == beta->GetViewShape()),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of beta should same as gamma"), return false);
+    OP_CHECK((x->GetViewShape().GetDim(xDimNums - 1) == gamma->GetViewShape().GetDim(gammaDimNums - 1)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of gamma should be equal to last dims of shape x"), return false);
+    OP_CHECK((gamma->GetViewShape() == beta->GetViewShape()),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of beta should same as gamma"), return false);
 
     size_t scaleDimNums = scale->GetViewShape().GetDimNum();
     size_t zeroPointsOptionalDimNums = zeroPointsOptional->GetViewShape().GetDimNum();
-    OP_CHECK(
-        (scaleDimNums == 1 && scale->GetViewShape().GetDim(0) == 1),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should be equal to [1]"), return false);
-    OP_CHECK(
-        (scaleDimNums == zeroPointsOptionalDimNums),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should same as zeroPointsOptional"), return false);
+    OP_CHECK((scaleDimNums == 1 && scale->GetViewShape().GetDim(0) == 1),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should be equal to [1]"), return false);
+    OP_CHECK((scaleDimNums == zeroPointsOptionalDimNums),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of scale should same as zeroPointsOptional"), return false);
 
-    OP_CHECK(
-        (x->GetViewShape() == res->GetViewShape()),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of res should same as x"), return false);
+    OP_CHECK((x->GetViewShape() == res->GetViewShape()),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of res should same as x"), return false);
 
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* gammma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, aclTensor* res)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* gammma, const aclTensor* beta,
+                               const aclTensor* scale, const aclTensor* zeroPointsOptional, int quantMode,
+                               aclTensor* res)
 {
     // 1. 检查数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(
-        CheckDtype(x, gammma, beta, scale, zeroPointsOptional, res),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtype(x, gammma, beta, scale, zeroPointsOptional, res), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查入参间的shape关系
-    CHECK_RET(
-        CheckShape(x, gammma, beta, scale, zeroPointsOptional, quantMode, res),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(x, gammma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-
-aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* gammma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, double epsilon, aclTensor* res, aclTensor* scaleOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* gammma, const aclTensor* beta,
+                                                const aclTensor* scale, const aclTensor* zeroPointsOptional,
+                                                int quantMode, double epsilon, aclTensor* res, aclTensor* scaleOut,
+                                                uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGI("aclnnLayerNormQuantGetWorkspaceSize start.");
-    L2_DFX_PHASE_1(
-        aclnnLayerNormQuant,
-        DFX_IN(x, gammma, beta, scale, zeroPointsOptional, quantMode, epsilon),
-        DFX_OUT(res, scaleOut));
-    
+    L2_DFX_PHASE_1(aclnnLayerNormQuant, DFX_IN(x, gammma, beta, scale, zeroPointsOptional, quantMode, epsilon),
+                   DFX_OUT(res, scaleOut));
+
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -189,8 +175,7 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
     CHECK_RET(CheckNotNull(x, gammma, beta, scale, zeroPointsOptional, quantMode, res), ACLNN_ERR_PARAM_NULLPTR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        x, gammma, beta, scale, zeroPointsOptional, quantMode, res);
+    auto ret = CheckParams(x, gammma, beta, scale, zeroPointsOptional, quantMode, res);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空tensor场景处理
@@ -214,14 +199,14 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
     CHECK_RET(zeroPointsOptionalCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 调用LayerNormQuant算子进行计算
-    std::array<aclTensor*, 2> result =
-        l0op::LayerNormQuant(xCont, gammmaCont, betaCont, scaleCont, zeroPointsOptionalCont, quantMode, epsilon, uniqueExecutor.get());
+    std::array<aclTensor*, 2> result = l0op::LayerNormQuant(
+        xCont, gammmaCont, betaCont, scaleCont, zeroPointsOptionalCont, quantMode, epsilon, uniqueExecutor.get());
     CHECK_RET(result[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResResult = l0op::ViewCopy(result[0], res, uniqueExecutor.get());
     CHECK_RET(viewCopyResResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    if(quantMode == 1) {
+    if (quantMode == 1) {
         CHECK_RET(result[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyScaleResult = l0op::ViewCopy(result[1], scaleOut, uniqueExecutor.get());
         CHECK_RET(viewCopyScaleResult != nullptr, ACLNN_ERR_INNER_NULLPTR);

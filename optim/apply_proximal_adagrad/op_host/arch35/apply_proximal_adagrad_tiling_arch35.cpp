@@ -68,8 +68,8 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
 using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
@@ -93,24 +93,19 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context,
-                                       uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
-                                    int64_t& totalElements,
-                                    ge::DataType& dataType)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements, ge::DataType& dataType)
 {
     // Input 0 = var; its shape is canonical (var/accum/grad must match).
     auto inputVar = context->GetInputShape(0);
@@ -121,9 +116,7 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
-    OP_CHECK_IF(dataType != ge::DT_FLOAT &&
-                dataType != ge::DT_FLOAT16 &&
-                dataType != ge::DT_BF16,
+    OP_CHECK_IF(dataType != ge::DT_FLOAT && dataType != ge::DT_FLOAT16 && dataType != ge::DT_BF16,
                 OP_LOGE(context,
                         "ApplyProximalAdagrad: only float32 / float16 / "
                         "bfloat16 are supported, got %d",
@@ -142,17 +135,11 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 // Multi-core split: ceil-aligned to DMA granularity.
 // ubBlockSize = 32B / sizeof(T), fp32 -> 8 elements, fp16/bf16 -> 16 elements.
-static ge::graphStatus ComputeMultiCoreSplit(gert::TilingContext* context,
-                                             int64_t totalElements,
-                                             int64_t coreNum,
-                                             int64_t& blockFactor,
-                                             int64_t& usedCoreNum,
-                                             int64_t& ubBlockSize)
+static ge::graphStatus ComputeMultiCoreSplit(gert::TilingContext* context, int64_t totalElements, int64_t coreNum,
+                                             int64_t& blockFactor, int64_t& usedCoreNum, int64_t& ubBlockSize)
 {
     ubBlockSize = Ops::Base::GetUbBlockSize(context);
-    OP_CHECK_IF(ubBlockSize <= 0,
-                OP_LOGE(context, "invalid ubBlockSize=%ld", ubBlockSize),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubBlockSize <= 0, OP_LOGE(context, "invalid ubBlockSize=%ld", ubBlockSize), return ge::GRAPH_FAILED);
 
     blockFactor = CeilAlign(CeilDiv(totalElements, coreNum), ubBlockSize);
     usedCoreNum = CeilDiv(totalElements, blockFactor);
@@ -162,27 +149,17 @@ static ge::graphStatus ComputeMultiCoreSplit(gert::TilingContext* context,
 // UB split per dtype path. perElemBytes = sizeof(fp32) for the worst-case
 // (cast/scratch) accounting; ubBufCount captures the actual per-element
 // 4-byte-unit footprint. Caller must ensure ubBlockSize > 0.
-static ge::graphStatus ComputeUbSplit(gert::TilingContext* context,
-                                      uint64_t ubSize, ge::DataType dataType,
-                                      int64_t blockFactor, int64_t ubBlockSize,
-                                      int64_t& ubFactor)
+static ge::graphStatus ComputeUbSplit(gert::TilingContext* context, uint64_t ubSize, ge::DataType dataType,
+                                      int64_t blockFactor, int64_t ubBlockSize, int64_t& ubFactor)
 {
-    int64_t ubBufCount =
-        (dataType == ge::DT_FLOAT) ? UB_BUFFER_COUNT_FP32 : UB_BUFFER_COUNT_HALF;
+    int64_t ubBufCount = (dataType == ge::DT_FLOAT) ? UB_BUFFER_COUNT_FP32 : UB_BUFFER_COUNT_HALF;
     int64_t perElemBytes = SIZE_FP32;
 
-    int64_t ubCapacityElem =
-        FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / perElemBytes,
-                            ubBufCount),
-                   ubBlockSize);
-    OP_CHECK_IF(ubCapacityElem <= 0,
-                OP_LOGE(context, "UB too small: ubCapacityElem=%ld",
-                        ubCapacityElem),
+    int64_t ubCapacityElem = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / perElemBytes, ubBufCount), ubBlockSize);
+    OP_CHECK_IF(ubCapacityElem <= 0, OP_LOGE(context, "UB too small: ubCapacityElem=%ld", ubCapacityElem),
                 return ge::GRAPH_FAILED);
 
-    ubFactor = (TILE_ELEM_NUM_TARGET < ubCapacityElem)
-                   ? TILE_ELEM_NUM_TARGET
-                   : ubCapacityElem;
+    ubFactor = (TILE_ELEM_NUM_TARGET < ubCapacityElem) ? TILE_ELEM_NUM_TARGET : ubCapacityElem;
 
     // Also cap by blockFactor so a single core does not allocate more UB
     // space than it will ever use.
@@ -201,8 +178,7 @@ static ge::graphStatus ComputeUbSplit(gert::TilingContext* context,
 // default it to 1 and rely on the kernel to take a runtime fast-path when
 // l1 == 0. The HAS_L1 = 0 binary is still produced so UT can drive TilingKey
 // directly (and a future L0-API hint can flip this from host).
-static void SetTilingKey(gert::TilingContext* context, ge::DataType dataType,
-                         uint32_t padTail)
+static void SetTilingKey(gert::TilingContext* context, ge::DataType dataType, uint32_t padTail)
 {
     uint32_t dTypeVar = static_cast<uint32_t>(dataType);
     uint32_t hasL1 = 1U;
@@ -211,26 +187,19 @@ static void SetTilingKey(gert::TilingContext* context, ge::DataType dataType,
 
 // Multi-core + UB split for non-empty tensors. Fills tiling, sets block dim and
 // tiling key. Empty-tensor handling lives in the caller.
-static ge::graphStatus FillTilingForNonEmpty(gert::TilingContext* context,
-                                             int64_t totalElements,
-                                             ge::DataType dataType,
-                                             uint64_t ubSize, int64_t coreNum,
-                                             ApplyProximalAdagradTilingData* tiling)
+static ge::graphStatus FillTilingForNonEmpty(gert::TilingContext* context, int64_t totalElements, ge::DataType dataType,
+                                             uint64_t ubSize, int64_t coreNum, ApplyProximalAdagradTilingData* tiling)
 {
     int64_t blockFactor = 0;
     int64_t usedCoreNum = 0;
     int64_t ubBlockSize = 0;
-    OP_CHECK_IF(ComputeMultiCoreSplit(context, totalElements, coreNum,
-                                      blockFactor, usedCoreNum,
-                                      ubBlockSize) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "ComputeMultiCoreSplit error"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeMultiCoreSplit(context, totalElements, coreNum, blockFactor, usedCoreNum, ubBlockSize) !=
+                    ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeMultiCoreSplit error"), return ge::GRAPH_FAILED);
 
     int64_t ubFactor = 0;
-    OP_CHECK_IF(ComputeUbSplit(context, ubSize, dataType, blockFactor,
-                               ubBlockSize, ubFactor) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "ComputeUbSplit error"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeUbSplit(context, ubSize, dataType, blockFactor, ubBlockSize, ubFactor) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeUbSplit error"), return ge::GRAPH_FAILED);
 
     tiling->blockFactor = blockFactor;
     tiling->ubFactor = ubFactor;
@@ -239,8 +208,7 @@ static ge::graphStatus FillTilingForNonEmpty(gert::TilingContext* context,
     // Guard the modulo against ubBlockSize == 0; ComputeMultiCoreSplit already
     // rejects ubBlockSize <= 0, the explicit check here just satisfies static
     // analyzers that don't track the postcondition through the call.
-    uint32_t padTail =
-        (ubBlockSize > 0 && (totalElements % ubBlockSize) != 0) ? 1U : 0U;
+    uint32_t padTail = (ubBlockSize > 0 && (totalElements % ubBlockSize) != 0) ? 1U : 0U;
     SetTilingKey(context, dataType, padTail);
     return ge::GRAPH_SUCCESS;
 }
@@ -250,27 +218,21 @@ static ge::graphStatus ApplyProximalAdagradTilingFunc(gert::TilingContext* conte
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT;
     OP_CHECK_IF(GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetShapeInfo error"),
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"),
-                return ge::GRAPH_FAILED);
-
-    ApplyProximalAdagradTilingData* tiling =
-        context->GetTilingData<ApplyProximalAdagradTilingData>();
+    ApplyProximalAdagradTilingData* tiling = context->GetTilingData<ApplyProximalAdagradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyProximalAdagradTilingData), 0,
-                 sizeof(ApplyProximalAdagradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        memset_s(tiling, sizeof(ApplyProximalAdagradTilingData), 0, sizeof(ApplyProximalAdagradTilingData)) != EOK,
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->totalElements = totalElements;
 
@@ -284,12 +246,10 @@ static ge::graphStatus ApplyProximalAdagradTilingFunc(gert::TilingContext* conte
         return ge::GRAPH_SUCCESS;
     }
 
-    return FillTilingForNonEmpty(context, totalElements, dataType, ubSize,
-                                 coreNum, tiling);
+    return FillTilingForNonEmpty(context, totalElements, dataType, ubSize, coreNum, tiling);
 }
 
-static ge::graphStatus TilingParseForApplyProximalAdagrad(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForApplyProximalAdagrad([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

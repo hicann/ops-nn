@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -25,20 +26,13 @@
 using namespace std;
 // using namespace AscendC;
 
-extern "C" __global__ __aicore__ void group_norm_grad(
-    GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-    GM_ADDR workspace, GM_ADDR tilingdata);
-class group_norm_grad_test : public testing::Test
-{
+extern "C" __global__ __aicore__ void group_norm_grad(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma,
+                                                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                                      GM_ADDR tilingdata);
+class group_norm_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "group_norm_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "group_norm_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "group_norm_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "group_norm_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(group_norm_grad_test, test_case_mode0_align)
@@ -107,9 +101,8 @@ TEST_F(group_norm_grad_test, test_case_mode0_align)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -190,9 +183,8 @@ TEST_F(group_norm_grad_test, test_case_mode0_not_align)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -273,9 +265,8 @@ TEST_F(group_norm_grad_test, test_case_mode1)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -355,9 +346,8 @@ TEST_F(group_norm_grad_test, test_case_mode2)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -437,9 +427,8 @@ TEST_F(group_norm_grad_test, test_case_mode3)
     tilingDatafromBin->dbeta_is_require = 1;          // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -520,9 +509,8 @@ TEST_F(group_norm_grad_test, test_case_mode5_float32_deterministic)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -576,24 +564,24 @@ TEST_F(group_norm_grad_test, test_case_mode0_bf16)
     GroupNormGradTilingData* tilingDatafromBin = reinterpret_cast<GroupNormGradTilingData*>(tiling);
     tilingDatafromBin->Tiling_key = 0;               // 0
     tilingDatafromBin->N = 1;                        // 1
-    tilingDatafromBin->C = 128;                       // 2
-    tilingDatafromBin->HXW = 64;                    // 3
+    tilingDatafromBin->C = 128;                      // 2
+    tilingDatafromBin->HXW = 64;                     // 3
     tilingDatafromBin->G = 4;                        // 4
     tilingDatafromBin->NXG = 4;                      // 5
-    tilingDatafromBin->C_G = 32;                      // 6
+    tilingDatafromBin->C_G = 32;                     // 6
     tilingDatafromBin->task_num_per_core = 1;        // 7
     tilingDatafromBin->task_num_per_tail_core = 1;   // 8
     tilingDatafromBin->tail_core = 4;                // 9
-    tilingDatafromBin->mode1_ub_cap_C_num = 169;      // 10
+    tilingDatafromBin->mode1_ub_cap_C_num = 169;     // 10
     tilingDatafromBin->mode1_ub_iter_C_num = 1;      // 11
-    tilingDatafromBin->mode1_ub_tail_C_num = 32;      // 12
+    tilingDatafromBin->mode1_ub_tail_C_num = 32;     // 12
     tilingDatafromBin->mode2_ub_capacity_ele = 0;    // 13
     tilingDatafromBin->mode2_ub_iteration_num = 0;   // 14
     tilingDatafromBin->mode2_ub_tail_num = 0;        // 15
-    tilingDatafromBin->workSpaceSize = 128;            // 16
+    tilingDatafromBin->workSpaceSize = 128;          // 16
     tilingDatafromBin->stage2CoreUsed = 4;           // 17
-    tilingDatafromBin->castEleNum = 64;               // 18
-    tilingDatafromBin->tailCastNum = 64;              // 19
+    tilingDatafromBin->castEleNum = 64;              // 18
+    tilingDatafromBin->tailCastNum = 64;             // 19
     tilingDatafromBin->coreBatchParts = 0;           // 20
     tilingDatafromBin->coreBatchPartsTailRepeat = 0; // 21
     tilingDatafromBin->repeatTime4Stage2 = 0;        // 22
@@ -602,9 +590,8 @@ TEST_F(group_norm_grad_test, test_case_mode0_bf16)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -659,24 +646,24 @@ TEST_F(group_norm_grad_test, test_case_mode1_bf16)
     GroupNormGradTilingData* tilingDatafromBin = reinterpret_cast<GroupNormGradTilingData*>(tiling);
     tilingDatafromBin->Tiling_key = 1;               // 0
     tilingDatafromBin->N = 1;                        // 1
-    tilingDatafromBin->C = 128;                       // 2
-    tilingDatafromBin->HXW = 64;                   // 3
+    tilingDatafromBin->C = 128;                      // 2
+    tilingDatafromBin->HXW = 64;                     // 3
     tilingDatafromBin->G = 4;                        // 4
     tilingDatafromBin->NXG = 4;                      // 5
-    tilingDatafromBin->C_G = 32;                      // 6
+    tilingDatafromBin->C_G = 32;                     // 6
     tilingDatafromBin->task_num_per_core = 1;        // 7
     tilingDatafromBin->task_num_per_tail_core = 1;   // 8
     tilingDatafromBin->tail_core = 4;                // 9
-    tilingDatafromBin->mode1_ub_cap_C_num = 169;       // 10
+    tilingDatafromBin->mode1_ub_cap_C_num = 169;     // 10
     tilingDatafromBin->mode1_ub_iter_C_num = 1;      // 11
-    tilingDatafromBin->mode1_ub_tail_C_num = 32;      // 12
+    tilingDatafromBin->mode1_ub_tail_C_num = 32;     // 12
     tilingDatafromBin->mode2_ub_capacity_ele = 0;    // 13
     tilingDatafromBin->mode2_ub_iteration_num = 0;   // 14
     tilingDatafromBin->mode2_ub_tail_num = 0;        // 15
-    tilingDatafromBin->workSpaceSize = 128;            // 16
+    tilingDatafromBin->workSpaceSize = 128;          // 16
     tilingDatafromBin->stage2CoreUsed = 4;           // 17
-    tilingDatafromBin->castEleNum = 64;               // 18
-    tilingDatafromBin->tailCastNum = 64;              // 19
+    tilingDatafromBin->castEleNum = 64;              // 18
+    tilingDatafromBin->tailCastNum = 64;             // 19
     tilingDatafromBin->coreBatchParts = 0;           // 20
     tilingDatafromBin->coreBatchPartsTailRepeat = 0; // 21
     tilingDatafromBin->repeatTime4Stage2 = 0;        // 22
@@ -685,9 +672,8 @@ TEST_F(group_norm_grad_test, test_case_mode1_bf16)
     tilingDatafromBin->dbeta_is_require = 1;         // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -746,7 +732,7 @@ TEST_F(group_norm_grad_test, test_case_mode3_bf16)
     tilingDatafromBin->HXW = 16384;                   // 3
     tilingDatafromBin->G = 2;                         // 4
     tilingDatafromBin->NXG = 2;                       // 5
-    tilingDatafromBin->C_G = 32;                       // 6
+    tilingDatafromBin->C_G = 32;                      // 6
     tilingDatafromBin->task_num_per_core = 1;         // 7
     tilingDatafromBin->task_num_per_tail_core = 1;    // 8
     tilingDatafromBin->tail_core = 2;                 // 9
@@ -756,10 +742,10 @@ TEST_F(group_norm_grad_test, test_case_mode3_bf16)
     tilingDatafromBin->mode2_ub_capacity_ele = 10752; // 13
     tilingDatafromBin->mode2_ub_iteration_num = 2;    // 14
     tilingDatafromBin->mode2_ub_tail_num = 5632;      // 15
-    tilingDatafromBin->workSpaceSize = 64;             // 16
+    tilingDatafromBin->workSpaceSize = 64;            // 16
     tilingDatafromBin->stage2CoreUsed = 1;            // 17
-    tilingDatafromBin->castEleNum = 64;                // 18
-    tilingDatafromBin->tailCastNum = 64;               // 19
+    tilingDatafromBin->castEleNum = 64;               // 18
+    tilingDatafromBin->tailCastNum = 64;              // 19
     tilingDatafromBin->coreBatchParts = 0;            // 20
     tilingDatafromBin->coreBatchPartsTailRepeat = 0;  // 21
     tilingDatafromBin->repeatTime4Stage2 = 0;         // 22
@@ -768,9 +754,8 @@ TEST_F(group_norm_grad_test, test_case_mode3_bf16)
     tilingDatafromBin->dbeta_is_require = 1;          // 25
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_grad, blockDim, dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);

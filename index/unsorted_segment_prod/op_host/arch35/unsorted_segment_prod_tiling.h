@@ -22,13 +22,10 @@
 namespace optiling {
 
 // ---------------------------UnsortedSegmentProd Simt Tiling---------------------------
-class UnsortedSegmentProdSimtTiling : public UnsortedSegmentSimtTiling
-{
+class UnsortedSegmentProdSimtTiling : public UnsortedSegmentSimtTiling {
 public:
-    explicit UnsortedSegmentProdSimtTiling(gert::TilingContext* context) : UnsortedSegmentSimtTiling(context)
-    {}
-    ~UnsortedSegmentProdSimtTiling() override
-    {}
+    explicit UnsortedSegmentProdSimtTiling(gert::TilingContext* context) : UnsortedSegmentSimtTiling(context) {}
+    ~UnsortedSegmentProdSimtTiling() override {}
 };
 
 } // namespace optiling

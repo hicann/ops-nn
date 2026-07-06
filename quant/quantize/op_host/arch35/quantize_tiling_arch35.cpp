@@ -23,10 +23,8 @@
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "util/math_util.h"
 
-namespace optiling
-{
-namespace quantize
-{
+namespace optiling {
+namespace quantize {
 using namespace QuantizeOp;
 using namespace Ops::Base;
 
@@ -41,7 +39,7 @@ constexpr size_t SECOND_SHAPE_DIM = 1;
 constexpr size_t THIRD_SHAPE_DIM = 2;
 
 constexpr int32_t AXIS_MAX = 2;
-constexpr int64_t SYNC_WORKSPACE_SIZE = 33554432;  // 32 MB
+constexpr int64_t SYNC_WORKSPACE_SIZE = 33554432; // 32 MB
 constexpr int64_t CACHE_SIZE_910D = 128;
 constexpr int64_t TWO_DIMENSIONS = 2;
 constexpr int64_t THREE_DIMENSIONS = 3;
@@ -62,24 +60,19 @@ ge::graphStatus Quantize::DoQuantizeTiling()
 {
     OP_LOGD(context_->GetNodeName(), "DoQuantizeTiling begin");
     OP_CHECK_IF((GetCompileInfo() != ge::GRAPH_SUCCESS),
-                    OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling GetCompileInfo Failed."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling GetCompileInfo Failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((GetOpParam() != ge::GRAPH_SUCCESS),
-                    OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling GetOpParam Failed."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling GetOpParam Failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((CheckDtype() != ge::GRAPH_SUCCESS),
-                    OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling CheckDtype Failed."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling CheckDtype Failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((CheckAttrs() != ge::GRAPH_SUCCESS),
-                    OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling CheckAttrs Failed."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling CheckAttrs Failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((CheckShape() != ge::GRAPH_SUCCESS),
-                    OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling CheckShape Failed."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "DoQuantizeTiling CheckShape Failed."), return ge::GRAPH_FAILED);
 
     SelectMode();
     MergeInputShape();
@@ -101,12 +94,11 @@ ge::graphStatus Quantize::GetCompileInfo()
     coreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
 
-    OP_CHECK_IF(
-        (coreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(),"coreNum,ubSize",
-		                        std::to_string(coreNum_)+","+std::to_string(ubSize_),
-                                        "The values of coreNum and ubSize must be greater than 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "coreNum,ubSize",
+                                                       std::to_string(coreNum_) + "," + std::to_string(ubSize_),
+                                                       "The values of coreNum and ubSize must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
     cacheLine_ = CACHE_SIZE_910D;
 
@@ -134,53 +126,58 @@ ge::graphStatus Quantize::CheckDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     xDtype_ = xInputDesc->GetDataType();
     OP_CHECK_IF(INPUT_X_SUPPORT_DTYPE_SET.count(xDtype_) == 0,
-                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_), "[DT_FLOAT, DT_FLOAT16, DT_BF16]"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_),
+                                          "[DT_FLOAT, DT_FLOAT16, DT_BF16]"),
+                return ge::GRAPH_FAILED);
 
     auto scaleInputDesc = context_->GetInputDesc(INPUT_SCALE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleInputDesc);
     scalesDtype_ = scaleInputDesc->GetDataType();
     OP_CHECK_IF(INPUT_SCALE_SUPPORT_DTYPE_SET.count(scalesDtype_) == 0,
-                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scales", ge::TypeUtils::DataTypeToSerialString(scalesDtype_), "[DT_FLOAT, DT_BF16]"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scales",
+                                          ge::TypeUtils::DataTypeToSerialString(scalesDtype_), "[DT_FLOAT, DT_BF16]"),
+                return ge::GRAPH_FAILED);
 
     if (scalesDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            xDtype_ != scalesDtype_,
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_), "DT_BF16"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xDtype_ != scalesDtype_,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+                                              ge::TypeUtils::DataTypeToSerialString(xDtype_), "DT_BF16"),
+                    return ge::GRAPH_FAILED);
     }
 
     if (hasZeroPoint_) {
         auto zeroPointInputDesc = context_->GetInputDesc(INPUT_ZERO_POINT_INDEX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, zeroPointInputDesc);
         zeroPointsDtype_ = zeroPointInputDesc->GetDataType();
-        OP_CHECK_IF(
-            INPUT_ZERO_POINT_SUPPORT_DTYPE_SET.count(zeroPointsDtype_) == 0,
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "zero_points", ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_), "[DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT, DT_BF16]"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(INPUT_ZERO_POINT_SUPPORT_DTYPE_SET.count(zeroPointsDtype_) == 0,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "zero_points",
+                                              ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_),
+                                              "[DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT, DT_BF16]"),
+                    return ge::GRAPH_FAILED);
 
         if (scalesDtype_ == ge::DT_BF16) {
-            OP_CHECK_IF(
-                scalesDtype_ != zeroPointsDtype_,
-                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "zero_points", ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_), "DT_BF16"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(scalesDtype_ != zeroPointsDtype_,
+                        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "zero_points",
+                                                  ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_), "DT_BF16"),
+                        return ge::GRAPH_FAILED);
         }
 
         if (zeroPointsDtype_ == ge::DT_BF16) {
-            OP_CHECK_IF(
-                scalesDtype_ != zeroPointsDtype_,
-                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scales", ge::TypeUtils::DataTypeToSerialString(scalesDtype_), "DT_BF16"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(scalesDtype_ != zeroPointsDtype_,
+                        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scales",
+                                                  ge::TypeUtils::DataTypeToSerialString(scalesDtype_), "DT_BF16"),
+                        return ge::GRAPH_FAILED);
         }
     }
 
     auto yOutputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputDesc);
     yDtype_ = yOutputDesc->GetDataType();
-    OP_CHECK_IF(OUTPUT_Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
-                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_), "[DT_INT8, DT_UINT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        OUTPUT_Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_),
+                                  "[DT_INT8, DT_UINT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -189,11 +186,15 @@ ge::graphStatus Quantize::CheckAttrs()
 {
     OP_LOGD(context_->GetNodeName(), "CheckAttrs begin");
     if (OUTPUT_Y_SUPPORT_DTYPE_SET.count(dtype_) == 0) {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dtype", ge::TypeUtils::DataTypeToSerialString(dtype_), "[DT_UINT8, DT_INT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dtype", ge::TypeUtils::DataTypeToSerialString(dtype_),
+                                  "[DT_UINT8, DT_INT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]");
         return ge::GRAPH_FAILED;
     }
     if (dtype_ != yDtype_) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dtype, y", ge::TypeUtils::DataTypeToSerialString(dtype_) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype_), "The dtype of attr[dtype] must be the same as the dtype of y");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dtype, y",
+            ge::TypeUtils::DataTypeToSerialString(dtype_) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype_),
+            "The dtype of attr[dtype] must be the same as the dtype of y");
         return ge::GRAPH_FAILED;
     }
 
@@ -210,7 +211,9 @@ ge::graphStatus Quantize::CheckAttrs()
         axis_ = xDimNum_ - 1;
         return ge::GRAPH_SUCCESS;
     }
-    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_), "The value of axis must be within the range [-" + std::to_string(xDimNum_) + ", " + std::to_string(xDimNum_) + ")");
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_),
+                                          "The value of axis must be within the range [-" + std::to_string(xDimNum_) +
+                                              ", " + std::to_string(xDimNum_) + ")");
     return ge::GRAPH_FAILED;
 }
 
@@ -218,20 +221,25 @@ ge::graphStatus Quantize::CheckShape()
 {
     OP_LOGD(context_->GetNodeName(), "CheckShape begin");
     if (scalesDimNum_ == 0) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", "0", "The shape dim of scales must not be 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", "0",
+                                                 "The shape dim of scales must not be 0");
         return ge::GRAPH_FAILED;
     } else if (scalesDimNum_ == 1) {
         OP_LOGD(context_->GetNodeName(), "Scales dim number is 1.");
         // elewise轴需要和x一致, or 1
         if (xInputShape_.GetDim(axis_) != scalesInputShape_.GetDim(0) && scalesInputShape_.GetDim(0) != 1) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, x", Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(xInputShape_), "dim[0] of scales must be equal to dim[axis] of x or 1");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "scales, x",
+                Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(xInputShape_),
+                "dim[0] of scales must be equal to dim[axis] of x or 1");
             return ge::GRAPH_FAILED;
         }
     } else {
         // scales轴个数不为1时，需要和x轴个数保持一致
         OP_LOGD(context_->GetNodeName(), "Scales dim number is %ld.", scalesDimNum_);
         if (scalesDimNum_ != xDimNum_) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", std::to_string(scalesDimNum_), "The shape dim of scales must be 1 or the shape dim of x");
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", std::to_string(scalesDimNum_),
+                                                     "The shape dim of scales must be 1 or the shape dim of x");
             return ge::GRAPH_FAILED;
         }
         // elewise轴需要和x一致 or 1，非elewise轴必须为1
@@ -239,13 +247,18 @@ ge::graphStatus Quantize::CheckShape()
             if (i == axis_) {
                 if (xInputShape_.GetDim(axis_) != scalesInputShape_.GetDim(axis_) &&
                     scalesInputShape_.GetDim(axis_) != 1) {
-OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, x", Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(xInputShape_), "dim[axis] of scales must be equal to dim[axis] of x or 1");
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "scales, x",
+                        Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(xInputShape_),
+                        "dim[axis] of scales must be equal to dim[axis] of x or 1");
                     return ge::GRAPH_FAILED;
                 }
                 continue;
             }
             if (scalesInputShape_.GetDim(i) != 1) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "scales", Ops::Base::ToString(scalesInputShape_), "The values of all axes except for axis_ must be 1");
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "scales",
+                                                      Ops::Base::ToString(scalesInputShape_),
+                                                      "The values of all axes except for axis_ must be 1");
                 return ge::GRAPH_FAILED;
             }
         }
@@ -256,7 +269,10 @@ OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, x", Ops
     }
     // offset的shape要和scales一致
     if (scalesInputShape_ != zeroPointsInputShape_) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, zero_points", Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(zeroPointsInputShape_), "The shapes of scales and zero_points must be the same");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "scales, zero_points",
+            Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(zeroPointsInputShape_),
+            "The shapes of scales and zero_points must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -296,8 +312,8 @@ void Quantize::MergeInputShape()
         }
         // merge shape to (1, n)
         xInputShape_.SetDimNum(TWO_DIMENSIONS);
-        xInputShape_.SetDim(0, shape0);  // 0轴为1
-        xInputShape_.SetDim(1, shape1);  // 1轴为乘积
+        xInputShape_.SetDim(0, shape0); // 0轴为1
+        xInputShape_.SetDim(1, shape1); // 1轴为乘积
         OP_LOGD(context_->GetNodeName(), "merge shape0:%ld, shape1:%ld", shape0, shape1);
     } else if (mode_ == TPL_PER_CHANNEL) {
         // per channel场景，0轴为合轴，1轴为尾轴
@@ -308,8 +324,8 @@ void Quantize::MergeInputShape()
         }
         // merge shape to 2 dim
         xInputShape_.SetDimNum(TWO_DIMENSIONS);
-        xInputShape_.SetDim(0, shape0);  // 0轴为合轴
-        xInputShape_.SetDim(1, shape1);  // 1轴为尾轴
+        xInputShape_.SetDim(0, shape0); // 0轴为合轴
+        xInputShape_.SetDim(1, shape1); // 1轴为尾轴
         OP_LOGD(context_->GetNodeName(), "merge shape0:%ld, shape1:%ld", shape0, shape1);
     } else {
         int64_t shape0 = 1;
@@ -325,9 +341,9 @@ void Quantize::MergeInputShape()
         }
         // merge shape to 3 dim
         xInputShape_.SetDimNum(THREE_DIMENSIONS);
-        xInputShape_.SetDim(0, shape0);  // 0轴为合轴
-        xInputShape_.SetDim(1, shape1);  // 1轴为尾轴
-        xInputShape_.SetDim(2, shape2);  // 2轴为尾轴
+        xInputShape_.SetDim(0, shape0); // 0轴为合轴
+        xInputShape_.SetDim(1, shape1); // 1轴为尾轴
+        xInputShape_.SetDim(2, shape2); // 2轴为尾轴
         OP_LOGD(context_->GetNodeName(), "merge shape0:%ld, shape1:%ld, shape2:%ld", shape0, shape1, shape2);
     }
 }
@@ -456,9 +472,9 @@ int64_t Quantize::CalcPerChannelMaxN(int64_t ubSize, int64_t base) const
 void Quantize::CalcPerTensorUBFactor(int64_t cacheLineNum)
 {
     int64_t availableUb = ubSize_ - reserveUb_;
-    int64_t maxBase = CalcMaxBaseLen(availableUb);    // 一个UB能算的数
-    maxBase = Ops::Base::FloorAlign(maxBase, cacheLineNum);  // 用cacheLine对齐
-    int64_t blockBase = blockFactor_;                 // 合成一个轴时，block块的宽度
+    int64_t maxBase = CalcMaxBaseLen(availableUb);          // 一个UB能算的数
+    maxBase = Ops::Base::FloorAlign(maxBase, cacheLineNum); // 用cacheLine对齐
+    int64_t blockBase = blockFactor_;                       // 合成一个轴时，block块的宽度
     blockBase = CeilAlign(blockBase, cacheLineNum);
     ubAxis_ = 1;
     baseN_ = 1;
@@ -470,19 +486,19 @@ void Quantize::CalcPerChannelUBFactor(int64_t cacheLineNum)
     // ub can split to three input: x_dtype_size * n * base, x_dtype_size * base, x_dtype_size * base
     // and one output: y_dtype_size * n * base
     int64_t availableUb = ubSize_ - reserveUb_;
-    int64_t maxBase = CalcMaxBaseLen(availableUb);    // 一个UB能算的数
-    maxBase = Ops::Base::FloorAlign(maxBase, cacheLineNum);  // 用cacheLine对齐
+    int64_t maxBase = CalcMaxBaseLen(availableUb);          // 一个UB能算的数
+    maxBase = Ops::Base::FloorAlign(maxBase, cacheLineNum); // 用cacheLine对齐
     // block cut axis 0, means all dim 1 is continous, else each core handle blockFactor
-    int64_t blockBase = blockAxis_ == 0 ? xInputShape_.GetDim(1) : blockFactor_;  // block的宽度，n方向
-    blockBase = CeilAlign(blockBase, cacheLineNum);                           // 用cacheLine对齐
+    int64_t blockBase = blockAxis_ == 0 ? xInputShape_.GetDim(1) : blockFactor_; // block的宽度，n方向
+    blockBase = CeilAlign(blockBase, cacheLineNum);                              // 用cacheLine对齐
     // 至少能放下2行时走第一分支
     if (blockBase <= maxBase / 2) {
         // need calc max n with real base
-        int64_t maxN = CalcPerChannelMaxN(availableUb, blockBase);  // 一个UB能处理几行
+        int64_t maxN = CalcPerChannelMaxN(availableUb, blockBase); // 一个UB能处理几行
         int64_t blockInnerSize = blockAxis_ == 0 ? blockFactor_ : xInputShape_.GetDim(0);
         ubAxis_ = 0;
-        baseN_ = std::min(maxN, blockInnerSize);            // UB块的行数
-        baseLen_ = CeilAlign(blockBase, cacheLineNum);  // UB块的宽度
+        baseN_ = std::min(maxN, blockInnerSize);       // UB块的行数
+        baseLen_ = CeilAlign(blockBase, cacheLineNum); // UB块的宽度
     } else {
         ubAxis_ = 1;
         baseN_ = 1;
@@ -495,16 +511,16 @@ void Quantize::CalcPerChannelNddmaUBFactor()
     // ub can split to three input: x_dtype_size * n * base, x_dtype_size * base, x_dtype_size * base
     // and one output: y_dtype_size * n * base
     int64_t availableUb = ubSize_ - reserveUb_;
-    int64_t maxBase = CalcMaxBaseLen(availableUb);                                // 一个UB能算的数
-    int64_t blockBase = blockAxis_ == 0 ? xInputShape_.GetDim(1) : blockFactor_;  // block的宽度，n方向
+    int64_t maxBase = CalcMaxBaseLen(availableUb);                               // 一个UB能算的数
+    int64_t blockBase = blockAxis_ == 0 ? xInputShape_.GetDim(1) : blockFactor_; // block的宽度，n方向
     // 至少能放下2行时走第一分支
     if (blockBase <= maxBase / 2) {
         // need calc max n with real base
-        int64_t maxN = CalcPerChannelMaxN(availableUb, blockBase);  // 一个UB能处理几行
+        int64_t maxN = CalcPerChannelMaxN(availableUb, blockBase); // 一个UB能处理几行
         int64_t blockInnerSize = blockAxis_ == 0 ? blockFactor_ : xInputShape_.GetDim(0);
         ubAxis_ = 0;
-        baseN_ = std::min(maxN, blockInnerSize);  // UB块的行数
-        baseLen_ = blockBase;                     // UB块的宽度
+        baseN_ = std::min(maxN, blockInnerSize); // UB块的行数
+        baseLen_ = blockBase;                    // UB块的宽度
     } else {
         ubAxis_ = 1;
         baseN_ = 1;
@@ -631,11 +647,11 @@ void Quantize::CalcTiling()
         // 计算缓存对齐后的第三维度分块数
         int64_t cacheLineNum = Ops::Base::CeilDiv(shape2, cacheLine_ / dataTypeSize);
         // 分三种维度分配核数
-        uint32_t usedCoreNum0 = GetCoreNum(shape0, coreNum_);  // 切第0个维度来分核
-        uint32_t usedCoreNum1 =
-            GetCoreNumDoubleCut(shape0, shape1, static_cast<int64_t>(coreNum_));  // 切第0维和第1维来分核
-        uint32_t usedCoreNum2 =
-            GetCoreNumDoubleCut(shape0 * shape1, cacheLineNum, static_cast<int64_t>(coreNum_));  // 切第3维来分核
+        uint32_t usedCoreNum0 = GetCoreNum(shape0, coreNum_); // 切第0个维度来分核
+        uint32_t usedCoreNum1 = GetCoreNumDoubleCut(shape0, shape1,
+                                                    static_cast<int64_t>(coreNum_)); // 切第0维和第1维来分核
+        uint32_t usedCoreNum2 = GetCoreNumDoubleCut(shape0 * shape1, cacheLineNum,
+                                                    static_cast<int64_t>(coreNum_)); // 切第3维来分核
 
         blockAxis_ = FIRST_SHAPE_DIM;
         actCoreNum_ = usedCoreNum0;
@@ -653,14 +669,15 @@ void Quantize::CalcTiling()
     }
 }
 
-static const std::unordered_map<ge::DataType, uint32_t> dtypeToTplMap = {{ge::DataType::DT_INT8, TPL_INT8},
-                                                            {ge::DataType::DT_UINT8, TPL_UINT8},
-                                                            {ge::DataType::DT_INT32, TPL_INT32},
-                                                            {ge::DataType::DT_BF16, TPL_BF16},
-                                                            {ge::DataType::DT_HIFLOAT8, TPL_HIFLOAT8},
-                                                            {ge::DataType::DT_FLOAT8_E4M3FN, TPL_FP8_E4M3FN},
-                                                            {ge::DataType::DT_FLOAT8_E5M2, TPL_FP8_E5M2},
-                                                            {ge::DataType::DT_FLOAT, TPL_FLOAT}};
+static const std::unordered_map<ge::DataType, uint32_t> dtypeToTplMap = {
+    {ge::DataType::DT_INT8, TPL_INT8},
+    {ge::DataType::DT_UINT8, TPL_UINT8},
+    {ge::DataType::DT_INT32, TPL_INT32},
+    {ge::DataType::DT_BF16, TPL_BF16},
+    {ge::DataType::DT_HIFLOAT8, TPL_HIFLOAT8},
+    {ge::DataType::DT_FLOAT8_E4M3FN, TPL_FP8_E4M3FN},
+    {ge::DataType::DT_FLOAT8_E5M2, TPL_FP8_E5M2},
+    {ge::DataType::DT_FLOAT, TPL_FLOAT}};
 
 uint32_t getTplForDtype(ge::DataType dtype)
 {
@@ -701,7 +718,7 @@ void Quantize::WriteTilingData()
     tilingData_->dim2 = xInputShape_.GetDim(THIRD_SHAPE_DIM);
     tilingData_->hasZeroPoint = static_cast<int64_t>(hasZeroPoint_);
 }
-}  // namespace quantize
+} // namespace quantize
 
 static ge::graphStatus Tiling4Quantize(gert::TilingContext* context)
 {
@@ -720,11 +737,11 @@ static ge::graphStatus Tiling4Quantize(gert::TilingContext* context)
     return status;
 }
 
-static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext* context)
 {
     auto compileInfoPtr = context->GetCompiledInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -732,5 +749,7 @@ static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *conte
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Quantize).Tiling(Tiling4Quantize).TilingParse<Ops::Base::BroadcastCompileInfo>(TilingPrepareForBroadcast);
-}  // namespace optiling
+IMPL_OP_OPTILING(Quantize)
+    .Tiling(Tiling4Quantize)
+    .TilingParse<Ops::Base::BroadcastCompileInfo>(TilingPrepareForBroadcast);
+} // namespace optiling

@@ -20,18 +20,11 @@
 using namespace op;
 using namespace std;
 
-class l2_adaptive_avg_pool3d_backward_test : public testing::Test
-{
+class l2_adaptive_avg_pool3d_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "_adaptive_avg_pool3d_backward_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "_adaptive_avg_pool3d_backward_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "_adaptive_avg_pool3d_backward_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "_adaptive_avg_pool3d_backward_test TearDown" << endl; }
 };
 
 TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_outputsize_one_one_NCDHW_01)
@@ -41,8 +34,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -58,8 +51,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 2, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -72,8 +65,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_bac
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -86,8 +79,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_bac
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 2}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -99,8 +92,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
     auto grad_output_tensor_desc = TensorDesc({2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -112,8 +105,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
     auto grad_output_tensor_desc = TensorDesc({2, 1, 2, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -125,8 +118,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_bac
     auto grad_output_tensor_desc = TensorDesc({2, 1, 2, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -139,8 +132,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -153,8 +146,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_bac
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -166,8 +159,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_output
     auto grad_output_tensor_desc = TensorDesc({2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -180,8 +173,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_input_
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -194,8 +187,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_dtype_
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -208,8 +201,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_dtype_
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -222,8 +215,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B_adaptive_avg_pool3d_back
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -236,8 +229,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B_adaptive_avg_pool3d_back
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -250,8 +243,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_dtype_
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, dtype, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -262,8 +255,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_outsiz
     auto grad_output_tensor_desc = TensorDesc({2, 2, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -274,8 +267,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_input_
     auto grad_output_tensor_desc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -287,8 +280,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_FLOAT_
     auto input_tensor_desc = TensorDesc({4, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({4, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -303,8 +296,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_FLOAT_
     auto input_tensor_desc = TensorDesc({4, 4, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({4, 4, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -319,8 +312,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_FLOAT_
     auto input_tensor_desc = TensorDesc({5, 5, 5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({5, 5, 5, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -335,8 +328,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_FLOAT_
     auto input_tensor_desc = TensorDesc({5, 5, 5, 5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({5, 5, 5, 5, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -366,8 +359,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_FLOAT_
     auto input_tensor_desc = TensorDesc({3, 3, 3, 3, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({3, 3, 3, 3, 3}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -380,8 +373,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_FLOAT_
     auto input_tensor_desc = TensorDesc({3, 3, 3, 3, 3, 3}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({3, 3, 3, 3, 3, 3}, dtype, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -393,8 +386,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_dtype_
     auto input_tensor_desc = TensorDesc({3, 3, 3, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({3, 3, 3, 3, 3}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -406,8 +399,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_dtype_
     auto input_tensor_desc = TensorDesc({3, 3, 3, 3, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({3, 3, 3, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -419,8 +412,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_gradou
     auto input_tensor_desc = TensorDesc({4, 4, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto output_tensor = TensorDesc({4, 4, 4, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -434,8 +427,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_gradou
 
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.1, 0.1);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -449,8 +442,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_self_d
 
     auto output_tensor = TensorDesc({2, 2, -1, 4, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.1, 0.1);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -464,8 +457,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_self_n
 
     auto output_tensor = TensorDesc({2, 2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.1, 0.1);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -478,8 +471,8 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, adaptive_avg_pool3d_backward_gradou
 
     auto output_tensor = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.1, 0.1);
 
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -491,23 +484,23 @@ TEST_F(l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_bac
     auto grad_output_tensor_desc = TensorDesc({2, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 1, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(
-    l2_adaptive_avg_pool3d_backward_test, ascend910B2_adaptive_avg_pool3d_backward_gradoutput__n_not_match_selfshape_30)
+TEST_F(l2_adaptive_avg_pool3d_backward_test,
+       ascend910B2_adaptive_avg_pool3d_backward_gradoutput__n_not_match_selfshape_30)
 {
     aclDataType dtype = ACL_FLOAT;
     auto grad_output_tensor_desc = TensorDesc({3, 1, 1, 1}, dtype, ACL_FORMAT_ND).ValueRange(-50, 50);
     auto input_tensor_desc = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto output_tensor = TensorDesc({2, 2, 2, 2}, dtype, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc), OUTPUT(output_tensor));
+    auto ut = OP_API_UT(aclnnAdaptiveAvgPool3dBackward, INPUT(grad_output_tensor_desc, input_tensor_desc),
+                        OUTPUT(output_tensor));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

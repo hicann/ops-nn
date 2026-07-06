@@ -28,8 +28,8 @@ extern "C" {
 
 static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_WITH_BF16 = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                             DataType::DT_BF16};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
@@ -72,9 +72,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     // self、out的数据格式必须相同
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of self and out can't be different, self [%s], out [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of self and out can't be different, self [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
     return true;
@@ -97,11 +96,11 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFastGeluGetWorkspaceSize(
-    const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnFastGeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                          aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    
+
     L2_DFX_PHASE_1(aclnnFastGelu, DFX_IN(self), DFX_OUT(out));
 
     // 固定写法，创建OpExecutor

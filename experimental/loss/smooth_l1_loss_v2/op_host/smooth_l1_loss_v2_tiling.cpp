@@ -41,8 +41,7 @@ constexpr uint32_t TILE_SPLIT_NUM_REDUCE = 2048;
 constexpr uint32_t SINGLE_CORE_THRESHOLD = 8192;
 constexpr uint32_t SYNC_WORKSPACE_REGION_NUM = 2;
 constexpr uint32_t WS_SYS_SIZE = 0;
-struct SmoothL1LossV2CompileInfo {
-};
+struct SmoothL1LossV2CompileInfo {};
 
 static ge::graphStatus TilingParseForSmoothL1LossV2([[maybe_unused]] gert::TilingParseContext* context)
 {
@@ -89,14 +88,11 @@ static int GetReductionType(gert::TilingContext* context)
     return static_cast<int>(smooth_l1_loss_v2_host::GetReductionTypeFromContext(context, true));
 }
 
-static float GetSigmaAttr(gert::TilingContext* context)
-{
-    return smooth_l1_loss_v2_host::GetSigmaFromContext(context);
-}
+static float GetSigmaAttr(gert::TilingContext* context) { return smooth_l1_loss_v2_host::GetSigmaFromContext(context); }
 
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum, uint64_t& inputBytes, uint64_t& tileBlockNum,
-    uint64_t& tileDataNum, uint64_t& inputLengthAlgin32, int reductionType)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum,
+                                         uint64_t& inputBytes, uint64_t& tileBlockNum, uint64_t& tileDataNum,
+                                         uint64_t& inputLengthAlgin32, int reductionType)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
     auto inputShape = context->GetInputShape(0);
@@ -106,17 +102,15 @@ static ge::graphStatus GetShapeAttrsInfo(
     inputNum = inputShape->GetStorageShape().GetShapeSize();
     auto labelShape = context->GetInputShape(1);
     OP_CHECK_IF(labelShape == nullptr, OP_LOGE(context, "label shape is nullptr"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputShape->GetStorageShape() != labelShape->GetStorageShape(),
-        OP_LOGE(context, "predict and label shapes must match"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape->GetStorageShape() != labelShape->GetStorageShape(),
+                OP_LOGE(context, "predict and label shapes must match"), return ge::GRAPH_FAILED);
 
     auto predictDesc = context->GetInputDesc(0);
     auto labelDesc = context->GetInputDesc(1);
     OP_CHECK_IF(predictDesc == nullptr, OP_LOGE(context, "predict desc is nullptr"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(labelDesc == nullptr, OP_LOGE(context, "label desc is nullptr"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        predictDesc->GetDataType() != labelDesc->GetDataType(), OP_LOGE(context, "predict and label dtypes must match"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(predictDesc->GetDataType() != labelDesc->GetDataType(),
+                OP_LOGE(context, "predict and label dtypes must match"), return ge::GRAPH_FAILED);
 
     uint32_t typeLength = 0;
     ge::TypeUtils::GetDataTypeLength(predictDesc->GetDataType(), typeLength);
@@ -150,16 +144,17 @@ static ge::graphStatus GetShapeAttrsInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(
-    gert::TilingContext* context, uint64_t inputLengthAlgin32, int64_t coreNum, uint64_t tileBlockNum,
-    uint64_t inputBytes, uint64_t tileDataNum, uint32_t blockSize, uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum,
-    uint64_t& smallTailDataNum, uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum,
-    uint64_t& tailBlockNum)
+static ge::graphStatus CalculateCoreBlockNums(gert::TilingContext* context, uint64_t inputLengthAlgin32,
+                                              int64_t coreNum, uint64_t tileBlockNum, uint64_t inputBytes,
+                                              uint64_t tileDataNum, uint32_t blockSize, uint64_t& smallCoreDataNum,
+                                              uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum,
+                                              uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum,
+                                              uint64_t& finalBigTileNum, uint64_t& tailBlockNum)
 {
     if (blockSize == 0 || coreNum == 0 || tileBlockNum == 0 || inputBytes == 0) {
-        OP_LOGE(
-            context, "CalculateCoreBlockNums invalid params: blockSize=%u coreNum=%ld tileBlockNum=%lu inputBytes=%lu",
-            blockSize, coreNum, tileBlockNum, inputBytes);
+        OP_LOGE(context,
+                "CalculateCoreBlockNums invalid params: blockSize=%u coreNum=%ld tileBlockNum=%lu inputBytes=%lu",
+                blockSize, coreNum, tileBlockNum, inputBytes);
         return ge::GRAPH_FAILED;
     }
     uint64_t everyCoreInputBlockNum = inputLengthAlgin32 / blockSize / coreNum;
@@ -192,14 +187,13 @@ struct SmoothL1LossV2BasicInfo {
     uint64_t inputLengthAlgin32 = 0;
 };
 
-static ge::graphStatus PrepareTilingInputs(
-    gert::TilingContext* context, SmoothL1LossV2TilingData*& tiling, SmoothL1LossV2BasicInfo& info)
+static ge::graphStatus PrepareTilingInputs(gert::TilingContext* context, SmoothL1LossV2TilingData*& tiling,
+                                           SmoothL1LossV2BasicInfo& info)
 {
     tiling = context->GetTilingData<SmoothL1LossV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SmoothL1LossV2TilingData), 0, sizeof(SmoothL1LossV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SmoothL1LossV2TilingData), 0, sizeof(SmoothL1LossV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     ge::graphStatus ret = GetPlatformInfo(context, info.ubSize, info.platformCoreNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
@@ -208,9 +202,8 @@ static ge::graphStatus PrepareTilingInputs(
     OP_CHECK_IF(info.reductionType < 0, OP_LOGE(context, "Invalid reduction attr"), return ge::GRAPH_FAILED);
     info.sigma = GetSigmaAttr(context);
 
-    ret = GetShapeAttrsInfo(
-        context, info.ubSize, info.inputNum, info.inputBytes, info.tileBlockNum, info.tileDataNum,
-        info.inputLengthAlgin32, info.reductionType);
+    ret = GetShapeAttrsInfo(context, info.ubSize, info.inputNum, info.inputBytes, info.tileBlockNum, info.tileDataNum,
+                            info.inputLengthAlgin32, info.reductionType);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -258,19 +251,18 @@ static int64_t DecideLaunchCoreNum(const SmoothL1LossV2BasicInfo& info)
     return (coreNum <= 0) ? 1 : coreNum;
 }
 
-static ge::graphStatus FinalizeTilingResult(
-    gert::TilingContext* context, SmoothL1LossV2TilingData* tiling, const SmoothL1LossV2BasicInfo& info,
-    int64_t coreNum)
+static ge::graphStatus FinalizeTilingResult(gert::TilingContext* context, SmoothL1LossV2TilingData* tiling,
+                                            const SmoothL1LossV2BasicInfo& info, int64_t coreNum)
 {
     // 统一通过 workspace + core0 汇总完成 sum/mean，避免全局原子带来的抖动。
     context->SetNeedAtomic(false);
 
     uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum;
     uint64_t finalSmallTileNum, finalBigTileNum, tailBlockNum;
-    ge::graphStatus ret = CalculateCoreBlockNums(
-        context, info.inputLengthAlgin32, coreNum, info.tileBlockNum, info.inputBytes, info.tileDataNum,
-        GetUbBlockSize(context), smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum,
-        finalBigTileNum, tailBlockNum);
+    ge::graphStatus ret = CalculateCoreBlockNums(context, info.inputLengthAlgin32, coreNum, info.tileBlockNum,
+                                                 info.inputBytes, info.tileDataNum, GetUbBlockSize(context),
+                                                 smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum,
+                                                 finalSmallTileNum, finalBigTileNum, tailBlockNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateCoreBlockNums error"), return ge::GRAPH_FAILED);
 
     tiling->smallCoreDataNum = static_cast<uint64_t>(smallCoreDataNum);
@@ -286,9 +278,8 @@ static ge::graphStatus FinalizeTilingResult(
     tiling->sigma = info.sigma;
     tiling->reduction = info.reductionType;
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context, coreNum, info.reductionType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context, coreNum, info.reductionType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
     uint64_t tilingKey = GET_TPL_TILING_KEY(0);
     context->SetTilingKey(tilingKey);
     context->SetBlockDim(coreNum);

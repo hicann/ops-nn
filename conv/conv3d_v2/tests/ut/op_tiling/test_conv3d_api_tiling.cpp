@@ -6,8 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
-
+ */
 
 /*!
  * \file test_conv3d_api_tiling.cpp
@@ -41,7 +40,8 @@ class TestConv3dTiling : public testing::Test {
 protected:
     static void SetUpTestCase() {}
     static void TearDownTestCase() {}
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
         platform.l1Size = L1_SIZE;
         platform.l0CSize = L0C_SIZE;
         platform.ubSize = UB_SIZE;
@@ -277,16 +277,22 @@ TEST_F(TestConv3dTiling, GetL0Tiling_normal)
     }
 }
 
-void SetSingleOutputShapeInTest(Conv3dApiTiling::Conv3dTiling &testTiling)
+void SetSingleOutputShapeInTest(Conv3dApiTiling::Conv3dTiling& testTiling)
 {
     int64_t orgHo = (testTiling.shapeInfo.orgHi + testTiling.attrInfo.padTop + testTiling.attrInfo.padBottom -
-             testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) / testTiling.attrInfo.strideH + 1;
+                     testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) /
+                        testTiling.attrInfo.strideH +
+                    1;
     int64_t orgWo = (testTiling.shapeInfo.orgWi + testTiling.attrInfo.padLeft + testTiling.attrInfo.padRight -
-             testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) / testTiling.attrInfo.strideW + 1;
+                     testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) /
+                        testTiling.attrInfo.strideW +
+                    1;
 
     int64_t singleM = orgHo * orgWo;
     int64_t singleDo = (testTiling.shapeInfo.orgDi + testTiling.attrInfo.padHead + testTiling.attrInfo.padTail -
-                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
+                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) /
+                           testTiling.attrInfo.strideD +
+                       1;
 
     testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM);
     testTiling.SetGroups(1);
@@ -294,22 +300,27 @@ void SetSingleOutputShapeInTest(Conv3dApiTiling::Conv3dTiling &testTiling)
     testTiling.shapeInfo.cinOpt = testTiling.shapeInfo.orgCi;
     testTiling.shapeInfo.coutOpt = testTiling.shapeInfo.orgCo;
     int64_t singleCoreGroupOpt = CeilDiv(testTiling.attrInfo.groupOpt, 1);
-    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt),
-                                    singleCoreGroupOpt,
-                                    static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
-                                    static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
+    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt), singleCoreGroupOpt,
+                               static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
+                               static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
 }
 
-void SetSingleOutputShapeHwModeInTest(Conv3dApiTiling::Conv3dTiling &testTiling)
+void SetSingleOutputShapeHwModeInTest(Conv3dApiTiling::Conv3dTiling& testTiling)
 {
     int64_t orgHo = (testTiling.shapeInfo.orgHi + testTiling.attrInfo.padTop + testTiling.attrInfo.padBottom -
-             testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) / testTiling.attrInfo.strideH + 1;
+                     testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) /
+                        testTiling.attrInfo.strideH +
+                    1;
     int64_t orgWo = (testTiling.shapeInfo.orgWi + testTiling.attrInfo.padLeft + testTiling.attrInfo.padRight -
-             testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) / testTiling.attrInfo.strideW + 1;
+                     testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) /
+                        testTiling.attrInfo.strideW +
+                    1;
 
     int64_t singleM = orgHo * orgWo;
     int64_t singleDo = (testTiling.shapeInfo.orgDi + testTiling.attrInfo.padHead + testTiling.attrInfo.padTail -
-                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
+                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) /
+                           testTiling.attrInfo.strideD +
+                       1;
 
     testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, orgHo, orgWo);
     testTiling.SetOutputOrder(Conv3dApiTiling::HW_Mode);
@@ -318,14 +329,14 @@ void SetSingleOutputShapeHwModeInTest(Conv3dApiTiling::Conv3dTiling &testTiling)
     testTiling.shapeInfo.cinOpt = testTiling.shapeInfo.orgCi;
     testTiling.shapeInfo.coutOpt = testTiling.shapeInfo.orgCo;
     int64_t singleCoreGroupOpt = CeilDiv(testTiling.attrInfo.groupOpt, 1);
-    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt),
-                                    singleCoreGroupOpt,
-                                    static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
-                                    static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
-    testTiling.SetSingleWeightShape(testTiling.shapeInfo.cinOpt, testTiling.shapeInfo.orgkD, testTiling.shapeInfo.orgkH, testTiling.shapeInfo.orgkW);
+    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt), singleCoreGroupOpt,
+                               static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
+                               static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
+    testTiling.SetSingleWeightShape(testTiling.shapeInfo.cinOpt, testTiling.shapeInfo.orgkD, testTiling.shapeInfo.orgkH,
+                                    testTiling.shapeInfo.orgkW);
 }
 
-void SetType(Conv3dApiTiling::Conv3dTiling &testTiling)
+void SetType(Conv3dApiTiling::Conv3dTiling& testTiling)
 {
     testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z_3D, ConvDtype::BF16);
     testTiling.SetFmapType(TPosition::GM, ConvFormat::NDC1HWC0, ConvDtype::BF16);
@@ -335,7 +346,7 @@ void SetType(Conv3dApiTiling::Conv3dTiling &testTiling)
     }
 }
 
-void SetTypePointWise(Conv3dApiTiling::Conv3dTiling &testTiling)
+void SetTypePointWise(Conv3dApiTiling::Conv3dTiling& testTiling)
 {
     testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BF16);
     testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BF16);
@@ -345,7 +356,7 @@ void SetTypePointWise(Conv3dApiTiling::Conv3dTiling &testTiling)
     }
 }
 
-void SetTypePointWise(Conv3dApiTiling::Conv3dTiling &testTiling, Conv3dApiTiling::ConvDtype dtype )
+void SetTypePointWise(Conv3dApiTiling::Conv3dTiling& testTiling, Conv3dApiTiling::ConvDtype dtype)
 {
     testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, dtype);
     testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, dtype);
@@ -355,7 +366,7 @@ void SetTypePointWise(Conv3dApiTiling::Conv3dTiling &testTiling, Conv3dApiTiling
     }
 }
 
-void SetInputPointWise(Conv3dApiTiling::Conv3dTiling &testTiling)
+void SetInputPointWise(Conv3dApiTiling::Conv3dTiling& testTiling)
 {
     testTiling.SetSingleWeightShape(testTiling.shapeInfo.orgCi, 1, 1, 1);
 
@@ -365,7 +376,7 @@ void SetInputPointWise(Conv3dApiTiling::Conv3dTiling &testTiling)
     testTiling.SetStride(1, 1, 1);
 }
 
-void TestTilingResult(int64_t ret, Conv3dApiTiling::Conv3dTiling &testTiling)
+void TestTilingResult(int64_t ret, Conv3dApiTiling::Conv3dTiling& testTiling)
 {
     EXPECT_EQ(ret, 0);
     EXPECT_NE(testTiling.l1TilingInfo.kAL1, 0);
@@ -377,13 +388,13 @@ void TestTilingResult(int64_t ret, Conv3dApiTiling::Conv3dTiling &testTiling)
 
         EXPECT_NE(testTiling.l1TilingInfo.nBL1Value, 0);
         int multiDivFlag = (testTiling.l1TilingInfo.nBL1Value % testTiling.l0TilingInfo.nL0 == 0) |
-                            (testTiling.l1TilingInfo.nBL1Value % testTiling.cubeInfo.n0 == 0);
+                           (testTiling.l1TilingInfo.nBL1Value % testTiling.cubeInfo.n0 == 0);
         EXPECT_EQ(multiDivFlag, 1);
     }
 
     EXPECT_NE(testTiling.l1TilingInfo.mAL1Value, 0);
     int multiDivFlag = (testTiling.l1TilingInfo.mAL1Value % testTiling.l0TilingInfo.mL0 == 0) |
-                        (testTiling.l1TilingInfo.mAL1Value % testTiling.cubeInfo.m0 == 0);
+                       (testTiling.l1TilingInfo.mAL1Value % testTiling.cubeInfo.m0 == 0);
     EXPECT_EQ(multiDivFlag, 1);
 
     EXPECT_NE(testTiling.l0TilingInfo.mL0, 0);
@@ -1465,7 +1476,6 @@ TEST_F(TestConv3dTiling, NetWorks_051)
     int64_t ret1 = testTiling.GetTiling(tilingData);
     TestTilingResult(ret1, testTiling);
 }
-
 
 TEST_F(TestConv3dTiling, NetWorks_052)
 {
@@ -5567,13 +5577,19 @@ TEST_F(TestConv3dTiling, PointWise_Groups_negative1)
     testTiling.SetStride(1, 1, 1);
 
     int64_t orgHo = (testTiling.shapeInfo.orgHi + testTiling.attrInfo.padTop + testTiling.attrInfo.padBottom -
-             testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) / testTiling.attrInfo.strideH + 1;
+                     testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) /
+                        testTiling.attrInfo.strideH +
+                    1;
     int64_t orgWo = (testTiling.shapeInfo.orgWi + testTiling.attrInfo.padLeft + testTiling.attrInfo.padRight -
-             testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) / testTiling.attrInfo.strideW + 1;
+                     testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) /
+                        testTiling.attrInfo.strideW +
+                    1;
 
     int64_t singleM = orgHo * orgWo;
     int64_t singleDo = (testTiling.shapeInfo.orgDi + testTiling.attrInfo.padHead + testTiling.attrInfo.padTail -
-                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
+                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) /
+                           testTiling.attrInfo.strideD +
+                       1;
 
     testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM);
     testTiling.SetGroups(2);
@@ -5581,10 +5597,9 @@ TEST_F(TestConv3dTiling, PointWise_Groups_negative1)
     testTiling.shapeInfo.cinOpt = testTiling.shapeInfo.orgCi;
     testTiling.shapeInfo.coutOpt = testTiling.shapeInfo.orgCo;
     int64_t singleCoreGroupOpt = CeilDiv(testTiling.attrInfo.groupOpt, 1);
-    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt),
-                                    singleCoreGroupOpt,
-                                    static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
-                                    static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
+    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt), singleCoreGroupOpt,
+                               static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
+                               static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
 
     testTiling.hasBias = 1;
     SetTypePointWise(testTiling);
@@ -5607,13 +5622,19 @@ TEST_F(TestConv3dTiling, PointWise_Groups_negative2)
     testTiling.SetStride(1, 1, 1);
 
     int64_t orgHo = (testTiling.shapeInfo.orgHi + testTiling.attrInfo.padTop + testTiling.attrInfo.padBottom -
-             testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) / testTiling.attrInfo.strideH + 1;
+                     testTiling.attrInfo.dilationH * (testTiling.shapeInfo.orgkH - 1) - 1) /
+                        testTiling.attrInfo.strideH +
+                    1;
     int64_t orgWo = (testTiling.shapeInfo.orgWi + testTiling.attrInfo.padLeft + testTiling.attrInfo.padRight -
-             testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) / testTiling.attrInfo.strideW + 1;
+                     testTiling.attrInfo.dilationW * (testTiling.shapeInfo.orgkW - 1) - 1) /
+                        testTiling.attrInfo.strideW +
+                    1;
 
     int64_t singleM = orgHo * orgWo;
     int64_t singleDo = (testTiling.shapeInfo.orgDi + testTiling.attrInfo.padHead + testTiling.attrInfo.padTail -
-                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) / testTiling.attrInfo.strideD + 1;
+                        testTiling.attrInfo.dilationD * (testTiling.shapeInfo.orgkD - 1) - 1) /
+                           testTiling.attrInfo.strideD +
+                       1;
 
     testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM);
     testTiling.SetGroups(64);
@@ -5621,10 +5642,9 @@ TEST_F(TestConv3dTiling, PointWise_Groups_negative2)
     testTiling.shapeInfo.cinOpt = testTiling.shapeInfo.orgCi;
     testTiling.shapeInfo.coutOpt = testTiling.shapeInfo.orgCo;
     int64_t singleCoreGroupOpt = CeilDiv(testTiling.attrInfo.groupOpt, 1);
-    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt),
-                                    singleCoreGroupOpt,
-                                    static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
-                                    static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
+    testTiling.SetOptGroupInfo(static_cast<int64_t>(testTiling.attrInfo.groupOpt), singleCoreGroupOpt,
+                               static_cast<int64_t>(testTiling.shapeInfo.cinOpt),
+                               static_cast<int64_t>(testTiling.shapeInfo.coutOpt));
 
     testTiling.hasBias = 1;
     SetTypePointWise(testTiling);

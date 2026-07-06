@@ -49,21 +49,24 @@ extern "C" {
  * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape中除dim维外，其它维的大小跟gradOutput一样，
  * dim维的大小是gradOutput的两倍，支持非连续的Tensor，数据格式支持ND。
  * @param [in] gelu：计算输入，npu
- * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与gradOutput一样，支持非连续的Tensor， 数据格式支持ND。
+ * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与gradOutput一样，支持非连续的Tensor，
+ * 数据格式支持ND。
  * @param [in] dim: 计算属性，host侧的整数，数据类型支持INT64，当前取值只支持-1。
  * @param [in] approximate: 计算属性，host侧的整数，数据类型支持INT64，取值范围是0('none')、1('tanh') ，当前取值只支持
  * 1('tanh') 。
  * @param [in] activateLeft:
  * 计算属性，host侧的布尔值，表示激活函数操作数据块的方向，默认值为false，表示对右边做activate。
  * @param [out] gradInput：计算输出，npu
- * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与self一样，支持非连续的Tensor， 数据格式支持ND。
+ * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与self一样，支持非连续的Tensor，
+ * 数据格式支持ND。
  * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeGluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeGluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                         const aclTensor* gelu, int64_t dim, int64_t approximate,
+                                                         aclTensor* gradInput, uint64_t* workspaceSize,
+                                                         aclOpExecutor** executor);
 
 /**
  * @brief aclnnGeGluV3Backward的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -75,21 +78,24 @@ ACLNN_API aclnnStatus aclnnGeGluBackwardGetWorkspaceSize(
  * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape中除dim维外，其它维的大小跟gradOutput一样，
  * dim维的大小是gradOutput的两倍，支持非连续的Tensor，数据格式支持ND。
  * @param [in] gelu：计算输入，npu
- * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与gradOutput一样，支持非连续的Tensor， 数据格式支持ND。
+ * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与gradOutput一样，支持非连续的Tensor，
+ * 数据格式支持ND。
  * @param [in] dim: 计算属性，host侧的整数，数据类型支持INT64，当前取值只支持-1。
  * @param [in] approximate: 计算属性，host侧的整数，数据类型支持INT64，取值范围是0('none')、1('tanh') ，当前取值只支持
  * 1('tanh') 。
  * @param [in] activateLeft:
  * 计算属性，host侧的布尔值，表示激活函数操作数据块的方向，默认值为false，表示对右边做activate。
  * @param [out] gradInput：计算输出，npu
- * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与self一样，支持非连续的Tensor， 数据格式支持ND。
+ * device侧的aclTensor，数据类型支持FLOAT16、FLOAT32、BFLOAT16，shape需要与self一样，支持非连续的Tensor，
+ * 数据格式支持ND。
  * @param [out] workspace_size: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    bool activateLeft, aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                           const aclTensor* gelu, int64_t dim, int64_t approximate,
+                                                           bool activateLeft, aclTensor* gradInput,
+                                                           uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnGeGluBackward的第二段接口，用于执行计算。
@@ -99,8 +105,8 @@ ACLNN_API aclnnStatus aclnnGeGluV3BackwardGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnGeGluBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGeGluBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         aclrtStream stream);
 
 /**
  * @brief aclnnGeGluBackward的第二段接口，用于执行计算。
@@ -110,8 +116,8 @@ aclnnGeGluBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* execu
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnGeGluV3Backward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGeGluV3Backward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream);
 
 #ifdef __cplusplus
 }

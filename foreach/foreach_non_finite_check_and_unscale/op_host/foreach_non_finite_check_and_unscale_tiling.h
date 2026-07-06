@@ -58,15 +58,11 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ForeachNonFiniteCheckAndUnscale_100, ForeachNonFiniteCheckAndUnscaleRegbaseTilingData)
 
-class ForeachNonFiniteCheckAndUnscaleBaseClass : public Ops::NN::Optiling::TilingBaseClass
-{
+class ForeachNonFiniteCheckAndUnscaleBaseClass : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ForeachNonFiniteCheckAndUnscaleBaseClass(gert::TilingContext* context) : TilingBaseClass(context) {};
+    explicit ForeachNonFiniteCheckAndUnscaleBaseClass(gert::TilingContext* context) : TilingBaseClass(context){};
     ~ForeachNonFiniteCheckAndUnscaleBaseClass() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
 
 protected:
     ge::graphStatus GetPlatformInfo() override;

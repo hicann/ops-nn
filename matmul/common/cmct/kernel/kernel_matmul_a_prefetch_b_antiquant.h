@@ -30,11 +30,11 @@
 #include "../utils/tensor_utils.h"
 namespace Cmct::Gemm::Kernel {
 
-using Cmct::Gemm::Get;
 using AscendC::MakeCoord;
 using AscendC::MakeLayout;
 using AscendC::MakeShape;
 using AscendC::MakeStride;
+using Cmct::Gemm::Get;
 
 template <class ProblemShape_, class BlockMmad_, class BlockPrologue_, class BlockScheduler_>
 class KernelMatmulAPrefetchBAntiquant {
@@ -67,11 +67,10 @@ public:
     template <typename Tiling>
     __aicore__ inline static Params ToUnderlyingArguments(const Arguments& args, Tiling const* tiling)
     {
-        return {
-            .problemShape = args.problemShape,
-            .mmad = BlockMmad::ToUnderlyingArguments(args.problemShape, args.mmad, tiling),
-            .prologue = BlockPrologue::ToUnderlyingArguments(args.problemShape, args.prologue, tiling),
-            .scheduler = BlockScheduler::ToUnderlyingArguments(args.problemShape, args.scheduler, tiling)};
+        return {.problemShape = args.problemShape,
+                .mmad = BlockMmad::ToUnderlyingArguments(args.problemShape, args.mmad, tiling),
+                .prologue = BlockPrologue::ToUnderlyingArguments(args.problemShape, args.prologue, tiling),
+                .scheduler = BlockScheduler::ToUnderlyingArguments(args.problemShape, args.scheduler, tiling)};
     }
 
     __aicore__ inline KernelMatmulAPrefetchBAntiquant() = default;
@@ -85,12 +84,12 @@ public:
     {
         BlockPrologue blockPrologue(params.prologue);
         BlockScheduler blockScheduler(params.problemShape, params.scheduler);
-        auto tensorB =
-            MakeTensor((__gm__ typename BlockPrologue::ElementIn*)params.prologue.ptrB, params.prologue.layoutB);
-        auto tensorScale = MakeTensor(
-            (__gm__ typename BlockPrologue::ElementScale*)params.prologue.ptrScale, params.prologue.layoutScale);
-        auto tensorOffset = MakeTensor(
-            (__gm__ typename BlockPrologue::ElementScale*)params.prologue.ptrOffset, params.prologue.layoutScale);
+        auto tensorB = MakeTensor((__gm__ typename BlockPrologue::ElementIn*)params.prologue.ptrB,
+                                  params.prologue.layoutB);
+        auto tensorScale = MakeTensor((__gm__ typename BlockPrologue::ElementScale*)params.prologue.ptrScale,
+                                      params.prologue.layoutScale);
+        auto tensorOffset = MakeTensor((__gm__ typename BlockPrologue::ElementScale*)params.prologue.ptrOffset,
+                                       params.prologue.layoutScale);
         for (uint64_t coordM = blockScheduler.mStart; coordM < blockScheduler.mStop; coordM += blockScheduler.mStep) {
             auto tileM = Min(blockScheduler.mStop - coordM, blockScheduler.mTile);
             auto tileN = blockScheduler.n0Tile;
@@ -99,8 +98,8 @@ public:
                 auto blockScale = GetAntiScaleTile(tensorScale, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockOffset = GetAntiScaleTile(tensorOffset, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockWeight = GetWeightTile<WEIGHT_NZ>(tensorB, coordN, tileN, params.prologue.antiQuantGroupSize);
-                blockPrologue(
-                    blockWeight, blockScale, blockOffset, AscendC::MakeShape(tileN, Get<2>(params.problemShape)));
+                blockPrologue(blockWeight, blockScale, blockOffset,
+                              AscendC::MakeShape(tileN, Get<2>(params.problemShape)));
             }
             for (uint64_t coordN = blockScheduler.n1Start; coordN < blockScheduler.n1Stop;
                  coordN += blockScheduler.n1Step) {
@@ -109,8 +108,8 @@ public:
                 auto blockScale = GetAntiScaleTile(tensorScale, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockOffset = GetAntiScaleTile(tensorOffset, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockWeight = GetWeightTile<WEIGHT_NZ>(tensorB, coordN, tileN, params.prologue.antiQuantGroupSize);
-                blockPrologue(
-                    blockWeight, blockScale, blockOffset, AscendC::MakeShape(tileN, Get<2>(params.problemShape)));
+                blockPrologue(blockWeight, blockScale, blockOffset,
+                              AscendC::MakeShape(tileN, Get<2>(params.problemShape)));
             }
             for (uint64_t coordN = blockScheduler.n2Start; coordN < blockScheduler.n2Stop;
                  coordN += blockScheduler.n2Step) {
@@ -119,8 +118,8 @@ public:
                 auto blockScale = GetAntiScaleTile(tensorScale, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockOffset = GetAntiScaleTile(tensorOffset, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockWeight = GetWeightTile<WEIGHT_NZ>(tensorB, coordN, tileN, params.prologue.antiQuantGroupSize);
-                blockPrologue(
-                    blockWeight, blockScale, blockOffset, AscendC::MakeShape(tileN, Get<2>(params.problemShape)));
+                blockPrologue(blockWeight, blockScale, blockOffset,
+                              AscendC::MakeShape(tileN, Get<2>(params.problemShape)));
             }
         }
     }
@@ -132,14 +131,14 @@ public:
         BlockMmad::PreloadA(tensorA, params.mmad);
         BlockMmad blockMmad(params.mmad);
         auto tensorC = MakeTensor((__gm__ typename BlockMmad::ElementC*)(params.mmad.ptrC), params.mmad.layoutC);
-        auto tensorBias =
-            MakeTensor((__gm__ typename BlockMmad::ElementBias*)(params.mmad.ptrBias), params.mmad.layoutBias);
+        auto tensorBias = MakeTensor((__gm__ typename BlockMmad::ElementBias*)(params.mmad.ptrBias),
+                                     params.mmad.layoutBias);
 
         BlockScheduler blockScheduler(params.problemShape, params.scheduler);
         for (uint64_t coordM = blockScheduler.mStart; coordM < blockScheduler.mStop; coordM += blockScheduler.mStep) {
             auto tileM = Min(blockScheduler.mStop - coordM, blockScheduler.mTile);
-            auto tensorBlockA =
-                GetTile(tensorA, MakeCoord(coordM, _), MakeShape(blockScheduler.mStep, Get<1>(tensorA.GetShape())));
+            auto tensorBlockA = GetTile(tensorA, MakeCoord(coordM, _),
+                                        MakeShape(blockScheduler.mStep, Get<1>(tensorA.GetShape())));
             auto tileN = blockScheduler.n0Tile;
             for (uint64_t coordN = blockScheduler.n0Start; coordN < blockScheduler.n0Stop;
                  coordN += blockScheduler.n0Step) {
@@ -173,8 +172,8 @@ private:
         typename BlockPrologue::ElementScale>;
 
     template <typename ScaleOffsetType>
-    __aicore__ inline auto GetAntiScaleTile(
-        const ScaleOffsetType& scaleOffset, uint64_t coordN, uint64_t tileN, uint64_t antiQuantGroupSize)
+    __aicore__ inline auto GetAntiScaleTile(const ScaleOffsetType& scaleOffset, uint64_t coordN, uint64_t tileN,
+                                            uint64_t antiQuantGroupSize)
     {
         if constexpr (ANTIQUANT_TYPE == QuantType::PER_TENSOR) {
             return scaleOffset;
@@ -190,8 +189,8 @@ private:
     }
 
     template <bool IsPrivate, typename WeightType>
-    __aicore__ inline auto GetWeightTile(
-        const WeightType& weight, uint64_t coordN, uint64_t tileN, uint64_t antiQuantGroupSize)
+    __aicore__ inline auto GetWeightTile(const WeightType& weight, uint64_t coordN, uint64_t tileN,
+                                         uint64_t antiQuantGroupSize)
     {
         if constexpr (IsPrivate) {
             return GetTile(
@@ -213,4 +212,3 @@ private:
     }
 };
 } // namespace Cmct::Gemm::Kernel
-

@@ -46,9 +46,8 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
 }
 
 template <bool forAtomicAdd = false, typename T>
-__aicore__ inline void SafeDataCopy(
-    const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal, const int64_t& calCount,
-    bool recoverUbTailFormat = false)
+__aicore__ inline void SafeDataCopy(const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal,
+                                    const int64_t& calCount, bool recoverUbTailFormat = false)
 {
     constexpr int typeSize = sizeof(T);                                // 元素字节数
     constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize; // 32byte元素数
@@ -94,9 +93,8 @@ __aicore__ inline void SafeDataCopy(
                 event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventID);
-                DataCopy(
-                    srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
-                    numElemsPerBlock); // 还原用于回退的block内容
+                DataCopy(srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
+                         numElemsPerBlock); // 还原用于回退的block内容
             }
         }
     }
@@ -105,9 +103,8 @@ __aicore__ inline void SafeDataCopy(
 class TransQuantParamV2 {
 public:
     __aicore__ inline TransQuantParamV2(){};
-    __aicore__ inline void Init(
-        GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, const TransQuantParamV2TilingData* tilingData,
-        TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                const TransQuantParamV2TilingData* tilingData, TPipe* tPipe)
     {
         if ASCEND_IS_AIC {
             return;
@@ -140,8 +137,8 @@ public:
         uint32_t loops = Max<uint32_t>(scaleLength_, offsetLength_) / eachLength;
         uint32_t tailLength = Max<uint32_t>(scaleLength_, offsetLength_) - loops * eachLength;
         uint32_t alignedLength = Align<uint32_t>(eachLength * sizeof(float), UB_ALIGN_SIZE) / sizeof(float);
-        pipe_->InitBuffer(
-            offsetUb_, 2 * alignedLength * sizeof(float)); // need 2 times space for float and int32_t tensor
+        pipe_->InitBuffer(offsetUb_,
+                          2 * alignedLength * sizeof(float)); // need 2 times space for float and int32_t tensor
         pipe_->InitBuffer(resUb_, SPLIT_SIZE);
         LocalTensor<uint64_t> resTensor = resUb_.Get<uint64_t>(eachLength);
         DataCopyParams ub2GmParams{1, SPLIT_SIZE / UB_ALIGN_SIZE, 0, 0};
@@ -306,9 +303,8 @@ protected:
         return quantPre;
     }
 
-    __aicore__ inline void SetOffsetValue(
-        LocalTensor<uint64_t> resTensor, LocalTensor<int32_t> offsetInt32, LocalTensor<float> offsetFp32,
-        uint32_t length)
+    __aicore__ inline void SetOffsetValue(LocalTensor<uint64_t> resTensor, LocalTensor<int32_t> offsetInt32,
+                                          LocalTensor<float> offsetFp32, uint32_t length)
     {
         SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);

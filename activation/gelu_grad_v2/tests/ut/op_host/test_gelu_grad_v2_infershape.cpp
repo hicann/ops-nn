@@ -22,15 +22,9 @@
 
 class GeluGradV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GeluGradV2Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GeluGradV2Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GeluGradV2Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GeluGradV2Test TearDown" << std::endl; }
 };
 
 TEST_F(GeluGradV2Test, gelu_grad_v2_infershape_950_test)
@@ -45,8 +39,8 @@ TEST_F(GeluGradV2Test, gelu_grad_v2_infershape_950_test)
     ge::op::GeluGradV2 op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                               shape_range);
 
     op.UpdateInputDesc("dy", tensor_desc);
     op.UpdateInputDesc("x", tensor_desc);

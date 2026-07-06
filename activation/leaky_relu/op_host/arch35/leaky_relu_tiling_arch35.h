@@ -22,6 +22,6 @@ struct LeakrReluCompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSize = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 
 #endif // RUNTIME_V2_OP_IMPL_LEAKY_RELU_TILING_H_

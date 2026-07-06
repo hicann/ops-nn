@@ -29,20 +29,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void rms_norm_quant(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void rms_norm_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale,
+                                                     GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 class rms_norm_atb_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_atb_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_atb_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_atb_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "rms_norm_atb_test TearDown\n" << endl; }
 };
 
 // rms_norm_quant

@@ -189,25 +189,43 @@ template <typename T>
 __simt_callee__ inline float ConvertToFloat(T val);
 
 template <>
-__simt_callee__ inline float ConvertToFloat<float>(float val) { return val; }
+__simt_callee__ inline float ConvertToFloat<float>(float val)
+{
+    return val;
+}
 
 template <>
-__simt_callee__ inline float ConvertToFloat<half>(half val) { return __half2float(val); }
+__simt_callee__ inline float ConvertToFloat<half>(half val)
+{
+    return __half2float(val);
+}
 
 template <>
-__simt_callee__ inline float ConvertToFloat<bfloat16_t>(bfloat16_t val) { return __bfloat162float(val); }
+__simt_callee__ inline float ConvertToFloat<bfloat16_t>(bfloat16_t val)
+{
+    return __bfloat162float(val);
+}
 
 template <typename T>
 __simt_callee__ inline T ConvertFromFloat(float val);
 
 template <>
-__simt_callee__ inline float ConvertFromFloat<float>(float val) { return val; }
+__simt_callee__ inline float ConvertFromFloat<float>(float val)
+{
+    return val;
+}
 
 template <>
-__simt_callee__ inline half ConvertFromFloat<half>(float val) { return __float2half(val); }
+__simt_callee__ inline half ConvertFromFloat<half>(float val)
+{
+    return __float2half(val);
+}
 
 template <>
-__simt_callee__ inline bfloat16_t ConvertFromFloat<bfloat16_t>(float val) { return __float2bfloat16(val); }
+__simt_callee__ inline bfloat16_t ConvertFromFloat<bfloat16_t>(float val)
+{
+    return __float2bfloat16(val);
+}
 
 template <typename T>
 __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx)
@@ -219,14 +237,10 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T>
-__simt_callee__ inline void PowElementRange(
-    __gm__ T* x1, __gm__ T* x2, __gm__ T* y,
-    int64_t localStart, int64_t localEnd,
-    uint64_t tid, uint64_t stride)
+__simt_callee__ inline void PowElementRange(__gm__ T* x1, __gm__ T* x2, __gm__ T* y, int64_t localStart,
+                                            int64_t localEnd, uint64_t tid, uint64_t stride)
 {
-    for (uint64_t idx = static_cast<uint64_t>(localStart) + tid;
-         idx < static_cast<uint64_t>(localEnd);
-         idx += stride) {
+    for (uint64_t idx = static_cast<uint64_t>(localStart) + tid; idx < static_cast<uint64_t>(localEnd); idx += stride) {
         T bVal = x1[idx];
         T eVal = x2[idx];
 
@@ -306,12 +320,9 @@ __simt_callee__ inline void PowElementRange(
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachPowListSimtKernel(
-    int64_t coreStart, int64_t coreEnd,
-    int32_t tensorCount,
-    __gm__ const int64_t* cumulativeOffsets,
-    GM_ADDR x1List, GM_ADDR x2List, GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachPowListSimtKernel(
+    int64_t coreStart, int64_t coreEnd, int32_t tensorCount, __gm__ const int64_t* cumulativeOffsets, GM_ADDR x1List,
+    GM_ADDR x2List, GM_ADDR yList)
 {
     uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetThreadIdx());
     uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum());
@@ -331,7 +342,7 @@ inline void ForeachPowListSimtKernel(
 
         __gm__ T* x1 = SimtGetTensorAddr<T>(x1List, t);
         __gm__ T* x2 = SimtGetTensorAddr<T>(x2List, t);
-        __gm__ T* y  = SimtGetTensorAddr<T>(yList, t);
+        __gm__ T* y = SimtGetTensorAddr<T>(yList, t);
 
         PowElementRange<T>(x1, x2, y, localStart, localEnd, tid, stride);
     }
@@ -340,8 +351,7 @@ inline void ForeachPowListSimtKernel(
 template <typename T>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    __gm__ const ForeachPowListTilingData* tilingGM =
-        reinterpret_cast<__gm__ const ForeachPowListTilingData*>(tiling);
+    __gm__ const ForeachPowListTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachPowListTilingData*>(tiling);
 
     int32_t coreId = static_cast<int32_t>(GetBlockIdx());
     int64_t coreStart = static_cast<int64_t>(coreId) * tilingGM->perCoreElements;
@@ -353,10 +363,8 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR worksp
         return;
     }
 
-    AscendC::Simt::VF_CALL<ForeachPowListSimtKernel<T>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        coreStart, coreEnd, tilingGM->tensorCount,
-        tilingGM->cumulativeOffsets, x1, x2, y);
+    AscendC::Simt::VF_CALL<ForeachPowListSimtKernel<T>>(AscendC::Simt::Dim3(THREAD_NUM), coreStart, coreEnd,
+                                                        tilingGM->tensorCount, tilingGM->cumulativeOffsets, x1, x2, y);
 }
 
 } // namespace NsForeachPowList

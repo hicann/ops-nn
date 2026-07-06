@@ -27,15 +27,9 @@ using namespace ut_util;
 
 class MseLossDavidTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MseLossDavidTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MseLossDavidTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MseLossDavidTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MseLossDavidTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -50,9 +44,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return result;
 }
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string hardwareInfo = R"({
         "hardware_info": {"UB_SIZE": 253952, "CORE_NUM": 64}
@@ -62,9 +55,9 @@ static void InitPlatForm(
     platFormInfo.Init();
 }
 
-static void DoMseLossTilingCase(
-    std::initializer_list<int64_t>& predictShape, std::initializer_list<int64_t>& lableShape,
-    std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype, std::string reduction, std::string& expectStr)
+static void DoMseLossTilingCase(std::initializer_list<int64_t>& predictShape,
+                                std::initializer_list<int64_t>& lableShape, std::initializer_list<int64_t>& outputShape,
+                                ge::DataType inputDtype, std::string reduction, std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -92,8 +85,8 @@ static void DoMseLossTilingCase(
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     // kernelHolder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -147,11 +140,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling1)
     std::initializer_list<int64_t> outputShape = {2048, 1, 48};
     std::string reduction = "none";
 
-    std::string expectStr =
-        "1 98304 1536 64 9024 1 1 1536 1536 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-        "0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "1 98304 1536 64 9024 1 1 1536 1536 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling2)
@@ -162,11 +155,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling2)
     std::initializer_list<int64_t> outputShape = {1};
     std::string reduction = "sum";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 31488 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 "
-        "0 1 1 0 0 0 0 0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 31488 3975177272524013632 1 98304 0 0 0 0 0 0 0 "
+                            "98304 1 0 0 0 0 0 0 "
+                            "0 1 1 0 0 0 0 0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling3)
@@ -177,11 +170,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling3)
     std::initializer_list<int64_t> outputShape = {1};
     std::string reduction = "mean";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 31488 3975177272524013632 1 98304 0 0 0 0 0 0 0 98304 1 0 0 0 0 0 0 "
-        "0 1 1 0 0 0 0 0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 55 1792 55 1 31488 3975177272524013632 1 98304 0 0 0 0 0 0 0 "
+                            "98304 1 0 0 0 0 0 0 "
+                            "0 1 1 0 0 0 0 0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling4)
@@ -192,11 +185,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling4)
     std::initializer_list<int64_t> outputShape = {1};
     std::string reduction = "mean";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 31488 4287426845256712256 1 256 0 0 0 0 0 0 0 256 1 0 0 0 0 0 0 0 1 1 0 0 "
-        "0 0 0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 31488 4287426845256712256 1 256 0 0 0 0 0 0 0 256 1 0 "
+                            "0 0 0 0 0 0 1 1 0 0 "
+                            "0 0 0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling5)
@@ -207,10 +200,10 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling5)
     std::initializer_list<int64_t> outputShape = {4, 64};
     std::string reduction = "none";
 
-    std::string expectStr =
-        "1 256 256 1 9024 1 1 256 256 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "1 256 256 1 9024 1 1 256 256 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 0 0 0 0 0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling6)
@@ -221,11 +214,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling6)
     std::initializer_list<int64_t> outputShape = {1};
     std::string reduction = "sum";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 31488 4287426845256712256 1 256 0 0 0 0 0 0 0 256 1 0 0 0 0 0 0 0 1 1 0 0 "
-        "0 0 0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 31488 4287426845256712256 1 256 0 0 0 0 0 0 0 256 1 0 "
+                            "0 0 0 0 0 0 1 1 0 0 "
+                            "0 0 0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling7)
@@ -236,11 +229,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling7)
     std::initializer_list<int64_t> outputShape = {1};
     std::string reduction = "mean";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 26368 4575657221408424000 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 "
-        "0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 26368 4575657221408424000 1 0 0 0 0 0 0 0 0 1 0 0 0 0 "
+                            "0 0 0 0 1 0 0 0 0 0 "
+                            "0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling8)
@@ -251,11 +244,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling8)
     std::initializer_list<int64_t> outputShape = {1};
     std::string reduction = "sum";
 
-    std::string expectStr =
-        "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 26368 4575657221408424000 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 1 0 0 0 0 0 "
-        "0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 26368 4575657221408424000 1 0 0 0 0 0 0 0 0 1 0 0 0 0 "
+                            "0 0 0 0 1 0 0 0 0 0 "
+                            "0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling9)
@@ -266,10 +259,10 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling9)
     std::initializer_list<int64_t> outputShape = {1, 1, 1};
     std::string reduction = "none";
 
-    std::string expectStr =
-        "1 1 8 1 9024 1 1 8 1 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "1 1 8 1 9024 1 1 8 1 9024 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 0 0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling10)
@@ -280,12 +273,11 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling10)
     std::initializer_list<int64_t> outputShape = {2048, 1, 48};
     std::string reduction = "none";
 
-    std::string expectStr =
-        "1 98304 2048 48 7040 1 1 2048 2048 7040 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-        "0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_FLOAT16 /*inputdtype*/, reduction /*noopWithEmptyAxes*/,
-        expectStr);
+    std::string expectStr = "1 98304 2048 48 7040 1 1 2048 2048 7040 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_FLOAT16 /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }
 
 TEST_F(MseLossDavidTiling, mse_loss_david_tiling11)
@@ -296,9 +288,9 @@ TEST_F(MseLossDavidTiling, mse_loss_david_tiling11)
     std::initializer_list<int64_t> outputShape = {2048, 1, 48};
     std::string reduction = "none";
 
-    std::string expectStr =
-        "1 98304 2048 48 7040 1 1 2048 2048 7040 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-        "0 0 ";
-    DoMseLossTilingCase(
-        predictShape, labelShape, outputShape, ge::DT_BF16 /*inputdtype*/, reduction /*noopWithEmptyAxes*/, expectStr);
+    std::string expectStr = "1 98304 2048 48 7040 1 1 2048 2048 7040 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 0 0 0 0 0 0 0 0 "
+                            "0 0 ";
+    DoMseLossTilingCase(predictShape, labelShape, outputShape, ge::DT_BF16 /*inputdtype*/,
+                        reduction /*noopWithEmptyAxes*/, expectStr);
 }

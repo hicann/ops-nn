@@ -87,7 +87,7 @@ static inline ge::graphStatus TBMMCheckPermAndShapeDim(const gert::TilingContext
     return ge::GRAPH_SUCCESS;
 }
 
-static inline void TBMMGetFormat(const gert::TilingContext &context, MatMulV3Args &args)
+static inline void TBMMGetFormat(const gert::TilingContext& context, MatMulV3Args& args)
 {
     ge::Format formatA = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(0)->GetStorageFormat()));
     ge::Format formatB = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(1)->GetStorageFormat()));
@@ -97,7 +97,7 @@ static inline void TBMMGetFormat(const gert::TilingContext &context, MatMulV3Arg
     args.outFormat = (formatOut != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatOut;
 }
 
-static inline void TBMMGetDtype(const gert::TilingContext &context, MatMulV3Args &args)
+static inline void TBMMGetDtype(const gert::TilingContext& context, MatMulV3Args& args)
 {
     args.aType = context.GetInputDesc(0)->GetDataType();
     args.bType = context.GetInputDesc(1)->GetDataType();
@@ -112,28 +112,27 @@ static inline void TBMMGetDtype(const gert::TilingContext &context, MatMulV3Args
     OP_LOGD(args.opName, "MatMulV3 Hf32 flag is: %d", args.isHf32);
 }
 
-ge::graphStatus IsValidDtype(const MatMulV3Args &args)
+ge::graphStatus IsValidDtype(const MatMulV3Args& args)
 {
-    std::vector<ge::DataType> dtype = { args.aType, args.bType, args.cType };
+    std::vector<ge::DataType> dtype = {args.aType, args.bType, args.cType};
     const std::vector<std::vector<ge::DataType>> dtypeSuportList = {
         // x1,              x2,             y,              bias
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16 },
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT },
-        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT},
-        { ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT },
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT },
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16 } // david supports bias-bf16
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT},
+        {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT},
+        {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT},
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16} // david supports bias-bf16
     };
-    for (auto &supported : dtypeSuportList) {
+    for (auto& supported : dtypeSuportList) {
         if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
             return ge::GRAPH_SUCCESS;
         }
     }
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
         args.opName, "x1, x2, y",
-        Ops::NN::FormatString(
-            "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-            Ops::Base::ToString(args.cType).c_str())
+        Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                              Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str())
             .c_str(),
         Ops::NN::FormatString(
             "The dtypes of %s must be within the range %s", "x1, x2, y",
@@ -142,15 +141,14 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
     return ge::GRAPH_FAILED;
 }
 
-ge::graphStatus TBMMOpSpecificCheck(MatMulV3Args &args)
+ge::graphStatus TBMMOpSpecificCheck(MatMulV3Args& args)
 {
     // format check
     if ((args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ)) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
             args.opName, "x1, y",
-            Ops::NN::FormatString(
-                "%s, %s", (args.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
-                (args.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
+            Ops::NN::FormatString("%s, %s", (args.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
+                                  (args.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
                 .c_str(),
             Ops::NN::FormatString("The formats of %s must be %s", "x1, y", "ND").c_str());
         return ge::GRAPH_FAILED;
@@ -166,9 +164,9 @@ ge::graphStatus TBMMOpSpecificCheck(MatMulV3Args &args)
     return IsValidDtype(args);
 }
 
-ge::graphStatus TBMMGetShapeMKN(const gert::Shape &aShape, const gert::Shape &bShape,
-                                const gert::ContinuousVector *aPermList, const gert::ContinuousVector *bPermList,
-                                MatMulV3Args &args)
+ge::graphStatus TBMMGetShapeMKN(const gert::Shape& aShape, const gert::Shape& bShape,
+                                const gert::ContinuousVector* aPermList, const gert::ContinuousVector* bPermList,
+                                MatMulV3Args& args)
 {
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     int64_t m = aShape[aPerm[M_IDX]];
@@ -205,20 +203,20 @@ ge::graphStatus TBMMGetShapeMKN(const gert::Shape &aShape, const gert::Shape &bS
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &args)
+ge::graphStatus TBMMGetShape(const gert::TilingContext& context, MatMulV3Args& args)
 {
     const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
     const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
 
     auto attrs = context.GetAttrs();
     size_t idx = 0;
-    const gert::ContinuousVector *aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const gert::ContinuousVector *bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const gert::ContinuousVector *yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const gert::ContinuousVector* yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
-    bool aPermCheck =
-        ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) ||
-        ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2] or [0,1,2]
+    bool aPermCheck = ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) ||
+                      ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) &&
+                       (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2] or [0,1,2]
     if (!aPermCheck) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             args.opName, "permX1",
@@ -251,8 +249,9 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
 
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
-        bool batchSplitFactorPermCheck =
-            aShape[static_cast<const int64_t*>(aPermList->GetData())[0]] % batchSplitFactor == 0;
+        bool batchSplitFactorPermCheck = aShape[static_cast<const int64_t*>(aPermList->GetData())[0]] %
+                                             batchSplitFactor ==
+                                         0;
         if (!batchSplitFactorPermCheck) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args.opName, "x1", Ops::Base::ToString(aShape).c_str(),
@@ -264,7 +263,7 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
     }
     return ge::GRAPH_SUCCESS;
 }
-}
+} // namespace
 
 namespace optiling {
 namespace transpose_batch_mat_mul_advanced {
@@ -289,8 +288,8 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckScale(const gert::Shape& shape_
         if (batchSplitFactor != 1) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 args_.opName, "batchSplitFactor", Ops::NN::FormatString("%u", batchSplitFactor).c_str(),
-                Ops::NN::FormatString(
-                    "When optional parameter %s exists, the value of %s must be %d", "scale", "batchSplitFactor", 1)
+                Ops::NN::FormatString("When optional parameter %s exists, the value of %s must be %d", "scale",
+                                      "batchSplitFactor", 1)
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -313,11 +312,11 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckScale(const gert::Shape& shape_
     if (dtype_x2 != ge::DT_FLOAT16 || dtype_x1 != ge::DT_FLOAT16) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args_.opName, "x1, x2",
-            Ops::NN::FormatString(
-                "%s, %s", Ops::Base::ToString(dtype_x1).c_str(), Ops::Base::ToString(dtype_x2).c_str())
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(dtype_x1).c_str(),
+                                  Ops::Base::ToString(dtype_x2).c_str())
                 .c_str(),
-            Ops::NN::FormatString(
-                "When optional parameter %s exists, the dtypes of %s must be %s", "scale", "x1, x2", "FLOAT16")
+            Ops::NN::FormatString("When optional parameter %s exists, the dtypes of %s must be %s", "scale", "x1, x2",
+                                  "FLOAT16")
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -372,23 +371,21 @@ ge::graphStatus TransposeBatchMatMulTiling::DoTiling()
     }
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    NpuArch npuArch =
-        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
-    MMRegisterCfg registerCfg{"TransposeBatchMatMul", npuArch,
-                              strategy::GetTransposeBatchMatMulPriorities(npuArch)};
+    NpuArch npuArch = static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    MMRegisterCfg registerCfg{"TransposeBatchMatMul", npuArch, strategy::GetTransposeBatchMatMulPriorities(npuArch)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 
-ge::graphStatus TransposeBatchMatMulTiling::GetBatchInfo(const gert::TilingContext &context, MatMulV3Args& args,
+ge::graphStatus TransposeBatchMatMulTiling::GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
                                                          MatMulV3BatchInfo& batchInfo) const
 {
-    const gert::Shape &aShape = context.GetInputShape(0)->GetOriginShape();
-    const gert::Shape &bShape = context.GetInputShape(1)->GetOriginShape();
+    const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
+    const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
 
     auto attrs = context.GetAttrs();
     size_t idx = 0;
-    const gert::ContinuousVector *aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    const gert::ContinuousVector *bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
 
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     uint64_t batchA = aShape[aPerm[BATCH_IDX]];
@@ -410,5 +407,5 @@ ge::graphStatus TransposeBatchMatMulTiling::GetBatchInfo(const gert::TilingConte
     batchInfo.batchC = batchA;
     return ge::GRAPH_SUCCESS;
 }
-}
-}
+} // namespace transpose_batch_mat_mul_advanced
+} // namespace optiling

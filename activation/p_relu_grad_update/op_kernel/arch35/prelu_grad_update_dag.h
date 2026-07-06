@@ -27,9 +27,8 @@ using namespace Ops::Base;
 
 template <class T>
 struct PReluGradDxCustom : public Vec::ElemwiseTernaryOP<T, T, T, T> {
-    __aicore__ inline PReluGradDxCustom(
-        const LocalTensor<T>& dst, const LocalTensor<T>& src0, const LocalTensor<T>& src1, const LocalTensor<T>& src2,
-        const uint32_t& count)
+    __aicore__ inline PReluGradDxCustom(const LocalTensor<T>& dst, const LocalTensor<T>& src0,
+                                        const LocalTensor<T>& src1, const LocalTensor<T>& src2, const uint32_t& count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);
@@ -51,7 +50,7 @@ struct PReluGradDxCustom : public Vec::ElemwiseTernaryOP<T, T, T, T> {
         __VEC_SCOPE__
         {
             MicroAPI::Duplicate(vRegTensorInputZero, FP32_ZERO);
-            uint32_t sregMask=count;
+            uint32_t sregMask = count;
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(sregMask);
                 // OpCopyIn
@@ -73,8 +72,8 @@ struct PReluGradDxCustom : public Vec::ElemwiseTernaryOP<T, T, T, T> {
 
 template <class T>
 struct PReluGradDaCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
-    __aicore__ inline PReluGradDaCustom(
-        const LocalTensor<T>& dst, const LocalTensor<T>& src0, const LocalTensor<T>& src1, uint32_t count)
+    __aicore__ inline PReluGradDaCustom(const LocalTensor<T>& dst, const LocalTensor<T>& src0,
+                                        const LocalTensor<T>& src1, uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);

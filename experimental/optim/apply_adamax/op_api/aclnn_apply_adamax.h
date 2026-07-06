@@ -37,27 +37,15 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnApplyAdamaxGetWorkspaceSize(
-    const aclTensor *var,
-    const aclTensor *m,
-    const aclTensor *v,
-    const aclScalar *beta1Power,
-    const aclScalar *lr,
-    const aclScalar *beta1,
-    const aclScalar *beta2,
-    const aclScalar *epsilon,
-    const aclTensor *grad,
-    aclTensor *varOut,
-    aclTensor *mOut,
-    aclTensor *vOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnApplyAdamaxGetWorkspaceSize(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                                       const aclScalar* beta1Power, const aclScalar* lr,
+                                                       const aclScalar* beta1, const aclScalar* beta2,
+                                                       const aclScalar* epsilon, const aclTensor* grad,
+                                                       aclTensor* varOut, aclTensor* mOut, aclTensor* vOut,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnApplyAdamax(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnApplyAdamax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream);
 
 #ifdef __cplusplus
 }

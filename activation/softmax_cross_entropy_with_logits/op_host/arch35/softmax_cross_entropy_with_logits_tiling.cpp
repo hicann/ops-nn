@@ -57,23 +57,23 @@ struct BaseTilingData {
     int64_t r = 0;               // r轴
     int64_t blockFactor = 0;     // a轴分核，主核数据量
     int64_t tailBlockFactor = 0; // a轴分核，尾核数据量
-    int64_t rUbNumFactor = 0;    // R轴切分，一次UB可以放下的数据量，全载模板下等于r，注意32b对齐
-    int64_t aUbNumFactor = 0;    // A轴切分，一次UB可以放下的数据量，非全载模板下等于1，注意32b对齐
-    int64_t aLoopTimes = 0;      // 主核A方向循环搬移数据的次数
-    int64_t aLoopTimesT = 0;     // 尾核A方向循环搬移数据的次数
-    int64_t aLoopTail = 0;       // 主核A方向尾块的数据量
-    int64_t aLoopTailT = 0;      // 尾核A方向尾块的数据量
-    int64_t rLoopTime = 0;       // 不能全载时，R轴反向的循环次数
-    int64_t rLoopTile = 0;       // 不能全载时，R轴反向的尾块数据量
-    int64_t rLoopTileAlign = 0;  // 不能全载时，R轴反向的尾块数据量
-    int64_t kTimesTail = 0;      // 不能全载时，完全二分累加，存在主尾块相加的次数
-    int64_t kTimes = 0;          // 不能全载时，完全二分累加，2的k次方内循环次数
+    int64_t rUbNumFactor = 0; // R轴切分，一次UB可以放下的数据量，全载模板下等于r，注意32b对齐
+    int64_t aUbNumFactor = 0; // A轴切分，一次UB可以放下的数据量，非全载模板下等于1，注意32b对齐
+    int64_t aLoopTimes = 0;     // 主核A方向循环搬移数据的次数
+    int64_t aLoopTimesT = 0;    // 尾核A方向循环搬移数据的次数
+    int64_t aLoopTail = 0;      // 主核A方向尾块的数据量
+    int64_t aLoopTailT = 0;     // 尾核A方向尾块的数据量
+    int64_t rLoopTime = 0;      // 不能全载时，R轴反向的循环次数
+    int64_t rLoopTile = 0;      // 不能全载时，R轴反向的尾块数据量
+    int64_t rLoopTileAlign = 0; // 不能全载时，R轴反向的尾块数据量
+    int64_t kTimesTail = 0;     // 不能全载时，完全二分累加，存在主尾块相加的次数
+    int64_t kTimes = 0;         // 不能全载时，完全二分累加，2的k次方内循环次数
     int64_t tilingKey = 0;
 };
 
 class SoftmaxCrossEntropyWithLogitsRegbaseTiling {
 public:
-    explicit SoftmaxCrossEntropyWithLogitsRegbaseTiling(gert::TilingContext* context) : context_(context) {};
+    explicit SoftmaxCrossEntropyWithLogitsRegbaseTiling(gert::TilingContext* context) : context_(context){};
 
     ge::graphStatus Init();
     ge::graphStatus DoTiling();
@@ -120,13 +120,13 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CheckInputDtype()
     if (labelsDtype != featuresDtype) {
         std::string dtypeMsg = ToString(labelsDtype) + " and " + ToString(featuresDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "labels and features", dtypeMsg.c_str(),
-            "The dtypes of input labels and input features must be the same");
+                                               "The dtypes of input labels and input features must be the same");
         return ge::GRAPH_FAILED;
     }
     bool validDtype = featuresDtype == ge::DT_BF16 || featuresDtype == ge::DT_FLOAT || featuresDtype == ge::DT_FLOAT16;
     OP_CHECK_IF(!validDtype,
-                OP_LOGE_FOR_INVALID_DTYPE(
-                    context_->GetNodeName(), "features", ToString(featuresDtype).c_str(), "FLOAT, FLOAT16 or BF16"),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "features", ToString(featuresDtype).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -146,7 +146,8 @@ bool SoftmaxCrossEntropyWithLogitsRegbaseTiling::IsElewiseShape(const gert::Shap
     return true;
 }
 
-int64_t SoftmaxCrossEntropyWithLogitsRegbaseTiling::GetMod(int64_t l_value, int64_t r_value) {
+int64_t SoftmaxCrossEntropyWithLogitsRegbaseTiling::GetMod(int64_t l_value, int64_t r_value)
+{
     if (r_value == 0) {
         return l_value;
     }
@@ -197,8 +198,8 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CalTilingData()
     int64_t rAligned = (baseTiling_.r + perBlock - 1) / perBlock * perBlock;
     baseTiling_.rUbNumFactor = rAligned;
     int64_t arAllUbSize = static_cast<int64_t>(ubSize);
-    int64_t arBuf =
-        (DOUBLE_BUFFER * PING_PANG_AR_NUM) * rAligned * inputByte + TEMP_BUF_AR_NUM * rAligned * DTYPE_LEN_FP32;
+    int64_t arBuf = (DOUBLE_BUFFER * PING_PANG_AR_NUM) * rAligned * inputByte +
+                    TEMP_BUF_AR_NUM * rAligned * DTYPE_LEN_FP32;
     int64_t aBuf = (DOUBLE_BUFFER * PING_PANG_A_NUM) * inputByte + TEMP_BUF_A_NUM * DTYPE_LEN_FP32;
     int64_t aNum = arAllUbSize / (arBuf + aBuf);
     if (aNum < perBlock) {
@@ -211,8 +212,9 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CalTilingData()
         baseTiling_.aUbNumFactor = aNum > perBlock ? aNum / perBlock * perBlock : perBlock;
         baseTiling_.aLoopTimes = baseTiling_.aUbNumFactor == 0 ? 0 : baseTiling_.blockFactor / baseTiling_.aUbNumFactor;
         baseTiling_.aLoopTail = baseTiling_.blockFactor % baseTiling_.aUbNumFactor;
-        baseTiling_.aLoopTimesT =
-            baseTiling_.aUbNumFactor == 0 ? 0 : baseTiling_.tailBlockFactor / baseTiling_.aUbNumFactor;
+        baseTiling_.aLoopTimesT = baseTiling_.aUbNumFactor == 0 ?
+                                      0 :
+                                      baseTiling_.tailBlockFactor / baseTiling_.aUbNumFactor;
         baseTiling_.aLoopTailT = baseTiling_.tailBlockFactor % baseTiling_.aUbNumFactor;
         schIdNum = SCHID_FULL_LOAD;
     }
@@ -231,20 +233,25 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CalTilingDataRSplit(
     int64_t inputByte = featuresDtype == ge::DT_FLOAT ? DTYPE_LEN_FP32 : DTYPE_LEN_FP16;
     int64_t perBlock = Ops::Base::FloorDiv(ubBlockSize, inputByte);
     baseTiling_.aUbNumFactor = perBlock;
-    baseTiling_.aLoopTimes =
-        baseTiling_.aUbNumFactor == 0 ? 0 : Ops::Base::FloorDiv(baseTiling_.blockFactor, baseTiling_.aUbNumFactor);
+    baseTiling_.aLoopTimes = baseTiling_.aUbNumFactor == 0 ?
+                                 0 :
+                                 Ops::Base::FloorDiv(baseTiling_.blockFactor, baseTiling_.aUbNumFactor);
     baseTiling_.aLoopTail = GetMod(baseTiling_.blockFactor, baseTiling_.aUbNumFactor);
-    baseTiling_.aLoopTimesT =
-        baseTiling_.aUbNumFactor == 0 ? 0 : Ops::Base::FloorDiv(baseTiling_.tailBlockFactor, baseTiling_.aUbNumFactor);
+    baseTiling_.aLoopTimesT = baseTiling_.aUbNumFactor == 0 ?
+                                  0 :
+                                  Ops::Base::FloorDiv(baseTiling_.tailBlockFactor, baseTiling_.aUbNumFactor);
     baseTiling_.aLoopTailT = GetMod(baseTiling_.tailBlockFactor, baseTiling_.aUbNumFactor);
     int64_t cacheUbSize = (CONST_CACHE * vfLenB32 + baseTiling_.aUbNumFactor) * DTYPE_LEN_FP32;
-    int64_t arAllUbSize =
-        static_cast<int64_t>(ubSize) - (baseTiling_.aUbNumFactor * A_UB_NUMS * DTYPE_LEN_FP32) - cacheUbSize;
-    int64_t oneRowRNum = static_cast<int64_t>(Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B16)));
+    int64_t arAllUbSize = static_cast<int64_t>(ubSize) - (baseTiling_.aUbNumFactor * A_UB_NUMS * DTYPE_LEN_FP32) -
+                          cacheUbSize;
+    int64_t oneRowRNum = static_cast<int64_t>(
+        Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B16)));
     if (featuresDtype == ge::DT_FLOAT) {
-        oneRowRNum = static_cast<int64_t>(Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B32)));
+        oneRowRNum = static_cast<int64_t>(
+            Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B32)));
     }
-    int64_t rOnceNumByte = oneRowRNum < cacheLineSize ? cacheLineSize : Ops::Base::FloorAlign(oneRowRNum, cacheLineSize);
+    int64_t rOnceNumByte = oneRowRNum < cacheLineSize ? cacheLineSize :
+                                                        Ops::Base::FloorAlign(oneRowRNum, cacheLineSize);
     baseTiling_.rUbNumFactor = baseTiling_.r <= perBlock ? perBlock : Ops::Base::FloorDiv(rOnceNumByte, inputByte);
     baseTiling_.rLoopTime = Ops::Base::CeilDiv(baseTiling_.r, baseTiling_.rUbNumFactor);
     int64_t rTail = GetMod(baseTiling_.r, baseTiling_.rUbNumFactor);
@@ -271,9 +278,8 @@ void SoftmaxCrossEntropyWithLogitsRegbaseTiling::GetTilingKey()
     uint64_t featuresBrc = featuresBroc;
     uint64_t labelsBrc = labelsBroc;
 
-    OP_LOGI(
-        context_->GetNodeName(), "schId is %lu, featuresBrc is %lu, labelsBrc is %lu, db is %lu", schId, featuresBrc,
-        labelsBrc, db);
+    OP_LOGI(context_->GetNodeName(), "schId is %lu, featuresBrc is %lu, labelsBrc is %lu, db is %lu", schId,
+            featuresBrc, labelsBrc, db);
     const uint64_t tilingKey = GET_TPL_TILING_KEY(schId, featuresBrc, labelsBrc, db);
     OP_LOGI(context_->GetNodeName(), "tilingKey is %ld", tilingKey);
     context_->SetTilingKey(tilingKey);
@@ -331,28 +337,23 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::Init()
     OP_LOGD(context_->GetNodeName(), "Enter SoftmaxCrossEntropyWithLogitsRegbaseTiling init.");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        coreNum <= 0, OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed vectorCoreNum %ld", coreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum <= 0, OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed vectorCoreNum %ld", coreNum),
+                return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        ubSize == 0UL, OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed ubSize %ld", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize == 0UL, OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed ubSize %ld", ubSize),
+                return ge::GRAPH_FAILED);
     ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     vfLenB32 = static_cast<int64_t>(Ops::Base::GetVRegSize(context_));
     cacheLineSize = static_cast<int64_t>(Ops::Base::GetCacheLineSize(context_));
 
     if (tilingData_ == nullptr) {
         tilingData_ = context_->GetTilingData<SoftmaxCrossEntropyWithLogitsTilingData>();
-        OP_CHECK_IF(
-            tilingData_ == nullptr, OP_LOGE(context_->GetNodeName(), "get tilingdata ptr failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tilingData_ == nullptr, OP_LOGE(context_->GetNodeName(), "get tilingdata ptr failed"),
+                    return ge::GRAPH_FAILED);
     }
-    OP_CHECK_IF(
-        (memset_s(
-             tilingData_, sizeof(SoftmaxCrossEntropyWithLogitsTilingData), 0,
-             sizeof(SoftmaxCrossEntropyWithLogitsTilingData)) != EOK),
-        OP_LOGE(context_->GetNodeName(), "memset tilingdata failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((memset_s(tilingData_, sizeof(SoftmaxCrossEntropyWithLogitsTilingData), 0,
+                          sizeof(SoftmaxCrossEntropyWithLogitsTilingData)) != EOK),
+                OP_LOGE(context_->GetNodeName(), "memset tilingdata failed"), return ge::GRAPH_FAILED);
     OP_LOGD(context_->GetNodeName(), "Exit SoftmaxCrossEntropyWithLogitsRegbaseTiling init.");
     return ge::GRAPH_SUCCESS;
 }
@@ -378,9 +379,8 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoDimCollapse()
     }
     auto collapseOutput = dims.back();
     uint64_t shapeLen = collapseOutput.size();
-    OP_CHECK_IF(
-        shapeLen != DIM_NUM, OP_LOGE(context_->GetNodeName(), "broadcast only support dim size 2."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shapeLen != DIM_NUM, OP_LOGE(context_->GetNodeName(), "broadcast only support dim size 2."),
+                return ge::GRAPH_FAILED);
 
     baseTiling_.a = collapseOutput[0];
     baseTiling_.r = collapseOutput[1];
@@ -405,19 +405,16 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Enter SoftmaxCrossEntropyWithLogitsRegbaseTiling DoTiling.v1.1");
 
-    OP_CHECK_IF(
-        CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputParams is failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckInputShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputShapes is failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputParams is failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckInputShapes is failed"),
+                return ge::GRAPH_FAILED);
     auto featureShape = context_->GetInputShape(INPUT_LABELS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, featureShape);
     auto featureStorageShape = featureShape->GetStorageShape();
     if (featuresBroc == NEED_BROC || labelsBroc == NEED_BROC) {
-        OP_CHECK_IF(
-            DoDimCollapse() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "DoDimCollapse is failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(DoDimCollapse() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "DoDimCollapse is failed"),
+                    return ge::GRAPH_FAILED);
     } else {
         auto output = context_->GetOutputShape(OUTPUT_BACKPROP_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, output);
@@ -433,9 +430,8 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::DoTiling()
             }
         }
     }
-    OP_CHECK_IF(
-        CalTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Calculate TilingData failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Calculate TilingData failed"),
+                return ge::GRAPH_FAILED);
 
     GetTilingKey();
     FillTilingData();

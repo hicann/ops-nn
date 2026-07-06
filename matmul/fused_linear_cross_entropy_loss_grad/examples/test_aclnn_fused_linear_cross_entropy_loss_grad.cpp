@@ -13,21 +13,18 @@
 #include "aclnn_fused_linear_cross_entropy_loss_grad.h"
 
 #define CHECK_RET(cond, return_expr) \
-    do                               \
-    {                                \
-        if (!(cond))                 \
-        {                            \
+    do {                             \
+        if (!(cond)) {               \
             return_expr;             \
         }                            \
     } while (0)
 
 #define LOG_PRINT(message, ...)         \
-    do                                  \
-    {                                   \
+    do {                                \
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
     for (auto i : shape) {
@@ -36,7 +33,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream *stream)
+int Init(int32_t deviceId, aclrtStream* stream)
 {
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
@@ -49,7 +46,8 @@ int Init(int32_t deviceId, aclrtStream *stream)
 }
 
 template <typename T>
-std::vector<T> GenZeroVector(const std::vector<int64_t>& shape) {
+std::vector<T> GenZeroVector(const std::vector<int64_t>& shape)
+{
     // 1. 计算总元素数量
     size_t total = 1;
     for (auto dim : shape) {
@@ -65,8 +63,8 @@ std::vector<T> GenZeroVector(const std::vector<int64_t>& shape) {
 }
 
 template <typename T>
-int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &shape, void **deviceAddr,
-                    aclDataType dataType, aclTensor **tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -89,8 +87,7 @@ int CreateAclTensor(const std::vector<T> &hostData, const std::vector<int64_t> &
 }
 
 template <typename T>
-int CreateEmptyAclTensor(const std::vector<int64_t> &shape, void **deviceAddr,
-                         aclDataType dataType, aclTensor **tensor)
+int CreateEmptyAclTensor(const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -130,25 +127,25 @@ int main()
     std::vector<int64_t> softmaxOptionalShape = {BT, V};
     std::vector<int64_t> inputGradOutShape = {BT, H};
     std::vector<int64_t> weightGradOutShape = {V, H};
-    void *gradDeviceAddr = nullptr;
-    void *inputDeviceAddr = nullptr;
-    void *weightDeviceAddr = nullptr;
-    void *targetMaskDeviceAddr = nullptr;
-    void *maskedTargetDeviceAddr = nullptr;
-    void *softmaxOptionalDeviceAddr = nullptr;
-    void *inputGradOutDeviceAddr = nullptr;
-    void *weightGradOutDeviceAddr = nullptr;
-    aclTensor *grad = nullptr;
-    aclTensor *input = nullptr;
-    aclTensor *weight = nullptr;
-    aclTensor *targetMask = nullptr;
-    aclTensor *maskedTarget = nullptr;
+    void* gradDeviceAddr = nullptr;
+    void* inputDeviceAddr = nullptr;
+    void* weightDeviceAddr = nullptr;
+    void* targetMaskDeviceAddr = nullptr;
+    void* maskedTargetDeviceAddr = nullptr;
+    void* softmaxOptionalDeviceAddr = nullptr;
+    void* inputGradOutDeviceAddr = nullptr;
+    void* weightGradOutDeviceAddr = nullptr;
+    aclTensor* grad = nullptr;
+    aclTensor* input = nullptr;
+    aclTensor* weight = nullptr;
+    aclTensor* targetMask = nullptr;
+    aclTensor* maskedTarget = nullptr;
     float labelSmoothing = 0.0;
-    aclTensor *logitsMaxOptional = nullptr;
-    aclTensor *sumExpLogitsOptional = nullptr;
-    aclTensor *softmaxOptional = nullptr;
-    aclTensor *inputGradOut = nullptr;
-    aclTensor *weightGradOut = nullptr;
+    aclTensor* logitsMaxOptional = nullptr;
+    aclTensor* sumExpLogitsOptional = nullptr;
+    aclTensor* softmaxOptional = nullptr;
+    aclTensor* inputGradOut = nullptr;
+    aclTensor* weightGradOut = nullptr;
     // 创建aclTensor
     auto gradData = GenZeroVector<int32_t>(gradShape);
     ret = CreateAclTensor<int32_t>(gradData, gradShape, &gradDeviceAddr, aclDataType::ACL_FLOAT, &grad);
@@ -160,36 +157,46 @@ int main()
     ret = CreateAclTensor<int16_t>(weightData, weightShape, &weightDeviceAddr, aclDataType::ACL_BF16, &weight);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto targetMaskData = GenZeroVector<int8_t>(targetMaskShape);
-    ret = CreateAclTensor<int8_t>(targetMaskData, targetMaskShape, &targetMaskDeviceAddr, aclDataType::ACL_UINT8, &targetMask);
+    ret = CreateAclTensor<int8_t>(targetMaskData, targetMaskShape, &targetMaskDeviceAddr, aclDataType::ACL_UINT8,
+                                  &targetMask);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto maskedTargetData = GenZeroVector<int32_t>(maskedTargetShape);
-    ret = CreateAclTensor<int32_t>(maskedTargetData, maskedTargetShape, &maskedTargetDeviceAddr, aclDataType::ACL_INT32, &maskedTarget);
+    ret = CreateAclTensor<int32_t>(maskedTargetData, maskedTargetShape, &maskedTargetDeviceAddr, aclDataType::ACL_INT32,
+                                   &maskedTarget);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto softmaxOptionalData = GenZeroVector<int32_t>(softmaxOptionalShape);
-    ret = CreateAclTensor<int32_t>(softmaxOptionalData, softmaxOptionalShape, &softmaxOptionalDeviceAddr, aclDataType::ACL_FLOAT, &softmaxOptional);
+    ret = CreateAclTensor<int32_t>(softmaxOptionalData, softmaxOptionalShape, &softmaxOptionalDeviceAddr,
+                                   aclDataType::ACL_FLOAT, &softmaxOptional);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto inputGradOutData = GenZeroVector<int16_t>(inputGradOutShape);
-    ret = CreateAclTensor<int16_t>(inputGradOutData, inputGradOutShape, &inputGradOutDeviceAddr, aclDataType::ACL_BF16, &inputGradOut);
+    ret = CreateAclTensor<int16_t>(inputGradOutData, inputGradOutShape, &inputGradOutDeviceAddr, aclDataType::ACL_BF16,
+                                   &inputGradOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     auto weightGradOutData = GenZeroVector<int16_t>(weightGradOutShape);
-    ret = CreateAclTensor<int16_t>(weightGradOutData, weightGradOutShape, &weightGradOutDeviceAddr, aclDataType::ACL_BF16, &weightGradOut);
+    ret = CreateAclTensor<int16_t>(weightGradOutData, weightGradOutShape, &weightGradOutDeviceAddr,
+                                   aclDataType::ACL_BF16, &weightGradOut);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
-    aclOpExecutor *executor;
+    aclOpExecutor* executor;
     // 调用aclnnFusedLinearCrossEntropyLossGrad第一段接口
-    ret = aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(grad, input, weight, targetMask, maskedTarget, labelSmoothing, logitsMaxOptional, sumExpLogitsOptional, softmaxOptional, inputGradOut, weightGradOut, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
+        grad, input, weight, targetMask, maskedTarget, labelSmoothing, logitsMaxOptional, sumExpLogitsOptional,
+        softmaxOptional, inputGradOut, weightGradOut, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS,
+              LOG_PRINT("aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void *workspaceAddr = nullptr;
+    void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
     // 调用aclnnFusedLinearCrossEntropyLossGrad第二段接口
     ret = aclnnFusedLinearCrossEntropyLossGrad(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedLinearCrossEntropyLossGrad failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedLinearCrossEntropyLossGrad failed. ERROR: %d\n", ret);
+              return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -199,7 +206,8 @@ int main()
     // inputGradOut
     auto size = GetShapeSize(inputGradOutShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), inputGradOutDeviceAddr, size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), inputGradOutDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < 16; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);

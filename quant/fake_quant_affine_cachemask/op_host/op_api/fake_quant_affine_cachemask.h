@@ -19,9 +19,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*> FakeQuantAffineCachemask(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, int64_t axis, int64_t quantMin,
-    int64_t quantMax, aclOpExecutor* executor);
+std::tuple<aclTensor*, aclTensor*> FakeQuantAffineCachemask(const aclTensor* self, const aclTensor* scale,
+                                                            const aclTensor* zeroPoint, int64_t axis, int64_t quantMin,
+                                                            int64_t quantMax, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_FAKE_QUANT_AFFINE_CACHEMASK_H_

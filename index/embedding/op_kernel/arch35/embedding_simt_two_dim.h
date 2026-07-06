@@ -33,74 +33,80 @@ using namespace AscendC;
 
 template <typename X_T, typename INDICES_T, typename INDEX_SIZE_T>
 class EmbeddingSimtTwoDim {
- public:
-  __aicore__ inline EmbeddingSimtTwoDim(){};
-  __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y, 
-  __tiling_data_ptr__ EmbeddingTilingDataSimtTwoDim* tilingData);
-  __aicore__ inline void Process();
+public:
+    __aicore__ inline EmbeddingSimtTwoDim(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y,
+                                __tiling_data_ptr__ EmbeddingTilingDataSimtTwoDim* tilingData);
+    __aicore__ inline void Process();
 
- private:
-  static __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_TWO_DIM) inline void GatherSimt(const INDEX_SIZE_T yIndexBase,
-  INDEX_SIZE_T currentCoreElements, INDEX_SIZE_T m0, INDEX_SIZE_T shift0, INDEX_SIZE_T innerSize,
-  INDEX_SIZE_T gatherDimSize, __gm__ X_T* x, __gm__ INDICES_T* indices, __gm__ volatile X_T* y);
+private:
+    static __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_TWO_DIM) inline void GatherSimt(
+        const INDEX_SIZE_T yIndexBase, INDEX_SIZE_T currentCoreElements, INDEX_SIZE_T m0, INDEX_SIZE_T shift0,
+        INDEX_SIZE_T innerSize, INDEX_SIZE_T gatherDimSize, __gm__ X_T* x, __gm__ INDICES_T* indices,
+        __gm__ volatile X_T* y);
 
- private:
-  GlobalTensor<X_T> xGm_;
-  GlobalTensor<INDICES_T> indicesGm_;
-  GlobalTensor<X_T> yGm_;
+private:
+    GlobalTensor<X_T> xGm_;
+    GlobalTensor<INDICES_T> indicesGm_;
+    GlobalTensor<X_T> yGm_;
 
-  __tiling_data_ptr__ EmbeddingTilingDataSimtTwoDim* tilingData_ = nullptr;
+    __tiling_data_ptr__ EmbeddingTilingDataSimtTwoDim* tilingData_ = nullptr;
 };
 
 template <typename X_T, typename INDICES_T, typename INDEX_SIZE_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_TWO_DIM) inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::GatherSimt(const INDEX_SIZE_T yIndexBase,
-  INDEX_SIZE_T currentCoreElements, INDEX_SIZE_T m0, INDEX_SIZE_T shift0, INDEX_SIZE_T innerSize,
-  INDEX_SIZE_T gatherDimSize, __gm__ X_T* x, __gm__ INDICES_T* indices, __gm__ volatile X_T* y) {
-  for (INDEX_SIZE_T index = static_cast<INDEX_SIZE_T>(threadIdx.x); index < currentCoreElements;
-      index += static_cast<INDEX_SIZE_T>(blockDim.x)) {
-    INDEX_SIZE_T yIndex = yIndexBase + index;
-    INDEX_SIZE_T gatherI = Simt::UintDiv(yIndex, m0, shift0);
-    INDEX_SIZE_T innerI = yIndex  - gatherI * innerSize;
+__simt_vf__ __aicore__
+LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_TWO_DIM) inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::GatherSimt(
+    const INDEX_SIZE_T yIndexBase, INDEX_SIZE_T currentCoreElements, INDEX_SIZE_T m0, INDEX_SIZE_T shift0,
+    INDEX_SIZE_T innerSize, INDEX_SIZE_T gatherDimSize, __gm__ X_T* x, __gm__ INDICES_T* indices,
+    __gm__ volatile X_T* y)
+{
+    for (INDEX_SIZE_T index = static_cast<INDEX_SIZE_T>(threadIdx.x); index < currentCoreElements;
+         index += static_cast<INDEX_SIZE_T>(blockDim.x)) {
+        INDEX_SIZE_T yIndex = yIndexBase + index;
+        INDEX_SIZE_T gatherI = Simt::UintDiv(yIndex, m0, shift0);
+        INDEX_SIZE_T innerI = yIndex - gatherI * innerSize;
 
-    INDICES_T indicesValue = indices[gatherI];
-    INDEX_SIZE_T indicesValueI = static_cast<INDEX_SIZE_T>(indicesValue);
-    INDEX_SIZE_T xIndex = indicesValueI * innerSize + innerI;    
-    y[yIndex] = x[xIndex];
-  }
+        INDICES_T indicesValue = indices[gatherI];
+        INDEX_SIZE_T indicesValueI = static_cast<INDEX_SIZE_T>(indicesValue);
+        INDEX_SIZE_T xIndex = indicesValueI * innerSize + innerI;
+        y[yIndex] = x[xIndex];
+    }
 }
 
 template <typename X_T, typename INDICES_T, typename INDEX_SIZE_T>
-__aicore__ inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::Init(GM_ADDR x, GM_ADDR indices,
-                                                                    GM_ADDR y, __tiling_data_ptr__ EmbeddingTilingDataSimtTwoDim* tilingData) {
-  tilingData_ = tilingData;
-  xGm_.SetGlobalBuffer((__gm__ X_T*)x);
-  indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)indices);
-  yGm_.SetGlobalBuffer((__gm__ X_T*)y);
+__aicore__ inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::Init(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR y, __tiling_data_ptr__ EmbeddingTilingDataSimtTwoDim* tilingData)
+{
+    tilingData_ = tilingData;
+    xGm_.SetGlobalBuffer((__gm__ X_T*)x);
+    indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)indices);
+    yGm_.SetGlobalBuffer((__gm__ X_T*)y);
 }
 
 template <typename X_T, typename INDICES_T, typename INDEX_SIZE_T>
-__aicore__ inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::Process() {
-  int32_t blockIdx = static_cast<int32_t>(GetBlockIdx());
-  int32_t needCoreNum = static_cast<int32_t>(tilingData_->needCoreNum);
-  uint32_t threadNum = static_cast<uint32_t>(tilingData_->threadNum);
-  INDEX_SIZE_T gatherDimSize = static_cast<INDEX_SIZE_T>(tilingData_->gatherDimSize);
-  INDEX_SIZE_T innerSize = static_cast<INDEX_SIZE_T>(tilingData_->innerSize);
-  INDEX_SIZE_T currentCoreElements = static_cast<INDEX_SIZE_T>(tilingData_->perCoreElements);
-  if (blockIdx == tilingData_->needCoreNum - 1) {
-    currentCoreElements = static_cast<INDEX_SIZE_T>(tilingData_->lastCoreElements);
-  }
-  INDEX_SIZE_T m0 {0};
-  INDEX_SIZE_T shift0 {0};
+__aicore__ inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::Process()
+{
+    int32_t blockIdx = static_cast<int32_t>(GetBlockIdx());
+    int32_t needCoreNum = static_cast<int32_t>(tilingData_->needCoreNum);
+    uint32_t threadNum = static_cast<uint32_t>(tilingData_->threadNum);
+    INDEX_SIZE_T gatherDimSize = static_cast<INDEX_SIZE_T>(tilingData_->gatherDimSize);
+    INDEX_SIZE_T innerSize = static_cast<INDEX_SIZE_T>(tilingData_->innerSize);
+    INDEX_SIZE_T currentCoreElements = static_cast<INDEX_SIZE_T>(tilingData_->perCoreElements);
+    if (blockIdx == tilingData_->needCoreNum - 1) {
+        currentCoreElements = static_cast<INDEX_SIZE_T>(tilingData_->lastCoreElements);
+    }
+    INDEX_SIZE_T m0{0};
+    INDEX_SIZE_T shift0{0};
 
-  // fast division
-  GetUintDivMagicAndShift(m0, shift0, innerSize);
+    // fast division
+    GetUintDivMagicAndShift(m0, shift0, innerSize);
 
-  if (blockIdx < needCoreNum) {
-    INDEX_SIZE_T yIndexBase = blockIdx * tilingData_->perCoreElements;
-    asc_vf_call<GatherSimt>(dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0,
-                  innerSize, gatherDimSize, (__gm__ X_T*) (xGm_.GetPhyAddr()),
-                  (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()));
-  }
+    if (blockIdx < needCoreNum) {
+        INDEX_SIZE_T yIndexBase = blockIdx * tilingData_->perCoreElements;
+        asc_vf_call<GatherSimt>(dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0, innerSize, gatherDimSize,
+                                (__gm__ X_T*)(xGm_.GetPhyAddr()), (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()),
+                                (__gm__ volatile X_T*)(yGm_.GetPhyAddr()));
+    }
 }
-}  // namespace Embedding
-#endif  // Embedding_SIMT_TWO_DIM_H
+} // namespace Embedding
+#endif // Embedding_SIMT_TWO_DIM_H

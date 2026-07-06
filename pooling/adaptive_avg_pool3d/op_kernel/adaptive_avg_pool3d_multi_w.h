@@ -21,24 +21,22 @@
 
 namespace AdaptiveAvgPool3d {
 template <typename T, int32_t QUEUE_DEPTH>
-class KernelAdaptiveAvgPool3dMultiW
-{
+class KernelAdaptiveAvgPool3dMultiW {
 public:
-    __aicore__ inline KernelAdaptiveAvgPool3dMultiW()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AdaptiveAvgPool3dTilingData* __restrict__ tiling, TPipe* pipe);
+    __aicore__ inline KernelAdaptiveAvgPool3dMultiW() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                const AdaptiveAvgPool3dTilingData* __restrict__ tiling, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void InitTiling(const AdaptiveAvgPool3dTilingData* __restrict__ tiling);
     __aicore__ inline void CopyIn(int64_t offset, uint16_t blockCount, uint32_t blockLen, uint8_t rightPadding);
     __aicore__ inline void CopyOut(int64_t outputPointIdx, uint16_t blockCount, uint32_t blockLen);
-    __aicore__ inline void DataCopyOutNonPad(
-        LocalTensor<T>& outputLocal, int64_t outputPointIdx, uint16_t blockCount, uint32_t validDataLen);
+    __aicore__ inline void DataCopyOutNonPad(LocalTensor<T>& outputLocal, int64_t outputPointIdx, uint16_t blockCount,
+                                             uint32_t validDataLen);
     __aicore__ inline void ReduceMeanMultiWindow(int64_t outputPointIdx, int64_t bufIdx, int64_t windowNum);
-    __aicore__ inline void ReduceSumMultiWindow(
-        const Index& index, LocalTensor<float>& sumBufLocal, int64_t bufIdx, int64_t windowNum, int64_t nOffset);
+    __aicore__ inline void ReduceSumMultiWindow(const Index& index, LocalTensor<float>& sumBufLocal, int64_t bufIdx,
+                                                int64_t windowNum, int64_t nOffset);
 
     TPipe* pipe;
     TQue<QuePosition::VECIN, QUEUE_DEPTH> inputQueue;
@@ -86,18 +84,18 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::InitTiling
     indexBufLen = tiling->indexBufLen;
 
     outputPointNum = GetBlockIdx() < tiling->formerNum ? tiling->formerLength : tiling->tailLength;
-    outputPointOffset =
-        GetBlockIdx() < tiling->formerNum ?
-            GetBlockIdx() * tiling->formerLength :
-            tiling->formerNum * tiling->formerLength + tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
+    outputPointOffset = GetBlockIdx() < tiling->formerNum ?
+                            GetBlockIdx() * tiling->formerLength :
+                            tiling->formerNum * tiling->formerLength +
+                                tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
     lastPointOffset = outputPointNum + outputPointOffset - 1;
     atomicAddNum = outputPointNum < tiling->atomicAddNum ? outputPointNum : tiling->atomicAddNum;
     validTailLen = cLength % numPerBlock;
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::CopyIn(
-    int64_t offset, uint16_t blockCount, uint32_t blockLen, uint8_t rightPadding)
+__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::CopyIn(int64_t offset, uint16_t blockCount,
+                                                                             uint32_t blockLen, uint8_t rightPadding)
 {
     LocalTensor<T> inputLocal = inputQueue.template AllocTensor<T>();
 #if __CCE_AICORE__ < 220
@@ -118,8 +116,10 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::CopyIn(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::DataCopyOutNonPad(
-    LocalTensor<T>& outputLocal, int64_t outputPointIdx, uint16_t blockCount, uint32_t validDataLen)
+__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::DataCopyOutNonPad(LocalTensor<T>& outputLocal,
+                                                                                        int64_t outputPointIdx,
+                                                                                        uint16_t blockCount,
+                                                                                        uint32_t validDataLen)
 {
     int64_t curPointIdx = outputPointIdx;
     for (int i = 0; i < blockCount; i++, curPointIdx++) {
@@ -136,9 +136,8 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::DataCopyOu
                 DataCopy(outputGlobal[curPointIdx * validDataLen], outputLocal[i * cLengthAligned], cLengthAligned);
             }
         } else if (curPointIdx == lastPointOffset) {
-            DataCopy(
-                outputGlobal[curPointIdx * validDataLen], outputLocal[i * cLengthAligned],
-                cLengthAligned - numPerBlock);
+            DataCopy(outputGlobal[curPointIdx * validDataLen], outputLocal[i * cLengthAligned],
+                     cLengthAligned - numPerBlock);
             int32_t lastLeftShift = validTailLen;
             uint32_t mask = 2 * numPerBlock;
             uint64_t rsvdCnt = 0;
@@ -149,21 +148,19 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::DataCopyOu
                 int32_t preLeftShift = lastLeftShift + numPerBlock;
 
                 bufPattern.SetValue(0, (1u << preLeftShift) - (1u << lastLeftShift));
-                GatherMask(
-                    outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8},
-                    rsvdCnt);
+                GatherMask(outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8},
+                           rsvdCnt);
             } else {
                 LocalTensor<uint16_t> bufPattern = tmpPattern.Get<uint16_t>();
                 int32_t preLeftShift = numPerBlock - lastLeftShift;
 
                 bufPattern.SetValue(0, ((1u << preLeftShift) - 1u) << lastLeftShift);
                 bufPattern.SetValue(1, (1u << lastLeftShift) - 1u);
-                GatherMask(
-                    outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8},
-                    rsvdCnt);
+                GatherMask(outputLocal[gatherOffset], outputLocal[gatherOffset], bufPattern, true, mask, {1, 1, 8, 8},
+                           rsvdCnt);
             }
-            DataCopy(
-                outputGlobal[(curPointIdx + 1) * validDataLen - numPerBlock], outputLocal[gatherOffset], numPerBlock);
+            DataCopy(outputGlobal[(curPointIdx + 1) * validDataLen - numPerBlock], outputLocal[gatherOffset],
+                     numPerBlock);
         } else {
             DataCopy(outputGlobal[curPointIdx * validDataLen], outputLocal[i * cLengthAligned], cLengthAligned);
         }
@@ -171,8 +168,8 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::DataCopyOu
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::CopyOut(
-    int64_t outputPointIdx, uint16_t blockCount, uint32_t blockLen)
+__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::CopyOut(int64_t outputPointIdx,
+                                                                              uint16_t blockCount, uint32_t blockLen)
 {
     LocalTensor<T> outputLocal = outputQueue.template DeQue<T>();
 #if __CCE_AICORE__ < 220
@@ -236,8 +233,9 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::ReduceSumM
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::ReduceMeanMultiWindow(
-    int64_t outputPointIdx, int64_t bufIdx, int64_t windowNum)
+__aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::ReduceMeanMultiWindow(int64_t outputPointIdx,
+                                                                                            int64_t bufIdx,
+                                                                                            int64_t windowNum)
 {
     Index index;
     int64_t endBufIdx = bufIdx + windowNum;
@@ -260,8 +258,8 @@ __aicore__ inline void KernelAdaptiveAvgPool3dMultiW<T, QUEUE_DEPTH>::ReduceMean
         int64_t wstart = startWIndexLocal.GetValue(i);
         int64_t wend = endWIndexLocal.GetValue(i);
 
-        float factor =
-            1.0f / (static_cast<float>(index.dend - index.dstart) * (index.hend - index.hstart) * (wend - wstart));
+        float factor = 1.0f /
+                       (static_cast<float>(index.dend - index.dstart) * (index.hend - index.hstart) * (wend - wstart));
 
         SToVSync();
 

@@ -102,18 +102,11 @@ static Status ParseOpToGraphCompress(const ge::Operator& op, Graph& graph)
 
 REGISTER_CUSTOM_OP("PartitionedCall")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {
-            ge::AscendString("ai.onnx::9::Compress"), 
-            ge::AscendString("ai.onnx::10::Compress"),
-            ge::AscendString("ai.onnx::11::Compress"), 
-            ge::AscendString("ai.onnx::12::Compress"),
-            ge::AscendString("ai.onnx::13::Compress"), 
-            ge::AscendString("ai.onnx::14::Compress"),
-            ge::AscendString("ai.onnx::15::Compress"), 
-            ge::AscendString("ai.onnx::16::Compress"),
-            ge::AscendString("ai.onnx::17::Compress"), 
-            ge::AscendString("ai.onnx::18::Compress")})
+    .OriginOpType({ge::AscendString("ai.onnx::9::Compress"), ge::AscendString("ai.onnx::10::Compress"),
+                   ge::AscendString("ai.onnx::11::Compress"), ge::AscendString("ai.onnx::12::Compress"),
+                   ge::AscendString("ai.onnx::13::Compress"), ge::AscendString("ai.onnx::14::Compress"),
+                   ge::AscendString("ai.onnx::15::Compress"), ge::AscendString("ai.onnx::16::Compress"),
+                   ge::AscendString("ai.onnx::17::Compress"), ge::AscendString("ai.onnx::18::Compress")})
     .ParseParamsFn(parseParamsCompress)
     .ParseOpToGraphFn(ParseOpToGraphCompress)
     .ImplyType(ImplyType::TVM);

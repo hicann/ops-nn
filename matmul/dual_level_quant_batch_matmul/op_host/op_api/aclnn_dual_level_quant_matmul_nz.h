@@ -52,8 +52,8 @@ ACLNN_API aclnnStatus aclnnDualLevelQuantMatmulWeightNzGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus
-aclnnDualLevelQuantMatmulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnDualLevelQuantMatmulWeightNz(void* workspace, uint64_t workspaceSize,
+                                                        aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

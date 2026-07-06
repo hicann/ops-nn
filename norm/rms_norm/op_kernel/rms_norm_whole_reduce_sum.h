@@ -21,8 +21,7 @@ using namespace AscendC;
 template <typename T, bool IF_ALIGN>
 class KernelRmsNormWholeReduceSum {
 public:
-    __aicore__ inline KernelRmsNormWholeReduceSum()
-    {}
+    __aicore__ inline KernelRmsNormWholeReduceSum() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim3 can not be zero!");
@@ -101,9 +100,8 @@ public:
         inQueueGamma.FreeTensor(gammaLocal);
     }
 
-    __aicore__ inline void SubProcess910(
-        uint64_t i_o, uint32_t calc_row_num, LocalTensor<float> rstdLocal, LocalTensor<T>& gammaLocal,
-        uint64_t once_num)
+    __aicore__ inline void SubProcess910(uint64_t i_o, uint32_t calc_row_num, LocalTensor<float> rstdLocal,
+                                         LocalTensor<T>& gammaLocal, uint64_t once_num)
     {
         uint64_t rstd_index = i_o % rstd_once_row * row_factor;
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
@@ -136,9 +134,9 @@ private:
         inQueueGamma.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void ComputeRstd(
-        uint64_t inner_progress, LocalTensor<float> rstdLocal, LocalTensor<float> x_fp32, LocalTensor<float> sqx,
-        LocalTensor<float> reduce_buf_local, LocalTensor<float> x, uint32_t calc_row_num, uint64_t once_num)
+    __aicore__ inline void ComputeRstd(uint64_t inner_progress, LocalTensor<float> rstdLocal, LocalTensor<float> x_fp32,
+                                       LocalTensor<float> sqx, LocalTensor<float> reduce_buf_local,
+                                       LocalTensor<float> x, uint32_t calc_row_num, uint64_t once_num)
     {
         uint32_t repeat_time = calc_row_num / MAX_REAPEAT;
         uint32_t last_repeat_num = calc_row_num % MAX_REAPEAT;
@@ -181,9 +179,8 @@ private:
         }
     }
 
-    __aicore__ inline void Compute(
-        uint64_t inner_progress, LocalTensor<bfloat16_t> gammaLocal, LocalTensor<float> rstdLocal,
-        uint32_t calc_row_num, uint64_t once_num)
+    __aicore__ inline void Compute(uint64_t inner_progress, LocalTensor<bfloat16_t> gammaLocal,
+                                   LocalTensor<float> rstdLocal, uint32_t calc_row_num, uint64_t once_num)
     {
         LocalTensor<T> xLocal = inQueueX.DeQue<T>();
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
@@ -206,9 +203,8 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void Compute(
-        uint64_t inner_progress, LocalTensor<half> gammaLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num,
-        uint64_t once_num)
+    __aicore__ inline void Compute(uint64_t inner_progress, LocalTensor<half> gammaLocal, LocalTensor<float> rstdLocal,
+                                   uint32_t calc_row_num, uint64_t once_num)
     {
         LocalTensor<T> xLocal = inQueueX.DeQue<T>();
 
@@ -235,9 +231,8 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void Compute(
-        uint64_t inner_progress, LocalTensor<float> gammaLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num,
-        uint64_t once_num)
+    __aicore__ inline void Compute(uint64_t inner_progress, LocalTensor<float> gammaLocal, LocalTensor<float> rstdLocal,
+                                   uint32_t calc_row_num, uint64_t once_num)
     {
         LocalTensor<T> xLocal = inQueueX.DeQue<T>();
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
@@ -263,14 +258,13 @@ private:
             if (row_tail * num_col >= data_per_block) {
                 for (uint32_t i_i = 0; i_i < row_tail - last_block_row; i_i++) {
                     PipeBarrier<PIPE_MTE3>();
-                    DataCopy(
-                        yGm[((i_o_max - 1) * row_factor + i_i) * num_col], yLocal[i_i * num_col_align], num_col_align);
+                    DataCopy(yGm[((i_o_max - 1) * row_factor + i_i) * num_col], yLocal[i_i * num_col_align],
+                             num_col_align);
                 }
                 if (num_col > data_per_block) {
                     PipeBarrier<PIPE_MTE3>();
-                    DataCopy(
-                        yGm[(row_work - 1) * num_col], yLocal[(row_tail - 1) * num_col_align],
-                        num_col_align - data_per_block);
+                    DataCopy(yGm[(row_work - 1) * num_col], yLocal[(row_tail - 1) * num_col_align],
+                             num_col_align - data_per_block);
                 }
                 event_t eventIdMte3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
                 SetFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
@@ -286,9 +280,8 @@ private:
                 event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
                 SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
                 WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
-                DataCopy(
-                    yGm[row_work * num_col - data_per_block], yLocal[row_tail * num_col_align - data_per_block],
-                    data_per_block);
+                DataCopy(yGm[row_work * num_col - data_per_block], yLocal[row_tail * num_col_align - data_per_block],
+                         data_per_block);
             } else {
                 uint32_t start_index = (i_o_max - 1) * row_factor * num_col;
                 for (uint32_t last_data = 0; last_data < row_tail * num_col; last_data++) {

@@ -24,9 +24,8 @@
 #include "avg_pool_3d_tiling_common.h"
 #include "max_pool_3d_tiling_common.h"
 
-namespace optiling
-{
-    
+namespace optiling {
+
 BEGIN_TILING_DATA_DEF(Pool3DSmallKernelNDHWCTilingData)
 TILING_DATA_FIELD_DEF(int64_t, dInDim);
 TILING_DATA_FIELD_DEF(int64_t, hInDim);
@@ -86,16 +85,11 @@ REGISTER_TILING_DATA_CLASS(MaxPool3D_211110, Pool3DSmallKernelNDHWCTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPool3D_222220, Pool3DSmallKernelNDHWCTilingData);
 REGISTER_TILING_DATA_CLASS(MaxPool3D_222221, Pool3DSmallKernelNDHWCTilingData);
 
-class Pool3DSmallKernelNDHWCTiling : public TilingBaseClass
-{
+class Pool3DSmallKernelNDHWCTiling : public TilingBaseClass {
 public:
-    explicit Pool3DSmallKernelNDHWCTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit Pool3DSmallKernelNDHWCTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~Pool3DSmallKernelNDHWCTiling() override
-    {
-    }
+    ~Pool3DSmallKernelNDHWCTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -116,7 +110,6 @@ public:
     uint64_t ubSize_ = 0;
 
 private:
-    
     void InitializationVars();
     bool IsBufferCapable();
     void DoUBTilingSingle();
@@ -166,36 +159,26 @@ private:
     int64_t divisor_{1};
 };
 
-class AvgPool3DSmallKernelNDHWCTiling : public Pool3DSmallKernelNDHWCTiling
-{
+class AvgPool3DSmallKernelNDHWCTiling : public Pool3DSmallKernelNDHWCTiling {
 public:
-    explicit AvgPool3DSmallKernelNDHWCTiling(gert::TilingContext* context) : Pool3DSmallKernelNDHWCTiling(context)
-    {
-    }
-    ~AvgPool3DSmallKernelNDHWCTiling() override
-    {
-    }
+    explicit AvgPool3DSmallKernelNDHWCTiling(gert::TilingContext* context) : Pool3DSmallKernelNDHWCTiling(context) {}
+    ~AvgPool3DSmallKernelNDHWCTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class MaxPool3DSmallKernelNDHWCTiling : public Pool3DSmallKernelNDHWCTiling
-{
+class MaxPool3DSmallKernelNDHWCTiling : public Pool3DSmallKernelNDHWCTiling {
 public:
-    explicit MaxPool3DSmallKernelNDHWCTiling(gert::TilingContext* context) : Pool3DSmallKernelNDHWCTiling(context)
-    {
-    }
-    ~MaxPool3DSmallKernelNDHWCTiling() override
-    {
-    }
+    explicit MaxPool3DSmallKernelNDHWCTiling(gert::TilingContext* context) : Pool3DSmallKernelNDHWCTiling(context) {}
+    ~MaxPool3DSmallKernelNDHWCTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

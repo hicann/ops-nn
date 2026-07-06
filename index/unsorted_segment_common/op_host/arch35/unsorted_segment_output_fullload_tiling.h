@@ -20,13 +20,11 @@
 
 namespace optiling {
 
-class UnsortedSegmentOutFlTiling : public UnsortedSegmentBaseTiling
-{
+class UnsortedSegmentOutFlTiling : public UnsortedSegmentBaseTiling {
 public:
-    explicit UnsortedSegmentOutFlTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context)
-    {}
-    ~UnsortedSegmentOutFlTiling() override
-    {}
+    explicit UnsortedSegmentOutFlTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context) {}
+    ~UnsortedSegmentOutFlTiling() override {}
+
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -38,9 +36,9 @@ protected:
     bool IsSupportSize();
     ge::graphStatus UbAddBranch();
 
-    uint64_t maxIndexNum_ {0};
-    uint64_t oneCoreUbLoopTimes_ {0};
-    uint64_t rowNumUb_ {0};
+    uint64_t maxIndexNum_{0};
+    uint64_t oneCoreUbLoopTimes_{0};
+    uint64_t rowNumUb_{0};
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_OUTPUT_FULLLOAD_TILING_H

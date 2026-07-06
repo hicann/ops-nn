@@ -18,7 +18,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 #pragma pack(1)
 struct IndexPutWithSortTilingData {
     uint32_t coreNums;
@@ -42,7 +41,7 @@ inline void InitIndexPutWithSortTilingData(uint8_t* tiling, IndexPutWithSortTili
     memcpy(data, tiling, sizeof(IndexPutWithSortTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                               \
-    IndexPutWithSortTilingData tiling_data;                                    \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    IndexPutWithSortTilingData tiling_data;      \
     InitIndexPutWithSortTilingData(tiling_arg, &tiling_data)
 #endif // INDEX_PUT_WITH_SORT_TILING_H

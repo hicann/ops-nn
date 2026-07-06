@@ -27,30 +27,25 @@
 #include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-#include "index/scatter_update/op_kernel/arch35/scatter_update_struct.h" 
+#include "index/scatter_update/op_kernel/arch35/scatter_update_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 struct ScatterUpdateCompileInfo {
-  int64_t core_num{1};
-  int64_t ub_size{1};
-  bool is_950{false};
+    int64_t core_num{1};
+    int64_t ub_size{1};
+    bool is_950{false};
 };
 
 using namespace Ops::NN::Optiling;
-class ScatterUpdateTiling : public TilingBaseClass
-{
+class ScatterUpdateTiling : public TilingBaseClass {
 public:
-    explicit ScatterUpdateTiling(gert::TilingContext* context) : TilingBaseClass(context){}
+    explicit ScatterUpdateTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
-    constexpr static uint64_t BASE_BLOCK_SIZE {8192};
-    constexpr static uint64_t MOVE_ALIGN_LIMIT_BYTE {256};
-    constexpr static uint64_t BASE_BLOCK_COPY_ALIGN {2048};
-    bool IsCapable() override
-    {
-        return true;
-    }
+    constexpr static uint64_t BASE_BLOCK_SIZE{8192};
+    constexpr static uint64_t MOVE_ALIGN_LIMIT_BYTE{256};
+    constexpr static uint64_t BASE_BLOCK_COPY_ALIGN{2048};
+    bool IsCapable() override { return true; }
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus DoOpTiling() override;
@@ -60,12 +55,12 @@ protected:
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
     void SetTilingData();
-    void DumpSimdTilingInfo(std::ostringstream &info);
-    void SetSimdTilingData(ScatterUpdateTilingData *tilingData);
-    void SetDeterSimdSplitCol(ScatterUpdateTilingData *tilingData);
+    void DumpSimdTilingInfo(std::ostringstream& info);
+    void SetSimdTilingData(ScatterUpdateTilingData* tilingData);
+    void SetDeterSimdSplitCol(ScatterUpdateTilingData* tilingData);
     ge::graphStatus CheckInputDtype();
     ge::graphStatus CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
-                                    const gert::Shape& updatesShape);
+                                      const gert::Shape& updatesShape);
     void CalcKernelParam();
     uint64_t CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd, uint64_t updatesSize, uint64_t reserveSize);
     void ClacColUbParam(uint64_t blockColNum, int32_t coreTypeIndex);
@@ -151,7 +146,7 @@ private:
     uint64_t indicesUbForUpTailLoopNum_ = 0;
     uint64_t indicesTailForUpLoopSize_ = 0;
     uint64_t indicesTailForUpTailLoopNum_ = 0;
-    uint64_t indicesCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
+    uint64_t indicesCastMode_ = 0; // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
     uint64_t indicesCastDtypeSize_ = 0;
     int32_t rowFormerNum_ = 0;
     int32_t colFormerNum_ = 0;
@@ -161,18 +156,18 @@ private:
     ge::DataType indicesCastDtype_ = ge::DT_UNDEFINED;
     const char* opName = "ScatterUpdate";
 
-    uint64_t rowTotalNum_ {0};
-    uint64_t colTotalNum_ {0};
-    uint64_t rowNormalNum_ {0};
-    uint64_t colNormalNum_ {0};
-    uint64_t rowTailNum_ {0};
-    uint64_t colTailNum_ {0};
-    uint64_t rowTileNum_ {0};// 行切片数量
-    uint64_t colTileNum_ {0};// 列切片数量
-    ge::DataType dataType_ {ge::DataType::DT_FLOAT};
+    uint64_t rowTotalNum_{0};
+    uint64_t colTotalNum_{0};
+    uint64_t rowNormalNum_{0};
+    uint64_t colNormalNum_{0};
+    uint64_t rowTailNum_{0};
+    uint64_t colTailNum_{0};
+    uint64_t rowTileNum_{0}; // 行切片数量
+    uint64_t colTileNum_{0}; // 列切片数量
+    ge::DataType dataType_{ge::DataType::DT_FLOAT};
 
     void AutoTiling();
     std::set<uint64_t> FindUniqueCut();
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_UPDATE_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_UPDATE_TILING_H_

@@ -77,8 +77,8 @@ struct LambNextMVWithDecayCompute {
     // next_v = v*b2 + g^2*(1-b2)
     using NextV = Bind<Vec::Add<U>, Bind<Vec::Mul<U>, V, B2>, Bind<Vec::Mul<U>, G2, OmB2>>;
     using VUnbias = Bind<Vec::Div<U>, NextV, Rd1>;
-    using SqrtVeps = Bind<Vec::Sqrt<U>, Bind<Vec::Add<U>, VUnbias, Eps>>;       // sqrt(v_unbiased+eps)
-    using SqrtVAddEps = Bind<Vec::Add<U>, Bind<Vec::Sqrt<U>, VUnbias>, Eps>;    // sqrt(v_unbiased)+eps
+    using SqrtVeps = Bind<Vec::Sqrt<U>, Bind<Vec::Add<U>, VUnbias, Eps>>;    // sqrt(v_unbiased+eps)
+    using SqrtVAddEps = Bind<Vec::Add<U>, Bind<Vec::Sqrt<U>, VUnbias>, Eps>; // sqrt(v_unbiased)+eps
     // next_m = m*b1 + g*(1-b1)
     using NextM = Bind<Vec::Add<U>, Bind<Vec::Mul<U>, M, B1>, Bind<Vec::Mul<U>, G, OmB1>>;
     using MUnbias = Bind<Vec::Div<U>, NextM, Rd0>;

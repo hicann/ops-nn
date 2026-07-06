@@ -25,35 +25,34 @@ OP_TYPE_REGISTER(WeightQuantBatchMatmulV2);
 constexpr int64_t TYPE_FP16 = 1;
 constexpr int64_t TYPE_BF16 = 27;
 
-const aclTensor* WeightQuantBatchMatmulV2(
-    const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
-    const aclTensor* antiquantOffsetOptional, const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
-    const aclTensor* biasOptional, bool transposeX, bool transposeWeight, int antiquantGroupSize, int64_t dtype,
-    int innerPrecise, aclOpExecutor* executor)
+const aclTensor* WeightQuantBatchMatmulV2(const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
+                                          const aclTensor* antiquantOffsetOptional, const aclTensor* quantScaleOptional,
+                                          const aclTensor* quantOffsetOptional, const aclTensor* biasOptional,
+                                          bool transposeX, bool transposeWeight, int antiquantGroupSize, int64_t dtype,
+                                          int innerPrecise, aclOpExecutor* executor)
 {
-    L0_DFX(
-        WeightQuantBatchMatmulV2, x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional,
-        quantOffsetOptional, biasOptional, transposeX, transposeWeight, antiquantGroupSize, dtype, innerPrecise);
+    L0_DFX(WeightQuantBatchMatmulV2, x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional,
+           quantOffsetOptional, biasOptional, transposeX, transposeWeight, antiquantGroupSize, dtype, innerPrecise);
     DataType outType = x->GetDataType();
     if (dtype != -1) {
         outType = static_cast<DataType>(dtype);
     }
     auto output = executor->AllocTensor(outType, Format::FORMAT_ND, Format::FORMAT_ND);
 
-    auto ret = INFER_SHAPE(
-        WeightQuantBatchMatmulV2,
-        OP_INPUT(
-            x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional, quantOffsetOptional, biasOptional),
-        OP_OUTPUT(output), OP_ATTR(transposeX, transposeWeight, antiquantGroupSize, dtype, innerPrecise));
+    auto ret = INFER_SHAPE(WeightQuantBatchMatmulV2,
+                           OP_INPUT(x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional,
+                                    quantOffsetOptional, biasOptional),
+                           OP_OUTPUT(output),
+                           OP_ATTR(transposeX, transposeWeight, antiquantGroupSize, dtype, innerPrecise));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
         return nullptr;
     }
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        WeightQuantBatchMatmulV2,
-        OP_INPUT(
-            x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional, quantOffsetOptional, biasOptional),
-        OP_OUTPUT(output), OP_ATTR(transposeX, transposeWeight, antiquantGroupSize, dtype, innerPrecise));
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(WeightQuantBatchMatmulV2,
+                                      OP_INPUT(x, weight, antiquantScale, antiquantOffsetOptional, quantScaleOptional,
+                                               quantOffsetOptional, biasOptional),
+                                      OP_OUTPUT(output),
+                                      OP_ATTR(transposeX, transposeWeight, antiquantGroupSize, dtype, innerPrecise));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_STATIC_WORKSPACE_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;

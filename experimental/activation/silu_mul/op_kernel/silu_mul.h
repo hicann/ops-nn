@@ -37,8 +37,8 @@ class SiluMulND {
 public:
     TPipe pipe;
     __aicore__ inline SiluMulND(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, const SiluMulTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace,
+                                const SiluMulTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -47,13 +47,12 @@ private:
     __aicore__ inline void CopyIn(int64_t inputOffset, DataCopyExtParams dataCopyParams);
     __aicore__ inline void Compute(int64_t dataCount);
     __aicore__ inline void CopyOut(int64_t outputOffset, int64_t dataCount, DataCopyExtParams dataCopyParams);
-    __aicore__ inline void SmallTailCopyIn(
-        int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign, LocalTensor<T>& x1Pad, LocalTensor<T>& x2Pad);
-    __aicore__ inline void SmallTailCompute(
-        uint32_t calcLen, uint32_t maxN, uint32_t dAlign, LocalTensor<T>& x1Pad, LocalTensor<T>& x2Pad,
-        LocalTensor<float>& floatBuf);
-    __aicore__ inline void SmallTailCopyOut(
-        int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign, LocalTensor<T>& x1Pad);
+    __aicore__ inline void SmallTailCopyIn(int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign, LocalTensor<T>& x1Pad,
+                                           LocalTensor<T>& x2Pad);
+    __aicore__ inline void SmallTailCompute(uint32_t calcLen, uint32_t maxN, uint32_t dAlign, LocalTensor<T>& x1Pad,
+                                            LocalTensor<T>& x2Pad, LocalTensor<float>& floatBuf);
+    __aicore__ inline void SmallTailCopyOut(int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign,
+                                            LocalTensor<T>& x1Pad);
 
 private:
     TBuf<QuePosition::VECCALC> ubTBuf;
@@ -88,8 +87,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void SiluMulND<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace, const SiluMulTilingData* tilingData)
+__aicore__ inline void SiluMulND<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, GM_ADDR workspace,
+                                          const SiluMulTilingData* tilingData)
 {
     inputGmX.SetGlobalBuffer((__gm__ T*)x);
     inputGmY.SetGlobalBuffer((__gm__ T*)y);
@@ -229,8 +228,8 @@ __aicore__ inline void SiluMulND<T>::CopyOut(int64_t outputOffset, int64_t dataC
     SetFlag<HardEvent::MTE3_MTE2>(eventId);
 }
 template <typename T>
-__aicore__ inline void SiluMulND<T>::SmallTailCopyIn(
-    int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign, LocalTensor<T>& x1Pad, LocalTensor<T>& x2Pad)
+__aicore__ inline void SiluMulND<T>::SmallTailCopyIn(int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign,
+                                                     LocalTensor<T>& x1Pad, LocalTensor<T>& x2Pad)
 {
     for (int32_t j = 0; j < tmpCalNum; j++) {
         int32_t batchOffset = gmOffset + j * lastDimSize;
@@ -242,9 +241,9 @@ __aicore__ inline void SiluMulND<T>::SmallTailCopyIn(
 }
 
 template <typename T>
-__aicore__ inline void SiluMulND<T>::SmallTailCompute(
-    uint32_t calcLen, uint32_t maxN, uint32_t dAlign, LocalTensor<T>& x1Pad, LocalTensor<T>& x2Pad,
-    LocalTensor<float>& floatBuf)
+__aicore__ inline void SiluMulND<T>::SmallTailCompute(uint32_t calcLen, uint32_t maxN, uint32_t dAlign,
+                                                      LocalTensor<T>& x1Pad, LocalTensor<T>& x2Pad,
+                                                      LocalTensor<float>& floatBuf)
 {
     LocalTensor<float> compRes = floatBuf;
     LocalTensor<float> compX1 = floatBuf[maxN * dAlign];
@@ -276,8 +275,8 @@ __aicore__ inline void SiluMulND<T>::SmallTailCompute(
 }
 
 template <typename T>
-__aicore__ inline void SiluMulND<T>::SmallTailCopyOut(
-    int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign, LocalTensor<T>& x1Pad)
+__aicore__ inline void SiluMulND<T>::SmallTailCopyOut(int32_t gmOffset, uint32_t tmpCalNum, uint32_t dAlign,
+                                                      LocalTensor<T>& x1Pad)
 {
     int32_t outOffset = gmOffset;
     for (int32_t j = 0; j < tmpCalNum; j++) {

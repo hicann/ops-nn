@@ -18,8 +18,7 @@
 
 #include "batch_norm_base.h"
 
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
 
 using AscendC::MicroAPI::LoadDist;
@@ -29,15 +28,11 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T1, typename T2>
-class BatchNormInfer
-{
+class BatchNormInfer {
 public:
     __aicore__ inline BatchNormInfer(){};
 
-    __aicore__ inline BatchNormInfer(const BatchNormInferTilingData* tilingDataIn)
-    {
-        tilingData_ = tilingDataIn;
-    }
+    __aicore__ inline BatchNormInfer(const BatchNormInferTilingData* tilingDataIn) { tilingData_ = tilingDataIn; }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
                                 GM_ADDR batch_mean, GM_ADDR batch_variance, GM_ADDR reserve_space_1,
@@ -94,12 +89,12 @@ public:
             bool needCopyOut = modFusedBOuter == 0;
 
             // Tile整尾块
-            int64_t curTileB0Len =
-                curB0Idx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail : tilingData_->tileBlockB0Len;
-            int64_t curTileALen =
-                curAIdx == (tilingData_->aOuter - 1) ? tilingData_->tileBlockATail : tilingData_->tileBlockALen;
-            int64_t curTileB1Len =
-                curB1Idx == (tilingData_->b1Outer - 1) ? tilingData_->tileBlockB1Tail : tilingData_->tileBlockB1Len;
+            int64_t curTileB0Len = curB0Idx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail :
+                                                                            tilingData_->tileBlockB0Len;
+            int64_t curTileALen = curAIdx == (tilingData_->aOuter - 1) ? tilingData_->tileBlockATail :
+                                                                         tilingData_->tileBlockALen;
+            int64_t curTileB1Len = curB1Idx == (tilingData_->b1Outer - 1) ? tilingData_->tileBlockB1Tail :
+                                                                            tilingData_->tileBlockB1Len;
 
             int64_t ubStrideT = 0;
             int64_t ubStrideFloat = 0;
@@ -269,8 +264,8 @@ private:
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads var  1->64
                 LoadTwoTensorForDtypeTBrc<T2>(var, mean, varLocal, meanLocal, pregMask, pregMask, i, i);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load gamma、beta  1->64
@@ -366,6 +361,6 @@ private:
     GlobalTensor<T2> reserveSpace1Gm_;
     GlobalTensor<T2> reserveSpace2Gm_;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_INFER_H

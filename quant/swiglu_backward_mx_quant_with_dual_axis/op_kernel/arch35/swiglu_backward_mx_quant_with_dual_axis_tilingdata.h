@@ -16,15 +16,14 @@
 #ifndef OPS_NN_SWIGLU_BACKWARD_MX_QUANT_WITH_DUAL_AXIS_TILINGDATA_H
 #define OPS_NN_SWIGLU_BACKWARD_MX_QUANT_WITH_DUAL_AXIS_TILINGDATA_H
 
-
 struct SwigluBackwardMxQuantWithDualAxisTilingData {
     int64_t usedCoreNum;
-    int64_t dstType;   
+    int64_t dstType;
     int64_t activateLeft;
-    int64_t dimM;    
-    int64_t dimN; 
+    int64_t dimM;
+    int64_t dimN;
     int64_t numGroups;
-    int64_t blockW; 
+    int64_t blockW;
     int64_t splitBlockH;
     int64_t dimNBlockNum;
     int64_t dimNTail;

@@ -20,8 +20,8 @@ class ForeachZeroInplace : public OpDef {
 public:
     explicit ForeachZeroInplace(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {
-            ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16,
+                                                       ge::DT_BF16};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
         this->Input("x")
             .ParamType(DYNAMIC)

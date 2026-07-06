@@ -23,24 +23,23 @@
 #include "op_host/tiling_base.h"
 #include "pooling/avg_pool/op_host/avg_pool_common.h"
 
-namespace optiling
-{
+namespace optiling {
 using TilingBaseClass = Ops::NN::Optiling::TilingBaseClass;
- 
+
 struct AvgPoolV2Common {
-    int64_t nDim; 
-    int64_t cDim; 
-    int64_t hDim; 
-    int64_t wDim; 
+    int64_t nDim;
+    int64_t cDim;
+    int64_t hDim;
+    int64_t wDim;
     std::string padModeStr;
 };
 
 ge::graphStatus Tiling4AvgPoolV2RegBase(gert::TilingContext* context);
 
-ge::graphStatus GetAvgPoolV2PlatformInfo(gert::TilingContext *context, uint64_t& ubSize, uint64_t& coreNum);
+ge::graphStatus GetAvgPoolV2PlatformInfo(gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum);
 
-ge::graphStatus GetAvgPoolV2ShapeAttrsInfo(gert::TilingContext *context, AvgPoolInputInfo& inputData);
+ge::graphStatus GetAvgPoolV2ShapeAttrsInfo(gert::TilingContext* context, AvgPoolInputInfo& inputData);
 
-}  // namespace optiling
- 
+} // namespace optiling
+
 #endif

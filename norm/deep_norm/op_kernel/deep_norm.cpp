@@ -27,28 +27,14 @@ static constexpr uint32_t REPEAT_MAX = 64;
 template <typename T>
 class KernelDeepNorm {
 public:
-    __aicore__ inline KernelDeepNorm()
-    {}
-    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
-    {
-        return y == 0 ? x : (x + y - 1) / y;
-    }
-    __aicore__ inline uint32_t ROUND_UP(uint32_t x)
-    {
-        return (x + blockNumEl - 1) / blockNumEl * blockNumEl;
-    }
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
-    {
-        return x < y ? x : y;
-    }
-    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y)
-    {
-        return x > y ? x : y;
-    }
+    __aicore__ inline KernelDeepNorm() {}
+    __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y) { return y == 0 ? x : (x + y - 1) / y; }
+    __aicore__ inline uint32_t ROUND_UP(uint32_t x) { return (x + blockNumEl - 1) / blockNumEl * blockNumEl; }
+    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
+    __aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
-    __aicore__ inline void ReduceSumShort(
-        const LocalTensor<float>& dst_local1, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
-        int32_t len, int32_t repeat)
+    __aicore__ inline void ReduceSumShort(const LocalTensor<float>& dst_local1, const LocalTensor<float>& src_local,
+                                          const LocalTensor<float>& tmp_local, int32_t len, int32_t repeat)
     {
         int32_t elementNum = BLOCK_SIZE / sizeof(float);
         int32_t maxRepeat = ONE_REPEAT_BYTE_SIZE / sizeof(float);
@@ -74,8 +60,8 @@ public:
             BlockReduceSum<float>(dst_local1, tmp_local, repeatTimes, maxRepeat, 1, 1, elementNum);
         }
         if (repeatTail != 0) {
-            BlockReduceSum<float>(
-                dst_local1[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+            BlockReduceSum<float>(dst_local1[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1,
+                                  elementNum);
         }
     }
 
@@ -89,11 +75,12 @@ public:
         return rstd_value;
     }
 
-    __aicore__ inline void InitBase(
-        __gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma, __gm__ uint8_t* mean,
-        __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_,
-        uint32_t nl_first_dim_per_core_, uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
-        uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_, uint32_t meanNum_, uint32_t alpha_)
+    __aicore__ inline void InitBase(__gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma,
+                                    __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_,
+                                    uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                    uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
+                                    uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_,
+                                    uint32_t meanNum_, uint32_t alpha_)
     {
         //  store arguments
         databyte = sizeof(T);
@@ -146,16 +133,16 @@ public:
         pipe.InitBuffer(rstd_que_fp32, BUFFER_NUM, row_step * BLOCK_SIZE);
     }
 
-    __aicore__ inline void InitShort(
-        __gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma, __gm__ uint8_t* mean,
-        __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_,
-        uint32_t nl_first_dim_per_core_, uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
-        uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_, uint32_t meanNum_, uint32_t alpha_)
+    __aicore__ inline void InitShort(__gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma,
+                                     __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_,
+                                     uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                     uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
+                                     uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_,
+                                     uint32_t meanNum_, uint32_t alpha_)
     {
-        InitBase(
-            x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
-            l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_, meanNum_,
-            alpha_);
+        InitBase(x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
+                 l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_, meanNum_,
+                 alpha_);
         pipe.InitBuffer(z_que, BUFFER_NUM, row_step * ROUND_UP(num_last_dim) * databyte);
         pipe.InitBuffer(calc_buf_fp32, ROUND_UP(num_last_dim) * sizeof(float));
         // calc buffer
@@ -166,16 +153,16 @@ public:
         }
     }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma, __gm__ uint8_t* mean,
-        __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_,
-        uint32_t nl_first_dim_per_core_, uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
-        uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_, uint32_t meanNum_, uint32_t alpha_)
+    __aicore__ inline void Init(__gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma,
+                                __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_,
+                                uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
+                                uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_,
+                                uint32_t meanNum_, uint32_t alpha_)
     {
-        InitBase(
-            x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
-            l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_, meanNum_,
-            alpha_);
+        InitBase(x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
+                 l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_, meanNum_,
+                 alpha_);
         pipe.InitBuffer(z_que, BUFFER_NUM, row_step * ROUND_UP(num_last_dim) * databyte);
         pipe.InitBuffer(calc_buf_fp32, ROUND_UP(num_last_dim) * sizeof(float));
         pipe.InitBuffer(x_buf_fp32, sizeof(float) * ROUND_UP(num_last_dim));
@@ -187,16 +174,16 @@ public:
         }
     }
 
-    __aicore__ inline void InitExtra(
-        __gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma, __gm__ uint8_t* mean,
-        __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_,
-        uint32_t nl_first_dim_per_core_, uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
-        uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_v1, uint32_t meanNum_, uint32_t alpha_)
+    __aicore__ inline void InitExtra(__gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma,
+                                     __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_,
+                                     uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                     uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
+                                     uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_v1,
+                                     uint32_t meanNum_, uint32_t alpha_)
     {
-        InitBase(
-            x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
-            l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_v1, meanNum_,
-            alpha_);
+        InitBase(x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
+                 l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_v1, meanNum_,
+                 alpha_);
         // calc buffer
         pipe.InitBuffer(y_buf_fp32, sizeof(float) * ROUND_UP(updated_last_dim_));
         pipe.InitBuffer(x_buf_fp32, sizeof(float) * ROUND_UP(updated_last_dim_));
@@ -205,16 +192,17 @@ public:
         pipe.InitBuffer(calc_buf_fp32, ROUND_UP(num_last_dim) * sizeof(float));
     }
 
-    __aicore__ inline void InitCommon(
-        __gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta, __gm__ uint8_t* gamma, __gm__ uint8_t* mean,
-        __gm__ uint8_t* rstd, __gm__ uint8_t* z, uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_,
-        uint32_t nl_first_dim_per_core_, uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
-        uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_, uint32_t meanNum_, uint32_t alpha_)
+    __aicore__ inline void InitCommon(__gm__ uint8_t* x, __gm__ uint8_t* gx, __gm__ uint8_t* beta,
+                                      __gm__ uint8_t* gamma, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                      __gm__ uint8_t* z, uint32_t num_core_, uint32_t num_Last_dim_,
+                                      uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                      uint32_t l_first_dim_per_core_, uint32_t first_dim_per_times_,
+                                      uint32_t updated_last_dim_, uint32_t updated_last_times_, uint32_t eps_,
+                                      uint32_t meanNum_, uint32_t alpha_)
     {
-        InitBase(
-            x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
-            l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_, meanNum_,
-            alpha_);
+        InitBase(x, gx, beta, gamma, mean, rstd, z, num_core_, num_Last_dim_, num_first_dim_, nl_first_dim_per_core_,
+                 l_first_dim_per_core_, first_dim_per_times_, updated_last_dim_, updated_last_times_, eps_, meanNum_,
+                 alpha_);
         pipe.InitBuffer(x_buf_fp32, sizeof(float) * ROUND_UP(updated_last_dim_));
         pipe.InitBuffer(y_buf_fp32, sizeof(float) * ROUND_UP(updated_last_dim_));
         pipe.InitBuffer(z_buf_fp32, sizeof(float) * ROUND_UP(updated_last_dim_));
@@ -410,7 +398,8 @@ private:
         LocalTensor<T> gx_local = gx_que.AllocTensor<T>();
 
         uint32_t offset = proc_id * row_step * num_last_dim;
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyPadParams temp;
         DataCopyParams copyInput;
         DataCopyParams copyParams;
@@ -440,7 +429,8 @@ private:
     {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 ||  (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyPadParams temp;
         DataCopyParams copyInput;
         DataCopyParams copyParams;
@@ -782,9 +772,9 @@ private:
         z_que.EnQue(z_local);
     }
 
-    __aicore__ inline void PrecisionComputeMeanShort(
-        int32_t nums, LocalTensor<float>& z_local, LocalTensor<float>& x_local, LocalTensor<float>& gx_local,
-        LocalTensor<float>& mean_local)
+    __aicore__ inline void PrecisionComputeMeanShort(int32_t nums, LocalTensor<float>& z_local,
+                                                     LocalTensor<float>& x_local, LocalTensor<float>& gx_local,
+                                                     LocalTensor<float>& mean_local)
     {
         uint32_t realLen = ROUND_UP(num_last_dim);
         uint32_t stepSize = nums * realLen;
@@ -810,9 +800,9 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void PrecisionComputeRstdShort(
-        int32_t nums, LocalTensor<float>& z_local, LocalTensor<float>& x_local, LocalTensor<float>& gx_local,
-        LocalTensor<float>& rstd_local)
+    __aicore__ inline void PrecisionComputeRstdShort(int32_t nums, LocalTensor<float>& z_local,
+                                                     LocalTensor<float>& x_local, LocalTensor<float>& gx_local,
+                                                     LocalTensor<float>& rstd_local)
     {
         uint32_t realLen = ROUND_UP(num_last_dim);
         uint32_t stepSize = nums * realLen;
@@ -848,8 +838,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void PrecisionComputeResultShort(
-        int32_t nums, LocalTensor<float>& z_local, LocalTensor<float>& beta_local, LocalTensor<float>& gamma_local)
+    __aicore__ inline void PrecisionComputeResultShort(int32_t nums, LocalTensor<float>& z_local,
+                                                       LocalTensor<float>& beta_local, LocalTensor<float>& gamma_local)
     {
         uint32_t realLen = ROUND_UP(num_last_dim);
         uint8_t repeatStride = realLen / FLOAT_BLOCK;
@@ -882,7 +872,8 @@ private:
         LocalTensor<float> rstd = rstd_que_fp32.DeQue<float>();
 
         uint32_t offset = proc_id * row_step * num_last_dim;
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         uint32_t offset2 = proc_id * row_step;
 
         DataCopyParams copyOutput;
@@ -932,7 +923,8 @@ private:
     {
         LocalTensor<T> x_local = x_que.AllocTensor<T>();
         LocalTensor<T> gx_local = gx_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyPadParams temp;
         DataCopyParams copyInput;
 
@@ -953,7 +945,8 @@ private:
     {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyPadParams temp;
         DataCopyParams copyParams;
 
@@ -1587,7 +1580,8 @@ private:
     __aicore__ inline void CommonCopyOutRes(int32_t offset, int32_t length)
     {
         LocalTensor<T> result = z_que.DeQue<T>();
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyParams copyParams;
         copyParams.blockLen = length * sizeof(T);
         copyParams.blockCount = 1;
@@ -1619,7 +1613,8 @@ private:
         LocalTensor<float> mean = mean_que_fp32.DeQue<float>();
         LocalTensor<float> rstd = rstd_que_fp32.DeQue<float>();
 
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         DataCopyParams copyParams;
 
         copyParams.blockLen = sizeof(float);
@@ -1686,115 +1681,102 @@ private:
 #define bfloat16_t int16_t
 #endif
 
-extern "C" __global__ __aicore__ void deep_norm(
-    GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean, GM_ADDR rstd, GM_ADDR y, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void deep_norm(GM_ADDR x, GM_ADDR gx, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean,
+                                                GM_ADDR rstd, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
 
     if (TILING_KEY_IS(0)) { // bf16 && D <= 4096
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelDeepNorm<bfloat16_t> op;
-        op.Init(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.Init(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBF16LELimit();
 #endif
     } else if (TILING_KEY_IS(1)) { // fp16 && D <= 4096
         KernelDeepNorm<half> op;
-        op.Init(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.Init(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp16LELimit();
     } else if (TILING_KEY_IS(2)) { // fp32 && D <= 4096
         KernelDeepNorm<float> op;
-        op.Init(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.Init(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32LELimit();
     } else if (TILING_KEY_IS(4)) { // bf16 && D > 4096
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelDeepNorm<bfloat16_t> op;
-        op.InitExtra(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitExtra(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                     tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                     tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                     tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBf16GTLimit();
 #endif
     } else if (TILING_KEY_IS(5)) { // fp16 && D > 4096
         KernelDeepNorm<half> op;
-        op.InitExtra(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitExtra(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                     tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                     tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                     tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp16GTLimit();
     } else if (TILING_KEY_IS(6)) { // fp32 && D > 4096
         KernelDeepNorm<float> op;
-        op.InitExtra(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitExtra(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                     tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                     tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                     tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32GTLimit();
     } else if (TILING_KEY_IS(12)) { // bf16 && D in common (>15360)
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelDeepNorm<bfloat16_t> op;
-        op.InitCommon(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitCommon(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                      tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                      tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                      tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBf16Common();
 #endif
     } else if (TILING_KEY_IS(13)) { // fp16 && D in common (>15360)
         KernelDeepNorm<half> op;
-        op.InitCommon(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitCommon(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                      tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                      tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                      tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp16Common();
     } else if (TILING_KEY_IS(14)) { // fp32 && D in common (>8192)
         KernelDeepNorm<float> op;
-        op.InitCommon(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitCommon(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                      tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                      tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                      tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32Common();
     } else if (TILING_KEY_IS(16)) { // bf16 && D <= 500
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         KernelDeepNorm<bfloat16_t> op;
-        op.InitShort(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitShort(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                     tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                     tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                     tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessBf16Short();
 #endif
     } else if (TILING_KEY_IS(17)) { // fp16 && D <= 500
         KernelDeepNorm<half> op;
-        op.InitShort(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitShort(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                     tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                     tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                     tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp16Short();
     } else if (TILING_KEY_IS(18)) { // fp32 && D <= 500
         KernelDeepNorm<float> op;
-        op.InitShort(
-            x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
-            tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
-            tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
-            tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
+        op.InitShort(x, gx, beta, gamma, mean, rstd, y, tiling_data.num_core, tiling_data.num_last_dim,
+                     tiling_data.num_first_dim, tiling_data.nl_firstdim_per_core, tiling_data.l_firstdim_per_core,
+                     tiling_data.first_dim_per_times, tiling_data.updated_last_dim, tiling_data.updated_last_times,
+                     tiling_data.eps_str, tiling_data.ave_str, tiling_data.alpha_str);
         op.ProcessFp32Short();
     }
 }

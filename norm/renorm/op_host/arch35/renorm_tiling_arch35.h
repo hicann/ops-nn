@@ -23,17 +23,15 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 struct RenormTilingKey {
     ReduceTilingKey reduceTiling;
     uint32_t templateNum;
 };
 
-class RenormTiling
-{
+class RenormTiling {
 public:
-    explicit RenormTiling(gert::TilingContext* context) : tilingContext_(context) {};
+    explicit RenormTiling(gert::TilingContext* context) : tilingContext_(context){};
     ge::graphStatus RunTiling(const ReduceOpCompileInfo* compileInfo);
 
 private:
@@ -70,5 +68,5 @@ private:
     bool dtypeXEqualY = false;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_RENORM_H_
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_RENORM_H_

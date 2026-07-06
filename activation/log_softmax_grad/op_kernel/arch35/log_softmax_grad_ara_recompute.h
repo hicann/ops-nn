@@ -26,8 +26,7 @@
 #endif
 #include "log_softmax_grad_base.h"
 
-namespace LogSoftmaxGradOps
-{
+namespace LogSoftmaxGradOps {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 
@@ -38,8 +37,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T>
-class LogSoftmaxGradARARecompute : public LogSoftmaxGradOpsBase
-{
+class LogSoftmaxGradARARecompute : public LogSoftmaxGradOpsBase {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
 
@@ -84,8 +82,8 @@ public:
             int64_t curA0Idx = curIdx % tilingData_->tileA0Outer;
             int64_t curA1Idx = curIdx / tilingData_->tileA0Outer;
 
-            uint32_t curTileA0Len =
-                curA0Idx == (tilingData_->tileA0Outer - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len;
+            uint32_t curTileA0Len = curA0Idx == (tilingData_->tileA0Outer - 1) ? tilingData_->tileA0Tail :
+                                                                                 tilingData_->tileA0Len;
 
             int64_t xOffset =
                 // a1 offset
@@ -98,8 +96,8 @@ public:
             CalcReduceSum(curTileA0Len, xOffset, loopA0Num);
 
             for (int64_t idx = 0; idx < tilingData_->binAddRTotalLoop; idx++) {
-                int64_t curTileRLen =
-                    idx == (tilingData_->binAddRTotalLoop - 1) ? tilingData_->binAddRTail : tilingData_->binAddRFactor;
+                int64_t curTileRLen = idx == (tilingData_->binAddRTotalLoop - 1) ? tilingData_->binAddRTail :
+                                                                                   tilingData_->binAddRFactor;
 
                 int64_t offset = xOffset + idx * tilingData_->binAddRFactor * tilingData_->totalA0Len;
                 CopyInGradAndX(offset, curTileRLen, curTileA0Len);
@@ -295,7 +293,7 @@ private:
                     // copy out
                     if constexpr (IsSameType<T, float>::value) {
                         DataCopy(((__local_mem__ float*)yLocal) + xOffset, gradReg, pregMask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         Cast<T, float, castTraitFp32ToFp16>(xFp16, gradReg, pregMask);
                         DataCopy<T, StoreDist::DIST_PACK_B32>(((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMask);
@@ -315,7 +313,7 @@ private:
     {
         if constexpr (IsSameType<T, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
             Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -358,6 +356,6 @@ private:
 
     LocalTensor<float> yMain_;
 };
-}  // namespace LogSoftmaxGradOps
+} // namespace LogSoftmaxGradOps
 
 #endif // LOG_SOFTMAX_GRAD_ARA_RECOMPUTE_H

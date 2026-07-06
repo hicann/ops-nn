@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <gtest/gtest.h>
 #include <iostream>
@@ -15,18 +16,11 @@
 #include "ut_op_common.h"
 #include "ut_op_util.h"
 
-class BatchNormGradV3Test : public testing::Test
-{
+class BatchNormGradV3Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "BatchNormGradV3 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "BatchNormGradV3 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "BatchNormGradV3 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "BatchNormGradV3 TearDown" << std::endl; }
 };
 
 // REG_OP(Data).INPUT(x, TensorType::ALL()).OUTPUT().ATTR().OP_END_FACTORY_REG()
@@ -50,14 +44,12 @@ TEST_F(BatchNormGradV3Test, batchnorm_infer_shape_nchw)
     TENSOR_INPUT_WITH_SHAPE(test_op, dy, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, weight, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
     auto output0_desc = test_op.GetOutputDesc(0);
@@ -87,14 +79,12 @@ TEST_F(BatchNormGradV3Test, batchnorm_infer_shape_ncdhw)
     TENSOR_INPUT_WITH_SHAPE(test_op, dy, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, weight, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
     auto output0_desc = test_op.GetOutputDesc(0);
@@ -124,14 +114,12 @@ TEST_F(BatchNormGradV3Test, batchnorm_infer_shape_nhwc)
     TENSOR_INPUT_WITH_SHAPE(test_op, dy, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, weight, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
     auto output0_desc = test_op.GetOutputDesc(0);
@@ -161,14 +149,12 @@ TEST_F(BatchNormGradV3Test, batchnorm_infer_shape_ndhwc)
     TENSOR_INPUT_WITH_SHAPE(test_op, dy, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NCHW, shape_range_x);
     TENSOR_INPUT_WITH_SHAPE(test_op, weight, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
-    TENSOR_INPUT_WITH_SHAPE(
-        test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_mean, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, running_var, input_weight_shape, input_weight_dtype, FORMAT_ND,
+                            shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_mean, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
+    TENSOR_INPUT_WITH_SHAPE(test_op, save_rstd, input_weight_shape, input_weight_dtype, FORMAT_ND, shape_range_weight);
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
     auto output0_desc = test_op.GetOutputDesc(0);

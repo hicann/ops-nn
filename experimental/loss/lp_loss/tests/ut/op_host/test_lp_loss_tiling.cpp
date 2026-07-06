@@ -37,12 +37,10 @@ const char* kCompileInfoString = R"({
                         "CORE_NUM": 48}
                         })";
 
-struct LpLossTilingCompileInfo {
-};
+struct LpLossTilingCompileInfo {};
 
-void InitPlatForm(
-    fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics)
+void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
+                  map<string, string>& intrinsics)
 {
     GetPlatFormInfos(kCompileInfoString, socInfos, aicoreSpec, intrinsics);
     platformInfo.Init();
@@ -52,8 +50,8 @@ void DoLpLossTilingCase(DataType inputDtype, const std::string& reduction)
 {
     gert::StorageShape predictShape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
     gert::StorageShape labelShape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
-    gert::StorageShape outputShape =
-        (reduction == "none") ? gert::StorageShape{{1, 2, 8, 16}, {1, 2, 8, 16}} : gert::StorageShape{{}, {}};
+    gert::StorageShape outputShape = (reduction == "none") ? gert::StorageShape{{1, 2, 8, 16}, {1, 2, 8, 16}} :
+                                                             gert::StorageShape{{}, {}};
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -79,8 +77,8 @@ void DoLpLossTilingCase(DataType inputDtype, const std::string& reduction)
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(opImpl->tiling_parse(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -99,9 +97,8 @@ void DoLpLossTilingCase(DataType inputDtype, const std::string& reduction)
                       .NodeInputTd(0, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -121,28 +118,13 @@ void DoLpLossTilingCase(DataType inputDtype, const std::string& reduction)
 
 class LpLossTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "LpLossTiling SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "LpLossTiling SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "LpLossTiling TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "LpLossTiling TearDown" << endl; }
 };
 
-TEST_F(LpLossTiling, lp_loss_float32_none_success)
-{
-    DoLpLossTilingCase(ge::DT_FLOAT, "none");
-}
+TEST_F(LpLossTiling, lp_loss_float32_none_success) { DoLpLossTilingCase(ge::DT_FLOAT, "none"); }
 
-TEST_F(LpLossTiling, lp_loss_float16_mean_success)
-{
-    DoLpLossTilingCase(ge::DT_FLOAT16, "mean");
-}
+TEST_F(LpLossTiling, lp_loss_float16_mean_success) { DoLpLossTilingCase(ge::DT_FLOAT16, "mean"); }
 
-TEST_F(LpLossTiling, lp_loss_bf16_sum_success)
-{
-    DoLpLossTilingCase(ge::DT_BF16, "sum");
-}
+TEST_F(LpLossTiling, lp_loss_bf16_sum_success) { DoLpLossTilingCase(ge::DT_BF16, "sum"); }

@@ -23,16 +23,15 @@ namespace OpKernel {
 using namespace AscendC;
 
 template <typename T>
-using OneScalarQuaternaryImplictOutputOp = void(
-    const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<float>&, const float,
-    const uint32_t, const int64_t);
+using OneScalarQuaternaryImplictOutputOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&,
+                                                const LocalTensor<float>&, const float, const uint32_t, const int64_t);
 
 template <typename T, OneScalarQuaternaryImplictOutputOp<T>* op>
 class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& inLocal_3,
-        LocalTensor<float>& float32Tensor, float scalarVal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& inLocal_3,
+                                   LocalTensor<float>& float32Tensor, float scalarVal, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         op(inLocal_1, inLocal_2, inLocal_3, float32Tensor, scalarVal, maxCastDataCount, dataCount);
@@ -40,19 +39,17 @@ public:
     }
 };
 
-template <
-    typename T, OneScalarQuaternaryImplictOutputOp<T>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT>
+template <typename T, OneScalarQuaternaryImplictOutputOp<T>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT>
 class ForeachOneScalarQuaternaryImplictOutput
-    : public KernelForeachUnary<
-          T, ForeachOneScalarQuaternaryImplictOutput<T, op, bufferNum, paramsCount>, bufferNum, paramsCount, false> {
+    : public KernelForeachUnary<T, ForeachOneScalarQuaternaryImplictOutput<T, op, bufferNum, paramsCount>, bufferNum,
+                                paramsCount, false> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachOneScalarQuaternaryImplictOutput<T, op, bufferNum, paramsCount>, bufferNum, paramsCount, false>;
+    using Base = KernelForeachUnary<T, ForeachOneScalarQuaternaryImplictOutput<T, op, bufferNum, paramsCount>,
+                                    bufferNum, paramsCount, false>;
     using Operator = OneScalarQuaternaryImplictOutputOp<T>;
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
-        const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline void Process();
     __aicore__ inline ForeachOneScalarQuaternaryImplictOutput() : Base(*this){};
 
@@ -67,8 +64,8 @@ protected:
     float scalarVal = 0.0;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> inLocal_1 = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> inLocal_2 = InQueue_2.DeQue<T>();
@@ -112,19 +109,13 @@ private:
         InQueue_3.EnQue(inLocal_3);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
-    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
-    {}
+    __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart) {}
 
     friend Base;
 };

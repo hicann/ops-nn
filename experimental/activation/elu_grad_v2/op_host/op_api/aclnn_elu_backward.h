@@ -20,7 +20,9 @@ extern "C" {
 
 /**
  * 算子功能：完成ELU激活函数的反向计算，输出ELU激活函数正向输入的梯度。
- * 计算公式：当 is_result=false（x 为正向输入）：x > 0 时: dy * scale,  x <= 0 时: dy * alpha * scale * input_scale * exp(x * input_scale);  当 is_result=true（x 为正向输出）： x > 0 时: dy * scale,  x <= 0 时: dy * input_scale * (x + alpha * scale)
+ * 计算公式：当 is_result=false（x 为正向输入）：x > 0 时: dy * scale,  x <= 0 时: dy * alpha * scale * input_scale *
+ * exp(x * input_scale);  当 is_result=true（x 为正向输出）： x > 0 时: dy * scale,  x <= 0 时: dy * input_scale * (x +
+ * alpha * scale)
  *
  * 实现说明：如下
  *
@@ -84,4 +86,4 @@ ACLNN_API aclnnStatus aclnnEluBackward(void* workspace, uint64_t workspaceSize, 
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_ELU_BACKWARD_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_ELU_BACKWARD_H_

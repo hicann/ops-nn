@@ -44,7 +44,7 @@ private:
 } // namespace Ops
 
 namespace gert {
-    using OpImplRegistry = Ops::NN::OpImplRegistry;
+using OpImplRegistry = Ops::NN::OpImplRegistry;
 }
 
-#endif  // OPS_NN_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H
+#endif // OPS_NN_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H

@@ -22,15 +22,10 @@
 
 namespace optiling {
 
-class UnsortedSegmentSimtTiling : public UnsortedSegmentBaseTiling
-{
+class UnsortedSegmentSimtTiling : public UnsortedSegmentBaseTiling {
 public:
-    explicit UnsortedSegmentSimtTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context)
-    {
-    }
-    ~UnsortedSegmentSimtTiling() override
-    {  
-    }
+    explicit UnsortedSegmentSimtTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context) {}
+    ~UnsortedSegmentSimtTiling() override {}
 
 protected:
     bool IsCapable() override;

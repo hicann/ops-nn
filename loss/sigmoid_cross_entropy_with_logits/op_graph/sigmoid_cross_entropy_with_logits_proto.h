@@ -25,8 +25,10 @@ namespace ge {
 
 * @par Inputs:
 * two inputs, including:
-* @li predict: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the predictive value, format is ND.
-* @li target: A multi-dimensional Tensor, has the same dtype, format and shape as "predict", specifying the target value. \n
+* @li predict: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the predictive value,
+format is ND.
+* @li target: A multi-dimensional Tensor, has the same dtype, format and shape as "predict", specifying the target
+value. \n
 
 * @par Outputs:
 * loss: A multi-dimensional Tensor, Sigmoid cross entropy between the predictive value and target value.
@@ -41,5 +43,5 @@ REG_OP(SigmoidCrossEntropyWithLogits)
     .OUTPUT(loss, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OP_END_FACTORY_REG(SigmoidCrossEntropyWithLogits)
 
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_SIGMOID_CROSS_ENTROPY_WITH_LOGITS_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_SIGMOID_CROSS_ENTROPY_WITH_LOGITS_H_

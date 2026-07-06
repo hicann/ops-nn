@@ -26,6 +26,6 @@ public:
     __aicore__ inline Conv3DBpInputIntf() {}
 };
 
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 
 #endif

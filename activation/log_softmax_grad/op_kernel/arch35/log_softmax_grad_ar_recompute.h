@@ -27,8 +27,7 @@
 #include "op_kernel/math_util.h"
 #include "log_softmax_grad_base.h"
 
-namespace LogSoftmaxGradOps
-{
+namespace LogSoftmaxGradOps {
 using namespace AscendC;
 constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
 constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;
@@ -36,21 +35,17 @@ constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BTYES / sizeof(
 constexpr int64_t A_IN_IN = 1;
 
 template <typename T>
-class LogSoftmaxGradArRecompute : public LogSoftmaxGradOpsBase
-{
+class LogSoftmaxGradArRecompute : public LogSoftmaxGradOpsBase {
 public:
-    __aicore__ inline LogSoftmaxGradArRecompute(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline LogSoftmaxGradArRecompute(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR y, const SoftmaxGradARRecomputeTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void CalculateOutVF(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
-                                          const LocalTensor<T>& gradLocal, __local_mem__ float*& gradSumPtr,
-                                          uint32_t a, uint32_t ubFactor);
+                                          const LocalTensor<T>& gradLocal, __local_mem__ float*& gradSumPtr, uint32_t a,
+                                          uint32_t ubFactor);
     __aicore__ inline void CastVF(const LocalTensor<float>& gradFp32Local, const LocalTensor<T>& gradLocal, uint32_t a,
                                   uint32_t ubFactor);
     __aicore__ inline void FoldBlockVF(const LocalTensor<float>& grad1Fp32Local, const LocalTensor<T>& grad2Local,
@@ -120,7 +115,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::Process()
 {
     DataCopyPadExtParams<T> padExtParams{false, 0, 0, 0};
 
-    int64_t xDimOffsetPerCore = tl_->aBlockFactor * blockIdx_;  // 每个核按行的偏移
+    int64_t xDimOffsetPerCore = tl_->aBlockFactor * blockIdx_; // 每个核按行的偏移
     LocalTensor<float> gradSumLocal = gradSumBuffer.Get<float>();
 
     DataCopyExtParams x1DataCopyExtParams;
@@ -135,7 +130,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::Process()
 
     // 对每行循环
     for (uint64_t rowIdx = 0; rowIdx < currentRowBlock_; rowIdx++) {
-        int64_t xDimOffset = (xDimOffsetPerCore + rowIdx) * tl_->r;  // 每行的偏移量
+        int64_t xDimOffset = (xDimOffsetPerCore + rowIdx) * tl_->r; // 每行的偏移量
 
         LocalTensor<float> cacheLocal = cachebuffer.Get<float>();
 
@@ -147,8 +142,8 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::Process()
         x2DataCopyExtParams.blockLen = tl_->ubFactor * sizeof(T);
 
         for (uint64_t basicBlockIdx = 0; basicBlockIdx < tl_->basicBlockLoop; basicBlockIdx++) {
-            int64_t gradUbOffset1 = xDimOffset + tl_->ubFactor * basicBlockIdx;                          // 主块
-            int64_t gradUbOffset2 = xDimOffset + tl_->ubFactor * (tl_->basicBlockLoop + basicBlockIdx);  // 被折叠块
+            int64_t gradUbOffset1 = xDimOffset + tl_->ubFactor * basicBlockIdx;                         // 主块
+            int64_t gradUbOffset2 = xDimOffset + tl_->ubFactor * (tl_->basicBlockLoop + basicBlockIdx); // 被折叠块
             LocalTensor<T> grad1Local = gradQueue_.AllocTensor<T>();
 
             DataCopyPad(grad1Local[0], gradGm_[gradUbOffset1], x1DataCopyExtParams, padExtParams);
@@ -169,7 +164,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::Process()
                 gradQueue_.FreeTensor(grad2Local);
             } else if ((basicBlockIdx == tl_->mainFoldCount) && (tl_->ubFactorTail > 0)) {
                 LocalTensor<T> grad2Local = gradQueue_.AllocTensor<T>();
-                x2DataCopyExtParams.blockLen = tl_->ubFactorTail * sizeof(T);  // 这里的grad2为尾块
+                x2DataCopyExtParams.blockLen = tl_->ubFactorTail * sizeof(T); // 这里的grad2为尾块
                 DataCopyPad(grad2Local[0], gradGm_[gradUbOffset2], x2DataCopyExtParams, padExtParams);
                 gradQueue_.EnQue<T>(grad2Local);
                 grad2Local = gradQueue_.DeQue<T>();
@@ -234,13 +229,11 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::Process()
     }
 }
 
-
 template <typename T>
 __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalTensor<T>& yLocal,
                                                                     const LocalTensor<T>& xLocal,
                                                                     const LocalTensor<T>& gradLocal,
-                                                                    __local_mem__ float*& gradSumPtr,
-                                                                    uint32_t a,
+                                                                    __local_mem__ float*& gradSumPtr, uint32_t a,
                                                                     uint32_t ubFactor)
 {
     __local_mem__ T* yPtr = (__local_mem__ T*)yLocal.GetPhyAddr();
@@ -291,8 +284,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalT
 
 template <typename T>
 __aicore__ inline void LogSoftmaxGradArRecompute<T>::CastVF(const LocalTensor<float>& gradFp32Local,
-                                                            const LocalTensor<T>& gradLocal,
-                                                            uint32_t a,
+                                                            const LocalTensor<T>& gradLocal, uint32_t a,
                                                             uint32_t ubFactor)
 {
     __local_mem__ float* gradFp32Ptr = (__local_mem__ float*)gradFp32Local.GetPhyAddr();
@@ -326,8 +318,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CastVF(const LocalTensor<fl
 
 template <typename T>
 __aicore__ inline void LogSoftmaxGradArRecompute<T>::FoldBlockVF(const LocalTensor<float>& grad1Fp32Local,
-                                                                 const LocalTensor<T>& grad2Local,
-                                                                 uint32_t a,
+                                                                 const LocalTensor<T>& grad2Local, uint32_t a,
                                                                  uint32_t ubFactor)
 {
     __local_mem__ float* grad1Fp32Ptr = (__local_mem__ float*)grad1Fp32Local.GetPhyAddr();
@@ -371,8 +362,8 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::UpdateCache(const LocalTens
                                                                  const int64_t cacheId, const int64_t stride,
                                                                  const int64_t count)
 {
-    uint16_t outerLoopTimes =
-        Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    uint16_t outerLoopTimes = Ops::Base::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
+                                                 static_cast<int64_t>(platform::GetVRegSize()));
     uint16_t innerLoopTimes = cacheId;
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
@@ -397,5 +388,5 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::UpdateCache(const LocalTens
         }
     }
 }
-}  // namespace LogSoftmaxGradOps
+} // namespace LogSoftmaxGradOps
 #endif // LOG_SOFTMAX_GRAD_AR_RECOMPUTE_H

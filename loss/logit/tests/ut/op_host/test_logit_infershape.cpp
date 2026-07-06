@@ -14,18 +14,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/logit_proto.h"
 
-class Logit : public testing::Test
-{
+class Logit : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Logit SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Logit SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Logit TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Logit TearDown" << std::endl; }
 };
 
 TEST_F(Logit, Logit_infershape_case_0)

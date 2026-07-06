@@ -53,14 +53,13 @@ uint64_t AdaLayerNormGradWorkspaceTiling::GetTilingKey() const
 ge::graphStatus AdaLayerNormGradWorkspaceTiling::PostTiling()
 {
     context_->SetBlockDim(commonParams.coreNum);
-    td_.SaveToBuffer(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());                             
+    td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaLayerNormGradWorkspaceTiling::DoOpTiling() 
+ge::graphStatus AdaLayerNormGradWorkspaceTiling::DoOpTiling()
 {
     int64_t colAlignV = CeilDiv(static_cast<int64_t>(commonParams.colSize), LNG_B16_ALIGN_FACTOR) *
                         LNG_B16_ALIGN_FACTOR;
@@ -77,24 +76,23 @@ ge::graphStatus AdaLayerNormGradWorkspaceTiling::DoOpTiling()
 
     td_.set_batch(batch_);
     td_.set_seq(seq_);
-    td_.set_row(row_); 
+    td_.set_row(row_);
     td_.set_col(col_);
     td_.set_colAlignV(colAlignV);
     td_.set_colAlignM(colAlignM);
     // calculate block tiling, batch split block
 
     int64_t blockFormer = CeilDiv(batch_, static_cast<int64_t>(commonParams.coreNum));
-    int64_t blockNum = CeilDiv(batch_, blockFormer); 
-    int64_t blockTail = batch_ - (blockNum - 1) * blockFormer;             
+    int64_t blockNum = CeilDiv(batch_, blockFormer);
+    int64_t blockTail = batch_ - (blockNum - 1) * blockFormer;
     td_.set_blockFormer(blockFormer * seq_);
     td_.set_blockNum(blockNum);
     td_.set_blockTail(blockTail * seq_);
     int64_t maxBufferSize = (commonParams.ubSizePlatForm - LNG_TMP_BUFFER_SIZE_0 * LNG_CONSTANT_THREE) /
-                            LNG_MAX_BUFFER_NUM / LNG_B32_DTYPE_SIZE / LNG_B16_ALIGN_FACTOR *
-                            LNG_B16_ALIGN_FACTOR;                                   
-    int64_t ubFormer = std::min(maxBufferSize, colAlignV);                          
-    int64_t ubLoop = CeilDiv(static_cast<int64_t>(commonParams.colSize), ubFormer); 
-    int64_t ubTail = commonParams.colSize - (ubLoop - 1) * ubFormer;                
+                            LNG_MAX_BUFFER_NUM / LNG_B32_DTYPE_SIZE / LNG_B16_ALIGN_FACTOR * LNG_B16_ALIGN_FACTOR;
+    int64_t ubFormer = std::min(maxBufferSize, colAlignV);
+    int64_t ubLoop = CeilDiv(static_cast<int64_t>(commonParams.colSize), ubFormer);
+    int64_t ubTail = commonParams.colSize - (ubLoop - 1) * ubFormer;
     td_.set_ubFormer(ubFormer);
     td_.set_ubLoop(ubLoop);
     td_.set_ubTail(ubTail);
@@ -105,7 +103,9 @@ ge::graphStatus AdaLayerNormGradWorkspaceTiling::DoOpTiling()
 ge::graphStatus AdaLayerNormGradWorkspaceTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = td_.get_blockNum() * td_.get_colAlignV() * LNG_B32_DTYPE_SIZE * (4 + 2 * td_.get_blockFormer() / td_.get_seq()) + LNG_WORKSPACE_RESERVED;
+    workspaces[0] = td_.get_blockNum() * td_.get_colAlignV() * LNG_B32_DTYPE_SIZE *
+                        (4 + 2 * td_.get_blockFormer() / td_.get_seq()) +
+                    LNG_WORKSPACE_RESERVED;
 
     return ge::GRAPH_SUCCESS;
 }

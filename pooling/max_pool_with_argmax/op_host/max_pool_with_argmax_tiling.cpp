@@ -17,8 +17,7 @@
 
 using Ops::NN::Optiling::TilingRegistry;
 using namespace AscendC;
-namespace optiling
-{
+namespace optiling {
 
 ge::graphStatus Tiling4MaxPoolWithArgmax(gert::TilingContext* context)
 {
@@ -43,4 +42,4 @@ IMPL_OP_OPTILING(MaxPoolWithArgmax)
     .Tiling(Tiling4MaxPoolWithArgmax)
     .TilingParse<MaxPoolWithArgmaxCompileInfo>(TilingPrepare4MaxPoolWithArgmax);
 
-}  // namespace optiling
+} // namespace optiling

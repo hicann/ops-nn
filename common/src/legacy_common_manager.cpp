@@ -113,8 +113,8 @@ bool LegacyCommonMgr::GetParentPath(std::string& parentPath, std::string& currSo
     }
 }
 
-bool LegacyCommonMgr::GetSoPathForBuiltin(
-    const std::string& parentPath, const std::string& currSoName, std::string& soPath) const
+bool LegacyCommonMgr::GetSoPathForBuiltin(const std::string& parentPath, const std::string& currSoName,
+                                          std::string& soPath) const
 {
     if (currSoName == OPHOST_BUILTIN_SO_NAME) {
         // ophost built-in场景两个so在相同路径下
@@ -140,8 +140,8 @@ bool LegacyCommonMgr::GetSoPathForBuiltin(
     return false;
 }
 
-bool LegacyCommonMgr::GetSoPathForCustomOp(
-    const std::string& parentPath, const std::string& currSoName, std::string& soPath) const
+bool LegacyCommonMgr::GetSoPathForCustomOp(const std::string& parentPath, const std::string& currSoName,
+                                           std::string& soPath) const
 {
     // 自定义算子场景需要先向上找到opp入口
     std::string oppPath;

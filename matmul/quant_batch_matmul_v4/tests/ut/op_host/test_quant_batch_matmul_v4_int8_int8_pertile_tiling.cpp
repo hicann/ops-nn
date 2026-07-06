@@ -56,7 +56,8 @@ static std::vector<QuantBatchMatmulV4TilingTestParam> GetParams()
     std::vector<QuantBatchMatmulV4TilingTestParam> params;
     const std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
     const std::string casePath(
-        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_int8_int8_pertile_tiling.csv");
+        rootPath +
+        "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_int8_int8_pertile_tiling.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
         std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -271,9 +272,8 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(10, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&x1Shape, &x2Shape, hasBias ? &biasShape : nullptr, &x1ScaleShape, &x2ScaleShape, nullptr,
-                           nullptr, nullptr, nullptr, nullptr})
+                      .InputShapes({&x1Shape, &x2Shape, hasBias ? &biasShape : nullptr, &x1ScaleShape, &x2ScaleShape,
+                                    nullptr, nullptr, nullptr, nullptr, nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -288,12 +288,11 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
                       .NodeInputTd(8, yOffsetDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(9, x2TableDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)},
-                           {"compute_type", Ops::NN::AnyValue::CreateFrom<bool>(groupSize)},
-                           {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)},
+                                  {"compute_type", Ops::NN::AnyValue::CreateFrom<bool>(groupSize)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)

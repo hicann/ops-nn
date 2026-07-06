@@ -24,10 +24,7 @@
 /**
  * Get the block size of unified buffer in bytes
  */
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
 namespace LayerNormGradV3 {
 using namespace AscendC;
@@ -70,70 +67,70 @@ protected:
 
 public:
     template <typename T>
-    __aicore__ inline static void CastToFp32From(
-        const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t count);
+    __aicore__ inline static void CastToFp32From(const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor,
+                                                 const int64_t count);
     template <typename T>
-    __aicore__ inline static void CastToFp32From(
-        const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize,
-        const int64_t colSize, const int64_t stride);
+    __aicore__ inline static void CastToFp32From(const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor,
+                                                 const int64_t rowSize, const int64_t colSize, const int64_t stride);
     template <typename T>
-    __aicore__ inline static void CopyIn(
-        const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-        const int64_t dstStride, const int64_t srcStride);
+    __aicore__ inline static void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                         const int64_t rowSize, const int64_t colSize, const int64_t dstStride,
+                                         const int64_t srcStride);
     template <typename T>
-    __aicore__ inline static void CopyIn(
-        const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize);
+    __aicore__ inline static void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                         const int64_t rowSize);
     template <typename T>
-    __aicore__ inline static void CopyOut(
-        const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize);
+    __aicore__ inline static void CopyOut(const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor,
+                                          const int64_t rowSize);
     template <typename T>
-    __aicore__ inline static void CopyOut(
-        const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-        const int64_t dstStride, const int64_t srcStride);
-    __aicore__ inline static void CopyUB2UB(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count);
+    __aicore__ inline static void CopyOut(const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor,
+                                          const int64_t rowSize, const int64_t colSize, const int64_t dstStride,
+                                          const int64_t srcStride);
+    __aicore__ inline static void CopyUB2UB(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                            const int64_t count);
     template <typename T>
-    __aicore__ inline static void CopyUB2UBWithCast(
-            const LocalTensor<T>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count);
-    __aicore__ inline static void VectorAdd(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-        const int64_t count);
-    __aicore__ inline static void VectorAdd(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-        const int64_t mSize, const int64_t nSize, const int64_t stride);
-    __aicore__ inline static void VectorMul(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-        const int64_t count);
-    __aicore__ inline static void NlastBroadcastMul(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-        const int64_t bSize, const int64_t aSize);
-    __aicore__ inline static void LastReduceSumSmallR(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t aSize,
-        const int64_t rSize, const int64_t stride);
-    __aicore__ inline static void LastReduceSum(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
-        const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride);
-    __aicore__ inline static void NlastReduceSum(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
-        const LocalTensor<float>& reduceSumTempTensor, const int64_t rSize, const int64_t aSize, const int64_t stride);
-    __aicore__ inline static void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-        const int64_t stride, const int64_t count);
-    __aicore__ inline static void Normalize(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const LocalTensor<float>& meanTensor,
-        const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize);
-    __aicore__ inline static void ComputeGammaCommon(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-        const LocalTensor<float>& rstdTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
-        const int64_t colSize, const int64_t outerStride);
+    __aicore__ inline static void CopyUB2UBWithCast(const LocalTensor<T>& dstTensor,
+                                                    const LocalTensor<float>& srcTensor, const int64_t count);
+    __aicore__ inline static void VectorAdd(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
+                                            const LocalTensor<float>& src1Tensor, const int64_t count);
+    __aicore__ inline static void VectorAdd(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
+                                            const LocalTensor<float>& src1Tensor, const int64_t mSize,
+                                            const int64_t nSize, const int64_t stride);
+    __aicore__ inline static void VectorMul(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
+                                            const LocalTensor<float>& src1Tensor, const int64_t count);
+    __aicore__ inline static void NlastBroadcastMul(const LocalTensor<float>& dstTensor,
+                                                    const LocalTensor<float>& src0Tensor,
+                                                    const LocalTensor<float>& src1Tensor, const int64_t bSize,
+                                                    const int64_t aSize);
+    __aicore__ inline static void LastReduceSumSmallR(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& srcTensor, const int64_t aSize,
+                                                      const int64_t rSize, const int64_t stride);
+    __aicore__ inline static void LastReduceSum(const LocalTensor<float>& dstTensor,
+                                                const LocalTensor<float>& srcTensor,
+                                                const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize,
+                                                const int64_t rSize, const int64_t stride);
+    __aicore__ inline static void NlastReduceSum(const LocalTensor<float>& dstTensor,
+                                                 const LocalTensor<float>& srcTensor,
+                                                 const LocalTensor<float>& reduceSumTempTensor, const int64_t rSize,
+                                                 const int64_t aSize, const int64_t stride);
+    __aicore__ inline static void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                              const int64_t cacheID, const int64_t stride, const int64_t count);
+    __aicore__ inline static void Normalize(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                            const LocalTensor<float>& meanTensor, const LocalTensor<float>& rstdTensor,
+                                            const int64_t rowSize, const int64_t colSize);
+    __aicore__ inline static void ComputeGammaCommon(const LocalTensor<float>& dstTensor,
+                                                     const LocalTensor<float>& dyTensor,
+                                                     const LocalTensor<float>& xTensor,
+                                                     const LocalTensor<float>& rstdTensor,
+                                                     const LocalTensor<float>& meanTensor, const int64_t rowSize,
+                                                     const int64_t colSize, const int64_t outerStride);
     template <typename T, typename TilingData>
     __aicore__ inline static void ProcessGammaBetaMainBlockCommon(
         const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
         const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain, LocalTensor<float>& rstd,
-        LocalTensor<float>& mean, TQue<QuePosition::VECIN, 1>& inQueueDy,
-        TQue<QuePosition::VECIN, 1>& inQueueX, TQue<QuePosition::VECIN, 1>& inQueueParam,
-        GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM, GlobalTensor<float>& rstdInTensorGM,
-        GlobalTensor<float>& meanInTensorGM);
+        LocalTensor<float>& mean, TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
+        TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
+        GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM);
     template <typename T, typename TilingData>
     __aicore__ inline static void ProcessGammaBetaFoldBlockCommon(
         const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
@@ -142,15 +139,16 @@ public:
         TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
         GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM);
     template <typename PD_GAMMA_TYPE, typename TilingData>
-    __aicore__ inline static void GammaBetaPrologueCommon(
-        const TilingData* td, TQue<QuePosition::VECOUT, 1>& outQueueSum, LocalTensor<PD_GAMMA_TYPE>& beta,
-        LocalTensor<PD_GAMMA_TYPE>& gamma);
+    __aicore__ inline static void GammaBetaPrologueCommon(const TilingData* td,
+                                                          TQue<QuePosition::VECOUT, 1>& outQueueSum,
+                                                          LocalTensor<PD_GAMMA_TYPE>& beta,
+                                                          LocalTensor<PD_GAMMA_TYPE>& gamma);
     template <typename PD_GAMMA_TYPE, typename TilingData>
     __aicore__ inline static void GammaBetaEpilogueCommon(
-        const TilingData* td, const int64_t offset, const int64_t extent,
-        TQue<QuePosition::VECOUT, 1>& outQueueSum, LocalTensor<float>& cacheTensor0,
-        LocalTensor<float>& cacheTensor1, LocalTensor<PD_GAMMA_TYPE>& beta, LocalTensor<PD_GAMMA_TYPE>& gamma,
-        GlobalTensor<PD_GAMMA_TYPE>& pdBetaOutTensorGM, GlobalTensor<PD_GAMMA_TYPE>& pdGammaOutTensorGM);
+        const TilingData* td, const int64_t offset, const int64_t extent, TQue<QuePosition::VECOUT, 1>& outQueueSum,
+        LocalTensor<float>& cacheTensor0, LocalTensor<float>& cacheTensor1, LocalTensor<PD_GAMMA_TYPE>& beta,
+        LocalTensor<PD_GAMMA_TYPE>& gamma, GlobalTensor<PD_GAMMA_TYPE>& pdBetaOutTensorGM,
+        GlobalTensor<PD_GAMMA_TYPE>& pdGammaOutTensorGM);
     template <typename TilingData>
     __aicore__ inline static void GammaBetaProcessSummationCommon(
         const TilingData* td, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor,
@@ -164,8 +162,8 @@ public:
         const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
         const int64_t colSize, const int64_t stride, const int64_t fullColSize);
     template <typename T>
-    __aicore__ inline static void StoreTensorForDtypeT(
-        __local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline static void StoreTensorForDtypeT(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
+                                                       AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
 
 protected:
     TPipe* pipe_;
@@ -193,17 +191,17 @@ __aicore__ inline int64_t LayerNormGradV3Base::GetCacheID(const int64_t idx)
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CastToFp32From(
-    const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t count)
+__aicore__ inline void LayerNormGradV3Base::CastToFp32From(const LocalTensor<float>& dstTensor,
+                                                           const LocalTensor<T>& srcTensor, const int64_t count)
 {
     // CastToFp32From T
     CastToFp32From<T>(dstTensor, srcTensor, CONST_ONE, count, CONST_ZERO);
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CastToFp32From(
-    const LocalTensor<float>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-    const int64_t stride)
+__aicore__ inline void LayerNormGradV3Base::CastToFp32From(const LocalTensor<float>& dstTensor,
+                                                           const LocalTensor<T>& srcTensor, const int64_t rowSize,
+                                                           const int64_t colSize, const int64_t stride)
 {
     // CastToFp32From T
     uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
@@ -247,8 +245,8 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(
                         DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                             b16Reg, (__local_mem__ T*)src + i * outerLoopSrcStride + j * innerLoopStride);
                         Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                        DataCopy(
-                            (__local_mem__ float*)dst + i * outerLoopDstStride + j * innerLoopStride, fp32Reg, pMask);
+                        DataCopy((__local_mem__ float*)dst + i * outerLoopDstStride + j * innerLoopStride, fp32Reg,
+                                 pMask);
                     }
                 }
             }
@@ -257,9 +255,9 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CopyIn(
-    const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-    const int64_t dstStride, const int64_t srcStride)
+__aicore__ inline void LayerNormGradV3Base::CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                                   const int64_t rowSize, const int64_t colSize,
+                                                   const int64_t dstStride, const int64_t srcStride)
 {
     // CopyIn
     DataCopyExtParams params;
@@ -275,8 +273,8 @@ __aicore__ inline void LayerNormGradV3Base::CopyIn(
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CopyIn(
-    const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize)
+__aicore__ inline void LayerNormGradV3Base::CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                                   const int64_t rowSize)
 {
     // CopyIn
     DataCopyExtParams params;
@@ -288,8 +286,8 @@ __aicore__ inline void LayerNormGradV3Base::CopyIn(
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CopyOut(
-    const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize)
+__aicore__ inline void LayerNormGradV3Base::CopyOut(const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor,
+                                                    const int64_t rowSize)
 {
     // CopyOut
     DataCopyExtParams params;
@@ -299,9 +297,9 @@ __aicore__ inline void LayerNormGradV3Base::CopyOut(
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::CopyOut(
-    const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-    const int64_t dstStride, const int64_t srcStride)
+__aicore__ inline void LayerNormGradV3Base::CopyOut(const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor,
+                                                    const int64_t rowSize, const int64_t colSize,
+                                                    const int64_t dstStride, const int64_t srcStride)
 {
     // CopyOut
     DataCopyExtParams params;
@@ -314,13 +312,12 @@ __aicore__ inline void LayerNormGradV3Base::CopyOut(
     DataCopyPad(dstTensor, srcTensor, params);
 }
 
-__aicore__ inline void LayerNormGradV3Base::CopyUB2UB(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count)
+__aicore__ inline void LayerNormGradV3Base::CopyUB2UB(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& srcTensor, const int64_t count)
 {
     // CopyUB2UB
-    DataCopy(
-        dstTensor, srcTensor,
-        Aligned(static_cast<int64_t>(count), static_cast<int64_t>(GetUbBlockSize() / sizeof(float))));
+    DataCopy(dstTensor, srcTensor,
+             Aligned(static_cast<int64_t>(count), static_cast<int64_t>(GetUbBlockSize() / sizeof(float))));
 }
 
 template <typename T>
@@ -353,9 +350,9 @@ __aicore__ inline void LayerNormGradV3Base::CopyUB2UBWithCast(const LocalTensor<
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::VectorAdd(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-    const int64_t count)
+__aicore__ inline void LayerNormGradV3Base::VectorAdd(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& src0Tensor,
+                                                      const LocalTensor<float>& src1Tensor, const int64_t count)
 {
     // VectorAdd
     if (count <= 0) {
@@ -381,9 +378,10 @@ __aicore__ inline void LayerNormGradV3Base::VectorAdd(
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::VectorAdd(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-    const int64_t mSize, const int64_t nSize, const int64_t stride)
+__aicore__ inline void LayerNormGradV3Base::VectorAdd(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& src0Tensor,
+                                                      const LocalTensor<float>& src1Tensor, const int64_t mSize,
+                                                      const int64_t nSize, const int64_t stride)
 {
     // VectorAdd
     uint16_t outerLoopTimes = CeilDiv(static_cast<int64_t>(nSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
@@ -431,9 +429,9 @@ __aicore__ inline void LayerNormGradV3Base::VectorAdd(
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::VectorMul(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-    const int64_t count)
+__aicore__ inline void LayerNormGradV3Base::VectorMul(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& src0Tensor,
+                                                      const LocalTensor<float>& src1Tensor, const int64_t count)
 {
     // VectorMul
     if (count <= 0) {
@@ -459,9 +457,10 @@ __aicore__ inline void LayerNormGradV3Base::VectorMul(
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::NlastBroadcastMul(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-    const int64_t bSize, const int64_t aSize)
+__aicore__ inline void LayerNormGradV3Base::NlastBroadcastMul(const LocalTensor<float>& dstTensor,
+                                                              const LocalTensor<float>& src0Tensor,
+                                                              const LocalTensor<float>& src1Tensor, const int64_t bSize,
+                                                              const int64_t aSize)
 {
     // NlastBroadcastMul
     if (bSize <= 0) {
@@ -513,9 +512,10 @@ __aicore__ inline void LayerNormGradV3Base::NlastBroadcastMul(
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::LastReduceSumSmallR(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t aSize, const int64_t rSize,
-    const int64_t stride)
+__aicore__ inline void LayerNormGradV3Base::LastReduceSumSmallR(const LocalTensor<float>& dstTensor,
+                                                                const LocalTensor<float>& srcTensor,
+                                                                const int64_t aSize, const int64_t rSize,
+                                                                const int64_t stride)
 {
     // LastReduceSumSmallR
     if (aSize <= 0) {
@@ -555,8 +555,8 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSumSmallR(
             AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
             AscendC::MicroAPI::UnalignReg UReg;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 DataCopy(aReg, (__local_mem__ float*)src0 + i * stride);
                 DataCopy(bReg, (__local_mem__ float*)src1 + i * stride);
@@ -570,9 +570,11 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSumSmallR(
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::LastReduceSum(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
-    const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride)
+__aicore__ inline void LayerNormGradV3Base::LastReduceSum(const LocalTensor<float>& dstTensor,
+                                                          const LocalTensor<float>& srcTensor,
+                                                          const LocalTensor<float>& reduceSumTempTensor,
+                                                          const int64_t aSize, const int64_t rSize,
+                                                          const int64_t stride)
 {
     // LastReduceSum
     if (aSize <= 0) {
@@ -597,8 +599,8 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSum(
     uint16_t unFoldLoopTimes = foldPoint + foldPoint - ceilVLCount;
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
-    uint32_t outerLoopDstStride =
-        Aligned(static_cast<int64_t>(foldPoint), static_cast<int64_t>(GetUbBlockSize() / sizeof(float)));
+    uint32_t outerLoopDstStride = Aligned(static_cast<int64_t>(foldPoint),
+                                          static_cast<int64_t>(GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;
@@ -651,32 +653,32 @@ __aicore__ inline void LayerNormGradV3Base::LastReduceSum(
 
 template <uint32_t RSize, int32_t TailCount = -1, int32_t Index = 0, int32_t Depth = 1>
 struct NlastDichotomyAdd {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         __local_mem__ float* srcAOffset = srcA + stride * CONST_TWO;
         __local_mem__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
-            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(
-                aReg, srcA, srcAOffset, pMask, stride * CONST_TWO);
+            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(aReg, srcA, srcAOffset, pMask,
+                                                                          stride * CONST_TWO);
             NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(bReg, srcB, srcBOffset, pMask, stride * CONST_TWO);
         }
         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         __local_mem__ float* srcAOffset = srcA + stride * CONST_TWO;
         __local_mem__ float* srcBOffset = srcB + stride * CONST_TWO;
         if constexpr (TailCount <= 0) {
-            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(
-                aReg, srcA, srcAOffset, pMask, stride * CONST_TWO, offset);
-            NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(
-                bReg, srcB, srcBOffset, pMask, stride * CONST_TWO, offset);
+            NlastDichotomyAdd<(RSize + 1) / CONST_TWO>::LoadAndAccumulate(aReg, srcA, srcAOffset, pMask,
+                                                                          stride * CONST_TWO, offset);
+            NlastDichotomyAdd<RSize / CONST_TWO>::LoadAndAccumulate(bReg, srcB, srcBOffset, pMask, stride * CONST_TWO,
+                                                                    offset);
         } else {
             NlastDichotomyAdd<(RSize + 1) / CONST_TWO, TailCount, Index, Depth * CONST_TWO>::LoadAndAccumulate(
                 aReg, srcA, srcAOffset, pMask, stride * CONST_TWO, offset);
@@ -689,18 +691,18 @@ struct NlastDichotomyAdd {
 
 template <int32_t TailCount, int32_t Index, int32_t Depth>
 struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         DataCopy(aReg, (__local_mem__ float*)srcA);
         DataCopy(bReg, (__local_mem__ float*)srcB);
         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
     {
         if constexpr (TailCount <= 0) {
             AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
@@ -740,18 +742,18 @@ struct NlastDichotomyAdd<CONST_TWO, TailCount, Index, Depth> {
 
 template <>
 struct NlastDichotomyAdd<CONST_TWO> {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         DataCopy(aReg, (__local_mem__ float*)srcA);
         DataCopy(bReg, (__local_mem__ float*)srcB);
         Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(acc, aReg, bReg, pMask);
     }
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride, uint32_t offset)
     {
         AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
         DataCopy(aReg, (__local_mem__ float*)srcA);
@@ -766,17 +768,19 @@ struct NlastDichotomyAdd<CONST_TWO> {
 
 template <>
 struct NlastDichotomyAdd<1> {
-    __aicore__ static inline void LoadAndAccumulate(
-        AscendC::MicroAPI::RegTensor<float>& acc, __local_mem__ float*& srcA, __local_mem__ float*& srcB,
-        AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
+    __aicore__ static inline void LoadAndAccumulate(AscendC::MicroAPI::RegTensor<float>& acc,
+                                                    __local_mem__ float*& srcA, __local_mem__ float*& srcB,
+                                                    AscendC::MicroAPI::MaskReg& pMask, uint32_t stride)
     {
         DataCopy(acc, (__local_mem__ float*)srcA);
     }
 };
 
-__aicore__ inline void LayerNormGradV3Base::NlastReduceSum(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
-    const LocalTensor<float>& reduceSumTempTensor, const int64_t rSize, const int64_t aSize, const int64_t stride)
+__aicore__ inline void LayerNormGradV3Base::NlastReduceSum(const LocalTensor<float>& dstTensor,
+                                                           const LocalTensor<float>& srcTensor,
+                                                           const LocalTensor<float>& reduceSumTempTensor,
+                                                           const int64_t rSize, const int64_t aSize,
+                                                           const int64_t stride)
 {
     // AscendC API
     uint32_t srcShape[2] = {static_cast<uint32_t>(rSize), static_cast<uint32_t>(stride)};
@@ -784,9 +788,9 @@ __aicore__ inline void LayerNormGradV3Base::NlastReduceSum(
     AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(dstTensor, srcTensor, srcShape, srcInnerPad);
 }
 
-__aicore__ inline void LayerNormGradV3Base::UpdateCache(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-    const int64_t stride, const int64_t count)
+__aicore__ inline void LayerNormGradV3Base::UpdateCache(const LocalTensor<float>& dstTensor,
+                                                        const LocalTensor<float>& srcTensor, const int64_t cacheID,
+                                                        const int64_t stride, const int64_t count)
 {
     // UpdateCache
     uint16_t outerLoopTimes = CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
@@ -851,14 +855,16 @@ __aicore__ inline void LayerNormGradV3Base::UpdateCache(
     }
 }
 
-__aicore__ inline void LayerNormGradV3Base::Normalize(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const LocalTensor<float>& meanTensor,
-    const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize)
+__aicore__ inline void LayerNormGradV3Base::Normalize(const LocalTensor<float>& dstTensor,
+                                                      const LocalTensor<float>& srcTensor,
+                                                      const LocalTensor<float>& meanTensor,
+                                                      const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+                                                      const int64_t colSize)
 {
     // Normalize
     uint16_t outerLoopTimes = rowSize;
-    uint16_t innerLoopTimes =
-        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
     uint32_t outerLoopStride = colSize;
     uint32_t innerLoopStride = VL_FP32;
     if (innerLoopTimes == 1) {
@@ -980,9 +986,9 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
 
 template <typename T, typename TilingData>
 __aicore__ inline void LayerNormGradV3Base::ProcessGammaBetaMainBlockCommon(
-    const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
-    const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain, LocalTensor<float>& rstd,
-    LocalTensor<float>& mean, TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
+    const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor,
+    LocalTensor<float>& dyMain, LocalTensor<float>& xMain, LocalTensor<float>& rstd, LocalTensor<float>& mean,
+    TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
     TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
     GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM)
 {
@@ -1036,14 +1042,13 @@ __aicore__ inline void LayerNormGradV3Base::ProcessGammaBetaMainBlockCommon(
 
 template <typename T, typename TilingData>
 __aicore__ inline void LayerNormGradV3Base::ProcessGammaBetaFoldBlockCommon(
-    const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
-    const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain,
-    TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
-    TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
-    GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM)
+    const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor,
+    LocalTensor<float>& dyMain, LocalTensor<float>& xMain, TQue<QuePosition::VECIN, 1>& inQueueDy,
+    TQue<QuePosition::VECIN, 1>& inQueueX, TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM,
+    GlobalTensor<T>& xInTensorGM, GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM)
 {
-    int64_t offset =
-        ni * td->gammaBetaNfactor + (basicBlockIdx + td->gammaBetaBasicBlockLoop) * td->gammaBetaMfactor * td->col;
+    int64_t offset = ni * td->gammaBetaNfactor +
+                     (basicBlockIdx + td->gammaBetaBasicBlockLoop) * td->gammaBetaMfactor * td->col;
     LocalTensor<float> dyFold = inQueueDy.template AllocTensor<float>();
     if constexpr (IsSameType<T, float>::value) {
         CopyIn(dyFold, dyInTensorGM[offset], mfactor, nfactor, td->gammaBetaNfactor, td->col);
@@ -1098,9 +1103,10 @@ __aicore__ inline void LayerNormGradV3Base::ProcessGammaBetaFoldBlockCommon(
 }
 
 template <typename PD_GAMMA_TYPE, typename TilingData>
-__aicore__ inline void LayerNormGradV3Base::GammaBetaPrologueCommon(
-    const TilingData* td, TQue<QuePosition::VECOUT, 1>& outQueueSum, LocalTensor<PD_GAMMA_TYPE>& beta,
-    LocalTensor<PD_GAMMA_TYPE>& gamma)
+__aicore__ inline void LayerNormGradV3Base::GammaBetaPrologueCommon(const TilingData* td,
+                                                                    TQue<QuePosition::VECOUT, 1>& outQueueSum,
+                                                                    LocalTensor<PD_GAMMA_TYPE>& beta,
+                                                                    LocalTensor<PD_GAMMA_TYPE>& gamma)
 {
     if (td->pdbetaIsRequire) {
         beta = outQueueSum.template AllocTensor<PD_GAMMA_TYPE>();
@@ -1119,8 +1125,7 @@ __aicore__ inline void LayerNormGradV3Base::GammaBetaEpilogueCommon(
     GlobalTensor<PD_GAMMA_TYPE>& pdGammaOutTensorGM)
 {
     if (td->pdbetaIsRequire) {
-        CopyUB2UBWithCast<PD_GAMMA_TYPE>(beta, cacheTensor0[td->gammaBetaResultCacheID * td->gammaBetaNfactor],
-                                         extent);
+        CopyUB2UBWithCast<PD_GAMMA_TYPE>(beta, cacheTensor0[td->gammaBetaResultCacheID * td->gammaBetaNfactor], extent);
         outQueueSum.EnQue(beta);
         beta = outQueueSum.template DeQue<PD_GAMMA_TYPE>();
         CopyOut<PD_GAMMA_TYPE>(pdBetaOutTensorGM[offset], beta, extent);
@@ -1163,14 +1168,14 @@ __aicore__ inline void LayerNormGradV3Base::GammaBetaProcessSummationCommon(
 template <typename T>
 __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
     const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-    const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor,
-    const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
-    const int64_t colSize, const int64_t stride, const int64_t fullColSize)
+    const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
+    const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize, const int64_t stride,
+    const int64_t fullColSize)
 {
     constexpr static uint32_t VL = GetVRegSize() / sizeof(float);
     uint16_t outerLoopTimes = rowSize;
-    uint16_t innerLoopTimes =
-        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colSize * sizeof(float)),
+                                      static_cast<int64_t>(GetVRegSize()));
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL;
     float floatN = static_cast<float>(fullColSize);
@@ -1254,8 +1259,9 @@ __aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
 }
 
 template <typename T>
-__aicore__ inline void LayerNormGradV3Base::StoreTensorForDtypeT(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
-                                               AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void LayerNormGradV3Base::StoreTensorForDtypeT(__local_mem__ T* dst,
+                                                                 AscendC::MicroAPI::RegTensor<float>& src,
+                                                                 AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);

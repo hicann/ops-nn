@@ -26,41 +26,42 @@ public:
 protected:
     __aicore__ inline void ProcessInputMM();
     __aicore__ inline void ProcessHiddenMM(int64_t tIdx);
-    __aicore__ inline void ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<T> &mixGm);
-    __aicore__ inline void ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<T> &mixGm);
+    __aicore__ inline void ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<T>& mixGm);
+    __aicore__ inline void ProcessVectorInitHC(int64_t mIdx, int64_t nIdx, AscendC::GlobalTensor<T>& mixGm);
     __aicore__ inline void ProcessVector(int64_t tIdx);
     __aicore__ inline void ProcessInitalT();
-    __aicore__ inline void CopyGate(
-        AscendC::LocalTensor<T> &ub, AscendC::GlobalTensor<T> &gm, int64_t mIdx, int64_t nIdx, int64_t gateOffset);
-    __aicore__ inline void CopyWithSigmoid(AscendC::LocalTensor<T> &dstUb, AscendC::GlobalTensor<T> &mixGm,
-        int64_t mIdx, int64_t nIdx, int64_t gateOffset);
-    __aicore__ inline void CopyWithSigmoidAddBias(AscendC::LocalTensor<float> &dstUb,
-        AscendC::GlobalTensor<float> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset);
-    __aicore__ inline void CopyWithTanh(AscendC::LocalTensor<T> &dstUb, AscendC::GlobalTensor<T> &mixGm, int64_t mIdx,
-        int64_t nIdx, int64_t gateOffset);
-    __aicore__ inline void CopyWithMul(AscendC::LocalTensor<T> &dstUb, AscendC::LocalTensor<T> &other,
-        AscendC::GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx);
-    __aicore__ inline void CopyInHC(
-        AscendC::LocalTensor<T> &dstUb, AscendC::GlobalTensor<T> &mixGm, int64_t tIdx, int64_t mIdx, int64_t nIdx);
-    __aicore__ inline void CopyInSeq(
-        AscendC::LocalTensor<T> &dstUb, AscendC::GlobalTensor<T> &mixGm, int64_t tIdx, int64_t mIdx, int64_t nIdx);
-    __aicore__ inline void CopyOutput(
-        AscendC::GlobalTensor<T> &gm, AscendC::LocalTensor<T> &ub, int64_t tIdx, int64_t mIdx, int64_t nIdx);
-    __aicore__ inline void CopyWithTanhHighPrecision(
-        LocalTensor<T> &dstUb, GlobalTensor<T> &mixGm, int64_t mIdx, int64_t nIdx, int64_t gateOffset,
-        LocalTensor<T> &temp1, LocalTensor<T> &temp2, int64_t calcSizeAlign);
+    __aicore__ inline void CopyGate(AscendC::LocalTensor<T>& ub, AscendC::GlobalTensor<T>& gm, int64_t mIdx,
+                                    int64_t nIdx, int64_t gateOffset);
+    __aicore__ inline void CopyWithSigmoid(AscendC::LocalTensor<T>& dstUb, AscendC::GlobalTensor<T>& mixGm,
+                                           int64_t mIdx, int64_t nIdx, int64_t gateOffset);
+    __aicore__ inline void CopyWithSigmoidAddBias(AscendC::LocalTensor<float>& dstUb,
+                                                  AscendC::GlobalTensor<float>& mixGm, int64_t mIdx, int64_t nIdx,
+                                                  int64_t gateOffset);
+    __aicore__ inline void CopyWithTanh(AscendC::LocalTensor<T>& dstUb, AscendC::GlobalTensor<T>& mixGm, int64_t mIdx,
+                                        int64_t nIdx, int64_t gateOffset);
+    __aicore__ inline void CopyWithMul(AscendC::LocalTensor<T>& dstUb, AscendC::LocalTensor<T>& other,
+                                       AscendC::GlobalTensor<T>& mixGm, int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void CopyInHC(AscendC::LocalTensor<T>& dstUb, AscendC::GlobalTensor<T>& mixGm, int64_t tIdx,
+                                    int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void CopyInSeq(AscendC::LocalTensor<T>& dstUb, AscendC::GlobalTensor<T>& mixGm, int64_t tIdx,
+                                     int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void CopyOutput(AscendC::GlobalTensor<T>& gm, AscendC::LocalTensor<T>& ub, int64_t tIdx,
+                                      int64_t mIdx, int64_t nIdx);
+    __aicore__ inline void CopyWithTanhHighPrecision(LocalTensor<T>& dstUb, GlobalTensor<T>& mixGm, int64_t mIdx,
+                                                     int64_t nIdx, int64_t gateOffset, LocalTensor<T>& temp1,
+                                                     LocalTensor<T>& temp2, int64_t calcSizeAlign);
 
 public:
     // describe Matmul input/output dtype&format
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>>
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>>
         inputMM;
 
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>>
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<AscendC::TPosition::VECCALC, CubeFormat::ND, float>>
         hiddenMM;
 };
 

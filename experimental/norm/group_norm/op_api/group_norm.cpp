@@ -23,22 +23,22 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(GroupNorm);
 
-static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormAICore(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t numGroups, float eps, aclTensor* y,
-    aclTensor* mean, aclTensor* rstd, aclOpExecutor* executor)
+static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormAICore(const aclTensor* x, const aclTensor* gamma,
+                                                                      const aclTensor* beta, int64_t numGroups,
+                                                                      float eps, aclTensor* y, aclTensor* mean,
+                                                                      aclTensor* rstd, aclOpExecutor* executor)
 {
     L0_DFX(GroupNormAICore, x, gamma, beta, numGroups, eps, y, mean, rstd);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        GroupNorm, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, rstd), OP_ATTR(numGroups, eps));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        ret != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr, nullptr),
-        "GroupNorm add to aicore launch list failed.");
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(GroupNorm, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, rstd),
+                                           OP_ATTR(numGroups, eps));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr, nullptr),
+                                         "GroupNorm add to aicore launch list failed.");
     return std::tie(y, mean, rstd);
 }
 
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t n, int64_t numGroups, float eps,
-    aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(const aclTensor* x, const aclTensor* gamma,
+                                                               const aclTensor* beta, int64_t n, int64_t numGroups,
+                                                               float eps, aclOpExecutor* executor)
 {
     auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType(), x->GetViewFormat());
     auto mean = executor->AllocTensor(op::Shape({n, numGroups}), x->GetDataType(), op::Format::FORMAT_ND);

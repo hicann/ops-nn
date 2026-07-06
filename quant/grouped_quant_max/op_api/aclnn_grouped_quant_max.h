@@ -21,12 +21,13 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* groupList, const char* roundMode, int64_t dstType, const aclTensor* y,
-    const aclTensor* amax, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(const aclTensor* x, const aclTensor* scale,
+                                                           const aclTensor* groupList, const char* roundMode,
+                                                           int64_t dstType, const aclTensor* y, const aclTensor* amax,
+                                                           uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus
-aclnnGroupedQuantMax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGroupedQuantMax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream);
 
 #ifdef __cplusplus
 }

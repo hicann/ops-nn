@@ -38,10 +38,7 @@ public:
 
     __aicore__ inline void Init(Params const& params, int64_t calcM, int64_t calcN, int64_t n) {}
     __aicore__ inline void InitBuffers() {}
-    __aicore__ inline int64_t GetUbSizeOneM(int64_t ubCalcN)
-    {
-        return 0;
-    }
+    __aicore__ inline int64_t GetUbSizeOneM(int64_t ubCalcN) { return 0; }
     __aicore__ inline void Run(AscendC::LocalTensor<DataTypeOut>& dstLocal, AscendC::LocalTensor<DataTypeIn>& srcLocal,
                                int64_t curAivM, int64_t curAivN, int64_t mIdx, int64_t nIdx)
     {
@@ -59,4 +56,3 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

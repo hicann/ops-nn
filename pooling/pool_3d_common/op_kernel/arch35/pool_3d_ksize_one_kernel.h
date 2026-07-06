@@ -21,13 +21,11 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 using namespace AscendC;
 
 template <typename T, int32_t OP_TYPE>
-class Pool3DKsizeOneKernel
-{
+class Pool3DKsizeOneKernel {
 public:
     __aicore__ inline Pool3DKsizeOneKernel(TPipe* pipe, const Pool3DOneKsizeTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -35,14 +33,11 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CopyInMultiRows(int64_t offset, const ShapeInfo &inputInfo);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, const ShapeInfo& inputInfo);
     __aicore__ inline void CopyMaxOut(int64_t offset, uint32_t blockLen);
     __aicore__ inline void ComputeAvg(uint32_t datalen);
     __aicore__ inline void Compute(uint32_t datalen);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -83,26 +78,32 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::Process()
         int64_t dIdx = tmpIdx / (tilingData_->hLoop * tilingData_->wLoop);
         int64_t hIdx = (tmpIdx - dIdx * tilingData_->hLoop * tilingData_->wLoop) / tilingData_->wLoop;
         int64_t wIdx = tmpIdx % tilingData_->wLoop;
-        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                   : tilingData_->ubFactorN;
-        int64_t depthStart = dIdx * tilingData_->sD * tilingData_->outUbFactorD; 
+        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                      tilingData_->ubFactorN;
+        int64_t depthStart = dIdx * tilingData_->sD * tilingData_->outUbFactorD;
         int64_t rowStart = hIdx * tilingData_->sH * tilingData_->outUbFactorH;
         int64_t colStart = wIdx * tilingData_->sW * tilingData_->outUbFactorW;
 
-        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim +
-                            depthStart * tilingData_->hInDim * tilingData_->wInDim + rowStart * tilingData_->wInDim + colStart;
-        int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim +
-                            + dIdx * tilingData_->outUbFactorD  * tilingData_->hOutDim * tilingData_->wOutDim 
-                            + hIdx * tilingData_->outUbFactorH * tilingData_->wOutDim + wIdx * tilingData_->outUbFactorW;
+        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim *
+                                tilingData_->wInDim +
+                            depthStart * tilingData_->hInDim * tilingData_->wInDim + rowStart * tilingData_->wInDim +
+                            colStart;
+        int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim *
+                                tilingData_->wOutDim +
+                            +dIdx * tilingData_->outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim +
+                            hIdx * tilingData_->outUbFactorH * tilingData_->wOutDim + wIdx * tilingData_->outUbFactorW;
         srcOffset *= tilingData_->channel;
         dstOffset *= tilingData_->channel;
- 
-        uint32_t depths = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD : tilingData_->outUbFactorD;                                           
-        uint32_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * tilingData_->outUbFactorH : tilingData_->outUbFactorH;
-        uint32_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * tilingData_->outUbFactorW : tilingData_->outUbFactorW;
+
+        uint32_t depths = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD :
+                                                           tilingData_->outUbFactorD;
+        uint32_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * tilingData_->outUbFactorH :
+                                                         tilingData_->outUbFactorH;
+        uint32_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * tilingData_->outUbFactorW :
+                                                         tilingData_->outUbFactorW;
 
         ShapeInfo tensorInfo = {n, depths, rows, cols, static_cast<uint32_t>(tilingData_->channel)};
-        uint32_t totalNum = n*depths*rows*cols*tilingData_->channel;
+        uint32_t totalNum = n * depths * rows * cols * tilingData_->channel;
         CopyInMultiRows(srcOffset, tensorInfo);
         Compute(totalNum);
         CopyMaxOut(dstOffset, totalNum);
@@ -110,10 +111,10 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::Process()
 }
 
 template <typename T, int32_t OP_TYPE>
-__aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t offset, const ShapeInfo &inputInfo)
+__aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t offset, const ShapeInfo& inputInfo)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    if (tilingData_->dataFormat == 0) {    
+    if (tilingData_->dataFormat == 0) {
         MultiCopyLoopInfo<Pool3D::FOUR> loopInfo;
         loopInfo.loopSize[ZERO] = inputInfo.width;
         loopInfo.loopSize[ONE] = inputInfo.height;
@@ -126,7 +127,7 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
         loopInfo.loopDstStride[ZERO] = 1;
         loopInfo.loopDstStride[ONE] = inputInfo.width;
         loopInfo.loopDstStride[TWO] = inputInfo.width * inputInfo.height;
-        loopInfo.loopDstStride[THREE] = inputInfo.width * inputInfo.height * inputInfo.depth; 
+        loopInfo.loopDstStride[THREE] = inputInfo.width * inputInfo.height * inputInfo.depth;
         static constexpr MultiCopyConfig config = {false};
         MultiCopyParams<T, Pool3D::FOUR> paramsMain = {loopInfo};
         DataCopy<T, Pool3D::FOUR, config>(xLocal, xGm_[offset], paramsMain);
@@ -140,13 +141,15 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
         loopInfo.loopSrcStride[ZERO] = 1;
         loopInfo.loopSrcStride[ONE] = tilingData_->sW * tilingData_->channel;
         loopInfo.loopSrcStride[TWO] = tilingData_->sH * tilingData_->wInDim * tilingData_->channel;
-        loopInfo.loopSrcStride[THREE] = tilingData_->sD * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel;
-        loopInfo.loopSrcStride[FOUR] = tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * tilingData_->channel;
+        loopInfo.loopSrcStride[THREE] = tilingData_->sD * tilingData_->hInDim * tilingData_->wInDim *
+                                        tilingData_->channel;
+        loopInfo.loopSrcStride[FOUR] = tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim *
+                                       tilingData_->channel;
         loopInfo.loopDstStride[ZERO] = 1;
         loopInfo.loopDstStride[ONE] = inputInfo.channel;
         loopInfo.loopDstStride[TWO] = inputInfo.width * inputInfo.channel;
-        loopInfo.loopDstStride[THREE] = inputInfo.width * inputInfo.height * inputInfo.channel; 
-        loopInfo.loopDstStride[FOUR] = inputInfo.depth * inputInfo.height * inputInfo.width * inputInfo.channel; 
+        loopInfo.loopDstStride[THREE] = inputInfo.width * inputInfo.height * inputInfo.channel;
+        loopInfo.loopDstStride[FOUR] = inputInfo.depth * inputInfo.height * inputInfo.width * inputInfo.channel;
         static constexpr MultiCopyConfig config = {false};
         MultiCopyParams<T, Pool3D::FIVE> paramsMain = {loopInfo};
         DataCopy<T, Pool3D::FIVE, config>(xLocal, xGm_[offset], paramsMain);
@@ -174,10 +177,10 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::Compute(uint32_t datale
         ComputeAvg(datalen);
     } else {
         LocalTensor<T> maxOutLocal = outputQue_.AllocTensor<T>();
-        LocalTensor<T> xLocal = inputQue_.DeQue<T>();   
+        LocalTensor<T> xLocal = inputQue_.DeQue<T>();
         AscendC::Copy(maxOutLocal, xLocal, datalen);
         inputQue_.FreeTensor<T>(xLocal);
-        outputQue_.EnQue<T>(maxOutLocal); 
+        outputQue_.EnQue<T>(maxOutLocal);
     }
 }
 
@@ -194,7 +197,7 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::ComputeAvg(uint32_t dat
     uint16_t loopNum = static_cast<uint16_t>((datalen + repeatElm - 1) / repeatElm);
     float32_t divisor = static_cast<float32_t>(tilingData_->divisor);
     __VEC_SCOPE__
-    {   
+    {
         MicroAPI::RegTensor<T> src;
         MicroAPI::RegTensor<float32_t> div;
         MicroAPI::RegTensor<float32_t> tmp;
@@ -206,22 +209,22 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::ComputeAvg(uint32_t dat
             MicroAPI::AddrReg dstOffset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
             MicroAPI::MaskReg pMask = MicroAPI::UpdateMask<float32_t>(sreg);
 
-            if constexpr(std::is_same<T, float32_t>::value) {
-                MicroAPI::DataCopy(src, srcAddr, srcOffset);  
-                MicroAPI::Div(res, src, div, pMask); 
+            if constexpr (std::is_same<T, float32_t>::value) {
+                MicroAPI::DataCopy(src, srcAddr, srcOffset);
+                MicroAPI::Div(res, src, div, pMask);
                 MicroAPI::DataCopy(dstAddr, res, dstOffset, pMask);
             } else {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(src, srcAddr, srcOffset);  
+                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(src, srcAddr, srcOffset);
                 MicroAPI::Cast<float32_t, T, Pool3D::castTraitB16ToB32>(tmp, src, pMask);
-                MicroAPI::Div(tmp, tmp, div, pMask); 
+                MicroAPI::Div(tmp, tmp, div, pMask);
                 MicroAPI::Cast<T, float32_t, Pool3D::castTraitB32ToB16>(res, tmp, pMask);
                 MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr, res, dstOffset, pMask);
             }
         }
-    } 
+    }
     inputQue_.FreeTensor<T>(xLocal);
     outputQue_.EnQue<T>(maxOutLocal);
 }
 
-}  // namespace Pool3D
-#endif  // POOL_3D_KSIZE_ONE_KERNEL_H_
+} // namespace Pool3D
+#endif // POOL_3D_KSIZE_ONE_KERNEL_H_

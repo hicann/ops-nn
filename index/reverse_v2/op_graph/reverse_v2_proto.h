@@ -39,13 +39,11 @@ namespace ge {
 * Compatible with the TensorFlow operator ReverseV2.
 */
 REG_OP(ReverseV2)
-    .INPUT(x, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32,
-                          DT_INT64, DT_BOOL, DT_FLOAT16, DT_FLOAT, DT_DOUBLE,
-                          DT_COMPLEX64, DT_COMPLEX128, DT_STRING, DT_BF16}))
+    .INPUT(x, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_BOOL, DT_FLOAT16, DT_FLOAT,
+                          DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128, DT_STRING, DT_BF16}))
     .INPUT(axis, TensorType({DT_INT32, DT_INT64}))
-    .OUTPUT(y, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32,
-                           DT_INT64, DT_BOOL, DT_FLOAT16, DT_FLOAT, DT_DOUBLE,
-                           DT_COMPLEX64, DT_COMPLEX128, DT_STRING, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_BOOL, DT_FLOAT16, DT_FLOAT,
+                           DT_DOUBLE, DT_COMPLEX64, DT_COMPLEX128, DT_STRING, DT_BF16}))
     .OP_END_FACTORY_REG(ReverseV2)
 } // namespace ge
 

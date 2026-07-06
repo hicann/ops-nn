@@ -47,8 +47,7 @@ class MaxPoolWithArgmaxV3BigKernelTiling : public MaxPoolWithArgmaxV3BaseTiling 
 public:
     explicit MaxPoolWithArgmaxV3BigKernelTiling(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context)
     {}
-    ~MaxPoolWithArgmaxV3BigKernelTiling() override
-    {}
+    ~MaxPoolWithArgmaxV3BigKernelTiling() override {}
 
 private:
     void DoUBTiling();

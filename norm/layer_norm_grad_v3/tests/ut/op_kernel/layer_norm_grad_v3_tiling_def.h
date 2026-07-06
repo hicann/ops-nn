@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #ifndef _LAYER_NORM_GRAD_V3_TILING_H_
@@ -42,7 +43,7 @@ struct LayerNormGradV3TilingDataSingleRead {
 struct LayerNormGradV3TilingDataTranspose {
     uint64_t row = 0;                         // 输入tensor的行
     uint64_t col = 0;                         // 输入tensor的列，即reduce的轴
-    uint64_t numBlocks = 0;                    // 实际使用的core数量
+    uint64_t numBlocks = 0;                   // 实际使用的core数量
     uint64_t blockFormer = 0;                 // 整核处理的row大小
     uint64_t blockTail = 0;                   // 尾核处理的row大小
     uint64_t ubFormer = 0;                    // ub整循环处理的row大小
@@ -124,8 +125,7 @@ struct LayerNormGradV3TilingDataRecompute {
 #pragma pack()
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataSingleRead* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataSingleRead* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataSingleRead) / 4; i++)
@@ -139,8 +139,7 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataSingleRead*
 #endif
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataTranspose* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataTranspose* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataTranspose) / 4; i++)
@@ -154,8 +153,7 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataTranspose* 
 #endif
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataCommon* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataCommon* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataCommon) / 4; i++)
@@ -169,8 +167,7 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataCommon* con
 #endif
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataWorkspace* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataWorkspace* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataWorkspace) / 4; i++)
@@ -184,8 +181,7 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradV3TilingDataWorkspace* 
 #endif
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataRecompute* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradV3TilingDataRecompute* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradV3TilingDataRecompute) / 4; i++)

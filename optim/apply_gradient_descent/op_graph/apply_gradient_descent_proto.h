@@ -17,30 +17,30 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
-*@brief Updates "var" by subtracting 'alpha' * 'delta' from it.
-*   var -= delta * alpha
-*
-*@attention Constraints:
-*  the input tensors must have the same shape.
-*
-*@par Inputs:
-*@li var: A mutable tensor. Should be from a Variable().
-*@li alpha: A scalar. Has the same type as "var".
-*@li delta: A tensor for the change. Has the same type as "var".
-*
-*@par Attributes:
-* use_locking: An optional bool. Defaults to "False".
-*     If "True", updating of the "var" tensors is protected
-*     by a lock; otherwise the behavior is undefined, but may exhibit less
-*     contention.
-*
-*@par Outputs:
-* var: A mutable tensor. Has the same type as input "var".
-*
-*@par Third-party framework compatibility
-*Compatible with the TensorFlow operator ApplyGradientDescent.
-*
-*/
+ *@brief Updates "var" by subtracting 'alpha' * 'delta' from it.
+ *   var -= delta * alpha
+ *
+ *@attention Constraints:
+ *  the input tensors must have the same shape.
+ *
+ *@par Inputs:
+ *@li var: A mutable tensor. Should be from a Variable().
+ *@li alpha: A scalar. Has the same type as "var".
+ *@li delta: A tensor for the change. Has the same type as "var".
+ *
+ *@par Attributes:
+ * use_locking: An optional bool. Defaults to "False".
+ *     If "True", updating of the "var" tensors is protected
+ *     by a lock; otherwise the behavior is undefined, but may exhibit less
+ *     contention.
+ *
+ *@par Outputs:
+ * var: A mutable tensor. Has the same type as input "var".
+ *
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator ApplyGradientDescent.
+ *
+ */
 REG_OP(ApplyGradientDescent)
     .INPUT(var, TensorType::NumberType())
     .INPUT(alpha, TensorType::NumberType())
@@ -48,6 +48,6 @@ REG_OP(ApplyGradientDescent)
     .OUTPUT(var, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyGradientDescent)
-}  // namespace ge
+} // namespace ge
 
 #endif // OPS_OPTIM_APPLY_GRADIENT_DESCENT_GRAPH_PLUGIN_PROTO_H_

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -16,7 +16,7 @@
 #define SMOOTH_L1_LOSS_V2_TILINGDATA_H
 
 #include "atvoss/elewise/elewise_base_struct.h"
-#include "atvoss/reduce/reduce_tiling_data.h" 
+#include "atvoss/reduce/reduce_tiling_data.h"
 
 namespace SmoothL1LossV2 {
 
@@ -30,5 +30,5 @@ struct SmoothL1LossV2TilingData {
     float AddsValue;
 };
 
-}
-#endif //SMOOTH_L1_LOSS_V2_TILING_STRUCT_H
+} // namespace SmoothL1LossV2
+#endif // SMOOTH_L1_LOSS_V2_TILING_STRUCT_H

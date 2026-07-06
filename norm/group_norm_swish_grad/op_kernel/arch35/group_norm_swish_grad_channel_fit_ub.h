@@ -91,9 +91,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelFit
         CustomDataCopyIn(xLocal, inQueueXT, xGm, offset, onceProcessEleNum);
         CustomDataCopyIn(dyLocal, inQueueDyT, dyGm, offset, onceProcessEleNum);
         MulsAddsTemplate(xLocal, meanRstdLocal, this->eleNumPerChannel);
-        SwishGradMulXReduceTemplate(
-            temp1Local, temp2Local, dyNew, dswishRes, xLocal, dyLocal, gammaLocal, betaLocal,
-            static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
+        SwishGradMulXReduceTemplate(temp1Local, temp2Local, dyNew, dswishRes, xLocal, dyLocal, gammaLocal, betaLocal,
+                                    static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
         inQueueX.FreeTensor(xLocal);
         inQueueDy.FreeTensor(dyLocal);
     }
@@ -110,9 +109,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelFit
         CustomDataCopyIn(xLocal, inQueueXT, xGm, offset, onceProcessEleNum);
         CustomDataCopyIn(dyLocal, inQueueDyT, dyGm, offset, onceProcessEleNum);
         MulsAddsTemplate(xLocal, meanRstdLocal, this->eleNumPerChannel);
-        SwishDxTemplate(
-            tempHxwLocal, xLocal, dyLocal, gammaLocal, betaLocal, temp1Local, temp2Local, meanRstdLocal,
-            static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
+        SwishDxTemplate(tempHxwLocal, xLocal, dyLocal, gammaLocal, betaLocal, temp1Local, temp2Local, meanRstdLocal,
+                        static_cast<uint32_t>(cGIdx), swishScaleValue, this->eleNumPerChannel);
         inQueueX.FreeTensor(xLocal);
         inQueueDy.FreeTensor(dyLocal);
         event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));

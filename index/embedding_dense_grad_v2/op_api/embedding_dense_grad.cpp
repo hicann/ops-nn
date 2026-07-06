@@ -25,54 +25,51 @@ namespace l0op {
 OP_TYPE_REGISTER(EmbeddingDenseGrad);
 OP_TYPE_REGISTER(EmbeddingDenseGradV2);
 
-const aclTensor* EmbeddingDenseGradV2AiCore4David(
-    const aclTensor* grad, const aclTensor* sortIndices, const aclTensor* posIdx, const aclTensor* out, uint64_t numWeights,
-    uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor)
+const aclTensor* EmbeddingDenseGradV2AiCore4David(const aclTensor* grad, const aclTensor* sortIndices,
+                                                  const aclTensor* posIdx, const aclTensor* out, uint64_t numWeights,
+                                                  uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor)
 {
     L0_DFX(EmbeddingDenseGradV2AiCore4David, grad, sortIndices, posIdx, numWeights, paddingIdx, scaleGradByFreq);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        EmbeddingDenseGradV2, OP_INPUT(grad, sortIndices, posIdx), OP_OUTPUT(out),
-        OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(EmbeddingDenseGradV2, OP_INPUT(grad, sortIndices, posIdx), OP_OUTPUT(out),
+                                           OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* EmbeddingDenseGradV2AiCore(
-    const aclTensor* grad, const aclTensor* sortIndices, const aclTensor* posIdx, const aclTensor* out, uint64_t numWeights,
-    uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor)
+const aclTensor* EmbeddingDenseGradV2AiCore(const aclTensor* grad, const aclTensor* sortIndices,
+                                            const aclTensor* posIdx, const aclTensor* out, uint64_t numWeights,
+                                            uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor)
 {
     L0_DFX(EmbeddingDenseGradV2AiCore, grad, sortIndices, posIdx, numWeights, paddingIdx, scaleGradByFreq);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        EmbeddingDenseGradV2, OP_INPUT(grad, sortIndices, posIdx), OP_OUTPUT(out),
-        OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(EmbeddingDenseGradV2, OP_INPUT(grad, sortIndices, posIdx), OP_OUTPUT(out),
+                                           OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
 
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* EmbeddingDenseGradV2(
-    const aclTensor* grad, const aclTensor* sortIndices, const aclTensor* posIdx, const aclTensor* out, uint64_t numWeights,
-    uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor)
+const aclTensor* EmbeddingDenseGradV2(const aclTensor* grad, const aclTensor* sortIndices, const aclTensor* posIdx,
+                                      const aclTensor* out, uint64_t numWeights, uint64_t paddingIdx,
+                                      bool scaleGradByFreq, aclOpExecutor* executor)
 {
     L0_DFX(EmbeddingDenseGradV2, grad, sortIndices, posIdx, numWeights, paddingIdx, scaleGradByFreq);
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        return EmbeddingDenseGradV2AiCore4David(grad, sortIndices, posIdx, out, numWeights, paddingIdx, scaleGradByFreq, executor);
+        return EmbeddingDenseGradV2AiCore4David(grad, sortIndices, posIdx, out, numWeights, paddingIdx, scaleGradByFreq,
+                                                executor);
     } else {
-        return EmbeddingDenseGradV2AiCore(grad, sortIndices, posIdx, out, numWeights, paddingIdx, scaleGradByFreq, executor);
+        return EmbeddingDenseGradV2AiCore(grad, sortIndices, posIdx, out, numWeights, paddingIdx, scaleGradByFreq,
+                                          executor);
     }
 }
 
-const aclTensor* EmbeddingDenseGrad(
-    const aclTensor* grad, const aclTensor* indices, uint64_t numWeights, uint64_t paddingIdx, bool scaleGradByFreq,
-    aclOpExecutor* executor)
+const aclTensor* EmbeddingDenseGrad(const aclTensor* grad, const aclTensor* indices, uint64_t numWeights,
+                                    uint64_t paddingIdx, bool scaleGradByFreq, aclOpExecutor* executor)
 {
     L0_DFX(EmbeddingDenseGrad, grad, indices, numWeights, paddingIdx, scaleGradByFreq);
     // shape推导
@@ -91,12 +88,11 @@ const aclTensor* EmbeddingDenseGrad(
         return nullptr;
     }
     // 调用device的EmbeddingDenseGrad算子
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        EmbeddingDenseGrad, OP_INPUT(grad, indices), OP_OUTPUT(out), OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradAiCcore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(EmbeddingDenseGrad, OP_INPUT(grad, indices), OP_OUTPUT(out),
+                                           OP_ATTR(numWeights, paddingIdx, scaleGradByFreq));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EmbeddingDenseGradAiCcore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 } // namespace l0op

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 	 
+
 /**
  * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
@@ -35,8 +35,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -65,8 +65,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalNum,
-                                          ge::DataType& dataType, float& lambd)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalNum, ge::DataType& dataType,
+                                         float& lambd)
 {
     // Get input shape info (grad_output)
     auto inputGrad = context->GetInputShape(0);
@@ -79,11 +79,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto inputShapeSelf = EnsureNotScalar(inputSelf->GetStorageShape());
 
     // Shape validation: grad_output and self must have the same shape
-    OP_CHECK_IF(
-        inputShapeGrad.GetShapeSize() != inputShapeSelf.GetShapeSize(),
-        OP_LOGE(context, "HardShrinkGrad: grad_output and self shape size mismatch: grad=%ld, self=%ld",
-                inputShapeGrad.GetShapeSize(), inputShapeSelf.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShapeGrad.GetShapeSize() != inputShapeSelf.GetShapeSize(),
+                OP_LOGE(context, "HardShrinkGrad: grad_output and self shape size mismatch: grad=%ld, self=%ld",
+                        inputShapeGrad.GetShapeSize(), inputShapeSelf.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalNum = inputShapeGrad.GetShapeSize();
 
@@ -121,25 +120,19 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape, attribute info
     int64_t totalNum;
     ge::DataType dataType;
     float lambd;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType, lambd) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType, lambd) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace size
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // Handle empty tensor
     if (totalNum == 0) {
@@ -157,10 +150,8 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     // 4. Set tiling data
     HardShrinkGradTilingData* tiling = context->GetTilingData<HardShrinkGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardShrinkGradTilingData), 0, sizeof(HardShrinkGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardShrinkGradTilingData), 0, sizeof(HardShrinkGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Multi-core split: distribute elements evenly across cores
     tiling->totalNum = totalNum;
@@ -203,7 +194,7 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     // Ensure ubFactor satisfies Compare 256-byte alignment constraint
     // For fp16 path, Compare operates on fp32 tensors, so alignment is 256/4 = 64 elements
     // For fp32 path, alignment is 256/4 = 64 elements
-    int64_t cmpAlignElements = 64;  // Compare operates on fp32 in both paths
+    int64_t cmpAlignElements = 64; // Compare operates on fp32 in both paths
     tiling->ubFactor = FloorAlign(tiling->ubFactor, cmpAlignElements);
 
     context->SetBlockDim(usedCoreNum);

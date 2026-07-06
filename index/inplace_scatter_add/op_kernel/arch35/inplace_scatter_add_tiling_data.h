@@ -16,14 +16,14 @@
 #include <cstdint>
 
 struct InplaceScatterAddTilingData {
-    uint64_t M;                    // var.shape[0]
-    uint64_t N;                    // innerSize = product(var.shape[1:])
-    uint64_t K;                    // indices count
-    uint64_t NAligned;             // N aligned to 32 bytes
-    uint64_t frontCoreNum;         // cores processing front indices
-    uint64_t tailCoreNum;          // cores processing tail indices
-    uint64_t frontCoreIndicesNum;  // indices per front core
-    uint64_t tailCoreIndicesNum;   // indices per tail core
+    uint64_t M;                   // var.shape[0]
+    uint64_t N;                   // innerSize = product(var.shape[1:])
+    uint64_t K;                   // indices count
+    uint64_t NAligned;            // N aligned to 32 bytes
+    uint64_t frontCoreNum;        // cores processing front indices
+    uint64_t tailCoreNum;         // cores processing tail indices
+    uint64_t frontCoreIndicesNum; // indices per front core
+    uint64_t tailCoreIndicesNum;  // indices per tail core
 };
 
 #endif // INPLACE_SCATTER_ADD_TILING_DATA_H

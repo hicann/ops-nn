@@ -32,17 +32,17 @@ extern "C" {
 #endif
 
 static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {
-    DataType::DT_BF16, DataType::DT_FLOAT16, DataType::DT_FLOAT};
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_BF16, DataType::DT_FLOAT16,
+                                                                       DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST_REGBASE = {op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST_REGBASE = {op::DataType::DT_INT32,
+                                                                                       op::DataType::DT_INT64};
 
 static const size_t CDHW_DIMS = 4;
 static const size_t NCDHW_DIMS = 5;
 
-static bool CheckNotNullPtr(
-    const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, aclTensor* out, aclTensor* indices)
+static bool CheckNotNullPtr(const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
+                            const aclIntArray* padding, const aclIntArray* dilation, aclTensor* out, aclTensor* indices)
 {
     // self, kernelSize, stride, padding, dilation, out, indices cannot be null pointers
     OP_CHECK_NULL(self, return false);
@@ -81,16 +81,15 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out, const a
 static bool CheckFormat(const aclTensor* self, const aclTensor* out, const aclTensor* indices)
 {
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and output should be same, self [%s], out [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be same, self [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
     if (self->GetStorageFormat() != indices->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and indices should be same, self [%s], indices [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(indices->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and indices should be same, self [%s], indices [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(indices->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -103,9 +102,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out, const aclTe
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (self->GetStorageFormat() != ge::FORMAT_NDHWC && self->GetStorageFormat() != ge::FORMAT_NCDHW &&
             self->GetStorageFormat() != ge::FORMAT_NCHW && self->GetStorageFormat() != ge::FORMAT_ND) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
-                op::ToString(self->GetStorageFormat()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
+                    op::ToString(self->GetStorageFormat()).GetString());
             return false;
         }
     }
@@ -113,93 +111,79 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out, const aclTe
     return true;
 }
 
-static bool CheckParamsValid(
-    const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation)
+static bool CheckParamsValid(const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
+                             const aclIntArray* dilation)
 {
     // Kernel check
     const aclIntArray& kernelRef = *kernelSize;
-    OP_CHECK(
-        ((kernelRef.Size() == 1) || (kernelRef.Size() == 3)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of kernelSize can be only 1 or 3"), return false);
+    OP_CHECK(((kernelRef.Size() == 1) || (kernelRef.Size() == 3)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of kernelSize can be only 1 or 3"), return false);
     const int64_t kernelD = kernelRef[0];
     const int64_t kernelH = (kernelRef.Size() == 1) ? kernelD : kernelRef[1];
     const int64_t kernelW = (kernelRef.Size() == 1) ? kernelD : kernelRef[2];
-    OP_CHECK(
-        ((kernelD > 0) && (kernelH > 0) && (kernelW > 0)),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The value of kernel should be greater than 0, but got kernelD:%ld, kernelH:%ld, kernelW:%ld", kernelD,
-            kernelH, kernelW),
-        return false);
+    OP_CHECK(((kernelD > 0) && (kernelH > 0) && (kernelW > 0)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The value of kernel should be greater than 0, but got kernelD:%ld, kernelH:%ld, kernelW:%ld",
+                     kernelD, kernelH, kernelW),
+             return false);
 
     // Stride check
     const aclIntArray& strideRef = *stride;
-    OP_CHECK(
-        ((strideRef.Size() == 0) || (strideRef.Size() == 1) || (strideRef.Size() == 3)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of stride can be only 1 or 3"), return false);
+    OP_CHECK(((strideRef.Size() == 0) || (strideRef.Size() == 1) || (strideRef.Size() == 3)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of stride can be only 1 or 3"), return false);
     const int64_t strideD = (strideRef.Size() == 0) ? kernelD : strideRef[0];
     const int64_t strideH = (strideRef.Size() == 0) ? kernelH : ((strideRef.Size() == 1) ? strideD : strideRef[1]);
     const int64_t strideW = (strideRef.Size() == 0) ? kernelW : ((strideRef.Size() == 1) ? strideD : strideRef[2]);
-    OP_CHECK(
-        ((strideD > 0) && (strideH > 0) && (strideW > 0)),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The value of stride should be greater than 0, but got strideD:%ld, strideH:%ld, strideW:%ld", strideD,
-            strideH, strideW),
-        return false);
+    OP_CHECK(((strideD > 0) && (strideH > 0) && (strideW > 0)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The value of stride should be greater than 0, but got strideD:%ld, strideH:%ld, strideW:%ld",
+                     strideD, strideH, strideW),
+             return false);
 
     // Padding check
     const aclIntArray& paddingRef = *padding;
-    OP_CHECK(
-        ((paddingRef.Size() == 1) || (paddingRef.Size() == 3)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of padding can be only 1 or 3"), return false);
+    OP_CHECK(((paddingRef.Size() == 1) || (paddingRef.Size() == 3)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of padding can be only 1 or 3"), return false);
     const int64_t paddingD = paddingRef[0];
     const int64_t paddingH = (paddingRef.Size() == 1) ? paddingD : paddingRef[1];
     const int64_t paddingW = (paddingRef.Size() == 1) ? paddingD : paddingRef[2];
     const int ratioKernelPad = 2;
-    OP_CHECK(
-        ((paddingD >= 0) && (paddingH >= 0) && (paddingW >= 0)),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The value of padding should be greater than or equal to 0, but got paddingD:%ld, paddingH:%ld, "
-            "paddingW:%ld",
-            paddingD, paddingH, paddingW),
-        return false);
-    OP_CHECK(
-        ((paddingD <= (kernelD / ratioKernelPad)) && (paddingH <= (kernelH / ratioKernelPad)) &&
-         (paddingW <= (kernelW / ratioKernelPad))),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Padding should be smaller than or equal to half of kernel size, "
-            "but got kernelD:%ld, kernelH:%ld, kernelW:%ld, paddingD:%ld, paddingH:%ld, paddingW:%ld",
-            kernelD, kernelH, kernelW, paddingD, paddingH, paddingW),
-        return false);
+    OP_CHECK(((paddingD >= 0) && (paddingH >= 0) && (paddingW >= 0)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The value of padding should be greater than or equal to 0, but got paddingD:%ld, paddingH:%ld, "
+                     "paddingW:%ld",
+                     paddingD, paddingH, paddingW),
+             return false);
+    OP_CHECK(((paddingD <= (kernelD / ratioKernelPad)) && (paddingH <= (kernelH / ratioKernelPad)) &&
+              (paddingW <= (kernelW / ratioKernelPad))),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "Padding should be smaller than or equal to half of kernel size, "
+                     "but got kernelD:%ld, kernelH:%ld, kernelW:%ld, paddingD:%ld, paddingH:%ld, paddingW:%ld",
+                     kernelD, kernelH, kernelW, paddingD, paddingH, paddingW),
+             return false);
 
     // Dilation check
     const aclIntArray& dilationRef = *dilation;
-    OP_CHECK(
-        ((dilationRef.Size() == 1) || (dilationRef.Size() == 3)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of dilation can be only 1 or 3"), return false);
+    OP_CHECK(((dilationRef.Size() == 1) || (dilationRef.Size() == 3)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of dilation can be only 1 or 3"), return false);
     const int64_t dilationD = dilationRef[0];
     const int64_t dilationH = (dilationRef.Size() == 1) ? dilationD : dilationRef[1];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationD : dilationRef[2];
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (curArch == NpuArch::DAV_2201 || curArch == NpuArch::DAV_1001) {
-        OP_CHECK(
-            ((dilationD == 1) && (dilationH == 1) && (dilationW == 1)),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The value of dilation should be equal 1, but got dilationD:%ld, dilationH:%ld, dilationW:%ld", dilationD,
-                dilationH, dilationW),
-            return false);
+        OP_CHECK(((dilationD == 1) && (dilationH == 1) && (dilationW == 1)),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "The value of dilation should be equal 1, but got dilationD:%ld, dilationH:%ld, dilationW:%ld",
+                         dilationD, dilationH, dilationW),
+                 return false);
     }
 
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, aclTensor* out, aclTensor* indices)
+static aclnnStatus CheckParams(const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride,
+                               const aclIntArray* padding, const aclIntArray* dilation, aclTensor* out,
+                               aclTensor* indices)
 {
     CHECK_RET(CheckNotNullPtr(self, kernelSize, stride, padding, dilation, out, indices), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out, indices), ACLNN_ERR_PARAM_INVALID);
@@ -247,13 +231,14 @@ static inline const aclTensor* View5Das4D(const aclTensor* input, const op::Form
     return reformatInput;
 }
 
-aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
-    const aclIntArray* dilation, bool ceilMode, aclTensor* out, aclTensor* indices, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(const aclTensor* self, const aclIntArray* kernelSize,
+                                                     const aclIntArray* stride, const aclIntArray* padding,
+                                                     const aclIntArray* dilation, bool ceilMode, aclTensor* out,
+                                                     aclTensor* indices, uint64_t* workspaceSize,
+                                                     aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnMaxPool3dWithArgmax, DFX_IN(self, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(out, indices));
+    L2_DFX_PHASE_1(aclnnMaxPool3dWithArgmax, DFX_IN(self, kernelSize, stride, padding, dilation, ceilMode),
+                   DFX_OUT(out, indices));
     OP_LOGD("aclnnMaxPool3dWithArgmax: getWorkspaceSize");
 
     // Create an OpExecutor
@@ -291,8 +276,9 @@ aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
 
     // Returns a tuple containing out and indices
     auto indicesDtype = indices->GetDataType();
-    auto [outResult, indicesResult] = l0op::MaxPool3DWithArgmaxV2Ncdhw(
-        selfUnsqueezed, kernelSize, stride, padding, dilation, ceilMode, dataFormat, uniqueExecutor.get(), indicesDtype);
+    auto [outResult, indicesResult] = l0op::MaxPool3DWithArgmaxV2Ncdhw(selfUnsqueezed, kernelSize, stride, padding,
+                                                                       dilation, ceilMode, dataFormat,
+                                                                       uniqueExecutor.get(), indicesDtype);
 
     CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -323,8 +309,8 @@ aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMaxPool3dWithArgmax(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnMaxPool3dWithArgmax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnMaxPool3dWithArgmax);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

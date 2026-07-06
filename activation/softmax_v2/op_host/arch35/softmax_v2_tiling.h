@@ -23,41 +23,40 @@
 #include <vector>
 #include <exe_graph/runtime/tiling_context.h>
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::NN::Optiling;
 // ar小尾轴
 BEGIN_TILING_DATA_DEF(SoftmaxV2ArSmallRTilingData)
-TILING_DATA_FIELD_DEF(int64_t, totalA0Len);     // A轴大小
-TILING_DATA_FIELD_DEF(int64_t, totalRLen);      // R轴大小
-TILING_DATA_FIELD_DEF(int64_t, totalTiles);     // tiling块数量
-TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);   // 单核处理的tiling块数
-TILING_DATA_FIELD_DEF(int64_t, tileA0Len);      // tiling块在A方向的长度
-TILING_DATA_FIELD_DEF(int64_t, tileA0Tail);     // tiling块在A方向的尾块长度
-TILING_DATA_FIELD_DEF(int64_t, rTileBase);      // r基础块，用于TransDataTo5HD
+TILING_DATA_FIELD_DEF(int64_t, totalA0Len);   // A轴大小
+TILING_DATA_FIELD_DEF(int64_t, totalRLen);    // R轴大小
+TILING_DATA_FIELD_DEF(int64_t, totalTiles);   // tiling块数量
+TILING_DATA_FIELD_DEF(int64_t, tilesPerCore); // 单核处理的tiling块数
+TILING_DATA_FIELD_DEF(int64_t, tileA0Len);    // tiling块在A方向的长度
+TILING_DATA_FIELD_DEF(int64_t, tileA0Tail);   // tiling块在A方向的尾块长度
+TILING_DATA_FIELD_DEF(int64_t, rTileBase);    // r基础块，用于TransDataTo5HD
 TILING_DATA_FIELD_DEF(int64_t, rAligned);
 END_TILING_DATA_DEF;
 
 // ar全载
 BEGIN_TILING_DATA_DEF(SoftmaxV2ARTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);             // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);             // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, rAligned);      // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);      // UB内一次循环处理的a_in_in
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);  // 单核处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, rLoopCount);    // r / VL_Len
+TILING_DATA_FIELD_DEF(int64_t, a);            // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);            // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, rAligned);     // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);     // UB内一次循环处理的a_in_in
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor); // 单核处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, rLoopCount);   // r / VL_Len
 END_TILING_DATA_DEF;
 
 // ar重计算
 BEGIN_TILING_DATA_DEF(SoftmaxV2ArRecomputeTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);               // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);               // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);        // UB处理的r_in
-TILING_DATA_FIELD_DEF(int64_t, ubFactorTail);    // UB处理的r_in的尾块，值可能为0
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);    // 每个AIV处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, aLoopCountCeil);  // CeilDiv(r, r_in)
-TILING_DATA_FIELD_DEF(int64_t, basicBlockLoop);  // 二分累加：循环次数，折叠点左半部分的block数量
-TILING_DATA_FIELD_DEF(int64_t, mainFoldCount);   // 二分累加：折叠的块数，折叠点右半部分的block数量减1
+TILING_DATA_FIELD_DEF(int64_t, a);              // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);              // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);       // UB处理的r_in
+TILING_DATA_FIELD_DEF(int64_t, ubFactorTail);   // UB处理的r_in的尾块，值可能为0
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);   // 每个AIV处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, aLoopCountCeil); // CeilDiv(r, r_in)
+TILING_DATA_FIELD_DEF(int64_t, basicBlockLoop); // 二分累加：循环次数，折叠点左半部分的block数量
+TILING_DATA_FIELD_DEF(int64_t, mainFoldCount); // 二分累加：折叠的块数，折叠点右半部分的block数量减1
 END_TILING_DATA_DEF;
 
 // ara 全载
@@ -199,43 +198,25 @@ constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
 constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 
-class SoftmaxV2TilingBase : virtual public TilingBaseClass
-{
+class SoftmaxV2TilingBase : virtual public TilingBaseClass {
 public:
-    explicit SoftmaxV2TilingBase(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    explicit SoftmaxV2TilingBase(gert::TilingContext* context) : TilingBaseClass(context) {}
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
     ~SoftmaxV2TilingBase() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return false;
-    }
+    bool IsCapable() override { return false; }
 
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     // 5、计算TilingKey
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    }
+    uint64_t GetTilingKey() const override { return 0; }
     // 6、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override
     {
@@ -244,10 +225,7 @@ protected:
         return ge::GRAPH_SUCCESS;
     }
     // 7、保存Tiling数据
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }
 
     ge::graphStatus CheckFormatValid();
     virtual ge::graphStatus GetAndCheckDtypes();
@@ -279,18 +257,14 @@ protected:
 };
 
 // ar小尾轴
-class SoftmaxV2TilingArSmallR : virtual public SoftmaxV2TilingBase
-{
+class SoftmaxV2TilingArSmallR : virtual public SoftmaxV2TilingBase {
 public:
-    explicit SoftmaxV2TilingArSmallR(gert::TilingContext* context) : TilingBaseClass(context), SoftmaxV2TilingBase(context)
-    {
-    }
+    explicit SoftmaxV2TilingArSmallR(gert::TilingContext* context)
+        : TilingBaseClass(context), SoftmaxV2TilingBase(context)
+    {}
     ~SoftmaxV2TilingArSmallR() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        SoftmaxV2TilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { SoftmaxV2TilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override;
@@ -303,18 +277,12 @@ protected:
 };
 
 // ar全载
-class SoftmaxV2TilingAR : virtual public SoftmaxV2TilingBase
-{
+class SoftmaxV2TilingAR : virtual public SoftmaxV2TilingBase {
 public:
-    explicit SoftmaxV2TilingAR(gert::TilingContext* context) : TilingBaseClass(context), SoftmaxV2TilingBase(context)
-    {
-    }
+    explicit SoftmaxV2TilingAR(gert::TilingContext* context) : TilingBaseClass(context), SoftmaxV2TilingBase(context) {}
     ~SoftmaxV2TilingAR() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        SoftmaxV2TilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { SoftmaxV2TilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override;
@@ -327,13 +295,11 @@ protected:
 };
 
 // ar重计算
-class SoftmaxV2TilingARRecompute : virtual public SoftmaxV2TilingBase
-{
+class SoftmaxV2TilingARRecompute : virtual public SoftmaxV2TilingBase {
 public:
     explicit SoftmaxV2TilingARRecompute(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxV2TilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxV2TilingARRecompute() override = default;
 
 protected:
@@ -357,12 +323,10 @@ private:
 };
 
 // ara 全载
-class SoftmaxV2ARATiling : virtual public SoftmaxV2TilingBase
-{
+class SoftmaxV2ARATiling : virtual public SoftmaxV2TilingBase {
 public:
     explicit SoftmaxV2ARATiling(gert::TilingContext* context) : TilingBaseClass(context), SoftmaxV2TilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxV2ARATiling() override = default;
 
 protected:
@@ -385,13 +349,11 @@ private:
 };
 
 // ara重计算
-class SoftmaxV2ARARecomputeTiling : virtual public SoftmaxV2TilingBase
-{
+class SoftmaxV2ARARecomputeTiling : virtual public SoftmaxV2TilingBase {
 public:
     explicit SoftmaxV2ARARecomputeTiling(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxV2TilingBase(context)
-    {
-    }
+    {}
     ~SoftmaxV2ARARecomputeTiling() override = default;
 
 protected:
@@ -428,6 +390,6 @@ private:
 extern ge::graphStatus TilingForSoftmaxV2(gert::TilingContext* context);
 extern ge::graphStatus TilingPrepareForSoftmaxV2(gert::TilingParseContext* context);
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SOFTMAX_V2_TILING_BASE_H_
+#endif // SOFTMAX_V2_TILING_BASE_H_

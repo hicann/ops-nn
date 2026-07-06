@@ -22,22 +22,17 @@
 #define INFINITY (__builtin_inff())
 #endif
 
-namespace ConfusionSoftmaxGradOps
-{
+namespace ConfusionSoftmaxGradOps {
 using namespace AscendC;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
-constexpr static uint32_t BLOCK_SIZE = 32;  // 32B
+constexpr static uint32_t BLOCK_SIZE = 32; // 32B
 constexpr static uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T>
-class ConfusionSoftmaxGradAR : public ConfusionSoftmaxGradOpsBase
-{
+class ConfusionSoftmaxGradAR : public ConfusionSoftmaxGradOpsBase {
 public:
-    __aicore__ inline ConfusionSoftmaxGradAR(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline ConfusionSoftmaxGradAR(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR y, const SoftmaxGradARTilingData* tilingData);
     __aicore__ inline void Process();
@@ -45,21 +40,26 @@ public:
 private:
     __aicore__ inline void ProcessUB(int64_t ubA, int64_t aOffset);
 
-    __aicore__ inline void NormCompute(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor, const LocalTensor<T>& x1Tensor,
-                                      const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride);
-    __aicore__ inline void NormComputePost(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor, const LocalTensor<T>& x1Tensor,
+    __aicore__ inline void NormCompute(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor,
+                                       const LocalTensor<T>& x1Tensor, const LocalTensor<float>& reduceSumTempTensor,
+                                       const int64_t aSize, const int64_t rSize, const int64_t stride);
+    __aicore__ inline void NormComputePost(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor,
+                                           const LocalTensor<T>& x1Tensor,
                                            const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize,
                                            const int64_t rSize, const int64_t stride);
 
-    __aicore__ inline void NormComputePostWithMul(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor, const LocalTensor<T>& x1Tensor,
-                                                  const int64_t aSize, const int64_t rSize, const int64_t stride);
+    __aicore__ inline void NormComputePostWithMul(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor,
+                                                  const LocalTensor<T>& x1Tensor, const int64_t aSize,
+                                                  const int64_t rSize, const int64_t stride);
 
-    __aicore__ inline void CopyInX(const LocalTensor<T>& xInUb, const GlobalTensor<T>& xInGm, int64_t ubA, int64_t offset);
+    __aicore__ inline void CopyInX(const LocalTensor<T>& xInUb, const GlobalTensor<T>& xInGm, int64_t ubA,
+                                   int64_t offset);
     __aicore__ inline void CopyOutY(const LocalTensor<T>& yOutUb, int64_t ubA, int64_t offset);
     __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
                                                    AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
     __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T* src, AscendC::MicroAPI::RegTensor<float>& dst,
                                                  AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
+
 private:
     /* global memory address */
     GlobalTensor<T> xGm_;
@@ -74,7 +74,7 @@ private:
 
     TBuf<> binaryAddLocalBuffer_;
 
-    int64_t blockA_ = 0;  // 获取分块操作中的单个块的大小
+    int64_t blockA_ = 0; // 获取分块操作中的单个块的大小
     const SoftmaxGradARTilingData* tl_ = nullptr;
 };
 
@@ -84,9 +84,9 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::Init(GM_ADDR grad, GM_ADDR x, 
 {
     this->tl_ = tilingData;
     // 获取分块操作中的单个块的大小。判断是否是最后一块，是最后一块，则等于剩余元素的数量，否则等于固定的单核处理的行数
-    this->blockA_ = (AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1)
-                        ? (tl_->a - tl_->aBlockFactor * (AscendC::GetBlockNum() - 1))
-                        : tl_->aBlockFactor;
+    this->blockA_ = (AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1) ?
+                        (tl_->a - tl_->aBlockFactor * (AscendC::GetBlockNum() - 1)) :
+                        tl_->aBlockFactor;
 
     // 初始化GM Tensor
     int64_t aGmOffset = tl_->aBlockFactor * AscendC::GetBlockIdx() * tl_->r;
@@ -146,8 +146,10 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::ProcessUB(int64_t ubA, int64_t
 }
 
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor,
-                                                                         const LocalTensor<T>& x1Tensor, const int64_t aSize, const int64_t rSize,
+__aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const LocalTensor<T>& dstTensor,
+                                                                         const LocalTensor<T>& x0Tensor,
+                                                                         const LocalTensor<T>& x1Tensor,
+                                                                         const int64_t aSize, const int64_t rSize,
                                                                          const int64_t stride)
 {
     if (aSize <= 0) {
@@ -172,8 +174,8 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadTensorForDtypeTIn(x0, reg0, pMask, i * stride);
@@ -198,8 +200,8 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadTensorForDtypeTIn(x0, reg0, pFull, i * stride);
@@ -227,12 +229,9 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
 }
 
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(const LocalTensor<T>& dstTensor,
-                                                                        const LocalTensor<T>& x0Tensor,
-                                                                        const LocalTensor<T>& x1Tensor,
-                                                                        const LocalTensor<float>& reduceSumTempTensor,
-                                                                        const int64_t aSize, const int64_t rSize,
-                                                                        const int64_t stride)
+__aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
+    const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor, const LocalTensor<T>& x1Tensor,
+    const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride)
 {
     if (aSize <= 0) {
         return;
@@ -245,10 +244,10 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(const LocalTensor<
         return;
     }
 
-    int64_t ceilVLCount =
-        ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
-    int64_t floorVLCount =
-        ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+    int64_t ceilVLCount = ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)),
+                                       static_cast<int64_t>(platform::GetVRegSize()));
+    int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)),
+                                         static_cast<int64_t>(platform::GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -258,8 +257,8 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(const LocalTensor<
     uint16_t unFoldLoopTimes = foldPoint + foldPoint - ceilVLCount;
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
-    uint32_t outerLoopDstStride =
-        ops::Aligned(static_cast<int64_t>(foldPoint), static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
+    uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
+                                               static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;
@@ -337,9 +336,9 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(const LocalTensor<
 }
 
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor,
-                                                                  const LocalTensor<T>& x1Tensor, const LocalTensor<float>& reduceSumTempTensor,
-                                                                  const int64_t aSize, const int64_t rSize, const int64_t stride)
+__aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
+    const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor, const LocalTensor<T>& x1Tensor,
+    const LocalTensor<float>& reduceSumTempTensor, const int64_t aSize, const int64_t rSize, const int64_t stride)
 {
     if (aSize <= 0) {
         return;
@@ -367,8 +366,8 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(const LocalTen
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 DataCopy(reg0, (__local_mem__ float*)sumTmp + i * stride);
@@ -395,8 +394,8 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(const LocalTen
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 DataCopy(reg0, (__local_mem__ float*)sumTmpA + i * stride);
@@ -421,9 +420,9 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(const LocalTen
 
 template <typename T>
 __aicore__ inline void ConfusionSoftmaxGradAR<T>::LoadTensorForDtypeTIn(__local_mem__ T* src,
-                                                                       AscendC::MicroAPI::RegTensor<float>& dst,
-                                                                       AscendC::MicroAPI::MaskReg& preg,
-                                                                       uint32_t offset)
+                                                                        AscendC::MicroAPI::RegTensor<float>& dst,
+                                                                        AscendC::MicroAPI::MaskReg& preg,
+                                                                        uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(dst, src + offset);
@@ -435,7 +434,8 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::LoadTensorForDtypeTIn(__local_
 }
 
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradAR<T>::CopyInX(const LocalTensor<T>& xInUb, const GlobalTensor<T>& xInGm, int64_t ubA, int64_t offset)
+__aicore__ inline void ConfusionSoftmaxGradAR<T>::CopyInX(const LocalTensor<T>& xInUb, const GlobalTensor<T>& xInGm,
+                                                          int64_t ubA, int64_t offset)
 {
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
     DataCopyExtParams copyInParams;
@@ -448,9 +448,9 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::CopyInX(const LocalTensor<T>& 
 
 template <typename T>
 __aicore__ inline void ConfusionSoftmaxGradAR<T>::StoreTensorForDtypeTOut(__local_mem__ T* dst,
-                                                                         AscendC::MicroAPI::RegTensor<float>& src,
-                                                                         AscendC::MicroAPI::MaskReg& preg,
-                                                                         uint32_t offset)
+                                                                          AscendC::MicroAPI::RegTensor<float>& src,
+                                                                          AscendC::MicroAPI::MaskReg& preg,
+                                                                          uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
@@ -472,6 +472,6 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::CopyOutY(const LocalTensor<T>&
     DataCopyPad(yGm_[offset], yOutUb, copyOutParams);
 }
 
-}  // namespace ConfusionSoftmaxGradOps
+} // namespace ConfusionSoftmaxGradOps
 
-#endif  // NORM_CONFUSION_SOFTMAX_GRAD_AR_FULL_LOAD_H
+#endif // NORM_CONFUSION_SOFTMAX_GRAD_AR_FULL_LOAD_H

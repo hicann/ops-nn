@@ -23,14 +23,8 @@ using namespace std;
 
 class prelu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "prelu_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "prelu_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "prelu_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "prelu_test TearDown\n" << endl; }
 };
 
 TEST_F(prelu_test, scalar_float32_success)

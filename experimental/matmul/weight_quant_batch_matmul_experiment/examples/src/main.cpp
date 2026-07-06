@@ -50,7 +50,7 @@ OperatorDesc CreateOpDesc()
     return opDesc;
 }
 
-bool SetInputData(OpRunner &runner)
+bool SetInputData(OpRunner& runner)
 {
     size_t fileSize = 0;
     ReadFile("../input/input_a.bin", fileSize, runner.GetInputBuffer<void>(0), runner.GetInputSize(0));
@@ -61,7 +61,7 @@ bool SetInputData(OpRunner &runner)
     return true;
 }
 
-bool ProcessOutputData(OpRunner &runner)
+bool ProcessOutputData(OpRunner& runner)
 {
     WriteFile("../output/output_z.bin", runner.GetOutputBuffer<void>(0), runner.GetOutputSize(0));
     INFO_LOG("Write output success");
@@ -160,7 +160,7 @@ bool RunOp()
     return true;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     if (!InitResource()) {
         ERROR_LOG("Init resource failed");

@@ -20,30 +20,32 @@ class SwiGluGrad : public OpDef {
 public:
     explicit SwiGluGrad(const char* name) : OpDef(name)
     {
-        this->Input("y_grad").ParamType(REQUIRED)
+        this->Input("y_grad")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Input("x").ParamType(REQUIRED)
+        this->Input("x")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("x_grad").ParamType(REQUIRED)
+        this->Output("x_grad")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Attr("dim").AttrType(OPTIONAL)
-            .Int(-1);
+        this->Attr("dim").AttrType(OPTIONAL).Int(-1);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
         OpAICoreConfig regbaseCfg;
         regbaseCfg.DynamicCompileStaticFlag(true)
-                  .DynamicRankSupportFlag(true)
-                  .DynamicShapeSupportFlag(true)
-                  .ExtendCfgInfo("opFile.value", "swi_glu_grad_apt");
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "swi_glu_grad_apt");
         this->AICore().AddConfig("ascend950", regbaseCfg);
 
         OpAICoreConfig config_without_bf16;
@@ -51,17 +53,20 @@ public:
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true);
-        config_without_bf16.Input("y_grad").ParamType(REQUIRED)
+        config_without_bf16.Input("y_grad")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_without_bf16.Input("x").ParamType(REQUIRED)
+        config_without_bf16.Input("x")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        config_without_bf16.Output("x_grad").ParamType(REQUIRED)
+        config_without_bf16.Output("x_grad")
+            .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
@@ -69,4 +74,4 @@ public:
     }
 };
 OP_ADD(SwiGluGrad);
-}
+} // namespace ops

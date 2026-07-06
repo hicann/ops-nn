@@ -22,9 +22,8 @@ template <typename T, typename PD_GAMMA_TYPE>
 class LayerNormGradV3RecomputeGammaBeta : public LayerNormGradV3Base {
 public:
     __aicore__ inline LayerNormGradV3RecomputeGammaBeta() : LayerNormGradV3Base(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR pdGamma, GM_ADDR pdBeta, GM_ADDR workspace,
-        const LayerNormGradV3TilingDataRecompute* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR pdGamma, GM_ADDR pdBeta,
+                                GM_ADDR workspace, const LayerNormGradV3TilingDataRecompute* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
@@ -66,25 +65,24 @@ template <typename T, typename U>
 class LayerNormGradV3RecomputeBackward : public LayerNormGradV3Base {
 public:
     __aicore__ inline LayerNormGradV3RecomputeBackward() : LayerNormGradV3Base(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR workspace,
-        const LayerNormGradV3TilingDataRecompute* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX,
+                                GM_ADDR workspace, const LayerNormGradV3TilingDataRecompute* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void Prologue(const int64_t mi, const int64_t mfactor);
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessFoldBlock(
-        const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessSummation(
-        const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
+    __aicore__ inline void ProcessMainBlock(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
+    __aicore__ inline void ProcessFoldBlock(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
+    __aicore__ inline void ProcessSummation(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
+                                            const int64_t nfactor);
     __aicore__ inline void ProcessX(const int64_t mi, const int64_t ni, const int64_t mfactor, const int64_t nfactor);
     __aicore__ inline void Epilogue();
 
 private:
     const LayerNormGradV3TilingDataRecompute* __restrict td_;
-    
+
     int64_t Mloop = 0;
     int64_t Mtail = 0;
 

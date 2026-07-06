@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_to_mul_tiling.cc
  * \brief
@@ -107,5 +106,5 @@ ge::graphStatus MatMulV3ToMulTiling::GetTilingData(TilingResult& tiling) const
 {
     return GetTilingDataImpl<MatMulToMulBasicTilingData>(tiling);
 }
-}
-}
+} // namespace matmul_v3_advanced
+} // namespace optiling

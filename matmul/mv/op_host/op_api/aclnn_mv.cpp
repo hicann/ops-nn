@@ -31,19 +31,21 @@
 using namespace Ops::NN;
 using namespace op;
 
-namespace{
-    inline bool CheckNotNull(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
-    {
-        OP_CHECK_NULL(self, return false);
-        OP_CHECK_NULL(vec, return false);
-        OP_CHECK_NULL(out, return false);
-        return true;
-    }
-
-    static const aclTensor* MVProcess(const aclTensor* self, const aclTensor* vec, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor){
-        return MatmulCommonProcess(self, vec, nullptr, out, cubeMathType, mmOpInfo, executor, false);
-    }
+namespace {
+inline bool CheckNotNull(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
+{
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(vec, return false);
+    OP_CHECK_NULL(out, return false);
+    return true;
 }
+
+static const aclTensor* MVProcess(const aclTensor* self, const aclTensor* vec, const aclTensor* out,
+                                  int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+{
+    return MatmulCommonProcess(self, vec, nullptr, out, cubeMathType, mmOpInfo, executor, false);
+}
+} // namespace
 
 // 1. vec、out的数据类型要与self一致
 static bool CheckDtypeSame(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
@@ -86,7 +88,7 @@ static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec,
     //  self dtype 按soc校验。
     auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(archRule -> CheckInput(self, vec, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule->CheckInput(self, vec, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     // 3. shape: self必须为2维: n x m, vec必须为1维：m, out必须为1维：n
     CHECK_RET(CheckShape(self, vec, out), ACLNN_ERR_PARAM_INVALID);
@@ -94,10 +96,8 @@ static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec,
     return ACLNN_SUCCESS;
 }
 
-
-aclnnStatus aclnnMvGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnMvGetWorkspaceSize(const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType,
+                                    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMv, DFX_IN(self, vec, cubeMathType), DFX_OUT(out));
 

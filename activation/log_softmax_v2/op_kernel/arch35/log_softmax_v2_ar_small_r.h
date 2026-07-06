@@ -26,8 +26,7 @@
 #define INFINITY (__builtin_inff())
 #endif
 
-namespace LogSoftmaxV2Ops
-{
+namespace LogSoftmaxV2Ops {
 using namespace AscendC;
 using namespace SoftmaxV2Ops;
 
@@ -38,8 +37,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename Tx, typename Ty>
-class LogSoftmaxV2ArSmallR : public SoftmaxV2OpsBase
-{
+class LogSoftmaxV2ArSmallR : public SoftmaxV2OpsBase {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
     static constexpr int64_t DATA_BLOCK_COUNT = 16;
@@ -48,10 +46,7 @@ class LogSoftmaxV2ArSmallR : public SoftmaxV2OpsBase
     static constexpr int64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
 public:
-    __aicore__ inline LogSoftmaxV2ArSmallR(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline LogSoftmaxV2ArSmallR(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SoftmaxV2ArSmallRTilingData* tilingDataIn)
     {
@@ -79,7 +74,8 @@ public:
 
         // preload
         int64_t xOffset = beginIdx * tl_->tileA0Len * tl_->totalRLen;
-        CopyInAndTransPose(xOffset, beginIdx == (tl_->totalTiles - 1) ?  tl_->tileA0Tail : tl_->tileA0Len, tl_->totalRLen);
+        CopyInAndTransPose(xOffset, beginIdx == (tl_->totalTiles - 1) ? tl_->tileA0Tail : tl_->tileA0Len,
+                           tl_->totalRLen);
 
         int curIdx;
         uint32_t curTileA0Len = tl_->tileA0Len;
@@ -92,7 +88,7 @@ public:
             xOffset = curIdx * tl_->tileA0Len * tl_->totalRLen;
 
             CalcMaxSubExp(curTileA0Len, tl_->totalRLen);
-            CopyInAndTransPose(xOffsetPreLoad, nextTileA0Len, tl_->totalRLen);      // (curA0, R) -> (R, curA0)
+            CopyInAndTransPose(xOffsetPreLoad, nextTileA0Len, tl_->totalRLen); // (curA0, R) -> (R, curA0)
             CalcReduceSum(curTileA0Len, tl_->totalRLen);
             CalcOutput(curTileA0Len, tl_->totalRLen);
             CalcTranspose(curTileA0Len, tl_->rAligned);
@@ -180,7 +176,8 @@ private:
 
             for (uint16_t j = 0; j < aLoopTimes; j++) { // 列
                 mask = MicroAPI::UpdateMask<float>(sreg);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(sumReg, (__local_mem__ float*)sumAddr + j * VL_FP32);
+                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(sumReg,
+                                                                         (__local_mem__ float*)sumAddr + j * VL_FP32);
                 MicroAPI::Ln(lnReg, sumReg, mask);
 
                 for (uint16_t i = 0; i < rLoopTimes; i++) { // 行
@@ -191,7 +188,7 @@ private:
 
                     if constexpr (yToFp32_) {
                         MicroAPI::DataCopy(tmpAddrTy + offset, reg1, mask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         MicroAPI::RegTensor<Ty> xFp16;
                         MicroAPI::Cast<Ty, float, castTraitFp32ToFp16>(xFp16, reg1, mask);
                         MicroAPI::DataCopy<Ty, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + offset, xFp16, mask);
@@ -221,7 +218,8 @@ private:
             for (int j = 0; j < DATA_BLOCK_COUNT_HALF; j++) {
                 uint32_t offset = DATA_BLOCK_COUNT_HALF * i + DATA_BLOCK_COUNT_HALF * rRepeartTimes * j;
                 dstLocalList[j * CONST_TWO] = yLocal[offset];
-                dstLocalList[j * CONST_TWO + 1] = yLocal[offset + DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
+                dstLocalList[j * CONST_TWO + 1] = yLocal[offset +
+                                                         DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
             }
 
             AscendC::TransDataTo5HD(dstLocalList, srcLocalList, params);
@@ -244,7 +242,7 @@ private:
                 srcLocalList[j] = tmpLocalTy_[offset];
             }
             for (int j = 0; j < DATA_BLOCK_COUNT; j++) {
-                uint32_t offset = tl_->rTileBase * i + rAligned * j;  // R和16对齐，即16*2=32B对齐
+                uint32_t offset = tl_->rTileBase * i + rAligned * j; // R和16对齐，即16*2=32B对齐
                 dstLocalList[j] = yLocal[offset];
             }
 
@@ -267,7 +265,7 @@ private:
 
     __aicore__ inline void LoadTensorForDtypeT(const __local_mem__ Tx* src, RegTensor<float>& dst, MaskReg& preg,
                                                uint32_t offset)
-    {  
+    {
         if constexpr (xToFp32_) {
             MicroAPI::RegTensor<Tx> xFp16;
             MicroAPI::DataCopy<Tx, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ Tx*)src + offset));
@@ -308,7 +306,7 @@ private:
     {
         DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = curTileA0Len;
-        copyOutParams.blockLen =  tl_->totalRLen * sizeof(Ty);
+        copyOutParams.blockLen = tl_->totalRLen * sizeof(Ty);
         copyOutParams.srcStride = 0;
         copyOutParams.dstStride = 0;
         DataCopyPad(yGm_[yGmOffset], yLocal[0], copyOutParams);
@@ -349,7 +347,6 @@ private:
     static constexpr bool yToFp32_ = IsSameType<Ty, float>::value;
 };
 
-
-}  // namespace SoftmaxV2Ops
+} // namespace LogSoftmaxV2Ops
 
 #endif

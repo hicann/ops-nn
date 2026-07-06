@@ -54,9 +54,8 @@ bool MaxPool3DGradWithArgmaxCutKTiling::IsCapable()
     return false;
 }
 
-void MaxPool3DGradWithArgmaxCutKTiling::CalXp(
-    uint64_t& baseDo, uint64_t& baseHo, uint64_t& baseWo, uint64_t& baseDp, uint64_t& baseHp, uint64_t& baseWp,
-    const uint32_t ubCutAxis)
+void MaxPool3DGradWithArgmaxCutKTiling::CalXp(uint64_t& baseDo, uint64_t& baseHo, uint64_t& baseWo, uint64_t& baseDp,
+                                              uint64_t& baseHp, uint64_t& baseWp, const uint32_t ubCutAxis)
 {
     if ((TILING_UB_NO_CUT == ubCutAxis) || (TILING_UB_CUT_DO == ubCutAxis)) {
         baseDp = (baseDo - 1UL) * maxPoolGradParams.sd + maxPoolGradParams.kd;
@@ -77,8 +76,8 @@ void MaxPool3DGradWithArgmaxCutKTiling::CalXp(
     }
 }
 
-uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalUBTotalSize(
-    uint64_t baseDo, uint64_t baseHo, uint64_t baseWo, const uint32_t ubCutAxis)
+uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalUBTotalSize(uint64_t baseDo, uint64_t baseHo, uint64_t baseWo,
+                                                           const uint32_t ubCutAxis)
 {
     const uint64_t vl = maxPoolGradParams.vl;
     uint64_t baseDp, baseHp, baseWp;
@@ -97,20 +96,21 @@ uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalUBTotalSize(
     uint64_t doHoWoB32Align = Ops::Base::CeilDiv(doHoWo, b32BlockAlignNum) * b32BlockAlignNum;
     uint64_t doHoWoDtypeAlign = Ops::Base::CeilDiv(doHoWo, dtypeBlockAlignNum) * dtypeBlockAlignNum;
 
-    uint64_t cutKDpHpWpTensorSize =
-        1UL * vl * dpHpWp * DTYPE_LEN_B32 +        // indexImgBuf
-        3UL * vl * dpHpWpB32Align * DTYPE_LEN_B32; // yQue&yTransposeBuf&yTranDepadBuf(all fp32)
-    uint64_t cutKDoHoWoTensorSize =
-        Ops::Base::CeilDiv(1 * vl * doHoWo, b8BlockAlignNum) * b8BlockAlignNum * DTYPE_LEN_B8 + // mask
-        2 * vl * doHoWo * DTYPE_LEN_B32 +                         // tmpGradBuf(fp32)&indexColBuf
-        2 * vl * doHoWoB32Align * DTYPE_LEN_B32 +                 // argmaxQue&argmaxTransposeBuf
-        2 * vl * doHoWoDtypeAlign * maxPoolGradParams.xDtypeSize; // gradQue&gradTransposeBuf
+    uint64_t cutKDpHpWpTensorSize = 1UL * vl * dpHpWp * DTYPE_LEN_B32 + // indexImgBuf
+                                    3UL * vl * dpHpWpB32Align *
+                                        DTYPE_LEN_B32; // yQue&yTransposeBuf&yTranDepadBuf(all fp32)
+    uint64_t cutKDoHoWoTensorSize = Ops::Base::CeilDiv(1 * vl * doHoWo, b8BlockAlignNum) * b8BlockAlignNum *
+                                        DTYPE_LEN_B8 +                        // mask
+                                    2 * vl * doHoWo * DTYPE_LEN_B32 +         // tmpGradBuf(fp32)&indexColBuf
+                                    2 * vl * doHoWoB32Align * DTYPE_LEN_B32 + // argmaxQue&argmaxTransposeBuf
+                                    2 * vl * doHoWoDtypeAlign *
+                                        maxPoolGradParams.xDtypeSize; // gradQue&gradTransposeBuf
     return cutKDpHpWpTensorSize + cutKDoHoWoTensorSize + SELECT_RESERVED_UB_SIZE;
 }
 
-uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalCloseBaseSize(
-    uint64_t notCutOuterDimsMul, uint64_t notCutProcessOneDim, uint64_t wiDim, uint64_t kCutDim, uint64_t sCutDim,
-    const uint32_t ubCutAxis)
+uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalCloseBaseSize(uint64_t notCutOuterDimsMul, uint64_t notCutProcessOneDim,
+                                                             uint64_t wiDim, uint64_t kCutDim, uint64_t sCutDim,
+                                                             const uint32_t ubCutAxis)
 {
     const uint64_t vl = maxPoolGradParams.vl;
     uint64_t b8BlockAlignNum = static_cast<uint64_t>(BLOCK_SIZE / DTYPE_LEN_B8);
@@ -123,19 +123,22 @@ uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalCloseBaseSize(
         notCutProcessDimsMulB32Align = notCutProcessDimsMul * b32BlockAlignNum;
     }
     uint64_t notCutOuterDimsMulB32Align = Ops::Base::CeilDiv(notCutOuterDimsMul, b32BlockAlignNum) * b32BlockAlignNum;
-    uint64_t notCutOuterDimsMulDtypeAlign =
-        Ops::Base::CeilDiv(notCutOuterDimsMul, dtypeBlockAlignNum) * dtypeBlockAlignNum;
-    uint64_t cutKDpHpWpTensorSizeWithoutXo =
-        1UL * vl * notCutProcessDimsMul * (kCutDim - sCutDim) * DTYPE_LEN_B32 + // indexImgBuf
-        3UL * vl * notCutProcessDimsMulB32Align * (kCutDim - sCutDim) *
-            DTYPE_LEN_B32; // yQue&yTransposeBuf&yTranDepadBuf
-    uint64_t cutKDiHiWiTensorSizePreXo =
-        1 * vl * notCutProcessDimsMul * sCutDim * DTYPE_LEN_B32 +         // indexImgBuf
-        3 * vl * notCutProcessDimsMulB32Align * sCutDim * DTYPE_LEN_B32 + // yQue&yTransposeBuf&yTranDepadBuf
-        Ops::Base::CeilDiv(1 * vl * notCutOuterDimsMul, b8BlockAlignNum) * b8BlockAlignNum * DTYPE_LEN_B8 + // mask
-        2 * vl * notCutOuterDimsMul * DTYPE_LEN_B32 +                         // tmpGradBuf(fp32)&indexColBuf
-        2 * vl * notCutOuterDimsMulB32Align * DTYPE_LEN_B32 +                 // argmaxQue&argmaxTransposeBuf
-        2 * vl * notCutOuterDimsMulDtypeAlign * maxPoolGradParams.xDtypeSize; // gradQue&gradTransposeBuf
+    uint64_t notCutOuterDimsMulDtypeAlign = Ops::Base::CeilDiv(notCutOuterDimsMul, dtypeBlockAlignNum) *
+                                            dtypeBlockAlignNum;
+    uint64_t cutKDpHpWpTensorSizeWithoutXo = 1UL * vl * notCutProcessDimsMul * (kCutDim - sCutDim) *
+                                                 DTYPE_LEN_B32 + // indexImgBuf
+                                             3UL * vl * notCutProcessDimsMulB32Align * (kCutDim - sCutDim) *
+                                                 DTYPE_LEN_B32; // yQue&yTransposeBuf&yTranDepadBuf
+    uint64_t cutKDiHiWiTensorSizePreXo = 1 * vl * notCutProcessDimsMul * sCutDim * DTYPE_LEN_B32 + // indexImgBuf
+                                         3 * vl * notCutProcessDimsMulB32Align * sCutDim *
+                                             DTYPE_LEN_B32 + // yQue&yTransposeBuf&yTranDepadBuf
+                                         Ops::Base::CeilDiv(1 * vl * notCutOuterDimsMul, b8BlockAlignNum) *
+                                             b8BlockAlignNum * DTYPE_LEN_B8 +          // mask
+                                         2 * vl * notCutOuterDimsMul * DTYPE_LEN_B32 + // tmpGradBuf(fp32)&indexColBuf
+                                         2 * vl * notCutOuterDimsMulB32Align *
+                                             DTYPE_LEN_B32 + // argmaxQue&argmaxTransposeBuf
+                                         2 * vl * notCutOuterDimsMulDtypeAlign *
+                                             maxPoolGradParams.xDtypeSize; // gradQue&gradTransposeBuf
     if (maxPoolGradParams.maxUbSize < (SELECT_RESERVED_UB_SIZE + cutKDpHpWpTensorSizeWithoutXo)) {
         return 1;
     }
@@ -150,8 +153,8 @@ uint64_t MaxPool3DGradWithArgmaxCutKTiling::CalCloseBaseSize(
 
 bool MaxPool3DGradWithArgmaxCutKTiling::SetCutKParamsNotCutUB(const uint32_t ubCutAxis)
 {
-    uint64_t noCutSize = CalUBTotalSize(
-        maxPoolGradParams.singleCoreDo, maxPoolGradParams.singleCoreHo, maxPoolGradParams.singleCoreWo, ubCutAxis);
+    uint64_t noCutSize = CalUBTotalSize(maxPoolGradParams.singleCoreDo, maxPoolGradParams.singleCoreHo,
+                                        maxPoolGradParams.singleCoreWo, ubCutAxis);
     if (noCutSize <= maxPoolGradParams.maxUbSize) {
         maxPoolGradParams.baseDo = maxPoolGradParams.singleCoreDo;
         maxPoolGradParams.baseHo = maxPoolGradParams.singleCoreHo;
@@ -171,9 +174,8 @@ bool MaxPool3DGradWithArgmaxCutKTiling::SetCutKParamsCutUB()
         maxPoolGradParams.baseWo = maxPoolGradParams.singleCoreWo;
         uint64_t baseDp = 1;
         uint64_t baseWp = (maxPoolGradParams.baseWo - 1UL) * maxPoolGradParams.sw + maxPoolGradParams.kw;
-        maxPoolGradParams.baseHo = CalCloseBaseSize(
-            maxPoolGradParams.baseDo * maxPoolGradParams.baseWo, baseDp, baseWp, maxPoolGradParams.kh,
-            maxPoolGradParams.sh, TILING_UB_CUT_HO);
+        maxPoolGradParams.baseHo = CalCloseBaseSize(maxPoolGradParams.baseDo * maxPoolGradParams.baseWo, baseDp, baseWp,
+                                                    maxPoolGradParams.kh, maxPoolGradParams.sh, TILING_UB_CUT_HO);
         maxPoolGradParams.ubCutAxis = TILING_UB_CUT_HO;
         return true;
     }

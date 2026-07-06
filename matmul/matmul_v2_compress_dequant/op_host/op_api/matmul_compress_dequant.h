@@ -14,12 +14,11 @@
 
 namespace l0op {
 
-const aclTensor *MatMulCompressDequant(const aclTensor *x1, const aclTensor *x2, const aclTensor *compressIndex,
-    const aclTensor *deqScale, const aclTensor *bias, const aclTensor *offsetW,
-    const bool transposeX1, const bool transposeX2, const aclIntArray *compressInfo,
-    const int offsetX, const std::string &algStr, aclOpExecutor *executor);
+const aclTensor* MatMulCompressDequant(const aclTensor* x1, const aclTensor* x2, const aclTensor* compressIndex,
+                                       const aclTensor* deqScale, const aclTensor* bias, const aclTensor* offsetW,
+                                       const bool transposeX1, const bool transposeX2, const aclIntArray* compressInfo,
+                                       const int offsetX, const std::string& algStr, aclOpExecutor* executor);
 
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_MATMULV2_COMPRESS_DEQUANT_OP_H_
-
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_MATMULV2_COMPRESS_DEQUANT_OP_H_

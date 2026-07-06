@@ -20,28 +20,17 @@ const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM> AddRmsNormQuant(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
     const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
     const aclTensor* betaOptional, int64_t axis, double epsilon, bool divMode, aclOpExecutor* executor);
-    
+
 const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM> AddRmsNormQuant(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1,
     const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
     const aclTensor* betaOptional, int64_t axis, double epsilon, bool divMode, int dstType, aclOpExecutor* executor);
 
 const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM_V2> AddRmsNormQuantV2(
-    const aclTensor *x1,
-    const aclTensor *x2,
-    const aclTensor *gamma,
-    const aclTensor *bias,
-    const aclTensor *scales1,
-    const aclTensor *scales2Optional,
-    const aclTensor *zeroPoints1Optional,
-    const aclTensor *zeroPoints2Optional,
-    aclTensor *resOut,
-    aclTensor *xOut,
-    int64_t axis,
-    double epsilon,
-    bool divMode,
-    int dstType,
-    aclOpExecutor *executor);
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* bias, const aclTensor* scales1,
+    const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
+    aclTensor* resOut, aclTensor* xOut, int64_t axis, double epsilon, bool divMode, int dstType,
+    aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_ADD_RMS_NORM_QUANT_H_

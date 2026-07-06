@@ -29,13 +29,14 @@ class LoadAL1ToolsBase {
 public:
     __aicore__ inline LoadAL1ToolsBase() {}
 
-    __aicore__ inline void SetIntf(Intf *self)
+    __aicore__ inline void SetIntf(Intf* self)
     {
         self_ = self;
         buffAddr.logicPos = static_cast<uint8_t>(QuePosition::A1);
     }
 
-    __aicore__ inline void Al1PadHeadSet2d(uint64_t hiLoadL1, uint64_t wiLoadL1) {
+    __aicore__ inline void Al1PadHeadSet2d(uint64_t hiLoadL1, uint64_t wiLoadL1)
+    {
         uint32_t padHeadSize = cin1LoadL1PadHead * hiLoadL1 * wiLoadL1;
         if constexpr (Intf::isQuantScene || Intf::isDeQuantFlag) {
             uint16_t paddingValue = (static_cast<uint16_t>(self_->ctx.convTilingData->offsetx)) << BIT_OFFSET_8 |
@@ -56,7 +57,8 @@ public:
         }
     }
 
-    __aicore__ inline void Al1PadTailSet2d(uint64_t hiLoadL1, uint64_t wiLoadL1) {
+    __aicore__ inline void Al1PadTailSet2d(uint64_t hiLoadL1, uint64_t wiLoadL1)
+    {
         uint32_t padTailSize = cin1LoadL1PadTail * hiLoadL1 * wiLoadL1;
         if constexpr (Intf::isQuantScene || Intf::isDeQuantFlag) {
             uint16_t paddingValue = (static_cast<uint16_t>(self_->ctx.convTilingData->offsetx)) << BIT_OFFSET_8 |
@@ -80,8 +82,8 @@ public:
         if constexpr (Intf::isQuantScene || Intf::isDeQuantFlag) {
             uint16_t padValue = (static_cast<uint16_t>(self_->ctx.convTilingData->offsetx)) << BIT_OFFSET_8 |
                                 (static_cast<uint16_t>(self_->ctx.convTilingData->offsetx));
-            InitConstValueParams<uint16_t> params(1, static_cast<uint16_t>(
-                self_->ctx.convTilingData->aL1SpaceSize / C0_SIZE), 0, padValue);
+            InitConstValueParams<uint16_t> params(
+                1, static_cast<uint16_t>(self_->ctx.convTilingData->aL1SpaceSize / C0_SIZE), 0, padValue);
             buffAddr.dataLen = self_->ctx.convTilingData->aL1SpaceSize;
             buffAddr.bufferAddr = self_->ctx.al1.GetPhyAddr();
             al1tmp.SetAddr(buffAddr);
@@ -111,9 +113,11 @@ public:
         } else {
             if constexpr (Intf::bigKernelFlag) {
                 cinIdx = ((self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKh / self_->ctx.ddr2L1LoopKw) %
-                    self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Cin;
+                          self_->ctx.aL1CinLoadNum) *
+                         self_->ctx.aL1Cin;
                 kdL1Idx = (self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKh / self_->ctx.ddr2L1LoopKw /
-                    self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Dk;
+                           self_->ctx.aL1CinLoadNum) *
+                          self_->ctx.aL1Dk;
             } else {
                 cinIdx = (self_->ctx.kAL1Iter % self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Cin;
                 kdL1Idx = (self_->ctx.kAL1Iter / self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Dk;
@@ -123,7 +127,8 @@ public:
         uint64_t diStartWithPad = self_->ctx.diStartPos + self_->ctx.dOutIter * self_->ctx.convTilingData->strideD +
                                   kdL1Idx * self_->ctx.convTilingData->dilationD;
         diIdx = self_->ctx.diStartPos <= self_->ctx.convTilingData->padHead ?
-            diStartWithPad - self_->ctx.convTilingData->padHead : diStartWithPad - self_->ctx.diStartPos;
+                    diStartWithPad - self_->ctx.convTilingData->padHead :
+                    diStartWithPad - self_->ctx.diStartPos;
 
         uint64_t diEndWithPad = diStartWithPad + (dkLoadL1 - 1) * self_->ctx.convTilingData->dilationD + 1;
 
@@ -132,17 +137,19 @@ public:
 
         if (diStartWithPad < self_->ctx.convTilingData->padHead) {
             uint64_t kdTmp = CeilDiv((self_->ctx.convTilingData->padHead - diStartWithPad),
-                self_->ctx.convTilingData->dilationD);
+                                     self_->ctx.convTilingData->dilationD);
             kdTmp = kdTmp > dkLoadL1 ? dkLoadL1 : kdTmp;
             diIdx = self_->ctx.convTilingData->dilationD == 1 ? 0 :
-                kdTmp * self_->ctx.convTilingData->dilationD - self_->ctx.convTilingData->padHead + diStartWithPad;
+                                                                kdTmp * self_->ctx.convTilingData->dilationD -
+                                                                    self_->ctx.convTilingData->padHead + diStartWithPad;
             cin1LoadL1PadHead = kdTmp * AlignB(cinLoadL1, Intf::k0);
             dkLoadL1 -= kdTmp;
         }
 
         if (diEndWithPad > self_->ctx.convTilingData->orgDi + self_->ctx.convTilingData->padHead) {
-            uint64_t kdTmp = CeilDiv(diEndWithPad - (self_->ctx.convTilingData->orgDi + self_->ctx.convTilingData->padHead),
-                                     self_->ctx.convTilingData->dilationD);
+            uint64_t kdTmp = CeilDiv(
+                diEndWithPad - (self_->ctx.convTilingData->orgDi + self_->ctx.convTilingData->padHead),
+                self_->ctx.convTilingData->dilationD);
             kdTmp = kdTmp > dkLoadL1 ? dkLoadL1 : kdTmp;
             cin1LoadL1PadTail = kdTmp * AlignB(cinLoadL1, Intf::k0);
             dkLoadL1 -= kdTmp;
@@ -152,7 +159,8 @@ public:
     __aicore__ inline bool IsKAL1Tail()
     {
         if constexpr (Intf::bigKernelFlag) {
-            return (self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) == self_->ctx.aL1CinLoadNum - 1;
+            return (self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) ==
+                   self_->ctx.aL1CinLoadNum - 1;
         } else {
             if (self_->ctx.aL1CinLoadNum == 1) {
                 return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter;
@@ -178,7 +186,7 @@ public:
     }
 
 public:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t dkLoadL1 = 0;
     uint64_t cinLoadL1 = 0;
     uint64_t diIdx = 0;
@@ -194,13 +202,9 @@ public:
 template <class Intf>
 class LoadBL1Tools {
 public:
-    __aicore__ inline LoadBL1Tools()
-    {}
+    __aicore__ inline LoadBL1Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
     __aicore__ inline void LoadBL1()
     {
@@ -236,15 +240,16 @@ public:
         uint64_t bL1GmPos = 0;
         uint64_t bL1GmOffset = 0;
         if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
-            bL1GmPos = dkIdx * self_->ctx.convTilingData->kernelHxkernelW + cinIdx *
-                       self_->ctx.convTilingData->kernelHxkernelWxkernelD + coutIdx * self_->ctx.singleCoreCi *
-                       self_->ctx.convTilingData->kernelHxkernelWxkernelD;
+            bL1GmPos = dkIdx * self_->ctx.convTilingData->kernelHxkernelW +
+                       cinIdx * self_->ctx.convTilingData->kernelHxkernelWxkernelD +
+                       coutIdx * self_->ctx.singleCoreCi * self_->ctx.convTilingData->kernelHxkernelWxkernelD;
             bL1GmOffset = self_->ctx.convTilingData->kernelHxkernelW;
         } else {
             bL1GmPos = dkIdx * self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.singleCoreCi *
-                       self_->ctx.convTilingData->orgCo + cinIdx * self_->ctx.convTilingData->orgCo + coutIdx;
+                           self_->ctx.convTilingData->orgCo +
+                       cinIdx * self_->ctx.convTilingData->orgCo + coutIdx;
             bL1GmOffset = self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.singleCoreCi *
-                       self_->ctx.convTilingData->orgCo;
+                          self_->ctx.convTilingData->orgCo;
         }
         uint64_t bL1Pos = 0;
         uint64_t bL1Offset = AlignB(currentBL1Cin1, Intf::k0) * self_->ctx.convTilingData->kernelHxkernelW *
@@ -267,26 +272,27 @@ public:
 
         uint64_t bL1GmPos = 0;
         uint64_t bL1GmOffset = 0;
-        uint64_t dkIter = self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh / self_->ctx.cinBL1LoopTimes;
+        uint64_t dkIter = self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh /
+                          self_->ctx.cinBL1LoopTimes;
         if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
             bL1GmPos = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 * self_->ctx.singleCoreCi *
-                self_->ctx.convTilingData->kernelHxkernelWxkernelD +
-                self_->ctx.cinBL1Iter * self_->ctx.bL1Cin *
-                self_->ctx.convTilingData->kernelHxkernelWxkernelD +
-                dkIter * self_->ctx.bL1Dk * self_->ctx.convTilingData->kernelHxkernelW +
-                self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->kernelW +
-                self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1;
+                           self_->ctx.convTilingData->kernelHxkernelWxkernelD +
+                       self_->ctx.cinBL1Iter * self_->ctx.bL1Cin * self_->ctx.convTilingData->kernelHxkernelWxkernelD +
+                       dkIter * self_->ctx.bL1Dk * self_->ctx.convTilingData->kernelHxkernelW +
+                       self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->kernelW +
+                       self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1;
             bL1GmOffset = self_->ctx.convTilingData->kernelW;
         } else {
-            bL1GmPos = dkIter * self_->ctx.bL1Dk * self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.singleCoreCi *
-                self_->ctx.convTilingData->orgCo + self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 *
-                self_->ctx.convTilingData->kernelW * self_->ctx.singleCoreCi * self_->ctx.convTilingData->orgCo +
-                self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 * self_->ctx.singleCoreCi *
-                self_->ctx.convTilingData->orgCo + self_->ctx.cinBL1Iter *
-                self_->ctx.bL1Cin * self_->ctx.convTilingData->orgCo +
-                self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1;
+            bL1GmPos = dkIter * self_->ctx.bL1Dk * self_->ctx.convTilingData->kernelHxkernelW *
+                           self_->ctx.singleCoreCi * self_->ctx.convTilingData->orgCo +
+                       self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->kernelW *
+                           self_->ctx.singleCoreCi * self_->ctx.convTilingData->orgCo +
+                       self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 * self_->ctx.singleCoreCi *
+                           self_->ctx.convTilingData->orgCo +
+                       self_->ctx.cinBL1Iter * self_->ctx.bL1Cin * self_->ctx.convTilingData->orgCo +
+                       self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1;
             bL1GmOffset = self_->ctx.convTilingData->kernelW * self_->ctx.singleCoreCi *
-                self_->ctx.convTilingData->orgCo;
+                          self_->ctx.convTilingData->orgCo;
         }
         uint64_t bL1Pos = 0;
         uint64_t bL1Offset = AlignB(currentBL1Cin1, Intf::k0) * self_->ctx.convTilingData->kwL1 *
@@ -298,8 +304,9 @@ public:
             bL1GmPos += bL1GmOffset;
         }
     }
+
 private:
-    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, const uint64_t currentNBL1)
+    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams& intriParams, const uint64_t currentNBL1)
     {
         intriParams.dValue = currentBL1Cin1;
         intriParams.dstNzC0Stride = self_->ctx.convTilingData->nBL1 * self_->ctx.convTilingData->kernelHxkernelW;
@@ -307,7 +314,8 @@ private:
             intriParams.srcDValue = self_->ctx.convTilingData->kernelHxkernelWxkernelD;
             intriParams.dnNum = currentNBL1;
             intriParams.nValue = self_->ctx.convTilingData->kernelHxkernelW;
-            intriParams.srcDnMatrixStride = self_->ctx.singleCoreCi * self_->ctx.convTilingData->kernelHxkernelWxkernelD;
+            intriParams.srcDnMatrixStride = self_->ctx.singleCoreCi *
+                                            self_->ctx.convTilingData->kernelHxkernelWxkernelD;
             intriParams.dstNzNStride = self_->ctx.convTilingData->nBL1;
             intriParams.dstNzMatrixStride = C0_SIZE / Intf::sizeOfWeight;
         } else {
@@ -320,16 +328,17 @@ private:
         }
     }
 
-    __aicore__ inline void SetDn2NzIntriParamsBigKernel(Dn2NzParams &intriParams, const uint64_t currentNBL1)
+    __aicore__ inline void SetDn2NzIntriParamsBigKernel(Dn2NzParams& intriParams, const uint64_t currentNBL1)
     {
         intriParams.dValue = currentBL1Cin1;
         intriParams.dstNzC0Stride = self_->ctx.convTilingData->nBL1 * self_->ctx.convTilingData->khL1 *
-                self_->ctx.convTilingData->kwL1;
+                                    self_->ctx.convTilingData->kwL1;
         if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
             intriParams.srcDValue = self_->ctx.convTilingData->kernelHxkernelWxkernelD;
             intriParams.dnNum = currentNBL1;
             intriParams.nValue = self_->ctx.convTilingData->kwL1;
-            intriParams.srcDnMatrixStride = self_->ctx.singleCoreCi * self_->ctx.convTilingData->kernelHxkernelWxkernelD;
+            intriParams.srcDnMatrixStride = self_->ctx.singleCoreCi *
+                                            self_->ctx.convTilingData->kernelHxkernelWxkernelD;
             intriParams.dstNzNStride = self_->ctx.convTilingData->nBL1;
             intriParams.dstNzMatrixStride = C0_SIZE / Intf::sizeOfWeight;
         } else {
@@ -342,10 +351,7 @@ private:
         }
     }
 
-    __aicore__ inline bool IsNBL1Tail()
-    {
-        return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter;
-    }
+    __aicore__ inline bool IsNBL1Tail() { return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter; }
 
     __aicore__ inline bool IsKBL1Tail()
     {
@@ -357,13 +363,15 @@ private:
     }
     __aicore__ inline bool IsBigKernelCiBL1Tail()
     {
-        return (self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) == self_->ctx.cinBL1LoopTimes - 1;
+        return (self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) ==
+               self_->ctx.cinBL1LoopTimes - 1;
     }
+
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t currentBL1Cin1 = 0;
 };
 
-};
+}; // namespace Conv3dFunc
 
-#endif  // CONV3D_V2_INSTR_BASE_IMPL_H
+#endif // CONV3D_V2_INSTR_BASE_IMPL_H

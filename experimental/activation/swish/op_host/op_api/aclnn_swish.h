@@ -19,10 +19,9 @@ extern "C" {
 #endif
 
 ACLNN_API aclnnStatus aclnnSwishGetWorkspaceSize(const aclTensor* self, const aclScalar* betaOptional, aclTensor* out,
-                                                uint64_t* workspaceSize, aclOpExecutor** executor);
+                                                 uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnSwish(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSwish(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -34,7 +34,7 @@ TILING_DATA_FIELD_DEF(int32_t, quantMin);
 TILING_DATA_FIELD_DEF(int32_t, quantMax);
 TILING_DATA_FIELD_DEF(uint32_t, dTileLen);
 TILING_DATA_FIELD_DEF(uint32_t, numDChunks);
-TILING_DATA_FIELD_DEF(uint32_t, splitMode);  // 0 = split rows, 1 = split d-chunks
+TILING_DATA_FIELD_DEF(uint32_t, splitMode); // 0 = split rows, 1 = split d-chunks
 TILING_DATA_FIELD_DEF(uint32_t, chunksPerCore);
 TILING_DATA_FIELD_DEF(uint32_t, tailChunks);
 END_TILING_DATA_DEF;

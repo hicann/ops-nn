@@ -22,22 +22,16 @@
 // 0 = float32 (native precision)
 // 1 = float16 (native precision)
 // 2 = bfloat16 (cast to fp32 for computation)
-#define HARD_SIGMOID_GRAD_MODE_FLOAT32  0
-#define HARD_SIGMOID_GRAD_MODE_FLOAT16  1
+#define HARD_SIGMOID_GRAD_MODE_FLOAT32 0
+#define HARD_SIGMOID_GRAD_MODE_FLOAT16 1
 #define HARD_SIGMOID_GRAD_MODE_BFLOAT16 2
 
 ASCENDC_TPL_ARGS_DECL(HardSigmoidGrad,
-    ASCENDC_TPL_UINT_DECL(schMode, 8, ASCENDC_TPL_UI_LIST,
-                          HARD_SIGMOID_GRAD_MODE_FLOAT32, HARD_SIGMOID_GRAD_MODE_FLOAT16,
-                          HARD_SIGMOID_GRAD_MODE_BFLOAT16)
-);
+                      ASCENDC_TPL_UINT_DECL(schMode, 8, ASCENDC_TPL_UI_LIST, HARD_SIGMOID_GRAD_MODE_FLOAT32,
+                                            HARD_SIGMOID_GRAD_MODE_FLOAT16, HARD_SIGMOID_GRAD_MODE_BFLOAT16));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
-                             HARD_SIGMOID_GRAD_MODE_FLOAT32, HARD_SIGMOID_GRAD_MODE_FLOAT16,
-                             HARD_SIGMOID_GRAD_MODE_BFLOAT16)
-    ),
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, HARD_SIGMOID_GRAD_MODE_FLOAT32,
+                                                          HARD_SIGMOID_GRAD_MODE_FLOAT16,
+                                                          HARD_SIGMOID_GRAD_MODE_BFLOAT16)), );
 
 #endif

@@ -25,18 +25,16 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3>
 class DynamicQuantUpdateScatterEachCoreLargeBatchLargeQuant : DynamicQuantUpdateScatterBase<T1, T2, T3> {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterEachCoreLargeBatchLargeQuant()
-    {}
+    __aicore__ inline DynamicQuantUpdateScatterEachCoreLargeBatchLargeQuant() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
+                                const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         int64_t eachCoreBsNumElements = tilingPtr->srcBsStride * tilingPtr->eachCoreBsNum;
         this->InitBase(var, varScale, indices, smoothScales, tilingPtr);
-        int64_t varScaleOutAlignElemens =
-            (tilingPtr->eachCoreBsNum * tilingPtr->quantReptNum * sizeof(float) + THIRTY_TWO) / THIRTY_TWO *
-            THIRTY_TWO / sizeof(float);
+        int64_t varScaleOutAlignElemens = (tilingPtr->eachCoreBsNum * tilingPtr->quantReptNum * sizeof(float) +
+                                           THIRTY_TWO) /
+                                          THIRTY_TWO * THIRTY_TWO / sizeof(float);
         this->InitUpdateGM(updates, this->blockIdx * eachCoreBsNumElements, this->coreBsNumElements);
 
         this->InitvarScaleOutQueue(varScaleOutAlignElemens * sizeof(float));
@@ -59,8 +57,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CalcEachQuant(
-        int64_t dstBaseOffsetOrg, int64_t srcBaseOffsetOrg, const DynamicQuantUpdateScatterTilingData* tilingPtr)
+    __aicore__ inline void CalcEachQuant(int64_t dstBaseOffsetOrg, int64_t srcBaseOffsetOrg,
+                                         const DynamicQuantUpdateScatterTilingData* tilingPtr)
     {
         int64_t srcOffset = 0;
         int64_t dstOffset = 0;
@@ -83,8 +81,8 @@ private:
                 }
                 if (tilingPtr->innerLoopTail != 0) {
                     srcOffset = srcBaseOffset + tilingPtr->innerLoopTimes * tilingPtr->innerLoopEle;
-                    this->CopyUpdatesAndScalesByEle(
-                        srcOffset, tilingPtr->innerLoopTimes, tilingPtr->innerLoopTail, tilingPtr);
+                    this->CopyUpdatesAndScalesByEle(srcOffset, tilingPtr->innerLoopTimes, tilingPtr->innerLoopTail,
+                                                    tilingPtr);
                     this->ComputeGetMaxUpdates(tilingPtr->innerLoopTail, maxUpdatesValue);
                 }
 
@@ -104,8 +102,8 @@ private:
                 if (tilingPtr->innerLoopTail != 0) {
                     srcOffset = srcBaseOffset + tilingPtr->innerLoopTimes * tilingPtr->innerLoopEle;
                     dstOffset = dstBaseOffset + tilingPtr->innerLoopTimes * tilingPtr->innerLoopEle;
-                    this->CopyUpdatesAndScalesByEle(
-                        srcOffset, tilingPtr->innerLoopTimes, tilingPtr->innerLoopTail, tilingPtr);
+                    this->CopyUpdatesAndScalesByEle(srcOffset, tilingPtr->innerLoopTimes, tilingPtr->innerLoopTail,
+                                                    tilingPtr);
                     this->ComputeByEle(scale, tilingPtr->innerLoopTail);
                     this->CopyVarOut(dstOffset, tilingPtr->innerLoopTail);
                 }

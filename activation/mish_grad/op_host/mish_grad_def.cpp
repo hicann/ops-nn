@@ -10,8 +10,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class MishGrad : public OpDef
-{
+class MishGrad : public OpDef {
 public:
     explicit MishGrad(const char* name) : OpDef(name)
     {

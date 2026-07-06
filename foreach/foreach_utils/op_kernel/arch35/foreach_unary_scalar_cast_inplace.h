@@ -24,14 +24,13 @@ using namespace AscendC;
 // CRTP intermediate: Derived supplies ApplyScalarOp(dst, src, scalar, dataCount).
 // float/int compute directly; half/bfloat16 cast to float, apply, then cast back.
 template <typename T, typename ScalarT, typename Tiling, typename Derived>
-class ForeachUnaryScalarCastInplaceRegbase : public ForeachRegbaseUnary<T, Tiling, Derived>
-{
+class ForeachUnaryScalarCastInplaceRegbase : public ForeachRegbaseUnary<T, Tiling, Derived> {
 public:
     using Base = ForeachRegbaseUnary<T, Tiling, Derived>;
     using Base::Process;
     __aicore__ inline ForeachUnaryScalarCastInplaceRegbase() : Base(static_cast<Derived&>(*this)){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(inputs, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ ScalarT*)scalar, 1);

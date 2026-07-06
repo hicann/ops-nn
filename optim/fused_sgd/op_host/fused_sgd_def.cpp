@@ -20,8 +20,7 @@ static constexpr float WEIGHT_DECAY_DEFAULT = 0.0;
 static constexpr float MOMENTUM_DEFAULT = 0.0;
 static constexpr float DAMPENING_DEFAULT = 0.0;
 
-class FusedSgd : public OpDef
-{
+class FusedSgd : public OpDef {
 public:
     explicit FusedSgd(const char* name) : OpDef(name)
     {

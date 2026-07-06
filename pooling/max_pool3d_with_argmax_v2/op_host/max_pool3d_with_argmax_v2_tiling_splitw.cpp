@@ -30,9 +30,9 @@ bool MaxPool3DWithArgmaxV2SplitWTiling::IsCapable()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
-    } 
+    }
     splitData.partD = inputData.dilation[D_DIM] * (inputData.kernelSize[D_DIM] - 1) + 1;
     splitData.partOutD = 1UL;
     splitData.partH = inputData.dilation[H_DIM] * (inputData.kernelSize[H_DIM] - 1) + 1;
@@ -75,8 +75,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2SplitWTiling::SmallBatchesTiling(void)
     splitData.leftOverParts = (wholeCount * (batchesBlock + additionBatch)) % coreNum;
     uint64_t count = 0;
     uint64_t curPos = 0;
-    uint64_t offW =
-        splitData.partW - (inputData.kernelSize[W_DIM] - 1) * inputData.dilation[W_DIM] + inputData.stride[W_DIM] - 1;
+    uint64_t offW = splitData.partW - (inputData.kernelSize[W_DIM] - 1) * inputData.dilation[W_DIM] +
+                    inputData.stride[W_DIM] - 1;
     for (uint64_t b = 0UL; b < (batchesBlock + (batchesRem != 0UL)); b++) {
         if ((count != 0UL) && (curPos > 0UL)) {
             if (b < batchesBlock) {

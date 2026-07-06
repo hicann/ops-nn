@@ -44,8 +44,8 @@ const gert::Shape QuantBatchMatmulV4PergroupArch35Tiling::GetOptionShape(const s
     return context_->GetOptionalInputShape(index)->GetStorageShape();
 }
 
-ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::CalcDequantTiling(
-    uint32_t baseM, uint32_t baseN, uint32_t groupSizeK)
+ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::CalcDequantTiling(uint32_t baseM, uint32_t baseN,
+                                                                          uint32_t groupSizeK)
 {
     uint64_t ubSize = aicoreParams_.ubSize;
     uint64_t elesize = ubSize / sizeof(float);
@@ -73,9 +73,9 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::DoOpTiling()
 {
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        OP_LOGE(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
-            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-        return ge::GRAPH_FAILED);
+                    OP_LOGE(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+                    return ge::GRAPH_FAILED);
     isUbQuant_ = true;
     InitCompileInfo();
     SetTransAttr(trans_);
@@ -113,8 +113,8 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::DoOpTiling()
     stepK = std::max(1U, stepK);
     basicTiling_.stepKa = stepK;
     basicTiling_.stepKb = stepK;
-    OP_LOGD(inputParams_.opName, "arch35 int8 tiling: groupSizeK=%u, stepK=%u, l1Size=%u", 
-        inputParams_.groupSizeK, stepK, l1Size);
+    OP_LOGD(inputParams_.opName, "arch35 int8 tiling: groupSizeK=%u, stepK=%u, l1Size=%u", inputParams_.groupSizeK,
+            stepK, l1Size);
 
     basicTiling_.baseK = inputParams_.groupSizeK;
     QuantBatchMatmulV3BasicTiling::DoL2CacheTiling();
@@ -305,17 +305,14 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupAttrs() const
         return false;
     }
     if (inputParams_.groupSizeK != GROUP_SIZE_K) {
-        OP_LOGD(
-            inputParams_.opName,
-            "In %s, expected groupSizeK == %ld (groupSizeK = groupSize & 0xFFFF), but got %lu, full groupSize=%lu.",
-            INT4_KG_QUANT_MODE, GROUP_SIZE_K, inputParams_.groupSizeK, inputParams_.groupSize);
+        OP_LOGD(inputParams_.opName,
+                "In %s, expected groupSizeK == %ld (groupSizeK = groupSize & 0xFFFF), but got %lu, full groupSize=%lu.",
+                INT4_KG_QUANT_MODE, GROUP_SIZE_K, inputParams_.groupSizeK, inputParams_.groupSize);
         return false;
     }
-    if (inputParams_.transA != false ||  inputParams_.transB != true) {
-        OP_LOGD(
-            inputParams_.opName,
-            "In %s, only support transA=false and transB=true, but got transA=%s, transB=%s.",
-            INT4_KG_QUANT_MODE, inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false");
+    if (inputParams_.transA != false || inputParams_.transB != true) {
+        OP_LOGD(inputParams_.opName, "In %s, only support transA=false and transB=true, but got transA=%s, transB=%s.",
+                INT4_KG_QUANT_MODE, inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false");
         return false;
     }
     return true;
@@ -324,40 +321,33 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupAttrs() const
 bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupDtype() const
 {
     if (inputParams_.aDtype != ge::DT_INT4) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x1 dtype=int4, but got %s.", INT4_KG_QUANT_MODE,
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str());
+        OP_LOGD(inputParams_.opName, "In %s, expected x1 dtype=int4, but got %s.", INT4_KG_QUANT_MODE,
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str());
         return false;
     }
     if (inputParams_.bDtype != ge::DT_INT4) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x2 dtype=int4, but got %s.", INT4_KG_QUANT_MODE,
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str());
+        OP_LOGD(inputParams_.opName, "In %s, expected x2 dtype=int4, but got %s.", INT4_KG_QUANT_MODE,
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str());
         return false;
     }
     if (inputParams_.perTokenScaleDtype != ge::DT_FLOAT) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x1Scale dtype=float32, but got %s.", INT4_KG_QUANT_MODE,
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str());
+        OP_LOGD(inputParams_.opName, "In %s, expected x1Scale dtype=float32, but got %s.", INT4_KG_QUANT_MODE,
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str());
         return false;
     }
     if (inputParams_.scaleDtype != ge::DT_FLOAT) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x2Scale dtype=float32, but got %s.", INT4_KG_QUANT_MODE,
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str());
+        OP_LOGD(inputParams_.opName, "In %s, expected x2Scale dtype=float32, but got %s.", INT4_KG_QUANT_MODE,
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str());
         return false;
     }
     if (!(inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16)) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected output dtype in {float16, bfloat16}, but got %s.",
-            INT4_KG_QUANT_MODE,
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str());
+        OP_LOGD(inputParams_.opName, "In %s, expected output dtype in {float16, bfloat16}, but got %s.",
+                INT4_KG_QUANT_MODE, ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str());
         return false;
     }
     if (inputParamsPergroup_.x2OffsetDtype != ge::DT_FLOAT16) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x2Offset dtype=float16, but got %s.", INT4_KG_QUANT_MODE,
-            ge::TypeUtils::DataTypeToSerialString(inputParamsPergroup_.x2OffsetDtype).c_str());
+        OP_LOGD(inputParams_.opName, "In %s, expected x2Offset dtype=float16, but got %s.", INT4_KG_QUANT_MODE,
+                ge::TypeUtils::DataTypeToSerialString(inputParamsPergroup_.x2OffsetDtype).c_str());
         return false;
     }
     return true;
@@ -387,51 +377,50 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupBasicShapeConstraints(
         return false;
     }
     if (inputParams_.kSize % ALIGN1024 != 0) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected k aligned to %d, but got k=%lu.", INT4_KG_QUANT_MODE, ALIGN1024,
-            inputParams_.kSize);
+        OP_LOGD(inputParams_.opName, "In %s, expected k aligned to %d, but got k=%lu.", INT4_KG_QUANT_MODE, ALIGN1024,
+                inputParams_.kSize);
         return false;
     }
     if (inputParams_.nSize % ALIGN256 != 0) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected n aligned to %d, but got n=%lu.", INT4_KG_QUANT_MODE, ALIGN256,
-            inputParams_.nSize);
+        OP_LOGD(inputParams_.opName, "In %s, expected n aligned to %d, but got n=%lu.", INT4_KG_QUANT_MODE, ALIGN256,
+                inputParams_.nSize);
         return false;
     }
     return true;
 }
 
-bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupDimAndOutput(
-    const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
-    const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape)
+bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupDimAndOutput(const gert::Shape& x1Shape,
+                                                                       const gert::Shape& x2Shape,
+                                                                       const gert::Shape& x1ScaleShape,
+                                                                       const gert::Shape& x2ScaleShape,
+                                                                       const gert::Shape& x2OffsetShape)
 {
     if (x1Shape.GetDimNum() != EXPECTED_DIM_NUM || x2Shape.GetDimNum() != EXPECTED_DIM_NUM ||
         x1ScaleShape.GetDimNum() != EXPECTED_DIM_NUM || x2ScaleShape.GetDimNum() != EXPECTED_DIM_NUM ||
         x2OffsetShape.GetDimNum() != EXPECTED_DIM_NUM) {
-        OP_LOGD(
-            inputParams_.opName,
-            "In %s, expected dims=2 for x1/x2/x1Scale/x2Scale/x2Offset, but got [%zu, %zu, %zu, %zu, %zu].",
-            INT4_KG_QUANT_MODE, x1Shape.GetDimNum(), x2Shape.GetDimNum(), x1ScaleShape.GetDimNum(),
-            x2ScaleShape.GetDimNum(), x2OffsetShape.GetDimNum());
+        OP_LOGD(inputParams_.opName,
+                "In %s, expected dims=2 for x1/x2/x1Scale/x2Scale/x2Offset, but got [%zu, %zu, %zu, %zu, %zu].",
+                INT4_KG_QUANT_MODE, x1Shape.GetDimNum(), x2Shape.GetDimNum(), x1ScaleShape.GetDimNum(),
+                x2ScaleShape.GetDimNum(), x2OffsetShape.GetDimNum());
         return false;
     }
     if (!InferOutBatchDim(x1Shape, x2Shape)) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected batch dims of x1 and x2 to be broadcastable, but got non-broadcastable.",
-            INT4_KG_QUANT_MODE);
+        OP_LOGD(inputParams_.opName,
+                "In %s, expected batch dims of x1 and x2 to be broadcastable, but got non-broadcastable.",
+                INT4_KG_QUANT_MODE);
         return false;
     }
     if (!CheckOutputShapeAvailable()) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected output shape product within INT64_MAX, but got overflow risk.",
-            INT4_KG_QUANT_MODE);
+        OP_LOGD(inputParams_.opName, "In %s, expected output shape product within INT64_MAX, but got overflow risk.",
+                INT4_KG_QUANT_MODE);
         return false;
     }
     return true;
 }
 
-bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupScaleShape(
-    const gert::Shape& x1ScaleShape, const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape) const
+bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupScaleShape(const gert::Shape& x1ScaleShape,
+                                                                     const gert::Shape& x2ScaleShape,
+                                                                     const gert::Shape& x2OffsetShape) const
 {
     int64_t m = static_cast<int64_t>(inputParams_.mSize);
     int64_t k = static_cast<int64_t>(inputParams_.kSize);
@@ -439,21 +428,18 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupScaleShape(
     int64_t nkgroup = ops::CeilDiv(k, GROUP_SIZE_K);
 
     if (x1ScaleShape.GetDim(0) != m || x1ScaleShape.GetDim(1) != 1) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x1Scale shape=[%ld, 1], but got [%ld, %ld].", INT4_KG_QUANT_MODE, m,
-            x1ScaleShape.GetDim(0), x1ScaleShape.GetDim(1));
+        OP_LOGD(inputParams_.opName, "In %s, expected x1Scale shape=[%ld, 1], but got [%ld, %ld].", INT4_KG_QUANT_MODE,
+                m, x1ScaleShape.GetDim(0), x1ScaleShape.GetDim(1));
         return false;
     }
     if (x2ScaleShape.GetDim(0) != nkgroup || x2ScaleShape.GetDim(1) != n) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x2Scale shape=[%ld, %ld], but got [%ld, %ld].", INT4_KG_QUANT_MODE,
-            nkgroup, n, x2ScaleShape.GetDim(0), x2ScaleShape.GetDim(1));
+        OP_LOGD(inputParams_.opName, "In %s, expected x2Scale shape=[%ld, %ld], but got [%ld, %ld].",
+                INT4_KG_QUANT_MODE, nkgroup, n, x2ScaleShape.GetDim(0), x2ScaleShape.GetDim(1));
         return false;
     }
     if (x2OffsetShape.GetDim(0) != nkgroup || x2OffsetShape.GetDim(1) != n) {
-        OP_LOGD(
-            inputParams_.opName, "In %s, expected x2Offset shape=[%ld, %ld], but got [%ld, %ld].", INT4_KG_QUANT_MODE,
-            nkgroup, n, x2OffsetShape.GetDim(0), x2OffsetShape.GetDim(1));
+        OP_LOGD(inputParams_.opName, "In %s, expected x2Offset shape=[%ld, %ld], but got [%ld, %ld].",
+                INT4_KG_QUANT_MODE, nkgroup, n, x2OffsetShape.GetDim(0), x2OffsetShape.GetDim(1));
         return false;
     }
     return true;
@@ -463,22 +449,21 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupInputFormat() const
 {
     auto x1Format = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(X1_IDX)->GetStorageFormat()));
     auto x2Format = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(X2_IDX)->GetStorageFormat()));
-    auto x1ScaleFormat =
-        static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X1_SCALE_IDX)->GetStorageFormat()));
-    auto x2ScaleFormat =
-        static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X2_SCALE_IDX)->GetStorageFormat()));
+    auto x1ScaleFormat = static_cast<ge::Format>(
+        ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X1_SCALE_IDX)->GetStorageFormat()));
+    auto x2ScaleFormat = static_cast<ge::Format>(
+        ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X2_SCALE_IDX)->GetStorageFormat()));
     auto x2OffsetFormat = static_cast<ge::Format>(
         ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X2_OFFSET_IDX)->GetStorageFormat()));
     if (x1Format != ge::FORMAT_ND || x2Format != ge::FORMAT_ND || x1ScaleFormat != ge::FORMAT_ND ||
         x2ScaleFormat != ge::FORMAT_ND || x2OffsetFormat != ge::FORMAT_ND) {
-        OP_LOGD(
-            inputParams_.opName,
-            "In %s, expected storage format=ND for x1/x2/x1Scale/x2Scale/x2Offset, but got [%s, %s, %s, %s, %s].",
-            INT4_KG_QUANT_MODE, ge::TypeUtils::FormatToSerialString(x1Format).c_str(),
-            ge::TypeUtils::FormatToSerialString(x2Format).c_str(),
-            ge::TypeUtils::FormatToSerialString(x1ScaleFormat).c_str(),
-            ge::TypeUtils::FormatToSerialString(x2ScaleFormat).c_str(),
-            ge::TypeUtils::FormatToSerialString(x2OffsetFormat).c_str());
+        OP_LOGD(inputParams_.opName,
+                "In %s, expected storage format=ND for x1/x2/x1Scale/x2Scale/x2Offset, but got [%s, %s, %s, %s, %s].",
+                INT4_KG_QUANT_MODE, ge::TypeUtils::FormatToSerialString(x1Format).c_str(),
+                ge::TypeUtils::FormatToSerialString(x2Format).c_str(),
+                ge::TypeUtils::FormatToSerialString(x1ScaleFormat).c_str(),
+                ge::TypeUtils::FormatToSerialString(x2ScaleFormat).c_str(),
+                ge::TypeUtils::FormatToSerialString(x2OffsetFormat).c_str());
         return false;
     }
     return true;
@@ -488,9 +473,9 @@ uint64_t QuantBatchMatmulV4PergroupArch35Tiling::GetTilingKey() const
 {
     uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
     matmul_v4::KernelTemplateType kernelType = matmul_v4::KernelTemplateType::LUT_ASW;
-    return GET_TPL_TILING_KEY(
-        trans, static_cast<uint64_t>(matmul_v4::QuantType::INT4_ASYMMETRICAL), static_cast<uint64_t>(false),
-        static_cast<uint64_t>(false), static_cast<uint64_t>(kernelType));
+    return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(matmul_v4::QuantType::INT4_ASYMMETRICAL),
+                              static_cast<uint64_t>(false), static_cast<uint64_t>(false),
+                              static_cast<uint64_t>(kernelType));
 }
 
 ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::GetWorkspaceSize()

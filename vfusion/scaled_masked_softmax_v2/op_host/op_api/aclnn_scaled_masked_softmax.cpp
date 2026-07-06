@@ -37,12 +37,12 @@ static const std::initializer_list<op::DataType> SOFTMAX_X_DTYPE_SUPPORT_LIST = 
 
 static const std::initializer_list<op::DataType> MASK_DTYPE_SUPPORT_LIST = {op::DataType::DT_BOOL};
 
-extern aclnnStatus aclnnInnerScaledMaskedSoftmaxV2GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* mask, double scale, bool fixedTriuMask, aclTensor* y, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+extern aclnnStatus aclnnInnerScaledMaskedSoftmaxV2GetWorkspaceSize(const aclTensor* x, const aclTensor* mask,
+                                                                   double scale, bool fixedTriuMask, aclTensor* y,
+                                                                   uint64_t* workspaceSize, aclOpExecutor** executor);
 
-extern aclnnStatus aclnnInnerScaledMaskedSoftmaxV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+extern aclnnStatus aclnnInnerScaledMaskedSoftmaxV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                   aclrtStream stream);
 
 static bool CheckNotNull(const aclTensor* x, const aclTensor* mask, aclTensor* y)
 {
@@ -124,9 +124,9 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* mask, aclTen
 }
 } // namespace
 
-aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* mask, double scale, bool fixedTriuMask, aclTensor* y, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(const aclTensor* x, const aclTensor* mask, double scale,
+                                                     bool fixedTriuMask, aclTensor* y, uint64_t* workspaceSize,
+                                                     aclOpExecutor** executor)
 {
     auto ret_param = CheckParams(x, mask, y);
     CHECK_RET(ret_param == ACLNN_SUCCESS, ret_param);
@@ -138,8 +138,8 @@ aclnnStatus aclnnScaledMaskedSoftmaxGetWorkspaceSize(
     return result;
 }
 
-aclnnStatus aclnnScaledMaskedSoftmax(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnScaledMaskedSoftmax(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream)
 {
     return aclnnInnerScaledMaskedSoftmaxV2(workspace, workspaceSize, executor, stream);
 }

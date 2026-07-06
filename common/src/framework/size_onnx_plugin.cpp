@@ -12,31 +12,27 @@
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
-static Status ParseParamsSize(const Message *op_src, ge::Operator &op_dest) {
-  const NodeProto *node = dynamic_cast<const NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-  // set output's default type to int64.
-  ge::DataType output_type = ge::DT_INT64;
-  op_dest.SetAttr("dtype", output_type);
-  return SUCCESS;
+static Status ParseParamsSize(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
+    }
+    // set output's default type to int64.
+    ge::DataType output_type = ge::DT_INT64;
+    op_dest.SetAttr("dtype", output_type);
+    return SUCCESS;
 }
 // register Size op info to GE
 REGISTER_CUSTOM_OP("Size")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("ai.onnx::8::Size"),
-                 ge::AscendString("ai.onnx::9::Size"),
-                 ge::AscendString("ai.onnx::10::Size"),
-                 ge::AscendString("ai.onnx::11::Size"),
-                 ge::AscendString("ai.onnx::12::Size"),
-                 ge::AscendString("ai.onnx::13::Size"),
-                 ge::AscendString("ai.onnx::14::Size"),
-                 ge::AscendString("ai.onnx::15::Size"),
-                 ge::AscendString("ai.onnx::16::Size"),
-                 ge::AscendString("ai.onnx::17::Size"),
-                 ge::AscendString("ai.onnx::18::Size")})
-  .ParseParamsFn(ParseParamsSize)
-  .ImplyType(ImplyType::TVM);
-}  // namespace domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("ai.onnx::8::Size"), ge::AscendString("ai.onnx::9::Size"),
+                   ge::AscendString("ai.onnx::10::Size"), ge::AscendString("ai.onnx::11::Size"),
+                   ge::AscendString("ai.onnx::12::Size"), ge::AscendString("ai.onnx::13::Size"),
+                   ge::AscendString("ai.onnx::14::Size"), ge::AscendString("ai.onnx::15::Size"),
+                   ge::AscendString("ai.onnx::16::Size"), ge::AscendString("ai.onnx::17::Size"),
+                   ge::AscendString("ai.onnx::18::Size")})
+    .ParseParamsFn(ParseParamsSize)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

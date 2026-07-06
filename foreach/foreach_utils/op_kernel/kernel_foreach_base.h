@@ -26,8 +26,7 @@ using namespace AscendC;
 constexpr uint8_t COPY_SPACE_MULTIPLE = 9;
 
 template <typename T>
-class KernelForeachBase
-{
+class KernelForeachBase {
 protected:
     __aicore__ inline KernelForeachBase(){};
 

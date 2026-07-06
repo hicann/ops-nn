@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <gtest/gtest.h>
@@ -33,9 +34,8 @@ struct WeightQuantBatchMatmulV2TilingCustomBackwardCompatibleTestParam {
     uint64_t tilingKey;
 };
 
-class TestWeightQuantBatchMatmulV2CustomBackwardCompatibleTiling : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingCustomBackwardCompatibleTestParam>
-{
-};
+class TestWeightQuantBatchMatmulV2CustomBackwardCompatibleTiling
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingCustomBackwardCompatibleTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -209,11 +209,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomBackwardC
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -225,10 +225,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingCustomBackwardC
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)

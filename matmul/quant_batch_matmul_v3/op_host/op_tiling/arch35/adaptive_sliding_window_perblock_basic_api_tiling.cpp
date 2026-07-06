@@ -54,31 +54,22 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::Reset()
     }
 }
 
-bool AdaptiveSlidingWindowPerblockBasicAPITiling::IsCapable()
-{
-    return IsPerblockBasicApiCapable(inputParams_);
-}
+bool AdaptiveSlidingWindowPerblockBasicAPITiling::IsCapable() { return IsPerblockBasicApiCapable(inputParams_); }
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CheckCoreNum() const
 {
     if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {
-        OP_LOGE(
-            inputParams_.opName, "For perblock template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
-            compileInfo_.aicNum, compileInfo_.aivNum);
+        OP_LOGE(inputParams_.opName,
+                "For perblock template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
+                compileInfo_.aicNum, compileInfo_.aivNum);
         return false;
     }
     return true;
 }
 
-uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetBatchCoreCnt() const
-{
-    return inputParams_.batchC;
-}
+uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetBatchCoreCnt() const { return inputParams_.batchC; }
 
-const void* AdaptiveSlidingWindowPerblockBasicAPITiling::GetTilingData() const
-{
-    return &tilingData_;
-}
+const void* AdaptiveSlidingWindowPerblockBasicAPITiling::GetTilingData() const { return &tilingData_; }
 
 uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetApiLevel(NpuArch) const
 {
@@ -113,14 +104,15 @@ bool AdaptiveSlidingWindowPerblockBasicAPITiling::CalL1Tiling()
     basicTiling_.singleCoreK = inputParams_.kSize;
 
     basicTiling_.iterateOrder = 0U;
-    basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
-            qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
-            1U;
+    basicTiling_.dbL0c = ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C *
+                               qmmv3_tiling_const::DOUBLE_BUFFER_NUM <=
+                           aicoreParams_.l0cSize) &&
+                          CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
+                             qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
+                             1U;
 
-    L1TilingDataCalculator l1Calculator(
-        inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN, basicTiling_.baseK);
+    L1TilingDataCalculator l1Calculator(inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN,
+                                        basicTiling_.baseK);
     if (!l1Calculator.Compute(L1TilingMode::DEFAULT)) {
         return false;
     }
@@ -139,10 +131,7 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::AnalyseFullLoadInfo()
     isABFullLoad_ = false;
 }
 
-void AdaptiveSlidingWindowPerblockBasicAPITiling::CalcTailRoundBasicBlockSplit()
-{
-    CalcTailBasicBlock();
-}
+void AdaptiveSlidingWindowPerblockBasicAPITiling::CalcTailRoundBasicBlockSplit() { CalcTailBasicBlock(); }
 
 ge::graphStatus AdaptiveSlidingWindowPerblockBasicAPITiling::DoLibApiTiling()
 {
@@ -164,8 +153,9 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::CalculateNBufferNum4Perblock()
     tilingData_.matmulTiling.stepKa = basicTiling_.stepKa;
     tilingData_.matmulTiling.stepKb = basicTiling_.stepKb;
     uint64_t kAL1 = tilingData_.matmulTiling.stepKa * tilingData_.matmulTiling.baseK;
-    uint64_t fourBufUsedL1Size =
-        GetSizeWithDataType((basicTiling_.baseM + basicTiling_.baseN) * kAL1, inputParams_.aDtype) * qmmv3_tiling_const::L1_FOUR_BUFFER;
+    uint64_t fourBufUsedL1Size = GetSizeWithDataType((basicTiling_.baseM + basicTiling_.baseN) * kAL1,
+                                                     inputParams_.aDtype) *
+                                 qmmv3_tiling_const::L1_FOUR_BUFFER;
     if (tilingData_.matmulTiling.stepKa == tilingData_.matmulTiling.stepKb &&
         fourBufUsedL1Size <= aicoreParams_.l1Size && kAL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize) {
         tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_FOUR_BUFFER;
@@ -189,6 +179,6 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
 }
 
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    QuantBatchMatmulV3, AdaptiveSlidingWindowPerblockBasicAPITiling, supportedNpuArch, TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowPerblockBasicAPITiling, supportedNpuArch,
+                                   TILING_PRIORITY);
 } // namespace optiling

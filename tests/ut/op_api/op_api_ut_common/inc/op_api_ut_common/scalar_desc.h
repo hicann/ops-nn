@@ -19,39 +19,39 @@ using namespace std;
 using namespace nlohmann;
 
 class ScalarDesc {
-  public:
-    ScalarDesc(bool val = false): data_type_(ACL_BOOL) {val_.b = val;}
-    ScalarDesc(int8_t val = 0): data_type_(ACL_INT8) {SetInt8Value(&val);}
-    ScalarDesc(uint8_t val = 0): data_type_(ACL_UINT8) {SetInt8Value(&val);}
-    ScalarDesc(int16_t val = 0): data_type_(ACL_INT16) {SetInt16Value(&val);}
-    ScalarDesc(uint16_t val = 0): data_type_(ACL_UINT16) {SetInt16Value(&val);}
-    ScalarDesc(int32_t val = 0): data_type_(ACL_INT32) {SetInt32Value(&val);}
-    ScalarDesc(uint32_t val = 0): data_type_(ACL_UINT32) {SetInt32Value(&val);}
-    ScalarDesc(int64_t val = 0): data_type_(ACL_INT64) {SetInt64Value(&val);}
-    ScalarDesc(uint64_t val = 0): data_type_(ACL_UINT64) {SetInt64Value(&val);}
+public:
+    ScalarDesc(bool val = false) : data_type_(ACL_BOOL) { val_.b = val; }
+    ScalarDesc(int8_t val = 0) : data_type_(ACL_INT8) { SetInt8Value(&val); }
+    ScalarDesc(uint8_t val = 0) : data_type_(ACL_UINT8) { SetInt8Value(&val); }
+    ScalarDesc(int16_t val = 0) : data_type_(ACL_INT16) { SetInt16Value(&val); }
+    ScalarDesc(uint16_t val = 0) : data_type_(ACL_UINT16) { SetInt16Value(&val); }
+    ScalarDesc(int32_t val = 0) : data_type_(ACL_INT32) { SetInt32Value(&val); }
+    ScalarDesc(uint32_t val = 0) : data_type_(ACL_UINT32) { SetInt32Value(&val); }
+    ScalarDesc(int64_t val = 0) : data_type_(ACL_INT64) { SetInt64Value(&val); }
+    ScalarDesc(uint64_t val = 0) : data_type_(ACL_UINT64) { SetInt64Value(&val); }
     ScalarDesc(float val = 0, aclDataType data_type = ACL_FLOAT);
-    ScalarDesc(double val = 0): data_type_(ACL_DOUBLE) {val_.d = val;}
+    ScalarDesc(double val = 0) : data_type_(ACL_DOUBLE) { val_.d = val; }
     ~ScalarDesc() {}
 
     unique_ptr<aclScalar, void (*)(aclScalar*)> ToAclType() const;
-    aclScalar * ToAclTypeRawPtr() const;
+    aclScalar* ToAclTypeRawPtr() const;
     void ToJson(json& root, bool is_input = true) const;
 
-  private:
-    void SetInt8Value(void * v);
-    void SetInt16Value(void * v);
-    void SetInt32Value(void * v);
-    void SetInt64Value(void * v);
+private:
+    void SetInt8Value(void* v);
+    void SetInt16Value(void* v);
+    void SetInt32Value(void* v);
+    void SetInt64Value(void* v);
 
-  private:
+private:
     union {
-      bool b;
-      uint64_t i64;
-      uint32_t i32;
-      uint16_t i16;
-      uint8_t i8;
-      float f;
-      double d;
+        bool b;
+        uint64_t i64;
+        uint32_t i32;
+        uint16_t i16;
+        uint8_t i8;
+        float f;
+        double d;
     } val_;
     op::fp16_t f16_;
     aclDataType data_type_;

@@ -29,17 +29,17 @@ namespace Conv3dV2 {
 #pragma pack(1)
 
 #define CONV3D_COMMON_ATTRS \
-    uint32_t strideH = 0; \
-    uint32_t strideW = 0; \
-    uint32_t strideD = 0; \
+    uint32_t strideH = 0;   \
+    uint32_t strideW = 0;   \
+    uint32_t strideD = 0;   \
     uint32_t dilationH = 0; \
     uint32_t dilationW = 0; \
     uint32_t dilationD = 0; \
-    uint32_t padHead = 0; \
-    uint32_t padTail = 0; \
-    uint32_t padTop = 0; \
+    uint32_t padHead = 0;   \
+    uint32_t padTail = 0;   \
+    uint32_t padTop = 0;    \
     uint32_t padBottom = 0; \
-    uint32_t padLeft = 0; \
+    uint32_t padLeft = 0;   \
     uint32_t padRight = 0
 
 struct TConv3DTiling {
@@ -172,11 +172,12 @@ struct Conv3DV2TilingData {
 } // namespace NN
 } // namespace Ops
 
-inline void InitTilingData(uint8_t* tiling, Ops::NN::Conv3dV2::Conv3DV2TilingData* constData) {
+inline void InitTilingData(uint8_t* tiling, Ops::NN::Conv3dV2::Conv3DV2TilingData* constData)
+{
     memcpy(constData, tiling, sizeof(Ops::NN::Conv3dV2::Conv3DV2TilingData));
 }
 
-#define GET_TILING_DATA(tilingData, tilingArg) \
+#define GET_TILING_DATA(tilingData, tilingArg)        \
     Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData; \
     InitTilingData(tilingArg, &tilingData)
 

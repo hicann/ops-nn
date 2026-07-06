@@ -18,13 +18,14 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnGroupNormGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* gammaOptional, const aclTensor* betaOptional, int64_t n, int64_t c,
-    int64_t hxw, int64_t group, double eps, aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTensor* gammaOptional,
+                                                     const aclTensor* betaOptional, int64_t n, int64_t c, int64_t hxw,
+                                                     int64_t group, double eps, aclTensor* out, aclTensor* meanOut,
+                                                     aclTensor* rstdOut, uint64_t* workspaceSize,
+                                                     aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus
-aclnnGroupNorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGroupNorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream);
 
 #ifdef __cplusplus
 }

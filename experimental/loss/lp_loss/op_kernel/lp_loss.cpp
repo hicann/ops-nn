@@ -14,8 +14,7 @@
 #define DOUBLE_BUFFER_NUM 2
 #define SINGLE_BUFFER_NUM 1
 
-enum class LpLossTilingKey : uint32_t
-{
+enum class LpLossTilingKey : uint32_t {
     TILING_KEY_DB = LPLOSS_TPL_SCH_MODE_0,
     TILING_KEY_NDB = LPLOSS_TPL_SCH_MODE_1,
 };

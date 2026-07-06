@@ -24,9 +24,8 @@ namespace l0op {
 
 OP_TYPE_REGISTER(GeGluGradV2);
 
-const aclTensor* GeGluGradV2(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim, int64_t approximate,
-    bool activateLeft, aclOpExecutor* executor)
+const aclTensor* GeGluGradV2(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, int64_t dim,
+                             int64_t approximate, bool activateLeft, aclOpExecutor* executor)
 {
     L0_DFX(GeGluGradV2, gradOutput, self, gelu, dim, approximate, activateLeft);
 
@@ -37,8 +36,8 @@ const aclTensor* GeGluGradV2(
         return nullptr;
     }
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        GeGluGradV2, OP_INPUT(gradOutput, self, gelu), OP_OUTPUT(gradInput), OP_ATTR(dim, approximate, activateLeft));
+    ADD_TO_LAUNCHER_LIST_AICORE(GeGluGradV2, OP_INPUT(gradOutput, self, gelu), OP_OUTPUT(gradInput),
+                                OP_ATTR(dim, approximate, activateLeft));
 
     return gradInput;
 }

@@ -20,8 +20,7 @@
 #include "atvoss/reduce/reduce_tiling.h"
 namespace optiling {
 
-struct LpLossTilingKey
-{
+struct LpLossTilingKey {
     Ops::Base::ReduceTilingKey ReduceTiling;
     uint32_t Reduction = 2;
     uint32_t Dtype = 20;

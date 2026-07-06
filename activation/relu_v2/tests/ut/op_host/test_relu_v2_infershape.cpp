@@ -17,15 +17,9 @@
 
 class ReluV2ProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReluV2ProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReluV2ProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReluV2ProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReluV2ProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(ReluV2ProtoTest, relu_v2_infer_shape_rt1_1982)

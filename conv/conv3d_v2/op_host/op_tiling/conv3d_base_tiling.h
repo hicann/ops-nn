@@ -29,19 +29,19 @@
 
 namespace optiling {
 
-struct Conv3DTilingParseInfo: CubeTilingCommonParseInfo {
-        uint32_t aicoreNum = Conv3dOpsTiling::INITIAL_AICORE_ZERO;
-        uint64_t l2Size = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t l1Size = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t l0aSize = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t l0bSize = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t l0cSize = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t ubSize = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t btSize = Conv3dApiTiling::INITIAL_SIZE;
-        uint64_t l2Rate = Conv3dOpsTiling::INITIAL_L2_RATE_ZERO;
-        std::string socVersion = "";
-        std::string shortSocVersion = "";
-    };
+struct Conv3DTilingParseInfo : CubeTilingCommonParseInfo {
+    uint32_t aicoreNum = Conv3dOpsTiling::INITIAL_AICORE_ZERO;
+    uint64_t l2Size = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t l1Size = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t l0aSize = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t l0bSize = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t l0cSize = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t ubSize = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t btSize = Conv3dApiTiling::INITIAL_SIZE;
+    uint64_t l2Rate = Conv3dOpsTiling::INITIAL_L2_RATE_ZERO;
+    std::string socVersion = "";
+    std::string shortSocVersion = "";
+};
 
 struct Conv3DAttrInfo {
     uint32_t dilationH = 1;
@@ -95,25 +95,27 @@ struct Conv3DDescInfo {
 };
 
 static std::map<ge::DataType, uint32_t> g_dataTypeSizeTab = {
-    {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_FLOAT, 4}, {ge::DataType::DT_BF16, 2}, {ge::DataType::DT_INT8, 1},
-    {ge::DataType::DT_UINT8, 1}, {ge::DataType::DT_INT64, 8}, {ge::DataType::DT_UINT64, 8}, {ge::DataType::DT_INT32, 4}};
+    {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_FLOAT, 4}, {ge::DataType::DT_BF16, 2},
+    {ge::DataType::DT_INT8, 1},    {ge::DataType::DT_UINT8, 1}, {ge::DataType::DT_INT64, 8},
+    {ge::DataType::DT_UINT64, 8},  {ge::DataType::DT_INT32, 4}};
 
 static std::map<ge::DataType, Conv3dApiTiling::ConvDtype> g_dtypeMap = {
-    {ge::DT_FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16},
-    {ge::DT_FLOAT, Conv3dApiTiling::ConvDtype::FLOAT32},
-    {ge::DT_BF16, Conv3dApiTiling::ConvDtype::BF16},
-    {ge::DT_INT8, Conv3dApiTiling::ConvDtype::INT8},
-    {ge::DT_UINT8, Conv3dApiTiling::ConvDtype::UINT8},
-    {ge::DT_INT64, Conv3dApiTiling::ConvDtype::INT64},
-    {ge::DT_UINT64, Conv3dApiTiling::ConvDtype::UINT64},
-    {ge::DT_INT32, Conv3dApiTiling::ConvDtype::INT32}
-};
+    {ge::DT_FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT16}, {ge::DT_FLOAT, Conv3dApiTiling::ConvDtype::FLOAT32},
+    {ge::DT_BF16, Conv3dApiTiling::ConvDtype::BF16},       {ge::DT_INT8, Conv3dApiTiling::ConvDtype::INT8},
+    {ge::DT_UINT8, Conv3dApiTiling::ConvDtype::UINT8},     {ge::DT_INT64, Conv3dApiTiling::ConvDtype::INT64},
+    {ge::DT_UINT64, Conv3dApiTiling::ConvDtype::UINT64},   {ge::DT_INT32, Conv3dApiTiling::ConvDtype::INT32}};
 
-static std::map<ge::Format, std::string> g_formatToStrTab = {
-    {ge::FORMAT_NCHW, "NCHW"}, {ge::FORMAT_NHWC, "NHWC"}, {ge::FORMAT_HWCN, "HWCN"}, {ge::FORMAT_DHWNC, "DHWNC"},
-    {ge::FORMAT_DHWCN, "DHWCN"}, {ge::FORMAT_NDHWC, "NDHWC"}, {ge::FORMAT_NCDHW, "NCDHW"},
-    {ge::FORMAT_NC1HWC0, "NC1HWC0"}, {ge::FORMAT_ND, "ND"}, {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
-    {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
+static std::map<ge::Format, std::string> g_formatToStrTab = {{ge::FORMAT_NCHW, "NCHW"},
+                                                             {ge::FORMAT_NHWC, "NHWC"},
+                                                             {ge::FORMAT_HWCN, "HWCN"},
+                                                             {ge::FORMAT_DHWNC, "DHWNC"},
+                                                             {ge::FORMAT_DHWCN, "DHWCN"},
+                                                             {ge::FORMAT_NDHWC, "NDHWC"},
+                                                             {ge::FORMAT_NCDHW, "NCDHW"},
+                                                             {ge::FORMAT_NC1HWC0, "NC1HWC0"},
+                                                             {ge::FORMAT_ND, "ND"},
+                                                             {ge::FORMAT_NDC1HWC0, "NDC1HWC0"},
+                                                             {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}};
 
 static std::map<ge::Format, Conv3dApiTiling::ConvFormat> g_formatMap = {
     {ge::FORMAT_ND, Conv3dApiTiling::ConvFormat::ND},
@@ -126,26 +128,23 @@ static std::map<ge::Format, Conv3dApiTiling::ConvFormat> g_formatMap = {
     {ge::FORMAT_NCDHW, Conv3dApiTiling::ConvFormat::NCDHW},
     {ge::FORMAT_NC1HWC0, Conv3dApiTiling::ConvFormat::NC1HWC0},
     {ge::FORMAT_NDC1HWC0, Conv3dApiTiling::ConvFormat::NDC1HWC0},
-    {ge::FORMAT_FRACTAL_Z_3D, Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D}
-};
+    {ge::FORMAT_FRACTAL_Z_3D, Conv3dApiTiling::ConvFormat::FRACTAL_Z_3D}};
 
 static std::map<ge::DataType, std::string> g_dtypeToStrTab = {
     {ge::DataType::DT_FLOAT16, "float16"}, {ge::DataType::DT_FLOAT, "float32"}, {ge::DataType::DT_BF16, "bfloat16"},
-    {ge::DataType::DT_INT8, "int8"}, {ge::DataType::DT_UINT8, "uint8"}, {ge::DataType::DT_INT64, "int64"},
-    {ge::DataType::DT_UINT64, "uint64"}, {ge::DataType::DT_INT32, "int32"}};
+    {ge::DataType::DT_INT8, "int8"},       {ge::DataType::DT_UINT8, "uint8"},   {ge::DataType::DT_INT64, "int64"},
+    {ge::DataType::DT_UINT64, "uint64"},   {ge::DataType::DT_INT32, "int32"}};
 
 using Ops::NN::Optiling::TilingBaseClass;
 namespace Conv3dOpsTiling {
 
 class Conv3dBaseTiling : public TilingBaseClass {
 public:
-    explicit Conv3dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {};
+    explicit Conv3dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context){};
     ~Conv3dBaseTiling() override = default;
 
 protected:
-    bool IsCapable() override {
-        return true;
-    };
+    bool IsCapable() override { return true; };
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
@@ -155,10 +154,10 @@ protected:
     ge::graphStatus PostTiling() override;
 
     bool GetTilingFromRepo();
-    bool TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
+    bool TranslateAoeTiling(tuningtiling::TuningTilingDefPtr& tuningTiling);
     void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTunerTiling> aoeTiling);
     void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunerTiling> aoeTiling);
-    bool GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size_t &size);
+    bool GetTilingInputArgs(std::shared_ptr<void>& inputArgs, size_t& size);
     void SetAdditionalTilingInfo();
 
 private:
@@ -178,30 +177,30 @@ private:
     bool useTilingRepo_ = false;
     int8_t outputOrder_ = 0;
 
-    private:
-      ge::graphStatus SetTilingKey();
-      void InitConv3dOriginFormat();
-      void GetShapeInfo();
-      bool SyncAttrInfoFromEngine();
-      void GetDescInfo();
-      void PrintTilingInfo();
-      void GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
-      bool Is3DFp32InputFp32Output() const;
+private:
+    ge::graphStatus SetTilingKey();
+    void InitConv3dOriginFormat();
+    void GetShapeInfo();
+    bool SyncAttrInfoFromEngine();
+    void GetDescInfo();
+    void PrintTilingInfo();
+    void GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
+    bool Is3DFp32InputFp32Output() const;
 
-      std::vector<int64_t> ExtractOriginFmapShape();
-      std::vector<int64_t> ExtractOriginWeightShape();
-      std::vector<int64_t> ExtractOriginOutputShape();
-      bool ExtractPadList(std::vector<int64_t> &padList) const;
-      bool ExtractStrideList(std::vector<int64_t> &strideList);
-      bool ExtractDilationList(std::vector<int64_t> &dilationList);
-      bool ExtractBiasShape(std::vector<int64_t> &biasShape) const;
-      bool ExtractScaleShape(std::vector<int64_t> &scaleShape) const;
-      int64_t ExtractGroups() const;
-      void ExtractAndSetDataTypes();
-      void ExtractAndSetFormats();
-      void SetHF32Mode();
-      bool ExtractAndSetBiasScale();
-      bool ExtractAndPassParamsToEngine();
+    std::vector<int64_t> ExtractOriginFmapShape();
+    std::vector<int64_t> ExtractOriginWeightShape();
+    std::vector<int64_t> ExtractOriginOutputShape();
+    bool ExtractPadList(std::vector<int64_t>& padList) const;
+    bool ExtractStrideList(std::vector<int64_t>& strideList);
+    bool ExtractDilationList(std::vector<int64_t>& dilationList);
+    bool ExtractBiasShape(std::vector<int64_t>& biasShape) const;
+    bool ExtractScaleShape(std::vector<int64_t>& scaleShape) const;
+    int64_t ExtractGroups() const;
+    void ExtractAndSetDataTypes();
+    void ExtractAndSetFormats();
+    void SetHF32Mode();
+    bool ExtractAndSetBiasScale();
+    bool ExtractAndPassParamsToEngine();
 };
 
 } // namespace Conv3dOpsTiling

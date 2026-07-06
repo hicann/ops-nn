@@ -22,21 +22,14 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void group_norm_swish_grad(
-    GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
-    GM_ADDR dbeta, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void group_norm_swish_grad(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
+                                                            GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
+                                                            GM_ADDR dbeta, GM_ADDR workspace, GM_ADDR tiling);
 
-class group_norm_swish_grad_test : public testing::Test
-{
+class group_norm_swish_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "group_norm_swish_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "group_norm_swish_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "group_norm_swish_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "group_norm_swish_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(group_norm_swish_grad_test, test_case_mode0_align)
@@ -76,9 +69,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 576 8 float");
@@ -97,7 +89,7 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_align)
     tilingDatafromBin->C = 32;                       // 2
     tilingDatafromBin->HXW = 576;                    // 3
     tilingDatafromBin->G = 8;                        // 4
-    tilingDatafromBin->NXG = 8;                      // 5 
+    tilingDatafromBin->NXG = 8;                      // 5
     tilingDatafromBin->C_G = 4;                      // 6
     tilingDatafromBin->task_num_per_core = 1;        // 7
     tilingDatafromBin->task_num_per_tail_core = 1;   // 8
@@ -119,9 +111,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_align)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -174,9 +165,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_not_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 566 8 float");
@@ -217,9 +207,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_not_align)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -272,9 +261,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode1)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 8192 8 float");
@@ -315,9 +303,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode1)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -369,9 +356,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode3)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 16384 8 float");
@@ -412,9 +398,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode3)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -466,9 +451,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_bf16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 576 8 float16");
@@ -509,9 +493,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode0_bf16)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -564,9 +547,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode1_bf16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 8192 8 float16");
@@ -607,9 +589,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode1_bf16)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(11);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);
@@ -662,9 +643,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode3_bf16)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 8;
 
-    system(
-        "cp -r "
-        "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
+    system("cp -r "
+           "../../../../norm/group_norm_swish_grad/tests/ut/op_kernel/group_norm_swish_grad_data ./");
     system("chmod -R 755 ./group_norm_swish_grad_data/");
     system("cd ./group_norm_swish_grad_data/ && rm -rf ./*bin");
     system("cd ./group_norm_swish_grad_data/ && python3 gen_data.py 1 32 8192 8 float16");
@@ -705,9 +685,8 @@ TEST_F(group_norm_swish_grad_test, test_case_mode3_bf16)
     tilingDatafromBin->dbeta_is_require = 1;         // 24
     tilingDatafromBin->swish_scale = 1.0;            // 25
     ICPU_SET_TILING_KEY(12);
-    ICPU_RUN_KF(
-        group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(group_norm_swish_grad, blockDim, dy, mean, rstd, x, gamma, beta, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
     AscendC::GmFree(dy);
     AscendC::GmFree(mean);
     AscendC::GmFree(rstd);

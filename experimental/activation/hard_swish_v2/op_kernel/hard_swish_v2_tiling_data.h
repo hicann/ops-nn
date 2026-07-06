@@ -27,13 +27,13 @@
 #define _HARD_SWISH_V2_TILING_DATA_H_
 
 struct HardSwishV2TilingData {
-     int64_t smallCoreDataNum;
-     int64_t bigCoreDataNum;
-     int64_t finalBigTileNum;
-     int64_t finalSmallTileNum;
-     int64_t tileDataNum;
-     int64_t smallTailDataNum;
-     int64_t bigTailDataNum;
-     int64_t tailBlockNum;
+    int64_t smallCoreDataNum;
+    int64_t bigCoreDataNum;
+    int64_t finalBigTileNum;
+    int64_t finalSmallTileNum;
+    int64_t tileDataNum;
+    int64_t smallTailDataNum;
+    int64_t bigTailDataNum;
+    int64_t tailBlockNum;
 };
 #endif

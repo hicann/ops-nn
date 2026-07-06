@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 /*!
  * \file pool3d_grad_struct_common.h
  * \brief tiling base data
@@ -22,33 +22,21 @@ namespace Pool3DGradNameSpace {
 #define TPL_INT32 1
 #define TPL_INT64 2
 
-ASCENDC_TPL_ARGS_DECL(MaxPool3DGrad,
-    ASCENDC_TPL_DTYPE_DECL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
-    ASCENDC_TPL_BOOL_DECL(IS_SIMT, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(IS_CHANNEL_LAST, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(IS_CHECK_RANGE, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(USE_INT64_INDEX, 0, 1)
-);
+ASCENDC_TPL_ARGS_DECL(MaxPool3DGrad, ASCENDC_TPL_DTYPE_DECL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
+                      ASCENDC_TPL_BOOL_DECL(IS_SIMT, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_CHANNEL_LAST, 0, 1),
+                      ASCENDC_TPL_BOOL_DECL(IS_CHECK_RANGE, 0, 1), ASCENDC_TPL_BOOL_DECL(USE_INT64_INDEX, 0, 1));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32),
-        ASCENDC_TPL_BOOL_SEL(IS_SIMT, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHECK_RANGE, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(USE_INT64_INDEX, 0, 1)
-    ),
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32), ASCENDC_TPL_BOOL_SEL(IS_SIMT, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(IS_CHECK_RANGE, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(USE_INT64_INDEX, 0, 1)),
 
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-        ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT64),
-        ASCENDC_TPL_BOOL_SEL(IS_SIMT, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(IS_CHECK_RANGE, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(USE_INT64_INDEX, 0, 1)
-    )
-);
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT64), ASCENDC_TPL_BOOL_SEL(IS_SIMT, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(IS_CHECK_RANGE, 0, 1),
+                                     ASCENDC_TPL_BOOL_SEL(USE_INT64_INDEX, 0, 1)));
 
 struct Pool3DGradNCDHWTilingData {
     int64_t dArgmax = 0;
@@ -118,5 +106,5 @@ struct MaxPool3DGradSimtTilingData {
     int64_t threadNums = 1;
     int64_t blockNums = 1;
 };
-}
-#endif //POOL_3D_GRAD_STRUCT_H
+} // namespace Pool3DGradNameSpace
+#endif // POOL_3D_GRAD_STRUCT_H

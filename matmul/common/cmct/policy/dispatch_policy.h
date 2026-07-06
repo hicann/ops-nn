@@ -35,7 +35,7 @@ struct KernelMixWithWeightPrologue {};
 struct KernelMatMulToMul {};
 struct KernelFlatQuant {};
 struct KernelRotateQuant {};
-struct KernelMatmulToVector {}; 
+struct KernelMatmulToVector {};
 
 enum class MatMulL0C2Out : std::uint8_t { ON_THE_FLY = 0, ND_FIXPIPE_1_1 = 1, ND_FIXPIPE_1_2 = 2 };
 
@@ -140,8 +140,8 @@ struct MatmulMultiBlock {
  * @param [in] FULL_LOAD_MODE: mode of full load, default is 0(no full load)
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
  */
-template <
-    class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FULL_LOAD_MODE_ = 0, uint64_t FUSED_OP_TYPE_ = 0>
+template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FULL_LOAD_MODE_ = 0,
+          uint64_t FUSED_OP_TYPE_ = 0>
 struct MatmulMultiBlockWithOutQue {
     using ScheduleType = KernelMultiBlockOnKAxis;
     using SingleShape = SingleCoreShape;
@@ -159,9 +159,8 @@ struct MatmulMultiBlockWithOutQue {
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  */
-template <
-    MatMulL0C2Out FixpOpti = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OP_TYPE_ = 0,
-    class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
+template <MatMulL0C2Out FixpOpti = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OP_TYPE_ = 0,
+          class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
 struct MatmulMultiBlockWithStreamK {
     using ScheduleType = KernelMultiBlockStreamK;
     using SingleShape = SingleCoreShape;
@@ -185,9 +184,8 @@ struct BatchMatmulToMul {
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  * @param [in] FUSED_OPTYPE_: execute OP_TYPE_ADD, OP_TYPE_MUL, OP_TYPE_RELU after mmad , default is OP_TYPE_EMPTY
  */
-template <
-    MatMulL0C2Out EnableSync = MatMulL0C2Out::ON_THE_FLY, class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>,
-    uint64_t FUSED_OPTYPE_ = 0>
+template <MatMulL0C2Out EnableSync = MatMulL0C2Out::ON_THE_FLY, class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>,
+          uint64_t FUSED_OPTYPE_ = 0>
 struct MatmulIterBatch {
     using ScheduleType = KernelIterBatch;
     using SingleShape = SingleCoreShape;

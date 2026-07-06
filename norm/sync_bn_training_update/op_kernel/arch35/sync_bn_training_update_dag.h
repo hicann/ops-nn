@@ -34,7 +34,7 @@ struct SyncBNTrainingUpdateDag {
     using mulPart2Sub = Bind<Vec::Sub<float>, castRunningMean, mulPart2>;
     using res = Bind<Vec::Add<float>, mulPart1, mulPart2Sub>;
     using resCast = Bind<Vec::Cast<T, float, 1>, res>;
-    using opCopyOut= Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, resCast>;
+    using opCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, resCast>;
     using Output = Elems<opCopyOut>;
 
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;

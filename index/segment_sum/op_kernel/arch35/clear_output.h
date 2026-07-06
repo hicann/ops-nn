@@ -19,13 +19,11 @@
 #include "kernel_operator.h"
 #include "segment_sum_struct.h"
 
-namespace SegmentSum
-{
+namespace SegmentSum {
 using namespace AscendC;
 
 template <typename T>
-class AllClear
-{
+class AllClear {
 public:
     __aicore__ inline AllClear(){};
     __aicore__ inline void Init(GM_ADDR output, const SegmentSumSimdTilingData* tilingData, TPipe& pipeIn);
@@ -40,7 +38,8 @@ public:
 
 template <typename T>
 __aicore__ inline void AllClear<T>::Init(GM_ADDR output, const SegmentSumSimdTilingData* tilingData, TPipe& pipeIn)
-{   tilingData_ = tilingData;
+{
+    tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
     if (blockIdx_ >= tilingData_->usedCoreNumForClear) {
         return;
@@ -50,7 +49,8 @@ __aicore__ inline void AllClear<T>::Init(GM_ADDR output, const SegmentSumSimdTil
     uint64_t intraCoreOffset = blockIdx_ * tilingData_->normalCoreClearNum;
 
     // shield normal core and tail core
-    curCoreProcessNumForClear_ = (blockIdx_ == tilingData_->usedCoreNumForClear - 1) ? tilingData_->tailCoreClearNum : tilingData_->normalCoreClearNum;
+    curCoreProcessNumForClear_ = (blockIdx_ == tilingData_->usedCoreNumForClear - 1) ? tilingData_->tailCoreClearNum :
+                                                                                       tilingData_->normalCoreClearNum;
 
     outputGm_.SetGlobalBuffer((__gm__ T*)output + intraCoreOffset);
 }
@@ -71,6 +71,6 @@ __aicore__ inline void AllClear<T>::SyncALLCores()
     SyncAll();
 }
 
-}  // namespace SegmentSum
+} // namespace SegmentSum
 
-#endif  // CLEAR_OUTPUT_H
+#endif // CLEAR_OUTPUT_H

@@ -61,8 +61,7 @@ using namespace ut_str;
 
 namespace {
 constexpr char QUANT_BATCH_MATMUL_V3_TRANSPOSE_FUSION_PASS_NAME[] = "QuantBatchMatmulV3TransposeFusionPass";
-constexpr char QUANT_BATCH_MATMUL_V3_TRANSPOSE_LIMIT_FUSION_PASS_NAME[] =
-    "QuantBatchMatmulV3TransposeLimitFusionPass";
+constexpr char QUANT_BATCH_MATMUL_V3_TRANSPOSE_LIMIT_FUSION_PASS_NAME[] = "QuantBatchMatmulV3TransposeLimitFusionPass";
 constexpr char TEST_CSV_FILE[] = "test_quant_batch_matmul_v3_transpose_fusion_pass.csv";
 #ifndef QUANT_BATCH_MATMUL_V3_TRANSPOSE_FUSION_PASS_CSV_PATH
 #define QUANT_BATCH_MATMUL_V3_TRANSPOSE_FUSION_PASS_CSV_PATH ""
@@ -109,18 +108,12 @@ struct TensorWithDesc {
 
 class TestQuantBatchMatmulV3TransposeFusionPass : public ops::QuantBatchMatmulV3TransposeFusionPass {
 public:
-    Status RunForTest(GraphPtr& graph, CustomPassContext& passContext)
-    {
-        return Run(graph, passContext);
-    }
+    Status RunForTest(GraphPtr& graph, CustomPassContext& passContext) { return Run(graph, passContext); }
 };
 
 class TestQuantBatchMatmulV3TransposeLimitFusionPass : public ops::QuantBatchMatmulV3TransposeLimitFusionPass {
 public:
-    Status RunForTest(GraphPtr& graph, CustomPassContext& passContext)
-    {
-        return Run(graph, passContext);
-    }
+    Status RunForTest(GraphPtr& graph, CustomPassContext& passContext) { return Run(graph, passContext); }
 };
 
 static std::string GetDirName(const std::string& path)
@@ -190,10 +183,7 @@ static void SetPlatformSupport()
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
 }
 
-static void ClearPlatformSupport()
-{
-    fe::PlatformInfoManager::Instance().platform_info_map_.clear();
-}
+static void ClearPlatformSupport() { fe::PlatformInfoManager::Instance().platform_info_map_.clear(); }
 
 static QuantBatchMatmulV3TransposeFusionPassParam ParseParam(const std::vector<std::string>& fields)
 {
@@ -295,8 +285,8 @@ static GNode BuildUnaryNode(Graph* graph, const char* opType, const char* nodeNa
         .Build();
 }
 
-static void LinkUnaryNode(
-    Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& input, GNode& node, const TensorDesc& outputDesc)
+static void LinkUnaryNode(Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& input, GNode& node,
+                          const TensorDesc& outputDesc)
 {
     ge::es::AddEdgeAndUpdatePeerDesc(*graph, *input.tensor.GetProducer(), input.tensor.GetProducerOutIndex(), node, 0);
     node.UpdateInputDesc(0, input.desc);
@@ -305,8 +295,8 @@ static void LinkUnaryNode(
     input.desc = outputDesc;
 }
 
-static void AddTransposeIfNeeded(
-    Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& input, bool enabled, const char* nodeName)
+static void AddTransposeIfNeeded(Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& input,
+                                 bool enabled, const char* nodeName)
 {
     if (!enabled) {
         return;
@@ -316,8 +306,8 @@ static void AddTransposeIfNeeded(
     LinkUnaryNode(graph, graphBuilder, input, transposeNode, outputDesc);
 }
 
-static void AddBitcastIfNeeded(
-    Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& input, bool enabled, const char* nodeName)
+static void AddBitcastIfNeeded(Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& input, bool enabled,
+                               const char* nodeName)
 {
     if (!enabled) {
         return;
@@ -331,7 +321,8 @@ static void AddBitcastIfNeeded(
 }
 
 static void AddReshapeIfNeeded(Graph* graph, ge::es::EsGraphBuilder& graphBuilder, TensorWithDesc& scaleInput,
-    const TensorWithDesc& reshapeInput, bool enabled, const std::vector<int64_t>& outputShape)
+                               const TensorWithDesc& reshapeInput, bool enabled,
+                               const std::vector<int64_t>& outputShape)
 {
     if (!enabled) {
         return;
@@ -346,7 +337,7 @@ static void AddReshapeIfNeeded(Graph* graph, ge::es::EsGraphBuilder& graphBuilde
 static void LinkQuantInput(Graph* graph, GNode& quantBmmV3, const TensorWithDesc& input, int64_t inputIndex)
 {
     ge::es::AddEdgeAndUpdatePeerDesc(*graph, *input.tensor.GetProducer(), input.tensor.GetProducerOutIndex(),
-        quantBmmV3, inputIndex);
+                                     quantBmmV3, inputIndex);
     quantBmmV3.UpdateInputDesc(inputIndex, input.desc);
 }
 
@@ -387,8 +378,8 @@ static GraphPtr BuildGraph(const QuantBatchMatmulV3TransposeFusionPassParam& par
     TensorWithDesc x1ScaleInput;
     if (hasX1Scale) {
         x1ScaleInput.desc = MakeTensorDesc(param.x1ScaleShape, param.x1ScaleDtype);
-        x1ScaleInput.tensor =
-            graphBuilder.CreateInput(3, "dataX1Scale", param.x1ScaleDtype, FORMAT_ND, param.x1ScaleShape);
+        x1ScaleInput.tensor = graphBuilder.CreateInput(3, "dataX1Scale", param.x1ScaleDtype, FORMAT_ND,
+                                                       param.x1ScaleShape);
         x1ScaleInput.tensor.GetProducer()->UpdateOutputDesc(0, x1ScaleInput.desc);
     }
 
@@ -506,4 +497,4 @@ TEST_P(QuantBatchMatmulV3TransposeFusionPassTest, RunFusionPass)
 }
 
 INSTANTIATE_TEST_CASE_P(QuantBatchMatmulV3TransposeFusionPass, QuantBatchMatmulV3TransposeFusionPassTest,
-    testing::ValuesIn(GetParams()), TestName);
+                        testing::ValuesIn(GetParams()), TestName);

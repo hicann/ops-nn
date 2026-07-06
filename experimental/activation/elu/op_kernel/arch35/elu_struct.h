@@ -29,19 +29,14 @@ namespace EluOp {
 #define ELU_TPL_KEY_FP32_SCH0 6
 #define ELU_TPL_KEY_FP32_SCH1 7
 
-ASCENDC_TPL_ARGS_DECL(
-    Elu,
-    ASCENDC_TPL_UINT_DECL(
-        tilingKey, 3, ASCENDC_TPL_UI_LIST, ELU_TPL_KEY_FP16_SCH0, ELU_TPL_KEY_FP16_SCH1, ELU_TPL_KEY_BF16_SCH0,
-        ELU_TPL_KEY_BF16_SCH1, ELU_TPL_KEY_FP32_SCH0, ELU_TPL_KEY_FP32_SCH1));
+ASCENDC_TPL_ARGS_DECL(Elu, ASCENDC_TPL_UINT_DECL(tilingKey, 3, ASCENDC_TPL_UI_LIST, ELU_TPL_KEY_FP16_SCH0,
+                                                 ELU_TPL_KEY_FP16_SCH1, ELU_TPL_KEY_BF16_SCH0, ELU_TPL_KEY_BF16_SCH1,
+                                                 ELU_TPL_KEY_FP32_SCH0, ELU_TPL_KEY_FP32_SCH1));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(
-            tilingKey, ASCENDC_TPL_UI_LIST, ELU_TPL_KEY_FP16_SCH0, ELU_TPL_KEY_FP16_SCH1,
-            ELU_TPL_KEY_BF16_SCH0, ELU_TPL_KEY_BF16_SCH1, ELU_TPL_KEY_FP32_SCH0, ELU_TPL_KEY_FP32_SCH1)
-    )
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(tilingKey, ASCENDC_TPL_UI_LIST, ELU_TPL_KEY_FP16_SCH0,
+                                                          ELU_TPL_KEY_FP16_SCH1, ELU_TPL_KEY_BF16_SCH0,
+                                                          ELU_TPL_KEY_BF16_SCH1, ELU_TPL_KEY_FP32_SCH0,
+                                                          ELU_TPL_KEY_FP32_SCH1)));
 
 } // namespace EluOp
 

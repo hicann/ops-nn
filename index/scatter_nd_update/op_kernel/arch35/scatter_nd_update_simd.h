@@ -27,8 +27,8 @@ using namespace AscendC;
 template <typename T, typename U, typename OFFSET_T = U>
 class ScatterNdUpdateSimd : public ScatterNdUpdateBase<T, U, OFFSET_T> {
 public:
-    __aicore__ inline ScatterNdUpdateSimd(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline ScatterNdUpdateSimd(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void CopyIndiceInSplitIndices(int64_t rowIdx, int64_t rowLen);
     __aicore__ inline void CopyUpdatesInSplitIndices(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
@@ -52,14 +52,14 @@ private:
 };
 
 template <typename T, typename U, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Init(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                                                 GM_ADDR y, GM_ADDR workspace)
 {
-    varGm_.SetGlobalBuffer((__gm__ T *)(var));
-    indicesGm_.SetGlobalBuffer((__gm__ U *)(indices));
-    updatesGm_.SetGlobalBuffer((__gm__ T *)(updates));
-    yGm_.SetGlobalBuffer((__gm__ T *)(y));
-    
+    varGm_.SetGlobalBuffer((__gm__ T*)(var));
+    indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
+    updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
+    yGm_.SetGlobalBuffer((__gm__ T*)(y));
+
     this->indicesFactor_ = tilingData_.indicesFactor;
     this->afterAxis_ = tilingData_.afterAxis;
     this->afterAxisFactor_ = tilingData_.afterAxisFactor;
@@ -79,12 +79,12 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::ProcessSplitAfter()
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
     }
-     
-    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize
-                                                                              : tilingData_.updateLoopSize;
+
+    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize :
+                                                                                tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
-    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum
-                                                                                  : tilingData_.updateTailNum;
+    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum :
+                                                                                    tilingData_.updateTailNum;
     int64_t rowMainDataLen = tilingData_.indicesFactor;
     int64_t rowTailDataLen = tilingData_.indiceTailNum;
     int64_t rowLoopNum = tilingData_.indicesLoopSize;
@@ -139,16 +139,14 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyIndiceInSplitInd
 }
 
 template <typename T, typename U, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyUpdatesInSplitIndices(
-    int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyUpdatesInSplitIndices(int64_t rowIdx, int64_t colIdx,
+                                                                                      int64_t rowLen, int64_t colLen)
 {
     LocalTensor<T> updatesLocal = this->dataQueue_.template AllocTensor<T>();
     int64_t indicesOfset = GetBlockIdx() * tilingData_.eachCoreIndexCount + rowIdx * tilingData_.indicesFactor;
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
-                                    static_cast<uint32_t>(colLen * sizeof(T)),
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(T)),
-                                    static_cast<uint32_t>(0),
-                                    static_cast<uint32_t>(0)};
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<T> updatePadParams = {false, 0, 0, 0};
     int64_t rowOfset = indicesOfset * tilingData_.afterAxis;
     int64_t updatesOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
@@ -157,8 +155,8 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyUpdatesInSplitIn
 }
 
 template <typename T, typename U, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndices(
-    int64_t rowLen, int64_t colLen, int64_t colIdx)
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndices(int64_t rowLen, int64_t colLen,
+                                                                                int64_t colIdx)
 {
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
     LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
@@ -171,16 +169,16 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndices(
     for (int64_t i = 0; i < rowLen; i++) {
         int64_t indicesValue = outOfstLocal(i);
         int64_t outOfset = indicesValue + colIdx * tilingData_.afterAxisFactor;
- 	    if (indicesValue >= 0 && indicesValue < varInAxis) {
- 	        this->template CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
- 	    }
+        if (indicesValue >= 0 && indicesValue < varInAxis) {
+            this->template CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
+        }
     }
     this->dataQueue_.FreeTensor(dataLocal);
 }
 
 template <typename T, typename U, typename OFFSET_T>
-__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndicesWithSort(
-    int64_t rowLen, int64_t colLen, int64_t colIdx)
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndicesWithSort(int64_t rowLen, int64_t colLen,
+                                                                                        int64_t colIdx)
 {
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
     LocalTensor<OFFSET_T> sortIndicesLocal = this->sortIndicesQue_.template Get<OFFSET_T>();
@@ -199,9 +197,9 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndicesW
         int64_t outOfset = shiftSortLocal(uniqueIdx);
         outOfset += colIdx * tilingData_.afterAxisFactor;
         int64_t indicesValue = shiftSortLocal(uniqueIdx);
- 	    if (indicesValue >= 0 && indicesValue < varInAxis) {
- 	        this->template CopyOut<T>(yGm_[outOfset], dataLocal[inOfset], colLen);
- 	    }
+        if (indicesValue >= 0 && indicesValue < varInAxis) {
+            this->template CopyOut<T>(yGm_[outOfset], dataLocal[inOfset], colLen);
+        }
     }
 
     this->uniqueIdCountQue_.FreeTensor(uniqueIdCountLocal);
@@ -218,7 +216,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::ProcessSplitIndices(
     int64_t rowLoopNum = Ops::Base::CeilDiv(curCoreIndexCount_, tilingData_.indicesFactor);
     int64_t rowMainDataLen = tilingData_.indicesFactor;
     int64_t rowTailDataLen = curCoreIndexCount_ - tilingData_.indicesFactor * (rowLoopNum - 1);
-     
+
     int64_t colLoopNum = tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
     int64_t colTailDataLen = tilingData_.updateTailNum;
@@ -258,5 +256,5 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Process()
         ProcessSplitIndices();
     }
 }
-}  // namespace ScatterNdUpdate
-#endif  // SCATTER_ND_ADD_SIMD_H
+} // namespace ScatterNdUpdate
+#endif // SCATTER_ND_ADD_SIMD_H

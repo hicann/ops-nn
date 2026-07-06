@@ -19,16 +19,16 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ExtendConv2dNCHW(const aclTensor *input, const aclTensor *weight, const aclTensor *scale,
-                                  const aclTensor *bias, op::DataType outputDtype, const aclIntArray *stride,
-                                  const aclIntArray *padding, const aclIntArray *dilation, int groups, int32_t offsetx,
-                                  const char* roundMode, aclOpExecutor *executor);
+const aclTensor* ExtendConv2dNCHW(const aclTensor* input, const aclTensor* weight, const aclTensor* scale,
+                                  const aclTensor* bias, op::DataType outputDtype, const aclIntArray* stride,
+                                  const aclIntArray* padding, const aclIntArray* dilation, int groups, int32_t offsetx,
+                                  const char* roundMode, aclOpExecutor* executor);
 
-const aclTensor *QuantConv3dNCDHW(const aclTensor *input, const aclTensor *weight, const aclTensor *scale,
-                                  const aclTensor *bias, op::DataType outputDtype, const aclIntArray *stride,
-                                  const aclIntArray *padding, const aclIntArray *dilation, int groups, int32_t offsetx,
-                                  const char* roundMode, aclOpExecutor *executor);
+const aclTensor* QuantConv3dNCDHW(const aclTensor* input, const aclTensor* weight, const aclTensor* scale,
+                                  const aclTensor* bias, op::DataType outputDtype, const aclIntArray* stride,
+                                  const aclIntArray* padding, const aclIntArray* dilation, int groups, int32_t offsetx,
+                                  const char* roundMode, aclOpExecutor* executor);
 
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_CONVOLUTION_OP_H
+#endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_CONVOLUTION_OP_H

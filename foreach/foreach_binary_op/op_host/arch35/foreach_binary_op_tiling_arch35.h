@@ -46,7 +46,7 @@ namespace optiling {
 // multi-tensor per-core assignment directly: the gert TilingContextFaker cannot exercise it, since
 // it does not support dynamic-input instance counts > 1 together with CompileInfo/PlatformInfo.
 inline int64_t AssignCoresToTensors(ForeachBinaryOpTilingDataHost* tilingData, uint64_t tensorNum,
-    int64_t totalElements, int64_t needCoreNum, int64_t perCoreElements)
+                                    int64_t totalElements, int64_t needCoreNum, int64_t perCoreElements)
 {
     int64_t globalOffset = 0;
     int64_t usedCoreNum = 0;
@@ -85,6 +85,6 @@ inline int64_t AssignCoresToTensors(ForeachBinaryOpTilingDataHost* tilingData, u
     }
     return usedCoreNum;
 }
-}  // namespace optiling
+} // namespace optiling
 
 #endif // OPS_NN_FOREACH_BINARY_OP_TILING_ARCH35_H_

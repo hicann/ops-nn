@@ -32,18 +32,14 @@ using namespace ut_util;
 using namespace ge;
 
 class ConcatOffsetTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ConcatOffsetTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ConcatOffsetTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ConcatOffsetTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ConcatOffsetTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -55,21 +51,21 @@ static string to_string(void *buf, size_t size)
     return result;
 }
 
-
 template <typename T>
 void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> &const_tensors) {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::make_unique<uint8_t[]>(sizeof(gert::Tensor) + sizeof(T) * data_size);
-    auto input_tensor = reinterpret_cast<gert::Tensor *>(input_tensor_holder.get());
-    gert::Tensor tensor({{data_size}, {data_size}},               // shape
-                        {ge::FORMAT_ND, ge::FORMAT_ND, {}},        // format
-                        gert::kFollowing,                          // placement
-                        dtype,                                     //dt
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+{
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::make_unique<uint8_t[]>(sizeof(gert::Tensor) +
+                                                                                 sizeof(T) * data_size);
+    auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dt
                         nullptr);
     memcpy_s(input_tensor, sizeof(gert::Tensor), &tensor, sizeof(gert::Tensor));
-    auto tensor_data = reinterpret_cast<T *>(input_tensor + 1);
-    for(int64_t i =0; i < data_size; i++) {
+    auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
+    for (int64_t i = 0; i < data_size; i++) {
         tensor_data[i] = const_data[i];
     }
     input_tensor->SetData(gert::TensorData{tensor_data});
@@ -77,8 +73,8 @@ void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_
     const_tensors.push_back(std::move(pair));
 }
 
-
-TEST_F(ConcatOffsetTiling, concat_offset_simt_tiling_1) {
+TEST_F(ConcatOffsetTiling, concat_offset_simt_tiling_1)
+{
     // input shape
 
     gert::StorageShape concat_dim_shape = {{1}, {1}};
@@ -143,20 +139,15 @@ TEST_F(ConcatOffsetTiling, concat_offset_simt_tiling_1) {
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 3)
                       .IrInstanceNum({1, 3})
-                      .InputShapes({&concat_dim_shape,
-                                    &x1_shape,
-                                    &x2_shape,
-                                    &x3_shape})
-                      .OutputShapes({&y1_shape,
-                                    &y2_shape,
-                                    &y3_shape})
+                      .InputShapes({&concat_dim_shape, &x1_shape, &x2_shape, &x3_shape})
+                      .OutputShapes({&y1_shape, &y2_shape, &y3_shape})
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -164,9 +155,7 @@ TEST_F(ConcatOffsetTiling, concat_offset_simt_tiling_1) {
                       .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({
-                      {"N", ge::AnyValue::CreateFrom<int64_t>(3)}
-                      })
+                      .NodeAttrs({{"N", ge::AnyValue::CreateFrom<int64_t>(3)}})
                       .ConstInput(const_tensors)
                       .TilingData(param.get())
                       .Workspace(ws_size)

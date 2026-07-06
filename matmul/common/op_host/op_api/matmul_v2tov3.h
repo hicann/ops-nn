@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #pragma once
 
@@ -19,23 +19,21 @@
 namespace Ops {
 namespace NN {
 // 包间接口的适配，做透传，参数封装的价值不大
-bool MmCheckHitV3Shape(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1, const bool transposeX2,
-    op::Format mat2_format, bool supportSplitK);
+bool MmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1,
+                       const bool transposeX2, op::Format mat2_format, bool supportSplitK);
 
-bool BmmCheckHitV3Shape(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1, const bool adjX2,
-    op::Format self_format, op::Format mat2_format, const bool enableFp16Bf16InFp32Out);
+bool BmmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1,
+                        const bool adjX2, op::Format self_format, op::Format mat2_format,
+                        const bool enableFp16Bf16InFp32Out);
 } // namespace NN
 } // namespace Ops
 #else
 namespace l0op {
-bool MmCheckHitV3Shape(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1, const bool transposeX2,
-    op::Format mat2_format, bool supportSplitK);
-bool BmmCheckHitV3Shape(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1, const bool adjX2,
-    op::Format self_format, op::Format mat2_format, const bool enableFp16Bf16InFp32Out);
+bool MmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1,
+                       const bool transposeX2, op::Format mat2_format, bool supportSplitK);
+bool BmmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1,
+                        const bool adjX2, op::Format self_format, op::Format mat2_format,
+                        const bool enableFp16Bf16InFp32Out);
 } // namespace l0op
 
 namespace Ops {
@@ -45,4 +43,3 @@ using l0op::MmCheckHitV3Shape;
 } // namespace NN
 } // namespace Ops
 #endif
-

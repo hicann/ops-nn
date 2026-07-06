@@ -24,8 +24,8 @@ struct ApplyKerasMomentumTilingData {
     uint32_t ubTailOfFormerBlock; // 首 block 尾部元素数
     uint32_t ubLoopOfTailBlock;   // 尾 block UB 循环次数
     uint32_t ubTailOfTailBlock;   // 尾 block 尾部元素数
-    uint8_t  dtypeSize;           // 单元素字节数 (2=FP16/BF16, 4=FP32)
-    uint8_t  useNesterov;         // use_nesterov 属性值 (0=false, 1=true)
+    uint8_t dtypeSize;            // 单元素字节数 (2=FP16/BF16, 4=FP32)
+    uint8_t useNesterov;          // use_nesterov 属性值 (0=false, 1=true)
 };
 
 #endif // APPLY_KERAS_MOMENTUM_TILING_DATA_H

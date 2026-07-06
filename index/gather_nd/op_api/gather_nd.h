@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *GatherNd(const aclTensor *self, const aclTensor *indices, aclOpExecutor *executor,
+const aclTensor* GatherNd(const aclTensor* self, const aclTensor* indices, aclOpExecutor* executor,
                           bool negativeIndexSupport = false);
 }
 

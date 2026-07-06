@@ -24,7 +24,7 @@ using namespace AscendC;
 template <typename T>
 class SwiGluGradMoveAlignKernel : public SwiGluGradBaseKernel<T> {
 public:
-    __aicore__ inline SwiGluGradMoveAlignKernel(TPipe &pipe): pipe_(pipe) {};
+    __aicore__ inline SwiGluGradMoveAlignKernel(TPipe& pipe) : pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR out, const GluBaseTilingData& tilingData);
     __aicore__ inline void Process();
 
@@ -36,7 +36,7 @@ protected:
     __aicore__ inline void ProcessSplitCol();
 
 protected:
-    TPipe &pipe_;
+    TPipe& pipe_;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> inQueA_;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> inQueB_;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> inQueGrad_;
@@ -48,22 +48,23 @@ protected:
     GlobalTensor<T> outGm_;
 
     // mode
-    bool needSplitCol_ {true};
+    bool needSplitCol_{true};
 
     // ub内循环处理大小
-    uint32_t rowUbNorm_ {0};
-    uint32_t rowUbTail_ {0};
-    int64_t  rowLoopByUb_ {0};
-    uint32_t rowPerLoopNorm_ {0};
-    uint32_t colUbNorm_ {0};
-    uint32_t colUbTail_ {0};
-    int64_t colLoopByUb_ {0};
+    uint32_t rowUbNorm_{0};
+    uint32_t rowUbTail_{0};
+    int64_t rowLoopByUb_{0};
+    uint32_t rowPerLoopNorm_{0};
+    uint32_t colUbNorm_{0};
+    uint32_t colUbTail_{0};
+    int64_t colLoopByUb_{0};
 
     static constexpr int32_t BLOCK_NUM = ONE_BLK_SIZE / sizeof(T);
 };
 
 template <typename T>
-__aicore__ inline void SwiGluGradMoveAlignKernel<T>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR out, const GluBaseTilingData& tilingData)
+__aicore__ inline void SwiGluGradMoveAlignKernel<T>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR out,
+                                                          const GluBaseTilingData& tilingData)
 {
     if (!this->InitBase(tilingData)) {
         return;
@@ -100,7 +101,8 @@ __aicore__ inline void SwiGluGradMoveAlignKernel<T>::Init(GM_ADDR grad, GM_ADDR 
 }
 
 template <typename T>
-__aicore__ inline void SwiGluGradMoveAlignKernel<T>::CopyIn(int64_t offset, int64_t gradOffset, uint32_t rowLen, uint32_t colLen)
+__aicore__ inline void SwiGluGradMoveAlignKernel<T>::CopyIn(int64_t offset, int64_t gradOffset, uint32_t rowLen,
+                                                            uint32_t colLen)
 {
     LocalTensor<T> xATensor = inQueA_.AllocTensor<T>();
     LocalTensor<T> xBTensor = inQueB_.AllocTensor<T>();
@@ -112,26 +114,19 @@ __aicore__ inline void SwiGluGradMoveAlignKernel<T>::CopyIn(int64_t offset, int6
 
     uint8_t rightPadNum = static_cast<uint8_t>((colLen + BLOCK_NUM - 1) / BLOCK_NUM * BLOCK_NUM - colLen);
 
-    DataCopyExtParams copyParamForX{
-        static_cast<uint16_t>(rowLen),
-        static_cast<uint32_t>(colLen * sizeof(T)),
-        static_cast<uint32_t>((this->colTotal_ - colLen) * sizeof(T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyParamForX{static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)),
+                                    static_cast<uint32_t>((this->colTotal_ - colLen) * sizeof(T)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-    DataCopyPadExtParams<T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum), static_cast<uint8_t>(0)};
+    DataCopyPadExtParams<T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum),
+                                      static_cast<uint8_t>(0)};
 
     DataCopyPad(xATensor, xGm_[partA], copyParamForX, padParams);
     DataCopyPad(xBTensor, xGm_[partB], copyParamForX, padParams);
 
-    DataCopyExtParams copyParamsForGrad{
-        static_cast<uint16_t>(rowLen),
-        static_cast<uint32_t>(colLen * sizeof(T)),
-        static_cast<uint32_t>((this->colTotalA_ - colLen) * sizeof(T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
+    DataCopyExtParams copyParamsForGrad{static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)),
+                                        static_cast<uint32_t>((this->colTotalA_ - colLen) * sizeof(T)),
+                                        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(gradTensor, gradYGm_[grad], copyParamsForGrad, padParams);
 
@@ -150,12 +145,8 @@ __aicore__ inline void SwiGluGradMoveAlignKernel<T>::CopyOut(int64_t offset, uin
     uint64_t partB = this->partBStart_ + offset;
 
     DataCopyExtParams copyParams{
-        static_cast<uint16_t>(rowLen),
-        static_cast<uint32_t>(colLen * sizeof(T)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>((this->colTotal_ - colLen) * sizeof(T)),
-        static_cast<uint32_t>(0)
-    };
+        static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(T)), static_cast<uint32_t>(0),
+        static_cast<uint32_t>((this->colTotal_ - colLen) * sizeof(T)), static_cast<uint32_t>(0)};
 
     DataCopyPad(outGm_[partA], xATensor, copyParams);
     DataCopyPad(outGm_[partB], xBTensor, copyParams);
@@ -241,5 +232,5 @@ __aicore__ inline void SwiGluGradMoveAlignKernel<T>::ComputePerLoop(int32_t data
     inQueGrad_.FreeTensor(gradTensor);
 }
 
-}
+} // namespace SwiGluGrad
 #endif

@@ -43,15 +43,9 @@ public:
 
     __aicore__ inline BlockEpilogueEmpty() {}
 
-    __aicore__ inline void Run()
-    {
-        return;
-    }
+    __aicore__ inline void Run() { return; }
 
-    __aicore__ inline void operator()(Arguments const& params)
-    {
-        Run();
-    }
+    __aicore__ inline void operator()(Arguments const& params) { Run(); }
 
     __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR workspaceGm)
     {
@@ -59,15 +53,9 @@ public:
         return params;
     }
 
-    __host_aicore__ static size_t GetWorkspaceSize(int64_t blockNum, int64_t l1M, int64_t l1N)
-    {
-        return 0;
-    }
+    __host_aicore__ static size_t GetWorkspaceSize(int64_t blockNum, int64_t l1M, int64_t l1N) { return 0; }
 
-    __host_aicore__ static Status CanImplement(Arguments const& args)
-    {
-        return Status::success;
-    }
+    __host_aicore__ static Status CanImplement(Arguments const& args) { return Status::success; }
 
     __aicore__ inline void operator()(BlockShape const& blockShape, BlockCoord const& blockCoord,
                                       int64_t dstStartOffset = 0, int64_t srcStartOffset = 0)
@@ -78,4 +66,3 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

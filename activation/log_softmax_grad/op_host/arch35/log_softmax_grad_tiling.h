@@ -18,21 +18,18 @@
 
 #include "../../../softmax_grad/op_host/arch35/softmax_grad_tiling.h"
 
-namespace optiling
-{
-class LogSoftmaxGradTilingBase : virtual public SoftmaxGradTilingBase
-{
+namespace optiling {
+class LogSoftmaxGradTilingBase : virtual public SoftmaxGradTilingBase {
 public:
     explicit LogSoftmaxGradTilingBase(gert::TilingContext* context)
         : TilingBaseClass(context), SoftmaxGradTilingBase(context)
-    {
-    }
+    {}
     ~LogSoftmaxGradTilingBase() override = default;
 
 protected:
     ge::graphStatus GetAndCheckDtypes() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // LOG_SOFTMAX_GRAD_TILING_BASE_H
+#endif // LOG_SOFTMAX_GRAD_TILING_BASE_H

@@ -29,17 +29,17 @@
 namespace optiling {
 
 using namespace ge;
+using Ops::Base::bfloat16_t;
 using Ops::Base::ElewiseBaseTiling;
 using Ops::Base::half;
-using Ops::Base::bfloat16_t;
 
 // TilingKey 定义（与 DESIGN.md §3.1 一致）
 constexpr uint64_t TILING_KEY_FP16 = 101UL;
 constexpr uint64_t TILING_KEY_BF16 = 102UL;
 constexpr uint64_t TILING_KEY_FP32 = 103UL;
 
-static ge::graphStatus DoTilingByDtype(gert::TilingContext* context, ge::DataType dtype,
-                                       SoftsignTilingData* tilingData, uint64_t& tilingKey)
+static ge::graphStatus DoTilingByDtype(gert::TilingContext* context, ge::DataType dtype, SoftsignTilingData* tilingData,
+                                       uint64_t& tilingKey)
 {
     ElewiseBaseTiling eleTiling(context);
     ge::graphStatus ret;
@@ -60,8 +60,7 @@ static ge::graphStatus DoTilingByDtype(gert::TilingContext* context, ge::DataTyp
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Softsign: DoTiling failed for dtype=%d", static_cast<int>(dtype)),
-                return ret);
+                OP_LOGE(context, "Softsign: DoTiling failed for dtype=%d", static_cast<int>(dtype)), return ret);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -85,8 +84,7 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
     auto storageShape = inputShape->GetStorageShape();
     int64_t dim0 = (storageShape.GetDimNum() == 0) ? 1 : storageShape.GetShapeSize();
 
-    OP_CHECK_IF(PrepareWorkspace(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Softsign: PrepareWorkspace failed"),
+    OP_CHECK_IF(PrepareWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Softsign: PrepareWorkspace failed"),
                 return ge::GRAPH_FAILED);
 
     if (dim0 == 0) {
@@ -99,9 +97,7 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
     auto tilingData = context->GetTilingData<SoftsignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
     auto ret = DoTilingByDtype(context, dtype, tilingData, tilingKey);
-    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Softsign: DoTilingByDtype failed"),
-                return ret);
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "Softsign: DoTilingByDtype failed"), return ret);
 
     context->SetTilingKey(tilingKey);
     context->SetBlockDim(tilingData->baseTiling.blockNum);
@@ -115,8 +111,6 @@ static ge::graphStatus TilingParseForSoftsign([[maybe_unused]] gert::TilingParse
 
 struct SoftsignCompileInfo {};
 
-IMPL_OP_OPTILING(Softsign)
-    .Tiling(SoftsignTilingFunc)
-    .TilingParse<SoftsignCompileInfo>(TilingParseForSoftsign);
+IMPL_OP_OPTILING(Softsign).Tiling(SoftsignTilingFunc).TilingParse<SoftsignCompileInfo>(TilingParseForSoftsign);
 
-}  // namespace optiling
+} // namespace optiling

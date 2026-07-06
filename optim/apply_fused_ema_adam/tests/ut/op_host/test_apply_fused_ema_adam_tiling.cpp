@@ -27,18 +27,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class ApplyFusedEmaAdamTiling : public testing::Test
-{
+class ApplyFusedEmaAdamTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyFusedEmaAdamTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyFusedEmaAdamTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyFusedEmaAdamTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyFusedEmaAdamTiling TearDown" << std::endl; }
 };
 
 TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float32_mode_0_bias_0)
@@ -70,8 +63,7 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float32_mode_0_bias_0)
     platform_info.Init();
 
     // compile info
-    struct ApplyFusedEmaAdamCompileInfo {
-    };
+    struct ApplyFusedEmaAdamCompileInfo {};
     ApplyFusedEmaAdamCompileInfo compile_info;
 
     std::string op_type("ApplyFusedEmaAdam");
@@ -80,19 +72,19 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float32_mode_0_bias_0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -118,15 +110,14 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float32_mode_0_bias_0)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
-                           {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
-                           {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
-                           {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
-                           {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
-                           {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"bias_correction", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
+                      .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
+                                  {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
+                                  {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
+                                  {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
+                                  {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"bias_correction", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -176,8 +167,7 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float16_mode_1_bias_0)
     platform_info.Init();
 
     // compile info
-    struct ApplyFusedEmaAdamCompileInfo {
-    };
+    struct ApplyFusedEmaAdamCompileInfo {};
     ApplyFusedEmaAdamCompileInfo compile_info;
 
     std::string op_type("ApplyFusedEmaAdam");
@@ -186,19 +176,19 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float16_mode_1_bias_0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -224,15 +214,14 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_float16_mode_1_bias_0)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
-                           {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
-                           {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
-                           {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
-                           {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
-                           {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                           {"bias_correction", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
+                      .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
+                                  {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
+                                  {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
+                                  {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
+                                  {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"bias_correction", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -282,8 +271,7 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_bfloat16_mode_0_bias_1)
     platform_info.Init();
 
     // compile info
-    struct ApplyFusedEmaAdamCompileInfo {
-    };
+    struct ApplyFusedEmaAdamCompileInfo {};
     ApplyFusedEmaAdamCompileInfo compile_info;
 
     std::string op_type("ApplyFusedEmaAdam");
@@ -292,19 +280,19 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_bfloat16_mode_0_bias_1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -330,15 +318,14 @@ TEST_F(ApplyFusedEmaAdamTiling, test_tiling_bfloat16_mode_0_bias_1)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
-                           {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
-                           {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
-                           {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
-                           {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
-                           {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"bias_correction", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
+                      .NodeAttrs({{"lr", Ops::NN::AnyValue::CreateFrom(1e-3f)},
+                                  {"ema_decay", Ops::NN::AnyValue::CreateFrom(0.9999f)},
+                                  {"beta1", Ops::NN::AnyValue::CreateFrom(0.9f)},
+                                  {"beta2", Ops::NN::AnyValue::CreateFrom(0.999f)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom(1e-8f)},
+                                  {"mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"bias_correction", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"weight_decay", Ops::NN::AnyValue::CreateFrom(0.0001f)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

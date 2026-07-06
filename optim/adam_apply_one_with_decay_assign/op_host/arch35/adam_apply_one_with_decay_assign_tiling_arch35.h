@@ -30,8 +30,7 @@ struct AdamApplyOneWithDecayAssignCompileInfo {
 
 class AdamApplyOneWithDecayAssignTiling : public TilingBaseClass {
 public:
-    explicit AdamApplyOneWithDecayAssignTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit AdamApplyOneWithDecayAssignTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

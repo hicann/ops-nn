@@ -28,8 +28,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "util/math_util.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace std;
 
 const int HW_DIMS = 2;
@@ -73,16 +72,11 @@ struct MaxPoolWithArgmaxCompileInfo {
     uint64_t ubSize;
 };
 
-class MaxPoolWithArgmaxBaseTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class MaxPoolWithArgmaxBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPoolWithArgmaxBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit MaxPoolWithArgmaxBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~MaxPoolWithArgmaxBaseTiling() override
-    {
-    }
+    ~MaxPoolWithArgmaxBaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -100,6 +94,6 @@ public:
     uint32_t coreNum = 1;
     uint32_t ubSize = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 
 #endif

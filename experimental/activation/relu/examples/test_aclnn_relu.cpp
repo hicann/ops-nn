@@ -26,10 +26,10 @@
 #include "aclnnop/aclnn_relu.h"
 
 #define CHECK_RET(cond, expr) \
-    do { \
-        if (!(cond)) { \
-            expr; \
-        } \
+    do {                      \
+        if (!(cond)) {        \
+            expr;             \
+        }                     \
     } while (0)
 
 namespace {
@@ -39,7 +39,7 @@ struct ReluConfig {
     std::string name;
 };
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shape_size = 1;
     for (int64_t dim : shape) {
@@ -48,7 +48,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return shape_size;
 }
 
-std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
+std::vector<int64_t> MakeStrides(const std::vector<int64_t>& shape)
 {
     if (shape.empty()) {
         return {};
@@ -60,7 +60,7 @@ std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
     return strides;
 }
 
-bool ParseDtype(const std::string &dtype_name, ReluConfig *config)
+bool ParseDtype(const std::string& dtype_name, ReluConfig* config)
 {
     if (dtype_name == "fp16" || dtype_name == "float16") {
         *config = {ACL_FLOAT16, sizeof(uint16_t), "fp16"};
@@ -89,7 +89,7 @@ bool ParseDtype(const std::string &dtype_name, ReluConfig *config)
     return false;
 }
 
-bool ParseShape(const std::string &shape_text, std::vector<int64_t> *shape)
+bool ParseShape(const std::string& shape_text, std::vector<int64_t>* shape)
 {
     shape->clear();
     if (shape_text.empty() || shape_text == "scalar") {
@@ -112,7 +112,7 @@ bool ParseShape(const std::string &shape_text, std::vector<int64_t> *shape)
     return true;
 }
 
-bool ReadFile(const std::string &path, std::vector<char> *buffer)
+bool ReadFile(const std::string& path, std::vector<char>* buffer)
 {
     std::ifstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
@@ -128,7 +128,7 @@ bool ReadFile(const std::string &path, std::vector<char> *buffer)
     return size == 0 || stream.read(buffer->data(), size).good();
 }
 
-bool WriteFile(const std::string &path, const std::vector<char> &buffer)
+bool WriteFile(const std::string& path, const std::vector<char>& buffer)
 {
     std::ofstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
@@ -138,28 +138,26 @@ bool WriteFile(const std::string &path, const std::vector<char> &buffer)
     return stream.good();
 }
 
-aclError CreateAclTensor(
-    const std::vector<int64_t> &shape, aclDataType dtype, void *device_addr, aclTensor **tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
-    const int64_t *shape_ptr = shape.empty() ? nullptr : shape.data();
-    const int64_t *strides_ptr = strides.empty() ? nullptr : strides.data();
-    *tensor = aclCreateTensor(
-        shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(), device_addr);
+    const int64_t* shape_ptr = shape.empty() ? nullptr : shape.data();
+    const int64_t* strides_ptr = strides.empty() ? nullptr : strides.data();
+    *tensor = aclCreateTensor(shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(),
+                              device_addr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
 
-int RunRelu(
-    const std::vector<char> &input_host, const std::vector<int64_t> &shape, const ReluConfig &config,
-    std::vector<char> *output_host, int32_t device_id)
+int RunRelu(const std::vector<char>& input_host, const std::vector<int64_t>& shape, const ReluConfig& config,
+            std::vector<char>* output_host, int32_t device_id)
 {
     aclrtStream stream = nullptr;
-    void *input_device = nullptr;
-    void *output_device = nullptr;
-    void *workspace = nullptr;
-    aclTensor *input_tensor = nullptr;
-    aclTensor *output_tensor = nullptr;
-    aclOpExecutor *executor = nullptr;
+    void* input_device = nullptr;
+    void* output_device = nullptr;
+    void* workspace = nullptr;
+    aclTensor* input_tensor = nullptr;
+    aclTensor* output_tensor = nullptr;
+    aclOpExecutor* executor = nullptr;
     uint64_t workspace_size = 0;
     const size_t bytes = static_cast<size_t>(GetShapeSize(shape)) * config.element_size;
     bool acl_initialized = false;
@@ -239,7 +237,7 @@ cleanup:
 }
 
 template <typename T>
-std::vector<char> ToBytes(const std::vector<T> &values)
+std::vector<char> ToBytes(const std::vector<T>& values)
 {
     std::vector<char> buffer(values.size() * sizeof(T));
     if (!buffer.empty()) {
@@ -257,7 +255,7 @@ int RunDefaultExample()
     auto ret = RunRelu(ToBytes(input), shape, config, &output, 0);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    const float *result = reinterpret_cast<const float *>(output.data());
+    const float* result = reinterpret_cast<const float*>(output.data());
     const std::vector<float> expected = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 4.0f, 5.0f};
     for (size_t i = 0; i < expected.size(); ++i) {
         if (result[i] != expected[i]) {
@@ -268,9 +266,9 @@ int RunDefaultExample()
     std::printf("default example passed\n");
     return 0;
 }
-}  // namespace
+} // namespace
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     if (argc == 1) {
         return RunDefaultExample();

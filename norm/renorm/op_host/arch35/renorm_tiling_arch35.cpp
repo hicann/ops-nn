@@ -26,8 +26,7 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 using namespace Renorm;
 
 static const int32_t ATTR_INDEX_P = 0;
@@ -80,85 +79,77 @@ ge::graphStatus RenormTiling::SetTilingData()
     uint64_t tilingKey;
     GEN_REDUCE_TILING_KEY(tilingKey, key_.reduceTiling, key_.templateNum);
     OP_LOGI(tilingContext_->GetNodeName(),
-            "patternID:%u, loopARCount:%u, loopInnerARCount:%u, isContiguous:%d, Tiling Key is:%lu, templateNum is: %u, p: %f, recp: %f, maxnorm: %f",
-            key_.reduceTiling.patternID, key_.reduceTiling.loopARCount, key_.reduceTiling.loopInnerARCount, key_.reduceTiling.isContiguous, tilingKey,
-            key_.templateNum, p_, recp_, maxnorm_);
+            "patternID:%u, loopARCount:%u, loopInnerARCount:%u, isContiguous:%d, Tiling Key is:%lu, templateNum is: "
+            "%u, p: %f, recp: %f, maxnorm: %f",
+            key_.reduceTiling.patternID, key_.reduceTiling.loopARCount, key_.reduceTiling.loopInnerARCount,
+            key_.reduceTiling.isContiguous, tilingKey, key_.templateNum, p_, recp_, maxnorm_);
 
     tilingContext_->SetTilingKey(tilingKey);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RenormTiling::HandleP2(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
-                                         ReduceOpTilingData& reduceTiling)
+                                       ReduceOpTilingData& reduceTiling)
 {
     templateNum_ = TEMPLATE_P2;
     if (!dtypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP2Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP2Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP2Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP2Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP2Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP2Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RenormTiling::HandleP1(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
-                                         ReduceOpTilingData& reduceTiling)
+                                       ReduceOpTilingData& reduceTiling)
 {
     templateNum_ = TEMPLATE_P1;
     if (!dtypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP1Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP1Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP1Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP1Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP1Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP1Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RenormTiling::HandleP0(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
-                                         ReduceOpTilingData& reduceTiling)
+                                       ReduceOpTilingData& reduceTiling)
 {
     templateNum_ = TEMPLATE_P0;
     if (!dtypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP0Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP0Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP0Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP0Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP0Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP0Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RenormTiling::HandlePInf(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
-                                           ReduceOpTilingData& reduceTiling)
+                                         ReduceOpTilingData& reduceTiling)
 {
     templateNum_ = p_ < 0 ? TEMPLATE_P_NINF : TEMPLATE_P_INF;
     if (!dtypeXEqualY) {
@@ -166,81 +157,72 @@ ge::graphStatus RenormTiling::HandlePInf(const ReduceOpCompileInfo* compileInfo,
             // fp16 inf/-inf场景不需要升精度
             OP_CHECK_IF(
                 (Tiling4ReduceOp<Renorm::RenormPInfDag<half, half, float>::OpDag>(
-                    tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                     tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
                 , return ge::GRAPH_FAILED);
         } else if (xDtype_ == ge::DT_BF16) {
             OP_CHECK_IF(
                 (Tiling4ReduceOp<Renorm::RenormPInfDag<half, float, float>::OpDag>(
-                    tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                     tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
                 , return ge::GRAPH_FAILED);
         }
     } else if (xDtype_ == ge::DT_FLOAT16) {
         // fp16 inf/-inf场景不需要升精度
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormPInfDag<half, half, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormPInfDag<half, half, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormPInfDag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormPInfDag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormPInfDag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormPInfDag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RenormTiling::HandleP3(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
-                                         ReduceOpTilingData& reduceTiling)
+                                       ReduceOpTilingData& reduceTiling)
 {
     AscendC::GetPowerTmpBufferFactorSize(true, false, false, sizeof(float), opInput.reservedNode, opInput.reservedSize);
     templateNum_ = TEMPLATE_P3;
     recp_ = 1 / p_;
     if (!dtypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP3Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP3Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP3Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP3Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormP3Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormP3Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RenormTiling::HandlePOther(const ReduceOpCompileInfo* compileInfo, ReduceOpInputParam& opInput,
-                                             ReduceOpTilingData& reduceTiling)
+                                           ReduceOpTilingData& reduceTiling)
 {
     // 高阶api预留8k ub空间
     AscendC::GetPowerTmpBufferFactorSize(true, false, false, sizeof(float), opInput.reservedNode, opInput.reservedSize);
     templateNum_ = TEMPLATE_P_OTHER;
     recp_ = 1 / p_;
     if (!dtypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormPOtherDag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormPOtherDag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormPOtherDag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormPOtherDag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<Renorm::RenormPOtherDag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<Renorm::RenormPOtherDag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -263,8 +245,7 @@ ge::graphStatus RenormTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
 {
     ReduceOpInputParam opInput;
     OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext_, opInput, 0) == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext_->GetNodeName(), "ReduceOp get x input failed"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext_->GetNodeName(), "ReduceOp get x input failed"), return ge::GRAPH_FAILED);
 
     opInput.axes = reduceAxis_;
 
@@ -282,10 +263,8 @@ ge::graphStatus RenormTiling::TilingReduce(const ReduceOpCompileInfo* compileInf
     } else {
         ret = HandlePOther(compileInfo, opInput, tilingData_->reduceTiling);
     }
-    OP_CHECK_IF(
-        (ret == ge::GRAPH_FAILED),
-        OP_LOGE(tilingContext_->GetNodeName(), "Renorm Tiling for p: %f failed", p_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGE(tilingContext_->GetNodeName(), "Renorm Tiling for p: %f failed", p_),
+                return ge::GRAPH_FAILED);
 
     key_.templateNum = templateNum_;
 
@@ -304,9 +283,9 @@ ge::graphStatus RenormTiling::GetAndCheckDtypes()
     dtypeXEqualY = xDtype_ == yDtype;
 
     OP_CHECK_IF(xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_BF16,
-                    OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "x",
-                        ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "x", ToString(xDtype_).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -330,10 +309,9 @@ ge::graphStatus RenormTiling::GetAndCheckReduceAxis()
     // 边界检查：dim不合法（<0或>=xShapeDimNum）
     int targetDim = *targetDimPtr;
     if (targetDim < 0 || targetDim >= xShapeDimNum) {
-        std::string reasonMsg =
-            "The value of attribute dim depends on the number of shape axes of input x";
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "dim",
-            std::to_string(targetDim).c_str(), reasonMsg.c_str());
+        std::string reasonMsg = "The value of attribute dim depends on the number of shape axes of input x";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "dim", std::to_string(targetDim).c_str(),
+                                              reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -366,7 +344,7 @@ ge::graphStatus RenormTiling::GetAndCheckOtherAttrs(ge::DataType xDtype)
 
     if (xDtype == ge::DT_FLOAT16) {
         epsilon_ = DEFAULT_EPSILON_FP16;
-    } else {  // bf16 or fp32
+    } else { // bf16 or fp32
         epsilon_ = DEFAULT_EPSILON_FP32;
     }
 
@@ -382,16 +360,15 @@ ge::graphStatus RenormTiling::RunTiling(const ReduceOpCompileInfo* compileInfo)
     tilingData_ = tilingContext_->GetTilingData<RenormTilingData>();
 
     OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, OP_LOGE("RenormTiling", "get and check dtypes failed."),
-                    return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(GetAndCheckReduceAxis() != ge::GRAPH_SUCCESS,
-                    OP_LOGE("RenormTiling", "get and check reduce axis failed."), return ge::GRAPH_FAILED);
+                OP_LOGE("RenormTiling", "get and check reduce axis failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetAndCheckOtherAttrs(xDtype_) != ge::GRAPH_SUCCESS,
-                    OP_LOGE("RenormTiling", "get and check attr failed."), return ge::GRAPH_FAILED);
+                OP_LOGE("RenormTiling", "get and check attr failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "do tilingData_ failed for reduce"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext_->GetNodeName(), "do tilingData_ failed for reduce"), return ge::GRAPH_FAILED);
 
     return SetTilingData();
 }
@@ -419,40 +396,35 @@ ge::graphStatus TilingPrepare4Renorm(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum == 0UL),
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
-                                        compileInfo->vectorCoreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum == 0UL),
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
+                        compileInfo->vectorCoreNum),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(ubSize <= CACHE_BUF_SIZE,
-                    OP_LOGE(context->GetNodeName(),
-                                                    "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
-                                                    compileInfo->ubSize, CACHE_BUF_SIZE),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
+                        compileInfo->ubSize, CACHE_BUF_SIZE),
+                return ge::GRAPH_FAILED);
     compileInfo->ubSize = ubSize;
 
     compileInfo->cacheLineSize = Ops::Base::GetCacheLineSize(context);
-    OP_CHECK_IF(
-        compileInfo->cacheLineSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
-                                        compileInfo->cacheLineSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->cacheLineSize == 0UL,
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
+                        compileInfo->cacheLineSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->ubBlockSize = Ops::Base::GetUbBlockSize(context);
     OP_CHECK_IF(
         compileInfo->ubBlockSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.",
-                                        compileInfo->ubBlockSize),
+        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.", compileInfo->ubBlockSize),
         return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = Ops::Base::GetVRegSize(context);
     OP_CHECK_IF(
         compileInfo->vRegSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.",
-                                        compileInfo->vRegSize),
+        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.", compileInfo->vRegSize),
         return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%lu, ubSize:%lu, cacheLineSize:%lu, ubBlockSize:%lu, vRegSize:%lu",
@@ -462,7 +434,5 @@ ge::graphStatus TilingPrepare4Renorm(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Renorm)
-    .Tiling(Tiling4RenormFunc)
-    .TilingParse<ReduceOpCompileInfo>(TilingPrepare4Renorm);
-}  // namespace optiling
+IMPL_OP_OPTILING(Renorm).Tiling(Tiling4RenormFunc).TilingParse<ReduceOpCompileInfo>(TilingPrepare4Renorm);
+} // namespace optiling

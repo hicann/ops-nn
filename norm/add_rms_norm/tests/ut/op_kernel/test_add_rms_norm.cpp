@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -21,20 +22,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void add_rms_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void add_rms_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd,
+                                                   GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling);
 
-class add_rms_norm_test : public testing::Test
-{
+class add_rms_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_rms_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_rms_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_rms_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_rms_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(add_rms_norm_test, test_case_10)
@@ -438,7 +432,6 @@ TEST_F(add_rms_norm_test, test_case_14)
 //     tilingDatafromBin->row_tail = 2;
 //     tilingDatafromBin->last_block_row_tail = 2;
 
-
 //     ICPU_SET_TILING_KEY(34);
 //     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 //     ICPU_RUN_KF(add_rms_norm, blockDim, x1, x2, gamma, y, rstd, x, workspace, (uint8_t*)(tilingDatafromBin));
@@ -833,7 +826,6 @@ TEST_F(add_rms_norm_test, test_case_12)
 //     AscendC::GmFree(tiling);
 //     free(path_);
 // }
-
 
 TEST_F(add_rms_norm_test, test_case_32)
 {

@@ -15,14 +15,14 @@ using namespace ge;
 
 namespace ops {
 
-static ge::graphStatus InferShapeMishGradV2(gert::InferShapeContext *context)
+static ge::graphStatus InferShapeMishGradV2(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeMishGradV2");
 
-    const gert::Shape *gradShape = context->GetInputShape(0);
+    const gert::Shape* gradShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
 
-    gert::Shape *outputShape = context->GetOutputShape(0);
+    gert::Shape* outputShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
     *outputShape = *gradShape;
 
@@ -31,4 +31,4 @@ static ge::graphStatus InferShapeMishGradV2(gert::InferShapeContext *context)
 }
 
 IMPL_OP_INFERSHAPE(MishGradV2).InferShape(InferShapeMishGradV2);
-}  // namespace ops
+} // namespace ops

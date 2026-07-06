@@ -30,10 +30,10 @@ void Conv3DDequantToQuantConv3DFusionPass::InitMember()
     postCubeNode = nullptr;
 }
 
-bool Conv3DDequantToQuantConv3DFusionPass::MeetRequirements(const GNode &convNode)
+bool Conv3DDequantToQuantConv3DFusionPass::MeetRequirements(const GNode& convNode)
 {
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch),
-        OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
+                      OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
 
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv3DDequantToQuantConv3DFusionPass.");
 
@@ -43,100 +43,107 @@ bool Conv3DDequantToQuantConv3DFusionPass::MeetRequirements(const GNode &convNod
         convDtypes.emplace_back(convDescInfo.biasDtype);
     }
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(CONV_SUPPORT_DTYPES, convDtypes),
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv3D dtype not supported, no fusion."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Conv3D dtype not supported, no fusion."), return false);
 
     // Check cur node's formats whether it is supported.
     std::vector<Format> convFormats = {convDescInfo.fmapFormat, convDescInfo.filterFormat, convDescInfo.outputFormat};
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<Format>(CONV_SUPPORT_FORMATS_DAV_3510, convFormats),
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv3D format not supported, no fusion."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Conv3D format not supported, no fusion."), return false);
 
     auto outputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
 
     FUSION_PASS_CHECK(outputNodes.size() != SINGLE_OUTPUTNUM,
-        OP_LOGD(convDescInfo.nodeNameStr, "Only support conv3d single output."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Only support conv3d single output."), return false);
 
     FUSION_PASS_CHECK(outputNodes[0].first == nullptr,
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv3d node has no output nodes."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Conv3d node has no output nodes."), return false);
 
     AscendString nodeType;
     FUSION_PASS_CHECK(outputNodes[0].first->GetType(nodeType) != ge::GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "Failed to get node type."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Failed to get node type."), return false);
 
-    FUSION_PASS_CHECK(nodeType != ConvFusionUtils::ASCEND_DEQUANT,
+    FUSION_PASS_CHECK(
+        nodeType != ConvFusionUtils::ASCEND_DEQUANT,
         OP_LOGD(convDescInfo.nodeNameStr, "Node type is [%s], only support dequant", nodeType.GetString()),
         return false);
 
     bool sqrtMode = false;
     FUSION_PASS_CHECK(outputNodes[0].first->GetAttr(SQRT_MODE, sqrtMode) != ge::GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "Get sqrt_mode failed."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Get sqrt_mode failed."), return false);
     FUSION_PASS_CHECK(sqrtMode, OP_LOGD(convDescInfo.nodeNameStr, "Only support sqrt_mode is false."), return false);
 
     bool reluFlag = false;
     FUSION_PASS_CHECK(outputNodes[0].first->GetAttr(RELU_FLAG, reluFlag) != ge::GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "Get relu_flag failed."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Get relu_flag failed."), return false);
     FUSION_PASS_CHECK(reluFlag, OP_LOGD(convDescInfo.nodeNameStr, "Only support relu_flag is false."), return false);
 
     return true;
 }
 
-AscendString Conv3DDequantToQuantConv3DFusionPass::GetNodeType() const
-{
-    return ConvFusionUtils::CONV3D;
-}
+AscendString Conv3DDequantToQuantConv3DFusionPass::GetNodeType() const { return ConvFusionUtils::CONV3D; }
 
-Status Conv3DDequantToQuantConv3DFusionPass::ConvFusionPreImpl(GraphPtr& graph, GNode &convNode,
-    const CustomPassContext &pass_context)
+Status Conv3DDequantToQuantConv3DFusionPass::ConvFusionPreImpl(GraphPtr& graph, GNode& convNode,
+                                                               const CustomPassContext& pass_context)
 {
     GNodePtr nodePtr = ConvFusionUtilsPass::GetNodePtr(convNode, convDescInfo);
-    FUSION_PASS_CHECK(nodePtr == nullptr,
-        OP_LOGD(convDescInfo.nodeNameStr, "GetNodePtr failed, no fusion."), return CONV_NOT_CHANGED);
+    FUSION_PASS_CHECK(nodePtr == nullptr, OP_LOGD(convDescInfo.nodeNameStr, "GetNodePtr failed, no fusion."),
+                      return CONV_NOT_CHANGED);
 
     ops::PostCubeUtils postCubeUtils;
     FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."), return CONV_NOT_CHANGED);
+                      OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."),
+                      return CONV_NOT_CHANGED);
 
     SelectPostCubePassByWhiteList(postCubeUtils.m_matchpasses_);
 
     FUSION_PASS_CHECK(postCubeUtils.SelectPostCubeNodeList(false) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."), return CONV_NOT_CHANGED);
+                      OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."),
+                      return CONV_NOT_CHANGED);
 
     std::vector<GNodePtr> newNodes;
     FUSION_PASS_CHECK(postCubeUtils.CreatePostCubeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "CreatePostCubeNode failed, no fusion."), return CONV_NOT_CHANGED);
+                      OP_LOGD(convDescInfo.nodeNameStr, "CreatePostCubeNode failed, no fusion."),
+                      return CONV_NOT_CHANGED);
 
     return SUCCESS;
 }
 
-bool Conv3DDequantToQuantConv3DFusionPass::ConvFusionReplaceImpl(GraphPtr &graph, const GNode &convNode)
+bool Conv3DDequantToQuantConv3DFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, const GNode& convNode)
 {
     return DefaultConvFusionReplaceImpl(convNode);
 }
 
-std::unique_ptr<SubgraphBoundary> Conv3DDequantToQuantConv3DFusionPass::ConstructBoundary(const GNode &convNode)
+std::unique_ptr<SubgraphBoundary> Conv3DDequantToQuantConv3DFusionPass::ConstructBoundary(const GNode& convNode)
 {
     FUSION_PASS_CHECK_NOLOG(!GetPostCubeNodes(convNode), return nullptr);
 
     std::unique_ptr<SubgraphBoundary> boundary = std::make_unique<SubgraphBoundary>();
     for (size_t index = 0; index < REQUIRED_INPUT_NUMS; ++index) {
         FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, convNode, static_cast<int64_t>(index),
-            static_cast<int64_t>(index)), return nullptr);
+                                                                       static_cast<int64_t>(index)),
+                                return nullptr);
     }
 
     if (convDescInfo.hasBias) {
-        FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, convNode,
-            INPUT_BIAS_INDEX, QUANTCONV3D_CONV3D_INPUT_BIAS_INDEX), return nullptr);
+        FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, convNode, INPUT_BIAS_INDEX,
+                                                                       QUANTCONV3D_CONV3D_INPUT_BIAS_INDEX),
+                                return nullptr);
     }
 
-    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *postCubeNode,
-        POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, QUANTCONV3D_CONV3D_INPUT_SCALE_INDEX), return nullptr);
+    FUSION_PASS_CHECK_NOLOG(
+        !ConvFusionUtilsPass::AddSubgraphInput(boundary, *postCubeNode, POST_CUBE_INPUT_QUANT_SCALE_0_INDEX,
+                                               QUANTCONV3D_CONV3D_INPUT_SCALE_INDEX),
+        return nullptr);
 
-    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphOutput(boundary, *postCubeNode,
-        static_cast<int64_t>(OUTPUT_INDEX), static_cast<int64_t>(OUTPUT_INDEX)), return nullptr);
+    FUSION_PASS_CHECK_NOLOG(
+        !ConvFusionUtilsPass::AddSubgraphOutput(boundary, *postCubeNode, static_cast<int64_t>(OUTPUT_INDEX),
+                                                static_cast<int64_t>(OUTPUT_INDEX)),
+        return nullptr);
 
     return boundary;
 }
 
-GraphUniqPtr Conv3DDequantToQuantConv3DFusionPass::Replacement(const GNode &convNode)
+GraphUniqPtr Conv3DDequantToQuantConv3DFusionPass::Replacement(const GNode& convNode)
 {
     auto graphBuilder = es::EsGraphBuilder("replacement");
 
@@ -145,55 +152,61 @@ GraphUniqPtr Conv3DDequantToQuantConv3DFusionPass::Replacement(const GNode &conv
 
     TensorDesc postCubeOutDesc;
     FUSION_PASS_CHECK(postCubeNode->GetOutputDesc(OUTPUT_INDEX, postCubeOutDesc) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube out tensor desc failed."), return nullptr);
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube out tensor desc failed."), return nullptr);
     auto outDtype = postCubeOutDesc.GetDataType();
 
     auto [fmap, filter] = graphBuilder.CreateInputs<REQUIRED_INPUT_NUMS>();
     auto scale = graphBuilder.CreateInput(static_cast<int64_t>(QUANTCONV3D_CONV3D_INPUT_SCALE_INDEX));
     auto bias = convDescInfo.hasBias ?
-        graphBuilder.CreateInput(static_cast<int64_t>(QUANTCONV3D_CONV3D_INPUT_BIAS_INDEX)) : nullptr;
+                    graphBuilder.CreateInput(static_cast<int64_t>(QUANTCONV3D_CONV3D_INPUT_BIAS_INDEX)) :
+                    nullptr;
 
-    auto quantConv3D = es::QuantConv3D(fmap, filter, scale, bias, nullptr,
-        outDtype, baseAttrs.strides, baseAttrs.pads, baseAttrs.dilations, baseAttrs.groups,
-        baseAttrs.dataFormat.GetString(), baseAttrs.offsetX, RINT.GetString(), baseAttrs.padMode.GetString());
+    auto quantConv3D = es::QuantConv3D(fmap, filter, scale, bias, nullptr, outDtype, baseAttrs.strides, baseAttrs.pads,
+                                       baseAttrs.dilations, baseAttrs.groups, baseAttrs.dataFormat.GetString(),
+                                       baseAttrs.offsetX, RINT.GetString(), baseAttrs.padMode.GetString());
 
     auto quantConv3DNode = quantConv3D.GetProducer();
     FUSION_PASS_CHECK_NOLOG(!UpdateQuantConv3DDesc(quantConv3DNode, postCubeOutDesc), return nullptr);
     FUSION_PASS_CHECK(quantConv3DNode->SetAttr(OP_IMPL_MODE_ENUM, baseAttrs.opImplModeEnum) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for QuantConv3D failed."), return nullptr);
+                      OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for QuantConv3D failed."),
+                      return nullptr);
 
     std::vector<es::EsTensorHolder> replaceOutput = {quantConv3D};
 
     return graphBuilder.BuildAndReset(replaceOutput);
 }
 
-bool Conv3DDequantToQuantConv3DFusionPass::GetPostCubeNodes(const GNode &convNode)
+bool Conv3DDequantToQuantConv3DFusionPass::GetPostCubeNodes(const GNode& convNode)
 {
     auto outputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
 
     FUSION_PASS_CHECK(outputNodes.size() != SINGLE_OUTPUTNUM,
-        OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, Conv3D output num is not one."), return false);
+                      OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, Conv3D output num is not one."),
+                      return false);
 
     postCubeNode = outputNodes[0].first;
     FUSION_PASS_CHECK(postCubeNode == nullptr,
-        OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, Conv3D out nodes is nullptr."), return false);
+                      OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, Conv3D out nodes is nullptr."),
+                      return false);
 
     AscendString nodeType;
     FUSION_PASS_CHECK(postCubeNode->GetType(nodeType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, cannot get output node name."), return false);
+                      OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, cannot get output node name."),
+                      return false);
 
     FUSION_PASS_CHECK(nodeType != POST_CUBE_OP,
-        OP_LOGE(convDescInfo.nodeNameStr,
-                "After create PostCube, node type is [%s], not PostCube", nodeType.GetString()), return false);
+                      OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, node type is [%s], not PostCube",
+                              nodeType.GetString()),
+                      return false);
 
     return true;
 }
 
-void Conv3DDequantToQuantConv3DFusionPass::SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchVec)
+void Conv3DDequantToQuantConv3DFusionPass::SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo>& matchVec)
 {
     std::vector<ops::PostCubePassInfo> tmpPasses(matchVec);
     matchVec.clear();
-    for (auto &tmpPass : tmpPasses) {
+    for (auto& tmpPass : tmpPasses) {
         if (tmpPass.m_opnodes.size() < FUSION_LIST_LENGTH) {
             continue;
         }
@@ -201,18 +214,18 @@ void Conv3DDequantToQuantConv3DFusionPass::SelectPostCubePassByWhiteList(std::ve
         AscendString nodeType;
         auto& conv3dNode = tmpPass.m_opnodes[CONV3D_INDEX].GetNode();
         FUSION_PASS_CHECK(conv3dNode == nullptr,
-            OP_LOGD(convDescInfo.nodeNameStr, "Conv3d node is nullptr in postCubePass."), return);
+                          OP_LOGD(convDescInfo.nodeNameStr, "Conv3d node is nullptr in postCubePass."), return );
         FUSION_PASS_CHECK(conv3dNode->GetType(nodeType) != ge::GRAPH_SUCCESS,
-            OP_LOGD(convDescInfo.nodeNameStr, "Get conv3d node type failed."), return);
+                          OP_LOGD(convDescInfo.nodeNameStr, "Get conv3d node type failed."), return );
         if (nodeType != CONV3D) {
             continue;
         }
 
         auto& dequantNode = tmpPass.m_opnodes[ASCEND_DEQUANT_INDEX].GetNode();
         FUSION_PASS_CHECK(dequantNode == nullptr,
-            OP_LOGD(convDescInfo.nodeNameStr, "Dequant node is nullptr in postCubePass."), return);
+                          OP_LOGD(convDescInfo.nodeNameStr, "Dequant node is nullptr in postCubePass."), return );
         FUSION_PASS_CHECK(dequantNode->GetType(nodeType) != ge::GRAPH_SUCCESS,
-            OP_LOGD(convDescInfo.nodeNameStr, "Get dequant node type failed."), return);
+                          OP_LOGD(convDescInfo.nodeNameStr, "Get dequant node type failed."), return );
         if (nodeType != ConvFusionUtils::ASCEND_DEQUANT) {
             continue;
         }
@@ -222,7 +235,7 @@ void Conv3DDequantToQuantConv3DFusionPass::SelectPostCubePassByWhiteList(std::ve
     }
 }
 
-bool Conv3DDequantToQuantConv3DFusionPass::UpdateQuantConv3DDesc(GNode *quantConv3D, TensorDesc &postCubeOutDesc)
+bool Conv3DDequantToQuantConv3DFusionPass::UpdateQuantConv3DDesc(GNode* quantConv3D, TensorDesc& postCubeOutDesc)
 {
     if (convDescInfo.hasBias) {
         FUSION_PASS_CHECK(
@@ -233,11 +246,11 @@ bool Conv3DDequantToQuantConv3DFusionPass::UpdateQuantConv3DDesc(GNode *quantCon
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::UpdateInputDesc(quantConv3D, convDescInfo), return false);
 
     FUSION_PASS_CHECK(quantConv3D->UpdateOutputDesc(OUTPUT_INDEX, postCubeOutDesc) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Update QuantConv3D out tensor desc failed."), return false);
+                      OP_LOGE(convDescInfo.nodeNameStr, "Update QuantConv3D out tensor desc failed."), return false);
 
     TensorDesc scaleTensorDesc;
     FUSION_PASS_CHECK(postCubeNode->GetInputDesc(POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, scaleTensorDesc) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube scale tensor desc failed."), return false);
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube scale tensor desc failed."), return false);
     scaleTensorDesc.SetFormat(ge::FORMAT_ND);
     scaleTensorDesc.SetOriginFormat(ge::FORMAT_ND);
     FUSION_PASS_CHECK(

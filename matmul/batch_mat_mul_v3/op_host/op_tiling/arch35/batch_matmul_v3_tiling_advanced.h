@@ -21,19 +21,18 @@ namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3Tiling : public MatMulV3Tiling {
 public:
-    explicit BatchMatMulV3Tiling(gert::TilingContext *context) : MatMulV3Tiling(context){};
+    explicit BatchMatMulV3Tiling(gert::TilingContext* context) : MatMulV3Tiling(context){};
 
     ~BatchMatMulV3Tiling() override = default;
 
     ge::graphStatus DoTiling() override;
 
 protected:
-    virtual ge::graphStatus GetBatchInfo(
-        const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
+    virtual ge::graphStatus GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
+                                         MatMulV3BatchInfo& batchInfo);
     void MergeBatchAndMAxis(MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
-    virtual ge::graphStatus GetBmmBiasInfo(
-        const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
+    virtual ge::graphStatus GetBmmBiasInfo(const gert::TilingContext& context, MatMulV3Args& args,
+                                           MatMulV3BatchInfo& batchInfo);
 };
-}
-}
-
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

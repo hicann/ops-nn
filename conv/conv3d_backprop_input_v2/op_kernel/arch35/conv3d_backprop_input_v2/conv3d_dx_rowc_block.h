@@ -19,17 +19,17 @@
 
 namespace AscendC {
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    typename biasType, int biasFormat,
-    uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-    uint8_t b1Condition = TPL_GM_TO_L1,
-    bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
-class Conv3dDxOswBlock : public Conv3dDxBase<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-    b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
+          int scaleFormat = FORMAT_MAX>
+class Conv3dDxOswBlock
+    : public Conv3dDxBase<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
+                          b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
 public:
-    __aicore__ inline Conv3dDxOswBlock() {};
+    __aicore__ inline Conv3dDxOswBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData,
-                                GM_ADDR bias = nullptr, GM_ADDR scale=nullptr)
+                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData,
+                                GM_ADDR bias = nullptr, GM_ADDR scale = nullptr)
     {
         InitTilingData(tilingData);
 
@@ -44,25 +44,25 @@ public:
         }
 
         if (!this->enableVecTrans_) {
-            this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
+            this->filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);
         } else {
-            this->filterGm_.SetGlobalBuffer((__gm__ filterType *)workSpace);
+            this->filterGm_.SetGlobalBuffer((__gm__ filterType*)workSpace);
             // 开启前置transpose同时使用累加轴特性需要分段使用
             if (this->useUbAccumForSplitK_) {
-                workSpace += static_cast<uint64_t>(this->tiling_->coutG) *
-                             this->tiling_->dk * this->tiling_->hk * this->tiling_->wk *
-                             (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) * sizeof(filterType); // 4 : 2的4次方
+                workSpace += static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->dk * this->tiling_->hk *
+                             this->tiling_->wk * (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) *
+                             sizeof(filterType); // 4 : 2的4次方
             }
         }
-        this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
-        this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
+        this->dedyGm_.SetGlobalBuffer((__gm__ dedyType*)dedy);
+        this->yGm_.SetGlobalBuffer((__gm__ yType*)y);
         if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
+            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
         }
 
         if (unlikely(bias != nullptr)) {
             this->hasBias_ = true;
-            this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
+            this->biasGm_.SetGlobalBuffer((__gm__ biasType*)bias);
         }
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         InitMixCoreBuffer(workSpace);
@@ -70,7 +70,8 @@ public:
         this->dedx_.Init(&(tilingData->conv3DDxTiling), this->hasBias_);
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if (!enableC04Flag && !groupMode && !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
@@ -91,7 +92,7 @@ public:
     }
 
 protected:
-     __aicore__ inline void CrossCoreWaitVecTrans()
+    __aicore__ inline void CrossCoreWaitVecTrans()
     {
         if (this->enableVecTrans_) {
             if ASCEND_IS_AIC_SCALAR {
@@ -111,13 +112,14 @@ protected:
         this->dedx_.End();
     }
 
-    __aicore__ inline void CalBasicBlockCnt() {
+    __aicore__ inline void CalBasicBlockCnt()
+    {
         uint64_t m = static_cast<uint64_t>(this->tiling_->hi) * this->tiling_->wi;
         this->mCnt_ = DivCeil(m, this->singleShapeM_);
         this->mCoreTail_ = m - (this->mCnt_ - 1) * this->singleShapeM_;
 
         uint64_t n = this->tiling_->cinG;
-        uint64_t tailN =  this->tiling_->cin - n * (this->tiling_->group - 1);
+        uint64_t tailN = this->tiling_->cin - n * (this->tiling_->group - 1);
         this->nCnt_ = DivCeil(n, this->singleShapeN_);
         this->nTailCnt_ = DivCeil(tailN, this->singleShapeN_);
         this->nCoreTail_ = n - (this->nCnt_ - 1) * this->singleShapeN_;
@@ -141,7 +143,8 @@ protected:
         }
 
         // 记录基本块的位置
-        this->totalCnt_ = static_cast<uint64_t>(this->tiling_->batch) * static_cast<uint64_t>(this->tiling_->group) * this->dinCnt_ * this->mCnt_ * this->nCnt_;
+        this->totalCnt_ = static_cast<uint64_t>(this->tiling_->batch) * static_cast<uint64_t>(this->tiling_->group) *
+                          this->dinCnt_ * this->mCnt_ * this->nCnt_;
 
         uint64_t blockNum = GetBlockNum();
         if (this->totalCnt_ < blockNum) {
@@ -154,7 +157,8 @@ protected:
         this->tailCnt_ = this->totalCnt_ - this->calRound_ * this->usedCoreNum_;
     }
 
-    __aicore__ inline void InitBasicBlockLoopDirect() {
+    __aicore__ inline void InitBasicBlockLoopDirect()
+    {
         // 1.Kernel>1时右矩阵格式转换Bound,有效带宽不到1T,先沿着N走位;Kerenl=1沿着窄的方向走位
         // 2.M方向尽可能按照滑窗叠加的方向来分基本块，优先复用D的滑窗OverLap, 其次时H滑窗在L1边界的叠加
         if (this->tiling_->dk > 1) {
@@ -168,10 +172,11 @@ protected:
         }
     }
 
-    __aicore__ inline void CalBasicBlockIdx(uint64_t basicBlockIdx) {
+    __aicore__ inline void CalBasicBlockIdx(uint64_t basicBlockIdx)
+    {
         uint64_t mnCnt = this->mCnt_ * this->nCnt_;
         uint64_t depthMNCnt = this->dinCnt_ * mnCnt;
-        if(unlikely(this->tiling_->group > 1)) {
+        if (unlikely(this->tiling_->group > 1)) {
             uint64_t groupDepthMNCnt = static_cast<uint64_t>(this->tiling_->group) * depthMNCnt;
             this->batchCoreIdx_ = basicBlockIdx / groupDepthMNCnt;
             basicBlockIdx -= this->batchCoreIdx_ * groupDepthMNCnt;
@@ -204,12 +209,14 @@ protected:
         }
     }
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData) {
+    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
+    {
         this->tiling_ = &(tilingData->conv3DDxTiling);
         this->singleShapeM_ = this->tiling_->singleCoreM;
-        if(unlikely(this->tiling_->group > 1)) {
+        if (unlikely(this->tiling_->group > 1)) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->hk * this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->hk *
+                                      this->tiling_->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
                 this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
@@ -217,7 +224,8 @@ protected:
             }
         } else {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->hk * this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->hk *
+                                      this->tiling_->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
                 this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
@@ -227,7 +235,8 @@ protected:
         // 开启 split cout 同时 split Hk 或 split HkWk 时 Cout 置为 1
         if (this->tiling_->enableSplitK) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->hk * this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->hk *
+                                      this->tiling_->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
                 this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
@@ -243,28 +252,31 @@ protected:
         this->InitBlockStride();
     }
 
-    __aicore__ inline void CalBasicBlockOffset() {
+    __aicore__ inline void CalBasicBlockOffset()
+    {
         // 当前A的偏移仍然要用到ho，在切w模板拓展后可以从API外部剥离对ho的感知
         this->curHoStartIdx_ = this->dedx_.ctx.curHoStartIdx_;
         this->CalcBlockOffset(this->batchCoreIdx_, this->groupCoreIdx_);
     }
 
-    __aicore__ inline void CheckFullLoadEnable() {
-         if (this->offsetB_ == this->preOffsetB_) {
-             this->preEnableFullLoad = this->tiling_->enableFullLoad;
-             return;
-         }
-         this->preOffsetB_ = this->offsetB_;
-         // 代表B矩阵偏移变化且上一轮是全载
-         if (this->tiling_->enableFullLoad == 1 && this->preEnableFullLoad == this->tiling_->enableFullLoad) {
-             // 释放上一轮全载且后续不全载
-             this->dedx_.FreeB1Tensor();
-             const_cast<conv_bp_v2_kernel::TConv3DInputV2Tiling*>(this->tiling_)->enableFullLoad = 0;
-         }
-         this->preEnableFullLoad = this->tiling_->enableFullLoad;
-     }
+    __aicore__ inline void CheckFullLoadEnable()
+    {
+        if (this->offsetB_ == this->preOffsetB_) {
+            this->preEnableFullLoad = this->tiling_->enableFullLoad;
+            return;
+        }
+        this->preOffsetB_ = this->offsetB_;
+        // 代表B矩阵偏移变化且上一轮是全载
+        if (this->tiling_->enableFullLoad == 1 && this->preEnableFullLoad == this->tiling_->enableFullLoad) {
+            // 释放上一轮全载且后续不全载
+            this->dedx_.FreeB1Tensor();
+            const_cast<conv_bp_v2_kernel::TConv3DInputV2Tiling*>(this->tiling_)->enableFullLoad = 0;
+        }
+        this->preEnableFullLoad = this->tiling_->enableFullLoad;
+    }
 
-    __aicore__ inline void IterateAllForBias(bool& firstloadbias) {
+    __aicore__ inline void IterateAllForBias(bool& firstloadbias)
+    {
         this->CalcBiasFullLoadFlag();
         this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
         this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);
@@ -272,9 +284,10 @@ protected:
             firstloadbias = true;
         }
         this->fullLoadBiasFlag_ = false;
-     }
+    }
 
-     __aicore__ inline void CalBasicBlockCore(uint64_t blockIdx, uint64_t blockNum) {
+    __aicore__ inline void CalBasicBlockCore(uint64_t blockIdx, uint64_t blockNum)
+    {
         bool firstloadbias = false;
         uint64_t basicIdx = blockIdx;
 
@@ -288,7 +301,8 @@ protected:
             uint64_t coutCoreUse = this->singleShapeK_;
             if (unlikely(this->tiling_->group > 1)) {
                 coutCoreUse = (this->groupCoreIdx_ == (this->tiling_->group - 1)) ? this->coutGroupTail_ : coutCoreUse;
-                if (unlikely(this->tiling_->cin % this->tiling_->cinG != 0 && this->groupCoreIdx_ == (this->tiling_->group - 1))) {
+                if (unlikely(this->tiling_->cin % this->tiling_->cinG != 0 &&
+                             this->groupCoreIdx_ == (this->tiling_->group - 1))) {
                     if (this->nCoreIdx_ == this->nTailCnt_ - 1) {
                         nCoreUse = this->nGroupCoreTail_;
                     } else if (this->nCoreIdx_ > this->nTailCnt_ - 1) {
@@ -298,8 +312,9 @@ protected:
             }
             this->dedx_.SetBatchCoreIdx(this->batchCoreIdx_);
             this->dedx_.SetSingleShape(mCoreUse, coutCoreUse, nCoreUse, dinCoreUse);
-            this->dedx_.SetStartIdx(this->dCoreIdx_ * this->singleShapeDin_, this->mCoreIdx_ * this->tiling_->singleCoreM,
-                this->nCoreIdx_ * this->tiling_->singleCoreCin, 0);
+            this->dedx_.SetStartIdx(this->dCoreIdx_ * this->singleShapeDin_,
+                                    this->mCoreIdx_ * this->tiling_->singleCoreM,
+                                    this->nCoreIdx_ * this->tiling_->singleCoreCin, 0);
             this->CalBasicBlockOffset();
             this->dedx_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
             this->dedx_.SetWeight(this->filterGm_[this->offsetB_]);
@@ -323,7 +338,8 @@ protected:
         }
     }
 
-    __aicore__ inline void CalBasicBlock() {
+    __aicore__ inline void CalBasicBlock()
+    {
         uint64_t blockIdx = GetAicBlockIdx();
         // 拖尾的部分依次分配到前面的核计算，这些核会多算一轮
         if (blockIdx < this->tailCnt_) {
@@ -346,9 +362,9 @@ protected:
 
     __aicore__ inline void InitMixCoreBuffer(GM_ADDR workSpace)
     {
-        this->dedx_.ctx.l0cOutGm_.SetGlobalBuffer((__gm__ float *)workSpace);
+        this->dedx_.ctx.l0cOutGm_.SetGlobalBuffer((__gm__ float*)workSpace);
     }
 };
-}
+} // namespace AscendC
 
 #endif // CONV3D_BACKPROP_INPUT_ROWC_BLOCK_ADVANCE_H

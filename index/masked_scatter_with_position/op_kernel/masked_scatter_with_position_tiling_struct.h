@@ -21,8 +21,8 @@ public:
     int64_t xNum = 1;
     int64_t xInner = 1;
     int64_t updatesEleNums = 1;
-    int64_t pattern = 0;  // 0:BA 1:AB
-    int64_t computeType = 0;  // 0:int32 1:int64
+    int64_t pattern = 0;     // 0:BA 1:AB
+    int64_t computeType = 0; // 0:int32 1:int64
 };
 
 #endif

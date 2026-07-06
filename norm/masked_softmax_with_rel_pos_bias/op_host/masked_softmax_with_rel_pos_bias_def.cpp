@@ -16,8 +16,9 @@
 
 namespace ops {
 class MaskedSoftmaxWithRelPosBias : public OpDef {
-   public:
-    explicit MaskedSoftmaxWithRelPosBias(const char* name) : OpDef(name) {
+public:
+    explicit MaskedSoftmaxWithRelPosBias(const char* name) : OpDef(name)
+    {
         this->Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
@@ -42,12 +43,8 @@ class MaskedSoftmaxWithRelPosBias : public OpDef {
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Attr("scale_value")
-            .AttrType(OPTIONAL)
-            .Float(1.0);
-        this->Attr("inner_precision_mode")
-            .AttrType(OPTIONAL)
-            .Int(0);
+        this->Attr("scale_value").AttrType(OPTIONAL).Float(1.0);
+        this->Attr("inner_precision_mode").AttrType(OPTIONAL).Int(0);
         OpAICoreConfig config_910b;
         config_910b.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
@@ -138,4 +135,4 @@ private:
 };
 
 OP_ADD(MaskedSoftmaxWithRelPosBias);
-}  // namespace ops
+} // namespace ops

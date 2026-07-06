@@ -22,15 +22,12 @@ namespace FusedSgd {
 using namespace AscendC;
 
 template <typename T>
-class FusedSgdF16Bf16 : public FusedSgdBase<T>
-{
+class FusedSgdF16Bf16 : public FusedSgdBase<T> {
 public:
-    __aicore__ inline FusedSgdF16Bf16(TPipe *pipe) : pipe_(pipe) {};
-    __aicore__ inline void Init(
-        GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
-        GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref, 
-        GM_ADDR momentum_buffer_list_out, const FusedSgdTilingData& tiling, 
-        uint64_t tensorStart, uint64_t tensorEnd);
+    __aicore__ inline FusedSgdF16Bf16(TPipe* pipe) : pipe_(pipe){};
+    __aicore__ inline void Init(GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list, GM_ADDR grad_scale,
+                                GM_ADDR params_ref, GM_ADDR grads_ref, GM_ADDR momentum_buffer_list_out,
+                                const FusedSgdTilingData& tiling, uint64_t tensorStart, uint64_t tensorEnd);
     __aicore__ inline void Process();
 
 protected:
@@ -66,16 +63,15 @@ protected:
     int64_t paramsOffsetC;
     int64_t gradsOffsetC;
     int64_t momentumOffsetC;
-    TPipe *pipe_;
+    TPipe* pipe_;
     const FusedSgdTilingData* tiling_;
 };
 
 template <typename T>
-__aicore__ inline void FusedSgdF16Bf16<T>::Init(
-    GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
-    GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref, 
-    GM_ADDR momentum_buffer_list_out, const FusedSgdTilingData& tiling, 
-    uint64_t tensorStart, uint64_t tensorEnd)
+__aicore__ inline void FusedSgdF16Bf16<T>::Init(GM_ADDR params, GM_ADDR grads, GM_ADDR momentum_buffer_list,
+                                                GM_ADDR grad_scale, GM_ADDR params_ref, GM_ADDR grads_ref,
+                                                GM_ADDR momentum_buffer_list_out, const FusedSgdTilingData& tiling,
+                                                uint64_t tensorStart, uint64_t tensorEnd)
 {
     this->InitData(tiling);
     tiling_ = &tiling;
@@ -216,7 +212,7 @@ __aicore__ inline void FusedSgdF16Bf16<T>::Process()
         uint64_t buf[10];
         desc_.SetShapeAddr(buf);
         paramsList_.GetDesc(desc_, static_cast<uint32_t>(idx));
-        
+
         uint64_t tensorDataNum = 1;
         for (uint32_t j = 0; j < desc_.GetDim(); j++) {
             tensorDataNum *= desc_.GetShape(j);

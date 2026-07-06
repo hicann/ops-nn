@@ -19,13 +19,12 @@
 namespace Cmct::Prologue {
 using Cmct::Gemm::KB_ELEM;
 
-struct BCastScsc{};
+struct BCastScsc {};
 
-template <
-    typename ArchTag_, typename HighBitType, typename ScaleType, bool InnerK, bool WeightNz, uint64_t AivNum,
-    bool HasOffset, uint64_t UbInBufNum, uint64_t InnerSize, uint64_t VfN, uint64_t VfK, uint64_t UbOutBufNum,
-    uint64_t UbInSize, uint64_t UbOutSize, uint64_t ScaleSize, uint64_t OffsetSize,
-    uint64_t antiQuantScaleAfterCastSize = 0>
+template <typename ArchTag_, typename HighBitType, typename ScaleType, bool InnerK, bool WeightNz, uint64_t AivNum,
+          bool HasOffset, uint64_t UbInBufNum, uint64_t InnerSize, uint64_t VfN, uint64_t VfK, uint64_t UbOutBufNum,
+          uint64_t UbInSize, uint64_t UbOutSize, uint64_t ScaleSize, uint64_t OffsetSize,
+          uint64_t antiQuantScaleAfterCastSize = 0>
 struct BAntiquantScmc {
     using ArchTag = ArchTag_;
     // innerK
@@ -48,16 +47,15 @@ struct BAntiquantScmc {
     static constexpr uint64_t HIGH_BIT_DATA_UB_TOTAL_SIZE = UbOutSize * KB_ELEM<HighBitType>;
     static constexpr uint64_t ANTIQUANT_SCALE_UB_TOTAL_SIZE = ScaleSize * KB_ELEM<ScaleType>;
     static constexpr uint64_t ANTIQUANT_OFFSET_UB_TOTAL_SIZE = OffsetSize * KB_ELEM<ScaleType>;
-    static constexpr uint64_t ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE =
-        antiQuantScaleAfterCastSize * KB_ELEM<HighBitType>;
-    static constexpr uint64_t WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE =
-        WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE / UB_MTE2_BUF_NUM;
+    static constexpr uint64_t ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE = antiQuantScaleAfterCastSize *
+                                                                         KB_ELEM<HighBitType>;
+    static constexpr uint64_t WEIGHT_INPUT_LOW_BIT_UB_SINGLE_BUFFER_SIZE = WEIGHT_INPUT_LOW_BIT_UB_TOTAL_SIZE /
+                                                                           UB_MTE2_BUF_NUM;
     static constexpr uint64_t ANTIQUANT_SCALE_UB_SINGLE_BUFFER_SIZE = ANTIQUANT_SCALE_UB_TOTAL_SIZE / UB_MTE2_BUF_NUM;
-    static constexpr uint64_t ANTIQUANT_SCALE_AFTER_CAST_UB_SINGLE_BUFFER_SIZE =
-        ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE / UB_MTE2_BUF_NUM;
+    static constexpr uint64_t
+        ANTIQUANT_SCALE_AFTER_CAST_UB_SINGLE_BUFFER_SIZE = ANTIQUANT_SCALE_AFTER_CAST_UB_TOTAL_SIZE / UB_MTE2_BUF_NUM;
     static constexpr uint64_t ANTIQUANT_OFFSET_UB_SINGLE_BUFFER_SIZE = ANTIQUANT_OFFSET_UB_TOTAL_SIZE / UB_MTE2_BUF_NUM;
-    static constexpr uint64_t HIGH_BIT_DATA_UB_SINGLE_BUFFER_SIZE =
-        HIGH_BIT_DATA_UB_TOTAL_SIZE / UB_WEIGHT_OUTPUT_HIGH_BIT_BUFFER_NUM;
+    static constexpr uint64_t HIGH_BIT_DATA_UB_SINGLE_BUFFER_SIZE = HIGH_BIT_DATA_UB_TOTAL_SIZE /
+                                                                    UB_WEIGHT_OUTPUT_HIGH_BIT_BUFFER_NUM;
 };
-}  // namespace Cmct::Prologue
-
+} // namespace Cmct::Prologue

@@ -22,15 +22,9 @@
 
 class RmsNormAtb : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RmsNormAtb Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RmsNormAtb Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RmsNormAtb Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RmsNormAtb Proto Test TearDown" << std::endl; }
 };
 
 #endif

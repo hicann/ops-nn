@@ -38,16 +38,13 @@ constexpr int64_t BUFF_NUM = 2;
 
 ge::graphStatus QuantMaxRegbase::DoQuantMaxTiling()
 {
-    OP_CHECK_IF(
-        (GetPlatform() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "DoQuantMaxTiling GetPlatform Failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (GetOpParam() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "DoQuantMaxTiling GetOpParam Failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((GetPlatform() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "DoQuantMaxTiling GetPlatform Failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((GetOpParam() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "DoQuantMaxTiling GetOpParam Failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CalcTiling() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalcTiling Failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CalcTiling() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalcTiling Failed."),
+                return ge::GRAPH_FAILED);
     CalcTilingKey();
     return WriteTilingData();
 }
@@ -60,15 +57,13 @@ ge::graphStatus QuantMaxRegbase::GetPlatform()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
 
     uint32_t coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (static_cast<int32_t>(coreNum) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((static_cast<int32_t>(coreNum) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        (static_cast<int64_t>(ubSize) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((static_cast<int64_t>(ubSize) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
 
     coreNum_ = static_cast<int64_t>(coreNum);
     ubSize_ = ubSize;
@@ -87,46 +82,39 @@ ge::graphStatus QuantMaxRegbase::CheckDtype()
     auto xInputDesc = context_->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     xDtype_ = xInputDesc->GetDataType();
-    OP_CHECK_IF(
-        xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            "The dtype of x must be within the range [DT_FLOAT16, DT_FLOAT, DT_BF16]."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                    "The dtype of x must be within the range [DT_FLOAT16, DT_FLOAT, DT_BF16]."),
+                return ge::GRAPH_FAILED);
 
     auto scaleInputDesc = context_->GetInputDesc(INPUT_SCALE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleInputDesc);
     scaleDtype_ = scaleInputDesc->GetDataType();
-    OP_CHECK_IF(
-        scaleDtype_ != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "scale",
-            ge::TypeUtils::DataTypeToSerialString(scaleDtype_).c_str(),
-            "The dtype of scale must be DT_FLOAT."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scaleDtype_ != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scale",
+                                                      ge::TypeUtils::DataTypeToSerialString(scaleDtype_).c_str(),
+                                                      "The dtype of scale must be DT_FLOAT."),
+                return ge::GRAPH_FAILED);
 
     auto yOutputDesc = context_->GetOutputDesc(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputDesc);
     yDtype_ = yOutputDesc->GetDataType();
-    OP_CHECK_IF(
-        yDtype_ != ge::DT_HIFLOAT8 && yDtype_ != ge::DT_FLOAT8_E5M2 && yDtype_ != ge::DT_FLOAT8_E4M3FN,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str(),
-            "The dtype of y must be within the range [DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN]."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDtype_ != ge::DT_HIFLOAT8 && yDtype_ != ge::DT_FLOAT8_E5M2 && yDtype_ != ge::DT_FLOAT8_E4M3FN,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str(),
+                    "The dtype of y must be within the range [DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN]."),
+                return ge::GRAPH_FAILED);
 
     auto amaxOutputDesc = context_->GetOutputDesc(OUTPUT_AMAX_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, amaxOutputDesc);
     amaxDtype_ = amaxOutputDesc->GetDataType();
-    OP_CHECK_IF(
-        amaxDtype_ != xDtype_,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "x, amax",
-            (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(amaxDtype_)).c_str(),
-            "The dtypes of x and amax must be the same."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(amaxDtype_ != xDtype_,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context_->GetNodeName(), "x, amax",
+                    (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(amaxDtype_)).c_str(),
+                    "The dtypes of x and amax must be the same."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -168,8 +156,7 @@ ge::graphStatus QuantMaxRegbase::CheckAttrs()
     // check dstType and output dtype, must be same
     if (dstType_ != ge::DT_HIFLOAT8 && dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT8_E4M3FN) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "dst_type",
-            ToString(static_cast<ge::DataType>(dstType_)).c_str(),
+            context_->GetNodeName(), "dst_type", ToString(static_cast<ge::DataType>(dstType_)).c_str(),
             "The value of dst_type must be within the range [DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN].");
         return ge::GRAPH_FAILED;
     }
@@ -184,53 +171,43 @@ ge::graphStatus QuantMaxRegbase::CheckAttrs()
     // check round mode
     std::string roundModeStr = roundMode;
     roundMode_ = GetRoundMode(roundModeStr);
-    OP_CHECK_IF(
-        (roundMode_ == RoundMode::MODE_UNDEFINED),
-        OP_LOGE(context_->GetNodeName(), "invalid round mode:%s, %s", roundMode, errorMsg_.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((roundMode_ == RoundMode::MODE_UNDEFINED),
+                OP_LOGE(context_->GetNodeName(), "invalid round mode:%s, %s", roundMode, errorMsg_.c_str()),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus QuantMaxRegbase::CheckShape(
-    const gert::Shape& xShape, const gert::Shape& scaleShape, const gert::Shape& yShape,
-    const gert::Shape& amaxShape) const
+ge::graphStatus QuantMaxRegbase::CheckShape(const gert::Shape& xShape, const gert::Shape& scaleShape,
+                                            const gert::Shape& yShape, const gert::Shape& amaxShape) const
 {
     size_t xDimNum = xShape.GetDimNum();
     size_t scaleDimNum = scaleShape.GetDimNum();
     size_t amaxDimNum = amaxShape.GetDimNum();
 
-    OP_CHECK_IF(
-        xDimNum > 8 || xDimNum < 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "x",
-            std::to_string(xDimNum).c_str(),
-            "The shape dim of x must be within the range [1, 8]."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDimNum > 8 || xDimNum < 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                                                         "The shape dim of x must be within the range [1, 8]."),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         scaleDimNum != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "scale",
-            std::to_string(scaleDimNum).c_str(),
-            "The shape dim of scale must be equal to 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scale", std::to_string(scaleDimNum).c_str(),
+                                                 "The shape dim of scale must be equal to 1."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         amaxDimNum != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "amax",
-            std::to_string(amaxDimNum).c_str(),
-            "The shape dim of amax must be equal to 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "amax", std::to_string(amaxDimNum).c_str(),
+                                                 "The shape dim of amax must be equal to 1."),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        xShape != yShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x, y",
-            (std::to_string(xShape.GetShapeSize()) + ", " + std::to_string(yShape.GetShapeSize())).c_str(),
-            "The shapes of x and y must be the same."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape != yShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "x, y",
+                    (std::to_string(xShape.GetShapeSize()) + ", " + std::to_string(yShape.GetShapeSize())).c_str(),
+                    "The shapes of x and y must be the same."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -269,24 +246,19 @@ ge::graphStatus QuantMaxRegbase::GetOpParam()
 
     int64_t xSizeNum = xInputShape.GetShapeSize();
     if (xSizeNum == 0ULL) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "x",
-            std::to_string(xSizeNum).c_str(),
-            "The shape size of x must be greater than 0.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xSizeNum).c_str(),
+                                                  "The shape size of x must be greater than 0.");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        (CheckDtype() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "check input/output dtype failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckDtype() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "check input/output dtype failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckAttrs() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "op attrs is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckAttrs() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "op attrs is invalid."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckShape(xInputShape, scaleInputShape, yOutputShape, amaxOutputShape) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "input/output shape is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckShape(xInputShape, scaleInputShape, yOutputShape, amaxOutputShape) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "input/output shape is invalid."), return ge::GRAPH_FAILED);
 
     MergeInputShape(xInputShape);
 
@@ -316,13 +288,11 @@ ge::graphStatus QuantMaxRegbase::CalcPerTensorBlockFactor(int64_t size)
     blockFactor_ = CeilDiv(size, actCoreNum_);
     int64_t shape = xInputShape_.GetDim(FIRST_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF(
-        (dtypeSize <= 0),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            "The dtype size of x must be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dtypeSize <= 0),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                                                      "The dtype size of x must be greater than 0."),
+                return ge::GRAPH_FAILED);
     blockFactor_ = blockFactor_ * cacheLine_ / dtypeSize;
     blockTailFactor_ = shape - blockFactor_ * (actCoreNum_ - 1);
     blockTailFactor_ = blockTailFactor_ == 0 ? blockFactor_ : blockTailFactor_;
@@ -331,9 +301,8 @@ ge::graphStatus QuantMaxRegbase::CalcPerTensorBlockFactor(int64_t size)
 
 ge::graphStatus QuantMaxRegbase::CalcPerTensorUBFactor(int64_t numPerCache)
 {
-    OP_CHECK_IF(
-        (numPerCache <= 0), OP_LOGE(context_->GetNodeName(), "numPerCache is invalid: %ld", numPerCache),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((numPerCache <= 0), OP_LOGE(context_->GetNodeName(), "numPerCache is invalid: %ld", numPerCache),
+                return ge::GRAPH_FAILED);
     int64_t availableUb = static_cast<int64_t>(ubSize_) - reserveUb_;
     int64_t maxBase = CalcMaxBaseLen(availableUb); // 一个UB能算的数
     maxBase = FloorAlign(maxBase, numPerCache);    // 用cacheLine对齐
@@ -347,24 +316,20 @@ ge::graphStatus QuantMaxRegbase::CalcTiling()
 {
     int64_t shape = xInputShape_.GetDim(FIRST_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF(
-        (dtypeSize <= 0),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            "The dtype size of x must be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dtypeSize <= 0),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                                                      "The dtype size of x must be greater than 0."),
+                return ge::GRAPH_FAILED);
     int64_t cacheLineNum = CeilDiv(shape, cacheLine_ / dtypeSize);
     int64_t actCoreNum = GetCoreNum(cacheLineNum, coreNum_);
 
     actCoreNum_ = actCoreNum;
     int64_t size = cacheLineNum;
-    OP_CHECK_IF(
-        (CalcPerTensorBlockFactor(size) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "CalcPerTensorBlockFactor failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CalcPerTensorUBFactor(cacheLine_ / dtypeSize) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "CalcPerTensorUBFactor failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CalcPerTensorBlockFactor(size) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "CalcPerTensorBlockFactor failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CalcPerTensorUBFactor(cacheLine_ / dtypeSize) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "CalcPerTensorUBFactor failed."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -384,9 +349,8 @@ ge::graphStatus QuantMaxRegbase::WriteTilingData()
     QuantMaxTilingData* tilingData_ = context_->GetTilingData<QuantMaxTilingData>();
     tilingData_->roundMode = static_cast<int64_t>(roundMode_);
 
-    OP_LOGD(
-        context_->GetNodeName(), "actCoreNum:%ld, blockFactor:%ld, blockTailFactor:%ld, baseLen:%ld", actCoreNum_,
-        blockFactor_, blockTailFactor_, baseLen_);
+    OP_LOGD(context_->GetNodeName(), "actCoreNum:%ld, blockFactor:%ld, blockTailFactor:%ld, baseLen:%ld", actCoreNum_,
+            blockFactor_, blockTailFactor_, baseLen_);
     tilingData_->numCore = actCoreNum_;
     tilingData_->blockFactor = blockFactor_;
     tilingData_->blockTailFactor = blockTailFactor_;
@@ -419,12 +383,10 @@ static ge::graphStatus TilingPrepareForQuantMax(gert::TilingParseContext* contex
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
-    OP_CHECK_IF(
-        (compileInfoPtr->vectorCoreNum <= 0 || compileInfoPtr->ubSize <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "QuantMax GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
-            compileInfoPtr->vectorCoreNum, compileInfoPtr->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfoPtr->vectorCoreNum <= 0 || compileInfoPtr->ubSize <= 0),
+                OP_LOGE(context->GetNodeName(), "QuantMax GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
+                        compileInfoPtr->vectorCoreNum, compileInfoPtr->ubSize),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfoPtr->vectorCoreNum, compileInfoPtr->ubSize);
     return ge::GRAPH_SUCCESS;
 }

@@ -19,14 +19,13 @@
 #include "mat_mul_base_kernel.h"
 #include "mat_mul_nd2nz.h"
 
-
 using namespace AscendC;
 using namespace matmul;
 
 const uint64_t CV_FLAG = 4;
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulBaseBlock,
-    const MatmulConfig &MM_CFG = MM_CFG_NO_PRELOAD>
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD>
 class MatmulBaseUnAlignedKernel {
     struct BaseUnAlignedKernelParams {
         bool isTransposeA;
@@ -46,10 +45,10 @@ public:
     __aicore__ inline MatmulBaseUnAlignedKernel() {}
 
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM, const MatmulTilingData *matmulTilingData, TPipe *pipe);
+                                GM_ADDR workspaceGM, const MatmulTilingData* matmulTilingData, TPipe* pipe);
 
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM);
+                                              GM_ADDR workspaceGM);
 
     __aicore__ inline void Process(uint64_t index = 0, uint8_t enAtomic = 0);
 
@@ -76,9 +75,9 @@ protected:
     MatmulBaseKernel<A_TYPE, bType, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG> mmb_;
     MatmulBaseKernel<aType, bType, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG> mmab_;
     BaseUnAlignedKernelParams innerParams_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     TBuf<> ubBuf_;
-    const MatmulTilingData *matmulTilingData_;
+    const MatmulTilingData* matmulTilingData_;
 };
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
@@ -115,14 +114,15 @@ __aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TY
         mma_.Init(innerParams_.workspaceGMNZ, bGM, cGM, biasGM, offsetWGM, workspaceGM, matmulTilingData_, pipe_);
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB)) {
         mmab_.Init(innerParams_.workspaceGMNZ, innerParams_.workspaceGMabNZ, cGM, biasGM, offsetWGM, workspaceGM,
-            matmulTilingData_, pipe_);
+                   matmulTilingData_, pipe_);
     }
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void
-MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UpdateGlobalTensor(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
+__aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE,
+                                                 MM_CFG>::UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM,
+                                                                             GM_ADDR biasGM, GM_ADDR offsetWGM,
+                                                                             GM_ADDR workspaceGM)
 {
     CalculateabGM(aGM, bGM, cGM, biasGM, offsetWGM, workspaceGM);
     if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_B)) {
@@ -130,12 +130,12 @@ MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_A)) {
         mma_.UpdateGlobalTensor(innerParams_.workspaceGMNZ, bGM, cGM, biasGM, offsetWGM, workspaceGM);
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB)) {
-        mmab_.UpdateGlobalTensor(
-            innerParams_.workspaceGMNZ, innerParams_.workspaceGMabNZ, cGM, biasGM, offsetWGM, workspaceGM);
+        mmab_.UpdateGlobalTensor(innerParams_.workspaceGMNZ, innerParams_.workspaceGMabNZ, cGM, biasGM, offsetWGM,
+                                 workspaceGM);
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::CalculateabGM(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
 {
@@ -156,28 +156,27 @@ __aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TY
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void
-MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::ProcessNDtoNZ()
+__aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::ProcessNDtoNZ()
 {
     // ND2NZ
     if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_B)) {
         MatrixBtoNZV2<typename B_TYPE::T>(innerParams_.workspaceGMNZ, innerParams_.bGMNZ,
-            matmulTilingData_->matmulTiling, innerParams_.isTransposeB, ubBuf_, innerParams_.baseBN,
-            innerParams_.baseBD);
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeB, ubBuf_,
+                                          innerParams_.baseBN, innerParams_.baseBD);
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::ONLY_A)) {
         MatrixAtoNZV2<typename A_TYPE::T>(innerParams_.workspaceGMNZ, innerParams_.aGMNZ,
-            matmulTilingData_->matmulTiling, innerParams_.isTransposeA, ubBuf_, innerParams_.baseAN,
-            innerParams_.baseAD);
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeA, ubBuf_,
+                                          innerParams_.baseAN, innerParams_.baseAD);
     } else if (innerParams_.nd2nzFlag == static_cast<int32_t>(ND2NZ_SELECT::BOTH_AB)) {
         MatrixAtoNZV2<typename A_TYPE::T>(innerParams_.workspaceGMNZ, innerParams_.aGMNZ,
-            matmulTilingData_->matmulTiling, innerParams_.isTransposeA, ubBuf_, innerParams_.baseAN,
-            innerParams_.baseAD);
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeA, ubBuf_,
+                                          innerParams_.baseAN, innerParams_.baseAD);
         event_t eventMTE3MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3MTE2);
         MatrixBtoNZV2<typename B_TYPE::T>(innerParams_.workspaceGMabNZ, innerParams_.bGMNZ,
-            matmulTilingData_->matmulTiling, innerParams_.isTransposeB, ubBuf_, innerParams_.baseBN,
-            innerParams_.baseBD);
+                                          matmulTilingData_->matmulTiling, innerParams_.isTransposeB, ubBuf_,
+                                          innerParams_.baseBN, innerParams_.baseBD);
     }
     SyncAll();
     // CV SYNC
@@ -189,7 +188,7 @@ MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process(
     uint64_t index, uint8_t enAtomic)
 {
@@ -202,6 +201,5 @@ __aicore__ inline void MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TY
         mmab_.Process(index, enAtomic);
     }
 }
-
 
 #endif // MMV3_MATMUL_KERNEL_H

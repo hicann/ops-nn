@@ -37,12 +37,12 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
-constexpr int64_t FP32_SIZE = 4;   // float 字节数（内部计算基准）
+constexpr int64_t FP32_SIZE = 4; // float 字节数（内部计算基准）
 // 双缓冲阈值：元素数大于此值时启用双缓冲
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
@@ -88,13 +88,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto outputShape = EnsureNotScalar(outputDesc->GetStorageShape());
 
     // Shape 校验：gradients 和 features 的 shape 必须一致
-    OP_CHECK_IF(
-        gradientsShape != featuresShape || gradientsShape != outputShape,
-        OP_LOGE(
-            context, "SoftsignGrad: shape mismatch: gradients=%s, features=%s, output=%s",
-            Ops::Base::ToString(gradientsShape).c_str(), Ops::Base::ToString(featuresShape).c_str(),
-	    Ops::Base::ToString(outputShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradientsShape != featuresShape || gradientsShape != outputShape,
+                OP_LOGE(context, "SoftsignGrad: shape mismatch: gradients=%s, features=%s, output=%s",
+                        Ops::Base::ToString(gradientsShape).c_str(), Ops::Base::ToString(featuresShape).c_str(),
+                        Ops::Base::ToString(outputShape).c_str()),
+                return ge::GRAPH_FAILED);
 
     totalNum = gradientsShape.GetShapeSize();
 
@@ -111,10 +109,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     // 校验 gradients 与 features dtype 一致
     auto featuresDescInfo = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, featuresDescInfo);
-    OP_CHECK_IF(
-        featuresDescInfo->GetDataType() != dataType,
-        OP_LOGE(context, "SoftsignGrad: gradients and features dtype mismatch"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(featuresDescInfo->GetDataType() != dataType,
+                OP_LOGE(context, "SoftsignGrad: gradients and features dtype mismatch"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -133,32 +129,24 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
     // 1、平台信息
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2、shape / dtype
     int64_t totalNum;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3、workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4、计算 Tiling 参数
     SoftsignGradTilingData* tiling = context->GetTilingData<SoftsignGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftsignGradTilingData), 0, sizeof(SoftsignGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftsignGradTilingData), 0, sizeof(SoftsignGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // 多核切分
     tiling->totalNum = totalNum;
@@ -178,7 +166,8 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
     //   - 双缓冲: 2 input(float,*2) + 1 tmp(float) + 1 output(float,*2) = 7
     //
     // FP16/BF16 路径 (NEEDS_CAST=true):
-    //   - 单缓冲: 2 input(half,*1=1 float eq) + 2 cast(float) + 1 tmp(float) + 1 output(half,*1=0.5 float eq) = 4.5 -> ceil to 5
+    //   - 单缓冲: 2 input(half,*1=1 float eq) + 2 cast(float) + 1 tmp(float) + 1 output(half,*1=0.5 float eq) = 4.5 ->
+    //   ceil to 5
     //   - 双缓冲: 2 input(half,*2=2 float eq) + 2 cast(float) + 1 tmp(float) + 1 output(half,*2=1 float eq) = 6
     //
     // Use dtype-specific bufferNum for tighter UB utilization
@@ -192,9 +181,7 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
         bufferNum = useDoubleBuffer ? 7 : 4;
     }
 
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / FP32_SIZE, bufferNum),
-        ubBlockSize);
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / FP32_SIZE, bufferNum), ubBlockSize);
 
     context->SetBlockDim(usedCoreNum);
 
@@ -212,7 +199,7 @@ static ge::graphStatus TilingParseForSoftsignGrad([[maybe_unused]] gert::TilingP
     return ge::GRAPH_SUCCESS;
 }
 
-struct SoftsignGradCompileInfo {};  // 入图场景依赖
+struct SoftsignGradCompileInfo {}; // 入图场景依赖
 
 IMPL_OP_OPTILING(SoftsignGrad)
     .Tiling(SoftsignGradTilingFunc)

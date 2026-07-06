@@ -18,10 +18,11 @@
 
 using namespace AscendC;
 
-__aicore__ inline uint32_t ROUND_UP8(const uint32_t x) {
-  constexpr uint32_t ROUND_SIZE = 8;
-  if (x % ROUND_SIZE != 0) {
-    return (x / ROUND_SIZE + 1) * ROUND_SIZE;
-  }
-  return x;
+__aicore__ inline uint32_t ROUND_UP8(const uint32_t x)
+{
+    constexpr uint32_t ROUND_SIZE = 8;
+    if (x % ROUND_SIZE != 0) {
+        return (x / ROUND_SIZE + 1) * ROUND_SIZE;
+    }
+    return x;
 }

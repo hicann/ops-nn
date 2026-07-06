@@ -22,14 +22,8 @@ using namespace std;
 
 class l2_batchmatmul_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_batchmatmul_quant_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_batchmatmul_quant_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_batchmatmul_quant_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_batchmatmul_quant_test TearDown" << endl; }
 };
 // bmm quantParamN
 TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_quantParamN)
@@ -41,8 +35,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_quantParamN)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -58,8 +52,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_transposex1)
     bool adjX1 = true;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 128, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -75,8 +69,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_transposex2)
     bool adjX1 = false;
     bool adjX2 = true;
     auto out_desc = TensorDesc({1, 128, 8}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -92,8 +86,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_quantParamN)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -109,8 +103,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_transposex1)
     bool adjX1 = true;
     bool adjX2 = false;
     auto out_desc = TensorDesc({128, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -126,8 +120,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_transposex2)
     bool adjX1 = false;
     bool adjX2 = true;
     auto out_desc = TensorDesc({128, 8}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -143,8 +137,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_wrongbias)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -160,8 +154,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_wrongbias)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -177,8 +171,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_wrongquantParamdim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -194,8 +188,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_wrongquantParamdim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -211,8 +205,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_wrongquantParaminput)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -228,8 +222,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_wrongquantParaminput)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -245,8 +239,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_quantParam1)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -262,8 +256,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_quantParam1)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -279,8 +273,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_x1wrongdim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -296,8 +290,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_x2wrongdim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -313,8 +307,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_wrongbiasinput)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -330,8 +324,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_bmm_wrongbiasinput)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -348,8 +342,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_emptyTensor1)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({0, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -366,8 +360,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_emptyTensor2)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -383,8 +377,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_test_mm_diffKaxis)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -400,8 +394,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_invalid_min_dim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -417,8 +411,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_invalid_max_dim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 2, 3, 4, 5, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -434,8 +428,8 @@ TEST_F(l2_batchmatmul_quant_test, ascend910B2_valid_max_dim)
     bool adjX1 = false;
     bool adjX2 = false;
     auto out_desc = TensorDesc({1, 2, 3, 4, 16, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2), OUTPUT(out_desc));
+    auto ut = OP_API_UT(aclnnBatchMatmulQuant, INPUT(x1_desc, x2_desc, quantParam_desc, bias_desc, adjX1, adjX2),
+                        OUTPUT(out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

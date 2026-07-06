@@ -20,21 +20,20 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SyncBatchNormBackwardElemt);
 
-const aclTensor* SyncBatchNormBackwardElemt(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* invstd,
-    const aclTensor* weight, const aclTensor* meadDy, const aclTensor* meadDyXmu, aclOpExecutor* executor)
+const aclTensor* SyncBatchNormBackwardElemt(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                            const aclTensor* invstd, const aclTensor* weight, const aclTensor* meadDy,
+                                            const aclTensor* meadDyXmu, aclOpExecutor* executor)
 {
     L0_DFX(SyncBatchNormBackwardElemt, gradOut, input, mean, invstd, weight, meadDy, meadDyXmu);
 
     auto gradInput = executor->AllocTensor(input->GetViewShape(), input->GetDataType(), input->GetViewFormat());
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        SyncBatchNormBackwardElemt, OP_INPUT(gradOut, input, mean, invstd, weight, meadDy, meadDyXmu),
-        OP_OUTPUT(gradInput));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SyncBatchNormBackwardElemtAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SyncBatchNormBackwardElemt,
+                                           OP_INPUT(gradOut, input, mean, invstd, weight, meadDy, meadDyXmu),
+                                           OP_OUTPUT(gradInput));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SyncBatchNormBackwardElemtAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return gradInput;
 }
 } // namespace l0op

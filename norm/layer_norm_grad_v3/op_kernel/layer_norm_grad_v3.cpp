@@ -64,41 +64,41 @@ using namespace LayerNormGradV3;
 #define COMMON_BFLOAT16_BFLOAT16_DETERMINISTIC 414
 #define COMMON_BFLOAT16_FLOAT_DETERMINISTIC 415
 
-#define INVOKE_LAYER_NORM_GRAD_V3_SINGLE_READ_IMPL(Tdy, Tgamma, Isdeterministic)               \
-    do {                                                                                       \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataSingleRead, tilingData, tiling);  \
-        LayerNormGradV3SingleRead<Tdy, Tgamma, Isdeterministic> op;                            \
+#define INVOKE_LAYER_NORM_GRAD_V3_SINGLE_READ_IMPL(Tdy, Tgamma, Isdeterministic)                     \
+    do {                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataSingleRead, tilingData, tiling);        \
+        LayerNormGradV3SingleRead<Tdy, Tgamma, Isdeterministic> op;                                  \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process(&tilingData);                                                               \
+        op.Process(&tilingData);                                                                     \
     } while (0)
 
-#define INVOKE_LAYER_NORM_GRAD_V3_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                 \
-    do {                                                                                       \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataWorkspace, tilingData, tiling);   \
-        LayerNormGradV3Workspace<Tdy, Tgamma, Isdeterministic> op;                             \
+#define INVOKE_LAYER_NORM_GRAD_V3_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                       \
+    do {                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataWorkspace, tilingData, tiling);         \
+        LayerNormGradV3Workspace<Tdy, Tgamma, Isdeterministic> op;                                   \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process(&tilingData);                                                               \
+        op.Process(&tilingData);                                                                     \
     } while (0)
 
-#define INVOKE_LAYER_NORM_GRAD_V3_TRANSPOSE_IMPL(Tdy, Tgamma, Isdeterministic)                 \
-    do {                                                                                       \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataTranspose, tilingData, tiling);   \
-        LayerNormGradV3Transpose<Tdy, Tgamma, Isdeterministic> op;                             \
+#define INVOKE_LAYER_NORM_GRAD_V3_TRANSPOSE_IMPL(Tdy, Tgamma, Isdeterministic)                       \
+    do {                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataTranspose, tilingData, tiling);         \
+        LayerNormGradV3Transpose<Tdy, Tgamma, Isdeterministic> op;                                   \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process();                                                                          \
+        op.Process();                                                                                \
     } while (0)
 
-#define INVOKE_LAYER_NORM_GRAD_V3_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                    \
-    do {                                                                                       \
-        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataCommon, tilingData, tiling);      \
-        LayerNormGradV3Common<Tdy, Tgamma, Isdeterministic> op;                                \
+#define INVOKE_LAYER_NORM_GRAD_V3_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                          \
+    do {                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataCommon, tilingData, tiling);            \
+        LayerNormGradV3Common<Tdy, Tgamma, Isdeterministic> op;                                      \
         op.Init(dy, x, rstd, mean, gamma, pd_x, pd_gamma, pd_beta, usrWorkspace, &tilingData, pipe); \
-        op.Process(&tilingData);                                                               \
+        op.Process(&tilingData);                                                                     \
     } while (0)
 
-extern "C" __global__ __aicore__ void layer_norm_grad_v3(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void layer_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                         GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     if (g_coreType == AIC) {

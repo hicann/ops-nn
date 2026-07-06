@@ -1,4 +1,4 @@
- /**
+/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /**
+/**
  * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
@@ -60,10 +60,10 @@ class HardShrinkGradDirect {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline HardShrinkGradDirect() {};
+    __aicore__ inline HardShrinkGradDirect(){};
 
     __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR output,
-                                 const HardShrinkGradTilingData* tilingData);
+                                const HardShrinkGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -91,9 +91,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardShrinkGradDirect<T, BUFFER_MODE>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR output,
-    const HardShrinkGradTilingData* tilingData)
+__aicore__ inline void HardShrinkGradDirect<T, BUFFER_MODE>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR output,
+                                                                  const HardShrinkGradTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -114,7 +113,8 @@ __aicore__ inline void HardShrinkGradDirect<T, BUFFER_MODE>::Init(
     pipe.InitBuffer(zeroBuf, ubLength_ * sizeof(T));
 
     int64_t cmpMaskBytes = ((ubLength_ + 7) / 8 + 255) / 256 * 256;
-    if (cmpMaskBytes < 256) cmpMaskBytes = 256;
+    if (cmpMaskBytes < 256)
+        cmpMaskBytes = 256;
     pipe.InitBuffer(cmpMaskBuf, cmpMaskBytes);
 
     if (blockLength_ > 0) {
@@ -186,7 +186,8 @@ __aicore__ inline void HardShrinkGradDirect<T, BUFFER_MODE>::CopyOut(int64_t pro
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardShrinkGradDirect<T, BUFFER_MODE>::Process()
 {
-    if (blockLength_ <= 0) return;
+    if (blockLength_ <= 0)
+        return;
 
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {
@@ -207,10 +208,10 @@ class HardShrinkGradCastFp32 {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline HardShrinkGradCastFp32() {};
+    __aicore__ inline HardShrinkGradCastFp32(){};
 
     __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR output,
-                                 const HardShrinkGradTilingData* tilingData);
+                                const HardShrinkGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -230,9 +231,9 @@ private:
     TBuf<QuePosition::VECCALC> gradFp32Buf;
     TBuf<QuePosition::VECCALC> selfFp32Buf;
     TBuf<QuePosition::VECCALC> outFp32Buf;
-    TBuf<QuePosition::VECCALC> absBuf;      // fp32
-    TBuf<QuePosition::VECCALC> lambdBuf;    // fp32
-    TBuf<QuePosition::VECCALC> zeroBuf;     // fp32
+    TBuf<QuePosition::VECCALC> absBuf;   // fp32
+    TBuf<QuePosition::VECCALC> lambdBuf; // fp32
+    TBuf<QuePosition::VECCALC> zeroBuf;  // fp32
     TBuf<QuePosition::VECCALC> cmpMaskBuf;
 
     GlobalTensor<T> inputGMGrad;
@@ -245,9 +246,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardShrinkGradCastFp32<T, BUFFER_MODE>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR output,
-    const HardShrinkGradTilingData* tilingData)
+__aicore__ inline void HardShrinkGradCastFp32<T, BUFFER_MODE>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR output,
+                                                                    const HardShrinkGradTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -273,7 +273,8 @@ __aicore__ inline void HardShrinkGradCastFp32<T, BUFFER_MODE>::Init(
     pipe.InitBuffer(zeroBuf, ubLength_ * sizeof(float));
 
     int64_t cmpMaskBytes = ((ubLength_ + 7) / 8 + 255) / 256 * 256;
-    if (cmpMaskBytes < 256) cmpMaskBytes = 256;
+    if (cmpMaskBytes < 256)
+        cmpMaskBytes = 256;
     pipe.InitBuffer(cmpMaskBuf, cmpMaskBytes);
 
     // Pre-fill constant buffers as fp32
@@ -363,7 +364,8 @@ __aicore__ inline void HardShrinkGradCastFp32<T, BUFFER_MODE>::CopyOut(int64_t p
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardShrinkGradCastFp32<T, BUFFER_MODE>::Process()
 {
-    if (blockLength_ <= 0) return;
+    if (blockLength_ <= 0)
+        return;
 
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {

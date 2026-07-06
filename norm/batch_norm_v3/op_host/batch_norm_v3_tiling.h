@@ -171,7 +171,9 @@ TILING_DATA_FIELD_DEF(int64_t, patternA);
 TILING_DATA_FIELD_DEF(int64_t, patternR0);
 TILING_DATA_FIELD_DEF(int64_t, patternAAlign);
 TILING_DATA_FIELD_DEF(int64_t, blockSplitAxis); // 多核切分轴（多核只切分R轴，从R1到R0）
-TILING_DATA_FIELD_DEF(int64_t, formerBlockOuter); // 多核切分外轴，用于绑多核，绑多核分为formerCore和tailCore，formerBlockOuter表示formerCore的外轴数
+TILING_DATA_FIELD_DEF(
+    int64_t,
+    formerBlockOuter); // 多核切分外轴，用于绑多核，绑多核分为formerCore和tailCore，formerBlockOuter表示formerCore的外轴数
 TILING_DATA_FIELD_DEF(int64_t, tailBlockOuter); // 多核切分外轴，用于绑多核，表示tailCore的外轴数
 TILING_DATA_FIELD_DEF(int64_t, blockInner); // 多核切分内轴，在ub切分不够情况下参与ub切分，ub切分足够时，抛for循环
 TILING_DATA_FIELD_DEF(int64_t, ubFactor); // ubFactor
@@ -181,8 +183,10 @@ TILING_DATA_FIELD_DEF(int64_t, formerCoreUbInner);
 TILING_DATA_FIELD_DEF(int64_t, tailCoreUbSplitAxis);
 TILING_DATA_FIELD_DEF(int64_t, tailCoreUbOuter);
 TILING_DATA_FIELD_DEF(int64_t, tailCoreUbInner);
-TILING_DATA_FIELD_DEF(int64_t, formerCoreBinaryAddQuotient); // 对于formerCore，R轴做二分时，前半部分的大小，例如R=100,该值为64
-TILING_DATA_FIELD_DEF(int64_t, tailCoreBinaryAddQuotient); // 对于tailCore，R轴做二分时，前半部分的大小，例如R=100,该值为64
+TILING_DATA_FIELD_DEF(int64_t,
+                      formerCoreBinaryAddQuotient); // 对于formerCore，R轴做二分时，前半部分的大小，例如R=100,该值为64
+TILING_DATA_FIELD_DEF(int64_t,
+                      tailCoreBinaryAddQuotient); // 对于tailCore，R轴做二分时，前半部分的大小，例如R=100,该值为64
 TILING_DATA_FIELD_DEF(int64_t, lastBinaryAddQuotient);
 TILING_DATA_FIELD_DEF(int64_t, lastBinaryAddK);
 TILING_DATA_FIELD_DEF(int64_t, lastBinaryAddLast);
@@ -345,35 +349,19 @@ struct BatchNormV3CompileInfo {
 
 class BatchNormV3TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit BatchNormV3TilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit BatchNormV3TilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
     ~BatchNormV3TilingBase() override = default;
     ParamsBatchNormV3 commonParams;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
+    bool IsCapable() override { return true; };
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    };
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    };
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    };
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; };
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; };
+    uint64_t GetTilingKey() const override { return 0; };
     ge::graphStatus GetWorkspaceSize() override;
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    };
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; };
     bool CheckInputDtype();
     bool CheckInputShape();
     bool CheckInputParam();
@@ -383,8 +371,7 @@ protected:
 
 class BatchNormV3WelfordTiling : public BatchNormV3TilingBase {
 public:
-    explicit BatchNormV3WelfordTiling(gert::TilingContext* context) : BatchNormV3TilingBase(context)
-    {}
+    explicit BatchNormV3WelfordTiling(gert::TilingContext* context) : BatchNormV3TilingBase(context) {}
     ~BatchNormV3WelfordTiling() override = default;
     BatchNormV3WelfordTilingData td_;
 
@@ -403,8 +390,7 @@ private:
 
 class BatchNormV3FullReduceTiling : public BatchNormV3TilingBase {
 public:
-    explicit BatchNormV3FullReduceTiling(gert::TilingContext* tilingContext) : BatchNormV3TilingBase(tilingContext)
-    {}
+    explicit BatchNormV3FullReduceTiling(gert::TilingContext* tilingContext) : BatchNormV3TilingBase(tilingContext) {}
     ~BatchNormV3FullReduceTiling() override = default;
     BatchNormV3FullReduceTilingData td_;
 
@@ -422,8 +408,7 @@ private:
 
 class BatchNormV3RegbaseTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit BatchNormV3RegbaseTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit BatchNormV3RegbaseTilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
     void Reset(gert::TilingContext* context) override
     {

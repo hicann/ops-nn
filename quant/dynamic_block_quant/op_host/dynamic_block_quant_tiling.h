@@ -23,38 +23,38 @@ constexpr uint16_t MAX_CORE_COUNT = 50;
 
 BEGIN_TILING_DATA_DEF(DynamicBlockQuantTilingData)
 TILING_DATA_FIELD_DEF(int64_t, tilingKey);
-TILING_DATA_FIELD_DEF(int64_t, totalCoreNum);                     // 核心数
-TILING_DATA_FIELD_DEF(int64_t, ubSize);                           // UB大小
-TILING_DATA_FIELD_DEF(int64_t, vfLen);                            // 向量长度
-TILING_DATA_FIELD_DEF(float, minScale);                           // 最小缩放比例
-TILING_DATA_FIELD_DEF(int64_t, roundMode);                        // 数据类型转换的模式
-TILING_DATA_FIELD_DEF(int64_t, dstType);                          // 输出数据类型
-TILING_DATA_FIELD_DEF(int64_t, blockSizeRow);                     // 行方向的块大小
-TILING_DATA_FIELD_DEF(int64_t, blockSizeCol);                     // 列方向的块大小
-TILING_DATA_FIELD_DEF(float, dstTypeMax);                         // 目标数据类型的最大值
-TILING_DATA_FIELD_DEF(int64_t, batchNum);                         // batchNum数
-TILING_DATA_FIELD_DEF(int64_t, rowNum);                           // 行数
-TILING_DATA_FIELD_DEF(int64_t, colNum);                           // 列数
-TILING_DATA_FIELD_DEF(int64_t, singleBatchRowBlockLoopNum);       // 单batch行方向块的循环次数
-TILING_DATA_FIELD_DEF(int64_t, rowBlockLoopNum);                  // 行方向块的循环次数
-TILING_DATA_FIELD_DEF(int64_t, colBlockLoopNum);                  // 列方向块的循环次数
-TILING_DATA_FIELD_DEF(int64_t, rowUbBlockLoopNum);                // 行方向UB块的循环次数
-TILING_DATA_FIELD_DEF(int64_t, colUbBlockLoopNum);                // 列方向UB块的循环次数
-TILING_DATA_FIELD_DEF(int64_t, rowUbFactor);                      // 行方向UB因子
-TILING_DATA_FIELD_DEF(int64_t, colUbFactor);                      // 列方向UB因子
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);                      // 实际使用的核心数
-TILING_DATA_FIELD_DEF(int64_t, rowTileNum);                       // 单核循环次数
-TILING_DATA_FIELD_DEF(int64_t, colTileNum);                       // 尾核循环次数
-TILING_DATA_FIELD_DEF(int64_t, normalCoreRowTileNum);             // 单核循环次数
-TILING_DATA_FIELD_DEF(int64_t, normalCoreColTileNum);             // 尾核循环次数
-TILING_DATA_FIELD_DEF(int64_t, tailCoreRowTileNum);               // 单核循环次数
-TILING_DATA_FIELD_DEF(int64_t, tailCoreColTileNum);               // 尾核循环次数
-TILING_DATA_FIELD_DEF(int64_t, rowNormalCoreNum);                 // 单核循环次数
-TILING_DATA_FIELD_DEF(int64_t, colNormalCoreNum);                 // 尾核循环次数
-TILING_DATA_FIELD_DEF(int64_t, rowTailCoreNum);                   // 单核循环次数
-TILING_DATA_FIELD_DEF(int64_t, colTailCoreNum);                   // 尾核循环次数
-TILING_DATA_FIELD_DEF(int64_t, perCoreRowNum);                    // 每个核处理的行数
-TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_COUNT, tailRowList); // 每个核在尾块中处理数据的行数
+TILING_DATA_FIELD_DEF(int64_t, totalCoreNum);                              // 核心数
+TILING_DATA_FIELD_DEF(int64_t, ubSize);                                    // UB大小
+TILING_DATA_FIELD_DEF(int64_t, vfLen);                                     // 向量长度
+TILING_DATA_FIELD_DEF(float, minScale);                                    // 最小缩放比例
+TILING_DATA_FIELD_DEF(int64_t, roundMode);                                 // 数据类型转换的模式
+TILING_DATA_FIELD_DEF(int64_t, dstType);                                   // 输出数据类型
+TILING_DATA_FIELD_DEF(int64_t, blockSizeRow);                              // 行方向的块大小
+TILING_DATA_FIELD_DEF(int64_t, blockSizeCol);                              // 列方向的块大小
+TILING_DATA_FIELD_DEF(float, dstTypeMax);                                  // 目标数据类型的最大值
+TILING_DATA_FIELD_DEF(int64_t, batchNum);                                  // batchNum数
+TILING_DATA_FIELD_DEF(int64_t, rowNum);                                    // 行数
+TILING_DATA_FIELD_DEF(int64_t, colNum);                                    // 列数
+TILING_DATA_FIELD_DEF(int64_t, singleBatchRowBlockLoopNum);                // 单batch行方向块的循环次数
+TILING_DATA_FIELD_DEF(int64_t, rowBlockLoopNum);                           // 行方向块的循环次数
+TILING_DATA_FIELD_DEF(int64_t, colBlockLoopNum);                           // 列方向块的循环次数
+TILING_DATA_FIELD_DEF(int64_t, rowUbBlockLoopNum);                         // 行方向UB块的循环次数
+TILING_DATA_FIELD_DEF(int64_t, colUbBlockLoopNum);                         // 列方向UB块的循环次数
+TILING_DATA_FIELD_DEF(int64_t, rowUbFactor);                               // 行方向UB因子
+TILING_DATA_FIELD_DEF(int64_t, colUbFactor);                               // 列方向UB因子
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);                               // 实际使用的核心数
+TILING_DATA_FIELD_DEF(int64_t, rowTileNum);                                // 单核循环次数
+TILING_DATA_FIELD_DEF(int64_t, colTileNum);                                // 尾核循环次数
+TILING_DATA_FIELD_DEF(int64_t, normalCoreRowTileNum);                      // 单核循环次数
+TILING_DATA_FIELD_DEF(int64_t, normalCoreColTileNum);                      // 尾核循环次数
+TILING_DATA_FIELD_DEF(int64_t, tailCoreRowTileNum);                        // 单核循环次数
+TILING_DATA_FIELD_DEF(int64_t, tailCoreColTileNum);                        // 尾核循环次数
+TILING_DATA_FIELD_DEF(int64_t, rowNormalCoreNum);                          // 单核循环次数
+TILING_DATA_FIELD_DEF(int64_t, colNormalCoreNum);                          // 尾核循环次数
+TILING_DATA_FIELD_DEF(int64_t, rowTailCoreNum);                            // 单核循环次数
+TILING_DATA_FIELD_DEF(int64_t, colTailCoreNum);                            // 尾核循环次数
+TILING_DATA_FIELD_DEF(int64_t, perCoreRowNum);                             // 每个核处理的行数
+TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_COUNT, tailRowList);           // 每个核在尾块中处理数据的行数
 TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_COUNT, tailColBlockStartList); // 每个核在尾块中处理数据的开始列
 TILING_DATA_FIELD_DEF_ARR(int64_t, MAX_CORE_COUNT, tailColBlockEndList); // 每个核在尾块中处理数据的结束列
 END_TILING_DATA_DEF;
@@ -100,8 +100,7 @@ struct DynamicBlockQuantTilingParam {
     int64_t colTailCoreNum = 0;
 };
 
-enum class RoundModeList : int64_t
-{
+enum class RoundModeList : int64_t {
     MODE_UNDEFINED = -1,
     MODE_NONE = 0,
     MODE_RINT = 1,

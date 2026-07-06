@@ -19,25 +19,25 @@
 
 namespace ge {
 /**
-* @brief Computes the gradient of SELU:
-*    y = scale * gradients                          if outputs >= 0
-*    y = gradients * (outputs + scale * alpha)      if outputs < 0
-*
-*    where alpha = 1.6732632423543772848170429916717
-*          scale = 1.0507009873554804934193349852946
-*
-* @par Inputs:
-* Two inputs:
-* gradients: A Tensor. Support 1D ~ 8D. Must be one of the following types: float16, float,
-* bfloat16, int32, int8, uint8. format:ND.
-* outputs: A Tensor. Has the same type, shape and format as "gradients".
-*
-* @par Outputs:
-* y: A Tensor. Has the same type, shape and format as "gradients".
-*
-* @par Third-party framework compatibility
-* @li Compatible with the Pytorch operator selu_backward.
-*/
+ * @brief Computes the gradient of SELU:
+ *    y = scale * gradients                          if outputs >= 0
+ *    y = gradients * (outputs + scale * alpha)      if outputs < 0
+ *
+ *    where alpha = 1.6732632423543772848170429916717
+ *          scale = 1.0507009873554804934193349852946
+ *
+ * @par Inputs:
+ * Two inputs:
+ * gradients: A Tensor. Support 1D ~ 8D. Must be one of the following types: float16, float,
+ * bfloat16, int32, int8, uint8. format:ND.
+ * outputs: A Tensor. Has the same type, shape and format as "gradients".
+ *
+ * @par Outputs:
+ * y: A Tensor. Has the same type, shape and format as "gradients".
+ *
+ * @par Third-party framework compatibility
+ * @li Compatible with the Pytorch operator selu_backward.
+ */
 REG_OP(SeluGrad)
     .INPUT(gradients, TensorType::RealNumberType())
     .INPUT(outputs, TensorType::RealNumberType())

@@ -14,10 +14,12 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> AdaLayerNormQuant(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* smoothScalesOptional, float epsilon, const char* quantMode,
-    int32_t dstType, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> AdaLayerNormQuant(const aclTensor* x, const aclTensor* scale,
+                                                           const aclTensor* shift, const aclTensor* weightOptional,
+                                                           const aclTensor* biasOptional,
+                                                           const aclTensor* smoothScalesOptional, float epsilon,
+                                                           const char* quantMode, int32_t dstType,
+                                                           aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_ADA_LAYER_NORM_QUANT_H

@@ -147,8 +147,8 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
         GenInitial1DIndices((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize);
         AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg allMaskU32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         for (uint16_t highIdx = 0; highIdx < highAxisActual; ++highIdx) {
             uint32_t highArgmaxOffset = highIdx * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
             int32_t baseOffset = int32_t(highIdx * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
@@ -157,39 +157,36 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
                 for (uint16_t hIdx = 0; hIdx < hArgmaxActual; hIdx++) {
                     for (uint16_t wRepeatIdx = 0; wRepeatIdx < repeatimes; wRepeatIdx++) {
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                            uint32_t offset =
-                                (wBatchIdx + wRepeatIdx * computeSizeT2 * wProBatchSize + hIdx * wArgmaxAligned +
-                                 dArgmaxOffset + highArgmaxOffset);
+                            uint32_t offset = (wBatchIdx + wRepeatIdx * computeSizeT2 * wProBatchSize +
+                                               hIdx * wArgmaxAligned + dArgmaxOffset + highArgmaxOffset);
                             AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                             DoSingleNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, all, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        uint32_t offset =
-                            (wBatchIdx + repeatimes * computeSizeT2 * wProBatchSize + hIdx * wArgmaxAligned +
-                             dArgmaxOffset + highArgmaxOffset);
+                        uint32_t offset = (wBatchIdx + repeatimes * computeSizeT2 * wProBatchSize +
+                                           hIdx * wArgmaxAligned + dArgmaxOffset + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, wRemainBatchCount, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        uint32_t offset =
-                            (wBatchIdx + wRemainBatchCount * wProBatchSize +
-                             repeatimes * computeSizeT2 * wProBatchSize + hIdx * wArgmaxAligned + dArgmaxOffset +
-                             highArgmaxOffset);
+                        uint32_t offset = (wBatchIdx + wRemainBatchCount * wProBatchSize +
+                                           repeatimes * computeSizeT2 * wProBatchSize + hIdx * wArgmaxAligned +
+                                           dArgmaxOffset + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, one, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
             }
@@ -276,13 +273,13 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
 
         AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndex;
         AscendC::MicroAPI::RegTensor<uint32_t> initialRegIndexOne;
-        DhwGenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize, hProBatchSize,
-                                    wArgmaxAligned, wFullBatchCount, divW);
+        DhwGenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndex, wProBatchSize,
+                                   hProBatchSize, wArgmaxAligned, wFullBatchCount, divW);
         DhwGen2DIndexOne((AscendC::MicroAPI::RegTensor<int32_t>&)initialRegIndexOne, hProBatchSize, wArgmaxAligned);
         AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
 
-        AscendC::MicroAPI::MaskReg allMaskU32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
         for (uint16_t highIdx = 0; highIdx < highAxisActual; ++highIdx) {
             uint32_t highArgmaxOffset = highIdx * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
@@ -293,82 +290,76 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
                 for (uint16_t hIdx = 0; hIdx < blockConcurrentCount; hIdx++) {
                     for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                            T2 offset =
-                                (dArgmaxOffset + highArgmaxOffset + wBatchIdx + hProBatchIdx * wArgmaxAligned +
-                                 hIdx * wArgmaxAligned * hProBatchSize * hConcurrentCount);
+                            T2 offset = (dArgmaxOffset + highArgmaxOffset + wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                         hIdx * wArgmaxAligned * hProBatchSize * hConcurrentCount);
                             AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                             DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, maskBlock, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                            T2 offset =
-                                (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                                 hIdx * wArgmaxAligned * hProBatchSize * hConcurrentCount + dArgmaxOffset +
-                                 highArgmaxOffset);
+                            T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                         hIdx * wArgmaxAligned * hProBatchSize * hConcurrentCount + dArgmaxOffset +
+                                         highArgmaxOffset);
                             AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
                             DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, blockOne, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
                     }
                 }
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + hProBatchIdx * wArgmaxAligned +
-                             blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned + dArgmaxOffset +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                     blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
+                                     dArgmaxOffset + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, maskRemainBatch, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                             blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned + dArgmaxOffset +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                     blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
+                                     dArgmaxOffset + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, remainBatchOne, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + hProBatchIdx * wArgmaxAligned +
-                             hRemainBatchCount * hProBatchSize * wArgmaxAligned +
-                             blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned + dArgmaxOffset +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                     hRemainBatchCount * hProBatchSize * wArgmaxAligned +
+                                     blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
+                                     dArgmaxOffset + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndex, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, maskRemainTail, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                             hRemainBatchCount * hProBatchSize * wArgmaxAligned +
-                             blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned + dArgmaxOffset +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                     hRemainBatchCount * hProBatchSize * wArgmaxAligned +
+                                     blockConcurrentCount * hConcurrentCount * hProBatchSize * wArgmaxAligned +
+                                     dArgmaxOffset + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initialRegIndexOne, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, remainTailOne, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
             }
@@ -478,21 +469,23 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndex;
         AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndexOne;
 
-        GenInitial3DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndex, dProBatchSize, hProBatchSize, wProBatchSize,
-                                        hFullBatchCount, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divWH, divW);
-        Gen3DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOne, dProBatchSize, hProBatchSize, wArgmaxAligned,
-                                        hFullBatchCount, hArgmaxActual, divH);
-        GenInitial3DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexDw, dProBatchSize, hProBatchSize, wProBatchSize,
-                                        1, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divW, divW);
-        Gen3DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOneDw, dProBatchSize, hProBatchSize, wArgmaxAligned,
-                                        1, hArgmaxActual, div1);
-        DhwGenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize, hProBatchSize,
-                                        wArgmaxAligned, wFullBatchCount, divW);
+        GenInitial3DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndex, dProBatchSize, hProBatchSize,
+                                wProBatchSize, hFullBatchCount, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divWH,
+                                divW);
+        Gen3DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOne, dProBatchSize, hProBatchSize,
+                          wArgmaxAligned, hFullBatchCount, hArgmaxActual, divH);
+        GenInitial3DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexDw, dProBatchSize,
+                                hProBatchSize, wProBatchSize, 1, hArgmaxActual, wFullBatchCount, wArgmaxAligned, divW,
+                                divW);
+        Gen3DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOneDw, dProBatchSize, hProBatchSize,
+                          wArgmaxAligned, 1, hArgmaxActual, div1);
+        DhwGenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize,
+                                   hProBatchSize, wArgmaxAligned, wFullBatchCount, divW);
         DhwGen2DIndexOne((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndexOne, hProBatchSize, wArgmaxAligned);
-        
+
         AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg allMaskU32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         for (uint16_t highIdx = 0; highIdx < highAxisActual; ++highIdx) {
             uint32_t highArgmaxOffset = highIdx * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
             int32_t baseOffset = int32_t(highIdx * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
@@ -500,63 +493,59 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
                 for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
                     for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                            T2 offset =
-                                (wBatchIdx + hProBatchIdx * wArgmaxAligned +
-                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                                 dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
-                                 highArgmaxOffset);
+                            T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                         dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                         dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
+                                         highArgmaxOffset);
 
                             AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
                             DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
 
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                            T2 offset =
-                                (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                                 dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
-                                 highArgmaxOffset);
+                            T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                         dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                         dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
+                                         highArgmaxOffset);
 
                             AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
                             DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
                     }
                     for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                            T2 offset =
-                                (wBatchIdx + (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
-                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                                 dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
-                                 highArgmaxOffset);
+                            T2 offset = (wBatchIdx + (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
+                                         dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                         dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
+                                         highArgmaxOffset);
 
                             AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexDw, offset, allMaskU32);
                             DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
                         for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                            T2 offset =
-                                (wBatchIdx + wProBatchSize * wFullBatchCount +
-                                 (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
-                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                                 dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
-                                 highArgmaxOffset);
+                            T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
+                                         (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
+                                         dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                         dIdx * dProBatchSize * hArgmaxActual * wArgmaxAligned * hwConcurrentCount +
+                                         highArgmaxOffset);
                             AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOneDw, offset, allMaskU32);
                             DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                                 yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask3, magicHWReg,
-                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                                hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                                dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                                static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                                wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg,
+                                dUpperReg, hUpperReg, wUpperReg);
                         }
                     }
                 }
@@ -569,65 +558,62 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
             for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + hProBatchIdx * wArgmaxAligned + dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
-                                 wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
+                                         wArgmaxAligned +
+                                     highArgmaxOffset);
 
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask4, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
-                                 wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
+                                         wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask5, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
-                                 wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
+                                         wArgmaxAligned +
+                                     highArgmaxOffset);
 
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexDw, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask6, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount +
-                             (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
-                                 wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
+                                     (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize * hArgmaxActual *
+                                         wArgmaxAligned +
+                                     highArgmaxOffset);
 
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOneDw, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask7, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
             }
@@ -639,64 +625,61 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
             for (uint16_t dProBatchIdx = 0; dProBatchIdx < dRemainTail; dProBatchIdx++) {
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + hProBatchIdx * wArgmaxAligned + dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
-                                 hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
+                                         hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask8, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
-                                 hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
+                                         hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
 
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask9, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
-                                 hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
+                                         hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask10, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount +
-                             (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
-                                 hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
+                                     (hProBatchIdx + hFullBatchCount * hProBatchSize) * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned +
+                                     (dRemainBatchCount + dBlockConcurrentCount * hwConcurrentCount) * dProBatchSize *
+                                         hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
 
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
                         DoSingleNCNchwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask11, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg);
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg);
                     }
                 }
             }
@@ -830,63 +813,59 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndexOne;
         AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndex;
         AscendC::MicroAPI::RegTensor<uint32_t> initial2DRegIndexOne;
-        GenInitial4DIndicesFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndex, wProBatchSize, hProBatchSize, wArgmaxAligned,
-            wFullBatchCount, hFullBatchCount, dFullBatchCount, depthStride, highStride, divDHW, divWH, divW);
-        Gen4DIndexOneFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexOne, hProBatchSize, wArgmaxAligned,
-            hFullBatchCount, dFullBatchCount, depthStride, highStride, divHD, divH);
-        GenInitial4DIndicesFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexDW, wProBatchSize, hProBatchSize, wArgmaxAligned,
-            wFullBatchCount, 1, dFullBatchCount, depthStride, highStride, divWD, divW, divW);
-        Gen4DIndexOneFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexOneHD, hProBatchSize, wArgmaxAligned, 1,
-            dFullBatchCount, depthStride, highStride, divD, div1);
-        GenInitial3DHighIndicesFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndex, highStride, wProBatchSize, hProBatchSize,
-            wArgmaxAligned, wFullBatchCount, hFullBatchCount, divWH, divW);
-        Gen3DHighIndexOneFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOne, highStride, hProBatchSize, wArgmaxAligned,
-            hFullBatchCount, divH);
-        GenInitial2DIndicesFast(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize, dArgmaxActual * hArgmaxActual,
-            wArgmaxAligned, wFullBatchCount, divW);
-        Gen2DIndexOne(
-            (AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndexOne, dArgmaxActual * hArgmaxActual,
-            wArgmaxAligned);
+        GenInitial4DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndex, wProBatchSize, hProBatchSize,
+                                wArgmaxAligned, wFullBatchCount, hFullBatchCount, dFullBatchCount, depthStride,
+                                highStride, divDHW, divWH, divW);
+        Gen4DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexOne, hProBatchSize, wArgmaxAligned,
+                          hFullBatchCount, dFullBatchCount, depthStride, highStride, divHD, divH);
+        GenInitial4DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexDW, wProBatchSize,
+                                hProBatchSize, wArgmaxAligned, wFullBatchCount, 1, dFullBatchCount, depthStride,
+                                highStride, divWD, divW, divW);
+        Gen4DIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial4DRegIndexOneHD, hProBatchSize, wArgmaxAligned,
+                          1, dFullBatchCount, depthStride, highStride, divD, div1);
+        GenInitial3DHighIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndex, highStride,
+                                    wProBatchSize, hProBatchSize, wArgmaxAligned, wFullBatchCount, hFullBatchCount,
+                                    divWH, divW);
+        Gen3DHighIndexOneFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial3DRegIndexOne, highStride, hProBatchSize,
+                              wArgmaxAligned, hFullBatchCount, divH);
+        GenInitial2DIndicesFast((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndex, wProBatchSize,
+                                dArgmaxActual * hArgmaxActual, wArgmaxAligned, wFullBatchCount, divW);
+        Gen2DIndexOne((AscendC::MicroAPI::RegTensor<int32_t>&)initial2DRegIndexOne, dArgmaxActual * hArgmaxActual,
+                      wArgmaxAligned);
         AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
-        AscendC::MicroAPI::MaskReg allMaskU32 =
-            AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dhw);
         AscendC::MicroAPI::Duplicate(magicHighReg2, magicHigh_dh);
         for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
-            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
-            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
+            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual *
+                                        wArgmaxAligned;
+            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual *
+                                         wOutputAligned) +
+                                 baseOffsetConst;
             for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + hProBatchIdx * wArgmaxAligned + dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndex, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask0, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_dhw, magicHighReg, static_cast<int16_t>(shiftHigh_dhw));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_dhw, magicHighReg,
+                            static_cast<int16_t>(shiftHigh_dhw));
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOne, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask1, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_dh, magicHighReg2, static_cast<int16_t>(shiftHigh_dh));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_dh, magicHighReg2,
+                            static_cast<int16_t>(shiftHigh_dh));
                     }
                 }
             }
@@ -895,21 +874,23 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dw);
         AscendC::MicroAPI::Duplicate(magicHighReg2, magicHigh_d);
         for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
-            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
-            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
+            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual *
+                                        wArgmaxAligned;
+            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual *
+                                         wOutputAligned) +
+                                 baseOffsetConst;
             for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
                 for (uint16_t hTailIdx = 0; hTailIdx < hRemainTail; hTailIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
-                             dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                        T2 offset = (wBatchIdx + (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
+                                     dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexDW, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask2, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_dw, magicHighReg, static_cast<int16_t>(shiftHigh_dw));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_dw, magicHighReg,
+                            static_cast<int16_t>(shiftHigh_dw));
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
                         T2 offset = wBatchIdx + wProBatchSize * wFullBatchCount +
@@ -918,10 +899,10 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOneHD, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask3, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_d, magicHighReg2, static_cast<int16_t>(shiftHigh_d));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_d, magicHighReg2,
+                            static_cast<int16_t>(shiftHigh_d));
                     }
                 }
             }
@@ -930,35 +911,36 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_hw);
         AscendC::MicroAPI::Duplicate(magicHighReg2, magicHigh_h);
         for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
-            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
-            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
+            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual *
+                                        wArgmaxAligned;
+            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual *
+                                         wOutputAligned) +
+                                 baseOffsetConst;
             for (uint16_t dTailIdx = 0; dTailIdx < dRemainTail; dTailIdx++) {
                 for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + hProBatchIdx * wArgmaxAligned +
-                             (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                     (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask4, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_hw, magicHighReg, static_cast<int16_t>(shiftHigh_hw));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_hw, magicHighReg,
+                            static_cast<int16_t>(shiftHigh_hw));
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                             (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                     (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask5, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_h, magicHighReg2, static_cast<int16_t>(shiftHigh_h));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_h, magicHighReg2,
+                            static_cast<int16_t>(shiftHigh_h));
                     }
                 }
             }
@@ -967,75 +949,71 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_w);
         AscendC::MicroAPI::Duplicate(magicHighReg2, magicHigh_1);
         for (uint16_t highBlockIdx = 0; highBlockIdx < highBlockConcurrentCount; ++highBlockIdx) {
-            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
-            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
+            uint32_t highArgmaxOffset = highBlockIdx * highConcurrentCount * dArgmaxActual * hArgmaxActual *
+                                        wArgmaxAligned;
+            int32_t baseOffset = int32_t(highBlockIdx * highConcurrentCount * dOutputActual * hOutputActual *
+                                         wOutputAligned) +
+                                 baseOffsetConst;
             for (uint16_t dTailIdx = 0; dTailIdx < dRemainTail; dTailIdx++) {
                 for (uint16_t hTailIdx = 0; hTailIdx < hRemainTail; hTailIdx++) {
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
-                             (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
+                                     (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask6, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_w, magicHighReg, static_cast<int16_t>(shiftHigh_w));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_w, magicHighReg,
+                            static_cast<int16_t>(shiftHigh_w));
                     }
                     for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                        T2 offset =
-                            (wBatchIdx + wProBatchSize * wFullBatchCount +
-                             (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
-                             (dProBatchSize * dFullBatchCount + dTailIdx) * hArgmaxActual * wArgmaxAligned +
-                             highArgmaxOffset);
+                        T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
+                                     (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
+                                     (dProBatchSize * dFullBatchCount + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                     highArgmaxOffset);
                         AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
                         DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                             yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask7, magicHWReg,
-                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                            hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                            dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                            highOutputPlaneActual, divisor_1, magicHighReg2, static_cast<int16_t>(shiftHigh_1));
+                            static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                            wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                            hUpperReg, wUpperReg, highOutputPlaneActual, divisor_1, magicHighReg2,
+                            static_cast<int16_t>(shiftHigh_1));
                     }
                 }
             }
         }
 
-        uint32_t highArgmaxOffset =
-            highBlockConcurrentCount * highConcurrentCount * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
-        int32_t baseOffset =
-            int32_t(highBlockConcurrentCount * highConcurrentCount * dOutputActual * hOutputActual * wOutputAligned) + baseOffsetConst;
+        uint32_t highArgmaxOffset = highBlockConcurrentCount * highConcurrentCount * dArgmaxActual * hArgmaxActual *
+                                    wArgmaxAligned;
+        int32_t baseOffset = int32_t(highBlockConcurrentCount * highConcurrentCount * dOutputActual * hOutputActual *
+                                     wOutputAligned) +
+                             baseOffsetConst;
 
         AscendC::MicroAPI::Duplicate(magicHighReg, magicHigh_dhw);
         AscendC::MicroAPI::Duplicate(magicHighReg2, magicHigh_dh);
         for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
             for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + hProBatchIdx * wArgmaxAligned + dProBatchIdx * hArgmaxActual * wArgmaxAligned +
-                         highArgmaxOffset);
+                    T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndex, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask8, magicHWReg, static_cast<int16_t>(shiftHW),
-                        magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_dhw, magicHighReg,
-                        static_cast<int16_t>(shiftHigh_dhw));
+                        magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned, wOutputAligned, wOutput, hwOutput,
+                        baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
+                        highOutputPlaneActual, divisor_dhw, magicHighReg, static_cast<int16_t>(shiftHigh_dhw));
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                         dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOne, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask9, magicHWReg, static_cast<int16_t>(shiftHW),
-                        magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_dh, magicHighReg2,
-                        static_cast<int16_t>(shiftHigh_dh));
+                        magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned, wOutputAligned, wOutput, hwOutput,
+                        baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
+                        highOutputPlaneActual, divisor_dh, magicHighReg2, static_cast<int16_t>(shiftHigh_dh));
                 }
             }
         }
@@ -1045,29 +1023,27 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
             for (uint16_t hProBatchIdx = 0; hProBatchIdx < hRemainTail; hProBatchIdx++) {
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + (hProBatchSize * hFullBatchCount + hProBatchIdx) * wArgmaxAligned +
-                         dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + (hProBatchSize * hFullBatchCount + hProBatchIdx) * wArgmaxAligned +
+                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexDW, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask10, magicHWReg,
-                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_dw, magicHighReg, static_cast<int16_t>(shiftHigh_dw));
+                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                        wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                        hUpperReg, wUpperReg, highOutputPlaneActual, divisor_dw, magicHighReg,
+                        static_cast<int16_t>(shiftHigh_dw));
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + wProBatchSize * wFullBatchCount +
-                         (hProBatchSize * hFullBatchCount + hProBatchIdx) * wArgmaxAligned +
-                         dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
+                                 (hProBatchSize * hFullBatchCount + hProBatchIdx) * wArgmaxAligned +
+                                 dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial4DRegIndexOneHD, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask11, magicHWReg,
-                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_d, magicHighReg2, static_cast<int16_t>(shiftHigh_d));
+                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                        wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                        hUpperReg, wUpperReg, highOutputPlaneActual, divisor_d, magicHighReg2,
+                        static_cast<int16_t>(shiftHigh_d));
                 }
             }
         }
@@ -1077,28 +1053,28 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         for (uint16_t dTailIdx = 0; dTailIdx < dRemainTail; dTailIdx++) {
             for (uint16_t hProBatchIdx = 0; hProBatchIdx < hProBatchSize; hProBatchIdx++) {
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + hProBatchIdx * wArgmaxAligned +
-                         (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned +
+                                 (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                 highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndex, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask12, magicHWReg,
-                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_hw, magicHighReg, static_cast<int16_t>(shiftHigh_hw));
+                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                        wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                        hUpperReg, wUpperReg, highOutputPlaneActual, divisor_hw, magicHighReg,
+                        static_cast<int16_t>(shiftHigh_hw));
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
-                         (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount + hProBatchIdx * wArgmaxAligned +
+                                 (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                 highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial3DRegIndexOne, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask13, magicHWReg,
-                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_h, magicHighReg2, static_cast<int16_t>(shiftHigh_h));
+                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                        wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                        hUpperReg, wUpperReg, highOutputPlaneActual, divisor_h, magicHighReg2,
+                        static_cast<int16_t>(shiftHigh_h));
                 }
             }
         }
@@ -1108,29 +1084,29 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
         for (uint16_t dTailIdx = 0; dTailIdx < dRemainTail; dTailIdx++) {
             for (uint16_t hTailIdx = 0; hTailIdx < hRemainTail; hTailIdx++) {
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wProBatchSize; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
-                         (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
+                                 (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                 highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndex, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask14, magicHWReg,
-                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_w, magicHighReg, static_cast<int16_t>(shiftHigh_w));
+                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                        wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                        hUpperReg, wUpperReg, highOutputPlaneActual, divisor_w, magicHighReg,
+                        static_cast<int16_t>(shiftHigh_w));
                 }
                 for (uint16_t wBatchIdx = 0; wBatchIdx < wRemainTail; wBatchIdx++) {
-                    T2 offset =
-                        (wBatchIdx + wProBatchSize * wFullBatchCount +
-                         (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
-                         (dProBatchSize * dFullBatchCount + dTailIdx) * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
+                    T2 offset = (wBatchIdx + wProBatchSize * wFullBatchCount +
+                                 (hProBatchSize * hFullBatchCount + hTailIdx) * wArgmaxAligned +
+                                 (dProBatchSize * dFullBatchCount + dTailIdx) * hArgmaxActual * wArgmaxAligned +
+                                 highArgmaxOffset);
                     AscendC::MicroAPI::Adds(parallelRegIndex, initial2DRegIndexOne, offset, allMaskU32);
                     DoMulNCNcdhwFastDiv<T1, T2, IS_CHECK_RANGE>(
                         yAddr, gradAddr, argmaxAddr, parallelRegIndex, mask15, magicHWReg,
-                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW),
-                        hwOutputAligned, wOutputAligned, wOutput, hwOutput, baseOffset,
-                        dLowerReg, hLowerReg, wLowerReg, dUpperReg, hUpperReg, wUpperReg,
-                        highOutputPlaneActual, divisor_1, magicHighReg2, static_cast<int16_t>(shiftHigh_1));
+                        static_cast<int16_t>(shiftHW), magicWReg, static_cast<int16_t>(shiftW), hwOutputAligned,
+                        wOutputAligned, wOutput, hwOutput, baseOffset, dLowerReg, hLowerReg, wLowerReg, dUpperReg,
+                        hUpperReg, wUpperReg, highOutputPlaneActual, divisor_1, magicHighReg2,
+                        static_cast<int16_t>(shiftHigh_1));
                 }
             }
         }

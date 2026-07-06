@@ -55,10 +55,10 @@ struct MishGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(
-                        vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(
-                        vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
+                                                                         (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(vregInput2,
+                                                                         (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
 
                     MicroAPI::Mul(vregInputSqr, vregInput2, vregInput2, mask); // vregInput2 = tanh(z)
                     MicroAPI::Adds(vregInputSqr, vregInputSqr, FP32_NEG_ONE, mask);
@@ -71,8 +71,8 @@ struct MishGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                     MicroAPI::Div(vregInputExp2, vregInputSqr, vregInputExp2, mask);
                     MicroAPI::Sub(vregOutput, vregInput2, vregInputExp2, mask);
                     // OpCopyOut
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>(
-                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                              vregOutput, mask);
                 }
             }
         }
@@ -109,8 +109,8 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(
-                    vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
+                                                                     (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
 
                 MicroAPI::Muls(vregInputNeg, vregInput, FP32_NEG_ONE, mask);
                 MicroAPI::Muls(vregInputNeg2, vregInput, FP32_NEG_TWO, mask);
@@ -120,7 +120,7 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
                 MicroAPI::Muls(vregInputNeg, vregInputNeg, FP32_TWO, mask);
                 MicroAPI::Adds(vregInputNeg, vregInputNeg, FP32_ONE, mask); // x = 2e^(-x)+1
                 MicroAPI::Muls(vregInputNeg2, vregInputNeg2, FP32_TWO, mask);
-                MicroAPI::Add(vregInputNeg2, vregInputNeg2, vregInputNeg, mask); 
+                MicroAPI::Add(vregInputNeg2, vregInputNeg2, vregInputNeg, mask);
                 MicroAPI::Div(vregOutput, vregInputNeg, vregInputNeg2, mask);
 
                 MicroAPI::Muls(vregInputMid, vregInput, FP32_TWO, mask);
@@ -133,8 +133,8 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
                 MicroAPI::CompareScalar<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
                 MicroAPI::Select(vregOutput, vregInputMid, vregOutput, cmpMaskReg);
                 // OpCopyOut
-                MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>(
-                    (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
+                                                                          vregOutput, mask);
             }
         }
 #endif

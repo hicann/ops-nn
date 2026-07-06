@@ -29,15 +29,9 @@ namespace {
 // ----------------EmbeddingHashTableImport-------------------
 class EmbeddingHashTableImportProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingHashTableImport Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingHashTableImport Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingHashTableImport Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingHashTableImport Proto Test TearDown" << std::endl; }
 };
 
 //   pass cases
@@ -53,19 +47,52 @@ TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_shap
 
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableImport")->infer_shape;
 
-    gert::StorageShape table_handles_shape = {{1}, {1,}};
-    gert::StorageShape embedding_dims_shape = {{1,}, {1,}};
-    gert::StorageShape bucket_sizes_shape = {{1,}, {1,}};
-    gert::StorageShape keys_shape = {{2,}, {2,}};
-    gert::StorageShape counters_shape = {{2,}, {2,}};
-    gert::StorageShape filter_flags_shape = {{2,}, {2,}};
-    gert::StorageShape values_shape = {{10,}, {10,}};
+    gert::StorageShape table_handles_shape = {{1},
+                                              {
+                                                  1,
+                                              }};
+    gert::StorageShape embedding_dims_shape = {{
+                                                   1,
+                                               },
+                                               {
+                                                   1,
+                                               }};
+    gert::StorageShape bucket_sizes_shape = {{
+                                                 1,
+                                             },
+                                             {
+                                                 1,
+                                             }};
+    gert::StorageShape keys_shape = {{
+                                         2,
+                                     },
+                                     {
+                                         2,
+                                     }};
+    gert::StorageShape counters_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
+    gert::StorageShape filter_flags_shape = {{
+                                                 2,
+                                             },
+                                             {
+                                                 2,
+                                             }};
+    gert::StorageShape values_shape = {{
+                                           10,
+                                       },
+                                       {
+                                           10,
+                                       }};
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&table_handles_shape, &embedding_dims_shape, &bucket_sizes_shape,
-                                  &keys_shape, &counters_shape, &filter_flags_shape, &values_shape})
+                      .InputShapes({&table_handles_shape, &embedding_dims_shape, &bucket_sizes_shape, &keys_shape,
+                                    &counters_shape, &filter_flags_shape, &values_shape})
                       .OutputShapes({&table_handles_shape})
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)

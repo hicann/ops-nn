@@ -45,9 +45,8 @@ ge::graphStatus InitTilingData(gert::TilingContext* context, T*& tilingData)
 {
     tilingData = context->GetTilingData<T>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
-    OP_CHECK_IF(
-        memset_s(tilingData, sizeof(T), 0, sizeof(T)) != EOK,
-        OP_LOGE(context->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingData, sizeof(T), 0, sizeof(T)) != EOK,
+                OP_LOGE(context->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -162,7 +161,7 @@ ge::graphStatus IndexSimtTiling::GetParamsShapeInfo()
 
 ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
 {
-    const char *op_type = context_->GetNodeType();
+    const char* op_type = context_->GetNodeType();
     OP_CHECK_NULL_WITH_CONTEXT(context_, op_type);
     OP_LOGD("IndexSimtTiling", "tiling for %s", op_type);
     isIndexPut_ = std::string_view(op_type) == "IndexPutV2";
@@ -172,7 +171,7 @@ ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
         if (accumuMode != nullptr && *accumuMode) {
             accumulateMode_ = true;
             OP_LOGD("IndexPutV2", "accumulate mode enabled.");
-        } 
+        }
     }
 
     auto getResult = GetParamsShapeInfo();

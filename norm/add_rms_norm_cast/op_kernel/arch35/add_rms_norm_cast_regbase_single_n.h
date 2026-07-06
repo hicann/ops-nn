@@ -34,21 +34,17 @@ class KernelAddRmsNormCastRegBaseSingleN {
 #define MAGIC_CONDITION (GetBlockNum() > 0x7)
 
 public:
-    __aicore__ inline KernelAddRmsNormCastRegBaseSingleN(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormCastRegBaseSingleN(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRmsNormCastRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRmsNormCastRegbaseTilingData* tilingData)
     {
         tilingData_ = tilingData;
         InitBuffer(x1, x2, gamma, y1, y2, rstd, x, workspace);
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
+                                      GM_ADDR x, GM_ADDR workspace)
     {
         // Init GM
         uint64_t gmOffset = GetBlockIdx() * NUM_N_;
@@ -103,9 +99,8 @@ public:
         // 1. Calc xOut
         LocalTensor<float> rstdLocal = outQueueRstd_.AllocTensor<float>();
         LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
-        ReduceSumRstdMulti<T_X, true, true, true>(
-            rstdLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local, reduceLocal, 0, BASE_N_REDUCE_ALIGN_, POWER_SPLIT_, 1,
-            AVG_FACTOR_, EPSILON_);
+        ReduceSumRstdMulti<T_X, true, true, true>(rstdLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local, reduceLocal, 0,
+                                                  BASE_N_REDUCE_ALIGN_, POWER_SPLIT_, 1, AVG_FACTOR_, EPSILON_);
         inQueueX1X2_.FreeTensor(xLocal);
         outQueueX_.EnQue<T_X>(xOutLocal);
         outQueueRstd_.EnQue<float>(rstdLocal);
@@ -118,8 +113,8 @@ public:
         // 2. Calc y1/y2
         LocalTensor<float> y1Local = outQueueY1_.AllocTensor<float>();
         LocalTensor<T_X> y2Local = outQueueY2_.AllocTensor<T_X>();
-        AddRmsNormCast::ComputeYMulti<T_X, T_X>(
-            y1Local, y2Local, xOutTmpLocal, gammaLocal, rstdLocal, 0, BASE_N_REDUCE_ALIGN_, 1);
+        AddRmsNormCast::ComputeYMulti<T_X, T_X>(y1Local, y2Local, xOutTmpLocal, gammaLocal, rstdLocal, 0,
+                                                BASE_N_REDUCE_ALIGN_, 1);
         outQueueY1_.EnQue<float>(y1Local);
         outQueueY2_.EnQue<T_X>(y2Local);
         CopyOutXYMulti(y1Gm_, outQueueY1_, b32BlockStride_);
@@ -132,8 +127,8 @@ public:
         }
     }
 
-    __aicore__ inline void MergeOutScales(
-        LocalTensor<float>& tmpLocal, GlobalTensor<float>& wsGm, GlobalTensor<float>& outRstdGm)
+    __aicore__ inline void MergeOutScales(LocalTensor<float>& tmpLocal, GlobalTensor<float>& wsGm,
+                                          GlobalTensor<float>& outRstdGm)
     {
         if (GetBlockIdx() == 0) {
             constexpr int64_t MAGIC_PAGE_BYTES = 128;
@@ -162,8 +157,8 @@ public:
 
 private:
     template <typename T>
-    __aicore__ inline void CopyInXMultiMoveAlign(
-        uint64_t blockLen, uint64_t blockLenDtypeAlign, uint64_t dtypeBlockStride)
+    __aicore__ inline void CopyInXMultiMoveAlign(uint64_t blockLen, uint64_t blockLenDtypeAlign,
+                                                 uint64_t dtypeBlockStride)
     {
         LocalTensor<T> xLocal = inQueueX1X2_.AllocTensor<T>();
 
@@ -186,8 +181,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyOutXYMulti(
-        GlobalTensor<T>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint32_t srcStride)
+    __aicore__ inline void CopyOutXYMulti(GlobalTensor<T>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY,
+                                          uint32_t srcStride)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         RmsNorm::DataCopyImpl<T>(yGm[0], yLocal, 1, NUM_N_, srcStride, 0);

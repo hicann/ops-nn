@@ -23,14 +23,14 @@ using namespace AscendC;
 using namespace Common::OpKernel;
 
 template <typename T>
-__aicore__ void MinsAdapter(
-    const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, const T& scalarValue, const int32_t& uValue)
+__aicore__ void MinsAdapter(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, const T& scalarValue,
+                            const int32_t& uValue)
 {
     Mins(dstLocal, srcLocal, scalarValue, static_cast<uint32_t>(uValue));
 }
 
-extern "C" __global__ __aicore__ void foreach_minimum_scalar_list(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_minimum_scalar_list(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs,
+                                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

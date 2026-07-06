@@ -23,7 +23,6 @@ constexpr uint64_t TILING_KEY_NOSPLIT_HALF = 100001;
 // 1, splitD=0, splitH=0, splitW=0, splitKernel = 0, dtype=bfloat16
 constexpr uint64_t TILING_KEY_NOSPLIT_BF16 = 100002;
 
-
 namespace optiling {
 
 bool MaxPool3DWithArgmaxV2NoSplitTiling::IsCapable()
@@ -31,14 +30,14 @@ bool MaxPool3DWithArgmaxV2NoSplitTiling::IsCapable()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
-    } 
-    array<uint64_t, DHW_DIMS> tmpOutShape{
-        inputData.outShape[D_DIM], inputData.outShape[H_DIM], inputData.outShape[W_DIM]};
-    auto summaryMemory = CalcBufferSizes(
-        padInputData.padInputShape, tmpOutShape, padInputData.padInputShape[W_DIM] * padInputData.padInputShape[H_DIM],
-        bufSizes);
+    }
+    array<uint64_t, DHW_DIMS> tmpOutShape{inputData.outShape[D_DIM], inputData.outShape[H_DIM],
+                                          inputData.outShape[W_DIM]};
+    auto summaryMemory = CalcBufferSizes(padInputData.padInputShape, tmpOutShape,
+                                         padInputData.padInputShape[W_DIM] * padInputData.padInputShape[H_DIM],
+                                         bufSizes);
     return (summaryMemory < ubSizeNew);
 }
 

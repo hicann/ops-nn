@@ -18,22 +18,22 @@
 using namespace AscendC;
 
 constexpr int32_t BUFFER_NUM = 2;
-constexpr uint32_t BLOCK_SIZE = 512;  // 改为512字节对齐
+constexpr uint32_t BLOCK_SIZE = 512; // 改为512字节对齐
 
 template <typename T>
 class KernelSoftplusV2Grad {
-   public:
+public:
     __aicore__ inline KernelSoftplusV2Grad() {}
     __aicore__ inline void Init(TPipe* pipeIn, GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput, GM_ADDR workspace,
                                 const SoftplusV2GradTilingData& tilingData);
     __aicore__ inline void Process();
 
-   private:
+private:
     __aicore__ inline void CopyIn(int32_t progress);
     __aicore__ inline void CopyOut(int32_t progress);
     __aicore__ inline void Compute(int32_t progress);
 
-   private:
+private:
     TPipe* pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> gradOutputQueue;
     TQue<QuePosition::VECIN, BUFFER_NUM> selfQueue;
@@ -65,4 +65,4 @@ class KernelSoftplusV2Grad {
 extern "C" __global__ __aicore__ void softplus_v2_grad(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
                                                        GM_ADDR workspace, GM_ADDR tiling);
 
-#endif  // SOFTPLUS_BACKWARD_KERNEL_H
+#endif // SOFTPLUS_BACKWARD_KERNEL_H

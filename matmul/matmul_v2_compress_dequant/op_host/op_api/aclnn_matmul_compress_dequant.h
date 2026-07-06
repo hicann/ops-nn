@@ -38,4 +38,4 @@ ACLNN_API aclnnStatus aclnnMatmulCompressDequant(void* workspace, uint64_t works
 }
 #endif
 
-#endif  // OP_API_INC_MM_UNZIP_H_
+#endif // OP_API_INC_MM_UNZIP_H_

@@ -23,15 +23,14 @@
  * \brief
  */
 
- #include "logsigmoid_v2.h"
+#include "logsigmoid_v2.h"
 
- template <uint32_t schMode>
- __global__ __aicore__ void logsigmoid_v2(GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
- {
-     REGISTER_TILING_DEFAULT(LogsigmoidV2TilingData);
-     GET_TILING_DATA_WITH_STRUCT(LogsigmoidV2TilingData, tilingData, tiling);
-     NsLogsigmoidV2::LogsigmoidV2<DTYPE_X> op; // 算子kernel实例获取
-     op.Init(x,  z, &tilingData);      // 算子kernel实例初始化
-     op.Process();                       // 算子kernel实例执行
- }
- 
+template <uint32_t schMode>
+__global__ __aicore__ void logsigmoid_v2(GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
+{
+    REGISTER_TILING_DEFAULT(LogsigmoidV2TilingData);
+    GET_TILING_DATA_WITH_STRUCT(LogsigmoidV2TilingData, tilingData, tiling);
+    NsLogsigmoidV2::LogsigmoidV2<DTYPE_X> op; // 算子kernel实例获取
+    op.Init(x, z, &tilingData);               // 算子kernel实例初始化
+    op.Process();                             // 算子kernel实例执行
+}

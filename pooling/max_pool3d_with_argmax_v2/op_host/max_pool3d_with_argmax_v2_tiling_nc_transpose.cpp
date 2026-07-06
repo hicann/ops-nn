@@ -27,8 +27,7 @@
 #include "platform/platform_info.h"
 #include "op_host/tiling_util.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t FLOAT16_OR_BF16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
 static constexpr int64_t INT32_SIZE = 4;
@@ -68,7 +67,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::GetPlatformInfo()
     if (platformPtr == nullptr) {
         auto compileInfoPtr = static_cast<const MaxPool3DWithArgmaxV2CompileInfo*>(context_->GetCompileInfo());
         OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_, "compile info is null"),
-                        return ge::GRAPH_FAILED);
+                    return ge::GRAPH_FAILED);
         ubSize = compileInfoPtr->ubSize;
         coreNum = compileInfoPtr->coreNum;
     } else {
@@ -93,23 +92,24 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::ValidatePlatformAndInput
     auto inputX = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = inputX->GetStorageShape();
-    OP_CHECK_IF(inputShape.GetDimNum() != NCDHW_DIMS,
-                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                    std::to_string(inputShape.GetDimNum()).c_str(), std::to_string(NCDHW_DIMS).c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputShape.GetDimNum() != NCDHW_DIMS,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(),
+                                     std::to_string(NCDHW_DIMS).c_str()),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(inputShape.GetShapeSize() <= 0,
                 OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x",
-                    std::to_string(inputShape.GetShapeSize()).c_str(), "greater than 0"),
+                                              std::to_string(inputShape.GetShapeSize()).c_str(), "greater than 0"),
                 return ge::GRAPH_FAILED);
 
     auto inputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
-    OP_CHECK_IF(dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT,
-                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
-                    ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
-                    "BFLOAT16, FLOAT16 or FLOAT32"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                  "BFLOAT16, FLOAT16 or FLOAT32"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -140,12 +140,10 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::ParseShapeAndFormat()
     int d_dim = MP_MAX_3D_DIM_TWO;
     int h_dim = MP_MAX_3D_DIM_THREE;
     int w_dim = MP_MAX_3D_DIM_FOUR;
-    inputData.inputShape =
-        array<uint64_t, DHW_DIMS>{uint64_t(inputShape.GetDim(d_dim)), uint64_t(inputShape.GetDim(h_dim)),
-                                  uint64_t(inputShape.GetDim(w_dim))};
-    inputData.outShape =
-        array<uint64_t, DHW_DIMS>{uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)),
-                                  uint64_t(outShape.GetDim(w_dim))};
+    inputData.inputShape = array<uint64_t, DHW_DIMS>{
+        uint64_t(inputShape.GetDim(d_dim)), uint64_t(inputShape.GetDim(h_dim)), uint64_t(inputShape.GetDim(w_dim))};
+    inputData.outShape = array<uint64_t, DHW_DIMS>{uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)),
+                                                   uint64_t(outShape.GetDim(w_dim))};
     return ge::GRAPH_SUCCESS;
 }
 
@@ -183,25 +181,24 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::ParseKernelStrideAttrs(c
     int32_t wValue = 0;
     const gert::TypedContinuousVector<int64_t>* kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
-    OP_CHECK_IF(
-        kernelSize->GetSize() < 3,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ksize",
-            std::to_string(kernelSize->GetSize()).c_str(),
-            "ksize list size must be greater than or equal to 3"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(kernelSize->GetSize() < 3,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ksize",
+                                                      std::to_string(kernelSize->GetSize()).c_str(),
+                                                      "ksize list size must be greater than or equal to 3"),
+                return ge::GRAPH_FAILED);
     const int64_t* kData = kernelSize->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, kData);
     dValue = *kData;
     hValue = *(kData + 1);
     wValue = *(kData + MP_MAX_3D_DIM_TWO);
     inputData.kernelSize = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
-    OP_CHECK_IF(
-        dValue <= 0 || hValue <= 0 || wValue <= 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ksize",
-            ("{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " +
-             std::to_string(wValue) + "}").c_str(),
-            "all values of ksize must be greater than or equal to 1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dValue <= 0 || hValue <= 0 || wValue <= 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "ksize",
+                    ("{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " + std::to_string(wValue) + "}")
+                        .c_str(),
+                    "all values of ksize must be greater than or equal to 1"),
+                return ge::GRAPH_FAILED);
 
     const gert::TypedContinuousVector<int64_t>* stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, stride);
@@ -209,13 +206,13 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::ParseKernelStrideAttrs(c
     hValue = *(stride->GetData() + 1);
     wValue = *(stride->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.stride = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
-    OP_CHECK_IF(
-        dValue <= 0 || hValue <= 0 || wValue <= 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "strides",
-            ("{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " +
-             std::to_string(wValue) + "}").c_str(),
-            "all values of strides must be greater than or equal to 1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dValue <= 0 || hValue <= 0 || wValue <= 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "strides",
+                    ("{" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " + std::to_string(wValue) + "}")
+                        .c_str(),
+                    "all values of strides must be greater than or equal to 1"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -255,7 +252,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::ParseCeilModeAndDtype(co
             break;
         case MP_MAX_3D_TYPE_INT32:
             inputData.indexDtype = ge::DataType::DT_INT32;
-            break;     
+            break;
         default:
             inputData.indexDtype = ge::DataType::DT_INT32;
             break;
@@ -284,7 +281,7 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::InitializationVars()
     baseData_.wInput = inputData.inputShape[W_DIM];
     baseData_.padFront = inputData.pad[D_DIM];
     baseData_.padTop = inputData.pad[H_DIM];
-    baseData_.padLeft = inputData.pad[W_DIM];   
+    baseData_.padLeft = inputData.pad[W_DIM];
     baseData_.dStride = inputData.stride[D_DIM];
     baseData_.hStride = inputData.stride[H_DIM];
     baseData_.wStride = inputData.stride[W_DIM];
@@ -364,10 +361,7 @@ bool MaxPool3DWithArgmaxV2NcTransposeTiling::IsCapable()
     return true;
 }
 
-uint64_t MaxPool3DWithArgmaxV2NcTransposeTiling::GetTilingKey() const
-{
-    return NC_TRANSPOSE_NO_PAD_KEY;
-}
+uint64_t MaxPool3DWithArgmaxV2NcTransposeTiling::GetTilingKey() const { return NC_TRANSPOSE_NO_PAD_KEY; }
 
 void MaxPool3DWithArgmaxV2NcTransposeTiling::DoBufferCalculate()
 {
@@ -378,17 +372,16 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::DoBufferCalculate()
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(splitData_.wInputInner, baseData_.oneBlockNumT1);
     int64_t ncInnerAligned = Ops::Base::CeilAlign(splitData_.ncInner, static_cast<int64_t>(TRANS_ALIGN));
 
-    splitData_.inputBufferSize =
-        splitData_.ncInner * splitData_.dInputInner * splitData_.hInputInner * wInputInnerAligned * baseData_.inputBytes;
+    splitData_.inputBufferSize = splitData_.ncInner * splitData_.dInputInner * splitData_.hInputInner *
+                                 wInputInnerAligned * baseData_.inputBytes;
     int64_t outputSpatialSize = splitData_.dOutputInner * splitData_.hOutputInner * splitData_.wOutputInner;
     int64_t outputSpatialAligned = Ops::Base::CeilAlign(outputSpatialSize, static_cast<int64_t>(TRANS_ALIGN));
-    int64_t inputTransSize =
-        splitData_.dInputInner * splitData_.hInputInner * wInputInnerAligned * ncInnerAligned * baseData_.inputBytes;
+    int64_t inputTransSize = splitData_.dInputInner * splitData_.hInputInner * wInputInnerAligned * ncInnerAligned *
+                             baseData_.inputBytes;
     int64_t outputTransSize = ncInnerAligned * outputSpatialAligned * (baseData_.inputBytes + baseData_.indexBytes);
     splitData_.transBufferSize = std::max(inputTransSize, outputTransSize);
     splitData_.maxValueBufferSize = outputSpatialAligned * ncInnerAligned * baseData_.inputBytes;
-    splitData_.argmaxBufferSize =
-        outputSpatialAligned * ncInnerAligned * std::max(INT32_SIZE, baseData_.indexBytes);
+    splitData_.argmaxBufferSize = outputSpatialAligned * ncInnerAligned * std::max(INT32_SIZE, baseData_.indexBytes);
     int64_t kernelVolume = baseData_.dKernel * baseData_.hKernel * baseData_.wKernel;
     // delta 表：kernel 内只取 kernelVolume * vlIDX_ 个 IDX_T（fp16→int16, float→int32）
     splitData_.deltaIndexBufferSize = kernelVolume * baseData_.vlNumT1 * baseData_.inputBytes;
@@ -400,9 +393,8 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::DoBufferCalculate()
         splitData_.castBufferSize = 0;
     }
 
-    int64_t totalSize = splitData_.inputBufferSize + splitData_.transBufferSize +
-                        splitData_.maxValueBufferSize + splitData_.argmaxBufferSize +
-                        splitData_.deltaIndexBufferSize + splitData_.castBufferSize;
+    int64_t totalSize = splitData_.inputBufferSize + splitData_.transBufferSize + splitData_.maxValueBufferSize +
+                        splitData_.argmaxBufferSize + splitData_.deltaIndexBufferSize + splitData_.castBufferSize;
     splitData_.totalBufferSize = totalSize;
 }
 
@@ -426,7 +418,7 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::BinarySearch(int64_t start, int64_t
 {
     int64_t bestSplit = 1;
     int64_t left = start;
-    int64_t right = end;  
+    int64_t right = end;
 
     while (left <= right) {
         int64_t midValue = left + (right - left) / DOUBLE;
@@ -542,13 +534,14 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::DoUBTiling()
 {
     SearchBestTiling();
     // 除0校验：Inner 值必须 > 0
-    OP_CHECK_IF(splitData_.wOutputInner <= 0 || splitData_.hOutputInner <= 0 ||
-                splitData_.dOutputInner <= 0 || splitData_.ncInner <= 0,
-        CUBE_INNER_ERR_REPORT(context_, "NcTranspose: invalid inner values after SearchBestTiling, "
-            "wInner=%ld, hInner=%ld, dInner=%ld, ncInner=%ld",
-            splitData_.wOutputInner, splitData_.hOutputInner,
-            splitData_.dOutputInner, splitData_.ncInner),
-        return);
+    OP_CHECK_IF(splitData_.wOutputInner <= 0 || splitData_.hOutputInner <= 0 || splitData_.dOutputInner <= 0 ||
+                    splitData_.ncInner <= 0,
+                CUBE_INNER_ERR_REPORT(context_,
+                                      "NcTranspose: invalid inner values after SearchBestTiling, "
+                                      "wInner=%ld, hInner=%ld, dInner=%ld, ncInner=%ld",
+                                      splitData_.wOutputInner, splitData_.hOutputInner, splitData_.dOutputInner,
+                                      splitData_.ncInner),
+                return );
     DoBufferCalculate();
 
     splitData_.wOutputOuter = Ops::Base::CeilDiv(baseData_.wOutput, splitData_.wOutputInner);
@@ -570,14 +563,12 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::DoUBTiling()
 
 void MaxPool3DWithArgmaxV2NcTransposeTiling::DoBlockTiling()
 {
-    splitData_.totalBaseBlockNum =
-        splitData_.ncOuter * splitData_.dOutputOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
-    splitData_.normalCoreProcessNum =
-        Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
-    splitData_.usedCoreNum =
-        Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
-    splitData_.tailCoreProcessNum =
-        splitData_.totalBaseBlockNum - splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+    splitData_.totalBaseBlockNum = splitData_.ncOuter * splitData_.dOutputOuter * splitData_.hOutputOuter *
+                                   splitData_.wOutputOuter;
+    splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
+    splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
+    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
+                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
 }
 
 void MaxPool3DWithArgmaxV2NcTransposeTiling::SetTilingData()
@@ -593,7 +584,7 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::SetTilingData()
     tilingData_->hOutputOuter = splitData_.hOutputOuter;
     tilingData_->wOutputInner = splitData_.wOutputInner;
     tilingData_->wOutputTail = splitData_.wOutputTail;
-    tilingData_->wOutputOuter = splitData_.wOutputOuter;    
+    tilingData_->wOutputOuter = splitData_.wOutputOuter;
     tilingData_->dKernel = baseData_.dKernel;
     tilingData_->hKernel = baseData_.hKernel;
     tilingData_->wKernel = baseData_.wKernel;
@@ -605,10 +596,10 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::SetTilingData()
     tilingData_->wOutput = baseData_.wOutput;
     tilingData_->ncInner = splitData_.ncInner;
     tilingData_->ncTail = splitData_.ncTail;
-    tilingData_->ncOuter = splitData_.ncOuter; 
+    tilingData_->ncOuter = splitData_.ncOuter;
     tilingData_->padFront = baseData_.padFront;
     tilingData_->padTop = baseData_.padTop;
-    tilingData_->padLeft = baseData_.padLeft;     
+    tilingData_->padLeft = baseData_.padLeft;
     tilingData_->normalCoreProcessNum = splitData_.normalCoreProcessNum;
     tilingData_->tailCoreProcessNum = splitData_.tailCoreProcessNum;
     tilingData_->usedCoreNum = splitData_.usedCoreNum;
@@ -621,12 +612,12 @@ void MaxPool3DWithArgmaxV2NcTransposeTiling::SetTilingData()
     tilingData_->isPad = baseData_.isPad;
 
     // 传递给 kernel 的除数必须为正
-    OP_CHECK_IF(splitData_.dOutputOuter <= 0 || splitData_.hOutputOuter <= 0 ||
-                splitData_.wOutputOuter <= 0,
-        CUBE_INNER_ERR_REPORT(context_, "NcTranspose: outer values must be positive, "
-            "dOuter=%ld, hOuter=%ld, wOuter=%ld",
-            splitData_.dOutputOuter, splitData_.hOutputOuter, splitData_.wOutputOuter),
-        return);
+    OP_CHECK_IF(splitData_.dOutputOuter <= 0 || splitData_.hOutputOuter <= 0 || splitData_.wOutputOuter <= 0,
+                CUBE_INNER_ERR_REPORT(context_,
+                                      "NcTranspose: outer values must be positive, "
+                                      "dOuter=%ld, hOuter=%ld, wOuter=%ld",
+                                      splitData_.dOutputOuter, splitData_.hOutputOuter, splitData_.wOutputOuter),
+                return );
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::DoOpTiling()
@@ -639,15 +630,12 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::DoOpTiling()
             "dOut[%ld/%ld/%ld], hOut[%ld/%ld/%ld], wOut[%ld/%ld/%ld], "
             "usedCore=%ld, normalProc=%ld, tailProc=%ld, isPad=%ld, "
             "buf[input=%ld trans=%ld max=%ld argmax=%ld index=%ld total=%ld] availableUb=%ld",
-            splitData_.ncInner, splitData_.ncTail, splitData_.ncOuter,
-            splitData_.dOutputInner, splitData_.dOutputTail, splitData_.dOutputOuter,
-            splitData_.hOutputInner, splitData_.hOutputTail, splitData_.hOutputOuter,
-            splitData_.wOutputInner, splitData_.wOutputTail, splitData_.wOutputOuter,
-            splitData_.usedCoreNum, splitData_.normalCoreProcessNum, splitData_.tailCoreProcessNum,
-            baseData_.isPad,
-            splitData_.inputBufferSize, splitData_.transBufferSize, splitData_.maxValueBufferSize,
-            splitData_.argmaxBufferSize, splitData_.deltaIndexBufferSize, splitData_.totalBufferSize,
-            baseData_.availableUb);
+            splitData_.ncInner, splitData_.ncTail, splitData_.ncOuter, splitData_.dOutputInner, splitData_.dOutputTail,
+            splitData_.dOutputOuter, splitData_.hOutputInner, splitData_.hOutputTail, splitData_.hOutputOuter,
+            splitData_.wOutputInner, splitData_.wOutputTail, splitData_.wOutputOuter, splitData_.usedCoreNum,
+            splitData_.normalCoreProcessNum, splitData_.tailCoreProcessNum, baseData_.isPad, splitData_.inputBufferSize,
+            splitData_.transBufferSize, splitData_.maxValueBufferSize, splitData_.argmaxBufferSize,
+            splitData_.deltaIndexBufferSize, splitData_.totalBufferSize, baseData_.availableUb);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -659,4 +647,4 @@ ge::graphStatus MaxPool3DWithArgmaxV2NcTransposeTiling::PostTiling()
 
 REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2NcTransposeTiling, 1);
 
-}  // namespace optiling
+} // namespace optiling

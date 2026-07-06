@@ -30,16 +30,16 @@ struct InstanceNormARFullReduceTilingData {
 };
 
 struct InstanceNormARWelfordTilingData {
-    uint64_t a1;            // 在AR Pattern下输入tensor的N轴
-    uint64_t a0;            // 在AR Pattern下输入tensor的C轴
-    uint64_t r;             // 输入tensor的列，即reduce的轴
-    uint64_t blockNum;      // 实际使用的core数量
+    uint64_t a1;       // 在AR Pattern下输入tensor的N轴
+    uint64_t a0;       // 在AR Pattern下输入tensor的C轴
+    uint64_t r;        // 输入tensor的列，即reduce的轴
+    uint64_t blockNum; // 实际使用的core数量
     uint64_t totalTiles;
     uint64_t tilesPerCore;
     uint64_t a0Outer;
     uint64_t a0Inner;
     uint64_t a0Tail;
-    uint64_t welfordTileLength;         // tile块的元素个数
+    uint64_t welfordTileLength;  // tile块的元素个数
     uint64_t welfordTempSize;    // welford临时buffer的大小
     uint64_t welfordUpdateTimes; // welford update的次数
     uint64_t welfordUpdateTail;  // welford update的尾数
@@ -73,8 +73,8 @@ struct InstanceNormARAWelfordTilingData {
     int64_t tilesPerCore;
     int64_t a0Outer;
     uint64_t tileA0Len;
-    uint64_t tileA0Tail; 
-    uint64_t welfordrFactor;         // welford的迭代段的长度
+    uint64_t tileA0Tail;
+    uint64_t welfordrFactor; // welford的迭代段的长度
     int64_t binaryAddQuotient;
     int64_t binaryAddK;
     int64_t binaryAddLast;

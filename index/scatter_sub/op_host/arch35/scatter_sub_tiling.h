@@ -23,12 +23,12 @@
 
 namespace optiling {
 struct ScatterSubCompileInfo {
-  int64_t core_num{1};
-  int64_t ub_size{1};
-  int64_t var_size{1};
-  int64_t indices_size{1};
-  int64_t support_atomic{1};
+    int64_t core_num{1};
+    int64_t ub_size{1};
+    int64_t var_size{1};
+    int64_t indices_size{1};
+    int64_t support_atomic{1};
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_SUB_H_
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_SCATTER_SUB_H_

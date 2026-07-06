@@ -22,8 +22,7 @@
 
 namespace optiling {
 
-enum class GeGluGradV2TilingKey : uint64_t
-{
+enum class GeGluGradV2TilingKey : uint64_t {
     TILING_KEY_TANH_101 = 101,
     TILING_KEY_TANH_102,
     TILING_KEY_TANH_103,
@@ -66,14 +65,7 @@ static const std::map<ge::DataType, int32_t> DTYPE_BUF_CNT_MAP_ERF = {
     {ge::DT_BF16, ERF_BUF_CNT_BFP16}, {ge::DT_FLOAT16, ERF_BUF_CNT_FP16}, {ge::DT_FLOAT, ERF_BUF_CNT_FP32}};
 
 namespace platform_ascendc {
-enum class SocVersion
-{
-    ASCEND910 = 0,
-    ASCEND910B,
-    ASCEND310P,
-    ASCEND310B,
-    RESERVED_VERSION = 99999
-};
+enum class SocVersion { ASCEND910 = 0, ASCEND910B, ASCEND310P, ASCEND310B, RESERVED_VERSION = 99999 };
 }
 
 struct GeGluGradV2CompileInfo {
@@ -82,12 +74,10 @@ struct GeGluGradV2CompileInfo {
     platform_ascendc::SocVersion curSocVersion = platform_ascendc::SocVersion::ASCEND910B;
 };
 
-class GeGluGradV2Tiling
-{
+class GeGluGradV2Tiling {
 public:
-    GeGluGradV2Tiling(
-        const std::vector<std::vector<int64_t>> shapesInfo, const std::vector<int64_t> attsInfo,
-        ge::DataType dyDtypeIn = ge::DT_FLOAT)
+    GeGluGradV2Tiling(const std::vector<std::vector<int64_t>> shapesInfo, const std::vector<int64_t> attsInfo,
+                      ge::DataType dyDtypeIn = ge::DT_FLOAT)
         : dimAttr(attsInfo[0]), approximateAttr(attsInfo[1])
     {
         dyDtype = dyDtypeIn;
@@ -115,15 +105,9 @@ public:
     ge::graphStatus RunTiling4GeGluGradV2();
     void FillTilingData(uint8_t* tilingPtr);
 
-    int32_t GetNeedCoreNum()
-    {
-        return needCoreNum;
-    };
+    int32_t GetNeedCoreNum() { return needCoreNum; };
 
-    int32_t GetTilingKey()
-    {
-        return static_cast<int32_t>(tilingKey);
-    };
+    int32_t GetTilingKey() { return static_cast<int32_t>(tilingKey); };
 
 private:
     ge::graphStatus Init();
@@ -204,20 +188,18 @@ void GeGluGradV2Tiling::FillTilingData(uint8_t* tilingPtr)
     tilingData.tailUbLoopNum = tailUbLoopNum;
     tilingData.groupNum = groupNum;
     memcpy(tilingPtr, &tilingData, sizeof(GeGluGradV2TilingData));
-    printf(
-        "Tiling data is maxProcCount:%ld, valueN:%ld, valueM:%ld, needCoreNum:%d, loopNumPerCore:%ld, "
-        "tailCoreIndex:%ld, tailUbLoopNum:%ld, groupNum:%ld, tilingKey:%lu.\n",
-        maxProcCount, valueN, valueM, needCoreNum, loopNumPerCore, tailCoreIndex, tailUbLoopNum, groupNum,
-        static_cast<uint64_t>(tilingKey));
+    printf("Tiling data is maxProcCount:%ld, valueN:%ld, valueM:%ld, needCoreNum:%d, loopNumPerCore:%ld, "
+           "tailCoreIndex:%ld, tailUbLoopNum:%ld, groupNum:%ld, tilingKey:%lu.\n",
+           maxProcCount, valueN, valueM, needCoreNum, loopNumPerCore, tailCoreIndex, tailUbLoopNum, groupNum,
+           static_cast<uint64_t>(tilingKey));
 }
 
 ge::graphStatus GeGluGradV2Tiling::Init()
 {
     size_t xDimNum = xShape.GetDimNum();
     dimAttr = dimAttr < 0 ? xDimNum + dimAttr : dimAttr;
-    printf(
-        "Attr info: dimAttr:%ld, approximateAttr:%ld, activateLeftAttr:%s, dyDtype: %d.\n", dimAttr, approximateAttr,
-        activateLeftAttr ? "true" : "false", static_cast<int32_t>(dyDtype));
+    printf("Attr info: dimAttr:%ld, approximateAttr:%ld, activateLeftAttr:%s, dyDtype: %d.\n", dimAttr, approximateAttr,
+           activateLeftAttr ? "true" : "false", static_cast<int32_t>(dyDtype));
 
     return ge::GRAPH_SUCCESS;
 }

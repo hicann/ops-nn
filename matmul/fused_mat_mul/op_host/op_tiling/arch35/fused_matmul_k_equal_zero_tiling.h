@@ -23,7 +23,7 @@ using batch_matmul_v3_advanced::BatchMatMulV3KEqZeroTiling;
 class FusedMatMulKEqZeroTiling : public BatchMatMulV3KEqZeroTiling {
 public:
     FusedMatMulKEqZeroTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3KEqZeroTiling(context, cfg) {};
+        : BatchMatMulV3KEqZeroTiling(context, cfg){};
 
     ~FusedMatMulKEqZeroTiling() override = default;
 

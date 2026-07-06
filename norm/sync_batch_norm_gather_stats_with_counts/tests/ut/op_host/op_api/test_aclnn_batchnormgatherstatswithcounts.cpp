@@ -21,18 +21,11 @@
 
 using namespace std;
 
-class l2BatchNormGatherStatsWithCountsTest : public testing::Test
-{
+class l2BatchNormGatherStatsWithCountsTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2BatchNormGatherStatsWithCountsTest SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2BatchNormGatherStatsWithCountsTest SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2BatchNormGatherStatsWithCountsTest TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2BatchNormGatherStatsWithCountsTest TearDown" << endl; }
 };
 
 TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_counts_float32_3d)
@@ -49,10 +42,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -75,10 +67,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -100,10 +91,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -125,10 +115,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -151,10 +140,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -175,10 +163,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -199,10 +186,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -220,10 +206,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, nullptr, nullptr, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, nullptr, nullptr, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -246,10 +231,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -272,10 +256,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -296,10 +279,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -320,10 +302,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -344,10 +325,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -368,10 +348,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -392,10 +371,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -416,10 +394,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -440,10 +417,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -464,10 +440,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -488,10 +463,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -512,10 +486,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -535,10 +508,9 @@ TEST_F(l2BatchNormGatherStatsWithCountsTest, l2_batch_norm_gather_stats_with_cou
 
     auto meanAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto invstdAllDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnBatchNormGatherStatsWithCounts,
-        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
-        OUTPUT(meanAllDesc, invstdAllDesc));
+    auto ut = OP_API_UT(aclnnBatchNormGatherStatsWithCounts,
+                        INPUT(selfDesc, meanDesc, invstdDesc, runningMeanDesc, runningVarDesc, 1e-2, 1e-4, countsDesc),
+                        OUTPUT(meanAllDesc, invstdAllDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

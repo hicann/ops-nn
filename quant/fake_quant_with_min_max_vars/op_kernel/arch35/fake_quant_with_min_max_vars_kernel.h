@@ -54,11 +54,10 @@ class FakeQuantWithMinMaxVars {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline FakeQuantWithMinMaxVars() {};
+    __aicore__ inline FakeQuantWithMinMaxVars(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR y,
-        const FakeQuantWithMinMaxVarsTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR y,
+                                const FakeQuantWithMinMaxVarsTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -69,19 +68,19 @@ private:
     __aicore__ inline void Compute(int64_t currentNum);
 
     // Scalar round helper for nudge computation (one call per Process, not per-element)
-    __aicore__ static inline float RoundHalfAwayFromZero(float x) {
-        return (x >= 0.0f)
-            ? static_cast<float>(static_cast<int64_t>(x + 0.5f))
-            : static_cast<float>(static_cast<int64_t>(x - 0.5f));
+    __aicore__ static inline float RoundHalfAwayFromZero(float x)
+    {
+        return (x >= 0.0f) ? static_cast<float>(static_cast<int64_t>(x + 0.5f)) :
+                             static_cast<float>(static_cast<int64_t>(x - 0.5f));
     }
 
 private:
     TPipe pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueScale;   // min scalar (32B queue)
-    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueOffset;  // max scalar (32B queue)
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueScale;  // min scalar (32B queue)
+    TQue<QuePosition::VECIN, BUFFER_NUM> inQueueOffset; // max scalar (32B queue)
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY;
-    TBuf<QuePosition::VECOUT> bufTempI32;  // temp for int32 round intermediate
+    TBuf<QuePosition::VECOUT> bufTempI32; // temp for int32 round intermediate
 
     // VF MicroAPI CastTraits
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_INT32_FLOOR = {
@@ -112,9 +111,8 @@ private:
 };
 
 template <int BUFFER_MODE>
-__aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Init(
-    GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR y,
-    const FakeQuantWithMinMaxVarsTilingData* tilingData)
+__aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR y,
+                                                                  const FakeQuantWithMinMaxVarsTilingData* tilingData)
 {
     ubLength_ = static_cast<int64_t>(tilingData->baseLen);
 
@@ -144,8 +142,8 @@ __aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Init(
 
     // Init pipe buffers: reference PT template (static-quant-kernel.md §三)
     pipe.InitBuffer(inQueueX, BUFFER_NUM, ubLength_ * sizeof(float));
-    pipe.InitBuffer(inQueueScale, BUFFER_NUM, 32);   // PT: 32B scalar queue
-    pipe.InitBuffer(inQueueOffset, BUFFER_NUM, 32);  // PT: 32B scalar queue
+    pipe.InitBuffer(inQueueScale, BUFFER_NUM, 32);  // PT: 32B scalar queue
+    pipe.InitBuffer(inQueueOffset, BUFFER_NUM, 32); // PT: 32B scalar queue
     pipe.InitBuffer(outQueueY, BUFFER_NUM, ubLength_ * sizeof(float));
     pipe.InitBuffer(bufTempI32, ubLength_ * sizeof(int32_t));
 }
@@ -216,7 +214,8 @@ __aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Compute(int64_t cur
 
         uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             AscendC::MicroAPI::RegTensor<float> vregX, vregY;
             AscendC::MicroAPI::RegTensor<float> vregNmin, vregNmax, vregScale, vregInvScale, vregHalf;
             AscendC::MicroAPI::RegTensor<int32_t> vregI32;
@@ -235,30 +234,22 @@ __aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Compute(int64_t cur
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 mask = AscendC::MicroAPI::UpdateMask<float>(count);
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vregX, xLocalAddr + i * VL);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregX, xLocalAddr + i * VL);
 
-                AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::GE>(
-                    vmaskCmp, vregX, vregNmin, mask);
-                AscendC::MicroAPI::Select<float>(
-                    vregX, vregX, vregNmin, vmaskCmp);
-                AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::LE>(
-                    vmaskCmp, vregX, vregNmax, mask);
-                AscendC::MicroAPI::Select<float>(
-                    vregX, vregX, vregNmax, vmaskCmp);
+                AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::GE>(vmaskCmp, vregX, vregNmin, mask);
+                AscendC::MicroAPI::Select<float>(vregX, vregX, vregNmin, vmaskCmp);
+                AscendC::MicroAPI::Compare<float, AscendC::CMPMODE::LE>(vmaskCmp, vregX, vregNmax, mask);
+                AscendC::MicroAPI::Select<float>(vregX, vregX, vregNmax, vmaskCmp);
 
                 // y = floor(clamp(x, nmin, nmax) * invScale + 0.5) * scale
                 AscendC::MicroAPI::Mul(vregX, vregX, vregInvScale, mask);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    vregX, vregX, vregHalf, mask);
-                AscendC::MicroAPI::Cast<int32_t, float, CAST_TRAIT_FP32_TO_INT32_FLOOR>(
-                    vregI32, vregX, mask);
-                AscendC::MicroAPI::Cast<float, int32_t, CAST_TRAIT_INT32_TO_FP32>(
-                    vregY, vregI32, mask);
+                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vregX, vregX, vregHalf, mask);
+                AscendC::MicroAPI::Cast<int32_t, float, CAST_TRAIT_FP32_TO_INT32_FLOOR>(vregI32, vregX, mask);
+                AscendC::MicroAPI::Cast<float, int32_t, CAST_TRAIT_INT32_TO_FP32>(vregY, vregI32, mask);
                 AscendC::MicroAPI::Mul(vregY, vregY, vregScale, mask);
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM>(
-                    yLocalAddr + i * VL, vregY, mask);
+                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM>(yLocalAddr + i * VL, vregY,
+                                                                                            mask);
             }
         }
     } else {
@@ -296,8 +287,10 @@ __aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Process()
         float invNudgeScale = static_cast<float>(quantMax - quantMin) / (maxVal - minVal);
         float zpFloat = static_cast<float>(quantMin) - minVal / nudgeScale;
         float nzp = RoundHalfAwayFromZero(zpFloat);
-        if (nzp < static_cast<float>(quantMin)) nzp = static_cast<float>(quantMin);
-        if (nzp > static_cast<float>(quantMax)) nzp = static_cast<float>(quantMax);
+        if (nzp < static_cast<float>(quantMin))
+            nzp = static_cast<float>(quantMin);
+        if (nzp > static_cast<float>(quantMax))
+            nzp = static_cast<float>(quantMax);
 
         scale_ = nudgeScale;
         invScale_ = invNudgeScale;
@@ -311,13 +304,12 @@ __aicore__ inline void FakeQuantWithMinMaxVars<BUFFER_MODE>::Process()
     // Column tile loop
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {
-        int64_t currentNum = (i == (loopCount - 1)) ?
-            (blockLength_ - ubLength_ * i) : ubLength_;
+        int64_t currentNum = (i == (loopCount - 1)) ? (blockLength_ - ubLength_ * i) : ubLength_;
         CopyInX(i, currentNum);
         Compute(currentNum);
         CopyOutY(i, currentNum);
     }
 }
 
-}  // namespace NsFakeQuantWithMinMaxVars
-#endif  // FAKE_QUANT_WITH_MIN_MAX_VARS_KERNEL_H
+} // namespace NsFakeQuantWithMinMaxVars
+#endif // FAKE_QUANT_WITH_MIN_MAX_VARS_KERNEL_H

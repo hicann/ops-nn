@@ -59,7 +59,7 @@ static bool CheckSupportV1(const aclTensor* self, const aclTensor* mask, const a
 
     if (maskShape.GetDim(maskDimNum - 1) != selfShape.GetDim(selfDimNum - 1) &&
         !(maskShape.GetDim(maskDimNum - 1) == 1 &&
-        selfShape.GetDim(selfDimNum - 1) == sourceShape.GetDim(sourceDimNum - 1))) {
+          selfShape.GetDim(selfDimNum - 1) == sourceShape.GetDim(sourceDimNum - 1))) {
         return false;
     }
     return true;
@@ -75,7 +75,7 @@ static bool CheckShapeLimit(const aclTensor* self, const aclTensor* mask, const 
 static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask, const aclTensor* source)
 {
     // 只需要判断dtype
-    auto supportList = Ops::NN::AclnnUtil::IsRegbase() ?     // 判断芯片架构
+    auto supportList = Ops::NN::AclnnUtil::IsRegbase() ? // 判断芯片架构
                            AICORE_DTYPE_SUPPORT_LIST_REGBASE :
                            AICORE_DTYPE_SUPPORT_LIST;
     bool result = CheckType(self->GetDataType(), supportList);
@@ -85,36 +85,34 @@ static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask, const 
 }
 
 // AICORE算子kernel
-static const aclTensor* MaskedScatterAiCore(
-    const aclTensor* self, const aclTensor* mask, const aclTensor* source, aclTensor* output, aclOpExecutor* executor)
+static const aclTensor* MaskedScatterAiCore(const aclTensor* self, const aclTensor* mask, const aclTensor* source,
+                                            aclTensor* output, aclOpExecutor* executor)
 {
     L0_DFX(MaskedScatterAiCore, self, mask, source, output);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MaskedScatter, OP_INPUT(self, mask, source), OP_OUTPUT(output));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return output;
 }
 
 // AICPU算子kernel
-static const aclTensor* MaskedScatterAiCpu(
-    const aclTensor* self, const aclTensor* mask, const aclTensor* source, aclTensor* maskedScatterOut,
-    aclOpExecutor* executor)
+static const aclTensor* MaskedScatterAiCpu(const aclTensor* self, const aclTensor* mask, const aclTensor* source,
+                                           aclTensor* maskedScatterOut, aclOpExecutor* executor)
 {
     L0_DFX(MaskedScatterAiCpu, self, mask, source, maskedScatterOut);
 
     static internal::AicpuTaskSpace space("MaskedScatter");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        MaskedScatter, OP_ATTR_NAMES(), OP_INPUT(self, mask, source), OP_OUTPUT(maskedScatterOut));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(MaskedScatter, OP_ATTR_NAMES(), OP_INPUT(self, mask, source),
+                                          OP_OUTPUT(maskedScatterOut));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
     return maskedScatterOut;
 }
 
-const aclTensor* MaskedScatter(
-    const aclTensor* self, const aclTensor* mask, const aclTensor* source, aclOpExecutor* executor)
+const aclTensor* MaskedScatter(const aclTensor* self, const aclTensor* mask, const aclTensor* source,
+                               aclOpExecutor* executor)
 {
     L0_DFX(MaskedScatter, self, mask, source);
     auto maskedScatterOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());

@@ -26,49 +26,46 @@ const int32_t BLOCK_UB = platform::GetUbBlockSize(); // 一个block的ub大小
 const int32_t ONE_FP32 = BLOCK_UB / FP32_DTYPE;
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
-class CrossEntropyLossFullLoad
-{
+class CrossEntropyLossFullLoad {
 public:
     __aicore__ inline CrossEntropyLossFullLoad(){};
-    __aicore__ inline void Init(
-        GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR zloss,
-        GM_ADDR lseForZloss, GM_ADDR workspace, const CrossEntropyLossRegBaseTilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb,
+                                GM_ADDR zloss, GM_ADDR lseForZloss, GM_ADDR workspace,
+                                const CrossEntropyLossRegBaseTilingData* tilingData, TPipe* pipe);
     __aicore__ inline void Process();
 
 protected:
-    __aicore__ inline void ProcessEachCore(
-        int64_t nLoopTimes, int64_t onceNSize, int64_t nTailNum, int64_t nCoreOffset);
-    __aicore__ inline void ComputeEachCoreOnce(
-        int32_t nLoopTimes, int32_t onceNSize, int32_t nTailNum, int64_t nUbOffset);
-    __aicore__ inline void VfComputeNone(
-        int32_t nTailNum, LocalTensor<float>& lossOutLocal, LocalTensor<float>& smoothLossLocal);
-    __aicore__ inline void VfComputeSmoothLoss(
-        int32_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float>& tempNCLocal,
-        LocalTensor<float>& weightLocal, LocalTensor<float>& subUbLocal, LocalTensor<float>& sumUbLocal);
-    __aicore__ inline void VfComputeLossOut(
-        int32_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float>& lossOutLocal,
-        LocalTensor<float>& weightYnLocal);
-    __aicore__ inline void VfComputeLogSub(
-        int64_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float> sumUbLocal, LocalTensor<float> subUbLocal,
-        LocalTensor<float> tempLocal);
-    __aicore__ inline void VfSubExp(
-        int64_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float> maxUbLocal, LocalTensor<T1> inputUbLocal,
-        LocalTensor<float> subUbLocal, LocalTensor<float> tempLocal);
-    __aicore__ inline void VfReduceMax(
-        int64_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float> maxUbLocal, LocalTensor<T1> inputUbLocal);
+    __aicore__ inline void ProcessEachCore(int64_t nLoopTimes, int64_t onceNSize, int64_t nTailNum,
+                                           int64_t nCoreOffset);
+    __aicore__ inline void ComputeEachCoreOnce(int32_t nLoopTimes, int32_t onceNSize, int32_t nTailNum,
+                                               int64_t nUbOffset);
+    __aicore__ inline void VfComputeNone(int32_t nTailNum, LocalTensor<float>& lossOutLocal,
+                                         LocalTensor<float>& smoothLossLocal);
+    __aicore__ inline void VfComputeSmoothLoss(int32_t nTailNum, int64_t cNum, int64_t AlignC,
+                                               LocalTensor<float>& tempNCLocal, LocalTensor<float>& weightLocal,
+                                               LocalTensor<float>& subUbLocal, LocalTensor<float>& sumUbLocal);
+    __aicore__ inline void VfComputeLossOut(int32_t nTailNum, int64_t cNum, int64_t AlignC,
+                                            LocalTensor<float>& lossOutLocal, LocalTensor<float>& weightYnLocal);
+    __aicore__ inline void VfComputeLogSub(int64_t nTailNum, int64_t cNum, int64_t AlignC,
+                                           LocalTensor<float> sumUbLocal, LocalTensor<float> subUbLocal,
+                                           LocalTensor<float> tempLocal);
+    __aicore__ inline void VfSubExp(int64_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float> maxUbLocal,
+                                    LocalTensor<T1> inputUbLocal, LocalTensor<float> subUbLocal,
+                                    LocalTensor<float> tempLocal);
+    __aicore__ inline void VfReduceMax(int64_t nTailNum, int64_t cNum, int64_t AlignC, LocalTensor<float> maxUbLocal,
+                                       LocalTensor<T1> inputUbLocal);
     __aicore__ inline void CopyInInput(int64_t nTailNum, int64_t offset);
     __aicore__ inline void CopyInTarget(int64_t nTailNum, int64_t offset);
     __aicore__ inline void CopyOutPadLoss(int64_t nTailNum, int64_t offset);
     __aicore__ inline void CopyOutPadLogProp(int64_t nTailNum, int64_t offset);
     __aicore__ inline void CopyInWeight(int64_t cTailNum, int64_t cAlgin);
     __aicore__ inline void CleanRUb(LocalTensor<float>& clearUb);
-    __aicore__ inline void ComputePartSum(
-        int32_t nTailNum, LocalTensor<float>& lossOutLocal, LocalTensor<float>& smoothLossLocal,
-        LocalTensor<float>& weightYnLocal);
-    __aicore__ inline void VfComputeIgnore(
-        int32_t nSizeNum, int64_t nOffset, LocalTensor<T2>& targetUb, LocalTensor<float>& weightLocal,
-        LocalTensor<float>& weightYnLocal, LocalTensor<float>& tempNCLocal, LocalTensor<float>& lossOutLocal,
-        LocalTensor<float>& smoothLossLocal, LocalTensor<float>& sumUbLocal);
+    __aicore__ inline void ComputePartSum(int32_t nTailNum, LocalTensor<float>& lossOutLocal,
+                                          LocalTensor<float>& smoothLossLocal, LocalTensor<float>& weightYnLocal);
+    __aicore__ inline void VfComputeIgnore(int32_t nSizeNum, int64_t nOffset, LocalTensor<T2>& targetUb,
+                                           LocalTensor<float>& weightLocal, LocalTensor<float>& weightYnLocal,
+                                           LocalTensor<float>& tempNCLocal, LocalTensor<float>& lossOutLocal,
+                                           LocalTensor<float>& smoothLossLocal, LocalTensor<float>& sumUbLocal);
     __aicore__ inline void VToS();
     __aicore__ inline void MTE2ToS();
     __aicore__ inline void SToV();
@@ -80,13 +77,11 @@ protected:
     __aicore__ inline void DataCopyOutLoss(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
     __aicore__ inline void DataCopyOutS0(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
     __aicore__ inline void DataCopyOutS1(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
-    __aicore__ inline void VfAddAll(
-        RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, __local_mem__ float* srcAddr, MaskReg& regAllFp32,
-        AddrReg& srcOffset);
-    __aicore__ inline void VfAddTail(
-        RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT, MaskReg& preg,
-        MaskReg& regAllFp32, MaskReg& preg2, uint16_t repeatTimes1, uint32_t vfLen, __local_mem__ float* srcAddr,
-        __local_mem__ float* dstAddr);
+    __aicore__ inline void VfAddAll(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, __local_mem__ float* srcAddr,
+                                    MaskReg& regAllFp32, AddrReg& srcOffset);
+    __aicore__ inline void VfAddTail(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT,
+                                     MaskReg& preg, MaskReg& regAllFp32, MaskReg& preg2, uint16_t repeatTimes1,
+                                     uint32_t vfLen, __local_mem__ float* srcAddr, __local_mem__ float* dstAddr);
     __aicore__ inline void DataCopyCommon(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
 
     constexpr static uint32_t DOUBLE_BUFFER_ONE = 1;
@@ -124,8 +119,8 @@ private:
     int32_t SIZE_32 = 32;
     float MIN_VALUE = -3.402823466e+38;
 
-    constexpr static MicroAPI::CastTrait castTrait1 = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    constexpr static MicroAPI::CastTrait castTrait1 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                       MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
     constexpr static AscendC::MicroAPI::CastTrait castTrait2 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
         AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
@@ -257,12 +252,11 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     LocalTensor<float> weightYnLocal = weightYnUb_.Get<float>();
     LocalTensor<float> smoothLossLocal = smoothLossUb_.Get<float>();
     if constexpr (labelS != 0) {
-        VfComputeSmoothLoss(
-            nTailNum, tilingData_->C, tilingData_->cOnceNum, tempNCLocal, weightLocal, subUbLocal, sumUbLocal);
+        VfComputeSmoothLoss(nTailNum, tilingData_->C, tilingData_->cOnceNum, tempNCLocal, weightLocal, subUbLocal,
+                            sumUbLocal);
     }
-    VfComputeIgnore(
-        nTailNum, nUbOffset, targetUbLocal, weightLocal, weightYnLocal, tempNCLocal, lossOutLocal, smoothLossLocal,
-        sumUbLocal);
+    VfComputeIgnore(nTailNum, nUbOffset, targetUbLocal, weightLocal, weightYnLocal, tempNCLocal, lossOutLocal,
+                    smoothLossLocal, sumUbLocal);
     targetInQueue_.FreeTensor(targetUbLocal);
     if constexpr (isWeight == 1) {
         weightQueue_.FreeTensor(weightLocal);
@@ -295,13 +289,13 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(partSumUb[0], lossOutLocal, srcShape, false);
     AscendC::Add(clearUb[0], partSumUb[0], clearUb[0], 1);
     if constexpr (reduction == 1) {
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
-            partSumUb[ONE_FP32], weightYnLocal, srcShape, false);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(partSumUb[ONE_FP32], weightYnLocal, srcShape,
+                                                                      false);
         AscendC::Add(clearUb[ONE_FP32], partSumUb[ONE_FP32], clearUb[ONE_FP32], 1);
     }
     if constexpr (labelS != 0) {
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(
-            partSumUb[ONE_FP32 * 2], smoothLossLocal, srcShape, false);
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(partSumUb[ONE_FP32 * 2], smoothLossLocal,
+                                                                      srcShape, false);
         AscendC::Add(clearUb[ONE_FP32 * 2], partSumUb[ONE_FP32 * 2], clearUb[ONE_FP32 * 2], 1);
     }
 }
@@ -322,8 +316,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     {
         AscendC::MicroAPI::RegTensor<float> smoothLossReg;
         AscendC::MicroAPI::RegTensor<float> lossOutReg;
-        AscendC::MicroAPI::MaskReg pregMain =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(sreg);
 
         for (uint16_t i = 0; i < repeatTimes; i++) {
@@ -363,8 +357,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     {
         AscendC::MicroAPI::RegTensor<float> logPropReg;
         AscendC::MicroAPI::RegTensor<float> weightReg;
-        AscendC::MicroAPI::MaskReg pregMain =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
@@ -406,8 +400,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     {
         AscendC::MicroAPI::RegTensor<float> lossOutReg;
         AscendC::MicroAPI::RegTensor<float> weightYnReg;
-        AscendC::MicroAPI::MaskReg pregMain =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(sreg);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             AscendC::MicroAPI::DataCopy(lossOutReg, lossOutAddr + i * vfLen);
@@ -444,8 +438,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::RegTensor<float> subReg;
         AscendC::MicroAPI::RegTensor<float> tempReg;
 
-        AscendC::MicroAPI::MaskReg pregMain =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
@@ -494,8 +488,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::RegTensor<float> featuresReg32;
         AscendC::MicroAPI::RegTensor<float> maxReg32;
 
-        AscendC::MicroAPI::MaskReg pregMain =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
@@ -553,9 +547,9 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     }
 
     __VEC_SCOPE__
-	{
-		AscendC::MicroAPI::RegTensor<T1> inputReg1;
-		AscendC::MicroAPI::RegTensor<float> maxReg;
+    {
+        AscendC::MicroAPI::RegTensor<T1> inputReg1;
+        AscendC::MicroAPI::RegTensor<float> maxReg;
         AscendC::MicroAPI::RegTensor<T1> inputReg;
         AscendC::MicroAPI::RegTensor<T1> inputRegLowest;
         AscendC::MicroAPI::RegTensor<T1> inputRegHighest;
@@ -563,18 +557,19 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::RegTensor<float> inputRegHighest32;
         AscendC::MicroAPI::RegTensor<float> maxRegTemp;
 
-		AscendC::MicroAPI::MaskReg pregMain = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
-		AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(tailNum);
-		AscendC::MicroAPI::MaskReg pregReduce = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg pregMain = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(tailNum);
+        AscendC::MicroAPI::MaskReg
+            pregReduce = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg mergePreg = AscendC::MicroAPI::CreateMask<float, MaskPattern::VL1>();
-		AscendC::MicroAPI::MaskReg comparePreg;
+        AscendC::MicroAPI::MaskReg comparePreg;
 
-		for(uint16_t i = 0; i < aTimes; i++) {
-			AscendC::MicroAPI::Duplicate(inputReg, minValue);
+        for (uint16_t i = 0; i < aTimes; i++) {
+            AscendC::MicroAPI::Duplicate(inputReg, minValue);
             AscendC::MicroAPI::DataCopy(inputReg1, inputAddr + i * AlignC + repeatTimes * vfLen);
             AscendC::MicroAPI::Max(inputReg1, inputReg, inputReg1, preg);
             AscendC::MicroAPI::Copy<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(inputReg, inputReg1, preg);
-            for(uint16_t j = 0; j < repeatTimes; j++) {
+            for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T1>(i, AlignC, j, vfLen);
                 AscendC::MicroAPI::DataCopy(inputReg1, inputAddr1, offset);
                 AscendC::MicroAPI::Max(inputReg, inputReg1, inputReg, pregMain);
@@ -586,16 +581,16 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
                 AscendC::MicroAPI::UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(
                     (AscendC::MicroAPI::RegTensor<int32_t>&)inputRegHighest,
                     (AscendC::MicroAPI::RegTensor<int16_t>&)inputReg);
-				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegLowest32, inputRegLowest, pregReduce);
-				AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegHighest32, inputRegHighest, pregReduce);
+                AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegLowest32, inputRegLowest, pregReduce);
+                AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegHighest32, inputRegHighest, pregReduce);
                 AscendC::MicroAPI::Max(maxRegTemp, inputRegLowest32, inputRegHighest32, pregReduce);
-			    AscendC::MicroAPI::ReduceMax(maxReg, maxRegTemp, pregReduce);
-		    } else {
-			    AscendC::MicroAPI::ReduceMax(maxReg, inputReg, pregReduce);
-		    }
+                AscendC::MicroAPI::ReduceMax(maxReg, maxRegTemp, pregReduce);
+            } else {
+                AscendC::MicroAPI::ReduceMax(maxReg, inputReg, pregReduce);
+            }
             DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
-		}
-	}
+        }
+    }
 }
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
@@ -717,8 +712,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::RegTensor<int32_t> tempReg;
         AscendC::MicroAPI::RegTensor<int32_t> targetReg;
         AscendC::MicroAPI::MaskReg regGather;
-        AscendC::MicroAPI::MaskReg regAll =
-            AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            regAll = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::RegTensor<float> reg0;
         AscendC::MicroAPI::RegTensor<float> reg1;
         AscendC::MicroAPI::Duplicate(reg0, 0.0f);
@@ -750,8 +745,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
             MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(dstMask, targetReg, ignoreData, regAll);
 
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopyGather(
-                    weightGatherReg, weightAddr, (MicroAPI::RegTensor<uint32_t>&)targetReg, regGather);
+                MicroAPI::DataCopyGather(weightGatherReg, weightAddr, (MicroAPI::RegTensor<uint32_t>&)targetReg,
+                                         regGather);
                 MicroAPI::Select(weightDestReg, reg0, weightGatherReg, dstMask);
                 MicroAPI::DataCopy(weightYnAddr + i * vfLen, weightDestReg, regGather);
             } else {
@@ -765,9 +760,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
                 MicroAPI::DataCopy(smoothLossAddr + i * vfLen, smoothLossDestReg, regGather);
             }
             MicroAPI::Add(targetDstReg, indexReg2, targetReg, regAll);
-            MicroAPI::DataCopyGather(
-                lossOutGatherReg, logPropAddr + i * vfLen * rAlign, (MicroAPI::RegTensor<uint32_t>&)targetDstReg,
-                regGather);
+            MicroAPI::DataCopyGather(lossOutGatherReg, logPropAddr + i * vfLen * rAlign,
+                                     (MicroAPI::RegTensor<uint32_t>&)targetDstReg, regGather);
             MicroAPI::Select(lossOutDestReg, reg0, lossOutGatherReg, dstMask);
             MicroAPI::DataCopy(lossOutAddr + i * vfLen, lossOutDestReg, regGather);
         }
@@ -796,9 +790,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
                 MicroAPI::DataCopy(smoothLossAddr + repeatTimes * vfLen, smoothLossDestReg, preg);
             }
             MicroAPI::Add(targetDstReg, indexReg2, targetReg, regAll);
-            MicroAPI::DataCopyGather(
-                lossOutGatherReg, logPropAddr + repeatTimes * vfLen * rAlign,
-                (MicroAPI::RegTensor<uint32_t>&)targetDstReg, preg);
+            MicroAPI::DataCopyGather(lossOutGatherReg, logPropAddr + repeatTimes * vfLen * rAlign,
+                                     (MicroAPI::RegTensor<uint32_t>&)targetDstReg, preg);
             MicroAPI::Select(lossOutDestReg, reg0, lossOutGatherReg, dstMask);
             MicroAPI::DataCopy(lossOutAddr + repeatTimes * vfLen, lossOutDestReg, preg);
         }
@@ -929,8 +922,8 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::RegTensor<float> srcRegS0;
         AscendC::MicroAPI::RegTensor<float> srcRegS1;
         AscendC::MicroAPI::RegTensor<float> srcRegST;
-        AscendC::MicroAPI::MaskReg regAllFp32 =
-            AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::MicroAPI::MaskReg
+            regAllFp32 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg2 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
         AscendC::MicroAPI::Duplicate(srcReg0, 0.0f);
         AscendC::MicroAPI::Duplicate(srcRegW0, 0.0f);
@@ -948,14 +941,12 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         preg = AscendC::MicroAPI::UpdateMask<float>(tail);
         VfAddTail(srcReg0, srcReg1, srcRegT, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbLddr, clearAddr);
         if constexpr (reduction == 1) {
-            VfAddTail(
-                srcRegW0, srcRegW1, srcRegWT, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbWddr,
-                clearAddr + 8);
+            VfAddTail(srcRegW0, srcRegW1, srcRegWT, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbWddr,
+                      clearAddr + 8);
         }
         if constexpr (labelS != 0) {
-            VfAddTail(
-                srcRegS0, srcRegS1, srcRegST, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbSddr,
-                clearAddr + 16);
+            VfAddTail(srcRegS0, srcRegS1, srcRegST, preg, regAllFp32, preg2, repeatTimes1, vfLen, allReduceUbSddr,
+                      clearAddr + 16);
         }
     }
 }

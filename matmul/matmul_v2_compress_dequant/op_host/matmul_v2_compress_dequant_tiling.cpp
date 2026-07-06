@@ -35,7 +35,7 @@ constexpr uint32_t FP32_BYTE_SIZE = 4;
 constexpr float INT8_DTYPE_SIZE = 1.0f;
 constexpr uint32_t AXES_ALIGN_SIZE = 512;
 constexpr uint32_t AXES_ALIGN_SIZE_INT8 = 256;
-constexpr uint32_t L0AB_PP_BUF_LEN_FP16 = 131072;       // 128 KB
+constexpr uint32_t L0AB_PP_BUF_LEN_FP16 = 131072;        // 128 KB
 constexpr uint32_t L1AB_PP_BUF_LEN_INT8_SPARSE = 163840; // 160 KB
 constexpr uint32_t ALIGNMENT_16 = 16;
 constexpr uint32_t CONST_3 = 3;
@@ -43,8 +43,8 @@ constexpr uint32_t CONST_4 = 4;
 constexpr uint32_t CONST_256 = 256;
 constexpr uint32_t TRANS_B_MASK = 0b001000;
 constexpr float L2_BW_RATIO = 5.0f;
-constexpr uint64_t DEFAULT_L2_SIZE = 48UL * 1024 * 1024;   // 48 MB
-constexpr uint64_t DEFAULT_L0C_SIZE = 256UL * 1024;        // 256 KB
+constexpr uint64_t DEFAULT_L2_SIZE = 48UL * 1024 * 1024; // 48 MB
+constexpr uint64_t DEFAULT_L0C_SIZE = 256UL * 1024;      // 256 KB
 
 constexpr size_t TRANSPOSE_X1_ATTR_IDX = 0;
 constexpr size_t TRANSPOSE_X2_ATTR_IDX = 1;
@@ -63,7 +63,6 @@ constexpr size_t INPUT_IDX_BIAS = 4;
 // Utility functions
 // ============================================================
 
-
 inline uint32_t CeilDivU32(uint32_t dividend, uint32_t divisor)
 {
     if (divisor == 0 || dividend + divisor - 1 < dividend) {
@@ -72,14 +71,11 @@ inline uint32_t CeilDivU32(uint32_t dividend, uint32_t divisor)
     return (dividend + divisor - 1) / divisor;
 }
 
-
 // // ============================================================
 // // Compute k0 and compressOverlapN
 // // Ported from PpTilingData310P::End
 // // ============================================================
-uint32_t ComputeK0(uint32_t n0, uint32_t n,
-                   bool isCompress, uint32_t tilingNVal,
-                   uint32_t &compressOverlapN)
+uint32_t ComputeK0(uint32_t n0, uint32_t n, bool isCompress, uint32_t tilingNVal, uint32_t& compressOverlapN)
 {
     compressOverlapN = 0;
 
@@ -98,15 +94,15 @@ uint32_t ComputeK0(uint32_t n0, uint32_t n,
 // Extract M, K, N, batchSize from TilingContext
 // Handles both ND shapes (2D: [M, K]) and NZ shapes (4D)
 // ============================================================
-ge::graphStatus ExtractMatmulDims(const gert::TilingContext *context, uint32_t &batchSize, uint32_t &m, uint32_t &k,
-                                  uint32_t &n, const int64_t *compressInfoData, size_t compressInfoCount)
+ge::graphStatus ExtractMatmulDims(const gert::TilingContext* context, uint32_t& batchSize, uint32_t& m, uint32_t& k,
+                                  uint32_t& n, const int64_t* compressInfoData, size_t compressInfoCount)
 {
-    const auto *x1ShapePtr = context->GetInputShape(INPUT_IDX_X1);
+    const auto* x1ShapePtr = context->GetInputShape(INPUT_IDX_X1);
     if (x1ShapePtr == nullptr) {
         OP_LOGE("MatMulV2CompressDequant", "x1 shape is nullptr.");
         return ge::GRAPH_FAILED;
     }
-    const auto &x1Shape = x1ShapePtr->GetOriginShape();
+    const auto& x1Shape = x1ShapePtr->GetOriginShape();
 
     m = static_cast<uint32_t>(x1Shape.GetDim(0));
     k = static_cast<uint32_t>(x1Shape.GetDim(1));
@@ -118,16 +114,15 @@ ge::graphStatus ExtractMatmulDims(const gert::TilingContext *context, uint32_t &
         n = static_cast<uint32_t>(compressInfoData[CI_IDX_N]);
     }
     if (n == 0) {
-        const auto *outShapePtr = context->GetOutputShape(0);
+        const auto* outShapePtr = context->GetOutputShape(0);
         if (outShapePtr != nullptr) {
-            const auto &outShape = outShapePtr->GetStorageShape();
+            const auto& outShape = outShapePtr->GetStorageShape();
             size_t outNdim = outShape.GetDimNum();
             constexpr size_t kMin4D = 4;
             constexpr size_t kMin2D = 2;
             constexpr size_t kDimOffsetToN4D = 4;
             if (outNdim >= kMin4D) {
-                n = static_cast<uint32_t>(outShape.GetDim(outNdim - kDimOffsetToN4D) *
-                                          outShape.GetDim(outNdim - 1));
+                n = static_cast<uint32_t>(outShape.GetDim(outNdim - kDimOffsetToN4D) * outShape.GetDim(outNdim - 1));
             } else if (outNdim >= kMin2D) {
                 n = static_cast<uint32_t>(outShape.GetDim(outNdim - 1));
             }
@@ -141,21 +136,19 @@ ge::graphStatus ExtractMatmulDims(const gert::TilingContext *context, uint32_t &
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace
+} // namespace
 
-
-static ge::graphStatus TbmmEinsumTilingFunc (gert::TilingContext* context,
-    uint32_t &batchSize, uint32_t &m, uint32_t &k, uint32_t &n,
-    uint32_t& tilingK, uint32_t& tilingN)
+static ge::graphStatus TbmmEinsumTilingFunc(gert::TilingContext* context, uint32_t& batchSize, uint32_t& m, uint32_t& k,
+                                            uint32_t& n, uint32_t& tilingK, uint32_t& tilingN)
 {
     if (context == nullptr) {
         OP_LOGE("MatMulV2CompressDequant", "context is null.");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = static_cast<const MatmulV2CompressDequantCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const MatmulV2CompressDequantCompileInfo*>(context->GetCompileInfo());
     uint32_t coreNum = static_cast<uint32_t>(compileInfo->aivNum);
 
-    size_t sysWorkspaceSize = static_cast<size_t>(24 * 1024 * 1024);  // 24M same as ppmatmul tiling
+    size_t sysWorkspaceSize = static_cast<size_t>(24 * 1024 * 1024); // 24M same as ppmatmul tiling
     size_t* currentWorkSpace = context->GetWorkspaceSizes(1);
     currentWorkSpace[0] = sysWorkspaceSize;
 
@@ -205,11 +198,10 @@ static ge::graphStatus TbmmEinsumTilingFunc (gert::TilingContext* context,
     return ge::GRAPH_SUCCESS;
 }
 
-
 // ============================================================
 // Main tiling function
 // ============================================================
-ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext *context)
+ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext* context)
 {
     OP_LOGI(context->GetNodeName(), "TbmmEinsum Tiling start.");
 
@@ -217,15 +209,14 @@ ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext *context)
     uint32_t m = 0;
     uint32_t k = 0;
     uint32_t n = 0;
-    const int64_t *compressInfoData = nullptr;
+    const int64_t* compressInfoData = nullptr;
     size_t compressInfoCount = 0;
-    auto *attrs = context->GetAttrs();
-    const auto *compressInfoVec = attrs->GetAttrPointer<gert::ContinuousVector>(COMPRESS_INFO_ATTR_IDX);
+    auto* attrs = context->GetAttrs();
+    const auto* compressInfoVec = attrs->GetAttrPointer<gert::ContinuousVector>(COMPRESS_INFO_ATTR_IDX);
     compressInfoCount = compressInfoVec->GetSize();
-    compressInfoData = static_cast<const int64_t *>(compressInfoVec->GetData());
+    compressInfoData = static_cast<const int64_t*>(compressInfoVec->GetData());
 
-    (void)ExtractMatmulDims(context, batchSize, m, k, n,
-                            compressInfoData, compressInfoCount);
+    (void)ExtractMatmulDims(context, batchSize, m, k, n, compressInfoData, compressInfoCount);
 
     uint32_t tilingKVal = 0;
     uint32_t tilingNVal = 0;
@@ -236,10 +227,10 @@ ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext *context)
     }
     TbmmEinsumTilingFunc(context, batchSize, m, k, n, tilingKVal, tilingNVal);
 
-    auto compileInfo = static_cast<const MatmulV2CompressDequantCompileInfo *>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const MatmulV2CompressDequantCompileInfo*>(context->GetCompileInfo());
 
     // ---- Workspace ----
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = compileInfo->workSpaceSize;
     return ge::GRAPH_SUCCESS;
 }
@@ -247,7 +238,7 @@ ge::graphStatus TilingForMatmulV2CompressDequant(gert::TilingContext *context)
 // ============================================================
 // TilingPrepare – collect compile-time hardware info
 // ============================================================
-ge::graphStatus TilingPrepareForMatmulV2CompressDequant(gert::TilingParseContext *context)
+ge::graphStatus TilingPrepareForMatmulV2CompressDequant(gert::TilingParseContext* context)
 {
     if (context == nullptr) {
         OP_LOGE("MatMulV2CompressDequant", "TilingParse context is nullptr.");
@@ -279,8 +270,8 @@ ge::graphStatus TilingPrepareForMatmulV2CompressDequant(gert::TilingParseContext
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->socVersion = ascendcPlatform.GetSocVersion();
     compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfoPtr->btSize = compileInfoPtr->supportL0c2out ? 1024UL : 0UL;                       // 1024 is btSize
-    compileInfoPtr->btSize = compileInfoPtr->supportL12BtBf16 ? 4096UL : compileInfoPtr->btSize;  // 4096 is btSize
+    compileInfoPtr->btSize = compileInfoPtr->supportL0c2out ? 1024UL : 0UL;                      // 1024 is btSize
+    compileInfoPtr->btSize = compileInfoPtr->supportL12BtBf16 ? 4096UL : compileInfoPtr->btSize; // 4096 is btSize
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr->l1Size);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, compileInfoPtr->l0ASize);
@@ -290,8 +281,8 @@ ge::graphStatus TilingPrepareForMatmulV2CompressDequant(gert::TilingParseContext
 
     compileInfoPtr->isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
 
-    OP_LOGD(context, "TilingPrepare end: aivNum=%lu ubSize=%lu l0CSize=%lu l2Size=%lu",
-            compileInfoPtr->aivNum, compileInfoPtr->ubSize, compileInfoPtr->l0CSize, compileInfoPtr->l2Size);
+    OP_LOGD(context, "TilingPrepare end: aivNum=%lu ubSize=%lu l0CSize=%lu l2Size=%lu", compileInfoPtr->aivNum,
+            compileInfoPtr->ubSize, compileInfoPtr->l0CSize, compileInfoPtr->l2Size);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -302,4 +293,4 @@ IMPL_OP_OPTILING(MatMulV2CompressDequant)
     .Tiling(TilingForMatmulV2CompressDequant)
     .TilingParse<MatmulV2CompressDequantCompileInfo>(TilingPrepareForMatmulV2CompressDequant);
 
-}  // namespace optiling
+} // namespace optiling

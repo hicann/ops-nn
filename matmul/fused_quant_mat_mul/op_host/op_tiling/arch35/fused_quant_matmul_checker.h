@@ -25,13 +25,14 @@ namespace optiling {
 
 class FusedQuantMatMulChecker : public QuantBatchMatmulV3Checker4MmadS8S4 {
 public:
-    FusedQuantMatMulChecker(gert::TilingContext *context, const QuantBatchMatmulInfo &inputParams)
-        : QuantBatchMatmulV3Checker4MmadS8S4(context, inputParams) {}
+    FusedQuantMatMulChecker(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
+        : QuantBatchMatmulV3Checker4MmadS8S4(context, inputParams)
+    {}
 
     ~FusedQuantMatMulChecker() = default;
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                    const std::vector<const gert::StorageShape *> &optionalInputShape,
-                    const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                    const std::vector<const gert::StorageShape*>& optionalInputShape,
+                    const std::vector<int64_t>& dimValueOfMKN) const;
 
 protected:
     uint32_t GetX1Idx() const override { return X1_INDEX_FQMM; }
@@ -41,10 +42,9 @@ protected:
     uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX_FQMM; }
     uint32_t GetOffsetIdx() const override { return X2_OFFSET_INDEX_FQMM; }
     uint32_t GetX2TableIdx() const { return X2_TABLE_INDEX_FQMM; }
-    bool CheckShapeInRangeForOptionalInputs(const gert::StorageShape *scaleShape, const gert::StorageShape *biasShape,
-                                            const gert::StorageShape *offsetShape) const;
-    bool CheckDimValue(const gert::StorageShape *scaleShape, const gert::StorageShape *biasShape,
-                       const gert::StorageShape *offsetShape, const std::vector<int64_t> &dimValueOfMKN) const;
+    bool CheckShapeInRangeForOptionalInputs(const gert::StorageShape* scaleShape, const gert::StorageShape* biasShape,
+                                            const gert::StorageShape* offsetShape) const;
+    bool CheckDimValue(const gert::StorageShape* scaleShape, const gert::StorageShape* biasShape,
+                       const gert::StorageShape* offsetShape, const std::vector<int64_t>& dimValueOfMKN) const;
 };
 } // namespace optiling
-

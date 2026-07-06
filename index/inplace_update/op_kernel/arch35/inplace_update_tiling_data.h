@@ -20,10 +20,10 @@
 
 struct InplaceUpdateTilingData {
     int32_t needCoreNum = 0;
-    int32_t n            = 0;
-    int32_t k            = 0;
-    int64_t innerSize    = 0;
-    int32_t perCoreN     = 0;
+    int32_t n = 0;
+    int32_t k = 0;
+    int64_t innerSize = 0;
+    int32_t perCoreN = 0;
 };
 
 #endif // __INPLACE_UPDATE_TILING_DATA_H__

@@ -14,8 +14,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class GroupNormSwishGrad : public OpDef
-{
+class GroupNormSwishGrad : public OpDef {
 public:
     explicit GroupNormSwishGrad(const char* name) : OpDef(name)
     {
@@ -87,11 +86,11 @@ public:
         this->AICore().AddConfig("ascend910_93", aicore_config);
 
         OpAICoreConfig config_910_95;
- 	         config_910_95.DynamicCompileStaticFlag(true)
- 	             .DynamicRankSupportFlag(true)
- 	             .DynamicShapeSupportFlag(true)
- 	             .ExtendCfgInfo("opFile.value", "group_norm_swish_grad_apt");
- 	         this->AICore().AddConfig("ascend950", config_910_95);
+        config_910_95.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "group_norm_swish_grad_apt");
+        this->AICore().AddConfig("ascend950", config_910_95);
     }
 };
 

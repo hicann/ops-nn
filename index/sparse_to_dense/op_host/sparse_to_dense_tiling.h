@@ -26,22 +26,17 @@
 #include "util/math_util.h"
 #include "../op_kernel/arch35/sparse_to_dense_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
-
 
 struct SparseToDenseCompileInfo {
     int64_t coreNum{0};
     int64_t ubSize{0};
 };
 
-class SparseToDenseTiling : public TilingBaseClass
-{
+class SparseToDenseTiling : public TilingBaseClass {
 public:
-    explicit SparseToDenseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit SparseToDenseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -56,9 +51,9 @@ protected:
     ge::graphStatus CheckInputShape();
     ge::graphStatus CheckInputDtype();
     void SetTilingData();
-    
+
     template <typename T>
-    ge::graphStatus GetIntValue(const gert::Tensor *constTensor, gert::Shape &constShape);
+    ge::graphStatus GetIntValue(const gert::Tensor* constTensor, gert::Shape& constShape);
 
 private:
     int64_t numValues_ = 0;
@@ -97,5 +92,5 @@ private:
     SparseToDenseTilingData tilingData_;
     const char* opName_ = "SparseToDense";
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SPARSE_TO_DENSE_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SPARSE_TO_DENSE_TILING_H_

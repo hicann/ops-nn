@@ -26,14 +26,11 @@ using namespace AscendC;
 template <typename DY_TYPE, typename WEIGHT_TYPE>
 class BatchNormGradV3RASplitR {
 public:
-    __aicore__ inline BatchNormGradV3RASplitR(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline BatchNormGradV3RASplitR(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-        GM_ADDR workspace, const BatchNormGradV3RASplitRTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                const BatchNormGradV3RASplitRTilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         tilingData_ = tilingData;
@@ -159,9 +156,8 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t rLength, const int64_t aLength, const LocalTensor<DY_TYPE> dyTensor,
-        const LocalTensor<DY_TYPE> xTensor)
+    __aicore__ inline void ProcessMainBlock(const int64_t rLength, const int64_t aLength,
+                                            const LocalTensor<DY_TYPE> dyTensor, const LocalTensor<DY_TYPE> xTensor)
     {
         uint16_t outerLoopTimes = CeilDiv(aLength, VL_FP32);
         uint16_t innerLoopTimes = rLength;
@@ -248,14 +244,10 @@ private:
         UpdateCache(dgammaCacheTensor_, dgammaWsTensor_, cacheId, aLength);
     }
 
-    __aicore__ inline int64_t GetCacheID(const int64_t idx)
-    {
-        return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
-    }
+    __aicore__ inline int64_t GetCacheID(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheIdLoop,
-        const uint32_t aLength)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheIdLoop, const uint32_t aLength)
     {
         uint16_t outerLoopTimes = ops::CeilDiv(aLength, VL_FP32);
         uint16_t innerLoopTimes = cacheIdLoop;
@@ -277,8 +269,8 @@ private:
                     DataCopy(cacheReg, (__local_mem__ float*)dst + offset);
                     MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(srcReg, srcReg, cacheReg, pMask);
                 }
-                DataCopy(
-                    (__local_mem__ float*)dst + i * outerLoopStride + cacheIdLoop * innerLoopStride, srcReg, pMask);
+                DataCopy((__local_mem__ float*)dst + i * outerLoopStride + cacheIdLoop * innerLoopStride, srcReg,
+                         pMask);
             }
         }
     }
@@ -297,9 +289,8 @@ private:
         pipe_->InitBuffer(dgammaOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(WEIGHT_TYPE));
     }
 
-    __aicore__ inline void LoadDbetaDgammaFromWs(
-        const int64_t offset, const int64_t rowSize, const uint32_t colSize, const int64_t dstStride,
-        const int64_t srcStride)
+    __aicore__ inline void LoadDbetaDgammaFromWs(const int64_t offset, const int64_t rowSize, const uint32_t colSize,
+                                                 const int64_t dstStride, const int64_t srcStride)
     {
         DataCopyExtParams copyParams;
         copyParams.blockCount = rowSize;
@@ -345,8 +336,8 @@ private:
             LocalTensor<float> dbetaTmpTensor = dbetaWsOutQue_.AllocTensor<float>();
             LocalTensor<float> dgammaTmpTensor = dgammaWsOutQue_.AllocTensor<float>();
             // workspace空间上的dbeta, dgamma reduce成一行
-            uint32_t srcShape[2] = {
-                static_cast<uint32_t>(tilingData_->usedCoreNum), static_cast<uint32_t>(aFactorAlign_)};
+            uint32_t srcShape[2] = {static_cast<uint32_t>(tilingData_->usedCoreNum),
+                                    static_cast<uint32_t>(aFactorAlign_)};
             ReduceSum<float, Pattern::Reduce::RA, true>(dbetaTmpTensor, dbetaWsTensor, srcShape, false);
             ReduceSum<float, Pattern::Reduce::RA, true>(dgammaTmpTensor, dgammaWsTensor, srcShape, false);
             dbetaWsInQue_.FreeTensor(dbetaWsTensor);
@@ -370,9 +361,10 @@ private:
         }
     }
 
-    __aicore__ inline void DbetaDgammaTypeConvers(
-        const uint32_t aLength, const LocalTensor<float> dbetaTmpTensor, const LocalTensor<float> dgammaTmpTensor,
-        const LocalTensor<WEIGHT_TYPE> dbetaOutTensor, const LocalTensor<WEIGHT_TYPE> dgammaOutTensor)
+    __aicore__ inline void DbetaDgammaTypeConvers(const uint32_t aLength, const LocalTensor<float> dbetaTmpTensor,
+                                                  const LocalTensor<float> dgammaTmpTensor,
+                                                  const LocalTensor<WEIGHT_TYPE> dbetaOutTensor,
+                                                  const LocalTensor<WEIGHT_TYPE> dgammaOutTensor)
     {
         __local_mem__ float* dbetaTmpLocal = (__local_mem__ float*)dbetaTmpTensor.GetPhyAddr();
         __local_mem__ float* dgammaTmpLocal = (__local_mem__ float*)dgammaTmpTensor.GetPhyAddr();
@@ -459,9 +451,9 @@ private:
         }
     }
 
-    __aicore__ inline void CalDxVF(
-        const int64_t gmOffset, const uint16_t rLength, const uint16_t aLength, const LocalTensor<float>& dbetaTensor,
-        const LocalTensor<float>& dgammaTensor, const LocalTensor<WEIGHT_TYPE>& gammaTensor)
+    __aicore__ inline void CalDxVF(const int64_t gmOffset, const uint16_t rLength, const uint16_t aLength,
+                                   const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
+                                   const LocalTensor<WEIGHT_TYPE>& gammaTensor)
     {
         LoadDyXToUb(gmOffset, rLength, aLength, aFactorAlign_, tilingData_->aDim);
         LocalTensor<DY_TYPE> dyTensor = dyInQue_.DeQue<DY_TYPE>();
@@ -514,9 +506,8 @@ private:
         dxOutQue_.EnQue(dxTensor);
     }
 
-    __aicore__ inline void StoreDxToGM(
-        const int64_t offset, const int64_t rowSize, const int64_t colSize, const int64_t dstStride,
-        const int64_t srcStride)
+    __aicore__ inline void StoreDxToGM(const int64_t offset, const int64_t rowSize, const int64_t colSize,
+                                       const int64_t dstStride, const int64_t srcStride)
     {
         DataCopyExtParams copyParams;
         copyParams.blockCount = rowSize;
@@ -529,9 +520,8 @@ private:
         dbetaOutQue_.FreeTensor(dxTensor);
     }
 
-    __aicore__ inline void LoadDyXToUb(
-        const int64_t offset, const uint32_t rowSize, const uint32_t colSize, const int64_t dstStride,
-        const int64_t srcStride)
+    __aicore__ inline void LoadDyXToUb(const int64_t offset, const uint32_t rowSize, const uint32_t colSize,
+                                       const int64_t dstStride, const int64_t srcStride)
     {
         DataCopyExtParams params;
         params.blockCount = rowSize;

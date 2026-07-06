@@ -35,8 +35,8 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包括算子计算流程
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus
-aclnnFastGeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnFastGeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                                    aclOpExecutor** executor);
 
 /**
  * @brief aclnnFastGelu的第二段接口，用于执行计算。
@@ -46,8 +46,8 @@ aclnnFastGeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* w
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus
-aclnnFastGelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFastGelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

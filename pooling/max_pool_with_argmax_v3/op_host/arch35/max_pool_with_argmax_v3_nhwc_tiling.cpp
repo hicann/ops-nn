@@ -74,8 +74,8 @@ void MaxPoolWithArgmaxV3NhwcTiling::InitializationVars()
 
     // 并发度按照索引类型计算  索引类型位宽 >= 输入类型位宽
     baseData_.concurrentCount = Ops::Base::GetVRegSize(context_) / baseData_.indexBytes;
-    baseData_.templateMode =
-        DOUBLE * baseData_.cInput > baseData_.concurrentCount ? TEMPLATE_MODE_LARGE_C : TEMPLATE_MODE_SMALL_C;
+    baseData_.templateMode = DOUBLE * baseData_.cInput > baseData_.concurrentCount ? TEMPLATE_MODE_LARGE_C :
+                                                                                     TEMPLATE_MODE_SMALL_C;
 }
 
 bool MaxPoolWithArgmaxV3NhwcTiling::IsCapable()
@@ -136,8 +136,8 @@ void MaxPoolWithArgmaxV3NhwcTiling::DoBufferCalculate()
     splitData_.argmaxBufferSize = splitData_.nOutputInner * splitData_.hOutputInner * splitData_.wOutputInner *
                                   cOutputInnerAligned * baseData_.indexBytes;
 
-    int64_t tmpTotalBufferSize =
-        splitData_.inputBufferSize + splitData_.maxValueBufferSize + splitData_.argmaxBufferSize + HELPER_BUFFER_SIZE;
+    int64_t tmpTotalBufferSize = splitData_.inputBufferSize + splitData_.maxValueBufferSize +
+                                 splitData_.argmaxBufferSize + HELPER_BUFFER_SIZE;
     splitData_.totalBufferSize = tmpTotalBufferSize * DOUBLE;
 }
 
@@ -239,9 +239,8 @@ void MaxPoolWithArgmaxV3NhwcTiling::SplitC()
     int64_t tmpC = baseData_.cInput < baseData_.concurrentCount ? baseData_.cInput : baseData_.concurrentCount;
     splitData_.cOutputInner = tmpC;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        BinarySearch(
-            1, Ops::Base::CeilDiv(baseData_.cInput / DOUBLE, baseData_.concurrentCount), &splitData_.cOutputInner,
-            baseData_.concurrentCount);
+        BinarySearch(1, Ops::Base::CeilDiv(baseData_.cInput / DOUBLE, baseData_.concurrentCount),
+                     &splitData_.cOutputInner, baseData_.concurrentCount);
     }
 }
 
@@ -325,12 +324,12 @@ void MaxPoolWithArgmaxV3NhwcTiling::DoUBTiling()
 
 void MaxPoolWithArgmaxV3NhwcTiling::DoBlockTiling()
 {
-    splitData_.totalBaseBlockNum =
-        splitData_.nOutputOuter * splitData_.cOutputOuter * splitData_.hOutputOuter * splitData_.wOutputOuter;
+    splitData_.totalBaseBlockNum = splitData_.nOutputOuter * splitData_.cOutputOuter * splitData_.hOutputOuter *
+                                   splitData_.wOutputOuter;
     splitData_.normalCoreProcessNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, baseData_.totalCoreNum);
     splitData_.usedCoreNum = Ops::Base::CeilDiv(splitData_.totalBaseBlockNum, splitData_.normalCoreProcessNum);
-    splitData_.tailCoreProcessNum =
-        splitData_.totalBaseBlockNum - splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
+    splitData_.tailCoreProcessNum = splitData_.totalBaseBlockNum -
+                                    splitData_.normalCoreProcessNum * (splitData_.usedCoreNum - 1);
 }
 
 void MaxPoolWithArgmaxV3NhwcTiling::RerouteTemplateBySplit()

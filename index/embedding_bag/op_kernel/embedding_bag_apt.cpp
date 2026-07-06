@@ -21,26 +21,26 @@
 #include "./arch35/embedding_bag_regbase_2d_simt.h"
 #include "./arch35/embedding_bag_regbase_empty_simt.h"
 
-#define TILING_KEY_INDICES_1D_SAME         100
-#define TILING_KEY_INDICES_1D_PROMOTE      101
-#define TILING_KEY_INDICES_2D_SAME         200
-#define TILING_KEY_INDICES_2D_PROMOTE      201
-#define TILING_KEY_SIMT_1D_SAME_INT32         300  
-#define TILING_KEY_SIMT_1D_SAME_INT64         301  
-#define TILING_KEY_SIMT_1D_PROMOTE_INT32         302  
-#define TILING_KEY_SIMT_1D_PROMOTE_INT64         303  
-#define TILING_KEY_SIMT_2D_SAME_INT32         400  
-#define TILING_KEY_SIMT_2D_SAME_INT64         401  
-#define TILING_KEY_SIMT_2D_PROMOTE_INT32         402
-#define TILING_KEY_SIMT_2D_PROMOTE_INT64         403
-#define TILING_KEY_SIMT_EMPTY_SAME_INT32         500
-#define TILING_KEY_SIMT_EMPTY_SAME_INT64         501
-#define TILING_KEY_SIMT_EMPTY_PROMOTE_INT32      502
-#define TILING_KEY_SIMT_EMPTY_PROMOTE_INT64      503
+#define TILING_KEY_INDICES_1D_SAME 100
+#define TILING_KEY_INDICES_1D_PROMOTE 101
+#define TILING_KEY_INDICES_2D_SAME 200
+#define TILING_KEY_INDICES_2D_PROMOTE 201
+#define TILING_KEY_SIMT_1D_SAME_INT32 300
+#define TILING_KEY_SIMT_1D_SAME_INT64 301
+#define TILING_KEY_SIMT_1D_PROMOTE_INT32 302
+#define TILING_KEY_SIMT_1D_PROMOTE_INT64 303
+#define TILING_KEY_SIMT_2D_SAME_INT32 400
+#define TILING_KEY_SIMT_2D_SAME_INT64 401
+#define TILING_KEY_SIMT_2D_PROMOTE_INT32 402
+#define TILING_KEY_SIMT_2D_PROMOTE_INT64 403
+#define TILING_KEY_SIMT_EMPTY_SAME_INT32 500
+#define TILING_KEY_SIMT_EMPTY_SAME_INT64 501
+#define TILING_KEY_SIMT_EMPTY_PROMOTE_INT32 502
+#define TILING_KEY_SIMT_EMPTY_PROMOTE_INT64 503
 
-#define MODE_SUM         0
-#define MODE_MEAN        1
-#define MODE_MAX         2
+#define MODE_SUM 0
+#define MODE_MEAN 1
+#define MODE_MAX 2
 #else
 #include "embedding_bag.h"
 #include "embedding_bag_fp16.h"
@@ -48,9 +48,10 @@
 
 using namespace AscendC;
 // kernel function
-extern "C" __global__ __aicore__ void embedding_bag(
-    GM_ADDR weight, GM_ADDR indices, GM_ADDR offsets, GM_ADDR per_sample_weights, GM_ADDR y, GM_ADDR offset2bag,
-    GM_ADDR bag_size, GM_ADDR max_indices, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indices, GM_ADDR offsets,
+                                                    GM_ADDR per_sample_weights, GM_ADDR y, GM_ADDR offset2bag,
+                                                    GM_ADDR bag_size, GM_ADDR max_indices, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     if (workspace == nullptr || GetUserWorkspace(workspace) == nullptr) {
         return;
@@ -59,18 +60,22 @@ extern "C" __global__ __aicore__ void embedding_bag(
     GET_TILING_DATA(tilingData, tiling);
 
 #if __CCE_AICORE__ == 310 && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)
-    GM_ADDR gmParam[TENSOR_COUNT] = {weight, indices, offsets, per_sample_weights, y, offset2bag, bag_size, max_indices};
+    GM_ADDR gmParam[TENSOR_COUNT] = {weight, indices,    offsets,  per_sample_weights,
+                                     y,      offset2bag, bag_size, max_indices};
     if (TILING_KEY_IS(TILING_KEY_INDICES_1D_SAME)) {
         if (tilingData.mode == MODE_SUM) {
-            EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else if (tilingData.mode == MODE_MEAN) {
-            EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else if (tilingData.mode == MODE_MAX) {
-            EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else {
@@ -79,15 +84,18 @@ extern "C" __global__ __aicore__ void embedding_bag(
     } else if (TILING_KEY_IS(TILING_KEY_INDICES_1D_PROMOTE)) {
         if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
             if (tilingData.mode == MODE_SUM) {
-                EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData, pipe);
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData,
+                                                                                                             pipe);
                 op.Init(gmParam);
                 op.Process();
             } else if (tilingData.mode == MODE_MEAN) {
-                EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData, pipe);
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(
+                    tilingData, pipe);
                 op.Init(gmParam);
                 op.Process();
             } else if (tilingData.mode == MODE_MAX) {
-                EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData, pipe);
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData,
+                                                                                                             pipe);
                 op.Init(gmParam);
                 op.Process();
             } else {
@@ -95,15 +103,18 @@ extern "C" __global__ __aicore__ void embedding_bag(
             }
         } else {
             if (tilingData.mode == MODE_SUM) {
-                EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData, pipe);
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData,
+                                                                                                             pipe);
                 op.Init(gmParam);
                 op.Process();
             } else if (tilingData.mode == MODE_MEAN) {
-                EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData, pipe);
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(
+                    tilingData, pipe);
                 op.Init(gmParam);
                 op.Process();
             } else if (tilingData.mode == MODE_MAX) {
-                EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData, pipe);
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData,
+                                                                                                             pipe);
                 op.Init(gmParam);
                 op.Process();
             } else {
@@ -119,58 +130,70 @@ extern "C" __global__ __aicore__ void embedding_bag(
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_SAME_INT32)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
+        EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(
+            tilingData, pipe);
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_SAME_INT64)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint64_t> op(tilingData, pipe);
+        EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint64_t> op(
+            tilingData, pipe);
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_PROMOTE_INT32)) {
         if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
-            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint32_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint32_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else {
-            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint32_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint32_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_1D_PROMOTE_INT64)) {
         if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
-            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint64_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint64_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else {
-            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint64_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt1D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint64_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_SAME_INT32)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
+        EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint32_t> op(
+            tilingData, pipe);
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_SAME_INT64)) {
-        EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint64_t> op(tilingData, pipe);
+        EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, DTYPE_INDICES, uint64_t> op(
+            tilingData, pipe);
         op.Init(gmParam);
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_PROMOTE_INT32)) {
         if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
-            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint32_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint32_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else {
-            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint32_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint32_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         }
     } else if (TILING_KEY_IS(TILING_KEY_SIMT_2D_PROMOTE_INT64)) {
         if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
-            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint64_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t, uint64_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         } else {
-            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint64_t> op(tilingData, pipe);
+            EmbeddingBag::EmbeddingBagRegBaseSimt2D<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t, uint64_t> op(
+                tilingData, pipe);
             op.Init(gmParam);
             op.Process();
         }

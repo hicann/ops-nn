@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file max_pool3d_with_argmax_v2_tiling_struct.h
  * \brief max_pool3d_with_argmax_v2  tiling data
  */
@@ -16,7 +16,7 @@
 #ifndef MAX_POOL_3D_WITH_ARGMAX_V2_TILING_DATA_H
 #define MAX_POOL_3D_WITH_ARGMAX_V2_TILING_DATA_H
 
-namespace MaxPool3DWithArgmaxV2Tiling{
+namespace MaxPool3DWithArgmaxV2Tiling {
 class MaxPool3DWithArgmaxV2GatherTilingData {
 public:
     int64_t dInput = 0;
@@ -154,9 +154,9 @@ public:
     int64_t padFront = 0;
     int64_t padLeft = 0;
     int64_t padTop = 0;
-    int64_t ncInner = 0;       // NC channels processed together per tile
-    int64_t ncTail = 0;        // NC channels in the last tile
-    int64_t ncOuter = 0;       // number of NC tiles
+    int64_t ncInner = 0; // NC channels processed together per tile
+    int64_t ncTail = 0;  // NC channels in the last tile
+    int64_t ncOuter = 0; // number of NC tiles
     int64_t dOutputInner = 0;
     int64_t dOutputTail = 0;
     int64_t dOutputOuter = 0;
@@ -177,6 +177,6 @@ public:
     int64_t deltaIndexBufferSize = 0;
     int64_t castBufferSize = 0;
 };
-}
+} // namespace MaxPool3DWithArgmaxV2Tiling
 
 #endif

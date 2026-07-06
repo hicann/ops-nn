@@ -17,7 +17,6 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(GeluGradV2);
 
-
 static const std::initializer_list<DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
@@ -42,21 +41,20 @@ static bool IsAiCoreSupport(const aclTensor* gradOutput, const aclTensor* self)
 }
 
 // AiCore逻辑
-static void GeluGradV2AiCore(
-    const aclTensor* gradOutput, const aclTensor* self, const char* approximate, aclTensor* gradInput,
-    aclOpExecutor* executor)
+static void GeluGradV2AiCore(const aclTensor* gradOutput, const aclTensor* self, const char* approximate,
+                             aclTensor* gradInput, aclOpExecutor* executor)
 {
     L0_DFX(GeluGradV2AiCore, gradOutput, self, approximate, gradInput);
 
-    auto retAicore =
-        ADD_TO_LAUNCHER_LIST_AICORE(GeluGradV2, OP_INPUT(gradOutput, self), OP_OUTPUT(gradInput), OP_ATTR(approximate));
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(GeluGradV2, OP_INPUT(gradOutput, self), OP_OUTPUT(gradInput),
+                                                 OP_ATTR(approximate));
     if (retAicore != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GeluGradV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     }
 }
 
-const aclTensor* GeluGradV2(
-    const aclTensor* gradOutput, const aclTensor* self, const char* approximate, aclOpExecutor* executor)
+const aclTensor* GeluGradV2(const aclTensor* gradOutput, const aclTensor* self, const char* approximate,
+                            aclOpExecutor* executor)
 {
     L0_DFX(GeluGradV2, gradOutput, self, approximate);
     // 判断走AiCore还是AiCPU，目前无AiCPU实现，默认走AiCore
@@ -66,19 +64,23 @@ const aclTensor* GeluGradV2(
 
     Shape broadcastShape;
     if (!BroadcastInferShape(gradOutput->GetViewShape(), self->GetViewShape(), broadcastShape)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
-            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
+                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return nullptr;
     }
 
-    bool isMixDataType =
-        (self->GetDataType() == DataType::DT_FLOAT && gradOutput->GetDataType() == DataType::DT_FLOAT16) ||
-        (self->GetDataType() == DataType::DT_FLOAT && gradOutput->GetDataType() == DataType::DT_BF16) ||
-        (self->GetDataType() == DataType::DT_FLOAT16 && gradOutput->GetDataType() == DataType::DT_FLOAT) ||
-        (self->GetDataType() == DataType::DT_FLOAT16 && gradOutput->GetDataType() == DataType::DT_BF16) ||
-        (self->GetDataType() == DataType::DT_BF16 && gradOutput->GetDataType() == DataType::DT_FLOAT) ||
-        (self->GetDataType() == DataType::DT_BF16 && gradOutput->GetDataType() == DataType::DT_FLOAT16);
+    bool isMixDataType = (self->GetDataType() == DataType::DT_FLOAT &&
+                          gradOutput->GetDataType() == DataType::DT_FLOAT16) ||
+                         (self->GetDataType() == DataType::DT_FLOAT &&
+                          gradOutput->GetDataType() == DataType::DT_BF16) ||
+                         (self->GetDataType() == DataType::DT_FLOAT16 &&
+                          gradOutput->GetDataType() == DataType::DT_FLOAT) ||
+                         (self->GetDataType() == DataType::DT_FLOAT16 &&
+                          gradOutput->GetDataType() == DataType::DT_BF16) ||
+                         (self->GetDataType() == DataType::DT_BF16 &&
+                          gradOutput->GetDataType() == DataType::DT_FLOAT) ||
+                         (self->GetDataType() == DataType::DT_BF16 &&
+                          gradOutput->GetDataType() == DataType::DT_FLOAT16);
 
     auto gradInput = isMixDataType ? executor->AllocTensor(broadcastShape, DataType::DT_FLOAT) :
                                      executor->AllocTensor(broadcastShape, self->GetDataType());

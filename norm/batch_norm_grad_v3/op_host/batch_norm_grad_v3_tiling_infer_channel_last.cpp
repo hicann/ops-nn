@@ -23,8 +23,7 @@ using namespace ge;
 namespace optiling {
 class BatchNormGradV3InferChannelLastTiling : public BatchNormGradV3InferBase {
 public:
-    explicit BatchNormGradV3InferChannelLastTiling(gert::TilingContext* context) : BatchNormGradV3InferBase(context)
-    {}
+    explicit BatchNormGradV3InferChannelLastTiling(gert::TilingContext* context) : BatchNormGradV3InferBase(context) {}
     ~BatchNormGradV3InferChannelLastTiling() override = default;
 
 protected:
@@ -32,18 +31,16 @@ protected:
     {
         OP_TILING_CHECK(
             fusedB1Len_ != 1,
-            OP_LOGD(
-                context_->GetNodeName(),
-                "BatchNormGradV3InferChannelLastTiling BA template is not capable, fused shape: (%ld, %ld, %ld)",
-                fusedB0Len_, fusedALen_, fusedB1Len_),
+            OP_LOGD(context_->GetNodeName(),
+                    "BatchNormGradV3InferChannelLastTiling BA template is not capable, fused shape: (%ld, %ld, %ld)",
+                    fusedB0Len_, fusedALen_, fusedB1Len_),
             return false);
 
         CalcBasicInfo();
 
-        OP_LOGD(
-            context_->GetNodeName(),
-            "BatchNormGradV3InferChannelLastTiling BA template is capable, fused shape: (%ld, %ld, %ld)", fusedB0Len_,
-            fusedALen_, fusedB1Len_);
+        OP_LOGD(context_->GetNodeName(),
+                "BatchNormGradV3InferChannelLastTiling BA template is capable, fused shape: (%ld, %ld, %ld)",
+                fusedB0Len_, fusedALen_, fusedB1Len_);
         return true;
     }
 
@@ -59,9 +56,9 @@ ge::graphStatus BatchNormGradV3InferChannelLastTiling::DoOpTiling()
 {
     // 切分A、B基本块， （B,A） -- >(Bouter, Aouter, Binner*Ainner*aTileBase_)
     int64_t aInner = 1;
-    int64_t ubBufferSize =
-        (aicoreParams_.ubSize / DOUBLE_BUFFER - (bytesPerWeight_ + bytesPerRunningVar_) * aInner * aTileBase_) /
-        bytesPerDy_ / INPUT_OUTPUT_NUM;
+    int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
+                            (bytesPerWeight_ + bytesPerRunningVar_) * aInner * aTileBase_) /
+                           bytesPerDy_ / INPUT_OUTPUT_NUM;
 
     // 先按照B切分，再切A
     int64_t bFactorMax = ubBufferSize / aTileBase_;
@@ -101,10 +98,7 @@ ge::graphStatus BatchNormGradV3InferChannelLastTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormGradV3InferChannelLastTiling::GetTilingKey() const
-{
-    return (TILINGKEY_INFER_CHANNEL_LAST_BASE);
-}
+uint64_t BatchNormGradV3InferChannelLastTiling::GetTilingKey() const { return (TILINGKEY_INFER_CHANNEL_LAST_BASE); }
 
 ge::graphStatus BatchNormGradV3InferChannelLastTiling::PostTiling()
 {

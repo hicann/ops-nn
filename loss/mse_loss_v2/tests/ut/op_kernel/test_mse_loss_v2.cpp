@@ -22,19 +22,12 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void mse_loss_v2(
-    GM_ADDR input, GM_ADDR target, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class mse_loss_v2_test : public testing::Test
-{
+extern "C" __global__ __aicore__ void mse_loss_v2(GM_ADDR input, GM_ADDR target, GM_ADDR output, GM_ADDR workspace,
+                                                  GM_ADDR tiling);
+class mse_loss_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "mse_loss_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "mse_loss_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "mse_loss_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "mse_loss_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(mse_loss_v2_test, test_case_mean_fp16_01)

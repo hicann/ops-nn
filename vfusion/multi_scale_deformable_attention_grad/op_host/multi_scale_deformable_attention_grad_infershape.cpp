@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file multi_scale_deformable_attention_grad_infershape.cpp
  * \brief
@@ -22,20 +21,20 @@
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShapeForMultiScaleDeformableAttentionGrad(gert::InferShapeContext *context)
+static ge::graphStatus InferShapeForMultiScaleDeformableAttentionGrad(gert::InferShapeContext* context)
 {
-    const gert::Shape *valueShape = context->GetInputShape(0);
+    const gert::Shape* valueShape = context->GetInputShape(0);
     if (valueShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    const gert::Shape *samplingLocationsShape = context->GetInputShape(3);
+    const gert::Shape* samplingLocationsShape = context->GetInputShape(3);
     if (samplingLocationsShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
 
-    gert::Shape *gradValueShape = context->GetOutputShape(0);
-    gert::Shape *gradSampleLocShape = context->GetOutputShape(1);
-    gert::Shape *gradAttnWeightShape = context->GetOutputShape(2);
+    gert::Shape* gradValueShape = context->GetOutputShape(0);
+    gert::Shape* gradSampleLocShape = context->GetOutputShape(1);
+    gert::Shape* gradAttnWeightShape = context->GetOutputShape(2);
     if ((gradValueShape == nullptr) || (gradSampleLocShape == nullptr) || (gradAttnWeightShape == nullptr)) {
         return ge::GRAPH_FAILED;
     }
@@ -69,5 +68,7 @@ static ge::graphStatus InferDataTypeMultiScaleDeformableAttentionGrad(gert::Infe
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(MultiScaleDeformableAttentionGrad).InferShape(InferShapeForMultiScaleDeformableAttentionGrad).InferDataType(InferDataTypeMultiScaleDeformableAttentionGrad);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(MultiScaleDeformableAttentionGrad)
+    .InferShape(InferShapeForMultiScaleDeformableAttentionGrad)
+    .InferDataType(InferDataTypeMultiScaleDeformableAttentionGrad);
+} // namespace ops

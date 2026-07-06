@@ -41,7 +41,7 @@ public:
     int64_t xTailCoreTailLoopSize;
 };
 
-class ReverseSequenceBSATilingData{
+class ReverseSequenceBSATilingData {
 public:
     int64_t bDim;
     int64_t sDim;
@@ -63,7 +63,7 @@ public:
     int64_t dtypeSize;
 };
 
-class ReverseSequenceBASTilingData{
+class ReverseSequenceBASTilingData {
 public:
     int64_t bDim;
     int64_t aDim;
@@ -84,7 +84,7 @@ public:
     int64_t dtypeSize;
 };
 
-class ReverseSequenceBSTilingData{
+class ReverseSequenceBSTilingData {
 public:
     int64_t bDim;
     int64_t sDim;
@@ -103,9 +103,8 @@ public:
     int64_t dtypeSize;
 };
 
-
-class ReverseSequenceA1SBATilingData{
-    public:
+class ReverseSequenceA1SBATilingData {
+public:
     int64_t a1Dim;
     int64_t sDim;
     int64_t bDim;
@@ -127,5 +126,5 @@ class ReverseSequenceA1SBATilingData{
     int64_t batchSize;
     int64_t reverseSize;
 };
-}
+} // namespace ReverseSequence
 #endif

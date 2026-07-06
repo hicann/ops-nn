@@ -34,13 +34,13 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                   op::DataType::DT_BF16};
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-  return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-    GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
+    return GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+           GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E;
 }
 
 static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
@@ -52,8 +52,9 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, acl
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self,
-                            const aclScalar* betaOptional, aclTensor* gradInput) {
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* betaOptional,
+                            aclTensor* gradInput)
+{
     // 检查gradOutput的数据类型是否在SiluGrad/SwishGrad算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, DTYPE_SUPPORT_LIST, return false);
 
@@ -62,9 +63,9 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self,
 
     // 检查betaOptional的数据类型能否转换为FLOAT
     if (betaOptional != nullptr && !CanCast(betaOptional->GetDataType(), DataType::DT_FLOAT)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "betaOptional dtype %s can not cast to float32.",
-            ToString(betaOptional->GetDataType()).GetString());
-            return false;
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "betaOptional dtype %s can not cast to float32.",
+                ToString(betaOptional->GetDataType()).GetString());
+        return false;
     }
 
     // 检查gradOutput, self和gradInput的dtype是否一致
@@ -75,14 +76,15 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self,
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!bf16flag && self->GetDataType() == op::DataType::DT_BF16) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s is unsupported by the current SOC version [%s].",
-        op::ToString(self->GetDataType()).GetString(), op::ToString(socVersion).GetString());
+                op::ToString(self->GetDataType()).GetString(), op::ToString(socVersion).GetString());
         return false;
     }
 
     return true;
 }
 
-static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput) {
+static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
+{
     OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(gradInput, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -94,8 +96,9 @@ static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, 
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self,
-                               const aclScalar* betaOptional, aclTensor* gradInput) {
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* betaOptional,
+                               aclTensor* gradInput)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, gradInput), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -108,7 +111,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) {
+static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor)
+{
     auto shape = x->GetViewShape();
     int64_t dimSize = x->GetViewShape().GetDimNum();
 
@@ -122,14 +126,15 @@ static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) 
 }
 
 static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor, size_t originalDimSize,
-                                          aclIntArray* valuePerm = nullptr) {
-  size_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
-    return x;
-  }
+                                          aclIntArray* valuePerm = nullptr)
+{
+    size_t dimSize = x->GetViewShape().GetDimNum();
+    if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
+        return x;
+    }
 
-  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-  return reshapeSelf;
+    auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
+    return reshapeSelf;
 }
 
 aclnnStatus aclnnSwishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
@@ -194,7 +199,7 @@ aclnnStatus aclnnSwishBackwardGetWorkspaceSize(const aclTensor* gradOutput, cons
     // 把长1维tensor reshape回原来的维度
     auto reshapeSwishGradOpOut = swishGradOpOut;
     if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-      reshapeSwishGradOpOut = ReshapeLongTensor(swishGradOpOut, uniqueExecutor.get(), dimSize, shapeOriDetial);
+        reshapeSwishGradOpOut = ReshapeLongTensor(swishGradOpOut, uniqueExecutor.get(), dimSize, shapeOriDetial);
     }
 
     // 固定写法，将计算结果拷贝到输出gradInput上，gradInput可能是非连续的tensor

@@ -18,13 +18,12 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *MseLossGradV1(const aclTensor* gradOutput, const aclTensor *self, const aclTensor *target,
-                             const std::string& reduction, aclOpExecutor *executor, const aclTensor *out);
-const aclTensor *MseLossGradV2(const aclTensor* gradOutput, const aclTensor *self, const aclTensor *target,
-                             const std::string& reduction, aclOpExecutor *executor, const aclTensor *out);
-const aclTensor *MseLossGrad(const aclTensor* gradOutput, const aclTensor *self, const aclTensor *target,
-                             const std::string& reduction, aclOpExecutor *executor);
-}
+const aclTensor* MseLossGradV1(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               const std::string& reduction, aclOpExecutor* executor, const aclTensor* out);
+const aclTensor* MseLossGradV2(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               const std::string& reduction, aclOpExecutor* executor, const aclTensor* out);
+const aclTensor* MseLossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                             const std::string& reduction, aclOpExecutor* executor);
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_OP_MSE_LOSS_GRAD_OP_H_
-
+#endif // OP_API_INC_LEVEL0_OP_MSE_LOSS_GRAD_OP_H_

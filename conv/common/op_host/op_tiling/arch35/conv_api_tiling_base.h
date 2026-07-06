@@ -30,16 +30,14 @@ const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_WITH_BIAS = {
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}
-};
+    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}};
 
 // [fmap, weight, output]
 const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_WITHOUT_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8}
-};
+    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8}};
 
 // [fmap, weight, bias, output]
 const std::vector<std::vector<ConvDtype>> EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_WITH_BIAS = {
@@ -56,8 +54,7 @@ const std::vector<std::vector<ConvDtype>> EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_W
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT8_E4M3FN},
     {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::INT8}
-};
+    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::INT8}};
 
 // [fmap, weight, output]
 const std::vector<std::vector<ConvDtype>> EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_WITHOUT_BIAS = {
@@ -74,8 +71,7 @@ const std::vector<std::vector<ConvDtype>> EXTENDCONV_QUANTCONV_SUPPORTED_TYPES_W
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::BFLOAT16},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN},
     {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT8}
-};
+    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT8}};
 
 struct L1TilingRes {
     uint64_t kAL1 = 0; // with khkw
@@ -159,24 +155,24 @@ struct ShapeInfo {
     uint8_t dualOutput = 0;
 };
 
-#pragma pack(push, 1)  // 确保无填充，严格按位排列
+#pragma pack(push, 1) // 确保无填充，严格按位排列
 struct BitFieldData {
-    uint64_t strideW        : 6;       // bits 0-5
-    uint64_t strideH        : 6;       // bits 6-11
-    uint64_t kernelW        : 8;       // bits 12-19
-    uint64_t kernelH        : 8;       // bits 20-27
-    uint64_t dilationW      : 8;       // bits 28-35
-    uint64_t dilationH      : 8;       // bits 36-43
+    uint64_t strideW : 6;             // bits 0-5
+    uint64_t strideH : 6;             // bits 6-11
+    uint64_t kernelW : 8;             // bits 12-19
+    uint64_t kernelH : 8;             // bits 20-27
+    uint64_t dilationW : 8;           // bits 28-35
+    uint64_t dilationH : 8;           // bits 36-43
     uint64_t kernelW_highest_bit : 1; // bit 44
     uint64_t kernelH_highest_bit : 1; // bit 45
-    uint64_t reserve1       : 2;        // bits 46-47
-    uint64_t channelSize    : 16;      // bits 48-63
+    uint64_t reserve1 : 2;            // bits 46-47
+    uint64_t channelSize : 16;        // bits 48-63
 };
 #pragma pack(pop)
- 
+
 union UnionDataXt {
     uint64_t n;
-    BitFieldData bf;    // n与bf共享同一块内存空间
+    BitFieldData bf; // n与bf共享同一块内存空间
 };
 
 struct AttrInfo {
@@ -221,7 +217,7 @@ struct CubeInfo {
 
 class __attribute__((visibility("default"))) ConvTilingBase {
 public:
-    ConvTilingBase() {};
+    ConvTilingBase(){};
     explicit ConvTilingBase(const PlatformInfo& platform);
     virtual ~ConvTilingBase() = default;
     void SetNodeType(std::string inType);

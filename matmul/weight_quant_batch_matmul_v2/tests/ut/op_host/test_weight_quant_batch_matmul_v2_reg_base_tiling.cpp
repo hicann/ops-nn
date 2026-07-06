@@ -33,9 +33,8 @@ struct WeightQuantBatchMatmulV2TilingRegBaseTestParam {
     uint64_t tilingKey;
 };
 
-class TestWeightQuantBatchMatmulV2RegBaseTiling : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingRegBaseTestParam>
-{
-};
+class TestWeightQuantBatchMatmulV2RegBaseTiling
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingRegBaseTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -208,11 +207,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -224,10 +223,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingRegBaseTestPara
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -422,11 +420,11 @@ TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_init_compile_info)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -438,10 +436,9 @@ TEST_F(TestWeightQuantBatchMatmulV2RegBaseTiling, test_init_compile_info)
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)

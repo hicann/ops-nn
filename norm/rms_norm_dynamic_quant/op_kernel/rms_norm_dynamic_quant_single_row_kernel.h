@@ -16,14 +16,10 @@
 template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelRmsNormDynamicQuantSingleRow : public KernelRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelRmsNormDynamicQuantSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelRmsNormDynamicQuantSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
-        GM_ADDR workspace, const RmsNormDynamicQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const RmsNormDynamicQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x, gamma, smooth, beta);
@@ -140,8 +136,8 @@ private:
         yQue.EnQue(yLocal);
     }
 
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t idx)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                       LocalTensor<float>& scaleTensor, int32_t idx)
     {
         Abs(tmpTensor, srcTensor, this->numLastDim);
         PipeBarrier<PIPE_V>();

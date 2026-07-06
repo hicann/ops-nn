@@ -38,7 +38,8 @@ public:
 
 private:
     ge::graphStatus GetShapeInfo();
-    template<int64_t R> ge::graphStatus DoTilingAndSet();
+    template <int64_t R>
+    ge::graphStatus DoTilingAndSet();
 
     gert::TilingContext* ctx_;
     std::vector<std::vector<int64_t>> raw_input_shapes_;

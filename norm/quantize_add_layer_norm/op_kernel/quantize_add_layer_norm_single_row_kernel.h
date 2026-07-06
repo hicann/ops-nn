@@ -22,16 +22,13 @@ template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelQuantizeAddLayerNormSingleRow {
 #define IS_MUL_MODE ((TILING_KEY % 10) == 2)
 public:
-    __aicore__ inline KernelQuantizeAddLayerNormSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelQuantizeAddLayerNormSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales, __gm__ uint8_t* offsets, __gm__ uint8_t* y, __gm__ uint8_t* x,
-        __gm__ uint8_t* workspace, uint32_t numCore_, uint32_t numLastDim_, uint32_t numFirstDim_,
-        uint32_t firstDimPerCore_, uint32_t firstDimPerCoreTail_, float eps_, float aveNum_)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales, __gm__ uint8_t* offsets,
+                                __gm__ uint8_t* y, __gm__ uint8_t* x, __gm__ uint8_t* workspace, uint32_t numCore_,
+                                uint32_t numLastDim_, uint32_t numFirstDim_, uint32_t firstDimPerCore_,
+                                uint32_t firstDimPerCoreTail_, float eps_, float aveNum_)
     {
         numCore = numCore_;
         numLastDim = numLastDim_;

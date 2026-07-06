@@ -12,11 +12,11 @@
  * \file max_pool3d_with_argmax_v2_tiling_base.h
  * \brief
  * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (51) USING BLANK LINES.
- * 
- * 
- * 
  *
- * 
+ *
+ *
+ *
+ *
  */
 
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_MAX_POOL3D_WITH_AGRMAX_V2_TILING_BASE_H_
@@ -33,7 +33,7 @@
 using namespace std;
 
 namespace optiling {
-using Ops::NN::Optiling::TilingBaseClass;    
+using Ops::NN::Optiling::TilingBaseClass;
 const int DHW_DIMS = 3;
 const int DHW_PAD_DIMS = 6;
 const int MAX_CORE_NUM = 50;
@@ -511,11 +511,9 @@ struct MaxPool3DWithArgmaxV2CompileInfo {
 
 class MaxPool3DWithArgmaxV2BaseTiling : public TilingBaseClass {
 public:
-    explicit MaxPool3DWithArgmaxV2BaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit MaxPool3DWithArgmaxV2BaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~MaxPool3DWithArgmaxV2BaseTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2BaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -540,18 +538,16 @@ public:
         : MaxPool3DWithArgmaxV2BaseTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2BaseSplitTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2BaseSplitTiling() override {}
 
 protected:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetWorkspaceSize() override;
-    uint64_t CalcBufferSizes(
-        const array<uint64_t, DHW_DIMS> part, const array<uint64_t, DHW_DIMS> partOut, const uint64_t partHwInp,
-        UBBufferSize& ubBufSizes);
-    ge::graphStatus FindSplitParts(
-        array<uint64_t, DHW_DIMS>& inParts, array<uint64_t, DHW_DIMS>& outParts, UBBufferSize& ubBufSizes, uint64_t dim);
+    uint64_t CalcBufferSizes(const array<uint64_t, DHW_DIMS> part, const array<uint64_t, DHW_DIMS> partOut,
+                             const uint64_t partHwInp, UBBufferSize& ubBufSizes);
+    ge::graphStatus FindSplitParts(array<uint64_t, DHW_DIMS>& inParts, array<uint64_t, DHW_DIMS>& outParts,
+                                   UBBufferSize& ubBufSizes, uint64_t dim);
     uint64_t RoundUpBlock(const uint64_t& src, const uint64_t& blockLen);
     uint64_t RoundDownBlock(const uint64_t& src, const uint64_t& blockLen);
 
@@ -574,8 +570,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseSplitTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2NoSplitTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2NoSplitTiling() override {}
 
 private:
     void DoUBTiling();
@@ -596,8 +591,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseSplitTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2SplitDTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2SplitDTiling() override {}
 
 private:
     void DoUBTiling();
@@ -618,8 +612,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseSplitTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2SplitHTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2SplitHTiling() override {}
 
 private:
     void DoUBTiling();
@@ -640,8 +633,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseSplitTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2SplitWTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2SplitWTiling() override {}
 
 private:
     void DoUBTiling();
@@ -662,8 +654,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseSplitTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2HugeKernelTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2HugeKernelTiling() override {}
 
 private:
     void DoUBTiling();
@@ -674,7 +665,7 @@ private:
     ge::graphStatus PostTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus LargeKernelCalcParts(array<uint64_t, DHW_DIMS>& inParts, uint64_t inPartsSize,
-        UBBufferSize& ubBufSizes, uint64_t dim);
+                                         UBBufferSize& ubBufSizes, uint64_t dim);
     uint64_t CalcBufferSizes(const array<uint64_t, DHW_DIMS> part, UBBufferSize& ubBufSizes);
 
     MaxPool3DWithArgmaxV2HugeKernelTilingData tiling;
@@ -687,8 +678,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseSplitTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2BigKernelTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2BigKernelTiling() override {}
 
 private:
     void DoUBTiling();
@@ -711,8 +701,7 @@ public:
         : MaxPool3DWithArgmaxV2BaseTiling(context)
     {}
 
-    ~MaxPool3DWithArgmaxV2NoExpandIndicesTiling() override
-    {}
+    ~MaxPool3DWithArgmaxV2NoExpandIndicesTiling() override {}
 
 private:
     void DoDAdjustment();

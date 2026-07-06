@@ -88,11 +88,11 @@ uint64_t AvgPoolV2GradCommonNCHWTiling::GetTilingKey() const
 {
     uint64_t schMode = TILING_KEY_NCHW;
     uint64_t format = FORMAT_NCHW;
-    uint64_t isPad = 0;  // tilingkey not use this key
+    uint64_t isPad = 0; // tilingkey not use this key
     uint64_t countIncludePad = inputData.countIncludePad;
-    uint64_t tilingKey = GET_TPL_TILING_KEY(
-        schMode, format, static_cast<uint64_t>(inputData.isInt32Meet), isPad,
-        static_cast<uint64_t>(splitData.isCheckRange), countIncludePad, static_cast<uint64_t>(inputData.hasDivisor));
+    uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, format, static_cast<uint64_t>(inputData.isInt32Meet), isPad,
+                                            static_cast<uint64_t>(splitData.isCheckRange), countIncludePad,
+                                            static_cast<uint64_t>(inputData.hasDivisor));
 
     return tilingKey;
 }
@@ -100,10 +100,10 @@ uint64_t AvgPoolV2GradCommonNCHWTiling::GetTilingKey() const
 void AvgPoolV2GradCommonNCHWTiling::DoBufferCalculate()
 {
     // The calculation only involves inner.
-    splitData.hInputInner =
-        Ops::Base::CeilDiv(splitData.hOutputInner + inputData.kernelSize[H_DIM] - 1, inputData.stride[H_DIM]);
-    splitData.wInputInner =
-        Ops::Base::CeilDiv(splitData.wOutputInner + inputData.kernelSize[W_DIM] - 1, inputData.stride[W_DIM]);
+    splitData.hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData.kernelSize[H_DIM] - 1,
+                                               inputData.stride[H_DIM]);
+    splitData.wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData.kernelSize[W_DIM] - 1,
+                                               inputData.stride[W_DIM]);
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(splitData.wInputInner, baseData.dataNumInOneBlock);
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.dataNumInOneBlock);
 
@@ -321,8 +321,8 @@ void AvgPoolV2GradCommonNCHWTiling::DoBlockTiling()
     splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter;
     splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
     splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void AvgPoolV2GradCommonNCHWTiling::PrintBaseData() const
@@ -422,9 +422,9 @@ ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
     wBatchCnt = wBatchCnt > 1 ? wBatchCnt : 1;
     int64_t vlLen = baseData.vRegSize / sizeof(float);
     if (wBatchCnt <= vlLen / DOUBLE) {
-        OP_CHECK_IF(
-            baseData.isOverlap, OP_LOGI(context_->GetNodeName(), "nchw template is not capable for overlap case."),
-            return ge::GRAPH_PARAM_INVALID);
+        OP_CHECK_IF(baseData.isOverlap,
+                    OP_LOGI(context_->GetNodeName(), "nchw template is not capable for overlap case."),
+                    return ge::GRAPH_PARAM_INVALID);
 
         int64_t hBatchCnt = std::min(splitData.hInputInner, inputData.gradShape[H_DIM]) / baseData.hProBatchSize;
         hBatchCnt = hBatchCnt > 1 ? hBatchCnt : 1;
@@ -439,10 +439,9 @@ ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
     }
     bool bankConfilictGrad = (baseData.wProBatchSize * baseData.inputBytes) % BANK_FACTOR == 0;
     bool bankConfilictOut = (baseData.wProBatchSize * inputData.stride[W_DIM] * sizeof(float)) % BANK_FACTOR == 0;
-    OP_CHECK_IF(
-        bankConfilictGrad || bankConfilictOut,
-        OP_LOGI(context_->GetNodeName(), "nchw template is not capable because of bank Confilict."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(bankConfilictGrad || bankConfilictOut,
+                OP_LOGI(context_->GetNodeName(), "nchw template is not capable because of bank Confilict."),
+                return ge::GRAPH_PARAM_INVALID);
 
     DoBlockTiling();
     SetTilingData();
@@ -451,10 +450,7 @@ ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AvgPoolV2GradCommonNCHWTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AvgPoolV2GradCommonNCHWTiling::GetWorkspaceSize()
 {

@@ -18,22 +18,19 @@
 namespace AscendC {
 constexpr uint8_t SYNC_MODE2 = 2;
 constexpr uint8_t VEC_FALG_ID = 9;
-constexpr int32_t BEST_FIXPIPE_ELEMENTS = 32;  // 128B/sizeof(float)
+constexpr int32_t BEST_FIXPIPE_ELEMENTS = 32; // 128B/sizeof(float)
 template <typename yType>
 class Conv3dDwInitOutput {
 public:
     __aicore__ inline Conv3dDwInitOutput() {}
-    __aicore__ inline void Init(GM_ADDR y, const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR y, const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
         InitTilingData(tilingData);
         // init global buffer
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
+        yGm_.SetGlobalBuffer((__gm__ yType*)y);
     }
 
-    __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b)
-    {
-        return (a + b - 1) / b;
-    }
+    __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b) { return (a + b - 1) / b; }
 
     __aicore__ inline void Process()
     {
@@ -69,28 +66,25 @@ public:
         CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(VEC_FALG_ID);
     }
 
-    __aicore__ inline void Destroy()
-    {
-        pipe_.Destroy();
-    }
+    __aicore__ inline void Destroy() { pipe_.Destroy(); }
 
 protected:
     uint64_t outputSize_;
     TPipe pipe_;
     GlobalTensor<yType> yGm_;
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
         uint64_t mSize = static_cast<uint64_t>(tilingData->dwTiling.cout);
         uint64_t nSize = static_cast<uint64_t>(tilingData->dwTiling.cin) * tilingData->dwTiling.dk *
-            tilingData->dwTiling.hk * tilingData->dwTiling.wk;
+                         tilingData->dwTiling.hk * tilingData->dwTiling.wk;
         if (tilingData->dwTiling.group > 1) {
             nSize = static_cast<uint64_t>(tilingData->dwTiling.cin / tilingData->dwTiling.group) *
-                tilingData->dwTiling.dk * tilingData->dwTiling.hk * tilingData->dwTiling.wk;
+                    tilingData->dwTiling.dk * tilingData->dwTiling.hk * tilingData->dwTiling.wk;
         }
         outputSize_ = mSize * nSize;
     }
 };
-}  // namespace AscendC
+} // namespace AscendC
 
-#endif  // CONV3D_BACKPROP_FILTER_V2_INIT_OUTPUT_H
+#endif // CONV3D_BACKPROP_FILTER_V2_INIT_OUTPUT_H

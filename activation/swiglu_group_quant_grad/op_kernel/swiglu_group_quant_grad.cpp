@@ -17,9 +17,9 @@
 
 using namespace SwigluGroupQuantGradOp;
 
-extern "C" __global__ __aicore__ void swiglu_group_quant_grad(GM_ADDR gradY, GM_ADDR x, GM_ADDR weight,
-                                                          GM_ADDR yOrigin, GM_ADDR groupIndex, GM_ADDR gradX,
-                                                          GM_ADDR gradWeight, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void swiglu_group_quant_grad(GM_ADDR gradY, GM_ADDR x, GM_ADDR weight, GM_ADDR yOrigin,
+                                                              GM_ADDR groupIndex, GM_ADDR gradX, GM_ADDR gradWeight,
+                                                              GM_ADDR workspace, GM_ADDR tiling)
 {
     SwigluGroupQuantGrad<DTYPE_X> op;
     op.Init(gradY, x, weight, yOrigin, groupIndex, gradX, gradWeight, workspace, tiling);

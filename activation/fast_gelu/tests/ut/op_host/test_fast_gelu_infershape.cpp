@@ -24,15 +24,9 @@ using namespace ge;
 
 class FastGeluTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FastGeluTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FastGeluTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FastGeluTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FastGeluTest TearDown" << std::endl; }
 };
 
 TEST_F(FastGeluTest, fast_gelu_infershape_test)
@@ -41,8 +35,8 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
 
-    auto input_tensor =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto input_tensor = create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                                shape_range);
     op.UpdateInputDesc("x", input_tensor);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
@@ -60,8 +54,8 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test_float32)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 128}, {1, 256}};
 
-    auto input_tensor =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {128, 256}, ge::FORMAT_ND, shape_range);
+    auto input_tensor = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {128, 256}, ge::FORMAT_ND,
+                                                shape_range);
     op.UpdateInputDesc("x", input_tensor);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
@@ -79,8 +73,8 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test_3d)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 32}, {1, 64}, {1, 128}};
 
-    auto input_tensor =
-        create_desc_shape_range({-1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {32, 64, 128}, ge::FORMAT_ND, shape_range);
+    auto input_tensor = create_desc_shape_range({-1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {32, 64, 128},
+                                                ge::FORMAT_ND, shape_range);
     op.UpdateInputDesc("x", input_tensor);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
@@ -98,8 +92,8 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test_4d_nchw)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 2}, {1, 64}, {112, 112}, {112, 112}};
 
-    auto input_tensor = create_desc_shape_range(
-        {-1, -1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_NCHW, {2, 64, 112, 112}, ge::FORMAT_NCHW, shape_range);
+    auto input_tensor = create_desc_shape_range({-1, -1, -1, -1}, ge::DT_FLOAT16, ge::FORMAT_NCHW, {2, 64, 112, 112},
+                                                ge::FORMAT_NCHW, shape_range);
     op.UpdateInputDesc("x", input_tensor);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
@@ -114,8 +108,8 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test_5d)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 2}, {1, 4}, {8, 8}, {16, 16}, {32, 32}};
 
-    auto input_tensor = create_desc_shape_range(
-        {-1, -1, -1, -1, -1}, ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 4, 8, 16, 32}, ge::FORMAT_NCDHW, shape_range);
+    auto input_tensor = create_desc_shape_range({-1, -1, -1, -1, -1}, ge::DT_FLOAT, ge::FORMAT_NCDHW, {2, 4, 8, 16, 32},
+                                                ge::FORMAT_NCDHW, shape_range);
     op.UpdateInputDesc("x", input_tensor);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
@@ -158,8 +152,8 @@ TEST_F(FastGeluTest, fast_gelu_infershape_test_large)
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1024, 1024}, {1024, 1024}};
 
-    auto input_tensor =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {1024, 1024}, ge::FORMAT_ND, shape_range);
+    auto input_tensor = create_desc_shape_range({-1, -1}, ge::DT_FLOAT16, ge::FORMAT_ND, {1024, 1024}, ge::FORMAT_ND,
+                                                shape_range);
     op.UpdateInputDesc("x", input_tensor);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 

@@ -29,18 +29,20 @@ public:
     __aicore__ inline ~DequantSwigluQuantDynamicPerformance(){};
 
     __aicore__ inline void Init(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-    GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-    GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
+                                GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
+                                GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
     __aicore__ inline void Process();
     __aicore__ inline void BaseCompute1(uint64_t curTileLen, uint64_t blockCount, uint64_t idx, int32_t ppFlag);
     __aicore__ inline void BaseCompute2(uint64_t curTileLen, uint64_t blockCount, uint64_t idx, int32_t ppFlag);
     __aicore__ inline void CopyOutF(uint64_t rowId, uint64_t tileLen, uint64_t length, int32_t ppFlag);
     __aicore__ inline void CanFullLocaOneRow(uint32_t offset1, uint32_t offset2);
-    __aicore__ inline void CopyIn(uint32_t dataTileLen, uint32_t offset1, uint32_t offset2, uint32_t blockCount, int32_t ppFlag);
+    __aicore__ inline void CopyIn(uint32_t dataTileLen, uint32_t offset1, uint32_t offset2, uint32_t blockCount,
+                                  int32_t ppFlag);
     __aicore__ inline void CopyInDequantBuffer(uint32_t offset1, uint32_t offset2, uint32_t dataTileLen);
-    __aicore__ inline void InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-        GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-        GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
+    __aicore__ inline void InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm,
+                                      GM_ADDR bias_gm, GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm,
+                                      GM_ADDR scale_gm, GM_ADDR userspace, const SwiGluTilingData* tilingData,
+                                      TPipe* pipe_);
     __aicore__ inline void InitUbBufferCommon(uint64_t tileLength, uint32_t realRowLen);
     __aicore__ inline void CopyOutScale(uint32_t realRowLen);
     __aicore__ inline void CopyInQuantScale(uint64_t dataTileLength, uint64_t offset);
@@ -85,15 +87,15 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Init
     GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm, GM_ADDR userspace, const SwiGluTilingData* tilingData,
     TPipe* pipe_)
 {
-    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm, scale_gm, userspace, tilingData, pipe_);
+    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm,
+                     scale_gm, userspace, tilingData, pipe_);
     this->weightScaleGm.SetGlobalBuffer((__gm__ float*)weight_scale_gm, this->colNum);
     if (this->biasIsEmpty == 0) {
         this->biasGm.SetGlobalBuffer((__gm__ BiasType*)bias_gm, this->colNum);
     }
 
     if (this->activateScaleIsEmpty == 0) {
-        this->activationScaleGm.SetGlobalBuffer((__gm__ float*) activation_scale_gm + this->biasOffset,
-            this->numRound);
+        this->activationScaleGm.SetGlobalBuffer((__gm__ float*)activation_scale_gm + this->biasOffset, this->numRound);
     }
 
     this->InitUbBufferCommon(this->baseColLen, this->numRound);
@@ -104,7 +106,7 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Init
     }
 
     this->pipe->InitBuffer(weightScaleBufA, alignTileLength * sizeof(float));
-    this->pipe->InitBuffer(weightScaleBufB,  alignTileLength * sizeof(float));
+    this->pipe->InitBuffer(weightScaleBufB, alignTileLength * sizeof(float));
     this->pipe->InitBuffer(quantScaleBuf, alignTileLength * sizeof(float));
 
     this->pipe->InitBuffer(calcSwiGluTmpBuf, alignTileLength * sizeof(float) * this->baseRowLen);
@@ -128,8 +130,8 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Init
     inALocalPong = inQueueAPongBuf.Get<InType>();
     inBLocalPing = inQueueBPingBuf.Get<InType>();
     inBLocalPong = inQueueBPongBuf.Get<InType>();
-    outFLocalPing = outQueueFPingBuf.Get<int8_t>(); 
-    outFLocalPong = outQueueFPongBuf.Get<int8_t>(); 
+    outFLocalPing = outQueueFPingBuf.Get<int8_t>();
+    outFLocalPong = outQueueFPongBuf.Get<int8_t>();
     this->maxTempLocal = outQueueSBuf.Get<float>();
 
     this->weightScaleLocalA = weightScaleBufA.Get<float>();
@@ -138,9 +140,10 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Init
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::InitCommon(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-    GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-    GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::InitCommon(
+    GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm, GM_ADDR quant_scale_gm,
+    GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm, GM_ADDR userspace, const SwiGluTilingData* tilingData,
+    TPipe* pipe_)
 {
     this->pipe = pipe_;
     this->curBlockIdx = GetBlockIdx();
@@ -173,14 +176,16 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Init
     } else {
         this->biasOffset = (this->perRoundCnt + 1) * remainCnt + (this->curBlockIdx - remainCnt) * this->perRoundCnt;
     }
-    this->xGm.SetGlobalBuffer((__gm__ InType*)x_gm + this->biasOffset * this->colNum * DOUBLE, this->colNum * this->numRound * DOUBLE);
+    this->xGm.SetGlobalBuffer((__gm__ InType*)x_gm + this->biasOffset * this->colNum * DOUBLE,
+                              this->colNum * this->numRound * DOUBLE);
     this->scaleGm.SetGlobalBuffer((__gm__ float*)scale_gm, this->rowNum);
     this->yGm.SetGlobalBuffer((__gm__ int8_t*)y_gm + this->biasOffset * this->colNum, this->numRound * this->colNum);
     this->quantScaleGm.SetGlobalBuffer((__gm__ float*)quant_scale_gm, this->colNum);
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::InitUbBufferCommon(uint64_t tileLength, uint32_t realRowLen)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::InitUbBufferCommon(uint64_t tileLength,
+                                                                                               uint32_t realRowLen)
 {
     uint64_t alignTileLength = tileLength;
     if (!this->isOut32BAligned) {
@@ -191,7 +196,8 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Init
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Process() {
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Process()
+{
     if (this->curBlockIdx >= this->useCoreNum) {
         return;
     }
@@ -213,7 +219,8 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Copy
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CanFullLocaOneRow(uint32_t offset1, uint32_t offset2)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CanFullLocaOneRow(uint32_t offset1,
+                                                                                              uint32_t offset2)
 {
     if (this->quantScaleIsEmpty == 0) {
         this->CopyInQuantScale(this->colNum, 0);
@@ -245,9 +252,10 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CanF
         WaitFlag<HardEvent::MTE2_V>(eventId);
         this->BaseCompute1(perLoopColSize, blockCount, i, pingPongFlag);
 
-        if(i != loops -1) {
+        if (i != loops - 1) {
             WaitFlag<HardEvent::MTE3_MTE2>(eventIdNext);
-            this->CopyIn(this->colNum, offset1 + (i + 1) * base, offset2 + (i + 1) * base, blockCount, 1 - pingPongFlag);
+            this->CopyIn(this->colNum, offset1 + (i + 1) * base, offset2 + (i + 1) * base, blockCount,
+                         1 - pingPongFlag);
             SetFlag<HardEvent::MTE2_V>(eventIdNext);
         }
 
@@ -266,7 +274,8 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CanF
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyInQuantScale(uint64_t dataTileLength, uint64_t offset)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyInQuantScale(uint64_t dataTileLength,
+                                                                                             uint64_t offset)
 {
     DataCopyExtParams dataCopyParams{1, static_cast<uint32_t>(dataTileLength * sizeof(float)), 0, 0, 0};
     DataCopyPadExtParams<float> dataCopyPadParams{false, 0, 0, 0};
@@ -274,7 +283,9 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Copy
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyInDequantBuffer(uint32_t offset1, uint32_t offset2, uint32_t dataTileLen)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyInDequantBuffer(uint32_t offset1,
+                                                                                                uint32_t offset2,
+                                                                                                uint32_t dataTileLen)
 {
     DataCopyExtParams params = {1, static_cast<uint32_t>(dataTileLen * sizeof(float)), 0, 0, 0};
     DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
@@ -284,11 +295,14 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Copy
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyIn(uint32_t dataTileLen, uint32_t offset1, uint32_t offset2, uint32_t blockCount, int32_t ppFlag)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyIn(uint32_t dataTileLen,
+                                                                                   uint32_t offset1, uint32_t offset2,
+                                                                                   uint32_t blockCount, int32_t ppFlag)
 {
     uint32_t srcStride = dataTileLen * sizeof(InType);
     DataCopyExtParams dataCopyParams{static_cast<uint16_t>(blockCount),
-        static_cast<uint32_t>(dataTileLen * sizeof(InType)), srcStride, this->dstStride, 0};
+                                     static_cast<uint32_t>(dataTileLen * sizeof(InType)), srcStride, this->dstStride,
+                                     0};
     DataCopyPadExtParams<InType> dataCopyPadParams{false, 0, 0, 0};
     LocalTensor<InType> aLocal = ppFlag ? inALocalPong : inALocalPing;
     LocalTensor<InType> bLocal = ppFlag ? inBLocalPong : inBLocalPing;
@@ -297,7 +311,9 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Copy
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::BaseCompute1(uint64_t curTileLen, uint64_t blockCount, uint64_t rowId, int32_t ppFlag)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::BaseCompute1(uint64_t curTileLen,
+                                                                                         uint64_t blockCount,
+                                                                                         uint64_t rowId, int32_t ppFlag)
 {
     LocalTensor<InType> inALocal = ppFlag ? inALocalPong : inALocalPing;
     LocalTensor<InType> bLocal_ = ppFlag ? inBLocalPong : inBLocalPing;
@@ -343,7 +359,9 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Base
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::BaseCompute2(uint64_t curTileLen, uint64_t blockCount, uint64_t rowId, int32_t ppFlag)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::BaseCompute2(uint64_t curTileLen,
+                                                                                         uint64_t blockCount,
+                                                                                         uint64_t rowId, int32_t ppFlag)
 {
     LocalTensor<int8_t> outLocal = ppFlag ? outFLocalPong : outFLocalPing;
 
@@ -373,12 +391,13 @@ __aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::Base
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyOutF(uint64_t rowId, uint64_t tileLen, uint64_t length, int32_t ppFlag)
+__aicore__ inline void DequantSwigluQuantDynamicPerformance<TEMPLATE_ARGS>::CopyOutF(uint64_t rowId, uint64_t tileLen,
+                                                                                     uint64_t length, int32_t ppFlag)
 {
     LocalTensor<int8_t> outLocal = ppFlag ? outFLocalPong : outFLocalPing;
     DataCopyExtParams intriParams{1, static_cast<uint32_t>(tileLen), 0, 0, 0};
     DataCopyPad(this->yGm[rowId * this->colNum * this->baseRowLen], outLocal, intriParams);
 }
 
-}  // namespace DequantSwigluQuant
-#endif  // DEQUANT_SWIGLU_QUANT_DYNAMIC_PERFORMANCE_HPP
+} // namespace DequantSwigluQuant
+#endif // DEQUANT_SWIGLU_QUANT_DYNAMIC_PERFORMANCE_HPP

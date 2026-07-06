@@ -18,18 +18,13 @@
 
 #include "unsorted_segment_base.h"
 
-namespace UnsortedSegmentSum
-{
+namespace UnsortedSegmentSum {
 using namespace AscendC;
 
 template <typename TX, typename Index>
-class KernelUnsortedSegmentAddSum
-{
+class KernelUnsortedSegmentAddSum {
 public:
-    __aicore__ inline KernelUnsortedSegmentAddSum(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelUnsortedSegmentAddSum(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output,
                                 const UnsortedSegmentSumOutFlTilingData* tiling)
@@ -63,17 +58,17 @@ public:
     {
         LocalTensor<Index> indexLocal = inQueueIndex.AllocTensor<Index>();
         DataCopyExtParams extParams{
-            static_cast<uint16_t>(1),                       // blockCount
-            static_cast<uint32_t>(extent * sizeof(Index)),  // blockLen
-            0,                                              // srcStride
-            0,                                              // dstStride
-            0                                               // rsv
+            static_cast<uint16_t>(1),                      // blockCount
+            static_cast<uint32_t>(extent * sizeof(Index)), // blockLen
+            0,                                             // srcStride
+            0,                                             // dstStride
+            0                                              // rsv
         };
         DataCopyPadExtParams<Index> padParams{
-            false,  // isPad
-            0,      // leftPadding
-            0,      // rightPadding
-            0       // paddingValue
+            false, // isPad
+            0,     // leftPadding
+            0,     // rightPadding
+            0      // paddingValue
         };
         DataCopyPad(indexLocal, segmentIdsGm[offset], extParams, padParams);
         inQueueIndex.EnQue(indexLocal);
@@ -135,9 +130,9 @@ public:
             __local_mem__ TX* midResPtr = (__local_mem__ TX*)midRes.GetPhyAddr();
             DataSyncBarrier<MemDsbT::UB>();
             asc_vf_call<SimtGatherValue<TX, Index>>(
-                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)},
-                midResPtr, xUbLocalPtr, (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize,
-                needIndexOneUb, oneRowOutNumAlign);
+                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)}, midResPtr, xUbLocalPtr,
+                (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize, needIndexOneUb,
+                oneRowOutNumAlign);
             inQueueX.FreeTensor(xUbLocal);
             inQueueIndex.FreeTensor(indexUb);
         }
@@ -156,11 +151,11 @@ public:
         WaitFlag<HardEvent::V_MTE3>(eventId);
         SetAtomicAdd<TX>();
         DataCopyExtParams extParams{
-            static_cast<uint16_t>(1),         // blockCount
-            static_cast<uint32_t>(oneRowOutNum * sizeof(TX)),  // blockLen
-            0,                                                 // srcStride
-            0,                                                 // dstStride
-            0                                                  // rsv
+            static_cast<uint16_t>(1),                         // blockCount
+            static_cast<uint32_t>(oneRowOutNum * sizeof(TX)), // blockLen
+            0,                                                // srcStride
+            0,                                                // dstStride
+            0                                                 // rsv
         };
         DataCopyPad(outputGm, midRes, extParams);
         SetAtomicNone();
@@ -183,5 +178,5 @@ private:
     uint32_t oneCoreUbLoop{1};
     uint32_t rowNumOneUb{1};
 };
-}  // namespace UnsortedSegmentSum
+} // namespace UnsortedSegmentSum
 #endif

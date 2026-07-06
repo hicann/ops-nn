@@ -17,14 +17,12 @@
 #include "infershape_elewise_util.h"
 using namespace Ops::Base;
 
-namespace
-{
+namespace {
 const size_t IR_ATTR_NUM_TWO = 2;
-}  // namespace
+} // namespace
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 static graphStatus InferDtype4SoftmaxV2(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferDtype4SoftmaxV2 enter");
@@ -47,10 +45,7 @@ static graphStatus InferDtype4SoftmaxV2(gert::InferDataTypeContext* context)
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShape4SoftmaxV2(gert::InferShapeContext* context)
-{
-    return InferShape4Elewise(context);
-}
+static ge::graphStatus InferShape4SoftmaxV2(gert::InferShapeContext* context) { return InferShape4Elewise(context); }
 
 IMPL_OP_INFERSHAPE(SoftmaxV2).InferShape(InferShape4SoftmaxV2).InferDataType(InferDtype4SoftmaxV2);
-}  // namespace ops
+} // namespace ops

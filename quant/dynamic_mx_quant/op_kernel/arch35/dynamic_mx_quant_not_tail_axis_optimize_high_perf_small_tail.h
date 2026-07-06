@@ -27,8 +27,8 @@ template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t c
 class DynamicMxQuantNotTailAxisOptimizeSmallTail {
 public:
     __aicore__ inline DynamicMxQuantNotTailAxisOptimizeSmallTail(){};
-    __aicore__ inline void Init(
-        TPipe* pipe, GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, const DynamicMxQuant4OptimizeTilingData* tilingData);
+    __aicore__ inline void Init(TPipe* pipe, GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                const DynamicMxQuant4OptimizeTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -39,9 +39,9 @@ private:
     template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
     __aicore__ inline void SplitPreAxisCompute(int64_t offset, int64_t blockCount);
     template <const bool canInterleave, const bool canMaxLowBound>
-    __aicore__ inline void Compute(
-        __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr,
-        __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
+    __aicore__ inline void Compute(__ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr,
+                                   __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* lhsYAddr,
+                                   __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
     __aicore__ inline void CopyOut(int64_t offset, int64_t blockCount);
 
 private:
@@ -111,15 +111,14 @@ private:
     __aicore__ inline void InitializeConstants(AuxRegisters& regs);
 
     template <const bool canInterleave>
-    __aicore__ inline void ComputeMaxExponents(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
-        __ubuf__ DTYPE_X* rhsXAddr, uint16_t loop0, uint16_t loop1);
+    __aicore__ inline void ComputeMaxExponents(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs,
+                                               AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
+                                               __ubuf__ DTYPE_X* rhsXAddr, uint16_t loop0, uint16_t loop1);
 
-     // 0: do nothing, 1: load from ub, 2: duplicate 0
+    // 0: do nothing, 1: load from ub, 2: duplicate 0
     template <const uint8_t initRHS>
-    __aicore__ inline void LoadData(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
-        __ubuf__ DTYPE_X* rhsXAddr);
+    __aicore__ inline void LoadData(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs,
+                                    __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr);
 
     __aicore__ inline void ComputeMax(ComputeRegisters& reg, AuxRegisters& auxRegs);
     __aicore__ inline void ComputeMaxFP32(ComputeRegisters& reg, AuxRegisters& auxRegs);
@@ -133,56 +132,58 @@ private:
     __aicore__ inline void ComputeScalesAndSharedExpNonFP32(ComputeRegisters& regs, AuxRegisters& auxRegs);
 
     template <const bool isEven, const bool canMaxLowBound>
-    __aicore__ inline void ComputeScaleFromAbsMaxFP32(
-        AuxRegisters& auxRegs, Reg::RegTensor<uint32_t>& absMaxU32, Reg::RegTensor<uint32_t>& mxScaleU32,
-        Reg::RegTensor<uint32_t>& mxScaleAdd1U32, Reg::RegTensor<uint16_t>& mxScale);
+    __aicore__ inline void ComputeScaleFromAbsMaxFP32(AuxRegisters& auxRegs, Reg::RegTensor<uint32_t>& absMaxU32,
+                                                      Reg::RegTensor<uint32_t>& mxScaleU32,
+                                                      Reg::RegTensor<uint32_t>& mxScaleAdd1U32,
+                                                      Reg::RegTensor<uint16_t>& mxScale);
     template <const bool isEven, const bool canMaxLowBound>
-    __aicore__ inline void ComputeScaleFromAbsMaxNonFP32(
-        AuxRegisters& auxRegs, Reg::RegTensor<uint16_t>& absMaxU16, Reg::RegTensor<uint32_t>& absMaxU32,
-        Reg::RegTensor<uint32_t>& mxScaleU32, Reg::RegTensor<uint32_t>& mxScaleAdd1U32,
-        Reg::RegTensor<uint16_t>& mxScale);
+    __aicore__ inline void ComputeScaleFromAbsMaxNonFP32(AuxRegisters& auxRegs, Reg::RegTensor<uint16_t>& absMaxU16,
+                                                         Reg::RegTensor<uint32_t>& absMaxU32,
+                                                         Reg::RegTensor<uint32_t>& mxScaleU32,
+                                                         Reg::RegTensor<uint32_t>& mxScaleAdd1U32,
+                                                         Reg::RegTensor<uint16_t>& mxScale);
 
     template <const bool canInterleave>
-    __aicore__ inline void QuantizeValues(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
-        __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0,
-        uint16_t loop1);
+    __aicore__ inline void QuantizeValues(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs,
+                                          __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr,
+                                          __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0,
+                                          uint16_t loop1);
 
     template <const bool canInterleave>
-    __aicore__ inline void QuantizeValuesFP32(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
-        __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0,
-        uint16_t loop1);
+    __aicore__ inline void QuantizeValuesFP32(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs,
+                                              AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
+                                              __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* lhsYAddr,
+                                              __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
     template <const bool canInterleave>
-    __aicore__ inline void QuantizeValuesNonFP32(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
-        __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0,
-        uint16_t loop1);
+    __aicore__ inline void QuantizeValuesNonFP32(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs,
+                                                 AuxRegisters& auxRegs, __ubuf__ DTYPE_X* lhsXAddr,
+                                                 __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* lhsYAddr,
+                                                 __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
 
     // Additional helper function declarations
     template <const bool canInterleave, const bool withRHS>
-    __aicore__ inline void ProcessQuantizationFP16(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
-        __ubuf__ uint8_t* rhsYAddr);
+    __aicore__ inline void ProcessQuantizationFP16(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs,
+                                                   AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
+                                                   __ubuf__ uint8_t* rhsYAddr);
     template <const bool canInterleave, const bool withRHS>
-    __aicore__ inline void ProcessQuantizationFP32(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
-        __ubuf__ uint8_t* rhsYAddr);
+    __aicore__ inline void ProcessQuantizationFP32(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs,
+                                                   AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
+                                                   __ubuf__ uint8_t* rhsYAddr);
 
     template <const bool canInterleave, const bool withRHS>
-    __aicore__ inline void ProcessQuantizationBF16ToFP4(
-        ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
-        __ubuf__ uint8_t* rhsYAddr);
+    __aicore__ inline void ProcessQuantizationBF16ToFP4(ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs,
+                                                        AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
+                                                        __ubuf__ uint8_t* rhsYAddr);
 
     template <const bool canInterleave>
-    __aicore__ inline void ProcessFP4QuantizationNonFp32(
-        ComputeRegisters& regs, AuxRegisters& auxRegs, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ProcessFP4QuantizationNonFp32(ComputeRegisters& regs, AuxRegisters& auxRegs,
+                                                         __ubuf__ uint8_t* yAddr);
 
     __aicore__ inline void ComputeReciprocalScale(ComputeRegisters& regs, AuxRegisters& auxRegs, bool isModeOne);
 
     template <const bool canInterleave>
-    __aicore__ inline void ProcessFP8QuantizationNonFP32(
-        ComputeRegisters& regs, AuxRegisters& auxRegs, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ProcessFP8QuantizationNonFP32(ComputeRegisters& regs, AuxRegisters& auxRegs,
+                                                         __ubuf__ uint8_t* yAddr);
     __aicore__ inline void PreProcessFP32(Reg::RegTensor<float>& in, AuxRegisters& auxRegs);
 
 private:
@@ -271,8 +272,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
     if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value || IsSame<DTYPE_Y, fp4x2_e1m2_t>::value) {
         quantedVFBlock = DIGIT_TWO; // for fp4x2, 256B/4/32B = 2
     }
-    inStride_ =
-        alignedPostAxisSize_ / ONE_BLK_SIZE * sizeof(DTYPE_X) - Ceil(postAxisSize_, ONE_BLK_SIZE / sizeof(DTYPE_X));
+    inStride_ = alignedPostAxisSize_ / ONE_BLK_SIZE * sizeof(DTYPE_X) -
+                Ceil(postAxisSize_, ONE_BLK_SIZE / sizeof(DTYPE_X));
     outStride_ = alignedOutputPostAxisSize_ / ONE_BLK_SIZE - Ceil(outputPostAxisSize_, ONE_BLK_SIZE);
     scaleStride_ = alignedPostAxisSize_ * DIGIT_TWO / ONE_BLK_SIZE - Ceil(postAxisSize_ * DIGIT_TWO, ONE_BLK_SIZE);
 
@@ -362,8 +363,8 @@ template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t c
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::CopyIn(
     int64_t offset, int64_t count)
 {
-    int64_t rowOffset =
-        (offset + count) / padBlockNumInAxis_ * quantAxisSize_ + (offset + count) % padBlockNumInAxis_ * blockSize_;
+    int64_t rowOffset = (offset + count) / padBlockNumInAxis_ * quantAxisSize_ +
+                        (offset + count) % padBlockNumInAxis_ * blockSize_;
     int64_t inOffset = nextInRowOffset_ * postAxisSize_;
     uint16_t nBurst = needPadPostAxis_ ? rowOffset - nextInRowOffset_ : 1;
     uint32_t blockLen = needPadPostAxis_ ? postAxisSize_ * sizeof(DTYPE_X) :
@@ -379,12 +380,12 @@ template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t c
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::CopyOut(
     int64_t offset, int64_t count)
 {
-    int64_t rowOffset =
-        (offset + count) / padBlockNumInAxis_ * quantAxisSize_ + (offset + count) % padBlockNumInAxis_ * blockSize_;
+    int64_t rowOffset = (offset + count) / padBlockNumInAxis_ * quantAxisSize_ +
+                        (offset + count) % padBlockNumInAxis_ * blockSize_;
     int64_t outOffset = nextOutRowOffset_ * outputPostAxisSize_;
     uint16_t outNBurst = needPadPostAxis_ ? rowOffset - nextOutRowOffset_ : 1;
-    uint32_t outBlockLen =
-        needPadPostAxis_ ? outputPostAxisSize_ : (rowOffset - nextOutRowOffset_) * outputPostAxisSize_;
+    uint32_t outBlockLen = needPadPostAxis_ ? outputPostAxisSize_ :
+                                              (rowOffset - nextOutRowOffset_) * outputPostAxisSize_;
     uint16_t scaleNBurst = needPadPostAxis_ ? count / 2 : 1;
     uint32_t scaleBlockLen = needPadPostAxis_ ? postAxisSize_ * DIGIT_TWO : count * postAxisSize_;
     int64_t scaleOffset = offset * postAxisSize_; // byte
@@ -404,8 +405,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
 template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
 __aicore__ inline void
-DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::SplitPreAxisCompute(
-    int64_t offset, int64_t count)
+DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::SplitPreAxisCompute(int64_t offset,
+                                                                                                     int64_t count)
 {
     LocalTensor<DTYPE_X> x = inQueue_.DeQue<DTYPE_X>();
     LocalTensor<uint8_t> mxScale = mxScaleQueue_.AllocTensor<uint8_t>();
@@ -436,13 +437,11 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
             }
         }
         if (loop0 == 0 && loop1 != 0) {
-            Compute<canInterleave, false>(
-                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
-                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+            Compute<canInterleave, false>(xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                                          yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
         } else {
-            Compute<canInterleave, true>(
-                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
-                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+            Compute<canInterleave, true>(xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                                         yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
         }
 
         xAddr += (2 * loop0 + loop1) * alignedPostAxisSize_;
@@ -475,28 +474,28 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
         if constexpr (!IsSame<DTYPE_X, float>::value) {
             // Compute MX scales and shared exponents
             ComputeScalesAndSharedExp<canMaxLowBound>(lhsRegs, auxRegs);
-            Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, lhsRegs.mxScale);
+            Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint8_t>&)lhsRegs.mxScale,
+                                                                   lhsRegs.mxScale);
 
             if constexpr (!canInterleave) {
                 ComputeScalesAndSharedExp<canMaxLowBound>(rhsRegs, auxRegs);
-                Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::HIGHEST>(
-                    (Reg::RegTensor<uint8_t>&)rhsRegs.mxScale, rhsRegs.mxScale);
+                Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::HIGHEST>((Reg::RegTensor<uint8_t>&)rhsRegs.mxScale,
+                                                                        rhsRegs.mxScale);
                 Reg::Or(lhsRegs.mxScale, lhsRegs.mxScale, rhsRegs.mxScale, auxRegs.p0);
             }
             Reg::DataCopy(mxScaleAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, auxRegs.p2);
         } else {
             // Compute MX scales and shared exponents
             ComputeScalesAndSharedExp<canMaxLowBound>(lhsRegs, auxRegs);
-            Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(
-                (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, lhsRegs.mxScale);
+            Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint8_t>&)lhsRegs.mxScale,
+                                                                   lhsRegs.mxScale);
             Reg::DataCopy(mxScaleAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, auxRegs.p2);
             if constexpr (!canInterleave) {
                 ComputeScalesAndSharedExp<canMaxLowBound>(rhsRegs, auxRegs);
-                Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(
-                    (Reg::RegTensor<uint8_t>&)rhsRegs.mxScale, rhsRegs.mxScale);
-                Reg::DataCopy(
-                    mxScaleAddr + alignedPostAxisSize_, (Reg::RegTensor<uint8_t>&)rhsRegs.mxScale, auxRegs.p2);
+                Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint8_t>&)rhsRegs.mxScale,
+                                                                       rhsRegs.mxScale);
+                Reg::DataCopy(mxScaleAddr + alignedPostAxisSize_, (Reg::RegTensor<uint8_t>&)rhsRegs.mxScale,
+                              auxRegs.p2);
             }
         }
 
@@ -586,9 +585,8 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 
     uint16_t xOffset0 = 0;
     for (uint16_t i = 0; i < loop0; ++i) {
-        LoadData<1>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset0 * alignedPostAxisSize_,
-            rhsXAddr + xOffset0 * alignedPostAxisSize_);
+        LoadData<1>(lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset0 * alignedPostAxisSize_,
+                    rhsXAddr + xOffset0 * alignedPostAxisSize_);
         ComputeMax(lhsRegs, auxRegs);
         if constexpr (!canInterleave) {
             ComputeMax(rhsRegs, auxRegs);
@@ -646,32 +644,33 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
-__aicore__ inline void
-DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ComputeMaxNonFP32(
-    ComputeRegisters& reg, AuxRegisters& auxRegs)
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode,
+                                                                  calcMode>::ComputeMaxNonFP32(ComputeRegisters& reg,
+                                                                                               AuxRegisters& auxRegs)
 {
     if constexpr (calcMode == MODE_ZERO) {
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = { Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         if constexpr (IsSame<DTYPE_X, half>::value) {
             Reg::And(reg.expU16, (Reg::RegTensor<uint16_t>&)reg.x, auxRegs.fp16MaxEleU16, auxRegs.p0);
-            Reg::CompareScalar<uint16_t, CMPMODE::EQ>(
-                auxRegs.infMask, (Reg::RegTensor<uint16_t>&)reg.expU16, FP16_INF, auxRegs.p0);
-            Reg::Cast<bfloat16_t, DTYPE_X, castTraitHalf2Bf16>(
-                (Reg::RegTensor<bfloat16_t>&)reg.expU16, (Reg::RegTensor<DTYPE_X>&)reg.x, auxRegs.p0);
-            Reg::Select<uint16_t>(
-                (Reg::RegTensor<uint16_t>&)reg.expU16, auxRegs.maxEleU16, (Reg::RegTensor<uint16_t>&)reg.expU16,
-                auxRegs.infMask);
+            Reg::CompareScalar<uint16_t, CMPMODE::EQ>(auxRegs.infMask, (Reg::RegTensor<uint16_t>&)reg.expU16, FP16_INF,
+                                                      auxRegs.p0);
+            Reg::Cast<bfloat16_t, DTYPE_X, castTraitHalf2Bf16>((Reg::RegTensor<bfloat16_t>&)reg.expU16,
+                                                               (Reg::RegTensor<DTYPE_X>&)reg.x, auxRegs.p0);
+            Reg::Select<uint16_t>((Reg::RegTensor<uint16_t>&)reg.expU16, auxRegs.maxEleU16,
+                                  (Reg::RegTensor<uint16_t>&)reg.expU16, auxRegs.infMask);
             Reg::And(reg.expU16, (Reg::RegTensor<uint16_t>&)reg.expU16, auxRegs.maxEleU16, auxRegs.p0);
         } else {
             Reg::And(reg.expU16, (Reg::RegTensor<uint16_t>&)reg.x, auxRegs.maxEleU16, auxRegs.p0);
         }
         Reg::Max(reg.expMaxU16, reg.expMaxU16, reg.expU16, auxRegs.p0);
     } else {
-        static constexpr Reg::CastTrait castTraitCublsHalf2Bf16 = { Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitCublsHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                                   Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         Reg::And(reg.expU16, (Reg::RegTensor<uint16_t>&)reg.x, auxRegs.absForX, auxRegs.p0);
         if constexpr (calcMode == MODE_TWO && (IsSame<DTYPE_X, half>::value)) {
-            Reg::Cast<bfloat16_t, DTYPE_X, castTraitCublsHalf2Bf16>(
-                (Reg::RegTensor<bfloat16_t>&)reg.expU16, (Reg::RegTensor<DTYPE_X>&)reg.expU16, auxRegs.p0);
+            Reg::Cast<bfloat16_t, DTYPE_X, castTraitCublsHalf2Bf16>((Reg::RegTensor<bfloat16_t>&)reg.expU16,
+                                                                    (Reg::RegTensor<DTYPE_X>&)reg.expU16, auxRegs.p0);
         }
         Reg::Max(reg.absMaxU16, reg.absMaxU16, reg.expU16, auxRegs.p0);
     }
@@ -716,7 +715,8 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     ComputeRegisters& regs, AuxRegisters& auxRegs)
 {
     if constexpr (calcMode == MODE_ONE || calcMode == MODE_THREE) {
-        ComputeScaleFromAbsMaxFP32<false, canMaxLowBound>(auxRegs, regs.absMaxU32, regs.mxScale0U32, regs.mxScale0Add1U32, regs.mxScale);
+        ComputeScaleFromAbsMaxFP32<false, canMaxLowBound>(auxRegs, regs.absMaxU32, regs.mxScale0U32,
+                                                          regs.mxScale0Add1U32, regs.mxScale);
         Reg::ShiftLefts(regs.expMaxU16, regs.mxScale, BF16_SHR_NUM, auxRegs.p0);
         ComputeReciprocalScale(regs, auxRegs, true);
     } else {
@@ -762,12 +762,12 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     ComputeRegisters& regs, AuxRegisters& auxRegs)
 {
     if constexpr (calcMode == MODE_ONE || calcMode == MODE_THREE) {
-        ComputeScaleFromAbsMaxNonFP32<false, canMaxLowBound>(
-            auxRegs, regs.absMaxU16, (Reg::RegTensor<uint32_t>&)regs.max0FP32, regs.mxScale0U32, regs.mxScale0Add1U32,
-            regs.mxScale);
-        ComputeScaleFromAbsMaxNonFP32<true, canMaxLowBound>(
-            auxRegs, regs.absMaxU16, (Reg::RegTensor<uint32_t>&)regs.max1FP32, regs.mxScale1U32, regs.mxScale1Add1U32,
-            regs.mxScale1);
+        ComputeScaleFromAbsMaxNonFP32<false, canMaxLowBound>(auxRegs, regs.absMaxU16,
+                                                             (Reg::RegTensor<uint32_t>&)regs.max0FP32, regs.mxScale0U32,
+                                                             regs.mxScale0Add1U32, regs.mxScale);
+        ComputeScaleFromAbsMaxNonFP32<true, canMaxLowBound>(auxRegs, regs.absMaxU16,
+                                                            (Reg::RegTensor<uint32_t>&)regs.max1FP32, regs.mxScale1U32,
+                                                            regs.mxScale1Add1U32, regs.mxScale1);
 
         Reg::Interleave(regs.mxScale, regs.mxScale1, regs.mxScale, regs.mxScale1);
         Reg::ShiftLefts(regs.expMaxU16, regs.mxScale, BF16_SHR_NUM, auxRegs.p0);
@@ -820,12 +820,11 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
                 Reg::Maxs((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32, maxLowBound_, maskAll);
             }
         }
-        Reg::Mul(
-            (Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32,
-            (Reg::RegTensor<float>&)auxRegs.invMax, auxRegs.p1);
+        Reg::Mul((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32,
+                 (Reg::RegTensor<float>&)auxRegs.invMax, auxRegs.p1);
     } else {
-        Reg::Mul(
-            (Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32, auxRegs.dstTypeMaxReg, auxRegs.p1);
+        Reg::Mul((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32, auxRegs.dstTypeMaxReg,
+                 auxRegs.p1);
     }
 
     Reg::ShiftRights(mxScaleU32, absMaxU32, FP32_SHR_NUM, auxRegs.p1);
@@ -858,13 +857,15 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     Reg::RegTensor<uint32_t>& mxScaleU32, Reg::RegTensor<uint32_t>& mxScaleAdd1U32, Reg::RegTensor<uint16_t>& mxScale)
 {
     if constexpr (isEven) {
-        static constexpr Reg::CastTrait castTraitOne = { Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        Reg::Cast<float, DTYPE_X, castTraitOne>(
-            (Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<DTYPE_X>&)absMaxU16, auxRegs.p0);
+        static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        Reg::Cast<float, DTYPE_X, castTraitOne>((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<DTYPE_X>&)absMaxU16,
+                                                auxRegs.p0);
     } else {
-        static constexpr Reg::CastTrait castTraitZero = { Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        Reg::Cast<float, DTYPE_X, castTraitZero>(
-            (Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<DTYPE_X>&)absMaxU16, auxRegs.p0);
+        static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        Reg::Cast<float, DTYPE_X, castTraitZero>((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<DTYPE_X>&)absMaxU16,
+                                                 auxRegs.p0);
     }
     ComputeScaleFromAbsMaxFP32<isEven, canMaxLowBound>(auxRegs, absMaxU32, mxScaleU32, mxScaleAdd1U32, mxScale);
 }
@@ -876,11 +877,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
     __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1)
 {
     if constexpr (IsSame<DTYPE_X, float>::value) {
-        QuantizeValuesFP32<canInterleave>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr, rhsXAddr, lhsYAddr, rhsYAddr, loop0, loop1);
+        QuantizeValuesFP32<canInterleave>(lhsRegs, rhsRegs, auxRegs, lhsXAddr, rhsXAddr, lhsYAddr, rhsYAddr, loop0,
+                                          loop1);
     } else {
-        QuantizeValuesNonFP32<canInterleave>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr, rhsXAddr, lhsYAddr, rhsYAddr, loop0, loop1);
+        QuantizeValuesNonFP32<canInterleave>(lhsRegs, rhsRegs, auxRegs, lhsXAddr, rhsXAddr, lhsYAddr, rhsYAddr, loop0,
+                                             loop1);
     }
 }
 
@@ -893,21 +894,19 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 {
     uint16_t xOffset1 = 0;
     for (uint16_t i = 0; i < loop0; ++i) {
-        LoadData<1>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
-            rhsXAddr + xOffset1 * alignedPostAxisSize_);
-        ProcessQuantizationFP32<canInterleave, true>(
-            lhsRegs, rhsRegs, auxRegs, lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
-            rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
+        LoadData<1>(lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
+                    rhsXAddr + xOffset1 * alignedPostAxisSize_);
+        ProcessQuantizationFP32<canInterleave, true>(lhsRegs, rhsRegs, auxRegs,
+                                                     lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
+                                                     rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
         xOffset1++;
     }
     for (uint16_t i = 0; i < loop1; ++i) {
-        LoadData<0>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
-            rhsXAddr + xOffset1 * alignedPostAxisSize_);
-        ProcessQuantizationFP32<canInterleave, false>(
-            lhsRegs, rhsRegs, auxRegs, lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
-            rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
+        LoadData<0>(lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
+                    rhsXAddr + xOffset1 * alignedPostAxisSize_);
+        ProcessQuantizationFP32<canInterleave, false>(lhsRegs, rhsRegs, auxRegs,
+                                                      lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
+                                                      rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
         xOffset1++;
     }
 }
@@ -921,36 +920,32 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 {
     uint16_t xOffset1 = 0;
     for (uint16_t i = 0; i < loop0; ++i) {
-        LoadData<1>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
-            rhsXAddr + xOffset1 * alignedPostAxisSize_);
-        if constexpr (
-            IsSame<DTYPE_X, half>::value || IsSame<DTYPE_Y, fp8_e4m3fn_t>::value ||
-            IsSame<DTYPE_Y, fp8_e5m2_t>::value) {
-            ProcessQuantizationFP16<canInterleave, true>(
-                lhsRegs, rhsRegs, auxRegs, lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
-                rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
+        LoadData<1>(lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
+                    rhsXAddr + xOffset1 * alignedPostAxisSize_);
+        if constexpr (IsSame<DTYPE_X, half>::value || IsSame<DTYPE_Y, fp8_e4m3fn_t>::value ||
+                      IsSame<DTYPE_Y, fp8_e5m2_t>::value) {
+            ProcessQuantizationFP16<canInterleave, true>(lhsRegs, rhsRegs, auxRegs,
+                                                         lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
+                                                         rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
         } else {
-            ProcessQuantizationBF16ToFP4<canInterleave, true>(
-                lhsRegs, rhsRegs, auxRegs, lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
-                rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
+            ProcessQuantizationBF16ToFP4<canInterleave, true>(lhsRegs, rhsRegs, auxRegs,
+                                                              lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
+                                                              rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
         }
         xOffset1++;
     }
     for (uint16_t i = 0; i < loop1; ++i) {
-        LoadData<0>(
-            lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
-            rhsXAddr + xOffset1 * alignedPostAxisSize_);
-        if constexpr (
-            IsSame<DTYPE_X, half>::value || IsSame<DTYPE_Y, fp8_e4m3fn_t>::value ||
-            IsSame<DTYPE_Y, fp8_e5m2_t>::value) {
-            ProcessQuantizationFP16<canInterleave, false>(
-                lhsRegs, rhsRegs, auxRegs, lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
-                rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
+        LoadData<0>(lhsRegs, rhsRegs, auxRegs, lhsXAddr + xOffset1 * alignedPostAxisSize_,
+                    rhsXAddr + xOffset1 * alignedPostAxisSize_);
+        if constexpr (IsSame<DTYPE_X, half>::value || IsSame<DTYPE_Y, fp8_e4m3fn_t>::value ||
+                      IsSame<DTYPE_Y, fp8_e5m2_t>::value) {
+            ProcessQuantizationFP16<canInterleave, false>(lhsRegs, rhsRegs, auxRegs,
+                                                          lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
+                                                          rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
         } else {
-            ProcessQuantizationBF16ToFP4<canInterleave, false>(
-                lhsRegs, rhsRegs, auxRegs, lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
-                rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
+            ProcessQuantizationBF16ToFP4<canInterleave, false>(lhsRegs, rhsRegs, auxRegs,
+                                                               lhsYAddr + xOffset1 * alignedOutputPostAxisSize_,
+                                                               rhsYAddr + xOffset1 * alignedOutputPostAxisSize_);
         }
         xOffset1++;
     }
@@ -963,20 +958,22 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
     __ubuf__ uint8_t* rhsYAddr)
 {
-    static constexpr Reg::CastTrait castTraitZero = { Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr Reg::CastTrait castTraitOne = { Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    Reg::Cast<float, bfloat16_t, castTraitZero>(
-        lhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16, auxRegs.p0);
-    Reg::Cast<float, bfloat16_t, castTraitOne>(
-        lhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16, auxRegs.p0);
+    static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                    Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    Reg::Cast<float, bfloat16_t, castTraitZero>(lhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16,
+                                                auxRegs.p0);
+    Reg::Cast<float, bfloat16_t, castTraitOne>(lhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16,
+                                               auxRegs.p0);
     Reg::Interleave(lhsRegs.exp0FP32, lhsRegs.exp1FP32, lhsRegs.exp0FP32, lhsRegs.exp1FP32);
     Reg::Mul(lhsRegs.x0FP32, lhsRegs.x, lhsRegs.exp0FP32, auxRegs.p1);
 
     if (!canInterleave) {
-        Reg::Cast<float, bfloat16_t, castTraitZero>(
-            rhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16, auxRegs.p0);
-        Reg::Cast<float, bfloat16_t, castTraitOne>(
-            rhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16, auxRegs.p0);
+        Reg::Cast<float, bfloat16_t, castTraitZero>(rhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16,
+                                                    auxRegs.p0);
+        Reg::Cast<float, bfloat16_t, castTraitOne>(rhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16,
+                                                   auxRegs.p0);
         Reg::Interleave(rhsRegs.exp0FP32, rhsRegs.exp1FP32, rhsRegs.exp0FP32, rhsRegs.exp1FP32);
         Reg::Mul(rhsRegs.x0FP32, rhsRegs.x, rhsRegs.exp0FP32, auxRegs.p1);
     }
@@ -984,35 +981,38 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     Reg::DeInterleave(lhsRegs.x0FP32, rhsRegs.x0FP32, lhsRegs.x0FP32, rhsRegs.x0FP32);
 
     if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value || IsSame<DTYPE_Y, fp4x2_e1m2_t>::value) {
-        static constexpr Reg::CastTrait castTraitDownZero = { Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
-        static constexpr Reg::CastTrait castTraitDownZeroBF16Trunc = { Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitDownZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                             Reg::MaskMergeMode::ZEROING, roundMode};
+        static constexpr Reg::CastTrait castTraitDownZeroBF16Trunc = {
+            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         // handle lhsregs
         PreProcessFP32(lhsRegs.x0FP32, auxRegs);
-        Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16Trunc>(
-            (Reg::RegTensor<bfloat16_t>&)lhsRegs.yU16, lhsRegs.x0FP32, auxRegs.p1);
+        Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16Trunc>((Reg::RegTensor<bfloat16_t>&)lhsRegs.yU16,
+                                                                 lhsRegs.x0FP32, auxRegs.p1);
         Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(lhsRegs.yU16, (Reg::RegTensor<uint32_t>&)lhsRegs.yU16);
-        Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(
-            lhsRegs.y, (Reg::RegTensor<bfloat16_t>&)lhsRegs.yU16, auxRegs.p0);
+        Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(lhsRegs.y, (Reg::RegTensor<bfloat16_t>&)lhsRegs.yU16,
+                                                          auxRegs.p0);
         DataCopy<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(lhsYAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.y, auxRegs.p3);
 
         // handle rhsregs
         PreProcessFP32(rhsRegs.x0FP32, auxRegs);
-        Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16Trunc>(
-            (Reg::RegTensor<bfloat16_t>&)rhsRegs.yU16, rhsRegs.x0FP32, auxRegs.p1);
+        Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16Trunc>((Reg::RegTensor<bfloat16_t>&)rhsRegs.yU16,
+                                                                 rhsRegs.x0FP32, auxRegs.p1);
         Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(rhsRegs.yU16, (Reg::RegTensor<uint32_t>&)rhsRegs.yU16);
-        Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(
-            rhsRegs.y, (Reg::RegTensor<bfloat16_t>&)rhsRegs.yU16, auxRegs.p0);
+        Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(rhsRegs.y, (Reg::RegTensor<bfloat16_t>&)rhsRegs.yU16,
+                                                          auxRegs.p0);
         DataCopy<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(rhsYAddr, (Reg::RegTensor<uint8_t>&)rhsRegs.y, auxRegs.p3);
     } else {
-        static constexpr Reg::CastTrait castTraitDownZero = { Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitDownZero = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                             Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         Reg::Cast<DTYPE_Y, float, castTraitDownZero>(lhsRegs.y, lhsRegs.x0FP32, auxRegs.p1);
-        Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-            (Reg::RegTensor<uint16_t>&)lhsRegs.y, (Reg::RegTensor<uint32_t>&)lhsRegs.y);
+        Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)lhsRegs.y,
+                                                                (Reg::RegTensor<uint32_t>&)lhsRegs.y);
         DataCopy<uint8_t, Reg::StoreDist::DIST_PACK_B16>(lhsYAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.y, auxRegs.p3);
 
         Reg::Cast<DTYPE_Y, float, castTraitDownZero>(rhsRegs.y, rhsRegs.x0FP32, auxRegs.p1);
-        Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-            (Reg::RegTensor<uint16_t>&)rhsRegs.y, (Reg::RegTensor<uint32_t>&)rhsRegs.y);
+        Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)rhsRegs.y,
+                                                                (Reg::RegTensor<uint32_t>&)rhsRegs.y);
         DataCopy<uint8_t, Reg::StoreDist::DIST_PACK_B16>(rhsYAddr, (Reg::RegTensor<uint8_t>&)rhsRegs.y, auxRegs.p3);
     }
 }
@@ -1024,18 +1024,20 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
     __ubuf__ uint8_t* rhsYAddr)
 {
-    static constexpr Reg::CastTrait castTraitZero = { Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr Reg::CastTrait castTraitOne = { Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                     Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+    static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                    Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-    Reg::Cast<float, bfloat16_t, castTraitZero>(
-        lhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16, auxRegs.p0);
-    Reg::Cast<float, bfloat16_t, castTraitOne>(
-        rhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16, auxRegs.p0);
+    Reg::Cast<float, bfloat16_t, castTraitZero>(lhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16,
+                                                auxRegs.p0);
+    Reg::Cast<float, bfloat16_t, castTraitOne>(rhsRegs.exp0FP32, (Reg::RegTensor<bfloat16_t>&)lhsRegs.expMaxU16,
+                                               auxRegs.p0);
     if constexpr (!canInterleave) {
-        Reg::Cast<float, bfloat16_t, castTraitZero>(
-            lhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16, auxRegs.p0);
-        Reg::Cast<float, bfloat16_t, castTraitOne>(
-            rhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16, auxRegs.p0);
+        Reg::Cast<float, bfloat16_t, castTraitZero>(lhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16,
+                                                    auxRegs.p0);
+        Reg::Cast<float, bfloat16_t, castTraitOne>(rhsRegs.exp1FP32, (Reg::RegTensor<bfloat16_t>&)rhsRegs.expMaxU16,
+                                                   auxRegs.p0);
     }
 
     Reg::Cast<float, DTYPE_X, castTraitZero>(lhsRegs.x0FP32, lhsRegs.x, auxRegs.p0);
@@ -1073,7 +1075,8 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     ComputeRegisters& lhsRegs, ComputeRegisters& rhsRegs, AuxRegisters& auxRegs, __ubuf__ uint8_t* lhsYAddr,
     __ubuf__ uint8_t* rhsYAddr)
 {
-    static constexpr Reg::CastTrait castTraitDownZero = { Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr Reg::CastTrait castTraitDownZero = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                         Reg::MaskMergeMode::ZEROING, roundMode};
 
     Reg::Mul(lhsRegs.x, lhsRegs.x, (Reg::RegTensor<DTYPE_X>&)lhsRegs.expMaxU16, auxRegs.p0);
     if constexpr (!canInterleave) {
@@ -1083,8 +1086,8 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(lhsRegs.y, (Reg::RegTensor<bfloat16_t>&)lhsRegs.x, auxRegs.p0);
     DataCopy<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(lhsYAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.y, auxRegs.p3);
     if constexpr (withRHS) {
-        Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(
-            rhsRegs.y, (Reg::RegTensor<bfloat16_t>&)rhsRegs.x, auxRegs.p0);
+        Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(rhsRegs.y, (Reg::RegTensor<bfloat16_t>&)rhsRegs.x,
+                                                          auxRegs.p0);
         DataCopy<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(rhsYAddr, (Reg::RegTensor<uint8_t>&)rhsRegs.y, auxRegs.p3);
     }
 }
@@ -1095,30 +1098,31 @@ __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ProcessFP4QuantizationNonFp32(
     ComputeRegisters& regs, AuxRegisters& auxRegs, __ubuf__ uint8_t* yAddr)
 {
-    static constexpr Reg::CastTrait castTraitDownZero = { Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr Reg::CastTrait castTraitDownZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, roundMode};
     // After Truncate in PreProcessFP32, FP32 value is at FP4E2M1 precision;
     // FP32→BF16 Cast is exact (FP4E2M1 values are exactly representable in BF16).
-    static constexpr Reg::CastTrait castTraitDownZeroBF16 = { Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr Reg::CastTrait castTraitDownZeroBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                             Reg::MaskMergeMode::ZEROING, roundMode};
 
     PreProcessFP32(regs.x0FP32, auxRegs);
 
-    Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16>(
-        (Reg::RegTensor<bfloat16_t>&)regs.yU16, regs.x0FP32, auxRegs.p1);
+    Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16>((Reg::RegTensor<bfloat16_t>&)regs.yU16, regs.x0FP32,
+                                                        auxRegs.p1);
 
     Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(regs.yU16, (Reg::RegTensor<uint32_t>&)regs.yU16);
 
     if constexpr (!canInterleave) {
         PreProcessFP32(regs.x1FP32, auxRegs);
 
-        Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16>(
-            (Reg::RegTensor<bfloat16_t>&)regs.y, regs.x1FP32, auxRegs.p1);
+        Reg::Cast<bfloat16_t, float, castTraitDownZeroBF16>((Reg::RegTensor<bfloat16_t>&)regs.y, regs.x1FP32,
+                                                            auxRegs.p1);
 
-        Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::HIGHEST>(
-            (Reg::RegTensor<uint16_t>&)regs.y, (Reg::RegTensor<uint32_t>&)regs.y);
+        Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::HIGHEST>((Reg::RegTensor<uint16_t>&)regs.y,
+                                                                 (Reg::RegTensor<uint32_t>&)regs.y);
 
-        Reg::Or<uint16_t>(
-            (Reg::RegTensor<uint16_t>&)regs.yU16, (Reg::RegTensor<uint16_t>&)regs.yU16,
-            (Reg::RegTensor<uint16_t>&)regs.y, auxRegs.p0);
+        Reg::Or<uint16_t>((Reg::RegTensor<uint16_t>&)regs.yU16, (Reg::RegTensor<uint16_t>&)regs.yU16,
+                          (Reg::RegTensor<uint16_t>&)regs.y, auxRegs.p0);
     }
 
     Reg::Cast<DTYPE_Y, bfloat16_t, castTraitDownZero>(regs.y, (Reg::RegTensor<bfloat16_t>&)regs.yU16, auxRegs.p0);
@@ -1132,11 +1136,12 @@ __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ProcessFP8QuantizationNonFP32(
     ComputeRegisters& regs, AuxRegisters& auxRegs, __ubuf__ uint8_t* yAddr)
 {
-    static constexpr Reg::CastTrait castTraitDownZero = { Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr Reg::CastTrait castTraitDownZero = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
     Reg::Cast<DTYPE_Y, float, castTraitDownZero>(regs.y, regs.x0FP32, auxRegs.p1);
-    Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-        (Reg::RegTensor<uint16_t>&)regs.y, (Reg::RegTensor<uint32_t>&)regs.y);
+    Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)regs.y,
+                                                            (Reg::RegTensor<uint32_t>&)regs.y);
 
     if constexpr (!canInterleave) {
         Reg::Cast<DTYPE_Y, float, castTraitDownZero>((Reg::RegTensor<DTYPE_Y>&)regs.yU16, regs.x1FP32, auxRegs.p1);

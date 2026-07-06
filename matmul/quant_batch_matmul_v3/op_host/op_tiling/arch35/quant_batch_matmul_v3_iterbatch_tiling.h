@@ -45,9 +45,8 @@ protected:
     bool IsCapable() override;
     bool CheckDtype() const override;
     void GetBroadCastInfo(uint64_t& broadcastNum, uint64_t& innerBatchNum, bool& isBroadcastA, bool& isBroadcastB);
-    bool CheckShape(
-        const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
-        const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
+    bool CheckShape(const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
+                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
     uint32_t CalcIterBatch();
     void SetTilingData();
     uint64_t GetBiasMode() const;

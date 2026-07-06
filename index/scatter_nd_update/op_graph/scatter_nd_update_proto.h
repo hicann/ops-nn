@@ -46,9 +46,9 @@ REG_OP(ScatterNdUpdate)
     .INPUT(var, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8}))
     .INPUT(indices, TensorType::IndexNumberType())
     .INPUT(updates, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8}))
-    .OUTPUT(var,  TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8}))
+    .OUTPUT(var, TensorType({BasicType(), DT_BOOL, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterNdUpdate)
 
-}  // namespace ge
-#endif  // OPS_INDEX_SCATTER_ND_UPDATE_GRAPH_PLUGIN_SCATTER_ND_UPDATE_PROTO_H_
+} // namespace ge
+#endif // OPS_INDEX_SCATTER_ND_UPDATE_GRAPH_PLUGIN_SCATTER_ND_UPDATE_PROTO_H_

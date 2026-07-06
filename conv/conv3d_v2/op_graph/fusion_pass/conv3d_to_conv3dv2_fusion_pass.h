@@ -32,31 +32,28 @@ const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_OUT2L1_DN2NZ = 
     {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
     {ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
-    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT}
-};
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT}};
 
 // Fmap Filter Output Bias
 const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES = {
     {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
     {ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT},
-    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}
-};
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}};
 } // namespace Conv3dToConv3dV2Fusion
 
 class __attribute__((visibility("default"))) Conv3dToConv3dV2FusionPass : public ge::fusion::DecomposePass {
 public:
-    explicit Conv3dToConv3dV2FusionPass(const std::vector<ge::AscendString> &opTypes)
-        : DecomposePass(opTypes) {}
+    explicit Conv3dToConv3dV2FusionPass(const std::vector<ge::AscendString>& opTypes) : DecomposePass(opTypes) {}
 
 protected:
-    bool MeetRequirements(const ge::GNode &convNode) override;
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
+    bool MeetRequirements(const ge::GNode& convNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
 
 private:
     bool CheckSocCapability();
-    bool CheckPostCubeInOutNode(const ge::GNode &convNode) const;
-    bool CheckTransDataInInputNode(const ge::GNode &convNode) const;
-    bool CheckIFMRInSameOutputNode(const ge::GNode &convNode) const;
+    bool CheckPostCubeInOutNode(const ge::GNode& convNode) const;
+    bool CheckTransDataInInputNode(const ge::GNode& convNode) const;
+    bool CheckIFMRInSameOutputNode(const ge::GNode& convNode) const;
     void InitMember();
 
     bool supportOut2L1Dn2Nz = false;

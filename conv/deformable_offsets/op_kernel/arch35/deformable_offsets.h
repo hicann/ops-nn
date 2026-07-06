@@ -26,11 +26,9 @@ const int32_t OFFSET_DIM_VALUE = 3;
 template <typename T, typename T1, typename T2>
 class DeformableOffset {
 public:
-    __aicore__ inline DeformableOffset()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR offsets, GM_ADDR y, GM_ADDR workspace,
-        const DeformableOffsetsTilingDataSimt* __restrict tilingData);
+    __aicore__ inline DeformableOffset() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR offsets, GM_ADDR y, GM_ADDR workspace,
+                                const DeformableOffsetsTilingDataSimt* __restrict tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -42,9 +40,8 @@ private:
 };
 
 template <typename T, typename T1, typename T2>
-__aicore__ inline void DeformableOffset<T, T1, T2>::Init(
-    GM_ADDR x, GM_ADDR offsets, GM_ADDR y, GM_ADDR workspace,
-    const DeformableOffsetsTilingDataSimt* __restrict tilingData)
+__aicore__ inline void DeformableOffset<T, T1, T2>::Init(GM_ADDR x, GM_ADDR offsets, GM_ADDR y, GM_ADDR workspace,
+                                                         const DeformableOffsetsTilingDataSimt* __restrict tilingData)
 {
     inputImgGm_.SetGlobalBuffer((__gm__ T*)(x));
     offsetsGm_.SetGlobalBuffer((__gm__ T*)(offsets));
@@ -53,19 +50,16 @@ __aicore__ inline void DeformableOffset<T, T1, T2>::Init(
     tiling_ = tilingData;
 }
 
-__simt_callee__ __aicore__ __attribute__((always_inline)) inline float GetFloorValue(float x)
-{
-    return __floorf(x);
-}
+__simt_callee__ __aicore__ __attribute__((always_inline)) inline float GetFloorValue(float x) { return __floorf(x); }
 
 template <typename T, typename T1, typename T2>
 __simt_callee__ __aicore__ __attribute__((always_inline)) inline T GetInputPointValue(
-    __gm__ T* inputImgGmAddr, T1 inputHeight, T1 inputWidth, T1 channelIndex,
-    T1 inputDataBatchOffset, T1 imgHeight, T1 imgWidth, T1 imgWidthStride, T1 imgChannel)
+    __gm__ T* inputImgGmAddr, T1 inputHeight, T1 inputWidth, T1 channelIndex, T1 inputDataBatchOffset, T1 imgHeight,
+    T1 imgWidth, T1 imgWidthStride, T1 imgChannel)
 {
     if (inputHeight >= 0 && inputWidth >= 0 && inputHeight < imgHeight && inputWidth < imgWidth) {
-        return inputImgGmAddr
-            [inputDataBatchOffset + inputHeight * imgWidthStride + inputWidth * imgChannel + channelIndex];
+        return inputImgGmAddr[inputDataBatchOffset + inputHeight * imgWidthStride + inputWidth * imgChannel +
+                              channelIndex];
     }
     return static_cast<T>(0.0);
 }
@@ -81,30 +75,30 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline T DeformableOff
     float heightFloorDelta = pointHeight - heightFloor;
     float widthFloorDelta = pointWidth - widthFloor;
     // pointLeftUp
-    float inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>(
-        (__gm__ T*)inputImgGmAddr, heightFloor, widthFloor, channelIndex, inputDataBatchOffset, imgHeight, imgWidth,
-        imgWidthStride, imgChannel));
+    float inputValue = static_cast<float>(
+        GetInputPointValue<T, T1, T2>((__gm__ T*)inputImgGmAddr, heightFloor, widthFloor, channelIndex,
+                                      inputDataBatchOffset, imgHeight, imgWidth, imgWidthStride, imgChannel));
     float inputWeight = (1.0f - heightFloorDelta) * (1.0f - widthFloorDelta);
     float bilinearValue = (inputValue * inputWeight);
 
     // pointRightUp
-    inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>(
-        (__gm__ T*)inputImgGmAddr, heightFloor, (widthFloor + 1), channelIndex, inputDataBatchOffset, imgHeight,
-        imgWidth, imgWidthStride, imgChannel));
+    inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>((__gm__ T*)inputImgGmAddr, heightFloor,
+                                                                  (widthFloor + 1), channelIndex, inputDataBatchOffset,
+                                                                  imgHeight, imgWidth, imgWidthStride, imgChannel));
     inputWeight = (1.0f - heightFloorDelta) * widthFloorDelta;
     bilinearValue += (inputValue * inputWeight);
 
     // pointLeftBottom
-    inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>(
-        (__gm__ T*)inputImgGmAddr, (heightFloor + 1), widthFloor, channelIndex, inputDataBatchOffset, imgHeight,
-        imgWidth, imgWidthStride, imgChannel));
+    inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>((__gm__ T*)inputImgGmAddr, (heightFloor + 1),
+                                                                  widthFloor, channelIndex, inputDataBatchOffset,
+                                                                  imgHeight, imgWidth, imgWidthStride, imgChannel));
     inputWeight = heightFloorDelta * (1.0f - widthFloorDelta);
     bilinearValue += (inputValue * inputWeight);
 
     // pointRightBottom
-    inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>(
-        (__gm__ T*)inputImgGmAddr, (heightFloor + 1), (widthFloor + 1), channelIndex, inputDataBatchOffset, imgHeight,
-        imgWidth, imgWidthStride, imgChannel));
+    inputValue = static_cast<float>(GetInputPointValue<T, T1, T2>((__gm__ T*)inputImgGmAddr, (heightFloor + 1),
+                                                                  (widthFloor + 1), channelIndex, inputDataBatchOffset,
+                                                                  imgHeight, imgWidth, imgWidthStride, imgChannel));
     inputWeight = heightFloorDelta * widthFloorDelta;
     bilinearValue += (inputValue * inputWeight);
 
@@ -113,15 +107,15 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline T DeformableOff
 
 // LAUNCH_BOUND
 template <typename T, typename T1, typename T2>
-__simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void ComputeDeformableOffset(
-    __gm__ T* inputImgGmAddr, __gm__ T* offsetsGmAddr, __gm__ T* yGmAddr, T1 blockNumber, T1 numKernels,
-    T1 imgOutWidth, T1 imgChannel, T1 imgHeight, T1 imgWidth, T1 strideH,
-    T1 strideW, T1 dilationH, T1 dilationW, T1 padsH, T1 padsW, T1 dimKh,
-    T1 dimKw, T1 outputPointWidthStride, T1 outputWidthStride, T1 outputKernelWidthStride,
-    T1 outputBatchStride, T1 offsetBatchStride, T1 offsetKernelElementStride,
-    T1 offsetPointStride, T1 offsetWidthStride, T1 imgBatchStride, T1 imgWidthStride,
-    T1 groups, T1 outImgSize, T2 shiftB_, T2 mB_, T2 shiftH_, T2 mH_,
-    T2 shiftW_, T2 mW_, T2 shiftC_, T2 mC_, T1 blockId_)
+__simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__
+    void ComputeDeformableOffset(__gm__ T* inputImgGmAddr, __gm__ T* offsetsGmAddr, __gm__ T* yGmAddr, T1 blockNumber,
+                                 T1 numKernels, T1 imgOutWidth, T1 imgChannel, T1 imgHeight, T1 imgWidth, T1 strideH,
+                                 T1 strideW, T1 dilationH, T1 dilationW, T1 padsH, T1 padsW, T1 dimKh, T1 dimKw,
+                                 T1 outputPointWidthStride, T1 outputWidthStride, T1 outputKernelWidthStride,
+                                 T1 outputBatchStride, T1 offsetBatchStride, T1 offsetKernelElementStride,
+                                 T1 offsetPointStride, T1 offsetWidthStride, T1 imgBatchStride, T1 imgWidthStride,
+                                 T1 groups, T1 outImgSize, T2 shiftB_, T2 mB_, T2 shiftH_, T2 mH_, T2 shiftW_, T2 mW_,
+                                 T2 shiftC_, T2 mC_, T1 blockId_)
 {
     T1 offsetGroupKernelStride = dimKh * dimKw;
     T1 heightOffset = HEIGHT_OFFSET_INDEX * offsetKernelElementStride;
@@ -153,7 +147,7 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void ComputeDeformableOff
         T1 newInputIndex = batchNum * imgBatchStride;
 
         T1 offsetBaseAdrr = newOffsetIndex + heightCol * offsetWidthStride + widthCol * offsetPointStride +
-                                  groupsIndex * offsetGroupKernelStride;
+                            groupsIndex * offsetGroupKernelStride;
         for (T1 i = 0; i < dimKh; i++) {
             for (T1 j = 0; j < dimKw; j++) {
                 T1 offsetAdrr = offsetBaseAdrr + (i * dimKw + j);
@@ -187,11 +181,11 @@ __aicore__ inline void DeformableOffset<T, T1, T2>::Process()
     GetUintDivMagicAndShift(mW_, shiftW_, static_cast<T2>(tiling_->imgChannel));
     GetUintDivMagicAndShift(mC_, shiftC_, static_cast<T2>(tiling_->imgChannel / tiling_->deformableGroups));
     asc_vf_call<ComputeDeformableOffset<T, T1, T2>>(
-        dim3{VF_MAX_THREAD_NUM, 1, 1}, (__gm__ T*)(inputImgGm_.GetPhyAddr()),
-        (__gm__ T*)(offsetsGm_.GetPhyAddr()), (__gm__ T*)(yGm_.GetPhyAddr()), tiling_->blockNum, tiling_->numKernels,
-        tiling_->imgOutWidth, tiling_->imgChannel, tiling_->imgHeight, tiling_->imgWidth, tiling_->strideHeight,
-        tiling_->strideWidth, tiling_->dilationHeight, tiling_->dilationWidth, tiling_->padsHeight, tiling_->padsWidth,
-        tiling_->dimKHeight, tiling_->dimKWidth, tiling_->outputPointWidthStride, tiling_->outputWidthStride,
+        dim3{VF_MAX_THREAD_NUM, 1, 1}, (__gm__ T*)(inputImgGm_.GetPhyAddr()), (__gm__ T*)(offsetsGm_.GetPhyAddr()),
+        (__gm__ T*)(yGm_.GetPhyAddr()), tiling_->blockNum, tiling_->numKernels, tiling_->imgOutWidth,
+        tiling_->imgChannel, tiling_->imgHeight, tiling_->imgWidth, tiling_->strideHeight, tiling_->strideWidth,
+        tiling_->dilationHeight, tiling_->dilationWidth, tiling_->padsHeight, tiling_->padsWidth, tiling_->dimKHeight,
+        tiling_->dimKWidth, tiling_->outputPointWidthStride, tiling_->outputWidthStride,
         tiling_->outputKernelWidthStride, tiling_->outputBatchStride, tiling_->offsetBatchStride,
         tiling_->offsetKernelElementStride, tiling_->offsetPointStride, tiling_->offsetWidthStride,
         tiling_->imgBatchStride, tiling_->imgWidthStride, tiling_->deformableGroups, outImgSize, shiftB_, mB_, shiftH_,

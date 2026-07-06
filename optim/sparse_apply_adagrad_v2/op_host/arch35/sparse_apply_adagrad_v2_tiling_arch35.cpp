@@ -66,10 +66,8 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto varShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
@@ -95,25 +93,22 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesStorageShape = indicesShape->GetStorageShape();
 
-    OP_CHECK_IF(
-        accumStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
-        OP_LOGE(context, "accum dim num %zu != var dim num %zu",
-            accumStorageShape.GetDimNum(), varStorageShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(accumStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
+                OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumStorageShape.GetDimNum(),
+                        varStorageShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < varStorageShape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            accumStorageShape.GetDim(i) != varStorageShape.GetDim(i),
-            OP_LOGE(context, "accum dim[%zu]=%ld != var dim[%zu]=%ld",
-                i, accumStorageShape.GetDim(i), i, varStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(accumStorageShape.GetDim(i) != varStorageShape.GetDim(i),
+                    OP_LOGE(context, "accum dim[%zu]=%ld != var dim[%zu]=%ld", i, accumStorageShape.GetDim(i), i,
+                            varStorageShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
 
     auto lrDimNum = lrStorageShape.GetDimNum();
-    OP_CHECK_IF(
-        lrDimNum != 0 && !(lrDimNum == 1 && lrStorageShape.GetDim(0) == 1),
-        OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(lrDimNum != 0 && !(lrDimNum == 1 && lrStorageShape.GetDim(0) == 1),
+                OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrDimNum),
+                return ge::GRAPH_FAILED);
 
     auto epsDimNum = epsilonStorageShape.GetDimNum();
     OP_CHECK_IF(
@@ -122,27 +117,22 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
         return ge::GRAPH_FAILED);
 
     auto indicesDimNum = indicesStorageShape.GetDimNum();
-    OP_CHECK_IF(
-        indicesDimNum != 1,
-        OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDimNum != 1, OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesDimNum),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        gradStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
-        OP_LOGE(context, "grad dim num %zu != var dim num %zu",
-            gradStorageShape.GetDimNum(), varStorageShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
+                OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradStorageShape.GetDimNum(),
+                        varStorageShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
     int64_t N = indicesStorageShape.GetDim(0);
-    OP_CHECK_IF(
-        gradStorageShape.GetDim(0) != N,
-        OP_LOGE(context, "grad first dim %ld != indices length %ld", gradStorageShape.GetDim(0), N),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradStorageShape.GetDim(0) != N,
+                OP_LOGE(context, "grad first dim %ld != indices length %ld", gradStorageShape.GetDim(0), N),
+                return ge::GRAPH_FAILED);
     for (size_t i = 1; i < varStorageShape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            gradStorageShape.GetDim(i) != varStorageShape.GetDim(i),
-            OP_LOGE(context, "grad dim[%zu]=%ld != var dim[%zu]=%ld",
-                i, gradStorageShape.GetDim(i), i, varStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(gradStorageShape.GetDim(i) != varStorageShape.GetDim(i),
+                    OP_LOGE(context, "grad dim[%zu]=%ld != var dim[%zu]=%ld", i, gradStorageShape.GetDim(i), i,
+                            varStorageShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
 
     auto varDtype = context->GetInputDesc(0)->GetDataType();
@@ -151,23 +141,26 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     auto epsilonDtype = context->GetInputDesc(3)->GetDataType();
     auto gradDtype = context->GetInputDesc(4)->GetDataType();
     OP_CHECK_IF(varDtype != accumDtype,
-        OP_LOGE(context, "var dtype %d != accum dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(accumDtype)),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(varDtype != lrDtype,
+                OP_LOGE(context, "var dtype %d != accum dtype %d", static_cast<int32_t>(varDtype),
+                        static_cast<int32_t>(accumDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        varDtype != lrDtype,
         OP_LOGE(context, "var dtype %d != lr dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(lrDtype)),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(varDtype != epsilonDtype,
-        OP_LOGE(context, "var dtype %d != epsilon dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(epsilonDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "var dtype %d != epsilon dtype %d", static_cast<int32_t>(varDtype),
+                        static_cast<int32_t>(epsilonDtype)),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(varDtype != gradDtype,
-        OP_LOGE(context, "var dtype %d != grad dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(gradDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "var dtype %d != grad dtype %d", static_cast<int32_t>(varDtype),
+                        static_cast<int32_t>(gradDtype)),
+                return ge::GRAPH_FAILED);
 
     auto indicesDtype = context->GetInputDesc(5)->GetDataType();
-    OP_CHECK_IF(
-        indicesDtype != ge::DT_INT32,
-        OP_LOGE(context, "indices dtype %d must be int32", static_cast<int32_t>(indicesDtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDtype != ge::DT_INT32,
+                OP_LOGE(context, "indices dtype %d must be int32", static_cast<int32_t>(indicesDtype)),
+                return ge::GRAPH_FAILED);
 
     int64_t firstDim = varStorageShape.GetDim(0);
     int64_t innerDim = 1;
@@ -177,17 +170,14 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
 
     bool updateSlots = GetUpdateSlotsAttr(context);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     SparseApplyAdagradV2TilingData* tiling = context->GetTilingData<SparseApplyAdagradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(SparseApplyAdagradV2TilingData), 0, sizeof(SparseApplyAdagradV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->N = N;
     tiling->innerDim = innerDim;
@@ -204,12 +194,9 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     context->SetBlockDim(1);
 
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize), return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
 
     uint64_t tilingKey = GET_TPL_TILING_KEY(SPARSE_ADAGRAD_V2_SCH_MODE_0);
     context->SetTilingKey(tilingKey);

@@ -21,14 +21,12 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 
 using namespace AscendC;
 
-template <typename T, int32_t OP_TYPE, bool OUT_DIV=false>
-class Pool3dNDHWCBigChannelPad
-{
+template <typename T, int32_t OP_TYPE, bool OUT_DIV = false>
+class Pool3dNDHWCBigChannelPad {
 public:
     __aicore__ inline Pool3dNDHWCBigChannelPad(TPipe* pipe, const Pool3DSmallKernelNDHWCTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -39,20 +37,21 @@ private:
     template <typename M, typename U>
     __aicore__ inline void BaseCompute();
     __aicore__ inline void InitDivisor();
-    __aicore__ inline void CopyInMultiChannels(int64_t offset, TensorDescInfo &inputInfo);
-    __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t deps,
-                                                int64_t rows, int64_t cols, int64_t channels);
+    __aicore__ inline void CopyInMultiChannels(int64_t offset, TensorDescInfo& inputInfo);
+    __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t deps, int64_t rows, int64_t cols,
+                                                int64_t channels);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleChannels(int64_t n, int64_t inDeps, int64_t inRows, int64_t inCols, int64_t outDeps,
-                                                 int64_t outRows, int64_t outCols, int64_t expectDepStart,
-                                                 int64_t expectRowStart, int64_t expectColStart, int64_t realDeps,
-                                                 int64_t realRows, int64_t realCols, int64_t alignChannels);
+    __aicore__ inline void ComputeSingleChannels(int64_t n, int64_t inDeps, int64_t inRows, int64_t inCols,
+                                                 int64_t outDeps, int64_t outRows, int64_t outCols,
+                                                 int64_t expectDepStart, int64_t expectRowStart, int64_t expectColStart,
+                                                 int64_t realDeps, int64_t realRows, int64_t realCols,
+                                                 int64_t alignChannels);
     template <typename M, typename U>
     __aicore__ inline void CopyPadData(LocalTensor<T>& inLocal, LocalTensor<T>& outLocal, int64_t n, int64_t inDeps,
                                        int64_t inRows, int64_t cols, int64_t expectDepStart, int64_t expectRowStart,
                                        int64_t expectColStart, int64_t realDeps, int64_t realRows, int64_t realCols,
                                        int64_t alignChannels);
-    __aicore__ inline void ComputeDivisor(int64_t start, int64_t num) ;
+    __aicore__ inline void ComputeDivisor(int64_t start, int64_t num);
     __aicore__ inline void ComputeCurrentDivisor(uint32_t num);
     __aicore__ inline uint32_t GetCurrentDivisorIndex(uint32_t index);
     TPipe* pipe_;
@@ -73,7 +72,7 @@ private:
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::InitDivisor()
-{   
+{
     if (OUT_DIV && tilingData_->realCalcDivisor == 0 && needDivisorBuf_) {
         int64_t length = max(static_cast<int64_t>(tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim),
                              static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float)));
@@ -139,33 +138,34 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::BaseComput
                         dIdx * tilingData_->hLoop * tilingData_->wLoop) /
                        tilingData_->wLoop;
         int64_t wIdx = idx % tilingData_->wLoop;
-        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                   : tilingData_->ubFactorN;
-        int64_t deps = dIdx == tilingData_->dLoop - 1 ?  tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD
-                                                    : tilingData_->outUbFactorD;
+        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                      tilingData_->ubFactorN;
+        int64_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD :
+                                                        tilingData_->outUbFactorD;
         int64_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * outUbFactorH : outUbFactorH;
         int64_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
         int64_t expectDepStart = dIdx * sD * outUbFactorD;
         int64_t expectRowStart = hIdx * sH * outUbFactorH;
         int64_t expectColStart = wIdx * sW * outUbFactorW;
-        int64_t dUpper =
-            min(dIdx * sD * outUbFactorD + (deps - 1) * sD + effectiveKd - tilingData_->fPad, tilingData_->dInDim);
+        int64_t dUpper = min(dIdx * sD * outUbFactorD + (deps - 1) * sD + effectiveKd - tilingData_->fPad,
+                             tilingData_->dInDim);
         int64_t dLower = max(dIdx * sD * outUbFactorD - tilingData_->fPad, (int64_t)0);
-        int64_t hUpper =
-            min(hIdx * sH * outUbFactorH + (rows - 1) * sH + effectiveKh - tilingData_->tPad, tilingData_->hInDim);
+        int64_t hUpper = min(hIdx * sH * outUbFactorH + (rows - 1) * sH + effectiveKh - tilingData_->tPad,
+                             tilingData_->hInDim);
         int64_t hLower = max(hIdx * sH * outUbFactorH - tilingData_->tPad, (int64_t)0);
-        int64_t wUpper =
-            min(wIdx * sW * outUbFactorW + (cols - 1) * sW + effectiveKw - tilingData_->lPad, tilingData_->wInDim);
+        int64_t wUpper = min(wIdx * sW * outUbFactorW + (cols - 1) * sW + effectiveKw - tilingData_->lPad,
+                             tilingData_->wInDim);
         int64_t wLower = max(wIdx * sW * outUbFactorW - tilingData_->lPad, (int64_t)0);
         uint32_t realDeps = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : dUpper - dLower;
         uint32_t realRows = tilingData_->splitMode == SPLIT_BATCHS || tilingData_->splitMode == SPLIT_DEPTHS ?
-                            tilingData_->hInDim : hUpper - hLower;
+                                tilingData_->hInDim :
+                                hUpper - hLower;
         uint32_t realCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : wUpper - wLower;
 
-        int64_t srcOffset =
-            nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels +
-            dLower * tilingData_->hInDim * tilingData_->wInDim * channels + hLower * tilingData_->wInDim * channels +
-            wLower * channels;
+        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim *
+                                tilingData_->wInDim * channels +
+                            dLower * tilingData_->hInDim * tilingData_->wInDim * channels +
+                            hLower * tilingData_->wInDim * channels + wLower * channels;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim *
                                 tilingData_->wOutDim * channels +
                             dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim * channels +
@@ -177,8 +177,8 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::BaseComput
         int64_t rowStart = expectRowStart >= tilingData_->tPad ? 0 : tilingData_->tPad - expectRowStart;
         int64_t colStart = expectColStart >= tilingData_->lPad ? 0 : tilingData_->lPad - expectColStart;
 
-        curOffsetInBatch_ = dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim
-                            + hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
+        curOffsetInBatch_ = dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim +
+                            hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
         uint32_t oneRowElements = realCols * alignChannels;
         uint32_t onePlaneElements = oneRowElements * realRows;
         uint32_t oneBatchElements = onePlaneElements * realDeps;
@@ -188,15 +188,15 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::BaseComput
             {1, channels, tilingData_->wInDim * channels, tilingData_->wInDim * tilingData_->hInDim * channels,
              tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels}};
         CopyInMultiChannels(srcOffset, inputInfo);
-        ComputeSingleChannels<M, U>(n, expectDeps, expectRows, expectCols, deps, rows, cols, depStart, rowStart, colStart, realDeps,
-                                    realRows, realCols, alignChannels);
+        ComputeSingleChannels<M, U>(n, expectDeps, expectRows, expectCols, deps, rows, cols, depStart, rowStart,
+                                    colStart, realDeps, realRows, realCols, alignChannels);
         CopyOutMultiChannels(dstOffset, n, deps, rows, cols, channels);
     }
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyInMultiChannels(int64_t offset,
-                                                                                 TensorDescInfo& inputInfo)
+                                                                                          TensorDescInfo& inputInfo)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyPadExtParams<T> padExtParams;
@@ -206,12 +206,12 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyInMult
     padExtParams.paddingValue = 0;
     uint32_t dstStride = 0;
     DataCopyExtParams extParams;
-    extParams.blockCount =inputInfo.size[1];
+    extParams.blockCount = inputInfo.size[1];
     extParams.blockLen = inputInfo.size[0] * sizeof(T);
     extParams.srcStride = 0;
     extParams.dstStride = dstStride;
     // 切w 跳h 跳d
-   if (tilingData_->splitMode == SPLIT_COLS) {
+    if (tilingData_->splitMode == SPLIT_COLS) {
         extParams.blockCount = inputInfo.size[1];
         LoopModeParams loopParams;
         loopParams.loop2Size = inputInfo.size[3];
@@ -223,7 +223,7 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyInMult
         SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    } else if (tilingData_->splitMode == SPLIT_ROWS) {  //切h 跳d
+    } else if (tilingData_->splitMode == SPLIT_ROWS) { //切h 跳d
         extParams.blockCount = inputInfo.size[1] * inputInfo.size[2];
         LoopModeParams loopParams;
         loopParams.loop2Size = 1;
@@ -235,7 +235,7 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyInMult
         SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    }  else { // 切d n 不跳
+    } else { // 切d n 不跳
         extParams.blockCount = inputInfo.size[1] * inputInfo.size[2] * inputInfo.size[3] * inputInfo.size[4];
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
     }
@@ -244,8 +244,9 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyInMult
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
 __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyOutMultiChannels(int64_t offset, int64_t n,
-                                                                                  int64_t deps, int64_t rows,
-                                                                                  int64_t cols, int64_t channels)
+                                                                                           int64_t deps, int64_t rows,
+                                                                                           int64_t cols,
+                                                                                           int64_t channels)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -285,10 +286,12 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyPadDat
         totalSize,
     };
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
-    if constexpr(OP_TYPE == Pool3D::OP_TYPE_MAX_POOL_3D) {
-        CopyPad::CopyAndPad<M, U, CopyPad::DEFAULT_MODE_NEG_INF>(inLocal, outLocal, indexLocal, shapeInfo, CopyPad::COPY_SINGLE_ROW);
+    if constexpr (OP_TYPE == Pool3D::OP_TYPE_MAX_POOL_3D) {
+        CopyPad::CopyAndPad<M, U, CopyPad::DEFAULT_MODE_NEG_INF>(inLocal, outLocal, indexLocal, shapeInfo,
+                                                                 CopyPad::COPY_SINGLE_ROW);
     } else {
-        CopyPad::CopyAndPad<M, U, CopyPad::DEFAULT_MODE_ZERO>(inLocal, outLocal, indexLocal, shapeInfo, CopyPad::COPY_SINGLE_ROW);
+        CopyPad::CopyAndPad<M, U, CopyPad::DEFAULT_MODE_ZERO>(inLocal, outLocal, indexLocal, shapeInfo,
+                                                              CopyPad::COPY_SINGLE_ROW);
     }
 }
 
@@ -335,8 +338,8 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeSin
     constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(U);
     uint16_t cLoop = alignChannels / repeatElm;
     uint16_t tailNum = alignChannels - cLoop * repeatElm;
-    CopyPadData<M, U>(inLocal, xLocal, n, inDeps, inRows, inCols, expectDepStart, expectRowStart, expectColStart, realDeps,
-                      realRows, realCols, alignChannels);
+    CopyPadData<M, U>(inLocal, xLocal, n, inDeps, inRows, inCols, expectDepStart, expectRowStart, expectColStart,
+                      realDeps, realRows, realCols, alignChannels);
     uint32_t totalNum = n * outUbFactorD * outUbFactorH * outUbFactorW;
     ComputeCurrentDivisor(totalNum);
     uint32_t curIndex = 0;
@@ -350,12 +353,12 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeSin
         for (uint16_t d = 0; d < loopD; d++) {
             for (uint16_t j = 0; j < loopH; j++) {
                 for (uint16_t k = 0; k < loopW; k++) {
-                    auto srcAddr =
-                        xLocalAddr + i * batchStride + d * oneLoopStrideD + j * oneLoopStrideH + k * oneLoopStrideW;
+                    auto srcAddr = xLocalAddr + i * batchStride + d * oneLoopStrideD + j * oneLoopStrideH +
+                                   k * oneLoopStrideW;
                     auto dstAddr = dstLocalAddr + i * oneChannelOutElements + d * outLoopStrideD + j * outLoopStrideH +
                                    k * alignChannels;
                     if constexpr (OUT_DIV) {
-                            curIndex = GetCurrentDivisorIndex(index++);
+                        curIndex = GetCurrentDivisorIndex(index++);
                     }
                     __VEC_SCOPE__
                     {
@@ -370,17 +373,17 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeSin
                                                            colStride, repeatElm);
                             } else {
                                 AvgPoolSingleChannelImpl<M, U>(curDstAddr, curSrcAddr, kD, kH, kW, depStride, rowStride,
-                                                           colStride, repeatElm, divisor);
+                                                               colStride, repeatElm, divisor);
                             }
                         }
                         auto curSrcAddr = srcAddr + cLoop * repeatElm;
                         auto curDstAddr = dstAddr + cLoop * repeatElm;
                         if constexpr (OP_TYPE == Pool3D::OP_TYPE_MAX_POOL_3D) {
-                            MaxPoolSingleChannel<M, U>(curDstAddr, curSrcAddr, kD, kH, kW, depStride, rowStride, colStride,
-                                                       tailNum);
+                            MaxPoolSingleChannel<M, U>(curDstAddr, curSrcAddr, kD, kH, kW, depStride, rowStride,
+                                                       colStride, tailNum);
                         } else {
-                            AvgPoolSingleChannelImpl<M, U>(curDstAddr, curSrcAddr, kD, kH, kW, depStride, rowStride, colStride,
-                                                       tailNum, divisor);
+                            AvgPoolSingleChannelImpl<M, U>(curDstAddr, curSrcAddr, kD, kH, kW, depStride, rowStride,
+                                                           colStride, tailNum, divisor);
                         }
                     }
                 }
@@ -392,25 +395,21 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeSin
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeDivisor(int64_t start, int64_t num)   {
-
+__aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeDivisor(int64_t start, int64_t num)
+{
     Pool3D::CalcDivisorParam param = {
-        tilingData_->kD, tilingData_->kH, tilingData_->kW,
-        tilingData_->sD, tilingData_->sH, tilingData_->sW,
-        tilingData_->fPad, tilingData_->backPad, tilingData_->tPad,
-        tilingData_->bottomPad, tilingData_->lPad, tilingData_->rPad,
-        tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim,
-        tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim
-    };
+        tilingData_->kD,     tilingData_->kH,     tilingData_->kW,      tilingData_->sD,      tilingData_->sH,
+        tilingData_->sW,     tilingData_->fPad,   tilingData_->backPad, tilingData_->tPad,    tilingData_->bottomPad,
+        tilingData_->lPad,   tilingData_->rPad,   tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim,
+        tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim};
     LocalTensor<float> divisorLocal = divisorBuf_.Get<float>();
     auto dstAddr = (__local_mem__ float*)divisorLocal.GetPhyAddr();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
     ComputeDivisorCommon(tilingData_->divisorMode, dstAddr, param, start, num);
 }
 
-
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeCurrentDivisor(uint32_t num)  
+__aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeCurrentDivisor(uint32_t num)
 {
     if constexpr (OUT_DIV && OP_TYPE == OP_TYPE_AVG_POOL_3D) {
         if (tilingData_->splitMode != SPLIT_BATCHS && tilingData_->realCalcDivisor != 0) {
@@ -420,7 +419,7 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeCur
 }
 
 template <typename T, int32_t OP_TYPE, bool OUT_DIV>
-__aicore__ inline uint32_t Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::GetCurrentDivisorIndex(uint32_t index)  
+__aicore__ inline uint32_t Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::GetCurrentDivisorIndex(uint32_t index)
 {
     uint32_t curIndex = index;
     if (tilingData_->splitMode == SPLIT_BATCHS) {
@@ -434,5 +433,5 @@ __aicore__ inline uint32_t Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::GetCur
     return curIndex;
 }
 
-}  // namespace Pool3D
-#endif  // MAX_POOL_V3_NDHWC_BIG_CHANNEL_PAD_H_
+} // namespace Pool3D
+#endif // MAX_POOL_V3_NDHWC_BIG_CHANNEL_PAD_H_

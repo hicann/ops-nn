@@ -21,7 +21,7 @@
 
 namespace ge {
 /**
-* @brief The FastGeluV2 activation function is 
+* @brief The FastGeluV2 activation function is
 *        FastGeluV2(x) = x * (sgn(x) * [-0.1444 * (clip(|0.7071 * x|, max=1.769) - 1.769)^2 + 0.5] + 0.5),
 *        where sgn(x) function is (x+0.000000000001)/|(x+0.000000000001)|.
 
@@ -40,4 +40,4 @@ REG_OP(FastGeluV2)
     .OP_END_FACTORY_REG(FastGeluV2)
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_FAST_GELU_V2_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_FAST_GELU_V2_OPS_H_

@@ -28,14 +28,13 @@ class LoadBL1FZTools {
 public:
     __aicore__ inline LoadBL1FZTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         maxNBL1Iter_ = self->ctx.maxNBL1Iter;
         maxKBL1Iter_ = self->ctx.maxKBL1Iter;
         if constexpr (Intf::groupOptNZFlag) {
-            self->ctx.coPerGroup =
-                self->ctx.convTilingData->orgCo / self->ctx.convTilingData->groups;
+            self->ctx.coPerGroup = self->ctx.convTilingData->orgCo / self->ctx.convTilingData->groups;
             self->ctx.coOpt = self->ctx.coPerGroup * self->ctx.convTilingData->enlarge;
             orgCoAlignN0 = AlignB(self->ctx.coOpt, BLOCK_L0_N);
         } else {
@@ -43,10 +42,7 @@ public:
         }
     }
 
-    __aicore__ inline void LoadBL1()
-    {
-        LoadBL1(self_->ctx.kBL1Iter, self_->ctx.nBL1Iter);
-    }
+    __aicore__ inline void LoadBL1() { LoadBL1(self_->ctx.kBL1Iter, self_->ctx.nBL1Iter); }
 
     __aicore__ inline void LoadBL1(uint64_t kBL1Iter, uint64_t nBL1Iter)
     {
@@ -56,14 +52,12 @@ public:
         } else {
             bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->kBL1 * orgCoAlignN0 +
                           nBL1Iter * self_->ctx.convTilingData->nBL1 * Intf::k0;
-            self_->ctx.currentNBL1 = nBL1Iter == maxNBL1Iter_ ?
-                                     self_->ctx.nBL1Tail : self_->ctx.convTilingData->nBL1;
+            self_->ctx.currentNBL1 = nBL1Iter == maxNBL1Iter_ ? self_->ctx.nBL1Tail : self_->ctx.convTilingData->nBL1;
         }
 
         uint64_t currentKBL1 = self_->ctx.convTilingData->kBL1;
         if constexpr (!Intf::c04Flag) {
-            currentKBL1 = kBL1Iter == maxKBL1Iter_ ?
-                          self_->ctx.kBL1AlignK0Tail : self_->ctx.convTilingData->kBL1;
+            currentKBL1 = kBL1Iter == maxKBL1Iter_ ? self_->ctx.kBL1AlignK0Tail : self_->ctx.convTilingData->kBL1;
         }
         DataCopyPadExtParams<typename Intf::WeightT> padParams;
         DataCopyExtParams dataCopyParams;
@@ -81,7 +75,7 @@ public:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t maxNBL1Iter_ = UINT64_MAX;
     uint64_t maxKBL1Iter_ = UINT64_MAX;
     uint32_t orgCoAlignN0 = 0;

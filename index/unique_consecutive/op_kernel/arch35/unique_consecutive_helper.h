@@ -27,16 +27,11 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
-__aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
-{
-    return (y > 0) ? (x + y - 1) / y : 0;
-}
+__aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y) { return (y > 0) ? (x + y - 1) / y : 0; }
 
 template <typename T>
 __aicore__ inline constexpr uint32_t GetVLEleNums()
@@ -114,7 +109,8 @@ static __aicore__ inline void VFCollectPostUniqueIdx(__ubuf__ int32_t* dstIdxAdd
         MicroAPI::DataCopyUnAlignPre(uregIn, curtSrcAddr);
         MicroAPI::DataCopyUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext, pregLoop);
+        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext,
+                                           pregLoop);
 
         if constexpr (sizeof(T) == 1) {
             MicroAPI::MaskReg maskQ1;
@@ -182,7 +178,8 @@ static __aicore__ inline void VFCollectPostUniqueValue(__ubuf__ T* dstValueAddr,
         MicroAPI::DataCopyUnAlignPre(uregIn, curtSrcAddr);
         MicroAPI::DataCopyUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext, pregLoop);
+        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext,
+                                           pregLoop);
 
         CollectAndCopy2Ub<T>(dstValueAddr, xPrev, out, cmpRet, uregOut);
     }
@@ -234,7 +231,8 @@ static __aicore__ inline void VFCollectPostUniqueValueB64(__ubuf__ int32_t* dstV
 */
 template <typename VALUE_TYPE, typename INPUT_TYPE, bool IS_TAIL>
 __aicore__ inline void CollectPostUniqueIdx(LocalTensor<int32_t>& dstIdx, LocalTensor<VALUE_TYPE>& srcValue,
-                                            int32_t startCount, int32_t endCount, uint32_t nums, uint64_t& rsvdCnt, uint64_t position)
+                                            int32_t startCount, int32_t endCount, uint32_t nums, uint64_t& rsvdCnt,
+                                            uint64_t position)
 {
     // Set phy addr
     __local_mem__ VALUE_TYPE* srcValueAddr = (__local_mem__ VALUE_TYPE*)srcValue[0].GetPhyAddr();
@@ -245,8 +243,8 @@ __aicore__ inline void CollectPostUniqueIdx(LocalTensor<int32_t>& dstIdx, LocalT
     uint32_t totalNums = nums - 1;
     uint32_t repTimes = CEIL_DIV(totalNums, repNums);
 
-    AscendC::VF_CALL<VFCollectPostUniqueIdx<VALUE_TYPE, INPUT_TYPE, repNums>>(dstIdxAddr, srcValueAddr, startCount, repTimes,
-                                                                  totalNums);
+    AscendC::VF_CALL<VFCollectPostUniqueIdx<VALUE_TYPE, INPUT_TYPE, repNums>>(dstIdxAddr, srcValueAddr, startCount,
+                                                                              repTimes, totalNums);
     rsvdCnt = GetSpr<SpecialPurposeReg::AR>() / sizeof(int32_t);
     if constexpr (IS_TAIL) {
         dstIdx.SetValue(position + rsvdCnt, endCount);
@@ -265,10 +263,10 @@ __aicore__ inline void CollectPostUniqueValue(LocalTensor<VALUE_TYPE>& dstValue,
 {
     if constexpr (is_same<VALUE_TYPE, int64_t>::value) {
         // Set phy addr
-        __local_mem__ int32_t* srcValueAddr =
-            (__local_mem__ int32_t*)srcValue[0].template ReinterpretCast<int32_t>().GetPhyAddr();
-        __local_mem__ int32_t* dstValueAddr =
-            (__local_mem__ int32_t*)dstValue[0].template ReinterpretCast<int32_t>().GetPhyAddr();
+        __local_mem__ int32_t*
+            srcValueAddr = (__local_mem__ int32_t*)srcValue[0].template ReinterpretCast<int32_t>().GetPhyAddr();
+        __local_mem__ int32_t*
+            dstValueAddr = (__local_mem__ int32_t*)dstValue[0].template ReinterpretCast<int32_t>().GetPhyAddr();
 
         // Compute VF params
         constexpr uint32_t repNums = GetVLEleNums<int32_t>();
@@ -284,8 +282,8 @@ __aicore__ inline void CollectPostUniqueValue(LocalTensor<VALUE_TYPE>& dstValue,
         constexpr uint32_t repNums = GetVLEleNums<VALUE_TYPE>();
         uint32_t totalNums = nums - 1;
         uint32_t repTimes = CEIL_DIV(totalNums, repNums);
-        AscendC::VF_CALL<VFCollectPostUniqueValue<VALUE_TYPE, INPUT_TYPE, repNums>>(dstValueAddr, srcValueAddr, repTimes,
-                                                                        totalNums);
+        AscendC::VF_CALL<VFCollectPostUniqueValue<VALUE_TYPE, INPUT_TYPE, repNums>>(dstValueAddr, srcValueAddr,
+                                                                                    repTimes, totalNums);
     }
     rsvdCnt = GetSpr<SpecialPurposeReg::AR>() / sizeof(VALUE_TYPE);
     if constexpr (IS_TAIL) {
@@ -295,8 +293,8 @@ __aicore__ inline void CollectPostUniqueValue(LocalTensor<VALUE_TYPE>& dstValue,
 }
 
 template <int REP_LENGTH, typename T>
-static __aicore__ inline void VFPostAdjDiff(__ubuf__ T* dstIdxAddr, __ubuf__ T* srcIdxAddr,
-                                            uint32_t repeatTimes, uint32_t totalNums, uint16_t hasTail)
+static __aicore__ inline void VFPostAdjDiff(__ubuf__ T* dstIdxAddr, __ubuf__ T* srcIdxAddr, uint32_t repeatTimes,
+                                            uint32_t totalNums, uint16_t hasTail)
 {
     MicroAPI::RegTensor<T> idxPrev;
     MicroAPI::RegTensor<T> idxNext;
@@ -320,8 +318,7 @@ static __aicore__ inline void VFPostAdjDiff(__ubuf__ T* dstIdxAddr, __ubuf__ T* 
         MicroAPI::DataCopyUnAlignPre(uregIn, curtSrcAddr);
         MicroAPI::DataCopyUnAlign(idxNext, uregIn, curtSrcAddr);
         MicroAPI::Sub(out, idxNext, idxPrev, pregLoop);
-        MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curtDstAddr, out, uregOut,
-                                                                                    REP_LENGTH);
+        MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curtDstAddr, out, uregOut, REP_LENGTH);
     }
 
     // tail block
@@ -344,8 +341,8 @@ static __aicore__ inline void VFPostAdjDiff(__ubuf__ T* dstIdxAddr, __ubuf__ T* 
     consider compute dstIdx[0] in VF......
 */
 template <typename T>
-__aicore__ inline void PostAdjDiff(LocalTensor<T>& dstIdx, LocalTensor<T>& srcIdx, T firstValue,
-                                   uint32_t nums, uint64_t position)
+__aicore__ inline void PostAdjDiff(LocalTensor<T>& dstIdx, LocalTensor<T>& srcIdx, T firstValue, uint32_t nums,
+                                   uint64_t position)
 {
     // Set phy addr
     __local_mem__ T* srcIdxAddr = (__local_mem__ T*)srcIdx[0].GetPhyAddr();
@@ -363,7 +360,7 @@ __aicore__ inline void PostAdjDiff(LocalTensor<T>& dstIdx, LocalTensor<T>& srcId
 
 template <int REP_LENGTH>
 static __aicore__ inline void VFCastAndAddsOffsets(__ubuf__ int64_t* dstIdxAddr, __ubuf__ int32_t* srcIdxAddr,
-                                            uint32_t repeatTimes, uint32_t totalNums, int64_t offset)
+                                                   uint32_t repeatTimes, uint32_t totalNums, int64_t offset)
 {
     MicroAPI::RegTensor<int64_t> srcReg;
     MicroAPI::RegTensor<int64_t> dstReg;
@@ -372,15 +369,17 @@ static __aicore__ inline void VFCastAndAddsOffsets(__ubuf__ int64_t* dstIdxAddr,
 
     for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
         pregLoop = MicroAPI::UpdateMask<int64_t>(totalNums);
-        MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<int32_t>(i,REP_LENGTH);
-        MicroAPI::AddrReg dstOffset = MicroAPI::CreateAddrReg<int64_t>(i,REP_LENGTH);
-        MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_UNPACK_B32>((MicroAPI::RegTensor<int32_t>&)srcReg, srcIdxAddr, srcOffset);
+        MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<int32_t>(i, REP_LENGTH);
+        MicroAPI::AddrReg dstOffset = MicroAPI::CreateAddrReg<int64_t>(i, REP_LENGTH);
+        MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_UNPACK_B32>((MicroAPI::RegTensor<int32_t>&)srcReg,
+                                                                         srcIdxAddr, srcOffset);
         MicroAPI::Adds(dstReg, srcReg, offset, pregLoop);
         MicroAPI::DataCopy(dstIdxAddr, dstReg, dstOffset, pregLoop);
     }
 }
 
-__aicore__ inline void CastAndAddsOffsets(LocalTensor<int64_t>& dstIdx, LocalTensor<int32_t>& srcIdx,  uint32_t nums, uint64_t position, int64_t offset)
+__aicore__ inline void CastAndAddsOffsets(LocalTensor<int64_t>& dstIdx, LocalTensor<int32_t>& srcIdx, uint32_t nums,
+                                          uint64_t position, int64_t offset)
 {
     // Set phy addr
     __local_mem__ int32_t* srcIdxAddr = (__local_mem__ int32_t*)srcIdx[position].GetPhyAddr();
@@ -423,7 +422,8 @@ static __aicore__ inline void VFCountAdjacentNe(__ubuf__ int32_t* dstCountAddr, 
         MicroAPI::DataCopyUnAlignPre(uregIn, curtSrcAddr);
         MicroAPI::DataCopyUnAlign(xNext, uregIn, curtSrcAddr);
 
-        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext, pregLoop);
+        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext,
+                                           pregLoop);
 
         if constexpr (sizeof(T) == 1) {
             MicroAPI::MaskReg maskQ1, maskQ2, maskQ3, maskQ4, maskTmp;
@@ -463,8 +463,8 @@ static __aicore__ inline void VFCountAdjacentNe(__ubuf__ int32_t* dstCountAddr, 
 }
 
 template <int REP_LENGTH>
-static __aicore__ inline void VFCountAdjacentNeB64(__ubuf__ int32_t* dstCountAddr, __ubuf__ int64_t* srcValueAddr, 
-                                                    uint32_t repeatTimes, uint32_t totalNums)
+static __aicore__ inline void VFCountAdjacentNeB64(__ubuf__ int32_t* dstCountAddr, __ubuf__ int64_t* srcValueAddr,
+                                                   uint32_t repeatTimes, uint32_t totalNums)
 {
     MicroAPI::RegTensor<int64_t> xPrev;
     MicroAPI::RegTensor<int64_t> xNext;
@@ -504,7 +504,8 @@ static __aicore__ inline void VFCountAdjacentNeB64(__ubuf__ int32_t* dstCountAdd
 }
 
 template <typename VALUE_TYPE, typename INPUT_TYPE, bool IS_TAIL>
-__aicore__ inline void CountAdjacentNe(LocalTensor<int32_t>& dstNums, LocalTensor<VALUE_TYPE>& srcValue, uint32_t nums, uint64_t& rsvdCnt)
+__aicore__ inline void CountAdjacentNe(LocalTensor<int32_t>& dstNums, LocalTensor<VALUE_TYPE>& srcValue, uint32_t nums,
+                                       uint64_t& rsvdCnt)
 {
     __local_mem__ int32_t* dstCountAddr = (__local_mem__ int32_t*)dstNums[0].GetPhyAddr();
     __local_mem__ VALUE_TYPE* srcValueAddr = (__local_mem__ VALUE_TYPE*)srcValue[0].GetPhyAddr();
@@ -516,7 +517,8 @@ __aicore__ inline void CountAdjacentNe(LocalTensor<int32_t>& dstNums, LocalTenso
     if constexpr (is_same<VALUE_TYPE, int64_t>::value) {
         AscendC::VF_CALL<VFCountAdjacentNeB64<repNums>>(dstCountAddr, srcValueAddr, repTimes, totalNums);
     } else {
-        AscendC::VF_CALL<VFCountAdjacentNe<VALUE_TYPE, INPUT_TYPE, repNums>>(dstCountAddr, srcValueAddr, repTimes, totalNums);
+        AscendC::VF_CALL<VFCountAdjacentNe<VALUE_TYPE, INPUT_TYPE, repNums>>(dstCountAddr, srcValueAddr, repTimes,
+                                                                             totalNums);
     }
 
     SimpleNativePipeSync<HardEvent::V_S>();
@@ -525,4 +527,4 @@ __aicore__ inline void CountAdjacentNe(LocalTensor<int32_t>& dstNums, LocalTenso
         rsvdCnt += 1;
     }
 }
-#endif  // UNIQUE_CONSECUTIVE_HELPER_H
+#endif // UNIQUE_CONSECUTIVE_HELPER_H

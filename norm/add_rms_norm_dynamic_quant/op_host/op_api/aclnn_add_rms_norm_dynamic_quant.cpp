@@ -35,9 +35,10 @@ constexpr int IDX_INT8 = 2;
 constexpr int IDX_HIFLOAT8 = 34;
 constexpr int IDX_FLOAT8_E5M2 = 35;
 constexpr int IDX_FLOAT8_E4M3FN = 36;
-static std::map<op::DataType, int> dstTypeMap = {{op::DataType::DT_INT8, IDX_INT8}, 
-       {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8}, {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2}, 
-       {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN}};
+static std::map<op::DataType, int> dstTypeMap = {{op::DataType::DT_INT8, IDX_INT8},
+                                                 {op::DataType::DT_HIFLOAT8, IDX_HIFLOAT8},
+                                                 {op::DataType::DT_FLOAT8_E5M2, IDX_FLOAT8_E5M2},
+                                                 {op::DataType::DT_FLOAT8_E4M3FN, IDX_FLOAT8_E4M3FN}};
 
 namespace AddRmsNormDynamicQuantACLNN {
 constexpr int IDX_0 = 0;
@@ -46,13 +47,13 @@ constexpr int IDX_2 = 2;
 constexpr int IDX_3 = 3;
 constexpr int IDX_4 = 4;
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE = {op::DataType::DT_FLOAT16,
+                                                                                          op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> REGBASE_DTYPE_SUPPORT_LIST_Y = {
     op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_HIFLOAT8, op::DataType::DT_INT8};
-static bool CheckNotNull(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, aclTensor* y1Out, aclTensor* y2Out,
-    const aclTensor* xOut, const aclTensor* scale1Out, const aclTensor* scale2Out)
+static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, aclTensor* y1Out,
+                         aclTensor* y2Out, const aclTensor* xOut, const aclTensor* scale1Out,
+                         const aclTensor* scale2Out)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
@@ -65,10 +66,10 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, const aclTensor* y1Out, const aclTensor* y2Out, const aclTensor* xOut,
-    const aclTensor* scale1Out, const aclTensor* scale2Out)
+static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                            const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
+                            const aclTensor* y1Out, const aclTensor* y2Out, const aclTensor* xOut,
+                            const aclTensor* scale1Out, const aclTensor* scale2Out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
@@ -92,9 +93,8 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckShapeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional)
+static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                            const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional)
 {
     // 检查 x1 和 x2 shape 是否一致
     auto x1Shape = x1->GetViewShape();
@@ -137,33 +137,30 @@ static bool CheckShapeValid(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
-    aclTensor* scale2Out)
+static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                               const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
+                               aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
+                               aclTensor* scale2Out)
 {
     // 1. 检查必选输入/输出是否为空指针
     CHECK_RET(CheckNotNull(x1, x2, gamma, y1Out, y2Out, xOut, scale1Out, scale2Out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入/输出的数据类型是否合法
-    CHECK_RET(
-        CheckDtypeValid(
-            x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, y1Out, y2Out, xOut, scale1Out, scale2Out),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, y1Out, y2Out, xOut, scale1Out,
+                              scale2Out),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入 shape 是否合法
-    CHECK_RET(
-        CheckShapeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional),
-        ACLNN_ERR_INNER_TILING_ERROR);
+    CHECK_RET(CheckShapeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional), ACLNN_ERR_INNER_TILING_ERROR);
 
     return ACLNN_SUCCESS;
 }
 } // namespace AddRmsNormDynamicQuantACLNN
 
-aclnnStatus ComputeAddRmsNormDynamicQuant(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, double epsilon, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
-    aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
+aclnnStatus ComputeAddRmsNormDynamicQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                          const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
+                                          double epsilon, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
+                                          aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
 {
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* y2ComputeOut = nullptr;
@@ -171,9 +168,9 @@ aclnnStatus ComputeAddRmsNormDynamicQuant(
 
     int dstType = dstTypeMap[y1Out->GetDataType()];
 
-    auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(
-        x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, scale1Out,
-        scale2Out, executor);
+    auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
+                                                            nullptr, epsilon, nullptr, dstType, scale1Out, scale2Out,
+                                                            executor);
     y1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_0>(addRmsNormQuantOuts);
     y2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_1>(addRmsNormQuantOuts);
     xComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_2>(addRmsNormQuantOuts);
@@ -202,23 +199,25 @@ const aclTensor* ContiguousX(const aclTensor* opt, aclOpExecutor* executor)
     return l0op::Contiguous(opt, executor);
 }
 
-aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, double epsilon, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
-    aclTensor* scale1Out, aclTensor* scale2Out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                        const aclTensor* gamma, const aclTensor* smoothScale1Optional,
+                                                        const aclTensor* smoothScale2Optional, double epsilon,
+                                                        aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
+                                                        aclTensor* scale1Out, aclTensor* scale2Out,
+                                                        uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_LOGD("Enter aclnnAddRmsNormDynamicQuantGetWorkspaceSize.");
-    L2_DFX_PHASE_1(
-        aclnnAddRmsNormDynamicQuant, DFX_IN(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, epsilon),
-        DFX_OUT(y1Out, y2Out, xOut, scale1Out, scale2Out));
+    L2_DFX_PHASE_1(aclnnAddRmsNormDynamicQuant,
+                   DFX_IN(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, epsilon),
+                   DFX_OUT(y1Out, y2Out, xOut, scale1Out, scale2Out));
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 参数检查
-    auto ret = AddRmsNormDynamicQuantACLNN::CheckParams(
-        x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, y1Out, y2Out, xOut, scale1Out, scale2Out);
+    auto ret = AddRmsNormDynamicQuantACLNN::CheckParams(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
+                                                        y1Out, y2Out, xOut, scale1Out, scale2Out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 支持空tensor
@@ -246,13 +245,14 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
 
     if (Ops::NN::AclnnUtil::IsRegbase() && hasReduceEmptyTensor) {
         int dstType = dstTypeMap[y1Out->GetDataType()];
-        auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(
-            x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, scale1Out,  
-        scale2Out, uniqueExecutor.get());
+        auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(x1, x2, gamma, smoothScale1Optional,
+                                                                smoothScale2Optional, nullptr, epsilon, nullptr,
+                                                                dstType, scale1Out, scale2Out, uniqueExecutor.get());
         aclTensor* y1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_0>(addRmsNormQuantOuts);
         aclTensor* y2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_1>(addRmsNormQuantOuts);
         aclTensor* xComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_2>(addRmsNormQuantOuts);
-        CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr,
+                  ACLNN_ERR_INNER_NULLPTR);
 
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
@@ -260,9 +260,8 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    ret = ComputeAddRmsNormDynamicQuant(
-        x1Cont, x2Cont, gammaCont, s1Cont, s2Cont, epsilon, y1Out, y2Out, xOut, scale1Out, scale2Out,
-        uniqueExecutor.get());
+    ret = ComputeAddRmsNormDynamicQuant(x1Cont, x2Cont, gammaCont, s1Cont, s2Cont, epsilon, y1Out, y2Out, xOut,
+                                        scale1Out, scale2Out, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 获取计算过程中需要使用的workspace大小
@@ -272,8 +271,8 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAddRmsNormDynamicQuant(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnAddRmsNormDynamicQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAddRmsNormDynamicQuant);
     // 固定写法，调用框架能力，完成计算

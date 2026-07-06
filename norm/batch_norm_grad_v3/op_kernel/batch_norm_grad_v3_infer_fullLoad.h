@@ -96,25 +96,23 @@ private:
 
     __aicore__ inline void computeDBias()
     {
-        this->DoNormalReduce(
-            this->dyTensor, this->reduceUbTensor, this->reduceUbTensor, this->cBlockLength,
-            this->b0Dim * this->b1DimAlign, this->b0Dim * this->b1DimAlign);
+        this->DoNormalReduce(this->dyTensor, this->reduceUbTensor, this->reduceUbTensor, this->cBlockLength,
+                             this->b0Dim * this->b1DimAlign, this->b0Dim * this->b1DimAlign);
         PipeBarrier<PIPE_V>();
         this->reduceQueue.template EnQue(this->reduceUbTensor);
     }
 
     __aicore__ inline void computeDWeight()
     {
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
         CALC_TWO_TENSOR_REPEAT(Sub, Adds, this->xTensor, this->meanBrcbTensor, CALC_SUB_FLAG, "x_sub_mean");
         PipeBarrier<PIPE_V>();
-        CALC_TWO_TENSOR(
-            Mul, this->xTensor, this->xTensor, this->dyTensor, this->cBlockLength, this->b1DimAlign * this->b0Dim,
-            "x_mul_dy");
+        CALC_TWO_TENSOR(Mul, this->xTensor, this->xTensor, this->dyTensor, this->cBlockLength,
+                        this->b1DimAlign * this->b0Dim, "x_mul_dy");
         PipeBarrier<PIPE_V>();
-        this->DoNormalReduce(
-            this->xTensor, this->xTensor, this->xTensor, this->cBlockLength, this->b0Dim * this->b1DimAlign,
-            this->b0Dim * this->b1DimAlign);
+        this->DoNormalReduce(this->xTensor, this->xTensor, this->xTensor, this->cBlockLength,
+                             this->b0Dim * this->b1DimAlign, this->b0Dim * this->b1DimAlign);
         PipeBarrier<PIPE_V>();
         Div(this->xTensor, this->xTensor, this->varTensor, this->cBlockLength);
         PipeBarrier<PIPE_V>();

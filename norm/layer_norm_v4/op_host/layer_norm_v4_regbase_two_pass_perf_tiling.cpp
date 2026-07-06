@@ -60,7 +60,8 @@ bool LayerNormV4RegBaseTwoPassPerfTiling::IsCapable()
         return false;
     }
 
-    if (static_cast<int64_t>(commonParams.rowAlign) > LN_NUM_TWO * commonParams.vlFp32 * commonParams.vlFp32 * LN_NUM_TWO) {
+    if (static_cast<int64_t>(commonParams.rowAlign) >
+        LN_NUM_TWO * commonParams.vlFp32 * commonParams.vlFp32 * LN_NUM_TWO) {
         return false;
     }
 
@@ -139,10 +140,7 @@ ge::graphStatus LayerNormV4RegBaseTwoPassPerfTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LayerNormV4RegBaseTwoPassPerfTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV4RegBaseTwoPassPerfTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus LayerNormV4RegBaseTwoPassPerfTiling::PostTiling()
 {

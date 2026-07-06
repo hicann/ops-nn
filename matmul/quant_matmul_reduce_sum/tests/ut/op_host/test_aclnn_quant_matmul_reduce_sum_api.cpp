@@ -24,17 +24,10 @@
 
 using namespace std;
 
-class l2_quant_matmul_reduce_sum_test : public testing::Test
-{
+class l2_quant_matmul_reduce_sum_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_quant_matmul_reduce_sum_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_quant_matmul_reduce_sum_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_quant_matmul_reduce_sum_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_quant_matmul_reduce_sum_test TearDown" << endl; }
 };
 
 /*
@@ -50,13 +43,11 @@ static void QuantMatmulTestCaseNormal(int64_t b, int64_t m, int64_t k, int64_t n
     auto x1ScaleDesc = TensorDesc({b, m}, ACL_FLOAT, ACL_FORMAT_ND);
     auto outDesc = TensorDesc({m, n}, ACL_BF16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulReduceSumWeightNz,
-        INPUT(
-            x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-            nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-            false, false, -1, dimsDesc, false),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                              false, false, -1, dimsDesc, false),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -113,94 +104,67 @@ static void QuantMatmulTestCaseNullptr(int inputIndex, int outputIndex)
     uint64_t workspaceSize = 0;
 
     if (inputIndex == 0) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulReduceSumWeightNz,
-            INPUT(
-                nullptr, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-                nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-                false, false, -1, dimsDesc, false),
-            OUTPUT(outDesc));
+        auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                            INPUT(nullptr, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                  nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                                  false, false, -1, dimsDesc, false),
+                            OUTPUT(outDesc));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     } else if (inputIndex == 1) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulReduceSumWeightNz,
-            INPUT(
-                x1Desc, nullptr, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-                nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-                false, false, -1, dimsDesc, false),
-            OUTPUT(outDesc));
+        auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                            INPUT(x1Desc, nullptr, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                  nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                                  false, false, -1, dimsDesc, false),
+                            OUTPUT(outDesc));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     } else if (inputIndex == 2) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulReduceSumWeightNz,
-            INPUT(
-                x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-                nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-                false, false, -1, dimsDesc, false),
-            OUTPUT(outDesc));
+        auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                            INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                  nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                                  false, false, -1, dimsDesc, false),
+                            OUTPUT(outDesc));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     } else if (inputIndex == 3) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulReduceSumWeightNz,
-            INPUT(
-                x1Desc, x2Desc, x1ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-                false, false, -1, dimsDesc, false),
-            OUTPUT(outDesc));
+        auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                            INPUT(x1Desc, x2Desc, x1ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                                  nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                                  false, false, -1, dimsDesc, false),
+                            OUTPUT(outDesc));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     } else if (inputIndex == 12) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulReduceSumWeightNz,
-            INPUT(
-                x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-                nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-                false, false, -1, nullptr, false),
-            OUTPUT(outDesc));
+        auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                  nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                                  false, false, -1, nullptr, false),
+                            OUTPUT(outDesc));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     }
 
     if (outputIndex == 0) {
-        auto ut = OP_API_UT(
-            aclnnQuantMatmulReduceSumWeightNz,
-            INPUT(
-                x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-                nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-                false, false, -1, dimsDesc, false),
-            OUTPUT(nullptr));
+        auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                            INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                                  nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                                  false, false, -1, dimsDesc, false),
+                            OUTPUT(nullptr));
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     }
 }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_empty)
-{
-    QuantMatmulTestCaseNullptr(0, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_empty) { QuantMatmulTestCaseNullptr(0, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_empty)
-{
-    QuantMatmulTestCaseNullptr(1, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_empty) { QuantMatmulTestCaseNullptr(1, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_scale_empty)
-{
-    QuantMatmulTestCaseNullptr(2, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_scale_empty) { QuantMatmulTestCaseNullptr(2, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_scale_empty)
-{
-    QuantMatmulTestCaseNullptr(3, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_scale_empty) { QuantMatmulTestCaseNullptr(3, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_out_empty)
-{
-    QuantMatmulTestCaseNullptr(-1, 0);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_out_empty) { QuantMatmulTestCaseNullptr(-1, 0); }
 
 /*
  常规 opapi_UT 异常算例2： 数据类型不支持
@@ -232,13 +196,11 @@ static void QuantMatmulTestCaseInvalidDatatype(int inputIndex, int outputIndex, 
         outDesc = TensorDesc({m, n}, aclDtype, ACL_FORMAT_ND);
     }
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulReduceSumWeightNz,
-        INPUT(
-            x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-            nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-            false, false, -1, dimsDesc, false),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                              false, false, -1, dimsDesc, false),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -300,13 +262,11 @@ static void QuantMatmulTestCaseInvalidFormat(int inputIndex, int outputIndex, ac
         outDesc = TensorDesc({m, n}, ACL_BF16, invalidFormat);
     }
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulReduceSumWeightNz,
-        INPUT(
-            x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-            nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-            false, false, -1, dimsDesc, false),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                              false, false, -1, dimsDesc, false),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -363,35 +323,21 @@ static void QuantMatmulTestCaseInvalidShape(int inputIndex, int outputIndex)
         outDesc = TensorDesc({m, n + 1}, ACL_BF16, ACL_FORMAT_ND);
     }
 
-    auto ut = OP_API_UT(
-        aclnnQuantMatmulReduceSumWeightNz,
-        INPUT(
-            x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
-            nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
-            false, false, -1, dimsDesc, false),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantMatmulReduceSumWeightNz,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                              nullptr, // nullptr: yScale, x1Offset, x2Offset, yOffset, bias
+                              false, false, -1, dimsDesc, false),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_not_match)
-{
-    QuantMatmulTestCaseInvalidShape(0, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_not_match) { QuantMatmulTestCaseInvalidShape(0, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_not_match)
-{
-    QuantMatmulTestCaseInvalidShape(1, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_not_match) { QuantMatmulTestCaseInvalidShape(1, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_scale_not_match)
-{
-    QuantMatmulTestCaseInvalidShape(2, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x1_scale_not_match) { QuantMatmulTestCaseInvalidShape(2, -1); }
 
-TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_scale_not_match)
-{
-    QuantMatmulTestCaseInvalidShape(3, -1);
-}
+TEST_F(l2_quant_matmul_reduce_sum_test, ascend910B2_test_x2_scale_not_match) { QuantMatmulTestCaseInvalidShape(3, -1); }

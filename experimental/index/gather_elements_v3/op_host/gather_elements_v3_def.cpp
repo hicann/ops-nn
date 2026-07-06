@@ -52,9 +52,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "gather_elements_v3");    
+            .ExtendCfgInfo("opFile.value", "gather_elements_v3");
         this->AICore().AddConfig("ascend910b", aicoreConfig);
     }
 };
-OP_ADD(GatherElementsV3); 
+OP_ADD(GatherElementsV3);
 } // namespace ops

@@ -24,7 +24,7 @@
 namespace optiling {
 namespace pp_matmul {
 struct MatMulInfo {
-    const char *opName = nullptr;
+    const char* opName = nullptr;
     uint64_t batchSize{0};
     uint64_t m{0}; // 实际输入的 m
     uint64_t n{0}; // 实际输入的 n
@@ -35,8 +35,8 @@ struct MatMulInfo {
     ge::Format formatA = ge::FORMAT_ND;
     ge::Format formatB = ge::FORMAT_ND;
     ge::Format formatC = ge::FORMAT_ND;
-    uint64_t transA{0}; 
-    uint64_t transB{0}; 
+    uint64_t transA{0};
+    uint64_t transB{0};
     bool biasFlag{0}; // false: 0, true: 1
     bool isInt8{0};
     bool isQuantBatchMatmulV3{0};
@@ -56,7 +56,7 @@ struct HardwareInfo {
     uint64_t l0bSize{0};
     uint64_t l0cSize{0};
     uint64_t hbmBandWidth{1};
-    uint64_t l2BandWidth{5};// 5x faster than hbm.
+    uint64_t l2BandWidth{5}; // 5x faster than hbm.
     platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
     std::string socVersionStr = "";
 };
@@ -89,8 +89,9 @@ struct PpMatmulDefaultTilingData {
     uint32_t compressOverlapN{0};
 
     void SetBaseShape(uint64_t batchSize, uint64_t m, uint64_t k, uint64_t n);
-    void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo &mmInfo, bool isNpuArch2002);
-    void End(const MatMulInfo &mmInfo, bool isNpuArch2002);
+    void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo& mmInfo,
+                   bool isNpuArch2002);
+    void End(const MatMulInfo& mmInfo, bool isNpuArch2002);
 };
 
 } // namespace pp_matmul

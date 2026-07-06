@@ -50,10 +50,9 @@ constexpr size_t DIM2 = 2;
 constexpr size_t DIM3 = 3;
 constexpr size_t DIM4 = 4;
 
-class AdaptiveAvgPool3dGradTiling
-{
+class AdaptiveAvgPool3dGradTiling {
 public:
-    explicit AdaptiveAvgPool3dGradTiling(gert::TilingContext* tilingContext) : context(tilingContext) {};
+    explicit AdaptiveAvgPool3dGradTiling(gert::TilingContext* tilingContext) : context(tilingContext){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void PrintTilingData();
@@ -117,19 +116,18 @@ ge::graphStatus AdaptiveAvgPool3dGradTiling::Init()
         coreNum = 1U;
     }
     auto const yGradShape = context->GetInputShape(0)->GetStorageShape();
-    OP_CHECK_IF(
-        yGradShape.GetDimNum() != Y_GRAD_DIMS,
-        OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal 4."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yGradShape.GetDimNum() != Y_GRAD_DIMS,
+                OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal 4."), return ge::GRAPH_FAILED);
 
     auto const xShapeVal = context->GetInputShape(1)->GetStorageShape();
-    OP_CHECK_IF(
-        (xShapeVal.GetDimNum() != X_DIMS_4 && xShapeVal.GetDimNum() != X_DIMS_5),
-        OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal 4 or 5."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xShapeVal.GetDimNum() != X_DIMS_4 && xShapeVal.GetDimNum() != X_DIMS_5),
+                OP_LOGE(nodeName, "Check yGrad shape failed, the dims of yGrad not equal 4 or 5."),
+                return ge::GRAPH_FAILED);
 
     auto const yGradDtype = context->GetInputDesc(0)->GetDataType();
-    OP_CHECK_IF(
-        GetDataTypeKey(yGradDtype) == false,
-        OP_LOGE(nodeName, "The dtype of input must be in [float32, float16, bfloat16]."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetDataTypeKey(yGradDtype) == false,
+                OP_LOGE(nodeName, "The dtype of input must be in [float32, float16, bfloat16]."),
+                return ge::GRAPH_FAILED);
 
     dOut = yGradShape.GetDim(DIM0);
     hOut = yGradShape.GetDim(DIM1);
@@ -144,14 +142,12 @@ ge::graphStatus AdaptiveAvgPool3dGradTiling::Init()
         hIn = xShapeVal.GetDim(DIM3);
         wIn = xShapeVal.GetDim(DIM4);
     }
-    OP_CHECK_IF(
-        dOut <= 0 || hOut <= 0 || wOut <= 0 || ncNum <= 0,
-        OP_LOGE(nodeName, "Check yGradShape failed, the value of yGradShape should be greater than 0."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        dIn <= 0 || hIn <= 0 || wIn <= 0,
-        OP_LOGE(nodeName, "Check xShape failed, the value of xShape should be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dOut <= 0 || hOut <= 0 || wOut <= 0 || ncNum <= 0,
+                OP_LOGE(nodeName, "Check yGradShape failed, the value of yGradShape should be greater than 0."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dIn <= 0 || hIn <= 0 || wIn <= 0,
+                OP_LOGE(nodeName, "Check xShape failed, the value of xShape should be greater than 0."),
+                return ge::GRAPH_FAILED);
     ncAlign = (ncNum + dataAlign - 1) / dataAlign * dataAlign;
     CalTilingKey(ubSize);
     PrintTilingData();
@@ -183,7 +179,7 @@ void AdaptiveAvgPool3dGradTiling::CalTilingKey(uint32_t ubSize)
         ncSliceNum = 1;
     } else {
         tilingKey = tilingKey * DTYPE_KEY_WEIGHT + NC_LARGE_KEY;
-        OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0."), return);
+        OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0."), return );
         ncSliceNum = (perCalcSize - 1 + static_cast<int64_t>(ubSize)) / static_cast<int64_t>(ubSize);
         ncAlignSliceLength = ncAlign / ncSliceNum / ALIGN_NUM * ALIGN_NUM;
         ncSliceNum = (ncNum - 1 + ncAlignSliceLength) / ncAlignSliceLength;
@@ -287,18 +283,15 @@ ge::graphStatus TilingPrepare4AdaptiveAvgPool3dGrad(gert::TilingParseContext* co
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(nodeName, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(nodeName, "Failed to get core num."), return ge::GRAPH_FAILED);
 
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(nodeName, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(nodeName, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(nodeName, "TilingPrepare4AdaptiveAvgPool3dGrad end.");
     return ge::GRAPH_SUCCESS;
@@ -322,4 +315,4 @@ IMPL_OP_OPTILING(AdaptiveAvgPool3dGrad)
     .Tiling(TilingFunc4AdaptiveAvgPool3dGrad)
     .TilingParse<AdaptiveAvgPool3dGradCompileInfo>(TilingPrepare4AdaptiveAvgPool3dGrad);
 
-}  // namespace optiling
+} // namespace optiling

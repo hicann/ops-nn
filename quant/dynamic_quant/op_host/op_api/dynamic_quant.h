@@ -13,9 +13,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*> DynamicQuant(
-    const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexsOptional, int32_t dstType,
-    aclOpExecutor* executor);
+std::tuple<aclTensor*, aclTensor*> DynamicQuant(const aclTensor* x, const aclTensor* smoothScalesOptional,
+                                                const aclTensor* groupIndexsOptional, int32_t dstType,
+                                                aclOpExecutor* executor);
 }
 
 #endif

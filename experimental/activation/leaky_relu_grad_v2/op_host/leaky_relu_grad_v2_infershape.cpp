@@ -21,7 +21,7 @@
 /*!
  * \file leaky_relu_grad_v2_infer.cpp
  * \brief
-*/
+ */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 

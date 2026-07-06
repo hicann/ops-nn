@@ -21,16 +21,18 @@ extern "C" {
  * @brief aclnnSyncBatchNormGatherStats的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_norm
  */
-ACLNN_API aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, aclTensor* mean,
-    aclTensor* variance, float momentum, float eps, aclTensor* batchMean, aclTensor* batchInvstd,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(const aclTensor* totalSum,
+                                                                    const aclTensor* totalSquareSum,
+                                                                    const aclTensor* sampleCount, aclTensor* mean,
+                                                                    aclTensor* variance, float momentum, float eps,
+                                                                    aclTensor* batchMean, aclTensor* batchInvstd,
+                                                                    uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnSyncBatchNormGatherStats的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus
-aclnnSyncBatchNormGatherStats(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSyncBatchNormGatherStats(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

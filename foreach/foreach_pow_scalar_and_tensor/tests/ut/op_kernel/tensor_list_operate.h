@@ -62,8 +62,8 @@ uint8_t* CreateTensorListForeachPowScalarAndTensor(const std::vector<std::vector
 }
 
 template <typename T>
-void FreeTensorListForeachPowScalarAndTensor(
-    uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+void FreeTensorListForeachPowScalarAndTensor(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos,
+                                             char* d_type)
 {
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;

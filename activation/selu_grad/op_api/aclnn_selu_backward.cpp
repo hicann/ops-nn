@@ -36,128 +36,138 @@ static inline const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8};
 
 static inline const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32,
-    op::DataType::DT_INT8, op::DataType::DT_BF16};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8,
+    op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-    return ASCEND910B_DTYPE_SUPPORT_LIST;
-  } else {
-    return ASCEND910_DTYPE_SUPPORT_LIST;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+        return ASCEND910B_DTYPE_SUPPORT_LIST;
+    } else {
+        return ASCEND910_DTYPE_SUPPORT_LIST;
+    }
 }
 
-static inline bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *result, aclTensor *gradInput) {
-  OP_CHECK_NULL(gradOutput, return false);
-  OP_CHECK_NULL(result, return false);
-  OP_CHECK_NULL(gradInput, return false);
-  return true;
+static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
+{
+    OP_CHECK_NULL(gradOutput, return false);
+    OP_CHECK_NULL(result, return false);
+    OP_CHECK_NULL(gradInput, return false);
+    return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *result, aclTensor *gradInput) {
-  auto supportList = GetDtypeSupportList();
-  OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
-  OP_CHECK_DTYPE_NOT_SUPPORT(result, supportList, return false);
-  OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, supportList, return false);
-  return true;
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
+{
+    auto supportList = GetDtypeSupportList();
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(result, supportList, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, supportList, return false);
+    return true;
 }
 
-static inline bool CheckShape(const aclTensor *gradOutput, const aclTensor *result, aclTensor *gradInput) {
-  OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, result, return false);
-  OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, gradInput, return false);
-  return true;
+static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
+{
+    OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, result, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL(gradOutput, gradInput, return false);
+    return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *result, aclTensor *gradInput) {
-  CHECK_RET(CheckNotNull(gradOutput, result, gradInput), ACLNN_ERR_PARAM_NULLPTR);
+static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
+{
+    CHECK_RET(CheckNotNull(gradOutput, result, gradInput), ACLNN_ERR_PARAM_NULLPTR);
 
-  CHECK_RET(CheckDtypeValid(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
 
-  CHECK_RET(CheckShape(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(gradOutput, result, gradInput), ACLNN_ERR_PARAM_INVALID);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
-static inline aclIntArray *GetTensorShape(const aclTensor *x, aclOpExecutor *executor) {
-  auto shape = x->GetViewShape();
-  int64_t dimSize = x->GetViewShape().GetDimNum();
+static inline aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor)
+{
+    auto shape = x->GetViewShape();
+    int64_t dimSize = x->GetViewShape().GetDimNum();
 
-  std::vector<int64_t> valuePerm(dimSize);
-  for (int i = 0; i < dimSize; i++) {
-    valuePerm[i] = shape[i];
-  }
-  auto perm = executor->AllocIntArray(valuePerm.data(), dimSize);
-  return perm;
+    std::vector<int64_t> valuePerm(dimSize);
+    for (int i = 0; i < dimSize; i++) {
+        valuePerm[i] = shape[i];
+    }
+    auto perm = executor->AllocIntArray(valuePerm.data(), dimSize);
+    return perm;
 }
 
-static const aclTensor *ReshapeLongTensor(const aclTensor *x, aclOpExecutor *executor, int originalDimSize,
-                                          aclIntArray *valuePerm = nullptr) {
-  int64_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
-    return x;
-  }
+static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor, int originalDimSize,
+                                          aclIntArray* valuePerm = nullptr)
+{
+    int64_t dimSize = x->GetViewShape().GetDimNum();
+    if (originalDimSize == dimSize && dimSize <= (int64_t)MAX_SUPPORT_DIMS_NUMS) {
+        return x;
+    }
 
-  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-  return reshapeSelf;
+    auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
+    return reshapeSelf;
 }
 
-aclnnStatus ExecSeluBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *result, aclTensor *gradInput,
-                                             uint64_t *workspaceSize, aclOpExecutor **executor) {
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+aclnnStatus ExecSeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput,
+                                             uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  auto ret = CheckParams(gradOutput, result, gradInput);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    auto ret = CheckParams(gradOutput, result, gradInput);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  if (gradOutput->IsEmpty() || result->IsEmpty()) {
-    *workspaceSize = 0;
+    if (gradOutput->IsEmpty() || result->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
+    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto resultContiguous = l0op::Contiguous(result, uniqueExecutor.get());
+    CHECK_RET(resultContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    size_t dimSize = gradOutput->GetViewShape().GetDimNum();
+    auto shapeOriDetail = GetTensorShape(gradOutputContiguous, uniqueExecutor.get());
+
+    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
+        auto allDimValue = gradOutput->Size();
+        int64_t allDim[1] = {allDimValue};
+        auto shape1d = (uniqueExecutor)->AllocIntArray(allDim, 1);
+        gradOutputContiguous = ReshapeLongTensor(gradOutputContiguous, uniqueExecutor.get(), dimSize, shape1d);
+        resultContiguous = ReshapeLongTensor(resultContiguous, uniqueExecutor.get(), dimSize, shape1d);
+    }
+
+    auto seluGradOut = l0op::SeluGrad(gradOutputContiguous, resultContiguous, uniqueExecutor.get());
+    CHECK_RET(seluGradOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
+        seluGradOut = ReshapeLongTensor(seluGradOut, uniqueExecutor.get(), dimSize, shapeOriDetail);
+    }
+
+    auto castSeluGradOut = l0op::Cast(seluGradOut, gradInput->GetDataType(), uniqueExecutor.get());
+    auto viewCopyOut = l0op::ViewCopy(castSeluGradOut, gradInput, uniqueExecutor.get());
+    CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
-  }
-
-  auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
-  CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto resultContiguous = l0op::Contiguous(result, uniqueExecutor.get());
-  CHECK_RET(resultContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  size_t dimSize = gradOutput->GetViewShape().GetDimNum();
-  auto shapeOriDetail = GetTensorShape(gradOutputContiguous, uniqueExecutor.get());
-
-  if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-    auto allDimValue = gradOutput->Size();
-    int64_t allDim[1] = {allDimValue};
-    auto shape1d = (uniqueExecutor)->AllocIntArray(allDim, 1);
-    gradOutputContiguous = ReshapeLongTensor(gradOutputContiguous, uniqueExecutor.get(), dimSize, shape1d);
-    resultContiguous = ReshapeLongTensor(resultContiguous, uniqueExecutor.get(), dimSize, shape1d);
-  }
-
-  auto seluGradOut = l0op::SeluGrad(gradOutputContiguous, resultContiguous, uniqueExecutor.get());
-  CHECK_RET(seluGradOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-    seluGradOut = ReshapeLongTensor(seluGradOut, uniqueExecutor.get(), dimSize, shapeOriDetail);
-  }
-
-  auto castSeluGradOut = l0op::Cast(seluGradOut, gradInput->GetDataType(), uniqueExecutor.get());
-  auto viewCopyOut = l0op::ViewCopy(castSeluGradOut, gradInput, uniqueExecutor.get());
-  CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSeluBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *result,
-                                              aclTensor *gradInput, uint64_t *workspaceSize, aclOpExecutor **executor) {
-  L2_DFX_PHASE_1(aclnnSeluBackward, DFX_IN(gradOutput, result), DFX_OUT(gradInput));
-  return ExecSeluBackwardGetWorkspaceSize(gradOutput, result, gradInput, workspaceSize, executor);
+aclnnStatus aclnnSeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* result,
+                                              aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnSeluBackward, DFX_IN(gradOutput, result), DFX_OUT(gradInput));
+    return ExecSeluBackwardGetWorkspaceSize(gradOutput, result, gradInput, workspaceSize, executor);
 }
 
-aclnnStatus aclnnSeluBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnSeluBackward);
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnSeluBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnSeluBackward);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

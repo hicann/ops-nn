@@ -27,14 +27,8 @@ using namespace std;
 
 class swish_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "swish_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "swish_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "swish_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "swish_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(swish_grad_test, test_case_0)
@@ -75,7 +69,7 @@ TEST_F(swish_grad_test, test_case_0)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(SwishGradKernel, blockDim, grad, x, y, grad_x, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(SwishGradKernel, blockDim, grad, x, y, grad_x, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(grad);
     AscendC::GmFree(x);

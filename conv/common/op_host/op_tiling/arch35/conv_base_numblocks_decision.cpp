@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv_base_numblocks_decision.cpp
  * \brief
@@ -21,10 +21,7 @@
 namespace optiling {
 namespace conv_ops_tiling {
 
-uint32_t Gcd(uint32_t i, uint32_t j)
-{
-    return j > 0 ? Gcd(j, i % j) : i;
-}
+uint32_t Gcd(uint32_t i, uint32_t j) { return j > 0 ? Gcd(j, i % j) : i; }
 
 uint64_t ConvCeilDiv(uint64_t a, uint64_t b)
 {
@@ -112,13 +109,10 @@ ge::graphStatus ConvBaseDeci::GetNumBlocksInfo(ConvAscendcTilingInfo& tilingInfo
     return ge::GRAPH_SUCCESS;
 }
 
-void ConvBaseDeci::SetTilingInfo(ConvAscendcTilingInfo& tilingInfo)
-{
-    tilingInfo.flagInfo = flagInfo_;
-}
+void ConvBaseDeci::SetTilingInfo(ConvAscendcTilingInfo& tilingInfo) { tilingInfo.flagInfo = flagInfo_; }
 
-void ConvBaseDeci::ConvBaseInit(const ConvAscendcShapesInfo& shapeInfo,
-                                const ConvAscendcDescInfo& descInfo, const ConvAscendcTilingFlag& flagInfo)
+void ConvBaseDeci::ConvBaseInit(const ConvAscendcShapesInfo& shapeInfo, const ConvAscendcDescInfo& descInfo,
+                                const ConvAscendcTilingFlag& flagInfo)
 {
     shapeInfo_ = shapeInfo;
     descInfo_ = descInfo;
@@ -137,20 +131,14 @@ void ConvBaseDeci::ConvBaseInitNodeInfo(const string& nodeName, const string& no
     nodeInfo_.nodeType = nodeType;
 }
 
-void ConvBaseDeci::ConvBaseInitAttrInfo(const ConvAscendcAttrInfo& attrInfo)
-{
-    attrInfo_ = attrInfo;
-}
+void ConvBaseDeci::ConvBaseInitAttrInfo(const ConvAscendcAttrInfo& attrInfo) { attrInfo_ = attrInfo; }
 
 void ConvBaseDeci::GetConvBaseCoreInfo(ConvOpsConstParams& convOpsConstParams)
 {
     convOpsConstParams = convOpsConstParams_;
 }
 
-void ConvBaseDeci::SetAiCoreNum(uint32_t aicoreNum)
-{
-    aicoreNum_ = aicoreNum;
-}
+void ConvBaseDeci::SetAiCoreNum(uint32_t aicoreNum) { aicoreNum_ = aicoreNum; }
 
 void ConvBaseDeci::InitNumBlocksConstParas()
 {
@@ -159,10 +147,10 @@ void ConvBaseDeci::InitNumBlocksConstParas()
     convOpsConstParams_.n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX);
     convOpsConstParams_.ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
     convOpsConstParams_.co1 = ConvCeilDiv(shapeInfo_.co, convOpsConstParams_.n0);
-	SetAiCoreNum(platformInfo_.aicoreNum);
+    SetAiCoreNum(platformInfo_.aicoreNum);
     SetMKN(CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_M_IDX),
-                     CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_K_IDX),
-                     CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX));
+           CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_K_IDX),
+           CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.fMapDtype), MKN_N_IDX));
 }
 
 ge::graphStatus ConvBaseDeci::SelectNumBlocksMode()
@@ -183,9 +171,10 @@ bool ConvBaseDeci::CheckInstrLimitsMmode()
     uint64_t c04AlignSize = ADDR_ALIGN_SIZE / (dtypeSizeTab.at(descInfo_.fMapDtype) * C04_CIN_SIZE);
     if (flagInfo_.enableC04Flag && shapeInfo_.wi * c04AlignSize > N_VALUE_MAX) {
         stringstream ss;
-        ss << nodeInfo_.nodeType.c_str() <<
-            " AscendC: Fmap can't enable m split mode due to C04 address align limits: "
-            "wi(" << shapeInfo_.wi << ") < " << N_VALUE_MAX / c04AlignSize << ".";
+        ss << nodeInfo_.nodeType.c_str()
+           << " AscendC: Fmap can't enable m split mode due to C04 address align limits: "
+              "wi("
+           << shapeInfo_.wi << ") < " << N_VALUE_MAX / c04AlignSize << ".";
         OP_LOGD(nodeInfo_.nodeName, "%s", ss.str().c_str());
         return false;
     }
@@ -202,7 +191,7 @@ bool ConvBaseDeci::CheckInstrLimitsMmode()
     }
     return true;
 }
- 
+
 bool ConvBaseDeci::CheckInstrLimitsHWmode()
 {
     if (descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
@@ -213,10 +202,10 @@ bool ConvBaseDeci::CheckInstrLimitsHWmode()
             ss << "the constraint of instruction %s must be met: ";
             ss << "shape[%zu] * shape [%zu] ≤ %ld";
             vector<int64_t> outputShape = {static_cast<int64_t>(shapeInfo_.batch),
-                static_cast<int64_t>(shapeInfo_.dout), static_cast<int64_t>(shapeInfo_.ho),
-                static_cast<int64_t>(shapeInfo_.wo), static_cast<int64_t>(shapeInfo_.co)};
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeInfo_.nodeType.c_str(), "y",
-                VectorToString(outputShape, IntToString<int64_t>).c_str(),
+                                           static_cast<int64_t>(shapeInfo_.dout), static_cast<int64_t>(shapeInfo_.ho),
+                                           static_cast<int64_t>(shapeInfo_.wo), static_cast<int64_t>(shapeInfo_.co)};
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                nodeInfo_.nodeType.c_str(), "y", VectorToString(outputShape, IntToString<int64_t>).c_str(),
                 FormatString(ss.str().c_str(), "Fixpipe", NDHWC_W_IDX, NDHWC_C_IDX).c_str());
             return false;
         }
@@ -236,25 +225,15 @@ void ConvBaseDeci::GetNumBlocksRes()
     if (flagInfo_.mSplitModeFlag) {
         numBlocksRes_ = NumBlocksDecisionMsplitMode();
         OP_LOGD(nodeInfo_.nodeName,
-            "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-            nodeInfo_.nodeType.c_str(),
-            numBlocksRes_.batchDim,
-            numBlocksRes_.mDim,
-            numBlocksRes_.nDim,
-            numBlocksRes_.doDim,
-            numBlocksRes_.groupDim,
-            numBlocksRes_.minCost);
+                "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
+                nodeInfo_.nodeType.c_str(), numBlocksRes_.batchDim, numBlocksRes_.mDim, numBlocksRes_.nDim,
+                numBlocksRes_.doDim, numBlocksRes_.groupDim, numBlocksRes_.minCost);
     } else {
         numBlocksRes_ = NumBlocksDecisionHWsplitMode();
         OP_LOGD(nodeInfo_.nodeName,
-            "%s AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
-            nodeInfo_.nodeType.c_str(),
-            numBlocksRes_.batchDim,
-            numBlocksRes_.hoDim,
-            numBlocksRes_.nDim,
-            numBlocksRes_.doDim,
-            numBlocksRes_.groupDim,
-            numBlocksRes_.minCost);
+                "%s AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
+                nodeInfo_.nodeType.c_str(), numBlocksRes_.batchDim, numBlocksRes_.hoDim, numBlocksRes_.nDim,
+                numBlocksRes_.doDim, numBlocksRes_.groupDim, numBlocksRes_.minCost);
     }
 }
 
@@ -268,43 +247,43 @@ int32_t ConvBaseDeci::NumBlocksDecision(NumBlocksRes& numBlocksRes)
     return 0;
 }
 
-uint64_t ConvBaseDeci::CalcTotalCostMsplitMode(uint32_t batchDim, uint32_t mDim,
-                                           uint32_t nDim, uint32_t doDim, uint32_t groupDim)
+uint64_t ConvBaseDeci::CalcTotalCostMsplitMode(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim,
+                                               uint32_t groupDim)
 {
     uint64_t curCi = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.ciPerGroup : optGroupInfo_.cinOpt) : shapeInfo_.ci;
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.ciPerGroup :
+                                                                                     optGroupInfo_.cinOpt) :
+                         shapeInfo_.ci;
     uint64_t ci1 = ConvCeilDiv(curCi, k0_);
 
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup :
+                                                                                     optGroupInfo_.coutOpt) :
+                         shapeInfo_.co;
     uint64_t co1 = ConvCeilDiv(curCo, n0_);
 
-    uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        optGroupInfo_.groupOpt : attrInfo_.groups;
+    uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ? optGroupInfo_.groupOpt :
+                                                                                    attrInfo_.groups;
 
     uint64_t loadFeatureMapCost = ConvCeilDiv(shapeInfo_.batch, batchDim) * ConvCeilDiv(curGroups, groupDim) *
                                   ConvCeilDiv(shapeInfo_.dout, doDim) *
-                                  ConvCeilDiv(ConvAlignB(shapeInfo_.hi * shapeInfo_.wi, m0_), mDim) *
-                                  shapeInfo_.kd * ci1 * k0_;
+                                  ConvCeilDiv(ConvAlignB(shapeInfo_.hi * shapeInfo_.wi, m0_), mDim) * shapeInfo_.kd *
+                                  ci1 * k0_;
 
-    uint64_t loadWeightCost = ConvCeilDiv(curGroups, groupDim) *
-                              shapeInfo_.kd * ci1 * shapeInfo_.kh * shapeInfo_.kw * k0_ *
-                              ConvCeilDiv(shapeInfo_.batch, batchDim);
+    uint64_t loadWeightCost = ConvCeilDiv(curGroups, groupDim) * shapeInfo_.kd * ci1 * shapeInfo_.kh * shapeInfo_.kw *
+                              k0_ * ConvCeilDiv(shapeInfo_.batch, batchDim);
     // N dim full load to UB in opt group mode.
     if (flagInfo_.convGroupType != ConvGroupType::OPT_GROUP_CONV) {
         loadWeightCost *= ConvCeilDiv(co1 * n0_, nDim);
     }
 
     uint64_t loadOutputCost = ConvCeilDiv(shapeInfo_.batch, batchDim) * ConvCeilDiv(curGroups, groupDim) *
-                              ConvCeilDiv(co1 * n0_, nDim) *
-                              ConvCeilDiv(shapeInfo_.dout, doDim) *
+                              ConvCeilDiv(co1 * n0_, nDim) * ConvCeilDiv(shapeInfo_.dout, doDim) *
                               ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, m0_), mDim);
 
     uint64_t cubeCalcCost = ConvCeilDiv(shapeInfo_.batch, batchDim) * ConvCeilDiv(curGroups, groupDim) *
-                            ConvCeilDiv(co1, nDim) * ConvCeilDiv(shapeInfo_.dout, doDim) *
-                            shapeInfo_.kd * ci1 * shapeInfo_.kh * shapeInfo_.kw *
+                            ConvCeilDiv(co1, nDim) * ConvCeilDiv(shapeInfo_.dout, doDim) * shapeInfo_.kd * ci1 *
+                            shapeInfo_.kh * shapeInfo_.kw *
                             ConvCeilDiv(ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, m0_), mDim);
 
     uint32_t curBwCoeff = GetWeightBandWidthCoeff();
@@ -314,8 +293,7 @@ uint64_t ConvBaseDeci::CalcTotalCostMsplitMode(uint32_t batchDim, uint32_t mDim,
 
 bool ConvBaseDeci::SkipScaleBiasL1Size()
 {
-    return descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
-           !flagInfo_.quantFlag &&
+    return descInfo_.fMapFormat == ge::FORMAT_NCDHW && !flagInfo_.quantFlag &&
            descInfo_.fMapDtype == ge::DataType::DT_INT8;
 }
 
@@ -328,29 +306,37 @@ uint64_t ConvBaseDeci::CalcMinUsedL1SizeInMsplitMode(uint64_t kAL1min, uint64_t 
     // ensure 32-byte alignment
     uint64_t nBL1min = convOpsConstParams_.n0;
     uint64_t biasUsedL1Size = (flagInfo_.hasBias && !SkipScaleBiasL1Size()) ?
-        ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
+                                  ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) :
+                                  0;
     uint64_t scaleUsedL1Size = !SkipScaleBiasL1Size() ?
-        ConvAlignB(static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE) : 0;
+                                   ConvAlignB(
+                                       static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE),
+                                       C0_SIZE) :
+                                   0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t hoAL1min = std::min(convOpsConstParams_.m0 / shapeInfo_.wo + CONST_VALUE_2, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
-    uint64_t fmapUsedL1Size =
-        ConvAlignB(hiAL1min * shapeInfo_.wi * kAL1min * fMapDtypeSize, C0_SIZE);
+    uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * shapeInfo_.wi * kAL1min * fMapDtypeSize, C0_SIZE);
 
     uint64_t minL1LoadSize = biasUsedL1Size + fmapUsedL1Size + weightUsedL1Size + scaleUsedL1Size;
     return minL1LoadSize;
 }
 
-uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min, uint64_t hiAL1min)
+uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min,
+                                                      uint64_t hiAL1min)
 {
     uint64_t fMapDtypeSize = dtypeSizeTab.at(descInfo_.fMapDtype);
     uint64_t biasDtypeSize = dtypeSizeTab.at(descInfo_.biasDtype);
     uint64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
     uint64_t nBL1min = convOpsConstParams_.n0;
     uint64_t biasUsedL1Size = (flagInfo_.hasBias && !SkipScaleBiasL1Size()) ?
-        ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
+                                  ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) :
+                                  0;
     uint64_t scaleUsedL1Size = !SkipScaleBiasL1Size() ?
-        ConvAlignB(static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE) : 0;
+                                   ConvAlignB(
+                                       static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE),
+                                       C0_SIZE) :
+                                   0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
 
@@ -366,28 +352,26 @@ ge::graphStatus ConvBaseDeci::CheckL1SizeLimitsInHWsplitMode()
     }
     uint64_t woAL1min = convOpsConstParams_.m0;
     uint64_t wiAL1min = ConvInferWiL1(woAL1min, shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
-    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
-                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t hoAL1min = std::min(
+        shapeInfo_.wo < convOpsConstParams_.m0 ? ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
     uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
-    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(convOpsConstParams_.k0,
-        shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0, wiAL1min, hiAL1min);
+    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(
+        convOpsConstParams_.k0, shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0, wiAL1min, hiAL1min);
     if (usdL1SizeUnderMinHWtiling > platformInfo_.l1Size) {
-        OP_LOGD(nodeInfo_.nodeName,
-            "%s AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+        OP_LOGD(nodeInfo_.nodeName, "%s AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
                 nodeInfo_.nodeType.c_str(), usdL1SizeUnderMinHWtiling, platformInfo_.l1Size);
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
- 
+
 ge::graphStatus ConvBaseDeci::CheckL1SizeLimitsInMSplitMode()
 {
-    uint64_t usdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(convOpsConstParams_.k0,
-        shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0);
+    uint64_t usdL1SizeUnderMinMtiling = CalcMinUsedL1SizeInMsplitMode(
+        convOpsConstParams_.k0, shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0);
     if (usdL1SizeUnderMinMtiling > platformInfo_.l1Size) {
-        OP_LOGD(nodeInfo_.nodeName,
-            "%s AscendC: MinL1LoadSizeInMmode > L1size, current L1size: %lu, maxL1Size: %lu",
-            nodeInfo_.nodeType.c_str(), usdL1SizeUnderMinMtiling, platformInfo_.l1Size);
+        OP_LOGD(nodeInfo_.nodeName, "%s AscendC: MinL1LoadSizeInMmode > L1size, current L1size: %lu, maxL1Size: %lu",
+                nodeInfo_.nodeType.c_str(), usdL1SizeUnderMinMtiling, platformInfo_.l1Size);
         return ge::GRAPH_FAILED;
     }
     // load3dv2 win max value
@@ -431,7 +415,7 @@ void ConvBaseDeci::CoreNumBlocksDecisionMsplitMode()
     numBlocksRes_.doDim = 1;
     numBlocksRes_.groupDim = 1;
     numBlocksRes_.minCost = CalcTotalCostMsplitMode(numBlocksRes_.batchDim, numBlocksRes_.mDim, numBlocksRes_.nDim,
-                                                   numBlocksRes_.doDim, numBlocksRes_.groupDim);
+                                                    numBlocksRes_.doDim, numBlocksRes_.groupDim);
     vector<vector<uint32_t>> allRanges(NUMBLOCKS_MSPLIT_DEC_NUM, vector<uint32_t>(1, 1));
     allRanges[NUMBLOCKS_MSPLIT_BATCH_IDX] = numBlocksRanges_.batchRange;
     allRanges[NUMBLOCKS_MSPLIT_M_IDX] = numBlocksRanges_.mRange;
@@ -442,26 +426,26 @@ void ConvBaseDeci::CoreNumBlocksDecisionMsplitMode()
     NumBlocksDecisionBackTrackMsplitMode(allRanges, NUMBLOCKS_MSPLIT_BATCH_IDX, dimsRecord);
 }
 
-
-void ConvBaseDeci::NumBlocksDecisionBackTrackMsplitMode(const vector<vector<uint32_t>> &inputRanges,
-                                                       uint32_t rangeIdx, vector<uint32_t> &record)
+void ConvBaseDeci::NumBlocksDecisionBackTrackMsplitMode(const vector<vector<uint32_t>>& inputRanges, uint32_t rangeIdx,
+                                                        vector<uint32_t>& record)
 {
     if (record.size() == inputRanges.size()) {
         uint32_t curNumBlocks = record[NUMBLOCKS_MSPLIT_BATCH_IDX] * record[NUMBLOCKS_MSPLIT_M_IDX] *
-                               record[NUMBLOCKS_MSPLIT_N_IDX] * record[NUMBLOCKS_MSPLIT_DO_IDX] *
-                               record[NUMBLOCKS_MSPLIT_GROUP_IDX];
+                                record[NUMBLOCKS_MSPLIT_N_IDX] * record[NUMBLOCKS_MSPLIT_DO_IDX] *
+                                record[NUMBLOCKS_MSPLIT_GROUP_IDX];
         if (curNumBlocks > aicoreNum_) {
             return;
         }
         bool update_flag = false;
-        uint64_t curCost = CalcTotalCostMsplitMode(record[NUMBLOCKS_MSPLIT_BATCH_IDX],
-                                                   record[NUMBLOCKS_MSPLIT_M_IDX], record[NUMBLOCKS_MSPLIT_N_IDX],
-                                                   record[NUMBLOCKS_MSPLIT_DO_IDX], record[NUMBLOCKS_MSPLIT_GROUP_IDX]);
+        uint64_t curCost = CalcTotalCostMsplitMode(record[NUMBLOCKS_MSPLIT_BATCH_IDX], record[NUMBLOCKS_MSPLIT_M_IDX],
+                                                   record[NUMBLOCKS_MSPLIT_N_IDX], record[NUMBLOCKS_MSPLIT_DO_IDX],
+                                                   record[NUMBLOCKS_MSPLIT_GROUP_IDX]);
         if (curCost < numBlocksRes_.minCost) {
             update_flag = true;
         } else if (curCost == numBlocksRes_.minCost) {
             update_flag = CmpCoreUtilizeMsplitMode(record[NUMBLOCKS_MSPLIT_BATCH_IDX], record[NUMBLOCKS_MSPLIT_M_IDX],
-                record[NUMBLOCKS_MSPLIT_N_IDX], record[NUMBLOCKS_MSPLIT_DO_IDX], record[NUMBLOCKS_MSPLIT_GROUP_IDX]);
+                                                   record[NUMBLOCKS_MSPLIT_N_IDX], record[NUMBLOCKS_MSPLIT_DO_IDX],
+                                                   record[NUMBLOCKS_MSPLIT_GROUP_IDX]);
         }
         if (update_flag) {
             SetNumBlocksMsplitMode(record, curCost);
@@ -490,22 +474,24 @@ NumBlocksRes ConvBaseDeci::NumBlocksDecisionHWsplitMode()
     return numBlocksRes_;
 }
 
-uint64_t ConvBaseDeci::CalcCostHWsplitMode(const NumBlocksRes &numBlocksRes,
-    const uint64_t ci1, const uint64_t ci0, const uint64_t co1)
+uint64_t ConvBaseDeci::CalcCostHWsplitMode(const NumBlocksRes& numBlocksRes, const uint64_t ci1, const uint64_t ci0,
+                                           const uint64_t co1)
 {
-    const uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        optGroupInfo_.groupOpt : attrInfo_.groups;
+    const uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ? optGroupInfo_.groupOpt :
+                                                                                          attrInfo_.groups;
 
     const uint64_t loadFeatureMapCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
-        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) *
-        shapeInfo_.kd * ci1 * ConvCeilDiv(shapeInfo_.hi, numBlocksRes.hoDim) *
-        ConvCeilDiv(shapeInfo_.wi, numBlocksRes.woDim) * ci0;
+                                        ConvCeilDiv(curGroups, numBlocksRes.groupDim) *
+                                        ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) * shapeInfo_.kd * ci1 *
+                                        ConvCeilDiv(shapeInfo_.hi, numBlocksRes.hoDim) *
+                                        ConvCeilDiv(shapeInfo_.wi, numBlocksRes.woDim) * ci0;
 
     const uint64_t weightKSize = flagInfo_.enableC04Flag ?
-        static_cast<uint64_t>(ConvAlignB(ci1 * shapeInfo_.kh * shapeInfo_.kw, static_cast<uint64_t>(k0_))) :
-        ci1 * shapeInfo_.kh * shapeInfo_.kw * static_cast<uint64_t>(k0_);
+                                     static_cast<uint64_t>(
+                                         ConvAlignB(ci1 * shapeInfo_.kh * shapeInfo_.kw, static_cast<uint64_t>(k0_))) :
+                                     ci1 * shapeInfo_.kh * shapeInfo_.kw * static_cast<uint64_t>(k0_);
     uint64_t loadWeightCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
-        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * shapeInfo_.kd * weightKSize;
+                              ConvCeilDiv(curGroups, numBlocksRes.groupDim) * shapeInfo_.kd * weightKSize;
 
     // N dim full load to UB in opt group mode.
     if (flagInfo_.convGroupType != ConvGroupType::OPT_GROUP_CONV) {
@@ -513,45 +499,48 @@ uint64_t ConvBaseDeci::CalcCostHWsplitMode(const NumBlocksRes &numBlocksRes,
     }
 
     const uint64_t loadOutputCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
-        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) *
-        ConvCeilDiv(co1 * n0_, numBlocksRes.nDim) * ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim) *
-        ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim);
+                                    ConvCeilDiv(curGroups, numBlocksRes.groupDim) *
+                                    ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) *
+                                    ConvCeilDiv(co1 * n0_, numBlocksRes.nDim) *
+                                    ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim) *
+                                    ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim);
 
     const uint64_t cubeCalcCost = ConvCeilDiv(shapeInfo_.batch, numBlocksRes.batchDim) *
-        ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(co1, numBlocksRes.nDim) *
-        ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) * shapeInfo_.kd * ci1 * shapeInfo_.kh * shapeInfo_.kw *
-        ConvCeilDiv(ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim) * ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim),
-        m0_);
+                                  ConvCeilDiv(curGroups, numBlocksRes.groupDim) * ConvCeilDiv(co1, numBlocksRes.nDim) *
+                                  ConvCeilDiv(shapeInfo_.dout, numBlocksRes.doDim) * shapeInfo_.kd * ci1 *
+                                  shapeInfo_.kh * shapeInfo_.kw *
+                                  ConvCeilDiv(ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim) *
+                                                  ConvCeilDiv(shapeInfo_.wo, numBlocksRes.woDim),
+                                              m0_);
 
     uint32_t curBwCoeff = GetWeightBandWidthCoeff();
     return (loadFeatureMapCost + (loadWeightCost * curBwCoeff) + loadOutputCost) / MIN_L2_BAND_WIDTH + cubeCalcCost;
 }
 
-uint64_t ConvBaseDeci::CalcTotalCostHWsplitMode(const NumBlocksRes &numBlocksRes)
+uint64_t ConvBaseDeci::CalcTotalCostHWsplitMode(const NumBlocksRes& numBlocksRes)
 {
     uint64_t ci0 = k0_;
     uint64_t curCi = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.ciPerGroup : optGroupInfo_.cinOpt) : shapeInfo_.ci;
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.ciPerGroup :
+                                                                                     optGroupInfo_.cinOpt) :
+                         shapeInfo_.ci;
     uint64_t ci1 = ConvCeilDiv(curCi, ci0);
 
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
-        (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
-         oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
+                         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ? oriGroupInfo_.coPerGroup :
+                                                                                     optGroupInfo_.coutOpt) :
+                         shapeInfo_.co;
     uint64_t co1 = ConvCeilDiv(curCo, n0_);
 
     if (flagInfo_.enableC04Flag) {
         ci1 = C04_CI1_SIZE;
         ci0 = C04_CIN_SIZE;
     }
-    
+
     return CalcCostHWsplitMode(numBlocksRes, ci1, ci0, co1);
 }
 
-uint64_t ConvBaseDeci::GetMinBurstNum()
-{
-    return MIN_L2_BAND_WIDTH / dtypeSizeTab.at(descInfo_.fMapDtype);
-}
+uint64_t ConvBaseDeci::GetMinBurstNum() { return MIN_L2_BAND_WIDTH / dtypeSizeTab.at(descInfo_.fMapDtype); }
 
 uint32_t ConvBaseDeci::GetWeightBandWidthCoeff()
 {
@@ -618,8 +607,8 @@ void ConvBaseDeci::GetNumBlocksRangeCommon()
         numBlocksRanges_.doRange.assign(1, 1);
     }
     // groupRange
-    uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ?
-        optGroupInfo_.groupOpt : attrInfo_.groups;
+    uint64_t curGroups = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV ? optGroupInfo_.groupOpt :
+                                                                                    attrInfo_.groups;
     ConvCalcCommFactor(curGroups, aicoreNum_, numBlocksRanges_.groupRange);
     ConvNumBlocksFactorMix(curGroups, numBlocksRanges_.groupRange, numBlocksRanges_.aicNumRange);
 }
@@ -641,7 +630,7 @@ void ConvBaseDeci::GetNumBlocksRangeHWsplitMode()
     }
 }
 
-void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<uint32_t> &reslist)
+void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<uint32_t>& reslist)
 {
     uint32_t sqrtMax = static_cast<uint32_t>(sqrt(num));
     for (uint32_t i = 1; i <= sqrtMax; ++i) {
@@ -658,7 +647,7 @@ void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, std::vector<u
     sort(reslist.begin(), reslist.end());
 }
 
-void ConvNumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange, const std::vector<uint32_t> &mixRange)
+void ConvNumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t>& inputRange, const std::vector<uint32_t>& mixRange)
 {
     std::vector<uint32_t> tmpSelectMixRange;
     for (auto v : mixRange) {
@@ -666,14 +655,13 @@ void ConvNumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange, 
             tmpSelectMixRange.push_back(v);
         }
     }
-    std::set<uint32_t>tmpRanges(inputRange.begin(), inputRange.end());
+    std::set<uint32_t> tmpRanges(inputRange.begin(), inputRange.end());
     tmpRanges.insert(tmpSelectMixRange.begin(), tmpSelectMixRange.end());
     inputRange.assign(tmpRanges.begin(), tmpRanges.end());
 }
 
-void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
-                            const ConvAscendcDescInfo& descInfo,
-                            const ConvAscendcShapesInfo& shapeInfo)
+void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams, const ConvAscendcDescInfo& descInfo,
+                             const ConvAscendcShapesInfo& shapeInfo)
 {
     convOpsConstParams.m0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo.fMapDtype), MKN_M_IDX);
     convOpsConstParams.k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo.weightDtype), MKN_K_IDX);
@@ -683,28 +671,29 @@ void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
 }
 
 bool ConvBaseDeci::CmpCoreUtilize(const uint32_t curCoreUtilize, const uint32_t minCostCoreUtilize,
-    const uint32_t batchDim, const uint32_t doDim)
+                                  const uint32_t batchDim, const uint32_t doDim)
 {
     if (curCoreUtilize < minCostCoreUtilize) {
         return false;
     } else if (curCoreUtilize == minCostCoreUtilize) {
         // for same cost, preference: batch > dout
-        bool updateFlag = std::make_tuple(batchDim, doDim) > std::make_tuple(numBlocksRes_.batchDim, numBlocksRes_.doDim);
+        bool updateFlag = std::make_tuple(batchDim, doDim) >
+                          std::make_tuple(numBlocksRes_.batchDim, numBlocksRes_.doDim);
         return updateFlag;
     }
     return true;
 }
 
-bool ConvBaseDeci::CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t mDim,
-                                            uint32_t nDim, uint32_t doDim, uint32_t groupDim)
+bool ConvBaseDeci::CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim,
+                                            uint32_t groupDim)
 {
     const uint32_t curCoreUtilize = batchDim * mDim * nDim * doDim * groupDim / aicoreNum_;
     const uint32_t minCostCoreUtilize = numBlocksRes_.batchDim * numBlocksRes_.mDim * numBlocksRes_.nDim *
-                                  numBlocksRes_.doDim * numBlocksRes_.groupDim / aicoreNum_;
+                                        numBlocksRes_.doDim * numBlocksRes_.groupDim / aicoreNum_;
     return CmpCoreUtilize(curCoreUtilize, minCostCoreUtilize, batchDim, doDim);
 }
 
-bool ConvBaseDeci::CmpCoreUtilizeHWsplitMode(const vector<uint32_t> &record)
+bool ConvBaseDeci::CmpCoreUtilizeHWsplitMode(const vector<uint32_t>& record)
 {
     auto batchDim = record[NUMBLOCKS_HWSPLIT_BATCH_IDX];
     auto hoDim = record[NUMBLOCKS_HWSPLIT_HO_IDX];
@@ -718,8 +707,8 @@ bool ConvBaseDeci::CmpCoreUtilizeHWsplitMode(const vector<uint32_t> &record)
     return CmpCoreUtilize(curCoreUtilize, minCostCoreUtilize, batchDim, doDim);
 }
 
-void ConvBaseDeci::SetNumBlocksHWsplitMode(const vector<uint32_t> &record, const uint64_t curCost,
-    NumBlocksRes &numBlocksRes) const
+void ConvBaseDeci::SetNumBlocksHWsplitMode(const vector<uint32_t>& record, const uint64_t curCost,
+                                           NumBlocksRes& numBlocksRes) const
 {
     numBlocksRes.batchDim = record[NUMBLOCKS_HWSPLIT_BATCH_IDX];
     numBlocksRes.hoDim = record[NUMBLOCKS_HWSPLIT_HO_IDX];
@@ -730,7 +719,7 @@ void ConvBaseDeci::SetNumBlocksHWsplitMode(const vector<uint32_t> &record, const
     numBlocksRes.minCost = curCost;
 }
 
-void ConvBaseDeci::SetNumBlocksMsplitMode(const vector<uint32_t> &record, uint64_t curCost)
+void ConvBaseDeci::SetNumBlocksMsplitMode(const vector<uint32_t>& record, uint64_t curCost)
 {
     numBlocksRes_.batchDim = record[NUMBLOCKS_MSPLIT_BATCH_IDX];
     numBlocksRes_.mDim = record[NUMBLOCKS_MSPLIT_M_IDX];
@@ -751,15 +740,14 @@ void ConvBaseDeci::GetNumBlocksInitHWsplitMode()
     numBlocksInit_[NUMBLOCKS_HWSPLIT_GROUP_IDX] = numBlocksRanges_.groupRange[0];
 }
 
-void ConvBaseDeci::NumBlocksDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>> &inputRanges,
-                                                        uint32_t rangeIdx, vector<uint32_t> &record)
+void ConvBaseDeci::NumBlocksDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>>& inputRanges, uint32_t rangeIdx,
+                                                         vector<uint32_t>& record)
 {
     if (record.size() == inputRanges.size()) {
         NumBlocksRes numBlocksResTemp;
         SetNumBlocksHWsplitMode(record, 0, numBlocksResTemp);
-        const uint32_t curNumBlocks = numBlocksResTemp.batchDim * numBlocksResTemp.hoDim *
-            numBlocksResTemp.woDim * numBlocksResTemp.nDim * numBlocksResTemp.doDim *
-            numBlocksResTemp.groupDim;
+        const uint32_t curNumBlocks = numBlocksResTemp.batchDim * numBlocksResTemp.hoDim * numBlocksResTemp.woDim *
+                                      numBlocksResTemp.nDim * numBlocksResTemp.doDim * numBlocksResTemp.groupDim;
         if (curNumBlocks > aicoreNum_) {
             return;
         }
@@ -813,18 +801,19 @@ void ConvBaseDeci::CoreNumBlocksDecisionHWsplitMode()
 void ConvBaseDeci::CheckCoreUsedupHWsplitMode()
 {
     // woDim is not considered because it is only used in Conv1d scene and hoDim is always 1
-    if (numBlocksRes_.batchDim * numBlocksRes_.hoDim * numBlocksRes_.nDim *
-        numBlocksRes_.doDim * numBlocksRes_.groupDim == aicoreNum_) {
+    if (numBlocksRes_.batchDim * numBlocksRes_.hoDim * numBlocksRes_.nDim * numBlocksRes_.doDim *
+            numBlocksRes_.groupDim ==
+        aicoreNum_) {
         return;
     }
 
     for (auto newHoDim : numBlocksRanges_.hoSpareRange) {
-        if (numBlocksRes_.batchDim * numBlocksRes_.groupDim * newHoDim *
-            numBlocksRes_.nDim * numBlocksRes_.doDim <= aicoreNum_) {
+        if (numBlocksRes_.batchDim * numBlocksRes_.groupDim * newHoDim * numBlocksRes_.nDim * numBlocksRes_.doDim <=
+            aicoreNum_) {
             numBlocksRes_.hoDim = std::max(numBlocksRes_.hoDim, newHoDim);
         }
     }
 }
 
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

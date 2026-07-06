@@ -26,10 +26,10 @@
 namespace conv_tiling {
 class __attribute__((visibility("default"))) Conv3dTiling : public ConvTilingBase {
 public:
-    Conv3dTiling() {};
-    explicit Conv3dTiling(const PlatformInfo& platform) : ConvTilingBase(platform) {};
-    ~Conv3dTiling() override {};
-    int64_t GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 &tiling);
+    Conv3dTiling(){};
+    explicit Conv3dTiling(const PlatformInfo& platform) : ConvTilingBase(platform){};
+    ~Conv3dTiling() override{};
+    int64_t GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);
     int64_t Compute() override;
     int64_t GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrInfo convAttrInfo,
                           optiling::conv_ops_tiling::ConvAscendcDescInfo convDescInfo,
@@ -47,13 +47,13 @@ public:
     void SetSingleWeightShape(int64_t singleCi, int64_t singleKd, int64_t singleKh, int64_t singleKw);
     void SetSingleOutputShape(int64_t singleCo, int64_t singleDo, int64_t singleM, int64_t singleBatch);
     void SetSingleOutputShape(int64_t singleCo, int64_t singleDo, int64_t singleHo, int64_t singleWo,
-        int64_t singleBatch);
+                              int64_t singleBatch);
     void SetWeightType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetFmapType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetBiasType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetOutputType(TPosition pos, ConvFormat format, ConvDtype dtype);
-    void SetPadding(int64_t padHead, int64_t padTail, int64_t padTop, int64_t padBottom,
-        int64_t padLeft, int64_t padRight);
+    void SetPadding(int64_t padHead, int64_t padTail, int64_t padTop, int64_t padBottom, int64_t padLeft,
+                    int64_t padRight);
     void SetDilation(int64_t dilationH, int64_t dilationW, int64_t dilationD);
     void SetStride(int64_t strideH, int64_t strideW, int64_t strideD);
     void SetGroups(int32_t groups);
@@ -70,6 +70,7 @@ public:
     void SetRoundMode(int8_t roundMode);
     void InitFlag();
     void SetKernelSplit(bool isKernelSplitIn);
+
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
     void SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);

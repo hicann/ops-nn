@@ -17,28 +17,28 @@
 
 namespace ops {
 class L2Loss : public OpDef {
-    public:
-        explicit L2Loss(const char* name) : OpDef(name)
-        {
-            this->Input("x")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});                        
-            this->Output("y")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+public:
+    explicit L2Loss(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
 
 OP_ADD(L2Loss);
-}  // namespace ops
+} // namespace ops

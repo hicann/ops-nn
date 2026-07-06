@@ -25,31 +25,26 @@ using namespace ge;
 using namespace ut_util;
 
 class ApplyAdagradDTilingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ApplyAdagradDTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ApplyAdagradDTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ApplyAdagradDTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ApplyAdagradDTiling TearDown" << std::endl; }
 };
 
-
-static string TilingData2Str(const gert::TilingData *tilingDataV)
+static string TilingData2Str(const gert::TilingData* tilingDataV)
 {
     auto data = tilingDataV->GetData();
     string result;
     for (size_t i = 0; i < tilingDataV->GetDataSize(); i += sizeof(int64_t)) {
-        result += std::to_string((reinterpret_cast<const int64_t *>(tilingDataV->GetData())[i / sizeof(int64_t)]));
+        result += std::to_string((reinterpret_cast<const int64_t*>(tilingDataV->GetData())[i / sizeof(int64_t)]));
         result += " ";
     }
 
     return result;
 }
 
-static void InitPlatForm(fe::PlatFormInfos &platformInfo, map<string, string> &socInfos,
-    map<string, string> &aicoreSpec, map<string, string> &intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -64,22 +59,23 @@ static void InitPlatForm(fe::PlatFormInfos &platformInfo, map<string, string> &s
     platformInfo.Init();
 }
 
-static string to_string(const std::stringstream& tiling_data) {
-  auto data = tiling_data.str();
-  string result;
-  int64_t tmp = 0;
-  for (size_t i = 0; i < data.length(); i += sizeof(int64_t)) {
-    memcpy(&tmp, data.c_str() + i, sizeof(tmp));
-    result += std::to_string(tmp);
-    result += " ";
-  }
+static string to_string(const std::stringstream& tiling_data)
+{
+    auto data = tiling_data.str();
+    string result;
+    int64_t tmp = 0;
+    for (size_t i = 0; i < data.length(); i += sizeof(int64_t)) {
+        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
-static void DoTest(gert::StorageShape &var, gert::StorageShape &accum, gert::StorageShape &lr, gert::StorageShape &grad,
-                   gert::StorageShape &var_out, gert::StorageShape &accum_out,
-                   ge::DataType varDtype, ge::Format format, bool updateSlots, bool useLocking, string &expectData) 
+static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::StorageShape& lr, gert::StorageShape& grad,
+                   gert::StorageShape& var_out, gert::StorageShape& accum_out, ge::DataType varDtype, ge::Format format,
+                   bool updateSlots, bool useLocking, string& expectData)
 {
     optiling::ApplyAdagradDCompileInfo compileInfo;
     compileInfo.coreNum = 64;
@@ -99,15 +95,15 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &accum, gert::Sto
     auto param = gert::TilingData::CreateCap(8192);
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(32);
-    auto wsSize = reinterpret_cast<gert::ContinuousVector *>(workspaceSizeHoler.get());
-    
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
+
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 2)
                       .IrInstanceNum({1, 1, 1, 1})
                       .InputShapes({&var, &accum, &lr, &grad})
                       .OutputShapes({&var_out, &accum_out})
                       .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, varDtype, format, format)
                       .NodeInputTd(1, varDtype, format, format)
                       .NodeInputTd(2, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -120,7 +116,7 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &accum, gert::Sto
                       .Workspace(wsSize)
                       .Build();
 
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -134,17 +130,16 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &accum, gert::Sto
     EXPECT_EQ(tilingDataResult, expectData);
 }
 
-
-#define RUN_TEST_WITH_SHAPE(...) do {\
-gert::StorageShape var = {{__VA_ARGS__}, {__VA_ARGS__}};\
-gert::StorageShape accum = {{__VA_ARGS__}, {__VA_ARGS__}};\
-gert::StorageShape lr = {{1}, {1}};\
-gert::StorageShape grad = {{__VA_ARGS__}, {__VA_ARGS__}};\
-gert::StorageShape var_out = {{__VA_ARGS__}, {__VA_ARGS__}};\
-gert::StorageShape accum_out = {{__VA_ARGS__}, {__VA_ARGS__}};\
-DoTest(var, accum, lr, grad,\
-var_out, accum_out, varDtype, dataFormat, updateSlots, useLocking, expectData);\
-} while(0)
+#define RUN_TEST_WITH_SHAPE(...)                                                                                     \
+    do {                                                                                                             \
+        gert::StorageShape var = {{__VA_ARGS__}, {__VA_ARGS__}};                                                     \
+        gert::StorageShape accum = {{__VA_ARGS__}, {__VA_ARGS__}};                                                   \
+        gert::StorageShape lr = {{1}, {1}};                                                                          \
+        gert::StorageShape grad = {{__VA_ARGS__}, {__VA_ARGS__}};                                                    \
+        gert::StorageShape var_out = {{__VA_ARGS__}, {__VA_ARGS__}};                                                 \
+        gert::StorageShape accum_out = {{__VA_ARGS__}, {__VA_ARGS__}};                                               \
+        DoTest(var, accum, lr, grad, var_out, accum_out, varDtype, dataFormat, updateSlots, useLocking, expectData); \
+    } while (0)
 
 TEST_F(ApplyAdagradDTilingTest, apply_adagrad_d_tiling_1000)
 {
@@ -152,7 +147,6 @@ TEST_F(ApplyAdagradDTilingTest, apply_adagrad_d_tiling_1000)
     auto dataFormat = ge::FORMAT_ND;
     bool updateSlots = false;
     bool useLocking = false;
-    string expectData =
-    "3840 23914377904132 1024 4 1 1 1024 768 5568 1 ";
+    string expectData = "3840 23914377904132 1024 4 1 1 1024 768 5568 1 ";
     RUN_TEST_WITH_SHAPE(768, 5);
 }

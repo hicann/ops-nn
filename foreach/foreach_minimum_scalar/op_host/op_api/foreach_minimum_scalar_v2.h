@@ -13,7 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensorList *ForeachMinimumScalarV2(const aclTensorList *x, const aclTensor *scalar, const aclTensorList *out, aclOpExecutor *executor);
+const aclTensorList* ForeachMinimumScalarV2(const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out,
+                                            aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_FOREACH_MINIMUM_SCALAR_V2_OP_H

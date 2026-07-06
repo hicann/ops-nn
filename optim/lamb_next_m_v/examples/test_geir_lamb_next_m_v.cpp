@@ -32,18 +32,20 @@
 using namespace ge;
 using std::vector;
 
-#define ADD_INPUT(idx, name, dtype, shape)                                                  \
-    vector<int64_t> ph##idx##_shape = shape;                                                 \
-    auto ph##idx = op::Data(std::string("ph") + #idx).set_attr_index(0);                     \
-    TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_ND, dtype);    \
-    float* d##idx = new (std::nothrow) float[1024];                                          \
-    for (int i = 0; i < 1024; ++i) { d##idx[i] = 1.0f; }                                     \
-    Tensor t##idx(ph##idx##_desc, (uint8_t*)d##idx, 1024 * sizeof(float));                   \
-    ph##idx.update_input_desc_x(ph##idx##_desc);                                             \
-    ph##idx.update_output_desc_y(ph##idx##_desc);                                            \
-    input.push_back(t##idx);                                                                 \
-    graph.AddOp(ph##idx);                                                                    \
-    op0.set_input_##name(ph##idx);                                                           \
+#define ADD_INPUT(idx, name, dtype, shape)                                                \
+    vector<int64_t> ph##idx##_shape = shape;                                              \
+    auto ph##idx = op::Data(std::string("ph") + #idx).set_attr_index(0);                  \
+    TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_ND, dtype); \
+    float* d##idx = new (std::nothrow) float[1024];                                       \
+    for (int i = 0; i < 1024; ++i) {                                                      \
+        d##idx[i] = 1.0f;                                                                 \
+    }                                                                                     \
+    Tensor t##idx(ph##idx##_desc, (uint8_t*)d##idx, 1024 * sizeof(float));                \
+    ph##idx.update_input_desc_x(ph##idx##_desc);                                          \
+    ph##idx.update_output_desc_y(ph##idx##_desc);                                         \
+    input.push_back(t##idx);                                                              \
+    graph.AddOp(ph##idx);                                                                 \
+    op0.set_input_##name(ph##idx);                                                        \
     inputs.push_back(ph##idx)
 
 int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
@@ -74,17 +76,29 @@ int main(int argc, char* argv[])
     Graph graph("test_lamb_next_m_v");
     std::vector<ge::Tensor> input;
     std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
-    if (ge::GEInitialize(global_options) != SUCCESS) { return FAILED; }
+    if (ge::GEInitialize(global_options) != SUCCESS) {
+        return FAILED;
+    }
     std::vector<Operator> inputs{}, outputs{};
     DataType inDtype = DT_FLOAT;
-    if (CreateOppInGraph(inDtype, input, inputs, outputs, graph) != SUCCESS) { return FAILED; }
-    if (!inputs.empty() && !outputs.empty()) { graph.SetInputs(inputs).SetOutputs(outputs); }
+    if (CreateOppInGraph(inDtype, input, inputs, outputs, graph) != SUCCESS) {
+        return FAILED;
+    }
+    if (!inputs.empty() && !outputs.empty()) {
+        graph.SetInputs(inputs).SetOutputs(outputs);
+    }
     ge::Session* session = new Session({});
-    if (session == nullptr) { return FAILED; }
+    if (session == nullptr) {
+        return FAILED;
+    }
     uint32_t graph_id = 0;
     session->AddGraph(graph_id, graph, {});
     std::vector<ge::Tensor> output;
-    if (session->RunGraph(graph_id, input, output) != SUCCESS) { delete session; GEFinalize(); return FAILED; }
+    if (session->RunGraph(graph_id, input, output) != SUCCESS) {
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
     delete session;
     ge::GEFinalize();
     return SUCCESS;

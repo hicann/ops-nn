@@ -44,26 +44,20 @@ static ge::graphStatus InferShape4AdamApplyOneWithDecayAssign(gert::InferShapeCo
     auto output2_shape = context->GetOutputShape(OUTPUT2_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, output2_shape);
 
-    OP_CHECK_IF(
-        !BroadcastShape(input0_shape, input1_shape, output0_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input0_shape).c_str(),
-            ToString(*input1_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(input0_shape, input1_shape, output0_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input0_shape).c_str(),
+                        ToString(*input1_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        !BroadcastShape(input0_shape, input2_shape, output1_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input0_shape).c_str(),
-            ToString(*input2_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(input0_shape, input2_shape, output1_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input0_shape).c_str(),
+                        ToString(*input2_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        !BroadcastShape(input2_shape, input3_shape, output2_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input2_shape).c_str(),
-            ToString(*input3_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(input2_shape, input3_shape, output2_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*input2_shape).c_str(),
+                        ToString(*input3_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
 }

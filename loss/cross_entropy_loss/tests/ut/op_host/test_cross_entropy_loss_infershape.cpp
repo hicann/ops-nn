@@ -13,18 +13,11 @@
 #include "ut_op_util.h"
 
 using ut_util::ToVector;
-class CrossEntropyLoss : public testing::Test
-{
+class CrossEntropyLoss : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CrossEntropyLoss Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CrossEntropyLoss Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CrossEntropyLoss Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CrossEntropyLoss Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_bf16_mean_case)
@@ -45,10 +38,9 @@ TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_bf16_mean_case)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
@@ -82,10 +74,9 @@ TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_fp32_mean_case)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
@@ -119,10 +110,9 @@ TEST_F(CrossEntropyLoss, cross_entropy_loss_infershape_fp16_mean_case)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
-                           {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                  {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)}})
                       .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();

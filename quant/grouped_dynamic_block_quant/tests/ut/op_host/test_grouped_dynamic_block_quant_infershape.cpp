@@ -19,15 +19,9 @@ using namespace op;
 
 class GroupedDynamicBlockQuantProto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GroupedDynamicBlockQuantProto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GroupedDynamicBlockQuantProto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GroupedDynamicBlockQuantProto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GroupedDynamicBlockQuantProto TearDown" << std::endl; }
 };
 
 TEST_F(GroupedDynamicBlockQuantProto, inferDtype_case_1)
@@ -151,9 +145,8 @@ TEST_F(GroupedDynamicBlockQuantProto, infershape_case_1)
     gert::StorageShape xShape = {{B, H, W}, {B, H, W}};
     gert::StorageShape groupListShape = {{groupNum}, {groupNum}};
     gert::StorageShape yShape = {{B, H, W}, {B, H, W}};
-    gert::StorageShape scaleShape = {
-        {B, H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize},
-        {B, H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize}};
+    gert::StorageShape scaleShape = {{B, H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize},
+                                     {B, H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize}};
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(2, 2)
@@ -193,9 +186,8 @@ TEST_F(GroupedDynamicBlockQuantProto, infershape_case_2)
     gert::StorageShape xShape = {{H, W}, {H, W}};
     gert::StorageShape groupListShape = {{groupNum}, {groupNum}};
     gert::StorageShape yShape = {{H, W}, {H, W}};
-    gert::StorageShape scaleShape = {
-        {H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize},
-        {H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize}};
+    gert::StorageShape scaleShape = {{H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize},
+                                     {H / rowBlockSize + groupNum, (W + colBlockSize - 1) / colBlockSize}};
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(2, 2)

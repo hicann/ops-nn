@@ -45,70 +45,70 @@ enum class IterateOrder : uint8_t {
 };
 
 template <class Intf>
-__aicore__ inline void CheckTiling(Intf *self)
+__aicore__ inline void CheckTiling(Intf* self)
 {
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.tiling_->batch > 0),
-        "orignal batch is %d , which should be larger than 0", self->ctx.tiling_->batch);
-    ascendc_assert((self->ctx.tiling_->cin > 0),
-        "orignal cin is %d , which should be larger than 0", self->ctx.tiling_->cin);
-    ascendc_assert((self->ctx.tiling_->cout > 0),
-        "orignal cout is %d , which should be larger than 0", self->ctx.tiling_->cout);
-    ascendc_assert((self->ctx.tiling_->ho > 0),
-        "orignal ho is %d , which should be larger than 0", self->ctx.tiling_->ho);
-    ascendc_assert((self->ctx.tiling_->wo > 0),
-        "orignal wo is %d , which should be larger than 0", self->ctx.tiling_->wo);
-    ascendc_assert((self->ctx.tiling_->hi > 0),
-        "orignal hi is %d , which should be larger than 0", self->ctx.tiling_->hi);
-    ascendc_assert((self->ctx.tiling_->wi > 0),
-        "orignal wi is %d , which should be larger than 0", self->ctx.tiling_->wi);
-    ascendc_assert((self->ctx.tiling_->hk > 0),
-        "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk);
-    ascendc_assert((self->ctx.tiling_->wk > 0),
-        "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk);
-    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0),
-        "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
-    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0),
-        "singleCoreCout is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCout);
-    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0),
-        "singleCoreCin is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCin);
-    ascendc_assert((self->ctx.tiling_->baseM > 0),
-        "baseM is %d , which should be larger than 0", self->ctx.tiling_->baseM);
-    ascendc_assert((self->ctx.tiling_->baseK > 0),
-        "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK);
-    ascendc_assert((self->ctx.tiling_->baseN > 0),
-        "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN);
-    ascendc_assert((self->ctx.tiling_->stepKa > 0),
-        "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa);
-    ascendc_assert((self->ctx.tiling_->stepKb > 0),
-        "stepKb is %d , which should be larger than 0", self->ctx.tiling_->stepKb);
+    ascendc_assert((self->ctx.tiling_->batch > 0), "orignal batch is %d , which should be larger than 0",
+                   self->ctx.tiling_->batch);
+    ascendc_assert((self->ctx.tiling_->cin > 0), "orignal cin is %d , which should be larger than 0",
+                   self->ctx.tiling_->cin);
+    ascendc_assert((self->ctx.tiling_->cout > 0), "orignal cout is %d , which should be larger than 0",
+                   self->ctx.tiling_->cout);
+    ascendc_assert((self->ctx.tiling_->ho > 0), "orignal ho is %d , which should be larger than 0",
+                   self->ctx.tiling_->ho);
+    ascendc_assert((self->ctx.tiling_->wo > 0), "orignal wo is %d , which should be larger than 0",
+                   self->ctx.tiling_->wo);
+    ascendc_assert((self->ctx.tiling_->hi > 0), "orignal hi is %d , which should be larger than 0",
+                   self->ctx.tiling_->hi);
+    ascendc_assert((self->ctx.tiling_->wi > 0), "orignal wi is %d , which should be larger than 0",
+                   self->ctx.tiling_->wi);
+    ascendc_assert((self->ctx.tiling_->hk > 0), "orignal hk is %d , which should be larger than 0",
+                   self->ctx.tiling_->hk);
+    ascendc_assert((self->ctx.tiling_->wk > 0), "orignal wk is %d , which should be larger than 0",
+                   self->ctx.tiling_->wk);
+    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0), "singleCoreBatch is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreBatch);
+    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0), "singleCoreCout is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreCout);
+    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0), "singleCoreCin is %d , which should be larger than 0",
+                   self->ctx.tiling_->singleCoreCin);
+    ascendc_assert((self->ctx.tiling_->baseM > 0), "baseM is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseM);
+    ascendc_assert((self->ctx.tiling_->baseK > 0), "baseK is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseK);
+    ascendc_assert((self->ctx.tiling_->baseN > 0), "baseN is %d , which should be larger than 0",
+                   self->ctx.tiling_->baseN);
+    ascendc_assert((self->ctx.tiling_->stepKa > 0), "stepKa is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepKa);
+    ascendc_assert((self->ctx.tiling_->stepKb > 0), "stepKb is %d , which should be larger than 0",
+                   self->ctx.tiling_->stepKb);
     ascendc_assert((self->ctx.tiling_->dk % self->ctx.tiling_->singleIterateDk == 0),
-                "tiling_->dk should be divisible by tiling_->singleIterateDk");
+                   "tiling_->dk should be divisible by tiling_->singleIterateDk");
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitStepMParams(Intf *self)
+__aicore__ inline void InitStepMParams(Intf* self)
 {
     self->ctx.mIter_ = DivCeil(self->ctx.singleShapeM_, self->ctx.tiling_->baseM);
     self->ctx.tailM_ = self->ctx.singleShapeM_ - (self->ctx.mIter_ - 1) * self->ctx.tiling_->baseM;
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.mIter_ > 0),
-        "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_);
+    ascendc_assert((self->ctx.mIter_ > 0), "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitStepKParams(Intf *self)
+__aicore__ inline void InitStepKParams(Intf* self)
 {
     uint64_t tmpSingleCoreK = 0;
     // kernel拆分后，K方向去除无效计算
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
-        tmpSingleCoreK = self->ctx.tiling_->group == 1
-            ? static_cast<uint64_t>(self->ctx.tiling_->cout1) * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_]
-            : static_cast<uint64_t>(self->ctx.tiling_->cout1G) * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
+        tmpSingleCoreK = self->ctx.tiling_->group == 1 ? static_cast<uint64_t>(self->ctx.tiling_->cout1) *
+                                                             self->ctx.splitHkWkC0List_[self->ctx.splitIndex_] :
+                                                         static_cast<uint64_t>(self->ctx.tiling_->cout1G) *
+                                                             self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-            RecalcStepForKernelSplit<Intf>(self);   // 当pad大于0时，子kernel顺序会变化，stepka需要重新计算
+            RecalcStepForKernelSplit<Intf>(self); // 当pad大于0时，子kernel顺序会变化，stepka需要重新计算
         }
     } else {
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
@@ -125,34 +125,33 @@ __aicore__ inline void InitStepKParams(Intf *self)
     self->ctx.stepKaTail = self->ctx.kIter_ - self->ctx.kIterStepKaTail;
     self->ctx.stepKbTail = self->ctx.kIter_ - self->ctx.kIterStepKbTail;
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.kIter_ > 0),
-        "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
+    ascendc_assert((self->ctx.kIter_ > 0), "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitStepNParams(Intf *self)
+__aicore__ inline void InitStepNParams(Intf* self)
 {
     self->ctx.nIter_ = DivCeil(self->ctx.singleShapeCin_, self->ctx.tiling_->baseN);
     self->ctx.tailN_ = self->ctx.singleShapeCin_ - (self->ctx.nIter_ - 1) * self->ctx.tiling_->baseN;
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.nIter_ > 0),
-        "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
+    ascendc_assert((self->ctx.nIter_ > 0), "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
 #endif
 }
 
 template <class Intf>
-static __aicore__ inline void InitParamsForSplitDkSplit(Intf *self)
+static __aicore__ inline void InitParamsForSplitDkSplit(Intf* self)
 {
     self->ctx.enableSplitDk_ = self->ctx.tiling_->singleIterateDk != self->ctx.tiling_->dk;
 #ifdef __CCE_KT_TEST__
-    ascendc_assert((!self->ctx.enableSplitDk_ || (self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_K))),
-                    "iterateOrder must be ORDER_K when splitDK.");
+    ascendc_assert(
+        (!self->ctx.enableSplitDk_ || (self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_K))),
+        "iterateOrder must be ORDER_K when splitDK.");
 #endif
 }
 
 template <class Intf>
-__aicore__ inline void InitFullLoadFlag(Intf *self)
+__aicore__ inline void InitFullLoadFlag(Intf* self)
 {
     if constexpr (Intf::conv3dConfig.loadB1Condition != TPL_GM_TO_L1) {
         self->ctx.isB1FullLoadFlag_ = false;
@@ -160,50 +159,50 @@ __aicore__ inline void InitFullLoadFlag(Intf *self)
         return;
     }
     bool isDoutDkFullLoad = self->ctx.tiling_->dk == 1 || self->ctx.tiling_->dout == 1;
-    bool baseB1Cond = self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin &&
-        self->ctx.tiling_->enlarge == 1;
+    bool baseB1Cond = self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin && self->ctx.tiling_->enlarge == 1;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         bool needReloadA1 = self->ctx.tiling_->wk == 3 ||
-            ((self->ctx.tiling_->backpropPadLeft == 0 || self->ctx.tiling_->backpropPadLeft == 2) &&
-             (self->ctx.tiling_->wk == 4 || self->ctx.tiling_->wk == 2));
-        self->ctx.isA1FullLoadFlag_ = self->ctx.kSCoutFullLoad_ &&
-            self->ctx.tiling_->al1Pbuffer == 1 && isDoutDkFullLoad && !needReloadA1;
-        self->ctx.isB1FullLoadFlag_ = self->ctx.kSCoutFullLoad_ && baseB1Cond &&
-            self->ctx.tiling_->bl1Pbuffer == 1 && isDoutDkFullLoad;
+                            ((self->ctx.tiling_->backpropPadLeft == 0 || self->ctx.tiling_->backpropPadLeft == 2) &&
+                             (self->ctx.tiling_->wk == 4 || self->ctx.tiling_->wk == 2));
+        self->ctx.isA1FullLoadFlag_ = self->ctx.kSCoutFullLoad_ && self->ctx.tiling_->al1Pbuffer == 1 &&
+                                      isDoutDkFullLoad && !needReloadA1;
+        self->ctx.isB1FullLoadFlag_ = self->ctx.kSCoutFullLoad_ && baseB1Cond && self->ctx.tiling_->bl1Pbuffer == 1 &&
+                                      isDoutDkFullLoad;
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         self->ctx.isA1FullLoadFlag_ = false;
         self->ctx.isB1FullLoadFlag_ = baseB1Cond && isDoutDkFullLoad &&
-            self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
-            self->ctx.tiling_->singleCoreCout * self->ctx.splitHkWkList_[0];
+                                      self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
+                                          self->ctx.tiling_->singleCoreCout * self->ctx.splitHkWkList_[0];
     } else {
         self->ctx.isA1FullLoadFlag_ = false;
         self->ctx.isB1FullLoadFlag_ = baseB1Cond &&
-            self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
-            self->ctx.tiling_->singleCoreCout * self->ctx.singleShapeHWk_ &&
-            self->ctx.tiling_->bl1Pbuffer == 1 &&
-            self->ctx.tiling_->singleIterateDk == 1;
+                                      self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
+                                          self->ctx.tiling_->singleCoreCout * self->ctx.singleShapeHWk_ &&
+                                      self->ctx.tiling_->bl1Pbuffer == 1 && self->ctx.tiling_->singleIterateDk == 1;
     }
 }
 
 template <class Intf>
-__aicore__ inline void InitC04Params(Intf *self)
+__aicore__ inline void InitC04Params(Intf* self)
 {
     if constexpr (Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIV_SCALAR {
             self->ctx.c04LoadToB1IterIdx_ = 0;
-            uint32_t c04UbBufSize = (AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH -
-                MASK_REG_WIDTH - AscendC::ONE_BLOCK_SIZE) >> 1;
+            uint32_t c04UbBufSize = (AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH - MASK_REG_WIDTH -
+                                     AscendC::ONE_BLOCK_SIZE) >>
+                                    1;
             uint32_t c04UbPixNum = DivDtypeByte<typename Intf::SrcBT>(c04UbBufSize);
             uint32_t tmpVal1 = self->ctx.dkHkWk_ << C04_SHIFT_SIZE;
             uint32_t tmpVal2 = AlignUp((self->ctx.hkWk_ << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
             uint32_t tmpVal3 = tmpVal1 > tmpVal2 ? tmpVal1 : tmpVal2;
-            self->ctx.vecBlockN_ = ((c04UbPixNum / tmpVal3) >> 4) << 4; // >> 4 等价于除BLOCK_CUBE，<< 4 等价于乘BLOCK_CUBE
+            self->ctx.vecBlockN_ = ((c04UbPixNum / tmpVal3) >> 4)
+                                   << 4; // >> 4 等价于除BLOCK_CUBE，<< 4 等价于乘BLOCK_CUBE
         }
     }
 }
 
 template <class Intf>
-__aicore__ inline void InitParamsPart3(Intf *self)
+__aicore__ inline void InitParamsPart3(Intf* self)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
     self->ctx.dstB2Stride_ = 0;
@@ -219,7 +218,7 @@ __aicore__ inline void InitParamsPart3(Intf *self)
     }
 }
 template <class Intf>
-__aicore__ inline void InitParamsPart2(Intf *self)
+__aicore__ inline void InitParamsPart2(Intf* self)
 {
     self->ctx.mIter_ = 0;
     self->ctx.nIter_ = 0;
@@ -267,7 +266,7 @@ __aicore__ inline void InitParamsPart2(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void InitParamsForNormal(Intf *self)
+static __aicore__ inline void InitParamsForNormal(Intf* self)
 {
     if constexpr (Intf::conv3dConfig.enableC04Flag) {
         self->ctx.channelSize_ = C04_COUT_SIZE;
@@ -282,7 +281,7 @@ static __aicore__ inline void InitParamsForNormal(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void InitSingleShapeParams(Intf *self)
+__aicore__ inline void InitSingleShapeParams(Intf* self)
 {
     // 初始化为0，避免decache功能开启后全局变量不会初始化为0，出现随机值导致未知问题
     self->ctx.singleShapeDin_ = 0;
@@ -299,7 +298,7 @@ __aicore__ inline void InitSingleShapeParams(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void InitParams(Intf *self)
+__aicore__ inline void InitParams(Intf* self)
 {
     InitSingleShapeParams<Intf>(self);
     self->ctx.l0cPingPongFlag_ = 1;
@@ -313,7 +312,7 @@ __aicore__ inline void InitParams(Intf *self)
         InitParamsForKernelSplitHW<Intf>(self);
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         InitParamsForKernelSplitH<Intf>(self);
-    } else  {
+    } else {
         InitParamsForNormal<Intf>(self);
     }
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
@@ -341,75 +340,78 @@ __aicore__ inline void InitParams(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void CalcMatrixByteSize(Intf *self, uint32_t &aMatrixByteSize, uint32_t &bMatrixByteSize)
+__aicore__ inline void CalcMatrixByteSize(Intf* self, uint32_t& aMatrixByteSize, uint32_t& bMatrixByteSize)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         uint32_t hoSize = CalFmapHMaxForKernelSplit(self, self->ctx.tiling_->baseM);
         hoSize = self->ctx.tiling_->ho < hoSize ? self->ctx.tiling_->ho : hoSize;
         aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.channelSize_ * sizeof(typename Intf::SrcAT);
         if (self->ctx.kSCoutFullLoad_) {
-            bMatrixByteSize = self->ctx.tiling_->baseN *
-                self->ctx.channelSize_ * self->ctx.singleShapeHWk_ * sizeof(typename Intf::SrcBT);
+            bMatrixByteSize = self->ctx.tiling_->baseN * self->ctx.channelSize_ * self->ctx.singleShapeHWk_ *
+                              sizeof(typename Intf::SrcBT);
         } else {
-            bMatrixByteSize = self->ctx.tiling_->baseN *
-                self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
+            bMatrixByteSize = self->ctx.tiling_->baseN * self->ctx.curStepKb_ * self->ctx.tiling_->baseK *
+                              sizeof(typename Intf::SrcBT);
         }
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         uint32_t hoSize = self->ctx.tiling_->ho < self->ctx.curHoSize_ ? self->ctx.tiling_->ho : self->ctx.curHoSize_;
-        aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
-            self->ctx.channelSize_ * sizeof(typename Intf::SrcAT);
-        bMatrixByteSize = self->ctx.tiling_->baseN *
-            self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
+        aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW * self->ctx.channelSize_ *
+                          sizeof(typename Intf::SrcAT);
+        bMatrixByteSize = self->ctx.tiling_->baseN * self->ctx.curStepKb_ * self->ctx.tiling_->baseK *
+                          sizeof(typename Intf::SrcBT);
     } else {
         uint32_t hoSize = self->ctx.hoExpand_ < static_cast<uint64_t>(self->ctx.curHoSize_) ?
-                static_cast<uint32_t>(self->ctx.hoExpand_) : self->ctx.curHoSize_;
+                              static_cast<uint32_t>(self->ctx.hoExpand_) :
+                              self->ctx.curHoSize_;
         if constexpr (Intf::conv3dConfig.enableC04Flag) {
-            aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
-                C04_COUT_SIZE * sizeof(typename Intf::SrcAT);
+            aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW * C04_COUT_SIZE *
+                              sizeof(typename Intf::SrcAT);
         } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
             // 不加载L1不加载完整的hkwk时, wo无需搬一整行
             aMatrixByteSize = self->ctx.tiling_->baseM *
-                DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) * sizeof(typename Intf::SrcAT);
+                              DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
+                              sizeof(typename Intf::SrcAT);
         } else {
             aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
-                DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
-                sizeof(typename Intf::SrcAT);
+                              DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
+                              sizeof(typename Intf::SrcAT);
         }
-        bMatrixByteSize = self->ctx.tiling_->baseN *
-            self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
+        bMatrixByteSize = self->ctx.tiling_->baseN * self->ctx.curStepKb_ * self->ctx.tiling_->baseK *
+                          sizeof(typename Intf::SrcBT);
     }
 }
 
 template <class Intf>
-__aicore__ inline void InitBiasTque(Intf *self)
+__aicore__ inline void InitBiasTque(Intf* self)
 {
     // 64: BT Buffer 需要64B对齐，加63后右移6位代替乘64
-    uint32_t biasSize = self->ctx.tiling_->isBiasFullLoad
-                            ? (DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::BiasT), 64) << 6)
-                            : (DivCeil(self->ctx.tiling_->baseN * sizeof(typename Intf::BiasT), 64) << 6);
+    uint32_t biasSize = self->ctx.tiling_->isBiasFullLoad ?
+                            (DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::BiasT), 64) << 6) :
+                            (DivCeil(self->ctx.tiling_->baseN * sizeof(typename Intf::BiasT), 64) << 6);
     self->ctx.pipe_.InitBuffer(self->ctx.biasL1Que_, 1, biasSize);
     self->ctx.pipe_.InitBuffer(self->ctx.biasBTQue_, 1, biasSize);
 }
 
 template <class Intf>
-__aicore__ inline void InitScaleTque(Intf *self)
+__aicore__ inline void InitScaleTque(Intf* self)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
-             self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        uint32_t scaleSize = DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::ScaleT),
-                                     ONE_BLK_SIZE) * ONE_BLK_SIZE;
+        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint32_t scaleSize = DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::ScaleT), ONE_BLK_SIZE) *
+                             ONE_BLK_SIZE;
         self->ctx.pipe_.InitBuffer(self->ctx.scaleL1Que_, 1, scaleSize);
     }
 }
 
 template <class Intf>
-__aicore__ inline void InitTque(Intf *self, const bool hasBias)
+__aicore__ inline void InitTque(Intf* self, const bool hasBias)
 {
     uint32_t bMatrixByteSize = 0;
     uint32_t aMatrixByteSize = 0;
     CalcMatrixByteSize(self, aMatrixByteSize, bMatrixByteSize);
 #ifdef __CCE_KT_TEST__
-    uint32_t usedBufferSize = aMatrixByteSize * self->ctx.tiling_->al1Pbuffer + bMatrixByteSize * self->ctx.tiling_->bl1Pbuffer;
+    uint32_t usedBufferSize = aMatrixByteSize * self->ctx.tiling_->al1Pbuffer +
+                              bMatrixByteSize * self->ctx.tiling_->bl1Pbuffer;
     ascendc_assert((usedBufferSize <= TOTAL_L1_SIZE), "l1 size exceeds limit");
 #endif
 
@@ -445,7 +447,8 @@ __aicore__ inline void InitTque(Intf *self, const bool hasBias)
 }
 
 template <class Intf>
-static __aicore__ inline void FreeFullLoadL1Tensor(Intf *self) {
+static __aicore__ inline void FreeFullLoadL1Tensor(Intf* self)
+{
     if ASCEND_IS_AIC_SCALAR {
         // 全载场景，如果Tensor已经被载入了，进行释放
         if (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_ && !self->ctx.isLoadB1_) {
@@ -461,27 +464,32 @@ static __aicore__ inline void FreeFullLoadL1Tensor(Intf *self) {
 }
 
 template <class Intf, bool hasBias>
-static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
-    LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
+static __aicore__ inline void ComputeForNoTilingHWk(Intf* self, LocalTensor<typename Intf::SrcAT>& l0a,
+                                                    LocalTensor<typename Intf::SrcBT>& l0b,
+                                                    LocalTensor<typename Intf::L0cT>& l0c, uint8_t& l0PingPongFlag)
 {
     bool isFirstDk = (self->ctx.curDkIdx_ == 0);
     const uint32_t strideD = self->ctx.tiling_->strideD;
     const int64_t strideDMulDout = self->ctx.tiling_->dout * strideD;
     const bool strideDgtOne = strideD > 1;
-    for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_; curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
+    for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_;
+         curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             self->ctx.groupIterIdx_ = 0;
         }
 
-        int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront - curInnerKdIdx * self->ctx.tiling_->dilationD;
+        int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront -
+                       curInnerKdIdx * self->ctx.tiling_->dilationD;
         if (dTmp < 0 || (strideDgtOne && (dTmp % strideD > 0)) || dTmp >= strideDMulDout) {
             continue;
         }
         int64_t curDoutIdx = strideDgtOne ? (dTmp / strideD) : dTmp;
         if (self->ctx.kSCoutFullLoad_) {
-            ComputeForKIter<Intf, hasBias, true>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
+            ComputeForKIter<Intf, hasBias, true>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk,
+                                                 l0PingPongFlag);
         } else {
-            ComputeForKIter<Intf, hasBias, false>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
+            ComputeForKIter<Intf, hasBias, false>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk,
+                                                  l0PingPongFlag);
         }
         isFirstDk = false;
     }
@@ -493,7 +501,7 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<type
 }
 
 template <class Intf>
-static __aicore__ inline void ComputeStart(Intf *self, LocalTensor<typename Intf::L0cT> &l0c)
+static __aicore__ inline void ComputeStart(Intf* self, LocalTensor<typename Intf::L0cT>& l0c)
 {
     if ASCEND_IS_AIC_SCALAR {
         InitMmadParams<Intf>(self);
@@ -510,7 +518,7 @@ static __aicore__ inline void ComputeStart(Intf *self, LocalTensor<typename Intf
 }
 
 template <class Intf>
-static __aicore__ inline void ComputeEnd(Intf *self, LocalTensor<typename Intf::L0cT> &l0c, uint8_t l0PingPongFlag)
+static __aicore__ inline void ComputeEnd(Intf* self, LocalTensor<typename Intf::L0cT>& l0c, uint8_t l0PingPongFlag)
 {
     if ASCEND_IS_AIC_SCALAR {
         if (self->ctx.l0cPingPongFlag_) {
@@ -525,7 +533,7 @@ static __aicore__ inline void ComputeEnd(Intf *self, LocalTensor<typename Intf::
 }
 
 template <class Intf, bool hasBias>
-static __aicore__ inline void NoNeedComputeHandle(Intf *self)
+static __aicore__ inline void NoNeedComputeHandle(Intf* self)
 {
     if (!hasBias) {
         FreeFullLoadL1Tensor<Intf>(self);
@@ -545,7 +553,7 @@ static __aicore__ inline void NoNeedComputeHandle(Intf *self)
 }
 
 template <class Intf, bool hasBias>
-static __aicore__ inline void Compute(Intf *self)
+static __aicore__ inline void Compute(Intf* self)
 {
     if (!self->ctx.needComputeFlag_) {
         NoNeedComputeHandle<Intf, hasBias>(self);
@@ -566,7 +574,7 @@ static __aicore__ inline void Compute(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateCurHoSize(Intf *self)
+static __aicore__ inline void UpdateCurHoSize(Intf* self)
 {
     // 要从当前核hoStartIdx开始算，普通场景可以跨行，要从GM起点开始计算
     uint32_t curWi = self->ctx.tiling_->wi;
@@ -585,14 +593,14 @@ static __aicore__ inline void UpdateCurHoSize(Intf *self)
         endHoIdx = self->ctx.curHoIdx_ + (hiCal + (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH);
     } else {
         self->ctx.curHoIdx_ = static_cast<int32_t>(curHiIdx) - self->ctx.curBackPropPadUp_;
-        endHoIdx = self->ctx.curHoIdx_ + (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) *
-            self->ctx.tiling_->dilationH);
+        endHoIdx = self->ctx.curHoIdx_ +
+                   (hiCal + (self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->dilationH);
     }
     UpdateCurHoSizeCore<Intf>(self, endHoIdx);
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateKComputeStatus(Intf *self)
+static __aicore__ inline void UpdateKComputeStatus(Intf* self)
 {
     if (!self->ctx.needComputeFlag_) {
         // 其他方向要跳过计算，K可以不判断了
@@ -642,35 +650,32 @@ static __aicore__ inline bool CheckFreeA1ForKernelSplit(Intf* self)
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
+static __aicore__ inline void UpdateFullLoadL1Status(Intf* self)
 {
     if (!self->ctx.isB1FullLoadFlag_ && !self->ctx.isA1FullLoadFlag_) {
         return;
     }
-    bool isLastMNIter = self->ctx.curMIdx_ == self->ctx.mIter_ - 1 &&
-        self->ctx.curNIdx_ == self->ctx.nIter_ - 1;
+    bool isLastMNIter = self->ctx.curMIdx_ == self->ctx.mIter_ - 1 && self->ctx.curNIdx_ == self->ctx.nIter_ - 1;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         bool isLastRearrangeHWIter = self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1 &&
-            self->ctx.rearrangeHIndex_ == self->ctx.tiling_->strideH - 1;
+                                     self->ctx.rearrangeHIndex_ == self->ctx.tiling_->strideH - 1;
         self->ctx.isFreeA1_ = isLastRearrangeHWIter || CheckFreeA1ForKernelSplit(self);
         self->ctx.isFreeB1_ = isLastMNIter && self->ctx.tiling_->dk > 1 && isLastRearrangeHWIter;
     } else {
-        bool isLastDIter = (self->ctx.tiling_->dk == 1 && self->ctx.curDinIdx_ ==
-            self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
-            self->ctx.tiling_->dk > 1;
+        bool isLastDIter = (self->ctx.tiling_->dk == 1 &&
+                            self->ctx.curDinIdx_ == self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
+                           self->ctx.tiling_->dk > 1;
         bool suppressB1Free = self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 &&
-            self->ctx.tiling_->enableFullLoad && !Intf::conv3dConfig.enableC04Flag &&
-            self->ctx.tiling_->group == 1;
+                              self->ctx.tiling_->enableFullLoad && !Intf::conv3dConfig.enableC04Flag &&
+                              self->ctx.tiling_->group == 1;
         self->ctx.isFreeB1_ = isLastMNIter && isLastDIter && !suppressB1Free;
     }
 }
 
-
 template <class Intf>
-static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
+static __aicore__ inline void UpdateL1ComputeInfo(Intf* self)
 {
-    self->ctx.baseUseM_ =
-        (self->ctx.curMIdx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
+    self->ctx.baseUseM_ = (self->ctx.curMIdx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
         uint32_t Hd = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
         uint32_t Wd = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
@@ -684,17 +689,15 @@ static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
             self->ctx.baseUseM_ = M;
         }
     }
-    self->ctx.baseUseN_ =
-        (self->ctx.curNIdx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
+    self->ctx.baseUseN_ = (self->ctx.curNIdx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
     self->ctx.needComputeFlag_ = true;
     UpdateCurHoSize<Intf>(self);
     UpdateKComputeStatus<Intf>(self);
     UpdateFullLoadL1Status<Intf>(self);
 }
 
-
 template <class Intf>
-static __aicore__ inline void UpdateSplitKTail(Intf *self, uint32_t kIdx)
+static __aicore__ inline void UpdateSplitKTail(Intf* self, uint32_t kIdx)
 {
     if (kIdx + self->ctx.tiling_->kSegment < self->ctx.tiling_->coutG) {
         return;
@@ -707,18 +710,15 @@ static __aicore__ inline void UpdateSplitKTail(Intf *self, uint32_t kIdx)
 
     self->ctx.kIter_ = DivCeil(tmpSingleCoreK, self->ctx.tiling_->baseK);
     self->ctx.tailK_ = tmpSingleCoreK - (self->ctx.kIter_ - 1) * self->ctx.tiling_->baseK;
-    self->ctx.kIterStepKaTail =
-        (DivCeil(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
-    self->ctx.kIterStepKbTail =
-        (DivCeil(self->ctx.kIter_, self->ctx.curStepKb_) - 1) * self->ctx.curStepKb_;
+    self->ctx.kIterStepKaTail = (DivCeil(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
+    self->ctx.kIterStepKbTail = (DivCeil(self->ctx.kIter_, self->ctx.curStepKb_) - 1) * self->ctx.curStepKb_;
 
     self->ctx.stepKaTail = self->ctx.kIter_ - self->ctx.kIterStepKaTail;
     self->ctx.stepKbTail = self->ctx.kIter_ - self->ctx.kIterStepKbTail;
 }
 
 template <class Intf>
-static __aicore__ inline void CalcInWorkspace(Intf *self,
-                                              const GlobalTensor<typename Intf::DstT> &output)
+static __aicore__ inline void CalcInWorkspace(Intf* self, const GlobalTensor<typename Intf::DstT>& output)
 {
     // 无需在workspace上累加的场景不需要搬出
     if (!self->ctx.useUbAccumForSplitK_) {
@@ -735,20 +735,21 @@ static __aicore__ inline void CalcInWorkspace(Intf *self,
 }
 
 template <class Intf>
-static __aicore__ inline void SetDequantScale(Intf *self)
+static __aicore__ inline void SetDequantScale(Intf* self)
 {
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
             event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::FIX_MTE2));
- 	        SetFlag<HardEvent::FIX_MTE2>(eventId);
- 	        WaitFlag<HardEvent::FIX_MTE2>(eventId);
+            SetFlag<HardEvent::FIX_MTE2>(eventId);
+            WaitFlag<HardEvent::FIX_MTE2>(eventId);
             Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
         }
     }
 }
 
 template <class Intf, bool sync>
-static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const GlobalTensor<typename Intf::DstT> &output, bool hasBias)
+static __aicore__ inline void CalcSplitK_(Intf* self, uint8_t& enAtomic,
+                                          const GlobalTensor<typename Intf::DstT>& output, bool hasBias)
 {
     // calRound多轮场景重置标志位
     self->ctx.isLastKSegment_ = false;
@@ -757,8 +758,9 @@ static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const G
 
     if (unlikely(hasBias)) {
         self->ctx.computeBiasOnce_ = false;
-    }    
-    for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.tiling_->kSegment) {
+    }
+    for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG;
+         kIdx += self->ctx.tiling_->kSegment) {
         self->ctx.curCoutStartIdx_ = kIdx;
         UpdateSplitKTail<Intf>(self, kIdx);
         // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
@@ -782,7 +784,8 @@ template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias)
+    static __aicore__ inline void call(Intf* self, const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling,
+                                       const bool hasBias)
     {
         self->ctx.hasBias_ = hasBias;
         self->ctx.tiling_ = tiling;
@@ -800,7 +803,7 @@ struct Init {
 template <class Intf>
 struct FreeBiasTensor {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         if ASCEND_IS_AIC_SCALAR {
             self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
@@ -812,7 +815,7 @@ struct FreeBiasTensor {
 template <class Intf>
 struct SetWeight {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcBT> &weight)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::SrcBT>& weight)
     {
         self->ctx.weightGlobal_ = weight;
     }
@@ -821,7 +824,7 @@ struct SetWeight {
 template <class Intf>
 struct SetOutBackprop {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::SrcAT> &outBackprop)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::SrcAT>& outBackprop)
     {
         self->ctx.outBackPropGlobal_ = outBackprop;
     }
@@ -830,7 +833,7 @@ struct SetOutBackprop {
 template <class Intf>
 struct SetBias {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::BiasT> &bias)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::BiasT>& bias)
     {
         self->ctx.biasGlobal_ = bias;
     }
@@ -839,7 +842,7 @@ struct SetBias {
 template <class Intf>
 struct SetScale {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::ScaleT> &scale)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::ScaleT>& scale)
     {
         self->ctx.scaleGlobal_ = scale;
     }
@@ -848,7 +851,7 @@ struct SetScale {
 template <class Intf>
 struct SetSingleShape {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN,
+    static __aicore__ inline void call(Intf* self, uint64_t singleShapeM, uint64_t singleShapeK, uint32_t singleShapeN,
                                        uint32_t singleShapeD)
     {
         if (self->ctx.singleShapeDin_ != singleShapeD) {
@@ -877,7 +880,8 @@ struct SetSingleShape {
 
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             self->ctx.curEnlarge = self->ctx.singleShapeCout_ / (self->ctx.tiling_->cout / self->ctx.tiling_->oriGroup);
-            self->ctx.curEnlargeCin1_ = DivCeil16(self->ctx.curEnlarge * (self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup));
+            self->ctx.curEnlargeCin1_ = DivCeil16(self->ctx.curEnlarge *
+                                                  (self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup));
         }
     }
 };
@@ -885,20 +889,23 @@ struct SetSingleShape {
 template <class Intf>
 struct SetStartIdx {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, uint32_t curDinStartIdx, int64_t curMStartIdx,
-        int32_t curCinStartIdx, int32_t curCoutStartIdx)
+    static __aicore__ inline void call(Intf* self, uint32_t curDinStartIdx, int64_t curMStartIdx,
+                                       int32_t curCinStartIdx, int32_t curCoutStartIdx)
     {
         // 需要增加入参的startDinIdx判断，否则无法确定padding和补0问题
         // 增加入参，传参判断
         self->ctx.curDinStartIdx_ = curDinStartIdx;
         self->ctx.curMStartIdx_ = curMStartIdx;
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
-            self->ctx.curHoStartIdx_ = static_cast<int32_t>(curMStartIdx / self->ctx.tiling_->wi) - self->ctx.tiling_->backpropPadUp;
+            self->ctx.curHoStartIdx_ = static_cast<int32_t>(curMStartIdx / self->ctx.tiling_->wi) -
+                                       self->ctx.tiling_->backpropPadUp;
         } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             self->ctx.curBackPropPadUp_ = self->ctx.tiling_->backpropPadUp >> 1;
-            self->ctx.curHoStartIdx_ = static_cast<int32_t>(curMStartIdx / (self->ctx.splitWi_)) - self->ctx.curBackPropPadUp_;
+            self->ctx.curHoStartIdx_ = static_cast<int32_t>(curMStartIdx / (self->ctx.splitWi_)) -
+                                       self->ctx.curBackPropPadUp_;
         } else {
-            self->ctx.curHoStartIdx_ = static_cast<int32_t>(curMStartIdx / self->ctx.tiling_->wi) - self->ctx.curBackPropPadUp_;
+            self->ctx.curHoStartIdx_ = static_cast<int32_t>(curMStartIdx / self->ctx.tiling_->wi) -
+                                       self->ctx.curBackPropPadUp_;
         }
         self->ctx.curCinStartIdx_ = curCinStartIdx;
         self->ctx.curCoutStartIdx_ = curCoutStartIdx;
@@ -908,14 +915,11 @@ struct SetStartIdx {
 template <class Intf>
 struct SetBatchCoreIdx {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, uint32_t batchCoreIdx)
-    {
-        self->ctx.curBatchCoreIdx_ = batchCoreIdx;
-    }
+    static __aicore__ inline void call(Intf* self, uint32_t batchCoreIdx) { self->ctx.curBatchCoreIdx_ = batchCoreIdx; }
 };
 
 template <class Intf>
-static __aicore__ inline void InitFirstIterState(Intf *self)
+static __aicore__ inline void InitFirstIterState(Intf* self)
 {
     if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
         self->ctx.groupIterIdx_ = 0;
@@ -934,13 +938,13 @@ static __aicore__ inline void InitFirstIterState(Intf *self)
         self->ctx.rearrangeWIndex_ = 0;
         self->ctx.splitHIndex_ = self->ctx.splitHStartIndex_;
         self->ctx.splitWIndex_ = self->ctx.splitWStartIndex_;
-        if (self->ctx.tiling_->dk > 1) {    // dk等于1时，全载时无需重复加载B矩阵
+        if (self->ctx.tiling_->dk > 1) { // dk等于1时，全载时无需重复加载B矩阵
             self->ctx.isLoadB1_ = true;
             self->ctx.isFreeB1_ = false;
         }
     } else {
-        if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 ||
-            Intf::conv3dConfig.enableC04Flag || !self->ctx.tiling_->enableFullLoad || self->ctx.tiling_->group != 1) {
+        if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 || Intf::conv3dConfig.enableC04Flag ||
+            !self->ctx.tiling_->enableFullLoad || self->ctx.tiling_->group != 1) {
             self->ctx.isLoadB1_ = true;
             self->ctx.isFreeB1_ = false;
         }
@@ -948,7 +952,7 @@ static __aicore__ inline void InitFirstIterState(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline bool ProcessKernelSplitIteration(Intf *self, bool hasBias)
+static __aicore__ inline bool ProcessKernelSplitIteration(Intf* self, bool hasBias)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (IterateForKernelSplit<Intf>(self)) {
@@ -968,7 +972,7 @@ static __aicore__ inline bool ProcessKernelSplitIteration(Intf *self, bool hasBi
 }
 
 template <class Intf>
-static __aicore__ inline bool AdvanceIterIndices(Intf *self)
+static __aicore__ inline bool AdvanceIterIndices(Intf* self)
 {
     if (++self->ctx.curMIdx_ >= self->ctx.mIter_) {
         self->ctx.curMIdx_ = 0;
@@ -986,7 +990,7 @@ template <class Intf, bool sync>
 struct Iterate {
     // 一次iterate计算(baseM, baseN, baseD)，当前baseD=1
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline bool call(Intf *self, bool enPartialSum, bool hasBias)
+    static __aicore__ inline bool call(Intf* self, bool enPartialSum, bool hasBias)
     {
         /*
         |   <---------singleShapeM------->        |
@@ -1036,7 +1040,8 @@ struct Iterate {
 template <class Intf, bool sync>
 struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic, bool fullLoadBiasFlag_, bool freeBiasFlag_)
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output, uint8_t enAtomic,
+                                       bool fullLoadBiasFlag_, bool freeBiasFlag_)
     {
         bool hasBias = self->ctx.hasBias_;
         if (unlikely(hasBias && self->ctx.tiling_->isBiasFullLoad)) {
@@ -1078,7 +1083,7 @@ struct IterateAll {
 template <class Intf, bool sync>
 struct GetTensorC {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
                                        uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         LoadL0c2Gm<Intf>(self, output, enAtomic, enSequentialWrite);
@@ -1088,7 +1093,7 @@ struct GetTensorC {
 template <class Intf, bool sync>
 struct VecPreProcess {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
                                        uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         if (unlikely(self->ctx.enableSplitDk_)) {
@@ -1103,7 +1108,7 @@ struct VecPreProcess {
 template <class Intf, bool sync>
 struct VecPostProcess {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
                                        uint8_t enAtomic = 0, bool enSequentialWrite = false)
     {
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
@@ -1137,7 +1142,7 @@ struct VecPostProcess {
 template <class Intf>
 struct End {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self)
+    static __aicore__ inline void call(Intf* self)
     {
         CrossCoreWaitTailForMix<Intf>(self);
 
@@ -1164,5 +1169,5 @@ struct End {
         }
     }
 };
-}  // namespace Convolution3DBackpropFunc
+} // namespace Convolution3DBackpropFunc
 #endif

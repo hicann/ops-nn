@@ -51,14 +51,12 @@ constexpr uint8_t FILTER_FLAG_MASK = 0b00000101;
 constexpr uint8_t EXPORT_FLAG_MASK = 0b00000100;
 
 template <typename T>
-class EmbeddingHashTableImport
-{
+class EmbeddingHashTableImport {
 public:
     __aicore__ inline EmbeddingHashTableImport(){};
-    __aicore__ inline void Init(
-        GM_ADDR tableHandles, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys, GM_ADDR counters,
-        GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
-        const EmbeddingHashTableImportTilingData* __restrict tilingData);
+    __aicore__ inline void Init(GM_ADDR tableHandles, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys,
+                                GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
+                                const EmbeddingHashTableImportTilingData* __restrict tilingData);
     __aicore__ inline void ParseTilingData(const EmbeddingHashTableImportTilingData* __restrict tilingData);
     __aicore__ inline int64_t AlignUpByte8(const int64_t x) const;
     __aicore__ inline void Process();
@@ -132,9 +130,8 @@ __aicore__ inline void EmbeddingHashTableImport<T>::Init(
         reinterpret_cast<__gm__ void*>(reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(keys))));
     countersListGm_ = ListTensorDesc(
         reinterpret_cast<__gm__ void*>(reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(counters))));
-    filterFlagsListGm_ = ListTensorDesc(
-        reinterpret_cast<__gm__ void*>(
-            reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(filterFlags))));
+    filterFlagsListGm_ = ListTensorDesc(reinterpret_cast<__gm__ void*>(
+        reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(filterFlags))));
     valuesListGm_ = ListTensorDesc(
         reinterpret_cast<__gm__ void*>(reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(values))));
 
@@ -154,9 +151,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
     int64_t tableIdx, int64_t keyNum, int64_t embeddingDim, int64_t blockSize, int64_t bucketSize, int64_t bitWidth,
     int64_t unusedKey, int64_t blockIdx, int64_t blockNum, __gm__ int64_t* tableHandlesGm, __gm__ int64_t* keyGm,
     __gm__ uint64_t* counterGm, __gm__ uint8_t* filterFlagGm, __gm__ T* valueGm, __gm__ uint8_t* tableGm)
-{   
-    __gm__ int64_t* tableHandle =
-            reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm[tableIdx]));
+{
+    __gm__ int64_t* tableHandle = reinterpret_cast<__gm__ int64_t*>(
+        reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm[tableIdx]));
     for (int64_t i = blockIdx * blockDim.x + threadIdx.x; i < keyNum; i = i + blockNum * blockDim.x) {
         int64_t insertKey = keyGm[i];
         uint32_t hashValue = Hashtbl::MurmurHash3(keyGm + i, INT64_TYPE_BYTES, 0);
@@ -209,7 +206,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
                 // 刷新no_export_hash_addr地址 --> (key存在， tablesize不变, noexportsize--)
                 int64_t flagOffset = blockOffset + ((FLAG_OFFSET + 1) * INT64_TYPE_BYTES - 1);
                 __gm__ uint8_t* filterFlagValue = reinterpret_cast<__gm__ uint8_t*>(tableGm + flagOffset);
-                if (!(*filterFlagValue & EXPORT_FLAG_MASK)) { // means change flag from 0 to 1(1 means cannot be exported)
+                if (!(*filterFlagValue &
+                      EXPORT_FLAG_MASK)) { // means change flag from 0 to 1(1 means cannot be exported)
                     asc_atomic_sub(tableHandle + HANDLE_SIZE_ALL_NOEXPORT_OFFSET, INT64_ONE);
                 }
             }
@@ -224,7 +222,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
             if (isInsertSucc) {
                 *filterFlagValue |= FILTER_FLAG_MASK;
             } else {
-                *filterFlagValue = filterFlagGm[i];   // actually not exist
+                *filterFlagValue = filterFlagGm[i]; // actually not exist
             }
 
             // 插入value值
@@ -241,8 +239,8 @@ template <typename T>
 __aicore__ inline void EmbeddingHashTableImport<T>::Process()
 {
     for (int64_t idx = 0; idx < tablesCount_; idx++) {
-        __gm__ int64_t* tableHandle =
-            reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm_.GetValue(idx)));
+        __gm__ int64_t* tableHandle = reinterpret_cast<__gm__ int64_t*>(
+            reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm_.GetValue(idx)));
         tableHandleGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(tableHandle));
         __gm__ int64_t* table = reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(tableHandleGm_(0)));
         tableGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(table));

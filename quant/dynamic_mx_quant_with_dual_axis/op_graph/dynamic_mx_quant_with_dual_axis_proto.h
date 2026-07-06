@@ -12,7 +12,7 @@
  * \file dynamic_mx_quant_with_dual_axis_proto.h
  * \brief
  */
- 
+
 #ifndef OPS_NN_DEV_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_PROTO_H
 #define OPS_NN_DEV_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_PROTO_H
 

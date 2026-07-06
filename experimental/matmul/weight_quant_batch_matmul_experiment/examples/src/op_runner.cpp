@@ -25,7 +25,7 @@ using namespace std;
 
 extern bool g_isDevice;
 
-OpRunner::OpRunner(OperatorDesc *opDesc) : opDesc_(opDesc)
+OpRunner::OpRunner(OperatorDesc* opDesc) : opDesc_(opDesc)
 {
     numInputs_ = opDesc->inputDesc.size();
     numOutputs_ = opDesc->outputDesc.size();
@@ -65,7 +65,7 @@ bool OpRunner::Init()
 {
     for (size_t i = 0; i < numInputs_; ++i) {
         auto size = GetInputSize(i);
-        void *devMem = nullptr;
+        void* devMem = nullptr;
         if (aclrtMalloc(&devMem, size, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
             ERROR_LOG("Malloc device memory for input[%zu] failed", i);
             return false;
@@ -73,7 +73,7 @@ bool OpRunner::Init()
         devInputs_.emplace_back(devMem);
         inputBuffers_.emplace_back(aclCreateDataBuffer(devMem, size));
 
-        void *hostInput = nullptr;
+        void* hostInput = nullptr;
         if (g_isDevice) {
             if (aclrtMalloc(&hostInput, size, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
                 ERROR_LOG("Malloc device memory for input[%zu] failed", i);
@@ -91,9 +91,9 @@ bool OpRunner::Init()
         }
         hostInputs_.emplace_back(hostInput);
 
-        aclTensor *inputTensor =
-            aclCreateTensor(GetInputShape(i).data(), GetInputNumDims(i), GetInputDataType(i), nullptr, 0,
-                            GetInputFormat(i), GetInputShape(i).data(), GetInputNumDims(i), devInputs_[i]);
+        aclTensor* inputTensor = aclCreateTensor(GetInputShape(i).data(), GetInputNumDims(i), GetInputDataType(i),
+                                                 nullptr, 0, GetInputFormat(i), GetInputShape(i).data(),
+                                                 GetInputNumDims(i), devInputs_[i]);
         if (inputTensor == nullptr) {
             ERROR_LOG("Create Tensor for input[%zu] failed", i);
             return false;
@@ -103,7 +103,7 @@ bool OpRunner::Init()
 
     for (size_t i = 0; i < numOutputs_; ++i) {
         auto size = GetOutputSize(i);
-        void *devMem = nullptr;
+        void* devMem = nullptr;
         if (aclrtMalloc(&devMem, size, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
             ERROR_LOG("Malloc device memory for output[%zu] failed", i);
             return false;
@@ -111,7 +111,7 @@ bool OpRunner::Init()
         devOutputs_.emplace_back(devMem);
         outputBuffers_.emplace_back(aclCreateDataBuffer(devMem, size));
 
-        void *hostOutput = nullptr;
+        void* hostOutput = nullptr;
         if (g_isDevice) {
             if (aclrtMalloc(&hostOutput, size, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
                 ERROR_LOG("Malloc device memory for output[%zu] failed", i);
@@ -129,9 +129,9 @@ bool OpRunner::Init()
         }
         hostOutputs_.emplace_back(hostOutput);
 
-        aclTensor *outputTensor =
-            aclCreateTensor(GetOutputShape(i).data(), GetOutputNumDims(i), GetOutputDataType(i), nullptr, 0,
-                            GetOutputFormat(i), GetOutputShape(i).data(), GetOutputNumDims(i), devOutputs_[i]);
+        aclTensor* outputTensor = aclCreateTensor(GetOutputShape(i).data(), GetOutputNumDims(i), GetOutputDataType(i),
+                                                  nullptr, 0, GetOutputFormat(i), GetOutputShape(i).data(),
+                                                  GetOutputNumDims(i), devOutputs_[i]);
         if (outputTensor == nullptr) {
             ERROR_LOG("Create Tensor for output[%zu] failed", i);
             return false;
@@ -294,7 +294,7 @@ bool OpRunner::RunOp()
     size_t workspaceSize = 0;
     bool transposeX1 = false;
     bool transposeX2 = false;
-    aclOpExecutor *handle = nullptr;
+    aclOpExecutor* handle = nullptr;
     auto ret = aclnnWeightQuantBatchMatmulExperimentGetWorkspaceSize(inputTensor_[0], inputTensor_[1], inputTensor_[2],
                                                                      outputTensor_[0], &workspaceSize, &handle);
     if (ret != ACL_SUCCESS) {

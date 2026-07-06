@@ -21,18 +21,19 @@
 __aicore__ inline bool IsCacheOpTiling(const ScatterElementsV2TilingData* tiling_data)
 {
     return tiling_data->coreNums != 0 || tiling_data->xDim0 != 0 || tiling_data->xDim1 != 0 ||
-           tiling_data->indicesDim0 != 0 || tiling_data->indicesDim1 != 0 ||
-           tiling_data->updatesDim0 != 0 || tiling_data->updatesDim1 != 0;
+           tiling_data->indicesDim0 != 0 || tiling_data->indicesDim1 != 0 || tiling_data->updatesDim0 != 0 ||
+           tiling_data->updatesDim1 != 0;
 }
 
 template <typename T, typename U, bool IsScalar>
 __aicore__ inline void ExecCacheScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                          ScatterElementsV2TilingData* tiling_data,
-                                          AscendC::TPipe* pipe, GM_ADDR workspace) {
+                                          ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
+                                          GM_ADDR workspace)
+{
     if (tiling_data->mode >= ScatterElementsV2NS::SCATTER_MODE_REDUCTION_BEGIN &&
         tiling_data->mode <= ScatterElementsV2NS::SCATTER_MODE_REDUCTION_END &&
-        !(std::is_same<T, int32_t>::value || std::is_same<T, float>::value ||
-          std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value)) {
+        !(std::is_same<T, int32_t>::value || std::is_same<T, float>::value || std::is_same<T, half>::value ||
+          std::is_same<T, bfloat16_t>::value)) {
         return;
     }
     ScatterElementsV2NS::ExecTransposeAndScatterElements<T, U, IsScalar> op;
@@ -42,8 +43,8 @@ __aicore__ inline void ExecCacheScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR 
 
 template <typename T, typename U>
 __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                           ScatterElementsV2TilingData* tiling_data,
-                                           AscendC::TPipe* pipe) {
+                                           ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe)
+{
     KernelScatterElementsV2<T, U> op;
     op.Init(tiling_data, pipe, var, indices, updates);
     if (tiling_data->modeFlag == SMALL_MODE) {
@@ -55,8 +56,9 @@ __aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR
 
 template <typename T, typename U, bool IsScalar>
 __aicore__ inline void ExecScatterOpImpl(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                         ScatterElementsV2TilingData* tiling_data,
-                                         AscendC::TPipe* pipe, GM_ADDR workspace) {
+                                         ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe,
+                                         GM_ADDR workspace)
+{
     if (IsCacheOpTiling(tiling_data)) {
         ExecCacheScatterOp<T, U, IsScalar>(var, indices, updates, tiling_data, pipe, workspace);
     } else {
@@ -66,19 +68,19 @@ __aicore__ inline void ExecScatterOpImpl(GM_ADDR var, GM_ADDR indices, GM_ADDR u
 
 template <typename T, typename U, bool IsScalar>
 __aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                     ScatterElementsV2TilingData* tiling_data,
-                                     AscendC::TPipe* pipe, GM_ADDR workspace) {
+                                     ScatterElementsV2TilingData* tiling_data, AscendC::TPipe* pipe, GM_ADDR workspace)
+{
     ExecScatterOpImpl<T, U, IsScalar>(var, indices, updates, tiling_data, pipe, workspace);
 }
 #endif
 
-#define CALL_OP_IMPL(T, U)                                                             \
-    do {                                                                               \
+#define CALL_OP_IMPL(T, U)                                                                 \
+    do {                                                                                   \
         ExecScatterOp<T, U, false>(var, indices, updates, tilingDevice, &pipe, workspace); \
     } while (0)
 
-extern "C" __global__ __aicore__ void scatter_elements_v2(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
+                                                          GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
     ScatterElementsV2TilingData* __restrict tilingDevice = &tiling_data;
@@ -86,9 +88,11 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ < 220
 #if (defined(DTYPE_VAR))
     if (TILING_KEY_IS(0)) {
-        ScatterElementsV2310PNS::scatter_elements_v2_310p_split_m<DTYPE_VAR, DTYPE_INDICES>(var, indices, updates, &tiling_data, &pipe);
+        ScatterElementsV2310PNS::scatter_elements_v2_310p_split_m<DTYPE_VAR, DTYPE_INDICES>(var, indices, updates,
+                                                                                            &tiling_data, &pipe);
     } else if (TILING_KEY_IS(1)) {
-        ScatterElementsV2310PNS::scatter_elements_v2_310p_multy_m<DTYPE_VAR, DTYPE_INDICES>(var, indices, updates, &tiling_data, &pipe);
+        ScatterElementsV2310PNS::scatter_elements_v2_310p_multy_m<DTYPE_VAR, DTYPE_INDICES>(var, indices, updates,
+                                                                                            &tiling_data, &pipe);
     }
 #endif
 #else

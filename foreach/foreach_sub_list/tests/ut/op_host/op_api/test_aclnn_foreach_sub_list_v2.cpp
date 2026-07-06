@@ -22,18 +22,11 @@
 
 using namespace std;
 
-class l2_foreach_sub_list_v2_test : public testing::Test
-{
+class l2_foreach_sub_list_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_foreach_sub_list_v2_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_foreach_sub_list_v2_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_foreach_sub_list_v2_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_foreach_sub_list_v2_test TearDown" << endl; }
 };
 
 // self and out diffrent dtype

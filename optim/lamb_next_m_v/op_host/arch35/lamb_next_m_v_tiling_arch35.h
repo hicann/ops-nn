@@ -30,8 +30,7 @@ struct LambNextMVCompileInfo {
 
 class LambNextMVTiling : public TilingBaseClass {
 public:
-    explicit LambNextMVTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LambNextMVTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

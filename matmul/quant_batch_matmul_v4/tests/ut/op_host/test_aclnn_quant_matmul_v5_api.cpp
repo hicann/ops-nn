@@ -80,7 +80,8 @@ protected:
     static void TearDownTestCase() { cout << "l2_QuantBatchMatmulV5_test_910B2 TearDown" << endl; }
 };
 
-vector<int64_t> GenerateNZShape(const vector<int64_t> &viewShape, const aclDataType &dtype) {
+vector<int64_t> GenerateNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
+{
     if (viewShape.size() < 2) {
         throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
                                std::to_string(viewShape.size()));
@@ -101,17 +102,14 @@ vector<int64_t> GenerateNZShape(const vector<int64_t> &viewShape, const aclDataT
     return storageShape;
 }
 
-static std::string GetRepoRootPath()
-{
-    return ut_str::GetExeDirPath() + "../../../../";
-}
+static std::string GetRepoRootPath() { return ut_str::GetExeDirPath() + "../../../../"; }
 
-static std::vector<QuantBatchMatmulV5TestParam> LoadParamsFromCsv(const string &socVersion)
+static std::vector<QuantBatchMatmulV5TestParam> LoadParamsFromCsv(const string& socVersion)
 {
     std::vector<QuantBatchMatmulV5TestParam> params;
     const std::string rootPath = GetRepoRootPath();
-    const std::string casePath(
-        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_aclnn_quant_matmul_v5_api.csv");
+    const std::string casePath(rootPath +
+                               "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_aclnn_quant_matmul_v5_api.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
         std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -128,7 +126,7 @@ static std::vector<QuantBatchMatmulV5TestParam> LoadParamsFromCsv(const string &
         std::vector<std::string> cols;
         SplitStr2Vec(line, ",", cols);
         if (headers.empty()) {
-            for (const auto &col : cols) {
+            for (const auto& col : cols) {
                 headers.push_back(Trim(col));
             }
             continue;
@@ -186,11 +184,10 @@ static std::vector<QuantBatchMatmulV5TestParam> LoadParamsFromCsv(const string &
     return params;
 }
 
-static void TestOneParamCase(const QuantBatchMatmulV5TestParam &param)
+static void TestOneParamCase(const QuantBatchMatmulV5TestParam& param)
 {
     std::cout << "run case " << param.caseName << std::endl;
-    const bool isDav3510 = param.caseName.rfind("ascend950", 0) == 0 ||
-                           param.caseName.rfind("ascend3510", 0) == 0 ||
+    const bool isDav3510 = param.caseName.rfind("ascend950", 0) == 0 || param.caseName.rfind("ascend3510", 0) == 0 ||
                            param.caseName.rfind("ascend910D", 0) == 0;
     op::NpuArchManager archManager(isDav3510 ? NpuArch::DAV_3510 : NpuArch::DAV_2201);
     vector<int64_t> stride;
@@ -216,45 +213,61 @@ static void TestOneParamCase(const QuantBatchMatmulV5TestParam &param)
         }
 
         const vector<int64_t> x2Stride = param.x2_stride.empty() ? MakeDefaultStride(param.x2Shape) : param.x2_stride;
-        x2Desc = aclCreateTensor(param.x2Shape.data(), param.x2Shape.size(), param.x2Type, x2Stride.data(), 0, format, storageShape.data(), storageShape.size(), deviceAddr);
+        x2Desc = aclCreateTensor(param.x2Shape.data(), param.x2Shape.size(), param.x2Type, x2Stride.data(), 0, format,
+                                 storageShape.data(), storageShape.size(), deviceAddr);
     }
     aclTensor* scaleDesc = nullptr;
     if (param.scaleShape.size() > 0) {
-        scaleDesc = aclCreateTensor(param.scaleShape.data(), param.scaleShape.size(), param.scaleType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.scaleShape.data(), param.scaleShape.size(), deviceAddr);
+        scaleDesc = aclCreateTensor(param.scaleShape.data(), param.scaleShape.size(), param.scaleType, stride.data(), 0,
+                                    aclFormat::ACL_FORMAT_ND, param.scaleShape.data(), param.scaleShape.size(),
+                                    deviceAddr);
     }
     aclTensor* offsetDesc = nullptr;
     if (param.offsetShape.size() > 0) {
-        offsetDesc = aclCreateTensor(param.offsetShape.data(), param.offsetShape.size(), param.offsetType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.offsetShape.data(), param.offsetShape.size(), deviceAddr);
+        offsetDesc = aclCreateTensor(param.offsetShape.data(), param.offsetShape.size(), param.offsetType,
+                                     stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.offsetShape.data(),
+                                     param.offsetShape.size(), deviceAddr);
     }
     aclTensor* pertokenDesc = nullptr;
     if (param.pertokenScaleShape.size() > 0) {
-        pertokenDesc = aclCreateTensor(param.pertokenScaleShape.data(), param.pertokenScaleShape.size(), param.pertokenType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.pertokenScaleShape.data(), param.pertokenScaleShape.size(), deviceAddr);
+        pertokenDesc = aclCreateTensor(param.pertokenScaleShape.data(), param.pertokenScaleShape.size(),
+                                       param.pertokenType, stride.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                       param.pertokenScaleShape.data(), param.pertokenScaleShape.size(), deviceAddr);
     }
     aclTensor* biasDesc = nullptr;
     if (param.biasShape.size() > 0) {
-        biasDesc = aclCreateTensor(param.biasShape.data(), param.biasShape.size(), param.biasType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.biasShape.data(), param.biasShape.size(), deviceAddr);
+        biasDesc = aclCreateTensor(param.biasShape.data(), param.biasShape.size(), param.biasType, stride.data(), 0,
+                                   aclFormat::ACL_FORMAT_ND, param.biasShape.data(), param.biasShape.size(),
+                                   deviceAddr);
     }
     aclTensor* outDesc = nullptr;
     if (param.outShape.size() > 0) {
-        outDesc = aclCreateTensor(param.outShape.data(), param.outShape.size(), param.outType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.outShape.data(), param.outShape.size(), deviceAddr);
+        outDesc = aclCreateTensor(param.outShape.data(), param.outShape.size(), param.outType, stride.data(), 0,
+                                  aclFormat::ACL_FORMAT_ND, param.outShape.data(), param.outShape.size(), deviceAddr);
     }
     aclTensor* yScaleDesc = nullptr;
     if (param.yScaleShape.size() > 0) {
-        yScaleDesc = aclCreateTensor(param.yScaleShape.data(), param.yScaleShape.size(), param.yScaleType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.yScaleShape.data(), param.yScaleShape.size(), deviceAddr);
+        yScaleDesc = aclCreateTensor(param.yScaleShape.data(), param.yScaleShape.size(), param.yScaleType,
+                                     stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.yScaleShape.data(),
+                                     param.yScaleShape.size(), deviceAddr);
     }
     aclTensor* x1OffsetDesc = nullptr;
     if (param.x1OffsetShape.size() > 0) {
-        x1OffsetDesc = aclCreateTensor(param.x1OffsetShape.data(), param.x1OffsetShape.size(), param.x1OffsetType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.x1OffsetShape.data(), param.x1OffsetShape.size(), deviceAddr);
+        x1OffsetDesc = aclCreateTensor(param.x1OffsetShape.data(), param.x1OffsetShape.size(), param.x1OffsetType,
+                                       stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.x1OffsetShape.data(),
+                                       param.x1OffsetShape.size(), deviceAddr);
     }
     aclTensor* yOffsetDesc = nullptr;
     if (param.yOffsetShape.size() > 0) {
-        yOffsetDesc = aclCreateTensor(param.yOffsetShape.data(), param.yOffsetShape.size(), param.yOffsetType, stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.yOffsetShape.data(), param.yOffsetShape.size(), deviceAddr);
+        yOffsetDesc = aclCreateTensor(param.yOffsetShape.data(), param.yOffsetShape.size(), param.yOffsetType,
+                                      stride.data(), 0, aclFormat::ACL_FORMAT_ND, param.yOffsetShape.data(),
+                                      param.yOffsetShape.size(), deviceAddr);
     }
 
     aclnnStatus aclRet;
     auto ut = OP_API_UT(aclnnQuantMatmulV5,
-                        INPUT(x1Desc, x2Desc, pertokenDesc, scaleDesc, yScaleDesc, x1OffsetDesc, offsetDesc, yOffsetDesc, biasDesc, param.transposeX1,
-                              param.transposeX2, param.groupSize),
+                        INPUT(x1Desc, x2Desc, pertokenDesc, scaleDesc, yScaleDesc, x1OffsetDesc, offsetDesc,
+                              yOffsetDesc, biasDesc, param.transposeX1, param.transposeX2, param.groupSize),
                         OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -281,10 +294,12 @@ TEST_P(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_generalTest)
 static const std::vector<QuantBatchMatmulV5TestParam> kCasesParams950 = LoadParamsFromCsv("Ascend950");
 static const std::vector<QuantBatchMatmulV5TestParam> kCasesParams910B2 = LoadParamsFromCsv("Ascend910B2");
 
-INSTANTIATE_TEST_SUITE_P(Ascend950_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_950, testing::ValuesIn(kCasesParams950));
-INSTANTIATE_TEST_SUITE_P(Ascend910B2_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_910B2, testing::ValuesIn(kCasesParams910B2));
+INSTANTIATE_TEST_SUITE_P(Ascend950_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_950,
+                         testing::ValuesIn(kCasesParams950));
+INSTANTIATE_TEST_SUITE_P(Ascend910B2_QuantBatchMatmulV5, l2_QuantBatchMatmulV5_test_910B2,
+                         testing::ValuesIn(kCasesParams910B2));
 
-static void ThreadFunc(const QuantBatchMatmulV5TestParam *params, size_t testcase_num, size_t thread_idx,
+static void ThreadFunc(const QuantBatchMatmulV5TestParam* params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
@@ -292,7 +307,7 @@ static void ThreadFunc(const QuantBatchMatmulV5TestParam *params, size_t testcas
     }
 }
 
-static void TestMultiThread(const QuantBatchMatmulV5TestParam *params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const QuantBatchMatmulV5TestParam* params, size_t testcase_num, size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {

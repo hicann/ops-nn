@@ -13,22 +13,21 @@
  * \brief leaky_relu_grad
  */
 
- #include "kernel_operator.h"
- #include "arch35/leaky_relu_grad_dag.h"
- #include "arch35/leaky_relu_grad_struct.h"
- #include "atvoss/broadcast/broadcast_sch.h"
- 
- using namespace AscendC;
- using namespace LeakyReluGradOp;
- 
- template <uint64_t schMode, uint64_t dtype>
- __global__ __aicore__ void leaky_relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
-                                      GM_ADDR tiling)
- {
+#include "kernel_operator.h"
+#include "arch35/leaky_relu_grad_dag.h"
+#include "arch35/leaky_relu_grad_struct.h"
+#include "atvoss/broadcast/broadcast_sch.h"
+
+using namespace AscendC;
+using namespace LeakyReluGradOp;
+
+template <uint64_t schMode, uint64_t dtype>
+__global__ __aicore__ void leaky_relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                                           GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-     using OpDag = LeakyReluGradDag<DTYPE_GRADIENTS>::OpDag;
-     BroadcastSch<schMode, OpDag> sch(tiling);
-     sch.Process(gradients, features, backprops);
-     return;
- }
- 
+    using OpDag = LeakyReluGradDag<DTYPE_GRADIENTS>::OpDag;
+    BroadcastSch<schMode, OpDag> sch(tiling);
+    sch.Process(gradients, features, backprops);
+    return;
+}

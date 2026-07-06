@@ -34,8 +34,10 @@ class KernelSoftMarginLossGrad {
 public:
     __aicore__ inline KernelSoftMarginLossGrad(){};
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR grad_out, GM_ADDR out, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float cof);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR grad_out, GM_ADDR out, uint64_t smallCoreDataNum,
+                                uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                uint64_t tailBlockNum, float cof);
     __aicore__ inline void Process();
 
 private:
@@ -69,8 +71,11 @@ private:
 };
 
 template <typename TYPE_X>
-__aicore__ inline void KernelSoftMarginLossGrad<TYPE_X>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR grad_out, GM_ADDR out, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float cof)
+__aicore__ inline void KernelSoftMarginLossGrad<TYPE_X>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR grad_out, GM_ADDR out,
+                                                              uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                                              uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                                              uint64_t tileDataNum, uint64_t smallTailDataNum,
+                                                              uint64_t bigTailDataNum, uint64_t tailBlockNum, float cof)
 {
     uint64_t coreId = AscendC::GetBlockIdx();
     uint64_t globalBufferIndex = bigCoreDataNum * coreId;
@@ -86,10 +91,10 @@ __aicore__ inline void KernelSoftMarginLossGrad<TYPE_X>::Init(GM_ADDR x, GM_ADDR
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    xGm.SetGlobalBuffer((__gm__ TYPE_X *)x + globalBufferIndex, this->coreDataNum);
-    yGm.SetGlobalBuffer((__gm__ TYPE_X *)y + globalBufferIndex, this->coreDataNum);
-    gradOutGm.SetGlobalBuffer((__gm__ TYPE_X *)grad_out + globalBufferIndex, this->coreDataNum);
-    outGm.SetGlobalBuffer((__gm__ TYPE_X *)out + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_X*)y + globalBufferIndex, this->coreDataNum);
+    gradOutGm.SetGlobalBuffer((__gm__ TYPE_X*)grad_out + globalBufferIndex, this->coreDataNum);
+    outGm.SetGlobalBuffer((__gm__ TYPE_X*)out + globalBufferIndex, this->coreDataNum);
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));
     pipe.InitBuffer(inQueueY, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));
     pipe.InitBuffer(inQueueGradOut, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));

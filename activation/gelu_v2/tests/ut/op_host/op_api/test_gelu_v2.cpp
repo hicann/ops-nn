@@ -15,15 +15,9 @@
 
 class l2GeluV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2GeluV2Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2GeluV2Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2GeluV2Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2GeluV2Test TearDown" << std::endl; }
 };
 
 // x为空
@@ -387,8 +381,8 @@ TEST_F(l2GeluV2Test, l2_gelu_v2_test_028_1d_large)
 
 TEST_F(l2GeluV2Test, l2_gelu_v2_test_029_specific_values)
 {
-    auto xDesc =
-        TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0});
+    auto xDesc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND)
+                     .Value(vector<float>{-3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0});
     auto yDesc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.01, 0.01);
 
     auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));

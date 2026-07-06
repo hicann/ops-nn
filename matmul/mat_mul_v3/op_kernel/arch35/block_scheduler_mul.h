@@ -22,11 +22,7 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_
->
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_>
 class BlockSchedulerMulBuiltIn {
 public:
     int64_t m_{0};
@@ -47,6 +43,7 @@ public:
     struct Params {
         const MatMulToMulBasicTilingData* tilingData;
     };
+
 public:
     __aicore__ inline BlockSchedulerMulBuiltIn(const ProblemShape& shape, const Params& params)
     {
@@ -62,50 +59,23 @@ public:
         k_ = shape.k;
     }
 
-    __aicore__ inline int64_t GetRealBlockNum()
-    {
-        return usedCoreNum_;
-    }
+    __aicore__ inline int64_t GetRealBlockNum() { return usedCoreNum_; }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return tileNum_;
-    }
+    __aicore__ inline int64_t GetTileNum() { return tileNum_; }
 
-    __aicore__ inline int64_t GetLoopK()
-    {
-        return loopK_;
-    }
+    __aicore__ inline int64_t GetLoopK() { return loopK_; }
 
-    __aicore__ inline bool GetDataCopyMode()
-    {
-        return dataCopyMode_;
-    }
+    __aicore__ inline bool GetDataCopyMode() { return dataCopyMode_; }
 
-    __aicore__ inline TupleShape GetBlockInfo()
-    {
-        return {baseMN_, tailMN_, baseK_, tailK_};
-    }
+    __aicore__ inline TupleShape GetBlockInfo() { return {baseMN_, tailMN_, baseK_, tailK_}; }
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInMulScheduler,
-    TransA_,
-    TransB_
-> {
-using SchedulerOp = BlockSchedulerMulBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInMulScheduler, TransA_,
+                              TransB_> {
+    using SchedulerOp = BlockSchedulerMulBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

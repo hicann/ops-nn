@@ -42,20 +42,22 @@ namespace NsApplyKerasMomentum {
 
 using namespace AscendC;
 
-template<typename T>
-struct SchModeTrait { static constexpr uint32_t value = 1; };
+template <typename T>
+struct SchModeTrait {
+    static constexpr uint32_t value = 1;
+};
 
-template<>
-struct SchModeTrait<float> { static constexpr uint32_t value = 0; };
+template <>
+struct SchModeTrait<float> {
+    static constexpr uint32_t value = 0;
+};
 
 template <typename T, uint32_t SCH_MODE>
 class ApplyKerasMomentum {
 public:
     __aicore__ inline ApplyKerasMomentum() {}
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
-                                 GM_ADDR grad, GM_ADDR momentum,
-                                 GM_ADDR var_out,
-                                 const ApplyKerasMomentumTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad, GM_ADDR momentum, GM_ADDR var_out,
+                                const ApplyKerasMomentumTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -97,11 +99,9 @@ private:
 // Init
 // ============================================================================
 template <typename T, uint32_t SCH_MODE>
-__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::Init(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
-    GM_ADDR grad, GM_ADDR momentum,
-    GM_ADDR var_out,
-    const ApplyKerasMomentumTilingData* tilingData)
+__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
+                                                             GM_ADDR momentum, GM_ADDR var_out,
+                                                             const ApplyKerasMomentumTilingData* tilingData)
 {
     totalElements_ = tilingData->totalElements;
     tileLength_ = tilingData->tileLength;
@@ -128,9 +128,8 @@ __aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::Init(
 
     bool isLastBlock = (blockIdx == blockNum_ - 1);
     int64_t blockOffset = static_cast<int64_t>(blockFormer_) * blockIdx;
-    blockLength_ = isLastBlock
-        ? static_cast<int64_t>(totalElements_ - blockOffset)
-        : static_cast<int64_t>(blockFormer_);
+    blockLength_ = isLastBlock ? static_cast<int64_t>(totalElements_ - blockOffset) :
+                                 static_cast<int64_t>(blockFormer_);
     ubLength_ = tileLength_;
 
     varGM.SetGlobalBuffer((__gm__ T*)var + blockOffset, blockLength_);
@@ -140,7 +139,8 @@ __aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::Init(
     // accum in-place：输出写回输入地址（accumGM 即为输出 GM）
 
     uint32_t alignedLength = (static_cast<uint32_t>(ubLength_) + 63) / 64 * 64;
-    if (alignedLength < 64) alignedLength = 64;
+    if (alignedLength < 64)
+        alignedLength = 64;
     uint32_t fp32Size = alignedLength * sizeof(float);
 
     pipe.InitBuffer(inVarBuf, 1, fp32Size);
@@ -164,20 +164,18 @@ __aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::Init(
 template <typename T, uint32_t SCH_MODE>
 __aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::Process()
 {
-    if (totalElements_ == 0) return;
+    if (totalElements_ == 0)
+        return;
 
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {
-        int64_t currentK = (i == loopCount - 1)
-            ? (blockLength_ - ubLength_ * i)
-            : ubLength_;
+        int64_t currentK = (i == loopCount - 1) ? (blockLength_ - ubLength_ * i) : ubLength_;
         ProcessTile(i, currentK);
     }
 }
 
 template <typename T, uint32_t SCH_MODE>
-__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::ProcessTile(
-    int64_t progress, int64_t K)
+__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::ProcessTile(int64_t progress, int64_t K)
 {
     CopyIn(progress, K);
     ComputeAndCopyOut(progress, K);
@@ -187,8 +185,7 @@ __aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::ProcessTile(
 // CopyIn
 // ============================================================================
 template <typename T, uint32_t SCH_MODE>
-__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::CopyIn(
-    int64_t progress, int64_t K)
+__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::CopyIn(int64_t progress, int64_t K)
 {
     AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(K * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<T> padParams{false, 0, 0, T(0)};
@@ -234,12 +231,11 @@ __aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::CopyIn(
 // Vector 计算后直接 DataCopyPad(MTE3)，需 PipeBarrier 保证 V→MTE3 同步
 // ============================================================================
 template <typename T, uint32_t SCH_MODE>
-__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::ComputeAndCopyOut(
-    int64_t progress, int64_t K)
+__aicore__ inline void ApplyKerasMomentum<T, SCH_MODE>::ComputeAndCopyOut(int64_t progress, int64_t K)
 {
-    auto var_fp32   = inVarBuf.template DeQue<float>();
+    auto var_fp32 = inVarBuf.template DeQue<float>();
     auto accum_fp32 = inAccumBuf.template DeQue<float>();
-    auto grad_fp32  = inGradBuf.template DeQue<float>();
+    auto grad_fp32 = inGradBuf.template DeQue<float>();
 
     uint32_t uK = (uint32_t)K;
 

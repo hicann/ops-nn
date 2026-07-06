@@ -26,13 +26,12 @@
 #include "aclnn_kernels/reshape.h"
 #include "opdev/op_executor.h"
 
-using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
-using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
-                              const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &,
-                              const int64_t &>;
-using TupleFused = std::tuple<const aclTensor *, const char *>;
+using TupleInput = std::tuple<const aclTensor*, const aclTensor*>;
+using TupleQuant = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                              const aclTensor*, const aclTensor*, const int64_t&, const int64_t&>;
+using TupleFused = std::tuple<const aclTensor*, const char*>;
 using TupleAttr = std::tuple<bool, bool>;
-using TupleTensor = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *>;
+using TupleTensor = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>;
 
 static constexpr int INDEX_X1_IN_INPUT_TUPLE = 0;
 static constexpr int INDEX_X2_IN_INPUT_TUPLE = 1;
@@ -64,31 +63,29 @@ static const size_t MAX_DIM_NUM_NZ = 8;
 
 static const size_t PENULTIMATE_DIM = 2;
 
-bool CheckSpecialCase(const aclTensor *tensor, int64_t firstLastDim, int64_t secondLastDim);
-bool GetTransposeAttrValue(const aclTensor *tensor, bool transpose);
-op::Shape GetWeightNzShape(const aclTensor *input, bool transpose);
-bool CheckWeightNzStorageShape(const op::Shape &nzShape, const op::Shape &storageShape);
-const aclTensor *SetTensorToNZFormat(const aclTensor *input, op::Shape &shape, aclOpExecutor *executor);
+bool CheckSpecialCase(const aclTensor* tensor, int64_t firstLastDim, int64_t secondLastDim);
+bool GetTransposeAttrValue(const aclTensor* tensor, bool transpose);
+op::Shape GetWeightNzShape(const aclTensor* input, bool transpose);
+bool CheckWeightNzStorageShape(const op::Shape& nzShape, const op::Shape& storageShape);
+const aclTensor* SetTensorToNZFormat(const aclTensor* input, op::Shape& shape, aclOpExecutor* executor);
 
-bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose, aclOpExecutor *executor);
+bool TensorContiguousProcess(const aclTensor*& contiguousTensor, bool& transpose, aclOpExecutor* executor);
 
-aclnnStatus WeightNZCaseProcess(const aclTensor *&x2, bool &transposeX2, aclOpExecutor *executor);
-aclnnStatus SetSpecilNZTensorToNormalNZFormat(const aclTensor *&input, aclOpExecutor *executor);
+aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, aclOpExecutor* executor);
+aclnnStatus SetSpecilNZTensorToNormalNZFormat(const aclTensor*& input, aclOpExecutor* executor);
 
 aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* executor);
-void InputPreProcessA4W4(const aclTensor *&x1, const aclTensor *&x2, aclOpExecutor *executor);
-aclnnStatus A4W4CaseProcess(const aclTensor *&x1, const aclTensor *&x2, aclOpExecutor *executor);
+void InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor);
+aclnnStatus A4W4CaseProcess(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor);
 
-const aclTensor* SetTensorToNDFormat(const aclTensor *input);
-const aclTensor* GetNDFormat(const aclTensor *input);
+const aclTensor* SetTensorToNDFormat(const aclTensor* input);
+const aclTensor* GetNDFormat(const aclTensor* input);
 
-void GetDtypeAndTranspose(TupleTensor mandatoryTensors, int64_t &dtype, bool &transposeX1,
-                                 bool &transposeX2);
+void GetDtypeAndTranspose(TupleTensor mandatoryTensors, int64_t& dtype, bool& transposeX1, bool& transposeX2);
 
-aclnnStatus SpecialOutputProcess(const aclTensor *x1, const aclTensor *x2, const aclTensor *out,
-                                        const aclTensor *&matmulRet, aclOpExecutor* executor);
-aclnnStatus PostMatmulCalcProcess(const aclTensor *matmulRet, const aclTensor *x1, const aclTensor *x2,
-                                         const aclTensor *out, aclOpExecutor *executor);
+aclnnStatus SpecialOutputProcess(const aclTensor* x1, const aclTensor* x2, const aclTensor* out,
+                                 const aclTensor*& matmulRet, aclOpExecutor* executor);
+aclnnStatus PostMatmulCalcProcess(const aclTensor* matmulRet, const aclTensor* x1, const aclTensor* x2,
+                                  const aclTensor* out, aclOpExecutor* executor);
 
-
-#endif  // OP_API_INC_QUANT_MATMUL_COMMON_CHECK_H
+#endif // OP_API_INC_QUANT_MATMUL_COMMON_CHECK_H

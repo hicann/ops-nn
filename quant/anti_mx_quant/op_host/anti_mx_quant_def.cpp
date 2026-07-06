@@ -31,14 +31,12 @@ static const std::vector<ge::DataType> antiMxQuantMxscaleDataType = {
     ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0};
 
 static const std::vector<ge::DataType> antiMxQuantYDataType = {
-    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
-    ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BF16,
+    ge::DT_BF16,    ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> antiMxQuantNDFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::Format> antiMxQuantNDFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class AntiMxQuant : public OpDef {
 public:
@@ -77,4 +75,4 @@ public:
 };
 
 OP_ADD(AntiMxQuant);
-}  // namespace ops
+} // namespace ops

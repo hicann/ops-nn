@@ -31,21 +31,20 @@ static ge::graphStatus InferShapeInplaceUpdate(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, vShape);
 
     // 校验1: indices 必须是 1 维
-    OP_CHECK_IF(indicesShape->GetDimNum() != 1,
-        OP_LOGE(context, "indices must be 1-dimensional"), return GRAPH_FAILED);
+    OP_CHECK_IF(indicesShape->GetDimNum() != 1, OP_LOGE(context, "indices must be 1-dimensional"), return GRAPH_FAILED);
 
     // 校验2: x.ndim == v.ndim
-    OP_CHECK_IF(xShape->GetDimNum() != vShape->GetDimNum(),
-        OP_LOGE(context, "x.ndim must equal v.ndim"), return GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() != vShape->GetDimNum(), OP_LOGE(context, "x.ndim must equal v.ndim"),
+                return GRAPH_FAILED);
 
     // 校验3: v.shape[0] == indices.shape[0]（即 K）
-    OP_CHECK_IF(vShape->GetDim(0) != indicesShape->GetDim(0),
-        OP_LOGE(context, "v.shape[0] must equal indices length"), return GRAPH_FAILED);
+    OP_CHECK_IF(vShape->GetDim(0) != indicesShape->GetDim(0), OP_LOGE(context, "v.shape[0] must equal indices length"),
+                return GRAPH_FAILED);
 
     // 校验4: x.shape[1:] == v.shape[1:]
     for (size_t d = 1; d < xShape->GetDimNum(); d++) {
         OP_CHECK_IF(xShape->GetDim(d) != vShape->GetDim(d),
-            OP_LOGE(context, "x.shape[d] must equal v.shape[d] for d >= 1"), return GRAPH_FAILED);
+                    OP_LOGE(context, "x.shape[d] must equal v.shape[d] for d >= 1"), return GRAPH_FAILED);
     }
 
     // 输出 y shape = x shape

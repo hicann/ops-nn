@@ -102,8 +102,7 @@ int64_t countOnes(uint64_t num)
     return count - 1;
 }
 
-class CrossEntropyLossRegbaseTiling
-{
+class CrossEntropyLossRegbaseTiling {
 public:
     explicit CrossEntropyLossRegbaseTiling(gert::TilingContext* context) : context_(context){};
 
@@ -122,8 +121,8 @@ private:
     void GetTilingKey();
     void ComputeNotAllC();
     void ComputeAllC(int64_t aNum, int64_t perBlock, int64_t blockNum);
-    void ComputeUbTiling(
-        int64_t reserveUb, int64_t isWeightQue, int64_t isWeightUb, int64_t isCleanUb, int64_t isSmoothUb);
+    void ComputeUbTiling(int64_t reserveUb, int64_t isWeightQue, int64_t isWeightUb, int64_t isCleanUb,
+                         int64_t isSmoothUb);
     void FillTilingData();
     void PrintTilingData() const;
 
@@ -157,32 +156,24 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputDtype()
     bool validDtype = inputDtype == ge::DT_BF16 || inputDtype == ge::DT_FLOAT || inputDtype == ge::DT_FLOAT16;
     OP_CHECK_IF(
         !validDtype,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
-            "BF16, FLOAT or FLOAT16"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+                                  ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(), "BF16, FLOAT or FLOAT16"),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (targetDtype != ge::DT_INT64 && targetDtype != ge::DT_INT32),
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "target",
-            ge::TypeUtils::DataTypeToSerialString(targetDtype).c_str(),
-            "INT64 or INT32"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((targetDtype != ge::DT_INT64 && targetDtype != ge::DT_INT32),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "target",
+                                          ge::TypeUtils::DataTypeToSerialString(targetDtype).c_str(), "INT64 or INT32"),
+                return ge::GRAPH_FAILED);
     dtypeTarget = targetDtype == ge::DT_INT64 ? DTYPE_LEN_INT64 : DTYPE_LEN_FP32;
     // optional input
     auto weight = context_->GetOptionalInputDesc(INPUT_WEIGHT_IDX);
     if (weight != nullptr) {
         isWeight = static_cast<uint64_t>(1);
         auto weightDtype = weight->GetDataType();
-        OP_CHECK_IF(
-            (weightDtype != ge::DT_FLOAT),
-            OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "weight",
-                ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
-                "FP32"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "weight",
+                                              ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(), "FP32"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -213,27 +204,25 @@ bool CrossEntropyLossRegbaseTiling::IsAllC()
     auto shape = ge::Shape({aNum_db2, cAligned});
     uint32_t maxValue = 0;
     uint32_t minValue = 0;
-    AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
-        AscendC::ReducePattern::AR, true, false, maxValue, minValue);
+    AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
+                                       minValue);
     int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) /
-        (arBuf_db2 + aBuf_db2);
-    OP_LOGI(
-        context_,
-        "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db2:%ld, aNum_db2:%ld, maxValue:%u, aNum_res:%ld",
-        blockNum, cAligned, allUbSize, aBuf_db2, aNum_db2, maxValue, aNum_res);
+                       (arBuf_db2 + aBuf_db2);
+    OP_LOGI(context_,
+            "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db2:%ld, aNum_db2:%ld, maxValue:%u, aNum_res:%ld",
+            blockNum, cAligned, allUbSize, aBuf_db2, aNum_db2, maxValue, aNum_res);
     if (aNum_res < perBlock) {
         int64_t arBuf_db1 = DOUBLE_BUFFER_1 * AR_DB_NUM * cAligned * dtypeX + AR_NUM * cAligned * DTYPE_LEN_FP32;
         int64_t aBuf_db1 = dtypeX + dtypeTarget + A_NUM * DTYPE_LEN_FP32;
         int64_t aNum_db1 = (allUbSize - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) / (arBuf_db1 + aBuf_db1);
         shape = ge::Shape({aNum_db1, cAligned});
-        AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
-            AscendC::ReducePattern::AR, true, false, maxValue, minValue);
+        AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
+                                           minValue);
         aNum_res = (allUbSize - static_cast<int64_t>(maxValue) - cAligned * DTYPE_LEN_FP32 - SUM_NUM * blockSize) /
-            (arBuf_db1 + aBuf_db1);
-        OP_LOGI(
-            context_,
-            "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db1:%ld, aNum_db1:%ld, maxValue:%u, aNum_res:%ld",
-            blockNum, cAligned, allUbSize, aBuf_db1, aNum_db1, maxValue, aNum_res);
+                   (arBuf_db1 + aBuf_db1);
+        OP_LOGI(context_,
+                "blockNum:%ld, cAligned:%ld, allUbSize:%ld, aBuf_db1:%ld, aNum_db1:%ld, maxValue:%u, aNum_res:%ld",
+                blockNum, cAligned, allUbSize, aBuf_db1, aNum_db1, maxValue, aNum_res);
         if (aNum_res < perBlock) {
             return false;
         } else {
@@ -255,10 +244,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
     auto inputShape = input->GetStorageShape();
     OP_CHECK_IF(
         inputShape.GetDimNum() != DIM_2,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x",
-            std::to_string(inputShape.GetDimNum()).c_str(),
-            "2"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(), "2"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         inputShape.GetDim(DIM_0) != 0 && inputShape.GetDim(DIM_1) == 0,
@@ -271,13 +257,10 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
     auto target = context_->GetInputShape(INPUT_TARGET_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, target);
     auto targetShape = target->GetStorageShape();
-    OP_CHECK_IF(
-        targetShape.GetDimNum() != DIM_1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "target",
-            std::to_string(targetShape.GetDimNum()).c_str(),
-            "1"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(targetShape.GetDimNum() != DIM_1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "target",
+                                             std::to_string(targetShape.GetDimNum()).c_str(), "1"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (targetShape.GetDim(0) != inputShape.GetDim(DIM_0)),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
@@ -292,7 +275,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
         OP_CHECK_IF(
             (weightShape.GetDim(0) != inputShape.GetDim(DIM_1)),
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x and weight",
+                context_->GetNodeName(), "x and weight",
                 (std::to_string(inputShape.GetDim(DIM_1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
                 "The dim 1 of input should be the same as the shape size of weight"),
             return ge::GRAPH_FAILED);
@@ -324,9 +307,8 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::GetAttrTilingData()
     const float* labelSmoothingAttr = attrs->GetAttrPointer<float>(ATTR_LABEL_SMOOTHING_IDX);
     labelSmoothing = labelSmoothingAttr == nullptr ? 0.0 : *labelSmoothingAttr;
     if (labelSmoothing < 0.0 || labelSmoothing > 1.0) {
-        OP_LOGE_FOR_INVALID_VALUE(
-            context_->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(),
-            "in [0.0, 1.0]");
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(),
+                                  "in [0.0, 1.0]");
         return ge::GRAPH_FAILED;
     }
     labelS = labelSmoothing > 0.0f ? REDUCTION_MEAN : static_cast<uint64_t>(0);
@@ -347,10 +329,8 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CalTilingData()
     BaseTiling_.frontCoreNum = BaseTiling_.N - BaseTiling_.frontCoreNSize * BaseTiling_.realCoreNum;
     dtypeX = inputDtype == ge::DT_FLOAT ? DTYPE_LEN_FP32 : DTYPE_LEN_FP16;
 
-    OP_CHECK_IF(
-        GetAttrTilingData() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "Get attr tilingData failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAttrTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Get attr tilingData failed"),
+                return ge::GRAPH_FAILED);
     GetTilingKey();
     return ge::GRAPH_SUCCESS;
 }
@@ -371,9 +351,8 @@ void CrossEntropyLossRegbaseTiling::GetTilingKey()
         schId = static_cast<uint64_t>(0);
         ComputeNotAllC(); // 具体计算非全载模板的tilingdata值
     }
-    OP_LOGI(
-        context_, "schId is %lu, reduction is %lu, isWeight is %lu, labelS is %lu, ignorex is %lu",
-        schId, reduction, isWeight, labelS, ignorex);
+    OP_LOGI(context_, "schId is %lu, reduction is %lu, isWeight is %lu, labelS is %lu, ignorex is %lu", schId,
+            reduction, isWeight, labelS, ignorex);
 
     const uint64_t tilingKey = GET_TPL_TILING_KEY(schId, reduction, isWeight, labelS, ignorex);
     OP_LOGI(context_, "tilingKey is %ld", tilingKey);
@@ -402,17 +381,14 @@ int64_t CrossEntropyLossRegbaseTiling::CalculateTail(int64_t a, int64_t b, int64
     }
 }
 
-int64_t CrossEntropyLossRegbaseTiling::CeilDivMul(int64_t a, int64_t b) const
-{
-    return ((a + b - 1) / b) * b;
-}
+int64_t CrossEntropyLossRegbaseTiling::CeilDivMul(int64_t a, int64_t b) const { return ((a + b - 1) / b) * b; }
 
-void CrossEntropyLossRegbaseTiling::ComputeUbTiling(
-    int64_t reserveUb, int64_t isWeightQue, int64_t isWeightUb, int64_t isCleanUb, int64_t isSmoothUb)
+void CrossEntropyLossRegbaseTiling::ComputeUbTiling(int64_t reserveUb, int64_t isWeightQue, int64_t isWeightUb,
+                                                    int64_t isCleanUb, int64_t isSmoothUb)
 {
     int64_t nUb = CONST_64 * DTYPE_LEN_FP32;
-    int64_t needNub =
-        reserveUb + nUb + isCleanUb * CONST_96 + isSmoothUb * nUb + isWeightUb * nUb + CONST_64 * dtypeTarget;
+    int64_t needNub = reserveUb + nUb + isCleanUb * CONST_96 + isSmoothUb * nUb + isWeightUb * nUb +
+                      CONST_64 * dtypeTarget;
     int64_t queUb = DTYPE_LEN_FP16 * dtypeX + isWeightQue * DTYPE_LEN_FP32 + DTYPE_LEN_FP32;
     int64_t cUbParams = queUb + DTYPE_LEN_FP32 + isSmoothUb * DTYPE_LEN_FP32;
     int64_t onceC = (static_cast<int64_t>(ubSize) - needNub) / cUbParams;
@@ -430,9 +406,8 @@ void CrossEntropyLossRegbaseTiling::ComputeUbTiling(
     int64_t result = (BaseTiling_.kTimes - 1) ^ (BaseTiling_.kTimes);
     BaseTiling_.cacheStart = countOnes(static_cast<uint64_t>(result));
     int64_t cacheUb = (BaseTiling_.cacheStart + 1) * DTYPE_LEN_INT64 * DTYPE_LEN_FP32;
-    OP_LOGI(
-        context_, "needNub is %ld, cUbParams is %ld, tailUb is %ld, cacheStart %ld", needNub, cUbParams,
-        tailUb, BaseTiling_.cacheStart);
+    OP_LOGI(context_, "needNub is %ld, cUbParams is %ld, tailUb is %ld, cacheStart %ld", needNub, cUbParams, tailUb,
+            BaseTiling_.cacheStart);
     while (cacheUb > tailUb) { // 这里注意，如果剩余ub不够cacheUb,那么上面的需要重新计算
         BaseTiling_.cOnceNum = BaseTiling_.cOnceNum - oneBlock;
         tailUb = static_cast<int64_t>(ubSize) - needNub - cUbParams * BaseTiling_.cOnceNum;
@@ -445,9 +420,8 @@ void CrossEntropyLossRegbaseTiling::ComputeUbTiling(
         result = (BaseTiling_.kTimes - 1) ^ (BaseTiling_.kTimes);
         BaseTiling_.cacheStart = countOnes(static_cast<uint64_t>(result));
         cacheUb = (BaseTiling_.cacheStart + 1) * DTYPE_LEN_INT64 * DTYPE_LEN_FP32;
-        OP_LOGI(
-            context_, "cOnceNum %ld, tailUb %ld, cacheStart %ld, cacheUb %ld", BaseTiling_.cOnceNum,
-            tailUb, BaseTiling_.cacheStart, cacheUb);
+        OP_LOGI(context_, "cOnceNum %ld, tailUb %ld, cacheStart %ld, cacheUb %ld", BaseTiling_.cOnceNum, tailUb,
+                BaseTiling_.cacheStart, cacheUb);
     }
     BaseTiling_.cOnceNumTail = CalculateTail(BaseTiling_.C, BaseTiling_.cOnceNum, BaseTiling_.cLoopTimes);
 }
@@ -540,30 +514,20 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::Init()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     coreNum = ascendcPlatform.GetCoreNumAiv();
     blockSize = Ops::Base::GetUbBlockSize(context_);
-    OP_CHECK_IF((blockSize <= 0), OP_LOGE(context_, "block size is invalid."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        coreNum <= 0,
-        OP_LOGE(context_, "coreNum must greater than zero, but is %ld", coreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((blockSize <= 0), OP_LOGE(context_, "block size is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum <= 0, OP_LOGE(context_, "coreNum must greater than zero, but is %ld", coreNum),
+                return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        ubSize <= 0UL,
-        OP_LOGE(context_, "ubSize must greater than zero, but is %lu", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize <= 0UL, OP_LOGE(context_, "ubSize must greater than zero, but is %lu", ubSize),
+                return ge::GRAPH_FAILED);
     OP_LOGI(context_, "coreNum is %ld, ubSize is %lu", coreNum, ubSize);
     if (tilingData_ == nullptr) {
         tilingData_ = context_->GetTilingData<CrossEntropyLossRegBaseTilingData>();
-        OP_CHECK_IF(
-            tilingData_ == nullptr,
-            OP_LOGE(context_, "get tilingdata ptr failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tilingData_ == nullptr, OP_LOGE(context_, "get tilingdata ptr failed"), return ge::GRAPH_FAILED);
     }
-    OP_CHECK_IF(
-        (memset_s(
-             tilingData_, sizeof(CrossEntropyLossRegBaseTilingData), 0, sizeof(CrossEntropyLossRegBaseTilingData)) !=
-         EOK),
-        OP_LOGE(context_, "memset tilingdata failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((memset_s(tilingData_, sizeof(CrossEntropyLossRegBaseTilingData), 0,
+                          sizeof(CrossEntropyLossRegBaseTilingData)) != EOK),
+                OP_LOGE(context_, "memset tilingdata failed"), return ge::GRAPH_FAILED);
     OP_LOGD(context_, "Exit CrossEntropyLossRegbaseTiling init.");
     return ge::GRAPH_SUCCESS;
 }
@@ -572,17 +536,12 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::DoTiling()
 {
     OP_LOGD(context_, "Enter CrossEntropyLossRegbaseTiling DoTiling");
 
-    OP_CHECK_IF(
-        CheckInputDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "CheckInputParams is failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckInputShape() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "CheckInputShapes is failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CalTilingData() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "CalTilingData failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CheckInputParams is failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CheckInputShapes is failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalTilingData() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CalTilingData failed"),
+                return ge::GRAPH_FAILED);
     FillTilingData();
     PrintTilingData();
     context_->SetBlockDim(tilingData_->realCoreNum);

@@ -24,19 +24,16 @@ namespace SparseSlice {
 using namespace AscendC;
 
 template <typename T>
-class SparseSliceEmpty : public SparseSliceBase
-{
+class SparseSliceEmpty : public SparseSliceBase {
 public:
-    __aicore__ inline SparseSliceEmpty() {};
-    __aicore__ inline void Init(GM_ADDR indices, GM_ADDR values,
-                               GM_ADDR shape, GM_ADDR start, GM_ADDR size,
-                               GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape,
-                               GM_ADDR outputShape1,
-                               GM_ADDR workspace, const SparseSliceTilingData& tilingData, TPipe *inPipe);
+    __aicore__ inline SparseSliceEmpty(){};
+    __aicore__ inline void Init(GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start, GM_ADDR size,
+                                GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape, GM_ADDR outputShape1,
+                                GM_ADDR workspace, const SparseSliceTilingData& tilingData, TPipe* inPipe);
     __aicore__ inline void Process();
 
 private:
-    TPipe *pipe;
+    TPipe* pipe;
     TBuf<QuePosition::VECCALC> yIndicesTmpUb_;
     TBuf<QuePosition::VECCALC> yValuesTmpUb_;
     TBuf<QuePosition::VECCALC> yShapeTmpUb_;
@@ -48,11 +45,10 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void SparseSliceEmpty<T>::Init(
-    GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start, GM_ADDR size,
-    GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape,
-    GM_ADDR outputShape1,
-    GM_ADDR workspace, const SparseSliceTilingData& tilingData, TPipe *inPipe)
+__aicore__ inline void SparseSliceEmpty<T>::Init(GM_ADDR indices, GM_ADDR values, GM_ADDR shape, GM_ADDR start,
+                                                 GM_ADDR size, GM_ADDR yIndices, GM_ADDR yValues, GM_ADDR yShape,
+                                                 GM_ADDR outputShape1, GM_ADDR workspace,
+                                                 const SparseSliceTilingData& tilingData, TPipe* inPipe)
 {
     pipe = inPipe;
     blockIdx_ = GetBlockIdx();
@@ -60,7 +56,7 @@ __aicore__ inline void SparseSliceEmpty<T>::Init(
     if (blockIdx_ >= usedCoreNum_) {
         return;
     }
-    
+
     yIndicesGm_.SetGlobalBuffer((__gm__ int64_t*)(yIndices), 0);
     yValuesGm_.SetGlobalBuffer((__gm__ T*)(yValues), 0);
     yShapeGm_.SetGlobalBuffer((__gm__ int64_t*)(yShape), rankNumbers_);
@@ -90,12 +86,13 @@ __aicore__ inline void SparseSliceEmpty<T>::Process()
     LocalTensor<int64_t> outputIndicesShapeTensor = yIndicesTmpUb_.Get<int64_t>();
     // 此处输出y_indices的shape为[0, rankNumbers_]
     outputIndicesShapeTensor.SetValue(DIGIT_ZERO, Y_INDICES_SHAPE_DIM_BASE); // 输出shape的维度
-    outputIndicesShapeTensor.SetValue(DIGIT_ONE, DIGIT_ZERO); // 输出的第一个维度
-    outputIndicesShapeTensor.SetValue(DIGIT_TWO, rankNumbers_); // 输出的第二个维度
+    outputIndicesShapeTensor.SetValue(DIGIT_ONE, DIGIT_ZERO);                // 输出的第一个维度
+    outputIndicesShapeTensor.SetValue(DIGIT_TWO, rankNumbers_);              // 输出的第二个维度
     event_t eventId2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventId2);
     WaitFlag<HardEvent::S_MTE3>(eventId2);
-    DataCopyPad(outputShape1Gm_[0], outputIndicesShapeTensor[0], {1, static_cast<uint16_t>(DIGIT_THREE * sizeof(int64_t)), 0, 0});
+    DataCopyPad(outputShape1Gm_[0], outputIndicesShapeTensor[0],
+                {1, static_cast<uint16_t>(DIGIT_THREE * sizeof(int64_t)), 0, 0});
 
     LocalTensor<int64_t> outputValuesShapeTensor = yValuesTmpUb_.Get<int64_t>();
     // 此处输出y_values的shape为[0]
@@ -104,7 +101,8 @@ __aicore__ inline void SparseSliceEmpty<T>::Process()
     event_t eventId3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventId3);
     WaitFlag<HardEvent::S_MTE3>(eventId3);
-    DataCopyPad(outputShape1Gm_[DIGIT_NINE], outputValuesShapeTensor[0], {1, static_cast<uint16_t>(DIGIT_TWO * sizeof(int64_t)), 0, 0});
+    DataCopyPad(outputShape1Gm_[DIGIT_NINE], outputValuesShapeTensor[0],
+                {1, static_cast<uint16_t>(DIGIT_TWO * sizeof(int64_t)), 0, 0});
 
     LocalTensor<int64_t> outputShapeShapeTensor = yShapeShapeTmpUb_.Get<int64_t>();
     // 此处输出y_shape的shape为[rankNumbers_]
@@ -113,7 +111,8 @@ __aicore__ inline void SparseSliceEmpty<T>::Process()
     event_t eventId4 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventId4);
     WaitFlag<HardEvent::S_MTE3>(eventId4);
-    DataCopyPad(outputShape1Gm_[DIGIT_EIGHTEEN], outputShapeShapeTensor[0], {1, static_cast<uint16_t>(DIGIT_TWO * sizeof(int64_t)), 0, 0});
+    DataCopyPad(outputShape1Gm_[DIGIT_EIGHTEEN], outputShapeShapeTensor[0],
+                {1, static_cast<uint16_t>(DIGIT_TWO * sizeof(int64_t)), 0, 0});
 }
 
 } //  namespace SparseSlice

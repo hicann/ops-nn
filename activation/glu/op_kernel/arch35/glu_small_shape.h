@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -32,8 +32,7 @@ template <typename T>
 class GluSmallShape {
 public:
     __aicore__ inline GluSmallShape(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -73,8 +72,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GluSmallShape<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
+__aicore__ inline void GluSmallShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -89,7 +87,7 @@ __aicore__ inline void GluSmallShape<T>::Init(
 
     gmXOffset = blockIdx * tilingData->numPerCore * splitSize * 2;
     gmYOffset = blockIdx * tilingData->numPerCore * splitSize;
-    
+
     SetGlobalBufferForGlu(xGm, yGm, x, y);
 
     if (splitSize % blockSize == 0) {
@@ -107,7 +105,7 @@ __aicore__ inline void GluSmallShape<T>::Init(
     one_process_out_stride = group * splitSize;
 
     isLastCore = (this->blockIdx == realCoreNum - 1) && (tailLoopNum != 0 || lastTailGroup != 0);
-    
+
     pipe.InitBuffer(inQueueX1, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
     pipe.InitBuffer(inQueueX2, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
     pipe.InitBuffer(outQueue, BUFFER_NUM, BUFFER_SIZE * sizeof(float));
@@ -196,13 +194,13 @@ __aicore__ inline void GluSmallShape<T>::ComputeSigmoidAndMul(const int64_t& cou
     LocalTensor<T> x1Local = inQueueX1.DeQue<T>();
     LocalTensor<T> x2Local = inQueueX2.DeQue<T>();
     LocalTensor<T> outLocal = outQueue.AllocTensor<T>();
-    
+
     __local_mem__ T* x1LocalPtr = (__local_mem__ T*)x1Local.GetPhyAddr();
     __local_mem__ T* x2LocalPtr = (__local_mem__ T*)x2Local.GetPhyAddr();
     __local_mem__ T* outLocalPtr = (__local_mem__ T*)outLocal.GetPhyAddr();
-    
+
     ComputeSigmoidAndMulImpl<T>(x1LocalPtr, x2LocalPtr, outLocalPtr, count);
-    
+
     inQueueX1.FreeTensor(x1Local);
     inQueueX2.FreeTensor(x2Local);
     outQueue.EnQue(outLocal);
@@ -210,8 +208,7 @@ __aicore__ inline void GluSmallShape<T>::ComputeSigmoidAndMul(const int64_t& cou
 }
 
 template <typename T>
-__aicore__ inline void GluSmallShape<T>::CopyOut(
-    const int64_t& index, const int64_t& ub_num, const int64_t& group)
+__aicore__ inline void GluSmallShape<T>::CopyOut(const int64_t& index, const int64_t& ub_num, const int64_t& group)
 {
     LocalTensor<T> outLocal = outQueue.DeQue<T>();
     if (splitSize % blockSize == 0) {

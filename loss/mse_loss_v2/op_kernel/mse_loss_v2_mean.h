@@ -20,8 +20,7 @@
 
 namespace MSELossV2Namespace {
 template <typename T>
-class MSELossV2Mean : public MSELossV2Sum<T>
-{
+class MSELossV2Mean : public MSELossV2Sum<T> {
 public:
     __aicore__ inline MSELossV2Mean(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : MSELossV2Sum<T>(pipe, tilingData), scale(tilingData->scale)
@@ -38,9 +37,8 @@ public:
         }
 
         if (this->isLastCore && this->tailElems) {
-            MSELossV2Base<T>::CopyIn(
-                cast0Local, cast1Local, this->epochs * this->tileLength,
-                this->tailTileLength + MSELossV2Base<T>::FLOAT_COUNT_PER_BLOCK);
+            MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, this->epochs * this->tileLength,
+                                     this->tailTileLength + MSELossV2Base<T>::FLOAT_COUNT_PER_BLOCK);
             this->Compute(cast0Local, cast1Local, this->tailTileLength + this->tailElems);
         } else if (this->tailTileLength) {
             MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, this->epochs * this->tileLength, this->tailTileLength);
@@ -51,8 +49,8 @@ public:
     }
 
 private:
-    __aicore__ inline void Compute(
-        const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1, uint64_t tileLength)
+    __aicore__ inline void Compute(const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1,
+                                   uint64_t tileLength)
     {
         AscendC::Sub<float>(cast0, cast0, cast1, tileLength);
         AscendC::Mul<float>(cast1, cast0, cast0, tileLength);
@@ -64,8 +62,7 @@ private:
 };
 
 template <>
-class MSELossV2Mean<float> : public MSELossV2Sum<float>
-{
+class MSELossV2Mean<float> : public MSELossV2Sum<float> {
 public:
     __aicore__ inline MSELossV2Mean(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : MSELossV2Sum<float>(pipe, tilingData), scale(tilingData->scale)
@@ -79,8 +76,8 @@ public:
         }
 
         if (this->isLastCore && this->tailElems) {
-            MSELossV2Base<float>::CopyIn(
-                this->epochs * this->tileLength, this->tailTileLength + MSELossV2Base<float>::FLOAT_COUNT_PER_BLOCK);
+            MSELossV2Base<float>::CopyIn(this->epochs * this->tileLength,
+                                         this->tailTileLength + MSELossV2Base<float>::FLOAT_COUNT_PER_BLOCK);
             this->Compute(this->tailTileLength + this->tailElems);
         } else if (this->tailTileLength) {
             MSELossV2Base<float>::CopyIn(this->epochs * this->tileLength, this->tailTileLength);

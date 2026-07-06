@@ -36,10 +36,8 @@ constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 #endif
 template <typename T = float, bool HAS_WEIGHT = false, bool HAS_POS_WEIGHT = false>
 struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
-    __aicore__ inline CalcBCEWithLogitsV2(
-        LocalTensor<T>& loss, 
-        LocalTensor<T>& predict, LocalTensor<T>& target, LocalTensor<T>& weight, LocalTensor<T>& pos_weight,
-        int32_t count)
+    __aicore__ inline CalcBCEWithLogitsV2(LocalTensor<T>& loss, LocalTensor<T>& predict, LocalTensor<T>& target,
+                                          LocalTensor<T>& weight, LocalTensor<T>& pos_weight, int32_t count)
     {
 #ifdef __CCE_AICORE__
 
@@ -82,11 +80,13 @@ struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
                 AscendC::MicroAPI::Duplicate(regOne, (T)1.0f, pregUp);
                 MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
                 MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
-                if constexpr (HAS_WEIGHT){
-                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regWeight, weightAddr, (int32_t)oneRepeat);
+                if constexpr (HAS_WEIGHT) {
+                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regWeight, weightAddr,
+                                                                                   (int32_t)oneRepeat);
                 }
-                if constexpr (HAS_POS_WEIGHT){
-                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regPosWeight, posWeightAddr, (int32_t)oneRepeat);
+                if constexpr (HAS_POS_WEIGHT) {
+                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regPosWeight, posWeightAddr,
+                                                                                   (int32_t)oneRepeat);
                 }
 
                 MicroAPI::Mins(regMinVal, regX, (T)0.0f, pregUp);
@@ -98,7 +98,7 @@ struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
 
                 MicroAPI::Sub(regLogSigmoid, regMinVal, regLog, pregUp);
 
-                if constexpr (HAS_POS_WEIGHT){
+                if constexpr (HAS_POS_WEIGHT) {
                     MicroAPI::Sub(regPWSubOne, regPosWeight, regOne, pregUp);
                     MicroAPI::Mul(regPWSubOneMulY, regPWSubOne, regY, pregUp);
                     MicroAPI::Adds(regPWSubOneMulYAddOne, regPWSubOneMulY, (T)1.0f, pregUp);
@@ -109,11 +109,12 @@ struct CalcBCEWithLogitsV2 : public Vec::ElemwiseQuaternaryOP<T, T, T, T, T> {
                 MicroAPI::Mul(regOneSubYMulX, regOneSubY, regX, pregUp);
                 MicroAPI::Sub(regLoss, regOneSubYMulX, regLogSigmoid, pregUp);
 
-                if constexpr (HAS_WEIGHT){
+                if constexpr (HAS_WEIGHT) {
                     MicroAPI::Mul(regLoss, regLoss, regWeight, pregUp);
                 }
 
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(lossAddr, regLoss, (int32_t)oneRepeat, pregUp);
+                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(lossAddr, regLoss, (int32_t)oneRepeat,
+                                                                               pregUp);
             }
         }
 #endif
@@ -141,7 +142,8 @@ struct SigmoidCEWithLogitsV2HasTwoWeight {
     using OpCopyWeightCast = Bind<Vec::Cast<T, U, 0>, OpCopyWeight>;
     using OpCopyPosWeightCast = Bind<Vec::Cast<T, U, 0>, OpCopyPosWeight>;
 
-    using OpLoss = Bind<CalcBCEWithLogitsV2<T, true, true>, OpCopyXCast, OpCopyYCast, OpCopyWeightCast, OpCopyPosWeightCast>;
+    using OpLoss = Bind<CalcBCEWithLogitsV2<T, true, true>, OpCopyXCast, OpCopyYCast, OpCopyWeightCast,
+                        OpCopyPosWeightCast>;
 
     using OpRes = Bind<Vec::Cast<R, T, CAST_MODE_RINT>, OpLoss>;
 
@@ -185,7 +187,8 @@ struct SigmoidCEWithLogitsV2PosWeightOnly {
     using OpCopyYCast = Bind<Vec::Cast<T, U, 0>, OpCopyY>;
     using OpCopyPosWeightCast = Bind<Vec::Cast<T, U, 0>, OpCopyPosWeight>;
 
-    using OpLoss = Bind<CalcBCEWithLogitsV2<T, false, true>, OpCopyXCast, OpCopyYCast, OpCopyXCast, OpCopyPosWeightCast>;
+    using OpLoss = Bind<CalcBCEWithLogitsV2<T, false, true>, OpCopyXCast, OpCopyYCast, OpCopyXCast,
+                        OpCopyPosWeightCast>;
 
     using OpRes = Bind<Vec::Cast<R, T, CAST_MODE_RINT>, OpLoss>;
 

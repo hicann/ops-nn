@@ -46,8 +46,8 @@ constexpr uint32_t SCHEDULE_MODE = 1; // batchmode
 
 static const vector<DataType> SUPPORTED_DTYPE = {DT_FLOAT, DT_FLOAT16, DT_BF16};
 
-inline static ge::graphStatus CTCLossV2SetTilingData(
-    gert::TilingContext* context, CTCLossV2TilingData4AscendC& tilingData)
+inline static ge::graphStatus CTCLossV2SetTilingData(gert::TilingContext* context,
+                                                     CTCLossV2TilingData4AscendC& tilingData)
 {
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
@@ -102,8 +102,8 @@ inline static bool IsInputeLengthValid(const gert::Tensor* inputLengths, int64_t
     return true;
 }
 
-inline static bool IsLargeSize(
-    int64_t logProbsDimSize0, int64_t logProbsDimSize1, int64_t logProbsDimSize2, int64_t maxTargetLength)
+inline static bool IsLargeSize(int64_t logProbsDimSize0, int64_t logProbsDimSize1, int64_t logProbsDimSize2,
+                               int64_t maxTargetLength)
 {
     return (logProbsDimSize0 > INT32_MAX) || (logProbsDimSize1 > INT32_MAX) || (logProbsDimSize2 > INT32_MAX) ||
            (maxTargetLength > INT32_MAX) || (logProbsDimSize0 * logProbsDimSize1 > INT32_MAX) ||
@@ -120,11 +120,10 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, logProbs);
     auto logProbsDesc = context->GetInputDesc(LOG_PROBS_IDX);
     DataType logProbsDtype = logProbsDesc->GetDataType();
-    OP_CHECK_IF(
-        find(SUPPORTED_DTYPE.begin(), SUPPORTED_DTYPE.end(), logProbsDtype) == SUPPORTED_DTYPE.end(),
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "log_probs",
-            Ops::Base::ToString(logProbsDtype).c_str(), "float32, float16 or bfloat16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(find(SUPPORTED_DTYPE.begin(), SUPPORTED_DTYPE.end(), logProbsDtype) == SUPPORTED_DTYPE.end(),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "log_probs",
+                                          Ops::Base::ToString(logProbsDtype).c_str(), "float32, float16 or bfloat16"),
+                return ge::GRAPH_FAILED);
     auto logProbsShape = logProbs->GetStorageShape();
     size_t logProbsDimNum = logProbsShape.GetDimNum();
     int64_t logProbsDimSize0 = 0;
@@ -155,8 +154,8 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     DataType inputLengthsDtype = inputLengthsDesc->GetDataType();
     if (inputLengthsDtype == DT_INT32 && !IsInputeLengthValid<int32_t>(inputLengths, batchSize, maxInputLength)) {
         return ge::GRAPH_FAILED;
-    } else if (
-        inputLengthsDtype == DT_INT64 && !IsInputeLengthValid<int64_t>(inputLengths, batchSize, maxInputLength)) {
+    } else if (inputLengthsDtype == DT_INT64 &&
+               !IsInputeLengthValid<int64_t>(inputLengths, batchSize, maxInputLength)) {
         return ge::GRAPH_FAILED;
     }
     tilingData.set_maxInputLength(maxInputLength);
@@ -227,8 +226,8 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     if (logProbsDtype == DT_FLOAT) {
         isFP32 = CTC_LOSS_V2_TPL_KEY_TRUE;
     } else {
-        EXTRA_WORKSPACE_SIZE =
-            Ops::Base::CeilAlign((DIM2 * maxTargetLength + 1) * FLOAT32_SIZE * batchSize * logProbsDimSize0, BLOCK);
+        EXTRA_WORKSPACE_SIZE = Ops::Base::CeilAlign(
+            (DIM2 * maxTargetLength + 1) * FLOAT32_SIZE * batchSize * logProbsDimSize0, BLOCK);
     }
     if (!IsLargeSize(logProbsDimSize0, logProbsDimSize1, logProbsDimSize2, maxTargetLength)) {
         MAX_THREAD = THREAD_NUM_1024;
@@ -242,8 +241,8 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
         threadsTarget = DIM2 * maxTargetLength + 1;
     }
     int32_t threadsMaxBatch = MAX_THREAD / threadsTarget;
-    OP_CHECK_IF(
-        totalCoreNum == 0, OP_LOGE("Tiling4CTCLossV2ForAscendC", "totalCoreNum is zero."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(totalCoreNum == 0, OP_LOGE("Tiling4CTCLossV2ForAscendC", "totalCoreNum is zero."),
+                return ge::GRAPH_FAILED);
     int32_t threadsPerBlockBatch = (logProbsDimSize1 + totalCoreNum - 1) / totalCoreNum;
     blockDimX = threadsTarget;
     blockDimY = threadsPerBlockBatch < threadsMaxBatch ? threadsPerBlockBatch : threadsMaxBatch;
@@ -266,9 +265,9 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = SYSTEM_WORKSPACE_SIZE + EXTRA_WORKSPACE_SIZE;
     tilingData.set_workspaceSize(currentWorkspace[0]);
-    OP_CHECK_IF(
-        CTCLossV2SetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "CTCLossV2SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CTCLossV2SetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "CTCLossV2SetTilingData set tiling data fail."),
+                return ge::GRAPH_FAILED);
     PrintTilingData(tilingData);
     return ge::GRAPH_SUCCESS;
 }
@@ -281,9 +280,9 @@ ge::graphStatus SetTotalCoreNum(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo4AscendC->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo4AscendC->totalCoreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "TilingPrepare4CTCLossV2 fail to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo4AscendC->totalCoreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "TilingPrepare4CTCLossV2 fail to get core num."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -37,4 +37,4 @@ ACLNN_API aclnnStatus aclnnBinaryCrossEntropyBackward(void* workspace, uint64_t 
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_BINARY_CROSS_ENTROPY_BACKWARD_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_BINARY_CROSS_ENTROPY_BACKWARD_H_

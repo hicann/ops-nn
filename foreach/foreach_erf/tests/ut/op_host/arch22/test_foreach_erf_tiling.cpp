@@ -23,16 +23,13 @@
 
 class ForeachCommonTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "ForeachCommonTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachCommonTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "ForeachCommonTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachCommonTiling TearDown" << std::endl; }
 };
 
-static string to_string(const std::stringstream& tiling_data) {
+static string to_string(const std::stringstream& tiling_data)
+{
     auto data = tiling_data.str();
     string result;
     int32_t tmp = 0;
@@ -45,7 +42,8 @@ static string to_string(const std::stringstream& tiling_data) {
     return result;
 }
 
-TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float16_1) {
+TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float16_1)
+{
     std::string op_type("ForeachErf");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -81,12 +79,12 @@ TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float16_1) {
     } compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -130,7 +128,8 @@ TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float16_1) {
     ASSERT_EQ(tiling_key, 1);
 }
 
-TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float32_2) {
+TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float32_2)
+{
     std::string op_type("ForeachErf");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -166,12 +165,12 @@ TEST_F(ForeachCommonTiling, foreach_erf_test_tiling_float32_2) {
     } compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);

@@ -20,13 +20,13 @@ extern "C" {
 #endif
 
 // 将scale转为硬件需要的uint64_t类型数据
-aclnnStatus TransQuantScaleToM1(const float *scaleArray, uint64_t scaleSize, uint64_t **quantParam);
+aclnnStatus TransQuantScaleToM1(const float* scaleArray, uint64_t scaleSize, uint64_t** quantParam);
 
 // 将offset转为硬件需要的uint64_t类型数据
-aclnnStatus TransQuantOffsetToToM1(const float *offsetArray, uint64_t offsetSize, uint64_t **quantParam);
+aclnnStatus TransQuantOffsetToToM1(const float* offsetArray, uint64_t offsetSize, uint64_t** quantParam);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_SRC_LEVEL2_QUANT_UTIL_H_
+#endif // OP_API_SRC_LEVEL2_QUANT_UTIL_H_

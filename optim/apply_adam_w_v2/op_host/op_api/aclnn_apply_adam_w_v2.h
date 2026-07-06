@@ -22,13 +22,14 @@ extern "C" {
  * @brief aclnnApplyAdamWV2的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  */
-ACLNN_API aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
-    aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* maxGradNormOptionalRef, const aclTensor* grad,
-    const aclTensor* step, float lr, float beta1, float beta2, float weightDecay, float eps, bool amsgrad,
-    bool maximize, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef,
+                                                        aclTensor* maxGradNormOptionalRef, const aclTensor* grad,
+                                                        const aclTensor* step, float lr, float beta1, float beta2,
+                                                        float weightDecay, float eps, bool amsgrad, bool maximize,
+                                                        uint64_t* workspaceSize, aclOpExecutor** executor);
 /* @brief aclnnApplyAdamWV2的第二段接口，用于执行计算。 */
-ACLNN_API aclnnStatus
-aclnnApplyAdamWV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnApplyAdamWV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        aclrtStream stream);
 
 #ifdef __cplusplus
 }

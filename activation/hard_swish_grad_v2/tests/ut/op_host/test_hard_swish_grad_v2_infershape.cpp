@@ -16,15 +16,9 @@
 
 class HardSwishGradV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "HardSwishGradV2 Proto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "HardSwishGradV2 Proto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "HardSwishGradV2 Proto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "HardSwishGradV2 Proto TearDown" << std::endl; }
 };
 
 TEST_F(HardSwishGradV2, HardSwishGradV2_infershape_case_0)
@@ -32,7 +26,7 @@ TEST_F(HardSwishGradV2, HardSwishGradV2_infershape_case_0)
     gert::StorageShape grad_output_shape = {{2, 4}, {2, 4}};
     gert::StorageShape self_shape = {{2, 4}, {2, 4}};
     gert::StorageShape out_shape = {{}, {}};
-    
+
     ge::op::HardSwishGradV2 op;
     op.UpdateInputDesc("gradOutput", create_desc({2, 4}, ge::DT_BF16));
     op.UpdateInputDesc("self", create_desc({2, 4}, ge::DT_BF16));

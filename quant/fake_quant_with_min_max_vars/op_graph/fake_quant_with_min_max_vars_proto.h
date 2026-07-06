@@ -48,6 +48,6 @@ REG_OP(FakeQuantWithMinMaxVars)
     .ATTR(num_bits, Int, 8)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVars)
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_OP_PROTO_INC_FakeQuantWithMinMaxVars_H_
+#endif // OPS_OP_PROTO_INC_FakeQuantWithMinMaxVars_H_

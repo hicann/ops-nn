@@ -23,9 +23,9 @@ using namespace AscendC;
 using namespace CrossEntropyLoss;
 
 template <uint64_t schId, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
-__global__ __aicore__ void cross_entropy_loss(
-    GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR log_prob, GM_ADDR zloss, GM_ADDR lse_for_zloss,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void cross_entropy_loss(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss,
+                                              GM_ADDR log_prob, GM_ADDR zloss, GM_ADDR lse_for_zloss, GM_ADDR workspace,
+                                              GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(CrossEntropyLossRegBaseTilingData);

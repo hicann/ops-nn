@@ -39,7 +39,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     size_t usrSize = 0;
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t* currentWorkspace = context->GetWorkspaceSizes(1); 
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
@@ -47,9 +47,8 @@ static ge::graphStatus GatherElementsV3TilingFunc(gert::TilingContext* context)
 {
     GatherElementsV3TilingData* tiling = context->GetTilingData<GatherElementsV3TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(GatherElementsV3TilingData), 0, sizeof(GatherElementsV3TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(GatherElementsV3TilingData), 0, sizeof(GatherElementsV3TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // ---------- 1. 平台信息 ----------
     uint64_t ubSize;
@@ -77,7 +76,8 @@ static ge::graphStatus GatherElementsV3TilingFunc(gert::TilingContext* context)
     uint32_t alignX = 32 / typeLength;
     constexpr uint32_t alignIdx = 8;
     uint32_t alignNum = (alignX > alignIdx) ? alignX : alignIdx;
-    if (alignNum == 0) alignNum = 1;
+    if (alignNum == 0)
+        alignNum = 1;
 
     // ---------- 5. 维度 flatten ----------
     uint32_t xPre = 1, xPost = 1, xGather = xShape.GetDim(dim);
@@ -100,7 +100,7 @@ static ge::graphStatus GatherElementsV3TilingFunc(gert::TilingContext* context)
     }
     if (usedCore == 0) {
         OP_LOGE(context, "coreNum is 0");
-        return ge::GRAPH_FAILED; 
+        return ge::GRAPH_FAILED;
     }
 
     // ---------- 7. tileSize ----------
@@ -113,35 +113,37 @@ static ge::graphStatus GatherElementsV3TilingFunc(gert::TilingContext* context)
     if (alignNum > 1) {
         maxTileElements &= ~(uint64_t)(alignNum - 1);
     }
-    if (maxTileElements == 0) maxTileElements = alignNum;
+    if (maxTileElements == 0)
+        maxTileElements = alignNum;
 
     uint32_t tileSize = (uint32_t)maxTileElements;
-    if (tileSize > idxPost) tileSize = idxPost;
+    if (tileSize > idxPost)
+        tileSize = idxPost;
 
     // ---------- 8. 写入 tiling ----------
-    tiling->xPreDim     = xPre;
-    tiling->xGatherDim  = xGather;
-    tiling->xPostDim    = xPost;
-    tiling->idxPreDim   = idxPre;
-    tiling->idxGatherDim= idxGather;
-    tiling->idxPostDim  = idxPost;
-    tiling->tileSize    = tileSize;
-    tiling->usedCores   = usedCore;
+    tiling->xPreDim = xPre;
+    tiling->xGatherDim = xGather;
+    tiling->xPostDim = xPost;
+    tiling->idxPreDim = idxPre;
+    tiling->idxGatherDim = idxGather;
+    tiling->idxPostDim = idxPost;
+    tiling->tileSize = tileSize;
+    tiling->usedCores = usedCore;
 
     // ---------- 9. workspace / blockDim ----------
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(tiling->usedCores);
 
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingParseForGatherElementsV3([[maybe_unused]] gert::TilingParseContext* context)
-{   
+{
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(GatherElementsV3).Tiling(GatherElementsV3TilingFunc).TilingParse<GatherElementsV3CompileInfo>(TilingParseForGatherElementsV3);
-} 
+IMPL_OP_OPTILING(GatherElementsV3)
+    .Tiling(GatherElementsV3TilingFunc)
+    .TilingParse<GatherElementsV3CompileInfo>(TilingParseForGatherElementsV3);
+} // namespace optiling

@@ -68,20 +68,20 @@ __aicore__ inline void CalcParamsL12L0b(Intf* self)
     uint32_t hkwk16 = self->ctx.hwK_ * self->ctx.tiling_->n0;
     self->ctx.load3d_.kStartPt = ((self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16;
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
-        self->ctx.load3d_.channelSize =
-            Ceil(self->ctx.load3d_.kStartPt + self->ctx.baseUseN_, hkwk16) * self->ctx.tiling_->n0;
+        self->ctx.load3d_.channelSize = Ceil(self->ctx.load3d_.kStartPt + self->ctx.baseUseN_, hkwk16) *
+                                        self->ctx.tiling_->n0;
     } else {
-        self->ctx.load3d_.channelSize =
-            Ceil(self->ctx.load3d_.kStartPt + self->ctx.baseUseN_, hkwk16) * self->ctx.tiling_->channelSize;
+        self->ctx.load3d_.channelSize = Ceil(self->ctx.load3d_.kStartPt + self->ctx.baseUseN_, hkwk16) *
+                                        self->ctx.tiling_->channelSize;
     }
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL12L0a(
-    Intf* self, const LocalTensor<typename Intf::SrcT>& l1AMatrix, uint32_t kPos, LocalTensor<typename Intf::SrcT>& l0a)
+static __aicore__ inline void LoadL12L0a(Intf* self, const LocalTensor<typename Intf::SrcT>& l1AMatrix, uint32_t kPos,
+                                         LocalTensor<typename Intf::SrcT>& l0a)
 {
-    uint32_t kOffset =
-        ShiftDivChannelSize<Intf>((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->k0);
+    uint32_t kOffset = ShiftDivChannelSize<Intf>((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK,
+                                                 self->ctx.tiling_->k0);
 
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         if (likely(!self->ctx.isSplitWo_)) {
@@ -91,9 +91,9 @@ static __aicore__ inline void LoadL12L0a(
             kOffset = ShiftDivM0((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->m0);
             self->ctx.load2dv2_.srcStride = ShiftDivM0(self->ctx.alignedL1UseKa_, self->ctx.tiling_->m0);
             self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseK_, self->ctx.tiling_->m0);
-            self->ctx.srcL12L0aOffset_ =
-                (kOffset * self->ctx.tiling_->m0) * self->ctx.tiling_->k0 +
-                (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ % self->ctx.singleShapeWo_ * self->ctx.tiling_->k0;
+            self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.tiling_->m0) * self->ctx.tiling_->k0 +
+                                         (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ %
+                                             self->ctx.singleShapeWo_ * self->ctx.tiling_->k0;
         }
     } else if (self->ctx.baseUseM_ == 1) { // fp16 且 baseUseM_ == 1
         self->ctx.load2dv2_.kStep = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
@@ -104,23 +104,23 @@ static __aicore__ inline void LoadL12L0a(
         if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0;
         } else {
-            self->ctx.srcL12L0aOffset_ =
-                (kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0 +
-                (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ % self->ctx.singleShapeWo_ * self->ctx.tiling_->m0;
+            self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0 +
+                                         (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ %
+                                             self->ctx.singleShapeWo_ * self->ctx.tiling_->m0;
         }
     }
     LoadData(l0a[self->ctx.dstL12L0aOffset_], l1AMatrix[self->ctx.srcL12L0aOffset_], self->ctx.load2dv2_);
 }
 
 template <class Intf>
-__aicore__ inline void LoadL12L0bFp32(
-    Intf* self, const LocalTensor<typename Intf::SrcT>& l1BMatrix, LocalTensor<typename Intf::SrcT>& l0b)
+__aicore__ inline void LoadL12L0bFp32(Intf* self, const LocalTensor<typename Intf::SrcT>& l1BMatrix,
+                                      LocalTensor<typename Intf::SrcT>& l0b)
 {
     // 由于fp32是通过k_repeat重复载入，先加载c0上数据，再加载c1数据（两者并不连续，中间隔着hkwkc0），两者合并为整体数据
     // 当前计算的kStart是c0连续的情况，c0不连续时，跳过已计算的数据为kStart需除以k_repeat，kStart为src跳过的地址
     uint32_t hkwk16 = self->ctx.hwK_ * self->ctx.tiling_->n0;
-    self->ctx.load3d_.kStartPt =
-        (((self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16) / DOUBLE;
+    self->ctx.load3d_.kStartPt = (((self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16) /
+                                 DOUBLE;
 
     // 先加载c0上的数据， 使用k_repeat方式来加载c1上的8个数， 从而凑齐16个数
     uint16_t repeatStride = (self->ctx.tiling_->singleCoreCin <= 8) ?
@@ -159,8 +159,8 @@ __aicore__ inline void LoadL12L0bFp32(
 }
 
 template <class Intf>
-__aicore__ inline void LoadL12L0b(
-    Intf* self, const LocalTensor<typename Intf::SrcT>& l1BMatrix, LocalTensor<typename Intf::SrcT>& l0b)
+__aicore__ inline void LoadL12L0b(Intf* self, const LocalTensor<typename Intf::SrcT>& l1BMatrix,
+                                  LocalTensor<typename Intf::SrcT>& l0b)
 {
     // load3dStepM
     // fp32时，K轴为8，N轴为16，M轴为16，因此kstep为baseUseK_/8

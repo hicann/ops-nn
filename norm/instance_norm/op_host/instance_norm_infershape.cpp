@@ -49,7 +49,8 @@ static ge::graphStatus InferShape4InstanceNorm(gert::InferShapeContext* context)
         if (i == 0) {
             mean_shape->SetDim(i, x_shape->GetDim(i));
             var_shape->SetDim(i, x_shape->GetDim(i));
-        } else if (i == 1 && (x_format == ge::FORMAT_NCHW || x_format == ge::FORMAT_NCDHW || x_format == ge::FORMAT_ND)) {
+        } else if (i == 1 &&
+                   (x_format == ge::FORMAT_NCHW || x_format == ge::FORMAT_NCDHW || x_format == ge::FORMAT_ND)) {
             mean_shape->SetDim(i, x_shape->GetDim(i));
             var_shape->SetDim(i, x_shape->GetDim(i));
         } else if (i == (x_dim_num - 1) && (x_format == ge::FORMAT_NHWC || x_format == ge::FORMAT_NDHWC)) {

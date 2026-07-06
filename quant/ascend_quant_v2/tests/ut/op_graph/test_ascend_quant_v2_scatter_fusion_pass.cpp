@@ -28,7 +28,8 @@ using namespace ops;
 
 class AscendQuantV2ScatterFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
+    static void SetUpTestCase()
+    {
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
@@ -38,7 +39,8 @@ protected:
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
@@ -48,30 +50,29 @@ protected:
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
-    static void InferShapeForTest(
-        DataType dtype1, Shape& shape1, DataType dtype2, Shape& shape2, DataType dtype3, Shape& shape3,
-        es::EsTensorHolder& input0, es::EsTensorHolder& input1, es::EsTensorHolder& input2, es::EsTensorHolder& input3,
-        es::EsTensorHolder& op1, es::EsTensorHolder& op2, int dstType = 2,
-        es::EsTensorHolder* offset = nullptr)
+    static void InferShapeForTest(DataType dtype1, Shape& shape1, DataType dtype2, Shape& shape2, DataType dtype3,
+                                  Shape& shape3, es::EsTensorHolder& input0, es::EsTensorHolder& input1,
+                                  es::EsTensorHolder& input2, es::EsTensorHolder& input3, es::EsTensorHolder& op1,
+                                  es::EsTensorHolder& op2, int dstType = 2, es::EsTensorHolder* offset = nullptr)
     {
         TensorDesc x1_output_desc;
         input0.GetProducer()->GetOutputDesc(0, x1_output_desc);
         x1_output_desc.SetDataType(dtype1);
         x1_output_desc.SetShape(shape1);
         input0.GetProducer()->UpdateOutputDesc(0, x1_output_desc);
-        //input1
+        // input1
         TensorDesc x2_output_desc;
         input1.GetProducer()->GetOutputDesc(0, x2_output_desc);
         x2_output_desc.SetDataType(dtype1);
         x2_output_desc.SetShape(shape2);
         input1.GetProducer()->UpdateOutputDesc(0, x2_output_desc);
-        //input2
+        // input2
         TensorDesc x3_output_desc;
         input2.GetProducer()->GetOutputDesc(0, x3_output_desc);
         x3_output_desc.SetDataType(dtype2);
         x3_output_desc.SetShape(shape3);
         input2.GetProducer()->UpdateOutputDesc(0, x3_output_desc);
-        //input3
+        // input3
         TensorDesc x4_output_desc;
         input3.GetProducer()->GetOutputDesc(0, x4_output_desc);
         x4_output_desc.SetDataType(dtype3);
@@ -119,26 +120,22 @@ protected:
         auto graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
 
         auto quantV2Node = es::CompliantNodeBuilder(graphPtr)
-            .OpType("AscendQuantV2")
-            .Name("AscendQuantV2")
-            .IrDefInputs({
-                {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"scale", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"offset", es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-            })
-            .IrDefOutputs({
-                {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-            })
-            .Build();
+                               .OpType("AscendQuantV2")
+                               .Name("AscendQuantV2")
+                               .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                             {"scale", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                             {"offset", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                               .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                               .Build();
 
         es::AddEdgeAndUpdatePeerDesc(*graphPtr, *x.GetProducer(), x.GetProducerOutIndex(), quantV2Node, 0);
         es::AddEdgeAndUpdatePeerDesc(*graphPtr, *scale.GetProducer(), scale.GetProducerOutIndex(), quantV2Node, 1);
         if (offset != nullptr) {
-            es::AddEdgeAndUpdatePeerDesc(*graphPtr, *offset->GetProducer(), offset->GetProducerOutIndex(), quantV2Node, 2);
+            es::AddEdgeAndUpdatePeerDesc(*graphPtr, *offset->GetProducer(), offset->GetProducerOutIndex(), quantV2Node,
+                                         2);
         }
 
-        return es::EsTensorHolder(
-            graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(quantV2Node, 0));
+        return es::EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(quantV2Node, 0));
     }
 
     es::EsTensorHolder BuildScatter(es::EsGraphBuilder& graphBuilder, const es::EsTensorHolder& var,
@@ -147,42 +144,42 @@ protected:
         auto graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
         // Build Scatter node (updates from AscendQuantV2 output)
         auto scatterNode = es::CompliantNodeBuilder(graphPtr)
-            .OpType("Scatter")
-            .Name("Scatter")
-            .IrDefInputs({
-                {"var", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-            })
-            .IrDefOutputs({
-                {"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-            })
-            .IrDefAttrs({
-                {"reduce", es::CompliantNodeBuilder::kEsAttrOptional, "String", es::CreateFrom(ge::AscendString("update"))},
-                {"axis", es::CompliantNodeBuilder::kEsAttrOptional, "Int", es::CreateFrom(static_cast<int64_t>(0))}
-            })
-            .Build();
+                               .OpType("Scatter")
+                               .Name("Scatter")
+                               .IrDefInputs({{"var", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                             {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                             {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                               .IrDefOutputs({{"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                               .IrDefAttrs({{"reduce", es::CompliantNodeBuilder::kEsAttrOptional, "String",
+                                             es::CreateFrom(ge::AscendString("update"))},
+                                            {"axis", es::CompliantNodeBuilder::kEsAttrOptional, "Int",
+                                             es::CreateFrom(static_cast<int64_t>(0))}})
+                               .Build();
 
         // Connect inputs to Scatter
         es::AddEdgeAndUpdatePeerDesc(*graphPtr, *var.GetProducer(), var.GetProducerOutIndex(), scatterNode, 0);
         es::AddEdgeAndUpdatePeerDesc(*graphPtr, *indices.GetProducer(), indices.GetProducerOutIndex(), scatterNode, 1);
-        es::AddEdgeAndUpdatePeerDesc(*graphPtr, *ascend_quant_v2.GetProducer(), ascend_quant_v2.GetProducerOutIndex(), scatterNode, 2);
+        es::AddEdgeAndUpdatePeerDesc(*graphPtr, *ascend_quant_v2.GetProducer(), ascend_quant_v2.GetProducerOutIndex(),
+                                     scatterNode, 2);
 
         // Build graph with scatter output
-        auto scatterOutput = es::EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(scatterNode, 0));
+        auto scatterOutput = es::EsTensorHolder(
+            graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(scatterNode, 0));
         return scatterOutput;
     }
 };
 
 // Test 1: Pattern creation test
-TEST_F(AscendQuantV2ScatterFusionPassTest, pattern_test) {
+TEST_F(AscendQuantV2ScatterFusionPassTest, pattern_test)
+{
     ops::AscendQuantV2ScatterFusionPass pass;
     std::vector<PatternUniqPtr> patterns = pass.Patterns();
     EXPECT_GT(patterns.size(), 0);
 }
 
 // Test 2: Pattern structure test - verify pattern has correct structure
-TEST_F(AscendQuantV2ScatterFusionPassTest, pattern_structure_test) {
+TEST_F(AscendQuantV2ScatterFusionPassTest, pattern_structure_test)
+{
     ops::AscendQuantV2ScatterFusionPass pass;
     std::vector<PatternUniqPtr> patterns = pass.Patterns();
     EXPECT_EQ(patterns.size(), 2);
@@ -206,8 +203,8 @@ TEST_F(AscendQuantV2ScatterFusionPassTest, ascend_quant_v2_scatter_fusion_OK)
     auto ascend_quant_v2 = BuildAscendQuantV2(graph_builder, x, scale);
     auto scatter = BuildScatter(graph_builder, var, indices, ascend_quant_v2);
 
-    InferShapeForTest(
-        DT_BF16, shape1, DT_INT8, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2, scatter);
+    InferShapeForTest(DT_BF16, shape1, DT_INT8, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2,
+                      scatter);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset(std::vector<es::EsTensorHolder>{scatter});
 
@@ -250,9 +247,8 @@ TEST_F(AscendQuantV2ScatterFusionPassTest, ascend_quant_v2_scatter_fusion_fp8_e5
     auto ascend_quant_v2 = BuildAscendQuantV2(graph_builder, x, scale);
     auto scatter = BuildScatter(graph_builder, var, indices, ascend_quant_v2);
 
-    InferShapeForTest(
-        DT_BF16, shape1, DT_FLOAT8_E5M2, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2, scatter,
-        DT_FLOAT8_E5M2);
+    InferShapeForTest(DT_BF16, shape1, DT_FLOAT8_E5M2, shape2, DT_INT64, shape3, x, scale, var, indices,
+                      ascend_quant_v2, scatter, DT_FLOAT8_E5M2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset(std::vector<es::EsTensorHolder>{scatter});
 
@@ -295,9 +291,8 @@ TEST_F(AscendQuantV2ScatterFusionPassTest, ascend_quant_v2_scatter_fusion_fp8_e4
     auto ascend_quant_v2 = BuildAscendQuantV2(graph_builder, x, scale);
     auto scatter = BuildScatter(graph_builder, var, indices, ascend_quant_v2);
 
-    InferShapeForTest(
-        DT_BF16, shape1, DT_FLOAT8_E4M3FN, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2, scatter,
-        DT_FLOAT8_E4M3FN);
+    InferShapeForTest(DT_BF16, shape1, DT_FLOAT8_E4M3FN, shape2, DT_INT64, shape3, x, scale, var, indices,
+                      ascend_quant_v2, scatter, DT_FLOAT8_E4M3FN);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset(std::vector<es::EsTensorHolder>{scatter});
 
@@ -340,9 +335,8 @@ TEST_F(AscendQuantV2ScatterFusionPassTest, ascend_quant_v2_scatter_fusion_hifloa
     auto ascend_quant_v2 = BuildAscendQuantV2(graph_builder, x, scale);
     auto scatter = BuildScatter(graph_builder, var, indices, ascend_quant_v2);
 
-    InferShapeForTest(
-        DT_BF16, shape1, DT_HIFLOAT8, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2, scatter,
-        DT_HIFLOAT8);
+    InferShapeForTest(DT_BF16, shape1, DT_HIFLOAT8, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2,
+                      scatter, DT_HIFLOAT8);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset(std::vector<es::EsTensorHolder>{scatter});
 
@@ -386,9 +380,8 @@ TEST_F(AscendQuantV2ScatterFusionPassTest, ascend_quant_v2_scatter_fusion_int8_w
     auto ascend_quant_v2 = BuildAscendQuantV2(graph_builder, x, scale, &offset);
     auto scatter = BuildScatter(graph_builder, var, indices, ascend_quant_v2);
 
-    InferShapeForTest(
-        DT_BF16, shape1, DT_INT8, shape2, DT_INT64, shape3, x, scale, var, indices,
-        ascend_quant_v2, scatter, 2, &offset);
+    InferShapeForTest(DT_BF16, shape1, DT_INT8, shape2, DT_INT64, shape3, x, scale, var, indices, ascend_quant_v2,
+                      scatter, 2, &offset);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset(std::vector<es::EsTensorHolder>{scatter});
 

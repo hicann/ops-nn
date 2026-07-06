@@ -40,23 +40,23 @@
 
 namespace NsCeluV3 {
 
-using AscendC::TPipe;
-using AscendC::TQue;
-using AscendC::TBuf;
-using AscendC::QuePosition;
+using AscendC::Add;
+using AscendC::Adds;
+using AscendC::Cast;
+using AscendC::DataCopyPad;
+using AscendC::DataCopyParams;
+using AscendC::Exp;
+using AscendC::GetBlockIdx;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
-using AscendC::DataCopyParams;
-using AscendC::DataCopyPad;
-using AscendC::RoundMode;
-using AscendC::GetBlockIdx;
-using AscendC::Muls;
-using AscendC::Exp;
-using AscendC::Adds;
-using AscendC::Mins;
 using AscendC::Maxs;
-using AscendC::Add;
-using AscendC::Cast;
+using AscendC::Mins;
+using AscendC::Muls;
+using AscendC::QuePosition;
+using AscendC::RoundMode;
+using AscendC::TBuf;
+using AscendC::TPipe;
+using AscendC::TQue;
 
 template <typename T>
 class CeluV3 {
@@ -72,19 +72,18 @@ private:
     __aicore__ inline void CopyOut(int64_t gmOffset, int64_t currentNum);
 
     // float32 direct computation
-    __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat,
-                                          int64_t alignedNum);
+    __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat, int64_t alignedNum);
     // float16/bf16 path: cast to fp32, compute, cast back
     template <typename SrcT>
-    __aicore__ inline void ComputeWithCast(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal,
-                                           int64_t currentNum, int64_t alignedNum);
+    __aicore__ inline void ComputeWithCast(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal, int64_t currentNum,
+                                           int64_t alignedNum);
 
 private:
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> inputQueue;
     TQue<QuePosition::VECOUT, 1> outputQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf1_;  // exp intermediate (float32)
-    TBuf<QuePosition::VECCALC> tmpBuf2_;  // max(0,x) intermediate (float32)
+    TBuf<QuePosition::VECCALC> tmpBuf1_; // exp intermediate (float32)
+    TBuf<QuePosition::VECCALC> tmpBuf2_; // max(0,x) intermediate (float32)
 
     GlobalTensor<T> selfGM_;
     GlobalTensor<T> outGM_;
@@ -155,9 +154,8 @@ __aicore__ inline void CeluV3<T>::CopyOut(int64_t gmOffset, int64_t currentNum)
 }
 
 template <typename T>
-__aicore__ inline void CeluV3<T>::ComputeFloat32(LocalTensor<float>& xFloat,
-                                                   LocalTensor<float>& yFloat,
-                                                   int64_t alignedNum)
+__aicore__ inline void CeluV3<T>::ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat,
+                                                 int64_t alignedNum)
 {
     // Get temporary buffers
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
@@ -188,10 +186,8 @@ __aicore__ inline void CeluV3<T>::ComputeFloat32(LocalTensor<float>& xFloat,
 
 template <typename T>
 template <typename SrcT>
-__aicore__ inline void CeluV3<T>::ComputeWithCast(LocalTensor<SrcT>& xLocal,
-                                                    LocalTensor<SrcT>& yLocal,
-                                                    int64_t currentNum,
-                                                    int64_t alignedNum)
+__aicore__ inline void CeluV3<T>::ComputeWithCast(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal,
+                                                  int64_t currentNum, int64_t alignedNum)
 {
     // Get temporary buffers (used as fp32 workspace)
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
@@ -238,8 +234,8 @@ __aicore__ inline void CeluV3<T>::Compute(int64_t currentNum)
     // For fp16/bf16: Cast between T and float requires alignment to both
     //   32/sizeof(T) = 16 elements and 32/sizeof(float) = 8 elements,
     //   so use 16-element alignment (LCM of 8 and 16).
-    constexpr int64_t floatBlock = 32 / sizeof(float);  // 8
-    constexpr int64_t typeBlock = 32 / sizeof(T);        // 8 for float, 16 for half/bf16
+    constexpr int64_t floatBlock = 32 / sizeof(float); // 8
+    constexpr int64_t typeBlock = 32 / sizeof(T);      // 8 for float, 16 for half/bf16
     constexpr int64_t alignBlock = (floatBlock > typeBlock) ? floatBlock : typeBlock;
     int64_t alignedNum = ((currentNum + alignBlock - 1) / alignBlock) * alignBlock;
 

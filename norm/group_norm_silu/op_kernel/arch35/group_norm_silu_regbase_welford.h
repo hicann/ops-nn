@@ -19,13 +19,11 @@
 namespace GroupNormSilu {
 using namespace AscendC;
 template <typename T1, typename T2, int32_t BUFFER_NUM = 2>
-class GroupNormSiluWelford
-{
+class GroupNormSiluWelford {
 public:
     __aicore__ inline GroupNormSiluWelford(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluRegbaseTilingData* tilingData)
     {
         tiling = tilingData;
         blockIdx = GetBlockIdx();
@@ -69,13 +67,11 @@ public:
             if constexpr (sizeof(T2) == sizeof(float)) {
                 LocalTensor<T2> meanOutTensorNew = meanOutTensor.template ReinterpretCast<T2>();
                 LocalTensor<T2> rstdOutTensorNew = rstdOutTensor.template ReinterpretCast<T2>();
-                ProcessMeanAndRstd<T2>(
-                    meanTensor, meanOutTensorNew, meanT2Gm, rstdTensor, rstdOutTensorNew, rstdT2Gm,
-                    blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
+                ProcessMeanAndRstd<T2>(meanTensor, meanOutTensorNew, meanT2Gm, rstdTensor, rstdOutTensorNew, rstdT2Gm,
+                                       blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
             } else {
-                ProcessMeanAndRstd<T1>(
-                    meanTensor, meanOutTensor, meanGm, rstdTensor, rstdOutTensor, rstdGm,
-                    blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
+                ProcessMeanAndRstd<T1>(meanTensor, meanOutTensor, meanGm, rstdTensor, rstdOutTensor, rstdGm,
+                                       blockIdx * tiling->numPerCore + i * innerNumPerCore, numPerCoreOneLoop);
             }
             if (i < numPerCoreLoop - 1) {
                 SetFlag<HardEvent::MTE3_MTE2>(eventIDMte3ToMte2);
@@ -123,8 +119,8 @@ private:
             if (i > BUFFER_NUM - 1) {
                 WaitFlag<HardEvent::V_MTE2>(isPing ? eventIDVToMte2Ping : eventIDVToMte2Pong);
             }
-            CopyX2UB<T1>(
-                xGm[xGmOffset + curNumPerCore * elemNum + i * parallelN], xPhase1Tensor[xPhase1Offset], 1, welfordLen);
+            CopyX2UB<T1>(xGm[xGmOffset + curNumPerCore * elemNum + i * parallelN], xPhase1Tensor[xPhase1Offset], 1,
+                         welfordLen);
             SetFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
             WaitFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
             __local_mem__ T1* x1Local = (__local_mem__ T1*)xPhase1Tensor[xPhase1Offset].GetPhyAddr();
@@ -142,10 +138,9 @@ private:
         ProcessGammaAndBeta(curNumPerCore);
         float reduceScale = float(1.0) / static_cast<float>(elemNum);
         float scale = float(1.0) / static_cast<float>(parallelN);
-        VFWelfordParallelFinalize(
-            meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal, parallelN, dichotomyAddPower,
-            dichotomyAddK, dichotomyAddLastNum, curInnerNumPerCore, welfordLoopTail, reduceScale, scale, count, eps,
-            welfordAlign);
+        VFWelfordParallelFinalize(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal, parallelN,
+                                  dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum, curInnerNumPerCore,
+                                  welfordLoopTail, reduceScale, scale, count, eps, welfordAlign);
         auto eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
         SetFlag<HardEvent::V_MTE2>(eventId);
         WaitFlag<HardEvent::V_MTE2>(eventId);
@@ -214,8 +209,8 @@ private:
             uint64_t gammaOffset = gammaBaseOffset + i * (processSize / hwNumAlign);
             uint64_t betaOffset = gammaOffset;
             __local_mem__ T1* xLocal = (__local_mem__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
-            __local_mem__ T2* gammaLocal =
-                hasGamma ? (__local_mem__ T2*)gammaTensor[gammaOffset].GetPhyAddr() : nullptr;
+            __local_mem__ T2* gammaLocal = hasGamma ? (__local_mem__ T2*)gammaTensor[gammaOffset].GetPhyAddr() :
+                                                      nullptr;
             __local_mem__ T2* betaLocal = hasBeta ? (__local_mem__ T2*)betaTensor[betaOffset].GetPhyAddr() : nullptr;
             __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[curInnerNumPerCore].GetPhyAddr();
             __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[curInnerNumPerCore].GetPhyAddr();
@@ -223,16 +218,15 @@ private:
             if (i > 1) {
                 WaitFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
             }
-            VFNormalizeAndSwishAlign<T1, T2>(
-                xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, rowsCount, reduceCount, activateSilu,
-                hasGamma, hasBeta);
+            VFNormalizeAndSwishAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, rowsCount,
+                                             reduceCount, activateSilu, hasGamma, hasBeta);
             SetFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
             WaitFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
             if (i < loopNum - BUFFER_NUM) {
                 SetFlag<HardEvent::V_MTE2>(isPing ? eventIDVToMte2Ping : eventIDVToMte2Pong);
             }
-            int32_t outputGmOffset =
-                outputBaseOffset + hwNum * (processSize / hwNumAlign) * i + elemNum * curNumPerCore;
+            int32_t outputGmOffset = outputBaseOffset + hwNum * (processSize / hwNumAlign) * i +
+                                     elemNum * curNumPerCore;
             CopySilu2Gm<T1>(siluGm[outputGmOffset], yTensor[inputUbOffset], rowsCount, hwNum);
             if (i < loopNum - BUFFER_NUM) {
                 SetFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
@@ -285,19 +279,18 @@ private:
                 SetFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
                 WaitFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
                 __local_mem__ T1* xLocal = (__local_mem__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
-                __local_mem__ T2* gammaLocal =
-                    hasGamma ? (__local_mem__ T2*)gammaTensor[gammaOffset].GetPhyAddr() : nullptr;
-                __local_mem__ T2* betaLocal =
-                    hasBeta ? (__local_mem__ T2*)betaTensor[betaOffset].GetPhyAddr() : nullptr;
+                __local_mem__ T2* gammaLocal = hasGamma ? (__local_mem__ T2*)gammaTensor[gammaOffset].GetPhyAddr() :
+                                                          nullptr;
+                __local_mem__ T2* betaLocal = hasBeta ? (__local_mem__ T2*)betaTensor[betaOffset].GetPhyAddr() :
+                                                        nullptr;
                 __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[curInnerNumPerCore].GetPhyAddr();
                 __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[curInnerNumPerCore].GetPhyAddr();
                 __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[inputUbOffset].GetPhyAddr();
                 if (extent > 1) {
                     WaitFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
                 }
-                VFNormalizeAndSwishAlign<T1, T2>(
-                    xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1, copyLen, activateSilu, hasGamma,
-                    hasBeta);
+                VFNormalizeAndSwishAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1,
+                                                 copyLen, activateSilu, hasGamma, hasBeta);
                 SetFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
                 WaitFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
                 if (extent < loopNum * innerLoopNum - BUFFER_NUM) {

@@ -36,14 +36,13 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetFormat(int form
     return Convolution3DBackprop::CubeFormat::NDC1HWC0;
 }
 
-template <
-    typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    uint8_t b2Condition, bool enableKernelSplit = false>
+template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
+          uint8_t b2Condition, bool enableKernelSplit = false>
 class Conv3dDx {
 public:
     __aicore__ inline Conv3dDx(){};
-    __aicore__ inline void Init(
-        GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace, const Conv3DBackpropInputV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
+                                const Conv3DBackpropInputV2TilingData* tilingData)
     {
         if constexpr (yFormat == FORMAT_NDC1HWC0) {
             if ASCEND_IS_AIV {
@@ -128,11 +127,12 @@ protected:
     static constexpr Convolution3DBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr Convolution3DBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
     using filterDxType = Convolution3DBackprop::ConvType<TPosition::GM, filterCubeFormat, filterType>;
-    using inputSizeDxType =
-        Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND, int32_t>;
+    using inputSizeDxType = Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND,
+                                                            int32_t>;
     using dedyDxType = Convolution3DBackprop::ConvType<TPosition::GM, dedyCubeFormat, dedyType>;
     using yDxType = Convolution3DBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
-    static constexpr Convolution3DBackprop::B2Condition kb2Condition = static_cast<Convolution3DBackprop::B2Condition>(b2Condition);
+    static constexpr Convolution3DBackprop::B2Condition kb2Condition = static_cast<Convolution3DBackprop::B2Condition>(
+        b2Condition);
     static constexpr Conv3dConfig conv3dConfig = {kb2Condition, enableKernelSplit};
     Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, conv3dConfig> dedx_;
 
@@ -284,8 +284,8 @@ protected:
         uint64_t doutOffsetA = 0;
         uint64_t coutOffsetA = static_cast<uint64_t>(kCoreIndx_) * static_cast<uint64_t>(singleCoreCout_) *
                                static_cast<uint64_t>(ho_) * static_cast<uint64_t>(wo_);
-        uint64_t mOffsetA =
-            static_cast<uint64_t>(alignedHoStartIdx_) * static_cast<uint64_t>(wo_) * static_cast<uint64_t>(c0_);
+        uint64_t mOffsetA = static_cast<uint64_t>(alignedHoStartIdx_) * static_cast<uint64_t>(wo_) *
+                            static_cast<uint64_t>(c0_);
         offsetA_ = batchOffsetA + groupOffsetA + doutOffsetA + coutOffsetA + mOffsetA;
 
         // FP32场景下，cout1_ * c0_可能非16对齐，此时要补齐到16，原始数据GM中自动补0，计算偏移时要考虑对齐后的数据
@@ -304,11 +304,11 @@ protected:
             uint64_t batchOffsetC = static_cast<uint64_t>(batchIdx) * batchStrideC_;
             groupStrideC_ = static_cast<uint64_t>(cin1G_) * static_cast<uint64_t>(c0_) * cinStrideC_;
             uint64_t groupOffsetC = groupOffsetNum * groupStrideC_;
-            uint64_t cinOffsetC =
-                static_cast<uint64_t>(nCoreIndx_) * static_cast<uint64_t>(singleCoreCin_) * cinStrideC_;
+            uint64_t cinOffsetC = static_cast<uint64_t>(nCoreIndx_) * static_cast<uint64_t>(singleCoreCin_) *
+                                  cinStrideC_;
             uint64_t dinOffsetC = 0;
-            uint64_t mOffsetC =
-                static_cast<uint64_t>(mCoreIndx_) * static_cast<uint64_t>(singleCoreHi_) * static_cast<uint64_t>(wi_);
+            uint64_t mOffsetC = static_cast<uint64_t>(mCoreIndx_) * static_cast<uint64_t>(singleCoreHi_) *
+                                static_cast<uint64_t>(wi_);
             offsetC_ = batchOffsetC + groupOffsetC + cinOffsetC + dinOffsetC + mOffsetC;
         } else {
             cin1StrideC_ = static_cast<uint64_t>(hi_) * static_cast<uint64_t>(wi_) * static_cast<uint64_t>(c0_);
@@ -318,8 +318,8 @@ protected:
             uint64_t groupOffsetC = groupOffsetNum * groupStrideC_;
             uint64_t batchOffsetC = static_cast<uint64_t>(batchIdx) * batchStrideC_;
             uint64_t dinOffsetC = 0;
-            uint64_t cinOffsetC =
-                static_cast<uint64_t>(nCoreIndx_) * static_cast<uint64_t>(singleCoreCin1_) * cin1StrideC_;
+            uint64_t cinOffsetC = static_cast<uint64_t>(nCoreIndx_) * static_cast<uint64_t>(singleCoreCin1_) *
+                                  cin1StrideC_;
             uint64_t mOffsetC = static_cast<uint64_t>(mCoreIndx_) * static_cast<uint64_t>(singleCoreHi_) *
                                 static_cast<uint64_t>(wi_) * static_cast<uint64_t>(c0_);
             offsetC_ = batchOffsetC + groupOffsetC + dinOffsetC + cinOffsetC + mOffsetC;
@@ -346,13 +346,13 @@ protected:
         offsetC_ += groupStrideC_;
     }
 
-    __aicore__ inline void ProcessKernelSplit(
-        uint64_t& kernelSplitOffsetA, uint64_t& kernelSplitOffsetB, uint64_t& kernelSplitOffsetC)
+    __aicore__ inline void ProcessKernelSplit(uint64_t& kernelSplitOffsetA, uint64_t& kernelSplitOffsetB,
+                                              uint64_t& kernelSplitOffsetC)
     {
         for (uint32_t kernelHIdx = 0; kernelHIdx < strideH_; ++kernelHIdx) {
             for (uint32_t kernelWIdx = 0; kernelWIdx < strideW_; ++kernelWIdx) {
-                CalcKernelSplitOffset(
-                    kernelHIdx, kernelWIdx, kernelSplitOffsetA, kernelSplitOffsetB, kernelSplitOffsetC);
+                CalcKernelSplitOffset(kernelHIdx, kernelWIdx, kernelSplitOffsetA, kernelSplitOffsetB,
+                                      kernelSplitOffsetC);
                 dedx_.SetOutBackprop(dedyGm_[kernelSplitOffsetA]);
                 dedx_.SetWeight(filterGm_[kernelSplitOffsetB]);
                 dedx_.IterateAll(yGm_[kernelSplitOffsetC], 0); // 1 means atomic add
@@ -360,9 +360,8 @@ protected:
         }
     }
 
-    __aicore__ inline void CalcKernelSplitOffset(
-        uint32_t kernelHIdx, uint32_t kernelWIdx, uint64_t& kernelSplitOffsetA, uint64_t& kernelSplitOffsetB,
-        uint64_t& kernelSplitOffsetC)
+    __aicore__ inline void CalcKernelSplitOffset(uint32_t kernelHIdx, uint32_t kernelWIdx, uint64_t& kernelSplitOffsetA,
+                                                 uint64_t& kernelSplitOffsetB, uint64_t& kernelSplitOffsetC)
     {
         uint64_t kernelHOffsetA = (static_cast<uint64_t>(kernelHIdx) * wo_ * c0_);
         uint64_t kernelWOffsetA = (static_cast<uint64_t>(kernelWIdx) * c0_);
@@ -472,10 +471,10 @@ protected:
         int64_t srcOffset = block_idx * dedx_.ctx.tiling_->baseM * dedx_.ctx.tiling_->baseN;
         DataCopyParams loadGm2UbParams;
         loadGm2UbParams.srcStride = 0;
-        loadGm2UbParams.dstStride =
-            (dedx_.ctx.tiling_->baseM - dedx_.ctx.baseUseM_) * dedx_.ctx.tiling_->c0 * sizeof(yType) / ONE_BLK_SIZE;
-        loadGm2UbParams.blockLen =
-            static_cast<uint16_t>(dedx_.ctx.baseUseM_ * dedx_.ctx.tiling_->c0 * sizeof(yType) / ONE_BLK_SIZE);
+        loadGm2UbParams.dstStride = (dedx_.ctx.tiling_->baseM - dedx_.ctx.baseUseM_) * dedx_.ctx.tiling_->c0 *
+                                    sizeof(yType) / ONE_BLK_SIZE;
+        loadGm2UbParams.blockLen = static_cast<uint16_t>(dedx_.ctx.baseUseM_ * dedx_.ctx.tiling_->c0 * sizeof(yType) /
+                                                         ONE_BLK_SIZE);
         loadGm2UbParams.blockCount = static_cast<uint16_t>(Ceil(dedx_.ctx.baseUseN_, BLOCK_CUBE));
         DataCopy(vecInBuf_, l0cOutGm_[srcOffset], loadGm2UbParams);
         vecInQueue_.EnQue(vecInBuf_);
@@ -534,19 +533,19 @@ protected:
         LocalTensor<yType> vecOutBuf_ = vecOutQueue_.template DeQue<yType>();
         uint64_t diHiWi = static_cast<uint64_t>(dedx_.ctx.tiling_->di) * dedx_.ctx.tiling_->hi * dedx_.ctx.tiling_->wi;
         uint64_t dstStride = (diHiWi - dedx_.ctx.baseUseM_) * sizeof(yType);
-        uint64_t dstOffset =
-            static_cast<uint64_t>(dedx_.ctx.curNL0Idx_) * dedx_.ctx.tiling_->baseN * diHiWi +
-            static_cast<uint64_t>(dedx_.ctx.curML0Idx_) * dedx_.ctx.tiling_->baseM +
-            static_cast<uint64_t>(dedx_.ctx.curDinIdx_) * dedx_.ctx.tiling_->hi * dedx_.ctx.tiling_->wi;
-        uint32_t curCinSize =
-            dedx_.ctx.baseUseN_ < (dedx_.ctx.singleShapeCin_ - dedx_.ctx.curNL0Idx_ * dedx_.ctx.tiling_->baseN) ?
-                dedx_.ctx.baseUseN_ :
-                (dedx_.ctx.singleShapeCin_ - dedx_.ctx.curNL0Idx_ * dedx_.ctx.tiling_->baseN);
+        uint64_t dstOffset = static_cast<uint64_t>(dedx_.ctx.curNL0Idx_) * dedx_.ctx.tiling_->baseN * diHiWi +
+                             static_cast<uint64_t>(dedx_.ctx.curML0Idx_) * dedx_.ctx.tiling_->baseM +
+                             static_cast<uint64_t>(dedx_.ctx.curDinIdx_) * dedx_.ctx.tiling_->hi *
+                                 dedx_.ctx.tiling_->wi;
+        uint32_t curCinSize = dedx_.ctx.baseUseN_ <
+                                      (dedx_.ctx.singleShapeCin_ - dedx_.ctx.curNL0Idx_ * dedx_.ctx.tiling_->baseN) ?
+                                  dedx_.ctx.baseUseN_ :
+                                  (dedx_.ctx.singleShapeCin_ - dedx_.ctx.curNL0Idx_ * dedx_.ctx.tiling_->baseN);
         DataCopyExtParams storeUb2GmParams;
         // 用&f 代替对16取余
         if (((dedx_.ctx.baseUseM_ & 0xf) == 0) && dstStride <= UINT32_MAX) {
-            storeUb2GmParams.srcStride =
-                (dedx_.ctx.tiling_->baseM - dedx_.ctx.baseUseM_) * sizeof(yType) / ONE_BLK_SIZE;
+            storeUb2GmParams.srcStride = (dedx_.ctx.tiling_->baseM - dedx_.ctx.baseUseM_) * sizeof(yType) /
+                                         ONE_BLK_SIZE;
             storeUb2GmParams.dstStride = dstStride;
             storeUb2GmParams.blockLen = dedx_.ctx.baseUseM_ * sizeof(yType);
             storeUb2GmParams.blockCount = curCinSize;
@@ -588,8 +587,8 @@ protected:
         return false;
     }
 
-    __aicore__ inline void VecPostProcess(
-        const GlobalTensor<yType>& output, uint8_t enAtomic = 0, bool enSequentialWrite = false)
+    __aicore__ inline void VecPostProcess(const GlobalTensor<yType>& output, uint8_t enAtomic = 0,
+                                          bool enSequentialWrite = false)
     {
         if ASCEND_IS_AIC {
             return;

@@ -25,8 +25,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "util/math_util.h"
 
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 constexpr int16_t TILING_ARRAY_LEN = 7;
 
@@ -57,12 +56,9 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2AscTilingData)
 
-class ScatterElementsV2AscTiling : public TilingBaseClass
-{
+class ScatterElementsV2AscTiling : public TilingBaseClass {
 public:
-    explicit ScatterElementsV2AscTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit ScatterElementsV2AscTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -123,5 +119,5 @@ private:
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
     ScatterElementsV2AscTilingData tilingData_;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ELEMENTS_V2_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ELEMENTS_V2_TILING_H_

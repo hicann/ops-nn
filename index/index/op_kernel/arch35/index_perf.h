@@ -41,8 +41,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void SimtCompute(
     int64_t inputShape0 = static_cast<int64_t>(tilingData->inputShape0);
     T2 inputShape1 = static_cast<T2>(tilingData->inputShape1);
 
-    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength;
-         i = i + gridDim.x * blockDim.x) {
+    for (T2 i = blockIdx.x * blockDim.x + threadIdx.x; i < outputLength; i = i + gridDim.x * blockDim.x) {
         int64_t curIdx0 = indexTensor0[i];
         curIdx0 = curIdx0 < 0 ? (curIdx0 + inputShape0) : curIdx0;
         int64_t curIdx1 = indexTensor1[i];
@@ -63,14 +62,13 @@ __aicore__ inline __gm__ P* GetInputTensorAddr(GM_ADDR indices, uint16_t index)
 }
 
 template <typename T, typename P, typename T2>
-__aicore__ inline void Process(
-    __gm__ T* output, __gm__ T* inputX, GM_ADDR indices, __gm__ const IndexPerfSimtTilingData* __restrict tiling)
+__aicore__ inline void Process(__gm__ T* output, __gm__ T* inputX, GM_ADDR indices,
+                               __gm__ const IndexPerfSimtTilingData* __restrict tiling)
 {
     // get dynamci input tensor
     __gm__ P* indexTensor0 = GetInputTensorAddr<P>(indices, 0);
     __gm__ P* indexTensor1 = GetInputTensorAddr<P>(indices, 1);
-    asc_vf_call<SimtCompute<T, P, T2>>(
-        dim3{USED_THREAD}, output, inputX, indexTensor0, indexTensor1, tiling);
+    asc_vf_call<SimtCompute<T, P, T2>>(dim3{USED_THREAD}, output, inputX, indexTensor0, indexTensor1, tiling);
 }
 } // namespace Index
 

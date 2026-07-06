@@ -29,29 +29,29 @@ namespace l0op {
 OP_TYPE_REGISTER(IndexPutV2);
 OP_TYPE_REGISTER(IndexPutV3);
 
-const aclTensor *IndexPutV2(const aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values,
-                            const aclTensor *masks, const bool accumulate, aclTensor *out, aclOpExecutor *executor) {
-  L0_DFX(IndexPutV2, selfRef, values, masks, indices, out, accumulate);
+const aclTensor* IndexPutV2(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
+                            const aclTensor* masks, const bool accumulate, aclTensor* out, aclOpExecutor* executor)
+{
+    L0_DFX(IndexPutV2, selfRef, values, masks, indices, out, accumulate);
 
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexPutV2,
-                                         OP_INPUT(selfRef, values, masks, masks, indices),
-                                         OP_OUTPUT(out),
-                                         OP_ATTR(accumulate));
-  OP_CHECK(ret ==  ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexPutV2 ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
-  return out;
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexPutV2, OP_INPUT(selfRef, values, masks, masks, indices), OP_OUTPUT(out),
+                                           OP_ATTR(accumulate));
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexPutV2 ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return out;
 }
 
-const aclTensor *IndexPutV3(const aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values,
-                          const aclTensor *masks, const bool accumulate, const bool deterministic, 
-                          aclTensor *out, aclOpExecutor *executor) {
-  L0_DFX(IndexPutV3, selfRef, values, masks, indices, accumulate, deterministic, out);
-  static internal::AicpuTaskSpace space("IndexPutV3");
-  auto ret = ADD_TO_LAUNCHER_LIST_AICPU(IndexPutV3, OP_ATTR_NAMES({"accumulate", "deterministic"}),
-                                        OP_INPUT(selfRef, values, masks, indices),
-                                        OP_OUTPUT(out),
-                                        OP_ATTR(accumulate, deterministic));
-  OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexPutV3 ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
-  return out;
+const aclTensor* IndexPutV3(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
+                            const aclTensor* masks, const bool accumulate, const bool deterministic, aclTensor* out,
+                            aclOpExecutor* executor)
+{
+    L0_DFX(IndexPutV3, selfRef, values, masks, indices, accumulate, deterministic, out);
+    static internal::AicpuTaskSpace space("IndexPutV3");
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(IndexPutV3, OP_ATTR_NAMES({"accumulate", "deterministic"}),
+                                          OP_INPUT(selfRef, values, masks, indices), OP_OUTPUT(out),
+                                          OP_ATTR(accumulate, deterministic));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexPutV3 ADD_TO_LAUNCHER_LIST_AICPU failed."),
+             return nullptr);
+    return out;
 }
-}  // namespace l0op
-
+} // namespace l0op

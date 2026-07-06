@@ -60,7 +60,8 @@ ge::graphStatus InstanceNormARWelfordTiling::DoOpTiling()
         GammaBetaTypeSize = WELFORD_B16_SIZE;
     }
     int64_t a0Inner = WELFORD_CONSTANT_TWO * vectorLength / GammaBetaTypeSize;
-    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoOpTiling: class member vectorLength is %lu !", vectorLength);
+    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoOpTiling: class member vectorLength is %lu !",
+            vectorLength);
     int64_t a0Outer = Ops::Base::CeilDiv(a0, a0Inner);
     int64_t a0Tail = a0 - a0Inner * (a0Outer - 1);
 
@@ -76,7 +77,8 @@ ge::graphStatus InstanceNormARWelfordTiling::DoOpTiling()
     td_.a0Inner = a0Inner;
     td_.a0Tail = a0Tail;
 
-    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoOpTiling: r is %lu,"
+    OP_LOGI(context_->GetNodeName(),
+            "InstanceNormARWelfordTiling DoOpTiling: r is %lu,"
             " a1 is %lu, a0 is %lu, totalTiles is %lu, tilesPerCore is %lu, blockNum_ is %lu,"
             " a0Outer is %lu, a0Inner is %lu, a0Tail is %lu !",
             r, a1, a0, totalTiles, tilesPerCore, blockNum_, a0Outer, a0Inner, a0Tail);
@@ -125,8 +127,8 @@ bool InstanceNormARWelfordTiling::IsValidwelfordTileLength(int64_t welfordTileLe
     uint32_t minValue{0};
     uint32_t maxValue{0};
     ge::Shape tensorShape({1, welfordTileLength});
-    AscendC::GetWelfordUpdateMaxMinTmpSize(
-        tensorShape, xDataTypeSize, WELFORD_B32_SIZE, false, true, maxValue, minValue);
+    AscendC::GetWelfordUpdateMaxMinTmpSize(tensorShape, xDataTypeSize, WELFORD_B32_SIZE, false, true, maxValue,
+                                           minValue);
     welfordUpdateApiTempSize = minValue;
     AscendC::GetWelfordFinalizeMaxMinTmpSize(tensorShape, WELFORD_B32_SIZE, false, maxValue, minValue);
     welfordFinalizeApiTempSize = minValue;
@@ -134,8 +136,8 @@ bool InstanceNormARWelfordTiling::IsValidwelfordTileLength(int64_t welfordTileLe
     td_.apiTempBufferSize = apiTempSize;
 
     // total size
-    int64_t totalSize =
-        (xSize + ySize) + (meanSize + varianceSize) + (gammaSize + betaSize) + welfordTempSize + apiTempSize + cntBufSize;
+    int64_t totalSize = (xSize + ySize) + (meanSize + varianceSize) + (gammaSize + betaSize) + welfordTempSize +
+                        apiTempSize + cntBufSize;
     return (totalSize <= static_cast<int64_t>(aicoreParams_.ubSize));
 }
 
@@ -146,28 +148,30 @@ ge::graphStatus InstanceNormARWelfordTiling::DoLibApiTiling()
     meanDataType = meanDesc->GetDataType();
 
     int64_t welfordTileLength = 0;
-    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling:  static_cast<int64_t>(aicoreParams_.ubSize) is %lu !",  static_cast<int64_t>(aicoreParams_.ubSize));
+    OP_LOGI(context_->GetNodeName(),
+            "InstanceNormARWelfordTiling DoLibApiTiling:  static_cast<int64_t>(aicoreParams_.ubSize) is %lu !",
+            static_cast<int64_t>(aicoreParams_.ubSize));
     while (IsValidwelfordTileLength(welfordTileLength + WELFORD_CONSTANT_TWO * WELFORD_TILELENGTH_STEP_SIZE)) {
         welfordTileLength += WELFORD_TILELENGTH_STEP_SIZE;
     }
-    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling: welfordTileLength is %lu !", welfordTileLength);
+    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling: welfordTileLength is %lu !",
+            welfordTileLength);
 
     int64_t welfordUpdateTimes = r / welfordTileLength;
-    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling: welfordUpdateTimes is %lu !", welfordUpdateTimes);
+    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling: welfordUpdateTimes is %lu !",
+            welfordUpdateTimes);
 
     int64_t welfordUpdateTail = r - welfordUpdateTimes * welfordTileLength;
-    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling: welfordUpdateTail is %lu !", welfordUpdateTail);
-    
+    OP_LOGI(context_->GetNodeName(), "InstanceNormARWelfordTiling DoLibApiTiling: welfordUpdateTail is %lu !",
+            welfordUpdateTail);
+
     td_.welfordTileLength = welfordTileLength;
     td_.welfordUpdateTimes = welfordUpdateTimes;
     td_.welfordUpdateTail = welfordUpdateTail;
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t InstanceNormARWelfordTiling::GetTilingKey() const
-{
-    return TILINGKEY_AR_WELFORD;
-}
+uint64_t InstanceNormARWelfordTiling::GetTilingKey() const { return TILINGKEY_AR_WELFORD; }
 
 ge::graphStatus InstanceNormARWelfordTiling::PostTiling()
 {
@@ -176,20 +180,17 @@ ge::graphStatus InstanceNormARWelfordTiling::PostTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(td_) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(td_),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(td_), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&td_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(td_));
     return ge::GRAPH_SUCCESS;
 }

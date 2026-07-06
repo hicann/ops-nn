@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -22,17 +22,19 @@ namespace FlatQuantNS {
 template <typename T, uint8_t MM_MODE>
 class FlatQuantCubeOne {
 public:
-    aifunc FlatQuantCubeOne(){}
-    aifunc void Init(GM_ADDR xmtx_, GM_ADDR p1mtx_, GM_ADDR p2mtx_, GM_ADDR workspace_, const FlatQuantTilingData* tilingData){
+    aifunc FlatQuantCubeOne() {}
+    aifunc void Init(GM_ADDR xmtx_, GM_ADDR p1mtx_, GM_ADDR p2mtx_, GM_ADDR workspace_,
+                     const FlatQuantTilingData* tilingData)
+    {
         shape.M = tilingData->M;
         shape.N = tilingData->N;
         shape.K = tilingData->K;
         tiling();
 
-        xGM.SetGlobalBuffer((__gm__ T *)xmtx_);
-        p1GM.SetGlobalBuffer((__gm__ T *)p1mtx_);
-        p2GM.SetGlobalBuffer((__gm__ T *)p2mtx_);
-        outnzGM.SetGlobalBuffer((__gm__ T *)workspace_);
+        xGM.SetGlobalBuffer((__gm__ T*)xmtx_);
+        p1GM.SetGlobalBuffer((__gm__ T*)p1mtx_);
+        p2GM.SetGlobalBuffer((__gm__ T*)p2mtx_);
+        outnzGM.SetGlobalBuffer((__gm__ T*)workspace_);
 
         SetFixpipeNz2ndFlag(1, 1, shape.Nceil);
         pipe.InitBuffer(l1Buf, L1_SIZE);
@@ -56,9 +58,11 @@ public:
         c2Tensor = cTensor[DATA_COUNT];
     }
 
-    aifunc void tiling(){
-        int allTimes = GetBlockNum() * BATCH_SIZE; // 每个核处理16个批次, 控制同步计数器不会超过16 
-        shape.M = (((shape.K + GetBlockNum() - 1) / GetBlockNum()) + CEIL_SIZE - 1) / CEIL_SIZE * CEIL_SIZE; //reshape K、M
+    aifunc void tiling()
+    {
+        int allTimes = GetBlockNum() * BATCH_SIZE; // 每个核处理16个批次, 控制同步计数器不会超过16
+        shape.M = (((shape.K + GetBlockNum() - 1) / GetBlockNum()) + CEIL_SIZE - 1) / CEIL_SIZE *
+                  CEIL_SIZE; // reshape K、M
         if (shape.M > BASE_SIZE) {
             shape.M = BASE_SIZE;
         }
@@ -68,7 +72,7 @@ public:
         shape.perK = (shape.perK + K_PER_VEC_ONE - 1) / (K_PER_VEC_ONE) * (K_PER_VEC_ONE); // 和4对齐
 
         int k_per_core = ((shape.K + GetBlockNum() - 1) / GetBlockNum() + shape.perK - 1) / shape.perK * shape.perK;
-        shape.K1 = k_per_core * (GetBlockIdx());  // cube blk idx is 0~20
+        shape.K1 = k_per_core * (GetBlockIdx()); // cube blk idx is 0~20
         shape.K2 = ((k_per_core + shape.K1) > shape.K) ? shape.K : (k_per_core + shape.K1);
         shape.fractalM = (shape.M + CEIL_SIZE - 1) / CEIL_SIZE;
         shape.fractalN = (shape.N + CEIL_SIZE - 1) / CEIL_SIZE;
@@ -86,12 +90,14 @@ public:
         invalidK = (shape.K * shape.M - shape.Mceil) / shape.M;
     }
 
-    aifunc void Process(){
+    aifunc void Process()
+    {
         l1empty.setall();
         l0empty.setall();
         outempty.setall();
         // set zero for L1
-        int dataCount = shape.calM * shape.calM + shape.Nceil * shape.Nceil + DOUBLE * DOUBLE * shape.calM * shape.Nceil;
+        int dataCount = shape.calM * shape.calM + shape.Nceil * shape.Nceil +
+                        DOUBLE * DOUBLE * shape.calM * shape.Nceil;
         InitConstValue(xTensor, {1, static_cast<uint16_t>(dataCount / CEIL_SIZE), 0, (T)0});
         AscendC::PipeBarrier<PIPE_MTE2>();
         // Preload P1,P2
@@ -114,7 +120,8 @@ public:
         outempty.release();
     }
 
-    aifunc void ProcessSplitK(int64_t k, bool isLast){
+    aifunc void ProcessSplitK(int64_t k, bool isLast)
+    {
         if (k == shape.K1) {
             l1empty.wait();
             if (k == shape.K2 - 1 && isLast) {
@@ -151,7 +158,8 @@ public:
         ProcessSplitXP2(k, false);
     }
 
-    aifunc void ProcessSplitXP2(int64_t k, bool isTail){  // 20,32,16
+    aifunc void ProcessSplitXP2(int64_t k, bool isTail)
+    { // 20,32,16
         int64_t c = (k - shape.K1) * (matmulInfo.splitCount);
         int64_t p = (k - shape.K1) * (matmulInfo.splitCount2);
         l1ready.wait();
@@ -168,13 +176,15 @@ public:
                 int32_t numK = (shape.Nceil - kIdx < BASE_SIZE) ? shape.Nceil - kIdx : BASE_SIZE;
                 l0empty.wait();
                 uint16_t baseIdx = kIdx / CEIL_SIZE;
-                for (int32_t sIdx = 0; sIdx < numM / CEIL_SIZE; sIdx ++) {
-                    LoadData(GetATensor(p)[sIdx * numK * CEIL_SIZE], GetXTensor(k), LoadData2DParams(baseIdx, numK / CEIL_SIZE, 1, 0, 0, false, 0));
+                for (int32_t sIdx = 0; sIdx < numM / CEIL_SIZE; sIdx++) {
+                    LoadData(GetATensor(p)[sIdx * numK * CEIL_SIZE], GetXTensor(k),
+                             LoadData2DParams(baseIdx, numK / CEIL_SIZE, 1, 0, 0, false, 0));
                     baseIdx += shape.fractalN;
                 }
                 baseIdx = kIdx * shape.fractalN / CEIL_SIZE + nIdx / CEIL_SIZE;
-                for (int32_t sIdx = 0; sIdx < numK / CEIL_SIZE; sIdx ++) {
-                    LoadData(GetBTensor(p)[sIdx * numN * CEIL_SIZE], p2Tensor, LoadData2DParams(baseIdx, numN / CEIL_SIZE, 1, 0, 0, true, 0));
+                for (int32_t sIdx = 0; sIdx < numK / CEIL_SIZE; sIdx++) {
+                    LoadData(GetBTensor(p)[sIdx * numN * CEIL_SIZE], p2Tensor,
+                             LoadData2DParams(baseIdx, numN / CEIL_SIZE, 1, 0, 0, true, 0));
                     baseIdx += shape.fractalN;
                 }
                 l0ready.set();
@@ -186,13 +196,14 @@ public:
                     outempty.wait();
                 }
                 l0ready.wait();
-                CalMatrix(GetCTensor(c), GetATensor(p), GetBTensor(p), numM, numK, numN, kIdx + numK == shape.Nceil ? UFMode3 : UFMode2, false, false, kIdx == 0);
+                CalMatrix(GetCTensor(c), GetATensor(p), GetBTensor(p), numM, numK, numN,
+                          kIdx + numK == shape.Nceil ? UFMode3 : UFMode2, false, false, kIdx == 0);
                 PipeBarrier<PIPE_M>();
                 l0empty.set();
-                p ++;
+                p++;
             }
             QuantMode_t quantMode = F322F16;
-            if constexpr(std::is_same<T, bfloat16_t>::value) {
+            if constexpr (std::is_same<T, bfloat16_t>::value) {
                 quantMode = F322BF16;
             }
             DataCopyCO12DstParams dataCopyParams(realN, numM, shape.N, numM, quantMode, 0, false, true);
@@ -200,29 +211,19 @@ public:
             DataCopy(outnzGM[k * shape.Mceil * shape.N + nIdx], GetCTensor(c), dataCopyParams);
 
             outempty.set();
-            c ++;
+            c++;
         }
     }
 
-    __aicore__ inline LocalTensor<T> GetXTensor(int64_t k){
-        return ((k & 1) == 0) ? xTensor : x2Tensor;
-    };
+    __aicore__ inline LocalTensor<T> GetXTensor(int64_t k) { return ((k & 1) == 0) ? xTensor : x2Tensor; };
 
-    __aicore__ inline LocalTensor<T> GetYTensor(int64_t k){
-        return ((k & 1) == 0) ? yTensor : y2Tensor;
-    };
+    __aicore__ inline LocalTensor<T> GetYTensor(int64_t k) { return ((k & 1) == 0) ? yTensor : y2Tensor; };
 
-    __aicore__ inline LocalTensor<T> GetATensor(int64_t k){
-        return ((k & 1) == 0) ? aTensor : a2Tensor;
-    };
+    __aicore__ inline LocalTensor<T> GetATensor(int64_t k) { return ((k & 1) == 0) ? aTensor : a2Tensor; };
 
-    __aicore__ inline LocalTensor<T> GetBTensor(int64_t k){
-        return ((k & 1) == 0) ? bTensor : b2Tensor;
-    };
+    __aicore__ inline LocalTensor<T> GetBTensor(int64_t k) { return ((k & 1) == 0) ? bTensor : b2Tensor; };
 
-    __aicore__ inline LocalTensor<float> GetCTensor(int64_t k){
-        return ((k & 1) == 0) ? cTensor : c2Tensor;
-    };
+    __aicore__ inline LocalTensor<float> GetCTensor(int64_t k) { return ((k & 1) == 0) ? cTensor : c2Tensor; };
 
 private:
     TPipe pipe;
@@ -260,6 +261,6 @@ private:
     int64_t invalidK = 0; // 从invalidK开始，需要区分尾块/非尾块搬入x
     uint32_t tailK = 0;
 };
-}  // namespace FlatQuantNS
+} // namespace FlatQuantNS
 
-#endif  // FLAT_QUANT_CUBE_H
+#endif // FLAT_QUANT_CUBE_H

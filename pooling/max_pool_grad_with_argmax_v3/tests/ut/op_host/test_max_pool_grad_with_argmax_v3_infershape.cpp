@@ -36,15 +36,9 @@ std::string Shape2String(const T& shape)
 
 class MaxPoolGradWithArgmaxV3Infer : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolGradWithArgmaxV3InferTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolGradWithArgmaxV3InferTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "max_pool_grad_with_argmax_v3_infer_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "max_pool_grad_with_argmax_v3_infer_test TearDown" << std::endl; }
 };
 
 TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_infershape_test_01)
@@ -62,14 +56,13 @@ TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_infershape_tes
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -96,14 +89,13 @@ TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_inferdtype_tes
                                   .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                                   .InputDataTypes({&input_ref, &input_ref, &input_ref1})
                                   .OutputDataTypes({&output_ref})
-                                  .NodeAttrs(
-                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
-                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
-                                       {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                                       {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                                       {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({9, 5})},
-                                       {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                                  .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
+                                              {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 3})},
+                                              {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                              {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                              {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({9, 5})},
+                                              {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                              {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
@@ -127,14 +119,13 @@ TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_infershape_tes
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -159,14 +150,13 @@ TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_infershape_tes
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -178,9 +168,9 @@ TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_infershape_tes
 
 // ==================== OP_LOGE_FOR Error Branch UT Cases ====================
 
-static void ExecuteInferShapeErrorTestCase(
-    ge::Format xFormat, std::vector<int64_t> ksize, std::vector<int64_t> strides,
-    std::vector<int64_t> pads, std::vector<int64_t> dilation, bool ceil_mode, std::string data_format)
+static void ExecuteInferShapeErrorTestCase(ge::Format xFormat, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+                                           std::vector<int64_t> pads, std::vector<int64_t> dilation, bool ceil_mode,
+                                           std::string data_format)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmaxV3")->infer_shape;
 
@@ -196,14 +186,13 @@ static void ExecuteInferShapeErrorTestCase(
                       .NodeInputTd(1, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_INT32, xFormat, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .InputShapes({&xShape, &gradShape, &indicesShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -214,36 +203,31 @@ static void ExecuteInferShapeErrorTestCase(
 // OP_LOGE_FOR_INVALID_FORMAT: x format not ND/NCHW/NHWC (line 59)
 TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_format)
 {
-    ExecuteInferShapeErrorTestCase(
-        ge::Format::FORMAT_FRACTAL_NZ, {1, 1}, {2, 2}, {0, 0}, {1, 1}, true, "NCHW");
+    ExecuteInferShapeErrorTestCase(ge::Format::FORMAT_FRACTAL_NZ, {1, 1}, {2, 2}, {0, 0}, {1, 1}, true, "NCHW");
 }
 
 // OP_LOGE_FOR_INVALID_LISTSIZE: ksize list size != 2 (line 70)
 TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_ksize_listsize)
 {
-    ExecuteInferShapeErrorTestCase(
-        ge::Format::FORMAT_NCHW, {1, 1, 1}, {2, 2}, {0, 0}, {1, 1}, true, "NCHW");
+    ExecuteInferShapeErrorTestCase(ge::Format::FORMAT_NCHW, {1, 1, 1}, {2, 2}, {0, 0}, {1, 1}, true, "NCHW");
 }
 
 // OP_LOGE_FOR_INVALID_LISTSIZE: strides list size != 2 (line 78)
 TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_strides_listsize)
 {
-    ExecuteInferShapeErrorTestCase(
-        ge::Format::FORMAT_NCHW, {1, 1}, {2, 2, 2}, {0, 0}, {1, 1}, true, "NCHW");
+    ExecuteInferShapeErrorTestCase(ge::Format::FORMAT_NCHW, {1, 1}, {2, 2, 2}, {0, 0}, {1, 1}, true, "NCHW");
 }
 
 // OP_LOGE_FOR_INVALID_LISTSIZE: pads list size != 2 (line 86)
 TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_pads_listsize)
 {
-    ExecuteInferShapeErrorTestCase(
-        ge::Format::FORMAT_NCHW, {1, 1}, {2, 2}, {0, 0, 0}, {1, 1}, true, "NCHW");
+    ExecuteInferShapeErrorTestCase(ge::Format::FORMAT_NCHW, {1, 1}, {2, 2}, {0, 0, 0}, {1, 1}, true, "NCHW");
 }
 
 // OP_LOGE_FOR_INVALID_LISTSIZE: dilation list size != 2 (line 94)
 TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_dilation_listsize)
 {
-    ExecuteInferShapeErrorTestCase(
-        ge::Format::FORMAT_NCHW, {1, 1}, {2, 2}, {0, 0}, {1, 1, 1}, true, "NCHW");
+    ExecuteInferShapeErrorTestCase(ge::Format::FORMAT_NCHW, {1, 1}, {2, 2}, {0, 0}, {1, 1, 1}, true, "NCHW");
 }
 
 } // namespace

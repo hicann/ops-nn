@@ -23,13 +23,10 @@
 
 namespace optiling {
 
-class SegmentSumSimdTiling : public SegmentSumBaseTiling
-{
+class SegmentSumSimdTiling : public SegmentSumBaseTiling {
 public:
-    explicit SegmentSumSimdTiling(gert::TilingContext* context) : SegmentSumBaseTiling(context)
-    {}
-    ~SegmentSumSimdTiling() override
-    {}
+    explicit SegmentSumSimdTiling(gert::TilingContext* context) : SegmentSumBaseTiling(context) {}
+    ~SegmentSumSimdTiling() override {}
 
 private:
     bool IsCapable() override;
@@ -43,7 +40,8 @@ private:
     void DoBlockTiling();
     void DoUBTiling();
     void DoSplitColUBTiling(int64_t availableUbsize);
-    void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum);
+    void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum,
+                          int64_t colTotalNum);
     void DoMultCoreAddTiling();
 
 private:
@@ -57,7 +55,7 @@ private:
     int64_t blockNumInCol_ = 0;
     int64_t normalCoreInnerNum_ = 0;
     int64_t normalCoreOutterNum_ = 0;
-    int64_t tailCoreInnerNum_ = 0; // 列尾核列上处理的inner数
+    int64_t tailCoreInnerNum_ = 0;  // 列尾核列上处理的inner数
     int64_t tailCoreOutterNum_ = 0; // 行尾核行上处理的行数
 
     int64_t normalCoreRowUbLoop_ = 0;

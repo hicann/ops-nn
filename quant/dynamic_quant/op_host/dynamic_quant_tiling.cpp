@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file dynamic_quant_tiling.cpp
  * \brief
@@ -92,8 +92,7 @@ auto AlignUp(T a) -> T
     return (a + base - 1) / base * base;
 }
 
-class DynamicQuantTiling
-{
+class DynamicQuantTiling {
 public:
     DynamicQuantTiling() = default;
     ~DynamicQuantTiling() = default;
@@ -109,8 +108,8 @@ private:
     ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context);
     ge::graphStatus CheckAttrs(const gert::TilingContext* context) const;
     ge::graphStatus CheckOpShape(const gert::TilingContext* context);
-    ge::graphStatus CheckOpDim(
-        const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim);
+    ge::graphStatus CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim,
+                               uint32_t shape2Dim);
     ge::graphStatus CheckOpParams(const gert::TilingContext* context);
     void ResetLargeTilingParams();
     void SetTilingData(gert::TilingContext* context, ge::DataType xDtype);
@@ -183,8 +182,8 @@ void DynamicQuantTiling::SetTilingKey(gert::TilingContext* context, ge::DataType
     }
 }
 
-ge::graphStatus DynamicQuantTiling::CheckOpDim(
-    const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim)
+ge::graphStatus DynamicQuantTiling::CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2,
+                                               uint32_t shape1Dim, uint32_t shape2Dim)
 {
     if (shape1Dim != shape2Dim) {
         return ge::GRAPH_FAILED;
@@ -205,25 +204,23 @@ ge::graphStatus DynamicQuantTiling::CheckOpInputShape(const gert::TilingContext*
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     if (xDimNum == 1U) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum),
-                                              "The shape dim of x must be greater than or equal to 2");
+                                                 "The shape dim of x must be greater than or equal to 2");
         return ge::GRAPH_FAILED;
     }
     int64_t xDimLast = xShape->GetStorageShape().GetDim(xDimNum - 1);
 
     if (yDtype == ge::DT_INT4) {
-        OP_CHECK_IF(
-            (xDimLast % EVEN_FACTOR),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
-                    Ops::Base::ToString(xShape->GetStorageShape()),
-                    "When the yDtype is DT_INT4, the tail axis of x must be an even number"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((xDimLast % EVEN_FACTOR),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), "x", Ops::Base::ToString(xShape->GetStorageShape()),
+                        "When the yDtype is DT_INT4, the tail axis of x must be an even number"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto smoothShape = context->GetOptionalInputShape(SMOOTH_INDEX);
     if (smoothShape != nullptr) {
-        OP_CHECK_IF(
-            (CheckSmoothShape(context, xDimLast) != ge::GRAPH_SUCCESS),
-            OP_LOGE(context, "smooth shape check failed!"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF((CheckSmoothShape(context, xDimLast) != ge::GRAPH_SUCCESS),
+                    OP_LOGE(context, "smooth shape check failed!"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -234,41 +231,42 @@ ge::graphStatus DynamicQuantTiling::CheckSmoothShape(const gert::TilingContext* 
     if (groupShape != nullptr) {
         size_t groupDimNum = groupShape->GetStorageShape().GetDimNum();
         groupNum = groupShape->GetStorageShape().GetDim(groupDimNum > 0U ? groupDimNum - 1U : 0U);
-        OP_CHECK_IF(
-            (groupNum > MAX_EXPERT_NUM),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
-                                           "The value of groupNum must be less than or equal to 1024"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((groupNum > MAX_EXPERT_NUM),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
+                                                          "The value of groupNum must be less than or equal to 1024"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto smoothShape = context->GetOptionalInputShape(SMOOTH_INDEX);
     size_t smoothDimNum = smoothShape->GetStorageShape().GetDimNum();
     // 针对moe场景下的校验
     if (groupNum >= 1U) {
-        OP_CHECK_IF(
-            (smoothDimNum != MOE_SMOOTH_NUM),
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
-                                          "When groupNum is more than 0, the shape dim of smooth_scales must be equal to 2"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((smoothDimNum != MOE_SMOOTH_NUM),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
+                        "When groupNum is more than 0, the shape dim of smooth_scales must be equal to 2"),
+                    return ge::GRAPH_FAILED);
         int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
         if (groupNum != static_cast<uint32_t>(smoothDimFirst)) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "smooth_scales, group_index",
-                                            std::to_string(smoothDimFirst) + ", " + std::to_string(groupNum),
-                                            "The value of smooth_scales first dim and group_num must be the same");
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                context->GetNodeName(), "smooth_scales, group_index",
+                std::to_string(smoothDimFirst) + ", " + std::to_string(groupNum),
+                "The value of smooth_scales first dim and group_num must be the same");
             return ge::GRAPH_FAILED;
         }
     } else {
         if (smoothDimNum != 1U) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
-                                          "The shape dim of smooth_scales must be 1");
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales",
+                                                     std::to_string(smoothDimNum),
+                                                     "The shape dim of smooth_scales must be 1");
             return ge::GRAPH_FAILED;
         }
     }
     int64_t smoothDimLast = smoothShape->GetStorageShape().GetDim(smoothDimNum - 1);
     if (xDimLast != smoothDimLast) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, smooth_scales",
-                                            std::to_string(xDimLast) + ", " + std::to_string(smoothDimLast),
-                                            "last dim of x and smooth_scales must be equal");
+                                               std::to_string(xDimLast) + ", " + std::to_string(smoothDimLast),
+                                               "last dim of x and smooth_scales must be equal");
         return ge::GRAPH_FAILED;
     }
     hasSmooth = true;
@@ -282,34 +280,33 @@ ge::graphStatus DynamicQuantTiling::CheckOpOutputShape(const gert::TilingContext
     auto yShape = context->GetOutputShape(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     size_t yDimNum = yShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        (CheckOpDim(xShape, yShape, xDimNum, yDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y",
-                                                Ops::Base::ToString(xShape->GetStorageShape()) + ", " + Ops::Base::ToString(yShape->GetStorageShape()),
-                                                "The shapes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpDim(xShape, yShape, xDimNum, yDimNum) != ge::GRAPH_SUCCESS),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y",
+                                                       Ops::Base::ToString(xShape->GetStorageShape()) + ", " +
+                                                           Ops::Base::ToString(yShape->GetStorageShape()),
+                                                       "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto scaleShape = context->GetOutputShape(SCALE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape);
     size_t scaleDimNum = scaleShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
         (CheckOpDim(xShape, scaleShape, xDimNum - 1, scaleDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "scale, x",
-                                                Ops::Base::ToString(scaleShape->GetStorageShape()) + ", " + Ops::Base::ToString(xShape->GetStorageShape()),
-                                                "The shapes of scale and x excluding the last dim must be the same"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "scale, x",
+            Ops::Base::ToString(scaleShape->GetStorageShape()) + ", " + Ops::Base::ToString(xShape->GetStorageShape()),
+            "The shapes of scale and x excluding the last dim must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus DynamicQuantTiling::CheckOpShape(const gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        (CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "input shape check failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input shape check failed!"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOpOutputShape(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "output shape check failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpOutputShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "output shape check failed!"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -319,7 +316,9 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(const gert::TilingContext* 
     OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
     yDtype = yDesc->GetDataType();
     if (yDtype != ge::DataType::DT_INT8 && yDtype != ge::DataType::DT_INT4) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(yDtype)), "DT_INT8, DT_INT4");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y",
+                                  ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(yDtype)),
+                                  "DT_INT8, DT_INT4");
         return ge::GRAPH_FAILED;
     }
 
@@ -327,7 +326,8 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(const gert::TilingContext* 
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleDesc);
     auto scaleDtype = scaleDesc->GetDataType();
     if (scaleDtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "scale", ge::TypeUtils::DataTypeToSerialString(scaleDtype), "DT_FLOAT");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "scale", ge::TypeUtils::DataTypeToSerialString(scaleDtype),
+                                  "DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 
@@ -336,7 +336,8 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(const gert::TilingContext* 
         OP_CHECK_NULL_WITH_CONTEXT(context, offsetDesc);
         auto offsetDtype = scaleDesc->GetDataType();
         if (offsetDtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "offset", ge::TypeUtils::DataTypeToSerialString(offsetDtype), "DT_FLOAT");
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "offset",
+                                      ge::TypeUtils::DataTypeToSerialString(offsetDtype), "DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
     }
@@ -349,7 +350,8 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(const gert::TilingContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xDtype = xDesc->GetDataType();
     if (xDtype != ge::DataType::DT_FLOAT16 && xDtype != ge::DataType::DT_BF16) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype), "DT_FLOAT16, DT_BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype),
+                                  "DT_FLOAT16, DT_BF16");
         return ge::GRAPH_FAILED;
     }
 
@@ -357,13 +359,15 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(const gert::TilingContext* c
     if (smoothDesc != nullptr) {
         auto smoothDtype = smoothDesc->GetDataType();
         if (smoothDtype != ge::DataType::DT_FLOAT16 && smoothDtype != ge::DataType::DT_BF16) {
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "smooth_scales", ge::TypeUtils::DataTypeToSerialString(smoothDtype), "DT_FLOAT16, DT_BF16");
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "smooth_scales",
+                                      ge::TypeUtils::DataTypeToSerialString(smoothDtype), "DT_FLOAT16, DT_BF16");
             return ge::GRAPH_FAILED;
         }
         if (xDtype != smoothDtype) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, smooth_scales",
-                                                ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(smoothDtype),
-                                                "The dtype of x must be the same as the dtype of smooth_scales");
+                                                   ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+                                                       ge::TypeUtils::DataTypeToSerialString(smoothDtype),
+                                                   "The dtype of x must be the same as the dtype of smooth_scales");
             return ge::GRAPH_FAILED;
         }
 
@@ -371,7 +375,8 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(const gert::TilingContext* c
         if (groupDesc != nullptr) {
             auto groupDtype = groupDesc->GetDataType();
             if (groupDtype != ge::DataType::DT_INT32) {
-                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "group_index", ge::TypeUtils::DataTypeToSerialString(groupDtype), "DT_INT32");
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "group_index",
+                                          ge::TypeUtils::DataTypeToSerialString(groupDtype), "DT_INT32");
                 return ge::GRAPH_FAILED;
             }
             groupDtypeSize = g_dTypeLen[groupDtype];
@@ -389,8 +394,8 @@ ge::graphStatus DynamicQuantTiling::CheckAttrs(const gert::TilingContext* contex
         int32_t dstType = *dstTypePtr;
         if (dstType != yDtype) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "dst_type, y",
-                                                std::to_string(dstType) + ", " + std::to_string(yDtype),
-                                                "The dtype of dst_type must be the same as the dtype of y");
+                                                   std::to_string(dstType) + ", " + std::to_string(yDtype),
+                                                   "The dtype of dst_type must be the same as the dtype of y");
             return ge::GRAPH_FAILED;
         }
     }
@@ -399,23 +404,17 @@ ge::graphStatus DynamicQuantTiling::CheckAttrs(const gert::TilingContext* contex
 
 ge::graphStatus DynamicQuantTiling::CheckOpParams(const gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        (CheckInputDtype(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "x or smooth_scales dtype is invalid"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckInputDtype(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "x or smooth_scales dtype is invalid"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOutputDtype(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "op output dtype is invalid"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOutputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "op output dtype is invalid"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckAttrs(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "op attrs is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckAttrs(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "op attrs is invalid."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOpShape(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "input or output shape is invalid"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input or output shape is invalid"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -435,7 +434,8 @@ void DynamicQuantTiling::SetTilingData(gert::TilingContext* context, ge::DataTyp
     bool useDb = true;
     if (ubAvail == 0U) {
         // 这里需要除个单行最大需要的空间
-        innerLoopEle = static_cast<uint32_t>(maxUseUbSize / BF16_DB_SMOOTH_UB_SIZE / FLOAT_NUM_ONE_RPT * FLOAT_NUM_ONE_RPT);
+        innerLoopEle = static_cast<uint32_t>(maxUseUbSize / BF16_DB_SMOOTH_UB_SIZE / FLOAT_NUM_ONE_RPT *
+                                             FLOAT_NUM_ONE_RPT);
         innerLoopTimes = rowLen / innerLoopEle;
         innerLoopTail = rowLen % innerLoopEle;
         ubAvail = ONE;
@@ -509,8 +509,7 @@ ge::graphStatus DynamicQuantTiling::GetCompileInfo(gert::TilingContext* context)
     ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
         (vectorCoreNum <= 0 || ubSize <= 0),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.",
-            vectorCoreNum, ubSize),
+        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.", vectorCoreNum, ubSize),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -548,7 +547,7 @@ bool DynamicQuantTiling::SetSpecialTilingForDs(gert::TilingContext* context)
     tmpR = Ops::Base::CeilDiv(rowLoops, coreNum);
     tilingData.set_coreNum(coreNum);
     tilingData.set_rowLen(rowLen);
-    tilingData.set_headCoreNum(coreNum - 1); // 非尾行的核数
+    tilingData.set_headCoreNum(coreNum - 1);                  // 非尾行的核数
     tilingData.set_rowPerHeadCore(tmpR * maxHandleRowsPerUb); // 每个headCore要处理的行数
 
     int64_t leftRows = static_cast<int64_t>(rowNum) - static_cast<int64_t>((coreNum - 1) * tmpR * maxHandleRowsPerUb);
@@ -559,7 +558,9 @@ bool DynamicQuantTiling::SetSpecialTilingForDs(gert::TilingContext* context)
 
     tilingData.set_hasSmooth(hasSmooth ? 1 : 0);
 
-    OP_LOGI(context, "rowNum:%u vectorCoreNum:%u rowLen:%u, tiling coreNum:%u "
+    OP_LOGI(
+        context,
+        "rowNum:%u vectorCoreNum:%u rowLen:%u, tiling coreNum:%u "
         "headCoreNum:%u rowPerHeadCore:%u rowPerTailCore:%u multiRowNumHeadCore:%u multiRowNumTailCore:%u hasSmooth:%d",
         rowNum, vectorCoreNum, rowLen, tilingData.get_coreNum(), tilingData.get_headCoreNum(),
         tilingData.get_rowPerHeadCore(), tilingData.get_rowPerTailCore(), tilingData.get_multiRowNumHeadCore(),
@@ -585,7 +586,8 @@ bool DynamicQuantTiling::CheckMultiRowPreconditions(const gert::TilingContext* c
         return false;
     }
 
-    maxUbLen = ubSize - RESERVED_LENGTH - (NUM_TWO_FIVE_SIX + ONE_REPEAT_ELE + MEMORY_ALLOC_COEFFICIENT * ONE_REPEAT_ELE * sizeof(float));
+    maxUbLen = ubSize - RESERVED_LENGTH -
+               (NUM_TWO_FIVE_SIX + ONE_REPEAT_ELE + MEMORY_ALLOC_COEFFICIENT * ONE_REPEAT_ELE * sizeof(float));
 
     if (hasSmooth) {
         maxUbLen = maxUbLen / MULTI_ROW_HAS_SMOOTH_SPLIT / ONE_REPEAT_ELE * ONE_REPEAT_ELE;
@@ -603,7 +605,8 @@ bool DynamicQuantTiling::CheckMultiRowPreconditions(const gert::TilingContext* c
     return true;
 }
 
-void DynamicQuantTiling::CalculateMultiRowCoreDistribution(uint32_t maxUbLen, uint32_t& perCoreLoop, uint32_t& extraRows)
+void DynamicQuantTiling::CalculateMultiRowCoreDistribution(uint32_t maxUbLen, uint32_t& perCoreLoop,
+                                                           uint32_t& extraRows)
 {
     // 先用满ub再分核
     uint32_t maxHandleRowsPerUb = maxUbLen / rowLen; // 单个核单次处理的行数
@@ -611,7 +614,7 @@ void DynamicQuantTiling::CalculateMultiRowCoreDistribution(uint32_t maxUbLen, ui
 
     uint32_t perCoreMinLoop = 1; // 每个核至少计算的循环次数，用于调优，当前固定为1
     uint32_t rowLoops = maxHandleRowsPerUb == 0 ? 0 : rowNum / maxHandleRowsPerUb; // 所有核完整循环计算的总次数
-    perCoreLoop = rowLoops / vectorCoreNum; // 每个核计算的循环次数
+    perCoreLoop = rowLoops / vectorCoreNum;                                        // 每个核计算的循环次数
 
     if (perCoreLoop < perCoreMinLoop) {
         coreNum = rowLoops / perCoreMinLoop;
@@ -645,7 +648,7 @@ bool DynamicQuantTiling::CalcTilingForMultiRow(gert::TilingContext* context)
     maxHandleRowsPerUb = std::min(maxHandleRowsPerUb, rowNum);
 
     uint32_t perCoreTailRows = extraRows / coreNum; // 未平均分配的行数均分至当前所有核上
-    headCoreNum = extraRows % coreNum; // 需额外多处理一行的核数
+    headCoreNum = extraRows % coreNum;              // 需额外多处理一行的核数
     tilingData.set_coreNum(coreNum);
     tilingData.set_rowLen(rowLen);
     tilingData.set_headCoreNum(headCoreNum); // headCore的核数,会比非headCore多处理一行
@@ -656,11 +659,12 @@ bool DynamicQuantTiling::CalcTilingForMultiRow(gert::TilingContext* context)
 
     tilingData.set_hasSmooth(hasSmooth ? 1 : 0);
     tilingData.set_ubSize(ubSize);
-    OP_LOGI(context, "rowNum:%u vectorCoreNum:%u rowLen:%u, tiling coreNum:%u "
-        "headCoreNum:%u rowPerHeadCore:%u multiRowNumHeadCore:%u multiRowNumTailCore:%u hasSmooth:%d",
-        rowNum, vectorCoreNum, rowLen, tilingData.get_coreNum(), tilingData.get_headCoreNum(),
-        tilingData.get_rowPerHeadCore(), tilingData.get_multiRowNumHeadCore(),
-        tilingData.get_multiRowNumTailCore(), hasSmooth);
+    OP_LOGI(context,
+            "rowNum:%u vectorCoreNum:%u rowLen:%u, tiling coreNum:%u "
+            "headCoreNum:%u rowPerHeadCore:%u multiRowNumHeadCore:%u multiRowNumTailCore:%u hasSmooth:%d",
+            rowNum, vectorCoreNum, rowLen, tilingData.get_coreNum(), tilingData.get_headCoreNum(),
+            tilingData.get_rowPerHeadCore(), tilingData.get_multiRowNumHeadCore(), tilingData.get_multiRowNumTailCore(),
+            hasSmooth);
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
     workSpaces[0] = SYS_WORKSPACE_SIZE;
@@ -673,21 +677,15 @@ bool DynamicQuantTiling::CalcTilingForMultiRow(gert::TilingContext* context)
 ge::graphStatus DynamicQuantTiling::RunFusionKernelTiling(gert::TilingContext* context)
 {
     ResetLargeTilingParams();
-    OP_CHECK_IF(
-        (GetCompileInfo(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CheckOpParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((GetCompileInfo(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpParams(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."), return ge::GRAPH_FAILED);
     const gert::StorageShape* xShape = context->GetInputShape(X_INDEX);
 
     rowLen = xShape->GetStorageShape().GetDim(xShape->GetStorageShape().GetDimNum() - 1);
-    OP_CHECK_IF(
-        (rowLen == 0),
-        OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((rowLen == 0), OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."),
+                return ge::GRAPH_FAILED);
     size_t dimNum = xShape->GetStorageShape().GetDimNum() - 1;
     uint64_t tempHeadCoreNum = 1;
     for (size_t i = 0; i < dimNum; i++) {
@@ -777,11 +775,10 @@ static ge::graphStatus TilingPrepareForDynamicQuant(gert::TilingParseContext* co
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-        OP_LOGE(context, "DynamicQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
-            compileInfo->vectorCoreNum, compileInfo->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
+                OP_LOGE(context, "DynamicQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
+                        compileInfo->vectorCoreNum, compileInfo->ubSize),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 
     return ge::GRAPH_SUCCESS;

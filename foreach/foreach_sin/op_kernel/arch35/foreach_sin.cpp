@@ -16,28 +16,23 @@
 
 #include "foreach_sin_simt.h"
 
-enum class ForeachSinTilingKey : uint32_t
-{
+enum class ForeachSinTilingKey : uint32_t {
     TILING_KEY_FLOAT16 = 0,
-    TILING_KEY_FLOAT   = 1,
-    TILING_KEY_BF16    = 2,
+    TILING_KEY_FLOAT = 1,
+    TILING_KEY_BF16 = 2,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_sin(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_sin(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachSinTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachSinTilingData, tilingData, tiling);
 
-    if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSinTilingKey::TILING_KEY_FLOAT16)) {
+    if constexpr (schMode == static_cast<uint32_t>(ForeachSinTilingKey::TILING_KEY_FLOAT16)) {
         NsForeachSin::Process<half>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSinTilingKey::TILING_KEY_FLOAT)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSinTilingKey::TILING_KEY_FLOAT)) {
         NsForeachSin::Process<float>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSinTilingKey::TILING_KEY_BF16)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSinTilingKey::TILING_KEY_BF16)) {
         NsForeachSin::Process<bfloat16_t>(x, y, &tilingData);
     }
 }

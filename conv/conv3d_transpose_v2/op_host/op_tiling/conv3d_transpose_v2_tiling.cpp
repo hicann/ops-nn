@@ -26,23 +26,25 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 
-static ge::graphStatus Conv3DTransposeV2TilingFunc(gert::TilingContext *context)
+static ge::graphStatus Conv3DTransposeV2TilingFunc(gert::TilingContext* context)
 {
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus TilingParseForConv3DTransposeV2(gert::TilingParseContext *context)
+static ge::graphStatus TilingParseForConv3DTransposeV2(gert::TilingParseContext* context)
 {
     auto platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null."),
+                return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null."),
+                return ge::GRAPH_FAILED);
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->shortSocVersion = ascendcPlatform.GetSocVersion();
-	compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
     OP_LOGD(context->GetNodeName(), "compileInfoPtr npuArch: %d", compileInfoPtr->npuArch);
     return ge::GRAPH_SUCCESS;
 }
@@ -51,6 +53,6 @@ IMPL_OP_OPTILING(Conv3DTransposeV2)
     .Tiling(Conv3DTransposeV2TilingFunc)
     .TilingParse<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>(TilingParseForConv3DTransposeV2);
 
-}  // namespace Conv
-}  // namespace NN
-}  // namespace Ops
+} // namespace Conv
+} // namespace NN
+} // namespace Ops

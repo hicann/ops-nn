@@ -39,11 +39,10 @@ bool LayerNormGradV3CommonTiling::IsCapable()
         return false;
     }
     if (commonParams.colSize > COMMON_LNG_MAX_COL) {
-        OP_LOGI(
-            context_,
-            "LayerNormGradV3CommonTiling: col value(=%ld) is not support now, "
-            "please check.",
-            commonParams.colSize);
+        OP_LOGI(context_,
+                "LayerNormGradV3CommonTiling: col value(=%ld) is not support now, "
+                "please check.",
+                commonParams.colSize);
         return false;
     }
     return true;
@@ -81,14 +80,12 @@ ge::graphStatus LayerNormGradV3CommonTiling::DoOpTiling()
     td_.set_nlastRBufferBytes(colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE);
     // calculate ub tiling, row split ub
     int64_t ubFormer = CalculateUbFormer();
-    OP_CHECK_IF(
-        (ubFormer <= 0),
-        OP_LOGE(
-            context_,
-            "TilingForLayerNormGradV3: ub former(=%ld) is not greater than 0 "
-            "in common tiling, please check",
-            ubFormer),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubFormer <= 0),
+                OP_LOGE(context_,
+                        "TilingForLayerNormGradV3: ub former(=%ld) is not greater than 0 "
+                        "in common tiling, please check",
+                        ubFormer),
+                return ge::GRAPH_FAILED);
     int64_t ubLoopOfFormerBlock = Ops::Base::CeilDiv(blockFormer, ubFormer);
     int64_t ubLoopOfTailBlock = Ops::Base::CeilDiv(blockTail, ubFormer);
     td_.set_ubFormer(ubFormer);
@@ -109,8 +106,8 @@ int64_t LayerNormGradV3CommonTiling::CalculateUbFormer()
     int64_t curUbFormer = maxUBSize / coff;
     for (; curUbFormer >= 0; curUbFormer--) {
         int64_t wholeBufferBytes = curUbFormer * colAlignM_ * COMMON_LNG_B32_DTYPE_SIZE;
-        int64_t lastRBufferBytes =
-            CommonCeilDiv(curUbFormer * COMMON_LNG_B32_DTYPE_SIZE, COMMON_LNG_BLOCK_BYTES) * COMMON_LNG_BLOCK_BYTES;
+        int64_t lastRBufferBytes = CommonCeilDiv(curUbFormer * COMMON_LNG_B32_DTYPE_SIZE, COMMON_LNG_BLOCK_BYTES) *
+                                   COMMON_LNG_BLOCK_BYTES;
         int64_t lastBrcbBufferBytes = CommonCeilDiv(curUbFormer, COMMON_LNG_BRCB_ALIGN_FACTOR) *
                                       COMMON_LNG_BRCB_ALIGN_FACTOR * COMMON_LNG_BLOCK_BYTES;
         int64_t curUBSize = wholeBufferBytes * COMMON_LNG_WHOLE_BUFFER_NUM +

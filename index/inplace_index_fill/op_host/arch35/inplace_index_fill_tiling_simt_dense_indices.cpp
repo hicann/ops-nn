@@ -66,13 +66,12 @@ bool InplaceIndexFillTilingSimtDenseIndices::IsCapable()
 // GetOptimalIndiceUBFactor：计算最优的 indices UB 加载量
 // 策略：indicesUbFactor 要尽量大（去重效果好），同时确保多核并行
 // ============================================================================
-int64_t InplaceIndexFillTilingSimtDenseIndices::GetOptimalIndiceUBFactor(
-    int64_t indicesUbFactor, int64_t indicesNum, int64_t n)
+int64_t InplaceIndexFillTilingSimtDenseIndices::GetOptimalIndiceUBFactor(int64_t indicesUbFactor, int64_t indicesNum,
+                                                                         int64_t n)
 {
     int64_t indicesFactor = std::min(indicesUbFactor, indicesNum);
     // 逐步缩小 indicesFactor，直到满足多核并行条件
-    while (indicesFactor > INDICES_UB_FACTOR_MIN_THRESHOLD &&
-           indicesFactor > n + DUP_ELEMENTS_MIN_THRESHOLD) {
+    while (indicesFactor > INDICES_UB_FACTOR_MIN_THRESHOLD && indicesFactor > n + DUP_ELEMENTS_MIN_THRESHOLD) {
         // 计算总块数
         int64_t totalBlocks = (indicesNum + indicesFactor - 1) / indicesFactor;
         // 如果总块数 >= 核数的一半，说明有足够的并行度
@@ -106,8 +105,7 @@ void InplaceIndexFillTilingSimtDenseIndices::DoIndicesTilingTask()
     int64_t indicesUbFactor = maxUbIndicesNum;
 
     // 进一步优化：确保多核并行度
-    indicesUbFactor = GetOptimalIndiceUBFactor(
-        indicesUbFactor, inputData.indicesNum, inputData.dimSize);
+    indicesUbFactor = GetOptimalIndiceUBFactor(indicesUbFactor, inputData.indicesNum, inputData.dimSize);
 
     inputData.indicesUbFactor = indicesUbFactor;
 }
@@ -167,9 +165,8 @@ ge::graphStatus InplaceIndexFillTilingSimtDenseIndices::PostTiling()
 uint64_t InplaceIndexFillTilingSimtDenseIndices::GetTilingKey() const
 {
     uint64_t templateMode = static_cast<uint64_t>(TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES);
-    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
-        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
-        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4) ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32) :
+                                                       static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
     return GET_TPL_TILING_KEY(templateMode, dtypeMode);
 }
 
@@ -197,13 +194,9 @@ void InplaceIndexFillTilingSimtDenseIndices::DumpTilingInfo()
 {
     auto* tilingData = context_->GetTilingData<InplaceIndexFillSimtDenseIndicesTilingData>();
     std::ostringstream info;
-    info << "DenseIndices tilingKey: " << tilingData->tilingKeySimt
-         << ", p: " << tilingData->p
-         << ", n: " << tilingData->n
-         << ", q: " << tilingData->q
-         << ", indicesNum: " << tilingData->indicesNum
-         << ", usedCoreNum: " << tilingData->usedCoreNum
-         << ", indicesUbFactor: " << tilingData->indicesUbFactor;
+    info << "DenseIndices tilingKey: " << tilingData->tilingKeySimt << ", p: " << tilingData->p
+         << ", n: " << tilingData->n << ", q: " << tilingData->q << ", indicesNum: " << tilingData->indicesNum
+         << ", usedCoreNum: " << tilingData->usedCoreNum << ", indicesUbFactor: " << tilingData->indicesUbFactor;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 

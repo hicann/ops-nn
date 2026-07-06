@@ -22,7 +22,8 @@ using namespace Ops::Base;
 
 namespace ops {
 
-ge::graphStatus Infershape4MseLossGrad(gert::InferShapeContext* context) {
+ge::graphStatus Infershape4MseLossGrad(gert::InferShapeContext* context)
+{
     const size_t inputCount = 3;
     std::vector<const gert::Shape*> to_broadcast_shapes(inputCount);
     for (size_t i = 0; i < inputCount; i++) {
@@ -34,12 +35,13 @@ ge::graphStatus Infershape4MseLossGrad(gert::InferShapeContext* context) {
     OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
 
     OP_CHECK_IF(!BroadcastShape(to_broadcast_shapes, out_shape),
-        OP_LOGE(context->GetNodeName(), "BroadcastShape failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "BroadcastShape failed!"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus InferDataType4MseLossGrad(gert::InferDataTypeContext* context) {
+ge::graphStatus InferDataType4MseLossGrad(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "InferDataType4MseLossGrad enter");
     auto input_x_dtype = context->GetInputDataType(0);
     context->SetOutputDataType(0, input_x_dtype);

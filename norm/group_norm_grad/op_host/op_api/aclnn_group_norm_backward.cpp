@@ -60,17 +60,17 @@ constexpr size_t BN2D_INPUT_DIMS = 4;
 constexpr size_t UPDATE_GRAD_RESULT_CNT = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                       op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> REGBASE_FP16_FP32_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> REGBASE_FP16_FP32_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                   op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> REGBASE_BF16_FP32_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> REGBASE_BF16_FP32_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                   op::DataType::DT_BF16};
 
 static bool CheckNotNull(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd)
 {
@@ -83,23 +83,20 @@ static bool CheckNotNull(const aclTensor* gradOut, const aclTensor* input, const
 
 static inline bool isBatchNormSupportNcdhw(void)
 {
-    return (
-        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ||
-        (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002));
+    return ((GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ||
+            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002));
 }
 
-static bool CheckMaskNotNull(
-    const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
-    const aclBoolArray* outputMask)
+static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
+                             const aclBoolArray* outputMask)
 {
     OP_CHECK_NULL(outputMask, return false);
     if (outputMask->Size() != SHAPE_DIM) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Expected aclnnGroupNormBackward outputMask len to be 3, but got %zu.",
-            outputMask->Size());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected aclnnGroupNormBackward outputMask len to be 3, but got %zu.",
+                outputMask->Size());
         return false;
     }
-  
+
     if ((*outputMask)[AXIS_ZERO]) {
         OP_CHECK_NULL(gradInput, return false);
     }
@@ -113,10 +110,10 @@ static bool CheckMaskNotNull(
 }
 
 // David 支持混合精度
-static bool CheckMixPrecisionDtype(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* gamma, const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
-    const aclBoolArray* outputMask)
+static bool CheckMixPrecisionDtype(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                                   const aclTensor* rstd, const aclTensor* gamma, const aclTensor* gradInput,
+                                   const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
+                                   const aclBoolArray* outputMask)
 {
     OP_CHECK_DTYPE_NOT_MATCH(input, gradOut->GetDataType(), return false);
     if ((*outputMask)[AXIS_ZERO]) {
@@ -144,18 +141,17 @@ static bool CheckMixPrecisionDtype(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* gamma, const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
-    const aclBoolArray* outputMask)
+static bool CheckDtypeValid(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                            const aclTensor* rstd, const aclTensor* gamma, const aclTensor* gradInput,
+                            const aclTensor* gradGammaOut, const aclTensor* gradBetaOut, const aclBoolArray* outputMask)
 {
     // 检查self的数据类型是否在支持列表内
     auto supportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_DTYPE_SUPPORT_LIST);
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOut, supportList, return false);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(mean, supportList, return false);
-        return CheckMixPrecisionDtype(
-            gradOut, input, mean, rstd, gamma, gradInput, gradGammaOut, gradBetaOut, outputMask);
+        return CheckMixPrecisionDtype(gradOut, input, mean, rstd, gamma, gradInput, gradGammaOut, gradBetaOut,
+                                      outputMask);
     }
     OP_CHECK_DTYPE_NOT_MATCH(input, gradOut->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(mean, gradOut->GetDataType(), return false);
@@ -188,55 +184,48 @@ static int64_t GetTensorNumel(const aclTensor* x)
 static bool CheckAttr(int64_t C, int64_t group)
 {
     // 检查group是否大于0
-    OP_CHECK(
-        group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
-        return false);
+    OP_CHECK(group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
+             return false);
     // 检查C是否能被group整除
-    OP_CHECK(
-        C % group == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C can be divided by group, but got false."),
-        return false);
+    OP_CHECK(C % group == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C can be divided by group, but got false."),
+             return false);
 
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
         // 检查C//GROUP是否超过8000
-        OP_CHECK(
-            C / group <= UPPER_CARRYING_LIMIT,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C / group <= 8000 to be true, but got false."), return false);
+        OP_CHECK(C / group <= UPPER_CARRYING_LIMIT,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C / group <= 8000 to be true, but got false."),
+                 return false);
         // 检查C是否超过240000
-        OP_CHECK(
-            C <= MAX_C_SIZE, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expecting C to not exceed 240000, got %ld.", C),
-            return false);
+        OP_CHECK(C <= MAX_C_SIZE, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expecting C to not exceed 240000, got %ld.", C),
+                 return false);
     }
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW, int64_t group, const aclBoolArray* outputMask,
-    const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut)
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
+                       const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW, int64_t group,
+                       const aclBoolArray* outputMask, const aclTensor* gradInput, const aclTensor* gradGammaOut,
+                       const aclTensor* gradBetaOut)
 {
     // 检查gradOut维度是否小于等于8
     OP_CHECK_MAX_DIM(gradOut, MAX_SUPPORT_DIMS_NUMS, return false);
 
     // 检查gradOut的元素数量是否等于 N * C * HxW
-    OP_CHECK(
-        GetTensorNumel(gradOut) == N * C * HxW,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected gradOut.numel() == N * C * HxW to be true, but got false."),
-        return false);
+    OP_CHECK(GetTensorNumel(gradOut) == N * C * HxW,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected gradOut.numel() == N * C * HxW to be true, but got false."),
+             return false);
     // 检查input的元素数量是否等于 N * C * HxW
-    OP_CHECK(
-        GetTensorNumel(input) == N * C * HxW,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected input.numel() == N * C * HxW to be true, but got false."),
-        return false);
+    OP_CHECK(GetTensorNumel(input) == N * C * HxW,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected input.numel() == N * C * HxW to be true, but got false."),
+             return false);
     // 检查mean的元素数量是否等于 N * group
-    OP_CHECK(
-        GetTensorNumel(mean) == N * group,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected mean.numel() == N * group to be true, but got false."),
-        return false);
+    OP_CHECK(GetTensorNumel(mean) == N * group,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected mean.numel() == N * group to be true, but got false."),
+             return false);
     // 检查rstd的元素数量是否等于 N * group
-    OP_CHECK(
-        GetTensorNumel(rstd) == N * group,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected rstd.numel() == N * group to be true, but got false."),
-        return false);
+    OP_CHECK(GetTensorNumel(rstd) == N * group,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected rstd.numel() == N * group to be true, but got false."),
+             return false);
     // 获取原始输入shape
     auto orginInputShape = input->GetViewShape();
     auto orginGammaShape = op::Shape({C});
@@ -263,10 +252,10 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW, int64_t group, const aclBoolArray* outputMask,
-    const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut)
+static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean,
+                               const aclTensor* rstd, const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW,
+                               int64_t group, const aclBoolArray* outputMask, const aclTensor* gradInput,
+                               const aclTensor* gradGammaOut, const aclTensor* gradBetaOut)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOut, input, mean, rstd), ACLNN_ERR_PARAM_NULLPTR);
@@ -275,26 +264,25 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckMaskNotNull(gradInput, gradGammaOut, gradBetaOut, outputMask), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(
-        CheckDtypeValid(gradOut, input, mean, rstd, gamma, gradInput, gradGammaOut, gradBetaOut, outputMask),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(gradOut, input, mean, rstd, gamma, gradInput, gradGammaOut, gradBetaOut, outputMask),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查对应属性
     CHECK_RET(CheckAttr(C, group), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查是否shape一致
-    CHECK_RET(
-        CheckShape(
-            gradOut, input, mean, rstd, gamma, N, C, HxW, group, outputMask, gradInput, gradGammaOut, gradBetaOut),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(gradOut, input, mean, rstd, gamma, N, C, HxW, group, outputMask, gradInput, gradGammaOut,
+                         gradBetaOut),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormBackwardProcInner(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
-    aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+aclnnStatus BatchNormBackwardProcInner(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                                       const aclTensor* runningMean, const aclTensor* runningVar,
+                                       const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
+                                       aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias,
+                                       aclOpExecutor* executor)
 {
     bool isSupportNcdhw = isBatchNormSupportNcdhw();
     auto weightResize = ResizeFrom1D(weight, input, isSupportNcdhw, executor);
@@ -326,16 +314,16 @@ aclnnStatus BatchNormBackwardProcInner(
             grad = l0op::BN3DTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
             CHECK_RET(grad[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
             CHECK_RET(grad[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto reduceGrad = l0op::BN3DTrainingReduceGrad(
-                gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
+            auto reduceGrad = l0op::BN3DTrainingReduceGrad(gradOut, input, grad[0], grad[1], weightResize,
+                                                           saveMeanResize, saveInvstdResize, eps, executor);
             CHECK_RET(reduceGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
             *gradInput = const_cast<aclTensor*>(reduceGrad);
         } else {
             grad = l0op::BNTrainingUpdateGrad(gradOut, input, saveMeanResize, saveInvstdResize, eps, executor);
             CHECK_RET(grad[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
             CHECK_RET(grad[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto reduceGrad = l0op::BNTrainingReduceGrad(
-                gradOut, input, grad[0], grad[1], weightResize, saveMeanResize, saveInvstdResize, eps, executor);
+            auto reduceGrad = l0op::BNTrainingReduceGrad(gradOut, input, grad[0], grad[1], weightResize, saveMeanResize,
+                                                         saveInvstdResize, eps, executor);
             *gradInput = const_cast<aclTensor*>(reduceGrad);
         }
     }
@@ -344,10 +332,10 @@ aclnnStatus BatchNormBackwardProcInner(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormBackwardInner(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, float eps,
-    aclTensor** gradInput, aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
+aclnnStatus BatchNormBackwardInner(const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight,
+                                   const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* saveMean,
+                                   const aclTensor* saveInvstd, bool training, float eps, aclTensor** gradInput,
+                                   aclTensor** gradWeight, aclTensor** gradBias, aclOpExecutor* executor)
 {
     if (runningMean == nullptr) {
         runningMean = FillScalar(input->GetViewShape()[1], 0, executor);
@@ -381,9 +369,8 @@ aclnnStatus BatchNormBackwardInner(
     }
 
     aclTensor* result = nullptr;
-    auto bnResult = BatchNormBackwardProcInner(
-        gradOutPre, inputPre, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, &result, gradWeight,
-        gradBias, executor);
+    auto bnResult = BatchNormBackwardProcInner(gradOutPre, inputPre, weight, runningMean, runningVar, saveMean,
+                                               saveInvstd, training, eps, &result, gradWeight, gradBias, executor);
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
     *gradInput = result;
@@ -397,17 +384,17 @@ aclnnStatus BatchNormBackwardInner(
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* getBatchNormBackwardGradInput(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* weight, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training, double eps,
-    aclOpExecutor* executor)
+static const aclTensor* getBatchNormBackwardGradInput(const aclTensor* gradOut, const aclTensor* input,
+                                                      const aclTensor* weight, const aclTensor* runningMean,
+                                                      const aclTensor* runningVar, const aclTensor* saveMean,
+                                                      const aclTensor* saveInvstd, bool training, double eps,
+                                                      aclOpExecutor* executor)
 {
     aclTensor* bnGradInput = nullptr;
     aclTensor* bnGradWeight = nullptr;
     aclTensor* bnGradBias = nullptr;
-    auto bnResult = BatchNormBackwardInner(
-        gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, &bnGradInput,
-        &bnGradWeight, &bnGradBias, executor);
+    auto bnResult = BatchNormBackwardInner(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd,
+                                           training, eps, &bnGradInput, &bnGradWeight, &bnGradBias, executor);
     CHECK_RET(bnResult == ACLNN_SUCCESS, nullptr);
 
     return bnGradInput;
@@ -422,8 +409,8 @@ static const aclTensor* Reshape1DProcess(const aclTensor* self, int64_t N, aclOp
     return selfReshape;
 }
 
-static const aclTensor* Reshape3DProcess(
-    const aclTensor* self, int64_t N, int64_t C, int64_t HxW, aclOpExecutor* executor)
+static const aclTensor* Reshape3DProcess(const aclTensor* self, int64_t N, int64_t C, int64_t HxW,
+                                         aclOpExecutor* executor)
 {
     int64_t shapeValue[3] = {N, C, HxW};
     aclIntArray* shapeArray = executor->AllocIntArray(shapeValue, 3);
@@ -459,8 +446,8 @@ static inline int64_t GetTensorDim(const aclTensor* self)
     return static_cast<int64_t>(self->GetViewShape().GetDimNum());
 }
 
-static const aclTensor* GetvarianceBatchNorm(
-    const aclTensor* rstdContiguous, int64_t N, int64_t group, double eps, aclOpExecutor* executor)
+static const aclTensor* GetvarianceBatchNorm(const aclTensor* rstdContiguous, int64_t N, int64_t group, double eps,
+                                             aclOpExecutor* executor)
 {
     auto variance = l0op::Mul(rstdContiguous, rstdContiguous, executor);
     CHECK_RET(variance != nullptr, nullptr);
@@ -478,10 +465,10 @@ static const aclTensor* GetvarianceBatchNorm(
     return varianceBatchNorm;
 }
 
-static aclnnStatus GradInputProcess(
-    const aclTensor* gradOutReshape, const aclTensor* meanContiguous, const aclTensor* rstdContiguous,
-    const aclTensor* gammaContiguous, const aclTensor* inputReshape, int64_t N, int64_t C, int64_t group,
-    aclTensor* gradInput, aclOpExecutor* executor)
+static aclnnStatus GradInputProcess(const aclTensor* gradOutReshape, const aclTensor* meanContiguous,
+                                    const aclTensor* rstdContiguous, const aclTensor* gammaContiguous,
+                                    const aclTensor* inputReshape, int64_t N, int64_t C, int64_t group,
+                                    aclTensor* gradInput, aclOpExecutor* executor)
 {
     auto gradOutMulGamma = gradOutReshape;
     auto gammaReshape = Reshape3DProcess(gammaContiguous, 1, C, 1, executor);
@@ -504,9 +491,8 @@ static aclnnStatus GradInputProcess(
     auto weight = FillValue(weightTmp, 1.0, executor);
     CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradInputBatch = getBatchNormBackwardGradInput(
-        gradOutBatchNorm, inputBatchNorm, weight, nullptr, nullptr, meanBatchNorm, varianceBatchNorm, true, eps,
-        executor);
+    auto gradInputBatch = getBatchNormBackwardGradInput(gradOutBatchNorm, inputBatchNorm, weight, nullptr, nullptr,
+                                                        meanBatchNorm, varianceBatchNorm, true, eps, executor);
     CHECK_RET(gradInputBatch != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto gradInputReshape = l0op::Reshape(gradInputBatch, gradInput->GetViewShape(), executor);
     CHECK_RET(gradInputReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -516,10 +502,9 @@ static aclnnStatus GradInputProcess(
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* CalDgamma(
-    const aclTensor* gradOutReshape, const aclTensor* inputReshape, const aclTensor* mean, const aclTensor* rstd,
-    aclIntArray* AxisZeroShape, aclIntArray* AxisTwoShape, int64_t N, int64_t C, int64_t group,
-    aclOpExecutor* executor)
+static const aclTensor* CalDgamma(const aclTensor* gradOutReshape, const aclTensor* inputReshape, const aclTensor* mean,
+                                  const aclTensor* rstd, aclIntArray* AxisZeroShape, aclIntArray* AxisTwoShape,
+                                  int64_t N, int64_t C, int64_t group, aclOpExecutor* executor)
 {
     int64_t cDivGroup = group > 0 ? C / group : C;
     int64_t expandShapeValue[3] = {N, group, cDivGroup};
@@ -549,10 +534,9 @@ static const aclTensor* CalDgamma(
     return dgamma;
 }
 
-static aclnnStatus GetDgamma(
-    const aclTensor* gradOutReshape, const aclTensor* inputReshape, const aclTensor* meanContiguous,
-    const aclTensor* rstdContiguous, int64_t N, int64_t C, int64_t group,
-    aclTensor* gradGammaOut, aclOpExecutor* executor)
+static aclnnStatus GetDgamma(const aclTensor* gradOutReshape, const aclTensor* inputReshape,
+                             const aclTensor* meanContiguous, const aclTensor* rstdContiguous, int64_t N, int64_t C,
+                             int64_t group, aclTensor* gradGammaOut, aclOpExecutor* executor)
 {
     int64_t AxisTwoShapeValue[1] = {AXIS_TWO};
     aclIntArray* AxisTwoShape = executor->AllocIntArray(AxisTwoShapeValue, 1);
@@ -579,9 +563,8 @@ static aclnnStatus GetDgamma(
     CHECK_RET(meanBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(rstdBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto dgamma = CalDgamma(
-        gradOutReshape, inputReshape, meanBroadcast, rstdBroadcast, AxisZeroShape, AxisTwoShape, N, C, group,
-        executor);
+    auto dgamma = CalDgamma(gradOutReshape, inputReshape, meanBroadcast, rstdBroadcast, AxisZeroShape, AxisTwoShape, N,
+                            C, group, executor);
     CHECK_RET(dgamma != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto dgammaReshape = l0op::Reshape(dgamma, gradGammaOut->GetViewShape(), executor);
     CHECK_RET(dgammaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -591,8 +574,7 @@ static aclnnStatus GetDgamma(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus GetDbeta(
-    const aclTensor* gradOutReshape, aclTensor* gradBetaOut, aclOpExecutor* executor)
+static aclnnStatus GetDbeta(const aclTensor* gradOutReshape, aclTensor* gradBetaOut, aclOpExecutor* executor)
 {
     int64_t AxisTwoShapeValue[1] = {AXIS_TWO};
     aclIntArray* AxisTwoShape = executor->AllocIntArray(AxisTwoShapeValue, 1);
@@ -613,8 +595,8 @@ static aclnnStatus GetDbeta(
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* GetgammaContiguous(
-    const aclTensor* gradOut, const aclTensor* gamma, int64_t C, aclOpExecutor* executor)
+static const aclTensor* GetgammaContiguous(const aclTensor* gradOut, const aclTensor* gamma, int64_t C,
+                                           aclOpExecutor* executor)
 {
     auto gammaContiguous = gamma;
     if (gamma == nullptr) {
@@ -627,11 +609,12 @@ static const aclTensor* GetgammaContiguous(
     return gammaContiguous;
 }
 
-aclnnStatus ComputeGroupNormBackwardEmptyInput(
-    const aclTensor* gradOutContiguous, const aclTensor* inputContiguous, const aclTensor* meanContiguous,
-    const aclTensor* rstdContiguous, const aclTensor* gammaContiguous, int64_t N, int64_t C, int64_t group,
-    const aclBoolArray* outputMask, aclTensor* gradGammaOut, aclTensor* gradBetaOut, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus ComputeGroupNormBackwardEmptyInput(const aclTensor* gradOutContiguous, const aclTensor* inputContiguous,
+                                               const aclTensor* meanContiguous, const aclTensor* rstdContiguous,
+                                               const aclTensor* gammaContiguous, int64_t N, int64_t C, int64_t group,
+                                               const aclBoolArray* outputMask, aclTensor* gradGammaOut,
+                                               aclTensor* gradBetaOut, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -644,27 +627,26 @@ aclnnStatus ComputeGroupNormBackwardEmptyInput(
         meanReshape = l0op::Reshape(meanContiguous, {N, group}, uniqueExecutor.get());
         rstdReshape = l0op::Reshape(rstdContiguous, {N, group}, uniqueExecutor.get());
     }
-    auto gammaReshape = l0op::Reshape(
-        gammaContiguous,
-        {
-            C,
-        },
-        uniqueExecutor.get());
+    auto gammaReshape = l0op::Reshape(gammaContiguous,
+                                      {
+                                          C,
+                                      },
+                                      uniqueExecutor.get());
     CHECK_RET(gammaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     std::string data_format = "NCHW";
 
     // 创建输出Tensor
-    aclTensor* dx_output = uniqueExecutor.get()->AllocTensor(
-        gradOutContiguous->GetViewShape(), gradOutContiguous->GetDataType(), op::Format::FORMAT_ND);
-    aclTensor* dgamma_output = uniqueExecutor.get()->AllocTensor(
-        gammaReshape->GetViewShape(), gammaReshape->GetDataType(), op::Format::FORMAT_ND);
-    aclTensor* dbeta_output = uniqueExecutor.get()->AllocTensor(
-        gammaReshape->GetViewShape(), gammaReshape->GetDataType(), op::Format::FORMAT_ND);
+    aclTensor* dx_output = uniqueExecutor.get()->AllocTensor(gradOutContiguous->GetViewShape(),
+                                                             gradOutContiguous->GetDataType(), op::Format::FORMAT_ND);
+    aclTensor* dgamma_output = uniqueExecutor.get()->AllocTensor(gammaReshape->GetViewShape(),
+                                                                 gammaReshape->GetDataType(), op::Format::FORMAT_ND);
+    aclTensor* dbeta_output = uniqueExecutor.get()->AllocTensor(gammaReshape->GetViewShape(),
+                                                                gammaReshape->GetDataType(), op::Format::FORMAT_ND);
 
-    auto GroupNormGradOut = l0op::GroupNormGrad(
-        gradOutContiguous, meanReshape, rstdReshape, inputContiguous, gammaReshape, group, data_format,
-        (*outputMask)[AXIS_ZERO], (*outputMask)[AXIS_ONE], (*outputMask)[AXIS_TWO], dx_output, dgamma_output,
-        dbeta_output, uniqueExecutor.get());
+    auto GroupNormGradOut = l0op::GroupNormGrad(gradOutContiguous, meanReshape, rstdReshape, inputContiguous,
+                                                gammaReshape, group, data_format, (*outputMask)[AXIS_ZERO],
+                                                (*outputMask)[AXIS_ONE], (*outputMask)[AXIS_TWO], dx_output,
+                                                dgamma_output, dbeta_output, uniqueExecutor.get());
 
     // 将 dgamma 输出
     auto dgamma = std::get<OUTPUT_DGAMMA_INDEX>(GroupNormGradOut);
@@ -681,25 +663,25 @@ aclnnStatus ComputeGroupNormBackwardEmptyInput(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW, int64_t group, const aclBoolArray* outputMask,
-    aclTensor* gradInput, aclTensor* gradGammaOut, aclTensor* gradBetaOut, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
+                                                   const aclTensor* mean, const aclTensor* rstd, const aclTensor* gamma,
+                                                   int64_t N, int64_t C, int64_t HxW, int64_t group,
+                                                   const aclBoolArray* outputMask, aclTensor* gradInput,
+                                                   aclTensor* gradGammaOut, aclTensor* gradBetaOut,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(
-        aclnnGroupNormBackward, DFX_IN(gradOut, input, mean, rstd, gamma, N, C, HxW, group, outputMask),
-        DFX_OUT(gradInput, gradGammaOut, gradBetaOut));
+    L2_DFX_PHASE_1(aclnnGroupNormBackward, DFX_IN(gradOut, input, mean, rstd, gamma, N, C, HxW, group, outputMask),
+                   DFX_OUT(gradInput, gradGammaOut, gradBetaOut));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        gradOut, input, mean, rstd, gamma, N, C, HxW, group, outputMask, gradInput, gradGammaOut, gradBetaOut);
+    auto ret = CheckParams(gradOut, input, mean, rstd, gamma, N, C, HxW, group, outputMask, gradInput, gradGammaOut,
+                           gradBetaOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
@@ -724,12 +706,13 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
     CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 空tensor在kernel中支持，91095场景
-    bool isNeedProcessEmpty = (Ops::NN::AclnnUtil::IsRegbase(npuArch) && (gradOut->IsEmpty() || input->IsEmpty()
-                               || mean->IsEmpty() || rstd->IsEmpty()) && !gammaContiguous->IsEmpty());
+    bool isNeedProcessEmpty = (Ops::NN::AclnnUtil::IsRegbase(npuArch) &&
+                               (gradOut->IsEmpty() || input->IsEmpty() || mean->IsEmpty() || rstd->IsEmpty()) &&
+                               !gammaContiguous->IsEmpty());
     if (isNeedProcessEmpty) {
-        ret = ComputeGroupNormBackwardEmptyInput(
-            gradOutContiguous, inputContiguous, meanContiguous, rstdContiguous, gammaContiguous, N, C, group,
-            outputMask, gradGammaOut, gradBetaOut, workspaceSize, executor);
+        ret = ComputeGroupNormBackwardEmptyInput(gradOutContiguous, inputContiguous, meanContiguous, rstdContiguous,
+                                                 gammaContiguous, N, C, group, outputMask, gradGammaOut, gradBetaOut,
+                                                 workspaceSize, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         return ACLNN_SUCCESS;
     } else if (Ops::NN::AclnnUtil::IsRegbase(npuArch) && gammaContiguous->IsEmpty()) {
@@ -743,12 +726,11 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
     auto inputReshape = l0op::Reshape(inputContiguous, {N, C, HxW}, uniqueExecutor.get());
     auto meanReshape = l0op::Reshape(meanContiguous, {N, group}, uniqueExecutor.get());
     auto rstdReshape = l0op::Reshape(rstdContiguous, {N, group}, uniqueExecutor.get());
-    auto gammaReshape = l0op::Reshape(
-        gammaContiguous,
-        {
-            C,
-        },
-        uniqueExecutor.get());
+    auto gammaReshape = l0op::Reshape(gammaContiguous,
+                                      {
+                                          C,
+                                      },
+                                      uniqueExecutor.get());
     CHECK_RET(gradOutReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(inputReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(meanReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -758,20 +740,20 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
 
     if (npuArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         // 创建输出Tensor
-        aclTensor* dx_output = uniqueExecutor.get()->AllocTensor(
-            gradOutReshape->GetViewShape(), gradOutReshape->GetDataType(), op::Format::FORMAT_ND);
+        aclTensor* dx_output = uniqueExecutor.get()->AllocTensor(gradOutReshape->GetViewShape(),
+                                                                 gradOutReshape->GetDataType(), op::Format::FORMAT_ND);
         CHECK_RET(dx_output != nullptr, ACLNN_ERR_INNER_NULLPTR);
         aclTensor* dgamma_output = uniqueExecutor.get()->AllocTensor(
             gammaReshape->GetViewShape(), gammaReshape->GetDataType(), op::Format::FORMAT_ND);
         CHECK_RET(dgamma_output != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        aclTensor* dbeta_output = uniqueExecutor.get()->AllocTensor(
-            gammaReshape->GetViewShape(), gammaReshape->GetDataType(), op::Format::FORMAT_ND);
+        aclTensor* dbeta_output = uniqueExecutor.get()->AllocTensor(gammaReshape->GetViewShape(),
+                                                                    gammaReshape->GetDataType(), op::Format::FORMAT_ND);
         CHECK_RET(dbeta_output != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 调用l0接口GroupNormGrad
-        auto GroupNormGradOut = l0op::GroupNormGrad(
-            gradOutReshape, meanReshape, rstdReshape, inputReshape, gammaReshape, group, data_format,
-            (*outputMask)[AXIS_ZERO], (*outputMask)[AXIS_ONE], (*outputMask)[AXIS_TWO], dx_output, dgamma_output,
-            dbeta_output, uniqueExecutor.get());
+        auto GroupNormGradOut = l0op::GroupNormGrad(gradOutReshape, meanReshape, rstdReshape, inputReshape,
+                                                    gammaReshape, group, data_format, (*outputMask)[AXIS_ZERO],
+                                                    (*outputMask)[AXIS_ONE], (*outputMask)[AXIS_TWO], dx_output,
+                                                    dgamma_output, dbeta_output, uniqueExecutor.get());
         if ((*outputMask)[AXIS_ZERO]) {
             auto dx = std::get<0>(GroupNormGradOut);
             CHECK_RET(dx != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -799,16 +781,14 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
     } else {
         // 计算并将结果拷贝到输出gradInput
         if ((*outputMask)[AXIS_ZERO]) {
-            ret = GradInputProcess(
-                gradOutReshape, meanContiguous, rstdContiguous, gammaContiguous, inputReshape, N, C, group,
-                gradInput, uniqueExecutor.get());
+            ret = GradInputProcess(gradOutReshape, meanContiguous, rstdContiguous, gammaContiguous, inputReshape, N, C,
+                                   group, gradInput, uniqueExecutor.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ret);
         }
         if ((*outputMask)[AXIS_ONE]) {
             // 计算并将结果拷贝到输出gradGammaOut
-            ret = GetDgamma(
-                gradOutReshape, inputReshape, meanContiguous, rstdContiguous, N, C, group, gradGammaOut,
-                uniqueExecutor.get());
+            ret = GetDgamma(gradOutReshape, inputReshape, meanContiguous, rstdContiguous, N, C, group, gradGammaOut,
+                            uniqueExecutor.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ret);
         }
         if ((*outputMask)[AXIS_TWO]) {
@@ -824,8 +804,8 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGroupNormBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnGroupNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnGroupNormBackward);
     // 固定写法，调用框架能力，完成计算

@@ -15,35 +15,19 @@
 
 #include "register/op_def_registry.h"
 
-namespace ops{
-static const std::vector<ge::DataType> dataType = {
-    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT   
-};
+namespace ops {
+static const std::vector<ge::DataType> dataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> dataFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class MseLossGrad : public OpDef {
 public:
     explicit MseLossGrad(const char* name) : OpDef(name)
     {
-        this->Input("predict")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat);
-        this->Input("label")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat);
-        this->Input("dout")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat);
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(dataType)
-            .Format(dataFormat);
+        this->Input("predict").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Input("label").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Input("dout").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Output("y").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
         this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
         OpAICoreConfig aicoreConfig;

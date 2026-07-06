@@ -12,7 +12,7 @@
  * \file adaptive_pool2d_tiling.h
  * \brief
  * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (51) USING BLANK LINES.
- * 
+ *
  */
 
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPTIVE_POOL2D_TILING_H_
@@ -72,10 +72,8 @@ struct AdaptivePool2dCompileInfo {
 
 class AdaptivePool2dBaseTiling : public TilingBaseClass {
 public:
-    explicit AdaptivePool2dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptivePool2dBaseTiling() override
-    {}
+    explicit AdaptivePool2dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptivePool2dBaseTiling() override {}
 
     BaseInput input_;
     std::string nodeName = "";
@@ -91,13 +89,13 @@ protected:
     uint64_t GetTilingKey() const override;
     void DumpTilingInfo() override;
     ge::graphStatus GetAndCheckDataFormat();
-    ge::graphStatus GetRealOutDims(const int64_t* outputSize, const gert::Shape& xShape,
-                                    size_t output_size_len, size_t input_dim_num);
+    ge::graphStatus GetRealOutDims(const int64_t* outputSize, const gert::Shape& xShape, size_t output_size_len,
+                                   size_t input_dim_num);
     ge::graphStatus CheckNpuArch();
     uint64_t CalKernelSizeOneDimMax(uint64_t inSize, uint64_t outSize);
     ge::graphStatus CheckOutDims();
 };
 
-}// namespace optiling
+} // namespace optiling
 
 #endif

@@ -17,61 +17,33 @@
 
 namespace ops {
 static const std::vector<ge::DataType> dyDataType950 = {
-    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_BF16,
-    ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,
-    ge::DT_BF16,
-    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_BF16,
-    ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,
-    ge::DT_BF16
-};
+    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16};
 static const std::vector<ge::DataType> dxDataType950 = {
-    ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,
-    ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,
-    ge::DT_INT8,
-    ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8,
-    ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8,
-    ge::DT_HIFLOAT8
-};
+    ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,
+    ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8,
+    ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8};
 static const std::vector<ge::DataType> rstdDataType950 = {
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT
-};
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
 static const std::vector<ge::DataType> gammaDataType950 = {
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,
-    ge::DT_BF16,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-    ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,    ge::DT_FLOAT16,
-    ge::DT_BF16
-};
+    ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT,
+    ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_BF16};
 static const std::vector<ge::DataType> scalesXDataType950 = {
-    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16,
-    ge::DT_BF16,
-    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_BF16,
-    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16,
-    ge::DT_BF16
-};
+    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,  ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT,
+    ge::DT_BF16,  ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
 static const std::vector<ge::DataType> offsetXDataType950 = {
-    ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
-    ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
-    ge::DT_INT32,
-    ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
-    ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
-    ge::DT_INT32
-};
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32};
 static const std::vector<ge::Format> format950 = {
-    ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,
-    ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,
-    ge::FORMAT_ND,
-    ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,
-    ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,  ge::FORMAT_ND,
-    ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class RmsNormGradQuant : public OpDef {
 public:
@@ -113,11 +85,7 @@ public:
             .Format(format950)
             .UnknownShapeFormat(format950)
             .AutoContiguous();
-        this->Output("dx")
-            .ParamType(REQUIRED)
-            .DataType(dxDataType950)
-            .Format(format950)
-            .UnknownShapeFormat(format950);
+        this->Output("dx").ParamType(REQUIRED).DataType(dxDataType950).Format(format950).UnknownShapeFormat(format950);
         this->Output("dgamma")
             .ParamType(REQUIRED)
             .DataType(rstdDataType950)

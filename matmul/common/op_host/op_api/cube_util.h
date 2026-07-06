@@ -31,7 +31,7 @@ bool CheckAddmmTensorShapeNeedBroadcast(const aclTensor* mat1, const aclTensor* 
 
 // 校验针对Addmm算子的cubeMathType和平台是否符合预期
 bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
-    const aclTensor* out, int8_t cubeMathType);
+                               const aclTensor* out, int8_t cubeMathType);
 
 // 返回芯片对应支持的数据类型
 const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion();
@@ -49,13 +49,15 @@ op::DataType CalcPromoteTypeCubeMathTypeNew(const op::DataType cubeTensorPromote
 bool NeedCubeGoHF32(const op::DataType cubeTensorPromoteType, int8_t cubeMathType);
 
 // 判断当前ARCH是否为DAV_3510或后续兼容版本，后续新增兼容ARCH在此函数内追加
-inline bool IsNpuArch3510Series() {
+inline bool IsNpuArch3510Series()
+{
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     return (npuArch == NpuArch::DAV_3510);
 }
 
 // 检查针对x芯片，cube算子是否支持FP32
-inline bool IsCubeSupportFp32() {
+inline bool IsCubeSupportFp32()
+{
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series() && (npuArch != NpuArch::DAV_3002)) {
         return false;
@@ -64,7 +66,8 @@ inline bool IsCubeSupportFp32() {
 }
 
 // 检查针对x芯片，cube算子是否支持HF32
-inline bool IsCubeSupportHf32() {
+inline bool IsCubeSupportHf32()
+{
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series() && (npuArch != NpuArch::DAV_3002)) {
         return false;
@@ -72,8 +75,7 @@ inline bool IsCubeSupportHf32() {
     return true;
 }
 
-bool CheckUnSupportDtype(const aclTensor *input, const aclTensor *weight);
+bool CheckUnSupportDtype(const aclTensor* input, const aclTensor* weight);
 
 } // namespace NN
 } // namespace Ops
-

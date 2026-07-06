@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_basic_streamk_tiling.h
  * \brief
@@ -28,10 +27,10 @@ namespace optiling {
 namespace matmul_v3_advanced {
 class MatMulV3BasicStreamKTiling : public MatMulV3BaseTiling {
 public:
-    MatMulV3BasicStreamKTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    MatMulV3BasicStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg){};
 
-    ~MatMulV3BasicStreamKTiling() override {};
+    ~MatMulV3BasicStreamKTiling() override{};
+
 protected:
     bool IsCapable() override;
 
@@ -41,7 +40,7 @@ protected:
 
     std::vector<size_t> GetWorkspaceSize() const override;
 
-    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
 private:
     bool CheckStreamKSKTiling() const;
@@ -50,11 +49,10 @@ private:
 
     MatMulV3L0C2Out GetL0C2OutFlag() const;
 
-    uint64_t mCnt_{ 1 };
-    uint64_t nCnt_{ 1 };
-    uint64_t totalMNCnt_{ 1 };
+    uint64_t mCnt_{1};
+    uint64_t nCnt_{1};
+    uint64_t totalMNCnt_{1};
     MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
 };
-} // namespace matmul_v3
+} // namespace matmul_v3_advanced
 } // namespace optiling
-

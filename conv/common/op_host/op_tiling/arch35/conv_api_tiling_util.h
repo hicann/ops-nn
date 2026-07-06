@@ -70,23 +70,11 @@ struct PlatformInfo {
     NpuArch npuArch = NpuArch::DAV_RESV;
 };
 
-enum class BoundType {
-    CUBE_BOUND = 0,
-    MEMORY_BOUND,
-    INVALID
-};
+enum class BoundType { CUBE_BOUND = 0, MEMORY_BOUND, INVALID };
 
-enum class IterateMNOrder {
-    ITER_M_FST = 0,
-    ITER_N_FST,
-    INVALID
-};
+enum class IterateMNOrder { ITER_M_FST = 0, ITER_N_FST, INVALID };
 
-enum class OutputOrder {
-    HW = 0,
-    M,
-    INVALID
-};
+enum class OutputOrder { HW = 0, M, INVALID };
 
 struct ConvC04Info {
     uint64_t curNBL1 = 0;
@@ -106,7 +94,7 @@ struct ConvWeightUbTransParams {
     uint64_t k0 = 0;
     uint64_t n0 = 0;
     ConvDtype weightDtype = ConvDtype::UNDEFINED;
- 
+
     uint32_t bUbNStep = 0;
     uint32_t bUbKStep = 0;
 };
@@ -123,29 +111,17 @@ struct ConvDmaParams {
     uint32_t kwUb = 0;
 };
 
-enum class TilingAlgorithmType {
-    FORMULAS = 0,
-    BASIC_BLOCK,
-    INVALID
-};
+enum class TilingAlgorithmType { FORMULAS = 0, BASIC_BLOCK, INVALID };
 
 const std::map<ConvDtype, std::string> DTYPE_TO_STR = {
-    {ConvDtype::FLOAT16, "float16"},
-    {ConvDtype::FLOAT32, "float32"},
-    {ConvDtype::BFLOAT16, "bfloat16"},
-    {ConvDtype::INT4, "int4"},
-    {ConvDtype::INT8, "int8"},
-    {ConvDtype::UINT8, "uint8"},
-    {ConvDtype::INT16, "int16"},
-    {ConvDtype::UINT16, "uint16"},
-    {ConvDtype::INT32, "int32"},
-    {ConvDtype::UINT32, "uint32"},
-    {ConvDtype::INT64, "int64"},
-    {ConvDtype::UINT64, "uint64"},
-    {ConvDtype::HIFLOAT8, "hifloat8"},
-    {ConvDtype::FLOAT8_E4M3FN, "float8_e4m3fn"},
-    {ConvDtype::DOUBLE, "double"},
-    {ConvDtype::UNDEFINED, "undefined"},
+    {ConvDtype::FLOAT16, "float16"},   {ConvDtype::FLOAT32, "float32"},
+    {ConvDtype::BFLOAT16, "bfloat16"}, {ConvDtype::INT4, "int4"},
+    {ConvDtype::INT8, "int8"},         {ConvDtype::UINT8, "uint8"},
+    {ConvDtype::INT16, "int16"},       {ConvDtype::UINT16, "uint16"},
+    {ConvDtype::INT32, "int32"},       {ConvDtype::UINT32, "uint32"},
+    {ConvDtype::INT64, "int64"},       {ConvDtype::UINT64, "uint64"},
+    {ConvDtype::HIFLOAT8, "hifloat8"}, {ConvDtype::FLOAT8_E4M3FN, "float8_e4m3fn"},
+    {ConvDtype::DOUBLE, "double"},     {ConvDtype::UNDEFINED, "undefined"},
 };
 
 const std::map<ConvFormat, std::string> FORMAT_TO_STR = {
@@ -165,17 +141,9 @@ const std::map<ConvFormat, std::string> FORMAT_TO_STR = {
 };
 
 const std::map<ConvDtype, uint32_t> DTYPE_SIZE_TAB = {
-    {ConvDtype::FLOAT16, 2},
-    {ConvDtype::FLOAT32, 4},
-    {ConvDtype::BFLOAT16, 2},
-    {ConvDtype::INT4, 1},
-    {ConvDtype::INT8, 1},
-    {ConvDtype::INT32, 4},
-    {ConvDtype::INT64, 8},
-    {ConvDtype::UINT64, 8},
-    {ConvDtype::HIFLOAT8, 1},
-    {ConvDtype::FLOAT8_E4M3FN, 1}
-};
+    {ConvDtype::FLOAT16, 2},  {ConvDtype::FLOAT32, 4},      {ConvDtype::BFLOAT16, 2}, {ConvDtype::INT4, 1},
+    {ConvDtype::INT8, 1},     {ConvDtype::INT32, 4},        {ConvDtype::INT64, 8},    {ConvDtype::UINT64, 8},
+    {ConvDtype::HIFLOAT8, 1}, {ConvDtype::FLOAT8_E4M3FN, 1}};
 
 constexpr uint64_t SINGLE_BUFFER_NUM = 1;
 constexpr uint64_t DOUBLE_BUFFER_NUM = 2;
@@ -255,10 +223,8 @@ public:
     struct {
         ConvDtype madType;
         ConvDtype biasType;
-    } typeMaps[static_cast<uint8_t>(ConvDtype::UNDEFINED) + 1] = {
-        {ConvDtype::UNDEFINED, ConvDtype::UNDEFINED}
-    };
-    
+    } typeMaps[static_cast<uint8_t>(ConvDtype::UNDEFINED) + 1] = {{ConvDtype::UNDEFINED, ConvDtype::UNDEFINED}};
+
     ConvDtype ToBiasType(ConvDtype type) const
     {
         if (static_cast<uint8_t>(type) > static_cast<uint8_t>(ConvDtype::UNDEFINED)) {
@@ -297,13 +263,13 @@ struct AscendApiMknMap {
     int32_t GetByIndex(uint32_t idx) const
     {
         if (idx > MKN_MAX_SIZE - 1) {
-        return MKN_VALUE_DEFAULT;
+            return MKN_VALUE_DEFAULT;
         }
         return map[idx];
     }
     int8_t map[MKN_MAX_SIZE];
 };
- 
+
 struct AscendApiCubeMkn {
     int8_t toIdx[static_cast<uint8_t>(ConvDtype::UNDEFINED) + 1] = {0};
     AscendApiMknMap maps[3] = {{M0, B16_K0, N0}, // fp16
@@ -331,10 +297,10 @@ uint64_t AlignB(uint64_t a, uint64_t b);
 uint64_t CeilDiv(uint64_t a, uint64_t b);
 uint64_t FloorAlign(uint64_t a, uint64_t b);
 uint64_t Gcd(uint64_t a, uint64_t b);
-void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
-void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList);
-void CalcCommFactorOfTwoNum(const uint64_t num1, const uint64_t num2, std::vector<uint64_t> &resList);
-void VectorElementMultip(std::vector<uint64_t> &range, const uint64_t value);
+void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList);
+void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList);
+void CalcCommFactorOfTwoNum(const uint64_t num1, const uint64_t num2, std::vector<uint64_t>& resList);
+void VectorElementMultip(std::vector<uint64_t>& range, const uint64_t value);
 bool IsEqual(std::vector<ConvDtype>& arr1, const std::vector<ConvDtype>& arr2, uint32_t size);
 uint64_t CalcKhDilated(uint64_t singlekH, uint64_t dilationH);
 uint64_t Conv2DInferHiL1(uint64_t inputHoL1, uint64_t khDilated, uint64_t hi, uint64_t strideH);

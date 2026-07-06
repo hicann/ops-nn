@@ -57,8 +57,7 @@ static int64_t FindBinaryQuotient(int64_t len)
 namespace optiling {
 class BatchNormV3BlockSplitRTiling : public BatchNormV3RegbaseTilingBase {
 public:
-    explicit BatchNormV3BlockSplitRTiling(gert::TilingContext* context) : BatchNormV3RegbaseTilingBase(context)
-    {}
+    explicit BatchNormV3BlockSplitRTiling(gert::TilingContext* context) : BatchNormV3RegbaseTilingBase(context) {}
     ~BatchNormV3BlockSplitRTiling() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -117,8 +116,8 @@ void BatchNormV3BlockSplitRTiling::SetInputInfo()
     batchNormV3TilingData.set_momentumReverse(1 - momentum);
 }
 
-bool BatchNormV3BlockSplitRTiling::BinaryAddTiling(
-    const int64_t binaryAddNum, int64_t& binaryAddK, int64_t& binaryAddLast)
+bool BatchNormV3BlockSplitRTiling::BinaryAddTiling(const int64_t binaryAddNum, int64_t& binaryAddK,
+                                                   int64_t& binaryAddLast)
 {
     if (!GetBatchNormV3BinaryAddParam(binaryAddNum, binaryAddK, binaryAddLast)) {
         OP_LOGI(context_->GetNodeName(), "BinaryAddTiling binaryAddNum %ld case not supported", binaryAddNum);
@@ -159,21 +158,20 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
     batchNormV3TilingData.set_aUbTail(aUbTail);
     int64_t aAlignSize = aUbFactor * FP32_BYTE;
     int64_t fp32EleNumPerBlock = blockSize / FP32_BYTE;
-    int64_t rFactorMaxAlignSize =
-        Ops::Base::CeilAlign(
-            static_cast<int64_t>(aicoreParams_.ubSize) / (aAlignSize * (inOutNodeNum + TBUF_NODE_NUM)),
-            fp32EleNumPerBlock) *
-        FP32_BYTE;
-    int64_t blockDimAlignSize =
-        Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.numBlocks), fp32EleNumPerBlock) * FP32_BYTE;
+    int64_t rFactorMaxAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.ubSize) /
+                                                           (aAlignSize * (inOutNodeNum + TBUF_NODE_NUM)),
+                                                       fp32EleNumPerBlock) *
+                                  FP32_BYTE;
+    int64_t blockDimAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.numBlocks),
+                                                     fp32EleNumPerBlock) *
+                                FP32_BYTE;
     int64_t ubSizeCanUse = aicoreParams_.ubSize - blockDimAlignSize - rFactorMaxAlignSize -
                            aAlignSize * (runningMeanVarNodeNum + gammaBetaNodeNum + BATCH_MEAN_VAR_NODE_NUM);
     int64_t rUbFactor = Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM));
     rUbFactor = std::min(rUbFactor, batchNormV3TilingData.get_patternR());
     rUbFactor = Ops::Base::FloorAlign(rUbFactor, RA_BINARY_ADD_THRESHOLD);
-    OP_CHECK_IF(
-        rUbFactor == 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(rUbFactor == 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
+                return ge::GRAPH_PARAM_INVALID);
     int64_t rGroups = Ops::Base::FloorDiv(batchNormV3TilingData.get_patternR(), rUbFactor);
     usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.numBlocks));
     int64_t tBufUbFactor = std::max(rUbFactor, usedCoreNum);
@@ -186,9 +184,8 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
         usedCoreNum = std::min(rGroups, static_cast<int64_t>(aicoreParams_.numBlocks));
         tBufUbFactor = std::max(rUbFactor, usedCoreNum);
     }
-    OP_CHECK_IF(
-        rUbFactor <= 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(rUbFactor <= 0, OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling rUbFactor == 0"),
+                return ge::GRAPH_PARAM_INVALID);
     int64_t formerCoreBlockFactor = Ops::Base::CeilDiv(rGroups, usedCoreNum);
     int64_t tailCoreBlockFactor = formerCoreBlockFactor - 1;
     int64_t tailCoreNums = formerCoreBlockFactor * usedCoreNum - rGroups;
@@ -203,10 +200,9 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
     int64_t lastBinaryAddK = 0;
     int64_t lastBinaryAddLast = 0;
     auto res1 = BinaryAddTiling(lastBinaryAddQuotient, lastBinaryAddK, lastBinaryAddLast);
-    OP_CHECK_IF(
-        res0 == false || res1 == false,
-        OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling BinaryAddTiling param invalid"),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(res0 == false || res1 == false,
+                OP_LOGI(context_->GetNodeName(), "BatchNormV3BlockSplitRTiling BinaryAddTiling param invalid"),
+                return ge::GRAPH_PARAM_INVALID);
     batchNormV3TilingData.set_tBufUbFactor(tBufUbFactor);
     batchNormV3TilingData.set_rUbFactor(rUbFactor);
     batchNormV3TilingData.set_formerCoreBlockFactor(formerCoreBlockFactor);
@@ -224,10 +220,7 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormV3BlockSplitRTiling::GetTilingKey() const
-{
-    return TILINGKEY_BLOCK_SPLIT_R;
-}
+uint64_t BatchNormV3BlockSplitRTiling::GetTilingKey() const { return TILINGKEY_BLOCK_SPLIT_R; }
 
 ge::graphStatus BatchNormV3BlockSplitRTiling::PostTiling()
 {
@@ -235,14 +228,12 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::PostTiling()
     auto rawTilingData = context_->GetRawTilingData();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] =
-        WSP_RESERVED_SIZE + usedCoreNum * MEAN_AND_VAR_NODE_NUM * batchNormV3TilingData.get_patternAAlign() * FP32_BYTE;
-    OP_CHECK_IF(
-        batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    currentWorkspace[0] = WSP_RESERVED_SIZE +
+                          usedCoreNum * MEAN_AND_VAR_NODE_NUM * batchNormV3TilingData.get_patternAAlign() * FP32_BYTE;
+    OP_CHECK_IF(batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     uint32_t batch_mode = 1U;
     batchNormV3TilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormV3TilingData.GetDataSize());

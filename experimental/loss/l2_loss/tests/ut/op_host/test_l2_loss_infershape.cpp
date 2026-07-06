@@ -24,8 +24,7 @@ protected:
     static void TearDownTestCase() { cout << "L2LossInfershape TearDown" << endl; }
 };
 
-static ge::graphStatus RunL2LossInfershape(const gert::StorageShape& xShape, ge::DataType dtype,
-                                           int64_t& outDim0)
+static ge::graphStatus RunL2LossInfershape(const gert::StorageShape& xShape, ge::DataType dtype, int64_t& outDim0)
 {
     auto infershape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("L2Loss")->infer_shape;
     auto holder = gert::InferShapeContextFaker()
@@ -36,7 +35,9 @@ static ge::graphStatus RunL2LossInfershape(const gert::StorageShape& xShape, ge:
                       .InputShapes({const_cast<gert::StorageShape*>(&xShape)})
                       .Build();
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
-    if (context == nullptr) { return ge::GRAPH_FAILED; }
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     ge::graphStatus ret = infershape_func(context);
     if (ret == ge::GRAPH_SUCCESS) {
         const gert::Shape* outShape = context->GetOutputShape(0);

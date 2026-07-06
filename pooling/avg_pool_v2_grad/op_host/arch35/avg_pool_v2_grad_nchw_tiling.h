@@ -79,11 +79,9 @@ struct AvgPoolV2GradNCHWSplitInfo {
 
 class AvgPoolV2GradCommonNCHWTiling : public TilingBaseClass {
 public:
-    explicit AvgPoolV2GradCommonNCHWTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit AvgPoolV2GradCommonNCHWTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~AvgPoolV2GradCommonNCHWTiling() override
-    {}
+    ~AvgPoolV2GradCommonNCHWTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -118,10 +116,8 @@ public:
 
 class AvgPoolV2GradNCHWTiling : public AvgPoolV2GradCommonNCHWTiling {
 public:
-    explicit AvgPoolV2GradNCHWTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNCHWTiling(context)
-    {}
-    ~AvgPoolV2GradNCHWTiling() override
-    {}
+    explicit AvgPoolV2GradNCHWTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNCHWTiling(context) {}
+    ~AvgPoolV2GradNCHWTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;

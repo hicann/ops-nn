@@ -26,15 +26,9 @@ using namespace std;
 
 class l2_mse_loss_out_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "mse_loss_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "mse_loss_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "mse_loss_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "mse_loss_test TearDown" << std::endl; }
 };
 
 TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_01_float_nd_none)

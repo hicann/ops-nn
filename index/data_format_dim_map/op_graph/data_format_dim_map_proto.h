@@ -23,27 +23,27 @@
 namespace ge {
 
 /**
-*@brief Returns the dimension index in the destination data format given the one in
-* the source data format.
-*
-*@par Inputs:
-* x: An ND or 5HD tensor. Support 1D~8D. Must be one of the following types:int32, int64.
-*     A Tensor with each element as a dimension index in source data format.
-*     Must be in the range [-4, 4).
-*
-*@par Attributes:
-*@li src_format: An optional string. Supports NHWC and NCHW, Defaults to NHWC.
-*     source data format. Must of length 4.
-*@li dst_format: An optional string. Supports NHWC and NCHW, Defaults to NCHW.
-*     destination data format. Must of length 4.
-*
-*@par Outputs:
-* y: A tensor. Has the same type as "x". Must be in the range [0, 4).
-*
-*@par Third-party framework compatibility
-*Compatible with the TensorFlow operator DataFormatDimMap.
-*
-*/
+ *@brief Returns the dimension index in the destination data format given the one in
+ * the source data format.
+ *
+ *@par Inputs:
+ * x: An ND or 5HD tensor. Support 1D~8D. Must be one of the following types:int32, int64.
+ *     A Tensor with each element as a dimension index in source data format.
+ *     Must be in the range [-4, 4).
+ *
+ *@par Attributes:
+ *@li src_format: An optional string. Supports NHWC and NCHW, Defaults to NHWC.
+ *     source data format. Must of length 4.
+ *@li dst_format: An optional string. Supports NHWC and NCHW, Defaults to NCHW.
+ *     destination data format. Must of length 4.
+ *
+ *@par Outputs:
+ * y: A tensor. Has the same type as "x". Must be in the range [0, 4).
+ *
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator DataFormatDimMap.
+ *
+ */
 REG_OP(DataFormatDimMap)
     .INPUT(x, TensorType::IndexNumberType())
     .ATTR(src_format, String, "NHWC")

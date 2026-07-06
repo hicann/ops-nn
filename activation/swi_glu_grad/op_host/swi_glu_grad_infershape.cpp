@@ -17,22 +17,24 @@
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShapeForSwiGluGrad(gert::InferShapeContext* context) {
+static ge::graphStatus InferShapeForSwiGluGrad(gert::InferShapeContext* context)
+{
     const gert::Shape* x1_shape = context->GetInputShape(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, x1_shape);
 
-    gert::Shape *output_shape_1 = context->GetOutputShape(0);
+    gert::Shape* output_shape_1 = context->GetOutputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, output_shape_1);
 
     *output_shape_1 = *x1_shape;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForSwiGluGrad(gert::InferDataTypeContext *context) {
+static ge::graphStatus InferDataTypeForSwiGluGrad(gert::InferDataTypeContext* context)
+{
     const ge::DataType dtype = context->GetInputDataType(0);
     ge::graphStatus ret = context->SetOutputDataType(0, dtype);
     return ret;
 }
 
 IMPL_OP_INFERSHAPE(SwiGluGrad).InferShape(InferShapeForSwiGluGrad).InferDataType(InferDataTypeForSwiGluGrad);
-}  // namespace ops
+} // namespace ops

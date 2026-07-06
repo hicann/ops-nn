@@ -25,8 +25,7 @@ using namespace AscendC;
 template <typename T1, typename T2>
 class QuantizedBatchNormBase {
 public:
-    __aicore__ inline QuantizedBatchNormBase()
-    {}
+    __aicore__ inline QuantizedBatchNormBase() {}
 
 protected:
     /* global memory address */

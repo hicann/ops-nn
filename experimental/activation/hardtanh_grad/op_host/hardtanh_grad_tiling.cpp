@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include <algorithm> 
+#include <algorithm>
 #include "log/log.h"
 #include "util/math_util.h"
 #include "op_host/tiling_util.h"
@@ -25,7 +25,7 @@
 
 namespace optiling {
 #define UB_DATA_NUM_UINT8 16U // 对应DT_FLOAT, DT_INT32, DT_UINT32类型的ub分块数量
-#define UB_DATA_NUM_OTHER 8U // 对应DT_FLOAT16, DT_BFLOAT16, DT_INT16, DT_UINT16其他数据类型的ub分块数量
+#define UB_DATA_NUM_OTHER 8U  // 对应DT_FLOAT16, DT_BFLOAT16, DT_INT16, DT_UINT16其他数据类型的ub分块数量
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr uint32_t GM_ALIGN = 512;
 constexpr uint32_t REPEAT_ALIGN = 256;
@@ -68,14 +68,16 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeWithLargeShape(uint64_t& tilingKey, int64_t& coreNum, 
-                           uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum, uint64_t& finalBigTileNum, uint64_t& finalSmallTileNum, 
-                           uint64_t& tileDataNum, uint64_t& smallTailDataNum, uint64_t& bigTailDataNum, uint64_t& tailBlockNum,
-                           int64_t real_coreNum, uint64_t inputLengthAlgin512, uint64_t elemsPerGmBlock)
+static ge::graphStatus ComputeWithLargeShape(uint64_t& tilingKey, int64_t& coreNum, uint64_t& smallCoreDataNum,
+                                             uint64_t& bigCoreDataNum, uint64_t& finalBigTileNum,
+                                             uint64_t& finalSmallTileNum, uint64_t& tileDataNum,
+                                             uint64_t& smallTailDataNum, uint64_t& bigTailDataNum,
+                                             uint64_t& tailBlockNum, int64_t real_coreNum, uint64_t inputLengthAlgin512,
+                                             uint64_t elemsPerGmBlock)
 {
-    tileDataNum = MAX_TILEDATA; 
+    tileDataNum = MAX_TILEDATA;
     tilingKey = GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_1);
-    
+
     // 核间切分
     int64_t needCoreNum = (inputLengthAlgin512 + tileDataNum * BUFFER_NUM - 1) / (tileDataNum * BUFFER_NUM);
     coreNum = ((real_coreNum) < needCoreNum) ? real_coreNum : needCoreNum;
@@ -86,32 +88,33 @@ static ge::graphStatus ComputeWithLargeShape(uint64_t& tilingKey, int64_t& coreN
     uint64_t needTileDataNum = (needCoreDataNum + BUFFER_NUM - 1) / BUFFER_NUM;
     if (elemsPerGmBlock == 0) {
         return ge::GRAPH_FAILED;
-    }    
+    }
     needTileDataNum = (needTileDataNum + elemsPerGmBlock - 1) / elemsPerGmBlock * elemsPerGmBlock;
     tileDataNum = (tileDataNum < needTileDataNum) ? tileDataNum : needTileDataNum;
     if (elemsPerGmBlock == 0) {
         return ge::GRAPH_FAILED;
-    }        
+    }
     uint64_t everyCoreInputBlockNum = inputLengthAlgin512 / elemsPerGmBlock;
     if (coreNum == 0) {
         return ge::GRAPH_FAILED;
-    }     
+    }
     everyCoreInputBlockNum = everyCoreInputBlockNum / coreNum;
     tailBlockNum = (inputLengthAlgin512 / elemsPerGmBlock) % coreNum;
     smallCoreDataNum = everyCoreInputBlockNum * elemsPerGmBlock;
     if (tileDataNum == 0) {
         return ge::GRAPH_FAILED;
-    }     
+    }
     finalSmallTileNum = (smallCoreDataNum + tileDataNum - 1) / tileDataNum;
     smallTailDataNum = smallCoreDataNum - (finalSmallTileNum - 1) * tileDataNum;
     bigCoreDataNum = smallCoreDataNum + elemsPerGmBlock;
     finalBigTileNum = (bigCoreDataNum + tileDataNum - 1) / tileDataNum;
-    bigTailDataNum = bigCoreDataNum - (finalBigTileNum - 1) * tileDataNum;   
+    bigTailDataNum = bigCoreDataNum - (finalBigTileNum - 1) * tileDataNum;
     return ge::GRAPH_SUCCESS;
 }
 
-void SetTilingParam(uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
-                    uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t maskTileDataNum, float min, float max,
+void SetTilingParam(uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
+                    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum,
+                    uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t maskTileDataNum, float min, float max,
                     HardtanhGradTilingData* tiling)
 {
     tiling->smallCoreDataNum = smallCoreDataNum;
@@ -124,40 +127,40 @@ void SetTilingParam(uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t
     tiling->tailBlockNum = tailBlockNum;
     tiling->maskTileDataNum = maskTileDataNum;
     tiling->min = min;
-    tiling->max = max; 
+    tiling->max = max;
 }
 
-
-static ge::graphStatus ComputeWithSmallShape(uint64_t& tilingKey, int64_t& coreNum, 
-                           uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum, uint64_t& finalBigTileNum, uint64_t& finalSmallTileNum, 
-                           uint64_t& tileDataNum, uint64_t& smallTailDataNum, uint64_t& bigTailDataNum, uint64_t& tailBlockNum,
-                           int64_t real_coreNum, uint64_t inputLengthAlgin512, uint64_t elemsPerGmBlock)
+static ge::graphStatus ComputeWithSmallShape(uint64_t& tilingKey, int64_t& coreNum, uint64_t& smallCoreDataNum,
+                                             uint64_t& bigCoreDataNum, uint64_t& finalBigTileNum,
+                                             uint64_t& finalSmallTileNum, uint64_t& tileDataNum,
+                                             uint64_t& smallTailDataNum, uint64_t& bigTailDataNum,
+                                             uint64_t& tailBlockNum, int64_t real_coreNum, uint64_t inputLengthAlgin512,
+                                             uint64_t elemsPerGmBlock)
 {
     tilingKey = GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_0);
     uint64_t threshold = TILE_BASE_SIZE * TILE_THRESHOLD_FACTOR;
     if (threshold == 0) {
         return ge::GRAPH_FAILED;
-    }        
+    }
     uint64_t index = (inputLengthAlgin512 - 1) / threshold;
-    tileDataNum = (index < TILE_MAX_REGULAR_INDEX) ? 
-        (TILE_BASE_SIZE * (index + 1)) : MAX_TILEDATA;
+    tileDataNum = (index < TILE_MAX_REGULAR_INDEX) ? (TILE_BASE_SIZE * (index + 1)) : MAX_TILEDATA;
     // 计算coreNum
     if (tileDataNum == 0) {
         return ge::GRAPH_FAILED;
     }
-    int64_t needCoreNum = (inputLengthAlgin512 + tileDataNum  - 1) / tileDataNum;
+    int64_t needCoreNum = (inputLengthAlgin512 + tileDataNum - 1) / tileDataNum;
     if (needCoreNum == 0) {
         return ge::GRAPH_FAILED;
-    }        
-    tileDataNum = (inputLengthAlgin512 + needCoreNum  - 1) / needCoreNum;
+    }
+    tileDataNum = (inputLengthAlgin512 + needCoreNum - 1) / needCoreNum;
     if (elemsPerGmBlock == 0) {
         return ge::GRAPH_FAILED;
-    }     
+    }
     tileDataNum = (tileDataNum + elemsPerGmBlock - 1) / elemsPerGmBlock * elemsPerGmBlock;
     if (tileDataNum == 0) {
         return ge::GRAPH_FAILED;
-    }        
-    coreNum = (inputLengthAlgin512 + tileDataNum  - 1) / tileDataNum;
+    }
+    coreNum = (inputLengthAlgin512 + tileDataNum - 1) / tileDataNum;
     smallTailDataNum = inputLengthAlgin512 - (coreNum - 1) * tileDataNum;
     smallCoreDataNum = 0;
     bigCoreDataNum = 0;
@@ -172,16 +175,14 @@ static ge::graphStatus HardtanhGradTilingFunc(gert::TilingContext* context)
 {
     HardtanhGradTilingData* tiling = context->GetTilingData<HardtanhGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardtanhGradTilingData), 0, sizeof(HardtanhGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardtanhGradTilingData), 0, sizeof(HardtanhGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     int64_t real_coreNum, coreNum;
     ge::graphStatus ret = GetPlatformInfo(context, ubSize, real_coreNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
+                return ge::GRAPH_FAILED);
     float min = *context->GetAttrs()->GetFloat(0);
     float max = *context->GetAttrs()->GetFloat(1);
     uint64_t inputNum = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
@@ -189,29 +190,30 @@ static ge::graphStatus HardtanhGradTilingFunc(gert::TilingContext* context)
     ge::TypeUtils::GetDataTypeLength(context->GetInputDesc(1)->GetDataType(), typeLength);
     uint64_t elemsPerGmBlock = (GM_ALIGN / typeLength);
     uint64_t inputLengthAlgin512 = (inputNum + elemsPerGmBlock - 1) / elemsPerGmBlock * elemsPerGmBlock;
-    uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum, tileDataNum, tilingKey;
-    if (inputNum > DB_THRESHOLD_VALUE) 
-    {// 大shape
-        ComputeWithLargeShape(tilingKey, coreNum, smallCoreDataNum, bigCoreDataNum, finalBigTileNum, finalSmallTileNum, tileDataNum, smallTailDataNum, bigTailDataNum,
-                              tailBlockNum, real_coreNum, inputLengthAlgin512, elemsPerGmBlock);
+    uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum,
+        tailBlockNum, tileDataNum, tilingKey;
+    if (inputNum > DB_THRESHOLD_VALUE) { // 大shape
+        ComputeWithLargeShape(tilingKey, coreNum, smallCoreDataNum, bigCoreDataNum, finalBigTileNum, finalSmallTileNum,
+                              tileDataNum, smallTailDataNum, bigTailDataNum, tailBlockNum, real_coreNum,
+                              inputLengthAlgin512, elemsPerGmBlock);
+    } else { // 小shape
+        ComputeWithSmallShape(tilingKey, coreNum, smallCoreDataNum, bigCoreDataNum, finalBigTileNum, finalSmallTileNum,
+                              tileDataNum, smallTailDataNum, bigTailDataNum, tailBlockNum, real_coreNum,
+                              inputLengthAlgin512, elemsPerGmBlock);
     }
-    else
-    { // 小shape
-        ComputeWithSmallShape(tilingKey, coreNum, smallCoreDataNum, bigCoreDataNum, finalBigTileNum, finalSmallTileNum, tileDataNum, smallTailDataNum, bigTailDataNum,
-                              tailBlockNum, real_coreNum, inputLengthAlgin512, elemsPerGmBlock);
-    }
-    uint64_t maskTileDataNum = (tileDataNum + BITS_PER_BYTE - 1)/ BITS_PER_BYTE;
+    uint64_t maskTileDataNum = (tileDataNum + BITS_PER_BYTE - 1) / BITS_PER_BYTE;
     maskTileDataNum = (maskTileDataNum + REPEAT_ALIGN - 1) / REPEAT_ALIGN * REPEAT_ALIGN;
-    SetTilingParam(smallCoreDataNum, bigCoreDataNum, finalBigTileNum, finalSmallTileNum, 
-               tileDataNum, smallTailDataNum, bigTailDataNum, tailBlockNum, maskTileDataNum, min, max, tiling);
+    SetTilingParam(smallCoreDataNum, bigCoreDataNum, finalBigTileNum, finalSmallTileNum, tileDataNum, smallTailDataNum,
+                   bigTailDataNum, tailBlockNum, maskTileDataNum, min, max, tiling);
     context->SetTilingKey(tilingKey);
-    context->SetBlockDim(coreNum);   
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    context->SetBlockDim(coreNum);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 // tiling注册入口.
-IMPL_OP_OPTILING(HardtanhGrad).Tiling(HardtanhGradTilingFunc).TilingParse<HardtanhGradCompileInfo>(TilingParseForHardtanhGrad);
+IMPL_OP_OPTILING(HardtanhGrad)
+    .Tiling(HardtanhGradTilingFunc)
+    .TilingParse<HardtanhGradCompileInfo>(TilingParseForHardtanhGrad);
 } // namespace optiling

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv_api_tiling_algorithm_BBmode.h
  * \brief
@@ -54,23 +54,20 @@ enum class L1LoadStrategyType : int8_t {
     INVALID
 };
 
-enum class Kl1MultiAxis : int8_t {
-    KAL1 = 0,
-    KBL1,
-    INVALID
-};
+enum class Kl1MultiAxis : int8_t { KAL1 = 0, KBL1, INVALID };
 
 class ConvTilingAlgorithmBBmode : public ConvTilingAlgorithmBase {
 public:
     Conv2DBasicBlockInfo* conv2DBasicBlockInfoPtr = nullptr;
 
-    explicit ConvTilingAlgorithmBBmode(ConvTilingBase *tilingIns, Conv2DBasicBlockInfo& conv2DBasicBlockInfo) :
-        ConvTilingAlgorithmBase(tilingIns), conv2DBasicBlockInfoPtr(&conv2DBasicBlockInfo) {
-            singleCi1xC0 = AlignB(tilingIns_->shapeInfo.singleCi, tilingIns_->cubeInfo.k0);
-            groupOpt = tilingIns_->optGroupFlag ? tilingIns_->attrInfo.groups * 
-                tilingIns_->shapeInfo.enlarge : tilingIns_->attrInfo.groups;
-        };
-    ~ConvTilingAlgorithmBBmode() override {};
+    explicit ConvTilingAlgorithmBBmode(ConvTilingBase* tilingIns, Conv2DBasicBlockInfo& conv2DBasicBlockInfo)
+        : ConvTilingAlgorithmBase(tilingIns), conv2DBasicBlockInfoPtr(&conv2DBasicBlockInfo)
+    {
+        singleCi1xC0 = AlignB(tilingIns_->shapeInfo.singleCi, tilingIns_->cubeInfo.k0);
+        groupOpt = tilingIns_->optGroupFlag ? tilingIns_->attrInfo.groups * tilingIns_->shapeInfo.enlarge :
+                                              tilingIns_->attrInfo.groups;
+    };
+    ~ConvTilingAlgorithmBBmode() override{};
     int64_t Process() override;
     void SetL1TilingRes() override;
     void SetL0TilingRes() override;
@@ -81,7 +78,7 @@ public:
         bool MultiLoadKL1(ConvTilingAlgorithmBBmode* bbPtr, const Kl1MultiAxis& kL1MultiAxis) const;
         bool MultiLoadMAL1(ConvTilingAlgorithmBBmode* bbPtr);
         bool MultiLoadNBL1(ConvTilingAlgorithmBBmode* bbPtr);
-        
+
         virtual bool GetL1LoadStrategy(ConvTilingAlgorithmBBmode* bbPtr) = 0;
         virtual bool GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr) = 0;
         virtual ~L1LoadStrategyBase() = default;
@@ -91,15 +88,16 @@ public:
     class L1LoadStrategyKFullLoad : public L1LoadStrategyBase {
     public:
         bool GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr) override;
-        void GetL1LoadTilingBothFullLoad(ConvTilingAlgorithmBBmode* bbPtr,
-                uint64_t maxMAL1Iter, uint64_t maxNBL1Iter) const;
+        void GetL1LoadTilingBothFullLoad(ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxMAL1Iter,
+                                         uint64_t maxNBL1Iter) const;
         void GetL1LoadTilingFmapFullLoad(ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxMAL1Iter) const;
         void GetL1LoadTilingWeightFullLoad(ConvTilingAlgorithmBBmode* bbPtr, uint64_t maxNBL1Iter) const;
         void GetL1LoadTilingWithoutFullLoad(ConvTilingAlgorithmBBmode* bbPtr) const;
         bool GetAOrBFullLoadL1TilingParams(ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1,
-            int64_t weightLoadBBSizeMultix1, int64_t singleBBFmapSize, int64_t singleBBWeightSize) const;
+                                           int64_t weightLoadBBSizeMultix1, int64_t singleBBFmapSize,
+                                           int64_t singleBBWeightSize) const;
         bool GetNoneFullLoadL1TilingParams(ConvTilingAlgorithmBBmode* bbPtr, int64_t fmapLoadSizeMultix1,
-            int64_t weightLoadBBSizeMultix1) const;
+                                           int64_t weightLoadBBSizeMultix1) const;
     };
     class L1LoadStrategyNFirst : public L1LoadStrategyBase {
     public:

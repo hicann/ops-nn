@@ -29,19 +29,19 @@ struct HardSwishGradV2TilingData {
     int64_t elementNumEachCore = 0;
 };
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                     \
-    HardSwishGradV2TilingData tilingData;                                              \
-    INIT_TILING_DATA(HardSwishGradV2TilingData, tilingDataPointer, tilingPointer);     \
-    (tilingData).elementNum = tilingDataPointer->elementNum;                           \
-    (tilingData).needCoreNum = tilingDataPointer->needCoreNum;                         \
-    (tilingData).ubSize = tilingDataPointer->ubSize;                                   \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                 \
+    HardSwishGradV2TilingData tilingData;                                          \
+    INIT_TILING_DATA(HardSwishGradV2TilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).elementNum = tilingDataPointer->elementNum;                       \
+    (tilingData).needCoreNum = tilingDataPointer->needCoreNum;                     \
+    (tilingData).ubSize = tilingDataPointer->ubSize;                               \
     (tilingData).elementNumEachCore = tilingDataPointer->elementNumEachCore;
 
 #endif

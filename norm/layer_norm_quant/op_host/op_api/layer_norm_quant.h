@@ -15,9 +15,10 @@
 namespace l0op {
 constexpr size_t LAYER_NORM_QUANT_OUT_NUM = 2;
 
-std::array<aclTensor*, LAYER_NORM_QUANT_OUT_NUM> LayerNormQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const aclTensor* scale,
-    const aclTensor* zeroPointsOptional, int quantMode, double epsilon, aclOpExecutor* executor);
+std::array<aclTensor*, LAYER_NORM_QUANT_OUT_NUM> LayerNormQuant(const aclTensor* x, const aclTensor* gamma,
+                                                                const aclTensor* beta, const aclTensor* scale,
+                                                                const aclTensor* zeroPointsOptional, int quantMode,
+                                                                double epsilon, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_LAYER_NORM_QUANT_H_

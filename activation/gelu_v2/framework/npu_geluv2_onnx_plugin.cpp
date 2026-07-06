@@ -17,7 +17,8 @@ using json = nlohmann::json;
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-Status ParseParamsNpuGeluV2(const ge::Operator& op_src, ge::Operator& op_dest) {
+Status ParseParamsNpuGeluV2(const ge::Operator& op_src, ge::Operator& op_dest)
+{
     AscendString attrsString;
     std::string approximateMode = "none";
 
@@ -29,16 +30,15 @@ Status ParseParamsNpuGeluV2(const ge::Operator& op_src, ge::Operator& op_dest) {
             }
         }
     }
-  
+
     op_dest.SetAttr("approximate", approximateMode);
     return SUCCESS;
 }
 
-
 // register npu_gelu_v2 op info to GE
 REGISTER_CUSTOM_OP("GeluV2")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUGeluV2")})
-  .ParseParamsByOperatorFn(ParseParamsNpuGeluV2)
-  .ImplyType(ImplyType::TVM);
-} // domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("npu::1::NPUGeluV2")})
+    .ParseParamsByOperatorFn(ParseParamsNpuGeluV2)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

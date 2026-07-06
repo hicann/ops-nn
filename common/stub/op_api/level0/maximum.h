@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file maximum.h
-* \brief
-*/
+ * \file maximum.h
+ * \brief
+ */
 
 #ifndef OP_API_INC_LEVEL0_OP_MAXIMUM_OP_H_
 #define OP_API_INC_LEVEL0_OP_MAXIMUM_OP_H_

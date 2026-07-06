@@ -23,29 +23,21 @@
 #include "foreach_norm_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_norm(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_norm(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                   GM_ADDR tiling);
 
-class foreach_norm_test : public testing::Test
-{
+class foreach_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_norm_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_norm_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_norm_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_norm_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_norm_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{1, 4}, {1, 4}, {1, 4}};
     std::vector<std::vector<uint64_t>> shapeInfos_out = {{1}, {1}, {1}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
     system("chmod -R 755 ./norm_data/");
     system("cd ./norm_data/ && python3 gen_data.py '{{1, 4}, {1, 4}, {1, 4}}' 2 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -80,9 +72,8 @@ TEST_F(foreach_norm_test, test_case_float16_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{1, 4}, {1, 4}, {1, 4}};
     std::vector<std::vector<uint64_t>> shapeInfos_out = {{1}, {1}, {1}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
     system("chmod -R 755 ./norm_data/");
     system("cd ./norm_data/ && python3 gen_data.py '{{1, 4}, {1, 4}, {1, 4}}' 2 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -117,9 +108,8 @@ TEST_F(foreach_norm_test, test_case_float16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{1, 4}, {1, 4}, {1, 4}};
     std::vector<std::vector<uint64_t>> shapeInfos_out = {{1}, {1}, {1}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
     system("chmod -R 755 ./norm_data/");
     system("cd ./norm_data/ && python3 gen_data.py '{{1, 4}, {1, 4}, {1, 4}}' 1 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -154,9 +144,8 @@ TEST_F(foreach_norm_test, test_case_bfloat16_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{1, 4}, {1, 4}, {1, 4}};
     std::vector<std::vector<uint64_t>> shapeInfos_out = {{1}, {1}, {1}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
     system("chmod -R 755 ./norm_data/");
     system("cd ./norm_data/ && python3 gen_data.py '{{1, 4}, {1, 4}, {1, 4}}' 2 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -191,9 +180,8 @@ TEST_F(foreach_norm_test, test_case_bfloat16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{1, 4}, {1, 4}, {1, 4}};
     std::vector<std::vector<uint64_t>> shapeInfos_out = {{1}, {1}, {1}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_norm/tests/ut/op_kernel/norm_data ./");
     system("chmod -R 755 ./norm_data/");
     system("cd ./norm_data/ && python3 gen_data.py '{{1, 4}, {1, 4}, {1, 4}}' 1 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

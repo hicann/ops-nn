@@ -11,11 +11,11 @@
 /*!
  * \file sigmoid_grad_tiling_data.h
  * \brief tiling data struct
-*/
+ */
 #ifndef SIGMOID_GRAD_TILING_DATA_H_
 #define SIGMOID_GRAD_TILING_DATA_H_
 
-struct SigmoidGradTilingData{
+struct SigmoidGradTilingData {
     uint64_t smallCoreDataNum;
     uint64_t bigCoreDataNum;
     uint64_t finalBigTileNum;
@@ -24,5 +24,5 @@ struct SigmoidGradTilingData{
     uint64_t smallTailDataNum;
     uint64_t bigTailDataNum;
     uint64_t tailBlockNum;
-} ;
+};
 #endif

@@ -110,8 +110,8 @@ ge::graphStatus BatchMatMulV3BasicStreamKTiling::DoOpTiling()
     runInfo_.tailInfo.kCnt = ops::FloorDiv(blocksPerBatch, mnCnt);
     runInfo_.singleCoreK = MathUtil::CeilDivision(args_.kValue, runInfo_.tailInfo.kCnt);
     l0C2Out_ = GetL0C2OutFlag();
-    uint64_t baseKAlignValue =
-        !args_.isATrans || args_.isBTrans ? BASIC_BLOCK_SIZE_128 / args_.aDtypeSize : BASIC_BLOCK_SIZE_16;
+    uint64_t baseKAlignValue = !args_.isATrans || args_.isBTrans ? BASIC_BLOCK_SIZE_128 / args_.aDtypeSize :
+                                                                   BASIC_BLOCK_SIZE_16;
     uint64_t kValueMax = ops::FloorAlign(
         L0A_SIZE_2 / DB_SIZE / args_.aDtypeSize / std::max(runInfo_.baseM, runInfo_.baseN), baseKAlignValue);
     runInfo_.baseK = std::min(runInfo_.singleCoreK, kValueMax);
@@ -128,8 +128,8 @@ ge::graphStatus BatchMatMulV3BasicStreamKTiling::DoOpTiling()
 
 std::vector<size_t> BatchMatMulV3BasicStreamKTiling::GetWorkspaceSize() const
 {
-    size_t workspaceSize =
-        compileInfo_.aicNum * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 * DATA_SIZE_FP32 + RPC_WORKSIZE * MB_SIZE;
+    size_t workspaceSize = compileInfo_.aicNum * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 * DATA_SIZE_FP32 +
+                           RPC_WORKSIZE * MB_SIZE;
     OP_LOGI(args_.opName, "BatchMatMulV3 tiling workspace size is %lu", workspaceSize);
     return {workspaceSize};
 }

@@ -25,5 +25,5 @@ namespace ConvolutionBackprop {
 
 REGISTER_DW_IMPL(Conv3DBackpropFilter, Conv3DBpFilterCfg, Conv3DBpFilterImpl, Conv3DBpFilterIntf);
 
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 #endif

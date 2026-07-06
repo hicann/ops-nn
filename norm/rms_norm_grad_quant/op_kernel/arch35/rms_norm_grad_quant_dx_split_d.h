@@ -22,23 +22,23 @@
 
 namespace RmsNormGradQuant {
 using namespace AscendC;
-template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DX, typename T_DGAMMA, typename T_SCALES_X, typename T_OFFSET_X, bool HAS_OFFSET_X, bool DIV_MODE>
+template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DX, typename T_DGAMMA, typename T_SCALES_X,
+          typename T_OFFSET_X, bool HAS_OFFSET_X, bool DIV_MODE>
 class RegbaseDxSplitD {
 public:
-        __aicore__ inline RegbaseDxSplitD(TPipe* pipe, const RmsNormGradQuantRegbaseDxTilingData* tilingData)
+    __aicore__ inline RegbaseDxSplitD(TPipe* pipe, const RmsNormGradQuantRegbaseDxTilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma, __gm__ uint8_t* scales_x,
-        __gm__ uint8_t* offset_x, __gm__ uint8_t* dx, __gm__ uint8_t* dgamma)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma,
+                                __gm__ uint8_t* scales_x, __gm__ uint8_t* offset_x, __gm__ uint8_t* dx,
+                                __gm__ uint8_t* dgamma)
     {
-    #if (__NPU_ARCH__ == 3510)
-        if constexpr (
-            IsSameType<T_DX, hifloat8_t>::value) {
+#if (__NPU_ARCH__ == 3510)
+        if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
             AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
         }
-    #endif
+#endif
         usedCoreNum_ = tiling_->usedCoreNumDx;
         uint32_t coreIdx = GetBlockIdx();
         if (coreIdx >= usedCoreNum_) {
@@ -140,8 +140,8 @@ public:
         Duplicate(level2Local, 0.0f, ONCE_VECTOR_SIZE);
     }
 
-    __aicore__ inline void ComputeIntoMultiLevel(
-        int64_t count, uint32_t& level0Offset, uint32_t& level1Offset, uint32_t& level2Offset)
+    __aicore__ inline void ComputeIntoMultiLevel(int64_t count, uint32_t& level0Offset, uint32_t& level1Offset,
+                                                 uint32_t& level2Offset)
     {
         LocalTensor<float> level0Local = level0Buf_.Get<float>();
         LocalTensor<float> level1Local = level1Buf_.Get<float>();
@@ -221,11 +221,11 @@ public:
     {
         LocalTensor<T_SCALES_X> scalesXLocal = scalesXBuf_.Get<T_SCALES_X>();
         DataCopyExtParams copyParams{
-            1,                                              // blockCount
+            1,                                             // blockCount
             static_cast<uint32_t>(1 * sizeof(T_SCALES_X)), // blockLen
-            0,                                              // srcStride
-            0,                                              // dstStride
-            0                                               // rsv
+            0,                                             // srcStride
+            0,                                             // dstStride
+            0                                              // rsv
         };
 
         DataCopyPad(scalesXLocal, scalesXGm_, copyParams, {true, 0, 0, 0});
@@ -235,19 +235,18 @@ public:
     {
         LocalTensor<T_OFFSET_X> offsetXLocal = offsetXBuf_.Get<T_OFFSET_X>();
         DataCopyExtParams copyParams{
-            1,                                                 // blockCount
+            1,                                             // blockCount
             static_cast<uint32_t>(1 * sizeof(T_OFFSET_X)), // blockLen
-            0,                                                 // srcStride
-            0,                                                 // dstStride
-            0                                                  // rsv
+            0,                                             // srcStride
+            0,                                             // dstStride
+            0                                              // rsv
         };
 
         DataCopyPad(offsetXLocal, offsetXGm_, copyParams, {true, 0, 0, 0});
     }
 
     template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(
-        __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg)
+    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg)
     {
         if constexpr (IsSameType<T_IN, float>::value) {
             DataCopy<float, LoadDist::DIST_BRC_B32>(dst, src);
@@ -293,7 +292,8 @@ public:
                 if constexpr (IsBody) {
                     DataCopy(reduceAddr + static_cast<uint32_t>(i * oneRepeat), mulReg3, maskReg);
                 } else {
-                    DataCopy(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3, maskReg); // 注意补零
+                    DataCopy(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3,
+                             maskReg); // 注意补零
                 }
             }
         }
@@ -303,8 +303,8 @@ public:
         inQueueX_.FreeTensor(xLocal);
     }
 
-    __aicore__ inline void WholeReduceSum(
-        LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t count, int32_t dstOffset)
+    __aicore__ inline void WholeReduceSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t count,
+                                          int32_t dstOffset)
     {
         // 对齐到512BYTE, reduce需要
         int64_t countBlockAlign = AlignUp(count, FLOAT_NUM_BLOCK); // 搬入已对齐
@@ -392,7 +392,8 @@ public:
                 if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
                     RegTensor<T_DX> dxRegHif8;
                     Cast<T_DX, float, castTraitFp322Hifp8>(dxRegHif8, scalesXResultReg, maskReg);
-                    DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegHif8, maskReg);
+                    DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegHif8,
+                                                              maskReg);
                 } else if constexpr (IsSameType<T_DX, int8_t>::value) {
                     RegTensor<T_DX> dxRegInt8;
                     RegTensor<half> dxRegFp16;
@@ -401,7 +402,8 @@ public:
                     Cast<float, int32_t, castTraitInt322Fp32>(scalesXResultReg, dxRegInt32, maskReg);
                     Cast<half, float, castTraitFp322Fp16>(dxRegFp16, scalesXResultReg, maskReg);
                     Cast<T_DX, half, castTraitFp162Int8>(dxRegInt8, dxRegFp16, maskReg);
-                    DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegInt8, maskReg);
+                    DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegInt8,
+                                                              maskReg);
                 }
             }
         }

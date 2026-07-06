@@ -23,9 +23,10 @@ using namespace AscendC;
 using namespace Common::OpKernel;
 
 template <typename T>
-__aicore__ void AddcDivScalarAdapterForFloat(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<T>& float32Tensor, const T scalarVal, const uint32_t maxCastDataCount, const int64_t dataCount)
+__aicore__ void AddcDivScalarAdapterForFloat(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
+                                             const LocalTensor<T>& tensor3Local, const LocalTensor<T>& float32Tensor,
+                                             const T scalarVal, const uint32_t maxCastDataCount,
+                                             const int64_t dataCount)
 {
     Div(tensor2Local, tensor2Local, tensor3Local, dataCount);
     PipeBarrier<PIPE_V>();
@@ -33,10 +34,11 @@ __aicore__ void AddcDivScalarAdapterForFloat(
 }
 
 template <typename T>
-__aicore__ void ComputerPerCastForAddcDivScalar(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<float>& float32Tensor, const float scalarVal, const uint32_t maxCastDataCount,
-    const uint32_t index, const int64_t dataCount)
+__aicore__ void ComputerPerCastForAddcDivScalar(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
+                                                const LocalTensor<T>& tensor3Local,
+                                                const LocalTensor<float>& float32Tensor, const float scalarVal,
+                                                const uint32_t maxCastDataCount, const uint32_t index,
+                                                const int64_t dataCount)
 {
     Cast(float32Tensor, tensor2Local[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
     PipeBarrier<PIPE_V>();
@@ -54,27 +56,25 @@ __aicore__ void ComputerPerCastForAddcDivScalar(
 }
 
 template <typename T>
-__aicore__ void AddcDivScalarAdapter(
-    const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
-    const LocalTensor<float>& float32Tensor, const float scalarVal, const uint32_t maxCastDataCount,
-    const int64_t dataCount)
+__aicore__ void AddcDivScalarAdapter(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
+                                     const LocalTensor<T>& tensor3Local, const LocalTensor<float>& float32Tensor,
+                                     const float scalarVal, const uint32_t maxCastDataCount, const int64_t dataCount)
 {
     uint32_t castTimes = dataCount / maxCastDataCount;
     uint32_t castTimesRemainder = dataCount % maxCastDataCount;
     for (uint32_t i = 0; i < castTimes; i++) {
-        ComputerPerCastForAddcDivScalar<T>(
-            tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarVal, maxCastDataCount, i, maxCastDataCount);
+        ComputerPerCastForAddcDivScalar<T>(tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarVal,
+                                           maxCastDataCount, i, maxCastDataCount);
     }
     if (castTimesRemainder > 0) {
-        ComputerPerCastForAddcDivScalar<T>(
-            tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarVal, maxCastDataCount, castTimes,
-            castTimesRemainder);
+        ComputerPerCastForAddcDivScalar<T>(tensor1Local, tensor2Local, tensor3Local, float32Tensor, scalarVal,
+                                           maxCastDataCount, castTimes, castTimesRemainder);
     }
 }
 
-extern "C" __global__ __aicore__ void foreach_addcdiv_scalar(
-    GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcdiv_scalar(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3,
+                                                             GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                             GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);

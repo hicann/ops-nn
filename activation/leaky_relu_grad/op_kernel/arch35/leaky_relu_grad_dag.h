@@ -19,7 +19,6 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
-
 namespace LeakyReluGradOp {
 using namespace AscendC;
 using namespace Ops::Base;
@@ -37,7 +36,7 @@ struct LeakyReluGradDag {
     using OpCopyInYCast = Bind<Vec::Cast<float, U, CastModeBf16ToFp32>, OpCopyInY>;
     using OpCopyInYCastMul = Bind<Vec::Muls<float>, OpCopyInYCast, Placeholder::Var<float, 0>>;
     using OpCopyInX = Bind<Vec::CopyInBrc<U>, Placeholder::In1<U>>;
-    using Compare = Bind<Vec::Compare<uint8_t, U, COMPARE_MODE_GT>,OpCopyInX,data_zero>;
+    using Compare = Bind<Vec::Compare<uint8_t, U, COMPARE_MODE_GT>, OpCopyInX, data_zero>;
     using Select = Bind<Vec::Select<uint8_t, float, SELECT_MODE_TENSOR>, Compare, OpCopyInYCast, OpCopyInYCastMul>;
     using SelectCast = Bind<Vec::Cast<U, float, CastModeFp32ToBf16>, Select>;
     using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, SelectCast>;
@@ -46,6 +45,5 @@ struct LeakyReluGradDag {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-}  // namespace LeakyReluGradOp
-#endif  // LEAKY_RELU_GRAD_DAG_H
-
+} // namespace LeakyReluGradOp
+#endif // LEAKY_RELU_GRAD_DAG_H

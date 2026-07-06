@@ -22,8 +22,7 @@ using namespace Ops::NN::Optiling;
 
 class PreluTiling : public TilingBaseClass {
 public:
-    explicit PreluTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit PreluTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

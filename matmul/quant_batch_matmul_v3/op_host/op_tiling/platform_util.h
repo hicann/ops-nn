@@ -25,11 +25,13 @@ namespace optiling {
 const std::initializer_list<NpuArch> AdvancedArch = {NpuArch::DAV_3510, NpuArch::DAV_RESV};
 
 class PlatformUtil {
-  public:
-    static void ParseRuntimePlatformInfo(optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const char *op_name, fe::PlatFormInfos &platform_info);
+public:
+    static void ParseRuntimePlatformInfo(optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const char* op_name,
+                                         fe::PlatFormInfos& platform_info);
     static bool IsAdvancedArch(NpuArch arch);
 
-  private:
-    static void GetLocalMemSize(fe::PlatFormInfos &platform_info, const std::string &lable, const std::string &mem_type, uint64_t &size);
+private:
+    static void GetLocalMemSize(fe::PlatFormInfos& platform_info, const std::string& lable, const std::string& mem_type,
+                                uint64_t& size);
 };
 } // namespace optiling

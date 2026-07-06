@@ -80,6 +80,5 @@ REG_OP(MaxPoolWithArgmax)
     .ATTR(nan_prop, Bool, false)
     .OP_END_FACTORY_REG(MaxPoolWithArgmax)
 
-
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_POOLING_OPS_H
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_POOLING_OPS_H

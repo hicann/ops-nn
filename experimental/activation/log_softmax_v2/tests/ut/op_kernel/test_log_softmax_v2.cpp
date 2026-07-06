@@ -34,17 +34,17 @@ protected:
         system(cmd.c_str());
         system("chmod -R 755 ./logsoftmax_data/");
     }
-    static void TearDownTestCase()
-    {
-        cout << "log_softmax_v2_test TearDown\n" << endl;
-    }
+    static void TearDownTestCase() { cout << "log_softmax_v2_test TearDown\n" << endl; }
+
 private:
     const static std::string rootPath;
     const static std::string dataPath;
 };
 
 const std::string log_softmax_v2_test::rootPath = "../../../../";
-const std::string log_softmax_v2_test::dataPath = rootPath + "experimental/activation/log_softmax_v2/tests/ut/op_kernel/logsoftmax_data";
+const std::string
+    log_softmax_v2_test::dataPath = rootPath +
+                                    "experimental/activation/log_softmax_v2/tests/ut/op_kernel/logsoftmax_data";
 
 TEST_F(log_softmax_v2_test, test_case_0)
 {
@@ -74,15 +74,10 @@ TEST_F(log_softmax_v2_test, test_case_0)
     };
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(LogSoftmaxV2Kernel,
-        blockDim,
-        x,
-        y,
-        workspace,
-        (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(LogSoftmaxV2Kernel, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
     fileName = "./logsoftmax_data/float32_output_logsoftmax.bin";
     WriteFile(fileName, y, yByteSize);
-    
+
     AscendC::GmFree((void*)(x));
     AscendC::GmFree((void*)(y));
     AscendC::GmFree((void*)workspace);

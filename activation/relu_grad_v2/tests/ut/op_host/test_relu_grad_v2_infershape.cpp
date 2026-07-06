@@ -22,15 +22,9 @@
 
 class ReluGradV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReluGradV2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReluGradV2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReluGradV2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReluGradV2 TearDown" << std::endl; }
 };
 
 TEST_F(ReluGradV2, ReluGradV2_infershape_95_test)
@@ -45,13 +39,13 @@ TEST_F(ReluGradV2, ReluGradV2_infershape_95_test)
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     ge::op::ReluGradV2 op;
 
-    std::vector<std::pair<int64_t, int64_t>> shape_range = { {1, 16}, {1, 16} };
+    std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
 
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                               shape_range);
 
-    auto tensor_desc2 =
-        create_desc_shape_range({-1, -1}, ge::DT_UINT1, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc2 = create_desc_shape_range({-1, -1}, ge::DT_UINT1, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                                shape_range);
     op.UpdateInputDesc("gradients", tensor_desc);
     op.UpdateInputDesc("mask", tensor_desc2);
     auto ret = op.InferShapeAndType();

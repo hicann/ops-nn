@@ -19,8 +19,7 @@
 #include "../inc/platform.h"
 
 #include "simt_api/asc_simt.h"
-namespace GatherNd
-{
+namespace GatherNd {
 using namespace AscendC;
 
 constexpr uint32_t BUFFER_NUM = 2;
@@ -34,7 +33,6 @@ constexpr uint32_t THREAD_NUMS = 128;
 #else
 constexpr uint32_t THREAD_NUMS = 2048;
 #endif
-
 
 template <typename T2, typename T3>
 __simd_callee__ inline MicroAPI::MaskReg GenT2Mask(uint32_t& maskCount)
@@ -50,8 +48,10 @@ __simd_callee__ inline MicroAPI::MaskReg GenT2Mask(uint32_t& maskCount)
 
 // T2 为 conditionalType
 template <typename T1, typename T2, typename T3>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimt( __ubuf__ T1 *yAddr, __ubuf__ T3 *indicesAddr,  __gm__ T1 *xAddr, 
-    const T2 yCount,  const T3 aMergeAxisSize, const T2 shift, const T2 m)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimt(__ubuf__ T1* yAddr, __ubuf__ T3* indicesAddr,
+                                                                     __gm__ T1* xAddr, const T2 yCount,
+                                                                     const T3 aMergeAxisSize, const T2 shift,
+                                                                     const T2 m)
 {
     for (T2 idx = threadIdx.x; idx < yCount; idx += blockDim.x) {
         T3 indicesCurrentIdx = Simt::UintDiv(idx, m, shift);
@@ -65,8 +65,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimt( __ubuf__ T
 
 // T2 为 conditionalType
 template <typename T1, typename T2, typename T3>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimtWithLastAxisOne( __ubuf__ T1 *yAddr, __ubuf__ T3 *indicesAddr,  __gm__ T1 *xAddr, 
-    const T2 yCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimtWithLastAxisOne(__ubuf__ T1* yAddr,
+                                                                                    __ubuf__ T3* indicesAddr,
+                                                                                    __gm__ T1* xAddr, const T2 yCount)
 {
     for (T2 idx = threadIdx.x; idx < yCount; idx += blockDim.x) {
         T3 rowStart = indicesAddr[idx];
@@ -88,10 +89,10 @@ __simd_vf__ inline void GenGatherIndexVf(int32_t eleStride, __ubuf__ int32_t* he
 }
 
 template <typename T2, typename T3, const bool NIS>
-__simd_vf__ inline void FixIndicesVfCoreVf(
-    __ubuf__ T2* indicesAddr, __ubuf__ T3* maxGatherShapeAddr, __ubuf__ T3* strideShapeAddr,
-    uint16_t computeSizeT3, uint16_t repeatimes, uint32_t repeatStride,
-    __ubuf__ uint32_t* helpAddr, int32_t indicesNumPro, uint16_t rank, T3 aMergeAxisSize)
+__simd_vf__ inline void FixIndicesVfCoreVf(__ubuf__ T2* indicesAddr, __ubuf__ T3* maxGatherShapeAddr,
+                                           __ubuf__ T3* strideShapeAddr, uint16_t computeSizeT3, uint16_t repeatimes,
+                                           uint32_t repeatStride, __ubuf__ uint32_t* helpAddr, int32_t indicesNumPro,
+                                           uint16_t rank, T3 aMergeAxisSize)
 {
     AscendC::MicroAPI::RegTensor<uint32_t> indexStart;
     AscendC::MicroAPI::RegTensor<uint32_t> curIndex;
@@ -107,7 +108,7 @@ __simd_vf__ inline void FixIndicesVfCoreVf(
     AscendC::MicroAPI::MaskReg pregAll = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
     uint32_t indicesMask = indicesNumPro;
     uint32_t indicesMaskU32 = indicesNumPro;
-    
+
     AscendC::MicroAPI::DataCopy<uint32_t>(indexStart, helpAddr);
 
     for (uint16_t i = 0; i < repeatimes; i++) {
@@ -116,7 +117,8 @@ __simd_vf__ inline void FixIndicesVfCoreVf(
 
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T3>(indicesMask);
         AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2, T3>(indicesMaskU32);
-        AscendC::MicroAPI::MaskReg overstepMask = AscendC::MicroAPI::CreateMask<T3, AscendC::MicroAPI::MaskPattern::ALLF>();
+        AscendC::MicroAPI::MaskReg
+            overstepMask = AscendC::MicroAPI::CreateMask<T3, AscendC::MicroAPI::MaskPattern::ALLF>();
         for (uint16_t k = 0; k < rank; k++) {
             AscendC::MicroAPI::Adds(curIndex, indexStart, (indicesOffset + k), pregAll);
 
@@ -159,19 +161,21 @@ __simd_vf__ inline void FixIndicesVfCoreVf(
 }
 
 template <typename T1, typename T2, typename T3>
-class GatherNdMixKernel
-{
+class GatherNdMixKernel {
 public:
     __aicore__ inline GatherNdMixKernel(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y, GM_ADDR workspace,
                                 const GatherNdTilingData* __restrict ordTilingData, TPipe* pipeIn);
-    __aicore__ inline void CopyInIndices(LocalTensor<T2>& dstTensor, int32_t indicesCount, int64_t indicesOffset, uint16_t rank);
+    __aicore__ inline void CopyInIndices(LocalTensor<T2>& dstTensor, int32_t indicesCount, int64_t indicesOffset,
+                                         uint16_t rank);
     __aicore__ inline void CopyOutY(LocalTensor<T1>& yTensor, uint32_t yCount, int64_t yOffset);
     __aicore__ inline void Process();
     __aicore__ inline void GenGatherIndex();
     template <const bool NIS>
-    __aicore__ inline void FixIndicesVf(LocalTensor<T2>& indicesTensor, LocalTensor<T3>& maxGatherShapeTensor, LocalTensor<T3>& strideShapeTensor, int32_t indicesNumPro, uint16_t rank, T3 aMergeAxisSize);
+    __aicore__ inline void FixIndicesVf(LocalTensor<T2>& indicesTensor, LocalTensor<T3>& maxGatherShapeTensor,
+                                        LocalTensor<T3>& strideShapeTensor, int32_t indicesNumPro, uint16_t rank,
+                                        T3 aMergeAxisSize);
 
 protected:
     TQue<QuePosition::VECIN, BUFFER_NUM> indicesQue_;
@@ -221,8 +225,11 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::GenGatherIndex()
 
 template <typename T1, typename T2, typename T3>
 template <const bool NIS>
-__aicore__ inline void GatherNdMixKernel<T1, T2, T3>::FixIndicesVf(
-    LocalTensor<T2>& indicesTensor, LocalTensor<T3>& maxGatherShapeTensor, LocalTensor<T3>& strideShapeTensor, int32_t indicesNumPro, uint16_t rank, T3 aMergeAxisSize)
+__aicore__ inline void GatherNdMixKernel<T1, T2, T3>::FixIndicesVf(LocalTensor<T2>& indicesTensor,
+                                                                   LocalTensor<T3>& maxGatherShapeTensor,
+                                                                   LocalTensor<T3>& strideShapeTensor,
+                                                                   int32_t indicesNumPro, uint16_t rank,
+                                                                   T3 aMergeAxisSize)
 {
     int32_t indicesStride = rank;
     uint16_t computeSizeT3 = platform::GetVRegSize() / sizeof(T3);
@@ -233,16 +240,14 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::FixIndicesVf(
     LocalTensor<uint32_t> helpTensor = helpTBuf_.Get<uint32_t>();
 
     FixIndicesVfCoreVf<T2, T3, NIS>(
-        (__ubuf__ T2*)indicesTensor.GetPhyAddr(),
-        (__ubuf__ T3*)maxGatherShapeTensor.GetPhyAddr(),
-        (__ubuf__ T3*)strideShapeTensor.GetPhyAddr(),
-        computeSizeT3, repeatimes, repeatStride,
-        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(),
-        indicesNumPro, rank, aMergeAxisSize);
+        (__ubuf__ T2*)indicesTensor.GetPhyAddr(), (__ubuf__ T3*)maxGatherShapeTensor.GetPhyAddr(),
+        (__ubuf__ T3*)strideShapeTensor.GetPhyAddr(), computeSizeT3, repeatimes, repeatStride,
+        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), indicesNumPro, rank, aMergeAxisSize);
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void GatherNdMixKernel<T1, T2, T3>::CopyInIndices(LocalTensor<T2>& dstTensor, int32_t indicesCount, int64_t indicesOffset, uint16_t rank)
+__aicore__ inline void GatherNdMixKernel<T1, T2, T3>::CopyInIndices(LocalTensor<T2>& dstTensor, int32_t indicesCount,
+                                                                    int64_t indicesOffset, uint16_t rank)
 {
     DataCopyPad(dstTensor, indicesGm_[indicesOffset * rank],
                 {static_cast<uint16_t>(1), static_cast<uint32_t>(indicesCount * rank * sizeof(T2)), 0, 0, 0},
@@ -250,9 +255,11 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::CopyInIndices(LocalTensor<
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void GatherNdMixKernel<T1, T2, T3>::CopyOutY(LocalTensor<T1>& yTensor, uint32_t yCount, int64_t yOffset)
+__aicore__ inline void GatherNdMixKernel<T1, T2, T3>::CopyOutY(LocalTensor<T1>& yTensor, uint32_t yCount,
+                                                               int64_t yOffset)
 {
-    DataCopyPad(yGm_[yOffset], yTensor, {static_cast<uint16_t>(1), static_cast<uint32_t>(yCount * sizeof(T1)), 0, 0, 0});
+    DataCopyPad(yGm_[yOffset], yTensor,
+                {static_cast<uint16_t>(1), static_cast<uint32_t>(yCount * sizeof(T1)), 0, 0, 0});
 }
 
 template <typename T1, typename T2, typename T3>
@@ -275,7 +282,8 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::Process()
     }
     DataSyncBarrier<MemDsbT::UB>();
 
-    using conditionalType = typename std::conditional<std::is_same<T2, int64_t>::value && std::is_same<T3, int64_t>::value, uint64_t, uint32_t>::type;
+    using conditionalType = typename std::conditional<
+        std::is_same<T2, int64_t>::value && std::is_same<T3, int64_t>::value, uint64_t, uint32_t>::type;
 
     conditionalType shift = 0;
     conditionalType m = 0;
@@ -290,36 +298,36 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::Process()
     uint16_t rank = tilingData_->rank;
     int64_t indicesBufEleNum = tilingData_->singleUbProNum;
     int64_t curCoreIndicesNum_ = (blockIdx_ + 1 == tilingData_->blockNum) ? tilingData_->tailCoreIndicesNum :
-                                                                           tilingData_->normalCoreIndicesNum;
-    int64_t ubRepeatimes = (curCoreIndicesNum_  + indicesBufEleNum - 1) / indicesBufEleNum;
+                                                                            tilingData_->normalCoreIndicesNum;
+    int64_t ubRepeatimes = (curCoreIndicesNum_ + indicesBufEleNum - 1) / indicesBufEleNum;
     for (int64_t i = 0; i < ubRepeatimes; i++) {
-        int32_t indicesNumPro = i == (ubRepeatimes - 1) ? curCoreIndicesNum_ - (ubRepeatimes - 1) * indicesBufEleNum : indicesBufEleNum;
+        int32_t indicesNumPro = i == (ubRepeatimes - 1) ? curCoreIndicesNum_ - (ubRepeatimes - 1) * indicesBufEleNum :
+                                                          indicesBufEleNum;
         int64_t indicesNumOffset = i * indicesBufEleNum;
         LocalTensor<T2> indicesTensor = indicesQue_.AllocTensor<T2>();
         CopyInIndices(indicesTensor, indicesNumPro, indicesNumOffset, rank);
         indicesQue_.EnQue(indicesTensor);
         indicesQue_.DeQue<T2>();
         if (negativeIndexSupport) {
-            FixIndicesVf<true>(indicesTensor, maxGatherShapeTensor, strideShapeTensor, indicesNumPro, rank, aMergeAxisSize);
+            FixIndicesVf<true>(indicesTensor, maxGatherShapeTensor, strideShapeTensor, indicesNumPro, rank,
+                               aMergeAxisSize);
         } else {
-            FixIndicesVf<false>(indicesTensor, maxGatherShapeTensor, strideShapeTensor, indicesNumPro, rank, aMergeAxisSize);
+            FixIndicesVf<false>(indicesTensor, maxGatherShapeTensor, strideShapeTensor, indicesNumPro, rank,
+                                aMergeAxisSize);
         }
 
         LocalTensor<T1> yTensor = yQue_.AllocTensor<T1>();
 
         uint32_t yCount = indicesNumPro * aMergeAxisSize;
         if (isLastAxisOne) {
-            asc_vf_call<MixSimtWithLastAxisOne<T1, conditionalType, T3>>(dim3(static_cast<uint32_t>(THREAD_NUMS)),
-                                                    (__ubuf__ T1*)yTensor.GetPhyAddr(),
-                                                    (__ubuf__ T3*)indicesTensor.GetPhyAddr(),
-                                                    (__gm__ T1*)xGm_.GetPhyAddr(),
-                                                    yCount);
+            asc_vf_call<MixSimtWithLastAxisOne<T1, conditionalType, T3>>(
+                dim3(static_cast<uint32_t>(THREAD_NUMS)), (__ubuf__ T1*)yTensor.GetPhyAddr(),
+                (__ubuf__ T3*)indicesTensor.GetPhyAddr(), (__gm__ T1*)xGm_.GetPhyAddr(), yCount);
         } else {
-            asc_vf_call<MixSimt<T1, conditionalType, T3>>(dim3(static_cast<uint32_t>(THREAD_NUMS)),
-                                                    (__ubuf__ T1*)yTensor.GetPhyAddr(),
-                                                    (__ubuf__ T3*)indicesTensor.GetPhyAddr(),
-                                                    (__gm__ T1*)xGm_.GetPhyAddr(),
-                                                    yCount, aMergeAxisSize, shift, m);
+            asc_vf_call<MixSimt<T1, conditionalType, T3>>(
+                dim3(static_cast<uint32_t>(THREAD_NUMS)), (__ubuf__ T1*)yTensor.GetPhyAddr(),
+                (__ubuf__ T3*)indicesTensor.GetPhyAddr(), (__gm__ T1*)xGm_.GetPhyAddr(), yCount, aMergeAxisSize, shift,
+                m);
         }
 
         indicesQue_.FreeTensor(indicesTensor);
@@ -331,6 +339,6 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::Process()
         yQue_.FreeTensor(yTensor);
     }
 }
-}  // namespace GatherNd
+} // namespace GatherNd
 
-#endif  // ASCENDC_GATHER_ND_GATHER_ND_MIX_H_
+#endif // ASCENDC_GATHER_ND_GATHER_ND_MIX_H_

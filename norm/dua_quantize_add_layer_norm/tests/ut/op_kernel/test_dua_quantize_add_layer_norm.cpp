@@ -21,22 +21,15 @@
 
 using namespace std;
 
-extern "C" void dua_quantize_add_layer_norm(
-    uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias, uint8_t* scales1, uint8_t* scales2,
-    uint8_t* zeroPoints1, uint8_t* zeroPoints2, uint8_t* y1, uint8_t* y2, uint8_t* x, uint8_t* workspace,
-    uint8_t* tiling);
+extern "C" void dua_quantize_add_layer_norm(uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias,
+                                            uint8_t* scales1, uint8_t* scales2, uint8_t* zeroPoints1,
+                                            uint8_t* zeroPoints2, uint8_t* y1, uint8_t* y2, uint8_t* x,
+                                            uint8_t* workspace, uint8_t* tiling);
 
-class dua_quantize_add_layer_norm_test : public testing::Test
-{
+class dua_quantize_add_layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dua_quantize_add_layer_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dua_quantize_add_layer_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dua_quantize_add_layer_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dua_quantize_add_layer_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(dua_quantize_add_layer_norm_test, test_case_bf16)
@@ -89,14 +82,12 @@ TEST_F(dua_quantize_add_layer_norm_test, test_case_bf16)
 
     // normal fp16
     ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(
-        dua_quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, zeroPoints1, zeroPoints2,
-        y1, y2, x, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dua_quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, zeroPoints1,
+                zeroPoints2, y1, y2, x, workspace, (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(1001);
-    ICPU_RUN_KF(
-        dua_quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, zeroPoints1, zeroPoints2,
-        y1, y2, x, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dua_quantize_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, scales1, scales2, zeroPoints1,
+                zeroPoints2, y1, y2, x, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

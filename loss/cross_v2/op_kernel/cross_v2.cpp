@@ -28,9 +28,9 @@ const uint32_t IDX_1 = 1;
 const uint32_t IDX_2 = 2;
 const half HALF_ZERO = 0;
 const half HALF_256 = 256;
-const uint16_t GATHER_MASK_UINT16_0 = 0b1001'0010'0100'1001;                     // 每个repeat内每三个元素取第一个元素
-const uint16_t GATHER_MASK_UINT16_1 = 0b0010'0100'1001'0010;                     // 每个repeat内每三个元素取第二个元素
-const uint16_t GATHER_MASK_UINT16_2 = 0b0100'1001'0010'0100;                     // 每个repeat内每三个元素取第三个元素
+const uint16_t GATHER_MASK_UINT16_0 = 0b1001'0010'0100'1001; // 每个repeat内每三个元素取第一个元素
+const uint16_t GATHER_MASK_UINT16_1 = 0b0010'0100'1001'0010; // 每个repeat内每三个元素取第二个元素
+const uint16_t GATHER_MASK_UINT16_2 = 0b0100'1001'0010'0100; // 每个repeat内每三个元素取第三个元素
 const uint32_t GATHER_MASK_UINT32_0 = 0b0100'1001'0010'0100'1001'0010'0100'1001; // 每个repeat内每三个元素取第一个元素
 const uint32_t GATHER_MASK_UINT32_1 = 0b1001'0010'0100'1001'0010'0100'1001'0010; // 每个repeat内每三个元素取第二个元素
 const uint32_t GATHER_MASK_UINT32_2 = 0b0010'0100'1001'0010'0100'1001'0010'0100; // 每个repeat内每三个元素取第三个元素
@@ -44,15 +44,12 @@ __aicore__ inline uint32_t RoundUp(uint32_t x, uint32_t y)
 }
 
 template <typename T>
-class KernelCross
-{
+class KernelCross {
 public:
-    __aicore__ inline KernelCross()
-    {}
+    __aicore__ inline KernelCross() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR y, int64_t stepSize, int64_t tileNum, int64_t tileNumPerBatch,
-        int64_t tileDataNum, int64_t tailDataNum)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, int64_t stepSize, int64_t tileNum,
+                                int64_t tileNumPerBatch, int64_t tileDataNum, int64_t tailDataNum)
     {
         this->coreIdx = GetBlockIdx();
         this->coreNum = GetBlockNum();
@@ -150,10 +147,11 @@ private:
         inQueueZ2.EnQue(z2Local);
     }
 
-    __aicore__ inline void ComputeBit16(
-        const LocalTensor<T>& x1Local, const LocalTensor<T>& y1Local, const LocalTensor<T>& z1Local,
-        const LocalTensor<T>& x2Local, const LocalTensor<T>& y2Local, const LocalTensor<T>& z2Local,
-        const LocalTensor<T>& x3Local, const LocalTensor<T>& y3Local, const LocalTensor<T>& z3Local)
+    __aicore__ inline void ComputeBit16(const LocalTensor<T>& x1Local, const LocalTensor<T>& y1Local,
+                                        const LocalTensor<T>& z1Local, const LocalTensor<T>& x2Local,
+                                        const LocalTensor<T>& y2Local, const LocalTensor<T>& z2Local,
+                                        const LocalTensor<T>& x3Local, const LocalTensor<T>& y3Local,
+                                        const LocalTensor<T>& z3Local)
     {
         LocalTensor<float> xayb = bufXaYb.Get<float>();
         LocalTensor<float> xbya = bufXbYa.Get<float>();
@@ -186,10 +184,11 @@ private:
         Cast(z3Local, z3, RoundMode::CAST_RINT, this->processDataNum);
     }
 
-    __aicore__ inline void ComputeBit8(
-        const LocalTensor<T>& x1Local, const LocalTensor<T>& y1Local, const LocalTensor<T>& z1Local,
-        const LocalTensor<T>& x2Local, const LocalTensor<T>& y2Local, const LocalTensor<T>& z2Local,
-        const LocalTensor<T>& x3Local, const LocalTensor<T>& y3Local, const LocalTensor<T>& z3Local)
+    __aicore__ inline void ComputeBit8(const LocalTensor<T>& x1Local, const LocalTensor<T>& y1Local,
+                                       const LocalTensor<T>& z1Local, const LocalTensor<T>& x2Local,
+                                       const LocalTensor<T>& y2Local, const LocalTensor<T>& z2Local,
+                                       const LocalTensor<T>& x3Local, const LocalTensor<T>& y3Local,
+                                       const LocalTensor<T>& z3Local)
     {
         LocalTensor<half> xayb = bufXaYb.Get<half>();
         LocalTensor<half> xbya = bufXbYa.Get<half>();
@@ -224,8 +223,8 @@ private:
             LocalTensor<half> x3Tmp = x2Buf.Get<half>();
             LocalTensor<half> y3Tmp = y2Buf.Get<half>();
             LocalTensor<half> z3Tmp = z2Buf.Get<half>();
-            uint32_t calCount =
-                RoundUp(static_cast<uint32_t>(this->processDataNum * sizeof(half)), UINT8_ALIGN_SIZE) / sizeof(half);
+            uint32_t calCount = RoundUp(static_cast<uint32_t>(this->processDataNum * sizeof(half)), UINT8_ALIGN_SIZE) /
+                                sizeof(half);
             CompareScalar(maskX, x3, HALF_ZERO, CMPMODE::LT, calCount);
             CompareScalar(maskY, y3, HALF_ZERO, CMPMODE::LT, calCount);
             CompareScalar(maskZ, z3, HALF_ZERO, CMPMODE::LT, calCount);
@@ -241,10 +240,11 @@ private:
         Cast(z3Local, z3, RoundMode::CAST_NONE, this->processDataNum);
     }
 
-    __aicore__ inline void ComputeNotCast(
-        const LocalTensor<T>& x1Local, const LocalTensor<T>& y1Local, const LocalTensor<T>& z1Local,
-        const LocalTensor<T>& x2Local, const LocalTensor<T>& y2Local, const LocalTensor<T>& z2Local,
-        const LocalTensor<T>& x3Local, const LocalTensor<T>& y3Local, const LocalTensor<T>& z3Local)
+    __aicore__ inline void ComputeNotCast(const LocalTensor<T>& x1Local, const LocalTensor<T>& y1Local,
+                                          const LocalTensor<T>& z1Local, const LocalTensor<T>& x2Local,
+                                          const LocalTensor<T>& y2Local, const LocalTensor<T>& z2Local,
+                                          const LocalTensor<T>& x3Local, const LocalTensor<T>& y3Local,
+                                          const LocalTensor<T>& z3Local)
     {
         LocalTensor<T> xayb = bufXaYb.Get<T>();
         LocalTensor<T> xbya = bufXbYa.Get<T>();
@@ -339,14 +339,12 @@ private:
 };
 
 template <typename T>
-class KernelCrossOneStep
-{
+class KernelCrossOneStep {
 public:
-    __aicore__ inline KernelCrossOneStep()
-    {}
+    __aicore__ inline KernelCrossOneStep() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR y, int64_t tileNum, int64_t tileDataNum, int64_t tailDataNum)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, int64_t tileNum, int64_t tileDataNum,
+                                int64_t tailDataNum)
     {
         this->coreIdx = GetBlockIdx();
         this->coreNum = GetBlockNum();
@@ -450,8 +448,8 @@ private:
         LocalTensor<T> selfLocal = inQueueSelf.AllocTensor<T>();
         LocalTensor<T> otherLocal = inQueueOther.AllocTensor<T>();
 
-        DataCopyExtParams copyParams{
-            1, static_cast<uint32_t>(SPECIFIED_DIM_SIZE * this->processDataNum * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(SPECIFIED_DIM_SIZE * this->processDataNum * sizeof(T)), 0,
+                                     0, 0};
         AscendC::DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
         DataCopyPad(selfLocal, x1Gm[offset], copyParams, padParams);
         DataCopyPad(otherLocal, x2Gm[offset], copyParams, padParams);
@@ -460,8 +458,8 @@ private:
         inQueueOther.EnQue(otherLocal);
     }
 
-    __aicore__ inline void ComputeBit16(
-        const LocalTensor<T>& selfLocal, const LocalTensor<T>& otherLocal, const LocalTensor<T>& outLocal)
+    __aicore__ inline void ComputeBit16(const LocalTensor<T>& selfLocal, const LocalTensor<T>& otherLocal,
+                                        const LocalTensor<T>& outLocal)
     {
         using U = float;
         LocalTensor<uint32_t> xOffset = srcOffsetBuf.GetWithOffset<uint32_t>(NUM_PER_BLK_32, 0);
@@ -509,8 +507,8 @@ private:
         Cast(outLocal, out, RoundMode::CAST_RINT, SPECIFIED_DIM_SIZE * this->processDataNum);
     }
 
-    __aicore__ inline void ComputeBit8(
-        const LocalTensor<T>& selfLocal, const LocalTensor<T>& otherLocal, const LocalTensor<T>& outLocal)
+    __aicore__ inline void ComputeBit8(const LocalTensor<T>& selfLocal, const LocalTensor<T>& otherLocal,
+                                       const LocalTensor<T>& outLocal)
     {
         using U = half;
         LocalTensor<uint16_t> xOffset = srcOffsetBuf.GetWithOffset<uint16_t>(NUM_PER_BLK_16, 0);
@@ -557,8 +555,8 @@ private:
             LocalTensor<U> x3Tmp = x2Buf.Get<U>();
             LocalTensor<U> y3Tmp = y2Buf.Get<U>();
             LocalTensor<U> z3Tmp = z2Buf.Get<U>();
-            uint32_t calCount =
-                RoundUp(static_cast<uint32_t>(this->processDataNum * sizeof(U)), UINT8_ALIGN_SIZE) / sizeof(U);
+            uint32_t calCount = RoundUp(static_cast<uint32_t>(this->processDataNum * sizeof(U)), UINT8_ALIGN_SIZE) /
+                                sizeof(U);
             CompareScalar(maskX, x3, HALF_ZERO, CMPMODE::LT, calCount);
             CompareScalar(maskY, y3, HALF_ZERO, CMPMODE::LT, calCount);
             CompareScalar(maskZ, z3, HALF_ZERO, CMPMODE::LT, calCount);
@@ -578,8 +576,8 @@ private:
     }
 
     template <typename U>
-    __aicore__ inline void ComputeNotCast(
-        const LocalTensor<T>& selfLocal, const LocalTensor<T>& otherLocal, const LocalTensor<T>& outLocal)
+    __aicore__ inline void ComputeNotCast(const LocalTensor<T>& selfLocal, const LocalTensor<T>& otherLocal,
+                                          const LocalTensor<T>& outLocal)
     {
         uint32_t numPerBlock = BLOCK_SIZE / sizeof(U);
         LocalTensor<U> xOffset = srcOffsetBuf.GetWithOffset<U>(numPerBlock, 0);
@@ -643,8 +641,8 @@ private:
     __aicore__ inline void CopyOutOneStep(int64_t offset)
     {
         LocalTensor<T> outLocal = outQueueOut.DeQue<T>();
-        DataCopyExtParams copyParams{
-            1, static_cast<uint32_t>(SPECIFIED_DIM_SIZE * this->processDataNum * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(SPECIFIED_DIM_SIZE * this->processDataNum * sizeof(T)), 0,
+                                     0, 0};
         DataCopyPad(yGm[offset], outLocal, copyParams);
         outQueueOut.FreeTensor(outLocal);
     }
@@ -690,9 +688,8 @@ extern "C" __global__ __aicore__ void cross_v2(GM_ADDR x1, GM_ADDR x2, GM_ADDR y
         op.Process();
     } else if (TILING_KEY_IS(1)) {
         KernelCross<DTYPE_X1> op;
-        op.Init(
-            x1, x2, y, tiling_data.stepSize, tiling_data.tileNum, tiling_data.tileNumPerBatch, tiling_data.tileDataNum,
-            tiling_data.tailDataNum);
+        op.Init(x1, x2, y, tiling_data.stepSize, tiling_data.tileNum, tiling_data.tileNumPerBatch,
+                tiling_data.tileDataNum, tiling_data.tailDataNum);
         op.Process();
     }
 }

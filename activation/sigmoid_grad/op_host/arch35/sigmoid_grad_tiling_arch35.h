@@ -25,14 +25,14 @@
 namespace optiling {
 
 BEGIN_TILING_DATA_DEF(SigmoidGradTilingData)
-    TILING_DATA_FIELD_DEF(int64_t, dim0);
-    TILING_DATA_FIELD_DEF(int64_t, blockFormer);
-    TILING_DATA_FIELD_DEF(int64_t, ubFormer);
-    TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock);
-    TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);
-    TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock);
-    TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);
-    TILING_DATA_FIELD_DEF(int64_t, elemNum);
+TILING_DATA_FIELD_DEF(int64_t, dim0);
+TILING_DATA_FIELD_DEF(int64_t, blockFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubFormer);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock);
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);
+TILING_DATA_FIELD_DEF(int64_t, elemNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(SigmoidGrad, SigmoidGradTilingData);
@@ -43,10 +43,10 @@ struct SigmoidGradCompileInfo {
 };
 
 class SigmoidGradTiling : public Ops::NN::Optiling::TilingBaseClass {
-   public:
+public:
     explicit SigmoidGradTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
-   protected:
+protected:
     bool IsCapable() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -55,9 +55,9 @@ class SigmoidGradTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    std::string ToString(SigmoidGradTilingData &tilingDataParam) const;
+    std::string ToString(SigmoidGradTilingData& tilingDataParam) const;
 
-   private:
+private:
     uint64_t GetOpKey(ge::DataType yDtype, ge::DataType dyDtype, ge::DataType zDtype) const;
     uint64_t GenerateTilingKey(uint64_t innerKey) const;
     std::map<uint64_t, Ops::Base::ComputeParams> GetComputeMap(uint64_t opKeyParam) const;
@@ -69,6 +69,6 @@ class SigmoidGradTiling : public Ops::NN::Optiling::TilingBaseClass {
     uint64_t blockNum;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif //AIR_CXX_RUNTIME_V2_OP_IMPL_SIGMOID_GRAD_H_
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SIGMOID_GRAD_H_

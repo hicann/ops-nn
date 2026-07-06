@@ -21,20 +21,14 @@ using namespace std;
 
 class l2_gelu_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Gelu Backward Test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "Gelu Backward Test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Gelu Backward Test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "Gelu Backward Test TearDown" << std::endl; }
 };
 
 TEST_F(l2_gelu_backward_test, gelu_backward_testcase_001_normal_float32)
 {
-    auto gradOutputDesc =
-        TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND)
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
 
@@ -69,8 +63,8 @@ TEST_F(l2_gelu_backward_test, Ascend950_gelu_backward_testcase_001_normal_float3
 // float16
 TEST_F(l2_gelu_backward_test, gelu_backward_testcase_002_normal_float16)
 {
-    auto gradOutputDesc =
-        TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND)
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.01, 0.01);
 

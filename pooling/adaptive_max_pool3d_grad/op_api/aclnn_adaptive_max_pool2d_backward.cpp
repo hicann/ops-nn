@@ -34,20 +34,19 @@ static const int H_DIM = -2;
 
 static const int64_t MAX_INT32 = 2147483647;
 
-static bool CheckFormat(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
+static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                        const aclTensor* gradInput)
 {
     if ((self->GetStorageFormat() != gradOutput->GetStorageFormat()) ||
         (self->GetStorageFormat() != gradInput->GetStorageFormat()) ||
         (self->GetStorageFormat() != indices->GetStorageFormat())) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Format of self and gradOutput and gradInput and indices should be same, self[%s], gradOutput[%s], "
-            "gradInput[%s], indices[%s].",
-            op::ToString(self->GetStorageFormat()).GetString(),
-            op::ToString(gradOutput->GetStorageFormat()).GetString(),
-            op::ToString(gradInput->GetStorageFormat()).GetString(),
-            op::ToString(indices->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format of self and gradOutput and gradInput and indices should be same, self[%s], gradOutput[%s], "
+                "gradInput[%s], indices[%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(gradOutput->GetStorageFormat()).GetString(),
+                op::ToString(gradInput->GetStorageFormat()).GetString(),
+                op::ToString(indices->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -58,30 +57,26 @@ static bool CheckFormat(
     }
 
     if (self->GetViewShape().GetDimNum() != NCL_DIMS && self->GetViewShape().GetDimNum() != CDHW_DIMS) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for self but got dim num:%zu",
-            self->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for self but got dim num:%zu",
+                self->GetViewShape().GetDimNum());
         return false;
     }
 
     if (gradInput->GetViewShape().GetDimNum() != NCL_DIMS && gradInput->GetViewShape().GetDimNum() != CDHW_DIMS) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradInput but got dim num:%zu",
-            gradInput->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradInput but got dim num:%zu",
+                gradInput->GetViewShape().GetDimNum());
         return false;
     }
 
     if (gradOutput->GetViewShape().GetDimNum() != NCL_DIMS && gradOutput->GetViewShape().GetDimNum() != CDHW_DIMS) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradOutput but got dim num:%zu",
-            gradOutput->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradOutput but got dim num:%zu",
+                gradOutput->GetViewShape().GetDimNum());
         return false;
     }
 
     if (indices->GetViewShape().GetDimNum() != NCL_DIMS && indices->GetViewShape().GetDimNum() != CDHW_DIMS) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for indices but got dim num:%zu",
-            indices->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for indices but got dim num:%zu",
+                indices->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -97,12 +92,10 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
 
     const int64_t selfSize = selfDimW * selfDimH;
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
-        OP_CHECK(
-            (selfSize <= MAX_INT32),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The size of self should be less than or equal to 2^31 - 1, but got selfSize:%ld",
-                selfSize),
-            return false);
+        OP_CHECK((selfSize <= MAX_INT32),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "The size of self should be less than or equal to 2^31 - 1, but got selfSize:%ld", selfSize),
+                 return false);
     }
     return true;
 }
@@ -123,9 +116,9 @@ static const aclTensor* View4Das3D(const aclTensor* input, aclOpExecutor* execut
     return reformatInput;
 }
 
-aclnnStatus aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                           const aclTensor* indices, aclTensor* gradInput,
+                                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAdaptiveMaxPool2dBackward, DFX_IN(gradOutput, self, indices), DFX_OUT(gradInput));
     OP_LOGD("AdaptiveMaxPool2DGrad: getWorkspaceSize");
@@ -184,8 +177,8 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize(
                                         l0op::ReFormat(indices4d, op::Format::FORMAT_NCDHW, uniqueExecutor.get());
     CHECK_RET(indicesUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradInputResult = selectLevelZeroOperation(
-        gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed, gradInput, uniqueExecutor.get());
+    auto gradInputResult = selectLevelZeroOperation(gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed, gradInput,
+                                                    uniqueExecutor.get());
     CHECK_RET(gradInputResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const op::Format& dstFormat = gradOutput4d->GetStorageFormat();
@@ -205,8 +198,8 @@ aclnnStatus aclnnAdaptiveMaxPool2dBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAdaptiveMaxPool2dBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnAdaptiveMaxPool2dBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnAdaptiveMaxPool2dBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

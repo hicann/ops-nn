@@ -24,8 +24,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ForeachSubScalar);
 
-const aclTensorList* ForeachSubScalarV2(
-    const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out, aclOpExecutor* executor)
+const aclTensorList* ForeachSubScalarV2(const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out,
+                                        aclOpExecutor* executor)
 {
     L0_DFX(ForeachSubScalarV2, x, scalar);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachSubScalar, OP_INPUT(x, scalar), OP_OUTPUT(out));

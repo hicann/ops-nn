@@ -24,12 +24,11 @@
 namespace EmbeddingBag {
 using namespace AscendC;
 
-template <typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeSumWithPerSample2D(
-    __gm__ W* weights, __gm__ I* indices, __gm__ W* perSampleWeights,
-    __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize,
-    COMP_T numBags, COMP_T numIndices, COMP_T indicesSize,  COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
-    COMP_T embeddingDimSize, COMP_T paddingIdx)
+    __gm__ W* weights, __gm__ I* indices, __gm__ W* perSampleWeights, __gm__ W* y, __gm__ P* offset2bag,
+    __gm__ P* bagSize, COMP_T numBags, COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic,
+    COMP_T shift, COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
     COMP_T numChunks = numBags * chunkPerBag;
     COMP_T chunkStride = gridDim.x * blockDim.y;
@@ -63,12 +62,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeSumW
     }
 }
 
-template <typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeSum2D(
-    __gm__ W* weights, __gm__ I* indices,
-    __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize,
-    COMP_T numBags, COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
-    COMP_T embeddingDimSize, COMP_T paddingIdx)
+    __gm__ W* weights, __gm__ I* indices, __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize, COMP_T numBags,
+    COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift, COMP_T embeddingDimSize,
+    COMP_T paddingIdx)
 {
     COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
     COMP_T chunkStride = gridDim.x * blockDim.y;
@@ -101,12 +99,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeSum2
     }
 }
 
-template <typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMean2D(
-    __gm__ W* weights, __gm__ I* indices,
-    __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize,
-    COMP_T numBags, COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
-    COMP_T embeddingDimSize, COMP_T paddingIdx)
+    __gm__ W* weights, __gm__ I* indices, __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize, COMP_T numBags,
+    COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift, COMP_T embeddingDimSize,
+    COMP_T paddingIdx)
 {
     COMP_T numChunks = numBags * chunkPerBag;
     COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
@@ -142,10 +139,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMean
     }
 }
 
-template <typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax2D(
-    __gm__ W* weights, __gm__ I* indices,
-    __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize, __gm__ P* maxIndices,
+    __gm__ W* weights, __gm__ I* indices, __gm__ W* y, __gm__ P* offset2bag, __gm__ P* bagSize, __gm__ P* maxIndices,
     COMP_T numBags, COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
     COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
@@ -161,9 +157,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax2
         if (featureDim < embeddingDimSize) {
             COMP_T bag = Simt::UintDiv(chunk, magic, shift);
             COMP_T eachBagSize = 0;
-            COMP_T begin = bag * indicesSize;;
+            COMP_T begin = bag * indicesSize;
+            ;
             COMP_T end = begin + indicesSize;
-            W maxVal = begin == end ? 0: negInf;
+            W maxVal = begin == end ? 0 : negInf;
             P maxIdx = static_cast<P>(-1);
             for (COMP_T embedIdx = begin; embedIdx < end; embedIdx++) {
                 bool pad = (indices[embedIdx] == paddingIdx);
@@ -189,11 +186,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax2
     }
 }
 
-template<typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 class EmbeddingBagRegBaseSimt2D {
 public:
-    __aicore__ inline EmbeddingBagRegBaseSimt2D(const EmbeddingBagTilingData &tilingData, TPipe &pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline EmbeddingBagRegBaseSimt2D(const EmbeddingBagTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR gmParam[TENSOR_COUNT]);
     __aicore__ inline void Process();
 
@@ -210,7 +207,7 @@ private:
     const EmbeddingBagTilingData& tilingData_;
 };
 
-template<typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Init(GM_ADDR gmParam[TENSOR_COUNT])
 {
     weightGm_.SetGlobalBuffer((__gm__ W*)(gmParam[WEIGHT_INPUT_IDX]));
@@ -223,7 +220,7 @@ __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Init(GM_AD
     offset2bagGm_.SetGlobalBuffer((__gm__ P*)(gmParam[OFFSET2BAG_OUTPUT_IDX]));
 }
 
-template<typename W, typename I,  typename O, typename P, typename COMP_T>
+template <typename W, typename I, typename O, typename P, typename COMP_T>
 __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Process()
 {
     int64_t mode = tilingData_.mode;
@@ -240,45 +237,31 @@ __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Process()
     GetUintDivMagicAndShift(magic, shift, chunkPerBag);
 
     if (mode == MODE_MAX) {
-        asc_vf_call<SimtComputeMax2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
-                (__gm__ W*)(weightGm_.GetPhyAddr()), 
-                (__gm__ I*)(indicesGm_.GetPhyAddr()),
-                (__gm__ W*)(yGm_.GetPhyAddr()),
-                (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
-                (__gm__ P*)(bagSizeGm_.GetPhyAddr()),
-                (__gm__ P*)(maxIndicesGm_.GetPhyAddr()),
-                numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
-                embeddingDimSize, paddingIdx);
+        asc_vf_call<SimtComputeMax2D<W, I, O, P, COMP_T>>(
+            dim3{BLOCK_DIM_0, BLOCK_DIM_1}, (__gm__ W*)(weightGm_.GetPhyAddr()), (__gm__ I*)(indicesGm_.GetPhyAddr()),
+            (__gm__ W*)(yGm_.GetPhyAddr()), (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
+            (__gm__ P*)(bagSizeGm_.GetPhyAddr()), (__gm__ P*)(maxIndicesGm_.GetPhyAddr()), numBags, numIndices,
+            indicesSize, chunkPerBag, magic, shift, embeddingDimSize, paddingIdx);
     } else if (mode == MODE_MEAN) {
-        asc_vf_call<SimtComputeMean2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
-                (__gm__ W*)(weightGm_.GetPhyAddr()), 
-                (__gm__ I*)(indicesGm_.GetPhyAddr()),
-                (__gm__ W*)(yGm_.GetPhyAddr()),
-                (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
-                (__gm__ P*)(bagSizeGm_.GetPhyAddr()),
-                numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
-                embeddingDimSize, paddingIdx);
+        asc_vf_call<SimtComputeMean2D<W, I, O, P, COMP_T>>(
+            dim3{BLOCK_DIM_0, BLOCK_DIM_1}, (__gm__ W*)(weightGm_.GetPhyAddr()), (__gm__ I*)(indicesGm_.GetPhyAddr()),
+            (__gm__ W*)(yGm_.GetPhyAddr()), (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
+            (__gm__ P*)(bagSizeGm_.GetPhyAddr()), numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
+            embeddingDimSize, paddingIdx);
     } else if (mode == MODE_SUM && isNeedSampleWeight == 0) {
-        asc_vf_call<SimtComputeSum2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
-                (__gm__ W*)(weightGm_.GetPhyAddr()), 
-                (__gm__ I*)(indicesGm_.GetPhyAddr()),
-                (__gm__ W*)(yGm_.GetPhyAddr()),
-                (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
-                (__gm__ P*)(bagSizeGm_.GetPhyAddr()),
-                numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
-                embeddingDimSize, paddingIdx);
+        asc_vf_call<SimtComputeSum2D<W, I, O, P, COMP_T>>(
+            dim3{BLOCK_DIM_0, BLOCK_DIM_1}, (__gm__ W*)(weightGm_.GetPhyAddr()), (__gm__ I*)(indicesGm_.GetPhyAddr()),
+            (__gm__ W*)(yGm_.GetPhyAddr()), (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
+            (__gm__ P*)(bagSizeGm_.GetPhyAddr()), numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
+            embeddingDimSize, paddingIdx);
     } else {
-        asc_vf_call<SimtComputeSumWithPerSample2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
-                (__gm__ W*)(weightGm_.GetPhyAddr()), 
-                (__gm__ I*)(indicesGm_.GetPhyAddr()),
-                (__gm__ W*)(perSampleWeightsGm_.GetPhyAddr()),
-                (__gm__ W*)(yGm_.GetPhyAddr()),
-                (__gm__ P*)(offset2bagGm_.GetPhyAddr()),
-                (__gm__ P*)(bagSizeGm_.GetPhyAddr()),
-                numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
-                embeddingDimSize, paddingIdx);
+        asc_vf_call<SimtComputeSumWithPerSample2D<W, I, O, P, COMP_T>>(
+            dim3{BLOCK_DIM_0, BLOCK_DIM_1}, (__gm__ W*)(weightGm_.GetPhyAddr()), (__gm__ I*)(indicesGm_.GetPhyAddr()),
+            (__gm__ W*)(perSampleWeightsGm_.GetPhyAddr()), (__gm__ W*)(yGm_.GetPhyAddr()),
+            (__gm__ P*)(offset2bagGm_.GetPhyAddr()), (__gm__ P*)(bagSizeGm_.GetPhyAddr()), numBags, numIndices,
+            indicesSize, chunkPerBag, magic, shift, embeddingDimSize, paddingIdx);
     }
 }
-}
+} // namespace EmbeddingBag
 
 #endif // EMBEDDING_BAG_H_REGBASE_1D_SIMT_H

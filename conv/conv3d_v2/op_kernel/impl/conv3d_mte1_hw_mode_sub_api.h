@@ -29,16 +29,13 @@ class LoadAL0WithHwModeTools {
 public:
     __aicore__ inline LoadAL0WithHwModeTools() {}
 
-    __aicore__ inline void SetParams(Intf *self, LoadAL1WithHwModeTools<Intf> *aL1Tools)
+    __aicore__ inline void SetParams(Intf* self, LoadAL1WithHwModeTools<Intf>* aL1Tools)
     {
         self_ = self;
         aL1Tools_ = aL1Tools;
     }
 
-    __aicore__ inline void SetM(uint64_t m)
-    {
-        currentML0_ = m;
-    }
+    __aicore__ inline void SetM(uint64_t m) { currentML0_ = m; }
 
     __aicore__ inline void LoadAL0()
     {
@@ -53,8 +50,8 @@ public:
         LoadData3DParamsV2<typename Intf::FmapT> loadData3Dv2Params = aL1Tools_->GetLoadData3DParams();
         SetLoadData3DParamsV2(loadData3Dv2Params);
 
-        LoadData<typename Intf::FmapT, CONV3D_LOAD3DV2_DEFAULT_CONFIG>(
-            self_->ctx.al0, self_->ctx.al1, loadData3Dv2Params);
+        LoadData<typename Intf::FmapT, CONV3D_LOAD3DV2_DEFAULT_CONFIG>(self_->ctx.al0, self_->ctx.al1,
+                                                                       loadData3Dv2Params);
     };
 
     __aicore__ inline void SetAl02d()
@@ -73,7 +70,7 @@ public:
     }
 
 private:
-    __aicore__ inline void SetLoadData3DParamsV2(LoadData3DParamsV2<typename Intf::FmapT> &loadData3Dv2Params)
+    __aicore__ inline void SetLoadData3DParamsV2(LoadData3DParamsV2<typename Intf::FmapT>& loadData3Dv2Params)
     {
         // params about k dicision
         loadData3Dv2Params.kExtension = currentKL0_;
@@ -85,21 +82,18 @@ private:
         ASC_OP_LOGD(
             "[LoadAL0] loadData3Dv2Params.channelSize %d, loadData3Dv2Params.kExtension %d, "
             "loadData3Dv2Params.kStartPt %d, loadData3Dv2Params.mExtension %d, loadData3Dv2Params.mStartPt %d.\n",
-            loadData3Dv2Params.channelSize,
-            loadData3Dv2Params.kExtension,
-            loadData3Dv2Params.kStartPt,
-            loadData3Dv2Params.mExtension,
-            loadData3Dv2Params.mStartPt);
+            loadData3Dv2Params.channelSize, loadData3Dv2Params.kExtension, loadData3Dv2Params.kStartPt,
+            loadData3Dv2Params.mExtension, loadData3Dv2Params.mStartPt);
     }
 
 private:
-    Intf *self_ = nullptr;
-    LoadAL1WithHwModeTools<Intf> *aL1Tools_;
+    Intf* self_ = nullptr;
+    LoadAL1WithHwModeTools<Intf>* aL1Tools_;
     uint64_t currentML0_ = 0;
     uint64_t currentKL0_ = 0;
     uint64_t al0Set2dSpacesize_ = 0;
 };
 
-};  // namespace Conv3dFunc
+}; // namespace Conv3dFunc
 
-#endif  // __CONV3D_MTE1_HW_MODE_SUB_API_H__
+#endif // __CONV3D_MTE1_HW_MODE_SUB_API_H__

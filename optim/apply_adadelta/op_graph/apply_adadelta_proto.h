@@ -29,32 +29,32 @@
 namespace ge {
 
 /**
-* @brief Update '*var' according to the Adadelta algorithm.
-*
-*   accum_new        = rho * accum + (1 - rho) * grad^2
-*   update           = sqrt(accum_update + epsilon) / sqrt(accum_new + epsilon) * grad
-*   var_new          = var - lr * update
-*   accum_update_new = rho * accum_update + (1 - rho) * update^2
-*
-* @par Inputs:
-*  7 Tensor inputs (accum, accum_update shared with output via in-place semantics):
-*   @li var:          A Tensor of type float16 or float32. Weight to update.
-*   @li accum:        A Tensor of type float16 or float32. Gradient squared accumulator (in-place updated).
-*   @li accum_update: A Tensor of type float16 or float32. Update squared accumulator (in-place updated).
-*   @li lr:           Scalar Tensor ([1]) learning rate.
-*   @li rho:          Scalar Tensor ([1]) decay rate, range [0, 1).
-*   @li epsilon:      Scalar Tensor ([1]) numerical-stability constant, must be > 0.
-*   @li grad:         A Tensor, same shape/dtype as var.
-*
-* @par Outputs:
-*   @li var: Updated var (in-place; accum / accum_update are also in-place updated through input GM addresses).
-*
-* @par Attributes:
-*   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.
-*
-* @par Third-party framework compatibility
-* Compatible with the TensorFlow operator ApplyAdadelta.
-*/
+ * @brief Update '*var' according to the Adadelta algorithm.
+ *
+ *   accum_new        = rho * accum + (1 - rho) * grad^2
+ *   update           = sqrt(accum_update + epsilon) / sqrt(accum_new + epsilon) * grad
+ *   var_new          = var - lr * update
+ *   accum_update_new = rho * accum_update + (1 - rho) * update^2
+ *
+ * @par Inputs:
+ *  7 Tensor inputs (accum, accum_update shared with output via in-place semantics):
+ *   @li var:          A Tensor of type float16 or float32. Weight to update.
+ *   @li accum:        A Tensor of type float16 or float32. Gradient squared accumulator (in-place updated).
+ *   @li accum_update: A Tensor of type float16 or float32. Update squared accumulator (in-place updated).
+ *   @li lr:           Scalar Tensor ([1]) learning rate.
+ *   @li rho:          Scalar Tensor ([1]) decay rate, range [0, 1).
+ *   @li epsilon:      Scalar Tensor ([1]) numerical-stability constant, must be > 0.
+ *   @li grad:         A Tensor, same shape/dtype as var.
+ *
+ * @par Outputs:
+ *   @li var: Updated var (in-place; accum / accum_update are also in-place updated through input GM addresses).
+ *
+ * @par Attributes:
+ *   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.
+ *
+ * @par Third-party framework compatibility
+ * Compatible with the TensorFlow operator ApplyAdadelta.
+ */
 REG_OP(ApplyAdadelta)
     .INPUT(var, TensorType::NumberType())
     .INPUT(accum, TensorType::NumberType())

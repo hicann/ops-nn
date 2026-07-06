@@ -26,11 +26,9 @@ namespace Convolution3DBackprop {
 template <typename Intf_, class Config_>
 struct Conv3DBpInputImpl : public ConvBpImpl<Intf_, Config_> {
 public:
-    __aicore__ inline Conv3DBpInputImpl()
-    {}
+    __aicore__ inline Conv3DBpInputImpl() {}
     struct ContextData : public ConvBpImpl<Intf_, Config_>::ContextData {
-        __aicore__ inline ContextData()
-        {}
+        __aicore__ inline ContextData() {}
     };
 };
 

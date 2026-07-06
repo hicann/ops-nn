@@ -52,7 +52,7 @@ uint64_t ShapeSize(const std::vector<uint64_t>& shape)
 }
 
 ge::graphStatus BroadcastIndexShape(gert::TilingContext* context, const std::vector<uint32_t>& indexedDims,
-    std::vector<uint64_t>& broadcastShape, std::vector<uint64_t>& indexInputStrides)
+                                    std::vector<uint64_t>& broadcastShape, std::vector<uint64_t>& indexInputStrides)
 {
     size_t maxRank = 0;
     std::vector<std::vector<uint64_t>> shapes;
@@ -136,8 +136,8 @@ ge::graphStatus GetAivCoreNum(gert::TilingContext* context, uint32_t& coreNum)
 }
 
 ge::graphStatus MakeOutputShape(gert::TilingContext* context, const std::vector<uint32_t>& indexedDims,
-    const std::vector<uint64_t>& xShape, std::vector<uint64_t>& indexShape, std::vector<uint64_t>& indexInputStrides,
-    std::vector<uint64_t>& yShape)
+                                const std::vector<uint64_t>& xShape, std::vector<uint64_t>& indexShape,
+                                std::vector<uint64_t>& indexInputStrides, std::vector<uint64_t>& yShape)
 {
     if (BroadcastIndexShape(context, indexedDims, indexShape, indexInputStrides) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -154,8 +154,8 @@ ge::graphStatus MakeOutputShape(gert::TilingContext* context, const std::vector<
 }
 
 void FillIndexTilingData(optiling::IndexTilingData* tiling, const std::vector<uint32_t>& indexedDims,
-    const std::vector<uint64_t>& xShape, const std::vector<uint64_t>& yShape,
-    const std::vector<uint64_t>& indexShape, const std::vector<uint64_t>& indexInputStrides)
+                         const std::vector<uint64_t>& xShape, const std::vector<uint64_t>& yShape,
+                         const std::vector<uint64_t>& indexShape, const std::vector<uint64_t>& indexInputStrides)
 {
     tiling->xRank = static_cast<uint32_t>(xShape.size());
     tiling->yRank = static_cast<uint32_t>(yShape.size());
@@ -190,7 +190,7 @@ void FillIndexTilingData(optiling::IndexTilingData* tiling, const std::vector<ui
     std::copy(indexStrideArray, indexStrideArray + INDEX_MAX_RANK, tiling->indexStride);
     std::copy(indexInputStrideArray, indexInputStrideArray + INDEX_MAX_INDEX_STRIDE_SIZE, tiling->indexInputStrides);
 }
-}  // namespace
+} // namespace
 
 namespace optiling {
 struct IndexCompileInfo {};
@@ -246,4 +246,4 @@ IMPL_OP_OPTILING(IndexAiCore)
     .Tiling(Tiling4Index)
     .TilingInputsDataDependency({1})
     .TilingParse<IndexCompileInfo>(TilingParseForIndex);
-}  // namespace optiling
+} // namespace optiling

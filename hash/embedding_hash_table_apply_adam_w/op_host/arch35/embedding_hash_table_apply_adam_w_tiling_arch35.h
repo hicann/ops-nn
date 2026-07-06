@@ -42,14 +42,12 @@ struct EmbeddingHashTableApplyAdamWCompileInfo {};
 
 class EmbeddingHashTableApplyAdamWTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit EmbeddingHashTableApplyAdamWTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
+    explicit EmbeddingHashTableApplyAdamWTiling(gert::TilingContext* context)
+        : Ops::NN::Optiling::TilingBaseClass(context)
     {}
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
     // 计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;

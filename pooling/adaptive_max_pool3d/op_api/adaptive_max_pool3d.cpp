@@ -32,26 +32,29 @@ static const int32_t DTYPE_INT32 = 3;
 static const int32_t DTYPE_INT64 = 9;
 static const int32_t DHW_DIMS = 3;
 
-static const std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool3dAiCore(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static const std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool3dAiCore(const aclTensor* self,
+                                                                        const aclIntArray* outputSize,
+                                                                        aclTensor* outputOut, aclTensor* indicesOut,
+                                                                        aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveMaxPool3dAiCore, self, outputSize, outputOut, indicesOut);
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         int32_t indicesDtype = (indicesOut->GetDataType() == op::DataType::DT_INT64) ? DTYPE_INT64 : DTYPE_INT32;
-        ADD_TO_LAUNCHER_LIST_AICORE(
-        AdaptiveMaxPool3d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut), OP_ATTR(outputSize, indicesDtype));
+        ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveMaxPool3d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut),
+                                    OP_ATTR(outputSize, indicesDtype));
     } else {
-        ADD_TO_LAUNCHER_LIST_AICORE(
-        AdaptiveMaxPool3d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut), OP_ATTR(outputSize));
+        ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveMaxPool3d, OP_INPUT(self), OP_OUTPUT(outputOut, indicesOut),
+                                    OP_ATTR(outputSize));
     }
 
     return std::tuple<aclTensor*, aclTensor*>(outputOut, indicesOut);
 }
 
-const std::tuple<const aclTensor*, const aclTensor*> AdaptiveMaxPool3d(
-    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor, op::DataType indicesDtype)
+const std::tuple<const aclTensor*, const aclTensor*> AdaptiveMaxPool3d(const aclTensor* self,
+                                                                       const aclIntArray* outputSize,
+                                                                       aclOpExecutor* executor,
+                                                                       op::DataType indicesDtype)
 {
     L0_DFX(AdaptiveMaxPool3d, self, outputSize);
 

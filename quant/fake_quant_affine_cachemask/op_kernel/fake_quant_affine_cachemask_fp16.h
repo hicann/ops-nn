@@ -21,21 +21,18 @@ using namespace AscendC;
 using namespace std;
 
 template <typename yType>
-class FakeQuantAffineCachemaskFp16 : public FakeQuantAffineCachemaskBase<yType>
-{
+class FakeQuantAffineCachemaskFp16 : public FakeQuantAffineCachemaskBase<yType> {
 public:
-    __aicore__ inline FakeQuantAffineCachemaskFp16()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR scale, GM_ADDR zero_point, GM_ADDR y, GM_ADDR mask,
-        const FakeQuantAffineCachemaskTilingData* tilingData)
+    __aicore__ inline FakeQuantAffineCachemaskFp16() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR scale, GM_ADDR zero_point, GM_ADDR y, GM_ADDR mask,
+                                const FakeQuantAffineCachemaskTilingData* tilingData)
     {
         this->BaseMemberDataInit(tilingData);
 
         xGm.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(x) + this->offset, this->blockLength);
         scaleGm.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(scale) + this->scaleOffset, this->circleNum);
-        zeroGm.SetGlobalBuffer(
-            reinterpret_cast<__gm__ DTYPE_ZERO_POINT*>(zero_point) + this->scaleOffset, this->circleNum);
+        zeroGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_ZERO_POINT*>(zero_point) + this->scaleOffset,
+                               this->circleNum);
         yGm.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(y) + this->offset, this->blockLength);
         maskGm.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(mask) + this->offset, this->blockLength);
 
@@ -58,9 +55,8 @@ public:
 
     __aicore__ inline void Process()
     {
-        this->CommonBufferGet(
-            infBuf, zeroBuf, oneBuf, quantMinQueueBuf, quantMaxQueueBuf, infTensor, zeroTensor, oneTensor,
-            quantMinTensor, quantMaxTensor, this->tileLength);
+        this->CommonBufferGet(infBuf, zeroBuf, oneBuf, quantMinQueueBuf, quantMaxQueueBuf, infTensor, zeroTensor,
+                              oneTensor, quantMinTensor, quantMaxTensor, this->tileLength);
         for (uint32_t i = 0; i < this->circleNum; i++) {
             scaleValue = static_cast<float>(scaleGm.GetValue(i));
             zeroPointValue = zeroGm.GetValue(i);
@@ -122,13 +118,11 @@ private:
         // maskTemp = (round(tmp) >= quant_min) & (round(tmp) <= quant_max)
         Compare(maskTemp, curHf16Temp, quantMinTensor, CMPMODE::GE, calCount);
         BinaryRepeatParams repeatParams = {1, 1, 1, 8, 8, 8};
-        Select(
-            selectTemp, maskTemp, oneTensor, zeroTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->mask, repeatTimes,
-            repeatParams);
+        Select(selectTemp, maskTemp, oneTensor, zeroTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->mask, repeatTimes,
+               repeatParams);
         Compare(maskTemp, curHf16Temp, quantMaxTensor, CMPMODE::LE, calCount);
-        Select(
-            curHf16Temp, maskTemp, oneTensor, zeroTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->mask, repeatTimes,
-            repeatParams);
+        Select(curHf16Temp, maskTemp, oneTensor, zeroTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->mask, repeatTimes,
+               repeatParams);
         Mul(curHf16Temp, selectTemp, curHf16Temp, calCount);
         Cast(maskLocal, curHf16Temp, RoundMode::CAST_RINT, calCount);
 
@@ -138,9 +132,8 @@ private:
         Mins(curInt32Temp, curInt32Temp, static_cast<int32_t>(this->quantMax), calCount);
         Cast(curTemp, curInt32Temp, RoundMode::CAST_ROUND, calCount);
         Compare(maskTemp, xLocal, xLocal, CMPMODE::EQ, calCount);
-        Select(
-            curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            this->mask, repeatTimes, repeatParams);
+        Select(curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, this->mask, repeatTimes,
+               repeatParams);
         Adds(curTemp, curTemp, static_cast<float>(-1 * static_cast<float>(zeroPointValue)), calCount);
         Muls(curTemp, curTemp, static_cast<float>(scaleValue), calCount);
         Cast(yLocal, curTemp, RoundMode::CAST_RINT, calCount);

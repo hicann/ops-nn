@@ -21,7 +21,7 @@
 /*!
  * \file renorm_v2.cpp
  * \brief
-*/
+ */
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -41,15 +41,9 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Attr("p")
-            .AttrType(OPTIONAL)
-            .Float(1.0f); 
-        this->Attr("dim")
-            .AttrType(OPTIONAL)
-            .Int(0); 
-        this->Attr("max_norm")
-            .AttrType(OPTIONAL)
-            .Float(5.0f); 
+        this->Attr("p").AttrType(OPTIONAL).Float(1.0f);
+        this->Attr("dim").AttrType(OPTIONAL).Int(0);
+        this->Attr("max_norm").AttrType(OPTIONAL).Float(5.0f);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

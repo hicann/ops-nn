@@ -46,16 +46,14 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(ClippedSwiglu, ClippedSwigluTilingData)
 
 struct ClippedSwigluCompileInfo {
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
 };
 
 class ClippedSwigluTiling : public TilingBaseClass {
 public:
-    explicit ClippedSwigluTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext)
-    {}
-    ~ClippedSwigluTiling() override
-    {}
+    explicit ClippedSwigluTiling(gert::TilingContext* tilingContext) : TilingBaseClass(tilingContext) {}
+    ~ClippedSwigluTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -92,7 +90,7 @@ private:
     float gluLimit_ = 0.0;
     float gluAlpha_ = 0.0;
     float gluBias_ = 0.0;
-    int64_t ubMaxPair_ = 0;// UB最多可以处理的元素pair数
+    int64_t ubMaxPair_ = 0; // UB最多可以处理的元素pair数
     int64_t groupNum_ = 0;
 };
 

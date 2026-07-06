@@ -24,12 +24,12 @@ template <typename T, typename U, typename Y, uint8_t OP_CODE>
 class AdaLayerNormWelford {
 public:
     __aicore__ inline AdaLayerNormWelford(){};
-    __aicore__ inline void InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData);
-    __aicore__ inline void InitQuant(const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData *tilingData);
+    __aicore__ inline void InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData* tilingData);
+    __aicore__ inline void InitQuant(const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData *tilingData);
+    __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData* tilingData);
     __aicore__ inline void SliceProcess();
     __aicore__ inline void ComputeMeanVar(int64_t offset, int64_t batchCount);
     __aicore__ inline void ComputeAdaLayerNorm(int64_t offset, int64_t scaleOffset, int64_t batchCount);
@@ -110,7 +110,8 @@ private:
 };
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::InitV2(const GmAddr* gmAddr,
+                                                                     const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(xQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
@@ -137,7 +138,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::InitV2(const GmAdd
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::InitQuant(const GmAddr* gmAddr, GM_ADDR workspace,
-    const AdaLayerNormTilingData *tilingData)
+                                                                        const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(xQueue, DOUBLE_BUFFER, WELFORD_COUNT * sizeof(float));
@@ -186,7 +187,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::Process()
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ParseTilingData(const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ParseTilingData(const AdaLayerNormTilingData* tilingData)
 {
     int32_t blockNum = HALF_BLOCK_NUM;
     if constexpr (std::is_same_v<T, float>) {
@@ -266,7 +267,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeMeanVar(int
     WelfordInitialize(sliceSize);
     int64_t welfordCount = 0;
     while (welfordCount < sliceCount) {
-        welfordCount ++;
+        welfordCount++;
         LocalTensor<T> xLocal = xQueue.AllocTensor<T>();
         DataCopyPad(xLocal, xGm[offset], {1, static_cast<uint32_t>(sliceSize * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         xQueue.EnQue(xLocal);
@@ -274,7 +275,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeMeanVar(int
         offset += sliceSize;
     }
     if (tailSize > 0) {
-        welfordCount ++;
+        welfordCount++;
         LocalTensor<T> xLocal = xQueue.AllocTensor<T>();
         DataCopyPad(xLocal, xGm[offset], {1, static_cast<uint32_t>(tailSize * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         xQueue.EnQue(xLocal);
@@ -284,14 +285,15 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeMeanVar(int
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeAdaLayerNorm(int64_t offset, int64_t scaleOffset, int64_t batchCount)
+__aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ComputeAdaLayerNorm(int64_t offset, int64_t scaleOffset,
+                                                                                  int64_t batchCount)
 {
     if constexpr (OP_CODE == QUANT_OP_CODE) {
         Duplicate(maxTmpLocal, 0.0f, V_LENGTH);
         PipeBarrier<PIPE_V>();
     }
     int64_t h = 0;
-    for (int64_t i = 0; i < sliceCount; i ++) {
+    for (int64_t i = 0; i < sliceCount; i++) {
         CopyInX(offset + h, sliceSize);
         CopyInOtherData(h, sliceSize);
         ProcessNormalize(sliceSize, batchCount);
@@ -326,7 +328,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::DynamicQuant(int64
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
     WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
     int64_t h = 0;
-    for (int64_t i = 0; i < sliceCount; i ++) {
+    for (int64_t i = 0; i < sliceCount; i++) {
         CopyInNorm(normOffset + h, sliceSize);
         ProcessQuant(sliceSize, batchCount);
         QuantCopyOut(offset + h, sliceSize);
@@ -362,11 +364,11 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::Adaption(uint32_t 
     }
 
     if (hasSmooth) {
-        WelfordAdaptionVF<T, OUT_DTYPE, OP_CODE, true>(dataCount, normAddr, scaleAddr, shiftAddr, 
-                                                       smoothAddr, maxTmpAddr, outAddr);
+        WelfordAdaptionVF<T, OUT_DTYPE, OP_CODE, true>(dataCount, normAddr, scaleAddr, shiftAddr, smoothAddr,
+                                                       maxTmpAddr, outAddr);
     } else {
-        WelfordAdaptionVF<T, OUT_DTYPE, OP_CODE, false>(dataCount, normAddr, scaleAddr, shiftAddr, 
-                                                        nullptr, maxTmpAddr, outAddr);
+        WelfordAdaptionVF<T, OUT_DTYPE, OP_CODE, false>(dataCount, normAddr, scaleAddr, shiftAddr, nullptr, maxTmpAddr,
+                                                        outAddr);
     }
     scaleQueue.FreeTensor(scaleLocal);
     shiftQueue.FreeTensor(shiftLocal);
@@ -399,7 +401,7 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessQuant(uint3
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
         DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale, quantScaleAddr);
-        for (uint16_t j = 0; j < colLoopTimes;j ++) {
+        for (uint16_t j = 0; j < colLoopTimes; j++) {
             pregLoop = UpdateMask<float>(dataCount);
             DataCopy(x, xAddr + j * V_LENGTH);
             Div(x, x, quantScale, pregLoop);
@@ -419,6 +421,6 @@ __aicore__ inline void AdaLayerNormWelford<T, U, Y, OP_CODE>::ProcessQuant(uint3
     quantOutQueue.EnQue<Y>(quantOutLocal);
     xQueue.FreeTensor(xLocal);
 }
-}  // namespace AdaLayerNormNS
+} // namespace AdaLayerNormNS
 
-#endif  // ADA_LAYER_NORM_WELFORD_H
+#endif // ADA_LAYER_NORM_WELFORD_H

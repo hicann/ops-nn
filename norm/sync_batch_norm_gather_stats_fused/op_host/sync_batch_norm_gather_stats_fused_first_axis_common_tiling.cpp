@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file sync_batch_norm_gather_stats_fused_first_axis_common_tiling.cpp
  * \brief
  */
@@ -24,7 +24,7 @@ static const int64_t FIRST_AXIS_COMMON_LNG_B16_ALIGN_FACTOR = 16;
 static const int64_t FIRST_AXIS_COMMON_LNG_B32_ALIGN_FACTOR = 8;
 static const int64_t FIRST_AXIS_COMMON_MAX_C = 5000;
 static const int64_t FIRST_AXIS_FLOAT_DTYPE_SIZE = 4;
-static const size_t  FIRST_AXIS_COMMON_WORKSPACE_RESERVED = 16 * 1024 * 1024;
+static const size_t FIRST_AXIS_COMMON_WORKSPACE_RESERVED = 16 * 1024 * 1024;
 
 static inline int64_t CommonCeilDiv(int64_t value, int64_t factor)
 {
@@ -38,11 +38,9 @@ static inline int64_t CommonCeilAlign(int64_t value, int64_t alignment)
 
 bool SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::IsCapable()
 {
-    
     if (commonParams.cLength > FIRST_AXIS_COMMON_MAX_C) {
-        OP_LOGI(
-            context_, "SyncBatchNormGatherStatsFusedFirstAxisCommonTiling: cLength=%ld exceeds limit %ld",
-            commonParams.cLength, FIRST_AXIS_COMMON_MAX_C);
+        OP_LOGI(context_, "SyncBatchNormGatherStatsFusedFirstAxisCommonTiling: cLength=%ld exceeds limit %ld",
+                commonParams.cLength, FIRST_AXIS_COMMON_MAX_C);
         return false;
     }
     return true;
@@ -61,9 +59,9 @@ int64_t SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::CalculateubFormer()
     int64_t curUbFormer = maxUBSize / coff;
     for (; curUbFormer >= 0; curUbFormer--) { // 迭代搜优
         int64_t wholeBufferByteSize = curUbFormer * cAlignM_ * FIRST_AXIS_FLOAT_DTYPE_SIZE;
-        int64_t nBufferByteSize =
-            CommonCeilDiv(curUbFormer * FIRST_AXIS_FLOAT_DTYPE_SIZE, FIRST_AXIS_COMMON_BLOCK_BYTES) *
-            FIRST_AXIS_COMMON_BLOCK_BYTES;
+        int64_t nBufferByteSize = CommonCeilDiv(curUbFormer * FIRST_AXIS_FLOAT_DTYPE_SIZE,
+                                                FIRST_AXIS_COMMON_BLOCK_BYTES) *
+                                  FIRST_AXIS_COMMON_BLOCK_BYTES;
         int64_t nBrcbBufferByteSize = CommonCeilDiv(curUbFormer, FIRST_AXIS_COMMON_LNG_B32_ALIGN_FACTOR) *
                                       FIRST_AXIS_COMMON_LNG_B32_ALIGN_FACTOR * FIRST_AXIS_COMMON_BLOCK_BYTES; // BRCB
         int64_t curUBSize = wholeBufferByteSize * 2 + nBufferByteSize * 1 + nBrcbBufferByteSize;
@@ -94,7 +92,8 @@ ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::DoOpTiling()
     cAlignM_ = cAlignV_;
 
     if (commonParams.dtype != ge::DataType::DT_FLOAT) {
-        cAlignM_ = CommonCeilDiv(commonParams.cLength, FIRST_AXIS_COMMON_LNG_B16_ALIGN_FACTOR) * FIRST_AXIS_COMMON_LNG_B16_ALIGN_FACTOR;
+        cAlignM_ = CommonCeilDiv(commonParams.cLength, FIRST_AXIS_COMMON_LNG_B16_ALIGN_FACTOR) *
+                   FIRST_AXIS_COMMON_LNG_B16_ALIGN_FACTOR;
     }
 
     td_.set_cAlignV(cAlignV_);
@@ -102,9 +101,8 @@ ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::DoOpTiling()
     td_.set_cBufferByteSize(cAlignM_ * FIRST_AXIS_FLOAT_DTYPE_SIZE);
     int64_t ubFormer = CalculateubFormer();
     if (ubFormer <= 0) {
-        OP_LOGE(
-            context_, "SyncBatchNormGatherStatsFusedFirstAxisCommonTiling: Calculate ubFormer failed, ubFormer=%ld",
-            ubFormer);
+        OP_LOGE(context_, "SyncBatchNormGatherStatsFusedFirstAxisCommonTiling: Calculate ubFormer failed, ubFormer=%ld",
+                ubFormer);
         return ge::GRAPH_FAILED;
     }
 
@@ -114,7 +112,6 @@ ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::DoOpTiling()
     int64_t ubTailOfFormerBlock = blockFormer - (ubLoopOfFormerBlock - 1) * ubFormer;
     int64_t ubTailOfTailBlock = blockTail - (ubLoopOfTailBlock - 1) * ubFormer;
 
-    
     td_.set_ubFormer(ubFormer);
     td_.set_ubLoopOfFormerBlock(ubLoopOfFormerBlock);
     td_.set_ubLoopOfTailBlock(ubLoopOfTailBlock);
@@ -140,7 +137,8 @@ ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::PostTiling()
 ge::graphStatus SyncBatchNormGatherStatsFusedFirstAxisCommonTiling::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    workspaces[0] = (td_.get_blockNum() + 2) * td_.get_cAlignM() * FIRST_AXIS_FLOAT_DTYPE_SIZE + FIRST_AXIS_FLOAT_DTYPE_SIZE * commonParams.coreNum  + FIRST_AXIS_COMMON_WORKSPACE_RESERVED;
+    workspaces[0] = (td_.get_blockNum() + 2) * td_.get_cAlignM() * FIRST_AXIS_FLOAT_DTYPE_SIZE +
+                    FIRST_AXIS_FLOAT_DTYPE_SIZE * commonParams.coreNum + FIRST_AXIS_COMMON_WORKSPACE_RESERVED;
 
     return ge::GRAPH_SUCCESS;
 }

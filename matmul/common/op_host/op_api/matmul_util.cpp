@@ -84,15 +84,14 @@ static const std::set<std::vector<int>> transposeNeed = {{2, 0, 1}, {0, 3, 1, 2}
 static const std::set<std::vector<int>> transposeNoNeed = {{1, 0, 2}, {0, 2, 1, 3}};
 
 static const std::initializer_list<op::DataType> V100_DTYPE_SUPPORT = {DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                       DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {DataType::DT_FLOAT,
+                                                                                    DataType::DT_FLOAT16};
 
-static const std::map<op::DataType, uint64_t> ALIGN_UNIT_MAP = {
-    {DataType::DT_FLOAT16, BASIC_BLOCK_SIZE_256},
-    {DataType::DT_BF16, BASIC_BLOCK_SIZE_256},
-    {DataType::DT_FLOAT, BASIC_BLOCK_SIZE_128}};
+static const std::map<op::DataType, uint64_t> ALIGN_UNIT_MAP = {{DataType::DT_FLOAT16, BASIC_BLOCK_SIZE_256},
+                                                                {DataType::DT_BF16, BASIC_BLOCK_SIZE_256},
+                                                                {DataType::DT_FLOAT, BASIC_BLOCK_SIZE_128}};
 
 static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
 {
@@ -124,8 +123,8 @@ static inline bool CheckMMV3NzNzNdSupport(MmOpInfo& mmOpInfo)
     return op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
+                            int8_t cubeMathType)
 {
     bool bf16flag = CheckNpuArchIsSupportBf16();
     if (bf16flag) {
@@ -144,31 +143,29 @@ static bool CheckDtypeValid(
 
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || mat2->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Bfloat16 is unsupported by the current SOC version [%s], now self is %s, mat2 is %s",
-            op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
-            op::ToString(mat2->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Bfloat16 is unsupported by the current SOC version [%s], now self is %s, mat2 is %s",
+                op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
+                op::ToString(mat2->GetDataType()).GetString());
         return false;
     }
     if (out != nullptr && cubeMathType == KEEP_DTYPE && out->GetDataType() == op::DataType::DT_FLOAT16 &&
         self->GetDataType() == op::DataType::DT_FLOAT) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input tensor's dtype[DT_FLOAT] should be same with output's dtype[DT_FLOAT16].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Input tensor's dtype[DT_FLOAT] should be same with output's dtype[DT_FLOAT16].");
         return false;
     }
     // self和mat2的dtype不相等时，会做promote处理。
     bool dtype_match = self->GetDataType() == mat2->GetDataType();
     if (!dtype_match) {
-        OP_LOGW(
-            "Self's dtype [%s] and mat2's dtype [%s] are not equal. Promotion of Data Type will be applied",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
+        OP_LOGW("Self's dtype [%s] and mat2's dtype [%s] are not equal. Promotion of Data Type will be applied",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
     }
     return true;
 }
 
-static bool CheckShapeValid(
-    const aclTensor* self, const aclTensor* mat2, bool transposeX2 = false, bool isSlice = false)
+static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2, bool transposeX2 = false,
+                            bool isSlice = false)
 {
     if (isSlice) {
         OP_CHECK_WRONG_DIMENSION(self, DIMS_THREE, return false);
@@ -184,9 +181,8 @@ static bool CheckShapeValid(
         selfKDim = selfShape.GetDim(OUTER_AXIS);
     }
     if (mat2KDim != selfKDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different, self Kdim[%ld], mat2 Kdim[%ld].",
-            selfKDim, mat2KDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different, self Kdim[%ld], mat2 Kdim[%ld].",
+                selfKDim, mat2KDim);
         return false;
     }
     return true;
@@ -228,8 +224,8 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     return fillTensor;
 }
 
-static const aclTensor* ProcessEmptyTensorWithTrans(
-    const aclTensor* self, const aclTensor* mat2, int64_t transSelf, int64_t transMat2, aclOpExecutor* executor)
+static const aclTensor* ProcessEmptyTensorWithTrans(const aclTensor* self, const aclTensor* mat2, int64_t transSelf,
+                                                    int64_t transMat2, aclOpExecutor* executor)
 {
     // 获取shape信息
     op::Shape selfShape = self->GetViewShape();
@@ -252,8 +248,8 @@ static const aclTensor* ProcessEmptyTensorWithTrans(
     return fillTensor;
 }
 
-static bool CheckSupportSingleSplitKFp16Bf16(
-    const aclTensor* self, const aclTensor* mat2, const DataType selfDtype, const DataType mat2Dtype)
+static bool CheckSupportSingleSplitKFp16Bf16(const aclTensor* self, const aclTensor* mat2, const DataType selfDtype,
+                                             const DataType mat2Dtype)
 {
     // 判决门限
     // 1. 输入数据类型为fp16/bf16
@@ -286,8 +282,8 @@ static bool CheckSupportSingleSplitKFp16Bf16(
 }
 
 // 910/310P 支持fp16进 fp16/fp32出，非对齐case 只能NZ进出，对齐case支持ND进出
-static aclnnStatus SetMatmulOpSupportInfo(
-    const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo, int8_t cubeMathType)
+static aclnnStatus SetMatmulOpSupportInfo(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo,
+                                          int8_t cubeMathType)
 {
     // 判断传入L0接口，用于计算的Dtype
     SetMmSupportDType(mmOpInfo, cubeMathType);
@@ -309,8 +305,8 @@ static aclnnStatus SetMatmulOpSupportInfo(
         }
     }
 
-    if (CheckSupportSingleSplitKFp16Bf16(
-            self, mat2, mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype)) {
+    if (CheckSupportSingleSplitKFp16Bf16(self, mat2, mmOpInfo.support_info.self_dtype,
+                                         mmOpInfo.support_info.mat2_dtype)) {
         OP_LOGI("Hit mat_mul_v3 ND fp16/bf16 single core splitK case channel.");
         mmOpInfo.support_info.output_format = Format::FORMAT_ND;
         mmOpInfo.support_info.self_format = Format::FORMAT_ND;
@@ -319,22 +315,22 @@ static aclnnStatus SetMatmulOpSupportInfo(
     }
 
     // self=nd, mat2=nz不支持切K
-    bool isNdNzIn =
-        self->GetStorageFormat() == Format::FORMAT_ND && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
+    bool isNdNzIn = self->GetStorageFormat() == Format::FORMAT_ND &&
+                    mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
     // 支持weightnz16进32出
-    bool enable16In32Out = NeedEnableFp32Output(
-        self->GetDataType(), mat2->GetDataType(), mmOpInfo.support_info.output_dtype, cubeMathType);
+    bool enable16In32Out = NeedEnableFp32Output(self->GetDataType(), mat2->GetDataType(),
+                                                mmOpInfo.support_info.output_dtype, cubeMathType);
     mmOpInfo.support_info.mat2_format = isNdNzIn ? Format::FORMAT_FRACTAL_NZ : mmOpInfo.support_info.mat2_format;
-    mmOpInfo.support_info.output_dtype =
-        isNdNzIn ? mmOpInfo.support_info.mat2_dtype : mmOpInfo.support_info.output_dtype;
+    mmOpInfo.support_info.output_dtype = isNdNzIn ? mmOpInfo.support_info.mat2_dtype :
+                                                    mmOpInfo.support_info.output_dtype;
     if (enable16In32Out) {
         mmOpInfo.support_info.output_dtype = op::DataType::DT_FLOAT;
     }
     return ACLNN_SUCCESS;
 }
 
-static MmOpInfo GetMatmulOpInfoWithTrans(
-    const aclTensor* self, const aclTensor* mat2, int64_t transSelf, int64_t transMat2, int8_t cubeMathType)
+static MmOpInfo GetMatmulOpInfoWithTrans(const aclTensor* self, const aclTensor* mat2, int64_t transSelf,
+                                         int64_t transMat2, int8_t cubeMathType)
 {
     // 获取m、k、n轴的大小
     op::Shape selfShape = self->GetViewShape();
@@ -362,35 +358,32 @@ static MmOpInfo GetMatmulOpInfoWithTrans(
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    mmOpInfo.enableForceGrpAccForFp32 =
-        cubeMathType == USE_FP32_ADD && (npuArch == NpuArch::DAV_2201 || IsNpuArch3510Series());
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == USE_FP32_ADD &&
+                                        (npuArch == NpuArch::DAV_2201 || IsNpuArch3510Series());
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
-    OP_LOGD(
-        "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d", mmOpInfo.opImplModeEnum,
-        mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType);
+    OP_LOGD("opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d", mmOpInfo.opImplModeEnum,
+            mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType);
 
     SetMatmulOpSupportInfo(self, mat2, mmOpInfo, cubeMathType);
     GetMmInfo(mmOpInfo);
     return mmOpInfo;
 }
 
-static inline bool IsSplitKThenForbiddenNd2Nz(
-    const uint64_t mDim, const uint64_t kDim, const uint64_t nDim, const bool transposeX1, const bool transposeX2)
+static inline bool IsSplitKThenForbiddenNd2Nz(const uint64_t mDim, const uint64_t kDim, const uint64_t nDim,
+                                              const bool transposeX1, const bool transposeX2)
 {
     constexpr uint64_t align128 = 128;
     constexpr uint64_t numTwo = 2;
     constexpr uint64_t smallMNsplitKThres = 15000;
     bool kIsEnoughMultiCore = kDim >= smallMNsplitKThres;
-    bool mnIsNotEnoughCore =
-        (std::ceil(mDim / align128) * std::ceil(nDim / align128) <
-         static_cast<int64_t>(GetCurrentPlatformInfo().GetCubeCoreNum() / numTwo));
+    bool mnIsNotEnoughCore = (std::ceil(mDim / align128) * std::ceil(nDim / align128) <
+                              static_cast<int64_t>(GetCurrentPlatformInfo().GetCubeCoreNum() / numTwo));
     // M/N轴在内轴的场景切m/n不影响MTE2搬运效率，M/N可以切小保证多核能开启，属于cube_bound场景
     return kIsEnoughMultiCore && mnIsNotEnoughCore && !(!transposeX1 && transposeX2);
 }
 
-static bool CheckAscendCScenario(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const MmOpInfo& mmOpInfo, const bool transposeX1,
-    const bool transposeX2)
+static bool CheckAscendCScenario(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                 const MmOpInfo& mmOpInfo, const bool transposeX1, const bool transposeX2)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch != NpuArch::DAV_2201 && !IsNpuArch3510Series()) ||
@@ -399,14 +392,12 @@ static bool CheckAscendCScenario(
         return false;
     }
     bool alwaysUseV3 = IsNpuArch3510Series();
-    return (
-        alwaysUseV3 ||
-        Ops::NN::MmCheckHitV3Shape(
-            x1, x2, bias, transposeX1, transposeX2, mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
+    return (alwaysUseV3 || Ops::NN::MmCheckHitV3Shape(x1, x2, bias, transposeX1, transposeX2,
+                                                      mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
 }
 
-static bool CheckAscendCScenario2(
-    const aclTensor* x1, const aclTensor* x2, const MmOpInfo& mmOpInfo, const bool transposeX1, const bool transposeX2)
+static bool CheckAscendCScenario2(const aclTensor* x1, const aclTensor* x2, const MmOpInfo& mmOpInfo,
+                                  const bool transposeX1, const bool transposeX2)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch != NpuArch::DAV_2002) {
@@ -432,21 +423,19 @@ static bool CheckAscendCScenario2(
     return true;
 }
 
-static const aclTensor* GetGemmV3Op(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* c, bool transposeX1, bool transposeX2, bool enableHf32,
-    aclOpExecutor* executor)
+static const aclTensor* GetGemmV3Op(const aclTensor* x1, const aclTensor* x2, const aclTensor* c, bool transposeX1,
+                                    bool transposeX2, bool enableHf32, aclOpExecutor* executor)
 {
     OP_LOGI("Hit gemmv3 scenario.");
     const aclTensor* mmOut = l0op::GemmV3Nd(x1, x2, c, transposeX1, transposeX2, enableHf32, executor);
     return mmOut;
 }
 
-static bool CheckMatmulV3Support(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
-    const bool transposeX2, const int64_t opImplModeEnum)
+static bool CheckMatmulV3Support(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo,
+                                 const bool transposeX1, const bool transposeX2, const int64_t opImplModeEnum)
 {
-    bool enableForceGrpAccForFp32 =
-        opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 && mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
+    bool enableForceGrpAccForFp32 = opImplModeEnum == 0x4 && mmOpInfo.shapeInfo.kDim >= 2048 &&
+                                    mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT;
     bool isFP32Wnz = mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
                      mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT;
     return CheckAscendCScenario(x1, x2, bias, mmOpInfo, transposeX1, transposeX2) ||
@@ -467,14 +456,13 @@ static bool CheckSupportInfoFormatNdNzNd(const MmOpInfo& mmOpInfo)
            mmOpInfo.support_info.output_format == ge::FORMAT_ND;
 }
 
-static const aclTensor* GetMatMulOp(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
-    const bool transposeX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor)
+static const aclTensor* GetMatMulOp(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo,
+                                    const bool transposeX1, const bool transposeX2, const bool offsetX,
+                                    const int64_t opImplModeEnum, aclOpExecutor* executor)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    bool enable16In32Out = NeedEnableFp32Output(
-        mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype, mmOpInfo.support_info.output_dtype,
-        KEEP_DTYPE, bias);
+    bool enable16In32Out = NeedEnableFp32Output(mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype,
+                                                mmOpInfo.support_info.output_dtype, KEEP_DTYPE, bias);
     bool isFp32Out = mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT;
     bool bothMatFp16Bf16 = (mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
@@ -487,10 +475,10 @@ static const aclTensor* GetMatMulOp(
     if (CheckMatmulV3Support(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, opImplModeEnum) ||
         (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo)) || addmmWeightNz16In32OutForA2) {
         OP_LOGI("Hit matmul_v3 scenario.");
-        
+
         if ((enable16In32Out && IsNpuArch3510Series())) {
-            const aclTensor* mmOut =
-                l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            const aclTensor* mmOut = l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX,
+                                                               opImplModeEnum, executor);
             return mmOut;
         } else if (enable16In32Out && bias == nullptr) {
             if (CheckSupportInfoFormatNzNzNd(mmOpInfo)) {
@@ -498,13 +486,13 @@ static const aclTensor* GetMatMulOp(
                 x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
                 x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
 
-                const aclTensor* mmOut = l0op::MatMulV3NzNzNdFp162Fp32(
-                    x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+                const aclTensor* mmOut = l0op::MatMulV3NzNzNdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX,
+                                                                       opImplModeEnum, executor);
                 return mmOut;
             }
 
-            const aclTensor* mmOut =
-                l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            const aclTensor* mmOut = l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX,
+                                                               opImplModeEnum, executor);
             OP_LOGI("hit matmulv3 fp16/bp16 in fp32 out case.");
             return mmOut;
         }
@@ -514,46 +502,45 @@ static const aclTensor* GetMatMulOp(
             x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
             x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
 
-            const aclTensor* mmOut =
-                l0op::MatMulV3NzNzNd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            const aclTensor* mmOut = l0op::MatMulV3NzNzNd(x1, x2, bias, transposeX1, transposeX2, offsetX,
+                                                          opImplModeEnum, executor);
             return mmOut;
         }
         if (CheckSupportInfoFormatNdNzNd(mmOpInfo)) {
             x1 = l0op::ReFormat(x1, op::Format::FORMAT_ND);
             x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
         }
-        const aclTensor* mmOut =
-            l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+        const aclTensor* mmOut = l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum,
+                                                  executor);
         return mmOut;
     } else if ((enable16In32Out || (isFp32Out && bothMatFp16Bf16)) && bias == nullptr) {
         // This is Split K Mode; Check if MatMul using Nd in Nd Out
         OP_LOGI("hit matmulv2 fp16/bp16 in fp32 out case.");
-        const aclTensor* mmOut =
-            (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
-             mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
-                l0op::MatMulNdFp162Fp32(
-                    x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor) :
-                l0op::MatMulNzFp162Fp32(
-                    x1, x2, nullptr, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+        const aclTensor* mmOut = (mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
+                                  mmOpInfo.support_info.output_format == ge::FORMAT_ND) ?
+                                     l0op::MatMulNdFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
+                                                             offsetX, opImplModeEnum, executor) :
+                                     l0op::MatMulNzFp162Fp32(x1, x2, nullptr, nullptr, transposeX1, transposeX2,
+                                                             offsetX, opImplModeEnum, executor);
         return mmOut;
     } else {
         if (mmOpInfo.support_info.self_format == ge::FORMAT_ND) {
-            const aclTensor* mmOut =
-                (mmOpInfo.support_info.mat2_format == ge::FORMAT_ND) ?
-                    l0op::MatMulNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor) :
-                    l0op::MatMulNdNz(
-                        x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            const aclTensor* mmOut = (mmOpInfo.support_info.mat2_format == ge::FORMAT_ND) ?
+                                         l0op::MatMulNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                        opImplModeEnum, executor) :
+                                         l0op::MatMulNdNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                          opImplModeEnum, executor);
             return mmOut;
         } else {
             OP_LOGD("self format is not ND.");
             if (mmOpInfo.support_info.output_format == ge::FORMAT_ND) {
                 OP_LOGD("Output format is ND, call MatMulNzNzNd.");
-                const aclTensor* mmOut = l0op::MatMulNzNzNd(
-                    x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+                const aclTensor* mmOut = l0op::MatMulNzNzNd(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                            opImplModeEnum, executor);
                 return mmOut;
             }
-            const aclTensor* mmOut =
-                l0op::MatMulNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
+            const aclTensor* mmOut = l0op::MatMulNz(x1, x2, bias, nullptr, transposeX1, transposeX2, offsetX,
+                                                    opImplModeEnum, executor);
             return mmOut;
         }
     }
@@ -584,8 +571,8 @@ static inline const aclTensor* GetPadTensor(int64_t padNum, int64_t padDim, aclO
 
 static bool CheckStreamKSKTiling(MmOpInfo& mmOpInfo)
 {
-    uint64_t kAlign =
-        static_cast<uint64_t>(CeilAlign(mmOpInfo.shapeInfo.kDim, static_cast<int64_t>(BASIC_BLOCK_SIZE_256)));
+    uint64_t kAlign = static_cast<uint64_t>(
+        CeilAlign(mmOpInfo.shapeInfo.kDim, static_cast<int64_t>(BASIC_BLOCK_SIZE_256)));
     uint64_t aiCoreCnt = std::max(uint64_t{1}, static_cast<uint64_t>(mmOpInfo.aiCoreCnt));
     uint64_t dtypeASize = std::max(uint64_t{1}, static_cast<uint64_t>(mmOpInfo.shapeInfo.dtypeASize));
     constexpr uint64_t STREAM_K_MAX_K_THRESHOLD = 2000000UL;
@@ -654,8 +641,8 @@ static bool CheckShapeSupport(MmOpInfo& mmOpInfo)
     return true;
 }
 
-static const aclTensor* HandleEmptyTensor(
-    const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor, int8_t cubeMathType)
+static const aclTensor* HandleEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor,
+                                          int8_t cubeMathType)
 {
     auto emptyOut = ProcessEmptyTensor(self, mat2, executor);
     CHECK_RET(emptyOut != nullptr, nullptr);
@@ -692,8 +679,8 @@ static bool IsContiguousStride(StrideIndexPairs& strideIndexPairs)
     return true;
 }
 
-static bool ValidateSliceParams(
-    const op::Shape& simpleShape, const op::Strides& simpleStrides, int64_t viewOffset, int64_t storageSize)
+static bool ValidateSliceParams(const op::Shape& simpleShape, const op::Strides& simpleStrides, int64_t viewOffset,
+                                int64_t storageSize)
 {
     auto dimNum = static_cast<int64_t>(simpleStrides.size());
     op::FVector<int64_t> srcShape(dimNum, 1);
@@ -767,8 +754,8 @@ static aclnnStatus SetMatmulOpSupportFormat(const aclTensor* self, const aclTens
         }
     }
 
-    if (CheckSupportSingleSplitKFp16Bf16(
-            self, mat2, mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype)) {
+    if (CheckSupportSingleSplitKFp16Bf16(self, mat2, mmOpInfo.support_info.self_dtype,
+                                         mmOpInfo.support_info.mat2_dtype)) {
         OP_LOGI("Hit mat_mul_v3 ND fp16/bf16 single core splitK case channel.");
         mmOpInfo.support_info.output_format = Format::FORMAT_ND;
         mmOpInfo.support_info.self_format = Format::FORMAT_ND;
@@ -777,11 +764,11 @@ static aclnnStatus SetMatmulOpSupportFormat(const aclTensor* self, const aclTens
     }
 
     // self=nd, mat2=nz不支持切K
-    bool isNdNzIn =
-        self->GetStorageFormat() == Format::FORMAT_ND && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
+    bool isNdNzIn = self->GetStorageFormat() == Format::FORMAT_ND &&
+                    mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
     mmOpInfo.support_info.mat2_format = isNdNzIn ? Format::FORMAT_FRACTAL_NZ : mmOpInfo.support_info.mat2_format;
-    mmOpInfo.support_info.output_dtype =
-        isNdNzIn ? mmOpInfo.support_info.mat2_dtype : mmOpInfo.support_info.output_dtype;
+    mmOpInfo.support_info.output_dtype = isNdNzIn ? mmOpInfo.support_info.mat2_dtype :
+                                                    mmOpInfo.support_info.output_dtype;
     return ACLNN_SUCCESS;
 }
 
@@ -789,16 +776,15 @@ static aclnnStatus SetMatmulOpSupportFormat(const aclTensor* self, const aclTens
 
 namespace Ops {
 namespace NN {
-bool Check16In32OutWithBiasValid(
-    op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, const aclTensor* bias)
+bool Check16In32OutWithBiasValid(op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype,
+                                 const aclTensor* bias)
 {
     bool isFp32Output = outputDtype == DataType::DT_FLOAT;
     if (!isFp32Output) {
         return true;
     }
-    bool isLowPrecisionInput =
-        (selfDtype == DataType::DT_FLOAT16 && mat2Dtype == DataType::DT_FLOAT16) ||
-        (selfDtype == DataType::DT_BF16 && mat2Dtype == DataType::DT_BF16);
+    bool isLowPrecisionInput = (selfDtype == DataType::DT_FLOAT16 && mat2Dtype == DataType::DT_FLOAT16) ||
+                               (selfDtype == DataType::DT_BF16 && mat2Dtype == DataType::DT_BF16);
     if (isLowPrecisionInput && bias != nullptr) {
         // bias Dtype should match mat Dtype, or be DT_FLOAT
         op::DataType biasDataType = bias->GetDataType();
@@ -807,9 +793,8 @@ bool Check16In32OutWithBiasValid(
     return true;
 }
 
-bool NeedEnableFp32Output(
-    op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
-    const aclTensor* bias, bool isFusion)
+bool NeedEnableFp32Output(op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
+                          const aclTensor* bias, bool isFusion)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch != NpuArch::DAV_2201 && !IsNpuArch3510Series()) {
@@ -939,8 +924,8 @@ static inline string PrintIndex(const vector<int> idx)
     return oss.str();
 }
 
-static bool CheckTransposeNonContiguousStridePattern(
-    const op::Shape& viewShape, const op::Strides& viewStrides, bool& isNeedSwapInnerTwoDim)
+static bool CheckTransposeNonContiguousStridePattern(const op::Shape& viewShape, const op::Strides& viewStrides,
+                                                     bool& isNeedSwapInnerTwoDim)
 {
     int64_t dimNum = viewShape.GetDimNum();
     StrideIndexPairs strideIndexPairs;
@@ -1032,9 +1017,8 @@ op::Shape SwapLastTwoDimValue(const op::Shape tensorShape, int64_t last, int64_t
 /*
     isSlice为true时self可能为2维或者3维
 */
-MmOpInfo GetMatmulOpInfo(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    bool isSelfSlice, bool isFusion)
+MmOpInfo GetMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
+                         int8_t cubeMathType, bool isSelfSlice, bool isFusion)
 {
     // 获取m、k、n轴的大小
     op::Shape selfShape = self->GetViewShape();
@@ -1057,8 +1041,7 @@ MmOpInfo GetMatmulOpInfo(
     mmOpInfo.ori_info.output_dtype = self->GetDataType();
     op::DataType outDtype = out == nullptr ? DataType::DT_UNDEFINED : out->GetDataType();
     if (FP16FP32_KEEP_DTYPE == cubeMathType ||
-        NeedEnableFp32Output(
-            self->GetDataType(), mat2->GetDataType(), outDtype, cubeMathType, bias, isFusion)) {
+        NeedEnableFp32Output(self->GetDataType(), mat2->GetDataType(), outDtype, cubeMathType, bias, isFusion)) {
         mmOpInfo.ori_info.output_dtype = DataType::DT_FLOAT;
     }
     mmOpInfo.ori_info.output_format = op::Format::FORMAT_ND;
@@ -1069,9 +1052,8 @@ MmOpInfo GetMatmulOpInfo(
     mmOpInfo.shapeInfo.transposeX2 = false;
     mmOpInfo.shapeInfo.dtypeASize = ge::GetSizeByDataType(self->GetDataType());
     mmOpInfo.shapeInfo.dtypeBSize = ge::GetSizeByDataType(mat2->GetDataType());
-    OP_LOGD(
-        "mDim=%ld, kDim=%ld, nDim=%ld, dtypeASize=%ld, dtypeBSize=%ld", mDim, kDim, nDim, mmOpInfo.shapeInfo.dtypeASize,
-        mmOpInfo.shapeInfo.dtypeBSize);
+    OP_LOGD("mDim=%ld, kDim=%ld, nDim=%ld, dtypeASize=%ld, dtypeBSize=%ld", mDim, kDim, nDim,
+            mmOpInfo.shapeInfo.dtypeASize, mmOpInfo.shapeInfo.dtypeBSize);
     mmOpInfo.support_info = mmOpInfo.ori_info;
 
     // 不同芯片能力不同
@@ -1087,12 +1069,12 @@ MmOpInfo GetMatmulOpInfo(
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    mmOpInfo.enableForceGrpAccForFp32 =
-        cubeMathType == USE_FP32_ADD && (npuArch == NpuArch::DAV_2201 || IsNpuArch3510Series());
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == USE_FP32_ADD &&
+                                        (npuArch == NpuArch::DAV_2201 || IsNpuArch3510Series());
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
-    OP_LOGD(
-        "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d",
-        mmOpInfo.opImplModeEnum, mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType, inputFp32Flag);
+    OP_LOGD("opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d",
+            mmOpInfo.opImplModeEnum, mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType,
+            inputFp32Flag);
     // Log mm info
     GetMmInfo(mmOpInfo);
     return mmOpInfo;
@@ -1108,9 +1090,9 @@ std::shared_ptr<NpuArchMatMulRuleBase> BuildRule()
     }
 }
 
-aclnnStatus CreateMatmulOpInfo(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    MmOpInfo& mmOpInfo, bool isSelfSlice = false, bool isFusion)
+aclnnStatus CreateMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                               const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, bool isSelfSlice = false,
+                               bool isFusion)
 {
     // 获取m、k、n轴的大小
     op::Shape selfShape = self->GetViewShape();
@@ -1136,9 +1118,8 @@ aclnnStatus CreateMatmulOpInfo(
     mmOpInfo.shapeInfo.transposeX2 = false;
     mmOpInfo.shapeInfo.dtypeASize = ge::GetSizeByDataType(self->GetDataType());
     mmOpInfo.shapeInfo.dtypeBSize = ge::GetSizeByDataType(mat2->GetDataType());
-    OP_LOGD(
-        "mDim=%ld, kDim=%ld, nDim=%ld, dtypeASize=%ld, dtypeBSize=%ld", mDim, kDim, nDim, mmOpInfo.shapeInfo.dtypeASize,
-        mmOpInfo.shapeInfo.dtypeBSize);
+    OP_LOGD("mDim=%ld, kDim=%ld, nDim=%ld, dtypeASize=%ld, dtypeBSize=%ld", mDim, kDim, nDim,
+            mmOpInfo.shapeInfo.dtypeASize, mmOpInfo.shapeInfo.dtypeBSize);
 
     // 解析当前规格matmulop支持的dtype能力
     std::shared_ptr<NpuArchMatMulRuleBase> archRule = BuildRule();
@@ -1158,20 +1139,19 @@ aclnnStatus CreateMatmulOpInfo(
     // 如果允许降精度处理， 则开启HF32模式（0x40），否则采用默认模式; 后续此字段配置需要按照字段表进行配置
     mmOpInfo.enableHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    mmOpInfo.enableForceGrpAccForFp32 =
-        cubeMathType == USE_FP32_ADD && (npuArch == NpuArch::DAV_2201 || IsNpuArch3510Series());
+    mmOpInfo.enableForceGrpAccForFp32 = cubeMathType == USE_FP32_ADD &&
+                                        (npuArch == NpuArch::DAV_2201 || IsNpuArch3510Series());
     mmOpInfo.opImplModeEnum = mmOpInfo.enableHf32 ? 0x40 : (mmOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
-    OP_LOGD(
-        "opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d",
-        mmOpInfo.opImplModeEnum, mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType, inputFp32Flag);
+    OP_LOGD("opImplModeEnum=%ld, enableHf32=%d, enableForceGrpAccForFp32=%d cubeMathType=%d, inputFp32Flag= %d",
+            mmOpInfo.opImplModeEnum, mmOpInfo.enableHf32, mmOpInfo.enableForceGrpAccForFp32, cubeMathType,
+            inputFp32Flag);
     // Log mm info
     GetMmInfo(mmOpInfo);
     return ACLNN_SUCCESS;
 }
 
-bool ContiguousAndCast(
-    const aclTensor*& contiguousInput, const aclTensor*& castOut, bool& transposeFlag, op::DataType dtype,
-    aclOpExecutor* executor)
+bool ContiguousAndCast(const aclTensor*& contiguousInput, const aclTensor*& castOut, bool& transposeFlag,
+                       op::DataType dtype, aclOpExecutor* executor)
 {
     auto contiguousOut = contiguousInput;
     if (IsTransposeLastTwoDims(contiguousInput)) {
@@ -1191,8 +1171,8 @@ bool ContiguousAndCast(
     return true;
 }
 
-bool ContiguousAndCastBias(
-    const aclTensor*& contiguousInput, const aclTensor*& castOut, op::DataType dtype, aclOpExecutor* executor)
+bool ContiguousAndCastBias(const aclTensor*& contiguousInput, const aclTensor*& castOut, op::DataType dtype,
+                           aclOpExecutor* executor)
 {
     auto contiguousOut = contiguousInput;
 
@@ -1206,9 +1186,8 @@ bool ContiguousAndCastBias(
     return true;
 }
 
-const aclTensor* ExecMmOp(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
-    bool isFusion)
+const aclTensor* ExecMmOp(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType,
+                          aclOpExecutor* executor, bool isFusion)
 {
     return ExecMmOpWithBias(self, mat2, nullptr, out, cubeMathType, executor, false, isFusion);
 }
@@ -1216,9 +1195,9 @@ const aclTensor* ExecMmOp(
 /*
    注意：虽然申明为const指针引用，但selfReshapeOutput和mat2ReshapeOutput会重新赋值修改指针指向新的const aclTensor
 */
-int64_t ProcessSpecialCases(
-    const aclTensor*& selfCastOut, const aclTensor*& mat2CastOut, MmOpInfo& mmOpInfo, const aclTensor*& bias,
-    const aclTensor*& selfReshapeOutput, const aclTensor*& mat2ReshapeOutput, aclOpExecutor* executor, bool& ifKEqual1)
+int64_t ProcessSpecialCases(const aclTensor*& selfCastOut, const aclTensor*& mat2CastOut, MmOpInfo& mmOpInfo,
+                            const aclTensor*& bias, const aclTensor*& selfReshapeOutput,
+                            const aclTensor*& mat2ReshapeOutput, aclOpExecutor* executor, bool& ifKEqual1)
 {
     ifKEqual1 = IfKEqual1(selfCastOut, mmOpInfo, mmOpInfo.shapeInfo.transposeX1, bias);
     if (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 ||
@@ -1227,21 +1206,21 @@ int64_t ProcessSpecialCases(
                     CheckKEqual1Support() && checkBF16MMValid(selfCastOut, mat2CastOut, mmOpInfo.shapeInfo.transposeX2);
     }
     if (ifKEqual1) {
-        aclnnStatus kEqual1SelfToMKRes =
-            IfKEqual1SelfToMK(selfCastOut, selfReshapeOutput, mmOpInfo.shapeInfo.transposeX1, executor);
+        aclnnStatus kEqual1SelfToMKRes = IfKEqual1SelfToMK(selfCastOut, selfReshapeOutput,
+                                                           mmOpInfo.shapeInfo.transposeX1, executor);
         CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
-        aclnnStatus kEqual1Mat2ToKNRes =
-            IfKEqual1Mat2ToKN(mat2CastOut, mat2ReshapeOutput, mmOpInfo.shapeInfo.transposeX2, executor);
+        aclnnStatus kEqual1Mat2ToKNRes = IfKEqual1Mat2ToKN(mat2CastOut, mat2ReshapeOutput,
+                                                           mmOpInfo.shapeInfo.transposeX2, executor);
         CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, -1);
         OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate");
     } else {
-        aclnnStatus mEqual1SelfToMKRes = IfMEqual1SelfToMK(
-            selfCastOut, selfReshapeOutput, mmOpInfo.support_info.self_format, mmOpInfo.shapeInfo.transposeX1,
-            executor);
+        aclnnStatus mEqual1SelfToMKRes = IfMEqual1SelfToMK(selfCastOut, selfReshapeOutput,
+                                                           mmOpInfo.support_info.self_format,
+                                                           mmOpInfo.shapeInfo.transposeX1, executor);
         CHECK_RET(mEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
-        aclnnStatus nEqual1Mat2ToNKRes = IfNEqual1Mat2ToNK(
-            mat2CastOut, mat2ReshapeOutput, mmOpInfo.support_info.mat2_format, mmOpInfo.shapeInfo.transposeX2,
-            executor);
+        aclnnStatus nEqual1Mat2ToNKRes = IfNEqual1Mat2ToNK(mat2CastOut, mat2ReshapeOutput,
+                                                           mmOpInfo.support_info.mat2_format,
+                                                           mmOpInfo.shapeInfo.transposeX2, executor);
         CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, -1);
     }
     return 0;
@@ -1270,9 +1249,9 @@ int64_t ProcessSpecialCases(
                          output
 
 */
-const aclTensor* ExecMmOpWithBias(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    aclOpExecutor* executor, bool transposeX2, bool isFusion)
+const aclTensor* ExecMmOpWithBias(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                                  const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor, bool transposeX2,
+                                  bool isFusion)
 {
     CHECK_RET(self != nullptr, nullptr);
     CHECK_RET(mat2 != nullptr, nullptr);
@@ -1285,9 +1264,8 @@ const aclTensor* ExecMmOpWithBias(
     if (self->IsEmpty() || mat2->IsEmpty()) {
         return HandleEmptyTensor(self, mat2, executor, cubeMathType);
     }
-    OP_LOGI(
-        "Origin storage shapes: self[%s], mat2[%s].", op::ToString(self->GetStorageShape()).GetString(),
-        op::ToString(mat2->GetStorageShape()).GetString());
+    OP_LOGI("Origin storage shapes: self[%s], mat2[%s].", op::ToString(self->GetStorageShape()).GetString(),
+            op::ToString(mat2->GetStorageShape()).GetString());
 
     // 解析当前规格matmulop支持的dtype、format能力
     MmOpInfo mmOpInfo = GetMatmulOpInfo(self, mat2, bias, out, cubeMathType, isSelfSlice, isFusion);
@@ -1304,15 +1282,15 @@ const aclTensor* ExecMmOpWithBias(
     auto selfCastOut = self;
     if (isSelfSlice) {
         // 刷新oriShape
-        selfCastOut = executor->CreateView(
-            self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+        selfCastOut = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(),
+                                           self->GetViewOffset());
         CHECK_RET(selfCastOut != nullptr, nullptr);
         // 非ND修改format为ND
         selfCastOut = SetTensorToNDFormat(selfCastOut);
     } else {
         // 转连续
-        bool selfCastRes = ContiguousAndCast(
-            self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
+        bool selfCastRes = ContiguousAndCast(self, selfCastOut, mmOpInfo.shapeInfo.transposeX1,
+                                             mmOpInfo.support_info.self_dtype, executor);
         CHECK_RET(selfCastRes, nullptr);
         // 再次合并batch和M
         if (needFoldBatch) {
@@ -1343,8 +1321,8 @@ const aclTensor* ExecMmOpWithBias(
 
     auto mat2CastOut = mat2;
     auto mat2StorageShape = mat2->GetStorageShape();
-    bool mat2CastRes = ContiguousAndCast(
-        mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2, mmOpInfo.support_info.mat2_dtype, executor);
+    bool mat2CastRes = ContiguousAndCast(mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2,
+                                         mmOpInfo.support_info.mat2_dtype, executor);
     CHECK_RET(mat2CastRes, nullptr);
 
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
@@ -1359,11 +1337,9 @@ const aclTensor* ExecMmOpWithBias(
     auto mat2ReshapeOutput = mat2CastOut;
     bool ifKEqual1 = false;
     if (!isSelfSlice) {
-        CHECK_RET(
-            ProcessSpecialCases(
-                selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, selfReshapeOutput, mat2ReshapeOutput, executor,
-                ifKEqual1) != -1,
-            nullptr);
+        CHECK_RET(ProcessSpecialCases(selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, selfReshapeOutput,
+                                      mat2ReshapeOutput, executor, ifKEqual1) != -1,
+                  nullptr);
     }
 
     auto selfTransdataOut = selfReshapeOutput;
@@ -1379,14 +1355,13 @@ const aclTensor* ExecMmOpWithBias(
 
     const aclTensor* mmOut = nullptr;
     op::DataType outDtype = out == nullptr ? DataType::DT_UNDEFINED : out->GetDataType();
-    bool enable16In32Out = NeedEnableFp32Output(
-        self->GetDataType(), mat2->GetDataType(), outDtype, cubeMathType, bias);
+    bool enable16In32Out = NeedEnableFp32Output(self->GetDataType(), mat2->GetDataType(), outDtype, cubeMathType, bias);
     auto selfCastfp32 = selfTransdataOut;
     auto mat2Castfp32 = mat2TransdataOut;
     if (isSelfSlice) {
-        mmOut = GetMatMulOp(
-            selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
+        mmOut = GetMatMulOp(selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo,
+                            mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum,
+                            executor);
     } else if (ifKEqual1) {
         if (enable16In32Out) {
             // 16in32out场景下升精度处理
@@ -1397,9 +1372,9 @@ const aclTensor* ExecMmOpWithBias(
         }
         mmOut = l0op::Mul(selfCastfp32, mat2Castfp32, executor);
     } else {
-        mmOut = GetMatMulOp(
-            selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
+        mmOut = GetMatMulOp(selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo,
+                            mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum,
+                            executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
     auto mmTransdataOut = l0op::TransData(mmOut, mmOpInfo.ori_info.output_format, 0, executor);
@@ -1410,9 +1385,9 @@ const aclTensor* ExecMmOpWithBias(
     return castOut;
 }
 
-const aclTensor* MatmulCommonProcess(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
-    const int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor, bool transposeX2, bool isFusion)
+const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                                     const aclTensor* out, const int8_t cubeMathType, MmOpInfo& mmOpInfo,
+                                     aclOpExecutor* executor, bool transposeX2, bool isFusion)
 {
     /*
                   self            mat2
@@ -1443,9 +1418,8 @@ const aclTensor* MatmulCommonProcess(
         return HandleEmptyTensor(self, mat2, executor, cubeMathType);
     }
 
-    OP_LOGI(
-        "Origin storage shapes: self[%s], mat2[%s].", op::ToString(self->GetStorageShape()).GetString(),
-        op::ToString(mat2->GetStorageShape()).GetString());
+    OP_LOGI("Origin storage shapes: self[%s], mat2[%s].", op::ToString(self->GetStorageShape()).GetString(),
+            op::ToString(mat2->GetStorageShape()).GetString());
 
     // 解析当前规格matmulop支持的dtype、format能力
     aclnnStatus result = CreateMatmulOpInfo(self, mat2, bias, out, cubeMathType, mmOpInfo, isSelfSlice, isFusion);
@@ -1464,15 +1438,15 @@ const aclTensor* MatmulCommonProcess(
     auto selfCastOut = self;
     if (isSelfSlice) {
         // 刷新oriShape
-        selfCastOut = executor->CreateView(
-            self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
+        selfCastOut = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(),
+                                           self->GetViewOffset());
         CHECK_RET(selfCastOut != nullptr, nullptr);
         // 非ND修改format为ND
         selfCastOut = SetTensorToNDFormat(selfCastOut);
     } else {
         // 转连续
-        bool selfCastRes = ContiguousAndCast(
-            self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
+        bool selfCastRes = ContiguousAndCast(self, selfCastOut, mmOpInfo.shapeInfo.transposeX1,
+                                             mmOpInfo.support_info.self_dtype, executor);
         CHECK_RET(selfCastRes, nullptr);
         // 再次合并batch和M
         if (needFoldBatch) {
@@ -1498,8 +1472,8 @@ const aclTensor* MatmulCommonProcess(
 
     auto mat2CastOut = mat2;
     auto mat2StorageShape = mat2->GetStorageShape();
-    bool mat2CastRes = ContiguousAndCast(
-        mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2, mmOpInfo.support_info.mat2_dtype, executor);
+    bool mat2CastRes = ContiguousAndCast(mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2,
+                                         mmOpInfo.support_info.mat2_dtype, executor);
     CHECK_RET(mat2CastRes, nullptr);
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("mat2 GetStorageFormat FORMAT_FRACTAL_NZ.");
@@ -1519,11 +1493,9 @@ const aclTensor* MatmulCommonProcess(
     auto mat2ReshapeOutput = mat2CastOut;
     bool ifKEqual1 = false;
     if (!isSelfSlice) {
-        CHECK_RET(
-            ProcessSpecialCases(
-                selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, selfReshapeOutput, mat2ReshapeOutput, executor,
-                ifKEqual1) != -1,
-            nullptr);
+        CHECK_RET(ProcessSpecialCases(selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, selfReshapeOutput,
+                                      mat2ReshapeOutput, executor, ifKEqual1) != -1,
+                  nullptr);
     }
 
     auto selfTransdataOut = selfReshapeOutput;
@@ -1539,15 +1511,15 @@ const aclTensor* MatmulCommonProcess(
 
     const aclTensor* mmOut = nullptr;
     if (isSelfSlice) {
-        mmOut = GetMatMulOp(
-            selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
+        mmOut = GetMatMulOp(selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo,
+                            mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum,
+                            executor);
     } else if (ifKEqual1) {
         mmOut = l0op::Mul(selfTransdataOut, mat2TransdataOut, executor);
     } else {
-        mmOut = GetMatMulOp(
-            selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
+        mmOut = GetMatMulOp(selfTransdataOut, mat2TransdataOut, contiguousBias, mmOpInfo,
+                            mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum,
+                            executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
     auto mmTransdataOut = l0op::TransData(mmOut, mmOpInfo.ori_info.output_format, 0, executor);
@@ -1559,9 +1531,8 @@ const aclTensor* MatmulCommonProcess(
 /*
 计算MatMul，输入根据 transSelf和transMat2决定是否转置
 */
-const aclTensor* ExecMmOpWithTrans(
-    const aclTensor* self, const aclTensor* mat2, int64_t transSelf, int64_t transMat2, int8_t cubeMathType,
-    aclOpExecutor* executor)
+const aclTensor* ExecMmOpWithTrans(const aclTensor* self, const aclTensor* mat2, int64_t transSelf, int64_t transMat2,
+                                   int8_t cubeMathType, aclOpExecutor* executor)
 {
     CHECK_RET(CheckDtypeValid(self, mat2, nullptr, nullptr, cubeMathType), nullptr);
     CHECK_RET(CheckShapeValidWithTrans(self, mat2, transSelf, transMat2), nullptr);
@@ -1605,21 +1576,21 @@ const aclTensor* ExecMmOpWithTrans(
                     CheckKEqual1Support() && checkBF16MMValid(selfCastOut, mat2CastOut, mmOpInfo.shapeInfo.transposeX2);
     }
     if (ifKEqual1) {
-        aclnnStatus kEqual1SelfToMKRes =
-            IfKEqual1SelfToMK(selfCastOut, selfReshapeOutput, mmOpInfo.shapeInfo.transposeX1, executor);
+        aclnnStatus kEqual1SelfToMKRes = IfKEqual1SelfToMK(selfCastOut, selfReshapeOutput,
+                                                           mmOpInfo.shapeInfo.transposeX1, executor);
         CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, nullptr);
-        aclnnStatus kEqual1Mat2ToKNRes =
-            IfKEqual1Mat2ToKN(mat2CastOut, mat2ReshapeOutput, mmOpInfo.shapeInfo.transposeX2, executor);
+        aclnnStatus kEqual1Mat2ToKNRes = IfKEqual1Mat2ToKN(mat2CastOut, mat2ReshapeOutput,
+                                                           mmOpInfo.shapeInfo.transposeX2, executor);
         CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, nullptr);
         OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate");
     } else {
-        aclnnStatus mEqual1SelfToMKRes = IfMEqual1SelfToMK(
-            selfCastOut, selfReshapeOutput, mmOpInfo.support_info.self_format, mmOpInfo.shapeInfo.transposeX1,
-            executor);
+        aclnnStatus mEqual1SelfToMKRes = IfMEqual1SelfToMK(selfCastOut, selfReshapeOutput,
+                                                           mmOpInfo.support_info.self_format,
+                                                           mmOpInfo.shapeInfo.transposeX1, executor);
         CHECK_RET(mEqual1SelfToMKRes == ACLNN_SUCCESS, nullptr);
-        aclnnStatus nEqual1Mat2ToNKRes = IfNEqual1Mat2ToNK(
-            mat2CastOut, mat2ReshapeOutput, mmOpInfo.support_info.mat2_format, mmOpInfo.shapeInfo.transposeX2,
-            executor);
+        aclnnStatus nEqual1Mat2ToNKRes = IfNEqual1Mat2ToNK(mat2CastOut, mat2ReshapeOutput,
+                                                           mmOpInfo.support_info.mat2_format,
+                                                           mmOpInfo.shapeInfo.transposeX2, executor);
         CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, nullptr);
     }
 
@@ -1632,9 +1603,8 @@ const aclTensor* ExecMmOpWithTrans(
     if (ifKEqual1) {
         mmOut = l0op::Mul(selfTransdataOut, mat2TransdataOut, executor);
     } else {
-        mmOut = GetMatMulOp(
-            selfTransdataOut, mat2TransdataOut, nullptr, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
+        mmOut = GetMatMulOp(selfTransdataOut, mat2TransdataOut, nullptr, mmOpInfo, mmOpInfo.shapeInfo.transposeX1,
+                            mmOpInfo.shapeInfo.transposeX2, 0, mmOpInfo.opImplModeEnum, executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
 
@@ -1689,9 +1659,8 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& 
     return CheckShapeSupport(mmOpInfo);
 }
 
-bool CheckGemmV3Support(
-    const aclTensor* mat1, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, MmOpInfo& mmOpInfo,
-    int8_t cubeMathType)
+bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
+                        MmOpInfo& mmOpInfo, int8_t cubeMathType)
 {
     CHECK_RET(CheckShapeValid(mat1, mat2), false);
 
@@ -1730,8 +1699,8 @@ bool CheckGemmV3Support(
     return CheckShapeSupport(mmOpInfo);
 }
 
-const aclTensor* ExecGemmV3Op(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* c, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+const aclTensor* ExecGemmV3Op(const aclTensor* self, const aclTensor* mat2, const aclTensor* c, MmOpInfo& mmOpInfo,
+                              aclOpExecutor* executor)
 {
     OP_LOGD("Format of self origin is [%s].", op::ToString(self->GetStorageShape()).GetString());
     OP_LOGD("Format of mat2 origin is [%s].", op::ToString(mat2->GetStorageShape()).GetString());
@@ -1745,14 +1714,14 @@ const aclTensor* ExecGemmV3Op(
     OP_LOGI("Format of mat2 is [%s].", op::ToString(mat2->GetStorageShape()).GetString());
     // 左输入非连续转连续
     auto selfCastOut = self;
-    bool selfCastRes = ContiguousAndCast(
-        self, selfCastOut, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.support_info.self_dtype, executor);
+    bool selfCastRes = ContiguousAndCast(self, selfCastOut, mmOpInfo.shapeInfo.transposeX1,
+                                         mmOpInfo.support_info.self_dtype, executor);
     CHECK_RET(selfCastRes, nullptr);
 
     // 右输入非连续转连续
     auto mat2CastOut = mat2;
-    bool mat2CastRes = ContiguousAndCast(
-        mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2, mmOpInfo.support_info.mat2_dtype, executor);
+    bool mat2CastRes = ContiguousAndCast(mat2, mat2CastOut, mmOpInfo.shapeInfo.transposeX2,
+                                         mmOpInfo.support_info.mat2_dtype, executor);
     CHECK_RET(mat2CastRes, nullptr);
 
     // 输入c非连续转连续以及转换dtype
@@ -1766,9 +1735,8 @@ const aclTensor* ExecGemmV3Op(
     mmOpInfo.ori_info.output_dtype = DataType::DT_FLOAT;
 
     // Invoke GemmV3 l0 api
-    const aclTensor* mmOut = GetGemmV3Op(
-        selfCastOut, mat2CastOut, contiguousC, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2,
-        mmOpInfo.enableHf32, executor);
+    const aclTensor* mmOut = GetGemmV3Op(selfCastOut, mat2CastOut, contiguousC, mmOpInfo.shapeInfo.transposeX1,
+                                         mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, executor);
 
     CHECK_RET(mmOut != nullptr, nullptr);
 
@@ -1833,8 +1801,8 @@ static inline bool CheckDtypeSupportBias(const aclTensor* self, const aclTensor*
 }
 
 // 如果beta==1 && alpha == 1 && self.shape[0] == mat2.shape[1] && 不属于切k，直接走matmul的bias模式
-bool NeedToConvertBias(
-    const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta, const aclScalar* alpha)
+bool NeedToConvertBias(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta,
+                       const aclScalar* alpha)
 {
     int64_t mat1DimNum = static_cast<int64_t>(mat1->GetViewShape().GetDimNum());
     // rightMove to distinguish different shape of mm and bmm
@@ -1871,8 +1839,8 @@ bool NeedToConvertBias(
 }
 
 // Nz fp16 in fp32 out experimental rules
-bool GetNzSplitKFlag(
-    const aclTensor* self, const aclTensor* mat2, const Format selfSuppFormat, const Format outSuppFormat)
+bool GetNzSplitKFlag(const aclTensor* self, const aclTensor* mat2, const Format selfSuppFormat,
+                     const Format outSuppFormat)
 {
     if ((selfSuppFormat == Format::FORMAT_ND) && (outSuppFormat == Format::FORMAT_ND)) {
         return true;
@@ -1940,14 +1908,15 @@ bool IsFormatSupportNd(const aclTensor* self, const aclTensor* mat2)
     return true;
 }
 
-bool CheckMMV3NdNzNdSupport(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo) {
+bool CheckMMV3NdNzNdSupport(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo)
+{
     // 当前切换场景不支持输入self/mat2混精度场景，不支持self/out升精度输出场景，且输入类型只支持fp16/bf16/fp32
     bool isDtypeSupport = mmOpInfo.support_info.self_dtype == mmOpInfo.support_info.mat2_dtype &&
                           mmOpInfo.support_info.self_dtype == mmOpInfo.support_info.output_dtype &&
                           ALIGN_UNIT_MAP.find(mmOpInfo.support_info.self_dtype) != ALIGN_UNIT_MAP.end();
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    return isDtypeSupport && npuArch == NpuArch::DAV_2201 &&
-           self->GetStorageFormat() == Format::FORMAT_ND && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
+    return isDtypeSupport && npuArch == NpuArch::DAV_2201 && self->GetStorageFormat() == Format::FORMAT_ND &&
+           mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
 }
 
 bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2)
@@ -1965,8 +1934,9 @@ bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2)
         return ((static_cast<uint64_t>(mat2Shape.GetDim(dimNum - 1)) & 0x0000000F) == 0);
     };
     // 310p weightnz input only supports k and n both 32B(16 element for fp16) aligned.
-    bool isMat2NzNotAligned = (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) && (!isNAligned() || !isKAligned());
-    if (isMat2NzNotAligned){
+    bool isMat2NzNotAligned = (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) &&
+                              (!isNAligned() || !isKAligned());
+    if (isMat2NzNotAligned) {
         OP_LOGD("NzNzNd is not supported for mat2 format nz and k(or n) not aligned scenario.");
         return false;
     }
@@ -1987,21 +1957,25 @@ bool IsNdToNzOnTheFly(const aclTensor* self, const aclTensor* mat2)
     }
     bool isTransposeSelf = IsTransposeLastTwoDims(self);
     bool isTransposeMat2 = IsTransposeLastTwoDims(mat2);
-    uint64_t selfInnerAxis =
-        isTransposeSelf ? static_cast<uint64_t>(self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 2)) :
-                          static_cast<uint64_t>(self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 1));
-    uint64_t mat2InnerAxis =
-        isTransposeMat2 ? static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 2)) :
-                          static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1));
+    uint64_t selfInnerAxis = isTransposeSelf ? static_cast<uint64_t>(
+                                                   self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 2)) :
+                                               static_cast<uint64_t>(
+                                                   self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 1));
+    uint64_t mat2InnerAxis = isTransposeMat2 ? static_cast<uint64_t>(
+                                                   mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 2)) :
+                                               static_cast<uint64_t>(
+                                                   mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1));
 
-    uint64_t selfOuterAxis =
-        isTransposeSelf ? static_cast<uint64_t>(self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 1)) :
-                          static_cast<uint64_t>(self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 2));
-    uint64_t mat2OuterAxis =
-        isTransposeMat2 ? static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1)) :
-                          static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 2));
-    uint64_t mAxis =
-        static_cast<uint64_t>(self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 2)); // 倒数第2维
+    uint64_t selfOuterAxis = isTransposeSelf ? static_cast<uint64_t>(
+                                                   self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 1)) :
+                                               static_cast<uint64_t>(
+                                                   self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 2));
+    uint64_t mat2OuterAxis = isTransposeMat2 ? static_cast<uint64_t>(
+                                                   mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1)) :
+                                               static_cast<uint64_t>(
+                                                   mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 2));
+    uint64_t mAxis = static_cast<uint64_t>(
+        self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 2)); // 倒数第2维
     uint64_t kAxis = static_cast<uint64_t>(self->GetViewShape().GetDim(self->GetViewShape().GetDimNum() - 1));
     uint64_t nAxis = static_cast<uint64_t>(mat2->GetViewShape().GetDim(mat2->GetViewShape().GetDimNum() - 1));
     if (selfInnerAxis * selfOuterAxis <= kInnerAxisMaxLimit && mat2InnerAxis * mat2OuterAxis <= kInnerAxisMaxLimit) {
@@ -2053,14 +2027,15 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor)
 aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType)
 {
     bool dtypeMismatch = mmOpInfo.ori_info.self_dtype != mmOpInfo.ori_info.mat2_dtype;
-    bool tensorFloat =
-        mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT || mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT;
-    bool tensorBfloat16 =
-        mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 || mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16;
+    bool tensorFloat = mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT ||
+                       mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT;
+    bool tensorBfloat16 = mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 ||
+                          mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16;
 
-    bool lowPrecisionInput =
-        (mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 && mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16) ||
-        (mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT16 && mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT16);
+    bool lowPrecisionInput = (mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 &&
+                              mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16) ||
+                             (mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT16 &&
+                              mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT16);
     if (!IsInputSupportFp32()) {
         mmOpInfo.support_info.self_dtype = DataType::DT_FLOAT16;
         mmOpInfo.support_info.mat2_dtype = DataType::DT_FLOAT16;
@@ -2076,8 +2051,7 @@ aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType)
         mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
     } else if (IsInputSupportFp32() && cubeMathType == USE_FP32_ADD && lowPrecisionInput) {
         mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
-    } else if (
-        IsInputSupportFp32()&& lowPrecisionInput && (mmOpInfo.ori_info.output_dtype == DataType::DT_FLOAT)) {
+    } else if (IsInputSupportFp32() && lowPrecisionInput && (mmOpInfo.ori_info.output_dtype == DataType::DT_FLOAT)) {
         mmOpInfo.support_info.output_dtype = DataType::DT_FLOAT;
     }
     return ACLNN_SUCCESS;
@@ -2157,8 +2131,8 @@ bool checkBF16SizeValid(const aclTensor*& mat2, const bool& transX2Flag)
     // 校验N轴是否在优化范围内
     int64_t nDimNumWhenNoTrans = mat2->GetViewShape().GetDimNum() - INNER_AXIS;
     int64_t nDimNumWhenTrans = mat2->GetViewShape().GetDimNum() - OUTER_AXIS;
-    int64_t nDim =
-        transX2Flag ? mat2->GetViewShape().GetDim(nDimNumWhenTrans) : mat2->GetViewShape().GetDim(nDimNumWhenNoTrans);
+    int64_t nDim = transX2Flag ? mat2->GetViewShape().GetDim(nDimNumWhenTrans) :
+                                 mat2->GetViewShape().GetDim(nDimNumWhenNoTrans);
     if (nDim > N_KEQAL1_LIMIT) {
         return false;
     }
@@ -2170,12 +2144,12 @@ bool checkBF16MMValid(const aclTensor*& self, const aclTensor*& mat2, const bool
     // 校验MN轴是否在优化范围内
     int64_t mDimNumWhenNoTrans = self->GetViewShape().GetDimNum() - OUTER_AXIS;
     int64_t mDimNumWhenTrans = self->GetViewShape().GetDimNum() - INNER_AXIS;
-    int64_t mDim =
-        transX2Flag ? self->GetViewShape().GetDim(mDimNumWhenTrans) : self->GetViewShape().GetDim(mDimNumWhenNoTrans);
+    int64_t mDim = transX2Flag ? self->GetViewShape().GetDim(mDimNumWhenTrans) :
+                                 self->GetViewShape().GetDim(mDimNumWhenNoTrans);
     int64_t nDimNumWhenNoTrans = mat2->GetViewShape().GetDimNum() - INNER_AXIS;
     int64_t nDimNumWhenTrans = mat2->GetViewShape().GetDimNum() - OUTER_AXIS;
-    int64_t nDim =
-        transX2Flag ? mat2->GetViewShape().GetDim(nDimNumWhenTrans) : mat2->GetViewShape().GetDim(nDimNumWhenNoTrans);
+    int64_t nDim = transX2Flag ? mat2->GetViewShape().GetDim(nDimNumWhenTrans) :
+                                 mat2->GetViewShape().GetDim(nDimNumWhenNoTrans);
     if (mDim * nDim < MM_KEQAL1_LIMIT) {
         return false;
     }
@@ -2209,8 +2183,8 @@ bool IfKEqual1(const aclTensor*& selfInput, const MmOpInfo& mmOpInfo, const bool
     return true;
 }
 
-aclnnStatus IfKEqual1SelfToMK(
-    const aclTensor*& selfInput, const aclTensor*& selfReshapeOutput, bool& transX1Flag, aclOpExecutor* executor)
+aclnnStatus IfKEqual1SelfToMK(const aclTensor*& selfInput, const aclTensor*& selfReshapeOutput, bool& transX1Flag,
+                              aclOpExecutor* executor)
 {
     auto x1Perm = NeedTransPerm(selfInput, executor);
     selfReshapeOutput = transX1Flag ? l0op::Reshape(selfInput, x1Perm, executor) : selfInput;
@@ -2219,8 +2193,8 @@ aclnnStatus IfKEqual1SelfToMK(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus IfKEqual1Mat2ToKN(
-    const aclTensor*& mat2Input, const aclTensor*& mat2ReshapeOutput, bool& transX2Flag, aclOpExecutor* executor)
+aclnnStatus IfKEqual1Mat2ToKN(const aclTensor*& mat2Input, const aclTensor*& mat2ReshapeOutput, bool& transX2Flag,
+                              aclOpExecutor* executor)
 {
     auto x2Perm = NeedTransPerm(mat2Input, executor);
     mat2ReshapeOutput = transX2Flag ? l0op::Reshape(mat2Input, x2Perm, executor) : mat2Input;
@@ -2229,9 +2203,8 @@ aclnnStatus IfKEqual1Mat2ToKN(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus IfMEqual1SelfToMK(
-    const aclTensor*& selfInput, const aclTensor*& selfReshapeOutput, const Format selfInputFormat, bool& transX1Flag,
-    aclOpExecutor* executor)
+aclnnStatus IfMEqual1SelfToMK(const aclTensor*& selfInput, const aclTensor*& selfReshapeOutput,
+                              const Format selfInputFormat, bool& transX1Flag, aclOpExecutor* executor)
 {
     // 不支持nz场景
     if (selfInputFormat == Format::FORMAT_FRACTAL_NZ) {
@@ -2256,9 +2229,8 @@ aclnnStatus IfMEqual1SelfToMK(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus IfNEqual1Mat2ToNK(
-    const aclTensor*& mat2Input, const aclTensor*& mat2ReshapeOutput, const Format mat2InputFormat, bool& transX2Flag,
-    aclOpExecutor* executor)
+aclnnStatus IfNEqual1Mat2ToNK(const aclTensor*& mat2Input, const aclTensor*& mat2ReshapeOutput,
+                              const Format mat2InputFormat, bool& transX2Flag, aclOpExecutor* executor)
 {
     // 不支持nz场景。
     if (mat2InputFormat == Format::FORMAT_FRACTAL_NZ) {
@@ -2319,8 +2291,7 @@ const aclTensor* ContiguousBias(const aclTensor* self, const aclTensor* bias, ac
     auto contiguousBias = l0op::Contiguous(bias, executor);
     CHECK_RET(contiguousBias != nullptr, nullptr);
     // bias为bf16时cast为fp32保证精度
-    if ((contiguousBias->GetDataType() == DataType::DT_BF16 &&
-         !IsNpuArch3510Series()) ||
+    if ((contiguousBias->GetDataType() == DataType::DT_BF16 && !IsNpuArch3510Series()) ||
         self->GetDataType() == DataType::DT_FLOAT) {
         contiguousBias = l0op::Cast(contiguousBias, op::DataType::DT_FLOAT, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
@@ -2361,8 +2332,8 @@ aclnnStatus MatmulGraphImpl::CommonPostProcessWithReshape()
 // ==========================================================================================================
 // NpuArchMatMulRuleBase
 
-bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(
-    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out)
+bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(const aclTensor* matA, const aclTensor* matB,
+                                                       const aclTensor* bias, const aclTensor* out)
 {
     auto dtypeList = GetSupportedDTypes();
     OP_CHECK_DTYPE_NOT_SUPPORT(matA, dtypeList, return false);
@@ -2375,8 +2346,8 @@ bool NpuArchMatMulRuleBase::CheckInputTensorDtypeValid(
     return true;
 }
 
-aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(
-    const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType, op::DataType& upperDtype)
+aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(const aclTensor* matA, const aclTensor* matB, int8_t cubeMathType,
+                                                 op::DataType& upperDtype)
 {
     op::DataType typeA = matA->GetDataType();
     op::DataType typeB = matB->GetDataType();
@@ -2398,8 +2369,8 @@ aclnnStatus NpuArchMatMulRuleBase::GetUpperDtype(
     return ACLNN_SUCCESS;
 }
 
-bool Dav2201MatMulRule::CheckInput(
-    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
+bool Dav2201MatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias,
+                                   const aclTensor* out, int8_t cubeMathType)
 {
     if (FP16FP32_KEEP_DTYPE == cubeMathType) {
         if (npuArch_ != NpuArch::DAV_2201) {
@@ -2420,9 +2391,9 @@ bool Dav2201MatMulRule::CheckInput(
     return dtypeVaild && CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-aclnnStatus Dav2201MatMulRule::PromoteDtype(
-    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    struct MmOpInfo& mmOpInfo, bool isFusion)
+aclnnStatus Dav2201MatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias,
+                                            const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo,
+                                            bool isFusion)
 {
     // 输入数据类型
     mmOpInfo.ori_info.self_dtype = matA->GetDataType();
@@ -2456,12 +2427,12 @@ aclnnStatus Dav2201MatMulRule::PromoteDtype(
     // 更新 kernel support outputDtype
     mmOpInfo.support_info.output_dtype = UpdateOutputDtype(upperDtype, out->GetDataType(), cubeMathType);
 
-        bool enable16In32Out = NeedEnableFp32Output(
-            matA->GetDataType(), matB->GetDataType(), out->GetDataType(), cubeMathType, bias, isFusion);
-        if (enable16In32Out) {
-            mmOpInfo.ori_info.output_dtype =  op::DataType::DT_FLOAT;
-            mmOpInfo.support_info.output_dtype = op::DataType::DT_FLOAT;
-        }
+    bool enable16In32Out = NeedEnableFp32Output(matA->GetDataType(), matB->GetDataType(), out->GetDataType(),
+                                                cubeMathType, bias, isFusion);
+    if (enable16In32Out) {
+        mmOpInfo.ori_info.output_dtype = op::DataType::DT_FLOAT;
+        mmOpInfo.support_info.output_dtype = op::DataType::DT_FLOAT;
+    }
 
     // 更新 biasDtype
     if (bias != nullptr) {
@@ -2480,11 +2451,11 @@ std::initializer_list<op::DataType> Dav2201MatMulRule::GetSupportedDTypes()
 
 NpuArchMatMulRuleBase::PromoteResult Dav2201MatMulRule::GetUpperDtypeByLookUpTable(int inputCase, int8_t cubeMathType)
 {
-    static constexpr const char* WARN0 =
-        "The cubeMathType USE_HF32 will be ignored when the input dtype is FP16 or BF16.";
+    static constexpr const char*
+        WARN0 = "The cubeMathType USE_HF32 will be ignored when the input dtype is FP16 or BF16.";
 
-    static constexpr const char* WARN1 =
-        "The cubeMathType KEEP_DTYPE will be ignored when the inputs dtype are BF16 and FP16.";
+    static constexpr const char*
+        WARN1 = "The cubeMathType KEEP_DTYPE will be ignored when the inputs dtype are BF16 and FP16.";
 
     static constexpr const char* WARN2 = "The cubeMathType USE_FP16 will be ignored when all inputs dtype are BF16.";
 
@@ -2494,8 +2465,8 @@ NpuArchMatMulRuleBase::PromoteResult Dav2201MatMulRule::GetUpperDtypeByLookUpTab
 
     static constexpr const char* WARN5 = "The inputs are BF16 and FP16 with cubeMathType ALLOW_FP32_DOWN_PRECISION.";
 
-    static constexpr const char* WARN6 =
-        "The inputs are BF16 and FP32 with cubeMathType USE_FP16, BF16 will be cast to FP16 for computation.";
+    static constexpr const char*
+        WARN6 = "The inputs are BF16 and FP32 with cubeMathType USE_FP16, BF16 will be cast to FP16 for computation.";
 
     if (FP16FP32_KEEP_DTYPE == cubeMathType) {
         if (npuArch_ != NpuArch::DAV_2201) {
@@ -2519,13 +2490,13 @@ NpuArchMatMulRuleBase::PromoteResult Dav2201MatMulRule::GetUpperDtypeByLookUpTab
         /*4: FP16+BF16*/
         {{FP32, false, WARN1}, {FP32, false, WARN5}, {FP16, false, WARN3}, {FP32, false, WARN4}, {FP32, false, ""}},
         /*5: BF16+BF16*/
-        {{BF16, false, ""}, {BF16, false, ""}, {BF16, false, WARN2}, {BF16, false, WARN0}, {BF16, false, ""}}}; 
+        {{BF16, false, ""}, {BF16, false, ""}, {BF16, false, WARN2}, {BF16, false, WARN0}, {BF16, false, ""}}};
 
     return promoteResultTable[inputCase][cubeMathType];
 }
 
-op::DataType Dav2201MatMulRule::UpdateOutputDtype(
-    op::DataType upperDtype, op::DataType outOriDtype, int8_t cubeMathType) const
+op::DataType Dav2201MatMulRule::UpdateOutputDtype(op::DataType upperDtype, op::DataType outOriDtype,
+                                                  int8_t cubeMathType) const
 {
     // 支持FP32的类型的out参与计算, out可以保持输入要求的类型,不需要做cast
     if ((npuArch_ == NpuArch::DAV_2201) && (cubeMathType != USE_FP16) && outOriDtype == op::DataType::DT_FLOAT) {
@@ -2548,37 +2519,34 @@ op::DataType Dav2201MatMulRule::UpdateBiasDtype(op::DataType upperDtype, op::Dat
     return upperDtype;
 }
 
-
-bool DefaultMatMulRule::CheckInput(
-    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType)
+bool DefaultMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias,
+                                   const aclTensor* out, int8_t cubeMathType)
 {
     bool dtypeVaild = CheckInputTensorDtypeValid(matA, matB, bias, out);
     if (dtypeVaild == false) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported data types for Cube");
         return false;
     }
-    bool isFp32TypeExist =
-        matA->GetDataType() == op::DataType::DT_FLOAT || matB->GetDataType() == op::DataType::DT_FLOAT;
+    bool isFp32TypeExist = matA->GetDataType() == op::DataType::DT_FLOAT ||
+                           matB->GetDataType() == op::DataType::DT_FLOAT;
     if (isFp32TypeExist && (cubeMathType == USE_HF32 || cubeMathType == KEEP_DTYPE)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The npu arch does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
-            "please change the setting of cubeMathType or the Dtype of input tensor.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The npu arch does not support FP32 for calculations when the cubeMathType is KEEP_DTYPE or USE_HF32, "
+                "please change the setting of cubeMathType or the Dtype of input tensor.");
         return false;
     }
     if (isFp32TypeExist && cubeMathType == FP16FP32_KEEP_DTYPE) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The npu arch does not support FP32 for calculations when the cubeMathType is FP16FP32_KEEP_DTYPE, "
-            "please change the setting of cubeMathType or the Dtype of input tensor.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The npu arch does not support FP32 for calculations when the cubeMathType is FP16FP32_KEEP_DTYPE, "
+                "please change the setting of cubeMathType or the Dtype of input tensor.");
         return false;
     }
     return true;
 }
 
-aclnnStatus DefaultMatMulRule::PromoteDtype(
-    const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    struct MmOpInfo& mmOpInfo, [[maybe_unused]] bool isFusion)
+aclnnStatus DefaultMatMulRule::PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias,
+                                            const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo,
+                                            [[maybe_unused]] bool isFusion)
 {
     // 输入数据类型
     mmOpInfo.ori_info.self_dtype = matA->GetDataType();
@@ -2614,7 +2582,8 @@ aclnnStatus DefaultMatMulRule::PromoteDtype(
 
     // 更新 biasDtype 与 outputDtype
     if (bias != nullptr) {
-        op::DataType upperOutputAndBiasDtype = PromoteOutputAndBiasDtype(mmOpInfo.support_info.output_dtype, bias->GetDataType());
+        op::DataType upperOutputAndBiasDtype = PromoteOutputAndBiasDtype(mmOpInfo.support_info.output_dtype,
+                                                                         bias->GetDataType());
         mmOpInfo.support_info.bias_dtype = upperOutputAndBiasDtype;
         mmOpInfo.support_info.output_dtype = upperOutputAndBiasDtype;
     }
@@ -2624,8 +2593,8 @@ aclnnStatus DefaultMatMulRule::PromoteDtype(
 
 std::initializer_list<op::DataType> DefaultMatMulRule::GetSupportedDTypes()
 {
-    static constexpr std::initializer_list<op::DataType> dtypeSupportList = {
-        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+    static constexpr std::initializer_list<op::DataType> dtypeSupportList = {op::DataType::DT_FLOAT,
+                                                                             op::DataType::DT_FLOAT16};
     return dtypeSupportList;
 }
 
@@ -2634,18 +2603,17 @@ NpuArchMatMulRuleBase::PromoteResult DefaultMatMulRule::GetUpperDtypeByLookUpTab
     static constexpr const char* WARN0 = "The cubeMathType is USE_HF32. For input FP16, it will not be enabled.";
 
     static constexpr const char* Err0 = "The npu arch does not support FP32 for calculations "
-                                         "when the cubeMathType is KEEP_DTYPE or USE_HF32, "
-                                         "please change the setting of cubeMathType or the Dtype of input tensor.";
+                                        "when the cubeMathType is KEEP_DTYPE or USE_HF32, "
+                                        "please change the setting of cubeMathType or the Dtype of input tensor.";
     if (FP16FP32_KEEP_DTYPE == cubeMathType) {
         // 和cubeMathType为KEEP_DTYPE时保持一致
         cubeMathType = KEEP_DTYPE;
     }
     static constexpr PromoteResult promoteResultTable[][4] = {
         /* cubeMathType:   KEEP_DTYPE,             ALLOW_FP32_DOWN_P,    USE_FP16,             USE_HF32,     */
-        /*0: FP32+FP32*/ {{FP16, true,  Err0},    {FP16, false, ""},    {FP16, false, ""},    {FP16, true, Err0}   },
-        /*1: FP32+FP16*/ {{FP16, true,  Err0},    {FP16, false, ""},    {FP16, false, ""},    {FP16, true, Err0}   },
-        /*2: FP16+FP16*/ {{FP16, false, ""},      {FP16, false, ""},    {FP16, false, ""},    {FP16, false, WARN0} }
-    };
+        /*0: FP32+FP32*/ {{FP16, true, Err0}, {FP16, false, ""}, {FP16, false, ""}, {FP16, true, Err0}},
+        /*1: FP32+FP16*/ {{FP16, true, Err0}, {FP16, false, ""}, {FP16, false, ""}, {FP16, true, Err0}},
+        /*2: FP16+FP16*/ {{FP16, false, ""}, {FP16, false, ""}, {FP16, false, ""}, {FP16, false, WARN0}}};
 
     return promoteResultTable[inputCase][cubeMathType];
 }
@@ -2682,19 +2650,15 @@ const aclTensor* TransposeAndContiguousMat(const aclTensor* mat, aclOpExecutor* 
     if (mat->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("mat GetStorageFormat FORMAT_FRACTAL_NZ.");
         aclTensor* matShapeSet = const_cast<aclTensor*>(contiguousMat);
-        matShapeSet->SetStorageShape(matStorageShape);  // 对NZ的场景用原来的stroageShape刷新
+        matShapeSet->SetStorageShape(matStorageShape); // 对NZ的场景用原来的stroageShape刷新
     }
     OP_LOGI("mat storage shape is [%s].", op::ToString(matStorageShape).GetString());
     CHECK_RET(contiguousMat != nullptr, nullptr);
     return contiguousMat;
 }
 
-const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
-                                           const aclTensor* self,
-                                           const aclTensor* mat2,
-                                           const aclScalar* alpha,
-                                           const aclScalar* beta,
-                                           aclOpExecutor* executor,
+const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias, const aclTensor* self, const aclTensor* mat2,
+                                           const aclScalar* alpha, const aclScalar* beta, aclOpExecutor* executor,
                                            bool enable16In32Out)
 {
     bool isNdNzInput = self->GetStorageFormat() == Format::FORMAT_ND &&
@@ -2714,7 +2678,8 @@ const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
         reformatMat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);
     }
     // 右输入非连续转连续
-    auto contiguousMat2 = TransposeAndContiguousMat(reformatMat2, executor);;
+    auto contiguousMat2 = TransposeAndContiguousMat(reformatMat2, executor);
+    ;
     CHECK_RET(contiguousMat2 != nullptr, nullptr);
 
     // bias非连续转连续
@@ -2727,16 +2692,9 @@ const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
 
     // 执行GemmV3WithAlphaBeta l0接口
     OP_LOGI("Entering l0op::GemmV3NdNzWithAlphaBeta.");
-    const aclTensor* gemmV3OpOut = l0op::GemmV3NdNzWithAlphaBeta(contiguousSelf,
-                                                                 contiguousMat2,
-                                                                 contiguousBias,
-                                                                 alpha->ToFloat(),
-                                                                 beta->ToFloat(),
-                                                                 transposeSelf,
-                                                                 transposeMat2,
-                                                                 false,
-                                                                 executor,
-                                                                 enable16In32Out);
+    const aclTensor* gemmV3OpOut = l0op::GemmV3NdNzWithAlphaBeta(contiguousSelf, contiguousMat2, contiguousBias,
+                                                                 alpha->ToFloat(), beta->ToFloat(), transposeSelf,
+                                                                 transposeMat2, false, executor, enable16In32Out);
     return gemmV3OpOut;
 }
 } // namespace NN

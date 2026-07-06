@@ -14,44 +14,40 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-static const std::vector<ge::DataType> DataTypeXY = {ge::DT_INT32,  ge::DT_INT16, ge::DT_INT8,  ge::DT_UINT32,
-                                                     ge::DT_UINT16, ge::DT_UINT8, ge::DT_BF16,  ge::DT_FLOAT16,
-                                                     ge::DT_FLOAT,  ge::DT_INT64, ge::DT_UINT64,
-                                                     ge::DT_INT32,  ge::DT_INT16, ge::DT_INT8,  ge::DT_UINT32,
-                                                     ge::DT_UINT16, ge::DT_UINT8, ge::DT_BF16,  ge::DT_FLOAT16,
-                                                     ge::DT_FLOAT,  ge::DT_INT64, ge::DT_UINT64};
-static const std::vector<ge::Format> format = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                               ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-static const std::vector<ge::DataType> DataTypeIdx = {ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                      ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                      ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                      ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-                                                      ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-                                                      ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
-static const std::vector<ge::DataType> DataTypeCount = {ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                        ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                        ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                        ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-                                                        ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-                                                        ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+namespace ops {
+static const std::vector<ge::DataType> DataTypeXY = {
+    ge::DT_INT32,   ge::DT_INT16,   ge::DT_INT8,   ge::DT_UINT32, ge::DT_UINT16, ge::DT_UINT8,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,  ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT32,
+    ge::DT_INT16,   ge::DT_INT8,    ge::DT_UINT32, ge::DT_UINT16, ge::DT_UINT8,  ge::DT_BF16,
+    ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_INT64,  ge::DT_UINT64};
+static const std::vector<ge::Format> format = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> DataTypeIdx = {
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::DataType> DataTypeCount = {
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 
-static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& result) {
+static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& result)
+{
     bool attr_idx = false;
     std::string resultJsonStr;
     ge::graphStatus retStatus = op.GetAttr("return_idx", attr_idx);
     if (retStatus != ge::GRAPH_SUCCESS) {
-        resultJsonStr = R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "GetAttr return_idx error"})";
+        resultJsonStr =
+            R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "GetAttr return_idx error"})";
         result = ge::AscendString(resultJsonStr.c_str());
         return ge::GRAPH_FAILED;
     }
     if (attr_idx) {
-        resultJsonStr = R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Aicore not support 'return_idx = true'"})";
+        resultJsonStr =
+            R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Aicore not support 'return_idx = true'"})";
         result = ge::AscendString(resultJsonStr.c_str());
         return ge::GRAPH_FAILED;
     }
@@ -60,8 +56,7 @@ static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& re
     return ge::GRAPH_SUCCESS;
 }
 
-class UniqueConsecutive : public OpDef
-{
+class UniqueConsecutive : public OpDef {
 public:
     explicit UniqueConsecutive(const char* name) : OpDef(name)
     {
@@ -84,10 +79,10 @@ public:
             .DataType(DataTypeCount)
             .Format(format)
             .UnknownShapeFormat(format);
-        this->Attr("return_idx").AttrType(OPTIONAL).Bool(false);  // always false
+        this->Attr("return_idx").AttrType(OPTIONAL).Bool(false); // always false
         this->Attr("return_counts").AttrType(OPTIONAL).Bool(false);
-        this->Attr("axis").AttrType(OPTIONAL).Int(1000);               // always 1000
-        this->Attr("out_idx").AttrType(OPTIONAL).Int(ge::DT_INT64);  // default INT64
+        this->Attr("axis").AttrType(OPTIONAL).Int(1000);            // always 1000
+        this->Attr("out_idx").AttrType(OPTIONAL).Int(ge::DT_INT64); // default INT64
         this->AICore().SetCheckSupport(CheckSupport);
 
         OpAICoreConfig aicoreConfig;

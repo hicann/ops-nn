@@ -106,21 +106,18 @@ static QuantBatchMatmulInplaceAddInferShapeCsvLoadResult LoadParams()
     return result;
 }
 
-static const QuantBatchMatmulInplaceAddInferShapeCsvLoadResult &GetParamsLoadResult()
+static const QuantBatchMatmulInplaceAddInferShapeCsvLoadResult& GetParamsLoadResult()
 {
     static const QuantBatchMatmulInplaceAddInferShapeCsvLoadResult result = LoadParams();
     return result;
 }
 
-static std::vector<QuantBatchMatmulInplaceAddInferShapeParam> GetParams()
-{
-    return GetParamsLoadResult().params;
-}
+static std::vector<QuantBatchMatmulInplaceAddInferShapeParam> GetParams() { return GetParamsLoadResult().params; }
 
-static std::string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddInferShapeParam> &info)
+static std::string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddInferShapeParam>& info)
 {
     std::string name = info.param.caseName;
-    for (char &ch : name) {
+    for (char& ch : name) {
         if (!std::isalnum(static_cast<unsigned char>(ch))) {
             ch = '_';
         }
@@ -130,22 +127,16 @@ static std::string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmu
 
 class TestQuantBatchMatmulInplaceAddInferShapeCsv
     : public testing::TestWithParam<QuantBatchMatmulInplaceAddInferShapeParam> {
- protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestQuantBatchMatmulInplaceAddInferShapeCsv SetUp" << std::endl;
-    }
+protected:
+    static void SetUpTestCase() { std::cout << "TestQuantBatchMatmulInplaceAddInferShapeCsv SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestQuantBatchMatmulInplaceAddInferShapeCsv TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestQuantBatchMatmulInplaceAddInferShapeCsv TearDown" << std::endl; }
 };
 
 TEST(QuantBatchMatmulInplaceAddInferShapeCsvLoad, ShouldLoadValidCases)
 {
-    const auto &loadResult = GetParamsLoadResult();
-    for (const auto &error : loadResult.errors) {
+    const auto& loadResult = GetParamsLoadResult();
+    for (const auto& error : loadResult.errors) {
         ADD_FAILURE() << error;
     }
     EXPECT_FALSE(loadResult.params.empty());
@@ -153,7 +144,7 @@ TEST(QuantBatchMatmulInplaceAddInferShapeCsvLoad, ShouldLoadValidCases)
 
 TEST_P(TestQuantBatchMatmulInplaceAddInferShapeCsv, runCase)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulInplaceAdd"), nullptr);
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulInplaceAdd")->infer_shape;
     ASSERT_NE(inferShapeFunc, nullptr);
@@ -176,14 +167,14 @@ TEST_P(TestQuantBatchMatmulInplaceAddInferShapeCsv, runCase)
     gert::StorageShape outputShape = {{}, {}};
 
     auto contextHolder = gert::InferShapeContextFaker()
-        .NodeIoNum(5, 1)
-        .IrInstanceNum({1, 1, 1, 1, 1})
-        .InputShapes({&x1, &x2, &x2Scale, &y, &x1Scale})
-        .OutputShapes({&outputShape})
-        .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)},
-                    {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groupSize)}})
-        .Build();
+                             .NodeIoNum(5, 1)
+                             .IrInstanceNum({1, 1, 1, 1, 1})
+                             .InputShapes({&x1, &x2, &x2Scale, &y, &x1Scale})
+                             .OutputShapes({&outputShape})
+                             .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
+                                         {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)},
+                                         {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groupSize)}})
+                             .Build();
     ASSERT_EQ(inferShapeFunc(contextHolder.GetContext<gert::InferShapeContext>()), param.expectRet)
         << "case=" << param.caseName;
     if (param.expectRet == ge::GRAPH_SUCCESS) {
@@ -193,10 +184,8 @@ TEST_P(TestQuantBatchMatmulInplaceAddInferShapeCsv, runCase)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAddInferShape,
-                         TestQuantBatchMatmulInplaceAddInferShapeCsv,
-                         testing::ValuesIn(GetParams()),
-                         SanitizeCaseName);
+INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAddInferShape, TestQuantBatchMatmulInplaceAddInferShapeCsv,
+                         testing::ValuesIn(GetParams()), SanitizeCaseName);
 
 } // namespace
 } // namespace ge

@@ -22,26 +22,25 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
           class BiasType_, class TileCopy_>
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>, DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>, DispatchPolicy_>>> {
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>,
+                                   DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;
@@ -110,8 +109,8 @@ public:
     }
 
 public:
-    __aicore__ inline void Init(
-        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, bool isSplitSingleK = false)
+    __aicore__ inline void Init(const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0,
+                                bool isBias, bool isSplitSingleK = false)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -137,9 +136,8 @@ public:
         abL1LoopCnt_ = 0;
     }
     // For FP32: L1 copy needs no modification
-    __aicore__ inline void CopyInA1(
-        const AscendC::GlobalTensor<A_T>& aGlobal, const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1,
-        uint64_t curKL1)
+    __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal,
+                                    const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1, uint64_t curKL1)
     {
         AscendC::Nd2NzParams nd2nzParams;
         nd2nzParams.ndNum = 1;
@@ -157,9 +155,8 @@ public:
     }
 
     template <CubeFormat LayoutB = CubeFormat::ND>
-    __aicore__ inline void CopyInB1(
-        const AscendC::GlobalTensor<B_T>& bGlobal, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
-        uint64_t curKL1)
+    __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T>& bGlobal,
+                                    const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1, uint64_t curKL1)
     {
         if constexpr (LayoutB == CubeFormat::ND) {
             AscendC::Nd2NzParams nd2nzParams;
@@ -182,26 +179,25 @@ public:
             uint64_t nkDim = BType::isTrans ? n_ : k_;
             dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(dDim, C0_SIZE);
             dataCopyParams.blockLen = Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE) * C0_BYTE_SIZE;
-            dataCopyParams.srcStride =
-                (Cmct::Gemm::Align(nkDim, AscendC::BLOCK_CUBE) - Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE)) *
-                C0_BYTE_SIZE;
+            dataCopyParams.srcStride = (Cmct::Gemm::Align(nkDim, AscendC::BLOCK_CUBE) -
+                                        Cmct::Gemm::Align(nDim, AscendC::BLOCK_CUBE)) *
+                                       C0_BYTE_SIZE;
             dataCopyParams.dstStride = 0;
             AscendC::DataCopyPadExtParams<B_T> padParams{false, 0, 0, 0};
             AscendC::DataCopyPad(bl1Local, bGlobal, dataCopyParams, padParams);
         }
     }
 
-    __aicore__ inline void CopyInC1(
-        const AscendC::GlobalTensor<Bias_T>& biasGlobal, const AscendC::LocalTensor<Bias_T>& cl1Local, uint64_t curNL1)
+    __aicore__ inline void CopyInC1(const AscendC::GlobalTensor<Bias_T>& biasGlobal,
+                                    const AscendC::LocalTensor<Bias_T>& cl1Local, uint64_t curNL1)
     {
         AscendC::DataCopyPadParams padParams;
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(curNL1 * sizeof(Bias_T)), 0, 0};
         AscendC::DataCopyPad(cl1Local, biasGlobal, biasParam, padParams);
     }
 
-    __aicore__ inline void CopyInC2(
-        const AscendC::LocalTensor<Bias_T>& BiasL1Local, const AscendC::LocalTensor<float>& biasBt, uint64_t nl1Align,
-        bool needBias)
+    __aicore__ inline void CopyInC2(const AscendC::LocalTensor<Bias_T>& BiasL1Local,
+                                    const AscendC::LocalTensor<float>& biasBt, uint64_t nl1Align, bool needBias)
     {
         if (!needBias) {
             return;
@@ -214,9 +210,8 @@ public:
         AscendC::DataCopy(biasBt, BiasL1Local, biasParam);
     }
 
-    __aicore__ inline void CopyInA2(
-        const AscendC::LocalTensor<A_T>& a2Local, const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1,
-        uint64_t curKL1, uint64_t kL0)
+    __aicore__ inline void CopyInA2(const AscendC::LocalTensor<A_T>& a2Local, const AscendC::LocalTensor<A_T>& al1Local,
+                                    uint64_t curML1, uint64_t curKL1, uint64_t kL0)
     {
         if constexpr (!AType::isTrans) {
             // (M, K) use LoadData2D
@@ -261,9 +256,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInB2(
-        const AscendC::LocalTensor<B_T>& b2Local, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
-        uint64_t curKL1, uint64_t kL0)
+    __aicore__ inline void CopyInB2(const AscendC::LocalTensor<B_T>& b2Local, const AscendC::LocalTensor<B_T>& bl1Local,
+                                    uint64_t curNL1, uint64_t curKL1, uint64_t kL0)
     {
         if constexpr (BType::isTrans) {
             // (N, K) use LoadData2D
@@ -307,9 +301,10 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOut(
-        const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::GlobalTensor<float>& workspaceGlobal,
-        const AscendC::LocalTensor<float>& c1Local, uint64_t baseM, uint64_t baseN, bool checkIsSkScene)
+    __aicore__ inline void CopyOut(const AscendC::GlobalTensor<C_T>& cGlobal,
+                                   const AscendC::GlobalTensor<float>& workspaceGlobal,
+                                   const AscendC::LocalTensor<float>& c1Local, uint64_t baseM, uint64_t baseN,
+                                   bool checkIsSkScene)
     {
         if (isSplitSingleK_) {
             PipeBarrier<PIPE_FIX>();
@@ -354,10 +349,11 @@ public:
     }
 
     template <CubeFormat LayoutB = CubeFormat::ND>
-    __aicore__ inline void operator()(
-        AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
-        AscendC::GlobalTensor<Bias_T> biasGlobal, AscendC::GlobalTensor<float> workspaceGlobal, TupleShape tileShape,
-        int64_t kCntIndex, bool checkIsSkScene, uint64_t blkK = 0, bool isFirstSplitK = false, bool isEndSplitK = false)
+    __aicore__ inline void operator()(AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal,
+                                      AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal,
+                                      AscendC::GlobalTensor<float> workspaceGlobal, TupleShape tileShape,
+                                      int64_t kCntIndex, bool checkIsSkScene, uint64_t blkK = 0,
+                                      bool isFirstSplitK = false, bool isEndSplitK = false)
     {
         // mL1_ == ml0, nL1_ == nl0
         uint64_t curML1 = Get<0>(tileShape);
@@ -432,7 +428,8 @@ public:
                 mmadParams.unitFlag = (iter0 + 1 == curKL1Iter && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION :
                                                                                           NON_FINAL_ACCUMULATION;
                 if (isSplitSingleK_) {
-                    mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && (!isBias_ || (isBias_ && !(kCntIndex ==0 && isFirstSplitK_))));
+                    mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 &&
+                                                 (!isBias_ || (isBias_ && !(kCntIndex == 0 && isFirstSplitK_))));
                 } else {
                     mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && (!isBias_ || (isBias_ && kCntIndex != 0)));
                 }

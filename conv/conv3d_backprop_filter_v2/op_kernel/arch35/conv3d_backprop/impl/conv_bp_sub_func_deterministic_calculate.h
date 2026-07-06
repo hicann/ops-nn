@@ -19,8 +19,8 @@
 
 namespace ConvolutionBackpropFunc {
 template <class Intf>
-static __aicore__ inline bool GetIsNeedAddFlag(Intf *self, const uint64_t coreAddCnt,
-    const uint64_t coreRelatedIndexTotal)
+static __aicore__ inline bool GetIsNeedAddFlag(Intf* self, const uint64_t coreAddCnt,
+                                               const uint64_t coreRelatedIndexTotal)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if (GetIsLastPieceOut(self, coreAddCnt, coreRelatedIndexTotal)) {
@@ -29,11 +29,11 @@ static __aicore__ inline bool GetIsNeedAddFlag(Intf *self, const uint64_t coreAd
 
     uint64_t coreRelatedIndex = coreRelatedIndexTotal - self->ctx.coreStartIndexTotal_;
     // // CV 1:2, 需按cl0Pbuffer>1和等于1的场景判断提前退出条件
-    bool needAddFlag =
-        (self->ctx.tiling_->cl0Pbuffer > 1 && coreRelatedIndex < self->ctx.deterAddCoreNum_) ||
-        (self->ctx.tiling_->cl0Pbuffer == 1 && (((coreRelatedIndex <= self->ctx.deterAddCoreNum_) &&
-        self->ctx.subCoreInx_ >= RELATED_CORE_NUM) || ((coreRelatedIndex < self->ctx.deterAddCoreNum_) &&
-        self->ctx.subCoreInx_ < RELATED_CORE_NUM)));
+    bool needAddFlag = (self->ctx.tiling_->cl0Pbuffer > 1 && coreRelatedIndex < self->ctx.deterAddCoreNum_) ||
+                       (self->ctx.tiling_->cl0Pbuffer == 1 && (((coreRelatedIndex <= self->ctx.deterAddCoreNum_) &&
+                                                                self->ctx.subCoreInx_ >= RELATED_CORE_NUM) ||
+                                                               ((coreRelatedIndex < self->ctx.deterAddCoreNum_) &&
+                                                                self->ctx.subCoreInx_ < RELATED_CORE_NUM)));
     return needAddFlag;
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
     // CV 1:1, 只需判断被累加核超过累加核数量
@@ -43,7 +43,7 @@ static __aicore__ inline bool GetIsNeedAddFlag(Intf *self, const uint64_t coreAd
 }
 
 template <class Intf>
-static __aicore__ inline uint64_t GetRelatedCore(Intf *self, const uint64_t coreAddCnt)
+static __aicore__ inline uint64_t GetRelatedCore(Intf* self, const uint64_t coreAddCnt)
 {
     uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_;
     uint64_t coreRelatedIndexTotal = 0;
@@ -66,7 +66,7 @@ static __aicore__ inline uint64_t GetRelatedCore(Intf *self, const uint64_t core
             (coreAddCnt != 1 && (self->ctx.deterAddCoreIndex_ >> 1) % coreAddCnt == 0)) {
             coreRelatedIndexTotal = coreIndexTotal + coreAddCnt;
         } else if ((coreAddCnt == 1 && self->ctx.deterAddCoreIndex_ % doublecoreAddCnt != 0) ||
-            (coreAddCnt != 1 && (self->ctx.deterAddCoreIndex_ >> 1) % coreAddCnt != 0)) {
+                   (coreAddCnt != 1 && (self->ctx.deterAddCoreIndex_ >> 1) % coreAddCnt != 0)) {
             coreRelatedIndexTotal = coreIndexTotal - coreAddCnt;
         }
     }
@@ -84,11 +84,12 @@ static __aicore__ inline uint64_t GetRelatedCore(Intf *self, const uint64_t core
 }
 
 template <class Intf>
-static __aicore__ inline void VecAddFunc(Intf *self, const GlobalTensor<typename Intf::DstT> &userGm,
-    const uint64_t coreAddCnt, uint64_t &coreRelatedIndexTotal, DeterMinisticShape &deterShape)
+static __aicore__ inline void VecAddFunc(Intf* self, const GlobalTensor<typename Intf::DstT>& userGm,
+                                         const uint64_t coreAddCnt, uint64_t& coreRelatedIndexTotal,
+                                         DeterMinisticShape& deterShape)
 {
-    auto vecMiddleBuf =
-        self->ctx.vecBuf_.template GetWithOffset<float>(VECTOR_UB_SIZE_HALF >> FLOAT_SHIFT_SIZE, VECTOR_UB_SIZE_HALF);
+    auto vecMiddleBuf = self->ctx.vecBuf_.template GetWithOffset<float>(VECTOR_UB_SIZE_HALF >> FLOAT_SHIFT_SIZE,
+                                                                        VECTOR_UB_SIZE_HALF);
 
     coreRelatedIndexTotal = GetRelatedCore(self, coreAddCnt);
     bool needAddFlag = GetIsNeedAddFlag(self, coreAddCnt, coreRelatedIndexTotal);
@@ -96,27 +97,27 @@ static __aicore__ inline void VecAddFunc(Intf *self, const GlobalTensor<typename
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
     intriParams.blockLen = Ceil(deterShape.mnSize[self->ctx.subCoreInx_] * sizeof(typename Intf::DstT),
-        AscendC::ONE_BLOCK_SIZE);
+                                AscendC::ONE_BLOCK_SIZE);
     intriParams.srcStride = 0;
     intriParams.dstStride = 0;
 
-    if (coreAddCnt == 1) {  // 从CubeGm中读取数据
+    if (coreAddCnt == 1) { // 从CubeGm中读取数据
         uint64_t coreIndexTotal = self->ctx.coreStartIndexTotal_ + self->ctx.deterAddCoreIndex_; // 当前核的索引
         uint64_t addCoreRdGmAddr1 = coreIndexTotal * CUBE_WORKSPACE + deterShape.addrOffset[self->ctx.subCoreInx_];
         DataCopy(self->ctx.vecOutBuf_, userGm[addCoreRdGmAddr1], intriParams);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
         if (GetIsLastPieceOut(self, coreAddCnt, coreRelatedIndexTotal)) {
             uint64_t addCoreRdGmAddr2 = coreIndexTotal * CUBE_WORKSPACE +
-                deterShape.addrOffset[self->ctx.subCoreInx_ + RELATED_CORE_NUM];
+                                        deterShape.addrOffset[self->ctx.subCoreInx_ + RELATED_CORE_NUM];
             DataCopy(vecMiddleBuf, userGm[addCoreRdGmAddr2], intriParams);
         }
 #endif
         if (needAddFlag) {
             uint64_t addCoreRdGmAddr2 = coreRelatedIndexTotal * CUBE_WORKSPACE +
-                deterShape.addrOffset[self->ctx.subCoreInx_];
+                                        deterShape.addrOffset[self->ctx.subCoreInx_];
             DataCopy(vecMiddleBuf, userGm[addCoreRdGmAddr2], intriParams);
         }
-    } else {    // vec核读取数据并累加
+    } else { // vec核读取数据并累加
         if (needAddFlag) {
             uint64_t addCoreRdGmAddr = GetRdGmAddr(self, coreRelatedIndexTotal, deterShape);
             PipeBarrier<PIPE_MTE2>();
@@ -130,7 +131,7 @@ static __aicore__ inline void VecAddFunc(Intf *self, const GlobalTensor<typename
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToVec);
 
         Add<float>(self->ctx.vecOutBuf_[0], self->ctx.vecOutBuf_[0], vecMiddleBuf[0],
-            deterShape.mnSize[self->ctx.subCoreInx_]);
+                   deterShape.mnSize[self->ctx.subCoreInx_]);
     } else {
         // 无需累加且只需要输出数据
         event_t eventIdMte2ToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
@@ -140,47 +141,46 @@ static __aicore__ inline void VecAddFunc(Intf *self, const GlobalTensor<typename
 }
 
 template <class Intf>
-static __aicore__ inline bool IsCoreNonCalc(Intf *self, const uint64_t coreAddCnt, DeterMinisticShape &deterShape)
+static __aicore__ inline bool IsCoreNonCalc(Intf* self, const uint64_t coreAddCnt, DeterMinisticShape& deterShape)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     // 超出累加核数量，或者累加核shape为0，通知cube结束。
     // streamk场景会有一些核需要跳过，不参与确定性计算
-    return coreAddCnt >= self->ctx.deterAddCoreNum_ ||
-        deterShape.mSize[self->ctx.subCoreInx_] == 0 || deterShape.nSize[self->ctx.subCoreInx_] == 0 ||
-        self->ctx.isNoDeterministic_;
+    return coreAddCnt >= self->ctx.deterAddCoreNum_ || deterShape.mSize[self->ctx.subCoreInx_] == 0 ||
+           deterShape.nSize[self->ctx.subCoreInx_] == 0 || self->ctx.isNoDeterministic_;
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
     bool isLastCoreOdd = (self->ctx.deterAddCoreIndex_ == self->ctx.deterAddCoreNum_ - 1) &&
-            (self->ctx.deterAddCoreNum_ & 1) != 0;
+                         (self->ctx.deterAddCoreNum_ & 1) != 0;
     // 超出累加核数量，或者累加核shape为0，通知vec结束。
     // 最后一个累加奇数核不搬不算
     // streamk场景会有一些核需要跳过，不参与确定性计算
-    return coreAddCnt >= self->ctx.deterAddCoreNum_ ||
-        deterShape.mSize[self->ctx.subCoreInx_] == 0 || deterShape.nSize[self->ctx.subCoreInx_] == 0 ||
-        isLastCoreOdd || self->ctx.isNoDeterministic_;
+    return coreAddCnt >= self->ctx.deterAddCoreNum_ || deterShape.mSize[self->ctx.subCoreInx_] == 0 ||
+           deterShape.nSize[self->ctx.subCoreInx_] == 0 || isLastCoreOdd || self->ctx.isNoDeterministic_;
 #endif
 }
 
 template <class Intf>
-static __aicore__ inline void VecUb2Gm(Intf *self, const GlobalTensor<typename Intf::DstT> &userGm,
-    const uint64_t coreAddCnt, const uint64_t coreRelatedIndexTotal, DeterMinisticShape &deterShape)
+static __aicore__ inline void VecUb2Gm(Intf* self, const GlobalTensor<typename Intf::DstT>& userGm,
+                                       const uint64_t coreAddCnt, const uint64_t coreRelatedIndexTotal,
+                                       DeterMinisticShape& deterShape)
 {
     uint64_t cubeUserGmSize = (GetBlockNum() * CUBE_WORKSPACE); // cube输出gm总大小
     uint64_t addCoreStGmAddr = GetStGmAddr(self, cubeUserGmSize);
     DeterministicUb2Gm(self, userGm[addCoreStGmAddr], deterShape);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     if (GetIsLastPieceOut(self, coreAddCnt, coreRelatedIndexTotal)) {
-        uint64_t addCoreStGmAddr2 =
-            cubeUserGmSize + ((coreRelatedIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
+        uint64_t addCoreStGmAddr2 = cubeUserGmSize +
+                                    ((coreRelatedIndexTotal << 1) + GetSubBlockIdx()) * QUARTER_CUBE_WORKSPACE;
         DeterministicUb2GmNoPingPong(self, userGm[addCoreStGmAddr2], deterShape);
     }
 #endif
 }
 
 template <class Intf>
-static __aicore__ inline void InitSubCoreInx(Intf *self)
+static __aicore__ inline void InitSubCoreInx(Intf* self)
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    uint64_t isOddCore = (self->ctx.deterAddCoreIndex_ & 1) == 0 ? 0 : 1;    // 标记当前核是否为奇数核
+    uint64_t isOddCore = (self->ctx.deterAddCoreIndex_ & 1) == 0 ? 0 : 1; // 标记当前核是否为奇数核
     self->ctx.subCoreInx_ = (isOddCore << 1) + GetSubBlockIdx();
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
     // 奇数核负责L0C切块数据的计算，调整addCoreIndex
@@ -190,11 +190,11 @@ static __aicore__ inline void InitSubCoreInx(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void DeterministicAddFunc(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
-    const GlobalTensor<typename Intf::DstT> &userGm)
+static __aicore__ inline void DeterministicAddFunc(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                   const GlobalTensor<typename Intf::DstT>& userGm)
 {
-    uint64_t coreAddCnt = 1;     // 迭代次数
-    bool loopEndFlag = false;   // 标记是否结束迭代
+    uint64_t coreAddCnt = 1;  // 迭代次数
+    bool loopEndFlag = false; // 标记是否结束迭代
 
     DeterMinisticShape deterShape;
     GetCutShape(self, deterShape);
@@ -216,9 +216,9 @@ static __aicore__ inline void DeterministicAddFunc(Intf *self, const GlobalTenso
         VecAddFunc(self, userGm, coreAddCnt, coreRelatedIndexTotal, deterShape);
         loopEndFlag = GetLoopEndFlag(self, coreAddCnt);
 
-        if (IsAddTreeLoopEnd(coreAddCnt, self->ctx.deterAddCoreNum_)) {   // 达到累加迭代次数，输出到GM
+        if (IsAddTreeLoopEnd(coreAddCnt, self->ctx.deterAddCoreNum_)) { // 达到累加迭代次数，输出到GM
             UBRearrange2Gm(self, output, deterShape);
-        } else if (loopEndFlag) {    // output to VEC
+        } else if (loopEndFlag) { // output to VEC
             VecUb2Gm(self, userGm, coreAddCnt, coreRelatedIndexTotal, deterShape);
         }
 
@@ -226,6 +226,6 @@ static __aicore__ inline void DeterministicAddFunc(Intf *self, const GlobalTenso
         coreAddCnt = (coreAddCnt << 1);
     }
 }
-}  // namespace ConvolutionBackpropFunc
+} // namespace ConvolutionBackpropFunc
 
 #endif

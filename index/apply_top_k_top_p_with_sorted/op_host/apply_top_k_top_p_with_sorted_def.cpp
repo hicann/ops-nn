@@ -17,7 +17,7 @@
 namespace ops {
 class ApplyTopKTopPWithSorted : public OpDef {
 public:
-    explicit ApplyTopKTopPWithSorted(const char *name) : OpDef(name)
+    explicit ApplyTopKTopPWithSorted(const char* name) : OpDef(name)
     {
         this->Input("sorted_value")
             .ParamType(REQUIRED)
@@ -47,9 +47,9 @@ public:
 
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)
-                        .DynamicFormatFlag(false)
-                        .DynamicRankSupportFlag(true)
-                        .DynamicShapeSupportFlag(true);
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend950");

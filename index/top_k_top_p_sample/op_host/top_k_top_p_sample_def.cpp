@@ -13,9 +13,9 @@
  * \brief
  */
 
- #include "register/op_def_registry.h"
- 
- namespace ops {
+#include "register/op_def_registry.h"
+
+namespace ops {
 
 static const float EPS_DEFAULT = 1E-8;
 static const bool IS_NEED_LOGITS_DEFAULT = false;
@@ -62,11 +62,11 @@ public:
 
         OpAICoreConfig aicConfig;
         aicConfig.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(false)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .NeedCheckSupportFlag(false)
-                .ExtendCfgInfo("softsync.flag", "true");
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .ExtendCfgInfo("softsync.flag", "true");
 
         this->Attr("eps").AttrType(OPTIONAL).Float(EPS_DEFAULT);
         this->Attr("is_need_logits").AttrType(OPTIONAL).Bool(IS_NEED_LOGITS_DEFAULT);
@@ -74,7 +74,7 @@ public:
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
     }
-    };
+};
 
-    OP_ADD(TopKTopPSample);
- }   //namespace ops
+OP_ADD(TopKTopPSample);
+} // namespace ops

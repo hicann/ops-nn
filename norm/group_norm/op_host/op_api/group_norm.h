@@ -18,9 +18,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, int64_t N, int64_t numGroups,
-    float eps, bool isTraining, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNorm(const aclTensor* x, const aclTensor* gamma,
+                                                               const aclTensor* beta, int64_t N, int64_t numGroups,
+                                                               float eps, bool isTraining, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_GROUP_NORM_OP_H_

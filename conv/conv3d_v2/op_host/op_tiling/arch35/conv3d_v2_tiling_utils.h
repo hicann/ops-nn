@@ -39,14 +39,14 @@ constexpr uint32_t FORMAT_FRACTAL_3D_N1_INDEX = 1;
 constexpr uint32_t FORMAT_FRACTAL_3D_N0_INDEX = 2;
 constexpr uint32_t FORMAT_FRACTAL_3D_C0_INDEX = 3;
 constexpr uint32_t FORMAT_FRACTAL_3D_DIM = 4;
- 
+
 constexpr uint32_t ATTR_STRIDE_INDEX = 0;
 constexpr uint32_t ATTR_PAD_INDEX = 1;
 constexpr uint32_t ATTR_DILATION_INDEX = 2;
 constexpr uint32_t ATTR_GROUP_INDEX = 3;
 constexpr uint32_t ATTR_PAD_MODE_INDEX = 6;
 constexpr uint32_t ATTR_ENABLE_HF32_INDEX = 7;
- 
+
 constexpr uint32_t ATTR_QUANT_DTYPE_INDEX = 0;
 constexpr uint32_t ATTR_QUANT_STRIDE_INDEX = 1;
 constexpr uint32_t ATTR_QUANT_PAD_INDEX = 2;
@@ -56,7 +56,7 @@ constexpr uint32_t ATTR_QUANT_DATAFORMAT_INDEX = 5;
 constexpr uint32_t ATTR_QUANT_OFFSETX_INDEX = 6;
 constexpr uint32_t ATTR_QUANT_ROUNDMODE_INDEX = 7;
 constexpr uint32_t ATTR_QUANT_PADMODE_INDEX = 8;
- 
+
 constexpr uint32_t PAD_HEAD_INDEX = 0;
 constexpr uint32_t PAD_TAIL_INDEX = 1;
 constexpr uint32_t PAD_TOP_INDEX = 2;
@@ -108,7 +108,7 @@ constexpr uint32_t PB_BL0_OFFSET = 1;
 constexpr uint32_t PB_CL0_OFFSET = 2;
 constexpr uint32_t PB_BL1_OFFSET = 4;
 
-constexpr int COUNT_PARAMS_WITH_BIAS = 4; // [fmap, weight, bias, output]
+constexpr int COUNT_PARAMS_WITH_BIAS = 4;    // [fmap, weight, bias, output]
 constexpr int COUNT_PARAMS_WITHOUT_BIAS = 3; // [fmap, weight, output]
 
 constexpr int QUANT_CONV_SCALE_IDX = 2;
@@ -123,10 +123,7 @@ struct Conv3dOriginFormatAixsPosInfo {
 };
 
 // the function used by judgeing operation type
-inline bool isQuantConv3D(const string nodeType)
-{
-    return nodeType == "QuantConv3D";
-}
-}
-}
+inline bool isQuantConv3D(const string nodeType) { return nodeType == "QuantConv3D"; }
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

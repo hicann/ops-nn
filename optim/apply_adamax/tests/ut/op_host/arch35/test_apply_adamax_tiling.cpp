@@ -70,15 +70,9 @@ using namespace ge;
 
 class TestApplyAdaMaxTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyAdaMaxTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyAdaMaxTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyAdaMaxTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyAdaMaxTiling TearDown" << std::endl; }
 };
 
 // TilingKey encoding constants
@@ -87,9 +81,9 @@ static constexpr uint64_t TILING_KEY_FP32_ALIGN = 256;
 static constexpr uint64_t TILING_KEY_FP16_UNALIGN = 1;
 static constexpr uint64_t TILING_KEY_FP16_ALIGN = 257;
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -119,18 +113,11 @@ struct ApplyAdaMaxTilingResult {
 };
 
 static ApplyAdaMaxTilingResult DoApplyAdaMaxTilingCase(
-    const std::initializer_list<int64_t>& varShape,
-    const std::initializer_list<int64_t>& mShape,
-    const std::initializer_list<int64_t>& vShape,
-    const std::initializer_list<int64_t>& beta1PowerShape,
-    const std::initializer_list<int64_t>& lrShape,
-    const std::initializer_list<int64_t>& beta1Shape,
-    const std::initializer_list<int64_t>& beta2Shape,
-    const std::initializer_list<int64_t>& epsilonShape,
-    const std::initializer_list<int64_t>& gradShape,
-    ge::DataType tensorDtype,
-    ge::Format inputFormat,
-    bool useLocking)
+    const std::initializer_list<int64_t>& varShape, const std::initializer_list<int64_t>& mShape,
+    const std::initializer_list<int64_t>& vShape, const std::initializer_list<int64_t>& beta1PowerShape,
+    const std::initializer_list<int64_t>& lrShape, const std::initializer_list<int64_t>& beta1Shape,
+    const std::initializer_list<int64_t>& beta2Shape, const std::initializer_list<int64_t>& epsilonShape,
+    const std::initializer_list<int64_t>& gradShape, ge::DataType tensorDtype, ge::Format inputFormat, bool useLocking)
 {
     ApplyAdaMaxTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0};
 
@@ -173,10 +160,8 @@ static ApplyAdaMaxTilingResult DoApplyAdaMaxTilingCase(
                       .SetOpType(opType)
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &mStorage, &vStorage,
-                           &beta1PowerStorage, &lrStorage, &beta1Storage,
-                           &beta2Storage, &epsilonStorage, &gradStorage})
+                      .InputShapes({&varStorage, &mStorage, &vStorage, &beta1PowerStorage, &lrStorage, &beta1Storage,
+                                    &beta2Storage, &epsilonStorage, &gradStorage})
                       .OutputShapes({&varStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -190,8 +175,7 @@ static ApplyAdaMaxTilingResult DoApplyAdaMaxTilingCase(
                       .NodeInputTd(7, tensorDtype, inputFormat, inputFormat)  // epsilon
                       .NodeInputTd(8, tensorDtype, inputFormat, inputFormat)  // grad
                       .NodeOutputTd(0, tensorDtype, inputFormat, inputFormat) // var
-                      .NodeAttrs(
-                          {{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
+                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -208,10 +192,8 @@ static ApplyAdaMaxTilingResult DoApplyAdaMaxTilingCase(
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ApplyAdamaxTilingData)) {
-            const auto* td = reinterpret_cast<const ApplyAdamaxTilingData*>(
-                rawTilingData->GetData());
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ApplyAdamaxTilingData)) {
+            const auto* td = reinterpret_cast<const ApplyAdamaxTilingData*>(rawTilingData->GetData());
             result.totalNum = td->totalNum;
             result.blockFactor = td->blockFactor;
             result.ubFactor = td->ubFactor;
@@ -222,16 +204,11 @@ static ApplyAdaMaxTilingResult DoApplyAdaMaxTilingCase(
 
 // Convenience wrapper: build a "valid" context where var/m/v/grad share
 // the same shape and beta1_power/lr/beta1/beta2/epsilon are shape {1}.
-static ApplyAdaMaxTilingResult DoApplyAdaMaxValidCase(
-    const std::initializer_list<int64_t>& tensorShape,
-    ge::DataType tensorDtype,
-    bool useLocking = false)
+static ApplyAdaMaxTilingResult DoApplyAdaMaxValidCase(const std::initializer_list<int64_t>& tensorShape,
+                                                      ge::DataType tensorDtype, bool useLocking = false)
 {
-    return DoApplyAdaMaxTilingCase(
-        tensorShape, tensorShape, tensorShape,
-        {1}, {1}, {1}, {1}, {1},
-        tensorShape,
-        tensorDtype, ge::FORMAT_ND, useLocking);
+    return DoApplyAdaMaxTilingCase(tensorShape, tensorShape, tensorShape, {1}, {1}, {1}, {1}, {1}, tensorShape,
+                                   tensorDtype, ge::FORMAT_ND, useLocking);
 }
 
 // =====================================================================
@@ -361,12 +338,11 @@ TEST_F(TestApplyAdaMaxTiling, apply_adamax_large_shape_total_num)
 TEST_F(TestApplyAdaMaxTiling, apply_adamax_zero_dim_scalar_var)
 {
     auto result = DoApplyAdaMaxTilingCase(
-        /*var=*/{},  // 0-dim scalar
+        /*var=*/{}, // 0-dim scalar
         /*m=*/{},
         /*v=*/{},
         /*beta1_power=*/{1}, /*lr=*/{1}, /*beta1=*/{1}, /*beta2=*/{1}, /*epsilon=*/{1},
-        /*grad=*/{},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*grad=*/{}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     // EnsureNotScalar promotes {} to {1}, so totalNum == 1.
     EXPECT_EQ(result.totalNum, 1);

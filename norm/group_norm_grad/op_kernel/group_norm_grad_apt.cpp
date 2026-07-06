@@ -45,9 +45,9 @@ namespace {
 #define GROUP_NORM_GRAD_EMPTY_TENSOR_KEY 500
 } // namespace
 
-extern "C" __global__ __aicore__ void group_norm_grad(
-    GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-    GM_ADDR workspace, GM_ADDR tilingdata)
+extern "C" __global__ __aicore__ void group_norm_grad(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma,
+                                                      GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                                      GM_ADDR tilingdata)
 {
     if (workspace == nullptr) {
         return;

@@ -22,11 +22,10 @@
 using namespace Cmct;
 using namespace Cmct::Gemm;
 
-template <
-    class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE,
-    class aLayout, class bLayout, class cLayout, uint64_t FULL_LOAD_MODE = 0>
-__aicore__ inline void QbmmiaCubeBasicApiKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
+template <class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
+          class cLayout, uint64_t FULL_LOAD_MODE = 0>
+__aicore__ inline void QbmmiaCubeBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR perTokenScale,
+                                                GM_ADDR cGM, const void* tilingData)
 {
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
     using L0TileShape = AscendC::Shape<_0, _0, _0>;
@@ -42,12 +41,11 @@ __aicore__ inline void QbmmiaCubeBasicApiKernel(
     using BlockScheduler = Cmct::Gemm::QuantBatchMatmulV3Scheduler<FULL_LOAD_MODE>;
 
     using DispatchPolicy = MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE>;
-    using BlockMmad = Block::BlockMmadA8W8FixpipeQuant<
-        DispatchPolicy, L1TileShape, L0TileShape, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType, cLayout,
-        X2ScaleType>;
+    using BlockMmad = Block::BlockMmadA8W8FixpipeQuant<DispatchPolicy, L1TileShape, L0TileShape, AType, aLayout, BType,
+                                                       bLayout, OutType, cLayout, BiasType, cLayout, X2ScaleType>;
 
-    using MatmulKernel =
-        Cmct::Gemm::Kernel::QuantMmBatchCube<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, true>;
+    using MatmulKernel = Cmct::Gemm::Kernel::QuantMmBatchCube<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler,
+                                                              true>;
     using Params = typename MatmulKernel::Params;
 
     const QMMIA::QuantBatchMatmulInplaceAddTilingData* quantBmmInplaceAddTilingData_;
@@ -74,7 +72,9 @@ __aicore__ inline void QbmmiaCubeBasicApiKernel(
                           matmulTiling.stepKa * matmulTiling.baseK,
                           matmulTiling.stepKb * matmulTiling.baseK,
                           matmulTiling.nBufferNum,
-                          matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK,
+                          matmulTiling.baseM,
+                          matmulTiling.baseN,
+                          matmulTiling.baseK,
                           static_cast<uint32_t>(matmulTiling.isBias),
                           static_cast<uint32_t>(matmulTiling.dbL0C)};
     Params params = {

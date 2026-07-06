@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file sigmoid_cross_entropy_with_logits_v2.h
  * \brief
@@ -27,12 +27,10 @@ constexpr int32_t FP32_BUF_NUM = 6;
 template <typename T>
 class KernelSigmoidCrossEntropyWithLogitsV2 {
 public:
-    __aicore__ inline KernelSigmoidCrossEntropyWithLogitsV2()
-    {}
+    __aicore__ inline KernelSigmoidCrossEntropyWithLogitsV2() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR predict, GM_ADDR target, GM_ADDR weight, GM_ADDR posWeight, GM_ADDR loss,
-        SigmoidCrossEntropyWithLogitsV2TilingData tiling);
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR target, GM_ADDR weight, GM_ADDR posWeight, GM_ADDR loss,
+                                SigmoidCrossEntropyWithLogitsV2TilingData tiling);
     __aicore__ inline void Process();
 
 private:

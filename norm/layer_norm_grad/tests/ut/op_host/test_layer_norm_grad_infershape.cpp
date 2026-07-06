@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -18,14 +18,8 @@
 
 class LayerNormGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LayerNormGradTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "LayerNormGradTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LayerNormGradTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "LayerNormGradTest TearDown" << std::endl; }
 };
 
 TEST_F(LayerNormGradTest, layer_norm_grad_infershape_test_0)
@@ -150,36 +144,31 @@ TEST_F(LayerNormGradTest, layer_norm_grad_infershape_test_5)
     // input_is_scala
     ge::op::LayerNormGrad op;
 
-    op.UpdateInputDesc(
-        "dy", create_desc(
-                  {
-                      -2,
-                  },
-                  ge::DT_FLOAT16));
-    op.UpdateInputDesc(
-        "x", create_desc(
-                 {
-                     -2,
-                 },
-                 ge::DT_FLOAT16));
-    op.UpdateInputDesc(
-        "rstd", create_desc(
-                    {
-                        -2,
-                    },
-                    ge::DT_FLOAT16));
-    op.UpdateInputDesc(
-        "mean", create_desc(
-                    {
-                        -2,
-                    },
-                    ge::DT_FLOAT16));
-    op.UpdateInputDesc(
-        "gamma", create_desc(
-                     {
-                         -2,
-                     },
-                     ge::DT_FLOAT16));
+    op.UpdateInputDesc("dy", create_desc(
+                                 {
+                                     -2,
+                                 },
+                                 ge::DT_FLOAT16));
+    op.UpdateInputDesc("x", create_desc(
+                                {
+                                    -2,
+                                },
+                                ge::DT_FLOAT16));
+    op.UpdateInputDesc("rstd", create_desc(
+                                   {
+                                       -2,
+                                   },
+                                   ge::DT_FLOAT16));
+    op.UpdateInputDesc("mean", create_desc(
+                                   {
+                                       -2,
+                                   },
+                                   ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc(
+                                    {
+                                        -2,
+                                    },
+                                    ge::DT_FLOAT16));
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
     auto output_pd_x_desc = op.GetOutputDesc(0);
@@ -211,22 +200,22 @@ TEST_F(LayerNormGradTest, LayerNormGrad_InferDtype_case)
         ge::DataType output_x_ref = ge::DT_FLOAT16;
         ge::DataType output_gb_ref = ge::DT_FLOAT;
 
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(5)
-                .NodeIoNum(5, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(5)
+                                  .NodeIoNum(5, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
 
-                .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&input_dy_ref, &input_dy_ref, &input_var_ref, &input_var_ref, &input_gamma_ref})
-                .OutputDataTypes({&output_x_ref, &output_gb_ref, &output_gb_ref})
-                .Build();
+                                  .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes(
+                                      {&input_dy_ref, &input_dy_ref, &input_var_ref, &input_var_ref, &input_gamma_ref})
+                                  .OutputDataTypes({&output_x_ref, &output_gb_ref, &output_gb_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

@@ -21,10 +21,11 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AdaLayerNormGrad);
 
-const std::array<aclTensor*, GRAD_OUT_NUM> AdaLayerNormGrad(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean,
-    const aclTensor* scale, const aclTensor* shift, const aclTensor* weight, 
-    const aclTensor* bias,  aclOpExecutor* executor)
+const std::array<aclTensor*, GRAD_OUT_NUM> AdaLayerNormGrad(const aclTensor* gradOut, const aclTensor* input,
+                                                            const aclTensor* rstd, const aclTensor* mean,
+                                                            const aclTensor* scale, const aclTensor* shift,
+                                                            const aclTensor* weight, const aclTensor* bias,
+                                                            aclOpExecutor* executor)
 {
     L0_DFX(AdaLayerNormGrad, gradOut, input, rstd, mean, scale, weight, bias);
     auto gradInputOut = executor->AllocTensor(input->GetViewShape(), input->GetDataType(), Format::FORMAT_ND);
@@ -33,9 +34,8 @@ const std::array<aclTensor*, GRAD_OUT_NUM> AdaLayerNormGrad(
     auto gradWeight = executor->AllocTensor(weight->GetViewShape(), weight->GetDataType(), Format::FORMAT_ND);
     auto gradBias = executor->AllocTensor(bias->GetViewShape(), bias->GetDataType(), Format::FORMAT_ND);
 
-
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AdaLayerNormGrad, OP_INPUT(gradOut, input, rstd, mean, scale, weight, bias), OP_OUTPUT(gradInputOut,  gradScale, gradShift, gradWeight, gradBias));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaLayerNormGrad, OP_INPUT(gradOut, input, rstd, mean, scale, weight, bias),
+                                           OP_OUTPUT(gradInputOut, gradScale, gradShift, gradWeight, gradBias));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaLayerNormGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::array<aclTensor*, GRAD_OUT_NUM>{nullptr, nullptr, nullptr, nullptr, nullptr};

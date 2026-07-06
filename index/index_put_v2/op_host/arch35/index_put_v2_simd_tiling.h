@@ -25,9 +25,7 @@ constexpr size_t MAX_DIM_NUM = 8;
 
 class IndexPutV2SimdTiling : public IndexTilingCommon {
 public:
-    explicit IndexPutV2SimdTiling(gert::TilingContext* context)
-        : IndexTilingCommon(context)
-    {}
+    explicit IndexPutV2SimdTiling(gert::TilingContext* context) : IndexTilingCommon(context) {}
 
 protected:
     bool IsCapable() override;
@@ -40,7 +38,8 @@ protected:
     bool CheckInputDtype();
     void DoUBTiling();
     bool IsContinuous();
-    void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum);
+    void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum,
+                          int64_t colTotalNum);
 
 private:
     uint64_t valueTypeSize = 0;

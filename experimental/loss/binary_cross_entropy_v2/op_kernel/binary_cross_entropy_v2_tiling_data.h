@@ -23,17 +23,17 @@
  * \brief tiling data struct
  */
 
- #ifndef __BINARY_CROSS_ENTROPY_V2_TILLING_DATA_H__
- #define __BINARY_CROSS_ENTROPY_V2_TILLING_DATA_H__
- 
- struct BinaryCrossEntropyV2TilingData {
-     int64_t smallCoreDataNum;
-     int64_t bigCoreDataNum;
-     int64_t finalBigTileNum;
-     int64_t finalSmallTileNum;
-     int64_t tileDataNum;
-     int64_t smallTailDataNum;
-     int64_t bigTailDataNum;
-     int64_t tailBlockNum;
- };
- #endif 
+#ifndef __BINARY_CROSS_ENTROPY_V2_TILLING_DATA_H__
+#define __BINARY_CROSS_ENTROPY_V2_TILLING_DATA_H__
+
+struct BinaryCrossEntropyV2TilingData {
+    int64_t smallCoreDataNum;
+    int64_t bigCoreDataNum;
+    int64_t finalBigTileNum;
+    int64_t finalSmallTileNum;
+    int64_t tileDataNum;
+    int64_t smallTailDataNum;
+    int64_t bigTailDataNum;
+    int64_t tailBlockNum;
+};
+#endif

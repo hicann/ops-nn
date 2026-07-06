@@ -28,8 +28,8 @@ class MaskedScatter : public MaskedScatterBase {
 public:
     __aicore__ inline MaskedScatter(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, const MaskedScatterV1TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y,
+                                const MaskedScatterV1TilingData* tilingData)
     {
         BaseMemberDataInit(tilingData);
         xGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_X*>(x) + xBlockOffset, xBlockLength);
@@ -37,7 +37,7 @@ public:
         updatesGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_X*>(updates), totalUpdatesNum);
         preMaskGm.SetGlobalBuffer(reinterpret_cast<__gm__ bool*>(mask), totalPreMaskLength);
         yGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_X*>(y) + xBlockOffset, xBlockLength);
- 
+
         pipe.InitBuffer(inQueuePreMask, BUFFER_NUM, alignedPreMaskTileLength * sizeof(bool));
         pipe.InitBuffer(inQueueMask, BUFFER_NUM, alignedMaskLengthB * sizeof(bool));
         pipe.InitBuffer(outQueueY, BUFFER_NUM, alignedTotalUpdatesNum * sizeof(DTYPE_X));
@@ -103,13 +103,14 @@ private:
         alignedMaskLengthB = CeilAlign(maskTileLength, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(bool)));
         alignedMaskLengthFp32 = CeilAlign(maxMaskComputeNum, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(float)));
         alignedMaskLengthHf = CeilAlign(maxMaskComputeNum, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(half)));
-        alignedTotalUpdatesNum = CeilAlign(maskTileLength * updatesLineNum, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(DTYPE_X)));
+        alignedTotalUpdatesNum = CeilAlign(maskTileLength * updatesLineNum,
+                                           static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(DTYPE_X)));
     }
 
     __aicore__ inline void CopyIn(uint32_t maskOffset, uint32_t maskCount)
     {
         CommonCopyIn<bool>(maskLocal, maskGm, maskOffset, 1, maskCount);
-        CommonCopyIn<DTYPE_X>(xLocal, xGm,  maskOffset * updatesLineNum, 1, maskCount * updatesLineNum);
+        CommonCopyIn<DTYPE_X>(xLocal, xGm, maskOffset * updatesLineNum, 1, maskCount * updatesLineNum);
     }
 
     __aicore__ inline void Compute(uint32_t& updateOffset, uint32_t maskCount)
@@ -130,7 +131,7 @@ private:
         } else {
             CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, aviUpdates, updatesLineNum);
         }
-        
+
         updateOffset = updateOffset + tempUpdateLength;
         updatesIndex += aviUpdates;
     }
@@ -140,12 +141,12 @@ private:
         const uint32_t LOOP_SIZE = 8;
         DTYPE_X updatesCache[LOOP_SIZE];
         uint64_t loopNum = CeilDiv(maskCount, LOOP_SIZE);
-        auto maskUbAddress = reinterpret_cast<__ubuf__ bool *>(maskLocal.GetPhyAddr(0));
-        auto xUbAddress = reinterpret_cast<__ubuf__ DTYPE_X *>(xLocal.GetPhyAddr(0));
-        auto updatesUbAddress = reinterpret_cast<__ubuf__ DTYPE_X *>(updatesLocal.GetPhyAddr(0));
+        auto maskUbAddress = reinterpret_cast<__ubuf__ bool*>(maskLocal.GetPhyAddr(0));
+        auto xUbAddress = reinterpret_cast<__ubuf__ DTYPE_X*>(xLocal.GetPhyAddr(0));
+        auto updatesUbAddress = reinterpret_cast<__ubuf__ DTYPE_X*>(updatesLocal.GetPhyAddr(0));
         uint32_t index = 0;
         uint32_t xOffset = 0;
-        for(uint32_t i = 0; i < loopNum; i++) {
+        for (uint32_t i = 0; i < loopNum; i++) {
             for (uint32_t j = 0; j < LOOP_SIZE; j++) {
                 bool isUpdate = *(maskUbAddress + (i * LOOP_SIZE + j));
                 if (isUpdate && (index < aviUpdates)) {
@@ -195,7 +196,8 @@ private:
                 break;
             }
             if (maskLocal.GetValue(i)) {
-                DataCopyPad(yGm[(maskOffset + i) * updatesLineNum], updatesLocal[index * alignedUpdatesLineNum], outCopyOutParams);
+                DataCopyPad(yGm[(maskOffset + i) * updatesLineNum], updatesLocal[index * alignedUpdatesLineNum],
+                            outCopyOutParams);
                 index++;
             }
         }

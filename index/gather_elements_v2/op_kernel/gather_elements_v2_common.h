@@ -60,11 +60,9 @@ struct GatherParam {
 
 namespace AscendC {
 template <typename T_X, typename T_IDX>
-class GatherElementsV2KernelBase
-{
+class GatherElementsV2KernelBase {
 public:
-    __aicore__ inline GatherElementsV2KernelBase()
-    {}
+    __aicore__ inline GatherElementsV2KernelBase() {}
 
 protected:
     __aicore__ inline void InitBasicParams(const GatherElementsV2TilingData& tiling)

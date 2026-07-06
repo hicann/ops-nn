@@ -21,15 +21,9 @@
 
 class l2QuantizedBatchNormTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2QuantizedBatchNormTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2QuantizedBatchNormTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2QuantizedBatchNormTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2QuantizedBatchNormTest TearDown" << std::endl; }
 };
 
 TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_int32_infer)
@@ -47,12 +41,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_int32_infer)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -74,12 +66,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_int8_infer)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_INT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -101,12 +91,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_uint8_infer)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_UINT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -125,12 +113,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_null_input)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_UINT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            nullptr, nullptr, nullptr, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(nullptr, nullptr, nullptr, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -150,12 +136,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_null_out)
     auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
     float eps = 1e-5;
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(nullptr));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(nullptr));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -177,12 +161,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_float)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -204,12 +186,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_int32_var)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_UINT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -231,12 +211,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_int32_mean)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_UINT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -258,12 +236,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_int32_weight)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_UINT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -285,12 +261,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_int32_bias)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_UINT8, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -312,12 +286,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_shape)
 
     auto outDesc = TensorDesc({3, 4, 5, 6, 7, 8, 9, 10, 11}, ACL_UINT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -339,12 +311,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_dim)
 
     auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -366,12 +336,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_format1)
 
     auto outDesc = TensorDesc({3, 5, 4, 6, 5}, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -393,12 +361,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_format2)
 
     auto outDesc = TensorDesc({3, 5, 4, 6, 5}, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -420,12 +386,10 @@ TEST_F(l2QuantizedBatchNormTest, l2_quantized_batch_norm_err_format3)
 
     auto outDesc = TensorDesc({3, 5, 4, 6, 5}, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnQuantizedBatchNorm,
-        INPUT(
-            selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
-            outZeroPointScalarDesc, weightDesc, biasDesc, eps),
-        OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnQuantizedBatchNorm,
+                        INPUT(selfDesc, meanDesc, varDesc, inScaleScalarDesc, inZeroPointScalarDesc, outScaleScalarDesc,
+                              outZeroPointScalarDesc, weightDesc, biasDesc, eps),
+                        OUTPUT(outDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);

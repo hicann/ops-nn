@@ -25,9 +25,8 @@ using namespace Ops::Base;
 using namespace SigmoidCrossEntropyWithLogitsOp;
 
 template <uint64_t dType>
-__global__ __aicore__ void sigmoid_cross_entropy_with_logits(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR loss,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sigmoid_cross_entropy_with_logits(GM_ADDR predict, GM_ADDR target, GM_ADDR loss,
+                                                             GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EleBaseTilingData16B);
     GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData16B, tilingData, tiling);

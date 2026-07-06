@@ -90,8 +90,8 @@ ACLNN_API aclnnStatus aclnnAddLayerNormQuantV2GetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* beta,
     const aclTensor* biasOptional, const aclTensor* scales1Optional, const aclTensor* scales2Optional,
     const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional, const char* quantMode, double epsilon,
-    bool additionalOutput, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* layernormRes, aclTensor* outScales1Out,
-    aclTensor* outScales2Out, uint64_t* workspaceSize, aclOpExecutor** executor);
+    bool additionalOutput, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* layernormRes,
+    aclTensor* outScales1Out, aclTensor* outScales2Out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnAddLayerNormQuantV2的第二段接口，用于执行计算。
@@ -99,13 +99,14 @@ ACLNN_API aclnnStatus aclnnAddLayerNormQuantV2GetWorkspaceSize(
  * 算子功能：将输入tensor转换为指定的dtype类型。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddLayerNormQuantV2GetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnAddLayerNormQuantV2GetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnAddLayerNormQuantV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnAddLayerNormQuantV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream);
 
 #ifdef __cplusplus
 }

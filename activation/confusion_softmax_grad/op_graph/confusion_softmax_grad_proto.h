@@ -34,10 +34,10 @@ namespace ge {
 *Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.
 */
 REG_OP(ConfusionSoftmaxGrad)
-  .INPUT(grad, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-  .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-  .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-  .OP_END_FACTORY_REG(ConfusionSoftmaxGrad)
+    .INPUT(grad, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .OP_END_FACTORY_REG(ConfusionSoftmaxGrad)
 } // namespace ge
 
 #endif // OPS_NORM_CONFUSION_SOFTMAX_GRAD_PROTO_H_

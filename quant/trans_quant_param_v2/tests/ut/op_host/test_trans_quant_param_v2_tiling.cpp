@@ -134,18 +134,18 @@ static void TestOneParamCase(const TransQuantParamV2TilingTestParam& param)
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfoStr})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs(
+                                 {const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                             .Outputs({&compileInfoStr})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);
     ASSERT_EQ(tilingParseFunc(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -163,8 +163,8 @@ TEST_P(TestTransQuantParamV2Tiling, generalTest)
 
 INSTANTIATE_TEST_CASE_P(TQPV2, TestTransQuantParamV2Tiling, testing::ValuesIn(casesParams));
 
-static void ThreadFunc(
-    const TransQuantParamV2TilingTestParam* params, size_t testcase_num, size_t thread_idx, size_t thread_num)
+static void ThreadFunc(const TransQuantParamV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,
+                       size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);

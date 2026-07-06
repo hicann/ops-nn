@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -17,21 +17,17 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "transpose_quant_batch_mat_mul_tiling_key_public.h"
 
-
-ASCENDC_TPL_ARGS_DECL(TransposeQuantBatchMatMul,
-                      ASCENDC_TPL_UINT_DECL(PERM_X1, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_0_1_2,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2),
-                      ASCENDC_TPL_UINT_DECL(PERM_X2, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_2_1),
-                      ASCENDC_TPL_UINT_DECL(BATCH_SPLIT, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_TRUE),
-                      ASCENDC_TPL_UINT_DECL(PRECISION_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_MXFP8,
-                                            TRANSPOSE_QUANT_BATCH_MAT_MUL_HIFP8), );
+ASCENDC_TPL_ARGS_DECL(
+    TransposeQuantBatchMatMul,
+    ASCENDC_TPL_UINT_DECL(PERM_X1, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_0_1_2,
+                          TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2),
+    ASCENDC_TPL_UINT_DECL(PERM_X2, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
+                          TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_2_1),
+    ASCENDC_TPL_UINT_DECL(BATCH_SPLIT, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
+                          TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE,
+                          TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_TRUE),
+    ASCENDC_TPL_UINT_DECL(PRECISION_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8,
+                          TRANSPOSE_QUANT_BATCH_MAT_MUL_MXFP8, TRANSPOSE_QUANT_BATCH_MAT_MUL_HIFP8), );
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
 ASCENDC_TPL_SEL(
@@ -57,4 +53,3 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(PRECISION_MODE, ASCENDC_TPL_UI_LIST, TRANSPOSE_QUANT_BATCH_MAT_MUL_HIFP8)),
 
 );
-

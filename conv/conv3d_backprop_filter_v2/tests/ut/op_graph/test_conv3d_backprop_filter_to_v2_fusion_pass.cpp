@@ -40,20 +40,20 @@ void SetPlatform(const std::string& soc)
     PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
 }
 
-es::EsTensorHolder CreateConv3dBpFilterNode(
-    es::EsGraphBuilder& builder, const char* opType, const es::EsTensorHolder& x, const es::EsTensorHolder& filterSize,
-    const es::EsTensorHolder& outBackprop, std::vector<int64_t> strides, std::vector<int64_t> pads,
-    std::vector<int64_t> dilations, int64_t groups, const std::string& dataFormat, DataType outDtype,
-    const std::vector<int64_t>& outShape, Format outFormat)
+es::EsTensorHolder CreateConv3dBpFilterNode(es::EsGraphBuilder& builder, const char* opType,
+                                            const es::EsTensorHolder& x, const es::EsTensorHolder& filterSize,
+                                            const es::EsTensorHolder& outBackprop, std::vector<int64_t> strides,
+                                            std::vector<int64_t> pads, std::vector<int64_t> dilations, int64_t groups,
+                                            const std::string& dataFormat, DataType outDtype,
+                                            const std::vector<int64_t>& outShape, Format outFormat)
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     auto node = es::CompliantNodeBuilder(graph)
                     .OpType(opType)
                     .Name(opType)
-                    .IrDefInputs(
-                        {{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                         {"filter_size", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                         {"out_backprop", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                    .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"filter_size", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"out_backprop", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                     .InstanceOutputDataType("y", outDtype)
                     .InstanceOutputShape("y", outShape)
@@ -110,9 +110,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, patternTest)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -130,9 +130,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, unsupportedPlatformFail)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -149,9 +149,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, bf16FusionSuccess)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_BF16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_BF16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_BF16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -168,9 +168,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, fp32FusionSuccess)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -188,9 +188,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, mc62cm12APlatformFail)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -207,9 +207,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, differentShapeSmallBatch)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {1, 1, 4, 4, 32});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {1, 1, 2, 2, 16}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {1, 1, 2, 2, 16},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -226,9 +226,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, noTransposeCase)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 32, 1, 4, 4}, FORMAT_NCDHW);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 32, 1, 4, 4},
+                                      FORMAT_NCDHW);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -245,9 +245,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, dhwcFormatCase)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {1, 4, 4, 32, 2}, FORMAT_DHWCN);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {1, 4, 4, 32, 2},
+                                      FORMAT_DHWCN);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -265,9 +265,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, shapeLimitExceededNoTranspose)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {128, 1, 4, 4, 256});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 256}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 256},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -286,9 +286,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, diEqualsOneNeedTranspose)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 4, 4, 32});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -307,9 +307,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, diEqualsOneShapeLimitExceeded)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {256, 1, 4, 4, 256});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {256, 1, 4, 4, 256}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {256, 1, 4, 4, 256},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -328,9 +328,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, xNdwhcFormatCase)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -349,9 +349,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, xDhwhnFormatCase)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -370,9 +370,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, boundary3DNeedTranspose)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {128, 1, 4, 4, 32});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -391,9 +391,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, boundary2DNeedTranspose)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {128, 1, 4, 4, 128});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 128}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 128},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -413,9 +413,9 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, coreCountZeroNoTranspose)
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
+    auto y = CreateConv3dBpFilterNode(builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1},
+                                      {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32},
+                                      FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;

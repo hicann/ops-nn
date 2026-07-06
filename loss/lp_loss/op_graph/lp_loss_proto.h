@@ -27,13 +27,14 @@ namespace ge {
 
 * @par Attributes:
 * @li p: A required int attribute that decides which loss to compute, now the p only can be 1 to compute l1_loss.
-* @li reduction: An optional string which specifies the reduction to apply to the output. It can be "mean","sum" or "none". Defaults to "mean". 
+* @li reduction: An optional string which specifies the reduction to apply to the output. It can be "mean","sum" or
+"none". Defaults to "mean".
 * "none": no reduction will be applied.
 * "mean": the sum of the output will be divided by the number of elements in the output.
 * "sum": the output will be summed.
 
 * @par Outputs:
-*  y: An ND tensor tensor with the same shape and type as "predict". 
+*  y: An ND tensor tensor with the same shape and type as "predict".
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator LpLoss.
@@ -45,6 +46,6 @@ REG_OP(LpLoss)
     .REQUIRED_ATTR(p, Int)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(LpLoss)
-}
+} // namespace ge
 
 #endif

@@ -34,8 +34,10 @@ class KernelEluGrad {
 public:
     __aicore__ inline KernelEluGrad(){};
 
-    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen);
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, uint64_t smallCoreDataNum,
+                                uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                uint64_t tailBlockNum, uint64_t bufferOpen);
     __aicore__ inline void Process();
 
 private:
@@ -58,8 +60,12 @@ private:
 };
 
 template <typename TYPE_GRADS>
-__aicore__ inline void KernelEluGrad<TYPE_GRADS>::Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, uint64_t bufferOpen)
+__aicore__ inline void KernelEluGrad<TYPE_GRADS>::Init(GM_ADDR grads, GM_ADDR activations, GM_ADDR y,
+                                                       uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                                       uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                                       uint64_t tileDataNum, uint64_t smallTailDataNum,
+                                                       uint64_t bigTailDataNum, uint64_t tailBlockNum,
+                                                       uint64_t bufferOpen)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -80,9 +86,9 @@ __aicore__ inline void KernelEluGrad<TYPE_GRADS>::Init(GM_ADDR grads, GM_ADDR ac
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    gradsGm.SetGlobalBuffer((__gm__ TYPE_GRADS *)grads + globalBufferIndex, this->coreDataNum);
-    activationsGm.SetGlobalBuffer((__gm__ TYPE_GRADS *)activations + globalBufferIndex, this->coreDataNum);
-    yGm.SetGlobalBuffer((__gm__ TYPE_GRADS *)y + globalBufferIndex, this->coreDataNum);
+    gradsGm.SetGlobalBuffer((__gm__ TYPE_GRADS*)grads + globalBufferIndex, this->coreDataNum);
+    activationsGm.SetGlobalBuffer((__gm__ TYPE_GRADS*)activations + globalBufferIndex, this->coreDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_GRADS*)y + globalBufferIndex, this->coreDataNum);
 
     pipe.InitBuffer(inQueueGrads, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_GRADS));
     pipe.InitBuffer(inQueueActivations, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_GRADS));
@@ -127,8 +133,10 @@ __aicore__ inline void KernelEluGrad<TYPE_GRADS>::Compute(int32_t progress)
         AscendC::LocalTensor<uint8_t> mask1Local = tmpQueueMask1.AllocTensor<uint8_t>();
         AscendC::Cast(tmp0Local, activationsLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Adds(tmp1Local, tmp0Local, static_cast<float>(1.0), this->processDataNum);
-        AscendC::CompareScalar(mask1Local, tmp0Local, static_cast<float>(0.0), AscendC::CMPMODE::LE, this->processDataNum);
-        AscendC::Select(tmp1Local, mask1Local, tmp1Local, static_cast<float>(1.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::CompareScalar(mask1Local, tmp0Local, static_cast<float>(0.0), AscendC::CMPMODE::LE,
+                               this->processDataNum);
+        AscendC::Select(tmp1Local, mask1Local, tmp1Local, static_cast<float>(1.0),
+                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
         AscendC::Cast(tmp0Local, gradsLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Mul(tmp1Local, tmp0Local, tmp1Local, this->processDataNum);
         AscendC::Cast(yLocal, tmp1Local, AscendC::RoundMode::CAST_RINT, this->processDataNum);
@@ -141,8 +149,10 @@ __aicore__ inline void KernelEluGrad<TYPE_GRADS>::Compute(int32_t progress)
         AscendC::LocalTensor<float> yLocal = outQueueY.AllocTensor<float>();
         AscendC::LocalTensor<uint8_t> mask1Local = tmpQueueMask1.AllocTensor<uint8_t>();
         AscendC::Adds(yLocal, activationsLocal, static_cast<float>(1.0), this->processDataNum);
-        AscendC::CompareScalar(mask1Local, activationsLocal, static_cast<float>(0.0), AscendC::CMPMODE::LE, this->processDataNum);
-        AscendC::Select(yLocal, mask1Local, yLocal, static_cast<float>(1.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::CompareScalar(mask1Local, activationsLocal, static_cast<float>(0.0), AscendC::CMPMODE::LE,
+                               this->processDataNum);
+        AscendC::Select(yLocal, mask1Local, yLocal, static_cast<float>(1.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                        this->processDataNum);
         AscendC::Mul(yLocal, yLocal, gradsLocal, this->processDataNum);
         outQueueY.EnQue<float>(yLocal);
         inQueueGrads.FreeTensor(gradsLocal);

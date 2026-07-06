@@ -18,9 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* L1LossGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction,
-    aclOpExecutor* executor);
+const aclTensor* L1LossGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            int64_t reduction, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_L1_LOSS_GRAD_OP_H_

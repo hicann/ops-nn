@@ -35,7 +35,7 @@ struct SoftMarginLossTilingKey {
 
 class SoftMarginLossTiling {
 public:
-    explicit SoftMarginLossTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit SoftMarginLossTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling(const SoftMarginLossCompileInfo* compileInfo);
 
 protected:

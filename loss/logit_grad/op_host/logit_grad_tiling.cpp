@@ -31,10 +31,9 @@ constexpr uint64_t TILING_KEY_BFLOAT16 = 3;
 const static int64_t SIZE_16 = 16;
 const static int64_t LENGTH_1024 = 1024;
 
-class LogitGradTiling
-{
+class LogitGradTiling {
 public:
-    explicit LogitGradTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit LogitGradTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -110,8 +109,8 @@ ge::graphStatus LogitGradTiling::RunBigKernelTiling()
     tilingData.set_needCoreNum(needCoreNum);
     tilingData.set_eps(epsilon);
 
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
     tilingContext->SetBlockDim(needCoreNum);

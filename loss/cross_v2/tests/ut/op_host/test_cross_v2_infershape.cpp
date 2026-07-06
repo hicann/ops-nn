@@ -14,21 +14,15 @@
 #include "infershape_test_util.h"
 #include "../../../op_graph/cross_v2_proto.h"
 
-class CrossV2 : public testing::Test
-{
+class CrossV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CrossV2 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CrossV2 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CrossV2 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CrossV2 Proto Test TearDown" << std::endl; }
 };
 
-std::vector<int64_t> CrossV2ToVector(const gert::Shape& shape) {
+std::vector<int64_t> CrossV2ToVector(const gert::Shape& shape)
+{
     size_t shape_size = shape.GetDimNum();
     std::vector<int64_t> shape_vec(shape_size, 0);
     for (size_t i = 0; i < shape_size; i++) {

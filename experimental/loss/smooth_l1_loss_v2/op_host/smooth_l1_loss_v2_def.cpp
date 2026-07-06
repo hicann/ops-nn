@@ -38,13 +38,9 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
 
-        this->Attr("sigma")
-            .AttrType(OPTIONAL)
-            .Float(1.0);
+        this->Attr("sigma").AttrType(OPTIONAL).Float(1.0);
 
-        this->Attr("reduction")
-            .AttrType(OPTIONAL)
-            .String("mean");
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
         this->AICore().AddConfig("ascend910b");
     }

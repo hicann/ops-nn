@@ -14,10 +14,9 @@
 #include "opdev/platform.h"
 
 namespace l0op {
-bool SplitVAiCoreSupport(const aclTensor *self);
-bool IsSplitV2AiCoreSupport(const aclTensor *self, const aclIntArray *splitSize,
-                            int64_t dim, int64_t numSplit);
-const aclTensorList *SplitV(const aclTensor *self, const aclIntArray *splitSize, int64_t dim, aclOpExecutor *executor);
-}
+bool SplitVAiCoreSupport(const aclTensor* self);
+bool IsSplitV2AiCoreSupport(const aclTensor* self, const aclIntArray* splitSize, int64_t dim, int64_t numSplit);
+const aclTensorList* SplitV(const aclTensor* self, const aclIntArray* splitSize, int64_t dim, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_SPLIT_V_H_

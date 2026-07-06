@@ -23,7 +23,8 @@ using namespace AscendC;
 using namespace BinaryCrossEntropyGrad;
 template <uint64_t schMode, uint32_t Reduction, uint32_t HasWeight>
 __global__ __aicore__ void binary_cross_entropy_grad(GM_ADDR x, GM_ADDR y, GM_ADDR grad_output, GM_ADDR weight,
-        GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling) {
+                                                     GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+{
     if constexpr (static_cast<u_int32_t>(Reduction) == static_cast<u_int32_t>(BCE_MEAN)) {
         if constexpr (static_cast<u_int32_t>(HasWeight) == static_cast<u_int32_t>(BCE_HAS_WEIGHT)) {
             using OpDag = BinaryCrossEntropyGrad::BCEGMeanHasWeight<DTYPE_X>::OpDag;

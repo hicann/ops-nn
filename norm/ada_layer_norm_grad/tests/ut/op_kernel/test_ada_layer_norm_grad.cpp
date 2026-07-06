@@ -20,20 +20,14 @@
 
 using namespace std;
 
-extern "C" void ada_layer_norm_grad(
-    uint8_t* dy, uint8_t* x, uint8_t* rstd, uint8_t* mean, uint8_t* scale, uint8_t* gamma, uint8_t* beta, uint8_t* dx, uint8_t* dscale, 
-    uint8_t* dshift, uint8_t* dgamma, uint8_t* dbeta, uint8_t* workspace, uint8_t* tiling);
+extern "C" void ada_layer_norm_grad(uint8_t* dy, uint8_t* x, uint8_t* rstd, uint8_t* mean, uint8_t* scale,
+                                    uint8_t* gamma, uint8_t* beta, uint8_t* dx, uint8_t* dscale, uint8_t* dshift,
+                                    uint8_t* dgamma, uint8_t* dbeta, uint8_t* workspace, uint8_t* tiling);
 
 class ada_layer_norm_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ada_layer_norm_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ada_layer_norm_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ada_layer_norm_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ada_layer_norm_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(ada_layer_norm_grad_test, test_case_workspace_201)
@@ -76,8 +70,8 @@ TEST_F(ada_layer_norm_grad_test, test_case_workspace_201)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    AdaLayerNormGradTilingDataWorkspace* tilingDatafromBin =
-        reinterpret_cast<AdaLayerNormGradTilingDataWorkspace*>(tiling);
+    AdaLayerNormGradTilingDataWorkspace* tilingDatafromBin = reinterpret_cast<AdaLayerNormGradTilingDataWorkspace*>(
+        tiling);
 
     tilingDatafromBin->batch = 2;
     tilingDatafromBin->seq = 9;
@@ -96,9 +90,8 @@ TEST_F(ada_layer_norm_grad_test, test_case_workspace_201)
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
     ICPU_SET_TILING_KEY(301);
-    ICPU_RUN_KF(
-        ada_layer_norm_grad, blockDim, dy, x, rstd, mean, scale, gamma, beta, dx, dscale, dshift, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(ada_layer_norm_grad, blockDim, dy, x, rstd, mean, scale, gamma, beta, dx, dscale, dshift, dgamma, dbeta,
+                workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);
@@ -185,9 +178,8 @@ TEST_F(ada_layer_norm_grad_test, test_case_common_401)
     uint32_t blockDim = tilingDatafromBin->blockNum;
 
     ICPU_SET_TILING_KEY(101);
-    ICPU_RUN_KF(
-        ada_layer_norm_grad, blockDim, dy, x, rstd, mean, scale, gamma, beta, dx, dscale, dshift, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(ada_layer_norm_grad, blockDim, dy, x, rstd, mean, scale, gamma, beta, dx, dscale, dshift, dgamma, dbeta,
+                workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x);

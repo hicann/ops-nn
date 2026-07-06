@@ -47,10 +47,7 @@ static const std::set<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT1
                                                      ge::DT_INT8,  ge::DT_INT16,   ge::DT_INT32,  ge::DT_INT64,
                                                      ge::DT_BOOL,  ge::DT_BF16};
 
-bool MaskedScatterWithPositionTiling::IsCapable()
-{ 
-    return true; 
-}
+bool MaskedScatterWithPositionTiling::IsCapable() { return true; }
 
 ge::graphStatus MaskedScatterWithPositionTiling::GetPlatformInfo() // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
 {
@@ -61,7 +58,8 @@ ge::graphStatus MaskedScatterWithPositionTiling::GetPlatformInfo() // 1、获取
     totalCoreNum_ = static_cast<int64_t>(compileInfo->totalCoreNum);
     ubSize_ = compileInfo->ubSize - DCACHE_SIZE;
     OP_CHECK_IF((ubSize_ <= 0), OP_LOGE(opName_, "ub size is invalid."), return ge::GRAPH_FAILED);
-    OP_LOGI(opName_, "MaskedScatterWithPositionTiling::GetPlatformInfo ubSize_=%d, totalCoreNum_=%d", ubSize_, totalCoreNum_);
+    OP_LOGI(opName_, "MaskedScatterWithPositionTiling::GetPlatformInfo ubSize_=%d, totalCoreNum_=%d", ubSize_,
+            totalCoreNum_);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -101,8 +99,8 @@ ge::graphStatus MaskedScatterWithPositionTiling::DoLibApiTiling() // 4、计算�
 
 uint64_t MaskedScatterWithPositionTiling::GetTilingKey() const // 5、计算TilingKey
 {
-    uint64_t tilingKey =
-        TILING_KEY_BASE * (isBA_ ? PATTERN_BA : PATTERN_AB) + (isInt64Mask_ ? PATTERN_INT64 : PATTERN_INT32);
+    uint64_t tilingKey = TILING_KEY_BASE * (isBA_ ? PATTERN_BA : PATTERN_AB) +
+                         (isInt64Mask_ ? PATTERN_INT64 : PATTERN_INT32);
     return tilingKey;
 }
 
@@ -170,14 +168,14 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckInputShape()
 
     if (positionShape != maskShape) {
         std::string shapeMsg = Ops::Base::ToString(positionShape) + " and " + Ops::Base::ToString(maskShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName_, "position and mask", shapeMsg.c_str(), "position and mask must have the same shape");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "position and mask", shapeMsg.c_str(),
+                                               "position and mask must have the same shape");
         return ge::GRAPH_FAILED;
     }
     if (maskShape.GetDimNum() > xShape.GetDimNum()) {
         std::string dimMsg = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(maskShape.GetDimNum());
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            opName_, "x and mask", dimMsg.c_str(), "x's shape dim must be greater than or equal to mask's shape dim");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_, "x and mask", dimMsg.c_str(),
+                                                  "x's shape dim must be greater than or equal to mask's shape dim");
         return ge::GRAPH_FAILED;
     }
     if (maskShape.GetDimNum() == 0) {
@@ -197,8 +195,8 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckInputShape()
     return ge::GRAPH_SUCCESS;
 }
 
-bool MaskedScatterWithPositionTiling::CanBroadcastBAOrAB(
-    const gert::Shape xShape, const gert::Shape maskShape) // 是否为BA
+bool MaskedScatterWithPositionTiling::CanBroadcastBAOrAB(const gert::Shape xShape,
+                                                         const gert::Shape maskShape) // 是否为BA
 {
     size_t lenA = xShape.GetDimNum();
     size_t lenB = maskShape.GetDimNum();
@@ -238,9 +236,9 @@ bool MaskedScatterWithPositionTiling::CanBroadcastBAOrAB(
     }
 }
 
-void MaskedScatterWithPositionTiling::CanBroadcastBAOrABEqual(
-    const std::vector<int64_t>& xShapeVec, const std::vector<int64_t>& maskShapeVec, const size_t len, bool& BA,
-    bool& AB)
+void MaskedScatterWithPositionTiling::CanBroadcastBAOrABEqual(const std::vector<int64_t>& xShapeVec,
+                                                              const std::vector<int64_t>& maskShapeVec,
+                                                              const size_t len, bool& BA, bool& AB)
 {
     size_t i = 0;
     while (i < len && xShapeVec[i] == 1 && maskShapeVec[i] == 1) {
@@ -281,9 +279,8 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckDataType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
     dType_ = inputXPtr->GetDataType();
     if (SUPPORT_DTYPE.count(dType_) == 0) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName_, "x", Ops::Base::ToString(dType_).c_str(),
-            "float32, float16, double, uint8, int8, int16, int32, int64, bool and bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "x", Ops::Base::ToString(dType_).c_str(),
+                                  "float32, float16, double, uint8, int8, int16, int32, int64, bool and bfloat16");
         return ge::GRAPH_FAILED;
     }
 
@@ -308,8 +305,8 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckDataType()
     auto updatesDtype = inputUpdatesPtr->GetDataType();
     if (dType_ != updatesDtype) {
         std::string dtypeMsg = Ops::Base::ToString(dType_) + " and " + Ops::Base::ToString(updatesDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName_, "x and updates", dtypeMsg.c_str(), "x and updates must have the same dtype");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x and updates", dtypeMsg.c_str(),
+                                               "x and updates must have the same dtype");
         return ge::GRAPH_FAILED;
     }
 
@@ -334,16 +331,14 @@ static ge::graphStatus TilingParse4MaskedScatterWithPosition(gert::TilingParseCo
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(context, "Tiling4MaskedScatterWithPosition fail to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0),
+                OP_LOGE(context, "Tiling4MaskedScatterWithPosition fail to get core num."), return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(
-        (compileInfo->ubSize <= 0), OP_LOGE(context, "Tiling4MaskedScatterWithPosition fail to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Tiling4MaskedScatterWithPosition fail to get ub size."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

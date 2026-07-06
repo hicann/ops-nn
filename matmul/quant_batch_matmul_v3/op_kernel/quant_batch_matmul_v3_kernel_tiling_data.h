@@ -20,7 +20,7 @@
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) QuantBatchMatmulV3Params{
+struct alignas(8) QuantBatchMatmulV3Params {
     uint32_t batchA;
     uint32_t batchB;
     uint32_t batchC;
@@ -46,7 +46,7 @@ struct alignas(8) QuantBatchMatmulV3Params{
     uint32_t needUbBuffer;
     uint32_t realSingleCoreM;
     uint32_t realSingleCoreN;
-    uint32_t biasDtype; 
+    uint32_t biasDtype;
     uint32_t ubSize;
     uint32_t isMClash;
     uint32_t isNClash;
@@ -58,7 +58,7 @@ struct alignas(8) QuantBatchMatmulV3Params{
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) L2cacheTileParam{
+struct alignas(8) L2cacheTileParam {
     uint32_t mTileCntL2;
     uint32_t nTileCntL2;
     uint32_t mTileBlock;
@@ -70,7 +70,7 @@ struct alignas(8) L2cacheTileParam{
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) SlidingWindowParam{
+struct alignas(8) SlidingWindowParam {
     uint32_t mTailTile;
     uint32_t nTailTile;
     uint32_t mBaseTailSplitCnt;
@@ -82,11 +82,11 @@ struct alignas(8) SlidingWindowParam{
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) QuantBatchMatmulV3TilingData{
-  QuantBatchMatmulV3Params params;
-  TCubeTiling matmulTiling;
-  L2cacheTileParam tileL2cacheTiling;
-  SlidingWindowParam adaptiveSlidingWin;
+struct alignas(8) QuantBatchMatmulV3TilingData {
+    QuantBatchMatmulV3Params params;
+    TCubeTiling matmulTiling;
+    L2cacheTileParam tileL2cacheTiling;
+    SlidingWindowParam adaptiveSlidingWin;
 };
 #pragma pack(pop)
 

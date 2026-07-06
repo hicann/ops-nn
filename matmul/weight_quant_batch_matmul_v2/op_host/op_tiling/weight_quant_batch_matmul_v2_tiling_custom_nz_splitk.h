@@ -21,8 +21,7 @@
 
 namespace optiling {
 
-class WeightQuantBatchMatmulV2CustomNzSplitK : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2CustomNzSplitK : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2CustomNzSplitK(gert::TilingContext* context)
         : WeightQuantBatchMatmulV2Tiling(context)

@@ -26,30 +26,27 @@ using namespace std;
 using namespace ge;
 
 class HardtanhGradTilingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "HardtanhGradTilingTest SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "HardtanhGradTilingTest SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "HardtanhGradTilingTest TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "HardtanhGradTilingTest TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tiling_data) {
-  auto data = tiling_data->GetData();
-  string result;
-  for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
-    result += std::to_string((reinterpret_cast<const int64_t *>(tiling_data->GetData())[i / sizeof(int64_t)]));
-    result += " ";
-  }
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
+    auto data = tiling_data->GetData();
+    string result;
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
+        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
-static void DoTilingTest(
-    gert::StorageShape input_shape, gert::StorageShape output_shape, ge::DataType input_dataType,
-    ge::DataType output_dataType, ge::graphStatus expect_status, int expect_tilingKey, string expect_tiling_data)
+static void DoTilingTest(gert::StorageShape input_shape, gert::StorageShape output_shape, ge::DataType input_dataType,
+                         ge::DataType output_dataType, ge::graphStatus expect_status, int expect_tilingKey,
+                         string expect_tiling_data)
 {
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
@@ -80,21 +77,21 @@ static void DoTilingTest(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(1, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -130,7 +127,7 @@ static void DoTilingTest(
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), expect_status);
-    if(expect_status != ge::GRAPH_SUCCESS){
+    if (expect_status != ge::GRAPH_SUCCESS) {
         return;
     }
     // todo check tiling result
@@ -164,15 +161,18 @@ TEST_F(HardtanhGradTilingTest, test_tiling_bf16_03)
     DoTilingTest(Shape, Shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
 }
 
-TEST_F(HardtanhGradTilingTest, test_tiling_failed_diff_shape_04) {
+TEST_F(HardtanhGradTilingTest, test_tiling_failed_diff_shape_04)
+{
     gert::StorageShape input_shape = {{1, 1024}, {1, 1024}};
     gert::StorageShape output_shape = {{2, 1024}, {2, 1024}};
     int expect_tilingKey = 0;
     string expect_tiling_data = "";
-    DoTilingTest(input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+    DoTilingTest(input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey,
+                 expect_tiling_data);
 }
 
-TEST_F(HardtanhGradTilingTest, test_tiling_failed_diff_dtype_05) {
+TEST_F(HardtanhGradTilingTest, test_tiling_failed_diff_dtype_05)
+{
     gert::StorageShape Shape = {{1, 1024}, {1, 1024}};
     int expect_tilingKey = 0;
     string expect_tiling_data = "";

@@ -23,19 +23,20 @@
 
 namespace optiling {
 
-bool FusedQuantMatMulChecker::CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                                         const std::vector<const gert::StorageShape *> &optionalInputShape,
-                                         const std::vector<int64_t> &dimValueOfMKN) const {
+bool FusedQuantMatMulChecker::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                                         const std::vector<const gert::StorageShape*>& optionalInputShape,
+                                         const std::vector<int64_t>& dimValueOfMKN) const
+{
     // mandtoryShape = [x1Shape, x2Shape]
     // optionalInputShape = [biasShape, scaleShape]
     OP_TILING_CHECK(mandtoryShape.size() < 2 || optionalInputShape.size() < 2,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "check input is illegal."), return false);
 
-    auto &x1Shape = *mandtoryShape[0]; // using index 0 to get x1Shape
-    auto &x2Shape = *mandtoryShape[1]; // using index 1 to get x2Shape
+    auto& x1Shape = *mandtoryShape[0]; // using index 0 to get x1Shape
+    auto& x2Shape = *mandtoryShape[1]; // using index 1 to get x2Shape
 
-    auto biasShape = optionalInputShape[0];     // using index 0 to get biasShape
-    auto scaleShape = optionalInputShape[1];    // using index 1 to get x2ScaleShape
+    auto biasShape = optionalInputShape[0];  // using index 0 to get biasShape
+    auto scaleShape = optionalInputShape[1]; // using index 1 to get x2ScaleShape
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     if (!CheckShapeInRangeForOptionalInputs(scaleShape, biasShape, offsetShape) ||
         !CheckDimValue(scaleShape, biasShape, offsetShape, dimValueOfMKN) ||
@@ -48,9 +49,10 @@ bool FusedQuantMatMulChecker::CheckShape(const std::vector<gert::Shape *> &mandt
     return true;
 }
 
-bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape, const gert::StorageShape *biasShape,
-                                            const gert::StorageShape *offsetShape,
-                                            const std::vector<int64_t> &dimValueOfMKN) const {
+bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape* scaleShape, const gert::StorageShape* biasShape,
+                                            const gert::StorageShape* offsetShape,
+                                            const std::vector<int64_t>& dimValueOfMKN) const
+{
     auto x2Inner = dimValueOfMKN[2]; // using index 2 to get x2Inner
     auto x2Outer = dimValueOfMKN[3]; // using index 3 to get x2Outer
     // 检查kA是否等于kB
@@ -62,12 +64,12 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape
 
     // scaleShapescale shape必须是1或nSize
     if (scaleShape != nullptr) {
-        OP_TILING_CHECK(!(scaleShape->GetStorageShape().GetDim(0) == 1 ||
-                          static_cast<uint64_t>(scaleShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The scale dimension value must be 1 or n[%lu], but it is %ld.",
-                                              inputParams_.nSize, scaleShape->GetStorageShape().GetDim(0)),
-                        return false);
+        OP_TILING_CHECK(
+            !(scaleShape->GetStorageShape().GetDim(0) == 1 ||
+              static_cast<uint64_t>(scaleShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "The scale dimension value must be 1 or n[%lu], but it is %ld.",
+                                  inputParams_.nSize, scaleShape->GetStorageShape().GetDim(0)),
+            return false);
     }
 
     // bias的shape等于nSize
@@ -80,19 +82,20 @@ bool FusedQuantMatMulChecker::CheckDimValue(const gert::StorageShape *scaleShape
 
     // offsetShape必须是1或nSize
     if (offsetShape != nullptr) {
-        OP_TILING_CHECK(!(offsetShape->GetStorageShape().GetDim(0) == 1 ||
-                          static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "offset dim value must be 1 or n[%lu], but it is %ld", inputParams_.nSize,
-                                              offsetShape->GetStorageShape().GetDim(0)),
-                        return false);
+        OP_TILING_CHECK(
+            !(offsetShape->GetStorageShape().GetDim(0) == 1 ||
+              static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "offset dim value must be 1 or n[%lu], but it is %ld",
+                                  inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)),
+            return false);
     }
     return true;
 }
 
-bool FusedQuantMatMulChecker::CheckShapeInRangeForOptionalInputs(const gert::StorageShape *scaleShape,
-                                                                 const gert::StorageShape *biasShape,
-                                                                 const gert::StorageShape *offsetShape) const {
+bool FusedQuantMatMulChecker::CheckShapeInRangeForOptionalInputs(const gert::StorageShape* scaleShape,
+                                                                 const gert::StorageShape* biasShape,
+                                                                 const gert::StorageShape* offsetShape) const
+{
     // scale维数必须是1维
     if (scaleShape != nullptr) {
         auto scaleDimNum = scaleShape->GetStorageShape().GetDimNum();
@@ -118,11 +121,11 @@ bool FusedQuantMatMulChecker::CheckShapeInRangeForOptionalInputs(const gert::Sto
             CUBE_INNER_ERR_REPORT(inputParams_.opName, "When outputDtype is not INT8, x2Offset must be null"),
             return false);
         // offset维数只能是1维
-        OP_TILING_CHECK(offsetShape->GetStorageShape().GetDimNum() != 1,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The x2Offset shape should be 1 dimension, but it is %lu",
-                                              offsetShape->GetStorageShape().GetDimNum()),
-                        return false);
+        OP_TILING_CHECK(
+            offsetShape->GetStorageShape().GetDimNum() != 1,
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2Offset shape should be 1 dimension, but it is %lu",
+                                  offsetShape->GetStorageShape().GetDimNum()),
+            return false);
     }
     return true;
 }

@@ -38,7 +38,6 @@
 //     }
 // };
 
-
 // TEST_F(max_pool_grad_with_argmax_test, test_case_nchw_simt_float32)
 // {
 //     AscendC:: SetKernelMode(KernelMode::AIV_MODE);
@@ -78,7 +77,8 @@
 
 //     ICPU_SET_TILING_KEY(801UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, out, grad, argmax, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, out, grad, argmax, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     AscendC::GmFree(input);
 //     AscendC::GmFree(out);
@@ -129,7 +129,8 @@
 //     tilingDatafromBin->padW      = 0;
 //     ICPU_SET_TILING_KEY(803UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     // Cleanup
 //     AscendC::GmFree(input);
@@ -183,7 +184,8 @@
 
 //     ICPU_SET_TILING_KEY(802UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     // Cleanup
 //     AscendC::GmFree(input);
@@ -233,7 +235,8 @@
 //     tilingDatafromBin->padW      = 0;
 //     ICPU_SET_TILING_KEY(804UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     // Cleanup
 //     AscendC::GmFree(input);
@@ -250,7 +253,7 @@
 //     uint32_t blockDim = 36;
 
 //     size_t inputByteSize = 2 * 10000 * 4 * 3 * sizeof(float);
-//     size_t outputByteSize = inputByteSize; 
+//     size_t outputByteSize = inputByteSize;
 
 //     size_t gradByteSize = 2 * 5000 * 2 * 11 * sizeof(float);
 //     size_t argmaxByteSize = 2 * 5000 * 2 * 11 * sizeof(int32_t);
@@ -261,29 +264,30 @@
 //     uint8_t* out = (uint8_t*)AscendC::GmAlloc(outputByteSize);
 //     uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
 //     uint8_t* argmax = (uint8_t*)AscendC::GmAlloc(argmaxByteSize);
-//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 64); 
+//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 64);
 //     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
 //     MaxPoolGradWithArgmaxSimtTilingCommonData* tilingDatafromBin =
 //         reinterpret_cast<MaxPoolGradWithArgmaxSimtTilingCommonData*>(tiling);
 
 //     tilingDatafromBin->nDim      = 2;
-//     tilingDatafromBin->cDim      = 3;       
-//     tilingDatafromBin->hInDim    = 10000;    
-//     tilingDatafromBin->wInDim    = 4;   
+//     tilingDatafromBin->cDim      = 3;
+//     tilingDatafromBin->hInDim    = 10000;
+//     tilingDatafromBin->wInDim    = 4;
 //     tilingDatafromBin->hOutDim   = 5000;
 //     tilingDatafromBin->wOutDim   = 2;
 
-//     tilingDatafromBin->kSizeH    = 2;     
-//     tilingDatafromBin->kSizeW    = 2;        
-//     tilingDatafromBin->stridesH  = 2;       
-//     tilingDatafromBin->stridesW  = 2;       
+//     tilingDatafromBin->kSizeH    = 2;
+//     tilingDatafromBin->kSizeW    = 2;
+//     tilingDatafromBin->stridesH  = 2;
+//     tilingDatafromBin->stridesW  = 2;
 
-//     tilingDatafromBin->padH      = 0;        
+//     tilingDatafromBin->padH      = 0;
 //     tilingDatafromBin->padW      = 0;
 //     ICPU_SET_TILING_KEY(501UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     // Cleanup
 //     AscendC::GmFree(input);
@@ -300,7 +304,7 @@
 //     uint32_t blockDim = 36;
 
 //     size_t inputByteSize = 2 * 10000 * 4 * 3 * sizeof(float);
-//     size_t outputByteSize = inputByteSize; 
+//     size_t outputByteSize = inputByteSize;
 
 //     size_t gradByteSize = 2 * 5000 * 2 * 11 * sizeof(float);
 //     size_t argmaxByteSize = 2 * 5000 * 2 * 11 * sizeof(int32_t);
@@ -311,29 +315,30 @@
 //     uint8_t* out = (uint8_t*)AscendC::GmAlloc(outputByteSize);
 //     uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
 //     uint8_t* argmax = (uint8_t*)AscendC::GmAlloc(argmaxByteSize);
-//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 64); 
+//     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 64);
 //     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
 //     MaxPoolGradWithArgmaxSimtTilingCommonData* tilingDatafromBin =
 //         reinterpret_cast<MaxPoolGradWithArgmaxSimtTilingCommonData*>(tiling);
 
 //     tilingDatafromBin->nDim      = 2;
-//     tilingDatafromBin->cDim      = 3;       
-//     tilingDatafromBin->hInDim    = 10000;    
-//     tilingDatafromBin->wInDim    = 4;   
+//     tilingDatafromBin->cDim      = 3;
+//     tilingDatafromBin->hInDim    = 10000;
+//     tilingDatafromBin->wInDim    = 4;
 //     tilingDatafromBin->hOutDim   = 5000;
 //     tilingDatafromBin->wOutDim   = 2;
 
-//     tilingDatafromBin->kSizeH    = 2;     
-//     tilingDatafromBin->kSizeW    = 2;        
-//     tilingDatafromBin->stridesH  = 2;       
-//     tilingDatafromBin->stridesW  = 2;       
+//     tilingDatafromBin->kSizeH    = 2;
+//     tilingDatafromBin->kSizeW    = 2;
+//     tilingDatafromBin->stridesH  = 2;
+//     tilingDatafromBin->stridesW  = 2;
 
-//     tilingDatafromBin->padH      = 0;        
+//     tilingDatafromBin->padH      = 0;
 //     tilingDatafromBin->padW      = 0;
 //     ICPU_SET_TILING_KEY(511UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     // Cleanup
 //     AscendC::GmFree(input);
@@ -539,7 +544,8 @@
 //     tilingDatafromBin-> tilingKey = 700;
 //     ICPU_SET_TILING_KEY(700UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, out, grad, argmax, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, out, grad, argmax, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     AscendC::GmFree(input);
 //     AscendC::GmFree(out);
@@ -607,7 +613,8 @@
 //     tilingDatafromBin-> tilingKey = 701;
 //     ICPU_SET_TILING_KEY(701UL);
 
-//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace, (uint8_t*)(tilingDatafromBin));
+//     ICPU_RUN_KF(max_pool_grad_with_argmax, blockDim, input, grad, argmax, out, workspace,
+//     (uint8_t*)(tilingDatafromBin));
 
 //     // Cleanup
 //     AscendC::GmFree(input);

@@ -26,7 +26,8 @@ constexpr uint64_t ALLOW_COL2 = 4096;
 
 bool LayerNormV4SingleReadTiling::IsCapable()
 {
-    if ((commonParams.rowSize != ALLOW_COL1 && commonParams.rowSize != ALLOW_COL2) || commonParams.tensorDtype != ge::DT_BF16 || commonParams.paramDtype != ge::DT_BF16) {
+    if ((commonParams.rowSize != ALLOW_COL1 && commonParams.rowSize != ALLOW_COL2) ||
+        commonParams.tensorDtype != ge::DT_BF16 || commonParams.paramDtype != ge::DT_BF16) {
         return false;
     }
     if (commonParams.isRegBase) {
@@ -35,17 +36,15 @@ bool LayerNormV4SingleReadTiling::IsCapable()
     uint32_t rowMax = 0;
     rowMax = ((commonParams.ubSizePlatForm - NUM_EIGHT * BLOCK_SIZE) / FLOAT_SIZE) / NUM_TWO;
     if (commonParams.rowAlign > rowMax) {
-        OP_LOGI(
-            context_->GetNodeName(),
-            "LayerNormV4SingleRead Template only support rowAlign <= rowMax, rowAlign: %u, rowMax: %u",
-            static_cast<uint32_t>(commonParams.rowAlign), static_cast<uint32_t>(rowMax));
+        OP_LOGI(context_->GetNodeName(),
+                "LayerNormV4SingleRead Template only support rowAlign <= rowMax, rowAlign: %u, rowMax: %u",
+                static_cast<uint32_t>(commonParams.rowAlign), static_cast<uint32_t>(rowMax));
         return false;
     }
     if (LayerNormV4SingleReadTiling::GetTilingKey() == 0) {
-        OP_LOGI(
-            context_->GetNodeName(),
-            "LayerNormV4SingleRead Template Unsupported dtype, tensorDtype: %d, paramDtype: %d",
-            commonParams.tensorDtype, commonParams.paramDtype);
+        OP_LOGI(context_->GetNodeName(),
+                "LayerNormV4SingleRead Template Unsupported dtype, tensorDtype: %d, paramDtype: %d",
+                commonParams.tensorDtype, commonParams.paramDtype);
         return false;
     }
     return true;

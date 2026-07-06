@@ -425,15 +425,15 @@ es::EsTensorHolder BuildQuantUpdateScatter(es::EsGraphBuilder& graphBuilder, std
                                    {"quant_scales", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
                                    {"quant_zero_points", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
                      .IrDefOutputs({{"var", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                     .IrDefAttrs({{"reduce", es::CompliantNodeBuilder::kEsAttrRequired, "String",
-                                   es::CreateFrom(ge::AscendString(attrs.reduce.c_str()))},
-                                  {"axis", es::CompliantNodeBuilder::kEsAttrRequired, "Int", es::CreateFrom(attrs.axis)},
-                                  {"quant_axis", es::CompliantNodeBuilder::kEsAttrRequired, "Int",
-                                   es::CreateFrom(QUANT_AXIS_NEGATIVE_ONE)},
-                                  {"reciprocal_scale", es::CompliantNodeBuilder::kEsAttrRequired, "Bool",
-                                   es::CreateFrom(true)},
-                                  {"round_mode", es::CompliantNodeBuilder::kEsAttrOptional, "String",
-                                   es::CreateFrom(ge::AscendString(attrs.roundMode.c_str()))}})
+                     .IrDefAttrs(
+                         {{"reduce", es::CompliantNodeBuilder::kEsAttrRequired, "String",
+                           es::CreateFrom(ge::AscendString(attrs.reduce.c_str()))},
+                          {"axis", es::CompliantNodeBuilder::kEsAttrRequired, "Int", es::CreateFrom(attrs.axis)},
+                          {"quant_axis", es::CompliantNodeBuilder::kEsAttrRequired, "Int",
+                           es::CreateFrom(QUANT_AXIS_NEGATIVE_ONE)},
+                          {"reciprocal_scale", es::CompliantNodeBuilder::kEsAttrRequired, "Bool", es::CreateFrom(true)},
+                          {"round_mode", es::CompliantNodeBuilder::kEsAttrOptional, "String",
+                           es::CreateFrom(ge::AscendString(attrs.roundMode.c_str()))}})
                      .Build();
 
     // Connect inputs

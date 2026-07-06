@@ -23,17 +23,15 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-#define AAQ_TPL_NO_SQRT_MODE   0
-#define AAQ_TPL_SQRT_MODE      1
+#define AAQ_TPL_NO_SQRT_MODE 0
+#define AAQ_TPL_SQRT_MODE 1
 
 namespace AscendAntiQuantOp {
-ASCENDC_TPL_ARGS_DECL(AscendAntiQuant,
-    ASCENDC_TPL_UINT_DECL(sqrtModeKey, 1, ASCENDC_TPL_UI_LIST,
-        AAQ_TPL_NO_SQRT_MODE, AAQ_TPL_SQRT_MODE));
+ASCENDC_TPL_ARGS_DECL(AscendAntiQuant, ASCENDC_TPL_UINT_DECL(sqrtModeKey, 1, ASCENDC_TPL_UI_LIST, AAQ_TPL_NO_SQRT_MODE,
+                                                             AAQ_TPL_SQRT_MODE));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
-    ASCENDC_TPL_UINT_SEL(sqrtModeKey, ASCENDC_TPL_UI_LIST,
-        AAQ_TPL_NO_SQRT_MODE, AAQ_TPL_SQRT_MODE)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(sqrtModeKey, ASCENDC_TPL_UI_LIST, AAQ_TPL_NO_SQRT_MODE,
+                                                          AAQ_TPL_SQRT_MODE)));
 
-}  // namespace AscendAntiQuantOp
-#endif  // ASCEND_ANTI_QUANT_STRUCT_H_
+} // namespace AscendAntiQuantOp
+#endif // ASCEND_ANTI_QUANT_STRUCT_H_

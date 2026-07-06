@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_conv2d_v2_ascendc_api_tiling.cpp
  * \brief
  */
@@ -42,11 +42,8 @@ PlatformInfo SetPlatFormInfo()
     return platformInfo;
 }
 
-void SetDtype(ConvTilingBase &testTiling,
-              ConvDtype fmapDtype,
-              ConvDtype weightDtype,
-              ConvDtype biasDtype = ConvDtype::FLOAT16,
-              ConvDtype scaleType = ConvDtype::INT64)
+void SetDtype(ConvTilingBase& testTiling, ConvDtype fmapDtype, ConvDtype weightDtype,
+              ConvDtype biasDtype = ConvDtype::FLOAT16, ConvDtype scaleType = ConvDtype::INT64)
 {
     testTiling.descInfo.fMapType.dtype = fmapDtype;
     testTiling.descInfo.weightType.dtype = weightDtype;
@@ -54,7 +51,7 @@ void SetDtype(ConvTilingBase &testTiling,
     testTiling.descInfo.scaleType.dtype = scaleType;
 }
 
-void SetTypeNCHWINT8(ConvTilingBase &testTiling)
+void SetTypeNCHWINT8(ConvTilingBase& testTiling)
 {
     testTiling.descInfo.weightType = {ConvFormat::NCHW, ConvDtype::INT8, TPosition::GM};
     testTiling.descInfo.fMapType = {ConvFormat::NCHW, ConvDtype::INT8, TPosition::GM};
@@ -62,7 +59,7 @@ void SetTypeNCHWINT8(ConvTilingBase &testTiling)
     testTiling.descInfo.biasType = {ConvFormat::ND, ConvDtype::INT32, TPosition::GM};
 }
 
-void SetTypeNCHWFP16(ConvTilingBase &testTiling)
+void SetTypeNCHWFP16(ConvTilingBase& testTiling)
 {
     testTiling.descInfo.weightType = {ConvFormat::NCHW, ConvDtype::FLOAT16, TPosition::GM};
     testTiling.descInfo.fMapType = {ConvFormat::NCHW, ConvDtype::FLOAT16, TPosition::GM};
@@ -82,7 +79,7 @@ struct ShapeParams {
     int64_t orgWo;
 };
 
-void SetShape(ConvTilingBase &testTiling, const ShapeParams &shapeParams)
+void SetShape(ConvTilingBase& testTiling, const ShapeParams& shapeParams)
 {
     testTiling.shapeInfo.orgCo = shapeParams.orgCo;
     testTiling.shapeInfo.orgHi = shapeParams.orgHi;
@@ -108,7 +105,7 @@ struct AttrParams {
     int32_t groups;
 };
 
-void SetAttrs(ConvTilingBase &testTiling, const AttrParams &attrParams)
+void SetAttrs(ConvTilingBase& testTiling, const AttrParams& attrParams)
 {
     testTiling.attrInfo.dilationH = attrParams.dilationH;
     testTiling.attrInfo.dilationW = attrParams.dilationW;
@@ -443,7 +440,6 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckL1SpaceNotEnough)
     EXPECT_EQ(ret, false);
 }
 
-
 TEST_F(TestConv2dTiling, test_algo_BB_CalcMNFullLoadFlag)
 {
     Conv2dTiling testTiling(SetPlatFormInfo());
@@ -496,7 +492,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcAvalibleL1Size)
 
     testTiling.hasBias = true;
     testTiling.hasScale = false;
-    algo.biasDTypeSize = 4;  // INT32 dtype size
+    algo.biasDTypeSize = 4; // INT32 dtype size
     algo.CalcAvalibleL1Size();
     EXPECT_EQ(algo.fmapL1FullLoadSize, MEM_SIZE_1K);
     EXPECT_EQ(algo.weightL1FullLoadSize, MEM_SIZE_1K + MEM_SIZE_128B);
@@ -587,7 +583,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcL1LoadScore)
     algo.nRepeats = 1;
     algo.l1ScoreBase = 5;
     double l1LoadScoreTemp = algo.CalcL1LoadScore();
-    EXPECT_EQ(l1LoadScoreTemp, 5+(1.0/(512/9*2+576*1)));
+    EXPECT_EQ(l1LoadScoreTemp, 5 + (1.0 / (512 / 9 * 2 + 576 * 1)));
 }
 
 TEST_F(TestConv2dTiling, test_algo_BB_TryKABFullLoadL1Stratgy)
@@ -601,8 +597,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKABFullLoadL1Stratgy)
     testTiling.shapeInfo.orgkH = 3;
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -614,25 +609,25 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKABFullLoadL1Stratgy)
     conv2DBasicBlockInfo.mAl1FullLoad = true;
     conv2DBasicBlockInfo.nBl1FullLoad = true;
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
-    algo->TryKABFullLoadL1Stratgy(); // update KAndMAl1FullLoad NFst 
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
+    algo->TryKABFullLoadL1Stratgy(); // update KAndMAl1FullLoad NFst
 
     conv2DBasicBlockInfo.mAl1FullLoad = true;
     conv2DBasicBlockInfo.nBl1FullLoad = false;
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryKABFullLoadL1Stratgy(); // update KAndMAl1FullLoad
 
     conv2DBasicBlockInfo.mAl1FullLoad = false;
     conv2DBasicBlockInfo.nBl1FullLoad = false;
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryKABFullLoadL1Stratgy(); // update KAndNoneFullLoad
 
     conv2DBasicBlockInfo.mAl1FullLoad = false;
     conv2DBasicBlockInfo.nBl1FullLoad = false;
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryKABFullLoadL1Stratgy(); // update KAndNoneFullLoad
 
     delete algo;
@@ -650,8 +645,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKABFullLoadL1Stratgy_MFst)
     testTiling.shapeInfo.orgkH = 3;
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -663,7 +657,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKABFullLoadL1Stratgy_MFst)
     conv2DBasicBlockInfo.mAl1FullLoad = true;
     conv2DBasicBlockInfo.nBl1FullLoad = true;
     algo->weightL1FullLoadSize = MEM_SIZE_100K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryKABFullLoadL1Stratgy(); // update KAndMAl1FullLoad MFst
 
     delete algo;
@@ -681,8 +675,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryNFstLoadL1Stratgy)
     testTiling.shapeInfo.orgkH = 3;
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -694,26 +687,26 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryNFstLoadL1Stratgy)
 
     conv2DBasicBlockInfo.mAl1FullLoad = true;
     algo->weightL1FullLoadSize = MEM_SIZE_100K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
-    algo->TryNFstLoadL1Stratgy(); // update KAndMAl1FullLoad NFst 
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
+    algo->TryNFstLoadL1Stratgy(); // update KAndMAl1FullLoad NFst
 
     conv2DBasicBlockInfo.mAl1FullLoad = false;
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryNFstLoadL1Stratgy(); // update KAndMAl1FullLoad MFst
 
     conv2DBasicBlockInfo.mAl1FullLoad = true;
     conv2DBasicBlockInfo.mIn = 1666;
     conv2DBasicBlockInfo.nTile = 12345;
     algo->weightL1FullLoadSize = MEM_SIZE_100K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
-    algo->TryNFstLoadL1Stratgy(); // update KAndMAl1FullLoad NFst 
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
+    algo->TryNFstLoadL1Stratgy(); // update KAndMAl1FullLoad NFst
 
     conv2DBasicBlockInfo.mAl1FullLoad = false;
     conv2DBasicBlockInfo.mIn = 1666;
     conv2DBasicBlockInfo.nTile = 1128;
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryNFstLoadL1Stratgy(); // update KAndMAl1FullLoad MFst
     delete algo;
     algo = nullptr;
@@ -730,8 +723,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryMFstLoadL1Stratgy)
     testTiling.shapeInfo.orgkH = 3;
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -771,8 +763,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKAllSplitLoadL1Stratgy_M_FST)
     testTiling.shapeInfo.orgkH = 3;
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -783,7 +774,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKAllSplitLoadL1Stratgy_M_FST)
     conv2DBasicBlockInfo.nTile = 128;
 
     algo->weightL1FullLoadSize = MEM_SIZE_100K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryKAllSplitLoadL1Stratgy(); // ITER_M_FST
 
     delete algo;
@@ -801,8 +792,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKAllSplitLoadL1Stratgy_N_FST)
     testTiling.shapeInfo.orgkH = 3;
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -813,7 +803,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_TryKAllSplitLoadL1Stratgy_N_FST)
     conv2DBasicBlockInfo.nTile = 128;
 
     algo->weightL1FullLoadSize = MEM_SIZE_300K;
-    algo->fmapL1FullLoadSize   = MEM_SIZE_200K;
+    algo->fmapL1FullLoadSize = MEM_SIZE_200K;
     algo->TryKAllSplitLoadL1Stratgy(); // ITER_N_FST
 
     delete algo;
@@ -849,8 +839,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcBestL1LoadStratgy)
     testTiling.attrInfo.groups = 1;
     testTiling.optGroupFlag = false; // no opt
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     conv2DBasicBlockInfo.fDim = 8;
     conv2DBasicBlockInfo.nDim = 2;
     conv2DBasicBlockInfo.groupDim = 1;
@@ -898,8 +887,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcBestL1LoadStratgy_groupOPt)
     testTiling.attrInfo.groups = 1;
     testTiling.optGroupFlag = true;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     conv2DBasicBlockInfo.fDim = 8;
     conv2DBasicBlockInfo.nDim = 2;
     conv2DBasicBlockInfo.groupDim = 1;
@@ -931,8 +919,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_KAndMAl1FullLoad)
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
 
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 16;
     algo->availableL1Size = MEM_SIZE_512K;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
@@ -960,8 +947,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_KAndNBl1FullLoad)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -981,8 +967,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_KAndNoneFullLoad)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1002,8 +987,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_FmapFullLoad)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1024,8 +1008,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_FmapKFullLoad)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1046,8 +1029,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_NFirstKSplit)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1067,8 +1049,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_WeightFullLoad)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1089,8 +1070,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_WeightKFullLoad)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1111,8 +1091,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_MFirstKSplit)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1132,8 +1111,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_KAllSplit)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1157,8 +1135,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_KAndMAl1FullLoad_fail
     testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
 
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
     algo->preSetFullLoadFlag.kAl1FullLoad = true;
     algo->preSetFullLoadFlag.kBl1FullLoad = true;
@@ -1185,8 +1162,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_WeightFullLoad_fail)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1207,8 +1183,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_WeightKFullLoad_fail)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1229,8 +1204,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_FmapFullLoad_fail)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1251,8 +1225,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_UpdateL1LoadStrategy_FmapKFullLoad_fail)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->singleCi1xC0 = 128;
 
     bool ret = false;
@@ -1316,8 +1289,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetL1Tiling_KABFullLoad)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = true;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     algo->singleCi1xC0 = 16;
 
@@ -1347,13 +1319,13 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetL1Tiling_KABFullLoad)
 
     conv2DBasicBlockInfo.nCut = 4;
     conv2DBasicBlockInfo.nDim = 1;
-    conv2DBasicBlockInfo.batch= 1;
+    conv2DBasicBlockInfo.batch = 1;
     testTiling.shapeInfo.orgCo = 1024;
     algo->GetL1Tiling(algo);
 
     conv2DBasicBlockInfo.nCut = 16;
     conv2DBasicBlockInfo.nDim = 1;
-    conv2DBasicBlockInfo.batch= 1;
+    conv2DBasicBlockInfo.batch = 1;
     testTiling.shapeInfo.orgCo = MEM_SIZE_4K;
     algo->GetL1Tiling(algo);
     delete algo;
@@ -1369,8 +1341,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetL1Tiling_GetKABFullLoadL1TilingParams)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = true;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     algo->singleCi1xC0 = 16;
 
@@ -1416,8 +1387,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetL1Tiling_ITER_N_FST)
 
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     algo->singleCi1xC0 = 128;
 
@@ -1470,7 +1440,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetL1Tiling_ITER_M_FST)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = true;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -1520,7 +1491,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_Process_success)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -1549,7 +1521,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_Process_fail)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = true;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     conv2DBasicBlockInfo.fDim = 8;
     conv2DBasicBlockInfo.nDim = 2;
     conv2DBasicBlockInfo.groupDim = 1;
@@ -1577,7 +1550,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_PostK_fail)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -1603,7 +1577,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypePartOne)
     SetTypeNCHWFP16(testTiling);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     bool ret = false;
     testTiling.shapeInfo.orgCo = 128;
@@ -1654,7 +1629,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypePartTwo)
     SetTypeNCHWFP16(testTiling);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     bool ret = false;
     SetShape(testTiling, {128, 256, 256, 32, 32, 3, 3, 2, 16, 16});
@@ -1704,7 +1680,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypePartThree)
     SetTypeNCHWFP16(testTiling);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     bool ret = false;
     SetShape(testTiling, {128, 256, 256, 32, 32, 3, 3, 2, 16, 16});
@@ -1754,7 +1731,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypePartFour)
     SetTypeNCHWFP16(testTiling);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     bool ret = false;
     SetShape(testTiling, {128, 256, 256, 32, 32, 3, 3, 2, 16, 16});
@@ -1779,7 +1757,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypePartFour)
     conv2DBasicBlockInfo.batchDim = 1;
     ret = testTiling.CheckTilingAlgorithmType(conv2DBasicBlockInfo, 1);
     EXPECT_EQ(ret, true);
-    testTiling.shapeInfo.singleM = 256*256/4;
+    testTiling.shapeInfo.singleM = 256 * 256 / 4;
     ret = testTiling.CheckTilingAlgorithmType(conv2DBasicBlockInfo, 2);
     EXPECT_EQ(ret, false);
     testTiling.shapeInfo.singleCo = 64;
@@ -1804,7 +1782,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypeFive)
     SetTypeNCHWFP16(testTiling);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     bool ret = false;
     SetShape(testTiling, {128, 256, 256, 32, 32, 3, 3, 2, 16, 16});
@@ -1821,7 +1800,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmTypeFive)
     conv2DBasicBlockInfo.nCut = 1;
     conv2DBasicBlockInfo.batch = 4;
     conv2DBasicBlockInfo.iterateMNOrder = conv_tiling::IterateMNOrder::ITER_M_FST;
-    testTiling.shapeInfo.singleM = 256*256/4;
+    testTiling.shapeInfo.singleM = 256 * 256 / 4;
     testTiling.shapeInfo.singleCo = 64;
     conv2DBasicBlockInfo.batchDim = 1;
     conv2DBasicBlockInfo.mDim = 1;
@@ -1845,7 +1824,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmType)
     SetTypeNCHWFP16(testTiling);
     testTiling.InferCubeInfo();
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
     bool ret = false;
     SetShape(testTiling, {128, 256, 256, 32, 32, 3, 3, 2, 16, 16});
@@ -1860,7 +1840,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmType)
     conv2DBasicBlockInfo.mCut = 1;
     conv2DBasicBlockInfo.nCut = 1;
     conv2DBasicBlockInfo.batch = 4;
-    testTiling.shapeInfo.singleM = 256*256/4;
+    testTiling.shapeInfo.singleM = 256 * 256 / 4;
     testTiling.shapeInfo.singleCo = 64;
     conv2DBasicBlockInfo.batchDim = 1;
     conv2DBasicBlockInfo.mDim = 1;
@@ -1889,7 +1869,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CheckTilingAlgorithmType_Quant)
     Conv2dTiling testTiling(SetPlatFormInfo());
     SetTypeNCHWINT8(testTiling);
     testTiling.InferCubeInfo();
-    
+
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
     ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
@@ -1952,8 +1932,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTiling)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -1975,7 +1954,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTiling)
     ret = testTiling.GetTiling(conv2DBasicBlockInfo, tilingData);
     EXPECT_EQ(ret, false);
 
-    testTiling.shapeInfo.singleM = 256*256/4;
+    testTiling.shapeInfo.singleM = 256 * 256 / 4;
     ret = testTiling.GetTiling(conv2DBasicBlockInfo, tilingData);
     EXPECT_EQ(ret, false);
 
@@ -2010,7 +1989,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTilingPartTwo)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -2066,7 +2046,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTilingPartThree)
     SetAttrs(testTiling, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -2128,8 +2109,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetCoreBindingDecisionFactor)
     testTiling.attrInfo.groups = 1;
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling,
-        conv2DBasicBlockInfo);
+    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
     algo->availableL1Size = MEM_SIZE_512K;
 
     conv2DBasicBlockInfo.fDim = 8;
@@ -2149,7 +2129,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetCoreBindingDecisionFactor)
     optiling::Conv2DTilingData tilingData;
     bool ret = testTiling.GetCoreBindingDecisionFactor(conv2DBasicBlockInfo);
     EXPECT_EQ(ret, true);
-    
+
     delete algo;
     algo = nullptr;
 }
@@ -2175,7 +2155,6 @@ TEST_F(TestConv2dTiling, test_algo_hw_updatebiasfixparamsl1fullload)
     EXPECT_EQ(algo.l1Flags.isBiasFullLoad, false);
     EXPECT_EQ(algo.l1Flags.isFixpParamsFullLoad, false);
 }
-
 
 TEST_F(TestConv2dTiling, test_util_isequal)
 {
@@ -2310,8 +2289,8 @@ TEST_F(TestConv2dTiling, test_CheckL0DoubleBuffer)
     testTiling.l0TilingInfo.nL0 = 13;
     testTiling.l1TilingInfo.hoAL1 = 15;
     testTiling.l1TilingInfo.woAL1 = 12;
-    algo.l0TilingRange.woL0Range = {13,13,13};
-    algo.l0TilingRange.hoL0Range = {16,16,16};
+    algo.l0TilingRange.woL0Range = {13, 13, 13};
+    algo.l0TilingRange.hoL0Range = {16, 16, 16};
     testTiling.l1TilingInfo.kAL1 = 10;
     testTiling.l1TilingInfo.kBL1 = 10;
     testTiling.l1TilingInfo.nBL1 = 13;

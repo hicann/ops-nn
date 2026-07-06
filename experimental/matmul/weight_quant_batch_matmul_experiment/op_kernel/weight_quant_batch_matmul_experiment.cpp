@@ -23,7 +23,7 @@ using WeightQuantBatchMatmulExperimental::WqbmmExpMsdController;
     do {                                                                                                            \
         GET_TILING_DATA_WITH_STRUCT(WeightQuantBatchMatmulExperimental::WeightQuantBatchMatmulExperimentTilingData, \
                                     tilingDataIn, tiling);                                                          \
-        templateClass<DTYPE_X, DTYPE_WEIGHT, MSD_MODE> op;                                                                    \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, MSD_MODE> op;                                                          \
         op.Init(xGM, weightGM, antiquantScaleGM, yGM, user, &tilingDataIn, &tPipe);                                 \
         op.Process();                                                                                               \
     } while (0)

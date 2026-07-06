@@ -59,7 +59,8 @@ namespace ge {
 
 *@par Outputs:
 *Three outputs, including:
-* @li pd_x: A tensor. Indicates the first output of the forward calculation, which is the output tensor of the x derivative.
+* @li pd_x: A tensor. Indicates the first output of the forward calculation, which is the output tensor of the x
+derivative.
 * Must be one of the following types: float16, float32, bfloat16. The format must be ND.
 * Has the same type, shape and format as x.
 * @li pd_gamma: A tensor. Indicates the output tensor of gamma derivative.
@@ -91,5 +92,5 @@ REG_OP(LayerNormGradV3)
     .ATTR(output_mask, ListBool, {true, true, true})
     .OP_END_FACTORY_REG(LayerNormGradV3)
 
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM1_OPS_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM1_OPS_H_

@@ -42,7 +42,8 @@ __aicore__ inline void CalGatterIndex2D(MicroAPI::RegTensor<T>& indexReg, T rate
 }
 
 template <typename T>
-__aicore__ inline void CalGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void CalGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
+                                        T rate1D = 1)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segScalarReg;
@@ -68,7 +69,8 @@ __aicore__ inline void CalGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate
 }
 
 template <typename T>
-__aicore__ inline void CalGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void CalGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D,
+                                        T rate2D, T num1D, T rate1D = 1)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segScalarReg;
@@ -104,19 +106,19 @@ __aicore__ inline void CalGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate
 template <typename T>
 __aicore__ inline void SetNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
 {
-     // -inf 
+    // -inf
     constexpr uint32_t FLOAT32_NEG_INF = 0xFF800000;
     constexpr uint16_t FLOAT16_NEG_INF = 0xFC00;
     constexpr uint16_t BFLOAT16_NEG_INF = 0xFF80;
     using computeType = std::conditional_t<std::is_same<T, float>::value, uint32_t, uint16_t>;
 
-    if constexpr(std::is_same<T, float>::value) {
+    if constexpr (std::is_same<T, float>::value) {
         AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT32_NEG_INF));
-    } else if constexpr(std::is_same<T, half>::value) {
+    } else if constexpr (std::is_same<T, half>::value) {
         AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (FLOAT16_NEG_INF));
     } else {
         AscendC::MicroAPI::Duplicate((AscendC::MicroAPI::RegTensor<computeType>&)negInfReg, (BFLOAT16_NEG_INF));
     }
 }
-}
-#endif  // MAX_POOL3D_GRAD_SMALL_KERNEL_GATHER_H
+} // namespace MaxPool3DSmallKernelNameSpace
+#endif // MAX_POOL3D_GRAD_SMALL_KERNEL_GATHER_H

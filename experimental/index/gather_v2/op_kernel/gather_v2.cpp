@@ -10,8 +10,8 @@
 
 #include "gather_v2_kernel.h"
 
-extern "C" __global__ __aicore__ void gather_v2(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, GM_ADDR workspace,
+                                                GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(optiling::GatherV2TilingData, tilingData, tiling);
     GatherV2::GatherV2Kernel<DTYPE_INDICES> op;

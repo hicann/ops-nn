@@ -24,13 +24,12 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 using namespace ReverseSequence;
 
 static constexpr int64_t TYPE_BAS = 6;
 static constexpr int64_t UB_RESERVED_SIZE = 512;
-static constexpr int64_t DCACHE_SIZE = 131072;  // 128k or 32k
+static constexpr int64_t DCACHE_SIZE = 131072; // 128k or 32k
 static constexpr int64_t BLOCK_SPLIT_THRESHOLD = 8192;
 static constexpr int64_t DIM_B = 0;
 static constexpr int64_t DIM_A = 1;
@@ -45,11 +44,10 @@ static constexpr int64_t SPLIT_DIM_B = 3;
 const uint32_t WS_SYS_SIZE = 16U * 1024U * 1024U;
 static constexpr int64_t TEMPLATE_MODE = 2;
 
-
 void ReverseSequenceBASTiling::InitializationVars()
 {
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / inputData_.xDtypeSize;
-    availableUb_ = static_cast<int64_t>(ubSize_  - UB_RESERVED_SIZE - DCACHE_SIZE) / inputData_.xDtypeSize;
+    availableUb_ = static_cast<int64_t>(ubSize_ - UB_RESERVED_SIZE - DCACHE_SIZE) / inputData_.xDtypeSize;
 }
 
 bool ReverseSequenceBASTiling::IsCapable()
@@ -59,31 +57,34 @@ bool ReverseSequenceBASTiling::IsCapable()
     }
 
     InitializationVars();
-    
+
     return true;
 }
-
 
 int64_t ReverseSequenceBASTiling::CalcBufferSize(int64_t inB, int64_t inA, int64_t inS)
 {
     int64_t tmpInDataBufferSize = Ops::Base::CeilAlign(inB * inA * inS, oneBlockNum_);
-    
+
     int64_t tmpOutDataBufferSize = tmpInDataBufferSize;
 
     int64_t tmpTotalBufferSize = (tmpInDataBufferSize + tmpOutDataBufferSize) * DOUBLE_BUFFER;
-    
+
     return tmpTotalBufferSize;
 }
 
 void ReverseSequenceBASTiling::CalcSplitDimB()
-{    
+{
     int64_t inDimBLower = 1;
     int64_t inDimBUpper = inputData_.inputDim[DIM_B];
     while (inDimBLower < inDimBUpper) {
         int64_t inDimBMid = (inDimBLower + inDimBUpper + 1) / DIGIT_TWO;
         // split_b 时单次处理所有Batch
-        int64_t midSeqBuf = Ops::Base::CeilAlign(Ops::Base::CeilDiv(inDimBMid * inputData_.seqLengthsDtypeSize, inputData_.xDtypeSize), oneBlockNum_) * DOUBLE_BUFFER;
-        int64_t midBuffer = CalcBufferSize(inDimBMid, inputData_.inputDim[DIM_A], inputData_.inputDim[DIM_S]) + midSeqBuf;
+        int64_t midSeqBuf = Ops::Base::CeilAlign(
+                                Ops::Base::CeilDiv(inDimBMid * inputData_.seqLengthsDtypeSize, inputData_.xDtypeSize),
+                                oneBlockNum_) *
+                            DOUBLE_BUFFER;
+        int64_t midBuffer = CalcBufferSize(inDimBMid, inputData_.inputDim[DIM_A], inputData_.inputDim[DIM_S]) +
+                            midSeqBuf;
         if (midBuffer <= availableUb_) {
             inDimBLower = inDimBMid;
         } else {
@@ -98,7 +99,8 @@ void ReverseSequenceBASTiling::CalcSplitDimB()
     aLoop_ = 1;
     sLoop_ = 1;
     splitMode_ = SPLIT_DIM_B;
-    seqUbByte_ = Ops::Base::CeilAlign(ubFactorB_ * inputData_.seqLengthsDtypeSize, static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_)));
+    seqUbByte_ = Ops::Base::CeilAlign(ubFactorB_ * inputData_.seqLengthsDtypeSize,
+                                      static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_)));
     if (inputData_.inputDim[DIM_S] * inputData_.inputDim[DIM_A] < threadNumX_) {
         threadNumX_ = inputData_.inputDim[DIM_S] * inputData_.inputDim[DIM_A];
     }
@@ -159,7 +161,10 @@ void ReverseSequenceBASTiling::DoUBTilingSingle()
         isZero_ = true;
         return;
     }
-    int64_t oneSeqBuffer = Ops::Base::CeilAlign(Ops::Base::CeilDiv(inputData_.seqLengthsDtypeSize, inputData_.xDtypeSize), oneBlockNum_) * DOUBLE_BUFFER;
+    int64_t oneSeqBuffer = Ops::Base::CeilAlign(
+                               Ops::Base::CeilDiv(inputData_.seqLengthsDtypeSize, inputData_.xDtypeSize),
+                               oneBlockNum_) *
+                           DOUBLE_BUFFER;
     // AS 全载
     if (oneBatchBuffer + oneSeqBuffer <= availableUb_) {
         CalcSplitDimB();
@@ -210,10 +215,7 @@ ge::graphStatus ReverseSequenceBASTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ReverseSequenceBASTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ReverseSequenceBASTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t ReverseSequenceBASTiling::GetTilingKey() const
 {
@@ -238,16 +240,18 @@ ge::graphStatus ReverseSequenceBASTiling::PostTiling()
     OP_LOGD("ReverseSequenceBASTiling::PostTiling begin");
     context_->SetBlockDim(usedCoreNum_);
 
-    auto res = context_->SetLocalMemorySize(ubSize_  - UB_RESERVED_SIZE - DCACHE_SIZE);
+    auto res = context_->SetLocalMemorySize(ubSize_ - UB_RESERVED_SIZE - DCACHE_SIZE);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_  - UB_RESERVED_SIZE - DCACHE_SIZE), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.",
+                        ubSize_ - UB_RESERVED_SIZE - DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 void ReverseSequenceBASTiling::SetTilingData()
 {
-     ReverseSequence::ReverseSequenceBASTilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceBASTilingData>();
+    ReverseSequence::ReverseSequenceBASTilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceBASTilingData>();
 
     tilingData->bDim = inputData_.inputDim[DIM_B];
     tilingData->aDim = inputData_.inputDim[DIM_A];
@@ -270,8 +274,8 @@ void ReverseSequenceBASTiling::SetTilingData()
 
 std::string ReverseSequenceBASTiling::TilingDataToString()
 {
-    ReverseSequence::ReverseSequenceBASTilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceBASTilingData>();
+    ReverseSequence::ReverseSequenceBASTilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceBASTilingData>();
     std::string str = " bDim:" + std::to_string(tilingData->bDim);
     str += " aDim:" + std::to_string(tilingData->aDim);
     str += " sDim:" + std::to_string(tilingData->sDim);
@@ -308,6 +312,5 @@ ge::graphStatus ReverseSequenceBASTiling::GetShapeAttrsInfo()
 }
 
 REGISTER_TILING_TEMPLATE("ReverseSequence", ReverseSequenceBASTiling, 2);
-
 
 } // namespace optiling

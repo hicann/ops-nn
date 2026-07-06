@@ -31,12 +31,10 @@ struct ScatterNonAliasingAddCompileInfo {
     uint64_t sysWorkspaceSize;
 };
 
-static ge::graphStatus ComputeScatterTilingParams(
-    gert::TilingContext* context, int64_t coreNum,
-    int64_t& totalElements, int64_t& totalScatters,
-    int64_t& updateDataNum, int32_t& K, int64_t& maxIndice,
-    int64_t* strides,
-    int64_t& perCoreSlots, int64_t& needCoreNum, int64_t& perCoreElements)
+static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, int64_t coreNum, int64_t& totalElements,
+                                                  int64_t& totalScatters, int64_t& updateDataNum, int32_t& K,
+                                                  int64_t& maxIndice, int64_t* strides, int64_t& perCoreSlots,
+                                                  int64_t& needCoreNum, int64_t& perCoreElements)
 {
     auto xInput = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xInput);
@@ -65,14 +63,12 @@ static ge::graphStatus ComputeScatterTilingParams(
         strides[k] = stride;
     }
     perCoreSlots = (maxIndice > 0) ? Ops::Base::CeilDiv(maxIndice, coreNum) : 0;
-    int64_t minSlots = (updateDataNum > 0) ?
-        ((PER_CORE_MIN_ELEMENTS + updateDataNum - 1) / updateDataNum) : 1;
+    int64_t minSlots = (updateDataNum > 0) ? ((PER_CORE_MIN_ELEMENTS + updateDataNum - 1) / updateDataNum) : 1;
     if (perCoreSlots < minSlots) {
         perCoreSlots = minSlots;
     }
     perCoreSlots = Ops::Base::CeilAlign(perCoreSlots, SLOT_ALIGN);
-    needCoreNum = (perCoreSlots > 0) ?
-        ((maxIndice + perCoreSlots - 1) / perCoreSlots) : 1;
+    needCoreNum = (perCoreSlots > 0) ? ((maxIndice + perCoreSlots - 1) / perCoreSlots) : 1;
     needCoreNum = (needCoreNum < 1) ? 1 : needCoreNum;
     perCoreElements = perCoreSlots * updateDataNum;
     auto indicesDesc = context->GetInputDesc(1);
@@ -102,15 +98,13 @@ static ge::graphStatus ScatterNonAliasingAddTilingFunc(gert::TilingContext* cont
     int64_t perCoreSlots, needCoreNum, perCoreElements;
     int32_t K;
     int64_t strides[MAX_STRIDES] = {0};
-    OP_CHECK_IF(ComputeScatterTilingParams(context, coreNum,
-        totalElements, totalScatters, updateDataNum, K, maxIndice,
-        strides, perCoreSlots, needCoreNum, perCoreElements) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ComputeScatterTilingParams failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeScatterTilingParams(context, coreNum, totalElements, totalScatters, updateDataNum, K, maxIndice,
+                                           strides, perCoreSlots, needCoreNum, perCoreElements) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeScatterTilingParams failed"), return ge::GRAPH_FAILED);
     auto* tiling = context->GetTilingData<ScatterNonAliasingAddTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(ScatterNonAliasingAddTilingData), 0,
-        sizeof(ScatterNonAliasingAddTilingData)) != EOK,
+    OP_CHECK_IF(
+        memset_s(tiling, sizeof(ScatterNonAliasingAddTilingData), 0, sizeof(ScatterNonAliasingAddTilingData)) != EOK,
         OP_LOGE(context, "memset tiling data error"), return ge::GRAPH_FAILED);
     tiling->totalElements = totalElements;
     tiling->perCoreElements = perCoreElements;
@@ -129,14 +123,12 @@ static ge::graphStatus ScatterNonAliasingAddTilingFunc(gert::TilingContext* cont
     constexpr uint32_t DCACHE_SIZE = 128 * 1024;
     constexpr uint32_t STATIC_UB_ESTIMATE = 0;
     if (ubSize > static_cast<uint64_t>(DCACHE_SIZE) + static_cast<uint64_t>(STATIC_UB_ESTIMATE)) {
-        context->SetLocalMemorySize(
-            static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
+        context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
     }
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForScatterNonAliasingAdd(
-    gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForScatterNonAliasingAdd(gert::TilingParseContext* context)
 {
     OP_CHECK_NULL_WITH_CONTEXT(context, context);
     auto compileInfo = context->GetCompiledInfo<ScatterNonAliasingAddCompileInfo>();
@@ -147,8 +139,7 @@ static ge::graphStatus TilingParseForScatterNonAliasingAdd(
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfo->coreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
-    OP_CHECK_IF(compileInfo->coreNum <= 0,
-        OP_LOGE(context, "Failed to get core num"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->coreNum <= 0, OP_LOGE(context, "Failed to get core num"), return ge::GRAPH_FAILED);
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();

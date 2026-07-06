@@ -13,18 +13,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/deep_norm_proto.h"
 
-class DeepNorm : public testing::Test
-{
+class DeepNorm : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeepNorm Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeepNorm Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeepNorm Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeepNorm Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(DeepNorm, DeepNorm_infershape_case_0)

@@ -68,9 +68,8 @@ ge::graphStatus ErfinvTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(
-            tilingContext->GetNodeName(), "input x dtype[%s] not support",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
+        OP_LOGE(tilingContext->GetNodeName(), "input x dtype[%s] not support",
+                ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -86,9 +85,8 @@ ge::graphStatus ErfinvTiling::CheckShape() const
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
     const gert::Shape& outputYShape = Ops::Base::EnsureNotScalar(outputStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputXShape != outputYShape, OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputXShape != outputYShape,
+                OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -98,9 +96,8 @@ ge::graphStatus ErfinvTiling::CalcOutputDtype()
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->outputDtype != this->inputDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "output y dtype not same as input x"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->outputDtype != this->inputDtype,
+                OP_LOGE(tilingContext->GetNodeName(), "output y dtype not same as input x"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -108,39 +105,35 @@ ge::graphStatus ErfinvTiling::RunTiling()
 {
     OP_LOGD(tilingContext->GetNodeName(), "ErfinvTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
 
     tiling = tilingContext->GetTilingData<EleBaseTilingDataV2>();
-    OP_CHECK_IF(
-        (tiling == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get ErfinvTiling from GE context failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get ErfinvTiling from GE context failed"),
+                return ge::GRAPH_FAILED);
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = TPL_FP16;
-        baseTilingResult =
-            elewiseBaseTiling.DoTiling<ErfinvOp::ErfinvDAG<half>::OpDag>(*tiling, ASCEND_API_BUFFER + DCACHE_SIZE);
+        baseTilingResult = elewiseBaseTiling.DoTiling<ErfinvOp::ErfinvDAG<half>::OpDag>(
+            *tiling, ASCEND_API_BUFFER + DCACHE_SIZE);
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = TPL_BF16;
         baseTilingResult = elewiseBaseTiling.DoTiling<ErfinvOp::ErfinvDAG<bfloat16_t>::OpDag>(
             *tiling, ASCEND_API_BUFFER + DCACHE_SIZE);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         dType = TPL_FP32;
-        baseTilingResult =
-            elewiseBaseTiling.DoTiling<ErfinvOp::ErfinvDAG<float>::OpDag>(*tiling, ASCEND_API_BUFFER + DCACHE_SIZE);
+        baseTilingResult = elewiseBaseTiling.DoTiling<ErfinvOp::ErfinvDAG<float>::OpDag>(
+            *tiling, ASCEND_API_BUFFER + DCACHE_SIZE);
     } else {
         OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        baseTilingResult != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(baseTilingResult != ge::GRAPH_SUCCESS, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
     return SetTilingData();
 }
@@ -154,10 +147,7 @@ static ge::graphStatus Tiling4Erfinv(gert::TilingContext* tilingContextGen)
     return baseOpTiling.RunTiling();
 }
 
-ge::graphStatus TilingPrepare4Erfinv([[maybe_unused]] gert::TilingParseContext* context)
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus TilingPrepare4Erfinv([[maybe_unused]] gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 IMPL_OP_OPTILING(Erfinv).Tiling(Tiling4Erfinv).TilingParse<ElewiseCompileInfo>(TilingPrepare4Erfinv);
 } // namespace optiling

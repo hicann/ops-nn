@@ -47,23 +47,11 @@ struct RowView {
     const BasicBlock* ptr;
     std::size_t len;
 
-    const BasicBlock* begin() const
-    {
-        return ptr;
-    }
-    const BasicBlock* end() const
-    {
-        return ptr + len;
-    }
+    const BasicBlock* begin() const { return ptr; }
+    const BasicBlock* end() const { return ptr + len; }
 
-    const BasicBlock& operator[](std::size_t i) const
-    {
-        return ptr[i];
-    }
-    std::size_t size() const
-    {
-        return len;
-    }
+    const BasicBlock& operator[](std::size_t i) const { return ptr[i]; }
+    std::size_t size() const { return len; }
 };
 
 // 定义在类内无法通过编译(used before its definition)
@@ -90,17 +78,14 @@ static constexpr int64_t Bits(int64_t n)
     return bits;
 }
 
-static constexpr int64_t BitsAndOne(int64_t n)
-{
-    return Bits(n) + 1;
-}
+static constexpr int64_t BitsAndOne(int64_t n) { return Bits(n) + 1; }
 
 template <int64_t BitsA, int64_t BitsB>
 static constexpr double CalcMte2Bw(int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim)
 {
-    double denom =
-        static_cast<double>(mDim * baseM * BitsA + nDim * baseN * BitsB) / HBM_BW_V100 +
-        static_cast<double>((mDim * nDim - mDim) * baseM * BitsA + baseN * (mDim * nDim - nDim) * BitsB) / L2_BW_V100;
+    double denom = static_cast<double>(mDim * baseM * BitsA + nDim * baseN * BitsB) / HBM_BW_V100 +
+                   static_cast<double>((mDim * nDim - mDim) * baseM * BitsA + baseN * (mDim * nDim - nDim) * BitsB) /
+                       L2_BW_V100;
     if (denom == 0) {
         return 0.0;
     }
@@ -181,8 +166,8 @@ static constexpr std::array<RowView, sizeof...(Is)> CreateRowViewsImpl(
 }
 
 template <std::size_t TableSize, std::size_t OffsetSize>
-static constexpr auto CreateRowViews(
-    const std::array<BasicBlock, TableSize>& basicBlockTable, const std::array<std::size_t, OffsetSize>& rowOffsets)
+static constexpr auto CreateRowViews(const std::array<BasicBlock, TableSize>& basicBlockTable,
+                                     const std::array<std::size_t, OffsetSize>& rowOffsets)
 {
     return CreateRowViewsImpl(std::make_index_sequence<OffsetSize - 1>{}, basicBlockTable, rowOffsets);
 }
@@ -199,21 +184,20 @@ public:
     }
 
 private:
-    static constexpr auto A16W8_ROW_OFFSET =
-        WeightQuantBatchMatmulV2Detail::CreateOffsetTable<BLOCK_NUM, BITS_16, BITS_8, BASE_BLOCK_MIN>();
+    static constexpr auto A16W8_ROW_OFFSET = WeightQuantBatchMatmulV2Detail::CreateOffsetTable<
+        BLOCK_NUM, BITS_16, BITS_8, BASE_BLOCK_MIN>();
     static constexpr auto A16W8_TABLE_SIZE = A16W8_ROW_OFFSET.back();
-    static constexpr auto A16W8_BASIC_BLOCK_TABLE_V100 =
-        WeightQuantBatchMatmulV2Detail::CreateTable<A16W8_TABLE_SIZE, BLOCK_NUM, BITS_16, BITS_8, BASE_BLOCK_MIN>();
-    static constexpr auto A16W8_ROW_VIEWS =
-        WeightQuantBatchMatmulV2Detail::CreateRowViews(A16W8_BASIC_BLOCK_TABLE_V100, A16W8_ROW_OFFSET);
+    static constexpr auto A16W8_BASIC_BLOCK_TABLE_V100 = WeightQuantBatchMatmulV2Detail::CreateTable<
+        A16W8_TABLE_SIZE, BLOCK_NUM, BITS_16, BITS_8, BASE_BLOCK_MIN>();
+    static constexpr auto A16W8_ROW_VIEWS = WeightQuantBatchMatmulV2Detail::CreateRowViews(A16W8_BASIC_BLOCK_TABLE_V100,
+                                                                                           A16W8_ROW_OFFSET);
 
-    static constexpr auto A16W4_ROW_OFFSET =
-        WeightQuantBatchMatmulV2Detail::CreateOffsetTable<BLOCK_NUM, BITS_16, BITS_4, BASE_BLOCK_MIN / FACTOR_2>();
+    static constexpr auto A16W4_ROW_OFFSET = WeightQuantBatchMatmulV2Detail::CreateOffsetTable<
+        BLOCK_NUM, BITS_16, BITS_4, BASE_BLOCK_MIN / FACTOR_2>();
     static constexpr auto A16W4_TABLE_SIZE = A16W4_ROW_OFFSET.back();
     static constexpr auto A16W4_BASIC_BLOCK_TABLE_V100 = WeightQuantBatchMatmulV2Detail::CreateTable<
         A16W4_TABLE_SIZE, BLOCK_NUM, BITS_16, BITS_4, BASE_BLOCK_MIN / FACTOR_2>();
-    static constexpr auto A16W4_ROW_VIEWS =
-        WeightQuantBatchMatmulV2Detail::CreateRowViews(A16W4_BASIC_BLOCK_TABLE_V100, A16W4_ROW_OFFSET);
+    static constexpr auto A16W4_ROW_VIEWS = WeightQuantBatchMatmulV2Detail::CreateRowViews(A16W4_BASIC_BLOCK_TABLE_V100,
+                                                                                           A16W4_ROW_OFFSET);
 };
 } // namespace optiling
-

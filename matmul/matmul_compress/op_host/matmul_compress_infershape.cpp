@@ -27,8 +27,8 @@ static ge::graphStatus InferShapeForMatmulCompress(InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Start to do InferShapeForMatmulCompress.");
     auto attrs = context->GetAttrs();
-    const bool *trans_a = attrs->GetAttrPointer<bool>(0);
-    const bool *trans_b = attrs->GetAttrPointer<bool>(1);
+    const bool* trans_a = attrs->GetAttrPointer<bool>(0);
+    const bool* trans_b = attrs->GetAttrPointer<bool>(1);
     auto shape_a = context->GetInputShape(0);
     auto shape_b = context->GetInputShape(1);
     auto shape_out = context->GetOutputShape(0);
@@ -63,8 +63,8 @@ static ge::graphStatus InferShapeForMatmulCompress(InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForMatmulCompress(gert::InferDataTypeContext *context)
-{ 
+static ge::graphStatus InferDataTypeForMatmulCompress(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForMatmulCompress.");
     const ge::DataType a_data_type = context->GetInputDataType(0);
     ge::graphStatus ret = context->SetOutputDataType(0, a_data_type);
@@ -73,9 +73,8 @@ static ge::graphStatus InferDataTypeForMatmulCompress(gert::InferDataTypeContext
 }
 } // namespace
 
-
 namespace Ops::NN::MatMul {
 IMPL_OP_INFERSHAPE(MatmulCompress)
-  .InferShape(InferShapeForMatmulCompress)
-  .InferDataType(InferDataTypeForMatmulCompress);
+    .InferShape(InferShapeForMatmulCompress)
+    .InferDataType(InferDataTypeForMatmulCompress);
 }

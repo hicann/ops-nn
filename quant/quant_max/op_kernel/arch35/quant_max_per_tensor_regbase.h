@@ -66,8 +66,8 @@ private:
 };
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Init(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace)
+__aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Init(GM_ADDR x, GM_ADDR scale, GM_ADDR y,
+                                                                       GM_ADDR amax, GM_ADDR workspace)
 {
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
     blockIdx_ = GetBlockIdx();
@@ -181,8 +181,8 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Compute(int64_
                 AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatX, xLocalAddr + i * VL);
             } else if constexpr (IsSameType<T, half>::value) {
                 AscendC::Reg::DataCopy<half, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xLocalAddr + i * VL);
-                AscendC::Reg::Cast<float, half, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_HALF_TO_FP32>(
-                    vregFloatX, vregX, mask);
+                AscendC::Reg::Cast<float, half, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_HALF_TO_FP32>(vregFloatX,
+                                                                                                        vregX, mask);
             } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                 AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregX, xLocalAddr + i * VL);
                 AscendC::Reg::Cast<float, bfloat16_t, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_BF16_TO_FP32>(
@@ -194,8 +194,8 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::Compute(int64_
             AscendC::Reg::Mul(vregFloatY, vregFloatX, vregS, mask);
 
             if constexpr (IsSameType<U, hifloat8_t>::value) {
-                AscendC::Reg::Cast<U, float, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_HIFP8>(
-                    vregY, vregFloatY, mask);
+                AscendC::Reg::Cast<U, float, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_HIFP8>(vregY, vregFloatY,
+                                                                                                      mask);
                 AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK4_B32>(outLocalAddr + i * VL, vregY, mask);
             } else if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
                 AscendC::Reg::Cast<U, float, QuantMaxBase<T, U, RoundMode>::CAST_TRAIT_FP32_TO_FP8E5M2>(
@@ -253,7 +253,7 @@ __aicore__ inline void QuantMaxPerTensorRegbase<T, U, RoundMode>::MergeAmax()
     } else if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
         LocalTensor<T> amaxBf16Local = amaxBuf_.Get<T>();
         Cast<T, float>(amaxBf16Local, dstLocal, RoundMode::CAST_RINT, 1);
-        
+
         int32_t eventIDVToMTE3 = GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3);
         SetFlag<AscendC::HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<AscendC::HardEvent::V_MTE3>(eventIDVToMTE3);

@@ -25,19 +25,13 @@ using namespace std;
 
 class l2_repeat_interleave_int_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "repeat_interleave_int_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "repeat_interleave_int_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "repeat_interleave_int_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "repeat_interleave_int_test TearDown" << std::endl; }
 
-    void test_run(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        int64_t repeats, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat)
+    void test_run(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
+                  int64_t repeats, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype,
+                  aclFormat outFormat)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat).Precision(0.00001, 0.00001);
@@ -48,9 +42,9 @@ protected:
         EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
     }
 
-    void test_run_invalid(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        int64_t repeats, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat)
+    void test_run_invalid(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat,
+                          vector<int64_t> selfRange, int64_t repeats, int64_t outputSize, vector<int64_t> outDims,
+                          aclDataType outDtype, aclFormat outFormat)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat).Precision(0.00001, 0.00001);
@@ -65,14 +59,13 @@ protected:
 // self + out: 910A not support bfloat16
 TEST_F(l2_repeat_interleave_int_test, l2_repeat_interleave_int_test_09)
 {
-    auto supportBF16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950) || 
-                    (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B && GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E);
+    auto supportBF16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND950) ||
+                       (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E);
     if (supportBF16) {
-        test_run({2, 3, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, 2,
-            36, {36}, ACL_BF16, ACL_FORMAT_ND);
+        test_run({2, 3, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, 2, 36, {36}, ACL_BF16, ACL_FORMAT_ND);
     } else {
-        test_run_invalid({2, 3, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, 2,
-            36, {36}, ACL_BF16, ACL_FORMAT_ND);
+        test_run_invalid({2, 3, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, 2, 36, {36}, ACL_BF16, ACL_FORMAT_ND);
     }
 }
 

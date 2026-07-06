@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_sqrt_proto.h"
 
-class ForeachSqrtTest : public testing::Test
-{
+class ForeachSqrtTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSqrt SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSqrt SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSqrt TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSqrt TearDown" << std::endl; }
 };
 
 TEST_F(ForeachSqrtTest, infer_shape_known_success)

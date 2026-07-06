@@ -22,10 +22,10 @@ using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::UpdateMask;
+using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
+using AscendC::MicroAPI::UpdateMask;
 
 namespace NormCommonRegbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
@@ -40,8 +40,8 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 template <typename T>
 __aicore__ inline T CeilDiv(T a, T b)
 {
-    using type = typename std::conditional<
-        sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t, uint64_t>::type;
+    using type = typename std::conditional<sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t,
+                                           uint64_t>::type;
     type res = (static_cast<type>(a) + static_cast<type>(b) - 1) / static_cast<type>(b);
     return static_cast<T>(res);
 }
@@ -49,8 +49,8 @@ __aicore__ inline T CeilDiv(T a, T b)
 template <typename T>
 __aicore__ inline T CeilAlign(T a, T b)
 {
-    using type = typename std::conditional<
-        sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t, uint64_t>::type;
+    using type = typename std::conditional<sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t,
+                                           uint64_t>::type;
     type res = (static_cast<type>(a) + static_cast<type>(b) - 1) / static_cast<type>(b) * static_cast<type>(b);
     return static_cast<T>(res);
 }
@@ -64,7 +64,7 @@ __aicore__ inline T Aligned(T value, T alignment)
     return (value + alignment - 1) / alignment * alignment;
 }
 
-} // namespace
+} // namespace NormCommonRegbase
 
 constexpr int32_t VL_SIZE = NormCommonRegbase::GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / static_cast<int32_t>(sizeof(float)));
@@ -85,8 +85,8 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
     AscendC::RoundMode::CAST_RINT,
 };
 
-__aicore__ inline void DichotomyAdd(
-    RegTensor<float>& dstReg, __local_mem__ float* src, uint16_t outerLoop, uint16_t innerLoop, uint32_t lastNum)
+__aicore__ inline void DichotomyAdd(RegTensor<float>& dstReg, __local_mem__ float* src, uint16_t outerLoop,
+                                    uint16_t innerLoop, uint32_t lastNum)
 {
     RegTensor<float> tmpReg1;
     RegTensor<float> tmpReg2;
@@ -110,8 +110,8 @@ __aicore__ inline void DichotomyAdd(
 }
 
 template <typename U>
-__aicore__ inline void LoadTwoCloseRegVF(
-    RegTensor<U>& dstA, RegTensor<U>& dstB, __local_mem__ U* srcAddr, uint16_t offset)
+__aicore__ inline void LoadTwoCloseRegVF(RegTensor<U>& dstA, RegTensor<U>& dstB, __local_mem__ U* srcAddr,
+                                         uint16_t offset)
 {
     if constexpr (IsSameType<U, float>::value) {
         DataCopy(dstA, srcAddr + offset);
@@ -123,8 +123,8 @@ __aicore__ inline void LoadTwoCloseRegVF(
 }
 
 template <typename U>
-__aicore__ inline void CastAddVF(
-    RegTensor<float>& dstReg, RegTensor<U>& src1Reg, RegTensor<U>& src2Reg, MaskReg& pregLoop)
+__aicore__ inline void CastAddVF(RegTensor<float>& dstReg, RegTensor<U>& src1Reg, RegTensor<U>& src2Reg,
+                                 MaskReg& pregLoop)
 {
     if constexpr (IsSameType<U, float>::value) {
         Add(dstReg, src1Reg, src2Reg, pregLoop);
@@ -141,8 +141,8 @@ __aicore__ inline void CastAddVF(
  * @param offset idx of VF loop.
  */
 template <typename T>
-__aicore__ inline void LoadCastRegVF(
-    RegTensor<float>& dstTensor, __local_mem__ T* srcAddr, uint16_t offset, MaskReg& pregLoop)
+__aicore__ inline void LoadCastRegVF(RegTensor<float>& dstTensor, __local_mem__ T* srcAddr, uint16_t offset,
+                                     MaskReg& pregLoop)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy(dstTensor, srcAddr + offset * V_LENGTH);
@@ -154,8 +154,8 @@ __aicore__ inline void LoadCastRegVF(
 }
 
 template <typename T>
-__aicore__ inline void CastStoreTwoCloseRegVF(
-    __local_mem__ T* dstAddr, RegTensor<float>& srcA, RegTensor<float>& srcB, uint16_t offset, MaskReg& pregLoop)
+__aicore__ inline void CastStoreTwoCloseRegVF(__local_mem__ T* dstAddr, RegTensor<float>& srcA, RegTensor<float>& srcB,
+                                              uint16_t offset, MaskReg& pregLoop)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy(dstAddr + offset, srcA, pregLoop);
@@ -179,8 +179,9 @@ __aicore__ inline void CastStoreTwoCloseRegVF(
  */
 template <typename U, bool HAS_XOUT = false, bool HAS_XOUT_FP32 = false, bool IS_RSTD = false>
 __aicore__ inline void ReduceSumRstd(LocalTensor<float>& dstLocal, LocalTensor<U>& xOutLocal,
-    LocalTensor<float>& xOutFp32Local, LocalTensor<U>& x1Local, LocalTensor<U>& x2Local, LocalTensor<float>& workLocal,
-    uint32_t dstOffset, uint32_t count, uint32_t powerSplit, float avgFactor = 1.0f, float epsilon = 0.0f)
+                                     LocalTensor<float>& xOutFp32Local, LocalTensor<U>& x1Local,
+                                     LocalTensor<U>& x2Local, LocalTensor<float>& workLocal, uint32_t dstOffset,
+                                     uint32_t count, uint32_t powerSplit, float avgFactor = 1.0f, float epsilon = 0.0f)
 {
     uint32_t remainTile = count - powerSplit;
     uint32_t remainSreg = remainTile;
@@ -316,10 +317,11 @@ __aicore__ inline void ReduceSumRstd(LocalTensor<float>& dstLocal, LocalTensor<U
  *        Use float32 VL_LENGTH
  */
 template <typename U, bool HAS_XOUT = false, bool HAS_XOUT_FP32 = false, bool IS_RSTD = false>
-__aicore__ inline void ReduceSumRstdMulti(
-    LocalTensor<float>& rstdLocal, LocalTensor<U>& xOutLocal, LocalTensor<float>& xOutFp32Local,
-    LocalTensor<U>& x1Local, LocalTensor<U>& x2Local, LocalTensor<float>& workLocal, uint32_t rstdOffsetStart,
-    uint32_t count, uint32_t powerSplit, uint32_t repeatTimes, float avgFactor = 1.0f, float epsilon = 0.0f)
+__aicore__ inline void ReduceSumRstdMulti(LocalTensor<float>& rstdLocal, LocalTensor<U>& xOutLocal,
+                                          LocalTensor<float>& xOutFp32Local, LocalTensor<U>& x1Local,
+                                          LocalTensor<U>& x2Local, LocalTensor<float>& workLocal,
+                                          uint32_t rstdOffsetStart, uint32_t count, uint32_t powerSplit,
+                                          uint32_t repeatTimes, float avgFactor = 1.0f, float epsilon = 0.0f)
 {
     uint32_t rstdOffset = rstdOffsetStart;
     uint32_t remainTile = count - powerSplit;
@@ -466,8 +468,8 @@ __aicore__ inline void ReduceSumRstdMulti(
 }
 
 template <bool NEED_MAX = true>
-__aicore__ inline void ComputeRstdNewtonRaphsonReg(
-    RegTensor<float>& var, RegTensor<float>& rstd, MaskReg& preg, float epsilon)
+__aicore__ inline void ComputeRstdNewtonRaphsonReg(RegTensor<float>& var, RegTensor<float>& rstd, MaskReg& preg,
+                                                   float epsilon)
 {
     static constexpr float POS_INF = 3.40282366920938E+38;
     static constexpr float SCALAR1 = -0.5;
@@ -521,16 +523,17 @@ __aicore__ inline void ComputeRstdNewtonRaphsonReg(
 
 template <typename T>
 __aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T*& src, RegTensor<float>& dst,
-    AscendC::MicroAPI::UnalignReg& uSrc, MaskReg& preg, uint32_t postUpdateStride)
+                                                  AscendC::MicroAPI::UnalignReg& uSrc, MaskReg& preg,
+                                                  uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            dst, uSrc, src, postUpdateStride);
+        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, uSrc, src,
+                                                                                                    postUpdateStride);
     } else {
         RegTensor<T> xB16;
         RegTensor<T> xB16Unpack;
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            xB16, uSrc, src, postUpdateStride);
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xB16, uSrc, src,
+                                                                                                postUpdateStride);
         UnPack((RegTensor<uint32_t>&)xB16Unpack, (RegTensor<uint16_t>&)xB16);
         Cast<float, T, castTraitB162B32>(dst, xB16Unpack, preg);
     }
@@ -538,24 +541,25 @@ __aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T*& src, RegTens
 
 template <typename T>
 __aicore__ inline void StoreTensorUnAlignForDtypeT(__local_mem__ T*& dst, RegTensor<float>& src,
-    AscendC::MicroAPI::UnalignReg& uDst, MaskReg& preg, uint32_t postUpdateStride)
+                                                   AscendC::MicroAPI::UnalignReg& uDst, MaskReg& preg,
+                                                   uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
-        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            dst, src, uDst, postUpdateStride);
+        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, src, uDst,
+                                                                                                    postUpdateStride);
     } else {
         RegTensor<T> xB16;
         RegTensor<T> xB16Pack;
         Cast<T, float, castTraitB322B16>(xB16, src, preg);
         Pack((RegTensor<uint16_t>&)xB16Pack, (RegTensor<uint32_t>&)xB16);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            dst, xB16Pack, uDst, postUpdateStride);
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, xB16Pack, uDst,
+                                                                                                postUpdateStride);
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadTensorUnAlignForDtypeT(
-    __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t postUpdateStride)
+__aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg,
+                                                  uint32_t postUpdateStride)
 {
     AscendC::MicroAPI::UnalignReg uSrc;
     __local_mem__ T* srcTmp = src;
@@ -564,8 +568,8 @@ __aicore__ inline void LoadTensorUnAlignForDtypeT(
 }
 
 template <typename T>
-__aicore__ inline void StoreTensorUnAlignForDtypeT(
-    __local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg, uint32_t postUpdateStride)
+__aicore__ inline void StoreTensorUnAlignForDtypeT(__local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg,
+                                                   uint32_t postUpdateStride)
 {
     AscendC::MicroAPI::UnalignReg uDst;
     __local_mem__ T* dstTmp = dst;
@@ -575,8 +579,9 @@ __aicore__ inline void StoreTensorUnAlignForDtypeT(
 
 // NOTE: x is overwritten in place (x = (x - mean) * scale * rstd); only y is the
 // downstream-usable result. Callers must not rely on the original x after this call.
-__aicore__ inline void NormalizeWithScaleBiasReg(RegTensor<float>& x, RegTensor<float>& scale,
-    RegTensor<float>& bias, RegTensor<float>& mean, RegTensor<float>& rstd, RegTensor<float>& y, MaskReg& preg)
+__aicore__ inline void NormalizeWithScaleBiasReg(RegTensor<float>& x, RegTensor<float>& scale, RegTensor<float>& bias,
+                                                 RegTensor<float>& mean, RegTensor<float>& rstd, RegTensor<float>& y,
+                                                 MaskReg& preg)
 {
     Sub(x, x, mean, preg);
     Mul(x, x, scale, preg);
@@ -585,9 +590,8 @@ __aicore__ inline void NormalizeWithScaleBiasReg(RegTensor<float>& x, RegTensor<
 }
 
 template <bool NEED_MAX = true, bool NEED_AVG_FACTOR = false>
-__aicore__ inline void ComputeRstdNewtonRaphson(
-    __local_mem__ float* src, __local_mem__ float* dst, uint32_t rowCount, float epsilon,
-    float avgFactor = 1.0f, uint32_t vectorLen = V_LENGTH)
+__aicore__ inline void ComputeRstdNewtonRaphson(__local_mem__ float* src, __local_mem__ float* dst, uint32_t rowCount,
+                                                float epsilon, float avgFactor = 1.0f, uint32_t vectorLen = V_LENGTH)
 {
     uint16_t loopRows = static_cast<uint16_t>((rowCount + vectorLen - 1) / vectorLen);
     __VEC_SCOPE__
@@ -610,9 +614,9 @@ __aicore__ inline void ComputeRstdNewtonRaphson(
 }
 
 template <bool NEED_MAX = true, bool NEED_AVG_FACTOR = false>
-__aicore__ inline void ComputeRstdNewtonRaphson(
-    LocalTensor<float> srcLocal, LocalTensor<float> dstLocal, uint32_t rowCount, float epsilon,
-    float avgFactor = 1.0f, uint32_t vectorLen = V_LENGTH)
+__aicore__ inline void ComputeRstdNewtonRaphson(LocalTensor<float> srcLocal, LocalTensor<float> dstLocal,
+                                                uint32_t rowCount, float epsilon, float avgFactor = 1.0f,
+                                                uint32_t vectorLen = V_LENGTH)
 {
     __local_mem__ float* src = (__local_mem__ float*)srcLocal.GetPhyAddr();
     __local_mem__ float* dst = (__local_mem__ float*)dstLocal.GetPhyAddr();
@@ -631,9 +635,8 @@ __aicore__ inline void ComputeRstdNewtonRaphson(
  * @return
  */
 template <bool IS_RSTD>
-__aicore__ inline void LevelMergeRstd(
-    LocalTensor<float>& dstLocal, LocalTensor<float> srcLocal, uint64_t offset, uint32_t count, float avgFactor = 1.0f,
-    float epsilon = 0.0f)
+__aicore__ inline void LevelMergeRstd(LocalTensor<float>& dstLocal, LocalTensor<float> srcLocal, uint64_t offset,
+                                      uint32_t count, float avgFactor = 1.0f, float epsilon = 0.0f)
 {
     uint64_t calCount = count / 4; // Div 4 for VF parallel execution.
     uint32_t sreg = (uint32_t)(calCount);
@@ -689,9 +692,10 @@ __aicore__ inline void LevelMergeRstd(
  * @return
  */
 template <bool IS_RSTD>
-__aicore__ inline void ComputeMultiLevelRstd(
-    LocalTensor<float>& dstLocal, uint32_t offset, LocalTensor<float>& level1Local, LocalTensor<float>& level2Local,
-    LocalTensor<float>& level3Local, uint32_t& level1, uint32_t& level2, float avgFactor = 1.0f, float epsilon = 0.0f)
+__aicore__ inline void ComputeMultiLevelRstd(LocalTensor<float>& dstLocal, uint32_t offset,
+                                             LocalTensor<float>& level1Local, LocalTensor<float>& level2Local,
+                                             LocalTensor<float>& level3Local, uint32_t& level1, uint32_t& level2,
+                                             float avgFactor = 1.0f, float epsilon = 0.0f)
 {
     if (level1 > 0 && level1 < ONCE_VECTOR_SIZE) {
         LevelMergeRstd<IS_RSTD>(dstLocal, level1Local, offset, ONCE_VECTOR_SIZE, avgFactor, epsilon);
@@ -705,9 +709,8 @@ __aicore__ inline void ComputeMultiLevelRstd(
 namespace NormCommonRegbase {
 
 template <typename T, LoadDist FLOAT_LOAD_DIST = LoadDist::DIST_NORM,
-    LoadDist NON_FLOAT_LOAD_DIST = LoadDist::DIST_UNPACK_B16>
-__aicore__ inline void LoadRegForDtype(
-    __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+          LoadDist NON_FLOAT_LOAD_DIST = LoadDist::DIST_UNPACK_B16>
+__aicore__ inline void LoadRegForDtype(__local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, FLOAT_LOAD_DIST>(dst, src + offset);
@@ -719,9 +722,8 @@ __aicore__ inline void LoadRegForDtype(
 }
 
 template <typename T, StoreDist FLOAT_STORE_DIST = StoreDist::DIST_NORM,
-    StoreDist NON_FLOAT_STORE_DIST = StoreDist::DIST_PACK_B32>
-__aicore__ inline void StoreRegForDtype(
-    __local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+          StoreDist NON_FLOAT_STORE_DIST = StoreDist::DIST_PACK_B32>
+__aicore__ inline void StoreRegForDtype(__local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<T, FLOAT_STORE_DIST>(dst + offset, src, preg);
@@ -733,8 +735,8 @@ __aicore__ inline void StoreRegForDtype(
 }
 
 template <typename T>
-__aicore__ inline void CalculateSquareReduceSumLessThanVL(
-    __local_mem__ T* xPtr, __local_mem__ float* dstPtr, uint16_t rows, uint32_t rowStride, uint32_t reduceNum)
+__aicore__ inline void CalculateSquareReduceSumLessThanVL(__local_mem__ T* xPtr, __local_mem__ float* dstPtr,
+                                                          uint16_t rows, uint32_t rowStride, uint32_t reduceNum)
 {
     __VEC_SCOPE__
     {
@@ -752,8 +754,8 @@ __aicore__ inline void CalculateSquareReduceSumLessThanVL(
 }
 
 template <typename T>
-__aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(
-    __local_mem__ T* xPtr, __local_mem__ float* dstPtr, uint16_t rows, uint32_t rowStride, uint32_t reduceNum)
+__aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(__local_mem__ T* xPtr, __local_mem__ float* dstPtr,
+                                                             uint16_t rows, uint32_t rowStride, uint32_t reduceNum)
 {
     uint32_t tailLen = reduceNum - V_LENGTH;
     __VEC_SCOPE__
@@ -771,8 +773,8 @@ __aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(
             LoadRegForDtype<T>(xPtr + V_LENGTH, xFoldReg, pregTail, baseOffset);
             Mul(xReg, xReg, xReg, pregFull);
             Mul(xFoldReg, xFoldReg, xFoldReg, pregTail);
-            ShiftLefts(
-                (RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0), pregTail);
+            ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
+                       pregTail);
             Add(sumReg, xReg, xFoldReg, pregFull);
             ReduceSum(reduceReg, sumReg, pregFull);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + i, reduceReg, pregOne);
@@ -782,8 +784,8 @@ __aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(
 
 template <typename T, int32_t LAST_LOOP_NUMS>
 __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __local_mem__ float* dstPtr,
-    __local_mem__ float* tmpPtr, uint16_t rows, uint32_t rowStride, uint32_t reduceNum, uint32_t foldPoint,
-    uint32_t tmpStride)
+                                                      __local_mem__ float* tmpPtr, uint16_t rows, uint32_t rowStride,
+                                                      uint32_t reduceNum, uint32_t foldPoint, uint32_t tmpStride)
 {
     uint16_t foldLoops = static_cast<uint16_t>((foldPoint + V_LENGTH - 1) / V_LENGTH);
     uint32_t lastNum = foldPoint / V_LENGTH;
@@ -822,12 +824,12 @@ __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __l
                 LoadRegForDtype<T>(xPtr + foldPoint, xFoldReg, pregLoop, offset);
                 Mul(xReg, xReg, xReg, pregFull);
                 Mul(xFoldReg, xFoldReg, xFoldReg, pregLoop);
-                ShiftLefts(
-                    (RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0), pregLoop);
+                ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
+                           pregLoop);
                 Add(sumReg, xReg, xFoldReg, pregFull);
                 ReduceSum(reduceReg, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    tmpPtr + tmpOffset + tailFullLoops, reduceReg, pregOne);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tmpOffset + tailFullLoops, reduceReg,
+                                                                   pregOne);
             }
             for (uint16_t r = tailCeilLoops; r < foldLoops; ++r) {
                 uint32_t offset = static_cast<uint32_t>(r) * V_LENGTH + baseOffset;
@@ -852,8 +854,8 @@ __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __l
                 uint32_t tmpOffset = static_cast<uint32_t>(i) * tmpStride;
                 DataCopy(xReg, tmpPtr + tmpOffset);
                 DataCopy(xFoldReg, tmpPtr + tmpOffset + V_LENGTH);
-                ShiftLefts(
-                    (RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0), pregLast);
+                ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
+                           pregLast);
                 Add(sumReg, xReg, xFoldReg, pregFull);
                 ReduceSum(reduceReg, sumReg, pregFull);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + i, reduceReg, pregOne);
@@ -865,8 +867,9 @@ __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __l
 template <typename T>
 // Squares input values inside this function, then reduces each row.
 __aicore__ inline void CalculateSquareReduceSum(__local_mem__ T* xPtr, __local_mem__ float* dstPtr,
-    __local_mem__ float* tmpPtr, uint16_t rows, uint32_t rowStride, uint32_t reduceNum, uint32_t foldPoint,
-    uint32_t tmpStride, uint32_t branchNum = 0)
+                                                __local_mem__ float* tmpPtr, uint16_t rows, uint32_t rowStride,
+                                                uint32_t reduceNum, uint32_t foldPoint, uint32_t tmpStride,
+                                                uint32_t branchNum = 0)
 {
     uint32_t reduceBranchNum = branchNum == 0 ? reduceNum : branchNum;
     if (reduceBranchNum <= V_LENGTH) {
@@ -876,15 +879,16 @@ __aicore__ inline void CalculateSquareReduceSum(__local_mem__ T* xPtr, __local_m
     } else if (reduceBranchNum <= V_LENGTH * V_LENGTH * DICHOTOMY_ADD_COEFF) {
         CalculateSquareReduceSumCommon<T, 1>(xPtr, dstPtr, tmpPtr, rows, rowStride, reduceNum, foldPoint, tmpStride);
     } else {
-        CalculateSquareReduceSumCommon<T, DICHOTOMY_ADD_COEFF>(
-            xPtr, dstPtr, tmpPtr, rows, rowStride, reduceNum, foldPoint, tmpStride);
+        CalculateSquareReduceSumCommon<T, DICHOTOMY_ADD_COEFF>(xPtr, dstPtr, tmpPtr, rows, rowStride, reduceNum,
+                                                               foldPoint, tmpStride);
     }
 }
 
 template <typename T>
 __aicore__ inline void CalculateSquareReduceSum(LocalTensor<T>& xLocal, LocalTensor<float>& dstLocal,
-    LocalTensor<float>& tmpLocal, uint16_t rows, uint32_t rowStride, uint32_t reduceNum, uint32_t foldPoint,
-    uint32_t blockAlign, uint32_t branchNum = 0)
+                                                LocalTensor<float>& tmpLocal, uint16_t rows, uint32_t rowStride,
+                                                uint32_t reduceNum, uint32_t foldPoint, uint32_t blockAlign,
+                                                uint32_t branchNum = 0)
 {
     __local_mem__ T* xPtr = (__local_mem__ T*)xLocal.GetPhyAddr();
     __local_mem__ float* dstPtr = (__local_mem__ float*)dstLocal.GetPhyAddr();
@@ -896,16 +900,17 @@ __aicore__ inline void CalculateSquareReduceSum(LocalTensor<T>& xLocal, LocalTen
 
 template <typename T>
 __aicore__ inline void CalculateSquareReduceSum(LocalTensor<T>& xLocal, LocalTensor<float>& dstLocal,
-    TBuf<TPosition::VECCALC>& tmpBuf, uint16_t rows, uint32_t rowStride, uint32_t reduceNum, uint32_t foldPoint,
-    uint32_t blockAlign, uint32_t branchNum = 0)
+                                                TBuf<TPosition::VECCALC>& tmpBuf, uint16_t rows, uint32_t rowStride,
+                                                uint32_t reduceNum, uint32_t foldPoint, uint32_t blockAlign,
+                                                uint32_t branchNum = 0)
 {
     LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
-    CalculateSquareReduceSum<T>(
-        xLocal, dstLocal, tmpLocal, rows, rowStride, reduceNum, foldPoint, blockAlign, branchNum);
+    CalculateSquareReduceSum<T>(xLocal, dstLocal, tmpLocal, rows, rowStride, reduceNum, foldPoint, blockAlign,
+                                branchNum);
 }
 
-__aicore__ inline void CalculateReduceSumLessThanVL(
-    __local_mem__ float* xPtr, __local_mem__ float* dstPtr, uint32_t reduceNum)
+__aicore__ inline void CalculateReduceSumLessThanVL(__local_mem__ float* xPtr, __local_mem__ float* dstPtr,
+                                                    uint32_t reduceNum)
 {
     __VEC_SCOPE__
     {
@@ -919,8 +924,8 @@ __aicore__ inline void CalculateReduceSumLessThanVL(
     }
 }
 
-__aicore__ inline void CalculateReduceSumLessThanTwoVL(
-    __local_mem__ float* xPtr, __local_mem__ float* dstPtr, uint32_t reduceNum)
+__aicore__ inline void CalculateReduceSumLessThanTwoVL(__local_mem__ float* xPtr, __local_mem__ float* dstPtr,
+                                                       uint32_t reduceNum)
 {
     uint32_t tailLen = reduceNum - V_LENGTH;
     __VEC_SCOPE__
@@ -942,9 +947,8 @@ __aicore__ inline void CalculateReduceSumLessThanTwoVL(
 }
 
 template <int32_t LAST_LOOP_NUMS>
-__aicore__ inline void CalculateReduceSumCommon(
-    __local_mem__ float* xPtr, __local_mem__ float* dstPtr, __local_mem__ float* tmpPtr, uint32_t reduceNum,
-    uint32_t foldPoint)
+__aicore__ inline void CalculateReduceSumCommon(__local_mem__ float* xPtr, __local_mem__ float* dstPtr,
+                                                __local_mem__ float* tmpPtr, uint32_t reduceNum, uint32_t foldPoint)
 {
     uint16_t foldLoops = static_cast<uint16_t>((foldPoint + V_LENGTH - 1) / V_LENGTH);
     uint32_t lastNum = foldPoint / V_LENGTH;
@@ -976,8 +980,8 @@ __aicore__ inline void CalculateReduceSumCommon(
             uint32_t offset = static_cast<uint32_t>(tailFullLoops) * V_LENGTH;
             DataCopy<float, LoadDist::DIST_NORM>(xReg, xPtr + offset);
             DataCopy<float, LoadDist::DIST_NORM>(xFoldReg, xPtr + foldPoint + offset);
-            ShiftLefts(
-                (RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0), pregLoop);
+            ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
+                       pregLoop);
             Add(sumReg, xReg, xFoldReg, pregFull);
             ReduceSum(reduceReg, sumReg, pregFull);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tailFullLoops, reduceReg, pregOne);
@@ -1000,8 +1004,8 @@ __aicore__ inline void CalculateReduceSumCommon(
             MaskReg pregLast = UpdateMask<float>(lastNum);
             DataCopy<float, LoadDist::DIST_NORM>(xReg, tmpPtr);
             DataCopy<float, LoadDist::DIST_NORM>(xFoldReg, tmpPtr + V_LENGTH);
-            ShiftLefts(
-                (RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0), pregLast);
+            ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
+                       pregLast);
             Add(sumReg, xReg, xFoldReg, pregFull);
             ReduceSum(reduceReg, sumReg, pregFull);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr, reduceReg, pregOne);
@@ -1010,9 +1014,8 @@ __aicore__ inline void CalculateReduceSumCommon(
 }
 
 // Reduces an fp32 buffer whose values have already been squared by the caller.
-__aicore__ inline void CalculateReduceSum(
-    __local_mem__ float* xPtr, __local_mem__ float* dstPtr, __local_mem__ float* tmpPtr, uint32_t reduceNum,
-    uint32_t foldPoint)
+__aicore__ inline void CalculateReduceSum(__local_mem__ float* xPtr, __local_mem__ float* dstPtr,
+                                          __local_mem__ float* tmpPtr, uint32_t reduceNum, uint32_t foldPoint)
 {
     if (reduceNum <= V_LENGTH) {
         CalculateReduceSumLessThanVL(xPtr, dstPtr, reduceNum);
@@ -1026,7 +1029,7 @@ __aicore__ inline void CalculateReduceSum(
 }
 
 __aicore__ inline void CalculateReduceSum(LocalTensor<float>& xLocal, LocalTensor<float>& dstLocal,
-    LocalTensor<float>& tmpLocal, uint32_t reduceNum, uint32_t foldPoint)
+                                          LocalTensor<float>& tmpLocal, uint32_t reduceNum, uint32_t foldPoint)
 {
     __local_mem__ float* xPtr = (__local_mem__ float*)xLocal.GetPhyAddr();
     __local_mem__ float* dstPtr = (__local_mem__ float*)dstLocal.GetPhyAddr();
@@ -1035,7 +1038,7 @@ __aicore__ inline void CalculateReduceSum(LocalTensor<float>& xLocal, LocalTenso
 }
 
 __aicore__ inline void CalculateReduceSum(LocalTensor<float>& xLocal, LocalTensor<float>& dstLocal,
-    TBuf<TPosition::VECCALC>& tmpBuf, uint32_t reduceNum, uint32_t foldPoint)
+                                          TBuf<TPosition::VECCALC>& tmpBuf, uint32_t reduceNum, uint32_t foldPoint)
 {
     LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
     CalculateReduceSum(xLocal, dstLocal, tmpLocal, reduceNum, foldPoint);

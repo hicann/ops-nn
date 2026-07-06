@@ -22,22 +22,28 @@
 using namespace AscendC;
 
 template <uint64_t schId, uint64_t db>
-__global__ __aicore__ void sparse_softmax_cross_entropy_with_logits(GM_ADDR features, GM_ADDR labels, GM_ADDR loss, GM_ADDR backProp,  GM_ADDR workspace, GM_ADDR tiling) {
-	REGISTER_TILING_DEFAULT(SparseSoftmaxCrossEntropyWithLogitsTilingData);
+__global__ __aicore__ void sparse_softmax_cross_entropy_with_logits(GM_ADDR features, GM_ADDR labels, GM_ADDR loss,
+                                                                    GM_ADDR backProp, GM_ADDR workspace, GM_ADDR tiling)
+{
+    REGISTER_TILING_DEFAULT(SparseSoftmaxCrossEntropyWithLogitsTilingData);
 
-	GET_TILING_DATA_WITH_STRUCT(SparseSoftmaxCrossEntropyWithLogitsTilingData, tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(SparseSoftmaxCrossEntropyWithLogitsTilingData, tilingData, tiling);
 
-	GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
-	TPipe pipe;
+    GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
+    TPipe pipe;
 
     if constexpr (schId == 1) {
-		SparseSoftmaxCrossEntropyWithLogits::SparseSoftmaxCrossEntropyWithLogitsSplitR<DTYPE_FEATURES, DTYPE_LABELS, schId, db> op;
-		op.Init(features, labels, loss, backProp, userWorkspace, &tilingData, &pipe);
-		op.Process();
-	}
+        SparseSoftmaxCrossEntropyWithLogits::SparseSoftmaxCrossEntropyWithLogitsSplitR<DTYPE_FEATURES, DTYPE_LABELS,
+                                                                                       schId, db>
+            op;
+        op.Init(features, labels, loss, backProp, userWorkspace, &tilingData, &pipe);
+        op.Process();
+    }
     if constexpr (schId == 0 || schId == 2) {
-	    SparseSoftmaxCrossEntropyWithLogits::SparseSoftmaxCrossEntropyWithLogitsFullLoad<DTYPE_FEATURES, DTYPE_LABELS, schId, db> op;
-	    op.Init(features, labels, loss, backProp, userWorkspace, &tilingData, &pipe);
-	    op.Process();
+        SparseSoftmaxCrossEntropyWithLogits::SparseSoftmaxCrossEntropyWithLogitsFullLoad<DTYPE_FEATURES, DTYPE_LABELS,
+                                                                                         schId, db>
+            op;
+        op.Init(features, labels, loss, backProp, userWorkspace, &tilingData, &pipe);
+        op.Process();
     }
 }

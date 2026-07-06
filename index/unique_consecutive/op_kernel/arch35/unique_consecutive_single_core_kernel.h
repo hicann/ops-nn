@@ -22,13 +22,9 @@ constexpr int32_t BUFFER_NUM = 1;
 constexpr uint32_t ALIGNMENT_SCALE_FACTOR = 2;
 
 template <typename T, typename T1, typename DTYPE_COUNT, bool COUNT_OUT, bool ISINT64>
-class UniqueConsecutiveSingleCoreKerenl
-{
+class UniqueConsecutiveSingleCoreKerenl {
 public:
-    __aicore__ inline UniqueConsecutiveSingleCoreKerenl(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline UniqueConsecutiveSingleCoreKerenl(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR idx, GM_ADDR count, GM_ADDR shape_out, GM_ADDR workspace,
                                 const UniqueConsecutiveTilingData* tilingData)
@@ -46,13 +42,14 @@ public:
 
         countGm_.SetGlobalBuffer((__gm__ int32_t*)(count));
         if constexpr (sizeof(DTYPE_COUNT) == (sizeof(int64_t))) {
-            countQueueSize_ = CEIL_DIV(totalLength_ * sizeof(int64_t), blockSize_ * ALIGNMENT_SCALE_FACTOR) * blockSize_ * ALIGNMENT_SCALE_FACTOR;
+            countQueueSize_ = CEIL_DIV(totalLength_ * sizeof(int64_t), blockSize_ * ALIGNMENT_SCALE_FACTOR) *
+                              blockSize_ * ALIGNMENT_SCALE_FACTOR;
             pipe_->InitBuffer(countQueue_, BUFFER_NUM, totalLength_ * sizeof(int64_t));
         } else {
             countQueueSize_ = CEIL_DIV(totalLength_ * sizeof(int32_t), blockSize_) * blockSize_;
             pipe_->InitBuffer(countQueue_, BUFFER_NUM, totalLength_ * sizeof(int32_t));
         }
-        
+
         pipe_->InitBuffer(idxBuf_, CEIL_DIV(totalLength_ * sizeof(int32_t), blockSize_) * blockSize_);
         pipe_->InitBuffer(shapeBuf_, CEIL_DIV(SHAPE_LEN * sizeof(uint64_t), blockSize_) * blockSize_);
 
@@ -97,7 +94,8 @@ public:
         CollectPostUniqueValue<T, T1, true>(outTensor, xLocal, totalLength_, reduceCntValue);
 
         if constexpr (COUNT_OUT) {
-            CollectPostUniqueIdx<T, T1, true>(idxTensor, xLocal, 1, totalLength_, totalLength_, reduceCntIdx, START_POSITION);
+            CollectPostUniqueIdx<T, T1, true>(idxTensor, xLocal, 1, totalLength_, totalLength_, reduceCntIdx,
+                                              START_POSITION);
         }
 
         xQueue_.FreeTensor(xLocal);
@@ -140,9 +138,9 @@ public:
                 countQueue_.FreeTensor(outCount);
             } else {
                 LocalTensor<int32_t> outCount = countQueue_.template DeQue<int32_t>();
-                Copy2GmEx<int32_t>(countGm_, outCount, 1, copyLenIdx, 0, 0 );
+                Copy2GmEx<int32_t>(countGm_, outCount, 1, copyLenIdx, 0, 0);
                 countQueue_.FreeTensor(outCount);
-            } 
+            }
         }
 
         DataCopyPad(yGm_, yLocal, dataCopyParamsValue);
@@ -200,4 +198,4 @@ private:
 
     TPipe* pipe_ = nullptr;
 };
-#endif  // UNIQUE_CONSECUTIVE_SINGLE_CORE_KERNEL_H
+#endif // UNIQUE_CONSECUTIVE_SINGLE_CORE_KERNEL_H

@@ -17,8 +17,7 @@
 
 namespace ops {
 
-class Heaviside : public OpDef
-{
+class Heaviside : public OpDef {
 public:
     explicit Heaviside(const char* name) : OpDef(name)
     {

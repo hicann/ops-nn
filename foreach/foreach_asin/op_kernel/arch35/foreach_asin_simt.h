@@ -60,13 +60,10 @@ __simt_callee__ inline T ComputeAsin(T val)
  * @param yAddr      输出 tensor 的 GM 地址
  */
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachAsinSimtKernel(
-    int64_t localStart, int64_t localEnd,
-    __gm__ T* xAddr, __gm__ T* yAddr)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachAsinSimtKernel(int64_t localStart, int64_t localEnd,
+                                                                                  __gm__ T* xAddr, __gm__ T* yAddr)
 {
-    for (int64_t i = localStart + static_cast<int64_t>(Simt::GetThreadIdx());
-         i < localEnd;
+    for (int64_t i = localStart + static_cast<int64_t>(Simt::GetThreadIdx()); i < localEnd;
          i += static_cast<int64_t>(Simt::GetThreadNum())) {
         T val = xAddr[i];
         yAddr[i] = ComputeAsin<T>(val);
@@ -81,9 +78,7 @@ inline void ForeachAsinSimtKernel(
  * @param tilingData tiling 数据指针
  */
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y,
-    const ForeachAsinTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachAsinTilingData* tilingData)
 {
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
     int64_t coreStart = blockIdx * tilingData->perCoreElements;
@@ -123,9 +118,7 @@ __aicore__ inline void Process(
         __gm__ T* yAddr = yList.GetDataPtr<T>(t);
 
         // 启动 SIMT VF 计算该段
-        Simt::VF_CALL<ForeachAsinSimtKernel<T>>(
-            Simt::Dim3(THREAD_NUM),
-            localStart, localEnd, xAddr, yAddr);
+        Simt::VF_CALL<ForeachAsinSimtKernel<T>>(Simt::Dim3(THREAD_NUM), localStart, localEnd, xAddr, yAddr);
     }
 }
 

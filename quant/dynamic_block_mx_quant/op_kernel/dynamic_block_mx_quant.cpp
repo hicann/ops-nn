@@ -47,8 +47,8 @@ struct RoundModeMapper {
 } // namespace
 
 template <uint64_t roundMode, uint64_t scaleAlg>
-__global__ __aicore__ void dynamic_block_mx_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void dynamic_block_mx_quant(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 

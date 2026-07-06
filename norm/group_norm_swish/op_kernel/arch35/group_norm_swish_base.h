@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file group_norm_swish_base.h
@@ -28,15 +28,13 @@ constexpr int32_t oneBlockSize = 32;
 
 template <typename T1, typename T2>
 
-class GroupNormSwishBase
-{
+class GroupNormSwishBase {
 public:
     __aicore__ inline GroupNormSwishBase(){};
 
 protected:
-    __aicore__ inline void InitGlobal(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-        const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void InitGlobal(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                      const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
     __aicore__ inline void InitLocal(const int32_t gammaSize, const int32_t outMeanSize, const int32_t meanBufSize);
     __aicore__ inline void InitLocalB32(const int32_t gammaSize, const int32_t outMeanSize, const int32_t meanBufSize);
     __aicore__ inline void CopyInX(const int64_t xOffset, const int64_t copyNum);
@@ -44,28 +42,23 @@ protected:
     __aicore__ inline void CastMeanAndRstd(const int64_t copyNum);
     __aicore__ inline void CopyOutMeanAndRstd(const int64_t copyNum);
     __aicore__ inline void CopyOutMeanAndRstdWithOffset(const int64_t offset, const int64_t copyNum);
-    __aicore__ inline void CopyOutWithOutPadT1(
-        const GlobalTensor<T1>& dstGM, const LocalTensor<T1>& srcUB, const int64_t copyNum);
-    __aicore__ inline void CopyOutWithOutPadT2(
-        const GlobalTensor<T2>& dstGM, const LocalTensor<T2>& srcUB, const int64_t copyNum);
+    __aicore__ inline void CopyOutWithOutPadT1(const GlobalTensor<T1>& dstGM, const LocalTensor<T1>& srcUB,
+                                               const int64_t copyNum);
+    __aicore__ inline void CopyOutWithOutPadT2(const GlobalTensor<T2>& dstGM, const LocalTensor<T2>& srcUB,
+                                               const int64_t copyNum);
     __aicore__ inline void ComputeSwishB16(const int64_t calcNum);
     __aicore__ inline void CopyInGammaAndBeta(const int64_t gmOffset, const int64_t localOffset, const int64_t copyNum);
-    __aicore__ inline void CastGammaAndBeta(
-        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const int64_t offset);
-    __aicore__ inline void ReduceSumCustomSmall(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
-        const int32_t count);
-    __aicore__ inline void ReduceSumCustom(
-        const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
-        const int32_t count);
+    __aicore__ inline void CastGammaAndBeta(const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal,
+                                            const int64_t offset);
+    __aicore__ inline void ReduceSumCustomSmall(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                                const LocalTensor<float>& workLocal, const int32_t count);
+    __aicore__ inline void ReduceSumCustom(const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal,
+                                           const LocalTensor<float>& workLocal, const int32_t count);
     __aicore__ inline void TwoPassSumOneLoop(const int64_t num);
     __aicore__ inline void TwoPassSumMulLoop(const int64_t loopTimesBegin, const int64_t loopTimesEnd);
 
 protected:
-    __aicore__ inline int64_t CeilDiv(int64_t a, int64_t b)
-    {
-        return b == 0 ? 0 : (a + b - 1) / b;
-    };
+    __aicore__ inline int64_t CeilDiv(int64_t a, int64_t b) { return b == 0 ? 0 : (a + b - 1) / b; };
     __aicore__ inline int64_t CeilRem(int64_t a, int64_t b)
     {
         if (b == 0) {
@@ -73,10 +66,7 @@ protected:
         }
         return a % b == 0 ? b : a % b;
     };
-    __aicore__ inline int64_t GetMin(int64_t a, int64_t b)
-    {
-        return a > b ? b : a;
-    };
+    __aicore__ inline int64_t GetMin(int64_t a, int64_t b) { return a > b ? b : a; };
     __aicore__ inline RoundMode GetRoundMode()
     {
 #if __CCE_AICORE__ == 220 or __CCE_AICORE__ == 310
@@ -126,9 +116,9 @@ protected:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::InitGlobal(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::InitGlobal(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y,
+                                                              GM_ADDR mean, GM_ADDR rstd,
+                                                              const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
 {
     tiling = tilingData;
     blockIdx = GetBlockIdx();
@@ -146,8 +136,8 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::InitGlobal(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::InitLocal(
-    const int32_t inQueSize, const int32_t outQueSize, const int32_t bufSize)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::InitLocal(const int32_t inQueSize, const int32_t outQueSize,
+                                                             const int32_t bufSize)
 {
     pipe->InitBuffer(inQueueGamma, 1, inQueSize * sizeof(float));
     pipe->InitBuffer(inQueueBeta, 1, inQueSize * sizeof(float));
@@ -170,8 +160,8 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::InitLocal(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::InitLocalB32(
-    const int32_t inQueSize, const int32_t outQueSize, const int32_t bufSize)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::InitLocalB32(const int32_t inQueSize, const int32_t outQueSize,
+                                                                const int32_t bufSize)
 {
     pipe->InitBuffer(inQueueGamma, 1, inQueSize * sizeof(float));
     pipe->InitBuffer(inQueueBeta, 1, inQueSize * sizeof(float));
@@ -217,8 +207,9 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutY(const int64_t yOffse
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutWithOutPadT1(
-    const GlobalTensor<T1>& dstGM, const LocalTensor<T1>& srcUB, const int64_t copyNum)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutWithOutPadT1(const GlobalTensor<T1>& dstGM,
+                                                                       const LocalTensor<T1>& srcUB,
+                                                                       const int64_t copyNum)
 {
     if (copyNum % elementsPerBlockT1 == 0) {
         DataCopy(dstGM, srcUB, copyNum);
@@ -238,8 +229,9 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutWithOutPadT1(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutWithOutPadT2(
-    const GlobalTensor<T2>& dstGM, const LocalTensor<T2>& srcUB, const int64_t copyNum)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutWithOutPadT2(const GlobalTensor<T2>& dstGM,
+                                                                       const LocalTensor<T2>& srcUB,
+                                                                       const int64_t copyNum)
 {
     if (copyNum % elementsPerBlockT2 == 0) {
         DataCopy(dstGM, srcUB, copyNum);
@@ -296,8 +288,8 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutMeanAndRstd(const int6
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutMeanAndRstdWithOffset(
-    const int64_t offset, const int64_t copyNum)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutMeanAndRstdWithOffset(const int64_t offset,
+                                                                                const int64_t copyNum)
 {
     LocalTensor<T2> meanOutT2 = outQueueMean.DeQue<T2>();
     LocalTensor<T2> rstdOutT2 = outQueueRstd.DeQue<T2>();
@@ -320,29 +312,27 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyOutMeanAndRstdWithOffset(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyInGammaAndBeta(
-    const int64_t gmOffset, const int64_t localOffset, const int64_t copyNum)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::CopyInGammaAndBeta(const int64_t gmOffset, const int64_t localOffset,
+                                                                      const int64_t copyNum)
 {
 #if __CCE_AICORE__ == 220 or __CCE_AICORE__ == 310
     if constexpr (std::is_same_v<T2, float>) {
         LocalTensor<T2> gammaLocal = inQueueGamma.AllocTensor<T2>();
-        DataCopyPad(
-            gammaLocal, gammaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(gammaLocal, gammaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0},
+                    {false, 0, 0, 0});
         inQueueGamma.EnQue(gammaLocal);
         LocalTensor<T2> betaLocal = inQueueBeta.AllocTensor<T2>();
-        DataCopyPad(
-            betaLocal, betaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(betaLocal, betaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0},
+                    {false, 0, 0, 0});
         inQueueBeta.EnQue(betaLocal);
     } else {
         LocalTensor<T2> gammaLocal = inQueueGamma.AllocTensor<T2>();
-        DataCopyPad(
-            gammaLocal[localOffset], gammaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0},
-            {false, 0, 0, 0});
+        DataCopyPad(gammaLocal[localOffset], gammaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0},
+                    {false, 0, 0, 0});
         inQueueGamma.EnQue(gammaLocal);
         LocalTensor<T2> betaLocal = inQueueBeta.AllocTensor<T2>();
-        DataCopyPad(
-            betaLocal[localOffset], betaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0},
-            {false, 0, 0, 0});
+        DataCopyPad(betaLocal[localOffset], betaGm[gmOffset], {1, static_cast<uint16_t>(copyNum * sizeof(T2)), 0, 0},
+                    {false, 0, 0, 0});
         inQueueBeta.EnQue(betaLocal);
     }
 #else
@@ -366,8 +356,9 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CopyInGammaAndBeta(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::CastGammaAndBeta(
-    const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const int64_t offset)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::CastGammaAndBeta(const LocalTensor<float>& gammaLocal,
+                                                                    const LocalTensor<float>& betaLocal,
+                                                                    const int64_t offset)
 {
     LocalTensor<T2> gammaLocalb16 = gammaLocal.template ReinterpretCast<T2>();
     LocalTensor<T2> betaLocalb16 = betaLocal.template ReinterpretCast<T2>();
@@ -376,9 +367,10 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::CastGammaAndBeta(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::ReduceSumCustomSmall(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
-    const int32_t count)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::ReduceSumCustomSmall(const LocalTensor<float>& dstLocal,
+                                                                        const LocalTensor<float>& srcLocal,
+                                                                        const LocalTensor<float>& workLocal,
+                                                                        const int32_t count)
 {
     int32_t repeat = count / 64;
     int32_t tailNum = count % 64;
@@ -397,9 +389,10 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::ReduceSumCustomSmall(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::ReduceSumCustom(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
-    const int32_t count)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::ReduceSumCustom(const LocalTensor<float>& dstLocal,
+                                                                   const LocalTensor<float>& srcLocal,
+                                                                   const LocalTensor<float>& workLocal,
+                                                                   const int32_t count)
 {
     if (count == doubleRNum) {
         BlockReduceSum(workLocal, srcLocal, 128, 64, 1, 1, 8);
@@ -469,8 +462,8 @@ __aicore__ inline void GroupNormSwishBase<T1, T2>::TwoPassSumOneLoop(const int64
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishBase<T1, T2>::TwoPassSumMulLoop(
-    const int64_t loopTimesBegin, const int64_t loopTimesEnd)
+__aicore__ inline void GroupNormSwishBase<T1, T2>::TwoPassSumMulLoop(const int64_t loopTimesBegin,
+                                                                     const int64_t loopTimesEnd)
 {
     float y, t;
     float n_a, n_b;

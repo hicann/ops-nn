@@ -29,8 +29,8 @@ using namespace AscendC;
 using namespace AscendQuantV2Op;
 
 template <uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void AscendQuantV2PerChannel(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void AscendQuantV2PerChannel(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                               GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -40,8 +40,8 @@ __aicore__ inline void AscendQuantV2PerChannel(
 }
 
 template <uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void AscendQuantV2PerChannelNoOffset(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void AscendQuantV2PerChannelNoOffset(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -51,8 +51,8 @@ __aicore__ inline void AscendQuantV2PerChannelNoOffset(
 }
 
 template <uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void AscendQuantV2PerTensor(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void AscendQuantV2PerTensor(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                              GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -62,8 +62,8 @@ __aicore__ inline void AscendQuantV2PerTensor(
 }
 
 template <uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void AscendQuantV2PerTensorNoOffset(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void AscendQuantV2PerTensorNoOffset(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                                      GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -73,8 +73,8 @@ __aicore__ inline void AscendQuantV2PerTensorNoOffset(
 }
 
 template <uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void AscendQuantV2PerHead(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void AscendQuantV2PerHead(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -84,8 +84,8 @@ __aicore__ inline void AscendQuantV2PerHead(
 }
 
 template <uint64_t RoundMode, uint64_t SqrtMode>
-__aicore__ inline void AscendQuantV2PerHeadNoOffset(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void AscendQuantV2PerHeadNoOffset(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(QuantizeTilingData);
     GET_TILING_DATA(tilingData, tiling);
@@ -99,12 +99,12 @@ __aicore__ inline void AscendQuantV2PerHeadNoOffset(
  * \brief quantize kernel main entry
  */
 template <uint64_t perMode, uint64_t zeroPointsType, uint64_t RoundMode, uint64_t SqrtMode>
-__global__ __aicore__ void ascend_quant_v2(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void ascend_quant_v2(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                           GM_ADDR tiling)
 {
-    #if (__NPU_ARCH__ == 3510)
-        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
-    #endif
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+#endif
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if constexpr (perMode == TPL_PER_TENSOR) {
         if constexpr (zeroPointsType == TPL_NO_OFFSET) {
@@ -125,7 +125,7 @@ __global__ __aicore__ void ascend_quant_v2(
             AscendQuantV2PerHead<RoundMode, SqrtMode>(x, scale, offset, y, workspace, tiling);
         }
     }
-    #if (__NPU_ARCH__ == 3510)
-        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
-    #endif
+#if (__NPU_ARCH__ == 3510)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+#endif
 }

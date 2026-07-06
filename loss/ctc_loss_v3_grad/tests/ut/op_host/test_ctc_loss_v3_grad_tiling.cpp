@@ -32,26 +32,19 @@
 using namespace std;
 using namespace ge;
 
-class CTCLossV3GradTiling : public testing::Test
-{
+class CTCLossV3GradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CTCLossV3GradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CTCLossV3GradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CTCLossV3GradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CTCLossV3GradTiling TearDown" << std::endl; }
 };
 
-void TestCTCLossV3GradTiling(
-    gert::StorageShape& gradOutShape, gert::StorageShape& logProbsShape, gert::StorageShape& targetsShape,
-    gert::StorageShape& inputLengthsShape, gert::StorageShape& targetLengthsShape, gert::StorageShape& lossShape,
-    gert::StorageShape& logAlphaShape, gert::StorageShape& gradShape,
-    std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList, ge::DataType gradDataType,
-    ge::DataType indicesDataType, uint64_t expectTilingKey)
+void TestCTCLossV3GradTiling(gert::StorageShape& gradOutShape, gert::StorageShape& logProbsShape,
+                             gert::StorageShape& targetsShape, gert::StorageShape& inputLengthsShape,
+                             gert::StorageShape& targetLengthsShape, gert::StorageShape& lossShape,
+                             gert::StorageShape& logAlphaShape, gert::StorageShape& gradShape,
+                             std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList,
+                             ge::DataType gradDataType, ge::DataType indicesDataType, uint64_t expectTilingKey)
 {
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -77,19 +70,19 @@ void TestCTCLossV3GradTiling(
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // TilingParseFunc simulate
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(COMPILE_INFO_STRING_910B.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
 
     ASSERT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -102,9 +95,8 @@ void TestCTCLossV3GradTiling(
                       .SetOpType("CTCLossV3Grad")
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&gradOutShape, &logProbsShape, &targetsShape, &inputLengthsShape, &targetLengthsShape,
-                           &lossShape, &logAlphaShape})
+                      .InputShapes({&gradOutShape, &logProbsShape, &targetsShape, &inputLengthsShape,
+                                    &targetLengthsShape, &lossShape, &logAlphaShape})
                       .OutputShapes({&gradShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -116,10 +108,9 @@ void TestCTCLossV3GradTiling(
                       .NodeInputTd(5, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, gradDataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
-                           {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
+                                  {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -140,7 +131,8 @@ void TestCTCLossV3GradTiling(
 
 TEST_F(CTCLossV3GradTiling, ctc_loss_v3_grad_tilingkey_0)
 {
-    std::cout << "run case: " << "ctc_loss_v3_grad_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "ctc_loss_v3_grad_tilingkey_0" << std::endl;
     gert::StorageShape gradOutShape = {{1}, {1}};
     gert::StorageShape logProbsShape = {{32, 1, 1024}, {32, 1, 1024}};
     gert::StorageShape targetsShape = {{1, 32}, {1, 32}};
@@ -150,7 +142,6 @@ TEST_F(CTCLossV3GradTiling, ctc_loss_v3_grad_tilingkey_0)
     gert::StorageShape logAlphaShape = {{1, 32, 65}, {1, 32, 65}};
     gert::StorageShape gradShape = {{32, 1, 1024}, {32, 1, 1024}};
     std::vector<std::pair<std::string, Ops::NN::AnyValue>> attrList = {};
-    TestCTCLossV3GradTiling(
-        gradOutShape, logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape,
-        gradShape, attrList, ge::DT_FLOAT, ge::DT_INT64, 0);
+    TestCTCLossV3GradTiling(gradOutShape, logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape,
+                            logAlphaShape, gradShape, attrList, ge::DT_FLOAT, ge::DT_INT64, 0);
 }

@@ -27,9 +27,8 @@ constexpr static uint64_t DEFAULT_NUM = 0;
 bool RmsNormDynamicMxQuantReduceEmptyTiling::IsCapable()
 {
     if (numN_ != 0 && numM_ != 0) {
-        OP_LOGI(
-            context_->GetNodeName(), "ReduceEmptyTiling not applicable: numN=%ld != 0 and numM=%ld != 0.", numN_,
-            numM_);
+        OP_LOGI(context_->GetNodeName(), "ReduceEmptyTiling not applicable: numN=%ld != 0 and numM=%ld != 0.", numN_,
+                numM_);
         return false;
     }
     OP_LOGI(context_->GetNodeName(), "ReduceEmptyTiling IsCapable: true (numN=%ld, numM=%ld).", numN_, numM_);
@@ -88,8 +87,8 @@ ge::graphStatus RmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
     td_.perCoreLastLoopElements = static_cast<uint64_t>(perCoreLastLoopElements);
 
     // Intra-core loop splitting (last core)
-    int64_t lastCorePerLoopElements =
-        Ops::Base::FloorAlign(std::min(perLoopMaxElements, lastCoreElements), ubAlignElems);
+    int64_t lastCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxElements, lastCoreElements),
+                                                            ubAlignElems);
     if (lastCorePerLoopElements < 1) {
         lastCorePerLoopElements = lastCoreElements;
     }
@@ -100,22 +99,18 @@ ge::graphStatus RmsNormDynamicMxQuantReduceEmptyTiling::DoOpTiling()
     td_.lastCorePerLoopElements = static_cast<uint64_t>(lastCorePerLoopElements);
     td_.lastCoreLastLoopElements = static_cast<uint64_t>(lastCoreLastLoopElements);
 
-    OP_LOGI(
-        context_->GetNodeName(),
-        "ReduceEmpty DoOpTiling: blockNum=%lu, perCoreElements=%lu, lastCoreElements=%lu, "
-        "perCoreLoops=%lu, perCorePerLoopElements=%lu, perCoreLastLoopElements=%lu, "
-        "lastCoreLoops=%lu, lastCorePerLoopElements=%lu, lastCoreLastLoopElements=%lu, hasOutputRstd=%lu.",
-        usedCoreNum_, td_.perCoreElements, td_.lastCoreElements, td_.perCoreLoops, td_.perCorePerLoopElements,
-        td_.perCoreLastLoopElements, td_.lastCoreLoops, td_.lastCorePerLoopElements, td_.lastCoreLastLoopElements,
-        td_.hasOutputRstd);
+    OP_LOGI(context_->GetNodeName(),
+            "ReduceEmpty DoOpTiling: blockNum=%lu, perCoreElements=%lu, lastCoreElements=%lu, "
+            "perCoreLoops=%lu, perCorePerLoopElements=%lu, perCoreLastLoopElements=%lu, "
+            "lastCoreLoops=%lu, lastCorePerLoopElements=%lu, lastCoreLastLoopElements=%lu, hasOutputRstd=%lu.",
+            usedCoreNum_, td_.perCoreElements, td_.lastCoreElements, td_.perCoreLoops, td_.perCorePerLoopElements,
+            td_.perCoreLastLoopElements, td_.lastCoreLoops, td_.lastCorePerLoopElements, td_.lastCoreLastLoopElements,
+            td_.hasOutputRstd);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormDynamicMxQuantReduceEmptyTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RmsNormDynamicMxQuantReduceEmptyTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t RmsNormDynamicMxQuantReduceEmptyTiling::GetTilingKey() const
 {
@@ -131,9 +126,8 @@ ge::graphStatus RmsNormDynamicMxQuantReduceEmptyTiling::PostTiling()
     context_->SetBlockDim(usedCoreNum_);
 
     size_t tilingDataSize = sizeof(td_);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&td_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void*>(&td_), tilingDataSize);
     OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "memcpy_s failed."), return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 
@@ -143,7 +137,7 @@ ge::graphStatus RmsNormDynamicMxQuantReduceEmptyTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(
-    RmsNormDynamicMxQuant, RmsNormDynamicMxQuantReduceEmptyTiling, TEMPLATE_REDUCE_EMPTY_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(RmsNormDynamicMxQuant, RmsNormDynamicMxQuantReduceEmptyTiling,
+                             TEMPLATE_REDUCE_EMPTY_PRIORITY);
 
 } // namespace optiling

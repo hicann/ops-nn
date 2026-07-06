@@ -25,17 +25,15 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3>
 class DynamicQuantUpdateScatterEachCoreLargeEleLargeQuant : DynamicQuantUpdateScatterBase<T1, T2, T3> {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterEachCoreLargeEleLargeQuant()
-    {}
+    __aicore__ inline DynamicQuantUpdateScatterEachCoreLargeEleLargeQuant() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
-        const DynamicQuantUpdateScatterTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales,
+                                const DynamicQuantUpdateScatterTilingData* tiling)
     {
         this->InitBase(var, varScale, indices, smoothScales, tiling);
         int64_t eachCoreQuantNums = tiling->eachCoreBsNum * tiling->quantReptNum;
-        int64_t varScaleOutAlignElemens =
-            (eachCoreQuantNums * sizeof(float) + THIRTY_TWO) / THIRTY_TWO * THIRTY_TWO / sizeof(float);
+        int64_t varScaleOutAlignElemens = (eachCoreQuantNums * sizeof(float) + THIRTY_TWO) / THIRTY_TWO * THIRTY_TWO /
+                                          sizeof(float);
         this->InitUpdateGM(updates, 0, tiling->updatesElements);
         this->InitUpdatesInQueue(tiling->innerLoopEle * sizeof(T3));
         this->InitSmoothScalesInQueue(tiling->innerLoopEle * sizeof(T3), tiling->innerLoopEle * sizeof(float));
@@ -57,8 +55,8 @@ public:
     }
 
 private:
-    __aicore__ inline void LoopProcessCalc(
-        int64_t dstOffsetBaseOrg, int64_t srcOffsetBaseOrg, const DynamicQuantUpdateScatterTilingData* tiling)
+    __aicore__ inline void LoopProcessCalc(int64_t dstOffsetBaseOrg, int64_t srcOffsetBaseOrg,
+                                           const DynamicQuantUpdateScatterTilingData* tiling)
     {
         int64_t dstOffsetBase = 0;
         int64_t srcOffsetBase = 0;
@@ -117,8 +115,8 @@ private:
         for (int64_t dim0Index = 0; dim0Index < tiling->updateDim0; dim0Index++) {
             for (int64_t dim1Index = 0; dim1Index < tiling->updateDim1; dim1Index++) {
                 for (int64_t coreBatchIndex = 0; coreBatchIndex < this->coreBatchNum; coreBatchIndex++) {
-                    dstOffsetBaseOrg =
-                        this->GetDetOffsetNeg2LargeEle(coreBatchIndex, dim0Index, dim1Index, indicesLocal, tiling);
+                    dstOffsetBaseOrg = this->GetDetOffsetNeg2LargeEle(coreBatchIndex, dim0Index, dim1Index,
+                                                                      indicesLocal, tiling);
                     srcOffsetBaseOrg = dim0Index * tiling->srcFirBsStride + dim1Index * tiling->srcBsStride +
                                        (coreBatchIndex + eachBsOffset) * tiling->sizeSrcPerHead;
                     LoopProcessCalc(dstOffsetBaseOrg, srcOffsetBaseOrg, tiling);

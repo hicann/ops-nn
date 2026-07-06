@@ -3,14 +3,14 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 /*!
-* \file index_put_with_sort_v2_tiling_arch35.cpp
-* \brief IndexPutWithSortV2 regbase tiling file
-*/
+ * \file index_put_with_sort_v2_tiling_arch35.cpp
+ * \brief IndexPutWithSortV2 regbase tiling file
+ */
 
 #include <limits>
 #include "util/platform_util.h"
@@ -18,8 +18,7 @@
 #include "index_put_with_sort_v2_simd_tiling_arch35.h"
 #include "index/index_put_with_sort_v2/op_kernel/arch35/index_put_with_sort_v2_struct.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::NN::OpTiling;
 
 constexpr int64_t INPUT_NUM = 4;
@@ -36,7 +35,7 @@ constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16777216;
 constexpr int64_t UB_BLOCK = 32;
 constexpr int64_t COL_ALING = 512;
 constexpr int32_t SPLIT_LIMIT = 256;
-constexpr int64_t MIN_UB_FOR_INDICES = 8*1024; // 8K;
+constexpr int64_t MIN_UB_FOR_INDICES = 8 * 1024; // 8K;
 
 size_t IndexPutWithSortV2SIMDTiling::FindFirstOneIdx()
 {
@@ -53,11 +52,10 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
     constexpr int64_t MAX_SAFE_MULTIPLY = std::numeric_limits<int64_t>::max();
     int64_t dtypeSize = ge::GetSizeByDataType(xDataType_);
     bool requiresNonIndexed = false;
-    if (nonIndexedDimSize_ > 0 && dtypeSize > 0 && 
-        nonIndexedDimSize_ <= MAX_SAFE_MULTIPLY / dtypeSize) {
+    if (nonIndexedDimSize_ > 0 && dtypeSize > 0 && nonIndexedDimSize_ <= MAX_SAFE_MULTIPLY / dtypeSize) {
         requiresNonIndexed = nonIndexedDimSize_ * dtypeSize > SPLIT_LIMIT;
     }
-    
+
     if (CheckIndexedSizesPattern() && requiresNonIndexed) {
         size_t firstOneIdx = FindFirstOneIdx();
 
@@ -70,9 +68,9 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
             indexedSizes_[i] = indexedSizes_[firstOneIdx + i];
             selfDims_[i] = selfDims_[firstOneIdx + i];
         }
-        
+
         selfDimNum_ = static_cast<uint32_t>(newDimNum);
-        
+
         indexedDimNum_ = 0;
         nonIndexedDimNum_ = 0;
         nonIndexedDimSize_ = 1;
@@ -91,21 +89,20 @@ bool IndexPutWithSortV2SIMDTiling::IsCapable()
                 indexedDimNum_++;
             }
         }
-        
+
         indexed0_ = indexedSizes_[0];
         isContinous_ = true;
-        
-        OP_LOGI(context_->GetNodeName(), 
+
+        OP_LOGI(context_->GetNodeName(),
                 "SIMD adapted: firstOneIdx=%zu, newDimNum=%u, indexedDimNum=%u, nonIndexedDimNum=%u, "
                 "indexed0_=%ld, isContinous_=%d",
-                firstOneIdx, selfDimNum_, indexedDimNum_, nonIndexedDimNum_,
-                indexed0_, static_cast<int>(isContinous_));
-        
+                firstOneIdx, selfDimNum_, indexedDimNum_, nonIndexedDimNum_, indexed0_, static_cast<int>(isContinous_));
+
         return true;
     }
-    
-    OP_LOGI(context_->GetNodeName(), 
-            "IndexPutWithSortV2SIMDTiling IsCapable isContinous_: %ld, nonIndexedDimSize_: %ld", 
+
+    OP_LOGI(context_->GetNodeName(),
+            "IndexPutWithSortV2SIMDTiling IsCapable isContinous_: %ld, nonIndexedDimSize_: %ld",
             static_cast<int64_t>(isContinous_), nonIndexedDimSize_);
     isContinous_ = (isContinous_ && (indexed0_ == 1));
     return isContinous_ && requiresNonIndexed;
@@ -182,19 +179,19 @@ ge::graphStatus IndexPutWithSortV2SIMDTiling::PostTiling()
 ge::graphStatus IndexPutWithSortV2SIMDTiling::GetWorkspaceSize()
 {
     workspaceSize_ = Ops::Base::CeilAlign(nonIndexedDimSize_ * xCastDtypeSize_, COL_ALING) * B2_SIZE * rowUseCoreNum_ +
-    rowUseCoreNum_ * B2_SIZE * CACHELINE_SIZE;
+                     rowUseCoreNum_ * B2_SIZE * CACHELINE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
 void IndexPutWithSortV2SIMDTiling::LogTilingResult()
 {
-    OP_LOGI(context_->GetNodeName(), "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_, nonIndexedDimSize_);
+    OP_LOGI(context_->GetNodeName(), "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_,
+            nonIndexedDimSize_);
 }
 
 void IndexPutWithSortV2SIMDTiling::SetTilingData()
 {
-    IndexPutWithSortV2SimdTilingData* tilingData =
-    context_->GetTilingData<IndexPutWithSortV2SimdTilingData>();
+    IndexPutWithSortV2SimdTilingData* tilingData = context_->GetTilingData<IndexPutWithSortV2SimdTilingData>();
     tilingData->nonIndexedDimNum = static_cast<int64_t>(nonIndexedDimNum_);
     tilingData->indexedDimSize = indexedDimSize_;
     tilingData->nonIndexedDimSize = nonIndexedDimSize_;
@@ -229,23 +226,26 @@ void IndexPutWithSortV2SIMDTiling::DoBlockTiling()
 void IndexPutWithSortV2SIMDTiling::DoUbTiling()
 {
     auto xTypeSize = ge::GetSizeByDataType(xDataType_);
-    int64_t availableUb = Ops::Base::FloorAlign(maxUbSize_ / B2_SIZE, static_cast<uint64_t>(UB_BLOCK));  // double buff
-    inOutUb_ = Ops::Base::CeilAlign(colBlockFactor_ * xTypeSize, UB_BLOCK);   // 一行输入/输出
+    int64_t availableUb = Ops::Base::FloorAlign(maxUbSize_ / B2_SIZE, static_cast<uint64_t>(UB_BLOCK)); // double buff
+    inOutUb_ = Ops::Base::CeilAlign(colBlockFactor_ * xTypeSize, UB_BLOCK); // 一行输入/输出
     xCastDtypeSize_ = xTypeSize;
     int64_t resUb = availableUb - (inOutUb_ * B2_SIZE); // input + output
     if ((xDataType_ == ge::DT_FLOAT16 || xDataType_ == ge::DT_BF16) && accumulate_) {
         isCast_ = true;
         xCastDtypeSize_ = B4_SIZE;
         int64_t castUb = inOutUb_ * (B4_SIZE / xTypeSize);
-        resUb = availableUb - (inOutUb_ + castUb * B2_SIZE); // input + output + cast ， 
+        resUb = availableUb - (inOutUb_ + castUb * B2_SIZE); // input + output + cast ，
     }
-    
+
     if (resUb >= MIN_UB_FOR_INDICES) {
-        indicesFactor_ = Ops::Base::FloorAlign(resUb / static_cast<int64_t>(B2_SIZE), UB_BLOCK) / indicesTypeSize_;     // indices + pos    100   98
+        indicesFactor_ = Ops::Base::FloorAlign(resUb / static_cast<int64_t>(B2_SIZE), UB_BLOCK) /
+                         indicesTypeSize_; // indices + pos    100   98
         ubFactor_ = colBlockFactor_;
     } else {
         indicesFactor_ = MIN_UB_FOR_INDICES / B2_SIZE / indicesTypeSize_;
-        ubFactor_ = Ops::Base::FloorAlign((availableUb - MIN_UB_FOR_INDICES) / static_cast<int64_t>(B2_SIZE), UB_BLOCK) / xCastDtypeSize_; 
+        ubFactor_ = Ops::Base::FloorAlign((availableUb - MIN_UB_FOR_INDICES) / static_cast<int64_t>(B2_SIZE),
+                                          UB_BLOCK) /
+                    xCastDtypeSize_;
     }
 }
 
@@ -261,4 +261,4 @@ ge::graphStatus IndexPutWithSortV2SIMDTiling::DoOpTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(IndexPutWithSortV2, IndexPutWithSortV2SIMDTiling, 10);
 
-}  // namespace optiling
+} // namespace optiling

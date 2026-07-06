@@ -42,8 +42,8 @@ static const std::initializer_list<DataType> ASCEND910B_SCALAR_DTYPE_SUPPORT_LIS
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_DOUBLE, DataType::DT_INT32, DataType::DT_INT64,
     DataType::DT_INT8,  DataType::DT_UINT8,   DataType::DT_BOOL,   DataType::DT_INT16, op::DataType::DT_BF16};
 
-static inline bool CheckNotNull(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* negativeSlope, const aclTensor* out)
+static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* negativeSlope,
+                                const aclTensor* out)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -92,9 +92,8 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* self
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return false);
 
     if (broadcastShape != out->GetViewShape()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(out->GetViewShape()).GetString());
         return false;
     }
     return true;
@@ -103,12 +102,11 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* self
 static inline bool CheckIsResult(const aclScalar* negativeSlope, bool selfIsResult)
 {
     if (selfIsResult && negativeSlope->ToDouble() < 0.0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "In-place leakyRelu backward calculation is triggered with a negativeSlope which is not supported, "
-            "while negativeSlope: [%e], selfIsResult: [%d]. This is caused by calling in-place forward function "
-            "with a negative slope, please call out-of-place version instead.",
-            negativeSlope->ToDouble(), selfIsResult);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "In-place leakyRelu backward calculation is triggered with a negativeSlope which is not supported, "
+                "while negativeSlope: [%e], selfIsResult: [%d]. This is caused by calling in-place forward function "
+                "with a negative slope, please call out-of-place version instead.",
+                negativeSlope->ToDouble(), selfIsResult);
         return false;
     }
     return true;
@@ -119,9 +117,9 @@ static inline bool CheckPromoteType(const DataType gradOutputDtype, const DataTy
     // 检查self和other能否做数据类型推导
     DataType promoteType = PromoteType(gradOutputDtype, selfDtype);
     if (promoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Expected gradOutputDtype %s and selfDtype %s can promote dtype but check fail.",
-            ToString(gradOutputDtype).GetString(), ToString(selfDtype).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected gradOutputDtype %s and selfDtype %s can promote dtype but check fail.",
+                ToString(gradOutputDtype).GetString(), ToString(selfDtype).GetString());
         return false;
     }
 
@@ -130,9 +128,8 @@ static inline bool CheckPromoteType(const DataType gradOutputDtype, const DataTy
     return true;
 }
 
-static inline aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* negativeSlope, bool selfIsResult,
-    const aclTensor* out)
+static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self,
+                                      const aclScalar* negativeSlope, bool selfIsResult, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, negativeSlope, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -147,15 +144,15 @@ static inline aclnnStatus CheckParams(
     CHECK_RET(CheckIsResult(negativeSlope, selfIsResult), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查gradOutput和self能否做数据类型推导以及推导的数据类型能否转换为输出数据类型
-    CHECK_RET(
-        CheckPromoteType(gradOutput->GetDataType(), self->GetDataType(), out->GetDataType()), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckPromoteType(gradOutput->GetDataType(), self->GetDataType(), out->GetDataType()),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLeakyReluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* negativeSlope, bool selfIsResult,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnLeakyReluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                   const aclScalar* negativeSlope, bool selfIsResult, aclTensor* out,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnLeakyReluBackward, DFX_IN(gradOutput, self, negativeSlope, selfIsResult), DFX_OUT(out));
 

@@ -38,15 +38,9 @@ struct ClippedSwigluCompileInfo {};
 
 class ClippedSwigluArch35TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ClippedSwigluArch35TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ClippedSwigluArch35TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ClippedSwigluArch35TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ClippedSwigluArch35TilingTest TearDown" << std::endl; }
 };
 
 static const string kCompileInfoStr = R"({
@@ -59,8 +53,7 @@ static const string kCompileInfoStr = R"({
     "CORE_NUM": 64, "socVersion": "Ascend950"}
 })";
 
-static const map<string, string> kSocVersion = {
-    {"NpuArch", "3510"}, {"Short_SoC_version", "ASCEND950"}};
+static const map<string, string> kSocVersion = {{"NpuArch", "3510"}, {"Short_SoC_version", "ASCEND950"}};
 
 struct Arch35TilingTestParam {
     gert::StorageShape xShape;
@@ -90,27 +83,22 @@ static void RunArch35TilingTest(const Arch35TilingTestParam& tc)
     string op_type("ClippedSwiglu");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func =
-        gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     auto kernel_holder = gert::KernelRunContextFaker()
                              .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(kCompileInfoStr.c_str()),
-                                      reinterpret_cast<void*>(&platform_info)})
+                             .Inputs(
+                                 {const_cast<char*>(kCompileInfoStr.c_str()), reinterpret_cast<void*>(&platform_info)})
                              .Outputs({&compile_info})
                              .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", kSocVersion);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType(
-        "AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", kSocVersion);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -143,26 +131,20 @@ static void RunArch35TilingTest(const Arch35TilingTestParam& tc)
     ASSERT_NE(tiling_context, nullptr);
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), tc.expectedStatus);
 }
 
 // ========== Normal cases: half (interleaved=false), ungrouped ==========
 
-TEST_F(ClippedSwigluArch35TilingTest, arch35_fp16_half_ungrouped)
-{
-    RunArch35TilingTest({{5760}, nullptr, {2880}});
-}
+TEST_F(ClippedSwigluArch35TilingTest, arch35_fp16_half_ungrouped) { RunArch35TilingTest({{5760}, nullptr, {2880}}); }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_fp32_half_ungrouped)
 {
-    RunArch35TilingTest({{3200, 5760}, nullptr, {1600, 5760},
-                         ge::DT_FLOAT, ge::DT_INT64, 0});
+    RunArch35TilingTest({{3200, 5760}, nullptr, {1600, 5760}, ge::DT_FLOAT, ge::DT_INT64, 0});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_bf16_half_ungrouped)
@@ -179,8 +161,7 @@ TEST_F(ClippedSwigluArch35TilingTest, arch35_fp16_interleaved_ungrouped)
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_fp32_interleaved_ungrouped)
 {
-    RunArch35TilingTest({{3200, 5760}, nullptr, {1600, 5760},
-                         ge::DT_FLOAT, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
+    RunArch35TilingTest({{3200, 5760}, nullptr, {1600, 5760}, ge::DT_FLOAT, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_bf16_interleaved_ungrouped)
@@ -213,22 +194,19 @@ TEST_F(ClippedSwigluArch35TilingTest, arch35_bf16_half_grouped)
 TEST_F(ClippedSwigluArch35TilingTest, arch35_fp16_interleaved_grouped)
 {
     gert::StorageShape gs = {{200}};
-    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760},
-                         ge::DT_FLOAT16, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
+    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760}, ge::DT_FLOAT16, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_fp32_interleaved_grouped)
 {
     gert::StorageShape gs = {{200}};
-    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760},
-                         ge::DT_FLOAT, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
+    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760}, ge::DT_FLOAT, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_bf16_interleaved_grouped)
 {
     gert::StorageShape gs = {{200}};
-    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760},
-                         ge::DT_BF16, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
+    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760}, ge::DT_BF16, ge::DT_INT64, 0, 1.702f, 7.0f, 1.0f, true});
 }
 
 // ========== Normal cases: custom attrs ==========
@@ -266,62 +244,116 @@ TEST_F(ClippedSwigluArch35TilingTest, arch35_x_is_none_wrong)
 {
     // To test x shape is nullptr, we set xShape with 0 dims and expect failure
     // when xDims_ <= 0 check triggers
-    RunArch35TilingTest({{}, nullptr, {}, ge::DT_FLOAT16, ge::DT_INT64, -1, 1.702f, 7.0f, 1.0f,
-                         false, ge::GRAPH_FAILED});
+    RunArch35TilingTest(
+        {{}, nullptr, {}, ge::DT_FLOAT16, ge::DT_INT64, -1, 1.702f, 7.0f, 1.0f, false, ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_x_dim_div2_wrong)
 {
-    RunArch35TilingTest({{3200, 5761}, nullptr, {3200, 2880}, ge::DT_FLOAT16, ge::DT_INT64, 0, 1.702f,
-                         7.0f, 1.0f, false, ge::GRAPH_FAILED});
+    RunArch35TilingTest({{3200, 5761},
+                         nullptr,
+                         {3200, 2880},
+                         ge::DT_FLOAT16,
+                         ge::DT_INT64,
+                         0,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_x_dtype_wrong)
 {
-    RunArch35TilingTest({{5760}, nullptr, {2880}, ge::DT_INT8, ge::DT_INT64, -1, 1.702f, 7.0f, 1.0f,
-                         false, ge::GRAPH_FAILED});
+    RunArch35TilingTest(
+        {{5760}, nullptr, {2880}, ge::DT_INT8, ge::DT_INT64, -1, 1.702f, 7.0f, 1.0f, false, ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_limit_zero_wrong)
 {
-    RunArch35TilingTest({{5760}, nullptr, {2880}, ge::DT_FLOAT16, ge::DT_INT64, -1, 1.702f, 0.0f, 1.0f,
-                         false, ge::GRAPH_FAILED});
+    RunArch35TilingTest(
+        {{5760}, nullptr, {2880}, ge::DT_FLOAT16, ge::DT_INT64, -1, 1.702f, 0.0f, 1.0f, false, ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_limit_negative_wrong)
 {
-    RunArch35TilingTest({{5760}, nullptr, {2880}, ge::DT_FLOAT16, ge::DT_INT64, -1, 1.702f, -1.0f, 1.0f,
-                         false, ge::GRAPH_FAILED});
+    RunArch35TilingTest(
+        {{5760}, nullptr, {2880}, ge::DT_FLOAT16, ge::DT_INT64, -1, 1.702f, -1.0f, 1.0f, false, ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_groupindex_dtype_wrong)
 {
     gert::StorageShape gs = {{200}};
-    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760}, ge::DT_FLOAT16, ge::DT_FLOAT, 0, 1.702f,
-                         7.0f, 1.0f, false, ge::GRAPH_FAILED});
+    RunArch35TilingTest({{3200, 5760},
+                         &gs,
+                         {1600, 5760},
+                         ge::DT_FLOAT16,
+                         ge::DT_FLOAT,
+                         0,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_groupindex_dims_wrong)
 {
     gert::StorageShape gs = {{200, 2}};
-    RunArch35TilingTest({{3200, 5760}, &gs, {1600, 5760}, ge::DT_FLOAT16, ge::DT_INT64, 0, 1.702f,
-                         7.0f, 1.0f, false, ge::GRAPH_FAILED});
+    RunArch35TilingTest({{3200, 5760},
+                         &gs,
+                         {1600, 5760},
+                         ge::DT_FLOAT16,
+                         ge::DT_INT64,
+                         0,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_y_dims_diff_wrong)
 {
-    RunArch35TilingTest({{3200, 5760}, nullptr, {3200, 2880, 2}, ge::DT_FLOAT16, ge::DT_INT64, 0,
-                         1.702f, 7.0f, 1.0f, false, ge::GRAPH_FAILED});
+    RunArch35TilingTest({{3200, 5760},
+                         nullptr,
+                         {3200, 2880, 2},
+                         ge::DT_FLOAT16,
+                         ge::DT_INT64,
+                         0,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_y_dim_equal_x_dim_div2_wrong)
 {
-    RunArch35TilingTest({{3200, 5760}, nullptr, {3200, 2800}, ge::DT_FLOAT16, ge::DT_INT64, 0, 1.702f,
-                         7.0f, 1.0f, false, ge::GRAPH_FAILED});
+    RunArch35TilingTest({{3200, 5760},
+                         nullptr,
+                         {3200, 2800},
+                         ge::DT_FLOAT16,
+                         ge::DT_INT64,
+                         0,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
 }
 
 TEST_F(ClippedSwigluArch35TilingTest, arch35_dim_value_wrong)
 {
-    RunArch35TilingTest({{3200, 5760}, nullptr, {1600, 5760}, ge::DT_FLOAT16, ge::DT_INT64, 10,
-                         1.702f, 7.0f, 1.0f, false, ge::GRAPH_FAILED});
+    RunArch35TilingTest({{3200, 5760},
+                         nullptr,
+                         {1600, 5760},
+                         ge::DT_FLOAT16,
+                         ge::DT_INT64,
+                         10,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
 }

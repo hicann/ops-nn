@@ -27,15 +27,9 @@ using namespace ge;
 
 class LeakyReluGradTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LeakyReluGradTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LeakyReluGradTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LeakyReluGradTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LeakyReluGradTilingTest TearDown" << std::endl; }
 };
 
 TEST_F(LeakyReluGradTilingTest, test_leaky_relu_grad_tiling_fp16_001)

@@ -24,20 +24,16 @@
 #include "arch35/sparse_apply_ftrl_v2_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_apply_ftrl_v2(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR linear,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR l2_shrinkage, GM_ADDR lr_power,
-    GM_ADDR var_out, GM_ADDR accum_out, GM_ADDR linear_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_apply_ftrl_v2(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad,
+                                                GM_ADDR indices, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                                                GM_ADDR l2_shrinkage, GM_ADDR lr_power, GM_ADDR var_out,
+                                                GM_ADDR accum_out, GM_ADDR linear_out, GM_ADDR workspace,
+                                                GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseApplyFtrlV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseApplyFtrlV2TilingData, tilingData, tiling);
 
-    NsSparseApplyFtrlV2::Process<DTYPE_VAR, DTYPE_INDICES>(
-        var, accum, linear, grad, indices,
-        lr, l1, l2, l2_shrinkage, lr_power,
-        var_out, accum_out, linear_out,
-        workspace, &tilingData);
+    NsSparseApplyFtrlV2::Process<DTYPE_VAR, DTYPE_INDICES>(var, accum, linear, grad, indices, lr, l1, l2, l2_shrinkage,
+                                                           lr_power, var_out, accum_out, linear_out, workspace,
+                                                           &tilingData);
 }

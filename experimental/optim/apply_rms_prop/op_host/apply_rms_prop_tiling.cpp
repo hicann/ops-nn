@@ -32,21 +32,21 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
-constexpr size_t INPUT_IDX_VAR  = 0;
-constexpr size_t INPUT_IDX_MS   = 1;
-constexpr size_t INPUT_IDX_MOM  = 2;
+constexpr size_t INPUT_IDX_VAR = 0;
+constexpr size_t INPUT_IDX_MS = 1;
+constexpr size_t INPUT_IDX_MOM = 2;
 constexpr size_t INPUT_IDX_GRAD = 3;
 
-constexpr size_t ATTR_IDX_LR       = 0;
-constexpr size_t ATTR_IDX_RHO      = 1;
+constexpr size_t ATTR_IDX_LR = 0;
+constexpr size_t ATTR_IDX_RHO = 1;
 constexpr size_t ATTR_IDX_MOMENTUM = 2;
-constexpr size_t ATTR_IDX_EPSILON  = 3;
+constexpr size_t ATTR_IDX_EPSILON = 3;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 
@@ -59,7 +59,8 @@ struct PlatformResource {
 static int64_t EstimateBytesPerElem(ge::DataType dtype, bool isCastBranch)
 {
     int64_t typeSize = 4;
-    if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16) typeSize = 2;
+    if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16)
+        typeSize = 2;
     if (isCastBranch) {
         return 7 * typeSize + 8 * 4;
     }
@@ -72,11 +73,9 @@ static ge::graphStatus FetchPlatform(gert::TilingContext* context, PlatformResou
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     res.coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(res.coreNum == 0, OP_LOGE(context, "ApplyRmsProp: coreNum is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res.coreNum == 0, OP_LOGE(context, "ApplyRmsProp: coreNum is 0"), return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, res.ubSize);
-    OP_CHECK_IF(res.ubSize == 0, OP_LOGE(context, "ApplyRmsProp: ubSize is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res.ubSize == 0, OP_LOGE(context, "ApplyRmsProp: ubSize is 0"), return ge::GRAPH_FAILED);
     res.ubBlockSize = GetUbBlockSize(context);
     return ge::GRAPH_SUCCESS;
 }
@@ -85,46 +84,39 @@ static ge::graphStatus FetchAttrs(gert::TilingContext* context, ApplyRmsPropTili
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const float* lrPtr  = attrs->GetFloat(ATTR_IDX_LR);
+    const float* lrPtr = attrs->GetFloat(ATTR_IDX_LR);
     const float* rhoPtr = attrs->GetFloat(ATTR_IDX_RHO);
     const float* momPtr = attrs->GetFloat(ATTR_IDX_MOMENTUM);
     const float* epsPtr = attrs->GetFloat(ATTR_IDX_EPSILON);
     OP_CHECK_IF(lrPtr == nullptr || rhoPtr == nullptr || momPtr == nullptr || epsPtr == nullptr,
-                OP_LOGE(context, "ApplyRmsProp: attr ptr nullptr"),
-                return ge::GRAPH_FAILED);
-    td->lr    = *lrPtr;
+                OP_LOGE(context, "ApplyRmsProp: attr ptr nullptr"), return ge::GRAPH_FAILED);
+    td->lr = *lrPtr;
     td->rho1m = 1.0f - (*rhoPtr);
-    td->mom   = *momPtr;
-    td->eps   = *epsPtr;
+    td->mom = *momPtr;
+    td->eps = *epsPtr;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeSplit(gert::TilingContext* context, ge::DataType dtype,
-                                    int64_t totalLength, const PlatformResource& res,
-                                    ApplyRmsPropTilingData* td)
+static ge::graphStatus ComputeSplit(gert::TilingContext* context, ge::DataType dtype, int64_t totalLength,
+                                    const PlatformResource& res, ApplyRmsPropTilingData* td)
 {
     int64_t typeSize = (dtype == ge::DT_FLOAT) ? 4 : 2;
-    OP_CHECK_IF(typeSize == 0 || res.ubBlockSize == 0,
-                OP_LOGE(context, "ApplyRmsProp: invalid typeSize/ubBlockSize"),
+    OP_CHECK_IF(typeSize == 0 || res.ubBlockSize == 0, OP_LOGE(context, "ApplyRmsProp: invalid typeSize/ubBlockSize"),
                 return ge::GRAPH_FAILED);
     int64_t elemPerBlock = res.ubBlockSize / typeSize;
-    OP_CHECK_IF(elemPerBlock == 0,
-                OP_LOGE(context, "ApplyRmsProp: elemPerBlock is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(elemPerBlock == 0, OP_LOGE(context, "ApplyRmsProp: elemPerBlock is 0"), return ge::GRAPH_FAILED);
 
     int64_t blockLength = CeilAlign(CeilDiv(totalLength, res.coreNum), elemPerBlock);
-    OP_CHECK_IF(blockLength == 0,
-                OP_LOGE(context, "ApplyRmsProp: blockLength is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(blockLength == 0, OP_LOGE(context, "ApplyRmsProp: blockLength is 0"), return ge::GRAPH_FAILED);
     int64_t usedCoreNum = CeilDiv(totalLength, blockLength);
     int64_t lastBlockLength = totalLength - blockLength * (usedCoreNum - 1);
-    if (lastBlockLength <= 0) lastBlockLength = blockLength;
+    if (lastBlockLength <= 0)
+        lastBlockLength = blockLength;
 
     bool isCastBranch = (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16);
     int64_t bytesPerElem = EstimateBytesPerElem(dtype, isCastBranch);
     if (bytesPerElem <= 0) {
-        OP_LOGE(context, "ApplyRmsProp: bytesPerElem=%ld invalid (divide-by-zero guard)",
-                (long)bytesPerElem);
+        OP_LOGE(context, "ApplyRmsProp: bytesPerElem=%ld invalid (divide-by-zero guard)", (long)bytesPerElem);
         return ge::GRAPH_FAILED;
     }
     int64_t safeBytesPerElem = std::max<int64_t>(bytesPerElem, 1);
@@ -135,26 +127,30 @@ static ge::graphStatus ComputeSplit(gert::TilingContext* context, ge::DataType d
                 return ge::GRAPH_FAILED);
 
     int64_t tileLength = maxTileElems;
-    if (tileLength > blockLength) tileLength = CeilAlign(blockLength, elemPerBlock);
-    if (tileLength > maxTileElems) tileLength = maxTileElems;
+    if (tileLength > blockLength)
+        tileLength = CeilAlign(blockLength, elemPerBlock);
+    if (tileLength > maxTileElems)
+        tileLength = maxTileElems;
 
     int64_t tileNum = CeilDiv(blockLength, tileLength);
     int64_t lastTileLength = blockLength - tileLength * (tileNum - 1);
-    if (lastTileLength <= 0) lastTileLength = tileLength;
+    if (lastTileLength <= 0)
+        lastTileLength = tileLength;
 
     int64_t lastBlockTileNum = CeilDiv(lastBlockLength, tileLength);
     int64_t lastBlockLastTileLength = lastBlockLength - tileLength * (lastBlockTileNum - 1);
-    if (lastBlockLastTileLength <= 0) lastBlockLastTileLength = tileLength;
+    if (lastBlockLastTileLength <= 0)
+        lastBlockLastTileLength = tileLength;
 
-    td->totalLength             = totalLength;
-    td->blockLength             = blockLength;
-    td->lastBlockLength         = lastBlockLength;
-    td->tileLength              = tileLength;
-    td->tileNum                 = tileNum;
-    td->lastTileLength          = lastTileLength;
-    td->lastBlockTileNum        = lastBlockTileNum;
+    td->totalLength = totalLength;
+    td->blockLength = blockLength;
+    td->lastBlockLength = lastBlockLength;
+    td->tileLength = tileLength;
+    td->tileNum = tileNum;
+    td->lastTileLength = lastTileLength;
+    td->lastBlockTileNum = lastBlockTileNum;
     td->lastBlockLastTileLength = lastBlockLastTileLength;
-    td->usedCoreNum             = static_cast<int32_t>(usedCoreNum);
+    td->usedCoreNum = static_cast<int32_t>(usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -172,14 +168,13 @@ static ge::graphStatus FinalizeTiling(gert::TilingContext* context, ge::DataType
 static ge::graphStatus ApplyRmsPropTilingFunc(gert::TilingContext* context)
 {
     PlatformResource res;
-    if (FetchPlatform(context, res) != ge::GRAPH_SUCCESS) return ge::GRAPH_FAILED;
+    if (FetchPlatform(context, res) != ge::GRAPH_SUCCESS)
+        return ge::GRAPH_FAILED;
 
     auto* td = context->GetTilingData<ApplyRmsPropTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, td);
-    OP_CHECK_IF(memset_s(td, sizeof(ApplyRmsPropTilingData), 0,
-                         sizeof(ApplyRmsPropTilingData)) != EOK,
-                OP_LOGE(context, "ApplyRmsProp: memset tiling failed"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(td, sizeof(ApplyRmsPropTilingData), 0, sizeof(ApplyRmsPropTilingData)) != EOK,
+                OP_LOGE(context, "ApplyRmsProp: memset tiling failed"), return ge::GRAPH_FAILED);
 
     auto varDesc = context->GetInputDesc(INPUT_IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
@@ -192,24 +187,24 @@ static ge::graphStatus ApplyRmsPropTilingFunc(gert::TilingContext* context)
     auto varShape = context->GetInputShape(INPUT_IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
     int64_t totalLength = varShape->GetStorageShape().GetShapeSize();
-    OP_CHECK_IF(totalLength < 0,
-                OP_LOGE(context, "ApplyRmsProp: totalLength=%ld invalid", (long)totalLength),
+    OP_CHECK_IF(totalLength < 0, OP_LOGE(context, "ApplyRmsProp: totalLength=%ld invalid", (long)totalLength),
                 return ge::GRAPH_FAILED);
     if (totalLength == 0) {
         OP_LOGI(context, "ApplyRmsProp: empty tensor, skip computation");
         return FinalizeTiling(context, dtype, 1U);
     }
 
-    if (FetchAttrs(context, td) != ge::GRAPH_SUCCESS) return ge::GRAPH_FAILED;
-    if (ComputeSplit(context, dtype, totalLength, res, td) != ge::GRAPH_SUCCESS) return ge::GRAPH_FAILED;
+    if (FetchAttrs(context, td) != ge::GRAPH_SUCCESS)
+        return ge::GRAPH_FAILED;
+    if (ComputeSplit(context, dtype, totalLength, res, td) != ge::GRAPH_SUCCESS)
+        return ge::GRAPH_FAILED;
 
     OP_LOGI(context,
-        "ApplyRmsProp Tiling: dtype=%d total=%ld block=%ld lastBlock=%ld tile=%ld tileNum=%ld "
-        "lastTile=%ld lastBlockTileNum=%ld lastBlockLastTile=%ld cores=%d lr=%f rho1m=%f mom=%f eps=%f",
-        (int)dtype, (long)td->totalLength, (long)td->blockLength, (long)td->lastBlockLength,
-        (long)td->tileLength, (long)td->tileNum, (long)td->lastTileLength,
-        (long)td->lastBlockTileNum, (long)td->lastBlockLastTileLength,
-        (int)td->usedCoreNum, td->lr, td->rho1m, td->mom, td->eps);
+            "ApplyRmsProp Tiling: dtype=%d total=%ld block=%ld lastBlock=%ld tile=%ld tileNum=%ld "
+            "lastTile=%ld lastBlockTileNum=%ld lastBlockLastTile=%ld cores=%d lr=%f rho1m=%f mom=%f eps=%f",
+            (int)dtype, (long)td->totalLength, (long)td->blockLength, (long)td->lastBlockLength, (long)td->tileLength,
+            (long)td->tileNum, (long)td->lastTileLength, (long)td->lastBlockTileNum, (long)td->lastBlockLastTileLength,
+            (int)td->usedCoreNum, td->lr, td->rho1m, td->mom, td->eps);
 
     return FinalizeTiling(context, dtype, static_cast<uint32_t>(td->usedCoreNum));
 }
@@ -225,4 +220,4 @@ IMPL_OP_OPTILING(ApplyRmsProp)
     .Tiling(ApplyRmsPropTilingFunc)
     .TilingParse<ApplyRmsPropCompileInfo>(TilingParseForApplyRmsProp);
 
-}  // namespace optiling
+} // namespace optiling

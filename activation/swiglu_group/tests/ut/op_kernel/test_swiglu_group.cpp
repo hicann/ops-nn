@@ -13,21 +13,15 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 
-extern "C" __global__ __aicore__ void swiglu_group(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void swiglu_group(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y,
+                                                   GM_ADDR workspace, GM_ADDR tiling);
 
 namespace {
 class SwigluGroupKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluGroupKernelTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluGroupKernelTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluGroupKernelTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluGroupKernelTest TearDown" << std::endl; }
 };
 
 void FillCommonTiling(SwigluGroupTilingData* tilingData, int64_t bs, int64_t d, uint32_t coreNum, float clampLimit)
@@ -126,18 +120,9 @@ void RunKernelGroupLarge(int64_t g)
     AscendC::GmFree(tiling);
 }
 
-TEST_F(SwigluGroupKernelTest, block_fp16)
-{
-    RunKernelBasic(-1.0f);
-}
+TEST_F(SwigluGroupKernelTest, block_fp16) { RunKernelBasic(-1.0f); }
 
-TEST_F(SwigluGroupKernelTest, block_fp16_clamp)
-{
-    RunKernelBasic(1.0f);
-}
+TEST_F(SwigluGroupKernelTest, block_fp16_clamp) { RunKernelBasic(1.0f); }
 
-TEST_F(SwigluGroupKernelTest, group_index_large)
-{
-    RunKernelGroupLarge(97);
-}
+TEST_F(SwigluGroupKernelTest, group_index_large) { RunKernelGroupLarge(97); }
 } // namespace

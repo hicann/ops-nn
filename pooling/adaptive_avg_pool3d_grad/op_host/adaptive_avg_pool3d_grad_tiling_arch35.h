@@ -46,13 +46,11 @@ struct AdaptiveAvgPool3dGradInputInfo {
 
 class AdaptiveAvgPool3dGradTilingBaseV35 : public TilingBaseClass {
 public:
-    explicit AdaptiveAvgPool3dGradTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptiveAvgPool3dGradTilingBaseV35() override
-    {}
+    explicit AdaptiveAvgPool3dGradTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptiveAvgPool3dGradTilingBaseV35() override {}
 
     const std::string nodeName = "AdaptiveAvgPool3dGrad";
-    //71TilingData
+    // 71TilingData
     AdaptiveAvgPool3dGradTilingDataV35* tilingData_ = context_->GetTilingData<AdaptiveAvgPool3dGradTilingDataV35>();
     AdaptiveAvgPool3dGradInputInfo inputData;
     int64_t coreNum_{0};
@@ -78,11 +76,9 @@ protected:
 
 class AdaptiveAvgPool3dGradTilingSimt : public AdaptiveAvgPool3dGradTilingBaseV35 {
 public:
-    explicit AdaptiveAvgPool3dGradTilingSimt(gert::TilingContext* context)
-        : AdaptiveAvgPool3dGradTilingBaseV35(context)
+    explicit AdaptiveAvgPool3dGradTilingSimt(gert::TilingContext* context) : AdaptiveAvgPool3dGradTilingBaseV35(context)
     {}
-    ~AdaptiveAvgPool3dGradTilingSimt() override
-    {}
+    ~AdaptiveAvgPool3dGradTilingSimt() override {}
 
 protected:
     bool IsCapable() override;
@@ -92,6 +88,6 @@ protected:
     bool NeedInt64(int64_t isize, int64_t osize) const;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

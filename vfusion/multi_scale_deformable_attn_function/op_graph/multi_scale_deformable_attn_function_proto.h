@@ -19,21 +19,21 @@
 
 namespace ge {
 /**
-* @brief multi-scale deformable attention.
-*
-* @par Inputs:
-* @li value: A Tensor. Must be one of the following types: float16, float32.
-* @li value_spatial_shapes: A Tensor. Must be one of the following types: int32, int64.
-* @li value_level_start_index: A Tensor. Must be one of the following types: int32, int64.
-* @li sampling_locations: A Tensor. Must be one of the following types: float16, float32.
-* @li attention_weights: A Tensor. Must be one of the following types: float16, float32.
-*
-* @par Outputs:
-* output: A Tensor. Must be one of the following types: float16, float32.
-*
-* @par Restrictions:
-* Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-*/
+ * @brief multi-scale deformable attention.
+ *
+ * @par Inputs:
+ * @li value: A Tensor. Must be one of the following types: float16, float32.
+ * @li value_spatial_shapes: A Tensor. Must be one of the following types: int32, int64.
+ * @li value_level_start_index: A Tensor. Must be one of the following types: int32, int64.
+ * @li sampling_locations: A Tensor. Must be one of the following types: float16, float32.
+ * @li attention_weights: A Tensor. Must be one of the following types: float16, float32.
+ *
+ * @par Outputs:
+ * output: A Tensor. Must be one of the following types: float16, float32.
+ *
+ * @par Restrictions:
+ * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+ */
 REG_OP(MultiScaleDeformableAttnFunction)
     .INPUT(value, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(value_spatial_shapes, TensorType({DT_UINT64, DT_INT32}))

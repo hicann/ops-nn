@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file scatter_nd_common_simd_sort.h
  * \brief scatter_nd_common_simd_sort
@@ -23,8 +23,7 @@ namespace ScatterNdCommon {
 using namespace AscendC;
 
 template <typename T, typename U, typename CAST_T, typename OFFSET_T, uint32_t castType, uint8_t Mode>
-class ScatterNdCommonSimdSort : public ScatterNdCommonBase<T, U, CAST_T, OFFSET_T, castType, Mode>
-{
+class ScatterNdCommonSimdSort : public ScatterNdCommonBase<T, U, CAST_T, OFFSET_T, castType, Mode> {
 public:
     __aicore__ inline ScatterNdCommonSimdSort(const ScatterNdCommonSimdSortTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
@@ -48,8 +47,9 @@ private:
 };
 
 template <typename T, typename U, typename CAST_T, typename OFFSET_T, uint32_t castType, uint8_t Mode>
-__aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType, Mode>::Init(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y)
+__aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType, Mode>::Init(GM_ADDR var,
+                                                                                             GM_ADDR indices,
+                                                                                             GM_ADDR updates, GM_ADDR y)
 {
     this->eachCoreAfterAxisCount_ = tilingData_.eachCoreAfterAxisCount;
     this->indexRankSize_ = tilingData_.indexRankSize;
@@ -59,9 +59,8 @@ __aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType,
     this->afterAxisFactor_ = tilingData_.afterAxisFactor;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y, tilingData_.singleCol);
 
-    curCoreIndexCount_ =
-        (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
-                                                                tilingData_.tailCoreIndexCount);
+    curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
+                                                                                 tilingData_.tailCoreIndexCount);
 }
 
 template <typename T, typename U, typename CAST_T, typename OFFSET_T, uint32_t castType, uint8_t Mode>
@@ -73,11 +72,11 @@ __aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType,
     int64_t rowMainDataLen = tilingData_.indicesFactor;
     int64_t rowTailDataLen = tilingData_.indiceTailNum;
     int64_t rowLoopNum = tilingData_.indicesLoopSize;
-    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize
-                                                                              : tilingData_.updateLoopSize;
+    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize :
+                                                                                tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
-    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateTailNum
-                                                                                  : tilingData_.updateTailNum;
+    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateTailNum :
+                                                                                    tilingData_.updateTailNum;
     for (int64_t rowIdx = 0; rowIdx < rowLoopNum; rowIdx++) {
         int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
         this->CopyIndiceInSplitAfter(rowIdx, rowDataLen);
@@ -161,7 +160,7 @@ __aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType,
                 SetFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
                 WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
                 this->CopyOutSplitIndices(outOfstLocal, updatesLocal, rowDataLen, colDataLen, colIdx);
-                this->dataQueue_.template FreeTensor(updatesLocal); 
+                this->dataQueue_.template FreeTensor(updatesLocal);
             }
         }
     }

@@ -28,10 +28,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -96,17 +96,15 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShapeDesc);
     auto gradShape = EnsureNotScalar(gradShapeDesc->GetStorageShape());
 
-    OP_CHECK_IF(
-        varShape.GetShapeSize() != mShape.GetShapeSize() ||
-            varShape.GetShapeSize() != vShape.GetShapeSize() ||
-            varShape.GetShapeSize() != vhatShape.GetShapeSize() ||
-            varShape.GetShapeSize() != gradShape.GetShapeSize(),
-        OP_LOGE(context,
-                "ApplyAdamWithAmsgradV2: var/m/v/vhat/grad shape size mismatch: "
-                "var=%ld, m=%ld, v=%ld, vhat=%ld, grad=%ld",
-                varShape.GetShapeSize(), mShape.GetShapeSize(), vShape.GetShapeSize(),
-                vhatShape.GetShapeSize(), gradShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varShape.GetShapeSize() != mShape.GetShapeSize() || varShape.GetShapeSize() != vShape.GetShapeSize() ||
+                    varShape.GetShapeSize() != vhatShape.GetShapeSize() ||
+                    varShape.GetShapeSize() != gradShape.GetShapeSize(),
+                OP_LOGE(context,
+                        "ApplyAdamWithAmsgradV2: var/m/v/vhat/grad shape size mismatch: "
+                        "var=%ld, m=%ld, v=%ld, vhat=%ld, grad=%ld",
+                        varShape.GetShapeSize(), mShape.GetShapeSize(), vShape.GetShapeSize(), vhatShape.GetShapeSize(),
+                        gradShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     *totalNum = varShape.GetShapeSize();
 
@@ -114,11 +112,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
     // 仅支持 fp32
-    OP_CHECK_IF(*dataType != ge::DT_FLOAT,
-                OP_LOGE(context,
-                        "ApplyAdamWithAmsgradV2: only float32 supported, var dtype=%d.",
-                        static_cast<int>(*dataType)),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *dataType != ge::DT_FLOAT,
+        OP_LOGE(context, "ApplyAdamWithAmsgradV2: only float32 supported, var dtype=%d.", static_cast<int>(*dataType)),
+        return ge::GRAPH_FAILED);
 
     // m/v/vhat/grad 必须与 var 同 dtype：kernel 统一 DTYPE_X 单模板，异构 dtype 会按错误字宽错读字节
     const int consistencyIdx[] = {IDX_M, IDX_V, IDX_VHAT, IDX_GRAD};
@@ -126,9 +123,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         auto desc = context->GetInputDesc(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, desc);
         OP_CHECK_IF(desc->GetDataType() != *dataType,
-                    OP_LOGE(context,
-                            "ApplyAdamWithAmsgradV2: input[%d] dtype=%d must equal var dtype=%d.",
-                            idx, static_cast<int>(desc->GetDataType()), static_cast<int>(*dataType)),
+                    OP_LOGE(context, "ApplyAdamWithAmsgradV2: input[%d] dtype=%d must equal var dtype=%d.", idx,
+                            static_cast<int>(desc->GetDataType()), static_cast<int>(*dataType)),
                     return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -169,11 +165,11 @@ static void ReadScalars(gert::TilingContext* context, ApplyAdamWithAmsgradV2Tili
 }
 
 // 切分计算：blockFactor（每核元素数）+ ubFactor（每轮 UB 元素数），写回 tiling，返回 usedCoreNum
-static int64_t CalcBlockTiling(gert::TilingContext* context, ApplyAdamWithAmsgradV2TilingData* tiling,
-                               int64_t totalNum, int64_t coreNum, uint64_t ubSize)
+static int64_t CalcBlockTiling(gert::TilingContext* context, ApplyAdamWithAmsgradV2TilingData* tiling, int64_t totalNum,
+                               int64_t coreNum, uint64_t ubSize)
 {
     tiling->totalNum = totalNum;
-    if (totalNum == 0) {  // 空 tensor
+    if (totalNum == 0) { // 空 tensor
         tiling->blockFactor = 0;
         tiling->ubFactor = 0;
         return 1;
@@ -182,8 +178,8 @@ static int64_t CalcBlockTiling(gert::TilingContext* context, ApplyAdamWithAmsgra
     // 算子已收窄为 fp32-only：typeSize 恒为 4，bytesPerElem 恒为 FP32_BYTES_PER_ELEM
     int64_t typeSize = 4;
     int64_t bytesPerElem = FP32_BYTES_PER_ELEM;
-    int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context);  // 32 字节
-    int64_t alignElems = ubBlockSize / typeSize;  // 对齐元素数（fp32=8, 半=16），与 ubFactor 一致
+    int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context); // 32 字节
+    int64_t alignElems = ubBlockSize / typeSize; // 对齐元素数（fp32=8, 半=16），与 ubFactor 一致
 
     tiling->blockFactor = CeilAlign(CeilDiv(totalNum, coreNum), alignElems);
     int64_t usedCoreNum = Ops::Base::CeilDiv(totalNum, tiling->blockFactor);
@@ -213,16 +209,16 @@ static ge::graphStatus ApplyAdamWithAmsgradV2TilingFunc(gert::TilingContext* con
     OP_CHECK_IF(GetShapeAttrsInfo(context, &totalNum, &dataType) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ApplyAdamWithAmsgradV2TilingData* tiling = context->GetTilingData<ApplyAdamWithAmsgradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(ApplyAdamWithAmsgradV2TilingData), 0,
-                         sizeof(ApplyAdamWithAmsgradV2TilingData)) != EOK,
-                OP_LOGE(context, "memset tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        memset_s(tiling, sizeof(ApplyAdamWithAmsgradV2TilingData), 0, sizeof(ApplyAdamWithAmsgradV2TilingData)) != EOK,
+        OP_LOGE(context, "memset tiling data error"), return ge::GRAPH_FAILED);
 
-    ReadScalars(context, tiling);  // 标量读取（ValueDepend(REQUIRED, TILING) 保证 host 可读）
+    ReadScalars(context, tiling); // 标量读取（ValueDepend(REQUIRED, TILING) 保证 host 可读）
     int64_t usedCoreNum = CalcBlockTiling(context, tiling, totalNum, coreNum, ubSize);
 
     context->SetBlockDim(usedCoreNum);
@@ -238,7 +234,7 @@ static ge::graphStatus TilingParseForApplyAdamWithAmsgradV2([[maybe_unused]] ger
     return ge::GRAPH_SUCCESS;
 }
 
-struct ApplyAdamWithAmsgradV2CompileInfo {};  // 入图场景依赖
+struct ApplyAdamWithAmsgradV2CompileInfo {}; // 入图场景依赖
 
 IMPL_OP_OPTILING(ApplyAdamWithAmsgradV2)
     .Tiling(ApplyAdamWithAmsgradV2TilingFunc)

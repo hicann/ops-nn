@@ -26,33 +26,24 @@
 #include <cstdint>
 using namespace std;
 
-extern "C" __global__ __aicore__ void max_pool_with_argmax(GM_ADDR x, GM_ADDR y, GM_ADDR argmax,
-                                                           GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void max_pool_with_argmax(GM_ADDR x, GM_ADDR y, GM_ADDR argmax, GM_ADDR workspace,
+                                                           GM_ADDR tiling);
 
 class max_pool_with_argmax_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "max_pool_with_argmax_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "max_pool_with_argmax_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "max_pool_with_argmax_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "max_pool_with_argmax_test TearDown\n" << endl; }
 };
 
-inline int64_t GetShapeSize(const std::vector<int64_t> &shape) {
+inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     return std::accumulate(shape.begin(), shape.end(), 1LL, std::multiplies<int64_t>());
 }
 
 template <typename T>
-void ExcuteTestCase(const std::vector<int64_t> &inputShape,
-                    const std::vector<int64_t> &outputShape,
-                    const std::string &input_Type,
-                    const std::string &indices_Type,
-                    const std::string &caseName,
-                    uint64_t tilingKey,
-                    const T &tilingConfig)
+void ExcuteTestCase(const std::vector<int64_t>& inputShape, const std::vector<int64_t>& outputShape,
+                    const std::string& input_Type, const std::string& indices_Type, const std::string& caseName,
+                    uint64_t tilingKey, const T& tilingConfig)
 {
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
@@ -65,11 +56,11 @@ void ExcuteTestCase(const std::vector<int64_t> &inputShape,
     size_t workspaceSize = 16 * 1024 * 1024;
     size_t tilingSize = sizeof(T);
 
-    uint8_t *input = (uint8_t *)AscendC::GmAlloc((inputByteSize + 31) / 32 * 32);
-    uint8_t *out = (uint8_t *)AscendC::GmAlloc((outputByteSize + 31) / 32 * 32);
-    uint8_t *argmax = (uint8_t *)AscendC::GmAlloc((argmaxByteSize + 31) / 32 * 32);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc((inputByteSize + 31) / 32 * 32);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc((outputByteSize + 31) / 32 * 32);
+    uint8_t* argmax = (uint8_t*)AscendC::GmAlloc((argmaxByteSize + 31) / 32 * 32);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     memset_s(input, (inputByteSize + 31) / 32 * 32, 0, (inputByteSize + 31) / 32 * 32);
     memset_s(out, (outputByteSize + 31) / 32 * 32, 0, (outputByteSize + 31) / 32 * 32);
@@ -113,51 +104,61 @@ void ExcuteTestCase(const std::vector<int64_t> &inputShape,
     AscendC::GmFree(tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800001) {
+TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800001)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        11, 14, 8, 4, 1, 5, 6, 3, 6, 9, 0, 1, 1, 17, 1, 1, 4, 1, 1, 1, 11, 11, 1, 2, 2, 34, 960, 32, 128, 0, 0, 0, 0, 0, 0, 0
-    };
+        11, 14, 8,  4,  1, 5, 6, 3,  6,   9,  0,   1, 1, 17, 1, 1, 4, 1,
+        1,  1,  11, 11, 1, 2, 2, 34, 960, 32, 128, 0, 0, 0,  0, 0, 0, 0};
     ExcuteTestCase({17, 14, 8, 11}, {17, 4, 1, 11}, "float32", "int32", "test_case_nhwc_bigc_800001", 800001UL, tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800011) {
+TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800011)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        2, 2, 2, 1, 1, 2, 2, 8303, 2, 0, 0, 5, 4, 69, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 1, 35, 640, 160, 320, 0, 0, 0, 0, 0, 0, 0
-    };
+        2, 2, 2, 1, 1, 2, 2, 8303, 2,   0,   0,   5, 4, 69, 1, 1, 1, 1,
+        1, 1, 2, 2, 1, 2, 1, 35,   640, 160, 320, 0, 0, 0,  0, 0, 0, 0};
     ExcuteTestCase({344, 2, 2, 2}, {344, 1, 1, 2}, "float32", "int32", "test_case_nhwc_bigc_800011", 800011UL, tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800002) {
+TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800002)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        19, 5, 7, 2, 7, 4, 2, 4, 1, 0, 1, 1, 1, 17, 1, 1, 2, 6, 1, 2, 19, 19, 1, 2, 2, 34, 1792, 384, 1536, 1, 0, 0, 0, 0, 0, 0
-    };
+        19, 5, 7,  2,  7, 4, 2, 4,  1,    0,   1,    1, 1, 17, 1, 1, 2, 6,
+        1,  2, 19, 19, 1, 2, 2, 34, 1792, 384, 1536, 1, 0, 0,  0, 0, 0, 0};
     ExcuteTestCase({17, 5, 7, 19}, {17, 2, 7, 19}, "float32", "int64", "test_case_nhwc_bigc_800002", 800002UL, tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800012) {
+TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800012)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        79828, 2, 1, 1, 1, 2, 2, 2, 2, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2560, 468, 32, 1, 1, 64, 20480, 5120, 20480, 1, 0, 0, 0, 0, 0, 0
-    };
-    ExcuteTestCase({2, 2, 1, 79828}, {2, 1, 1, 79828}, "float32", "int64", "test_case_nhwc_bigc_800012", 800012UL, tiling);
+        79828, 2, 1,    1,   1,  2, 2, 2,  2,     0,    0,     1, 1, 2, 1, 1, 1, 1,
+        1,     1, 2560, 468, 32, 1, 1, 64, 20480, 5120, 20480, 1, 0, 0, 0, 0, 0, 0};
+    ExcuteTestCase({2, 2, 1, 79828}, {2, 1, 1, 79828}, "float32", "int64", "test_case_nhwc_bigc_800012", 800012UL,
+                   tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nhwc_smallc_700001) {
+TEST_F(max_pool_with_argmax_test, test_case_nhwc_smallc_700001)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        3, 7, 5871, 3, 587, 2, 2, 2, 10, 0, 0, 1, 1, 3, 1, 1, 3, 83, 6, 8, 3, 3, 1, 2, 2, 36, 52608, 2656, 10624, 0, 0, 0, 0, 0, 0, 0
-    };
-    ExcuteTestCase({3, 7, 5871, 3}, {3, 3, 587, 3}, "float32", "int64", "test_case_nhwc_smallc_700001", 700001UL, tiling);
+        3, 7, 5871, 3, 587, 2, 2, 2,  10,    0,    0,     1, 1, 3, 1, 1, 3, 83,
+        6, 8, 3,    3, 1,   2, 2, 36, 52608, 2656, 10624, 0, 0, 0, 0, 0, 0, 0};
+    ExcuteTestCase({3, 7, 5871, 3}, {3, 3, 587, 3}, "float32", "int64", "test_case_nhwc_smallc_700001", 700001UL,
+                   tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nhwc_smallc_700011) {
+TEST_F(max_pool_with_argmax_test, test_case_nhwc_smallc_700011)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        15, 2218, 4, 1109, 1, 2, 2, 2, 1068, 0, 0, 1, 1, 4, 73, 14, 16, 1, 1, 1, 15, 15, 1, 1, 1, 64, 9344, 2336, 4672, 0, 0, 0, 0, 0, 0, 0
-    };
-    ExcuteTestCase({4, 2218, 4, 15}, {4, 1109, 1, 15}, "float32", "int32", "test_case_nhwc_smallc_700011", 700011UL, tiling);
+        15, 2218, 4,  1109, 1, 2, 2, 2,  1068, 0,    0,    1, 1, 4, 73, 14, 16, 1,
+        1,  1,    15, 15,   1, 1, 1, 64, 9344, 2336, 4672, 0, 0, 0, 0,  0,  0,  0};
+    ExcuteTestCase({4, 2218, 4, 15}, {4, 1109, 1, 15}, "float32", "int32", "test_case_nhwc_smallc_700011", 700011UL,
+                   tiling);
 }
 
-TEST_F(max_pool_with_argmax_test, test_case_nchw_simt_50101) {
+TEST_F(max_pool_with_argmax_test, test_case_nchw_simt_50101)
+{
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData tiling = {
-        256, 64, 3, 12, 3, 3311, 2, 828, 2, 2, 2, 4, 0, 0, 0
-    };
-    ExcuteTestCase({3, 12, 3, 3311}, {3, 12, 2, 828}, "float32", "int64", "test_case_nchw_simt_500101", 500101UL, tiling);
+        256, 64, 3, 12, 3, 3311, 2, 828, 2, 2, 2, 4, 0, 0, 0};
+    ExcuteTestCase({3, 12, 3, 3311}, {3, 12, 2, 828}, "float32", "int64", "test_case_nchw_simt_500101", 500101UL,
+                   tiling);
 }

@@ -24,9 +24,8 @@
 #include "avg_pool_3d_tiling_common.h"
 #include "max_pool_3d_tiling_common.h"
 
-namespace optiling
-{
-    
+namespace optiling {
+
 BEGIN_TILING_DATA_DEF(Pool3DBigKernelNDHWCTilingData)
 TILING_DATA_FIELD_DEF(int64_t, dInDim);
 TILING_DATA_FIELD_DEF(int64_t, hInDim);
@@ -66,16 +65,11 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(MaxPool3D_411110, Pool3DBigKernelNDHWCTilingData);
 REGISTER_TILING_DATA_CLASS(AvgPool3D_411110, Pool3DBigKernelNDHWCTilingData);
 
-class Pool3DBigKernelNDHWCTiling : public TilingBaseClass
-{
+class Pool3DBigKernelNDHWCTiling : public TilingBaseClass {
 public:
-    explicit Pool3DBigKernelNDHWCTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit Pool3DBigKernelNDHWCTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~Pool3DBigKernelNDHWCTiling() override
-    {
-    }
+    ~Pool3DBigKernelNDHWCTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -106,36 +100,26 @@ public:
     bool isMaxPool3D_{false};
 };
 
-class AvgPool3DBigKernelNDHWCTiling : public Pool3DBigKernelNDHWCTiling
-{
+class AvgPool3DBigKernelNDHWCTiling : public Pool3DBigKernelNDHWCTiling {
 public:
-    explicit AvgPool3DBigKernelNDHWCTiling(gert::TilingContext* context) : Pool3DBigKernelNDHWCTiling(context)
-    {
-    }
-    ~AvgPool3DBigKernelNDHWCTiling() override
-    {
-    }
+    explicit AvgPool3DBigKernelNDHWCTiling(gert::TilingContext* context) : Pool3DBigKernelNDHWCTiling(context) {}
+    ~AvgPool3DBigKernelNDHWCTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class MaxPool3DBigKernelNDHWCTiling : public Pool3DBigKernelNDHWCTiling
-{
+class MaxPool3DBigKernelNDHWCTiling : public Pool3DBigKernelNDHWCTiling {
 public:
-    explicit MaxPool3DBigKernelNDHWCTiling(gert::TilingContext* context) : Pool3DBigKernelNDHWCTiling(context)
-    {
-    }
-    ~MaxPool3DBigKernelNDHWCTiling() override
-    {
-    }
+    explicit MaxPool3DBigKernelNDHWCTiling(gert::TilingContext* context) : Pool3DBigKernelNDHWCTiling(context) {}
+    ~MaxPool3DBigKernelNDHWCTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

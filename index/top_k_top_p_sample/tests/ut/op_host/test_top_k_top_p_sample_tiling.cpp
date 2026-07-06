@@ -29,18 +29,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class TopKTopPSampleTiling : public testing::Test
-{
+class TopKTopPSampleTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TopKTopPSampleTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TopKTopPSampleTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TopKTopPSampleTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TopKTopPSampleTiling TearDown" << std::endl; }
 };
 
 static string to_string(const std::stringstream& tiling_data)
@@ -48,7 +41,7 @@ static string to_string(const std::stringstream& tiling_data)
     auto data = tiling_data.str();
     string result;
     int32_t tmp = 0;
-    for(size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
+    for (size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
         memcpy(&tmp, data.c_str() + i, sizeof(tmp));
         result += std::to_string(tmp);
         result += " ";
@@ -58,12 +51,12 @@ static string to_string(const std::stringstream& tiling_data)
 }
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
     size_t len = size / sizeof(T);
-    for(size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         result += std::to_string(data[i]);
         result += " ";
     }
@@ -104,30 +97,30 @@ TEST_F(TopKTopPSampleTiling, TOP_K_TOP_P_SAMPLE_001_FLOAT16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1) 
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096); 
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 2)
-                      .IrInstanceNum({1, 1, 1, 1}) 
+                      .IrInstanceNum({1, 1, 1, 1})
                       .InputShapes({&input_shape_logits, &input_shape_top_k, &input_shape_top_p, &input_shape_q})
                       .OutputShapes({&output_shape_logits_select_idx, &output_shape_logits_top_kp_select})
                       .CompileInfo(&compile_info)
@@ -138,10 +131,9 @@ TEST_F(TopKTopPSampleTiling, TOP_K_TOP_P_SAMPLE_001_FLOAT16)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"eps", Ops::NN::AnyValue::CreateFrom<float>(1e-8)},
-                           {"is_need_logits", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"top_k_guess", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
+                      .NodeAttrs({{"eps", Ops::NN::AnyValue::CreateFrom<float>(1e-8)},
+                                  {"is_need_logits", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"top_k_guess", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -158,7 +150,6 @@ TEST_F(TopKTopPSampleTiling, TOP_K_TOP_P_SAMPLE_001_FLOAT16)
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1001);
 }
-
 
 TEST_F(TopKTopPSampleTiling, TOP_K_TOP_P_SAMPLE_002_BFLOAT16)
 {
@@ -194,30 +185,30 @@ TEST_F(TopKTopPSampleTiling, TOP_K_TOP_P_SAMPLE_002_BFLOAT16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1) 
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096); 
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 2)
-                      .IrInstanceNum({1, 1, 1, 1}) 
+                      .IrInstanceNum({1, 1, 1, 1})
                       .InputShapes({&input_shape_logits, &input_shape_top_k, &input_shape_top_p, &input_shape_q})
                       .OutputShapes({&output_shape_logits_select_idx, &output_shape_logits_top_kp_select})
                       .CompileInfo(&compile_info)
@@ -228,10 +219,9 @@ TEST_F(TopKTopPSampleTiling, TOP_K_TOP_P_SAMPLE_002_BFLOAT16)
                       .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"eps", Ops::NN::AnyValue::CreateFrom<float>(1e-8)},
-                           {"is_need_logits", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"top_k_guess", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
+                      .NodeAttrs({{"eps", Ops::NN::AnyValue::CreateFrom<float>(1e-8)},
+                                  {"is_need_logits", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"top_k_guess", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

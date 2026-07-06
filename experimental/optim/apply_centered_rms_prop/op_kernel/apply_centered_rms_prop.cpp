@@ -34,17 +34,14 @@
 #include "apply_centered_rms_prop.h"
 
 template <typename D_T_VAR>
-__global__ __aicore__ void apply_centered_rms_prop(
-    GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-    GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR mg_out, GM_ADDR ms_out, GM_ADDR mom_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_centered_rms_prop(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr,
+                                                   GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad,
+                                                   GM_ADDR var_out, GM_ADDR mg_out, GM_ADDR ms_out, GM_ADDR mom_out,
+                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyCenteredRMSPropTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyCenteredRMSPropTilingData, tilingData, tiling);
     NsApplyCenteredRMSProp::ApplyCenteredRMSProp<D_T_VAR> op;
-    op.Init(var, mg, ms, mom, lr, rho, momentum, epsilon, grad,
-            var_out, mg_out, ms_out, mom_out, &tilingData);
+    op.Init(var, mg, ms, mom, lr, rho, momentum, epsilon, grad, var_out, mg_out, ms_out, mom_out, &tilingData);
     op.Process();
 }

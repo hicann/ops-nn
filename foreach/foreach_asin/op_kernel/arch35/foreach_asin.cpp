@@ -18,8 +18,7 @@
 using namespace AscendC;
 
 template <uint32_t dtype>
-__global__ __aicore__ void foreach_asin(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_asin(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachAsinTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachAsinTilingData, tilingData, tiling);

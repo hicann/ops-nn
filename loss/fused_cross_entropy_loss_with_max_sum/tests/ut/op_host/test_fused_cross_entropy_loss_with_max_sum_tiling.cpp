@@ -30,17 +30,14 @@ using namespace std;
 using namespace ge;
 
 class FusedCrossEntropyLossWithMaxSumTiling : public testing::Test {
-  protected:
-    static void SetUpTestCase() {
-        std::cout << "FusedCrossEntropyLossWithMaxSumTiling SetUp" << std::endl;
-    }
+protected:
+    static void SetUpTestCase() { std::cout << "FusedCrossEntropyLossWithMaxSumTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "FusedCrossEntropyLossWithMaxSumTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FusedCrossEntropyLossWithMaxSumTiling TearDown" << std::endl; }
 };
 
-TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_sum_tiling_0) {
+TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_sum_tiling_0)
+{
     std::string op_type("FusedCrossEntropyLossWithMaxSum");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -70,12 +67,12 @@ TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_
         int64_t ubSizePlatForm = 0;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -95,31 +92,29 @@ TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_
     gert::StorageShape input_3 = {{1024}, {1024}};
     gert::StorageShape input_4 = {{1024}, {1024}};
     gert::StorageShape input_5 = {{1024, 4096}, {1024, 4096}};
-    
+
     gert::StorageShape output_shape0 = {{1024}, {1024}};
     gert::StorageShape output_shape1 = {{1024, 4096}, {1024, 4096}};
 
-
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .NodeIoNum(6, 2)
-          .IrInstanceNum({1, 1, 1, 1, 1, 1})
-          .InputShapes({&input_0, &input_1, &input_2, &input_3, &input_4, &input_5})
-          .OutputShapes({&output_shape0, &output_shape1})
-          .CompileInfo(&compile_info)
-          .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(ws_size)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input_0, &input_1, &input_2, &input_3, &input_4, &input_5})
+                      .OutputShapes({&output_shape0, &output_shape1})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -135,7 +130,8 @@ TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_
     ASSERT_EQ(tiling_key, 0);
 }
 
-TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_sum_tiling_3) {
+TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_sum_tiling_3)
+{
     std::string op_type("FusedCrossEntropyLossWithMaxSum");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
@@ -165,12 +161,12 @@ TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_
         int64_t ubSizePlatForm = 0;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -189,28 +185,34 @@ TEST_F(FusedCrossEntropyLossWithMaxSumTiling, fused_cross_entropy_loss_with_max_
     gert::StorageShape input_2 = {{1024}, {1024}};
     gert::StorageShape input_3 = {{1024}, {1024}};
     gert::StorageShape input_4 = {{1024}, {1024}};
-    
+
     gert::StorageShape output_shape0 = {{1024}, {1024}};
     gert::StorageShape output_shape1 = {{1024, 4096}, {1024, 4096}};
 
-
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .NodeIoNum(3, 2)
-          .IrInstanceNum({1, 1, 1,})
-          .InputShapes({&input_0, &input_1, &input_2, })
-          .OutputShapes({&output_shape0, &output_shape1})
-          .CompileInfo(&compile_info)
-          .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .TilingData(param.get())
-          .Workspace(ws_size)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({
+                          1,
+                          1,
+                          1,
+                      })
+                      .InputShapes({
+                          &input_0,
+                          &input_1,
+                          &input_2,
+                      })
+                      .OutputShapes({&output_shape0, &output_shape1})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

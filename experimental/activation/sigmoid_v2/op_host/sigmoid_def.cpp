@@ -13,7 +13,7 @@
 namespace ops {
 class Sigmoid : public OpDef {
 public:
-    explicit Sigmoid(const char *name) : OpDef(name)
+    explicit Sigmoid(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -42,4 +42,4 @@ public:
 };
 
 OP_ADD(Sigmoid);
-}  // namespace ops
+} // namespace ops

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv3d_v2_base_tiling_tilingkey.cpp
  * \brief
@@ -23,21 +23,16 @@ using namespace Conv3DV2Key;
 
 ge::graphStatus Conv3dBaseTilingV2::SetTilingKey()
 {
-    Conv3dV2BaseTilingKey conv3dV2BaseTilingKey(tilingData_, flagInfo_,
-    descInfo_, shapeInfo_, numBlocksRes, convOpsConstParams_);
+    Conv3dV2BaseTilingKey conv3dV2BaseTilingKey(tilingData_, flagInfo_, descInfo_, shapeInfo_, numBlocksRes,
+                                                convOpsConstParams_);
     conv3dV2BaseTilingKey.GetTemplateTilingKey(tilingKeyPara_);
-    
-    tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling,
-                                    tilingKeyPara_.weightTiling,
-                                    tilingKeyPara_.l1PingPong,
-                                    tilingKeyPara_.l0PingPong,
-                                    tilingKeyPara_.outputOrder,
-                                    tilingKeyPara_.iterOrder,
-                                    tilingKeyPara_.groupType,
-                                    tilingKeyPara_.bigKernel);
+
+    tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling, tilingKeyPara_.weightTiling, tilingKeyPara_.l1PingPong,
+                                    tilingKeyPara_.l0PingPong, tilingKeyPara_.outputOrder, tilingKeyPara_.iterOrder,
+                                    tilingKeyPara_.groupType, tilingKeyPara_.bigKernel);
 
     OP_LOGD(context_->GetNodeName(), "%s AscendC: tiling key: %lu.", paramInfo_.nodeType.c_str(), tilingKey_);
     return ge::GRAPH_SUCCESS;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

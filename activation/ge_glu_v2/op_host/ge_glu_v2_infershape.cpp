@@ -46,24 +46,20 @@ static ge::graphStatus InferShapeForGeGluV2(gert::InferShapeContext* context)
     *out_shape_y_glu = *x_shape;
     size_t x_dim_num = x_shape->GetDimNum();
 
-    OP_CHECK_IF(
-        x_dim_num == 0, OP_LOGE("GEGLUV2", "input x dim num is %zu, not support input x is scalar", x_dim_num),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(x_dim_num == 0, OP_LOGE("GEGLUV2", "input x dim num is %zu, not support input x is scalar", x_dim_num),
+                return GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        Ops::Base::IsUnknownRank(*x_shape), OP_LOGD("GEGLUV2", "input x is unknown rank, no need check."),
-        return GRAPH_SUCCESS);
+    OP_CHECK_IF(Ops::Base::IsUnknownRank(*x_shape), OP_LOGD("GEGLUV2", "input x is unknown rank, no need check."),
+                return GRAPH_SUCCESS);
 
     if (split_dim < 0) {
         split_dim += x_dim_num;
     }
 
-    OP_CHECK_IF(
-        (split_dim < 0 || split_dim >= static_cast<int64_t>(x_dim_num)),
-        OP_LOGE(
-            "GEGLUV2", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].", x_dim_num,
-            x_dim_num - 1, split_dim),
-        return GRAPH_FAILED);
+    OP_CHECK_IF((split_dim < 0 || split_dim >= static_cast<int64_t>(x_dim_num)),
+                OP_LOGE("GEGLUV2", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
+                        x_dim_num, x_dim_num - 1, split_dim),
+                return GRAPH_FAILED);
 
     // 动态shape场景split_dim_value传入-1不做处理
     auto split_dim_value = x_shape->GetDim(split_dim);

@@ -30,7 +30,7 @@ constexpr uint16_t BIAS_BUFFER_FLAG_0 = 4;
 constexpr uint16_t BIAS_BUFFER_FLAG_1 = 5;
 constexpr uint16_t X2_SCALE_BUFFER_FLAG_0 = 0;
 constexpr uint16_t X2_SCALE_BUFFER_FLAG_1 = 1;
-}
+} // namespace
 
 namespace Cmct {
 namespace Gemm {
@@ -47,14 +47,15 @@ class BlockMmadA8W8FixpipeQuant {
 
 template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class LayoutA_, class BType_,
           class LayoutB_, class CType_, class LayoutC_, class BiasType_, class LayoutBias_, class ScaleType_>
-class BlockMmadA8W8FixpipeQuant<DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, LayoutA_, BType_, LayoutB_, CType_, LayoutC_,
-                    BiasType_, LayoutBias_, ScaleType_,
-                    AscendC::Std::enable_if_t<
-                        AscendC::Std::is_base_of_v<MatmulWithScale<>, DispatchPolicy_> ||
-                        AscendC::Std::is_base_of_v<MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>,
-                                                   DispatchPolicy_> ||
-                        AscendC::Std::is_base_of_v<MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>,
-                                                   DispatchPolicy_>>> {
+class BlockMmadA8W8FixpipeQuant<
+    DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, LayoutA_, BType_, LayoutB_, CType_, LayoutC_, BiasType_,
+    LayoutBias_, ScaleType_,
+    AscendC::Std::enable_if_t<
+        AscendC::Std::is_base_of_v<MatmulWithScale<>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>,
+                                   DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;
@@ -132,8 +133,8 @@ public:
     }
 
 public:
-    __aicore__ inline void Init(const TupleShape &problemShape, const BlockShape &l0TileShape, const uint64_t &kAL1,
-                                const uint64_t &kBL1, const uint64_t &l1BufferNum,
+    __aicore__ inline void Init(const TupleShape& problemShape, const BlockShape& l0TileShape, const uint64_t& kAL1,
+                                const uint64_t& kBL1, const uint64_t& l1BufferNum,
                                 QuantBatchMatmul::QuantMode quantMode, bool isBias, bool dbL0C)
     {
         m_ = Get<IDX_M_IDX>(problemShape);
@@ -212,7 +213,7 @@ public:
     }
 
 private:
-    __aicore__ inline void InitAFullLoad(const uint64_t &kBL1)
+    __aicore__ inline void InitAFullLoad(const uint64_t& kBL1)
     {
         kBL1_ = kBL1;
         kAL1_ = kBL1_;
@@ -225,8 +226,9 @@ private:
         // 2 buffer: L1 space is : B0|Scale0|bias0|A|...|B1|Scale1|bias1|
         // 4 buffer: L1 space is : B0B2|Scale0|bias0|A|...|B1B3|Scale1|bias1|...
         l1BufferAOffset_[0] = bL1OneBuffer_ * (l1BufNum_ >> 1) + x2ScaleL1OneBuffer_ + biasL1OneBuffer_;
-        uint64_t b1Offset = l1BufferAOffset_[0] + aL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1)
-                            ? l1BufferAOffset_[0] + aL1OneBuffer_ : (AscendC::TOTAL_L1_SIZE >> 1);
+        uint64_t b1Offset = l1BufferAOffset_[0] + aL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1) ?
+                                l1BufferAOffset_[0] + aL1OneBuffer_ :
+                                (AscendC::TOTAL_L1_SIZE >> 1);
         for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
             l1BufferBOffset_[bufferId] = b1Offset * (bufferId & 1) + bL1OneBuffer_ * (bufferId >> 1);
         }
@@ -236,7 +238,7 @@ private:
         }
     }
 
-    __aicore__ inline void InitBFullLoad(const uint64_t &kAL1)
+    __aicore__ inline void InitBFullLoad(const uint64_t& kAL1)
     {
         kAL1_ = kAL1;
         kBL1_ = kAL1_;
@@ -249,9 +251,9 @@ private:
         // 2 buffer: L1 space is : A0|Scale0|bias0|B|...|A1|Scale1|bias1|
         // 4 buffer: L1 space is : A0A2|Scale0|bias0|B|...|A1A3|Scale1|bias1|...
         l1BufferBOffset_[0] = aL1OneBuffer_ * (l1BufNum_ >> 1) + x2ScaleL1OneBuffer_ + biasL1OneBuffer_;
-        uint64_t a1Offset = l1BufferBOffset_[0] + bL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1)
-                             ? l1BufferBOffset_[0] + bL1OneBuffer_
-                             : (AscendC::TOTAL_L1_SIZE >> 1);
+        uint64_t a1Offset = l1BufferBOffset_[0] + bL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1) ?
+                                l1BufferBOffset_[0] + bL1OneBuffer_ :
+                                (AscendC::TOTAL_L1_SIZE >> 1);
         for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
             l1BufferAOffset_[bufferId] = a1Offset * (bufferId & 1) + aL1OneBuffer_ * (bufferId >> 1);
         }
@@ -261,7 +263,7 @@ private:
         }
     }
 
-    __aicore__ inline void InitNormal(const uint64_t &kAL1, const uint64_t &kBL1, const uint64_t &l1BufferNum)
+    __aicore__ inline void InitNormal(const uint64_t& kAL1, const uint64_t& kBL1, const uint64_t& l1BufferNum)
     {
         if (l1BufferNum == AB_L1_TWO_BUFFER) {
             kAL1_ = kAL1;
@@ -287,8 +289,7 @@ private:
         for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
             uint64_t l1Offset = (AscendC::TOTAL_L1_SIZE >> 1) * (bufferId & 1);
             l1BufferAOffset_[bufferId] = l1Offset + aL1OneBuffer_ * (bufferId >> 1);
-            l1BufferBOffset_[bufferId] =
-                l1Offset + aL1OneBuffer_ * (l1BufNum_ >> 1) + bL1OneBuffer_ * (bufferId >> 1);
+            l1BufferBOffset_[bufferId] = l1Offset + aL1OneBuffer_ * (l1BufNum_ >> 1) + bL1OneBuffer_ * (bufferId >> 1);
         }
         for (uint16_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
             l1BufferX2ScaleOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
@@ -323,8 +324,8 @@ private:
             DataCopyA(aGlobal, curML1, curKL1, offsetA, offsetAL1);
         } else {
             if (abL1LoopCnt_ < kL1Iter_) {
-                uint64_t offsetAL1 =
-                    l1BufferAOffset_[0] + l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curML1, transA ? C0_SIZE : BLOCK_CUBE);
+                uint64_t offsetAL1 = l1BufferAOffset_[0] +
+                                     l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curML1, transA ? C0_SIZE : BLOCK_CUBE);
                 DataCopyA(aGlobal, curML1, curKL1, offsetA, offsetAL1);
             }
         }
@@ -357,8 +358,8 @@ private:
         AscendC::DataCopy(bL1Local_[offsetBL1], bGlobal[offsetB], nd2nzParams);
     }
 
-    __aicore__ inline void CopyBiasInL1(const AscendC::GlobalTensor<BiasType> &biasGlobal,
-                                        const AscendC::LocalTensor<BiasType> &biasL1Local, uint64_t curNL1,
+    __aicore__ inline void CopyBiasInL1(const AscendC::GlobalTensor<BiasType>& biasGlobal,
+                                        const AscendC::LocalTensor<BiasType>& biasL1Local, uint64_t curNL1,
                                         uint16_t biasBufId)
     {
         // Set a sync flag here because bias is using separate sync flags
@@ -371,8 +372,8 @@ private:
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(BIAS_BUFFER_FLAG_0 + biasBufId);
     }
 
-    __aicore__ inline void CopyX2ScaleInL1(const AscendC::GlobalTensor<uint64_t> &scaleGlobal,
-                                           const AscendC::LocalTensor<uint64_t> &scaleL1Local, uint64_t curNL1,
+    __aicore__ inline void CopyX2ScaleInL1(const AscendC::GlobalTensor<uint64_t>& scaleGlobal,
+                                           const AscendC::LocalTensor<uint64_t>& scaleL1Local, uint64_t curNL1,
                                            uint16_t scaleL1BufId)
     {
         AscendC::WaitFlag<AscendC::HardEvent::FIX_MTE2>(scaleL1BufId);
@@ -383,8 +384,8 @@ private:
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_FIX>(scaleL1BufId);
     }
 
-    __aicore__ inline void CopyInL0A(const AscendC::LocalTensor<AType> &l0aLocal,
-                                     const AscendC::LocalTensor<AType> &al1Local, uint64_t curML1, uint64_t curKL1,
+    __aicore__ inline void CopyInL0A(const AscendC::LocalTensor<AType>& l0aLocal,
+                                     const AscendC::LocalTensor<AType>& al1Local, uint64_t curML1, uint64_t curKL1,
                                      uint64_t curKL0, uint64_t l0Iter)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
@@ -401,8 +402,8 @@ private:
             loadDataParams.mStartPosition = Cmct::Gemm::CeilDiv(l0Iter * baseK_, AscendC::BLOCK_CUBE);
             loadDataParams.kStartPosition = 0;
             if ((m1 & 1) == 0) {
-                loadDataParams.mStep = Cmct::Gemm::CeilAlign(
-                    Cmct::Gemm::CeilDiv(curKL0, AscendC::BLOCK_CUBE), L0_TRANS_ALIGN);
+                loadDataParams.mStep = Cmct::Gemm::CeilAlign(Cmct::Gemm::CeilDiv(curKL0, AscendC::BLOCK_CUBE),
+                                                             L0_TRANS_ALIGN);
             } else {
                 loadDataParams.mStep = B8_MIN_STEP;
             }
@@ -415,8 +416,7 @@ private:
         if constexpr (transA) {
             if ((m1 & 1) != 0) {
                 PipeBarrier<PIPE_MTE1>();
-                uint64_t loadTimes =
-                    Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(curKL0, BLOCK_CUBE), B8_MIN_STEP);
+                uint64_t loadTimes = Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(curKL0, BLOCK_CUBE), B8_MIN_STEP);
                 for (uint16_t i = 1; i < loadTimes; i++) {
                     loadDataParams.mStartPosition = B8_MIN_STEP * i + Cmct::Gemm::CeilDiv(l0Iter * baseK_, BLOCK_CUBE);
                     AscendC::LoadData(l0aLocal[i * m1 * BLOCK_CUBE * C0_SIZE], al1Local, loadDataParams);
@@ -426,8 +426,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInL0B(const AscendC::LocalTensor<BType> &l0bLocal,
-                                     const AscendC::LocalTensor<BType> &bl1Local, uint64_t curNL1, uint64_t curKL1,
+    __aicore__ inline void CopyInL0B(const AscendC::LocalTensor<BType>& l0bLocal,
+                                     const AscendC::LocalTensor<BType>& bl1Local, uint64_t curNL1, uint64_t curKL1,
                                      uint64_t curKL0, uint64_t l0Iter)
     {
         AscendC::LoadData2DParamsV2 loadDataParams;
@@ -444,8 +444,8 @@ private:
             loadDataParams.mStartPosition = Cmct::Gemm::CeilDiv(l0Iter * baseK_, AscendC::BLOCK_CUBE);
             loadDataParams.kStartPosition = 0;
             if ((n1 & 1) == 0) {
-                loadDataParams.mStep =
-                    Cmct::Gemm::CeilAlign(Cmct::Gemm::CeilDiv(curKL0, AscendC::BLOCK_CUBE), L0_TRANS_ALIGN);
+                loadDataParams.mStep = Cmct::Gemm::CeilAlign(Cmct::Gemm::CeilDiv(curKL0, AscendC::BLOCK_CUBE),
+                                                             L0_TRANS_ALIGN);
             } else {
                 loadDataParams.mStep = B8_MIN_STEP;
             }
@@ -458,8 +458,7 @@ private:
         if constexpr (!transB) {
             if ((n1 & 1) != 0) {
                 PipeBarrier<PIPE_MTE1>();
-                uint64_t loadTimes =
-                    Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(curKL0, BLOCK_CUBE), B8_MIN_STEP);
+                uint64_t loadTimes = Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(curKL0, BLOCK_CUBE), B8_MIN_STEP);
                 for (uint16_t i = 1; i < loadTimes; i++) {
                     loadDataParams.mStartPosition = B8_MIN_STEP * i + Cmct::Gemm::CeilDiv(l0Iter * baseK_, BLOCK_CUBE);
                     AscendC::LoadData(l0bLocal[i * n1 * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, loadDataParams);
@@ -469,8 +468,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyBiasInBT(const AscendC::LocalTensor<BiasType> &biasL1Local,
-                                        const AscendC::LocalTensor<BiasType> &biasBt, uint64_t nl1Align, bool needBias)
+    __aicore__ inline void CopyBiasInBT(const AscendC::LocalTensor<BiasType>& biasL1Local,
+                                        const AscendC::LocalTensor<BiasType>& biasBt, uint64_t nl1Align, bool needBias)
     {
         if (!needBias) {
             return;
@@ -483,42 +482,44 @@ private:
         AscendC::DataCopy(biasBt, biasL1Local, biasParam);
     }
 
-    __aicore__ inline void Mmad(AscendC::MmadParams &mmadParams, uint64_t l0cOffset, uint64_t l0abOffset,
+    __aicore__ inline void Mmad(AscendC::MmadParams& mmadParams, uint64_t l0cOffset, uint64_t l0abOffset,
                                 uint64_t biasOffset, bool needBias)
     {
         mmadParams.cmatrixSource = needBias;
         if (needBias) {
-            AscendC::Mmad(
-                c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], biasBt_[biasOffset], mmadParams);
+            AscendC::Mmad(c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], biasBt_[biasOffset],
+                          mmadParams);
         } else {
             mmadParams.cmatrixSource = false;
             AscendC::Mmad(c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], mmadParams);
         }
     }
 
-    __aicore__ inline void Iterate(MmadParams &mmadParams, uint64_t curML1, uint64_t curNL1, uint64_t curOuterKL1,
+    __aicore__ inline void Iterate(MmadParams& mmadParams, uint64_t curML1, uint64_t curNL1, uint64_t curOuterKL1,
                                    uint64_t curInnerKL1, uint64_t l1Iter, uint16_t aL1BufId, uint16_t bL1BufId,
                                    uint16_t biasBufId, uint64_t l0cOffset, bool isL1LastRound)
     {
         uint64_t kL0Iter = Cmct::Gemm::CeilDiv(curInnerKL1, baseK_);
         uint64_t offsetAL1 = 0;
         if constexpr (DispatchPolicy::fullLoadMode != A_FULL_LOAD_MODE) {
-            uint64_t kBL1Multiple = kAL1_ >= kBL1_ ? (l1Iter % (kAL1_ / kBL1_)) * kBL1_ *
-                                                         (transA ? C0_SIZE : Cmct::Gemm::CeilAlign(curML1, BLOCK_CUBE))
-                                                   : 0;
+            uint64_t kBL1Multiple = kAL1_ >= kBL1_ ?
+                                        (l1Iter % (kAL1_ / kBL1_)) * kBL1_ *
+                                            (transA ? C0_SIZE : Cmct::Gemm::CeilAlign(curML1, BLOCK_CUBE)) :
+                                        0;
             offsetAL1 = l1BufferAOffset_[aL1BufId] + kBL1Multiple;
         } else {
-            offsetAL1 =
-                l1BufferAOffset_[0] + l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curML1, transA ? C0_SIZE : BLOCK_CUBE);
+            offsetAL1 = l1BufferAOffset_[0] +
+                        l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curML1, transA ? C0_SIZE : BLOCK_CUBE);
         }
         uint64_t offsetBL1 = l1BufferBOffset_[bL1BufId];
         if constexpr (DispatchPolicy::fullLoadMode == B_FULL_LOAD_MODE) {
             offsetBL1 = l1BufferBOffset_[0] +
                         l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curNL1, transB ? BLOCK_CUBE : C0_SIZE);
         } else if constexpr (DispatchPolicy::fullLoadMode == 0) {
-            uint64_t kAL1Multiple = kBL1_ >= kAL1_ ? (l1Iter % (kBL1_ / kAL1_)) * kAL1_ *
-                                                         (transB ? Cmct::Gemm::CeilAlign(curNL1, BLOCK_CUBE) : C0_SIZE)
-                                                   : 0;
+            uint64_t kAL1Multiple = kBL1_ >= kAL1_ ?
+                                        (l1Iter % (kBL1_ / kAL1_)) * kAL1_ *
+                                            (transB ? Cmct::Gemm::CeilAlign(curNL1, BLOCK_CUBE) : C0_SIZE) :
+                                        0;
             offsetBL1 += kAL1Multiple;
         }
         for (uint16_t iter1 = 0; iter1 < kL0Iter; ++iter1) {
@@ -545,9 +546,9 @@ private:
         }
     }
 
-    __aicore__ inline void CopyFixpipeScalar(const AscendC::GlobalTensor<CType> &cGlobal,
-                                             AscendC::LocalTensor<L0CType> &c1Local, MmadParams &mmadParams,
-                                             uint64_t &scalarX2Scale)
+    __aicore__ inline void CopyFixpipeScalar(const AscendC::GlobalTensor<CType>& cGlobal,
+                                             AscendC::LocalTensor<L0CType>& c1Local, MmadParams& mmadParams,
+                                             uint64_t& scalarX2Scale)
     {
         AscendC::FixpipeParamsC310 intriParams;
         intriParams.nSize = mmadParams.n;
@@ -583,9 +584,9 @@ private:
         AscendC::Fixpipe(cGlobal, c1Local, intriParams);
     }
 
-    __aicore__ inline void CopyFixpipeTensor(const AscendC::GlobalTensor<CType> &cGlobal,
-                                             AscendC::LocalTensor<L0CType> &c1Local, MmadParams &mmadParams,
-                                             const AscendC::LocalTensor<uint64_t> &tensorX2Scale)
+    __aicore__ inline void CopyFixpipeTensor(const AscendC::GlobalTensor<CType>& cGlobal,
+                                             AscendC::LocalTensor<L0CType>& c1Local, MmadParams& mmadParams,
+                                             const AscendC::LocalTensor<uint64_t>& tensorX2Scale)
     {
         AscendC::FixpipeParamsC310 intriParams;
         intriParams.nSize = mmadParams.n;
@@ -621,7 +622,7 @@ private:
     }
 
     __aicore__ inline void IterateAL1BL1(AscendC::GlobalTensor<AType> aGlobal, AscendC::GlobalTensor<BType> bGlobal,
-                                         AscendC::GlobalTensor<CType> cGlobal, MmadParams &mmadParams, uint64_t curML1,
+                                         AscendC::GlobalTensor<CType> cGlobal, MmadParams& mmadParams, uint64_t curML1,
                                          uint64_t curNL1, uint64_t l0cOffset, uint16_t biasBufId)
     {
         for (uint64_t kAIter = 0; kAIter < kAL1Iter_; ++kAIter) {
@@ -632,8 +633,9 @@ private:
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(INPUT_BUFFER_FLAG_0 + aPingPongID_);
             uint64_t kBL1Iter = Cmct::Gemm::CeilDiv(curKAL1, kBL1_);
             for (uint64_t kBIter = 0; kBIter < kBL1Iter; ++kBIter) {
-                uint64_t curKBL1 =
-                    kAIter == kAL1Iter_ - 1 && kBIter == kBL1Iter - 1 ? k_ - kAIter * kAL1_ - kBIter * kBL1_ : kBL1_;
+                uint64_t curKBL1 = kAIter == kAL1Iter_ - 1 && kBIter == kBL1Iter - 1 ?
+                                       k_ - kAIter * kAL1_ - kBIter * kBL1_ :
+                                       kBL1_;
                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(INPUT_BUFFER_FLAG_2 + bPingPongID_);
                 CopyBInL1(bGlobal, curNL1, curKBL1, abL1LoopCnt_, bPingPongID_);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(INPUT_BUFFER_FLAG_2 + bPingPongID_);
@@ -651,7 +653,7 @@ private:
     }
 
     __aicore__ inline void IterateBL1AL1(AscendC::GlobalTensor<AType> aGlobal, AscendC::GlobalTensor<BType> bGlobal,
-                                         AscendC::GlobalTensor<CType> cGlobal, MmadParams &mmadParams, uint64_t curML1,
+                                         AscendC::GlobalTensor<CType> cGlobal, MmadParams& mmadParams, uint64_t curML1,
                                          uint64_t curNL1, uint64_t l0cOffset, uint16_t biasBufId)
     {
         for (uint64_t kBIter = 0; kBIter < kBL1Iter_; ++kBIter) {
@@ -662,8 +664,9 @@ private:
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(INPUT_BUFFER_FLAG_0 + bPingPongID_);
             uint64_t kAL1Iter = Cmct::Gemm::CeilDiv(curKBL1, kAL1_);
             for (uint64_t kAIter = 0; kAIter < kAL1Iter; ++kAIter) {
-                uint64_t curKAL1 =
-                    kBIter == kBL1Iter_ - 1 && kAIter == kAL1Iter - 1 ? k_ - kBIter * kBL1_ - kAIter * kAL1_ : kAL1_;
+                uint64_t curKAL1 = kBIter == kBL1Iter_ - 1 && kAIter == kAL1Iter - 1 ?
+                                       k_ - kBIter * kBL1_ - kAIter * kAL1_ :
+                                       kAL1_;
                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(INPUT_BUFFER_FLAG_2 + aPingPongID_);
                 CopyAInL1(aGlobal, curML1, curKAL1, abL1LoopCnt_, aPingPongID_);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(INPUT_BUFFER_FLAG_2 + aPingPongID_);
@@ -681,7 +684,7 @@ private:
     }
 
     __aicore__ inline void IterateABL1(AscendC::GlobalTensor<AType> aGlobal, AscendC::GlobalTensor<BType> bGlobal,
-                                       AscendC::GlobalTensor<CType> cGlobal, MmadParams &mmadParams, uint64_t curML1,
+                                       AscendC::GlobalTensor<CType> cGlobal, MmadParams& mmadParams, uint64_t curML1,
                                        uint64_t curNL1, uint64_t l0cOffset, uint16_t biasBufId)
     {
         for (uint64_t iter0 = 0; iter0 < kL1Iter_; ++iter0) {
@@ -713,7 +716,7 @@ private:
     uint64_t x2ScaleL1OneBuffer_ = 0UL;
     uint64_t biasL1OneBuffer_ = 0UL;
     uint64_t l1BufferX2ScaleOffset_[2] = {0UL}; // default 2 buffer
-    uint64_t l1BufferBiasOffset_[2] = {0UL}; // default 2 buffer
+    uint64_t l1BufferBiasOffset_[2] = {0UL};    // default 2 buffer
     uint64_t scalarScale_ = 0UL;
     AscendC::LocalTensor<AType> l0aLocal_{AscendC::TPosition::A2, 0, L0A_SIZE};
     AscendC::LocalTensor<BType> l0bLocal_{AscendC::TPosition::B2, 0, L0B_SIZE};
@@ -724,7 +727,6 @@ private:
     AscendC::LocalTensor<BiasType> biasL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE / sizeof(BiasType)};
     AscendC::LocalTensor<uint64_t> scaleL1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE / sizeof(uint64_t)};
 };
-}
-}
-}
-
+} // namespace Block
+} // namespace Gemm
+} // namespace Cmct

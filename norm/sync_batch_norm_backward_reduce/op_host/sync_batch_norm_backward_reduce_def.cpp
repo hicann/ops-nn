@@ -17,38 +17,38 @@
 namespace ops {
 class SyncBatchNormBackwardReduce : public OpDef {
 public:
-    explicit SyncBatchNormBackwardReduce(const char *name) : OpDef(name)
+    explicit SyncBatchNormBackwardReduce(const char* name) : OpDef(name)
     {
         this->Input("sum_dy")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("sum_dy_dx_pad")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("mean")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("invert_std")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("sum_dy_xmu")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

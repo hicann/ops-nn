@@ -20,8 +20,8 @@
 #include "arch35/rms_norm_grad_empty_dgamma.h"
 #include "arch35/rms_norm_grad_regbase_dgamma_big_m.h"
 
-extern "C" __global__ __aicore__ void rms_norm_grad(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void rms_norm_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
+                                                    GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (TILING_KEY_IS(8000)) {

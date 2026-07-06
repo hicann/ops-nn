@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class AscendDequant : public OpDef
-{
+class AscendDequant : public OpDef {
 public:
     explicit AscendDequant(const char* name) : OpDef(name)
     {

@@ -100,9 +100,8 @@ struct Conv3DAttrsForAvgPool3d {
     int64_t padr = 0;
 };
 
-static bool GetConv3DXShape(
-    const InferShapeContext* context, size_t x_idx, Format x_format, bool avg_pool3d,
-    Conv3DInputShapesForAvgPool3d& shapes)
+static bool GetConv3DXShape(const InferShapeContext* context, size_t x_idx, Format x_format, bool avg_pool3d,
+                            Conv3DInputShapesForAvgPool3d& shapes)
 {
     const auto x_shape = context->GetInputShape(x_idx);
     OP_LOGE_IF(x_shape == nullptr, false, context->GetNodeName(), "failed to get x shape.");
@@ -131,16 +130,16 @@ static bool GetConv3DXShape(
         shapes.ic = x_shape->GetDim(idx++);
         shapes.in = x_shape->GetDim(idx++);
     } else {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            context->GetNodeName(), "X", ge::TypeUtils::FormatToAscendString(x_format).GetString(),
-            "format only supports NCDHW, NDHWC, DHWCN");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context->GetNodeName(), "X",
+                                                ge::TypeUtils::FormatToAscendString(x_format).GetString(),
+                                                "format only supports NCDHW, NDHWC, DHWCN");
         return false;
     }
 
     return true;
 }
 
-static void SetPads(Conv3DAttrsForAvgPool3d& attrs, int64_t padf, int64_t padb, int64_t padu, int64_t padd, 
+static void SetPads(Conv3DAttrsForAvgPool3d& attrs, int64_t padf, int64_t padb, int64_t padu, int64_t padd,
                     int64_t padl, int64_t padr)
 {
     attrs.padf = padf;
@@ -151,17 +150,16 @@ static void SetPads(Conv3DAttrsForAvgPool3d& attrs, int64_t padf, int64_t padb, 
     attrs.padr = padr;
 }
 
-static bool GetConv3DPads(
-    const InferShapeContext* context, const Conv3DInputShapesForAvgPool3d& shapes, size_t pads_idx, size_t padding_idx,
-    Conv3DAttrsForAvgPool3d& attrs)
+static bool GetConv3DPads(const InferShapeContext* context, const Conv3DInputShapesForAvgPool3d& shapes,
+                          size_t pads_idx, size_t padding_idx, Conv3DAttrsForAvgPool3d& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
     OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
     const auto pads_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(pads_idx);
     OP_LOGE_IF(pads_list == nullptr, false, context->GetNodeName(), "failed to get pads attrs");
     if (pads_list->GetSize() != LEN_6 and pads_list->GetSize() != LEN_3 and pads_list->GetSize() != LEN_1) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            "AvgPool3D", "Size of pads", std::to_string(pads_list->GetSize()).c_str(), "[6, 3, 1]");
+        OP_LOGE_FOR_INVALID_LISTSIZE("AvgPool3D", "Size of pads", std::to_string(pads_list->GetSize()).c_str(),
+                                     "[6, 3, 1]");
         return false;
     }
     const auto pads_list_data = static_cast<const int64_t*>(pads_list->GetData());
@@ -174,8 +172,8 @@ static bool GetConv3DPads(
         attrs.padl = pads_list->GetSize() == LEN_1 ? pads_list_data[DIM_0] : pads_list_data[DIM_2];
         attrs.padr = pads_list->GetSize() == LEN_1 ? pads_list_data[DIM_0] : pads_list_data[DIM_2];
     } else {
-        SetPads(attrs, pads_list_data[DIM_0], pads_list_data[DIM_1], pads_list_data[DIM_2],
-                pads_list_data[DIM_3], pads_list_data[DIM_4], pads_list_data[DIM_5]);
+        SetPads(attrs, pads_list_data[DIM_0], pads_list_data[DIM_1], pads_list_data[DIM_2], pads_list_data[DIM_3],
+                pads_list_data[DIM_4], pads_list_data[DIM_5]);
     }
 
     if (runtime_attrs->GetAttrNum() > padding_idx) {
@@ -191,24 +189,25 @@ static bool GetConv3DPads(
             int64_t pad_d = std::max((tails_d > 0 ? dilate_kernel_d - tails_d : dilate_kernel_d - attrs.strd), 0L);
             int64_t pad_h = std::max((tails_h > 0 ? dilate_kernel_h - tails_h : dilate_kernel_h - attrs.strh), 0L);
             int64_t pad_w = std::max((tails_w > 0 ? dilate_kernel_w - tails_w : dilate_kernel_w - attrs.strw), 0L);
-            SetPads(attrs, pad_d / DIM_2, pad_d - pad_d / DIM_2, pad_h / DIM_2, pad_h - pad_h / DIM_2, pad_w / DIM_2, pad_w - pad_w / DIM_2);
+            SetPads(attrs, pad_d / DIM_2, pad_d - pad_d / DIM_2, pad_h / DIM_2, pad_h - pad_h / DIM_2, pad_w / DIM_2,
+                    pad_w - pad_w / DIM_2);
             return true;
         }
     }
 
-    bool negative_pad =
-        std::any_of(pads_list_data, pads_list_data + pads_list->GetSize(), [](int64_t val) -> bool { return val < 0; });
+    bool negative_pad = std::any_of(pads_list_data, pads_list_data + pads_list->GetSize(),
+                                    [](int64_t val) -> bool { return val < 0; });
     if (negative_pad) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "AvgPool3D", "Value of pads", "negative value found", "each element of pads must be >= 0");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("AvgPool3D", "Value of pads", "negative value found",
+                                              "each element of pads must be >= 0");
         return false;
     }
 
     return true;
 }
 
-static bool GetStridesForAvgPool3D(
-    const InferShapeContext* context, ge::Format x_format, Conv3DAttrsForAvgPool3d& attrs)
+static bool GetStridesForAvgPool3D(const InferShapeContext* context, ge::Format x_format,
+                                   Conv3DAttrsForAvgPool3d& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
     OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
@@ -292,9 +291,8 @@ static bool GetKSize(const InferShapeContext* context, ge::Format x_format, Conv
     return true;
 }
 
-static bool CalcAvgPool3DOutputShape(
-    const char* op_name, const Conv3DInputShapesForAvgPool3d& shapes, const Conv3DAttrsForAvgPool3d& attrs,
-    ge::Format y_format, gert::Shape* y_shape)
+static bool CalcAvgPool3DOutputShape(const char* op_name, const Conv3DInputShapesForAvgPool3d& shapes,
+                                     const Conv3DAttrsForAvgPool3d& attrs, ge::Format y_format, gert::Shape* y_shape)
 {
     int64_t outd = 0;
     int64_t outh = 0;
@@ -338,9 +336,9 @@ static bool CalcAvgPool3DOutputShape(
         y_shape->AppendDim(shapes.ic);
         y_shape->AppendDim(shapes.in);
     } else {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            op_name, "Format of output y", ge::TypeUtils::FormatToAscendString(y_format).GetString(),
-            "format only supports NCDHW, NDHWC, DHWCN");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "Format of output y",
+                                                ge::TypeUtils::FormatToAscendString(y_format).GetString(),
+                                                "format only supports NCDHW, NDHWC, DHWCN");
         return false;
     }
 

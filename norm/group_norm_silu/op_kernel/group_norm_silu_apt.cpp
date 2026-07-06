@@ -34,8 +34,8 @@ namespace {
 #define TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE 1131
 } // namespace
 
-extern "C" __global__ __aicore__ void group_norm_silu(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void group_norm_silu(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu,
+                                                      GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

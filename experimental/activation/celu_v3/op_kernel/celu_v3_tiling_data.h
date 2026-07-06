@@ -24,11 +24,11 @@
 #define _CELU_V3_TILING_DATA_H_
 
 struct CeluV3TilingData {
-    int64_t totalElements = 0;   // Total number of elements
-    int64_t blockFactor = 0;     // Number of elements per AI Core
-    int64_t ubFactor = 0;        // Number of elements per UB iteration
-    float alphaVal = 1.0f;       // alpha value
-    float invAlpha = 1.0f;       // 1.0 / alpha
+    int64_t totalElements = 0; // Total number of elements
+    int64_t blockFactor = 0;   // Number of elements per AI Core
+    int64_t ubFactor = 0;      // Number of elements per UB iteration
+    float alphaVal = 1.0f;     // alpha value
+    float invAlpha = 1.0f;     // 1.0 / alpha
 };
 
 #endif // _CELU_V3_TILING_DATA_H_

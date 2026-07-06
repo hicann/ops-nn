@@ -21,17 +21,14 @@ namespace AddRmsNormDynamicQuant {
 
 template <typename T_X, typename T_Y>
 class KernelAddRmsNormDynamicQuantRegbaseSpiltReduce {
-using T_SMOOTH_SCALE = T_X;
-public:
-    __aicore__ inline KernelAddRmsNormDynamicQuantRegbaseSpiltReduce(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    using T_SMOOTH_SCALE = T_X;
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta,
-        GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace,
-        const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
+public:
+    __aicore__ inline KernelAddRmsNormDynamicQuantRegbaseSpiltReduce(TPipe* pipe) { pipe_ = pipe; }
+
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2,
+                                GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2,
+                                GM_ADDR workspace, const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -72,9 +69,9 @@ public:
         reduceSumBufAlign_ = CeilAlign(reduceSumBufLen, B32_BLOCK_NUM);
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta,
-        GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1,
+                                      GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
+                                      GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
     {
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
         uint64_t gmLen = mCore_ * numN_;
@@ -162,8 +159,8 @@ public:
                 Duplicate(scale2Local, 0.0f, B32_BLOCK_NUM);
             }
             // Process rstd & Copy out xOut(x1+x2)
-            SubProcessRstd<true>(
-                rstdLocal, 0, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_, epsilon_);
+            SubProcessRstd<true>(rstdLocal, 0, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_,
+                                 epsilon_);
             // Process reducemax & Store (rmsout*smooth) to workSpace
             SubProcessReduceMax(scale1Local, scale2Local, rstdLocal, mIdx);
             // Process scale
@@ -216,9 +213,8 @@ private:
     /**
      * @brief Copy in xGm_[srcGmOffset:srcGmOffset+count] and reduce to dst[dstOffset].
      */
-    __aicore__ inline void ComputeFormerHandle(
-        LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset, uint64_t workSpaceOffset,
-        uint32_t count, uint32_t powerSplit)
+    __aicore__ inline void ComputeFormerHandle(LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset,
+                                               uint64_t workSpaceOffset, uint32_t count, uint32_t powerSplit)
     {
         LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
         uint32_t calCount = Aligned((uint64_t)(count * sizeof(T_X)), ALIGN_32_FACTOR) / sizeof(T_X);
@@ -236,8 +232,8 @@ private:
         }
 
         LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
-        NormCommon::ReduceSumRstd<T_X, true, true, false>(
-            dstLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local, workLocal, dstOffset, calNum, powerSplit);
+        NormCommon::ReduceSumRstd<T_X, true, true, false>(dstLocal, xOutLocal, xOutTmpLocal, x1Local, x2Local,
+                                                          workLocal, dstOffset, calNum, powerSplit);
         outQueueX_.EnQue<T_X>(xOutLocal);
         inQueueX1_.FreeTensor(x1Local);
         inQueueX2_.FreeTensor(x2Local);
@@ -254,9 +250,9 @@ private:
     }
 
     template <bool IS_RSTD>
-    __aicore__ inline void SubProcessRstd(
-        LocalTensor<float> dstLocal, uint64_t position, uint64_t curRow, uint64_t masterLoop, uint64_t tailLoop,
-        uint64_t tail, float avgFactor = 1.0f, float epsilon = 0.0f)
+    __aicore__ inline void SubProcessRstd(LocalTensor<float> dstLocal, uint64_t position, uint64_t curRow,
+                                          uint64_t masterLoop, uint64_t tailLoop, uint64_t tail, float avgFactor = 1.0f,
+                                          float epsilon = 0.0f)
     {
         uint64_t workSpaceOffset{0};
         uint64_t offset{curRow};
@@ -321,12 +317,12 @@ private:
             level1 += 1;
             RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
         }
-        ComputeMultiLevelRstd<IS_RSTD>(
-            dstLocal, position, level1Local, level2Local, level3Local, level1, level2, avgFactor, epsilon);
+        ComputeMultiLevelRstd<IS_RSTD>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2,
+                                       avgFactor, epsilon);
     }
 
-    __aicore__ inline void SubProcessReduceMax(
-        LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local, LocalTensor<float>& rstdLocal, uint64_t mIdx)
+    __aicore__ inline void SubProcessReduceMax(LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local,
+                                               LocalTensor<float>& rstdLocal, uint64_t mIdx)
     {
         LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
         LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
@@ -374,11 +370,13 @@ private:
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
             SetOverflowMode<T_Y>(0);
-            DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(
-                scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, 0, baseNDtypeAlign_, hasSmoothScale1_, hasBeta_);
+            DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal,
+                                                        betaLocal, smoothScale1Local, 0, baseNDtypeAlign_,
+                                                        hasSmoothScale1_, hasBeta_);
             if (hasY2Scale2_) {
-                DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(
-                    scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, 0, baseNDtypeAlign_, hasSmoothScale2_, hasBeta_);
+                DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal,
+                                                            gammaLocal, betaLocal, smoothScale2Local, 0,
+                                                            baseNDtypeAlign_, hasSmoothScale2_, hasBeta_);
             }
             SetOverflowMode<T_Y>(oriOverflowMode_);
 
@@ -469,27 +467,31 @@ private:
     }
 
     template <typename T_GAMMA, typename T_SMOOTH, typename T_YB8>
-    __aicore__ inline void DispatchReduceMax(
-        LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal, LocalTensor<float>& xLocal,
-        LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
-        LocalTensor<T_SMOOTH>& smoothScaleLocal, uint32_t rstdScaleOffset, uint32_t calCount,
-        bool hasSmoothScale, bool hasBeta)
+    __aicore__ inline void DispatchReduceMax(LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal,
+                                             LocalTensor<float>& xLocal, LocalTensor<float>& rstdLocal,
+                                             LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+                                             LocalTensor<T_SMOOTH>& smoothScaleLocal, uint32_t rstdScaleOffset,
+                                             uint32_t calCount, bool hasSmoothScale, bool hasBeta)
     {
         if (hasSmoothScale) {
             if (hasBeta) {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, true, T_YB8>(
-                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset, calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, true, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
+                                                                              gammaLocal, betaLocal, smoothScaleLocal,
+                                                                              rstdScaleOffset, calCount);
             } else {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, false, T_YB8>(
-                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset, calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, false, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
+                                                                               gammaLocal, betaLocal, smoothScaleLocal,
+                                                                               rstdScaleOffset, calCount);
             }
         } else {
             if (hasBeta) {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, true, T_YB8>(
-                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset, calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, true, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
+                                                                               gammaLocal, betaLocal, smoothScaleLocal,
+                                                                               rstdScaleOffset, calCount);
             } else {
                 ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, false, T_YB8>(
-                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset, calCount);
+                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset,
+                    calCount);
             }
         }
     }

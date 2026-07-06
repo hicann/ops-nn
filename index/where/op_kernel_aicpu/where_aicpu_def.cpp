@@ -14,12 +14,12 @@
 namespace ops {
 class Where : public OpDef {
 public:
-    explicit Where(const char *name) : OpDef(name)
+    explicit Where(const char* name) : OpDef(name)
     {
-        this->Input("x").ParamType(REQUIRED).DataType({
-            ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT8, ge::DT_QINT8,
-            ge::DT_QUINT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_UINT32, ge::DT_QINT32,
-            ge::DT_INT64, ge::DT_UINT64, ge::DT_BOOL, ge::DT_COMPLEX64, ge::DT_COMPLEX128});
+        this->Input("x").ParamType(REQUIRED).DataType(
+            {ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_UINT8, ge::DT_QINT8, ge::DT_QUINT8,
+             ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_UINT32, ge::DT_QINT32, ge::DT_INT64, ge::DT_UINT64,
+             ge::DT_BOOL, ge::DT_COMPLEX64, ge::DT_COMPLEX128});
         this->Output("y").ParamType(REQUIRED).DataType({ge::DT_INT64});
 
         ApplyNnAicpuDefaultCfg(*this);
@@ -32,4 +32,4 @@ public:
 };
 
 OP_ADD(Where);
-}  // namespace ops
+} // namespace ops

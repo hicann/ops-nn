@@ -25,7 +25,7 @@ using namespace AscendC;
 using namespace conv;
 
 template <class Intf>
-__aicore__ inline void OptGroupCalcBL1LoadTimesHWMode(Intf *self)
+__aicore__ inline void OptGroupCalcBL1LoadTimesHWMode(Intf* self)
 {
     if (!self->ctx.kBL1fullload) {
         self->ctx.ddr2l1LoopKB = self->ctx.maxKBL1Iter + 1;
@@ -34,9 +34,9 @@ __aicore__ inline void OptGroupCalcBL1LoadTimesHWMode(Intf *self)
         if constexpr (Intf::hasWL0IterFlag) {
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2l0LoopW = (self->ctx.ddr2l1LoopW - W_TAIL_NUM) *
-                    CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
-                    CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) +
-                    CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->woL0);
+                                  CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
+                              CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) +
+                              CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->woL0);
             } else {
                 ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->woL0);
             }
@@ -62,7 +62,7 @@ __aicore__ inline void OptGroupCalcBL1LoadTimesHWMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupCalcBL1LoadTimesMMode(Intf *self)
+__aicore__ inline void OptGroupCalcBL1LoadTimesMMode(Intf* self)
 {
     if (!self->ctx.kBL1fullload) {
         uint64_t ddr2l0LoopM = CeilDiv(self->ctx.singleCoreM, self->ctx.mL0);
@@ -85,7 +85,7 @@ __aicore__ inline void OptGroupCalcBL1LoadTimesMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupCalcBL1LoadTimes(Intf *self)
+__aicore__ inline void OptGroupCalcBL1LoadTimes(Intf* self)
 {
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE)) {
         OptGroupCalcBL1LoadTimesHWMode<Intf>(self);
@@ -95,24 +95,25 @@ __aicore__ inline void OptGroupCalcBL1LoadTimes(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitIterValueMfirstHWMode(Intf *self)
+__aicore__ inline void OptGroupInitIterValueMfirstHWMode(Intf* self)
 {
     if (!self->ctx.kBL1fullload) {
         uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->hoL0);
         uint64_t ddr2l0LoopW = 0;
         if constexpr (Intf::hasWL0IterFlag) {
             self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->woL1;
-            self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
+            self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ? self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
             if (self->ctx.convTilingData->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
                 CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) > 1) {
                 self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTilingData->woL0;
-                self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->woL0) * self->ctx.convTilingData->woL0;
+                self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->woL0) *
+                                      self->ctx.convTilingData->woL0;
             }
 
             self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->woL1);
-            ddr2l0LoopW = 
-                (self->ctx.ddr2l1LoopW - 1) * CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
-                CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0);
+            ddr2l0LoopW = (self->ctx.ddr2l1LoopW - 1) *
+                              CeilDiv(self->ctx.convTilingData->woL1, self->ctx.convTilingData->woL0) +
+                          CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0);
 
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2l0LoopW += CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->woL0);
@@ -129,7 +130,7 @@ __aicore__ inline void OptGroupInitIterValueMfirstHWMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitIterValueNfirstHWMode(Intf *self)
+__aicore__ inline void OptGroupInitIterValueNfirstHWMode(Intf* self)
 {
     if constexpr (!Intf::hasHL1IterFlag) {
         self->ctx.ddr2l1LoopH = 1;
@@ -146,12 +147,13 @@ __aicore__ inline void OptGroupInitIterValueNfirstHWMode(Intf *self)
     }
 
     self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->woL1;
-    self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
+    self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ? self->ctx.convTilingData->woL1 : self->ctx.woAL1Tail;
     if constexpr (Intf::hasWL0IterFlag) {
         if (self->ctx.convTilingData->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
             CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->woL0) > 1) {
             self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTilingData->woL0;
-            self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->woL0) * self->ctx.convTilingData->woL0;
+            self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->woL0) *
+                                  self->ctx.convTilingData->woL0;
         }
 
         if (self->ctx.woL1SmallTail > 0) {
@@ -174,7 +176,7 @@ __aicore__ inline void OptGroupInitIterValueNfirstHWMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitIterValueMfirstMMode(Intf *self)
+__aicore__ inline void OptGroupInitIterValueMfirstMMode(Intf* self)
 {
     if (!self->ctx.kBL1fullload) {
         uint64_t ddr2l0LoopM = CeilDiv(self->ctx.singleCoreM, self->ctx.mL0);
@@ -186,7 +188,7 @@ __aicore__ inline void OptGroupInitIterValueMfirstMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitIterValueNfirstMMode(Intf *self)
+__aicore__ inline void OptGroupInitIterValueNfirstMMode(Intf* self)
 {
     self->ctx.ddr2l1LoopM = CeilDiv(self->ctx.singleCoreM, self->ctx.mAL1);
 
@@ -204,7 +206,7 @@ __aicore__ inline void OptGroupInitIterValueNfirstMMode(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitIterValue(Intf *self)
+__aicore__ inline void OptGroupInitIterValue(Intf* self)
 {
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE)) {
         if constexpr (Intf::iterateMFirstFlag) {
@@ -222,11 +224,11 @@ __aicore__ inline void OptGroupInitIterValue(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitKValue(Intf *self)
+__aicore__ inline void OptGroupInitKValue(Intf* self)
 {
-    self->ctx.ddr2l1LoopKB =
-        CeilDiv(AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelWxkernelD,
-                self->ctx.convTilingData->kBL1);
+    self->ctx.ddr2l1LoopKB = CeilDiv(
+        AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelWxkernelD,
+        self->ctx.convTilingData->kBL1);
     self->ctx.maxKBL1Iter = self->ctx.ddr2l1LoopKB - 1;
     self->ctx.kBL1fullload = self->ctx.ddr2l1LoopKB == 1;
 
@@ -241,7 +243,7 @@ __aicore__ inline void OptGroupInitKValue(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitNValue(Intf *self)
+__aicore__ inline void OptGroupInitNValue(Intf* self)
 {
     self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTilingData->nBL1;
     self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTilingData->nBL1 : self->ctx.nBL1Tail;
@@ -251,7 +253,7 @@ __aicore__ inline void OptGroupInitNValue(Intf *self)
         self->ctx.maxNBL1Iter = 0;
     } else {
         self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->nBL1);
-        self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN  - 1;
+        self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN - 1;
     }
 
     if constexpr (!Intf::hasNL0IterFlag) {
@@ -262,7 +264,7 @@ __aicore__ inline void OptGroupInitNValue(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupInitBuf(Intf *self)
+__aicore__ inline void OptGroupInitBuf(Intf* self)
 {
     self->ctx.ubBufSize = self->ctx.ci1Opt * self->ctx.convTilingData->kernelHxkernelWxkernelD * self->ctx.co1Opt *
                           Intf::k0 * BLOCK_L0_N;
@@ -280,17 +282,15 @@ __aicore__ inline void OptGroupInitBuf(Intf *self)
 
     if constexpr (Intf::bL1DBFlag) {
         self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf,
-            aL1SpaceSize + self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
+                                  aL1SpaceSize + self->ctx.bL1SpaceSize * DOUBLE_BUF * Intf::sizeOfWeight);
     } else {
-        self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf,
-            aL1SpaceSize + self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
+        self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf, aL1SpaceSize + self->ctx.bL1SpaceSize * Intf::sizeOfWeight);
     }
-    self->ctx.bl1 = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>()[
-        aL1SpaceSize / Intf::sizeOfFmap];
+    self->ctx.bl1 = self->ctx.bL1TBuf.template Get<typename Intf::WeightT>()[aL1SpaceSize / Intf::sizeOfFmap];
 }
 
 template <class Intf>
-__aicore__ inline void OptGroupVecInit(Intf *self)
+__aicore__ inline void OptGroupVecInit(Intf* self)
 {
     self->ctx.vecId = GetSubBlockIdx();
 
@@ -323,7 +323,8 @@ __aicore__ inline void OptGroupVecInit(Intf *self)
         self->ctx.singleCoreDo = self->ctx.convTilingData->singleCoreDo;
         self->ctx.cin1xcin0 = AlignB(self->ctx.singleCoreCi, Intf::k0);
         self->ctx.bL1Dk = self->ctx.convTilingData->cinBInCore <= self->ctx.cin1xcin0 ?
-                            1 : self->ctx.convTilingData->cinBInCore / self->ctx.cin1xcin0;
+                              1 :
+                              self->ctx.convTilingData->cinBInCore / self->ctx.cin1xcin0;
         self->ctx.bL1DkTail = self->ctx.convTilingData->kernelD % self->ctx.bL1Dk;
         self->ctx.bL1DkTail = self->ctx.bL1DkTail == 0 ? self->ctx.bL1Dk : self->ctx.bL1DkTail;
     }
@@ -341,6 +342,6 @@ __aicore__ inline void OptGroupVecInit(Intf *self)
     self->ctx.optGroupLoadUB2L1Tools.SetParams(self);
 }
 
-};
+}; // namespace ConvFunc
 
 #endif // CONV_OPT_GROUP_INIT_IMPL_H

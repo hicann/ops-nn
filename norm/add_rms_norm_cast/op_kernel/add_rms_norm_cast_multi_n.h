@@ -22,13 +22,9 @@ using namespace RmsNorm;
 template <typename T>
 class KernelAddRmsNormCastMultiN {
 public:
-    __aicore__ inline KernelAddRmsNormCastMultiN(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRMSNormCastTilingData* tiling)
+    __aicore__ inline KernelAddRmsNormCastMultiN(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRMSNormCastTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numCol = tiling->num_col;
@@ -94,7 +90,8 @@ public:
 
     __aicore__ inline void SubProcess(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) * static_cast<uint64_t>(numCol);
+        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) *
+                           static_cast<uint64_t>(numCol);
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(calc_row_num);
         CopyOutX(gm_bias, calc_row_num);
@@ -190,9 +187,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeY(
-        LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num,
-        uint32_t gm_bias)
+    __aicore__ inline void ComputeY(LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal,
+                                    uint32_t calc_row_num, uint32_t gm_bias)
     {
         LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
         LocalTensor<uint32_t> offsetLocal = offsetBuf.Get<uint32_t>();

@@ -18,8 +18,7 @@
 
 #include "confusion_softmax_grad_base.h"
 
-namespace ConfusionSoftmaxGradOps
-{
+namespace ConfusionSoftmaxGradOps {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 
@@ -30,8 +29,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T>
-class ConfusionSoftmaxGradARSmallR
-{
+class ConfusionSoftmaxGradARSmallR {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
     static constexpr int64_t DATA_BLOCK_COUNT = 16;
@@ -42,10 +40,7 @@ class ConfusionSoftmaxGradARSmallR
 public:
     __aicore__ inline ConfusionSoftmaxGradARSmallR(){};
 
-    __aicore__ inline ConfusionSoftmaxGradARSmallR(TPipe* pipeIn)
-    {
-        pipe_ = pipeIn;
-    }
+    __aicore__ inline ConfusionSoftmaxGradARSmallR(TPipe* pipeIn) { pipe_ = pipeIn; }
 
     __aicore__ inline void Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y, const SoftmaxGradARSmallRTilingData* tilingDataIn)
     {
@@ -140,7 +135,7 @@ public:
         LocalTensor<T> x1Tensor = x1Queue_.DeQue<T>();
         __local_mem__ T* x0Local = (__local_mem__ T*)x0Tensor.GetPhyAddr();
         __local_mem__ T* x1Local = (__local_mem__ T*)x1Tensor.GetPhyAddr();
-        CalcReduceSum(x0Local , x1Local, curTileA0Len);
+        CalcReduceSum(x0Local, x1Local, curTileA0Len);
         x1Queue_.FreeTensor(x1Tensor);
         CalcOutput(x0Local, curTileA0Len, false);
         CalcTranspose(curTileA0Len, tilingData_->rAligned);
@@ -187,10 +182,10 @@ private:
         __local_mem__ float* xSumLocal = (__local_mem__ float*)xSumTensor_.GetPhyAddr();
         __local_mem__ T* tmpAddrTy;
         LocalTensor<T> yLocal_;
-        if (isNormal) {   // Normal
+        if (isNormal) { // Normal
             yLocal_ = yQueue_.AllocTensor<T>();
             tmpAddrTy = (__local_mem__ T*)yLocal_.GetPhyAddr();
-        } else {   // Transpose
+        } else { // Transpose
             tmpLocalTy_ = tmpLocal_.template ReinterpretCast<T>();
             tmpAddrTy = (__local_mem__ T*)tmpLocalTy_.GetPhyAddr();
         }
@@ -217,7 +212,7 @@ private:
 
                     if constexpr (xToFp32_) {
                         MicroAPI::DataCopy(tmpAddrTy + xOffset, x0Reg, pregMask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, x0Reg, pregMask);
                         MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16, pregMask);
@@ -230,7 +225,7 @@ private:
             yQueue_.EnQue(yLocal_);
         }
     }
-    
+
     __aicore__ inline void CalcTransposeFp32(const LocalTensor<T>& yLocal, uint32_t curTileA0Len, uint32_t rAligned)
     {
         int rRepeartTimes = ops::CeilDiv(static_cast<int64_t>(rAligned), DATA_BLOCK_COUNT_HALF);
@@ -251,7 +246,8 @@ private:
             for (int j = 0; j < DATA_BLOCK_COUNT_HALF; j++) {
                 uint32_t offset = DATA_BLOCK_COUNT_HALF * i + DATA_BLOCK_COUNT_HALF * rRepeartTimes * j;
                 dstLocalList[j * CONST_TWO] = yLocal[offset];
-                dstLocalList[j * CONST_TWO + 1] = yLocal[offset + DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
+                dstLocalList[j * CONST_TWO + 1] = yLocal[offset +
+                                                         DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
             }
 
             AscendC::TransDataTo5HD(dstLocalList, srcLocalList, params);
@@ -274,7 +270,7 @@ private:
                 srcLocalList[j] = tmpLocalTy_[offset];
             }
             for (int j = 0; j < DATA_BLOCK_COUNT; j++) {
-                uint32_t offset = tilingData_->rTileBase * i + rAligned * j; 
+                uint32_t offset = tilingData_->rTileBase * i + rAligned * j;
                 dstLocalList[j] = yLocal[offset];
             }
 
@@ -300,7 +296,7 @@ private:
     {
         if constexpr (xToFp32_) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
             Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -398,6 +394,6 @@ private:
 
     static constexpr bool xToFp32_ = IsSameType<T, float>::value;
 };
-}  // namespace ConfusionSoftmaxGradOps
+} // namespace ConfusionSoftmaxGradOps
 
-#endif  // NORM_CONFUSION_SOFTMAX_GRAD_AR_SMALL_R_H
+#endif // NORM_CONFUSION_SOFTMAX_GRAD_AR_SMALL_R_H

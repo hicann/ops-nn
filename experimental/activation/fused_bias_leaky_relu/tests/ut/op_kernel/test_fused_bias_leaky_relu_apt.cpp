@@ -20,17 +20,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fused_bias_leaky_relu(GM_ADDR x, GM_ADDR bias, GM_ADDR y, 
-                                                            GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fused_bias_leaky_relu(GM_ADDR x, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                                            GM_ADDR tiling);
 
 class FusedBiasLeakyReluKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        cout << "FusedBiasLeakyReluKernelTest SetUp" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "FusedBiasLeakyReluKernelTest TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "FusedBiasLeakyReluKernelTest SetUp" << endl; }
+    static void TearDownTestCase() { cout << "FusedBiasLeakyReluKernelTest TearDown" << endl; }
 };
 
 static void RunKernelTest(size_t totalNum, ge::DataType dtype, float negativeSlope, float scale, uint64_t tilingKey)
@@ -70,7 +66,7 @@ TEST_F(FusedBiasLeakyReluKernelTest, test_fp32_small)
     size_t totalNum = 8;
     float negativeSlope = 0.2f;
     float scale = 1.414213562373f;
-    uint64_t tilingKey = 0;  // float32, single buffer
+    uint64_t tilingKey = 0; // float32, single buffer
     RunKernelTest(totalNum, ge::DT_FLOAT, negativeSlope, scale, tilingKey);
 }
 
@@ -88,7 +84,7 @@ TEST_F(FusedBiasLeakyReluKernelTest, test_fp32_large)
     size_t totalNum = 8192;
     float negativeSlope = 0.2f;
     float scale = 1.414213562373f;
-    uint64_t tilingKey = 1;  // float32, double buffer
+    uint64_t tilingKey = 1; // float32, double buffer
     RunKernelTest(totalNum, ge::DT_FLOAT, negativeSlope, scale, tilingKey);
 }
 
@@ -97,7 +93,7 @@ TEST_F(FusedBiasLeakyReluKernelTest, test_fp16_small)
     size_t totalNum = 8;
     float negativeSlope = 0.2f;
     float scale = 1.414213562373f;
-    uint64_t tilingKey = 1000;  // float16, single buffer (key base offset)
+    uint64_t tilingKey = 1000; // float16, single buffer (key base offset)
     RunKernelTest(totalNum, ge::DT_FLOAT16, negativeSlope, scale, tilingKey);
 }
 
@@ -115,14 +111,14 @@ TEST_F(FusedBiasLeakyReluKernelTest, test_fp16_large)
     size_t totalNum = 8192;
     float negativeSlope = 0.2f;
     float scale = 1.414213562373f;
-    uint64_t tilingKey = 1001;  // float16, double buffer
+    uint64_t tilingKey = 1001; // float16, double buffer
     RunKernelTest(totalNum, ge::DT_FLOAT16, negativeSlope, scale, tilingKey);
 }
 
 TEST_F(FusedBiasLeakyReluKernelTest, test_negative_slope_zero)
 {
     size_t totalNum = 1024;
-    float negativeSlope = 0.0f;  // standard ReLU
+    float negativeSlope = 0.0f; // standard ReLU
     float scale = 1.0f;
     uint64_t tilingKey = 0;
     RunKernelTest(totalNum, ge::DT_FLOAT, negativeSlope, scale, tilingKey);
@@ -132,7 +128,7 @@ TEST_F(FusedBiasLeakyReluKernelTest, test_scale_one)
 {
     size_t totalNum = 1024;
     float negativeSlope = 0.2f;
-    float scale = 1.0f;  // no scaling
+    float scale = 1.0f; // no scaling
     uint64_t tilingKey = 0;
     RunKernelTest(totalNum, ge::DT_FLOAT, negativeSlope, scale, tilingKey);
 }
@@ -151,6 +147,6 @@ TEST_F(FusedBiasLeakyReluKernelTest, test_very_large_shape)
     size_t totalNum = 65536;
     float negativeSlope = 0.2f;
     float scale = 1.414213562373f;
-    uint64_t tilingKey = 1;  // double buffer for large data
+    uint64_t tilingKey = 1; // double buffer for large data
     RunKernelTest(totalNum, ge::DT_FLOAT, negativeSlope, scale, tilingKey);
 }

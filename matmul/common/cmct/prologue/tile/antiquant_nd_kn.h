@@ -27,13 +27,13 @@ namespace detail {
 template <int32_t N, class TensorOut, class TensorTraitIn, class TensorScale, class Shape, bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
-    TensorScale, TensorScale, Shape,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>, TensorScale,
+    TensorScale, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
         (AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, int8_t> ||
-         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>) &&
-        AscendC::Std::is_same_v<TensorScale, half>>> {
+         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>)&&AscendC::Std::is_same_v<TensorScale,
+                                                                                                            half>>> {
     using DtypeIn = AscendC::Std::conditional_t<
         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>, int4x2_t,
         AscendC::PrimT<TensorTraitIn>>;
@@ -43,14 +43,14 @@ struct AntiquantImpl<
     static constexpr MicroAPI::LoadDist LD_DIST = AscendC::Std::is_same_v<DtypeIn, int4x2_t> ?
                                                       MicroAPI::LoadDist::DIST_UNPACK4_B8 :
                                                       MicroAPI::LoadDist::DIST_UNPACK_B8;
-    __aicore__ inline static void Run(
-        const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn, const TensorScale& tensorScale,
-        const TensorScale& tensorOffset, const Shape& shape)
+    __aicore__ inline static void Run(const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
+                                      const TensorScale& tensorScale, const TensorScale& tensorOffset,
+                                      const Shape& shape)
     {
         __local_mem__ DtypeIn* weightLowBitPhyAddr0 = (__local_mem__ DtypeIn*)tensorIn.GetPhyAddr();
         __local_mem__ DtypeOut* weightF16PhyAddr0 = (__local_mem__ DtypeOut*)tensorOut.GetPhyAddr();
-        __local_mem__ DtypeIn* weightLowBitPhyAddr1 =
-            weightLowBitPhyAddr0 + ElemToByte<DtypeIn>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
+        __local_mem__ DtypeIn* weightLowBitPhyAddr1 = weightLowBitPhyAddr0 +
+                                                      ElemToByte<DtypeIn>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
         __local_mem__ DtypeOut* weightF16PhyAddr1 = weightF16PhyAddr0 + (Policy::K + 1) * VECTOR_REG_SIZE<DtypeOut>;
         uint16_t ubLoopK = static_cast<uint16_t>(Cmct::Gemm::Get<1>(shape));
 
@@ -78,8 +78,8 @@ struct AntiquantImpl<
                 // PS 硬件指令不支持Muls bfloat16
                 MicroAPI::Muls(weightF16Vreg0, weightF16Vreg0, tensorScale, maskAll);
                 MicroAPI::Muls(weightF16Vreg1, weightF16Vreg1, tensorScale, maskAll);
-                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(
-                    weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0, weightF16Vreg1, maskAll);
+                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0,
+                                                                   weightF16Vreg1, maskAll);
             }
         }
     }
@@ -91,13 +91,13 @@ struct AntiquantImpl<
 template <int32_t N, class TensorOut, class TensorTraitIn, class TensorScale, class Shape, bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
-    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
-    TensorScale, TensorScale, Shape,
+    DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>, TensorScale,
+    TensorScale, Shape,
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
         (AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, int8_t> ||
-         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>) &&
-        AscendC::Std::is_same_v<TensorScale, bfloat16_t>>> {
+         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>,
+                                 AscendC::int4b_t>)&&AscendC::Std::is_same_v<TensorScale, bfloat16_t>>> {
     using DtypeIn = AscendC::Std::conditional_t<
         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>, int4x2_t,
         AscendC::PrimT<TensorTraitIn>>;
@@ -107,14 +107,14 @@ struct AntiquantImpl<
     static constexpr MicroAPI::LoadDist LD_DIST = AscendC::Std::is_same_v<DtypeIn, int4x2_t> ?
                                                       MicroAPI::LoadDist::DIST_UNPACK4_B8 :
                                                       MicroAPI::LoadDist::DIST_UNPACK_B8;
-    __aicore__ inline static void Run(
-        const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn, const TensorScale& tensorScale,
-        const TensorScale& tensorOffset, const Shape& shape)
+    __aicore__ inline static void Run(const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
+                                      const TensorScale& tensorScale, const TensorScale& tensorOffset,
+                                      const Shape& shape)
     {
         __local_mem__ DtypeIn* weightLowBitPhyAddr0 = (__local_mem__ DtypeIn*)tensorIn.GetPhyAddr();
         __local_mem__ DtypeOut* weightF16PhyAddr0 = (__local_mem__ DtypeOut*)tensorOut.GetPhyAddr();
-        __local_mem__ DtypeIn* weightLowBitPhyAddr1 =
-            weightLowBitPhyAddr0 + ElemToByte<DtypeIn>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
+        __local_mem__ DtypeIn* weightLowBitPhyAddr1 = weightLowBitPhyAddr0 +
+                                                      ElemToByte<DtypeIn>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
         __local_mem__ DtypeOut* weightF16PhyAddr1 = weightF16PhyAddr0 + (Policy::K + 1) * VECTOR_REG_SIZE<DtypeOut>;
         uint16_t ubLoopK = static_cast<uint16_t>(Cmct::Gemm::Get<1>(shape));
 
@@ -144,8 +144,8 @@ struct AntiquantImpl<
                 // PS 硬件指令不支持Muls bfloat16
                 MicroAPI::Mul(weightF16Vreg0, weightF16Vreg0, antiQuantScaleVreg, maskAll);
                 MicroAPI::Mul(weightF16Vreg1, weightF16Vreg1, antiQuantScaleVreg, maskAll);
-                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(
-                    weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0, weightF16Vreg1, maskAll);
+                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0,
+                                                                   weightF16Vreg1, maskAll);
             }
         }
     }
@@ -154,8 +154,8 @@ struct AntiquantImpl<
 // kn
 // int8/hifloat8/int4
 // per-channel
-template <
-    int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale, bool HasAntiQuantOffset>
+template <int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale,
+          bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
     DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
@@ -164,8 +164,9 @@ struct AntiquantImpl<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
         (AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, int8_t> ||
          AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, hifloat8_t> ||
-         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>) &&
-        QUANT_TYPE<decltype(TensorTraitScale{}.GetShape())> == QuantType::PER_CHANNEL>> {
+         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>,
+                                 AscendC::int4b_t>)&&QUANT_TYPE<decltype(TensorTraitScale{}.GetShape())> ==
+            QuantType::PER_CHANNEL>> {
     using DtypeIn = AscendC::Std::conditional_t<
         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, AscendC::int4b_t>, int4x2_t,
         AscendC::PrimT<TensorTraitIn>>;
@@ -177,15 +178,14 @@ struct AntiquantImpl<
                                                         MicroAPI::LoadDist::DIST_UNPACK4_B8 :
                                                         MicroAPI::LoadDist::DIST_UNPACK_B8;
 
-    __aicore__ inline static void Run(
-        const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
-        const AscendC::LocalTensor<TensorTraitScale>& tensorScale,
-        const AscendC::LocalTensor<TensorTraitScale>& tensorOffset, const Shape& shape)
+    __aicore__ inline static void Run(const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
+                                      const AscendC::LocalTensor<TensorTraitScale>& tensorScale,
+                                      const AscendC::LocalTensor<TensorTraitScale>& tensorOffset, const Shape& shape)
     {
         __local_mem__ DtypeIn* weightLowBitPhyAddr0 = (__local_mem__ DtypeIn*)tensorIn.GetPhyAddr();
         __local_mem__ DtypeOut* weightF16PhyAddr0 = (__local_mem__ DtypeOut*)tensorOut.GetPhyAddr();
-        __local_mem__ DtypeIn* weightLowBitPhyAddr1 =
-            weightLowBitPhyAddr0 + ElemToByte<DtypeIn>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
+        __local_mem__ DtypeIn* weightLowBitPhyAddr1 = weightLowBitPhyAddr0 +
+                                                      ElemToByte<DtypeIn>(VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
         __local_mem__ DtypeOut* weightF16PhyAddr1 = weightF16PhyAddr0 + (Policy::K + 1) * VECTOR_REG_SIZE<DtypeOut>;
         __local_mem__ DtypeOut* antiQuantScaleBasePhyAddr = (__local_mem__ DtypeOut*)tensorScale.GetPhyAddr();
         __local_mem__ DtypeOut* antiQuantOffsetBasePhyAddr = (__local_mem__ DtypeOut*)tensorOffset.GetPhyAddr();
@@ -206,10 +206,10 @@ struct AntiquantImpl<
             MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
             if constexpr (HasAntiQuantOffset) {
-                MicroAPI::DataCopy<DtypeOut, MicroAPI::LoadDist::DIST_NORM>(
-                    antiQuantOffsetVreg, antiQuantOffsetBasePhyAddr);
-                MicroAPI::DataCopy<DtypeOut, MicroAPI::LoadDist::DIST_NORM>(
-                    antiQuantOffsetVreg1, antiQuantOffsetBasePhyAddr1);
+                MicroAPI::DataCopy<DtypeOut, MicroAPI::LoadDist::DIST_NORM>(antiQuantOffsetVreg,
+                                                                            antiQuantOffsetBasePhyAddr);
+                MicroAPI::DataCopy<DtypeOut, MicroAPI::LoadDist::DIST_NORM>(antiQuantOffsetVreg1,
+                                                                            antiQuantOffsetBasePhyAddr1);
             }
             MicroAPI::DataCopy<DtypeOut, LD_DIST_SCALE>(antiQuantScaleVreg, antiQuantScaleBasePhyAddr);
             MicroAPI::DataCopy<DtypeOut, LD_DIST_SCALE>(antiQuantScaleVreg1, antiQuantScaleBasePhyAddr1);
@@ -229,8 +229,8 @@ struct AntiquantImpl<
                 }
                 MicroAPI::Mul(weightF16Vreg0, weightF16Vreg0, antiQuantScaleVreg, maskAll);
                 MicroAPI::Mul(weightF16Vreg1, weightF16Vreg1, antiQuantScaleVreg1, maskAll);
-                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(
-                    weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0, weightF16Vreg1, maskAll);
+                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0,
+                                                                   weightF16Vreg1, maskAll);
             }
         }
     }
@@ -239,8 +239,8 @@ struct AntiquantImpl<
 // kn
 // fp8_e5m2_t/fp8_e4m3fn_t
 // per-channel
-template <
-    int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale, bool HasAntiQuantOffset>
+template <int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale,
+          bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
     DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
@@ -248,8 +248,9 @@ struct AntiquantImpl<
     typename AscendC::Std::enable_if_t<
         IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
         (AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, fp8_e5m2_t> ||
-         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, fp8_e4m3fn_t>) &&
-        QUANT_TYPE<decltype(TensorTraitScale{}.GetShape())> == QuantType::PER_CHANNEL>> {
+         AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>,
+                                 fp8_e4m3fn_t>)&&QUANT_TYPE<decltype(TensorTraitScale{}.GetShape())> ==
+            QuantType::PER_CHANNEL>> {
     using DtypeIn = AscendC::PrimT<TensorTraitIn>;
     using DtypeOut = AscendC::PrimT<AscendC::Std::remove_cvref_t<decltype(TensorOut{}.GetTensorTrait())>>;
     // fix k to 64
@@ -257,10 +258,9 @@ struct AntiquantImpl<
     static constexpr MicroAPI::LoadDist LD_DIST_SCALE = MicroAPI::LoadDist::DIST_NORM;
     static constexpr MicroAPI::LoadDist LD_DIST_W = MicroAPI::LoadDist::DIST_UNPACK_B8;
 
-    __aicore__ inline static void Run(
-        const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
-        const AscendC::LocalTensor<TensorTraitScale>& tensorScale,
-        const AscendC::LocalTensor<TensorTraitScale>& tensorOffset, const Shape& shape)
+    __aicore__ inline static void Run(const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
+                                      const AscendC::LocalTensor<TensorTraitScale>& tensorScale,
+                                      const AscendC::LocalTensor<TensorTraitScale>& tensorOffset, const Shape& shape)
     {
         __local_mem__ DtypeOut* antiQuantOffsetBasePhyAddr = (__local_mem__ DtypeOut*)tensorOffset.GetPhyAddr();
         __local_mem__ DtypeOut* antiQuantScaleBasePhyAddr = (__local_mem__ DtypeOut*)tensorScale.GetPhyAddr();
@@ -304,8 +304,8 @@ struct AntiquantImpl<
                     (MicroAPI::RegTensor<uint16_t>&)weightF16Vreg3, maskAll);
                 MicroAPI::Mul(weightF16Vreg0, weightF16Vreg0, antiQuantScaleVreg0, maskAll);
                 MicroAPI::Mul(weightF16Vreg2, weightF16Vreg2, antiQuantScaleVreg1, maskAll);
-                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(
-                    weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0, weightF16Vreg2, maskAll);
+                WeightF16NdRegToNzUb<DtypeOut, DtypeIn, Policy::K>(weightF16PhyAddr0, weightF16PhyAddr1, weightF16Vreg0,
+                                                                   weightF16Vreg2, maskAll);
             }
         }
     }
@@ -314,26 +314,24 @@ struct AntiquantImpl<
 // ND
 // fp4x2_e2m1_t
 // MX KN
-template <
-    int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale, class TensorOffset,
-    bool HasAntiQuantOffset>
+template <int32_t N, class TensorOut, class TensorTraitIn, class Shape, typename TensorTraitScale, class TensorOffset,
+          bool HasAntiQuantOffset>
 struct AntiquantImpl<
     // fix k to 64
     DAV3510, AntiquantFixTile<N, 64, HasAntiQuantOffset>, TensorOut, AscendC::LocalTensor<TensorTraitIn>,
     AscendC::LocalTensor<TensorTraitScale>, TensorOffset, Shape,
-    typename AscendC::Std::enable_if_t<
-        IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
-        AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, fp4x2_e2m1_t> &&
-        QUANT_TYPE<decltype(TensorTraitScale{}.GetShape())> == QuantType::PER_GROUP>> {
+    typename AscendC::Std::enable_if_t<IsColumnMajor2D<decltype(TensorTraitIn{}.GetLayout())>::value &&
+                                       AscendC::Std::is_same_v<AscendC::PrimT<TensorTraitIn>, fp4x2_e2m1_t> &&
+                                       QUANT_TYPE<decltype(TensorTraitScale{}.GetShape())> == QuantType::PER_GROUP>> {
     using DtypeIn = AscendC::PrimT<TensorTraitIn>;
     using DtypeOut = AscendC::PrimT<AscendC::Std::remove_cvref_t<decltype(TensorOut{}.GetTensorTrait())>>;
     // fix k to 64
     using Policy = AntiquantFixTile<N, 64, HasAntiQuantOffset>;
     static constexpr MicroAPI::LoadDist LD_DIST_SCALE = MicroAPI::LoadDist::DIST_NORM;
     static constexpr MicroAPI::LoadDist LD_DIST_W = MicroAPI::LoadDist::DIST_UNPACK4_B8;
-    __aicore__ inline static void Run(
-        const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
-        const AscendC::LocalTensor<TensorTraitScale>& tensorScale, const TensorOffset& tensorOffset, const Shape& shape)
+    __aicore__ inline static void Run(const TensorOut& tensorOut, const AscendC::LocalTensor<TensorTraitIn>& tensorIn,
+                                      const AscendC::LocalTensor<TensorTraitScale>& tensorScale,
+                                      const TensorOffset& tensorOffset, const Shape& shape)
     {
         uint16_t groupSize = static_cast<uint16_t>(Cmct::Gemm::Get<2>(shape));
         uint16_t ubLoopK = CeilDiv(Cmct::Gemm::Get<1>(shape), Cmct::Gemm::Get<2>(shape));
@@ -343,8 +341,8 @@ struct AntiquantImpl<
         // 2: 一次处理64个4bit数据到16bit,右移2位
         __ubuf__ DtypeIn* weightLowBitPhyAddr1 = weightLowBitPhyAddr0 + (AscendC::VECTOR_REG_WIDTH >> 2);
         __ubuf__ DtypeOut* weightF16PhyAddr0 = (__ubuf__ DtypeOut*)tensorOut.GetPhyAddr();
-        __ubuf__ DtypeOut* weightF16PhyAddr1 =
-            weightF16PhyAddr0 + (Policy::K + 1) * (VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
+        __ubuf__ DtypeOut* weightF16PhyAddr1 = weightF16PhyAddr0 +
+                                               (Policy::K + 1) * (VECTOR_REG_SIZE<DtypeOut, DtypeIn>);
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<DtypeOut> antiQuantScaleF16Vreg0;
@@ -372,12 +370,12 @@ struct AntiquantImpl<
                     CastLowBitToF16(weightF16Vreg1, weightFp4Vreg1, maskAll);
                     MicroAPI::Mul(weightF16Vreg0, weightF16Vreg0, antiQuantScaleF16Vreg0, maskAll);
                     MicroAPI::Mul(weightF16Vreg1, weightF16Vreg1, antiQuantScaleF16Vreg1, maskAll);
-                    MicroAPI::StoreAlign<
-                        DtypeOut, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        weightF16PhyAddr0, weightF16Vreg0, Policy::K + 1, 1, maskAll);
-                    MicroAPI::StoreAlign<
-                        DtypeOut, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        weightF16PhyAddr1, weightF16Vreg1, Policy::K + 1, 1, maskAll);
+                    MicroAPI::StoreAlign<DtypeOut, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                         MicroAPI::PostLiteral::POST_MODE_UPDATE>(weightF16PhyAddr0, weightF16Vreg0,
+                                                                                  Policy::K + 1, 1, maskAll);
+                    MicroAPI::StoreAlign<DtypeOut, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                         MicroAPI::PostLiteral::POST_MODE_UPDATE>(weightF16PhyAddr1, weightF16Vreg1,
+                                                                                  Policy::K + 1, 1, maskAll);
                 }
             }
         }
@@ -386,4 +384,3 @@ struct AntiquantImpl<
 
 } // namespace detail
 } // namespace Cmct::Prologue::Tile
-

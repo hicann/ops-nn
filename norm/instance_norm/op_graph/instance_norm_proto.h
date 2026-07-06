@@ -25,11 +25,10 @@ namespace ge {
 
 * @par Inputs:
 * Three inputs, including:
-* @li x: Empty tensors are supported, but only allows the reduction axis to have shape 0, the dim N and dim C must not be empty. 
-         Must be one of the following types: bfloat16, float16, float32.
-         4D/5D with format NCHW/NHWC/NCDHW/NDHWC.
-         2D~8D with format ND, the second dim is fixed as the dim C.
-* @li gamma: Empty tensors are not supported. An ND Tensor. 
+* @li x: Empty tensors are supported, but only allows the reduction axis to have shape 0, the dim N and dim C must not
+be empty. Must be one of the following types: bfloat16, float16, float32. 4D/5D with format NCHW/NHWC/NCDHW/NDHWC. 2D~8D
+with format ND, the second dim is fixed as the dim C.
+* @li gamma: Empty tensors are not supported. An ND Tensor.
              The data type is same as input x, if not, explicitly set to float32.
              The shape is same as dim C of input x.
 * @li beta: Empty tensors are not supported. An ND tensor of the same dtype and shape as input gamma.
@@ -42,9 +41,9 @@ namespace ge {
 * @par Outputs:
 * Three outputs, including:
 * @li y: Empty tensors are supported. The shape, data type and format are the same as the input x.
-* @li mean: Empty tensors are not supported. An ND tensor of the same dtype as input gamma, 
-            the number of dim is same as input x, 
-            the shape size of the non-reduction axis is same as input x, 
+* @li mean: Empty tensors are not supported. An ND tensor of the same dtype as input gamma,
+            the number of dim is same as input x,
+            the shape size of the non-reduction axis is same as input x,
             the reduction axis is 1.
 * @li variance: Empty tensors are not supported. An ND tensor of the same dtype and shape as output mean.
 */

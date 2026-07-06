@@ -22,21 +22,14 @@
 #include "../../../op_kernel/elu_v2.h"
 #include <cstdint>
 
-extern "C" __global__ __aicore__ void elu_v2(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void elu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 using namespace std;
 
 class elu_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "elu_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "elu_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "elu_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "elu_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(elu_v2_test, test_case_0)
@@ -60,7 +53,6 @@ TEST_F(elu_v2_test, test_case_0)
     tilingDataFromBin->alpha = 0.5f;
     tilingDataFromBin->scale = 1.5f;
     tilingDataFromBin->inputScale = 2.0f;
-
 
     auto eluV2Kernel = elu_v2;
 

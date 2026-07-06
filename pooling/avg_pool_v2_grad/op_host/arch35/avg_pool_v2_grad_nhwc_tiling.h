@@ -26,8 +26,7 @@
 #include "../op_kernel/arch35/avg_pool_v2_grad_tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
 struct AvgPoolV2GradNHWCBaseInfo {
@@ -81,31 +80,27 @@ struct AvgPoolV2GradNHWCSplitInfo {
 
 class AvgPoolV2GradCommonNHWCTiling : public TilingBaseClass {
 public:
-    explicit AvgPoolV2GradCommonNHWCTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit AvgPoolV2GradCommonNHWCTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~AvgPoolV2GradCommonNHWCTiling() override
-    {
-    }
+    ~AvgPoolV2GradCommonNHWCTiling() override {}
 
 protected:
-    void DoUBTiling();  // 入口
-    void InitializationVars();  // tiling初始化
-    bool TrySplitN();  // 尝试一次ub分多个n
-    bool TrySplitAlignH();  // 无pad无overlap，尝试一次ub分多个h
-    bool TrySplitAlignW();  // 无pad无overlap，ub分多个w
-    bool TrySplitAlignC();   // 无pad无overlap，ub分多个c
-    void SplitUnalignHWC();  // 非对齐加载
-    bool IsMeetTargetCoreNum() const;  // 当前切分是否满足核数 分块过大，块数小于核数会false
-    bool IsMeetUBSize();  // 当前切分是否满足ub大小 buffer小于ub大小
-    void SearchBestTiling();  // 动态查找各维度outer TrySplitN TrySplitAlignH TrySplitAlignW SplitUnalignHWC
-    void DynamicAdjustmentWH();  // SplitUnalignHWC中动态查找h和w切分outer
+    void DoUBTiling();                // 入口
+    void InitializationVars();        // tiling初始化
+    bool TrySplitN();                 // 尝试一次ub分多个n
+    bool TrySplitAlignH();            // 无pad无overlap，尝试一次ub分多个h
+    bool TrySplitAlignW();            // 无pad无overlap，ub分多个w
+    bool TrySplitAlignC();            // 无pad无overlap，ub分多个c
+    void SplitUnalignHWC();           // 非对齐加载
+    bool IsMeetTargetCoreNum() const; // 当前切分是否满足核数 分块过大，块数小于核数会false
+    bool IsMeetUBSize();              // 当前切分是否满足ub大小 buffer小于ub大小
+    void SearchBestTiling();    // 动态查找各维度outer TrySplitN TrySplitAlignH TrySplitAlignW SplitUnalignHWC
+    void DynamicAdjustmentWH(); // SplitUnalignHWC中动态查找h和w切分outer
     void SetTilingData();
     uint64_t GetTilingKey() const override;
     void PrintBaseData() const;
     void PrintSplitData() const;
-    void DoBlockTiling();  // 核间block划分
+    void DoBlockTiling(); // 核间block划分
     void DoBufferCalculate();
     bool IsCapable() override;
     ge::graphStatus DoLibApiTiling() override;
@@ -123,16 +118,14 @@ public:
 
 class AvgPoolV2GradNHWCTiling : public AvgPoolV2GradCommonNHWCTiling {
 public:
-    explicit AvgPoolV2GradNHWCTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNHWCTiling(context)
-    {}
-    ~AvgPoolV2GradNHWCTiling() override
-    {}
+    explicit AvgPoolV2GradNHWCTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNHWCTiling(context) {}
+    ~AvgPoolV2GradNHWCTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

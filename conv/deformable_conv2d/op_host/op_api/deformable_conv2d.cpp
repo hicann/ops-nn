@@ -21,8 +21,7 @@
 
 using namespace op;
 
-namespace l0op
-{
+namespace l0op {
 OP_TYPE_REGISTER(DeformableConv2d);
 OP_TYPE_REGISTER(DeformableOffsets);
 
@@ -62,30 +61,31 @@ const std::tuple<aclTensor*, aclTensor*> DeformableConv2d(const aclTensor* x, co
     return std::tuple<aclTensor*, aclTensor*>(out, deformOut);
 }
 
-const aclTensor *DeformableOffsetsNHWC(const aclTensor *x, const aclTensor *offset, const aclIntArray *kernelSize,
-                                       op::DataType outputDtype, const aclIntArray *stride,const aclIntArray *padding,
-                                       const aclIntArray *dilation, int64_t deformableGroups, bool modulated,
+const aclTensor* DeformableOffsetsNHWC(const aclTensor* x, const aclTensor* offset, const aclIntArray* kernelSize,
+                                       op::DataType outputDtype, const aclIntArray* stride, const aclIntArray* padding,
+                                       const aclIntArray* dilation, int64_t deformableGroups, bool modulated,
                                        aclOpExecutor* executor)
 {
     L0_DFX(DeformableOffsetsNHWC, x, offset, kernelSize, outputDtype, stride, padding, dilation, deformableGroups,
-        modulated);
+           modulated);
     if (x->GetStorageFormat() != Format::FORMAT_NHWC || offset->GetStorageFormat() != Format::FORMAT_NHWC) {
         OP_LOGE(ACLNN_ERR_INNER, "L0 func only supports inputs with NHWC format.");
         return nullptr;
     }
     ge::AscendString originalFormat = op::ToString(x->GetOriginalFormat());
-    const char *dataFormat = originalFormat.GetString();
+    const char* dataFormat = originalFormat.GetString();
     auto output = executor->AllocTensor(outputDtype, x->GetStorageFormat(), x->GetOriginalFormat());
     auto ret = INFER_SHAPE(DeformableOffsets, OP_INPUT(x, offset), OP_OUTPUT(output),
-        OP_ATTR(stride, padding, kernelSize, dilation, dataFormat, deformableGroups, modulated));
+                           OP_ATTR(stride, padding, kernelSize, dilation, dataFormat, deformableGroups, modulated));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
         output = nullptr;
         return nullptr;
     }
 
-    ADD_TO_LAUNCHER_LIST_AICORE(DeformableOffsets, OP_INPUT(x, offset), OP_OUTPUT(output),
+    ADD_TO_LAUNCHER_LIST_AICORE(
+        DeformableOffsets, OP_INPUT(x, offset), OP_OUTPUT(output),
         OP_ATTR(stride, padding, kernelSize, dilation, dataFormat, deformableGroups, modulated));
     return output;
 }
-}  // namespace l0op
+} // namespace l0op

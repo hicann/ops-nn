@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_conv2d_v2_ascendc_repo_tiling.cpp
  * \brief
  */
@@ -42,11 +42,12 @@ using namespace ut_util;
 using namespace conv_tiling_utils;
 
 namespace {
-string TilingData2Str(const gert::TilingData *tiling_data) {
+string TilingData2Str(const gert::TilingData* tiling_data)
+{
     auto data = tiling_data->GetData();
     string result;
     for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int32_t)) {
-        result += std::to_string((reinterpret_cast<const int32_t *>(tiling_data->GetData())[i / sizeof(int32_t)]));
+        result += std::to_string((reinterpret_cast<const int32_t*>(tiling_data->GetData())[i / sizeof(int32_t)]));
         result += " ";
     }
     return result;
@@ -59,7 +60,8 @@ struct Conv2DTilingTestParamRepo {
     string info_dict;
 };
 
-string to_string(const std::stringstream &tiling_data) {
+string to_string(const std::stringstream& tiling_data)
+{
     auto data = tiling_data.str();
     string result;
     int32_t tmp = 0;
@@ -73,16 +75,18 @@ string to_string(const std::stringstream &tiling_data) {
 }
 } // namespace
 
-class Conv2DTilingRepo: public testing::TestWithParam<Conv2DTilingTestParamRepo> {
+class Conv2DTilingRepo : public testing::TestWithParam<Conv2DTilingTestParamRepo> {
 protected:
     void SetUp() {}
     void TearDown() {}
     static void TearDownTestCase() {}
-    void PrepareTest(Conv2DTilingTestParamRepo &param) {
+    void PrepareTest(Conv2DTilingTestParamRepo& param)
+    {
         PrepareKnowledge(param);
         PrepareInfoDict(param);
     }
-    void PrepareKnowledge(Conv2DTilingTestParamRepo &param) {
+    void PrepareKnowledge(Conv2DTilingTestParamRepo& param)
+    {
         auto j = nlohmann::json::parse(param.tiling_data);
         conv2d_knowledge.groups = j["groups"];
         conv2d_knowledge.orgCi = j["orgCi"];
@@ -105,33 +109,34 @@ protected:
         conv2d_knowledge.woL0 = j["woL0"];
         conv2d_knowledge.kL0 = j["kL0"];
         conv2d_knowledge.nL0 = j["nL0"];
-        conv2d_knowledge.pBufferFlag= j["pBufferFlag"];
+        conv2d_knowledge.pBufferFlag = j["pBufferFlag"];
         conv2d_knowledge.nBL1 = j["nBL1"];
-        conv2d_knowledge.strideH= j["strideH"];
-        conv2d_knowledge.strideW= j["strideW"];
-        conv2d_knowledge.dilationH= j["dilationH"];
-        conv2d_knowledge.dilationW= j["dilationW"];
-        conv2d_knowledge.padTop= j["padTop"];
-        conv2d_knowledge.padBottom= j["padBottom"];
-        conv2d_knowledge.padLeft= j["padLeft"];
-        conv2d_knowledge.padRight= j["padRight"];
-        conv2d_knowledge.iterateMNOrder= j["iterateMNOrder"];
-        conv2d_knowledge.biasFullLoadFlag= j["biasFullLoadFlag"];
-        conv2d_knowledge.fixpParamsFullLoadFlag= j["fixpParamsFullLoadFlag"];
+        conv2d_knowledge.strideH = j["strideH"];
+        conv2d_knowledge.strideW = j["strideW"];
+        conv2d_knowledge.dilationH = j["dilationH"];
+        conv2d_knowledge.dilationW = j["dilationW"];
+        conv2d_knowledge.padTop = j["padTop"];
+        conv2d_knowledge.padBottom = j["padBottom"];
+        conv2d_knowledge.padLeft = j["padLeft"];
+        conv2d_knowledge.padRight = j["padRight"];
+        conv2d_knowledge.iterateMNOrder = j["iterateMNOrder"];
+        conv2d_knowledge.biasFullLoadFlag = j["biasFullLoadFlag"];
+        conv2d_knowledge.fixpParamsFullLoadFlag = j["fixpParamsFullLoadFlag"];
         conv2d_knowledge.offsetx = j["offsetx"];
-        conv2d_knowledge.hf32Enable= j["hf32Enable"];
-        conv2d_knowledge.hf32TransMode= j["hf32TransMode"];
-        conv2d_knowledge.isC04Flag= j["isC04Flag"];
-        conv2d_knowledge.roundMode= j["roundMode"];
-        conv2d_knowledge.batchDim= j["batchDim"];
-        conv2d_knowledge.hoDim= j["hoDim"];
+        conv2d_knowledge.hf32Enable = j["hf32Enable"];
+        conv2d_knowledge.hf32TransMode = j["hf32TransMode"];
+        conv2d_knowledge.isC04Flag = j["isC04Flag"];
+        conv2d_knowledge.roundMode = j["roundMode"];
+        conv2d_knowledge.batchDim = j["batchDim"];
+        conv2d_knowledge.hoDim = j["hoDim"];
         conv2d_knowledge.nDim = j["nDim"];
         conv2d_knowledge.nDim = j["nDim"];
         conv2d_knowledge.groupDim = j["groupDim"];
         conv2d_knowledge.mMode = j["mMode"];
     }
 
-    void PrepareInfoDict(Conv2DTilingTestParamRepo &param) {
+    void PrepareInfoDict(Conv2DTilingTestParamRepo& param)
+    {
         auto j = nlohmann::json::parse(param.info_dict);
         conv2d_info_dict.aDtype = j["aDtype"];
         conv2d_info_dict.bDtype = j["bDtype"];
@@ -168,9 +173,10 @@ protected:
     tuningtiling::Conv2DV2InputArgs conv2d_info_dict;
 };
 
-TEST_P(Conv2DTilingRepo, general_cases_001) {
-    Conv2DTilingTestParamRepo param = GetParam(); 
-    PrepareTest(param);  
+TEST_P(Conv2DTilingRepo, general_cases_001)
+{
+    Conv2DTilingTestParamRepo param = GetParam();
+    PrepareTest(param);
     shared_ptr<tuningtiling::Conv2DV2InputArgs> conv2DInput = std::make_shared<tuningtiling::Conv2DV2InputArgs>();
     conv2DInput->aDtype = ge::DT_FLOAT;
     conv2DInput->bDtype = ge::DT_FLOAT;
@@ -210,8 +216,8 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
     tuningtiling::TuningTilingDefPtr tiling = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(optype);
     nlohmann::json a;
 
-    conv2d_knowledge.ToJson(a);  
-    tiling->FromJson(a);  
+    conv2d_knowledge.ToJson(a);
+    tiling->FromJson(a);
 
     gert::StorageShape featuremap = {
         {conv2d_info_dict.aShapeN, conv2d_info_dict.bShapeC, conv2d_info_dict.aShapeH, conv2d_info_dict.aShapeW},
@@ -239,8 +245,8 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
 
     std::vector<void*> output_shapes_ref = {&output};
     std::vector<int64_t> strides = {1, 1, conv2d_info_dict.strideH, conv2d_info_dict.strideW};
-    std::vector<int64_t> pads = 
-    {conv2d_info_dict.padTop, conv2d_info_dict.padBottom, conv2d_info_dict.padLeft, conv2d_info_dict.padRight};
+    std::vector<int64_t> pads = {conv2d_info_dict.padTop, conv2d_info_dict.padBottom, conv2d_info_dict.padLeft,
+                                 conv2d_info_dict.padRight};
     std::vector<int64_t> dilations = {1, 1, conv2d_info_dict.dilationH, conv2d_info_dict.dilationW};
 
     std::string op_type = "Conv2DV2";
@@ -273,34 +279,31 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
 
     auto tilingDataPtr = gert::TilingData::CreateCap(MEM_SIZE_1K);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(MEM_SIZE_1K);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector *>(workspace_size_holer.get());
-    auto holder = gert::TilingContextFaker().SetOpType(op_type)
-                                            .NodeIoNum(4, 1)
-                                            .IrInstanceNum({1, 1, 1, 1})
-                                            .InputShapes(input_shape_ref)
-                                            .OutputShapes(output_shapes_ref)
-                                            .CompileInfo(&compile_info)
-                                            .PlatformInfo(reinterpret_cast<char *>(&platform_info))
-                                            .NodeInputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                            .NodeInputTd(1, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                            .NodeInputTd(2, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                                            .NodeInputTd(3, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                                            .NodeOutputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                                            .NodeAttrs({
-                                                {"strides",
-                                                    Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                                                {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                                                {"dilations",
-                                                    Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
-                                                {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                                                {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                                {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                                {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                                                {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}
-                                                })
-                                            .TilingData(tilingDataPtr.get())
-                                            .Workspace(ws_size)
-                                            .Build();
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes(input_shape_ref)
+                      .OutputShapes(output_shapes_ref)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(1, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(2, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, conv2d_info_dict.aDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, conv2d_info_dict.aDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .TilingData(tilingDataPtr.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -317,20 +320,18 @@ TEST_P(Conv2DTilingRepo, general_cases_001) {
 }
 
 static Conv2DTilingTestParamRepo general_cases_params_repo[] = {
-    {
-    "Conv2D_repo_test_0","Conv2DV2",
-    R"({"groups":1,"orgCi":1280,"orgHi":32,"orgWi":32,"orgCo":1280,"orgHo":32,"orgWo":32,"kernelH":3,"kernelW":3,
+    {"Conv2D_repo_test_0", "Conv2DV2",
+     R"({"groups":1,"orgCi":1280,"orgHi":32,"orgWi":32,"orgCo":1280,"orgHo":32,"orgWo":32,"kernelH":3,"kernelW":3,
     "singleCoreCi":1280,"singleCoreCo":80,"singleCoreHo":16,"singleCoreWo":32,"strideH":1,"strideW":1,"dilationH":1,
     "dilationW":1,"padTop":1,"padBottom":1,"padLeft":1,"padRight":1,"biasFullLoadFlag":1,"fixpParamsFullLoadFlag":1,
     "offsetx":0,"hf32Enable":0,"hf32TransMode":0,"isC04Flag":0,"roundMode":1,"batchDim":1,"hoDim":2,"woDim":1,"nDim":16,
     "groupDim":1,"mMode":0,"woL1":32,"woL0":32,"kAL1":576,"kBL1":576,"hoL1":16,"nBL1":80,"kL0":32,"nL0":80,"hoL0":16,
-    "iterateMNOrder":1,"pBufferFlag":27})",R"({"aDtype":1,"bDtype":1, "cDtype":1,"biasDtype":1,"aShapeN":1,
+    "iterateMNOrder":1,"pBufferFlag":27})",
+     R"({"aDtype":1,"bDtype":1, "cDtype":1,"biasDtype":1,"aShapeN":1,
     "aShapeH":32,"aShapeW":32,"bShapeN":1280,"bShapeC":1280,"bShapeH":3,"bShapeW":3,
     "cShapeH":32,"cShapeW":32,"aFormat":0,"bFormat":0,"cFormat":0,"groups":1,"strideH":1,"strideW":1,"dilationH":1,
     "dilationW":1,"padTop":1,"padBottom":1,"padLeft":1,"padRight":1,"biasFlag":true,"hf32Flag":false,
     "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
-    "reserverdParam6": 0})"
-    }
-};
+    "reserverdParam6": 0})"}};
 
 INSTANTIATE_TEST_CASE_P(Conv2DV2, Conv2DTilingRepo, testing::ValuesIn(general_cases_params_repo));

@@ -30,20 +30,20 @@ struct SwiGluTilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)  \
-    __ubuf__ tilingStruct* tilingDataPointer =                                 \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
-#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)     \
+#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-    SwiGluTilingData tilingData;                                               \
-    INIT_TILING_DATA(SwiGluTilingData, tilingDataPointer, tilingPointer);  \
-    (tilingData).rowLen = tilingDataPointer->rowLen;                              \
-    (tilingData).colLen = tilingDataPointer->colLen;                          \
-    (tilingData).is32BAligned = tilingDataPointer->is32BAligned;            \
-    (tilingData).isDoubleBuffer = tilingDataPointer->isDoubleBuffer;              \
-    (tilingData).baseRowLen = tilingDataPointer->baseRowLen;            \
+#define GET_TILING_DATA(tilingData, tilingPointer)                        \
+    SwiGluTilingData tilingData;                                          \
+    INIT_TILING_DATA(SwiGluTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).rowLen = tilingDataPointer->rowLen;                      \
+    (tilingData).colLen = tilingDataPointer->colLen;                      \
+    (tilingData).is32BAligned = tilingDataPointer->is32BAligned;          \
+    (tilingData).isDoubleBuffer = tilingDataPointer->isDoubleBuffer;      \
+    (tilingData).baseRowLen = tilingDataPointer->baseRowLen;              \
     (tilingData).baseColLen = tilingDataPointer->baseColLen;
 #endif

@@ -14,9 +14,10 @@
 
 using namespace EmbeddingHashTable;
 
-extern "C" __global__ __aicore__ void embedding_hash_table_import(
-    GM_ADDR tableHandles, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys,
-    GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void embedding_hash_table_import(GM_ADDR tableHandles, GM_ADDR embeddingDims,
+                                                                  GM_ADDR bucketSizes, GM_ADDR keys, GM_ADDR counters,
+                                                                  GM_ADDR filterFlags, GM_ADDR values,
+                                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

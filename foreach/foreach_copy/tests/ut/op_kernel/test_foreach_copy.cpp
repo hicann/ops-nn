@@ -23,25 +23,19 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_copy(GM_ADDR inputs, GM_ADDR outputs,
-                                                                GM_ADDR workspace,
-                                                                GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_copy(GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling);
 
 class foreach_copy_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_copy_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "foreach_copy_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_copy_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_copy_test TearDown\n" << std::endl; }
 };
 
-TEST_F(foreach_copy_test, test_case_float_1) {
+TEST_F(foreach_copy_test, test_case_float_1)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -70,11 +64,11 @@ TEST_F(foreach_copy_test, test_case_float_1) {
     system("cd ./copy_data/ && python3 compare_data.py 'float32'");
 }
 
-TEST_F(foreach_copy_test, test_case_float16_2) {
+TEST_F(foreach_copy_test, test_case_float16_2)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -103,11 +97,11 @@ TEST_F(foreach_copy_test, test_case_float16_2) {
     system("cd ./copy_data/ && python3 compare_data.py 'float16'");
 }
 
-TEST_F(foreach_copy_test, test_case_bfloat16_3) {
+TEST_F(foreach_copy_test, test_case_bfloat16_3)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -136,11 +130,11 @@ TEST_F(foreach_copy_test, test_case_bfloat16_3) {
     system("cd ./copy_data/ && python3 compare_data.py 'bfloat16_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_int8_4) {
+TEST_F(foreach_copy_test, test_case_int8_4)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int8_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -169,11 +163,11 @@ TEST_F(foreach_copy_test, test_case_int8_4) {
     system("cd ./copy_data/ && python3 compare_data.py 'int8_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_uint8_5) {
+TEST_F(foreach_copy_test, test_case_uint8_5)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{64, 32}, {8, 64}, {16, 64}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{64, 32}, {8, 64}, {16, 64}}' 'uint8_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -202,11 +196,11 @@ TEST_F(foreach_copy_test, test_case_uint8_5) {
     system("cd ./copy_data/ && python3 compare_data.py 'uint8_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_int16_6) {
+TEST_F(foreach_copy_test, test_case_int16_6)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -235,11 +229,11 @@ TEST_F(foreach_copy_test, test_case_int16_6) {
     system("cd ./copy_data/ && python3 compare_data.py 'int16_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_uint16_7) {
+TEST_F(foreach_copy_test, test_case_uint16_7)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'uint16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -268,11 +262,11 @@ TEST_F(foreach_copy_test, test_case_uint16_7) {
     system("cd ./copy_data/ && python3 compare_data.py 'uint16_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_int32_8) {
+TEST_F(foreach_copy_test, test_case_int32_8)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int32_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -301,11 +295,11 @@ TEST_F(foreach_copy_test, test_case_int32_8) {
     system("cd ./copy_data/ && python3 compare_data.py 'int32_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_uint32_9) {
+TEST_F(foreach_copy_test, test_case_uint32_9)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'uint32_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -334,11 +328,11 @@ TEST_F(foreach_copy_test, test_case_uint32_9) {
     system("cd ./copy_data/ && python3 compare_data.py 'uint32_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_int64_10) {
+TEST_F(foreach_copy_test, test_case_int64_10)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'int64_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -367,11 +361,11 @@ TEST_F(foreach_copy_test, test_case_int64_10) {
     system("cd ./copy_data/ && python3 compare_data.py 'int64_t'");
 }
 
-TEST_F(foreach_copy_test, test_case_float64_11) {
+TEST_F(foreach_copy_test, test_case_float64_11)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float64'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -400,11 +394,11 @@ TEST_F(foreach_copy_test, test_case_float64_11) {
     system("cd ./copy_data/ && python3 compare_data.py 'float64'");
 }
 
-TEST_F(foreach_copy_test, test_case_bool_12) {
+TEST_F(foreach_copy_test, test_case_bool_12)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
     system("chmod -R 755 ./copy_data/");
     system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'bool'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

@@ -27,8 +27,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -40,7 +40,8 @@ constexpr int64_t SIZE_256 = 256;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -59,9 +60,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-                                         int64_t& totalIdx,
-                                         ge::DataType& dataType,
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalIdx, ge::DataType& dataType,
                                          float& lambd)
 {
     // 获取输入 shape 信息 (gradients)
@@ -78,12 +77,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
     auto outShape = EnsureNotScalar(output->GetStorageShape());
 
     // shape 校验
-    OP_CHECK_IF(
-        inputShapeGrad.GetShapeSize() != inputShapeSelf.GetShapeSize() ||
-            inputShapeGrad.GetShapeSize() != outShape.GetShapeSize(),
-        OP_LOGE(context, "HardShrinkGrad: shape size mismatch: gradients=%ld, features=%ld, backprops=%ld",
-                inputShapeGrad.GetShapeSize(), inputShapeSelf.GetShapeSize(), outShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShapeGrad.GetShapeSize() != inputShapeSelf.GetShapeSize() ||
+                    inputShapeGrad.GetShapeSize() != outShape.GetShapeSize(),
+                OP_LOGE(context, "HardShrinkGrad: shape size mismatch: gradients=%ld, features=%ld, backprops=%ld",
+                        inputShapeGrad.GetShapeSize(), inputShapeSelf.GetShapeSize(), outShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalIdx = inputShapeGrad.GetShapeSize();
 
@@ -121,33 +119,25 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     // 1. 获取平台信息
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. 获取 shape、属性信息
     int64_t totalIdx;
     ge::DataType dataType;
     float lambd;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalIdx, dataType, lambd) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType, lambd) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. 获取 WorkspaceSize
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. 设置 TilingData
     HardShrinkGradTilingData* tiling = context->GetTilingData<HardShrinkGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardShrinkGradTilingData), 0, sizeof(HardShrinkGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardShrinkGradTilingData), 0, sizeof(HardShrinkGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // 多核切分
     tiling->totalNum = totalIdx;
@@ -163,14 +153,14 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     int64_t computeAlignment;
     if (dataType == ge::DT_FLOAT16) {
         typeSize = SIZE_2;
-        computeAlignment = SIZE_256 / typeSize;  // 128 元素
+        computeAlignment = SIZE_256 / typeSize; // 128 元素
     } else if (dataType == ge::DT_FLOAT) {
         typeSize = SIZE_4;
-        computeAlignment = SIZE_256 / typeSize;  // 64 元素
+        computeAlignment = SIZE_256 / typeSize; // 64 元素
     } else {
         // bf16: 存储 2B, 计算在 float(4B)
         typeSize = SIZE_2;
-        computeAlignment = SIZE_256 / SIZE_4;  // 64 元素 (按 float 对齐)
+        computeAlignment = SIZE_256 / SIZE_4; // 64 元素 (按 float 对齐)
     }
 
     int64_t ubBlockSize = GetUbBlockSize(context);

@@ -40,36 +40,30 @@ constexpr uint32_t REDUCTION_MEAN = 1;
 constexpr uint32_t REDUCTION_SUM = 2;
 
 template <typename OriT>
-class CrossEntropyLossBase
-{
+class CrossEntropyLossBase {
 public:
     __aicore__ inline CrossEntropyLossBase(){};
 
 protected:
     __aicore__ inline void InitTiling(const CrossEntropyLossTilingData& tilingData);
-    __aicore__ inline void InitGlobalTensor(
-        GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR workspace);
+    __aicore__ inline void InitGlobalTensor(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss,
+                                            GM_ADDR logProb, GM_ADDR workspace);
     __aicore__ inline void InitUB();
     __aicore__ inline void CopyIn(const LocalTensor<float>& castLocal, const uint64_t offset, const uint32_t len);
-    __aicore__ inline void CopyOut(
-        const LocalTensor<float>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset,
-        const uint32_t len);
-    __aicore__ inline void CopyOutNoCast(
-        const LocalTensor<OriT>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset, 
-        const uint32_t len);
+    __aicore__ inline void CopyOut(const LocalTensor<float>& srcLocal, const LocalTensor<OriT>& dstLocal,
+                                   const uint64_t offset, const uint32_t len);
+    __aicore__ inline void CopyOutNoCast(const LocalTensor<OriT>& srcLocal, const LocalTensor<OriT>& dstLocal,
+                                         const uint64_t offset, const uint32_t len);
     __aicore__ inline void CopyWeightIn(const uint64_t offset, const uint32_t len);
-    __aicore__ inline void GetReduceSum(
-        const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-        const uint32_t len);
-    __aicore__ inline void ReduceSumSmall(
-        const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-        const uint32_t len);
-    __aicore__ inline void GetReduceMax(
-        const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& resTmpBuf,
-        const LocalTensor<float>& dstLocal, const uint32_t len);
-    __aicore__ inline void ReduceMaxSmall(
-        const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-        const uint32_t len);
+    __aicore__ inline void GetReduceSum(const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
+                                        const LocalTensor<float>& dstLocal, const uint32_t len);
+    __aicore__ inline void ReduceSumSmall(const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
+                                          const LocalTensor<float>& dstLocal, const uint32_t len);
+    __aicore__ inline void GetReduceMax(const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
+                                        const LocalTensor<float>& resTmpBuf, const LocalTensor<float>& dstLocal,
+                                        const uint32_t len);
+    __aicore__ inline void ReduceMaxSmall(const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal,
+                                          const LocalTensor<float>& dstLocal, const uint32_t len);
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> inQueue;
 
@@ -154,8 +148,8 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::InitTiling(const CrossEntropy
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::InitGlobalTensor(
-    GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR workspace)
+__aicore__ inline void CrossEntropyLossBase<OriT>::InitGlobalTensor(GM_ADDR input, GM_ADDR target, GM_ADDR weight,
+                                                                    GM_ADDR loss, GM_ADDR logProb, GM_ADDR workspace)
 {
     this->coreIndex = GetBlockIdx();
     uint64_t coreAddrOffset;
@@ -170,8 +164,8 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::InitGlobalTensor(
         totalLenPerCore = this->tailBatchNum * this->targetNum;
         coreAddrOffset = this->frontCoreNum * this->frontBatchNum * this->targetNum +
                          (this->coreIndex - this->frontCoreNum) * this->batchNum * this->targetNum;
-        this->startBatchIndex =
-            this->frontCoreNum * this->frontBatchNum + (this->coreIndex - this->frontCoreNum) * this->tailBatchNum;
+        this->startBatchIndex = this->frontCoreNum * this->frontBatchNum +
+                                (this->coreIndex - this->frontCoreNum) * this->tailBatchNum;
     }
     inputGm.SetGlobalBuffer((__gm__ OriT*)(input) + coreAddrOffset, totalLenPerCore);
     targetGm.SetGlobalBuffer((__gm__ int64_t*)(target));
@@ -193,8 +187,8 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::InitUB()
     this->castTmpBuf = this->calcBuf.template Get<float>(castTmpBufSize);
     this->probOutBuf = this->calcBuf.template GetWithOffset<OriT>(castTmpBufSize, this->workLocalOffset);
     this->workLocalOffset += castTmpBufSize * this->inputTypeSize;
-    this->weight4SmoothingBuf =
-        this->calcBuf.template GetWithOffset<float>(weight4SmoothingBufSize, this->workLocalOffset);
+    this->weight4SmoothingBuf = this->calcBuf.template GetWithOffset<float>(weight4SmoothingBufSize,
+                                                                            this->workLocalOffset);
     this->workLocalOffset += weight4SmoothingBufSize * FP32_BYTE_LEN;
     this->reduceCalc = this->calcBuf.template GetWithOffset<float>(FP32_PER_BLOCK, this->workLocalOffset);
     this->workLocalOffset += BLOCK_32;
@@ -204,14 +198,14 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::InitUB()
     this->workLocalOffset += this->lnTmpBufSize * FP32_BYTE_LEN;
     this->weightLocal = this->calcBuf.template GetWithOffset<float>(this->weightTmpBufSize, this->workLocalOffset);
     this->workLocalOffset += this->weightTmpBufSize * FP32_BYTE_LEN;
-    this->smoothingLossLocal =
-        this->calcBuf.template GetWithOffset<float>(this->weightTmpBufSize, this->workLocalOffset);
+    this->smoothingLossLocal = this->calcBuf.template GetWithOffset<float>(this->weightTmpBufSize,
+                                                                           this->workLocalOffset);
     this->workLocalOffset += this->weightTmpBufSize * FP32_BYTE_LEN;
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::CopyIn(
-    const LocalTensor<float>& castLocal, const uint64_t offset, const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::CopyIn(const LocalTensor<float>& castLocal, const uint64_t offset,
+                                                          const uint32_t len)
 {
     if (len == FP32_128_REPEAT || len % BLOCK_32 == 0) {
         DataCopy(this->inputLocal, inputGm[offset], len);
@@ -232,8 +226,8 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::CopyIn(
 }
 
 template <>
-__aicore__ inline void CrossEntropyLossBase<float>::CopyIn(
-    const LocalTensor<float>& castLocal, const uint64_t offset, const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<float>::CopyIn(const LocalTensor<float>& castLocal, const uint64_t offset,
+                                                           const uint32_t len)
 {
     event_t eventVMTE2 = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_MTE2));
     SetFlag<HardEvent::V_MTE2>(eventVMTE2);
@@ -269,8 +263,9 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::CopyWeightIn(const uint64_t o
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::CopyOut(
-    const LocalTensor<float>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset, const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::CopyOut(const LocalTensor<float>& srcLocal,
+                                                           const LocalTensor<OriT>& dstLocal, const uint64_t offset,
+                                                           const uint32_t len)
 {
     event_t eventMTE3V = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventMTE3V);
@@ -288,8 +283,9 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::CopyOut(
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::CopyOutNoCast(
-    const LocalTensor<OriT>& srcLocal, const LocalTensor<OriT>& dstLocal, const uint64_t offset, const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::CopyOutNoCast(const LocalTensor<OriT>& srcLocal,
+                                                                 const LocalTensor<OriT>& dstLocal,
+                                                                 const uint64_t offset, const uint32_t len)
 {
     event_t eventVMTE3 = static_cast<event_t>(this->pipe.FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventVMTE3);
@@ -306,9 +302,9 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::CopyOutNoCast(
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::GetReduceSum(
-    const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-    const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::GetReduceSum(const LocalTensor<float>& srcLocal,
+                                                                const LocalTensor<float>& workLocal,
+                                                                const LocalTensor<float>& dstLocal, const uint32_t len)
 {
     if (len == FP32_128_REPEAT) {
         AscendC::BlockReduceSum(workLocal, srcLocal, 128, 64, 1, 1, 8);
@@ -336,9 +332,10 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::GetReduceSum(
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::ReduceSumSmall(
-    const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-    const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::ReduceSumSmall(const LocalTensor<float>& srcLocal,
+                                                                  const LocalTensor<float>& workLocal,
+                                                                  const LocalTensor<float>& dstLocal,
+                                                                  const uint32_t len)
 {
     uint32_t repeat = len / 64;
     uint32_t tailNum = len % 64;
@@ -355,9 +352,10 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::ReduceSumSmall(
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::GetReduceMax(
-    const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-    const LocalTensor<float>& resTmpBuf, const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::GetReduceMax(const LocalTensor<float>& srcLocal,
+                                                                const LocalTensor<float>& workLocal,
+                                                                const LocalTensor<float>& dstLocal,
+                                                                const LocalTensor<float>& resTmpBuf, const uint32_t len)
 {
     if (len == FP32_128_REPEAT) {
         AscendC::BlockReduceMax(workLocal, srcLocal, 128, 64, 1, 1, 8);
@@ -395,9 +393,10 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::GetReduceMax(
 }
 
 template <typename OriT>
-__aicore__ inline void CrossEntropyLossBase<OriT>::ReduceMaxSmall(
-    const LocalTensor<float>& srcLocal, const LocalTensor<float>& workLocal, const LocalTensor<float>& dstLocal,
-    const uint32_t len)
+__aicore__ inline void CrossEntropyLossBase<OriT>::ReduceMaxSmall(const LocalTensor<float>& srcLocal,
+                                                                  const LocalTensor<float>& workLocal,
+                                                                  const LocalTensor<float>& dstLocal,
+                                                                  const uint32_t len)
 {
     uint32_t repeat = len / 64;
     uint32_t tailNum = len % 64;
@@ -406,8 +405,8 @@ __aicore__ inline void CrossEntropyLossBase<OriT>::ReduceMaxSmall(
         PipeBarrier<PIPE_V>();
     }
     if (tailNum != 0) {
-        AscendC::WholeReduceMax(
-            workLocal[repeat], srcLocal[len - tailNum], tailNum, 1, 1, 1, 8, ReduceOrder::ORDER_ONLY_VALUE);
+        AscendC::WholeReduceMax(workLocal[repeat], srcLocal[len - tailNum], tailNum, 1, 1, 1, 8,
+                                ReduceOrder::ORDER_ONLY_VALUE);
         PipeBarrier<PIPE_V>();
         repeat += 1;
     }

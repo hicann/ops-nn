@@ -25,11 +25,11 @@ using namespace fusion;
 using namespace ops;
 
 namespace {
-const char *kSourceOpType = "SparseSegmentMeanGrad";
-const char *kSortOpType = "Sort";
-const char *kTargetOpType = "SortedSparseSegmentMeanGrad";
+const char* kSourceOpType = "SparseSegmentMeanGrad";
+const char* kSortOpType = "Sort";
+const char* kTargetOpType = "SortedSparseSegmentMeanGrad";
 
-void SetPlatform(const std::string &soc)
+void SetPlatform(const std::string& soc)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
@@ -41,11 +41,12 @@ void SetPlatform(const std::string &soc)
 }
 
 // Build a SparseSegmentMeanGrad node (no ES API) via CompliantNodeBuilder, wiring its 4 inputs.
-es::EsTensorHolder CreateSparseSegmentMeanGradNode(es::EsGraphBuilder &graphBuilder,
-    const es::EsTensorHolder &grad, const es::EsTensorHolder &indices,
-    const es::EsTensorHolder &segmentIds, const es::EsTensorHolder &outputDim0, DataType gradDtype)
+es::EsTensorHolder CreateSparseSegmentMeanGradNode(es::EsGraphBuilder& graphBuilder, const es::EsTensorHolder& grad,
+                                                   const es::EsTensorHolder& indices,
+                                                   const es::EsTensorHolder& segmentIds,
+                                                   const es::EsTensorHolder& outputDim0, DataType gradDtype)
 {
-    auto CheckGraphSuccess = [](graphStatus status, const char *expr) {
+    auto CheckGraphSuccess = [](graphStatus status, const char* expr) {
         if (status != GRAPH_SUCCESS) {
             ADD_FAILURE() << expr << " failed, status=" << status;
             return false;
@@ -53,28 +54,26 @@ es::EsTensorHolder CreateSparseSegmentMeanGradNode(es::EsGraphBuilder &graphBuil
         return true;
     };
 
-    auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
     auto node = es::CompliantNodeBuilder(graph)
                     .OpType(kSourceOpType)
                     .Name(kSourceOpType)
-                    .IrDefInputs({
-                        {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                        {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                        {"segment_ids", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                        {"output_dim0", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                    .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"segment_ids", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"output_dim0", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                     .InstanceOutputDataType("y", gradDtype)
                     .InstanceOutputShape("y", {8, 10})
                     .InstanceOutputFormat("y", FORMAT_ND)
                     .Build();
 
-    const es::EsTensorHolder *inputs[] = {&grad, &indices, &segmentIds, &outputDim0};
+    const es::EsTensorHolder* inputs[] = {&grad, &indices, &segmentIds, &outputDim0};
     for (int32_t i = 0; i < 4; ++i) {
-        auto &producer = *inputs[i]->GetProducer();
+        auto& producer = *inputs[i]->GetProducer();
         int32_t producerOutIdx = inputs[i]->GetProducerOutIndex();
-        if (!CheckGraphSuccess(
-                es::AddEdgeAndUpdatePeerDesc(*graph, producer, producerOutIdx, node, i),
-                "AddEdgeAndUpdatePeerDesc")) {
+        if (!CheckGraphSuccess(es::AddEdgeAndUpdatePeerDesc(*graph, producer, producerOutIdx, node, i),
+                               "AddEdgeAndUpdatePeerDesc")) {
             return {};
         }
         // CompliantNodeBuilder cannot set input dtypes, and AddEdgeAndUpdatePeerDesc does not propagate
@@ -89,11 +88,11 @@ es::EsTensorHolder CreateSparseSegmentMeanGradNode(es::EsGraphBuilder &graphBuil
         }
     }
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0);
     return es::EsTensorHolder(yHolder);
 }
 
-bool FindNodeType(const std::shared_ptr<Graph> &graph, const char *type)
+bool FindNodeType(const std::shared_ptr<Graph>& graph, const char* type)
 {
     for (auto node : graph->GetAllNodes()) {
         AscendString nodeType;
@@ -106,7 +105,7 @@ bool FindNodeType(const std::shared_ptr<Graph> &graph, const char *type)
 }
 
 // Build the full test graph: 4 Data inputs -> SparseSegmentMeanGrad.
-std::shared_ptr<Graph> BuildGraph(const std::string &name, DataType gradDtype, DataType indicesDtype)
+std::shared_ptr<Graph> BuildGraph(const std::string& name, DataType gradDtype, DataType indicesDtype)
 {
     auto graphBuilder = es::EsGraphBuilder(name.c_str());
     auto grad = graphBuilder.CreateInput(0, "x", gradDtype, FORMAT_ND, {8, 10});
@@ -120,10 +119,7 @@ std::shared_ptr<Graph> BuildGraph(const std::string &name, DataType gradDtype, D
 
 class SortedSparseSegmentMeanGradFusionPassTest : public testing::Test {
 protected:
-    void SetUp() override
-    {
-        SetPlatform("Ascend950");
-    }
+    void SetUp() override { SetPlatform("Ascend950"); }
 };
 
 // test1: fp32 grad + int32 indices -> fusion success

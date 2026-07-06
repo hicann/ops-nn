@@ -60,7 +60,7 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
         .append(std::to_string(ge::FORMAT_ND))
         .append("/")
         .append(std::to_string(ge::FORMAT_ND))
-        .append("/") 
+        .append("/")
         .append(std::to_string(outputFormat))
         .append("/")
         .append(std::to_string(input0DataType))

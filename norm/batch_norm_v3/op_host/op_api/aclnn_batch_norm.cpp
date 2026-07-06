@@ -51,8 +51,8 @@ static const std::initializer_list<op::DataType>& GetSupportDtypeList(NpuArch np
     static const std::initializer_list<op::DataType> emptyDtypes = {};
     static const std::initializer_list<op::DataType> DTYPE_SUPPORT_910BCD_LIST = {
         op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_310P_910_LIST = {
-        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_310P_910_LIST = {op::DataType::DT_FLOAT,
+                                                                                    op::DataType::DT_FLOAT16};
     static const std::map<NpuArch, std::initializer_list<op::DataType>> dataTypeSupportedMap = {
         {NpuArch::DAV_2002, DTYPE_SUPPORT_310P_910_LIST},
         {NpuArch::DAV_1001, DTYPE_SUPPORT_310P_910_LIST},
@@ -66,8 +66,8 @@ static const std::initializer_list<op::DataType>& GetSupportDtypeList(NpuArch np
     return found->second;
 }
 
-static bool CheckNotNull(
-    const aclTensor* input, const aclTensor* out, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training)
+static bool CheckNotNull(const aclTensor* input, const aclTensor* out, const aclTensor* saveMean,
+                         const aclTensor* saveInvstd, bool training)
 {
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(out, return false);
@@ -82,9 +82,7 @@ static bool CheckNotNull(
 static inline bool isBatchNormSupportNcdhw(void)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    return (
-        (curArch == NpuArch::DAV_2201) ||
-        (curArch == NpuArch::DAV_2002));
+    return ((curArch == NpuArch::DAV_2201) || (curArch == NpuArch::DAV_2002));
 }
 
 static bool isBNV3Supported(const aclTensor* input)
@@ -109,15 +107,14 @@ static bool isBNV3Supported(const aclTensor* input)
         }
     }
     bool isShapeSupport = (patternA >= PATTERN_A_MIN);
-    OP_LOGD(
-        "isBNV3Supported, isSocSupport: %d, isFormatSupport: %d, isShapeSupport: %d", isSocSupport, isFormatSupport,
-        isShapeSupport);
+    OP_LOGD("isBNV3Supported, isSocSupport: %d, isFormatSupport: %d, isShapeSupport: %d", isSocSupport, isFormatSupport,
+            isShapeSupport);
 
     return (isSocSupport && isFormatSupport && isShapeSupport);
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* input, const aclTensor* out, const aclTensor* saveMean, const aclTensor* saveInvstd, bool training)
+static bool CheckDtypeValid(const aclTensor* input, const aclTensor* out, const aclTensor* saveMean,
+                            const aclTensor* saveInvstd, bool training)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     const auto& DTYPE_SUPPORT_LIST_CURRENT = GetSupportDtypeList(curArch);
@@ -136,8 +133,8 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckOtherDtypeValid(
-    const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean, const aclTensor* runningVar)
+static bool CheckOtherDtypeValid(const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean,
+                                 const aclTensor* runningVar)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     const auto& DTYPE_SUPPORT_LIST_CURRENT = GetSupportDtypeList(curArch);
@@ -161,16 +158,14 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
     auto inputFormat = input->GetStorageFormat();
     auto outputFormat = out->GetStorageFormat();
     if (inputFormat != outputFormat) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, input [%s], output [%s].",
-            op::ToString(inputFormat).GetString(), op::ToString(outputFormat).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal, input [%s], output [%s].",
+                op::ToString(inputFormat).GetString(), op::ToString(outputFormat).GetString());
         return false;
     }
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
-            ((inputFormat != Format::FORMAT_NCDHW) &&
-             (inputFormat != Format::FORMAT_NDHWC))) {
+            ((inputFormat != Format::FORMAT_NCDHW) && (inputFormat != Format::FORMAT_NDHWC))) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDWH or NDWHC, when input dim is 5.");
             return false;
         }
@@ -211,8 +206,8 @@ static bool CheckShape(const aclTensor* input, const aclTensor* out)
     return true;
 }
 
-static bool CheckOtherShape(
-    int dimC, const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean, const aclTensor* runningVar)
+static bool CheckOtherShape(int dimC, const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean,
+                            const aclTensor* runningVar)
 {
     if (weight != nullptr && (weight->GetViewShape().GetDimNum() != 1 || weight->GetViewShape()[0] != dimC)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of weight should be one and shape is channel num of input.");
@@ -246,10 +241,9 @@ static int64_t GetBatchNormDimC(const aclTensor* input)
     return viewShape[1];
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, const aclTensor* runningMean,
-    const aclTensor* runningVar, const aclTensor* output, const aclTensor* saveMean, const aclTensor* saveInvstd,
-    bool training)
+static aclnnStatus CheckParams(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                               const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* output,
+                               const aclTensor* saveMean, const aclTensor* saveInvstd, bool training)
 {
     CHECK_RET(CheckDtypeValid(input, output, saveMean, saveInvstd, training), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckOtherDtypeValid(weight, bias, runningMean, runningVar), ACLNN_ERR_PARAM_INVALID);
@@ -278,14 +272,13 @@ static bool isEvalAndNotSupportNcdhw(bool training, size_t dimNum)
 }
 }; // namespace
 
-aclnnStatus aclnnBatchNormGetWorkspaceSize(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,
-    aclTensor* runningVar, bool training, double momentum, double eps, aclTensor* output, aclTensor* saveMean,
-    aclTensor* saveInvstd, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBatchNormGetWorkspaceSize(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                           aclTensor* runningMean, aclTensor* runningVar, bool training,
+                                           double momentum, double eps, aclTensor* output, aclTensor* saveMean,
+                                           aclTensor* saveInvstd, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnBatchNorm, DFX_IN(input, weight, bias, runningMean, runningVar, training, momentum, eps),
-        DFX_OUT(output, saveMean, saveInvstd));
+    L2_DFX_PHASE_1(aclnnBatchNorm, DFX_IN(input, weight, bias, runningMean, runningVar, training, momentum, eps),
+                   DFX_OUT(output, saveMean, saveInvstd));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -295,8 +288,8 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(
     if (input->IsEmpty()) {
         auto ret = op::ProcessEmptyTensorWithValue(saveMean, 0, uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret =
-            op::ProcessEmptyTensorWithValue(saveInvstd, std::numeric_limits<float>::quiet_NaN(), uniqueExecutor.get());
+        ret = op::ProcessEmptyTensorWithValue(saveInvstd, std::numeric_limits<float>::quiet_NaN(),
+                                              uniqueExecutor.get());
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
@@ -321,9 +314,8 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(
     }
 
     aclTensor* bnOutput = nullptr;
-    auto bnResult = BatchNorm(
-        inputContiguous, weight, bias, runningMean, runningVar, training, momentum, eps, &bnOutput, saveMean,
-        saveInvstd, uniqueExecutor.get());
+    auto bnResult = BatchNorm(inputContiguous, weight, bias, runningMean, runningVar, training, momentum, eps,
+                              &bnOutput, saveMean, saveInvstd, uniqueExecutor.get());
     CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
 
     if (inputDims > MAX_BN_DIMS) {
@@ -346,10 +338,9 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus DoBatchNormProc(
-    const aclTensor* input, const aclTensor* weightResize, const aclTensor* biasResize, aclTensor* runningMeanOut,
-    aclTensor* runningVarOut, float momentum, float eps, aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd,
-    aclOpExecutor* executor)
+aclnnStatus DoBatchNormProc(const aclTensor* input, const aclTensor* weightResize, const aclTensor* biasResize,
+                            aclTensor* runningMeanOut, aclTensor* runningVarOut, float momentum, float eps,
+                            aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd, aclOpExecutor* executor)
 {
     size_t dimNum = input->GetViewShape().GetDimNum();
     std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor;
@@ -358,30 +349,27 @@ aclnnStatus DoBatchNormProc(
         auto input6hd = l0op::TransDataSpecial(input, Format::FORMAT_NDC1HWC0, 0, executor);
         CHECK_RET(input6hd != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        std::array<aclTensor*, REDUCE_RESULT_CNT> sumTensor =
-            l0op::BN3DTrainingReduce(input6hd, weightResize->GetStorageShape(), executor);
-        outTensor = l0op::BN3DTrainingUpdate(
-            input6hd, sumTensor[0], sumTensor[1], weightResize, biasResize, runningMeanOut, runningVarOut, momentum,
-            eps, executor);
+        std::array<aclTensor*, REDUCE_RESULT_CNT> sumTensor = l0op::BN3DTrainingReduce(
+            input6hd, weightResize->GetStorageShape(), executor);
+        outTensor = l0op::BN3DTrainingUpdate(input6hd, sumTensor[0], sumTensor[1], weightResize, biasResize,
+                                             runningMeanOut, runningVarOut, momentum, eps, executor);
         CHECK_RET(outTensor[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto resultNcdhw = l0op::TransDataSpecial(outTensor[0], Format::FORMAT_NCDHW, 0, executor);
         CHECK_RET(resultNcdhw != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         *output = const_cast<aclTensor*>(resultNcdhw);
     } else if (dimNum == MAX_BN_DIMS) {
-        std::array<aclTensor*, REDUCE_RESULT_CNT> sumTensor =
-            l0op::BN3DTrainingReduce(input, weightResize->GetStorageShape(), executor);
-        outTensor = l0op::BN3DTrainingUpdate(
-            input, sumTensor[0], sumTensor[1], weightResize, biasResize, runningMeanOut, runningVarOut, momentum, eps,
-            executor);
+        std::array<aclTensor*, REDUCE_RESULT_CNT> sumTensor = l0op::BN3DTrainingReduce(
+            input, weightResize->GetStorageShape(), executor);
+        outTensor = l0op::BN3DTrainingUpdate(input, sumTensor[0], sumTensor[1], weightResize, biasResize,
+                                             runningMeanOut, runningVarOut, momentum, eps, executor);
         CHECK_RET(outTensor[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         *output = const_cast<aclTensor*>(outTensor[0]);
     } else {
-        std::array<aclTensor*, REDUCE_RESULT_CNT> sumTensor =
-            l0op::BNTrainingReduce(input, weightResize->GetViewShape(), executor);
-        outTensor = l0op::BNTrainingUpdate(
-            input, sumTensor[0], sumTensor[1], weightResize, biasResize, runningMeanOut, runningVarOut, momentum, eps,
-            executor);
+        std::array<aclTensor*, REDUCE_RESULT_CNT> sumTensor = l0op::BNTrainingReduce(
+            input, weightResize->GetViewShape(), executor);
+        outTensor = l0op::BNTrainingUpdate(input, sumTensor[0], sumTensor[1], weightResize, biasResize, runningMeanOut,
+                                           runningVarOut, momentum, eps, executor);
         CHECK_RET(outTensor[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         *output = outTensor[0];
     }
@@ -395,10 +383,9 @@ aclnnStatus DoBatchNormProc(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormProc(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,
-    aclTensor* runningVar, bool training, float momentum, float eps, aclTensor** output, aclTensor* saveMean,
-    aclTensor* saveInvstd, aclOpExecutor* executor)
+aclnnStatus BatchNormProc(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                          aclTensor* runningMean, aclTensor* runningVar, bool training, float momentum, float eps,
+                          aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd, aclOpExecutor* executor)
 {
     bool isSupportNcdhw = isBatchNormSupportNcdhw();
     auto weightResize = op::ResizeFrom1D(weight, input, isSupportNcdhw, executor);
@@ -414,8 +401,8 @@ aclnnStatus BatchNormProc(
     CHECK_RET(runningVarResize != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     if (!training) {
-        auto inferResult =
-            l0op::BNInfer(input, weightResize, biasResize, runningMeanResize, runningVarResize, eps, executor);
+        auto inferResult = l0op::BNInfer(input, weightResize, biasResize, runningMeanResize, runningVarResize, eps,
+                                         executor);
         CHECK_RET(inferResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         *output = const_cast<aclTensor*>(inferResult);
@@ -423,11 +410,9 @@ aclnnStatus BatchNormProc(
         auto runningMeanOut = const_cast<aclTensor*>(runningMeanResize);
         auto runningVarOut = const_cast<aclTensor*>(runningVarResize);
 
-        CHECK_RET(
-            DoBatchNormProc(
-                input, weightResize, biasResize, runningMeanOut, runningVarOut, momentum, eps, output, saveMean,
-                saveInvstd, executor) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(DoBatchNormProc(input, weightResize, biasResize, runningMeanOut, runningVarOut, momentum, eps, output,
+                                  saveMean, saveInvstd, executor) == ACLNN_SUCCESS,
+                  ACLNN_ERR_INNER_NULLPTR);
 
         if (!runningMean->IsFromWorkspace()) {
             auto viewCopyRunningMean = op::ResizeTo1D(runningMeanOut, runningMean, isSupportNcdhw, executor);
@@ -442,14 +427,13 @@ aclnnStatus BatchNormProc(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormV3Proc(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,
-    aclTensor* runningVar, float momentum, float eps, aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd,
-    aclOpExecutor* executor)
+aclnnStatus BatchNormV3Proc(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                            aclTensor* runningMean, aclTensor* runningVar, float momentum, float eps,
+                            aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd, aclOpExecutor* executor)
 {
     op::DataType weightBiasPromoteType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
-    op::DataType weightBiasDstType =
-        (weightBiasPromoteType == input->GetDataType()) ? input->GetDataType() : DataType::DT_FLOAT;
+    op::DataType weightBiasDstType = (weightBiasPromoteType == input->GetDataType()) ? input->GetDataType() :
+                                                                                       DataType::DT_FLOAT;
 
     auto weightContiguous = l0op::Contiguous(weight, executor);
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -473,8 +457,8 @@ aclnnStatus BatchNormV3Proc(
 
     auto runningMeanOut = const_cast<aclTensor*>(runningMeanCast);
     auto runningVarOut = const_cast<aclTensor*>(runningVarCast);
-    std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor =
-        l0op::BatchNormV3(input, weightCast, biasCast, runningMeanOut, runningVarOut, momentum, eps, executor);
+    std::array<aclTensor*, UPDATE_RESULT_CNT> outTensor = l0op::BatchNormV3(input, weightCast, biasCast, runningMeanOut,
+                                                                            runningVarOut, momentum, eps, executor);
     *output = outTensor[0];
     CHECK_RET(outTensor[MEAN_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(outTensor[VAR_INDEX] != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -506,10 +490,9 @@ aclnnStatus BatchNormV3Proc(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormProcDavid(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,
-    aclTensor* runningVar, float momentum, float eps, bool training, aclTensor** output, aclTensor* saveMean,
-    aclTensor* saveInvstd, aclOpExecutor* executor)
+aclnnStatus BatchNormProcDavid(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                               aclTensor* runningMean, aclTensor* runningVar, float momentum, float eps, bool training,
+                               aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd, aclOpExecutor* executor)
 {
     op::DataType weigthBiasPromoteDType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
     CHECK_RET(weigthBiasPromoteDType != op::DataType::DT_UNDEFINED, ACLNN_ERR_PARAM_INVALID);
@@ -606,35 +589,31 @@ aclTensor* BNFillScalar(int64_t dim, int value, aclOpExecutor* executor, op::Dat
     return const_cast<aclTensor*>(fillTensor);
 }
 
-aclnnStatus BatchNorm(
-    const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,
-    aclTensor* runningVar, bool training, float momentum, float eps, aclTensor** output, aclTensor* saveMean,
-    aclTensor* saveInvstd, aclOpExecutor* executor)
+aclnnStatus BatchNorm(const aclTensor* input, const aclTensor* weight, const aclTensor* bias, aclTensor* runningMean,
+                      aclTensor* runningVar, bool training, float momentum, float eps, aclTensor** output,
+                      aclTensor* saveMean, aclTensor* saveInvstd, aclOpExecutor* executor)
 {
     size_t dimC = GetBatchNormDimC(input);
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (runningMean == nullptr) {
-        runningMean =
-            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
-                                                        op::FillScalar(dimC, 0, executor));
+        runningMean = ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ?
+                           BNFillScalar(dimC, 0, executor, input->GetDataType()) :
+                           op::FillScalar(dimC, 0, executor));
         CHECK_RET(runningMean != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (runningVar == nullptr) {
-        runningVar =
-            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
-                                                        op::FillScalar(dimC, 1, executor));
+        runningVar = ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
+                                                                 op::FillScalar(dimC, 1, executor));
         CHECK_RET(runningVar != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (weight == nullptr) {
-        weight =
-            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
-                                                        op::FillScalar(dimC, 1, executor));
+        weight = ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 1, executor, input->GetDataType()) :
+                                                             op::FillScalar(dimC, 1, executor));
         CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (bias == nullptr) {
-        bias =
-            ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
-                                                        op::FillScalar(dimC, 0, executor));
+        bias = ((Ops::NN::AclnnUtil::IsRegbase(curArch)) ? BNFillScalar(dimC, 0, executor, input->GetDataType()) :
+                                                           op::FillScalar(dimC, 0, executor));
         CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
@@ -649,23 +628,17 @@ aclnnStatus BatchNorm(
 
     aclTensor* result = nullptr;
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        CHECK_RET(
-            BatchNormProcDavid(
-                inputPre, weight, bias, runningMean, runningVar, momentum, eps, training, &result, saveMean, saveInvstd,
-                executor) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(BatchNormProcDavid(inputPre, weight, bias, runningMean, runningVar, momentum, eps, training, &result,
+                                     saveMean, saveInvstd, executor) == ACLNN_SUCCESS,
+                  ACLNN_ERR_INNER_NULLPTR);
     } else if (isBNV3Supported(inputPre) && training) {
-        CHECK_RET(
-            BatchNormV3Proc(
-                inputPre, weight, bias, runningMean, runningVar, momentum, eps, &result, saveMean, saveInvstd,
-                executor) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(BatchNormV3Proc(inputPre, weight, bias, runningMean, runningVar, momentum, eps, &result, saveMean,
+                                  saveInvstd, executor) == ACLNN_SUCCESS,
+                  ACLNN_ERR_INNER_NULLPTR);
     } else {
-        CHECK_RET(
-            BatchNormProc(
-                inputPre, weight, bias, runningMean, runningVar, training, momentum, eps, &result, saveMean, saveInvstd,
-                executor) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(BatchNormProc(inputPre, weight, bias, runningMean, runningVar, training, momentum, eps, &result,
+                                saveMean, saveInvstd, executor) == ACLNN_SUCCESS,
+                  ACLNN_ERR_INNER_NULLPTR);
     }
 
     *output = result;

@@ -25,8 +25,8 @@ namespace {
 #define TILINGKEY_AR_RECOMPUTE 2000
 } // namespace
 
-extern "C" __global__ __aicore__ void softmax_grad_ext(
-    GM_ADDR grad, GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void softmax_grad_ext(GM_ADDR grad, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

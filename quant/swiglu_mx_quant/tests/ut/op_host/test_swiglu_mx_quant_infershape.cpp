@@ -23,15 +23,9 @@
 namespace {
 class SwigluMxQuantTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluMxQuantTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluMxQuantTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluMxQuantTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluMxQuantTest TearDown" << std::endl; }
 };
 
 TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_case_0_fp16)
@@ -44,7 +38,8 @@ TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_case_0_fp16)
     xDesc.SetOriginShape(xShape);
     op.UpdateInputDesc("x", xDesc);
 
-    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias", "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
+    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias",
+                             "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
     auto outputY = op.GetOutputDesc(0);
@@ -63,7 +58,8 @@ TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_case_1_bf16)
     xDesc.SetOriginShape(xShape);
     op.UpdateInputDesc("x", xDesc);
 
-    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias", "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
+    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias",
+                             "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
     auto outputY = op.GetOutputDesc(0);
@@ -81,7 +77,8 @@ TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_case_dynamic_shape)
     xDesc.SetOriginShape(xShape);
     op.UpdateInputDesc("x", xDesc);
 
-    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias", "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
+    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias",
+                             "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
     auto outputY = op.GetOutputDesc(0);
@@ -102,7 +99,8 @@ TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_error_invalid_dim)
     xDesc.SetOriginShape(xShape);
     op.UpdateInputDesc("x", xDesc);
 
-    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias", "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
+    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias",
+                             "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
 }
 
@@ -117,8 +115,9 @@ TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_error_invalid_axis)
     op.UpdateInputDesc("x", xDesc);
     op.SetAttr("axis", 3);
 
-    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias", "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
+    Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias",
+                             "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
 }
 
-}  // namespace
+} // namespace

@@ -3,15 +3,15 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
-* \file index_put_with_sort_v2_simd_tiling_arch35.h
-* \brief IndexPutWithSortV2 tiling file
-*/
+ * \file index_put_with_sort_v2_simd_tiling_arch35.h
+ * \brief IndexPutWithSortV2 tiling file
+ */
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_SIMD_ARCH35_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_SIMD_ARCH35_H
 
@@ -22,12 +22,9 @@
 #include "index_put_with_sort_v2_tiling_arch35.h"
 
 namespace optiling {
-class IndexPutWithSortV2SIMDTiling : public IndexPutWithSortV2Tiling
-{
+class IndexPutWithSortV2SIMDTiling : public IndexPutWithSortV2Tiling {
 public:
-    explicit IndexPutWithSortV2SIMDTiling(gert::TilingContext* context) : IndexPutWithSortV2Tiling(context)
-    {
-    }
+    explicit IndexPutWithSortV2SIMDTiling(gert::TilingContext* context) : IndexPutWithSortV2Tiling(context) {}
 
 protected:
     bool IsCapable() override;
@@ -57,5 +54,5 @@ protected:
     size_t FindFirstOneIdx();
     int64_t inputShapes_[MAX_DIM_NUM] = {0};
 };
-}  // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_H
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_H

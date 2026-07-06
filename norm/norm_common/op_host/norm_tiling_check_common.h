@@ -24,34 +24,30 @@
 
 namespace NormCheck {
 
-inline bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-    string nodeName, string src1Name, string src2Name)
+inline bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape, string nodeName,
+                           string src1Name, string src2Name)
 {
     size_t src1DimNum = src1Shape->GetStorageShape().GetDimNum();
     size_t src2DimNum = src2Shape->GetStorageShape().GetDimNum();
 
-    OP_TILING_CHECK(
-        (src1DimNum != src2DimNum),
-        OP_LOGE(
-            nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not equal.", src1Name.c_str(), src1DimNum,
-            src2Name.c_str(), src2DimNum),
-        return false);
+    OP_TILING_CHECK((src1DimNum != src2DimNum),
+                    OP_LOGE(nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not equal.",
+                            src1Name.c_str(), src1DimNum, src2Name.c_str(), src2DimNum),
+                    return false);
     for (size_t i = 0; i < src1DimNum; i++) {
         uint64_t src1DimValue = src1Shape->GetStorageShape().GetDim(i);
         uint64_t src2DimValue = src2Shape->GetStorageShape().GetDim(i);
 
-        OP_TILING_CHECK(
-            (src1DimValue != src2DimValue),
-            OP_LOGE(
-                nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
-                src1Name.c_str(), i, src1DimValue, src2Name.c_str(), i, src2DimValue),
-            return false);
+        OP_TILING_CHECK((src1DimValue != src2DimValue),
+                        OP_LOGE(nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
+                                src1Name.c_str(), i, src1DimValue, src2Name.c_str(), i, src2DimValue),
+                        return false);
     }
     return true;
 }
 
-inline bool CheckShapeLastDim(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-    string nodeName, string src1Name, string src2Name)
+inline bool CheckShapeLastDim(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape, string nodeName,
+                              string src1Name, string src2Name)
 {
     size_t src1DimNum = src1Shape->GetStorageShape().GetDimNum();
     size_t src2DimNum = src2Shape->GetStorageShape().GetDimNum();
@@ -60,15 +56,14 @@ inline bool CheckShapeLastDim(const gert::StorageShape* src1Shape, const gert::S
 
     OP_TILING_CHECK(
         (src1DimValue != src2DimValue),
-        OP_LOGE(
-            nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.", src1Name.c_str(),
-            src1DimNum - 1, src1DimValue, src2Name.c_str(), src2DimNum - 1, src2DimValue),
+        OP_LOGE(nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
+                src1Name.c_str(), src1DimNum - 1, src1DimValue, src2Name.c_str(), src2DimNum - 1, src2DimValue),
         return false);
     return true;
 }
 
-inline bool CheckShapeNumel(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-    string nodeName, string src1Name, string src2Name)
+inline bool CheckShapeNumel(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape, string nodeName,
+                            string src1Name, string src2Name)
 {
     size_t src1DimNum = src1Shape->GetStorageShape().GetDimNum();
     size_t src2DimNum = src2Shape->GetStorageShape().GetDimNum();
@@ -80,27 +75,23 @@ inline bool CheckShapeNumel(const gert::StorageShape* src1Shape, const gert::Sto
     for (size_t i = 0; i < src2DimNum; i++) {
         src2Numel *= src2Shape->GetStorageShape().GetDim(i);
     }
-    OP_TILING_CHECK(
-        (src1Numel != src2Numel),
-        OP_LOGE(
-            nodeName.c_str(), "Shape Numel check invalid, %s is %lu, %s is %lu, not equal.", src1Name.c_str(),
-            src1Numel, src2Name.c_str(), src2Numel),
-        return false);
+    OP_TILING_CHECK((src1Numel != src2Numel),
+                    OP_LOGE(nodeName.c_str(), "Shape Numel check invalid, %s is %lu, %s is %lu, not equal.",
+                            src1Name.c_str(), src1Numel, src2Name.c_str(), src2Numel),
+                    return false);
     return true;
 }
 
-inline bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape,
-    string nodeName, string srcBcName, string srcName, bool isBcHeader = true)
+inline bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape, string nodeName,
+                         string srcBcName, string srcName, bool isBcHeader = true)
 {
     size_t srcBcDimNum = srcBcShape->GetStorageShape().GetDimNum();
     size_t srcDimNum = srcShape->GetStorageShape().GetDimNum();
 
-    OP_TILING_CHECK(
-        (srcBcDimNum < srcDimNum),
-        OP_LOGE(
-            nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not bigger.", srcBcName.c_str(), srcBcDimNum,
-            srcName.c_str(), srcDimNum),
-        return false);
+    OP_TILING_CHECK((srcBcDimNum < srcDimNum),
+                    OP_LOGE(nodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not bigger.",
+                            srcBcName.c_str(), srcBcDimNum, srcName.c_str(), srcDimNum),
+                    return false);
     for (size_t i = 0; i < srcDimNum; i++) {
         uint64_t srcBcDimValue;
         if (isBcHeader) {
@@ -110,25 +101,22 @@ inline bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::Stora
         }
         uint64_t srcDimValue = srcShape->GetStorageShape().GetDim(i);
 
-        OP_TILING_CHECK(
-            (srcBcDimValue != srcDimValue),
-            OP_LOGE(
-                nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
-                srcBcName.c_str(), i, srcBcDimValue, srcName.c_str(), i, srcDimValue),
-            return false);
+        OP_TILING_CHECK((srcBcDimValue != srcDimValue),
+                        OP_LOGE(nodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
+                                srcBcName.c_str(), i, srcBcDimValue, srcName.c_str(), i, srcDimValue),
+                        return false);
     }
     return true;
 }
 
-inline bool CheckDimBiggerZero(const gert::StorageShape* srcShape, const uint32_t shapeLen,
-    string nodeName, string srcName)
+inline bool CheckDimBiggerZero(const gert::StorageShape* srcShape, const uint32_t shapeLen, string nodeName,
+                               string srcName)
 {
     // Support zero shape.
     for (uint32_t i = 0; i < shapeLen; i++) {
-        OP_TILING_CHECK(
-            srcShape->GetStorageShape().GetDim(i) < 0,
-            OP_LOGE(nodeName.c_str(), "Input %s shape should bigger or equal than zero.", srcName.c_str()),
-            return false);
+        OP_TILING_CHECK(srcShape->GetStorageShape().GetDim(i) < 0,
+                        OP_LOGE(nodeName.c_str(), "Input %s shape should bigger or equal than zero.", srcName.c_str()),
+                        return false);
     }
     return true;
 }

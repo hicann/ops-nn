@@ -17,18 +17,20 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LogSoftmaxGrad);
 
-aclTensor *LogSoftmaxGrad(const aclTensor *grad_output, const aclTensor *output, int64_t dim,
-                          aclOpExecutor *executor) {
+aclTensor* LogSoftmaxGrad(const aclTensor* grad_output, const aclTensor* output, int64_t dim, aclOpExecutor* executor)
+{
     auto out = executor->AllocTensor(grad_output->GetStorageShape(), grad_output->GetDataType());
 
     // 使用框架宏ADD_TO_LAUNCHER_LIST，将LogSoftmaxGrad算子加入任务队列
     L0_DFX(LogSoftmaxGrad, grad_output, output, dim);
     FVector<int64_t> newdim{dim};
     auto dims = executor->AllocIntArray(newdim.data(), 1);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LogSoftmaxGrad, OP_INPUT(grad_output, output), OP_OUTPUT(out), OP_ATTR(dims));
-    OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LogSoftmaxGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LogSoftmaxGrad, OP_INPUT(grad_output, output), OP_OUTPUT(out),
+                                           OP_ATTR(dims));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LogSoftmaxGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-}
+} // namespace l0op

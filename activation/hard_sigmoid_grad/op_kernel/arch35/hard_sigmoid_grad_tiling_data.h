@@ -14,11 +14,11 @@
 #define _HARD_SIGMOID_GRAD_TILING_DATA_H_
 
 struct HardSigmoidGradTilingData {
-    int64_t totalLength = 0;    // total number of elements
-    int64_t blockFactor = 0;    // elements per core
-    int64_t ubFactor = 0;       // elements per UB tile
-    float alpha = 1.0f / 6.0f;  // alpha parameter (matches PyTorch hardsigmoid)
-    float beta = 0.5f;          // beta parameter
+    int64_t totalLength = 0;   // total number of elements
+    int64_t blockFactor = 0;   // elements per core
+    int64_t ubFactor = 0;      // elements per UB tile
+    float alpha = 1.0f / 6.0f; // alpha parameter (matches PyTorch hardsigmoid)
+    float beta = 0.5f;         // beta parameter
 };
 
 #endif

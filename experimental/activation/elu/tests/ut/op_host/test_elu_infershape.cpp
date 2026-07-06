@@ -22,16 +22,11 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 
-class TestEluInfershape : public testing::Test
-{
+class TestEluInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-    }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase()
-    {
-    }
+    static void TearDownTestCase() {}
 };
 
 TEST_F(TestEluInfershape, elu_infershape_diff_test)

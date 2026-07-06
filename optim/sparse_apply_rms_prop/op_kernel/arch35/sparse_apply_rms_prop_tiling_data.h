@@ -25,4 +25,4 @@ struct SparseApplyRMSPropTilingData {
     int64_t varFirstDim;
 };
 
-#endif  // SPARSE_APPLY_RMS_PROP_TILING_DATA_H_
+#endif // SPARSE_APPLY_RMS_PROP_TILING_DATA_H_

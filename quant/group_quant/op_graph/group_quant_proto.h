@@ -54,6 +54,6 @@ REG_OP(GroupQuant)
     .OUTPUT(y, TensorType({DT_INT4, DT_INT8}))
     .ATTR(dst_type, Int, DT_INT8)
     .OP_END_FACTORY_REG(GroupQuant)
-}  // namespace ge
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_GROUP_QUANT_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_GROUP_QUANT_H_

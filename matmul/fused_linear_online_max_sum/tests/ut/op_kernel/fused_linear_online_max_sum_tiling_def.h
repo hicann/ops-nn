@@ -36,7 +36,7 @@ inline void InitFusedLinearOnlineMaxSumTilingData(uint8_t* tiling, FusedLinearOn
     memcpy(data, tiling, sizeof(FusedLinearOnlineMaxSumTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                    \
-    FusedLinearOnlineMaxSumTilingData tiling_data;                  \
+#define GET_TILING_DATA(tiling_data, tiling_arg)   \
+    FusedLinearOnlineMaxSumTilingData tiling_data; \
     InitFusedLinearOnlineMaxSumTilingData(tiling_arg, &tiling_data)
 #endif // FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL

@@ -25,10 +25,10 @@
 using namespace AscendC;
 using namespace conv2d;
 
-template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-        int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
-        int8_t InnerBatch, int8_t DisContinuous = 0, int8_t BatchOne = 0, int8_t NoPad = 0, int8_t SmallWeight = 0,
-        IsExtendConv2D ExtendConv2DFlag = IsExtendConv2D::FALSE, typename Output1T = half, int8_t FmapDataSrc = 0>
+template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
+          int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
+          int8_t InnerBatch, int8_t DisContinuous = 0, int8_t BatchOne = 0, int8_t NoPad = 0, int8_t SmallWeight = 0,
+          IsExtendConv2D ExtendConv2DFlag = IsExtendConv2D::FALSE, typename Output1T = half, int8_t FmapDataSrc = 0>
 struct Conv2DV1Param : public Conv2dParam {
     __aicore__ inline Conv2DV1Param() {}
     constexpr static int8_t fmapTiling = FmapTiling;
@@ -48,7 +48,7 @@ struct Conv2DV1Param : public Conv2dParam {
     constexpr static int8_t smallWeight = SmallWeight;
     constexpr static int8_t isExtendConv2d = static_cast<int8_t>(ExtendConv2DFlag);
     using Output1Dtype = Output1T;
-    constexpr static int8_t fmapDataSrc = FmapDataSrc;  //0 for DDR; 1 for L1
+    constexpr static int8_t fmapDataSrc = FmapDataSrc; // 0 for DDR; 1 for L1
 };
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
@@ -65,8 +65,8 @@ protected:
     __aicore__ inline bool Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                             const ExtendParams* extendParams, const Conv2DTilingData& tilingData);
 
-    __aicore__ inline bool InitSingleCoreData(const uint32_t& blockPerNDim, uint32_t blockPerMDim, uint32_t blockPerHoDim,
-                                              uint32_t blockPerWoDim);
+    __aicore__ inline bool InitSingleCoreData(const uint32_t& blockPerNDim, uint32_t blockPerMDim,
+                                              uint32_t blockPerHoDim, uint32_t blockPerWoDim);
 
     __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                       const ExtendParams* extendParams);
@@ -148,23 +148,26 @@ public:
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     constexpr static bool IS_OPTGROUP_PRELOAD = false;
 #else
-    constexpr static bool IS_OPTGROUP_PRELOAD =
-        (CONV_CFG::fmapTiling == static_cast<int8_t>(ConvFmapTiling::FULLLOAD_AL1) ||
-        CONV_CFG::fmapTiling == static_cast<int8_t>(ConvFmapTiling::OTHER)) &&
-        CONV_CFG::weightTiling == static_cast<int8_t>(ConvWeightTiling::FULLLOAD_BL1) &&
-        CONV_CFG::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
-        CONV_CFG::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN);
+    constexpr static bool IS_OPTGROUP_PRELOAD = (CONV_CFG::fmapTiling ==
+                                                     static_cast<int8_t>(ConvFmapTiling::FULLLOAD_AL1) ||
+                                                 CONV_CFG::fmapTiling == static_cast<int8_t>(ConvFmapTiling::OTHER)) &&
+                                                CONV_CFG::weightTiling ==
+                                                    static_cast<int8_t>(ConvWeightTiling::FULLLOAD_BL1) &&
+                                                CONV_CFG::groupType ==
+                                                    static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
+                                                CONV_CFG::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN);
 #endif
-    constexpr static bool DIS_CONTINUOUS =
-        CONV_CFG::disContinuous == static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);
+    constexpr static bool DIS_CONTINUOUS = CONV_CFG::disContinuous ==
+                                           static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);
 
     constexpr static uint8_t k0 = SINGLE_BLOCK_SIZE / sizeof(WEIGHT_T);
 };
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const Conv2DTilingData& convTilingData,
-                    const ExtendParams* extendParams)
+__aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
+                                  CONV_CFG>::RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                                             const Conv2DTilingData& convTilingData,
+                                                             const ExtendParams* extendParams)
 {
     if (Conv2dKernelInit(x, filter, bias, y, extendParams, convTilingData)) {
         Conv2dKernelImpl();
@@ -172,9 +175,10 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams,
-                     const Conv2DTilingData& tilingData)
+__aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
+                                  CONV_CFG>::Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                                              const ExtendParams* extendParams,
+                                                              const Conv2DTilingData& tilingData)
 {
     hasScale = (extendParams != nullptr);
     convTilingData = &tilingData;
@@ -188,8 +192,7 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
                 return false;
             }
         } else {
-            if (!InitSingleCoreData(convTilingData->hoDim * convTilingData->woDim, 0,
-                convTilingData->woDim, 1)) {
+            if (!InitSingleCoreData(convTilingData->hoDim * convTilingData->woDim, 0, convTilingData->woDim, 1)) {
                 return false;
             }
         }
@@ -199,8 +202,7 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
                 return false;
             }
         } else {
-            if (!InitSingleCoreData(1, 0, convTilingData->woDim * convTilingData->nDim,
-                convTilingData->nDim)) {
+            if (!InitSingleCoreData(1, 0, convTilingData->woDim * convTilingData->nDim, convTilingData->nDim)) {
                 return false;
             }
         }
@@ -212,20 +214,20 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitSingleCoreData(const uint32_t& blockPerNDim, uint32_t blockPerMDim, uint32_t blockPerHoDim, uint32_t blockPerWoDim)
+__aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
+                                  CONV_CFG>::InitSingleCoreData(const uint32_t& blockPerNDim, uint32_t blockPerMDim,
+                                                                uint32_t blockPerHoDim, uint32_t blockPerWoDim)
 {
     DimDataToFill batchToFill(singleCoreBatch, batchIdxStart, isBatchDimTail);
-    bool isRealDim =
-        convCommon.CalcDimData(convTilingData->hoDim * convTilingData->nDim * convTilingData->woDim,
-                               convTilingData->batchDim, convTilingData->batch, convTilingData->batch, batchToFill);
+    bool isRealDim = convCommon.CalcDimData(convTilingData->hoDim * convTilingData->nDim * convTilingData->woDim,
+                                            convTilingData->batchDim, convTilingData->batch, convTilingData->batch,
+                                            batchToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nToFill(singleCoreN, nIdxStart, isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->nDim,
-                                             convTilingData->cout, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->nDim, convTilingData->cout, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
@@ -233,8 +235,8 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
     if constexpr (isMMode) {
         DimDataToFill mToFill(singleCoreM, mIdxStart, isMDimTail);
         uint64_t totalM = convTilingData->hout * convTilingData->wout;
-        isRealDim = convCommon.CalcDimData(blockPerMDim, convTilingData->mDim, convCommon.AlignB(totalM, M0),
-                                           totalM, mToFill);
+        isRealDim = convCommon.CalcDimData(blockPerMDim, convTilingData->mDim, convCommon.AlignB(totalM, M0), totalM,
+                                           mToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
@@ -258,8 +260,8 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+__aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitBuffer(
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
     if constexpr (A_FORMAT == ConvFormat::NCHW) {
         if constexpr (isMMode) {
@@ -279,8 +281,8 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    Conv2dKernelImpl()
+__aicore__ inline void
+Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::Conv2dKernelImpl()
 {
     if constexpr (isMMode) {
         if (unlikely(isNDimTail || isMDimTail || isBatchDimTail)) {

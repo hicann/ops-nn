@@ -43,38 +43,34 @@ using namespace AscendC;
 
 template <typename T, int USE_NESTEROV>
 class ApplyAdamD {
-    static constexpr int32_t BUFFER_NUM = 2;  // double buffer
+    static constexpr int32_t BUFFER_NUM = 2; // double buffer
     static constexpr bool IS_FP16 = !AscendC::IsSameType<T, float>::value;
-    static constexpr int32_t SCALAR_NUM = 6;          // beta1_power..epsilon
-    static constexpr int32_t BLOCK_BYTES = 32;        // 32B-aligned scalar slot
+    static constexpr int32_t SCALAR_NUM = 6;   // beta1_power..epsilon
+    static constexpr int32_t BLOCK_BYTES = 32; // 32B-aligned scalar slot
     static constexpr int32_t ELEMS_PER_SLOT = BLOCK_BYTES / static_cast<int32_t>(sizeof(T));
 
 public:
     __aicore__ inline ApplyAdamD() = default;
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR m, GM_ADDR v,
-        GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
-        GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
-        GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut,
-        const ApplyAdamDTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
+                                GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR varOut,
+                                GM_ADDR mOut, GM_ADDR vOut, const ApplyAdamDTilingData* tilingData);
 
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void LoadScalars(
-        GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
-        GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon);
+    __aicore__ inline void LoadScalars(GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr, GM_ADDR beta1, GM_ADDR beta2,
+                                       GM_ADDR epsilon);
     __aicore__ inline void CopyIn(int64_t progress, int64_t currentNum);
     __aicore__ inline void Compute(int64_t currentNum);
-    __aicore__ inline void ComputeFp32(
-        LocalTensor<T>& varIn, LocalTensor<T>& mIn, LocalTensor<T>& vIn, LocalTensor<T>& gradIn,
-        LocalTensor<T>& varOutLocal, LocalTensor<T>& mOutLocal, LocalTensor<T>& vOutLocal,
-        LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, int32_t n);
-    __aicore__ inline void ComputeCastFp32(
-        LocalTensor<T>& varIn, LocalTensor<T>& mIn, LocalTensor<T>& vIn, LocalTensor<T>& gradIn,
-        LocalTensor<T>& varOutLocal, LocalTensor<T>& mOutLocal, LocalTensor<T>& vOutLocal,
-        LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, int32_t n);
+    __aicore__ inline void ComputeFp32(LocalTensor<T>& varIn, LocalTensor<T>& mIn, LocalTensor<T>& vIn,
+                                       LocalTensor<T>& gradIn, LocalTensor<T>& varOutLocal, LocalTensor<T>& mOutLocal,
+                                       LocalTensor<T>& vOutLocal, LocalTensor<float>& tmpA, LocalTensor<float>& tmpB,
+                                       int32_t n);
+    __aicore__ inline void ComputeCastFp32(LocalTensor<T>& varIn, LocalTensor<T>& mIn, LocalTensor<T>& vIn,
+                                           LocalTensor<T>& gradIn, LocalTensor<T>& varOutLocal,
+                                           LocalTensor<T>& mOutLocal, LocalTensor<T>& vOutLocal,
+                                           LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, int32_t n);
     __aicore__ inline void CopyOut(int64_t progress, int64_t currentNum);
 
 private:
@@ -100,8 +96,8 @@ private:
     TBuf<TPosition::VECCALC> castVBuf;
     TBuf<TPosition::VECCALC> castGradBuf;
     // Scalar staging buffers
-    TBuf<TPosition::VECCALC> scalarBufT;   // T view (6 x 32B slots)
-    TBuf<TPosition::VECCALC> scalarBufF;   // fp32 view (only IS_FP16)
+    TBuf<TPosition::VECCALC> scalarBufT; // T view (6 x 32B slots)
+    TBuf<TPosition::VECCALC> scalarBufF; // fp32 view (only IS_FP16)
 
     // Global Tensors
     GlobalTensor<T> varGm;
@@ -125,12 +121,10 @@ private:
 };
 
 template <typename T, int USE_NESTEROV>
-__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::Init(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v,
-    GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
-    GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut,
-    const ApplyAdamDTilingData* tilingData)
+__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR beta1Power,
+                                                         GM_ADDR beta2Power, GM_ADDR lr, GM_ADDR beta1, GM_ADDR beta2,
+                                                         GM_ADDR epsilon, GM_ADDR grad, GM_ADDR varOut, GM_ADDR mOut,
+                                                         GM_ADDR vOut, const ApplyAdamDTilingData* tilingData)
 {
     int64_t blockIdx = AscendC::GetBlockIdx();
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * blockIdx;
@@ -179,9 +173,8 @@ __aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::Init(
 }
 
 template <typename T, int USE_NESTEROV>
-__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::LoadScalars(
-    GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
-    GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon)
+__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::LoadScalars(GM_ADDR beta1Power, GM_ADDR beta2Power, GM_ADDR lr,
+                                                                GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon)
 {
     GlobalTensor<T> gB1P, gB2P, gLr, gB1, gB2, gEps;
     gB1P.SetGlobalBuffer((__gm__ T*)beta1Power, 1);
@@ -264,10 +257,11 @@ __aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::CopyIn(int64_t progress, int
 }
 
 template <typename T, int USE_NESTEROV>
-__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::ComputeFp32(
-    LocalTensor<T>& varIn, LocalTensor<T>& mIn, LocalTensor<T>& vIn, LocalTensor<T>& gradIn,
-    LocalTensor<T>& varOutLocal, LocalTensor<T>& mOutLocal, LocalTensor<T>& vOutLocal,
-    LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, int32_t n)
+__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::ComputeFp32(LocalTensor<T>& varIn, LocalTensor<T>& mIn,
+                                                                LocalTensor<T>& vIn, LocalTensor<T>& gradIn,
+                                                                LocalTensor<T>& varOutLocal, LocalTensor<T>& mOutLocal,
+                                                                LocalTensor<T>& vOutLocal, LocalTensor<float>& tmpA,
+                                                                LocalTensor<float>& tmpB, int32_t n)
 {
     Muls(tmpA, mIn, beta1_, n);
     Muls(tmpB, gradIn, oneMinusBeta1_, n);
@@ -294,10 +288,12 @@ __aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::ComputeFp32(
 }
 
 template <typename T, int USE_NESTEROV>
-__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::ComputeCastFp32(
-    LocalTensor<T>& varIn, LocalTensor<T>& mIn, LocalTensor<T>& vIn, LocalTensor<T>& gradIn,
-    LocalTensor<T>& varOutLocal, LocalTensor<T>& mOutLocal, LocalTensor<T>& vOutLocal,
-    LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, int32_t n)
+__aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::ComputeCastFp32(LocalTensor<T>& varIn, LocalTensor<T>& mIn,
+                                                                    LocalTensor<T>& vIn, LocalTensor<T>& gradIn,
+                                                                    LocalTensor<T>& varOutLocal,
+                                                                    LocalTensor<T>& mOutLocal,
+                                                                    LocalTensor<T>& vOutLocal, LocalTensor<float>& tmpA,
+                                                                    LocalTensor<float>& tmpB, int32_t n)
 {
     LocalTensor<float> castVar = castVarBuf.Get<float>();
     LocalTensor<float> castM = castMBuf.Get<float>();
@@ -400,6 +396,6 @@ __aicore__ inline void ApplyAdamD<T, USE_NESTEROV>::Process()
     }
 }
 
-}  // namespace NsApplyAdamD
+} // namespace NsApplyAdamD
 
-#endif  // APPLY_ADAM_D_KERNEL_H
+#endif // APPLY_ADAM_D_KERNEL_H

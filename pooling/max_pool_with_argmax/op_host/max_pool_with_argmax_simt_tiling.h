@@ -29,14 +29,11 @@ constexpr uint64_t SIMT_NCHW_TILING_KEY_INT64 = 500011;
 constexpr uint64_t SIMT_NHWC_TILING_KEY_INT64 = 500012;
 constexpr int64_t MAX_THREAD_NUM = 256;
 
-class MaxPoolWithArgmaxTilingSIMT : public MaxPoolWithArgmaxBaseTiling
-{
+class MaxPoolWithArgmaxTilingSIMT : public MaxPoolWithArgmaxBaseTiling {
 public:
-    explicit MaxPoolWithArgmaxTilingSIMT(gert::TilingContext* context) : MaxPoolWithArgmaxBaseTiling(context)
-    {}
+    explicit MaxPoolWithArgmaxTilingSIMT(gert::TilingContext* context) : MaxPoolWithArgmaxBaseTiling(context) {}
 
-    ~MaxPoolWithArgmaxTilingSIMT() override
-    {}
+    ~MaxPoolWithArgmaxTilingSIMT() override {}
 
 protected:
     // 计算数据切分TilingData

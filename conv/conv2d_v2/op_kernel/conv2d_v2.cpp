@@ -45,15 +45,13 @@ constexpr ConvFormat outputFormat = ConvFormat::NCHW;
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z;
 constexpr ConvFormat outputFormat = ConvFormat::NHWC;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && \
-    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
-    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && \
+    FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
 constexpr ConvFormat fmapFormat = ConvFormat::NCHW;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NCHW;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && \
-    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
-    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NHWC
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && defined(FORMAT_FILTER) && \
+    FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && defined(FORMAT_Y) && FORMAT_Y == FORMAT_NHWC
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NHWC;
@@ -67,15 +65,13 @@ constexpr ConvFormat outputFormat = ConvFormat::NHWC;
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z;
 constexpr ConvFormat outputFormat = ConvFormat::NCHW;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && \
-    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
-    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NHWC
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && \
+    FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && defined(FORMAT_Y) && FORMAT_Y == FORMAT_NHWC
 constexpr ConvFormat fmapFormat = ConvFormat::NCHW;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NHWC;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && \
-    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
-    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && defined(FORMAT_FILTER) && \
+    FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NCHW;
@@ -89,11 +85,12 @@ constexpr ConvFormat scaleFormat = ConvFormat::ND;
 #define SET_KERNEL_TASK_TYPE(key) KERNEL_TASK_TYPE(key, KERNEL_TYPE_MIX_AIC_1_2)
 #endif
 
-template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-         int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
-         int8_t InnerBatch, int8_t DisContinuous, int8_t BatchOne, int8_t NoPad, int8_t SmallWeight, int8_t SmallKernel>
+template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
+          int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
+          int8_t InnerBatch, int8_t DisContinuous, int8_t BatchOne, int8_t NoPad, int8_t SmallWeight,
+          int8_t SmallKernel>
 __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -111,14 +108,13 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 #if defined(DTYPE_BIAS)
     using biasType = ConvType<TPosition::GM, biasFormat, DTYPE_BIAS>;
 #else
-    using biasType = ConvType<TPosition::GM, biasFormat, half>;  // only for compile
+    using biasType = ConvType<TPosition::GM, biasFormat, half>; // only for compile
 #endif
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
     if constexpr (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
-        fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW) {
-        if constexpr (weightFormat == ConvFormat::FRACTAL_Z &&
-            AscendC::IsSameType<DTYPE_X, half>::value) {
+                  fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW) {
+        if constexpr (weightFormat == ConvFormat::FRACTAL_Z && AscendC::IsSameType<DTYPE_X, half>::value) {
             const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
             uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
             bool isParallelism = false;
@@ -145,24 +141,25 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
     } else {
         if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
             Conv2dBase<fmapType, weightType, outputType, biasType, scaleType,
-                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
-                            EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
-                            SmallWeight>> baseConv2d;
+                       Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder,
+                                     GroupType, EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch,
+                                     DisContinuous, BatchOne, NoPad, SmallWeight>>
+                baseConv2d;
             baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
         } else if constexpr (GroupType == CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV) {
             DepthwiseConv2dSimplifiedKernel<
-                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong,
-                              OutputOrder, IterOrder, GroupType, EnableSmallChannel,
-                              WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous>,
+                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                              EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous>,
                 DTYPE_X>
                 depthwiseConv2d;
             depthwiseConv2d.Init(x, filter, bias, y, &tilingData);
             depthwiseConv2d.Process();
         } else {
             GroupConv2d<fmapType, weightType, outputType, biasType, scaleType,
-                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
-                            EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
-                            SmallWeight>> groupConv2d;
+                        Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder,
+                                      GroupType, EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch,
+                                      DisContinuous, BatchOne, NoPad, SmallWeight>>
+                groupConv2d;
             groupConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
         }
     }

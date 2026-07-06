@@ -31,21 +31,15 @@
 #include "util/math_util.h"
 #include "reverse_sequence_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 
 using Ops::NN::Optiling::TilingBaseClass;
 
-class ReverseSequenceSBACommonTiling : public TilingBaseClass
-{
+class ReverseSequenceSBACommonTiling : public TilingBaseClass {
 public:
-    explicit ReverseSequenceSBACommonTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit ReverseSequenceSBACommonTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~ReverseSequenceSBACommonTiling() override
-    {
-    }
+    ~ReverseSequenceSBACommonTiling() override {}
 
 protected:
     bool IsCapable() override;

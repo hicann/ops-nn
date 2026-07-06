@@ -22,12 +22,9 @@ using namespace RmsNorm;
 template <typename T, int32_t MODE>
 class KernelAddRmsNormMultiN {
 public:
-    __aicore__ inline KernelAddRmsNormMultiN(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, const AddRMSNormTilingData* tiling)
+    __aicore__ inline KernelAddRmsNormMultiN(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tiling->num_row;
@@ -50,8 +47,10 @@ public:
             this->rowTail = tiling->last_block_row_tail;
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol,
+                             this->rowWork * this->numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol,
+                             this->rowWork * this->numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
@@ -95,7 +94,8 @@ public:
 
     __aicore__ inline void SubProcessHalf(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) * static_cast<uint64_t>(numCol);
+        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) *
+                           static_cast<uint64_t>(numCol);
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(calc_row_num);
         if constexpr (MODE == ADD_RMS_NORM_MODE || MODE == PRE_RMS_NORM_MODE) {
@@ -202,16 +202,18 @@ private:
         int32_t bodyCount = repeatTimes * NUM_PER_REP_FP32;
 
         if (likely(repeatTimes > 0)) {
-            Div(rstdLocal, reduce_buf_local, rstdLocal, NUM_PER_REP_FP32, repeatTimes, {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
+            Div(rstdLocal, reduce_buf_local, rstdLocal, NUM_PER_REP_FP32, repeatTimes,
+                {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
         }
         if (unlikely(tailCount != 0)) {
-            Div(rstdLocal[bodyCount], reduce_buf_local, rstdLocal[bodyCount], tailCount, 1, {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
+            Div(rstdLocal[bodyCount], reduce_buf_local, rstdLocal[bodyCount], tailCount, 1,
+                {1, 0, 1, DEFAULT_REPEAT_STRIDE, 0, DEFAULT_REPEAT_STRIDE});
         }
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeY(
-        LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal, uint32_t calc_row_num)
+    __aicore__ inline void ComputeY(LocalTensor<T> xLocal, LocalTensor<T> gammaLocal, LocalTensor<float> rstdLocal,
+                                    uint32_t calc_row_num)
     {
         LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
         LocalTensor<uint32_t> offsetLocal = offsetBuf.Get<uint32_t>();
@@ -234,26 +236,26 @@ private:
         PipeBarrier<PIPE_V>();
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
         if constexpr (is_same<T, half>::value) {
-          Cast(yLocal, x_fp32, RoundMode::CAST_NONE, calc_row_num * numColAlign);
-          PipeBarrier<PIPE_V>();
+            Cast(yLocal, x_fp32, RoundMode::CAST_NONE, calc_row_num * numColAlign);
+            PipeBarrier<PIPE_V>();
 
-          for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-              Mul(yLocal[i_i * numColAlign], gammaLocal, yLocal[i_i * numColAlign], numCol);
-          }
+            for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
+                Mul(yLocal[i_i * numColAlign], gammaLocal, yLocal[i_i * numColAlign], numCol);
+            }
         } else {
-          Cast(yLocal, x_fp32, RoundMode::CAST_RINT, calc_row_num * numColAlign);
-          PipeBarrier<PIPE_V>();
-          LocalTensor<float> yfp32 = xFp32Buf.Get<float>();
-          Cast(yfp32, yLocal, RoundMode::CAST_NONE, calc_row_num * numColAlign);
-          PipeBarrier<PIPE_V>();
-          LocalTensor<float> gammaFp32 = sqxBuf.Get<float>();
-          Cast(gammaFp32, gammaLocal, RoundMode::CAST_NONE, numCol);
-          PipeBarrier<PIPE_V>();
-          for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-              Mul(yfp32[i_i * numColAlign], gammaFp32, yfp32[i_i * numColAlign], numCol);
-          }
-          PipeBarrier<PIPE_V>();
-          Cast(yLocal, yfp32, RoundMode::CAST_RINT, calc_row_num * numColAlign);
+            Cast(yLocal, x_fp32, RoundMode::CAST_RINT, calc_row_num * numColAlign);
+            PipeBarrier<PIPE_V>();
+            LocalTensor<float> yfp32 = xFp32Buf.Get<float>();
+            Cast(yfp32, yLocal, RoundMode::CAST_NONE, calc_row_num * numColAlign);
+            PipeBarrier<PIPE_V>();
+            LocalTensor<float> gammaFp32 = sqxBuf.Get<float>();
+            Cast(gammaFp32, gammaLocal, RoundMode::CAST_NONE, numCol);
+            PipeBarrier<PIPE_V>();
+            for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
+                Mul(yfp32[i_i * numColAlign], gammaFp32, yfp32[i_i * numColAlign], numCol);
+            }
+            PipeBarrier<PIPE_V>();
+            Cast(yLocal, yfp32, RoundMode::CAST_RINT, calc_row_num * numColAlign);
         }
         PipeBarrier<PIPE_V>();
         outQueueY.EnQue<T>(yLocal);

@@ -28,21 +28,15 @@
 #include "util/math_util.h"
 #include "reverse_sequence_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 
 using Ops::NN::Optiling::TilingBaseClass;
 
-class ReverseSequenceBASTiling : public TilingBaseClass
-{
+class ReverseSequenceBASTiling : public TilingBaseClass {
 public:
-    explicit ReverseSequenceBASTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit ReverseSequenceBASTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~ReverseSequenceBASTiling() override
-    {
-    }
+    ~ReverseSequenceBASTiling() override {}
 
 protected:
     void DoUBTiling();

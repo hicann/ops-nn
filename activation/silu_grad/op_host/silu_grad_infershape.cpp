@@ -16,11 +16,9 @@
 #include "register/op_impl_registry.h"
 #include "infershape_elewise_util.h"
 
-
 using namespace ge;
-namespace ops
-{
-static ge::graphStatus InferDataTypeForSiluGrad(gert::InferDataTypeContext *context)
+namespace ops {
+static ge::graphStatus InferDataTypeForSiluGrad(gert::InferDataTypeContext* context)
 {
     const ge::DataType dtypeDy = context->GetInputDataType(0);
     const ge::DataType dtypeX = context->GetInputDataType(1);
@@ -29,6 +27,5 @@ static ge::graphStatus InferDataTypeForSiluGrad(gert::InferDataTypeContext *cont
     return ret;
 }
 
-IMPL_OP_INFERSHAPE(SiluGrad).InferShape(Ops::Base::InferShape4Elewise)
-                            .InferDataType(InferDataTypeForSiluGrad);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(SiluGrad).InferShape(Ops::Base::InferShape4Elewise).InferDataType(InferDataTypeForSiluGrad);
+} // namespace ops

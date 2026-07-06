@@ -18,8 +18,7 @@
 namespace optiling {
 
 // 对应0位 平台大类
-enum class SocVersionType : uint8_t
-{
+enum class SocVersionType : uint8_t {
     RESERVERD = 0,
     SUPPORT_L0C_TO_OUT = 1,
     SUPPORT_L1_TO_BT_BF16 = 2,
@@ -27,28 +26,24 @@ enum class SocVersionType : uint8_t
 };
 
 // 对应1位 平台小类
-enum class SocVersionSubType
-{
+enum class SocVersionSubType {
     RESERVERD = 0,
 };
 
 // 对应2-3位 伪量化场景
-enum class QuantizationScenario
-{
+enum class QuantizationScenario {
     DEFAULT = 0,
 };
 
 // 对应4位 算法大类
-enum class OptimizationAlgorithmCategory
-{
+enum class OptimizationAlgorithmCategory {
     VECTOR_ANTIQUANT = 0,
     MULTI_SCALE_DEQUANT = 1,
     FIXPIPE_ANTIQUANT = 2,
 };
 
 // 对应5位 算法小类
-enum class OptimizationAlgorithmSubCategory : uint8_t
-{
+enum class OptimizationAlgorithmSubCategory : uint8_t {
     VDEFAULT = 0,
     SPLIT_K = 1,
     N_FIRST_TAIL_RESPLIT = 2,
@@ -60,21 +55,18 @@ enum class OptimizationAlgorithmSubCategory : uint8_t
 };
 
 // 对应6-9位 fixp模板自定义组合
-enum class FixpipeConfiguration : uint16_t
-{
+enum class FixpipeConfiguration : uint16_t {
     A_NORMAL_LOAD = 0,
     A_SINGLE_M_SINGLE_K_FULL_LOAD = 1,
 };
 
-enum class CustomSplitKConfiguration
-{
+enum class CustomSplitKConfiguration {
     A_NORMAL_LOAD = 0,
     A_MK_FULL_LOAD = 1,
 };
 
 // 对应14位 表示转置场景，transA/transB
-enum class TransposeSituation
-{
+enum class TransposeSituation {
     A_NOT_TRANS_B_NOT_TRANS = 0,
     A_NOT_TRANS_B_TRANS = 1,
     A_TRANS_B_NOT_TRANS = 2,
@@ -82,8 +74,7 @@ enum class TransposeSituation
 };
 
 // 对应17位 可选输入是否存在 hasAntiquantOffset/hasBias
-enum class OptionInputSituation
-{
+enum class OptionInputSituation {
     ANTIQUANT_OFFSET_NOT_EXIST_BIAS_NOT_EXIST = 0,
     ANTIQUANT_OFFSET_NOT_EXIST_BIAS_EXIST = 1,
     ANTIQUANT_OFFSET_EXIST_BIAS_NOT_EXIST = 2,
@@ -92,8 +83,7 @@ enum class OptionInputSituation
     ANTIQUANT_OFFSET_EXIST_BIAS_FP32_EXIST = 6,
 };
 
-class TilingKeyConfigure
-{
+class TilingKeyConfigure {
 public:
     // 对应0-1位 平台大类，平台小类
     uint8_t socVersionType = 0;
@@ -126,10 +116,7 @@ public:
     uint16_t apiConstexpr = 0;
 
 public:
-    void PrintTilingKeyLog() const
-    {
-        OP_LOGI("WeightQuantBatchMatmulV2", "%ld", PrintTilingKeyLogImpl());
-    }
+    void PrintTilingKeyLog() const { OP_LOGI("WeightQuantBatchMatmulV2", "%ld", PrintTilingKeyLogImpl()); }
 
     int64_t PrintTilingKeyLogImpl() const
     {

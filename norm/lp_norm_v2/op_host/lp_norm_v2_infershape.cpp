@@ -22,7 +22,8 @@ namespace ops {
 static constexpr size_t INDEX_AXES = 1;
 static constexpr size_t INDEX_KEEPDIM = 2;
 
-static ge::graphStatus InferShape4LpNormV2(gert::InferShapeContext *context) {
+static ge::graphStatus InferShape4LpNormV2(gert::InferShapeContext* context)
+{
     const auto xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     auto yShape = context->GetOutputShape(0);
@@ -67,7 +68,8 @@ static ge::graphStatus InferShape4LpNormV2(gert::InferShapeContext *context) {
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4LpNormV2(gert::InferDataTypeContext *context) {
+static ge::graphStatus InferDataType4LpNormV2(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "InferDataType4LpNorm start");
     auto inputXDtype = context->GetInputDataType(0);
     context->SetOutputDataType(0, inputXDtype);

@@ -32,27 +32,21 @@ std::unique_ptr<TilingBaseClass> TILING_CLASS(gert::TilingContext* context)
 
 using TilingClassCase = std::unique_ptr<TilingBaseClass> (*)(gert::TilingContext*);
 
-class PoolTilingCases
-{
+class PoolTilingCases {
 public:
-    explicit PoolTilingCases(std::string op_type) : op_type_(std::move(op_type))
-    {}
+    explicit PoolTilingCases(std::string op_type) : op_type_(std::move(op_type)) {}
 
     template <typename T>
     void AddTiling(int32_t priority)
     {
-        OP_CHECK_IF(
-            cases_.find(priority) != cases_.end(), OP_LOGE(op_type_, "There are duplicate registrations."), return);
+        OP_CHECK_IF(cases_.find(priority) != cases_.end(), OP_LOGE(op_type_, "There are duplicate registrations."),
+                    return );
         cases_[priority] = TILING_CLASS<T>;
-        OP_CHECK_IF(
-            cases_[priority] == nullptr,
-            OP_LOGE(op_type_, "PoolRegister op tiling func failed, please check the class name."), return);
+        OP_CHECK_IF(cases_[priority] == nullptr,
+                    OP_LOGE(op_type_, "PoolRegister op tiling func failed, please check the class name."), return );
     }
 
-    const std::map<int32_t, TilingClassCase>& GetPoolTilingCases()
-    {
-        return cases_;
-    }
+    const std::map<int32_t, TilingClassCase>& GetPoolTilingCases() { return cases_; }
 
 private:
     std::map<int32_t, TilingClassCase> cases_;
@@ -60,8 +54,7 @@ private:
 };
 
 // --------------------------------Interfacce without soc version --------------------------------
-class PoolTilingRegistry
-{
+class PoolTilingRegistry {
 public:
     PoolTilingRegistry() = default;
 
@@ -80,9 +73,8 @@ public:
         if (registry_map_.find(op_type) == registry_map_.end()) {
             registry_map_[op_type] = std::make_shared<PoolTilingCases>(PoolTilingCases(op_type));
         }
-        OP_CHECK_IF(
-            registry_map_[op_type] == nullptr,
-            OP_LOGE(op_type, "PoolRegister tiling func failed, please check the class name."), return nullptr);
+        OP_CHECK_IF(registry_map_[op_type] == nullptr,
+                    OP_LOGE(op_type, "PoolRegister tiling func failed, please check the class name."), return nullptr);
         return registry_map_[op_type];
     }
 
@@ -130,9 +122,9 @@ public:
 
     const std::map<int32_t, TilingClassCase>& GetTilingTemplates(const std::string& op_type)
     {
-        OP_CHECK_IF(
-            registry_map_.find(op_type) == registry_map_.end(),
-            OP_LOGE(op_type, "Get op tiling func failed, please check the op name."), return empty_tiling_case_);
+        OP_CHECK_IF(registry_map_.find(op_type) == registry_map_.end(),
+                    OP_LOGE(op_type, "Get op tiling func failed, please check the op name."),
+                    return empty_tiling_case_);
         return registry_map_[op_type]->GetPoolTilingCases();
     }
 
@@ -141,18 +133,16 @@ private:
     const std::map<int32_t, TilingClassCase> empty_tiling_case_;
 };
 
-class PoolRegister
-{
+class PoolRegister {
 public:
-    explicit PoolRegister(std::string op_type) : op_type_(std::move(op_type))
-    {}
+    explicit PoolRegister(std::string op_type) : op_type_(std::move(op_type)) {}
 
     template <typename T>
     PoolRegister& tiling(int32_t priority)
     {
         auto PoolTilingCases = PoolTilingRegistry::GetInstance().RegisterOp(op_type_);
-        OP_CHECK_IF(
-            PoolTilingCases == nullptr, OP_LOGE(op_type_, "PoolRegister op tiling failed, please the op name."), return *this);
+        OP_CHECK_IF(PoolTilingCases == nullptr, OP_LOGE(op_type_, "PoolRegister op tiling failed, please the op name."),
+                    return *this);
         PoolTilingCases->AddTiling<T>(priority);
         return *this;
     }
@@ -163,17 +153,17 @@ private:
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
-#define REGISTER_POOL_TILING_TEMPLATE(op_type, class_name, priority)                                                        \
-    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
-    static PoolRegister VAR_UNUSED##op_type_##class_name##priority_register = \
-    PoolRegister(op_type).tiling<class_name>(priority)
+#define REGISTER_POOL_TILING_TEMPLATE(op_type, class_name, priority)                                \
+    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);               \
+    static PoolRegister VAR_UNUSED##op_type_##class_name##priority_register = PoolRegister(op_type) \
+                                                                                  .tiling<class_name>(priority)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 REGISTER_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
-#define REGISTER_OPS_POOL_TILING_TEMPLATE(op_type, class_name, priority) \
-    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
-    static PoolRegister __attribute__((unused)) tiling_##op_type##_##class_name##_##priority##_register = \
-    PoolRegister(#op_type).tiling<class_name>(priority)
-}
-#endif  // CONV_TILING_TEMPLATES_REGISTRY
+#define REGISTER_OPS_POOL_TILING_TEMPLATE(op_type, class_name, priority)          \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__); \
+    static PoolRegister __attribute__((unused))                                   \
+    tiling_##op_type##_##class_name##_##priority##_register = PoolRegister(#op_type).tiling<class_name>(priority)
+} // namespace optiling
+#endif // CONV_TILING_TEMPLATES_REGISTRY

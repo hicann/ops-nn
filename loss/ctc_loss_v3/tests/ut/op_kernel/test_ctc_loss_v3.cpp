@@ -22,28 +22,20 @@
 
 using namespace std;
 
-extern "C" void ctc_loss_v3(
-    GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths, GM_ADDR target_lengths, GM_ADDR neg_log_likelihood,
-    GM_ADDR log_alpha, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" void ctc_loss_v3(GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths, GM_ADDR target_lengths,
+                            GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR workspace, GM_ADDR tiling);
 
-class CTCLossV3Kernel : public testing::Test
-{
+class CTCLossV3Kernel : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "CTCLossV3 Kernel SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "CTCLossV3 Kernel TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "CTCLossV3 Kernel SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "CTCLossV3 Kernel TearDown\n" << endl; }
 };
 
 template <typename T>
-void TestCTCLossV3Kernel(
-    vector<uint64_t>& logProbsShape, vector<uint64_t>& targetsShape, vector<uint64_t>& inputLengthsShape,
-    vector<uint64_t>& targetLengthsShape, vector<uint64_t>& lossShape, vector<uint64_t>& logAlphaShape,
-    uint64_t workspaceSize, uint64_t blockDim, uint64_t tilingKey)
+void TestCTCLossV3Kernel(vector<uint64_t>& logProbsShape, vector<uint64_t>& targetsShape,
+                         vector<uint64_t>& inputLengthsShape, vector<uint64_t>& targetLengthsShape,
+                         vector<uint64_t>& lossShape, vector<uint64_t>& logAlphaShape, uint64_t workspaceSize,
+                         uint64_t blockDim, uint64_t tilingKey)
 {
     uint64_t N = logProbsShape[1];
     uint64_t Time = logProbsShape[0];
@@ -99,9 +91,8 @@ void TestCTCLossV3Kernel(
 
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        ctc_loss_v3, blockDim, log_probs, targets, input_lengths, target_lengths, loss, log_alpha, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(ctc_loss_v3, blockDim, log_probs, targets, input_lengths, target_lengths, loss, log_alpha, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(log_probs);
     AscendC::GmFree(targets);
@@ -125,9 +116,8 @@ TEST_F(CTCLossV3Kernel, ctc_loss_v3_case_float_0)
     uint64_t workspaceSize = (65 + 32) * 4 * 4 * 1;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 0;
-    TestCTCLossV3Kernel<float>(
-        logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape, workspaceSize,
-        blockDim, tilingKey);
+    TestCTCLossV3Kernel<float>(logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape,
+                               logAlphaShape, workspaceSize, blockDim, tilingKey);
 }
 
 TEST_F(CTCLossV3Kernel, ctc_loss_v3_case_float_large_symbleSet_0)
@@ -141,7 +131,6 @@ TEST_F(CTCLossV3Kernel, ctc_loss_v3_case_float_large_symbleSet_0)
     uint64_t workspaceSize = (65 + 32) * 4 * 4 * 1;
     uint64_t blockDim = 1;
     uint64_t tilingKey = 0;
-    TestCTCLossV3Kernel<float>(
-        logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape, logAlphaShape, workspaceSize,
-        blockDim, tilingKey);
+    TestCTCLossV3Kernel<float>(logProbsShape, targetsShape, inputLengthsShape, targetLengthsShape, lossShape,
+                               logAlphaShape, workspaceSize, blockDim, tilingKey);
 }

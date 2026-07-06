@@ -52,72 +52,65 @@ __simt_callee__ inline float ToComputeFloat(bfloat16_t v) { return __bfloat162fl
 __simt_callee__ inline half FloatToHalf(float v) { return __float2half(v); }
 __simt_callee__ inline bfloat16_t FloatToBfloat16(float v) { return __float2bfloat16(v); }
 
-}  // namespace detail
+} // namespace detail
 
 // ========== SIMT VF Kernel ==========
 template <typename T, typename IndexT>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void SparseApplyRMSPropSimtKernel(
-    int64_t totalIndices, int64_t innerDim, int64_t varFirstDim,
-    __gm__ T* var, __gm__ T* ms, __gm__ T* mom,
-    __gm__ T* grad, __gm__ IndexT* indices,
-    __gm__ T* lr, __gm__ T* rho, __gm__ T* momentum, __gm__ T* epsilon)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void SparseApplyRMSPropSimtKernel(
+    int64_t totalIndices, int64_t innerDim, int64_t varFirstDim, __gm__ T* var, __gm__ T* ms, __gm__ T* mom,
+    __gm__ T* grad, __gm__ IndexT* indices, __gm__ T* lr, __gm__ T* rho, __gm__ T* momentum, __gm__ T* epsilon)
 {
     // Promote scalar hyper-params to float32 once
-    float fLr       = detail::ToComputeFloat(lr[0]);
-    float fRho      = detail::ToComputeFloat(rho[0]);
+    float fLr = detail::ToComputeFloat(lr[0]);
+    float fRho = detail::ToComputeFloat(rho[0]);
     float fMomentum = detail::ToComputeFloat(momentum[0]);
-    float fEpsilon  = detail::ToComputeFloat(epsilon[0]);
+    float fEpsilon = detail::ToComputeFloat(epsilon[0]);
     float fOneMinusRho = 1.0f - fRho;
 
     // Total work items = M * innerDim
-    uint64_t totalWork = static_cast<uint64_t>(totalIndices) *
-                         static_cast<uint64_t>(innerDim);
+    uint64_t totalWork = static_cast<uint64_t>(totalIndices) * static_cast<uint64_t>(innerDim);
 
     // Grid-stride loop
-    for (uint64_t workIdx = static_cast<uint64_t>(blockIdx.x) * THREAD_NUM + threadIdx.x;
-         workIdx < totalWork;
-         workIdx += blockDim.x * gridDim.x)
-    {
+    for (uint64_t workIdx = static_cast<uint64_t>(blockIdx.x) * THREAD_NUM + threadIdx.x; workIdx < totalWork;
+         workIdx += blockDim.x * gridDim.x) {
         // Coordinate decoding
-        uint64_t idxIdx   = workIdx / static_cast<uint64_t>(innerDim);
+        uint64_t idxIdx = workIdx / static_cast<uint64_t>(innerDim);
         uint64_t innerIdx = workIdx % static_cast<uint64_t>(innerDim);
 
         // Read index, compute GM offsets
-        IndexT row            = indices[idxIdx];
+        IndexT row = indices[idxIdx];
         if (row < static_cast<IndexT>(0) || row >= static_cast<IndexT>(varFirstDim)) {
             continue;
         }
-        uint64_t rowOffset    = static_cast<uint64_t>(row) * static_cast<uint64_t>(innerDim) + innerIdx;
-        uint64_t gradOffset   = static_cast<uint64_t>(idxIdx) * static_cast<uint64_t>(innerDim) + innerIdx;
+        uint64_t rowOffset = static_cast<uint64_t>(row) * static_cast<uint64_t>(innerDim) + innerIdx;
+        uint64_t gradOffset = static_cast<uint64_t>(idxIdx) * static_cast<uint64_t>(innerDim) + innerIdx;
 
         // Read old values, promote to float32
-        float fMsOld  = detail::ToComputeFloat(ms[rowOffset]);
+        float fMsOld = detail::ToComputeFloat(ms[rowOffset]);
         float fMomOld = detail::ToComputeFloat(mom[rowOffset]);
         float fVarOld = detail::ToComputeFloat(var[rowOffset]);
-        float fGrad   = detail::ToComputeFloat(grad[gradOffset]);
+        float fGrad = detail::ToComputeFloat(grad[gradOffset]);
 
         // Step 1: ms_new = rho * ms_old + (1 - rho) * grad^2
         float fMsNew = fRho * fMsOld + fOneMinusRho * fGrad * fGrad;
 
         // Step 2: mom_new = momentum * mom_old + lr * grad / sqrt(ms_new + epsilon)
-        float fMomNew = fMomentum * fMomOld +
-                        fLr * fGrad * rsqrtf(fMsNew + fEpsilon);
+        float fMomNew = fMomentum * fMomOld + fLr * fGrad * rsqrtf(fMsNew + fEpsilon);
 
         // Step 3: var_new = var_old - mom_new
         float fVarNew = fVarOld - fMomNew;
 
         // Write back (demote from float32 for half/bf16)
         if constexpr (std::is_same_v<T, float>) {
-            ms[rowOffset]  = fMsNew;
+            ms[rowOffset] = fMsNew;
             mom[rowOffset] = fMomNew;
             var[rowOffset] = fVarNew;
         } else if constexpr (std::is_same_v<T, half>) {
-            ms[rowOffset]  = detail::FloatToHalf(fMsNew);
+            ms[rowOffset] = detail::FloatToHalf(fMsNew);
             mom[rowOffset] = detail::FloatToHalf(fMomNew);
             var[rowOffset] = detail::FloatToHalf(fVarNew);
         } else {
-            ms[rowOffset]  = detail::FloatToBfloat16(fMsNew);
+            ms[rowOffset] = detail::FloatToBfloat16(fMsNew);
             mom[rowOffset] = detail::FloatToBfloat16(fMomNew);
             var[rowOffset] = detail::FloatToBfloat16(fVarNew);
         }
@@ -126,22 +119,20 @@ inline void SparseApplyRMSPropSimtKernel(
 
 // ========== Process Entry ==========
 template <typename T, typename IndexT>
-__aicore__ inline void Process(
-    GM_ADDR var_gm, GM_ADDR ms_gm, GM_ADDR mom_gm,
-    GM_ADDR lr_gm, GM_ADDR rho_gm, GM_ADDR momentum_gm, GM_ADDR epsilon_gm,
-    GM_ADDR grad_gm, GM_ADDR indices_gm,
-    GM_ADDR var_out_gm, GM_ADDR ms_out_gm, GM_ADDR mom_out_gm,
-    const SparseApplyRMSPropTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR var_gm, GM_ADDR ms_gm, GM_ADDR mom_gm, GM_ADDR lr_gm, GM_ADDR rho_gm,
+                               GM_ADDR momentum_gm, GM_ADDR epsilon_gm, GM_ADDR grad_gm, GM_ADDR indices_gm,
+                               GM_ADDR var_out_gm, GM_ADDR ms_out_gm, GM_ADDR mom_out_gm,
+                               const SparseApplyRMSPropTilingData* tilingData)
 {
     // Cast GM_ADDR to typed pointers
-    __gm__ T* varPtr       = (__gm__ T*)var_gm;
-    __gm__ T* msPtr        = (__gm__ T*)ms_gm;
-    __gm__ T* momPtr       = (__gm__ T*)mom_gm;
-    __gm__ T* lrPtr        = (__gm__ T*)lr_gm;
-    __gm__ T* rhoPtr       = (__gm__ T*)rho_gm;
-    __gm__ T* momentumPtr  = (__gm__ T*)momentum_gm;
-    __gm__ T* epsilonPtr   = (__gm__ T*)epsilon_gm;
-    __gm__ T* gradPtr      = (__gm__ T*)grad_gm;
+    __gm__ T* varPtr = (__gm__ T*)var_gm;
+    __gm__ T* msPtr = (__gm__ T*)ms_gm;
+    __gm__ T* momPtr = (__gm__ T*)mom_gm;
+    __gm__ T* lrPtr = (__gm__ T*)lr_gm;
+    __gm__ T* rhoPtr = (__gm__ T*)rho_gm;
+    __gm__ T* momentumPtr = (__gm__ T*)momentum_gm;
+    __gm__ T* epsilonPtr = (__gm__ T*)epsilon_gm;
+    __gm__ T* gradPtr = (__gm__ T*)grad_gm;
     __gm__ IndexT* indicesPtr = (__gm__ IndexT*)indices_gm;
 
     // Early exit for empty indices
@@ -151,15 +142,11 @@ __aicore__ inline void Process(
 
     // Launch SIMT VF
     asc_vf_call<SparseApplyRMSPropSimtKernel<T, IndexT>>(
-        dim3(THREAD_NUM),
-        tilingData->totalIndices,
-        tilingData->innerDim,
-        tilingData->varFirstDim,
-        varPtr, msPtr, momPtr, gradPtr, indicesPtr,
-        lrPtr, rhoPtr, momentumPtr, epsilonPtr);
+        dim3(THREAD_NUM), tilingData->totalIndices, tilingData->innerDim, tilingData->varFirstDim, varPtr, msPtr,
+        momPtr, gradPtr, indicesPtr, lrPtr, rhoPtr, momentumPtr, epsilonPtr);
 }
 
-}  // namespace sparse_apply_rms_prop
-}  // namespace ops
+} // namespace sparse_apply_rms_prop
+} // namespace ops
 
-#endif  // SPARSE_APPLY_RMS_PROP_SIMT_H_
+#endif // SPARSE_APPLY_RMS_PROP_SIMT_H_

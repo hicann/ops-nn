@@ -11,10 +11,10 @@
 /*!
  * \file inplace_index_fill_tiling_simd.h
  * \brief
-*/
+ */
 #ifndef INPLACE_INDEX_FILL_TILING_SIMD_H_
 #define INPLACE_INDEX_FILL_TILING_SIMD_H_
- 	 
+
 #include "op_host/tiling_base.h"
 #include "register/tilingdata_base.h"
 #include "inplace_index_fill_tiling_base.h"
@@ -23,46 +23,43 @@
 #include "util/math_util.h"
 #include "util/platform_util.h"
 
-namespace optiling 
-{
-class InplaceIndexFillTilingSimd : public InplaceIndexFillTilingBase
-{
+namespace optiling {
+class InplaceIndexFillTilingSimd : public InplaceIndexFillTilingBase {
 public:
- 	explicit InplaceIndexFillTilingSimd(gert::TilingContext* context) : InplaceIndexFillTilingBase(context)
- 	{}
- 	~InplaceIndexFillTilingSimd() {};
- 	 
+    explicit InplaceIndexFillTilingSimd(gert::TilingContext* context) : InplaceIndexFillTilingBase(context) {}
+    ~InplaceIndexFillTilingSimd(){};
+
 protected:
- 	InplaceIndexFill::InplaceIndexFillSimdTilingData* tilingData_ = 
- 	    context_->GetTilingData<InplaceIndexFill::InplaceIndexFillSimdTilingData>();
- 	 
+    InplaceIndexFill::InplaceIndexFillSimdTilingData*
+        tilingData_ = context_->GetTilingData<InplaceIndexFill::InplaceIndexFillSimdTilingData>();
+
 protected:
- 	bool IsCapable() override;
- 	ge::graphStatus DoOpTiling() override;
- 	ge::graphStatus GetWorkspaceSize() override;
- 	ge::graphStatus PostTiling() override;
- 	uint64_t GetTilingKey() const override;
- 	void SetTilingData();
- 	void DumpTilingInfo() override;
-	void UBTiling();
-  	void BlockTiling();
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+    void SetTilingData();
+    void DumpTilingInfo() override;
+    void UBTiling();
+    void BlockTiling();
 
 private:
     int64_t perBlockData_ = 0;
     int64_t tailBlockData_ = 0;
     int64_t tailBlockNum_ = 0;
-	int64_t qBlockFactor_ = 0;
+    int64_t qBlockFactor_ = 0;
     int64_t qUsedCoreNum_ = 0;
     int64_t usedCoreNum_ = 0;
 
-    //UB参数
+    // UB参数
     int64_t qBufferSize_ = 0;
     int64_t indicesBufferSize_ = 0;
     int64_t indicesUbFactor_ = 0;
     int64_t qUbFactor_ = 0;
     int64_t qLoopSize_ = 0;
     int64_t qUbTailFactor_ = 0;
-};	 
-}   // namespace optiling
- 	 
-#endif  // INPLACE_INDEX_FILL_TILING_SIMD_H_
+};
+} // namespace optiling
+
+#endif // INPLACE_INDEX_FILL_TILING_SIMD_H_

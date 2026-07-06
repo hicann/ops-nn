@@ -103,10 +103,7 @@ ge::graphStatus LayerNormV3RegBaseNoReduceTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LayerNormV3RegBaseNoReduceTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV3RegBaseNoReduceTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus LayerNormV3RegBaseNoReduceTiling::PostTiling()
 {

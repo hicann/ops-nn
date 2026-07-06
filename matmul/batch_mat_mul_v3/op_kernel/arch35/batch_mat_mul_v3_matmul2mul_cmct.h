@@ -23,9 +23,8 @@
 using namespace Cmct;
 using namespace Cmct::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT>
-__aicore__ inline void BatchMatMulToMulActKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-    const BatchMatMulToMulBasicTilingData& tilingData)
+__aicore__ inline void BatchMatMulToMulActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                                 GM_ADDR workspaceGM, const BatchMatMulToMulBasicTilingData& tilingData)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -49,9 +48,8 @@ __aicore__ inline void BatchMatMulToMulActKernel(
     using BlockScheduler = BuiltInBatchMatmulToMulScheduler;
 
     // 定义MMAD类型 BatchMatmulToMul 来自 dispatch_policy.h
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
-        BatchMatmulToMul<>>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, BatchMatmulToMul<>>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = Block::BlockEpilogueEmpty;
@@ -63,13 +61,11 @@ __aicore__ inline void BatchMatMulToMulActKernel(
     using BatchMatmulKernel = Kernel::KernelBatchMatMulToMul<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename BatchMatmulKernel::Params;
     // k 必须为 1
-    Params params = {
-        {tilingData.m, tilingData.n, 1, tilingData.b}, // shape
-        {aGM, bGM, cGM, biasGM},                       // gm addr
-        {},                                            // epilogue args
-        {&tilingData}};
+    Params params = {{tilingData.m, tilingData.n, 1, tilingData.b}, // shape
+                     {aGM, bGM, cGM, biasGM},                       // gm addr
+                     {},                                            // epilogue args
+                     {&tilingData}};
     AscendC::TPipe tPipe;
     BatchMatmulKernel bmm;
     bmm(params);
 }
-

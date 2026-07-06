@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file ut_op_util.cpp
  */
@@ -17,14 +16,15 @@
 
 namespace ut_util {
 
-std::vector<int64_t> ToVector(const gert::Shape& shape) {
-  size_t shape_size = shape.GetDimNum();
-  std::vector<int64_t> shape_vec(shape_size, 0);
+std::vector<int64_t> ToVector(const gert::Shape& shape)
+{
+    size_t shape_size = shape.GetDimNum();
+    std::vector<int64_t> shape_vec(shape_size, 0);
 
-  for (size_t i = 0; i < shape_size; i++) {
-    shape_vec[i] = shape.GetDim(i);
-  }
-  return shape_vec;
+    for (size_t i = 0; i < shape_size; i++) {
+        shape_vec[i] = shape.GetDim(i);
+    }
+    return shape_vec;
 }
 
-}  // namespace ut_util
+} // namespace ut_util

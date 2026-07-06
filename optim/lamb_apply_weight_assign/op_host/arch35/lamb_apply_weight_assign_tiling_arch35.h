@@ -30,8 +30,7 @@ struct LambApplyWeightAssignCompileInfo {
 
 class LambApplyWeightAssignTiling : public TilingBaseClass {
 public:
-    explicit LambApplyWeightAssignTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LambApplyWeightAssignTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

@@ -39,7 +39,7 @@ private:
 template <typename T>
 class GenericHashItem {
 public:
-    GenericHashItem() {};
+    GenericHashItem(){};
     GenericHashItem(const GenericHashItem& obj)
     {
         cacheTilingContext = obj.cacheTilingContext;
@@ -53,14 +53,8 @@ public:
         hashInput = hi;
         return true;
     }
-    bool GetContext(gert::TilingContext& context) const
-    {
-        return cacheTilingContext.Load(context);
-    }
-    const T& input() const
-    {
-        return hashInput;
-    }
+    bool GetContext(gert::TilingContext& context) const { return cacheTilingContext.Load(context); }
+    const T& input() const { return hashInput; }
     GenericHashItem& operator=(const GenericHashItem& rhs)
     {
         cacheTilingContext = rhs.cacheTilingContext;

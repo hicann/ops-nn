@@ -98,4 +98,4 @@ static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* co
 }
 
 IMPL_OP_INFERSHAPE(SparseApplyAdadelta).InferShape(InferShapeSparseApplyAdadelta);
-}  // namespace ops
+} // namespace ops

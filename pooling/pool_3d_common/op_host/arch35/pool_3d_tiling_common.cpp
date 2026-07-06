@@ -12,12 +12,11 @@
  * \file pool_3d_tiling_common.cpp
  * \brief
  */
- 
+
 #include "pool_3d_tiling_common.h"
 
-namespace optiling
-{
-    
+namespace optiling {
+
 // Integer division rounding to -Infinity
 int64_t DivRtn(const int64_t x, const int64_t y)
 {
@@ -32,4 +31,4 @@ int64_t DivRtn(const int64_t x, const int64_t y)
     return q;
 }
 
-}  // namespace optiling
+} // namespace optiling

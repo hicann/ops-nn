@@ -20,8 +20,7 @@
 using namespace Ops::Base;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t BLOCK_SIZE = 32;
 static constexpr int64_t UB_RESERVED_BYTE = 1024;
 static constexpr int64_t R_MAX_VALUE = 16384;
@@ -30,12 +29,12 @@ static constexpr int64_t BINARY_TMP_LOCAL_SHAPE = 512;
 bool SoftmaxV2TilingAR::IsCapable()
 {
     OP_CHECK_IF(a0_ != DIM_NUM_ONE, OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "),
-                    return false);
+                return false);
 
     OP_CHECK_IF(r_ > R_MAX_VALUE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR full load template is not capable. actual r is %ld, larger than %ld", r_, R_MAX_VALUE),
+                return false);
     return true;
 }
 
@@ -43,9 +42,9 @@ ge::graphStatus SoftmaxV2TilingAR::DoOpTiling()
 {
     int64_t rAligned = CeilAlign(r_, (BLOCK_SIZE / xDtypeSize_));
 
-    int64_t ubFactor =
-        (aicoreParams_.ubSize - UB_RESERVED_BYTE - BINARY_TMP_LOCAL_SHAPE) /
-        (rAligned * FLOAT32_BYTES + DOUBLE_BUFFER * rAligned * xDtypeSize_ + DOUBLE_BUFFER * rAligned * yDtypeSize_);
+    int64_t ubFactor = (aicoreParams_.ubSize - UB_RESERVED_BYTE - BINARY_TMP_LOCAL_SHAPE) /
+                       (rAligned * FLOAT32_BYTES + DOUBLE_BUFFER * rAligned * xDtypeSize_ +
+                        DOUBLE_BUFFER * rAligned * yDtypeSize_);
     OP_CHECK_IF(
         (ubFactor <= 0),
         OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. r is %ld, ubFactor %ld", r_, ubFactor),
@@ -70,10 +69,7 @@ ge::graphStatus SoftmaxV2TilingAR::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxV2TilingAR::GetTilingKey() const
-{
-    return TILINGKEY_AR;
-}
+uint64_t SoftmaxV2TilingAR::GetTilingKey() const { return TILINGKEY_AR; }
 
 ge::graphStatus SoftmaxV2TilingAR::PostTiling()
 {
@@ -88,4 +84,4 @@ ge::graphStatus SoftmaxV2TilingAR::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxV2, SoftmaxV2TilingAR, TEMPLATE_AR_FULL_LOAD_PRIORITY);
 
-}  // namespace optiling
+} // namespace optiling

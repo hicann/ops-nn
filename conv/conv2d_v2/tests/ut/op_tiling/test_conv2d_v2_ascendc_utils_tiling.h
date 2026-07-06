@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_conv2d_v2_tiling_utils.h.h
  * \brief
  */
@@ -83,8 +83,7 @@ const std::vector<std::vector<ConvDtype>> SUPPORTED_QUANT_TYPES_WITHOUT_BIAS = {
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::BFLOAT16},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN}
-};
+    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN}};
 const std::vector<std::vector<ConvDtype>> SUPPORTED_QUANT_TYPES_WITH_BIAS = {
     {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::FLOAT16},
     {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
@@ -94,18 +93,15 @@ const std::vector<std::vector<ConvDtype>> SUPPORTED_QUANT_TYPES_WITH_BIAS = {
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT8_E4M3FN}
-};
+    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT8_E4M3FN}};
 const std::vector<std::vector<ConvDtype>> SUPPORTED_CONV2D_TYPES_WITH_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}
-};
+    {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}};
 const std::vector<std::vector<ConvDtype>> SUPPORTED_CONV2D_TYPES_WITHOUT_BIAS = {
     {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
     {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}
-};
+    {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16}};
 
 // ConvShape 结构体定义
 struct ConvShape {
@@ -128,5 +124,5 @@ uint64_t ConvCeilDiv(uint64_t a, uint64_t b);
 uint64_t ConvGcd(uint64_t a, uint64_t b);
 
 uint64_t ConvAlignB(uint64_t a, uint64_t b);
-}
+} // namespace conv_tiling_utils
 #endif

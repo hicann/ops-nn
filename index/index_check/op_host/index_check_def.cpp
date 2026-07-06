@@ -15,26 +15,19 @@
 #include "register/op_def_registry.h"
 
 namespace {
-    static const std::vector<ge::DataType> boundsType = {ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::DataType> boundsType = {ge::DT_INT64, ge::DT_INT64};
 
-    static const std::vector<ge::Format> format = {ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::Format> format = {ge::FORMAT_ND, ge::FORMAT_ND};
 
-    static const std::vector<ge::DataType> indicesType = {ge::DT_INT64, ge::DT_INT32};
-}
+static const std::vector<ge::DataType> indicesType = {ge::DT_INT64, ge::DT_INT32};
+} // namespace
 namespace ops {
-class IndexCheck : public OpDef
-{
+class IndexCheck : public OpDef {
 public:
     explicit IndexCheck(const char* name) : OpDef(name)
     {
-        this->Input("bounds")
-            .ParamType(REQUIRED)
-            .DataType(boundsType)
-            .Format(format);
-        this->Input("indices_list")
-            .ParamType(DYNAMIC)
-            .DataType(indicesType)
-            .Format(format);
+        this->Input("bounds").ParamType(REQUIRED).DataType(boundsType).Format(format);
+        this->Input("indices_list").ParamType(DYNAMIC).DataType(indicesType).Format(format);
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");

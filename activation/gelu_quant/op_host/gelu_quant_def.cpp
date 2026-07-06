@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class GeluQuant : public OpDef
-{
+class GeluQuant : public OpDef {
 public:
     explicit GeluQuant(const char* name) : OpDef(name)
     {

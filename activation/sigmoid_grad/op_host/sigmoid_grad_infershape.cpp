@@ -15,9 +15,7 @@
 #include "register/op_impl_registry.h"
 #include "infershape_elewise_util.h"
 
-
 using namespace ge;
-namespace ops
-{
+namespace ops {
 IMPL_OP_INFERSHAPE(SigmoidGrad).InferShape(Ops::Base::InferShape4Elewise);
-}  // namespace ops
+} // namespace ops

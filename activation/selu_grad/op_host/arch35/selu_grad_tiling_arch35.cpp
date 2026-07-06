@@ -31,10 +31,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -42,7 +42,7 @@ constexpr size_t WORKSPACE_NUM = 1;
 constexpr int32_t MAX_RANK = 8;
 
 // Buffer 数量常量
-constexpr int64_t SELECT_UB_RESERVE = 8192; // Select 8K 预留
+constexpr int64_t SELECT_UB_RESERVE = 8192;    // Select 8K 预留
 constexpr int64_t DEFAULT_BYTES_PER_ELEM = 40; // 默认每元素 UB 字节数（兜底）
 
 static const gert::Shape g_vec_1_shape = {1};
@@ -69,12 +69,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
 }
 
 // 获取 shape、dtype 信息（含广播推导）
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-                                           int64_t* totalElements,
-                                           ge::DataType* dataType,
-                                           gert::Shape* gradShapeOut,
-                                           gert::Shape* outShapeOut,
-                                           gert::Shape* yShapeOut)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType,
+                                         gert::Shape* gradShapeOut, gert::Shape* outShapeOut, gert::Shape* yShapeOut)
 {
     auto inputGrad = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
@@ -94,7 +90,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
 
     // 计算输出总元素数
     if (yShape.GetDimNum() == 0) {
-        *totalElements = 1;  // rank=0 标量
+        *totalElements = 1; // rank=0 标量
     } else {
         *totalElements = yShape.GetShapeSize();
     }
@@ -128,9 +124,7 @@ static bool NeedsBroadcast(const gert::Shape& gradShape, const gert::Shape& outS
 }
 
 // 计算广播 stride（广播轴 stride=0）
-static void ComputeBroadcastStrides(const gert::Shape& yShape,
-                                     const gert::Shape& inputShape,
-                                     int64_t* strides)
+static void ComputeBroadcastStrides(const gert::Shape& yShape, const gert::Shape& inputShape, int64_t* strides)
 {
     int64_t yRank = static_cast<int64_t>(yShape.GetDimNum());
     int64_t inputRank = static_cast<int64_t>(inputShape.GetDimNum());
@@ -163,9 +157,7 @@ static void ComputeBroadcastStrides(const gert::Shape& yShape,
 // 计算连续内维大小（从最内层开始，连续非广播轴）
 // 修复 B2/B3: 当任一输入在此维度有 stride=0（广播轴）时，内维到此结束
 // 这确保了内维中的两个输入都是连续的，可以安全地用 DataCopyPad 搬入
-static int64_t ComputeInnerSize(const gert::Shape& yShape,
-                                 const int64_t* gradStrides,
-                                 const int64_t* outStrides)
+static int64_t ComputeInnerSize(const gert::Shape& yShape, const int64_t* gradStrides, const int64_t* outStrides)
 {
     int64_t rank = static_cast<int64_t>(yShape.GetDimNum());
     if (rank == 0) {
@@ -189,20 +181,26 @@ static int64_t ComputeInnerSize(const gert::Shape& yShape,
 static int64_t GetBytesPerElem(ge::DataType dataType)
 {
     switch (dataType) {
-        case ge::DT_FLOAT:   return 7 * 4 + 1;            // 29: 7 float 缓冲 + selMask(1B)
-        case ge::DT_FLOAT16: return 3 * 2 + 7 * 4;        // 34: 3 half 队列 + 7 float
-        case ge::DT_BF16:    return 3 * 2 + 7 * 4;        // 34: 3 bf16 队列 + 7 float
-        case ge::DT_INT32:   return 3 * 4 + 2 * 2 + 7 * 4; // 44: 3 int32 队列 + 2 half + 7 float
-        case ge::DT_INT8:    return 3 * 1 + 2 * 2 + 7 * 4; // 35: 3 int8 队列 + 2 half + 7 float
-        case ge::DT_UINT8:   return 3 * 1 + 3 * 2 + 7 * 4; // 37: 3 uint8 队列 + 3 half + 7 float
-        default:             return DEFAULT_BYTES_PER_ELEM;
+        case ge::DT_FLOAT:
+            return 7 * 4 + 1; // 29: 7 float 缓冲 + selMask(1B)
+        case ge::DT_FLOAT16:
+            return 3 * 2 + 7 * 4; // 34: 3 half 队列 + 7 float
+        case ge::DT_BF16:
+            return 3 * 2 + 7 * 4; // 34: 3 bf16 队列 + 7 float
+        case ge::DT_INT32:
+            return 3 * 4 + 2 * 2 + 7 * 4; // 44: 3 int32 队列 + 2 half + 7 float
+        case ge::DT_INT8:
+            return 3 * 1 + 2 * 2 + 7 * 4; // 35: 3 int8 队列 + 2 half + 7 float
+        case ge::DT_UINT8:
+            return 3 * 1 + 3 * 2 + 7 * 4; // 37: 3 uint8 队列 + 3 half + 7 float
+        default:
+            return DEFAULT_BYTES_PER_ELEM;
     }
 }
 
 // TilingKey_0 (OneDim) 路径参数计算
-static void ComputeOneDimTiling(SeluGradTilingData* tiling, int64_t totalElements,
-                                  ge::DataType dataType, uint64_t ubSize,
-                                  int64_t coreNum, int64_t ubBlockSize)
+static void ComputeOneDimTiling(SeluGradTilingData* tiling, int64_t totalElements, ge::DataType dataType,
+                                uint64_t ubSize, int64_t coreNum, int64_t ubBlockSize)
 {
     tiling->totalElements = totalElements;
 
@@ -219,8 +217,8 @@ static void ComputeOneDimTiling(SeluGradTilingData* tiling, int64_t totalElement
 }
 
 // Broadcast 内维分块 + UB/多核切分（已知 innerSize/totalRows/bytesPerElem 后）
-static void ComputeBroadcastUbSplit(SeluGradTilingData* tiling, int64_t bytesPerElem,
-                                      int64_t availableUb, int64_t coreNum, int64_t ubBlockSize)
+static void ComputeBroadcastUbSplit(SeluGradTilingData* tiling, int64_t bytesPerElem, int64_t availableUb,
+                                    int64_t coreNum, int64_t ubBlockSize)
 {
     // 内维分块：如果 innerSize 太大无法放入 UB，则分块处理
     if (bytesPerElem <= 0) {
@@ -268,15 +266,9 @@ static void ComputeBroadcastUbSplit(SeluGradTilingData* tiling, int64_t bytesPer
 }
 
 // TilingKey_1 (Broadcast) 路径参数计算
-static void ComputeBroadcastTiling(SeluGradTilingData* tiling,
-                                     const gert::Shape& gradShape,
-                                     const gert::Shape& outShape,
-                                     const gert::Shape& yShape,
-                                     int64_t totalElements,
-                                     ge::DataType dataType,
-                                     uint64_t ubSize,
-                                     int64_t coreNum,
-                                     int64_t ubBlockSize)
+static void ComputeBroadcastTiling(SeluGradTilingData* tiling, const gert::Shape& gradShape,
+                                   const gert::Shape& outShape, const gert::Shape& yShape, int64_t totalElements,
+                                   ge::DataType dataType, uint64_t ubSize, int64_t coreNum, int64_t ubBlockSize)
 {
     tiling->totalElements = totalElements;
     tiling->needBroadcast = 1;
@@ -302,16 +294,14 @@ static void ComputeBroadcastTiling(SeluGradTilingData* tiling,
 }
 
 // 判定 schMode 并计算对应路径的 tiling 参数，返回 schMode；needBroadcast 经出参回传
-static uint32_t DispatchTiling(SeluGradTilingData* tiling,
-                                const gert::Shape& gradShape, const gert::Shape& outShape,
-                                const gert::Shape& yShape, int64_t totalElements,
-                                ge::DataType dataType, uint64_t ubSize, int64_t coreNum,
-                                int64_t ubBlockSize, bool* needBroadcast)
+static uint32_t DispatchTiling(SeluGradTilingData* tiling, const gert::Shape& gradShape, const gert::Shape& outShape,
+                               const gert::Shape& yShape, int64_t totalElements, ge::DataType dataType, uint64_t ubSize,
+                               int64_t coreNum, int64_t ubBlockSize, bool* needBroadcast)
 {
     *needBroadcast = NeedsBroadcast(EnsureNotScalar(gradShape), EnsureNotScalar(outShape));
     if (*needBroadcast) {
-        ComputeBroadcastTiling(tiling, EnsureNotScalar(gradShape), EnsureNotScalar(outShape),
-                               yShape, totalElements, dataType, ubSize, coreNum, ubBlockSize);
+        ComputeBroadcastTiling(tiling, EnsureNotScalar(gradShape), EnsureNotScalar(outShape), yShape, totalElements,
+                               dataType, ubSize, coreNum, ubBlockSize);
         return static_cast<uint32_t>(SELU_GRAD_BROADCAST);
     }
     ComputeOneDimTiling(tiling, totalElements, dataType, ubSize, coreNum, ubBlockSize);
@@ -319,8 +309,8 @@ static uint32_t DispatchTiling(SeluGradTilingData* tiling,
 }
 
 // 按 work item 数（Broadcast: 行×内维块；OneDim: 元素）设置使用核数
-static void SetUsedCoreNum(gert::TilingContext* context, const SeluGradTilingData* tiling,
-                            int64_t totalElements, bool needBroadcast)
+static void SetUsedCoreNum(gert::TilingContext* context, const SeluGradTilingData* tiling, int64_t totalElements,
+                           bool needBroadcast)
 {
     int64_t workItems = needBroadcast ? (tiling->totalRows * tiling->numInnerChunks) : totalElements;
     int64_t usedCoreNum = CeilDiv(workItems, tiling->blockFormer);
@@ -336,10 +326,8 @@ static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
     // 1. 获取平台运行信息
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. 获取 shape、属性信息
     int64_t totalElements;
@@ -347,22 +335,17 @@ static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
     gert::Shape gradShape, outShape, yShape;
     OP_CHECK_IF(
         GetShapeAttrsInfo(context, &totalElements, &dataType, &gradShape, &outShape, &yShape) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. 获取 WorkspaceSize
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. 设置 TilingData
     SeluGradTilingData* tiling = context->GetTilingData<SeluGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SeluGradTilingData), 0, sizeof(SeluGradTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SeluGradTilingData), 0, sizeof(SeluGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context);
 
@@ -376,8 +359,8 @@ static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
 
     // 5. 判定 TilingKey 并计算 tiling
     bool needBroadcast = false;
-    uint32_t schMode = DispatchTiling(tiling, gradShape, outShape, yShape, totalElements,
-                                      dataType, ubSize, coreNum, ubBlockSize, &needBroadcast);
+    uint32_t schMode = DispatchTiling(tiling, gradShape, outShape, yShape, totalElements, dataType, ubSize, coreNum,
+                                      ubBlockSize, &needBroadcast);
 
     // 6. 校验 tiling 参数有效性
     if (tiling->blockFormer < 1 || tiling->ubFormer < 1) {

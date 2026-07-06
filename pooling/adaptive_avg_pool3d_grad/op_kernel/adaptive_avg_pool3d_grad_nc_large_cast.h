@@ -20,14 +20,11 @@
 using namespace AscendC;
 
 template <typename T>
-class KernelAdaptiveAvgPool3DGradNcLargeCast
-{
+class KernelAdaptiveAvgPool3DGradNcLargeCast {
 public:
-    __aicore__ inline KernelAdaptiveAvgPool3DGradNcLargeCast()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data,
-        TPipe* tmpPipe)
+    __aicore__ inline KernelAdaptiveAvgPool3DGradNcLargeCast() {}
+    __aicore__ inline void Init(GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace,
+                                const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data, TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();
@@ -119,9 +116,8 @@ public:
                 if (ncIdx == ncSliceNum - 1) {
                     ncMoveNum = ncAlignSliceTail;
                 }
-                DataCopyPad(
-                    workspaceGm[taskIdx * ncAlign + ncIdx * ncAlignSliceLength], inputLocalFloat,
-                    {1, (uint32_t)(ncMoveNum * sizeof(float)), 0, 0, 0});
+                DataCopyPad(workspaceGm[taskIdx * ncAlign + ncIdx * ncAlignSliceLength], inputLocalFloat,
+                            {1, (uint32_t)(ncMoveNum * sizeof(float)), 0, 0, 0});
             }
         }
         if ASCEND_IS_AIV {
@@ -197,9 +193,8 @@ private:
                     ncMoveNum = ncAlignSliceTail;
                 }
                 WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-                DataCopyPad(
-                    outputLocalFloat, workspaceGm[moveOffset], {1, (uint32_t)(ncMoveNum * sizeof(float)), 0, 0, 0},
-                    {false, 0, 0, 0});
+                DataCopyPad(outputLocalFloat, workspaceGm[moveOffset],
+                            {1, (uint32_t)(ncMoveNum * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
                 WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
@@ -209,9 +204,8 @@ private:
                 SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
 
                 WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
-                DataCopyPad(
-                    outputGradGm[moveOffset], outputLocal,
-                    {(uint16_t)1, (uint32_t)(ncMoveNum * sizeof(T)), 0, 0, 0}); // kw约束[1, 4095]
+                DataCopyPad(outputGradGm[moveOffset], outputLocal,
+                            {(uint16_t)1, (uint32_t)(ncMoveNum * sizeof(T)), 0, 0, 0}); // kw约束[1, 4095]
                 SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
             }
         }
@@ -222,13 +216,11 @@ private:
     __aicore__ inline void DataCopyOut(uint64_t kd, uint64_t kh, uint64_t kw)
     {
         if (isAtomicAdd == 1) {
-            DataCopyPad(
-                workspaceGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncAlign + n * ncAlignSliceLength],
-                outputLocalFloat, {(uint16_t)1, (uint32_t)(ncMoveNum * sizeof(float)), 0, 0, 0});
+            DataCopyPad(workspaceGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncAlign + n * ncAlignSliceLength],
+                        outputLocalFloat, {(uint16_t)1, (uint32_t)(ncMoveNum * sizeof(float)), 0, 0, 0});
         } else {
-            DataCopyPad(
-                outputGradGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncAlign + n * ncAlignSliceLength],
-                outputLocal, {(uint16_t)1, (uint32_t)(ncMoveNum * sizeof(T)), 0, 0, 0});
+            DataCopyPad(outputGradGm[(kd * inHeight * inWidth + kh * inWidth + kw) * ncAlign + n * ncAlignSliceLength],
+                        outputLocal, {(uint16_t)1, (uint32_t)(ncMoveNum * sizeof(T)), 0, 0, 0});
         }
     }
 

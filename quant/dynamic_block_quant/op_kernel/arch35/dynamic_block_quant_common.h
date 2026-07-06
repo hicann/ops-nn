@@ -63,15 +63,15 @@ constexpr static AscendC::MicroAPI::CastTrait castTrait32tofp8 = {
     AscendC::RoundMode::CAST_RINT};
 
 constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToI16 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 constexpr static AscendC::MicroAPI::CastTrait castTraitI16ToF16 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_FLOOR};
+    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_FLOOR};
 
 constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8 = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_FLOOR};
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_FLOOR};
 } // namespace DynamicBlockQuant
 #endif // DYNAMIC_BLOCK_QUANT_COMMON_H

@@ -15,16 +15,16 @@
 
 namespace aicpu {
 struct EluAttrInfo {
-  float alpha;
-  float scale;
-  float inputScale;
+    float alpha;
+    float scale;
+    float inputScale;
 };
 
 class EluCpuKernel : public CpuKernel {
- public:
-  EluCpuKernel() = default;
-  ~EluCpuKernel() override = default;
-  uint32_t Compute(CpuKernelContext &ctx) override;
+public:
+    EluCpuKernel() = default;
+    ~EluCpuKernel() override = default;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 };
-}  // namespace aicpu
-#endif  // OPS_NN_ACTIVATION_ELU_AICPU_H
+} // namespace aicpu
+#endif // OPS_NN_ACTIVATION_ELU_AICPU_H

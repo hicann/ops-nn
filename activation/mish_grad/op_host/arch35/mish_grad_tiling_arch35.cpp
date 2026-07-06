@@ -42,19 +42,19 @@ ge::graphStatus MishGradTiling::CalcInputDtype()
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtype of grad must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
+                                              ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+                                              "The dtype of grad must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     auto inputDesc1 = tilingContext->GetInputDesc(1);
 
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc1);
     this->inputDtype1 = inputDesc1->GetDataType();
-    OP_CHECK_IF(
-        this->inputDtype1 != this->inputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype1),
-            "The dtypes of x and grad must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->inputDtype1 != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, grad",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->inputDtype1),
+                                                       "The dtypes of x and grad must be the same"),
+                return ge::GRAPH_FAILED);
     if (!unfullCompute) {
         auto inputDesc2 = tilingContext->GetInputDesc(THIRD);
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc2);
@@ -62,8 +62,9 @@ ge::graphStatus MishGradTiling::CalcInputDtype()
         OP_CHECK_IF(
             this->inputDtype2 != this->inputDtype,
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "tanh_x, grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype2),
-            "The dtypes of tanh_x and grad must be the same"),
+                                                   ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " +
+                                                       ge::TypeUtils::DataTypeToSerialString(this->inputDtype2),
+                                                   "The dtypes of tanh_x and grad must be the same"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -80,12 +81,12 @@ ge::graphStatus MishGradTiling::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
     const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputYShape != outputZShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
-            Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
-            "The shapes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputYShape != outputZShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -95,12 +96,12 @@ ge::graphStatus MishGradTiling::CalcOutputDtype()
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->outputDtype != this->inputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, grad",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtypes of y and grad must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(this->outputDtype != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, grad",
+                                                       ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+                                                       "The dtypes of y and grad must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -109,19 +110,16 @@ ge::graphStatus MishGradTiling::RunTiling()
     auto tiling = tilingContext->GetTilingData<EleBaseTilingData16B>();
     OP_LOGD(tilingContext->GetNodeName(), "MishGradTiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    
+
     if (tilingContext->GetInputDesc(THIRD) != nullptr) {
         unfullCompute = false;
     }
-    OP_CHECK_IF(
-        CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16 && unfullCompute) {
@@ -144,25 +142,24 @@ ge::graphStatus MishGradTiling::RunTiling()
         baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradFullDAG<float>::OpDag>(*tiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "DT_FLOAT16, DT_BF16, DT_FLOAT");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "MishGradTiling failed"),
-        return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "MishGradTiling failed"),
+                return ge::GRAPH_FAILED);
+
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
- 	currentWorkspace[0] = ASCEND_WORKSPACE;
- 	const uint64_t tilingKey = GET_TPL_TILING_KEY(1, dType);
- 	OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu", tilingKey);
- 	tilingContext->SetTilingKey(tilingKey);
- 	tilingContext->SetBlockDim(elewiseBaseTiling.GetBlockDim());
- 	return ge::GRAPH_SUCCESS;
+    currentWorkspace[0] = ASCEND_WORKSPACE;
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(1, dType);
+    OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu", tilingKey);
+    tilingContext->SetTilingKey(tilingKey);
+    tilingContext->SetBlockDim(elewiseBaseTiling.GetBlockDim());
+    return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus Tiling4MishGrad(gert::TilingContext *tilingContextGen)
+static ge::graphStatus Tiling4MishGrad(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4MishGrad rt2.0 is running.");
     auto compileInfo = tilingContextGen->GetCompileInfo<MishGradCompileInfo>();
@@ -171,7 +168,6 @@ static ge::graphStatus Tiling4MishGrad(gert::TilingContext *tilingContextGen)
     MishGradTiling baseOpTiling(tilingContextGen);
     return baseOpTiling.RunTiling();
 }
-
 
 ge::graphStatus TilingPrepareForMishGrad(gert::TilingParseContext* context)
 {
@@ -184,7 +180,6 @@ ge::graphStatus TilingPrepareForMishGrad(gert::TilingParseContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     return ge::GRAPH_SUCCESS;
 }
-
 
 IMPL_OP_OPTILING(MishGrad).Tiling(Tiling4MishGrad).TilingParse<MishGradCompileInfo>(TilingPrepareForMishGrad);
 

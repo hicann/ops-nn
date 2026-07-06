@@ -41,10 +41,7 @@ constexpr int64_t MB_SIZE = 1048576;  // 1024 * 1024
 } // namespace
 
 namespace optiling {
-ge::graphStatus QuantMatmulReduceSumTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus QuantMatmulReduceSumTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 void QuantMatmulReduceSumTiling::InitCompileInfo()
 {
@@ -54,7 +51,7 @@ void QuantMatmulReduceSumTiling::InitCompileInfo()
         return;
     }
 
-    const auto &ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    const auto& ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo_.ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfo_.l1Size);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfo_.l2Size);
@@ -85,24 +82,19 @@ ge::graphStatus QuantMatmulReduceSumTiling::GetShapeAttrsInfo()
 
     inputParams_.opName = context_->GetNodeName();
     OP_LOGI(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(
-        CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid context."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid context."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        AnalyzeAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid attrs."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        AnalyzeDtype() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid dtypes."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        AnalyzeShapes() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid shapes."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid attrs."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeDtype() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid dtypes."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeShapes() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid shapes."),
+                    return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        inputParams_.opName, "Input params: MKN[%ld, %ld, %ld], transA[%s], transB[%s].", inputParams_.mSize,
-        inputParams_.kSize, inputParams_.nSize, inputParams_.transA ? "true" : "false",
-        inputParams_.transB ? "true" : "false");
+    OP_LOGD(inputParams_.opName, "Input params: MKN[%ld, %ld, %ld], transA[%s], transB[%s].", inputParams_.mSize,
+            inputParams_.kSize, inputParams_.nSize, inputParams_.transA ? "true" : "false",
+            inputParams_.transB ? "true" : "false");
 
     inputParams_.initFlag = true;
     return ge::GRAPH_SUCCESS;
@@ -124,9 +116,8 @@ ge::graphStatus QuantMatmulReduceSumTiling::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
-            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -147,65 +138,54 @@ ge::graphStatus QuantMatmulReduceSumTiling::AnalyzeDtype()
     inputParams_.x2scaleDtype = context_->GetOptionalInputDesc(X2_SCALE_INDEX)->GetDataType();
     inputParams_.yDtype = context_->GetOutputDesc(0)->GetDataType();
 
-    OP_TILING_CHECK(
-        inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8,
-        OP_LOGE(inputParams_.opName, "x1 and x2 dtype should be int8."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8,
+                    OP_LOGE(inputParams_.opName, "x1 and x2 dtype should be int8."), return ge::GRAPH_FAILED);
     inputParams_.cDtype = ge::DT_INT32;
-    OP_TILING_CHECK(
-        inputParams_.x1scaleDtype != ge::DT_FLOAT,
-        OP_LOGE(inputParams_.opName, "x1Scale dtype should be float."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        inputParams_.x2scaleDtype != ge::DT_BF16,
-        OP_LOGE(inputParams_.opName, "x2Scale dtype should be bfloat16."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        inputParams_.yDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "y dtype should be bfloat16."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.x1scaleDtype != ge::DT_FLOAT,
+                    OP_LOGE(inputParams_.opName, "x1Scale dtype should be float."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.x2scaleDtype != ge::DT_BF16,
+                    OP_LOGE(inputParams_.opName, "x2Scale dtype should be bfloat16."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.yDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "y dtype should be bfloat16."),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus QuantMatmulReduceSumTiling::AnalyzeShapes()
 {
-    const auto &x1Sahpe = context_->GetInputShape(X1_INDEX)->GetOriginShape();
-    const auto &x2Shape = context_->GetInputShape(X2_INDEX)->GetOriginShape();
-    const auto &x1ScaleShape = context_->GetOptionalInputShape(X1_SCALE_INDEX)->GetOriginShape();
-    const auto &x2ScaleShape = context_->GetOptionalInputShape(X2_SCALE_INDEX)->GetOriginShape();
+    const auto& x1Sahpe = context_->GetInputShape(X1_INDEX)->GetOriginShape();
+    const auto& x2Shape = context_->GetInputShape(X2_INDEX)->GetOriginShape();
+    const auto& x1ScaleShape = context_->GetOptionalInputShape(X1_SCALE_INDEX)->GetOriginShape();
+    const auto& x2ScaleShape = context_->GetOptionalInputShape(X2_SCALE_INDEX)->GetOriginShape();
     auto x1DimNum = x1Sahpe.GetDimNum();
     auto x2DimNum = x2Shape.GetDimNum();
     if (x1DimNum != X_DIM_NUM_ND || x2DimNum != X_DIM_NUM_ND) {
-        OP_LOGE(
-            inputParams_.opName, "input x and w dimension should be 3, but got x: %zu, w: %zu", x1DimNum, x2DimNum);
+        OP_LOGE(inputParams_.opName, "input x and w dimension should be 3, but got x: %zu, w: %zu", x1DimNum, x2DimNum);
         return ge::GRAPH_FAILED;
     }
-    OP_TILING_CHECK(
-        x1Sahpe.GetDim(0) != x2Shape.GetDim(0),
-        OP_LOGE(inputParams_.opName, "x and w batch size should be same"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(x1Sahpe.GetDim(0) != x2Shape.GetDim(0),
+                    OP_LOGE(inputParams_.opName, "x and w batch size should be same"), return ge::GRAPH_FAILED);
 
     auto batchSize = x1Sahpe.GetDim(0);
     auto mSize = x1Sahpe.GetDim(x1DimNum - 2);
     auto x1KSize = x1Sahpe.GetDim(x1DimNum - 1);
     auto x2KSize = x2Shape.GetDim(x2DimNum - 2);
     auto nSize = x2Shape.GetDim(x2DimNum - 1);
-    OP_TILING_CHECK(
-        x1KSize != x2KSize, OP_LOGE(inputParams_.opName, "x and w K size should be same"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(x1KSize != x2KSize, OP_LOGE(inputParams_.opName, "x and w K size should be same"),
+                    return ge::GRAPH_FAILED);
     inputParams_.mSize = mSize;
     inputParams_.kSize = x1KSize;
     inputParams_.nSize = nSize;
     inputParams_.batchNum = batchSize;
 
-    OP_TILING_CHECK(
-        x1ScaleShape.GetDimNum() != X1SCALE_DIM_NUM,
-        OP_LOGE(inputParams_.opName, "x1Scale dimension should be 2"), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        x1ScaleShape.GetDim(0) != batchSize || x1ScaleShape.GetDim(1) != mSize,
-        OP_LOGE(inputParams_.opName, "x1Scale shape should (b, m)"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(x1ScaleShape.GetDimNum() != X1SCALE_DIM_NUM,
+                    OP_LOGE(inputParams_.opName, "x1Scale dimension should be 2"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(x1ScaleShape.GetDim(0) != batchSize || x1ScaleShape.GetDim(1) != mSize,
+                    OP_LOGE(inputParams_.opName, "x1Scale shape should (b, m)"), return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        x2ScaleShape.GetDimNum() != X2SCALE_DIM_NUM,
-        OP_LOGE(inputParams_.opName, "x2Scale dimension should be 1"), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        x2ScaleShape.GetDim(0) != nSize, OP_LOGE(inputParams_.opName, "x2Scale shape should (n,)"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(x2ScaleShape.GetDimNum() != X2SCALE_DIM_NUM,
+                    OP_LOGE(inputParams_.opName, "x2Scale dimension should be 1"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(x2ScaleShape.GetDim(0) != nSize, OP_LOGE(inputParams_.opName, "x2Scale shape should (n,)"),
+                    return ge::GRAPH_FAILED);
 
     inputParams_.isPertoken = true;
 
@@ -315,10 +295,7 @@ ge::graphStatus QuantMatmulReduceSumTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t QuantMatmulReduceSumTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t QuantMatmulReduceSumTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus QuantMatmulReduceSumTiling::GetWorkspaceSize()
 {
@@ -336,9 +313,8 @@ ge::graphStatus QuantMatmulReduceSumTiling::PostTiling()
 {
     context_->SetBlockDim(tilingData_.matmulTiling.usedCoreNum);
     context_->SetScheduleMode(1); // 核间同步算子需要设置该模式
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

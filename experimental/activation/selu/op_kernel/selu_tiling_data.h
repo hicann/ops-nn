@@ -25,9 +25,9 @@
 #define _SELU_TILING_DATA_H_
 
 struct SeluTilingData {
-    int64_t totalElements = 0;   // Total number of elements
-    int64_t blockFactor = 0;     // Number of elements per AI Core
-    int64_t ubFactor = 0;        // Number of elements per UB iteration
+    int64_t totalElements = 0; // Total number of elements
+    int64_t blockFactor = 0;   // Number of elements per AI Core
+    int64_t ubFactor = 0;      // Number of elements per UB iteration
 };
 
 #endif // _SELU_TILING_DATA_H_

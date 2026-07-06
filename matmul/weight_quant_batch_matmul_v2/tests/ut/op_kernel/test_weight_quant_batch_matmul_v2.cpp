@@ -53,10 +53,9 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_inc_1000110000000003001)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(100 * 1024 * 1024 * 4);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    system(
-        "cp -r "
-        "../../../../matmul/weight_quant_batch_matmul_v2/tests/ut/op_kernel/"
-        "weight_quant_batch_matmul_v2_data ./");
+    system("cp -r "
+           "../../../../matmul/weight_quant_batch_matmul_v2/tests/ut/op_kernel/"
+           "weight_quant_batch_matmul_v2_data ./");
     system("chmod -R 755 ./weight_quant_batch_matmul_v2_data/");
     system("cd ./weight_quant_batch_matmul_v2_data/ && rm -rf ./*bin");
 
@@ -72,11 +71,10 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_inc_1000110000000003001)
     string path(path_);
     ReadFile(path + "/weight_quant_batch_matmul_v2_data/x.bin", xSize, x, xSize);
     ReadFile(path + "/weight_quant_batch_matmul_v2_data/weight.bin", weightSize, weight, weightSize);
-    ReadFile(
-        path + "/weight_quant_batch_matmul_v2_data/antiquant_scale.bin", antiquantSize, antiquantScale, antiquantSize);
-    ReadFile(
-        path + "/weight_quant_batch_matmul_v2_data/antiquant_offset.bin", antiquantSize, antiquantOffset,
-        antiquantSize);
+    ReadFile(path + "/weight_quant_batch_matmul_v2_data/antiquant_scale.bin", antiquantSize, antiquantScale,
+             antiquantSize);
+    ReadFile(path + "/weight_quant_batch_matmul_v2_data/antiquant_offset.bin", antiquantSize, antiquantOffset,
+             antiquantSize);
     ReadFile(path + "/weight_quant_batch_matmul_v2_data/tiling.bin", tilingSize, tiling, tilingSize);
 
     auto wrapper = [](GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
@@ -85,8 +83,8 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_inc_1000110000000003001)
             x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling);
     };
 
-    ICPU_RUN_KF(
-        wrapper, 1, x, weight, antiquantScale, antiquantOffset, nullptr, nullptr, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(wrapper, 1, x, weight, antiquantScale, antiquantOffset, nullptr, nullptr, nullptr, y, workspace,
+                tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);
@@ -111,18 +109,17 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_311210_0)
     size_t antiquantSize = n * group * sizeof(uint16_t);
     size_t ySize = m * n * sizeof(uint16_t);
     size_t tilingSize = sizeof(WeightQuantBatchMatmulV2TilingData);
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(xSize);
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc(weightSize);
-    uint8_t *antiquantScale = (uint8_t *)AscendC::GmAlloc(antiquantSize);
-    uint8_t *antiquantOffset = (uint8_t *)AscendC::GmAlloc(antiquantSize);
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(ySize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(100 * 1024 * 1024 * 4);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xSize);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightSize);
+    uint8_t* antiquantScale = (uint8_t*)AscendC::GmAlloc(antiquantSize);
+    uint8_t* antiquantOffset = (uint8_t*)AscendC::GmAlloc(antiquantSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(ySize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(100 * 1024 * 1024 * 4);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    system(
-        "cp -r "
-        "../../../../matmul/weight_quant_batch_matmul_v2/tests/ut/op_kernel/"
-        "weight_quant_batch_matmul_v2_data ./");
+    system("cp -r "
+           "../../../../matmul/weight_quant_batch_matmul_v2/tests/ut/op_kernel/"
+           "weight_quant_batch_matmul_v2_data ./");
     system("chmod -R 755 ./weight_quant_batch_matmul_v2_data/");
     system("cd ./weight_quant_batch_matmul_v2_data/ && rm -rf ./*bin");
 
@@ -134,7 +131,7 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_311210_0)
     system(genData.str().c_str());
     system(genTiling.str().c_str());
 
-    char *path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/weight_quant_batch_matmul_v2_data/x.bin", xSize, x, xSize);
     ReadFile(path + "/weight_quant_batch_matmul_v2_data/weight.bin", weightSize, weight, weightSize);
@@ -145,17 +142,18 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_311210_0)
     ReadFile(path + "/weight_quant_batch_matmul_v2_data/tiling.bin", tilingSize, tiling, tilingSize);
 
     // ICPU_SET_TILING_KEY(311210);
-    // ICPU_RUN_KF(weight_quant_batch_matmul_v2, 1, x, weight, antiquantScale, antiquantOffset, nullptr, nullptr, nullptr,
+    // ICPU_RUN_KF(weight_quant_batch_matmul_v2, 1, x, weight, antiquantScale, antiquantOffset, nullptr, nullptr,
+    // nullptr,
     //             y, workspace, tiling);
-    
+
     auto wrapper = [](GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
                       GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         ::weight_quant_batch_matmul_v2<1, 0, 0, 3, 0, 3, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 3, 5, 0>(
             x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling);
     };
 
-    ICPU_RUN_KF(
-        wrapper, 1, x, weight, antiquantScale, antiquantOffset, nullptr, nullptr, nullptr, y, workspace, tiling);
+    ICPU_RUN_KF(wrapper, 1, x, weight, antiquantScale, antiquantOffset, nullptr, nullptr, nullptr, y, workspace,
+                tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(weight);

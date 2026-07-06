@@ -17,8 +17,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SoftmaxGrad);
 
-aclTensor *SoftmaxGrad(const aclTensor *gradOutput, const aclTensor *output, int64_t dim,
-                       aclOpExecutor *executor) {
+aclTensor* SoftmaxGrad(const aclTensor* gradOutput, const aclTensor* output, int64_t dim, aclOpExecutor* executor)
+{
     auto out = executor->AllocTensor(gradOutput->GetStorageShape(), gradOutput->GetDataType());
 
     // 使用框架宏ADD_TO_LAUNCHER_LIST，将SoftmaxGrad算子加入任务队列
@@ -28,4 +28,4 @@ aclTensor *SoftmaxGrad(const aclTensor *gradOutput, const aclTensor *output, int
     ADD_TO_LAUNCHER_LIST_AICORE(SoftmaxGrad, OP_INPUT(output, gradOutput), OP_OUTPUT(out), OP_ATTR(dims));
     return out;
 }
-}
+} // namespace l0op

@@ -29,24 +29,24 @@ class SyncBnTrainingUpdateV2 : public OpDef {
 public:
     explicit SyncBnTrainingUpdateV2(const char* name) : OpDef(name)
     {
-        this->Input("x1")                                
-            .ParamType(REQUIRED)                           
-            .DataType({ ge::DT_FLOAT})         
-            .Format({ ge::FORMAT_ND})            
-            .UnknownShapeFormat({ ge::FORMAT_ND}) 
-            .AutoContiguous();                     
-        this->Input("x2")                           
-            .ParamType(REQUIRED)                   
-            .DataType({ ge::DT_FLOAT})         
-            .Format({ ge::FORMAT_ND})          
-            .UnknownShapeFormat({ ge::FORMAT_ND}) 
+        this->Input("x1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        this->Input("x3")                           
-            .ParamType(REQUIRED)                   
-            .DataType({ ge::DT_FLOAT})         
-            .Format({ ge::FORMAT_ND})          
-            .UnknownShapeFormat({ ge::FORMAT_ND}) 
-            .AutoContiguous();                                                         
+        this->Input("x2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("x3")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
         this->Attr("momentum") // momentum属性定义
             .AttrType(OPTIONAL)
             .Float();
@@ -56,13 +56,13 @@ public:
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("y2") 
+        this->Output("y2")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("y3") 
+        this->Output("y3")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND})

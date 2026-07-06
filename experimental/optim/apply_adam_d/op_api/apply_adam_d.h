@@ -30,10 +30,10 @@ struct ApplyAdamDOutputs {
     const aclTensor* vOut;
 };
 
-ApplyAdamDOutputs ApplyAdamD(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, bool useLocking, bool useNesterov, aclOpExecutor* executor);
+ApplyAdamDOutputs ApplyAdamD(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
+                             const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1,
+                             const aclTensor* beta2, const aclTensor* epsilon, const aclTensor* grad, bool useLocking,
+                             bool useNesterov, aclOpExecutor* executor);
 
 } // namespace l0op
 

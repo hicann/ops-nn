@@ -45,12 +45,9 @@
 // 算子对外只暴露 1 个输出 var_out, accum 通过 input ref 原地更新, 因此
 // kernel 入口签名为 (var, accum, lr, l1, l2, grad, var_out, workspace, tiling),
 // 内部把 accum 形参既当作输入又当作 accumOut 转给 Init。
-extern "C" __global__ __aicore__ void apply_proximal_adagrad(
-    GM_ADDR var, GM_ADDR accum,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR grad,
-    GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void apply_proximal_adagrad(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR l1,
+                                                             GM_ADDR l2, GM_ADDR grad, GM_ADDR var_out,
+                                                             GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(ApplyProximalAdagradTilingData, tilingData, tiling);
     NsApplyProximalAdagrad::ApplyProximalAdagrad<DTYPE_VAR, false, true> op;
@@ -59,12 +56,8 @@ extern "C" __global__ __aicore__ void apply_proximal_adagrad(
 }
 #else
 template <typename D_T_VAR, uint32_t PAD_TAIL, uint32_t HAS_L1>
-__global__ __aicore__ void apply_proximal_adagrad(
-    GM_ADDR var, GM_ADDR accum,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR grad,
-    GM_ADDR var_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_proximal_adagrad(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                                                  GM_ADDR grad, GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyProximalAdagradTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyProximalAdagradTilingData, tilingData, tiling);

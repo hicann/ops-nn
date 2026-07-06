@@ -56,9 +56,10 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 #endif
 
 template <int TPL_ATRANS, int TPL_BTRANS, int TPL_BIASMODE, int TPL_KERNELTYPE, int TPL_OPTYPE>
-__global__ __aicore__ void fused_quant_mat_mul(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2Scale, GM_ADDR yScale, GM_ADDR x1Offset,
-    GM_ADDR x2Offset, GM_ADDR yOffset, GM_ADDR x2Table, GM_ADDR x3, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+__global__ __aicore__ void fused_quant_mat_mul(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2Scale,
+                                               GM_ADDR yScale, GM_ADDR x1Offset, GM_ADDR x2Offset, GM_ADDR yOffset,
+                                               GM_ADDR x2Table, GM_ADDR x3, GM_ADDR y, GM_ADDR workSpace,
+                                               GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;
@@ -75,9 +76,8 @@ __global__ __aicore__ void fused_quant_mat_mul(
         GET_TILING_DATA(tilingData, tiling);
         KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
-            MatMulASWKernel<
-                DTYPE_X1, DTYPE_X2, DTYPE_X2_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), false, FusedOpType::RELU>
+            MatMulASWKernel<DTYPE_X1, DTYPE_X2, DTYPE_X2_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+                            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), false, FusedOpType::RELU>
                 op;
             op.Init(x1, x2, bias, x2Scale, yScale, y, user, &tilingData, &tPipe);
             op.Process();
@@ -110,9 +110,8 @@ __global__ __aicore__ void fused_quant_mat_mul(
     } else if (TPL_OPTYPE == F_OPTYPE_SWIGLU) {
         GET_TILING_DATA_WITH_STRUCT(FusedQuantMatmulSwigluTilingData, tilingData, tiling);
         KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
-        FusedQuantMatmulSwiglu<
-            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+        FusedQuantMatmulSwiglu<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+                               static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
             op;
         op.Init(x1, x2, bias, x2Scale, x3, y, user, &tilingData, &tPipe);
         op.Process();

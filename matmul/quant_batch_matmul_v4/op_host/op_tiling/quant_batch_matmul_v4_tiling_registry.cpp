@@ -41,13 +41,12 @@ REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PergroupTiling,
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", AdaptiveSlidingWindowTilingV4, LUT_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PergroupArch35Tiling, PERGROUP_ARCH35_PRIORITY);
 
-
-ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext *context)
+ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
 {
     platform_ascendc::SocVersion socVersion;
     bool supportMmadS8S4 = false;
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulV4", "tilingContext is null");
-    auto compileInfoPtr = reinterpret_cast<const QuantBatchMatmulV4CompileInfo *>(context->GetCompileInfo());
+    auto compileInfoPtr = reinterpret_cast<const QuantBatchMatmulV4CompileInfo*>(context->GetCompileInfo());
     if (compileInfoPtr == nullptr) {
         auto platformInfoPtr = context->GetPlatformInfo();
         OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
@@ -61,8 +60,8 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext *context)
         supportMmadS8S4 = compileInfoPtr->supportMmadS8S4;
     }
     if (socVersion == platform_ascendc::SocVersion::ASCEND910B ||
-            socVersion == platform_ascendc::SocVersion::ASCEND910_93 ||
-            socVersion == platform_ascendc::SocVersion::KIRINX90) {
+        socVersion == platform_ascendc::SocVersion::ASCEND910_93 ||
+        socVersion == platform_ascendc::SocVersion::KIRINX90) {
         std::vector<int32_t> regitserList = {MSD_PRIORITY, PERBLOCK_PRIORITY, PERGROUP_PRIORITY};
         return TilingRegistry::GetInstance().DoTilingImpl(context, regitserList);
     } else if (supportMmadS8S4) {
@@ -73,7 +72,7 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext *context)
     return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
 }
 
-ge::graphStatus TilingParseForQuantBatchMatmulV4(gert::TilingParseContext *context)
+ge::graphStatus TilingParseForQuantBatchMatmulV4(gert::TilingParseContext* context)
 {
     auto platformInfoPtr = context->GetPlatformInfo();
     // 在tilingParse获取不到GetPlatformInfo时，返回成功。会在之后的InitCompileInfo阶段设置compileInfo信息。
@@ -110,5 +109,5 @@ ge::graphStatus TilingParseForQuantBatchMatmulV4(gert::TilingParseContext *conte
 
 IMPL_OP_OPTILING(QuantBatchMatmulV4)
     .Tiling(QuantBatchMatmulV4TilingFunc)
-    .TilingParse<QuantBatchMatmulV4CompileInfo>(TilingParseForQuantBatchMatmulV4);  // 向框架注册入口函数
+    .TilingParse<QuantBatchMatmulV4CompileInfo>(TilingParseForQuantBatchMatmulV4); // 向框架注册入口函数
 } // namespace optiling

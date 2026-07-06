@@ -26,8 +26,7 @@ constexpr uint8_t DTYPE_SIZE_HALF = 2;
 constexpr uint32_t COEFFICIENT_OF_FLOAT = 2;
 constexpr uint32_t COEFFICIENT_OF_NON_FLOAT = COEFFICIENT_OF_FLOAT * 3;
 
-class ForeachNonFiniteCheckAndUnscaleTiling
-{
+class ForeachNonFiniteCheckAndUnscaleTiling {
 public:
     ForeachNonFiniteCheckAndUnscaleTiling() = default;
     void Init(const std::vector<std::vector<uint64_t>>& shapeInfos, const int32_t dTypeSize = 4);
@@ -65,8 +64,8 @@ private:
     int16_t totalTensorCount = 0;
 };
 
-void ForeachNonFiniteCheckAndUnscaleTiling::Init(
-    const std::vector<std::vector<uint64_t>>& shapeInfos, const int32_t dTypeSize)
+void ForeachNonFiniteCheckAndUnscaleTiling::Init(const std::vector<std::vector<uint64_t>>& shapeInfos,
+                                                 const int32_t dTypeSize)
 {
     InitTilingDataItems();
     dataTypeSize = dTypeSize;
@@ -170,8 +169,8 @@ bool ForeachNonFiniteCheckAndUnscaleTiling::DivideUbMemory(uint64_t ubSizePlatFo
     if (dataTypeSize == 4) {
         coefficient = COEFFICIENT_OF_FLOAT;
     }
-    uint32_t predictSGUbSize = uint32_t(
-        BYTE_REPEAT * dataTypeSize / (coefficient * BYTE_REPEAT * dataTypeSize + BYTE_BLOCK * 1.0) * canUseUbSize);
+    uint32_t predictSGUbSize = uint32_t(BYTE_REPEAT * dataTypeSize /
+                                        (coefficient * BYTE_REPEAT * dataTypeSize + BYTE_BLOCK * 1.0) * canUseUbSize);
     scaledGradsUbSize = predictSGUbSize / BYTE_BLOCK * BYTE_BLOCK;
     reduceTempValUbSize = GetReduceRetValSize(scaledGradsUbSize);
     if ((coefficient * scaledGradsUbSize + reduceTempValUbSize) > canUseUbSize) {

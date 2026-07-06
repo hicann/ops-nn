@@ -21,8 +21,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr size_t WS_SYS_SIZE = 0U;
@@ -60,8 +60,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
 
     OP_CHECK_IF(inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
-        OP_LOGE(context, "Celu: input and output shape size mismatch"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "Celu: input and output shape size mismatch"), return ge::GRAPH_FAILED);
 
     totalNum = inputShapeX.GetShapeSize();
 
@@ -93,9 +92,8 @@ static ge::graphStatus GetScalarParams(gert::TilingContext* context, float& alph
     alpha2 = *pA2;
     alpha3 = *pA3;
 
-    OP_CHECK_IF(!(alpha2 > 0.0f),
-        OP_LOGE(context, "Celu: alpha2 must be positive and not NaN, got %f", alpha2),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(alpha2 > 0.0f), OP_LOGE(context, "Celu: alpha2 must be positive and not NaN, got %f", alpha2),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -113,24 +111,24 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalNum;
     ge::DataType dataType;
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     float alpha1, alpha2, alpha3;
     OP_CHECK_IF(GetScalarParams(context, alpha1, alpha2, alpha3) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetScalarParams error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetScalarParams error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     CeluTilingData* tiling = context->GetTilingData<CeluTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(CeluTilingData), 0, sizeof(CeluTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (totalNum == 0) {
         tiling->totalNum = 0;
@@ -149,15 +147,15 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
     int64_t typeSize = ge::GetSizeByDataType(dataType);
     int64_t ubBlockSize = GetUbBlockSize(context);
     if (typeSize <= 0 || ubBlockSize <= 0) {
-        OP_LOGE(context, "Celu: invalid typeSize=%lld or ubBlockSize=%lld",
-            static_cast<long long>(typeSize), static_cast<long long>(ubBlockSize));
+        OP_LOGE(context, "Celu: invalid typeSize=%lld or ubBlockSize=%lld", static_cast<long long>(typeSize),
+                static_cast<long long>(ubBlockSize));
         return ge::GRAPH_FAILED;
     }
     tiling->ubFactor = FloorAlign(FloorDiv(FloorDiv(static_cast<int64_t>(ubSize), typeSize), BUFFER_NUM), ubBlockSize);
     if (tiling->ubFactor <= 0) {
         OP_LOGE(context, "Celu: invalid ubFactor=%lld, ubSize=%u, typeSize=%lld, ubBlockSize=%lld",
-            static_cast<long long>(tiling->ubFactor), ubSize,
-            static_cast<long long>(typeSize), static_cast<long long>(ubBlockSize));
+                static_cast<long long>(tiling->ubFactor), ubSize, static_cast<long long>(typeSize),
+                static_cast<long long>(ubBlockSize));
         return ge::GRAPH_FAILED;
     }
 

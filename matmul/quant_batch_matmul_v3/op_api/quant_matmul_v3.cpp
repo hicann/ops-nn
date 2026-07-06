@@ -35,7 +35,8 @@ constexpr int64_t NO_BATCH_DIM_SUM = 2;
 const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
                                     const aclTensor* offset, const aclTensor* bias, const aclTensor* pertokenScale,
                                     int64_t dtype, bool transposeX1, bool transposeX2, int64_t groupSize,
-                                    aclOpExecutor* executor) {
+                                    aclOpExecutor* executor)
+{
     L0_DFX(QuantBatchMatmulV3, x1, x2, scale, offset, bias, pertokenScale, transposeX1, transposeX2, groupSize);
     DataType outType = DataType::DT_INT8;
     if (dtype == TYPE_FP16) {
@@ -48,7 +49,8 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
         outType = DataType::DT_FLOAT;
     }
     Format format = Format::FORMAT_ND;
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && pertokenScale != nullptr && !pertokenScale->IsEmpty()) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && pertokenScale != nullptr &&
+        !pertokenScale->IsEmpty()) {
         OP_LOGD("Npu_Arch = 2002 pertoken mode need transData out");
         format = Format::FORMAT_FRACTAL_NZ;
     }
@@ -63,7 +65,7 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
     auto output = executor->AllocTensor(outType, format, format);
 
     auto ret = INFER_SHAPE(QuantBatchMatmulV3, OP_INPUT(x1, x2, scale, offset, bias, pertokenScale), OP_OUTPUT(output),
-                            OP_ATTR(dtype, transposeX1, transposeX2, groupSize));
+                           OP_ATTR(dtype, transposeX1, transposeX2, groupSize));
     OP_CHECK_INFERSHAPE(ret != ACLNN_SUCCESS, return nullptr, "QuantBatchMatmulV3 InferShape failed.");
     ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantBatchMatmulV3, OP_INPUT(x1, x2, scale, offset, bias, pertokenScale),
                                       OP_OUTPUT(output), OP_ATTR(dtype, transposeX1, transposeX2, groupSize));
@@ -71,4 +73,4 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
                                          "QuantBatchMatmulV3 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return output;
 }
-}
+} // namespace l0op

@@ -25,8 +25,7 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormQuantBase {
 public:
-    __aicore__ inline KernelAddLayerNormQuantBase()
-    {}
+    __aicore__ inline KernelAddLayerNormQuantBase() {}
 
     template <typename TilingDataT>
     __aicore__ inline void InitBaseParams(const TilingDataT* tiling)
@@ -83,8 +82,7 @@ public:
         xGm.SetGlobalBuffer((__gm__ T*)(x) + coreOffset);
     }
 
-    __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace)
-    {}
+    __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace) {}
 
 protected:
     GlobalTensor<T> x1Gm, x2Gm, gammaGm, betaGm, biasGm, xGm;

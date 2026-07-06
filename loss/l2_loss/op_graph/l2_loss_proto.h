@@ -39,5 +39,5 @@ REG_OP(L2Loss)
     .INPUT(x, TensorType({FloatingDataType, DT_BF16}))
     .OUTPUT(y, TensorType({FloatingDataType, DT_BF16}))
     .OP_END_FACTORY_REG(L2Loss)
-}
+} // namespace ge
 #endif // L2_LOSS_OP_PROTO_H_

@@ -41,13 +41,13 @@ static ge::graphStatus HandleZeroCase(gert::TilingContext* context, uint64_t M, 
     context->SetBlockDim(1);
     context->SetTilingKey(0);
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    if (currentWorkspace) currentWorkspace[0] = SYS_WORK_SPACE_SIZE;
+    if (currentWorkspace)
+        currentWorkspace[0] = SYS_WORK_SPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
-static void CalcCoreDistribution(uint32_t coreNum, uint64_t K,
-    uint32_t& frontCoreNum, uint32_t& tailCoreNum,
-    uint64_t& frontCoreIndicesNum, uint64_t& tailCoreIndicesNum)
+static void CalcCoreDistribution(uint32_t coreNum, uint64_t K, uint32_t& frontCoreNum, uint32_t& tailCoreNum,
+                                 uint64_t& frontCoreIndicesNum, uint64_t& tailCoreIndicesNum)
 {
     if (coreNum == 0) {
         frontCoreNum = 1;
@@ -66,8 +66,8 @@ static void CalcCoreDistribution(uint32_t coreNum, uint64_t K,
 }
 
 static ge::graphStatus FillTilingData(gert::TilingContext* context, uint64_t M, uint64_t N, uint64_t K,
-    uint64_t NAligned, uint32_t frontCoreNum, uint32_t tailCoreNum,
-    uint64_t frontCoreIndicesNum, uint64_t tailCoreIndicesNum)
+                                      uint64_t NAligned, uint32_t frontCoreNum, uint32_t tailCoreNum,
+                                      uint64_t frontCoreIndicesNum, uint64_t tailCoreIndicesNum)
 {
     InplaceScatterAddTilingData* tiling = context->GetTilingData<InplaceScatterAddTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -122,8 +122,8 @@ static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
 
     uint64_t tilingKey = 1;
 
-    if (FillTilingData(context, M, N, K, NAligned, frontCoreNum, tailCoreNum,
-                   frontCoreIndicesNum, tailCoreIndicesNum) != ge::GRAPH_SUCCESS) {
+    if (FillTilingData(context, M, N, K, NAligned, frontCoreNum, tailCoreNum, frontCoreIndicesNum,
+                       tailCoreIndicesNum) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -142,5 +142,7 @@ static ge::graphStatus TilingParseForInplaceScatterAdd([[maybe_unused]] gert::Ti
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(InplaceScatterAdd).Tiling(InplaceScatterAddTilingFunc).TilingParse<InplaceScatterAddCompileInfo>(TilingParseForInplaceScatterAdd);
+IMPL_OP_OPTILING(InplaceScatterAdd)
+    .Tiling(InplaceScatterAddTilingFunc)
+    .TilingParse<InplaceScatterAddCompileInfo>(TilingParseForInplaceScatterAdd);
 } // namespace optiling

@@ -40,8 +40,8 @@ constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t ALIGN_NUM = 2;
 constexpr size_t MAX_DIM_NUM = 7;
 
-static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
+                                                                        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 
 graphStatus ComputeInferShape(gert::InferShapeContext* context, const gert::Shape* xShape, gert::Shape* yShape,
                               gert::Shape* mxscaleShape)
@@ -56,23 +56,19 @@ graphStatus ComputeInferShape(gert::InferShapeContext* context, const gert::Shap
 
     // Normalize activate_dim
     int64_t xRank = xShape->GetDimNum();
-    OP_CHECK_IF(xRank <= 1,
-        OP_LOGE(context->GetNodeName(),
-        "the rank of x must be greater than 1, but is %ld", xRank),
-        return ge::GRAPH_FAILED);
-    int64_t activateDimNorm = (*activateDim >= 0) ? static_cast<int64_t>(*activateDim)
-                                                  : static_cast<int64_t>(*activateDim + xRank);
+    OP_CHECK_IF(xRank <= 1, OP_LOGE(context->GetNodeName(), "the rank of x must be greater than 1, but is %ld", xRank),
+                return ge::GRAPH_FAILED);
+    int64_t activateDimNorm = (*activateDim >= 0) ? static_cast<int64_t>(*activateDim) :
+                                                    static_cast<int64_t>(*activateDim + xRank);
     // Normalize axis (for y shape)
-    int64_t axisNorm = (*axis >= 0) ? static_cast<int64_t>(*axis)
-                                   : static_cast<int64_t>(*axis + xRank);
+    int64_t axisNorm = (*axis >= 0) ? static_cast<int64_t>(*axis) : static_cast<int64_t>(*axis + xRank);
     OP_CHECK_IF(activateDimNorm >= xRank || axisNorm >= xRank,
-        OP_LOGE(context->GetNodeName(),
-        "activateDim and axis must < xRank, but xRank is %ld, activateDim is %ld, axis is %ld", xRank,
-        activateDimNorm, axisNorm),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(),
+                        "activateDim and axis must < xRank, but xRank is %ld, activateDim is %ld, axis is %ld", xRank,
+                        activateDimNorm, axisNorm),
+                return ge::GRAPH_FAILED);
     // Validate activate_dim dimension is divisible by 2
-    if (xShape->GetDim(activateDimNorm) != UNKNOWN_DIM_VALUE_ &&
-        xShape->GetDim(activateDimNorm) % SPLIT_NUM != 0) {
+    if (xShape->GetDim(activateDimNorm) != UNKNOWN_DIM_VALUE_ && xShape->GetDim(activateDimNorm) % SPLIT_NUM != 0) {
         OP_LOGE(context->GetNodeName(), "The dimension [%zu] at activate_dim must be divisible by 2, but got [%ld].",
                 activateDimNorm, xShape->GetDim(activateDimNorm));
         return ge::GRAPH_FAILED;
@@ -138,10 +134,9 @@ graphStatus InferShapeForSwigluMxQuant(gert::InferShapeContext* context)
     gert::Shape* mxscaleShape = context->GetOutputShape(INDEX_OUTPUT_MXSCALE);
     OP_CHECK_NULL_WITH_CONTEXT(context, mxscaleShape);
 
-    OP_CHECK_IF(
-        xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "x shape is UnknownRank, set y, mxscale shape to (-2, )");
@@ -162,11 +157,10 @@ ge::graphStatus InferDataTypeForSwigluMxQuant(gert::InferDataTypeContext* contex
     ge::DataType outDtype = static_cast<ge::DataType>(*dstDtype);
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-        OP_LOGE(
-            context->GetNodeName(),
-            "dst_type is illegal, only supports 40(FLOAT4_E2M1), 41(FLOAT4_E1M2), "
-            "36(FLOAT8_E4M3FN) or 35(FLOAT8_E5M2). but got %d(%s) please check.",
-            *dstDtype, ge::TypeUtils::DataTypeToAscendString(outDtype).GetString()),
+        OP_LOGE(context->GetNodeName(),
+                "dst_type is illegal, only supports 40(FLOAT4_E2M1), 41(FLOAT4_E1M2), "
+                "36(FLOAT8_E4M3FN) or 35(FLOAT8_E5M2). but got %d(%s) please check.",
+                *dstDtype, ge::TypeUtils::DataTypeToAscendString(outDtype).GetString()),
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(INDEX_OUTPUT_Y, outDtype);
     context->SetOutputDataType(INDEX_OUTPUT_MXSCALE, ge::DT_FLOAT8_E8M0);
@@ -174,7 +168,5 @@ ge::graphStatus InferDataTypeForSwigluMxQuant(gert::InferDataTypeContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SwigluMxQuant)
-    .InferShape(InferShapeForSwigluMxQuant)
-    .InferDataType(InferDataTypeForSwigluMxQuant);
+IMPL_OP_INFERSHAPE(SwigluMxQuant).InferShape(InferShapeForSwigluMxQuant).InferDataType(InferDataTypeForSwigluMxQuant);
 } // namespace ops

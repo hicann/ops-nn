@@ -29,10 +29,9 @@ constexpr uint32_t SIZE_OF_FP32 = 4;
 constexpr uint32_t BYTE_BLOCK = 32;
 constexpr uint32_t BYTE_REPEAT = 256;                 // The amount of data that can be processed by a repeat.
 constexpr uint32_t SELECT_MODE_GE_ZERO_TMP_UB = 8000; // select mode 2 neead 8000B
-class FakeQuantAffineCachemaskTiling
-{
+class FakeQuantAffineCachemaskTiling {
 public:
-    explicit FakeQuantAffineCachemaskTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit FakeQuantAffineCachemaskTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -117,8 +116,8 @@ ge::graphStatus FakeQuantAffineCachemaskTiling::Init()
     }
     calcLength = totalLength / headNum;
 
-    OP_LOGD(
-        tilingContext->GetNodeName(), "headNum %lu, calcLength %lu, totalLength %lu.", headNum, calcLength, totalLength);
+    OP_LOGD(tilingContext->GetNodeName(), "headNum %lu, calcLength %lu, totalLength %lu.", headNum, calcLength,
+            totalLength);
 
     auto compileInfo = tilingContext->GetCompileInfo<FakeQuantAffineCachemaskCompileInfo>();
     coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
@@ -157,8 +156,8 @@ ge::graphStatus FakeQuantAffineCachemaskTiling::RunKernelTiling()
     tilingData.set_dataPerRepeat(dataPerRepeat);
     tilingData.set_totalLengthAligned(totalLengthAligned);
     tilingData.set_tileLength(tileLength);
-    tilingData.SaveToBuffer(
-        tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
+    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
+                            tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     TilingDataPrint();
     OP_LOGD(tilingContext->GetNodeName(), "Tiling end.");
@@ -203,8 +202,8 @@ static ge::graphStatus TilingPrepareForFakeQuantAffineCachemask(gert::TilingPars
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

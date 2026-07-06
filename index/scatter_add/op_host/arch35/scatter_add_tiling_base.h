@@ -23,8 +23,7 @@
 #include "log/log.h"
 #include "op_host/tiling_base.h"
 
-namespace optiling
-{
+namespace optiling {
 
 // ///////////////////////////////////
 // tilingdata define
@@ -75,14 +74,14 @@ TILING_DATA_FIELD_DEF(uint64_t, tailBlockTail);
 TILING_DATA_FIELD_DEF(uint64_t, sortCoreNum);
 
 // simd排序+非排序
-TILING_DATA_FIELD_DEF(uint64_t, rowTileNum);    // 行切分份数
-TILING_DATA_FIELD_DEF(uint64_t, colTileNum);    // 列切分份数
-TILING_DATA_FIELD_DEF(uint64_t, normBlockRow);  // 整核分块行数
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockRow);  // 行尾核分块行数
-TILING_DATA_FIELD_DEF(uint64_t, normBlockCol);  // 整核分块列数
-TILING_DATA_FIELD_DEF(uint64_t, tailBlockCol);  // 列尾核分块列数
-TILING_DATA_FIELD_DEF(uint64_t, ubFactorRow);   // UB每次循环搬运的行数
-TILING_DATA_FIELD_DEF(uint64_t, ubFactorCol);   // UB每次循环搬运的列数
+TILING_DATA_FIELD_DEF(uint64_t, rowTileNum);   // 行切分份数
+TILING_DATA_FIELD_DEF(uint64_t, colTileNum);   // 列切分份数
+TILING_DATA_FIELD_DEF(uint64_t, normBlockRow); // 整核分块行数
+TILING_DATA_FIELD_DEF(uint64_t, tailBlockRow); // 行尾核分块行数
+TILING_DATA_FIELD_DEF(uint64_t, normBlockCol); // 整核分块列数
+TILING_DATA_FIELD_DEF(uint64_t, tailBlockCol); // 列尾核分块列数
+TILING_DATA_FIELD_DEF(uint64_t, ubFactorRow);  // UB每次循环搬运的行数
+TILING_DATA_FIELD_DEF(uint64_t, ubFactorCol);  // UB每次循环搬运的列数
 TILING_DATA_FIELD_DEF(uint64_t, indicesCastMode);
 END_TILING_DATA_DEF;
 
@@ -91,18 +90,12 @@ REGISTER_TILING_DATA_CLASS(ScatterSub, ScatterAddTilingData)
 
 ge::graphStatus ScatterAddTilingForAscendC(gert::TilingContext* context);
 
-class ScatterAddTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class ScatterAddTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ScatterAddTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {
-    }
+    explicit ScatterAddTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     ge::graphStatus ScatterAddTilingForAscendC(gert::TilingContext* context);
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
@@ -115,7 +108,8 @@ protected:
     ge::graphStatus TilingSimtSort();
     ge::graphStatus TilingSimdCompute();
     std::set<uint64_t> FindUniqueCut(uint64_t usedCoreNum) const;
-    std::tuple<uint64_t, uint64_t> SimdTiling(uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize, bool colTileNumMin=false);
+    std::tuple<uint64_t, uint64_t> SimdTiling(uint64_t usedCoreNum, uint64_t colNumAlign, uint64_t colLimitSize,
+                                              bool colTileNumMin = false);
     void DoBlockTiling(uint64_t baseCol);
     uint64_t CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd) const;
     ge::graphStatus TilingSimdSupportAtomicAddSortCompute();
@@ -123,13 +117,13 @@ protected:
     ge::graphStatus TilingSimdNotSupportAtomicAddCompute(bool supportAtomicAdd);
     ge::graphStatus ScatterAddDeterministicTiling();
     ge::graphStatus getRestAvailableSize(uint64_t sampleNum, uint64_t valueTypeBytes, uint64_t originalSize,
-        uint64_t postAxisSize, ge::DataType idType) const;
+                                         uint64_t postAxisSize, ge::DataType idType) const;
     uint64_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend) const;
     void DumpTilingInfo() override;
     void SetTilingData();
     ge::graphStatus CheckInputDtype();
     ge::graphStatus CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
-                                    const gert::Shape& updatesShape) const;
+                                      const gert::Shape& updatesShape) const;
     ge::graphStatus GetCastType();
 
 private:
@@ -152,7 +146,7 @@ private:
     uint64_t isSort_ = 0;
     uint64_t perCoreHandleVar_ = 0;
     uint64_t copyCoreNum_ = 0;
-    uint64_t indicesCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
+    uint64_t indicesCastMode_ = 0; // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
 
     uint64_t atomicAddCoreNum_ = 0;
     uint64_t perCoreHandleIndices_ = 0;
@@ -208,5 +202,5 @@ private:
     const char* opName_ = "ScatterAdd";
     ScatterAddTilingData tilingData_;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ADD_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ADD_TILING_H_

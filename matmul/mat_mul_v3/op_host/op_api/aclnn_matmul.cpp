@@ -18,7 +18,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"
-#include "opdev/op_executor.h" 
+#include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 
@@ -50,10 +50,10 @@ static const int NZ_K0_VALUE_16 = 16;
 static const int NZ_K0_VALUE_32 = 8;
 static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
 static const size_t MAX_SUPPORT_MATMUL_DIMS_NUMS = 6;
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                       DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITHOUT_BF16 = {DataType::DT_FLOAT,
+                                                                                    DataType::DT_FLOAT16};
 inline static bool CheckNotNull(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
@@ -74,18 +74,18 @@ static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
         // weightnz暂不支持self,mat2为bfloat16和float16的数据类型推导
         if ((self->GetDataType() == op::DataType::DT_FLOAT16 && mat2->GetDataType() == op::DataType::DT_BF16) ||
             (self->GetDataType() == op::DataType::DT_BF16 && mat2->GetDataType() == op::DataType::DT_FLOAT16)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The dtypes of self and mat2 must be both DT_BF16 or both DT_FLOAT16, now self's dtype is [%s], mat2's dtype is [%s]",
-                op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The dtypes of self and mat2 must be both DT_BF16 or both DT_FLOAT16, now self's dtype is [%s], "
+                    "mat2's dtype is [%s]",
+                    op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
             return false;
         }
     }
     return true;
 }
 
-inline static bool CheckWeightNzDtypeValid(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
+inline static bool CheckWeightNzDtypeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* out,
+                                           int8_t cubeMathType)
 {
     bool bf16flag = CheckNpuArchIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
@@ -95,38 +95,35 @@ inline static bool CheckWeightNzDtypeValid(
     OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
     // 目前仅A2,A3支持Float32 weight NZ
-    if (curArch != NpuArch::DAV_2201 && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ && 
-       (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT)) {
-        OP_LOGE( 
-            ACLNN_ERR_PARAM_INVALID, 
-            "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .", 
-            op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(), 
-            op::ToString(mat2->GetDataType()).GetString()); 
-        return false; 
+    if (curArch != NpuArch::DAV_2201 && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ &&
+        (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .",
+                op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
+                op::ToString(mat2->GetDataType()).GetString());
+        return false;
     }
 
     if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || mat2->GetDataType() == op::DataType::DT_BF16 ||
                       out->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Bfloat16 is unsupported by the current SOC version [%s], now self is %s, mat2 is %s, out is %s",
-            op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
-            op::ToString(mat2->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Bfloat16 is unsupported by the current SOC version [%s], now self is %s, mat2 is %s, out is %s",
+                op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(),
+                op::ToString(mat2->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
         return false;
     }
 
     // keeptype模式支持类型检查
     if (cubeMathType == KEEP_DTYPE && !IsInputSupportFp32() &&
         (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Self dtype %s or mat2 dtype %s not support under keep type mode.",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s or mat2 dtype %s not support under keep type mode.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(mat2->GetDataType()).GetString());
         return false;
     }
     if (cubeMathType == KEEP_DTYPE && out->GetDataType() == op::DataType::DT_FLOAT16 &&
         self->GetDataType() == op::DataType::DT_FLOAT) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input tensor's dtype[DT_FLOAT] should be same with output's dtype[DT_FLOAT16].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Input tensor's dtype[DT_FLOAT] should be same with output's dtype[DT_FLOAT16].");
         return false;
     }
     return CheckWeightNzDtype(self, mat2);
@@ -163,26 +160,23 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
 
     // Tensor1 dims number is 0 OR error dims number is 0
     if (dimTensor1 == 0 || dimTensor2 == 0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Matmul not support %s, %s", op::ToString(selfShape).GetString(),
-            op::ToString(mat2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Matmul not support %s, %s", op::ToString(selfShape).GetString(),
+                op::ToString(mat2Shape).GetString());
         return false;
     } else if (dimTensor2 == 1 || dimTensor2 == 2) { // tensor1 dims number is 1 OR tensor2 dims number is 2
         selfKDim = selfShape.GetDim(dimTensor1 - 1); // the rear dim 1
         mat2KDim = mat2Shape.GetDim(0);              // the front 0
         if (selfKDim != mat2KDim) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-                op::ToString(selfShape).GetString(), op::ToString(mat2Shape).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
+                    op::ToString(selfShape).GetString(), op::ToString(mat2Shape).GetString());
             return false;
         }
     } else if (dimTensor2 >= 3) {                    // tensor2 dims number >= 3
         selfKDim = selfShape.GetDim(dimTensor1 - 1); // the rear dim 1
         mat2KDim = mat2Shape.GetDim(dimTensor2 - 2); // the rear dim 2
         if (selfKDim != mat2KDim) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-                op::ToString(selfShape).GetString(), op::ToString(mat2Shape).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
+                    op::ToString(selfShape).GetString(), op::ToString(mat2Shape).GetString());
             return false;
         }
     }
@@ -192,9 +186,8 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
         auto selfBroadcastShape = GetBroadcastShape(self);
         auto mat2BroadcastShape = GetBroadcastShape(mat2);
         if (!BroadcastInferShape(selfBroadcastShape, mat2BroadcastShape, broadcastShape)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.", op::ToString(self->GetViewShape()).GetString(),
-                op::ToString(mat2->GetViewShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
+                    op::ToString(self->GetViewShape()).GetString(), op::ToString(mat2->GetViewShape()).GetString());
             return false;
         }
     }
@@ -202,24 +195,22 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
     return true;
 }
 
-static bool CheckFormat(
-    const aclTensor* selfTensor, [[maybe_unused]] const aclTensor* mat2Tensor, const aclTensor* outTensor)
+static bool CheckFormat(const aclTensor* selfTensor, [[maybe_unused]] const aclTensor* mat2Tensor,
+                        const aclTensor* outTensor)
 {
     auto selfFormat = selfTensor->GetStorageFormat();
     auto outTensorFormat = outTensor->GetStorageFormat();
-    bool noSupportFormat =
-        ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
+    bool noSupportFormat = ((selfFormat == Format::FORMAT_FRACTAL_NZ) ||
+                            (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            " The 'self' or 'out' tensor currently does not support NZ format");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, " The 'self' or 'out' tensor currently does not support NZ format");
         return false;
     }
     return true;
 }
 
-inline static aclnnStatus CheckInputParams(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
+inline static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* mat2, const aclTensor* out,
+                                           int8_t cubeMathType)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -227,9 +218,7 @@ inline static aclnnStatus CheckInputParams(
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule->CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckWeightNzDtype(self, mat2), ACLNN_ERR_PARAM_INVALID);
 
@@ -266,8 +255,8 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     return fillTensor;
 }
 
-static inline const aclTensor* ContiguousUnsqueezeNd(
-    const aclTensor* input, FVector<int64_t>& dimData, aclOpExecutor* executor)
+static inline const aclTensor* ContiguousUnsqueezeNd(const aclTensor* input, FVector<int64_t>& dimData,
+                                                     aclOpExecutor* executor)
 {
     auto inputContiguous = l0op::Contiguous(input, executor);
     CHECK_RET(inputContiguous != nullptr, nullptr);
@@ -293,20 +282,17 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    bool isSupportNpuArch =
-        ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_2002) || IsNpuArch3510Series());
+    bool isSupportNpuArch = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_2002) || IsNpuArch3510Series());
     if (!isSupportNpuArch) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
-            op::ToString(socVersion).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
+                op::ToString(socVersion).GetString());
         return false;
     }
 
     // mat2 format must be NZ
     if (ge::GetPrimaryFormat(mat2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of mat2 must be FRACTAL_NZ, actual is %s.",
-            op::ToString(mat2->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of mat2 must be FRACTAL_NZ, actual is %s.",
+                op::ToString(mat2->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -325,18 +311,16 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
     if (mat2Shape.GetDim(0) == 1 || mat2Shape.GetDim(1) == 1) { // 不支持N=1 or K = 1
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Not supported mat2 n = 1 or k = 1 when format is FRACTAL_NZ, mat2: %s",
-            op::ToString(mat2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not supported mat2 n = 1 or k = 1 when format is FRACTAL_NZ, mat2: %s",
+                op::ToString(mat2Shape).GetString());
         return false;
     }
     auto dimTensor1 = selfShape.GetDimNum();
     auto selfKDim = selfShape.GetDim(dimTensor1 - 1);
     auto mat2KDim = mat2Shape.GetDim(0);
     if (selfKDim != mat2KDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-            op::ToString(selfShape).GetString(), op::ToString(mat2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
+                op::ToString(selfShape).GetString(), op::ToString(mat2Shape).GetString());
         return false;
     }
     return true;
@@ -352,9 +336,7 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
     CHECK_RET(CheckWeightNzShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
     auto archRule = BuildRule();
     CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(archRule->CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("MatmulWeightNz check params success.");
     return ACLNN_SUCCESS;
 }
@@ -362,10 +344,10 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
 op::Shape GetWeightNzShape(const aclTensor* input, bool transpose)
 {
     size_t viewDimNum = input->GetViewShape().GetDimNum();
-    uint64_t k = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_FIRST_DIM_INDEX)
-                           : input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX);
-    uint64_t n = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX)
-                           : input->GetViewShape().GetDim(viewDimNum - LAST_FIRST_DIM_INDEX);
+    uint64_t k = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_FIRST_DIM_INDEX) :
+                             input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX);
+    uint64_t n = transpose ? input->GetViewShape().GetDim(viewDimNum - LAST_SECOND_DIM_INDEX) :
+                             input->GetViewShape().GetDim(viewDimNum - LAST_FIRST_DIM_INDEX);
     // cal C0
     int c0 = NZ_K0_VALUE_16;
     if (input->GetDataType() == DataType::DT_FLOAT) {
@@ -413,7 +395,8 @@ bool CheckWeightNzStorageShape(const op::Shape& nzShape, const op::Shape& storag
     return nzDimMultiply == storageDimMultiply;
 }
 
-static bool GetTransposeAttrValue(const aclTensor *tensor) {
+static bool GetTransposeAttrValue(const aclTensor* tensor)
+{
     int64_t dim1 = tensor->GetViewShape().GetDimNum() - LAST_FIRST_DIM_INDEX;
     int64_t dim2 = tensor->GetViewShape().GetDimNum() - LAST_SECOND_DIM_INDEX;
     // check if tensor is contiguous layout
@@ -427,8 +410,8 @@ static bool GetTransposeAttrValue(const aclTensor *tensor) {
     return false;
 }
 
-static const aclTensor* BuildMatMulWeightNzGraph(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+static const aclTensor* BuildMatMulWeightNzGraph(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                                 int8_t cubeMathType, aclOpExecutor* executor)
 {
     // 空tensor 处理
     if (self->IsEmpty() || mat2->IsEmpty()) {
@@ -443,7 +426,7 @@ static const aclTensor* BuildMatMulWeightNzGraph(
     bool transposeX2 = GetTransposeAttrValue(mat2);
     // swap last two dims value
     if (transposeX2) {
-        const_cast<aclTensor *>(mat2)->SetViewShape(SwapLastTwoDimValue(mat2->GetViewShape()));
+        const_cast<aclTensor*>(mat2)->SetViewShape(SwapLastTwoDimValue(mat2->GetViewShape()));
     }
     // Check storage shape Nz shape
     op::Shape weightNzShape = GetWeightNzShape(mat2, transposeX2);
@@ -471,24 +454,26 @@ static const aclTensor* BuildMatMulWeightNzGraph(
 
 // ===========================================================================================
 
-static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
+static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out,
+                                      int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
 {
     return MatmulCommonProcess(mat1, mat2, nullptr, out, cubeMathType, mmOpInfo, executor, false);
 }
 
-static inline const aclTensor* BatchMatmulProcess(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+static inline const aclTensor* BatchMatmulProcess(const aclTensor* self, const aclTensor* mat2, const aclTensor* out,
+                                                  int8_t cubeMathType, aclOpExecutor* executor)
 {
     auto matmulOut = ExecBmmOpWithBiasV2(self, mat2, nullptr, out, cubeMathType, executor);
     CHECK_RET(matmulOut != nullptr, nullptr);
     return matmulOut;
 }
 
-class MatMulEmptyTensorGraph : public Ops::NN::MatmulGraphImpl{
+class MatMulEmptyTensorGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 获取shape信息
         op::Shape outShape = output->GetViewShape();
         auto outputNew = executor->AllocTensor(outShape, matA->GetDataType());
@@ -508,7 +493,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
+    aclnnStatus PostProcess() override
+    {
         // 执行ViewCopy
         auto result = l0op::ViewCopy(convOut, output, executor);
         CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -518,11 +504,12 @@ public:
     ~MatMulEmptyTensorGraph() override = default;
 };
 
-class MatMulDotGraph : public Ops::NN::MatmulGraphImpl{
+class MatMulDotGraph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
+    aclnnStatus PreProcess() override
+    {
         auto self = matA;
         auto mat2 = matB;
 
@@ -530,8 +517,8 @@ public:
         auto dimSize1 = self->GetViewShape().GetDim(0);
         auto dimSize2 = mat2->GetViewShape().GetDim(0);
         if (dimSize1 != dimSize2) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Self dimSize [%ld] should be same as mat2 dimSize [%ld].", dimSize1, dimSize2);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dimSize [%ld] should be same as mat2 dimSize [%ld].", dimSize1,
+                    dimSize2);
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -559,26 +546,26 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行点乘
-        const aclTensor* out  = l0op::Dot(matA, matB, executor);
+        const aclTensor* out = l0op::Dot(matA, matB, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
         convOut = out;
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
     ~MatMulDotGraph() override = default;
 };
 
-class MatMulDimNum1And2Graph : public Ops::NN::MatmulGraphImpl{
+class MatMulDimNum1And2Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
+    aclnnStatus PreProcess() override
+    {
         // matA的Unsqueeze
         FVector<int64_t> dimData{0};
         auto matAUnsqueeze = ContiguousUnsqueezeNd(matA, dimData, executor);
@@ -587,11 +574,10 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 Matmul: out = matA @ matB
         const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -603,15 +589,14 @@ public:
     ~MatMulDimNum1And2Graph() override = default;
 };
 
-class MatMulDimNum2And1Graph : public Ops::NN::MatmulGraphImpl{
+class MatMulDimNum2And1Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
-    aclnnStatus PreProcess() override{
+    aclnnStatus PreProcess() override
+    {
         // matB的Unsqueeze
         FVector<int64_t> dimData{-1};
         auto matBUnsqueeze = ContiguousUnsqueezeNd(matB, dimData, executor);
@@ -620,7 +605,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 Matmul: out = matA @ matB
         const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -632,11 +618,12 @@ public:
     ~MatMulDimNum2And1Graph() override = default;
 };
 
-class MatMulDimNum2And2Graph : public Ops::NN::MatmulGraphImpl{
+class MatMulDimNum2And2Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 Matmul: out = matA @ matB
         const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -645,18 +632,17 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
     ~MatMulDimNum2And2Graph() override = default;
 };
 
-class MatMulDimNumMatAGe3Graph : public Ops::NN::MatmulGraphImpl{
+class MatMulDimNumMatAGe3Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
+    aclnnStatus PreProcess() override
+    {
         auto mat2Unsqueeze = matB;
         auto dimTensor1 = matA->GetViewShape().GetDimNum();
         auto dimTensor2 = matB->GetViewShape().GetDimNum();
@@ -681,7 +667,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 Matmul: out = matA @ matB
         const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -690,18 +677,17 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
     ~MatMulDimNumMatAGe3Graph() override = default;
 };
 
-class MatMulDimNumMatBGe3Graph : public Ops::NN::MatmulGraphImpl{
+class MatMulDimNumMatBGe3Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus PreProcess() override{
+    aclnnStatus PreProcess() override
+    {
         auto dimTensor1 = matA->GetViewShape().GetDimNum();
         FVector<int64_t> dimData;
         if (dimTensor1 == 1) {
@@ -716,7 +702,8 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 BatchMatmul: out = matA @ matB
         auto out = BatchMatmulProcess(matA, matB, output, cubeMathType, executor);
 
@@ -726,18 +713,17 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
     ~MatMulDimNumMatBGe3Graph() override = default;
 };
 
-class MatMulDimNumBothGe3Graph : public Ops::NN::MatmulGraphImpl{
+class MatMulDimNumBothGe3Graph : public Ops::NN::MatmulGraphImpl {
 public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
-    aclnnStatus Impl() override{
+    aclnnStatus Impl() override
+    {
         // 执行 BatchMatmul: out = matA @ matB
         auto out = BatchMatmulProcess(matA, matB, output, cubeMathType, executor);
 
@@ -747,20 +733,19 @@ public:
         return ACLNN_SUCCESS;
     };
 
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
+    aclnnStatus PostProcess() override { return CommonPostProcessWithReshape(); };
 
     ~MatMulDimNumBothGe3Graph() override = default;
 };
 
 // 创建Matmul计算图
-std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor) {
+std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                                       int8_t cubeMathType, aclOpExecutor* executor)
+{
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
 
     // 空tensor处理, 当输出的shape不为空时
-    if ((self->IsEmpty() || mat2->IsEmpty()) && (!out -> IsEmpty())) {
+    if ((self->IsEmpty() || mat2->IsEmpty()) && (!out->IsEmpty())) {
         matmulGraph = std::make_shared<MatMulEmptyTensorGraph>(self, mat2, out, cubeMathType, executor);
         return matmulGraph;
     }
@@ -779,15 +764,14 @@ std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(
     } else if (dimTensor1 >= 3 && (dimTensor2 == 1 || dimTensor2 == 2)) { // dimTensor1 is 1 or 2 && dimTensor2  >= 3
         // t1:(N, n, m) * t2:(m, p)
         matmulGraph = std::make_shared<MatMulDimNumMatAGe3Graph>(self, mat2, out, cubeMathType, executor);
-    } else if ((dimTensor1 == 1 || dimTensor1 == 2) &&  dimTensor2 >= 3) { // dimTensor2 >= 3  && dimTensor1 is 1 or 2
+    } else if ((dimTensor1 == 1 || dimTensor1 == 2) && dimTensor2 >= 3) { // dimTensor2 >= 3  && dimTensor1 is 1 or 2
         // t1:(n, m) * t2:(N, m, p)
         matmulGraph = std::make_shared<MatMulDimNumMatBGe3Graph>(self, mat2, out, cubeMathType, executor);
     } else if (dimTensor1 >= 3 && dimTensor2 >= 3) { // Tensor1 dims number >= 3 && Tensor2 dim number >= 3
         matmulGraph = std::make_shared<MatMulDimNumBothGe3Graph>(self, mat2, out, cubeMathType, executor);
     } else { // Impossible cases.
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Internal error self: %s, mat2: %s",
-            op::ToString(self->GetViewShape()).GetString(), op::ToString(mat2->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Internal error self: %s, mat2: %s",
+                op::ToString(self->GetViewShape()).GetString(), op::ToString(mat2->GetViewShape()).GetString());
         return nullptr;
     }
     return matmulGraph;
@@ -795,9 +779,8 @@ std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(
 
 } // namespace
 
-aclnnStatus aclnnMatmulGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, size_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnMatmulGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                        int8_t cubeMathType, size_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMatmul, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
 
@@ -810,7 +793,7 @@ aclnnStatus aclnnMatmulGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 空tensor处理
-    if (out -> IsEmpty() && (self->IsEmpty() || mat2->IsEmpty())) {
+    if (out->IsEmpty() && (self->IsEmpty() || mat2->IsEmpty())) {
         OP_LOGI("Returning an empty tensor without actually doing calculation.");
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -818,11 +801,12 @@ aclnnStatus aclnnMatmulGetWorkspaceSize(
     }
 
     // 构建matmul计算图
-    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateMatmulGraphImpl(self, mat2, out, cubeMathType, uniqueExecutor.get());
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateMatmulGraphImpl(self, mat2, out, cubeMathType,
+                                                                         uniqueExecutor.get());
     CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行计算图
-    auto executeStatus = matmulGraph -> Execute();
+    auto executeStatus = matmulGraph->Execute();
     CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // 获取workspace
@@ -839,9 +823,8 @@ aclnnStatus aclnnMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* 
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, size_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnMatmulWeightNzGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                                int8_t cubeMathType, size_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnMatmulWeightNz, DFX_IN(self, mat2, cubeMathType), DFX_OUT(out));
     // 固定写法，创建OpExecutor

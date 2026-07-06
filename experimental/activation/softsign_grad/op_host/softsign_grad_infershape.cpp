@@ -55,8 +55,6 @@ static ge::graphStatus InferDataType4SoftsignGrad(gert::InferDataTypeContext* co
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SoftsignGrad)
-    .InferShape(InferShape4SoftsignGrad)
-    .InferDataType(InferDataType4SoftsignGrad);
+IMPL_OP_INFERSHAPE(SoftsignGrad).InferShape(InferShape4SoftsignGrad).InferDataType(InferDataType4SoftsignGrad);
 
 } // namespace ops

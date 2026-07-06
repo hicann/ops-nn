@@ -20,7 +20,7 @@
 
 namespace IndexFill {
 
-constexpr uint64_t B8  = 1;
+constexpr uint64_t B8 = 1;
 constexpr uint64_t B16 = 2;
 constexpr uint64_t B32 = 4;
 constexpr uint64_t B64 = 8;
@@ -38,20 +38,16 @@ struct ComputeTypeGet {
         sizeof(T) == B64, int64_t,
         typename std::conditional<
             sizeof(T) == B32, int32_t,
-            typename std::conditional<
-                sizeof(T) == B16, int16_t,
-                typename std::conditional<sizeof(T) == B8, int8_t, T>::type
-            >::type
-        >::type
-    >::type;
+            typename std::conditional<sizeof(T) == B16, int16_t,
+                                      typename std::conditional<sizeof(T) == B8, int8_t, T>::type>::type>::type>::type;
 };
 
 class IndexFillTilingData {
 public:
     uint32_t coreNum = 0;
-    uint64_t N = 0;                          // x在axis上的维度值
-    uint64_t indicesNum = 0;                 // 索引tensor长度
-    uint64_t indicesProcessMode = 0;         // 索引处理模式
+    uint64_t N = 0;                  // x在axis上的维度值
+    uint64_t indicesNum = 0;         // 索引tensor长度
+    uint64_t indicesProcessMode = 0; // 索引处理模式
     uint64_t frontCoreNumTaskIndices = 0;
     uint64_t tailCoreNumTaskIndices = 0;
     uint64_t frontCoreDataTaskIndices = 0;
@@ -70,18 +66,19 @@ public:
     int64_t q;
     int64_t indicesNum;
     int64_t coreNum;
-    int64_t usedCoreNum;           // 实际kernel使用的核数，为max(simdUsedCoreNum, simtUsedCoreNum)的取值.
-    int64_t simdUsedCoreNum;       // simd搬运tiling侧估算需使用的核数
-    int64_t simtUsedCoreNum;       // simt计算tiling侧估算需使用的核数
-    int64_t frontCoreNum;          // 前frontCoreNum个核每个多处理一个block分片
-    int64_t blockSize;             // 表示切分的一个block分片中有多少个元素
-    int64_t tailBlockSize;         // 表示尾块中有多少个元素
-    int64_t loopsPerFrontCore;     // 前frontCoreNum个核的单核循环次数
-    int64_t loopsPerTailCore;      // 尾部这(usedCoreNum-frontCoreNum)个核的单核循环次数
-    int64_t simtComputeMode;       // 枚举值,0:表示根据p*n*q进行simt遍历 1:表示根据p*indicesNum*q进行simt遍历
+    int64_t usedCoreNum;       // 实际kernel使用的核数，为max(simdUsedCoreNum, simtUsedCoreNum)的取值.
+    int64_t simdUsedCoreNum;   // simd搬运tiling侧估算需使用的核数
+    int64_t simtUsedCoreNum;   // simt计算tiling侧估算需使用的核数
+    int64_t frontCoreNum;      // 前frontCoreNum个核每个多处理一个block分片
+    int64_t blockSize;         // 表示切分的一个block分片中有多少个元素
+    int64_t tailBlockSize;     // 表示尾块中有多少个元素
+    int64_t loopsPerFrontCore; // 前frontCoreNum个核的单核循环次数
+    int64_t loopsPerTailCore;  // 尾部这(usedCoreNum-frontCoreNum)个核的单核循环次数
+    int64_t simtComputeMode; // 枚举值,0:表示根据p*n*q进行simt遍历 1:表示根据p*indicesNum*q进行simt遍历
 
 public:
-    std::string ToString() const {
+    std::string ToString() const
+    {
         std::string result;
         result += "tilingKey: " + std::to_string(tilingKey);
         result += ", p: " + std::to_string(p);
@@ -103,10 +100,11 @@ public:
 
 class IndexFillSimtDenseIndicesTilingData : public IndexFillSimtTilingData {
 public:
-    int64_t indicesUbFactor;        // ub中每次加载的indicesNum数量
+    int64_t indicesUbFactor; // ub中每次加载的indicesNum数量
 
 public:
-    std::string ToString() const {
+    std::string ToString() const
+    {
         std::string result;
         result += IndexFillSimtTilingData::ToString();
         result += ", indicesUbFactor: " + std::to_string(indicesUbFactor);
@@ -124,13 +122,14 @@ public:
     int64_t usedCoreNum;
     int64_t blockFactorPN;
     int64_t usedCoreNumPN;
-    int64_t tailBlockNumPN;                // 表示前tailBlockNumPN个核，多处理一个block.
+    int64_t tailBlockNumPN; // 表示前tailBlockNumPN个核，多处理一个block.
     int64_t usedCoreNumQ;
-    int64_t blockFactorQ;                  // AICore核分布可以看成是(corePN, coreQ)两个维度的分布。blockFactorQ表示将Q按照coreQ分核,每个核要处理的大小
+    int64_t blockFactorQ; // AICore核分布可以看成是(corePN,
+                          // coreQ)两个维度的分布。blockFactorQ表示将Q按照coreQ分核,每个核要处理的大小
     int64_t blockTailQ;
     int64_t blockFactorUbBufferMask;
     int64_t blockFactorTileNumQ;
-    int64_t blockFactorUbFactorQ;          // 核内切分，每次Q搬运的个数
+    int64_t blockFactorUbFactorQ; // 核内切分，每次Q搬运的个数
     int64_t blockFactorUbTailQ;
     int64_t blockTailUbBufferMask;
     int64_t blockTailTileNumQ;
@@ -140,4 +139,4 @@ public:
 
 } // namespace IndexFill
 
-#endif //INDEX_FILL_STRUCT_H
+#endif // INDEX_FILL_STRUCT_H

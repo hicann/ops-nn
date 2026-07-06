@@ -63,7 +63,5 @@ static graphStatus InferDataTypeForApplyFtrl(gert::InferDataTypeContext* context
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ApplyFtrl)
-    .InferShape(InferShapeForApplyFtrl)
-    .InferDataType(InferDataTypeForApplyFtrl);
+IMPL_OP_INFERSHAPE(ApplyFtrl).InferShape(InferShapeForApplyFtrl).InferDataType(InferDataTypeForApplyFtrl);
 } // namespace ops

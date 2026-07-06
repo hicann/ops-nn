@@ -21,7 +21,8 @@ namespace ge {
 * @brief Online quantizes the input tensor per block & per group.
 * @par Inputs:
 * @li x: A tensor of type Float16 or Bfloat16. Shape must be 2-dimensional or 3-dimensional.
-* @li group_list: A tensor of type Int32. Shape must be 1-dimensional. Indicate the size or offset of each group on the -2 axis of x.
+* @li group_list: A tensor of type Int32. Shape must be 1-dimensional. Indicate the size or offset of each group on the
+-2 axis of x.
 
 * @par Attributes:
 * @li min_scale: An Optional Float. Minimum scale value for quantization. Must be a non-negative float.
@@ -47,7 +48,8 @@ namespace ge {
 
 * @par Outputs:
 * @li y: A tensor of type Fp8/HiF8. Quantized tensor with same shape as input x. Data type depends on dst_type.
-* @li scale: A tensor of type float. Shape is [x.rows/row_block_size + group_num, ceil(x.cols/col_block_size)] or [B, x.rows/row_block_size + group_num, ceil(x.cols/col_block_size)].
+* @li scale: A tensor of type float. Shape is [x.rows/row_block_size + group_num, ceil(x.cols/col_block_size)] or [B,
+x.rows/row_block_size + group_num, ceil(x.cols/col_block_size)].
 */
 REG_OP(GroupedDynamicBlockQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))

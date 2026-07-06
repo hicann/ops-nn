@@ -32,9 +32,8 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormGrad(
     uint64_t numGroups, const std::string& dataFormat, bool dxIsRequire, bool dgammaIsRequire, bool dbetaIsRequire,
     aclTensor* dxOutput, aclTensor* dgammaOutput, aclTensor* dbetaOutput, aclOpExecutor* executor)
 {
-    L0_DFX(
-        GroupNormGrad, dy, mean, rstd, x, gamma, numGroups, dataFormat, dxIsRequire, dgammaIsRequire, dbetaIsRequire,
-        dxOutput, dgammaOutput, dbetaOutput);
+    L0_DFX(GroupNormGrad, dy, mean, rstd, x, gamma, numGroups, dataFormat, dxIsRequire, dgammaIsRequire, dbetaIsRequire,
+           dxOutput, dgammaOutput, dbetaOutput);
     // 创建输出Tensor
     // 调用device的GroupNormGrad算子
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(

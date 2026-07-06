@@ -31,32 +31,38 @@ constexpr int64_t VFLEN_INT32 = platform::GetVRegSize() / sizeof(int32_t);
 
 constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
 
-__aicore__ inline void PIPE_V_S() {
+__aicore__ inline void PIPE_V_S()
+{
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIDVToS);
     WaitFlag<HardEvent::V_S>(eventIDVToS);
 }
 
-__aicore__ inline void PIPE_MTE2_S() {
+__aicore__ inline void PIPE_MTE2_S()
+{
     event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
 }
 
-__aicore__ inline void PIPE_V_MTE3() {
+__aicore__ inline void PIPE_V_MTE3()
+{
     int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
 }
 
-__aicore__ inline void PIPE_S_V() {
+__aicore__ inline void PIPE_S_V()
+{
     event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventIdSToV);
     WaitFlag<HardEvent::S_V>(eventIdSToV);
 }
 
-template<typename INDEX_TYPE>
-__simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+template <typename INDEX_TYPE>
+__simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ INDEX_TYPE* sortedInputAddr,
+                                                    __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt,
+                                                    int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -72,15 +78,18 @@ __simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ INDEX_TYPE* sortedI
         AscendC::MicroAPI::DataCopyUnAlign<INDEX_TYPE>(sortedIdxShiftOneReg, u0, startAddr - 1);
         AscendC::MicroAPI::Compare<INDEX_TYPE, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
         AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-        AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, maskHalf);
-        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            uniqueIndicesAddr, selReg, uOut);
+        AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                             maskHalf);
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIndicesAddr,
+                                                                                                      selReg, uOut);
     }
     AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIndicesAddr, uOut);
 }
 
-template<typename INDEX_TYPE>
-__simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+template <typename INDEX_TYPE>
+__simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ INDEX_TYPE* sortedInputAddr,
+                                                    __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt,
+                                                    int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -96,14 +105,15 @@ __simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ INDEX_TYPE* sortedI
         AscendC::MicroAPI::DataCopyUnAlign<INDEX_TYPE>(sortedIdxShiftOneReg, u0, startAddr - 1);
         AscendC::MicroAPI::Compare<INDEX_TYPE, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
         AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg, cmpMask);
-        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            uniqueIndicesAddr, selReg, uOut);
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIndicesAddr,
+                                                                                                      selReg, uOut);
     }
     AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIndicesAddr, uOut);
 }
 
-template<typename INDEX_TYPE>
-__simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+template <typename INDEX_TYPE>
+__simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr,
+                                             uint16_t loopCnt, int64_t dataLen)
 {
     AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
     if constexpr (std::is_same<int64_t, INDEX_TYPE>::value) {
@@ -113,15 +123,18 @@ __simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INDEX_TYPE* sortedInputAdd
     }
 }
 
-template<typename INDEX_TYPE>
-__aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInput, LocalTensor<int32_t> uniqueIndicesOut, int64_t dataLen)
+template <typename INDEX_TYPE>
+__aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInput,
+                                              LocalTensor<int32_t> uniqueIndicesOut, int64_t dataLen)
 {
-    __local_mem__ INDEX_TYPE* sortedInputAddr = (__local_mem__ INDEX_TYPE*)sortedInput[(UB_AGLIN_VALUE / sizeof(INDEX_TYPE))].GetPhyAddr();
+    __local_mem__ INDEX_TYPE*
+        sortedInputAddr = (__local_mem__ INDEX_TYPE*)sortedInput[(UB_AGLIN_VALUE / sizeof(INDEX_TYPE))].GetPhyAddr();
     __local_mem__ int32_t* uniqueIndicesAddr = (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr();
 
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(INDEX_TYPE);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-    ComputeUniqueIdNumVf<INDEX_TYPE>((__ubuf__ INDEX_TYPE*)sortedInputAddr, (__ubuf__ int32_t*)uniqueIndicesAddr, loopCnt, dataLen);
+    ComputeUniqueIdNumVf<INDEX_TYPE>((__ubuf__ INDEX_TYPE*)sortedInputAddr, (__ubuf__ int32_t*)uniqueIndicesAddr,
+                                     loopCnt, dataLen);
     uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
 }
@@ -138,12 +151,12 @@ __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInpu
  * @param size              input: number of elements
  * @return number of unique elements
  */
-template<typename INDEX_TYPE>
-__aicore__ inline uint32_t SortAndUnique(LocalTensor<INDEX_TYPE> sortedOut, LocalTensor<int32_t> uniqueIndicesOut, LocalTensor<INDEX_TYPE> src, int64_t size)
+template <typename INDEX_TYPE>
+__aicore__ inline uint32_t SortAndUnique(LocalTensor<INDEX_TYPE> sortedOut, LocalTensor<int32_t> uniqueIndicesOut,
+                                         LocalTensor<INDEX_TYPE> src, int64_t size)
 {
     // 类型最小值（两补码）：int32 → 0x80000000，int64 → 0x8000000000000000
-    constexpr INDEX_TYPE SENTINEL =
-        static_cast<INDEX_TYPE>(static_cast<INDEX_TYPE>(1) << (sizeof(INDEX_TYPE) * 8 - 1));
+    constexpr INDEX_TYPE SENTINEL = static_cast<INDEX_TYPE>(static_cast<INDEX_TYPE>(1) << (sizeof(INDEX_TYPE) * 8 - 1));
 
     PIPE_V_S();
 
@@ -170,9 +183,8 @@ using namespace AscendC;
 using InplaceIndexFill::SIMT_THREAD_NUM;
 
 // 多核并行将 mask 位图初始化为全 0，并执行核间同步
-__aicore__ inline void InitMaskZero(
-    GlobalTensor<int8_t>& maskGm, GM_ADDR workspace,
-    int64_t n, uint32_t blockIdx, uint32_t blockNum)
+__aicore__ inline void InitMaskZero(GlobalTensor<int8_t>& maskGm, GM_ADDR workspace, int64_t n, uint32_t blockIdx,
+                                    uint32_t blockNum)
 {
     maskGm.SetGlobalBuffer((__gm__ int8_t*)(workspace), n * sizeof(int8_t));
 
@@ -192,11 +204,10 @@ __aicore__ inline void InitMaskZero(
 // 基于 mask 位图的顺序填充 SIMT 核函数
 // 遍历 P*N*Q，对 mask[nIdx]==1 的位置写入 value
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void MaskBasedFillSimt(
-    __gm__ T_X* x, __gm__ int8_t* mask, T_X value,
-    COM_T total_num, COM_T n,
-    COM_T shift_n, COM_T magic_n,
-    COM_T shift_q, COM_T magic_q)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void MaskBasedFillSimt(__gm__ T_X* x, __gm__ int8_t* mask,
+                                                                                   T_X value, COM_T total_num, COM_T n,
+                                                                                   COM_T shift_n, COM_T magic_n,
+                                                                                   COM_T shift_q, COM_T magic_q)
 {
     COM_T threadIdx = static_cast<COM_T>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
     COM_T threadNum = static_cast<COM_T>(Simt::GetBlockNum() * Simt::GetThreadNum());
@@ -214,9 +225,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void MaskBasedFillSi
 
 // 封装 magic number 计算 + MaskBasedFillSimt 调用
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void CallMaskBasedFill(
-    __gm__ T_X* x, __gm__ int8_t* maskAddr, T_X fillValue,
-    COM_T n, COM_T p, COM_T q)
+__aicore__ inline void CallMaskBasedFill(__gm__ T_X* x, __gm__ int8_t* maskAddr, T_X fillValue, COM_T n, COM_T p,
+                                         COM_T q)
 {
     COM_T process_num = n * p * q;
 
@@ -226,12 +236,10 @@ __aicore__ inline void CallMaskBasedFill(
     COM_T shift_q = 0, magic_q = 0;
     GetUintDivMagicAndShift(magic_q, shift_q, q);
 
-    Simt::VF_CALL<MaskBasedFillSimt<T_X, INDEX_TYPE, COM_T>>(
-        Simt::Dim3{SIMT_THREAD_NUM},
-        x, maskAddr, fillValue, process_num, n,
-        shift_n, magic_n, shift_q, magic_q);
+    Simt::VF_CALL<MaskBasedFillSimt<T_X, INDEX_TYPE, COM_T>>(Simt::Dim3{SIMT_THREAD_NUM}, x, maskAddr, fillValue,
+                                                             process_num, n, shift_n, magic_n, shift_q, magic_q);
 }
 
 } // namespace InplaceIndexFillCommon
 
-#endif  // INPLACE_INDEX_FILL_COMMON_H
+#endif // INPLACE_INDEX_FILL_COMMON_H

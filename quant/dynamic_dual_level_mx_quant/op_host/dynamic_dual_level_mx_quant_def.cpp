@@ -45,11 +45,7 @@ public:
             .DataType(INPUT_DATA_TYPE)
             .Format(FORMAT)
             .UnknownShapeFormat(FORMAT);
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(OUTPUT_Y_DATA_TYPE)
-            .Format(FORMAT)
-            .UnknownShapeFormat(FORMAT);
+        this->Output("y").ParamType(REQUIRED).DataType(OUTPUT_Y_DATA_TYPE).Format(FORMAT).UnknownShapeFormat(FORMAT);
         this->Output("level0_scale")
             .ParamType(REQUIRED)
             .DataType(OUTPUT_LEVEL0_DATA_TYPE)

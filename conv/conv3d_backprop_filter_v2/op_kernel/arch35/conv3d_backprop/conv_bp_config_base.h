@@ -22,19 +22,7 @@ using namespace AscendC;
 
 namespace ConvolutionBackprop {
 
-enum class CubeFormat {
-    NC1HWC0,
-    NCHW,
-    NHWC,
-    HWCN,
-    FRACTALZ_C04,
-    ND,
-    NDC1HWC0,
-    NCDHW,
-    FRACTAL_Z_3D,
-    NDHWC,
-    DHWCN
-};
+enum class CubeFormat { NC1HWC0, NCHW, NHWC, HWCN, FRACTALZ_C04, ND, NDC1HWC0, NCDHW, FRACTAL_Z_3D, NDHWC, DHWCN };
 
 template <typename T>
 struct GetDstType {
@@ -64,9 +52,9 @@ struct GetDstType<bfloat16_t> {
 // ConvType，定义卷积输入输出对象的属性
 template <TPosition POSITION, CubeFormat FORMAT, typename T>
 struct ConvType {
-    constexpr static TPosition pos = POSITION;    // Convolution输入或输出时的scope
-    constexpr static CubeFormat format = FORMAT;  // Convolution输入或者输出的format
-    using Type = T;                               // Convolution输入或输出的数据类型
+    constexpr static TPosition pos = POSITION;   // Convolution输入或输出时的scope
+    constexpr static CubeFormat format = FORMAT; // Convolution输入或者输出的format
+    using Type = T;                              // Convolution输入或输出的数据类型
 };
 
 struct Conv3ddwConfig {
@@ -111,5 +99,5 @@ struct ConvBpContext {
         __aicore__ inline _() {}
     };
 };
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 #endif

@@ -24,18 +24,11 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "register/op_impl_registry.h"
 
-class MultiAddRmsNormDynamicQuant : public testing::Test
-{
+class MultiAddRmsNormDynamicQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MultiAddRmsNormDynamicQuant Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MultiAddRmsNormDynamicQuant Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MultiAddRmsNormDynamicQuant Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MultiAddRmsNormDynamicQuant Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(MultiAddRmsNormDynamicQuant, MultiAddRmsNormDynamicQuant_infershape_case_dynamic)
@@ -44,13 +37,12 @@ TEST_F(MultiAddRmsNormDynamicQuant, MultiAddRmsNormDynamicQuant_infershape_case_
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MultiAddRmsNormDynamicQuant")->infer_shape;
     if (infer_shape_func != nullptr) {
         gert::StorageShape input_shape = {{24, 1, 11264}, {24, 1, 11264}};
-        gert::StorageShape gamma_shape = {
-            {
-                11264,
-            },
-            {
-                11264,
-            }};
+        gert::StorageShape gamma_shape = {{
+                                              11264,
+                                          },
+                                          {
+                                              11264,
+                                          }};
         gert::StorageShape out_shape = {{24, 1, 11264}, {24, 1, 11264}};
         gert::StorageShape reduce_shape = {{24, 1}, {24, 1}};
 

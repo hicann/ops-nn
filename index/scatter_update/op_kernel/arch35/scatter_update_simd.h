@@ -25,32 +25,35 @@ using namespace AscendC;
 
 constexpr uint64_t INDICES_ONE = 1;
 
-template<typename T, typename U, bool updatesIsScalar>
+template <typename T, typename U, bool updatesIsScalar>
 class ScatterUpdateSIMDImpl : public ScatterUpdateSimdCommon<T, U, updatesIsScalar> {
 public:
-    __aicore__ inline ScatterUpdateSIMDImpl(const ScatterUpdateTilingData& tilingData, TPipe& pipe) :
-        ScatterUpdateSimdCommon<T, U, updatesIsScalar> (tilingData, pipe) {};
+    __aicore__ inline ScatterUpdateSIMDImpl(const ScatterUpdateTilingData& tilingData, TPipe& pipe)
+        : ScatterUpdateSimdCommon<T, U, updatesIsScalar>(tilingData, pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessNotSplitCol();
     __aicore__ inline void ProcessSplitCol();
-    __aicore__ inline void ProcessUpdates(LocalTensor<U> indicesLocal, uint32_t rowLen, uint32_t outLen, uint64_t oneRowOffSet);
+    __aicore__ inline void ProcessUpdates(LocalTensor<U> indicesLocal, uint32_t rowLen, uint32_t outLen,
+                                          uint64_t oneRowOffSet);
     __aicore__ inline void ProcessUpdatesSplit(uint32_t outLen, uint64_t oneRowOffSet, U indicesValue);
 
-    __aicore__ inline void SyncMte2toS() {
+    __aicore__ inline void SyncMte2toS()
+    {
         auto sWaitMTEEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(sWaitMTEEventID);
         WaitFlag<HardEvent::MTE2_S>(sWaitMTEEventID);
     }
 };
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace)
+template <typename T, typename U, bool updatesIsScalar>
+__aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                                                          GM_ADDR workspace)
 {
     this->InitBase(var, indices, updates);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
+template <typename T, typename U, bool updatesIsScalar>
 __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::Process()
 {
     if (GetBlockIdx() >= this->tilingData_.usedCoreNum) {
@@ -63,7 +66,7 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::Process()
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
+template <typename T, typename U, bool updatesIsScalar>
 __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessNotSplitCol()
 {
     int64_t indicesOffset = 0;
@@ -83,24 +86,28 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessNotS
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessUpdates(LocalTensor<U> indicesLocal, uint32_t rowLen, uint32_t outLen, uint64_t oneRowOffSet)
+template <typename T, typename U, bool updatesIsScalar>
+__aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessUpdates(LocalTensor<U> indicesLocal,
+                                                                                    uint32_t rowLen, uint32_t outLen,
+                                                                                    uint64_t oneRowOffSet)
 {
     LocalTensor<T> updatesLocal = this->updateInQueue_.template DeQue<T>();
     uint32_t updatesOffset = (outLen + this->BLOCK_NUM - 1) / this->BLOCK_NUM * this->BLOCK_NUM;
     SyncMte2toS();
     for (int64_t i = 0; i < rowLen; ++i) {
         U indicesValue = indicesLocal.GetValue(i);
-        if (static_cast<int64_t>(indicesValue) < 0 || static_cast<int64_t>(indicesValue) >= this->tilingData_.varShape[0]) {
+        if (static_cast<int64_t>(indicesValue) < 0 ||
+            static_cast<int64_t>(indicesValue) >= this->tilingData_.varShape[0]) {
             continue;
         }
-        int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->colTotalOffset_ + oneRowOffSet);
+        int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride +
+                                                     this->colTotalOffset_ + oneRowOffSet);
         this->CopyOutUpdates(indicesOffset, outLen, updatesLocal[i * updatesOffset]);
     }
     this->updateInQueue_.FreeTensor(updatesLocal);
 }
 
-template<typename T, typename U, bool updatesIsScalar>
+template <typename T, typename U, bool updatesIsScalar>
 __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessSplitCol()
 {
     int64_t indicesOffset = 0;
@@ -115,7 +122,8 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessSpli
         SyncMte2toS();
         for (int64_t k = 0; k < rowByUb; k++) {
             U indicesValue = indicesLocal.GetValue(k);
-            if (static_cast<int64_t>(indicesValue) < 0 || static_cast<int64_t>(indicesValue) >= this->tilingData_.varShape[0]) {
+            if (static_cast<int64_t>(indicesValue) < 0 ||
+                static_cast<int64_t>(indicesValue) >= this->tilingData_.varShape[0]) {
                 continue;
             }
             for (int64_t j = 0; j < this->colLoopByUb_; j++) {
@@ -131,15 +139,18 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessSpli
     }
 }
 
-template<typename T, typename U, bool updatesIsScalar>
-__aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessUpdatesSplit(uint32_t outLen, uint64_t oneRowOffSet, U indicesValue)
+template <typename T, typename U, bool updatesIsScalar>
+__aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessUpdatesSplit(uint32_t outLen,
+                                                                                         uint64_t oneRowOffSet,
+                                                                                         U indicesValue)
 {
     LocalTensor<T> updatesLocal = this->updateInQueue_.template DeQue<T>();
     SyncMte2toS();
 
-    int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->colTotalOffset_ + oneRowOffSet);
+    int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->colTotalOffset_ +
+                                                 oneRowOffSet);
     this->CopyOutUpdates(indicesOffset, outLen, updatesLocal);
     this->updateInQueue_.FreeTensor(updatesLocal);
 }
-}
-#endif  // SCATTER_UPDATE_SIMD_IMPL_H
+} // namespace ScatterUpdate
+#endif // SCATTER_UPDATE_SIMD_IMPL_H

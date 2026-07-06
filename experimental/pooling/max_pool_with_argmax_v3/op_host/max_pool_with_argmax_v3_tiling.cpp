@@ -47,10 +47,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static inline int64_t AlignUp(int64_t value, int64_t align)
-{
-    return (value + align - 1) / align * align;
-}
+static inline int64_t AlignUp(int64_t value, int64_t align) { return (value + align - 1) / align * align; }
 
 // Tiling 分发入口
 static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* context)
@@ -58,24 +55,18 @@ static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* contex
     // 1. 获取平台信息
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. 获取 workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 3. 获取输入 shape (TilingContext 返回 StorageShape*)
     auto inputShapePtr = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShapePtr);
     auto inputShape = inputShapePtr->GetStorageShape();
-    OP_CHECK_IF(inputShape.GetDimNum() != 4,
-        OP_LOGE(context, "input must be 4D"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape.GetDimNum() != 4, OP_LOGE(context, "input must be 4D"), return ge::GRAPH_FAILED);
 
     int64_t N = inputShape.GetDim(0);
     int64_t C = inputShape.GetDim(1);
@@ -143,8 +134,7 @@ static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* contex
         OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
         OP_CHECK_IF(
             memset_s(tiling, sizeof(MaxPoolWithArgmaxV3TilingData), 0, sizeof(MaxPoolWithArgmaxV3TilingData)) != EOK,
-            OP_LOGE(context, "set tiling data error"),
-            return ge::GRAPH_FAILED);
+            OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
         tiling->batchSize = N;
         tiling->channels = C;
         tiling->inputHeight = H;
@@ -225,8 +215,7 @@ static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(MaxPoolWithArgmaxV3TilingData), 0, sizeof(MaxPoolWithArgmaxV3TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->batchSize = N;
     tiling->channels = C;
@@ -269,8 +258,7 @@ static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForMaxPoolWithArgmaxV3(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForMaxPoolWithArgmaxV3([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

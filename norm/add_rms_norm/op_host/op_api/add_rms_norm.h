@@ -23,9 +23,9 @@ constexpr size_t ADD_RMS_NORM_OUT_NUM = 3;
 constexpr int ADD_RMS_NORM_MODE = 0;
 constexpr int PRE_RMS_NORM_MODE = 1;
 constexpr int POST_RMS_NORM_MODE = 2;
-const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, double epsilon, int64_t mode,
-    aclOpExecutor* executor);
+const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(const aclTensor* x1, const aclTensor* x2,
+                                                              const aclTensor* gamma, double epsilon, int64_t mode,
+                                                              aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_ADD_RMS_NORM_H_

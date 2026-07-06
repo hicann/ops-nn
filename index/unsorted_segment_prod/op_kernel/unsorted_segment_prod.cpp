@@ -18,10 +18,10 @@
 
 using namespace AscendC;
 
-#define TEMPLATE_SIMT_TILING_KEY  1000
+#define TEMPLATE_SIMT_TILING_KEY 1000
 
 extern "C" __global__ __aicore__ void unsorted_segment_prod(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments,
-    GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+                                                            GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     REGISTER_TILING_DEFAULT(UnsortedSegment::UnsortedSegmentSimtTilingData);

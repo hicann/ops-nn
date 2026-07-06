@@ -12,7 +12,7 @@
  * \file top_k_top_p_sample_v2_tiling.h
  * \brief
  */
- 
+
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_TOP_K_TOP_P_SAMPLE_V2_TILING_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_TOP_K_TOP_P_SAMPLE_V2_TILING_H
 
@@ -21,7 +21,7 @@
 #include "op_host/tiling_base.h"
 #include "util/math_util.h"
 
- namespace optiling {
+namespace optiling {
 
 BEGIN_TILING_DATA_DEF(TopKTopPSampleV2TilingData)
 TILING_DATA_FIELD_DEF(uint32_t, numCore);
@@ -59,5 +59,5 @@ struct TopKTopPSampleV2CompileInfo {
     uint64_t ubSize = 0;
     uint32_t sysWorkspaceSize = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_TOP_K_TOP_P_SAMPLE_V2_TILING_H

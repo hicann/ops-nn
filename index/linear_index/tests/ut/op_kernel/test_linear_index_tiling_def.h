@@ -41,29 +41,29 @@ struct LinearIndexTilingDataDef {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                             \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                \
     LinearIndexTilingDataDef tilingData;                                          \
     INIT_TILING_DATA(LinearIndexTilingDataDef, tilingDataPointer, tilingPointer); \
-    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                 \
-    (tilingData).eachCount = tilingDataPointer->eachCount;                     \
-    (tilingData).lastCount = tilingDataPointer->lastCount;                     \
-    (tilingData).indicesCount = tilingDataPointer->indicesCount;               \
-    (tilingData).indicesAlign = tilingDataPointer->indicesAlign;               \
-    (tilingData).maxSize = tilingDataPointer->maxSize;                         \
-    (tilingData).eachNum = tilingDataPointer->eachNum;                         \
-    (tilingData).eachLoop = tilingDataPointer->eachLoop;                       \
-    (tilingData).eachTail = tilingDataPointer->eachTail;                       \
-    (tilingData).lastNum = tilingDataPointer->lastNum;                         \
-    (tilingData).lastLoop = tilingDataPointer->lastLoop;                       \
-    (tilingData).lastTail = tilingDataPointer->lastTail;                       \
-    (tilingData).target = tilingDataPointer->target;                           \
-    (tilingData).selfStride = tilingDataPointer->selfStride;                   \
+    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                    \
+    (tilingData).eachCount = tilingDataPointer->eachCount;                        \
+    (tilingData).lastCount = tilingDataPointer->lastCount;                        \
+    (tilingData).indicesCount = tilingDataPointer->indicesCount;                  \
+    (tilingData).indicesAlign = tilingDataPointer->indicesAlign;                  \
+    (tilingData).maxSize = tilingDataPointer->maxSize;                            \
+    (tilingData).eachNum = tilingDataPointer->eachNum;                            \
+    (tilingData).eachLoop = tilingDataPointer->eachLoop;                          \
+    (tilingData).eachTail = tilingDataPointer->eachTail;                          \
+    (tilingData).lastNum = tilingDataPointer->lastNum;                            \
+    (tilingData).lastLoop = tilingDataPointer->lastLoop;                          \
+    (tilingData).lastTail = tilingDataPointer->lastTail;                          \
+    (tilingData).target = tilingDataPointer->target;                              \
+    (tilingData).selfStride = tilingDataPointer->selfStride;                      \
     (tilingData).indicesStride = tilingDataPointer->indicesStride;
 #endif // _FAST_OP_TEST_LINEAR_INDEX_TILING_H_

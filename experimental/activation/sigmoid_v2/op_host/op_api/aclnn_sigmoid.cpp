@@ -25,17 +25,17 @@ extern "C" {
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
-static bool CheckNotNull(const aclTensor *self, const aclTensor *out)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
@@ -43,7 +43,7 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static bool CheckShape(const aclTensor *self, const aclTensor *out)
+static bool CheckShape(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -51,7 +51,7 @@ static bool CheckShape(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
@@ -59,7 +59,7 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckInplaceParams(aclTensor *selfRef)
+static aclnnStatus CheckInplaceParams(aclTensor* selfRef)
 {
     OP_CHECK_NULL(selfRef, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
@@ -67,8 +67,8 @@ static aclnnStatus CheckInplaceParams(aclTensor *selfRef)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecSigmoidGetWorkspaceSize(
-    const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+static aclnnStatus ExecSigmoidGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -96,16 +96,15 @@ static aclnnStatus ExecSigmoidGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSigmoidGetWorkspaceSize(
-    const aclTensor *self, aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnSigmoidGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                         aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnSigmoid, DFX_IN(self), DFX_OUT(out));
     return ExecSigmoidGetWorkspaceSize(self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceSigmoidGetWorkspaceSize(
-    aclTensor *selfRef, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnInplaceSigmoidGetWorkspaceSize(aclTensor* selfRef, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnInplaceSigmoid, DFX_IN(selfRef), DFX_OUT(selfRef));
@@ -113,18 +112,18 @@ aclnnStatus aclnnInplaceSigmoidGetWorkspaceSize(
     auto ret = CheckInplaceParams(selfRef);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    auto *out = const_cast<aclTensor *>(selfRef);
+    auto* out = const_cast<aclTensor*>(selfRef);
     return ExecSigmoidGetWorkspaceSize(selfRef, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnSigmoid(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnSigmoid(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnSigmoid);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceSigmoid(
-    void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnInplaceSigmoid(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceSigmoid);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

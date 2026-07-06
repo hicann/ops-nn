@@ -51,14 +51,13 @@ static const inline std::initializer_list<DataType>& GetSupportDtypeList()
     return emptyDtypes;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            const aclTensor* out)
 {
     const auto& supportList = GetSupportDtypeList();
     if (supportList.size() == 0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "support for npuArch %u is not implemented",
-            static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for npuArch %u is not implemented",
+                static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
         return false;
     }
 
@@ -77,8 +76,8 @@ static bool CheckDtypeValid(
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static bool CheckShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* out)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                       const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(gradOutput, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -90,9 +89,8 @@ static bool CheckShape(
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, broadcastShape, return false);
     if (!BroadcastInferShape(gradOutput->GetViewShape(), broadcastShape, broadcastGradShape) ||
         broadcastShape != broadcastGradShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Except shape of gradOutput must broadcast to %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(gradOutput->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Except shape of gradOutput must broadcast to %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(gradOutput->GetViewShape()).GetString());
         return false;
     }
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
@@ -100,8 +98,8 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull4Tensor(gradOutput, self, target, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -169,9 +167,9 @@ static const aclTensor* ReduceSumTensor(const aclTensor* grad, const op::Shape o
     return grad;
 }
 
-aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction, bool logTarget,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                               const aclTensor* target, int64_t reduction, bool logTarget,
+                                               aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -231,8 +229,8 @@ aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
     CHECK_RET(selfBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行计算
-    auto grad = l0op::KlDivLossGrad(
-        gradOutputCasted, selfBroadcast, targetCasted, GetReductionStr(reduction), logTarget, uniqueExecutor.get());
+    auto grad = l0op::KlDivLossGrad(gradOutputCasted, selfBroadcast, targetCasted, GetReductionStr(reduction),
+                                    logTarget, uniqueExecutor.get());
     CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 根据grad的shape是否与out的shape相同，判断是否需要reduce

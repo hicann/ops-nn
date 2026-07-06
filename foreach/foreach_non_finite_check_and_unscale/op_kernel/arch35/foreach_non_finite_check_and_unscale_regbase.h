@@ -35,23 +35,18 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
 constexpr int32_t BUFFER_NUM = 2;
 constexpr uint32_t BYTE_BLOCK = GetUbBlockSize();
 constexpr uint32_t TEM_BUFFER_REMAIN = 32;
 
 template <typename T>
-class ForeachNonFiniteCheckAndUnscaleNDRegbase
-{
+class ForeachNonFiniteCheckAndUnscaleNDRegbase {
 public:
     __aicore__ inline ForeachNonFiniteCheckAndUnscaleNDRegbase(){};
-    __aicore__ inline void Init(
-        GM_ADDR scaled_grads, GM_ADDR found_inf, GM_ADDR inv_scale, GM_ADDR workspace,
-        const ForeachNonFiniteCheckAndUnscaleRegbaseTilingData* __restrict tilingData);
+    __aicore__ inline void Init(GM_ADDR scaled_grads, GM_ADDR found_inf, GM_ADDR inv_scale, GM_ADDR workspace,
+                                const ForeachNonFiniteCheckAndUnscaleRegbaseTilingData* __restrict tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -178,9 +173,8 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::CopyIn(uint1
 {
     LocalTensor<T> copyInLT = copyInQueue_.AllocTensor<T>();
     if (dataCount % perBlockCount_) {
-        DataCopyExtParams extParams{
-            static_cast<uint16_t>(1), static_cast<uint32_t>(dataCount * sizeof(T)), static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0), 0};
+        DataCopyExtParams extParams{static_cast<uint16_t>(1), static_cast<uint32_t>(dataCount * sizeof(T)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), 0};
         DataCopyPadExtParams<T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0.0)};
         DataCopyPad(copyInLT, scaledGradsGM_[index * maxDataCount_], extParams, padParams);
     } else {
@@ -253,9 +247,8 @@ __aicore__ inline void ForeachNonFiniteCheckAndUnscaleNDRegbase<T>::CopyOut(uint
 {
     LocalTensor<T> copyOutLT = copyOutQueue_.DeQue<T>();
     if (dataCount % perBlockCount_) {
-        DataCopyExtParams extParams{
-            static_cast<uint16_t>(1), static_cast<uint32_t>(dataCount * sizeof(T)), static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0), 0};
+        DataCopyExtParams extParams{static_cast<uint16_t>(1), static_cast<uint32_t>(dataCount * sizeof(T)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), 0};
         DataCopyPad(scaledGradsGM_[index * maxDataCount_], copyOutLT, extParams);
     } else {
         DataCopy(scaledGradsGM_[index * maxDataCount_], copyOutLT, dataCount);

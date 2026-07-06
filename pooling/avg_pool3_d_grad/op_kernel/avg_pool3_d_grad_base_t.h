@@ -23,8 +23,7 @@ using namespace AscendC;
 template <typename T>
 class KernelAvgPool3DGradBaseT {
 public:
-    __aicore__ inline KernelAvgPool3DGradBaseT()
-    {}
+    __aicore__ inline KernelAvgPool3DGradBaseT() {}
 
 protected:
     __aicore__ inline int64_t min(int64_t a, int64_t b);

@@ -17,22 +17,15 @@
 
 using namespace std;
 
-class l2_ada_layer_norm_test : public testing::Test
-{
+class l2_ada_layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_ada_layer_norm_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_ada_layer_norm_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_ada_layer_norm_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_ada_layer_norm_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& scaleShape, const vector<int64_t>& weightShape,
-        const vector<int64_t>& outShape, aclDataType dtype, aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& scaleShape,
+                    const vector<int64_t>& weightShape, const vector<int64_t>& outShape, aclDataType dtype,
+                    aclnnStatus expectRet)
     {
         auto x = TensorDesc(xShape, dtype, ACL_FORMAT_NCL);
         auto scale = TensorDesc(scaleShape, dtype, ACL_FORMAT_ND);

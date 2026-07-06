@@ -48,8 +48,8 @@ const aclTensor* TransData(const aclTensor* x, op::Format dstPrimaryFormat, int6
  * @param executor: executor should not be null
  * @return trans format tensor
  */
-const aclTensor* TransDataSpecial(
-    const aclTensor* x, op::Format dstPrimaryFormat, int64_t groups, aclOpExecutor* executor);
+const aclTensor* TransDataSpecial(const aclTensor* x, op::Format dstPrimaryFormat, int64_t groups,
+                                  aclOpExecutor* executor);
 
 } // namespace l0op
 

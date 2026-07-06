@@ -48,11 +48,9 @@ __simt_callee__ inline T CastFromFloat32(float val)
 }
 
 template <typename T, typename Tindex>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void OpSparseApplyAdagradV2Kernel(
-    int64_t N, int64_t innerDim, int64_t firstDim,
-    T lr_val, T epsilon_val, int32_t updateSlots,
-    __gm__ T* var, __gm__ T* accum, __gm__ T* grad, __gm__ Tindex* indices)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAdagradV2Kernel(
+    int64_t N, int64_t innerDim, int64_t firstDim, T lr_val, T epsilon_val, int32_t updateSlots, __gm__ T* var,
+    __gm__ T* accum, __gm__ T* grad, __gm__ Tindex* indices)
 {
     float lr_f32 = CastToFloat32<T>(lr_val);
     float epsilon_f32 = CastToFloat32<T>(epsilon_val);
@@ -66,10 +64,7 @@ inline void OpSparseApplyAdagradV2Kernel(
         int64_t rowOffset = static_cast<int64_t>(index) * innerDim;
         int64_t gradOffset = i * innerDim;
 
-        for (int64_t j = static_cast<int64_t>(threadIdx.x);
-             j < innerDim;
-             j += static_cast<int64_t>(blockDim.x))
-        {
+        for (int64_t j = static_cast<int64_t>(threadIdx.x); j < innerDim; j += static_cast<int64_t>(blockDim.x)) {
             float gradF32 = CastToFloat32<T>(grad[gradOffset + j]);
 
             float accumNew;
@@ -93,34 +88,26 @@ inline void OpSparseApplyAdagradV2Kernel(
 }
 
 template <typename T, typename Tindex>
-__aicore__ inline void Process(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR indices,
-    const SparseApplyAdagradV2TilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR epsilon, GM_ADDR grad, GM_ADDR indices,
+                               const SparseApplyAdagradV2TilingData* tilingData)
 {
     if (tilingData->N == 0) {
         return;
     }
 
-    __gm__ T* lr_gm = (__gm__ T*) lr;
-    __gm__ T* epsilon_gm = (__gm__ T*) epsilon;
+    __gm__ T* lr_gm = (__gm__ T*)lr;
+    __gm__ T* epsilon_gm = (__gm__ T*)epsilon;
     T lr_val = lr_gm[0];
     T epsilon_val = epsilon_gm[0];
 
-    __gm__ T* var_gm = (__gm__ T*) var;
-    __gm__ T* accum_gm = (__gm__ T*) accum;
-    __gm__ T* grad_gm = (__gm__ T*) grad;
-    __gm__ Tindex* indices_gm = (__gm__ Tindex*) indices;
+    __gm__ T* var_gm = (__gm__ T*)var;
+    __gm__ T* accum_gm = (__gm__ T*)accum;
+    __gm__ T* grad_gm = (__gm__ T*)grad;
+    __gm__ Tindex* indices_gm = (__gm__ Tindex*)indices;
 
     asc_vf_call<OpSparseApplyAdagradV2Kernel<T, Tindex>>(
-        dim3(THREAD_NUM),
-        tilingData->N,
-        tilingData->innerDim,
-        tilingData->firstDim,
-        lr_val, epsilon_val,
-        tilingData->updateSlots,
-        var_gm, accum_gm, grad_gm, indices_gm
-    );
+        dim3(THREAD_NUM), tilingData->N, tilingData->innerDim, tilingData->firstDim, lr_val, epsilon_val,
+        tilingData->updateSlots, var_gm, accum_gm, grad_gm, indices_gm);
 }
 
 } // namespace NsSparseApplyAdagradV2

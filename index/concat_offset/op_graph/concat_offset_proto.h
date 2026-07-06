@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_CONCAT_OFFSET_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_CONCAT_OFFSET_H_
 #include "graph/operator_reg.h"
@@ -20,9 +20,9 @@ namespace ge {
 *@par Inputs:
 *Two inputs, including:
 * @li concat_dim: A Tensor of type int32.Supported format list ["ND"].
-* @li x: A list of 1D tensor objects of type int32, each with same shape and type. 
-*        It's a dynamic input.Supported format list ["ND"]. 
-         The number of tensors in the x must be at least 2. 
+* @li x: A list of 1D tensor objects of type int32, each with same shape and type.
+*        It's a dynamic input.Supported format list ["ND"].
+         The number of tensors in the x must be at least 2.
          The shape size of each tensor in x is in range [1, 8]. \n
 
 *@par Attributes:
@@ -41,5 +41,5 @@ REG_OP(ConcatOffset)
     .REQUIRED_ATTR(N, Int)
     .OP_END_FACTORY_REG(ConcatOffset)
 
-}
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_CONCAT_OFFSET_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_CONCAT_OFFSET_H_

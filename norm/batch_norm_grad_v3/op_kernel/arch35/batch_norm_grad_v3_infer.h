@@ -83,12 +83,12 @@ public:
             bool needCopy = (curIdx <= beginIdx + 1) || (curIdx % (tilingData_->b0Outer * tilingData_->b1Outer) <= 1);
 
             // Tile整尾块
-            int64_t curTileB0Len =
-                curB0Idx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail : tilingData_->tileBlockB0Len;
-            int64_t curTileALen =
-                curAIdx == (tilingData_->aOuter - 1) ? tilingData_->tileBlockATail : tilingData_->tileBlockALen;
-            int64_t curTileB1Len =
-                curB1Idx == (tilingData_->b1Outer - 1) ? tilingData_->tileBlockB1Tail : tilingData_->tileBlockB1Len;
+            int64_t curTileB0Len = curB0Idx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail :
+                                                                            tilingData_->tileBlockB0Len;
+            int64_t curTileALen = curAIdx == (tilingData_->aOuter - 1) ? tilingData_->tileBlockATail :
+                                                                         tilingData_->tileBlockALen;
+            int64_t curTileB1Len = curB1Idx == (tilingData_->b1Outer - 1) ? tilingData_->tileBlockB1Tail :
+                                                                            tilingData_->tileBlockB1Len;
 
             int64_t ubStrideT1 = curAIdx == (tilingData_->aOuter - 1) ? paddingANumSizeT1 : 0;
 
@@ -104,15 +104,15 @@ public:
 
             CopyInDy(dyOffset, curTileB0Len, curTileALen, curTileB1Len, ubStrideT1);
             CopyInGammaVarCommon(gammaQueue_, runningVarQueue_, gammaGm_, runningVarGm_, needCopy, weightOffset,
-                curTileALen);
+                                 curTileALen);
             Compute(curTileB0Len, curTileALen, curTileB1Len);
             CopyOutDx(dyOffset, curTileB0Len, curTileALen, curTileB1Len, ubStrideT1);
         }
     }
 
 private:
-    __aicore__ inline void CopyInDy(
-        int64_t dyGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len, int64_t ubStrideT1)
+    __aicore__ inline void CopyInDy(int64_t dyGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len,
+                                    int64_t ubStrideT1)
     {
         LocalTensor<T1> dyLocal = dyQueue_.AllocTensor<T1>();
         LoopModeParams loopParams;
@@ -156,9 +156,9 @@ private:
         runningVarQueue_.FreeTensor<T3>(runningVar);
     }
 
-    __aicore__ inline void VFNormalize(
-        __local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal, __local_mem__ T3* varLocal, __local_mem__ T1* dxLocal,
-        uint16_t curTileB0Len, uint16_t curTileALen, uint16_t curTileB1Len)
+    __aicore__ inline void VFNormalize(__local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal,
+                                       __local_mem__ T3* varLocal, __local_mem__ T1* dxLocal, uint16_t curTileB0Len,
+                                       uint16_t curTileALen, uint16_t curTileB1Len)
     {
         __VEC_SCOPE__
         {
@@ -177,8 +177,8 @@ private:
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads runningVar  1->64
                 LoadsTensorForDtypeT<T3>(varLocal, runningVar, pregMask, i);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 // load gamma 1->64
@@ -202,8 +202,8 @@ private:
         }
     }
 
-    __aicore__ inline void CopyOutDx(
-        int64_t dxGmOffset, int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len, int64_t ubStrideT1)
+    __aicore__ inline void CopyOutDx(int64_t dxGmOffset, int64_t curTileB0Len, int64_t curTileALen,
+                                     int64_t curTileB1Len, int64_t ubStrideT1)
     {
         LocalTensor<T1> dx = dxQueue_.DeQue<T1>();
         LoopModeParams loopParams;

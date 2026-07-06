@@ -44,9 +44,8 @@ public:
     using Params = typename KernelCmct::Params;
     using BlockSchedulerSwizzleInMnCoreCmct = BlockSchedulerSwizzleInMnCore<ProblemShape_, TileShape_, BlockShape_>;
     __aicore__ inline BlockSchedulerSwizzleInMnCoreNN() = delete;
-    __aicore__ inline BlockSchedulerSwizzleInMnCoreNN(const Params &params) : BlockSchedulerSwizzleInMnCoreCmct(params)
-    {
-    }
+    __aicore__ inline BlockSchedulerSwizzleInMnCoreNN(const Params& params) : BlockSchedulerSwizzleInMnCoreCmct(params)
+    {}
 
     __aicore__ inline static Params ToUnderlyingArguments(
         ProblemShape const& problemShape, [[maybe_unused]] Arguments const& args,
@@ -60,6 +59,5 @@ public:
                 .blockShape = AscendC::MakeShape(tiling->cubeNumBlocksM, tiling->cubeNumBlocksN)};
     }
 };
-}  // namespace Block
-}  // namespace QuantBatchMatmulV4
-
+} // namespace Block
+} // namespace QuantBatchMatmulV4

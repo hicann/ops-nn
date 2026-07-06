@@ -15,32 +15,23 @@
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
-class SPARSE_TENSOR_DENSE_MAT_MUL_UT : public testing::Test
-{
+class SPARSE_TENSOR_DENSE_MAT_MUL_UT : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SPARSE_TENSOR_DENSE_MAT_MUL_UT SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SPARSE_TENSOR_DENSE_MAT_MUL_UT SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SPARSE_TENSOR_DENSE_MAT_MUL_UT TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SPARSE_TENSOR_DENSE_MAT_MUL_UT TearDown" << std::endl; }
 };
 
 template <typename T>
-gert::Tensor* ConstructInputConstTensor(
-    std::unique_ptr<uint8_t[]>& input_tensor_holder, const vector<T>& const_value, ge::DataType const_dtype,
-    const gert::StorageShape tensorShape)
+gert::Tensor* ConstructInputConstTensor(std::unique_ptr<uint8_t[]>& input_tensor_holder, const vector<T>& const_value,
+                                        ge::DataType const_dtype, const gert::StorageShape tensorShape)
 {
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        tensorShape,                        // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        const_dtype,                        // dt
-        nullptr);
+    gert::Tensor tensor(tensorShape,                        // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        const_dtype,                        // dt
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     std::memcpy(tensor_data, &const_value[0], sizeof(T) * const_value.size());
@@ -79,9 +70,8 @@ TEST_F(SPARSE_TENSOR_DENSE_MAT_MUL_UT, SparseTensorDenseMatMul_InferShape_test_1
                       .NodeIoNum(4, 1)
                       .InputShapes({indices_tensor, values_tensor, shape_tensor, x2_tensor})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"adjoint_a", ge::AnyValue::CreateFrom<bool>(false)},
-                           {"adjoint_b", ge::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"adjoint_a", ge::AnyValue::CreateFrom<bool>(false)},
+                                  {"adjoint_b", ge::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
 
     EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
@@ -105,4 +95,3 @@ TEST_F(SPARSE_TENSOR_DENSE_MAT_MUL_UT, SparseTensorDenseMatMul_InferDtype_test_1
     auto outputDtype = op.GetOutputDesc(0).GetDataType();
     EXPECT_EQ(outputDtype, ge::DT_INT32);
 }
-

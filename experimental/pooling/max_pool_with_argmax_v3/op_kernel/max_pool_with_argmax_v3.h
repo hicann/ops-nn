@@ -25,14 +25,18 @@ namespace NsMaxPoolWithArgmaxV3 {
 
 using namespace AscendC;
 
-constexpr int32_t BUFFER_NUM = 2; 
+constexpr int32_t BUFFER_NUM = 2;
 
 // ---- type trait helper ----
 // Used to distinguish bfloat16_t from half (both sizeof == 2) in if constexpr branches.
 template <typename A, typename B>
-struct IsSameType { static constexpr bool value = false; };
+struct IsSameType {
+    static constexpr bool value = false;
+};
 template <typename A>
-struct IsSameType<A, A> { static constexpr bool value = true; };
+struct IsSameType<A, A> {
+    static constexpr bool value = true;
+};
 
 template <typename T>
 __aicore__ inline T FloatToT(float val)
@@ -85,8 +89,7 @@ class MaxPoolWithArgmaxV3 {
 public:
     __aicore__ inline MaxPoolWithArgmaxV3() {}
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR argmax,
-                                const MaxPoolWithArgmaxV3TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR argmax, const MaxPoolWithArgmaxV3TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -116,9 +119,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void MaxPoolWithArgmaxV3<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR argmax,
-    const MaxPoolWithArgmaxV3TilingData* tilingData)
+__aicore__ inline void MaxPoolWithArgmaxV3<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR argmax,
+                                                    const MaxPoolWithArgmaxV3TilingData* tilingData)
 {
     tiling_ = tilingData;
 
@@ -134,8 +136,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::Init(
     // For empty tensors (totalSlices=0), use size >= 1 to avoid zero-length GM buffers
     int64_t inputTotalElems = tiling_->totalSlices * tiling_->inputHeight * tiling_->inputWidth;
     int64_t outputTotalElems = tiling_->totalSlices * tiling_->outputHeight * tiling_->outputWidth;
-    if (inputTotalElems == 0) inputTotalElems = 1;
-    if (outputTotalElems == 0) outputTotalElems = 1;
+    if (inputTotalElems == 0)
+        inputTotalElems = 1;
+    if (outputTotalElems == 0)
+        outputTotalElems = 1;
     inputGM.SetGlobalBuffer((__gm__ T*)x, inputTotalElems);
     yGM.SetGlobalBuffer((__gm__ T*)y, outputTotalElems);
     argmaxGM.SetGlobalBuffer((__gm__ int64_t*)argmax, outputTotalElems);
@@ -143,8 +147,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::Init(
     // 初始化 pipe buffer
     // inputQueue: 需容纳 totalInputRows 行, 其中
     // totalInputRows = dilationH * (kH - 1) + 1 + (outputRowsPerTile - 1) * strideH
-    int64_t totalInputRows = static_cast<int64_t>(tiling_->dilationH) * (tiling_->kernelH - 1) + 1
-                             + (tiling_->outputRowsPerTile - 1) * tiling_->strideH;
+    int64_t totalInputRows = static_cast<int64_t>(tiling_->dilationH) * (tiling_->kernelH - 1) + 1 +
+                             (tiling_->outputRowsPerTile - 1) * tiling_->strideH;
     int64_t inputBufSize = totalInputRows * tiling_->inputWidthAligned * static_cast<int64_t>(sizeof(T));
     pipe.InitBuffer(inputQueue, BUFFER_NUM, inputBufSize);
 
@@ -154,7 +158,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::Init(
 
     // argmaxOutputQueue: outputRowsPerTile 行输出
     int64_t argmaxWidthAligned = (tiling_->outputWidth * 8 + 31) / 32 * 32 / 8;
-    if (argmaxWidthAligned == 0) argmaxWidthAligned = 4; // minimum 32-byte alignment for int64_t
+    if (argmaxWidthAligned == 0)
+        argmaxWidthAligned = 4; // minimum 32-byte alignment for int64_t
     int64_t argmaxBufSize = tiling_->outputRowsPerTile * argmaxWidthAligned * static_cast<int64_t>(sizeof(int64_t));
     pipe.InitBuffer(argmaxOutputQueue, BUFFER_NUM, argmaxBufSize);
 }
@@ -183,8 +188,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::ProcessOneSlice(int64_t sliceIdx)
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolWithArgmaxV3<T>::CopyInRows(
-    int64_t sliceIdx, int64_t hOutStart, int64_t numRows)
+__aicore__ inline void MaxPoolWithArgmaxV3<T>::CopyInRows(int64_t sliceIdx, int64_t hOutStart, int64_t numRows)
 {
     LocalTensor<T> inputLocal = inputQueue.AllocTensor<T>();
 
@@ -202,8 +206,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::CopyInRows(
     // inputRowStart = hOutStart * strideH - padH
     // inputRowEnd = (hOutStart + numRows - 1) * strideH - padH + dilationH * (kH - 1)
     int64_t inputRowStart = hOutStart * tiling_->strideH - tiling_->padH;
-    int64_t inputRowEnd = (hOutStart + numRows - 1) * tiling_->strideH - tiling_->padH
-                          + static_cast<int64_t>(tiling_->dilationH) * (tiling_->kernelH - 1);
+    int64_t inputRowEnd = (hOutStart + numRows - 1) * tiling_->strideH - tiling_->padH +
+                          static_cast<int64_t>(tiling_->dilationH) * (tiling_->kernelH - 1);
     int64_t totalInputRows = inputRowEnd - inputRowStart + 1;
 
     // 加载所有需要的输入行
@@ -236,8 +240,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::CopyInRows(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolWithArgmaxV3<T>::ComputeTile(
-    int64_t sliceIdx, int64_t hOutStart, int64_t numRows)
+__aicore__ inline void MaxPoolWithArgmaxV3<T>::ComputeTile(int64_t sliceIdx, int64_t hOutStart, int64_t numRows)
 {
     LocalTensor<T> inputLocal = inputQueue.DeQue<T>();
     LocalTensor<T> yLocal = yOutputQueue.AllocTensor<T>();
@@ -299,8 +302,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3<T>::ComputeTile(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolWithArgmaxV3<T>::CopyOut(
-    int64_t sliceIdx, int64_t hOutStart, int64_t numRows)
+__aicore__ inline void MaxPoolWithArgmaxV3<T>::CopyOut(int64_t sliceIdx, int64_t hOutStart, int64_t numRows)
 {
     int64_t sliceOutOffset = sliceIdx * tiling_->outputHeight * tiling_->outputWidth;
     int64_t tileOffset = sliceOutOffset + hOutStart * tiling_->outputWidth;

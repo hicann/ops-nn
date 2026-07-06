@@ -24,7 +24,7 @@ constexpr int32_t BUFFER_NUM = 2;
 constexpr int32_t QUEUE_DEPTH = 1;
 
 template <typename Kernel>
-__aicore__ inline void ProcessTiles(Kernel &kernel, int64_t blockLength, int64_t tileLength)
+__aicore__ inline void ProcessTiles(Kernel& kernel, int64_t blockLength, int64_t tileLength)
 {
     int64_t tileNum = (blockLength + tileLength - 1) / tileLength;
     if (tileNum == 0) {
@@ -46,17 +46,14 @@ __aicore__ inline void ProcessTiles(Kernel &kernel, int64_t blockLength, int64_t
 template <typename Derived, typename T>
 class KernelSwishV2Base {
 public:
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SwishV2TilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SwishV2TilingData* tilingData)
     {
         InitBlockGm(x, y, tilingData);
         pipe_.InitBuffer(inOutQueue_, BUFFER_NUM, tileLength_ * sizeof(T));
-        static_cast<Derived &>(*this).InitExtraBuffers();
+        static_cast<Derived&>(*this).InitExtraBuffers();
     }
 
-    __aicore__ inline void Process()
-    {
-        ProcessTiles(static_cast<Derived &>(*this), blockLength_, tileLength_);
-    }
+    __aicore__ inline void Process() { ProcessTiles(static_cast<Derived&>(*this), blockLength_, tileLength_); }
 
     __aicore__ inline void CopyIn(int64_t progress, int64_t curTileLength)
     {
@@ -76,20 +73,20 @@ public:
     }
 
 protected:
-    __aicore__ inline void InitBlockGm(GM_ADDR x, GM_ADDR y, const SwishV2TilingData *tilingData)
+    __aicore__ inline void InitBlockGm(GM_ADDR x, GM_ADDR y, const SwishV2TilingData* tilingData)
     {
         int64_t blockIdx = GetBlockIdx();
         scale_ = tilingData->scale;
         if (blockIdx < tilingData->formerNum) {
             blockLength_ = tilingData->formerLength;
             int64_t offset = tilingData->formerLength * blockIdx;
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->formerLength);
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->formerLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->formerLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->formerLength);
         } else {
             blockLength_ = tilingData->tailLength;
             int64_t offset = tilingData->formerLength * tilingData->formerNum;
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->tailLength);
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->tailLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->tailLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->tailLength);
         }
 
         tileLength_ = tilingData->tileLength;
@@ -178,6 +175,6 @@ private:
     TBuf<TPosition::VECCALC> tmpBufOneFp32_;
 };
 
-}  // namespace NsSwishV2
+} // namespace NsSwishV2
 
 #endif

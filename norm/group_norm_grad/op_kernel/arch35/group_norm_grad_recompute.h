@@ -33,32 +33,33 @@ class GroupNormGradReCompute : public GroupNormGradBase<T, U> {
 public:
     __aicore__ inline GroupNormGradReCompute() : GroupNormGradBase<T, U>(){};
     __aicore__ inline ~GroupNormGradReCompute(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-        GM_ADDR workspace, const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
+                                GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 protected:
     __aicore__ inline void InitBuffer(const GroupNormGradRegBaseTilingData* tilingData);
     __aicore__ inline void Compute(int32_t taskIdx);
-    __aicore__ inline void VFMode2DbetaDs(
-        const LocalTensor<T>& xMain, const LocalTensor<T>& xFold, const LocalTensor<T>& dyMain,
-        const LocalTensor<T>& dyFold, const uint32_t mainReduceNum, const uint32_t foldReduceNum,
-        const uint32_t loopIdx, const LocalTensor<float>& cacheDbeta, const LocalTensor<float>& cacheDgama);
-    __aicore__ inline void Mode2DbetaDs(
-        const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma, const uint32_t C_G_idx,
-        const int64_t offset);
-    __aicore__ inline void ComputeMode2Dx(
-        int32_t taskIdx, LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor);
-    __aicore__ inline void VFComputeMode2Dx(
-        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-        const ComputeDxParams& dxParams);
+    __aicore__ inline void VFMode2DbetaDs(const LocalTensor<T>& xMain, const LocalTensor<T>& xFold,
+                                          const LocalTensor<T>& dyMain, const LocalTensor<T>& dyFold,
+                                          const uint32_t mainReduceNum, const uint32_t foldReduceNum,
+                                          const uint32_t loopIdx, const LocalTensor<float>& cacheDbeta,
+                                          const LocalTensor<float>& cacheDgama);
+    __aicore__ inline void Mode2DbetaDs(const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma,
+                                        const uint32_t C_G_idx, const int64_t offset);
+    __aicore__ inline void ComputeMode2Dx(int32_t taskIdx, LocalTensor<float>& dbetaTensor,
+                                          LocalTensor<float>& dsTensor);
+    __aicore__ inline void VFComputeMode2Dx(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
+                                            const LocalTensor<T>& dyTensor, const ComputeDxParams& dxParams);
 };
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradReCompute<T, U>::Init(
-    GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-    GM_ADDR workspace, const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn)
+__aicore__ inline void GroupNormGradReCompute<T, U>::Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
+                                                          GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
+                                                          GM_ADDR workspace,
+                                                          const GroupNormGradRegBaseTilingData* __restrict tilingData,
+                                                          TPipe* pipeIn)
 {
     this->pipe = pipeIn;
     this->InitCommon(dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace, tilingData);
@@ -216,20 +217,18 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
         // step2:  reduce the fold  tail (last 64 or less than 64) blocks reduce to 1.
         for (uint16_t i = 0; i < static_cast<uint16_t>(remainerLoopTimes); i++) {
             MaskReg pregLoop = UpdateMask<float>(sreg0);
-            LoadTwoTensorForDtypeT<T>(
-                ubXMain, ubXFold, vregXM, vregXF, pregMain, pregLoop, overLapLoopTimes * sregvl,
-                overLapLoopTimes * sregvl);
-            LoadTwoTensorForDtypeT<T>(
-                ubDyMain, ubDyFold, vregDyM, vregDyF, pregMain, pregLoop, overLapLoopTimes * sregvl,
-                overLapLoopTimes * sregvl);
+            LoadTwoTensorForDtypeT<T>(ubXMain, ubXFold, vregXM, vregXF, pregMain, pregLoop, overLapLoopTimes * sregvl,
+                                      overLapLoopTimes * sregvl);
+            LoadTwoTensorForDtypeT<T>(ubDyMain, ubDyFold, vregDyM, vregDyF, pregMain, pregLoop,
+                                      overLapLoopTimes * sregvl, overLapLoopTimes * sregvl);
             Mul(vregXM, vregXM, vregDyM, pregMain);
             MulDstAdd(vregXF, vregDyF, vregXM, pregLoop);
             Add(tempDy, vregDyM, vregDyF, pregLoop);
             Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
             Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
             ReduceSum(vregDgamma, vregXM, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ubBinaryDgamma + overLapLoopTimes, vregDgamma, pregMerge);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + overLapLoopTimes, vregDgamma,
+                                                               pregMerge);
             ReduceSum(vregDbeta, vregDyM, pregMain);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + overLapLoopTimes, vregDbeta, pregMerge);
         }
@@ -244,8 +243,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ubBinaryDgamma + i + overLapLoopTimes + remainerLoopTimes, vregDgamma, pregMerge);
             ReduceSum(vregDbeta, vregDyM, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ubBinaryDbeta + i + overLapLoopTimes + remainerLoopTimes, vregDbeta, pregMerge);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i + overLapLoopTimes + remainerLoopTimes,
+                                                               vregDbeta, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         // step4: binary folding reduce calculation
@@ -288,8 +287,9 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
   dgamma = ReduceSum(dy * temp)
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
-    const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma, const uint32_t C_G_idx, const int64_t offset)
+__aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(const LocalTensor<float>& dbeta,
+                                                                  const LocalTensor<float>& dgamma,
+                                                                  const uint32_t C_G_idx, const int64_t offset)
 {
     LocalTensor<T> xMainTensor, xFoldTensor;
     LocalTensor<T> dyMainTensor, dyFoldTensor;
@@ -313,7 +313,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
         dataCopyPadExtParamsX.paddingValue = 0;
         DataCopyExtParams copyInParamsX;
         copyInParamsX.blockCount = 1;
-        copyInParamsX.blockLen =  mainReduceNum * sizeof(T);
+        copyInParamsX.blockLen = mainReduceNum * sizeof(T);
         copyInParamsX.srcStride = 0;
         copyInParamsX.dstStride = 0;
         DataCopyPad(xMainTensor, this->xGm_[mainOffset], copyInParamsX, dataCopyPadExtParamsX);
@@ -332,9 +332,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
         this->inQueDy_.EnQue(dyMainTensor);
         xMainTensor = this->inQueX_.template DeQue<T>();
         dyMainTensor = this->inQueDy_.template DeQue<T>();
-        VFMode2DbetaDs(
-            xMainTensor, xFoldTensor, dyMainTensor, dyFoldTensor, mainReduceNum, foldReduceNum, loopIdx, cacheDbeta,
-            cacheDgama);
+        VFMode2DbetaDs(xMainTensor, xFoldTensor, dyMainTensor, dyFoldTensor, mainReduceNum, foldReduceNum, loopIdx,
+                       cacheDbeta, cacheDgama);
         this->inQueX_.FreeTensor(xMainTensor);
         this->inQueDy_.FreeTensor(dyMainTensor);
         this->UpdateCache(loopIdx, cacheDbeta, cacheDgama);
@@ -353,8 +352,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
-    int32_t taskIdx, LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor)
+__aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(int32_t taskIdx, LocalTensor<float>& dbetaTensor,
+                                                                    LocalTensor<float>& dsTensor)
 {
     float sum1 = 0;
     float sum2 = 0;
@@ -403,7 +402,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
             dataCopyPadExtParamsX.paddingValue = 0;
             DataCopyExtParams copyInParamsX;
             copyInParamsX.blockCount = 1;
-            copyInParamsX.blockLen =  this->mode2UbTailNum_ * sizeof(T);
+            copyInParamsX.blockLen = this->mode2UbTailNum_ * sizeof(T);
             copyInParamsX.srcStride = 0;
             copyInParamsX.dstStride = 0;
             DataCopyPad(xTensor, this->xGm_[offset], copyInParamsX, dataCopyPadExtParamsX);
@@ -434,9 +433,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
     Dx = C1 * dy + C2 * X + C3
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradReCompute<T, U>::VFComputeMode2Dx(
-    const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-    const ComputeDxParams& dxParams)
+__aicore__ inline void GroupNormGradReCompute<T, U>::VFComputeMode2Dx(const LocalTensor<T>& dstTensor,
+                                                                      const LocalTensor<T>& xTensor,
+                                                                      const LocalTensor<T>& dyTensor,
+                                                                      const ComputeDxParams& dxParams)
 {
     __ubuf__ T* ubX = (__ubuf__ T*)xTensor.GetPhyAddr();
     __ubuf__ T* ubDy = (__ubuf__ T*)dyTensor.GetPhyAddr();

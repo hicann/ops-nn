@@ -46,8 +46,8 @@ constexpr float SCALE_ALPHA_PRODUCT_F = 1.7580993408473768599402175208123f;
 
 // 需要经 half 两步 Cast（int → half → float）的 dtype（DAV_3510 不支持 int↔float 直接 Cast）
 template <typename T>
-constexpr bool kNeedsHalfTransit =
-    std::is_same_v<T, int32_t> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>;
+constexpr bool kNeedsHalfTransit = std::is_same_v<T, int32_t> || std::is_same_v<T, int8_t> ||
+                                   std::is_same_v<T, uint8_t>;
 
 // ============================================================================
 // 公共自由函数：搬运参数 / 计算核 / Cast / 广播偏移
@@ -66,14 +66,10 @@ __aicore__ inline DataCopyParams MakeCopyParams(int64_t count)
 
 // SELU 反向核（FP32）。direct 路径 T==float 时同样复用此核。
 // Iter3 Fix #1: 使用 float 常量做 Muls/Adds，避免 half 精度截断。
-__aicore__ inline void SeluGradSelectFp32(const LocalTensor<float>& yFp32,
-                                          const LocalTensor<float>& gradFp32,
-                                          const LocalTensor<float>& outFp32,
-                                          const LocalTensor<float>& branchA,
-                                          const LocalTensor<float>& branchB,
-                                          const LocalTensor<float>& tmp,
-                                          const LocalTensor<uint8_t>& selMask,
-                                          int64_t n)
+__aicore__ inline void SeluGradSelectFp32(const LocalTensor<float>& yFp32, const LocalTensor<float>& gradFp32,
+                                          const LocalTensor<float>& outFp32, const LocalTensor<float>& branchA,
+                                          const LocalTensor<float>& branchB, const LocalTensor<float>& tmp,
+                                          const LocalTensor<uint8_t>& selMask, int64_t n)
 {
     CompareScalar(selMask, outFp32, (float)0.0f, CMPMODE::LT, n);
     Muls(branchA, gradFp32, SCALE_F, n);
@@ -84,12 +80,9 @@ __aicore__ inline void SeluGradSelectFp32(const LocalTensor<float>& yFp32,
 
 // 输入 Cast: T → float（整型经 half 两步，浮点单步）
 template <typename T>
-__aicore__ inline void SeluGradCastInToFp32(const LocalTensor<float>& gradFp32,
-                                            const LocalTensor<float>& outFp32,
-                                            const LocalTensor<T>& gradLocal,
-                                            const LocalTensor<T>& outLocal,
-                                            const LocalTensor<half>& gradHalf,
-                                            const LocalTensor<half>& outHalf,
+__aicore__ inline void SeluGradCastInToFp32(const LocalTensor<float>& gradFp32, const LocalTensor<float>& outFp32,
+                                            const LocalTensor<T>& gradLocal, const LocalTensor<T>& outLocal,
+                                            const LocalTensor<half>& gradHalf, const LocalTensor<half>& outHalf,
                                             int64_t n)
 {
     if constexpr (kNeedsHalfTransit<T>) {
@@ -105,10 +98,8 @@ __aicore__ inline void SeluGradCastInToFp32(const LocalTensor<float>& gradFp32,
 
 // 输出 Cast: float → T（整型经 half 两步，浮点单步），统一 CAST_RINT
 template <typename T>
-__aicore__ inline void SeluGradCastFp32ToOut(const LocalTensor<T>& yLocal,
-                                             const LocalTensor<float>& yFp32,
-                                             const LocalTensor<half>& yHalf,
-                                             int64_t n)
+__aicore__ inline void SeluGradCastFp32ToOut(const LocalTensor<T>& yLocal, const LocalTensor<float>& yFp32,
+                                             const LocalTensor<half>& yHalf, int64_t n)
 {
     if constexpr (kNeedsHalfTransit<T>) {
         Cast(yHalf, yFp32, RoundMode::CAST_RINT, n);
@@ -119,8 +110,7 @@ __aicore__ inline void SeluGradCastFp32ToOut(const LocalTensor<T>& yLocal,
 }
 
 // 广播路径：flatIdx → multiIdx 分解
-__aicore__ inline void FlatIdxToMultiIdx(int64_t flatIdx, int32_t shapeLen,
-                                         const int64_t* dims, int64_t* multiIdx)
+__aicore__ inline void FlatIdxToMultiIdx(int64_t flatIdx, int32_t shapeLen, const int64_t* dims, int64_t* multiIdx)
 {
     for (int32_t d = shapeLen - 1; d >= 0; d--) {
         if (dims[d] > 0) {
@@ -132,8 +122,7 @@ __aicore__ inline void FlatIdxToMultiIdx(int64_t flatIdx, int32_t shapeLen,
     }
 }
 
-__aicore__ inline int64_t ComputeStrideOffset(int32_t shapeLen, const int64_t* multiIdx,
-                                              const int64_t* strides)
+__aicore__ inline int64_t ComputeStrideOffset(int32_t shapeLen, const int64_t* multiIdx, const int64_t* strides)
 {
     int64_t offset = 0;
     for (int32_t d = 0; d < shapeLen; d++) {
@@ -150,11 +139,8 @@ struct RowGeom {
     int64_t count;
 };
 
-__aicore__ inline RowGeom ComputeRowGeom(int64_t rowIdx, int32_t chunkIdx,
-                                         int64_t innerSize, int32_t shapeLen,
-                                         int64_t innerChunkSize,
-                                         const int64_t* outputDims,
-                                         const int64_t* gradStrides,
+__aicore__ inline RowGeom ComputeRowGeom(int64_t rowIdx, int32_t chunkIdx, int64_t innerSize, int32_t shapeLen,
+                                         int64_t innerChunkSize, const int64_t* outputDims, const int64_t* gradStrides,
                                          const int64_t* outStrides)
 {
     int64_t flatIdx = rowIdx * innerSize;
@@ -223,7 +209,7 @@ struct SeluGradTransitKit {
             pipe.InitBuffer(gradHalfBuf, n * sizeof(half));
             pipe.InitBuffer(outHalfBuf, n * sizeof(half));
             if constexpr (!std::is_same_v<T, int8_t>) {
-                pipe.InitBuffer(yHalfBuf, n * sizeof(half));  // int8 复用 outHalfBuf
+                pipe.InitBuffer(yHalfBuf, n * sizeof(half)); // int8 复用 outHalfBuf
             }
         }
         pipe.InitBuffer(gradFp32Buf, n * sizeof(float));
@@ -272,8 +258,7 @@ struct SeluGradTransitKit {
 template <typename T, typename Kit>
 class SeluGradOneDim {
 public:
-    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y,
-                                const SeluGradTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y, const SeluGradTilingData* tilingData)
     {
         if (tilingData->totalElements == 0) {
             blockLen_ = 0;
@@ -351,8 +336,7 @@ private:
 template <typename T, typename Kit>
 class SeluGradBroadcast {
 public:
-    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y,
-                                const SeluGradTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y, const SeluGradTilingData* tilingData)
     {
         totalElements_ = tilingData->totalElements;
         if (totalElements_ == 0) {
@@ -401,8 +385,8 @@ public:
 private:
     __aicore__ inline void ProcessRow(int64_t rowIdx, int32_t chunkIdx)
     {
-        RowGeom geom = ComputeRowGeom(rowIdx, chunkIdx, innerSize_, shapeLen_, innerChunkSize_,
-                                      outputDims_, gradStrides_, outStrides_);
+        RowGeom geom = ComputeRowGeom(rowIdx, chunkIdx, innerSize_, shapeLen_, innerChunkSize_, outputDims_,
+                                      gradStrides_, outStrides_);
         gradGM.SetGlobalBuffer(gradBase_ + geom.gradOffset, geom.count);
         outGM.SetGlobalBuffer(outBase_ + geom.outOffset, geom.count);
         yGM.SetGlobalBuffer(yBase_ + geom.yOffset, geom.count);
@@ -460,14 +444,12 @@ private:
 
 // dtype 调度别名：float 走 Direct，其余走 Transit
 template <typename T>
-using SeluGradOneDimOp =
-    SeluGradOneDim<T, std::conditional_t<std::is_same_v<T, float>,
-                                         SeluGradDirectKit<T>, SeluGradTransitKit<T>>>;
+using SeluGradOneDimOp = SeluGradOneDim<
+    T, std::conditional_t<std::is_same_v<T, float>, SeluGradDirectKit<T>, SeluGradTransitKit<T>>>;
 
 template <typename T>
-using SeluGradBroadcastOp =
-    SeluGradBroadcast<T, std::conditional_t<std::is_same_v<T, float>,
-                                            SeluGradDirectKit<T>, SeluGradTransitKit<T>>>;
+using SeluGradBroadcastOp = SeluGradBroadcast<
+    T, std::conditional_t<std::is_same_v<T, float>, SeluGradDirectKit<T>, SeluGradTransitKit<T>>>;
 
 } // namespace NsSeluGrad
 

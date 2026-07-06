@@ -29,8 +29,8 @@ public:
     __aicore__ inline ~DequantSwigluQuantDynamicBF16(){};
 
     __aicore__ inline void Init(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-        GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-        GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
+                                GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
+                                GM_ADDR userspace, const SwiGluTilingData* tilingData, TPipe* pipe_);
     __aicore__ inline void Process();
 };
 
@@ -38,8 +38,10 @@ TEMPLATE_DECLARE
 __aicore__ inline void DequantSwigluQuantDynamicBF16<TEMPLATE_ARGS>::Init(
     GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm, GM_ADDR quant_scale_gm,
     GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm, GM_ADDR userspace, const SwiGluTilingData* tilingData,
-    TPipe* pipe_) {
-    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm, scale_gm, userspace, tilingData, pipe_);
+    TPipe* pipe_)
+{
+    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm,
+                     scale_gm, userspace, tilingData, pipe_);
 
     if (this->numRound < this->baseRowLen) {
         this->baseRowLen = this->numRound;
@@ -48,8 +50,6 @@ __aicore__ inline void DequantSwigluQuantDynamicBF16<TEMPLATE_ARGS>::Init(
 }
 
 TEMPLATE_DECLARE
-__aicore__ inline void DequantSwigluQuantDynamicBF16<TEMPLATE_ARGS>::Process() {
-    this->BaseProcess();
-}
-}  // namespace DequantSwigluQuant
-#endif  // CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BF16_HPP
+__aicore__ inline void DequantSwigluQuantDynamicBF16<TEMPLATE_ARGS>::Process() { this->BaseProcess(); }
+} // namespace DequantSwigluQuant
+#endif // CANN_DEQUANT_SWIGLU_QUANT_DYNAMIC_BF16_HPP

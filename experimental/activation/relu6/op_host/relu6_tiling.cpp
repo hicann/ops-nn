@@ -81,9 +81,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
 
     // Shape 校验：输入输出元素数一致
-    OP_CHECK_IF(
-        inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
-        OP_LOGE(context, "Relu6: input and output shape size mismatch"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
+                OP_LOGE(context, "Relu6: input and output shape size mismatch"), return ge::GRAPH_FAILED);
 
     totalNum = inputShapeX.GetShapeSize();
 
@@ -114,28 +113,24 @@ static ge::graphStatus Relu6TilingFunc(gert::TilingContext* context)
     // 1. 获取平台运行信息
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. 获取 shape、dtype 信息
     int64_t totalNum;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. 获取 WorkspaceSize
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. 设置 TilingData
     Relu6TilingData* tiling = context->GetTilingData<Relu6TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(Relu6TilingData), 0, sizeof(Relu6TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(Relu6TilingData), 0, sizeof(Relu6TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // 多核切分：将总元素按核数均分
     tiling->totalNum = totalNum;

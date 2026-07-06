@@ -43,10 +43,9 @@ void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr, const std::v
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("celu input[%ld] is: %f, result[%ld] is: %f\n", i, inputHostData[i], i, resultData[i]);
     }
@@ -64,9 +63,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -79,9 +77,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -93,12 +90,8 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     std::vector<int64_t> xShape = {4, 4};
-    std::vector<float> xHostData = {
-        1.0f, -1.0f, 2.0f, -2.0f,
-        0.5f, -0.5f, 3.0f, -3.0f,
-        0.0f, -0.1f, 4.0f, -4.0f,
-        0.1f, -5.0f, 1.5f, -1.5f
-    };
+    std::vector<float> xHostData = {1.0f, -1.0f, 2.0f, -2.0f, 0.5f, -0.5f, 3.0f, -3.0f,
+                                    0.0f, -0.1f, 4.0f, -4.0f, 0.1f, -5.0f, 1.5f, -1.5f};
 
     aclTensor* x = nullptr;
     void* xDeviceAddr = nullptr;

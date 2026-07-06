@@ -28,21 +28,20 @@ using AscendC::MicroAPI::UpdateMask;
 constexpr int32_t VL_SIZE = platform::GetVRegSize();
 template <typename T, typename ScalarT, typename Tiling>
 class ForeachMulScalarListRegbase
-    : public ForeachRegbaseUnaryScalarList<T, Tiling, ForeachMulScalarListRegbase<T, ScalarT, Tiling>>
-{
+    : public ForeachRegbaseUnaryScalarList<T, Tiling, ForeachMulScalarListRegbase<T, ScalarT, Tiling>> {
 public:
     using Base = ForeachRegbaseUnaryScalarList<T, Tiling, ForeachMulScalarListRegbase<T, ScalarT, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachMulScalarListRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR tensor1, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR tensor1, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(tensor1, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ ScalarT*)scalars);
     }
 
-    __aicore__ inline void Compute(
-        LocalTensor<T> tensorLocal, LocalTensor<T> outLocal, int64_t tensorIndex, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T> tensorLocal, LocalTensor<T> outLocal, int64_t tensorIndex,
+                                   int64_t dataCount)
     {
         __local_mem__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
         __local_mem__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
@@ -57,8 +56,8 @@ public:
         __VEC_SCOPE__
         {
             MaskReg maskReg;
-            if constexpr (
-                IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value || IsSameType<T, float>::value) {
+            if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value ||
+                          IsSameType<T, float>::value) {
                 RegTensor<float> inRegToFloat;
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     maskReg = UpdateMask<float>(sreg);

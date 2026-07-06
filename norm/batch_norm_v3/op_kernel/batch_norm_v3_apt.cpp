@@ -43,9 +43,10 @@ namespace {
 #define TILINGKEY_INFER_SMALL_AB1 911000
 } // namespace
 
-extern "C" __global__ __aicore__ void batch_norm_v3(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR variance, GM_ADDR y, GM_ADDR mean_out,
-    GM_ADDR variance_out, GM_ADDR batch_mean, GM_ADDR batch_rstd, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void batch_norm_v3(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean,
+                                                    GM_ADDR variance, GM_ADDR y, GM_ADDR mean_out, GM_ADDR variance_out,
+                                                    GM_ADDR batch_mean, GM_ADDR batch_rstd, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

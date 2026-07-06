@@ -32,9 +32,8 @@
 //   gateMode 1/2: 恒透传/恒置0, grad 原生搬, 零 cast
 // ============================================================
 template <typename T>
-__simd_vf__ inline void ThresholdGradVF(
-    __ubuf__ T* dstAddr, __ubuf__ T* selfAddr, __ubuf__ T* gradAddr,
-    T threshold, int gateMode, uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+__simd_vf__ inline void ThresholdGradVF(__ubuf__ T* dstAddr, __ubuf__ T* selfAddr, __ubuf__ T* gradAddr, T threshold,
+                                        int gateMode, uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> selfReg, gradReg, zeroReg, dstReg;
     AscendC::Reg::MaskReg cmpMask, mask;
@@ -45,11 +44,11 @@ __simd_vf__ inline void ThresholdGradVF(
         uint32_t rem = count - (uint32_t)i * oneRepeatSize;
         mask = AscendC::Reg::UpdateMask<T>(rem);
         AscendC::Reg::LoadAlign(gradReg, gradAddr, aReg);
-        if (gateMode == 1) {           // 恒透传 grad
+        if (gateMode == 1) { // 恒透传 grad
             dstReg = gradReg;
-        } else if (gateMode == 2) {    // 恒置 0
+        } else if (gateMode == 2) { // 恒置 0
             dstReg = zeroReg;
-        } else {                       // PyTorch: self<=th -> 0 ; 否则(含 NaN, NaN<=th 为 false) grad
+        } else { // PyTorch: self<=th -> 0 ; 否则(含 NaN, NaN<=th 为 false) grad
             AscendC::Reg::LoadAlign(selfReg, selfAddr, aReg);
             AscendC::Reg::Compares<T, AscendC::CMPMODE::LE>(cmpMask, selfReg, threshold, mask);
             AscendC::Reg::Select<T>(dstReg, zeroReg, gradReg, cmpMask);
@@ -64,13 +63,12 @@ __simd_vf__ inline void ThresholdGradVF(
 //   按 fp32 VL 步进 (UNPACK_B16: 一拍 128 个 b16 -> 128 个 fp32, mask 与 b16 lane 1:1)。
 // ============================================================
 template <typename T>
-__simd_vf__ inline void ThresholdGradVFb16(
-    __ubuf__ T* dstAddr, __ubuf__ T* selfAddr, __ubuf__ T* gradAddr,
-    float threshold, uint32_t count, uint32_t vlF, uint16_t repeatTimes)
+__simd_vf__ inline void ThresholdGradVFb16(__ubuf__ T* dstAddr, __ubuf__ T* selfAddr, __ubuf__ T* gradAddr,
+                                           float threshold, uint32_t count, uint32_t vlF, uint16_t repeatTimes)
 {
-    static constexpr AscendC::Reg::CastTrait kToFp32{
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_NONE };
+    static constexpr AscendC::Reg::CastTrait kToFp32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING,
+                                                     AscendC::RoundMode::CAST_NONE};
     AscendC::Reg::RegTensor<T> selfReg, gradReg, zeroReg, dstReg;
     AscendC::Reg::RegTensor<float> selfF;
     AscendC::Reg::MaskReg cmpMask, mask;
@@ -91,8 +89,8 @@ __simd_vf__ inline void ThresholdGradVFb16(
 // ============================================================
 // Kernel 侧辅助函数 (int64_t* 版本)
 // ============================================================
-__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail,
-    int64_t& start, int64_t& end)
+__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail, int64_t& start,
+                                    int64_t& end)
 {
     if (core_id < cores_tail) {
         start = core_id * (tiles_main + 1);
@@ -108,11 +106,14 @@ __aicore__ inline int64_t GetUBSplitRange(int64_t a_o_off, int64_t a_o, int64_t 
     return (a_o_off == a_o - 1) ? a_i_tail : a_i;
 }
 
-__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape,
-    int64_t rank, int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
+__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape, int64_t rank,
+                                            int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
 {
-    for (int64_t d = 0; d < rank; d++) eff_coord[d] = 0;
-    if (a_o <= 0) { return false; }
+    for (int64_t d = 0; d < rank; d++)
+        eff_coord[d] = 0;
+    if (a_o <= 0) {
+        return false;
+    }
     int64_t a_o_off = flat % a_o;
     int64_t outer = flat / a_o;
     for (int64_t d = split_axis - 1; d >= 0; d--) {
@@ -126,7 +127,8 @@ __aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro
 __aicore__ inline int64_t CalcOffset(const int64_t* eff_coord, const int64_t* strides, int64_t rank)
 {
     int64_t offset = 0;
-    for (int64_t d = 0; d < rank; d++) offset += eff_coord[d] * strides[d];
+    for (int64_t d = 0; d < rank; d++)
+        offset += eff_coord[d] * strides[d];
     return offset;
 }
 
@@ -136,7 +138,7 @@ __aicore__ inline int64_t CalcOffset(const int64_t* eff_coord, const int64_t* st
 template <typename T, int64_t RANK>
 class ThresholdGradV2DKernel {
     static constexpr int64_t ND = (RANK <= 5) ? RANK : 5;
-    static constexpr uint32_t VL_T   = AscendC::GetVecLen() / sizeof(T);
+    static constexpr uint32_t VL_T = AscendC::GetVecLen() / sizeof(T);
 
     AscendC::TPipe pipe_;
     const ThresholdGradV2DTilingData<RANK>* td_;
@@ -153,16 +155,24 @@ public:
     static constexpr int IN_SELF = 1;
     static constexpr int OUT_Y = 0;
 
-    __aicore__ inline float TypeMin() {
-        if constexpr (std::is_same_v<T, int8_t>)  return -128.0f;
-        if constexpr (std::is_same_v<T, uint8_t>) return 0.0f;
-        if constexpr (std::is_same_v<T, int32_t>) return -2147483648.0f;
+    __aicore__ inline float TypeMin()
+    {
+        if constexpr (std::is_same_v<T, int8_t>)
+            return -128.0f;
+        if constexpr (std::is_same_v<T, uint8_t>)
+            return 0.0f;
+        if constexpr (std::is_same_v<T, int32_t>)
+            return -2147483648.0f;
         return -3.4e38f;
     }
-    __aicore__ inline float TypeMax() {
-        if constexpr (std::is_same_v<T, int8_t>)  return 127.0f;
-        if constexpr (std::is_same_v<T, uint8_t>) return 255.0f;
-        if constexpr (std::is_same_v<T, int32_t>) return 2147483647.0f;
+    __aicore__ inline float TypeMax()
+    {
+        if constexpr (std::is_same_v<T, int8_t>)
+            return 127.0f;
+        if constexpr (std::is_same_v<T, uint8_t>)
+            return 255.0f;
+        if constexpr (std::is_same_v<T, int32_t>)
+            return 2147483647.0f;
         return 3.4e38f;
     }
 
@@ -171,9 +181,12 @@ public:
     {
         td_ = td;
         threshold_ = td_->threshold;
-        for (int i = 0; i < kMaxInputSlots; i++) gmIn_[i].SetGlobalBuffer((__gm__ T*)inputs[i]);
-        for (int i = 0; i < kMaxOutputSlots; i++) gmOut_[i].SetGlobalBuffer((__gm__ T*)outputs[i]);
-        for (int i = 0; i < kPhysNodes; i++) pipe_.InitBuffer(buf_[i], td_->per_buf_bytes);
+        for (int i = 0; i < kMaxInputSlots; i++)
+            gmIn_[i].SetGlobalBuffer((__gm__ T*)inputs[i]);
+        for (int i = 0; i < kMaxOutputSlots; i++)
+            gmOut_[i].SetGlobalBuffer((__gm__ T*)outputs[i]);
+        for (int i = 0; i < kPhysNodes; i++)
+            pipe_.InitBuffer(buf_[i], td_->per_buf_bytes);
 
         const int64_t* dstShape = td_->max_bro_shape;
         int64_t k = td_->split.axis;
@@ -182,20 +195,20 @@ public:
             int64_t inner = 1;
             int64_t nd = 0;
             for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {
-                nddmaParams_[inp].loopInfo.loopSize[nd]      = (d == k) ? 0 : dstShape[d];
+                nddmaParams_[inp].loopInfo.loopSize[nd] = (d == k) ? 0 : dstShape[d];
                 nddmaParams_[inp].loopInfo.loopSrcStride[nd] = td_->input_strides[inp][d];
                 nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd]    = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd]    = 0;
+                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
                 inner *= (d == k) ? td_->split.a_i : dstShape[d];
                 nd++;
             }
             for (; nd < ND; nd++) {
-                nddmaParams_[inp].loopInfo.loopSize[nd]      = 1;
+                nddmaParams_[inp].loopInfo.loopSize[nd] = 1;
                 nddmaParams_[inp].loopInfo.loopSrcStride[nd] = 0;
                 nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd]    = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd]    = 0;
+                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
             }
             nddmaOuterIters_[inp] = 1;
             for (int64_t d = k; d < RANK - nddma_dims_; d++)
@@ -203,10 +216,7 @@ public:
         }
     }
 
-    __aicore__ inline void Process()
-    {
-        ProcessNative();
-    }
+    __aicore__ inline void Process() { ProcessNative(); }
 
 private:
     // ============================================================
@@ -214,8 +224,8 @@ private:
     // ============================================================
     __aicore__ inline void ProcessNative()
     {
-        int32_t evMTE2toV    = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
-        int32_t evVtoMTE3    = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+        int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+        int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
 
         int64_t start, end;
@@ -223,33 +233,36 @@ private:
 
         constexpr int B0 = 0, B1 = 1, B2 = 2;
         int64_t inner_count = 1;
-        for (int64_t d = td_->split.axis + 1; d < RANK; d++) inner_count *= td_->max_bro_shape[d];
+        for (int64_t d = td_->split.axis + 1; d < RANK; d++)
+            inner_count *= td_->max_bro_shape[d];
 
         int64_t coord[8] = {};
         for (int64_t flat = start; flat < end; flat++) {
-            int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o,
-                                              td_->split.a_i, td_->split.a_i_tail);
+            int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o, td_->split.a_i,
+                                              td_->split.a_i_tail);
             int64_t count = a_i_seg * inner_count;
-            FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK,
-                                 td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
+            FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK, td_->split.axis, td_->split.a_i, td_->split.a_o,
+                                 coord);
 
-            if (flat != start) AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+            if (flat != start)
+                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
 
-            CopyInBrc(coord, IN_SELF, B0, a_i_seg);  // self → B0
+            CopyInBrc(coord, IN_SELF, B0, a_i_seg); // self → B0
             AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            CopyInBrc(coord, IN_GRAD, B1, a_i_seg);  // grad → B1
+            CopyInBrc(coord, IN_GRAD, B1, a_i_seg); // grad → B1
             AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
 
-            int gateMode = 0;  // 0=比较, 1=全透传, 2=全置0
+            int gateMode = 0; // 0=比较, 1=全透传, 2=全置0
             T thT = ResolveThreshold(gateMode);
             ComputeThresholdGrad(B0, B1, B2, thT, gateMode, count);
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
             CopyOutOne(coord, OUT_Y, B2, a_i_seg);
-            if (flat != end - 1) AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+            if (flat != end - 1)
+                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
         }
     }
 
@@ -257,17 +270,22 @@ private:
     //   th<type_min -> 恒透传(gateMode=1); th>=type_max -> 恒置0(gateMode=2); 范围内取 floor(th) 整型比较。
     __aicore__ inline T ResolveThreshold(int& gateMode)
     {
-        if constexpr (std::is_same_v<T, float> || std::is_same_v<T, half> ||
-                      std::is_same_v<T, bfloat16_t>) {
+        if constexpr (std::is_same_v<T, float> || std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
             // 浮点: threshold(float) 直接转 T 原生比较 (含 NaN 透传: self<=th 置0)
             return static_cast<T>(threshold_);
         } else {
             // 整型: float 阈值可能超出 T 范围; 范围内向零截断 (trunc) 与 PyTorch 整型 cast 对齐, 非 floor。
             //   golden 先把 float 阈值 cast 成整型 T (C 截断) 再比 self<=(T)th; 对负非整阈值 trunc≠floor。
             //   例: th=-0.13, int8 self=0 时 PyTorch 比 0<=(int8)(-0.13)=0 -> true 置0; floor 得 -1 会误透传。
-            if (threshold_ < TypeMin()) { gateMode = 1; return static_cast<T>(0); }
-            if (threshold_ >= TypeMax()) { gateMode = 2; return static_cast<T>(0); }
-            return static_cast<T>((int64_t)threshold_);  // 向零截断 (trunc)
+            if (threshold_ < TypeMin()) {
+                gateMode = 1;
+                return static_cast<T>(0);
+            }
+            if (threshold_ >= TypeMax()) {
+                gateMode = 2;
+                return static_cast<T>(0);
+            }
+            return static_cast<T>((int64_t)threshold_); // 向零截断 (trunc)
         }
     }
 
@@ -280,18 +298,14 @@ private:
                 constexpr uint32_t VL_F = AscendC::GetVecLen() / sizeof(float);
                 uint16_t repF = AscendC::CeilDivision(count, VL_F);
                 asc_vf_call<ThresholdGradVFb16<T>>(
-                    (__ubuf__ T*)buf_[b2].Get<T>().GetPhyAddr(),
-                    (__ubuf__ T*)buf_[b0].Get<T>().GetPhyAddr(),
-                    (__ubuf__ T*)buf_[b1].Get<T>().GetPhyAddr(),
-                    threshold_, count, VL_F, repF);
+                    (__ubuf__ T*)buf_[b2].Get<T>().GetPhyAddr(), (__ubuf__ T*)buf_[b0].Get<T>().GetPhyAddr(),
+                    (__ubuf__ T*)buf_[b1].Get<T>().GetPhyAddr(), threshold_, count, VL_F, repF);
                 return;
             }
         }
-        asc_vf_call<ThresholdGradVF<T>>(
-            (__ubuf__ T*)buf_[b2].Get<T>().GetPhyAddr(),
-            (__ubuf__ T*)buf_[b0].Get<T>().GetPhyAddr(),
-            (__ubuf__ T*)buf_[b1].Get<T>().GetPhyAddr(),
-            thT, gateMode, count, VL_T, rep);
+        asc_vf_call<ThresholdGradVF<T>>((__ubuf__ T*)buf_[b2].Get<T>().GetPhyAddr(),
+                                        (__ubuf__ T*)buf_[b0].Get<T>().GetPhyAddr(),
+                                        (__ubuf__ T*)buf_[b1].Get<T>().GetPhyAddr(), thT, gateMode, count, VL_T, rep);
     }
 
     // ============================================================
@@ -307,13 +321,14 @@ private:
         int64_t k_nd = RANK - 1 - k;
         int64_t inner = 1;
         for (int64_t nd = 0; nd < ND; nd++) {
-            if (nd == k_nd) params.loopInfo.loopSize[nd] = a_i_seg;
+            if (nd == k_nd)
+                params.loopInfo.loopSize[nd] = a_i_seg;
             params.loopInfo.loopDstStride[nd] = inner;
             inner *= params.loopInfo.loopSize[nd];
         }
 
-        static constexpr AscendC::NdDmaConfig cfg = { false, AscendC::NdDmaConfig::unsetPad,
-                                                       AscendC::NdDmaConfig::unsetPad, false };
+        static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad,
+                                                     AscendC::NdDmaConfig::unsetPad, false};
         if constexpr (RANK <= 5) {
             AscendC::DataCopy<T, ND, cfg>(buf_[slot].Get<T>(), gmIn_[inputIdx][off], params);
         } else {
@@ -338,14 +353,15 @@ private:
     {
         int64_t off = CalcOffset(coord, td_->output_strides[outputIdx], RANK);
         int64_t inner_elems = 1;
-        for (int64_t d = td_->split.axis + 1; d < RANK; d++) inner_elems *= td_->output_shapes[outputIdx][d];
+        for (int64_t d = td_->split.axis + 1; d < RANK; d++)
+            inner_elems *= td_->output_shapes[outputIdx][d];
         int64_t cnt = a_i_seg * inner_elems;
 
         AscendC::DataCopyExtParams extParams;
         extParams.blockCount = 1;
-        extParams.blockLen   = cnt * sizeof(T);
-        extParams.srcStride  = 0;
-        extParams.dstStride  = 0;
+        extParams.blockLen = cnt * sizeof(T);
+        extParams.srcStride = 0;
+        extParams.dstStride = 0;
         AscendC::DataCopyPad(gmOut_[outputIdx][off], buf_[slot].Get<T>(), extParams);
     }
 };

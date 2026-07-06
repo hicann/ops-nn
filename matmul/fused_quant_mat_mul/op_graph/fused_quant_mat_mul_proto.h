@@ -30,8 +30,9 @@ namespace ge {
 * The format only supports ND in a4w4 scenario if fused_op_type is "gelu_erf" or "gelu_tanh".
 * The data type supports int8/int4. The k, n value must be in [1, 65535], k0 should be 16, n0 should be 64.
 * @li bias: An Optional Tensor.
-* The shape supports (1,), (n,) or (batch, 1, n), format supports ND, the type supports int32, bfloat16, float16 and float32, swiglu type is not supported yet.
-* @li x1_scale: An Optional Tensor for quantization parameters. 
+* The shape supports (1,), (n,) or (batch, 1, n), format supports ND, the type supports int32, bfloat16, float16 and
+float32, swiglu type is not supported yet.
+* @li x1_scale: An Optional Tensor for quantization parameters.
 * The type supports float32, format supports ND if fused_op_type is "gelu_erf" or "gelu_tanh".
 * @li x2_scale: An Optional Tensor for quantization parameters.
 * The type supports uint64, int64, float32, bfloat16, format supports ND.

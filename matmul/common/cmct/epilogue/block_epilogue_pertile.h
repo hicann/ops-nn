@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -27,10 +27,9 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-#define QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS                                              \
-    template <                                                                                      \
-        typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_, typename DataTypeBias_, \
-        typename DataTypeX1Scale_, typename DataTypeX2Scale_, typename LayoutX1Scale_, typename LayoutX2Scale_>
+#define QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS                                                    \
+    template <typename L0TileShape_, typename DataTypeOut_, typename DataTypeIn_, typename DataTypeBias_, \
+              typename DataTypeX1Scale_, typename DataTypeX2Scale_, typename LayoutX1Scale_, typename LayoutX2Scale_>
 #define QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS                                                           \
     L0TileShape_, DataTypeOut_, DataTypeIn_, DataTypeBias_, DataTypeX1Scale_, DataTypeX2Scale_, LayoutX1Scale_, \
         LayoutX2Scale_
@@ -154,8 +153,8 @@ private:
                                         uint16_t mSize, uint32_t nSize0, uint32_t nSize1, X2ScaleType x2Scale0,
                                         X2ScaleType x2Scale1);
     template <uint32_t ndNum>
-    __aicore__ inline void AddBias(
-        __ubuf__ CalcType* mmAdd, __ubuf__ BiasType* bias, uint16_t mSize, uint32_t nSize0, uint32_t nSize1);
+    __aicore__ inline void AddBias(__ubuf__ CalcType* mmAdd, __ubuf__ BiasType* bias, uint16_t mSize, uint32_t nSize0,
+                                   uint32_t nSize1);
     __aicore__ inline void AivPostProcess(const AscendC::LocalTensor<CalcType>& mmAddUb);
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<YType>& ubRes, uint16_t eventId, uint16_t blkCount,
                                    uint32_t blkLen, uint32_t srcStride, uint32_t dstStride, uint64_t yOffset);
@@ -227,22 +226,23 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
 
     isPertile_ = params_->groupSizeM == 1;
     if (isPertile_) {
-        constexpr uint32_t x1ScaleUbOffset =
-            (AscendC::IsSameType<CType, YType>::value) ? afterAddOffset : afterAddOffset + elems * sizeof(YType);
+        constexpr uint32_t x1ScaleUbOffset = (AscendC::IsSameType<CType, YType>::value) ?
+                                                 afterAddOffset :
+                                                 afterAddOffset + elems * sizeof(YType);
         x1ScaleUbPing_ = AscendC::LocalTensor<X1ScaleType>(AscendC::TPosition::VECCALC, x1ScaleUbOffset,
                                                            PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K);
         x1ScaleUbPong_ = AscendC::LocalTensor<X1ScaleType>(
-            AscendC::TPosition::VECCALC, x1ScaleUbOffset + PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K * sizeof(X1ScaleType),
+            AscendC::TPosition::VECCALC,
+            x1ScaleUbOffset + PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K * sizeof(X1ScaleType),
             PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K);
         if (params->isBias == 1) {
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(
-                biasPingPongID_);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(biasPingPongID_);
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(biasPingPongID_ ^ 1);
             isBias_ = true;
-            constexpr uint32_t afterx1ScaleUbOffset =
-                x1ScaleUbOffset + 2 * PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K * sizeof(X1ScaleType);
-            biasUbPing_ =
-                AscendC::LocalTensor<BiasType>(AscendC::TPosition::VECCALC, afterx1ScaleUbOffset, PER_BLOCK_SIZE);
+            constexpr uint32_t afterx1ScaleUbOffset = x1ScaleUbOffset +
+                                                      2 * PER_BLOCK_SIZE * QBMM_MAX_STEP_SCALEA_K * sizeof(X1ScaleType);
+            biasUbPing_ = AscendC::LocalTensor<BiasType>(AscendC::TPosition::VECCALC, afterx1ScaleUbOffset,
+                                                         PER_BLOCK_SIZE);
             biasUbPong_ = AscendC::LocalTensor<BiasType>(
                 AscendC::TPosition::VECCALC, afterx1ScaleUbOffset + PER_BLOCK_SIZE * sizeof(BiasType), PER_BLOCK_SIZE);
         }
@@ -360,9 +360,8 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
         bias4N1Gm2UbParams.blockLen = validN1Align;
         bias4N1Gm2UbParams.srcStride = 0;
         bias4N1Gm2UbParams.dstStride = 0;
-        AscendC::DataCopyPad(
-            biasUb[Align(ubParams_.validN[0], UB_ALIGN_SIZE / sizeof(BiasType))], biasGlobal_[ubParams_.offsetBias[1]],
-            bias4N1Gm2UbParams, padParams);
+        AscendC::DataCopyPad(biasUb[Align(ubParams_.validN[0], UB_ALIGN_SIZE / sizeof(BiasType))],
+                             biasGlobal_[ubParams_.offsetBias[1]], bias4N1Gm2UbParams, padParams);
     }
     AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(biasPingPongID_);
     AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(biasPingPongID_);
@@ -417,15 +416,16 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
 QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::UpdatePertileUBParam()
 {
-    ubParams_.CopyOutWithSplitN =
-        Get<MNK_N>(actualSingleShape_) > params_->groupSizeN || Get<MNK_M>(actualSingleShape_) == 1;
+    ubParams_.CopyOutWithSplitN = Get<MNK_N>(actualSingleShape_) > params_->groupSizeN ||
+                                  Get<MNK_M>(actualSingleShape_) == 1;
     uint32_t fixpipeN = 0;
     if (ubParams_.CopyOutWithSplitN) {
         // (m * n/2) is written to 2 UB, n must be multiples of 32
         // | AIV0 singleN | AIV1 singleN | AIV0 singleN | AIV1 singleN |, max(singleN) = 64
         ubParams_.ndNum = Get<MNK_N>(actualSingleShape_) > UB_TWO_BANK_ELEMS_B32 ? 2 : 1; // 2: 2 ND
-        int64_t alignedNBase =
-            Get<MNK_N>(actualSingleShape_) > PER_BLOCK_SIZE ? PER_BLOCK_SIZE : AscendC::ONE_BLK_SIZE * ubParams_.ndNum;
+        int64_t alignedNBase = Get<MNK_N>(actualSingleShape_) > PER_BLOCK_SIZE ?
+                                   PER_BLOCK_SIZE :
+                                   AscendC::ONE_BLK_SIZE * ubParams_.ndNum;
         fixpipeN = Align(Get<MNK_N>(actualSingleShape_), static_cast<uint64_t>(alignedNBase)) / ubParams_.ndNum;
         ubParams_.singleN = fixpipeN / static_cast<uint32_t>(AscendC::GetTaskRation());
         ubParams_.singleM = Get<MNK_M>(actualSingleShape_);
@@ -484,8 +484,9 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
 QBMM_BLOCK_EPILOGUE_PERTILE_CLASS_LOCAL_PARAMS
 template <class T>
 __aicore__ inline __ubuf__ T*
-BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::GetX1ScaleUbAddrPerGroup(
-    int64_t x1ScaleOffset, uint64_t kOffset, uint64_t kElem)
+BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOCAL_PARAMS>::GetX1ScaleUbAddrPerGroup(int64_t x1ScaleOffset,
+                                                                                              uint64_t kOffset,
+                                                                                              uint64_t kElem)
 {
     uint64_t scaleX1GmOffset;
     if constexpr (transA) {
@@ -505,7 +506,7 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
     uint64_t kElem;
     __ubuf__ X1ScaleType* x1ScaleUbAddr;
     X2ScaleType x2Scale[UB_SUB_BANK_NUM];
-    
+
     for (uint64_t kb = 0, kOffset = 0; kb < Get<MNK_K>(problemShape_); kb += params_->baseK, kOffset++) {
         CopyInX2Scale<X2ScaleType>(x2Scale, x2ScaleAddr, kOffset);
         uint64_t x1ScaleKRem = kOffset % x1ScaleKElem;
@@ -634,14 +635,14 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             }
             uint32_t dstUbOffset = offset;
             if constexpr (isFirstKLoop) {
-                AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(dst + dstUbOffset,
-                                                                                                mulScaleOutReg, maskN);
+                AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                    dst + dstUbOffset, mulScaleOutReg, maskN);
             } else {
                 AscendC::MicroAPI::DataCopy(addReg, dst + dstUbOffset);
                 AscendC::MicroAPI::Add(ResReg, mulScaleOutReg, addReg, maskN);
                 // copy out from register to ub
                 AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(dst + dstUbOffset,
-                                                                                                ResReg, maskN);
+                                                                                                   ResReg, maskN);
             }
             // 2 ND
             if constexpr (ndNum == 1) {
@@ -666,14 +667,14 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             }
             dstUbOffset = offset + nSize0;
             if constexpr (isFirstKLoop) {
-                AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(dst + dstUbOffset,
-                                                                                                mulScaleOutReg, maskN);
+                AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                    dst + dstUbOffset, mulScaleOutReg, maskN);
             } else {
                 AscendC::MicroAPI::DataCopy(addReg, dst + dstUbOffset);
                 AscendC::MicroAPI::Add(ResReg, mulScaleOutReg, addReg, maskN);
                 // copy out from register to ub
                 AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(dst + dstUbOffset,
-                                                                                                ResReg, maskN);
+                                                                                                   ResReg, maskN);
             }
         }
     }
@@ -756,8 +757,8 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             AscendC::MicroAPI::MaskReg maskN = AscendC::MicroAPI::UpdateMask<CalcType>(elementNum);
             AscendC::MicroAPI::DataCopy(mmAddReg, mmAdd + mmAddOffset);
             AscendC::MicroAPI::Add(mmAddReg, mmAddReg, biasReg, maskN);
-            AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
-                mmAdd + mmAddOffset, mmAddReg, maskN);
+            AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(mmAdd + mmAddOffset,
+                                                                                               mmAddReg, maskN);
             if constexpr (ndNum == 1) {
                 continue;
             }
@@ -767,8 +768,8 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             AscendC::MicroAPI::DataCopy(biasReg, bias + nSize0);
             AscendC::MicroAPI::DataCopy(mmAddReg, mmAdd + mmAddOffset);
             AscendC::MicroAPI::Add(mmAddReg, mmAddReg, biasReg, maskN);
-            AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
-                mmAdd + mmAddOffset, mmAddReg, maskN);
+            AscendC::MicroAPI::DataCopy<CalcType, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(mmAdd + mmAddOffset,
+                                                                                               mmAddReg, maskN);
         }
     }
 }
@@ -790,13 +791,11 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             auto mmAddUbAddr = reinterpret_cast<__ubuf__ CalcType*>(mmAddUb.GetPhyAddr());
             auto biasUbAddr = reinterpret_cast<__ubuf__ BiasType*>(biasUb.GetPhyAddr());
             if (ubParams_.ndNum == 1) {
-                AddBias<1U>(
-                    (__ubuf__ CalcType*)mmAddUbAddr, (__ubuf__ BiasType*)biasUbAddr, ubParams_.validM,
-                    ubParams_.validN[0], ubParams_.validN[1]);
+                AddBias<1U>((__ubuf__ CalcType*)mmAddUbAddr, (__ubuf__ BiasType*)biasUbAddr, ubParams_.validM,
+                            ubParams_.validN[0], ubParams_.validN[1]);
             } else if (ubParams_.ndNum == 2) {
-                AddBias<2U>(
-                    (__ubuf__ CalcType*)mmAddUbAddr, (__ubuf__ BiasType*)biasUbAddr, ubParams_.validM,
-                    ubParams_.validN[0], ubParams_.validN[1]);
+                AddBias<2U>((__ubuf__ CalcType*)mmAddUbAddr, (__ubuf__ BiasType*)biasUbAddr, ubParams_.validM,
+                            ubParams_.validN[0], ubParams_.validN[1]);
             }
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(biasPingPongID_);
             biasPingPongID_ = biasPingPongID_ ^ 1;
@@ -832,10 +831,9 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
     const AscendC::LocalTensor<YType>& ubRes, uint16_t eventId, uint16_t blkCount, uint32_t blkLen, uint32_t srcStride,
     uint32_t dstStride, uint64_t yOffset)
 {
-    AscendC::DataCopyExtParams copyParams{
-        blkCount, static_cast<uint32_t>(blkLen * sizeof(YType)),
-        static_cast<uint32_t>(srcStride * sizeof(YType) / AscendC::ONE_BLK_SIZE),
-        static_cast<uint32_t>(dstStride * sizeof(YType)), 0};
+    AscendC::DataCopyExtParams copyParams{blkCount, static_cast<uint32_t>(blkLen * sizeof(YType)),
+                                          static_cast<uint32_t>(srcStride * sizeof(YType) / AscendC::ONE_BLK_SIZE),
+                                          static_cast<uint32_t>(dstStride * sizeof(YType)), 0};
     AscendC::DataCopyPad<YType>(cGlobal_[yOffset], ubRes, copyParams);
 }
 
@@ -851,14 +849,13 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
             if (mSize[mDbIdx] > 0 && sumN > 0) {
                 auto ubRes = mDbIdx == 0 ? &ubResPing_ : &ubResPong_;
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(mDbIdx);
-                AscendC::Cast(
-                    *ubRes, mmAddUb[mDbIdx * mSizePing * UB_TWO_BANK_ELEMS_B32], AscendC::RoundMode::CAST_RINT,
-                    mSize[mDbIdx] * UB_TWO_BANK_ELEMS_B32);
+                AscendC::Cast(*ubRes, mmAddUb[mDbIdx * mSizePing * UB_TWO_BANK_ELEMS_B32],
+                              AscendC::RoundMode::CAST_RINT, mSize[mDbIdx] * UB_TWO_BANK_ELEMS_B32);
                 AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(mDbIdx);
                 AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(mDbIdx);
-                CopyOut(
-                    *ubRes, mDbIdx, mSize[mDbIdx], sumN, UB_TWO_BANK_ELEMS_B32 - sumN, Get<MNK_N>(problemShape_) - sumN,
-                    ubParams_.offsetY[0] + mDbIdx * mSizePing * Get<MNK_N>(problemShape_));
+                CopyOut(*ubRes, mDbIdx, mSize[mDbIdx], sumN, UB_TWO_BANK_ELEMS_B32 - sumN,
+                        Get<MNK_N>(problemShape_) - sumN,
+                        ubParams_.offsetY[0] + mDbIdx * mSizePing * Get<MNK_N>(problemShape_));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(mDbIdx);
             }
         }
@@ -889,4 +886,3 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

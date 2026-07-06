@@ -29,10 +29,7 @@ extern "C" __global__ __aicore__ void celu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR work
 
 class celu_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "celu_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "celu_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "celu_v2_test TearDown\n" << endl;

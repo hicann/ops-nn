@@ -20,8 +20,7 @@
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::NN::Optiling;
 
 constexpr uint64_t MAX_THREAD = 1024;
@@ -46,20 +45,14 @@ END_TILING_DATA_DEF;
 // simt template ascendc tools
 REGISTER_TILING_DATA_CLASS(NLLLossGrad, NLLLossGradSimtTilingData)
 
-class NLLLossGradSimtTiling : public TilingBaseClass
-{
+class NLLLossGradSimtTiling : public TilingBaseClass {
 public:
-    explicit NLLLossGradSimtTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit NLLLossGradSimtTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
     uint64_t maxThread_{MAX_THREAD};
     uint64_t coreNum_{1};
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
@@ -90,11 +83,11 @@ private:
 };
 
 struct NLLLossGradCompileInfo {
-  int64_t reduction = 2;
-  int64_t ub_size = 1;
-  int64_t block_dim = 1;
-  int64_t core_num {1};
-  uint32_t max_thread{1024};
+    int64_t reduction = 2;
+    int64_t ub_size = 1;
+    int64_t block_dim = 1;
+    int64_t core_num{1};
+    uint32_t max_thread{1024};
 };
-}  // namespace optiling
-#endif  // OPS_LOSS_NLL_LOSS_GRAD_OP_HOST_NLL_LOSS_GRAD_TILING_ARCH35_H_
+} // namespace optiling
+#endif // OPS_LOSS_NLL_LOSS_GRAD_OP_HOST_NLL_LOSS_GRAD_TILING_ARCH35_H_

@@ -35,7 +35,7 @@ uint32_t FLOAT16_DTYPE_BYTES = 2;
 constexpr uint32_t BATCH_MODE = 1;
 class ChamferDistanceGradTiling {
 public:
-    explicit ChamferDistanceGradTiling(gert::TilingContext* context) : TilingContext(context) {};
+    explicit ChamferDistanceGradTiling(gert::TilingContext* context) : TilingContext(context){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint();
@@ -100,8 +100,8 @@ ge::graphStatus ChamferDistanceGradTiling::RunKernelTiling()
     size_t sysWorkspaceSize = WORKSPACE_16MBYTE_SIZE;
     size_t* currentWorkspace = TilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
-    TilingData.SaveToBuffer(
-        TilingContext->GetRawTilingData()->GetData(), TilingContext->GetRawTilingData()->GetCapacity());
+    TilingData.SaveToBuffer(TilingContext->GetRawTilingData()->GetData(),
+                            TilingContext->GetRawTilingData()->GetCapacity());
     TilingContext->GetRawTilingData()->SetDataSize(TilingData.GetDataSize());
     TilingDataPrint();
     TilingContext->SetScheduleMode(BATCH_MODE);
@@ -135,16 +135,14 @@ static ge::graphStatus TilingPrepareForChamferDistanceGrad(gert::TilingParseCont
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "TilingPrepareForChamferDistanceGrad end.");
     return ge::GRAPH_SUCCESS;
 }

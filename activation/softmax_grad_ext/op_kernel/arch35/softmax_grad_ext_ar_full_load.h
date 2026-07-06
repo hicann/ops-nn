@@ -37,13 +37,10 @@ static constexpr uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 template <typename T>
 class SoftmaxGradExtAR : public SoftmaxGradExtBase {
 public:
-    __aicore__ inline SoftmaxGradExtAR(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline SoftmaxGradExtAR(TPipe* pipe) { pipe_ = pipe; };
 
-    __aicore__ inline void Init(
-        GM_ADDR x0, GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const SoftmaxGradExtARTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                const SoftmaxGradExtARTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -52,10 +49,10 @@ private:
 
     __aicore__ inline void NormCompute(const int64_t aSize);
 
-    __aicore__ inline void NormComputePost(
-        const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor, const LocalTensor<T>& x1Tensor,
-        const LocalTensor<T>& x2Tensor, const LocalTensor<float>& binAddTmpTensor, const int64_t aSize,
-        const int64_t rSize, const int64_t stride);
+    __aicore__ inline void NormComputePost(const LocalTensor<T>& dstTensor, const LocalTensor<T>& x0Tensor,
+                                           const LocalTensor<T>& x1Tensor, const LocalTensor<T>& x2Tensor,
+                                           const LocalTensor<float>& binAddTmpTensor, const int64_t aSize,
+                                           const int64_t rSize, const int64_t stride);
 
     __aicore__ inline void NormComputeSmallR(const int64_t aSize);
 
@@ -63,11 +60,11 @@ private:
 
     __aicore__ inline void CopyOutY(int64_t ubA, int64_t offset);
 
-    __aicore__ inline void StoreTensorForDtypeTOut(
-        __local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset);
+    __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg,
+                                                   uint32_t offset);
 
-    __aicore__ inline void LoadTensorForDtypeTIn(
-        __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset);
+    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg,
+                                                 uint32_t offset);
 
 private:
     /* global memory address */
@@ -89,8 +86,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void SoftmaxGradExtAR<T>::Init(
-    GM_ADDR x0, GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const SoftmaxGradExtARTilingData* tilingData)
+__aicore__ inline void SoftmaxGradExtAR<T>::Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                 const SoftmaxGradExtARTilingData* tilingData)
 {
     tl_ = tilingData;
 
@@ -173,8 +170,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormComputeSmallR(const int64_t aSiz
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2, reg3, reg4;               // 向量寄存器
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count); // 用于当前计算的数据长度
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>(); // 用于全部元素的掩码
+            AscendC::MicroAPI::MaskReg pFull = AscendC::MicroAPI::CreateMask<
+                float, AscendC::MicroAPI::MaskPattern::ALL>(); // 用于全部元素的掩码
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 LoadTensorForDtypeTIn(x0, reg0, pMask, i * rAligned);
@@ -207,8 +204,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormComputeSmallR(const int64_t aSiz
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg0_1, reg1_1, reg2, reg2_1, reg3, reg3_1, reg4, reg4_1;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 LoadTensorForDtypeTIn(x0, reg0, pFull, i * rAligned);
@@ -307,9 +304,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormCompute(const int64_t aSize)
                 LoadTensorForDtypeTIn(foldX0B, reg1, pFull, i * outerLoopStride + j * innerLoopStride);
 
                 LoadTensorForDtypeTIn(foldX1A, reg0_1, pFull, i * outerLoopStride + j * innerLoopStride);
-                LoadTensorForDtypeTIn(
-                    foldX1B, reg1_1, pFull,
-                    i * outerLoopStride + j * innerLoopStride); // 创建多个寄存器用于临时存储数据
+                LoadTensorForDtypeTIn(foldX1B, reg1_1, pFull,
+                                      i * outerLoopStride + j * innerLoopStride); // 创建多个寄存器用于临时存储数据
 
                 Mul(reg2, reg0, reg0_1, pFull);
                 Mul(reg2_1, reg1, reg1_1, pFull);
@@ -317,8 +313,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormCompute(const int64_t aSize)
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
                     reg2, reg2, reg2_1, pFull); // 将结果相加存储在reg2，使用zeroing模式，未参与计算的元素置为0
                 ReduceSum(reg2, reg2, pFull); // 对reg2中的数据进行求和
-                AscendC::MicroAPI::DataCopyUnAlign(
-                    (__local_mem__ float*&)dst, reg2, UReg, 1); // 将结果拷贝到dst，使用未对齐拷贝
+                AscendC::MicroAPI::DataCopyUnAlign((__local_mem__ float*&)dst, reg2, UReg,
+                                                   1); // 将结果拷贝到dst，使用未对齐拷贝
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; j++) { // 尾部折叠循环
                 uint32_t count = static_cast<uint32_t>(tailFoldElemCount);
@@ -388,8 +384,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormComputePost(
         {
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2, reg3, reg4;
-            AscendC::MicroAPI::MaskReg pMask =
-                AscendC::MicroAPI::UpdateMask<float>(count); // 创建一个掩码寄存器pMask，并根据count的值进行更新
+            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(
+                count); // 创建一个掩码寄存器pMask，并根据count的值进行更新
             AscendC::MicroAPI::MaskReg pFull = AscendC::MicroAPI::CreateMask<
                 float, AscendC::MicroAPI::MaskPattern::ALL>(); // 创建一个掩码寄存器pFull，并将其设置为全掩码模式
             AscendC::MicroAPI::MaskReg maskOri;
@@ -426,8 +422,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormComputePost(
         {
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> reg0, reg1, reg2, reg3, reg4;
-            AscendC::MicroAPI::MaskReg pMask =
-                AscendC::MicroAPI::UpdateMask<float>(count); // 创建一个掩码寄存器pMask，并根据count的值进行更新
+            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(
+                count); // 创建一个掩码寄存器pMask，并根据count的值进行更新
             AscendC::MicroAPI::MaskReg pFull = AscendC::MicroAPI::CreateMask<
                 float, AscendC::MicroAPI::MaskPattern::ALL>(); // 创建一个掩码寄存器pFull，并将其设置为全掩码模式
             AscendC::MicroAPI::MaskReg maskOri;
@@ -459,8 +455,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::NormComputePost(
 }
 
 template <typename T>
-__aicore__ inline void SoftmaxGradExtAR<T>::LoadTensorForDtypeTIn(
-    __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+__aicore__ inline void SoftmaxGradExtAR<T>::LoadTensorForDtypeTIn(__local_mem__ T* src, RegTensor<float>& dst,
+                                                                  MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
@@ -491,9 +487,8 @@ __aicore__ inline void SoftmaxGradExtAR<T>::CopyInX(int64_t ubA, int64_t offset)
 
     if (tl_->x2IsScalar == 1) {
         LocalTensor<T> x2InUb = x2Queue_.AllocTensor<T>();
-        DataCopyExtParams copyParams{
-            static_cast<uint16_t>(1), static_cast<uint32_t>(sizeof(T)), static_cast<uint32_t>(0),
-            static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+        DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(sizeof(T)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
         DataCopyPadExtParams<T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0.0)};
         DataCopyPad<T>(x2InUb, x2Gm_[0], copyParams, padParams);
         x2Queue_.EnQue(x2InUb);
@@ -508,8 +503,9 @@ __aicore__ inline void SoftmaxGradExtAR<T>::CopyInX(int64_t ubA, int64_t offset)
 }
 
 template <typename T>
-__aicore__ inline void SoftmaxGradExtAR<T>::StoreTensorForDtypeTOut(
-    __local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+__aicore__ inline void SoftmaxGradExtAR<T>::StoreTensorForDtypeTOut(__local_mem__ T* dst,
+                                                                    AscendC::MicroAPI::RegTensor<float>& src,
+                                                                    AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
         DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);

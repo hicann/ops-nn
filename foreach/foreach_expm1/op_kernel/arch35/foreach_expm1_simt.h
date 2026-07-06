@@ -73,12 +73,9 @@ __simt_callee__ inline float ComputeExpm1<float>(float x)
  * \brief SIMT VF kernel: compute expm1 for all elements across all tensors
  */
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachExpm1Simt(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachExpm1Simt(int32_t tensorCount,
+                                                                               __gm__ int64_t* tensorElements,
+                                                                               GM_ADDR xList, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -89,11 +86,9 @@ inline void OpForeachExpm1Simt(
         __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
         __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             yData[idx] = ComputeExpm1<T>(xData[idx]);
@@ -105,24 +100,16 @@ inline void OpForeachExpm1Simt(
  * \brief Process entry: launch SIMT VF for foreach_expm1
  */
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y,
-    const __gm__ ForeachExpm1TilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const __gm__ ForeachExpm1TilingData* tilingGm)
 {
     // Extract tensorElements array pointer from GM tiling data
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachExpm1TilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachExpm1TilingData*>(tilingGm)) +
         offsetof(ForeachExpm1TilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
-    AscendC::Simt::VF_CALL<OpForeachExpm1Simt<T>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        tensorCount,
-        elemCounts,
-        x,
-        y);
+    AscendC::Simt::VF_CALL<OpForeachExpm1Simt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
 }
 
 } // namespace NsForeachExpm1

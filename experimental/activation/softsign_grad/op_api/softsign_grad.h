@@ -28,10 +28,7 @@
 
 namespace l0op {
 
-const aclTensor* SoftsignGrad(
-    const aclTensor* gradients,
-    const aclTensor* features,
-    aclOpExecutor* executor);
+const aclTensor* SoftsignGrad(const aclTensor* gradients, const aclTensor* features, aclOpExecutor* executor);
 
 } // namespace l0op
 

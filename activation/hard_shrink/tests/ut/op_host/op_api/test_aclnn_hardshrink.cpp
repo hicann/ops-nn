@@ -23,14 +23,8 @@ using namespace std;
 
 class l2_hardshrink_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Hardshrink Test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "Hardshrink Test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Hardshrink Test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "Hardshrink Test TearDown" << std::endl; }
 };
 
 TEST_F(l2_hardshrink_test, case_1)
@@ -226,8 +220,8 @@ TEST_F(l2_hardshrink_test, case_14)
 {
     auto tensor_desc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {1, 4, 3}).ValueRange(-20, 20);
     auto lambd = ScalarDesc(1.0f);
-    auto out_tensor_desc =
-        TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {1, 4, 3}).Precision(0.0001, 0.0001);
+    auto out_tensor_desc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {1, 4, 3})
+                               .Precision(0.0001, 0.0001);
 
     auto ut = OP_API_UT(aclnnHardshrink, INPUT(tensor_desc, lambd), OUTPUT(out_tensor_desc));
     // SAMPLE: only test GetWorkspaceSize

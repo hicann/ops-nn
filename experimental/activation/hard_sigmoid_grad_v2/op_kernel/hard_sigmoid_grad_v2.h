@@ -45,7 +45,7 @@ class HardSigmoidGradV2 {
     using ComputeT = typename std::conditional<IS_BF16, float, T>::type;
 
 public:
-    __aicore__ inline HardSigmoidGradV2() {};
+    __aicore__ inline HardSigmoidGradV2(){};
 
     __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
                                 const HardSigmoidGradV2TilingData* tilingData);
@@ -66,8 +66,8 @@ private:
     AscendC::TBuf<AscendC::QuePosition::VECCALC> maskBuf1;
     AscendC::TBuf<AscendC::QuePosition::VECCALC> maskBuf2;
     // Extra float buffers for bf16 path (Cast bf16 -> float -> compute -> Cast back)
-    AscendC::TBuf<AscendC::QuePosition::VECCALC> floatBuf1;  // for selfLocal cast to float
-    AscendC::TBuf<AscendC::QuePosition::VECCALC> floatBuf2;  // for gradLocal cast to float / result
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> floatBuf1; // for selfLocal cast to float
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> floatBuf2; // for gradLocal cast to float / result
 
     AscendC::GlobalTensor<T> gradGM;
     AscendC::GlobalTensor<T> selfGM;
@@ -78,9 +78,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardSigmoidGradV2<T, BUFFER_MODE>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-    const HardSigmoidGradV2TilingData* tilingData)
+__aicore__ inline void HardSigmoidGradV2<T, BUFFER_MODE>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                                               const HardSigmoidGradV2TilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -97,7 +96,8 @@ __aicore__ inline void HardSigmoidGradV2<T, BUFFER_MODE>::Init(
     // Mask buffers: Compares outputs bit mask, 1 bit per element -> ceil(ubLength_/8) bytes
     // Align to 32 bytes
     int64_t maskBytes = (ubLength_ / 8 + 31) / 32 * 32;
-    if (maskBytes < 32) maskBytes = 32;
+    if (maskBytes < 32)
+        maskBytes = 32;
     pipe.InitBuffer(maskBuf1, maskBytes);
     pipe.InitBuffer(maskBuf2, maskBytes);
 
@@ -191,8 +191,7 @@ __aicore__ inline void HardSigmoidGradV2<T, BUFFER_MODE>::Compute(int64_t curren
         AscendC::Muls(gradLocal, gradLocal, oneOverSix, count);
         // Step 5: Select: mask1 ? gradLocal : 0 -> resultLocal
         ComputeT zero = static_cast<ComputeT>(0.0);
-        AscendC::Select(resultLocal, mask1, gradLocal, zero,
-                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, count);
+        AscendC::Select(resultLocal, mask1, gradLocal, zero, AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, count);
     }
 
     outputQueue.template EnQue<T>(resultLocal);
@@ -203,7 +202,8 @@ __aicore__ inline void HardSigmoidGradV2<T, BUFFER_MODE>::Compute(int64_t curren
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardSigmoidGradV2<T, BUFFER_MODE>::Process()
 {
-    if (blockLength_ <= 0) return;  // Empty tensor protection
+    if (blockLength_ <= 0)
+        return; // Empty tensor protection
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {
         int64_t currentNum = (i == (loopCount - 1)) ? (blockLength_ - ubLength_ * i) : ubLength_;

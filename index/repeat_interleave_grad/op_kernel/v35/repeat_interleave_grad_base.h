@@ -34,8 +34,7 @@ constexpr uint64_t BLOCK_SIZE_BYTE = platform::GetUbBlockSize();
 
 namespace __RIGType {
 template <typename DType>
-struct GetPromoteType {
-};
+struct GetPromoteType {};
 
 template <>
 struct GetPromoteType<half> {
@@ -69,15 +68,9 @@ __aicore__ inline T CeilDiv(T x, T y)
     return y == 0 ? x : (x + y - 1) / y;
 }
 
-__aicore__ inline int32_t CalPow2(int32_t index)
-{
-    return 1 << index;
-}
+__aicore__ inline int32_t CalPow2(int32_t index) { return 1 << index; }
 
-__aicore__ inline int32_t min(int32_t a, int32_t b)
-{
-    return a > b ? b : a;
-}
+__aicore__ inline int32_t min(int32_t a, int32_t b) { return a > b ? b : a; }
 
 __aicore__ inline int64_t GetCacheID(const int64_t idx)
 {

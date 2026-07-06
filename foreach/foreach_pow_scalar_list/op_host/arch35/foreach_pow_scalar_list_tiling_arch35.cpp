@@ -44,10 +44,8 @@ static ge::graphStatus ForeachPowScalarListTilingFunc(gert::TilingContext* conte
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -63,13 +61,10 @@ static ge::graphStatus ForeachPowScalarListTilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(ForeachPowScalarListTilingData), 0, sizeof(ForeachPowScalarListTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (tensorNum > MAX_TENSOR_NUM) {
-        OP_LOGE_FOR_INVALID_TENSORNUM(
-            context->GetNodeName(), "x", tensorNum,
-            std::to_string(MAX_TENSOR_NUM).c_str());
+        OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "x", tensorNum, std::to_string(MAX_TENSOR_NUM).c_str());
         return ge::GRAPH_FAILED;
     }
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
@@ -101,14 +96,12 @@ static ge::graphStatus ForeachPowScalarListTilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = static_cast<size_t>(userWorkspaceSize + static_cast<int64_t>(sysWorkspaceSize));
 
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE", ubSize),
+                return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed, ubSize=%lu, DCACHE_SIZE=%u",
-            ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "SetLocalMemorySize failed, ubSize=%lu, DCACHE_SIZE=%u", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
 
     uint64_t tilingKey = 0;
     if (dataType == ge::DT_FLOAT) {
@@ -120,10 +113,8 @@ static ge::graphStatus ForeachPowScalarListTilingFunc(gert::TilingContext* conte
     } else if (dataType == ge::DT_BF16) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_POW_SCALAR_LIST_TPL_SCH_MODE_BF16);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "x",
-            std::to_string(static_cast<int>(dataType)).c_str(),
-            "float, float16, int32 and bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", std::to_string(static_cast<int>(dataType)).c_str(),
+                                  "float, float16, int32 and bfloat16");
         return ge::GRAPH_FAILED;
     }
     context->SetTilingKey(tilingKey);
@@ -131,8 +122,7 @@ static ge::graphStatus ForeachPowScalarListTilingFunc(gert::TilingContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForForeachPowScalarList(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachPowScalarList([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

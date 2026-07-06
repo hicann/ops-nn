@@ -25,8 +25,8 @@ static ge::graphStatus InferShapeForApplyMomentum(gert::InferShapeContext* conte
     OP_LOGD(context, "InferShapeForApplyMomentum begin.");
     ge::graphStatus ret = ge::GRAPH_FAILED;
     ret = Ops::Base::InferShape4Elewise(context);
-    OP_CHECK_IF(ret == ge::GRAPH_FAILED,
-                OP_LOGE(context, "InferShapeForApplyMomentum failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ret == ge::GRAPH_FAILED, OP_LOGE(context, "InferShapeForApplyMomentum failed."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "InferShapeForApplyMomentum end");
     return ret;
 }
@@ -37,7 +37,5 @@ static graphStatus InferDataTypeForApplyMomentum(gert::InferDataTypeContext* con
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ApplyMomentum)
-    .InferShape(InferShapeForApplyMomentum)
-    .InferDataType(InferDataTypeForApplyMomentum);
+IMPL_OP_INFERSHAPE(ApplyMomentum).InferShape(InferShapeForApplyMomentum).InferDataType(InferDataTypeForApplyMomentum);
 } // namespace ops

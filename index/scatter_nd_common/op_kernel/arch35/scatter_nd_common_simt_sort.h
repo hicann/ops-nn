@@ -27,7 +27,8 @@ using namespace AscendC;
 
 // 处理bool类型的更新（无原子操作）
 template <uint8_t Mode, typename PARAMS_T>
-__simt_callee__ __aicore__ inline void ApplyBoolUpdate(__gm__ PARAMS_T* varGmAddr, int64_t varOffset, PARAMS_T value) {
+__simt_callee__ __aicore__ inline void ApplyBoolUpdate(__gm__ PARAMS_T* varGmAddr, int64_t varOffset, PARAMS_T value)
+{
     if constexpr (Mode == MODE_MAX) {
         if (value > 0) {
             varGmAddr[varOffset] = value;
@@ -41,7 +42,8 @@ __simt_callee__ __aicore__ inline void ApplyBoolUpdate(__gm__ PARAMS_T* varGmAdd
 
 // 处理非bool类型的原子更新
 template <uint8_t Mode, typename PARAMS_T>
-__simt_callee__ __aicore__ inline void ApplyAtomicUpdate(__gm__ PARAMS_T* varGmAddr, int64_t varOffset, PARAMS_T value) {
+__simt_callee__ __aicore__ inline void ApplyAtomicUpdate(__gm__ PARAMS_T* varGmAddr, int64_t varOffset, PARAMS_T value)
+{
     if constexpr (Mode == MODE_MAX) {
         Simt::AtomicMax(varGmAddr + varOffset, value);
     } else {
@@ -50,15 +52,15 @@ __simt_callee__ __aicore__ inline void ApplyAtomicUpdate(__gm__ PARAMS_T* varGmA
 }
 
 template <typename INDICES_T, typename PARAMS_T, typename TYPE_T, uint8_t Mode>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut(__gm__ PARAMS_T* varGmAddr,
-    __ubuf__ INDICES_T* indiceLocalAddr, __ubuf__ PARAMS_T* updateLocalAddr, int64_t colLen, uint32_t uniqueIdNum,
-    int64_t updateOffset, int64_t afterAxisFactor, int64_t afterAxis, int64_t varInAxis, TYPE_T magic, TYPE_T shift)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut(
+    __gm__ PARAMS_T* varGmAddr, __ubuf__ INDICES_T* indiceLocalAddr, __ubuf__ PARAMS_T* updateLocalAddr, int64_t colLen,
+    uint32_t uniqueIdNum, int64_t updateOffset, int64_t afterAxisFactor, int64_t afterAxis, int64_t varInAxis,
+    TYPE_T magic, TYPE_T shift)
 {
     for (TYPE_T index = threadIdx.x; index < afterAxisFactor * uniqueIdNum; index += blockDim.x) {
         TYPE_T quotient = Simt::UintDiv(index, magic, shift);
         TYPE_T updateAxisIdx = index - quotient * afterAxisFactor;
-        if (updateAxisIdx < colLen)
-        {
+        if (updateAxisIdx < colLen) {
             INDICES_T varRowIndex = indiceLocalAddr[quotient];
             if (varRowIndex < 0 || varRowIndex >= varInAxis) {
                 continue;
@@ -77,11 +79,10 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void Si
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType, uint8_t Mode>
-class ScatterNdCommonSimtSort : public ScatterNdCommonBase<PARAMS_T, INDICES_T, CAST_T, INDICES_T, castType, Mode>
-{
+class ScatterNdCommonSimtSort : public ScatterNdCommonBase<PARAMS_T, INDICES_T, CAST_T, INDICES_T, castType, Mode> {
 public:
     __aicore__ inline ScatterNdCommonSimtSort(const ScatterNdCommonSimtSortTilingData& tilingData, TPipe& pipe)
-        : tilingData_(tilingData), pipe_(pipe) {};
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void ProcessSplitIndices();
     __aicore__ inline void Process();
@@ -108,13 +109,14 @@ __aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST
     this->eachCoreIndexCount_ = tilingData_.eachCoreIndexCount;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y);
 
-    curCoreIndexCount_ =
-        (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
-                                                                tilingData_.tailCoreIndexCount);
+    curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
+                                                                                 tilingData_.tailCoreIndexCount);
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType, uint8_t Mode>
-__aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType, Mode>::SimtOutUpdate(int64_t rowLen, int64_t colLen, int64_t updateOffset){
+__aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType, Mode>::SimtOutUpdate(
+    int64_t rowLen, int64_t colLen, int64_t updateOffset)
+{
     LocalTensor<INDICES_T> updateSumIdxLocal = this->updateSumIdxQue_.template DeQue<INDICES_T>();
     LocalTensor<PARAMS_T> updatesLocal = this->dataQueue_.template DeQue<PARAMS_T>();
 
@@ -130,13 +132,9 @@ __aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST
     LocalTensor<PARAMS_T> updateSumLocal = this->updateSumQue_.template DeQue<PARAMS_T>();
 
     asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T, Mode>>(
-        Simt::Dim3(THREAD_NUM),
-        (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
-        (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(),
-        (__ubuf__ PARAMS_T*)updateSumLocal.GetPhyAddr(),
-        colLen, uniqueIdNum, updateOffset,
-        afterAxisFactor, afterAxis, varInAxis, magic, shift
-    );
+        Simt::Dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
+        (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)updateSumLocal.GetPhyAddr(), colLen,
+        uniqueIdNum, updateOffset, afterAxisFactor, afterAxis, varInAxis, magic, shift);
 
     this->updateSumQue_.template FreeTensor(updateSumLocal);
     this->dataQueue_.template FreeTensor(updatesLocal);
@@ -144,8 +142,9 @@ __aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType, uint8_t Mode>
-__aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType, Mode>::SimtOutUpdateWithoutSort(
-    int64_t rowLen, int64_t colLen, int64_t updateOffset)
+__aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType,
+                                               Mode>::SimtOutUpdateWithoutSort(int64_t rowLen, int64_t colLen,
+                                                                               int64_t updateOffset)
 {
     LocalTensor<INDICES_T> outOfstLocal = this->outOfstBuf_.template Get<INDICES_T>();
     LocalTensor<PARAMS_T> updatesLocal = this->dataQueue_.template DeQue<PARAMS_T>();
@@ -172,7 +171,8 @@ __aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename CAST_T, uint32_t castType, uint8_t Mode>
-__aicore__ inline void ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType, Mode>::ProcessSplitIndices()
+__aicore__ inline void
+ScatterNdCommonSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T, castType, Mode>::ProcessSplitIndices()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;

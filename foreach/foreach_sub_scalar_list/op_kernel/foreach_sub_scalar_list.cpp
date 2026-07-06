@@ -22,8 +22,8 @@
 using namespace AscendC;
 using namespace Common::OpKernel;
 
-extern "C" __global__ __aicore__ void foreach_sub_scalar_list(
-    GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_sub_scalar_list(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                                              GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

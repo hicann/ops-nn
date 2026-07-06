@@ -30,8 +30,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -58,10 +58,8 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListFrom
     }
 }
 
-static bool CheckNotNull(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef)
+static bool CheckNotNull(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                         const aclTensorList* momentumBufferListOptionalRef)
 {
     OP_CHECK_NULL(paramsRef, return false);
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
@@ -71,7 +69,7 @@ static bool CheckNotNull(
     for (uint64_t i = 0; i < gradsRef->Size(); i++) {
         OP_CHECK_NULL((*gradsRef)[i], return false);
     }
-    if(momentumBufferListOptionalRef != nullptr) {
+    if (momentumBufferListOptionalRef != nullptr) {
         for (uint64_t i = 0; i < momentumBufferListOptionalRef->Size(); i++) {
             OP_CHECK_NULL((*momentumBufferListOptionalRef)[i], return false);
         }
@@ -79,10 +77,8 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckTensorListCount(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef)
+static bool CheckTensorListCount(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                                 const aclTensorList* momentumBufferListOptionalRef)
 {
     auto tensorCount = paramsRef->Size();
     if (tensorCount == 0) {
@@ -100,10 +96,8 @@ static bool CheckTensorListCount(
     return true;
 }
 
-static bool CheckDtype(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef)
+static bool CheckDtype(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                       const aclTensorList* momentumBufferListOptionalRef)
 {
     const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListFromSocVersion();
     auto paramsTensor = (*paramsRef)[0];
@@ -116,7 +110,7 @@ static bool CheckDtype(
             return false;
         }
     }
-    if(momentumBufferListOptionalRef != nullptr) {
+    if (momentumBufferListOptionalRef != nullptr) {
         auto momentumTensor = (*momentumBufferListOptionalRef)[0];
         OP_CHECK_DTYPE_NOT_SUPPORT(momentumTensor, dtypeSupportList, return false);
         OP_CHECK_DTYPE_NOT_SAME(paramsTensor, momentumTensor, return false);
@@ -130,7 +124,7 @@ static bool CheckDtype(
     return true;
 }
 
-static void CheckOptionalTensorListEmpty(const aclTensorList *&tensorList)
+static void CheckOptionalTensorListEmpty(const aclTensorList*& tensorList)
 {
     if (tensorList == nullptr) {
         OP_LOGI("momentumBufferListOptionalRef is nullptr");
@@ -142,7 +136,7 @@ static void CheckOptionalTensorListEmpty(const aclTensorList *&tensorList)
     }
 }
 
-static void CheckOptionalTensorEmpty(const aclTensor *&tensor)
+static void CheckOptionalTensorEmpty(const aclTensor*& tensor)
 {
     if (tensor == nullptr) {
         OP_LOGI("gradScaleOptional is nullptr");
@@ -161,10 +155,8 @@ static void CheckIsFirstStep(bool isFirstStep)
     }
 }
 
-static bool CheckAttr(
-    const aclTensorList *momentumBufferListOptionalRef, 
-    float weightDecay, float momentum, float lr, 
-    float dampening, bool nesterov) 
+static bool CheckAttr(const aclTensorList* momentumBufferListOptionalRef, float weightDecay, float momentum, float lr,
+                      float dampening, bool nesterov)
 {
     if (weightDecay < 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weightDecay[%f] shoule be greater or equal than 0", weightDecay);
@@ -180,30 +172,34 @@ static bool CheckAttr(
     }
     const float EPS = 1e-6f;
     if (nesterov && (momentum <= 0 || std::abs(dampening) >= EPS)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "nesterov[%d] momentum requires a momentum[%f] and zero dampening[%f].", static_cast<int32_t>(nesterov), momentum, dampening);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "nesterov[%d] momentum requires a momentum[%f] and zero dampening[%f].",
+                static_cast<int32_t>(nesterov), momentum, dampening);
         return false;
     }
     if ((momentumBufferListOptionalRef == nullptr && std::abs(momentum) >= EPS)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "momentum[%f] is invalid. momentum shoube be 0 when momentumBufferListOptionalRef is nullptr.", momentum);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "momentum[%f] is invalid. momentum shoube be 0 when momentumBufferListOptionalRef is nullptr.",
+                momentum);
         return false;
     }
     if ((momentumBufferListOptionalRef != nullptr && (momentum < 0.0 || std::abs(momentum) < EPS))) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "momentum[%f] is invalid. momentum shoube be greater than 0 when momentumBufferListOptionalRef is not nullptr.", momentum);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "momentum[%f] is invalid. momentum shoube be greater than 0 when momentumBufferListOptionalRef is not "
+                "nullptr.",
+                momentum);
         return false;
     }
     return true;
 }
 
-static bool CheckShape(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef) 
+static bool CheckShape(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                       const aclTensorList* momentumBufferListOptionalRef)
 {
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
         op::Shape expectShape = (*paramsRef)[i]->GetViewShape();
-        if((*gradsRef)[i]->GetViewShape() != expectShape || 
-            (momentumBufferListOptionalRef != nullptr && 
-            (*momentumBufferListOptionalRef)[i]->GetViewShape() != expectShape)) {
+        if ((*gradsRef)[i]->GetViewShape() != expectShape ||
+            (momentumBufferListOptionalRef != nullptr &&
+             (*momentumBufferListOptionalRef)[i]->GetViewShape() != expectShape)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same shape.");
             return false;
         }
@@ -211,13 +207,12 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef,
-    float weightDecay, float momentum, float lr, float dampening, bool nesterov)
+static aclnnStatus CheckParams(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                               const aclTensorList* momentumBufferListOptionalRef, float weightDecay, float momentum,
+                               float lr, float dampening, bool nesterov)
 {
-    CHECK_RET(CheckAttr(momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening, nesterov), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckAttr(momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening, nesterov),
+              ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckNotNull(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckTensorListCount(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckDtype(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_INVALID);
@@ -229,7 +224,7 @@ const aclTensor* FlattenDims(const aclTensor* tensor, aclOpExecutor* executor)
 {
     op::Shape shapeTensor = tensor->GetViewShape();
     int64_t dimNum = shapeTensor.GetDimNum();
-    
+
     op::Shape newShape;
     int64_t catdimSize = 1;
     for (int64_t i = 0; i < dimNum; i++) {
@@ -243,8 +238,7 @@ const aclTensor* FlattenDims(const aclTensor* tensor, aclOpExecutor* executor)
     return reshapeTensor;
 }
 
-static const aclTensorList* MakeContiguousTensorList(
-    const aclTensorList* tensorList, aclOpExecutor* executor)
+static const aclTensorList* MakeContiguousTensorList(const aclTensorList* tensorList, aclOpExecutor* executor)
 {
     op::FVector<const aclTensor*> contiguousTensors;
     for (uint64_t i = 0; i < tensorList->Size(); i++) {
@@ -259,8 +253,7 @@ static const aclTensorList* MakeContiguousTensorList(
     return executor->AllocTensorList(contiguousTensors.data(), contiguousTensors.size());
 }
 
-static void ViewCopyTensorList(
-    const aclTensorList* src, const aclTensorList* dst, aclOpExecutor* executor)
+static void ViewCopyTensorList(const aclTensorList* src, const aclTensorList* dst, aclOpExecutor* executor)
 {
     uint64_t cnt = 0;
     for (uint64_t i = 0; i < dst->Size(); i++) {
@@ -272,25 +265,16 @@ static void ViewCopyTensorList(
     }
 }
 
-aclnnStatus aclnnFusedSgdGetWorkspaceSize(
-    const aclTensorList *paramsRef,
-    const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef,
-    const aclTensor *gradScaleOptional,
-    float weightDecay,
-    float momentum,
-    float lr,
-    float dampening,
-    bool nesterov,
-    bool maximize,
-    bool isFirstStep,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+aclnnStatus aclnnFusedSgdGetWorkspaceSize(const aclTensorList* paramsRef, const aclTensorList* gradsRef,
+                                          const aclTensorList* momentumBufferListOptionalRef,
+                                          const aclTensor* gradScaleOptional, float weightDecay, float momentum,
+                                          float lr, float dampening, bool nesterov, bool maximize, bool isFirstStep,
+                                          uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFusedSgd,
-        DFX_IN(paramsRef, gradsRef, momentumBufferListOptionalRef, gradScaleOptional,
-               weightDecay, momentum, lr, dampening, nesterov, maximize, isFirstStep),
-        DFX_OUT(paramsRef, gradsRef, momentumBufferListOptionalRef));
+                   DFX_IN(paramsRef, gradsRef, momentumBufferListOptionalRef, gradScaleOptional, weightDecay, momentum,
+                          lr, dampening, nesterov, maximize, isFirstStep),
+                   DFX_OUT(paramsRef, gradsRef, momentumBufferListOptionalRef));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -305,7 +289,8 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(
 
     CheckIsFirstStep(isFirstStep);
 
-    auto ret = CheckParams(paramsRef, gradsRef, momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening, nesterov);
+    auto ret = CheckParams(paramsRef, gradsRef, momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening,
+                           nesterov);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (gradScaleOptional != nullptr) {
@@ -319,22 +304,20 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(
     CHECK_RET(gradsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensorList* momentumContiguous = nullptr;
-    if(momentumBufferListOptionalRef != nullptr) {
+    if (momentumBufferListOptionalRef != nullptr) {
         momentumContiguous = MakeContiguousTensorList(momentumBufferListOptionalRef, uniqueExecutor.get());
     }
 
-    auto [paramsOut, gradsOut, momentumOut] = l0op::FusedSgd(
-        paramsContiguous, gradsContiguous, momentumContiguous,
-        gradScaleOptional,
-        weightDecay, momentum, lr, dampening, nesterov, maximize, isFirstStep,
-        uniqueExecutor.get());
+    auto [paramsOut, gradsOut, momentumOut] = l0op::FusedSgd(paramsContiguous, gradsContiguous, momentumContiguous,
+                                                             gradScaleOptional, weightDecay, momentum, lr, dampening,
+                                                             nesterov, maximize, isFirstStep, uniqueExecutor.get());
     CHECK_RET(paramsOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(gradsOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(momentumContiguous == nullptr || momentumOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     ViewCopyTensorList(paramsOut, paramsRef, uniqueExecutor.get());
     ViewCopyTensorList(gradsOut, gradsRef, uniqueExecutor.get());
-    if(momentumBufferListOptionalRef != nullptr) {
+    if (momentumBufferListOptionalRef != nullptr) {
         ViewCopyTensorList(momentumOut, momentumBufferListOptionalRef, uniqueExecutor.get());
     }
 
@@ -344,11 +327,7 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFusedSgd(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream)
+aclnnStatus aclnnFusedSgd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFusedSgd);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

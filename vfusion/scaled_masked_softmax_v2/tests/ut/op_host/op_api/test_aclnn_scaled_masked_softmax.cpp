@@ -21,8 +21,7 @@
 using namespace op;
 using namespace std;
 
-class l2_scaled_masked_softmax_test : public testing::Test
-{
+class l2_scaled_masked_softmax_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {

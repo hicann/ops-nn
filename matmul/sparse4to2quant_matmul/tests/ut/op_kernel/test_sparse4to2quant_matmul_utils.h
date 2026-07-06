@@ -24,8 +24,8 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void sparse4to2quant_matmul(GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index,
-                                                             GM_ADDR xScale, GM_ADDR sparseWeightScale, GM_ADDR bias,GM_ADDR y,
-                                                             GM_ADDR workSpace, GM_ADDR tiling);
+                                                             GM_ADDR xScale, GM_ADDR sparseWeightScale, GM_ADDR bias,
+                                                             GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling);
 
 struct Sparse4to2QuantMatmulTestParam {
     std::string socVersion;
@@ -51,7 +51,7 @@ struct Sparse4to2QuantMatmulTestParam {
 class Sparse4to2QuantMatmulTestUtils {
 public:
     static constexpr uint32_t MAX_NUM_BLOCKS = 4;
-    static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+    static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
     {
         auto delimiterLen = delimiter.size();
         std::string::size_type currPos = 0;
@@ -86,11 +86,12 @@ public:
         return exe_path;
     }
 
-    static vector<Sparse4to2QuantMatmulTestParam> GetParams(const string &socVersion, const string &testSuite)
+    static vector<Sparse4to2QuantMatmulTestParam> GetParams(const string& socVersion, const string& testSuite)
     {
         std::vector<Sparse4to2QuantMatmulTestParam> params;
         std::string rootPath(GetExeDirPath() + "../../../../");
-        std::string casePath(rootPath + "matmul/sparse4to2quant_matmul/tests/ut/op_kernel/test_sparse4to2quant_matmul.csv");
+        std::string casePath(rootPath +
+                             "matmul/sparse4to2quant_matmul/tests/ut/op_kernel/test_sparse4to2quant_matmul.csv");
         std::ifstream csvData(casePath, std::ios::in);
         if (!csvData.is_open()) {
             std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
@@ -112,7 +113,7 @@ public:
             }
 
             param.prefix = testParam[idx++];
-            idx++;  // skip coreNum
+            idx++; // skip coreNum
             param.x1Dim = stol(testParam[idx++]);
             param.x2Dim = stol(testParam[idx++]);
             param.yDim = stol(testParam[idx++]);
@@ -122,14 +123,14 @@ public:
             param.pertokenFlag = stol(testParam[idx++]);
             param.biasFlag = stol(testParam[idx++]);
             param.quantMode = stol(testParam[idx++]);
-            idx++;  // skip x1Dtype
-            idx++;  // skip x2Dtype
-            idx++;  // skip scaleDtype
-            idx++;  // skip perTokenScaleDtype
-            idx++;  // skip biasDtype
-            idx++;  // skip yDtype
-            idx++;  // skip format
-            idx++;  // skip wformat
+            idx++; // skip x1Dtype
+            idx++; // skip x2Dtype
+            idx++; // skip scaleDtype
+            idx++; // skip perTokenScaleDtype
+            idx++; // skip biasDtype
+            idx++; // skip yDtype
+            idx++; // skip format
+            idx++; // skip wformat
             param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
             param.numBlocks = stol(testParam[idx++]);
             param.tilingKey = stol(testParam[idx++]);
@@ -140,7 +141,7 @@ public:
         return params;
     }
 
-    static void TestOneParamCase(const Sparse4to2QuantMatmulTestParam &param)
+    static void TestOneParamCase(const Sparse4to2QuantMatmulTestParam& param)
     {
         size_t shape_x1 = param.m * param.k * sizeof(int8_t);
         size_t shape_x2 = param.n * param.k * sizeof(int8_t);
@@ -151,16 +152,16 @@ public:
         size_t shape_y = param.m * param.n * sizeof(uint32_t);
         size_t tiling_data_size = sizeof(SparseQmm::Sparse4to2QuantMatmulTilingData);
         size_t workspace_size = 16 * 1024 * 1024 + 50 * 1024 * 1024;
-        uint8_t *x1 = (uint8_t *)AscendC::GmAlloc(shape_x1);
-        uint8_t *x2 = (uint8_t *)AscendC::GmAlloc(shape_x2);
-        uint8_t *index = (uint8_t *)AscendC::GmAlloc(shape_index);
-        uint8_t *bias = (uint8_t *)AscendC::GmAlloc(shape_bias);
+        uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(shape_x1);
+        uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(shape_x2);
+        uint8_t* index = (uint8_t*)AscendC::GmAlloc(shape_index);
+        uint8_t* bias = (uint8_t*)AscendC::GmAlloc(shape_bias);
 
-        uint8_t *scale = (uint8_t *)AscendC::GmAlloc(shape_scale);
-        uint8_t *pertokenScale = (uint8_t *)AscendC::GmAlloc(shape_pertoken);
-        uint8_t *y = (uint8_t *)AscendC::GmAlloc(shape_y);
-        uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspace_size);
-        uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+        uint8_t* scale = (uint8_t*)AscendC::GmAlloc(shape_scale);
+        uint8_t* pertokenScale = (uint8_t*)AscendC::GmAlloc(shape_pertoken);
+        uint8_t* y = (uint8_t*)AscendC::GmAlloc(shape_y);
+        uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspace_size);
+        uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
         memset(x1, 1, shape_x1);
         memset(x2, 1, shape_x2);
@@ -174,7 +175,7 @@ public:
         SplitStr2Vec(param.tilingData, " ", tilingDataStr);
         std::vector<int32_t> tilingDataInt;
         tilingDataInt.reserve(tilingDataStr.size());
-        for (auto &tilingValue : tilingDataStr) {
+        for (auto& tilingValue : tilingDataStr) {
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
@@ -183,8 +184,8 @@ public:
 
         AscendC::SetKernelMode(KernelMode::MIX_AIC_1_1);
         ICPU_SET_TILING_KEY(param.tilingKey);
-        ICPU_RUN_KF(sparse4to2quant_matmul, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, index, pertokenScale, scale, bias,
-                    y, workspace, tiling);
+        ICPU_RUN_KF(sparse4to2quant_matmul, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, index, pertokenScale,
+                    scale, bias, y, workspace, tiling);
 
         AscendC::GmFree(x1);
         AscendC::GmFree(x2);

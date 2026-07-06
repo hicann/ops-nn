@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file dynamic_quant_single_row.h
  * \brief
@@ -23,23 +23,19 @@ using namespace AscendC;
 template <typename xDtype, typename yDtype>
 class DynamicQuantSingleRow {
 public:
-    __aicore__ inline DynamicQuantSingleRow(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantSingleRow(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
     {
         tilingD_ = tilingData;
         blockIdx_ = GetBlockIdx();
 
         maxHandleNum_ = tilingD_->multiRowNumHeadCore * tilingD_->rowLen;
-        uint32_t outQueLen =
-            maxHandleNum_ * sizeof(yDtype) + tilingD_->multiRowNumHeadCore * sizeof(float) + BLOCK_SIZE;
-        rowsAlignBlock_ =
-            (tilingD_->multiRowNumHeadCore + BLOCK_ELEM_F32 - 1) / BLOCK_ELEM_F32 * BLOCK_ELEM_F32 * BLOCK_SIZE;
+        uint32_t outQueLen = maxHandleNum_ * sizeof(yDtype) + tilingD_->multiRowNumHeadCore * sizeof(float) +
+                             BLOCK_SIZE;
+        rowsAlignBlock_ = (tilingD_->multiRowNumHeadCore + BLOCK_ELEM_F32 - 1) / BLOCK_ELEM_F32 * BLOCK_ELEM_F32 *
+                          BLOCK_SIZE;
         uint32_t tmpBufLens = maxHandleNum_ * sizeof(float) + rowsAlignBlock_ * CONST_2;
         if (tilingD_->hasSmooth) {
             tmpBufLens = tmpBufLens + tilingD_->rowLen * sizeof(float);
@@ -126,9 +122,8 @@ public:
                 // [1, rowLen] -> [ubRows, rowLen]
                 SetMaskCount();
                 SetVectorMask<float, MaskMode::COUNTER>(tilingD_->rowLen);
-                Copy<float, false>(
-                    inputCast, smoothLocalFp32, AscendC::MASK_PLACEHOLDER, ubRows,
-                    {1, 1, static_cast<uint16_t>(tilingD_->rowLen / BLOCK_ELEM_F32), 0});
+                Copy<float, false>(inputCast, smoothLocalFp32, AscendC::MASK_PLACEHOLDER, ubRows,
+                                   {1, 1, static_cast<uint16_t>(tilingD_->rowLen / BLOCK_ELEM_F32), 0});
                 SetMaskNorm();
                 ResetMask();
                 PipeBarrier<PIPE_V>();
@@ -141,9 +136,8 @@ public:
                 ComputeReduceMax(inputCast[i * tilingD_->rowLen], tilingD_->rowLen);
             }
             PipeBarrier<PIPE_V>();
-            WholeReduceMax(
-                inputCast, inputCast, MASK_NUM_T32, ubRows, 1, 1, tilingD_->rowLen / MASK_NUM_T32 * MASK_BLK_STRIDE,
-                ReduceOrder::ORDER_ONLY_VALUE);
+            WholeReduceMax(inputCast, inputCast, MASK_NUM_T32, ubRows, 1, 1,
+                           tilingD_->rowLen / MASK_NUM_T32 * MASK_BLK_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
             PipeBarrier<PIPE_V>();
 
             LocalTensor<yDtype> outLocal = outQueue_.AllocTensor<yDtype>();
@@ -166,9 +160,8 @@ public:
             // [ubRows, Block] -> [ubRows, tilingD_->rowLen]
             SetMaskCount();
             SetVectorMask<float, MaskMode::COUNTER>(tilingD_->rowLen);
-            Copy<float, false>(
-                inputCast, temp, AscendC::MASK_PLACEHOLDER, ubRows,
-                {1, 0, static_cast<uint16_t>(tilingD_->rowLen / BLOCK_ELEM_F32), 1});
+            Copy<float, false>(inputCast, temp, AscendC::MASK_PLACEHOLDER, ubRows,
+                               {1, 0, static_cast<uint16_t>(tilingD_->rowLen / BLOCK_ELEM_F32), 1});
             SetMaskNorm();
             ResetMask();
             PipeBarrier<PIPE_V>();
@@ -232,9 +225,8 @@ public:
                 ComputeReduceMax(inLocal[i * tilingD_->rowLen], tilingD_->rowLen);
             }
             PipeBarrier<PIPE_V>();
-            WholeReduceMax(
-                inLocal, inLocal, ELEM_PER_REP_HALF, ubRows, 1, 1,
-                tilingD_->rowLen / ELEM_PER_REP_HALF * MASK_BLK_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
+            WholeReduceMax(inLocal, inLocal, ELEM_PER_REP_HALF, ubRows, 1, 1,
+                           tilingD_->rowLen / ELEM_PER_REP_HALF * MASK_BLK_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
             PipeBarrier<PIPE_V>();
 
             LocalTensor<yDtype> outLocal = outQueue_.AllocTensor<yDtype>();
@@ -259,9 +251,8 @@ public:
             PipeBarrier<PIPE_V>();
             SetMaskCount();
             SetVectorMask<float, MaskMode::COUNTER>(tilingD_->rowLen);
-            Copy<float, false>(
-                inLocalFp32, temp, AscendC::MASK_PLACEHOLDER, ubRows,
-                {1, 0, static_cast<uint16_t>(tilingD_->rowLen / BLOCK_ELEM_F32), 1});
+            Copy<float, false>(inLocalFp32, temp, AscendC::MASK_PLACEHOLDER, ubRows,
+                               {1, 0, static_cast<uint16_t>(tilingD_->rowLen / BLOCK_ELEM_F32), 1});
             SetMaskNorm();
             ResetMask();
             PipeBarrier<PIPE_V>();

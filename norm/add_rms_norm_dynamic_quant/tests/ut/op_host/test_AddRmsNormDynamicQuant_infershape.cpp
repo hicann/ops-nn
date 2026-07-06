@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  *
  * @file test_AddRmsNormDynamicQuant_proto.cpp
  *
@@ -24,15 +25,9 @@
 
 class AddRmsNormDynamicQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddRmsNormDynamicQuant Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddRmsNormDynamicQuant Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddRmsNormDynamicQuant Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddRmsNormDynamicQuant Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_dynamic)
@@ -42,13 +37,12 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_dynamic)
 
     if (infer_shape_func != nullptr) {
         gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {
-            {
-                16,
-            },
-            {
-                16,
-            }};
+        gert::StorageShape gamma_shape = {{
+                                              16,
+                                          },
+                                          {
+                                              16,
+                                          }};
         gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
         gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
 
@@ -93,13 +87,12 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_int8)
 
     if (infer_shape_func != nullptr) {
         gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {
-            {
-                16,
-            },
-            {
-                16,
-            }};
+        gert::StorageShape gamma_shape = {{
+                                              16,
+                                          },
+                                          {
+                                              16,
+                                          }};
         gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
         gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
 
@@ -108,9 +101,8 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_int8)
                           .IrInstanceNum({1, 1, 1, 1, 1})
                           .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
                           .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs(
-                              {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                               {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                           .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -144,13 +136,12 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_hifloat8)
 
     if (infer_shape_func != nullptr) {
         gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {
-            {
-                16,
-            },
-            {
-                16,
-            }};
+        gert::StorageShape gamma_shape = {{
+                                              16,
+                                          },
+                                          {
+                                              16,
+                                          }};
         gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
         gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
 
@@ -159,9 +150,8 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_hifloat8)
                           .IrInstanceNum({1, 1, 1, 1, 1})
                           .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
                           .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs(
-                              {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                               {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
                           .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -195,13 +185,12 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_float8_e5m
 
     if (infer_shape_func != nullptr) {
         gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {
-            {
-                16,
-            },
-            {
-                16,
-            }};
+        gert::StorageShape gamma_shape = {{
+                                              16,
+                                          },
+                                          {
+                                              16,
+                                          }};
         gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
         gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
 
@@ -210,9 +199,8 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_float8_e5m
                           .IrInstanceNum({1, 1, 1, 1, 1})
                           .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
                           .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs(
-                              {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                               {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                           .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -246,13 +234,12 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_float8_e4m
 
     if (infer_shape_func != nullptr) {
         gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {
-            {
-                16,
-            },
-            {
-                16,
-            }};
+        gert::StorageShape gamma_shape = {{
+                                              16,
+                                          },
+                                          {
+                                              16,
+                                          }};
         gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
         gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
 
@@ -261,9 +248,8 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_float8_e4m
                           .IrInstanceNum({1, 1, 1, 1, 1})
                           .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
                           .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs(
-                              {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                               {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
                           .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -296,7 +282,6 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_unknown_ra
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
 
     if (infer_shape_func != nullptr) {
-
         gert::StorageShape input_shape = {{-2}, {-2}};
         gert::StorageShape gamma_shape = {{-2}, {-2}};
         gert::StorageShape out_shape = {{-2}, {-2}};
@@ -330,7 +315,7 @@ TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_unknown_ra
         EXPECT_EQ(context->GetOutputShape(2)->GetDim(0), -2);
         EXPECT_EQ(context->GetOutputShape(3)->GetDim(0), -2);
         EXPECT_EQ(context->GetOutputShape(4)->GetDim(0), -2);
-  }
+    }
 }
 
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_InferDtype_case_0)

@@ -31,8 +31,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void scatter_add_with_sorted(
-    GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index, GM_ADDR pos, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void scatter_add_with_sorted(GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index,
+                                                              GM_ADDR pos, GM_ADDR output, GM_ADDR workspace,
+                                                              GM_ADDR tiling);
 class scatter_add_with_sorted_test : public testing::Test {
 protected:
     static void SetUpTestCase() { cout << "scatter_add_with_sorted_test SetUp\n" << endl; }
@@ -62,9 +63,8 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 32;
 
-    kernel_ut::SetupTestEnvironment(
-        "index/scatter_add_with_sorted/tests/ut/op_kernel/scatter_add_with_sorted_data",
-        "scatter_add_with_sorted_data");
+    kernel_ut::SetupTestEnvironment("index/scatter_add_with_sorted/tests/ut/op_kernel/scatter_add_with_sorted_data",
+                                    "scatter_add_with_sorted_data");
     kernel_ut::RunGenData("./scatter_add_with_sorted_data", {"float32"});
     kernel_ut::RunGenTiling("./scatter_add_with_sorted_data", {});
 
@@ -79,8 +79,8 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
 
     ICPU_SET_TILING_KEY(11);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(src);

@@ -46,7 +46,7 @@ bool IndexPutV2SimdTiling::IsCapable()
     indicesTypeSize = ge::GetSizeByDataType(indicesType);
 
     bool isContinuous = IsContinuous();
-    if (!isContinuous || nonIndexedLength_ * valueTypeSize < 256) {    // 为[1,1,1,1,0,0]且非索引轴长度小于256B
+    if (!isContinuous || nonIndexedLength_ * valueTypeSize < 256) { // 为[1,1,1,1,0,0]且非索引轴长度小于256B
         return false;
     }
     if (!CheckInputDtype()) {
@@ -82,9 +82,10 @@ bool IndexPutV2SimdTiling::IsContinuous()
 
 bool IndexPutV2SimdTiling::CheckInputDtype()
 {
-    std::set<ge::DataType> supportType = {ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16,
+    std::set<ge::DataType> supportType = {ge::DT_BOOL, ge::DT_INT8,  ge::DT_UINT8, ge::DT_FLOAT16,
                                           ge::DT_BF16, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT64};
-    std::set<ge::DataType> atomicAddSupportType = {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_FLOAT};
+    std::set<ge::DataType> atomicAddSupportType = {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32,
+                                                   ge::DT_FLOAT};
     auto const attrs = context_->GetAttrs();
     auto* accumulateMode = attrs->GetAttrPointer<bool>(0);
     auto inputDesc = context_->GetInputDesc(0);
@@ -193,7 +194,8 @@ ge::graphStatus IndexPutV2SimdTiling::SetTilingData()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t IndexPutV2SimdTiling::GetTilingKey() const {
+uint64_t IndexPutV2SimdTiling::GetTilingKey() const
+{
     return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, static_cast<uint64_t>(accumulateMode_), 0);
 }
 
@@ -210,11 +212,13 @@ std::set<int64_t> IndexListFactors(int64_t usedCoreNum)
     return result;
 }
 
-void IndexPutV2SimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum)
+void IndexPutV2SimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum,
+                                            int64_t rowTotalNum, int64_t colTotalNum)
 {
     int64_t tmpEleNum = BASE_BLOCK_ALIGN / valueTypeSize;
     int64_t colBlockTotalNum = (colTotalNum + tmpEleNum - 1) / tmpEleNum;
-    usedCoreNum = std::min(usedCoreNum, std::max(int64_t(1), rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
+    usedCoreNum = std::min(usedCoreNum,
+                           std::max(int64_t(1), rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
 
     std::set<int64_t> cutSet = IndexListFactors(usedCoreNum);
     std::vector<std::vector<int64_t>> allTiling;
@@ -259,7 +263,7 @@ void IndexPutV2SimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTil
 // 核间切UB
 void IndexPutV2SimdTiling::DoUBTiling()
 {
-    uint64_t availableUbsize =  ubSize_ - MAX_DIM * MAX_DIM * TWO;
+    uint64_t availableUbsize = ubSize_ - MAX_DIM * MAX_DIM * TWO;
     int64_t minRows = 8;
     int64_t doubleB = 2;
     int32_t rankDim = 0;
@@ -273,17 +277,19 @@ void IndexPutV2SimdTiling::DoUBTiling()
     }
 
     minRows = std::min(minRows, normalCoreRowsNum_);
-    uint64_t tmpBuf = minRows * Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
-                      + Ops::Base::CeilAlign(minRows * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
+    uint64_t tmpBuf = minRows * Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB +
+                      Ops::Base::CeilAlign(minRows * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
     if (tmpBuf < availableUbsize) {
         colsFactor_ = normalCoreColsNum_;
-        oneRowBuffer = Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
-                     + Ops::Base::CeilAlign(indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
+        oneRowBuffer = Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB +
+                       Ops::Base::CeilAlign(indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
         rowsFactor_ = availableUbsize / oneRowBuffer;
         rowsFactor_ = std::min(rowsFactor_, normalCoreRowsNum_);
     } else {
         rowsFactor_ = minRows;
-        colsFactor_ = (availableUbsize - Ops::Base::CeilAlign(rowsFactor_ * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1)) / rowsFactor_ / doubleB / valueTypeSize;
+        colsFactor_ = (availableUbsize -
+                       Ops::Base::CeilAlign(rowsFactor_ * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1)) /
+                      rowsFactor_ / doubleB / valueTypeSize;
         colsFactor_ = Ops::Base::FloorAlign(colsFactor_, COLS_ALIGN_BYTES / static_cast<int64_t>(valueTypeSize));
         colsFactor_ = std::min(colsFactor_, normalCoreColsNum_);
     }
@@ -310,9 +316,8 @@ ge::graphStatus IndexPutV2SimdTiling::DoOpTiling()
 
     tilingData_ = context_->GetTilingData<IndexPutV2SimdTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
-    OP_CHECK_IF(
-    memset_s(tilingData_, sizeof(IndexPutV2SimdTilingData), 0, sizeof(IndexPutV2SimdTilingData)) != EOK,
-    OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingData_, sizeof(IndexPutV2SimdTilingData), 0, sizeof(IndexPutV2SimdTilingData)) != EOK,
+                OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
 
     DoUBTiling();
     SetTilingData();

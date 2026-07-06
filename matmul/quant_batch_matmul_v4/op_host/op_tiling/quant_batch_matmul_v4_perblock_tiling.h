@@ -36,8 +36,7 @@ constexpr int32_t GROUP_N_OFFSET = 16;
 constexpr uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
 constexpr int32_t CV_PARALL_NUM = 2;
 
-class QuantBatchMatmulV4PerblockTiling : public QuantBatchMatmulV3BasicTiling
-{
+class QuantBatchMatmulV4PerblockTiling : public QuantBatchMatmulV3BasicTiling {
 public:
     explicit QuantBatchMatmulV4PerblockTiling(gert::TilingContext* contextIn)
         : QuantBatchMatmulV3BasicTiling(contextIn), context(contextIn)

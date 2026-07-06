@@ -50,8 +50,8 @@ constexpr int64_t V4_TRANSPOSE_310P_REDUCE_AXIS_MIN = 20;
 constexpr int64_t LN_DIM_ONE = 1;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT};
+static const std::initializer_list<DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16,
+                                                                                   DataType::DT_FLOAT};
 
 static const std::initializer_list<DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
@@ -74,9 +74,8 @@ inline static bool CheckNotNull(const aclTensor* input, const aclIntArray* norma
     return true;
 }
 
-static bool CheckMeanRstdOutputShape(
-    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* meanOrRstdOptional,
-    const char* tensorName)
+static bool CheckMeanRstdOutputShape(const aclTensor* input, const aclIntArray* normalizedShape,
+                                     const aclTensor* meanOrRstdOptional, const char* tensorName)
 {
     if (meanOrRstdOptional == nullptr || meanOrRstdOptional->IsEmpty()) {
         return true;
@@ -91,8 +90,8 @@ static bool CheckMeanRstdOutputShape(
 
     if (meanRstdDimNum != inputDimNum) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Expected %s dimNum [%zu] to be equal to input dimNum [%zu], but check failed.",
-                tensorName, meanRstdDimNum, inputDimNum);
+                "Expected %s dimNum [%zu] to be equal to input dimNum [%zu], but check failed.", tensorName,
+                meanRstdDimNum, inputDimNum);
         return false;
     }
 
@@ -121,10 +120,7 @@ static bool CheckMeanRstdOutputShape(
     return true;
 }
 
-static bool IsArch3510()
-{
-    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
-}
+static bool IsArch3510() { return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510; }
 
 static bool CheckInputDtype(const aclTensor* input, const aclTensor* weightOptional, const aclTensor* biasOptional)
 {
@@ -164,19 +160,17 @@ static bool CheckOutputDtype(const aclTensor* out, const aclTensor* meanOutOptio
 inline static bool CheckArrayLen(const aclIntArray* normalizedShape)
 {
     if (normalizedShape->Size() > MAX_DIM_LEN) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNorm normalizedShape dim [%zu] to not be greater than [%zu] but check failed.",
-            normalizedShape->Size(), MAX_DIM_LEN);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNorm normalizedShape dim [%zu] to not be greater than [%zu] but check failed.",
+                normalizedShape->Size(), MAX_DIM_LEN);
         return false;
     }
     return true;
 }
 
-static bool CheckLen(
-    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
-    const aclTensor* rstdOutOptional)
+static bool CheckLen(const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
+                     const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
+                     const aclTensor* rstdOutOptional)
 {
     OP_CHECK_MAX_DIM(input, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_LEN, return false);
@@ -195,10 +189,9 @@ static bool CheckLen(
     return CheckArrayLen(normalizedShape);
 }
 
-static bool CheckShape(
-    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
-    const aclTensor* rstdOutOptional)
+static bool CheckShape(const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
+                       const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
+                       const aclTensor* rstdOutOptional)
 {
     // 1.检查入参维度是否小于8维
     if (!CheckLen(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional)) {
@@ -206,10 +199,9 @@ static bool CheckShape(
     }
     // 2.检查normalizedShape的长度是否大于等于1
     if (normalizedShape->Size() < LEAST_NORMALIZED_SHAPE_LEN) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
-            normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
+                normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
         return false;
     }
     // 3.检查input维度是否不小于normalizedShape的长度
@@ -241,11 +233,10 @@ static bool CheckShape(
         if (weightOptional) {
             int64_t weightDim = weightOptional->GetViewShape().GetDim(index);
             if (normDim != weightDim) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "Expected normalized index [%zu] shape [%ld] be equal to weight index [%zu] shape [%ld], but "
-                    "failed.",
-                    index, normDim, index, weightDim);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "Expected normalized index [%zu] shape [%ld] be equal to weight index [%zu] shape [%ld], but "
+                        "failed.",
+                        index, normDim, index, weightDim);
                 return false;
             }
         }
@@ -267,8 +258,8 @@ static bool CheckShape(
     return true;
 }
 
-static bool CheckImplMode(
-    const aclTensor* input, const aclTensor* weightOptional, const aclTensor* biasOptional, int32_t implMode)
+static bool CheckImplMode(const aclTensor* input, const aclTensor* weightOptional, const aclTensor* biasOptional,
+                          int32_t implMode)
 {
     if (implMode != HIGH_PRECISION && implMode != HIGH_PERFORMANCE && implMode != KEEP_FP16) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected implMode to be in [0, 1, 2], but now got [%d].", implMode);
@@ -295,30 +286,28 @@ inline static bool IsV4SocCheck(const aclTensor* input, const aclTensor* weight,
                                    input->GetDataType() == DataType::DT_BF16 &&
                                    (reduceAxis == MIN_V4_REDUCE_AXIS || reduceAxis == MAX_V4_REDUCE_AXIS) &&
                                    (curArch == NpuArch::DAV_2201);
-    bool v4TransposeTemplate310pSup =
-        (input->GetDataType() == DataType::DT_FLOAT16) &&
-        (reduceAxis == V4_TRANSPOSE_310P_REDUCE_AXIS_MIN || reduceAxis == V4_TRANSPOSE_310P_REDUCE_AXIS_MAX) &&
-        (curArch == NpuArch::DAV_2002);
+    bool v4TransposeTemplate310pSup = (input->GetDataType() == DataType::DT_FLOAT16) &&
+                                      (reduceAxis == V4_TRANSPOSE_310P_REDUCE_AXIS_MIN ||
+                                       reduceAxis == V4_TRANSPOSE_310P_REDUCE_AXIS_MAX) &&
+                                      (curArch == NpuArch::DAV_2002);
     int64_t inputBlockAlign = (input->GetDataType() == DataType::DT_FLOAT ? B32_BLOCK_ALIGN_NUM : B16_BLOCK_ALIGN_NUM);
     bool v4TransposeTemplate910bSup = ((reduceAxis % inputBlockAlign) != 0) &&
-                                      (reduceAxis < V4_TRANSPOSE_REDUCE_AXIS_LIMIT) &&
-                                      (curArch == NpuArch::DAV_2201);
+                                      (reduceAxis < V4_TRANSPOSE_REDUCE_AXIS_LIMIT) && (curArch == NpuArch::DAV_2201);
     return (v4SingleReadTemplateSup || v4TransposeTemplate310pSup || v4TransposeTemplate910bSup);
 }
 
-static aclnnStatus CheckParamsWithImplMode(
-    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* out, const aclTensor* meanOutOptional,
-    const aclTensor* rstdOutOptional, int32_t implMode)
+static aclnnStatus CheckParamsWithImplMode(const aclTensor* input, const aclIntArray* normalizedShape,
+                                           const aclTensor* weightOptional, const aclTensor* biasOptional,
+                                           const aclTensor* out, const aclTensor* meanOutOptional,
+                                           const aclTensor* rstdOutOptional, int32_t implMode)
 {
     // 1. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckInputDtype(input, weightOptional, biasOptional), ACLNN_ERR_PARAM_INVALID);
     // 2. 检查输出的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckOutputDtype(out, meanOutOptional, rstdOutOptional), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查input, weight，bias与normalizedShape间的shape关系
-    CHECK_RET(
-        CheckShape(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional),
+              ACLNN_ERR_PARAM_INVALID);
     // 4. arch3510下检查meanOutOptional和rstdOutOptional的shape
     if (IsArch3510()) {
         if (!CheckMeanRstdOutputShape(input, normalizedShape, meanOutOptional, "meanOutOptional")) {
@@ -339,14 +328,15 @@ static aclnnStatus CheckParamsWithImplMode(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(
-    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, double eps, aclTensor* out, aclTensor* meanOutOptional, aclTensor* rstdOutOptional,
-    int32_t implMode, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(const aclTensor* input, const aclIntArray* normalizedShape,
+                                                       const aclTensor* weightOptional, const aclTensor* biasOptional,
+                                                       double eps, aclTensor* out, aclTensor* meanOutOptional,
+                                                       aclTensor* rstdOutOptional, int32_t implMode,
+                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnLayerNormWithImplMode, DFX_IN(input, normalizedShape, weightOptional, biasOptional, eps, implMode),
-        DFX_OUT(out, meanOutOptional, rstdOutOptional));
+    L2_DFX_PHASE_1(aclnnLayerNormWithImplMode,
+                   DFX_IN(input, normalizedShape, weightOptional, biasOptional, eps, implMode),
+                   DFX_OUT(out, meanOutOptional, rstdOutOptional));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -356,8 +346,8 @@ aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(
     CHECK_RET(CheckNotNull(input, normalizedShape, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 固定写法，参数检查
-    auto ret = CheckParamsWithImplMode(
-        input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional, implMode);
+    auto ret = CheckParamsWithImplMode(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional,
+                                       rstdOutOptional, implMode);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 根据input_shape和normalizedShape的关系获取非reduce轴和reduce轴的shape
@@ -386,8 +376,8 @@ aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(
             CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
         }
         if (rstdOutOptional) {
-            ret = op::ProcessEmptyTensorWithValue(
-                rstdOutOptional, std::numeric_limits<float>::quiet_NaN(), uniqueExecutor.get());
+            ret = op::ProcessEmptyTensorWithValue(rstdOutOptional, std::numeric_limits<float>::quiet_NaN(),
+                                                  uniqueExecutor.get());
             CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
         }
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
@@ -491,19 +481,19 @@ aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLayerNormGetWorkspaceSize(
-    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, double eps, aclTensor* out, aclTensor* meanOutOptional, aclTensor* rstdOutOptional,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnLayerNormGetWorkspaceSize(const aclTensor* input, const aclIntArray* normalizedShape,
+                                           const aclTensor* weightOptional, const aclTensor* biasOptional, double eps,
+                                           aclTensor* out, aclTensor* meanOutOptional, aclTensor* rstdOutOptional,
+                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     int32_t implMode = HIGH_PRECISION;
-    return aclnnLayerNormWithImplModeGetWorkspaceSize(
-        input, normalizedShape, weightOptional, biasOptional, eps, out, meanOutOptional, rstdOutOptional, implMode,
-        workspaceSize, executor);
+    return aclnnLayerNormWithImplModeGetWorkspaceSize(input, normalizedShape, weightOptional, biasOptional, eps, out,
+                                                      meanOutOptional, rstdOutOptional, implMode, workspaceSize,
+                                                      executor);
 }
 
-aclnnStatus aclnnLayerNormWithImplMode(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnLayerNormWithImplMode(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnLayerNormWithImplMode);
     // 固定写法，调用框架能力，完成计算

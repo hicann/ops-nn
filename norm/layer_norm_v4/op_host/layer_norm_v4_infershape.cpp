@@ -34,9 +34,8 @@ static inline bool IsUnknownRank(const gert::Shape* check_shape)
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
         output_shape->SetDim(i, UNKNOWN_DIM_VALUE_);
@@ -61,28 +60,24 @@ static graphStatus InferShape4LayerNormV4(gert::InferShapeContext* context)
     *y_shape = *x_shape;
     *mean_shape = *x_shape;
     *rstd_shape = *x_shape;
-    OP_CHECK_IF(
-        IsUnknownRank(x_shape), OP_LOGI(context, "End to do InferShape4LayerNormV4, inputx is [-2]."),
-        return GRAPH_SUCCESS);
+    OP_CHECK_IF(IsUnknownRank(x_shape), OP_LOGI(context, "End to do InferShape4LayerNormV4, inputx is [-2]."),
+                return GRAPH_SUCCESS);
 
     const gert::Shape* norm_shape = context->GetInputShape(INPUT_IDX_NORM_SHAPE);
-    OP_CHECK_IF(
-        norm_shape->GetDimNum() > 1, OP_LOGE(context, "Shape of norm_shape should be 1 dimensions!"),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(norm_shape->GetDimNum() > 1, OP_LOGE(context, "Shape of norm_shape should be 1 dimensions!"),
+                return GRAPH_FAILED);
 
     int64_t norm_shape_len = norm_shape->IsScalar() ? 1 : norm_shape->GetDim(0);
     if (norm_shape_len < 0) {
-        OP_CHECK_IF(
-            SetAllUnknownDim(x_shape->GetDimNum(), mean_shape) != GRAPH_SUCCESS,
-            OP_LOGE(context, "do InferShape4LayerNormV4 failed!"), return GRAPH_FAILED);
+        OP_CHECK_IF(SetAllUnknownDim(x_shape->GetDimNum(), mean_shape) != GRAPH_SUCCESS,
+                    OP_LOGE(context, "do InferShape4LayerNormV4 failed!"), return GRAPH_FAILED);
         *rstd_shape = *mean_shape;
         OP_LOGI(context, "End to do InferShape4LayerNormV4, norm_shape is unknown.");
         return GRAPH_SUCCESS;
     }
 
-    OP_CHECK_IF(
-        static_cast<int64_t>(x_shape->GetDimNum()) < norm_shape_len,
-        OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
+    OP_CHECK_IF(static_cast<int64_t>(x_shape->GetDimNum()) < norm_shape_len,
+                OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
 
     int64_t begin_norm_axis_val = x_shape->GetDimNum() - norm_shape_len;
     for (size_t i = 0; i < x_shape->GetDimNum(); ++i) {
@@ -131,18 +126,14 @@ static ge::graphStatus InferShapeRange4LayerNormV4(gert::InferShapeRangeContext*
     auto rstd_shape_range = context->GetOutputShapeRange(OUTPUT_IDX_RSTD);
     OP_CHECK_NULL_WITH_CONTEXT(context, rstd_shape_range);
 
-    OP_LOGD(
-        context, "InferShapeRange4LayerNormV4 x_shape_range->GetMin() = %s",
-        Ops::Base::ToString(*x_shape_range->GetMin()).c_str());
-    OP_LOGD(
-        context, "InferShapeRange4LayerNormV4 x_shape_range->GetMax() = %s",
-        Ops::Base::ToString(*x_shape_range->GetMax()).c_str());
-    OP_LOGD(
-        context, "InferShapeRange4LayerNormV4 norm_shape_range->GetMin() = %s",
-        Ops::Base::ToString(*norm_shape_range->GetMin()).c_str());
-    OP_LOGD(
-        context, "InferShapeRange4LayerNormV4 norm_shape_range->GetMax() = %s",
-        Ops::Base::ToString(*norm_shape_range->GetMax()).c_str());
+    OP_LOGD(context, "InferShapeRange4LayerNormV4 x_shape_range->GetMin() = %s",
+            Ops::Base::ToString(*x_shape_range->GetMin()).c_str());
+    OP_LOGD(context, "InferShapeRange4LayerNormV4 x_shape_range->GetMax() = %s",
+            Ops::Base::ToString(*x_shape_range->GetMax()).c_str());
+    OP_LOGD(context, "InferShapeRange4LayerNormV4 norm_shape_range->GetMin() = %s",
+            Ops::Base::ToString(*norm_shape_range->GetMin()).c_str());
+    OP_LOGD(context, "InferShapeRange4LayerNormV4 norm_shape_range->GetMax() = %s",
+            Ops::Base::ToString(*norm_shape_range->GetMax()).c_str());
 
     bool is_need_update_y_range = y_shape_range->GetMax() != nullptr && y_shape_range->GetMin() != nullptr;
     bool is_need_update_mean_range = mean_shape_range->GetMax() != nullptr && mean_shape_range->GetMin() != nullptr;
@@ -156,12 +147,10 @@ static ge::graphStatus InferShapeRange4LayerNormV4(gert::InferShapeRangeContext*
 
     norm_shape_max_len = norm_shape_max_len == -1 ? output_shape_dim_num : norm_shape_max_len;
     norm_shape_min_len = norm_shape_min_len == -1 ? 0 : norm_shape_min_len;
-    OP_CHECK_IF(
-        static_cast<int64_t>(norm_shape_max_len) > static_cast<int64_t>(output_shape_dim_num),
-        OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        static_cast<int64_t>(norm_shape_min_len) > static_cast<int64_t>(output_shape_dim_num),
-        OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
+    OP_CHECK_IF(static_cast<int64_t>(norm_shape_max_len) > static_cast<int64_t>(output_shape_dim_num),
+                OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
+    OP_CHECK_IF(static_cast<int64_t>(norm_shape_min_len) > static_cast<int64_t>(output_shape_dim_num),
+                OP_LOGE(context, "norm_shape_len must be <= xshape rank!"), return GRAPH_FAILED);
     if (is_need_update_y_range) {
         y_shape_range->GetMax()->SetDimNum(output_shape_dim_num);
         y_shape_range->GetMin()->SetDimNum(output_shape_dim_num);

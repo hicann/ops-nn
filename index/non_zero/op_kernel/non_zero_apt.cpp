@@ -75,8 +75,8 @@
 
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void non_zero(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void non_zero(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                               GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -175,51 +175,43 @@ extern "C" __global__ __aicore__ void non_zero(
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_1_DIM)) {
             NonZero::NonZeroBigMaskDim1<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim1<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim1<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim1<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim1<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_2_DIM)) {
             NonZero::NonZeroBigMaskDim2<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim2<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim2<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim2<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim2<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_3_DIM)) {
             NonZero::NonZeroBigMaskDim3<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim3<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim3<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim3<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim3<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_4_DIM)) {
             NonZero::NonZeroBigMaskDim4<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim4<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim4<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim4<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim4<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_5_DIM)) {
             NonZero::NonZeroBigMaskDim5<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim5<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim5<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim5<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim5<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_6_DIM)) {
             NonZero::NonZeroBigMaskDim6<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim6<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim6<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim6<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim6<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_7_DIM)) {
             NonZero::NonZeroBigMaskDim7<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim7<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim7<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim7<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim7<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_8_DIM)) {
             NonZero::NonZeroBigMaskDim8<int8_t, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim8<int8_t, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim8<int8_t, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim8<int8_t, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim8<int8_t, DTYPE_Y>::ComputeOutput>(&op);
         }
     } else {
         if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_1_DIM)) {
@@ -301,51 +293,43 @@ extern "C" __global__ __aicore__ void non_zero(
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_1_DIM)) {
             NonZero::NonZeroBigMaskDim1<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim1<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim1<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim1<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim1<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_2_DIM)) {
             NonZero::NonZeroBigMaskDim2<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim2<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim2<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim2<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim2<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_3_DIM)) {
             NonZero::NonZeroBigMaskDim3<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim3<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim3<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim3<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim3<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_4_DIM)) {
             NonZero::NonZeroBigMaskDim4<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim4<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim4<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim4<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim4<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_5_DIM)) {
             NonZero::NonZeroBigMaskDim5<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim5<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim5<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim5<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim5<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_6_DIM)) {
             NonZero::NonZeroBigMaskDim6<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim6<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim6<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim6<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim6<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_7_DIM)) {
             NonZero::NonZeroBigMaskDim7<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim7<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim7<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim7<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim7<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         } else if (TILING_KEY_IS(TILING_KEY_BIG_MASK_8_DIM)) {
             NonZero::NonZeroBigMaskDim8<DTYPE_X, DTYPE_Y> op;
             op.Init(x, y, outShape, userWS, &tilingData);
-            op.Process<
-                NonZero::NonZeroBigMaskDim8<DTYPE_X, DTYPE_Y>,
-                &NonZero::NonZeroBigMaskDim8<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
+            op.Process<NonZero::NonZeroBigMaskDim8<DTYPE_X, DTYPE_Y>,
+                       &NonZero::NonZeroBigMaskDim8<DTYPE_X, DTYPE_Y>::ComputeOutput>(&op);
         }
     }
 }

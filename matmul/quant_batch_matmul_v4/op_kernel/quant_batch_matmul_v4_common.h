@@ -26,8 +26,7 @@
 
 namespace AscendC {
 
-class QuantBatchMatmulV4Common
-{
+class QuantBatchMatmulV4Common {
 protected:
     QuantBatchMatmulV3BaseBlock block_;
     QuantBatchMatmulV3Update update_;
@@ -68,12 +67,16 @@ protected:
         subBlockIdx_ = GetSubBlockIdx();
         blockIdx_ = GetBlockIdx();
         if ASCEND_IS_AIV {
-            if (GetTaskRation() != 0) { blockIdx_ /= GetTaskRation(); }
+            if (GetTaskRation() != 0) {
+                blockIdx_ /= GetTaskRation();
+            }
         }
         usedCoreNum_ = matmulTiling->usedCoreNum;
         pipe_ = tPipe;
 
-        if (blockIdx_ >= usedCoreNum_) { return; }
+        if (blockIdx_ >= usedCoreNum_) {
+            return;
+        }
         baseM_ = matmulTiling->baseM;
         baseN_ = matmulTiling->baseN;
         stepka_ = matmulTiling->stepKa;

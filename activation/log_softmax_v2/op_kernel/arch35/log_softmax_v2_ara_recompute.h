@@ -22,8 +22,7 @@
 #include "op_kernel/math_util.h"
 #include "../../softmax_v2/arch35/softmax_v2_base.h"
 
-namespace LogSoftmaxV2Ops
-{
+namespace LogSoftmaxV2Ops {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 using namespace SoftmaxV2Ops;
@@ -35,8 +34,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T1, typename T2>
-class LogSoftmaxV2ARARecompute : public SoftmaxV2OpsBase
-{
+class LogSoftmaxV2ARARecompute : public SoftmaxV2OpsBase {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
 
@@ -83,8 +81,8 @@ public:
             int64_t curA0Idx = curIdx % tilingData_->tileA0Outer;
             int64_t curA1Idx = curIdx / tilingData_->tileA0Outer;
 
-            uint32_t curTileA0Len =
-                curA0Idx == (tilingData_->tileA0Outer - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len;
+            uint32_t curTileA0Len = curA0Idx == (tilingData_->tileA0Outer - 1) ? tilingData_->tileA0Tail :
+                                                                                 tilingData_->tileA0Len;
 
             int64_t xOffset =
                 // a1 offset
@@ -98,8 +96,8 @@ public:
             CalcReduceSum(curTileA0Len, xOffset, loopA0Num);
 
             for (int64_t idx = 0; idx < tilingData_->binAddRTotalLoop; idx++) {
-                int64_t curTileRLen =
-                    idx == (tilingData_->binAddRTotalLoop - 1) ? tilingData_->binAddRTail : tilingData_->binAddRFactor;
+                int64_t curTileRLen = idx == (tilingData_->binAddRTotalLoop - 1) ? tilingData_->binAddRTail :
+                                                                                   tilingData_->binAddRFactor;
 
                 int64_t offset = xOffset + idx * tilingData_->binAddRFactor * tilingData_->totalA0Len;
                 CopyInX(offset, curTileRLen, curTileA0Len);
@@ -131,8 +129,8 @@ private:
         uint32_t tileA0Len = tilingData_->tileA0Len;
 
         for (int64_t idx = 0; idx < tilingData_->binAddRTotalLoop; idx++) {
-            int64_t curTileRLen =
-                idx == (tilingData_->binAddRTotalLoop - 1) ? tilingData_->binAddRTail : tilingData_->binAddRFactor;
+            int64_t curTileRLen = idx == (tilingData_->binAddRTotalLoop - 1) ? tilingData_->binAddRTail :
+                                                                               tilingData_->binAddRFactor;
             uint16_t curTileRLenVl = static_cast<uint16_t>(curTileRLen);
             int64_t xOffset = xOffsetStart + idx * tilingData_->binAddRFactor * tilingData_->totalA0Len;
 
@@ -370,7 +368,7 @@ private:
                     // copy out
                     if constexpr (IsSameType<T2, float>::value) {
                         DataCopy(((__local_mem__ float*)yLocal) + xOffset, yReg, pregMask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         RegTensor<T2> xFp16;
                         Cast<T2, float, castTraitFp32ToFp16>(xFp16, yReg, pregMask);
                         DataCopy<T2, StoreDist::DIST_PACK_B32>(((__local_mem__ T2*)yLocal) + xOffset, xFp16, pregMask);
@@ -389,7 +387,7 @@ private:
     {
         if constexpr (IsSameType<T1, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T1> xFp16;
             DataCopy<T1, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T1*)src + offset));
             Cast<float, T1, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -433,6 +431,6 @@ private:
 
     LocalTensor<float> yMain_;
 };
-}  // namespace LogSoftmaxV2Ops
+} // namespace LogSoftmaxV2Ops
 
 #endif

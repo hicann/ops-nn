@@ -29,13 +29,14 @@ using namespace Ops::Nn;
 const size_t SUPPORTED_DIM_NUM = 4;
 
 static std::map<ge::Format, std::string> format2str = {
-    {ge::Format::FORMAT_NCHW, "NCHW"}, {ge::Format::FORMAT_NHWC, "NHWC"}, {ge::Format::FORMAT_HWCN, "HWCN"},
+    {ge::Format::FORMAT_NCHW, "NCHW"},   {ge::Format::FORMAT_NHWC, "NHWC"},   {ge::Format::FORMAT_HWCN, "HWCN"},
     {ge::Format::FORMAT_DHWNC, "DHWNC"}, {ge::Format::FORMAT_DHWCN, "DHWCN"}, {ge::Format::FORMAT_NDHWC, "NDHWC"},
     {ge::Format::FORMAT_NCDHW, "NCDHW"}};
 
-inline std::string OtherErrMsg(const std::string& error_detail) {
-  std::string msg = error_detail;
-  return msg;
+inline std::string OtherErrMsg(const std::string& error_detail)
+{
+    std::string msg = error_detail;
+    return msg;
 }
 
 inline bool GetDimInFormat(const std::string& opName, const std::string& formatStr, const std::string& dimName,
@@ -43,8 +44,8 @@ inline bool GetDimInFormat(const std::string& opName, const std::string& formatS
 {
     dimPosition = formatStr.find(dimName);
     if (dimPosition < 0) {
-        CUBE_INNER_ERR_REPORT(opName.c_str(), "Position(%s) is invalid: %ld, which format is %s.",
-                              dimName.c_str(), dimPosition, formatStr.c_str());
+        CUBE_INNER_ERR_REPORT(opName.c_str(), "Position(%s) is invalid: %ld, which format is %s.", dimName.c_str(),
+                              dimPosition, formatStr.c_str());
         return false;
     }
     return true;

@@ -33,26 +33,27 @@ constexpr float TOPP_MAX = 1.0f;
 constexpr uint32_t FP32_NEG_INF_BITS = 0b11111111100000000000000000000000;
 
 template <typename T>
-class TopKTopPSampleV2Kernel
-{
+class TopKTopPSampleV2Kernel {
 public:
     TOPKPParams params{};
     TopKTopPSampleV2SortKernel<T> sortOp;
 
     __aicore__ inline TopKTopPSampleV2Kernel(){};
-    __aicore__ inline void Init(
-        GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR minPs, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect,
-        GM_ADDR logitsIdx, GM_ADDR logitsSortMasked, GM_ADDR workspace, const TopKTopPSampleV2TilingData tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR minPs,
+                                GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect, GM_ADDR logitsIdx,
+                                GM_ADDR logitsSortMasked, GM_ADDR workspace,
+                                const TopKTopPSampleV2TilingData tilingData, TPipe* tPipe)
     {
         if ASCEND_IS_AIV {
             InitTilingParams(tilingData);
-            InitAndSetBuffer(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKPSelect, logitsIdx, logitsSortMasked, workspace, tPipe);
+            InitAndSetBuffer(logits, topKs, topPs, q, minPs, logitsSelectIdx, logitsTopKPSelect, logitsIdx,
+                             logitsSortMasked, workspace, tPipe);
         }
     }
 
     __aicore__ inline void Process()
     {
-        if (g_coreType == AscendC::AIC){
+        if (g_coreType == AscendC::AIC) {
             return;
         }
 
@@ -63,27 +64,30 @@ public:
             LocalTensor<T> topPtempLocal = buf2.Get<T>();
             LocalTensor<T> minPtempLocal = buf4.Get<T>();
             LocalTensor<int32_t> topKtempLocal = buf5.Get<int32_t>();
-            DataCopyPad(topPtempLocal, topPGlobal[rowId], {1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0}, {false, 0, 0, 0}); 
+            DataCopyPad(topPtempLocal, topPGlobal[rowId], {1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0},
+                        {false, 0, 0, 0});
             SetWaitFlag<HardEvent::MTE2_S>(HardEvent::MTE2_S);
             this->p = topPtempLocal.GetValue(0);
             float fp32P = 0;
-            if constexpr (std::is_same<T, bfloat16_t>::value){
+            if constexpr (std::is_same<T, bfloat16_t>::value) {
                 fp32P = ToFloat(this->p);
-            }else {
+            } else {
                 fp32P = static_cast<float>(this->p);
             }
-            DataCopyPad(topKtempLocal, topKGlobal[rowId], {1, static_cast<uint32_t>(sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0}); 
+            DataCopyPad(topKtempLocal, topKGlobal[rowId], {1, static_cast<uint32_t>(sizeof(int32_t)), 0, 0, 0},
+                        {false, 0, 0, 0});
             SetWaitFlag<HardEvent::MTE2_S>(HardEvent::MTE2_S);
             this->k = topKtempLocal.GetValue(0);
             bool hasMinP = false;
             float fp32MinP{0.0f};
             if (this->isInputMinPs) {
-                DataCopyPad(minPtempLocal, minPGlobal[rowId], {1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0}, {false, 0, 0, 0}); 
+                DataCopyPad(minPtempLocal, minPGlobal[rowId], {1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_S>(HardEvent::MTE2_S);
                 this->minP = minPtempLocal.GetValue(0);
-                if constexpr (std::is_same<T, bfloat16_t>::value){
+                if constexpr (std::is_same<T, bfloat16_t>::value) {
                     fp32MinP = ToFloat(this->minP);
-                }else {
+                } else {
                     fp32MinP = static_cast<float>(this->minP);
                 }
                 hasMinP = fp32MinP > 0 ? true : false;
@@ -102,15 +106,17 @@ public:
             const bool doGuessTopK = !doTopKSample && doTopPSample;
             bool isInLocalTensor = false;
             hasCopyOutLogits = false;
-            
+
             if (doTopKSample || fp32P <= 0) {
                 kCount = this->k;
                 if (fp32P <= 0) {
                     kCount = 1;
                 }
                 this->topPNum = kCount;
-                this->k_pad = Align(kCount, EIGHT);  // logits转成float32后，需满足32字节对齐，k值必须为8的整倍数
-                TopKLoopProcess(rowId, kCount, logitsGlobal);       // 排序且取前k个，logits类型转换成float32，存在了localValueRs（buf0）和localIndexRs（buf1）中
+                this->k_pad = Align(kCount, EIGHT); // logits转成float32后，需满足32字节对齐，k值必须为8的整倍数
+                TopKLoopProcess(
+                    rowId, kCount,
+                    logitsGlobal); // 排序且取前k个，logits类型转换成float32，存在了localValueRs（buf0）和localIndexRs（buf1）中
                 SetFlag<HardEvent::V_S>(EVENT_ID0);
                 WaitFlag<HardEvent::V_S>(EVENT_ID0);
                 maxValue = localValueRs.GetValue(static_cast<uint32_t>(0));
@@ -125,13 +131,14 @@ public:
                 if (doTopKSample || fp32P <= 0) {
                     SoftMaxCompute(kCount, localValueRs, maxValue); // softmax后结果保存在sampleLogitsLocal（buf3）
                     maxValue = sampleLogitsLocal.GetValue(static_cast<uint32_t>(0));
-                } else if(!doTopPSample) {
+                } else if (!doTopPSample) {
                     // 从logitsGlobal copyin进来，cast完后，SoftMax一整行，存放在logitsGlobalUser里
                     float rowMax{FLOAT_MIN};
                     float reduceSumMax{0};
                     GetRowMax(rowId, &rowMax, logitsGlobal); // 将cast后未做排序的logits存入logitsGlobalUser，更新rowMax
                     oriMaxValue = rowMax;
-                    SoftMaxFstCompute(rowId, rowMax, &reduceSumMax, true); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
+                    SoftMaxFstCompute(rowId, rowMax, &reduceSumMax,
+                                      true); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
                     SoftMaxFullCompute(rowId, reduceSumMax, maxIndex); // 将softmax结果存储到logitsGlobalUser里
                     if (noTopKPMinP && this->ifQSampleCompute) {
                         LocalTensor<uint64_t> sampleIndexLocal = buf4.Get<uint64_t>();
@@ -145,7 +152,7 @@ public:
                     LogitsCast(rowId);
                 }
             } else {
-                if (doTopKSample|| fp32P <= 0) {
+                if (doTopKSample || fp32P <= 0) {
                     // localValueRs前kCount个数据copy到samplelogitslocal
                     PipeBarrier<PIPE_V>();
                     DataCopy(sampleLogitsLocal, localValueRs, this->k_pad);
@@ -156,10 +163,10 @@ public:
                 }
             }
 
-            if (doTopKSample && doTopPSample) {  //做topktopp
-                TopPCompute(sampleLogitsLocal, kCount, fp32P);  //拿到toppNum,方便后续sample
-                maxValue = sampleLogitsLocal.GetValue(0);  
-                maxIndex = localIndexRs.GetValue(0); 
+            if (doTopKSample && doTopPSample) {                //做topktopp
+                TopPCompute(sampleLogitsLocal, kCount, fp32P); //拿到toppNum,方便后续sample
+                maxValue = sampleLogitsLocal.GetValue(0);
+                maxIndex = localIndexRs.GetValue(0);
                 isInLocalTensor = true;
             } else if (doGuessTopK) {
                 kCount = this->topKGuess > this->rowLen ? this->rowLen : this->topKGuess;
@@ -189,7 +196,7 @@ public:
                         DataCopy(sampleLogitsLocal, localValueRs, this->k_pad);
                         PipeBarrier<PIPE_V>();
                     }
-                    maxIndex = localIndexRs.GetValue(0); 
+                    maxIndex = localIndexRs.GetValue(0);
                     isInLocalTensor = true;
                 }
                 if (!this->ifFind) { // GuessKFailed: 没猜到
@@ -204,13 +211,15 @@ public:
                     float reduceSumMax{0};
                     GetRowMax(rowId, &rowMax, logitsGlobal); // 将cast后未做排序的logits存入logitsGlobalUser，更新rowMax
                     oriMaxValue = rowMax;
-                    SoftMaxFstCompute(rowId, rowMax, &reduceSumMax, false); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
+                    SoftMaxFstCompute(rowId, rowMax, &reduceSumMax,
+                                      false); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
                     params.inputIsLogits = this->inputIsLogits;
                     params.reduceSumMax = reduceSumMax;
                     params.rowMax = rowMax;
                     // 全排序，拿到排序结果，也会做topP，拿到toppNum
                     sortOp.SortAll(
-                        params, logitsGlobalUser, sortPartGlobalUser, sortAllGlobalUser, // 从logitsGlobalUser取做了softmax但是没排序的值做sort，然后求topPNum，sort的value结果存在了logitsGlobalUser中，index结果放在了srcIndexGlobalUser中
+                        params, logitsGlobalUser, sortPartGlobalUser,
+                        sortAllGlobalUser, // 从logitsGlobalUser取做了softmax但是没排序的值做sort，然后求topPNum，sort的value结果存在了logitsGlobalUser中，index结果放在了srcIndexGlobalUser中
                         srcIndexGlobalUser);
                     SetWaitFlag<HardEvent::MTE3_S>(HardEvent::MTE3_S);
                     maxValue = logitsGlobalUser.GetValue(rowId * this->rowLen);
@@ -320,27 +329,31 @@ private:
         }
     }
 
-    __aicore__ inline void InitAndSetBuffer(
-        GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR minPs, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect,
-        GM_ADDR logitsIdx, GM_ADDR logitsSortMasked, GM_ADDR workspace, TPipe* tPipe)
+    __aicore__ inline void InitAndSetBuffer(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR minPs,
+                                            GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKPSelect, GM_ADDR logitsIdx,
+                                            GM_ADDR logitsSortMasked, GM_ADDR workspace, TPipe* tPipe)
     {
         // InitGlobalBuffer as '(type *)<ADDR_OFFSET>' where <ELEMENT AMOUNT> is not recommended.
-        uint64_t gmOffset = static_cast<uint64_t>(this->startTaskId) * this->rowLen;   // element offset by row-offset * col_size (B_offset * S)
+        uint64_t gmOffset = static_cast<uint64_t>(this->startTaskId) *
+                            this->rowLen; // element offset by row-offset * col_size (B_offset * S)
 
         // Read-only tensors
-        logitsGlobal.SetGlobalBuffer((__gm__ T*)logits + gmOffset);                 // logits in [B, S]
-        topKGlobal.SetGlobalBuffer((__gm__ int32_t*)topKs + this->startTaskId);    // top_k in [B, ]
-        topPGlobal.SetGlobalBuffer((__gm__ T*)topPs + this->startTaskId);           // top_p in [B, ]
-        
-        uint32_t coreEle_ = this->rtCoreRowNum == 0 ? this->rowLen : this->rtCoreRowNum * this->rowLen; 
+        logitsGlobal.SetGlobalBuffer((__gm__ T*)logits + gmOffset);             // logits in [B, S]
+        topKGlobal.SetGlobalBuffer((__gm__ int32_t*)topKs + this->startTaskId); // top_k in [B, ]
+        topPGlobal.SetGlobalBuffer((__gm__ T*)topPs + this->startTaskId);       // top_p in [B, ]
+
+        uint32_t coreEle_ = this->rtCoreRowNum == 0 ? this->rowLen : this->rtCoreRowNum * this->rowLen;
         // Write tensors shall aligned to their batch offset
-        dstLogitsGlobal.SetGlobalBuffer((__gm__ float*)logitsTopKPSelect + gmOffset, coreEle_);           // logits_top_kp_select in [B, S]
-        dstIndexGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsSelectIdx + this->startTaskId);  // logits_select_idx in [B, ]
-        dstLogitsSortMaskedGlobal.SetGlobalBuffer((__gm__ float*)logitsSortMasked + gmOffset, coreEle_);           // logits_sort_masked in [B, S]
-        dstLogitsIdxGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsIdx + gmOffset, coreEle_);  // logits_idx in [B, S]
+        dstLogitsGlobal.SetGlobalBuffer((__gm__ float*)logitsTopKPSelect + gmOffset,
+                                        coreEle_); // logits_top_kp_select in [B, S]
+        dstIndexGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsSelectIdx +
+                                       this->startTaskId); // logits_select_idx in [B, ]
+        dstLogitsSortMaskedGlobal.SetGlobalBuffer((__gm__ float*)logitsSortMasked + gmOffset,
+                                                  coreEle_); // logits_sort_masked in [B, S]
+        dstLogitsIdxGlobal.SetGlobalBuffer((__gm__ uint64_t*)logitsIdx + gmOffset, coreEle_); // logits_idx in [B, S]
 
         if (q != nullptr) {
-            qGlobal.SetGlobalBuffer((__gm__ float*)q + gmOffset);  // q in [B, S]
+            qGlobal.SetGlobalBuffer((__gm__ float*)q + gmOffset); // q in [B, S]
             this->ifQSampleCompute = true;
         } else {
             this->ifQSampleCompute = false;
@@ -355,11 +368,11 @@ private:
 
         // the workspace seems to be a shared cache for intermediate results from the GM data
         uint64_t count = static_cast<uint64_t>(this->rowNum) * this->rowLen;
-        uint64_t offset = 0;    // offsets for different cache blocks shared by ALL kernels
-        uint64_t wsKernelOfs = gmOffset;   // Kernel addr offset in current workspace block
+        uint64_t offset = 0;             // offsets for different cache blocks shared by ALL kernels
+        uint64_t wsKernelOfs = gmOffset; // Kernel addr offset in current workspace block
 
         // If there is NO inter-kernel communications, local workspace shall start from the GM offset of current core.
-        logitsGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs);  // global Logits workspace in [B, S]
+        logitsGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs); // global Logits workspace in [B, S]
         offset += count;
         wsKernelOfs *= MRG_PER_ELE; // Kernel Addr offset in workspace block is sized by column factor for ONLY ONCE
         sortPartGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs + offset);
@@ -369,9 +382,10 @@ private:
         srcIndexGlobalUser.SetGlobalBuffer((__gm__ uint32_t*)workspace + gmOffset + offset);
 
         // Init top_kp_selected_logits GM to zeros when if isNeedLogits
-        if(this->isNeedLogits){
+        if (this->isNeedLogits) {
             if (this->inputIsLogits) {
-                AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen, static_cast<float>(SEL_LOGITS_DEF_VAL));
+                AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen,
+                                          static_cast<float>(SEL_LOGITS_DEF_VAL));
             } else {
                 AscendC::InitGlobalMemory(dstLogitsGlobal, this->rtCoreRowNum * this->rowLen, static_cast<float>(0.0f));
             }
@@ -381,8 +395,9 @@ private:
             SyncAll();
         }
 
-        if(this->isNeedSampleResult){
-            AscendC::InitGlobalMemory(dstLogitsSortMaskedGlobal, this->rtCoreRowNum * this->rowLen, static_cast<float>(0.0f)); 
+        if (this->isNeedSampleResult) {
+            AscendC::InitGlobalMemory(dstLogitsSortMaskedGlobal, this->rtCoreRowNum * this->rowLen,
+                                      static_cast<float>(0.0f));
             // Sync single core I/O steps
             SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
             // Prevent dirty write under multi-core scenarios
@@ -412,24 +427,25 @@ private:
         uint64_t gmOffset = startIndex;
 
         for (uint32_t innerLoopCount = 0; innerLoopCount < this->innerLoopTime; ++innerLoopCount) {
-
             if (this->innerLoopEleTail > 0 && innerLoopCount == this->innerLoopTime - 1) {
                 innerCopyLen = this->innerLoopEleTailPad;
                 countLen = this->innerLoopEleTail;
             }
             if constexpr (std::is_same<T, float>::value) {
-                DataCopyPad(localValueCast, logitsGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(localValueCast, logitsGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_MTE3>(HardEvent::MTE2_MTE3);
-            }
-            else {
-                DataCopyPad(localValue, logitsGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            } else {
+                DataCopyPad(localValue, logitsGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, countLen); // half/bfloat16 -> float32
                 SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
             }
             DataCopyPad(logitsGlobalUser[gmOffset], localValueCast, {1, (uint32_t)(countLen * SIZEOF_FP32), 0, 0, 0});
             if (noTopKPMinP && this->isNeedLogits) {
-                DataCopyPad(dstLogitsGlobal[gmOffset], localValueCast, {1, (uint32_t)(countLen * SIZEOF_FP32), 0, 0, 0});
+                DataCopyPad(dstLogitsGlobal[gmOffset], localValueCast,
+                            {1, (uint32_t)(countLen * SIZEOF_FP32), 0, 0, 0});
                 hasCopyOutLogits = true;
             }
             gmOffset += innerCopyLen;
@@ -437,16 +453,16 @@ private:
         }
     }
 
-    __aicore__ inline void GetRowMaxAndIndexInner(
-        LocalTensor<float>& src, LocalTensor<float>& reduceMaxMiddle, uint32_t countLen, float* rowMax, uint32_t& rowMaxIdx,
-        uint32_t indexOffset, const GlobalTensor<float>& dist)
+    __aicore__ inline void GetRowMaxAndIndexInner(LocalTensor<float>& src, LocalTensor<float>& reduceMaxMiddle,
+                                                  uint32_t countLen, float* rowMax, uint32_t& rowMaxIdx,
+                                                  uint32_t indexOffset, const GlobalTensor<float>& dist)
     {
         ReduceMax(reduceMaxMiddle, src, reduceMaxMiddle, countLen, true);
         PipeBarrier<PIPE_V>();
         SetFlag<HardEvent::V_S>(EVENT_ID0);
         WaitFlag<HardEvent::V_S>(EVENT_ID0);
         auto temp = reduceMaxMiddle.GetValue(0);
-        if (temp > *rowMax){
+        if (temp > *rowMax) {
             float index = reduceMaxMiddle.GetValue(1);
             auto tempIndex = *reinterpret_cast<uint32_t*>(&index);
             rowMaxIdx = indexOffset + tempIndex;
@@ -471,13 +487,17 @@ private:
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
-            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset), countLen);
-            SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3); 
-            DataCopyPad(srcIndexGlobalUser[gmOffset], localIndex, {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0, 0}); 
-            DataCopyPad(valueLocalCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset),
+                           countLen);
+            SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
+            DataCopyPad(srcIndexGlobalUser[gmOffset], localIndex,
+                        {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0, 0});
+            DataCopyPad(valueLocalCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                        {false, 0, 0, 0});
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
-            GetRowMaxAndIndexInner(valueLocalCast, reduceMaxMiddle, countLen, rowMax, rowMaxIdx, indexOffset, logitsGlobalUser[gmOffset]);
+            GetRowMaxAndIndexInner(valueLocalCast, reduceMaxMiddle, countLen, rowMax, rowMaxIdx, indexOffset,
+                                   logitsGlobalUser[gmOffset]);
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
             indexOffset += countLen;
@@ -485,7 +505,8 @@ private:
         }
     }
 
-    __aicore__ inline void minPComputeLocal(LocalTensor<float>& samplelogitsLocal, LocalTensor<uint32_t>& localIndexRs, float& minPThd)
+    __aicore__ inline void minPComputeLocal(LocalTensor<float>& samplelogitsLocal, LocalTensor<uint32_t>& localIndexRs,
+                                            float& minPThd)
     {
         for (int32_t index = this->topPNum - 1; index >= 0; index--) {
             float samplelogitsLocalValue = samplelogitsLocal.GetValue(index);
@@ -496,7 +517,8 @@ private:
         }
     }
 
-    __aicore__ inline void minPComputeGloabal(uint32_t rowId, GlobalTensor<float>& logitsGlobalUser, GlobalTensor<uint32_t>& srcIndexGlobalUser, float& minPThd)
+    __aicore__ inline void minPComputeGloabal(uint32_t rowId, GlobalTensor<float>& logitsGlobalUser,
+                                              GlobalTensor<uint32_t>& srcIndexGlobalUser, float& minPThd)
     {
         uint32_t countLen = INNER_LOOP_ELE;
         uint32_t countLenPad = INNER_LOOP_ELE;
@@ -518,48 +540,49 @@ private:
                 countLenPad = Align(countLen, EIGHT);
             }
             // 搬运至UB
-            DataCopyPad(logitsLocal, logitsGlobalUser[startIndex + gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-            DataCopyPad(srcIndexLocal, srcIndexGlobalUser[startIndex + indexOffset], {1, (uint32_t)(countLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(logitsLocal, logitsGlobalUser[startIndex + gmOffset],
+                        {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(srcIndexLocal, srcIndexGlobalUser[startIndex + indexOffset],
+                        {1, (uint32_t)(countLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
 
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
 
             // 与minp比较
             GatherMaskParams gatherMaskParams{1, 1, 8, 8};
-            CompareScalar(compareIndexMask, logitsLocal, minPThd, CMPMODE::GE, SafeCeil(countLen, SIXTY_FOUR) * SIXTY_FOUR); // 大于等于，256字节对齐
+            CompareScalar(compareIndexMask, logitsLocal, minPThd, CMPMODE::GE,
+                          SafeCeil(countLen, SIXTY_FOUR) * SIXTY_FOUR); // 大于等于，256字节对齐
             PipeBarrier<PIPE_V>();
 
             // 取出
-            GatherMask(
-            logitsLocal, logitsLocal, compareIndexMask.ReinterpretCast<uint32_t>(), true, countLen, gatherMaskParams, rsvdCnt);
-            GatherMask(
-            srcIndexLocal, srcIndexLocal, compareIndexMask.ReinterpretCast<uint32_t>(), true, countLen, gatherMaskParams, rsvdCnt);
+            GatherMask(logitsLocal, logitsLocal, compareIndexMask.ReinterpretCast<uint32_t>(), true, countLen,
+                       gatherMaskParams, rsvdCnt);
+            GatherMask(srcIndexLocal, srcIndexLocal, compareIndexMask.ReinterpretCast<uint32_t>(), true, countLen,
+                       gatherMaskParams, rsvdCnt);
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
 
             // copy to workspace, 由rsvdCnt更新偏移
-            DataCopyExtParams valueCopyParams{static_cast<uint16_t>(1), static_cast<uint32_t>((rsvdCnt) * sizeof(float)),
-                                0, 0, 0};
-            DataCopyExtParams indexCopyParams{static_cast<uint16_t>(1), static_cast<uint32_t>((rsvdCnt) * sizeof(uint32_t)),
-            0, 0, 0};
+            DataCopyExtParams valueCopyParams{static_cast<uint16_t>(1),
+                                              static_cast<uint32_t>((rsvdCnt) * sizeof(float)), 0, 0, 0};
+            DataCopyExtParams indexCopyParams{static_cast<uint16_t>(1),
+                                              static_cast<uint32_t>((rsvdCnt) * sizeof(uint32_t)), 0, 0, 0};
             DataCopyPad(logitsGlobalUser[startIndex + copyOutOffset], logitsLocal, valueCopyParams);
             DataCopyPad(srcIndexGlobalUser[startIndex + copyOutOffset], srcIndexLocal, indexCopyParams);
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-            
+
             // 更新偏移
             gmOffset += countLen;
             indexOffset += countLen;
             copyOutOffset += rsvdCnt;
-
         }
 
         this->topPNum = copyOutOffset; // 最后的copyOutOffset等于有效logits的数量
     }
 
-    __aicore__ inline void GetRowMaxInner(
-        LocalTensor<float>& src, LocalTensor<float>& reduceMaxMiddle, uint32_t countLen, float* rowMax,
-        const GlobalTensor<float>& dist)
+    __aicore__ inline void GetRowMaxInner(LocalTensor<float>& src, LocalTensor<float>& reduceMaxMiddle,
+                                          uint32_t countLen, float* rowMax, const GlobalTensor<float>& dist)
     {
         ReduceMax(reduceMaxMiddle, src, reduceMaxMiddle, countLen, false);
         PipeBarrier<PIPE_V>();
@@ -569,8 +592,8 @@ private:
         *rowMax = *rowMax > temp ? *rowMax : temp;
         SetFlag<HardEvent::S_V>(EVENT_ID0);
         WaitFlag<HardEvent::S_V>(EVENT_ID0);
-        DataCopyPad(
-            dist, src, {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}); // 将cast后未做排序的logits存入globalUser
+        DataCopyPad(dist, src,
+                    {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}); // 将cast后未做排序的logits存入globalUser
     }
 
     template <typename DTYPE>
@@ -589,12 +612,13 @@ private:
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
             if constexpr (std::is_same<DTYPE, float>::value) {
-                DataCopyPad(valueLocalCast, src[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(valueLocalCast, src[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
                 WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
-            }
-            else {
-                DataCopyPad(valueLocal, src[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            } else {
+                DataCopyPad(valueLocal, src[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
                 WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
                 Cast(valueLocalCast, valueLocal, RoundMode::CAST_NONE, countLen);
@@ -602,8 +626,8 @@ private:
             }
             GetRowMaxInner(valueLocalCast, reduceMaxMiddle, countLen, rowMax, logitsGlobalUser[gmOffset]);
             if (noTopKPMinP && this->isNeedLogits) {
-                DataCopyPad(
-                    dstLogitsGlobal[gmOffset], valueLocalCast, {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
+                DataCopyPad(dstLogitsGlobal[gmOffset], valueLocalCast,
+                            {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
                 hasCopyOutLogits = true;
             }
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
@@ -626,9 +650,8 @@ private:
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
-            DataCopyPad(
-                valueLocalCast, logitsGlobalUser[gmOffset],
-                {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0}); // 从globalUser里将GetRowMax函数中存储的未排序的做了cast的logits拿出来
+            DataCopyPad(valueLocalCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                        {false, 0, 0, 0}); // 从globalUser里将GetRowMax函数中存储的未排序的做了cast的logits拿出来
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             Duplicate(valueLocalMiddle, rowMax, countLen); // 复制rowMax并填充
             PipeBarrier<PIPE_V>();
@@ -640,10 +663,9 @@ private:
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
             if (needCopyOut) {
-                DataCopyPad(
-                    logitsGlobalUser[gmOffset], valueLocalMiddle,
-                    {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
-                                          // 将EXP结果存储到globalUser里
+                DataCopyPad(logitsGlobalUser[gmOffset], valueLocalMiddle,
+                            {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
+                // 将EXP结果存储到globalUser里
             }
 
             ReduceSum(reduceSumVal, valueLocalMiddle, reduceSumVal, countLen); // 基础API
@@ -663,9 +685,8 @@ private:
         uint32_t countLen)
     {
         LocalTensor<float> valueRs = buf0.Get<float>();
-        DataCopyPad(
-            valueRs, logitsGlobalUser[gmOffset],
-            {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0}); // 将softmaxFst中算的exp临时存储在了GM中，现在搬到local中
+        DataCopyPad(valueRs, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                    {false, 0, 0, 0}); // 将softmaxFst中算的exp临时存储在了GM中，现在搬到local中
         SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
         Duplicate(valueLocalCast, reduceSumMax, countLen);
@@ -691,13 +712,17 @@ private:
                 innerCopyLen = this->innerLoopEleTailPad;
                 countLen = this->innerLoopEleTail;
             }
-            SoftMaxSecCompute(localValueCast, reduceSumMax, gmOffset, innerCopyLen, countLen); // localValueCast存放归一化后的softmax值
+            SoftMaxSecCompute(localValueCast, reduceSumMax, gmOffset, innerCopyLen,
+                              countLen); // localValueCast存放归一化后的softmax值
             if (!(noTopKPMinP && this->ifQSampleCompute)) {
-                SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3); // It should be ok to use SetWaitFlag for flows share the same EVENT_ID.
-                DataCopyPad(logitsGlobalUser[gmOffset], localValueCast, {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0,0});
+                SetWaitFlag<HardEvent::V_MTE3>(
+                    HardEvent::V_MTE3); // It should be ok to use SetWaitFlag for flows share the same EVENT_ID.
+                DataCopyPad(logitsGlobalUser[gmOffset], localValueCast,
+                            {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
-            } else{
-                DataCopyPad(sampleDistTemp, qGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            } else {
+                DataCopyPad(sampleDistTemp, qGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Abs(sampleDistTemp, sampleDistTemp, countLen);
                 PipeBarrier<PIPE_V>();
@@ -711,7 +736,7 @@ private:
                 float valueLocalFP = localValueCast.GetValue(0);
                 float indexLocalFP = localValueCast.GetValue(1);
                 auto tempIndex = *reinterpret_cast<uint32_t*>(&indexLocalFP);
-                if (valueLocalFP > maxValueTemp){
+                if (valueLocalFP > maxValueTemp) {
                     maxIndextemp = indexOffset + tempIndex;
                 }
                 maxValueTemp = maxValueTemp > valueLocalFP ? maxValueTemp : valueLocalFP;
@@ -723,20 +748,20 @@ private:
         }
     }
 
-    __aicore__ inline void SortOneTime(
-        LocalTensor<float>&& srcData, LocalTensor<uint32_t>&& srcIndex, uint32_t dataLen, LocalTensor<float>& sortedLocal)
+    __aicore__ inline void SortOneTime(LocalTensor<float>&& srcData, LocalTensor<uint32_t>&& srcIndex, uint32_t dataLen,
+                                       LocalTensor<float>& sortedLocal)
     {
         LocalTensor<float> concatLocal;
         LocalTensor<float> sortTmpLocal = buf5.Get<float>();
         Concat(concatLocal, srcData, sortTmpLocal, dataLen / SIXTEEN);
         PipeBarrier<PIPE_V>();
-        Sort<float, true>(
-            sortedLocal, concatLocal, srcIndex.ReinterpretCast<uint32_t>(), sortTmpLocal, dataLen / THIRTY_TWO);
+        Sort<float, true>(sortedLocal, concatLocal, srcIndex.ReinterpretCast<uint32_t>(), sortTmpLocal,
+                          dataLen / THIRTY_TWO);
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void Sort32Block(
-        LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex, uint32_t dataLen, bool mrg)
+    __aicore__ inline void Sort32Block(LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex, uint32_t dataLen,
+                                       bool mrg)
     {
         auto sort32LoopNum = SafeCeil(dataLen, SORT32_PER_LEN);
         auto sort32LoopTailNum = dataLen % SORT32_PER_LEN;
@@ -744,8 +769,8 @@ private:
         auto compareLenPad = SORT32_PER_LEN;
         LocalTensor<float> msgSortPart1 = buf0.Get<float>();
         LocalTensor<float> msgSortPart2 = buf4.Get<float>();
-        LocalTensor<float> msgSortLocal[SORT32_MAX_LOOP] = {
-            msgSortPart1, msgSortPart1[SORT32_PER_LEN * NUM_TWO], msgSortPart2, msgSortPart2[SORT32_PER_LEN * NUM_TWO]};
+        LocalTensor<float> msgSortLocal[SORT32_MAX_LOOP] = {msgSortPart1, msgSortPart1[SORT32_PER_LEN * NUM_TWO],
+                                                            msgSortPart2, msgSortPart2[SORT32_PER_LEN * NUM_TWO]};
         uint32_t queLen[SORT32_MAX_LOOP] = {0};
 
         for (uint32_t sort32LoopCount = 0; sort32LoopCount < sort32LoopNum; ++sort32LoopCount) {
@@ -778,8 +803,10 @@ private:
             msgSortLocalResultTemp = msgSortLocalResult[NUM_ZERO];
         }
         if (sort32LoopNum <= 1) {
-            // DataCopy demands 32bytes alignment, immediate call using calCount aligned to 32bytes is valid ONLY WHEN msgSortLocal HAS BEEN ALIGNED to 32bytes yet.   
-            DataCopy(msgSortLocalResultTemp, msgSortLocal[NUM_ZERO], static_cast<uint32_t>(Align(queLen[NUM_ZERO] * NUM_TWO, EIGHT)));
+            // DataCopy demands 32bytes alignment, immediate call using calCount aligned to 32bytes is valid ONLY WHEN
+            // msgSortLocal HAS BEEN ALIGNED to 32bytes yet.
+            DataCopy(msgSortLocalResultTemp, msgSortLocal[NUM_ZERO],
+                     static_cast<uint32_t>(Align(queLen[NUM_ZERO] * NUM_TWO, EIGHT)));
             PipeBarrier<PIPE_V>();
             this->queLenGlobal[qid] = queLen[NUM_ZERO];
         } else {
@@ -789,7 +816,9 @@ private:
             }
             localParams = {elementLengths, false, valueBits[sort32LoopNum], 1};
             MrgSort<float>(
-                msgSortLocalResultTemp, {msgSortLocal[NUM_ZERO], msgSortLocal[NUM_ONE], msgSortLocal[NUM_TWO], msgSortLocal[NUM_THREE]}, localParams);
+                msgSortLocalResultTemp,
+                {msgSortLocal[NUM_ZERO], msgSortLocal[NUM_ONE], msgSortLocal[NUM_TWO], msgSortLocal[NUM_THREE]},
+                localParams);
             PipeBarrier<PIPE_V>();
         }
 
@@ -797,18 +826,18 @@ private:
             elementLengths[NUM_ZERO] = static_cast<uint16_t>(this->queLenGlobal[NUM_ZERO]);
             elementLengths[NUM_ONE] = static_cast<uint16_t>(this->queLenGlobal[NUM_ONE]);
             localParams = {elementLengths, false, valueBits[MRGSORT_PER_NUM_LAST], 1};
-            MrgSort<float>(
-                msgSortLocalResult[NUM_TWO],
-                {msgSortLocalResult[NUM_ZERO], msgSortLocalResult[NUM_ONE], msgSortLocalResult[NUM_ONE], msgSortLocalResult[NUM_ONE]}, localParams);
+            MrgSort<float>(msgSortLocalResult[NUM_TWO],
+                           {msgSortLocalResult[NUM_ZERO], msgSortLocalResult[NUM_ONE], msgSortLocalResult[NUM_ONE],
+                            msgSortLocalResult[NUM_ONE]},
+                           localParams);
             PipeBarrier<PIPE_V>();
             DataCopy(msgSortLocalResult[NUM_ZERO], msgSortLocalResult[NUM_TWO], SORT32_PERGROUP_LEN);
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void Sort32BlockNext(
-        LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex, uint32_t dataLen, LocalTensor<float>& mrgSortResult,
-        uint32_t kCount)
+    __aicore__ inline void Sort32BlockNext(LocalTensor<float>& srcData, LocalTensor<uint32_t>& srcIndex,
+                                           uint32_t dataLen, LocalTensor<float>& mrgSortResult, uint32_t kCount)
     {
         uint32_t firstTopkIndex = (kCount - 1) * NUM_TWO;
         uint64_t rsvdCnt = 0;
@@ -819,11 +848,11 @@ private:
         float firstTopk = mrgSortResult.GetValue(firstTopkIndex);
         CompareScalar(compareIndexMask, srcData, firstTopk, CMPMODE::GT, SafeCeil(dataLen, SIXTY_FOUR) * SIXTY_FOUR);
         PipeBarrier<PIPE_V>();
-        GatherMask(
-            srcData, srcData, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams, rsvdCnt);
+        GatherMask(srcData, srcData, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams,
+                   rsvdCnt);
         PipeBarrier<PIPE_V>();
-        GatherMask(
-            srcIndex, srcIndex, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams, rsvdCnt);
+        GatherMask(srcIndex, srcIndex, compareIndexMask.ReinterpretCast<uint32_t>(), true, dataLen, gatherMaskParams,
+                   rsvdCnt);
         PipeBarrier<PIPE_V>();
 
         if (rsvdCnt > 0) {
@@ -858,14 +887,16 @@ private:
                 innerCopyLen = this->innerLoopEleTailPad;
                 countLen = this->innerLoopEleTail;
             }
-            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset), countLen);
+            CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset),
+                           countLen);
             PipeBarrier<PIPE_V>();
             if constexpr (std::is_same<DTYPE, float>::value) {
-                DataCopyPad(localValueCast, src[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(localValueCast, src[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
-            }
-            else {
-                DataCopyPad(localValue, src[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            } else {
+                DataCopyPad(localValue, src[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0},
+                            {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, countLen); // half/bfloat16 -> float32
                 PipeBarrier<PIPE_V>();
@@ -901,7 +932,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void SoftMaxComputeLocal(uint32_t count, LocalTensor<float>& sampleSrc, float maxValue, float reduceSumMax)
+    __aicore__ inline void SoftMaxComputeLocal(uint32_t count, LocalTensor<float>& sampleSrc, float maxValue,
+                                               float reduceSumMax)
     {
         LocalTensor<float> tempLocalSoftmax = buf4.Get<float>();
         Duplicate(sampleLogitsLocal, maxValue, count);
@@ -955,7 +987,8 @@ private:
         LocalTensor<float> localValueCast = buf2.Get<float>();
         LocalTensor<float> sampleDist = buf4.Get<float>();
         float maxValue{FLOAT_MIN};
-        params.softmaxLoopTime = SafeCeil(this->topPNum, SOFTMAX_PER_LEN); //(params.toppNum + SOFTMAX_PER_LEN - 1) / SOFTMAX_PER_LEN;
+        params.softmaxLoopTime = SafeCeil(this->topPNum,
+                                          SOFTMAX_PER_LEN); //(params.toppNum + SOFTMAX_PER_LEN - 1) / SOFTMAX_PER_LEN;
         params.softmaxLoopEleTail = this->topPNum % SOFTMAX_PER_LEN;
         params.softmaxLoopEleTailPad = (params.softmaxLoopEleTail + THIRTY_ONE) / THIRTY_TWO * THIRTY_TWO;
         for (int32_t innerLoopCount = 0; innerLoopCount < params.softmaxLoopTime; ++innerLoopCount) {
@@ -963,8 +996,10 @@ private:
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
-            DataCopyPad(localValueCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-            DataCopyPad(sampleDist, qGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(localValueCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                        {false, 0, 0, 0});
+            DataCopyPad(sampleDist, qGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0},
+                        {false, 0, 0, 0});
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
@@ -980,7 +1015,7 @@ private:
             float value = localValueCast.GetValue(0);
             float index = localValueCast.GetValue(1);
             auto tempIndex = *reinterpret_cast<uint32_t*>(&index);
-            if (value > maxValue){
+            if (value > maxValue) {
                 maxIndex = indexOffset + tempIndex;
             }
             maxValue = maxValue > value ? maxValue : value;
@@ -988,12 +1023,13 @@ private:
             gmOffset += innerCopyLen;
             indexOffset += countLen;
         }
-        AscendC::DataCacheCleanAndInvalid<uint32_t, AscendC::CacheLine::SINGLE_CACHE_LINE, AscendC::DcciDst::CACHELINE_OUT>(srcIndexGlobalUser[rowId * this->rowLen]);
+        AscendC::DataCacheCleanAndInvalid<uint32_t, AscendC::CacheLine::SINGLE_CACHE_LINE,
+                                          AscendC::DcciDst::CACHELINE_OUT>(srcIndexGlobalUser[rowId * this->rowLen]);
         maxIndex = srcIndexGlobalUser.GetValue(startIndex + maxIndex);
     }
 
     __aicore__ inline void CopyOutIndex(int32_t rowId, uint32_t maxIndex)
-    {   
+    {
         LocalTensor<uint64_t> tempLocalCopy = buf0.Get<uint64_t>();
         this->outputIdx = static_cast<uint64_t>(maxIndex);
         tempLocalCopy.SetValue(0, this->outputIdx);
@@ -1038,11 +1074,12 @@ private:
         while (rowLenOri > 0) {
             auto dataLen = rowLenOri > maxNum ? maxNum : rowLenOri;
             if constexpr (std::is_same<T, float>::value) {
-                DataCopyPad(localValueCast, logitsGlobal[startIndex + startOffset], {1, (uint32_t)(dataLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(localValueCast, logitsGlobal[startIndex + startOffset],
+                            {1, (uint32_t)(dataLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
-            }
-            else {
-                DataCopyPad(localValue, logitsGlobal[startIndex + startOffset], {1, (uint32_t)(dataLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            } else {
+                DataCopyPad(localValue, logitsGlobal[startIndex + startOffset],
+                            {1, (uint32_t)(dataLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, dataLen); // half/bfloat16 -> float32
                 PipeBarrier<PIPE_V>();
@@ -1051,15 +1088,15 @@ private:
             uint32_t indexStartOffset = 0;
             while (calCntOri > 0) {
                 auto indexDataLen = calCntOri > maxNum ? maxNum : calCntOri;
-                DataCopyPad(
-                    indexValue, dist[startIndex + indexStartOffset],
-                    {1, static_cast<uint16_t>(SIZEOF_UINT32 * indexDataLen), 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(indexValue, dist[startIndex + indexStartOffset],
+                            {1, static_cast<uint16_t>(SIZEOF_UINT32 * indexDataLen), 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_S>(HardEvent::MTE2_S);
                 for (uint32_t num = 0; num < indexDataLen; ++num) {
                     auto index = indexValue.GetValue(num);
-                    int32_t valIdx = index - startOffset;   // get local index in current global index section
+                    int32_t valIdx = index - startOffset; // get local index in current global index section
                     if (valIdx < dataLen && valIdx >= 0) {
-                        uint32_t offset = startIndex + index;   // adding origin column index on to GM offset of current core batch for dstlogitsIdx  
+                        uint32_t offset = startIndex + index; // adding origin column index on to GM offset of current
+                                                              // core batch for dstlogitsIdx
                         auto val = localValueCast.GetValue(valIdx);
                         topKPLogitsLocal.SetValue(0, val);
                         SetWaitFlag<HardEvent::S_MTE3>(HardEvent::S_MTE3);
@@ -1091,24 +1128,33 @@ private:
                 countLen = lastLoopLen;
             }
             if (!isInLocalTensor) {
-                DataCopyPad(sampleLogitsLocal, logitsGlobalUser[startIndex + startOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
-                DataCopyPad(localIndexRs, srcIndexGlobalUser[startIndex + startOffset], {1, (uint32_t)(countLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(sampleLogitsLocal, logitsGlobalUser[startIndex + startOffset],
+                            {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(localIndexRs, srcIndexGlobalUser[startIndex + startOffset],
+                            {1, (uint32_t)(countLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_MTE3>(HardEvent::MTE2_MTE3);
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
-                DataCopyExtParams dstLogitsSortMaskedParams{1, static_cast<uint32_t>(countLen * sizeof(float)), 0, 0, 0};
-                DataCopyPad(dstLogitsSortMaskedGlobal[startIndex + startOffset], sampleLogitsLocal, dstLogitsSortMaskedParams);
+                DataCopyExtParams dstLogitsSortMaskedParams{1, static_cast<uint32_t>(countLen * sizeof(float)), 0, 0,
+                                                            0};
+                DataCopyPad(dstLogitsSortMaskedGlobal[startIndex + startOffset], sampleLogitsLocal,
+                            dstLogitsSortMaskedParams);
                 Cast(middleIndexLocalInt64, localIndexRs.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, countLen);
                 SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
                 DataCopyExtParams dstLogitsIdxParams{1, static_cast<uint32_t>(countLen * sizeof(int64_t)), 0, 0, 0};
-                DataCopyPad(dstLogitsIdxGlobal[startIndex + startOffset], middleIndexLocalInt64.ReinterpretCast<uint64_t>(), dstLogitsIdxParams);
+                DataCopyPad(dstLogitsIdxGlobal[startIndex + startOffset],
+                            middleIndexLocalInt64.ReinterpretCast<uint64_t>(), dstLogitsIdxParams);
                 SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
             } else {
-                DataCopyExtParams dstLogitsSortMaskedParams{1, static_cast<uint32_t>(countLen * sizeof(float)), 0, 0, 0};
-                DataCopyPad(dstLogitsSortMaskedGlobal[startIndex + startOffset], sampleLogitsLocal[startOffset], dstLogitsSortMaskedParams);
-                Cast(middleIndexLocalInt64, localIndexRs.ReinterpretCast<int32_t>()[startOffset], RoundMode::CAST_NONE, countLen);
+                DataCopyExtParams dstLogitsSortMaskedParams{1, static_cast<uint32_t>(countLen * sizeof(float)), 0, 0,
+                                                            0};
+                DataCopyPad(dstLogitsSortMaskedGlobal[startIndex + startOffset], sampleLogitsLocal[startOffset],
+                            dstLogitsSortMaskedParams);
+                Cast(middleIndexLocalInt64, localIndexRs.ReinterpretCast<int32_t>()[startOffset], RoundMode::CAST_NONE,
+                     countLen);
                 SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
                 DataCopyExtParams dstLogitsIdxParams{1, static_cast<uint32_t>(countLen * sizeof(int64_t)), 0, 0, 0};
-                DataCopyPad(dstLogitsIdxGlobal[startIndex + startOffset], middleIndexLocalInt64.ReinterpretCast<uint64_t>(), dstLogitsIdxParams);
+                DataCopyPad(dstLogitsIdxGlobal[startIndex + startOffset],
+                            middleIndexLocalInt64.ReinterpretCast<uint64_t>(), dstLogitsIdxParams);
                 SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
             }
             startOffset += countLen;
@@ -1166,8 +1212,8 @@ private:
     uint32_t softmaxLoopEleTail{0};
     uint32_t softmaxLoopEleTailPad{0};
 
-    uint32_t startTaskId{0};    // start batch index offest of current kernel
-    uint32_t rtCoreRowNum{0};   // batch amount processed by this kernel
+    uint32_t startTaskId{0};  // start batch index offest of current kernel
+    uint32_t rtCoreRowNum{0}; // batch amount processed by this kernel
     int32_t k{0};
     uint32_t k_pad{0};
     uint32_t topPNum{0};
@@ -1190,6 +1236,6 @@ private:
 
     const float* FP32_NEG_INF_PTR = reinterpret_cast<const float*>(&FP32_NEG_INF_BITS);
     const float SEL_LOGITS_DEF_VAL = *FP32_NEG_INF_PTR;
-}; // namespace TopKTopPSampleV2
-};
+};     // namespace TopKTopPSampleV2
+};     // namespace TopKTopPSampleV2
 #endif // TOP_K_TOP_P_SAMPLE_V2_H

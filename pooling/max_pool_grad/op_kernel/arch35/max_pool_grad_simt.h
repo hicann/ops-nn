@@ -27,8 +27,7 @@ namespace MaxPoolGrad {
 using namespace AscendC;
 constexpr uint32_t THREAD_DIM = 256;
 
-enum SimtParamIndex
-{
+enum SimtParamIndex {
     MAGIC_C_IDX = 0,
     MAGIC_H_IDX = 2,
     MAGIC_W_IDX = 4,
@@ -38,8 +37,8 @@ enum SimtParamIndex
 };
 
 template <typename VALUE_T, typename PROCESS_T>
-__simt_callee__ __aicore__ inline static void CycleUpdate(
-    VALUE_T val, PROCESS_T idxOffset, VALUE_T* maxVal, PROCESS_T* maxIdx)
+__simt_callee__ __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T* maxVal,
+                                                          PROCESS_T* maxIdx)
 {
     if ((static_cast<VALUE_T>(val) > *maxVal) || isnan(static_cast<float>(val))) {
         *maxIdx = idxOffset;
@@ -48,10 +47,12 @@ __simt_callee__ __aicore__ inline static void CycleUpdate(
 }
 
 template <typename PROCESS_T>
-__simt_callee__ __aicore__ inline static void CalcPoolWindowBounds(
-    PROCESS_T ph, PROCESS_T pw, int32_t strideH, int32_t strideW, int32_t padH, int32_t padW, int32_t kernelH,
-    int32_t kernelW, int32_t dilationH, int32_t dilationW, int64_t height, int64_t width, PROCESS_T& hStart,
-    PROCESS_T& wStart, PROCESS_T& hEnd, PROCESS_T& wEnd, PROCESS_T& maxIdx)
+__simt_callee__ __aicore__ inline static void CalcPoolWindowBounds(PROCESS_T ph, PROCESS_T pw, int32_t strideH,
+                                                                   int32_t strideW, int32_t padH, int32_t padW,
+                                                                   int32_t kernelH, int32_t kernelW, int32_t dilationH,
+                                                                   int32_t dilationW, int64_t height, int64_t width,
+                                                                   PROCESS_T& hStart, PROCESS_T& wStart,
+                                                                   PROCESS_T& hEnd, PROCESS_T& wEnd, PROCESS_T& maxIdx)
 {
     hStart = ph * strideH - padH;
     wStart = pw * strideW - padW;
@@ -92,8 +93,8 @@ private:
 };
 
 template <typename VALUE_T, typename INDICES_T, int64_t Format_T>
-__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T>::Init(
-    GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void MaxPoolGradSIMT<VALUE_T, INDICES_T, Format_T>::Init(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grad,
+                                                                           GM_ADDR y, GM_ADDR workspace)
 {
     origx_.SetGlobalBuffer((__gm__ VALUE_T*)(orig_x));
     grad_.SetGlobalBuffer((__gm__ VALUE_T*)(grad));
@@ -126,9 +127,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNchw(
         DIV_T ph = dim0Idx - nxc * outputHeight;
 
         PROCESS_T hStart, wStart, hEnd, wEnd, maxIdx;
-        CalcPoolWindowBounds<PROCESS_T>(
-            ph, pw, strideH, strideW, padH, padW, kernelH, kernelW, dilationH, dilationW, height, width, hStart, wStart,
-            hEnd, wEnd, maxIdx);
+        CalcPoolWindowBounds<PROCESS_T>(ph, pw, strideH, strideW, padH, padW, kernelH, kernelW, dilationH, dilationW,
+                                        height, width, hStart, wStart, hEnd, wEnd, maxIdx);
         VAL_T maxVal = AscendC::NumericLimits<VAL_T>::NegativeInfinity();
         auto firData = bottomData + nxc * height * width;
         for (PROCESS_T h = hStart; h < hEnd; h += dilationH) {
@@ -160,9 +160,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNhwc(
         DIV_T ph = dim1Idx - n * outputHeight;
 
         PROCESS_T hStart, wStart, hEnd, wEnd, maxIdx;
-        CalcPoolWindowBounds<PROCESS_T>(
-            ph, pw, strideH, strideW, padH, padW, kernelH, kernelW, dilationH, dilationW, height, width, hStart, wStart,
-            hEnd, wEnd, maxIdx);
+        CalcPoolWindowBounds<PROCESS_T>(ph, pw, strideH, strideW, padH, padW, kernelH, kernelW, dilationH, dilationW,
+                                        height, width, hStart, wStart, hEnd, wEnd, maxIdx);
         VAL_T maxVal = AscendC::NumericLimits<VAL_T>::NegativeInfinity();
         auto firData = bottomData + (n * height * width * channels) + c;
         for (PROCESS_T h = hStart; h < hEnd; h += dilationH) {
@@ -177,8 +176,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPoolNhwc(
 }
 
 template <typename IDX_T>
-__simt_callee__ __aicore__ inline static IDX_T PStart(
-    int64_t size, int64_t pad, int64_t kernel, int64_t dilation, IDX_T magicStride, IDX_T shiftStride)
+__simt_callee__ __aicore__ inline static IDX_T PStart(int64_t size, int64_t pad, int64_t kernel, int64_t dilation,
+                                                      IDX_T magicStride, IDX_T shiftStride)
 {
     if (size + pad < ((kernel - 1) * dilation + 1)) {
         return 0;
@@ -192,8 +191,8 @@ __simt_callee__ __aicore__ inline static IDX_T PStart(
 }
 
 template <typename IDX_T>
-__simt_callee__ __aicore__ inline static IDX_T PEnd(
-    int64_t size, int64_t pad, int64_t poolSize, IDX_T magicStride, IDX_T shiftStride)
+__simt_callee__ __aicore__ inline static IDX_T PEnd(int64_t size, int64_t pad, int64_t poolSize, IDX_T magicStride,
+                                                    IDX_T shiftStride)
 {
     using DIV_T = typename std::conditional<std::is_same<IDX_T, int32_t>::value, uint32_t, uint64_t>::type;
     IDX_T pEnd = size + pad;

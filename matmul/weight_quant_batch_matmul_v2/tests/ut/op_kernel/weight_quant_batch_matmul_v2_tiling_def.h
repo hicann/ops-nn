@@ -30,8 +30,8 @@ template <class T>
 inline __aicore__ void InitTilingData(const __gm__ uint8_t* p_tilingdata, T* tilingdata)
 #else
 template <class T>
-__inline__ __attribute__((always_inline)) __aicore__ void InitTilingData(
-    const __gm__ uint8_t* p_tilingdata, T* tilingdata)
+__inline__ __attribute__((always_inline)) __aicore__ void InitTilingData(const __gm__ uint8_t* p_tilingdata,
+                                                                         T* tilingdata)
 #endif
 {
 #if defined(__CCE_KT_TEST__) || defined(__DAV_C220_CUBE__)
@@ -55,10 +55,10 @@ __inline__ __attribute__((always_inline)) __aicore__ void InitTilingData(
 #else
     LocalTensor<uint8_t> tilingDataInUb;
     GlobalTensor<uint8_t> tilingDataInGm;
-    tilingDataInGm.SetGlobalBuffer((__gm__ uint8_t *)p_tilingdata);
+    tilingDataInGm.SetGlobalBuffer((__gm__ uint8_t*)p_tilingdata);
     tilingDataInUb.InitBuffer(0, 192 * 1024); // 192 * 1024是UB大小
     tilingDataInUb.address_.logicPos = static_cast<uint8_t>(AscendC::TPosition::VECIN);
-    __ubuf__ uint8_t* tilingdata_in_ub = (__ubuf__ uint8_t *)tilingDataInUb.GetPhyAddr();
+    __ubuf__ uint8_t* tilingdata_in_ub = (__ubuf__ uint8_t*)tilingDataInUb.GetPhyAddr();
     uint32_t len_burst = (sizeof(T) + 31) / 32;
     DataCopy(tilingDataInUb, tilingDataInGm, {1, len_burst, 0, 0});
     PipeBarrier<PIPE_ALL>();

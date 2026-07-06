@@ -27,14 +27,8 @@ using namespace std;
 
 class soft_margin_loss_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "soft_margin_loss_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "soft_margin_loss_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "soft_margin_loss_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "soft_margin_loss_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(soft_margin_loss_grad_test, test_case_0)
@@ -69,13 +63,14 @@ TEST_F(soft_margin_loss_grad_test, test_case_0)
     tilingDatafromBin->tailBlockNum = 0;
     tilingDatafromBin->cof = 1.0f;
 
-    auto SoftMarginLossGradKernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR grad_out, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling) {
+    auto SoftMarginLossGradKernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR grad_out, GM_ADDR out, GM_ADDR workspace,
+                                       GM_ADDR tiling) {
         ::soft_margin_loss_grad<0>(x, y, grad_out, out, workspace, tiling);
     };
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(SoftMarginLossGradKernel, blockDim, x, y, grad_out, out, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(SoftMarginLossGradKernel, blockDim, x, y, grad_out, out, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);

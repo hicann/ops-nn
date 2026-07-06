@@ -31,18 +31,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class BatchNormGradTiling : public testing::Test
-{
+class BatchNormGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "BatchNormGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "BatchNormGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "BatchNormGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "BatchNormGradTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -106,20 +99,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp32)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -147,11 +140,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp32)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -170,9 +162,8 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp32)
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -224,20 +215,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -265,11 +256,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -288,9 +278,8 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp16)
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -342,20 +331,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_bf16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -383,11 +372,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_bf16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -406,9 +394,8 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_bf16)
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -460,20 +447,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp32)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -501,11 +488,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp32)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -578,20 +564,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -619,11 +605,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -642,9 +627,8 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load)
     ASSERT_EQ(tiling_key, 10000000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "5 0 2 0 12 0 64 0 1 0 0 0 2 0 3 0 32 0 0 0 0 0 230 0 1 0 2 0 1 0 3 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "5 0 2 0 12 0 64 0 1 0 0 0 2 0 3 0 32 0 0 0 0 0 230 0 1 0 2 0 1 0 3 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -695,20 +679,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RAfull_load)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -736,11 +720,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RAfull_load)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -759,9 +742,9 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RAfull_load)
     ASSERT_EQ(tiling_key, 20000000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "5 0 470 0 1 0 0 0 64 0 22 0 7 0 8 0 0 0 0 0 0 0 30 0 16 0 6 0 29 0 1 0 16 0 16 0 6 0 16 0 0 0 4 0 1 0 0 0 1 0 2 0 0 0 2 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "5 0 470 0 1 0 0 0 64 0 22 0 7 0 8 0 0 0 0 0 0 0 30 0 16 0 6 0 29 0 1 0 16 0 16 0 6 0 16 0 0 0 4 0 1 0 0 "
+              "0 1 0 2 0 0 0 2 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -813,20 +796,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -854,11 +837,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -932,20 +914,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_bf16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -973,11 +955,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_bf16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1051,20 +1032,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp32)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1092,11 +1073,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp32)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1170,20 +1150,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1211,11 +1191,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1289,20 +1268,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_bf16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1330,11 +1309,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_bf16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1408,20 +1386,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp32)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1449,11 +1427,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp32)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1528,20 +1505,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1569,11 +1546,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1648,20 +1624,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_bf16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1689,11 +1665,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_bf16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1767,20 +1742,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1808,11 +1783,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_0)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1831,10 +1805,9 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_0)
     ASSERT_EQ(tiling_key, 900000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 128 "
-        "0 0 0 1 0 30 0 0 0 0 0 1 0 0 0 4 0 1 0 16 0 4 0 1 0 1 0 1 1 1 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 128 "
+              "0 0 0 1 0 30 0 0 0 0 0 1 0 0 0 4 0 1 0 16 0 4 0 1 0 1 0 1 1 1 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -1886,20 +1859,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1927,11 +1900,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_1)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1950,10 +1922,9 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_1)
     ASSERT_EQ(tiling_key, 900000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 128 "
-        "0 0 0 1 0 30 0 0 0 0 0 1 0 0 0 4 0 1 0 16 0 4 0 1 0 1 0 1 1 1 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 128 "
+              "0 0 0 1 0 30 0 0 0 0 0 1 0 0 0 4 0 1 0 16 0 4 0 1 0 1 0 1 1 1 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -2005,20 +1976,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2046,11 +2017,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_0)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2124,20 +2094,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2165,11 +2135,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_1)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2188,10 +2157,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_1)
     ASSERT_EQ(tiling_key, 910001);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "4 0 1 0 4 0 1 0 456 0 173 0 1 0 4 0 1 0 1 0 1 0 119 0 99 0 256 0 173 0 0 0 925353388 0 128 0 0 0 2 0 1 0 0 0 0 0 64 0 "
-        "8 0 7 0 8 0 173 0 176 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "4 0 1 0 4 0 1 0 456 0 173 0 1 0 4 0 1 0 1 0 1 0 119 0 99 0 256 0 173 0 0 0 925353388 0 128 0 0 0 2 0 1 "
+              "0 0 0 0 0 64 0 "
+              "8 0 7 0 8 0 173 0 176 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 ");
     dlog_setlevel(0, 3, 0);
 }
 
@@ -2243,20 +2212,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2284,11 +2253,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2363,20 +2331,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0_1)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2404,11 +2372,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0_1)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2483,20 +2450,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ChannelMissMatch)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2524,11 +2491,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ChannelMissMatch)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2593,20 +2559,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_train_ChannelMissMatch)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2634,11 +2600,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_train_ChannelMissMatch)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2703,20 +2668,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_DtypeMixMatch)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2744,11 +2709,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_DtypeMixMatch)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NHWC")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2813,20 +2777,20 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_rar_split_r0_fp16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -2854,11 +2818,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_rar_split_r0_fp16)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
-                           {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
-                           {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(eps)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCHW")},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(is_training)},
+                                  {"output_mask", Ops::NN::AnyValue::CreateFrom<vector<bool>>({true, true, true})}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2879,7 +2842,8 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_rar_split_r0_fp16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 8 0 281416 0 62 0 4608 0 328 0 4608 0 1 0 4608 0 1 0 328 0 336 0 1 0 1 0 1 0 1 "
+        "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 8 0 281416 0 62 0 4608 0 328 0 4608 0 1 0 4608 0 1 0 328 0 336 0 1 0 "
+        "1 0 1 0 1 "
         "0 8 0 1 0 1 0 8 0 1 0 1 0 1 0 1 0 1 0 4608 0 1 0 4608 0 1 0 328 0 336 0 1 0 8 0 1 0 1 0 0 0 1 0 1 0 0 0 0 0 1 "
         "0 0 0 ");
     dlog_setlevel(0, 3, 0);

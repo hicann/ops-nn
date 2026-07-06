@@ -54,8 +54,8 @@ ge::graphStatus InstanceNormReduceEmptyTiling::DoOpTiling()
     int64_t lastCoreElements = 0;
 
     int64_t elemSize = FP32_BYTE;
-    int64_t perLoopMaxIndicesElements =
-        (static_cast<int64_t>(aicoreParams_.ubSize)) / static_cast<int64_t>(elemSize) / BUFFER_NUM;
+    int64_t perLoopMaxIndicesElements = (static_cast<int64_t>(aicoreParams_.ubSize)) / static_cast<int64_t>(elemSize) /
+                                        BUFFER_NUM;
 
     if (meanDataType == ge::DT_FLOAT16 || meanDataType == ge::DT_BF16) {
         elemSize = FP16_BYTE;
@@ -77,9 +77,11 @@ ge::graphStatus InstanceNormReduceEmptyTiling::DoOpTiling()
     int64_t perCorePerLoopElements = perCoreElements;
     int64_t perCoreLastLoopElements = perCoreElements;
 
-    OP_LOGI(context_->GetNodeName(), "InstanceNormReduceEmptyTiling DoOpTiling: class member ubBlockSize is %lu !", ubBlockSize);
+    OP_LOGI(context_->GetNodeName(), "InstanceNormReduceEmptyTiling DoOpTiling: class member ubBlockSize is %lu !",
+            ubBlockSize);
     // 核内切分计算（头核）
-    perCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, perCoreElements), ubBlockSize / elemSize);
+    perCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, perCoreElements),
+                                                   ubBlockSize / elemSize);
     perCoreLoops = Ops::Base::CeilDiv(perCoreElements, perCorePerLoopElements);
     perCoreLastLoopElements = perCoreElements - (perCoreLoops - 1) * perCorePerLoopElements;
 
@@ -92,7 +94,8 @@ ge::graphStatus InstanceNormReduceEmptyTiling::DoOpTiling()
     int64_t lastCoreLastLoopElements = lastCoreElements;
 
     // 尾核核内切分计算
-    lastCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, lastCoreElements), ubBlockSize / elemSize);
+    lastCorePerLoopElements = Ops::Base::FloorAlign(std::min(perLoopMaxIndicesElements, lastCoreElements),
+                                                    ubBlockSize / elemSize);
     lastCoreLoops = Ops::Base::CeilDiv(lastCoreElements, lastCorePerLoopElements);
     lastCoreLastLoopElements = lastCoreElements - (lastCoreLoops - 1) * lastCorePerLoopElements;
 
@@ -100,19 +103,18 @@ ge::graphStatus InstanceNormReduceEmptyTiling::DoOpTiling()
     td_.lastCorePerLoopElements = lastCorePerLoopElements;
     td_.lastCoreLastLoopElements = lastCoreLastLoopElements;
 
-    OP_LOGI(context_->GetNodeName(), "InstanceNormReduceEmptyTiling DoOpTiling: blockNum is %lu, perCoreElements is %lu,"
-            " lastCoreElements is %lu, perCoreLoops is %lu, perCorePerLoopElements is %lu, perCoreLastLoopElements is %lu,"
-            " lastCoreLoops is %lu, lastCorePerLoopElements is %lu, lastCoreLastLoopElements is %lu !",
-            blockNum_, perCoreElements, lastCoreElements, perCoreLoops, perCorePerLoopElements,
-            perCoreLastLoopElements, lastCoreLoops, lastCorePerLoopElements, lastCoreLastLoopElements);
+    OP_LOGI(
+        context_->GetNodeName(),
+        "InstanceNormReduceEmptyTiling DoOpTiling: blockNum is %lu, perCoreElements is %lu,"
+        " lastCoreElements is %lu, perCoreLoops is %lu, perCorePerLoopElements is %lu, perCoreLastLoopElements is %lu,"
+        " lastCoreLoops is %lu, lastCorePerLoopElements is %lu, lastCoreLastLoopElements is %lu !",
+        blockNum_, perCoreElements, lastCoreElements, perCoreLoops, perCorePerLoopElements, perCoreLastLoopElements,
+        lastCoreLoops, lastCorePerLoopElements, lastCoreLastLoopElements);
 
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t InstanceNormReduceEmptyTiling::GetTilingKey() const
-{
-    return TILINGKEY_REDUCE_EMPTY;
-}
+uint64_t InstanceNormReduceEmptyTiling::GetTilingKey() const { return TILINGKEY_REDUCE_EMPTY; }
 
 ge::graphStatus InstanceNormReduceEmptyTiling::PostTiling()
 {
@@ -122,16 +124,16 @@ ge::graphStatus InstanceNormReduceEmptyTiling::PostTiling()
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
-        OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(td_),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(td_), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&td_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
     OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(td_));
     return ge::GRAPH_SUCCESS;
 }

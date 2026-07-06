@@ -25,15 +25,9 @@ using namespace std;
 
 class l2_mish_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "mish_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "mish_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "mish_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "mish_backward_test TearDown" << std::endl; }
 };
 
 // 测试合法数据类型float

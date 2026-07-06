@@ -39,8 +39,8 @@ namespace {
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 } // namespace
 
 static const std::initializer_list<op::DataType> ASCEND950_SAMPLT_COUNT_DTYPE_SUPPORT_LIST = {
@@ -49,9 +49,8 @@ static const std::initializer_list<op::DataType> ASCEND950_SAMPLT_COUNT_DTYPE_SU
 static const std::initializer_list<op::DataType> ASCEND910_SAMPLT_COUNT_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
 
-static bool CheckNotNull(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, aclTensor* mean,
-    aclTensor* variance, aclTensor* batchMean, aclTensor* batchInvstd)
+static bool CheckNotNull(const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount,
+                         aclTensor* mean, aclTensor* variance, aclTensor* batchMean, aclTensor* batchInvstd)
 {
     OP_CHECK_NULL(totalSum, return false);
     OP_CHECK_NULL(totalSquareSum, return false);
@@ -63,9 +62,9 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, const aclTensor* mean,
-    const aclTensor* variance, const aclTensor* batchMean, const aclTensor* batchInvstd)
+static bool CheckDtypeValid(const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount,
+                            const aclTensor* mean, const aclTensor* variance, const aclTensor* batchMean,
+                            const aclTensor* batchInvstd)
 {
     auto dtypeSupportList = ASCEND910_DTYPE_SUPPORT_LIST;
     auto dtypeSampleCountSupportList = ASCEND910_SAMPLT_COUNT_DTYPE_SUPPORT_LIST;
@@ -89,9 +88,8 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckFormat(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, const aclTensor* mean,
-    const aclTensor* variance)
+static bool CheckFormat(const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount,
+                        const aclTensor* mean, const aclTensor* variance)
 {
     if (op::IsPrivateFormat(totalSum->GetStorageFormat())) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "totalSum format only support ND, NCL, NCHW, NCDHW.");
@@ -121,9 +119,9 @@ static constexpr int ONE_DIMS = 1;
 static constexpr int DIM_NUM_0 = 0;
 static constexpr int DIM_NUM_1 = 1;
 
-static bool CheckShape(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, const aclTensor* mean,
-    const aclTensor* variance, const aclTensor* batchMean, const aclTensor* batchInvstd)
+static bool CheckShape(const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount,
+                       const aclTensor* mean, const aclTensor* variance, const aclTensor* batchMean,
+                       const aclTensor* batchInvstd)
 {
     OP_CHECK_WRONG_DIMENSION(totalSum, TWO_DIMS, return false);
     OP_CHECK_WRONG_DIMENSION(totalSquareSum, TWO_DIMS, return false);
@@ -178,28 +176,24 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, aclTensor* mean,
-    aclTensor* variance, aclTensor* batchMean, aclTensor* batchInvstd)
+static aclnnStatus CheckParams(const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount,
+                               aclTensor* mean, aclTensor* variance, aclTensor* batchMean, aclTensor* batchInvstd)
 {
-    CHECK_RET(
-        CheckNotNull(totalSum, totalSquareSum, sampleCount, mean, variance, batchMean, batchInvstd),
-        ACLNN_ERR_PARAM_NULLPTR);
-    CHECK_RET(
-        CheckDtypeValid(totalSum, totalSquareSum, sampleCount, mean, variance, batchMean, batchInvstd),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckNotNull(totalSum, totalSquareSum, sampleCount, mean, variance, batchMean, batchInvstd),
+              ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckDtypeValid(totalSum, totalSquareSum, sampleCount, mean, variance, batchMean, batchInvstd),
+              ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(totalSum, totalSquareSum, sampleCount, mean, variance), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        CheckShape(totalSum, totalSquareSum, sampleCount, mean, variance, batchMean, batchInvstd),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(totalSum, totalSquareSum, sampleCount, mean, variance, batchMean, batchInvstd),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus SyncBatchNormGatherStatsFun(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, aclTensor* mean,
-    aclTensor* variance, float momentum, float eps, aclTensor* batchMean, aclTensor* batchInvstd,
-    aclOpExecutor* executor)
+aclnnStatus SyncBatchNormGatherStatsFun(const aclTensor* totalSum, const aclTensor* totalSquareSum,
+                                        const aclTensor* sampleCount, aclTensor* mean, aclTensor* variance,
+                                        float momentum, float eps, aclTensor* batchMean, aclTensor* batchInvstd,
+                                        aclOpExecutor* executor)
 {
     // 固定写法，将输入mean转换成连续的tensor
     auto totalSumContiguous = l0op::Contiguous(totalSum, executor);
@@ -256,14 +250,15 @@ aclnnStatus SyncBatchNormGatherStatsFun(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(
-    const aclTensor* totalSum, const aclTensor* totalSquareSum, const aclTensor* sampleCount, aclTensor* mean,
-    aclTensor* variance, float momentum, float eps, aclTensor* batchMean, aclTensor* batchInvstd,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(const aclTensor* totalSum, const aclTensor* totalSquareSum,
+                                                          const aclTensor* sampleCount, aclTensor* mean,
+                                                          aclTensor* variance, float momentum, float eps,
+                                                          aclTensor* batchMean, aclTensor* batchInvstd,
+                                                          uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnSyncBatchNormGatherStats, DFX_IN(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
-        DFX_OUT(batchMean, batchInvstd));
+    L2_DFX_PHASE_1(aclnnSyncBatchNormGatherStats,
+                   DFX_IN(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
+                   DFX_OUT(batchMean, batchInvstd));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -283,9 +278,8 @@ aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    auto result = SyncBatchNormGatherStatsFun(
-        totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps, batchMean, batchInvstd,
-        uniqueExecutor.get());
+    auto result = SyncBatchNormGatherStatsFun(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps,
+                                              batchMean, batchInvstd, uniqueExecutor.get());
     CHECK_RET(result == ACLNN_SUCCESS, result);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
@@ -294,8 +288,8 @@ aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSyncBatchNormGatherStats(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnSyncBatchNormGatherStats(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                          aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnSyncBatchNormGatherStats);
     // 固定写法，调用框架能力，完成计算

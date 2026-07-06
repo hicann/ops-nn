@@ -16,374 +16,389 @@
 #include "log/log.h"
 
 namespace {
-class TestMatMulV3InferShape : public testing::Test {
-};
+class TestMatMulV3InferShape : public testing::Test {};
 
-TEST_F(TestMatMulV3InferShape, Basic) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, Basic)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{32, 64}, {32, 64}};
-  gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{32, 64}, {32, 64}};
+    gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
 }
 
-TEST_F(TestMatMulV3InferShape, BasicWithBias) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, BasicWithBias)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{32, 64}, {4, 2, 16, 16}};
-  gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
-  gert::StorageShape bias_shape = {{128}, {128}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{32, 64}, {4, 2, 16, 16}};
+    gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
+    gert::StorageShape bias_shape = {{128}, {128}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
 }
 
-TEST_F(TestMatMulV3InferShape, BasicX2Trans) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, BasicX2Trans)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{32, 64}, {4, 2, 16, 16}};
-  gert::StorageShape x2_shape = {{128, 64}, {4, 8, 16, 16}}; // (n, k), (k1, n1, n0, k0)
-  gert::StorageShape bias_shape = {{128}, {128}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{32, 64}, {4, 2, 16, 16}};
+    gert::StorageShape x2_shape = {{128, 64}, {4, 8, 16, 16}}; // (n, k), (k1, n1, n0, k0)
+    gert::StorageShape bias_shape = {{128}, {128}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
 }
 
-TEST_F(TestMatMulV3InferShape, X2OnlyOneDim) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, X2OnlyOneDim)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {2, 4};
-  gert::Shape x2_shape = {4};
-  gert::Shape expect_output_shape = {2};
+    gert::Shape x1_shape = {2, 4};
+    gert::Shape x2_shape = {4};
+    gert::Shape expect_output_shape = {2};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, DynamicShape) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, DynamicShape)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{-1, 64}, {-1, 64}};
-  gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{-1, 64}, {-1, 64}};
+    gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[-1, 128]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[-1, 128]");
 }
 
-TEST_F(TestMatMulV3InferShape, DynamicBias) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, DynamicBias)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::StorageShape x1_shape = {{32, 64}, {32, 64}};
-  gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
-  gert::StorageShape bias_shape = {{1, -1}, {1, -1}};
-  gert::StorageShape output_shape = {{}, {}};
+    gert::StorageShape x1_shape = {{32, 64}, {32, 64}};
+    gert::StorageShape x2_shape = {{64, 128}, {8, 4, 16, 16}};
+    gert::StorageShape bias_shape = {{1, -1}, {1, -1}};
+    gert::StorageShape output_shape = {{}, {}};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[32, 128]");
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias01) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias01)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape bias_shape = {-2};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape bias_shape = {-2};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias02) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias02)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape bias_shape = {1, 128};
-  gert::Shape expect_output_shape = {-1, 128};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape bias_shape = {1, 128};
+    gert::Shape expect_output_shape = {-1, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias03) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias03)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {64, 128};
-  gert::Shape bias_shape = {-2};
-  gert::Shape expect_output_shape = {-1, 128};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {64, 128};
+    gert::Shape bias_shape = {-2};
+    gert::Shape expect_output_shape = {-1, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias04) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias04)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {64, 128};
-  gert::Shape bias_shape = {1, 128};
-  gert::Shape expect_output_shape = {-1, 128};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {64, 128};
+    gert::Shape bias_shape = {1, 128};
+    gert::Shape expect_output_shape = {-1, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias05) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias05)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {2, 64};
-  gert::Shape x2_shape = {-2};
-  gert::Shape bias_shape = {-2};
-  gert::Shape expect_output_shape = {2, -1};
+    gert::Shape x1_shape = {2, 64};
+    gert::Shape x2_shape = {-2};
+    gert::Shape bias_shape = {-2};
+    gert::Shape expect_output_shape = {2, -1};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias06) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias06)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {2, 64};
-  gert::Shape x2_shape = {64, 128};
-  gert::Shape bias_shape = {-2};
-  gert::Shape expect_output_shape = {2, 128};
+    gert::Shape x1_shape = {2, 64};
+    gert::Shape x2_shape = {64, 128};
+    gert::Shape bias_shape = {-2};
+    gert::Shape expect_output_shape = {2, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias07) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNumWithBias07)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {2, 64};
-  gert::Shape x2_shape = {-2};
-  gert::Shape bias_shape = {1, 128};
-  gert::Shape expect_output_shape = {2, 128};
+    gert::Shape x1_shape = {2, 64};
+    gert::Shape x2_shape = {-2};
+    gert::Shape bias_shape = {1, 128};
+    gert::Shape expect_output_shape = {2, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x1_shape, &x2_shape, &bias_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNum01) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNum01)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {-2};
-  gert::Shape expect_output_shape = {-2};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {-2};
+    gert::Shape expect_output_shape = {-2};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNum02) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNum02)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {-2};
-  gert::Shape x2_shape = {64, 128};
-  gert::Shape expect_output_shape = {-1, 128};
+    gert::Shape x1_shape = {-2};
+    gert::Shape x2_shape = {64, 128};
+    gert::Shape expect_output_shape = {-1, 128};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 
-TEST_F(TestMatMulV3InferShape, UnknownDimNum03) {
-  auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
+TEST_F(TestMatMulV3InferShape, UnknownDimNum03)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->infer_shape;
 
-  gert::Shape x1_shape = {2, 64};
-  gert::Shape x2_shape = {-2};
-  gert::Shape expect_output_shape = {2, -1};
+    gert::Shape x1_shape = {2, 64};
+    gert::Shape x2_shape = {-2};
+    gert::Shape expect_output_shape = {2, -1};
 
-  gert::Shape output_shape = {};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(2, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&x1_shape, &x2_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
 
-  ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-  auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-  ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
 }
 } // namespace

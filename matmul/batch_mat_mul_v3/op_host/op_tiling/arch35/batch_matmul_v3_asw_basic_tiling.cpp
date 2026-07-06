@@ -86,8 +86,8 @@ void BatchMatMulV3AswBasicTiling::CheckTensorApiSupport()
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
-    uint64_t fp32SplitKThreshold =
-        args_.kValue > FP32_K_SWITCH_THRESHOLD ? FP32_SPLIT_K_THRESHOLD2 : FP32_SPLIT_K_THRESHOLD1;
+    uint64_t fp32SplitKThreshold = args_.kValue > FP32_K_SWITCH_THRESHOLD ? FP32_SPLIT_K_THRESHOLD2 :
+                                                                            FP32_SPLIT_K_THRESHOLD1;
     bool isSplitK = false;
     // 连续且非全载场景才支持切K
     if (!isNonContiguous && isFp32 && !args_.isHf32 && isNdFormat && args_.kValue > fp32SplitKThreshold &&
@@ -96,7 +96,8 @@ void BatchMatMulV3AswBasicTiling::CheckTensorApiSupport()
     }
     // 非切K且连续场景下才允许切换tensor api实现
     apiLevel_ = (isBatchMatmul && !isNonContiguous && !isSplitK && !args_.isAvoidTensorApi) ?
-                    MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+                    MatMulV3ApiLevel::TENSOR_LEVEL :
+                    MatMulV3ApiLevel::BASIC_LEVEL;
     // 1952当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
@@ -117,9 +118,6 @@ ge::graphStatus BatchMatMulV3AswBasicTiling::GetTilingData(TilingResult& tiling)
     return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
 }
 
-uint64_t BatchMatMulV3AswBasicTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t BatchMatMulV3AswBasicTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

@@ -34,38 +34,31 @@
 using namespace std;
 using namespace ge;
 
-class SparseToDenseTiling : public testing::Test
-{
+class SparseToDenseTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SparseToDenseTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseToDenseTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SparseToDenseTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SparseToDenseTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-void SetConstInput(size_t const_index, ge::DataType dtype, T *const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> &const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::make_unique<uint8_t[]>(sizeof(gert::Tensor) + sizeof(T) * data_size);
-    auto input_tensor = reinterpret_cast<gert::Tensor *>(input_tensor_holder.get());
-    gert::Tensor tensor({ { data_size }, { data_size } }, // shape
-        { ge::FORMAT_ND, ge::FORMAT_ND, {} },             // format
-        gert::kFollowing,                                 // placement
-        dtype,                                            // dtype
-        nullptr);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::make_unique<uint8_t[]>(sizeof(gert::Tensor) +
+                                                                                 sizeof(T) * data_size);
+    auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dtype
+                        nullptr);
     memcpy_s(input_tensor, sizeof(gert::Tensor), &tensor, sizeof(gert::Tensor));
-    auto tensor_data = reinterpret_cast<T *>(input_tensor + 1);
+    auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
         tensor_data[i] = const_data[i];
     }
-    input_tensor->SetData(gert::TensorData{ tensor_data });
+    input_tensor->SetData(gert::TensorData{tensor_data});
     auto pair = std::make_pair(const_index, std::move(input_tensor_holder));
     const_tensors.push_back(std::move(pair));
 }
@@ -85,7 +78,7 @@ static string to_string(const std::stringstream& tiling_data)
 }
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -99,9 +92,12 @@ static string to_string(void *buf, size_t size)
 
 template <typename T>
 static void ExecuteTestCase(ge::DataType indices_dtype, ge::DataType output_shape_dtype, ge::DataType values_dtype,
-                            ge::DataType default_value_dtype, ge::DataType output_dtype, gert::StorageShape indices_shape, gert::StorageShape output_shape_shape,
-                            gert::StorageShape values_shape, gert::StorageShape default_value_shape, gert::StorageShape output_shape, bool validate_indices,
-                            uint64_t tilingKeyValue, string expectTilingData, T* output_shape_value, int64_t output_dim, ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::DataType default_value_dtype, ge::DataType output_dtype,
+                            gert::StorageShape indices_shape, gert::StorageShape output_shape_shape,
+                            gert::StorageShape values_shape, gert::StorageShape default_value_shape,
+                            gert::StorageShape output_shape, bool validate_indices, uint64_t tilingKeyValue,
+                            string expectTilingData, T* output_shape_value, int64_t output_dim,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -139,8 +135,10 @@ static void ExecuteTestCase(ge::DataType indices_dtype, ge::DataType output_shap
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
@@ -207,8 +205,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal01)
     string expectTilingData = "1 12 16 12 12 1 1 3 3 1 1 0 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, shape4, 
-                            outputshape, false, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_SUCCESS);
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2,
+                             shape3, shape4, outputshape, false, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal02)
@@ -223,8 +222,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal02)
     string expectTilingData = "4 4950 4960 4950 4950 1 1 157 109 64 64 257 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_SUCCESS);
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal03)
@@ -239,8 +239,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_normal03)
     string expectTilingData = "4 1562481 106496 71537 71474 15 15 157 109 64 64 257 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_SUCCESS);
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT16, ge::DT_INT16, ge::DT_INT16, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error01)
@@ -255,8 +256,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error01)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error02)
@@ -271,10 +273,10 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error02)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int32_t>(ge::DT_INT32, ge::DT_INT32, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, shape1, shape2, shape3,
+                             shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
-
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error03)
 {
@@ -288,8 +290,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error03)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int32_t>(ge::DT_INT16, ge::DT_INT16, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int32_t>(ge::DT_INT16, ge::DT_INT16, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, shape1, shape2, shape3,
+                             shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error04)
@@ -304,8 +307,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error04)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int64_t>(ge::DT_INT32, ge::DT_INT64, ge::DT_UINT8, ge::DT_UINT8, ge::DT_UINT8, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int64_t>(ge::DT_INT32, ge::DT_INT64, ge::DT_UINT8, ge::DT_UINT8, ge::DT_UINT8, shape1, shape2,
+                             shape3, shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error05)
@@ -320,8 +324,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error05)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3,
+                             shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error06)
@@ -336,8 +341,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error06)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3,
+                             shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error07)
@@ -352,8 +358,9 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error07)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3,
+                             shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseToDenseTiling, test_tiling_ascendc_error08)
@@ -368,6 +375,7 @@ TEST_F(SparseToDenseTiling, test_tiling_ascendc_error08)
     string expectTilingData = "3 12 1 12 12 3 3 1 1 1 ";
     uint64_t tilingKeyValue = 1000000;
 
-    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3, shape4, 
-                            outputshape, true, tilingKeyValue, expectTilingData, output_shape_value, output_dim, ge::GRAPH_FAILED);
+    ExecuteTestCase<int64_t>(ge::DT_INT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, shape1, shape2, shape3,
+                             shape4, outputshape, true, tilingKeyValue, expectTilingData, output_shape_value,
+                             output_dim, ge::GRAPH_FAILED);
 }

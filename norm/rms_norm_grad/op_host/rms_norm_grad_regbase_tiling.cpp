@@ -61,31 +61,26 @@ ge::graphStatus RmsNormGradRegbaseTiling::GetPlatformInfo()
 ge::graphStatus RmsNormGradRegbaseTiling::CheckShapeAllPositive(gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape.GetDim(i) <= 0,
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i, shape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape.GetDim(i) <= 0,
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i,
+                            shape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RmsNormGradRegbaseTiling::CheckShapesEqual(gert::Shape& lhsShape, gert::Shape& rhsShape)
 {
-    OP_CHECK_IF(
-        lhsShape.GetDimNum() != rhsShape.GetDimNum(),
-        OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", lhsShape.GetDimNum(),
-            rhsShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(lhsShape.GetDimNum() != rhsShape.GetDimNum(),
+                OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", lhsShape.GetDimNum(),
+                        rhsShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < lhsShape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            lhsShape.GetDim(i) != rhsShape.GetDim(i),
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, lhsShape.GetDim(i),
-                rhsShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(lhsShape.GetDim(i) != rhsShape.GetDim(i),
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i,
+                            lhsShape.GetDim(i), rhsShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -110,7 +105,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape0 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
-            "All axes of input dy must be positive numbers");
+                                              "All axes of input dy must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -120,7 +115,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape1 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(storageShape1).c_str(),
-            "All axes of input x must be positive numbers");
+                                              "All axes of input x must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -128,7 +123,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
         std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
-            "The shapes of input dy and input x must be the same");
+                                               "The shapes of input dy and input x must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -138,7 +133,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape2 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
-            "All axes of input rstd must be positive numbers");
+                                              "All axes of input rstd must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -148,7 +143,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape3 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
-            "All axes of input gamma must be positive numbers");
+                                              "All axes of input gamma must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -186,17 +181,16 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     if (dyDtype_ != xDtype) {
         std::string dtypeMsg = ToString(xDtype) + " and " + ToString(dyDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and dy", dtypeMsg.c_str(),
-            "The dtypes of input x and input dy must be the same");
+                                               "The dtypes of input x and input dy must be the same");
         return ge::GRAPH_FAILED;
     }
 
     auto rstdDesc = context_->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
     auto rstdDtype = rstdDesc->GetDataType();
-    OP_CHECK_IF(
-        (rstdDtype != ge::DataType::DT_FLOAT),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "rstd", ToString(rstdDtype).c_str(), "FLOAT"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((rstdDtype != ge::DataType::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "rstd", ToString(rstdDtype).c_str(), "FLOAT"),
+                return ge::GRAPH_FAILED);
 
     auto gammaDesc = context_->GetInputDesc(3);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
@@ -204,9 +198,8 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     if (gammaDtype != ge::DataType::DT_FLOAT && gammaDtype != dyDtype_) {
         std::string dtypeMsg = ToString(gammaDtype);
         std::string reasonMsg = "The dtype of input gamma must be FLOAT or the same as the dtype {" +
-            ToString(dyDtype_) + "} of input dy";
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
-            reasonMsg.c_str());
+                                ToString(dyDtype_) + "} of input dy";
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -216,17 +209,16 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     if (dyDtype_ != dxDtype) {
         std::string dtypeMsg = ToString(dxDtype) + " and " + ToString(dyDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dx and dy", dtypeMsg.c_str(),
-            "The dtypes of output dx and input dy must be the same");
+                                               "The dtypes of output dx and input dy must be the same");
         return ge::GRAPH_FAILED;
     }
 
     auto dgammaDesc = context_->GetOutputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dgammaDesc);
     auto dgammaDtype = dgammaDesc->GetDataType();
-    OP_CHECK_IF(
-        (dgammaDtype != ge::DataType::DT_FLOAT),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dgamma", ToString(dgammaDtype).c_str(), "FLOAT"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((dgammaDtype != ge::DataType::DT_FLOAT),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dgamma", ToString(dgammaDtype).c_str(), "FLOAT"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -251,15 +243,9 @@ ge::graphStatus RmsNormGradRegbaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool RmsNormGradRegbaseTiling::IsCapable()
-{
-    return true;
-}
+bool RmsNormGradRegbaseTiling::IsCapable() { return true; }
 
-uint64_t RmsNormGradRegbaseTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t RmsNormGradRegbaseTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus RmsNormGradRegbaseTiling::PostTiling()
 {
@@ -272,10 +258,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradRegbaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RmsNormGradRegbaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus RmsNormGradRegbaseTiling::GetWorkspaceSize()
 {
@@ -364,9 +347,9 @@ ge::graphStatus RmsNormGradRegbaseTiling::CalcTilingDataDgamma()
         // 一行数据的buffer为(dy + x + dgamma + dgamma1) *64 + (binaryAddCache + rstd)
         maxRowsNumDG_ = ubSize_ / BUFFER_NUM / ((vlFp32_ * 4 + TWO) * FLOATBYTESIZE);
         rowsPerUBDG_ = std::pow(TWO, NearestLowerPowerOfTwo(maxRowsNumDG_));
-        OP_CHECK_IF(
-            maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %d.", maxRowsNumDG_),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(maxRowsNumDG_ <= 0,
+                    OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %d.", maxRowsNumDG_),
+                    return ge::GRAPH_FAILED);
         totalBlockCountDG_ = (rows_ + rowsPerUBDG_ - 1) / rowsPerUBDG_;
         mainBlockCountDG_ = totalBlockCountDG_;
         tailBlockCountwithPadDG_ = 0;
@@ -383,10 +366,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CalcTilingDataDgamma()
     return ge::GRAPH_SUCCESS;
 }
 
-void RmsNormGradRegbaseTiling::LogTilingResult()
-{
-    OP_LOGI(OP_NAME, "rows: %ld, cols_: %ld", rows_, cols_);
-}
+void RmsNormGradRegbaseTiling::LogTilingResult() { OP_LOGI(OP_NAME, "rows: %ld, cols_: %ld", rows_, cols_); }
 
 ge::graphStatus RmsNormGradRegbaseTiling::DoOpTiling()
 {
@@ -397,12 +377,12 @@ ge::graphStatus RmsNormGradRegbaseTiling::DoOpTiling()
 
     // choose template and calc ub buffer size
     result = CalcTilingDataDgamma();
-    OP_CHECK_IF(
-        result != ge::GRAPH_SUCCESS, OP_LOGE(OP_NAME, "Regbase template do op tiling dgamma failed."), return result);
+    OP_CHECK_IF(result != ge::GRAPH_SUCCESS, OP_LOGE(OP_NAME, "Regbase template do op tiling dgamma failed."),
+                return result);
 
     result = CalcTilingDataDx();
-    OP_CHECK_IF(
-        result != ge::GRAPH_SUCCESS, OP_LOGE(OP_NAME, "Regbase template do op tiling dx failed."), return result);
+    OP_CHECK_IF(result != ge::GRAPH_SUCCESS, OP_LOGE(OP_NAME, "Regbase template do op tiling dx failed."),
+                return result);
 
     tilingData_.dxTilingData.set_cols(cols_);
     tilingData_.dxTilingData.set_rows(rows_);

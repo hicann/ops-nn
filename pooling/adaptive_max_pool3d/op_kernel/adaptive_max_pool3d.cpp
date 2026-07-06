@@ -19,8 +19,8 @@
 #include "adaptive_max_pool3d_small_pool.h"
 #include "adaptive_max_pool3d_big_pool.h"
 
-extern "C" __global__ __aicore__ void adaptive_max_pool3d(
-    GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void adaptive_max_pool3d(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
 {
     __gm__ uint8_t* user = GetUserWorkspace(workspace);
 

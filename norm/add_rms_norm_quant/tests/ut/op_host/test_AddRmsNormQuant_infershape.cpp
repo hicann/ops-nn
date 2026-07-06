@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  *
  *
  * @file test_AddRmsNormQuant_proto.cpp
@@ -25,15 +26,9 @@
 
 class AddRmsNormQuant : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddRmsNormQuant Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddRmsNormQuant Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddRmsNormQuant Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddRmsNormQuant Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(AddRmsNormQuant, AddRmsNormQuant_infershape_case_0)
@@ -71,24 +66,23 @@ TEST_F(AddRmsNormQuant, AddRmsNormQuant_InferDtype_case_0)
         ge::DataType scale_ref = ge::DT_FLOAT;
         ge::DataType zero_point_ref = ge::DT_FLOAT;
         ge::DataType output_ref = ge::DT_INT8;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes(
-                    {&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref, &zero_point_ref, &zero_point_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &input_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref,
+                                                   &zero_point_ref, &zero_point_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &input_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -134,25 +128,24 @@ TEST_F(AddRmsNormQuant, AddRmsNormQuant_InferDtype_case_1)
         ge::DataType scale_ref = ge::DT_FLOAT;
         ge::DataType zero_point_ref = ge::DT_FLOAT;
         ge::DataType output_ref = ge::DT_INT8;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
-                .InputDataTypes(
-                    {&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref, &zero_point_ref, &zero_point_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &input_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref,
+                                                   &zero_point_ref, &zero_point_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &input_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -198,28 +191,27 @@ TEST_F(AddRmsNormQuant, AddRmsNormQuant_InferDtype_case_2)
         ge::DataType scale_ref = ge::DT_FLOAT;
         ge::DataType zero_point_ref = ge::DT_FLOAT;
         ge::DataType output_ref = ge::DT_HIFLOAT8;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
-                            {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
-                .InputDataTypes(
-                    {&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref, &zero_point_ref, &zero_point_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &input_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                              {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                              {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref,
+                                                   &zero_point_ref, &zero_point_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &input_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -265,28 +257,27 @@ TEST_F(AddRmsNormQuant, AddRmsNormQuant_InferDtype_case_3)
         ge::DataType scale_ref = ge::DT_FLOAT;
         ge::DataType zero_point_ref = ge::DT_FLOAT;
         ge::DataType output_ref = ge::DT_FLOAT8_E5M2;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
-                            {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
-                .InputDataTypes(
-                    {&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref, &zero_point_ref, &zero_point_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &input_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                              {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                              {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref,
+                                                   &zero_point_ref, &zero_point_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &input_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);
@@ -332,28 +323,27 @@ TEST_F(AddRmsNormQuant, AddRmsNormQuant_InferDtype_case_4)
         ge::DataType scale_ref = ge::DT_FLOAT;
         ge::DataType zero_point_ref = ge::DT_FLOAT;
         ge::DataType output_ref = ge::DT_FLOAT8_E4M3FN;
-        auto context_holder =
-            gert::InferDataTypeContextFaker()
-                .IrInputNum(7)
-                .NodeIoNum(7, 3)
-                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                            {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
-                            {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                            {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
-                .InputDataTypes(
-                    {&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref, &zero_point_ref, &zero_point_ref})
-                .OutputDataTypes({&output_ref, &output_ref, &input_ref})
-                .Build();
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(7)
+                                  .NodeIoNum(7, 3)
+                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(6, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                              {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                              {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                              {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &scale_ref, &scale_ref,
+                                                   &zero_point_ref, &zero_point_ref})
+                                  .OutputDataTypes({&output_ref, &output_ref, &input_ref})
+                                  .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

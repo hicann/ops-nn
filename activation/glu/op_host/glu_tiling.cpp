@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -41,20 +41,17 @@ static ge::graphStatus TilingPrepare4Glu(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(context, "TilingPrepare4Glu fail to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context, "TilingPrepare4Glu fail to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "TilingPrepare4Glu fail to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "TilingPrepare4Glu fail to get ub size."),
+                return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        context, "TilingPrepare4Glu exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
-        compileInfo->ubSizePlatForm);
+    OP_LOGD(context, "TilingPrepare4Glu exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
+            compileInfo->ubSizePlatForm);
     return ge::GRAPH_SUCCESS;
 }
 

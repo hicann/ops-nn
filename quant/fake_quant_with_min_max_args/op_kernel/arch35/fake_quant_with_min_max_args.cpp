@@ -33,8 +33,7 @@ using namespace FakeQuantWithMinMaxArgs;
 using namespace FakeQuantWithMinMaxArgsOp;
 
 template <uint64_t schMode>
-__global__ __aicore__ void fake_quant_with_min_max_args(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void fake_quant_with_min_max_args(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(FakeQuantWithMinMaxArgsTilingData);

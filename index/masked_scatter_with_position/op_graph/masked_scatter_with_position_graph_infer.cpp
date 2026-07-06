@@ -32,14 +32,13 @@ static graphStatus MaskedScatterWithPositionInferDataType(gert::InferDataTypeCon
     OP_LOGD(context, "indices dtype:%s", Ops::Base::ToString(xDataType).c_str());
     ge::DataType yDtype = static_cast<ge::DataType>(xDataType);
     if (support_dtype.count(yDtype) == 0) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "x", Ops::Base::ToString(yDtype).c_str(),
-            "float32, float16, double, uint8, int8, int16, int32, int64, bool and bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", Ops::Base::ToString(yDtype).c_str(),
+                                  "float32, float16, double, uint8, int8, int16, int32, int64, bool and bfloat16");
         return ge::GRAPH_FAILED;
     }
     context->SetOutputDataType(0, yDtype);
     OP_LOGD(context, "MaskedScatterWithPositionInferDataTypeByAttr end. Data type is %s.",
-        Ops::Base::ToString(yDtype).c_str());
+            Ops::Base::ToString(yDtype).c_str());
 
     return ge::GRAPH_SUCCESS;
 }

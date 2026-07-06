@@ -33,8 +33,10 @@ class KernelSwishGrad {
 public:
     __aicore__ inline KernelSwishGrad(){};
 
-    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float sconf);
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, uint64_t smallCoreDataNum,
+                                uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                uint64_t tailBlockNum, float sconf);
     __aicore__ inline void Process();
 
 private:
@@ -60,8 +62,11 @@ private:
 };
 
 template <typename TYPE_X>
-__aicore__ inline void KernelSwishGrad<TYPE_X>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float sconf)
+__aicore__ inline void KernelSwishGrad<TYPE_X>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR grad_x,
+                                                     uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                                     uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                                     uint64_t tileDataNum, uint64_t smallTailDataNum,
+                                                     uint64_t bigTailDataNum, uint64_t tailBlockNum, float sconf)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -78,9 +83,9 @@ __aicore__ inline void KernelSwishGrad<TYPE_X>::Init(GM_ADDR grad, GM_ADDR x, GM
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    gradGm.SetGlobalBuffer((__gm__ TYPE_X *)grad + globalBufferIndex, this->coreDataNum);
-    xGm.SetGlobalBuffer((__gm__ TYPE_X *)x + globalBufferIndex, this->coreDataNum);
-    outputGm.SetGlobalBuffer((__gm__ TYPE_X *)grad_x + globalBufferIndex, this->coreDataNum);
+    gradGm.SetGlobalBuffer((__gm__ TYPE_X*)grad + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
+    outputGm.SetGlobalBuffer((__gm__ TYPE_X*)grad_x + globalBufferIndex, this->coreDataNum);
 
     pipe.InitBuffer(inQueueGrad, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_X));

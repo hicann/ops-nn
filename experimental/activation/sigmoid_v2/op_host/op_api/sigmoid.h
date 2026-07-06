@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Sigmoid(const aclTensor *self, aclOpExecutor *executor);
+const aclTensor* Sigmoid(const aclTensor* self, aclOpExecutor* executor);
 }
 
 #endif

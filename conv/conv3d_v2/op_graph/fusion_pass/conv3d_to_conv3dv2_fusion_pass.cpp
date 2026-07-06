@@ -41,16 +41,16 @@ bool Conv3dToConv3dV2FusionPass::CheckSocCapability()
         OP_LOGE(FUSION_NAME, "Get PlatformInfo failed."), return false);
 
     supportOut2L1Dn2Nz = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_data_move_out2l1_dn2nz") !=
-        platformInfo.ai_core_intrinsic_dtype_map.end();
+                         platformInfo.ai_core_intrinsic_dtype_map.end();
     if (supportOut2L1Dn2Nz) {
         OP_LOGD(FUSION_NAME, "Current soc supported out2l1_dn2nz intrinsic.");
         return true;
     }
 
     bool supportL0c2Out = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_fix_pipe_l0c2out") !=
-        platformInfo.ai_core_intrinsic_dtype_map.end();
+                          platformInfo.ai_core_intrinsic_dtype_map.end();
     bool supportFixpipeL0c2Ub = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_fix_pipe_l0c2ub") !=
-        platformInfo.ai_core_intrinsic_dtype_map.end();
+                                platformInfo.ai_core_intrinsic_dtype_map.end();
     if (!supportL0c2Out || supportFixpipeL0c2Ub) {
         OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion.");
         return false;
@@ -59,7 +59,7 @@ bool Conv3dToConv3dV2FusionPass::CheckSocCapability()
     return true;
 }
 
-bool Conv3dToConv3dV2FusionPass::CheckPostCubeInOutNode(const GNode &convNode) const
+bool Conv3dToConv3dV2FusionPass::CheckPostCubeInOutNode(const GNode& convNode) const
 {
     auto convOutputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     for (size_t i = 0; i < convOutputNodes.size(); ++i) {
@@ -77,11 +77,10 @@ bool Conv3dToConv3dV2FusionPass::CheckPostCubeInOutNode(const GNode &convNode) c
     return false;
 }
 
-bool Conv3dToConv3dV2FusionPass::CheckTransDataInInputNode(const GNode &convNode) const
+bool Conv3dToConv3dV2FusionPass::CheckTransDataInInputNode(const GNode& convNode) const
 {
     auto nodePtr = convNode.GetInDataNodesAndPortIndexs(INPUT_FMAP_INDEX).first;
-    FUSION_PASS_CHECK(nodePtr == nullptr,
-        OP_LOGD(convDescInfo.nodeNameStr, "Get in data node failed."), return false);
+    FUSION_PASS_CHECK(nodePtr == nullptr, OP_LOGD(convDescInfo.nodeNameStr, "Get in data node failed."), return false);
 
     AscendString opType;
     nodePtr->GetType(opType);
@@ -103,7 +102,7 @@ bool Conv3dToConv3dV2FusionPass::CheckTransDataInInputNode(const GNode &convNode
     return false;
 }
 
-bool Conv3dToConv3dV2FusionPass::CheckIFMRInSameOutputNode(const GNode &convNode) const
+bool Conv3dToConv3dV2FusionPass::CheckIFMRInSameOutputNode(const GNode& convNode) const
 {
     auto convOutputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     for (size_t i = 0; i < convOutputNodes.size(); ++i) {
@@ -127,7 +126,7 @@ bool Conv3dToConv3dV2FusionPass::CheckIFMRInSameOutputNode(const GNode &convNode
     return false;
 }
 
-bool Conv3dToConv3dV2FusionPass::MeetRequirements(const GNode &convNode)
+bool Conv3dToConv3dV2FusionPass::MeetRequirements(const GNode& convNode)
 {
     InitMember();
 
@@ -140,49 +139,47 @@ bool Conv3dToConv3dV2FusionPass::MeetRequirements(const GNode &convNode)
     if (convDescInfo.hasBias) {
         convDtypes.emplace_back(convDescInfo.biasDtype);
     }
-    auto &convSupportList = supportOut2L1Dn2Nz ? CONV_SUPPORT_DTYPES_OUT2L1_DN2NZ : CONV_SUPPORT_DTYPES;
+    auto& convSupportList = supportOut2L1Dn2Nz ? CONV_SUPPORT_DTYPES_OUT2L1_DN2NZ : CONV_SUPPORT_DTYPES;
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(convSupportList, convDtypes),
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv3D dtype not supported, no fusion."), return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Conv3D dtype not supported, no fusion."), return false);
 
     if (supportOut2L1Dn2Nz) {
         return true;
     }
 
     bool isStatic = !ConvFusionUtilsPass::IsUnknownShape(convDescInfo.fmapDesc) &&
-        !ConvFusionUtilsPass::IsUnknownShape(convDescInfo.filterDesc);
+                    !ConvFusionUtilsPass::IsUnknownShape(convDescInfo.filterDesc);
     if (convDescInfo.hasBias) {
         isStatic = isStatic && !ConvFusionUtilsPass::IsUnknownShape(convDescInfo.biasDesc);
     }
-    FUSION_PASS_CHECK(!isStatic,
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv3dv2 only support static shape. in current soc, no fusion."),
+    FUSION_PASS_CHECK(
+        !isStatic, OP_LOGD(convDescInfo.nodeNameStr, "Conv3dv2 only support static shape. in current soc, no fusion."),
         return false);
 
     FUSION_PASS_CHECK(CheckPostCubeInOutNode(convNode),
-        OP_LOGD(convDescInfo.nodeNameStr,
-            "Conv3d that contain FixPipe in out node is not supported."),
-            return false);
+                      OP_LOGD(convDescInfo.nodeNameStr, "Conv3d that contain FixPipe in out node is not supported."),
+                      return false);
 
     if (convDescInfo.fmapDtype == DataType::DT_FLOAT16) {
         FUSION_PASS_CHECK(CheckTransDataInInputNode(convNode),
-            OP_LOGD(convDescInfo.nodeNameStr,
-                "Extra situation: Conv3d that contain TransData in input node is not supported."),
-                return false);
+                          OP_LOGD(convDescInfo.nodeNameStr,
+                                  "Extra situation: Conv3d that contain TransData in input node is not supported."),
+                          return false);
         FUSION_PASS_CHECK(CheckIFMRInSameOutputNode(convNode),
-            OP_LOGD(convDescInfo.nodeNameStr,
-                "Extra situation: Conv3d that contain IFMR in same output node is not supported."),
-                return false);
+                          OP_LOGD(convDescInfo.nodeNameStr,
+                                  "Extra situation: Conv3d that contain IFMR in same output node is not supported."),
+                          return false);
     }
 
     return true;
 }
 
-GraphUniqPtr Conv3dToConv3dV2FusionPass::Replacement(const GNode &convNode)
+GraphUniqPtr Conv3dToConv3dV2FusionPass::Replacement(const GNode& convNode)
 {
     auto graphBuilder = es::EsGraphBuilder("replacement");
 
     ConvBaseAttrs baseAttrs = {};
-    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvBaseAttr(convNode, baseAttrs, convDescInfo),
-        return nullptr);
+    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvBaseAttr(convNode, baseAttrs, convDescInfo), return nullptr);
 
     if (!supportOut2L1Dn2Nz) {
         OP_LOGD(convDescInfo.nodeNameStr, "Current soc not supported Hf32, set enable_hf32 to false.");
@@ -190,30 +187,25 @@ GraphUniqPtr Conv3dToConv3dV2FusionPass::Replacement(const GNode &convNode)
     }
 
     auto [fmap, filter] = graphBuilder.CreateInputs<REQUIRED_INPUT_NUMS>();
-    auto bias = convDescInfo.hasBias ?
-        graphBuilder.CreateInput(static_cast<int64_t>(INPUT_BIAS_INDEX)) : nullptr;
+    auto bias = convDescInfo.hasBias ? graphBuilder.CreateInput(static_cast<int64_t>(INPUT_BIAS_INDEX)) : nullptr;
 
-    auto conv3dV2 = es::Conv3DV2(fmap, filter, bias,
-        nullptr, nullptr, nullptr,
-        baseAttrs.strides, baseAttrs.pads, baseAttrs.dilations,
-        baseAttrs.groups, baseAttrs.dataFormat.GetString(),
-        baseAttrs.offsetX, baseAttrs.padMode.GetString(),
-        baseAttrs.enableHf32);
+    auto conv3dV2 = es::Conv3DV2(fmap, filter, bias, nullptr, nullptr, nullptr, baseAttrs.strides, baseAttrs.pads,
+                                 baseAttrs.dilations, baseAttrs.groups, baseAttrs.dataFormat.GetString(),
+                                 baseAttrs.offsetX, baseAttrs.padMode.GetString(), baseAttrs.enableHf32);
 
     auto conv3dV2Node = conv3dV2.GetProducer();
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::UpdateInputDesc(conv3dV2Node, convDescInfo), return nullptr);
     FUSION_PASS_CHECK(conv3dV2Node->UpdateOutputDesc(OUTPUT_INDEX, convDescInfo.outputDesc) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Update Conv3DV2 output tensor desc failed."), return nullptr);
+                      OP_LOGE(convDescInfo.nodeNameStr, "Update Conv3DV2 output tensor desc failed."), return nullptr);
     FUSION_PASS_CHECK(conv3dV2Node->SetAttr(OP_IMPL_MODE_ENUM, baseAttrs.opImplModeEnum) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for Conv3DV2 failed."), return nullptr);
+                      OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for Conv3DV2 failed."), return nullptr);
     OP_LOGD(convDescInfo.nodeNameStr, "Create Conv3DV2 node successfully.");
 
     return graphBuilder.BuildAndReset({conv3dV2});
 }
 
 #if GE_COMPILER_VERSION_NUM >= 90000000U
-REG_DECOMPOSE_PASS(Conv3dToConv3dV2FusionPass, {ConvFusionUtils::CONV3D})
-    .Stage(CustomPassStage::kCompatibleInherited);
+REG_DECOMPOSE_PASS(Conv3dToConv3dV2FusionPass, {ConvFusionUtils::CONV3D}).Stage(CustomPassStage::kCompatibleInherited);
 #endif
 
 } // namespace Ops

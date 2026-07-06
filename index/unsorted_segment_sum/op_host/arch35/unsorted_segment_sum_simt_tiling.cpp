@@ -26,10 +26,7 @@ static constexpr uint64_t RATIO_BY_SORT = 5;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
 
-bool UnsortedSegmentSumSimtTiling::IsCapable()
-{
-    return true;
-}
+bool UnsortedSegmentSumSimtTiling::IsCapable() { return true; }
 
 uint64_t UnsortedSegmentSumSimtTiling::GetTilingKey() const
 {
@@ -64,10 +61,9 @@ ge::graphStatus UnsortedSegmentSumSimtTiling::PostTiling()
     context_->SetScheduleMode(1);
     ubSize_ = ubSize_ - DCACHE_SIZE - SIMD_RESERVED_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_CHECK_IF(
-        (res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
+                return ge::GRAPH_FAILED);
     if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
         return ge::GRAPH_FAILED;
     }

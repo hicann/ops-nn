@@ -46,8 +46,10 @@ class KernelReluGrad {
 public:
     __aicore__ inline KernelReluGrad(){};
 
-    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum);
+    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, uint64_t smallCoreDataNum,
+                                uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                uint64_t tailBlockNum);
     __aicore__ inline void Process();
 
 private:
@@ -70,8 +72,11 @@ private:
 };
 
 template <typename TYPE_GRADIENTS>
-__aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum)
+__aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops,
+                                                            uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                                            uint64_t finalBigTileNum, uint64_t finalSmallTileNum,
+                                                            uint64_t tileDataNum, uint64_t smallTailDataNum,
+                                                            uint64_t bigTailDataNum, uint64_t tailBlockNum)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -87,9 +92,9 @@ __aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Init(GM_ADDR gradients, G
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    xGm.SetGlobalBuffer((__gm__ TYPE_GRADIENTS *)gradients + globalBufferIndex, this->coreDataNum);
-    yGm.SetGlobalBuffer((__gm__ TYPE_GRADIENTS *)features + globalBufferIndex, this->coreDataNum);
-    outGm.SetGlobalBuffer((__gm__ TYPE_GRADIENTS *)backprops + globalBufferIndex, this->coreDataNum);
+    xGm.SetGlobalBuffer((__gm__ TYPE_GRADIENTS*)gradients + globalBufferIndex, this->coreDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_GRADIENTS*)features + globalBufferIndex, this->coreDataNum);
+    outGm.SetGlobalBuffer((__gm__ TYPE_GRADIENTS*)backprops + globalBufferIndex, this->coreDataNum);
     if constexpr (std::is_same_v<TYPE_GRADIENTS, float32_t> || std::is_same_v<TYPE_GRADIENTS, float16_t>) {
         pipe.InitBuffer(tmpQueueMask1, this->tileDataNum * sizeof(uint8_t));
     } else if constexpr (std::is_same_v<TYPE_GRADIENTS, bfloat16_t>) {
@@ -131,9 +136,11 @@ __aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Compute(int32_t progress)
         AscendC::LocalTensor<float> yLocal = inQueueY.DeQue<float>();
         AscendC::LocalTensor<float> outLocal = outQueueOut.AllocTensor<float>();
         AscendC::LocalTensor<uint8_t> mask1Local = tmpQueueMask1.AllocTensor<uint8_t>();
-        AscendC::CompareScalar(mask1Local, yLocal, static_cast<float>(scalar_float), AscendC::CMPMODE::LE, this->processDataNum);
+        AscendC::CompareScalar(mask1Local, yLocal, static_cast<float>(scalar_float), AscendC::CMPMODE::LE,
+                               this->processDataNum);
         AscendC::Duplicate(yLocal, static_cast<float>(scalar_float), this->processDataNum);
-        AscendC::Select(outLocal, mask1Local, yLocal, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, this->processDataNum);
+        AscendC::Select(outLocal, mask1Local, yLocal, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                        this->processDataNum);
         outQueueOut.EnQue<float>(outLocal);
         inQueueX.FreeTensor(xLocal);
         inQueueY.FreeTensor(yLocal);
@@ -143,9 +150,11 @@ __aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Compute(int32_t progress)
         AscendC::LocalTensor<TYPE_GRADIENTS> outLocal = outQueueOut.AllocTensor<TYPE_GRADIENTS>();
         if constexpr (std::is_same_v<TYPE_GRADIENTS, float16_t>) {
             AscendC::LocalTensor<uint8_t> mask1Local = tmpQueueMask1.AllocTensor<uint8_t>();
-            AscendC::CompareScalar(mask1Local, yLocal, static_cast<half>(scalar_half), AscendC::CMPMODE::LE, this->processDataNum);
+            AscendC::CompareScalar(mask1Local, yLocal, static_cast<half>(scalar_half), AscendC::CMPMODE::LE,
+                                   this->processDataNum);
             AscendC::Duplicate(yLocal, static_cast<half>(scalar_half), this->processDataNum);
-            AscendC::Select(outLocal, mask1Local, yLocal, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, this->processDataNum);
+            AscendC::Select(outLocal, mask1Local, yLocal, xLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                            this->processDataNum);
         } else if constexpr (std::is_same_v<TYPE_GRADIENTS, bfloat16_t>) {
             AscendC::LocalTensor<float> tmp1Local = tmpQueue1.AllocTensor<float>();
             AscendC::LocalTensor<float> tmp2Local = tmpQueue2.AllocTensor<float>();
@@ -191,7 +200,6 @@ __aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Compute(int32_t progress)
         inQueueY.FreeTensor(yLocal);
     }
 }
-
 
 template <typename TYPE_GRADIENTS>
 __aicore__ inline void KernelReluGrad<TYPE_GRADIENTS>::Process()

@@ -26,9 +26,9 @@ constexpr size_t DIM_3 = 3;
 
 OP_TYPE_REGISTER(InstanceNormV3);
 
-std::tuple<aclTensor*, aclTensor*, aclTensor*> InstanceNormV3(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, const char* dataFormat, double eps,
-    aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*, aclTensor*> InstanceNormV3(const aclTensor* x, const aclTensor* gamma,
+                                                              const aclTensor* beta, const char* dataFormat, double eps,
+                                                              aclOpExecutor* executor)
 {
     OP_LOGD("Enter InstanceNorm Level 0");
     L0_DFX(InstanceNormV3, x, gamma, beta, dataFormat, eps);
@@ -53,9 +53,8 @@ std::tuple<aclTensor*, aclTensor*, aclTensor*> InstanceNormV3(
         return std::make_tuple(nullptr, nullptr, nullptr);
     }
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        InstanceNormV3, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, variance),
-        OP_ATTR(dataFormat, static_cast<float>(eps)));
+    ADD_TO_LAUNCHER_LIST_AICORE(InstanceNormV3, OP_INPUT(x, gamma, beta), OP_OUTPUT(y, mean, variance),
+                                OP_ATTR(dataFormat, static_cast<float>(eps)));
 
     OP_LOGD("Finish InstanceNorm level 0");
     return std::tuple<aclTensor*, aclTensor*, aclTensor*>(y, mean, variance);

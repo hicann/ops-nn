@@ -28,19 +28,12 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnThresholdV2GetWorkspaceSize(
-    const aclTensor *self,
-    const aclScalar *threshold,
-    const aclScalar *value,
-    aclTensor       *out,
-    uint64_t        *workspaceSize,
-    aclOpExecutor  **executor);
+ACLNN_API aclnnStatus aclnnThresholdV2GetWorkspaceSize(const aclTensor* self, const aclScalar* threshold,
+                                                       const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
+                                                       aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnThresholdV2(
-    void           *workspace,
-    uint64_t        workspaceSize,
-    aclOpExecutor  *executor,
-    aclrtStream     stream);
+ACLNN_API aclnnStatus aclnnThresholdV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *SwishGrad(const aclTensor *gradOutput, const aclTensor *self, float betaOptional, aclOpExecutor *executor);
-}  // namespace l0op
+const aclTensor* SwishGrad(const aclTensor* gradOutput, const aclTensor* self, float betaOptional,
+                           aclOpExecutor* executor);
+} // namespace l0op
 
 #endif

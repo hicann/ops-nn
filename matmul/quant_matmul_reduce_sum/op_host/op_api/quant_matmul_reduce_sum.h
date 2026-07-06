@@ -18,12 +18,12 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* QuantMatmulReduceSum(
-    const aclTensor* x1, const aclTensor* x2, const aclIntArray* dims, const aclTensor* bias,
-    const aclTensor* x1Scale, const aclTensor* x2Scale, const aclTensor* yScale,
-    const aclTensor* x1Offset, const aclTensor* x2Offset, const aclTensor* yOffset, const aclTensor* x2Table,
-    int64_t dtype, bool transposeX1, bool transposeX2, uint64_t groupSize, bool keepDims,
-    aclOpExecutor* executor);
+const aclTensor* QuantMatmulReduceSum(const aclTensor* x1, const aclTensor* x2, const aclIntArray* dims,
+                                      const aclTensor* bias, const aclTensor* x1Scale, const aclTensor* x2Scale,
+                                      const aclTensor* yScale, const aclTensor* x1Offset, const aclTensor* x2Offset,
+                                      const aclTensor* yOffset, const aclTensor* x2Table, int64_t dtype,
+                                      bool transposeX1, bool transposeX2, uint64_t groupSize, bool keepDims,
+                                      aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_QUANT_MATMUL_REDUCE_SUM_H

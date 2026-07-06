@@ -72,10 +72,10 @@ constexpr uint32_t PAD_LEFT_INDEX = 4;
 constexpr uint32_t PAD_RIGHT_INDEX = 5;
 constexpr uint32_t FORMAT_PAD_DIM = 6;
 
-using ::Conv3dCommon::LOAD3D_MAX_STRIDE_H_W;
 using ::Conv3dCommon::LOAD3D_MAX_DILATION_H_W;
-using ::Conv3dCommon::LOAD3D_MAX_PAD;
 using ::Conv3dCommon::LOAD3D_MAX_FILTER_H_W;
+using ::Conv3dCommon::LOAD3D_MAX_PAD;
+using ::Conv3dCommon::LOAD3D_MAX_STRIDE_H_W;
 
 constexpr uint32_t MAX_16_BIT_NUM = 65535;
 
@@ -87,9 +87,9 @@ using ::Conv3dCommon::CUBE_UNIT;
 using ::Conv3dCommon::FP16_CUBE_UNIT;
 using ::Conv3dCommon::FP32_CUBE_UNIT;
 using ::Conv3dCommon::INT8_CUBE_UNIT;
-using ::Conv3dCommon::MKN_MAX_SIZE;
-using ::Conv3dCommon::MKN_M_INDEX;
 using ::Conv3dCommon::MKN_K_INDEX;
+using ::Conv3dCommon::MKN_M_INDEX;
+using ::Conv3dCommon::MKN_MAX_SIZE;
 using ::Conv3dCommon::MKN_N_INDEX;
 using ::Conv3dCommon::MKN_VALUE_DEFAULT;
 
@@ -98,7 +98,7 @@ using ::Conv3dCommon::CONST_VALUE_2;
 constexpr uint32_t BATCH_AICORE_COF = 2;
 using ::Conv3dCommon::C0_SIZE;
 
-//numBlocks: [batchDim, mdim, nDim, doDim, groupDim]
+// numBlocks: [batchDim, mdim, nDim, doDim, groupDim]
 constexpr uint32_t NUMBLOCKS_DEC_NUM = 5;
 constexpr uint32_t NUMBLOCKS_BATCH_IDX = 0;
 constexpr uint32_t NUMBLOCKS_M_IDX = 1;
@@ -110,7 +110,7 @@ constexpr uint32_t MKN_M_IDX = 0;
 constexpr uint32_t MKN_K_IDX = 1;
 constexpr uint32_t MKN_N_IDX = 2;
 
-constexpr uint32_t COUNT_PARAMS_WITH_BIAS = 4; // [fmap, weight, bias, output]
+constexpr uint32_t COUNT_PARAMS_WITH_BIAS = 4;    // [fmap, weight, bias, output]
 constexpr uint32_t COUNT_PARAMS_WITHOUT_BIAS = 3; // [fmap, weight, output]
 
 constexpr uint64_t INITIAL_AICORE_ZERO = 0;
@@ -146,40 +146,36 @@ struct Conv3DTilingFlag {
 };
 
 struct NumBlocksRange {
-  std::vector<uint32_t> aicNumRange;
-  std::vector<uint32_t> batchRange;
-  std::vector<uint32_t> mRange;
-  std::vector<uint32_t> nRange;
-  std::vector<uint32_t> doRange;
-  std::vector<uint32_t> groupRange;
+    std::vector<uint32_t> aicNumRange;
+    std::vector<uint32_t> batchRange;
+    std::vector<uint32_t> mRange;
+    std::vector<uint32_t> nRange;
+    std::vector<uint32_t> doRange;
+    std::vector<uint32_t> groupRange;
 };
 
 struct NumBlocksConstParas {
-  uint64_t m0;
-  uint64_t n0;
-  uint64_t k0;
-  uint64_t ci1;
-  uint64_t co1;
+    uint64_t m0;
+    uint64_t n0;
+    uint64_t k0;
+    uint64_t ci1;
+    uint64_t co1;
 };
 
 struct NumBlocksRes {
-  uint32_t batchDim = 0;
-  uint32_t mDim = 0;
-  uint32_t nDim = 0;
-  uint32_t doDim = 0;
-  uint32_t groupDim = 0;
-  uint64_t minCost = 0;
+    uint32_t batchDim = 0;
+    uint32_t mDim = 0;
+    uint32_t nDim = 0;
+    uint32_t doDim = 0;
+    uint32_t groupDim = 0;
+    uint64_t minCost = 0;
 };
 
 static std::map<Conv3dApiTiling::ConvDtype, std::string> g_convDtypeToStr = {
-    {Conv3dApiTiling::ConvDtype::FLOAT16, "float16"},
-    {Conv3dApiTiling::ConvDtype::FLOAT32, "float32"},
-    {Conv3dApiTiling::ConvDtype::BF16, "bfloat16"},
-    {Conv3dApiTiling::ConvDtype::INT4, "int4"},
-    {Conv3dApiTiling::ConvDtype::INT8, "int8"},
-    {Conv3dApiTiling::ConvDtype::UINT8, "uint8"},
-    {Conv3dApiTiling::ConvDtype::INT64, "int64"},
-    {Conv3dApiTiling::ConvDtype::UINT64, "uint64"},
+    {Conv3dApiTiling::ConvDtype::FLOAT16, "float16"}, {Conv3dApiTiling::ConvDtype::FLOAT32, "float32"},
+    {Conv3dApiTiling::ConvDtype::BF16, "bfloat16"},   {Conv3dApiTiling::ConvDtype::INT4, "int4"},
+    {Conv3dApiTiling::ConvDtype::INT8, "int8"},       {Conv3dApiTiling::ConvDtype::UINT8, "uint8"},
+    {Conv3dApiTiling::ConvDtype::INT64, "int64"},     {Conv3dApiTiling::ConvDtype::UINT64, "uint64"},
     {Conv3dApiTiling::ConvDtype::INT32, "int32"},
 };
 
@@ -187,36 +183,48 @@ struct AscendOpsCubeTypeMap {
     struct {
         Conv3dApiTiling::ConvDtype madType;
         Conv3dApiTiling::ConvDtype biasType;
-    } typeMaps[static_cast<uint8_t>(Conv3dApiTiling::ConvDtype::CONVDTYPEMAX) + 1] =
-        {{Conv3dApiTiling::ConvDtype::CONVDTYPEMAX, Conv3dApiTiling::ConvDtype::CONVDTYPEMAX}};
+    } typeMaps[static_cast<uint8_t>(Conv3dApiTiling::ConvDtype::CONVDTYPEMAX) + 1] = {
+        {Conv3dApiTiling::ConvDtype::CONVDTYPEMAX, Conv3dApiTiling::ConvDtype::CONVDTYPEMAX}};
 
-    Conv3dApiTiling::ConvDtype ToBiasType(Conv3dApiTiling::ConvDtype type) const {
+    Conv3dApiTiling::ConvDtype ToBiasType(Conv3dApiTiling::ConvDtype type) const
+    {
         return typeMaps[static_cast<uint8_t>(type)].biasType;
     }
-    Conv3dApiTiling::ConvDtype ToMadType(Conv3dApiTiling::ConvDtype type) const {
+    Conv3dApiTiling::ConvDtype ToMadType(Conv3dApiTiling::ConvDtype type) const
+    {
         return typeMaps[static_cast<uint8_t>(type)].madType;
     }
 
-    AscendOpsCubeTypeMap() {
-        SetMapping(Conv3dApiTiling::ConvDtype::INT4, Conv3dApiTiling::ConvDtype::INT32, Conv3dApiTiling::ConvDtype::INT32);
-        SetMapping(Conv3dApiTiling::ConvDtype::INT8, Conv3dApiTiling::ConvDtype::INT32, Conv3dApiTiling::ConvDtype::INT32);
-        SetMapping(Conv3dApiTiling::ConvDtype::UINT8, Conv3dApiTiling::ConvDtype::INT32, Conv3dApiTiling::ConvDtype::INT32);
-        SetMapping(Conv3dApiTiling::ConvDtype::FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32);
-        SetMapping(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32);
-        SetMapping(Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32);
+    AscendOpsCubeTypeMap()
+    {
+        SetMapping(Conv3dApiTiling::ConvDtype::INT4, Conv3dApiTiling::ConvDtype::INT32,
+                   Conv3dApiTiling::ConvDtype::INT32);
+        SetMapping(Conv3dApiTiling::ConvDtype::INT8, Conv3dApiTiling::ConvDtype::INT32,
+                   Conv3dApiTiling::ConvDtype::INT32);
+        SetMapping(Conv3dApiTiling::ConvDtype::UINT8, Conv3dApiTiling::ConvDtype::INT32,
+                   Conv3dApiTiling::ConvDtype::INT32);
+        SetMapping(Conv3dApiTiling::ConvDtype::FLOAT16, Conv3dApiTiling::ConvDtype::FLOAT32,
+                   Conv3dApiTiling::ConvDtype::FLOAT32);
+        SetMapping(Conv3dApiTiling::ConvDtype::BF16, Conv3dApiTiling::ConvDtype::FLOAT32,
+                   Conv3dApiTiling::ConvDtype::FLOAT32);
+        SetMapping(Conv3dApiTiling::ConvDtype::FLOAT32, Conv3dApiTiling::ConvDtype::FLOAT32,
+                   Conv3dApiTiling::ConvDtype::FLOAT32);
     }
 
-    private:
-    void SetMapping(Conv3dApiTiling::ConvDtype key, Conv3dApiTiling::ConvDtype madType, Conv3dApiTiling::ConvDtype biasType) {
+private:
+    void SetMapping(Conv3dApiTiling::ConvDtype key, Conv3dApiTiling::ConvDtype madType,
+                    Conv3dApiTiling::ConvDtype biasType)
+    {
         typeMaps[static_cast<uint8_t>(key)].madType = madType;
-        typeMaps[static_cast<uint8_t>(key)].biasType = biasType;    // bias dtype in bt
+        typeMaps[static_cast<uint8_t>(key)].biasType = biasType; // bias dtype in bt
     }
 };
 
 const AscendOpsCubeTypeMap CUBE_TYPE_MAP = AscendOpsCubeTypeMap();
 
 struct AscendOpsMknMap {
-    uint32_t GetByIndex(uint32_t idx) const {
+    uint32_t GetByIndex(uint32_t idx) const
+    {
         if (idx > MKN_MAX_SIZE - 1) {
             return MKN_VALUE_DEFAULT;
         }
@@ -227,13 +235,15 @@ struct AscendOpsMknMap {
 
 struct AscendOpsCubeMkn {
     int8_t toIdx[static_cast<uint8_t>(Conv3dApiTiling::ConvDtype::CONVDTYPEMAX) + 1] = {0};
-    AscendOpsMknMap maps[3] = {{CUBE_UNIT, FP16_CUBE_UNIT, CUBE_UNIT}, // fp16
-                              {CUBE_UNIT, FP32_CUBE_UNIT, CUBE_UNIT}, // fp32
-                              {CUBE_UNIT, INT8_CUBE_UNIT, CUBE_UNIT}}; // int8
-    uint32_t GetMKN(Conv3dApiTiling::ConvDtype dType, uint32_t idx) {
+    AscendOpsMknMap maps[3] = {{CUBE_UNIT, FP16_CUBE_UNIT, CUBE_UNIT},  // fp16
+                               {CUBE_UNIT, FP32_CUBE_UNIT, CUBE_UNIT},  // fp32
+                               {CUBE_UNIT, INT8_CUBE_UNIT, CUBE_UNIT}}; // int8
+    uint32_t GetMKN(Conv3dApiTiling::ConvDtype dType, uint32_t idx)
+    {
         return maps[toIdx[static_cast<uint8_t>(dType)]].GetByIndex(idx);
     }
-    AscendOpsCubeMkn() {
+    AscendOpsCubeMkn()
+    {
         toIdx[static_cast<uint8_t>(Conv3dApiTiling::ConvDtype::FLOAT16)] = static_cast<int8_t>(0);
         toIdx[static_cast<uint8_t>(Conv3dApiTiling::ConvDtype::FLOAT32)] = static_cast<int8_t>(1);
         toIdx[static_cast<uint8_t>(Conv3dApiTiling::ConvDtype::BF16)] = static_cast<int8_t>(0);
@@ -243,11 +253,11 @@ struct AscendOpsCubeMkn {
 
 static AscendOpsCubeMkn g_cubeMknMap = AscendOpsCubeMkn();
 
-using Conv3dCommon::CeilDiv;
 using Conv3dCommon::AlignUp;
+using Conv3dCommon::CalcCommFactor;
+using Conv3dCommon::CeilDiv;
 using Conv3dCommon::InferHiL1;
 using Conv3dCommon::InferWiL1;
-using Conv3dCommon::CalcCommFactor;
 using Conv3dCommon::IsArrayEqual;
 
 } // namespace Conv3dOpsTiling

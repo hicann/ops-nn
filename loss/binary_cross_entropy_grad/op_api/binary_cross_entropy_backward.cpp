@@ -23,24 +23,26 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(BinaryCrossEntropyGrad);
 
-const aclTensor *BinaryCrossEntropyGrad(const aclTensor *gradOutput, const aclTensor *self,
-    const aclTensor *target, const aclTensor *weightOptional,
-    const std::string &reduction, aclOpExecutor *executor) {
-  L0_DFX(BinaryCrossEntropyGrad, gradOutput, self, target, weightOptional, reduction);
+const aclTensor* BinaryCrossEntropyGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                                        const aclTensor* weightOptional, const std::string& reduction,
+                                        aclOpExecutor* executor)
+{
+    L0_DFX(BinaryCrossEntropyGrad, gradOutput, self, target, weightOptional, reduction);
 
-  auto out = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
-  auto ret = INFER_SHAPE(BinaryCrossEntropyGrad, OP_INPUT(self, target, gradOutput, weightOptional), OP_OUTPUT(out),
-                         OP_ATTR(reduction.c_str()));
-  if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
-    return nullptr;
-  }
+    auto out = executor->AllocTensor(self->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    auto ret = INFER_SHAPE(BinaryCrossEntropyGrad, OP_INPUT(self, target, gradOutput, weightOptional), OP_OUTPUT(out),
+                           OP_ATTR(reduction.c_str()));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
+        return nullptr;
+    }
 
-  auto retAiCore = ADD_TO_LAUNCHER_LIST_AICORE(BinaryCrossEntropyGrad, OP_INPUT(self, target, gradOutput, weightOptional),
-                                         OP_OUTPUT(out),
-                                         OP_ATTR_NAMES({"reduction"}), OP_ATTR(reduction));
-  OP_CHECK(retAiCore ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BinaryCrossEntropyGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),	 
-     return nullptr);
-  return out;
+    auto retAiCore = ADD_TO_LAUNCHER_LIST_AICORE(BinaryCrossEntropyGrad,
+                                                 OP_INPUT(self, target, gradOutput, weightOptional), OP_OUTPUT(out),
+                                                 OP_ATTR_NAMES({"reduction"}), OP_ATTR(reduction));
+    OP_CHECK(retAiCore == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BinaryCrossEntropyGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return out;
 }
-}
+} // namespace l0op

@@ -26,15 +26,9 @@ using namespace ge;
 
 class AdaptiveAvgPool2dInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool2dInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool2dInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool2dInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool2dInfershape TearDown" << std::endl; }
 };
 
 // 正常用例: 4D 输入 + 合法 output_size

@@ -21,12 +21,11 @@
 /*!
  * \file leaky_relu_grad_v2.cpp
  * \brief
-*/
+ */
 
 #include "leaky_relu_grad_v2.h"
 
-enum class LeakyReluGradV2TilingKey : uint32_t
-{
+enum class LeakyReluGradV2TilingKey : uint32_t {
     TILING_KEY_EXAMPLE_FLOAT = 0,
     TILING_KEY_EXAMPLE_HALF = 1,
 };
@@ -38,13 +37,13 @@ __global__ __aicore__ void leaky_relu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADDR dx,
     GET_TILING_DATA_WITH_STRUCT(LeakyReluGradV2TilingData, tilingData, tiling);
     if constexpr (schMode == static_cast<uint32_t>(LeakyReluGradV2TilingKey::TILING_KEY_EXAMPLE_FLOAT)) {
         NsLeakyReluGradV2::LeakyReluGradV2<float> op; // 算子kernel实例获取
-        op.Init(dy, x, dx, &tilingData);      // 算子kernel实例初始化
-        op.Process();                       // 算子kernel实例执行
+        op.Init(dy, x, dx, &tilingData);              // 算子kernel实例初始化
+        op.Process();                                 // 算子kernel实例执行
     }
-    
+
     else if constexpr (schMode == static_cast<uint32_t>(LeakyReluGradV2TilingKey::TILING_KEY_EXAMPLE_HALF)) {
         NsLeakyReluGradV2::LeakyReluGradV2<half> op; // 算子kernel实例获取
-        op.Init(dy, x, dx, &tilingData);        // 算子kernel实例初始化
-        op.Process();                         // 算子kernel实例执行
+        op.Init(dy, x, dx, &tilingData);             // 算子kernel实例初始化
+        op.Process();                                // 算子kernel实例执行
     }
 }

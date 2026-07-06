@@ -18,7 +18,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 struct ExpandIntoJaggedPermuteTilingDataDef {
     int64_t realCoreNum = 0;
     int64_t frontCoreNum = 0;

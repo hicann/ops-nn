@@ -17,38 +17,37 @@
 using namespace std;
 
 class OpTilingUtEnvironment : public testing::Environment {
-  public:
+public:
     OpTilingUtEnvironment() {}
-    virtual void SetUp() {
-      cout << "Global Environment SetpUp." << endl;
-      fe::OptionalInfos opti_compilation_infos_ge;
-      opti_compilation_infos_ge.Init();
-      opti_compilation_infos_ge.SetSocVersion("soc_version");
-      fe::PlatformInfoManager::GeInstance().SetOptionalCompilationInfo(opti_compilation_infos_ge);
+    virtual void SetUp()
+    {
+        cout << "Global Environment SetpUp." << endl;
+        fe::OptionalInfos opti_compilation_infos_ge;
+        opti_compilation_infos_ge.Init();
+        opti_compilation_infos_ge.SetSocVersion("soc_version");
+        fe::PlatformInfoManager::GeInstance().SetOptionalCompilationInfo(opti_compilation_infos_ge);
 
-      char exePath[PATH_MAX] = {0};
-      (void)readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
-      std::string exePathStr(exePath);
-      auto pos = exePathStr.find_last_of('/');
-      if (pos != std::string::npos) {
-        exePathStr.erase(pos + 1);
-      } else {
-        exePathStr.assign("./");
-      }
-      
-      shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
+        char exePath[PATH_MAX] = {0};
+        (void)readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+        std::string exePathStr(exePath);
+        auto pos = exePathStr.find_last_of('/');
+        if (pos != std::string::npos) {
+            exePathStr.erase(pos + 1);
+        } else {
+            exePathStr.assign("./");
+        }
 
-      gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
+        shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
 
+        gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
     }
 
-    virtual void TearDown() {
-      cout << "Global Environment TearDown" << endl;
-    }
+    virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 };
 
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc,argv);
-  testing::AddGlobalTestEnvironment(new OpTilingUtEnvironment());
-  return RUN_ALL_TESTS();
+int main(int argc, char** argv)
+{
+    testing::InitGoogleTest(&argc, argv);
+    testing::AddGlobalTestEnvironment(new OpTilingUtEnvironment());
+    return RUN_ALL_TESTS();
 }

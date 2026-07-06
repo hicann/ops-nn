@@ -18,7 +18,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
- #ifndef SOFTPLUSV2_H
+#ifndef SOFTPLUSV2_H
 #define SOFTPLUSV2_H
 
 #include "kernel_operator.h"
@@ -27,7 +27,7 @@
 #include "soft_plus_v2_tiling_key.h"
 
 namespace NsSoftPlusV2 {
-  
+
 using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2; // tensor num for each queue
 
@@ -49,28 +49,26 @@ private:
     GlobalTensor<DTYPE_X> xGm;
     GlobalTensor<DTYPE_Z> zGm;
     uint32_t blockLength;
-    uint32_t tileNum;      
-    uint32_t tileLength;    
+    uint32_t tileNum;
+    uint32_t tileLength;
 };
 
-__aicore__ inline void SoftPlusV2::Init(GM_ADDR x, GM_ADDR z, const SoftPlusV2TilingData* tilingData) {
+__aicore__ inline void SoftPlusV2::Init(GM_ADDR x, GM_ADDR z, const SoftPlusV2TilingData* tilingData)
+{
     this->blockLength = tilingData->totalLength / GetBlockNum();
     this->tileNum = tilingData->tileNum;
     this->tileLength = this->blockLength / tileNum / BUFFER_NUM;
 
-    xGm.SetGlobalBuffer((__gm__ DTYPE_X *)x +
-                            this->blockLength * GetBlockIdx(),
-                        this->blockLength);
-    zGm.SetGlobalBuffer((__gm__ DTYPE_Z *)z +
-                            this->blockLength * GetBlockIdx(),
-                        this->blockLength);
+    xGm.SetGlobalBuffer((__gm__ DTYPE_X*)x + this->blockLength * GetBlockIdx(), this->blockLength);
+    zGm.SetGlobalBuffer((__gm__ DTYPE_Z*)z + this->blockLength * GetBlockIdx(), this->blockLength);
 
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileLength * sizeof(DTYPE_X));
     pipe.InitBuffer(outQueueZ, BUFFER_NUM, this->tileLength * sizeof(DTYPE_Z));
 }
 
 // 仅保留类成员Process函数
-__aicore__ inline void SoftPlusV2::Process() {
+__aicore__ inline void SoftPlusV2::Process()
+{
     int32_t loopCount = this->tileNum * BUFFER_NUM;
     for (int32_t i = 0; i < loopCount; i++) {
         CopyIn(i);
@@ -79,14 +77,16 @@ __aicore__ inline void SoftPlusV2::Process() {
     }
 }
 
-__aicore__ inline void SoftPlusV2::CopyIn(int32_t progress) {
+__aicore__ inline void SoftPlusV2::CopyIn(int32_t progress)
+{
     LocalTensor<DTYPE_X> xLocal = inQueueX.AllocTensor<DTYPE_X>();
     DataCopy(xLocal, xGm[progress * this->tileLength], this->tileLength);
     inQueueX.EnQue(xLocal);
 }
 
-__aicore__ inline void SoftPlusV2::Compute(int32_t progress) {
-    LocalTensor<DTYPE_X> xLocal = inQueueX.DeQue<DTYPE_X>();  // 统一用DTYPE_X而非硬编码half
+__aicore__ inline void SoftPlusV2::Compute(int32_t progress)
+{
+    LocalTensor<DTYPE_X> xLocal = inQueueX.DeQue<DTYPE_X>(); // 统一用DTYPE_X而非硬编码half
     LocalTensor<DTYPE_Z> yLocal = outQueueZ.AllocTensor<DTYPE_Z>();
     LocalTensor<DTYPE_X> tmpLocal = inQueueX.AllocTensor<DTYPE_X>();
 
@@ -108,11 +108,12 @@ __aicore__ inline void SoftPlusV2::Compute(int32_t progress) {
     inQueueX.FreeTensor(tmpLocal);
 }
 
-__aicore__ inline void SoftPlusV2::CopyOut(int32_t progress) {
+__aicore__ inline void SoftPlusV2::CopyOut(int32_t progress)
+{
     LocalTensor<DTYPE_Z> zLocal = outQueueZ.DeQue<DTYPE_Z>();
     DataCopy(zGm[progress * this->tileLength], zLocal, this->tileLength);
     outQueueZ.FreeTensor(zLocal);
 }
 
-} // namespace NsSoftPlusV2 
+} // namespace NsSoftPlusV2
 #endif // SOFTPLUSV2_H

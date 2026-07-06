@@ -78,13 +78,12 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args)
             return ge::GRAPH_SUCCESS;
         }
     }
-    std::string incorrectDtypes = Ops::Base::ToString(args.aType) + ", " +
-        Ops::Base::ToString(args.bType) + ", " + Ops::Base::ToString(args.cType);
+    std::string incorrectDtypes = Ops::Base::ToString(args.aType) + ", " + Ops::Base::ToString(args.bType) + ", " +
+                                  Ops::Base::ToString(args.cType);
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
         args.opName, "A, B, out", incorrectDtypes.c_str(),
-        Ops::NN::FormatString(
-            "The dtypes of %s must be within the range %s", "A, B, out",
-            "(FLOAT16,FLOAT16,FLOAT), (BF16,BF16,FLOAT), (FLOAT,FLOAT,FLOAT)")
+        Ops::NN::FormatString("The dtypes of %s must be within the range %s", "A, B, out",
+                              "(FLOAT16,FLOAT16,FLOAT), (BF16,BF16,FLOAT), (FLOAT,FLOAT,FLOAT)")
             .c_str());
     return ge::GRAPH_FAILED;
 }
@@ -113,9 +112,7 @@ ge::graphStatus GetGemmV3ShapeMKN(const gert::Shape& aShape, const gert::Shape& 
     args.kValue = static_cast<uint64_t>(ka);
     args.nValue = static_cast<uint64_t>(n);
     // check dim value overlimit int32_max
-    auto isValidDimValue = [](int64_t dim) -> bool {
-        return (dim > 0) && (dim <= INT32_MAX);
-    };
+    auto isValidDimValue = [](int64_t dim) -> bool { return (dim > 0) && (dim <= INT32_MAX); };
     if (!isValidDimValue(args.mValue) || !isValidDimValue(args.kValue) || !isValidDimValue(args.nValue)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             args.opName, "A, B",
@@ -126,7 +123,6 @@ ge::graphStatus GetGemmV3ShapeMKN(const gert::Shape& aShape, const gert::Shape& 
     }
     return ge::GRAPH_SUCCESS;
 }
-
 
 } // namespace
 
@@ -142,13 +138,13 @@ ge::graphStatus GemmV3Tiling::GetArgs()
     return GemmV3OpSpecificCheck(args_);
 }
 
-
 void GemmV3Tiling::GetFormat()
 {
     // GemmV3 only support ND format
     ge::Format formatA = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(0)->GetStorageFormat()));
     ge::Format formatB = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(1)->GetStorageFormat()));
-    ge::Format formatOut = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetOutputDesc(0)->GetStorageFormat()));
+    ge::Format formatOut = static_cast<ge::Format>(
+        ge::GetPrimaryFormat(context_->GetOutputDesc(0)->GetStorageFormat()));
     args_.aFormat = (formatA != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatA;
     args_.bFormat = (formatB != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatB;
 
@@ -157,9 +153,9 @@ void GemmV3Tiling::GetFormat()
 
 ge::graphStatus GemmV3Tiling::GetShape()
 {
-    const gert::Shape &aShape = context_->GetInputShape(A_IDX)->GetOriginShape();
-    const gert::Shape &bShape = context_->GetInputShape(B_IDX)->GetOriginShape();
-    const gert::Shape &yShape = context_->GetOutputShape(Y_IDX)->GetOriginShape();
+    const gert::Shape& aShape = context_->GetInputShape(A_IDX)->GetOriginShape();
+    const gert::Shape& bShape = context_->GetInputShape(B_IDX)->GetOriginShape();
+    const gert::Shape& yShape = context_->GetOutputShape(Y_IDX)->GetOriginShape();
     const size_t aDimNum = aShape.GetDimNum();
     const size_t bDimNum = bShape.GetDimNum();
     const size_t yDimNum = yShape.GetDimNum();
@@ -197,8 +193,8 @@ ge::graphStatus GemmV3Tiling::GetShape()
         if (cShape[0] != yShape[0] || cShape[1] != yShape[1]) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 args_.opName, "C, out",
-                Ops::NN::FormatString(
-                    "%s, %s", Ops::Base::ToString(cShape).c_str(), Ops::Base::ToString(yShape).c_str())
+                Ops::NN::FormatString("%s, %s", Ops::Base::ToString(cShape).c_str(),
+                                      Ops::Base::ToString(yShape).c_str())
                     .c_str(),
                 Ops::NN::FormatString("The shapes of %s must be the same", "C, out").c_str());
             return ge::GRAPH_FAILED;
@@ -254,12 +250,11 @@ ge::graphStatus GemmV3Tiling::CheckArgs()
 ge::graphStatus GemmV3Tiling::GetShapeAttrsInfo()
 {
     args_.opName = context_->GetNodeName();
-    OP_TILING_CHECK(
-        args_.opName == nullptr, CUBE_INNER_ERR_REPORT("GemmV3", "get op name invalid"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(args_.opName == nullptr, CUBE_INNER_ERR_REPORT("GemmV3", "get op name invalid"),
+                    return ge::GRAPH_FAILED);
     OP_LOGI(args_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(
-        (CheckArgs() != ge::GRAPH_SUCCESS) || (GetArgs() != ge::GRAPH_SUCCESS),
-        CUBE_INNER_ERR_REPORT(args_.opName, "invalid context"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((CheckArgs() != ge::GRAPH_SUCCESS) || (GetArgs() != ge::GRAPH_SUCCESS),
+                    CUBE_INNER_ERR_REPORT(args_.opName, "invalid context"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -271,8 +266,7 @@ ge::graphStatus GemmV3Tiling::DoTiling()
     GemmV3TilingKey GemmV3TilingKey_;
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_), &GemmV3TilingKey_);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    NpuArch npuArch =
-        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    NpuArch npuArch = static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
     MMRegisterCfg registerCfg{"MatMulV3", npuArch, strategy::GetGemmV3Priorities(npuArch)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }

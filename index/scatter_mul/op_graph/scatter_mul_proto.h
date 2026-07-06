@@ -45,5 +45,5 @@ REG_OP(ScatterMul)
     .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterMul)
-}  // namespace ge
-#endif  // SCATTERMUL_PROTO_H_
+} // namespace ge
+#endif // SCATTERMUL_PROTO_H_

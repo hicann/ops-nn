@@ -14,28 +14,23 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 
-
 using namespace op;
 
 namespace l0op {
 OP_TYPE_REGISTER(PReluGradReduce);
 
 //无Aicpu分支
-const aclTensor *PReluGradReduce(const aclTensor *gradOutput,
-                                const aclTensor *self,
-                                const aclTensor *weight,
-                                const aclTensor *update,
-                                aclOpExecutor *executor) {
-  // AICORE算子kernel
-  L0_DFX(PReluGradReduce, gradOutput, self, weight, update);
+const aclTensor* PReluGradReduce(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* weight,
+                                 const aclTensor* update, aclOpExecutor* executor)
+{
+    // AICORE算子kernel
+    L0_DFX(PReluGradReduce, gradOutput, self, weight, update);
 
-  auto gradWeight = executor->AllocTensor(weight->GetViewShape(), weight->GetDataType());
-  CHECK_RET(gradWeight != nullptr, nullptr);
+    auto gradWeight = executor->AllocTensor(weight->GetViewShape(), weight->GetDataType());
+    CHECK_RET(gradWeight != nullptr, nullptr);
 
-  // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore PReluGradReduce算子加入任务队列
-  ADD_TO_LAUNCHER_LIST_AICORE(PReluGradReduce,
-                              OP_INPUT(gradOutput, self, weight, update),
-                              OP_OUTPUT(gradWeight));
-  return gradWeight;
+    // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore PReluGradReduce算子加入任务队列
+    ADD_TO_LAUNCHER_LIST_AICORE(PReluGradReduce, OP_INPUT(gradOutput, self, weight, update), OP_OUTPUT(gradWeight));
+    return gradWeight;
 }
-}  // namespace l0op
+} // namespace l0op

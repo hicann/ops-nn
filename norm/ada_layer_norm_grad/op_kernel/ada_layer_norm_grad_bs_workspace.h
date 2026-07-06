@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #ifndef ADA_LAYER_NORM_GRAD_MERGE_BS_WORKSPACE
 #define ADA_LAYER_NORM_GRAD_MERGE_BS_WORKSPACE
 
@@ -27,108 +26,121 @@ template <typename T, typename U, bool isDeterministic>
 class AdaLayerNormGradMergeBSWorkspace {
 public:
     __aicore__ inline AdaLayerNormGradMergeBSWorkspace(){};
-__aicore__ inline void CalculateBlockLengths(
-    const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData, int64_t& formerBlockLength, int64_t& curRowsNum, int64_t& curBlockLength) {
-    formerBlockLength = tilingData->blockFormer * tilingData->col;
-    curRowsNum = (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail;
-    curBlockLength = curRowsNum * tilingData->col;
-}
+    __aicore__ inline void CalculateBlockLengths(const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData,
+                                                 int64_t& formerBlockLength, int64_t& curRowsNum,
+                                                 int64_t& curBlockLength)
+    {
+        formerBlockLength = tilingData->blockFormer * tilingData->col;
+        curRowsNum = (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail;
+        curBlockLength = curRowsNum * tilingData->col;
+    }
 
-__aicore__ inline void InitGmTensors(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale, GM_ADDR gamma, GM_ADDR beta, GM_ADDR pdX, GM_ADDR pdScale, GM_ADDR pdShift,
-    const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData, int64_t formerBlockLength, int64_t curRowsNum, int64_t curBlockLength) {
-    // 初始化GM输入
-    sBatchIdx = (GetBlockIdx() * tilingData->blockFormer) / tilingData->seq;
-    int64_t eBatchIdx = (GetBlockIdx() * tilingData->blockFormer + curRowsNum) / tilingData->seq;
-    int64_t curBlockScaleLength = (eBatchIdx - sBatchIdx + 1) * tilingData->col;
-    dyInTensorGM.SetGlobalBuffer((__gm__ T*)dy + formerBlockLength * GetBlockIdx(), curBlockLength);
-    xInTensorGM.SetGlobalBuffer((__gm__ T*)x + formerBlockLength * GetBlockIdx(), curBlockLength);
-    rstdInTensorGM.SetGlobalBuffer((__gm__ float*)rstd + tilingData->blockFormer * GetBlockIdx(), curRowsNum);
-    meanInTensorGM.SetGlobalBuffer((__gm__ float*)mean + tilingData->blockFormer * GetBlockIdx(), curRowsNum);
-    scaleInTensorGM.SetGlobalBuffer((__gm__ T*)scale + sBatchIdx * colLen, curBlockScaleLength);
-    gammaInTensorGM.SetGlobalBuffer((__gm__ U*)gamma, tilingData->col);
-    betaInTensorGM.SetGlobalBuffer((__gm__ U*)beta, tilingData->col);
-    
-    // 初始化GM输出
-    pdXOutTensorGM.SetGlobalBuffer((__gm__ T*)pdX + formerBlockLength * GetBlockIdx(), curBlockLength);
-}
+    __aicore__ inline void InitGmTensors(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale,
+                                         GM_ADDR gamma, GM_ADDR beta, GM_ADDR pdX, GM_ADDR pdScale, GM_ADDR pdShift,
+                                         const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData,
+                                         int64_t formerBlockLength, int64_t curRowsNum, int64_t curBlockLength)
+    {
+        // 初始化GM输入
+        sBatchIdx = (GetBlockIdx() * tilingData->blockFormer) / tilingData->seq;
+        int64_t eBatchIdx = (GetBlockIdx() * tilingData->blockFormer + curRowsNum) / tilingData->seq;
+        int64_t curBlockScaleLength = (eBatchIdx - sBatchIdx + 1) * tilingData->col;
+        dyInTensorGM.SetGlobalBuffer((__gm__ T*)dy + formerBlockLength * GetBlockIdx(), curBlockLength);
+        xInTensorGM.SetGlobalBuffer((__gm__ T*)x + formerBlockLength * GetBlockIdx(), curBlockLength);
+        rstdInTensorGM.SetGlobalBuffer((__gm__ float*)rstd + tilingData->blockFormer * GetBlockIdx(), curRowsNum);
+        meanInTensorGM.SetGlobalBuffer((__gm__ float*)mean + tilingData->blockFormer * GetBlockIdx(), curRowsNum);
+        scaleInTensorGM.SetGlobalBuffer((__gm__ T*)scale + sBatchIdx * colLen, curBlockScaleLength);
+        gammaInTensorGM.SetGlobalBuffer((__gm__ U*)gamma, tilingData->col);
+        betaInTensorGM.SetGlobalBuffer((__gm__ U*)beta, tilingData->col);
 
-__aicore__ inline void InitWorkspace(const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData, 
-                                     GM_ADDR workspace, int64_t wsLenPerBlock) {
-    int64_t wsBase = wsLenPerBlock * GetBlockIdx();
-    
-    dGammaWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase, wsLenPerBlock);
-    dBetaWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + colAlign, colAlign);
-    dScaleWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + 2 * colAlign, tilingData->batch * colAlign);
-    dShiftWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + (tilingData->batch + 2) * colAlign, tilingData->batch * colAlign);
-    mul1WorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + (2 * tilingData->batch + 2) * colAlign, colAlign);
-    mul3WorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + (2 * tilingData->batch + 3) * colAlign, colAlign);
-    
-    // 清空工作空间
-    InitOutput<float>(dGammaWorkspaceGM, (2 * tilingData->batch + 2) * colAlign, 0.0);
-}
+        // 初始化GM输出
+        pdXOutTensorGM.SetGlobalBuffer((__gm__ T*)pdX + formerBlockLength * GetBlockIdx(), curBlockLength);
+    }
 
-__aicore__ inline void InitQueues(TPipe& pipe, const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData) {
-    int64_t sizeOfBuffer = tilingData->ubFormer * sizeof(float);
-    pipe.InitBuffer(queIn0_, 1, sizeOfBuffer);
-    pipe.InitBuffer(queIn1_, 1, sizeOfBuffer);
-    pipe.InitBuffer(queIn2_, 1, sizeOfBuffer);
-    pipe.InitBuffer(queIn3_, 1, sizeOfBuffer);
-    pipe.InitBuffer(queOut4_, 1, sizeOfBuffer);
-    pipe.InitBuffer(queOut5_, 1, sizeOfBuffer);
-    coff = static_cast<float>(1.0) / static_cast<float>(tilingData->col);
-}
+    __aicore__ inline void InitWorkspace(const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData,
+                                         GM_ADDR workspace, int64_t wsLenPerBlock)
+    {
+        int64_t wsBase = wsLenPerBlock * GetBlockIdx();
 
-__aicore__ inline void Init(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale, GM_ADDR gamma, GM_ADDR beta, GM_ADDR pdX, GM_ADDR pdScale, GM_ADDR pdShift, 
-    GM_ADDR pdGamma, GM_ADDR pdBeta, GM_ADDR workspace, const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData, TPipe& pipeIn) {
-    // 初始化基础变量
-    pipe = pipeIn;
-    seq = tilingData->seq;
-    colAlign = tilingData->colAlignV;
-    colLen = tilingData->col;
-    
-    // 计算块长度相关参数
-    int64_t formerBlockLength, curRowsNum, curBlockLength;
-    CalculateBlockLengths(tilingData, formerBlockLength, curRowsNum, curBlockLength);
-    
-    // 计算工作空间长度并初始化基础GM
-    int64_t wsLenPerBlock = colAlign * (WORKSPACE_NUM + 2 * tilingData->batch);
-    pdGammaOutTensorGM.SetGlobalBuffer((__gm__ U*)pdGamma, colLen);
-    pdBetaOutTensorGM.SetGlobalBuffer((__gm__ U*)pdBeta, colLen);
-    pdScaleOutTensorGM.SetGlobalBuffer((__gm__ T*)pdScale, tilingData->batch * colLen);
-    pdShiftOutTensorGM.SetGlobalBuffer((__gm__ T*)pdShift, tilingData->batch * colLen);
-    workspaceGMOri.SetGlobalBuffer((__gm__ float*)workspace, wsLenPerBlock * tilingData->blockNum);
+        dGammaWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase, wsLenPerBlock);
+        dBetaWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + colAlign, colAlign);
+        dScaleWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + 2 * colAlign,
+                                          tilingData->batch * colAlign);
+        dShiftWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + (tilingData->batch + 2) * colAlign,
+                                          tilingData->batch * colAlign);
+        mul1WorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + (2 * tilingData->batch + 2) * colAlign,
+                                        colAlign);
+        mul3WorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsBase + (2 * tilingData->batch + 3) * colAlign,
+                                        colAlign);
 
-    if (GetBlockIdx() < tilingData->blockNum) {
-        // 初始化GM输入输出
-        InitGmTensors(dy, x, rstd, mean, scale, gamma, beta, pdX, pdScale, pdShift, tilingData,
-                     formerBlockLength, curRowsNum, curBlockLength);
-        
-        // 初始化工作空间
-        InitWorkspace(tilingData, workspace, wsLenPerBlock);
+        // 清空工作空间
+        InitOutput<float>(dGammaWorkspaceGM, (2 * tilingData->batch + 2) * colAlign, 0.0);
+    }
 
-        // 非确定性模式下的初始化
-        if constexpr (!isDeterministic) {
-            if (GetBlockIdx() == 0) {
-                InitOutput<U>(pdGammaOutTensorGM, colLen, 0.0);
-                InitOutput<U>(pdBetaOutTensorGM, colLen, 0.0);
+    __aicore__ inline void InitQueues(TPipe& pipe, const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData)
+    {
+        int64_t sizeOfBuffer = tilingData->ubFormer * sizeof(float);
+        pipe.InitBuffer(queIn0_, 1, sizeOfBuffer);
+        pipe.InitBuffer(queIn1_, 1, sizeOfBuffer);
+        pipe.InitBuffer(queIn2_, 1, sizeOfBuffer);
+        pipe.InitBuffer(queIn3_, 1, sizeOfBuffer);
+        pipe.InitBuffer(queOut4_, 1, sizeOfBuffer);
+        pipe.InitBuffer(queOut5_, 1, sizeOfBuffer);
+        coff = static_cast<float>(1.0) / static_cast<float>(tilingData->col);
+    }
+
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale, GM_ADDR gamma,
+                                GM_ADDR beta, GM_ADDR pdX, GM_ADDR pdScale, GM_ADDR pdShift, GM_ADDR pdGamma,
+                                GM_ADDR pdBeta, GM_ADDR workspace,
+                                const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData, TPipe& pipeIn)
+    {
+        // 初始化基础变量
+        pipe = pipeIn;
+        seq = tilingData->seq;
+        colAlign = tilingData->colAlignV;
+        colLen = tilingData->col;
+
+        // 计算块长度相关参数
+        int64_t formerBlockLength, curRowsNum, curBlockLength;
+        CalculateBlockLengths(tilingData, formerBlockLength, curRowsNum, curBlockLength);
+
+        // 计算工作空间长度并初始化基础GM
+        int64_t wsLenPerBlock = colAlign * (WORKSPACE_NUM + 2 * tilingData->batch);
+        pdGammaOutTensorGM.SetGlobalBuffer((__gm__ U*)pdGamma, colLen);
+        pdBetaOutTensorGM.SetGlobalBuffer((__gm__ U*)pdBeta, colLen);
+        pdScaleOutTensorGM.SetGlobalBuffer((__gm__ T*)pdScale, tilingData->batch * colLen);
+        pdShiftOutTensorGM.SetGlobalBuffer((__gm__ T*)pdShift, tilingData->batch * colLen);
+        workspaceGMOri.SetGlobalBuffer((__gm__ float*)workspace, wsLenPerBlock * tilingData->blockNum);
+
+        if (GetBlockIdx() < tilingData->blockNum) {
+            // 初始化GM输入输出
+            InitGmTensors(dy, x, rstd, mean, scale, gamma, beta, pdX, pdScale, pdShift, tilingData, formerBlockLength,
+                          curRowsNum, curBlockLength);
+
+            // 初始化工作空间
+            InitWorkspace(tilingData, workspace, wsLenPerBlock);
+
+            // 非确定性模式下的初始化
+            if constexpr (!isDeterministic) {
+                if (GetBlockIdx() == 0) {
+                    InitOutput<U>(pdGammaOutTensorGM, colLen, 0.0);
+                    InitOutput<U>(pdBetaOutTensorGM, colLen, 0.0);
+                }
+                CrossCoreSetFlag<0x0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL);
             }
+
+            PipeBarrier<PIPE_ALL>();
+            // 初始化buffer
+            InitQueues(pipe, tilingData);
+        } else if (!isDeterministic) {
             CrossCoreSetFlag<0x0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL);
         }
-        
-        PipeBarrier<PIPE_ALL>();
-        // 初始化buffer
-        InitQueues(pipe, tilingData);
-    } else if (!isDeterministic) {
-        CrossCoreSetFlag<0x0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL);
     }
-}
 
     __aicore__ inline void Process(const AdaLayerNormGradTilingDataMergeBSWorkspace* tilingData)
     {
         if (GetBlockIdx() < tilingData->blockNum) {
-            int64_t rowCount =
-                (GetBlockIdx() == tilingData->blockNum - 1) ? tilingData->blockTail : tilingData->blockFormer;
+            int64_t rowCount = (GetBlockIdx() == tilingData->blockNum - 1) ? tilingData->blockTail :
+                                                                             tilingData->blockFormer;
             int64_t blockSrow = GetBlockIdx() * tilingData->blockFormer;
 
             for (int64_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
@@ -167,13 +179,12 @@ __aicore__ inline void Init(
                 PipeBarrier<PIPE_ALL>();
                 for (int64_t ubIndex = 0; ubIndex < tilingData->ubLoop - 1; ubIndex++) {
                     CopyInPhase1(ubIndex, tilingData->ubFormer, tilingData->ubFormer);
-                    ComputePhase1(
-                        rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer, reduce2, reduce3, rstdIn);
+                    ComputePhase1(rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer, reduce2, reduce3,
+                                  rstdIn);
                 }
                 CopyInPhase1(tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail);
-                ComputePhase1(
-                    rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, reduce2, reduce3,
-                    rstdIn);
+                ComputePhase1(rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, reduce2,
+                              reduce3, rstdIn);
             }
         }
         // step3. calc pgamma and pbeta form workspace
@@ -200,10 +211,10 @@ __aicore__ inline void Init(
             DataCopyPad(buffer1_, xInTensorGM[rowOffset], intriParamsT, padParams);
             DataCopyPad(buffer2_, scaleInTensorGM[batchOffset], intriParamsT, padParams);
         } else {
-            DataCopyPad(
-                buffer0_.ReinterpretCast<T>()[ubFormer], dyInTensorGM[rowOffset], intriParamsT, padParams); // buffer0_ dy
-            DataCopyPad(
-                buffer1_.ReinterpretCast<T>()[ubFormer], xInTensorGM[rowOffset], intriParamsT, padParams); // buffer1_ x
+            DataCopyPad(buffer0_.ReinterpretCast<T>()[ubFormer], dyInTensorGM[rowOffset], intriParamsT,
+                        padParams); // buffer0_ dy
+            DataCopyPad(buffer1_.ReinterpretCast<T>()[ubFormer], xInTensorGM[rowOffset], intriParamsT,
+                        padParams); // buffer1_ x
             DataCopyPad(buffer2_.ReinterpretCast<T>()[ubFormer], scaleInTensorGM[batchOffset], intriParamsT, padParams);
         }
         queIn0_.EnQue(buffer0_);
@@ -240,8 +251,8 @@ __aicore__ inline void Init(
         }
     }
 
-    __aicore__ inline void ComputePhase0Part1(
-        int64_t ubIndex, int64_t ubFormer, int64_t calcNum, float meanIn, float rstdIn)
+    __aicore__ inline void ComputePhase0Part1(int64_t ubIndex, int64_t ubFormer, int64_t calcNum, float meanIn,
+                                              float rstdIn)
     {
         Adds(buffer4_, buffer0_, 0.0f, calcNum); // dy+0
         PipeBarrier<PIPE_V>();
@@ -333,8 +344,8 @@ __aicore__ inline void Init(
         queOut4_.EnQue(buffer4_);
         buffer4_ = queOut4_.DeQue<float>();
         SetAtomicAdd<float>();
-        DataCopyPad(
-            dScaleWorkspaceGM[rowOfBatch * colAlign + ubIndex * ubFormer], buffer4_, intriParams); // workspace dscale
+        DataCopyPad(dScaleWorkspaceGM[rowOfBatch * colAlign + ubIndex * ubFormer], buffer4_,
+                    intriParams); // workspace dscale
         SetAtomicNone();
 
         PipeBarrier<PIPE_V>();
@@ -400,8 +411,8 @@ __aicore__ inline void Init(
         }
     }
 
-    __aicore__ inline float ReducePhase0(
-        const LocalTensor<float>& src, const LocalTensor<float>& tmp, int64_t reduceNum)
+    __aicore__ inline float ReducePhase0(const LocalTensor<float>& src, const LocalTensor<float>& tmp,
+                                         int64_t reduceNum)
     {
         ReduceSum(tmp, src, tmp, reduceNum);
         event_t event0 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -423,16 +434,15 @@ __aicore__ inline void Init(
         queIn1_.EnQue(buffer1_);
     }
 
-    __aicore__ inline void ComputePhase1(
-        int64_t rowIndex, int64_t ubIndex, int64_t ubFormer, int64_t calcNum, float reduce2, float reduce3,
-        float rstdIn)
+    __aicore__ inline void ComputePhase1(int64_t rowIndex, int64_t ubIndex, int64_t ubFormer, int64_t calcNum,
+                                         float reduce2, float reduce3, float rstdIn)
     {
         buffer4_ = queOut4_.AllocTensor<float>();
         buffer0_ = queIn0_.DeQue<float>();
         buffer1_ = queIn1_.DeQue<float>();
         Muls(buffer0_, buffer0_, reduce3, calcNum); //(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd)
         PipeBarrier<PIPE_V>();
-        Adds(buffer1_, buffer1_, -reduce2, calcNum);// dy*gamma*(1+scale)-(1/N)∑dy*gamma*(1+scale)
+        Adds(buffer1_, buffer1_, -reduce2, calcNum); // dy*gamma*(1+scale)-(1/N)∑dy*gamma*(1+scale)
         PipeBarrier<PIPE_V>();
         // dy*gamma-(1/N)∑dy*gamma*(1+scale)-(x-mean)*rstd*(1/N)*∑(dy*gamma*(1+scale)*(x-mean)*rstd))
         Sub(buffer1_, buffer1_, buffer0_, calcNum);
@@ -510,9 +520,8 @@ __aicore__ inline void Init(
         op.initBuffer(pipe, pdScaleOutTensorGM, pdShiftOutTensorGM, workspaceGMOri, curWorkspaceRowsNum);
 
         // 调用新写的 Batch 处理函数
-        op.BatchFinalProcessDeterministic(
-            tilingData->batch, tilingData->colAlignV, tilingData->blockNum, tilingData->col, pdScaleOutTensorGM,
-            pdShiftOutTensorGM);
+        op.BatchFinalProcessDeterministic(tilingData->batch, tilingData->colAlignV, tilingData->blockNum,
+                                          tilingData->col, pdScaleOutTensorGM, pdShiftOutTensorGM);
     }
 
 private:

@@ -55,13 +55,10 @@ struct ComputeInfo {
     uint64_t maxDimOut{0};
 };
 
-class AdaptiveAvgPool2dSmallKernelTiling : public AdaptivePool2dBaseTiling
-{
+class AdaptiveAvgPool2dSmallKernelTiling : public AdaptivePool2dBaseTiling {
 public:
-    explicit AdaptiveAvgPool2dSmallKernelTiling(gert::TilingContext* context) : AdaptivePool2dBaseTiling(context)
-    {}
-    ~AdaptiveAvgPool2dSmallKernelTiling() override
-    {}
+    explicit AdaptiveAvgPool2dSmallKernelTiling(gert::TilingContext* context) : AdaptivePool2dBaseTiling(context) {}
+    ~AdaptiveAvgPool2dSmallKernelTiling() override {}
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;

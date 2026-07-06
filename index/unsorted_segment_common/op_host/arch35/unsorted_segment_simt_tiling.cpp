@@ -20,10 +20,7 @@ static constexpr uint64_t DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 static constexpr uint64_t TEMPLATE_SIMT = 1000;
 static constexpr uint64_t UB_MIN_FACTOR = 2048;
 
-bool UnsortedSegmentSimtTiling::IsCapable()
-{
-    return true;
-}
+bool UnsortedSegmentSimtTiling::IsCapable() { return true; }
 
 uint64_t UnsortedSegmentSimtTiling::GetTilingKey() const
 {
@@ -33,8 +30,8 @@ uint64_t UnsortedSegmentSimtTiling::GetTilingKey() const
 
 void UnsortedSegmentSimtTiling::SetTilingData()
 {
-    UnsortedSegment::UnsortedSegmentSimtTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimtTilingData>();
+    UnsortedSegment::UnsortedSegmentSimtTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimtTilingData>();
 
     tilingData->inputOuterDim = inputOuterDim_;
     tilingData->outputOuterDim = outputOuterDim_;
@@ -55,7 +52,6 @@ ge::graphStatus UnsortedSegmentSimtTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-
 ge::graphStatus UnsortedSegmentSimtTiling::PostTiling()
 {
     context_->SetBlockDim(usedCoreNum_);
@@ -66,14 +62,14 @@ ge::graphStatus UnsortedSegmentSimtTiling::PostTiling()
         (res != ge::GRAPH_SUCCESS),
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
         return ge::GRAPH_FAILED);
-        
+
     return ge::GRAPH_SUCCESS;
 }
 
 void UnsortedSegmentSimtTiling::DumpTilingInfo()
 {
-    UnsortedSegment::UnsortedSegmentSimtTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimtTilingData>();
+    UnsortedSegment::UnsortedSegmentSimtTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimtTilingData>();
 
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();

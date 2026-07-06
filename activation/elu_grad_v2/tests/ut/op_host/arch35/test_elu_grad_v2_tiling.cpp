@@ -27,15 +27,9 @@ using namespace Ops::Base;
 
 class EluGradV2TilingUT : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EluGradV2TilingUT SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EluGradV2TilingUT SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EluGradV2TilingUT TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EluGradV2TilingUT TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -96,11 +90,10 @@ TEST_F(EluGradV2TilingUT, test_tiling_failed_dtype_input_output_diff_007)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -115,8 +108,8 @@ TEST_F(EluGradV2TilingUT, test_tiling_failed_dtype_input_output_diff_007)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-void TestEluGradV2TilingWithResult(
-    const ge::DataType Dtype, const bool result, const int tiling_key_, const std::string& tiling_data_target)
+void TestEluGradV2TilingWithResult(const ge::DataType Dtype, const bool result, const int tiling_key_,
+                                   const std::string& tiling_data_target)
 {
     std::string op_type("EluGradV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -163,11 +156,10 @@ void TestEluGradV2TilingWithResult(
                       .NodeInputTd(0, Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -238,11 +230,10 @@ TEST_F(EluGradV2TilingUT, test_tiling_fp32_isresult_002)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -302,11 +293,10 @@ TEST_F(EluGradV2TilingUT, test_tiling_bf16_isresult_003)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -366,11 +356,10 @@ TEST_F(EluGradV2TilingUT, test_tiling_fp16_isresult_false_004)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -427,11 +416,10 @@ TEST_F(EluGradV2TilingUT, test_tiling_failed_inputs_dtype_diff_005)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -489,11 +477,10 @@ TEST_F(EluGradV2TilingUT, test_tiling_failed_empty_tensor_006)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeAttrs(
-                          {{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"input_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"is_result", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

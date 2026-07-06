@@ -62,27 +62,27 @@ constexpr size_t WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 
 struct BaseTilingData {
     int64_t realCoreNum = 0;
-    int64_t a = 0; //a轴
-    int64_t r = 0; //r轴
-    int64_t blockFactor = 0; //a轴分核，主核数据量
-    int64_t tailBlockFactor = 0; //a轴分核，尾核数据量
-    int64_t rUbNumFactor = 0; //R轴切分，一次UB可以放下的数据量，全载模板下等于r，注意32b对齐
-    int64_t aUbNumFactor = 0; //A轴切分，一次UB可以放下的数据量，非全载模板下等于1，注意32b对齐
-    int64_t aLoopTimes = 0; //主核A方向循环搬移数据的次数
-    int64_t aLoopTimesT = 0; //尾核A方向循环搬移数据的次数
-    int64_t aLoopTail = 0; //主核A方向尾块的数据量
-    int64_t aLoopTailT = 0; //尾核A方向尾块的数据量
-    int64_t rLoopTime = 0; //不能全载时，R轴反向的循环次数
-    int64_t rLoopTile = 0; //不能全载时，R轴反向的尾块数据量
+    int64_t a = 0;               // a轴
+    int64_t r = 0;               // r轴
+    int64_t blockFactor = 0;     // a轴分核，主核数据量
+    int64_t tailBlockFactor = 0; // a轴分核，尾核数据量
+    int64_t rUbNumFactor = 0; // R轴切分，一次UB可以放下的数据量，全载模板下等于r，注意32b对齐
+    int64_t aUbNumFactor = 0; // A轴切分，一次UB可以放下的数据量，非全载模板下等于1，注意32b对齐
+    int64_t aLoopTimes = 0;     //主核A方向循环搬移数据的次数
+    int64_t aLoopTimesT = 0;    //尾核A方向循环搬移数据的次数
+    int64_t aLoopTail = 0;      //主核A方向尾块的数据量
+    int64_t aLoopTailT = 0;     //尾核A方向尾块的数据量
+    int64_t rLoopTime = 0;      //不能全载时，R轴反向的循环次数
+    int64_t rLoopTile = 0;      //不能全载时，R轴反向的尾块数据量
     int64_t rLoopTileAlign = 0; //不能全载时，R轴反向的尾块数据量
-    int64_t kTimesTail = 0; //不能全载时，完全二分累加，存在主尾块相加的次数
-    int64_t kTimes = 0; //不能全载时，完全二分累加，2的k次方内循环次数
+    int64_t kTimesTail = 0;     //不能全载时，完全二分累加，存在主尾块相加的次数
+    int64_t kTimes = 0;         //不能全载时，完全二分累加，2的k次方内循环次数
     int64_t tilingKey = 0;
 };
 
 class SparseSoftmaxCrossEntropyWithLogitsTiling {
 public:
-    explicit SparseSoftmaxCrossEntropyWithLogitsTiling(gert::TilingContext *context) : context_(context){};
+    explicit SparseSoftmaxCrossEntropyWithLogitsTiling(gert::TilingContext* context) : context_(context){};
 
     ge::graphStatus Init();
     ge::graphStatus DoTiling();
@@ -109,11 +109,12 @@ private:
     int64_t cacheLineSize = 0;
     int64_t doubleBuffer = DOUBLE_BUFFER_1;
 
-    gert::TilingContext *context_ = nullptr;
-    SparseSoftmaxCrossEntropyWithLogitsTilingData *tilingData_{ nullptr };
+    gert::TilingContext* context_ = nullptr;
+    SparseSoftmaxCrossEntropyWithLogitsTilingData* tilingData_{nullptr};
 };
 
-int64_t SparseSoftmaxCrossEntropyWithLogitsTiling::GetMod(int64_t l_value, int64_t r_value) {
+int64_t SparseSoftmaxCrossEntropyWithLogitsTiling::GetMod(int64_t l_value, int64_t r_value)
+{
     if (r_value == 0) {
         return l_value;
     }
@@ -131,17 +132,15 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputDtype()
     auto labelsDtype = input->GetDataType();
 
     bool validDtype = featuresDtype == ge::DT_BF16 || featuresDtype == ge::DT_FLOAT || featuresDtype == ge::DT_FLOAT16;
-    OP_CHECK_IF(
-        (!validDtype),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "features", ToString(featuresDtype).c_str(),
-            "FLOAT, FLOAT16 or BF16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((!validDtype),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "features", ToString(featuresDtype).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
 
     validDtype = labelsDtype == ge::DT_INT32 || labelsDtype == ge::DT_INT64;
     OP_CHECK_IF(
         (!validDtype),
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "labels", ToString(labelsDtype).c_str(),
-            "INT32 or INT64"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "labels", ToString(labelsDtype).c_str(), "INT32 or INT64"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -156,8 +155,9 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputShape()
     auto labelsStorageShape = labelsShape->GetStorageShape();
     if (featuresStorageShape.GetDimNum() - 1 != labelsStorageShape.GetDimNum()) {
         std::string dimNumMsg = std::to_string(labelsStorageShape.GetDimNum()) + " and " +
-            std::to_string(featuresStorageShape.GetDimNum());
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "labels and features", dimNumMsg.c_str(),
+                                std::to_string(featuresStorageShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "labels and features", dimNumMsg.c_str(),
             "The shape dim of input labels must be one less than that of input features");
         return ge::GRAPH_FAILED;
     }
@@ -165,11 +165,10 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputShape()
     for (size_t i = 0; i < featuresStorageShape.GetDimNum() - 1; i++) {
         if (featuresStorageShape.GetDim(i) != labelsStorageShape.GetDim(i)) {
             std::string shapeMsg = ToString(labelsStorageShape) + " and " + ToString(featuresStorageShape);
-            std::string reasonMsg = 
-                "The shape of input labels must be the same as the shape consisting of the first " +
-                std::to_string(featuresStorageShape.GetDimNum()) + " axes of input features";
+            std::string reasonMsg = "The shape of input labels must be the same as the shape consisting of the first " +
+                                    std::to_string(featuresStorageShape.GetDimNum()) + " axes of input features";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "labels and features", shapeMsg.c_str(),
-                reasonMsg.c_str());
+                                                   reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -182,7 +181,8 @@ void SparseSoftmaxCrossEntropyWithLogitsTiling::ComputeAllC(int64_t aNum, int64_
     baseTiling_.aUbNumFactor = aNum > perBlock ? aNum / perBlock * perBlock : perBlock;
     baseTiling_.aLoopTimes = baseTiling_.aUbNumFactor == 0 ? 0 : baseTiling_.blockFactor / baseTiling_.aUbNumFactor;
     baseTiling_.aLoopTail = baseTiling_.blockFactor % baseTiling_.aUbNumFactor;
-    baseTiling_.aLoopTimesT = baseTiling_.aUbNumFactor == 0 ? 0 : baseTiling_.tailBlockFactor / baseTiling_.aUbNumFactor;
+    baseTiling_.aLoopTimesT = baseTiling_.aUbNumFactor == 0 ? 0 :
+                                                              baseTiling_.tailBlockFactor / baseTiling_.aUbNumFactor;
     baseTiling_.aLoopTailT = baseTiling_.tailBlockFactor % baseTiling_.aUbNumFactor;
 }
 
@@ -198,35 +198,35 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CalTilingData()
     int64_t inputByte1 = featuresDtype == ge::DT_FLOAT ? DTYPE_LEN_FP32 : DTYPE_LEN_FP16;
     int64_t inputByte2 = labelsDtype == ge::DT_INT32 ? DTYPE_LEN_FP32 : DTYPE_LEN_INT64;
     int64_t perBlock = ubBlockSize / inputByte1;
-	if (perBlock == 0) {
+    if (perBlock == 0) {
         std::string errMsg = ge::TypeUtils::DataTypeToSerialString(featuresDtype);
-        std::string reasonMsg =
-            "The dtype size of input features must be less than or equal to " + std::to_string(ubBlockSize);
+        std::string reasonMsg = "The dtype size of input features must be less than or equal to " +
+                                std::to_string(ubBlockSize);
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "features", errMsg.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
-	}
+    }
 
-	int64_t rAligned = (baseTiling_.r + perBlock - 1) / perBlock * perBlock;
-	baseTiling_.rUbNumFactor = rAligned;
-	int64_t allUbSize = static_cast<int64_t>(ubSize);
+    int64_t rAligned = (baseTiling_.r + perBlock - 1) / perBlock * perBlock;
+    baseTiling_.rUbNumFactor = rAligned;
+    int64_t allUbSize = static_cast<int64_t>(ubSize);
     int64_t arBuf = AR_UB_T1_DB2_NUM * rAligned * inputByte1 + AR_UB_FP32_NUM * rAligned * DTYPE_LEN_FP32;
-    int64_t aBuf =  inputByte1 + inputByte2 + A_UB_FB32_NUM * DTYPE_LEN_FP32;
-	int64_t aNum = allUbSize / (arBuf + aBuf);
-	auto shape = ge::Shape({aNum, rAligned});
+    int64_t aBuf = inputByte1 + inputByte2 + A_UB_FB32_NUM * DTYPE_LEN_FP32;
+    int64_t aNum = allUbSize / (arBuf + aBuf);
+    auto shape = ge::Shape({aNum, rAligned});
     uint32_t maxValue = 0;
     uint32_t minValue = 0;
-    AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
-        AscendC::ReducePattern::AR, true, false, maxValue, minValue);
+    AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
+                                       minValue);
     int64_t aNum_res = (allUbSize - static_cast<int64_t>(maxValue)) / (arBuf + aBuf);
     if (aNum_res < perBlock) {
         OP_LOGD(context_, "can not full load r with db is 2, aNum_res = %ld", aNum_res);
         arBuf = AR_UB_T1_DB1_NUM * rAligned * inputByte1 + AR_UB_FP32_NUM * rAligned * DTYPE_LEN_FP32;
         aBuf = inputByte1 + inputByte2 + A_UB_FB32_NUM * DTYPE_LEN_FP32;
         aNum = allUbSize / (arBuf + aBuf);
-		shape = ge::Shape({aNum, rAligned});
-		AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT,
-        	AscendC::ReducePattern::AR, true, false, maxValue, minValue);
-    	aNum_res = (allUbSize - static_cast<int64_t>(maxValue)) / (arBuf + aBuf);
+        shape = ge::Shape({aNum, rAligned});
+        AscendC::GetReduceSumMaxMinTmpSize(shape, ge::DT_FLOAT, AscendC::ReducePattern::AR, true, false, maxValue,
+                                           minValue);
+        aNum_res = (allUbSize - static_cast<int64_t>(maxValue)) / (arBuf + aBuf);
         if (aNum_res < perBlock) {
             OP_LOGD(context_, "can not full load r with db is 1, aNum_res = %ld", aNum_res);
             CalTilingDataRSplit();
@@ -259,17 +259,25 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CalTilingDataRSplit()
     int64_t lablesByte = labelsDtype == ge::DT_INT32 ? DTYPE_LEN_FP32 : DTYPE_LEN_INT64;
     int64_t perBlock = Ops::Base::FloorDiv(ubBlockSize, inputByte);
     baseTiling_.aUbNumFactor = perBlock;
-    baseTiling_.aLoopTimes = baseTiling_.aUbNumFactor == 0 ? 0 : Ops::Base::FloorDiv(baseTiling_.blockFactor, baseTiling_.aUbNumFactor);
+    baseTiling_.aLoopTimes = baseTiling_.aUbNumFactor == 0 ?
+                                 0 :
+                                 Ops::Base::FloorDiv(baseTiling_.blockFactor, baseTiling_.aUbNumFactor);
     baseTiling_.aLoopTail = GetMod(baseTiling_.blockFactor, baseTiling_.aUbNumFactor);
-    baseTiling_.aLoopTimesT = baseTiling_.aUbNumFactor == 0 ? 0 : Ops::Base::FloorDiv(baseTiling_.tailBlockFactor, baseTiling_.aUbNumFactor);
+    baseTiling_.aLoopTimesT = baseTiling_.aUbNumFactor == 0 ?
+                                  0 :
+                                  Ops::Base::FloorDiv(baseTiling_.tailBlockFactor, baseTiling_.aUbNumFactor);
     baseTiling_.aLoopTailT = GetMod(baseTiling_.tailBlockFactor, baseTiling_.aUbNumFactor);
     int64_t cacheUbSize = (CONST_CACHE * vfLenB32 + baseTiling_.aUbNumFactor) * DTYPE_LEN_FP32;
-    int64_t arAllUbSize = static_cast<int64_t>(ubSize) - (baseTiling_.aUbNumFactor * A_UB_NUMS * DTYPE_LEN_FP32) - cacheUbSize - (baseTiling_.aUbNumFactor * lablesByte);
-    int64_t oneRowRNum = static_cast<int64_t>(Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B16)));
+    int64_t arAllUbSize = static_cast<int64_t>(ubSize) - (baseTiling_.aUbNumFactor * A_UB_NUMS * DTYPE_LEN_FP32) -
+                          cacheUbSize - (baseTiling_.aUbNumFactor * lablesByte);
+    int64_t oneRowRNum = static_cast<int64_t>(
+        Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B16)));
     if (featuresDtype == ge::DT_FLOAT) {
-        oneRowRNum = static_cast<int64_t>(Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B32)));
+        oneRowRNum = static_cast<int64_t>(
+            Ops::Base::FloorDiv(arAllUbSize, (baseTiling_.aUbNumFactor * AR_UB_NUMS_B32)));
     }
-    int64_t rOnceNumByte = oneRowRNum < cacheLineSize ? cacheLineSize : Ops::Base::FloorAlign(oneRowRNum, cacheLineSize);
+    int64_t rOnceNumByte = oneRowRNum < cacheLineSize ? cacheLineSize :
+                                                        Ops::Base::FloorAlign(oneRowRNum, cacheLineSize);
     baseTiling_.rUbNumFactor = baseTiling_.r <= perBlock ? perBlock : Ops::Base::FloorDiv(rOnceNumByte, inputByte);
     baseTiling_.rLoopTime = Ops::Base::CeilDiv(baseTiling_.r, baseTiling_.rUbNumFactor);
     int64_t rTail = GetMod(baseTiling_.r, baseTiling_.rUbNumFactor);
@@ -286,7 +294,8 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CalTilingDataRSplit()
 void SparseSoftmaxCrossEntropyWithLogitsTiling::GetTilingKey()
 {
     uint64_t schId = schIdNum;
-    uint64_t db = doubleBuffer == DOUBLE_BUFFER_1 ? 0 : 1;;
+    uint64_t db = doubleBuffer == DOUBLE_BUFFER_1 ? 0 : 1;
+    ;
 
     OP_LOGI(context_->GetNodeName(), "schId is %lu, db is %lu", schId, db);
     const uint64_t tilingKey = GET_TPL_TILING_KEY(schId, db);
@@ -342,13 +351,11 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::Init()
     OP_LOGD(context_->GetNodeName(), "Enter SparseSoftmaxCrossEntropyWithLogitsTiling init.");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (coreNum <= 0), OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed vectorCoreNum %ld", coreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((coreNum <= 0), OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed vectorCoreNum %ld", coreNum),
+                return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        (ubSize == 0UL), OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed ubSize %lu", ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize == 0UL), OP_LOGE(context_->GetNodeName(), "GetHardwareInfo Failed ubSize %lu", ubSize),
+                return ge::GRAPH_FAILED);
     ubSize -= SIMD_SIMT_DCACHE_SIZE;
     ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     vfLenB32 = static_cast<int64_t>(Ops::Base::GetVRegSize(context_));
@@ -356,13 +363,12 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::Init()
 
     if (tilingData_ == nullptr) {
         tilingData_ = context_->GetTilingData<SparseSoftmaxCrossEntropyWithLogitsTilingData>();
-        OP_CHECK_IF(
-            (tilingData_ == nullptr), OP_LOGE(context_->GetNodeName(), "get tilingdata ptr failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((tilingData_ == nullptr), OP_LOGE(context_->GetNodeName(), "get tilingdata ptr failed"),
+                    return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF((memset_s(tilingData_, sizeof(SparseSoftmaxCrossEntropyWithLogitsTilingData), 0,
-        sizeof(SparseSoftmaxCrossEntropyWithLogitsTilingData)) != EOK),
-        OP_LOGE(context_->GetNodeName(), "memset tilingdata failed"), return ge::GRAPH_FAILED);
+                          sizeof(SparseSoftmaxCrossEntropyWithLogitsTilingData)) != EOK),
+                OP_LOGE(context_->GetNodeName(), "memset tilingdata failed"), return ge::GRAPH_FAILED);
     OP_LOGD(context_->GetNodeName(), "Exit SparseSoftmaxCrossEntropyWithLogitsTiling init.");
     return ge::GRAPH_SUCCESS;
 }
@@ -370,12 +376,10 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::Init()
 ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::DoTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Enter SparseSoftmaxCrossEntropyWithLogitsTiling DoTiling.v1.1");
-    OP_CHECK_IF(
-        (CheckInputDtype() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CheckInputParams is failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CheckInputShape() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CheckInputShapes is failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckInputDtype() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "CheckInputParams is failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckInputShape() != ge::GRAPH_SUCCESS),
+                OP_LOGE(context_->GetNodeName(), "CheckInputShapes is failed"), return ge::GRAPH_FAILED);
     auto output = context_->GetOutputShape(OUTPUT_BACKPROP_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, output);
     auto outputShape = output->GetStorageShape();
@@ -383,15 +387,14 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::DoTiling()
     baseTiling_.r = outputShape.GetDim(outputDimNum - 1);
     if (baseTiling_.r <= 0) {
         std::string reasonMsg = "The reduce axis of output backprop must be a positive number, "
-            "where reduce axis is the last dim";
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "backprop",
-            ToString(outputShape).c_str(), reasonMsg.c_str());
+                                "where reduce axis is the last dim";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "backprop", ToString(outputShape).c_str(),
+                                              reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     baseTiling_.a = outputShape.GetShapeSize() / baseTiling_.r;
-    OP_CHECK_IF(
-        (CalTilingData() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "Calculate TilingData failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CalTilingData() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "Calculate TilingData failed"),
+                return ge::GRAPH_FAILED);
 
     GetTilingKey();
     FillTilingData();
@@ -399,14 +402,15 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::DoTiling()
     context_->SetBlockDim(tilingData_->realCoreNum);
     context_->SetScheduleMode(1);
     context_->SetLocalMemorySize(ubSize);
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = WORKSPACE_SIZE;
     OP_LOGD(context_->GetNodeName(), "Exit SparseSoftmaxCrossEntropyWithLogitsTiling DoTiling.");
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Tiling4SparseSoftmaxCrossEntropyWithLogits(gert::TilingContext* context) {
+ge::graphStatus Tiling4SparseSoftmaxCrossEntropyWithLogits(gert::TilingContext* context)
+{
     if (context == nullptr) {
         return ge::GRAPH_FAILED;
     }
@@ -435,10 +439,9 @@ ge::graphStatus TilingParse4SparseSoftmaxCrossEntropyWithLogits(gert::TilingPars
     return ge::GRAPH_SUCCESS;
 }
 
-struct SparseSoftmaxCrossEntropyWithLogitsCompileInfo {
-};
+struct SparseSoftmaxCrossEntropyWithLogitsCompileInfo {};
 
 IMPL_OP_OPTILING(SparseSoftmaxCrossEntropyWithLogits)
     .Tiling(Tiling4SparseSoftmaxCrossEntropyWithLogits)
     .TilingParse<SparseSoftmaxCrossEntropyWithLogitsCompileInfo>(TilingParse4SparseSoftmaxCrossEntropyWithLogits);
-}
+} // namespace optiling

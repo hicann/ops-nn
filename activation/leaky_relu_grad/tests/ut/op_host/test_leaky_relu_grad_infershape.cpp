@@ -22,15 +22,9 @@
 
 class LeakyReluGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LeakyReluGradTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LeakyReluGradTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LeakyReluGradTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LeakyReluGradTest TearDown" << std::endl; }
 };
 
 TEST_F(LeakyReluGradTest, leaky_relu_grad_infershape_950_test)
@@ -45,8 +39,8 @@ TEST_F(LeakyReluGradTest, leaky_relu_grad_infershape_950_test)
     ge::op::LeakyReluGrad op;
 
     std::vector<std::pair<int64_t, int64_t>> shape_range = {{1, 16}, {1, 16}};
-    auto tensor_desc =
-        create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND, shape_range);
+    auto tensor_desc = create_desc_shape_range({-1, -1}, ge::DT_FLOAT, ge::FORMAT_ND, {16, 16}, ge::FORMAT_ND,
+                                               shape_range);
 
     op.UpdateInputDesc("gradients", tensor_desc);
     op.UpdateInputDesc("features", tensor_desc);

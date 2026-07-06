@@ -25,16 +25,15 @@ using namespace AscendC;
 constexpr uint32_t FACTOR_FOR_CAST = 2;
 
 template <typename T>
-using OneScalarQuaternaryOp = void(
-    const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, const T&,
-    const int32_t&);
+using OneScalarQuaternaryOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&,
+                                   const LocalTensor<T>&, const T&, const int32_t&);
 
 template <typename T, typename P, OneScalarQuaternaryOp<P>* op>
 class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& inLocal_3, LocalTensor<T>& outLocal,
-        LocalTensor<float>& float32Tensor, T scalarVal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& inLocal_3,
+                                   LocalTensor<T>& outLocal, LocalTensor<float>& float32Tensor, T scalarVal,
+                                   uint32_t maxCastDataCount, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         op(outLocal, inLocal_1, inLocal_2, inLocal_3, scalarVal, dataCount);
@@ -46,43 +45,39 @@ public:
 template <OneScalarQuaternaryOp<float>* op>
 class InnerComputer<bfloat16_t, float, op> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, LocalTensor<bfloat16_t>& inLocal_3,
-        LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor, bfloat16_t scalarVal,
-        uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                   LocalTensor<bfloat16_t>& inLocal_3, LocalTensor<bfloat16_t>& outLocal,
+                                   LocalTensor<float>& float32Tensor, bfloat16_t scalarVal, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            ComputePerCast(
-                inLocal_1, inLocal_2, inLocal_3, outLocal, float32Tensor, scalarVal, maxCastDataCount, i,
-                maxCastDataCount);
+            ComputePerCast(inLocal_1, inLocal_2, inLocal_3, outLocal, float32Tensor, scalarVal, maxCastDataCount, i,
+                           maxCastDataCount);
         }
 
         if (castTimesRemainder > 0) {
-            ComputePerCast(
-                inLocal_1, inLocal_2, inLocal_3, outLocal, float32Tensor, scalarVal, maxCastDataCount, castTimes,
-                castTimesRemainder);
+            ComputePerCast(inLocal_1, inLocal_2, inLocal_3, outLocal, float32Tensor, scalarVal, maxCastDataCount,
+                           castTimes, castTimesRemainder);
         }
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, LocalTensor<bfloat16_t>& inLocal_3,
-        LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor, bfloat16_t scalarVal,
-        uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                          LocalTensor<bfloat16_t>& inLocal_3, LocalTensor<bfloat16_t>& outLocal,
+                                          LocalTensor<float>& float32Tensor, bfloat16_t scalarVal,
+                                          uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, maxCastDataCount);
         PipeBarrier<PIPE_V>();
-        Cast(
-            float32Tensor[maxCastDataCount], inLocal_2[index * maxCastDataCount], RoundMode::CAST_NONE,
-            maxCastDataCount);
+        Cast(float32Tensor[maxCastDataCount], inLocal_2[index * maxCastDataCount], RoundMode::CAST_NONE,
+             maxCastDataCount);
         PipeBarrier<PIPE_V>();
-        Cast(
-            float32Tensor[maxCastDataCount * FACTOR_FOR_CAST], inLocal_3[index * maxCastDataCount],
-            RoundMode::CAST_NONE, maxCastDataCount);
+        Cast(float32Tensor[maxCastDataCount * FACTOR_FOR_CAST], inLocal_3[index * maxCastDataCount],
+             RoundMode::CAST_NONE, maxCastDataCount);
         PipeBarrier<PIPE_V>();
         op(float32Tensor, float32Tensor, float32Tensor[maxCastDataCount],
            float32Tensor[maxCastDataCount * FACTOR_FOR_CAST], ToFloat(scalarVal), dataCount);
@@ -93,20 +88,17 @@ private:
 };
 #endif
 
-template <
-    typename T, typename P, OneScalarQuaternaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
-class ForeachOneScalarQuaternary : public KernelForeachUnary<
-                                       T, ForeachOneScalarQuaternary<T, P, op, bufferNum, paramsCount, needCopyOut>,
-                                       bufferNum, paramsCount, needCopyOut> {
+template <typename T, typename P, OneScalarQuaternaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+class ForeachOneScalarQuaternary
+    : public KernelForeachUnary<T, ForeachOneScalarQuaternary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
+                                paramsCount, needCopyOut> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachOneScalarQuaternary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount,
-        needCopyOut>;
+    using Base = KernelForeachUnary<T, ForeachOneScalarQuaternary<T, P, op, bufferNum, paramsCount, needCopyOut>,
+                                    bufferNum, paramsCount, needCopyOut>;
     using Operator = OneScalarQuaternaryOp<P>;
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
-        const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline ForeachOneScalarQuaternary() : Base(*this){};
     using Base::Process;
 
@@ -121,8 +113,8 @@ protected:
     T scalarVal = 0;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> inLocal_1 = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> inLocal_2 = InQueue_2.DeQue<T>();
@@ -130,8 +122,8 @@ private:
         LocalTensor<T> outLocal = Base::outQueue.template AllocTensor<T>();
 
         InnerComputer<T, P, op> computer;
-        computer.Compute(
-            inLocal_1, inLocal_2, inLocal_3, outLocal, float32Tensor, scalarVal, Base::maxCastDataCount, dataCount);
+        computer.Compute(inLocal_1, inLocal_2, inLocal_3, outLocal, float32Tensor, scalarVal, Base::maxCastDataCount,
+                         dataCount);
 
         Base::outQueue.template EnQue<T>(outLocal);
         Base::dataQueue.FreeTensor(inLocal_1);
@@ -156,16 +148,11 @@ private:
         InQueue_3.EnQue(inLocal_3);
     }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
     __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
     {
@@ -177,8 +164,8 @@ private:
     friend Base;
 };
 
-template <
-    typename T, typename P, OneScalarQuaternaryOp<P>* op, int32_t bufferNum, uint8_t paramsCount, bool needCopyOut>
+template <typename T, typename P, OneScalarQuaternaryOp<P>* op, int32_t bufferNum, uint8_t paramsCount,
+          bool needCopyOut>
 __aicore__ inline void ForeachOneScalarQuaternary<T, P, op, bufferNum, paramsCount, needCopyOut>::Init(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
     const ForeachCommonTilingData* tilingData)

@@ -8,27 +8,24 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <gtest/gtest.h>  // NOLINT
+#include <gtest/gtest.h> // NOLINT
 #include <iostream>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
 #include "../../../op_graph/gelu_mul_proto.h"
 #include "log/log.h"
 class GeluMul : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "GeluMul SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "GeluMul SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "GeluMul TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "GeluMul TearDown" << std::endl; }
 };
 
-TEST_F(GeluMul, GeluMul_infershape_case_0) {
-  ge::op::GeluMul op;
-  op.UpdateInputDesc("x", create_desc({4, 1, 1280}, ge::DT_FLOAT16));
+TEST_F(GeluMul, GeluMul_infershape_case_0)
+{
+    ge::op::GeluMul op;
+    op.UpdateInputDesc("x", create_desc({4, 1, 1280}, ge::DT_FLOAT16));
 
-  EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
-  EXPECT_EQ(InferDataTypeTest(op), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferDataTypeTest(op), ge::GRAPH_SUCCESS);
 }

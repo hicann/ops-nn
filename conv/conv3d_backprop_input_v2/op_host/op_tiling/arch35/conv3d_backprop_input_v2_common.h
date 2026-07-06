@@ -43,7 +43,6 @@ constexpr uint32_t BASIC_BLOCK_SIZE_16 = 16;
 constexpr uint32_t TOTAL_CNT_LOWER_RATIO = 10;
 constexpr uint32_t TOTAL_CNT_UPPER_RATIO = 45;
 
-
 constexpr uint32_t B2_TRANSPOSE_AND_REVERSE = 1;
 constexpr uint32_t B2_TRANSPOSE_ONLY = 3;
 constexpr uint32_t B2_REVERSE_ONLY = 2;
@@ -56,7 +55,7 @@ struct L0TilingParams {
     uint32_t baseM = 16;
     uint32_t baseK = 16;
     uint32_t baseN = 16;
-    uint32_t singleCoreCin = 16;  // 每个核实际处理的 Cin 数量，不会随 baseN shrink 改变
+    uint32_t singleCoreCin = 16; // 每个核实际处理的 Cin 数量，不会随 baseN shrink 改变
 };
 
 struct L1TilingParams {

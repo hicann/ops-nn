@@ -15,14 +15,13 @@
 #ifndef __OP_KERNEL_MATMUL_V3_BASE_KERNEL_H__
 #define __OP_KERNEL_MATMUL_V3_BASE_KERNEL_H__
 
-
 #include "mat_mul_base_block.h"
 
 using namespace AscendC;
 using namespace matmul;
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulBaseBlock,
-    const MatmulConfig &MM_CFG = MM_CFG_NO_PRELOAD, class MM_CB = MatmulCallBackFunc<nullptr, nullptr, nullptr>>
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD, class MM_CB = MatmulCallBackFunc<nullptr, nullptr, nullptr>>
 class MatmulBaseKernel {
 public:
     __aicore__ inline MatmulBaseKernel() {}
@@ -31,20 +30,14 @@ public:
     __aicore__ inline void SetOrgShape();
 
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM, const void *tilingData, TPipe *pipe);
+                                GM_ADDR workspaceGM, const void* tilingData, TPipe* pipe);
 
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM);
+                                              GM_ADDR workspaceGM);
 
     __aicore__ inline void Process(uint64_t index = 0, uint8_t enAtomic = 0);
-    __aicore__ inline void End()
-    {
-        mm_.End();
-    }
-    __aicore__ inline const BLOCK_TYPE GetBlock()
-    {
-        return block_;
-    }
+    __aicore__ inline void End() { mm_.End(); }
+    __aicore__ inline const BLOCK_TYPE GetBlock() { return block_; }
 
 protected:
     BLOCK_TYPE block_;
@@ -64,15 +57,15 @@ protected:
     GlobalTensor<B_T> bGlobal_;
     GlobalTensor<C_T> cGlobal_;
     GlobalTensor<BiasT> biasGlobal_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     TBuf<> ubBuf_;
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
-__aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::Init(GM_ADDR aGM,
-    GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM, const void *tilingData,
-    TPipe *pipe)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
+__aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::Init(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
+    const void* tilingData, TPipe* pipe)
 {
     block_.template Init<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(tilingData);
     pipe_ = pipe;
@@ -92,8 +85,8 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
     SetOrgShape();
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::InitInputs(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM)
 {
@@ -101,47 +94,49 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
     using B_T = typename B_TYPE::T;
     using C_T = typename C_TYPE::T;
     using BiasT = typename BIAS_TYPE::T;
-    aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM),
+    aGlobal_.SetGlobalBuffer(
+        reinterpret_cast<__gm__ A_T*>(aGM),
         static_cast<uint64_t>(block_.matmulTilingData_->matmulTiling.M) * block_.matmulTilingData_->matmulTiling.Ka);
-    bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(bGM),
+    bGlobal_.SetGlobalBuffer(
+        reinterpret_cast<__gm__ B_T*>(bGM),
         static_cast<uint64_t>(block_.matmulTilingData_->matmulTiling.Kb) * block_.matmulTilingData_->matmulTiling.N);
-    cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(cGM),
+    cGlobal_.SetGlobalBuffer(
+        reinterpret_cast<__gm__ C_T*>(cGM),
         static_cast<uint64_t>(block_.matmulTilingData_->matmulTiling.M) * block_.matmulTilingData_->matmulTiling.N);
-    biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT *>(biasGM), block_.matmulTilingData_->matmulTiling.N);
+    biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(biasGM), block_.matmulTilingData_->matmulTiling.N);
     SetL2CacheEnable(block_.matmulTilingData_->l2cacheUseInfo, aGlobal_, bGlobal_, cGlobal_, biasGlobal_);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::SetOrgShape()
 {
     if constexpr (A_TYPE::format == CubeFormat::NZ && B_TYPE::format == CubeFormat::NZ) {
         mm_.SetOrgShape(block_.params_.alignedOriM, block_.params_.alignedOriN, block_.params_.alignedKaSize,
-            block_.params_.alignedKbSize, block_.matmulTilingData_->matmulTiling.N);
+                        block_.params_.alignedKbSize, block_.matmulTilingData_->matmulTiling.N);
     } else if constexpr (A_TYPE::format == CubeFormat::NZ) {
         mm_.SetOrgShape(block_.params_.alignedOriM, block_.matmulTilingData_->matmulTiling.N,
-            block_.params_.alignedKaSize, block_.matmulTilingData_->matmulTiling.Kb,
-            block_.matmulTilingData_->matmulTiling.N);
+                        block_.params_.alignedKaSize, block_.matmulTilingData_->matmulTiling.Kb,
+                        block_.matmulTilingData_->matmulTiling.N);
     } else if constexpr (B_TYPE::format == CubeFormat::NZ) {
         mm_.SetOrgShape(block_.matmulTilingData_->matmulTiling.M, block_.params_.alignedOriN,
-            block_.matmulTilingData_->matmulTiling.singleCoreK, block_.params_.alignedKbSize,
-            block_.matmulTilingData_->matmulTiling.N);
+                        block_.matmulTilingData_->matmulTiling.singleCoreK, block_.params_.alignedKbSize,
+                        block_.matmulTilingData_->matmulTiling.N);
     }
 }
 
-
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG,
-    MM_CB>::UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-    GM_ADDR workspaceGM)
+                                        MM_CB>::UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM,
+                                                                   GM_ADDR biasGM, GM_ADDR offsetWGM,
+                                                                   GM_ADDR workspaceGM)
 {
     InitInputs(aGM, bGM, cGM, biasGM);
 }
 
-
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG,
-    class MM_CB>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          class MM_CB>
 __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, MM_CB>::Process(
     uint64_t index, uint8_t enAtomic)
 {
@@ -169,7 +164,7 @@ __aicore__ inline void MatmulBaseKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK
                     block_.template CalcGMOffset<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(mTileIndex, nTileIndex);
 
                     mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
-                        block_.matmulTilingData_->matmulTiling.singleCoreK);
+                                       block_.matmulTilingData_->matmulTiling.singleCoreK);
                     mm_.SetTensorA(aGlobal_[block_.offset_.offsetA], block_.params_.isTransposeA);
                     mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], block_.params_.isTransposeB);
                     if (block_.matmulTilingData_->matmulTiling.isBias) {

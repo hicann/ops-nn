@@ -78,10 +78,7 @@ constexpr uint32_t MAX_K_VALUE_FP32_DN = 2048;
 
 class Conv3DDXV2InnerProductTiling : public TilingBaseClass {
 public:
-    explicit Conv3DDXV2InnerProductTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit Conv3DDXV2InnerProductTiling(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~Conv3DDXV2InnerProductTiling() override = default;
     void Reset(gert::TilingContext* context) override
     {
@@ -113,14 +110,13 @@ protected:
     bool AnalyzeDtype() const;
     ge::graphStatus GetPublicShapeAttrsInfo();
     bool CheckDtypeFormatAttrs(size_t aMatrixesIndex, size_t bMatrixesIndex, bool hif8flag, bool fp8e4m3flag) const;
-    void EqualL1MatchStepMNKCore(
-        L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t curHiWiSize,
-        bool isNeedShrinkStepKa = false);
+    void EqualL1MatchStepMNKCore(L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t curHiWiSize,
+                                 bool isNeedShrinkStepKa = false);
     bool IsHkWkAligned(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     bool UpdateIsBiasFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CalcBL1Size(const L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t& bL1Size);
-    void SetSingleCoreInfoCore(
-        CoreTilingParams& coreParams, L0TilingParams& l0Params, uint64_t hwI, uint32_t kernelDHW, uint64_t kSCnt);
+    void SetSingleCoreInfoCore(CoreTilingParams& coreParams, L0TilingParams& l0Params, uint64_t hwI, uint32_t kernelDHW,
+                               uint64_t kSCnt);
 
     virtual void InitBaseMNK(L0TilingParams& l0Params);
     virtual bool InitL1Params(L1TilingParams& l1Params, const L0TilingParams& l0Params);
@@ -129,8 +125,8 @@ protected:
 
     virtual bool IsL1ParamsValid(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     virtual void AdjustBaseMNK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
-    virtual void SetTilingData(
-        const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
+    virtual void SetTilingData(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                               const L0TilingParams& l0Params);
     int32_t CalFmapH(const int32_t& mL1Size, bool isL1SplitHk = false) const;
     void SetGroupConvMode(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
 
@@ -142,12 +138,12 @@ protected:
     virtual void LegalProtection(L1TilingParams& l1Params, L0TilingParams& l0Params);
     virtual void EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     virtual void LadderMatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params);
-    virtual void SetTilingCondition(
-        const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
+    virtual void SetTilingCondition(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                                    const L0TilingParams& l0Params);
     virtual bool ShrinkBaseMN(L1TilingParams& l1Params, L0TilingParams& l0Params);
     virtual void UpdateL0CBufferMode(L0TilingParams& l0Params);
-    void SetCommonTilingData(
-        const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
+    void SetCommonTilingData(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                             const L0TilingParams& l0Params);
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);
     void LadderMatchStepKWithFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CloseL0PingPong(L0TilingParams& l0Params);
@@ -190,6 +186,7 @@ protected:
     Conv3dBpInputV2RunInfo runInfo_ = {};
     PlatformInfo platformInfo_;
     TilingRunInfo tilingRunInfo_;
+
 private:
     bool CheckC04Enable();
     bool CheckBasicSplitKCondition();
@@ -197,25 +194,29 @@ private:
     void SetSplitKRunInfo(uint32_t hkWk, uint32_t coutThreshold, uint32_t coutSegmentCount);
 
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
-    bool CheckVecTransEnable(
-        const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
+    bool CheckVecTransEnable(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                             const L0TilingParams& l0Params);
     bool ShrinkBaseK(L1TilingParams& l1Params, L0TilingParams& l0Params, const uint32_t maxBaseK);
     void ShrinkBasicBlock(L1TilingParams& l1Params, L0TilingParams& l0Params);
     ge::graphStatus GetLargeHkWkTilingMode();
     ge::graphStatus CalcKSegment();
     uint32_t CalculateMaxBaseM(uint32_t baseN);
-    void AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
-    void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
-    void AdjustBaseMNCommon(L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo, uint32_t& baseM, uint32_t& baseN, uint32_t& baseK);
+    void AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params,
+                               const TilingRunInfo& tilingRunInfo);
+    void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params,
+                               const TilingRunInfo& tilingRunInfo);
+    void AdjustBaseMNCommon(L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo, uint32_t& baseM,
+                            uint32_t& baseN, uint32_t& baseK);
     void AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
-    uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
+    uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params,
+                                   const TilingRunInfo& tilingRunInfo);
     uint32_t GetLoadB1Condition();
     uint32_t GetLoadB2Condition(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     uint32_t GetLoadB2ConditionByFormatAndKernel(const L0TilingParams& l0Params);
     bool AnalyzeFuseDtype(const DtypeFlags flags, const ge::DataType outputBackpropDtype,
-        const ge::DataType filterDtype, const ge::DataType yDtype) const;
+                          const ge::DataType filterDtype, const ge::DataType yDtype) const;
     DtypeFlags ComputeDtypeFlags(const ge::DataType outputBackpropDtype, const ge::DataType filterDtype,
-        const ge::DataType yDtype) const;
+                                 const ge::DataType yDtype) const;
 };
 
 } // namespace Conv

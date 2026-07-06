@@ -23,8 +23,7 @@
 #include "op_common/log/log.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 constexpr int16_t TILING_ARRAY_LEN = 7;
 
 // ///////////////////////////////////
@@ -56,12 +55,9 @@ REGISTER_TILING_DATA_CLASS(ScatterElements, ScatterElementsTilingData)
 
 ge::graphStatus ScatterElementsTilingForAscendC(gert::TilingContext* context);
 
-class ScatterElementsTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class ScatterElementsTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ScatterElementsTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {
-    }
+    explicit ScatterElementsTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -122,5 +118,5 @@ private:
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
     ScatterElementsTilingData tilingData_;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ELEMENTS_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SCATTER_ELEMENTS_TILING_H_

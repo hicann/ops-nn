@@ -38,13 +38,13 @@ using namespace AscendC;
 
 template <typename T>
 class ApplyAdamWithAmsgradV2 {
-    static constexpr int32_t BUFFER_NUM = 1;  // single_buffer
+    static constexpr int32_t BUFFER_NUM = 1; // single_buffer
 
 public:
     __aicore__ inline ApplyAdamWithAmsgradV2() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat, GM_ADDR grad,
-                                GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut, GM_ADDR vhatOut,
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat, GM_ADDR grad, GM_ADDR varOut,
+                                GM_ADDR mOut, GM_ADDR vOut, GM_ADDR vhatOut,
                                 const ApplyAdamWithAmsgradV2TilingData* td);
     __aicore__ inline void Process();
 
@@ -92,18 +92,17 @@ private:
     float oneMinusBeta1_ = 0.0f;
     float oneMinusBeta2_ = 0.0f;
     float epsilon_ = 0.0f;
-    float lrT_ = 0.0f;  // 预计算 lr_t 标量
+    float lrT_ = 0.0f; // 预计算 lr_t 标量
 
     // 单次 Compute 内三段子函数共享的工作张量（成员 buf 视图，无新 buffer）
-    LocalTensor<float> varF_, mF_, vF_, vhatF_, gradF_, tmpA_, tmpB_;  // fp32 计算缓存
-    LocalTensor<T> varOut_, mOut_, vOut_, vhatOut_;                    // VECOUT 4 出
+    LocalTensor<float> varF_, mF_, vF_, vhatF_, gradF_, tmpA_, tmpB_; // fp32 计算缓存
+    LocalTensor<T> varOut_, mOut_, vOut_, vhatOut_;                   // VECOUT 4 出
 };
 
 template <typename T>
-__aicore__ inline void ApplyAdamWithAmsgradV2<T>::Init(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut, GM_ADDR vhatOut,
-    const ApplyAdamWithAmsgradV2TilingData* td)
+__aicore__ inline void ApplyAdamWithAmsgradV2<T>::Init(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat, GM_ADDR grad,
+                                                       GM_ADDR varOut, GM_ADDR mOut, GM_ADDR vOut, GM_ADDR vhatOut,
+                                                       const ApplyAdamWithAmsgradV2TilingData* td)
 {
     int64_t remainder = td->totalNum - td->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainder > td->blockFactor) ? td->blockFactor : remainder;
@@ -225,16 +224,16 @@ __aicore__ inline void ApplyAdamWithAmsgradV2<T>::ComputeAmsgrad(int64_t current
     // m_t = m + (1 - beta1)(grad - m)   （融合差分式，减少中间舍入）
     Sub(tmpA_, gradF_, mF_, currentNum);
     Muls(tmpA_, tmpA_, oneMinusBeta1_, currentNum);
-    Add(mF_, mF_, tmpA_, currentNum);  // mF_ 现为 m_t
+    Add(mF_, mF_, tmpA_, currentNum); // mF_ 现为 m_t
 
     // v_t = v + (1 - beta2)(grad^2 - v)   （融合差分式，减少中间舍入）
     Mul(tmpA_, gradF_, gradF_, currentNum);
     Sub(tmpA_, tmpA_, vF_, currentNum);
     Muls(tmpA_, tmpA_, oneMinusBeta2_, currentNum);
-    Add(vF_, vF_, tmpA_, currentNum);  // vF_ 现为 v_t
+    Add(vF_, vF_, tmpA_, currentNum); // vF_ 现为 v_t
 
     // vhat_t = max(vhat, v_t)
-    Max(vhatF_, vhatF_, vF_, currentNum);  // vhatF_ 现为 vhat_t
+    Max(vhatF_, vhatF_, vF_, currentNum); // vhatF_ 现为 vhat_t
 
     // var_t = var - (lr_t * m_t) / (sqrt(vhat_t) + epsilon)
     // 先乘 lr_t 再除：lr_t≈1e-3 先缩小 m_t 量级，避免 m_t 接近上限时中间除法溢出 inf
@@ -242,7 +241,7 @@ __aicore__ inline void ApplyAdamWithAmsgradV2<T>::ComputeAmsgrad(int64_t current
     Adds(tmpA_, tmpA_, epsilon_, currentNum);
     Muls(tmpB_, mF_, lrT_, currentNum);
     Div(tmpB_, tmpB_, tmpA_, currentNum);
-    Sub(varF_, varF_, tmpB_, currentNum);  // varF_ 现为 var_out
+    Sub(varF_, varF_, tmpB_, currentNum); // varF_ 现为 var_out
 }
 
 // cast/Adds 回 T + EnQue 4 出

@@ -18,8 +18,7 @@
 
 #include "inplace_index_add_tiling_arch35.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(InplaceIndexAddSimdSortTilingData)
 TILING_DATA_FIELD_DEF(int64_t, preAxis);
 TILING_DATA_FIELD_DEF(int64_t, varInAxis);
@@ -59,11 +58,9 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(InplaceIndexAdd_200000, InplaceIndexAddSimdSortTilingData)
 
-class InplaceIndexAddSimdSortTiling : public InplaceIndexAddTiling
-{
+class InplaceIndexAddSimdSortTiling : public InplaceIndexAddTiling {
 public:
-    explicit InplaceIndexAddSimdSortTiling(gert::TilingContext* context) : InplaceIndexAddTiling(context)
-    {}
+    explicit InplaceIndexAddSimdSortTiling(gert::TilingContext* context) : InplaceIndexAddTiling(context) {}
     ~InplaceIndexAddSimdSortTiling() override = default;
 
 protected:
@@ -82,5 +79,5 @@ protected:
     void SetTilingData();
     InplaceIndexAddSimdSortTilingData tilingData_;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_

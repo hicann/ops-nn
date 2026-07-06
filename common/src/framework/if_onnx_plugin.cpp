@@ -12,55 +12,53 @@
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
-static Status  ParseParamsIf(const Message *op_src, ge::Operator &op_dest) {
-  const ge::onnx::NodeProto *node = dynamic_cast<const ge::onnx::NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-  int in_size = node->input_size() - 1;
-  if (in_size < 0) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "If input num is less than 0.");
-    return FAILED;
-  }
-  int out_size = node->output_size();
-  (void)op_dest.DynamicInputRegister("input", in_size);
-  (void)op_dest.DynamicOutputRegister("output", out_size);
-  return SUCCESS;
+static Status ParseParamsIf(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
+    }
+    int in_size = node->input_size() - 1;
+    if (in_size < 0) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "If input num is less than 0.");
+        return FAILED;
+    }
+    int out_size = node->output_size();
+    (void)op_dest.DynamicInputRegister("input", in_size);
+    (void)op_dest.DynamicOutputRegister("output", out_size);
+    return SUCCESS;
 }
-static Status  ParseSubgraphPostFnIf(const ge::AscendString& subgraph_name, const ge::Graph& graph) {
-  AutoMappingSubgraphIOIndexFunc auto_mapping_subgraph_index_func =
-    FrameworkRegistry::Instance().GetAutoMappingSubgraphIOIndexFunc(ONNX);
-  if (auto_mapping_subgraph_index_func == nullptr) {
-    OP_LOGE("If", "auto mapping subgraph func is nullptr!");
-    return FAILED;
-  }
-  return auto_mapping_subgraph_index_func(graph,
-      [&](int data_index, int &parent_index) -> Status {
-        parent_index = data_index + 1;
-        return SUCCESS;
-      },
-      [&](int output_index, int &parent_index) -> Status {
-        parent_index = output_index;
-        return SUCCESS;
-      });
+static Status ParseSubgraphPostFnIf(const ge::AscendString& subgraph_name, const ge::Graph& graph)
+{
+    AutoMappingSubgraphIOIndexFunc auto_mapping_subgraph_index_func = FrameworkRegistry::Instance()
+                                                                          .GetAutoMappingSubgraphIOIndexFunc(ONNX);
+    if (auto_mapping_subgraph_index_func == nullptr) {
+        OP_LOGE("If", "auto mapping subgraph func is nullptr!");
+        return FAILED;
+    }
+    return auto_mapping_subgraph_index_func(
+        graph,
+        [&](int data_index, int& parent_index) -> Status {
+            parent_index = data_index + 1;
+            return SUCCESS;
+        },
+        [&](int output_index, int& parent_index) -> Status {
+            parent_index = output_index;
+            return SUCCESS;
+        });
 }
 
 // register if op info to GE
 REGISTER_CUSTOM_OP("If")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("ai.onnx::8::If"),
-                 ge::AscendString("ai.onnx::9::If"),
-                 ge::AscendString("ai.onnx::10::If"),
-                 ge::AscendString("ai.onnx::11::If"),
-                 ge::AscendString("ai.onnx::12::If"),
-                 ge::AscendString("ai.onnx::13::If"),
-                 ge::AscendString("ai.onnx::14::If"),
-                 ge::AscendString("ai.onnx::15::If"),
-                 ge::AscendString("ai.onnx::16::If"),
-                 ge::AscendString("ai.onnx::17::If"),
-                 ge::AscendString("ai.onnx::18::If")})
-  .ParseParamsFn(ParseParamsIf)
-  .ParseSubgraphPostFn(ParseSubgraphPostFnIf)
-  .ImplyType(ImplyType::GELOCAL);
-}  // namespace domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("ai.onnx::8::If"), ge::AscendString("ai.onnx::9::If"),
+                   ge::AscendString("ai.onnx::10::If"), ge::AscendString("ai.onnx::11::If"),
+                   ge::AscendString("ai.onnx::12::If"), ge::AscendString("ai.onnx::13::If"),
+                   ge::AscendString("ai.onnx::14::If"), ge::AscendString("ai.onnx::15::If"),
+                   ge::AscendString("ai.onnx::16::If"), ge::AscendString("ai.onnx::17::If"),
+                   ge::AscendString("ai.onnx::18::If")})
+    .ParseParamsFn(ParseParamsIf)
+    .ParseSubgraphPostFn(ParseSubgraphPostFnIf)
+    .ImplyType(ImplyType::GELOCAL);
+} // namespace domi

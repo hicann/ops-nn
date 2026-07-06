@@ -30,12 +30,10 @@ using namespace OPS::NN;
 // 辅助函数：构建包含指定 op_type 节点的测试图
 // TensorScatterAdd / ScatterNonAliasingAdd 无 ES API，使用 CompliantNodeBuilder
 // ---------------------------------------------------------------------------
-static std::shared_ptr<Graph> BuildTestGraph(
-    const std::string& op_type,
-    DataType x_dtype,
-    const std::vector<int64_t>& x_dims,
-    const std::vector<int64_t>& indices_dims,
-    const std::vector<int64_t>& updates_dims)
+static std::shared_ptr<Graph> BuildTestGraph(const std::string& op_type, DataType x_dtype,
+                                             const std::vector<int64_t>& x_dims,
+                                             const std::vector<int64_t>& indices_dims,
+                                             const std::vector<int64_t>& updates_dims)
 {
     auto graph_builder = es::EsGraphBuilder("test_graph");
     auto x = graph_builder.CreateInput(0, "x", x_dtype, FORMAT_ND, x_dims);
@@ -45,12 +43,12 @@ static std::shared_ptr<Graph> BuildTestGraph(
     ge::Graph* graph_ptr = graph_builder.GetCGraphBuilder()->GetGraph();
 
     GNode op_node = es::CompliantNodeBuilder(graph_ptr)
-        .OpType(op_type.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                        .OpType(op_type.c_str())
+                        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                      {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                      {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                        .Build();
 
     GNode x_node = *x.GetProducer();
     GNode indices_node = *indices.GetProducer();

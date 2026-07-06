@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file quant_batch_matmulV3_onnx_plugin.cpp
  * \brief
@@ -15,49 +15,49 @@
 
 #include "onnx_common.h"
 
-namespace domi
-{
+namespace domi {
 
 using NodeProto = ge::onnx::NodeProto;
 
-static Status  ParseParamsWeightBatchQuantMatMulV2(const Message *opSrc, ge::Operator &opDst) {
-  const NodeProto *node = reinterpret_cast<const NodeProto *>(opSrc);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(opDst).c_str(), "Dynamic cast opSrc to NodeProto failed.");
-    return FAILED;
-  }
-  int antiquant_group_size = 0;
-  int dtype = -1;
-  for (auto attr : node->attribute()) {
-    if (attr.name() == "antiquant_group_size" && attr.type() == ge::onnx::AttributeProto::INT) {
-      antiquant_group_size = attr.i();
-      continue;
+static Status ParseParamsWeightBatchQuantMatMulV2(const Message* opSrc, ge::Operator& opDst)
+{
+    const NodeProto* node = reinterpret_cast<const NodeProto*>(opSrc);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(opDst).c_str(), "Dynamic cast opSrc to NodeProto failed.");
+        return FAILED;
     }
-    if (attr.name() == "dtype" && attr.type() == ge::onnx::AttributeProto::INT) {
-      dtype = attr.i();
-      continue;
+    int antiquant_group_size = 0;
+    int dtype = -1;
+    for (auto attr : node->attribute()) {
+        if (attr.name() == "antiquant_group_size" && attr.type() == ge::onnx::AttributeProto::INT) {
+            antiquant_group_size = attr.i();
+            continue;
+        }
+        if (attr.name() == "dtype" && attr.type() == ge::onnx::AttributeProto::INT) {
+            dtype = attr.i();
+            continue;
+        }
     }
-  }
-  // onnx doesn't have transpose attr
-  opDst.SetAttr("transpose_x", false);
-  opDst.SetAttr("transpose_weight", false);
-  opDst.SetAttr("antiquant_group_size", antiquant_group_size);
-  opDst.SetAttr("dtype", dtype);
-  return SUCCESS;
+    // onnx doesn't have transpose attr
+    opDst.SetAttr("transpose_x", false);
+    opDst.SetAttr("transpose_weight", false);
+    opDst.SetAttr("antiquant_group_size", antiquant_group_size);
+    opDst.SetAttr("dtype", dtype);
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("WeightQuantBatchMatmulV2")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::WeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::11::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::12::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::13::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::14::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::15::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::16::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::17::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::18::NPUWeightQuantBatchMatmulV2"),
-                 ge::AscendString("ai.onnx::19::NPUWeightQuantBatchMatmulV2")})
-  .ParseParamsFn(ParseParamsWeightBatchQuantMatMulV2)
-  .ImplyType(ImplyType::TVM);
-}
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("npu::1::WeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::11::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::12::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::13::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::14::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::15::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::16::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::17::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::18::NPUWeightQuantBatchMatmulV2"),
+                   ge::AscendString("ai.onnx::19::NPUWeightQuantBatchMatmulV2")})
+    .ParseParamsFn(ParseParamsWeightBatchQuantMatMulV2)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

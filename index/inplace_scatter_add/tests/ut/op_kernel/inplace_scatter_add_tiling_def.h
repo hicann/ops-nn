@@ -34,8 +34,8 @@ inline void InitInplaceScatterAddTilingData(uint8_t* tiling, InplaceScatterAddTi
     memcpy(const_data, tiling, sizeof(InplaceScatterAddTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                       \
-    InplaceScatterAddTilingData tiling_data;                                           \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    InplaceScatterAddTilingData tiling_data;     \
     InitInplaceScatterAddTilingData(tiling_arg, &tiling_data)
 
 #endif

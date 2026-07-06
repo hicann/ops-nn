@@ -20,15 +20,9 @@
 
 class gelugrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "gelugrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "gelugrad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "gelugrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "gelugrad TearDown" << std::endl; }
 };
 
 TEST_F(gelugrad, gelugrad_infershape_910b_test)
@@ -49,15 +43,15 @@ TEST_F(gelugrad, gelugrad_infershape_910b_test)
     gert::Shape output_shape_z = {16, 16};
 
     auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
-                    .OutputShapes({&output_shape_z})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
@@ -80,15 +74,15 @@ TEST_F(gelugrad, gelugrad_infershape_910b_fp16_test)
     gert::Shape output_shape_z = {2, 4, 8};
 
     auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
-                    .OutputShapes({&output_shape_z})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
@@ -111,15 +105,15 @@ TEST_F(gelugrad, gelugrad_infershape_910b_bf16_test)
     gert::Shape output_shape_z = {2, 4, 8};
 
     auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
-                    .OutputShapes({&output_shape_z})
-                    .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
@@ -142,15 +136,15 @@ TEST_F(gelugrad, gelugrad_infershape_310b_test)
     gert::Shape output_shape_z = {16, 16};
 
     auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
-                    .OutputShapes({&output_shape_z})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

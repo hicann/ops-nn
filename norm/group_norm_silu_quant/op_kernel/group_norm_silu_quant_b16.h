@@ -17,13 +17,11 @@ namespace GroupNormSiluQuant {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class GroupNormSiluQuantB16 : public GroupNormSiluQuantBase<T1>
-{
+class GroupNormSiluQuantB16 : public GroupNormSiluQuantBase<T1> {
 public:
     __aicore__ inline GroupNormSiluQuantB16(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR quantScale, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR quantScale, GM_ADDR silu, GM_ADDR mean,
+                                GM_ADDR rstd, GM_ADDR workspace, const GroupNormSiluQuantTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -34,17 +32,19 @@ private:
     __aicore__ inline void ComputeSumX(const int64_t& num);
     __aicore__ inline void CastMeanAndRstd(const int64_t& copyNum);
     __aicore__ inline void ComputeSilu(const int64_t& loopNum);
-    __aicore__ inline void ComputeForMeanAlign(
-        LocalTensor<T1>& meanOut, LocalTensor<T1>& rstdOut, const int64_t& groups);
+    __aicore__ inline void ComputeForMeanAlign(LocalTensor<T1>& meanOut, LocalTensor<T1>& rstdOut,
+                                               const int64_t& groups);
     __aicore__ inline void ComputeOneLoop(const int64_t& loopNum);
     __aicore__ inline void ComputeMultipleLoop(const int64_t& loopNum);
     __aicore__ inline void AccumulateXandX2OneLoop(const int64_t& outIdx);
     __aicore__ inline void AccumulateXandX2MultipleLoop(const int64_t& outIdx);
-    __aicore__ inline void CalcSilu(const float& scale, const float& quantScale, const float& bias, const int64_t& calcNum);
-    __aicore__ inline void ComputeQuant(const AscendC::LocalTensor<float> &out, int64_t calcNum, const float quantScale);
+    __aicore__ inline void CalcSilu(const float& scale, const float& quantScale, const float& bias,
+                                    const int64_t& calcNum);
+    __aicore__ inline void ComputeQuant(const AscendC::LocalTensor<float>& out, int64_t calcNum,
+                                        const float quantScale);
     __aicore__ inline void CopyOutY(const int64_t& yOffset, const int64_t& copyNum);
-    __aicore__ inline void CopyOutYWithPad(
-        const float& scale, const float& bias, const int64_t& yOffset, const int64_t& copyNum);
+    __aicore__ inline void CopyOutYWithPad(const float& scale, const float& bias, const int64_t& yOffset,
+                                           const int64_t& copyNum);
     __aicore__ inline void CopyOutMeanAndRstd(const int64_t& copyNum);
     __aicore__ inline void ProcessPerCore(const int64_t& loopNum);
     constexpr static int32_t bufferNum = 2;
@@ -92,9 +92,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR quantScale, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-    const GroupNormSiluQuantTilingData* tilingData)
+__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR quantScale,
+                                                           GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                           const GroupNormSiluQuantTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     tiling = tilingData;
@@ -166,8 +166,8 @@ __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CopyInGammaAndBeta()
     this->template CopyInData<T2, false>(beta, betaGm, tiling->shapeC);
     inQueueBeta.EnQue(beta);
     LocalTensor<float> quantScaleLocal = inQueueQuantScale.AllocTensor<float>();
-    DataCopyPad(quantScaleLocal, quantScaleGm, {1, static_cast<uint16_t>(this->tiling->shapeQuantScale * sizeof(float)), 0, 0},
-                {false, 0, 0, 0});
+    DataCopyPad(quantScaleLocal, quantScaleGm,
+                {1, static_cast<uint16_t>(this->tiling->shapeQuantScale * sizeof(float)), 0, 0}, {false, 0, 0, 0});
     inQueueQuantScale.EnQue(quantScaleLocal);
 }
 
@@ -274,8 +274,8 @@ __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::ComputeMultipleLoop(const 
                 CalcSilu(scale, quantScale, bias, tiling->processSize);
                 CopyOutY(xOffset, tiling->processSize);
             }
-            int64_t tailOffset =
-                outIdx * tiling->elemNum + dIdx * tiling->hwNum + (tiling->innerLoopNum - 1) * tiling->processSize;
+            int64_t tailOffset = outIdx * tiling->elemNum + dIdx * tiling->hwNum +
+                                 (tiling->innerLoopNum - 1) * tiling->processSize;
             CopyInX<false>(tailOffset, tiling->innerLoopTail);
             CalcSilu(scale, quantScale, bias, tiling->innerLoopTail);
             CopyOutYWithPad(scale, bias, tailOffset, tiling->innerLoopTail);
@@ -358,7 +358,8 @@ __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::ComputeSumX(const int64_t&
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CalcSilu(const float& scale, const float& quantScale, const float& bias, const int64_t& calcNum)
+__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CalcSilu(const float& scale, const float& quantScale,
+                                                               const float& bias, const int64_t& calcNum)
 {
     LocalTensor<T1> xUb = inQueueX.DeQue<T1>();
     LocalTensor<float> x1Ub32 = x1Buf32.Get<float>();
@@ -388,7 +389,8 @@ __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CalcSilu(const float& scal
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::ComputeQuant(const AscendC::LocalTensor<float> &out, int64_t calcNum, const float quantScale)
+__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::ComputeQuant(const AscendC::LocalTensor<float>& out,
+                                                                   int64_t calcNum, const float quantScale)
 {
     Muls(out, out, (float)(1 / quantScale), calcNum);
     AscendC::PipeBarrier<PIPE_V>();
@@ -411,8 +413,8 @@ __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CopyOutY(const int64_t& yO
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CopyOutYWithPad(
-    const float& scale, const float& bias, const int64_t& yOffset, const int64_t& copyNum)
+__aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CopyOutYWithPad(const float& scale, const float& bias,
+                                                                      const int64_t& yOffset, const int64_t& copyNum)
 {
     LocalTensor<int8_t> outSilu = outQueueSilu.DeQue<int8_t>();
     uint16_t dataCount = static_cast<uint16_t>(copyNum);
@@ -424,7 +426,6 @@ __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CopyOutYWithPad(
     DataCopyPad(siluGm[gmXOffset + yOffset], outSilu, dataCopyParams);
     outQueueSilu.FreeTensor(outSilu);
 }
-
 
 template <typename T1, typename T2>
 __aicore__ inline void GroupNormSiluQuantB16<T1, T2>::CastMeanAndRstd(const int64_t& copyNum)

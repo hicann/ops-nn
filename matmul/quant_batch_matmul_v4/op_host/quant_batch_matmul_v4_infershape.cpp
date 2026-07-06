@@ -28,9 +28,9 @@ static ge::graphStatus InferShapeForQuantBatchMatmulV4(gert::InferShapeContext* 
     if (!any_unknow_rank &&
         (dim_a < QUANT_BATCH_MATMUL_V4_MIN_SHAPE_SIZE || dim_a > QUANT_BATCH_MATMUL_V4_MAX_SHAPE_SIZE ||
          dim_b < QUANT_BATCH_MATMUL_V4_MIN_SHAPE_SIZE || dim_b > QUANT_BATCH_MATMUL_V4_MAX_SHAPE_SIZE)) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context->GetNodeName(), "x1, x2", (std::to_string(dim_a) + ", " + std::to_string(dim_b)).c_str(),
-            "The shape dims of x1, x2 must be in [2D, 6D]");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "x1, x2",
+                                                  (std::to_string(dim_a) + ", " + std::to_string(dim_b)).c_str(),
+                                                  "The shape dims of x1, x2 must be in [2D, 6D]");
         return ge::GRAPH_FAILED;
     }
     // first transpose attr is transpose_x1, its index is 2 and bias input tensor index is 2, is_x2_packed is true
@@ -38,8 +38,9 @@ static ge::graphStatus InferShapeForQuantBatchMatmulV4(gert::InferShapeContext* 
 }
 
 // 由于编译期InferShapeRange在InferShape之后，因此该函数无需重复InferShape的dtype校验
-static ge::graphStatus InferShapeRangeForQuantBatchMatmulV4(gert::InferShapeRangeContext *context) {
-  // first transpose attr is transpose_x1, its index is 2 and bias input tensor index is 2
+static ge::graphStatus InferShapeRangeForQuantBatchMatmulV4(gert::InferShapeRangeContext* context)
+{
+    // first transpose attr is transpose_x1, its index is 2 and bias input tensor index is 2
     return Ops::NN::InferShapeRangeForBatchMatMul(context, 2, 2);
 }
 

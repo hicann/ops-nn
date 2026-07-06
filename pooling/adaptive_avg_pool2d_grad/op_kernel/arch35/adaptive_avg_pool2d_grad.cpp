@@ -20,8 +20,8 @@
 using namespace AdaptiveAvgPool2dGradOp;
 
 template <uint64_t TEMPLATE_MODE = TPL_SMALL_KERNEL, uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_CHANNEL_LAST = 0>
-__global__ __aicore__ void adaptive_avg_pool2d_grad(
-    GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void adaptive_avg_pool2d_grad(GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;

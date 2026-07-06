@@ -24,13 +24,11 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListRLBSE : public ScatterListBase<T1>
-{
+class ScatterListRLBSE : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListRLBSE(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -69,9 +67,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListRLBSE<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListRLBSE<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                      GM_ADDR varOut, GM_ADDR workspace,
+                                                      const ScatterListTilingData* tilingData)
 {
     varPtr = var;
     blockIdx = GetBlockIdx();
@@ -134,9 +132,8 @@ template <typename T1, typename T2>
 __aicore__ inline void ScatterListRLBSE<T1, T2>::CopyIn(const int64_t& eachCoreBatchIdx)
 {
     LocalTensor<T1> updatesUb = updatesInQueue.AllocTensor<T1>();
-    DataCopy(
-        updatesUb, updatesGm[(preCoreBatchIdx + eachCoreBatchIdx) * m_tilingData.srcBatchStride],
-        m_tilingData.updatesCount);
+    DataCopy(updatesUb, updatesGm[(preCoreBatchIdx + eachCoreBatchIdx) * m_tilingData.srcBatchStride],
+             m_tilingData.updatesCount);
     updatesInQueue.EnQue(updatesUb);
 
     LocalTensor<T2> indiceUb = indiceInQueue.AllocTensor<T2>();

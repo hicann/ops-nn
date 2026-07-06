@@ -17,7 +17,7 @@
 #include "kernel_operator.h"
 
 using namespace AscendC;
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 class SwigluVectorBF16 {
 public:
     __aicore__ inline SwigluVectorBF16() {}
@@ -41,18 +41,19 @@ protected:
     GlobalTensor<outType> cGm;
 };
 
-  template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
-  __aicore__ inline void SwigluVectorBF16<inType, calcType, outType, bufferNum>::InitUbBuffer(uint64_t tileLength) {
-      // pipe alloc memory to queue, the unit is Bytes
-      pipe.InitBuffer(inQueueA, bufferNum, tileLength * sizeof(inType));
-      pipe.InitBuffer(inQueueB, bufferNum, tileLength * sizeof(inType));
-      pipe.InitBuffer(outQueueC, bufferNum, tileLength * sizeof(outType));
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
+__aicore__ inline void SwigluVectorBF16<inType, calcType, outType, bufferNum>::InitUbBuffer(uint64_t tileLength)
+{
+    // pipe alloc memory to queue, the unit is Bytes
+    pipe.InitBuffer(inQueueA, bufferNum, tileLength * sizeof(inType));
+    pipe.InitBuffer(inQueueB, bufferNum, tileLength * sizeof(inType));
+    pipe.InitBuffer(outQueueC, bufferNum, tileLength * sizeof(outType));
 
-      pipe.InitBuffer(inputTempBuffer, tileLength * sizeof(calcType));
-      pipe.InitBuffer(outputTempBuffer, tileLength * sizeof(calcType));
-  }
+    pipe.InitBuffer(inputTempBuffer, tileLength * sizeof(calcType));
+    pipe.InitBuffer(outputTempBuffer, tileLength * sizeof(calcType));
+}
 
-template<typename inType, typename calcType, typename outType, uint16_t bufferNum>
+template <typename inType, typename calcType, typename outType, uint16_t bufferNum>
 __aicore__ inline void SwigluVectorBF16<inType, calcType, outType, bufferNum>::Compute(uint64_t curTileLen)
 {
     LocalTensor<inType> aLocal_ = inQueueA.template DeQue<inType>();
@@ -90,4 +91,4 @@ __aicore__ inline void SwigluVectorBF16<inType, calcType, outType, bufferNum>::C
     outQueueC.template EnQue<outType>(cLocal_);
     // free input tensors for reuse
 }
-#endif  // OPP_SWI_GLU_BF16_HPP
+#endif // OPP_SWI_GLU_BF16_HPP

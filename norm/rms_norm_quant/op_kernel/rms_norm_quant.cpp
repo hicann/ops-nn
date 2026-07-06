@@ -29,12 +29,11 @@ static constexpr uint32_t REPEAT_TIME_16 = 16;   // 16 default stride
 static constexpr uint32_t REPEAT_TIME_64 = 64;   // 64 default stride
 } // namespace
 
-template <typename T, typename yDtype,  bool EN_BETA, bool FastComputeMode = false>
+template <typename T, typename yDtype, bool EN_BETA, bool FastComputeMode = false>
 class RmsNormQuant {
 public:
-    __aicore__ inline RmsNormQuant(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
-        const NormCommonTilingData1& tiling_data)
+    __aicore__ inline RmsNormQuant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                   const NormCommonTilingData1& tiling_data)
     {
         num_core_ = tiling_data.numCore;
         num_col_ = tiling_data.numCol;
@@ -70,7 +69,7 @@ public:
         gm_y_int4.SetGlobalBuffer((__gm__ int4b_t*)y + AscendC::GetBlockIdx() * gm_offset_ / 2);
 
         pipe.InitBuffer(fp16_x_que_, BUFFER_NUM, num_col_align_f16 * sizeof(T));
-        pipe.InitBuffer(int8_y_que_, BUFFER_NUM, num_col_align_int8 * sizeof(int8_t)); // quant output
+        pipe.InitBuffer(int8_y_que_, BUFFER_NUM, num_col_align_int8 * sizeof(int8_t));             // quant output
         pipe.InitBuffer(int4_y_que_, BUFFER_NUM, num_col_align_int4 * sizeof(int8_t) / SIZE_INT4); // quant output
         pipe.InitBuffer(fp32_xy_buf_, num_col_align_f32 * sizeof(float));
         pipe.InitBuffer(fp16_buf_, num_col_align_f16 * sizeof(T));
@@ -215,10 +214,10 @@ private:
         Adds(fp32_xy, fp32_xy, input_offset_, num_col_);
         AscendC::PipeBarrier<PIPE_V>();
         AscendC::LocalTensor<half> tmpfp16Buf = calc_buf_.Get<half>();
-        AscendC::LocalTensor<half> tmpfp16 =
-            tmpfp16Buf[OFFSET_SUM * num_col_align_f32 * DIM_2]; // 2：work,float偏移到half
+        AscendC::LocalTensor<half>
+            tmpfp16 = tmpfp16Buf[OFFSET_SUM * num_col_align_f32 * DIM_2]; // 2：work,float偏移到half
         CastFrom32To16(tmpfp16, fp32_xy, num_col_);
-        if constexpr(IsSameType<yDtype, int4b_t>::value) {
+        if constexpr (IsSameType<yDtype, int4b_t>::value) {
             AscendC::LocalTensor<int4b_t> int4_y = int4_y_que_.AllocTensor<int4b_t>();
             Cast(int4_y, tmpfp16, RoundMode::CAST_RINT, num_col_);
             int4_y_que_.EnQue(int4_y);
@@ -282,7 +281,7 @@ private:
         AscendC::LocalTensor<half> tmpfp16Buf = calc_buf_.Get<half>();
         AscendC::LocalTensor<half> tmpfp16 = tmpfp16Buf[OFFSET_SUM * slice_size_ * DIM_2]; // 2：work,float偏移到half
         CastFrom32To16(tmpfp16, fp32_xy, num);
-        if constexpr(IsSameType<yDtype, int4b_t>::value) {
+        if constexpr (IsSameType<yDtype, int4b_t>::value) {
             AscendC::LocalTensor<int4b_t> int4_y = int4_y_que_.AllocTensor<int4b_t>();
             Cast(int4_y, tmpfp16, RoundMode::CAST_RINT, num);
             int4_y_que_.EnQue(int4_y);
@@ -296,7 +295,7 @@ private:
 
     __aicore__ inline void CopyOut(int64_t offset, uint32_t numel)
     {
-        if constexpr(IsSameType<yDtype, int4b_t>::value) {
+        if constexpr (IsSameType<yDtype, int4b_t>::value) {
             AscendC::LocalTensor<int4b_t> int4_y = int4_y_que_.DeQue<int4b_t>();
             DataCopyParams copyParams;
             copyParams.blockLen = numel * sizeof(int4b_t) / SIZE_INT4;
@@ -347,8 +346,8 @@ private:
     int32_t dstType{29};
 };
 
-extern "C" __global__ __aicore__ void rms_norm_quant(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void rms_norm_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale,
+                                                     GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
     if (TILING_KEY_IS(257)) { // fp16, beta, gamma, beta, no slice 0b0_1_0_0_000001
@@ -367,7 +366,8 @@ extern "C" __global__ __aicore__ void rms_norm_quant(
         RmsNormQuant<half, DTYPE_Y, false, false> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();
     }
-#if (defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220)) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (defined(__CCE_KT_TEST__) || (__CCE_AICORE__ == 220)) && \
+    !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (TILING_KEY_IS(283)) { // bf16, beta, gamma, beta, no slice  0b0_1_0_0_011011
         RmsNormQuant<bfloat16_t, DTYPE_Y, true, true> kernel(x, gamma, beta, scale, offset, y, tiling_data);
         kernel.Launch();

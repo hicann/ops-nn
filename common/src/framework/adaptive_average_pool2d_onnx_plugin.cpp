@@ -51,15 +51,12 @@ static Status ParseParamsAdaptiveAvgPool2d(const Message* op_src, ge::Operator& 
 // register AdaptiveMaxPool2d op info to GE
 REGISTER_CUSTOM_OP("AdaptiveAvgPool2d")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::AdaptiveAvgPool2d"), 
-                   ge::AscendString("ai.onnx::9::AdaptiveAvgPool2d"), 
-                   ge::AscendString("ai.onnx::10::AdaptiveAvgPool2d"),
-                   ge::AscendString("ai.onnx::11::AdaptiveAvgPool2d"), 
-                   ge::AscendString("ai.onnx::12::AdaptiveAvgPool2d"), 
-                   ge::AscendString("ai.onnx::13::AdaptiveAvgPool2d"),
-                   ge::AscendString("ai.onnx::14::AdaptiveAvgPool2d"), 
-                   ge::AscendString("ai.onnx::15::AdaptiveAvgPool2d"), 
-                   ge::AscendString("ai.onnx::16::AdaptiveAvgPool2d")})
+    .OriginOpType(
+        {ge::AscendString("ai.onnx::8::AdaptiveAvgPool2d"), ge::AscendString("ai.onnx::9::AdaptiveAvgPool2d"),
+         ge::AscendString("ai.onnx::10::AdaptiveAvgPool2d"), ge::AscendString("ai.onnx::11::AdaptiveAvgPool2d"),
+         ge::AscendString("ai.onnx::12::AdaptiveAvgPool2d"), ge::AscendString("ai.onnx::13::AdaptiveAvgPool2d"),
+         ge::AscendString("ai.onnx::14::AdaptiveAvgPool2d"), ge::AscendString("ai.onnx::15::AdaptiveAvgPool2d"),
+         ge::AscendString("ai.onnx::16::AdaptiveAvgPool2d")})
     .ParseParamsFn(ParseParamsAdaptiveAvgPool2d)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

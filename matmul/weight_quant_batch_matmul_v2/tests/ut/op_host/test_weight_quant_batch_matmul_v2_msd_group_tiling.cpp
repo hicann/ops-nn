@@ -36,9 +36,7 @@ struct WeightQuantBatchMatmulV2TilingMsdGroupTestParam {
 };
 
 class TestWeightQuantBatchMatmulV2TilingMsdGroup
-    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingMsdGroupTestParam>
-{
-};
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingMsdGroupTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -222,11 +220,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingMsdGroupTestPar
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(hasTilingCompileInfo ? &compileInfo : nullptr)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -238,10 +236,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingMsdGroupTestPar
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -281,7 +278,7 @@ TEST_P(TestWeightQuantBatchMatmulV2TilingMsdGroup, generalTest)
 //       -1: per channel, 1: per tensor, > 1: per group
 
 static WeightQuantBatchMatmulV2TilingMsdGroupTestParam casesParams2448[] = {
-    {"Key11_1_11008_4096_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753}, //711300UL
+    {"Key11_1_11008_4096_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753}, // 711300UL
     {"Key12_1_4096_12288_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 24, 365333139882753},
     {"Key13_1_4096_22016_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753},
     {"Key14_1_4096_4096_1_0_0_0_0_0_128_FLOAT16_INT4_UINT64_FLOAT16", 22, 365333139882753},
@@ -295,17 +292,16 @@ static WeightQuantBatchMatmulV2TilingMsdGroupTestParam casesParams2448[] = {
 
 INSTANTIATE_TEST_CASE_P(MM2448, TestWeightQuantBatchMatmulV2TilingMsdGroup, testing::ValuesIn(casesParams2448));
 
-static void ThreadFunc(
-    const WeightQuantBatchMatmulV2TilingMsdGroupTestParam* params, size_t testcase_num, size_t thread_idx,
-    size_t thread_num)
+static void ThreadFunc(const WeightQuantBatchMatmulV2TilingMsdGroupTestParam* params, size_t testcase_num,
+                       size_t thread_idx, size_t thread_num)
 {
     for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
         TestOneParamCase(params[idx]);
     }
 }
 
-static void TestMultiThread(
-    const WeightQuantBatchMatmulV2TilingMsdGroupTestParam* params, size_t testcase_num, size_t thread_num)
+static void TestMultiThread(const WeightQuantBatchMatmulV2TilingMsdGroupTestParam* params, size_t testcase_num,
+                            size_t thread_num)
 {
     std::thread threads[thread_num];
     for (size_t idx = 0; idx < thread_num; ++idx) {
@@ -320,6 +316,6 @@ static void TestMultiThread(
 TEST_F(TestWeightQuantBatchMatmulV2TilingMsdGroup, multi_thread_2448)
 {
     // 用3个线程测试
-    TestMultiThread(
-        casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingMsdGroupTestParam), 3);
+    TestMultiThread(casesParams2448, sizeof(casesParams2448) / sizeof(WeightQuantBatchMatmulV2TilingMsdGroupTestParam),
+                    3);
 }

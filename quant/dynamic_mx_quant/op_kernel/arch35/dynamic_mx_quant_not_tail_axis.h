@@ -26,19 +26,19 @@ template <typename T, typename U, const bool ISTAIL>
 class DynamicMxQuantNotTailAxis : public DynamicMxQuantBase<T, U, ISTAIL> {
 public:
     __aicore__ inline DynamicMxQuantNotTailAxis(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace,
+                                const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void SplitPostAxisCompute(int64_t dataLen, int64_t blockCount);
     __aicore__ inline void SplitPreAxisCompute(int64_t ubFactor, int64_t blockSizeIdx);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, const int64_t calcMode>
-    __aicore__ inline void ComputeOcp(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeOcp(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                      __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeCuBLAS(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     __aicore__ inline bool IsTailLoopInUbDim(int64_t loopIdx);
     __aicore__ inline bool IsNeedPadAndTailInAxis(int64_t curLoopIdxInAllCore);
 
@@ -57,8 +57,9 @@ private:
 };
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
+__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale,
+                                                                     GM_ADDR workspace,
+                                                                     const DynamicMxQuantTilingData* tilingData)
 {
     invDstTypeMax_ = tilingData->invDstTypeMax;
     this->BaseInit(x, y, mxScale, workspace, tilingData);
@@ -67,8 +68,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::Init(
     }
     blockLoopOffset_ = this->blockIdx_ * this->blockFactor_;
     if (this->ubDim_ == DIM2) {
-        scaleBlockOffset_ =
-            blockLoopOffset_ / this->uo_ * this->postAxisSize_ + blockLoopOffset_ % this->uo_ * this->ubFactor_;
+        scaleBlockOffset_ = blockLoopOffset_ / this->uo_ * this->postAxisSize_ +
+                            blockLoopOffset_ % this->uo_ * this->ubFactor_;
         if (this->isPad_) {
             int64_t fullAxisNum = blockLoopOffset_ / (this->uo_ * this->blockSizeNumInAxis_);
             int64_t blockLoopMod = blockLoopOffset_ % (this->uo_ * this->blockSizeNumInAxis_);
@@ -181,8 +182,8 @@ __aicore__ inline bool DynamicMxQuantNotTailAxis<T, U, ISTAIL>::IsNeedPadAndTail
 }
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPostAxisCompute(
-    int64_t dataLen, int64_t blockCount)
+__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPostAxisCompute(int64_t dataLen,
+                                                                                     int64_t blockCount)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -222,8 +223,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPostAxisCom
 }
 
 template <typename T, typename U, const bool ISTAIL>
-__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPreAxisCompute(
-    int64_t ubFactor, int64_t blockSizeIdx)
+__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPreAxisCompute(int64_t ubFactor,
+                                                                                    int64_t blockSizeIdx)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -238,36 +239,36 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPreAxisComp
         offset += blockCount * this->postAxisSize_;
         if (calcMode_ == MODE_ZERO) {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, 0>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, 0>(this->postAxisSize_, blockCount, xAddr,
+                                                                           mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, 0>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, 0>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, 0>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, 0>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             }
         } else if (calcMode_ == MODE_TWO) {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, 2>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, 2>(this->postAxisSize_, blockCount, xAddr,
+                                                                           mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, 2>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, 2>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, 2>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, 2>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             }
         } else {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                           mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeCuBLAS<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
-                    this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+                ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(this->postAxisSize_, blockCount, xAddr,
+                                                                            mxScaleAddr, yAddr);
             }
         }
     }
@@ -278,10 +279,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPreAxisComp
 
 template <typename T, typename U, const bool ISTAIL>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, const int64_t calcMode>
-__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(
-    int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64_t dataLen, int64_t blockCount,
+                                                                           __ubuf__ T* xAddr,
+                                                                           __ubuf__ uint8_t* mxScaleAddr,
+                                                                           __ubuf__ uint8_t* yAddr)
 {
-    constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType);           // 寄存器单次处理能处理的长度
+    constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
     uint16_t regLoop = static_cast<uint16_t>(dataLen) / static_cast<uint16_t>(vfLen); // 当前loop需要处理的长度
     uint16_t tailVfLen = static_cast<uint16_t>(dataLen) % static_cast<uint16_t>(vfLen);
     int64_t outDataLenAlign = this->ubDim_ == DIM2 ?
@@ -531,10 +534,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(
 
 template <typename T, typename U, const bool ISTAIL>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
-    int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
+__aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(int64_t dataLen, int64_t blockCount,
+                                                                              __ubuf__ T* xAddr,
+                                                                              __ubuf__ uint8_t* mxScaleAddr,
+                                                                              __ubuf__ uint8_t* yAddr)
 {
-    constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType);           // 寄存器单次处理能处理的长度
+    constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
     uint16_t regLoop = static_cast<uint16_t>(dataLen) / static_cast<uint16_t>(vfLen); // 当前loop需要处理的长度
     uint16_t tailVfLen = static_cast<uint16_t>(dataLen) % static_cast<uint16_t>(vfLen);
     int64_t outDataLenAlign = this->ubDim_ == DIM2 ?
@@ -605,10 +610,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
         Reg::Duplicate(x2MaxReg, 0);
         Reg::Duplicate(invDstTypeMax, invDstTypeMax_);
 
-        static constexpr Reg::CastTrait castTraitZero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitOne = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
         uint32_t pnum = vfLen;
         p0 = AscendC::Reg::UpdateMask<calcTypeInt>(pnum);
@@ -623,17 +628,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
             // 求scale
             if constexpr (IsSame<T, bfloat16_t>::value) {
                 AscendC::Reg::Interleave(xMaxReg, zeroRegTensor16, xMaxReg, zeroRegTensor16);
-                AscendC::Reg::Cast<float, T, castTraitZero>(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, (AscendC::Reg::RegTensor<T>&)xMaxReg, pregAll16);
-                AscendC::Reg::Cast<float, T, castTraitZero>(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2, (AscendC::Reg::RegTensor<T>&)zeroRegTensor16,
-                    pregAll16);
-                AscendC::Reg::Mul(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, (AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
-                    invDstTypeMax, preMaskScale);
-                AscendC::Reg::Mul(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2, (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2,
-                    invDstTypeMax, preMaskScale);
+                AscendC::Reg::Cast<float, T, castTraitZero>((AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
+                                                            (AscendC::Reg::RegTensor<T>&)xMaxReg, pregAll16);
+                AscendC::Reg::Cast<float, T, castTraitZero>((AscendC::Reg::RegTensor<float>&)xFP32MaxReg2,
+                                                            (AscendC::Reg::RegTensor<T>&)zeroRegTensor16, pregAll16);
+                AscendC::Reg::Mul((AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
+                                  (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, invDstTypeMax, preMaskScale);
+                AscendC::Reg::Mul((AscendC::Reg::RegTensor<float>&)xFP32MaxReg2,
+                                  (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2, invDstTypeMax, preMaskScale);
                 // 右移获取指数位
                 AscendC::Reg::ShiftRights(expFP32Reg, xFP32MaxReg, FP32_SHR_NUM, preMaskScale);
                 AscendC::Reg::ShiftRights(expFP32Reg2, xFP32MaxReg2, FP32_SHR_NUM, preMaskScale);
@@ -657,28 +659,26 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
                 AscendC::Reg::Pack(mxScale, (Reg::RegTensor<uint16_t>&)expFP32Reg);
                 AscendC::Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, vfLen);
                 AscendC::Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
-                AscendC::Reg::ShiftLefts(
-                    (Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg, BF16_SHR_NUM,
-                    pregAll16);
-                AscendC::Reg::Compare<calcTypeInt, CMPMODE::NE>(
-                    infMask, (Reg::RegTensor<uint16_t>&)expFP32Reg, infForXReg, pregAll16);
-                AscendC::Reg::Compare<calcTypeInt, CMPMODE::EQ>(
-                    specialDataMask, (Reg::RegTensor<uint16_t>&)expFP32Reg, biasReg, pregAll16);
+                AscendC::Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg,
+                                         BF16_SHR_NUM, pregAll16);
+                AscendC::Reg::Compare<calcTypeInt, CMPMODE::NE>(infMask, (Reg::RegTensor<uint16_t>&)expFP32Reg,
+                                                                infForXReg, pregAll16);
+                AscendC::Reg::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, (Reg::RegTensor<uint16_t>&)expFP32Reg,
+                                                                biasReg, pregAll16);
                 AscendC::Reg::Sub(scaleReprocal, biasReg, (Reg::RegTensor<uint16_t>&)expFP32Reg, pregAll16);
                 AscendC::Reg::Select<calcTypeInt>(scaleReprocal, scaleReprocal, nan, infMask);
                 AscendC::Reg::Select<calcTypeInt>(scaleReprocal, specialExp, scaleReprocal, specialDataMask);
                 for (uint16_t j = 0; j < static_cast<uint16_t>(blockCount); j++) {
                     this->template LoadData<calcType>(xAddr, j * dataLen + i * vfLen, xReg, p0);
-                    CalcElement<roundMode, U, calcType, calcTypeInt>(
-                        xReg, scaleReprocal, infForXReg, out, preMaskScale2);
+                    CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out,
+                                                                     preMaskScale2);
                     auto addr = yAddr + (j * outDataLenAlign + i * vfLen) / DIGIT_TWO;
                     AscendC::Reg::DataCopyUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
                     AscendC::Reg::DataCopyUnAlignPost(addr, u1, 0);
                 }
             } else if constexpr (IsSame<T, half>::value) {
-                AscendC::Reg::Mul(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, (AscendC::Reg::RegTensor<float>&)xMaxReg,
-                    invDstTypeMax, preMaskScale);
+                AscendC::Reg::Mul((AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
+                                  (AscendC::Reg::RegTensor<float>&)xMaxReg, invDstTypeMax, preMaskScale);
                 // 右移获取指数位
                 AscendC::Reg::ShiftRights(expFP32Reg, xFP32MaxReg, FP32_SHR_NUM, preMaskScale);
                 // And获取尾数位
@@ -725,17 +725,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
             }
             if constexpr (IsSame<T, bfloat16_t>::value) {
                 AscendC::Reg::Interleave(x2MaxReg, zeroRegTensor16, x2MaxReg, zeroRegTensor16);
-                AscendC::Reg::Cast<float, T, castTraitZero>(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, (AscendC::Reg::RegTensor<T>&)x2MaxReg, pregAll16);
-                AscendC::Reg::Cast<float, T, castTraitZero>(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2, (AscendC::Reg::RegTensor<T>&)zeroRegTensor16,
-                    pregAll16);
-                AscendC::Reg::Mul(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, (AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
-                    invDstTypeMax, preMaskScale);
-                AscendC::Reg::Mul(
-                    (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2, (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2,
-                    invDstTypeMax, preMaskScale);
+                AscendC::Reg::Cast<float, T, castTraitZero>((AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
+                                                            (AscendC::Reg::RegTensor<T>&)x2MaxReg, pregAll16);
+                AscendC::Reg::Cast<float, T, castTraitZero>((AscendC::Reg::RegTensor<float>&)xFP32MaxReg2,
+                                                            (AscendC::Reg::RegTensor<T>&)zeroRegTensor16, pregAll16);
+                AscendC::Reg::Mul((AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
+                                  (AscendC::Reg::RegTensor<float>&)xFP32MaxReg, invDstTypeMax, preMaskScale);
+                AscendC::Reg::Mul((AscendC::Reg::RegTensor<float>&)xFP32MaxReg2,
+                                  (AscendC::Reg::RegTensor<float>&)xFP32MaxReg2, invDstTypeMax, preMaskScale);
 
                 AscendC::Reg::ShiftRights(expFP32Reg, xFP32MaxReg, FP32_SHR_NUM, preMaskScale);
                 AscendC::Reg::ShiftRights(expFP32Reg2, xFP32MaxReg2, FP32_SHR_NUM, preMaskScale);
@@ -760,13 +757,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
                 AscendC::Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
                 AscendC::Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
 
-                AscendC::Reg::ShiftLefts(
-                    (Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg, BF16_SHR_NUM,
-                    pregAll16);
-                AscendC::Reg::Compare<calcTypeInt, CMPMODE::NE>(
-                    infMask, (Reg::RegTensor<uint16_t>&)expFP32Reg, infForXReg, pregAll16);
-                AscendC::Reg::Compare<calcTypeInt, CMPMODE::EQ>(
-                    specialDataMask, (Reg::RegTensor<uint16_t>&)expFP32Reg, biasReg, pregAll16);
+                AscendC::Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg,
+                                         BF16_SHR_NUM, pregAll16);
+                AscendC::Reg::Compare<calcTypeInt, CMPMODE::NE>(infMask, (Reg::RegTensor<uint16_t>&)expFP32Reg,
+                                                                infForXReg, pregAll16);
+                AscendC::Reg::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, (Reg::RegTensor<uint16_t>&)expFP32Reg,
+                                                                biasReg, pregAll16);
                 AscendC::Reg::Sub(scaleReprocal, biasReg, (Reg::RegTensor<uint16_t>&)expFP32Reg, pregAll16);
                 AscendC::Reg::Select<calcTypeInt>(scaleReprocal, scaleReprocal, nan, infMask);
                 AscendC::Reg::Select<calcTypeInt>(scaleReprocal, specialExp, scaleReprocal, specialDataMask);
@@ -775,16 +771,16 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(
                 }
                 for (uint16_t j = 0; j < static_cast<uint16_t>(blockCount); j += step) {
                     this->template LoadData<calcType>(xAddr, regLoop * vfLen + j * dataLen, xReg, p2);
-                    CalcElement<roundMode, U, calcType, calcTypeInt>(
-                        xReg, scaleReprocal, infForXReg, out, preMaskScale2);
+                    CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out,
+                                                                     preMaskScale2);
                     auto addr = yAddr + (regLoop * vfLen + j * outDataLenAlign) / DIGIT_TWO;
                     Reg::DataCopyUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
                     Reg::DataCopyUnAlignPost(addr, u1, 0);
                 }
 
             } else if constexpr (IsSame<T, half>::value) {
-                AscendC::Reg::Mul(
-                    (Reg::RegTensor<float>&)xFP32MaxReg, (Reg::RegTensor<float>&)x2MaxReg, invDstTypeMax, preMaskScale);
+                AscendC::Reg::Mul((Reg::RegTensor<float>&)xFP32MaxReg, (Reg::RegTensor<float>&)x2MaxReg, invDstTypeMax,
+                                  preMaskScale);
                 Reg::ShiftRights(expFP32Reg, xFP32MaxReg, FP32_SHR_NUM, preMaskScale);
 
                 // And获取尾数位

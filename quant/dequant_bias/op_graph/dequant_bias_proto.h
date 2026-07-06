@@ -24,13 +24,16 @@ namespace ge {
 * @par Inputs:
 * @li x: A 2D tensor. Input tensor representing the inverse quantization operation.
 * Supported format "ND". The shape is [M, N], and the data type supports int32.
-* @li weight_scale: A 1D tensor. Indicates the weight of the multiplication on the N-dimensional input of the anti-quantization operation.
-* The shape is [N], and the length is consistent with the N-dimensional length of x. The data type supports float32, bfloat16.
+* @li weight_scale: A 1D tensor. Indicates the weight of the multiplication on the N-dimensional input of the
+anti-quantization operation.
+* The shape is [N], and the length is consistent with the N-dimensional length of x. The data type supports float32,
+bfloat16.
 * @li activate_scale: A 1D tensor. The data type supports float32.
 * Indicates the weight of the multiplication on the M dimension of the input for the anti-quantization operation.
 * The shape is [M], with a length consistent with the M dimension of x, and the data type supports float32.
 * Supported format "ND".
-* @li bias: A 1D tensor. Indicates the weight of the addition on the N-dimensional input of the anti-quantization operation.
+* @li bias: A 1D tensor. Indicates the weight of the addition on the N-dimensional input of the anti-quantization
+operation.
 * The shape is [N], with a length consistent with the N-dimensional length of x.
 * The data type supports float32, bfloat16, float16, int32. Supported format "ND".
 
@@ -52,7 +55,6 @@ REG_OP(DequantBias)
     .REQUIRED_ATTR(output_dtype, Int)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(DequantBias)
-}  // namespace ge
+} // namespace ge
 
-
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_FUSION_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_FUSION_OPS_H_

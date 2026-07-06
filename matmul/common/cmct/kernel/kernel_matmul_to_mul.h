@@ -47,7 +47,7 @@ class KernelMatmulToMul {
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
 class KernelMatmulToMul<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-                             std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
+                        std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
     __aicore__ inline KernelMatmulToMul() {}
     __aicore__ inline ~KernelMatmulToMul() {}
@@ -61,10 +61,9 @@ public:
     static constexpr bool transB = BlockMmadBuilder::transB;
 
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-                                               typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA,
-                                               transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -112,8 +111,7 @@ public:
         Params() = default;
     };
 
-    __aicore__ inline static TupleShape
-    ToShapeTuple(const ProblemShape& shape)
+    __aicore__ inline static TupleShape ToShapeTuple(const ProblemShape& shape)
     {
         return {shape.m, shape.n, shape.k, shape.b};
     }
@@ -239,13 +237,9 @@ public:
         return params;
     }
 
-    __aicore__ inline void operator()(const Params& params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(const Params& params) { Run(params); }
 };
 
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

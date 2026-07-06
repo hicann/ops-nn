@@ -40,13 +40,13 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor *x1, const aclTensor *x2,
-                                                         const aclTensor *x1Scale, const aclTensor *x2Scale,
-                                                         const aclTensor *yScale, const aclTensor *x1Offset,
-                                                         const aclTensor *x2Offset, const aclTensor *yOffset,
-                                                         const aclTensor *bias, bool transposeX1, bool transposeX2,
-                                                         int64_t groupSize, aclTensor *out, uint64_t *workspaceSize,
-                                                         aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                         const aclTensor* x1Scale, const aclTensor* x2Scale,
+                                                         const aclTensor* yScale, const aclTensor* x1Offset,
+                                                         const aclTensor* x2Offset, const aclTensor* yOffset,
+                                                         const aclTensor* bias, bool transposeX1, bool transposeX2,
+                                                         int64_t groupSize, aclTensor* out, uint64_t* workspaceSize,
+                                                         aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantMatmulV5的第二段接口，用于执行计算。
@@ -63,4 +63,4 @@ ACLNN_API aclnnStatus aclnnQuantMatmulV5(void* workspace, uint64_t workspaceSize
 }
 #endif
 
-#endif  // OP_API_INC_QUANT_MATMUL_V5_
+#endif // OP_API_INC_QUANT_MATMUL_V5_

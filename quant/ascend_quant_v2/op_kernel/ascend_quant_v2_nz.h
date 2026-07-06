@@ -31,8 +31,7 @@ class AscendQuantV2NZFP32 {
 public:
     TPipe pipe;
     __aicore__ inline AscendQuantV2NZFP32(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y,
-                              const AscendQuantV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const AscendQuantV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -41,11 +40,10 @@ private:
     __aicore__ inline void CopyOut(int64_t offset_out, DataCopyExtParams dataCopyParams);
 
 private:
-
     TBuf<QuePosition::VECCALC> ubTBuf;
     LocalTensor<uint8_t> tmpTensor;
 
-    LocalTensor<T> x1Tmp;  //16*8*4*8=4096
+    LocalTensor<T> x1Tmp; // 16*8*4*8=4096
 
     GlobalTensor<T> inputGm;
     GlobalTensor<int8_t> outputGm;
@@ -58,86 +56,94 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void AscendQuantV2NZFP32<T>::Init(GM_ADDR x, GM_ADDR y,
-                              const AscendQuantV2TilingData* tilingData) {
+__aicore__ inline void AscendQuantV2NZFP32<T>::Init(GM_ADDR x, GM_ADDR y, const AscendQuantV2TilingData* tilingData)
+{
     inputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
-    outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(y));;
+    outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(y));
+    ;
 
     E = tilingData->E;
     K = tilingData->K;
-    N = tilingData->N;  //tiling测获取输入的专家数以及长和宽
+    N = tilingData->N; // tiling测获取输入的专家数以及长和宽
     blockIdx = GetBlockIdx();
-    needCoreNum = tilingData->needCoreNum;  //一个核一次最多处理16*64个数    K/16/8为所需核数
+    needCoreNum = tilingData->needCoreNum; //一个核一次最多处理16*64个数    K/16/8为所需核数
     pipe.InitBuffer(ubTBuf, MAX_UB_SIZE);
     tmpTensor = ubTBuf.Get<uint8_t>();
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2NZFP32<T>::Process() {
+__aicore__ inline void AscendQuantV2NZFP32<T>::Process()
+{
     if (blockIdx >= needCoreNum) {
         return;
     }
-    int64_t kloop = K / 16 / needCoreNum;  //K维度上循环次数，对应多少组核
+    int64_t kloop = K / 16 / needCoreNum; // K维度上循环次数，对应多少组核
     int64_t tail = K - 16 * needCoreNum * kloop;
     int64_t tail_core = tail / 16;
-    if(tail > 0){
+    if (tail > 0) {
         kloop++;
     }
     int64_t nloop = E * N / 64; //最外层循环，
     int64_t dataCount = 16 * 8 * 8;
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-    for (int64_t i = 0; i < nloop; i++){
+    for (int64_t i = 0; i < nloop; i++) {
         int64_t offset_n = K * i * 64;
-        for (int64_t j = 0; j < kloop; j++){
-            if(tail > 0 && blockIdx >= tail_core && j == kloop - 1){
+        for (int64_t j = 0; j < kloop; j++) {
+            if (tail > 0 && blockIdx >= tail_core && j == kloop - 1) {
                 continue;
             }
-            int64_t offset_k =16 * 16 * blockIdx + 16 * 16 * needCoreNum * j;
+            int64_t offset_k = 16 * 16 * blockIdx + 16 * 16 * needCoreNum * j;
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-            for(int64_t k = 0; k < 4; k++){
-                int64_t offset = K * 16 * k;//
-                DataCopyExtParams dataCopyParams{16, static_cast<uint32_t>(16 * sizeof(T)), 0, 6, 0};  //repeat次数，一次repeat的长度
+            for (int64_t k = 0; k < 4; k++) {
+                int64_t offset = K * 16 * k; //
+                DataCopyExtParams dataCopyParams{16, static_cast<uint32_t>(16 * sizeof(T)), 0, 6,
+                                                 0}; // repeat次数，一次repeat的长度
                 CopyIn(offset, offset + offset_k + offset_n, dataCopyParams);
             }
             Compute(dataCount);
-            DataCopyExtParams outParams {1, static_cast<uint32_t>(64 * 16/2), 0, 0, 0};
+            DataCopyExtParams outParams{1, static_cast<uint32_t>(64 * 16 / 2), 0, 0, 0};
             CopyOut(offset_k * 4 + offset_n, outParams);
+        }
     }
-}
     WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2NZFP32<T>::CopyIn(int64_t offset, int64_t offset_in, DataCopyExtParams dataCopyParams){
+__aicore__ inline void AscendQuantV2NZFP32<T>::CopyIn(int64_t offset, int64_t offset_in,
+                                                      DataCopyExtParams dataCopyParams)
+{
     x1Tmp = tmpTensor[0].ReinterpretCast<T>();
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-    DataCopyPad(x1Tmp[offset/K], inputGm[offset_in], dataCopyParams, padParams);
+    DataCopyPad(x1Tmp[offset / K], inputGm[offset_in], dataCopyParams, padParams);
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2NZFP32<T>::Compute(int64_t dataCount){
-
+__aicore__ inline void AscendQuantV2NZFP32<T>::Compute(int64_t dataCount)
+{
     SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
     WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
     Cast(x1Tmp.template ReinterpretCast<int32_t>(), x1Tmp, RoundMode::CAST_RINT, dataCount);
     PipeBarrier<PIPE_V>();
     SetDeqScale((half)1.000000e+00f);
     PipeBarrier<PIPE_V>();
-    Cast(x1Tmp.template ReinterpretCast<half>(), x1Tmp.template ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, dataCount);
+    Cast(x1Tmp.template ReinterpretCast<half>(), x1Tmp.template ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+         dataCount);
     PipeBarrier<PIPE_V>();
 #ifdef __CCE_UT_TEST__
 #else
-    Cast(x1Tmp.template ReinterpretCast<int4b_t>(), x1Tmp.template ReinterpretCast<half>(), RoundMode::CAST_RINT, dataCount);
+    Cast(x1Tmp.template ReinterpretCast<int4b_t>(), x1Tmp.template ReinterpretCast<half>(), RoundMode::CAST_RINT,
+         dataCount);
 #endif
     PipeBarrier<PIPE_V>();
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2NZFP32<T>::CopyOut(int64_t offset_out, DataCopyExtParams outParams){
+__aicore__ inline void AscendQuantV2NZFP32<T>::CopyOut(int64_t offset_out, DataCopyExtParams outParams)
+{
     SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
     WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
-    DataCopyPad(outputGm[offset_out/2], x1Tmp.template ReinterpretCast<int8_t>(), outParams);
+    DataCopyPad(outputGm[offset_out / 2], x1Tmp.template ReinterpretCast<int8_t>(), outParams);
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
 }
-}
+} // namespace AscendQuantV2
 #endif

@@ -14,13 +14,13 @@
 namespace ops {
 class TensorScatterUpdate : public OpDef {
 public:
-    explicit TensorScatterUpdate(const char *name) : OpDef(name)
+    explicit TensorScatterUpdate(const char* name) : OpDef(name)
     {
-        const std::vector<ge::DataType> data_types = {
-            ge::DT_COMPLEX128, ge::DT_COMPLEX64, ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16,
-            ge::DT_INT16, ge::DT_INT32, ge::DT_INT64, ge::DT_INT8, ge::DT_QINT16, ge::DT_QINT32,
-            ge::DT_QINT8, ge::DT_QUINT16, ge::DT_QUINT8, ge::DT_UINT16, ge::DT_UINT32,
-            ge::DT_UINT64, ge::DT_UINT8, ge::DT_BOOL};
+        const std::vector<ge::DataType> data_types = {ge::DT_COMPLEX128, ge::DT_COMPLEX64, ge::DT_DOUBLE, ge::DT_FLOAT,
+                                                      ge::DT_FLOAT16,    ge::DT_INT16,     ge::DT_INT32,  ge::DT_INT64,
+                                                      ge::DT_INT8,       ge::DT_QINT16,    ge::DT_QINT32, ge::DT_QINT8,
+                                                      ge::DT_QUINT16,    ge::DT_QUINT8,    ge::DT_UINT16, ge::DT_UINT32,
+                                                      ge::DT_UINT64,     ge::DT_UINT8,     ge::DT_BOOL};
         this->Input("x").ParamType(REQUIRED).DataType(data_types);
         this->Input("indices").ParamType(REQUIRED).DataType({ge::DT_INT32, ge::DT_INT64});
         this->Input("updates").ParamType(REQUIRED).DataType(data_types);
@@ -32,4 +32,4 @@ public:
 };
 
 OP_ADD(TensorScatterUpdate);
-}  // namespace ops
+} // namespace ops

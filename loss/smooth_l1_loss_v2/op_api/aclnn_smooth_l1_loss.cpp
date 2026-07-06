@@ -46,42 +46,43 @@ static const std::initializer_list<DataType> ASCEND910_DTYPE_SUPPORT_LIST = {Dat
 static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                               DataType::DT_BF16};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    return ASCEND910B_DTYPE_SUPPORT_LIST;
-  } else {
-    return ASCEND910_DTYPE_SUPPORT_LIST;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return ASCEND910B_DTYPE_SUPPORT_LIST;
+    } else {
+        return ASCEND910_DTYPE_SUPPORT_LIST;
+    }
 }
 
-static inline bool IsAscendRegBase(void) {
-  return Ops::NN::AclnnUtil::IsRegbase();
-}
+static inline bool IsAscendRegBase(void) { return Ops::NN::AclnnUtil::IsRegbase(); }
 
 static bool CheckPromoteType(const op::DataType selfDtype, const op::DataType targetDtype,
-                             const op::DataType resultDtype, op::DataType promoteType) {
-  // 检查self和target能否做数据类型推导
-  OP_CHECK(promoteType != DataType::DT_UNDEFINED,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and target dtype %s can not promote dtype.",
-                   op::ToString(selfDtype).GetString(), op::ToString(targetDtype).GetString()),
-           return false);
+                             const op::DataType resultDtype, op::DataType promoteType)
+{
+    // 检查self和target能否做数据类型推导
+    OP_CHECK(promoteType != DataType::DT_UNDEFINED,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and target dtype %s can not promote dtype.",
+                     op::ToString(selfDtype).GetString(), op::ToString(targetDtype).GetString()),
+             return false);
 
-  // 检查推导后的数据类型能否转换为输出的数据类型
-  OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, resultDtype, return false);
+    // 检查推导后的数据类型能否转换为输出的数据类型
+    OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, resultDtype, return false);
 
-  return true;
+    return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *target) {
-  auto supportList = GetDtypeSupportList();
-  // 检查self的数据类型是否在add算子的支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target)
+{
+    auto supportList = GetDtypeSupportList();
+    // 检查self的数据类型是否在add算子的支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
 
-  // 检查target的数据类型是否在add算子的支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);
+    // 检查target的数据类型是否在add算子的支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);
 
-  return true;
+    return true;
 }
 
 static bool CheckReduction(int64_t reduction)
@@ -94,235 +95,237 @@ static bool CheckReduction(int64_t reduction)
     return true;
 }
 
-static bool CheckNotNullTensor(const aclTensor *self, const aclTensor *target, const aclTensor *result) {
-  OP_CHECK_NULL(self, return false);
-  OP_CHECK_NULL(target, return false);
-  OP_CHECK_NULL(result, return false);
-  return true;
+static bool CheckNotNullTensor(const aclTensor* self, const aclTensor* target, const aclTensor* result)
+{
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(target, return false);
+    OP_CHECK_NULL(result, return false);
+    return true;
 }
 
-static bool CheckNeed5hdFormat(const aclTensor *tensor, int64_t reduction) {
-  return ((tensor->GetStorageFormat() == Format::FORMAT_NCHW || tensor->GetStorageFormat() == Format::FORMAT_NHWC) &&
-          reduction == 0) && !IsAscendRegBase();
+static bool CheckNeed5hdFormat(const aclTensor* tensor, int64_t reduction)
+{
+    return ((tensor->GetStorageFormat() == Format::FORMAT_NCHW || tensor->GetStorageFormat() == Format::FORMAT_NHWC) &&
+            reduction == 0) &&
+           !IsAscendRegBase();
 }
 
 static void CheckFormat(const aclTensor* self)
 {
     // 检查self的format类型，NZ添加告警
     if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW(
-            "Format of self gets [%s], this format may lead to precision failure.",
-            op::ToString(self->GetStorageFormat()).GetString());
+        OP_LOGW("Format of self gets [%s], this format may lead to precision failure.",
+                op::ToString(self->GetStorageFormat()).GetString());
     }
 }
 
-static bool CheckShape(const aclTensor* self,const aclTensor* target, int64_t reduction,
-                       aclTensor* result){
-  //tensor维度不超过8维
-  OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
-  OP_CHECK_MAX_DIM(target, MAX_SUPPORT_DIMS_NUMS, return false);
+static bool CheckShape(const aclTensor* self, const aclTensor* target, int64_t reduction, aclTensor* result)
+{
+    // tensor维度不超过8维
+    OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MAX_DIM(target, MAX_SUPPORT_DIMS_NUMS, return false);
 
-  op::Shape BroadcastShape;
-  OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, BroadcastShape, return false);
-  if (reduction==0 && BroadcastShape != result->GetViewShape()){
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of result should be %s, but current is %s.",
-            op::ToString(BroadcastShape).GetString(), op::ToString(result->GetViewShape()).GetString());
-    return false;
-  }
-  return true;
+    op::Shape BroadcastShape;
+    OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, BroadcastShape, return false);
+    if (reduction == 0 && BroadcastShape != result->GetViewShape()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of result should be %s, but current is %s.",
+                op::ToString(BroadcastShape).GetString(), op::ToString(result->GetViewShape()).GetString());
+        return false;
+    }
+    return true;
 }
 
 static inline bool CheckBeta(float beta)
 {
-    OP_CHECK(beta >= 0,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta should be greater than or equal to 0"),
-             return false);
+    OP_CHECK(beta >= 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta should be greater than or equal to 0"), return false);
     return true;
 }
-static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *target, 
-                               int64_t reduction, float beta, aclTensor *result) {
-  // 1. 检查参数是否为空指针
-  CHECK_RET(CheckNotNullTensor(self, target, result), ACLNN_ERR_PARAM_NULLPTR);
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, int64_t reduction, float beta,
+                               aclTensor* result)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNullTensor(self, target, result), ACLNN_ERR_PARAM_NULLPTR);
 
-  // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-  CHECK_RET(CheckDtypeValid(self, target), ACLNN_ERR_PARAM_INVALID);
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    CHECK_RET(CheckDtypeValid(self, target), ACLNN_ERR_PARAM_INVALID);
 
-  // 3. 检查self和target能否做数据类型推导以及推导的数据类型能否转换为输出数据类型
-  op::DataType promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
-  CHECK_RET(CheckPromoteType(self->GetDataType(), target->GetDataType(), result->GetDataType(), promoteType),
-            ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查self和target能否做数据类型推导以及推导的数据类型能否转换为输出数据类型
+    op::DataType promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
+    CHECK_RET(CheckPromoteType(self->GetDataType(), target->GetDataType(), result->GetDataType(), promoteType),
+              ACLNN_ERR_PARAM_INVALID);
 
-  // 4. 检查reduction是否符合规则
-  CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
-  
-  // 5. 检查tensor的shape是否合理
-  CHECK_RET(CheckShape(self, target, reduction, result), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查reduction是否符合规则
+    CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
 
-  // 6. 检查tensor的format是否合理，nz添加warning打印
-  CheckFormat(self);
+    // 5. 检查tensor的shape是否合理
+    CHECK_RET(CheckShape(self, target, reduction, result), ACLNN_ERR_PARAM_INVALID);
 
-  // 7. 检查beta
+    // 6. 检查tensor的format是否合理，nz添加warning打印
+    CheckFormat(self);
+
+    // 7. 检查beta
     CHECK_RET(CheckBeta(beta), ACLNN_ERR_PARAM_INVALID);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
-static const aclTensor *InputPreProcess(const aclTensor *input, int64_t reduction,
-                                        op::DataType promoteType, aclOpExecutor *executor) {
-  auto inputCast = l0op::Cast(input, promoteType, executor);
-  OP_CHECK(inputCast != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The cast return nullptr."), return nullptr);
-
-  if (CheckNeed5hdFormat(inputCast, reduction)) {
-    inputCast = l0op::TransData(inputCast, Format::FORMAT_NC1HWC0, 1, executor);
-    OP_CHECK(inputCast != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The TransData return nullptr."),
-             return nullptr);
-  } else if (inputCast->GetStorageFormat() != Format::FORMAT_ND) {
-    inputCast = l0op::ReFormat(inputCast, Format::FORMAT_ND);
-    OP_CHECK(inputCast != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ReFormat return nullptr."),
-             return nullptr);
-  }
-  return inputCast;
-}
-
-static const std::string &GetReductionStr(int64_t reduction) {
-  if (reduction == 0) {
-    return REDUCTION_NONE;
-  } else if (reduction == 1) {
-    return REDUCTION_MEAN;
-  } else {
-    return REDUCTION_SUM;
-  }
-}
-
-static aclnnStatus CheckShapeBroadcast(const aclTensor** self, const aclTensor** target, aclOpExecutor *executor)
+static const aclTensor* InputPreProcess(const aclTensor* input, int64_t reduction, op::DataType promoteType,
+                                        aclOpExecutor* executor)
 {
-  // 判断输入shape不相等需要调用BroadcastTo
-  if ((*self)->GetViewShape() != (*target)->GetViewShape()) {
-    op::Shape broadcastShape;
-    if (BroadcastInferShape((*self)->GetViewShape(), (*target)->GetViewShape(), broadcastShape)) {
-      op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(broadcastShape);
-      auto broadcastShapeArray = executor->AllocIntArray(broadcastDims.data(), broadcastDims.size());
-      CHECK_RET(broadcastShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
-      *self = l0op::BroadcastTo(*self, broadcastShapeArray, executor);
-      CHECK_RET(*self != nullptr, ACLNN_ERR_INNER_NULLPTR);
-      *target = l0op::BroadcastTo(*target, broadcastShapeArray, executor);
-      CHECK_RET(*target != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto inputCast = l0op::Cast(input, promoteType, executor);
+    OP_CHECK(inputCast != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The cast return nullptr."), return nullptr);
+
+    if (CheckNeed5hdFormat(inputCast, reduction)) {
+        inputCast = l0op::TransData(inputCast, Format::FORMAT_NC1HWC0, 1, executor);
+        OP_CHECK(inputCast != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The TransData return nullptr."),
+                 return nullptr);
+    } else if (inputCast->GetStorageFormat() != Format::FORMAT_ND) {
+        inputCast = l0op::ReFormat(inputCast, Format::FORMAT_ND);
+        OP_CHECK(inputCast != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ReFormat return nullptr."),
+                 return nullptr);
+    }
+    return inputCast;
+}
+
+static const std::string& GetReductionStr(int64_t reduction)
+{
+    if (reduction == 0) {
+        return REDUCTION_NONE;
+    } else if (reduction == 1) {
+        return REDUCTION_MEAN;
+    } else {
+        return REDUCTION_SUM;
+    }
+}
+
+static aclnnStatus CheckShapeBroadcast(const aclTensor** self, const aclTensor** target, aclOpExecutor* executor)
+{
+    // 判断输入shape不相等需要调用BroadcastTo
+    if ((*self)->GetViewShape() != (*target)->GetViewShape()) {
+        op::Shape broadcastShape;
+        if (BroadcastInferShape((*self)->GetViewShape(), (*target)->GetViewShape(), broadcastShape)) {
+            op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(broadcastShape);
+            auto broadcastShapeArray = executor->AllocIntArray(broadcastDims.data(), broadcastDims.size());
+            CHECK_RET(broadcastShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            *self = l0op::BroadcastTo(*self, broadcastShapeArray, executor);
+            CHECK_RET(*self != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            *target = l0op::BroadcastTo(*target, broadcastShapeArray, executor);
+            CHECK_RET(*target != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        return ACLNN_SUCCESS;
     }
     return ACLNN_SUCCESS;
-  }
-  return ACLNN_SUCCESS;
 }
 
-inline static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor) {
-  FVector<int64_t> tmp = {1};
-  auto dims = executor->ConvertToTensor(tmp.data(), tmp.size(), DataType::DT_INT64);
-  auto shapeArray = executor->AllocIntArray(tmp.data(), tmp.size());
-  CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+inline static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor)
+{
+    FVector<int64_t> tmp = {1};
+    auto dims = executor->ConvertToTensor(tmp.data(), tmp.size(), DataType::DT_INT64);
+    auto shapeArray = executor->AllocIntArray(tmp.data(), tmp.size());
+    CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  FVector<float> valVector = {val};
-  auto valTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), out->GetDataType());
-  auto fillOut = l0op::Fill(dims, valTensor, shapeArray, executor);
-  CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  auto viewCopyResult = l0op::ViewCopy(fillOut, out, executor);
-  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  return ACLNN_SUCCESS;
-}
-
-inline static aclnnStatus EmptyTensorCompute(int64_t reduction, aclTensor* out, aclOpExecutor* executor) {
-  aclnnStatus ret;
-  if (reduction == 0) {
-    ret = ACLNN_SUCCESS;
-  } else if (reduction == 1) {
-    ret = FillScalar(out, NAN, executor);
-  } else {
-    ret = FillScalar(out, 0, executor);
-  }
-  return ret;
-}
-
-aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor *self, const aclTensor *target, int64_t reduction,
-                                              float beta, aclTensor *result, uint64_t *workspaceSize,
-                                              aclOpExecutor **executor) {
-  OP_CHECK_COMM_INPUT(workspaceSize, executor);
-
-  L2_DFX_PHASE_1(aclnnSmoothL1Loss, DFX_IN(self, target, reduction, beta), DFX_OUT(result));
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
-  // 固定写法，参数检查
-  auto ret = CheckParams(self, target, reduction, beta, result);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
-  // SmoothL1Loss算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充
-  if (self->IsEmpty() || target->IsEmpty()) {
-    // 根据实际支持情况补充
-    ret = EmptyTensorCompute(reduction, result, uniqueExecutor.get());
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    FVector<float> valVector = {val};
+    auto valTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), out->GetDataType());
+    auto fillOut = l0op::Fill(dims, valTensor, shapeArray, executor);
+    CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyResult = l0op::ViewCopy(fillOut, out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
-  }
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto targetContiguous = l0op::Contiguous(target, uniqueExecutor.get());
-  CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  ret = CheckShapeBroadcast(&selfContiguous, &targetContiguous, uniqueExecutor.get());
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
-  auto promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
-  auto selfpost = InputPreProcess(selfContiguous, reduction, promoteType, uniqueExecutor.get());
-  OP_CHECK(selfpost != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self with InputPreProcess return nullptr."),
-           return ACLNN_ERR_INNER_NULLPTR);
-
-  auto targetpost = InputPreProcess(targetContiguous, reduction, promoteType, uniqueExecutor.get());
-  OP_CHECK(targetpost != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The target with InputPreProcess return nullptr."),
-           return ACLNN_ERR_INNER_NULLPTR);
-
-  auto smoothL1LossResult =
-      l0op::SmoothL1Loss(selfpost, targetpost, GetReductionStr(reduction), beta, uniqueExecutor.get());
-  OP_CHECK(smoothL1LossResult != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The reslut with SmoothL1Loss return nullptr."),
-           return ACLNN_ERR_INNER_NULLPTR);
-  const aclTensor *smoothL1LossResultWithTrans = nullptr;
-  if ((smoothL1LossResult->GetStorageShape().GetDimNum() == NC1HWC0_DIM &&
-      (result->GetStorageFormat() == Format::FORMAT_NCHW || result->GetStorageFormat() == Format::FORMAT_NHWC))
-     && !IsAscendRegBase()) {
-    smoothL1LossResultWithTrans =
-        l0op::TransData(smoothL1LossResult, GetPrimaryFormat(result->GetOriginalFormat()), 1, uniqueExecutor.get());
-  } else {
-    smoothL1LossResultWithTrans = l0op::ReFormat(smoothL1LossResult, result->GetStorageFormat());
-  }
-  OP_CHECK(smoothL1LossResultWithTrans != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with TransData return nullptr."),
-           return ACLNN_ERR_INNER_NULLPTR);
-
-  // 固定写法，将计算结果转换成输出out的数据类型
-  auto smoothL1LossResultCast = l0op::Cast(smoothL1LossResultWithTrans, result->GetDataType(), uniqueExecutor.get());
-  OP_CHECK(smoothL1LossResultCast != nullptr,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with cast return nullptr."),
-           return ACLNN_ERR_INNER_NULLPTR);
-
-  // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-  auto viewCopyResult = l0op::ViewCopy(smoothL1LossResultCast, result, uniqueExecutor.get());
-  OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The reslut with ViewCopy return nullptr."),
-           return ACLNN_ERR_INNER_NULLPTR);
-
-  // 固定写法，获取计算过程中需要使用的workspace大小
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSmoothL1Loss(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnSmoothL1Loss);
-  // 固定写法，调用框架能力，完成计算
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+inline static aclnnStatus EmptyTensorCompute(int64_t reduction, aclTensor* out, aclOpExecutor* executor)
+{
+    aclnnStatus ret;
+    if (reduction == 0) {
+        ret = ACLNN_SUCCESS;
+    } else if (reduction == 1) {
+        ret = FillScalar(out, NAN, executor);
+    } else {
+        ret = FillScalar(out, 0, executor);
+    }
+    return ret;
+}
+
+aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor* self, const aclTensor* target, int64_t reduction,
+                                              float beta, aclTensor* result, uint64_t* workspaceSize,
+                                              aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnSmoothL1Loss, DFX_IN(self, target, reduction, beta), DFX_OUT(result));
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    // 固定写法，参数检查
+    auto ret = CheckParams(self, target, reduction, beta, result);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // SmoothL1Loss算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充
+    if (self->IsEmpty() || target->IsEmpty()) {
+        // 根据实际支持情况补充
+        ret = EmptyTensorCompute(reduction, result, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto targetContiguous = l0op::Contiguous(target, uniqueExecutor.get());
+    CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    ret = CheckShapeBroadcast(&selfContiguous, &targetContiguous, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    auto promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
+    auto selfpost = InputPreProcess(selfContiguous, reduction, promoteType, uniqueExecutor.get());
+    OP_CHECK(selfpost != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self with InputPreProcess return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    auto targetpost = InputPreProcess(targetContiguous, reduction, promoteType, uniqueExecutor.get());
+    OP_CHECK(targetpost != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The target with InputPreProcess return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    auto smoothL1LossResult = l0op::SmoothL1Loss(selfpost, targetpost, GetReductionStr(reduction), beta,
+                                                 uniqueExecutor.get());
+    OP_CHECK(smoothL1LossResult != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The reslut with SmoothL1Loss return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* smoothL1LossResultWithTrans = nullptr;
+    if ((smoothL1LossResult->GetStorageShape().GetDimNum() == NC1HWC0_DIM &&
+         (result->GetStorageFormat() == Format::FORMAT_NCHW || result->GetStorageFormat() == Format::FORMAT_NHWC)) &&
+        !IsAscendRegBase()) {
+        smoothL1LossResultWithTrans = l0op::TransData(smoothL1LossResult, GetPrimaryFormat(result->GetOriginalFormat()),
+                                                      1, uniqueExecutor.get());
+    } else {
+        smoothL1LossResultWithTrans = l0op::ReFormat(smoothL1LossResult, result->GetStorageFormat());
+    }
+    OP_CHECK(smoothL1LossResultWithTrans != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with TransData return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将计算结果转换成输出out的数据类型
+    auto smoothL1LossResultCast = l0op::Cast(smoothL1LossResultWithTrans, result->GetDataType(), uniqueExecutor.get());
+    OP_CHECK(smoothL1LossResultCast != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with cast return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
+    auto viewCopyResult = l0op::ViewCopy(smoothL1LossResultCast, result, uniqueExecutor.get());
+    OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The reslut with ViewCopy return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus aclnnSmoothL1Loss(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnSmoothL1Loss);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

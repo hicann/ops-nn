@@ -23,8 +23,8 @@ OP_TYPE_REGISTER(LayerNormV3);
 
 constexpr size_t MODE_V3_NUM = 3;
 
-const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3(
-    const LayerNormV3params& params, aclOpExecutor* executor)
+const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3(const LayerNormV3params& params,
+                                                                aclOpExecutor* executor)
 {
     L0_DFX(LayerNormV3, params.input, params.weight, params.bias, params.beginAxis, params.eps);
     Shape meanOutShape = params.input->GetViewShape();
@@ -35,19 +35,18 @@ const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3(
     auto meanOut = executor->AllocTensor(meanOutShape, params.weight->GetDataType(), Format::FORMAT_ND);
     auto rstdOut = executor->AllocTensor(meanOutShape, params.bias->GetDataType(), Format::FORMAT_ND);
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormV3, OP_INPUT(params.input, params.weight, params.bias), OP_OUTPUT(output, meanOut, rstdOut),
-        OP_ATTR(params.beginAxis, params.beginAxis, static_cast<float>(params.eps)));
+    ADD_TO_LAUNCHER_LIST_AICORE(LayerNormV3, OP_INPUT(params.input, params.weight, params.bias),
+                                OP_OUTPUT(output, meanOut, rstdOut),
+                                OP_ATTR(params.beginAxis, params.beginAxis, static_cast<float>(params.eps)));
 
     return {output, meanOut, rstdOut};
 }
 
-const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3WithImplMode(
-    const LayerNormV3WithImplModeparams& params, aclOpExecutor* executor)
+const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3WithImplMode(const LayerNormV3WithImplModeparams& params,
+                                                                            aclOpExecutor* executor)
 {
-    L0_DFX(
-        LayerNormV3WithImplMode, params.input, params.weight, params.bias, params.beginAxis, params.eps,
-        params.implMode);
+    L0_DFX(LayerNormV3WithImplMode, params.input, params.weight, params.bias, params.beginAxis, params.eps,
+           params.implMode);
     Shape meanOutShape = params.input->GetViewShape();
     for (size_t index = static_cast<size_t>(params.beginAxis); index < meanOutShape.GetDimNum(); index++) {
         meanOutShape[index] = 1;
@@ -56,13 +55,13 @@ const std::array<aclTensor*, LAYER_NORM_V3_OUT_NUM> LayerNormV3WithImplMode(
     auto meanOut = executor->AllocTensor(meanOutShape, params.weight->GetDataType(), Format::FORMAT_ND);
     auto rstdOut = executor->AllocTensor(meanOutShape, params.bias->GetDataType(), Format::FORMAT_ND);
 
-    OpImplMode mode[MODE_V3_NUM] = {
-        OpImplMode::IMPL_MODE_HIGH_PRECISION, OpImplMode::IMPL_MODE_HIGH_PERFORMANCE, OpImplMode::IMPL_MODE_KEEP_FP16};
+    OpImplMode mode[MODE_V3_NUM] = {OpImplMode::IMPL_MODE_HIGH_PRECISION, OpImplMode::IMPL_MODE_HIGH_PERFORMANCE,
+                                    OpImplMode::IMPL_MODE_KEEP_FP16};
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        LayerNormV3, OP_INPUT(params.input, params.weight, params.bias), OP_OUTPUT(output, meanOut, rstdOut),
-        OP_ATTR(params.beginAxis, params.beginAxis, static_cast<float>(params.eps)),
-        OP_OPTION(mode[static_cast<size_t>(params.implMode)]));
+    ADD_TO_LAUNCHER_LIST_AICORE(LayerNormV3, OP_INPUT(params.input, params.weight, params.bias),
+                                OP_OUTPUT(output, meanOut, rstdOut),
+                                OP_ATTR(params.beginAxis, params.beginAxis, static_cast<float>(params.eps)),
+                                OP_OPTION(mode[static_cast<size_t>(params.implMode)]));
 
     return {output, meanOut, rstdOut};
 }

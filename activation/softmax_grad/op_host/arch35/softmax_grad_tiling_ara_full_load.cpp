@@ -12,15 +12,14 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 bool SoftmaxGradARATiling::IsCapable()
 {
     // a0_为1的场景走AR模板
     OP_CHECK_IF(a0_ == DIM_NUM_ONE,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA full load template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
-                    return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA full load template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
+                return false);
     return true;
 }
 
@@ -33,11 +32,11 @@ ge::graphStatus SoftmaxGradARATiling::DoOpTiling()
     int64_t factorMax = aicoreParams_.ubSize / a0TileBase / (factor0 + FLOAT32_BYTES);
 
     OP_CHECK_IF(factorMax <= 0,
-                    OP_LOGI(context_->GetNodeName(),
-                            "ARA full load template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
-                            "tileBase: %ld, ub factor: %ld.",
-                            a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, factorMax),
-                    return ge::GRAPH_PARAM_INVALID);
+                OP_LOGI(context_->GetNodeName(),
+                        "ARA full load template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
+                        "tileBase: %ld, ub factor: %ld.",
+                        a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     // 不切r轴，先切a0
     int64_t a0FactorMax = Ops::Base::CeilDiv(a0_, a0TileBase);
@@ -76,10 +75,7 @@ ge::graphStatus SoftmaxGradARATiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxGradARATiling::GetTilingKey() const
-{
-    return TILINGKEY_ARA;
-}
+uint64_t SoftmaxGradARATiling::GetTilingKey() const { return TILINGKEY_ARA; }
 
 ge::graphStatus SoftmaxGradARATiling::PostTiling()
 {
@@ -93,4 +89,4 @@ ge::graphStatus SoftmaxGradARATiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxGrad, SoftmaxGradARATiling, TEMPLATE_ARA_FULL_LOAD_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

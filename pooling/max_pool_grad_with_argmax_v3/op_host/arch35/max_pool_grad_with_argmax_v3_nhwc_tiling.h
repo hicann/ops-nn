@@ -24,15 +24,10 @@ namespace optiling {
 class MaxPoolGradWithArgmaxV3NHWCTiling : public MaxPoolGradWithArgmaxV3BaseTiling {
 public:
     explicit MaxPoolGradWithArgmaxV3NHWCTiling(gert::TilingContext* context)
-        : MaxPoolGradWithArgmaxV3BaseTiling(context),
-          NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
-    {
-    }
+        : MaxPoolGradWithArgmaxV3BaseTiling(context), NHWCBase(new MaxPoolGradWithArgmaxNHWCTilingCommon(&inputData))
+    {}
 
-    ~MaxPoolGradWithArgmaxV3NHWCTiling() override
-    {
-        delete NHWCBase;
-    }
+    ~MaxPoolGradWithArgmaxV3NHWCTiling() override { delete NHWCBase; }
 
 private:
     MaxPoolGradWithArgmaxNHWCTilingCommon* NHWCBase;

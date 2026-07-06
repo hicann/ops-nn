@@ -20,10 +20,9 @@
 #include "atvoss/util/placeholder.h"
 #include "atvoss/reduce/reduce_operator.h"
 
-constexpr float COEFF_SQRT = 0.70710678118;  // equals 1 / np.sqrt(2)
+constexpr float COEFF_SQRT = 0.70710678118; // equals 1 / np.sqrt(2)
 using namespace Ops::Base;
-namespace L2Loss
-{
+namespace L2Loss {
 using namespace AscendC;
 template <typename T, typename PromteT>
 struct L2LossDag {
@@ -40,6 +39,6 @@ struct L2LossDag {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-}  // namespace L2Loss
+} // namespace L2Loss
 
-#endif  // CANN_CUSTOM_OPS_L2_LOSS_DAG_H
+#endif // CANN_CUSTOM_OPS_L2_LOSS_DAG_H

@@ -56,12 +56,7 @@ struct TilingDataStructModulate {
     int64_t parameterStatus = 0;
 };
 
-enum class TilingStrategy
-{
-    TilingB,
-    TilingL,
-    TilingD
-};
+enum class TilingStrategy { TilingB, TilingL, TilingD };
 
 class ModulateTilingOp {
 public:
@@ -155,8 +150,8 @@ void ModulateTilingOp::Init()
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     int64_t ubTensorNum = (this->tilingData.parameterStatus == SCALE_AND_SHIFT) ? UB_TENSOR_NUM_ALL : UB_TENSOR_NUM;
-    this->tilingData.ubLength =
-        static_cast<int64_t>(ubSizePlatForm) / ubTensorNum / this->dataTypeSize / ALIGNED_SIZE * ALIGNED_SIZE;
+    this->tilingData.ubLength = static_cast<int64_t>(ubSizePlatForm) / ubTensorNum / this->dataTypeSize / ALIGNED_SIZE *
+                                ALIGNED_SIZE;
 
     size_t* currentWorkSpace = context->GetWorkspaceSizes(1);
     currentWorkSpace[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -188,7 +183,7 @@ TilingStrategy ModulateTilingOp::SelectStrategy()
 void ModulateTilingOp::CalcTiling()
 {
     TilingStrategy strategy = SelectStrategy();
-    switch(strategy) {
+    switch (strategy) {
         case TilingStrategy::TilingB:
             CalcTilingParam(TILING_DIM_B, this->tilingData.inputB);
             break;
@@ -209,25 +204,24 @@ void ModulateTilingOp::CalcTilingParam(int64_t TilingDim, int64_t totalElements,
     this->tilingData.frontLength = this->tilingData.tailLength + 1;
     this->tilingData.frontNum = totalElements % this->coreNum;
     this->tilingData.tailNum = this->tilingData.tailLength == 0 ? 0 : this->coreNum - this->tilingData.frontNum;
-    if(useDtiling) {
+    if (useDtiling) {
         this->tilingData.useDTiling = 1;
     }
 }
 
 static ge::graphStatus ModulateTilingFunc(gert::TilingContext* context)
 {
-    const ModulateCompileInfo* compileInfo =
-        static_cast<const ModulateCompileInfo*>(context->GetCompileInfo());
+    const ModulateCompileInfo* compileInfo = static_cast<const ModulateCompileInfo*>(context->GetCompileInfo());
     if (compileInfo->isRegBase) {
         OP_LOGD(context, "ModulateTilingForRegbase start.");
         ModulateTilingForRegbase tilingOp(context);
         auto ret = tilingOp.DoTiling();
-        OP_CHECK_IF(
-            (ret == ge::GRAPH_FAILED), OP_LOGD(context, "ModulateTilingForRegbase tiling failed!"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGD(context, "ModulateTilingForRegbase tiling failed!"),
+                    return ge::GRAPH_FAILED);
         OP_LOGD(context, "ModulateTilingForRegbase end.");
         return ge::GRAPH_SUCCESS;
     }
-    
+
     OP_LOGD(context, "Tiling for Modulate start.");
     ModulateTilingOp tilingOp(context);
     tilingOp.Init();

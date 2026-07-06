@@ -34,11 +34,11 @@ REGISTER_TILING_DATA_CLASS(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3Tilin
 
 class MaxPoolGradWithArgmaxV3BaseTiling : public MaxPoolGradWithArgmaxTilingCommon {
 public:
-    explicit MaxPoolGradWithArgmaxV3BaseTiling(gert::TilingContext* context) : MaxPoolGradWithArgmaxTilingCommon(context)
+    explicit MaxPoolGradWithArgmaxV3BaseTiling(gert::TilingContext* context)
+        : MaxPoolGradWithArgmaxTilingCommon(context)
     {}
 
-    ~MaxPoolGradWithArgmaxV3BaseTiling() override
-    {}
+    ~MaxPoolGradWithArgmaxV3BaseTiling() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

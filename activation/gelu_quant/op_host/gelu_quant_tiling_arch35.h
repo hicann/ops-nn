@@ -21,8 +21,7 @@
 namespace optiling {
 namespace geluquantregbase {
 
-enum class RoundMode : int
-{
+enum class RoundMode : int {
     MODE_NONE = 0,
     MODE_RINT = 1,
     MODE_FLOOR = 2,
@@ -68,7 +67,7 @@ struct GeluQuantRegbaseSplitCoreParams {
     int64_t usedCoreNum{0};          // 使用到的核数
     int64_t tailCoreProcessNum{0};   // 尾核处理元素次数
 
-    int64_t coexistentNodeNum{0};        // 每次计算参与所有单个元素的数量（节点数），比如输入、中间结果、输出
+    int64_t coexistentNodeNum{0}; // 每次计算参与所有单个元素的数量（节点数），比如输入、中间结果、输出
     int64_t coexistentNodeElementNum{0}; // 单个UB内每次能处理多少个结果
 
     int64_t templateMode{0};

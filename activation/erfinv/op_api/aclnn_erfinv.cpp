@@ -84,8 +84,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnErfinvGetWorkspaceSize(
-    const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnErfinvGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                        aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -136,8 +136,8 @@ aclnnStatus aclnnErfinvGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnInplaceErfinvGetWorkspaceSize(
-    const aclTensor* selfRef, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnInplaceErfinvGetWorkspaceSize(const aclTensor* selfRef, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor)
 {
     auto out = const_cast<aclTensor*>(selfRef);
     return aclnnErfinvGetWorkspaceSize(selfRef, out, workspaceSize, executor);

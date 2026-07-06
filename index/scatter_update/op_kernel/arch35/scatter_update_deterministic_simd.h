@@ -23,11 +23,12 @@
 namespace ScatterUpdate {
 using namespace AscendC;
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
-class ScatterUpdateDeterministicSimd : public ScatterUpdateDeterministicCommon<T, U, MASK_T, splitCol, CAST_T, castType> {
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+class ScatterUpdateDeterministicSimd
+    : public ScatterUpdateDeterministicCommon<T, U, MASK_T, splitCol, CAST_T, castType> {
 public:
-    __aicore__ inline ScatterUpdateDeterministicSimd(const ScatterUpdateTilingData& tilingData, TPipe& pipe) : 
-        ScatterUpdateDeterministicCommon<T, U, MASK_T, splitCol, CAST_T, castType> (tilingData, pipe) {};
+    __aicore__ inline ScatterUpdateDeterministicSimd(const ScatterUpdateTilingData& tilingData, TPipe& pipe)
+        : ScatterUpdateDeterministicCommon<T, U, MASK_T, splitCol, CAST_T, castType>(tilingData, pipe){};
 
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace);
     __aicore__ inline void Process();
@@ -36,7 +37,8 @@ public:
     __aicore__ inline void CopyInUpdates(uint64_t updatesGmOffset, uint16_t blockCount, uint32_t blockLen);
     __aicore__ inline void CopyInManyUpdates(uint64_t updatesGmOffset, uint16_t blockCount, uint32_t blockLen);
     __aicore__ inline void CopyOutUpdates(uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount);
-    __aicore__ inline void CopyOutUpdates(uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount, LocalTensor<T> updatesLocal);
+    __aicore__ inline void CopyOutUpdates(uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount,
+                                          LocalTensor<T> updatesLocal);
 
 private:
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> updatesQueue_;
@@ -46,72 +48,78 @@ private:
     uint64_t updateBlockColNum_{0};
 };
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
-__aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::Init(
-            GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace)
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+__aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::Init(GM_ADDR var,
+                                                                                                      GM_ADDR indices,
+                                                                                                      GM_ADDR updates,
+                                                                                                      GM_ADDR workspace)
 {
     this->InitBase(var, indices, updates);
 
     if constexpr (splitCol) {
-        updatesBlockLoop_= this->tilingData_.updatesNormBlockLoop;
+        updatesBlockLoop_ = this->tilingData_.updatesNormBlockLoop;
         updatesTailLoopSize_ = this->tilingData_.updatesNormBlockTailLoopSize;
         updateBlockColNum_ = this->tilingData_.normBlockColNum;
         if (this->blockIdx_ == this->tilingData_.usedCoreNum - 1) {
-            updatesBlockLoop_= this->tilingData_.updatesTailBlockLoop;
+            updatesBlockLoop_ = this->tilingData_.updatesTailBlockLoop;
             updatesTailLoopSize_ = this->tilingData_.updatesTailBlockTailLoopSize;
             updateBlockColNum_ = this->tilingData_.tailBlockColNum;
         }
         this->pipe_.InitBuffer(updatesQueue_, 1, this->tilingData_.updateColUbFactor * sizeof(T));
     } else {
-        this->pipe_.InitBuffer(updatesQueue_, 1,
-            ops::CeilAlign(this->tilingData_.indicesUbFactor * this->tilingData_.varShape[1] * sizeof(T), UB_AGLIN_VALUE));
+        this->pipe_.InitBuffer(
+            updatesQueue_, 1,
+            ops::CeilAlign(this->tilingData_.indicesUbFactor * this->tilingData_.varShape[1] * sizeof(T),
+                           UB_AGLIN_VALUE));
         this->InitSetBuffer(var, indices, updates, workspace);
     }
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::CopyInUpdates(
-                     uint64_t updatesGmOffset, uint16_t blockCount, uint32_t blockLen)
+    uint64_t updatesGmOffset, uint16_t blockCount, uint32_t blockLen)
 {
     LocalTensor<T> updatesLocal = updatesQueue_.AllocTensor<T>();
 
-    DataCopyExtParams updatesCopyParams { blockCount, static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0 };
-    DataCopyPadExtParams<T> updatesPadParams { false, 0, 0, 0 };
+    DataCopyExtParams updatesCopyParams{blockCount, static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> updatesPadParams{false, 0, 0, 0};
     DataCopyPad(updatesLocal, this->updatesGm_[updatesGmOffset], updatesCopyParams, updatesPadParams);
     updatesQueue_.EnQue<T>(updatesLocal);
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::CopyInManyUpdates(
-                     uint64_t updatesGmOffset, uint16_t blockCount, uint32_t blockLen)
+    uint64_t updatesGmOffset, uint16_t blockCount, uint32_t blockLen)
 {
     LocalTensor<T> updatesLocal = updatesQueue_.AllocTensor<T>();
 
-    DataCopyExtParams updatesCopyParams {blockCount, static_cast<uint32_t>(blockLen * sizeof(T)), static_cast<uint32_t>((this->tilingData_.varShape[1] - blockLen) * sizeof(T)), 0, 0};
-    DataCopyPadExtParams<T> updatesPadParams {false, 0, 0, 0};
+    DataCopyExtParams updatesCopyParams{blockCount, static_cast<uint32_t>(blockLen * sizeof(T)),
+                                        static_cast<uint32_t>((this->tilingData_.varShape[1] - blockLen) * sizeof(T)),
+                                        0, 0};
+    DataCopyPadExtParams<T> updatesPadParams{false, 0, 0, 0};
     DataCopyPad(updatesLocal, this->updatesGm_[updatesGmOffset], updatesCopyParams, updatesPadParams);
     updatesQueue_.EnQue<T>(updatesLocal);
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::CopyOutUpdates(
-                    uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount)
+    uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount)
 {
-    DataCopyExtParams outParams = { 1, static_cast<uint32_t>(updatesCount * sizeof(T)), 0, 0, 0 };
+    DataCopyExtParams outParams = {1, static_cast<uint32_t>(updatesCount * sizeof(T)), 0, 0, 0};
     LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
     DataCopyPad(this->varGm_[varGmOffset], updatesLocal[updateOffset], outParams);
     updatesQueue_.FreeTensor(updatesLocal);
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::CopyOutUpdates(
-                    uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount, LocalTensor<T> updatesLocal)
+    uint64_t varGmOffset, uint32_t updateOffset, uint32_t updatesCount, LocalTensor<T> updatesLocal)
 {
-    DataCopyExtParams outParams = { 1, static_cast<uint32_t>(updatesCount * sizeof(T)), 0, 0, 0 };
+    DataCopyExtParams outParams = {1, static_cast<uint32_t>(updatesCount * sizeof(T)), 0, 0, 0};
     DataCopyPad(this->varGm_[varGmOffset], updatesLocal[updateOffset], outParams);
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::ProcessSplitCol()
 {
     uint32_t indicesCount = this->tilingData_.indicesUbFactor;
@@ -130,15 +138,16 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2_S);
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2_S);
         LocalTensor<U> indicesLocal = this->indicesQue_.template DeQue<U>();
-        if(this->tilingData_.updateColMany) {
+        if (this->tilingData_.updateColMany) {
             for (uint32_t i = 0; i < indicesForUpLoopSize; i++) {
                 uint64_t curUpProNum = this->tilingData_.updateUbProNum;
                 if (i == indicesForUpLoopSize - 1) {
                     curUpProNum = indicesForUpTailLoopNum;
                 }
-                uint64_t updatesGmOffset = (indicesGmOffset + i * this->tilingData_.updateUbProNum) * this->tilingData_.varShape[1] + 
-                                            this->blockIdx_ * this->tilingData_.normBlockColNum;
-                
+                uint64_t updatesGmOffset = (indicesGmOffset + i * this->tilingData_.updateUbProNum) *
+                                               this->tilingData_.varShape[1] +
+                                           this->blockIdx_ * this->tilingData_.normBlockColNum;
+
                 CopyInManyUpdates(updatesGmOffset, curUpProNum, this->tilingData_.updateOneColAlign);
                 LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
                 for (uint32_t j = 0; j < curUpProNum; j++) {
@@ -146,8 +155,10 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
                     if (indicesValue < 0 || indicesValue >= this->tilingData_.varShape[0]) {
                         continue;
                     }
-                    uint64_t varGmOffset = indicesValue * this->tilingData_.varStride + this->blockIdx_ * this->tilingData_.normBlockColNum;
-                    CopyOutUpdates(varGmOffset, j * this->tilingData_.updateOneColAlign, updateBlockColNum_, updatesLocal);
+                    uint64_t varGmOffset = indicesValue * this->tilingData_.varStride +
+                                           this->blockIdx_ * this->tilingData_.normBlockColNum;
+                    CopyOutUpdates(varGmOffset, j * this->tilingData_.updateOneColAlign, updateBlockColNum_,
+                                   updatesLocal);
                 }
                 updatesQueue_.FreeTensor(updatesLocal);
             }
@@ -158,9 +169,9 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
                     continue;
                 }
 
-                uint64_t updatesGmOffset = (indicesGmOffset + i) * this->tilingData_.varShape[1] + 
+                uint64_t updatesGmOffset = (indicesGmOffset + i) * this->tilingData_.varShape[1] +
                                            this->blockIdx_ * this->tilingData_.normBlockColNum;
-                uint64_t varGmOffset = indicesValue * this->tilingData_.varStride + 
+                uint64_t varGmOffset = indicesValue * this->tilingData_.varStride +
                                        this->blockIdx_ * this->tilingData_.normBlockColNum;
                 uint32_t updatesCount = this->tilingData_.updateColUbFactor;
                 for (uint64_t j = 0; j < updatesBlockLoop_; j++) {
@@ -178,7 +189,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
     }
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::ProcessSplitRow()
 {
     uint32_t indicesCount = this->tilingData_.indicesUbFactor;
@@ -187,7 +198,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
         if (idx == this->indicesBlockLoop_ - 1) {
             indicesCount = this->indicesTailLoopSize_;
         }
-        uint64_t indicesGmOffset = this->blockIdx_ * this->tilingData_.normBlockIndices + 
+        uint64_t indicesGmOffset = this->blockIdx_ * this->tilingData_.normBlockIndices +
                                    idx * this->tilingData_.indicesUbFactor;
         uint64_t updatesGmOffset = indicesGmOffset * this->tilingData_.varShape[1];
         uint32_t updatesCount = indicesCount * this->tilingData_.varShape[1];
@@ -215,7 +226,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
     }
 }
 
-template<typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
+template <typename T, typename U, typename MASK_T, bool splitCol, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CAST_T, castType>::Process()
 {
     if (GetBlockIdx() >= this->tilingData_.usedCoreNum) {
@@ -231,5 +242,5 @@ __aicore__ inline void ScatterUpdateDeterministicSimd<T, U, MASK_T, splitCol, CA
     }
 }
 
-}
-#endif  // SCATTER_UPDATE_DETERMINISTIC_SIMD_H
+} // namespace ScatterUpdate
+#endif // SCATTER_UPDATE_DETERMINISTIC_SIMD_H

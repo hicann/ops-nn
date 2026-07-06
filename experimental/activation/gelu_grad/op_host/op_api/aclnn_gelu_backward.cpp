@@ -26,8 +26,8 @@
 
 using namespace op;
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                   DataType::DT_BF16};
 
 static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
@@ -48,25 +48,23 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, broadcastShape, return false);
 
     if (broadcastShape != gradInputShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(gradInputShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(gradInputShape).GetString());
         return false;
     }
     return true;
 }
 
-namespace
-{
+namespace {
 static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* /* gradInput */)
 {
     op::DataType promoteType;
-    if (!CheckPromoteTypeGeluBackward(gradOutput, self, promoteType, DTYPE_SUPPORT_LIST)){
+    if (!CheckPromoteTypeGeluBackward(gradOutput, self, promoteType, DTYPE_SUPPORT_LIST)) {
         return false;
     }
     return true;
 }
-}
+} // namespace
 
 static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
@@ -106,9 +104,9 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
     return self;
 }
 
-aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnGeluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                              const aclTensor* gradInput, uint64_t* workspaceSize,
+                                              aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeluBackward, DFX_IN(gradOutput, self), DFX_OUT(gradInput));
     // 固定写法，创建OpExecutor
@@ -158,8 +156,8 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
         CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // 调用l0算子GeluGrad进行计算,输出dtype与gradInput一致
-        auto GeluBackwardResult =
-            l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, uniqueExecutor.get());
+        auto GeluBackwardResult = l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted,
+                                                 uniqueExecutor.get());
         CHECK_RET(GeluBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         auto castOut = l0op::Cast(GeluBackwardResult, gradInput->GetDataType(), uniqueExecutor.get());
@@ -186,8 +184,8 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
         CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // 调用l0算子GeluGrad进行计算,输出dtype与gradInput一致
-        auto GeluBackwardResult =
-            l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, uniqueExecutor.get());
+        auto GeluBackwardResult = l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted,
+                                                 uniqueExecutor.get());
         CHECK_RET(GeluBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         auto castOut = l0op::Cast(GeluBackwardResult, gradInput->GetDataType(), uniqueExecutor.get());
@@ -204,8 +202,8 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeluBackward(
-    void* workspace, uint64_t workspace_size, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnGeluBackward(void* workspace, uint64_t workspace_size, aclOpExecutor* executor,
+                              const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnGeluBackward);
     // 固定写法，调用框架能力，完成计算

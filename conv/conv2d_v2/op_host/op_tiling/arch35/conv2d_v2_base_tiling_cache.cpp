@@ -32,8 +32,8 @@ bool Conv2dBaseTiling::GetTilingFromCache()
     }
 
     Conv2dTilingCache& tilingCache = Conv2dTilingCache::GetInstance();
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: current cache size is %zu.",
-            paramInfo_.nodeType.c_str(), tilingCache.GetCacheSize());
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: current cache size is %zu.", paramInfo_.nodeType.c_str(),
+            tilingCache.GetCacheSize());
     GetCacheTilingInputArgs();
     if (tilingCache.GetCachedTiling(cacheInputArgs_, cachedTilingData_)) {
         TranslateCachedTilingData();
@@ -301,5 +301,5 @@ void Conv2dBaseTiling::TranslateCachedTilingData()
     flagInfo_.mSplitModeFlag = cachedTilingData_.mSplitModeFlag;
 }
 
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

@@ -29,9 +29,9 @@ extern "C" {
  * @param [out] executor: 执行器。
  * @return aclnnStatus。
  */
-ACLNN_API aclnnStatus aclnnInplaceEluGetWorkspaceSize(
-    aclTensor* selfRef, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnInplaceEluGetWorkspaceSize(aclTensor* selfRef, const aclScalar* alpha,
+                                                      const aclScalar* scale, const aclScalar* inputScale,
+                                                      uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnInplaceElu 第二段接口：在指定 stream 上执行计算。
@@ -41,8 +41,8 @@ ACLNN_API aclnnStatus aclnnInplaceEluGetWorkspaceSize(
  * @param [in] stream: aclrtStream。
  * @return aclnnStatus。
  */
-ACLNN_API aclnnStatus
-aclnnInplaceElu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnInplaceElu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      aclrtStream stream);
 
 #ifdef __cplusplus
 }

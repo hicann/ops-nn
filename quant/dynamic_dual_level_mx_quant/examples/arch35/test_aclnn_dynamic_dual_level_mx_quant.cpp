@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -35,8 +36,7 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-    int64_t
-    GetShapeSize(const std::vector<int64_t>& shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
     for (auto i : shape) {
@@ -77,7 +77,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -118,7 +118,8 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
     // 对应 float32 的值 (0->0)
     std::vector<float> level0ScaleOutHostData = {{0}};
     //对应float8_e8m0的值(128->2)
-    std::vector<std::vector<std::vector<uint8_t>>> level1ScaleOutHostData(1, std::vector<std::vector<uint8_t>>(8, std::vector<uint8_t>(2, 0)));
+    std::vector<std::vector<std::vector<uint8_t>>> level1ScaleOutHostData(
+        1, std::vector<std::vector<uint8_t>>(8, std::vector<uint8_t>(2, 0)));
     const char* roundModeOptional = "rint";
     int64_t level0Blocksize = 512;
     int64_t level1Blocksize = 32;
@@ -129,9 +130,12 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> xDeviceAddrPtr(xDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建smoothScaleOptional aclTensor
-    ret = CreateAclTensor(smoothScaleOptionalHostData, smoothScaleOptionalShape, &smoothScaleOptionalDeviceAddr, aclDataType::ACL_BF16, &smoothScaleOptional);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> smoothScaleOptionalTensorPtr(smoothScaleOptional, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void*)> smoothScaleOptionalDeviceAddrPtr(smoothScaleOptionalDeviceAddr, aclrtFree);
+    ret = CreateAclTensor(smoothScaleOptionalHostData, smoothScaleOptionalShape, &smoothScaleOptionalDeviceAddr,
+                          aclDataType::ACL_BF16, &smoothScaleOptional);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> smoothScaleOptionalTensorPtr(smoothScaleOptional,
+                                                                                               aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> smoothScaleOptionalDeviceAddrPtr(smoothScaleOptionalDeviceAddr,
+                                                                                aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建yOut aclTensor
     ret = CreateAclTensor(yOutHostData, yOutShape, &yOutDeviceAddr, aclDataType::ACL_FLOAT4_E2M1, &yOut);
@@ -139,13 +143,17 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(yOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建level0ScaleOut aclTensor
-    ret = CreateAclTensor(level0ScaleOutHostData, level0ScaleOutShape, &level0ScaleOutDeviceAddr, aclDataType::ACL_FLOAT, &level0ScaleOut);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> level0ScaleOutTensorPtr(level0ScaleOut, aclDestroyTensor);
+    ret = CreateAclTensor(level0ScaleOutHostData, level0ScaleOutShape, &level0ScaleOutDeviceAddr,
+                          aclDataType::ACL_FLOAT, &level0ScaleOut);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> level0ScaleOutTensorPtr(level0ScaleOut,
+                                                                                          aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> level0ScaleOutDeviceAddrPtr(level0ScaleOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建level1ScaleOut aclTensor
-    ret = CreateAclTensor(level1ScaleOutHostData, level1ScaleOutShape, &level1ScaleOutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &level1ScaleOut);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> level1ScaleOutTensorPtr(level1ScaleOut, aclDestroyTensor);
+    ret = CreateAclTensor(level1ScaleOutHostData, level1ScaleOutShape, &level1ScaleOutDeviceAddr,
+                          aclDataType::ACL_FLOAT8_E8M0, &level1ScaleOut);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> level1ScaleOutTensorPtr(level1ScaleOut,
+                                                                                          aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> level1ScaleOutDeviceAddrPtr(level1ScaleOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
@@ -154,9 +162,11 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
     aclOpExecutor* executor;
 
     // 调用aclnnDynamicDualLevelMxQuant第一段接口
-    ret = aclnnDynamicDualLevelMxQuantGetWorkspaceSize(x, smoothScaleOptional, (char *)roundModeOptional, level0Blocksize, level1Blocksize, yOut, level0ScaleOut, level1ScaleOut, &workspaceSize, &executor);
+    ret = aclnnDynamicDualLevelMxQuantGetWorkspaceSize(x, smoothScaleOptional, (char*)roundModeOptional,
+                                                       level0Blocksize, level1Blocksize, yOut, level0ScaleOut,
+                                                       level1ScaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -175,32 +185,29 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
 
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape) / 2;
-    std::vector<uint8_t> yOutData(
-        size, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
-                    size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+                      size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("yOut[%ld] is: %d\n", i, yOutData[i]);
     }
     size = GetShapeSize(level0ScaleOutShape);
-    std::vector<float> level0ScaleOutData(
-        size, 0);
-    ret = aclrtMemcpy(level0ScaleOutData.data(), level0ScaleOutData.size() * sizeof(level0ScaleOutData[0]), level0ScaleOutDeviceAddr,
-                    size * sizeof(level0ScaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    std::vector<float> level0ScaleOutData(size, 0);
+    ret = aclrtMemcpy(level0ScaleOutData.data(), level0ScaleOutData.size() * sizeof(level0ScaleOutData[0]),
+                      level0ScaleOutDeviceAddr, size * sizeof(level0ScaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy level0ScaleOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("level0ScaleOut[%ld] is: %f\n", i, level0ScaleOutData[i]);
     }
     size = GetShapeSize(level1ScaleOutShape);
     std::vector<uint8_t> level1ScaleOutData(
-        size, 0);  // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
-    ret = aclrtMemcpy(level1ScaleOutData.data(), level1ScaleOutData.size() * sizeof(level1ScaleOutData[0]), level1ScaleOutDeviceAddr,
-                    size * sizeof(level1ScaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+        size, 0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    ret = aclrtMemcpy(level1ScaleOutData.data(), level1ScaleOutData.size() * sizeof(level1ScaleOutData[0]),
+                      level1ScaleOutDeviceAddr, size * sizeof(level1ScaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy level1ScaleOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("level1ScaleOut[%ld] is: %d\n", i, level1ScaleOutData[i]);
     }
@@ -214,7 +221,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = aclnnDynamicDualLevelMxQuantTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuantTest failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuantTest failed. ERROR: %d\n", ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

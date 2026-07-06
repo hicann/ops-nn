@@ -19,8 +19,8 @@ using namespace AscendC;
 
 using namespace FatreluMul;
 
-extern "C" __global__ __aicore__ void fatrelu_mul(
-    GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void fatrelu_mul(GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace,
+                                                  GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

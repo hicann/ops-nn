@@ -23,8 +23,7 @@ struct GroupedQuantMaxCompileInfo {
     int32_t vectorCoreNum = 0;
 };
 
-enum class RoundMode
-{
+enum class RoundMode {
     MODE_RINT = 0,
     MODE_ROUND = 1,
     MODE_HYBRID = 2,
@@ -33,7 +32,7 @@ enum class RoundMode
 
 class GroupedQuantMaxRegbase {
 public:
-    explicit GroupedQuantMaxRegbase(gert::TilingContext* context) : context_(context) {};
+    explicit GroupedQuantMaxRegbase(gert::TilingContext* context) : context_(context){};
     ge::graphStatus DoTiling();
 
 protected:
@@ -41,9 +40,9 @@ protected:
     ge::graphStatus GetOpParam();
     ge::graphStatus CheckDtype();
     ge::graphStatus CheckAttrs();
-    ge::graphStatus CheckShape(
-        const gert::Shape& xShape, const gert::Shape& scaleShape, const gert::Shape& groupListShape, const gert::Shape& yShape,
-        const gert::Shape& amaxShape) const;
+    ge::graphStatus CheckShape(const gert::Shape& xShape, const gert::Shape& scaleShape,
+                               const gert::Shape& groupListShape, const gert::Shape& yShape,
+                               const gert::Shape& amaxShape) const;
     RoundMode GetRoundMode(const std::string& roundMode);
     void MergeInputShape(const gert::Shape& input);
     ge::graphStatus CalcTiling();
@@ -75,8 +74,8 @@ private:
     int64_t numGroups_{0};
     uint64_t tilingKey_{0};
     std::string errorMsg_ = "";
-    int64_t dtypeSizeX_{0};                                                                                                                                                                                                     
-    int64_t dtypeSizeY_{0}; 
+    int64_t dtypeSizeX_{0};
+    int64_t dtypeSizeY_{0};
 };
 
 } // namespace optiling

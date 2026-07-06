@@ -18,17 +18,12 @@
 
 #include "index_fill_tiling_common.h"
 
-namespace optiling
-{
-class IndexFillSimdTiling : public IndexFillCommonTiling
-{
+namespace optiling {
+class IndexFillSimdTiling : public IndexFillCommonTiling {
 public:
-    explicit IndexFillSimdTiling(gert::TilingContext* context) : IndexFillCommonTiling(context)
-    {
-    }
-    ~IndexFillSimdTiling() override
-    {
-    }
+    explicit IndexFillSimdTiling(gert::TilingContext* context) : IndexFillCommonTiling(context) {}
+    ~IndexFillSimdTiling() override {}
+
 private:
     uint64_t splitQ_ = 0;
     uint64_t blockFactorPN_;
@@ -58,5 +53,5 @@ private:
     void CalcUBBlock();
 };
 
-}  // namespace optiling
-#endif  // INDEX_FILL_TILING_SIMD_H_
+} // namespace optiling
+#endif // INDEX_FILL_TILING_SIMD_H_

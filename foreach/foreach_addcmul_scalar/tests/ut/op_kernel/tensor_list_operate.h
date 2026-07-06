@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -22,12 +23,15 @@
 #include "data_utils.h"
 
 template <typename T1, typename T2>
-inline T1 CeilA2B(T1 a, T2 b) {
+inline T1 CeilA2B(T1 a, T2 b)
+{
     return (a + b - 1) / b;
 }
 
 template <typename T>
-uint8_t* CreateTensorListForeachAddcmulScalar(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, char* tensor_name) {
+uint8_t* CreateTensorListForeachAddcmulScalar(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type,
+                                              char* tensor_name)
+{
     uint64_t tensorListDescCount = 1 + shapeInfos.size() * 2;
     for (auto s : shapeInfos) {
         tensorListDescCount += s.size();
@@ -53,7 +57,7 @@ uint8_t* CreateTensorListForeachAddcmulScalar(const std::vector<std::vector<uint
         uint64_t dataSize = shapeSizeList[i] * sizeof(T);
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
         std::stringstream fileName;
-        fileName << "./addcmul_scalar_data/"<< d_type << "_" << tensor_name << "_t_foreach_addcmul" << i <<".bin";
+        fileName << "./addcmul_scalar_data/" << d_type << "_" << tensor_name << "_t_foreach_addcmul" << i << ".bin";
         ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
     }
@@ -61,7 +65,9 @@ uint8_t* CreateTensorListForeachAddcmulScalar(const std::vector<std::vector<uint
 }
 
 template <typename T>
-void FreeTensorListForeachAddcmulScalar(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type) {
+void FreeTensorListForeachAddcmulScalar(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos,
+                                        char* d_type)
+{
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
     for (size_t i = 0; i < shapeInfos.size(); i++) {
@@ -71,7 +77,7 @@ void FreeTensorListForeachAddcmulScalar(uint8_t* addr, const std::vector<std::ve
         }
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
         std::stringstream fileName;
-        fileName << "./addcmul_scalar_data/"<< d_type << "_output_t_foreach_addcmul" << i <<".bin";
+        fileName << "./addcmul_scalar_data/" << d_type << "_output_t_foreach_addcmul" << i << ".bin";
         WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
         AscendC::GmFree((void*)(tensorAddr));
     }
@@ -79,4 +85,4 @@ void FreeTensorListForeachAddcmulScalar(uint8_t* addr, const std::vector<std::ve
     AscendC::GmFree((void*)addr);
 }
 
-#endif  // TENSOR_LIST_OPERATE_H
+#endif // TENSOR_LIST_OPERATE_H

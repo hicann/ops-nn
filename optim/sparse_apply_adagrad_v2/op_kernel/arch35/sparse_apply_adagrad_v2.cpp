@@ -18,17 +18,14 @@
 #include "sparse_apply_adagrad_v2_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_apply_adagrad_v2(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR epsilon,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR var_out, GM_ADDR accum_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_apply_adagrad_v2(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR epsilon,
+                                                   GM_ADDR grad, GM_ADDR indices, GM_ADDR var_out, GM_ADDR accum_out,
+                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseApplyAdagradV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseApplyAdagradV2TilingData, tilingData, tiling);
 
     if constexpr (schMode == SPARSE_ADAGRAD_V2_SCH_MODE_0) {
-        NsSparseApplyAdagradV2::Process<DTYPE_VAR, DTYPE_INDICES>(
-            var, accum, lr, epsilon, grad, indices, &tilingData);
+        NsSparseApplyAdagradV2::Process<DTYPE_VAR, DTYPE_INDICES>(var, accum, lr, epsilon, grad, indices, &tilingData);
     }
 }

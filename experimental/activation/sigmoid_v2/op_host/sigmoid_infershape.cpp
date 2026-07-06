@@ -13,10 +13,10 @@
 
 namespace ops {
 
-static ge::graphStatus InferShape4Sigmoid(gert::InferShapeContext *context)
+static ge::graphStatus InferShape4Sigmoid(gert::InferShapeContext* context)
 {
     return Ops::Base::InferShape4Elewise(context);
 }
 
 IMPL_OP_INFERSHAPE(Sigmoid).InferShape(InferShape4Sigmoid);
-}  // namespace ops
+} // namespace ops

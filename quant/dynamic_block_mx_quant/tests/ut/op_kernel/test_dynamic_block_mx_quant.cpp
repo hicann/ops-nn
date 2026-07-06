@@ -25,18 +25,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void dynamic_block_mx_quant(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void dynamic_block_mx_quant(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2,
+                                                             GM_ADDR workspace, GM_ADDR tiling);
 
 class dynamic_block_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dynamic_block_mx_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_block_mx_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dynamic_block_mx_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dynamic_block_mx_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(dynamic_block_mx_quant_test, test_case_100)
@@ -94,11 +89,11 @@ TEST_F(dynamic_block_mx_quant_test, test_case_100)
     tilingData->colTailCoreNum = 0;
     ICPU_SET_TILING_KEY(0);
 
-    auto dynamic_block_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_block_mx_quant<4,0>(x, y, mxScale1, mxScale2, workSpace, tiling);
+    auto dynamic_block_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workSpace,
+                                            GM_ADDR tiling) {
+        ::dynamic_block_mx_quant<4, 0>(x, y, mxScale1, mxScale2, workSpace, tiling);
     };
-    ICPU_RUN_KF(
-        dynamic_block_mx_quant_kernel, blockDim, x, y, mxScale1, mxScale2, workSpace, tiling);
+    ICPU_RUN_KF(dynamic_block_mx_quant_kernel, blockDim, x, y, mxScale1, mxScale2, workSpace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
@@ -162,7 +157,7 @@ TEST_F(dynamic_block_mx_quant_test, test_scaleAlg2_fp4_e2m1_dstMax0)
     ICPU_SET_TILING_KEY(0);
 
     auto kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_block_mx_quant<4,2>(x, y, mxScale1, mxScale2, workSpace, tiling);
+        ::dynamic_block_mx_quant<4, 2>(x, y, mxScale1, mxScale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel, blockDim, x, y, mxScale1, mxScale2, workSpace, tiling);
 
@@ -227,7 +222,7 @@ TEST_F(dynamic_block_mx_quant_test, test_scaleAlg2_fp4_e2m1_dstMax6)
     ICPU_SET_TILING_KEY(0);
 
     auto kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_block_mx_quant<4,2>(x, y, mxScale1, mxScale2, workSpace, tiling);
+        ::dynamic_block_mx_quant<4, 2>(x, y, mxScale1, mxScale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel, blockDim, x, y, mxScale1, mxScale2, workSpace, tiling);
 
@@ -292,7 +287,7 @@ TEST_F(dynamic_block_mx_quant_test, test_scaleAlg2_fp4_e2m1_dstMax7)
     ICPU_SET_TILING_KEY(0);
 
     auto kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_block_mx_quant<4,2>(x, y, mxScale1, mxScale2, workSpace, tiling);
+        ::dynamic_block_mx_quant<4, 2>(x, y, mxScale1, mxScale2, workSpace, tiling);
     };
     ICPU_RUN_KF(kernel, blockDim, x, y, mxScale1, mxScale2, workSpace, tiling);
 

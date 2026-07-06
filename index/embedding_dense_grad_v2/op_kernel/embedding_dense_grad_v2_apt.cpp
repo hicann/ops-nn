@@ -18,13 +18,13 @@
 using namespace AscendC;
 using namespace EmbeddingDenseGradV2;
 
-#define EMBEDDING_NO_SCALE_NO_SPLIT  1000000
-#define EMBEDDING_NO_SCALE_SPLIT  1000001
-#define EMBEDDING_SCALE_NO_SPLIT  1000010
-#define EMBEDDING_SCALE_SPLIT  1000011
+#define EMBEDDING_NO_SCALE_NO_SPLIT 1000000
+#define EMBEDDING_NO_SCALE_SPLIT 1000001
+#define EMBEDDING_SCALE_NO_SPLIT 1000010
+#define EMBEDDING_SCALE_SPLIT 1000011
 
-extern "C" __global__ __aicore__ void embedding_dense_grad_v2(GM_ADDR grad, GM_ADDR sortIndices,
-    GM_ADDR posIdx, GM_ADDR gradWeight, GM_ADDR workSpace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void embedding_dense_grad_v2(GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx,
+                                                              GM_ADDR gradWeight, GM_ADDR workSpace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EmbeddingDenseGradV2TilingData4RegBase);
     GM_ADDR userWS = GetUserWorkspace(workSpace);
@@ -36,19 +36,23 @@ extern "C" __global__ __aicore__ void embedding_dense_grad_v2(GM_ADDR grad, GM_A
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     if (TILING_KEY_IS(EMBEDDING_NO_SCALE_NO_SPLIT)) {
-        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, false, false, 1> obj(tpipe, tilingData);
+        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, false, false, 1> obj(
+            tpipe, tilingData);
         obj.Init(grad, sortIndices, posIdx, gradWeight, userWS);
         obj.Process();
     } else if (TILING_KEY_IS(EMBEDDING_NO_SCALE_SPLIT)) {
-        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, false, true, 1> obj(tpipe, tilingData);
+        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, false, true, 1> obj(
+            tpipe, tilingData);
         obj.Init(grad, sortIndices, posIdx, gradWeight, userWS);
         obj.Process();
     } else if (TILING_KEY_IS(EMBEDDING_SCALE_NO_SPLIT)) {
-        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, true, false, 1> obj(tpipe, tilingData);
+        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, true, false, 1> obj(
+            tpipe, tilingData);
         obj.Init(grad, sortIndices, posIdx, gradWeight, userWS);
         obj.Process();
     } else if (TILING_KEY_IS(EMBEDDING_SCALE_SPLIT)) {
-        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, true, true, 1> obj(tpipe, tilingData);
+        EmbeddingDenseGradV2::EmbeddingDenseGradV2Kernel<DTYPE_GRAD, float, DTYPE_SORT_INDICES, true, true, 1> obj(
+            tpipe, tilingData);
         obj.Init(grad, sortIndices, posIdx, gradWeight, userWS);
         obj.Process();
     }

@@ -23,15 +23,14 @@ using namespace AscendC;
 using namespace NsForeachAddcdivScalar;
 
 enum class ForeachAddcdivScalarTilingKey : uint32_t {
-    TILING_KEY_FP16 = 0,    // x1/x2/x3: float16, scalar: float16 -> y: float16
-    TILING_KEY_FP32 = 1,    // x1/x2/x3: float32, scalar: float32 -> y: float32
-    TILING_KEY_BF16 = 2,    // x1/x2/x3: bfloat16, scalar: float32 -> y: bfloat16
+    TILING_KEY_FP16 = 0, // x1/x2/x3: float16, scalar: float16 -> y: float16
+    TILING_KEY_FP32 = 1, // x1/x2/x3: float32, scalar: float32 -> y: float32
+    TILING_KEY_BF16 = 2, // x1/x2/x3: bfloat16, scalar: float32 -> y: bfloat16
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_addcdiv_scalar(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar,
-    GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_addcdiv_scalar(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalar, GM_ADDR y,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(ForeachAddcdivScalarTilingData);

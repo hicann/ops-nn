@@ -17,15 +17,9 @@
 
 class SigmoidProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Sigmoid Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Sigmoid Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Sigmoid Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Sigmoid Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(SigmoidProtoTest, sigmoid_infershape_diff_test)

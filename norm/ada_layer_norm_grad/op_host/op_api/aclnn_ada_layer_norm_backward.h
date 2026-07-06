@@ -24,15 +24,15 @@ extern "C" {
  */
 ACLNN_API aclnnStatus aclnnAdaLayerNormBackwardGetWorkspaceSize(
     const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* rstd,
-    const aclTensor* mean, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional, const aclTensor* biasOptional, 
-    aclTensor* gradInputOut, aclTensor* gradScaleOut, aclTensor* gradShiftOut,
+    const aclTensor* mean, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
+    const aclTensor* biasOptional, aclTensor* gradInputOut, aclTensor* gradScaleOut, aclTensor* gradShiftOut,
     aclTensor* gradWeightOut, aclTensor* gradBiasOut, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnAdaLayerNormBackward的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus
-aclnnAdaLayerNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnAdaLayerNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                aclrtStream stream);
 
 #ifdef __cplusplus
 }

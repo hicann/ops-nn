@@ -44,18 +44,11 @@ struct AdaptiveAvgPool3dCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-class AdaptiveAvgPool3dTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dTilingTestParam>
-{
+class AdaptiveAvgPool3dTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3dTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -104,18 +97,18 @@ TEST_P(AdaptiveAvgPool3dTilingTest, test_case_adaptive_avg_pool3d_tiling)
     // compile info
     AdaptiveAvgPool3dCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate

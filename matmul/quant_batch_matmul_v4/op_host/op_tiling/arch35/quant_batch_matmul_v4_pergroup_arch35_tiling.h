@@ -56,12 +56,12 @@ private:
     bool CheckPergroupDtype() const;
     bool CheckPergroupShape();
     bool CheckPergroupBasicShapeConstraints() const;
-    bool CheckPergroupDimAndOutput(
-        const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
-        const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape);
-    bool CheckPergroupScaleShape(const gert::Shape& x1ScaleShape, const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape) const;
+    bool CheckPergroupDimAndOutput(const gert::Shape& x1Shape, const gert::Shape& x2Shape,
+                                   const gert::Shape& x1ScaleShape, const gert::Shape& x2ScaleShape,
+                                   const gert::Shape& x2OffsetShape);
+    bool CheckPergroupScaleShape(const gert::Shape& x1ScaleShape, const gert::Shape& x2ScaleShape,
+                                 const gert::Shape& x2OffsetShape) const;
     bool CheckPergroupInputFormat() const;
     QuantBatchMatmulPergroupArch35Info inputParamsPergroup_;
 };
 } // namespace optiling
-

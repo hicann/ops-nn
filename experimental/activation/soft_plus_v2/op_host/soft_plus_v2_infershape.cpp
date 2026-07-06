@@ -25,11 +25,12 @@
 #include "log/log.h"
 
 namespace ops {
-static ge::graphStatus InferShape(gert::InferShapeContext *context) {
-  const gert::Shape *x_shape = context->GetInputShape(0);
-  gert::Shape *z_shape = context->GetOutputShape(0);
-  *z_shape = *x_shape;
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus InferShape(gert::InferShapeContext* context)
+{
+    const gert::Shape* x_shape = context->GetInputShape(0);
+    gert::Shape* z_shape = context->GetOutputShape(0);
+    *z_shape = *x_shape;
+    return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(SoftPlusV2).InferShape(InferShape);

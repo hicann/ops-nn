@@ -31,8 +31,8 @@ extern "C" {
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
@@ -90,8 +90,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, co
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecHardshrinkGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* lambd, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+static aclnnStatus ExecHardshrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, aclTensor* out,
+                                                  uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 参数检查
     auto ret = CheckParams(self, lambd, out);
@@ -130,8 +130,8 @@ static aclnnStatus ExecHardshrinkGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardshrinkGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* lambd, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnHardshrinkGetWorkspaceSize(const aclTensor* self, const aclScalar* lambd, aclTensor* out,
+                                            uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

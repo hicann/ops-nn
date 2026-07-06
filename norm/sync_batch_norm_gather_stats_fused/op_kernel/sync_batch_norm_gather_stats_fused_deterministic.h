@@ -23,8 +23,8 @@ using namespace AscendC;
 static constexpr int64_t DETERMINISTIC_DOUBLE_BUFFER = 2;
 static constexpr int64_t DETERMINISTIC_ROW_TEMPLATE = 180; // 改成了双倍的size
 static constexpr int64_t DETERMINISTIC_COL_TEMPLATE = 64;  // 因为Add mask的原因不太好调整
-static constexpr int64_t DETERMINISTIC_UB_SIZE =
-    180 * 1024 + 2 * DETERMINISTIC_DOUBLE_BUFFER * DETERMINISTIC_COL_TEMPLATE * sizeof(float);
+static constexpr int64_t DETERMINISTIC_UB_SIZE = 180 * 1024 + 2 * DETERMINISTIC_DOUBLE_BUFFER *
+                                                                  DETERMINISTIC_COL_TEMPLATE * sizeof(float);
 static constexpr int64_t FLOAT_ALIGN_SIZE = 8;
 static constexpr int64_t HALF_ALIGN_SIZE = 16;
 
@@ -32,13 +32,12 @@ template <typename T>
 class SyncBatchNormGatherStatsFusedDeterminsticCompute {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedDeterminsticCompute(){};
-    __aicore__ inline void initBuffer1(
-        TPipe& pipe, GlobalTensor<float>& reduceOutTensorGM, GlobalTensor<float>& workspaceGM, int64_t workspaceNum)
+    __aicore__ inline void initBuffer1(TPipe& pipe, GlobalTensor<float>& reduceOutTensorGM,
+                                       GlobalTensor<float>& workspaceGM, int64_t workspaceNum)
     {
         pipe_ = pipe;
-        pipe_.InitBuffer(
-            queueIn_, DETERMINISTIC_DOUBLE_BUFFER,
-            DETERMINISTIC_ROW_TEMPLATE * DETERMINISTIC_COL_TEMPLATE * sizeof(float));
+        pipe_.InitBuffer(queueIn_, DETERMINISTIC_DOUBLE_BUFFER,
+                         DETERMINISTIC_ROW_TEMPLATE * DETERMINISTIC_COL_TEMPLATE * sizeof(float));
         pipe_.InitBuffer(queueOut_, DETERMINISTIC_DOUBLE_BUFFER, DETERMINISTIC_COL_TEMPLATE * sizeof(float));
 
         reduceOutTensorGM_ = reduceOutTensorGM;
@@ -46,15 +45,14 @@ public:
         workspaceNum_ = workspaceNum;
     }
 
-    __aicore__ inline void initBuffer2(
-        TPipe& pipe, GlobalTensor<float>& reduceOutTensorGM, GlobalTensor<T>& resultOutTensorGM,
-        GlobalTensor<T>& runningMean, GlobalTensor<T>& runningMeanOut, GlobalTensor<float>& workspaceGM,
-        int64_t workspaceNum, float momentum)
+    __aicore__ inline void initBuffer2(TPipe& pipe, GlobalTensor<float>& reduceOutTensorGM,
+                                       GlobalTensor<T>& resultOutTensorGM, GlobalTensor<T>& runningMean,
+                                       GlobalTensor<T>& runningMeanOut, GlobalTensor<float>& workspaceGM,
+                                       int64_t workspaceNum, float momentum)
     {
         pipe_ = pipe;
-        pipe_.InitBuffer(
-            queueIn_, DETERMINISTIC_DOUBLE_BUFFER,
-            DETERMINISTIC_ROW_TEMPLATE * DETERMINISTIC_COL_TEMPLATE * sizeof(float));
+        pipe_.InitBuffer(queueIn_, DETERMINISTIC_DOUBLE_BUFFER,
+                         DETERMINISTIC_ROW_TEMPLATE * DETERMINISTIC_COL_TEMPLATE * sizeof(float));
         pipe_.InitBuffer(queueOut_, DETERMINISTIC_DOUBLE_BUFFER, DETERMINISTIC_COL_TEMPLATE * sizeof(float));
         pipe_.InitBuffer(runningMeanOut_, DETERMINISTIC_DOUBLE_BUFFER, DETERMINISTIC_COL_TEMPLATE * sizeof(float));
         resultOutTensorGM_ = resultOutTensorGM;
@@ -103,8 +101,8 @@ public:
         queueOut_.FreeTensor(buffer2_);
     }
 
-    __aicore__ inline void MeanAllDeterministicWithRunningMeanUpdate(
-        int64_t tcolAlignV, int64_t tblockNum, int64_t tcol)
+    __aicore__ inline void MeanAllDeterministicWithRunningMeanUpdate(int64_t tcolAlignV, int64_t tblockNum,
+                                                                     int64_t tcol)
     {
         colAlignV_ = tcolAlignV;
         row_ = tblockNum;
@@ -238,8 +236,8 @@ public:
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(buffer1_.ReinterpretCast<T>(), runningMeanGM_[offset], intriParams, padParams);
         } else {
-            DataCopyPad(
-                buffer1_.ReinterpretCast<T>()[colSize + rightPad], runningMeanGM_[offset], intriParams, padParams);
+            DataCopyPad(buffer1_.ReinterpretCast<T>()[colSize + rightPad], runningMeanGM_[offset], intriParams,
+                        padParams);
         }
         event_t event2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(event2);

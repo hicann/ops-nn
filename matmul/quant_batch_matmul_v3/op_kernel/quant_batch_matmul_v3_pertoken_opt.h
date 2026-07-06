@@ -22,14 +22,14 @@
 namespace AscendC {
 
 // 当前mc2不调用该接口，修改接口仍需check
-template <typename xType, typename wType, int fFormat, int wFormat, typename scaleType, typename yType, bool aTrans, bool bTrans,
-          bool isAllAiv = false>
+template <typename xType, typename wType, int fFormat, int wFormat, typename scaleType, typename yType, bool aTrans,
+          bool bTrans, bool isAllAiv = false>
 class BmmDequantPertokenOpt {
 public:
     __aicore__ inline BmmDequantPertokenOpt() {}
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR scale, GM_ADDR pertokenScale, GM_ADDR y,
-                                GM_ADDR workSpace, const QuantBatchMatmulV3TilingData *__restrict tilingData,
-                                TPipe *tPipe)
+                                GM_ADDR workSpace, const QuantBatchMatmulV3TilingData* __restrict tilingData,
+                                TPipe* tPipe)
     {
         blockIdx_ = GetBlockIdx();
         blockIdx_ /= GetTaskRation();
@@ -72,22 +72,22 @@ public:
             return;
         }
         // update global buffer
-        xGm_.SetGlobalBuffer((__gm__ xType *)x1);
-        weightGm_.SetGlobalBuffer((__gm__ wType *)x2);
+        xGm_.SetGlobalBuffer((__gm__ xType*)x1);
+        weightGm_.SetGlobalBuffer((__gm__ wType*)x2);
         if (m_ <= baseM_) {
             weightGm_.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
         }
         if (biasDtype_ == DT_BF16) {
-            biasGmBf16_.SetGlobalBuffer((__gm__ bfloat16_t *)bias);
+            biasGmBf16_.SetGlobalBuffer((__gm__ bfloat16_t*)bias);
         } else if (biasDtype_ == DT_FLOAT16) {
-            biasGmFp16_.SetGlobalBuffer((__gm__ half *)bias);
+            biasGmFp16_.SetGlobalBuffer((__gm__ half*)bias);
         } else if (biasDtype_ == DT_FLOAT) {
-            biasGmFp32_.SetGlobalBuffer((__gm__ float *)bias);
+            biasGmFp32_.SetGlobalBuffer((__gm__ float*)bias);
         } else if (hasBias_ != 0U) {
-            biasGmInt32_.SetGlobalBuffer((__gm__ int32_t *)bias);
+            biasGmInt32_.SetGlobalBuffer((__gm__ int32_t*)bias);
         }
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
-        scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
+        yGm_.SetGlobalBuffer((__gm__ yType*)y);
+        scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
         if (isPerTensor_) {
             if constexpr (IsSameType<scaleType, bfloat16_t>::value) {
                 scaleScalar_ = ToFloat(scaleGm_.GetValue(0));
@@ -95,9 +95,9 @@ public:
                 scaleScalar_ = scaleGm_.GetValue(0);
             }
         }
-        pertokenScaleGm_.SetGlobalBuffer((__gm__ float *)pertokenScale);
+        pertokenScaleGm_.SetGlobalBuffer((__gm__ float*)pertokenScale);
         uint32_t singleCoreOffset = baseM_ * DequantBmm::Align(singleCoreN_, baseN_);
-        mmOutGm_.SetGlobalBuffer((__gm__ int32_t *)workSpace, usedCoreNum_ * singleCoreOffset);
+        mmOutGm_.SetGlobalBuffer((__gm__ int32_t*)workSpace, usedCoreNum_ * singleCoreOffset);
     }
 
     /** main logical function
@@ -129,7 +129,7 @@ public:
         for (uint32_t i = 0; i < singleCoreBatchUpdate; ++i) {
             // 不同batch复用相同workspace，需设置c等v的搬运同步，避免workspace的读写冲突
             CalcOffset(i, batchCoreIndx, mCoreIndx, nCoreIndx);
-            for(uint32_t j = 0; j < mLoops; ++j) {
+            for (uint32_t j = 0; j < mLoops; ++j) {
                 uint32_t singleM = j == mLoops - 1 ? singleCoreMUpdate - (mLoops - 1) * baseM_ : baseM_;
                 CalcMAxisOffset(j, nLoops);
                 if ASCEND_IS_AIV {
@@ -176,7 +176,7 @@ protected:
     GlobalTensor<float> pertokenScaleGm_;
     GlobalTensor<int32_t> mmOutGm_;
 
-    TPipe *pipe_;
+    TPipe* pipe_;
     // define the que
     TQue<QuePosition::VECIN, 1> vecQueSrc_;
     TQue<QuePosition::VECIN, 1> vecQueScale_;
@@ -200,8 +200,8 @@ protected:
     float scaleScalar_;
     uint64_t offsetA_;
     uint64_t offsetB_;
-    uint64_t offsetC_;  // mm out: workspace
-    uint64_t offsetY_;  // op final out(y): ddr
+    uint64_t offsetC_; // mm out: workspace
+    uint64_t offsetY_; // op final out(y): ddr
     uint64_t offsetBias_;
     uint64_t offsetScale_;
     uint64_t offsetPertokenScale_;
@@ -230,7 +230,7 @@ protected:
 
     /** init function for TilingData of mm
      */
-    __aicore__ inline void InitTilingData(const QuantBatchMatmulV3TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const QuantBatchMatmulV3TilingData* tilingData)
     {
         hasBias_ = tilingData->matmulTiling.isBias;
         isPerTensor_ = tilingData->params.isPerTensor;
@@ -248,8 +248,8 @@ protected:
         m_ = tilingData->matmulTiling.M;
         n_ = tilingData->matmulTiling.N;
         k_ = tilingData->matmulTiling.Ka;
-        singleCoreM_ = tilingData->params.realSingleCoreM;  // calcM of each core
-        singleCoreN_ = tilingData->params.realSingleCoreN;  // calcN of each core
+        singleCoreM_ = tilingData->params.realSingleCoreM; // calcM of each core
+        singleCoreN_ = tilingData->params.realSingleCoreN; // calcN of each core
         singleCoreK_ = tilingData->matmulTiling.singleCoreK;
         usedCoreNum_ = tilingData->matmulTiling.usedCoreNum;
 
@@ -260,7 +260,8 @@ protected:
         ubTmpBuffer_ = tilingData->params.needUbBuffer;
     }
 
-    __aicore__ inline void CalcOffset(uint32_t batchIndex, uint32_t batchCoreIndx, uint32_t mCoreIndx, uint32_t nCoreIndx)
+    __aicore__ inline void CalcOffset(uint32_t batchIndex, uint32_t batchCoreIndx, uint32_t mCoreIndx,
+                                      uint32_t nCoreIndx)
     {
         uint64_t batchAOffset = static_cast<uint64_t>((batchCoreIndx * (singleCoreBatch_) + batchIndex) % batchA_);
         uint64_t batchBOffset = static_cast<uint64_t>((batchCoreIndx * (singleCoreBatch_) + batchIndex) % batchB_);
@@ -270,7 +271,7 @@ protected:
         if constexpr (AMatmulType::format == CubeFormat::ND) {
             if constexpr (aTrans) {
                 offsetA_ = batchAOffset * static_cast<uint64_t>(k_ * m_) + mOffset;
-            } else  {
+            } else {
                 offsetA_ = batchAOffset * static_cast<uint64_t>(k_ * m_) + mOffset * k_;
             }
         } else if constexpr (AMatmulType::format == CubeFormat::NZ) {
@@ -292,14 +293,11 @@ protected:
             if constexpr (bTrans) {
                 // k1, n1, n0, k0
                 offsetB_ = DequantBmm::Align(nOffset, BMM_BLOCK_NUM) * K0_INT8 +
-                           batchBOffset * DequantBmm::Align(n_, BMM_BLOCK_NUM) *
-                               DequantBmm::Align(k_, K0_INT8);
+                           batchBOffset * DequantBmm::Align(n_, BMM_BLOCK_NUM) * DequantBmm::Align(k_, K0_INT8);
             } else {
                 // n1, k1, k0, n0
-                offsetB_ =
-                    DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
-                    batchBOffset * DequantBmm::Align(n_, K0_INT8) *
-                        DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                offsetB_ = DequantBmm::Align(nOffset, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM) +
+                           batchBOffset * DequantBmm::Align(n_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 
@@ -316,7 +314,7 @@ protected:
         }
     }
 
-     __aicore__ inline void CalcMAxisOffset(uint32_t loopIdx, uint32_t nLoops)
+    __aicore__ inline void CalcMAxisOffset(uint32_t loopIdx, uint32_t nLoops)
     {
         if (loopIdx == 0) {
             return;
@@ -374,8 +372,7 @@ protected:
             if constexpr (bTrans) {
                 offsetB_ += DequantBmm::Align(baseN_, BMM_BLOCK_NUM) * K0_INT8;
             } else {
-                offsetB_ +=
-                    DequantBmm::Align(baseN_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
+                offsetB_ += DequantBmm::Align(baseN_, K0_INT8) * DequantBmm::Align(k_, BMM_BLOCK_NUM);
             }
         }
 
@@ -394,8 +391,8 @@ protected:
         if (hasBias_ != 0 && biasDtype_ == DT_INT32) {
             mm.SetBias(biasGmInt32_[offsetBias_]);
         }
-        mm.Iterate();                                // matmultiling singleM_ * baseN_
-        mm.GetTensorC(mmOutGm_[offsetC_], 0, true);  // baseM * baseN 连续写
+        mm.Iterate();                               // matmultiling singleM_ * baseN_
+        mm.GetTensorC(mmOutGm_[offsetC_], 0, true); // baseM * baseN 连续写
     }
 
     __aicore__ inline void PertokenGm2Ub(uint32_t singleM)
@@ -435,7 +432,7 @@ protected:
         }
     }
 
-    __aicore__ inline void CastBias2Fp32(LocalTensor<float> &biasFp32, uint32_t computedAivN)
+    __aicore__ inline void CastBias2Fp32(LocalTensor<float>& biasFp32, uint32_t computedAivN)
     {
         if (biasDtype_ == DT_INT32) {
             return;
@@ -459,7 +456,7 @@ protected:
         }
     }
 
-    __aicore__ inline void CalBiasAdd(const LocalTensor<float> &dstLocalFp32, LocalTensor<float> &biasFp32,
+    __aicore__ inline void CalBiasAdd(const LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32,
                                       uint32_t curAivM, uint32_t computedAivN)
     {
         for (uint32_t mIdx = 0; mIdx < curAivM; ++mIdx) {
@@ -468,7 +465,7 @@ protected:
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void MulPertokenAndScale(LocalTensor<float> &broadcastFp32, LocalTensor<float> &scaleLocalFp32,
+    __aicore__ inline void MulPertokenAndScale(LocalTensor<float>& broadcastFp32, LocalTensor<float>& scaleLocalFp32,
                                                const uint32_t (&broadCastDst)[2], uint32_t calCount)
     {
         uint32_t singleM = broadCastDst[0];
@@ -479,7 +476,7 @@ protected:
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void BroadCastMN(LocalTensor<float> &broadcastFp32, uint32_t singleM, uint32_t computedAivN)
+    __aicore__ inline void BroadCastMN(LocalTensor<float>& broadcastFp32, uint32_t singleM, uint32_t computedAivN)
     {
         const uint32_t broadCastDst[M_N_TWO_DIMS] = {singleM, computedAivN};
         const uint32_t broadCastSrc[M_N_TWO_DIMS] = {singleM, 1};
@@ -487,7 +484,7 @@ protected:
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void PreUbProcess(LocalTensor<float> &broadcastFp32, uint32_t singleM, uint32_t curAicN)
+    __aicore__ inline void PreUbProcess(LocalTensor<float>& broadcastFp32, uint32_t singleM, uint32_t curAicN)
     {
         // 提前做好m,n方向的scale相乘矩阵，这部分cv并行,按行组成m * baseN的fp32矩阵, 最大L0C Size
         // 全部弄到shape 16对齐
@@ -511,7 +508,7 @@ protected:
                 MulPertokenAndScale(broadcastFp32, scaleLocalFp32, broadCastDims, DequantBmm::Align(curAicN));
             } else {
                 MulPertokenAndScale(broadcastFp32, scaleLocal, broadCastDims,
-                                    DequantBmm::Align(curAicN, 8U));  // 8: 32 / sizeof(float)
+                                    DequantBmm::Align(curAicN, 8U)); // 8: 32 / sizeof(float)
             }
             vecQueScale_.FreeTensor(scaleLocal);
         }
@@ -520,7 +517,7 @@ protected:
         }
     }
 
-    __aicore__ inline void PostUbProcess(LocalTensor<float> &resFp32, uint32_t curAicM, uint32_t curAicN)
+    __aicore__ inline void PostUbProcess(LocalTensor<float>& resFp32, uint32_t curAicM, uint32_t curAicN)
     {
         LocalTensor<float> biasFp32;
         uint32_t curAivM = DequantBmm::Min(ubCalcM_, curAicM);
@@ -533,9 +530,9 @@ protected:
         DataCopyExtParams ub2GmParams{static_cast<uint16_t>(curAivM), static_cast<uint32_t>(curAivN * sizeof(yType)), 0,
                                       static_cast<uint32_t>((n_ - curAivN) * sizeof(yType)), 0};
         DataCopyPadParams padParams;
-        uint32_t computedAivN = DequantBmm::Align(curAivN);  // 16: sizeof(yType) is 2, 32B / 2
+        uint32_t computedAivN = DequantBmm::Align(curAivN); // 16: sizeof(yType) is 2, 32B / 2
         if (computedAivN != DequantBmm::Align(curAivN, 8U)) {
-            gm2UbParams.dstStride = 1;  // dst ub, 1 dataBlock(32B), shape 16 aligned
+            gm2UbParams.dstStride = 1; // dst ub, 1 dataBlock(32B), shape 16 aligned
         }
         // 后续可以把biasFp32搞成类成员变量，则可以把cast提到前处理中
         CastBias2Fp32(biasFp32, computedAivN);
@@ -602,7 +599,7 @@ protected:
             for (uint32_t fixpInnerIdx = 0; fixpInnerIdx < fixpNInnerTimes; ++fixpInnerIdx) {
                 if (realFixpInnerIdx == fixpNTimes - 1) {
                     curAicN = singleN - baseN_ * (fixpNTimes - 1);
-                    fixpNInnerTimes = fixpInnerIdx;  // 结束循环
+                    fixpNInnerTimes = fixpInnerIdx; // 结束循环
                 }
                 CalcNAxisOffset(realFixpInnerIdx);
                 if ASCEND_IS_AIC {
@@ -636,6 +633,6 @@ protected:
         }
     }
 };
-}  // namespace AscendC
+} // namespace AscendC
 
-#endif  // QUANT_BATCH_MATMUL_V3_PERTOKEN_OPT_H
+#endif // QUANT_BATCH_MATMUL_V3_PERTOKEN_OPT_H

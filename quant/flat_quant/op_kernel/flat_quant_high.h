@@ -21,21 +21,24 @@ namespace FlatQuantNS {
 template <typename T>
 class FlatQuantHigh {
 public:
-    aifunc FlatQuantHigh(){}
-    aifunc void Init(GM_ADDR xmtx_, GM_ADDR p1mtx_, GM_ADDR p2mtx_, GM_ADDR out_, GM_ADDR qscale_, GM_ADDR workspace_, const FlatQuantTilingData* tilingData){
+    aifunc FlatQuantHigh() {}
+    aifunc void Init(GM_ADDR xmtx_, GM_ADDR p1mtx_, GM_ADDR p2mtx_, GM_ADDR out_, GM_ADDR qscale_, GM_ADDR workspace_,
+                     const FlatQuantTilingData* tilingData)
+    {
         shape.M = tilingData->M;
         shape.N = tilingData->N;
         shape.K = tilingData->K;
         clipRatio = tilingData->clipRatio;
         tiling();
 
-        xGM.SetGlobalBuffer((__gm__ T *)xmtx_);
-        p1GM.SetGlobalBuffer((__gm__ T *)p1mtx_);
-        p2GM.SetGlobalBuffer((__gm__ T *)p2mtx_);
-        outGM.SetGlobalBuffer((__gm__ int4b_t *)out_);
-        qscaleGM.SetGlobalBuffer((__gm__ float *)qscale_);
-        x1GM.SetGlobalBuffer((__gm__ T *)workspace_ + useAivNum * K_DOUBLE_VEC * shape.Mceil * shape.N * sizeof(float) / sizeof(T));
-        x2GM.SetGlobalBuffer((__gm__ float *)workspace_);
+        xGM.SetGlobalBuffer((__gm__ T*)xmtx_);
+        p1GM.SetGlobalBuffer((__gm__ T*)p1mtx_);
+        p2GM.SetGlobalBuffer((__gm__ T*)p2mtx_);
+        outGM.SetGlobalBuffer((__gm__ int4b_t*)out_);
+        qscaleGM.SetGlobalBuffer((__gm__ float*)qscale_);
+        x1GM.SetGlobalBuffer((__gm__ T*)workspace_ +
+                             useAivNum * K_DOUBLE_VEC * shape.Mceil * shape.N * sizeof(float) / sizeof(T));
+        x2GM.SetGlobalBuffer((__gm__ float*)workspace_);
 
         pipe.InitBuffer(bufQueue, HIGH_UB_SIZE);
         xTensor = bufQueue.Get<float>();
@@ -52,14 +55,15 @@ public:
         eventIdMte3ToS = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_S));
     }
 
-    aifunc void tiling(){
+    aifunc void tiling()
+    {
         aivNum = GetBlockNum() * DOUBLE;
         useAivNum = (shape.K + K_PER_VEC - 1) / K_PER_VEC;
         if (useAivNum > aivNum) {
             useAivNum = aivNum;
         }
         int k_per_core = ((shape.K + aivNum - 1) / aivNum + K_PER_VEC - 1) / (K_PER_VEC) * (K_PER_VEC);
-        shape.K1 = k_per_core * GetBlockIdx();  // vector blk idx is 0~40
+        shape.K1 = k_per_core * GetBlockIdx(); // vector blk idx is 0~40
         shape.K2 = ((k_per_core + shape.K1) > shape.K) ? shape.K : (k_per_core + shape.K1);
         shape.Mceil = (shape.M + CEIL_SIZE - 1) / CEIL_SIZE * CEIL_SIZE;
         shape.Nceil = (shape.N + CEIL_SIZE - 1) / CEIL_SIZE * CEIL_SIZE;
@@ -68,12 +72,13 @@ public:
         x2Offset = GetBlockIdx() * K_DOUBLE_VEC * shape.Mceil * shape.N;
     }
 
-    aifunc void Process(){
+    aifunc void Process()
+    {
         Duplicate<float>(xTensor, (T)0, DATA_COUNT);
         Duplicate<half>(absTensor, (half)0, DATA_COUNT);
         Duplicate<float>(qscaleTensor, (float)0, SCALE_COUNT);
         PipeBarrier<PIPE_V>();
-        
+
         int64_t scaleK = shape.K1;
         int64_t k = shape.K1;
         for (int64_t startK = shape.K1; startK < shape.K2; startK += K_PER_VEC) {
@@ -81,7 +86,7 @@ public:
             ProcessHighK(startK, endK - startK);
             while (k < endK) {
                 SplitQuant(k, scaleK);
-                k ++;
+                k++;
             }
             if (k == shape.K2 || k == scaleK + SCALE_COUNT) {
                 CopyOutQuant(scaleK, k - scaleK);
@@ -90,7 +95,8 @@ public:
         }
     }
 
-    aifunc void CopyOutQuant(int64_t scaleK, int64_t scaleCount){
+    aifunc void CopyOutQuant(int64_t scaleK, int64_t scaleCount)
+    {
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(scaleCount * sizeof(float)), 0, 0, 0};
@@ -99,7 +105,8 @@ public:
         WaitFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
     }
 
-    aifunc void SplitQuant(int64_t k, int64_t scaleK){
+    aifunc void SplitQuant(int64_t k, int64_t scaleK)
+    {
         float maxValue = 0.0f;
         ComputeMaxValue(k, maxValue);
 
@@ -110,7 +117,8 @@ public:
             int64_t rowNumCeil = (shape.Mceil - rowIdx < splitRow) ? shape.Mceil - rowIdx : splitRow;
             int64_t realCount = rowNum * shape.N;
 
-            DataCopy(xTensor, x2GM[x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N + rowIdx * shape.N], rowNumCeil * shape.N);
+            DataCopy(xTensor, x2GM[x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N + rowIdx * shape.N],
+                     rowNumCeil * shape.N);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Cast(absTensor, xTensor, RoundMode::CAST_RINT, realCount);
@@ -133,11 +141,13 @@ public:
         }
     }
 
-    aifunc void ComputeMaxValue(int64_t k, float &maxValue){
+    aifunc void ComputeMaxValue(int64_t k, float& maxValue)
+    {
         for (int64_t rowIdx = 0; rowIdx < shape.Mceil; rowIdx += splitRow) {
             int64_t rowNum = (shape.M - rowIdx < splitRow) ? shape.M - rowIdx : splitRow;
             int64_t rowNumCeil = (shape.Mceil - rowIdx < splitRow) ? shape.Mceil - rowIdx : splitRow;
-            DataCopy(xTensor, x2GM[x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N + rowIdx * shape.N], rowNumCeil * shape.N);
+            DataCopy(xTensor, x2GM[x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N + rowIdx * shape.N],
+                     rowNumCeil * shape.N);
             SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
             Cast(xTensor.template ReinterpretCast<half>(), xTensor, RoundMode::CAST_RINT, rowNum * shape.N);
@@ -153,7 +163,8 @@ public:
         }
     }
 
-    aifunc void ProcessHighK(int64_t k, int64_t batch){
+    aifunc void ProcessHighK(int64_t k, int64_t batch)
+    {
         int64_t offset1 = x1Offset + (k % K_PER_VEC) * shape.M * shape.N;
         int64_t offset2 = x2Offset + (k % K_DOUBLE_VEC) * shape.Mceil * shape.N;
         matmulR.SetSingleShape(batch * shape.M, shape.N, shape.N);
@@ -162,7 +173,7 @@ public:
         matmulR.IterateAll(x1GM[offset1], false);
 
         matmulL.SetTensorA(p1GM, false);
-        for (int64_t i = 0;i < batch;i ++) {
+        for (int64_t i = 0; i < batch; i++) {
             matmulL.SetTensorB(x1GM[offset1], false);
             matmulL.IterateAll(x2GM[offset2], false);
             offset1 += shape.M * shape.N;
@@ -173,13 +184,15 @@ public:
 public:
     TPipe pipe;
     matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>, matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>, MDL_CFG>
+                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>, MDL_CFG>
         matmulR;
 
     matmul::Matmul<matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>,
-        matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>, matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>,
-        matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>, MDL_CFG>
+                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, float>,
+                   matmul::MatmulType<TPosition::GM, CubeFormat::ND, T>, MDL_CFG>
         matmulL;
 
 private:
@@ -214,6 +227,6 @@ private:
     int64_t x1Offset = 0;
     int64_t x2Offset = 0;
 };
-}  // namespace FlatQuantNS
+} // namespace FlatQuantNS
 
-#endif  // FLAT_QUANT_HIGH_H
+#endif // FLAT_QUANT_HIGH_H

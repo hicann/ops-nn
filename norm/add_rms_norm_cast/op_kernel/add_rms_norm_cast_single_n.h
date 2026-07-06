@@ -22,14 +22,11 @@ using namespace RmsNorm;
 template <typename T>
 class KernelAddRmsNormCastSingleN {
     static constexpr int32_t MAXBUF = 195584;
+
 public:
-    __aicore__ inline KernelAddRmsNormCastSingleN(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace,
-        const AddRMSNormCastTilingData* tiling)
+    __aicore__ inline KernelAddRmsNormCastSingleN(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRMSNormCastTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
 
@@ -120,7 +117,8 @@ private:
         PipeBarrier<PIPE_V>();
 
         // copyout rstd
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         SetFlag<HardEvent::V_MTE3>(eventVMTE3V1);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3V1);
         DataCopyCustom<float>(rstdGm, sqxLocal, 1);
@@ -216,21 +214,23 @@ private:
         SetFlag<HardEvent::S_V>(eventSVBf16);
         WaitFlag<HardEvent::S_V>(eventSVBf16);
         // copyout rstd
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         SetFlag<HardEvent::V_MTE3>(eventVMTE3Bf16);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3Bf16);
         DataCopyCustom<float>(rstdGm, sqxLocalBf16, 1);
         event_t eventMTE3V2Bf16 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
         SetFlag<HardEvent::MTE3_V>(eventMTE3V2Bf16);
 #endif
-        
+
         Muls(xFp32LocalBf16, xFp32LocalBf16, rstdValueBf16, numCol);
         PipeBarrier<PIPE_V>();
         WaitFlag<HardEvent::MTE3_V>(eventMTE3VBf16);
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventMTE3VBf16);
         WaitFlag<HardEvent::MTE2_V>(eventMTE2V3Bf16);
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE2_V>(eventMTE2V3Bf16);
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
         WaitFlag<HardEvent::MTE3_V>(eventMTE3V2Bf16);
         GetTPipePtr()->ReleaseEventID<HardEvent::MTE3_V>(eventMTE3V2Bf16);
 #endif

@@ -20,14 +20,11 @@ namespace optiling {
 
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 
-bool AdaptiveMaxPool3dGradTilingSimt::IsCapable()
-{
-    return true;
-}
+bool AdaptiveMaxPool3dGradTilingSimt::IsCapable() { return true; }
 
 ge::graphStatus AdaptiveMaxPool3dGradTilingSimt::DoOpTiling()
 {
- OP_LOGD(context_->GetNodeName(), "Enter AdaptiveMaxPool3dGradTilingSimt DoOpTiling.");
+    OP_LOGD(context_->GetNodeName(), "Enter AdaptiveMaxPool3dGradTilingSimt DoOpTiling.");
     tilingData_->nDim = inputData.nX;
     tilingData_->cDim = inputData.cX;
     tilingData_->dInDim = inputData.dGrad;
@@ -36,7 +33,10 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingSimt::DoOpTiling()
     tilingData_->dOutDim = inputData.dX;
     tilingData_->hOutDim = inputData.hX;
     tilingData_->wOutDim = inputData.wX;
-    tilingData_->isOverLap = (inputData.dX % inputData.dGrad != 0 || inputData.hX % inputData.hGrad != 0 || inputData.wX % inputData.wGrad != 0) ? 1 : 0;
+    tilingData_->isOverLap = (inputData.dX % inputData.dGrad != 0 || inputData.hX % inputData.hGrad != 0 ||
+                              inputData.wX % inputData.wGrad != 0) ?
+                                 1 :
+                                 0;
     tilingData_->deterministicFlag = (context_->GetDeterministic() == 1 && tilingData_->isOverLap) ? 1 : 0;
     return ge::GRAPH_SUCCESS;
 }
@@ -75,4 +75,4 @@ uint64_t AdaptiveMaxPool3dGradTilingSimt::GetTilingKey() const
 }
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveMaxPool3DGrad, AdaptiveMaxPool3dGradTilingSimt, 1);
-}  // namespace optiling
+} // namespace optiling

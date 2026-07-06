@@ -19,7 +19,6 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "util/math_util.h"
 
-
 namespace optiling {
 
 using namespace AscendC;
@@ -43,21 +42,19 @@ bool Pool3DBigKernelNDHWCTiling::IsCapable()
     if (inputData_.inputFormat != ge::Format::FORMAT_NDHWC) {
         return false;
     }
-    if (inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] 
-            < static_cast<int64_t>(totalCoreNum_ * DIGIT_TWO)) {
+    if (inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <
+        static_cast<int64_t>(totalCoreNum_ * DIGIT_TWO)) {
         return true;
     }
     if (inputData_.kernelSize[D_DIM] * inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] *
-        inputData_.channels * inputData_.dtypeSize < MIN_KERNEL) {
+            inputData_.channels * inputData_.dtypeSize <
+        MIN_KERNEL) {
         return false;
     }
     return true;
 }
 
-ge::graphStatus Pool3DBigKernelNDHWCTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Pool3DBigKernelNDHWCTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Pool3DBigKernelNDHWCTiling::GetWorkspaceSize()
 {
@@ -69,21 +66,20 @@ ge::graphStatus Pool3DBigKernelNDHWCTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t Pool3DBigKernelNDHWCTiling::GetTilingKey() const
-{
-    return POOL_3D_TILING_KEY_BIG_KERNEL_NDHWC;
-}
- 
+uint64_t Pool3DBigKernelNDHWCTiling::GetTilingKey() const { return POOL_3D_TILING_KEY_BIG_KERNEL_NDHWC; }
+
 void Pool3DBigKernelNDHWCTiling::DoUBTiling()
 {
     totalIdx_ = inputData_.batches * inputData_.outShape[D_DIM] * inputData_.outShape[H_DIM] *
-        inputData_.outShape[W_DIM];
+                inputData_.outShape[W_DIM];
     // coreNum已在tiling_base中校验过非0
     blockFactor_ = totalIdx_ / static_cast<int64_t>(totalCoreNum_);
     blockTail_ = totalIdx_ % static_cast<int64_t>(totalCoreNum_);
     coreNums_ = blockFactor_ == 0 ? totalIdx_ : static_cast<int64_t>(totalCoreNum_);
     isSigOut_ = (inputData_.outShape[D_DIM] == 1 && inputData_.outShape[H_DIM] == 1 &&
-        inputData_.outShape[W_DIM] == 1) ? 1 : 0;
+                 inputData_.outShape[W_DIM] == 1) ?
+                    1 :
+                    0;
 
     int64_t vRegSize = Ops::Base::GetVRegSize(context_) / inputData_.dtypeSize;
     int64_t blockSize = Ops::Base::GetUbBlockSize(context_) / inputData_.dtypeSize;
@@ -95,15 +91,16 @@ void Pool3DBigKernelNDHWCTiling::DoUBTiling()
         oneOutChannelAlign = Ops::Base::CeilAlign(channelAlign, vRegSize);
     }
     const int64_t sumBufferSize = (!isMaxPool3D_ && inputData_.dtypeSize == BYTE_NUM_TWO) ?
-        oneOutChannelAlign * DIGIT_TWO : 0;
+                                      oneOutChannelAlign * DIGIT_TWO :
+                                      0;
     if ((inputData_.kernelSize[D_DIM] * inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * channelAlign +
-        oneOutChannelAlign + sumBufferSize) <= ubAvailable) {
+         oneOutChannelAlign + sumBufferSize) <= ubAvailable) {
         inUbSize_ = inputData_.kernelSize[D_DIM] * inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] *
-            channelAlign;
+                    channelAlign;
         outUbSize_ = oneOutChannelAlign;
         tilingMode_ = NO_SPLIT_KERNEL;
     } else if ((inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * channelAlign + oneOutChannelAlign +
-        sumBufferSize) <= ubAvailable) {
+                sumBufferSize) <= ubAvailable) {
         inUbSize_ = Ops::Base::FloorAlign(ubAvailable - oneOutChannelAlign - sumBufferSize, vRegSize);
         outUbSize_ = oneOutChannelAlign;
         tilingMode_ = SPLIT_KERNEL_D;
@@ -242,4 +239,4 @@ ge::graphStatus AvgPool3DBigKernelNDHWCTiling::GetShapeAttrsInfo()
 
 REGISTER_POOL_TILING_TEMPLATE("AvgPool3D", AvgPool3DBigKernelNDHWCTiling, 13);
 REGISTER_OPS_POOL_TILING_TEMPLATE(MaxPool3D, MaxPool3DBigKernelNDHWCTiling, 13);
-}  // namespace optiling
+} // namespace optiling

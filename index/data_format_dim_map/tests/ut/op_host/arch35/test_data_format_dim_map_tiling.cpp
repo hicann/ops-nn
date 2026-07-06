@@ -26,38 +26,27 @@ struct DataFormatDimMapCompileInfo {
 } compileInfo;
 
 // Helper: build TilingContextPara with string ATTR for src_format/dst_format
-static gert::TilingContextPara MakeTilingPara(
-    std::initializer_list<int64_t> xShape,
-    ge::DataType dtype,
-    const char* srcFormat,
-    const char* dstFormat,
-    uint64_t coreNum = 20,
-    uint64_t ubSize = 253952,
-    uint64_t tilingDataSize = 4096)
+static gert::TilingContextPara MakeTilingPara(std::initializer_list<int64_t> xShape, ge::DataType dtype,
+                                              const char* srcFormat, const char* dstFormat, uint64_t coreNum = 20,
+                                              uint64_t ubSize = 253952, uint64_t tilingDataSize = 4096)
 {
     gert::StorageShape xStorageShape = {xShape, xShape};
     gert::StorageShape yStorageShape = {xShape, xShape};
 
-    std::vector<gert::TilingContextPara::TensorDescription> inputTensorDesc({
-        {xStorageShape, dtype, ge::FORMAT_ND}
-    });
-    std::vector<gert::TilingContextPara::TensorDescription> outputTensorDesc({
-        {yStorageShape, dtype, ge::FORMAT_ND}
-    });
+    std::vector<gert::TilingContextPara::TensorDescription> inputTensorDesc({{xStorageShape, dtype, ge::FORMAT_ND}});
+    std::vector<gert::TilingContextPara::TensorDescription> outputTensorDesc({{yStorageShape, dtype, ge::FORMAT_ND}});
 
-    std::vector<gert::TilingContextPara::OpAttr> attrs({
-        {"src_format", Ops::NN::AnyValue::CreateFrom<std::string>(std::string(srcFormat))},
-        {"dst_format", Ops::NN::AnyValue::CreateFrom<std::string>(std::string(dstFormat))}
-    });
+    std::vector<gert::TilingContextPara::OpAttr> attrs(
+        {{"src_format", Ops::NN::AnyValue::CreateFrom<std::string>(std::string(srcFormat))},
+         {"dst_format", Ops::NN::AnyValue::CreateFrom<std::string>(std::string(dstFormat))}});
 
-    return gert::TilingContextPara(
-        OP_NAME, inputTensorDesc, outputTensorDesc, attrs,
-        &compileInfo, coreNum, ubSize, tilingDataSize);
+    return gert::TilingContextPara(OP_NAME, inputTensorDesc, outputTensorDesc, attrs, &compileInfo, coreNum, ubSize,
+                                   tilingDataSize);
 }
 
 // Helper: build expected expanded table for verification
-static void BuildExpectedTable(const char* srcFormat, const char* dstFormat,
-                               int32_t* table, int32_t& formatLen) {
+static void BuildExpectedTable(const char* srcFormat, const char* dstFormat, int32_t* table, int32_t& formatLen)
+{
     formatLen = static_cast<int32_t>(strlen(srcFormat));
     for (int i = 0; i < formatLen; i++) {
         table[i] = 0;
@@ -75,12 +64,8 @@ static void BuildExpectedTable(const char* srcFormat, const char* dstFormat,
 
 class DataFormatDimMapTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "DataFormatDimMapTilingTest SetUp." << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "DataFormatDimMapTilingTest TearDown." << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DataFormatDimMapTilingTest SetUp." << std::endl; }
+    static void TearDownTestCase() { std::cout << "DataFormatDimMapTilingTest TearDown." << std::endl; }
 };
 
 // ============================================================================
@@ -97,8 +82,7 @@ TEST_F(DataFormatDimMapTilingTest, test_nhwc_to_nchw_mapping_table)
     // NHWC -> NCHW: N->0, H->2, W->3, C->1
     int32_t expectedTable[10] = {0, 2, 3, 1, 0, 2, 3, 1, 0, 0};
     for (int i = 0; i < 8; i++) {
-        EXPECT_EQ(td->expandedTable[i], expectedTable[i])
-            << "expandedTable[" << i << "] mismatch";
+        EXPECT_EQ(td->expandedTable[i], expectedTable[i]) << "expandedTable[" << i << "] mismatch";
     }
 }
 
@@ -115,8 +99,7 @@ TEST_F(DataFormatDimMapTilingTest, test_ndhwc_to_ncdhw_mapping_table)
     EXPECT_EQ(td->formatLen, 5);
     int32_t expectedTable[10] = {0, 2, 3, 4, 1, 0, 2, 3, 4, 1};
     for (int i = 0; i < 10; i++) {
-        EXPECT_EQ(td->expandedTable[i], expectedTable[i])
-            << "expandedTable[" << i << "] mismatch";
+        EXPECT_EQ(td->expandedTable[i], expectedTable[i]) << "expandedTable[" << i << "] mismatch";
     }
 }
 
@@ -220,8 +203,7 @@ TEST_F(DataFormatDimMapTilingTest, test_nchw_to_nhwc_mapping_table)
     EXPECT_EQ(td->formatLen, 4);
     int32_t expectedTable[8] = {0, 3, 1, 2, 0, 3, 1, 2};
     for (int i = 0; i < 8; i++) {
-        EXPECT_EQ(td->expandedTable[i], expectedTable[i])
-            << "expandedTable[" << i << "] mismatch";
+        EXPECT_EQ(td->expandedTable[i], expectedTable[i]) << "expandedTable[" << i << "] mismatch";
     }
 }
 
@@ -315,8 +297,7 @@ TEST_F(DataFormatDimMapTilingTest, test_n5_format_expanded_table_size)
     EXPECT_EQ(td->formatLen, 5);
     int32_t expected[10] = {0, 2, 3, 4, 1, 0, 2, 3, 4, 1};
     for (int i = 0; i < 10; i++) {
-        EXPECT_EQ(td->expandedTable[i], expected[i])
-            << "expandedTable[" << i << "] mismatch for N=5 format";
+        EXPECT_EQ(td->expandedTable[i], expected[i]) << "expandedTable[" << i << "] mismatch for N=5 format";
     }
 }
 
@@ -377,8 +358,7 @@ TEST_F(DataFormatDimMapTilingTest, test_large_data_multicore_split)
     EXPECT_GT(tilingInfo.blockNum, 1u);
     EXPECT_GE(static_cast<int64_t>(tilingInfo.blockNum) * td->blockFactor, td->totalNum);
 
-    std::cout << "Multi-core: blockNum=" << tilingInfo.blockNum
-              << " blockFactor=" << td->blockFactor << std::endl;
+    std::cout << "Multi-core: blockNum=" << tilingInfo.blockNum << " blockFactor=" << td->blockFactor << std::endl;
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_blockfactor_alignment)
@@ -388,8 +368,7 @@ TEST_F(DataFormatDimMapTilingTest, test_blockfactor_alignment)
     ASSERT_TRUE(ExecuteTiling(para, tilingInfo));
 
     auto* td = reinterpret_cast<const DataFormatDimMapTilingData*>(tilingInfo.tilingData.get());
-    EXPECT_EQ(td->blockFactor % 8, 0)
-        << "blockFactor=" << td->blockFactor << " should be aligned to ubBlockSize";
+    EXPECT_EQ(td->blockFactor % 8, 0) << "blockFactor=" << td->blockFactor << " should be aligned to ubBlockSize";
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_blockfactor_alignment_int64)
@@ -399,8 +378,8 @@ TEST_F(DataFormatDimMapTilingTest, test_blockfactor_alignment_int64)
     ASSERT_TRUE(ExecuteTiling(para, tilingInfo));
 
     auto* td = reinterpret_cast<const DataFormatDimMapTilingData*>(tilingInfo.tilingData.get());
-    EXPECT_EQ(td->blockFactor % 4, 0)
-        << "blockFactor=" << td->blockFactor << " should be aligned to ubBlockSize for int64";
+    EXPECT_EQ(td->blockFactor % 4, 0) << "blockFactor=" << td->blockFactor
+                                      << " should be aligned to ubBlockSize for int64";
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_exact_core_divisible)
@@ -430,8 +409,7 @@ TEST_F(DataFormatDimMapTilingTest, test_int64_small_data)
     EXPECT_GT(td->ubFactor, 0);
     EXPECT_EQ(td->ubFactor % 4, 0) << "int64 ubFactor should be aligned to ubBlockSize=4";
 
-    std::cout << "int64 small data tilingKey=" << tilingInfo.tilingKey
-              << " ubFactor=" << td->ubFactor << std::endl;
+    std::cout << "int64 small data tilingKey=" << tilingInfo.tilingKey << " ubFactor=" << td->ubFactor << std::endl;
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_int64_large_data)
@@ -445,8 +423,7 @@ TEST_F(DataFormatDimMapTilingTest, test_int64_large_data)
     EXPECT_GT(td->ubFactor, 0);
     EXPECT_EQ(td->ubFactor % 4, 0) << "int64 ubFactor should be aligned to ubBlockSize=4";
 
-    std::cout << "int64 large data tilingKey=" << tilingInfo.tilingKey
-              << " ubFactor=" << td->ubFactor << std::endl;
+    std::cout << "int64 large data tilingKey=" << tilingInfo.tilingKey << " ubFactor=" << td->ubFactor << std::endl;
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_int64_ubfactor_calculation)
@@ -463,8 +440,7 @@ TEST_F(DataFormatDimMapTilingTest, test_int64_ubfactor_calculation)
     EXPECT_GT(tdI32->ubFactor, tdI64->ubFactor)
         << "int32 ubFactor should be larger than int64 ubFactor (int64 uses more bytes per element)";
 
-    EXPECT_NE(infoI32.tilingKey, infoI64.tilingKey)
-        << "int32 and int64 should have different tilingKeys";
+    EXPECT_NE(infoI32.tilingKey, infoI64.tilingKey) << "int32 and int64 should have different tilingKeys";
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_int64_boundary_1023_vs_1024)
@@ -481,8 +457,7 @@ TEST_F(DataFormatDimMapTilingTest, test_int64_boundary_1023_vs_1024)
     EXPECT_EQ(info1023.tilingKey, info1024.tilingKey)
         << "Same dtype should produce the same tilingKey regardless of data size";
 
-    EXPECT_EQ(td1023->ubFactor, td1024->ubFactor)
-        << "Same dtype and UB size should produce the same ubFactor";
+    EXPECT_EQ(td1023->ubFactor, td1024->ubFactor) << "Same dtype and UB size should produce the same ubFactor";
 }
 
 // ============================================================================
@@ -543,8 +518,7 @@ TEST_F(DataFormatDimMapTilingTest, test_nchw_to_nhwc_int64)
     EXPECT_EQ(td->formatLen, 4);
     int32_t expectedTable[8] = {0, 3, 1, 2, 0, 3, 1, 2};
     for (int i = 0; i < 8; i++) {
-        EXPECT_EQ(td->expandedTable[i], expectedTable[i])
-            << "expandedTable[" << i << "] mismatch for NCHW->NHWC int64";
+        EXPECT_EQ(td->expandedTable[i], expectedTable[i]) << "expandedTable[" << i << "] mismatch for NCHW->NHWC int64";
     }
 }
 
@@ -558,8 +532,7 @@ TEST_F(DataFormatDimMapTilingTest, test_ndhwc_to_ncdhw_int64)
     EXPECT_EQ(td->formatLen, 5);
     int32_t expected[10] = {0, 2, 3, 4, 1, 0, 2, 3, 4, 1};
     for (int i = 0; i < 10; i++) {
-        EXPECT_EQ(td->expandedTable[i], expected[i])
-            << "expandedTable[" << i << "] mismatch for NDHWC->NCDHW int64";
+        EXPECT_EQ(td->expandedTable[i], expected[i]) << "expandedTable[" << i << "] mismatch for NDHWC->NCDHW int64";
     }
 }
 
@@ -573,8 +546,7 @@ TEST_F(DataFormatDimMapTilingTest, test_hwnc_to_nhwc_mapping_table)
     EXPECT_EQ(td->formatLen, 4);
     int32_t expectedTable[8] = {1, 2, 0, 3, 1, 2, 0, 3};
     for (int i = 0; i < 8; i++) {
-        EXPECT_EQ(td->expandedTable[i], expectedTable[i])
-            << "expandedTable[" << i << "] mismatch for HWNC->NHWC";
+        EXPECT_EQ(td->expandedTable[i], expectedTable[i]) << "expandedTable[" << i << "] mismatch for HWNC->NHWC";
     }
 }
 
@@ -590,8 +562,7 @@ TEST_F(DataFormatDimMapTilingTest, test_hwnc_to_nhwc_int64_large)
     EXPECT_GT(td->ubFactor, 0);
     int32_t expectedTable[8] = {1, 2, 0, 3, 1, 2, 0, 3};
     for (int i = 0; i < 8; i++) {
-        EXPECT_EQ(td->expandedTable[i], expectedTable[i])
-            << "expandedTable[" << i << "] mismatch";
+        EXPECT_EQ(td->expandedTable[i], expectedTable[i]) << "expandedTable[" << i << "] mismatch";
     }
 }
 
@@ -607,8 +578,7 @@ TEST_F(DataFormatDimMapTilingTest, test_invalid_format_partial_mismatch)
 {
     auto para = MakeTilingPara({64}, ge::DT_INT32, "NHWC", "NCHX");
     TilingInfo tilingInfo;
-    EXPECT_FALSE(ExecuteTiling(para, tilingInfo))
-        << "Should fail when dstFormat contains chars not in srcFormat";
+    EXPECT_FALSE(ExecuteTiling(para, tilingInfo)) << "Should fail when dstFormat contains chars not in srcFormat";
 }
 
 } // namespace DataFormatDimMapUT

@@ -26,17 +26,16 @@ OP_TYPE_REGISTER(FusedQuantMatMul);
 const aclTensor* FusedQuantMatMul(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                   const aclTensor* x1Scale, const aclTensor* x2Scale, const aclTensor* yScale,
                                   const aclTensor* x1Offset, const aclTensor* x2Offset, const aclTensor* yOffset,
-                                  const aclTensor* x2Table, const aclTensor* x3, int64_t dtype, int32_t computeType, 
-                                  bool transposeX1, bool transposeX2, uint64_t groupSize, const char* fusedOpType, 
-                                  aclOpExecutor* executor) {
-    L0_DFX(FusedQuantMatMul, x1, x2, bias, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset,
-           x2Table, x3, dtype, computeType, transposeX1, transposeX2, groupSize, fusedOpType);
+                                  const aclTensor* x2Table, const aclTensor* x3, int64_t dtype, int32_t computeType,
+                                  bool transposeX1, bool transposeX2, uint64_t groupSize, const char* fusedOpType,
+                                  aclOpExecutor* executor)
+{
+    L0_DFX(FusedQuantMatMul, x1, x2, bias, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset, x2Table, x3, dtype,
+           computeType, transposeX1, transposeX2, groupSize, fusedOpType);
     DataType outType = static_cast<DataType>(dtype);
     Format format = Format::FORMAT_ND;
     auto output = executor->AllocTensor(outType, format, format);
-    OP_CHECK(
-        output != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "output AllocTensor failed."),
-        return nullptr);
+    OP_CHECK(output != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "output AllocTensor failed."), return nullptr);
 
     auto ret = INFER_SHAPE(
         FusedQuantMatMul, OP_INPUT(x1, x2, bias, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset, x2Table, x3),
@@ -46,7 +45,7 @@ const aclTensor* FusedQuantMatMul(const aclTensor* x1, const aclTensor* x2, cons
         FusedQuantMatMul, OP_INPUT(x1, x2, bias, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset, x2Table, x3),
         OP_OUTPUT(output), OP_ATTR(dtype, computeType, transposeX1, transposeX2, groupSize, fusedOpType));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
-            "FusedQuantMatMul ADD_TO_LAUNCHER_LIST_AICORE failed.");
+                                         "FusedQuantMatMul ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return output;
 }
-}
+} // namespace l0op

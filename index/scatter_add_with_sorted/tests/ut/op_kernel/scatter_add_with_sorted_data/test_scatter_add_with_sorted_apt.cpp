@@ -26,22 +26,17 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void scatter_add_with_sorted(
-    GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index, GM_ADDR pos, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void scatter_add_with_sorted(GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index,
+                                                              GM_ADDR pos, GM_ADDR output, GM_ADDR workspace,
+                                                              GM_ADDR tiling);
 
 class scatter_add_with_sorted_apt_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "scatter_add_with_sorted_apt_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "scatter_add_with_sorted_apt_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "scatter_add_with_sorted_apt_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "scatter_add_with_sorted_apt_test TearDown\n" << endl; }
 };
 
-static void FillSimdTilingData(ScatterAddWithSortedSimdTilingData *td, int64_t indicesNum, int64_t updatesInner,
+static void FillSimdTilingData(ScatterAddWithSortedSimdTilingData* td, int64_t indicesNum, int64_t updatesInner,
                                bool withPos, uint64_t tilingKey)
 {
     td->tilingKey = tilingKey;
@@ -104,13 +99,13 @@ TEST_F(scatter_add_with_sorted_apt_test, test_simd_float32_with_pos)
     size_t output_size = (rows + 2) * cols * sizeof(float);
     size_t tiling_data_size = sizeof(ScatterAddWithSortedSimdTilingData);
 
-    uint8_t *var = (uint8_t *)AscendC::GmAlloc(var_size);
-    uint8_t *src = (uint8_t *)AscendC::GmAlloc(src_size);
-    uint8_t *ind = (uint8_t *)AscendC::GmAlloc(ind_size);
-    uint8_t *pos = (uint8_t *)AscendC::GmAlloc(pos_size);
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(output_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
+    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
+    uint8_t* ind = (uint8_t*)AscendC::GmAlloc(ind_size);
+    uint8_t* pos = (uint8_t*)AscendC::GmAlloc(pos_size);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
 
     memset(var, 0, var_size);
@@ -119,12 +114,12 @@ TEST_F(scatter_add_with_sorted_apt_test, test_simd_float32_with_pos)
     memset(pos, 0, pos_size);
     memset(output, 0, output_size);
 
-    ScatterAddWithSortedSimdTilingData *td = reinterpret_cast<ScatterAddWithSortedSimdTilingData *>(tiling);
+    ScatterAddWithSortedSimdTilingData* td = reinterpret_cast<ScatterAddWithSortedSimdTilingData*>(tiling);
     FillSimdTilingData(td, rows, cols, true, 0);
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t *)td);
+    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t*)td);
 
     AscendC::GmFree(var);
     AscendC::GmFree(src);
@@ -146,13 +141,13 @@ TEST_F(scatter_add_with_sorted_apt_test, test_simd_float32_without_pos)
     size_t output_size = (rows + 2) * cols * sizeof(float);
     size_t tiling_data_size = sizeof(ScatterAddWithSortedSimdTilingData);
 
-    uint8_t *var = (uint8_t *)AscendC::GmAlloc(var_size);
-    uint8_t *src = (uint8_t *)AscendC::GmAlloc(src_size);
-    uint8_t *ind = (uint8_t *)AscendC::GmAlloc(ind_size);
-    uint8_t *pos = (uint8_t *)AscendC::GmAlloc(pos_size);
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(output_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
+    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
+    uint8_t* ind = (uint8_t*)AscendC::GmAlloc(ind_size);
+    uint8_t* pos = (uint8_t*)AscendC::GmAlloc(pos_size);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
 
     memset(var, 0, var_size);
@@ -160,12 +155,12 @@ TEST_F(scatter_add_with_sorted_apt_test, test_simd_float32_without_pos)
     memset(ind, 0, ind_size);
     memset(output, 0, output_size);
 
-    ScatterAddWithSortedSimdTilingData *td = reinterpret_cast<ScatterAddWithSortedSimdTilingData *>(tiling);
+    ScatterAddWithSortedSimdTilingData* td = reinterpret_cast<ScatterAddWithSortedSimdTilingData*>(tiling);
     FillSimdTilingData(td, rows, cols, false, 0);
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t *)td);
+    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t*)td);
 
     AscendC::GmFree(var);
     AscendC::GmFree(src);
@@ -187,24 +182,24 @@ TEST_F(scatter_add_with_sorted_apt_test, test_empty_shape)
     size_t output_size = 2 * cols * sizeof(float);
     size_t tiling_data_size = sizeof(ScatterAddWithSortedSimdTilingData);
 
-    uint8_t *var = (uint8_t *)AscendC::GmAlloc(var_size);
-    uint8_t *src = (uint8_t *)AscendC::GmAlloc(src_size);
-    uint8_t *ind = (uint8_t *)AscendC::GmAlloc(ind_size);
-    uint8_t *pos = (uint8_t *)AscendC::GmAlloc(pos_size);
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(output_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
+    uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
+    uint8_t* ind = (uint8_t*)AscendC::GmAlloc(ind_size);
+    uint8_t* pos = (uint8_t*)AscendC::GmAlloc(pos_size);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
 
     memset(var, 0, var_size);
     memset(output, 0, output_size);
 
-    ScatterAddWithSortedSimdTilingData *td = reinterpret_cast<ScatterAddWithSortedSimdTilingData *>(tiling);
+    ScatterAddWithSortedSimdTilingData* td = reinterpret_cast<ScatterAddWithSortedSimdTilingData*>(tiling);
     FillSimdTilingData(td, rows, cols, false, 2);
 
     ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t *)td);
+    ICPU_RUN_KF(scatter_add_with_sorted, blockDim, var, src, ind, pos, output, workspace, (uint8_t*)td);
 
     AscendC::GmFree(var);
     AscendC::GmFree(src);

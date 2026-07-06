@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool_grad_with_argmax_tiling_common.h
@@ -74,11 +74,9 @@ struct MaxPoolGradWithArgmaxCompileInfo {
 
 class MaxPoolGradWithArgmaxTilingCommon : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MaxPoolGradWithArgmaxTilingCommon(gert::TilingContext* context) : TilingBaseClass(context) {
-    }
+    explicit MaxPoolGradWithArgmaxTilingCommon(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~MaxPoolGradWithArgmaxTilingCommon() override {
-    }
+    ~MaxPoolGradWithArgmaxTilingCommon() override {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -91,20 +89,20 @@ protected:
     uint64_t GetTilingKey() const override;
     void PrintInputData() const;
 
-public : 
+public:
     MaxPoolGradWithArgmaxInputInfoCommon inputData;
     MaxPoolGradWithArgmaxHardwareInfo hardwareData;
 };
- 
-static inline bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData,const std::string padModeStr)
- {
+
+static inline bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData, const std::string padModeStr)
+{
     int64_t tmpHGrad, tmpWGrad;
     if (padModeStr == "VALID") {
-      tmpHGrad = (inputData.hX - inputData.hKernel + inputData.hStride) / inputData.hStride;
-      tmpWGrad = (inputData.wX - inputData.wKernel + inputData.wStride) / inputData.wStride;
+        tmpHGrad = (inputData.hX - inputData.hKernel + inputData.hStride) / inputData.hStride;
+        tmpWGrad = (inputData.wX - inputData.wKernel + inputData.wStride) / inputData.wStride;
     } else if (padModeStr == "SAME") {
-      tmpHGrad = (inputData.hX + inputData.hStride -1) / inputData.hStride;
-      tmpWGrad = (inputData.wX + inputData.wStride -1) / inputData.wStride;
+        tmpHGrad = (inputData.hX + inputData.hStride - 1) / inputData.hStride;
+        tmpWGrad = (inputData.wX + inputData.wStride - 1) / inputData.wStride;
     }
 
     if (tmpHGrad != inputData.hGrad || tmpWGrad != inputData.wGrad || inputData.nX != inputData.nGrad ||
@@ -116,13 +114,13 @@ static inline bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& in
         return false;
     }
     return true;
- }
+}
 
 static inline bool IsGreaterThanInt32MaxNHWC(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
- {
-     int64_t planeSize = inputData.hX * inputData.wX * inputData.cX;
-     return planeSize > static_cast<int64_t>(INT32_MAX);
- }
+{
+    int64_t planeSize = inputData.hX * inputData.wX * inputData.cX;
+    return planeSize > static_cast<int64_t>(INT32_MAX);
+}
 
 static inline bool IsGreaterThanInt32MaxNCHW(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
 {

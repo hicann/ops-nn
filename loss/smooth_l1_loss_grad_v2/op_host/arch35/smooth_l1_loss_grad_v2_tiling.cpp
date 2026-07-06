@@ -34,8 +34,8 @@ constexpr static int32_t INPUT_LABEL_IDX = 1;
 constexpr static int32_t INPUT_DOUT_IDX = 2;
 constexpr static int32_t OUTPUT_IDX = 0;
 constexpr static float NEGTIVE_ONE = static_cast<float>(-1.0);
-static const std::map<std::string, uint32_t> STR_2_INT = { { "none", 0 }, { "sum", 1 }, { "mean", 2 } };
- 
+static const std::map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1}, {"mean", 2}};
+
 ge::graphStatus SmoothL1LossGradV2TilingClass::GetShapeAttrsInfo()
 {
     auto predictDesc = context_->GetInputDesc(INPUT_PREDICT_IDX);
@@ -49,43 +49,41 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::GetShapeAttrsInfo()
 
     ge::DataType predictDType = predictDesc->GetDataType();
     OP_CHECK_IF(predictDType != ge::DT_FLOAT16 && predictDType != ge::DT_BF16 && predictDType != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
-            ToString(predictDType).c_str(), "FLOAT, FLOAT16 or BF16"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(predictDType).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
     ge::DataType labelDType = labelDesc->GetDataType();
     ge::DataType doutDType = doutDesc->GetDataType();
     ge::DataType outputDType = outputDesc->GetDataType();
     if (predictDType != labelDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(labelDType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and label",
-            dtypeMsg.c_str(), "The dtypes of input predict and input label must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and label", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (predictDType != doutDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(doutDType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and dout",
-            dtypeMsg.c_str(), "The dtypes of input predict and input dout must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and dout", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and input dout must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (predictDType != outputDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(outputDType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and gradient",
-            dtypeMsg.c_str(), "The dtypes of input predict and output gradient must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and gradient", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and output gradient must be the same");
         return ge::GRAPH_FAILED;
     }
     this->inputDtype = predictDType;
-    OP_LOGD(context_->GetNodeName(), "[TilingData] : inputDtype is %s", ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str());
-    
+    OP_LOGD(context_->GetNodeName(), "[TilingData] : inputDtype is %s",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str());
+
     return ge::GRAPH_SUCCESS;
 }
- 
-bool SmoothL1LossGradV2TilingClass::IsCapable()
-{
-    return true;
-}
- 
+
+bool SmoothL1LossGradV2TilingClass::IsCapable() { return true; }
+
 ge::graphStatus SmoothL1LossGradV2TilingClass::GetDoutIsScalar()
 {
     auto inputDoutShape = context_->GetInputShape(INPUT_DOUT_IDX);
@@ -97,7 +95,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::GetDoutIsScalar()
     OP_LOGD(context_->GetNodeName(), "[TilingData] : doutIsScalar is %u", this->doutIsScalar);
     return ge::GRAPH_SUCCESS;
 }
- 
+
 ge::graphStatus SmoothL1LossGradV2TilingClass::CalcReduceMeanCof()
 {
     auto attrs = context_->GetAttrs();
@@ -105,9 +103,9 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcReduceMeanCof()
 
     this->reducationStr = attrs->GetAttrPointer<char>(1);
     auto iter = STR_2_INT.find(this->reducationStr);
-    OP_CHECK_IF(iter == STR_2_INT.end(),
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr,
-            "none, mean or sum"),
+    OP_CHECK_IF(
+        iter == STR_2_INT.end(),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr, "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->reduceMeanCof = 1.0f;
     int64_t dimVal = 1;
@@ -120,8 +118,8 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcReduceMeanCof()
             if (inputShape.GetDim(i) != 0) {
                 dimVal = dimVal * inputShape.GetDim(i);
             } else {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "predict",
-                    ToString(inputShape).c_str(),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "predict", ToString(inputShape).c_str(),
                     "Input predict cannot be an empty tensor when the attribute reduction is mean");
                 return ge::GRAPH_FAILED;
             }
@@ -136,35 +134,36 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcSigma()
 {
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
- 
+
     const float* sigmaPtr = attrs->GetAttrPointer<float>(0);
     this->sigma = (sigmaPtr == nullptr) ? 1.0 : *sigmaPtr;
     OP_CHECK_IF(this->sigma < 0,
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "sigma",
-            std::to_string(this->sigma).c_str(), "non-negative"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "sigma", std::to_string(this->sigma).c_str(),
+                                          "non-negative"),
+                return ge::GRAPH_FAILED);
     this->negSigma = NEGTIVE_ONE * this->sigma;
     this->invertSigma = fabsf(this->sigma) < 1e-6f ? NAN : 1 / this->sigma;
-    OP_LOGD(context_->GetNodeName(), "[TilingData] : sigma = %f, negSigma = %f, invertSigma = %f", 
-            this->sigma, this->negSigma, this->invertSigma);
+    OP_LOGD(context_->GetNodeName(), "[TilingData] : sigma = %f, negSigma = %f, invertSigma = %f", this->sigma,
+            this->negSigma, this->invertSigma);
     return ge::GRAPH_SUCCESS;
- }
+}
 
 template <typename T>
-ge::graphStatus SmoothL1LossGradV2TilingClass::DoScalarDagTilingForType() {
-    Ops::Base::BroadcastBaseTiling<typename SmoothL1LossGradV2Op::SmoothL1LossGradV2OpScalarDag<T, float>::OpDag> brcBaseTiling(context_);
+ge::graphStatus SmoothL1LossGradV2TilingClass::DoScalarDagTilingForType()
+{
+    Ops::Base::BroadcastBaseTiling<typename SmoothL1LossGradV2Op::SmoothL1LossGradV2OpScalarDag<T, float>::OpDag>
+        brcBaseTiling(context_);
     brcBaseTiling.SetScalar(this->sigma);
     brcBaseTiling.SetScalar(this->negSigma);
     brcBaseTiling.SetScalar(this->invertSigma);
     brcBaseTiling.SetScalar(this->reduceMeanCof);
     OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(),
-                        "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                return ge::GRAPH_FAILED);
     this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     return ge::GRAPH_SUCCESS;
 }
- 
+
 ge::graphStatus SmoothL1LossGradV2TilingClass::DoScalarDagOpTiling()
 {
     if (this->inputDtype == ge::DT_FLOAT16) {
@@ -174,8 +173,8 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::DoScalarDagOpTiling()
     } else if (this->inputDtype == ge::DT_FLOAT) {
         return DoScalarDagTilingForType<float>();
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
-            ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
 }
@@ -183,19 +182,19 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::DoScalarDagOpTiling()
 template <typename T>
 ge::graphStatus SmoothL1LossGradV2TilingClass::DoDagTilingForType()
 {
-    Ops::Base::BroadcastBaseTiling<typename SmoothL1LossGradV2Op::SmoothL1LossGradV2OpDag<T, float>::OpDag> brcBaseTiling(context_);
+    Ops::Base::BroadcastBaseTiling<typename SmoothL1LossGradV2Op::SmoothL1LossGradV2OpDag<T, float>::OpDag>
+        brcBaseTiling(context_);
     brcBaseTiling.SetScalar(this->sigma);
     brcBaseTiling.SetScalar(this->negSigma);
     brcBaseTiling.SetScalar(this->invertSigma);
     brcBaseTiling.SetScalar(this->reduceMeanCof);
-     OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-                    OP_LOGE(context_->GetNodeName(),
-                                                    "Do tiling failed. Please check the detailed log."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                return ge::GRAPH_FAILED);
     this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     return ge::GRAPH_SUCCESS;
 }
- 
+
 ge::graphStatus SmoothL1LossGradV2TilingClass::DoTensorDagOpTiling()
 {
     if (this->inputDtype == ge::DT_FLOAT16) {
@@ -205,55 +204,40 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::DoTensorDagOpTiling()
     } else if (this->inputDtype == ge::DT_FLOAT) {
         return DoDagTilingForType<float>();
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
-            ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
 }
 
 ge::graphStatus SmoothL1LossGradV2TilingClass::DoOpTiling()
 {
-    OP_CHECK_IF(GetDoutIsScalar() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "check dout is scalar failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcReduceMeanCof() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "get reduceMeanCof failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcSigma() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "get sigma failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetDoutIsScalar() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "check dout is scalar failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcReduceMeanCof() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get reduceMeanCof failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcSigma() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get sigma failed"),
+                return ge::GRAPH_FAILED);
     if (this->doutIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
         OP_CHECK_IF(DoScalarDagOpTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is scalar"), return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is scalar"), return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(DoTensorDagOpTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is tensor"), return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is tensor"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
- 
-ge::graphStatus SmoothL1LossGradV2TilingClass::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
- 
-uint64_t SmoothL1LossGradV2TilingClass::GetTilingKey() const
-{
-    return tilingKey;
-}
- 
-ge::graphStatus SmoothL1LossGradV2TilingClass::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
 
-ge::graphStatus SmoothL1LossGradV2TilingClass::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
- 
-ge::graphStatus SmoothL1LossGradV2TilingClass::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
- 
+ge::graphStatus SmoothL1LossGradV2TilingClass::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
+
+uint64_t SmoothL1LossGradV2TilingClass::GetTilingKey() const { return tilingKey; }
+
+ge::graphStatus SmoothL1LossGradV2TilingClass::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus SmoothL1LossGradV2TilingClass::PostTiling() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus SmoothL1LossGradV2TilingClass::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
+
 ge::graphStatus TilingForSmoothL1LossGradV2(gert::TilingContext* context)
 {
     OP_LOGD("SmoothL1LossGradV2Tiling", "Enter TilingForSmoothL1LossGradV2");
@@ -268,29 +252,26 @@ ge::graphStatus TilingForSmoothL1LossGradV2(gert::TilingContext* context)
     OP_LOGD(context, "Enter ascendc SmoothL1LossGradV2Tiling");
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
- 
- 
+
 ge::graphStatus SmoothL1LossGradV2TilingPrepareAscendC(gert::TilingParseContext* context)
 {
-    fe::PlatFormInfos *platformInfo = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
     auto compileInfo = context->GetCompiledInfo<SmoothL1LossGradV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->coreNum <= 0),
-                    OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %lu",
-                                                    compileInfo->coreNum),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %lu", compileInfo->coreNum),
+                return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
     OP_CHECK_IF((compileInfo->ubSize <= 0),
-                    OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %lu",
-                                                    compileInfo->ubSize),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %lu", compileInfo->ubSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
- 
+
 ge::graphStatus TilingPrepareForSmoothL1LossGradV2(gert::TilingParseContext* context)
 {
     OP_LOGD("TilingPrepareForSmoothL1LossGradV2", "Enter TilingPrepareForSmoothL1LossGradV2");
@@ -310,4 +291,4 @@ IMPL_OP_OPTILING(SmoothL1LossGradV2)
     .TilingParse<SmoothL1LossGradV2CompileInfo>(TilingPrepareForSmoothL1LossGradV2);
 
 REGISTER_OPS_TILING_TEMPLATE(SmoothL1LossGradV2, SmoothL1LossGradV2TilingClass, COMMON_TILING_PRIORITY);
-}   // namespace optiling
+} // namespace optiling

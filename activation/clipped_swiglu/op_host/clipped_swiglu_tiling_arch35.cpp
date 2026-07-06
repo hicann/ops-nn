@@ -60,7 +60,7 @@ private:
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus CheckAndGetXAndAttrs();
     ge::graphStatus CheckInputX(const gert::Shape& inputShapeX, int64_t xSize);
-    ge::graphStatus CheckAfterDim(const gert::Shape &xShape, const gert::Shape &inputShapeY, std::string shapeMsg);
+    ge::graphStatus CheckAfterDim(const gert::Shape& xShape, const gert::Shape& inputShapeY, std::string shapeMsg);
     ge::graphStatus CheckAndGetGroupIndex();
     ge::graphStatus CheckY();
     ge::graphStatus CountUbFactor();
@@ -130,15 +130,13 @@ ge::graphStatus ClippedSwigluArch35Tiling::GetPlatformInfo()
 
 ge::graphStatus ClippedSwigluArch35Tiling::DoTiling()
 {
-    OP_CHECK_IF(
-        CheckAndGetXAndAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "check x and attrs failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckAndGetGroupIndex() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "check group_index failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckAndGetXAndAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "check x and attrs failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckAndGetGroupIndex() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "check group_index failed."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckY() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "check y failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CountUbFactor() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CountUbFactor failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CountUbFactor() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CountUbFactor failed."),
+                return ge::GRAPH_FAILED);
     ComputeCoreSplit();
     SetTilingKey();
     FillTilingData();
@@ -155,15 +153,13 @@ ge::graphStatus ClippedSwigluArch35Tiling::DoTiling()
 ge::graphStatus ClippedSwigluArch35Tiling::CheckInputX(const gert::Shape& inputShapeX, int64_t xSize)
 {
     std::string reasonMsg = "in [" + std::to_string(0) + ", " + std::to_string(xDims_ - 1) + "]";
-    OP_CHECK_IF(
-        (cutDim_ > (xDims_ - 1) || cutDim_ < 0),
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "dim", std::to_string(cutDim_), reasonMsg),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        xSize <= 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-            context_->GetNodeName(), "x", std::to_string(xSize), "x shape size must > 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((cutDim_ > (xDims_ - 1) || cutDim_ < 0),
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "dim", std::to_string(cutDim_), reasonMsg),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xSize <= 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xSize),
+                                                           "x shape size must > 0"),
+                return ge::GRAPH_FAILED);
     xCutDimNum_ = inputShapeX.GetDim(cutDim_);
     dimBatchSize_ = 1;
     dim2H_ = 1;
@@ -180,19 +176,17 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckInputX(const gert::Shape& inputS
     }
     dimH_ = dim2H_ / CONST_2;
     std::string reason = "xShape[ " + std::to_string(cutDim_) + "] must be divisible by 2";
-    OP_CHECK_IF(
-        xCutDimNum_ % 2 != 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "x", Ops::Base::ToString(inputShapeX).c_str(), reason.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xCutDimNum_ % 2 != 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                      Ops::Base::ToString(inputShapeX).c_str(), reason.c_str()),
+                return ge::GRAPH_FAILED);
     auto descX = context_->GetInputDesc(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, descX);
     xDtype_ = descX->GetDataType();
     OP_CHECK_IF(
         (SUPPORT_DTYPE.find(xDtype_) == SUPPORT_DTYPE.end()),
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            "float16, bfloat16, float32"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                                  "float16, bfloat16, float32"),
         return ge::GRAPH_FAILED);
     if (xDtype_ == ge::DT_FLOAT) {
         dtypeSize_ = CONST_4;
@@ -211,10 +205,9 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetXAndAttrs()
     auto* attrLimit = attrs->GetAttrPointer<float>(LIMIT_INDEX);
     gluLimit_ = attrLimit == nullptr ? CLAMP_LIMIT_DEFAULT : *attrLimit;
 
-    OP_CHECK_IF(
-        gluLimit_ <= 0.0f,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "limit", std::to_string(gluLimit_), "> 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gluLimit_ <= 0.0f,
+                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "limit", std::to_string(gluLimit_), "> 0"),
+                return ge::GRAPH_FAILED);
     auto* attrBias = attrs->GetAttrPointer<float>(BIAS_INDEX);
     gluBias_ = attrBias == nullptr ? GLU_BIAS_DEFAULT : *attrBias;
     auto* attrInterleaved = attrs->GetAttrPointer<bool>(INTERLEAVED_INDEX);
@@ -225,16 +218,14 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetXAndAttrs()
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeX);
     const gert::Shape& inputShapeX = shapeX->GetStorageShape();
     xDims_ = inputShapeX.GetDimNum();
-    OP_CHECK_IF(
-        xDims_ <= 0, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(xDims_), "> 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDims_ <= 0, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(xDims_), "> 0"),
+                return ge::GRAPH_FAILED);
     if (cutDim_ < 0) {
         cutDim_ = cutDim_ + xDims_;
     }
     int64_t xSize = inputShapeX.GetShapeSize();
-    OP_CHECK_IF(
-        CheckInputX(inputShapeX, xSize) != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "check input x failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputX(inputShapeX, xSize) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "check input x failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -255,25 +246,24 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetGroupIndex()
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "group_index", std::to_string(groupIndexDim), "1D"),
             return ge::GRAPH_FAILED);
 
-        OP_CHECK_IF(
-            groupIndexDtype != ge::DT_INT64,
-            OP_LOGE_FOR_INVALID_DTYPE(
-                context_->GetNodeName(), "group_index", ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str(),
-                "int64"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(groupIndexDtype != ge::DT_INT64,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "group_index",
+                                              ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str(), "int64"),
+                    return ge::GRAPH_FAILED);
         groupNum_ = inputShapeGroupIndex.GetDim(0);
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ClippedSwigluArch35Tiling::CheckAfterDim(const gert::Shape &xShape, const gert::Shape &inputShapeY, std::string shapeMsg)
+ge::graphStatus ClippedSwigluArch35Tiling::CheckAfterDim(const gert::Shape& xShape, const gert::Shape& inputShapeY,
+                                                         std::string shapeMsg)
 {
     if (cutDim_ < xDims_ - 1) {
         for (int64_t i = cutDim_ + 1; i < xDims_; i++) {
             int64_t xShapeValue = xShape.GetDim(i);
             int64_t yShapeValue = inputShapeY.GetDim(i);
-            std::string shapeMsgValue =
-                "xShape[" + std::to_string(i) + "] should be equal yShape[" + std::to_string(i) + "].";
+            std::string shapeMsgValue = "xShape[" + std::to_string(i) + "] should be equal yShape[" +
+                                        std::to_string(i) + "].";
             OP_CHECK_IF(
                 xShapeValue != yShapeValue,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y", shapeMsg, shapeMsgValue),
@@ -300,32 +290,30 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckY()
 
     std::string reasonMsg = "x shape is " + Ops::Base::ToString(xShape) + "xShape[" + std::to_string(cutDim_) +
                             "] / 2 must be equal yShape[" + std::to_string(cutDim_) + "]";
-    OP_CHECK_IF(
-        inputShapeY.GetDim(cutDim_) != (xCutDimNum_ / CONST_2),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "y", Ops::Base::ToString(inputShapeY).c_str(), reasonMsg.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShapeY.GetDim(cutDim_) != (xCutDimNum_ / CONST_2),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
+                                                      Ops::Base::ToString(inputShapeY).c_str(), reasonMsg.c_str()),
+                return ge::GRAPH_FAILED);
 
     std::string dtypeMsg = "x dtype is " + ge::TypeUtils::DataTypeToSerialString(xDtype_) + " , y dtype is " +
                            ge::TypeUtils::DataTypeToSerialString(yDtype);
-    OP_CHECK_IF(
-        yDtype != xDtype_,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "x and y", dtypeMsg.c_str(), "y dtype must be same as x dtype"),
-        return ge::GRAPH_FAILED);
-    std::string shapeMsg =
-        "x shape is " + Ops::Base::ToString(xShape) + " y shape is " + Ops::Base::ToString(inputShapeY);
+    OP_CHECK_IF(yDtype != xDtype_,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
+                                                       "y dtype must be same as x dtype"),
+                return ge::GRAPH_FAILED);
+    std::string shapeMsg = "x shape is " + Ops::Base::ToString(xShape) + " y shape is " +
+                           Ops::Base::ToString(inputShapeY);
     for (int64_t i = 0; i < cutDim_; i++) {
         int64_t xShapeValue = xShape.GetDim(i);
         int64_t yShapeValue = inputShapeY.GetDim(i);
-        std::string shapeMsgValue =
-            "xShape[" + std::to_string(i) + "] should be equal yShape[" + std::to_string(i) + "].";
-        OP_CHECK_IF(
-            xShapeValue != yShapeValue,
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y", shapeMsg, shapeMsgValue),
-            return ge::GRAPH_FAILED);
+        std::string shapeMsgValue = "xShape[" + std::to_string(i) + "] should be equal yShape[" + std::to_string(i) +
+                                    "].";
+        OP_CHECK_IF(xShapeValue != yShapeValue,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y", shapeMsg, shapeMsgValue),
+                    return ge::GRAPH_FAILED);
     }
-    OP_CHECK_IF(CheckAfterDim(xShape, inputShapeY, shapeMsg) != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CheckAfterDim failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckAfterDim(xShape, inputShapeY, shapeMsg) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_, "CheckAfterDim failed."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -346,9 +334,8 @@ ge::graphStatus ClippedSwigluArch35Tiling::CountUbFactor()
     int64_t groupUb = groupNumAlign * CONST_8;
     OP_CHECK_IF(
         (groupUb > (ubFactor * CONST_2) || ubFactor <= 0),
-        OP_LOGE(
-            context_, "ubFactor must > 0 and groupUb <= (ubFactor*CONST_2), but ubFactor is %ld, groupUb is %ld",
-            ubFactor, groupUb),
+        OP_LOGE(context_, "ubFactor must > 0 and groupUb <= (ubFactor*CONST_2), but ubFactor is %ld, groupUb is %ld",
+                ubFactor, groupUb),
         return ge::GRAPH_FAILED);
     if ((dimH_ < hUbFactor_) && (isInterleaved_ == 0)) {
         hUbFactor_ = Ops::Base::FloorDiv(dimH_, oneBlockNum) * oneBlockNum;

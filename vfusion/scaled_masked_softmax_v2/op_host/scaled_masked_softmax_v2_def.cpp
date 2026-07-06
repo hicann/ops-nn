@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class ScaledMaskedSoftmaxV2 : public OpDef
-{
+class ScaledMaskedSoftmaxV2 : public OpDef {
 public:
     explicit ScaledMaskedSoftmaxV2(const char* name) : OpDef(name)
     {

@@ -68,14 +68,14 @@ private:
 
 private:
     TPipe pipe;
-    TQue<QuePosition::VECIN, 2> inputQueue;   // 双缓冲：2 个 input buffer 支持乒乓调度
+    TQue<QuePosition::VECIN, 2> inputQueue; // 双缓冲：2 个 input buffer 支持乒乓调度
     TQue<QuePosition::VECOUT, 1> outputQueue;
 
     GlobalTensor<T> inputGM;
     GlobalTensor<T> outputGM;
 
-    int64_t blockLength_ = 0;  // 当前 Core 需处理的元素数
-    int64_t ubLength_ = 0;     // 单次 UB 循环处理的元素数
+    int64_t blockLength_ = 0; // 当前 Core 需处理的元素数
+    int64_t ubLength_ = 0;    // 单次 UB 循环处理的元素数
 };
 
 template <typename T>

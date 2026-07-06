@@ -20,23 +20,20 @@
 namespace GeGluGradV2For310P {
 using namespace AscendC;
 
-class GeGluGradV2FP32By310p : public GeGluGradV2Base310p<float>
-{
+class GeGluGradV2FP32By310p : public GeGluGradV2Base310p<float> {
 public:
-    __aicore__ inline GeGluGradV2FP32By310p(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx, GM_ADDR workspace, const GeGluGradV2TilingData* tilingDataPtr)
+    __aicore__ inline GeGluGradV2FP32By310p(GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx, GM_ADDR workspace,
+                                            const GeGluGradV2TilingData* tilingDataPtr)
         : GeGluGradV2Base310p<float>(dy, x, gelu, dx, workspace, tilingDataPtr){};
     __aicore__ inline void Init();
     __aicore__ inline void Process()
     {
         if (valueM <= maxProcCount) {
-            ProcessLessEqual<
-                GeGluGradV2FP32By310p, &GeGluGradV2FP32By310p::ComputeLeftHalf,
-                &GeGluGradV2FP32By310p::ComputeRightHalf>(this);
+            ProcessLessEqual<GeGluGradV2FP32By310p, &GeGluGradV2FP32By310p::ComputeLeftHalf,
+                             &GeGluGradV2FP32By310p::ComputeRightHalf>(this);
         } else {
-            ProcessGreater<
-                GeGluGradV2FP32By310p, &GeGluGradV2FP32By310p::ComputeLeftHalf,
-                &GeGluGradV2FP32By310p::ComputeRightHalf>(this);
+            ProcessGreater<GeGluGradV2FP32By310p, &GeGluGradV2FP32By310p::ComputeLeftHalf,
+                           &GeGluGradV2FP32By310p::ComputeRightHalf>(this);
         }
     };
 

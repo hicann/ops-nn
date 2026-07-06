@@ -35,15 +35,9 @@ struct FusedBiasLeakyReluTilingTestParam {
 
 class FusedBiasLeakyReluTiling : public testing::TestWithParam<FusedBiasLeakyReluTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FusedBiasLeakyReluTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FusedBiasLeakyReluTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FusedBiasLeakyReluTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FusedBiasLeakyReluTiling TearDown" << std::endl; }
 };
 
 static FusedBiasLeakyReluTilingTestParam tilingCases[] = {
@@ -64,7 +58,7 @@ static void RunTilingTest(const FusedBiasLeakyReluTilingTestParam& param)
     gert::StorageShape x_shape = {{param.xShape}, {param.xShape}};
     gert::StorageShape bias_shape = {{param.xShape}, {param.xShape}};
     gert::StorageShape y_shape = {{param.xShape}, {param.xShape}};
-    
+
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, 
@@ -90,12 +84,12 @@ static void RunTilingTest(const FusedBiasLeakyReluTilingTestParam& param)
     auto tiling_func = op_impl->tiling;
     ASSERT_NE(tiling_func, nullptr);
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -106,22 +100,22 @@ static void RunTilingTest(const FusedBiasLeakyReluTilingTestParam& param)
     auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param_holder, nullptr);
-    
+
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("FusedBiasLeakyRelu")
-                        .NodeIoNum(2, 1)
-                        .IrInstanceNum({1, 1})
-                        .InputShapes({&x_shape, &bias_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, param.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, param.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, param.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .Attrs({param.negativeSlope, param.scale})
-                        .TilingData(param_holder.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("FusedBiasLeakyRelu")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &bias_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, param.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, param.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, param.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Attrs({param.negativeSlope, param.scale})
+                      .TilingData(param_holder.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context, nullptr);
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
@@ -140,7 +134,7 @@ TEST_F(FusedBiasLeakyReluTiling, empty_tensor)
     gert::StorageShape x_shape = {{0}, {0}};
     gert::StorageShape bias_shape = {{0}, {0}};
     gert::StorageShape y_shape = {{0}, {0}};
-    
+
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "UB_SIZE": 196608, "CORE_NUM": 24}
@@ -162,12 +156,12 @@ TEST_F(FusedBiasLeakyReluTiling, empty_tensor)
     auto tiling_func = op_impl->tiling;
     ASSERT_NE(tiling_func, nullptr);
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
 
     auto param_holder = gert::TilingData::CreateCap(4096);
@@ -175,20 +169,20 @@ TEST_F(FusedBiasLeakyReluTiling, empty_tensor)
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
 
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("FusedBiasLeakyRelu")
-                        .NodeIoNum(2, 1)
-                        .IrInstanceNum({1, 1})
-                        .InputShapes({&x_shape, &bias_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .Attrs({0.2f, 1.414213562373f})
-                        .TilingData(param_holder.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("FusedBiasLeakyRelu")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &bias_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Attrs({0.2f, 1.414213562373f})
+                      .TilingData(param_holder.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context, nullptr);
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);

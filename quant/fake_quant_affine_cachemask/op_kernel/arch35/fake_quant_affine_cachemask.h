@@ -32,9 +32,8 @@
 namespace NsFakeQuantAffineCachemask {
 
 template <typename T, typename ZpT, int MODE, int HAS_ZP>
-__aicore__ inline void RunOp(GM_ADDR x, GM_ADDR scale, GM_ADDR zp,
-                              GM_ADDR y, GM_ADDR mask,
-                              const FakeQuantAffineCachemaskTilingDataArch35* td)
+__aicore__ inline void RunOp(GM_ADDR x, GM_ADDR scale, GM_ADDR zp, GM_ADDR y, GM_ADDR mask,
+                             const FakeQuantAffineCachemaskTilingDataArch35* td)
 {
     if constexpr (MODE == MODE_PT) {
         FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP> op;

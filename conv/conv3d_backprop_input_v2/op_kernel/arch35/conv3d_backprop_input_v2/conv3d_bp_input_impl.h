@@ -32,6 +32,6 @@ public:
     };
 };
 
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 
 #endif

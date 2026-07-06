@@ -22,10 +22,7 @@ namespace optiling {
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr int64_t MAX_THREAD_NUM = 1024;
 
-bool MaxPool3DGradWithArgmaxTilingSimt::IsCapable()
-{
-    return true;
-}
+bool MaxPool3DGradWithArgmaxTilingSimt::IsCapable() { return true; }
 
 ge::graphStatus MaxPool3DGradWithArgmaxTilingSimt::DoOpTiling()
 {
@@ -76,4 +73,4 @@ uint64_t MaxPool3DGradWithArgmaxTilingSimt::GetTilingKey() const
 }
 
 REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", MaxPool3DGradWithArgmaxTilingSimt, 5);
-}  // namespace optiling
+} // namespace optiling

@@ -24,8 +24,8 @@ namespace l0op {
 OP_TYPE_REGISTER(ScatterAddWithAxis);
 
 // AICPU算子kernel
-static const aclTensor *ScatterAddAiCPU(const aclTensor *self, int64_t dim, const aclTensor *index,
-                                        const aclTensor *src, aclOpExecutor *executor)
+static const aclTensor* ScatterAddAiCPU(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                        const aclTensor* src, aclOpExecutor* executor)
 {
     // 使用框架宏ADD_TO_LAUNCHER_LIST，将AiCPU ScatterAddWithAxis
     // ScatterAddWithAxis, dim, src是算子的输入，out是算子的输出
@@ -40,9 +40,9 @@ static const aclTensor *ScatterAddAiCPU(const aclTensor *self, int64_t dim, cons
 }
 
 // 只支持 AICPU
-const aclTensor *ScatterAddWithAxis(const aclTensor *self, int64_t dim, const aclTensor *index,
-                                    const aclTensor *src, aclOpExecutor *executor)
+const aclTensor* ScatterAddWithAxis(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src,
+                                    aclOpExecutor* executor)
 {
     return ScatterAddAiCPU(self, dim, index, src, executor);
 }
-}
+} // namespace l0op

@@ -29,10 +29,10 @@ class AdamApplyOne {
 public:
     __aicore__ inline AdamApplyOne(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x,
-        GM_ADDR mul2_x, GM_ADDR mul3_x, GM_ADDR add2_y, GM_ADDR output0, GM_ADDR output1, GM_ADDR output2,
-        GM_ADDR workspace, const AdamApplyOneTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input4,
+                                GM_ADDR mul0_x, GM_ADDR mul1_x, GM_ADDR mul2_x, GM_ADDR mul3_x, GM_ADDR add2_y,
+                                GM_ADDR output0, GM_ADDR output1, GM_ADDR output2, GM_ADDR workspace,
+                                const AdamApplyOneTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -84,10 +84,11 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void AdamApplyOne<T>::Init(
-    GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x,
-    GM_ADDR mul2_x, GM_ADDR mul3_x, GM_ADDR add2_y, GM_ADDR output0, GM_ADDR output1, GM_ADDR output2,
-    GM_ADDR workspace, const AdamApplyOneTilingData* tilingData)
+__aicore__ inline void AdamApplyOne<T>::Init(GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3,
+                                             GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x, GM_ADDR mul2_x,
+                                             GM_ADDR mul3_x, GM_ADDR add2_y, GM_ADDR output0, GM_ADDR output1,
+                                             GM_ADDR output2, GM_ADDR workspace,
+                                             const AdamApplyOneTilingData* tilingData)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
 

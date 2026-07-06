@@ -38,10 +38,7 @@ static void fast_gelu_v2_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR
 
 class fast_gelu_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "fast_gelu_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "fast_gelu_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "fast_gelu_v2_test TearDown\n" << endl;
@@ -64,7 +61,6 @@ TEST_F(fast_gelu_v2_test, test_case_fp32)
     kernel_ut::SetupTestEnvironment("activation/fast_gelu_v2/tests/ut/op_kernel/fast_gelu_v2_data",
                                     "fast_gelu_v2_data");
     kernel_ut::RunGenData("./fast_gelu_v2_data", {"'(256)'", "float32"});
-
 
     std::string path = kernel_ut::GetTestWorkDir();
 

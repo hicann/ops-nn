@@ -37,31 +37,30 @@ using TileShapeL0 = AscendC::Std::tuple<uint32_t, uint32_t, uint32_t>;          
 using LayoutA = AscendC::Layout<AscendC::Std::tuple<uint64_t, uint64_t>, AscendC::Std::tuple<uint64_t, Cmct::Gemm::_1>>;
 using LayoutC = AscendC::Layout<AscendC::Std::tuple<uint64_t, uint64_t>, AscendC::Std::tuple<uint64_t, Cmct::Gemm::_1>>;
 using LayoutBias = AscendC::Layout<AscendC::Std::tuple<uint64_t>, AscendC::Std::tuple<Cmct::Gemm::_1>>;
-using LayoutScale =
-    AscendC::Layout<AscendC::Std::tuple<uint64_t, uint64_t>, AscendC::Std::tuple<uint64_t, Cmct::Gemm::_1>>;
+using LayoutScale = AscendC::Layout<AscendC::Std::tuple<uint64_t, uint64_t>,
+                                    AscendC::Std::tuple<uint64_t, Cmct::Gemm::_1>>;
 using AType = Cmct::Gemm::GemmType<DTYPE_X1, LayoutA>;
 using CType = Cmct::Gemm::GemmType<DTYPE_Y, LayoutC>;
 using BiasType = Cmct::Gemm::GemmType<DTYPE_Y, LayoutBias>;
 using ScaleType = Cmct::Gemm::GemmType<fp8_e8m0_t, LayoutScale>;
 
 // 不要使用 AscendC namespace下的CeilDiv和CeilAlign函数!
-using Cmct::CeilDiv;
 using Cmct::CeilAlign;
+using Cmct::CeilDiv;
 
 constexpr uint64_t MX_GROUP_SIZE = 32UL;
 constexpr uint64_t MX_K_ALIGN_SIZE = 64UL;
 
 template <bool weightNz>
 struct StrideWeight {
-    static_assert(
-        AscendC::Std::always_false_v<decltype(weightNz)>,
-        "StrideWeight should be specialized by values (true or false)");
+    static_assert(AscendC::Std::always_false_v<decltype(weightNz)>,
+                  "StrideWeight should be specialized by values (true or false)");
 };
 
 template <>
 struct StrideWeight<true> {
-    using type = AscendC::Std::tuple<
-        AscendC::Std::tuple<Cmct::Gemm::_32, Cmct::Gemm::_512>, AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>>;
+    using type = AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_32, Cmct::Gemm::_512>,
+                                     AscendC::Std::tuple<Cmct::Gemm::_1, uint64_t>>;
 };
 
 template <>
@@ -71,15 +70,14 @@ struct StrideWeight<false> {
 
 template <bool weightNz>
 struct ShapeWeight {
-    static_assert(
-        AscendC::Std::always_false_v<decltype(weightNz)>,
-        "ShapeWeight should be specialized by values (true or false)");
+    static_assert(AscendC::Std::always_false_v<decltype(weightNz)>,
+                  "ShapeWeight should be specialized by values (true or false)");
 };
 
 template <>
 struct ShapeWeight<true> {
-    using type = AscendC::Std::tuple<
-        AscendC::Std::tuple<Cmct::Gemm::_16, uint64_t>, AscendC::Std::tuple<Cmct::Gemm::_32, uint64_t>>;
+    using type = AscendC::Std::tuple<AscendC::Std::tuple<Cmct::Gemm::_16, uint64_t>,
+                                     AscendC::Std::tuple<Cmct::Gemm::_32, uint64_t>>;
 };
 
 template <>
@@ -103,35 +101,34 @@ struct CreateLayoutB<true> {
     __aicore__ inline decltype(auto) operator()(uint64_t n, uint64_t k)
     {
         return AscendC::MakeLayout(
-            AscendC::MakeShape(
-                AscendC::MakeShape(Cmct::Gemm::_16{}, static_cast<uint64_t>(Cmct::CeilDiv<uint64_t>(n, Cmct::Gemm::_16{}))),
-                AscendC::MakeShape(Cmct::Gemm::_32{}, static_cast<uint64_t>(Cmct::CeilDiv<uint64_t>(k, Cmct::Gemm::_32{})))),
-            AscendC::MakeStride(
-                AscendC::MakeStride(Cmct::Gemm::_32{}, Cmct::Gemm::_512{}),
-                AscendC::MakeStride(
-                    Cmct::Gemm::_1{},
-                    Cmct::CeilAlign<uint64_t>(n, Cmct::Gemm::_16{}) * Cmct::Gemm::_32{})));
+            AscendC::MakeShape(AscendC::MakeShape(Cmct::Gemm::_16{},
+                                                  static_cast<uint64_t>(Cmct::CeilDiv<uint64_t>(n, Cmct::Gemm::_16{}))),
+                               AscendC::MakeShape(Cmct::Gemm::_32{}, static_cast<uint64_t>(Cmct::CeilDiv<uint64_t>(
+                                                                         k, Cmct::Gemm::_32{})))),
+            AscendC::MakeStride(AscendC::MakeStride(Cmct::Gemm::_32{}, Cmct::Gemm::_512{}),
+                                AscendC::MakeStride(Cmct::Gemm::_1{}, Cmct::CeilAlign<uint64_t>(n, Cmct::Gemm::_16{}) *
+                                                                          Cmct::Gemm::_32{})));
     }
 };
 
 template <bool IS_WEIGHT_NZ>
-__aicore__ inline void InvokeKernel(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, [[maybe_unused]] GM_ADDR y_scale,
-    [[maybe_unused]] GM_ADDR x1_offset, [[maybe_unused]] GM_ADDR x2_offset, [[maybe_unused]] GM_ADDR y_offset,
-    [[maybe_unused]] GM_ADDR x2_table, GM_ADDR y, [[maybe_unused]] GM_ADDR workspace, const GM_ADDR tiling)
+__aicore__ inline void InvokeKernel(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
+                                    [[maybe_unused]] GM_ADDR y_scale, [[maybe_unused]] GM_ADDR x1_offset,
+                                    [[maybe_unused]] GM_ADDR x2_offset, [[maybe_unused]] GM_ADDR y_offset,
+                                    [[maybe_unused]] GM_ADDR x2_table, GM_ADDR y, [[maybe_unused]] GM_ADDR workspace,
+                                    const GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     GET_TILING_DATA_WITH_STRUCT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams, tilingDataIn, tiling);
-    using LayoutB =
-        AscendC::Layout<typename ShapeWeight<IS_WEIGHT_NZ>::type, typename StrideWeight<IS_WEIGHT_NZ>::type>;
+    using LayoutB = AscendC::Layout<typename ShapeWeight<IS_WEIGHT_NZ>::type,
+                                    typename StrideWeight<IS_WEIGHT_NZ>::type>;
     using BType = Cmct::Gemm::GemmType<DTYPE_X2, LayoutB>;
     using DispatchPolicy = Cmct::Gemm::UbAntiquantWithScSc;
-    using BlockMmad = Block::BlockMmadNN<
-        DispatchPolicy, TileShapeL1, TileShapeL0, AscendC::Std::tuple<AType, ScaleType>, BType, CType, BiasType, void,
-        void>;
+    using BlockMmad = Block::BlockMmadNN<DispatchPolicy, TileShapeL1, TileShapeL0,
+                                         AscendC::Std::tuple<AType, ScaleType>, BType, CType, BiasType, void, void>;
     using BlockPrologue = Prologue::BlockPrologueNN<Cmct::Prologue::BCastScsc, BType, AType, BiasType, TileShapeL1>;
-    using BlockScheduler = Block::BlockSchedulerSwizzleInMnCoreNN<
-        ProblemShape, AscendC::Std::tuple<uint32_t, uint32_t>, AscendC::Std::tuple<uint8_t, uint8_t>>;
+    using BlockScheduler = Block::BlockSchedulerSwizzleInMnCoreNN<ProblemShape, AscendC::Std::tuple<uint32_t, uint32_t>,
+                                                                  AscendC::Std::tuple<uint8_t, uint8_t>>;
     using KernelMmad = Kernel::KernelMatmulMixWeightPrologueNN<ProblemShape, BlockMmad, BlockScheduler, BlockPrologue>;
     auto problemShape = AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize, tilingDataIn.kSize);
     uint64_t kAlign = Cmct::CeilAlign<uint64_t>(tilingDataIn.kSize, MX_K_ALIGN_SIZE);
@@ -140,12 +137,10 @@ __aicore__ inline void InvokeKernel(
         .ptrC = y,
         .ptrAScale = x1_scale,
         .ptrBScale = x2_scale,
-        .layoutA = AscendC::MakeLayout(
-            AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.kSize),
-            AscendC::MakeStride(tilingDataIn.kSize, Cmct::Gemm::_1{})),
-        .layoutC = AscendC::MakeLayout(
-            AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize),
-            AscendC::MakeStride(tilingDataIn.nSize, Cmct::Gemm::_1{})),
+        .layoutA = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.kSize),
+                                       AscendC::MakeStride(tilingDataIn.kSize, Cmct::Gemm::_1{})),
+        .layoutC = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.mSize, tilingDataIn.nSize),
+                                       AscendC::MakeStride(tilingDataIn.nSize, Cmct::Gemm::_1{})),
         .layoutScale = AscendC::MakeLayout(
             AscendC::MakeShape(tilingDataIn.nSize, Cmct::CeilDiv<uint64_t>(kAlign, MX_GROUP_SIZE)),
             AscendC::MakeStride(Cmct::CeilDiv<uint64_t>(kAlign, MX_GROUP_SIZE), Cmct::Gemm::_1{}))};
@@ -153,8 +148,8 @@ __aicore__ inline void InvokeKernel(
         .ptrB = x2,
         .ptrBias = bias,
         .layoutB = CreateLayoutB<IS_WEIGHT_NZ>{}(tilingDataIn.nSize, tilingDataIn.kSize),
-        .layoutBias =
-            AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.nSize), AscendC::MakeStride(Cmct::Gemm::_1{}))};
+        .layoutBias = AscendC::MakeLayout(AscendC::MakeShape(tilingDataIn.nSize),
+                                          AscendC::MakeStride(Cmct::Gemm::_1{}))};
     typename BlockScheduler::Arguments scheduler{};
     typename KernelMmad::Arguments args{
         .problemShape = problemShape, .mmad = mmad, .prologue = prologue, .scheduler = scheduler};
@@ -166,4 +161,3 @@ __aicore__ inline void InvokeKernel(
 
 #define KERNEL_PARAMS \
     x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, x2_table, y, workspace, tiling
-

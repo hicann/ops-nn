@@ -27,27 +27,26 @@ namespace Gemm {
 namespace Block {
 template <class L1TileShape, class L0TileShape, class AT, class BT, class CT, class BiasT, class TileCopy>
 class BlockMmad<MatmulMultiBlockBias<>, L1TileShape, L0TileShape, AT, BT, CT, BiasT, TileCopy,
-    AscendC::Std::enable_if_t<IsMatmulLayoutTypeV<AT>>>
-    : public BlockMmad<MatmulMultiBlockBias<>, L1TileShape, L0TileShape,
-        ToMatmulTypeT<AT>, ToMatmulTypeT<BT>, ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy> {
-    using Base = BlockMmad<MatmulMultiBlockBias<>, L1TileShape, L0TileShape,
-                           ToMatmulTypeT<AT>, ToMatmulTypeT<BT>, ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy>;
+                AscendC::Std::enable_if_t<IsMatmulLayoutTypeV<AT>>>
+    : public BlockMmad<MatmulMultiBlockBias<>, L1TileShape, L0TileShape, ToMatmulTypeT<AT>, ToMatmulTypeT<BT>,
+                       ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy> {
+    using Base = BlockMmad<MatmulMultiBlockBias<>, L1TileShape, L0TileShape, ToMatmulTypeT<AT>, ToMatmulTypeT<BT>,
+                           ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy>;
     using Base::Base;
 };
 
 /**
-* @class BlockMmad
-* @brief A template class BlockMmad for performing multi-block matrix multiplication operations
-*
-* The class is specialized base on MatmulMultiBlockBias<>
-*/
+ * @class BlockMmad
+ * @brief A template class BlockMmad for performing multi-block matrix multiplication operations
+ *
+ * The class is specialized base on MatmulMultiBlockBias<>
+ */
 template <class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType, class TileCopy_>
 class BlockMmad<MatmulMultiBlockBias<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_,
-    AscendC::Std::enable_if_t<!IsMatmulLayoutTypeV<AType>>>
+                AscendC::Std::enable_if_t<!IsMatmulLayoutTypeV<AType>>>
     : public BlockMmadWithParams<
-        BlockMmad<MatmulMultiBlockBias<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_>,
-        MatmulMultiBlockBias<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_
-    > {
+          BlockMmad<MatmulMultiBlockBias<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_>,
+          MatmulMultiBlockBias<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_> {
 public:
     using DispatchPolicy = MatmulMultiBlockBias<>;
     using Self = BlockMmad<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy_>;
@@ -58,53 +57,52 @@ public:
                                                  Tile::TileCopy<Arch::DAV2201, Tile::CopyWithParams>, TileCopy_>;
     using MM = MatmulImplTraitsT<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
 
-    static_assert(
-        IsF16OrBf16AB<AType, BType, CType>() || IsI8I8I32<AType, BType, CType>() || IsF32F32F32<AType, BType, CType>(),
-        "Unsupported dtype"
-    );
+    static_assert(IsF16OrBf16AB<AType, BType, CType>() || IsI8I8I32<AType, BType, CType>() ||
+                      IsF32F32F32<AType, BType, CType>(),
+                  "Unsupported dtype");
     static_assert(IsNDOrAlign<AType>() && IsNDOrAlign<CType>(), "Only support ND format");
 
 public:
     /**
-    * @brief Set tensor A for matrix multiplication
-    * @param [in] gm: global tensor for matrix A
-    * @param [in] isTransposeA: whether to transpose matrix A, default is false
-    */
+     * @brief Set tensor A for matrix multiplication
+     * @param [in] gm: global tensor for matrix A
+     * @param [in] isTransposeA: whether to transpose matrix A, default is false
+     */
     __aicore__ inline void SetTensorA(const AscendC::GlobalTensor<typename AType::T>& gm, bool isTransposeA = false)
     {
         matmul_.SetTensorA(gm, isTransposeA);
     }
     /**
-    * @brief Set tensor B for matrix multiplication
-    * @param [in] gm: global tensor for matrix B
-    * @param [in] isTransposeB: whether to transpose matrix B, default is false
-    */
+     * @brief Set tensor B for matrix multiplication
+     * @param [in] gm: global tensor for matrix B
+     * @param [in] isTransposeB: whether to transpose matrix B, default is false
+     */
     __aicore__ inline void SetTensorB(const AscendC::GlobalTensor<typename BType::T>& gm, bool isTransposeB = false)
     {
         matmul_.SetTensorB(gm, isTransposeB);
     }
     /**
-    * @brief Set tensor bias for matrix multiplication
-    * @param [in] biasGlobal: global tensor for matrix bias
-    */
+     * @brief Set tensor bias for matrix multiplication
+     * @param [in] biasGlobal: global tensor for matrix bias
+     */
     __aicore__ inline void SetBias(const AscendC::GlobalTensor<typename BiasType::T>& biasGlobal)
     {
         matmul_.SetBias(biasGlobal);
     }
     /**
-    * @brief Iterate over all elements and perform matrix multiplication
-    * @param [out] cGm: global memory tensor C
-    * @param [in] enAtomic: whether to enable atomic operations
-    */
+     * @brief Iterate over all elements and perform matrix multiplication
+     * @param [out] cGm: global memory tensor C
+     * @param [in] enAtomic: whether to enable atomic operations
+     */
     __aicore__ inline void IterateAll(const AscendC::GlobalTensor<typename CType::T>& cGm, uint8_t enAtomic = 0)
     {
         matmul_.IterateAll(cGm, enAtomic);
     }
     /**
-    * @brief Iterate over all elements and store the result in local memory
-    * @param [out] ubCmatrix: local memory tensor C matrix
-    * @param [in] enAtomic: whether to enable atomic operations
-    */
+     * @brief Iterate over all elements and store the result in local memory
+     * @param [out] ubCmatrix: local memory tensor C matrix
+     * @param [in] enAtomic: whether to enable atomic operations
+     */
     __aicore__ inline void IterateAll(const AscendC::LocalTensor<typename CType::T>& ubCmatrix, uint8_t enAtomic = 0)
     {
         matmul_.IterateAll(ubCmatrix, enAtomic);
@@ -116,4 +114,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

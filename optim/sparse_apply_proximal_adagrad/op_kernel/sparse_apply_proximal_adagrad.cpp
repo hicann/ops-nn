@@ -21,17 +21,13 @@
 #include "arch35/sparse_apply_proximal_adagrad_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_apply_proximal_adagrad(
-    GM_ADDR var, GM_ADDR accum,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR var_out, GM_ADDR accum_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_apply_proximal_adagrad(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                                                         GM_ADDR grad, GM_ADDR indices, GM_ADDR var_out,
+                                                         GM_ADDR accum_out, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseApplyProximalAdagradTilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseApplyProximalAdagradTilingData, tilingData, tiling);
 
-    ops::sparse_apply_proximal_adagrad::Process<DTYPE_VAR, DTYPE_INDICES>(
-        var, accum, lr, l1, l2, grad, indices,
-        var_out, accum_out, &tilingData);
+    ops::sparse_apply_proximal_adagrad::Process<DTYPE_VAR, DTYPE_INDICES>(var, accum, lr, l1, l2, grad, indices,
+                                                                          var_out, accum_out, &tilingData);
 }

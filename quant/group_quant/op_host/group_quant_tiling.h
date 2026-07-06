@@ -23,8 +23,8 @@
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 struct GroupQuantCompileInfo {
-  int64_t coreNum = 0;
-  uint64_t ubSizePlatForm = 0;
+    int64_t coreNum = 0;
+    uint64_t ubSizePlatForm = 0;
 };
 
 BEGIN_TILING_DATA_DEF(GroupQuantTilingData)
@@ -42,39 +42,38 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(GroupQuant, GroupQuantTilingData)
 
 class GroupQuantTiling : public TilingBaseClass {
- public:
-  explicit GroupQuantTiling(gert::TilingContext* context) : TilingBaseClass(context) {
-  }
+public:
+    explicit GroupQuantTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
- protected:
-  bool IsCapable() override;
-  // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
-  ge::graphStatus GetPlatformInfo() override;
-  // 2、获取INPUT/OUTPUT/ATTR信息
-  ge::graphStatus GetShapeAttrsInfo() override;
-  // 3、计算数据切分TilingData
-  ge::graphStatus DoOpTiling() override;
-  // 4、计算高阶API的TilingData
-  ge::graphStatus DoLibApiTiling() override;
-  // 5、计算TilingKey
-  uint64_t GetTilingKey() const override;
-  // 6、计算Workspace 大小
-  ge::graphStatus GetWorkspaceSize() override;
-  // 7、保存Tiling数据
-  ge::graphStatus PostTiling() override;
+protected:
+    bool IsCapable() override;
+    // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
+    ge::graphStatus GetPlatformInfo() override;
+    // 2、获取INPUT/OUTPUT/ATTR信息
+    ge::graphStatus GetShapeAttrsInfo() override;
+    // 3、计算数据切分TilingData
+    ge::graphStatus DoOpTiling() override;
+    // 4、计算高阶API的TilingData
+    ge::graphStatus DoLibApiTiling() override;
+    // 5、计算TilingKey
+    uint64_t GetTilingKey() const override;
+    // 6、计算Workspace 大小
+    ge::graphStatus GetWorkspaceSize() override;
+    // 7、保存Tiling数据
+    ge::graphStatus PostTiling() override;
 
- private:
-  int64_t coreNumVar{0};
-  int64_t dimS{0};
-  int64_t dimE{0};
-  int64_t dimH{0};
-  int64_t hasOffset{0};
-  int64_t needCoreNum{0};
-  int64_t preCoreNum{0};
-  int64_t xRowNumPreCore{0};
-  int64_t xRowNumPostCore{0};
-  GroupQuantTilingData tilingData;
+private:
+    int64_t coreNumVar{0};
+    int64_t dimS{0};
+    int64_t dimE{0};
+    int64_t dimH{0};
+    int64_t hasOffset{0};
+    int64_t needCoreNum{0};
+    int64_t preCoreNum{0};
+    int64_t xRowNumPreCore{0};
+    int64_t xRowNumPostCore{0};
+    GroupQuantTilingData tilingData;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_GROUP_QUANT_H
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_GROUP_QUANT_H

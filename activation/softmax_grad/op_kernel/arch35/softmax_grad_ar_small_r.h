@@ -21,8 +21,7 @@
 #include "kernel_operator.h"
 #include "softmax_grad_base.h"
 
-namespace SoftmaxGradOps
-{
+namespace SoftmaxGradOps {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
 
@@ -33,8 +32,7 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T>
-class SoftmaxGradARSmallR
-{
+class SoftmaxGradARSmallR {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
     static constexpr int64_t DATA_BLOCK_COUNT = 16;
@@ -46,10 +44,7 @@ class SoftmaxGradARSmallR
 public:
     __aicore__ inline SoftmaxGradARSmallR(){};
 
-    __aicore__ inline SoftmaxGradARSmallR(TPipe* pipeIn)
-    {
-        pipe_ = pipeIn;
-    }
+    __aicore__ inline SoftmaxGradARSmallR(TPipe* pipeIn) { pipe_ = pipeIn; }
 
     __aicore__ inline void Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y, const SoftmaxGradARSmallRTilingData* tilingDataIn)
     {
@@ -77,7 +72,9 @@ public:
         tmpLocal_ = xTmpBuf_.Get<float>();
 
         int64_t xOffset = beginIdx * tilingData_->tileA0Len * tilingData_->totalRLen;
-        CopyInAndTransPose(xOffset, (beginIdx == tilingData_->totalTiles - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len, tilingData_->totalRLen);
+        CopyInAndTransPose(xOffset,
+                           (beginIdx == tilingData_->totalTiles - 1) ? tilingData_->tileA0Tail : tilingData_->tileA0Len,
+                           tilingData_->totalRLen);
         int curIdx;
         uint32_t curTileA0Len = tilingData_->tileA0Len;
         uint32_t nextTileA0Len = tilingData_->tileA0Len;
@@ -92,7 +89,7 @@ public:
 
             __local_mem__ T* x0Local = (__local_mem__ T*)x0Tensor.GetPhyAddr();
             __local_mem__ T* x1Local = (__local_mem__ T*)x1Tensor.GetPhyAddr();
-            CalcReduceSum(x0Local , x1Local, curTileA0Len);
+            CalcReduceSum(x0Local, x1Local, curTileA0Len);
             CopyInAndTransPose(xOffsetPreLoad, nextTileA0Len, tilingData_->totalRLen);
             x1Queue_.FreeTensor(x1Tensor);
             CalcOutput(x0Local, curTileA0Len);
@@ -109,7 +106,7 @@ public:
         LocalTensor<T> x1Tensor = x1Queue_.DeQue<T>();
         __local_mem__ T* x0Local = (__local_mem__ T*)x0Tensor.GetPhyAddr();
         __local_mem__ T* x1Local = (__local_mem__ T*)x1Tensor.GetPhyAddr();
-        CalcReduceSum(x0Local , x1Local, curTileA0Len);
+        CalcReduceSum(x0Local, x1Local, curTileA0Len);
         x1Queue_.FreeTensor(x1Tensor);
         CalcOutput(x0Local, curTileA0Len);
         CalcTranspose(curTileA0Len, tilingData_->rAligned);
@@ -122,8 +119,9 @@ private:
                                          uint32_t curTileA0Len)
     {
         __local_mem__ float* tmpAddr = (__local_mem__ float*)tmpLocal_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned].GetPhyAddr();
- 
+        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
+                                            .GetPhyAddr();
+
         uint32_t tileA0Len = tilingData_->tileA0Len;
         uint16_t curTileRLenVl = static_cast<uint16_t>(tilingData_->totalRLen);
         uint16_t loopA0Num = ops::CeilDiv(curTileA0Len, VL_FP32);
@@ -157,7 +155,8 @@ private:
     __aicore__ inline void CalcOutput(const __local_mem__ T* x0Local, uint32_t curTileA0Len)
     {
         __local_mem__ float* xSumLocal = (__local_mem__ float*)xSumTensor_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned].GetPhyAddr();
+        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
+                                            .GetPhyAddr();
         tmpLocalTy_ = tmpLocal_.template ReinterpretCast<T>();
         __local_mem__ T* tmpAddrTy = (__local_mem__ T*)tmpLocalTy_.GetPhyAddr();
 
@@ -186,7 +185,7 @@ private:
 
                     if constexpr (xToFp32_) {
                         MicroAPI::DataCopy(tmpAddrTy + xOffset, x1Reg, pregMask);
-                    } else {  // fp16、bf16
+                    } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, x1Reg, pregMask);
                         MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16, pregMask);
@@ -195,7 +194,7 @@ private:
             }
         }
     }
-    
+
     __aicore__ inline void CalcTransposeFp32(const LocalTensor<T>& yLocal, uint32_t curTileA0Len, uint32_t rAligned)
     {
         int rRepeartTimes = ops::CeilDiv(static_cast<int64_t>(rAligned), DATA_BLOCK_COUNT_HALF);
@@ -216,7 +215,8 @@ private:
             for (int j = 0; j < DATA_BLOCK_COUNT_HALF; j++) {
                 uint32_t offset = DATA_BLOCK_COUNT_HALF * i + DATA_BLOCK_COUNT_HALF * rRepeartTimes * j;
                 dstLocalList[j * CONST_TWO] = yLocal[offset];
-                dstLocalList[j * CONST_TWO + 1] = yLocal[offset + DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
+                dstLocalList[j * CONST_TWO + 1] = yLocal[offset +
+                                                         DATA_BLOCK_COUNT_HALF * DATA_BLOCK_COUNT_HALF * rRepeartTimes];
             }
 
             AscendC::TransDataTo5HD(dstLocalList, srcLocalList, params);
@@ -239,7 +239,7 @@ private:
                 srcLocalList[j] = tmpLocalTy_[offset];
             }
             for (int j = 0; j < DATA_BLOCK_COUNT; j++) {
-                uint32_t offset = tilingData_->rTileBase * i + rAligned * j; 
+                uint32_t offset = tilingData_->rTileBase * i + rAligned * j;
                 dstLocalList[j] = yLocal[offset];
             }
 
@@ -265,7 +265,7 @@ private:
     {
         if constexpr (xToFp32_) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
             Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
@@ -277,11 +277,11 @@ private:
         static constexpr MultiCopyConfig config = {false};
         MultiCopyLoopInfo<CONST_TWO> copyLoopInfo;
         copyLoopInfo.loopSrcStride[0] = 1;
-        copyLoopInfo.loopSrcStride[1] = totalRLen;   
-        copyLoopInfo.loopDstStride[0] = tilingData_->tileA0Len;  
+        copyLoopInfo.loopSrcStride[1] = totalRLen;
+        copyLoopInfo.loopDstStride[0] = tilingData_->tileA0Len;
         copyLoopInfo.loopDstStride[1] = 1;
-        copyLoopInfo.loopSize[0] = totalRLen;    
-        copyLoopInfo.loopSize[1] = curTileA0Len;   
+        copyLoopInfo.loopSize[0] = totalRLen;
+        copyLoopInfo.loopSize[1] = curTileA0Len;
         MultiCopyParams<T, CONST_TWO> params = {copyLoopInfo, 0};
 
         LocalTensor<T> x0Local_ = x0Queue_.AllocTensor<T>();
@@ -307,7 +307,7 @@ private:
     {
         DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = curTileA0Len;
-        copyOutParams.blockLen =  tilingData_->totalRLen * sizeof(T);
+        copyOutParams.blockLen = tilingData_->totalRLen * sizeof(T);
         copyOutParams.srcStride = 0;
         copyOutParams.dstStride = 0;
         DataCopyPad(yGm_[yGmOffset], yLocal[0], copyOutParams);
@@ -350,6 +350,6 @@ private:
 
     static constexpr bool xToFp32_ = IsSameType<T, float>::value;
 };
-}  // namespace SoftmaxGradOps
+} // namespace SoftmaxGradOps
 
 #endif

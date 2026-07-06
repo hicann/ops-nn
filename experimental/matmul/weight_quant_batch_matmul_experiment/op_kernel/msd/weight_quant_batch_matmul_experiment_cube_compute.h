@@ -45,15 +45,15 @@ WQBMM_EXP_CUBE_COMPUTE_TEMPLATE_PARAM
 class WqbmmExpCubeCompute {
 public:
     __aicore__ inline WqbmmExpCubeCompute(){};
-    __aicore__ inline void LaunchMatmul(uint64_t nOffset, uint64_t kGmOffset, const A16W4MsdConstParam &constParams,
-                                        const GlobalTensor<int8_t> &aUnfoldGm, const GlobalTensor<int32_t> &yS32Global);
-    __aicore__ inline void Init(GM_ADDR weight, const TCubeTiling *matmulTiling, TPipe *tPipe);
+    __aicore__ inline void LaunchMatmul(uint64_t nOffset, uint64_t kGmOffset, const A16W4MsdConstParam& constParams,
+                                        const GlobalTensor<int8_t>& aUnfoldGm, const GlobalTensor<int32_t>& yS32Global);
+    __aicore__ inline void Init(GM_ADDR weight, const TCubeTiling* matmulTiling, TPipe* tPipe);
 
 private:
     static constexpr uint64_t L1_BUF_NUM = 2;
     static constexpr uint64_t L1_BUFFER_OFFSET = 128 * 1024;
 
-    GlobalTensor<int8_t> weightS8Gm_;  // int8伪装2个int4
+    GlobalTensor<int8_t> weightS8Gm_; // int8伪装2个int4
 
     LocalTensor<int8_t> aUnfoldS8L1_;
     LocalTensor<int8_t> wS8L1_;
@@ -65,14 +65,14 @@ private:
     using InputBiasType = MatmulType<TPosition::GM, CubeFormat::ND, int32_t>;
     MatmulImpl<InputXType, InputWType, OutputYType, InputBiasType> mmObj_;
 
-    __aicore__ inline void CopyGmToL1Nd2Nz(uint64_t nOffset, uint64_t kGmOffset, const A16W4MsdConstParam &constParams,
-                                           const GlobalTensor<int8_t> &aUnfoldGm);
+    __aicore__ inline void CopyGmToL1Nd2Nz(uint64_t nOffset, uint64_t kGmOffset, const A16W4MsdConstParam& constParams,
+                                           const GlobalTensor<int8_t>& aUnfoldGm);
 };
 
 WQBMM_EXP_CUBE_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::Init(GM_ADDR weight, const TCubeTiling *matmulTiling, TPipe *tPipe)
+__aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::Init(GM_ADDR weight, const TCubeTiling* matmulTiling, TPipe* tPipe)
 {
-    weightS8Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t *>(weight));
+    weightS8Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(weight));
 
     TBuf<TPosition::A1> l1TBuf;
     tPipe->InitBuffer(l1TBuf, 512 * 1024); // l1总共512 KB
@@ -84,9 +84,9 @@ __aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::Init(GM_ADDR weight, const 
 
 WQBMM_EXP_CUBE_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::LaunchMatmul(uint64_t nOffset, uint64_t kGmOffset,
-                                                                  const A16W4MsdConstParam &constParams,
-                                                                  const GlobalTensor<int8_t> &aUnfoldGm,
-                                                                  const GlobalTensor<int32_t> &yS32Global)
+                                                                  const A16W4MsdConstParam& constParams,
+                                                                  const GlobalTensor<int8_t>& aUnfoldGm,
+                                                                  const GlobalTensor<int32_t>& yS32Global)
 {
     CopyGmToL1Nd2Nz(nOffset, kGmOffset, constParams, aUnfoldGm);
     event_t eventIdMte2ToMte1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE1));
@@ -106,8 +106,8 @@ __aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::LaunchMatmul(uint64_t nOffs
 
 WQBMM_EXP_CUBE_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::CopyGmToL1Nd2Nz(uint64_t nOffset, uint64_t kGmOffset,
-                                                                     const A16W4MsdConstParam &constParams,
-                                                                     const GlobalTensor<int8_t> &aUnfoldGm)
+                                                                     const A16W4MsdConstParam& constParams,
+                                                                     const GlobalTensor<int8_t>& aUnfoldGm)
 {
     // B矩阵 k,n
     Nd2NzParams nd2nzPara;
@@ -124,9 +124,9 @@ __aicore__ inline void WQBMM_EXP_CUBE_COMPUTE_CLASS::CopyGmToL1Nd2Nz(uint64_t nO
     nd2nzPara.nValue = constParams.mL1Size;
     nd2nzPara.dValue = constParams.kbL1Size >> 1;
     nd2nzPara.srcDValue = constParams.kbL1Size >> 1;
-    nd2nzPara.dstNzC0Stride = CeilAlign(nd2nzPara.nValue, static_cast<uint16_t>(BLOCK_CUBE));  // 对齐到16 单位block
+    nd2nzPara.dstNzC0Stride = CeilAlign(nd2nzPara.nValue, static_cast<uint16_t>(BLOCK_CUBE)); // 对齐到16 单位block
     // 默认一块buf最多放两份
     DataCopy(aUnfoldS8L1_[(l1LoopIdx_ % L1_BUF_NUM) * L1_BUFFER_OFFSET], aUnfoldGm, nd2nzPara);
 }
-}  // namespace WeightQuantBatchMatmulExperimental
+} // namespace WeightQuantBatchMatmulExperimental
 #endif

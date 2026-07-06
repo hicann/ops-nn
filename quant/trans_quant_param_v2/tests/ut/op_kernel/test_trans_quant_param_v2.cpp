@@ -25,20 +25,13 @@
 using namespace std;
 // using namespace AscendC;
 
-extern "C" __global__ __aicore__ void trans_quant_param_v2(
-    GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void trans_quant_param_v2(GM_ADDR scale, GM_ADDR offset, GM_ADDR y, GM_ADDR workspace,
+                                                           GM_ADDR tiling);
 
-class trans_quant_param_v2_test : public testing::Test
-{
+class trans_quant_param_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "trans_quant_param_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "trans_quant_param_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "trans_quant_param_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "trans_quant_param_v2_test TearDown\n" << endl; }
 };
 
 TEST_F(trans_quant_param_v2_test, test_case_2_1)
@@ -53,9 +46,8 @@ TEST_F(trans_quant_param_v2_test, test_case_2_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    system(
-        "cp -r ../../../../quant/trans_quant_param_v2/tests/ut/op_kernel/trans_quant_param_data "
-        "./");
+    system("cp -r ../../../../quant/trans_quant_param_v2/tests/ut/op_kernel/trans_quant_param_data "
+           "./");
     system("chmod -R 755 ./trans_quant_param_data/");
     system("cd ./trans_quant_param_data/ && rm -rf ./*bin");
     system("cd ./trans_quant_param_data/ && python3 gen_data.py 2 1");

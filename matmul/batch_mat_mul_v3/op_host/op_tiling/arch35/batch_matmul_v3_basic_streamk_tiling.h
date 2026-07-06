@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file batch_matmul_v3_basic_streamk_tiling.h
  * \brief
@@ -29,8 +28,8 @@ namespace optiling {
 namespace batch_matmul_v3_advanced {
 class BatchMatMulV3BasicStreamKTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3BasicStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) :
-        MatMulV3BaseTiling(context, cfg)
+    BatchMatMulV3BasicStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BaseTiling(context, cfg)
     {}
 
     ~BatchMatMulV3BasicStreamKTiling() override {}

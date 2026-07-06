@@ -32,30 +32,24 @@ using namespace ge;
 using namespace ut_util;
 using namespace std;
 
-class FusedSgdInferShape : public testing::Test
-{
+class FusedSgdInferShape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FusedSgdInferShape SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "FusedSgdInferShape TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FusedSgdInferShape SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "FusedSgdInferShape TearDown" << std::endl; }
 };
 
 namespace {
-    std::vector<int64_t> ToVectorForFused(const gert::Shape& shape) {
-        size_t shape_size = shape.GetDimNum();
-        std::vector<int64_t> shape_vec(shape_size, 0);
+std::vector<int64_t> ToVectorForFused(const gert::Shape& shape)
+{
+    size_t shape_size = shape.GetDimNum();
+    std::vector<int64_t> shape_vec(shape_size, 0);
 
-        for (size_t i = 0; i < shape_size; i++) {
-            shape_vec[i] = shape.GetDim(i);
-        }
-        return shape_vec;
+    for (size_t i = 0; i < shape_size; i++) {
+        shape_vec[i] = shape.GetDim(i);
     }
+    return shape_vec;
 }
+} // namespace
 
 TEST_F(FusedSgdInferShape, test_fused_sgd_infershape_same_shape)
 {
@@ -69,17 +63,17 @@ TEST_F(FusedSgdInferShape, test_fused_sgd_infershape_same_shape)
     gert::StorageShape gradsRefShape;
     gert::StorageShape momentumRefShape;
     auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(5, 3)
-                    .IrInstanceNum({1,1,1,1,1})
-                    .InputShapes({&paramsShape, &gradsShape, &momentumShape})
-                    .OutputShapes({&paramsShape, &gradsShape, &momentumShape})
-                    .Build();
+                      .NodeIoNum(5, 3)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&paramsShape, &gradsShape, &momentumShape})
+                      .OutputShapes({&paramsShape, &gradsShape, &momentumShape})
+                      .Build();
 
     gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
     EXPECT_EQ(infershape_func(context), ge::GRAPH_SUCCESS);
 
     std::vector<int64_t> expectedOutputShape1 = {3, 4, 5};
-    for(int i=0;i<3;i++){
+    for (int i = 0; i < 3; i++) {
         auto tmpOutShape1 = context->GetOutputShape(i);
         EXPECT_EQ(ToVectorForFused(*tmpOutShape1), expectedOutputShape1);
     }

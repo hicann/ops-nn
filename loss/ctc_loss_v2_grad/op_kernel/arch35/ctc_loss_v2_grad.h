@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file ctc_loss_v2_grad.h
  * \brief
@@ -36,10 +36,9 @@ class CTCLossV2Grad {
 public:
     __aicore__ inline CTCLossV2Grad(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR grad_out, GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths, GM_ADDR target_lengths,
-        GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR grad, GM_ADDR workspace,
-        const CTCLossV2GradTilingData4AscendC* tilingData);
+    __aicore__ inline void Init(GM_ADDR grad_out, GM_ADDR log_probs, GM_ADDR targets, GM_ADDR input_lengths,
+                                GM_ADDR target_lengths, GM_ADDR neg_log_likelihood, GM_ADDR log_alpha, GM_ADDR grad,
+                                GM_ADDR workspace, const CTCLossV2GradTilingData4AscendC* tilingData);
 
     __aicore__ inline void Process();
 
@@ -77,12 +76,12 @@ template <typename T, typename DataType, typename ThreadType>
 __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::InitGlobalGm()
 {
     if (blockInx >= tilingData_->initGradGmStartBlock && blockInx < tilingData_->initGradGmEndBlock) {
-        AscendC::InitOutput<T>(
-            gradGm[blockInx * tilingData_->initGradGmSizePerBlock], tilingData_->initGradGmSizePerBlock, 0);
+        AscendC::InitOutput<T>(gradGm[blockInx * tilingData_->initGradGmSizePerBlock],
+                               tilingData_->initGradGmSizePerBlock, 0);
     }
     if (blockInx == tilingData_->initGradGmEndBlock) {
-        AscendC::InitOutput<T>(
-            gradGm[blockInx * tilingData_->initGradGmSizePerBlock], tilingData_->initGradGmSizeLastBlock, 0);
+        AscendC::InitOutput<T>(gradGm[blockInx * tilingData_->initGradGmSizePerBlock],
+                               tilingData_->initGradGmSizeLastBlock, 0);
     }
     if (blockInx >= tilingData_->initLogBetaGmStartBlock && blockInx < tilingData_->initLogBetaGmEndBlock) {
         AscendC::InitOutput<float>(
@@ -107,10 +106,11 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::InitGlobalGm()
 }
 
 template <typename T, typename DataType, typename ThreadType>
-__aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Init(
-    GM_ADDR gradOut, GM_ADDR logProbs, GM_ADDR targets, GM_ADDR inputLengths, GM_ADDR targetLengths,
-    GM_ADDR negLogLikelihood, GM_ADDR logAlpha, GM_ADDR grad, GM_ADDR workspace,
-    const CTCLossV2GradTilingData4AscendC* tilingData)
+__aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Init(GM_ADDR gradOut, GM_ADDR logProbs, GM_ADDR targets,
+                                                                    GM_ADDR inputLengths, GM_ADDR targetLengths,
+                                                                    GM_ADDR negLogLikelihood, GM_ADDR logAlpha,
+                                                                    GM_ADDR grad, GM_ADDR workspace,
+                                                                    const CTCLossV2GradTilingData4AscendC* tilingData)
 {
     tilingData_ = tilingData;
     gradOutGm.SetGlobalBuffer((__gm__ T*)(gradOut));
@@ -127,8 +127,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Init(
     ThreadType symbolSet = tilingData_->symbolSet;
     logBetaGm.SetGlobalBuffer((__gm__ float*)(workspace), batchSize * maxInputLength * alphaLength);
     // 为了保证精度，申请临时空间
-    tempGradGm.SetGlobalBuffer(
-        (__gm__ float*)(workspace) + batchSize * maxInputLength * alphaLength, batchSize * maxInputLength * symbolSet);
+    tempGradGm.SetGlobalBuffer((__gm__ float*)(workspace) + batchSize * maxInputLength * alphaLength,
+                               batchSize * maxInputLength * symbolSet);
     blockInx = GetBlockIdx();
     InitGlobalGm();
     SyncAll();
@@ -162,11 +162,11 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline ThreadType GetT
 }
 
 template <typename T, typename DataType, typename ThreadType, int32_t THREAD_NUM>
-__simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void CalGradCompute(
-    __gm__ T* gradOutGm, __gm__ T* logProbsGm, __gm__ DataType* targetsGm, __gm__ DataType* inputLengthsGm,
-    __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm, __gm__ T* gradGm,
-    __gm__ float* logBetaGm, __gm__ float* tempGradGm, ThreadType maxInputLength, ThreadType batchSize,
-    ThreadType symbolSet, ThreadType zeroInfinity)
+__simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
+    void CalGradCompute(__gm__ T* gradOutGm, __gm__ T* logProbsGm, __gm__ DataType* targetsGm,
+                        __gm__ DataType* inputLengthsGm, __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm,
+                        __gm__ T* logAlphaGm, __gm__ T* gradGm, __gm__ float* logBetaGm, __gm__ float* tempGradGm,
+                        ThreadType maxInputLength, ThreadType batchSize, ThreadType symbolSet, ThreadType zeroInfinity)
 {
     ThreadType thread_idx = threadIdx.x;
     ThreadType blockDimX = blockDim.x;
@@ -194,12 +194,14 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void CalGradCompute(
 }
 
 template <typename T, typename DataType, typename ThreadType, int32_t THREAD_NUM>
-__simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
-    __gm__ T* gradOutGm, __gm__ T* logProbsGm, __gm__ DataType* targetsGm, __gm__ DataType* inputLengthsGm,
-    __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm, __gm__ volatile T* gradGm,
-    __gm__ volatile float* logBetaGm, __gm__ volatile float* tempGradGm, ThreadType maxInputLength,
-    ThreadType batchSize, ThreadType symbolSet, ThreadType zeroInfinity, ThreadType blank, ThreadType logAlphaT,
-    ThreadType alphaLength, ThreadType targetsDimNum, ThreadType sDimRange)
+__simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
+    void UpdateLcabCompute(__gm__ T* gradOutGm, __gm__ T* logProbsGm, __gm__ DataType* targetsGm,
+                           __gm__ DataType* inputLengthsGm, __gm__ DataType* targetLengthsGm,
+                           __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm, __gm__ volatile T* gradGm,
+                           __gm__ volatile float* logBetaGm, __gm__ volatile float* tempGradGm,
+                           ThreadType maxInputLength, ThreadType batchSize, ThreadType symbolSet,
+                           ThreadType zeroInfinity, ThreadType blank, ThreadType logAlphaT, ThreadType alphaLength,
+                           ThreadType targetsDimNum, ThreadType sDimRange)
 {
     ThreadType thread_idx = threadIdx.x;
     ThreadType blockDimX = blockDim.x;
@@ -223,29 +225,34 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
         ThreadType inputBatchOffset = t * symbolSet * batchSize;
         ThreadType logAlphaBatchOffset = b * logAlphaT * alphaLength;
         ThreadType logAlphaInputOffset = t * alphaLength;
-        ThreadType targetBatchOffset =
-            ProcessTgBatchOffsets<T, DataType, ThreadType>(b, targetLengthsGm, targetsDimNum, sDimRange);
+        ThreadType targetBatchOffset = ProcessTgBatchOffsets<T, DataType, ThreadType>(b, targetLengthsGm, targetsDimNum,
+                                                                                      sDimRange);
         ThreadType currentTargetPrime;
         // 和CPU保持一致，但是跟GPU不一致
         if (t == inputLength - 1) {
             currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
                 targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength, blank);
-            tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] =
-                static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + 2 * targetLength]) +
-                static_cast<float>(logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
+            tempGradGm[inputBatchOffset + batchOffset +
+                       currentTargetPrime] = static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset +
+                                                                           2 * targetLength]) +
+                                             static_cast<float>(
+                                                 logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
 
             if (targetLength > 0) {
                 currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
                     targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength - 1, blank);
-                tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] =
-                    static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + 2 * targetLength - 1]) +
-                    static_cast<float>(logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
+                tempGradGm[inputBatchOffset + batchOffset +
+                           currentTargetPrime] = static_cast<float>(logAlphaGm[logAlphaBatchOffset +
+                                                                               logAlphaInputOffset + 2 * targetLength -
+                                                                               1]) +
+                                                 static_cast<float>(
+                                                     logProbsGm[batchOffset + inputBatchOffset + currentTargetPrime]);
             }
         }
         for (ThreadType s = 0; s < alphaLength; s++) {
             if (s < 2 * targetLength + 1 && t != inputLength - 1) {
-                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
-                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s, blank);
+                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(targetsGm, targetBatchOffset,
+                                                                             static_cast<ThreadType>(1), s, blank);
                 float logAlphaBetaSum = static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + s]) +
                                         logBetaGm[logAlphaBatchOffset + logAlphaInputOffset + s];
                 float lcab = tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime];
@@ -254,8 +261,10 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
                     tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] = lcab;
                 } else {
                     float max = lcab > logAlphaBetaSum ? lcab : logAlphaBetaSum;
-                    tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] =
-                        __logf(__expf(lcab - max) + __expf(logAlphaBetaSum - max)) + max;
+                    tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime] = __logf(__expf(lcab - max) +
+                                                                                             __expf(logAlphaBetaSum -
+                                                                                                    max)) +
+                                                                                      max;
                 }
             }
         }
@@ -263,12 +272,13 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
 }
 
 template <typename T, typename DataType, typename ThreadType, int32_t THREAD_NUM>
-__simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
-    __gm__ T* gradOutGm, __gm__ T* logProbsGm, __gm__ DataType* targetsGm, __gm__ DataType* inputLengthsGm,
-    __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm, __gm__ T* logAlphaGm, __gm__ T* gradGm,
-    __gm__ float* logBetaGm, __gm__ float* tempGradGm, ThreadType maxInputLength, ThreadType batchSize,
-    ThreadType symbolSet, ThreadType zeroInfinity, ThreadType blank, ThreadType logAlphaT, ThreadType alphaLength,
-    ThreadType targetsDimNum, ThreadType sDimRange)
+__simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
+    void LogBetaCompute(__gm__ T* gradOutGm, __gm__ T* logProbsGm, __gm__ DataType* targetsGm,
+                        __gm__ DataType* inputLengthsGm, __gm__ DataType* targetLengthsGm, __gm__ T* negLogLikelihoodGm,
+                        __gm__ T* logAlphaGm, __gm__ T* gradGm, __gm__ float* logBetaGm, __gm__ float* tempGradGm,
+                        ThreadType maxInputLength, ThreadType batchSize, ThreadType symbolSet, ThreadType zeroInfinity,
+                        ThreadType blank, ThreadType logAlphaT, ThreadType alphaLength, ThreadType targetsDimNum,
+                        ThreadType sDimRange)
 {
     constexpr float neginf = -INFINITY;
     ThreadType threadIdy = threadIdx.y;
@@ -284,8 +294,8 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
         ThreadType targetLength = targetLengthsGm[b];
         ThreadType logProbsBatchOffset = b * symbolSet;
         ThreadType logBetaBatchOffset = b * logAlphaT * alphaLength;
-        ThreadType targetBatchOffset =
-            ProcessTgBatchOffsets<T, DataType, ThreadType>(b, targetLengthsGm, targetsDimNum, sDimRange);
+        ThreadType targetBatchOffset = ProcessTgBatchOffsets<T, DataType, ThreadType>(b, targetLengthsGm, targetsDimNum,
+                                                                                      sDimRange);
         for (ThreadType block_s = alphaLength - 1 - ((alphaLength - 1) % blockDimx); block_s >= 0;
              block_s -= blockDimx) {
             ThreadType s = thread_idx + block_s;
@@ -309,12 +319,12 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
             ThreadType currentTargetPrime;
             bool haveThree;
             if (s < 2 * targetLength + 1 && targetLength > 0) {
-                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
-                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s, blank);
-                haveThree =
-                    ((s < 2 * targetLength - 1) && (GetTargetPrime<T, DataType, ThreadType>(
-                                                        targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s + 2,
-                                                        blank) != currentTargetPrime));
+                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(targetsGm, targetBatchOffset,
+                                                                             static_cast<ThreadType>(1), s, blank);
+                haveThree = ((s < 2 * targetLength - 1) &&
+                             (GetTargetPrime<T, DataType, ThreadType>(targetsGm, targetBatchOffset,
+                                                                      static_cast<ThreadType>(1), s + 2,
+                                                                      blank) != currentTargetPrime));
             } else {
                 currentTargetPrime = blank;
                 haveThree = false;
@@ -344,9 +354,9 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
                     if (lbmax == neginf) {
                         lbmax = 0;
                     }
-                    float lb =
-                        __logf(__expf(lb1 - lbmax) + __expf(lb2 - lbmax) + __expf(lb3 - lbmax)) + lbmax +
-                        static_cast<float>(logProbsGm[b * symbolSet + t * batchSize * symbolSet + currentTargetPrime]);
+                    float lb = __logf(__expf(lb1 - lbmax) + __expf(lb2 - lbmax) + __expf(lb3 - lbmax)) + lbmax +
+                               static_cast<float>(
+                                   logProbsGm[b * symbolSet + t * batchSize * symbolSet + currentTargetPrime]);
                     logBetaGm[logBetaBatchOffset + alphaLength * t + s] = lb;
                 }
             }

@@ -19,13 +19,13 @@
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
 
 namespace optiling {
-    class Conv2DTilingData;
+class Conv2DTilingData;
 }
 
 namespace conv_tiling {
-using optiling::conv_ops_tiling::FixpipeInfo;
-using optiling::conv_ops_tiling::ConvOriGroupInfo;
 using optiling::conv_ops_tiling::ConvOptGroupInfo;
+using optiling::conv_ops_tiling::ConvOriGroupInfo;
+using optiling::conv_ops_tiling::FixpipeInfo;
 
 struct Conv2DBasicBlockTilingParams {
     uint32_t mTile = 0; // Tile is the size of the block in singleCore
@@ -65,19 +65,17 @@ struct Conv2DBasicBlockMinLoadStrategy {
 };
 
 // multiple inheritance
-struct Conv2DBasicBlockInfo :
-    public Conv2DBasicBlockTilingParams,
-    public Conv2DBasicNumBlocks,
-    public Conv2DBasicBlockMinLoadStrategy
-{};
+struct Conv2DBasicBlockInfo : public Conv2DBasicBlockTilingParams,
+                              public Conv2DBasicNumBlocks,
+                              public Conv2DBasicBlockMinLoadStrategy {};
 
 class Conv2dTiling : public ConvTilingBase {
 public:
-    Conv2dTiling() {};
-    explicit Conv2dTiling(const PlatformInfo& platform) : ConvTilingBase(platform) {};
-    ~Conv2dTiling() override {};
-    int64_t GetTiling(optiling::Conv2DTilingData &tiling);
-    bool GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::Conv2DTilingData &tiling);
+    Conv2dTiling(){};
+    explicit Conv2dTiling(const PlatformInfo& platform) : ConvTilingBase(platform){};
+    ~Conv2dTiling() override{};
+    int64_t GetTiling(optiling::Conv2DTilingData& tiling);
+    bool GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::Conv2DTilingData& tiling);
     int64_t Compute() override;
 
     void SetOrgWeightShape(int64_t orgCo, int64_t orgkH, int64_t orgkW);
@@ -95,7 +93,7 @@ public:
     void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
     void SetQuantScale(bool hasScaleFlag);
     void SetExtendConvFlag(bool extendConvEnable);
-    void SetQuantConvFlag(bool quantConvEnable); 
+    void SetQuantConvFlag(bool quantConvEnable);
     void SetFixpipeParams(FixpipeInfo& fixpipeInfo);
     void SetOffsetx(int8_t offsetx);
     void SetC04Flag(bool isC04Enable);
@@ -107,10 +105,11 @@ public:
     void SetGroups(int32_t groups);
     void SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt);
     void CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, ConvOptGroupInfo& optGroupInfo) const;
-    uint64_t CalcC04UbLoadNsize(const ConvC04Info &c04Info) const;
-    uint64_t CalcC04UbLoadMaxNsize(const ConvC04Info &c04Info) const;
+    uint64_t CalcC04UbLoadNsize(const ConvC04Info& c04Info) const;
+    uint64_t CalcC04UbLoadMaxNsize(const ConvC04Info& c04Info) const;
     void GetWeightUBTiling(ConvWeightUbTransParams& params);
     void GetDmaUbTiling(ConvDmaParams& params);
+
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
     void SetTilingData(optiling::Conv2DTilingData& tiling);

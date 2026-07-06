@@ -14,8 +14,7 @@
  */
 
 #include "layer_norm_grad_v3_tiling.h"
-namespace optiling
-{
+namespace optiling {
 constexpr static int64_t CONST_ZERO = 0;
 constexpr static int64_t CONST_ONE = 1;
 constexpr static int64_t CONST_TWO = 2;
@@ -46,7 +45,7 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::GammaBetaKernelTiling()
     // 沿M轴做reduce（输入形状为(M, N)）
     int64_t rowSize = static_cast<int64_t>(commonParams.rowSize);
     int64_t colSize = static_cast<int64_t>(commonParams.colSize);
-    
+
     // 动态调整 mFactor：小M场景（row<64）使用实际大小，避免 UB 空间浪费
     int64_t mFactor = std::min(GAMMA_BETA_DEFAULT_BIN_ADD_R_FACTOR, rowSize);
 
@@ -75,8 +74,8 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::GammaBetaKernelTiling()
                     OP_LOGI(context_->GetNodeName(),
                             "Big N template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
                             "mFactor: %ld, cacheBufferCount: %ld, nFactorMax: %ld.",
-                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm,
-                            mFactor, cacheBufferCount, nFactorMax),
+                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm, mFactor,
+                            cacheBufferCount, nFactorMax),
                     return ge::GRAPH_PARAM_INVALID);
 
     int64_t nFactor = ops::FloorAlign(nFactorMax, nFactorBase);
@@ -110,8 +109,8 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::BackwardKernelTiling()
     int64_t coreNum = static_cast<int64_t>(commonParams.coreNum);
 
     // 1. N轴分核
-    int64_t nFactor = rowSize > BACKWARD_BIG_R_FACTOR_THRES ? BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_64
-                                                            : BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_128;
+    int64_t nFactor = rowSize > BACKWARD_BIG_R_FACTOR_THRES ? BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_64 :
+                                                              BACKWARD_DEFAULT_BIN_ADD_R_FACTOR_128;
     // kernel二分计算部分限制核数不超过nfactor
     coreNum = std::min(coreNum, nFactor);
     int64_t mainBlockFactor = ops::CeilDiv(colSize, coreNum);
@@ -152,8 +151,8 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::BackwardKernelTiling()
     // 3. M方向分块参数
     int64_t mFactorAlignedMax = (commonParams.ubSizePlatForm / sizeof(float) - nFactor * CONST_TWO) /
                                 (nFactor * CONST_NINE + CONST_NINE + cacheBufferCountMain * CONST_TWO);
-    mFactorAlignedMax =
-        ops::FloorAlign(mFactorAlignedMax, static_cast<int64_t>(commonParams.blockSize / sizeof(float)));
+    mFactorAlignedMax = ops::FloorAlign(mFactorAlignedMax,
+                                        static_cast<int64_t>(commonParams.blockSize / sizeof(float)));
     OP_TILING_CHECK(mFactorAlignedMax <= 0,
                     OP_LOGI(context_->GetNodeName(),
                             "Big N template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
@@ -224,7 +223,7 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::PostTiling()
 {
     int64_t numBlocks = commonParams.coreNum;
     context_->SetBlockDim(numBlocks);
-    context_->SetScheduleMode(CONST_ONE);  // Set to batch mode, all cores start simultaneously
+    context_->SetScheduleMode(CONST_ONE); // Set to batch mode, all cores start simultaneously
     td_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(td_.GetDataSize());
 
@@ -238,4 +237,4 @@ uint64_t LayerNormGradV3GroupedReduceBigNTiling::GetTilingKey() const
 }
 
 REGISTER_TILING_TEMPLATE("LayerNormGradV3", LayerNormGradV3GroupedReduceBigNTiling, 6000);
-}  // namespace optiling
+} // namespace optiling

@@ -22,14 +22,8 @@ using namespace std;
 
 class l2_l1_loss_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "L1 Loss Test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "L1 Loss Test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "L1 Loss Test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "L1 Loss Test TearDown" << std::endl; }
 };
 
 TEST_F(l2_l1_loss_test, aclnnL1Loss_01_float_nd_none)

@@ -25,10 +25,7 @@ using namespace AscendC;
  * \brief Type mapping helper
  */
 
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
 class AscendAntiQuantV2Base {
@@ -36,10 +33,10 @@ public:
     __aicore__ inline AscendAntiQuantV2Base(){};
 
 protected:
-    __aicore__ inline void GetXInCopyParams(
-        int64_t dim1, int64_t baseLen, int64_t xN, int64_t xLen, DataCopyExtParams& copyParams);
-    __aicore__ inline void GetOutCopyParams(
-        int64_t dim1, int64_t baseLen, int64_t yN, int64_t yLen, DataCopyExtParams& copyParams);
+    __aicore__ inline void GetXInCopyParams(int64_t dim1, int64_t baseLen, int64_t xN, int64_t xLen,
+                                            DataCopyExtParams& copyParams);
+    __aicore__ inline void GetOutCopyParams(int64_t dim1, int64_t baseLen, int64_t yN, int64_t yLen,
+                                            DataCopyExtParams& copyParams);
     __aicore__ inline int64_t CeilAlign(int64_t i, int64_t align);
 
 protected:
@@ -50,36 +47,36 @@ protected:
 
 protected:
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_INT8_TO_HALF = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_HALF_TO_FP32 = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_BF16_TO_FP32 = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_HIFP8_TO_FP32 = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_FP8E5M2_TO_FP32 = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_FP8E4M3_TO_FP32 = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::UNKNOWN};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_HALF = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::CAST_RINT};
 
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_BF16 = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::CAST_RINT};
 };
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
@@ -92,8 +89,9 @@ __aicore__ inline int64_t AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CeilAli
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::GetOutCopyParams(
-    int64_t dim1, int64_t baseLen, int64_t yN, int64_t yLen, DataCopyExtParams& copyParams)
+__aicore__ inline void AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::GetOutCopyParams(int64_t dim1, int64_t baseLen,
+                                                                                       int64_t yN, int64_t yLen,
+                                                                                       DataCopyExtParams& copyParams)
 {
     copyParams.blockCount = yN;
     copyParams.blockLen = yLen * sizeof(U);
@@ -111,8 +109,9 @@ __aicore__ inline void AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::GetOutCopy
 }
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>
-__aicore__ inline void AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::GetXInCopyParams(
-    int64_t dim1, int64_t baseLen, int64_t xN, int64_t xLen, DataCopyExtParams& copyParams)
+__aicore__ inline void AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::GetXInCopyParams(int64_t dim1, int64_t baseLen,
+                                                                                       int64_t xN, int64_t xLen,
+                                                                                       DataCopyExtParams& copyParams)
 {
     int64_t xLenReal = xLen;
     if constexpr (IsSameType<T, int4b_t>::value) {

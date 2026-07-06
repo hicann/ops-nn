@@ -20,23 +20,21 @@
 #include <sstream>
 #include <string>
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::Base;
-const int64_t BUFFER_NUM            = 2;
-const int64_t ALL_BUFFERS           = 4;
-const int64_t INPUT_X_IDX           = 0;
-const int64_t INPUT_ASSIST1_IDX     = 1;
-const int64_t INPUT_ASSIST2_IDX     = 2;
-const int64_t OUTPUT_Y_IDX          = 0;
-const int64_t MIN_DATA_SIZE         = 1024;
-const int64_t ASCEND_WORKSPACE      = 16 * 1024 * 1024;
-const uint64_t TILING_KEY_COMMON    = 200;
-const uint64_t ALIGN_SIZE           = 512;
+const int64_t BUFFER_NUM = 2;
+const int64_t ALL_BUFFERS = 4;
+const int64_t INPUT_X_IDX = 0;
+const int64_t INPUT_ASSIST1_IDX = 1;
+const int64_t INPUT_ASSIST2_IDX = 2;
+const int64_t OUTPUT_Y_IDX = 0;
+const int64_t MIN_DATA_SIZE = 1024;
+const int64_t ASCEND_WORKSPACE = 16 * 1024 * 1024;
+const uint64_t TILING_KEY_COMMON = 200;
+const uint64_t ALIGN_SIZE = 512;
 
-static const std::set<ge::DataType> SUPPORT_DTYPE = {
-    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT64,ge::DT_BOOL, ge::DT_BF16
-};
+static const std::set<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32,
+                                                     ge::DT_INT64, ge::DT_BOOL,    ge::DT_BF16};
 
 ge::graphStatus IndexFillDTiling::CheckShape()
 {
@@ -57,17 +55,18 @@ ge::graphStatus IndexFillDTiling::CheckShape()
     auto yShape = yShapePtr->GetStorageShape();
 
     OP_CHECK_IF(xShape != assist1Shape || xShape != assist2Shape || xShape != yShape,
-               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(),
-               "x, assist1, assist2, y",
-               (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(assist1Shape) + ", " +
-                Ops::Base::ToString(assist2Shape) + ", " + Ops::Base::ToString(yShape)).c_str(),
-               "x, assist1, assist2 and y shapes must be the same"),
-               return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "x, assist1, assist2, y",
+                    (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(assist1Shape) + ", " +
+                     Ops::Base::ToString(assist2Shape) + ", " + Ops::Base::ToString(yShape))
+                        .c_str(),
+                    "x, assist1, assist2 and y shapes must be the same"),
+                return ge::GRAPH_FAILED);
     inputXShape_ = xShape;
     return ge::GRAPH_SUCCESS;
 }
 
-inline static bool IsSupportDtype(const std::set<ge::DataType> &supportDtype, const ge::DataType dtype)
+inline static bool IsSupportDtype(const std::set<ge::DataType>& supportDtype, const ge::DataType dtype)
 {
     return (supportDtype.count(dtype) != 0);
 }
@@ -86,29 +85,31 @@ ge::graphStatus IndexFillDTiling::CheckDataType()
     auto outputPtr = context_->GetOutputDesc(OUTPUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputPtr);
     auto outputDtype = outputPtr->GetDataType();
-    OP_CHECK_IF(!IsSupportDtype(SUPPORT_DTYPE, dType_), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-        context_->GetNodeName(), "x", Ops::Base::ToString(dType_).c_str(),
-        "dtype must be in [DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT64, DT_BOOL, DT_BF16]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsSupportDtype(SUPPORT_DTYPE, dType_),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "x", Ops::Base::ToString(dType_).c_str(),
+                    "dtype must be in [DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT64, DT_BOOL, DT_BF16]"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(dType_ != assist1DType || dType_ != assist2DType || dType_ != outputDtype,
-               OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(),
-               "x, assist1, assist2, y",
-               (Ops::Base::ToString(dType_) + ", " + Ops::Base::ToString(assist1DType) + ", " +
-                Ops::Base::ToString(assist2DType) + ", " + Ops::Base::ToString(outputDtype)).c_str(),
-               "x, assist1, assist2 and y dtypes must be the same"),
-               return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context_->GetNodeName(), "x, assist1, assist2, y",
+                    (Ops::Base::ToString(dType_) + ", " + Ops::Base::ToString(assist1DType) + ", " +
+                     Ops::Base::ToString(assist2DType) + ", " + Ops::Base::ToString(outputDtype))
+                        .c_str(),
+                    "x, assist1, assist2 and y dtypes must be the same"),
+                return ge::GRAPH_FAILED);
     dataTypeSize_ = ge::GetSizeByDataType(dType_);
-    OP_CHECK_IF(dataTypeSize_ == -1, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(),
-        "x", Ops::Base::ToString(dType_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataTypeSize_ == -1,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(dType_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-bool IndexFillDTiling::IsCapable() {
-    return true;
-}
+bool IndexFillDTiling::IsCapable() { return true; }
 
-ge::graphStatus IndexFillDTiling::GetShapeAttrsInfo() {
+ge::graphStatus IndexFillDTiling::GetShapeAttrsInfo()
+{
     if (CheckDataType() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -116,15 +117,17 @@ ge::graphStatus IndexFillDTiling::GetShapeAttrsInfo() {
     return CheckShape();
 }
 
-ge::graphStatus IndexFillDTiling::GetPlatformInfo() {
-    auto compileInfo = reinterpret_cast<const IndexFillDCompileInfo *>(context_->GetCompileInfo());
+ge::graphStatus IndexFillDTiling::GetPlatformInfo()
+{
+    auto compileInfo = reinterpret_cast<const IndexFillDCompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     totalCoreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IndexFillDTiling::DoOpTiling() {
+ge::graphStatus IndexFillDTiling::DoOpTiling()
+{
     inputShapeSize_ = inputXShape_.GetShapeSize();
     int64_t maxUbAvailable = ubSize_ / (BUFFER_NUM * ALL_BUFFERS * dataTypeSize_);
     normalCoreData_ = std::max(CeilDiv(inputShapeSize_, totalCoreNum_), MIN_DATA_SIZE);
@@ -141,20 +144,18 @@ ge::graphStatus IndexFillDTiling::DoOpTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IndexFillDTiling::DoLibApiTiling() {
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus IndexFillDTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t IndexFillDTiling::GetTilingKey() const {
-    return TILING_KEY_COMMON;
-}
+uint64_t IndexFillDTiling::GetTilingKey() const { return TILING_KEY_COMMON; }
 
-ge::graphStatus IndexFillDTiling::GetWorkspaceSize() {
+ge::graphStatus IndexFillDTiling::GetWorkspaceSize()
+{
     workspaceSize_ = ASCEND_WORKSPACE;
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IndexFillDTiling::PostTiling() {
+ge::graphStatus IndexFillDTiling::PostTiling()
+{
     tilingData_.set_normalCoreData(normalCoreData_);
     tilingData_.set_tailCoreData(tailCoreData_);
     tilingData_.set_ubFactor(ubFactor_);
@@ -171,7 +172,8 @@ ge::graphStatus IndexFillDTiling::PostTiling() {
     return ge::GRAPH_SUCCESS;
 }
 
-void IndexFillDTiling::DumpTilingInfo() {
+void IndexFillDTiling::DumpTilingInfo()
+{
     std::ostringstream info;
     info << "usedCoreNum: " << usedCoreNum_;
     info << ", normalCoreData: " << normalCoreData_;
@@ -210,4 +212,4 @@ ge::graphStatus TilingPrepareForIndexFillD(gert::TilingParseContext* context)
 }
 
 IMPL_OP_OPTILING(IndexFillD).Tiling(Tiling4IndexFillD).TilingParse<IndexFillDCompileInfo>(TilingPrepareForIndexFillD);
-}  // namespace optiling
+} // namespace optiling

@@ -53,10 +53,8 @@ struct AdaptiveMaxPool3dGradCompileInfoV35 {
 
 class AdaptiveMaxPool3dGradTilingBaseV35 : public TilingBaseClass {
 public:
-    explicit AdaptiveMaxPool3dGradTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptiveMaxPool3dGradTilingBaseV35() override
-    {}
+    explicit AdaptiveMaxPool3dGradTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptiveMaxPool3dGradTilingBaseV35() override {}
 
     const std::string nodeName = "AdaptiveMaxPool3DGrad";
     AdaptiveMaxPool3dGradTilingDataV35* tilingData_ = context_->GetTilingData<AdaptiveMaxPool3dGradTilingDataV35>();
@@ -82,11 +80,9 @@ protected:
 
 class AdaptiveMaxPool3dGradTilingSimt : public AdaptiveMaxPool3dGradTilingBaseV35 {
 public:
-    explicit AdaptiveMaxPool3dGradTilingSimt(gert::TilingContext* context)
-        : AdaptiveMaxPool3dGradTilingBaseV35(context)
+    explicit AdaptiveMaxPool3dGradTilingSimt(gert::TilingContext* context) : AdaptiveMaxPool3dGradTilingBaseV35(context)
     {}
-    ~AdaptiveMaxPool3dGradTilingSimt() override
-    {}
+    ~AdaptiveMaxPool3dGradTilingSimt() override {}
 
 protected:
     bool IsCapable() override;
@@ -96,6 +92,6 @@ protected:
     uint64_t GetTilingKey() const override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

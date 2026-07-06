@@ -22,24 +22,23 @@
 using namespace AscendC;
 using namespace LogSoftmaxV2Ops;
 
-namespace
-{
+namespace {
 #define TILINGKEY_AR_SMALL_R 500
 #define TILINGKEY_AR 1000
 #define TILINGKEY_AR_RECOMPUTE 2000
 #define TILINGKEY_ARA 10000
 #define TILINGKEY_ARA_RECOMPUTE 20000
 
-}  // namespace
+} // namespace
 
-#define LOG_SOFTMAX_V2_AR_SMALL_R_IMPL(INPUT_TYPE, OUTPUT_TYPE)                                 \
-    do {                                                                                    \
-        GET_TILING_DATA_WITH_STRUCT(SoftmaxV2ArSmallRTilingData, tilingDataIn, tiling);     \
-        const SoftmaxV2ArSmallRTilingData* __restrict tilingData = &tilingDataIn;           \
-        TPipe pipe;                                                                         \
-        LogSoftmaxV2ArSmallR<INPUT_TYPE, OUTPUT_TYPE> op(&pipe);                               \
-        op.Init(logits, logsoftmax, tilingData);                                                          \
-        op.Process();                                                                       \
+#define LOG_SOFTMAX_V2_AR_SMALL_R_IMPL(INPUT_TYPE, OUTPUT_TYPE)                         \
+    do {                                                                                \
+        GET_TILING_DATA_WITH_STRUCT(SoftmaxV2ArSmallRTilingData, tilingDataIn, tiling); \
+        const SoftmaxV2ArSmallRTilingData* __restrict tilingData = &tilingDataIn;       \
+        TPipe pipe;                                                                     \
+        LogSoftmaxV2ArSmallR<INPUT_TYPE, OUTPUT_TYPE> op(&pipe);                        \
+        op.Init(logits, logsoftmax, tilingData);                                        \
+        op.Process();                                                                   \
     } while (0)
 
 #define LOG_SOFTMAX_V2_AR_IMPL(INPUT_TYPE, OUTPUT_TYPE)                           \
@@ -92,7 +91,7 @@ extern "C" __global__ __aicore__ void log_softmax_v2(GM_ADDR logits, GM_ADDR log
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (TILING_KEY_IS(TILINGKEY_AR_SMALL_R)) {
         LOG_SOFTMAX_V2_AR_SMALL_R_IMPL(DTYPE_LOGITS, DTYPE_LOGSOFTMAX);
-    }else if (TILING_KEY_IS(TILINGKEY_AR)) {
+    } else if (TILING_KEY_IS(TILINGKEY_AR)) {
         LOG_SOFTMAX_V2_AR_IMPL(DTYPE_LOGITS, DTYPE_LOGSOFTMAX);
     } else if (TILING_KEY_IS(TILINGKEY_AR_RECOMPUTE)) {
         LOG_SOFTMAX_V2_AR_RECOMPUTE_IMPL(DTYPE_LOGITS, DTYPE_LOGSOFTMAX);

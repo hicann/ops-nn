@@ -28,11 +28,11 @@ struct ThresholdCompileInfo {
 
 class ThresholdTiling {
 public:
-    explicit ThresholdTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ThresholdTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:
-    ge::graphStatus ValidateParams();    
+    ge::graphStatus ValidateParams();
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckShape();
@@ -40,7 +40,7 @@ protected:
 private:
     uint64_t dType = 0;
     bool hasValue = true;
-    gert::TilingContext *tilingContext;
+    gert::TilingContext* tilingContext;
     ge::DataType outputDtype = ge::DT_UNDEFINED;
     ge::DataType inputDtype = ge::DT_UNDEFINED;
 };

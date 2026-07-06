@@ -19,8 +19,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "util/math_util.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t UB_RESVERVED_SIZE = 1024;
 static constexpr uint64_t ONE_KSIZE_TILING_KEY = 100001;
 static constexpr int64_t DOUBLE_BUFFER = 2;
@@ -52,7 +51,8 @@ bool Pool3DOneKsizeTiling::IsCapable()
     if (inputData_.kernelSize[D_DIM] != 1 || inputData_.kernelSize[H_DIM] != 1 || inputData_.kernelSize[W_DIM] != 1) {
         return false;
     }
-    if (inputData_.inputFormat == ge::Format::FORMAT_NDHWC && inputData_.channels * inputData_.dtypeSize > MAX_CHANNEL) {
+    if (inputData_.inputFormat == ge::Format::FORMAT_NDHWC &&
+        inputData_.channels * inputData_.dtypeSize > MAX_CHANNEL) {
         return false;
     }
     InitializationVars();
@@ -65,10 +65,7 @@ uint64_t Pool3DOneKsizeTiling::GetTilingKey() const
     return tilingKey;
 }
 
-ge::graphStatus Pool3DOneKsizeTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Pool3DOneKsizeTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Pool3DOneKsizeTiling::GetWorkspaceSize()
 {
@@ -84,7 +81,8 @@ void Pool3DOneKsizeTiling::DoUBTilingSingle()
 {
     // d*h*w全载
     if (inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM] <= availableUb_) {
-        int64_t maxNfactor = availableUb_ / (inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM]);
+        int64_t maxNfactor = availableUb_ /
+                             (inputData_.outShape[D_DIM] * inputData_.outShape[W_DIM] * inputData_.outShape[H_DIM]);
         ubFactorN_ = std::min(inputData_.batches, maxNfactor);
         outUbFactorD_ = inputData_.outShape[D_DIM];
         outUbFactorH_ = inputData_.outShape[H_DIM];
@@ -107,7 +105,7 @@ void Pool3DOneKsizeTiling::DoUBTilingSingle()
         hLoop_ = 1;
         wLoop_ = 1;
         return;
-    }    
+    }
     // w全载
     if (inputData_.outShape[W_DIM] <= availableUb_) {
         int64_t maxHfactor = availableUb_ / inputData_.outShape[W_DIM];
@@ -148,10 +146,11 @@ void Pool3DOneKsizeTiling::DoUBTiling()
 void Pool3DOneKsizeTiling::DoBlockTiling()
 {
     int64_t totalLoop = nLoop_ * dLoop_ * hLoop_ * wLoop_;
-    blockFactor_ = totalLoop / static_cast<int64_t>(coreNum_) ;
-    blockTail_ = totalLoop - blockFactor_ * static_cast<int64_t>(coreNum_) ;
-    usedCoreNum_ = blockFactor_ == 0 ? blockTail_ : static_cast<int64_t>(coreNum_) ;
-    inUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_ * inputData_.channels, oneBlockNum_);
+    blockFactor_ = totalLoop / static_cast<int64_t>(coreNum_);
+    blockTail_ = totalLoop - blockFactor_ * static_cast<int64_t>(coreNum_);
+    usedCoreNum_ = blockFactor_ == 0 ? blockTail_ : static_cast<int64_t>(coreNum_);
+    inUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorD_ * outUbFactorH_ * outUbFactorW_ * inputData_.channels,
+                                     oneBlockNum_);
 }
 
 void Pool3DOneKsizeTiling::CalcDivisor()
@@ -268,4 +267,4 @@ ge::graphStatus MaxPool3DOneKsizeTiling::GetShapeAttrsInfo()
 
 REGISTER_OPS_POOL_TILING_TEMPLATE(MaxPool3D, MaxPool3DOneKsizeTiling, 0);
 
-}  // namespace optiling
+} // namespace optiling

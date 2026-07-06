@@ -19,10 +19,7 @@ using namespace ge;
 
 namespace ops {
 
-static ge::graphStatus InferShapeMatmulFp32(gert::InferShapeContext* context)
-{
-    return GRAPH_SUCCESS;
-}
+static ge::graphStatus InferShapeMatmulFp32(gert::InferShapeContext* context) { return GRAPH_SUCCESS; }
 
 IMPL_OP_INFERSHAPE(MatmulFp32).InferShape(InferShapeMatmulFp32);
 } // namespace ops

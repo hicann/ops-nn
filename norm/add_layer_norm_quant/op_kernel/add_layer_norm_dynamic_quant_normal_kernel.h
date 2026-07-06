@@ -21,16 +21,13 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormDynamicQuantNormal : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormDynamicQuantNormal(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormDynamicQuantNormal(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* smooth1, __gm__ uint8_t* smooth2, __gm__ uint8_t* fake1, __gm__ uint8_t* fake2,
-        __gm__ uint8_t* y1, __gm__ uint8_t* y2, __gm__ uint8_t* x, __gm__ uint8_t* outScale1, __gm__ uint8_t* outScale2,
-        __gm__ uint8_t* workspace, const AddLayerNormQuantTilingData* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* smooth1, __gm__ uint8_t* smooth2,
+                                __gm__ uint8_t* fake1, __gm__ uint8_t* fake2, __gm__ uint8_t* y1, __gm__ uint8_t* y2,
+                                __gm__ uint8_t* x, __gm__ uint8_t* outScale1, __gm__ uint8_t* outScale2,
+                                __gm__ uint8_t* workspace, const AddLayerNormQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -55,7 +52,7 @@ public:
         uint32_t num_rn = this->rowStep * this->numLastDimAligned;
         uint32_t num_size_t = this->numLastDimAligned * sizeof(T);
         Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, ROUND_UP32(2 * num_rn * sizeof(T))); // 4RN
-        Ppipe->InitBuffer(outRowQue, BUFFER_NUM, ROUND_UP32(num_rn * sizeof(T))); // 2RN
+        Ppipe->InitBuffer(outRowQue, BUFFER_NUM, ROUND_UP32(num_rn * sizeof(T)));     // 2RN
 
         Ppipe->InitBuffer(xBufFp32, ROUND_UP32(num_rn * sizeof(float))); // 4RN
         Ppipe->InitBuffer(yBufFp32, ROUND_UP32(num_rn * sizeof(float))); // 4RN
@@ -115,8 +112,8 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX1X2(
-        uint64_t gmOffset, uint32_t rowCount, int32_t elementCount, DataCopyPadParams& padParams)
+    __aicore__ inline void CopyInX1X2(uint64_t gmOffset, uint32_t rowCount, int32_t elementCount,
+                                      DataCopyPadParams& padParams)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
         DataCopyEx(x1x2LocalIn[0], this->x1Gm[gmOffset], this->numLastDim, rowCount, padParams);
@@ -161,7 +158,8 @@ private:
                 Add(xLocalFp32, xLocalFp32, yLocalFp32, elementCount);
                 Cast(x1x2Local.template ReinterpretCast<float>(), biasLocal, RoundMode::CAST_NONE, this->numLastDim);
                 PipeBarrier<PIPE_V>();
-                repeatByRow(xLocalFp32, xLocalFp32, x1x2Local.template ReinterpretCast<float>(), UINT32_ONE, repeatParamsBias);
+                repeatByRow(xLocalFp32, xLocalFp32, x1x2Local.template ReinterpretCast<float>(), UINT32_ONE,
+                            repeatParamsBias);
             } else {
                 auto biasLocal = yLocalFp32.ReinterpretCast<T>()[elementCount];
                 Cast(xLocalFp32, x1Local, RoundMode::CAST_NONE, elementCount);
@@ -199,8 +197,8 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeLayerNorm(
-        uint32_t nums, int32_t elementCount, LocalTensor<T>& gammaLocal, LocalTensor<T>& betaLocal)
+    __aicore__ inline void ComputeLayerNorm(uint32_t nums, int32_t elementCount, LocalTensor<T>& gammaLocal,
+                                            LocalTensor<T>& betaLocal)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- x1 + x2 + bias
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -276,10 +274,12 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, elementCount);
+        Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
         PipeBarrier<PIPE_V>();
         for (int i = 0; i < nums; ++i) {
-            Cast(yLocal[i * this->numLastDimRoundUp32], xLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned], RoundMode::CAST_TRUNC, this->numLastDim);
+            Cast(yLocal[i * this->numLastDimRoundUp32], xLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned],
+                 RoundMode::CAST_TRUNC, this->numLastDim);
         }
 
         PipeBarrier<PIPE_V>();
@@ -306,7 +306,8 @@ private:
         inRowsQue.FreeTensor(smoothLocal);
 
         for (int32_t rid = 0; rid < nums; ++rid) {
-            Mul(yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], smoothFp32, this->numLastDim);
+            Mul(yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], smoothFp32,
+                this->numLastDim);
         }
         PipeBarrier<PIPE_V>();
 
@@ -319,10 +320,12 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, elementCount);
+        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
         PipeBarrier<PIPE_V>();
         for (int i = 0; i < nums; ++i) {
-            Cast(yLocal[i * this->numLastDimRoundUp32], yLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned], RoundMode::CAST_TRUNC, this->numLastDim);
+            Cast(yLocal[i * this->numLastDimRoundUp32], yLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned],
+                 RoundMode::CAST_TRUNC, this->numLastDim);
         }
 
         outRowQue.EnQue(yLocal);
@@ -335,7 +338,7 @@ private:
         LocalTensor<float> scale2Local = scales2Que.template AllocTensor<float>();
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- y
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
-       
+
         LocalTensor<T> smooth12Local = inRowsQue.template DeQue<T>();
         auto smooth1Local = smooth12Local[0];
         auto smooth2Local = smooth12Local[this->numLastDimAligned];
@@ -355,8 +358,10 @@ private:
         PipeBarrier<PIPE_V>();
 
         for (int32_t rid = 0; rid < nums; ++rid) {
-            Mul(yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], smooth1Fp32, this->numLastDim); // yLocalFp32 <-- y * smooth1
-            Mul(xLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], smooth2Fp32, this->numLastDim); // xLocalFp32 <-- y * smooth2
+            Mul(yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], smooth1Fp32,
+                this->numLastDim); // yLocalFp32 <-- y * smooth1
+            Mul(xLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], smooth2Fp32,
+                this->numLastDim); // xLocalFp32 <-- y * smooth2
         }
         PipeBarrier<PIPE_V>();
 
@@ -375,13 +380,19 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, elementCount);
-        Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, elementCount);
+        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
+        Cast(xLocalFp32.ReinterpretCast<half>(), xLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
         PipeBarrier<PIPE_V>();
 
         for (int i = 0; i < nums; ++i) {
-            Cast(y1Local[i * this->numLastDimRoundUp32], yLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned], RoundMode::CAST_TRUNC, this->numLastDim);
-            Cast(xLocalFp32.ReinterpretCast<int8_t>()[i * this->numLastDimRoundUp32], xLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned], RoundMode::CAST_TRUNC, this->numLastDim);
+            Cast(y1Local[i * this->numLastDimRoundUp32],
+                 yLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned], RoundMode::CAST_TRUNC,
+                 this->numLastDim);
+            Cast(xLocalFp32.ReinterpretCast<int8_t>()[i * this->numLastDimRoundUp32],
+                 xLocalFp32.ReinterpretCast<half>()[i * this->numLastDimAligned], RoundMode::CAST_TRUNC,
+                 this->numLastDim);
         }
         PipeBarrier<PIPE_V>();
 
@@ -438,9 +449,8 @@ private:
         }
     }
 
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
-        int32_t nums)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                       LocalTensor<float>& scaleTensor, int32_t size, int32_t nums)
     {
         float maxTemp;
         float scaleTemp;
@@ -465,71 +475,81 @@ private:
         }
     }
 
-    __aicore__ inline void doBrcbRstdShape(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local, uint32_t calcRowNum)
+    __aicore__ inline void doBrcbRstdShape(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local,
+                                           uint32_t calcRowNum)
     {
         uint32_t splidRow = 240;
         uint32_t rowRepeatLoop = calcRowNum / splidRow;
         uint32_t rowRepeatTail = calcRowNum - rowRepeatLoop * splidRow;
-        for(uint32_t r_i = 0; r_i < rowRepeatLoop; r_i ++) {
+        for (uint32_t r_i = 0; r_i < rowRepeatLoop; r_i++) {
             Brcb(dstLocal[r_i * splidRow * MOV_8], src1Local[r_i * splidRow], splidRow, {1, 8});
             PipeBarrier<PIPE_V>();
         }
-        if(rowRepeatTail > 0) {
-            Brcb(dstLocal[rowRepeatLoop * splidRow * MOV_8], src1Local[rowRepeatLoop * splidRow], rowRepeatTail, {1, 8});
+        if (rowRepeatTail > 0) {
+            Brcb(dstLocal[rowRepeatLoop * splidRow * MOV_8], src1Local[rowRepeatLoop * splidRow], rowRepeatTail,
+                 {1, 8});
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void repeatByRow(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local, const LocalTensor<float>& src2Local, uint32_t cmdType, uint32_t strideParams[4])
+    __aicore__ inline void repeatByRow(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local,
+                                       const LocalTensor<float>& src2Local, uint32_t cmdType, uint32_t strideParams[4])
     {
         uint32_t singlT = 255;
         uint32_t calc_row_num = strideParams[0];
         uint32_t rowRepeatLoop = calc_row_num / singlT;
         uint32_t rowRepeatTail = calc_row_num - rowRepeatLoop * singlT;
-        for(uint32_t r_i = 0; r_i < rowRepeatLoop; r_i ++) {
+        for (uint32_t r_i = 0; r_i < rowRepeatLoop; r_i++) {
             uint32_t offset2 = strideParams[1] == 1 ? r_i * singlT * MOV_8 : 0;
             uint32_t offset1 = r_i * singlT * this->numLastDimAligned;
             strideParams[0] = singlT;
             // 1=Add 2=Mul
             if (cmdType == 1) {
-              addRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
+                addRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
             } else {
-              mulRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
+                mulRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
             }
         }
-        if(rowRepeatTail > 0) {
+        if (rowRepeatTail > 0) {
             strideParams[0] = rowRepeatTail;
             uint32_t offset2 = strideParams[1] == 1 ? rowRepeatLoop * singlT * MOV_8 : 0;
             uint32_t offset1 = rowRepeatLoop * singlT * this->numLastDimAligned;
             if (cmdType == 1) {
-              addRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
+                addRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
             } else {
-              mulRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
+                mulRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], strideParams);
             }
         }
     }
 
-    __aicore__ inline void addRepeat(LocalTensor<float> dstLocal, LocalTensor<float> src1Local, LocalTensor<float> src2Local, uint32_t strideParams[4])
+    __aicore__ inline void addRepeat(LocalTensor<float> dstLocal, LocalTensor<float> src1Local,
+                                     LocalTensor<float> src2Local, uint32_t strideParams[4])
     {
         uint32_t calcRowNum = strideParams[0];
         // 1=rstd  2=gamma
         uint32_t type = strideParams[1];
         uint8_t src1BlkStride = static_cast<uint8_t>(strideParams[2]);
         uint8_t src1RepStride = static_cast<uint8_t>(strideParams[3]);
-        uint32_t repeatParams[6] = {strideParams[2], strideParams[3], strideParams[4], strideParams[5], strideParams[6], strideParams[7]};
+        uint32_t repeatParams[6] = {strideParams[2], strideParams[3], strideParams[4],
+                                    strideParams[5], strideParams[6], strideParams[7]};
         for (uint32_t m_i = 0; m_i < this->mulLoopFp32; m_i++) {
             uint32_t src2Offset = type == 2 ? m_i * NUM_PER_REP_FP32 : 0;
-            Add(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local[src2Offset], NUM_PER_REP_FP32, calcRowNum, {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
+            Add(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local[src2Offset],
+                NUM_PER_REP_FP32, calcRowNum,
+                {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
             PipeBarrier<PIPE_V>();
         }
-        if(this->mulTailFp32 > 0) {
+        if (this->mulTailFp32 > 0) {
             uint32_t src2Offset = type == 2 ? this->mulLoopFp32 * NUM_PER_REP_FP32 : 0;
-            Add(dstLocal[this->mulLoopFp32 * NUM_PER_REP_FP32], src1Local[this->mulLoopFp32 * NUM_PER_REP_FP32], src2Local[src2Offset], this->mulTailFp32, calcRowNum, {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
+            Add(dstLocal[this->mulLoopFp32 * NUM_PER_REP_FP32], src1Local[this->mulLoopFp32 * NUM_PER_REP_FP32],
+                src2Local[src2Offset], this->mulTailFp32, calcRowNum,
+                {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void mulRepeat(LocalTensor<float> dstLocal, LocalTensor<float> src1Local, LocalTensor<float> src2Local, uint32_t strideParams[4])
+    __aicore__ inline void mulRepeat(LocalTensor<float> dstLocal, LocalTensor<float> src1Local,
+                                     LocalTensor<float> src2Local, uint32_t strideParams[4])
     {
         uint32_t calcRowNum = strideParams[0];
         // 1=rstd  2=gamma
@@ -538,12 +558,16 @@ private:
         uint8_t src1RepStride = static_cast<uint8_t>(strideParams[3]);
         for (uint32_t m_i = 0; m_i < this->mulLoopFp32; m_i++) {
             uint32_t src2Offset = type == 2 ? m_i * NUM_PER_REP_FP32 : 0;
-            Mul(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local[src2Offset], NUM_PER_REP_FP32, calcRowNum, {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
+            Mul(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local[src2Offset],
+                NUM_PER_REP_FP32, calcRowNum,
+                {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
             PipeBarrier<PIPE_V>();
         }
-        if(this->mulTailFp32 > 0) {
+        if (this->mulTailFp32 > 0) {
             uint32_t src2Offset = type == 2 ? this->mulLoopFp32 * NUM_PER_REP_FP32 : 0;
-            Mul(dstLocal[this->mulLoopFp32 * NUM_PER_REP_FP32], src1Local[this->mulLoopFp32 * NUM_PER_REP_FP32], src2Local[src2Offset], this->mulTailFp32, calcRowNum, {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
+            Mul(dstLocal[this->mulLoopFp32 * NUM_PER_REP_FP32], src1Local[this->mulLoopFp32 * NUM_PER_REP_FP32],
+                src2Local[src2Offset], this->mulTailFp32, calcRowNum,
+                {1, 1, src1BlkStride, this->dstRepStrideFp32, this->dstRepStrideFp32, src1RepStride});
             PipeBarrier<PIPE_V>();
         }
     }

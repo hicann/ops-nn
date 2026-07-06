@@ -31,13 +31,14 @@ using namespace std;
 using namespace ge;
 
 class TestApplyFtrlTiling : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { std::cout << "TestApplyFtrlTiling SetUp" << std::endl; }
 
     static void TearDownTestCase() { std::cout << "TestApplyFtrlTiling TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData* tiling_data) {
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
     auto data = tiling_data->GetData();
     string result;
     for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
@@ -50,7 +51,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data) {
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
                          map<string, string>& aicoreSpec, map<string, string>& intrinsics,
-                         map<string, string>& socVersion) {
+                         map<string, string>& socVersion)
+{
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -66,11 +68,11 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-struct ApplyFtrlUtCompileInfo {
-};
+struct ApplyFtrlUtCompileInfo {};
 
 static void DoApplyFtrlTilingCase(std::initializer_list<int64_t>& inputShape, ge::DataType inputDtype,
-                                  ge::Format inputFormat, std::string& expectStr) {
+                                  ge::Format inputFormat, std::string& expectStr)
+{
     // init platform
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -99,7 +101,8 @@ static void DoApplyFtrlTilingCase(std::initializer_list<int64_t>& inputShape, ge
                       .SetOpType(opType)
                       .NodeIoNum(8, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &oneShape, &oneShape, &oneShape, &oneShape})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &oneShape, &oneShape,
+                                    &oneShape, &oneShape})
                       .OutputShapes({&tensorShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -131,32 +134,32 @@ static void DoApplyFtrlTilingCase(std::initializer_list<int64_t>& inputShape, ge
     EXPECT_EQ(tiling_data_result, expectStr);
 }
 
-TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float32) {
+TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float32)
+{
     // FLOAT
     std::initializer_list<int64_t> inputShape = {16, 26, 16, 19};
     auto inputDtype = ge::DT_FLOAT;
     auto inputFormat = ge::FORMAT_ND;
-    std::string expectStr =
-        "126464 12094627905567 4096 31 2 2 1280 768 2816 1 ";
+    std::string expectStr = "126464 12094627905567 4096 31 2 2 1280 768 2816 1 ";
     DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
 }
 
-TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float16) {
+TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_float16)
+{
     // FLOAT16
     std::initializer_list<int64_t> inputShape = {3761, 4, 44, 4};
     auto inputDtype = ge::DT_FLOAT16;
     auto inputFormat = ge::FORMAT_ND;
-    std::string expectStr =
-        "2647744 10995116277824 41472 64 17 14 512 1728 2560 1 ";
+    std::string expectStr = "2647744 10995116277824 41472 64 17 14 512 1728 2560 1 ";
     DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
 }
 
-TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_bfloat16) {
+TEST_F(TestApplyFtrlTiling, apply_ftrl_testcase_bfloat16)
+{
     // BFLOAT16
     std::initializer_list<int64_t> inputShape = {7, 2, 7, 8, 10};
     auto inputDtype = ge::DT_BF16;
     auto inputFormat = ge::FORMAT_ND;
-    std::string expectStr =
-        "7840 10995116277762 4096 2 2 2 1536 1184 2560 1 ";
+    std::string expectStr = "7840 10995116277762 4096 2 2 2 1536 1184 2560 1 ";
     DoApplyFtrlTilingCase(inputShape, inputDtype, inputFormat, expectStr);
 }

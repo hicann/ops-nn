@@ -46,16 +46,13 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp3>
-struct is_same<Tp3, Tp3> : public true_type {
-};
+struct is_same<Tp3, Tp3> : public true_type {};
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyEx(
-    const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
-    const DataCopyPadParams& padParams = {})
+__aicore__ inline void DataCopyEx(const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
+                                  const DataCopyPadParams& padParams = {})
 {
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
@@ -113,9 +110,9 @@ __aicore__ inline float ReduceSumFP32(const LocalTensor<float>& src_local, int32
     return value;
 }
 
-__aicore__ inline void ReduceSumShort(
-    const LocalTensor<float>& dst_local3, const LocalTensor<float>& src_local, const LocalTensor<float>& tmp_local,
-    int32_t align_len, int32_t data_len, int32_t repeat)
+__aicore__ inline void ReduceSumShort(const LocalTensor<float>& dst_local3, const LocalTensor<float>& src_local,
+                                      const LocalTensor<float>& tmp_local, int32_t align_len, int32_t data_len,
+                                      int32_t repeat)
 {
     int32_t elementNum = ONE_BLK_SIZE / sizeof(float);
     int32_t maxRepeat = ELEM_PER_REP_FP32;
@@ -141,14 +138,16 @@ __aicore__ inline void ReduceSumShort(
         BlockReduceSum<float>(dst_local3, tmp_local, repeatTimesV1, maxRepeat, 1, 1, elementNum);
     }
     if (repeatTail != 0) {
-        BlockReduceSum<float>(dst_local3[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1, elementNum);
+        BlockReduceSum<float>(dst_local3[bodyCount], tmp_local[bodyCount * elementNum], 1, repeatTail, 1, 1,
+                              elementNum);
     }
 }
 
-__aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
-    const uint32_t elemNum, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
-    const uint8_t repStride)
+__aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(const LocalTensor<float>& dstLocal,
+                                                           const LocalTensor<float>& srcLocal,
+                                                           const LocalTensor<float>& tmpLocal, const uint32_t elemNum,
+                                                           const uint32_t numLastDim, const uint32_t tailCount,
+                                                           const uint32_t repeat, const uint8_t repStride)
 {
     uint32_t elemIndex = 0;
     for (; elemIndex + ELEM_PER_REP_FP32 <= numLastDim; elemIndex += ELEM_PER_REP_FP32) {
@@ -169,105 +168,106 @@ __aicore__ inline void ReduceSumForSmallReduceDimPreRepeat(
  * reduce dim form (N, D) to (N, 1)
  * this reduce sum is for small reduce dim.
  */
-__aicore__ inline void ReduceSumForSmallReduceDim(
-    const LocalTensor<float>& dstLocal1, const LocalTensor<float>& srcLocal, const LocalTensor<float>& tmpLocal,
-    const uint32_t numLastDimAligned, const uint32_t numLastDim, const uint32_t tailCount, const uint32_t repeat,
-    const uint8_t repStride)
+__aicore__ inline void ReduceSumForSmallReduceDim(const LocalTensor<float>& dstLocal1,
+                                                  const LocalTensor<float>& srcLocal,
+                                                  const LocalTensor<float>& tmpLocal, const uint32_t numLastDimAligned,
+                                                  const uint32_t numLastDim, const uint32_t tailCount,
+                                                  const uint32_t repeat, const uint8_t repStride)
 {
     uint32_t repeatTimes = repeat / MAX_REP_NUM;
     if (repeatTimes == 0) {
-        ReduceSumForSmallReduceDimPreRepeat(
-            dstLocal1, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount, repeat, repStride);
+        ReduceSumForSmallReduceDimPreRepeat(dstLocal1, srcLocal, tmpLocal, ELEM_PER_REP_FP32, numLastDim, tailCount,
+                                            repeat, repStride);
     } else {
         uint32_t repTailNum = repeat % MAX_REP_NUM;
         uint32_t repIndex = 0;
         uint32_t repElem;
         for (; repIndex + MAX_REP_NUM <= repeat; repIndex += MAX_REP_NUM) {
-            ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal1[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
-                ELEM_PER_REP_FP32, numLastDim, tailCount, MAX_REP_NUM, repStride);
+            ReduceSumForSmallReduceDimPreRepeat(dstLocal1[repIndex], srcLocal[repIndex * numLastDimAligned],
+                                                tmpLocal[repIndex * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, numLastDim,
+                                                tailCount, MAX_REP_NUM, repStride);
         }
         if (repTailNum != 0) {
-            ReduceSumForSmallReduceDimPreRepeat(
-                dstLocal1[repIndex], srcLocal[repIndex * numLastDimAligned], tmpLocal[repIndex * ELEM_PER_REP_FP32],
-                ELEM_PER_REP_FP32, numLastDim, tailCount, repTailNum, repStride);
+            ReduceSumForSmallReduceDimPreRepeat(dstLocal1[repIndex], srcLocal[repIndex * numLastDimAligned],
+                                                tmpLocal[repIndex * ELEM_PER_REP_FP32], ELEM_PER_REP_FP32, numLastDim,
+                                                tailCount, repTailNum, repStride);
         }
     }
 }
 
-__aicore__ inline void InitVAForTransposeAscendC(__ubuf__ half *transposeDstAddr, __ubuf__ half *transposeSrcAddr, uint64_t dstLocalList[16], uint64_t srcLocalList[16]) {
-  for (int i = 0; i < 16; ++i) {
-    dstLocalList[i] = (uint64_t)(transposeDstAddr + i * 128);
-    srcLocalList[i] = (uint64_t)(transposeSrcAddr + (i % 2 ? 16 : 0) + (i / 2) * 256);
-  }
+__aicore__ inline void InitVAForTransposeAscendC(__ubuf__ half* transposeDstAddr, __ubuf__ half* transposeSrcAddr,
+                                                 uint64_t dstLocalList[16], uint64_t srcLocalList[16])
+{
+    for (int i = 0; i < 16; ++i) {
+        dstLocalList[i] = (uint64_t)(transposeDstAddr + i * 128);
+        srcLocalList[i] = (uint64_t)(transposeSrcAddr + (i % 2 ? 16 : 0) + (i / 2) * 256);
+    }
 }
 
 /*
  * for reduce dim > 64, need run InitVAForTranspose first.
  */
 __aicore__ inline void CCEBroadCastShortAscendC(const LocalTensor<int16_t>& dstAddr, const LocalTensor<float>& srcAddr,
-                                         const LocalTensor<int16_t>& transposeDstAddr, const LocalTensor<int16_t>& transposeSrcAddr,
-                                         const LocalTensor<int16_t>& orOffsetINT16Addr, uint64_t *dstLocalList, uint64_t *srcLocalList,
-                                         const uint32_t forCount, const uint32_t tailCount, const uint32_t repeat, const uint8_t repStride)
+                                                const LocalTensor<int16_t>& transposeDstAddr,
+                                                const LocalTensor<int16_t>& transposeSrcAddr,
+                                                const LocalTensor<int16_t>& orOffsetINT16Addr, uint64_t* dstLocalList,
+                                                uint64_t* srcLocalList, const uint32_t forCount,
+                                                const uint32_t tailCount, const uint32_t repeat,
+                                                const uint8_t repStride)
 {
-  SetMaskNorm();
-  SetVectorMask<int16_t, MaskMode::NORMAL>(0x0, 0xffff);
-  Duplicate<int16_t, false>(orOffsetINT16Addr, (int16_t)0, MASK_PLACEHOLDER, 1, (uint16_t)0, (uint8_t)0);    // all zero
-  ResetMask();
+    SetMaskNorm();
+    SetVectorMask<int16_t, MaskMode::NORMAL>(0x0, 0xffff);
+    Duplicate<int16_t, false>(orOffsetINT16Addr, (int16_t)0, MASK_PLACEHOLDER, 1, (uint16_t)0, (uint8_t)0); // all zero
+    ResetMask();
 
-  DataCopy<float>(transposeSrcAddr.ReinterpretCast<float>(), srcAddr, repStride * FLOAT_BLOCK_ELEM);
-  PipeBarrier<PIPE_V>();
+    DataCopy<float>(transposeSrcAddr.ReinterpretCast<float>(), srcAddr, repStride * FLOAT_BLOCK_ELEM);
+    PipeBarrier<PIPE_V>();
 
-  Transpose(transposeDstAddr.ReinterpretCast<uint16_t>(), transposeSrcAddr.ReinterpretCast<uint16_t>());
+    Transpose(transposeDstAddr.ReinterpretCast<uint16_t>(), transposeSrcAddr.ReinterpretCast<uint16_t>());
 
-  PipeBarrier<PIPE_V>();
+    PipeBarrier<PIPE_V>();
 
-  BinaryRepeatParams repeatParams;
-  repeatParams.src0RepStride = 0;
-  repeatParams.src0BlkStride = 1;
-  repeatParams.src1RepStride = 0;
-  repeatParams.src1BlkStride = 0;
-  repeatParams.dstRepStride = FLOAT_BLOCK_ELEM * LAYER_NUM_TWO;
-  repeatParams.dstBlkStride = 1;
-  SetVectorMask<int16_t, MaskMode::NORMAL>(ELEM_PER_REP_FP16);
-  Or<int16_t, false>(transposeSrcAddr, transposeDstAddr,
-      orOffsetINT16Addr, MASK_PLACEHOLDER, FLOAT_BLOCK_ELEM, repeatParams);
-  Or<int16_t, false>(transposeSrcAddr[(int64_t)ELEM_PER_REP_FP16],
-      transposeDstAddr[(int64_t)ELEM_PER_REP_FP16],
-      orOffsetINT16Addr, MASK_PLACEHOLDER, FLOAT_BLOCK_ELEM, repeatParams);
+    BinaryRepeatParams repeatParams;
+    repeatParams.src0RepStride = 0;
+    repeatParams.src0BlkStride = 1;
+    repeatParams.src1RepStride = 0;
+    repeatParams.src1BlkStride = 0;
+    repeatParams.dstRepStride = FLOAT_BLOCK_ELEM * LAYER_NUM_TWO;
+    repeatParams.dstBlkStride = 1;
+    SetVectorMask<int16_t, MaskMode::NORMAL>(ELEM_PER_REP_FP16);
+    Or<int16_t, false>(transposeSrcAddr, transposeDstAddr, orOffsetINT16Addr, MASK_PLACEHOLDER, FLOAT_BLOCK_ELEM,
+                       repeatParams);
+    Or<int16_t, false>(transposeSrcAddr[(int64_t)ELEM_PER_REP_FP16], transposeDstAddr[(int64_t)ELEM_PER_REP_FP16],
+                       orOffsetINT16Addr, MASK_PLACEHOLDER, FLOAT_BLOCK_ELEM, repeatParams);
 
-  PipeBarrier<PIPE_V>();
-  TransDataTo5HDParams transDataParams;
-  transDataParams.repeatTimes = FLOAT_BLOCK_ELEM;
-  transDataParams.srcRepStride = LAYER_NUM_TWO;
-  transDataParams.dstRepStride = 1;
-  TransDataTo5HD<int16_t>(dstLocalList, srcLocalList, transDataParams);
-  PipeBarrier<PIPE_V>();
-  BinaryRepeatParams repeatParams1;
-  repeatParams1.src0RepStride = 1;
-  repeatParams1.src0BlkStride = 0;
-  repeatParams1.src1RepStride = 0;
-  repeatParams1.src1BlkStride = 0;
-  repeatParams1.dstRepStride = repStride;
-  repeatParams1.dstBlkStride = 1;
-  for (int64_t forIndex = 0; forIndex < (int64_t)forCount; ++forIndex) {
-    Or<int16_t, false>(dstAddr[forIndex * (int64_t)ELEM_PER_REP_FP16],
-        transposeDstAddr,
-        orOffsetINT16Addr, MASK_PLACEHOLDER,
-        repeat, repeatParams1);
-  }
-  if (tailCount != 0) {
-    SetVectorMask<int16_t, MaskMode::NORMAL>(tailCount * LAYER_NUM_TWO);
-    Or<int16_t, false>(dstAddr[forCount * (int64_t)ELEM_PER_REP_FP16],
-        transposeDstAddr,
-        orOffsetINT16Addr, MASK_PLACEHOLDER,
-        repeat, repeatParams1);
-  }
+    PipeBarrier<PIPE_V>();
+    TransDataTo5HDParams transDataParams;
+    transDataParams.repeatTimes = FLOAT_BLOCK_ELEM;
+    transDataParams.srcRepStride = LAYER_NUM_TWO;
+    transDataParams.dstRepStride = 1;
+    TransDataTo5HD<int16_t>(dstLocalList, srcLocalList, transDataParams);
+    PipeBarrier<PIPE_V>();
+    BinaryRepeatParams repeatParams1;
+    repeatParams1.src0RepStride = 1;
+    repeatParams1.src0BlkStride = 0;
+    repeatParams1.src1RepStride = 0;
+    repeatParams1.src1BlkStride = 0;
+    repeatParams1.dstRepStride = repStride;
+    repeatParams1.dstBlkStride = 1;
+    for (int64_t forIndex = 0; forIndex < (int64_t)forCount; ++forIndex) {
+        Or<int16_t, false>(dstAddr[forIndex * (int64_t)ELEM_PER_REP_FP16], transposeDstAddr, orOffsetINT16Addr,
+                           MASK_PLACEHOLDER, repeat, repeatParams1);
+    }
+    if (tailCount != 0) {
+        SetVectorMask<int16_t, MaskMode::NORMAL>(tailCount * LAYER_NUM_TWO);
+        Or<int16_t, false>(dstAddr[forCount * (int64_t)ELEM_PER_REP_FP16], transposeDstAddr, orOffsetINT16Addr,
+                           MASK_PLACEHOLDER, repeat, repeatParams1);
+    }
 }
 
-__aicore__ inline void Level0MulFp32Short(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& src0Local, const LocalTensor<float>& src1Local,
-    uint32_t alignElem, uint32_t repeat, uint32_t processElem)
+__aicore__ inline void Level0MulFp32Short(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src0Local,
+                                          const LocalTensor<float>& src1Local, uint32_t alignElem, uint32_t repeat,
+                                          uint32_t processElem)
 {
     uint32_t maxElemFp32 = ELEM_PER_REP_FP32;
     uint8_t repStride = alignElem / FLOAT_BLOCK_ELEM;
@@ -321,9 +321,9 @@ __aicore__ inline void Level0MulFp32Short(
     }
 }
 
-__aicore__ inline void Level0AddFp32Short(
-    const LocalTensor<float>& dstLocal, const LocalTensor<float>& src0Local, const LocalTensor<float>& src1Local,
-    uint32_t alignElem, uint32_t repeat, uint32_t processElem)
+__aicore__ inline void Level0AddFp32Short(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src0Local,
+                                          const LocalTensor<float>& src1Local, uint32_t alignElem, uint32_t repeat,
+                                          uint32_t processElem)
 {
     uint32_t addMaxElemFp32 = ELEM_PER_REP_FP32;
     uint8_t addRepStride = alignElem / FLOAT_BLOCK_ELEM;

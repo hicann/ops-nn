@@ -43,8 +43,8 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
 using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
@@ -78,24 +78,19 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context,
-                                       uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
-                                    int64_t& totalElements,
-                                    ge::DataType& dataType)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements, ge::DataType& dataType)
 {
     // Input 0 = var; its shape is canonical (var/mg/ms/mom/grad must match).
     auto inputVar = context->GetInputShape(0);
@@ -117,40 +112,35 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context,
     // (Issue/Suggestion-4 closure: shape_mismatch must be rejected at host
     // tiling instead of relying on autogen L2 checker, which only catches
     // dtype mismatches.)
-    constexpr size_t kMainTensorIdx[] = {1U, 2U, 3U, 8U};   // mg, ms, mom, grad
+    constexpr size_t kMainTensorIdx[] = {1U, 2U, 3U, 8U}; // mg, ms, mom, grad
     const char* kMainTensorName[] = {"mg", "ms", "mom", "grad"};
     for (size_t i = 0; i < sizeof(kMainTensorIdx) / sizeof(kMainTensorIdx[0]); ++i) {
         auto inShape = context->GetInputShape(kMainTensorIdx[i]);
         OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
         auto s = EnsureNotScalar(inShape->GetStorageShape());
-        OP_CHECK_IF(
-            s.GetShapeSize() != totalElements,
-            OP_LOGE(context,
-                    "ApplyCenteredRMSProp: %s.numel=%ld must equal var.numel=%ld",
-                    kMainTensorName[i],
-                    static_cast<long>(s.GetShapeSize()),
-                    static_cast<long>(totalElements)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(s.GetShapeSize() != totalElements,
+                    OP_LOGE(context, "ApplyCenteredRMSProp: %s.numel=%ld must equal var.numel=%ld", kMainTensorName[i],
+                            static_cast<long>(s.GetShapeSize()), static_cast<long>(totalElements)),
+                    return ge::GRAPH_FAILED);
     }
 
     // Scalar shape self-defense (Issue-1): lr/rho/momentum/epsilon must be
     // 0-D or single-element 1-D (numel ∈ {0, 1}). Empty scalar is rejected
     // because LoadScalar reads element[0]. (numel == 0 untreated would lead
     // to OOB GetValue in kernel.)
-    constexpr size_t kScalarIdx[] = {4U, 5U, 6U, 7U};       // lr, rho, momentum, epsilon
+    constexpr size_t kScalarIdx[] = {4U, 5U, 6U, 7U}; // lr, rho, momentum, epsilon
     const char* kScalarName[] = {"lr", "rho", "momentum", "epsilon"};
     for (size_t i = 0; i < sizeof(kScalarIdx) / sizeof(kScalarIdx[0]); ++i) {
         auto inShape = context->GetInputShape(kScalarIdx[i]);
         OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
         const auto& rawShape = inShape->GetStorageShape();
         int64_t numel = (rawShape.GetDimNum() == 0) ? 1 : rawShape.GetShapeSize();
-        OP_CHECK_IF(
-            numel != 1,
-            OP_LOGE(context,
-                    "ApplyCenteredRMSProp: scalar %s must be 0-D or 1-element 1-D, "
-                    "got numel=%ld",
-                    kScalarName[i], static_cast<long>(numel)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(numel != 1,
+                    OP_LOGE(context,
+                            "ApplyCenteredRMSProp: scalar %s must be 0-D or 1-element 1-D, "
+                            "got numel=%ld",
+                            kScalarName[i], static_cast<long>(numel)),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -170,30 +160,24 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Shape / dtype info
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT;
     OP_CHECK_IF(GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetShapeInfo error"),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Workspace
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"),
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
                 return ge::GRAPH_FAILED);
 
     // 4. Fill TilingData
-    ApplyCenteredRMSPropTilingData* tiling =
-        context->GetTilingData<ApplyCenteredRMSPropTilingData>();
+    ApplyCenteredRMSPropTilingData* tiling = context->GetTilingData<ApplyCenteredRMSPropTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyCenteredRMSPropTilingData), 0,
-                 sizeof(ApplyCenteredRMSPropTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        memset_s(tiling, sizeof(ApplyCenteredRMSPropTilingData), 0, sizeof(ApplyCenteredRMSPropTilingData)) != EOK,
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->totalElements = totalElements;
 
@@ -209,9 +193,7 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
 
     // ubBlockSize = 32B / sizeof(T).
     int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context);
-    OP_CHECK_IF(ubBlockSize <= 0,
-                OP_LOGE(context, "invalid ubBlockSize=%ld", ubBlockSize),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubBlockSize <= 0, OP_LOGE(context, "invalid ubBlockSize=%ld", ubBlockSize), return ge::GRAPH_FAILED);
 
     // Multi-core split: ceil-aligned to DMA granularity.
     int64_t blockFactor = CeilAlign(CeilDiv(totalElements, coreNum), ubBlockSize);
@@ -228,18 +210,11 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
         ubBufCount = UB_BUFFER_COUNT_FP16;
     }
 
-    int64_t ubCapacityElem =
-        FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / perElemBytes,
-                            ubBufCount),
-                   ubBlockSize);
-    OP_CHECK_IF(ubCapacityElem <= 0,
-                OP_LOGE(context, "UB too small: ubCapacityElem=%ld",
-                        ubCapacityElem),
+    int64_t ubCapacityElem = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / perElemBytes, ubBufCount), ubBlockSize);
+    OP_CHECK_IF(ubCapacityElem <= 0, OP_LOGE(context, "UB too small: ubCapacityElem=%ld", ubCapacityElem),
                 return ge::GRAPH_FAILED);
 
-    int64_t ubFactor = (TILE_ELEM_NUM_TARGET < ubCapacityElem)
-                           ? TILE_ELEM_NUM_TARGET
-                           : ubCapacityElem;
+    int64_t ubFactor = (TILE_ELEM_NUM_TARGET < ubCapacityElem) ? TILE_ELEM_NUM_TARGET : ubCapacityElem;
 
     // Also cap by blockFactor so a single core does not allocate more UB
     // space than it will ever use.
@@ -263,8 +238,7 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForApplyCenteredRMSProp(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForApplyCenteredRMSProp([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

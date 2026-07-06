@@ -35,22 +35,20 @@ using AscendC::MicroAPI::UpdateMask;
 template <typename T, typename U, typename M, bool IsOutRstd>
 class LayerNormV3WelfordMultiReduce {
 public:
-    __aicore__ inline LayerNormV3WelfordMultiReduce(
-        const LayerNormV3TilingDataWelfordMultiReduce* tilingData, TPipe* pipeIn)
+    __aicore__ inline LayerNormV3WelfordMultiReduce(const LayerNormV3TilingDataWelfordMultiReduce* tilingData,
+                                                    TPipe* pipeIn)
     {
         pipe_ = pipeIn;
         td_ = tilingData;
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout)
     {
         if (GetBlockIdx() >= td_->numBlocks) {
             return;
         }
 
-        currentBlockFactor_ = (GetBlockIdx() == td_->mainBlockCount) ?
-            td_->tailBlockFactor : td_->mainBlockFactor;
+        currentBlockFactor_ = (GetBlockIdx() == td_->mainBlockCount) ? td_->tailBlockFactor : td_->mainBlockFactor;
         int64_t fmOffset = GetBlockIdx() * td_->mainBlockFactor * td_->n;
         int64_t paramOffset = GetBlockIdx() * td_->mainBlockFactor;
 
@@ -185,13 +183,13 @@ public:
             WelfordInitialize(mean_, variance_, td_->tileLength);
             for (int64_t k = 0; k < td_->welfordUpdateTimes; k++) {
                 int64_t offset = i * td_->n + k * td_->tileLength;
-                ProcessWelfordUpdate(inQueueX_, xGm_, offset, td_->tileLength,
-                    td_->tileLength, welfordCount_, mean_, variance_, shared_);
+                ProcessWelfordUpdate(inQueueX_, xGm_, offset, td_->tileLength, td_->tileLength, welfordCount_, mean_,
+                                     variance_, shared_);
             }
             if (td_->welfordUpdateTail > 0) {
                 int64_t offset = i * td_->n + td_->welfordUpdateTimes * td_->tileLength;
-                ProcessWelfordUpdate(inQueueX_, xGm_, offset, td_->welfordUpdateTail,
-                    td_->tileLength, welfordCount_, mean_, variance_, shared_);
+                ProcessWelfordUpdate(inQueueX_, xGm_, offset, td_->welfordUpdateTail, td_->tileLength, welfordCount_,
+                                     mean_, variance_, shared_);
             }
 
             WelfordFinalizePara para;
@@ -204,15 +202,11 @@ public:
             para.abRec = 1.0f / static_cast<float>(td_->tileLength);
             para.rRec = 1.0f / static_cast<float>(td_->n);
             if constexpr (IsOutRstd) {
-                WelfordFinalize<true>(
-                    meanTensor_[cacheCount_],
-                    varianceTensor_[cacheCount_],
-                    mean_, variance_, shared_, para);
+                WelfordFinalize<true>(meanTensor_[cacheCount_], varianceTensor_[cacheCount_], mean_, variance_, shared_,
+                                      para);
             } else {
-                WelfordFinalize<true>(
-                    meanTensor_[cacheCount_],
-                    lastoutTensor_[cacheCount_],
-                    mean_, variance_, shared_, para);
+                WelfordFinalize<true>(meanTensor_[cacheCount_], lastoutTensor_[cacheCount_], mean_, variance_, shared_,
+                                      para);
             }
 
             // Phase 2: Normalize
@@ -224,15 +218,15 @@ public:
 
             cacheCount_++;
             if (cacheCount_ >= AGGREGATION_COUNT) {
-                RefreshCache<M>(cacheCount_, paramAddr_, meanTensor_, lastoutTensor_,
-                    outQueueMean_, outQueueLastout_, meanGm_, lastoutGm_);
+                RefreshCache<M>(cacheCount_, paramAddr_, meanTensor_, lastoutTensor_, outQueueMean_, outQueueLastout_,
+                                meanGm_, lastoutGm_);
                 ResetCache();
-            } 
+            }
         }
 
         if (cacheCount_ > 0) {
-            RefreshCache<M>(cacheCount_, paramAddr_, meanTensor_, lastoutTensor_,
-                outQueueMean_, outQueueLastout_, meanGm_, lastoutGm_);
+            RefreshCache<M>(cacheCount_, paramAddr_, meanTensor_, lastoutTensor_, outQueueMean_, outQueueLastout_,
+                            meanGm_, lastoutGm_);
         }
     }
 
@@ -321,8 +315,7 @@ private:
 
             __local_mem__ T* xUbAddr = (__local_mem__ T*)xTensor.GetPhyAddr();
             __local_mem__ T* yUbAddr = (__local_mem__ T*)yTensor.GetPhyAddr();
-            NormalizeCutR1VF(xUbAddr, yUbAddr, gammaAddr, betaAddr, meanAddr, rstdAddr,
-                             r0Aligned, curR1);
+            NormalizeCutR1VF(xUbAddr, yUbAddr, gammaAddr, betaAddr, meanAddr, rstdAddr, r0Aligned, curR1);
 
             inQueueX_.FreeTensor(xTensor);
 
@@ -338,17 +331,15 @@ private:
         }
     }
 
-    __aicore__ inline void NormalizeCutR1VF(
-        __local_mem__ T* xAddr, __local_mem__ T* yOutAddr,
-        __local_mem__ U* gammaAddr, __local_mem__ U* betaAddr,
-        __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr,
-        int64_t r0Aligned, int64_t curR1)
+    __aicore__ inline void NormalizeCutR1VF(__local_mem__ T* xAddr, __local_mem__ T* yOutAddr,
+                                            __local_mem__ U* gammaAddr, __local_mem__ U* betaAddr,
+                                            __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr,
+                                            int64_t r0Aligned, int64_t curR1)
     {
         int64_t r1ComputeFactor = td_->r1ComputeFactor;
 
         if (r1ComputeFactor <= 1) {
-            NormalizeCutR1VFSingle(xAddr, yOutAddr, gammaAddr, betaAddr,
-                                   meanAddr, rstdAddr, r0Aligned, curR1);
+            NormalizeCutR1VFSingle(xAddr, yOutAddr, gammaAddr, betaAddr, meanAddr, rstdAddr, r0Aligned, curR1);
             return;
         }
 
@@ -422,11 +413,10 @@ private:
         }
     }
 
-    __aicore__ inline void NormalizeCutR1VFSingle(
-        __local_mem__ T* xAddr, __local_mem__ T* yOutAddr,
-        __local_mem__ U* gammaAddr, __local_mem__ U* betaAddr,
-        __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr,
-        int64_t r0Aligned, int64_t curR1)
+    __aicore__ inline void NormalizeCutR1VFSingle(__local_mem__ T* xAddr, __local_mem__ T* yOutAddr,
+                                                  __local_mem__ U* gammaAddr, __local_mem__ U* betaAddr,
+                                                  __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr,
+                                                  int64_t r0Aligned, int64_t curR1)
     {
         uint32_t r0Num = static_cast<uint32_t>(td_->r0);
         uint16_t loopCount = static_cast<uint16_t>((r0Num + VL_B32 - 1) / VL_B32);
@@ -452,7 +442,6 @@ private:
                 LoadTensorForDtype<U>(beta, betaAddr, pregLoop, r * VL_B32);
 
                 for (uint16_t r1Inner = 0; r1Inner < static_cast<uint16_t>(curR1); r1Inner++) {
-
                     // Load x
                     LoadTensorForDtype<T>(xReg, xAddr, pregLoop, r1Inner * r0Aligned + r * VL_B32);
 
@@ -470,8 +459,8 @@ private:
     }
 
     template <typename DType>
-    __aicore__ inline void LoadTensorForDtype(
-        RegTensor<float>& dst, __local_mem__ DType* src, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadTensorForDtype(RegTensor<float>& dst, __local_mem__ DType* src, MaskReg& preg,
+                                              uint32_t offset)
     {
         if constexpr (IsSameType<DType, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
@@ -483,8 +472,8 @@ private:
     }
 
     template <typename DType>
-    __aicore__ inline void StoreTensorForDtype(
-        __local_mem__ DType* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void StoreTensorForDtype(__local_mem__ DType* dst, RegTensor<float>& src, MaskReg& preg,
+                                               uint32_t offset)
     {
         if constexpr (IsSameType<DType, float>::value) {
             DataCopy<DType, StoreDist::DIST_NORM>(dst + offset, src, preg);
@@ -511,8 +500,8 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessNormalizeTile(
-        const int64_t fmOffset, const int64_t gammaOffset, const int64_t elemCnt)
+    __aicore__ inline void ProcessNormalizeTile(const int64_t fmOffset, const int64_t gammaOffset,
+                                                const int64_t elemCnt)
     {
         LocalTensor<T> xTensor = inQueueX_.template AllocTensor<T>();
         CopyIn(xTensor, xGm_[fmOffset], elemCnt);
@@ -542,17 +531,13 @@ private:
         normPara.rLength = elemCnt;
         normPara.rLengthWithPadding = elemCnt;
         if constexpr (IsOutRstd) {
-            Normalize<U, T, false>(
-                yTensor, lastoutTensor_[cacheCount_],
-                meanTensor_[cacheCount_],
-                varianceTensor_[cacheCount_],
-                xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, normPara);
+            Normalize<U, T, false>(yTensor, lastoutTensor_[cacheCount_], meanTensor_[cacheCount_],
+                                   varianceTensor_[cacheCount_], xTensor, gammaTensor, betaTensor, shared_,
+                                   td_->epsilon, normPara);
         } else {
-            Normalize<U, T, false>(
-                yTensor, rstdTensor_[cacheCount_],
-                meanTensor_[cacheCount_],
-                lastoutTensor_[cacheCount_],
-                xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, normPara);
+            Normalize<U, T, false>(yTensor, rstdTensor_[cacheCount_], meanTensor_[cacheCount_],
+                                   lastoutTensor_[cacheCount_], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon,
+                                   normPara);
         }
 
         inQueueX_.FreeTensor(xTensor);

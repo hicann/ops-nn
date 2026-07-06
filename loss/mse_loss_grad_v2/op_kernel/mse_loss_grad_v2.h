@@ -19,14 +19,12 @@
 using namespace AscendC;
 
 template <typename inType>
-class KernelMseLossGrad910 : public KernelMseLossGradBase<inType>
-{
+class KernelMseLossGrad910 : public KernelMseLossGradBase<inType> {
 public:
-    __aicore__ inline KernelMseLossGrad910()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, float cof, uint64_t totalLength, uint64_t tileNum,
-        uint64_t blockLength, uint64_t padLength, uint64_t usedDb)
+    __aicore__ inline KernelMseLossGrad910() {}
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, float cof,
+                                uint64_t totalLength, uint64_t tileNum, uint64_t blockLength, uint64_t padLength,
+                                uint64_t usedDb)
     {
         this->cof = cof;
         this->totalLength = static_cast<int32_t>(totalLength);
@@ -89,9 +87,8 @@ private:
         DataCopyPadExtParams<inType> padParams = {false, 0, 0, 0};
         DataCopyPad<inType>(inLocal[0], xGm[progress * this->tileLengthPtr], copyParams, padParams);
         DataCopyPad<inType>(inLocal[this->tileLengthAlign], yGm[progress * this->tileLengthPtr], copyParams, padParams);
-        DataCopyPad<inType>(
-            inLocal[2 * this->tileLengthAlign], // 2 means two tileLengthAlign offsets are needed
-            zGm[progress * this->tileLengthPtr], copyParams, padParams);
+        DataCopyPad<inType>(inLocal[2 * this->tileLengthAlign], // 2 means two tileLengthAlign offsets are needed
+                            zGm[progress * this->tileLengthPtr], copyParams, padParams);
         inQueueIN.EnQue(inLocal);
     }
 

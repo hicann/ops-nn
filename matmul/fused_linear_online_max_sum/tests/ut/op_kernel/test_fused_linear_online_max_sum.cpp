@@ -25,26 +25,19 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void fused_linear_online_max_sum(
-    GM_ADDR input, GM_ADDR weight, GM_ADDR target, GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal,
-    GM_ADDR predictedLogitsLocal, GM_ADDR targetMask, GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void fused_linear_online_max_sum(GM_ADDR input, GM_ADDR weight, GM_ADDR target,
+                                                                  GM_ADDR logitsMaxLocal, GM_ADDR sumExpLogitsLocal,
+                                                                  GM_ADDR predictedLogitsLocal, GM_ADDR targetMask,
+                                                                  GM_ADDR maskedTarget, GM_ADDR vocabParallelLogitsOut,
+                                                                  GM_ADDR workspace, GM_ADDR tiling);
 
-class fused_linear_online_max_sum_test : public testing::Test
-{
-    protected:
-
-    static void SetUpTestCase()
-    {
-        cout << "fused_linear_online_max_sum_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "fused_linear_online_max_sum_test TearDown\n" << endl;
-    }
+class fused_linear_online_max_sum_test : public testing::Test {
+protected:
+    static void SetUpTestCase() { cout << "fused_linear_online_max_sum_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "fused_linear_online_max_sum_test TearDown\n" << endl; }
 };
 
-TEST_F(fused_linear_online_max_sum_test, test_case_bf16_int32) 
+TEST_F(fused_linear_online_max_sum_test, test_case_bf16_int32)
 {
     size_t bt = 128;
     size_t h = 64;
@@ -54,17 +47,17 @@ TEST_F(fused_linear_online_max_sum_test, test_case_bf16_int32)
 
     size_t tilingSize = sizeof(FusedLinearOnlineMaxSumTilingData);
 
-    uint8_t *input = (uint8_t *)AscendC::GmAlloc(bt * h * sizeof(uint16_t));
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc(v * h * sizeof(uint16_t));
-    uint8_t *target = (uint8_t *)AscendC::GmAlloc(bt * sizeof(uint32_t));
-    uint8_t *logits_max_local = (uint8_t *)AscendC::GmAlloc(bt * sizeof(uint32_t));
-    uint8_t *sum_exp_logits_local = (uint8_t *)AscendC::GmAlloc(bt * sizeof(uint32_t));
-    uint8_t *predicted_logits_local = (uint8_t *)AscendC::GmAlloc(bt * sizeof(uint32_t));
-    uint8_t *target_mask = (uint8_t *)AscendC::GmAlloc((bt + 7) / 8 * sizeof(uint8_t));
-    uint8_t *masked_target = (uint8_t *)AscendC::GmAlloc(bt * sizeof(int32_t));
-    uint8_t *vocab_parallel_logtis_out = (uint8_t *)AscendC::GmAlloc(bt * v * sizeof(uint16_t));
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(bt * h * sizeof(uint16_t));
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(v * h * sizeof(uint16_t));
+    uint8_t* target = (uint8_t*)AscendC::GmAlloc(bt * sizeof(uint32_t));
+    uint8_t* logits_max_local = (uint8_t*)AscendC::GmAlloc(bt * sizeof(uint32_t));
+    uint8_t* sum_exp_logits_local = (uint8_t*)AscendC::GmAlloc(bt * sizeof(uint32_t));
+    uint8_t* predicted_logits_local = (uint8_t*)AscendC::GmAlloc(bt * sizeof(uint32_t));
+    uint8_t* target_mask = (uint8_t*)AscendC::GmAlloc((bt + 7) / 8 * sizeof(uint8_t));
+    uint8_t* masked_target = (uint8_t*)AscendC::GmAlloc(bt * sizeof(int32_t));
+    uint8_t* vocab_parallel_logtis_out = (uint8_t*)AscendC::GmAlloc(bt * v * sizeof(uint16_t));
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset_s(input, bt * h * sizeof(uint16_t), 0, bt * h * sizeof(uint16_t));
     memset_s(weight, v * h * sizeof(uint16_t), 0, v * h * sizeof(uint16_t));
@@ -77,7 +70,7 @@ TEST_F(fused_linear_online_max_sum_test, test_case_bf16_int32)
     memset_s(masked_target, bt * sizeof(int32_t), 0, bt * sizeof(int32_t));
     memset_s(vocab_parallel_logtis_out, bt * v * sizeof(uint16_t), 0, bt * v * sizeof(uint16_t));
 
-    FusedLinearOnlineMaxSumTilingData *tiling_data = reinterpret_cast<FusedLinearOnlineMaxSumTilingData*>(tiling);
+    FusedLinearOnlineMaxSumTilingData* tiling_data = reinterpret_cast<FusedLinearOnlineMaxSumTilingData*>(tiling);
     tiling_data->m = bt;
     tiling_data->k = h;
     tiling_data->n = v;

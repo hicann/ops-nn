@@ -46,7 +46,7 @@ constexpr auto cfg_v = [] {
     }
     return cfg;
 }();
-}
+} // namespace AL1FullLoad
 
 template <class x1Type, class x2Type, class inputScaleType, class biasType, class yType, CubeFormat formatX1,
           CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, bool isLut = false,
@@ -56,16 +56,16 @@ public:
     __aicore__ inline MatmulAswKernelAL1FullLoad() {}
     // 分成两个Init函数，包含x2Table和不包含x2Table，分别用于qbmmv4,qbmmv3
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale,
-                                GM_ADDR x2Table, GM_ADDR cGM, GM_ADDR workspace, const void *tilingData, TPipe *pipe);
+                                GM_ADDR x2Table, GM_ADDR cGM, GM_ADDR workspace, const void* tilingData, TPipe* pipe);
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale,
-                                GM_ADDR cGM, GM_ADDR workspace, const void *tilingData, TPipe *pipe);
+                                GM_ADDR cGM, GM_ADDR workspace, const void* tilingData, TPipe* pipe);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessWithoutBatch();
     __aicore__ inline void SetScaleTensor();
 
 protected:
-    using scaleType =
-        typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t, inputScaleType>::type;
+    using scaleType = typename AscendC::Conditional<IsSameType<inputScaleType, int64_t>::value, uint64_t,
+                                                    inputScaleType>::type;
     using aType = typename AscendC::Conditional<
         DequantBmm::IsMxType<scaleType>(),
         matmul::MatmulTypeWithScale<AscendC::TPosition::TSCM, AscendC::TPosition::TSCM, formatX1, x1Type, aTrans>,
@@ -84,7 +84,7 @@ protected:
         matmul::MatmulImpl<aType, bType, cType, biasMatmulType, AL1FullLoad::cfg_v<isLut, x2Type, fusedOpType>>>::type;
     MmType mm_;
     TQue<QuePosition::A1, 1> InQueueAL1_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     LocalTensor<x1Type> al1Local_;
     TQue<QuePosition::A1, 1> InQueueScaleA_;
     LocalTensor<fp8_e8m0_t> scaleALocal_;
@@ -97,31 +97,28 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::I
                                                                                     GM_ADDR bias, GM_ADDR scale,
                                                                                     GM_ADDR perTokenScale, GM_ADDR cGM,
                                                                                     GM_ADDR workSpace,
-                                                                                    const void *tilingData, TPipe *pipe)
+                                                                                    const void* tilingData, TPipe* pipe)
 {
     if ASCEND_IS_AIV {
         return;
     }
     pipe_ = pipe;
     this->blockIdx_ = GetBlockIdx();
-    this->quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    this->quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
     this->UpdateGlobalAddr(aGM, bGM, bias, scale, perTokenScale, nullptr, cGM, workSpace);
 }
 
 LOCAL_TEMPLATE_CLASS_PARAMS
-__aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(GM_ADDR aGM, GM_ADDR bGM,
-                                                                                    GM_ADDR bias, GM_ADDR scale,
-                                                                                    GM_ADDR perTokenScale,
-                                                                                    GM_ADDR x2Table, GM_ADDR cGM,
-                                                                                    GM_ADDR workSpace,
-                                                                                    const void *tilingData, TPipe *pipe)
+__aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::Init(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale, GM_ADDR perTokenScale, GM_ADDR x2Table, GM_ADDR cGM,
+    GM_ADDR workSpace, const void* tilingData, TPipe* pipe)
 {
     if ASCEND_IS_AIV {
         return;
     }
     pipe_ = pipe;
     this->blockIdx_ = GetBlockIdx();
-    this->quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    this->quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
     this->UpdateGlobalAddr(aGM, bGM, bias, scale, perTokenScale, x2Table, cGM, workSpace);
 }
 
@@ -154,7 +151,7 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
         this->block_.params_.totalCnt = this->block_.params_.nCnt;
     }
     // 之前是基于sizeof(fp4) = 1的在做运算，现在统一用GetSizeWithDataType
-    pipe_->InitBuffer(InQueueAL1_, 1, DequantBmm::GetSizeWithDataType<x1Type>(mAligned * kAligned));  // m k的计算
+    pipe_->InitBuffer(InQueueAL1_, 1, DequantBmm::GetSizeWithDataType<x1Type>(mAligned * kAligned)); // m k的计算
 
     al1Local_ = InQueueAL1_.AllocTensor<x1Type>();
     if constexpr (DequantBmm::IsMxType<scaleType>()) {
@@ -162,8 +159,8 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
             auto padTensor = al1Local_.template ReinterpretCast<uint16_t>();
             InitConstValueParams<uint16_t> initConstValueParams;
             initConstValueParams.repeatTimes = 1;
-            initConstValueParams.blockNum =
-                DequantBmm::GetSizeWithDataType<x1Type>(mAligned * MXFP_GROUP_SIZE) / DATA_BLOCK;
+            initConstValueParams.blockNum = DequantBmm::GetSizeWithDataType<x1Type>(mAligned * MXFP_GROUP_SIZE) /
+                                            DATA_BLOCK;
             initConstValueParams.dstGap = 0;
             initConstValueParams.initValue = 0;
             uint64_t offset = mAligned * (kAligned - MXFP_GROUP_SIZE) / 2UL; // 2 means 2 8-bit elements
@@ -175,12 +172,12 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
                              isMultiCore_, al1Local_, this->aGlobal_);
 
     if constexpr (DequantBmm::IsMxType<scaleType>()) {
-        pipe_->InitBuffer(
-            InQueueScaleA_, 1,
-            mAligned * DequantBmm::CeilDiv(kAligned, static_cast<uint64_t>(MXFP_DIVISOR_SIZE)) * MXFP_MULTI_BASE_SIZE * sizeof(fp8_e8m0_t));
+        pipe_->InitBuffer(InQueueScaleA_, 1,
+                          mAligned * DequantBmm::CeilDiv(kAligned, static_cast<uint64_t>(MXFP_DIVISOR_SIZE)) *
+                              MXFP_MULTI_BASE_SIZE * sizeof(fp8_e8m0_t));
         scaleALocal_ = InQueueScaleA_.AllocTensor<fp8_e8m0_t>();
         CopyInScaleA<fp8_e8m0_t, aTrans>(this->block_, this->blockIdx_, isMultiCore_, scaleALocal_,
-                                            this->scaleAGlobal_);
+                                         this->scaleAGlobal_);
     }
     mm_.SetSubBlockIdx(0);
     mm_.Init(&this->block_.tilingData_->matmulTiling, pipe_);
@@ -239,7 +236,7 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
                 }
                 mm_.SetSingleShape(this->block_.params_.singleCoreM, this->block_.params_.singleCoreN,
                                    this->block_.tilingData_->matmulTiling.singleCoreK);
-                if (isMultiCore_) {  // MDL模板，L1输入场景默认al1M=M，分核全载需要通过设置SetOrgShape指定al1M=singleCoreM
+                if (isMultiCore_) { // MDL模板，L1输入场景默认al1M=M，分核全载需要通过设置SetOrgShape指定al1M=singleCoreM
                     mm_.SetOrgShape(this->block_.params_.singleCoreM, this->block_.tilingData_->matmulTiling.N,
                                     this->block_.tilingData_->matmulTiling.Ka);
                 }
@@ -250,5 +247,4 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
     }
 }
 
-}  // namespace QuantBatchMatmulV3
-
+} // namespace QuantBatchMatmulV3

@@ -15,9 +15,9 @@
 
 #include "layer_norm_v4_apt.h"
 
-extern "C" __global__ __aicore__ void layer_norm_v4(
-    GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void layer_norm_v4(GM_ADDR x, GM_ADDR normalized_shape, GM_ADDR gamma, GM_ADDR beta,
+                                                    GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     layer_norm_impl(x, gamma, beta, y, mean, rstd, workspace, tiling);
 }

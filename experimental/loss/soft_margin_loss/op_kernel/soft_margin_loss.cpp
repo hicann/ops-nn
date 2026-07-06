@@ -25,8 +25,8 @@
 #include "soft_margin_loss.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void soft_margin_loss(GM_ADDR selfInput, GM_ADDR targetInput,
-                                             GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void soft_margin_loss(GM_ADDR selfInput, GM_ADDR targetInput, GM_ADDR output, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SoftMarginLossTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftMarginLossTilingData, tilingData, tiling);

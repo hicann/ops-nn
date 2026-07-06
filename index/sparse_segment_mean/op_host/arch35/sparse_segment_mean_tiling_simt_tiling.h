@@ -18,20 +18,13 @@
 
 #include "sparse_segment_mean_tiling_base.h"
 
-namespace optiling
-{
+namespace optiling {
 
-class SparseSegmentMeanSimtTiling : public SparseSegmentMeanBaseTiling
-{
+class SparseSegmentMeanSimtTiling : public SparseSegmentMeanBaseTiling {
 public:
-    explicit SparseSegmentMeanSimtTiling(gert::TilingContext* context)
-        : SparseSegmentMeanBaseTiling(context)
-    {
-    }
+    explicit SparseSegmentMeanSimtTiling(gert::TilingContext* context) : SparseSegmentMeanBaseTiling(context) {}
 
-    ~SparseSegmentMeanSimtTiling() override
-    {
-    }
+    ~SparseSegmentMeanSimtTiling() override {}
 
 private:
     uint64_t GetTilingKey() const override;
@@ -40,7 +33,7 @@ private:
     int64_t GetUpPow2(int64_t n);
     void CalcThreadTiling();
     void CalcBlockTiling();
-    
+
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
@@ -51,14 +44,14 @@ private:
     int64_t threadNumY_ = 0;
     int64_t perCoreSegmentNum_ = 0;
     int64_t resSegmentNum_ = 0;
-    int64_t normalCoreSegmentNum_ = 0; // 正常核处理的SegmentNum数
-    int64_t secondToLastCoreSegmentNum_ = 0;     // 倒数第二个核处理的SegmentNum数
-    int64_t lastCoreSegmentNum_ = 0; // 尾核处理的SegmentNum数
+    int64_t normalCoreSegmentNum_ = 0;       // 正常核处理的SegmentNum数
+    int64_t secondToLastCoreSegmentNum_ = 0; // 倒数第二个核处理的SegmentNum数
+    int64_t lastCoreSegmentNum_ = 0;         // 尾核处理的SegmentNum数
     bool specialBlockTiling_ = false;
     bool isSmallInner_ = false;
     bool isSimtLoop_ = false;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

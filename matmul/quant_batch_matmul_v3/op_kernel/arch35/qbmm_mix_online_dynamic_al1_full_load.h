@@ -24,14 +24,14 @@ using namespace matmul;
 
 template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType, CubeFormat aFormat,
           CubeFormat bFormat, CubeFormat cFormat, bool aTrans, bool bTrans, class l0cDtype,
-          class blockType = QuantBmmAswBlock, const MatmulConfig &mmCfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG>
+          class blockType = QuantBmmAswBlock, const MatmulConfig& mmCfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG>
 class QuantBmmPertokenAL1FullLoad
     : public QuantBmmPertokenRegbaseKernel<aType, bType, scaleType, biasType, ptScaleType, cType, aFormat, bFormat,
                                            cFormat, aTrans, bTrans, l0cDtype, blockType, mmCfg> {
 public:
     __aicore__ inline QuantBmmPertokenAL1FullLoad() {}
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR ptScale,
-                                GM_ADDR cGM, GM_ADDR workSpace, const void *tilingData, TPipe *pipe);
+                                GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData, TPipe* pipe);
     __aicore__ inline void InitBuffer();
     __aicore__ inline void Process();
     __aicore__ inline void ProcessWithoutBatch();
@@ -43,7 +43,7 @@ protected:
     using biasT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, biasType>;
     using cT = AscendC::MatmulType<TPosition::VECIN, CubeFormat::ND_ALIGN, l0cDtype>;
     AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
-                       AscendC::QBmmCustomMatmulPolicy>
+                        AscendC::QBmmCustomMatmulPolicy>
         mm;
     TQue<QuePosition::A1, 1> InQueueAL1_;
     LocalTensor<aType> al1Local_;
@@ -53,7 +53,7 @@ protected:
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::Init(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR ptScale, GM_ADDR cGM,
-    GM_ADDR workSpace, const void *tilingData, TPipe *pipe)
+    GM_ADDR workSpace, const void* tilingData, TPipe* pipe)
 {
     this->blockIdx_ = GetBlockIdx();
     if ASCEND_IS_AIV {
@@ -61,7 +61,7 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
         this->subBlockIdx_ = AscendC::GetSubBlockIdx();
     }
     this->pipe_ = pipe;
-    this->tilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
+    this->tilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams*>(tilingData);
 
     this->biasDtype_ = this->tilingData_->params.biasDtype;
     this->InitBiasEpilogueMode();
@@ -72,9 +72,9 @@ LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::InitBuffer()
 {
     if ASCEND_IS_AIC {
-        uint64_t aL1Size = DequantBmm::CalcAL1Size<aType, aTrans>(
-            this->block_.tilingData_->matmulTiling.singleCoreM, this->block_.tilingData_->matmulTiling.Ka);
-        this->pipe_->InitBuffer(InQueueAL1_, 1, aL1Size);  // m k的计算
+        uint64_t aL1Size = DequantBmm::CalcAL1Size<aType, aTrans>(this->block_.tilingData_->matmulTiling.singleCoreM,
+                                                                  this->block_.tilingData_->matmulTiling.Ka);
+        this->pipe_->InitBuffer(InQueueAL1_, 1, aL1Size); // m k的计算
         al1Local_ = InQueueAL1_.AllocTensor<aType>();
         CopyInA1<aType, aTrans>(this->block_, static_cast<uint64_t>(this->blockIdx_) % this->block_.params_.mCnt,
                                 isMMultiCore_, al1Local_, this->aGlobal_);
@@ -91,23 +91,32 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
             ubOffset += this->tilingData_->matmulTiling.baseN * sizeof(scaleType);
         }
         if (static_cast<bool>(this->tilingData_->params.isPertoken)) {
-            this->ptScaleUb_ = LocalTensor<ptScaleType>(TPosition::VECIN, ubOffset, DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), 
-                                                                                     static_cast<uint64_t>(DATA_BLOCK)) / sizeof(ptScaleType));
+            this->ptScaleUb_ = LocalTensor<ptScaleType>(
+                TPosition::VECIN, ubOffset,
+                DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK)) /
+                    sizeof(ptScaleType));
             ubOffset += DequantBmm::Align(mForSingleVec * sizeof(ptScaleType), static_cast<uint64_t>(DATA_BLOCK));
         }
         if (this->isBiasEpilogue_) {
             if (this->biasDtype_ == DT_FLOAT) {
-                this->biasUbFloat_ = LocalTensor<float>(TPosition::VECIN, ubOffset, this->tilingData_->matmulTiling.baseN);
+                this->biasUbFloat_ = LocalTensor<float>(TPosition::VECIN, ubOffset,
+                                                        this->tilingData_->matmulTiling.baseN);
                 ubOffset += this->tilingData_->matmulTiling.baseN * sizeof(float);
             } else {
-                this->biasUbB16_ = LocalTensor<bfloat16_t>(TPosition::VECIN, ubOffset, this->tilingData_->matmulTiling.baseN);
+                this->biasUbB16_ = LocalTensor<bfloat16_t>(TPosition::VECIN, ubOffset,
+                                                           this->tilingData_->matmulTiling.baseN);
                 ubOffset += this->tilingData_->matmulTiling.baseN * sizeof(bfloat16_t);
             }
         }
         // fp16/bf16分两次输出，fp32分四次输出
-        this->dequantOutInUBPing_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN);
-        ubOffset += DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN * sizeof(cType);
-        this->dequantOutInUBPong_ = LocalTensor<cType>(TPosition::VECOUT, ubOffset, DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN);
+        this->dequantOutInUBPing_ = LocalTensor<cType>(
+            TPosition::VECOUT, ubOffset,
+            DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN);
+        ubOffset += DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN *
+                    sizeof(cType);
+        this->dequantOutInUBPong_ = LocalTensor<cType>(
+            TPosition::VECOUT, ubOffset,
+            DequantBmm::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * this->tilingData_->matmulTiling.baseN);
     }
 }
 
@@ -164,7 +173,7 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
                 this->block_.template CalcGMOffset<aTrans, bTrans, scaleType, bFormat>();
                 if ASCEND_IS_AIC {
                     mm.SetSingleShape(this->block_.params_.singleCoreM, this->block_.params_.singleCoreN,
-                        this->tilingData_->matmulTiling.singleCoreK);
+                                      this->tilingData_->matmulTiling.singleCoreK);
                     if (this->block_.offset_.batchCOffset * this->block_.params_.round + j > 0) {
                         this->WaitForVector();
                     }
@@ -206,4 +215,4 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
     mm.GetTensorC(this->l0cOutUb_, 0, true);
 }
 
-}  // namespace QuantBatchMatmulV3
+} // namespace QuantBatchMatmulV3

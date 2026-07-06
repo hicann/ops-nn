@@ -25,30 +25,23 @@
 #include "op_common/atvoss/broadcast/broadcast_tiling.h"
 #include "index/concat_offset/op_kernel/arch35/concat_offset_struct.h"
 
-namespace optiling 
-{
+namespace optiling {
 
 ge::graphStatus ConcatOffsetTilingForAscendC(gert::TilingContext* context);
 
 class ConcatOffsetTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ConcatOffsetTiling(gert::TilingContext *context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit ConcatOffsetTiling(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~ConcatOffsetTiling() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         TilingBaseClass::Reset(context);
         Reset();
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
@@ -72,7 +65,7 @@ private:
     inline ge::graphStatus GetConcatDimInfoAndCheck();
     inline ge::graphStatus GetAttrInfoAndCheck();
 
-    const char *opName_ = "";
+    const char* opName_ = "";
 #ifdef DAVID_FPGA
     int64_t threadNum_ = 512;
 #else
@@ -85,5 +78,5 @@ private:
     int64_t perTensorShapeSize_ = 0;
     int64_t needCalNum_ = 0;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_CONCATOFFSET_H
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_CONCATOFFSET_H

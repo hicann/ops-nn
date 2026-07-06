@@ -47,7 +47,7 @@ struct RmsNormGradQuantRegbaseTilingData {
     RmsNormGradQuantRegbaseDxTilingData dxTilingData;
 };
 
-struct RmsNormGradQuantRegbaseBigMTilingData{
+struct RmsNormGradQuantRegbaseBigMTilingData {
     uint64_t dgammaUsedCoreNum;
     uint64_t dgammaMPerBlock;
     uint64_t dgammaMReminder;

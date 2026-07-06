@@ -29,7 +29,8 @@ static constexpr size_t RETURN_IDX_IDX = 0;
 static constexpr size_t REUTRN_COUNTS_IDX = 1;
 static constexpr size_t AXIS_IDX = 2;
 static constexpr int64_t MAX_VALID_AXIS = 8;
-static ge::graphStatus InferShape4UniqueConsecutive(gert::InferShapeContext* context) {
+static ge::graphStatus InferShape4UniqueConsecutive(gert::InferShapeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "InferShape4UniqueConsecutive running begin");
     const gert::Shape* x_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
@@ -48,7 +49,7 @@ static ge::graphStatus InferShape4UniqueConsecutive(gert::InferShapeContext* con
     }
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int64_t *axis = attrs->GetAttrPointer<int64_t>(AXIS_IDX);
+    const int64_t* axis = attrs->GetAttrPointer<int64_t>(AXIS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, axis);
 
     size_t xDimNum = x_shape->GetDimNum();
@@ -84,7 +85,8 @@ static ge::graphStatus InferShape4UniqueConsecutive(gert::InferShapeContext* con
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDtype4UniqueConsecutive(gert::InferDataTypeContext* context) {
+static ge::graphStatus InferDtype4UniqueConsecutive(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "InferDtype4UniqueConsecutive begin");
     auto input_dtype = context->GetInputDataType(0);
     auto attrs = context->GetAttrs();
@@ -115,7 +117,8 @@ static ge::graphStatus InferDtype4UniqueConsecutive(gert::InferDataTypeContext* 
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShapeRange4UniqueConsecutive(gert::InferShapeRangeContext* context) {
+static ge::graphStatus InferShapeRange4UniqueConsecutive(gert::InferShapeRangeContext* context)
+{
     auto x_range = context->GetInputShapeRange(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, x_range);
     auto out_range = context->GetOutputShapeRange(OUT_IDX);
@@ -126,7 +129,7 @@ static ge::graphStatus InferShapeRange4UniqueConsecutive(gert::InferShapeRangeCo
     OP_CHECK_NULL_WITH_CONTEXT(context, counts_range);
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int64_t *axis = attrs->GetAttrPointer<int64_t>(AXIS_IDX);
+    const int64_t* axis = attrs->GetAttrPointer<int64_t>(AXIS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, axis);
     auto real_axis = *axis >= 0 ? *axis : *axis + x_range->GetMax()->GetDimNum();
 
@@ -172,9 +175,10 @@ static ge::graphStatus InferShapeRange4UniqueConsecutive(gert::InferShapeRangeCo
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(UniqueConsecutive).InferShape(InferShape4UniqueConsecutive)
-                          .InferDataType(InferDtype4UniqueConsecutive)
-                          .InferShapeRange(InferShapeRange4UniqueConsecutive)
-                          .OutputShapeDependOnCompute({OUT_IDX, INDICES_IDX, COUNTS_DIX});
+IMPL_OP_INFERSHAPE(UniqueConsecutive)
+    .InferShape(InferShape4UniqueConsecutive)
+    .InferDataType(InferDtype4UniqueConsecutive)
+    .InferShapeRange(InferShapeRange4UniqueConsecutive)
+    .OutputShapeDependOnCompute({OUT_IDX, INDICES_IDX, COUNTS_DIX});
 
-}  // namespace ops
+} // namespace ops

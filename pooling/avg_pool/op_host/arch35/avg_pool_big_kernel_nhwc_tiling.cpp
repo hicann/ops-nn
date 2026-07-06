@@ -42,21 +42,18 @@ bool AvgPoolCommonNHWCBigKernelTiling::IsCapable()
     if (inputData_.inputFormat != ge::Format::FORMAT_NHWC) {
         return false;
     }
-    if (inputData_.batches * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] 
-            < static_cast<int64_t>(totalCoreNum_ * DIGIT_TWO)) {
+    if (inputData_.batches * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] <
+        static_cast<int64_t>(totalCoreNum_ * DIGIT_TWO)) {
         return true;
     }
-    if (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] *
-        inputData_.channels * inputData_.dtypeSize < MIN_KERNEL) {
+    if (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.channels * inputData_.dtypeSize <
+        MIN_KERNEL) {
         return false;
     }
     return true;
 }
 
-ge::graphStatus AvgPoolCommonNHWCBigKernelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AvgPoolCommonNHWCBigKernelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AvgPoolCommonNHWCBigKernelTiling::GetWorkspaceSize()
 {
@@ -68,15 +65,11 @@ ge::graphStatus AvgPoolCommonNHWCBigKernelTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t AvgPoolCommonNHWCBigKernelTiling::GetTilingKey() const
-{
-    return AVG_POOL_TILING_KEY_BIG_KERNEL_NHWC;
-}
- 
+uint64_t AvgPoolCommonNHWCBigKernelTiling::GetTilingKey() const { return AVG_POOL_TILING_KEY_BIG_KERNEL_NHWC; }
+
 void AvgPoolCommonNHWCBigKernelTiling::DoUBTiling()
 {
-    totalIdx_ = inputData_.batches * inputData_.outShape[H_DIM] *
-        inputData_.outShape[W_DIM];
+    totalIdx_ = inputData_.batches * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM];
     // coreNum已在tiling_base中校验过非0
     blockFactor_ = totalIdx_ / static_cast<int64_t>(totalCoreNum_);
     blockTail_ = totalIdx_ % static_cast<int64_t>(totalCoreNum_);
@@ -92,10 +85,9 @@ void AvgPoolCommonNHWCBigKernelTiling::DoUBTiling()
     if (channelAlign > oneOutChannelAlign) {
         oneOutChannelAlign = Ops::Base::CeilAlign(channelAlign, vRegSize);
     }
-    const int64_t sumBufferSize = (inputData_.dtypeSize == BYTE_NUM_TWO) ?
-        oneOutChannelAlign * DIGIT_TWO : 0;
-    if ((inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * channelAlign +
-        oneOutChannelAlign + sumBufferSize) <= ubAvailable) {
+    const int64_t sumBufferSize = (inputData_.dtypeSize == BYTE_NUM_TWO) ? oneOutChannelAlign * DIGIT_TWO : 0;
+    if ((inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * channelAlign + oneOutChannelAlign +
+         sumBufferSize) <= ubAvailable) {
         inUbSize_ = inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * channelAlign;
         outUbSize_ = oneOutChannelAlign;
         tilingMode_ = NO_SPLIT_KERNEL;
@@ -119,8 +111,8 @@ void AvgPoolCommonNHWCBigKernelTiling::DoUBTiling()
 
 void AvgPoolCommonNHWCBigKernelTiling::SetTilingData()
 {
-    AvgPool::AvgPoolBigKernelNhwcTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolBigKernelNhwcTilingData>();
+    AvgPool::AvgPoolBigKernelNhwcTilingData*
+        tilingData = context_->GetTilingData<AvgPool::AvgPoolBigKernelNhwcTilingData>();
     tilingData->hInDim = inputData_.inputShape[H_DIM];
     tilingData->wInDim = inputData_.inputShape[W_DIM];
     tilingData->hOutDim = inputData_.outShape[H_DIM];
@@ -162,8 +154,8 @@ ge::graphStatus AvgPoolCommonNHWCBigKernelTiling::PostTiling()
 
 void AvgPoolCommonNHWCBigKernelTiling::DumpTilingInfo()
 {
-    AvgPool::AvgPoolBigKernelNhwcTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolBigKernelNhwcTilingData>();
+    AvgPool::AvgPoolBigKernelNhwcTilingData*
+        tilingData = context_->GetTilingData<AvgPool::AvgPoolBigKernelNhwcTilingData>();
     std::ostringstream str;
     str << " hInDim:" << tilingData->hInDim;
     str << " wInDim:" << tilingData->wInDim;
@@ -217,4 +209,4 @@ ge::graphStatus AvgPoolV2NHWCBigKernelTiling::GetShapeAttrsInfo()
 REGISTER_TILING_TEMPLATE("AvgPool", AvgPoolNHWCBigKernelTiling, 4);
 REGISTER_TILING_TEMPLATE("AvgPoolV2", AvgPoolV2NHWCBigKernelTiling, 4);
 
-}  // namespace optiling
+} // namespace optiling

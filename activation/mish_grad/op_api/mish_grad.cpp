@@ -27,23 +27,27 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(MishGrad);
 
-const aclTensor* MishGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor) {
-  L0_DFX(MishGrad, gradOutput, self);
-  auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
-  CHECK_RET(out != nullptr, nullptr);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return out;
+const aclTensor* MishGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
+{
+    L0_DFX(MishGrad, gradOutput, self);
+    auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
+    CHECK_RET(out != nullptr, nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    return out;
 }
 
-const aclTensor* MishGradWithTanhX(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* tanhx, aclOpExecutor* executor) {
-  L0_DFX(MishGradWithTanhX, gradOutput, self);
-  auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
-  CHECK_RET(out != nullptr, nullptr);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self, tanhx), OP_OUTPUT(out));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradWithTanhXAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return out;
+const aclTensor* MishGradWithTanhX(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* tanhx,
+                                   aclOpExecutor* executor)
+{
+    L0_DFX(MishGradWithTanhX, gradOutput, self);
+    auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
+    CHECK_RET(out != nullptr, nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self, tanhx), OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradWithTanhXAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return out;
 }
-}  // namespace l0op
+} // namespace l0op

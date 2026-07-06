@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -35,8 +36,7 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-    int64_t
-    GetShapeSize(const std::vector<int64_t>& shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
     for (auto i : shape) {
@@ -115,7 +115,8 @@ int aclnnDynamicMxQuantV3Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yOutTensorPtr(yOut, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(yOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(mxscaleOutHostData, mxscaleOutShape, &mxscaleOutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscaleOut);
+    ret = CreateAclTensor(mxscaleOutHostData, mxscaleOutShape, &mxscaleOutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &mxscaleOut);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscaleOutTensorPtr(mxscaleOut, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscaleOutDeviceAddrPtr(mxscaleOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -123,7 +124,8 @@ int aclnnDynamicMxQuantV3Test(int32_t deviceId, aclrtStream& stream)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    ret = aclnnDynamicMxQuantV3GetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, dstTypeMax, maxLowBound, yOut, mxscaleOut, &workspaceSize, &executor);
+    ret = aclnnDynamicMxQuantV3GetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, dstTypeMax,
+                                                maxLowBound, yOut, mxscaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantV3GetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     void* workspaceAddr = nullptr;
@@ -143,8 +145,7 @@ int aclnnDynamicMxQuantV3Test(int32_t deviceId, aclrtStream& stream)
     std::vector<uint8_t> yOutData(size, 0);
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
                       size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);
-              return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("yOut[%ld] is: %d\n", i, yOutData[i]);
     }

@@ -57,12 +57,11 @@ __aicore__ inline void SetValueAdapter<bfloat16_t>(LocalTensor<bfloat16_t>& outL
 };
 
 template <typename T, uint8_t modelCode, typename Tiling>
-class ForeachNormNDRegbase
-{
+class ForeachNormNDRegbase {
 public:
     __aicore__ inline ForeachNormNDRegbase(){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData,
+                                TPipe* tPipe)
     {
         workTensorGM_.SetGlobalBuffer((__gm__ float*)(workspace), MAX_TENSOR_CONT + MAX_CORE_CONT);
         blockIdx_ = GetBlockIdx();
@@ -186,16 +185,16 @@ public:
         // Batch handling and calculation.
         int64_t quotient = CeilDivision(dataCount, maxDataCount_);
         for (int64_t i = 0; i < quotient; i++) {
-            int64_t currentDataCount =
-                (i == (quotient - 1)) ? (dataCount - (quotient - 1) * maxDataCount_) : maxDataCount_;
+            int64_t currentDataCount = (i == (quotient - 1)) ? (dataCount - (quotient - 1) * maxDataCount_) :
+                                                               maxDataCount_;
             CopyIn(i, currentDataCount);
             Compute(outLocal, currentDataCount, i, outOffset);
         }
     }
 
     template <bool isFirst, uint8_t modelOrd>
-    __aicore__ inline void DoCompute(
-        LocalTensor<T> inLocal, LocalTensor<float> outLocal, int64_t dataCount, uint16_t outOffset)
+    __aicore__ inline void DoCompute(LocalTensor<T> inLocal, LocalTensor<float> outLocal, int64_t dataCount,
+                                     uint16_t outOffset)
     {
         __local_mem__ T* inUbAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
         __local_mem__ float* outUbAddr = (__ubuf__ float*)outLocal.GetPhyAddr();

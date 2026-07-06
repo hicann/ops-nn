@@ -66,10 +66,9 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static void ComputeScatterShapes(const gert::Shape& varShape, const gert::Shape& indicesShape,
-                                  int64_t& numSlices, int64_t& sliceSize,
-                                  int64_t& indicesLastDim, int64_t& varRank,
-                                  int64_t varStrides[MAX_VAR_RANK])
+static void ComputeScatterShapes(const gert::Shape& varShape, const gert::Shape& indicesShape, int64_t& numSlices,
+                                 int64_t& sliceSize, int64_t& indicesLastDim, int64_t& varRank,
+                                 int64_t varStrides[MAX_VAR_RANK])
 {
     varRank = varShape.GetDimNum();
     int64_t indicesRank = indicesShape.GetDimNum();
@@ -90,18 +89,20 @@ static void ComputeScatterShapes(const gert::Shape& varShape, const gert::Shape&
     }
 }
 
-static void ComputeScatterCoreNum(int64_t totalVarElements, int64_t numSlices,
-                                   int64_t coreNum, gert::TilingContext* context)
+static void ComputeScatterCoreNum(int64_t totalVarElements, int64_t numSlices, int64_t coreNum,
+                                  gert::TilingContext* context)
 {
     if (totalVarElements == 0 && numSlices == 0) {
         context->SetBlockDim(1);
         return;
     }
     int64_t perCoreVar = Ops::Base::CeilDiv(totalVarElements, coreNum);
-    if (perCoreVar < PER_CORE_MIN) perCoreVar = PER_CORE_MIN;
+    if (perCoreVar < PER_CORE_MIN)
+        perCoreVar = PER_CORE_MIN;
     int64_t needCoreVar = (totalVarElements > 0) ? Ops::Base::CeilDiv(totalVarElements, perCoreVar) : 1;
     int64_t perCoreSlice = Ops::Base::CeilDiv(numSlices, coreNum);
-    if (perCoreSlice < PER_CORE_MIN) perCoreSlice = PER_CORE_MIN;
+    if (perCoreSlice < PER_CORE_MIN)
+        perCoreSlice = PER_CORE_MIN;
     int64_t needCoreSlice = (numSlices > 0) ? Ops::Base::CeilDiv(numSlices, perCoreSlice) : 1;
     int64_t needCoreNum = std::min(std::max(needCoreVar, needCoreSlice), coreNum);
     context->SetBlockDim(std::max(needCoreNum, static_cast<int64_t>(1)));
@@ -110,11 +111,9 @@ static void ComputeScatterCoreNum(int64_t totalVarElements, int64_t numSlices,
 static ge::graphStatus SetLocalMemory(gert::TilingContext* context, uint64_t ubSize)
 {
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize), return ge::GRAPH_FAILED);
     auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -122,9 +121,8 @@ static ge::graphStatus ScatterNdSubTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto varInput = context->GetInputShape(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
@@ -141,9 +139,8 @@ static ge::graphStatus ScatterNdSubTilingFunc(gert::TilingContext* context)
 
     ScatterNdSubTilingData* tiling = context->GetTilingData<ScatterNdSubTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ScatterNdSubTilingData), 0, sizeof(ScatterNdSubTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ScatterNdSubTilingData), 0, sizeof(ScatterNdSubTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     tiling->totalVarElements = totalVarElements;
     tiling->numSlices = numSlices;
     tiling->indicesLastDim = indicesLastDim;
@@ -156,18 +153,16 @@ static ge::graphStatus ScatterNdSubTilingFunc(gert::TilingContext* context)
     ComputeScatterCoreNum(totalVarElements, numSlices, coreNum, context);
     context->SetScheduleMode(1);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(SetLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetLocalMemory error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetLocalMemory error"),
+                return ge::GRAPH_FAILED);
 
     context->SetTilingKey(GET_TPL_TILING_KEY(SCATTER_ND_SUB_SCENE_DEFAULT));
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForScatterNdSub(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForScatterNdSub([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
@@ -176,4 +171,4 @@ IMPL_OP_OPTILING(ScatterNdSub)
     .Tiling(ScatterNdSubTilingFunc)
     .TilingParse<ScatterNdSubCompileInfo>(TilingParseForScatterNdSub);
 
-}  // namespace optiling
+} // namespace optiling

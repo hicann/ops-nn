@@ -20,12 +20,12 @@ using namespace AscendC;
 namespace optiling {
 constexpr int32_t DEPENDENCY_INPUT_INDEX = 4;
 
-ge::graphStatus Tiling4SortedSparseSegmentMeanGrad(gert::TilingContext* context) 
+ge::graphStatus Tiling4SortedSparseSegmentMeanGrad(gert::TilingContext* context)
 {
-     return TilingRegistry::GetInstance().DoTilingImpl(context);
+    return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-ge::graphStatus TilingPrepare4SortedSparseSegmentMeanGrad(gert::TilingParseContext* context) 
+ge::graphStatus TilingPrepare4SortedSparseSegmentMeanGrad(gert::TilingParseContext* context)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
@@ -44,5 +44,4 @@ IMPL_OP_OPTILING(SortedSparseSegmentMeanGrad)
     .TilingParse<SortedSparseSegmentMeanGradCompileInfo>(TilingPrepare4SortedSparseSegmentMeanGrad)
     .TilingInputsDataDependency({DEPENDENCY_INPUT_INDEX});
 
-}  // namespace optiling
- 
+} // namespace optiling

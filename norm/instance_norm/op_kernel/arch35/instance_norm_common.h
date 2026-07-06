@@ -38,10 +38,10 @@ constexpr uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 
 constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN,
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::UNKNOWN,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN,
 };
 
 constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
@@ -52,8 +52,8 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 };
 
 template <typename T_IN>
-__aicore__ inline void LoadTensorForDtypeTIn(
-    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
+                                             uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
         DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
@@ -65,8 +65,8 @@ __aicore__ inline void LoadTensorForDtypeTIn(
 }
 
 template <typename T_IN>
-__aicore__ inline void LoadScalarForDtypeTIn(
-    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadScalarForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
+                                             uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
         DataCopy<float, LoadDist::DIST_BRC_B32>(dst, src + offset);
@@ -78,8 +78,8 @@ __aicore__ inline void LoadScalarForDtypeTIn(
 }
 
 template <typename T_OUT>
-__aicore__ inline void StoreTensorForDtypeTOut(
-    __local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg,
+                                               uint32_t offset)
 {
     if constexpr (IsSameType<T_OUT, float>::value) {
         DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, src, preg);
@@ -91,8 +91,8 @@ __aicore__ inline void StoreTensorForDtypeTOut(
 }
 
 template <typename T_OUT>
-__aicore__ inline void StoreOneElementForDtypeTOut(
-    __local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
+__aicore__ inline void StoreOneElementForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg,
+                                                   uint32_t offset)
 {
     if constexpr (IsSameType<T_OUT, float>::value) {
         DataCopy<T_OUT, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + offset, src, preg);

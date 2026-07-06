@@ -13,22 +13,16 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 
-extern "C" __global__ __aicore__ void swiglu_group_quant(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y, GM_ADDR yScale, GM_ADDR yOrigin,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale,
+                                                         GM_ADDR y, GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace,
+                                                         GM_ADDR tiling);
 
 namespace {
 class SwigluGroupQuantKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluGroupQuantKernelTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluGroupQuantKernelTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluGroupQuantKernelTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluGroupQuantKernelTest TearDown" << std::endl; }
 };
 
 void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
@@ -81,7 +75,7 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
 
     ICPU_SET_TILING_KEY(tilingKey);
     auto swigluGroupQuantKernel = [](GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y,
-                                      GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling) {
+                                     GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling) {
         ::swiglu_group_quant(x, weight, groupIndex, scale, y, yScale, yOrigin, workspace, tiling);
     };
     ICPU_RUN_KF(swigluGroupQuantKernel, blockDim, x, nullptr, nullptr, nullptr, y, yScale, yOrigin, workspace, tiling);
@@ -94,13 +88,7 @@ void RunKernelWithTilingKey(uint64_t tilingKey, bool outputOrigin)
     AscendC::GmFree(tiling);
 }
 
-TEST_F(SwigluGroupQuantKernelTest, block_fp8)
-{
-    RunKernelWithTilingKey(1000, false);
-}
+TEST_F(SwigluGroupQuantKernelTest, block_fp8) { RunKernelWithTilingKey(1000, false); }
 
-TEST_F(SwigluGroupQuantKernelTest, block_fp8_y_origin)
-{
-    RunKernelWithTilingKey(1100, true);
-}
+TEST_F(SwigluGroupQuantKernelTest, block_fp8_y_origin) { RunKernelWithTilingKey(1100, true); }
 } // namespace

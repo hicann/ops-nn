@@ -17,11 +17,10 @@
 
 #include "foreach_tan_simt.h"
 
-enum class ForeachTanTilingKey : uint32_t
-{
-    TILING_KEY_FLOAT   = 0,
+enum class ForeachTanTilingKey : uint32_t {
+    TILING_KEY_FLOAT = 0,
     TILING_KEY_FLOAT16 = 1,
-    TILING_KEY_BF16    = 2,
+    TILING_KEY_BF16 = 2,
 };
 
 template <uint32_t schMode>
@@ -30,14 +29,11 @@ __global__ __aicore__ void foreach_tan(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, 
     REGISTER_TILING_DEFAULT(ForeachTanTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachTanTilingData, tilingData, tiling);
 
-    if constexpr (schMode == static_cast<uint32_t>(
-            ForeachTanTilingKey::TILING_KEY_FLOAT)) {
+    if constexpr (schMode == static_cast<uint32_t>(ForeachTanTilingKey::TILING_KEY_FLOAT)) {
         NsForeachTan::Process<float>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachTanTilingKey::TILING_KEY_FLOAT16)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachTanTilingKey::TILING_KEY_FLOAT16)) {
         NsForeachTan::Process<half>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachTanTilingKey::TILING_KEY_BF16)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachTanTilingKey::TILING_KEY_BF16)) {
         NsForeachTan::Process<bfloat16_t>(x, y, &tilingData);
     }
 }

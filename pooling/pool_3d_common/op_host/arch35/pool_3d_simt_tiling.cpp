@@ -22,18 +22,14 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr uint64_t POOL_3D_TILING_KEY_SIMT_NCDHW_INT32 = 911100;
 static constexpr uint64_t POOL_3D_TILING_KEY_SIMT_NDHWC_INT32 = 911101;
 static constexpr uint64_t POOL_3D_TILING_KEY_SIMT_NCDHW_INT64 = 911110;
 static constexpr uint64_t POOL_3D_TILING_KEY_SIMT_NDHWC_INT64 = 911111;
 
-bool Pool3DSimtTiling::IsCapable()
-{
-    return true;
-}
+bool Pool3DSimtTiling::IsCapable() { return true; }
 
 ge::graphStatus Pool3DSimtTiling::DoOpTiling()
 {
@@ -41,15 +37,14 @@ ge::graphStatus Pool3DSimtTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Pool3DSimtTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Pool3DSimtTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t Pool3DSimtTiling::GetTilingKey() const
 {
-    int64_t xSize = inputData.batches * inputData.channels * inputData.inputShape[D_DIM] * inputData.inputShape[H_DIM] * inputData.inputShape[W_DIM];
-    int64_t ySize = inputData.batches * inputData.channels * inputData.outShape[D_DIM] * inputData.outShape[H_DIM] * inputData.outShape[W_DIM];
+    int64_t xSize = inputData.batches * inputData.channels * inputData.inputShape[D_DIM] * inputData.inputShape[H_DIM] *
+                    inputData.inputShape[W_DIM];
+    int64_t ySize = inputData.batches * inputData.channels * inputData.outShape[D_DIM] * inputData.outShape[H_DIM] *
+                    inputData.outShape[W_DIM];
     if (inputData.inputFormat == ge::Format::FORMAT_NCDHW) {
         if (xSize <= INT32_MAX && ySize <= INT32_MAX) {
             return POOL_3D_TILING_KEY_SIMT_NCDHW_INT32;
@@ -79,9 +74,10 @@ ge::graphStatus Pool3DSimtTiling::PostTiling()
     context_->SetBlockDim(coreNum);
     ubSize = ubSize - DCACHE_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize);
-    OP_TILING_CHECK((res != ge::GRAPH_SUCCESS),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (res != ge::GRAPH_SUCCESS),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize),
+        return ge::GRAPH_FAILED);
     tiling_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tiling_.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -148,28 +144,16 @@ void Pool3DSimtTiling::DumpTilingInfo()
 }
 
 //////////////////////////////// AvgPool3DSimtTiling /////////////////////////////////
-ge::graphStatus AvgPool3DSimtTiling::GetPlatformInfo()
-{
-    return GetAvgPool3DPlatformInfo(context_, ubSize, coreNum);
-}
+ge::graphStatus AvgPool3DSimtTiling::GetPlatformInfo() { return GetAvgPool3DPlatformInfo(context_, ubSize, coreNum); }
 
-ge::graphStatus AvgPool3DSimtTiling::GetShapeAttrsInfo()
-{
-    return GetAvgPool3DShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus AvgPool3DSimtTiling::GetShapeAttrsInfo() { return GetAvgPool3DShapeAttrsInfo(context_, inputData); }
 
 REGISTER_POOL_TILING_TEMPLATE("AvgPool3D", AvgPool3DSimtTiling, 19);
 
 //////////////////////////////// MaxPool3DSimtTiling /////////////////////////////////
-ge::graphStatus MaxPool3DSimtTiling::GetPlatformInfo()
-{
-    return GetMaxPool3DPlatformInfo(context_, ubSize, coreNum);
-}
+ge::graphStatus MaxPool3DSimtTiling::GetPlatformInfo() { return GetMaxPool3DPlatformInfo(context_, ubSize, coreNum); }
 
-ge::graphStatus MaxPool3DSimtTiling::GetShapeAttrsInfo()
-{
-    return GetMaxPool3DShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus MaxPool3DSimtTiling::GetShapeAttrsInfo() { return GetMaxPool3DShapeAttrsInfo(context_, inputData); }
 
 REGISTER_OPS_POOL_TILING_TEMPLATE(MaxPool3D, MaxPool3DSimtTiling, 19);
-}  // namespace optiling
+} // namespace optiling

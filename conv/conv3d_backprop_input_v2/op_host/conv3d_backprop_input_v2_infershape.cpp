@@ -25,9 +25,8 @@ constexpr size_t kConv2dDimSizeLimit = 4;
 static ge::graphStatus InferShapeForConv3DBackpropInputV2(gert::InferShapeContext* context)
 {
     auto const_tensor = context->GetInputTensor(0);
-    OP_CHECK_IF(
-        const_tensor == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null tensor."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get null tensor."),
+                return ge::GRAPH_FAILED);
     size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
 
     auto ret = ge::GRAPH_SUCCESS;

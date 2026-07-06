@@ -29,15 +29,13 @@ constexpr uint32_t BYTES_MAX_UPDATE = 1024;
 constexpr uint32_t MASK_DIV = 8;
 constexpr uint32_t MASK_TILE_NUM = 64;
 
-static std::map<ge::DataType, uint32_t> SUPPORT_DTYPE = {
-    {ge::DataType::DT_FLOAT, 4}, {ge::DataType::DT_FLOAT16, 2},
-    {ge::DataType::DT_UINT8, 1}, {ge::DataType::DT_INT8, 1},
-    {ge::DataType::DT_INT16, 2}, {ge::DataType::DT_INT32, 4},
-    {ge::DataType::DT_INT64, 8}, {ge::DataType::DT_BF16, 2},
-    {ge::DataType::DT_DOUBLE, 8}, {ge::DataType::DT_BOOL, 1}
-};
+static std::map<ge::DataType, uint32_t> SUPPORT_DTYPE = {{ge::DataType::DT_FLOAT, 4},  {ge::DataType::DT_FLOAT16, 2},
+                                                         {ge::DataType::DT_UINT8, 1},  {ge::DataType::DT_INT8, 1},
+                                                         {ge::DataType::DT_INT16, 2},  {ge::DataType::DT_INT32, 4},
+                                                         {ge::DataType::DT_INT64, 8},  {ge::DataType::DT_BF16, 2},
+                                                         {ge::DataType::DT_DOUBLE, 8}, {ge::DataType::DT_BOOL, 1}};
 
-inline static bool IsSupportDtype(const std::set<ge::DataType> &supportDtype, const ge::DataType dtype)
+inline static bool IsSupportDtype(const std::set<ge::DataType>& supportDtype, const ge::DataType dtype)
 {
     return (supportDtype.count(dtype) != 0);
 }
@@ -114,7 +112,7 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
     size_t maskDimNum = maskShape.GetDimNum();
     auto updatesShape = context->GetInputShape(UPDATES_INDEX)->GetStorageShape();
     size_t updatesDimNum = updatesShape.GetDimNum();
-    
+
     uint32_t updatesElement = 1;
     for (size_t i = 0; i < updatesDimNum; i++) {
         updatesElement = updatesElement * updatesShape.GetDim(i);
@@ -223,9 +221,8 @@ ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* cont
     SetTilingKeyMode(context);
     MaskedScatterV1TilingData* tilingData = context->GetTilingData<MaskedScatterV1TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
-    OP_CHECK_IF(
-        memset_s(tilingData, sizeof(MaskedScatterV1TilingData), 0, sizeof(MaskedScatterV1TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingData, sizeof(MaskedScatterV1TilingData), 0, sizeof(MaskedScatterV1TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     tilingData->loopNum = loopNum;
     tilingData->remainNum = remainNum;
     tilingData->updatesLineNum = updatesLineNum;
@@ -244,15 +241,12 @@ ge::graphStatus MaskedScatterV1Tiling::RunKernelTiling(gert::TilingContext* cont
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        (CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "input shape check failed!"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CheckOpInputDtype(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "dtype is invalid"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (SetOpTilingData(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "set optiling failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeName(), "input shape check failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpInputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context->GetNodeName(), "dtype is invalid"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((SetOpTilingData(context) != ge::GRAPH_SUCCESS), OP_LOGE(context->GetNodeName(), "set optiling failed"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -270,6 +264,6 @@ static ge::graphStatus TilingParseForMaskedScatterV1(gert::TilingParseContext* c
 }
 
 IMPL_OP_OPTILING(MaskedScatter)
-.Tiling(MaskedScatterV1TilingFunc)
-.TilingParse<MaskedScatterV1CompileInfo>(TilingParseForMaskedScatterV1);
+    .Tiling(MaskedScatterV1TilingFunc)
+    .TilingParse<MaskedScatterV1CompileInfo>(TilingParseForMaskedScatterV1);
 } // namespace optiling

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -25,27 +26,19 @@
 
 using namespace std;
 
-extern "C" void add_layer_norm(
-    uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias, uint8_t* y, uint8_t* mean, uint8_t* rstd,
-    uint8_t* x, uint8_t* workspace, uint8_t* tiling);
+extern "C" void add_layer_norm(uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* beta, uint8_t* bias, uint8_t* y,
+                               uint8_t* mean, uint8_t* rstd, uint8_t* x, uint8_t* workspace, uint8_t* tiling);
 
 class add_layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_layer_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_layer_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_layer_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_layer_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(add_layer_norm_test, test_case_fp32_full_load)
 {
-    system(
-        "cp -rf "
-        "../../../../norm/add_layer_norm/tests/ut/op_kernel/add_layer_norm_data ./");
+    system("cp -rf "
+           "../../../../norm/add_layer_norm/tests/ut/op_kernel/add_layer_norm_data ./");
     system("chmod -R 755 ./add_layer_norm_data/");
     system("cd ./add_layer_norm_data/ && python3 gen_data.py '(37, 13)' '(13)' 'float32'");
     int N = 37;
@@ -102,20 +95,17 @@ TEST_F(add_layer_norm_test, test_case_fp32_full_load)
 
     // normal fp32
     ICPU_SET_TILING_KEY(8000);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(8001);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(8002);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
-    
+    ICPU_RUN_KF(add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
+
     std::string outFilePath = "./add_layer_norm_data/float32_output_";
     WriteFile(outFilePath + "y.bin", y, outputByteSize);
     WriteFile(outFilePath + "mean.bin", mean, meanByteSize);
@@ -138,9 +128,8 @@ TEST_F(add_layer_norm_test, test_case_fp32_full_load)
 
 TEST_F(add_layer_norm_test, test_case_fp32_welford)
 {
-    system(
-    "cp -rf "
-    "../../../../norm/add_layer_norm/tests/ut/op_kernel/add_layer_norm_data ./");
+    system("cp -rf "
+           "../../../../norm/add_layer_norm/tests/ut/op_kernel/add_layer_norm_data ./");
     system("chmod -R 755 ./add_layer_norm_data/");
     system("cd ./add_layer_norm_data/ && python3 gen_data.py '(37, 13000)' '(13000)' 'float32'");
     int N = 37;
@@ -197,20 +186,17 @@ TEST_F(add_layer_norm_test, test_case_fp32_welford)
 
     // normal fp32
     ICPU_SET_TILING_KEY(8100);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(8101);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(8102);
-    ICPU_RUN_KF(
-        add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
-    
+    ICPU_RUN_KF(add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
+
     std::string outFilePath = "./add_layer_norm_data/float32_output_";
     WriteFile(outFilePath + "y.bin", y, outputByteSize);
     WriteFile(outFilePath + "mean.bin", mean, meanByteSize);

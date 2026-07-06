@@ -104,8 +104,8 @@ inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* ou
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnNonzeroGetWorkspaceSize(
-    const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnNonzeroGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                         aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnNonzero, DFX_IN(self), DFX_OUT(out));
     // 固定写法，创建OpExecutor

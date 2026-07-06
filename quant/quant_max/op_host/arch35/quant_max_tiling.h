@@ -23,8 +23,7 @@ struct QuantMaxCompileInfo {
     int32_t vectorCoreNum = 0;
 };
 
-enum class RoundMode
-{
+enum class RoundMode {
     MODE_RINT = 0,
     MODE_ROUND = 1,
     MODE_HYBRID = 2,
@@ -33,7 +32,7 @@ enum class RoundMode
 
 class QuantMaxRegbase {
 public:
-    explicit QuantMaxRegbase(gert::TilingContext* context) : context_(context) {};
+    explicit QuantMaxRegbase(gert::TilingContext* context) : context_(context){};
     ge::graphStatus DoQuantMaxTiling();
 
 protected:
@@ -41,9 +40,8 @@ protected:
     ge::graphStatus GetOpParam();
     ge::graphStatus CheckDtype();
     ge::graphStatus CheckAttrs();
-    ge::graphStatus CheckShape(
-        const gert::Shape& xShape, const gert::Shape& scaleShape, const gert::Shape& yShape,
-        const gert::Shape& amaxShape) const;
+    ge::graphStatus CheckShape(const gert::Shape& xShape, const gert::Shape& scaleShape, const gert::Shape& yShape,
+                               const gert::Shape& amaxShape) const;
     RoundMode GetRoundMode(std::string& roundMode);
     void MergeInputShape(const gert::Shape& input);
     int64_t GetCoreNum(int64_t factor, int64_t coreNum) const;

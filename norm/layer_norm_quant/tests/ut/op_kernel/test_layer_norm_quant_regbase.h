@@ -39,32 +39,31 @@ struct LayerNormQuantRegTilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                          \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                   \
     LayerNormQuantRegTilingData tilingData;                                          \
     INIT_TILING_DATA(LayerNormQuantRegTilingData, tilingDataPointer, tilingPointer); \
-    (tilingData).numCore = tilingDataPointer->numCore;                                  \
-    (tilingData).numLastDim = tilingDataPointer->numLastDim;                              \
-    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                                        \
-    (tilingData).nlFirstdimPerCore = tilingDataPointer->nlFirstdimPerCore;                              \
-    (tilingData).lFirstdimPerCore = tilingDataPointer->lFirstdimPerCore;                      \
-    (tilingData).firstDimPerTimes = tilingDataPointer->firstDimPerTimes;                              \
-    (tilingData).colsAligned = tilingDataPointer->colsAligned;                                            \
-    (tilingData).epsStr = tilingDataPointer->epsStr;                              \
-    (tilingData).aveStr = tilingDataPointer->aveStr;                          \
-    (tilingData).sliceNum = tilingDataPointer->sliceNum;                                    \
-    (tilingData).sliceSize = tilingDataPointer->sliceSize;                            \
+    (tilingData).numCore = tilingDataPointer->numCore;                               \
+    (tilingData).numLastDim = tilingDataPointer->numLastDim;                         \
+    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                       \
+    (tilingData).nlFirstdimPerCore = tilingDataPointer->nlFirstdimPerCore;           \
+    (tilingData).lFirstdimPerCore = tilingDataPointer->lFirstdimPerCore;             \
+    (tilingData).firstDimPerTimes = tilingDataPointer->firstDimPerTimes;             \
+    (tilingData).colsAligned = tilingDataPointer->colsAligned;                       \
+    (tilingData).epsStr = tilingDataPointer->epsStr;                                 \
+    (tilingData).aveStr = tilingDataPointer->aveStr;                                 \
+    (tilingData).sliceNum = tilingDataPointer->sliceNum;                             \
+    (tilingData).sliceSize = tilingDataPointer->sliceSize;                           \
     (tilingData).tailSliceSize = tilingDataPointer->tailSliceSize;
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormQuantRegTilingData* constData)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormQuantRegTilingData* constData) {
     const __gm__ int64_t* src = (const __gm__ int64_t*)tiling;
     int64_t* dst = (int64_t*)constData;
     for (auto i = 0; i < sizeof(LayerNormQuantRegTilingData) / sizeof(int64_t); i++)
@@ -81,8 +80,8 @@ inline void InitTilingData(uint8_t* tiling, LayerNormQuantRegTilingData* constDa
     tilingStruct tilingData;                                             \
     InitTilingData(tilingArg, &tilingData)
 
-#define GET_TILING_DATA(tilingData, tilingArg)     \
-    LayerNormQuantRegTilingData tilingData; \
+#define GET_TILING_DATA(tilingData, tilingArg) \
+    LayerNormQuantRegTilingData tilingData;    \
     InitTilingData(tilingArg, &tilingData)
 
 #define DTYPE_X float

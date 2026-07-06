@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file reverse_sequence_tiling.cc
-* \brief
-*/
+ * \file reverse_sequence_tiling.cc
+ * \brief
+ */
 #include "reverse_sequence_tiling.h"
 #include "log/log.h"
 #include "op_host/util/math_util.h"
@@ -19,8 +19,7 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/platform_util.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::Base;
 
 static ge::graphStatus Tiling4ReverseSequence(gert::TilingContext* context)
@@ -44,5 +43,7 @@ ge::graphStatus TilingPrepareForReverseSequence(gert::TilingParseContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ReverseSequence).Tiling(Tiling4ReverseSequence).TilingParse<ReverseSequenceCompileInfo>(TilingPrepareForReverseSequence);
-}  // namespace optiling
+IMPL_OP_OPTILING(ReverseSequence)
+    .Tiling(Tiling4ReverseSequence)
+    .TilingParse<ReverseSequenceCompileInfo>(TilingPrepareForReverseSequence);
+} // namespace optiling

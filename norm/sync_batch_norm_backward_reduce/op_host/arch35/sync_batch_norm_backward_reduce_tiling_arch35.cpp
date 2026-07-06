@@ -85,29 +85,30 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::CalcOutputDtype()
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputSumDyDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(inputSumDyDxPadDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and sum_dy_dx_pad",
-            dtypeMsg.c_str(), "The dtypes of sum_dy and sum_dy_dx_pad must be the same");
+                                               dtypeMsg.c_str(),
+                                               "The dtypes of sum_dy and sum_dy_dx_pad must be the same");
         return ge::GRAPH_FAILED;
     }
     if (inputMeanDtype != inputInvertStdDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputMeanDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(inputInvertStdDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "mean and invert_std",
-            dtypeMsg.c_str(), "The dtypes of mean and invert_std must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "mean and invert_std", dtypeMsg.c_str(),
+                                               "The dtypes of mean and invert_std must be the same");
         return ge::GRAPH_FAILED;
     }
     if (inputSumDyDtype != inputInvertStdDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputSumDyDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(inputInvertStdDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and invert_std",
-            dtypeMsg.c_str(), "The dtypes of sum_dy and invert_std must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and invert_std", dtypeMsg.c_str(),
+                                               "The dtypes of sum_dy and invert_std must be the same");
         return ge::GRAPH_FAILED;
     }
     // 检查输出之间的dtype是否相同
     if (outputSumDyXmuDtype != outputYDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(outputSumDyXmuDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(outputYDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy_xmu and y",
-            dtypeMsg.c_str(), "The dtypes of sum_dy_xmu and y must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy_xmu and y", dtypeMsg.c_str(),
+                                               "The dtypes of sum_dy_xmu and y must be the same");
         return ge::GRAPH_FAILED;
     }
     // 输入输出之间是dtype是否相同
@@ -115,8 +116,8 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::CalcOutputDtype()
     if (inputSumDyDtype != this->outputDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputSumDyDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(outputYDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and y",
-            dtypeMsg.c_str(), "The dtypes of sum_dy and y must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and y", dtypeMsg.c_str(),
+                                               "The dtypes of sum_dy and y must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -125,9 +126,8 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::CalcOutputDtype()
 ge::graphStatus SyncBatchNormBackwardReduceTiling::RunTiling()
 {
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
 
     tiling = tilingContext->GetTilingData<SyncBatchNormBackwardReduceTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
@@ -140,14 +140,15 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::RunTiling()
         res = elewiseBaseTiling.DoTiling<SyncBatchNormBackwardReduceDag<bfloat16_t>::OpDag>(tiling->baseTiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "sum_dy_xmu",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(), "float16, bfloat16 and float");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
+                                  "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "SyncBatchNormBackwardReduce DoTiling failed",
-        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(res == ge::GRAPH_FAILED,
+                OP_LOGE(tilingContext, "SyncBatchNormBackwardReduce DoTiling failed",
+                        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus result = SetTilingData();
     return result;
@@ -156,8 +157,7 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::RunTiling()
 static ge::graphStatus TilingForSyncBatchNormBackwardReduce(gert::TilingContext* context)
 {
     OP_LOGD("SyncBatchNormBackwardReduceTiling", "Enter TilingForSyncBatchNormBackwardReduce");
-    OP_CHECK_IF(
-        context == nullptr, OP_LOGE(context, "Tiling context is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, OP_LOGE(context, "Tiling context is null"), return ge::GRAPH_FAILED);
 
     auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -165,12 +165,12 @@ static ge::graphStatus TilingForSyncBatchNormBackwardReduce(gert::TilingContext*
     return syncBatchNormBackwardReduceTiling.RunTiling();
 }
 
-ge::graphStatus TilingPrepareForSyncBatchNormBackwardReduce([[maybe_unused]] gert::TilingParseContext *context)
+ge::graphStatus TilingPrepareForSyncBatchNormBackwardReduce([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(SyncBatchNormBackwardReduce).
-    Tiling(TilingForSyncBatchNormBackwardReduce).
-    TilingParse<ElewiseCompileInfo>(TilingPrepareForSyncBatchNormBackwardReduce);
+IMPL_OP_OPTILING(SyncBatchNormBackwardReduce)
+    .Tiling(TilingForSyncBatchNormBackwardReduce)
+    .TilingParse<ElewiseCompileInfo>(TilingPrepareForSyncBatchNormBackwardReduce);
 } // namespace optiling

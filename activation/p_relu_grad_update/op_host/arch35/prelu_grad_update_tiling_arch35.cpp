@@ -37,39 +37,18 @@ constexpr static uint64_t PRELU_GRAD_UPDATE_COMMON_TILING_PRIORITY = 0;
 
 using namespace ge;
 
-bool PReluGradUpdateTiling::IsCapable()
-{
-    return true;
-}
+bool PReluGradUpdateTiling::IsCapable() { return true; }
 
-ge::graphStatus PReluGradUpdateTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
-ge::graphStatus PReluGradUpdateTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PReluGradUpdateTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus PReluGradUpdateTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t PReluGradUpdateTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t PReluGradUpdateTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus PReluGradUpdateTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PReluGradUpdateTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus PReluGradUpdateTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PReluGradUpdateTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus PReluGradUpdateTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PReluGradUpdateTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus PReluGradUpdateTiling::CalcInputDtype()
 {
@@ -81,31 +60,36 @@ ge::graphStatus PReluGradUpdateTiling::CalcInputDtype()
     OPS_ERR_IF(
         this->inputFeturesDtype != ge::DT_FLOAT16 && this->inputFeturesDtype != ge::DT_BF16 &&
             this->inputFeturesDtype != ge::DT_FLOAT,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input features dtype allow {float16, bfloat16, float32} ,but not support %s",ge::TypeUtils::DataTypeToSerialString(this->inputFeturesDtype).c_str()),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                        "input features dtype allow {float16, bfloat16, float32} ,but not support %s",
+                                        ge::TypeUtils::DataTypeToSerialString(this->inputFeturesDtype).c_str()),
         return ge::GRAPH_FAILED);
 
     auto inputWeightsDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputWeightsDesc);
     this->inputWeightsDtype = inputWeightsDesc->GetDataType();
-    OPS_ERR_IF(
-        this->inputWeightsDtype != ge::DT_FLOAT16 && this->inputWeightsDtype != ge::DT_BF16 &&
-            this->inputWeightsDtype != ge::DT_FLOAT,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input weights dtype {float16, bfloat16, float32} ,but not support %s",ge::TypeUtils::DataTypeToSerialString(this->inputWeightsDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OPS_ERR_IF(this->inputWeightsDtype != ge::DT_FLOAT16 && this->inputWeightsDtype != ge::DT_BF16 &&
+                   this->inputWeightsDtype != ge::DT_FLOAT,
+               VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                               "input weights dtype {float16, bfloat16, float32} ,but not support %s",
+                                               ge::TypeUtils::DataTypeToSerialString(this->inputWeightsDtype).c_str()),
+               return ge::GRAPH_FAILED);
 
     auto inputGradientsDesc = context_->GetInputDesc(INPUT_GRADIENT_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputGradientsDesc);
     this->inputGradientsDtype = inputGradientsDesc->GetDataType();
-    OPS_ERR_IF(
-        this->inputGradientsDtype != ge::DT_FLOAT16 && this->inputGradientsDtype != ge::DT_BF16 &&
-            this->inputGradientsDtype != ge::DT_FLOAT,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input gradients dtype {float16, bfloat16, float32} ,but not support %s",ge::TypeUtils::DataTypeToSerialString(this->inputGradientsDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OPS_ERR_IF(this->inputGradientsDtype != ge::DT_FLOAT16 && this->inputGradientsDtype != ge::DT_BF16 &&
+                   this->inputGradientsDtype != ge::DT_FLOAT,
+               VECTOR_INNER_ERR_REPORT_TILIING(
+                   context_->GetNodeName(), "input gradients dtype {float16, bfloat16, float32} ,but not support %s",
+                   ge::TypeUtils::DataTypeToSerialString(this->inputGradientsDtype).c_str()),
+               return ge::GRAPH_FAILED);
     OPS_ERR_IF(
         this->inputGradientsDtype != this->inputWeightsDtype || this->inputGradientsDtype != this->inputFeturesDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input gradients features weights dtype are not the same"),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                        "input gradients features weights dtype are not the same"),
         return ge::GRAPH_FAILED);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -124,12 +108,13 @@ ge::graphStatus PReluGradUpdateTiling::CheckAndInferShape(std::vector<gert::Shap
     auto inputStorageGradientShape = context_->GetInputShape(INPUT_GRADIENT_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputStorageGradientShape);
     const gert::Shape& inputGradientShape = Ops::Base::EnsureNotScalar(inputStorageGradientShape->GetStorageShape());
-    
+
     //检查weight的元素个数是否等于1或者features的通道数
     int64_t weightSize = inputWeightShape.GetShapeSize();
-    OP_TILING_CHECK(weightSize != 1 && weightSize != inputFeatureShape.GetDim(1),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "weight shape size must be 1 or features dim1 size"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        weightSize != 1 && weightSize != inputFeatureShape.GetDim(1),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "weight shape size must be 1 or features dim1 size"),
+        return ge::GRAPH_FAILED);
 
     inputShapes.push_back(inputGradientShape);
     inputShapes.push_back(inputFeatureShape);
@@ -149,7 +134,7 @@ ge::graphStatus PReluGradUpdateTiling::CheckAndInferShape(std::vector<gert::Shap
         }
     }
     inputShapes.push_back(weightReshape);
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -160,33 +145,30 @@ ge::graphStatus PReluGradUpdateTiling::CalcOutputDtype()
     auto outputDxDesc = context_->GetOutputDesc(OUT_BACKPROPS_DX_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDxDesc);
     this->outputBackpropsDxDtype = outputDxDesc->GetDataType();
-    OPS_ERR_IF(
-        this->outputBackpropsDxDtype != this->inputFeturesDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "output backprops dx dtype not same as input features"),
-        return ge::GRAPH_FAILED);
+    OPS_ERR_IF(this->outputBackpropsDxDtype != this->inputFeturesDtype,
+               VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                               "output backprops dx dtype not same as input features"),
+               return ge::GRAPH_FAILED);
 
     auto outputDaDesc = context_->GetOutputDesc(OUT_BACKPROPS_DA_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDaDesc);
     this->outputBackpropsDaDtype = outputDaDesc->GetDataType();
-    OPS_ERR_IF(
-        this->outputBackpropsDaDtype != this->inputFeturesDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "output backprops da dtype not same as input features"),
-        return ge::GRAPH_FAILED);
+    OPS_ERR_IF(this->outputBackpropsDaDtype != this->inputFeturesDtype,
+               VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                               "output backprops da dtype not same as input features"),
+               return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus PReluGradUpdateTiling::DoOpTiling()
 {
-    OPS_ERR_IF(
-        CalcInputDtype() == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(context_, "get input dtype failed"),
-        return ge::GRAPH_FAILED);
-    OPS_ERR_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(context_, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
+    OPS_ERR_IF(CalcInputDtype() == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(context_, "get input dtype failed"),
+               return ge::GRAPH_FAILED);
+    OPS_ERR_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(context_, "get output dtype failed"),
+               return ge::GRAPH_FAILED);
     std::vector<gert::Shape> inputShapes;
-    OPS_ERR_IF(
-        CheckAndInferShape(inputShapes) == ge::GRAPH_FAILED, OPS_REPORT_VECTOR_INNER_ERR(context_, "check and infer shape failed"),
-        return ge::GRAPH_FAILED);
+    OPS_ERR_IF(CheckAndInferShape(inputShapes) == ge::GRAPH_FAILED,
+               OPS_REPORT_VECTOR_INNER_ERR(context_, "check and infer shape failed"), return ge::GRAPH_FAILED);
 
     auto inputDesc = context_->GetInputDesc(INPUT_FEATURE_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
@@ -197,33 +179,33 @@ ge::graphStatus PReluGradUpdateTiling::DoOpTiling()
         brcBaseTiling.SetOpInputStorageShapes(inputShapes);
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
-        OP_LOGD("DoOpTiling","DT_FLOAT16 GetSchMode: %lu",brcBaseTiling.GetSchMode());
-        OP_LOGD("DoOpTiling","DT_FLOAT16 tiling key: %lu",tilingKey);
+        OP_LOGD("DoOpTiling", "DT_FLOAT16 GetSchMode: %lu", brcBaseTiling.GetSchMode());
+        OP_LOGD("DoOpTiling", "DT_FLOAT16 tiling key: %lu", tilingKey);
     } else if (inputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<PReluGradUpdate::PReluGradUpdateDAG<bfloat16_t>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetOpInputStorageShapes(inputShapes);
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
-        OP_LOGD("DoOpTiling","DT_BF16 GetSchMode: %lu",brcBaseTiling.GetSchMode());
-        OP_LOGD("DoOpTiling","DT_BF16 tiling key: %lu",tilingKey);
+        OP_LOGD("DoOpTiling", "DT_BF16 GetSchMode: %lu", brcBaseTiling.GetSchMode());
+        OP_LOGD("DoOpTiling", "DT_BF16 tiling key: %lu", tilingKey);
     } else if (inputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<PReluGradUpdate::PReluGradUpdateDAG<float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetOpInputStorageShapes(inputShapes);
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
-        OP_LOGD("DoOpTiling","DT_FLOAT GetSchMode: %lu",brcBaseTiling.GetSchMode());
-        OP_LOGD("DoOpTiling","DT_FLOAT tiling key: %lu",tilingKey);
+        OP_LOGD("DoOpTiling", "DT_FLOAT GetSchMode: %lu", brcBaseTiling.GetSchMode());
+        OP_LOGD("DoOpTiling", "DT_FLOAT tiling key: %lu", tilingKey);
     } else {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "Input dtype only support fp16, bf16, fp32 currently is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str());
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                        "Input dtype only support fp16, bf16, fp32 currently is %s.",
+                                        ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str());
         return ge::GRAPH_FAILED;
     }
 
-    OP_TILING_CHECK(
-        status != ge::GRAPH_SUCCESS,
-        OPS_REPORT_VECTOR_INNER_ERR(context_, "BroadcastBaseTiling do tiling failed."), return ge::GRAPH_FAILED);
-    OP_LOGD("prelugradupdate tiling","end do tiling");
+    OP_TILING_CHECK(status != ge::GRAPH_SUCCESS,
+                    OPS_REPORT_VECTOR_INNER_ERR(context_, "BroadcastBaseTiling do tiling failed."),
+                    return ge::GRAPH_FAILED);
+    OP_LOGD("prelugradupdate tiling", "end do tiling");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -241,11 +223,11 @@ static ge::graphStatus Tiling4PReluGradUpdate(gert::TilingContext* context)
     return tiling.DoTiling();
 }
 
-static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext* context)
 {
     auto compileInfoPtr = context->GetCompiledInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -253,6 +235,8 @@ static ge::graphStatus TilingPrepareForBroadcast(gert::TilingParseContext *conte
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(PReluGradUpdate).Tiling(Tiling4PReluGradUpdate).TilingParse<BroadcastCompileInfo>(TilingPrepareForBroadcast);
+IMPL_OP_OPTILING(PReluGradUpdate)
+    .Tiling(Tiling4PReluGradUpdate)
+    .TilingParse<BroadcastCompileInfo>(TilingPrepareForBroadcast);
 REGISTER_OPS_TILING_TEMPLATE(PReluGradUpdate, PReluGradUpdateTiling, PRELU_GRAD_UPDATE_COMMON_TILING_PRIORITY);
 } // namespace optiling

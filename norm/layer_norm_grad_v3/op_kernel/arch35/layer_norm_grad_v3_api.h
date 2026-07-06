@@ -33,10 +33,7 @@ namespace Arith {
  *
  * Note: This is optimized for AI Core execution (low-latency).
  */
-__aicore__ inline int64_t Min(int64_t a, int64_t b)
-{
-    return (a < b) ? a : b;
-}
+__aicore__ inline int64_t Min(int64_t a, int64_t b) { return (a < b) ? a : b; }
 
 /**
  * Computes the maximum of two 64-bit integers (aicore)
@@ -47,10 +44,7 @@ __aicore__ inline int64_t Min(int64_t a, int64_t b)
  *
  * Note: This is optimized for AI Core execution (low-latency).
  */
-__aicore__ inline int64_t Max(int64_t a, int64_t b)
-{
-    return (a > b) ? a : b;
-}
+__aicore__ inline int64_t Max(int64_t a, int64_t b) { return (a > b) ? a : b; }
 
 /**
  * Computes ceiling division of two 64-bit integers (aicore)
@@ -123,9 +117,9 @@ __aicore__ inline void CopyIn1D(const LocalTensor<T>& dstTensor, const GlobalTen
 }
 
 template <typename T>
-__aicore__ inline void CopyIn2D(
-    const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-    const int64_t dstStride, const int64_t srcStride)
+__aicore__ inline void CopyIn2D(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                const int64_t rowSize, const int64_t colSize, const int64_t dstStride,
+                                const int64_t srcStride)
 {
     DataCopyExtParams params;
     params.blockCount = rowSize;

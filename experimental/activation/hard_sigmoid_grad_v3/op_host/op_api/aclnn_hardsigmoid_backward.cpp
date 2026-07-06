@@ -28,12 +28,12 @@ extern "C" {
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -54,7 +54,7 @@ static inline op::DataType GetComputeType(op::DataType gradType, op::DataType se
     return promoteType;
 }
 
-static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *out)
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -62,7 +62,7 @@ static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self, con
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
@@ -73,7 +73,7 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, 
     return true;
 }
 
-static bool CheckShape(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *out)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(gradOutput, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -83,7 +83,7 @@ static bool CheckShape(const aclTensor *gradOutput, const aclTensor *self, const
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(gradOutput, self, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(gradOutput, self, out), ACLNN_ERR_PARAM_INVALID);
@@ -91,12 +91,9 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *sel
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecHardsigmoidBackwardGetWorkspaceSize(
-    const aclTensor *gradOutput,
-    const aclTensor *self,
-    aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+static aclnnStatus ExecHardsigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                           aclTensor* out, uint64_t* workspaceSize,
+                                                           aclOpExecutor** executor)
 {
     auto ret = CheckParams(gradOutput, self, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -136,23 +133,16 @@ static aclnnStatus ExecHardsigmoidBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
-    const aclTensor *gradOutput,
-    const aclTensor *self,
-    aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out,
+                                                     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnHardsigmoidBackward, DFX_IN(gradOutput, self), DFX_OUT(out));
     return ExecHardsigmoidBackwardGetWorkspaceSize(gradOutput, self, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnHardsigmoidBackward(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    const aclrtStream stream)
+aclnnStatus aclnnHardsigmoidBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnHardsigmoidBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

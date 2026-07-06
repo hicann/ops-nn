@@ -24,18 +24,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class ApplyGradientDescentTilingTest : public testing::Test
-{
+class ApplyGradientDescentTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyGradientDescentTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyGradientDescentTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyGradientDescentTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyGradientDescentTiling TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -52,7 +45,8 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
                          map<string, string>& aicoreSpec, map<string, string>& intrinsics,
-                         map<string, string>& socVersion) {
+                         map<string, string>& socVersion)
+{
     string compile_info_string = R"({
      "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
      "Intrinsic_fix_pipe_l0c2out": false,
@@ -68,8 +62,10 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
     platFormInfo.Init();
 }
 
-static void DoApplyGradientDescentTilingCase(std::initializer_list<int64_t>& inputShape1, std::initializer_list<int64_t>& inputShape2,
-                               std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype, std::string& expectStr)
+static void DoApplyGradientDescentTilingCase(std::initializer_list<int64_t>& inputShape1,
+                                             std::initializer_list<int64_t>& inputShape2,
+                                             std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype,
+                                             std::string& expectStr)
 {
     // init platform
     fe::PlatFormInfos platFormInfo;
@@ -88,12 +84,12 @@ static void DoApplyGradientDescentTilingCase(std::initializer_list<int64_t>& inp
 
     // tilingParseFunc simulate
     string compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platFormInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platFormInfo)})
+                             .Outputs({&compileInfo})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socVersion);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
@@ -108,7 +104,6 @@ static void DoApplyGradientDescentTilingCase(std::initializer_list<int64_t>& inp
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-
 
     gert::StorageShape varShape = {inputShape1, inputShape1};
     gert::StorageShape alphaShape = {inputShape2, inputShape2};
@@ -152,7 +147,6 @@ TEST_F(ApplyGradientDescentTilingTest, apply_gradient_descent_david_tiling1)
     std::initializer_list<int64_t> inputShape2 = {};
     std::initializer_list<int64_t> outputShape = {2048, 1, 48};
 
-    std::string expectStr =
-        "98304 32985348833344 1536 64 1 1 1536 1536 7680 1 ";
+    std::string expectStr = "98304 32985348833344 1536 64 1 1 1536 1536 7680 1 ";
     DoApplyGradientDescentTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }

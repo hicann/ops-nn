@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_multi_add_rms_norm_dynamic_quant.cpp
  * \brief
  */
@@ -27,24 +27,21 @@
 using namespace std;
 constexpr uint32_t SLICE_COL_LEN = 8864;
 
-extern "C" void multi_add_rms_norm_dynamic_quant(
-    uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* scales1, uint8_t* scales2, uint8_t* y1, uint8_t* y2, uint8_t* x,
-    uint8_t* y, uint8_t* outScale1, uint8_t* outScale2, uint8_t* workspace, uint8_t* tiling);
+extern "C" void multi_add_rms_norm_dynamic_quant(uint8_t* x1, uint8_t* x2, uint8_t* gamma, uint8_t* scales1,
+                                                 uint8_t* scales2, uint8_t* y1, uint8_t* y2, uint8_t* x, uint8_t* y,
+                                                 uint8_t* outScale1, uint8_t* outScale2, uint8_t* workspace,
+                                                 uint8_t* tiling);
 
-class multi_add_rms_norm_dynamic_quant_test : public testing::Test
-{
+class multi_add_rms_norm_dynamic_quant_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
         cout << "multi_add_rms_norm_dynamic_quant_test SetUp\n" << endl;
-        system(
-            "cp -rf "
-            "../../../../norm/multi_add_rms_norm_dynamic_quant/tests/ut/op_kernel/multi_add_rms_norm_dynamic_quant_data ./");
+        system("cp -rf "
+               "../../../../norm/multi_add_rms_norm_dynamic_quant/tests/ut/op_kernel/"
+               "multi_add_rms_norm_dynamic_quant_data ./");
     }
-    static void TearDownTestCase()
-    {
-        cout << "multi_add_rms_norm_dynamic_quant_test TearDown\n" << endl;
-    }
+    static void TearDownTestCase() { cout << "multi_add_rms_norm_dynamic_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_001_5add_fp16_normal)
@@ -80,13 +77,15 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_001_5add_fp16_normal)
 
     std::string path = ".";
 
-    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(tiling);
+    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(
+        tiling);
 
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/x2.bin", rowsByteSize, x2, rowsByteSize);
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/gamma.bin", weightBetaByteSize, gamma, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2, weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1,
+             weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2,
+             weightBetaByteSize);
 
     tilingDatafromBin->useCore = blockDim;
     tilingDatafromBin->numFirstDim = N;
@@ -105,10 +104,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_001_5add_fp16_normal)
 
     // dual normal fp16
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(
-        multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
-
+    ICPU_RUN_KF(multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     FreeTensorList<int16_t>(x1, shapeInfos, "float16", 0, "x1");
     AscendC::GmFree(x2);
@@ -123,7 +120,6 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_001_5add_fp16_normal)
     AscendC::GmFree(outScale2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
 }
 
 TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_002_3add_bf16_normal)
@@ -159,34 +155,35 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_002_3add_bf16_normal)
 
     std::string path = ".";
 
-    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(tiling);
+    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(
+        tiling);
 
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/x2.bin", rowsByteSize, x2, rowsByteSize);
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/gamma.bin", weightBetaByteSize, gamma, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2, weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1,
+             weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2,
+             weightBetaByteSize);
 
-  tilingDatafromBin->useCore = blockDim;
-  tilingDatafromBin->numFirstDim = N;
-  tilingDatafromBin->numLastDim = D;
-  tilingDatafromBin->numLastDimAligned = (D + 32 - 1) / 32 * 32;
-  tilingDatafromBin->firstDimPerCore = 1;
-  tilingDatafromBin->firstDimPerCoreTail = 1;
-  tilingDatafromBin->firstDimPerLoop = 1;
-  tilingDatafromBin->lastDimLoopNum = 1;
-  tilingDatafromBin->lastDimSliceLen = SLICE_COL_LEN;
-  tilingDatafromBin->lastDimSliceLenTail = D;
-  tilingDatafromBin->smoothNum = 2;
-  tilingDatafromBin->epsilon = 1e-5;
-  tilingDatafromBin->avgFactor = (1.0 / D);
-  tilingDatafromBin->x1Num = 3;
+    tilingDatafromBin->useCore = blockDim;
+    tilingDatafromBin->numFirstDim = N;
+    tilingDatafromBin->numLastDim = D;
+    tilingDatafromBin->numLastDimAligned = (D + 32 - 1) / 32 * 32;
+    tilingDatafromBin->firstDimPerCore = 1;
+    tilingDatafromBin->firstDimPerCoreTail = 1;
+    tilingDatafromBin->firstDimPerLoop = 1;
+    tilingDatafromBin->lastDimLoopNum = 1;
+    tilingDatafromBin->lastDimSliceLen = SLICE_COL_LEN;
+    tilingDatafromBin->lastDimSliceLenTail = D;
+    tilingDatafromBin->smoothNum = 2;
+    tilingDatafromBin->epsilon = 1e-5;
+    tilingDatafromBin->avgFactor = (1.0 / D);
+    tilingDatafromBin->x1Num = 3;
 
     // dual normal bf16
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(
-        multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     FreeTensorList<int16_t>(x1, shapeInfos, "bfloat16_t", 0, "x1");
     AscendC::GmFree(x2);
@@ -201,7 +198,6 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_002_3add_bf16_normal)
     AscendC::GmFree(outScale2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
 }
 
 TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_003_4add_fp16_single_row)
@@ -237,13 +233,15 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_003_4add_fp16_single_row
 
     std::string path = ".";
 
-    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(tiling);
+    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(
+        tiling);
 
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/x2.bin", rowsByteSize, x2, rowsByteSize);
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/gamma.bin", weightBetaByteSize, gamma, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2, weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1,
+             weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2,
+             weightBetaByteSize);
 
     tilingDatafromBin->useCore = blockDim;
     tilingDatafromBin->numFirstDim = N;
@@ -262,9 +260,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_003_4add_fp16_single_row
 
     // dual normal fp16
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     FreeTensorList<int16_t>(x1, shapeInfos, "float16", 0, "x1");
     AscendC::GmFree(x2);
@@ -279,7 +276,6 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_003_4add_fp16_single_row
     AscendC::GmFree(outScale2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
 }
 
 TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_004_4add_bf16_single_row)
@@ -315,13 +311,15 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_004_4add_bf16_single_row
 
     std::string path = ".";
 
-    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(tiling);
+    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(
+        tiling);
 
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/x2.bin", rowsByteSize, x2, rowsByteSize);
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/gamma.bin", weightBetaByteSize, gamma, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1, weightBetaByteSize);
-    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2, weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth1.bin", weightBetaByteSize, smooth1,
+             weightBetaByteSize);
+    ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/smooth2.bin", weightBetaByteSize, smooth2,
+             weightBetaByteSize);
 
     tilingDatafromBin->useCore = blockDim;
     tilingDatafromBin->numFirstDim = N;
@@ -340,9 +338,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_004_4add_bf16_single_row
 
     // dual normal bf16
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     FreeTensorList<int16_t>(x1, shapeInfos, "bfloat16_t", 0, "x1");
     AscendC::GmFree(x2);
@@ -357,17 +354,15 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_004_4add_bf16_single_row
     AscendC::GmFree(outScale2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
 }
-
 
 TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_005_5add_fp16_cut_d)
 {
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     system("chmod -R 755 ./multi_add_rms_norm_dynamic_quant_data/");
     system("cd ./multi_add_rms_norm_dynamic_quant_data/ && python3 gen_data.py '{230, 31200}' 5 'float16'");
-    int N = 230;  // Tensor rows
-    int D = 31200;  // columns must be times of full-loaded single row, here we take a 4-cut case 
+    int N = 230;   // Tensor rows
+    int D = 31200; // columns must be times of full-loaded single row, here we take a 4-cut case
     size_t xShape = N * D;
     size_t xSize = N * D * sizeof(half);
     size_t gammaSize = N * D * sizeof(int8_t);
@@ -391,8 +386,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_005_5add_fp16_cut_d)
 
     std::string path = ".";
 
-    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(tiling);
+    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(
+        tiling);
 
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/x2.bin", xSize, x2, xSize);
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/gamma.bin", gammaSize, gamma, gammaSize);
@@ -415,9 +410,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_005_5add_fp16_cut_d)
 
     // dual normal fp16
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(
-        multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, nullptr, nullptr, y1, y2, x, y, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, nullptr, nullptr, y1, y2, x, y, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     FreeTensorList<int16_t>(x1, shapeInfos, "float16", 0, "x1");
     AscendC::GmFree(x2);
@@ -437,8 +431,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_006_2add_bf16_cut_d)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     system("chmod -R 755 ./multi_add_rms_norm_dynamic_quant_data/");
     system("cd ./multi_add_rms_norm_dynamic_quant_data/ && python3 gen_data.py '{201, 17459}' 2 'bfloat16_t'");
-    int N = 201;  // Tensor rows
-    int D = 17459;  // columns must be times of full-loaded single row, here we take a 4-cut case 
+    int N = 201;   // Tensor rows
+    int D = 17459; // columns must be times of full-loaded single row, here we take a 4-cut case
     size_t xShape = N * D;
     size_t xSize = N * D * sizeof(bfloat16_t);
     size_t gammaSize = D * sizeof(bfloat16_t);
@@ -465,8 +459,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_006_2add_bf16_cut_d)
 
     std::string path = ".";
 
-    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin =
-        reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(tiling);
+    MultiAddRmsNormDynamicQuantTilingData* tilingDatafromBin = reinterpret_cast<MultiAddRmsNormDynamicQuantTilingData*>(
+        tiling);
 
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/x2.bin", xSize, x2, xSize);
     ReadFile(path + "/multi_add_rms_norm_dynamic_quant_data/gamma.bin", gammaSize, gamma, gammaSize);
@@ -491,10 +485,8 @@ TEST_F(multi_add_rms_norm_dynamic_quant_test, test_case_006_2add_bf16_cut_d)
 
     // dual normal bf16
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(
-        multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1, outScale2,
-        workspace, (uint8_t*)(tilingDatafromBin));
-
+    ICPU_RUN_KF(multi_add_rms_norm_dynamic_quant, blockDim, x1, x2, gamma, smooth1, smooth2, y1, y2, x, y, outScale1,
+                outScale2, workspace, (uint8_t*)(tilingDatafromBin));
 
     FreeTensorList<int16_t>(x1, shapeInfos, "bfloat16_t", 0, "x1");
     AscendC::GmFree(x2);

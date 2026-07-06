@@ -35,8 +35,8 @@ static const uint64_t GAMMA_BETA_UB_NUM = 6;
 static const uint64_t RESERVED_BLOCK_NUM = 2;
 static const uint64_t INPUT_OUTPUT_UB_NUM = 20;
 
-inline static ge::graphStatus GroupNormSiluQuantSetTilingData(
-    gert::TilingContext* context, GroupNormSiluQuantTilingData& tilingData)
+inline static ge::graphStatus GroupNormSiluQuantSetTilingData(gert::TilingContext* context,
+                                                              GroupNormSiluQuantTilingData& tilingData)
 {
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
@@ -78,15 +78,16 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     auto xDtype = inputX->GetDataType();
     uint64_t xDtypeSize = ge::GetSizeByDataType(xDtype);
     OP_CHECK_IF((xDtypeSize <= 0),
-        OP_LOGE(context->GetNodeType(), "xDtypeSize is invalid %lu, please check.", xDtypeSize), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeType(), "xDtypeSize is invalid %lu, please check.", xDtypeSize),
+                return ge::GRAPH_FAILED);
     auto xShapePtr = context->GetDynamicInputShape(INPUT_IDX_X, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
     uint64_t xDims = xShape.GetDimNum();
-    OP_CHECK_IF((xDims < X_SHAPE_MIN_LEN),
-        OP_LOGE(context->GetNodeType(), "inputDims can't be smaller than 2."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF((xDims > X_SHAPE_MAX_LEN),
-        OP_LOGE(context->GetNodeType(), "inputDims can't be bigger than 8."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDims < X_SHAPE_MIN_LEN), OP_LOGE(context->GetNodeType(), "inputDims can't be smaller than 2."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDims > X_SHAPE_MAX_LEN), OP_LOGE(context->GetNodeType(), "inputDims can't be bigger than 8."),
+                return ge::GRAPH_FAILED);
     uint64_t channel = xShape.GetDim(DIM_1);
     // check gamma and beta
     auto gammaShapePtr = context->GetDynamicInputShape(INPUT_IDX_GAMMA, 0);
@@ -94,13 +95,15 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     auto gammaShape = gammaShapePtr->GetStorageShape();
     uint64_t gammaSizes = gammaShape.GetDim(DIM_0);
     OP_CHECK_IF((gammaShape.GetDimNum() != 1 || gammaSizes != channel),
-        OP_LOGE(context->GetNodeType(), "The shape of gamma must be the same as channel, currently is %lu.", gammaSizes),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeType(), "The shape of gamma must be the same as channel, currently is %lu.",
+                        gammaSizes),
+                return ge::GRAPH_FAILED);
     auto betaShapePtr = context->GetDynamicInputShape(INPUT_IDX_BETA, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaShapePtr);
     auto betaShape = betaShapePtr->GetStorageShape();
     uint64_t betaSizes = betaShape.GetDim(DIM_0);
-    OP_CHECK_IF((betaShape.GetDimNum() != 1 || betaSizes != channel),
+    OP_CHECK_IF(
+        (betaShape.GetDimNum() != 1 || betaSizes != channel),
         OP_LOGE(context->GetNodeType(), "The shape of beta must be the same as channel, currently is %lu.", betaSizes),
         return ge::GRAPH_FAILED);
     auto gammaDtypePtr = context->GetDynamicInputDesc(INPUT_IDX_GAMMA, 0);
@@ -109,10 +112,11 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     auto betaDtypePtr = context->GetDynamicInputDesc(INPUT_IDX_BETA, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaDtypePtr);
     auto betaDtype = betaDtypePtr->GetDataType();
-    OP_CHECK_IF((xDtype != gammaDtype),
-        OP_LOGE(context->GetNodeType(), "The dtype of x and gamma must be consistent."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDtype != gammaDtype), OP_LOGE(context->GetNodeType(), "The dtype of x and gamma must be consistent."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF((gammaDtype != betaDtype),
-        OP_LOGE(context->GetNodeType(), "The dtype of gamma and beta must be consistent."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeType(), "The dtype of gamma and beta must be consistent."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -124,13 +128,11 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* tilingContext)
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const int64_t numGroups = *(attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS));
-    OP_CHECK_IF(
-        (numGroups <= 0), OP_LOGE(tilingContext->GetNodeType(), "numGroups must be bigger than 0."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (channel % numGroups != 0),
-        OP_LOGE(tilingContext->GetNodeType(), "channel must be integer multiples of numGroups."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((numGroups <= 0), OP_LOGE(tilingContext->GetNodeType(), "numGroups must be bigger than 0."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((channel % numGroups != 0),
+                OP_LOGE(tilingContext->GetNodeType(), "channel must be integer multiples of numGroups."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -145,17 +147,15 @@ static ge::graphStatus TilingPrepare4GroupNormSiluQuant(gert::TilingParseContext
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "Get core num for ai_core:%d", compileInfo->totalCoreNum);
     OP_LOGD(context, "Get total core num:%d", compileInfo->totalCoreNum);
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0),
-        OP_LOGE(context->GetNodeType(), "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeType(), "Failed to get core num."),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
     OP_LOGD(context, "Get total ub size:%lu", compileInfo->ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(context->GetNodeType(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeType(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "TilingPrepare4GroupNormSiluQuant ends.");
     return ge::GRAPH_SUCCESS;
@@ -193,7 +193,7 @@ static ge::graphStatus SetBlockTiling(const gert::TilingContext* context, GroupN
 {
     auto xDtype = context->GetDynamicInputDesc(INPUT_IDX_X, 0)->GetDataType();
     uint64_t xDtypeSize = ge::GetSizeByDataType(xDtype);
-    if (xDtypeSize == 0){
+    if (xDtypeSize == 0) {
         OP_LOGE(context, "Division by zero!");
         return ge::GRAPH_FAILED;
     }
@@ -207,8 +207,8 @@ static ge::graphStatus SetBlockTiling(const gert::TilingContext* context, GroupN
         tilingData.set_realCoreNum(1);
     }
 
-    tilingData.set_numLastCore(
-        shapeN * tilingData.get_numGroups() - tilingData.get_numPerCore() * (tilingData.get_realCoreNum() - 1));
+    tilingData.set_numLastCore(shapeN * tilingData.get_numGroups() -
+                               tilingData.get_numPerCore() * (tilingData.get_realCoreNum() - 1));
     return ge::GRAPH_SUCCESS;
 }
 
@@ -217,21 +217,20 @@ static void SetUbTiling(GroupNormSiluQuantTilingData& tilingData)
     tilingData.set_loopNum(CeilDiv(tilingData.get_elemNum(), tilingData.get_processSize()));
     tilingData.set_loopTail(tilingData.get_elemNum() - tilingData.get_processSize() * (tilingData.get_loopNum() - 1));
     tilingData.set_innerLoopNum(CeilDiv(tilingData.get_hwNum(), tilingData.get_processSize()));
-    tilingData.set_innerLoopTail(
-        tilingData.get_hwNum() - tilingData.get_processSize() * (tilingData.get_innerLoopNum() - 1));
+    tilingData.set_innerLoopTail(tilingData.get_hwNum() -
+                                 tilingData.get_processSize() * (tilingData.get_innerLoopNum() - 1));
 }
 
 static ge::graphStatus SetTiling(const gert::TilingContext* context, GroupNormSiluQuantTilingData& tilingData)
 {
     auto xDtype = context->GetDynamicInputDesc(INPUT_IDX_X, 0)->GetDataType();
     uint64_t xDtypeSize = ge::GetSizeByDataType(xDtype);
-    if (xDtypeSize == 0){
+    if (xDtypeSize == 0) {
         OP_LOGE(context, "Division by zero!");
         return ge::GRAPH_FAILED;
     }
-    if (tilingData.get_hwNum() >= static_cast<int64_t>(BLOCK_SIZE / xDtypeSize) && 
-        tilingData.get_shapeC() + tilingData.get_numPerCore() <= UPPER_LIMIT_ONE)
-    {
+    if (tilingData.get_hwNum() >= static_cast<int64_t>(BLOCK_SIZE / xDtypeSize) &&
+        tilingData.get_shapeC() + tilingData.get_numPerCore() <= UPPER_LIMIT_ONE) {
         tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluQuantTilingKey::TILINGKEY_HIGH_PERF_B16));
     } else {
         OP_LOGE(context, "shape is too big or too small, please check input shape!");
@@ -244,45 +243,38 @@ static ge::graphStatus Tiling4GroupNormSiluQuant(gert::TilingContext* context)
 {
     OP_LOGD(context, "Start running Tiling4GroupNormSiluQuant.");
     // check input && attrs params
-    OP_CHECK_IF(
-        (CheckInputParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "InputParams is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CheckAttrParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckInputParams(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeType(), "InputParams is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckAttrParams(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeType(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
     GroupNormSiluQuantTilingData tilingData;
     SetAttrParams(context, tilingData);
     SetTilingParams(context, tilingData);
 
     // block tiling
-    OP_CHECK_IF(
-        (SetBlockTiling(context, tilingData) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "SetBlockTiling is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((SetBlockTiling(context, tilingData) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeType(), "SetBlockTiling is invalid."), return ge::GRAPH_FAILED);
     // tiling key
-    OP_CHECK_IF(
-        (SetTiling(context, tilingData) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "SetTiling is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((SetTiling(context, tilingData) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context->GetNodeType(), "SetTiling is invalid."), return ge::GRAPH_FAILED);
     // ub tiling
     SetUbTiling(tilingData);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-   
-    OP_CHECK_IF(
-        GroupNormSiluQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeType(), "GroupNormSiluQuantSetTilingData set tiling data fail."),
-        return ge::GRAPH_FAILED);
-    OP_LOGD(
-        context,
-        "tilingData is numGroups:%ld, hwNum:%ld, elemNum:%ld, shapeC:%ld, shapeD:%ld, realCoreNum:%ld, \
+
+    OP_CHECK_IF(GroupNormSiluQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeType(), "GroupNormSiluQuantSetTilingData set tiling data fail."),
+                return ge::GRAPH_FAILED);
+    OP_LOGD(context, "tilingData is numGroups:%ld, hwNum:%ld, elemNum:%ld, shapeC:%ld, shapeD:%ld, realCoreNum:%ld, \
                 numPerCore:%ld, numLastCore:%ld, processSize:%ld, loopNum:%ld, loopTail:%ld, innerLoopNum:%ld, \
                 innerLoopTail:%ld, tilingKey:%ld, epsilon:%f, activateSilu:%ld, Tiling4GroupNormSiluQuant ends. ",
-        tilingData.get_numGroups(), tilingData.get_hwNum(), tilingData.get_elemNum(), tilingData.get_shapeC(),
-        tilingData.get_shapeD(), tilingData.get_realCoreNum(), tilingData.get_numPerCore(),
-        tilingData.get_numLastCore(), tilingData.get_processSize(), tilingData.get_loopNum(), tilingData.get_loopTail(),
-        tilingData.get_innerLoopNum(), tilingData.get_innerLoopTail(), tilingData.get_tilingKey(),
-        tilingData.get_epsilon(), tilingData.get_activateSilu());
+            tilingData.get_numGroups(), tilingData.get_hwNum(), tilingData.get_elemNum(), tilingData.get_shapeC(),
+            tilingData.get_shapeD(), tilingData.get_realCoreNum(), tilingData.get_numPerCore(),
+            tilingData.get_numLastCore(), tilingData.get_processSize(), tilingData.get_loopNum(),
+            tilingData.get_loopTail(), tilingData.get_innerLoopNum(), tilingData.get_innerLoopTail(),
+            tilingData.get_tilingKey(), tilingData.get_epsilon(), tilingData.get_activateSilu());
 
     // block dim, tilingKey
     context->SetBlockDim(tilingData.get_realCoreNum());

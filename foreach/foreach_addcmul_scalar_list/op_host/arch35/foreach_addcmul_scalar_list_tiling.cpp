@@ -61,11 +61,9 @@ static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
 constexpr int64_t FALLBACK_CORE_NUM = 24;
 constexpr int64_t FALLBACK_UB_SIZE = 1024 * 1024;
 
-static ge::graphStatus GetPlatformInfoFallback(
-    const gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
+static ge::graphStatus GetPlatformInfoFallback(const gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
 {
-    auto compileInfo = reinterpret_cast<
-        const ForeachAddcmulScalarListCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = reinterpret_cast<const ForeachAddcmulScalarListCompileInfo*>(context->GetCompileInfo());
     if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
         coreNum = compileInfo->coreNum;
         ubSize = compileInfo->ubSize;
@@ -87,8 +85,7 @@ static ge::graphStatus GetPlatformInfoFallback(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ValidateAndGetTensorCount(
-    const gert::TilingContext* context, uint64_t& tensorNum)
+static ge::graphStatus ValidateAndGetTensorCount(const gert::TilingContext* context, uint64_t& tensorNum)
 {
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -97,15 +94,14 @@ static ge::graphStatus ValidateAndGetTensorCount(
     tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
     OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST),
-        OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d",
-                tensorNum, MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum,
+                        MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeMaxTensorElements(
-    gert::TilingContext* context, uint64_t tensorNum,
-    int64_t& maxTensorElements, ge::DataType& dataType)
+static ge::graphStatus ComputeMaxTensorElements(gert::TilingContext* context, uint64_t tensorNum,
+                                                int64_t& maxTensorElements, ge::DataType& dataType)
 {
     maxTensorElements = 0;
     dataType = ge::DT_FLOAT;
@@ -127,35 +123,29 @@ static ge::graphStatus ComputeMaxTensorElements(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeCoreSplit(
-    int64_t maxTensorElements,
-    int64_t coreNum, int64_t& needCoreNum, int64_t& perCoreElements)
+static ge::graphStatus ComputeCoreSplit(int64_t maxTensorElements, int64_t coreNum, int64_t& needCoreNum,
+                                        int64_t& perCoreElements)
 {
     needCoreNum = 1;
     perCoreElements = 0;
     if (maxTensorElements <= 0) {
         return ge::GRAPH_SUCCESS;
     }
-    perCoreElements = std::max(SINGLE_CORE_MIN_ELEMENTS,
-        (maxTensorElements + coreNum - 1) / coreNum);
+    perCoreElements = std::max(SINGLE_CORE_MIN_ELEMENTS, (maxTensorElements + coreNum - 1) / coreNum);
     perCoreElements = ((perCoreElements + ALIGN_SIZE - 1) / ALIGN_SIZE) * ALIGN_SIZE;
-needCoreNum = (maxTensorElements + perCoreElements - 1) / perCoreElements;
+    needCoreNum = (maxTensorElements + perCoreElements - 1) / perCoreElements;
     needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
     needCoreNum = std::min(needCoreNum, coreNum);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetTilingContext(
-    gert::TilingContext* context, int64_t needCoreNum,
-    ge::DataType dataType)
+static ge::graphStatus SetTilingContext(gert::TilingContext* context, int64_t needCoreNum, ge::DataType dataType)
 {
     context->SetBlockDim(needCoreNum);
     context->SetTilingKey(GetTilingKeyByDtype(dataType));
 
     auto res = context->SetLocalMemorySize(0);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = 0;
@@ -179,12 +169,10 @@ static ge::graphStatus ForeachAddcmulScalarListTilingFunc(gert::TilingContext* c
     if (ValidateAndGetTensorCount(context, tensorNum) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ComputeMaxTensorElements(context, tensorNum,
-        maxTensorElements, dataType) != ge::GRAPH_SUCCESS) {
+    if (ComputeMaxTensorElements(context, tensorNum, maxTensorElements, dataType) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ComputeCoreSplit(maxTensorElements, coreNum,
-        needCoreNum, perCoreElements) != ge::GRAPH_SUCCESS) {
+    if (ComputeCoreSplit(maxTensorElements, coreNum, needCoreNum, perCoreElements) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -200,8 +188,7 @@ static ge::graphStatus ForeachAddcmulScalarListTilingFunc(gert::TilingContext* c
 }
 
 // TilingParse callback
-static ge::graphStatus TilingParseForForeachAddcmulScalarList(
-    gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachAddcmulScalarList(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<ForeachAddcmulScalarListCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -209,15 +196,11 @@ static ge::graphStatus TilingParseForForeachAddcmulScalarList(
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

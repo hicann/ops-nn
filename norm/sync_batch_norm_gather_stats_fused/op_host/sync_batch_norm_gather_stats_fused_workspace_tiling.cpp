@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file sync_batch_norm_gather_stats_fused_workspace_tiling.cpp
  * \brief
  */
@@ -33,9 +33,8 @@ static inline int64_t WorkspaceCeilDiv(int64_t value, int64_t factor)
 bool SyncBatchNormGatherStatsFusedWorkspaceTiling::IsCapable()
 {
     if (commonParams.cLength < commonParams.nLength && commonParams.nLength > 255) {
-        OP_LOGI(
-            context_, "SyncBatchNormGatherStatsFusedWorkspaceTiling: cLength=%ld exceeds limit %ld",
-            commonParams.cLength, WORKSPACE_MIN_C);
+        OP_LOGI(context_, "SyncBatchNormGatherStatsFusedWorkspaceTiling: cLength=%ld exceeds limit %ld",
+                commonParams.cLength, WORKSPACE_MIN_C);
         return false;
     }
     return true;

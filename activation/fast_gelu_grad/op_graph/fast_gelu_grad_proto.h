@@ -33,4 +33,4 @@ REG_OP(FastGeluGrad)
     .OUTPUT(z, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OP_END_FACTORY_REG(FastGeluGrad)
 } // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NONLINEAR_FUC_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NONLINEAR_FUC_OPS_H_

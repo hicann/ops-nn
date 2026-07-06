@@ -56,16 +56,14 @@ static ge::graphStatus SleepTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(cyclesPtr == nullptr, OP_LOGE(context, "GetAttr cycles failed"), return ge::GRAPH_FAILED);
     int64_t cycles = *cyclesPtr;
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     SleepTilingData* tiling = context->GetTilingData<SleepTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
 
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SleepTilingData), 0, sizeof(SleepTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SleepTilingData), 0, sizeof(SleepTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     int64_t kernelCycles = 0;
     if (cycles > 0) {

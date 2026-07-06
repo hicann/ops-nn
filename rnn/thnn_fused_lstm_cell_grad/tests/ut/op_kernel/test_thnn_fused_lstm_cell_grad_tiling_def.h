@@ -50,7 +50,7 @@ inline void InitThnnFusedLstmCellGradTilingDataTest(uint8_t* tiling, ThnnFusedLs
     memcpy(data, tiling, sizeof(ThnnFusedLstmCellGradTilingDataTest));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                    \
-    ThnnFusedLstmCellGradTilingDataTest tiling_data;                  \
+#define GET_TILING_DATA(tiling_data, tiling_arg)     \
+    ThnnFusedLstmCellGradTilingDataTest tiling_data; \
     InitThnnFusedLstmCellGradTilingDataTest(tiling_arg, &tiling_data)
 #endif // FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL

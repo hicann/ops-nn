@@ -19,8 +19,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "avg_pool_common_nchw_small_kernel_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t UB_RESVERVED_SIZE = 512;
 static constexpr uint64_t NO_PADDING_TILING_KEY = 300001;
 static constexpr uint64_t PADDING_TILING_KEY = 300002;
@@ -61,19 +60,18 @@ static constexpr int64_t OVERLEAP_THREHOULD = 30;
 
 void AvgPoolCommonNCHWSmallKernelTiling::CalcDivsiorUbSize(bool isPad)
 {
-    bool needColInPad =
-                (inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM]
-                <= inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX];
-    bool needRowInPad =
-                (inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM]
-                <= inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX];
+    bool needColInPad = (inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM] <=
+                        inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX];
+    bool needRowInPad = (inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM] <=
+                        inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX];
     allNeedInPad_ = needColInPad && needRowInPad;
     if ((!isPad) || (allNeedInPad_ && inputData.countIncludePad)) {
         divisorUbSize_ = 0;
-        return ;
+        return;
     }
     int64_t oneBatchOutNum = inputData.outShape[W_DIM] * inputData.outShape[H_DIM];
-    int64_t oneBatchDivisorBuffer = Ops::Base::CeilAlign(oneBatchOutNum * sizeof(float), static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
+    int64_t oneBatchDivisorBuffer = Ops::Base::CeilAlign(oneBatchOutNum * sizeof(float),
+                                                         static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
     if (oneBatchDivisorBuffer <= MIN_DIVISOR_UB) {
         divisorUbSize_ = MIN_DIVISOR_UB;
     } else if (oneBatchDivisorBuffer <= MAX_DIVISOR_UB) {
@@ -91,7 +89,7 @@ void AvgPoolCommonNCHWSmallKernelTiling::InitializationVars()
         inputData.pad[LEFT_PAD_INDEX] != 0 || inputData.pad[RIGHT_PAD_INDEX] != 0) {
         isPadding_ = true;
     }
-    
+
     if (inputData.ceilMode && isPadding_ == false) {
         if (((inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM]) >
                 inputData.inputShape[W_DIM] ||
@@ -100,7 +98,7 @@ void AvgPoolCommonNCHWSmallKernelTiling::InitializationVars()
             isPadding_ = true;
         }
     }
-    
+
     if (inputData.dtypeSize == B8 || inputData.dtypeSize == B16) {
         // b8, b16使用uint16索引
         maxGatherScatterElm_ = platform::GetVRegSize(context_) / B16;
@@ -110,21 +108,24 @@ void AvgPoolCommonNCHWSmallKernelTiling::InitializationVars()
     } else {
         maxGatherScatterElm_ = platform::GetVRegSize(context_) / inputData.dtypeSize;
     }
-    
-    indiceUbSize_ = Ops::Base::CeilDiv(inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM],  maxGatherScatterElm_) * platform::GetVRegSize(context_);
+
+    indiceUbSize_ = Ops::Base::CeilDiv(inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM],
+                                       maxGatherScatterElm_) *
+                    platform::GetVRegSize(context_);
     oneBlockNum_ = platform::GetUbBlockSize(context_) / inputData.dtypeSize;
     // 并发度
     paraNum_ = platform::GetVRegSize(context_) / DIGIT_TWO / inputData.dtypeSize;
     CalcDivsiorUbSize(isPadding_);
-    availableUb_ = static_cast<int64_t>(ubSize - indiceUbSize_ - divisorUbSize_ - UB_RESVERVED_SIZE) / inputData.dtypeSize;
+    availableUb_ = static_cast<int64_t>(ubSize - indiceUbSize_ - divisorUbSize_ - UB_RESVERVED_SIZE) /
+                   inputData.dtypeSize;
 }
 
-int64_t AvgPoolCommonNCHWSmallKernelTiling::CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols,
-                                                   bool isPadding)
+int64_t AvgPoolCommonNCHWSmallKernelTiling::CalcBufferSize(int64_t inRows, int64_t inCols, int64_t outRows,
+                                                           int64_t outCols, bool isPadding)
 {
     int64_t tmpInDataBufferSize = inRows * Ops::Base::CeilAlign(inCols, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outRows * outCols, oneBlockNum_);
-    
+
     if (inputData.divisorOverride == 0 && inputData.dtypeSize == B16) {
         tmpOutDataBufferSize *= DIGIT_TWO;
     }
@@ -134,22 +135,25 @@ int64_t AvgPoolCommonNCHWSmallKernelTiling::CalcBufferSize(int64_t inRows, int64
         tmpTotalBufferSize += tmpInDataBufferSize;
     }
     if (needCalcDivisorBuffer_) {
-        tmpTotalBufferSize = tmpTotalBufferSize + Ops::Base::CeilAlign(outRows * outCols * sizeof(float), static_cast<uint64_t>(platform::GetUbBlockSize(context_))) / inputData.dtypeSize;
+        tmpTotalBufferSize = tmpTotalBufferSize +
+                             Ops::Base::CeilAlign(outRows * outCols * sizeof(float),
+                                                  static_cast<uint64_t>(platform::GetUbBlockSize(context_))) /
+                                 inputData.dtypeSize;
     }
     return tmpTotalBufferSize;
 }
 
 bool AvgPoolCommonNCHWSmallKernelTiling::IsBufferCapable()
 {
-    int64_t maxInCols =
-        std::max((inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM],
-                 inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
-    int64_t maxInRows =
-        std::max((inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM],
-                 inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
+    int64_t maxInCols = std::max(
+        (inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM],
+        inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
+    int64_t maxInRows = std::max(
+        (inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM],
+        inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     maxInCols = Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
-    int64_t oneBatchBuffer =
-        CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM], isPadding_);
+    int64_t oneBatchBuffer = CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM],
+                                            isPadding_);
     if (oneBatchBuffer < availableUb_ &&
         ((availableUb_ / oneBatchBuffer * inputData.outShape[W_DIM] * inputData.outShape[H_DIM]) >= paraNum_)) {
         return true;
@@ -174,7 +178,6 @@ bool AvgPoolCommonNCHWSmallKernelTiling::IsBufferCapable()
     return tmpTotalBufferSize <= availableUb_;
 }
 
-
 bool AvgPoolCommonNCHWSmallKernelTiling::IsCapable()
 {
     if (inputData.inputFormat != ge::Format::FORMAT_NCHW) {
@@ -185,17 +188,18 @@ bool AvgPoolCommonNCHWSmallKernelTiling::IsCapable()
     }
     int64_t kSize = inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM];
     int64_t strideSize = inputData.stride[H_DIM] * inputData.stride[W_DIM];
-    if (kSize >= SIMT_k_SIZE_THREHOLD1 && kSize <= SIMT_k_SIZE_THREHOLD2 &&
-        strideSize >= SIMT_STRIDE_SIZE_THREHOLD1 && strideSize <= SIMT_STRIDE_SIZE_THREHOLD2 &&
-        inputData.batches >= SIMT_BATCHES_THREHOLD &&
-        (inputData.kernelSize[H_DIM] / inputData.stride[H_DIM] >= OVERLEAP_THREHOULD || inputData.kernelSize[W_DIM] / inputData.stride[W_DIM] >= OVERLEAP_THREHOULD)) {
+    if (kSize >= SIMT_k_SIZE_THREHOLD1 && kSize <= SIMT_k_SIZE_THREHOLD2 && strideSize >= SIMT_STRIDE_SIZE_THREHOLD1 &&
+        strideSize <= SIMT_STRIDE_SIZE_THREHOLD2 && inputData.batches >= SIMT_BATCHES_THREHOLD &&
+        (inputData.kernelSize[H_DIM] / inputData.stride[H_DIM] >= OVERLEAP_THREHOULD ||
+         inputData.kernelSize[W_DIM] / inputData.stride[W_DIM] >= OVERLEAP_THREHOULD)) {
         return false;
     }
-    
+
     InitializationVars();
 
     if ((inputData.outShape[H_DIM] > 1 && inputData.stride[H_DIM] >= MAX_STRIDE * inputData.kernelSize[H_DIM]) ||
-        (inputData.outShape[W_DIM] > 1 && inputData.stride[W_DIM] >= MAX_STRIDE * inputData.kernelSize[W_DIM] && inputData.stride[W_DIM] > W_SPARSE_THREHOLD)) {
+        (inputData.outShape[W_DIM] > 1 && inputData.stride[W_DIM] >= MAX_STRIDE * inputData.kernelSize[W_DIM] &&
+         inputData.stride[W_DIM] > W_SPARSE_THREHOLD)) {
         // stride 较大的离散场景不处理
         return false;
     }
@@ -204,7 +208,6 @@ bool AvgPoolCommonNCHWSmallKernelTiling::IsCapable()
     }
     return false;
 }
-
 
 void AvgPoolCommonNCHWSmallKernelTiling::CalcSplitMaxBatch(int64_t oneBacthBuffer, int64_t oneBatchInputSize)
 {
@@ -249,7 +252,7 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcSplitMaxRows(int64_t maxInCols)
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInRows = MAX_INPUT_ELEMENTS / Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
         outUbFactorH_ = std::min((tmpInRows - inputData.kernelSize[H_DIM]) / inputData.kernelSize[H_DIM] + 1,
-            inputData.outShape[H_DIM]);
+                                 inputData.outShape[H_DIM]);
     }
     if (outUbFactorH_ <= 0) {
         OP_LOGE(context_, "AvgPool outUbFactorH_ is %ld.", outUbFactorH_);
@@ -287,7 +290,7 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
     if (inputBufferSize > MAX_INPUT_ELEMENTS) {
         int64_t tmpInCols = Ops::Base::FloorAlign(MAX_INPUT_ELEMENTS / minInRows, oneBlockNum_);
         outUbFactorW_ = std::min((tmpInCols - inputData.kernelSize[W_DIM]) / inputData.stride[W_DIM] + 1,
-            inputData.outShape[W_DIM]);
+                                 inputData.outShape[W_DIM]);
     }
     if (outUbFactorW_ <= 0) {
         OP_LOGE(context_, "AvgPool outUbFactorW_ is %ld.", outUbFactorW_);
@@ -303,16 +306,16 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcSplitMaxCols(int64_t minInRows)
 
 void AvgPoolCommonNCHWSmallKernelTiling::DoUBTilingSingle()
 {
-    int64_t maxInCols =
-        std::max((inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM],
-                 inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
-    int64_t maxInRows =
-        std::max((inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM],
-                 inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
+    int64_t maxInCols = std::max(
+        (inputData.outShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM],
+        inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
+    int64_t maxInRows = std::max(
+        (inputData.outShape[H_DIM] - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM],
+        inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     maxInCols = Ops::Base::CeilAlign(maxInCols, oneBlockNum_);
     int64_t minInRows = inputData.kernelSize[H_DIM];
-    int64_t oneBacthBuffer =
-        CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM], isPadding_);
+    int64_t oneBacthBuffer = CalcBufferSize(maxInRows, maxInCols, inputData.outShape[H_DIM], inputData.outShape[W_DIM],
+                                            isPadding_);
     int64_t oneRowsBuffer = CalcBufferSize(minInRows, maxInCols, 1, inputData.outShape[W_DIM], isPadding_);
     if (oneBacthBuffer <= 0 || oneRowsBuffer <= 0 ||
         inputData.batches * inputData.outShape[W_DIM] * inputData.outShape[H_DIM] <= 0) {
@@ -349,7 +352,6 @@ void AvgPoolCommonNCHWSmallKernelTiling::DoUBTiling()
     } while (availableUb_ > ubStep);
 }
 
-
 void AvgPoolCommonNCHWSmallKernelTiling::DoBlockTiling()
 {
     int64_t totalLoop = nLoop_ * hLoop_ * wLoop_;
@@ -360,14 +362,12 @@ void AvgPoolCommonNCHWSmallKernelTiling::DoBlockTiling()
     int64_t inCols = (outUbFactorW_ - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM];
     int64_t inRows = (outUbFactorH_ - 1) * inputData.stride[H_DIM] + inputData.kernelSize[H_DIM];
     if (splitMode_ == SPLIT_BATCHS) {
-        inRows =
-            std::max(inRows, inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX]
-                    + inputData.pad[BOTTOM_PAD_INDEX]);
+        inRows = std::max(inRows,
+                          inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX]);
     }
     if (splitMode_ != SPLIT_COLS) {
-        inCols =
-            std::max(inCols, inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX]
-                    + inputData.pad[RIGHT_PAD_INDEX]);
+        inCols = std::max(inCols,
+                          inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX]);
     }
     inUbSize_ = ubFactorN_ * inRows * Ops::Base::CeilAlign(inCols, oneBlockNum_);
     outUbSize_ = ubFactorN_ * Ops::Base::CeilAlign(outUbFactorW_ * outUbFactorH_, oneBlockNum_);
@@ -378,7 +378,8 @@ void AvgPoolCommonNCHWSmallKernelTiling::DoBlockTiling()
         onceCopyRow_ = std::min(maxGatherScatterElm_ / inputData.inputShape[W_DIM], inputData.inputShape[H_DIM]);
     }
     if (needCalcDivisorBuffer_) {
-        divisorUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorH_ * sizeof(float), static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
+        divisorUbSize_ = Ops::Base::CeilAlign(ubFactorN_ * outUbFactorH_ * sizeof(float),
+                                              static_cast<uint64_t>(platform::GetUbBlockSize(context_)));
     }
 }
 
@@ -393,8 +394,8 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcCopyMode()
     }
 }
 
-
-void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisor() {
+void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisor()
+{
     if (inputData.divisorOverride != 0L) {
         divisor_ = inputData.divisorOverride;
     } else if (!isPadding_) {
@@ -406,20 +407,21 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisor() {
     }
 }
 
-
 void AvgPoolCommonNCHWSmallKernelTiling::CalcGatherMode()
 {
-    if (inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM] >= maxGatherScatterElm_ / DIGIT_TWO && divisor_ != 0) {
-            gatherMode_ = GATHER_SINGLE_KERNEL;
-    } else if (inputData.outShape[H_DIM] * inputData.outShape[W_DIM] <= maxGatherScatterElm_ && splitMode_ == SPLIT_BATCHS) {
+    if (inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM] >= maxGatherScatterElm_ / DIGIT_TWO &&
+        divisor_ != 0) {
+        gatherMode_ = GATHER_SINGLE_KERNEL;
+    } else if (inputData.outShape[H_DIM] * inputData.outShape[W_DIM] <= maxGatherScatterElm_ &&
+               splitMode_ == SPLIT_BATCHS) {
         gatherMode_ = GATHER_MULTI_BATCH;
-    } else if (inputData.outShape[W_DIM] <= maxGatherScatterElm_ && (splitMode_ == SPLIT_BATCHS || splitMode_ == SPLIT_ROWS)) {
+    } else if (inputData.outShape[W_DIM] <= maxGatherScatterElm_ &&
+               (splitMode_ == SPLIT_BATCHS || splitMode_ == SPLIT_ROWS)) {
         gatherMode_ = GATHER_MULTI_ROW;
     } else {
         gatherMode_ = GATHER_SINGLE_ROW;
     }
 }
-
 
 void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisorMode()
 {
@@ -427,13 +429,13 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisorMode()
         divisorMode_ = NO_NEED_CALC_DIVISOR;
         realCalcDivisor_ = 0;
         return;
-    } 
+    }
     int64_t maxInt32 = std::numeric_limits<int32_t>::max();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
-    bool colNeedInt64 =
-            inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX] > maxInt32;
-    bool rowNeedInt64 =
-             inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX] > maxInt32;
+    bool colNeedInt64 = inputData.inputShape[W_DIM] + inputData.pad[LEFT_PAD_INDEX] + inputData.pad[RIGHT_PAD_INDEX] >
+                        maxInt32;
+    bool rowNeedInt64 = inputData.inputShape[H_DIM] + inputData.pad[TOP_PAD_INDEX] + inputData.pad[BOTTOM_PAD_INDEX] >
+                        maxInt32;
     int64_t oneBatchOutElementNum = inputData.outShape[H_DIM] * inputData.outShape[W_DIM];
     bool outNeedInt64 = oneBatchOutElementNum > maxInt32;
     int64_t needInt64 = static_cast<int64_t>(colNeedInt64 || rowNeedInt64 || outNeedInt64);
@@ -443,8 +445,9 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisorMode()
 
     divisorMode_ = (needInt64 << DIGIT_TWO) + (includePad << 1) + needMultiBatch;
     int64_t oncCoreMaxLoop = blockTail_ == 0 ? blockFactor_ : (blockFactor_ + 1);
-    int64_t oneCoreMaxOutNum = oncCoreMaxLoop * ubFactorN_ * outUbFactorH_ * outUbFactorW_ ;
-    if (needCalcDivisorBuffer_ || (oneCoreMaxOutNum < oneBatchOutElementNum && oneBatchOutElementNum > oneRegDivElements)) {
+    int64_t oneCoreMaxOutNum = oncCoreMaxLoop * ubFactorN_ * outUbFactorH_ * outUbFactorW_;
+    if (needCalcDivisorBuffer_ ||
+        (oneCoreMaxOutNum < oneBatchOutElementNum && oneBatchOutElementNum > oneRegDivElements)) {
         realCalcDivisor_ = 1;
     } else {
         realCalcDivisor_ = 0;
@@ -453,7 +456,8 @@ void AvgPoolCommonNCHWSmallKernelTiling::CalcDivisorMode()
 
 void AvgPoolCommonNCHWSmallKernelTiling::SetTilingData()
 {
-    AvgPool::AvgPoolNCHWSmallKernelTilingData* tilingData = context_->GetTilingData<AvgPool::AvgPoolNCHWSmallKernelTilingData>();
+    AvgPool::AvgPoolNCHWSmallKernelTilingData*
+        tilingData = context_->GetTilingData<AvgPool::AvgPoolNCHWSmallKernelTilingData>();
     tilingData->hInDim = inputData.inputShape[H_DIM];
     tilingData->wInDim = inputData.inputShape[W_DIM];
     tilingData->nOutDim = inputData.batches;
@@ -500,10 +504,7 @@ ge::graphStatus AvgPoolCommonNCHWSmallKernelTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AvgPoolCommonNCHWSmallKernelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AvgPoolCommonNCHWSmallKernelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AvgPoolCommonNCHWSmallKernelTiling::GetWorkspaceSize()
 {
@@ -536,7 +537,8 @@ uint64_t AvgPoolCommonNCHWSmallKernelTiling::GetTilingKey() const
 
 void AvgPoolCommonNCHWSmallKernelTiling::DumpTilingInfo()
 {
-    AvgPool::AvgPoolNCHWSmallKernelTilingData* tilingData = context_->GetTilingData<AvgPool::AvgPoolNCHWSmallKernelTilingData>();
+    AvgPool::AvgPoolNCHWSmallKernelTilingData*
+        tilingData = context_->GetTilingData<AvgPool::AvgPoolNCHWSmallKernelTilingData>();
     std::string str;
     str += " hInDim:" + std::to_string(tilingData->hInDim);
     str += " wInDim:" + std::to_string(tilingData->wInDim);
@@ -573,7 +575,6 @@ void AvgPoolCommonNCHWSmallKernelTiling::DumpTilingInfo()
     OP_LOGI(context_, "%s", str.c_str());
 }
 
-
 //////////////////////////////// AvgPoolNCHWSmallKernelTiling /////////////////////////////////
 ge::graphStatus AvgPoolNCHWSmallKernelTiling::GetPlatformInfo()
 {
@@ -609,4 +610,4 @@ ge::graphStatus AvgPoolV2NCHWSmallKernelTiling::GetShapeAttrsInfo()
 REGISTER_TILING_TEMPLATE("AvgPoolV2", AvgPoolV2NCHWSmallKernelTiling, 0);
 REGISTER_TILING_TEMPLATE("AvgPool", AvgPoolNCHWSmallKernelTiling, 0);
 
-}  // namespace optiling
+} // namespace optiling

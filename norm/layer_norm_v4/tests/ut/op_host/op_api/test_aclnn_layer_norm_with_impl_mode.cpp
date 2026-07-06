@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <array>
@@ -21,15 +22,9 @@ using namespace std;
 
 class l2_layer_norm_test_with_impl_mode : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_with_impl_mode_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_with_impl_mode_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_with_impl_mode_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "layer_norm_with_impl_mode_test TearDown" << endl; }
 };
 
 // float16 keep_fp16 mode, cpu not support all keep_fp16 calculation
@@ -45,9 +40,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 2;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -67,9 +61,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -89,9 +82,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -111,9 +103,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_UINT64, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -133,9 +124,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -155,9 +145,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -177,9 +166,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -199,9 +187,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_UINT64, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -221,9 +208,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -243,9 +229,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -265,9 +250,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -287,9 +271,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({0, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -309,9 +292,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -331,9 +313,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -353,9 +334,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -375,9 +355,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -397,9 +376,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 6, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -419,9 +397,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -441,9 +418,9 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     int32_t implMode = 0;
 
     uint64_t workspaceSize = 0;
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT((aclTensor*)nullptr, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode,
+                        INPUT((aclTensor*)nullptr, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -462,9 +439,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     int32_t implMode = 0;
 
     uint64_t workspaceSize = 0;
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, (aclIntArray*)nullptr, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, (aclIntArray*)nullptr, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -484,9 +460,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
 
     uint64_t workspaceSize = 0;
     // out nullptr
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT((aclTensor*)nullptr, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT((aclTensor*)nullptr, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
@@ -506,9 +481,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
 
     uint64_t workspaceSize = 0;
     // meanOut nullptr
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, (aclTensor*)nullptr, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, (aclTensor*)nullptr, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -527,9 +501,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     int32_t implMode = 0;
 
     uint64_t workspaceSize = 0;
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, (aclTensor*)nullptr), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, (aclTensor*)nullptr), implMode);
     // SAMPLE: only test GetWorkspaceSize
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -548,9 +521,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 3;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -570,9 +542,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -592,9 +563,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -614,9 +584,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({1024, 52, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -635,9 +604,9 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, (aclTensor*)nullptr, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode,
+                        INPUT(inputDesc, normalizedShape, (aclTensor*)nullptr, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -656,9 +625,9 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, (aclTensor*)nullptr, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode,
+                        INPUT(inputDesc, normalizedShape, weightDesc, (aclTensor*)nullptr, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -677,9 +646,9 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, (aclTensor*)nullptr, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode,
+                        INPUT(inputDesc, normalizedShape, (aclTensor*)nullptr, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -699,9 +668,8 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 2;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -720,9 +688,9 @@ TEST_F(l2_layer_norm_test_with_impl_mode, ascend910B2_aclnnLayerNormWithImplMode
     auto rstdDesc = TensorDesc({2, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     int32_t implMode = 0;
 
-    auto ut = OP_API_UT(
-        aclnnLayerNormWithImplMode, INPUT(inputDesc, normalizedShape, weightDesc, (aclTensor*)nullptr, eps),
-        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
+    auto ut = OP_API_UT(aclnnLayerNormWithImplMode,
+                        INPUT(inputDesc, normalizedShape, weightDesc, (aclTensor*)nullptr, eps),
+                        OUTPUT(outputDesc, meanDesc, rstdDesc), implMode);
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

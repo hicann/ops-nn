@@ -25,8 +25,8 @@
 #include "common/bn_infer_grad.h"
 
 template <typename D_T_X, int SCH_MODE>
-__global__ __aicore__ void bn_infer_grad(GM_ADDR grads, GM_ADDR scale,
-    GM_ADDR batch_variance, GM_ADDR x_backprop, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void bn_infer_grad(GM_ADDR grads, GM_ADDR scale, GM_ADDR batch_variance, GM_ADDR x_backprop,
+                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(BnInferGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(BnInferGradTilingData, tilingData, tiling);

@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_zero_inplace_proto.h"
 
-class ForeachZeroInplaceTest : public testing::Test
-{
+class ForeachZeroInplaceTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachZeroInplace SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachZeroInplace SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachZeroInplace TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachZeroInplace TearDown" << std::endl; }
 };
 
 TEST_F(ForeachZeroInplaceTest, infer_shape_known_success)

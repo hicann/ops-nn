@@ -29,4 +29,4 @@ struct ScatterNdSubTilingData {
     int64_t varStrides[MAX_VAR_RANK] = {0};
 };
 
-#endif  // SCATTER_ND_SUB_TILING_DATA_H_
+#endif // SCATTER_ND_SUB_TILING_DATA_H_

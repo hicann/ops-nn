@@ -36,14 +36,12 @@ constexpr size_t X_DIM_NUM = 3;
 constexpr size_t X2_SCALE_DIM_NUM = 1;
 constexpr size_t X1_SCALE_DIM_NUM = 2;
 
-class AclnnQuantMatmulReduceSum
-{
+class AclnnQuantMatmulReduceSum {
 public:
     AclnnQuantMatmulReduceSum() = default;
     ~AclnnQuantMatmulReduceSum() = default;
-    void InitInputSeries1(
-        const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
-        const aclTensor* yScale)
+    void InitInputSeries1(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
+                          const aclTensor* yScale)
     {
         x1_ = x1;
         x2_ = x2;
@@ -52,8 +50,8 @@ public:
         yScale_ = yScale;
     }
 
-    void InitInputSeries2(
-        const aclTensor* x1Offset, const aclTensor* x2Offset, const aclTensor* yOffset, const aclTensor* bias)
+    void InitInputSeries2(const aclTensor* x1Offset, const aclTensor* x2Offset, const aclTensor* yOffset,
+                          const aclTensor* bias)
     {
         x1Offset_ = x1Offset;
         x2Offset_ = x2Offset;
@@ -119,9 +117,9 @@ public:
 
         // 调用l0算子进行计算
         int64_t dtype = static_cast<int64_t>(out_->GetDataType());
-        auto matmulRet = l0op::QuantMatmulReduceSum(
-            x1, x2_, dims_, bias_, x1Scale, x2Scale, yScale_, x1Offset_, x2Offset_, yOffset_, nullptr, dtype,
-            transposeX1_, transposeX2_, groupSize_, keepDims_, executor_);
+        auto matmulRet = l0op::QuantMatmulReduceSum(x1, x2_, dims_, bias_, x1Scale, x2Scale, yScale_, x1Offset_,
+                                                    x2Offset_, yOffset_, nullptr, dtype, transposeX1_, transposeX2_,
+                                                    groupSize_, keepDims_, executor_);
         if (matmulRet == nullptr) {
             return ACLNN_ERR_INNER_NULLPTR;
         }
@@ -174,13 +172,13 @@ private:
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x1Offset_ != nullptr && !x1Offset_->IsEmpty()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Do not support x1Offset now, x1Offset should be empty tensor or nullptr.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Do not support x1Offset now, x1Offset should be empty tensor or nullptr.");
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x2Offset_ != nullptr && !x2Offset_->IsEmpty()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Do not support x2Offset now, x2Offset should be empty tensor or nullptr.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Do not support x2Offset now, x2Offset should be empty tensor or nullptr.");
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (yOffset_ != nullptr && !yOffset_->IsEmpty()) {
@@ -218,10 +216,10 @@ private:
 
     aclnnStatus CheckInputShape() const
     {
-        const auto &x1Shape = x1_->GetViewShape();
-        const auto &x2Shape = x2_->GetViewShape();
-        const auto &x1ScaleShape = x1Scale_->GetViewShape();
-        const auto &x2ScaleShape = x2Scale_->GetViewShape();
+        const auto& x1Shape = x1_->GetViewShape();
+        const auto& x2Shape = x2_->GetViewShape();
+        const auto& x1ScaleShape = x1Scale_->GetViewShape();
+        const auto& x2ScaleShape = x2Scale_->GetViewShape();
 
         if (x1Shape.GetDimNum() != X_DIM_NUM || x2Shape.GetDimNum() != X_DIM_NUM) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 dim number (%lu) and x2 dim number (%lu) should be 3.",
@@ -246,24 +244,24 @@ private:
         }
 
         if (x2ScaleShape.GetDimNum() != X2_SCALE_DIM_NUM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale dim number should be %lu but got %lu.",
-                    X2_SCALE_DIM_NUM, x2ScaleShape.GetDimNum());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale dim number should be %lu but got %lu.", X2_SCALE_DIM_NUM,
+                    x2ScaleShape.GetDimNum());
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x2ScaleShape.GetDim(0) != nSize) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale shape should be (%ld,) but got (%ld,).",
-                    nSize, x2ScaleShape.GetDim(0));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale shape should be (%ld,) but got (%ld,).", nSize,
+                    x2ScaleShape.GetDim(0));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         if (x1ScaleShape.GetDimNum() != X1_SCALE_DIM_NUM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale dim number should be %lu but got %lu.",
-                    X1_SCALE_DIM_NUM, x1ScaleShape.GetDimNum());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale dim number should be %lu but got %lu.", X1_SCALE_DIM_NUM,
+                    x1ScaleShape.GetDimNum());
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x1ScaleShape.GetDim(0) != bSizeX || x1ScaleShape.GetDim(1) != mSize) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale shape should be (%ld, %ld) but got (%ld, %ld).",
-                    bSizeX, mSize, x1ScaleShape.GetDim(0), x1ScaleShape.GetDim(1));
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale shape should be (%ld, %ld) but got (%ld, %ld).", bSizeX, mSize,
+                    x1ScaleShape.GetDim(0), x1ScaleShape.GetDim(1));
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -272,33 +270,28 @@ private:
     aclnnStatus CheckDtype() const
     {
         if (x1_->GetDataType() != op::DataType::DT_INT8) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "x1 data type only support DT_INT8(%d) but got %d.", op::DataType::DT_INT8,
-                x1_->GetDataType());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 data type only support DT_INT8(%d) but got %d.", op::DataType::DT_INT8,
+                    x1_->GetDataType());
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x2_->GetDataType() != op::DataType::DT_INT8) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "x2 data type only support DT_INT8(%d) but got %d.", op::DataType::DT_INT8,
-                x2_->GetDataType());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2 data type only support DT_INT8(%d) but got %d.", op::DataType::DT_INT8,
+                    x2_->GetDataType());
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x1Scale_->GetDataType() != op::DataType::DT_FLOAT) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "x1Scale data type only support DT_FLOAT(%d) but got %d.",
-                op::DataType::DT_FLOAT, x1Scale_->GetDataType());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale data type only support DT_FLOAT(%d) but got %d.",
+                    op::DataType::DT_FLOAT, x1Scale_->GetDataType());
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x2Scale_->GetDataType() != op::DataType::DT_BF16) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "x2Scale data type only support DT_BF16(%d) but got %d.",
-                op::DataType::DT_BF16, x2Scale_->GetDataType());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale data type only support DT_BF16(%d) but got %d.",
+                    op::DataType::DT_BF16, x2Scale_->GetDataType());
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (out_->GetDataType() != op::DataType::DT_BF16) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "out data type only support DT_BF16(%d) but got %d.", op::DataType::DT_BF16,
-                out_->GetDataType());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out data type only support DT_BF16(%d) but got %d.",
+                    op::DataType::DT_BF16, out_->GetDataType());
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -306,11 +299,11 @@ private:
 
     aclnnStatus CheckFormat() const
     {
-        const auto &x1Format = x1_->GetStorageFormat();
-        const auto &x2Format = x2_->GetStorageFormat();
-        const auto &x1ScaleFormat = x1Scale_->GetStorageFormat();
-        const auto &x2ScaleFormat = x2Scale_->GetStorageFormat();
-        const auto &outFormat = out_->GetStorageFormat();
+        const auto& x1Format = x1_->GetStorageFormat();
+        const auto& x2Format = x2_->GetStorageFormat();
+        const auto& x1ScaleFormat = x1Scale_->GetStorageFormat();
+        const auto& x2ScaleFormat = x2Scale_->GetStorageFormat();
+        const auto& outFormat = out_->GetStorageFormat();
         if (x1Format == Format::FORMAT_FRACTAL_NZ) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 format(%d) not support NZ(%d).", x1Format, Format::FORMAT_FRACTAL_NZ);
             return ACLNN_ERR_PARAM_INVALID;
@@ -320,20 +313,18 @@ private:
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x1ScaleFormat == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "x1Scale format(%d) not support NZ(%d).", x1ScaleFormat,
-                Format::FORMAT_FRACTAL_NZ);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1Scale format(%d) not support NZ(%d).", x1ScaleFormat,
+                    Format::FORMAT_FRACTAL_NZ);
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (x2ScaleFormat == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "x2Scale format(%d) not support NZ(%d).", x2ScaleFormat,
-                Format::FORMAT_FRACTAL_NZ);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2Scale format(%d) not support NZ(%d).", x2ScaleFormat,
+                    Format::FORMAT_FRACTAL_NZ);
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (outFormat == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "out format(%d) not support NZ(%d).", outFormat, Format::FORMAT_FRACTAL_NZ);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out format(%d) not support NZ(%d).", outFormat,
+                    Format::FORMAT_FRACTAL_NZ);
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -381,8 +372,8 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnQuantMatmulReduceSumWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnQuantMatmulReduceSumWeightNz);
     // 固定写法，调用框架能力，完成计算

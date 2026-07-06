@@ -29,8 +29,8 @@ using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::UpdateMask;
 using AscendC::MicroAPI::StoreDist;
+using AscendC::MicroAPI::UpdateMask;
 
 constexpr static int64_t BLOCK_SIZE = 32;
 constexpr static uint32_t FLOAT_BYTES = 4;
@@ -46,10 +46,7 @@ constexpr static int64_t NDDMA_THIRD_DIM = 2;
 constexpr static int64_t NDDMA_DIM_NUM = 3;
 constexpr static int64_t DICHOTOMY_ADD_COEFF = 2;
 
-__aicore__ inline constexpr uint32_t GetUbBlockSize()
-{
-    return 32U;
-}
+__aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
 
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
@@ -69,7 +66,8 @@ __aicore__ inline T FloorDiv(T a, T b)
 template <typename T>
 __aicore__ inline T CeilDiv(T a, T b)
 {
-    using type = typename std::conditional<sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t, uint64_t>::type;
+    using type = typename std::conditional<sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t,
+                                           uint64_t>::type;
     type res = (static_cast<type>(a) + static_cast<type>(b) - 1) / static_cast<type>(b);
     return static_cast<T>(res);
 }
@@ -108,9 +106,8 @@ public:
         this->binaryAddLastNum = tilingData->binaryAddLastNum;
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean, GM_ADDR var, GM_ADDR y, GM_ADDR mean_out, GM_ADDR var_out,
-        GM_ADDR batch_mean, GM_ADDR batch_rstd)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR beta, GM_ADDR gamma, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
+                                GM_ADDR mean_out, GM_ADDR var_out, GM_ADDR batch_mean, GM_ADDR batch_rstd)
     {
         auto blockIdx = GetBlockIdx();
 
@@ -135,8 +132,8 @@ public:
         int64_t aFactorAlign = (((this->aFactor * sizeof(T) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(T);
         pipe.InitBuffer(betaQueue, DOUBLE_BUFFER, aFactorAlign * sizeof(T_BETA));
         pipe.InitBuffer(gammaQueue, DOUBLE_BUFFER, aFactorAlign * sizeof(T_BETA));
-        int64_t aFactorAlignF32 =
-            (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / FLOAT_BYTES;
+        int64_t aFactorAlignF32 = (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                                  FLOAT_BYTES;
         pipe.InitBuffer(batchMeanQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
         pipe.InitBuffer(batchRstdQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
 
@@ -149,8 +146,8 @@ public:
         pipe.InitBuffer(xQueue, DOUBLE_BUFFER, xBufferSize * sizeof(T));
         pipe.InitBuffer(yQueue, DOUBLE_BUFFER, xBufferSize * sizeof(T));
 
-        int64_t binaryAddBufSize =
-            (((binaryAddQuotient / VL_F32) * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE;
+        int64_t binaryAddBufSize = (((binaryAddQuotient / VL_F32) * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) *
+                                   BLOCK_SIZE;
         if (binaryAddBufSize > 0) {
             pipe.InitBuffer(binaryAddBuf, binaryAddBufSize);
         }
@@ -162,8 +159,8 @@ public:
         for (int64_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             int64_t offset = ubLoopIdx * this->aFactor * this->r0;
             int64_t aOffset = ubLoopIdx * this->aFactor;
-            int64_t currentA =
-                (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) : this->aFactor;
+            int64_t currentA = (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) :
+                                                               this->aFactor;
             ProcessUB(offset, aOffset, currentA);
         }
     }
@@ -186,8 +183,8 @@ private:
         }
 
         CopyInGammaBetaCommon(betaQueue, gammaQueue, betaGm, gammaGm, aOffset, currentANum);
-        CopyInRunningMeanVarCommon(
-            runningMeanInQueue, runningVarInQueue, runningMeanGm, runningVarGm, aOffset, currentANum);
+        CopyInRunningMeanVarCommon(runningMeanInQueue, runningVarInQueue, runningMeanGm, runningVarGm, aOffset,
+                                   currentANum);
 
         LocalTensor<T_BETA> betaInUb = betaQueue.template DeQue<T_BETA>();
         LocalTensor<T_BETA> gammaInUb = gammaQueue.template DeQue<T_BETA>();
@@ -203,13 +200,14 @@ private:
 
         __local_mem__ T_RUNNING_MEAN* runningMeanInUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningMeanInUb.GetPhyAddr();
         __local_mem__ T_RUNNING_MEAN* runningVarInUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningVarInUb.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* runningMeanOutUbAddr =
-            (__local_mem__ T_RUNNING_MEAN*)runningMeanOutUb.GetPhyAddr();
+        __local_mem__ T_RUNNING_MEAN* runningMeanOutUbAddr = (__local_mem__ T_RUNNING_MEAN*)
+                                                                 runningMeanOutUb.GetPhyAddr();
         __local_mem__ T_RUNNING_MEAN* runningVarOutUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningVarOutUb.GetPhyAddr();
         uint16_t aLoop = static_cast<uint16_t>(CEIL_DIV(currentANum, VL_F32));
-        CalculateRunningMeanVarWithRstdVF<T_RUNNING_MEAN>(batchMeanInUbAddr, batchRstdInUbAddr,
-            runningMeanInUbAddr, runningVarInUbAddr, runningMeanOutUbAddr, runningVarOutUbAddr, currentANum, aLoop,
-            VL_F32, this->besselCorrectionFactor, this->momentum, this->oneSubMomentum, this->epsilon);
+        CalculateRunningMeanVarWithRstdVF<T_RUNNING_MEAN>(batchMeanInUbAddr, batchRstdInUbAddr, runningMeanInUbAddr,
+                                                          runningVarInUbAddr, runningMeanOutUbAddr, runningVarOutUbAddr,
+                                                          currentANum, aLoop, VL_F32, this->besselCorrectionFactor,
+                                                          this->momentum, this->oneSubMomentum, this->epsilon);
 
         runningMeanInQueue.FreeTensor(runningMeanInUb);
         runningVarInQueue.FreeTensor(runningVarInUb);
@@ -218,12 +216,11 @@ private:
         runningMeanOutQueue.EnQue(runningMeanOutUb);
         runningVarOutQueue.EnQue(runningVarOutUb);
 
-        CopyOutBatchMeanRstdCommon(
-            batchMeanQueue, batchRstdQueue, batchMeanGm, batchRstdGm, aOffset, currentANum);
+        CopyOutBatchMeanRstdCommon(batchMeanQueue, batchRstdQueue, batchMeanGm, batchRstdGm, aOffset, currentANum);
         CopyOutRunningMeanVar(aOffset, currentANum);
 
-        CalculateNormalizeVF(
-            xInUbAddr, yInUbAddr, betaInUbAddr, gammaInUbAddr, batchMeanInUbAddr, batchRstdInUbAddr, currentANum);
+        CalculateNormalizeVF(xInUbAddr, yInUbAddr, betaInUbAddr, gammaInUbAddr, batchMeanInUbAddr, batchRstdInUbAddr,
+                             currentANum);
 
         xQueue.FreeTensor(xInUb);
         betaQueue.FreeTensor(betaInUb);
@@ -326,9 +323,9 @@ private:
         runningVarOutQueue.FreeTensor(runningVarOutUb);
     }
 
-    __aicore__ inline void LoadTwoTensorForDtypeT(
-        __local_mem__ T* src1, __local_mem__ T* src2, RegTensor<float>& dst1, RegTensor<float>& dst2, MaskReg& dst1Preg,
-        MaskReg& dst2Preg, uint32_t src1Offset, uint32_t src2Offset)
+    __aicore__ inline void LoadTwoTensorForDtypeT(__local_mem__ T* src1, __local_mem__ T* src2, RegTensor<float>& dst1,
+                                                  RegTensor<float>& dst2, MaskReg& dst1Preg, MaskReg& dst2Preg,
+                                                  uint32_t src1Offset, uint32_t src2Offset)
     {
         if constexpr (IsSameType<T, half>::value) {
             RegTensor<half> xFp16Q;
@@ -350,9 +347,8 @@ private:
         }
     }
 
-    __aicore__ inline void CalculateMeanVarRLessThanVL64VF(
-        __local_mem__ T* xInUb, __local_mem__ float* batchMeanInUb, __local_mem__ float* batchRstdInUb,
-        uint16_t currentANum)
+    __aicore__ inline void CalculateMeanVarRLessThanVL64VF(__local_mem__ T* xInUb, __local_mem__ float* batchMeanInUb,
+                                                           __local_mem__ float* batchRstdInUb, uint16_t currentANum)
     {
         int64_t calcNum = this->r1 * this->r0;
         float n = static_cast<float>(1) / static_cast<float>(this->powerOfTwoForR);
@@ -382,8 +378,8 @@ private:
                 Muls(mean, mean, nCorrectionFactor, pregMerge);
 
                 // save mean
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)batchMeanInUb + k), mean, pregMerge);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchMeanInUb + k), mean,
+                                                                   pregMerge);
                 Duplicate(mean, mean, pregMain);
                 Muls(mean, mean, (float)-1.0, pregMain);
 
@@ -393,15 +389,14 @@ private:
                 Muls(var_sum, y1Pow, n, pregLoop);
                 ReduceSum(var, var_sum, pregLoop);
                 Muls(var, var, nCorrectionFactor, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)batchRstdInUb + k), var, pregMerge);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdInUb + k), var,
+                                                                   pregMerge);
             }
         }
     }
 
-    __aicore__ inline void CalculateMeanVarVF(
-        __local_mem__ T* xInUb, __local_mem__ float* batchMeanInUb, __local_mem__ float* batchRstdInUb,
-        uint16_t currentANum)
+    __aicore__ inline void CalculateMeanVarVF(__local_mem__ T* xInUb, __local_mem__ float* batchMeanInUb,
+                                              __local_mem__ float* batchRstdInUb, uint16_t currentANum)
     {
         int64_t reduceNum = this->r1 * this->r0;
         float n = static_cast<float>(1) / static_cast<float>(this->powerOfTwoForR);
@@ -448,15 +443,15 @@ private:
                 uint32_t sreg0 = binaryAddRemainder;
                 for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddRemainderLoop - 1); i++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    LoadTwoTensorForDtypeT(
-                        xInUb, xInUb, binaryAddQ, binaryAddR, pregLoop, pregLoop, (i * VL_F32 + k * xyUbOffset),
-                        (i * VL_F32 + k * xyUbOffset + binaryAddQuotientOffset));
+                    LoadTwoTensorForDtypeT(xInUb, xInUb, binaryAddQ, binaryAddR, pregLoop, pregLoop,
+                                           (i * VL_F32 + k * xyUbOffset),
+                                           (i * VL_F32 + k * xyUbOffset + binaryAddQuotientOffset));
                     Muls(binaryAddQ, binaryAddQ, n, pregLoop);
                     Muls(binaryAddR, binaryAddR, n, pregLoop);
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
                     ReduceSum(vlMean, binaryAddQ, pregLoop);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__local_mem__ float*)binaryAddTensorAddr + i), vlMean, pregMerge);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)binaryAddTensorAddr + i),
+                                                                       vlMean, pregMerge);
                 }
                 {
                     pregLoop = UpdateMask<float>(sreg0);
@@ -472,8 +467,8 @@ private:
                         ((__local_mem__ float*)binaryAddTensorAddr + binaryAddRemainderLoop - 1), vlMean, pregMerge);
                 }
                 for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
-                    LoadOneTensorForDtypeT(
-                        xInUb, x, pregMain, ((i + binaryAddRemainderLoop) * VL_F32 + k * xyUbOffset));
+                    LoadOneTensorForDtypeT(xInUb, x, pregMain,
+                                           ((i + binaryAddRemainderLoop) * VL_F32 + k * xyUbOffset));
                     Muls(x, x, n, pregMain);
                     ReduceSum(vlMean, x, pregMain);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
@@ -485,9 +480,8 @@ private:
                     curBinaryAddLoopMean = curBinaryAddLoopMean / DICHOTOMY_ADD_COEFF;
                     for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddTensorAddr + j * VL_F32));
-                        DataCopy(
-                            binaryAddR,
-                            ((__local_mem__ float*)binaryAddTensorAddr + (j + curBinaryAddLoopMean) * VL_F32));
+                        DataCopy(binaryAddR,
+                                 ((__local_mem__ float*)binaryAddTensorAddr + (j + curBinaryAddLoopMean) * VL_F32));
                         Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
                         DataCopy(((__local_mem__ float*)binaryAddTensorAddr + j * VL_F32), binaryAddQ, pregMain);
                     }
@@ -502,17 +496,17 @@ private:
                 }
 
                 // batch mean
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)batchMeanInUb + k), mean, pregMerge);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchMeanInUb + k), mean,
+                                                                   pregMerge);
                 Duplicate(mean, mean, pregMain);
                 LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
 
                 uint32_t sreg1 = binaryAddRemainder;
                 for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddRemainderLoop - 1); i++) {
                     pregLoop = UpdateMask<float>(sreg1);
-                    LoadTwoTensorForDtypeT(
-                        xInUb, xInUb, binaryAddQ, binaryAddR, pregLoop, pregLoop, (i * VL_F32 + k * xyUbOffset),
-                        (i * VL_F32 + k * xyUbOffset + binaryAddQuotientOffset));
+                    LoadTwoTensorForDtypeT(xInUb, xInUb, binaryAddQ, binaryAddR, pregLoop, pregLoop,
+                                           (i * VL_F32 + k * xyUbOffset),
+                                           (i * VL_F32 + k * xyUbOffset + binaryAddQuotientOffset));
                     Sub(binaryAddQ, binaryAddQ, mean, pregLoop);
                     Sub(binaryAddR, binaryAddR, mean, pregLoop);
                     Mul(binaryAddQPow, binaryAddQ, binaryAddQ, pregLoop);
@@ -521,8 +515,8 @@ private:
                     Muls(binaryAddRPow, binaryAddRPow, n, pregLoop);
                     Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregLoop);
                     ReduceSum(vlVar, binaryAddQPow, pregLoop);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__local_mem__ float*)binaryAddTensorAddr + i), vlVar, pregMerge);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)binaryAddTensorAddr + i),
+                                                                       vlVar, pregMerge);
                 }
                 {
                     pregLoop = UpdateMask<float>(sreg1);
@@ -542,8 +536,8 @@ private:
                         ((__local_mem__ float*)binaryAddTensorAddr + binaryAddRemainderLoop - 1), vlVar, pregMerge);
                 }
                 for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
-                    LoadOneTensorForDtypeT(
-                        xInUb, x1, pregMain, ((i + binaryAddRemainderLoop) * VL_F32 + k * xyUbOffset));
+                    LoadOneTensorForDtypeT(xInUb, x1, pregMain,
+                                           ((i + binaryAddRemainderLoop) * VL_F32 + k * xyUbOffset));
                     Sub(y1, x1, mean, pregMain);
                     Mul(y1Pow, y1, y1, pregMain);
                     Muls(y1Pow, y1Pow, n, pregMain);
@@ -557,9 +551,8 @@ private:
                     curBinaryAddLoopVar = curBinaryAddLoopVar / DICHOTOMY_ADD_COEFF;
                     for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddTensorAddr + j * VL_F32));
-                        DataCopy(
-                            binaryAddR,
-                            ((__local_mem__ float*)binaryAddTensorAddr + (j + curBinaryAddLoopVar) * VL_F32));
+                        DataCopy(binaryAddR,
+                                 ((__local_mem__ float*)binaryAddTensorAddr + (j + curBinaryAddLoopVar) * VL_F32));
                         Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
                         DataCopy(((__local_mem__ float*)binaryAddTensorAddr + j * VL_F32), binaryAddQ, pregMain);
                     }
@@ -571,17 +564,18 @@ private:
                     DataCopy(var_sum, ((__local_mem__ float*)binaryAddTensorAddr));
                     ReduceSum(var, var_sum, pregLoop);
                     Muls(var, var, nCorrectionFactor, pregMerge);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__local_mem__ float*)batchRstdInUb + k), var, pregMerge);
+                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdInUb + k), var,
+                                                                       pregMerge);
                 }
                 LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
             }
         }
     }
 
-    __aicore__ inline void CalculateNormalizeVF(
-        __local_mem__ T* xInUb, __local_mem__ T* yInUb, __local_mem__ T_BETA* betaInUb, __local_mem__ T_BETA* gammaInUb,
-        __local_mem__ float* batchMeanInUb, __local_mem__ float* batchRstdInUb, uint16_t currentANum)
+    __aicore__ inline void CalculateNormalizeVF(__local_mem__ T* xInUb, __local_mem__ T* yInUb,
+                                                __local_mem__ T_BETA* betaInUb, __local_mem__ T_BETA* gammaInUb,
+                                                __local_mem__ float* batchMeanInUb, __local_mem__ float* batchRstdInUb,
+                                                uint16_t currentANum)
     {
         int64_t calcNum = this->r1 * this->r0;
         uint32_t xyUbOffset = this->r1r0Align;

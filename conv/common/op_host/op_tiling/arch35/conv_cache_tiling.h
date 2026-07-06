@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv_cache_tiling .h
  * \brief
@@ -58,14 +58,14 @@ struct ConvInputArgs {
     bool biasFlag = false;
     bool hf32Flag = false;
     uint8_t dual_output = 0; // 是否双输出
-    uint8_t quantMode0 = 0; // 通道1的量化模式
-    uint8_t reluMode0 = 0; // 通道1的relu模式
-    uint8_t clipMode0 = 0; //  通道1的clip模式
-    uint8_t scaleFlag0 = 0; // 通道1是否有scale的标记
-    uint8_t quantMode1 = 0; // 通道2的量化模式
-    uint8_t reluMode1 = 0; // 通道2的relu模式
-    uint8_t clipMode1 = 0; // 通道2的clip模式
-    uint8_t scaleFlag1 = 0; // 通道2是否有scale的标记
+    uint8_t quantMode0 = 0;  // 通道1的量化模式
+    uint8_t reluMode0 = 0;   // 通道1的relu模式
+    uint8_t clipMode0 = 0;   //  通道1的clip模式
+    uint8_t scaleFlag0 = 0;  // 通道1是否有scale的标记
+    uint8_t quantMode1 = 0;  // 通道2的量化模式
+    uint8_t reluMode1 = 0;   // 通道2的relu模式
+    uint8_t clipMode1 = 0;   // 通道2的clip模式
+    uint8_t scaleFlag1 = 0;  // 通道2是否有scale的标记
     ge::Format output1Format = ge::FORMAT_NCHW;
     ge::DataType output1Dtype = ge::DataType::DT_UNDEFINED;
     int64_t output1ShapeN = 1;
@@ -74,55 +74,27 @@ struct ConvInputArgs {
     int64_t output1ShapeW = 1;
 
     // 重载 == 运算符，用于比较
-    bool operator==(const ConvInputArgs& other) const {
-        return inputDtype == other.inputDtype &&
-               weightDtype == other.weightDtype &&
-               outputDtype == other.outputDtype &&
-               biasDtype == other.biasDtype &&
-               inputShapeN == other.inputShapeN &&
-               inputShapeH == other.inputShapeH &&
-               inputShapeD == other.inputShapeD &&
-               inputShapeW == other.inputShapeW &&
-               weightShapeN == other.weightShapeN &&
-               weightShapeC == other.weightShapeC &&
-               weightShapeD == other.weightShapeD &&
-               weightShapeH == other.weightShapeH &&
-               weightShapeW == other.weightShapeW &&
-               outputShapeD == other.outputShapeD &&
-               outputShapeH == other.outputShapeH &&
-               outputShapeW == other.outputShapeW &&
-               inputFormat == other.inputFormat &&
-               weightFormat == other.weightFormat &&
-               outputFormat == other.outputFormat &&
-               groups == other.groups &&
-               strideD == other.strideD &&
-               strideH == other.strideH &&
-               strideW == other.strideW &&
-               dilationD == other.dilationD &&
-               dilationH == other.dilationH &&
-               dilationW == other.dilationW &&
-               padHead == other.padHead &&
-               padTail == other.padTail &&
-               padTop == other.padTop &&
-               padBottom == other.padBottom &&
-               padLeft == other.padLeft &&
-               padRight == other.padRight &&
-               biasFlag == other.biasFlag &&
-               hf32Flag == other.hf32Flag &&
-               dual_output == other.dual_output &&
-               quantMode0 == other.quantMode0 &&
-               reluMode0 == other.reluMode0 &&
-               clipMode0 == other.clipMode0 &&
-               scaleFlag0 == other.scaleFlag0 &&
-               quantMode1 == other.quantMode1 &&
-               reluMode1 == other.reluMode1 &&
-               clipMode1 == other.clipMode1 &&
-               scaleFlag1 == other.scaleFlag1 &&
-               output1Format == other.output1Format &&
-               output1Dtype == other.output1Dtype &&
-               output1ShapeN == other.output1ShapeN &&
-               output1ShapeC == other.output1ShapeC &&
-               output1ShapeH == other.output1ShapeH &&
+    bool operator==(const ConvInputArgs& other) const
+    {
+        return inputDtype == other.inputDtype && weightDtype == other.weightDtype && outputDtype == other.outputDtype &&
+               biasDtype == other.biasDtype && inputShapeN == other.inputShapeN && inputShapeH == other.inputShapeH &&
+               inputShapeD == other.inputShapeD && inputShapeW == other.inputShapeW &&
+               weightShapeN == other.weightShapeN && weightShapeC == other.weightShapeC &&
+               weightShapeD == other.weightShapeD && weightShapeH == other.weightShapeH &&
+               weightShapeW == other.weightShapeW && outputShapeD == other.outputShapeD &&
+               outputShapeH == other.outputShapeH && outputShapeW == other.outputShapeW &&
+               inputFormat == other.inputFormat && weightFormat == other.weightFormat &&
+               outputFormat == other.outputFormat && groups == other.groups && strideD == other.strideD &&
+               strideH == other.strideH && strideW == other.strideW && dilationD == other.dilationD &&
+               dilationH == other.dilationH && dilationW == other.dilationW && padHead == other.padHead &&
+               padTail == other.padTail && padTop == other.padTop && padBottom == other.padBottom &&
+               padLeft == other.padLeft && padRight == other.padRight && biasFlag == other.biasFlag &&
+               hf32Flag == other.hf32Flag && dual_output == other.dual_output && quantMode0 == other.quantMode0 &&
+               reluMode0 == other.reluMode0 && clipMode0 == other.clipMode0 && scaleFlag0 == other.scaleFlag0 &&
+               quantMode1 == other.quantMode1 && reluMode1 == other.reluMode1 && clipMode1 == other.clipMode1 &&
+               scaleFlag1 == other.scaleFlag1 && output1Format == other.output1Format &&
+               output1Dtype == other.output1Dtype && output1ShapeN == other.output1ShapeN &&
+               output1ShapeC == other.output1ShapeC && output1ShapeH == other.output1ShapeH &&
                output1ShapeW == other.output1ShapeW;
     }
 };
@@ -378,19 +350,19 @@ struct ConvInputArgsHash {
 constexpr size_t MAX_CACHE_SIZE = 4096;
 
 template <typename Tiling>
-class ConvTilingCache
-{
+class ConvTilingCache {
 public:
     ConvTilingCache() = default;
     virtual ~ConvTilingCache() = default;
-    ConvTilingCache(const ConvTilingCache &) = delete;
+    ConvTilingCache(const ConvTilingCache&) = delete;
     ConvTilingCache& operator=(const ConvTilingCache&) = delete;
-    ConvTilingCache(const ConvTilingCache &&) = delete;
-    ConvTilingCache& operator=(const ConvTilingCache &&) = delete;
+    ConvTilingCache(const ConvTilingCache&&) = delete;
+    ConvTilingCache& operator=(const ConvTilingCache&&) = delete;
 
     virtual bool GetCachedTiling(const ConvInputArgs& ConvInputArgs, Tiling& tiling);
     virtual bool AddCachedTiling(const ConvInputArgs& ConvInputArgs, const Tiling& tiling);
-    size_t GetCacheSize() {
+    size_t GetCacheSize()
+    {
         std::lock_guard<std::mutex> lock(mutex_);
         return cachedTiling.size();
     }
@@ -408,10 +380,7 @@ public:
         convTilingParseInfo_ = std::move(convTilingParseInfo);
     }
 
-    ConvTilingParseInfo* GetPlatFormInfo()
-    {
-        return &convTilingParseInfo_;
-    }
+    ConvTilingParseInfo* GetPlatFormInfo() { return &convTilingParseInfo_; }
 
 protected:
     std::unordered_map<ConvInputArgs, Tiling, ConvInputArgsHash> cachedTiling;
@@ -444,6 +413,6 @@ bool ConvTilingCache<Tiling>::AddCachedTiling(const ConvInputArgs& ConvInputArgs
     return false;
 }
 
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

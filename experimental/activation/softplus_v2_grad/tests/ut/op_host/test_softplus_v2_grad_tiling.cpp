@@ -22,24 +22,25 @@ using namespace std;
 using namespace optiling;
 
 class SoftplusV2GradTiling : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { cout << "SoftplusV2GradTiling SetUp" << endl; }
 
     static void TearDownTestCase() { cout << "SoftplusV2GradTiling TearDown " << endl; }
 };
 
-TEST_F(SoftplusV2GradTiling, ascend9101_test_tiling_fp16_001) {
+TEST_F(SoftplusV2GradTiling, ascend9101_test_tiling_fp16_001)
+{
     // float beta;
     // float threshold;
     optiling::SoftplusV2GradCompileInfo compileInfo = {40, 196608, false};
     gert::TilingContextPara tilingContextPara(
         "SoftplusV2Grad",
         {
-            {{{2, 8}, {2, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // input
-            {{{2, 8}, {2, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // input
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // input
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // input
         },
         {
-            {{{2, 8}, {2, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // output
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // output
         },
         {
             gert::TilingContextPara::OpAttr("beta", Ops::Math::AnyValue::CreateFrom<float>(1.0)),

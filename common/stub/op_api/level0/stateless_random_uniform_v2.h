@@ -13,11 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *StatelessRandomUniformV2(const aclTensor *self,
-                                          uint64_t seed,
-                                          uint64_t offset,
-                                          int32_t alg,
-                                          aclOpExecutor *executor);
+const aclTensor* StatelessRandomUniformV2(const aclTensor* self, uint64_t seed, uint64_t offset, int32_t alg,
+                                          aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_UNIFORM_H_

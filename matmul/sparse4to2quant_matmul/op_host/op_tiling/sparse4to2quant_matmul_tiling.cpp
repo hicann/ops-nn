@@ -103,10 +103,9 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::GetPlatformInfo()
 {
     // mc2和qbmm把compileInfo都赋值给compileInfo_，后续硬件信息可以直接从compileInfo_中获取
     auto mmCompileInfo = context_->GetCompileInfo<Sparse4to2QuantMatmulCompileInfo>();
-    OP_TILING_CHECK(
-        mmCompileInfo == nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Sparse4to2_quant_matmul_tiling GetCompileInfo is null"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(mmCompileInfo == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Sparse4to2_quant_matmul_tiling GetCompileInfo is null"),
+                    return ge::GRAPH_FAILED);
     compileInfo_ = *mmCompileInfo;
     OP_LOGE_IF(compileInfo_.aicNum <= 0, ge::GRAPH_FAILED, inputParams_.opName, "CoreNum <= 0");
     aicoreParams_.aicNum = compileInfo_.aicNum;
@@ -141,21 +140,17 @@ bool Sparse4to2QuantMatmulTiling::AnalyzeDtype()
     if (bias != nullptr) {
         inputParams_.biasDtype = bias->GetDataType();
     }
-    OP_TILING_CHECK(
-        inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8,
-        OP_LOGE(inputParams_.opName, "X1 and x2 dtype should be int8."), return false);
+    OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8,
+                    OP_LOGE(inputParams_.opName, "X1 and x2 dtype should be int8."), return false);
 
-    OP_TILING_CHECK(
-        inputParams_.perTokenScaleDtype != ge::DT_FLOAT, OP_LOGE(inputParams_.opName, "Xscale dtype should be float."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        inputParams_.scaleDtype != ge::DT_FLOAT,
-        OP_LOGE(inputParams_.opName, "SparseWeightScale dtype should be float."), return false);
-    OP_TILING_CHECK(
-        (bias != nullptr && inputParams_.biasDtype != ge::DT_BF16),
-        OP_LOGE(inputParams_.opName, "Bias dtype should be bfloat16."), return false);
-    OP_TILING_CHECK(
-        inputParams_.cDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "Y dtype should be bfloat16."), return false);
+    OP_TILING_CHECK(inputParams_.perTokenScaleDtype != ge::DT_FLOAT,
+                    OP_LOGE(inputParams_.opName, "Xscale dtype should be float."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputParams_.scaleDtype != ge::DT_FLOAT,
+                    OP_LOGE(inputParams_.opName, "SparseWeightScale dtype should be float."), return false);
+    OP_TILING_CHECK((bias != nullptr && inputParams_.biasDtype != ge::DT_BF16),
+                    OP_LOGE(inputParams_.opName, "Bias dtype should be bfloat16."), return false);
+    OP_TILING_CHECK(inputParams_.cDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "Y dtype should be bfloat16."),
+                    return false);
     return true;
 }
 
@@ -164,9 +159,8 @@ bool Sparse4to2QuantMatmulTiling::AnalyzeInputs()
     auto x1 = context_->GetInputShape(X1_INDEX);
     auto x2 = context_->GetInputShape(X2_INDEX);
     auto x2Index = context_->GetInputShape(SPARSE_INDEX_INDEX);
-    OP_TILING_CHECK(
-        x1 == nullptr || x2 == nullptr || x2Index == nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid inputs."), return false);
+    OP_TILING_CHECK(x1 == nullptr || x2 == nullptr || x2Index == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid inputs."), return false);
     auto x1Shape = x1->GetOriginShape();
     auto x2Shape = x2->GetOriginShape();
     auto wScale = context_->GetOptionalInputShape(SCALE_INDEX);
@@ -217,8 +211,7 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::CheckContext()
     auto outputShape = context_->GetOutputShape(0);
     auto outputDesc = context_->GetOutputDesc(0);
     auto attrs = context_->GetAttrs();
-    OP_TILING_CHECK(attrs == nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Get Attrs failed!"),
+    OP_TILING_CHECK(attrs == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Get Attrs failed!"),
                     return ge::GRAPH_FAILED);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
@@ -230,9 +223,8 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < sizeof(tilingData_),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "Context tiling data capacity %zu < actual tiling data size %zu.",
-            context_->GetRawTilingData()->GetCapacity(), sizeof(tilingData_)),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Context tiling data capacity %zu < actual tiling data size %zu.",
+                              context_->GetRawTilingData()->GetCapacity(), sizeof(tilingData_)),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -241,17 +233,15 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::GetShapeAttrsInfo()
 {
     inputParams_.opName = context_->GetNodeName();
     OP_LOGD(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(
-        CheckContext() != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid context."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid context."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        !AnalyzeDtype() || !AnalyzeInputs(),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to analyze context info."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeDtype() || !AnalyzeInputs(),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to analyze context info."),
+                    return ge::GRAPH_FAILED);
     auto hasBiasStr = inputParams_.hasBias ? "true" : "false";
-    OP_LOGD(
-        inputParams_.opName, "Input params: MKN[%ld, %ld, %ld], bias[%s].", inputParams_.mSize, inputParams_.kaSize,
-        inputParams_.nSize, hasBiasStr);
+    OP_LOGD(inputParams_.opName, "Input params: MKN[%ld, %ld, %ld], bias[%s].", inputParams_.mSize, inputParams_.kaSize,
+            inputParams_.nSize, hasBiasStr);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -292,9 +282,8 @@ uint64_t Sparse4to2QuantMatmulTiling::GetTotalCnt(uint64_t baseM, uint64_t baseN
     uint64_t totalCnt = 1; // 1 最少核数即最少计算一个base块
     OP_TILING_CHECK(
         baseM < BLOCK_CUBE || baseN < BLOCK_CUBE,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "baseM(%lu) or baseN(%lu) is less than 16 when m(%lu) n(%lu)", baseM, baseN,
-            inputParams_.mSize, inputParams_.nSize),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "baseM(%lu) or baseN(%lu) is less than 16 when m(%lu) n(%lu)", baseM,
+                              baseN, inputParams_.mSize, inputParams_.nSize),
         return 1UL);
     uint64_t mCnt = ops::CeilDiv(inputParams_.mSize, baseM); // m方向需要的轮数
     uint64_t nCnt = ops::CeilDiv(inputParams_.nSize, baseN); // n方向需要的轮数
@@ -303,8 +292,8 @@ uint64_t Sparse4to2QuantMatmulTiling::GetTotalCnt(uint64_t baseM, uint64_t baseN
     return totalCnt;
 }
 
-void Sparse4to2QuantMatmulTiling::DivisibleCoreLayout(
-    uint64_t mCnt, uint64_t nCnt, uint64_t& calcOrder, uint64_t round) const
+void Sparse4to2QuantMatmulTiling::DivisibleCoreLayout(uint64_t mCnt, uint64_t nCnt, uint64_t& calcOrder,
+                                                      uint64_t round) const
 {
     bool rowFirstDivisible = false;
     bool colFirstDivisible = false;
@@ -335,9 +324,8 @@ std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> Sparse4to2QuantMatmulTiling::
     if (preCoreNum == 0U) {
         preCoreNum = usedCoreNum;
     }
-    OP_TILING_CHECK(mCnt == 0UL || nCnt == 0UL,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid mCnt or nCnt."),
-        return std::make_tuple(1UL, 1UL, 1UL, 1UL));
+    OP_TILING_CHECK(mCnt == 0UL || nCnt == 0UL, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid mCnt or nCnt."),
+                    return std::make_tuple(1UL, 1UL, 1UL, 1UL));
     uint64_t preTotalBlock = 0;
     if (calcOrder == ROW_FIRST) {
         for (uint64_t i = 0; i < usedCoreNum; ++i) {
@@ -363,7 +351,8 @@ std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> Sparse4to2QuantMatmulTiling::
     return std::make_tuple(maxMCoreClash, maxNCoreClash, numL2CacheMCnt, numL2CacheNCnt);
 }
 
-uint64_t Sparse4to2QuantMatmulTiling::CalcL1LoadSize(uint64_t baseM, uint64_t baseN) const{
+uint64_t Sparse4to2QuantMatmulTiling::CalcL1LoadSize(uint64_t baseM, uint64_t baseN) const
+{
     return inputParams_.mSize * ops::CeilDiv(inputParams_.nSize, baseN) +
            inputParams_.nSize * ops::CeilDiv(inputParams_.mSize, baseM) * SPARSE_WEIGHT_RATIO;
 }
@@ -381,8 +370,8 @@ loadSize = m * k * nCnt + n * k * SPARSE_WEIGHT_RATIO * MCnt
 k is same for the same case, and the formula is simplified as
 loadSize = m * ceil(N / baseN) + n * ceil(M / baseM) * SPARSE_WEIGHT_RATIO
 */
-int8_t Sparse4to2QuantMatmulTiling::CheckLoadAndCalcSize(
-    uint64_t baseM, uint64_t baseN, uint64_t bestRound, uint64_t round, uint64_t& bestLoadSize) const
+int8_t Sparse4to2QuantMatmulTiling::CheckLoadAndCalcSize(uint64_t baseM, uint64_t baseN, uint64_t bestRound,
+                                                         uint64_t round, uint64_t& bestLoadSize) const
 {
     uint64_t curLoadSize = CalcL1LoadSize(baseM, baseN);
     // 过大的L1加载量直接不考虑
@@ -436,8 +425,8 @@ void Sparse4to2QuantMatmulTiling::CompareBase(std::vector<uint64_t>& basicMetric
     uint64_t nCnt = ops::CeilDiv(inputParams_.nSize, baseN);
     uint64_t totalCnt = mCnt * nCnt;
     uint64_t usedCoreNum = std::min(totalCnt, aicoreParams_.aicNum);
-    OP_TILING_CHECK(
-        usedCoreNum == 0 || mCnt == 0 || nCnt == 0, OPS_LOG_W(inputParams_.opName, "Reset tiling failed."), return);
+    OP_TILING_CHECK(usedCoreNum == 0 || mCnt == 0 || nCnt == 0, OPS_LOG_W(inputParams_.opName, "Reset tiling failed."),
+                    return );
     uint64_t round = ops::CeilDiv(totalCnt, usedCoreNum);
     // 如果L1加载量过多或者轮数拖尾，都不更新
     // 3: idx of dataSize of L1 in basicMetrics
@@ -495,8 +484,8 @@ bool Sparse4to2QuantMatmulTiling::CheckCalcAndMemRatio(uint64_t baseM, uint64_t 
 }
 
 // MTE2 bound场景下，是否需要减少第一轮L2加载量而交换baseM/N
-bool Sparse4to2QuantMatmulTiling::CheckL2Load(
-    std::vector<uint64_t>& basicMetrics, uint64_t coreClash, uint64_t firstL2Load) const
+bool Sparse4to2QuantMatmulTiling::CheckL2Load(std::vector<uint64_t>& basicMetrics, uint64_t coreClash,
+                                              uint64_t firstL2Load) const
 {
     // base从小到大遍历，因此走进该函数时，当前baseM > baseN
     // 相对第一轮L2加载量，纯cube场景下scale随路处理更重要; kb<1024时，fixpipeBound
@@ -566,15 +555,14 @@ bool Sparse4to2QuantMatmulTiling::GetBaseK(uint64_t baseM, uint64_t baseN)
     return false;
 }
 
-void Sparse4to2QuantMatmulTiling::CalcClashAndFirstL2Load(
-    uint64_t& coreClash, uint64_t& firstL2Load, uint64_t mCnt, uint64_t nCnt, uint64_t round) const
+void Sparse4to2QuantMatmulTiling::CalcClashAndFirstL2Load(uint64_t& coreClash, uint64_t& firstL2Load, uint64_t mCnt,
+                                                          uint64_t nCnt, uint64_t round) const
 {
     uint64_t calcOrder = GetCalcOrder(mCnt, nCnt, inputParams_.mSize, inputParams_.nSize, basicTiling_.usedCoreNum);
     auto coreDist = CalcCoreDistribution(mCnt, nCnt, calcOrder, round, basicTiling_.usedCoreNum);
     coreClash = std::max(std::get<0>(coreDist), std::get<1>(coreDist));
-    firstL2Load =
-        std::get<2>(coreDist) * basicTiling_.baseM +  // 2: idx of firstL2Load in basicMetrics
-        std::get<3>(coreDist) * basicTiling_.baseN * SPARSE_WEIGHT_RATIO; // 3: idx of numL2CacheNCnt
+    firstL2Load = std::get<2>(coreDist) * basicTiling_.baseM + // 2: idx of firstL2Load in basicMetrics
+                  std::get<3>(coreDist) * basicTiling_.baseN * SPARSE_WEIGHT_RATIO; // 3: idx of numL2CacheNCnt
 }
 
 void Sparse4to2QuantMatmulTiling::InitBasicMetrics(std::vector<uint64_t>& basicMetrics)
@@ -594,10 +582,10 @@ bool Sparse4to2QuantMatmulTiling::IsMNSmallForMultiCores(uint64_t coreNum) const
     if (inputParams_.kaSize < INNER_LEN_L1_MEDIUM) {
         return false;
     }
-    uint64_t preCoreNum =
-        ops::CeilDiv(inputParams_.mSize, BASIC_BLOCK_SIZE_128) * ops::CeilDiv(inputParams_.nSize, BASIC_BLOCK_SIZE_256);
-    uint64_t preCoreNumBig =
-        ops::CeilDiv(inputParams_.mSize, BASIC_BLOCK_SIZE_256) * ops::CeilDiv(inputParams_.nSize, BASIC_BLOCK_SIZE_128);
+    uint64_t preCoreNum = ops::CeilDiv(inputParams_.mSize, BASIC_BLOCK_SIZE_128) *
+                          ops::CeilDiv(inputParams_.nSize, BASIC_BLOCK_SIZE_256);
+    uint64_t preCoreNumBig = ops::CeilDiv(inputParams_.mSize, BASIC_BLOCK_SIZE_256) *
+                             ops::CeilDiv(inputParams_.nSize, BASIC_BLOCK_SIZE_128);
     preCoreNum = std::min(preCoreNum, preCoreNumBig);
     if (preCoreNum > coreNum / HALF_FACTOR) {
         return false;
@@ -663,9 +651,8 @@ bool Sparse4to2QuantMatmulTiling::SetBase(const std::vector<uint64_t>& mBases, c
             }
         }
     }
-    OP_TILING_CHECK(
-        !GetBaseK(basicTiling_.baseM, basicTiling_.baseN),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetBaseK failed"), return false);
+    OP_TILING_CHECK(!GetBaseK(basicTiling_.baseM, basicTiling_.baseN),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetBaseK failed"), return false);
     return true;
 }
 
@@ -750,8 +737,8 @@ bool Sparse4to2QuantMatmulTiling::CalcL1Tiling()
     uint64_t l1Size = compileInfo_.l1Size;
     basicTiling_.depthA1 = INIT_DEPTH_A1_B1;
     basicTiling_.depthB1 = INIT_DEPTH_A1_B1;
-    uint64_t depthASize =
-        GetShapeWithDataType(basicTiling_.depthA1 * basicTiling_.baseM * basicTiling_.baseK, inputParams_.aDtype);
+    uint64_t depthASize = GetShapeWithDataType(basicTiling_.depthA1 * basicTiling_.baseM * basicTiling_.baseK,
+                                               inputParams_.aDtype);
     uint64_t depthBSize = GetShapeWithDataType(
         basicTiling_.depthB1 * basicTiling_.baseN * basicTiling_.baseK / SPARSE_K_MULTI, inputParams_.bDtype);
     uint64_t indexSize = depthBSize / SPARSE_INDEX_MULTI;
@@ -768,9 +755,8 @@ bool Sparse4to2QuantMatmulTiling::CalcL1Tiling()
 
     basicTiling_.stepKa = basicTiling_.depthA1 / NUM_DB;
     basicTiling_.stepKb = basicTiling_.depthB1 / NUM_DB;
-    OP_TILING_CHECK(
-        !GetStepK(basicTiling_.stepKa, basicTiling_.stepKb),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetStepK failed"), return false);
+    OP_TILING_CHECK(!GetStepK(basicTiling_.stepKa, basicTiling_.stepKb),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "GetStepK failed"), return false);
     basicTiling_.depthA1 = basicTiling_.stepKa * NUM_DB;
     basicTiling_.depthB1 = basicTiling_.stepKb * NUM_DB;
     return true;
@@ -778,16 +764,16 @@ bool Sparse4to2QuantMatmulTiling::CalcL1Tiling()
 
 bool Sparse4to2QuantMatmulTiling::GetStepK(uint64_t& stepKa, uint64_t& stepKb) const
 {
-    OP_TILING_CHECK(
-        stepKa == 0 || stepKb == 0,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "StepKa(%lu) or stepKb(%lu) is 0", stepKa, stepKb), return false);
+    OP_TILING_CHECK(stepKa == 0 || stepKb == 0,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "StepKa(%lu) or stepKb(%lu) is 0", stepKa, stepKb),
+                    return false);
     uint64_t kL1 = GetShapeWithDataType(std::min(stepKa, stepKb) * basicTiling_.baseK, inputParams_.aDtype);
     // 小k极其容易全载，导致MTE2与（MTE1/MMAD）串行，考虑拆分DB加载
     if (inputParams_.kaSize <= INNER_LEN_L1_MEDIUM) {
         kL1 = std::min(kL1, INNER_LEN_L1_MIN);
     }
-    uint64_t stepK =
-        GetShapeWithDataType(kL1 / INNER_LEN_L1_MIN * INNER_LEN_L1_MIN / basicTiling_.baseK, inputParams_.aDtype);
+    uint64_t stepK = GetShapeWithDataType(kL1 / INNER_LEN_L1_MIN * INNER_LEN_L1_MIN / basicTiling_.baseK,
+                                          inputParams_.aDtype);
     // kL1 aligned to 256B
     if (stepK > 0) {
         if (stepKa >= stepKb) {
@@ -818,9 +804,9 @@ void Sparse4to2QuantMatmulTiling::CorrectStepK(uint64_t& bigStepK, uint64_t& sma
     bigStepK = times * smallStepK;
 }
 
-bool Sparse4to2QuantMatmulTiling::IsTileClash(
-    uint64_t outSplit, uint64_t innerSplit, std::tuple<uint64_t, uint64_t>& tileClash,
-    const std::tuple<uint64_t, uint64_t, uint64_t>& params) const
+bool Sparse4to2QuantMatmulTiling::IsTileClash(uint64_t outSplit, uint64_t innerSplit,
+                                              std::tuple<uint64_t, uint64_t>& tileClash,
+                                              const std::tuple<uint64_t, uint64_t, uint64_t>& params) const
 {
     uint64_t outBase = std::get<0>(params);
     uint64_t innerBase = std::get<1>(params);
@@ -847,8 +833,8 @@ bool Sparse4to2QuantMatmulTiling::IsTileClash(
     return false;
 }
 
-uint64_t Sparse4to2QuantMatmulTiling::GetCalcOrder(
-    uint64_t mCnt, uint64_t nCnt, uint64_t mSize, uint64_t nSize, uint64_t usedCoreNum) const
+uint64_t Sparse4to2QuantMatmulTiling::GetCalcOrder(uint64_t mCnt, uint64_t nCnt, uint64_t mSize, uint64_t nSize,
+                                                   uint64_t usedCoreNum) const
 {
     uint64_t calcOrder = nSize / SELECT_COL_ROW_FIRST_MULTI > mSize ? COL_FIRST : ROW_FIRST;
     bool isMClash = false;
@@ -861,8 +847,8 @@ uint64_t Sparse4to2QuantMatmulTiling::GetCalcOrder(
     return calcOrder;
 }
 
-bool Sparse4to2QuantMatmulTiling::CheckTileTail(
-    uint64_t outTail, uint64_t innerTail, uint64_t outL2SplitTmp, uint64_t innerL2SplitTmp) const
+bool Sparse4to2QuantMatmulTiling::CheckTileTail(uint64_t outTail, uint64_t innerTail, uint64_t outL2SplitTmp,
+                                                uint64_t innerL2SplitTmp) const
 {
     if ((outTail != 0 && outTail < outL2SplitTmp * L2_TILE_TAIL_RATIO) ||
         (innerTail != 0 && innerTail < innerL2SplitTmp * L2_TILE_TAIL_RATIO)) {
@@ -871,10 +857,9 @@ bool Sparse4to2QuantMatmulTiling::CheckTileTail(
     return false;
 }
 
-bool Sparse4to2QuantMatmulTiling::CheckTileClash(
-    const std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>& tileInfo,
-    const std::tuple<uint64_t, uint64_t, uint64_t>& params,
-    std::vector<std::tuple<uint64_t, uint64_t>>& tileClash) const
+bool Sparse4to2QuantMatmulTiling::CheckTileClash(const std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>& tileInfo,
+                                                 const std::tuple<uint64_t, uint64_t, uint64_t>& params,
+                                                 std::vector<std::tuple<uint64_t, uint64_t>>& tileClash) const
 {
     uint64_t outTail = std::get<OUT_TAIL_INDEX>(tileInfo);
     uint64_t innerTail = std::get<INNER_TAIL_INDEX>(tileInfo);
@@ -934,24 +919,23 @@ void Sparse4to2QuantMatmulTiling::ResetBase(const uint64_t l0CSize)
 
 bool Sparse4to2QuantMatmulTiling::IsTilingDataInvalid() const
 {
-    return (
-        CheckNumberIsValid(basicTiling_.usedCoreNum, inputParams_.opName, "usedCoreNum") ||
-        CheckNumberIsValid(basicTiling_.singleCoreK, inputParams_.opName, "singleCoreK") ||
-        CheckNumberIsValid(basicTiling_.baseM, inputParams_.opName, "baseM") ||
-        CheckNumberIsValid(basicTiling_.baseN, inputParams_.opName, "baseN") ||
-        CheckNumberIsValid(basicTiling_.baseK, inputParams_.opName, "baseK") ||
-        CheckNumberIsValid(basicTiling_.depthA1, inputParams_.opName, "depthA1") ||
-        CheckNumberIsValid(basicTiling_.depthB1, inputParams_.opName, "depthB1") ||
-        CheckNumberIsValid(basicTiling_.stepM, inputParams_.opName, "baseK") ||
-        CheckNumberIsValid(basicTiling_.stepN, inputParams_.opName, "stepN") ||
-        CheckNumberIsValid(basicTiling_.stepKa, inputParams_.opName, "baseK") ||
-        CheckNumberIsValid(basicTiling_.stepKb, inputParams_.opName, "stepKb") ||
-        CheckNumberIsValid(basicTiling_.iterateOrder, inputParams_.opName, "iterateOrder") ||
-        CheckNumberIsValid(basicTiling_.dbL0c, inputParams_.opName, "dbL0c") ||
-        CheckNumberIsValid(basicTiling_.mTileCntl2, inputParams_.opName, "mTileCntl2") ||
-        CheckNumberIsValid(basicTiling_.nTileCntl2, inputParams_.opName, "nTileCntl2") ||
-        CheckNumberIsValid(basicTiling_.mTileBlock, inputParams_.opName, "mTileBlock") ||
-        CheckNumberIsValid(basicTiling_.nTileBlock, inputParams_.opName, "nTileBlock"));
+    return (CheckNumberIsValid(basicTiling_.usedCoreNum, inputParams_.opName, "usedCoreNum") ||
+            CheckNumberIsValid(basicTiling_.singleCoreK, inputParams_.opName, "singleCoreK") ||
+            CheckNumberIsValid(basicTiling_.baseM, inputParams_.opName, "baseM") ||
+            CheckNumberIsValid(basicTiling_.baseN, inputParams_.opName, "baseN") ||
+            CheckNumberIsValid(basicTiling_.baseK, inputParams_.opName, "baseK") ||
+            CheckNumberIsValid(basicTiling_.depthA1, inputParams_.opName, "depthA1") ||
+            CheckNumberIsValid(basicTiling_.depthB1, inputParams_.opName, "depthB1") ||
+            CheckNumberIsValid(basicTiling_.stepM, inputParams_.opName, "baseK") ||
+            CheckNumberIsValid(basicTiling_.stepN, inputParams_.opName, "stepN") ||
+            CheckNumberIsValid(basicTiling_.stepKa, inputParams_.opName, "baseK") ||
+            CheckNumberIsValid(basicTiling_.stepKb, inputParams_.opName, "stepKb") ||
+            CheckNumberIsValid(basicTiling_.iterateOrder, inputParams_.opName, "iterateOrder") ||
+            CheckNumberIsValid(basicTiling_.dbL0c, inputParams_.opName, "dbL0c") ||
+            CheckNumberIsValid(basicTiling_.mTileCntl2, inputParams_.opName, "mTileCntl2") ||
+            CheckNumberIsValid(basicTiling_.nTileCntl2, inputParams_.opName, "nTileCntl2") ||
+            CheckNumberIsValid(basicTiling_.mTileBlock, inputParams_.opName, "mTileBlock") ||
+            CheckNumberIsValid(basicTiling_.nTileBlock, inputParams_.opName, "nTileBlock"));
 }
 
 void Sparse4to2QuantMatmulTiling::SetMatmulTilingFromBasicTiling()
@@ -989,9 +973,9 @@ void Sparse4to2QuantMatmulTiling::SetMatmulTilingFromBasicTiling()
 
 ge::graphStatus Sparse4to2QuantMatmulTiling::DoLibApiTiling()
 {
-    OP_TILING_CHECK(
-        IsTilingDataInvalid(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "Check tilingData invalid failed"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(IsTilingDataInvalid(),
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Check tilingData invalid failed"),
+                    return ge::GRAPH_FAILED);
     SetMatmulTilingFromBasicTiling();
     return ge::GRAPH_SUCCESS;
 }
@@ -1013,9 +997,8 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::PostTiling()
     size_t tilingSize = sizeof(SparseQmm::Sparse4to2QuantMatmulTilingData);
     OP_LOGD(inputParams_.opName, "Final tiling data size: %zu.", sizeof(SparseQmm::Sparse4to2QuantMatmulTilingData));
     auto blockDim = tilingData_.matmulTiling.usedCoreNum;
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        static_cast<void*>(&tilingData_), tilingSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           static_cast<void*>(&tilingData_), tilingSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "Tilingdata memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -1028,10 +1011,7 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t Sparse4to2QuantMatmulTiling::GetTilingKey() const
-{
-    return 0UL;
-}
+uint64_t Sparse4to2QuantMatmulTiling::GetTilingKey() const { return 0UL; }
 
 void Sparse4to2QuantMatmulTiling::PrintBasicTiling() const
 {
@@ -1090,17 +1070,16 @@ ge::graphStatus Sparse4to2QuantMatmulTiling::CalcUbTiling(uint64_t& baseM, uint6
         // input: bias bf16/fp16/fp32, veccalc: bias fp32
         needUbSize += NUM_DB * ge::GetSizeByDataType(inputParams_.biasDtype) * ubCalcN + sizeof(float) * ubCalcN;
     }
-    OP_TILING_CHECK(
-        needUbSize >= ubSize,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "There is no proper ub tiling when m(%lu) n(%lu) baseM(%lu) baseN(%lu)",
-            inputParams_.mSize, inputParams_.nSize, baseM, baseN),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(needUbSize >= ubSize,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "There is no proper ub tiling when m(%lu) n(%lu) baseM(%lu) baseN(%lu)",
+                                          inputParams_.mSize, inputParams_.nSize, baseM, baseN),
+                    return ge::GRAPH_FAILED);
     ubSize -= needUbSize;
     uint32_t ubCalcM = std::min(std::min(ubSize / ubCalc, static_cast<uint64_t>(baseM)), inputParams_.mSize);
-    OP_TILING_CHECK(
-        ubCalcM == 0, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to calc ubCalcM(0) with ubCalcN(%u)", ubCalcN),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ubCalcM == 0,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to calc ubCalcM(0) with ubCalcN(%u)", ubCalcN),
+                    return ge::GRAPH_FAILED);
     tilingData_.params.ubCalcN = ubCalcN;
     tilingData_.params.ubCalcM = ubCalcM;
     tilingData_.params.needUbBuffer = ubCalcN * ubCalcM * UB_EXTRE_BYTE;

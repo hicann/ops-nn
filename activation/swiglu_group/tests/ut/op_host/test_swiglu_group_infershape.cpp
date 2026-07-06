@@ -34,15 +34,9 @@ void UpdateInputX(ge::op::SwigluGroup& op, const std::vector<int64_t>& dims, ge:
 
 class SwigluGroupInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluGroupInferShapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluGroupInferShapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluGroupInferShapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluGroupInferShapeTest TearDown" << std::endl; }
 };
 
 TEST_F(SwigluGroupInferShapeTest, infer_shape_fp16)

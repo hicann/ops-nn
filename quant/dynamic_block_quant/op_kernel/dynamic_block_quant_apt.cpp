@@ -76,8 +76,8 @@
 
 using namespace DynamicBlockQuant;
 
-__aicore__ inline void SingleUB(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData, TPipe& pipe)
+__aicore__ inline void SingleUB(GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData,
+                                TPipe& pipe)
 {
     if (TILING_KEY_IS(TILING_KEY_RINT_FP16_FP8E5M2_NORMAL)) {
         DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<half, fp8_e5m2_t, MODE_RINT> op(&pipe);
@@ -142,8 +142,8 @@ __aicore__ inline void SingleUB(
     }
 }
 
-__aicore__ inline void SingleRow(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData, TPipe& pipe)
+__aicore__ inline void SingleRow(GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData,
+                                 TPipe& pipe)
 {
     if (TILING_KEY_IS(TILING_KEY_RINT_FP16_FP8E5M2_SINGLE)) {
         DynamicBlockQuant::DynamicBlockQuantSingleRow<half, fp8_e5m2_t, MODE_RINT> op(&pipe);
@@ -208,8 +208,8 @@ __aicore__ inline void SingleRow(
     }
 }
 
-__aicore__ inline void LargeBlockSize(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, const DynamicBlockQuantTilingData& tilingData, TPipe& pipe)
+__aicore__ inline void LargeBlockSize(GM_ADDR x, GM_ADDR y, GM_ADDR scale,
+                                      const DynamicBlockQuantTilingData& tilingData, TPipe& pipe)
 {
     if (TILING_KEY_IS(TILING_KEY_RINT_FP16_FP8E5M2_LARGE)) {
         DynamicBlockQuant::DynamicBlockQuantLargeBlockSize<half, fp8_e5m2_t, MODE_RINT> op(&pipe);
@@ -274,8 +274,8 @@ __aicore__ inline void LargeBlockSize(
     }
 }
 
-extern "C" __global__ __aicore__ void dynamic_block_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void dynamic_block_quant(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;

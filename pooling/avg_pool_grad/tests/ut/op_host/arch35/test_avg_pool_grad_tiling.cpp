@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 #include <iostream>
 #include <fstream>
@@ -27,27 +27,20 @@ using namespace ge;
 
 class AvgPoolGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AvgPoolGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AvgPoolGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AvgPoolGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AvgPoolGradTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype, nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype,
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -58,13 +51,11 @@ void SetConstInput(
     const_tensors.push_back(std::move(pair));
 }
 
-static void ExecuteTestCase(
-    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string padding,
-    std::string data_format,
-    ge::DataType dtype,  ge::DataType dtypeIdx, uint64_t except_tilingkey,
-    int32_t* shape_data, ge::graphStatus expect_status = ge::GRAPH_SUCCESS,
-    int32_t shape_data_size = 4)
+static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape,
+                            std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string padding,
+                            std::string data_format, ge::DataType dtype, ge::DataType dtypeIdx,
+                            uint64_t except_tilingkey, int32_t* shape_data,
+                            ge::graphStatus expect_status = ge::GRAPH_SUCCESS, int32_t shape_data_size = 4)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -98,21 +89,21 @@ static void ExecuteTestCase(
     SetConstInput(0, DT_INT32, shape_data, shape_data_size, const_tensors);
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs(std::vector<void*>{&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs(std::vector<void*>{&compile_info})
+                             .Build();
 
-    ASSERT_TRUE((kernel_holder.GetContext<gert::TilingParseContext>()) ->GetPlatformInfo()->Init());
+    ASSERT_TRUE((kernel_holder.GetContext<gert::TilingParseContext>())->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func((kernel_holder.GetContext<gert::KernelContext>())), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -131,11 +122,10 @@ static void ExecuteTestCase(
                       .NodeInputTd(0, dtypeIdx, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .TilingData(param.get())
                       .ConstInput(const_tensors)
                       .Workspace(ws_size)
@@ -169,9 +159,8 @@ TEST_F(AvgPoolGradTiling, AvgPoolGradTiling_Test_1)
     uint64_t except_tilingkey = 274;
     int shape_data[4] = {1, 3, 3, 1};
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, except_tilingkey, shape_data);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, except_tilingkey,
+                    shape_data);
 }
 
 TEST_F(AvgPoolGradTiling, AvgPoolGradTiling_Test_2)
@@ -188,9 +177,8 @@ TEST_F(AvgPoolGradTiling, AvgPoolGradTiling_Test_2)
     uint64_t except_tilingkey = 258;
     int shape_data[4] = {1, 1, 3, 3};
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, except_tilingkey, shape_data);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, except_tilingkey,
+                    shape_data);
 }
 
 TEST_F(AvgPoolGradTiling, AvgPoolGradTiling_Test_3)
@@ -207,9 +195,8 @@ TEST_F(AvgPoolGradTiling, AvgPoolGradTiling_Test_3)
     uint64_t except_tilingkey = 1297;
     int shape_data[4] = {1, 5, 5, 1};
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, except_tilingkey, shape_data);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, except_tilingkey,
+                    shape_data);
 }
 
 // ======================== Failure Cases ========================
@@ -226,8 +213,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_padding)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_strides_listsize)
@@ -242,8 +229,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_strides_listsize)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_negative_stride)
@@ -258,8 +245,8 @@ TEST_F(AvgPoolGradTiling, fail_negative_stride)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_ksize_listsize)
@@ -274,8 +261,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_ksize_listsize)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_negative_ksize)
@@ -290,8 +277,8 @@ TEST_F(AvgPoolGradTiling, fail_negative_ksize)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_grad_shape_dim)
@@ -306,8 +293,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_grad_shape_dim)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_output_shape_dim)
@@ -322,8 +309,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_output_shape_dim)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_format)
@@ -338,8 +325,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_format)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "UNKNOWN";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_dtype)
@@ -354,8 +341,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_dtype)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 3, 3, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_invalid_orig_input_shape_dim)
@@ -370,8 +357,8 @@ TEST_F(AvgPoolGradTiling, fail_invalid_orig_input_shape_dim)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[5] = {1, 3, 3, 1, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED, 5);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED, 5);
 }
 
 TEST_F(AvgPoolGradTiling, fail_n_dim_mismatch)
@@ -386,8 +373,8 @@ TEST_F(AvgPoolGradTiling, fail_n_dim_mismatch)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NCHW";
     int shape_data[4] = {2, 3, 8, 8};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_c_dim_mismatch)
@@ -402,8 +389,8 @@ TEST_F(AvgPoolGradTiling, fail_c_dim_mismatch)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 4, 4, 3};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_h_dim_mismatch)
@@ -418,8 +405,8 @@ TEST_F(AvgPoolGradTiling, fail_h_dim_mismatch)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NCHW";
     int shape_data[4] = {1, 3, 4, 8};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_w_dim_mismatch)
@@ -434,8 +421,8 @@ TEST_F(AvgPoolGradTiling, fail_w_dim_mismatch)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 4, 8, 3};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_grad_shape_mismatch_valid)
@@ -450,8 +437,8 @@ TEST_F(AvgPoolGradTiling, fail_grad_shape_mismatch_valid)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 8, 8, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }
 
 TEST_F(AvgPoolGradTiling, fail_grad_shape_mismatch_same)
@@ -466,6 +453,6 @@ TEST_F(AvgPoolGradTiling, fail_grad_shape_mismatch_same)
     ge::DataType dtypeIdx = ge::DT_INT32;
     std::string data_format = "NHWC";
     int shape_data[4] = {1, 8, 8, 1};
-    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding,
-        data_format, dtype, dtypeIdx, 0, shape_data, ge::GRAPH_FAILED);
+    ExecuteTestCase(xShape, yShape, gradShape, ksize, strides, padding, data_format, dtype, dtypeIdx, 0, shape_data,
+                    ge::GRAPH_FAILED);
 }

@@ -24,8 +24,7 @@ namespace optiling {
 
 class MseLossGradTilingClass : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit MseLossGradTilingClass(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit MseLossGradTilingClass(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -50,8 +49,8 @@ private:
 };
 
 struct MseLossGradCompileInfo {
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
 };
 
 } // namespace optiling

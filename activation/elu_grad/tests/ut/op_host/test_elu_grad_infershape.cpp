@@ -22,15 +22,9 @@
 
 class elugrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "elugrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "elugrad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "elugrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "elugrad TearDown" << std::endl; }
 };
 
 TEST_F(elugrad, elugrad_infer_shape_fp16)

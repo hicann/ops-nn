@@ -57,16 +57,15 @@ bool LayerNormV4TransposeTiling::IsCapable()
         return false;
     }
     if ((commonParams.rowSize > TRANSPOSE_ROW_LIMIT) || (commonParams.rowSize == commonParams.rowAlign)) {
-        OP_LOGI(
-            context_->GetNodeName(),
-            "LayerNormV4Transpose Template only support rowSize <= 64 and not align 16, rowSize: %u",
-            static_cast<uint32_t>(commonParams.rowSize));
+        OP_LOGI(context_->GetNodeName(),
+                "LayerNormV4Transpose Template only support rowSize <= 64 and not align 16, rowSize: %u",
+                static_cast<uint32_t>(commonParams.rowSize));
         return false;
     }
     if (LayerNormV4TransposeTiling::GetTilingKey() == 0) {
-        OP_LOGI(
-            context_->GetNodeName(), "LayerNormV4Transpose Template Unsupported dtype, tensorDtype: %d, paramDtype: %d",
-            commonParams.tensorDtype, commonParams.paramDtype);
+        OP_LOGI(context_->GetNodeName(),
+                "LayerNormV4Transpose Template Unsupported dtype, tensorDtype: %d, paramDtype: %d",
+                commonParams.tensorDtype, commonParams.paramDtype);
         return false;
     }
     return true;
@@ -123,10 +122,10 @@ void LayerNormV4TransposeTiling::DoBlockTiling(BlockTilingData& blockTilingParam
         blockTilingParams.blockFormer = commonParams.colSize;
         blockTilingParams.blockTail = commonParams.colSize;
     }
-    blockTilingParams.numBlocks =
-        (commonParams.colSize + blockTilingParams.blockFormer - 1) / blockTilingParams.blockFormer;
-    blockTilingParams.blockTail =
-        commonParams.colSize - (blockTilingParams.numBlocks - 1) * blockTilingParams.blockFormer;
+    blockTilingParams.numBlocks = (commonParams.colSize + blockTilingParams.blockFormer - 1) /
+                                  blockTilingParams.blockFormer;
+    blockTilingParams.blockTail = commonParams.colSize -
+                                  (blockTilingParams.numBlocks - 1) * blockTilingParams.blockFormer;
 }
 
 void LayerNormV4TransposeTiling::DoUbTiling(const BlockTilingData& blockTilingParams, UbTilingData& ubTilingParams)
@@ -135,8 +134,8 @@ void LayerNormV4TransposeTiling::DoUbTiling(const BlockTilingData& blockTilingPa
     bool yOutLessThanBLOCK = false;
     uint64_t blockAlign = (commonParams.tensorDtype == ge::DT_FLOAT ? B32_BLOCK_ALIGN_NUM : B16_BLOCK_ALIGN_NUM);
     uint64_t blockAlignGamma = (commonParams.paramDtype == ge::DT_FLOAT ? B32_BLOCK_ALIGN_NUM : B16_BLOCK_ALIGN_NUM);
-    uint64_t gammaBufferSize =
-        (commonParams.rowSize + blockAlignGamma - 1) / blockAlignGamma * blockAlignGamma * sizeof(float);
+    uint64_t gammaBufferSize = (commonParams.rowSize + blockAlignGamma - 1) / blockAlignGamma * blockAlignGamma *
+                               sizeof(float);
     uint64_t curUbSize = commonParams.ubSizePlatForm - gammaBufferSize * TWO - UB_SIZE_RESERVED;
     // 依次为inputX * 2 + outputY + tmpBuf + reduceBuf, 因为 (16 * bFormer) >= ubFormer,
     uint64_t maxUbFormer = curUbSize / (commonParams.rowSize * FLOAT_SIZE * TWO + commonParams.rowSize * FLOAT_SIZE +
@@ -156,14 +155,14 @@ void LayerNormV4TransposeTiling::DoUbTiling(const BlockTilingData& blockTilingPa
             curUbSize) {
             continue;
         }
-        ubTilingParams.ubLoopOfFormerBlock =
-            (blockTilingParams.blockFormer + ubTilingParams.ubFormer - 1) / ubTilingParams.ubFormer;
-        ubTilingParams.ubLoopOfTailBlock =
-            (blockTilingParams.blockTail + ubTilingParams.ubFormer - 1) / ubTilingParams.ubFormer;
-        ubTilingParams.ubTailOfFormerBlock =
-            blockTilingParams.blockFormer - (ubTilingParams.ubLoopOfFormerBlock - 1) * ubTilingParams.ubFormer;
-        ubTilingParams.ubTailOfTailBlock =
-            blockTilingParams.blockTail - (ubTilingParams.ubLoopOfTailBlock - 1) * ubTilingParams.ubFormer;
+        ubTilingParams.ubLoopOfFormerBlock = (blockTilingParams.blockFormer + ubTilingParams.ubFormer - 1) /
+                                             ubTilingParams.ubFormer;
+        ubTilingParams.ubLoopOfTailBlock = (blockTilingParams.blockTail + ubTilingParams.ubFormer - 1) /
+                                           ubTilingParams.ubFormer;
+        ubTilingParams.ubTailOfFormerBlock = blockTilingParams.blockFormer -
+                                             (ubTilingParams.ubLoopOfFormerBlock - 1) * ubTilingParams.ubFormer;
+        ubTilingParams.ubTailOfTailBlock = blockTilingParams.blockTail -
+                                           (ubTilingParams.ubLoopOfTailBlock - 1) * ubTilingParams.ubFormer;
         // 910B直接获取切分，无需后续判断
         if (!commonParams.isAscend310P) {
             return;

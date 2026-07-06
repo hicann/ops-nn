@@ -31,11 +31,12 @@
 #include "lib/matmul_intf.h"
 #include "../mat_mul_v3_common.h"
 
-namespace MatmulV3Advanced{
+namespace MatmulV3Advanced {
 
 using namespace matmul;
 
-__aicore__ inline void MatMulInputKEqZeroClearOutput(GM_ADDR biasGM, GM_ADDR cGM, const MatMulV3KEqZeroBasicTilingData& tilingData)
+__aicore__ inline void MatMulInputKEqZeroClearOutput(GM_ADDR biasGM, GM_ADDR cGM,
+                                                     const MatMulV3KEqZeroBasicTilingData& tilingData)
 {
     if ASCEND_IS_AIC {
         return;
@@ -48,7 +49,7 @@ __aicore__ inline void MatMulInputKEqZeroClearOutput(GM_ADDR biasGM, GM_ADDR cGM
     uint64_t tailDataCount = totalDataAmount - everyAivDataCount * usedAivNum;
 
     AscendC::GlobalTensor<DTYPE_Y> outputGM;
-    outputGM.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_Y *>(cGM), totalDataAmount);
+    outputGM.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_Y*>(cGM), totalDataAmount);
 
     uint64_t coreIdx = AscendC::GetBlockIdx();
     if (coreIdx > usedAivNum) {
@@ -60,7 +61,7 @@ __aicore__ inline void MatMulInputKEqZeroClearOutput(GM_ADDR biasGM, GM_ADDR cGM
         copyDataAmount = tailDataCount;
     }
 
-    AscendC::InitOutput<DTYPE_Y>(outputGM[coreIdx * everyAivDataCount], static_cast<uint64_t>(copyDataAmount), (DTYPE_Y)0);
+    AscendC::InitOutput<DTYPE_Y>(outputGM[coreIdx * everyAivDataCount], static_cast<uint64_t>(copyDataAmount),
+                                 (DTYPE_Y)0);
 }
-}
-
+} // namespace MatmulV3Advanced

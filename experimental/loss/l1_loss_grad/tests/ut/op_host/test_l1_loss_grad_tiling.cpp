@@ -27,15 +27,9 @@ using namespace ge;
 
 class L1LossGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "L1LossGradTiling SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "L1LossGradTiling SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "L1LossGradTiling TearDown " << endl;
-    }
+    static void TearDownTestCase() { cout << "L1LossGradTiling TearDown " << endl; }
 };
 
 TEST_F(L1LossGradTiling, l1_loss_grad_float32_success)
@@ -59,24 +53,23 @@ TEST_F(L1LossGradTiling, l1_loss_grad_float32_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct L1LossGradTilingCompileInfo {
-    };
+    struct L1LossGradTilingCompileInfo {};
     L1LossGradTilingCompileInfo compileInfo;
 
     std::string opType("L1LossGrad");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(3, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(3, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -123,24 +116,23 @@ TEST_F(L1LossGradTiling, l1_loss_grad_float16_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct L1LossGradTilingCompileInfo {
-    };
+    struct L1LossGradTilingCompileInfo {};
     L1LossGradTilingCompileInfo compileInfo;
 
     std::string opType("L1LossGrad");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(3, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(3, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
@@ -187,24 +179,23 @@ TEST_F(L1LossGradTiling, l1_loss_grad_bf16_success)
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct L1LossGradTilingCompileInfo {
-    };
+    struct L1LossGradTilingCompileInfo {};
     L1LossGradTilingCompileInfo compileInfo;
 
     std::string opType("L1LossGrad");
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(3, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(3, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);

@@ -24,7 +24,7 @@ namespace Conv3dApiTiling {
 
 class Conv3dTilingAlgorithmHwMode : public Conv3dTilingAlgorithm {
 public:
-    explicit Conv3dTilingAlgorithmHwMode(Conv3dTilingBase *tilingIns) : Conv3dTilingAlgorithm(tilingIns) {}
+    explicit Conv3dTilingAlgorithmHwMode(Conv3dTilingBase* tilingIns) : Conv3dTilingAlgorithm(tilingIns) {}
     ~Conv3dTilingAlgorithmHwMode() override = default;
 
 private:
@@ -34,9 +34,7 @@ private:
     void InitPingPong() override;
     void GetL0TilingRange() override;
     void InitializeL0TilingParamsAndIndices();
-    void UpdateL0TilingParamsAndCheck(bool& l0BufferNotOverflowFlag,
-                                      uint64_t& usedL1Size,
-                                      uint64_t& usedBTSize);
+    void UpdateL0TilingParamsAndCheck(bool& l0BufferNotOverflowFlag, uint64_t& usedL1Size, uint64_t& usedBTSize);
     bool ShouldUpdateWoL0Index() const;
     void AdjustIndicesL0Tiling(bool updateWoL0Index);
     void SetFinalL0TilingParams();

@@ -15,28 +15,29 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> INPUT_DATA_TYPE = {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT4, ge::DT_INT4, ge::DT_INT4, ge::DT_INT4, 
-            ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN};
+static const std::vector<ge::DataType> INPUT_DATA_TYPE = {
+    ge::DT_INT8,        ge::DT_INT8,        ge::DT_INT8,          ge::DT_INT8,         ge::DT_INT4,
+    ge::DT_INT4,        ge::DT_INT4,        ge::DT_INT4,          ge::DT_HIFLOAT8,     ge::DT_HIFLOAT8,
+    ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN};
 
-static const std::vector<ge::DataType> INPUT_SCALE_DATA_TYPE = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BF16, 
-            ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+static const std::vector<ge::DataType> INPUT_SCALE_DATA_TYPE = {
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16,  ge::DT_BF16,  ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16,
+    ge::DT_BF16,  ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
 
-static const std::vector<ge::DataType> OUTPUT_DATA_TYPE = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, 
-            ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::DataType> OUTPUT_DATA_TYPE = {
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16};
 
-static const std::vector<ge::Format> FORMAT = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, 
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::Format> FORMAT = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class AscendAntiQuantV2 : public OpDef {
 public:
     explicit AscendAntiQuantV2(const char* name) : OpDef(name)
     {
         OpAICoreConfig config;
-        config.Input("x")
-            .ParamType(REQUIRED)
-            .DataType(INPUT_DATA_TYPE)
-            .Format(FORMAT)
-            .UnknownShapeFormat(FORMAT);
+        config.Input("x").ParamType(REQUIRED).DataType(INPUT_DATA_TYPE).Format(FORMAT).UnknownShapeFormat(FORMAT);
         config.Input("scale")
             .ParamType(REQUIRED)
             .DataType(INPUT_SCALE_DATA_TYPE)
@@ -47,14 +48,10 @@ public:
             .DataType(INPUT_SCALE_DATA_TYPE)
             .Format(FORMAT)
             .UnknownShapeFormat(FORMAT);
-        config.Output("y")
-            .ParamType(REQUIRED)
-            .DataType(OUTPUT_DATA_TYPE)
-            .Format(FORMAT)
-            .UnknownShapeFormat(FORMAT);
+        config.Output("y").ParamType(REQUIRED).DataType(OUTPUT_DATA_TYPE).Format(FORMAT).UnknownShapeFormat(FORMAT);
         this->Attr("dst_type").AttrType(OPTIONAL).Int(ge::DT_FLOAT16);
         this->Attr("sqrt_mode").AttrType(OPTIONAL).Bool(false);
-        
+
         config.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)

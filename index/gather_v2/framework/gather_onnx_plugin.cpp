@@ -82,20 +82,14 @@ static Status ParseOpToGraphGather(const ge::Operator& op, Graph& graph)
 
 REGISTER_CUSTOM_OP("PartitionedCall")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::8::Gather"), 
-         ge::AscendString("ai.onnx::9::Gather"),
-         ge::AscendString("ai.onnx::10::Gather"), 
-         ge::AscendString("ai.onnx::11::Gather"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::Gather"), ge::AscendString("ai.onnx::9::Gather"),
+                   ge::AscendString("ai.onnx::10::Gather"), ge::AscendString("ai.onnx::11::Gather"),
 
-         ge::AscendString("ai.onnx::12::Gather"), 
-         ge::AscendString("ai.onnx::13::Gather"),
-         ge::AscendString("ai.onnx::14::Gather"), 
-         ge::AscendString("ai.onnx::15::Gather"),
+                   ge::AscendString("ai.onnx::12::Gather"), ge::AscendString("ai.onnx::13::Gather"),
+                   ge::AscendString("ai.onnx::14::Gather"), ge::AscendString("ai.onnx::15::Gather"),
 
-         ge::AscendString("ai.onnx::16::Gather"), 
-         ge::AscendString("ai.onnx::17::Gather"),
-         ge::AscendString("ai.onnx::18::Gather")})
+                   ge::AscendString("ai.onnx::16::Gather"), ge::AscendString("ai.onnx::17::Gather"),
+                   ge::AscendString("ai.onnx::18::Gather")})
     .ParseParamsFn(ParseParamsGather)
     .ParseOpToGraphFn(ParseOpToGraphGather)
     .ImplyType(ImplyType::TVM);

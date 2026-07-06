@@ -26,8 +26,7 @@ using namespace AscendC;
 constexpr uint32_t NON_SORT_DB_BUF = 2;
 
 template <typename X_T, typename IDS_T>
-class USSKernelSimdNonSort
-{
+class USSKernelSimdNonSort {
 public:
     __aicore__ inline USSKernelSimdNonSort(const UnsortedSegmentSumSimdNonSortTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
@@ -54,8 +53,8 @@ __aicore__ inline void USSKernelSimdNonSort<X_T, IDS_T>::Init(GM_ADDR x, GM_ADDR
     yGm_.SetGlobalBuffer((__gm__ X_T*)(output));
 
     pipe_->InitBuffer(xQue_, NON_SORT_DB_BUF, td_->baseS * td_->baseA * sizeof(X_T));
-    pipe_->InitBuffer(
-        idsQue_, NON_SORT_DB_BUF, Ops::Base::CeilAlign(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
+    pipe_->InitBuffer(idsQue_, NON_SORT_DB_BUF,
+                      Ops::Base::CeilAlign(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
 }
 
 template <typename X_T, typename IDS_T>
@@ -86,7 +85,8 @@ __aicore__ inline void USSKernelSimdNonSort<X_T, IDS_T>::Process()
         idsLocal = idsQue_.DeQue<IDS_T>();
         for (uint64_t aLoop = 0; aLoop < aLoopNum; aLoop++) {
             uint64_t cols = (aLoop == aLoopNum - 1) ? (curCoreCols - aLoop * td_->baseA) : td_->baseA;
-            uint64_t colsAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) / sizeof(X_T);
+            uint64_t colsAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) /
+                                 sizeof(X_T);
 
             LocalTensor<X_T> xLocal = xQue_.AllocTensor<X_T>();
             uint64_t offset = blockOffsetX + sLoop * td_->baseS * td_->innerDim + aLoop * td_->baseA;

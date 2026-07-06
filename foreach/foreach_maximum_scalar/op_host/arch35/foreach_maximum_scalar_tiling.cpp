@@ -52,10 +52,8 @@ static ge::graphStatus ForeachMaximumScalarTilingFunc(gert::TilingContext* conte
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get tensor list info
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
@@ -74,13 +72,10 @@ static ge::graphStatus ForeachMaximumScalarTilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(ForeachMaximumScalarTilingData), 0, sizeof(ForeachMaximumScalarTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        tensorNum > MAX_TENSOR_NUM,
-        OP_LOGE(context, "tensorNum should be less than or equal to 256"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM, OP_LOGE(context, "tensorNum should be less than or equal to 256"),
+                return ge::GRAPH_FAILED);
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
 

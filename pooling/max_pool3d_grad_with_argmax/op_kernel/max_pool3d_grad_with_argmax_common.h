@@ -78,9 +78,9 @@ struct TilingParams : public TilingParamsCommon {
 
 // only support float/int32_t
 // [row, col] -> [col, row]: row:align16,max:64, col:align8
-__aicore__ inline void TransposeAddrBase16M8(
-    uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
-    uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeAddrBase16M8(uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
+                                             uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t rowNum,
+                                             uint64_t colNum)
 {
     struct TransDataTo5HDParams transDataParams;
     transDataParams.repeatTimes = colNum / BLOCK_NUM_32;
@@ -99,9 +99,9 @@ __aicore__ inline void TransposeAddrBase16M8(
 
 // only support float/int32_t
 // [row, col] -> [col, row]: row:align8, col:align16,max:64
-__aicore__ inline void TransposeAddrBase8M16(
-    uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
-    uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeAddrBase8M16(uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
+                                             uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t rowNum,
+                                             uint64_t colNum)
 {
     struct TransDataTo5HDParams transDataParams;
     transDataParams.repeatTimes = rowNum / BLOCK_NUM_32;
@@ -119,9 +119,9 @@ __aicore__ inline void TransposeAddrBase8M16(
 
 // only support float16/bfloat16
 // [row, col] -> [col, row]: row:align16, max:64, col:align16
-__aicore__ inline void TransposeAddrBase16M16(
-    uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
-    uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeAddrBase16M16(uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
+                                              uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t rowNum,
+                                              uint64_t colNum)
 {
     struct TransDataTo5HDParams transDataParams;
     transDataParams.repeatTimes = colNum / BLOCK_NUM_16;
@@ -141,9 +141,9 @@ __aicore__ inline void TransposeAddrBase16M16(
 
 // only support float16/bfloat16
 // [row, col] -> [col, row]: row:align16, col:align16, max:64
-__aicore__ inline void TransposeAddrBase16M16B(
-    uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
-    uint64_t rowNum, uint64_t colNum)
+__aicore__ inline void TransposeAddrBase16M16B(uint64_t dstAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN],
+                                               uint64_t srcAddrList[MAX_LIST_NUM][TRANS_ADDR_LEN], uint64_t rowNum,
+                                               uint64_t colNum)
 {
     struct TransDataTo5HDParams transDataParams;
     transDataParams.repeatTimes = rowNum / BLOCK_NUM_16;

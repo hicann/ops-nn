@@ -19,19 +19,19 @@
 #include <cstdint>
 
 struct AntiMxQuantTilingData {
-    int64_t ubSize{0};              // UB大小（字节）
-    int64_t dstType{0};             // 输出数据类型
-    int64_t totalCoreNum{0};        // AIV核总数
-    int64_t usedCoreNum{0};         // 实际使用的核数
-    int64_t rowTileNum{0};          // 行方向切核数
-    int64_t colTileNum{0};          // 列方向切核数
-    int64_t rowNum{0};              // 合并后的行大小（除最后一维外的所有维度）
-    int64_t colNum{0};              // 合并后的列大小（最后一维）
-    int64_t colNormalBlockNum{0};   // 列方向头核处理的块数（按512为单位）
-    int64_t colTailLen{0};          // 列方向尾块长度
-    int64_t rowNormalBlockNum{0};   // 行方向头核处理的块数
-    int64_t rowTailLen{0};          // 行方向尾块长度
-    int64_t maxUbBlockNum{0};       // UB能放下的最大1x32块数
+    int64_t ubSize{0};            // UB大小（字节）
+    int64_t dstType{0};           // 输出数据类型
+    int64_t totalCoreNum{0};      // AIV核总数
+    int64_t usedCoreNum{0};       // 实际使用的核数
+    int64_t rowTileNum{0};        // 行方向切核数
+    int64_t colTileNum{0};        // 列方向切核数
+    int64_t rowNum{0};            // 合并后的行大小（除最后一维外的所有维度）
+    int64_t colNum{0};            // 合并后的列大小（最后一维）
+    int64_t colNormalBlockNum{0}; // 列方向头核处理的块数（按512为单位）
+    int64_t colTailLen{0};        // 列方向尾块长度
+    int64_t rowNormalBlockNum{0}; // 行方向头核处理的块数
+    int64_t rowTailLen{0};        // 行方向尾块长度
+    int64_t maxUbBlockNum{0};     // UB能放下的最大1x32块数
 };
 
 #endif // OPS_NN_ANTI_MX_QUANT_TILINGDATA_H

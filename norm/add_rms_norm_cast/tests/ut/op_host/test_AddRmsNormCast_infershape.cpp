@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  *
  *
  * @file test_AddRmsNorm_proto.cpp
@@ -21,18 +22,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/add_rms_norm_cast_proto.h"
 
-class AddRmsNormCast : public testing::Test
-{
+class AddRmsNormCast : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddRmsNormCast Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddRmsNormCast Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddRmsNormCast Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddRmsNormCast Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(AddRmsNormCast, AddRmsNormCast_infershape_case_0)

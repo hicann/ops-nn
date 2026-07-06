@@ -22,7 +22,7 @@
 /*!
  * \file relu_v2_infer.cpp
  * \brief
-*/
+ */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -43,7 +43,7 @@ static ge::graphStatus InferShapeReluV2(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    *yShape = *xShape;  
+    *yShape = *xShape;
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeReluV2");
     return GRAPH_SUCCESS;

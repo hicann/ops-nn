@@ -71,9 +71,9 @@ __aicore__ inline void LayerNormGradV3RecomputeGammaBeta<T, PD_GAMMA_TYPE>::Proc
     cacheTensor0 = cacheBuffer0.Get<float>();
     cacheTensor1 = cacheBuffer1.Get<float>();
 
-    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop
-                              ? td_->gammaBetaMfactor
-                              : (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
+    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop ?
+                              td_->gammaBetaMfactor :
+                              (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
     int64_t loopCount = td_->gammaBetaBasicBlockLoop ? td_->gammaBetaBasicBlockLoop : 1;
     for (int64_t ni = 0; ni < NTotalloop; ++ni) {
         LayerNormGradV3Base::GammaBetaPrologueCommon<PD_GAMMA_TYPE>(td_, outQueueSum, beta_, gamma_);
@@ -88,21 +88,21 @@ __aicore__ inline void LayerNormGradV3RecomputeGammaBeta<T, PD_GAMMA_TYPE>::Proc
             if (td_->gammaBetaBasicBlockLoop > 0 &&
                 ((basicBlockIdx < td_->gammaBetaMainFoldCount) ||
                  (basicBlockIdx == td_->gammaBetaMainFoldCount && td_->gammaBetaMtail > 0))) {
-                const int64_t mfactorFold =
-                    (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor : td_->gammaBetaMtail;
+                const int64_t mfactorFold = (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor :
+                                                                                            td_->gammaBetaMtail;
                 LayerNormGradV3Base::ProcessGammaBetaFoldBlockCommon<T>(
                     td_, ni, basicBlockIdx, mfactorFold, nfactor, dyMain_, xMain_, inQueueDy, inQueueX, inQueueParam,
                     dyInTensorGM, xInTensorGM, rstdInTensorGM, meanInTensorGM);
             }
 
-            LayerNormGradV3Base::GammaBetaProcessSummationCommon(
-                td_, basicBlockIdx, mfactorMain, nfactor, tempTensor, dyMain_, xMain_, cacheTensor0, cacheTensor1,
-                inQueueDy, inQueueX);
+            LayerNormGradV3Base::GammaBetaProcessSummationCommon(td_, basicBlockIdx, mfactorMain, nfactor, tempTensor,
+                                                                 dyMain_, xMain_, cacheTensor0, cacheTensor1, inQueueDy,
+                                                                 inQueueX);
         }
 
-        LayerNormGradV3Base::GammaBetaEpilogueCommon<PD_GAMMA_TYPE>(
-            td_, ni * td_->gammaBetaNfactor, nfactor, outQueueSum, cacheTensor0, cacheTensor1, beta_, gamma_,
-            pdBetaOutTensorGM, pdGammaOutTensorGM);
+        LayerNormGradV3Base::GammaBetaEpilogueCommon<PD_GAMMA_TYPE>(td_, ni * td_->gammaBetaNfactor, nfactor,
+                                                                    outQueueSum, cacheTensor0, cacheTensor1, beta_,
+                                                                    gamma_, pdBetaOutTensorGM, pdGammaOutTensorGM);
     }
 }
 

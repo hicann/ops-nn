@@ -38,8 +38,8 @@ uint64_t UnsortedSegmentSimdSplitColTiling::GetTilingKey() const
 
 void UnsortedSegmentSimdSplitColTiling::SetTilingData()
 {
-    UnsortedSegment::UnsortedSegmentSimdSplitColTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdSplitColTilingData>();
+    UnsortedSegment::UnsortedSegmentSimdSplitColTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdSplitColTilingData>();
     tilingData->inputOuterDim = inputOuterDim_;
     tilingData->outputOuterDim = outputOuterDim_;
     tilingData->innerDim = innerDim_;
@@ -70,8 +70,7 @@ bool UnsortedSegmentSimdSplitColTiling::IsFullLoad()
 
 ge::graphStatus UnsortedSegmentSimdSplitColTiling::DoOpTiling()
 {
-    baseS_ =
-        (ubSize_ - outUbsize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM / (baseA_ * dataTypeBytes_ + idTypeBytes_);
+    baseS_ = (ubSize_ - outUbsize_ - BUFFER_NUM * ubBlockSize_) / BUFFER_NUM / (baseA_ * dataTypeBytes_ + idTypeBytes_);
     SetTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -84,8 +83,8 @@ ge::graphStatus UnsortedSegmentSimdSplitColTiling::PostTiling()
 
 void UnsortedSegmentSimdSplitColTiling::DumpTilingInfo()
 {
-    UnsortedSegment::UnsortedSegmentSimdSplitColTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdSplitColTilingData>();
+    UnsortedSegment::UnsortedSegmentSimdSplitColTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdSplitColTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;

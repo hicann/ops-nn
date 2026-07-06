@@ -67,18 +67,12 @@ static Status ParseOpToGraphGlobalMaxPool(const ge::Operator& op, ge::Graph& gra
 
 REGISTER_CUSTOM_OP("PartitionedCall")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::8::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::9::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::10::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::11::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::12::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::13::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::14::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::15::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::16::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::17::GlobalMaxPool"),
-         ge::AscendString("ai.onnx::18::GlobalMaxPool")})
+    .OriginOpType({ge::AscendString("ai.onnx::8::GlobalMaxPool"), ge::AscendString("ai.onnx::9::GlobalMaxPool"),
+                   ge::AscendString("ai.onnx::10::GlobalMaxPool"), ge::AscendString("ai.onnx::11::GlobalMaxPool"),
+                   ge::AscendString("ai.onnx::12::GlobalMaxPool"), ge::AscendString("ai.onnx::13::GlobalMaxPool"),
+                   ge::AscendString("ai.onnx::14::GlobalMaxPool"), ge::AscendString("ai.onnx::15::GlobalMaxPool"),
+                   ge::AscendString("ai.onnx::16::GlobalMaxPool"), ge::AscendString("ai.onnx::17::GlobalMaxPool"),
+                   ge::AscendString("ai.onnx::18::GlobalMaxPool")})
     .ParseParamsFn(ParseParamsGlobalMaxPool)
     .ParseOpToGraphFn(ParseOpToGraphGlobalMaxPool)
     .ImplyType(ImplyType::TVM);

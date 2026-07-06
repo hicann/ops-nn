@@ -53,8 +53,8 @@ static constexpr int64_t THREE = 3;
 static constexpr int64_t BASIC_FACTOR = 64;
 
 template <typename TilingData>
-bool SetRABlockFactorsCommon(
-    TilingData& tilingData, int64_t aDim, int64_t dtypeSize, uint32_t coreNum, uint64_t blockSize)
+bool SetRABlockFactorsCommon(TilingData& tilingData, int64_t aDim, int64_t dtypeSize, uint32_t coreNum,
+                             uint64_t blockSize)
 {
     if (aDim <= 0 || dtypeSize <= 0 || coreNum == 0 || blockSize == 0) {
         return false;
@@ -174,10 +174,9 @@ ge::graphStatus BatchNormGradV3TilingBase::CheckInputDtypeValid()
             break;
         }
     }
-    OP_TILING_CHECK(
-        invalid == true,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "dtype of inputs are invalid, pls check."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(invalid == true,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "dtype of inputs are invalid, pls check."),
+                    return ge::GRAPH_FAILED);
 
     auto dxDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
@@ -190,22 +189,19 @@ ge::graphStatus BatchNormGradV3TilingBase::CheckInputDtypeValid()
     ge::DataType dbiasDtype = dbiasDesc->GetDataType();
     OP_TILING_CHECK(
         dxDtype != dyDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "dtype of dx should be same as dy, but got %s and %s.",
-            Ops::Base::ToString(dxDtype).c_str(), Ops::Base::ToString(dyDtype).c_str()),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "dtype of dx should be same as dy, but got %s and %s.",
+                                        Ops::Base::ToString(dxDtype).c_str(), Ops::Base::ToString(dyDtype).c_str()),
         return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        dweightDtype != weightDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "dtype of dweight should be same as weight, but got %s and %s.",
-            Ops::Base::ToString(dweightDtype).c_str(), Ops::Base::ToString(weightDtype).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        dbiasDtype != weightDtype,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "dtype of dbias should be same as weight, but got %s and %s.",
-            Ops::Base::ToString(dbiasDtype).c_str(), Ops::Base::ToString(weightDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(dweightDtype != weightDtype,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context_->GetNodeName(), "dtype of dweight should be same as weight, but got %s and %s.",
+                        Ops::Base::ToString(dweightDtype).c_str(), Ops::Base::ToString(weightDtype).c_str()),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(dbiasDtype != weightDtype,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context_->GetNodeName(), "dtype of dbias should be same as weight, but got %s and %s.",
+                        Ops::Base::ToString(dbiasDtype).c_str(), Ops::Base::ToString(weightDtype).c_str()),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -215,32 +211,28 @@ ge::graphStatus BatchNormGradV3TilingBase::CheckSmallShapesValid()
         auto shape = context_->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, shape);
         auto storageShape = shape->GetStorageShape();
-        OP_TILING_CHECK(
-            storageShape.GetDimNum() != 1,
-            VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims of input %d should be one.", i),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(storageShape.GetDimNum() != 1,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims of input %d should be one.", i),
+                        return ge::GRAPH_FAILED);
         int64_t a = storageShape.GetDim(INDEX_0);
-        OP_TILING_CHECK(
-            a != aDim,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "Shape of input %d should be %ld, actual %ld.", i, aDim, a),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(a != aDim,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                                        "Shape of input %d should be %ld, actual %ld.", i, aDim, a),
+                        return ge::GRAPH_FAILED);
     }
 
     for (int i = INDEX_1; i <= INDEX_2; i++) {
         auto shape = context_->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, shape);
         auto storageShape = shape->GetStorageShape();
-        OP_TILING_CHECK(
-            storageShape.GetDimNum() != 1,
-            VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims of output %d should be one.", i),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(storageShape.GetDimNum() != 1,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims of output %d should be one.", i),
+                        return ge::GRAPH_FAILED);
         int64_t a = storageShape.GetDim(INDEX_0);
-        OP_TILING_CHECK(
-            a != aDim,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "Shape of output %d should be %ld, actual %ld.", i, aDim, a),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(a != aDim,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                                        "Shape of output %d should be %ld, actual %ld.", i, aDim, a),
+                        return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -282,13 +274,12 @@ ge::graphStatus BatchNormGradV3TilingBase::CheckBigShapesValid()
     int64_t dxDimNum = dxStorageShape.GetDimNum();
 
     // 校验dim相等
-    OP_TILING_CHECK(
-        dyDimNum != xDimNum || dyDimNum != dxDimNum,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(),
-            "Input Dy dim size [%ld], x dim size [%ld] and Output dx dim size [%ld] should be same", dyDimNum, xDimNum,
-            dxDimNum),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(dyDimNum != xDimNum || dyDimNum != dxDimNum,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context_->GetNodeName(),
+                        "Input Dy dim size [%ld], x dim size [%ld] and Output dx dim size [%ld] should be same",
+                        dyDimNum, xDimNum, dxDimNum),
+                    return ge::GRAPH_FAILED);
 
     // 校验format
     OP_TILING_CHECK(
@@ -300,23 +291,18 @@ ge::graphStatus BatchNormGradV3TilingBase::CheckBigShapesValid()
         return ge::GRAPH_FAILED);
 
     if (dyFormat == ge::FORMAT_NCHW || dyFormat == ge::FORMAT_NHWC) {
-        OP_TILING_CHECK(
-            dyDimNum != DIM_NUM_4,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "Dims should be 4 with format [%s].",
-                ge::TypeUtils::FormatToSerialString(dyFormat).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(dyDimNum != DIM_NUM_4,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims should be 4 with format [%s].",
+                                                        ge::TypeUtils::FormatToSerialString(dyFormat).c_str()),
+                        return ge::GRAPH_FAILED);
     } else if (dyFormat == ge::FORMAT_NCDHW || dyFormat == ge::FORMAT_NDHWC) {
-        OP_TILING_CHECK(
-            dyDimNum != DIM_NUM_5,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "Dims should be 5 with format [%s].",
-                ge::TypeUtils::FormatToSerialString(dyFormat).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(dyDimNum != DIM_NUM_5,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dims should be 5 with format [%s].",
+                                                        ge::TypeUtils::FormatToSerialString(dyFormat).c_str()),
+                        return ge::GRAPH_FAILED);
     } else {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "Not supported format [%s].",
-            ge::TypeUtils::FormatToSerialString(dyFormat).c_str());
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Not supported format [%s].",
+                                        ge::TypeUtils::FormatToSerialString(dyFormat).c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -329,11 +315,10 @@ ge::graphStatus BatchNormGradV3TilingBase::CheckBigShapesValid()
                 "Input Dy dim[%ld]: %ld, X dim[%ld]: %ld and Output Dx dim[%ld]: %ld should be same.", i,
                 dyStorageShape.GetDim(i), i, xStorageShape.GetDim(i), i, dxStorageShape.GetDim(i)),
             return ge::GRAPH_FAILED);
-        OP_TILING_CHECK(
-            dyStorageShape.GetDim(i) <= 0,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "Not support dim[%ld]: %ld.", i, dyStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(dyStorageShape.GetDim(i) <= 0,
+                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Not support dim[%ld]: %ld.", i,
+                                                        dyStorageShape.GetDim(i)),
+                        return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -350,10 +335,9 @@ ge::graphStatus BatchNormGradV3TilingBase::GetDtypesAndCheckValid()
 
     OP_TILING_CHECK(CheckInputDtypeValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
-    OP_LOGD(
-        context_->GetNodeName(), "Dtypes check success. DyDtype: [%s], WeightDtype: [%s].",
-        ge::TypeUtils::DataTypeToSerialString(dyDtype).c_str(),
-        ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str());
+    OP_LOGD(context_->GetNodeName(), "Dtypes check success. DyDtype: [%s], WeightDtype: [%s].",
+            ge::TypeUtils::DataTypeToSerialString(dyDtype).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str());
 
     return ge::GRAPH_SUCCESS;
 }
@@ -388,10 +372,9 @@ ge::graphStatus BatchNormGradV3TilingBase::GetShapesAndCheckValid()
     }
 
     // 小shape 校验
-    OP_TILING_CHECK(
-        CheckSmallShapesValid() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Input small shapes are invalid."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckSmallShapesValid() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Input small shapes are invalid."),
+                    return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -405,17 +388,16 @@ ge::graphStatus BatchNormGradV3TilingBase::GetShapeAttrsInfo()
 
     const bool* isTrainingPtr = attrs->GetBool(0);
     bool isTraining = (isTrainingPtr == nullptr) ? true : *isTrainingPtr;
-    OP_TILING_CHECK(
-        isTraining == false, OP_LOGI(context_->GetNodeName(), "This node only support training."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(isTraining == false, OP_LOGI(context_->GetNodeName(), "This node only support training."),
+                    return ge::GRAPH_PARAM_INVALID);
 
-    OP_TILING_CHECK(
-        GetShapesAndCheckValid() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Input shapes are invalid."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetShapesAndCheckValid() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Input shapes are invalid."),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        GetDtypesAndCheckValid() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Input dtypes are invalid."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetDtypesAndCheckValid() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Input dtypes are invalid."),
+                    return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -445,9 +427,8 @@ ge::graphStatus BatchNormGradV3TilingBase::DoOpTiling()
             blockNum = 1;
         }
     }
-    OP_TILING_CHECK(
-        blockNum == 0, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "block num is 0, failed."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(blockNum == 0, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "block num is 0, failed."),
+                    return ge::GRAPH_FAILED);
     int64_t tailBlockNum = aDim % blockNum;
     int64_t formerBlockDim = aDim / blockNum;
     int64_t tailBlockDim = formerBlockDim + 1;
@@ -463,10 +444,7 @@ ge::graphStatus BatchNormGradV3TilingBase::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchNormGradV3TilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BatchNormGradV3TilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 bool BatchNormGradV3RARFullLoadTilingBase::IsCapable()
 {
@@ -498,46 +476,43 @@ bool BatchNormGradV3RARFullLoadTilingBase::IsCapable()
     binaryAddUbNeed = Ops::Base::CeilDiv(quotientVcaddNum * sizeof(float), blockSize) * blockSize;
     // 开DB占用UB乘以 2
     if ((onceProcUbNeed + reservUbSizeForAlign) * DOUBLE_BUFFER + binaryAddUbNeed > static_cast<int64_t>(ubSize)) {
-        OP_LOGD(
-            context_->GetNodeName(),
-            "shape: %ld_%ld_%ld onceUbNeed: %ld bigger than "
-            "ub: %ld resserve: %ld binaryAdd %ld core: %d, not all load template",
-            r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
+        OP_LOGD(context_->GetNodeName(),
+                "shape: %ld_%ld_%ld onceUbNeed: %ld bigger than "
+                "ub: %ld resserve: %ld binaryAdd %ld core: %d, not all load template",
+                r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
         return false;
     }
-    OP_LOGD(
-        context_->GetNodeName(),
-        "shape: %ld_%ld_%ld onceUbNeed: %ld ub: %ld reserve: %ld binaryAdd: %ld core: %d match all load template",
-        r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
+    OP_LOGD(context_->GetNodeName(),
+            "shape: %ld_%ld_%ld onceUbNeed: %ld ub: %ld reserve: %ld binaryAdd: %ld core: %d match all load template",
+            r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
     return true;
 }
 
 ge::graphStatus BatchNormGradV3RARFullLoadTilingBase::DoOpTiling()
 {
-    OP_TILING_CHECK(
-        onceProcUbNeed == 0, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "onceProcUbNeed is 0, failed."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(onceProcUbNeed == 0,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "onceProcUbNeed is 0, failed."),
+                    return ge::GRAPH_FAILED);
     auto ret = BatchNormGradV3TilingBase::DoOpTiling();
-    OP_TILING_CHECK(
-        ret != ge::GRAPH_SUCCESS, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
+                    return ge::GRAPH_FAILED);
 
     // 考虑开DB，ubsize要减半
-    OP_TILING_CHECK(
-        static_cast<int64_t>((ubSize - binaryAddUbNeed) / DOUBLE_BUFFER) < reservUbSizeForAlign,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "ubsize: %ld reserve: %ld binaryAdd: %ld ub is too small, failed.", ubSize,
-            reservUbSizeForAlign, binaryAddUbNeed),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(static_cast<int64_t>((ubSize - binaryAddUbNeed) / DOUBLE_BUFFER) < reservUbSizeForAlign,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                                    "ubsize: %ld reserve: %ld binaryAdd: %ld ub is too small, failed.",
+                                                    ubSize, reservUbSizeForAlign, binaryAddUbNeed),
+                    return ge::GRAPH_FAILED);
     int64_t formerUbDim = ((ubSize - binaryAddUbNeed) / DOUBLE_BUFFER - reservUbSizeForAlign) / onceProcUbNeed;
-    OP_TILING_CHECK(
-        formerUbDim <= 0, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "formerUbDim is 0, failed."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(formerUbDim <= 0,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "formerUbDim is 0, failed."),
+                    return ge::GRAPH_FAILED);
 
     int64_t formerBlockDim = baseTilingData.get_formerBlockDim();
     int64_t ubLoopOfFormerBlock = Ops::Base::CeilDiv(formerBlockDim, formerUbDim);
-    int64_t ubTailOfFormerBlock =
-        (formerBlockDim > 0) ? (formerBlockDim - (formerUbDim * (ubLoopOfFormerBlock - 1))) : 0;
+    int64_t ubTailOfFormerBlock = (formerBlockDim > 0) ? (formerBlockDim - (formerUbDim * (ubLoopOfFormerBlock - 1))) :
+                                                         0;
 
     int64_t tailBlockDim = baseTilingData.get_tailBlockDim();
     int64_t ubLoopOfTailBlock = Ops::Base::CeilDiv(tailBlockDim, formerUbDim);
@@ -550,13 +525,13 @@ ge::graphStatus BatchNormGradV3RARFullLoadTilingBase::DoOpTiling()
     tilingData.set_ubTailOfFormerBlock(ubTailOfFormerBlock);
     tilingData.set_ubLoopOfTailBlock(ubLoopOfTailBlock);
     tilingData.set_ubTailOfTailBlock(ubTailOfTailBlock);
-    OP_LOGI(
-        context_->GetNodeName(),
-        "BatchNormGradV3 do tiling finish. r1: %ld a: %ld r0: %ld rAlign: %ld "
-        "block: %ld tailBlock: %ld formerBlockDim: %ld tailBlockDIm: %ld formerUbDim: %ld "
-        "ubLoopOfFormerBlock: %ld ubTailOfFormerBlock: %ld ubLoopOfTailBlock: %ld ubTailOfTailBlock: %ld",
-        r1Dim, aDim, r0Dim, rAlign, baseTilingData.get_blockNum(), baseTilingData.get_tailBlockNum(), formerBlockDim,
-        tailBlockDim, formerUbDim, ubLoopOfFormerBlock, ubTailOfFormerBlock, ubLoopOfTailBlock, ubTailOfTailBlock);
+    OP_LOGI(context_->GetNodeName(),
+            "BatchNormGradV3 do tiling finish. r1: %ld a: %ld r0: %ld rAlign: %ld "
+            "block: %ld tailBlock: %ld formerBlockDim: %ld tailBlockDIm: %ld formerUbDim: %ld "
+            "ubLoopOfFormerBlock: %ld ubTailOfFormerBlock: %ld ubLoopOfTailBlock: %ld ubTailOfTailBlock: %ld",
+            r1Dim, aDim, r0Dim, rAlign, baseTilingData.get_blockNum(), baseTilingData.get_tailBlockNum(),
+            formerBlockDim, tailBlockDim, formerUbDim, ubLoopOfFormerBlock, ubTailOfFormerBlock, ubLoopOfTailBlock,
+            ubTailOfTailBlock);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -582,9 +557,9 @@ ge::graphStatus BatchNormGradV3RARFullLoadTilingBase::GetWorkspaceSize()
 ge::graphStatus BatchNormGradV3RARFullLoadTilingBase::PostTiling()
 {
     uint64_t tilingKey = GetTilingKey();
-    OP_TILING_CHECK(
-        tilingKey == BNG_V3_TK_DEFAULT,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to get tiling key."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(tilingKey == BNG_V3_TK_DEFAULT,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to get tiling key."),
+                    return ge::GRAPH_FAILED);
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(baseTilingData.get_blockNum());
     size_t* workspaces = context_->GetWorkspaceSizes(1);
@@ -661,8 +636,8 @@ void BatchNormGradV3RARRecomputeTilingBase::DoRecomputeTilingSplitR0()
     ubRDimFactorAlign = Ops::Base::CeilDiv(ubRDimFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
     ubRDimTail = r0Dim - ubRDimFactor * ubRDimLoopNum;
     // ubRDimFactor / 2 * 2 may be less than ubRDimFactor
-    ubRDimTailFactor =
-        ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? (ubRDimFactor + TWO - 1) / TWO : ubRDimFactor;
+    ubRDimTailFactor = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? (ubRDimFactor + TWO - 1) / TWO :
+                                                                                      ubRDimFactor;
     ubRDimTailFactorAlign = Ops::Base::CeilDiv(ubRDimTailFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
     ubRDimTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? ubRDimTail / ubRDimFactor * TWO :
                                                                                        ubRDimTail / ubRDimFactor;
@@ -693,9 +668,9 @@ ge::graphStatus BatchNormGradV3RARRecomputeTilingBase::DoOpTiling()
 {
     onceProcUbNeed = INT64_MAX;
     auto ret = BatchNormGradV3TilingBase::DoOpTiling();
-    OP_TILING_CHECK(
-        ret != ge::GRAPH_SUCCESS, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
+                    return ge::GRAPH_FAILED);
 
     if (subTilingKey == BNG_V3_RAR_RECOMPUTE_SPLIT_R1) {
         DoRecomputeTilingSplitR1();
@@ -709,17 +684,16 @@ ge::graphStatus BatchNormGradV3RARRecomputeTilingBase::DoOpTiling()
     BatchNormGradV3TilingBase::DoBinaryAddTiling(tilingData.generalBinAddTilingData, generalBinAddQuotient);
     BatchNormGradV3TilingBase::DoBinaryAddTiling(tilingData.tailBinAddTilingData, tailBinAddQuotient);
 
-    OP_LOGI(
-        context_->GetNodeName(),
-        "BatchNormGradV3 do tiling finish. r1: %ld a: %ld r0: %ld rAlign: %ld "
-        "block: %ld tailBlock: %ld formerBlockDim: %ld tailBlockDIm: %ld "
-        "rDimFactor: %ld rDimFactorAlign: %ld rDimLoopNum: %ld "
-        "rDimTail: %ld rDimTailFactor: %ld rDimTailFactorAlign: %ld rDimTailLoopNum: %ld "
-        "rDimTailTail: %ld rDimTailTailFactor: %ld rDimTailTailFactorAlign: %ld rDimTailTailLoopNum: %ld",
-        r1Dim, aDim, r0Dim, rAlign, baseTilingData.get_blockNum(), baseTilingData.get_tailBlockNum(),
-        baseTilingData.get_formerBlockDim(), baseTilingData.get_tailBlockDim(), ubRDimFactor, ubRDimFactorAlign,
-        ubRDimLoopNum, ubRDimTail, ubRDimTailFactor, ubRDimTailFactorAlign, ubRDimTailLoopNum, ubRDimTailTail,
-        ubRDimTailTailFactor, ubRDimTailTailFactorAlign, ubRDimTailTailLoopNum);
+    OP_LOGI(context_->GetNodeName(),
+            "BatchNormGradV3 do tiling finish. r1: %ld a: %ld r0: %ld rAlign: %ld "
+            "block: %ld tailBlock: %ld formerBlockDim: %ld tailBlockDIm: %ld "
+            "rDimFactor: %ld rDimFactorAlign: %ld rDimLoopNum: %ld "
+            "rDimTail: %ld rDimTailFactor: %ld rDimTailFactorAlign: %ld rDimTailLoopNum: %ld "
+            "rDimTailTail: %ld rDimTailTailFactor: %ld rDimTailTailFactorAlign: %ld rDimTailTailLoopNum: %ld",
+            r1Dim, aDim, r0Dim, rAlign, baseTilingData.get_blockNum(), baseTilingData.get_tailBlockNum(),
+            baseTilingData.get_formerBlockDim(), baseTilingData.get_tailBlockDim(), ubRDimFactor, ubRDimFactorAlign,
+            ubRDimLoopNum, ubRDimTail, ubRDimTailFactor, ubRDimTailFactorAlign, ubRDimTailLoopNum, ubRDimTailTail,
+            ubRDimTailTailFactor, ubRDimTailTailFactorAlign, ubRDimTailTailLoopNum);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -744,9 +718,9 @@ ge::graphStatus BatchNormGradV3RARRecomputeTilingBase::GetWorkspaceSize()
 ge::graphStatus BatchNormGradV3RARRecomputeTilingBase::PostTiling()
 {
     uint64_t curTilingKey = GetTilingKey();
-    OP_TILING_CHECK(
-        curTilingKey == BNG_V3_TK_DEFAULT,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to get tiling key."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(curTilingKey == BNG_V3_TK_DEFAULT,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to get tiling key."),
+                    return ge::GRAPH_FAILED);
     context_->SetTilingKey(curTilingKey);
     context_->SetBlockDim(baseTilingData.get_blockNum());
     size_t* curWorkspaces = context_->GetWorkspaceSizes(1);
@@ -783,9 +757,9 @@ ge::graphStatus BatchNormGradV3RAFullLoadTilingBase::DoOpTiling()
 {
     onceProcUbNeed = INT64_MAX;
     auto ret = BatchNormGradV3TilingBase::DoOpTiling();
-    OP_TILING_CHECK(
-        ret != ge::GRAPH_SUCCESS, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
+                    return ge::GRAPH_FAILED);
 
     int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
     int64_t weightDtypeSize = weightDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
@@ -793,23 +767,22 @@ ge::graphStatus BatchNormGradV3RAFullLoadTilingBase::DoOpTiling()
     int64_t aDim_ = tilingData.baseTilingData.get_aDim();
     int64_t power2k = 1L << (63 - __builtin_clzl(rDim_ - 1));
 
-    OP_TILING_CHECK(
-        !SetRABlockFactorsCommon(tilingData, aDim_, dtypeSize, coreNum, blockSize),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to set RA block factors."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!SetRABlockFactorsCommon(tilingData, aDim_, dtypeSize, coreNum, blockSize),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to set RA block factors."),
+                    return ge::GRAPH_FAILED);
     CalculateLoopFactors(dtypeSize, weightDtypeSize, rDim_, power2k);
     SetReduceLoopTimes(power2k, rDim_);
 
     return ge::GRAPH_SUCCESS;
 }
 
-void BatchNormGradV3RAFullLoadTilingBase::CalculateLoopFactors(
-    int64_t dtypeSize, int64_t weightDtypeSize, int64_t rDim_, int64_t power2k)
+void BatchNormGradV3RAFullLoadTilingBase::CalculateLoopFactors(int64_t dtypeSize, int64_t weightDtypeSize,
+                                                               int64_t rDim_, int64_t power2k)
 {
     auto calculateLoopFactors = [&](int64_t blockFactor, int64_t& loopFactor, int64_t& loopFactorAligned) {
         for (int64_t factor = 1; factor <= blockFactor; ++factor) {
-            int64_t factorAligned =
-                Ops::Base::CeilDiv(static_cast<uint64_t>(factor * dtypeSize), blockSize) * blockSize / dtypeSize;
+            int64_t factorAligned = Ops::Base::CeilDiv(static_cast<uint64_t>(factor * dtypeSize), blockSize) *
+                                    blockSize / dtypeSize;
             int64_t total_bytes = rDim_ * factorAligned * dtypeSize * DOUBLE_BUFFER * THREE +
                                   factorAligned * FLOAT_BYTE_NUMBER * DOUBLE_BUFFER * TWO +
                                   factorAligned * weightDtypeSize * DOUBLE_BUFFER * THREE +
@@ -897,9 +870,9 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::DoOpTiling()
 {
     onceProcUbNeed = INT64_MAX;
     auto ret = BatchNormGradV3TilingBase::DoOpTiling();
-    OP_TILING_CHECK(
-        ret != ge::GRAPH_SUCCESS, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to do base tiling."),
+                    return ge::GRAPH_FAILED);
     int64_t aLoopFactor = BASIC_FACTOR;
     int64_t rLoopFactor = BASIC_FACTOR;
     int64_t aLoopFactorAligned = BASIC_FACTOR;
@@ -908,10 +881,9 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::DoOpTiling()
     int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
     int64_t rDim_ = tilingData.baseTilingData.get_r1Dim();
     int64_t aDim_ = tilingData.baseTilingData.get_aDim();
-    OP_TILING_CHECK(
-        !SetRABlockFactorsCommon(tilingData, aDim_, dtypeSize, coreNum, blockSize),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to set RA block factors."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!SetRABlockFactorsCommon(tilingData, aDim_, dtypeSize, coreNum, blockSize),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to set RA block factors."),
+                    return ge::GRAPH_FAILED);
 
     // ub tiling
     int64_t rLoopTimes = rDim_ / rLoopFactor;
@@ -925,8 +897,9 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::DoOpTiling()
     // ub binary add
     int64_t binaryBlockCount = (rDim_ + rLoopFactor - 1) / rLoopFactor;
     int64_t binaryTailBlock = rDim_ - (rDim_ / rLoopFactor) * rLoopFactor;
-    int64_t binaryFoldPoint =
-        (binaryBlockCount <= 1) ? 0 : 1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binaryBlockCount - 1));
+    int64_t binaryFoldPoint = (binaryBlockCount <= 1) ?
+                                  0 :
+                                  1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binaryBlockCount - 1));
     int64_t cacheBufferCount = ULONG_BIT_LEN - __builtin_clzl(binaryFoldPoint);
     tilingData.set_binaryFoldPoint(binaryFoldPoint);
     tilingData.set_binaryBlockCount(binaryBlockCount);
@@ -944,7 +917,7 @@ uint64_t BatchNormGradV3RARecomputeTilingBase::GetTilingKey() const
     if (dyDtype != ge::DataType::DT_FLOAT && dyDtype != ge::DataType::DT_FLOAT16 && dyDtype != ge::DataType::DT_BF16) {
         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "DoLibApiTiling Not supported datatype.");
         return BNG_V3_TK_DEFAULT;
-    } 
+    }
     uint64_t tilingKeyValue = BNG_V3_RA_RECOMPUTE_TK_BASE;
     OP_LOGD(context_->GetNodeName(), "BatchNormGradV3 get tiling key: %lx", tilingKeyValue);
     return tilingKeyValue;
@@ -976,8 +949,8 @@ ge::graphStatus TilingForBatchNormGradV3(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForBatchNormGradV3(gert::TilingParseContext* context)
 {
-    OP_TILING_CHECK(
-        context == nullptr, OP_LOGE("BatchNormGradV3", "TilingParseContext is nullptr."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(context == nullptr, OP_LOGE("BatchNormGradV3", "TilingParseContext is nullptr."),
+                    return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "TilingPrepareForBatchNormGradV3 enter.");
 
     auto compileInfo = context->GetCompiledInfo<BatchNormGradV3CompileInfo>();
@@ -990,20 +963,18 @@ ge::graphStatus TilingPrepareForBatchNormGradV3(gert::TilingParseContext* contex
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_TILING_CHECK(
-        (compileInfo->coreNum <= 0),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context->GetNodeName(), "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((compileInfo->coreNum <= 0),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Get core num failed, core num: %u",
+                                                    static_cast<uint32_t>(compileInfo->coreNum)),
+                    return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = ubSize;
-    OP_TILING_CHECK(
-        (compileInfo->ubSize <= 0),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context->GetNodeName(), "Get ub size failed, ub size: %lu", compileInfo->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((compileInfo->ubSize <= 0),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Get ub size failed, ub size: %lu",
+                                                    compileInfo->ubSize),
+                    return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "TilingPrepareForBatchNormGradV3 exit, ubSize: %ld.", ubSize);
     return ge::GRAPH_SUCCESS;

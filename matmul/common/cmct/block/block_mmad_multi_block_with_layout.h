@@ -27,30 +27,29 @@ namespace Gemm {
 namespace Block {
 template <class L1TileShape, class L0TileShape, class AT, class BT, class CT, class BiasT, class TileCopy>
 class BlockMmad<MatmulMultiBlockWithLayout<>, L1TileShape, L0TileShape, AT, BT, CT, BiasT, TileCopy,
-    AscendC::Std::enable_if_t<IsMatmulLayoutTypeV<AT>>>
-    : public BlockMmad<MatmulMultiBlockWithLayout<>, L1TileShape, L0TileShape,
-        ToMatmulTypeT<AT>, ToMatmulTypeT<BT>, ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy> {
-    using Base = BlockMmad<MatmulMultiBlockWithLayout<>, L1TileShape, L0TileShape,
-                           ToMatmulTypeT<AT>, ToMatmulTypeT<BT>, ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy>;
+                AscendC::Std::enable_if_t<IsMatmulLayoutTypeV<AT>>>
+    : public BlockMmad<MatmulMultiBlockWithLayout<>, L1TileShape, L0TileShape, ToMatmulTypeT<AT>, ToMatmulTypeT<BT>,
+                       ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy> {
+    using Base = BlockMmad<MatmulMultiBlockWithLayout<>, L1TileShape, L0TileShape, ToMatmulTypeT<AT>, ToMatmulTypeT<BT>,
+                           ToMatmulTypeT<CT>, ToMatmulTypeT<BiasT>, TileCopy>;
     using Base::Base;
 };
 
 /**
-* @class BlockMmad
-* @brief A template class for handling matrix multiplication across multiple blocks
-*
-* This class is specialized base on MatmulMultiBlockWithLayout<>
-*/
+ * @class BlockMmad
+ * @brief A template class for handling matrix multiplication across multiple blocks
+ *
+ * This class is specialized base on MatmulMultiBlockWithLayout<>
+ */
 template <class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType, class TileCopy>
 class BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy,
-    AscendC::Std::enable_if_t<
-        !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>> &&
-        !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitNWithParams>> &&
-        !IsMatmulLayoutTypeV<AType>
-    >> : public BlockMmadWithLayout<
-        BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>,
-        MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy
-    > {
+                AscendC::Std::enable_if_t<
+                    !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>> &&
+                    !AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitNWithParams>> &&
+                    !IsMatmulLayoutTypeV<AType>>>
+    : public BlockMmadWithLayout<
+          BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>,
+          MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy> {
 public:
     using DispatchPolicy = MatmulMultiBlockWithLayout<>;
     using Self = BlockMmad<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
@@ -58,10 +57,9 @@ public:
     friend class BlockMmadWithLayout<Self, DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
 
     static_assert(AscendC::PhyPosIsGM(AType::pos) && AscendC::PhyPosIsGM(BType::pos), "Only support GM input");
-    static_assert(
-        IsF16OrBf16AB<AType, BType, CType>() || IsI8I8I32<AType, BType, CType>() || IsF32F32F32<AType, BType, CType>(),
-        "Unsupported dtype"
-    );
+    static_assert(IsF16OrBf16AB<AType, BType, CType>() || IsI8I8I32<AType, BType, CType>() ||
+                      IsF32F32F32<AType, BType, CType>(),
+                  "Unsupported dtype");
     static_assert(IsNDOrAlign<AType>() && IsNDOrAlign<CType>(), "Only support ND format");
 
 private:
@@ -69,31 +67,29 @@ private:
 };
 
 /**
-* @class BlockMmad
-* @brief A template class for handling matrix multiplication across multiple blocks
-*
-* This class is specialized base on MatmulMultiBlockWithLayout<>, specifically for splitM/spltN scenarios
-*/
+ * @class BlockMmad
+ * @brief A template class for handling matrix multiplication across multiple blocks
+ *
+ * This class is specialized base on MatmulMultiBlockWithLayout<>, specifically for splitM/spltN scenarios
+ */
 template <class L1Shape, class L0Shape, class AType, class BType, class CType, class BiasType, class TileCopy>
-class BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy,
-    AscendC::Std::enable_if_t<
-        (AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>> ||
-        AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitNWithParams>>) &&
-        !IsMatmulLayoutTypeV<AType>
-    >> : public BlockMmadWithLayout<
-        BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>,
-        MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy
-    > {
+class BlockMmad<
+    MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy,
+    AscendC::Std::enable_if_t<(
+        AscendC::Std::is_same_v<TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitMWithParams>> ||
+        AscendC::Std::is_same_v<
+            TileCopy, Tile::TileCopy<Arch::DAV3510, Tile::CopyOutSplitNWithParams>>)&&!IsMatmulLayoutTypeV<AType>>>
+    : public BlockMmadWithLayout<
+          BlockMmad<MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>,
+          MatmulMultiBlockWithLayout<>, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy> {
 public:
     using DispatchPolicy = MatmulMultiBlockWithLayout<>;
     using Self = BlockMmad<DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
     using Base = BlockMmadWithLayout<Self, DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
     friend class BlockMmadWithLayout<Self, DispatchPolicy, L1Shape, L0Shape, AType, BType, CType, BiasType, TileCopy>;
 
-    static_assert(
-        AscendC::PhyPosIsGM(AType::pos) && AscendC::PhyPosIsGM(BType::pos) && AscendC::PhyPosIsUB(CType::pos),
-        "Only GM input and UB output support splitM or splitN"
-    );
+    static_assert(AscendC::PhyPosIsGM(AType::pos) && AscendC::PhyPosIsGM(BType::pos) && AscendC::PhyPosIsUB(CType::pos),
+                  "Only GM input and UB output support splitM or splitN");
     static_assert(IsF16F16F32<AType, BType, CType>() || IsBf16Bf16F32<AType, BType, CType>() ||
                       IsF32F32F32<AType, BType, CType>(),
                   "Unsupported dtype");
@@ -105,4 +101,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

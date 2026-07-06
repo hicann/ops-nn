@@ -26,17 +26,13 @@ class QuantBatchMatmulV3CheckerBase {
 public:
     explicit QuantBatchMatmulV3CheckerBase(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
         : context_(context), inputParams_(inputParams)
-    {
-    }
+    {}
 
     virtual ~QuantBatchMatmulV3CheckerBase() = default;
-    virtual bool CheckDtype() const
-    {
-        return false;
-    }
-    virtual bool CheckShape(
-        const std::vector<gert::Shape*>& /* mandtoryShape */, const gert::StorageShape* /* biasShape */,
-        const gert::StorageShape* /* pertokenShape */, const std::vector<int64_t>& /* dimValueOfMKN */) const
+    virtual bool CheckDtype() const { return false; }
+    virtual bool CheckShape(const std::vector<gert::Shape*>& /* mandtoryShape */,
+                            const gert::StorageShape* /* biasShape */, const gert::StorageShape* /* pertokenShape */,
+                            const std::vector<int64_t>& /* dimValueOfMKN */) const
     {
         return false;
     }
@@ -54,29 +50,11 @@ protected:
     constexpr static uint32_t PERTOKEN_SCALE_INDEX = 5;
 
     // Override these helpers when the V4 signature uses different input indices.
-    virtual uint32_t GetX1Idx() const
-    {
-        return X1_INDEX;
-    }
-    virtual uint32_t GetX2Idx() const
-    {
-        return X2_INDEX;
-    }
-    virtual uint32_t GetScaleIdx() const
-    {
-        return SCALE_INDEX;
-    }
-    virtual uint32_t GetOffsetIdx() const
-    {
-        return OFFSET_INDEX;
-    }
-    virtual uint32_t GetBiasIdx() const
-    {
-        return BIAS_INDEX;
-    }
-    virtual uint32_t GetPertokenIdx() const
-    {
-        return PERTOKEN_SCALE_INDEX;
-    }
+    virtual uint32_t GetX1Idx() const { return X1_INDEX; }
+    virtual uint32_t GetX2Idx() const { return X2_INDEX; }
+    virtual uint32_t GetScaleIdx() const { return SCALE_INDEX; }
+    virtual uint32_t GetOffsetIdx() const { return OFFSET_INDEX; }
+    virtual uint32_t GetBiasIdx() const { return BIAS_INDEX; }
+    virtual uint32_t GetPertokenIdx() const { return PERTOKEN_SCALE_INDEX; }
 };
-}  // namespace optiling
+} // namespace optiling

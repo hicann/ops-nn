@@ -26,37 +26,33 @@ constexpr int IDX_INT8 = 2;
 
 inline static const std::array<aclTensor*, ADD_RMS_NORM_DYNAMIC_QUANT_OUT_NUM> AddRmsNormDynamicQuantAiCore(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon, 
-    const aclBoolArray* outputMask, int dstType, aclTensor* scale1Out,
-    aclTensor* scale2Out, aclOpExecutor* executor)
+    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon,
+    const aclBoolArray* outputMask, int dstType, aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
 {
     OP_LOGD("AddRmsNormDynamicQuant L0 Start.");
-    L0_DFX(AddRmsNormDynamicQuantAiCore, x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
-           epsilon, outputMask, dstType, scale1Out, scale2Out);
+    L0_DFX(AddRmsNormDynamicQuantAiCore, x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, epsilon, outputMask,
+           dstType, scale1Out, scale2Out);
     OP_LOGD("AddRmsNormDynamicQuant L0_DFX.");
 
     bool out2Flag = false;
     if (outputMask != nullptr && outputMask->Size() == OUTPUT_MASK_LEN) {
-      out2Flag = (*outputMask)[IDX_1];
+        out2Flag = (*outputMask)[IDX_1];
     } else {
-      out2Flag = (nullptr != smoothScale1Optional) && (nullptr != smoothScale2Optional);
+        out2Flag = (nullptr != smoothScale1Optional) && (nullptr != smoothScale2Optional);
     }
     Shape dummyShape({1});
 
     auto y1Out = executor->AllocTensor(x1->GetViewShape(), op::DataType(dstType), op::Format::FORMAT_ND);
     auto xOut = executor->AllocTensor(x1->GetViewShape(), x1->GetDataType(), op::Format::FORMAT_ND);
-    auto y2Out = out2Flag ?
-                     executor->AllocTensor(x1->GetViewShape(), op::DataType(dstType), op::Format::FORMAT_ND) :
-                     executor->AllocTensor(dummyShape, op::DataType(dstType), op::Format::FORMAT_ND);
+    auto y2Out = out2Flag ? executor->AllocTensor(x1->GetViewShape(), op::DataType(dstType), op::Format::FORMAT_ND) :
+                            executor->AllocTensor(dummyShape, op::DataType(dstType), op::Format::FORMAT_ND);
 
-    OP_LOGD(
-        "y1Out=[%s], y2Out=[%s], xOut=[%s].", op::ToString(y1Out->GetViewShape()).GetString(),
-        op::ToString(y2Out->GetViewShape()).GetString(), op::ToString(xOut->GetViewShape()).GetString());
+    OP_LOGD("y1Out=[%s], y2Out=[%s], xOut=[%s].", op::ToString(y1Out->GetViewShape()).GetString(),
+            op::ToString(y2Out->GetViewShape()).GetString(), op::ToString(xOut->GetViewShape()).GetString());
 
     ADD_TO_LAUNCHER_LIST_AICORE(
         AddRmsNormDynamicQuant, OP_INPUT(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional),
-        OP_OUTPUT(y1Out, y2Out, xOut, scale1Out, scale2Out),
-        OP_ATTR(static_cast<float>(epsilon), outputMask));
+        OP_OUTPUT(y1Out, y2Out, xOut, scale1Out, scale2Out), OP_ATTR(static_cast<float>(epsilon), outputMask));
     OP_LOGI("AddRmsNormDynamicQuant Launch finish.");
 
     return {y1Out, y2Out, xOut};
@@ -64,23 +60,21 @@ inline static const std::array<aclTensor*, ADD_RMS_NORM_DYNAMIC_QUANT_OUT_NUM> A
 
 const std::array<aclTensor*, ADD_RMS_NORM_DYNAMIC_QUANT_OUT_NUM> AddRmsNormDynamicQuant(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon, const aclBoolArray* outputMask,
-    aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
+    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon,
+    const aclBoolArray* outputMask, aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
 {
     int dstType = IDX_INT8;
-    return AddRmsNormDynamicQuantAiCore(
-        x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional, epsilon, outputMask, dstType, scale1Out,
-        scale2Out, executor);
+    return AddRmsNormDynamicQuantAiCore(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional,
+                                        epsilon, outputMask, dstType, scale1Out, scale2Out, executor);
 }
 
 const std::array<aclTensor*, ADD_RMS_NORM_DYNAMIC_QUANT_OUT_NUM> AddRmsNormDynamicQuant(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* smoothScale1Optional,
-    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon, const aclBoolArray* outputMask,
-    int dstType, aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
+    const aclTensor* smoothScale2Optional, const aclTensor* betaOptional, double epsilon,
+    const aclBoolArray* outputMask, int dstType, aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
 {
-    return AddRmsNormDynamicQuantAiCore(
-        x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional, epsilon, outputMask, dstType, scale1Out,
-        scale2Out, executor);
+    return AddRmsNormDynamicQuantAiCore(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional,
+                                        epsilon, outputMask, dstType, scale1Out, scale2Out, executor);
 }
 
 } // namespace l0op

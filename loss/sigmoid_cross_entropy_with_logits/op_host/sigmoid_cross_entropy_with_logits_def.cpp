@@ -16,30 +16,31 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class SigmoidCrossEntropyWithLogits : public OpDef {
-    public:
-        explicit SigmoidCrossEntropyWithLogits(const char *name) : OpDef(name) {
-            this->Input("predict")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("target")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("loss")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+class SigmoidCrossEntropyWithLogits : public OpDef {
+public:
+    explicit SigmoidCrossEntropyWithLogits(const char* name) : OpDef(name)
+    {
+        this->Input("predict")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("target")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("loss")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
-    };
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
 
-    OP_ADD(SigmoidCrossEntropyWithLogits);
+OP_ADD(SigmoidCrossEntropyWithLogits);
 } // namespace ops

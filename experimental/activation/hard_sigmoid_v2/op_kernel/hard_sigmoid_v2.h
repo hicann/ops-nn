@@ -29,7 +29,7 @@ constexpr int32_t INT32_SHIFT_VALUE = -2;
 constexpr int32_t INT32_CLAMP_VALUE = 1;
 
 template <typename Kernel>
-__aicore__ inline void ProcessTiles(Kernel &kernel, int64_t blockLength, int64_t tileLength)
+__aicore__ inline void ProcessTiles(Kernel& kernel, int64_t blockLength, int64_t tileLength)
 {
     int64_t tileNum = (blockLength + tileLength - 1) / tileLength;
     if (tileNum == 0) {
@@ -51,17 +51,14 @@ __aicore__ inline void ProcessTiles(Kernel &kernel, int64_t blockLength, int64_t
 template <typename Derived, typename T>
 class KernelHardSigmoidV2Base {
 public:
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const HardSigmoidV2TilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const HardSigmoidV2TilingData* tilingData)
     {
         InitBlockGm(x, y, tilingData);
         pipe_.InitBuffer(inOutQueue_, BUFFER_NUM, tileLength_ * sizeof(T));
-        static_cast<Derived &>(*this).InitExtraBuffers();
+        static_cast<Derived&>(*this).InitExtraBuffers();
     }
 
-    __aicore__ inline void Process()
-    {
-        ProcessTiles(static_cast<Derived &>(*this), blockLength_, tileLength_);
-    }
+    __aicore__ inline void Process() { ProcessTiles(static_cast<Derived&>(*this), blockLength_, tileLength_); }
 
     __aicore__ inline void CopyIn(int64_t progress, int64_t curTileLength)
     {
@@ -81,19 +78,19 @@ public:
     }
 
 protected:
-    __aicore__ inline void InitBlockGm(GM_ADDR x, GM_ADDR y, const HardSigmoidV2TilingData *tilingData)
+    __aicore__ inline void InitBlockGm(GM_ADDR x, GM_ADDR y, const HardSigmoidV2TilingData* tilingData)
     {
         int64_t blockIdx = GetBlockIdx();
         if (blockIdx < tilingData->formerNum) {
             blockLength_ = tilingData->formerLength;
             int64_t offset = tilingData->formerLength * blockIdx;
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->formerLength);
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->formerLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->formerLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->formerLength);
         } else {
             blockLength_ = tilingData->tailLength;
             int64_t offset = tilingData->formerLength * tilingData->formerNum;
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->tailLength);
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->tailLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->tailLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->tailLength);
         }
 
         tileLength_ = tilingData->tileLength;
@@ -177,6 +174,6 @@ public:
     }
 };
 
-}  // namespace NsHardSigmoidV2
+} // namespace NsHardSigmoidV2
 
 #endif

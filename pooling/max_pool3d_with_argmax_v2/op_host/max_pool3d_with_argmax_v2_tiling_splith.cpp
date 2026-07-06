@@ -30,13 +30,13 @@ bool MaxPool3DWithArgmaxV2SplitHTiling::IsCapable()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
-    } 
+    }
     splitData.partD = inputData.dilation[D_DIM] * (inputData.kernelSize[D_DIM] - 1) + 1;
     splitData.partOutD = 1UL;
-    array<uint64_t, DHW_DIMS> parts{
-        splitData.partD, padInputData.padInputShape[H_DIM], padInputData.padInputShape[W_DIM]};
+    array<uint64_t, DHW_DIMS> parts{splitData.partD, padInputData.padInputShape[H_DIM],
+                                    padInputData.padInputShape[W_DIM]};
     array<uint64_t, DHW_DIMS> partOuts{splitData.partOutD, inputData.outShape[H_DIM], inputData.outShape[W_DIM]};
 
     FindSplitParts(parts, partOuts, bufSizes, H_DIM);
@@ -73,8 +73,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2SplitHTiling::SmallBatchesTiling(void)
     splitData.leftOverParts = (wholeCount * (batchesBlock + additionBatch)) % coreNum;
     uint64_t count = 0;
     uint64_t curPos = 0;
-    uint64_t offH =
-        splitData.partH - (inputData.kernelSize[H_DIM] - 1) * inputData.dilation[H_DIM] + inputData.stride[H_DIM] - 1;
+    uint64_t offH = splitData.partH - (inputData.kernelSize[H_DIM] - 1) * inputData.dilation[H_DIM] +
+                    inputData.stride[H_DIM] - 1;
     for (uint64_t b = 0UL; b < (batchesBlock + (batchesRem != 0UL)); b++) {
         if ((count != 0UL) && (curPos > 0UL)) {
             if (b < batchesBlock) {

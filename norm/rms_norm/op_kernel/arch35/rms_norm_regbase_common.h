@@ -68,9 +68,8 @@ __aicore__ inline void SetOverflowMode(uint64_t mode)
 }
 
 template <typename T, typename U, typename R>
-__aicore__ inline void YCopyOutImpl(
-    const U& dstTensor, const R& srcTensor, uint32_t blockCount, uint32_t blockLen, uint32_t srcStride = 0,
-    uint32_t dstStride = 0)
+__aicore__ inline void YCopyOutImpl(const U& dstTensor, const R& srcTensor, uint32_t blockCount, uint32_t blockLen,
+                                    uint32_t srcStride = 0, uint32_t dstStride = 0)
 {
     DataCopyExtParams extParams{
         static_cast<uint16_t>(blockCount),           // blockCount
@@ -95,9 +94,9 @@ __aicore__ inline void YCopyOutImpl(
  * @return void
  */
 template <typename T, typename U, typename R>
-__aicore__ inline void DataCopyImpl(
-    const U& dstTensor, const R& srcTensor, uint32_t blockCount, uint32_t blockLen, uint32_t srcStride = 0,
-    uint32_t dstStride = 0, const DataCopyPadExtParams<T> padParams = {false, 0, 0, 0})
+__aicore__ inline void DataCopyImpl(const U& dstTensor, const R& srcTensor, uint32_t blockCount, uint32_t blockLen,
+                                    uint32_t srcStride = 0, uint32_t dstStride = 0,
+                                    const DataCopyPadExtParams<T> padParams = {false, 0, 0, 0})
 {
     DataCopyExtParams extParams{
         static_cast<uint16_t>(blockCount),           // blockCount
@@ -114,9 +113,8 @@ __aicore__ inline void DataCopyImpl(
 }
 
 template <typename T_X>
-__aicore__ inline void CopyInX(
-    TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T_X>& srcGm, uint64_t gmOffset, uint32_t blockLen,
-    uint32_t left = 0, uint32_t right = 0)
+__aicore__ inline void CopyInX(TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T_X>& srcGm, uint64_t gmOffset,
+                               uint32_t blockLen, uint32_t left = 0, uint32_t right = 0)
 {
     LocalTensor<T_X> xLocal = inQueueX.AllocTensor<T_X>();
     DataCopyPadExtParams<T_X> padParams{
@@ -130,8 +128,8 @@ __aicore__ inline void CopyInX(
 }
 
 template <typename T_X>
-__aicore__ inline void CopyOutX(
-    GlobalTensor<T_X>& xGm, TQue<QuePosition::VECOUT, 1>& outQueueX, uint64_t gmOffset, uint32_t blockLen)
+__aicore__ inline void CopyOutX(GlobalTensor<T_X>& xGm, TQue<QuePosition::VECOUT, 1>& outQueueX, uint64_t gmOffset,
+                                uint32_t blockLen)
 {
     LocalTensor<T_X> xLocal = outQueueX.DeQue<T_X>();
     DataCopyImpl<T_X>(xGm[gmOffset], xLocal, 1, blockLen);
@@ -139,8 +137,8 @@ __aicore__ inline void CopyOutX(
 }
 
 template <typename T_Y>
-__aicore__ inline void CopyOutY(
-    GlobalTensor<T_Y>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset, uint32_t blockLen)
+__aicore__ inline void CopyOutY(GlobalTensor<T_Y>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset,
+                                uint32_t blockLen)
 {
     LocalTensor<T_Y> yLocal = outQueueY.DeQue<T_Y>();
     YCopyOutImpl<T_Y>(yGm[gmOffset], yLocal, 1, blockLen);
@@ -155,8 +153,8 @@ __aicore__ inline void CopyOutY(
  * @param count vector size
  * @return
  */
-__aicore__ inline void ComputeFormer(
-    LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, float scalar, uint32_t count)
+__aicore__ inline void ComputeFormer(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, float scalar,
+                                     uint32_t count)
 {
     __local_mem__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
     __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
@@ -188,8 +186,8 @@ __aicore__ inline void ComputeFormer(
  * @return
  */
 template <typename T>
-__aicore__ inline void ComputeFormer(
-    LocalTensor<float>& dstLocal, LocalTensor<float>& xFp32, LocalTensor<T>& srcLocal, float scalar, uint32_t count)
+__aicore__ inline void ComputeFormer(LocalTensor<float>& dstLocal, LocalTensor<float>& xFp32, LocalTensor<T>& srcLocal,
+                                     float scalar, uint32_t count)
 {
     uint32_t calCount = count / 2;
     uint32_t sreg = (uint32_t)calCount;
@@ -390,9 +388,8 @@ __aicore__ inline void ComputeRstd(LocalTensor<float>& rstdLocal, float epsilon,
  * @return void
  */
 template <typename DX, typename DG>
-__aicore__ inline void ComputeY(
-    LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal, LocalTensor<float>& rstdLocal,
-    uint32_t offset, uint32_t count)
+__aicore__ inline void ComputeY(LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal,
+                                LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count)
 {
     uint32_t calCount = count / 2;
     uint32_t sreg = (uint32_t)calCount;
@@ -486,11 +483,11 @@ __aicore__ inline void ComputeY(
 }
 
 template <typename DG>
-__aicore__ inline void GemmaWithOutFloat(
-    RegTensor<DG> gammaReg1, RegTensor<DG> gammaReg2, RegTensor<float>& gammaFp32Reg1, RegTensor<float>& gammaFp32Reg2, 
-    uint8_t isGemma, MaskReg pregMask)
+__aicore__ inline void GemmaWithOutFloat(RegTensor<DG> gammaReg1, RegTensor<DG> gammaReg2,
+                                         RegTensor<float>& gammaFp32Reg1, RegTensor<float>& gammaFp32Reg2,
+                                         uint8_t isGemma, MaskReg pregMask)
 {
-    if(isGemma) {
+    if (isGemma) {
         RegTensor<float> gammaTmp1, gammaTmp2;
         Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, pregMask);
         Cast<float, DG, castTraitB162B32>(gammaTmp2, gammaReg2, pregMask);
@@ -503,11 +500,11 @@ __aicore__ inline void GemmaWithOutFloat(
 }
 
 template <typename DG>
-__aicore__ inline void GemmaWithFloat(
-    __local_mem__ DG* gammaAddr1, __local_mem__ DG* gammaAddr2, RegTensor<DG>& gammaReg1, RegTensor<DG>& gammaReg2, 
-    uint8_t isGemma, MaskReg maskReg, uint16_t i)
+__aicore__ inline void GemmaWithFloat(__local_mem__ DG* gammaAddr1, __local_mem__ DG* gammaAddr2,
+                                      RegTensor<DG>& gammaReg1, RegTensor<DG>& gammaReg2, uint8_t isGemma,
+                                      MaskReg maskReg, uint16_t i)
 {
-    if(isGemma) {
+    if (isGemma) {
         RegTensor<float> gammaTmp1, gammaTmp2;
         DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
         DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
@@ -530,9 +527,9 @@ __aicore__ inline void GemmaWithFloat(
  * @return void
  */
 template <typename DX, typename DG>
-__aicore__ inline void ComputeYMultiN(
-    LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal, LocalTensor<float>& rstdLocal, 
-    uint32_t offset, uint32_t count, uint32_t curRows, uint8_t isGemma)
+__aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal,
+                                      LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count, uint32_t curRows,
+                                      uint8_t isGemma)
 {
     uint32_t calCount = count / 2;
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
@@ -656,9 +653,8 @@ __aicore__ inline void ComputeYMultiN(
  * @return void
  */
 template <typename DX, typename DG>
-__aicore__ inline void ComputeLatterY(
-    LocalTensor<DX>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal, LocalTensor<float>& rstdLocal,
-    uint32_t offset, uint32_t count, uint8_t isGemma)
+__aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal,
+                                      LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count, uint8_t isGemma)
 {
     uint32_t calCount = count / 2;
     uint32_t sreg = (uint32_t)calCount;
@@ -688,7 +684,7 @@ __aicore__ inline void ComputeLatterY(
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
                 DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
                 DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                if(isGemma) {
+                if (isGemma) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, maskReg);
                     Cast<float, DG, castTraitB162B32>(gammaTmp2, gammaReg2, maskReg);
@@ -723,7 +719,7 @@ __aicore__ inline void ComputeLatterY(
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
-                if(isGemma) {
+                if (isGemma) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
                     DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
@@ -757,7 +753,7 @@ __aicore__ inline void ComputeLatterY(
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                 DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                if(isGemma) {
+                if (isGemma) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
                     DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
@@ -788,9 +784,9 @@ __aicore__ inline void ComputeLatterY(
  * @param level3 level3 elements
  * @return void
  */
-__aicore__ inline void ComputeMultiLevelReduce(
-    LocalTensor<float>& level1Local, LocalTensor<float>& level2Local, LocalTensor<float>& level3Local, uint32_t& level1,
-    uint32_t& level2, uint32_t& level3)
+__aicore__ inline void ComputeMultiLevelReduce(LocalTensor<float>& level1Local, LocalTensor<float>& level2Local,
+                                               LocalTensor<float>& level3Local, uint32_t& level1, uint32_t& level2,
+                                               uint32_t& level3)
 {
     if (level1 == NormCommon::ONCE_VECTOR_SIZE) {
         LevelMergeRstd<false>(level2Local, level1Local, level2, NormCommon::ONCE_VECTOR_SIZE);
@@ -804,8 +800,8 @@ __aicore__ inline void ComputeMultiLevelReduce(
     }
 }
 
-__aicore__ inline void ComputeSum(
-    LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, uint32_t offset, uint32_t count)
+__aicore__ inline void ComputeSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, uint32_t offset,
+                                  uint32_t count)
 {
     uint32_t meanTile = count;
     uint32_t meanSreg = meanTile;
@@ -837,9 +833,9 @@ __aicore__ inline void ComputeSum(
  * @param powerSplit 2 ** k = powerSplit
  * @return void
  */
-__aicore__ inline void ReduceSumImpl(
-    LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, LocalTensor<float>& workLocal, uint32_t offset,
-    uint32_t count, uint32_t powerSplit)
+__aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal,
+                                     LocalTensor<float>& workLocal, uint32_t offset, uint32_t count,
+                                     uint32_t powerSplit)
 {
     uint32_t remainTile = count - powerSplit;
     uint32_t remainSreg = remainTile;
@@ -909,10 +905,10 @@ __aicore__ inline void ReduceSumImpl(
 }
 
 template <typename T>
-__aicore__ inline void LoadForHandleRemainV1(
-    __local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA,
-    RegTensor<float>& mainB, RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
-    __local_mem__ float* xFp32MainAddr, __local_mem__ float* xFp32TailAddr)
+__aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1,
+                                             uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
+                                             RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
+                                             __local_mem__ float* xFp32MainAddr, __local_mem__ float* xFp32TailAddr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
@@ -963,9 +959,9 @@ __aicore__ inline void LoadForHandleRemainV1(
 }
 
 template <typename T>
-__aicore__ inline void LoadForHandleMasterV1(
-    __local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
-    MaskReg& pregLoop, __local_mem__ float* xFp32MasterAddr)
+__aicore__ inline void LoadForHandleMasterV1(__local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2,
+                                             RegTensor<float>& mainA, RegTensor<float>& mainB, MaskReg& pregLoop,
+                                             __local_mem__ float* xFp32MasterAddr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB;
@@ -996,9 +992,10 @@ __aicore__ inline void LoadForHandleMasterV1(
 }
 
 template <typename T>
-__aicore__ inline void ComputeFormerImplV1(
-    LocalTensor<T>& xLocal, LocalTensor<float>& xFp32, LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
-    float avgFactor, float epsilon, uint32_t offset, uint32_t count, uint32_t powerSplit)
+__aicore__ inline void ComputeFormerImplV1(LocalTensor<T>& xLocal, LocalTensor<float>& xFp32,
+                                           LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
+                                           float avgFactor, float epsilon, uint32_t offset, uint32_t count,
+                                           uint32_t powerSplit)
 {
     uint32_t remainTile = count - powerSplit;
     uint32_t remainSreg = remainTile;
@@ -1035,9 +1032,8 @@ __aicore__ inline void ComputeFormerImplV1(
 
         for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
             pregLoop = UpdateMask<float>(remainSreg);
-            LoadForHandleRemainV1(
-                mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
-                pregLoop, xFp32MainAddr, xFp32TailAddr);
+            LoadForHandleRemainV1(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
+                                  tailA, tailB, pregLoop, xFp32MainAddr, xFp32TailAddr);
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
@@ -1046,8 +1042,8 @@ __aicore__ inline void ComputeFormerImplV1(
         }
         for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
             pregLoop = UpdateMask<float>(masterSreg);
-            LoadForHandleMasterV1(
-                masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop, xFp32MasterAddr);
+            LoadForHandleMasterV1(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop,
+                                  xFp32MasterAddr);
             Add(mainA, mainA, mainB, pregLoop);
             ReduceSum(vMean, mainA, pregLoop);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
@@ -1077,9 +1073,10 @@ __aicore__ inline void ComputeFormerImplV1(
 }
 
 template <typename T>
-__aicore__ inline void ComputeFormerImplV1MultiN(
-    LocalTensor<T>& xLocal, LocalTensor<float>& xFp32, LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
-    float avgFactor, float epsilon, uint32_t offset, uint32_t count, uint32_t powerSplit, uint32_t curRows)
+__aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTensor<float>& xFp32,
+                                                 LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
+                                                 float avgFactor, float epsilon, uint32_t offset, uint32_t count,
+                                                 uint32_t powerSplit, uint32_t curRows)
 {
     uint32_t remainTile = count - powerSplit;
     uint16_t remainRepeats = remainTile / (2 * V_LENGTH);
@@ -1119,8 +1116,7 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
     __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
     __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
 
-    __local_mem__ float* workAddr1 =
-        (__ubuf__ float*)workLocal.GetPhyAddr() + NormCommon::ONCE_VECTOR_SIZE;
+    __local_mem__ float* workAddr1 = (__ubuf__ float*)workLocal.GetPhyAddr() + NormCommon::ONCE_VECTOR_SIZE;
     __local_mem__ float* rstdAddr1 = (__ubuf__ float*)rstdLocal.GetPhyAddr() + curRows / 2;
 
     __VEC_SCOPE__
@@ -1145,9 +1141,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop = UpdateMask<float>(remainSreg);
-                LoadForHandleRemainV1(
-                    mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
-                    pregLoop, xFp32MainAddr, xFp32TailAddr);
+                LoadForHandleRemainV1(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
+                                      tailA, tailB, pregLoop, xFp32MainAddr, xFp32TailAddr);
                 Add(mainA, mainA, tailA, pregLoop);
                 Add(mainB, mainB, tailB, pregLoop);
                 Add(mainA, mainA, mainB, pregLoop);
@@ -1156,9 +1151,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop = UpdateMask<float>(masterSreg);
-                LoadForHandleMasterV1(
-                    masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop,
-                    xFp32MasterAddr);
+                LoadForHandleMasterV1(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
+                                      pregLoop, xFp32MasterAddr);
                 Add(mainA, mainA, mainB, pregLoop);
                 ReduceSum(vMean, mainA, pregLoop);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
@@ -1166,9 +1160,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             // unroll part
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(remainSreg1);
-                LoadForHandleRemainV1(
-                    mainAddr1, tailAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, tailA1,
-                    tailB1, pregLoop1, xFp32MainAddr1, xFp32TailAddr1);
+                LoadForHandleRemainV1(mainAddr1, tailAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
+                                      mainB1, tailA1, tailB1, pregLoop1, xFp32MainAddr1, xFp32TailAddr1);
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
@@ -1177,9 +1170,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
-                LoadForHandleMasterV1(
-                    masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, pregLoop1,
-                    xFp32MasterAddr1);
+                LoadForHandleMasterV1(masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1,
+                                      pregLoop1, xFp32MasterAddr1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
                 ReduceSum(vMean1, mainA1, pregLoop1);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
@@ -1266,9 +1258,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(remainSreg1);
-                LoadForHandleRemainV1(
-                    mainAddr2, tailAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, tailA1,
-                    tailB1, pregLoop1, xFp32MainAddr2, xFp32TailAddr2);
+                LoadForHandleRemainV1(mainAddr2, tailAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
+                                      mainB1, tailA1, tailB1, pregLoop1, xFp32MainAddr2, xFp32TailAddr2);
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
@@ -1277,9 +1268,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
-                LoadForHandleMasterV1(
-                    masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, pregLoop1,
-                    xFp32MasterAddr2);
+                LoadForHandleMasterV1(masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1,
+                                      pregLoop1, xFp32MasterAddr2);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
                 ReduceSum(vMean1, mainA1, pregLoop1);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
@@ -1310,9 +1300,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
 }
 
 template <typename T>
-__aicore__ inline void LoadForHandleRemainV2(
-    __local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA,
-    RegTensor<float>& mainB, RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop)
+__aicore__ inline void LoadForHandleRemainV2(__local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1,
+                                             uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
+                                             RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
@@ -1355,9 +1345,8 @@ __aicore__ inline void LoadForHandleRemainV2(
 }
 
 template <typename T>
-__aicore__ inline void LoadForHandleMasterV2(
-    __local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
-    MaskReg& pregLoop)
+__aicore__ inline void LoadForHandleMasterV2(__local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2,
+                                             RegTensor<float>& mainA, RegTensor<float>& mainB, MaskReg& pregLoop)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB;
@@ -1384,9 +1373,9 @@ __aicore__ inline void LoadForHandleMasterV2(
 }
 
 template <typename T>
-__aicore__ inline void ComputeFormerImplV2(
-    LocalTensor<float>& dstLocal, LocalTensor<T>& xLocal, LocalTensor<float>& workLocal, uint32_t offset,
-    uint32_t count, uint32_t powerSplit)
+__aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTensor<T>& xLocal,
+                                           LocalTensor<float>& workLocal, uint32_t offset, uint32_t count,
+                                           uint32_t powerSplit)
 {
     uint32_t remainTile = count - powerSplit;
     uint32_t remainSreg = remainTile;
@@ -1418,9 +1407,8 @@ __aicore__ inline void ComputeFormerImplV2(
 
         for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
             pregLoop = UpdateMask<float>(remainSreg);
-            LoadForHandleRemainV2(
-                mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
-                pregLoop);
+            LoadForHandleRemainV2(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
+                                  tailA, tailB, pregLoop);
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);

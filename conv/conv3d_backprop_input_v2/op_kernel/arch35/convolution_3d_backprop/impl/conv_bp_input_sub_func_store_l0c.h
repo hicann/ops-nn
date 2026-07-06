@@ -23,18 +23,18 @@ static __aicore__ inline uint64_t CalSplitKWorkspaceOffset(Intf* self, uint64_t 
 {
     uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
     uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
-    uint64_t singleCoreWorkspaceSize =
-        singleCoreCinAlignBaseN * singleCoreMAlignBaseM * self->ctx.tiling_->singleCoreDin;
-    uint64_t dinOffset =
-        (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN * singleCoreMAlignBaseM;
+    uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
+                                       self->ctx.tiling_->singleCoreDin;
+    uint64_t dinOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN *
+                         singleCoreMAlignBaseM;
     uint64_t nOffset = self->ctx.curNIdx_ * useN * singleCoreMAlignBaseM;
     uint64_t mOffset = self->ctx.curMIdx_ * useN * self->ctx.tiling_->baseM;
     return blockIdx * singleCoreWorkspaceSize + dinOffset + nOffset + mOffset;
 }
 
 template <class Intf>
-static __aicore__ inline uint64_t ComputeDstOffset(
-    Intf* self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
+static __aicore__ inline uint64_t ComputeDstOffset(Intf* self,
+                                                   FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
 {
     uint64_t dstOffset = 0;
     if (self->ctx.enableSplitDk_) {
@@ -42,30 +42,30 @@ static __aicore__ inline uint64_t ComputeDstOffset(
         fixPipeParams.dstStride = self->ctx.baseUseM_;
         uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
         uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
-        uint64_t singleCoreWorkspaceSize =
-            singleCoreCinAlignBaseN * singleCoreMAlignBaseM * self->ctx.tiling_->singleCoreDin;
-        dstOffset =
-            (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN * singleCoreMAlignBaseM +
-            self->ctx.curNIdx_ * self->ctx.tiling_->baseN * singleCoreMAlignBaseM +
-            self->ctx.curMIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->baseM +
-            GetBlockIdx() * singleCoreWorkspaceSize;
+        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
+                                           self->ctx.tiling_->singleCoreDin;
+        dstOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN *
+                        singleCoreMAlignBaseM +
+                    self->ctx.curNIdx_ * self->ctx.tiling_->baseN * singleCoreMAlignBaseM +
+                    self->ctx.curMIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->baseM +
+                    GetBlockIdx() * singleCoreWorkspaceSize;
     } else if (self->ctx.useUbAccumForSplitK_) {
         fixPipeParams.dstStride = self->ctx.baseUseM_;
         dstOffset = CalSplitKWorkspaceOffset<Intf>(self, self->ctx.baseUseN_, GetBlockIdx());
     } else {
         // loop2_dst_stride, element, c
         fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
-        dstOffset =
-            static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
-            static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ +       // di offset, remove useless data
-            static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM; // hi&wi offset
+        dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN *
+                        self->ctx.diHiWi_ +                                         // cin offset
+                    static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset, remove useless data
+                    static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM; // hi&wi offset
     }
     return dstOffset;
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForNz2Dn(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, const LocalTensor<typename Intf::L0cT>& useC1Buf)
+static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                 const LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     // NZ (1, cin1, hi, wi, cin0) -> DN (n, cin, di, hi, wi)
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
@@ -86,14 +86,17 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(
 #endif
     uint64_t dstOffset = ComputeDstOffset(self, fixPipeParams);
     if constexpr (std::is_same<typename Intf::DstT, bfloat16_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::F322BF16;
-    } else if constexpr (
-        (std::is_same<typename Intf::DstT, half>::value) && (std::is_same<typename Intf::L0cT, int32_t>::value)) {
+        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
+                                                                                                QuantMode_t::F322BF16;
+    } else if constexpr ((std::is_same<typename Intf::DstT, half>::value) &&
+                         (std::is_same<typename Intf::L0cT, int32_t>::value)) {
         SetQuantInt32ToHalf(self, fixPipeParams);
     } else if constexpr (std::is_same<typename Intf::DstT, half>::value) {
-        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::F322F16;
+        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
+                                                                                                QuantMode_t::F322F16;
     } else if constexpr (std::is_same<typename Intf::DstT, hifloat8_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322HIF8_PRE; // Half to Away Round
+        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
+                                                                    QuantMode_t::QF322HIF8_PRE; // Half to Away Round
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     } else if constexpr (std::is_same<typename Intf::DstT, int8_t>::value) {
         SetQuantInt8(self, fixPipeParams);
@@ -104,7 +107,8 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(
     if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
 #if (__NPU_ARCH__ != 5102)
         if constexpr (std::is_same<typename Intf::L0cT, int32_t>::value) {
-            Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf.template ReinterpretCast<float>(), fixPipeParams);
+            Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset],
+                                                    useC1Buf.template ReinterpretCast<float>(), fixPipeParams);
         } else {
             Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
         }
@@ -115,8 +119,8 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForNz2Nd(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& useC1Buf)
+static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                 LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     uint64_t dstOffset = 0;
     if (self->ctx.useUbAccumForSplitK_) {
@@ -141,14 +145,14 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(
     fixPipeParams.dstStride = self->ctx.tiling_->cin; // dst N stride, loop2_dst_stride (unit: element)
 
     if constexpr (std::is_same<typename Intf::DstT, bfloat16_t>::value) {
-        fixPipeParams.quantPre =
-            (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::F322BF16;
+        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
+                                                                                                QuantMode_t::F322BF16;
     } else if constexpr (std::is_same<typename Intf::DstT, half>::value) {
-        fixPipeParams.quantPre =
-            (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::F322F16;
+        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
+                                                                                                QuantMode_t::F322F16;
     } else if constexpr (std::is_same<typename Intf::DstT, hifloat8_t>::value) {
-        fixPipeParams.quantPre =
-            (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322HIF8_PRE; // Half to Away Round
+        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
+                                                                    QuantMode_t::QF322HIF8_PRE; // Half to Away Round
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     } else if constexpr (std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
         fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322FP8_PRE;
@@ -194,14 +198,14 @@ static __aicore__ inline void LoadL0c2GmRowForKernelSplitHFixPipe(
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(
             output[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(
-            output[dstOffset], useC1Buf[srcOffset], fixPipeParams);
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[dstOffset], useC1Buf[srcOffset],
+                                                                         fixPipeParams);
     }
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmDnForKernelSplitH(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& useC1Buf)
+static __aicore__ inline void LoadL0c2GmDnForKernelSplitH(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                          LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     // NZ (1, cin1, splithi, wi, cin0) -> DN (n, cin, di, splithi, wi)
     uint32_t mSize = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
@@ -263,8 +267,8 @@ static __aicore__ inline void LoadL0c2GmDnForKernelSplitH(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(
-    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& useC1Buf)
+static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(Intf* self, const GlobalTensor<typename Intf::DstT>& output,
+                                                          LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     // NZ (1, cin1, splithi, wi, cin0) -> ND (n, di, splithi, wi, cin)
     uint32_t mSize = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
@@ -304,8 +308,8 @@ static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(
     if (self->ctx.midHi_ != 0) {                       // 需要中间块
         fixPipeParams.params.ndNum = self->ctx.midHi_; // 循环中间块的行数
         fixPipeParams.params.srcNdStride = srcWi;      // loop3_src_stride
-        fixPipeParams.params.dstNdStride =
-            skipDstOffset + self->ctx.tiling_->wi * self->ctx.tiling_->cin; // loop3_dst_stride
+        fixPipeParams.params.dstNdStride = skipDstOffset +
+                                           self->ctx.tiling_->wi * self->ctx.tiling_->cin; // loop3_dst_stride
 
         fixPipeParams.mSize = srcWi; // M: 中间块一行的长度
         LoadL0c2GmRowForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);

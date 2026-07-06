@@ -16,8 +16,7 @@
 
 namespace ops {
 
-class ApplyFtrl : public OpDef
-{
+class ApplyFtrl : public OpDef {
 public:
     explicit ApplyFtrl(const char* name) : OpDef(name)
     {

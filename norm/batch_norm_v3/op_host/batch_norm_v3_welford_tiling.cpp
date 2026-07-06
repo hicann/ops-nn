@@ -57,10 +57,7 @@ bool BatchNormV3WelfordTiling::IsCapable()
     return true;
 }
 
-uint64_t BatchNormV3WelfordTiling::GetTilingKey() const
-{
-    return welfordTilingkey;
-}
+uint64_t BatchNormV3WelfordTiling::GetTilingKey() const { return welfordTilingkey; }
 
 void BatchNormV3WelfordTiling::DoUbTiling(int64_t& aUbFactor, int64_t& r0UbFactor)
 {
@@ -69,8 +66,8 @@ void BatchNormV3WelfordTiling::DoUbTiling(int64_t& aUbFactor, int64_t& r0UbFacto
     aUbFactor = (td_.get_blockFactor() > A_UB_SIZE_LIMIT) ?
                     A_UB_SIZE_LIMIT :
                     Ops::Base::CeilAlign(td_.get_blockFactor(), B16_BLOCK_ALIGN_NUM);
-    r0UbFactor =
-        Ops::Base::FloorAlign(Ops::Base::FloorDiv(eleNum - aUbFactor * A_UB_NUM, R0_UB_NUM), B16_BLOCK_ALIGN_NUM);
+    r0UbFactor = Ops::Base::FloorAlign(Ops::Base::FloorDiv(eleNum - aUbFactor * A_UB_NUM, R0_UB_NUM),
+                                       B16_BLOCK_ALIGN_NUM);
 }
 
 ge::graphStatus BatchNormV3WelfordTiling::DoOpTiling()
@@ -103,8 +100,8 @@ ge::graphStatus BatchNormV3WelfordTiling::DoOpTiling()
     td_.set_procNR0(1);
     td_.set_nR0Loop(commonParams.patternR1);
     td_.set_lastLoopNR0(1);
-    uint32_t parallelN =
-        (td_.get_r0UbLoop() == 1) ? static_cast<uint32_t>(commonParams.patternR0) : static_cast<uint32_t>(bnR0UbFactor);
+    uint32_t parallelN = (td_.get_r0UbLoop() == 1) ? static_cast<uint32_t>(commonParams.patternR0) :
+                                                     static_cast<uint32_t>(bnR0UbFactor);
     if ((td_.get_r0UbLoop() == 1) || (td_.get_r0UbFactor() == td_.get_r0UbTail())) {
         welfordTilingkey = BNV3_WELFORD_R0_SPLIT_ALIGN_TILING_KEY;
     } else {
@@ -118,8 +115,9 @@ ge::graphStatus BatchNormV3WelfordTiling::DoOpTiling()
         td_.set_nR0Loop(nR0Loop);
         td_.set_lastLoopNR0(lastLoopNR0);
         parallelN = (nR0Loop == 1) ? lastLoopNR0 * commonParams.patternR0Align : procNR0 * commonParams.patternR0Align;
-        uint64_t r0AlignTilingKeyBias =
-            (commonParams.patternR0 == commonParams.patternR0Align) ? R0_ALIGN_TILING_KEY_BIAS : 0;
+        uint64_t r0AlignTilingKeyBias = (commonParams.patternR0 == commonParams.patternR0Align) ?
+                                            R0_ALIGN_TILING_KEY_BIAS :
+                                            0;
         if ((nR0Loop == 1) || (lastLoopNR0 == procNR0)) {
             welfordTilingkey = BNV3_WELFORD_R1_SPLIT_ALIGN_TILING_KEY + r0AlignTilingKeyBias;
         } else {
@@ -141,15 +139,13 @@ ge::graphStatus BatchNormV3WelfordTiling::PostTiling()
     td_.set_momentum(commonParams.momentum);
     td_.set_momentumReverse(commonParams.momentumReverse);
     context_->SetBlockDim(usedCoreNum);
-    
+
     // Save tiling data to context
     auto welfordRawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        td_.GetDataSize() > welfordRawTilingData->GetCapacity(),
-        OP_LOGE(
-            commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu", td_.GetDataSize(),
-            welfordRawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(td_.GetDataSize() > welfordRawTilingData->GetCapacity(),
+                OP_LOGE(commonParams.nodeName, "actual tiling data size %zu > context tiling data size %zu",
+                        td_.GetDataSize(), welfordRawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     td_.SaveToBuffer(welfordRawTilingData->GetData(), welfordRawTilingData->GetCapacity());
     welfordRawTilingData->SetDataSize(td_.GetDataSize());
 

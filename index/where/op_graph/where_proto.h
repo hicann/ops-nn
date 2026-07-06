@@ -20,15 +20,15 @@
 
 namespace ge {
 
- /**
+/**
 * @brief Returns locations of nonzero / true values in a tensor. \n
 
 * @par Inputs:
 * Including:
 * x: A Tensor. Must be one of the following types:
-  DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_QINT8,
-  DT_QUINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_QINT32,
-  DT_INT64, DT_UINT64, DT_BOOL, DT_COMPLEX64, DT_COMPLEX128 \n
+ DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_QINT8,
+ DT_QUINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_QINT32,
+ DT_INT64, DT_UINT64, DT_BOOL, DT_COMPLEX64, DT_COMPLEX128 \n
 
 * @par Outputs:
 * y: A Tensor of type DT_INT64. \n
@@ -40,11 +40,8 @@ namespace ge {
 * Compatible with the TensorFlow operator Where.
 */
 
-REG_OP(Where)
-    .INPUT(x, TensorType({BasicType(), DT_BOOL}))
-    .OUTPUT(y, TensorType({DT_INT64}))
-    .OP_END_FACTORY_REG(Where)
+REG_OP(Where).INPUT(x, TensorType({BasicType(), DT_BOOL})).OUTPUT(y, TensorType({DT_INT64})).OP_END_FACTORY_REG(Where)
 
 } // namespace ge
 
-#endif  // OPS_NN_INDEX_WHERE_PROTO_H_
+#endif // OPS_NN_INDEX_WHERE_PROTO_H_

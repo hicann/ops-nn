@@ -16,8 +16,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class AdaptiveAvgPool2d : public OpDef
-{
+class AdaptiveAvgPool2d : public OpDef {
 public:
     explicit AdaptiveAvgPool2d(const char* name) : OpDef(name)
     {

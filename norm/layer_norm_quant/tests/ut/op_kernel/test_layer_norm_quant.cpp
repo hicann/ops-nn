@@ -25,21 +25,15 @@ using namespace ge;
 
 class LayerNormQuantKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LayerNormQuantKernel SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LayerNormQuantKernel SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LayerNormQuantKernel TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LayerNormQuantKernel TearDown" << std::endl; }
 };
 
 TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
 {
     dlog_setlevel(0, 0, 0);
-    
+
     // 非对齐形状测试
     gert::StorageShape x_shape = {{8, 63}, {8, 63}}; // 非对齐
     gert::StorageShape gamma_shape = {{63}, {63}};
@@ -48,7 +42,7 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
     gert::StorageShape offset_shape = {{1}, {1}};
     gert::StorageShape y_shape = {{8, 63}, {8, 63}};
     gert::StorageShape scale_out_shape = {{8}, {8}};
-    
+
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -77,20 +71,20 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .SetOpType(op_type)
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .SetOpType(op_type)
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -115,9 +109,8 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
                       .NodeInputTd(4, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
-                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -139,7 +132,7 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a2_non_aligned)
 TEST_F(LayerNormQuantKernelTest, kernel_test_a3_non_aligned)
 {
     dlog_setlevel(0, 0, 0);
-    
+
     // 非对齐形状测试
     gert::StorageShape x_shape = {{8, 63}, {8, 63}}; // 非对齐
     gert::StorageShape gamma_shape = {{63}, {63}};
@@ -148,7 +141,7 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a3_non_aligned)
     gert::StorageShape offset_shape = {{1}, {1}};
     gert::StorageShape y_shape = {{8, 63}, {8, 63}};
     gert::StorageShape scale_out_shape = {{8}, {8}};
-    
+
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -177,20 +170,20 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a3_non_aligned)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .SetOpType(op_type)
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .SetOpType(op_type)
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -215,9 +208,8 @@ TEST_F(LayerNormQuantKernelTest, kernel_test_a3_non_aligned)
                       .NodeInputTd(4, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
-                           {"quant_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

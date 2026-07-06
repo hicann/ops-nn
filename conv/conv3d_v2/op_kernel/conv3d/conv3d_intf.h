@@ -48,10 +48,9 @@ public:
     constexpr static int8_t quantType = Ext::quantType;
 
 public:
-    __aicore__ inline Conv3dIntf()
-    {}
+    __aicore__ inline Conv3dIntf() {}
 
-    __aicore__ inline void Init(const void *__restrict cubeTiling)
+    __aicore__ inline void Init(const void* __restrict cubeTiling)
     {
         using local = typename Ext::Init;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, cubeTiling)) {
@@ -59,7 +58,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmap(const GlobalTensor<FmapT> &fmap)
+    __aicore__ inline void SetFmap(const GlobalTensor<FmapT>& fmap)
     {
         using local = typename Ext::SetFmap;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, fmap)) {
@@ -67,7 +66,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetWeight(const GlobalTensor<WeightT> &weight)
+    __aicore__ inline void SetWeight(const GlobalTensor<WeightT>& weight)
     {
         using local = typename Ext::SetWeight;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, weight)) {
@@ -75,7 +74,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetBias(const GlobalTensor<BiasT> &bias)
+    __aicore__ inline void SetBias(const GlobalTensor<BiasT>& bias)
     {
         using local = typename Ext::SetBias;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, bias)) {
@@ -91,8 +90,8 @@ public:
         }
     }
 
-    __aicore__ inline void SetOrgWeightShape(
-        uint64_t orgCo, uint64_t orgCi, uint64_t orgKd, uint64_t orgKh, uint64_t orgKw)
+    __aicore__ inline void SetOrgWeightShape(uint64_t orgCo, uint64_t orgCi, uint64_t orgKd, uint64_t orgKh,
+                                             uint64_t orgKw)
     {
         using local = typename Ext::SetOrgWeightShape;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, orgCo, orgCi, orgKd, orgKh, orgKw)) {
@@ -108,8 +107,8 @@ public:
         }
     }
 
-    __aicore__ inline void SetSingleFmapShape(
-        uint64_t singleCi, uint64_t singleDi, uint64_t singleHi, uint64_t singleWi)
+    __aicore__ inline void SetSingleFmapShape(uint64_t singleCi, uint64_t singleDi, uint64_t singleHi,
+                                              uint64_t singleWi)
     {
         using local = typename Ext::SetSingleFmapShape;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, singleCi, singleDi, singleHi, singleWi)) {
@@ -117,9 +116,8 @@ public:
         }
     }
 
-    __aicore__ inline void SetSingleOutputShape(
-        uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo, uint64_t singleHo, uint64_t singleWo,
-        uint64_t singleGroupOpt)
+    __aicore__ inline void SetSingleOutputShape(uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo,
+                                                uint64_t singleHo, uint64_t singleWo, uint64_t singleGroupOpt)
     {
         using local = typename Ext::SetSingleOutputShape;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, singleCoreBatch, singleCo, singleDo, singleHo, singleWo,
@@ -128,8 +126,8 @@ public:
         }
     }
 
-    __aicore__ inline void SetSingleOutputShape(
-        uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo, uint64_t singleCoreM, uint64_t singleGroupOpt)
+    __aicore__ inline void SetSingleOutputShape(uint64_t singleCoreBatch, uint64_t singleCo, uint64_t singleDo,
+                                                uint64_t singleCoreM, uint64_t singleGroupOpt)
     {
         using local = typename Ext::SetSingleOutputShape;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, singleCoreBatch, singleCo, singleDo, singleCoreM,
@@ -138,8 +136,8 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmapStartPosition(
-        int64_t diStartPos, int64_t hiStartPos, int64_t wiStartPos, int64_t ciStartPos)
+    __aicore__ inline void SetFmapStartPosition(int64_t diStartPos, int64_t hiStartPos, int64_t wiStartPos,
+                                                int64_t ciStartPos)
     {
         using local = typename Ext::SetFmapStartPosition;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, diStartPos, hiStartPos, wiStartPos, ciStartPos)) {
@@ -170,7 +168,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetWorkspace(const GlobalTensor<L0cT> &workspace)
+    __aicore__ inline void SetWorkspace(const GlobalTensor<L0cT>& workspace)
     {
         using local = typename Ext::SetWorkspace;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, workspace)) {
@@ -178,7 +176,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetVecScale(const GlobalTensor<FP32T> &scale)
+    __aicore__ inline void SetVecScale(const GlobalTensor<FP32T>& scale)
     {
         using local = typename Ext::SetVecScale;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, scale)) {
@@ -210,18 +208,18 @@ public:
         }
     }
 
-    __aicore__ inline void SetGroupOptInfo(
-        uint64_t singleCoreCinTail, uint64_t singleCoreCoutTail, bool isGroupOptDimTail = false)
+    __aicore__ inline void SetGroupOptInfo(uint64_t singleCoreCinTail, uint64_t singleCoreCoutTail,
+                                           bool isGroupOptDimTail = false)
     {
         using local = typename Ext::SetGroupOptInfo;
-        if constexpr (CONV_CHECK_FUN(
-                          local, Conv3dFunc, this, singleCoreCinTail, singleCoreCoutTail, isGroupOptDimTail)) {
+        if constexpr (CONV_CHECK_FUN(local, Conv3dFunc, this, singleCoreCinTail, singleCoreCoutTail,
+                                     isGroupOptDimTail)) {
             local::call(this, singleCoreCinTail, singleCoreCoutTail, isGroupOptDimTail);
         }
     }
 
     template <bool sync = true>
-    __aicore__ inline void IterateAll(const GlobalTensor<OutputT> &output, bool enPartialSum = false)
+    __aicore__ inline void IterateAll(const GlobalTensor<OutputT>& output, bool enPartialSum = false)
     {
         using local = typename Ext::IterateAll;
         if constexpr (CONV_CHECK_FUN_TEMPLATE(local, ConvFunc, sync, this, output, enPartialSum)) {
@@ -249,7 +247,7 @@ private:
     }
 
     template <bool sync = true>
-    __aicore__ inline void GetTensorC(const GlobalTensor<OutputT> &output, bool enSequentialWrite = false)
+    __aicore__ inline void GetTensorC(const GlobalTensor<OutputT>& output, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
         if constexpr (CONV_CHECK_FUN_TEMPLATE(local, ConvFunc, sync, this, output, enSequentialWrite)) {
@@ -258,7 +256,7 @@ private:
     }
 
     template <bool sync = true>
-    __aicore__ inline void VecCompute(const GlobalTensor<OutputT> &output)
+    __aicore__ inline void VecCompute(const GlobalTensor<OutputT>& output)
     {
         using local = typename Ext::VecCompute;
         if constexpr (CONV_CHECK_FUN_TEMPLATE(local, ConvFunc, sync, this, output)) {
@@ -267,6 +265,6 @@ private:
     }
 };
 
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif

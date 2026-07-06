@@ -258,9 +258,9 @@ public:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadTwoTensorForDtypeT(
-        __local_mem__ T_SRC* src1, __local_mem__ T_SRC* src2, RegTensor<float>& dst1, RegTensor<float>& dst2,
-        MaskReg& dst1Preg, MaskReg& dst2Preg, uint32_t src1Offset, uint32_t src2Offset)
+    __aicore__ inline void LoadTwoTensorForDtypeT(__local_mem__ T_SRC* src1, __local_mem__ T_SRC* src2,
+                                                  RegTensor<float>& dst1, RegTensor<float>& dst2, MaskReg& dst1Preg,
+                                                  MaskReg& dst2Preg, uint32_t src1Offset, uint32_t src2Offset)
     {
         if constexpr (IsSameType<T_SRC, half>::value) {
             RegTensor<half> xFp16Q;
@@ -282,8 +282,8 @@ public:
         }
     }
 
-    __aicore__ inline void LoadOneTensorForDtypeT(
-        __local_mem__ T_X* input, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadOneTensorForDtypeT(__local_mem__ T_X* input, RegTensor<float>& dst, MaskReg& preg,
+                                                  uint32_t offset)
     {
         if constexpr (IsSameType<T_X, half>::value) {
             RegTensor<half> xFp16;
@@ -298,10 +298,10 @@ public:
         }
     }
 
-    __aicore__ inline void TwoRowAddForMeanWithTail(
-        RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1, uint32_t offset2,
-        uint32_t offset3, uint32_t offset4, RegTensor<float>& rem, RegTensor<float>& nextRow,
-        RegTensor<float>& remNextRow, float n)
+    __aicore__ inline void TwoRowAddForMeanWithTail(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+                                                    uint32_t offset1, uint32_t offset2, uint32_t offset3,
+                                                    uint32_t offset4, RegTensor<float>& rem, RegTensor<float>& nextRow,
+                                                    RegTensor<float>& remNextRow, float n)
     {
         DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
         DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
@@ -316,9 +316,8 @@ public:
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void TwoRowAddForMean(
-        RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1, uint32_t offset2,
-        RegTensor<float>& nextRow, float n)
+    __aicore__ inline void TwoRowAddForMean(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+                                            uint32_t offset1, uint32_t offset2, RegTensor<float>& nextRow, float n)
     {
         DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
         DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset2)));
@@ -327,10 +326,10 @@ public:
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void TwoRowAddForVarWithTail(
-        RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1, uint32_t offset2,
-        uint32_t offset3, uint32_t offset4, RegTensor<float>& mean, RegTensor<float>& rem, RegTensor<float>& nextRow,
-        RegTensor<float>& remNextRow, float n)
+    __aicore__ inline void TwoRowAddForVarWithTail(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+                                                   uint32_t offset1, uint32_t offset2, uint32_t offset3,
+                                                   uint32_t offset4, RegTensor<float>& mean, RegTensor<float>& rem,
+                                                   RegTensor<float>& nextRow, RegTensor<float>& remNextRow, float n)
     {
         DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
         DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
@@ -353,9 +352,9 @@ public:
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void TwoRowAddForVar(
-        RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1, uint32_t offset2,
-        RegTensor<float>& mean, RegTensor<float>& nextRow, float n)
+    __aicore__ inline void TwoRowAddForVar(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+                                           uint32_t offset1, uint32_t offset2, RegTensor<float>& mean,
+                                           RegTensor<float>& nextRow, float n)
     {
         DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
         DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset2)));
@@ -368,25 +367,23 @@ public:
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void BinaryAddVF(
-        __local_mem__ float* binaryAddTmpAddr, uint32_t rLoopStride, uint32_t offset, uint16_t binaryAddKLoop,
-        uint16_t binaryAddInnerLoop, uint16_t binaryAddLastLoop, MaskReg& pregLoop, RegTensor<float>& x1,
-        RegTensor<float>& x2, RegTensor<float>& x3, RegTensor<float>& x4)
+    __aicore__ inline void BinaryAddVF(__local_mem__ float* binaryAddTmpAddr, uint32_t rLoopStride, uint32_t offset,
+                                       uint16_t binaryAddKLoop, uint16_t binaryAddInnerLoop, uint16_t binaryAddLastLoop,
+                                       MaskReg& pregLoop, RegTensor<float>& x1, RegTensor<float>& x2,
+                                       RegTensor<float>& x3, RegTensor<float>& x4)
     {
         uint16_t curBinaryAddInnerLoop = binaryAddInnerLoop;
         for (uint16_t i = 0; i < binaryAddKLoop; i++) {
             curBinaryAddInnerLoop = curBinaryAddInnerLoop / ROW_FOUR_OFFSET;
             for (uint16_t j = 0; j < curBinaryAddInnerLoop; j++) {
                 DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET) * rLoopStride + offset));
-                DataCopy(
-                    x2, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + 1) * rLoopStride + offset));
+                DataCopy(x2,
+                         ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + 1) * rLoopStride + offset));
                 Add(x1, x1, x2, pregLoop);
-                DataCopy(
-                    x3, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + ROW_TWO_OFFSET) * rLoopStride +
-                         offset));
-                DataCopy(
-                    x4, ((__local_mem__ float*)binaryAddTmpAddr +
-                         (j * ROW_FOUR_OFFSET + ROW_THREE_OFFSET) * rLoopStride + offset));
+                DataCopy(x3, ((__local_mem__ float*)binaryAddTmpAddr +
+                              (j * ROW_FOUR_OFFSET + ROW_TWO_OFFSET) * rLoopStride + offset));
+                DataCopy(x4, ((__local_mem__ float*)binaryAddTmpAddr +
+                              (j * ROW_FOUR_OFFSET + ROW_THREE_OFFSET) * rLoopStride + offset));
                 Add(x3, x3, x4, pregLoop);
                 Add(x1, x1, x3, pregLoop);
                 DataCopy(((__local_mem__ float*)binaryAddTmpAddr + j * rLoopStride + offset), x1, pregLoop);
@@ -402,8 +399,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateMean(
-        __local_mem__ float* xInUb, __local_mem__ T_X* yOutUb, __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateMean(__local_mem__ float* xInUb, __local_mem__ T_X* yOutUb,
+                                         __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
     {
         if (totalRLen_ <= SCALE_COEF_TWO) {
             CalculateMeanRLessThan2(xInUb, meanOutUbAddr, curTileA0Len);
@@ -416,8 +413,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateMeanRLessThan2(
-        __local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateMeanRLessThan2(__local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr,
+                                                   int64_t curTileA0Len)
     {
         uint32_t rStride = tileA0Len_;
         uint16_t rLoopCount = totalRLen_;
@@ -445,8 +442,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateMeanRLessThan4(
-        __local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateMeanRLessThan4(__local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr,
+                                                   int64_t curTileA0Len)
     {
         uint32_t remainderOffset = SCALE_COEF_TWO * tileA0Len_;
         uint32_t aLength = tileA0Len_;
@@ -478,17 +475,17 @@ public:
                 uint32_t aLoopOffset = k * VL_FP32;
                 DataCopy(((__local_mem__ float*)xInUb + validNumInXUb + aLoopOffset), zero, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                TwoRowAddForMeanWithTail(
-                    x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset, aLength + aLoopOffset,
-                    remainderTailOffset1 + aLoopOffset, rem, nextRow, remNextRow, n);
+                TwoRowAddForMeanWithTail(x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
+                                         aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow,
+                                         remNextRow, n);
                 Muls(x1, x1, nCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)meanOutUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void CalculateMeanRLessThan8(
-        __local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateMeanRLessThan8(__local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr,
+                                                   int64_t curTileA0Len)
     {
         uint32_t remainderOffset = SCALE_COEF_FOUR * tileA0Len_;
         uint32_t aLength = tileA0Len_;
@@ -500,10 +497,10 @@ public:
         uint16_t remainderTailCount = totalRLen_ - SCALE_COEF_FOUR;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ? validNumInXUb :
+                                                                           remainderOffset + ROW_THREE_OFFSET * aLength;
 
         uint16_t aLoopCount = CEIL_DIV(curTileA0Len, VL_FP32);
         __VEC_SCOPE__
@@ -525,13 +522,12 @@ public:
                 uint32_t aLoopOffset = k * VL_FP32;
                 DataCopy(((__local_mem__ float*)xInUb + validNumInXUb + aLoopOffset), zero, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                TwoRowAddForMeanWithTail(
-                    x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset, aLength + aLoopOffset,
-                    remainderTailOffset1 + aLoopOffset, rem, nextRow, remNextRow, n);
-                TwoRowAddForMeanWithTail(
-                    x2, xInUb, pregLoop, ROW_TWO_OFFSET * aLength + aLoopOffset, remainderTailOffset2 + aLoopOffset,
-                    ROW_THREE_OFFSET * aLength + aLoopOffset, remainderTailOffset3 + aLoopOffset, rem, nextRow,
-                    remNextRow, n);
+                TwoRowAddForMeanWithTail(x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
+                                         aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow,
+                                         remNextRow, n);
+                TwoRowAddForMeanWithTail(x2, xInUb, pregLoop, ROW_TWO_OFFSET * aLength + aLoopOffset,
+                                         remainderTailOffset2 + aLoopOffset, ROW_THREE_OFFSET * aLength + aLoopOffset,
+                                         remainderTailOffset3 + aLoopOffset, rem, nextRow, remNextRow, n);
                 Add(x1, x1, x2, pregLoop);
                 Muls(x1, x1, nCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)meanOutUbAddr + aLoopOffset), x1, pregLoop);
@@ -539,8 +535,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateMeanRMoreThan8(
-        __local_mem__ float* xInUb, __local_mem__ T_X* yOutUb, __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateMeanRMoreThan8(__local_mem__ float* xInUb, __local_mem__ T_X* yOutUb,
+                                                   __local_mem__ float* meanOutUbAddr, int64_t curTileA0Len)
     {
         uint16_t remainderLoopCount = (totalRLen_ - r1Quotient_ + SCALE_COEF_EIGHT - 1) / SCALE_COEF_EIGHT;
         uint16_t quotientLoopCount = (r1Quotient_ / SCALE_COEF_EIGHT) - remainderLoopCount;
@@ -563,18 +559,22 @@ public:
         uint32_t remainderTailOffset = quotientTailOffset + remainderOffset;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderTailOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderTailOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_THREE_OFFSET * aLength;
-        uint32_t remainderTailOffset4 =
-            (ROW_FOUR > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FOUR_OFFSET * aLength;
-        uint32_t remainderTailOffset5 =
-            (ROW_FIVE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FIVE_OFFSET * aLength;
-        uint32_t remainderTailOffset6 =
-            (ROW_SIX > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SIX_OFFSET * aLength;
-        uint32_t remainderTailOffset7 =
-            (ROW_SEVEN > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset4 = (ROW_FOUR > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FOUR_OFFSET * aLength;
+        uint32_t remainderTailOffset5 = (ROW_FIVE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FIVE_OFFSET * aLength;
+        uint32_t remainderTailOffset6 = (ROW_SIX > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_SIX_OFFSET * aLength;
+        uint32_t remainderTailOffset7 = (ROW_SEVEN > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
 
         uint16_t aLoopCount = CEIL_DIV(curTileA0Len, VL_FP32);
         __VEC_SCOPE__
@@ -603,78 +603,71 @@ public:
                 for (uint16_t i = 0; i < static_cast<uint16_t>(remainderLoopCount - 1); i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
-                    TwoRowAddForMeanWithTail(
-                        x1, xInUb, pregLoop, quotOffset, remOffset, quotOffset + aLength, remOffset + aLength, rem,
-                        nextRow, remNextRow, n);
-                    TwoRowAddForMeanWithTail(
-                        x2, xInUb, pregLoop, quotOffset + ROW_TWO_OFFSET * aLength,
-                        remOffset + ROW_TWO_OFFSET * aLength, quotOffset + ROW_THREE_OFFSET * aLength,
-                        remOffset + ROW_THREE_OFFSET * aLength, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x1, xInUb, pregLoop, quotOffset, remOffset, quotOffset + aLength,
+                                             remOffset + aLength, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x2, xInUb, pregLoop, quotOffset + ROW_TWO_OFFSET * aLength,
+                                             remOffset + ROW_TWO_OFFSET * aLength,
+                                             quotOffset + ROW_THREE_OFFSET * aLength,
+                                             remOffset + ROW_THREE_OFFSET * aLength, rem, nextRow, remNextRow, n);
                     Add(x1, x1, x2, pregLoop);
-                    TwoRowAddForMeanWithTail(
-                        x3, xInUb, pregLoop, quotOffset + ROW_FOUR_OFFSET * aLength,
-                        remOffset + ROW_FOUR_OFFSET * aLength, quotOffset + ROW_FIVE_OFFSET * aLength,
-                        remOffset + ROW_FIVE_OFFSET * aLength, rem, nextRow, remNextRow, n);
-                    TwoRowAddForMeanWithTail(
-                        x4, xInUb, pregLoop, quotOffset + ROW_SIX_OFFSET * aLength,
-                        remOffset + ROW_SIX_OFFSET * aLength, quotOffset + ROW_SEVEN_OFFSET * aLength,
-                        remOffset + ROW_SEVEN_OFFSET * aLength, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x3, xInUb, pregLoop, quotOffset + ROW_FOUR_OFFSET * aLength,
+                                             remOffset + ROW_FOUR_OFFSET * aLength,
+                                             quotOffset + ROW_FIVE_OFFSET * aLength,
+                                             remOffset + ROW_FIVE_OFFSET * aLength, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x4, xInUb, pregLoop, quotOffset + ROW_SIX_OFFSET * aLength,
+                                             remOffset + ROW_SIX_OFFSET * aLength,
+                                             quotOffset + ROW_SEVEN_OFFSET * aLength,
+                                             remOffset + ROW_SEVEN_OFFSET * aLength, rem, nextRow, remNextRow, n);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
                     DataCopy(((__local_mem__ float*)yOutUb + i * aLength + aLoopOffset), x1, pregLoop);
                 }
                 // 前半部分为8行，后半部分可能不足8行
                 {
-                    TwoRowAddForMeanWithTail(
-                        x1, xInUb, pregLoop, quotientTailOffset + aLoopOffset, remainderTailOffset0 + aLoopOffset,
-                        quotientTailOffset + aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow,
-                        remNextRow, n);
-                    TwoRowAddForMeanWithTail(
-                        x2, xInUb, pregLoop, quotientTailOffset + ROW_TWO_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset2 + aLoopOffset,
-                        quotientTailOffset + ROW_THREE_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset3 + aLoopOffset, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x1, xInUb, pregLoop, quotientTailOffset + aLoopOffset,
+                                             remainderTailOffset0 + aLoopOffset,
+                                             quotientTailOffset + aLength + aLoopOffset,
+                                             remainderTailOffset1 + aLoopOffset, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x2, xInUb, pregLoop,
+                                             quotientTailOffset + ROW_TWO_OFFSET * aLength + aLoopOffset,
+                                             remainderTailOffset2 + aLoopOffset,
+                                             quotientTailOffset + ROW_THREE_OFFSET * aLength + aLoopOffset,
+                                             remainderTailOffset3 + aLoopOffset, rem, nextRow, remNextRow, n);
                     Add(x1, x1, x2, pregLoop);
-                    TwoRowAddForMeanWithTail(
-                        x3, xInUb, pregLoop, quotientTailOffset + ROW_FOUR_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset4 + aLoopOffset,
-                        quotientTailOffset + ROW_FIVE_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset5 + aLoopOffset, rem, nextRow, remNextRow, n);
-                    TwoRowAddForMeanWithTail(
-                        x4, xInUb, pregLoop, quotientTailOffset + ROW_SIX_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset6 + aLoopOffset,
-                        quotientTailOffset + ROW_SEVEN_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset7 + aLoopOffset, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x3, xInUb, pregLoop,
+                                             quotientTailOffset + ROW_FOUR_OFFSET * aLength + aLoopOffset,
+                                             remainderTailOffset4 + aLoopOffset,
+                                             quotientTailOffset + ROW_FIVE_OFFSET * aLength + aLoopOffset,
+                                             remainderTailOffset5 + aLoopOffset, rem, nextRow, remNextRow, n);
+                    TwoRowAddForMeanWithTail(x4, xInUb, pregLoop,
+                                             quotientTailOffset + ROW_SIX_OFFSET * aLength + aLoopOffset,
+                                             remainderTailOffset6 + aLoopOffset,
+                                             quotientTailOffset + ROW_SEVEN_OFFSET * aLength + aLoopOffset,
+                                             remainderTailOffset7 + aLoopOffset, rem, nextRow, remNextRow, n);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(
-                        ((__local_mem__ float*)yOutUb + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
-                        pregLoop);
+                    DataCopy(((__local_mem__ float*)yOutUb + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
+                             pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
                     uint32_t baseOffset = (remainderLoopCount + i) * baseLineOffset + aLoopOffset;
                     TwoRowAddForMean(x1, xInUb, pregLoop, baseOffset, baseOffset + aLength, nextRow, n);
-                    TwoRowAddForMean(
-                        x2, xInUb, pregLoop, baseOffset + ROW_TWO_OFFSET * aLength,
-                        baseOffset + ROW_THREE_OFFSET * aLength, nextRow, n);
+                    TwoRowAddForMean(x2, xInUb, pregLoop, baseOffset + ROW_TWO_OFFSET * aLength,
+                                     baseOffset + ROW_THREE_OFFSET * aLength, nextRow, n);
                     Add(x1, x1, x2, pregLoop);
-                    TwoRowAddForMean(
-                        x3, xInUb, pregLoop, baseOffset + ROW_FOUR_OFFSET * aLength,
-                        baseOffset + ROW_FIVE_OFFSET * aLength, nextRow, n);
-                    TwoRowAddForMean(
-                        x4, xInUb, pregLoop, baseOffset + ROW_SIX_OFFSET * aLength,
-                        baseOffset + ROW_SEVEN_OFFSET * aLength, nextRow, n);
+                    TwoRowAddForMean(x3, xInUb, pregLoop, baseOffset + ROW_FOUR_OFFSET * aLength,
+                                     baseOffset + ROW_FIVE_OFFSET * aLength, nextRow, n);
+                    TwoRowAddForMean(x4, xInUb, pregLoop, baseOffset + ROW_SIX_OFFSET * aLength,
+                                     baseOffset + ROW_SEVEN_OFFSET * aLength, nextRow, n);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(
-                        ((__local_mem__ float*)yOutUb + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
-                        pregLoop);
+                    DataCopy(((__local_mem__ float*)yOutUb + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
+                             pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                BinaryAddVF(
-                    (__local_mem__ float*)yOutUb, aLength, aLoopOffset, binaryAddKLoop, binaryAddInnerLoop,
-                    binaryAddLastLoop, pregLoop, x1, x2, x3, x4);
+                BinaryAddVF((__local_mem__ float*)yOutUb, aLength, aLoopOffset, binaryAddKLoop, binaryAddInnerLoop,
+                            binaryAddLastLoop, pregLoop, x1, x2, x3, x4);
                 DataCopy(x1, ((__local_mem__ float*)yOutUb + aLoopOffset));
                 Muls(x1, x1, nCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)meanOutUbAddr + aLoopOffset), x1, pregLoop);
@@ -682,9 +675,9 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateVar(
-        __local_mem__ float* xInUb, __local_mem__ T_X* yOutUb, __local_mem__ float* meanOutUbAddr,
-        __local_mem__ float* varianceOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateVar(__local_mem__ float* xInUb, __local_mem__ T_X* yOutUb,
+                                        __local_mem__ float* meanOutUbAddr, __local_mem__ float* varianceOutUbAddr,
+                                        int64_t curTileA0Len)
     {
         if (totalRLen_ <= SCALE_COEF_TWO) {
             CalculateVarRLessThan2(xInUb, meanOutUbAddr, varianceOutUbAddr, curTileA0Len);
@@ -697,9 +690,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateVarRLessThan2(
-        __local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr, __local_mem__ float* varianceOutUbAddr,
-        int64_t curTileA0Len)
+    __aicore__ inline void CalculateVarRLessThan2(__local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr,
+                                                  __local_mem__ float* varianceOutUbAddr, int64_t curTileA0Len)
     {
         uint32_t rStride = tileA0Len_;
         uint16_t rLoopCount = totalRLen_;
@@ -733,9 +725,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateVarRLessThan4(
-        __local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr, __local_mem__ float* varianceOutUbAddr,
-        int64_t curTileA0Len)
+    __aicore__ inline void CalculateVarRLessThan4(__local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr,
+                                                  __local_mem__ float* varianceOutUbAddr, int64_t curTileA0Len)
     {
         uint32_t remainderOffset = SCALE_COEF_TWO * tileA0Len_;
         uint32_t aLength = tileA0Len_;
@@ -765,18 +756,17 @@ public:
                 DataCopy(mean, ((__local_mem__ float*)meanOutUbAddr + aLoopOffset));
                 DataCopy(((__local_mem__ float*)xInUb + validNumInXUb + aLoopOffset), mean, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                TwoRowAddForVarWithTail(
-                    x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset, aLength + aLoopOffset,
-                    remainderTailOffset1 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
+                TwoRowAddForVarWithTail(x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
+                                        aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, mean, rem, nextRow,
+                                        remNextRow, n);
                 Muls(x1, x1, nCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)varianceOutUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void CalculateVarRLessThan8(
-        __local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr, __local_mem__ float* varianceOutUbAddr,
-        int64_t curTileA0Len)
+    __aicore__ inline void CalculateVarRLessThan8(__local_mem__ float* xInUb, __local_mem__ float* meanOutUbAddr,
+                                                  __local_mem__ float* varianceOutUbAddr, int64_t curTileA0Len)
     {
         uint32_t remainderOffset = SCALE_COEF_FOUR * tileA0Len_;
         uint32_t aLength = tileA0Len_;
@@ -788,10 +778,10 @@ public:
         uint16_t remainderTailCount = totalRLen_ - SCALE_COEF_FOUR;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ? validNumInXUb :
+                                                                           remainderOffset + ROW_THREE_OFFSET * aLength;
 
         uint16_t aLoopCount = CEIL_DIV(curTileA0Len, VL_FP32);
         __VEC_SCOPE__
@@ -811,13 +801,12 @@ public:
                 DataCopy(mean, ((__local_mem__ float*)meanOutUbAddr + aLoopOffset));
                 DataCopy(((__local_mem__ float*)xInUb + validNumInXUb + aLoopOffset), mean, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                TwoRowAddForVarWithTail(
-                    x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset, aLength + aLoopOffset,
-                    remainderTailOffset1 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
-                TwoRowAddForVarWithTail(
-                    x2, xInUb, pregLoop, ROW_TWO_OFFSET * aLength + aLoopOffset, remainderTailOffset2 + aLoopOffset,
-                    ROW_THREE_OFFSET * aLength + aLoopOffset, remainderTailOffset3 + aLoopOffset, mean, rem, nextRow,
-                    remNextRow, n);
+                TwoRowAddForVarWithTail(x1, xInUb, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
+                                        aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, mean, rem, nextRow,
+                                        remNextRow, n);
+                TwoRowAddForVarWithTail(x2, xInUb, pregLoop, ROW_TWO_OFFSET * aLength + aLoopOffset,
+                                        remainderTailOffset2 + aLoopOffset, ROW_THREE_OFFSET * aLength + aLoopOffset,
+                                        remainderTailOffset3 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
                 Add(x1, x1, x2, pregLoop);
                 Muls(x1, x1, nCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)varianceOutUbAddr + aLoopOffset), x1, pregLoop);
@@ -825,9 +814,9 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateVarRMoreThan8(
-        __local_mem__ float* xInUb, __local_mem__ T_X* yOutUb, __local_mem__ float* meanOutUbAddr,
-        __local_mem__ float* varianceOutUbAddr, int64_t curTileA0Len)
+    __aicore__ inline void CalculateVarRMoreThan8(__local_mem__ float* xInUb, __local_mem__ T_X* yOutUb,
+                                                  __local_mem__ float* meanOutUbAddr,
+                                                  __local_mem__ float* varianceOutUbAddr, int64_t curTileA0Len)
     {
         uint16_t remainderLoopCount = (totalRLen_ - r1Quotient_ + SCALE_COEF_EIGHT - 1) / SCALE_COEF_EIGHT;
         uint16_t quotientLoopCount = (r1Quotient_ / SCALE_COEF_EIGHT) - remainderLoopCount;
@@ -850,18 +839,22 @@ public:
         uint32_t remainderTailOffset = quotientTailOffset + remainderOffset;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderTailOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderTailOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_THREE_OFFSET * aLength;
-        uint32_t remainderTailOffset4 =
-            (ROW_FOUR > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FOUR_OFFSET * aLength;
-        uint32_t remainderTailOffset5 =
-            (ROW_FIVE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FIVE_OFFSET * aLength;
-        uint32_t remainderTailOffset6 =
-            (ROW_SIX > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SIX_OFFSET * aLength;
-        uint32_t remainderTailOffset7 =
-            (ROW_SEVEN > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset4 = (ROW_FOUR > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FOUR_OFFSET * aLength;
+        uint32_t remainderTailOffset5 = (ROW_FIVE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FIVE_OFFSET * aLength;
+        uint32_t remainderTailOffset6 = (ROW_SIX > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_SIX_OFFSET * aLength;
+        uint32_t remainderTailOffset7 = (ROW_SEVEN > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
 
         uint16_t aLoopCount = CEIL_DIV(curTileA0Len, VL_FP32);
         __VEC_SCOPE__
@@ -888,78 +881,71 @@ public:
                 for (uint16_t i = 0; i < static_cast<uint16_t>(remainderLoopCount - 1); i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
-                    TwoRowAddForVarWithTail(
-                        x1, xInUb, pregLoop, quotOffset, remOffset, quotOffset + aLength, remOffset + aLength, mean,
-                        rem, nextRow, remNextRow, n);
-                    TwoRowAddForVarWithTail(
-                        x2, xInUb, pregLoop, quotOffset + ROW_TWO_OFFSET * aLength,
-                        remOffset + ROW_TWO_OFFSET * aLength, quotOffset + ROW_THREE_OFFSET * aLength,
-                        remOffset + ROW_THREE_OFFSET * aLength, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x1, xInUb, pregLoop, quotOffset, remOffset, quotOffset + aLength,
+                                            remOffset + aLength, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x2, xInUb, pregLoop, quotOffset + ROW_TWO_OFFSET * aLength,
+                                            remOffset + ROW_TWO_OFFSET * aLength,
+                                            quotOffset + ROW_THREE_OFFSET * aLength,
+                                            remOffset + ROW_THREE_OFFSET * aLength, mean, rem, nextRow, remNextRow, n);
                     Add(x1, x1, x2, pregLoop);
-                    TwoRowAddForVarWithTail(
-                        x3, xInUb, pregLoop, quotOffset + ROW_FOUR_OFFSET * aLength,
-                        remOffset + ROW_FOUR_OFFSET * aLength, quotOffset + ROW_FIVE_OFFSET * aLength,
-                        remOffset + ROW_FIVE_OFFSET * aLength, mean, rem, nextRow, remNextRow, n);
-                    TwoRowAddForVarWithTail(
-                        x4, xInUb, pregLoop, quotOffset + ROW_SIX_OFFSET * aLength,
-                        remOffset + ROW_SIX_OFFSET * aLength, quotOffset + ROW_SEVEN_OFFSET * aLength,
-                        remOffset + ROW_SEVEN_OFFSET * aLength, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x3, xInUb, pregLoop, quotOffset + ROW_FOUR_OFFSET * aLength,
+                                            remOffset + ROW_FOUR_OFFSET * aLength,
+                                            quotOffset + ROW_FIVE_OFFSET * aLength,
+                                            remOffset + ROW_FIVE_OFFSET * aLength, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x4, xInUb, pregLoop, quotOffset + ROW_SIX_OFFSET * aLength,
+                                            remOffset + ROW_SIX_OFFSET * aLength,
+                                            quotOffset + ROW_SEVEN_OFFSET * aLength,
+                                            remOffset + ROW_SEVEN_OFFSET * aLength, mean, rem, nextRow, remNextRow, n);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
                     DataCopy(((__local_mem__ float*)yOutUb + i * aLength + aLoopOffset), x1, pregLoop);
                 }
                 // 前半部分为8行，后半部分可能不足8行
                 {
-                    TwoRowAddForVarWithTail(
-                        x1, xInUb, pregLoop, quotientTailOffset + aLoopOffset, remainderTailOffset0 + aLoopOffset,
-                        quotientTailOffset + aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, mean, rem,
-                        nextRow, remNextRow, n);
-                    TwoRowAddForVarWithTail(
-                        x2, xInUb, pregLoop, quotientTailOffset + ROW_TWO_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset2 + aLoopOffset,
-                        quotientTailOffset + ROW_THREE_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset3 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x1, xInUb, pregLoop, quotientTailOffset + aLoopOffset,
+                                            remainderTailOffset0 + aLoopOffset,
+                                            quotientTailOffset + aLength + aLoopOffset,
+                                            remainderTailOffset1 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x2, xInUb, pregLoop,
+                                            quotientTailOffset + ROW_TWO_OFFSET * aLength + aLoopOffset,
+                                            remainderTailOffset2 + aLoopOffset,
+                                            quotientTailOffset + ROW_THREE_OFFSET * aLength + aLoopOffset,
+                                            remainderTailOffset3 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
                     Add(x1, x1, x2, pregLoop);
-                    TwoRowAddForVarWithTail(
-                        x3, xInUb, pregLoop, quotientTailOffset + ROW_FOUR_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset4 + aLoopOffset,
-                        quotientTailOffset + ROW_FIVE_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset5 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
-                    TwoRowAddForVarWithTail(
-                        x4, xInUb, pregLoop, quotientTailOffset + ROW_SIX_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset6 + aLoopOffset,
-                        quotientTailOffset + ROW_SEVEN_OFFSET * aLength + aLoopOffset,
-                        remainderTailOffset7 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x3, xInUb, pregLoop,
+                                            quotientTailOffset + ROW_FOUR_OFFSET * aLength + aLoopOffset,
+                                            remainderTailOffset4 + aLoopOffset,
+                                            quotientTailOffset + ROW_FIVE_OFFSET * aLength + aLoopOffset,
+                                            remainderTailOffset5 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
+                    TwoRowAddForVarWithTail(x4, xInUb, pregLoop,
+                                            quotientTailOffset + ROW_SIX_OFFSET * aLength + aLoopOffset,
+                                            remainderTailOffset6 + aLoopOffset,
+                                            quotientTailOffset + ROW_SEVEN_OFFSET * aLength + aLoopOffset,
+                                            remainderTailOffset7 + aLoopOffset, mean, rem, nextRow, remNextRow, n);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(
-                        ((__local_mem__ float*)yOutUb + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
-                        pregLoop);
+                    DataCopy(((__local_mem__ float*)yOutUb + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
+                             pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
                     uint32_t baseOffset = (remainderLoopCount + i) * baseLineOffset + aLoopOffset;
                     TwoRowAddForVar(x1, xInUb, pregLoop, baseOffset, baseOffset + aLength, mean, nextRow, n);
-                    TwoRowAddForVar(
-                        x2, xInUb, pregLoop, baseOffset + ROW_TWO_OFFSET * aLength,
-                        baseOffset + ROW_THREE_OFFSET * aLength, mean, nextRow, n);
+                    TwoRowAddForVar(x2, xInUb, pregLoop, baseOffset + ROW_TWO_OFFSET * aLength,
+                                    baseOffset + ROW_THREE_OFFSET * aLength, mean, nextRow, n);
                     Add(x1, x1, x2, pregLoop);
-                    TwoRowAddForVar(
-                        x3, xInUb, pregLoop, baseOffset + ROW_FOUR_OFFSET * aLength,
-                        baseOffset + ROW_FIVE_OFFSET * aLength, mean, nextRow, n);
-                    TwoRowAddForVar(
-                        x4, xInUb, pregLoop, baseOffset + ROW_SIX_OFFSET * aLength,
-                        baseOffset + ROW_SEVEN_OFFSET * aLength, mean, nextRow, n);
+                    TwoRowAddForVar(x3, xInUb, pregLoop, baseOffset + ROW_FOUR_OFFSET * aLength,
+                                    baseOffset + ROW_FIVE_OFFSET * aLength, mean, nextRow, n);
+                    TwoRowAddForVar(x4, xInUb, pregLoop, baseOffset + ROW_SIX_OFFSET * aLength,
+                                    baseOffset + ROW_SEVEN_OFFSET * aLength, mean, nextRow, n);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(
-                        ((__local_mem__ float*)yOutUb + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
-                        pregLoop);
+                    DataCopy(((__local_mem__ float*)yOutUb + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
+                             pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                BinaryAddVF(
-                    (__local_mem__ float*)yOutUb, aLength, aLoopOffset, binaryAddKLoop, binaryAddInnerLoop,
-                    binaryAddLastLoop, pregLoop, x1, x2, x3, x4);
+                BinaryAddVF((__local_mem__ float*)yOutUb, aLength, aLoopOffset, binaryAddKLoop, binaryAddInnerLoop,
+                            binaryAddLastLoop, pregLoop, x1, x2, x3, x4);
                 DataCopy(x1, ((__local_mem__ float*)yOutUb + aLoopOffset));
                 Muls(x1, x1, nCorrection, pregLoop);
                 DataCopy(((__local_mem__ float*)varianceOutUbAddr + aLoopOffset), x1, pregLoop);
@@ -967,8 +953,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeRstd(
-        __local_mem__ float* varianceOutUbAddr, __local_mem__ float* rstdUbAddr, uint64_t curTileA0Len, float epsilon)
+    __aicore__ inline void ComputeRstd(__local_mem__ float* varianceOutUbAddr, __local_mem__ float* rstdUbAddr,
+                                       uint64_t curTileA0Len, float epsilon)
     {
         uint16_t aLoop = static_cast<uint16_t>((curTileA0Len + VL_FP32 - 1) / VL_FP32);
         __VEC_SCOPE__
@@ -1028,10 +1014,10 @@ public:
         }
     }
 
-    __aicore__ inline void CalculateY(
-        __local_mem__ float* xInUb, __local_mem__ T_X* yOutUb, __local_mem__ T_B* betaInUb,
-        __local_mem__ T_B* gammaInUb, __local_mem__ float* meanOutUbAddr, __local_mem__ float* rstdUbAddr,
-        uint16_t curTileA0Len)
+    __aicore__ inline void CalculateY(__local_mem__ float* xInUb, __local_mem__ T_X* yOutUb,
+                                      __local_mem__ T_B* betaInUb, __local_mem__ T_B* gammaInUb,
+                                      __local_mem__ float* meanOutUbAddr, __local_mem__ float* rstdUbAddr,
+                                      uint16_t curTileA0Len)
     {
         uint16_t rLoopCount = totalRLen_;
         uint16_t aLoopCount = CEIL_DIV(curTileA0Len, VL_FP32);
@@ -1077,8 +1063,8 @@ public:
             }
         }
     }
-    __aicore__ inline void CastMeanRstd(
-        LocalTensor<float> meanOutUb, LocalTensor<float> varianceOutUb, uint64_t curTileA0Len)
+    __aicore__ inline void CastMeanRstd(LocalTensor<float> meanOutUb, LocalTensor<float> varianceOutUb,
+                                        uint64_t curTileA0Len)
     {
         __local_mem__ float* meanInAddr = (__local_mem__ float*)meanOutUb.GetPhyAddr();
         __local_mem__ float* varianceInAddr = (__local_mem__ float*)varianceOutUb.GetPhyAddr();
@@ -1100,10 +1086,10 @@ public:
                 MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_rstd, varianceInAddr + VL_FP32 * i);
                 Cast<T_M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<T_M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
-                DataCopy<T_M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ T_M*)meanOutAddr + i * VL_MEAN), output_mean, pregLoop);
-                DataCopy<T_M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ T_M*)varianceOutAddr + i * VL_MEAN), output_rstd, pregLoop);
+                DataCopy<T_M, StoreDist::DIST_PACK_B32>(((__local_mem__ T_M*)meanOutAddr + i * VL_MEAN), output_mean,
+                                                        pregLoop);
+                DataCopy<T_M, StoreDist::DIST_PACK_B32>(((__local_mem__ T_M*)varianceOutAddr + i * VL_MEAN),
+                                                        output_rstd, pregLoop);
             }
         }
     }
@@ -1135,12 +1121,10 @@ public:
                 copyInParamsTail.blockLen = tailSize * sizeof(T_M);
                 copyInParamsTail.srcStride = 0;
                 copyInParamsTail.dstStride = 0;
-                DataCopyPad(
-                    meanGm_[offset + castDmaLoops * VL_FP32], MeanInUb[castDmaLoops * VL_FP32].ReinterpretCast<T_M>(),
-                    copyInParamsTail);
-                DataCopyPad(
-                    varianceGm_[offset + castDmaLoops * VL_FP32],
-                    varianceUb[castDmaLoops * VL_FP32].ReinterpretCast<T_M>(), copyInParamsTail);
+                DataCopyPad(meanGm_[offset + castDmaLoops * VL_FP32],
+                            MeanInUb[castDmaLoops * VL_FP32].ReinterpretCast<T_M>(), copyInParamsTail);
+                DataCopyPad(varianceGm_[offset + castDmaLoops * VL_FP32],
+                            varianceUb[castDmaLoops * VL_FP32].ReinterpretCast<T_M>(), copyInParamsTail);
             }
             meanQueue_.FreeTensor(MeanInUb);
             varianceQueue_.FreeTensor(varianceUb);

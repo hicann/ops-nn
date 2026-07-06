@@ -40,8 +40,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_01_float_none_broadcast)
 
     auto outDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -60,8 +60,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_02_float_nchw_mean)
 
     auto outDesc = TensorDesc({3, 5, 2, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -80,8 +80,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_03_float16_ncdhw_sum)
 
     auto outDesc = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT16, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -100,8 +100,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_04_float_hwcn_batchmean)
 
     auto outDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_HWCN).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -120,8 +120,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_05_float_none_logtarget_tru
 
     auto outDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -140,8 +140,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_06_float16_to_float_logtarg
 
     auto outDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -160,8 +160,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_07_float_nhwc_logtarget_tru
 
     auto outDesc = TensorDesc({3, 1, 2, 5}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -180,8 +180,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_08_float_ndhwc_logtarget_tr
 
     auto outDesc = TensorDesc({3, 1, 2, 5, 4}, ACL_FLOAT, ACL_FORMAT_NDHWC).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -200,8 +200,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_09_empty_tensor)
 
     auto outDesc = TensorDesc({3, 1, 0, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -220,8 +220,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_10_onedim_tensor_logtarget_
 
     auto outDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -240,8 +240,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_11_threedim_tensor_broadcas
 
     auto outDesc = TensorDesc({3, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -260,8 +260,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_12_fivedim_tensor_logtarget
 
     auto outDesc = TensorDesc({3, 4, 6, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -280,8 +280,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_13_dtype_promote_float16_to
 
     auto outDesc = TensorDesc({3, 4, 1, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -300,8 +300,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_14_reduction_error)
 
     auto outDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -314,28 +314,27 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_15_input_out_nullptr)
     int64_t reduction = Reduction::None;
     bool logTarget = true;
 
-    auto ut_grad = OP_API_UT(
-        aclnnKlDivBackward, INPUT((aclTensor*)nullptr, tensorDesc, tensorDesc, reduction, logTarget),
-        OUTPUT(tensorDesc));
+    auto ut_grad = OP_API_UT(aclnnKlDivBackward,
+                             INPUT((aclTensor*)nullptr, tensorDesc, tensorDesc, reduction, logTarget),
+                             OUTPUT(tensorDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut_grad.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut_self = OP_API_UT(
-        aclnnKlDivBackward, INPUT(tensorDesc, (aclTensor*)nullptr, tensorDesc, reduction, logTarget),
-        OUTPUT(tensorDesc));
+    auto ut_self = OP_API_UT(aclnnKlDivBackward,
+                             INPUT(tensorDesc, (aclTensor*)nullptr, tensorDesc, reduction, logTarget),
+                             OUTPUT(tensorDesc));
     aclRet = ut_self.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut_tar = OP_API_UT(
-        aclnnKlDivBackward, INPUT(tensorDesc, tensorDesc, (aclTensor*)nullptr, reduction, logTarget),
-        OUTPUT(tensorDesc));
+    auto ut_tar = OP_API_UT(aclnnKlDivBackward,
+                            INPUT(tensorDesc, tensorDesc, (aclTensor*)nullptr, reduction, logTarget),
+                            OUTPUT(tensorDesc));
     aclRet = ut_tar.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut_o = OP_API_UT(
-        aclnnKlDivBackward, INPUT(tensorDesc, tensorDesc, tensorDesc, reduction, logTarget),
-        OUTPUT((aclTensor*)nullptr));
+    auto ut_o = OP_API_UT(aclnnKlDivBackward, INPUT(tensorDesc, tensorDesc, tensorDesc, reduction, logTarget),
+                          OUTPUT((aclTensor*)nullptr));
     aclRet = ut_o.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
@@ -347,19 +346,19 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_16_input_error_shape_len)
     int64_t reduction = Reduction::None;
     bool logTarget = true;
 
-    auto ut_grad = OP_API_UT(
-        aclnnKlDivBackward, INPUT(tensorDesc9, tensorDesc4, tensorDesc4, reduction, logTarget), OUTPUT(tensorDesc4));
+    auto ut_grad = OP_API_UT(aclnnKlDivBackward, INPUT(tensorDesc9, tensorDesc4, tensorDesc4, reduction, logTarget),
+                             OUTPUT(tensorDesc4));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut_grad.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-    auto ut_self = OP_API_UT(
-        aclnnKlDivBackward, INPUT(tensorDesc4, tensorDesc9, tensorDesc4, reduction, logTarget), OUTPUT(tensorDesc4));
+    auto ut_self = OP_API_UT(aclnnKlDivBackward, INPUT(tensorDesc4, tensorDesc9, tensorDesc4, reduction, logTarget),
+                             OUTPUT(tensorDesc4));
     aclRet = ut_self.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-    auto ut_tar = OP_API_UT(
-        aclnnKlDivBackward, INPUT(tensorDesc4, tensorDesc4, tensorDesc9, reduction, logTarget), OUTPUT(tensorDesc4));
+    auto ut_tar = OP_API_UT(aclnnKlDivBackward, INPUT(tensorDesc4, tensorDesc4, tensorDesc9, reduction, logTarget),
+                            OUTPUT(tensorDesc4));
     aclRet = ut_tar.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
@@ -374,8 +373,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_17_error_input_dtype)
 
     auto outDesc = TensorDesc({3, 4, 6, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -391,8 +390,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_18_target_not_broadcast)
 
     auto outDesc = TensorDesc({3, 4, 6, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -408,8 +407,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_19_out_shape_not_equal_self
 
     auto outDesc = TensorDesc({3, 4, 6, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -425,8 +424,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_20_self_not_equal_broadcast
 
     auto outDesc = TensorDesc({3, 4, 6, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -442,8 +441,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_21_broadcast_grad_1d)
 
     auto outDesc = TensorDesc({3, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -462,8 +461,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_22_broadcast_target_1d)
 
     auto outDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -482,8 +481,8 @@ TEST_F(kl_div_loss_backward_test, aclnnKlDivBackward_23_broadcast_mixed_rank)
 
     auto outDesc = TensorDesc({3, 5, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnKlDivBackward, INPUT(gradOutputDesc, selfDesc, targetDesc, reduction, logTarget),
+                        OUTPUT(outDesc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

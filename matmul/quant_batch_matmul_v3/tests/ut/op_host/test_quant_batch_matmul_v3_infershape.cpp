@@ -42,7 +42,6 @@ struct QuantBatchMatmulV3InferShapeParam {
     gert::Shape expectOutput;
 };
 
-
 static std::vector<QuantBatchMatmulV3InferShapeParam> GetParams()
 {
     std::vector<QuantBatchMatmulV3InferShapeParam> params;
@@ -92,18 +91,14 @@ static std::vector<QuantBatchMatmulV3InferShapeParam> GetParams()
 
 class TestQuantBatchMatmulV3InferShape : public testing::TestWithParam<QuantBatchMatmulV3InferShapeParam> {
 protected:
-    static void SetUpTestCase()
-    {
-    }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase()
-    {
-    }
+    static void TearDownTestCase() {}
 };
 
 TEST_P(TestQuantBatchMatmulV3InferShape, InferShapeFromCsv)
 {
-    const auto &param = GetParam();
+    const auto& param = GetParam();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulV3"), nullptr);
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantBatchMatmulV3")->infer_shape;
     ASSERT_NE(inferShapeFunc, nullptr);
@@ -114,7 +109,7 @@ TEST_P(TestQuantBatchMatmulV3InferShape, InferShapeFromCsv)
     gert::Shape offset = param.offset;
     gert::Shape bias = param.bias;
     gert::Shape outputShape;
-    std::vector<gert::Shape *> inputShapes = {&x1, &x2};
+    std::vector<gert::Shape*> inputShapes = {&x1, &x2};
     if (param.inputNum >= 3UL) {
         inputShapes.push_back(&scale);
     }
@@ -129,14 +124,14 @@ TEST_P(TestQuantBatchMatmulV3InferShape, InferShapeFromCsv)
     std::vector<uint32_t> irInstanceNum(param.inputNum, 1U);
     int64_t dtype = static_cast<int64_t>(param.dtype);
     auto contextHolder = gert::InferShapeContextFaker()
-        .NodeIoNum(param.inputNum, 1)
-        .IrInstanceNum(irInstanceNum)
-        .InputShapes(inputShapes)
-        .OutputShapes({&outputShape})
-        .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
-                    {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
-                    {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
-        .Build();
+                             .NodeIoNum(param.inputNum, 1)
+                             .IrInstanceNum(irInstanceNum)
+                             .InputShapes(inputShapes)
+                             .OutputShapes({&outputShape})
+                             .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dtype)},
+                                         {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX1)},
+                                         {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transposeX2)}})
+                             .Build();
 
     auto ret = inferShapeFunc(contextHolder.GetContext<gert::InferShapeContext>());
     ASSERT_EQ(ret, param.expectStatus) << "caseName=" << param.caseName;
@@ -150,5 +145,5 @@ TEST_P(TestQuantBatchMatmulV3InferShape, InferShapeFromCsv)
 INSTANTIATE_TEST_CASE_P(QuantBatchMatmulV3InferShapeCsv, TestQuantBatchMatmulV3InferShape,
                         testing::ValuesIn(GetParams()));
 
-}  // namespace
-}  // namespace ge
+} // namespace
+} // namespace ge

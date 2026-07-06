@@ -59,13 +59,10 @@ static const uint64_t NUM_OF_QMAP = 2;
 static const float EPS = 0.00001f;
 static const int64_t BLOCKSIZE = 256;
 
-inline uint64_t CeilDiv(uint64_t a, uint64_t b)
-{
-    return (b == 0 ? 0 : ((a + b - 1) / b));
-}
+inline uint64_t CeilDiv(uint64_t a, uint64_t b) { return (b == 0 ? 0 : ((a + b - 1) / b)); }
 
-inline static ge::graphStatus ApplyAdamWQuantSetTilingData(
-    gert::TilingContext* context, ApplyAdamWQuantTilingData& tilingData)
+inline static ge::graphStatus ApplyAdamWQuantSetTilingData(gert::TilingContext* context,
+                                                           ApplyAdamWQuantTilingData& tilingData)
 {
     if (tilingData.GetDataSize() > context->GetRawTilingData()->GetCapacity()) {
         return ge::GRAPH_FAILED;
@@ -125,9 +122,8 @@ static ge::graphStatus GetTilingAttr(const gert::TilingContext* context, ApplyAd
     auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSize);
     tilingParam.block_size = static_cast<int64_t>(*attrBlockSize);
-    OP_CHECK_IF(
-        tilingParam.block_size != BLOCKSIZE, OP_LOGE(context, "attr block_size should be 256, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingParam.block_size != BLOCKSIZE, OP_LOGE(context, "attr block_size should be 256, please check."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -185,42 +181,38 @@ static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, stepShapePtr);
     auto stepShape = stepShapePtr->GetStorageShape();
 
-    bool isDiffShape =
-        !IsSameShape(varShape, gradShape) || !IsSameShape(varShape, mShape) || !IsSameShape(varShape, vShape);
+    bool isDiffShape = !IsSameShape(varShape, gradShape) || !IsSameShape(varShape, mShape) ||
+                       !IsSameShape(varShape, vShape);
     bool isqmapDiffShape = !IsSameShape(qmapMShape, qmapVShape) || qmapMSize != QMAP_SIZE;
-    OP_CHECK_IF(
-        isDiffShape, OP_LOGE(context, "var,grad,m,v should have same shape, please check."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        isqmapDiffShape, OP_LOGE(context, "qmapM and qmapV should be same shape,shape is [256], please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isDiffShape, OP_LOGE(context, "var,grad,m,v should have same shape, please check."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isqmapDiffShape, OP_LOGE(context, "qmapM and qmapV should be same shape,shape is [256], please check."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        stepShape.GetDimNum() != 1 || stepShape.GetDim(0) != 1,
-        OP_LOGE(context, "step should have only one element, please check."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(stepShape.GetDimNum() != 1 || stepShape.GetDim(0) != 1,
+                OP_LOGE(context, "step should have only one element, please check."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus DoTiling(
-    const gert::TilingContext* context, ApplyAdamWQuantTilingParam& tilingParam, uint64_t max_ub_size)
+static ge::graphStatus DoTiling(const gert::TilingContext* context, ApplyAdamWQuantTilingParam& tilingParam,
+                                uint64_t max_ub_size)
 {
     const auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint64_t aivNum = ascendcPlatform.GetCoreNumAiv();
     auto shapePtr = context->GetInputShape(INDEX_IN_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
-    uint64_t one_block_size =
-        tilingParam.block_size * (SIZE_OF_FLOAT * ONE_BLOCK_NEED_BUF + SIZE_OF_FLOAT16 + SIZE_OF_FLOAT) +
-        (PER_BLOCK_OF_MAX_NUM + PER_BLOCK_OF_MAX_NUM) * SIZE_OF_FLOAT;
+    uint64_t one_block_size = tilingParam.block_size *
+                                  (SIZE_OF_FLOAT * ONE_BLOCK_NEED_BUF + SIZE_OF_FLOAT16 + SIZE_OF_FLOAT) +
+                              (PER_BLOCK_OF_MAX_NUM + PER_BLOCK_OF_MAX_NUM) * SIZE_OF_FLOAT;
     bool check_one_block_size_zero = CheckZero(one_block_size);
-    OP_CHECK_IF(
-        check_one_block_size_zero, OP_LOGE(context, "one core max size can not be 0, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(check_one_block_size_zero, OP_LOGE(context, "one core max size can not be 0, please check."),
+                return ge::GRAPH_FAILED);
     uint64_t per_core_do_block_num = (max_ub_size - QMAP_SIZE * SIZE_OF_FLOAT * NUM_OF_QMAP) / one_block_size;
     uint64_t totalDataNum = shapePtr->GetStorageShape().GetShapeSize();
     uint64_t block_num = (totalDataNum + tilingParam.block_size - 1) / tilingParam.block_size;
     bool check_per_core_do_block_num = CheckZero(per_core_do_block_num);
-    OP_CHECK_IF(
-        check_per_core_do_block_num, OP_LOGE(context, "one core do block num can not be 0, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(check_per_core_do_block_num, OP_LOGE(context, "one core do block num can not be 0, please check."),
+                return ge::GRAPH_FAILED);
     uint64_t total_use_num_core = (block_num + per_core_do_block_num - 1) / per_core_do_block_num;
     uint64_t last_core_last_block = block_num - (total_use_num_core - 1) * per_core_do_block_num;
     uint64_t use_num_core = CeilDiv(total_use_num_core, CeilDiv(total_use_num_core, aivNum));
@@ -267,13 +259,11 @@ ge::graphStatus Tiling4ApplyAdamWQuant(gert::TilingContext* context)
     const auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, max_ub_size);
 
-    OP_CHECK_IF(
-        GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Tiling4ApplyAdamWQuant GetTilingAttr fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Tiling4ApplyAdamWQuant GetTilingAttr fail."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "input shape check failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "input shape check failed."),
+                return ge::GRAPH_FAILED);
 
     auto dtypePtr = context->GetInputDesc(INDEX_IN_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
@@ -290,16 +280,14 @@ ge::graphStatus Tiling4ApplyAdamWQuant(gert::TilingContext* context)
 
     context->SetTilingKey(tilingKey);
 
-    OP_CHECK_IF(
-        DoTiling(context, tilingParam, max_ub_size) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Tiling4ApplyAdamWQuant DoTiling fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(DoTiling(context, tilingParam, max_ub_size) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Tiling4ApplyAdamWQuant DoTiling fail."), return ge::GRAPH_FAILED);
 
     ApplyAdamWQuantTilingData tilingData;
     tilingData.set_tiling_key(tilingKey);
     GetTilingData(tilingData, tilingParam);
-    OP_CHECK_IF(
-        ApplyAdamWQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "Tiling4ApplyAdamWQuantSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ApplyAdamWQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "Tiling4ApplyAdamWQuantSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_use_num_core());
 
     PrintTilingData(tilingData);

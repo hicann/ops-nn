@@ -26,7 +26,7 @@ static graphStatus InferShapeForAscendAntiQuantV2(gert::InferShapeContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXShape);
 
     gert::Shape* outputShape = context->GetOutputShape(0);
-    
+
     *outputShape = *inputXShape;
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForAscendAntiQuantV2");
     return ge::GRAPH_SUCCESS;
@@ -43,5 +43,7 @@ static ge::graphStatus InferDataTypeForAscendAntiQuantV2(gert::InferDataTypeCont
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(AscendAntiQuantV2).InferShape(InferShapeForAscendAntiQuantV2).InferDataType(InferDataTypeForAscendAntiQuantV2);
+IMPL_OP_INFERSHAPE(AscendAntiQuantV2)
+    .InferShape(InferShapeForAscendAntiQuantV2)
+    .InferDataType(InferDataTypeForAscendAntiQuantV2);
 } // namespace ops

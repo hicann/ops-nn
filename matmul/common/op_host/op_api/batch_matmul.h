@@ -12,28 +12,27 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* BatchMatMulV3Nd(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* offsetW, const bool adjX1,
-    const bool adjX2, const bool offsetX, const bool enableHf32, aclOpExecutor* executor);
+const aclTensor* BatchMatMulV3Nd(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                 const aclTensor* offsetW, const bool adjX1, const bool adjX2, const bool offsetX,
+                                 const bool enableHf32, aclOpExecutor* executor);
 
-const aclTensor* BatchMatMulV3NdFp16Bf162Fp32(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* offsetW, const bool adjX1,
-    const bool adjX2, const bool offsetX, const bool enableHf32, aclOpExecutor* executor);
+const aclTensor* BatchMatMulV3NdFp16Bf162Fp32(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                              const aclTensor* offsetW, const bool adjX1, const bool adjX2,
+                                              const bool offsetX, const bool enableHf32, aclOpExecutor* executor);
 
-const aclTensor* BatchMatMulNd(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* offsetW, const bool adjX1,
-    const bool adjX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
+const aclTensor* BatchMatMulNd(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                               const aclTensor* offsetW, const bool adjX1, const bool adjX2, const bool offsetX,
+                               const int64_t opImplModeEnum, aclOpExecutor* executor);
 
-const aclTensor* BatchMatMulNzFp162Fp16(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* offsetW, const bool adjX1,
-    const bool adjX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
+const aclTensor* BatchMatMulNzFp162Fp16(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                        const aclTensor* offsetW, const bool adjX1, const bool adjX2,
+                                        const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
 
-const aclTensor* BatchMatMulNdFp162Fp32(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* offsetW, const bool adjX1,
-    const bool adjX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
+const aclTensor* BatchMatMulNdFp162Fp32(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                        const aclTensor* offsetW, const bool adjX1, const bool adjX2,
+                                        const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
 
-const aclTensor* BatchMatMulNzFp162Fp32(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* offsetW, const bool adjX1,
-    const bool adjX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
+const aclTensor* BatchMatMulNzFp162Fp32(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                        const aclTensor* offsetW, const bool adjX1, const bool adjX2,
+                                        const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
 } // namespace l0op
-

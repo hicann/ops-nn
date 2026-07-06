@@ -11,11 +11,10 @@
 #include "conv_backprop_filter_tuning_tiling.h"
 
 namespace tuningtiling {
-DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3DBackpropFilterV2, Conv3DBackpropFilterArgs, 
-    batch, groups, co, ci, dout, wo, ho, wi, hi, di, kw, kh, kd, 
-    stride_w, stride_h, stride_d, pad_l, pad_r, pad_u, pad_d, pad_f, pad_b, 
-    dilation_w, dilation_h, dilation_d, hf32Flag, a_dtype, b_dtype, c_dtype, 
-    a_dtype_bytes, b_dtype_bytes, c_dtype_bytes, fmapFormat, dedyFormat, filterFormat);
+DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3DBackpropFilterV2, Conv3DBackpropFilterArgs, batch, groups, co, ci, dout, wo, ho,
+                                 wi, hi, di, kw, kh, kd, stride_w, stride_h, stride_d, pad_l, pad_r, pad_u, pad_d,
+                                 pad_f, pad_b, dilation_w, dilation_h, dilation_d, hf32Flag, a_dtype, b_dtype, c_dtype,
+                                 a_dtype_bytes, b_dtype_bytes, c_dtype_bytes, fmapFormat, dedyFormat, filterFormat);
 
 REGISTER_TUNING_TILING_CLASS(Conv3DBackpropFilterV2, Conv3DBackpropFilterTunerTiling);
-}  // namespace tuningtiling
+} // namespace tuningtiling

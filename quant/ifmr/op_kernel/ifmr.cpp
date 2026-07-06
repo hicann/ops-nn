@@ -16,20 +16,14 @@
 #include "ifmr.h"
 
 using namespace AscendC;
- 
-extern "C" __global__ __aicore__ void ifmr(
-    GM_ADDR data,
-    GM_ADDR data_min,
-    GM_ADDR data_max,
-    GM_ADDR cumsum,
-    GM_ADDR scale,
-    GM_ADDR offset,
-    GM_ADDR workspace,
-    GM_ADDR tiling) {
+
+extern "C" __global__ __aicore__ void ifmr(GM_ADDR data, GM_ADDR data_min, GM_ADDR data_max, GM_ADDR cumsum,
+                                           GM_ADDR scale, GM_ADDR offset, GM_ADDR workspace, GM_ADDR tiling)
+{
     GM_ADDR user_workspace = AscendC::GetUserWorkspace(workspace);
     REGISTER_TILING_DEFAULT(IfmrTilingData);
     GET_TILING_DATA_WITH_STRUCT(IfmrTilingData, tilingData, tiling);
- 
+
 #if defined(DTYPE_DATA)
     if (TILING_KEY_IS(0)) {
         Ifmr::KernelIfmr<DTYPE_DATA> op;
@@ -37,6 +31,6 @@ extern "C" __global__ __aicore__ void ifmr(
         op.Process();
     }
 #endif
- 
+
     return;
 }

@@ -26,25 +26,24 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LogSigmoid);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                              op::DataType::DT_FLOAT16,
-                                                                              op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor *self) {
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* self) { return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
 // AICORE算子kernel
-static const aclTensor *LogSigmoidAiCore(const aclTensor *x, aclTensor *LogSigmoidOut, aclOpExecutor *executor) {
+static const aclTensor* LogSigmoidAiCore(const aclTensor* x, aclTensor* LogSigmoidOut, aclOpExecutor* executor)
+{
     L0_DFX(LogSigmoidAiCore, x, LogSigmoidOut);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LogSigmoid, OP_INPUT(x), OP_OUTPUT(LogSigmoidOut));
-    OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LogSigmoidAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LogSigmoidAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return LogSigmoidOut;
 }
 
-const aclTensor *LogSigmoid(const aclTensor *x, aclOpExecutor *executor) {
+const aclTensor* LogSigmoid(const aclTensor* x, aclOpExecutor* executor)
+{
     auto LogSigmoidOut = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
 
     if (IsAiCoreSupport(x)) {
@@ -54,4 +53,4 @@ const aclTensor *LogSigmoid(const aclTensor *x, aclOpExecutor *executor) {
         return nullptr;
     }
 }
-}  // namespace l0op
+} // namespace l0op

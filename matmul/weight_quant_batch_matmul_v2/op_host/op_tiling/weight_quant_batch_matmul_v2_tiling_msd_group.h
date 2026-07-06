@@ -25,9 +25,7 @@ using Ops::NN::Optiling::RecursiveSum;
 
 namespace optiling {
 
-
-class WeightQuantBatchMatmulV2TilingMsdGroup : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2TilingMsdGroup : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2TilingMsdGroup(gert::TilingContext* context)
         : WeightQuantBatchMatmulV2Tiling(context)
@@ -57,10 +55,7 @@ protected:
     ge::graphStatus DoOpTiling() override;
 
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
 
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override
@@ -88,12 +83,12 @@ protected:
             bool isBiasFp32 = false;
             bool isWeightNz = (tilingKeyConfigure.weightFormat == 1UL) ? true : false;
             uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
-            uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+            uint64_t fullLoadMode = 5UL;  // 5 means FULL_LOAD_MODE_NOT_USED
             uint64_t batch = 0UL;
-            return GET_TPL_TILING_KEY(
-                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
-                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
-                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return GET_TPL_TILING_KEY(socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm,
+                                      subAlgorithmCustom, innerPrecise, templateCustom, apiConstexpr, transA, transB,
+                                      antiquantType, quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz,
+                                      templateExtra, fullLoadMode, batch);
         } else {
             uint64_t socVersionType = 1UL; // 1 means SUPPORT_L0C_TO_OUT
             uint64_t subSocVersionType = 0UL;
@@ -113,12 +108,12 @@ protected:
             bool isBiasFp32 = false;
             bool isWeightNz = false;
             uint64_t templateExtra = 3UL; // 3 means TEMPLATE_EXTRA_NOT_USED
-            uint64_t fullLoadMode = 5UL; // 5 means FULL_LOAD_MODE_NOT_USED
+            uint64_t fullLoadMode = 5UL;  // 5 means FULL_LOAD_MODE_NOT_USED
             uint64_t batch = 0UL;
-            return GET_TPL_TILING_KEY(
-                socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm, subAlgorithmCustom,
-                innerPrecise, templateCustom, apiConstexpr, transA, transB, antiquantType, quantType, hasAntiquantOffset,
-                hasBias, isBiasFp32, isWeightNz, templateExtra, fullLoadMode, batch);
+            return GET_TPL_TILING_KEY(socVersionType, subSocVersionType, antiquantScenario, algorithm, subAlgorithm,
+                                      subAlgorithmCustom, innerPrecise, templateCustom, apiConstexpr, transA, transB,
+                                      antiquantType, quantType, hasAntiquantOffset, hasBias, isBiasFp32, isWeightNz,
+                                      templateExtra, fullLoadMode, batch);
         }
     }
 

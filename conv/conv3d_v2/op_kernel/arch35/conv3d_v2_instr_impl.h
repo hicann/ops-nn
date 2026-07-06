@@ -27,7 +27,7 @@ class LoadAL1ToolsMMode : public LoadAL1ToolsBase<Intf> {
 public:
     __aicore__ inline LoadAL1ToolsMMode() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         this->SetIntf(self);
@@ -35,7 +35,7 @@ public:
 
     __aicore__ inline void LoadAL1Data()
     {
-        uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize+
+        uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                             this->cinIdx * self_->ctx.convTilingData->orgDi * self_->ctx.convTilingData->orgHixWi +
                             this->diIdx * self_->ctx.convTilingData->orgHixWi +
                             hiIdx * self_->ctx.convTilingData->orgWi;
@@ -50,8 +50,7 @@ public:
     {
         uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                             this->diIdx * self_->ctx.convTilingData->orgHixWi * self_->ctx.convTilingData->orgCi +
-                            hiIdx * self_->ctx.convTilingData->orgWi * self_->ctx.convTilingData->orgCi +
-                            this->cinIdx;
+                            hiIdx * self_->ctx.convTilingData->orgWi * self_->ctx.convTilingData->orgCi + this->cinIdx;
         if (likely(this->dkLoadL1 > 0)) {
             Nd2NzParams intriParams;
             SetNd2NzIntriParams(intriParams);
@@ -86,7 +85,8 @@ public:
         }
 
         if (this->cin1LoadL1PadTail > 0) {
-            this->aL1Pos += this->dkLoadL1 * AlignB(this->cinLoadL1, Intf::k0) * hiLoadL1 * self_->ctx.convTilingData->orgWi;
+            this->aL1Pos += this->dkLoadL1 * AlignB(this->cinLoadL1, Intf::k0) * hiLoadL1 *
+                            self_->ctx.convTilingData->orgWi;
             this->Al1PadTailSet2d(hiLoadL1, self_->ctx.convTilingData->orgWi);
         }
     }
@@ -125,7 +125,7 @@ private:
         }
     }
 
-    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams)
+    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams& intriParams)
     {
         uint64_t aL1Mi = hiLoadL1 * self_->ctx.convTilingData->orgWi;
         intriParams.dnNum = this->dkLoadL1;
@@ -149,16 +149,13 @@ private:
         intriParams.dstNzMatrixStride = AlignB(this->cinLoadL1, Intf::k0) * aL1Mi;
         intriParams.srcDValue = self_->ctx.convTilingData->orgCi;
         intriParams.srcNdMatrixStride = self_->ctx.convTilingData->orgHixWi * self_->ctx.convTilingData->dilationD *
-            self_->ctx.convTilingData->orgCi;
+                                        self_->ctx.convTilingData->orgCi;
     }
 
-    __aicore__ inline bool IsMAL1Tail()
-    {
-        return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter;
-    }
+    __aicore__ inline bool IsMAL1Tail() { return self_->ctx.mAL1Iter == self_->ctx.maxMAL1Iter; }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t padTopL1 = 0;
     uint64_t padBottomL1 = 0;
     uint64_t hiLoadL1 = 0;
@@ -170,7 +167,7 @@ class LoadAL1ToolsHWmode : public LoadAL1ToolsBase<Intf> {
 public:
     __aicore__ inline LoadAL1ToolsHWmode() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         this->SetIntf(self);
@@ -180,27 +177,32 @@ public:
     {
         paddingWiAL1 = (self_->ctx.currentWoL1 - 1) * self_->ctx.convTilingData->strideW + self_->ctx.dilatedKernelW;
         if constexpr (Intf::bigKernelFlag) {
-            uint64_t kwOffset = self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 * self_->ctx.convTilingData->dilationW;
+            uint64_t kwOffset = self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 *
+                                self_->ctx.convTilingData->dilationW;
             if (unlikely(self_->ctx.woL1SmallTail != 0 && woAL1Iter == self_->ctx.maxWoL1Iter)) {
                 wiLeftPadIdx = ((woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) *
-                    self_->ctx.convTilingData->strideW - self_->ctx.convTilingData->padLeft + kwOffset;
+                                   self_->ctx.convTilingData->strideW -
+                               self_->ctx.convTilingData->padLeft + kwOffset;
             } else {
                 wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->woL1 * self_->ctx.convTilingData->strideW -
-                    self_->ctx.convTilingData->padLeft + kwOffset;
+                               self_->ctx.convTilingData->padLeft + kwOffset;
             }
         } else {
             if (unlikely(self_->ctx.woL1SmallTail != 0 && woAL1Iter == self_->ctx.maxWoL1Iter)) {
                 wiLeftPadIdx = ((woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) *
-                    self_->ctx.convTilingData->strideW - self_->ctx.convTilingData->padLeft;
+                                   self_->ctx.convTilingData->strideW -
+                               self_->ctx.convTilingData->padLeft;
             } else {
                 wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->woL1 * self_->ctx.convTilingData->strideW -
-                    self_->ctx.convTilingData->padLeft;
+                               self_->ctx.convTilingData->padLeft;
             }
         }
 
         wiRightPadIdx = wiLeftPadIdx + paddingWiAL1;
         padLeftL1 = wiLeftPadIdx < 0 ? (0 - wiLeftPadIdx) : 0;
-        padRightL1 = wiRightPadIdx > self_->ctx.convTilingData->orgWi ? (wiRightPadIdx - self_->ctx.convTilingData->orgWi) : 0;
+        padRightL1 = wiRightPadIdx > self_->ctx.convTilingData->orgWi ?
+                         (wiRightPadIdx - self_->ctx.convTilingData->orgWi) :
+                         0;
         if (padLeftL1 >= paddingWiAL1 || padRightL1 >= paddingWiAL1) {
             this->allPadFlag = true;
             return;
@@ -215,15 +217,18 @@ public:
         // hiTopPadIdx is inaccurate when hiStartPos > 0
         if constexpr (Intf::bigKernelFlag) {
             hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->hoL1 * self_->ctx.convTilingData->strideH +
-                hiRealStartPos + self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->dilationH;
+                          hiRealStartPos +
+                          self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->dilationH;
         } else {
             hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->hoL1 * self_->ctx.convTilingData->strideH +
-                hiRealStartPos;
+                          hiRealStartPos;
         }
         hiBottomPadIdx = hiTopPadIdx + paddingHiAL1;
         padTopL1 = hiTopPadIdx < 0 ? (0 - hiTopPadIdx) : 0;
         hiBottomPadIdx = self_->ctx.hiStartPos > 0 ? hiBottomPadIdx + self_->ctx.hiStartPos : hiBottomPadIdx;
-        padBottomL1 = hiBottomPadIdx > self_->ctx.convTilingData->orgHi ? hiBottomPadIdx - self_->ctx.convTilingData->orgHi : 0;
+        padBottomL1 = hiBottomPadIdx > self_->ctx.convTilingData->orgHi ?
+                          hiBottomPadIdx - self_->ctx.convTilingData->orgHi :
+                          0;
         if (padTopL1 >= paddingHiAL1 || padBottomL1 >= paddingHiAL1) {
             this->allPadFlag = true;
             return;
@@ -244,6 +249,7 @@ public:
         }
         LoadAl1Data();
     }
+
 private:
     __aicore__ inline void LoadAl1Data()
     {
@@ -262,7 +268,8 @@ private:
             aL1GmOffset = self_->ctx.convTilingData->orgHixWi * self_->ctx.convTilingData->dilationD;
             LoadAl1Data(realHiTopGmIdx, realWiTopGmIdx, al1Offset, aL1GmOffset);
         } else {
-            aL1GmOffset = self_->ctx.convTilingData->orgHixWi * self_->ctx.convTilingData->dilationD * self_->ctx.convTilingData->orgCi;
+            aL1GmOffset = self_->ctx.convTilingData->orgHixWi * self_->ctx.convTilingData->dilationD *
+                          self_->ctx.convTilingData->orgCi;
             LoadAl1DataHWC(realHiTopGmIdx, realWiTopGmIdx, al1Offset, aL1GmOffset);
         }
 
@@ -271,14 +278,13 @@ private:
         }
     }
 
-    __aicore__ inline void LoadAl1Data(int64_t realHiTopGmIdx, int64_t realWiTopGmIdx,
-                                       int64_t al1Offset, int64_t aL1GmOffset)
+    __aicore__ inline void LoadAl1Data(int64_t realHiTopGmIdx, int64_t realWiTopGmIdx, int64_t al1Offset,
+                                       int64_t aL1GmOffset)
     {
         uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                             this->cinIdx * self_->ctx.convTilingData->orgDi * self_->ctx.convTilingData->orgHixWi +
                             this->diIdx * self_->ctx.convTilingData->orgHixWi +
-                            realHiTopGmIdx * self_->ctx.convTilingData->orgWi +
-                            realWiTopGmIdx;
+                            realHiTopGmIdx * self_->ctx.convTilingData->orgWi + realWiTopGmIdx;
         Dn2NzParams intriParams;
         SetDn2NzIntriParams(intriParams);
         for (uint64_t dkIter = 0; dkIter < this->dkLoadL1; ++dkIter) {
@@ -288,14 +294,13 @@ private:
         }
     }
 
-    __aicore__ inline void LoadAl1DataHWC(int64_t realHiTopGmIdx, int64_t realWiTopGmIdx,
-                                          int64_t al1Offset, int64_t aL1GmOffset)
+    __aicore__ inline void LoadAl1DataHWC(int64_t realHiTopGmIdx, int64_t realWiTopGmIdx, int64_t al1Offset,
+                                          int64_t aL1GmOffset)
     {
         uint64_t aL1GmPos = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                             this->diIdx * self_->ctx.convTilingData->orgHixWi * self_->ctx.convTilingData->orgCi +
                             realHiTopGmIdx * self_->ctx.convTilingData->orgWi * self_->ctx.convTilingData->orgCi +
-                            realWiTopGmIdx * self_->ctx.convTilingData->orgCi +
-                            this->cinIdx;
+                            realWiTopGmIdx * self_->ctx.convTilingData->orgCi + this->cinIdx;
         Nd2NzParams intriParams;
         SetNd2NzIntriParams(intriParams);
         for (uint64_t dkIter = 0; dkIter < this->dkLoadL1; ++dkIter) {
@@ -305,7 +310,7 @@ private:
         }
     }
 
-    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams)
+    __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams& intriParams)
     {
         if (likely(wiLoadL1 == self_->ctx.convTilingData->orgWi)) {
             intriParams.dnNum = 1;
@@ -353,7 +358,7 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     int64_t padTopL1 = 0;
     int64_t padLeftL1 = 0;
     int64_t padRightL1 = 0;
@@ -368,6 +373,6 @@ private:
     int64_t wiLoadL1 = 0;
 };
 
-};
+}; // namespace Conv3dFunc
 
-#endif  // CONV3D_V2_INSTR_IMPL_H
+#endif // CONV3D_V2_INSTR_IMPL_H

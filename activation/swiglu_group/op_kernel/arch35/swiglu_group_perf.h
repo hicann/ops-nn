@@ -24,12 +24,10 @@ using namespace AscendC;
 template <typename T>
 class SwigluGroupPerf {
 public:
-    __aicore__ inline SwigluGroupPerf()
-    {}
+    __aicore__ inline SwigluGroupPerf() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y,
-        GM_ADDR workspace, const SwigluGroupTilingData* tilingDataPtr, TPipe* pipePtr)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR workspace,
+                                const SwigluGroupTilingData* tilingDataPtr, TPipe* pipePtr)
     {
         pipe = pipePtr;
         tilingData = tilingDataPtr;
@@ -39,8 +37,9 @@ public:
 
         pipe->InitBufPool(tBufPool, tilingData->ubSize);
         ProcessGroupIndexTiling(groupIndex, tilingData, tBufPool, groupIndexQue, groupIndexSumBuf, groupIndexGm,
-            groupSumLocal, hasGroupIndex_, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
-            rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+                                groupSumLocal, hasGroupIndex_, usedCoreNums, rowOfFormerBlock, rowOfTailBlock,
+                                rowLoopOfFormerBlock, rowLoopOfTailBlock, tailRowFactorOfFormerBlock,
+                                tailRowFactorOfTailBlock);
 
         if (weight != nullptr) {
             hasWeight_ = true;
@@ -48,12 +47,12 @@ public:
             tBufPool.InitBuffer(weightQue, DOUBLE_BUFFER_NUM, RoundUp<float>(tilingData->rowFactor) * sizeof(float));
         }
 
-        tBufPool.InitBuffer(
-            x0Que, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T>(tilingData->dFactor) * sizeof(T));
-        tBufPool.InitBuffer(
-            x1Que, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T>(tilingData->dFactor) * sizeof(T));
-        tBufPool.InitBuffer(
-            yQue, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T>(tilingData->dFactor) * sizeof(T));
+        tBufPool.InitBuffer(x0Que, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T>(tilingData->dFactor) * sizeof(T));
+        tBufPool.InitBuffer(x1Que, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T>(tilingData->dFactor) * sizeof(T));
+        tBufPool.InitBuffer(yQue, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T>(tilingData->dFactor) * sizeof(T));
         hasClampValue_ = (tilingData->hasClampLimit == 1);
         clampValue_ = tilingData->clampLimit;
     }
@@ -64,10 +63,9 @@ public:
             return;
         }
         int64_t curBlockIdx = GetBlockIdx();
-        int64_t rowOuterLoop =
-            (curBlockIdx == usedCoreNums - 1) ? rowLoopOfTailBlock : rowLoopOfFormerBlock;
+        int64_t rowOuterLoop = (curBlockIdx == usedCoreNums - 1) ? rowLoopOfTailBlock : rowLoopOfFormerBlock;
         int64_t tailRowFactor = (curBlockIdx == usedCoreNums - 1) ? tailRowFactorOfTailBlock :
-                                                                     tailRowFactorOfFormerBlock;
+                                                                    tailRowFactorOfFormerBlock;
         int64_t x0GmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->d;
         int64_t x1GmBaseOffset = x0GmBaseOffset + tilingData->splitD;
         int64_t yGmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->splitD;
@@ -76,45 +74,44 @@ public:
             int64_t curRowFactor = (rowOuterIdx == rowOuterLoop - 1) ? tailRowFactor : tilingData->rowFactor;
             if (hasWeight_) {
                 weightLocal = weightQue.template AllocTensor<float>();
-                CopyIn(weightGm[weightGmBaseOffset + rowOuterIdx * tilingData->rowFactor],
-                    weightLocal, 1, curRowFactor);
+                CopyIn(weightGm[weightGmBaseOffset + rowOuterIdx * tilingData->rowFactor], weightLocal, 1,
+                       curRowFactor);
                 weightQue.template EnQue(weightLocal);
                 weightLocal = weightQue.template DeQue<float>();
             }
 
             for (int64_t dLoopIdx = 0; dLoopIdx < tilingData->dLoop; dLoopIdx++) {
-                int64_t curDFactor =
-                    (dLoopIdx == tilingData->dLoop - 1) ? tilingData->tailDFactor : tilingData->dFactor;
-                int64_t xBaseOffset =
-                    rowOuterIdx * tilingData->rowFactor * tilingData->d + dLoopIdx * tilingData->dFactor;
+                int64_t curDFactor = (dLoopIdx == tilingData->dLoop - 1) ? tilingData->tailDFactor :
+                                                                           tilingData->dFactor;
+                int64_t xBaseOffset = rowOuterIdx * tilingData->rowFactor * tilingData->d +
+                                      dLoopIdx * tilingData->dFactor;
                 x0Local = x0Que.template AllocTensor<T>();
-                CopyIn(
-                    xGm[x0GmBaseOffset + xBaseOffset],
-                    x0Local, curRowFactor, curDFactor, tilingData->d - curDFactor);
+                CopyIn(xGm[x0GmBaseOffset + xBaseOffset], x0Local, curRowFactor, curDFactor,
+                       tilingData->d - curDFactor);
                 x0Que.template EnQue(x0Local);
                 x0Local = x0Que.template DeQue<T>();
 
                 x1Local = x1Que.template AllocTensor<T>();
-                CopyIn(
-                    xGm[x1GmBaseOffset + xBaseOffset],
-                    x1Local, curRowFactor, curDFactor, tilingData->d - curDFactor);
+                CopyIn(xGm[x1GmBaseOffset + xBaseOffset], x1Local, curRowFactor, curDFactor,
+                       tilingData->d - curDFactor);
                 x1Que.template EnQue(x1Local);
                 x1Local = x1Que.template DeQue<T>();
 
                 yLocal = yQue.template AllocTensor<T>();
 
                 int32_t maskBit = (hasClampValue_ << 1) | hasWeight_;
-                SwigluGroupDispatcher<T>(yLocal, x0Local, x1Local, weightLocal, clampValue_,
-                    curRowFactor, curDFactor, maskBit);
+                SwigluGroupDispatcher<T>(yLocal, x0Local, x1Local, weightLocal, clampValue_, curRowFactor, curDFactor,
+                                         maskBit);
 
                 x0Que.template FreeTensor(x0Local);
                 x1Que.template FreeTensor(x1Local);
 
                 yQue.template EnQue(yLocal);
                 yLocal = yQue.template DeQue<T>();
-                CopyOut(yLocal, yGm[yGmBaseOffset + rowOuterIdx * tilingData->rowFactor *
-                    tilingData->splitD + dLoopIdx * tilingData->dFactor],
-                    curRowFactor, curDFactor, tilingData->splitD - curDFactor);
+                CopyOut(yLocal,
+                        yGm[yGmBaseOffset + rowOuterIdx * tilingData->rowFactor * tilingData->splitD +
+                            dLoopIdx * tilingData->dFactor],
+                        curRowFactor, curDFactor, tilingData->splitD - curDFactor);
                 yQue.template FreeTensor(yLocal);
             }
             if (hasWeight_) {

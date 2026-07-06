@@ -33,36 +33,32 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void batch_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR weight, GM_ADDR running_mean,
                                                          GM_ADDR running_var, GM_ADDR save_mean, GM_ADDR save_rstd,
-                                                         GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias,
-                                                         GM_ADDR workspace, GM_ADDR tiling);
+                                                         GM_ADDR dx, GM_ADDR dweight, GM_ADDR dbias, GM_ADDR workspace,
+                                                         GM_ADDR tiling);
 
 class batch_norm_grad_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "batch_norm_grad_v3_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "batch_norm_grad_v3_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "batch_norm_grad_v3_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "batch_norm_grad_v3_test TearDown\n" << endl; }
 };
 
-inline int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
-    for(auto i : shape) {
+    for (auto i : shape) {
         shapeSize *= i;
     }
     return shapeSize;
 }
 
-void ExcuteTestCase(const std::vector<int64_t> &xShape, const std::vector<int64_t> &wShape, const std::string &dtype,
-                    const std::string &caseName, int64_t tilingKey, uint32_t blockNum, uint8_t *tiling, bool is_training = true)
+void ExcuteTestCase(const std::vector<int64_t>& xShape, const std::vector<int64_t>& wShape, const std::string& dtype,
+                    const std::string& caseName, int64_t tilingKey, uint32_t blockNum, uint8_t* tiling,
+                    bool is_training = true)
 {
     uint32_t typeSize = 4;
     uint32_t fp32TypeSize = 4;
     if (dtype != "float") {
-      typeSize = 2;
+        typeSize = 2;
     }
     // 每个block对应 1 aic + 2 aiv
     uint32_t realBlockNum = (blockNum + 1) / 2;
@@ -70,22 +66,20 @@ void ExcuteTestCase(const std::vector<int64_t> &xShape, const std::vector<int64_
     size_t weightFileSize = GetShapeSize(wShape) * typeSize;
     size_t meanFileSize = GetShapeSize(wShape) * fp32TypeSize;
 
-    size_t workspaceFileSize = 16*1024*1024;
+    size_t workspaceFileSize = 16 * 1024 * 1024;
 
-    uint8_t *dy = (uint8_t *)AscendC::GmAlloc((xFileSize + 31)/32*32);
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc((xFileSize + 31)/32*32);
-    uint8_t *weight = (uint8_t *)AscendC::GmAlloc((weightFileSize + 31)/32*32);
-    uint8_t *runningMean = (uint8_t *)AscendC::GmAlloc((meanFileSize + 31)/32*32);
-    uint8_t *runningVar = (uint8_t *)AscendC::GmAlloc((meanFileSize + 31)/32*32);
-    uint8_t *saveMean = (uint8_t *)AscendC::GmAlloc((meanFileSize + 31)/32*32);
-    uint8_t *saveRstd = (uint8_t *)AscendC::GmAlloc((meanFileSize + 31)/32*32);
-    uint8_t *dx = (uint8_t *)AscendC::GmAlloc((xFileSize + 31)/32*32);
-    uint8_t *dweight = (uint8_t *)AscendC::GmAlloc((weightFileSize + 31)/32*32);
-    uint8_t *dbias = (uint8_t *)AscendC::GmAlloc((weightFileSize + 31)/32*32);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* dy = (uint8_t*)AscendC::GmAlloc((xFileSize + 31) / 32 * 32);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc((xFileSize + 31) / 32 * 32);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc((weightFileSize + 31) / 32 * 32);
+    uint8_t* runningMean = (uint8_t*)AscendC::GmAlloc((meanFileSize + 31) / 32 * 32);
+    uint8_t* runningVar = (uint8_t*)AscendC::GmAlloc((meanFileSize + 31) / 32 * 32);
+    uint8_t* saveMean = (uint8_t*)AscendC::GmAlloc((meanFileSize + 31) / 32 * 32);
+    uint8_t* saveRstd = (uint8_t*)AscendC::GmAlloc((meanFileSize + 31) / 32 * 32);
+    uint8_t* dx = (uint8_t*)AscendC::GmAlloc((xFileSize + 31) / 32 * 32);
+    uint8_t* dweight = (uint8_t*)AscendC::GmAlloc((weightFileSize + 31) / 32 * 32);
+    uint8_t* dbias = (uint8_t*)AscendC::GmAlloc((weightFileSize + 31) / 32 * 32);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
     // uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-
-
 
     // system("cp -r ../../../../norm/batch_norm_grad_v3/tests/ut/op_kernel/batch_norm_grad_v3_data ./");
     // system("chmod -R 755 ./batch_norm_grad_v3_data/");
@@ -95,7 +89,7 @@ void ExcuteTestCase(const std::vector<int64_t> &xShape, const std::vector<int64_
     // cmd = "cd ./batch_norm_grad_v3_data/ && python3 gen_tiling.py " + caseName;
     // system(cmd.c_str());
 
-    char *path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     // ReadFile(path + "/batch_norm_grad_v3_data/input_dy.bin", xFileSize, dy, xFileSize);
     // ReadFile(path + "/batch_norm_grad_v3_data/input_x.bin", xFileSize, x, xFileSize);
@@ -107,11 +101,10 @@ void ExcuteTestCase(const std::vector<int64_t> &xShape, const std::vector<int64_
 
     // ReadFile(path + "/batch_norm_grad_v3_data/tiling.bin", tilingSize, tiling, tilingSize);
 
-
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(batch_norm_grad_v3, realBlockNum, dy, x, weight, runningMean, runningVar, saveMean, saveRstd,
-                dx, dweight, dbias, workspace, tiling);
+    ICPU_RUN_KF(batch_norm_grad_v3, realBlockNum, dy, x, weight, runningMean, runningVar, saveMean, saveRstd, dx,
+                dweight, dbias, workspace, tiling);
     // WriteFile(path + "/batch_norm_grad_v3_data/cce_cpu_dx.bin", dx, xFileSize);
     // WriteFile(path + "/batch_norm_grad_v3_data/cce_cpu_dweight.bin", dweight, weightFileSize);
     // WriteFile(path + "/batch_norm_grad_v3_data/cce_cpu_dbias.bin", dbias, weightFileSize);
@@ -150,8 +143,9 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_float32)
     std::string caseName = "case1";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARRecomputeTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 5;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -178,7 +172,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_float32)
     tilingDatafromBin->ubRDimTailTailFactor = 0;
     tilingDatafromBin->ubRDimTailTailFactorAlign = 0;
     tilingDatafromBin->ubRDimTailTailLoopNum = 0;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_split_r1_float16)
@@ -190,8 +184,9 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_float16)
     std::string caseName = "case2";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARRecomputeTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 170;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -218,7 +213,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_float16)
     tilingDatafromBin->ubRDimTailTailFactor = 0;
     tilingDatafromBin->ubRDimTailTailFactorAlign = 0;
     tilingDatafromBin->ubRDimTailTailLoopNum = 0;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_split_r1_bfloat16)
@@ -230,8 +225,9 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_bfloat16)
     std::string caseName = "case3";
     uint32_t blockNum = 4;
     size_t tilingSize = sizeof(BatchNormGradV3RARRecomputeTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 8;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -258,20 +254,21 @@ TEST_F(batch_norm_grad_v3_test, test_split_r1_bfloat16)
     tilingDatafromBin->ubRDimTailTailFactor = 6144;
     tilingDatafromBin->ubRDimTailTailFactorAlign = 6144;
     tilingDatafromBin->ubRDimTailTailLoopNum = 2;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_full_load_float32)
 {
-    std::vector<int64_t> xShape = {32, 2, 13 ,16};
+    std::vector<int64_t> xShape = {32, 2, 13, 16};
     std::vector<int64_t> wShape = {2};
     std::string dtype = "float";
     uint64_t tilingKey = 10000001;
     std::string caseName = "case4";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARFullLoadTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 32;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -289,20 +286,21 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_float32)
     tilingDatafromBin->ubTailOfFormerBlock = 1;
     tilingDatafromBin->ubLoopOfTailBlock = 1;
     tilingDatafromBin->ubTailOfTailBlock = 2;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_full_load_float16)
 {
-    std::vector<int64_t> xShape = {32, 2, 16 ,16};
+    std::vector<int64_t> xShape = {32, 2, 16, 16};
     std::vector<int64_t> wShape = {2};
     std::string dtype = "float16";
     uint64_t tilingKey = 10000002;
     std::string caseName = "case5";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARFullLoadTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 32;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -320,7 +318,7 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_float16)
     tilingDatafromBin->ubTailOfFormerBlock = 1;
     tilingDatafromBin->ubLoopOfTailBlock = 1;
     tilingDatafromBin->ubTailOfTailBlock = 2;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_full_load_bfloat16)
@@ -332,8 +330,9 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_bfloat16)
     std::string caseName = "case6";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARFullLoadTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARFullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARFullLoadTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 32;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -351,7 +350,7 @@ TEST_F(batch_norm_grad_v3_test, test_full_load_bfloat16)
     tilingDatafromBin->ubTailOfFormerBlock = 1;
     tilingDatafromBin->ubLoopOfTailBlock = 1;
     tilingDatafromBin->ubTailOfTailBlock = 2;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_split_r0_float32)
@@ -363,8 +362,9 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float32)
     std::string caseName = "case7";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARRecomputeTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 1;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -391,7 +391,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float32)
     tilingDatafromBin->ubRDimTailTailFactor = 7440;
     tilingDatafromBin->ubRDimTailTailFactorAlign = 7440;
     tilingDatafromBin->ubRDimTailTailLoopNum = 2;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_split_r0_float16)
@@ -403,8 +403,9 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float16)
     std::string caseName = "case8";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3RARRecomputeTilingData);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3RARRecomputeTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARRecomputeTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTilingData.r1Dim = 10;
     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -431,7 +432,7 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float16)
     tilingDatafromBin->ubRDimTailTailFactor = 7440;
     tilingDatafromBin->ubRDimTailTailFactorAlign = 7440;
     tilingDatafromBin->ubRDimTailTailLoopNum = 2;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 // TEST_F(batch_norm_grad_v3_test, test_split_core_r1_float32)
@@ -444,7 +445,8 @@ TEST_F(batch_norm_grad_v3_test, test_split_r0_float16)
 //     uint32_t blockNum = 30;
 //     size_t tilingSize = sizeof(BatchNormGradV3RARSplitCoreR1TilingData);
 //     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-//     BatchNormGradV3RARSplitCoreR1TilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3RARSplitCoreR1TilingData*>(tiling);
+//     BatchNormGradV3RARSplitCoreR1TilingData* tilingDatafromBin =
+//     reinterpret_cast<BatchNormGradV3RARSplitCoreR1TilingData*>(tiling);
 
 //     tilingDatafromBin->baseTilingData.r1Dim = 10;
 //     tilingDatafromBin->baseTilingData.aDim = 2;
@@ -500,8 +502,9 @@ TEST_F(batch_norm_grad_v3_test, test_infer_channel_last_float32)
     std::string caseName = "infer_channel_last_fp32";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3InferChannelLastTilingData) + sizeof(float);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3InferChannelLastTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3InferChannelLastTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3InferChannelLastTilingData*
+        tilingDatafromBin = reinterpret_cast<BatchNormGradV3InferChannelLastTilingData*>(tiling);
     tilingDatafromBin->totalTiles = 0;
     tilingDatafromBin->tilesPerCore = 0;
     tilingDatafromBin->usedCoreNums = 0;
@@ -514,7 +517,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_channel_last_float32)
     tilingDatafromBin->tileBlockBLen = 0;
     tilingDatafromBin->tileBlockBTail = 0;
     tilingDatafromBin->epsilon = 0;
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_infer_float32)
@@ -526,7 +529,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_float32)
     std::string caseName = "infer_fp32";
     uint32_t blockNum = 1;
     size_t tilingSize = sizeof(BatchNormGradV3InferTilingData) + sizeof(float);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3InferTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3InferTilingData*>(tiling);
     tilingDatafromBin->totalTiles = 1;
     tilingDatafromBin->tilesPerCore = 1;
@@ -546,7 +549,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_float32)
     tilingDatafromBin->tileBlockAPaddingNum = 0;
     tilingDatafromBin->epsilon = 0;
 
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_infer_full_load_float32_910b)
@@ -558,7 +561,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_full_load_float32_910b)
     std::string caseName = "infer_full_load_fp32";
     uint32_t blockNum = 1;
     size_t tilingSize = sizeof(BatchNormGradV3FullLoadTilingData) + sizeof(float);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     BatchNormGradV3FullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3FullLoadTilingData*>(tiling);
 
@@ -572,7 +575,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_full_load_float32_910b)
     tilingDatafromBin->needCoreNum = 2;
     tilingDatafromBin->epsilon = 0;
 
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin, false);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin, false);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_infer_split_load_cross_core_float32_910b)
@@ -585,8 +588,9 @@ TEST_F(batch_norm_grad_v3_test, test_infer_split_load_cross_core_float32_910b)
     uint32_t blockNum = 40;
     size_t tilingSize = sizeof(BatchNormGradV3SplitLoadCrossCoreTilingData) + sizeof(float);
     // uint32_t tilingData[tilingSize] = {10000, 2, 100, 1000000, 1, 1, 6128, 1, 2, 3872, 2, 0};
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3SplitLoadCrossCoreTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadCrossCoreTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3SplitLoadCrossCoreTilingData*
+        tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadCrossCoreTilingData*>(tiling);
 
     tilingDatafromBin->b1Dim = 1000;
     tilingDatafromBin->aDim = 2;
@@ -617,10 +621,9 @@ TEST_F(batch_norm_grad_v3_test, test_infer_split_load_cross_core_float32_910b)
     tilingDatafromBin->b0UbBlockTailMulti = 10000;
     tilingDatafromBin->coreNum = 40;
     tilingDatafromBin->epsilon = 0;
-    
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin, false);
-}
 
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin, false);
+}
 
 TEST_F(batch_norm_grad_v3_test, test_infer_split_load_float32_910b)
 {
@@ -632,8 +635,9 @@ TEST_F(batch_norm_grad_v3_test, test_infer_split_load_float32_910b)
     uint32_t blockNum = 40;
     size_t tilingSize = sizeof(BatchNormGradV3SplitLoadTilingData) + sizeof(float);
     // uint32_t tilingData[tilingSize] = {10000, 2, 100, 1000000, 1, 1, 6128, 1, 2, 3872, 2, 0};
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3SplitLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3SplitLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadTilingData*>(
+        tiling);
 
     tilingDatafromBin->b1Dim = 1000;
     tilingDatafromBin->aDim = 40;
@@ -649,7 +653,7 @@ TEST_F(batch_norm_grad_v3_test, test_infer_split_load_float32_910b)
     tilingDatafromBin->needCoreNum = 40;
     tilingDatafromBin->epsilon = 0;
 
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin, false);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin, false);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_train_full_load_float32_910b)
@@ -661,7 +665,7 @@ TEST_F(batch_norm_grad_v3_test, test_train_full_load_float32_910b)
     std::string caseName = "train_full_load_fp32";
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(BatchNormGradV3FullLoadTilingData) + sizeof(float);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
     BatchNormGradV3FullLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3FullLoadTilingData*>(tiling);
 
     tilingDatafromBin->b1Dim = 1;
@@ -674,7 +678,7 @@ TEST_F(batch_norm_grad_v3_test, test_train_full_load_float32_910b)
     tilingDatafromBin->needCoreNum = 2;
     tilingDatafromBin->epsilon = 0;
 
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin, false);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin, false);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_train_split_load_float32_910b)
@@ -687,8 +691,9 @@ TEST_F(batch_norm_grad_v3_test, test_train_split_load_float32_910b)
     uint32_t blockNum = 40;
     size_t tilingSize = sizeof(BatchNormGradV3SplitLoadTilingData) + sizeof(float);
     // uint32_t tilingData[tilingSize] = {10000, 2, 100, 1000000, 1, 1, 6128, 1, 2, 3872, 2, 0};
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3SplitLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3SplitLoadTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadTilingData*>(
+        tiling);
 
     tilingDatafromBin->b1Dim = 1000;
     tilingDatafromBin->aDim = 40;
@@ -704,7 +709,7 @@ TEST_F(batch_norm_grad_v3_test, test_train_split_load_float32_910b)
     tilingDatafromBin->needCoreNum = 40;
     tilingDatafromBin->epsilon = 0;
 
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin, false);
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin, false);
 }
 
 TEST_F(batch_norm_grad_v3_test, test_train_split_load_cross_core_float32_910b)
@@ -717,8 +722,9 @@ TEST_F(batch_norm_grad_v3_test, test_train_split_load_cross_core_float32_910b)
     uint32_t blockNum = 40;
     size_t tilingSize = sizeof(BatchNormGradV3SplitLoadCrossCoreTilingData) + sizeof(float);
     // uint32_t tilingData[tilingSize] = {10000, 2, 100, 1000000, 1, 1, 6128, 1, 2, 3872, 2, 0};
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    BatchNormGradV3SplitLoadCrossCoreTilingData* tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadCrossCoreTilingData*>(tiling);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    BatchNormGradV3SplitLoadCrossCoreTilingData*
+        tilingDatafromBin = reinterpret_cast<BatchNormGradV3SplitLoadCrossCoreTilingData*>(tiling);
 
     tilingDatafromBin->b1Dim = 1000;
     tilingDatafromBin->aDim = 2;
@@ -749,6 +755,6 @@ TEST_F(batch_norm_grad_v3_test, test_train_split_load_cross_core_float32_910b)
     tilingDatafromBin->b0UbBlockTailMulti = 10000;
     tilingDatafromBin->coreNum = 40;
     tilingDatafromBin->epsilon = 0;
-    
-    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey,  blockNum, (uint8_t *)tilingDatafromBin, false);
+
+    ExcuteTestCase(xShape, wShape, dtype, caseName, tilingKey, blockNum, (uint8_t*)tilingDatafromBin, false);
 }

@@ -44,8 +44,8 @@ namespace ge {
 * @li dtype: An optional int, default value is 3.  (3 is int32, 9 is int64)
 
 * @par Outputs:
-* @li y: A tensor has the same type and format as input "x", the shape is [batch, channels, depth_out, height_out, width_out] or
-  [batch, depth_out, height_out, width_out, channels].
+* @li y: A tensor has the same type and format as input "x", the shape is [batch, channels, depth_out, height_out,
+width_out] or [batch, depth_out, height_out, width_out, channels].
 * @li argmax:  A tensor of type is int64 or int32, the shape is [batch, channels, depth_out, height_out, width_out] or
   [batch, depth_out, height_out, width_out, channels].
 
@@ -65,6 +65,6 @@ REG_OP(MaxPool3DWithArgmaxV2)
     .ATTR(data_format, String, "NCDHW")
     .ATTR(dtype, Int, 3)
     .OP_END_FACTORY_REG(MaxPool3DWithArgmaxV2)
-} //namespace ge
+} // namespace ge
 
-#endif  //OPS_POOLING_MAX_POOL3D_WITH_ARGMAX_V2_PROTO_H_
+#endif // OPS_POOLING_MAX_POOL3D_WITH_ARGMAX_V2_PROTO_H_

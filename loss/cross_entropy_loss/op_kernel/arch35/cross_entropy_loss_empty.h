@@ -22,14 +22,12 @@ namespace CrossEntropyLoss {
 using namespace AscendC;
 
 template <typename T1, uint64_t reduction>
-class CrossEntropyLossEmpty
-{
+class CrossEntropyLossEmpty {
 public:
     __aicore__ inline CrossEntropyLossEmpty(){};
-    __aicore__ inline void Init(
-        GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb, GM_ADDR zloss,
-        GM_ADDR lseForZloss, GM_ADDR workspace, const CrossEntropyLossRegBaseTilingData* __restrict tilingData,
-        TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR target, GM_ADDR weight, GM_ADDR loss, GM_ADDR logProb,
+                                GM_ADDR zloss, GM_ADDR lseForZloss, GM_ADDR workspace,
+                                const CrossEntropyLossRegBaseTilingData* __restrict tilingData, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:

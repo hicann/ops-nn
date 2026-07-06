@@ -23,8 +23,8 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_, class TileCopy_>
+template <class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_,
+          class TileCopy_>
 class BlockMmad<MatmulToMul<>, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_> {
 public:
     using AType = AType_;
@@ -67,8 +67,8 @@ public:
     }
 
 public:
-    __aicore__ inline void Init(
-        const TupleShape& shape, const TupleShape& blockInfo, int64_t loopK, bool hasBias, bool dataCopyMode)
+    __aicore__ inline void Init(const TupleShape& shape, const TupleShape& blockInfo, int64_t loopK, bool hasBias,
+                                bool dataCopyMode)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -84,14 +84,11 @@ public:
         shapeMN_ = n_ * m_;
     }
 
-    __aicore__ inline void SetTailMN(int64_t tailMN)
-    {
-        tailMN_ = tailMN;
-    }
+    __aicore__ inline void SetTailMN(int64_t tailMN) { tailMN_ = tailMN; }
 
     // 用于搬运维度为1矩阵
-    __aicore__ inline void CopyInA(
-        const AscendC::GlobalTensor<float>& aGlobal, const AscendC::LocalTensor<float>& aubLocal)
+    __aicore__ inline void CopyInA(const AscendC::GlobalTensor<float>& aGlobal,
+                                   const AscendC::LocalTensor<float>& aubLocal)
     {
         if (dataCopyMode_) {
             AscendC::MultiCopyParams<float, DIMENSION> ndDmaParams;
@@ -123,8 +120,8 @@ public:
     }
 
     // 用于搬运维度不为1矩阵
-    __aicore__ inline void CopyInB(
-        const AscendC::GlobalTensor<float>& bGlobal, const AscendC::LocalTensor<float>& bubLocal)
+    __aicore__ inline void CopyInB(const AscendC::GlobalTensor<float>& bGlobal,
+                                   const AscendC::LocalTensor<float>& bubLocal)
     {
         if (dataCopyMode_) {
             uint32_t alignMN = AscendC::CeilAlign(tailMN_, ALIGN_NUM);
@@ -132,9 +129,9 @@ public:
             AscendC::DataCopyPadExtParams<float> copyPadParams{true, 0, rightPadding, 0};
             uint32_t srcStride = static_cast<uint32_t>((shapeMN_ - tailMN_) * sizeof(float));
             uint32_t dstStride = static_cast<uint32_t>((baseMN_ - alignMN) / ALIGN_NUM);
-            AscendC::DataCopyExtParams copyParams{
-                static_cast<uint16_t>(currentK_), static_cast<uint32_t>(tailMN_ * sizeof(float)), srcStride, dstStride,
-                0};
+            AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(currentK_),
+                                                  static_cast<uint32_t>(tailMN_ * sizeof(float)), srcStride, dstStride,
+                                                  0};
             AscendC::DataCopyPad(bubLocal, bGlobal, copyParams, copyPadParams);
         } else {
             uint32_t alignK = AscendC::CeilAlign(currentK_, ALIGN_NUM);
@@ -142,15 +139,15 @@ public:
             AscendC::DataCopyPadExtParams<float> copyPadParams{true, 0, rightPadding, 0};
             uint32_t srcStride = static_cast<uint32_t>((k_ - currentK_) * sizeof(float));
             uint32_t dstStride = static_cast<uint32_t>((baseK_ - alignK) / ALIGN_NUM);
-            AscendC::DataCopyExtParams copyParams{
-                static_cast<uint16_t>(tailMN_), static_cast<uint32_t>(currentK_ * sizeof(float)), srcStride, dstStride,
-                0};
+            AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(tailMN_),
+                                                  static_cast<uint32_t>(currentK_ * sizeof(float)), srcStride,
+                                                  dstStride, 0};
             AscendC::DataCopyPad(bubLocal, bGlobal, copyParams, copyPadParams);
         }
     }
 
-    __aicore__ inline void CopyInBias(
-        const AscendC::GlobalTensor<float>& biasGlobal, const AscendC::LocalTensor<float>& biasubLocal)
+    __aicore__ inline void CopyInBias(const AscendC::GlobalTensor<float>& biasGlobal,
+                                      const AscendC::LocalTensor<float>& biasubLocal)
     {
         if (n_ == 1) {
             AscendC::DataCopyPadExtParams<float> copyPadParams{false, 0, 0, 0};
@@ -172,17 +169,18 @@ public:
         AscendC::MulAddDst(cubLocal, aubLocal, bubLocal, calCount);
     }
 
-    __aicore__ inline void CopyOut(
-        const AscendC::GlobalTensor<float>& cGlobal, const AscendC::LocalTensor<float>& outubLocal)
+    __aicore__ inline void CopyOut(const AscendC::GlobalTensor<float>& cGlobal,
+                                   const AscendC::LocalTensor<float>& outubLocal)
     {
         uint32_t blockLen = static_cast<uint32_t>(tailMN_ * sizeof(float));
         AscendC::DataCopyExtParams copyParams{1, blockLen, 0, 0, 0};
         AscendC::DataCopyPad(cGlobal, outubLocal, copyParams);
     }
 
-    __aicore__ inline void operator()(
-        const AscendC::GlobalTensor<float>& cGlobal, const AscendC::GlobalTensor<float>& aGlobal,
-        const AscendC::GlobalTensor<float>& bGlobal, const AscendC::GlobalTensor<float>& biasGlobal)
+    __aicore__ inline void operator()(const AscendC::GlobalTensor<float>& cGlobal,
+                                      const AscendC::GlobalTensor<float>& aGlobal,
+                                      const AscendC::GlobalTensor<float>& bGlobal,
+                                      const AscendC::GlobalTensor<float>& biasGlobal)
     {
         uint64_t ubOffsetAPing = 0;
         uint64_t ubOffsetBPing = baseMN_ * baseK_ + ubOffsetAPing;
@@ -225,12 +223,12 @@ public:
         AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(0x0);
         if (dataCopyMode_) {
             uint32_t shape[] = {static_cast<uint32_t>(baseK_), static_cast<uint32_t>(baseMN_)};
-            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, isReuse>(
-                ubLocal_[ubOffsetOut], ubLocal_[ubOffsetC], shape, true);
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, isReuse>(ubLocal_[ubOffsetOut], ubLocal_[ubOffsetC],
+                                                                             shape, true);
         } else {
             uint32_t shape[] = {static_cast<uint32_t>(baseMN_), static_cast<uint32_t>(baseK_)};
-            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, isReuse>(
-                ubLocal_[ubOffsetOut], ubLocal_[ubOffsetC], shape, true);
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, isReuse>(ubLocal_[ubOffsetOut], ubLocal_[ubOffsetC],
+                                                                             shape, true);
         }
         if (hasBias_) {
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(SYNC_FLAG2);
@@ -238,13 +236,11 @@ public:
             AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(SYNC_FLAG1);
             AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(SYNC_FLAG1);
             if (m_ == 1) {
-                AscendC::Add(
-                    ubLocal_[ubOffsetOut], ubLocal_[ubOffsetOut], ubLocal_[ubOffsetBias],
-                    static_cast<int32_t>(tailMN_));
+                AscendC::Add(ubLocal_[ubOffsetOut], ubLocal_[ubOffsetOut], ubLocal_[ubOffsetBias],
+                             static_cast<int32_t>(tailMN_));
             } else {
-                AscendC::Adds(
-                    ubLocal_[ubOffsetOut], ubLocal_[ubOffsetOut], ubLocal_[ubOffsetBias][0],
-                    static_cast<int32_t>(tailMN_));
+                AscendC::Adds(ubLocal_[ubOffsetOut], ubLocal_[ubOffsetOut], ubLocal_[ubOffsetBias][0],
+                              static_cast<int32_t>(tailMN_));
             }
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(SYNC_FLAG2);
         }
@@ -272,4 +268,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

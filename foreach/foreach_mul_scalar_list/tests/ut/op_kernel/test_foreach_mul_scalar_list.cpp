@@ -23,28 +23,20 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_mul_scalar_list(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_mul_scalar_list(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs,
+                                                              GM_ADDR workspace, GM_ADDR tiling);
 
-class foreach_mul_scalar_list_test : public testing::Test
-{
+class foreach_mul_scalar_list_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_mul_scalar_list_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_mul_scalar_list_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_mul_scalar_list_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_mul_scalar_list_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_mul_scalar_list_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
     system("chmod -R 755 ./mul_scalar_list_data/");
     system("cd ./mul_scalar_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -82,9 +74,8 @@ TEST_F(foreach_mul_scalar_list_test, test_case_float_1)
 TEST_F(foreach_mul_scalar_list_test, test_case_float16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
     system("chmod -R 755 ./mul_scalar_list_data/");
     system("cd ./mul_scalar_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -122,9 +113,8 @@ TEST_F(foreach_mul_scalar_list_test, test_case_float16_2)
 TEST_F(foreach_mul_scalar_list_test, test_case_int32_3)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
     system("chmod -R 755 ./mul_scalar_list_data/");
     system("cd ./mul_scalar_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'int32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -162,9 +152,8 @@ TEST_F(foreach_mul_scalar_list_test, test_case_int32_3)
 TEST_F(foreach_mul_scalar_list_test, test_case_bfloat16_4)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_mul_scalar_list/tests/ut/op_kernel/mul_scalar_list_data ./");
     system("chmod -R 755 ./mul_scalar_list_data/");
     system("cd ./mul_scalar_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

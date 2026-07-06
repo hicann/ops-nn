@@ -50,8 +50,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     return NULL_SUPPORT_LIST;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional, aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional,
+                            aclTensor* out)
 {
     // 检查self，scaleOptional，shiftOptional, out的数据类型是否在算子的支持列表内
     auto supportList = GetDtypeSupportList();
@@ -61,32 +61,31 @@ static bool CheckDtypeValid(
     if (scaleOptional != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scaleOptional, supportList, return false);
         if (self->GetDataType() != scaleOptional->GetDataType()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The dtype of self [%s], scaleOptional [%s] need to be the same.",
-                op::ToString(self->GetDataType()).GetString(), op::ToString(scaleOptional->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dtype of self [%s], scaleOptional [%s] need to be the same.",
+                    op::ToString(self->GetDataType()).GetString(),
+                    op::ToString(scaleOptional->GetDataType()).GetString());
             return false;
         }
     }
     if (shiftOptional != nullptr) {
         OP_CHECK_DTYPE_NOT_SUPPORT(shiftOptional, supportList, return false);
         if (self->GetDataType() != shiftOptional->GetDataType()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The dtype of self [%s], shiftOptional [%s] need to be the same.",
-                op::ToString(self->GetDataType()).GetString(), op::ToString(shiftOptional->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dtype of self [%s], shiftOptional [%s] need to be the same.",
+                    op::ToString(self->GetDataType()).GetString(),
+                    op::ToString(shiftOptional->GetDataType()).GetString());
             return false;
         }
     }
     if (self->GetDataType() != out->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The dtype of self [%s], out [%s] need to be the same.",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dtype of self [%s], out [%s] need to be the same.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
         return false;
     }
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional, aclTensor* out)
+static bool CheckShape(const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional,
+                       aclTensor* out)
 {
     op::Shape selfShape = self->GetViewShape();
     size_t selfDimNum = selfShape.GetDimNum();
@@ -95,8 +94,9 @@ static bool CheckShape(
         return false;
     }
     // 对非ND数据格式增加warning
-    if (self->GetStorageFormat() != op::Format::FORMAT_ND || scaleOptional->GetStorageFormat() != op::Format::FORMAT_ND 
-                                                    || shiftOptional->GetStorageFormat() != op::Format::FORMAT_ND) {
+    if (self->GetStorageFormat() != op::Format::FORMAT_ND ||
+        scaleOptional->GetStorageFormat() != op::Format::FORMAT_ND ||
+        shiftOptional->GetStorageFormat() != op::Format::FORMAT_ND) {
         OP_LOGW("aclnnModulate only support ND format");
     }
     // self的维度必须为3
@@ -124,17 +124,20 @@ static bool CheckShape(
         // 第一和最后一个维度是否匹配
         if (optionalDimNum == 2) {
             if ((selfShape.GetDim(0) != optionalShape.GetDim(0)) || (selfShape.GetDim(2) != optionalShape.GetDim(1))) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The first and last dimension of self and %s must be the same.", tensorName);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The first and last dimension of self and %s must be the same.",
+                        tensorName);
                 return false;
             }
         } else {
             if ((selfShape.GetDim(0) != optionalShape.GetDim(0)) || (selfShape.GetDim(2) != optionalShape.GetDim(2))) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The first and last dimension of self and %s must be the same.", tensorName);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The first and last dimension of self and %s must be the same.",
+                        tensorName);
                 return false;
             }
             // 可选参数维度为3时，第二维必须为1
             if (optionalShape.GetDim(1) != 1) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when the dimension of %s is 3, the second dimension must be 1.", tensorName);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when the dimension of %s is 3, the second dimension must be 1.",
+                        tensorName);
                 return false;
             }
         }
@@ -144,8 +147,8 @@ static bool CheckShape(
     return CheckOptionalTensor(scaleOptional, "scaleOptional") && CheckOptionalTensor(shiftOptional, "shiftOptional");
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional, aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional,
+                               aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -167,9 +170,9 @@ static const aclTensor* GetOptTensorContiguous(const aclTensor* opt, aclOpExecut
     return l0op::Contiguous(opt, executor);
 }
 
-aclnnStatus aclnnModulateGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* scaleOptional, const aclTensor* shiftOptional, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnModulateGetWorkspaceSize(const aclTensor* self, const aclTensor* scaleOptional,
+                                          const aclTensor* shiftOptional, aclTensor* out, uint64_t* workspaceSize,
+                                          aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnModulate, DFX_IN(self, scaleOptional, shiftOptional), DFX_OUT(out));
 
@@ -211,8 +214,8 @@ aclnnStatus aclnnModulateGetWorkspaceSize(
     auto shiftOptionalContiguous = GetOptTensorContiguous(shiftOptional, uniqueExecutor.get());
 
     // 执行L0算子
-    auto ModulateRes =
-        l0op::Modulate(selfContiguous, scaleOptionalContiguous, shiftOptionalContiguous, uniqueExecutor.get());
+    auto ModulateRes = l0op::Modulate(selfContiguous, scaleOptionalContiguous, shiftOptionalContiguous,
+                                      uniqueExecutor.get());
     CHECK_RET(ModulateRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将计算结果拷贝到输出data上

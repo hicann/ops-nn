@@ -25,7 +25,8 @@ using namespace LeakyReluOp;
 using namespace Ops::Base;
 
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void leaky_relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+__global__ __aicore__ void leaky_relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(LeakyReluTilingData);
     GET_TILING_DATA_WITH_STRUCT(LeakyReluTilingData, tilingData, tiling);

@@ -12,7 +12,7 @@
  * \file conv3d_backprop_input_v2_tiling.cpp
  * \brief
  */
- 
+
 #include "arch32/conv3d_backprop_input_v2_base_tiling.h"
 
 #include <map>
@@ -24,31 +24,34 @@
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "error_util.h"
 
-
 namespace Ops {
 namespace NN {
 namespace Conv {
 
 static ge::graphStatus Conv3DBackpropInputV2TilingFunc(gert::TilingContext* context)
 {
-    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "context is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "context is null"),
+                return ge::GRAPH_FAILED);
     auto compileInfoPtr = context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"),
+                return ge::GRAPH_FAILED);
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 static ge::graphStatus TilingParseForConv3DBackpropInputV2(gert::TilingParseContext* context)
 {
     auto platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"),
+                return ge::GRAPH_FAILED);
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);
 
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();
     compileInfoPtr->shortSocVersion = ascendcPlatform.GetSocVersion();
-	compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
+    compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
     OP_LOGD(context->GetNodeName(), "compileInfoPtr npuArch: %d", compileInfoPtr->npuArch);
     return ge::GRAPH_SUCCESS;
 }

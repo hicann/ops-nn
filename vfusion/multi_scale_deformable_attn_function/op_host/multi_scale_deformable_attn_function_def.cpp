@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file multi_scale_deformable_attn_function_def.cpp
  * \brief
@@ -19,40 +18,91 @@
 namespace ops {
 class MultiScaleDeformableAttnFunction : public OpDef {
 public:
-    explicit MultiScaleDeformableAttnFunction(const char *name) : OpDef(name)
+    explicit MultiScaleDeformableAttnFunction(const char* name) : OpDef(name)
     {
-        this->Input("value").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        this->Input("value_spatial_shapes").ParamType(REQUIRED).DataType({ge::DT_INT32})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        this->Input("value_level_start_index").ParamType(REQUIRED).DataType({ge::DT_INT32})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        this->Input("sampling_locations").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        this->Input("attention_weights").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        this->Output("output").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND});
+        this->Input("value")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("value_spatial_shapes")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("value_level_start_index")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("sampling_locations")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("attention_weights")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Output("output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
-    	OpAICoreConfig config310p;
-    	config310p.DynamicCompileStaticFlag(true).DynamicFormatFlag(true).DynamicRankSupportFlag(true)
-        	.DynamicShapeSupportFlag(true).NeedCheckSupportFlag(false).PrecisionReduceFlag(true);
-		config310p.Input("value").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        config310p.Input("value_spatial_shapes").ParamType(REQUIRED).DataType({ge::DT_INT32}).Format({ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        config310p.Input("value_level_start_index").ParamType(REQUIRED).DataType({ge::DT_INT32})
-            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        config310p.Input("sampling_locations").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        config310p.Input("attention_weights").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND}).AutoContiguous();
-        config310p.Output("output").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND}).InitValue({ScalarType::FLOAT32, 0});
+        OpAICoreConfig config310p;
+        config310p.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config310p.Input("value")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config310p.Input("value_spatial_shapes")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config310p.Input("value_level_start_index")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config310p.Input("sampling_locations")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config310p.Input("attention_weights")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config310p.Output("output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .InitValue({ScalarType::FLOAT32, 0});
         this->AICore().AddConfig("ascend310p", config310p);
     }
 };
-    OP_ADD(MultiScaleDeformableAttnFunction);
-}
+OP_ADD(MultiScaleDeformableAttnFunction);
+} // namespace ops

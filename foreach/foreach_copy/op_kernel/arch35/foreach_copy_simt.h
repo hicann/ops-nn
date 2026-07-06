@@ -44,16 +44,10 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 // ========== ForeachCopyND: same-type copy kernel (MDE Section 5.2.1) ==========
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachCopyND(
-    int32_t needCoreNum,
-    int32_t tensorNum,
-    int32_t tensorStart,
-    int64_t tensorOffset,
-    int64_t totalElements,
-    GM_ADDR xList,
-    GM_ADDR yList,
-    __gm__ int64_t* numels)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachCopyND(int32_t needCoreNum, int32_t tensorNum,
+                                                                          int32_t tensorStart, int64_t tensorOffset,
+                                                                          int64_t totalElements, GM_ADDR xList,
+                                                                          GM_ADDR yList, __gm__ int64_t* numels)
 {
     if (totalElements <= 0) {
         return;
@@ -69,10 +63,8 @@ inline void ForeachCopyND(
     }
 
     // Grid-stride loop within this core
-    for (int64_t elemIdx = coreStart + static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
-         elemIdx < coreEnd;
-         elemIdx += static_cast<int64_t>(THREAD_NUM))
-    {
+    for (int64_t elemIdx = coreStart + static_cast<int64_t>(AscendC::Simt::GetThreadIdx()); elemIdx < coreEnd;
+         elemIdx += static_cast<int64_t>(THREAD_NUM)) {
         // Map flat element index to (tensorIdx, inTensorOffset) via prefix sum
         int32_t tensorIdx = tensorStart;
         int64_t prefix = 0;
@@ -101,16 +93,10 @@ inline void ForeachCopyND(
 // ========== ForeachCastND: cross-type cast kernel (MDE Section 5.2.2) ==========
 
 template <typename SrcT, typename DstT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachCastND(
-    int32_t needCoreNum,
-    int32_t tensorNum,
-    int32_t tensorStart,
-    int64_t tensorOffset,
-    int64_t totalElements,
-    GM_ADDR xList,
-    GM_ADDR yList,
-    __gm__ int64_t* numels)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachCastND(int32_t needCoreNum, int32_t tensorNum,
+                                                                          int32_t tensorStart, int64_t tensorOffset,
+                                                                          int64_t totalElements, GM_ADDR xList,
+                                                                          GM_ADDR yList, __gm__ int64_t* numels)
 {
     if (totalElements <= 0) {
         return;
@@ -126,10 +112,8 @@ inline void ForeachCastND(
     }
 
     // Grid-stride loop within this core
-    for (int64_t elemIdx = coreStart + static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
-         elemIdx < coreEnd;
-         elemIdx += static_cast<int64_t>(THREAD_NUM))
-    {
+    for (int64_t elemIdx = coreStart + static_cast<int64_t>(AscendC::Simt::GetThreadIdx()); elemIdx < coreEnd;
+         elemIdx += static_cast<int64_t>(THREAD_NUM)) {
         // Map flat element index to (tensorIdx, inTensorOffset) via prefix sum
         int32_t tensorIdx = tensorStart;
         int64_t prefix = 0;
@@ -160,8 +144,7 @@ inline void ForeachCastND(
 template <typename T>
 __aicore__ inline void ProcessSame(GM_ADDR x, GM_ADDR y, GM_ADDR tilingBuf)
 {
-    __gm__ ForeachCopyTilingData* tilingData =
-        reinterpret_cast<__gm__ ForeachCopyTilingData*>(tilingBuf);
+    __gm__ ForeachCopyTilingData* tilingData = reinterpret_cast<__gm__ ForeachCopyTilingData*>(tilingBuf);
 
     // totalElements already guarded in kernel entry
 
@@ -172,10 +155,8 @@ __aicore__ inline void ProcessSame(GM_ADDR x, GM_ADDR y, GM_ADDR tilingBuf)
     int64_t totalElements = tilingData->totalElements;
     __gm__ int64_t* numels = tilingData->numels;
 
-    AscendC::Simt::VF_CALL<ForeachCopyND<T>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        needCoreNum, tensorNum, tensorStart, tensorOffset,
-        totalElements, x, y, numels);
+    AscendC::Simt::VF_CALL<ForeachCopyND<T>>(AscendC::Simt::Dim3(THREAD_NUM), needCoreNum, tensorNum, tensorStart,
+                                             tensorOffset, totalElements, x, y, numels);
 }
 
 // ========== ProcessCast<SrcT, DstT>: cross-type cast entry (schMode 12-15) ==========
@@ -183,8 +164,7 @@ __aicore__ inline void ProcessSame(GM_ADDR x, GM_ADDR y, GM_ADDR tilingBuf)
 template <typename SrcT, typename DstT>
 __aicore__ inline void ProcessCast(GM_ADDR x, GM_ADDR y, GM_ADDR tilingBuf)
 {
-    __gm__ ForeachCopyTilingData* tilingData =
-        reinterpret_cast<__gm__ ForeachCopyTilingData*>(tilingBuf);
+    __gm__ ForeachCopyTilingData* tilingData = reinterpret_cast<__gm__ ForeachCopyTilingData*>(tilingBuf);
 
     int32_t needCoreNum = tilingData->needCoreNum;
     int32_t tensorNum = tilingData->tensorNum;
@@ -193,10 +173,8 @@ __aicore__ inline void ProcessCast(GM_ADDR x, GM_ADDR y, GM_ADDR tilingBuf)
     int64_t totalElements = tilingData->totalElements;
     __gm__ int64_t* numels = tilingData->numels;
 
-    AscendC::Simt::VF_CALL<ForeachCastND<SrcT, DstT>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        needCoreNum, tensorNum, tensorStart, tensorOffset,
-        totalElements, x, y, numels);
+    AscendC::Simt::VF_CALL<ForeachCastND<SrcT, DstT>>(AscendC::Simt::Dim3(THREAD_NUM), needCoreNum, tensorNum,
+                                                      tensorStart, tensorOffset, totalElements, x, y, numels);
 }
 
 } // namespace NsForeachCopy

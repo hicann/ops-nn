@@ -43,12 +43,11 @@ struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
 };
 
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-    MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0>
-__aicore__ inline void BatchMatMulActIterBatchKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-    const BatchMatMulV3IterBatchBasicTilingData& tilingData)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
+          MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0>
+__aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                                     GM_ADDR workspaceGM,
+                                                     const BatchMatMulV3IterBatchBasicTilingData& tilingData)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -68,26 +67,22 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
 
     // 定义MMAD类型
     using DispatchPolicy = MatmulIterBatch<FIXPIPE_OPT, AscendC::Shape<_0, _0, _0, _0>, FUSED_OPTYPE>;
-    using BlockMmad = Block::BlockMmadBuilder<
-            AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
-            L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = typename BlockEpilogueSelector<FIXPIPE_OPT, OutType, OutType, FUSED_OPTYPE>::type;
-    
+
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
 
     // 定义Kernel类型
-    using MatmulKernel =
-        Kernel::KernelMatMulIterBatch<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+    using MatmulKernel = Kernel::KernelMatMulIterBatch<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {tilingData.m, tilingData.n, tilingData.k, tilingData.b}, // shape
-        {aGM, bGM, cGM, biasGM}, // gm addr
-        {}, // epilogue args
-        {&tilingData}
-    };
+    Params params = {{tilingData.m, tilingData.n, tilingData.k, tilingData.b}, // shape
+                     {aGM, bGM, cGM, biasGM},                                  // gm addr
+                     {},                                                       // epilogue args
+                     {&tilingData}};
     if constexpr (FIXPIPE_OPT == MatMulL0C2Out::ND_FIXPIPE_1_2) {
         if constexpr (FUSED_OPTYPE == OP_TYPE_ADD) {
             params.epilogueParams = {cGM, {workspaceGM}};
@@ -99,4 +94,3 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
     MatmulKernel mm;
     mm(params);
 }
-

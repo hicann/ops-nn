@@ -16,15 +16,9 @@
 
 class SigmoidCrossEntropyWithLogits : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SigmoidCrossEntropyWithLogits SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SigmoidCrossEntropyWithLogits SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SigmoidCrossEntropyWithLogits TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SigmoidCrossEntropyWithLogits TearDown" << std::endl; }
 };
 
 TEST_F(SigmoidCrossEntropyWithLogits, SigmoidCrossEntropyWithLogits_infershape_case_0)
@@ -36,11 +30,11 @@ TEST_F(SigmoidCrossEntropyWithLogits, SigmoidCrossEntropyWithLogits_infershape_c
     gert::StorageShape targetShape = {{96, 256}, {96, 256}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&predictShape, &targetShape})
-        .OutputShapes({&predictShape})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&predictShape, &targetShape})
+                      .OutputShapes({&predictShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
@@ -54,11 +48,11 @@ TEST_F(SigmoidCrossEntropyWithLogits, SigmoidCrossEntropyWithLogits_infershape_c
     gert::StorageShape targetShape = {{1024}, {1024}};
 
     auto holder = gert::InferShapeContextFaker()
-        .NodeIoNum(2, 1)
-        .IrInstanceNum({1, 1})
-        .InputShapes({&predictShape, &targetShape})
-        .OutputShapes({&predictShape})
-        .Build();
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&predictShape, &targetShape})
+                      .OutputShapes({&predictShape})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

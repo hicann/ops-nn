@@ -35,9 +35,7 @@ struct WeightQuantBatchMatmulV2TilingTestParam {
 };
 
 class TestWeightQuantBatchMatmulV2AdaptiveSplitTiling
-    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingTestParam>
-{
-};
+    : public testing::TestWithParam<WeightQuantBatchMatmulV2TilingTestParam> {};
 
 using namespace ge;
 using namespace optiling;
@@ -63,17 +61,16 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     std::cout << "run case " << param.caseName << std::endl;
     std::vector<string> testParam;
     SplitStr2Vec(param.caseName.substr(param.caseName.find_first_of('_') + 1), "_", testParam);
-    map<string, ge::DataType> dtypeMap = {
-        {"FLOAT16", ge::DT_FLOAT16},
-        {"FLOAT", ge::DT_FLOAT},
-        {"BF16", ge::DT_BF16},
-        {"INT8", ge::DT_INT8},
-        {"INT4", ge::DT_INT4},
-        {"UINT64", ge::DT_UINT64},
-        {"FP8E4M3", ge::DT_FLOAT8_E4M3FN},
-        {"HIF8", ge::DT_HIFLOAT8},
-        {"FLOAT8E8M0", ge::DT_FLOAT8_E8M0},
-        {"FLOAT4E2M1", ge::DT_FLOAT4_E2M1}};
+    map<string, ge::DataType> dtypeMap = {{"FLOAT16", ge::DT_FLOAT16},
+                                          {"FLOAT", ge::DT_FLOAT},
+                                          {"BF16", ge::DT_BF16},
+                                          {"INT8", ge::DT_INT8},
+                                          {"INT4", ge::DT_INT4},
+                                          {"UINT64", ge::DT_UINT64},
+                                          {"FP8E4M3", ge::DT_FLOAT8_E4M3FN},
+                                          {"HIF8", ge::DT_HIFLOAT8},
+                                          {"FLOAT8E8M0", ge::DT_FLOAT8_E8M0},
+                                          {"FLOAT4E2M1", ge::DT_FLOAT4_E2M1}};
 
     size_t idx = 0;
     int64_t m = stol(testParam[idx++]);
@@ -212,11 +209,11 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&xShape, &weigthShape, &antiQuantScaleShape,
-                           antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
-                           quantScaleExistFlag ? &quantScaleShape : nullptr,
-                           quantOffsetExistFlag ? &quantOffsetShape : nullptr, biasFlag ? &biasShape : nullptr})
+                      .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                                    antiQuantOffsetExistFlag ? &antiQuantOffsetShape : nullptr,
+                                    quantScaleExistFlag ? &quantScaleShape : nullptr,
+                                    quantOffsetExistFlag ? &quantOffsetShape : nullptr,
+                                    biasFlag ? &biasShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -228,10 +225,9 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV2TilingTestParam& para
                       .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
-                           {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -295,15 +291,12 @@ static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
     {"davidCase_12_64_64_0_0_0_0_0_1_-1_BF16_FP8E4M3_BF16_UINT64_BF16_32_64_0_0", 4, 310517762UL},
     {"davidCase_16_1024_17152_0_0_0_1_0_1_-1_FLOAT16_HIF8_FLOAT16_UINT64_FLOAT16_32_64_0_0", 32, 310583298UL},
     {"davidCase_2_1024_8192_0_0_0_0_0_0_-1_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32, 34661933058UL},
-    {"davidCase_1_1024_8192_0_0_0_0_0_1_32_FLOAT16_FLOAT4E2M1_FLOAT8E8M0_UINT64_FLOAT16_32_64_0_0", 32,
-     344072194UL},
+    {"davidCase_1_1024_8192_0_0_0_0_0_1_32_FLOAT16_FLOAT4E2M1_FLOAT8E8M0_UINT64_FLOAT16_32_64_0_0", 32, 344072194UL},
     // a16w4(int4) pergroup(32,64,128) nz
     {"davidCase_1_8192_2560_0_0_0_1_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32, 34678579202UL},
     {"davidCase_1_8192_2560_1_0_0_1_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32, 38973546498UL},
-    {"davidCase_1983_1280_1088_0_0_0_1_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32,
-     34678579202UL},
-    {"davidCase_1983_1280_1088_1_0_0_1_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32,
-     38973546498UL},
+    {"davidCase_1983_1280_1088_0_0_0_1_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32, 34678579202UL},
+    {"davidCase_1983_1280_1088_1_0_0_1_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32, 38973546498UL},
     {"davidCase_1_64_64_0_0_0_1_0_0_32_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_4_8_1_0", 4, 34678579202UL},
     {"davidCase_8_8192_512_1_0_0_0_0_0_128_FLOAT16_INT4_FLOAT16_UINT64_FLOAT16_32_64_1_0", 32, 38973546498UL},
     {"davidCase_1_8192_2560_0_0_0_1_0_0_128_BF16_INT4_BF16_UINT64_BF16_32_64_1_0", 32, 51858448386UL},

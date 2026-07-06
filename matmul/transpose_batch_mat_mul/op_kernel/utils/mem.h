@@ -20,15 +20,7 @@
 #include "kernel_operator_block_sync_intf.h"
 
 namespace PpMatMulNS {
-enum class BufferType : uint32_t
-{
-    ASCEND_UB,
-    ASCEND_CB,
-    ASCEND_L0A,
-    ASCEND_L0B,
-    ASCEND_L0C,
-    ASCEND_MAX
-};
+enum class BufferType : uint32_t { ASCEND_UB, ASCEND_CB, ASCEND_L0A, ASCEND_L0B, ASCEND_L0C, ASCEND_MAX };
 
 template <ArchType archType>
 struct OnChipBuffer {
@@ -38,34 +30,32 @@ struct OnChipBuffer {
 public:
     __aicore__ inline OnChipBuffer()
     {
-        constexpr uint32_t bufferSize[(uint32_t)BufferType::ASCEND_MAX] = {HardwareInfo<archType>::ubSize,
-                                                                           HardwareInfo<archType>::l1Size,
-                                                                           HardwareInfo<archType>::l0ASize,
-                                                                           HardwareInfo<archType>::l0BSize,
-                                                                           HardwareInfo<archType>::l0CSize};
+        constexpr uint32_t bufferSize[(uint32_t)BufferType::ASCEND_MAX] = {
+            HardwareInfo<archType>::ubSize, HardwareInfo<archType>::l1Size, HardwareInfo<archType>::l0ASize,
+            HardwareInfo<archType>::l0BSize, HardwareInfo<archType>::l0CSize};
 #if defined(__DAV_C220_VEC__)
-        buffer_[(uint32_t)BufferType::ASCEND_UB] =
-            Tensor<uint8_t>(AscendC::TPosition::VECIN, 0, bufferSize[(uint32_t)BufferType::ASCEND_UB]);
+        buffer_[(uint32_t)BufferType::ASCEND_UB] = Tensor<uint8_t>(AscendC::TPosition::VECIN, 0,
+                                                                   bufferSize[(uint32_t)BufferType::ASCEND_UB]);
 #elif defined(__DAV_C220_CUBE__)
-        buffer_[(uint32_t)BufferType::ASCEND_CB] =
-            Tensor<uint8_t>(AscendC::TPosition::A1, 0, bufferSize[(uint32_t)BufferType::ASCEND_CB]);
-        buffer_[(uint32_t)BufferType::ASCEND_L0A] =
-            Tensor<uint8_t>(AscendC::TPosition::A2, 0, bufferSize[(uint32_t)BufferType::ASCEND_L0A]);
-        buffer_[(uint32_t)BufferType::ASCEND_L0B] =
-            Tensor<uint8_t>(AscendC::TPosition::B2, 0, bufferSize[(uint32_t)BufferType::ASCEND_L0B]);
-        buffer_[(uint32_t)BufferType::ASCEND_L0C] =
-            Tensor<uint8_t>(AscendC::TPosition::CO1, 0, bufferSize[(uint32_t)BufferType::ASCEND_L0C]);
+        buffer_[(uint32_t)BufferType::ASCEND_CB] = Tensor<uint8_t>(AscendC::TPosition::A1, 0,
+                                                                   bufferSize[(uint32_t)BufferType::ASCEND_CB]);
+        buffer_[(uint32_t)BufferType::ASCEND_L0A] = Tensor<uint8_t>(AscendC::TPosition::A2, 0,
+                                                                    bufferSize[(uint32_t)BufferType::ASCEND_L0A]);
+        buffer_[(uint32_t)BufferType::ASCEND_L0B] = Tensor<uint8_t>(AscendC::TPosition::B2, 0,
+                                                                    bufferSize[(uint32_t)BufferType::ASCEND_L0B]);
+        buffer_[(uint32_t)BufferType::ASCEND_L0C] = Tensor<uint8_t>(AscendC::TPosition::CO1, 0,
+                                                                    bufferSize[(uint32_t)BufferType::ASCEND_L0C]);
 #else
-        buffer_[(uint32_t)BufferType::ASCEND_UB] =
-            Tensor<uint8_t>(AscendC::TPosition::VECIN, 0, bufferSize[(uint32_t)BufferType::ASCEND_UB]);
-        buffer_[(uint32_t)BufferType::ASCEND_CB] =
-            Tensor<uint8_t>(AscendC::TPosition::A1, 0, bufferSize[(uint32_t)BufferType::ASCEND_CB]);
-        buffer_[(uint32_t)BufferType::ASCEND_L0A] =
-            Tensor<uint8_t>(AscendC::TPosition::A2, 0, bufferSize[(uint32_t)BufferType::ASCEND_L0A]);
-        buffer_[(uint32_t)BufferType::ASCEND_L0B] =
-            Tensor<uint8_t>(AscendC::TPosition::B2, 0, bufferSize[(uint32_t)BufferType::ASCEND_L0B]);
-        buffer_[(uint32_t)BufferType::ASCEND_L0C] =
-            Tensor<uint8_t>(AscendC::TPosition::CO1, 0, bufferSize[(uint32_t)BufferType::ASCEND_L0C]);
+        buffer_[(uint32_t)BufferType::ASCEND_UB] = Tensor<uint8_t>(AscendC::TPosition::VECIN, 0,
+                                                                   bufferSize[(uint32_t)BufferType::ASCEND_UB]);
+        buffer_[(uint32_t)BufferType::ASCEND_CB] = Tensor<uint8_t>(AscendC::TPosition::A1, 0,
+                                                                   bufferSize[(uint32_t)BufferType::ASCEND_CB]);
+        buffer_[(uint32_t)BufferType::ASCEND_L0A] = Tensor<uint8_t>(AscendC::TPosition::A2, 0,
+                                                                    bufferSize[(uint32_t)BufferType::ASCEND_L0A]);
+        buffer_[(uint32_t)BufferType::ASCEND_L0B] = Tensor<uint8_t>(AscendC::TPosition::B2, 0,
+                                                                    bufferSize[(uint32_t)BufferType::ASCEND_L0B]);
+        buffer_[(uint32_t)BufferType::ASCEND_L0C] = Tensor<uint8_t>(AscendC::TPosition::CO1, 0,
+                                                                    bufferSize[(uint32_t)BufferType::ASCEND_L0C]);
 #endif
     }
 
@@ -79,5 +69,5 @@ private:
     AscendC::LocalTensor<uint8_t> buffer_[(uint32_t)BufferType::ASCEND_MAX];
 };
 
-}
+} // namespace PpMatMulNS
 #endif

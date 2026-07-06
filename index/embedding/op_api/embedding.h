@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Embedding(const aclTensor *self, const aclTensor *indices, aclOpExecutor *executor);
+const aclTensor* Embedding(const aclTensor* self, const aclTensor* indices, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_EMBEDDING_H_

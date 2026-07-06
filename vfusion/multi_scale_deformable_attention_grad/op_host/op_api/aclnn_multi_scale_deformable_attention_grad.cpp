@@ -59,14 +59,15 @@ static const int32_t INPUT_DIM_6 = 6;
 
 static const std::initializer_list<DataType> VALUE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
-static const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
-static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<DataType> INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                         op::DataType::DT_INT64};
+static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
-static bool CheckNotNull(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                         const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
-                         const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+static bool CheckNotNull(const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex,
+                         const aclTensor* location, const aclTensor* attnWeight, const aclTensor* gradOutput,
+                         const aclTensor* gradValue, const aclTensor* gradLocation, const aclTensor* gradAttnWeight)
+{
     OP_CHECK_NULL(value, return false);
     OP_CHECK_NULL(spatialShape, return false);
     OP_CHECK_NULL(levelStartIndex, return false);
@@ -79,9 +80,10 @@ static bool CheckNotNull(const aclTensor *value, const aclTensor *spatialShape, 
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                            const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
-                            const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+static bool CheckDtypeValid(const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex,
+                            const aclTensor* location, const aclTensor* attnWeight, const aclTensor* gradOutput,
+                            const aclTensor* gradValue, const aclTensor* gradLocation, const aclTensor* gradAttnWeight)
+{
     // 检查value的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(value, VALUE_DTYPE_SUPPORT_LIST, return false);
 
@@ -112,8 +114,9 @@ static bool CheckDtypeValid(const aclTensor *value, const aclTensor *spatialShap
     return true;
 }
 
-static bool CheckFormat(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                        const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput) {
+static bool CheckFormat(const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex,
+                        const aclTensor* location, const aclTensor* attnWeight, const aclTensor* gradOutput)
+{
     // 检查输入tensor格式，不支持NZ格式
     if (value->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'value' format does not support NZ");
@@ -142,61 +145,54 @@ static bool CheckFormat(const aclTensor *value, const aclTensor *spatialShape, c
     return true;
 }
 
-static inline bool CheckShape(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                            const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput) {
+static inline bool CheckShape(const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex,
+                              const aclTensor* location, const aclTensor* attnWeight, const aclTensor* gradOutput)
+{
     if (value->GetViewShape().GetDimNum() != INPUT_DIM_4) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'value' expects 4 dimensions, but got %lu",
-            value->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'value' expects 4 dimensions, but got %lu",
+                value->GetViewShape().GetDimNum());
         return false;
     }
 
     if (spatialShape->GetViewShape().GetDimNum() != INPUT_DIM_2) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' expects 2 dimensions, but got %lu",
-            spatialShape->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' expects 2 dimensions, but got %lu",
+                spatialShape->GetViewShape().GetDimNum());
         return false;
     }
 
     if (spatialShape->GetViewShape().GetDim(SECOND_DIM) != INPUT_DIM_2) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' expects the last dimension to be 2, but got %lu",
-            spatialShape->GetViewShape().GetDim(SECOND_DIM));
-        return false;    
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'spatialShape' expects the last dimension to be 2, but got %lu",
+                spatialShape->GetViewShape().GetDim(SECOND_DIM));
+        return false;
     }
 
     if (levelStartIndex->GetViewShape().GetDimNum() != INPUT_DIM_1) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'levelStartIndex' expects 1 dimensions, but got %lu",
-            levelStartIndex->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'levelStartIndex' expects 1 dimensions, but got %lu",
+                levelStartIndex->GetViewShape().GetDimNum());
         return false;
     }
 
     if (location->GetViewShape().GetDimNum() != INPUT_DIM_6) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'location' expects 6 dimensions, but got %lu",
-            location->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'location' expects 6 dimensions, but got %lu",
+                location->GetViewShape().GetDimNum());
         return false;
     }
 
     if (location->GetViewShape().GetDim(SIXTH_DIM) != INPUT_DIM_2) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'location' expects the last dimension to be 2, but got %lu",
-            location->GetViewShape().GetDim(SIXTH_DIM));
-        return false;    
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'location' expects the last dimension to be 2, but got %lu",
+                location->GetViewShape().GetDim(SIXTH_DIM));
+        return false;
     }
 
     if (attnWeight->GetViewShape().GetDimNum() != INPUT_DIM_5) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'attnWeight' expects 5 dimensions, but got %lu",
-            attnWeight->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'attnWeight' expects 5 dimensions, but got %lu",
+                attnWeight->GetViewShape().GetDimNum());
         return false;
     }
 
     if (gradOutput->GetViewShape().GetDimNum() != INPUT_DIM_3) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "parameter 'gradOutput' expects 3 dimensions, but got %lu",
-            gradOutput->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "parameter 'gradOutput' expects 3 dimensions, but got %lu",
+                gradOutput->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -206,60 +202,63 @@ static inline bool CheckShape(const aclTensor *value, const aclTensor *spatialSh
     int64_t num_queries = location->GetViewShape().GetDim(SECOND_DIM);
     int64_t num_points = location->GetViewShape().GetDim(FIFTH_DIM);
 
-    bool isInputValid = (channels % 8 == 0 && channels <= 256 && num_queries < 500000 && num_levels <= 16 && num_heads <= 16 && num_points <= 16);
+    bool isInputValid = (channels % 8 == 0 && channels <= 256 && num_queries < 500000 && num_levels <= 16 &&
+                         num_heads <= 16 && num_points <= 16);
     if (!isInputValid) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "invalid parameter: constraints are not satisfied");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "invalid parameter: constraints are not satisfied");
         return false;
     }
 
     return true;
 }
-static aclnnStatus CheckParams(const aclTensor *value, const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                               const aclTensor *location, const aclTensor *attnWeight, const aclTensor *gradOutput,
-                               const aclTensor *gradValue, const aclTensor *gradLocation, const aclTensor *gradAttnWeight) {
+static aclnnStatus CheckParams(const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex,
+                               const aclTensor* location, const aclTensor* attnWeight, const aclTensor* gradOutput,
+                               const aclTensor* gradValue, const aclTensor* gradLocation,
+                               const aclTensor* gradAttnWeight)
+{
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(value, spatialShape, levelStartIndex, location, attnWeight,
-                            gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput, gradValue,
+                           gradLocation, gradAttnWeight),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(value, spatialShape, levelStartIndex, location, attnWeight,
-                              gradOutput, gradValue, gradLocation, gradAttnWeight), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput, gradValue,
+                              gradLocation, gradAttnWeight),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的格式是否为ND，不支持NZ格式
-    CHECK_RET(CheckFormat(value, spatialShape, levelStartIndex, location, attnWeight,
-                          gradOutput), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormat(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput),
+              ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输入的shape是否符合要求
-    CHECK_RET(CheckShape(value, spatialShape, levelStartIndex, location, attnWeight,
-                          gradOutput), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput),
+              ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(const aclTensor *value,
-                                                                   const aclTensor *spatialShape, const aclTensor *levelStartIndex,
-                                                                   const aclTensor *location, const aclTensor *attnWeight,
-                                                                   const aclTensor *gradOutput, aclTensor *gradValue,
-                                                                   aclTensor *gradLocation, aclTensor *gradAttnWeight,
-                                                                   uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(
+    const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex, const aclTensor* location,
+    const aclTensor* attnWeight, const aclTensor* gradOutput, aclTensor* gradValue, aclTensor* gradLocation,
+    aclTensor* gradAttnWeight, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnMultiScaleDeformableAttentionGrad,
-        DFX_IN(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput),
-        DFX_OUT(gradValue, gradLocation, gradAttnWeight));
+                   DFX_IN(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput),
+                   DFX_OUT(gradValue, gradLocation, gradAttnWeight));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput,
-        gradValue, gradLocation, gradAttnWeight);
+    auto ret = CheckParams(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput, gradValue,
+                           gradLocation, gradAttnWeight);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空Tensor处理
-    if (value->IsEmpty() || spatialShape->IsEmpty() || levelStartIndex->IsEmpty() ||
-        location->IsEmpty() || attnWeight->IsEmpty() || gradOutput->IsEmpty()) {
-      *workspaceSize = 0;
-      uniqueExecutor.ReleaseTo(executor);
-      return ACLNN_SUCCESS;
+    if (value->IsEmpty() || spatialShape->IsEmpty() || levelStartIndex->IsEmpty() || location->IsEmpty() ||
+        attnWeight->IsEmpty() || gradOutput->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
     }
 
     // 将输入转为连续tensor
@@ -318,9 +317,9 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(const aclTens
     CHECK_RET(levelStartIndexCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 调用l0算子MultiScaleDeformableAttentionGrad进行计算
-    auto multiScaleDeformableAttentionGradResult = l0op::MultiScaleDeformableAttentionGrad(valueCasted,
-        spatialShapeCasted, levelStartIndexCasted, locationCasted, attnWeightCasted,
-        gradOutputCasted, uniqueExecutor.get());
+    auto multiScaleDeformableAttentionGradResult = l0op::MultiScaleDeformableAttentionGrad(
+        valueCasted, spatialShapeCasted, levelStartIndexCasted, locationCasted, attnWeightCasted, gradOutputCasted,
+        uniqueExecutor.get());
     auto gradValueOut = std::get<0>(multiScaleDeformableAttentionGradResult);
     auto gradLocationNoTrans = std::get<1>(multiScaleDeformableAttentionGradResult);
     auto gradAttnWeightNoTrans = std::get<2>(multiScaleDeformableAttentionGradResult);
@@ -364,7 +363,9 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGradGetWorkspaceSize(const aclTens
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMultiScaleDeformableAttentionGrad(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
+aclnnStatus aclnnMultiScaleDeformableAttentionGrad(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                   aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnMultiScaleDeformableAttentionGrad);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

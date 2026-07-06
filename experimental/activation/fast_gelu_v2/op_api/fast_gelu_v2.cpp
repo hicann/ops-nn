@@ -25,14 +25,10 @@ namespace l0op {
 
 OP_TYPE_REGISTER(FastGeluV2);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor* x)
-{
-    return CheckType(x->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* x) { return CheckType(x->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
 static bool FastGeluV2InferShape(const op::Shape& xShape, op::Shape& outShape)
 {
@@ -40,17 +36,12 @@ static bool FastGeluV2InferShape(const op::Shape& xShape, op::Shape& outShape)
     return true;
 }
 
-static const aclTensor* FastGeluV2AiCore(const aclTensor* x, const aclTensor* out,
-                                          aclOpExecutor* executor)
+static const aclTensor* FastGeluV2AiCore(const aclTensor* x, const aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(FastGeluV2AiCore, x, out);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(FastGeluV2,
-        OP_INPUT(x), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FastGeluV2AiCore failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(FastGeluV2, OP_INPUT(x), OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FastGeluV2AiCore failed."), return nullptr);
     return out;
 }
 
@@ -65,8 +56,7 @@ const aclTensor* FastGeluV2(const aclTensor* x, aclOpExecutor* executor)
     }
 
     if (!IsAiCoreSupport(x)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "FastGeluV2 not supported: dtype x=%d. Supported: FLOAT, FLOAT16, BF16.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "FastGeluV2 not supported: dtype x=%d. Supported: FLOAT, FLOAT16, BF16.",
                 static_cast<int>(x->GetDataType()));
         return nullptr;
     }

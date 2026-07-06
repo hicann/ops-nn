@@ -24,17 +24,17 @@ constexpr int32_t BUFFER_NUM = 1;
 constexpr int64_t BLOCK_DATA = 32;
 constexpr int64_t REPEAT_DATA = 256;
 
-constexpr uint16_t FP16_EXPONENT_ALL_1_MASK = 0x7C00;  // 指数位全为1的掩码（5位指数位）
-constexpr uint16_t FP16_MANTISSA_NON_ZERO_MASK = 0x03FF;  // 尾数位非0的掩码（10位尾数位）
+constexpr uint16_t FP16_EXPONENT_ALL_1_MASK = 0x7C00;    // 指数位全为1的掩码（5位指数位）
+constexpr uint16_t FP16_MANTISSA_NON_ZERO_MASK = 0x03FF; // 尾数位非0的掩码（10位尾数位）
 
-constexpr uint32_t FP32_EXPONENT_ALL_1_MASK = 0x7F800000;  // 指数位全为1的掩码（8位指数位）
-constexpr uint32_t FP32_MANTISSA_NON_ZERO_MASK = 0x007FFFFF;  // 尾数位非0的掩码（23位尾数位）
+constexpr uint32_t FP32_EXPONENT_ALL_1_MASK = 0x7F800000;    // 指数位全为1的掩码（8位指数位）
+constexpr uint32_t FP32_MANTISSA_NON_ZERO_MASK = 0x007FFFFF; // 尾数位非0的掩码（23位尾数位）
 
 template <typename T, typename MaskType>
 class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB, TBuf<>& workLocalUB, uint32_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB,
+                                   TBuf<>& workLocalUB, uint32_t dataCount)
     {
         LocalTensor<T> maxOutLocal = maxUB.Get<T>();
         LocalTensor<T> workLocal = workLocalUB.Get<T>();
@@ -42,8 +42,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void GetMask(
-        LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<MaskType>& mask, uint32_t dataCount)
+    __aicore__ inline void GetMask(LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<MaskType>& mask,
+                                   uint32_t dataCount)
     {
         uint32_t dataCountAlign = (dataCount + REPEAT_DATA - 1) / REPEAT_DATA * REPEAT_DATA;
         if (dataCountAlign > dataCount) {
@@ -60,9 +60,8 @@ public:
 template <typename MaskType>
 class InnerComputer<bfloat16_t, MaskType> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB, TBuf<>& workLocalUB,
-        uint32_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB,
+                                   TBuf<>& workLocalUB, uint32_t dataCount)
     {
         LocalTensor<float> maxOutLocal = maxUB.Get<float>();
         LocalTensor<float> workLocal = workLocalUB.Get<float>();
@@ -72,9 +71,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void GetMask(
-        LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<MaskType>& mask,
-        uint32_t dataCount)
+    __aicore__ inline void GetMask(LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32,
+                                   LocalTensor<MaskType>& mask, uint32_t dataCount)
     {
         uint32_t dataCountAlign = (dataCount + REPEAT_DATA - 1) / REPEAT_DATA * REPEAT_DATA;
         if (dataCountAlign > dataCount) {
@@ -92,9 +90,8 @@ template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
 class MaxPool3DWithArgmaxBigKernel {
 public:
     __aicore__ inline MaxPool3DWithArgmaxBigKernel(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-        const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict tiling, int64_t dataType);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
+                                const MaxPool3DWithArgmaxV2BigKernelTilingData* __restrict tiling, int64_t dataType);
     __aicore__ inline void Process();
 
 private:
@@ -123,10 +120,7 @@ private:
         return (inputValue + upperValue - 1) / upperValue * upperValue;
     }
 
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     /*
      * 功能：判断输入值是否为NaN
@@ -151,10 +145,12 @@ private:
     {
         if (inputDataTypeKey == 1) { // 输入数据为fp16
             uint16_t nan = *reinterpret_cast<uint16_t*>(&value);
-            return (nan & FP16_EXPONENT_ALL_1_MASK) == FP16_EXPONENT_ALL_1_MASK && (nan & FP16_MANTISSA_NON_ZERO_MASK) != 0;
+            return (nan & FP16_EXPONENT_ALL_1_MASK) == FP16_EXPONENT_ALL_1_MASK &&
+                   (nan & FP16_MANTISSA_NON_ZERO_MASK) != 0;
         } else { // 输入数据为fp32或bf16
             uint32_t nan = *reinterpret_cast<uint32_t*>(&value);
-            return (nan & FP32_EXPONENT_ALL_1_MASK) == FP32_EXPONENT_ALL_1_MASK && (nan & FP32_MANTISSA_NON_ZERO_MASK) != 0;
+            return (nan & FP32_EXPONENT_ALL_1_MASK) == FP32_EXPONENT_ALL_1_MASK &&
+                   (nan & FP32_MANTISSA_NON_ZERO_MASK) != 0;
         }
         return false;
     }
@@ -396,7 +392,8 @@ __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::
 }
 
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::dhwCopyInput(int64_t offset, int64_t blockLen)
+__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::dhwCopyInput(int64_t offset,
+                                                                                                int64_t blockLen)
 {
     LocalTensor<T1> xLocal = inputQue.AllocTensor<T1>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T1);
@@ -418,8 +415,9 @@ __aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType
 }
 
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::hwCopyInput(
-    int64_t offset, int64_t blockLen, int64_t blockCount)
+__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::hwCopyInput(int64_t offset,
+                                                                                               int64_t blockLen,
+                                                                                               int64_t blockCount)
 {
     LocalTensor<T1> xLocal = inputQue.AllocTensor<T1>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T1);
@@ -452,8 +450,10 @@ __aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType
 }
 
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::wCopyInput(
-    int64_t offset, int64_t blockLen, int64_t blockCount, int64_t dLen)
+__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::wCopyInput(int64_t offset,
+                                                                                              int64_t blockLen,
+                                                                                              int64_t blockCount,
+                                                                                              int64_t dLen)
 {
     LocalTensor<T1> xLocal = inputQue.AllocTensor<T1>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T1);
@@ -554,8 +554,10 @@ __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::
  * 功能：计算所求max值在该nc中的真实Index
  */
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::RestoreIndex(
-    int32_t index, int64_t dLen, int64_t hLen, int64_t wLen)
+__aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::RestoreIndex(int32_t index,
+                                                                                                int64_t dLen,
+                                                                                                int64_t hLen,
+                                                                                                int64_t wLen)
 {
     int64_t realIndex = 0;
     if (wLen == w && hLen == h) {
@@ -593,7 +595,8 @@ __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::
 }
 
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::CopyIndicesOut(int64_t maxIndex, int64_t curIdx)
+__aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::CopyIndicesOut(int64_t maxIndex,
+                                                                                               int64_t curIdx)
 {
     DataCopyExtParams extParams;
     extParams.blockCount = 1;
@@ -618,7 +621,8 @@ __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::
 }
 
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::NaNIndicesInit(LocalTensor<float> indicesLocal)
+__aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::NaNIndicesInit(
+    LocalTensor<float> indicesLocal)
 {
     for (int32_t idx = 0; idx < 8; idx++) {
         indicesLocal.SetValue(idx, float(idx));
@@ -857,8 +861,9 @@ __aicore__ inline int64_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType
 }
 
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::UpdateMax(
-    int64_t curMaxIndex, T2& maxValue, int64_t& maxIndex)
+__aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::UpdateMax(int64_t curMaxIndex,
+                                                                                          T2& maxValue,
+                                                                                          int64_t& maxIndex)
 {
     LocalTensor<T2> maxOutLocal = maxUB.Get<T2>();
     T2 curMaxValue = maxOutLocal.GetValue(0);
@@ -878,8 +883,8 @@ __aicore__ inline void MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::
  *    计算所求Max值在kernel中的真实Index
  */
 template <typename T1, typename T2, const bool IS_MASK, typename MaskType>
-__aicore__ inline int32_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::kernelRealIndex(
-    int32_t index, int64_t blockLen)
+__aicore__ inline int32_t MaxPool3DWithArgmaxBigKernel<T1, T2, IS_MASK, MaskType>::kernelRealIndex(int32_t index,
+                                                                                                   int64_t blockLen)
 {
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T1); // 计算对齐值
     int64_t alignNum = blockLenAlign - blockLen;               // 计算pad个数

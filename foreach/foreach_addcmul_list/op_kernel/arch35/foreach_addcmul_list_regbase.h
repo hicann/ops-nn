@@ -20,8 +20,8 @@
 
 namespace ForeachAddcmulList {
 template <typename T, typename ScalarT, typename Tiling>
-using ForeachAddcmulListRegbase =
-    ForeachAddcList::ForeachAddcListRegbase<T, ScalarT, Tiling, ForeachAddcList::AddcOp::MUL>;
+using ForeachAddcmulListRegbase = ForeachAddcList::ForeachAddcListRegbase<T, ScalarT, Tiling,
+                                                                          ForeachAddcList::AddcOp::MUL>;
 } // namespace ForeachAddcmulList
 
 #endif // FOREACH_ADDCMUL_LIST_REGBASE_H

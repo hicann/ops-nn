@@ -23,6 +23,6 @@ namespace optiling {
 
 struct EuclideanNormCompileInfo {};
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // EUCLIDEAN_NORM_TILING_ARCH35_H
+#endif // EUCLIDEAN_NORM_TILING_ARCH35_H

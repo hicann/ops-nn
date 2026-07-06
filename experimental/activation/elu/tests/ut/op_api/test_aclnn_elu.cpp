@@ -23,15 +23,9 @@ using namespace std;
 
 class TestAclnnElu : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "elu_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "elu_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "elu_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "elu_test TearDown" << std::endl; }
 };
 
 // 正常场景_FLOAT_ND

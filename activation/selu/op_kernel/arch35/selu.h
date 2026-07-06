@@ -43,23 +43,23 @@
 
 namespace NsSelu {
 
-using AscendC::TPipe;
-using AscendC::TQue;
-using AscendC::TBuf;
-using AscendC::QuePosition;
+using AscendC::Add;
+using AscendC::Adds;
+using AscendC::Cast;
+using AscendC::DataCopyPad;
+using AscendC::DataCopyParams;
+using AscendC::Exp;
+using AscendC::GetBlockIdx;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
-using AscendC::DataCopyParams;
-using AscendC::DataCopyPad;
-using AscendC::RoundMode;
-using AscendC::GetBlockIdx;
-using AscendC::Muls;
-using AscendC::Exp;
-using AscendC::Adds;
-using AscendC::Mins;
 using AscendC::Maxs;
-using AscendC::Add;
-using AscendC::Cast;
+using AscendC::Mins;
+using AscendC::Muls;
+using AscendC::QuePosition;
+using AscendC::RoundMode;
+using AscendC::TBuf;
+using AscendC::TPipe;
+using AscendC::TQue;
 
 // SELU fixed constants（全部以 fp32 表示，FP16/BF16/INT 路径均通过 cast 到 fp32 计算后再回原 dtype）
 constexpr float ALPHA_F32 = 1.6732632423543772848170429916717f;
@@ -85,22 +85,18 @@ private:
     __aicore__ inline void CopyOut(int64_t gmOffset, int64_t currentNum);
 
     // float32 direct computation
-    __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat,
-                                           LocalTensor<float>& yFloat,
-                                           int64_t alignedNum);
+    __aicore__ inline void ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat, int64_t alignedNum);
     // 非 fp32 dtype（half/bf16/int32/int8）统一走 cast-to-fp32 路径
     template <typename SrcT>
-    __aicore__ inline void ComputeCastFp32(LocalTensor<SrcT>& xLocal,
-                                            LocalTensor<SrcT>& yLocal,
-                                            int64_t currentNum,
-                                            int64_t alignedNum);
+    __aicore__ inline void ComputeCastFp32(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal, int64_t currentNum,
+                                           int64_t alignedNum);
 
 private:
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> inputQueue;
     TQue<QuePosition::VECOUT, 1> outputQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf1_;  // exp/cast intermediate (fp32)
-    TBuf<QuePosition::VECCALC> tmpBuf2_;  // max(0,x)/calc workspace (fp32)
+    TBuf<QuePosition::VECCALC> tmpBuf1_; // exp/cast intermediate (fp32)
+    TBuf<QuePosition::VECCALC> tmpBuf2_; // max(0,x)/calc workspace (fp32)
 
     GlobalTensor<T> xGM_;
     GlobalTensor<T> yGM_;
@@ -180,9 +176,8 @@ __aicore__ inline void Selu<T>::CopyOut(int64_t gmOffset, int64_t currentNum)
 // ComputeFloat32 - FP32 direct computation (fast path, no cast)
 // =============================================================================
 template <typename T>
-__aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat,
-                                                   LocalTensor<float>& yFloat,
-                                                   int64_t alignedNum)
+__aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat, LocalTensor<float>& yFloat,
+                                               int64_t alignedNum)
 {
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();
@@ -215,10 +210,8 @@ __aicore__ inline void Selu<T>::ComputeFloat32(LocalTensor<float>& xFloat,
 // =============================================================================
 template <typename T>
 template <typename SrcT>
-__aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal,
-                                                    LocalTensor<SrcT>& yLocal,
-                                                    int64_t currentNum,
-                                                    int64_t alignedNum)
+__aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal, LocalTensor<SrcT>& yLocal,
+                                                int64_t currentNum, int64_t alignedNum)
 {
     LocalTensor<float> tmp1 = tmpBuf1_.template Get<float>();
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();

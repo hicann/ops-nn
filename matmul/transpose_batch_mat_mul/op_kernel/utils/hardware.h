@@ -19,11 +19,7 @@
 #include <cstdint>
 
 namespace PpMatMulNS {
-enum class ArchType : uint32_t {
-    ASCEND_V220,
-    ASCEND_V200,
-    ASCEND_M200
-};
+enum class ArchType : uint32_t { ASCEND_V220, ASCEND_V200, ASCEND_M200 };
 
 template <ArchType ArchTag>
 struct HardwareInfo {
@@ -56,5 +52,5 @@ struct HardwareInfo<ArchType::ASCEND_V200> {
     static uint32_t const fractalSize = 512;
     static uint32_t const l1l0BlockSize = 32;
 };
-}
+} // namespace PpMatMulNS
 #endif

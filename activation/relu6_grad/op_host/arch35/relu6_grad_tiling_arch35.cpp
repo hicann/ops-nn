@@ -30,15 +30,9 @@ namespace optiling {
 static constexpr uint64_t RELU6_GRAD_COMMON_TILING_PRIORITY = 0;
 static constexpr int64_t FEATURES_INPUT_INDEX = 1;
 
-ge::graphStatus Relu6GradTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Relu6GradTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
-bool Relu6GradTiling::IsCapable()
-{
-    return true;
-}
+bool Relu6GradTiling::IsCapable() { return true; }
 
 ge::graphStatus Relu6GradTiling::DoOpTiling()
 {
@@ -46,35 +40,29 @@ ge::graphStatus Relu6GradTiling::DoOpTiling()
     auto gradInputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradInputDesc);
     ge::DataType gradInputDtype = gradInputDesc->GetDataType();
-    OP_CHECK_IF(
-        gradInputDtype != ge::DT_FLOAT16 && gradInputDtype != ge::DT_BF16 && gradInputDtype != ge::DT_FLOAT,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "input gradients dtype %s not supported, only support [float16, bfloat16, float32].",
-            ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradInputDtype != ge::DT_FLOAT16 && gradInputDtype != ge::DT_BF16 && gradInputDtype != ge::DT_FLOAT,
+                OP_LOGE(context_->GetNodeName(),
+                        "input gradients dtype %s not supported, only support [float16, bfloat16, float32].",
+                        ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str()),
+                return ge::GRAPH_FAILED);
 
     auto featInputDesc = context_->GetInputDesc(FEATURES_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, featInputDesc);
     ge::DataType featInputDtype = featInputDesc->GetDataType();
-    OP_CHECK_IF(
-        featInputDtype != gradInputDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "input features dtype %s not equal gradients dtype %s.",
-            ge::TypeUtils::DataTypeToSerialString(featInputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(featInputDtype != gradInputDtype,
+                OP_LOGE(context_->GetNodeName(), "input features dtype %s not equal gradients dtype %s.",
+                        ge::TypeUtils::DataTypeToSerialString(featInputDtype).c_str(),
+                        ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str()),
+                return ge::GRAPH_FAILED);
 
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     ge::DataType outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        outputDtype != gradInputDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "output backprops dtype %s not same as input gradients %s.",
-            ge::TypeUtils::DataTypeToSerialString(outputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputDtype != gradInputDtype,
+                OP_LOGE(context_->GetNodeName(), "output backprops dtype %s not same as input gradients %s.",
+                        ge::TypeUtils::DataTypeToSerialString(outputDtype).c_str(),
+                        ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str()),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (gradInputDtype == ge::DT_FLOAT16) {
@@ -88,60 +76,41 @@ ge::graphStatus Relu6GradTiling::DoOpTiling()
     } else if (gradInputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<Relu6GradFloatCast<bfloat16_t, float>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<Relu6GradFloatCast<bfloat16_t, float>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(),
+                            "BroadcastBaseTiling<Relu6GradFloatCast<bfloat16_t, float>::OpDag> failed"),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (gradInputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<Relu6Grad<float>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<Relu6Grad<float>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<Relu6Grad<float>::OpDag> failed"),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE(
-            context_->GetNodeName(),
-            "input dtype %s not supported, only support [float16, bfloat16, float32].",
-            ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str());
+        OP_LOGE(context_->GetNodeName(), "input dtype %s not supported, only support [float16, bfloat16, float32].",
+                ge::TypeUtils::DataTypeToSerialString(gradInputDtype).c_str());
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Relu6GradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Relu6GradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t Relu6GradTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t Relu6GradTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus Relu6GradTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Relu6GradTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus Relu6GradTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Relu6GradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus Relu6GradTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus Relu6GradTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus Tiling4Relu6Grad(gert::TilingContext* tilingContextGen)
 {
-    OP_CHECK_IF(
-        tilingContextGen == nullptr, OP_LOGE("Tiling4Relu6Grad", "Tiling context is null"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingContextGen == nullptr, OP_LOGE("Tiling4Relu6Grad", "Tiling context is null"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(tilingContextGen->GetNodeName(), "Enter Tiling4Relu6Grad");
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4Relu6Grad rt2.0 is running.");
     Relu6GradTiling tiling(tilingContextGen);

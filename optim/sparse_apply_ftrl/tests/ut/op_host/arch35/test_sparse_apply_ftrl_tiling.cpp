@@ -21,15 +21,9 @@ using namespace ge;
 
 class SparseApplyFtrlTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SparseApplyFtrlTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseApplyFtrlTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SparseApplyFtrlTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SparseApplyFtrlTiling TearDown" << std::endl; }
 };
 
 static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950PR"}};
@@ -42,29 +36,29 @@ TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_int32)
     gert::TilingContextPara tilingContextPara(
         "SparseApplyFtrl",
         {
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 0: var
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 1: accum
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 2: linear
-            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},     // input 3: grad
-            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},             // input 4: indices (int32)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 5: lr (scalar)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 6: l1 (scalar)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 7: l2 (scalar)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 8: lr_power (scalar)
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices (int32)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr (scalar)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1 (scalar)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2 (scalar)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power (scalar)
         },
         {
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // output 0: var
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // output 1: accum
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // output 2: linear
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
         },
         {
             /* attrs: use_locking=false */
         },
         &compileInfo,
-        64,     // number of cores
-        262144, // ubsize
-        4096);  // max tiling data size
-    uint64_t expectTilingKey = 0;  // INT32 scene
+        64,                       // number of cores
+        262144,                   // ubsize
+        4096);                    // max tiling data size
+    uint64_t expectTilingKey = 0; // INT32 scene
     // TilingData: numIndices=10, innerSize=16, varDim0=100
     string expectTilingData = "10 16 100 ";
     std::vector<size_t> expectWorkspaces = {16777216};
@@ -78,29 +72,29 @@ TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_int64)
     gert::TilingContextPara tilingContextPara(
         "SparseApplyFtrl",
         {
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 0: var
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 1: accum
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 2: linear
-            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},     // input 3: grad
-            {{{10}, {10}}, ge::DT_INT64, ge::FORMAT_ND},             // input 4: indices (int64)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 5: lr (scalar)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 6: l1 (scalar)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 7: l2 (scalar)
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 8: lr_power (scalar)
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT64, ge::FORMAT_ND},           // input 4: indices (int64)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr (scalar)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1 (scalar)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2 (scalar)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power (scalar)
         },
         {
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // output 0: var
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // output 1: accum
-            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // output 2: linear
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output 2: linear
         },
         {
             /* attrs: use_locking=false */
         },
         &compileInfo,
-        64,     // number of cores
-        262144, // ubsize
-        4096);  // max tiling data size
-    uint64_t expectTilingKey = 1;  // INT64 scene
+        64,                       // number of cores
+        262144,                   // ubsize
+        4096);                    // max tiling data size
+    uint64_t expectTilingKey = 1; // INT64 scene
     // TilingData: numIndices=10, innerSize=16, varDim0=100
     string expectTilingData = "10 16 100 ";
     std::vector<size_t> expectWorkspaces = {16777216};

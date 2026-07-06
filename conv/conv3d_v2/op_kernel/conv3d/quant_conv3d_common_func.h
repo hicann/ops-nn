@@ -31,12 +31,10 @@ CONV_DECLARE_REG_IMPL(VecCompute);
 
 template <class Intf, uint32_t ImplType>
 struct VecCompute {
-    static __aicore__ inline bool call(
-        Intf *self, const GlobalTensor<typename Intf::OutputT> &output)
+    static __aicore__ inline bool call(Intf* self, const GlobalTensor<typename Intf::OutputT>& output)
     {
         uint64_t mSize, nSize, curNSize;
-        uint64_t ws_startoffset = self->ctx.workspaceDbFlag * self->ctx.conv3dTiling->mL0 *
-                                  self->ctx.conv3dTiling->nL0;
+        uint64_t ws_startoffset = self->ctx.workspaceDbFlag * self->ctx.conv3dTiling->mL0 * self->ctx.conv3dTiling->nL0;
         self->ctx.copyOutIns.GetL0CSize(mSize, nSize);
         self->ctx.copyOutIns.GetCurNSize(curNSize);
         uint64_t n16num = nSize / BLOCK_L0_N;
@@ -81,9 +79,9 @@ struct VecCompute {
         return false;
     }
 
-    static __aicore__ inline void DequantCompute(Intf *self, uint64_t mSize, uint64_t nSize,
-                                                 uint64_t nCurSize, uint64_t ws_startoffset,
-                                                 const GlobalTensor<typename Intf::OutputT> &output)
+    static __aicore__ inline void DequantCompute(Intf* self, uint64_t mSize, uint64_t nSize, uint64_t nCurSize,
+                                                 uint64_t ws_startoffset,
+                                                 const GlobalTensor<typename Intf::OutputT>& output)
     {
         uint32_t maxnUBIter = CeilDIV(nSize, self->ctx.conv3dTiling->nUB);
         uint32_t maxmUBIter = CeilDIV(mSize, self->ctx.conv3dTiling->mUB);
@@ -94,17 +92,17 @@ struct VecCompute {
             }
             for (uint32_t mIter = 0; mIter < maxmUBIter - 1; mIter++) {
                 uint64_t srcOffset = ws_startoffset + (nIter * self->ctx.conv3dTiling->nUB * mSize +
-                                    mIter * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
+                                                       mIter * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
                 CopyIn(self, self->ctx.totalBlockCount, self->ctx.totalBlockLen, totalSrcStride, srcOffset);
                 oneVecCompute(self, self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB, mIter, nIter);
                 CopyOut(self, self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB, mIter, nIter, output);
             }
             uint16_t blockLen = (mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB) * BLOCK_L0_N *
                                 self->ctx.sizeOfL0c / C0_SIZE;
-            uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N *
-                                 self->ctx.sizeOfL0c / C0_SIZE ;
+            uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N * self->ctx.sizeOfL0c /
+                                 C0_SIZE;
             uint64_t srcOffset = ws_startoffset + (nIter * self->ctx.conv3dTiling->nUB * mSize +
-                                (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
+                                                   (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
             CopyIn(self, self->ctx.totalBlockCount, blockLen, srcStride, srcOffset);
             oneVecCompute(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB, self->ctx.conv3dTiling->nUB,
                           maxmUBIter - 1, nIter);
@@ -119,20 +117,20 @@ struct VecCompute {
         }
         uint16_t blockCount = (nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB) / BLOCK_L0_N;
         for (uint32_t mIter = 0; mIter < maxmUBIter - 1; mIter++) {
-            uint64_t srcOffset = ws_startoffset + (maxnUBIter-1) * self->ctx.conv3dTiling->nUB * mSize +
-                                                    mIter * self->ctx.conv3dTiling->mUB * BLOCK_L0_N ;
+            uint64_t srcOffset = ws_startoffset + (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB * mSize +
+                                 mIter * self->ctx.conv3dTiling->mUB * BLOCK_L0_N;
             CopyIn(self, blockCount, self->ctx.totalBlockLen, totalSrcStride, srcOffset);
             oneVecCompute(self, self->ctx.conv3dTiling->mUB, nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB,
                           mIter, maxnUBIter - 1);
-            CopyOut(self, self->ctx.conv3dTiling->mUB, nCurSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB,
-                    mIter, maxnUBIter - 1, output);
+            CopyOut(self, self->ctx.conv3dTiling->mUB, nCurSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB, mIter,
+                    maxnUBIter - 1, output);
         }
         uint16_t blockLen = (mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB) * BLOCK_L0_N *
                             self->ctx.sizeOfL0c / C0_SIZE;
-        uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N *
-                             self->ctx.sizeOfL0c / C0_SIZE;
-        uint64_t srcOffset = ws_startoffset + ((maxnUBIter-1) * self->ctx.conv3dTiling->nUB * mSize +
-                                                    (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
+        uint16_t srcStride = (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N * self->ctx.sizeOfL0c /
+                             C0_SIZE;
+        uint64_t srcOffset = ws_startoffset + ((maxnUBIter - 1) * self->ctx.conv3dTiling->nUB * mSize +
+                                               (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB * BLOCK_L0_N);
         CopyIn(self, blockCount, blockLen, srcStride, srcOffset);
         oneVecCompute(self, mSize - (maxmUBIter - 1) * self->ctx.conv3dTiling->mUB,
                       nSize - (maxnUBIter - 1) * self->ctx.conv3dTiling->nUB, maxmUBIter - 1, maxnUBIter - 1);
@@ -144,32 +142,34 @@ struct VecCompute {
         }
     }
 
-    static __aicore__ inline void CopyIn(Intf *self, uint16_t blockCount, uint16_t blockLen,
-                                         uint16_t srcStride, uint64_t srcOffset)
+    static __aicore__ inline void CopyIn(Intf* self, uint16_t blockCount, uint16_t blockLen, uint16_t srcStride,
+                                         uint64_t srcOffset)
     {
         self->ctx.ubin = self->ctx.queueUBin.template AllocTensor<typename Intf::L0cT>();
         DataCopyParams copyinParams;
         copyinParams.blockCount = blockCount;
-        copyinParams.blockLen =  blockLen;
+        copyinParams.blockLen = blockLen;
         copyinParams.srcStride = srcStride;
         copyinParams.dstStride = 0;
         DataCopy(self->ctx.ubin, self->ctx.workspacegm[srcOffset], copyinParams);
         self->ctx.queueUBin.EnQue(self->ctx.ubin);
     }
 
-    static __aicore__ inline void  CopyScaleAndBias(Intf *self, uint16_t nIter, uint16_t num)
+    static __aicore__ inline void CopyScaleAndBias(Intf* self, uint16_t nIter, uint16_t num)
     {
         if (self->ctx.conv3dTiling->scaleAndBiasLoadType == static_cast<int8_t>(LoadChannelType::NORMAL)) {
             LocalTensor<typename Intf::BiasT> bias = self->ctx.queueUBbias.template AllocTensor<typename Intf::BiasT>();
             CopyInChannel<typename Intf::BiasT>(self, bias, self->ctx.biasgm[self->ctx.channelOffset], nIter, num);
             self->ctx.queueUBbias.EnQue(bias);
-            LocalTensor<typename Intf::FP32T> scale = self->ctx.queueUBscale.template AllocTensor<typename Intf::FP32T>();
+            LocalTensor<typename Intf::FP32T> scale = self->ctx.queueUBscale
+                                                          .template AllocTensor<typename Intf::FP32T>();
             CopyInChannel<typename Intf::FP32T>(self, scale, self->ctx.scalegm[self->ctx.channelOffset], nIter, num);
             self->ctx.queueUBscale.EnQue(scale);
 
             LocalTensor<typename Intf::BiasT> biasLocal = self->ctx.queueUBbias.template DeQue<typename Intf::BiasT>();
 
-            if constexpr (IsSameType<typename Intf::BiasT, bfloat16_t>::value || IsSameType<typename Intf::BiasT, half>::value) {
+            if constexpr (IsSameType<typename Intf::BiasT, bfloat16_t>::value ||
+                          IsSameType<typename Intf::BiasT, half>::value) {
                 self->ctx.ubbias = self->ctx.fp32BiasBuf.template Get<typename Intf::FP32T>();
                 Cast(self->ctx.ubbias, biasLocal, RoundMode::CAST_NONE, num);
                 self->ctx.queueUBbias.FreeTensor(biasLocal);
@@ -186,7 +186,8 @@ struct VecCompute {
             self->ctx.queueUBbias.EnQue(bias);
             LocalTensor<typename Intf::BiasT> biasLocal = self->ctx.queueUBbias.template DeQue<typename Intf::BiasT>();
 
-            if constexpr (IsSameType<typename Intf::BiasT, bfloat16_t>::value || IsSameType<typename Intf::BiasT, half>::value) {
+            if constexpr (IsSameType<typename Intf::BiasT, bfloat16_t>::value ||
+                          IsSameType<typename Intf::BiasT, half>::value) {
                 self->ctx.ubbias = self->ctx.fp32BiasBuf.template Get<typename Intf::FP32T>();
                 Cast(self->ctx.ubbias, biasLocal, RoundMode::CAST_NONE, num);
                 self->ctx.queueUBbias.FreeTensor(biasLocal);
@@ -195,35 +196,35 @@ struct VecCompute {
                 self->ctx.ubbias = biasLocal;
             }
 
-            LocalTensor<typename Intf::FP32T> scale = self->ctx.queueUBscale.template AllocTensor<typename Intf::FP32T>();
+            LocalTensor<typename Intf::FP32T> scale = self->ctx.queueUBscale
+                                                          .template AllocTensor<typename Intf::FP32T>();
             CopyInChannel<typename Intf::FP32T>(self, scale, self->ctx.scalegm[self->ctx.channelOffset], 0, num);
             self->ctx.queueUBscale.EnQue(scale);
             self->ctx.ubscale = self->ctx.queueUBscale.template DeQue<typename Intf::FP32T>();
         }
     }
 
-    static __aicore__ inline void  FreeScaleAndBias(Intf *self)
+    static __aicore__ inline void FreeScaleAndBias(Intf* self)
     {
-        if constexpr (!(IsSameType<typename Intf::BiasT, bfloat16_t>::value || IsSameType<typename Intf::BiasT, half>::value)) {
+        if constexpr (!(IsSameType<typename Intf::BiasT, bfloat16_t>::value ||
+                        IsSameType<typename Intf::BiasT, half>::value)) {
             self->ctx.queueUBbias.FreeTensor(self->ctx.ubbias);
         }
         self->ctx.queueUBscale.FreeTensor(self->ctx.ubscale);
     }
 
     template <typename DataTypeT>
-    static __aicore__ inline void CopyInChannel(Intf *self, const LocalTensor<DataTypeT>& dst,
-                                                const GlobalTensor<DataTypeT> &src,
-                                                uint16_t nIter, uint16_t num)
+    static __aicore__ inline void CopyInChannel(Intf* self, const LocalTensor<DataTypeT>& dst,
+                                                const GlobalTensor<DataTypeT>& src, uint16_t nIter, uint16_t num)
     {
         DataCopyParams copyinParams;
         copyinParams.blockCount = 1;
-        copyinParams.blockLen =  num * sizeof(DataTypeT) / C0_SIZE;
+        copyinParams.blockLen = num * sizeof(DataTypeT) / C0_SIZE;
         uint64_t Offset = self->ctx.copyOutIns.GetChannelOffset(nIter * self->ctx.conv3dTiling->nUB);
         DataCopy(dst, src[Offset], copyinParams);
     }
 
-    static __aicore__ inline void MulScaleAddBias(uint16_t m, uint16_t n,
-                                                  const LocalTensor<typename Intf::FP32T>& src,
+    static __aicore__ inline void MulScaleAddBias(uint16_t m, uint16_t n, const LocalTensor<typename Intf::FP32T>& src,
                                                   const LocalTensor<typename Intf::FP32T>& bias,
                                                   const LocalTensor<typename Intf::FP32T>& scale)
     {
@@ -238,33 +239,31 @@ struct VecCompute {
 
         uint16_t maxNiter = n / BLOCK_L0_N;
         uint16_t maxMiter = CeilDIV(m, MAX_VEC_LEN);
-        for(uint16_t niter = 0; niter < maxNiter; niter++) {
-            for (uint16_t miter = 0; miter < maxMiter - 1; miter++)
-            {
+        for (uint16_t niter = 0; niter < maxNiter; niter++) {
+            for (uint16_t miter = 0; miter < maxMiter - 1; miter++) {
                 uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * miter * BLOCK_L0_N;
                 Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask, MAX_VEC_LEN, repeatParams);
             }
 
             uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * (maxMiter - 1) * BLOCK_L0_N;
-            Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask,
-                m - (maxMiter - 1) * MAX_VEC_LEN, repeatParams);
+            Mul(src[offset], src[offset], scale[niter * BLOCK_L0_N], mask, m - (maxMiter - 1) * MAX_VEC_LEN,
+                repeatParams);
         }
 
         PipeBarrier<PIPE_V>();
 
-        for(uint16_t niter = 0; niter < maxNiter; niter++) {
-            for (uint16_t miter = 0; miter < maxMiter - 1; miter++)
-            {
+        for (uint16_t niter = 0; niter < maxNiter; niter++) {
+            for (uint16_t miter = 0; miter < maxMiter - 1; miter++) {
                 uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * miter * BLOCK_L0_N;
                 Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask, MAX_VEC_LEN, repeatParams);
             }
             uint64_t offset = m * niter * BLOCK_L0_N + MAX_VEC_LEN * (maxMiter - 1) * BLOCK_L0_N;
-            Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask,
-                m - (maxMiter - 1) * MAX_VEC_LEN, repeatParams);
+            Add(src[offset], src[offset], bias[niter * BLOCK_L0_N], mask, m - (maxMiter - 1) * MAX_VEC_LEN,
+                repeatParams);
         }
     }
 
-    static __aicore__ inline void oneVecCompute(Intf *self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter)
+    static __aicore__ inline void oneVecCompute(Intf* self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter)
     {
         LocalTensor<typename Intf::L0cT> localUBin = self->ctx.queueUBin.template DeQue<typename Intf::L0cT>();
         LocalTensor<typename Intf::FP32T> dstLocal = localUBin.template ReinterpretCast<typename Intf::FP32T>();
@@ -293,19 +292,18 @@ struct VecCompute {
         PipeBarrier<PIPE_V>();
         MulScaleAddBias(m, n, dstLocal, bias, scale);
 
-        //cast to bf16 or fp16
+        // cast to bf16 or fp16
         PipeBarrier<PIPE_V>();
         Cast(transLocal, dstLocal, AscendC::RoundMode::CAST_RINT, m * n);
         PipeBarrier<PIPE_V>();
         TransFormat(self, transLocal, m, n);
     }
 
-    static __aicore__ inline void TransFormat(Intf *self, const LocalTensor<typename Intf::OutputT>& transLocal,
+    static __aicore__ inline void TransFormat(Intf* self, const LocalTensor<typename Intf::OutputT>& transLocal,
                                               uint16_t m, uint16_t n)
     {
-        using transT = std::conditional_t<IsSameType<typename Intf::OutputT, bfloat16_t>::value,
-                                            uint16_t,
-                                            typename Intf::OutputT>;
+        using transT = std::conditional_t<IsSameType<typename Intf::OutputT, bfloat16_t>::value, uint16_t,
+                                          typename Intf::OutputT>;
         LocalTensor<transT> vecInBuf_ = transLocal.template ReinterpretCast<transT>();
         LocalTensor<transT> vecOutBuf_ = self->ctx.queueUBout.template AllocTensor<transT>();
 
@@ -350,8 +348,8 @@ struct VecCompute {
         self->ctx.queueUBin.FreeTensor(vecInBuf_);
     }
 
-    static __aicore__ inline void CopyOut(Intf *self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter,
-                                          const GlobalTensor<typename Intf::OutputT> &output)
+    static __aicore__ inline void CopyOut(Intf* self, uint16_t m, uint16_t n, uint16_t mIter, uint16_t nIter,
+                                          const GlobalTensor<typename Intf::OutputT>& output)
     {
         LocalTensor<typename Intf::OutputT> copyubout = self->ctx.queueUBout.template DeQue<typename Intf::OutputT>();
         self->ctx.copyOutIns.CopyUBOut(output, mIter, nIter, m, n, copyubout);
@@ -359,6 +357,6 @@ struct VecCompute {
     }
 };
 
-}  // namespace Conv3dFunc
+} // namespace Conv3dFunc
 
 #endif

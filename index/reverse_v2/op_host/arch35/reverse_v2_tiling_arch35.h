@@ -25,8 +25,7 @@
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t MAX_DIM_SIZE = 8;
 
 BEGIN_TILING_DATA_DEF(ReverseV2TilingData4AscendC)
@@ -91,20 +90,19 @@ struct ReverseV2TilingParam {
 };
 
 struct ReverseV2CompileInfo {
-  int64_t core_num;
-  int64_t max_elements;
-  int64_t max_elements_last_large_size;
-  int64_t dtype_rate;
-  int64_t topk_threshold;
-  int64_t is_vconcat;
-  int64_t ubSize{0};
-  int64_t totalCoreNum{0};
+    int64_t core_num;
+    int64_t max_elements;
+    int64_t max_elements_last_large_size;
+    int64_t dtype_rate;
+    int64_t topk_threshold;
+    int64_t is_vconcat;
+    int64_t ubSize{0};
+    int64_t totalCoreNum{0};
 };
 
 ge::graphStatus ReverseV2TilingForAscendC(gert::TilingContext* context);
 
-class ReverseV2Tiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class ReverseV2Tiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
     explicit ReverseV2Tiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -171,5 +169,5 @@ private:
     ReverseV2TilingData4AscendC tilingData_;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_REVERSE_V2_H_
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_REVERSE_V2_H_

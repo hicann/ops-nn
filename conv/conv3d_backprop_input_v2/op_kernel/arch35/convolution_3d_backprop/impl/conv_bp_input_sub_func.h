@@ -54,9 +54,9 @@ static __aicore__ inline void CalcParamsMmad(Intf* self, uint32_t kPos, bool isF
 }
 
 template <class Intf, bool hasBias>
-static __aicore__ inline void MmadLocal(
-    Intf* self, const LocalTensor<typename Intf::SrcAT>& l0a, const LocalTensor<typename Intf::SrcBT>& l0b,
-    LocalTensor<typename Intf::L0cT>& l0c)
+static __aicore__ inline void MmadLocal(Intf* self, const LocalTensor<typename Intf::SrcAT>& l0a,
+                                        const LocalTensor<typename Intf::SrcBT>& l0b,
+                                        LocalTensor<typename Intf::L0cT>& l0c)
 {
     // eType is bias Class
     if (hasBias) {
@@ -64,8 +64,8 @@ static __aicore__ inline void MmadLocal(
             // bias 通路，C矩阵初始值通过BT（C2）进行初始化
             self->ctx.mmad_.cmatrixInitVal = 0; // 不初始化，使用bias的值
             self->ctx.mmad_.cmatrixSource = 1;  // 第一次mmad，cmatrix值从BT buffer获取
-            uint64_t biasOffset =
-                self->ctx.tiling_->isBiasFullLoad ? (self->ctx.curNIdx_ * self->ctx.tiling_->baseN) : 0;
+            uint64_t biasOffset = self->ctx.tiling_->isBiasFullLoad ? (self->ctx.curNIdx_ * self->ctx.tiling_->baseN) :
+                                                                      0;
             Mmad(l0c, l0a, l0b, self->ctx.biasBTBuf_[biasOffset], self->ctx.mmad_);
             self->ctx.mmad_.cmatrixSource = 0; // 后续值从l0c读取
             self->ctx.computeBiasOnce_ = true;
@@ -108,9 +108,8 @@ static __aicore__ inline void UpdateL1KParams(Intf* self, const uint64_t kIdx, u
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0Zero(
-    Intf* self, const LocalTensor<typename Intf::SrcAT>& l0a, uint32_t baseM,
-    const LocalTensor<typename Intf::SrcBT>& l0b, uint32_t baseN)
+static __aicore__ inline void LoadL0Zero(Intf* self, const LocalTensor<typename Intf::SrcAT>& l0a, uint32_t baseM,
+                                         const LocalTensor<typename Intf::SrcBT>& l0b, uint32_t baseN)
 {
     LocalTensor<typename Intf::SrcAT> dummyL1A(TPosition::A1, 0, 0);
     LocalTensor<typename Intf::SrcBT> dummyL1B(TPosition::B1, 0, 0);
@@ -153,7 +152,7 @@ static __aicore__ inline void LoadL0Zero(
     load3dB.mStartPt = 0;
     load3dB.mExtension = k0B;
     load3dB.kExtension = AlignUp(baseN, BLOCK_CUBE);
-    
+
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
     LoadDataRepeatParamWithStride repeat = {};
     repeat.repeatTime = 1;
@@ -186,8 +185,8 @@ __aicore__ inline void FullLoadBias(Intf* self)
         InitZeroValue<Intf, typename Intf::BiasT>(self, useBiasL1);
     }
     DataCopyParams dataCopyParams(1, blockBytes, 0, 0);
-    uint8_t rightPadding =
-        DivCeil(blockBytes, ONE_BLK_SIZE) * ONE_BLK_SIZE / sizeof(typename Intf::BiasT) - self->ctx.singleShapeCin_;
+    uint8_t rightPadding = DivCeil(blockBytes, ONE_BLK_SIZE) * ONE_BLK_SIZE / sizeof(typename Intf::BiasT) -
+                           self->ctx.singleShapeCin_;
     DataCopyPadParams padParams(true, 0, rightPadding, 0);
 #ifndef __CCE_KT_TEST__
     DataCopyPad<typename Intf::BiasT>(useBiasL1, self->ctx.biasGlobal_, dataCopyParams, padParams);
@@ -210,8 +209,8 @@ __aicore__ inline void LoadBiasToBT(Intf* self)
     if ASCEND_IS_AIV_SHOULD_RETURN {
         return;
     }
-    uint32_t btCinSize =
-        self->ctx.singleShapeCin_ < self->ctx.baseUseN_ ? self->ctx.singleShapeCin_ : self->ctx.baseUseN_;
+    uint32_t btCinSize = self->ctx.singleShapeCin_ < self->ctx.baseUseN_ ? self->ctx.singleShapeCin_ :
+                                                                           self->ctx.baseUseN_;
     // GM -> L1
     LocalTensor<typename Intf::BiasT> useBiasL1 = self->ctx.biasL1Que_.template AllocTensor<typename Intf::BiasT>();
     uint16_t blockBytes = btCinSize * sizeof(typename Intf::BiasT);

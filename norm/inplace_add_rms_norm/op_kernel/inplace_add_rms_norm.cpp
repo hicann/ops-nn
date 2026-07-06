@@ -20,15 +20,15 @@
 
 using namespace AscendC;
 
-#define GENERAL_OP_IMPL(templateClass, ...)              \
-    do {                                                 \
-        templateClass<__VA_ARGS__> op(&inplacePipe);            \
+#define GENERAL_OP_IMPL(templateClass, ...)                                \
+    do {                                                                   \
+        templateClass<__VA_ARGS__> op(&inplacePipe);                       \
         op.Init(x1, x2, gamma, y, rstd, x, workspace, &inplaceTilingData); \
-        op.Process();                                    \
+        op.Process();                                                      \
     } while (0)
 
-extern "C" __global__ __aicore__ void inplace_add_rms_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void inplace_add_rms_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y,
+                                                           GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe inplacePipe;
     GET_TILING_DATA(inplaceTilingData, tiling);

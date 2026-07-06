@@ -18,7 +18,6 @@
 
 #include <cstdint>
 
- 	 
 #include "kernel_tiling/kernel_tiling.h"
 #include "register/op_impl_registry.h"
 #include "util/math_util.h"
@@ -37,17 +36,14 @@
 namespace optiling {
 
 struct SegmentSumCompileInfo {
-  uint64_t core_num;
-  uint64_t ub_size;
+    uint64_t core_num;
+    uint64_t ub_size;
 };
 
-class SegmentSumBaseTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class SegmentSumBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit SegmentSumBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~SegmentSumBaseTiling() override
-    {}
+    explicit SegmentSumBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~SegmentSumBaseTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -58,8 +54,7 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    void DumpTilingInfo() override
-    {}
+    void DumpTilingInfo() override {}
     virtual void SetTilingData() = 0;
     ge::graphStatus CheckInputDtype();
 

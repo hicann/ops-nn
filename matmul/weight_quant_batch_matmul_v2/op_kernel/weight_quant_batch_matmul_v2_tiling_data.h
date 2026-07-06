@@ -20,8 +20,7 @@
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2CustomNzSplitKTilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2CustomNzSplitKTilingData {
     uint8_t hasBias;
     uint8_t reverse1;
     uint16_t reverse2;
@@ -55,14 +54,13 @@ struct alignas(8) WeightQuantBatchMatmulV2CustomNzSplitKTilingData
     uint64_t kSize;
     uint64_t nSize;
     uint64_t nSizeAlign;
-    uint64_t kSizeAlign; 
+    uint64_t kSizeAlign;
 };
 #pragma pack(pop)
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2TilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2TilingData {
     uint8_t vecBlockDimN;
     uint8_t vecBlockDimK;
     uint8_t cubeBlockDimN;
@@ -127,8 +125,7 @@ struct alignas(8) WeightQuantBatchMatmulV2TilingData
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2FixpipeTilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2FixpipeTilingData {
     uint8_t hasBias;
     uint8_t nBlockNum;
     uint16_t baseK;
@@ -144,8 +141,7 @@ struct alignas(8) WeightQuantBatchMatmulV2FixpipeTilingData
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2MsdGroupTilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2MsdGroupTilingData {
     uint8_t vecBlockDimN;
     uint8_t cubeBlockDimK;
     uint8_t cubeBlockDimN;
@@ -167,8 +163,7 @@ struct alignas(8) WeightQuantBatchMatmulV2MsdGroupTilingData
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2MsdTilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2MsdTilingData {
     uint8_t cubeBlockDimN;
     uint8_t cubeBlockDimM;
     uint8_t cubeBlockDimK;
@@ -192,8 +187,7 @@ struct alignas(8) WeightQuantBatchMatmulV2MsdTilingData
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2NzTilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2NzTilingData {
     uint8_t cubeBlockDimN;
     uint8_t cubeBlockDimM;
     uint16_t AL1Pingpong;

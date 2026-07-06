@@ -26,13 +26,11 @@ using namespace AscendC;
 template <typename DY_TYPE, typename WEIGHT_TYPE>
 class BatchNormGradRASplitR {
 public:
-    __aicore__ inline BatchNormGradRASplitR(TPipe *pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline BatchNormGradRASplitR(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
-        GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace, const BatchNormGradRASplitRTilingData *tilingData)
+                                GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                const BatchNormGradRASplitRTilingData* tilingData)
     {
         blockIdx_ = GetBlockIdx();
         tilingData_ = tilingData;
@@ -91,7 +89,7 @@ public:
 private:
     __aicore__ inline void Stage0InitBuffer()
     {
-        int64_t rDimSize =  currLoopFactor_ * aFactorAlign_;
+        int64_t rDimSize = currLoopFactor_ * aFactorAlign_;
         int64_t aDimSize = aFactorAlign_ * sizeof(float);
         pipe_->InitBuffer(dyInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(xInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
@@ -168,12 +166,12 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ DY_TYPE *xAddr = (__local_mem__ DY_TYPE *)xTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE *dyAddr = (__local_mem__ DY_TYPE *)dyTensor.GetPhyAddr();
-            __local_mem__ float *meanAddr = (__local_mem__ float *)meanTensor_.GetPhyAddr();
-            __local_mem__ float *rstdAddr = (__local_mem__ float *)rstdTensor_.GetPhyAddr();
-            __local_mem__ float *xMainAddr = (__local_mem__ float *)xMainTensor_.GetPhyAddr();
-            __local_mem__ float *dyMainAddr = (__local_mem__ float *)dyMainTensor_.GetPhyAddr();
+            __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)xTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyTensor.GetPhyAddr();
+            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
+            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
+            __local_mem__ float* xMainAddr = (__local_mem__ float*)xMainTensor_.GetPhyAddr();
+            __local_mem__ float* dyMainAddr = (__local_mem__ float*)dyMainTensor_.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             uint32_t count = aLength;
             MicroAPI::RegTensor<float> xMainReg, dyMainReg, meanReg, rstdReg;
@@ -204,12 +202,12 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ float *dyMainAddr = (__local_mem__ float *)dyMainTensor_.GetPhyAddr();
-            __local_mem__ float *xMainAddr = (__local_mem__ float *)xMainTensor_.GetPhyAddr();
-            __local_mem__ DY_TYPE *dyFoldAddr = (__local_mem__ DY_TYPE *)dyFoldTensor_.GetPhyAddr();
-            __local_mem__ DY_TYPE *xFoldAddr = (__local_mem__ DY_TYPE *)xFoldTensor_.GetPhyAddr();
-            __local_mem__ float *meanAddr = (__local_mem__ float *)meanTensor_.GetPhyAddr();
-            __local_mem__ float *rstdAddr = (__local_mem__ float *)rstdTensor_.GetPhyAddr();
+            __local_mem__ float* dyMainAddr = (__local_mem__ float*)dyMainTensor_.GetPhyAddr();
+            __local_mem__ float* xMainAddr = (__local_mem__ float*)xMainTensor_.GetPhyAddr();
+            __local_mem__ DY_TYPE* dyFoldAddr = (__local_mem__ DY_TYPE*)dyFoldTensor_.GetPhyAddr();
+            __local_mem__ DY_TYPE* xFoldAddr = (__local_mem__ DY_TYPE*)xFoldTensor_.GetPhyAddr();
+            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
+            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             uint32_t count = aLength;
             MicroAPI::RegTensor<float> dyMainReg, dyFoldReg, xMainReg, xFoldReg, meanReg, rstdReg;
@@ -246,10 +244,7 @@ private:
         UpdateCache(dgammaCacheTensor_, dgammaWsTensor_, cacheId, aLength);
     }
 
-    __aicore__ inline int64_t GetCacheID(const int64_t idx)
-    {
-        return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
-    }
+    __aicore__ inline int64_t GetCacheID(const int64_t idx) { return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1; }
 
     __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
                                        const int64_t cacheIdLoop, const uint32_t aLength)
@@ -274,8 +269,8 @@ private:
                     DataCopy(cacheReg, (__local_mem__ float*)dst + offset);
                     MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(srcReg, srcReg, cacheReg, pMask);
                 }
-                DataCopy(
-                    (__local_mem__ float*)dst + i * outerLoopStride + cacheIdLoop * innerLoopStride, srcReg, pMask);
+                DataCopy((__local_mem__ float*)dst + i * outerLoopStride + cacheIdLoop * innerLoopStride, srcReg,
+                         pMask);
             }
         }
     }
@@ -302,7 +297,7 @@ private:
         copyParams.blockLen = colSize * sizeof(float);
         copyParams.srcStride = (srcStride - colSize) * sizeof(float);
         copyParams.dstStride = (dstStride - colSize) * sizeof(float) / BLOCK_SIZE;
-        DataCopyPadExtParams<float> PadParam {false, 0, 0, 0};
+        DataCopyPadExtParams<float> PadParam{false, 0, 0, 0};
 
         LocalTensor<float> dbetaWsTensor = dbetaWsInQue_.AllocTensor<float>();
         DataCopyPad<float, PaddingMode::Normal>(dbetaWsTensor, dbetaWorkSpace_[offset], copyParams, PadParam);
@@ -367,8 +362,9 @@ private:
     }
 
     __aicore__ inline void DbetaDgammaTypeConvers(const uint32_t aLength, const LocalTensor<float> dbetaTmpTensor,
-        const LocalTensor<float> dgammaTmpTensor, const LocalTensor<WEIGHT_TYPE> dbetaOutTensor,
-        const LocalTensor<WEIGHT_TYPE> dgammaOutTensor)
+                                                  const LocalTensor<float> dgammaTmpTensor,
+                                                  const LocalTensor<WEIGHT_TYPE> dbetaOutTensor,
+                                                  const LocalTensor<WEIGHT_TYPE> dgammaOutTensor)
     {
         __local_mem__ float* dbetaTmpLocal = (__local_mem__ float*)dbetaTmpTensor.GetPhyAddr();
         __local_mem__ float* dgammaTmpLocal = (__local_mem__ float*)dgammaTmpTensor.GetPhyAddr();
@@ -415,7 +411,7 @@ private:
     {
         pipe_->Reset();
 
-        int64_t rDimSize =  tilingData_->dxLoopFactor * aFactorAlign_;
+        int64_t rDimSize = tilingData_->dxLoopFactor * aFactorAlign_;
         int64_t aDimSize = aFactorAlign_ * sizeof(float);
         pipe_->InitBuffer(dyInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(xInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
@@ -460,8 +456,8 @@ private:
     }
 
     __aicore__ inline void CalDxVF(const int64_t gmOffset, const uint16_t rLength, const uint16_t aLength,
-        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
-        const LocalTensor<WEIGHT_TYPE>& gammaTensor)
+                                   const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
+                                   const LocalTensor<WEIGHT_TYPE>& gammaTensor)
     {
         LoadDyXToUb(gmOffset, rLength, aLength, aFactorAlign_, tilingData_->aDim);
         LocalTensor<DY_TYPE> dyTensor = dyInQue_.DeQue<DY_TYPE>();
@@ -475,14 +471,14 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ DY_TYPE *dyAddr = (__local_mem__ DY_TYPE *)dyTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE *xAddr = (__local_mem__ DY_TYPE *)xTensor.GetPhyAddr();
-            __local_mem__ float *meanAddr = (__local_mem__ float *)meanTensor_.GetPhyAddr();
-            __local_mem__ float *rstdAddr = (__local_mem__ float *)rstdTensor_.GetPhyAddr();
-            __local_mem__ WEIGHT_TYPE *gammaAddr = (__local_mem__ WEIGHT_TYPE *)gammaTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE *dxAddr = (__local_mem__ DY_TYPE *)dxTensor.GetPhyAddr();
-            __local_mem__ float *dbetaAddr = (__local_mem__ float *)dbetaTensor.GetPhyAddr();
-            __local_mem__ float *dgammaAddr = (__local_mem__ float *)dgammaTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)xTensor.GetPhyAddr();
+            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
+            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
+            __local_mem__ WEIGHT_TYPE* gammaAddr = (__local_mem__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* dxAddr = (__local_mem__ DY_TYPE*)dxTensor.GetPhyAddr();
+            __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbetaTensor.GetPhyAddr();
+            __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgammaTensor.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             uint32_t count = aLength;
             MicroAPI::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
@@ -515,14 +511,14 @@ private:
     }
 
     __aicore__ inline void CalDxVFSmallA(const int64_t gmOffset, const uint16_t rLength, const uint16_t aLength,
-        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
-        const LocalTensor<WEIGHT_TYPE>& gammaTensor)
+                                         const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
+                                         const LocalTensor<WEIGHT_TYPE>& gammaTensor)
     {
         LoadDyXToUb(gmOffset, rLength, aLength, aFactorAlign_, tilingData_->aDim);
         LocalTensor<DY_TYPE> dyTensor = dyInQue_.DeQue<DY_TYPE>();
         LocalTensor<DY_TYPE> xTensor = xInQue_.DeQue<DY_TYPE>();
         LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template AllocTensor<DY_TYPE>();
-        
+
         // 基于aFactorAlign计算 R轴合并搬入的数量
         uint16_t mergeNum = VL_FP32 / aFactorAlign_;
         uint16_t loopTimes = CeilDiv(rLength, mergeNum);
@@ -533,14 +529,14 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ DY_TYPE *dyAddr = (__local_mem__ DY_TYPE *)dyTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE *xAddr = (__local_mem__ DY_TYPE *)xTensor.GetPhyAddr();
-            __local_mem__ float *meanAddr = (__local_mem__ float *)meanTensor_.GetPhyAddr();
-            __local_mem__ float *rstdAddr = (__local_mem__ float *)rstdTensor_.GetPhyAddr();
-            __local_mem__ WEIGHT_TYPE *gammaAddr = (__local_mem__ WEIGHT_TYPE *)gammaTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE *dxAddr = (__local_mem__ DY_TYPE *)dxTensor.GetPhyAddr();
-            __local_mem__ float *dbetaAddr = (__local_mem__ float *)dbetaTensor.GetPhyAddr();
-            __local_mem__ float *dgammaAddr = (__local_mem__ float *)dgammaTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)xTensor.GetPhyAddr();
+            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
+            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
+            __local_mem__ WEIGHT_TYPE* gammaAddr = (__local_mem__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* dxAddr = (__local_mem__ DY_TYPE*)dxTensor.GetPhyAddr();
+            __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbetaTensor.GetPhyAddr();
+            __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgammaTensor.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             MicroAPI::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
             LoadOneTensorBrcVL(meanAddr, meanReg, meanOffset);
@@ -591,7 +587,7 @@ private:
         params.blockLen = colSize * sizeof(DY_TYPE);
         params.srcStride = (srcStride - colSize) * sizeof(DY_TYPE);
         params.dstStride = (dstStride - colSize) * sizeof(DY_TYPE) / BLOCK_SIZE;
-        DataCopyPadExtParams<DY_TYPE> padParam {false, 0, 0, 0};
+        DataCopyPadExtParams<DY_TYPE> padParam{false, 0, 0, 0};
 
         LocalTensor<DY_TYPE> dyTensor = dyInQue_.template AllocTensor<DY_TYPE>();
         DataCopyPad(dyTensor, dyGm_[offset], params, padParam);
@@ -609,7 +605,7 @@ private:
         copyParams.blockLen = aLength * sizeof(float);
         copyParams.srcStride = 0;
         copyParams.dstStride = 0;
-        DataCopyPadExtParams<float> padParam {false, 0, 0, 0};
+        DataCopyPadExtParams<float> padParam{false, 0, 0, 0};
 
         meanTensor_ = meanInQue_.template AllocTensor<float>();
         DataCopyPad(meanTensor_, meanGm_[offset], copyParams, padParam);
@@ -627,7 +623,7 @@ private:
         copyParams.blockLen = aLength * sizeof(WEIGHT_TYPE);
         copyParams.srcStride = 0;
         copyParams.dstStride = 0;
-        DataCopyPadExtParams<WEIGHT_TYPE> PadParam {false, 0, 0, 0};
+        DataCopyPadExtParams<WEIGHT_TYPE> PadParam{false, 0, 0, 0};
         LocalTensor<WEIGHT_TYPE> gammaTensor = gammaInQue_.template AllocTensor<WEIGHT_TYPE>();
         DataCopyPad(gammaTensor, gammaGm_[offset], copyParams, PadParam);
         gammaInQue_.EnQue(gammaTensor);
@@ -639,7 +635,7 @@ private:
 
     GlobalTensor<DY_TYPE> dyGm_, xGm_;
     GlobalTensor<float> meanGm_, rstdGm_;
-    GlobalTensor<float> dbetaWorkSpace_, dgammaWorkSpace_;    // workspace
+    GlobalTensor<float> dbetaWorkSpace_, dgammaWorkSpace_; // workspace
     GlobalTensor<WEIGHT_TYPE> gammaGm_, dgammaGm_, dbetaGm_;
     GlobalTensor<DY_TYPE> dxGm_;
     LocalTensor<DY_TYPE> dyFoldTensor_, xFoldTensor_;
@@ -669,11 +665,11 @@ private:
     int64_t binaryBlockCnt_{0};
     int64_t binaryFoldPoint_{0};
     int64_t binaryBlockTail_{0};
-    int64_t dxLoopFactor_ { 0 };
-    int64_t dxLoopTail_ { 0 };
-    int64_t dxLoopTimes_ { 0 };
+    int64_t dxLoopFactor_{0};
+    int64_t dxLoopTail_{0};
+    int64_t dxLoopTimes_{0};
     int64_t aFactorAlign_{0};
     float reciprocal_{0.0};
 };
-}  // namespace BatchNormGrad
+} // namespace BatchNormGrad
 #endif // __BATCH_NORM_GRAD_RA_SPLIT_R_REGBASE_H__

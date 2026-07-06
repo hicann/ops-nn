@@ -69,12 +69,9 @@ class DeformableConv2dBackwardChecker {
 public:
     DeformableConv2dBackwardChecker(const DeformableConv2dBackwardInputTensor& inputTensor,
                                     const ConvolutionBackwardOutput& outputTensor,
-                                    const DeformableConv2dBackwardParams& params,
-                                    const NpuArch npuArch)
-        : inputTensor_(inputTensor),
-          outputTensor_(outputTensor),
-          params_(params),
-          npuArch_(npuArch) {}
+                                    const DeformableConv2dBackwardParams& params, const NpuArch npuArch)
+        : inputTensor_(inputTensor), outputTensor_(outputTensor), params_(params), npuArch_(npuArch)
+    {}
 
     bool CheckNotNull();
     bool CheckDtypeValid();

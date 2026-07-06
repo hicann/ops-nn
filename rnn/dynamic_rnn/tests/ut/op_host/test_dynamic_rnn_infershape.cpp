@@ -29,16 +29,13 @@ using namespace ge;
 
 class DynamicRnnTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "dynamic_rnn test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "dynamic_rnn test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "dynamic_rnn test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "dynamic_rnn test TearDown" << std::endl; }
 };
 
-TEST_F(DynamicRnnTest, dynamic_rnn_test_case_1) {
+TEST_F(DynamicRnnTest, dynamic_rnn_test_case_1)
+{
     int t = 3;
     int batch = 16;
     int inputSize = 32;
@@ -51,13 +48,13 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_1) {
     XDesc.SetOriginShape(xShape);
 
     ge::TensorDesc WDesc;
-    ge::Shape wShape({inputSize+outputSize, 4*outputSize});
+    ge::Shape wShape({inputSize + outputSize, 4 * outputSize});
     WDesc.SetDataType(ge::DT_FLOAT16);
     WDesc.SetShape(wShape);
     WDesc.SetOriginShape(wShape);
 
     ge::TensorDesc BDesc;
-    ge::Shape bShape({4*outputSize});
+    ge::Shape bShape({4 * outputSize});
     BDesc.SetDataType(ge::DT_FLOAT16);
     BDesc.SetShape(bShape);
     BDesc.SetOriginShape(bShape);
@@ -71,7 +68,7 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_1) {
 
     // auto output_desc = rnn_op.GetOutputDesc("y");
     // EXPECT_EQ(output_desc.GetDataType(), ge::DT_FLOAT16);
-    std::vector<int64_t> expected_output_shape = {t,batch, outputSize};
+    std::vector<int64_t> expected_output_shape = {t, batch, outputSize};
     // EXPECT_EQ(output_desc.GetShape().GetDims(), expected_output_shape);
 
     Runtime2TestParam param{{"cell_type", "direction"}};
@@ -80,24 +77,25 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_1) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(DynamicRnnTest, dynamic_rnn_test_case_2) {
+TEST_F(DynamicRnnTest, dynamic_rnn_test_case_2)
+{
     int t = 3;
     int batch = 16;
     int inputSize = 32;
     int outputSize = 48;
     ge::op::DynamicRNN rnn_op;
     ge::TensorDesc XDesc;
-    ge::Shape xShape({t, batch, inputSize,outputSize});
+    ge::Shape xShape({t, batch, inputSize, outputSize});
     XDesc.SetDataType(ge::DT_FLOAT16);
     XDesc.SetShape(xShape);
 
     ge::TensorDesc WDesc;
-    ge::Shape wShape({inputSize+outputSize, 4*outputSize});
+    ge::Shape wShape({inputSize + outputSize, 4 * outputSize});
     WDesc.SetDataType(ge::DT_FLOAT16);
     WDesc.SetShape(wShape);
 
     ge::TensorDesc BDesc;
-    ge::Shape bShape({4*outputSize});
+    ge::Shape bShape({4 * outputSize});
     BDesc.SetDataType(ge::DT_FLOAT16);
     BDesc.SetShape(bShape);
 
@@ -112,7 +110,8 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_2) {
     EXPECT_EQ(InferShapeTest(rnn_op, param), ge::GRAPH_FAILED);
 }
 
-TEST_F(DynamicRnnTest, dynamic_rnn_test_case_3) {
+TEST_F(DynamicRnnTest, dynamic_rnn_test_case_3)
+{
     int t = 3;
     int batch = 16;
     int inputSize = 32;
@@ -125,13 +124,13 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_3) {
     XDesc.SetOriginShape(xShape);
 
     ge::TensorDesc WDesc;
-    ge::Shape wShape({inputSize+outputSize, 4*outputSize});
+    ge::Shape wShape({inputSize + outputSize, 4 * outputSize});
     WDesc.SetDataType(ge::DT_FLOAT16);
     WDesc.SetShape(wShape);
     WDesc.SetOriginShape(wShape);
 
     ge::TensorDesc BDesc;
-    ge::Shape bShape({4*outputSize});
+    ge::Shape bShape({4 * outputSize});
     BDesc.SetDataType(ge::DT_FLOAT16);
     BDesc.SetShape(bShape);
     BDesc.SetOriginShape(bShape);
@@ -158,32 +157,34 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_case_3) {
     EXPECT_EQ(output3_desc.GetShape().GetDims(), expected_output2_shape);
 }
 
-TEST_F(DynamicRnnTest, dynamic_rnn_test_inferdtype_0) {
-  ge::op::DynamicRNN op;
+TEST_F(DynamicRnnTest, dynamic_rnn_test_inferdtype_0)
+{
+    ge::op::DynamicRNN op;
 
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNN"), nullptr);
-  auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNN")->infer_datatype;
-  ASSERT_NE(data_type_func, nullptr);
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNN"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("DynamicRNN")->infer_datatype;
+    ASSERT_NE(data_type_func, nullptr);
 
-  ge::DataType x_datatype1 = ge::DT_FLOAT16;
-  ge::DataType w_datatype1 = ge::DT_FLOAT16;
-  ge::DataType b_datatype1 = ge::DT_FLOAT16;
-  ge::DataType out_datatype = ge::DT_FLOAT16;
-  auto context_holder = gert::InferDataTypeContextFaker()
-                            .IrInputNum(3)
-                            .NodeIoNum(3, 8)
-                            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                            .InputDataTypes({&x_datatype1, &w_datatype1, &b_datatype1})
-                            .OutputDataTypes({&out_datatype})
-                            .Build();
-  auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-  EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-  ASSERT_NE(context, nullptr);
+    ge::DataType x_datatype1 = ge::DT_FLOAT16;
+    ge::DataType w_datatype1 = ge::DT_FLOAT16;
+    ge::DataType b_datatype1 = ge::DT_FLOAT16;
+    ge::DataType out_datatype = ge::DT_FLOAT16;
+    auto context_holder = gert::InferDataTypeContextFaker()
+                              .IrInputNum(3)
+                              .NodeIoNum(3, 8)
+                              .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .InputDataTypes({&x_datatype1, &w_datatype1, &b_datatype1})
+                              .OutputDataTypes({&out_datatype})
+                              .Build();
+    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+    EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+    ASSERT_NE(context, nullptr);
 }
 
-TEST_F(DynamicRnnTest, dynamic_rnn_test_with_unknowndim) {
+TEST_F(DynamicRnnTest, dynamic_rnn_test_with_unknowndim)
+{
     int t = 3;
     int batch = 16;
     int inputSize = 32;
@@ -196,13 +197,13 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_with_unknowndim) {
     XDesc.SetOriginShape(xShape);
 
     ge::TensorDesc WDesc;
-    ge::Shape wShape({inputSize+outputSize, -1});
+    ge::Shape wShape({inputSize + outputSize, -1});
     WDesc.SetDataType(ge::DT_FLOAT16);
     WDesc.SetShape(wShape);
     WDesc.SetOriginShape(wShape);
 
     ge::TensorDesc BDesc;
-    ge::Shape bShape({4*outputSize});
+    ge::Shape bShape({4 * outputSize});
     BDesc.SetDataType(ge::DT_FLOAT16);
     BDesc.SetShape(bShape);
     BDesc.SetOriginShape(bShape);
@@ -214,7 +215,7 @@ TEST_F(DynamicRnnTest, dynamic_rnn_test_with_unknowndim) {
     // auto ret = rnn_op.InferShapeAndType();
     // EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 
-    std::vector<int64_t> expected_output_shape = {t,batch, -1};
+    std::vector<int64_t> expected_output_shape = {t, batch, -1};
     Runtime2TestParam param{{"cell_type", "direction"}};
     EXPECT_EQ(InferShapeTest(rnn_op, param), ge::GRAPH_SUCCESS);
     auto output0_desc = rnn_op.GetOutputDesc(0);

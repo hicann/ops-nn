@@ -18,13 +18,11 @@
 
 #include "kernel_operator.h"
 
-namespace SparseSegmentMeanNameSpace
-{
+namespace SparseSegmentMeanNameSpace {
 using namespace AscendC;
 
 template <typename T>
-class AllClear
-{
+class AllClear {
 public:
     __aicore__ inline AllClear(){};
     __aicore__ inline void Init(GM_ADDR output, const SparseSegmentMeanSimdTilingData* tilingData, TPipe& pipeIn);
@@ -39,8 +37,10 @@ public:
 };
 
 template <typename T>
-__aicore__ inline void AllClear<T>::Init(GM_ADDR output, const SparseSegmentMeanSimdTilingData* tilingData, TPipe& pipeIn)
-{   tilingData_ = tilingData;
+__aicore__ inline void AllClear<T>::Init(GM_ADDR output, const SparseSegmentMeanSimdTilingData* tilingData,
+                                         TPipe& pipeIn)
+{
+    tilingData_ = tilingData;
     blockIdx_ = GetBlockIdx();
     if (blockIdx_ >= tilingData_->usedCoreNumForClear) {
         return;
@@ -50,7 +50,9 @@ __aicore__ inline void AllClear<T>::Init(GM_ADDR output, const SparseSegmentMean
     uint64_t intraCoreOffset = blockIdx_ * tilingData_->normalCoreProcessNumForClear;
 
     // shield normal core and tail core
-    curCoreProcessNumForClear_ = (blockIdx_ + 1 == tilingData_->usedCoreNumForClear) ? tilingData_->tailCoreProcessNumForClear : tilingData_->normalCoreProcessNumForClear;
+    curCoreProcessNumForClear_ = (blockIdx_ + 1 == tilingData_->usedCoreNumForClear) ?
+                                     tilingData_->tailCoreProcessNumForClear :
+                                     tilingData_->normalCoreProcessNumForClear;
 
     outputGm_.SetGlobalBuffer((__gm__ T*)output + intraCoreOffset);
 }
@@ -71,6 +73,6 @@ __aicore__ inline void AllClear<T>::SyncALLCores()
     SyncAll();
 }
 
-}  // namespace SparseSegmentMeanNameSpace
+} // namespace SparseSegmentMeanNameSpace
 
-#endif  // ALL_CLEAR_H
+#endif // ALL_CLEAR_H

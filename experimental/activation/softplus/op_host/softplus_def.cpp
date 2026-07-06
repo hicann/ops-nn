@@ -36,7 +36,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "softplus");    // 这里制定的值会对应到kernel入口文件名.cpp
+            .ExtendCfgInfo("opFile.value", "softplus");       // 这里制定的值会对应到kernel入口文件名.cpp
         this->AICore().AddConfig("ascend910b", aicoreConfig); // 其他的soc版本补充部分配置项
     }
 };

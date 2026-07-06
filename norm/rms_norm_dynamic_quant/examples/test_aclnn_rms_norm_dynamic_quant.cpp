@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -48,9 +49,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -68,9 +68,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -138,8 +137,8 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnRmsNormDynamicQuant第一段接口
-    ret = aclnnRmsNormDynamicQuantGetWorkspaceSize(
-        x, gamma, smooth, beta, epsilon, dstType, y, scale, &workspaceSize, &executor);
+    ret = aclnnRmsNormDynamicQuantGetWorkspaceSize(x, gamma, smooth, beta, epsilon, dstType, y, scale, &workspaceSize,
+                                                   &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -149,7 +148,7 @@ int main()
     }
     ret = aclnnRmsNormDynamicQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRmsNormDynamicQuant failed. ERROR: %d\n", ret); return ret);
-    
+
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
@@ -166,7 +165,8 @@ int main()
 
     // 打印 scale (FLOAT32)
     std::vector<float> sRet(scaleShapeSize, 0);
-    ret = aclrtMemcpy(sRet.data(), scaleShapeSize * sizeof(float), scaleDeviceAddr, scaleShapeSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(sRet.data(), scaleShapeSize * sizeof(float), scaleDeviceAddr, scaleShapeSize * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("=== scale (FLOAT32, {2}) ===\n");
     for (int64_t i = 0; i < scaleShapeSize; i++) {

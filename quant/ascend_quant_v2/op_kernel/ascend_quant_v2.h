@@ -28,22 +28,19 @@ public:
     __aicore__ inline AscendQuantV2Base(){};
 
 protected:
-    __aicore__ inline void ParseTilingData(
-        const AscendQuantV2TilingData* tilingData, AscendQuantV2TilingData& runTilingData);
-    __aicore__ inline void ParseCoreBlocks(
-        const AscendQuantV2TilingData& runTilingData, int32_t blockIdx, int64_t& blockN, int64_t& blockLen);
-    __aicore__ inline void GetXInCopyParams(
-        const AscendQuantV2TilingData& runTilingData, int64_t xN, int64_t xLen, int64_t lastDimLen,
-        DataCopyExtParams& copyParams);
-    __aicore__ inline void GetOutCopyParams(
-        const AscendQuantV2TilingData& runTilingData, int64_t yN, int64_t yLen, int64_t lastDimLen,
-        DataCopyExtParams& copyParams);
-    __aicore__ inline void CastOut(
-        const AscendQuantV2TilingData& runTilingData, int64_t dataCount, int64_t outOffset, int64_t inOffset,
-        LocalTensor<int8_t>& outLocal, LocalTensor<float>& xLocal);
-    __aicore__ inline void MoveOutY(
-        LocalTensor<int8_t>& outLocal, GlobalTensor<int8_t>& outGm, LocalTensor<int8_t>& outTempLocal,
-        AscendQuantV2TilingData& runTilingData, int64_t yN, int64_t yLen, int64_t yOutOffset);
+    __aicore__ inline void ParseTilingData(const AscendQuantV2TilingData* tilingData,
+                                           AscendQuantV2TilingData& runTilingData);
+    __aicore__ inline void ParseCoreBlocks(const AscendQuantV2TilingData& runTilingData, int32_t blockIdx,
+                                           int64_t& blockN, int64_t& blockLen);
+    __aicore__ inline void GetXInCopyParams(const AscendQuantV2TilingData& runTilingData, int64_t xN, int64_t xLen,
+                                            int64_t lastDimLen, DataCopyExtParams& copyParams);
+    __aicore__ inline void GetOutCopyParams(const AscendQuantV2TilingData& runTilingData, int64_t yN, int64_t yLen,
+                                            int64_t lastDimLen, DataCopyExtParams& copyParams);
+    __aicore__ inline void CastOut(const AscendQuantV2TilingData& runTilingData, int64_t dataCount, int64_t outOffset,
+                                   int64_t inOffset, LocalTensor<int8_t>& outLocal, LocalTensor<float>& xLocal);
+    __aicore__ inline void MoveOutY(LocalTensor<int8_t>& outLocal, GlobalTensor<int8_t>& outGm,
+                                    LocalTensor<int8_t>& outTempLocal, AscendQuantV2TilingData& runTilingData,
+                                    int64_t yN, int64_t yLen, int64_t yOutOffset);
     __aicore__ inline int64_t CeilAlign(int64_t a, int64_t b);
 
 protected:
@@ -58,15 +55,15 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline void AscendQuantV2Base<T>::ParseTilingData(
-    const AscendQuantV2TilingData* tilingData, AscendQuantV2TilingData& runTilingData)
+__aicore__ inline void AscendQuantV2Base<T>::ParseTilingData(const AscendQuantV2TilingData* tilingData,
+                                                             AscendQuantV2TilingData& runTilingData)
 {
     runTilingData = *tilingData;
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2Base<T>::ParseCoreBlocks(
-    const AscendQuantV2TilingData& runTilingData, int32_t blockIdx, int64_t& blockN, int64_t& blockLen)
+__aicore__ inline void AscendQuantV2Base<T>::ParseCoreBlocks(const AscendQuantV2TilingData& runTilingData,
+                                                             int32_t blockIdx, int64_t& blockN, int64_t& blockLen)
 {
     if (runTilingData.blockUnion > 1) {
         if (blockIdx >= runTilingData.numCore) {
@@ -103,9 +100,9 @@ __aicore__ inline void AscendQuantV2Base<T>::ParseCoreBlocks(
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2Base<T>::GetXInCopyParams(
-    const AscendQuantV2TilingData& runTilingData, int64_t xN, int64_t xLen, int64_t lastDimLen,
-    DataCopyExtParams& copyParams)
+__aicore__ inline void AscendQuantV2Base<T>::GetXInCopyParams(const AscendQuantV2TilingData& runTilingData, int64_t xN,
+                                                              int64_t xLen, int64_t lastDimLen,
+                                                              DataCopyExtParams& copyParams)
 {
     copyParams.blockCount = xN;
     copyParams.blockLen = xLen * sizeof(T);
@@ -122,9 +119,9 @@ __aicore__ inline void AscendQuantV2Base<T>::GetXInCopyParams(
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2Base<T>::GetOutCopyParams(
-    const AscendQuantV2TilingData& runTilingData, int64_t yN, int64_t yLen, int64_t lastDimLen,
-    DataCopyExtParams& copyParams)
+__aicore__ inline void AscendQuantV2Base<T>::GetOutCopyParams(const AscendQuantV2TilingData& runTilingData, int64_t yN,
+                                                              int64_t yLen, int64_t lastDimLen,
+                                                              DataCopyExtParams& copyParams)
 {
     int64_t yLenReal = yLen;
     if (ORIG_DTYPE_Y == DT_INT4) {
@@ -150,9 +147,9 @@ __aicore__ inline void AscendQuantV2Base<T>::GetOutCopyParams(
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2Base<T>::CastOut(
-    const AscendQuantV2TilingData& runTilingData, int64_t dataCount, int64_t outOffset, int64_t inOffset,
-    LocalTensor<int8_t>& outLocal, LocalTensor<float>& xLocal)
+__aicore__ inline void AscendQuantV2Base<T>::CastOut(const AscendQuantV2TilingData& runTilingData, int64_t dataCount,
+                                                     int64_t outOffset, int64_t inOffset, LocalTensor<int8_t>& outLocal,
+                                                     LocalTensor<float>& xLocal)
 {
     if (runTilingData.roundMode == MODE_ROUND) {
         Cast(xLocal[inOffset].ReinterpretCast<int32_t>(), xLocal[inOffset], RoundMode::CAST_RINT, dataCount);
@@ -166,15 +163,13 @@ __aicore__ inline void AscendQuantV2Base<T>::CastOut(
     PipeBarrier<PIPE_V>();
     SetDeqScale((half)1.000000e+00f);
     PipeBarrier<PIPE_V>();
-    Cast(
-        xLocal[inOffset].ReinterpretCast<half>(), xLocal[inOffset].ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-        dataCount);
+    Cast(xLocal[inOffset].ReinterpretCast<half>(), xLocal[inOffset].ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+         dataCount);
     PipeBarrier<PIPE_V>();
 
     if (ORIG_DTYPE_Y == DT_INT4) {
-        Cast(
-            outLocal[outOffset].ReinterpretCast<int4b_t>(), xLocal[inOffset].ReinterpretCast<half>(),
-            RoundMode::CAST_RINT, dataCount);
+        Cast(outLocal[outOffset].ReinterpretCast<int4b_t>(), xLocal[inOffset].ReinterpretCast<half>(),
+             RoundMode::CAST_RINT, dataCount);
         return;
     }
 
@@ -195,9 +190,10 @@ __aicore__ inline void AscendQuantV2Base<T>::CastOut(
 }
 
 template <typename T>
-__aicore__ inline void AscendQuantV2Base<T>::MoveOutY(
-    LocalTensor<int8_t>& outLocal, GlobalTensor<int8_t>& outGm, LocalTensor<int8_t>& outTempLocal,
-    AscendQuantV2TilingData& runTilingData, int64_t yN, int64_t yLen, int64_t yOutOffset)
+__aicore__ inline void AscendQuantV2Base<T>::MoveOutY(LocalTensor<int8_t>& outLocal, GlobalTensor<int8_t>& outGm,
+                                                      LocalTensor<int8_t>& outTempLocal,
+                                                      AscendQuantV2TilingData& runTilingData, int64_t yN, int64_t yLen,
+                                                      int64_t yOutOffset)
 {
 #if defined(__DAV_M200__)
     DataCopyParams copyParams;
@@ -217,13 +213,12 @@ __aicore__ inline void AscendQuantV2Base<T>::MoveOutY(
         int64_t lastDim = totalDim1 == 0 ? yN - 1 : yN - totalDim1;
         for (int64_t nIdx = 0; nIdx < lastDim; ++nIdx) {
             if (runTilingData.blockAxis == 0) {
-                DataCopy(
-                    outGm[yOutOffset + nIdx * runTilingData.dim1], outLocal[nIdx * runTilingData.baseLen], copyParams);
+                DataCopy(outGm[yOutOffset + nIdx * runTilingData.dim1], outLocal[nIdx * runTilingData.baseLen],
+                         copyParams);
                 PipeBarrier<PIPE_MTE3>();
             } else {
-                DataCopy(
-                    outGm[yOutOffset + nIdx * runTilingData.dim1], outLocal[nIdx * runTilingData.baseLen],
-                    {1, static_cast<uint16_t>(yLen / BLOCK_SIZE), 0, 0});
+                DataCopy(outGm[yOutOffset + nIdx * runTilingData.dim1], outLocal[nIdx * runTilingData.baseLen],
+                         {1, static_cast<uint16_t>(yLen / BLOCK_SIZE), 0, 0});
                 PipeBarrier<PIPE_ALL>();
                 for (uint64_t i = 0; i < BLOCK_SIZE; i++) {
                     *(outTempBuf + i) = *(outBuf + nIdx * runTilingData.baseLen + yLen - BLOCK_SIZE + i);
@@ -251,22 +246,22 @@ __aicore__ inline void AscendQuantV2Base<T>::MoveOutY(
             int64_t modeLen = BLOCK_SIZE % yLen;
             if (modeLen != 0) {
                 for (uint64_t i = 0; i < modeLen; i++) {
-                    *(outTempBuf + i) = *(
-                        outBuf + outTempOffset - totalDim1 * runTilingData.baseLen + runTilingData.dim1 - modeLen + i);
+                    *(outTempBuf + i) = *(outBuf + outTempOffset - totalDim1 * runTilingData.baseLen +
+                                          runTilingData.dim1 - modeLen + i);
                 }
                 for (uint64_t i = 0; i < totalDim1; i++) {
                     for (uint64_t j = 0; j < runTilingData.dim1; j++) {
                         // outTempOffset - totalDim1 * runTilingData.baseLen + runTilingData.baseLen + i *
                         // runTilingData.baseLen
-                        *(outTempBuf + modeLen + i * runTilingData.dim1 + j) =
-                            *(outBuf + outTempOffset + (i + 1 - totalDim1) * runTilingData.baseLen + j);
+                        *(outTempBuf + modeLen + i * runTilingData.dim1 +
+                          j) = *(outBuf + outTempOffset + (i + 1 - totalDim1) * runTilingData.baseLen + j);
                     }
                 }
             } else {
                 for (uint64_t i = 0; i < totalDim1; i++) {
                     for (uint64_t j = 0; j < runTilingData.dim1; j++) {
-                        *(outTempBuf + i * runTilingData.dim1 + j) =
-                            *(outBuf + outTempOffset + (i + 1 - totalDim1) * runTilingData.baseLen + j);
+                        *(outTempBuf + i * runTilingData.dim1 + j) = *(outBuf + outTempOffset +
+                                                                       (i + 1 - totalDim1) * runTilingData.baseLen + j);
                     }
                 }
             }

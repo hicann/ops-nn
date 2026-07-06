@@ -44,8 +44,8 @@ struct ThresholdDag {
     using ValueScalarHolder = Placeholder::In2<T, Placeholder::ScalarAttr<1>>;
 
     using OpCompare = Bind<Vec::Compare<uint8_t, T, CMPMODE_LE>, OpCopyInX, ThresholdScalarHolder>;
-    using OpSelectResult =
-        Bind<Vec::Select<uint8_t, T, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ValueScalarHolder, OpCopyInX>;
+    using OpSelectResult = Bind<Vec::Select<uint8_t, T, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ValueScalarHolder,
+                                OpCopyInX>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpSelectResult>;
 
@@ -81,8 +81,8 @@ struct ThresholdCastDag {
     using ValueScalarHolderCast = Bind<ToFloatScalar<U, T>, ValueScalarHolder>;
 
     using OpCompare = Bind<Vec::Compare<uint8_t, U, CMPMODE_LE>, OpCopyInXCast, ThresholdScalarHolderCast>;
-    using OpSelect =
-        Bind<Vec::Select<uint8_t, U, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ValueScalarHolderCast, OpCopyInXCast>;
+    using OpSelect = Bind<Vec::Select<uint8_t, U, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ValueScalarHolderCast,
+                          OpCopyInXCast>;
     using OpSelectResult = Bind<Vec::Cast<T, U, CAST_RINT>, OpSelect>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpSelectResult>;
@@ -111,6 +111,6 @@ struct ThresholdCastDagNoValue {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-}
+} // namespace ThresholdOp
 
 #endif // CANN_CUSTOM_OPS_THRESHOLD_DAG_H

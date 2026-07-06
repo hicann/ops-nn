@@ -60,17 +60,18 @@ static Status ParseOpToGraphUnique(const ge::Operator& op, ge::Graph& graph)
     }
 
     auto data_x = ge::op::Data((name + "_x").c_str()).set_attr_index(0);
-    auto unique_with_counts_and_sorting =
-      ge::op::UniqueWithCountsAndSorting((name + "_UniqueWithCountsAndSorting").c_str());
+    auto unique_with_counts_and_sorting = ge::op::UniqueWithCountsAndSorting(
+        (name + "_UniqueWithCountsAndSorting").c_str());
     unique_with_counts_and_sorting.set_input_x(data_x)
         .set_attr_return_inverse(true)
         .set_attr_return_counts(true)
         .set_attr_sorted(sorted);
 
     auto shape = ge::op::Shape((name + "_shape").c_str()).set_input_x_by_name(unique_with_counts_and_sorting, "y");
-    auto empty = ge::op::Empty((name + "_empty").c_str()).set_input_shape(shape)
-                                                         .set_attr_dtype(ge::DT_INT64)
-                                                         .set_attr_init(true);
+    auto empty = ge::op::Empty((name + "_empty").c_str())
+                     .set_input_shape(shape)
+                     .set_attr_dtype(ge::DT_INT64)
+                     .set_attr_init(true);
 
     std::vector<ge::Operator> inputs{data_x};
     std::vector<std::pair<ge::Operator, std::vector<size_t>>> outputs;
@@ -86,15 +87,10 @@ static Status ParseOpToGraphUnique(const ge::Operator& op, ge::Graph& graph)
 // register Unique op info to GE
 REGISTER_CUSTOM_OP("PartitionedCall")
     .FrameworkType(ONNX)
-    .OriginOpType(
-        {ge::AscendString("ai.onnx::11::Unique"),
-         ge::AscendString("ai.onnx::12::Unique"),
-         ge::AscendString("ai.onnx::13::Unique"),
-         ge::AscendString("ai.onnx::14::Unique"),
-         ge::AscendString("ai.onnx::15::Unique"),
-         ge::AscendString("ai.onnx::16::Unique"),
-         ge::AscendString("ai.onnx::17::Unique"),
-         ge::AscendString("ai.onnx::18::Unique")})
+    .OriginOpType({ge::AscendString("ai.onnx::11::Unique"), ge::AscendString("ai.onnx::12::Unique"),
+                   ge::AscendString("ai.onnx::13::Unique"), ge::AscendString("ai.onnx::14::Unique"),
+                   ge::AscendString("ai.onnx::15::Unique"), ge::AscendString("ai.onnx::16::Unique"),
+                   ge::AscendString("ai.onnx::17::Unique"), ge::AscendString("ai.onnx::18::Unique")})
     .ParseParamsFn(ParseParamsUnique)
     .ParseOpToGraphFn(ParseOpToGraphUnique)
     .ImplyType(ImplyType::TVM);

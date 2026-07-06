@@ -16,8 +16,8 @@
 #include "max_pool_with_argmax_v3.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void max_pool_with_argmax_v3(
-    GM_ADDR x, GM_ADDR y, GM_ADDR argmax, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void max_pool_with_argmax_v3(GM_ADDR x, GM_ADDR y, GM_ADDR argmax, GM_ADDR workspace,
+                                                   GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(MaxPoolWithArgmaxV3TilingData);
     GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxV3TilingData, tilingData, tiling);

@@ -47,8 +47,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetTilingKeyByDtype(
-    gert::TilingContext* context, ge::DataType dataType, uint64_t& tilingKey)
+static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dataType, uint64_t& tilingKey)
 {
     if (dataType == ge::DT_FLOAT16) {
         tilingKey = GET_TPL_TILING_KEY(FPST_TPL_SCH_MODE_FP32_FP16);
@@ -65,8 +64,7 @@ static ge::graphStatus GetTilingKeyByDtype(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetTensorNumAndDtype(
-    gert::TilingContext* context, uint64_t& tensorNum, ge::DataType& dataType)
+static ge::graphStatus GetTensorNumAndDtype(gert::TilingContext* context, uint64_t& tensorNum, ge::DataType& dataType)
 {
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -80,9 +78,8 @@ static ge::graphStatus GetTensorNumAndDtype(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus FillTensorShapes(
-    gert::TilingContext* context, uint64_t tensorNum,
-    ForeachPowScalarAndTensorTilingData* tiling, int64_t& totalElements)
+static ge::graphStatus FillTensorShapes(gert::TilingContext* context, uint64_t tensorNum,
+                                        ForeachPowScalarAndTensorTilingData* tiling, int64_t& totalElements)
 {
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     totalElements = 0;
@@ -98,9 +95,8 @@ static ge::graphStatus FillTensorShapes(
     return ge::GRAPH_SUCCESS;
 }
 
-static void ComputeBlockDim(
-    gert::TilingContext* context, int64_t coreNum,
-    int64_t totalElements, ForeachPowScalarAndTensorTilingData* tiling)
+static void ComputeBlockDim(gert::TilingContext* context, int64_t coreNum, int64_t totalElements,
+                            ForeachPowScalarAndTensorTilingData* tiling)
 {
     if (totalElements == 0) {
         tiling->needCoreNum = 1;
@@ -117,26 +113,24 @@ static ge::graphStatus ForeachPowScalarAndTensorTilingFunc(gert::TilingContext* 
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     uint64_t tensorNum = 0;
     ge::DataType dataType = ge::DT_FLOAT;
     OP_CHECK_IF(GetTensorNumAndDtype(context, tensorNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetTensorNumAndDtype error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetTensorNumAndDtype error"), return ge::GRAPH_FAILED);
 
-    ForeachPowScalarAndTensorTilingData* tiling =
-        context->GetTilingData<ForeachPowScalarAndTensorTilingData>();
+    ForeachPowScalarAndTensorTilingData* tiling = context->GetTilingData<ForeachPowScalarAndTensorTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachPowScalarAndTensorTilingData), 0,
-                 sizeof(ForeachPowScalarAndTensorTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM),
-        OP_LOGE(context, "tensorNum exceeds MAX_TENSOR_NUM"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachPowScalarAndTensorTilingData), 0,
+                         sizeof(ForeachPowScalarAndTensorTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM), OP_LOGE(context, "tensorNum exceeds MAX_TENSOR_NUM"),
+                return ge::GRAPH_FAILED);
 
     int64_t totalElements = 0;
     OP_CHECK_IF(FillTensorShapes(context, tensorNum, tiling, totalElements) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "FillTensorShapes error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "FillTensorShapes error"), return ge::GRAPH_FAILED);
 
     ComputeBlockDim(context, coreNum, totalElements, tiling);
 
@@ -147,14 +141,13 @@ static ge::graphStatus ForeachPowScalarAndTensorTilingFunc(gert::TilingContext* 
 
     uint64_t tilingKey = 0;
     OP_CHECK_IF(GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetTilingKeyByDtype error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetTilingKeyByDtype error"), return ge::GRAPH_FAILED);
     context->SetTilingKey(tilingKey);
 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForForeachPowScalarAndTensor(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForForeachPowScalarAndTensor([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

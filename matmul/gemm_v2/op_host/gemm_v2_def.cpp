@@ -43,12 +43,8 @@ public:
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Attr("transpose_a")
-            .AttrType(OPTIONAL)
-            .Bool(false);
-        this->Attr("transpose_b")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("transpose_a").AttrType(OPTIONAL).Bool(false);
+        this->Attr("transpose_b").AttrType(OPTIONAL).Bool(false);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
@@ -67,34 +63,16 @@ private:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        config_kirin.Input("a")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND});
-        config_kirin.Input("b")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND});
-        config_kirin.Input("alpha")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND});
-        config_kirin.Input("beta")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16})
-            .Format({ge::FORMAT_ND});
-        config_kirin.Input("c")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND});
-        config_kirin.Output("c")
-            .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND});
+        config_kirin.Input("a").ParamType(REQUIRED).DataType({ge::DT_FLOAT16}).Format({ge::FORMAT_ND});
+        config_kirin.Input("b").ParamType(REQUIRED).DataType({ge::DT_FLOAT16}).Format({ge::FORMAT_ND});
+        config_kirin.Input("alpha").ParamType(REQUIRED).DataType({ge::DT_FLOAT16}).Format({ge::FORMAT_ND});
+        config_kirin.Input("beta").ParamType(REQUIRED).DataType({ge::DT_FLOAT16}).Format({ge::FORMAT_ND});
+        config_kirin.Input("c").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
+        config_kirin.Output("c").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
         return config_kirin;
     }
 };
 
 OP_ADD(GemmV2);
 
-}
+} // namespace ops

@@ -28,8 +28,7 @@ namespace ops {
 
 constexpr int64_t MAX_SUPPORTED_RANK = 8;
 
-static bool NumpyBroadcastShape(const gert::Shape& gradShape, const gert::Shape& outShape,
-                                 gert::Shape& yShape)
+static bool NumpyBroadcastShape(const gert::Shape& gradShape, const gert::Shape& outShape, gert::Shape& yShape)
 {
     int64_t gradRank = static_cast<int64_t>(gradShape.GetDimNum());
     int64_t outRank = static_cast<int64_t>(outShape.GetDimNum());
@@ -51,7 +50,7 @@ static bool NumpyBroadcastShape(const gert::Shape& gradShape, const gert::Shape&
         } else if (outDim == 1) {
             result.AppendDim(gradDim);
         } else {
-            return false;  // 不可广播
+            return false; // 不可广播
         }
     }
 
@@ -87,8 +86,7 @@ static ge::graphStatus InferShape4SeluGrad(gert::InferShapeContext* context)
     }
 
     // numpy broadcast 推导
-    OP_CHECK_IF(!NumpyBroadcastShape(*gradShape, *outShape, *yShape),
-                OP_LOGE(context, "Shape broadcast failed"),
+    OP_CHECK_IF(!NumpyBroadcastShape(*gradShape, *outShape, *yShape), OP_LOGE(context, "Shape broadcast failed"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

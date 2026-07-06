@@ -106,41 +106,41 @@ __aicore__ inline void InvokeWeightQuantBmmOpImpl(GM_ADDR x1, GM_ADDR x2, GM_ADD
             &tPipe);
     op.Process();
 }
-}  // namespace Arch35
-}  // namespace QuantBatchMatmulV4
+} // namespace Arch35
+} // namespace QuantBatchMatmulV4
 #endif
 #endif
 
-#define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                     \
-    do {                                                                                                        \
-        TPipe tPipe;                                                                                            \
-        GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);                                                  \
-        GET_TILING_DATA(tilingData, tiling);                                                                    \
-        QbmmCmctPertileKernel<                                                                                  \
-            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, float, float, DTYPE_Y, xLayout, wLayout, yLayout, DTYPE_LOC_LOCAL>( \
-            x1, x2, bias, x2_scale, x1_scale, y, userWS, &tilingData, &tPipe);                                  \
+#define QBMM_QUANT_GB_IMPL_CLASS(xLayout, wLayout, yLayout)                                                       \
+    do {                                                                                                          \
+        TPipe tPipe;                                                                                              \
+        GM_ADDR userWS = AscendC::GetUserWorkspace(workspace);                                                    \
+        GET_TILING_DATA(tilingData, tiling);                                                                      \
+        QbmmCmctPertileKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, float, float, DTYPE_Y, xLayout, wLayout, yLayout,   \
+                              DTYPE_LOC_LOCAL>(x1, x2, bias, x2_scale, x1_scale, y, userWS, &tilingData, &tPipe); \
     } while (0)
 
 template <int TRANS, int QUANT_TYPE, int OPTION_ATTRS, int WEIGHTNZ, int KERNEL_TEMPLATE_TYPE>
-__global__ __aicore__ void quant_batch_matmul_v4(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
-    GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
+                                                 GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
+                                                 GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table, GM_ADDR y,
+                                                 GM_ADDR workspace, GM_ADDR tiling)
 {
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #if CMCT_PRETILE_INT8_INT8_BF16
     REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3TilingDataParams);
     if constexpr (TRANS == QBMMV4_NOT_TRANS) {
-        QBMM_QUANT_GB_IMPL_CLASS(
-            Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
+        QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
+                                 Cmct::Gemm::layout::RowMajorAlign);
     } else if constexpr (TRANS == QBMMV4_ALL_TRANS) {
-        QBMM_QUANT_GB_IMPL_CLASS(
-            Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
+        QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
+                                 Cmct::Gemm::layout::RowMajorAlign);
     } else if constexpr (TRANS == QBMMV4_A_TRANS) {
-        QBMM_QUANT_GB_IMPL_CLASS(
-            Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign);
+        QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
+                                 Cmct::Gemm::layout::RowMajorAlign);
     } else if constexpr (TRANS == QBMMV4_B_TRANS) {
-        QBMM_QUANT_GB_IMPL_CLASS(
-            Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajorAlign);
+        QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
+                                 Cmct::Gemm::layout::RowMajorAlign);
     }
 #else
 #if CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
@@ -170,9 +170,8 @@ __global__ __aicore__ void quant_batch_matmul_v4(
         uint64_t offsetB = DequantBmm::Align(x1TotalElems * sizeof(int8_t), ALIGN_SIZE_128);
         uint64_t offsetMMOut = offsetB + DequantBmm::Align(x2TotalElems * sizeof(int8_t), ALIGN_SIZE_128);
         AscendC::QuantBatchMatmulV4Pergroup<int8_t, int8_t, float, float, DTYPE_Y> op;
-        op.Init(
-            userWS + offsetA, userWS + offsetB, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y,
-            userWS + offsetMMOut, tilingData_, &tPipe);
+        op.Init(userWS + offsetA, userWS + offsetB, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset,
+                y, userWS + offsetMMOut, tilingData_, &tPipe);
         op.Process();
         tPipe.Destroy();
     }
@@ -181,9 +180,9 @@ __global__ __aicore__ void quant_batch_matmul_v4(
     if (QUANT_TYPE == QBMMV4_PER_GROUP) {
         constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
         constexpr bool isTransB = TRANS == QBMMV4_B_TRANS || TRANS == QBMMV4_ALL_TRANS;
-        QuantBatchMatmulV4::Arch35::InvokeWeightQuantBmmOpImpl<QuantBatchMatmulV4PerChannelKernel<
-            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, isTransA, isTransB, false, QuantType::PER_GROUP, DTYPE_Y,
-            WEIGHTNZ>>(
+        QuantBatchMatmulV4::Arch35::InvokeWeightQuantBmmOpImpl<
+            QuantBatchMatmulV4PerChannelKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, isTransA, isTransB, false,
+                                               QuantType::PER_GROUP, DTYPE_Y, WEIGHTNZ> >(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, workspace, tiling);
     } else if (QUANT_TYPE == QBMMV4_MX) {
         QuantBatchMatmulV4::InvokeKernel<WEIGHTNZ>(KERNEL_PARAMS);

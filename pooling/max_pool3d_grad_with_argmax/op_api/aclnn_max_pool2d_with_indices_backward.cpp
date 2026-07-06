@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "aclnn_max_pool2d_with_indices_backward.h"
 #include "pooling/common/op_api/max_pool_grad_with_argmax_v1.h"
@@ -42,16 +42,16 @@ static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_910B_LIS
 static const std::initializer_list<op::DataType> SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 // 输入为5HD场景下
-static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST = {op::DataType::DT_FLOAT16,
+                                                                                         op::DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> MASK_INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT8};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_REGBASE_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                               op::DataType::DT_INT8};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_REGBASE_LIST = {op::DataType::DT_INT32,
+                                                                                       op::DataType::DT_INT64};
 
 static const int DIMENTION_3 = 3;
 static const int DIMENTION_4 = 4;
@@ -74,16 +74,15 @@ static const int64_t BLOCKSIZE = 16;
 static const int KERNEL_SIZE_32 = 32;
 static const int KERNEL_SIZE_64 = 64;
 
-static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion(
-    const bool isMask, const bool isMask2ND)
+static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion(const bool isMask,
+                                                                                        const bool isMask2ND)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
         case NpuArch::DAV_2201: {
-            return (
-                isMask    ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
-                isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
-                            SELF_OUT_DTYPE_SUPPORT_910B_LIST);
+            return (isMask    ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
+                    isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
+                                SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
         case NpuArch::DAV_3510: {
             return SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST;
@@ -111,9 +110,9 @@ static const inline std::initializer_list<op::DataType> GetIndicesDtypeSupportLi
     }
 }
 
-static bool CheckNotNullPtr(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, aclTensor* gradInput)
+static bool CheckNotNullPtr(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                            const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
+                            const aclIntArray* dilation, aclTensor* gradInput)
 {
     // gradOutput、self、indices、kernelSize、stride、padding、dilation、gradInput不能为空指针
     OP_CHECK_NULL(gradOutput, return false);
@@ -127,9 +126,8 @@ static bool CheckNotNullPtr(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput,
-    const bool isMask, const bool isMask2ND)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                            const aclTensor* gradInput, const bool isMask, const bool isMask2ND)
 {
     // 检查self的数据类型是否在支持列表内
     const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListBySocVersion(isMask, isMask2ND);
@@ -146,18 +144,17 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckFormat(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
+static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                        const aclTensor* gradInput)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if ((self->GetStorageFormat() != gradOutput->GetStorageFormat()) ||
         (self->GetStorageFormat() != gradInput->GetStorageFormat())) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Format of self and gradOutput and gradInput should be same, self[%s], gradOutput[%s], gradInput[%s].",
-            op::ToString(self->GetStorageFormat()).GetString(),
-            op::ToString(gradOutput->GetStorageFormat()).GetString(),
-            op::ToString(gradInput->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Format of self and gradOutput and gradInput should be same, self[%s], gradOutput[%s], gradInput[%s].",
+                op::ToString(self->GetStorageFormat()).GetString(),
+                op::ToString(gradOutput->GetStorageFormat()).GetString(),
+                op::ToString(gradInput->GetStorageFormat()).GetString());
         return false;
     }
 
@@ -175,31 +172,27 @@ static bool CheckFormat(
 
     // 仅支持NCHW、CHW
     if (self->GetViewShape().GetDimNum() != DIMENTION_3 && self->GetViewShape().GetDimNum() != DIMENTION_4) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for self but got dim num:%zu",
-            self->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for self but got dim num:%zu",
+                self->GetViewShape().GetDimNum());
         return false;
     }
 
     if (gradInput->GetViewShape().GetDimNum() != DIMENTION_3 && gradInput->GetViewShape().GetDimNum() != DIMENTION_4) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradInput but got dim num:%zu",
-            gradInput->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradInput but got dim num:%zu",
+                gradInput->GetViewShape().GetDimNum());
         return false;
     }
 
     if (gradOutput->GetViewShape().GetDimNum() != DIMENTION_3 &&
         gradOutput->GetViewShape().GetDimNum() != DIMENTION_4) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradOutput but got dim num:%zu",
-            gradOutput->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for gradOutput but got dim num:%zu",
+                gradOutput->GetViewShape().GetDimNum());
         return false;
     }
 
     if (indices->GetViewShape().GetDimNum() != DIMENTION_3 && indices->GetViewShape().GetDimNum() != DIMENTION_4) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for indices but got dim num:%zu",
-            indices->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for indices but got dim num:%zu",
+                indices->GetViewShape().GetDimNum());
         return false;
     }
 
@@ -238,12 +231,14 @@ static inline int64_t div_rtn(const int64_t x, const int64_t y)
 }
 
 // 计算经过MaxPool后的shape的h和w（n,c与input一致，不用计算）
-static inline int64_t PoolingOutShape(
-    const int64_t inputSize, const int64_t kernelSize, const int64_t pad_l, const int64_t pad_r, const int64_t stride,
-    const int64_t dilation, const bool ceil_mode)
+static inline int64_t PoolingOutShape(const int64_t inputSize, const int64_t kernelSize, const int64_t pad_l,
+                                      const int64_t pad_r, const int64_t stride, const int64_t dilation,
+                                      const bool ceil_mode)
 {
-    int64_t outputSize =
-        div_rtn(inputSize + pad_l + pad_r - dilation * (kernelSize - 1) - 1 + (ceil_mode ? stride - 1 : 0), stride) + 1;
+    int64_t outputSize = div_rtn(
+                             inputSize + pad_l + pad_r - dilation * (kernelSize - 1) - 1 + (ceil_mode ? stride - 1 : 0),
+                             stride) +
+                         1;
     if (ceil_mode) {
         if ((outputSize - 1) * stride >= inputSize + pad_l) {
             --outputSize;
@@ -266,17 +261,17 @@ static int64_t CeilDivUp(int64_t value, int64_t factor)
     return valueNum;
 }
 
-static bool CheckGradInputAndIndicesShapeIsMask(
-    const int64_t outHeight, const int64_t outWidth, const bool is3d, int64_t nInputPlane, bool isMask2ND, bool isMask,
-    const int64_t kH, const int64_t kW, int64_t nBatch, const aclTensor* indices, const aclTensor* gradOutput,
-    op::Shape calcOutShape)
+static bool CheckGradInputAndIndicesShapeIsMask(const int64_t outHeight, const int64_t outWidth, const bool is3d,
+                                                int64_t nInputPlane, bool isMask2ND, bool isMask, const int64_t kH,
+                                                const int64_t kW, int64_t nBatch, const aclTensor* indices,
+                                                const aclTensor* gradOutput, op::Shape calcOutShape)
 {
     if (isMask) {
         const int64_t blockSize = 16;
         const int64_t maskH = kH * kW;
         const int64_t maskW = (CeilDivUp(outHeight * outWidth, blockSize) + 1) * INDICES_TYPE_CONVERT * BLOCKSIZE;
-        const op::Shape calcIndicesShape =
-            is3d ? op::Shape({nInputPlane, maskH, maskW}) : op::Shape({nBatch, nInputPlane, maskH, maskW});
+        const op::Shape calcIndicesShape = is3d ? op::Shape({nInputPlane, maskH, maskW}) :
+                                                  op::Shape({nBatch, nInputPlane, maskH, maskW});
         // 判断indices的shape与推导出的输出shape是否相等
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(indices, calcIndicesShape, return false);
     } else {
@@ -298,10 +293,11 @@ static bool CheckGradInputAndIndicesShapeIsMask(
     return true;
 }
 
-static bool CheckGradInputAndIndicesShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const int64_t kH, const int64_t kW,
-    const int64_t padH, const int64_t padW, const int64_t dH, const int64_t dW, const int64_t dilationH,
-    const int64_t dilationW, const bool ceilMode, const bool isMask, bool isMask2ND, const aclTensor* gradInput)
+static bool CheckGradInputAndIndicesShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                                          const int64_t kH, const int64_t kW, const int64_t padH, const int64_t padW,
+                                          const int64_t dH, const int64_t dW, const int64_t dilationH,
+                                          const int64_t dilationW, const bool ceilMode, const bool isMask,
+                                          bool isMask2ND, const aclTensor* gradInput)
 {
     // gradInput与self的shape需要一致
     OP_CHECK_SHAPE_NOT_EQUAL(gradInput, self, return false);
@@ -316,58 +312,47 @@ static bool CheckGradInputAndIndicesShape(
         height = is3d ? self->GetViewShape().GetDim(DIM_INX_0) : self->GetViewShape().GetDim(DIM_INX_1);
         width = is3d ? self->GetViewShape().GetDim(DIM_INX_1) : self->GetViewShape().GetDim(DIM_INX_2);
     }
-    OP_CHECK(
-        ((nInputPlane != 0) && (height != 0) && (width != 0)),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected tensor\
+    OP_CHECK(((nInputPlane != 0) && (height != 0) && (width != 0)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected tensor\
         with optional 0 dim batch size, but got nInputPlane:%ld, height:%ld, width:%ld",
-            nInputPlane, height, width),
-        return false);
-    OP_CHECK(
-        padH <= ((kH - 1) * dilationH + 1) / 2,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "pad should be at most half of\
+                     nInputPlane, height, width),
+             return false);
+    OP_CHECK(padH <= ((kH - 1) * dilationH + 1) / 2,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad should be at most half of\
         effective kernel size, but got padH=%ld, kH=%ld and dilationH=%ld",
-            padH, kH, dilationH),
-        return false);
-    OP_CHECK(
-        padW <= ((kW - 1) * dilationW + 1) / 2,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "pad should be at most half of\
+                     padH, kH, dilationH),
+             return false);
+    OP_CHECK(padW <= ((kW - 1) * dilationW + 1) / 2,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pad should be at most half of\
         effective kernel size, but got padW=%ld, kW=%ld and dilationW=%ld",
-            padW, kW, dilationW),
-        return false);
+                     padW, kW, dilationW),
+             return false);
 
     const int64_t outHeight = PoolingOutShape(height, kH, padH, padH, dH, dilationH, ceilMode);
     const int64_t outWidth = PoolingOutShape(width, kW, padW, padW, dW, dilationW, ceilMode);
-    OP_CHECK(
-        (outHeight > 0 && outWidth > 0),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Given input size %ldx%ldx%ld, calc out size %ldx%ldx%ld", nInputPlane, height,
-            width, nInputPlane, outHeight, outWidth),
-        return false);
+    OP_CHECK((outHeight > 0 && outWidth > 0),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Given input size %ldx%ldx%ld, calc out size %ldx%ldx%ld", nInputPlane,
+                     height, width, nInputPlane, outHeight, outWidth),
+             return false);
 
-    op::Shape calcOutShape =
-        is3d ? op::Shape({nInputPlane, outHeight, outWidth}) : op::Shape({nBatch, nInputPlane, outHeight, outWidth});
+    op::Shape calcOutShape = is3d ? op::Shape({nInputPlane, outHeight, outWidth}) :
+                                    op::Shape({nBatch, nInputPlane, outHeight, outWidth});
     if (self->GetStorageFormat() == ge::FORMAT_NHWC) {
         calcOutShape = is3d ? op::Shape({outHeight, outWidth, nInputPlane}) :
                               op::Shape({nBatch, outHeight, outWidth, nInputPlane});
     } // 判断out的shape与推导出的输出shape是否相等
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(gradOutput, calcOutShape, return false);
 
-    CheckGradInputAndIndicesShapeIsMask(
-        outHeight, outWidth, is3d, nInputPlane, isMask2ND, isMask, kH, kW, nBatch, indices, gradOutput, calcOutShape);
+    CheckGradInputAndIndicesShapeIsMask(outHeight, outWidth, is3d, nInputPlane, isMask2ND, isMask, kH, kW, nBatch,
+                                        indices, gradOutput, calcOutShape);
 
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
-    aclTensor* gradInput, const bool isMask, bool isMask2ND)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                       const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
+                       const aclIntArray* dilation, bool ceilMode, aclTensor* gradInput, const bool isMask,
+                       bool isMask2ND)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     OP_CHECK(
@@ -378,10 +363,9 @@ static bool CheckShape(
         CheckAttrSize0Or1Or2(stride),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of stride must be zero, one or two, but got %zu.", stride->Size()),
         return false);
-    OP_CHECK(
-        CheckAttrSize1Or2(padding),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of padding must be one or two, but got %zu.", padding->Size()),
-        return false);
+    OP_CHECK(CheckAttrSize1Or2(padding),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of padding must be one or two, but got %zu.", padding->Size()),
+             return false);
     OP_CHECK(
         CheckAttrSize1Or2(dilation),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of dilation must be one or two, but got %zu.", dilation->Size()),
@@ -410,13 +394,11 @@ static bool CheckShape(
     const int64_t padH = paddingRef[0];
     const int64_t padW = (paddingRef.Size() == 1) ? padH : paddingRef[1];
     const int RATIO_KERNEL_PAD = 2;
-    OP_CHECK(
-        ((padH >= 0) && (padW >= 0) && (padH <= (kH / RATIO_KERNEL_PAD)) && (padW <= (kW / RATIO_KERNEL_PAD))),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "pad should be >= 0 and <= half of kernel size, but got kh:%ld, kw:%ld, padH:%ld, padW:%ld", kH, kW, padH,
-            padW),
-        return false);
+    OP_CHECK(((padH >= 0) && (padW >= 0) && (padH <= (kH / RATIO_KERNEL_PAD)) && (padW <= (kW / RATIO_KERNEL_PAD))),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "pad should be >= 0 and <= half of kernel size, but got kh:%ld, kw:%ld, padH:%ld, padW:%ld", kH,
+                     kW, padH, padW),
+             return false);
 
     // dilation目前算子只支持取值1
     const aclIntArray& dilationRef = *dilation;
@@ -425,37 +407,32 @@ static bool CheckShape(
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         OP_CHECK(
             ((dilationH > 0) && (dilationW > 0)),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "dilation should be greater than 0, but got dilationH:%ld, dilationW:%ld",
-                dilationH, dilationW),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation should be greater than 0, but got dilationH:%ld, dilationW:%ld",
+                    dilationH, dilationW),
             return false);
     } else {
-        OP_CHECK(
-            ((dilationH == 1) && (dilationW == 1)),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "dilation only support 1, but got dilationH:%ld, dilationW:%ld", dilationH,
-                dilationW),
-            return false);
+        OP_CHECK(((dilationH == 1) && (dilationW == 1)),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation only support 1, but got dilationH:%ld, dilationW:%ld",
+                         dilationH, dilationW),
+                 return false);
     }
 
     // 检查GradInput和indices的shape
-    const bool ret = CheckGradInputAndIndicesShape(
-        gradOutput, self, indices, kH, kW, padH, padW, dH, dW, dilationH, dilationW, ceilMode, isMask, isMask2ND,
-        gradInput);
+    const bool ret = CheckGradInputAndIndicesShape(gradOutput, self, indices, kH, kW, padH, padW, dH, dW, dilationH,
+                                                   dilationW, ceilMode, isMask, isMask2ND, gradInput);
     CHECK_RET(ret, false);
 
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
-    aclTensor* gradInput, const bool isMask, bool isMask2ND)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                               const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
+                               const aclIntArray* dilation, bool ceilMode, aclTensor* gradInput, const bool isMask,
+                               bool isMask2ND)
 {
     // 检查参数是否为空指针
-    CHECK_RET(
-        CheckNotNullPtr(gradOutput, self, indices, kernelSize, stride, padding, dilation, gradInput),
-        ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNullPtr(gradOutput, self, indices, kernelSize, stride, padding, dilation, gradInput),
+              ACLNN_ERR_PARAM_NULLPTR);
 
     // 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(gradOutput, self, indices, gradInput, isMask, isMask2ND), ACLNN_ERR_PARAM_INVALID);
@@ -464,10 +441,9 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFormat(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
 
     // 检查数据维度是否合法
-    CHECK_RET(
-        CheckShape(
-            gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, isMask, isMask2ND),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, isMask,
+                         isMask2ND),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -511,10 +487,9 @@ static op::DataType GetCastDtypeForMask(const aclTensor* self, bool isMask2ND)
 // 检查tuple <gradOut, self, indices>里的元素是否为非null。true表示为非null，false表示为null
 static bool CheckTupleArrayNullptr(TupleArrayInput tensorTupleArray)
 {
-    return (
-        (std::get<TUPLE_INX_GRAD>(tensorTupleArray) != nullptr) &&
-        (std::get<TUPLE_INX_SELF>(tensorTupleArray) != nullptr) &&
-        (std::get<TUPLE_INX_INDICES>(tensorTupleArray) != nullptr));
+    return ((std::get<TUPLE_INX_GRAD>(tensorTupleArray) != nullptr) &&
+            (std::get<TUPLE_INX_SELF>(tensorTupleArray) != nullptr) &&
+            (std::get<TUPLE_INX_INDICES>(tensorTupleArray) != nullptr));
 }
 
 static const aclTensor* IndicesInputProcess(const aclTensor* indices, aclOpExecutor* executor)
@@ -530,8 +505,8 @@ static const aclTensor* IndicesInputProcess(const aclTensor* indices, aclOpExecu
     op::Shape dimsStorageShape = {
         n_batch, n_plane, indices_height, indices_height, indices_width / INDICES_TYPE_CONVERT / BLOCKSIZE, BLOCKSIZE};
 
-    auto indicesNew = executor->AllocTensor(
-        dimsStorageShape, dimsViewShape, op::DataType::DT_UINT16, op::Format::FORMAT_NC1HWC0, op::Format::FORMAT_NCHW);
+    auto indicesNew = executor->AllocTensor(dimsStorageShape, dimsViewShape, op::DataType::DT_UINT16,
+                                            op::Format::FORMAT_NC1HWC0, op::Format::FORMAT_NCHW);
     CHECK_RET(indicesNew != nullptr, nullptr);
     indicesNew->SetFromWorkspace(false);
     indicesNew->SetStorageAddr(indices->GetStorageAddr());
@@ -539,8 +514,8 @@ static const aclTensor* IndicesInputProcess(const aclTensor* indices, aclOpExecu
     return indicesNew;
 }
 
-static const aclTensor* IndicesInputProcess3D(
-    const aclTensor* indices, const aclTensor* gradOutput, aclOpExecutor* executor)
+static const aclTensor* IndicesInputProcess3D(const aclTensor* indices, const aclTensor* gradOutput,
+                                              aclOpExecutor* executor)
 {
     // 处理2D属性适配3D
     Shape gradOutputShape = gradOutput->GetViewShape();
@@ -552,8 +527,8 @@ static const aclTensor* IndicesInputProcess3D(
     op::Shape dimsViewShape = {n_batch, n_plane, indices_depth, indices_height, indices_width};
     op::Shape dimsStorageShape = {n_batch, n_plane, indices_depth, indices_height, indices_width};
 
-    auto indicesNew = executor->AllocTensor(
-        dimsStorageShape, dimsViewShape, op::DataType::DT_INT32, op::Format::FORMAT_NCDHW, op::Format::FORMAT_NCDHW);
+    auto indicesNew = executor->AllocTensor(dimsStorageShape, dimsViewShape, op::DataType::DT_INT32,
+                                            op::Format::FORMAT_NCDHW, op::Format::FORMAT_NCDHW);
     CHECK_RET(indicesNew != nullptr, nullptr);
     indicesNew->SetFromWorkspace(false);
     indicesNew->SetStorageAddr(indices->GetStorageAddr());
@@ -561,53 +536,46 @@ static const aclTensor* IndicesInputProcess3D(
     return indicesNew;
 }
 
-static TupleArrayInput InputProcess(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const bool isMask, bool isMask2ND,
-    aclOpExecutor* executor)
+static TupleArrayInput InputProcess(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                                    const bool isMask, bool isMask2ND, aclOpExecutor* executor)
 {
     if (isMask) {
         /* 自定义mask语义接口时，将输入转为5HD格式 */
         int64_t groups = 1;
-        TupleArrayInput nullptrArray =
-            std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(nullptr, nullptr, nullptr);
+        TupleArrayInput nullptrArray = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(
+            nullptr, nullptr, nullptr);
 
         auto castGradOutput = l0op::Cast(gradOutput, GetCastDtypeForMask(self, isMask2ND), executor);
-        OP_CHECK(
-            castGradOutput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
-            return nullptrArray);
+        OP_CHECK(castGradOutput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
+                 return nullptrArray);
         auto castSelf = l0op::Cast(self, GetCastDtypeForMask(self, isMask2ND), executor);
-        OP_CHECK(
-            castSelf != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self Cast return nullptr."),
-            return nullptrArray);
+        OP_CHECK(castSelf != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self Cast return nullptr."),
+                 return nullptrArray);
 
         auto gradOutputTrans = l0op::TransDataSpecial(castGradOutput, Format::FORMAT_NC1HWC0, groups, executor);
-        OP_CHECK(
-            gradOutputTrans != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput TransDataSpecial return nullptr."), return nullptrArray);
+        OP_CHECK(gradOutputTrans != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput TransDataSpecial return nullptr."),
+                 return nullptrArray);
 
         auto selfTrans = l0op::TransDataSpecial(castSelf, Format::FORMAT_NC1HWC0, groups, executor);
-        OP_CHECK(
-            selfTrans != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self TransDataSpecial return nullptr."),
-            return nullptrArray);
+        OP_CHECK(selfTrans != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self TransDataSpecial return nullptr."),
+                 return nullptrArray);
 
         // 通过创建一个数据地址指向indices数据地址，但数据类型为UINT16的tensor，将返回结果的数据类型从UINT16转换为INT8
         auto indicesNew = IndicesInputProcess(indices, executor);
-        OP_CHECK(
-            indicesNew != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The indices process return nullptr."),
-            return nullptrArray);
+        OP_CHECK(indicesNew != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The indices process return nullptr."),
+                 return nullptrArray);
 
         return std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(gradOutputTrans, selfTrans, indicesNew);
     } else {
-        TupleArrayInput nullptrArray =
-            std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(nullptr, nullptr, nullptr);
+        TupleArrayInput nullptrArray = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(
+            nullptr, nullptr, nullptr);
         auto castGradOutput = l0op::Cast(gradOutput, GetCastDtypeForMask(self, isMask2ND), executor);
-        OP_CHECK(
-            castGradOutput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
-            return nullptrArray);
+        OP_CHECK(castGradOutput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
+                 return nullptrArray);
         auto castSelf = l0op::Cast(self, GetCastDtypeForMask(self, isMask2ND), executor);
-        OP_CHECK(
-            castSelf != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self Cast return nullptr."),
-            return nullptrArray);
+        OP_CHECK(castSelf != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self Cast return nullptr."),
+                 return nullptrArray);
         const bool isGrad3D = gradOutput->GetViewShape().GetDimNum() == DIMENTION_3;
         Shape gradViewShape = gradOutput->GetViewShape();
         const int64_t nBatch = isGrad3D ? 1 : gradViewShape.GetDim(DIM_INX_0);
@@ -616,39 +584,35 @@ static TupleArrayInput InputProcess(
         const int64_t widthOut = isGrad3D ? gradViewShape.GetDim(DIM_INX_2) : gradViewShape.GetDim(DIM_INX_3);
         op::Shape dimsViewShape = {nBatch, nPlane, heightOut, widthOut};
         op::Shape dimsStorageShape = {nBatch, nPlane, heightOut, widthOut};
-        auto indicesNew = executor->AllocTensor(
-            dimsStorageShape, dimsViewShape, op::DataType::DT_INT32, op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
-        OP_CHECK(
-            indicesNew != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The indices process return nullptr."),
-            return nullptrArray);
+        auto indicesNew = executor->AllocTensor(dimsStorageShape, dimsViewShape, op::DataType::DT_INT32,
+                                                op::Format::FORMAT_NCHW, op::Format::FORMAT_NCHW);
+        OP_CHECK(indicesNew != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The indices process return nullptr."),
+                 return nullptrArray);
         indicesNew->SetFromWorkspace(false);
         indicesNew->SetStorageAddr(indices->GetStorageAddr());
         return std::tuple<const aclTensor*, const aclTensor*, const aclTensor*>(castGradOutput, castSelf, indicesNew);
     }
 }
 
-static const aclTensor* OutputProcess(
-    const aclTensor* gradInput, const aclTensor* self, const bool isMask, aclOpExecutor* executor)
+static const aclTensor* OutputProcess(const aclTensor* gradInput, const aclTensor* self, const bool isMask,
+                                      aclOpExecutor* executor)
 {
     if (isMask) {
         /* 自定义mask语义接口时，将输出从5HD转为NCHW格式 */
         int64_t groups = 1;
         auto gradInputTrans = l0op::TransDataSpecial(gradInput, Format::FORMAT_NCHW, groups, executor);
-        OP_CHECK(
-            gradInputTrans != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradInput TransDataSpecial return nullptr."), return nullptr);
+        OP_CHECK(gradInputTrans != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradInput TransDataSpecial return nullptr."), return nullptr);
 
         auto castGradInput = l0op::Cast(gradInputTrans, self->GetDataType(), executor);
-        OP_CHECK(
-            castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
-            return nullptr);
+        OP_CHECK(castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
+                 return nullptr);
 
         return castGradInput;
     } else {
         auto castGradInput = l0op::Cast(gradInput, self->GetDataType(), executor);
-        OP_CHECK(
-            castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
-            return nullptr);
+        OP_CHECK(castGradInput != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The gradOutput Cast return nullptr."),
+                 return nullptr);
 
         return castGradInput;
     }
@@ -664,8 +628,8 @@ static aclnnStatus ExecMaxPool2dWithIndicesBackwardGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, isMask, isMask2ND);
+    auto ret = CheckParams(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput,
+                           isMask, isMask2ND);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 检查是否是空tensor
@@ -693,24 +657,24 @@ static aclnnStatus ExecMaxPool2dWithIndicesBackwardGetWorkspaceSize(
     auto selfUnsqueezed = isSelf3D ? View3Das4D(selfContiguous, uniqueExecutor.get()) : selfContiguous;
     CHECK_RET(selfUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradOutputUnsqueezed =
-        isSelf3D ? View3Das4D(gradOutpoutContiguous, uniqueExecutor.get()) : gradOutpoutContiguous;
+    auto gradOutputUnsqueezed = isSelf3D ? View3Das4D(gradOutpoutContiguous, uniqueExecutor.get()) :
+                                           gradOutpoutContiguous;
     CHECK_RET(gradOutputUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 自定义mask语义接口时，indices不在此处进行维度转换
-    auto indicesUnsqueezed =
-        (isSelf3D && !isMask) ? View3Das4D(indicesContiguous, uniqueExecutor.get()) : indicesContiguous;
+    auto indicesUnsqueezed = (isSelf3D && !isMask) ? View3Das4D(indicesContiguous, uniqueExecutor.get()) :
+                                                     indicesContiguous;
     CHECK_RET(indicesUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 对输入进行处理，包括5HD格式转换
-    auto inputResult =
-        InputProcess(gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed, isMask, isMask2ND, uniqueExecutor.get());
+    auto inputResult = InputProcess(gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed, isMask, isMask2ND,
+                                    uniqueExecutor.get());
     CHECK_RET(CheckTupleArrayNullptr(inputResult), ACLNN_ERR_INNER_NULLPTR);
 
-    auto maxPoolGradResult = l0op::MaxPoolGradWithArgmaxV1(
-        std::get<TUPLE_INX_GRAD>(inputResult), std::get<TUPLE_INX_SELF>(inputResult),
-        std::get<TUPLE_INX_INDICES>(inputResult), kernelSize, stride, padding, dilation, ceilMode,
-        uniqueExecutor.get());
+    auto maxPoolGradResult = l0op::MaxPoolGradWithArgmaxV1(std::get<TUPLE_INX_GRAD>(inputResult),
+                                                           std::get<TUPLE_INX_SELF>(inputResult),
+                                                           std::get<TUPLE_INX_INDICES>(inputResult), kernelSize, stride,
+                                                           padding, dilation, ceilMode, uniqueExecutor.get());
     CHECK_RET(maxPoolGradResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradInputResult = OutputProcess(maxPoolGradResult, self, isMask, uniqueExecutor.get());
@@ -771,8 +735,8 @@ static aclnnStatus ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, false, false);
+    auto ret = CheckParams(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, false,
+                           false);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 检查是否是空tensor
@@ -796,8 +760,8 @@ static aclnnStatus ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(
     // 如果self是3d，需要扩到4d再调用MaxPoolGradWithArgMaxV3接口
     const bool isSelf3D = self->GetViewShape().GetDimNum() == DIMENTION_3;
 
-    auto selfUnsqueezed =
-        isSelf3D ? View3Das4D(selfContiguous, uniqueExecutor.get()) : selfContiguous; // 正向此处是：self
+    auto selfUnsqueezed = isSelf3D ? View3Das4D(selfContiguous, uniqueExecutor.get()) :
+                                     selfContiguous; // 正向此处是：self
     CHECK_RET(selfUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradOutputUnsqueezed = isSelf3D ? View3Das4D(gradOutpoutContiguous, uniqueExecutor.get()) :
@@ -805,14 +769,14 @@ static aclnnStatus ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(
     CHECK_RET(gradOutputUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 自定义mask语义接口时，indices不在此处进行维度转换
-    auto indicesUnsqueezed =
-        isSelf3D ? View3Das4D(indicesContiguous, uniqueExecutor.get()) : indicesContiguous; // 正向此处是：indices
+    auto indicesUnsqueezed = isSelf3D ? View3Das4D(indicesContiguous, uniqueExecutor.get()) :
+                                        indicesContiguous; // 正向此处是：indices
     CHECK_RET(indicesUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     std::string dataFormat = (self->GetStorageFormat() == ge::FORMAT_NHWC) ? "NHWC" : "NCHW";
-    auto maxPoolGradResult = l0op::MaxPoolGradWithArgmaxV3(
-        gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed, kernelSize, stride, padding, indices->GetDataType(),
-        dilation, ceilMode, dataFormat, uniqueExecutor.get());
+    auto maxPoolGradResult = l0op::MaxPoolGradWithArgmaxV3(gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed,
+                                                           kernelSize, stride, padding, indices->GetDataType(),
+                                                           dilation, ceilMode, dataFormat, uniqueExecutor.get());
     CHECK_RET(maxPoolGradResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradInputResult = OutputProcess(maxPoolGradResult, self, false, uniqueExecutor.get());
@@ -841,8 +805,8 @@ static aclnnStatus ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, isMask, false);
+    auto ret = CheckParams(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput,
+                           isMask, false);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 检查是否是空tensor
@@ -880,14 +844,13 @@ static aclnnStatus ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(
     CHECK_RET(indicesUnsqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 处理输入属性适配5D
-    auto [kernel3D, stride3D, padding3D, dilation3D] =
-        ProcessAttrTo3DParams(kernelSize, stride, padding, uniqueExecutor.get());
-    CHECK_RET(
-        (kernel3D != nullptr) && (stride3D != nullptr) && (padding3D != nullptr) && (dilation3D != nullptr),
-        ACLNN_ERR_INNER_NULLPTR);
-    auto maxPoolGradResult = l0op::MaxPool3DGradWithArgmax(
-        gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed, kernel3D, stride3D, padding3D, dilation3D, ceilMode,
-        uniqueExecutor.get());
+    auto [kernel3D, stride3D, padding3D, dilation3D] = ProcessAttrTo3DParams(kernelSize, stride, padding,
+                                                                             uniqueExecutor.get());
+    CHECK_RET((kernel3D != nullptr) && (stride3D != nullptr) && (padding3D != nullptr) && (dilation3D != nullptr),
+              ACLNN_ERR_INNER_NULLPTR);
+    auto maxPoolGradResult = l0op::MaxPool3DGradWithArgmax(gradOutputUnsqueezed, selfUnsqueezed, indicesUnsqueezed,
+                                                           kernel3D, stride3D, padding3D, dilation3D, ceilMode,
+                                                           uniqueExecutor.get());
     CHECK_RET(maxPoolGradResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const op::Format& dstFormat = gradInput->GetStorageFormat();
@@ -904,82 +867,82 @@ static aclnnStatus ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                           const aclTensor* indices, const aclIntArray* kernelSize,
+                                                           const aclIntArray* stride, const aclIntArray* padding,
+                                                           const aclIntArray* dilation, bool ceilMode,
+                                                           aclTensor* gradInput, uint64_t* workspaceSize,
+                                                           aclOpExecutor** executor)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    OP_CHECK(
-        !(Ops::NN::AclnnUtil::IsRegbase(curArch)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Please use aclnnMaxPool2dWithIndicesBackward."),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase(curArch)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Please use aclnnMaxPool2dWithIndicesBackward."),
+             return ACLNN_ERR_PARAM_INVALID);
     // 如果kernelSize符合切ND要求，在这里把isMask设置为false
     OP_CHECK_NULL(kernelSize, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(gradOutput, return ACLNN_ERR_PARAM_NULLPTR);
-    OP_CHECK(
-        CheckAttrSize1Or2(kernelSize),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "param size must be a single int, or a tuple of two ints.\
+    OP_CHECK(CheckAttrSize1Or2(kernelSize),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "param size must be a single int, or a tuple of two ints.\
                     stride can be empty. kernelSize:%zu, stride:%zu, padding:%zu dilation:%zu",
-            kernelSize->Size(), stride->Size(), padding->Size(), dilation->Size()),
-        return ACLNN_ERR_PARAM_NULLPTR);
+                     kernelSize->Size(), stride->Size(), padding->Size(), dilation->Size()),
+             return ACLNN_ERR_PARAM_NULLPTR);
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
     if (!(kH == 1 && kW == 1) && (curArch == NpuArch::DAV_2201)) {
-        L2_DFX_PHASE_1(
-            aclnnMaxPool2dWithMaskBackward,
-            DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(gradInput));
-        return ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(
-            gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, true, workspaceSize,
-            executor);
+        L2_DFX_PHASE_1(aclnnMaxPool2dWithMaskBackward,
+                       DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode),
+                       DFX_OUT(gradInput));
+        return ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(gradOutput, self, indices, kernelSize, stride, padding,
+                                                                dilation, ceilMode, gradInput, true, workspaceSize,
+                                                                executor);
     } else {
-        L2_DFX_PHASE_1(
-            aclnnMaxPool2dWithMaskBackward,
-            DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(gradInput));
-        return ExecMaxPool2dWithIndicesBackwardGetWorkspaceSize(
-            gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, true, false,
-            workspaceSize, executor);
+        L2_DFX_PHASE_1(aclnnMaxPool2dWithMaskBackward,
+                       DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode),
+                       DFX_OUT(gradInput));
+        return ExecMaxPool2dWithIndicesBackwardGetWorkspaceSize(gradOutput, self, indices, kernelSize, stride, padding,
+                                                                dilation, ceilMode, gradInput, true, false,
+                                                                workspaceSize, executor);
     }
 }
 
-aclnnStatus aclnnMaxPool2dWithMaskBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnMaxPool2dWithMaskBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnMaxPool2dWithMaskBackward);
     // 固定写法，调用框架能力，完成计算
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnMaxPool2dWithIndicesBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                              const aclTensor* indices, const aclIntArray* kernelSize,
+                                                              const aclIntArray* stride, const aclIntArray* padding,
+                                                              const aclIntArray* dilation, bool ceilMode,
+                                                              aclTensor* gradInput, uint64_t* workspaceSize,
+                                                              aclOpExecutor** executor)
 {
     aclnnStatus ret;
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    L2_DFX_PHASE_1(
-        aclnnMaxPool2dWithIndicesBackward,
-        DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode), DFX_OUT(gradInput));
+    L2_DFX_PHASE_1(aclnnMaxPool2dWithIndicesBackward,
+                   DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode),
+                   DFX_OUT(gradInput));
 
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        ret = ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(
-            gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, workspaceSize,
-            executor);
+        ret = ExecMaxPool2dWithIndicesBackwardGetWorkspaceSizeV3(gradOutput, self, indices, kernelSize, stride, padding,
+                                                                 dilation, ceilMode, gradInput, workspaceSize,
+                                                                 executor);
     } else {
-        ret = ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(
-            gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput, false, workspaceSize,
-            executor);
+        ret = ExecMaxPool3dWithIndicesBackwardGetWorkspaceSize(gradOutput, self, indices, kernelSize, stride, padding,
+                                                               dilation, ceilMode, gradInput, false, workspaceSize,
+                                                               executor);
     }
 
     return ret;
 }
 
-aclnnStatus aclnnMaxPool2dWithIndicesBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnMaxPool2dWithIndicesBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnMaxPool2dWithIndicesBackward);
     // 固定写法，调用框架能力，完成计算

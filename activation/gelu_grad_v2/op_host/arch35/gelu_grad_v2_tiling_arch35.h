@@ -24,7 +24,7 @@ using namespace Ops::Base;
 
 class GeluGradV2Tiling : public TilingBaseClass {
 public:
-    explicit GeluGradV2Tiling(gert::TilingContext* context) : TilingBaseClass(context) {};
+    explicit GeluGradV2Tiling(gert::TilingContext* context) : TilingBaseClass(context){};
 
 protected:
     ge::graphStatus CheckValid();

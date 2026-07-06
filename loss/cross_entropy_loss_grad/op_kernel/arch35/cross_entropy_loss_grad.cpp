@@ -24,29 +24,30 @@ using namespace AscendC;
 using namespace CrossEntropyLossGradRegbase;
 
 template <uint64_t schId, uint64_t reductionKey, uint64_t isWeight, uint64_t labelS, uint64_t isIgnore>
-__global__ __aicore__ void cross_entropy_loss_grad(GM_ADDR grad_loss, GM_ADDR log_prob, GM_ADDR target,
-                                                              GM_ADDR weight, GM_ADDR grad_zloss, GM_ADDR lse_for_zloss,
-                                                              GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling) {
-  KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-  REGISTER_TILING_DEFAULT(CrossEntropyLossGradRegbaseTilingData);
-  GET_TILING_DATA_WITH_STRUCT(CrossEntropyLossGradRegbaseTilingData, tilingData, tiling);
-  GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
+__global__ __aicore__ void cross_entropy_loss_grad(GM_ADDR grad_loss, GM_ADDR log_prob, GM_ADDR target, GM_ADDR weight,
+                                                   GM_ADDR grad_zloss, GM_ADDR lse_for_zloss, GM_ADDR x_grad,
+                                                   GM_ADDR workspace, GM_ADDR tiling)
+{
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    REGISTER_TILING_DEFAULT(CrossEntropyLossGradRegbaseTilingData);
+    GET_TILING_DATA_WITH_STRUCT(CrossEntropyLossGradRegbaseTilingData, tilingData, tiling);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
 
-  if constexpr (schId == 0 && isWeight == 0) {
-    CrossEntropyLossGradWeightNone<DTYPE_GRAD_LOSS, DTYPE_TARGET> CrossEntropyLossGradWeightNoneOp;
-    CrossEntropyLossGradWeightNoneOp.Init(grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, x_grad, workspace, tilingData);
-    CrossEntropyLossGradWeightNoneOp.Process();
-  }
-  else if constexpr (schId == 0 && isWeight == 1) {
-    CrossEntropyLossGradWeightNotNone<DTYPE_GRAD_LOSS, DTYPE_TARGET> CrossEntropyLossGradWeightNotNoneOp;
-    CrossEntropyLossGradWeightNotNoneOp.Init(grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, x_grad, workspace, tilingData);
-    CrossEntropyLossGradWeightNotNoneOp.Process();
-  }
-  else if constexpr (schId == 1) {
-    CELossGradFullLoad<DTYPE_GRAD_LOSS, DTYPE_TARGET, reductionKey, isWeight, labelS, isIgnore> op;
-    op.Init(grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, x_grad, workspace, tilingData);
-    op.Process();
-  } else {
-    return;
-  }
+    if constexpr (schId == 0 && isWeight == 0) {
+        CrossEntropyLossGradWeightNone<DTYPE_GRAD_LOSS, DTYPE_TARGET> CrossEntropyLossGradWeightNoneOp;
+        CrossEntropyLossGradWeightNoneOp.Init(grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, x_grad,
+                                              workspace, tilingData);
+        CrossEntropyLossGradWeightNoneOp.Process();
+    } else if constexpr (schId == 0 && isWeight == 1) {
+        CrossEntropyLossGradWeightNotNone<DTYPE_GRAD_LOSS, DTYPE_TARGET> CrossEntropyLossGradWeightNotNoneOp;
+        CrossEntropyLossGradWeightNotNoneOp.Init(grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, x_grad,
+                                                 workspace, tilingData);
+        CrossEntropyLossGradWeightNotNoneOp.Process();
+    } else if constexpr (schId == 1) {
+        CELossGradFullLoad<DTYPE_GRAD_LOSS, DTYPE_TARGET, reductionKey, isWeight, labelS, isIgnore> op;
+        op.Init(grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, x_grad, workspace, tilingData);
+        op.Process();
+    } else {
+        return;
+    }
 }

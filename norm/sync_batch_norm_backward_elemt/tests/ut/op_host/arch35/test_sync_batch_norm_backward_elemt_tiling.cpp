@@ -33,23 +33,16 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class SyncBatchNormBackwardElemtTilingTest : public testing::Test
-{
+class SyncBatchNormBackwardElemtTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardElemtTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SyncBatchNormBackwardElemtTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardElemtTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SyncBatchNormBackwardElemtTilingTest TearDown" << std::endl; }
 };
 
-void SyncBatchNormBackwardElemtTilingRun(
-    gert::StorageShape grad_output_shape_in, gert::StorageShape mean_shape_in, ge::DataType grad_input_type,
-    ge::DataType mean_type, ge::graphStatus expectRes, uint64_t expectTilingKey)
+void SyncBatchNormBackwardElemtTilingRun(gert::StorageShape grad_output_shape_in, gert::StorageShape mean_shape_in,
+                                         ge::DataType grad_input_type, ge::DataType mean_type,
+                                         ge::graphStatus expectRes, uint64_t expectTilingKey)
 {
     gert::StorageShape grad_output_shape = grad_output_shape_in;
     gert::StorageShape save_input_shape = grad_output_shape_in;
@@ -90,19 +83,19 @@ void SyncBatchNormBackwardElemtTilingRun(
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -114,9 +107,8 @@ void SyncBatchNormBackwardElemtTilingRun(
                       .SetOpType(op_type)
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&grad_output_shape, &save_input_shape, &mean_shape, &invstd_shape, &weight_shape,
-                           &mean_dy_shape, &mean_dy_xmu_shape})
+                      .InputShapes({&grad_output_shape, &save_input_shape, &mean_shape, &invstd_shape, &weight_shape,
+                                    &mean_dy_shape, &mean_dy_xmu_shape})
                       .OutputShapes({&grad_input_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -151,8 +143,8 @@ TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp16)
 {
     gert::StorageShape grad_output_shape = {{2048}, {2048}};
     gert::StorageShape mean_shape = {{2048}, {2048}};
-    SyncBatchNormBackwardElemtTilingRun(
-        grad_output_shape, mean_shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, 0);
+    SyncBatchNormBackwardElemtTilingRun(grad_output_shape, mean_shape, ge::DT_FLOAT16, ge::DT_FLOAT16,
+                                        ge::GRAPH_SUCCESS, 0);
 }
 
 TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_bf16)
@@ -166,16 +158,16 @@ TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp32)
 {
     gert::StorageShape grad_output_shape = {{4096}, {4096}};
     gert::StorageShape mean_shape = {{4096}, {4096}};
-    SyncBatchNormBackwardElemtTilingRun(
-        grad_output_shape, mean_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, 0);
+    SyncBatchNormBackwardElemtTilingRun(grad_output_shape, mean_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
+                                        0);
 }
 
 TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_fp16_fp32)
 {
     gert::StorageShape grad_output_shape = {{1024}, {1024}};
     gert::StorageShape mean_shape = {{1024}, {1024}};
-    SyncBatchNormBackwardElemtTilingRun(
-        grad_output_shape, mean_shape, ge::DT_FLOAT16, ge::DT_FLOAT, ge::GRAPH_SUCCESS, 0);
+    SyncBatchNormBackwardElemtTilingRun(grad_output_shape, mean_shape, ge::DT_FLOAT16, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
+                                        0);
 }
 
 TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_shape_not_equal)
@@ -189,6 +181,6 @@ TEST_F(SyncBatchNormBackwardElemtTilingTest, test_ascend910d_dtype_not_equal)
 {
     gert::StorageShape grad_output_shape = {{1024}, {1024}};
     gert::StorageShape mean_shape = {{1024}, {1024}};
-    SyncBatchNormBackwardElemtTilingRun(
-        grad_output_shape, mean_shape, ge::DT_FLOAT, ge::DT_FLOAT16, ge::GRAPH_FAILED, 0);
+    SyncBatchNormBackwardElemtTilingRun(grad_output_shape, mean_shape, ge::DT_FLOAT, ge::DT_FLOAT16, ge::GRAPH_FAILED,
+                                        0);
 }

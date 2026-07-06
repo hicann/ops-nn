@@ -39,7 +39,7 @@ namespace ge {
 * @li transpose_x1: A bool. If True, changes the shape of "x1" from [M, K] to [K, M]. Now only support false.
 * Default value is false.
 * @li transpose_x2: A bool. If True, changes the shape of "x2" from [K, N] to [N, K] and
-* "x2_level1_scale" from [Ceil(K/(2*level1_group_size)), N, 2] to [N, Ceil(K/(2*level1_group_size)), 2]. 
+* "x2_level1_scale" from [Ceil(K/(2*level1_group_size)), N, 2] to [N, Ceil(K/(2*level1_group_size)), 2].
 * Now only support true. Default value is true.
 * @li level0_group_size: An int. First-level quantization parameter. Size supports 512.
 * Default value is 512.

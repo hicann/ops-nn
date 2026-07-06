@@ -22,18 +22,16 @@ namespace l0op {
 OP_TYPE_REGISTER(ApplyAdamWV2);
 
 // AICORE算子kernel
-void ApplyAdamWV2(
-    aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* maxGradNormOptionalRef, const aclTensor* grad,
-    const aclTensor* step, float lr, float beta1, float beta2, float weightDecay, float eps, bool amsgrad,
-    bool maximize, aclOpExecutor* executor)
+void ApplyAdamWV2(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor* maxGradNormOptionalRef,
+                  const aclTensor* grad, const aclTensor* step, float lr, float beta1, float beta2, float weightDecay,
+                  float eps, bool amsgrad, bool maximize, aclOpExecutor* executor)
 {
-    L0_DFX(
-        ApplyAdamWV2, varRef, mRef, vRef, maxGradNormOptionalRef, grad, step, lr, beta1, beta2, weightDecay, eps,
-        amsgrad, maximize);
+    L0_DFX(ApplyAdamWV2, varRef, mRef, vRef, maxGradNormOptionalRef, grad, step, lr, beta1, beta2, weightDecay, eps,
+           amsgrad, maximize);
     auto retAicore = ACL_SUCCESS;
-    retAicore =
-        ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdamWV2, OP_INPUT(varRef, mRef, vRef, grad, step, maxGradNormOptionalRef),
-                                    OP_ATTR(lr, beta1, beta2, weightDecay, eps, amsgrad, maximize));
+    retAicore = ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdamWV2,
+                                            OP_INPUT(varRef, mRef, vRef, grad, step, maxGradNormOptionalRef),
+                                            OP_ATTR(lr, beta1, beta2, weightDecay, eps, amsgrad, maximize));
     if (retAicore != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdamWV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     }

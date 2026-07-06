@@ -21,8 +21,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AddLayerNormQuant);
 
-static inline void InferReduceShape(
-    const op::Shape& xShape, const op::Shape& gammaShape, op::Shape& reduceShape, const char* quantMode)
+static inline void InferReduceShape(const op::Shape& xShape, const op::Shape& gammaShape, op::Shape& reduceShape,
+                                    const char* quantMode)
 {
     bool isDyn = (strcmp(quantMode, "dynamic") == 0);
     if (isDyn) {
@@ -48,9 +48,8 @@ const std::array<aclTensor*, ADD_LAYER_NORM_QUANT_OUT_NUM> AddLayerNormQuant(
     Shape dummyShape({1});
     InferReduceShape(x1->GetViewShape(), gamma->GetViewShape(), reduceShape, quantMode);
 
-    L0_DFX(
-        AddLayerNormQuant, x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
-        zeroPoints2Optional, quantMode, epsilon, additionalOutput, divMode);
+    L0_DFX(AddLayerNormQuant, x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
+           zeroPoints2Optional, quantMode, epsilon, additionalOutput, divMode);
 
     OP_LOGI("AddLayerNormQuant L0_DFX.");
 
@@ -65,19 +64,16 @@ const std::array<aclTensor*, ADD_LAYER_NORM_QUANT_OUT_NUM> AddLayerNormQuant(
 
     OP_LOGI("AddLayerNormQuant alloc out.");
 
-    OP_LOGI(
-        "y1Out=[%s], y2Out=[%s], xOut=[%s], outScales1Out=[%s], outScales2Out=[%s].",
-        op::ToString(y1Out->GetViewShape()).GetString(), op::ToString(y2Out->GetViewShape()).GetString(),
-        op::ToString(xOut->GetViewShape()).GetString(), op::ToString(outScales1Out->GetViewShape()).GetString(),
-        op::ToString(outScales2Out->GetViewShape()).GetString());
+    OP_LOGI("y1Out=[%s], y2Out=[%s], xOut=[%s], outScales1Out=[%s], outScales2Out=[%s].",
+            op::ToString(y1Out->GetViewShape()).GetString(), op::ToString(y2Out->GetViewShape()).GetString(),
+            op::ToString(xOut->GetViewShape()).GetString(), op::ToString(outScales1Out->GetViewShape()).GetString(),
+            op::ToString(outScales2Out->GetViewShape()).GetString());
 
-    ADD_TO_LAUNCHER_LIST_AICORE(
-        AddLayerNormQuant,
-        OP_INPUT(
-            x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional, zeroPoints1Optional,
-            zeroPoints2Optional),
-        OP_OUTPUT(y1Out, y2Out, xOut, outScales1Out, outScales2Out),
-        OP_ATTR(quantMode, static_cast<float>(epsilon), additionalOutput, divMode));
+    ADD_TO_LAUNCHER_LIST_AICORE(AddLayerNormQuant,
+                                OP_INPUT(x1, x2, gamma, beta, biasOptional, scales1Optional, scales2Optional,
+                                         zeroPoints1Optional, zeroPoints2Optional),
+                                OP_OUTPUT(y1Out, y2Out, xOut, outScales1Out, outScales2Out),
+                                OP_ATTR(quantMode, static_cast<float>(epsilon), additionalOutput, divMode));
 
     OP_LOGI("AddLayerNormQuant Launch finish.");
 

@@ -73,8 +73,8 @@ uint32_t GetDataTypeSize(DataType dt)
     return 4;
 }
 
-int32_t GenFloatData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, float value)
+int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                     float value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -96,8 +96,7 @@ int32_t GenFloatData(
 }
 
 // indices 用合法行号填充：第 i 个索引取 i % rowNum，保证落在 [0, rowNum)
-int32_t GenInt32Data(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, int64_t rowNum)
+int32_t GenInt32Data(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, int64_t rowNum)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -136,9 +135,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 }
 
 template <typename SetterFn>
-int32_t AddDataInput(
-    int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape, float fillValue,
-    Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
+int32_t AddDataInput(int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape,
+                     float fillValue, Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
 {
     std::string name = "placeholder" + std::to_string(placeholderIndex);
     auto data = op::Data(name.c_str()).set_attr_index(placeholderIndex);
@@ -160,9 +158,8 @@ int32_t AddDataInput(
 }
 
 template <typename SetterFn>
-int32_t AddIndicesInput(
-    int placeholderIndex, SetterFn portSetter, const vector<int64_t>& shape, int64_t rowNum,
-    Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
+int32_t AddIndicesInput(int placeholderIndex, SetterFn portSetter, const vector<int64_t>& shape, int64_t rowNum,
+                        Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
 {
     std::string name = "placeholder" + std::to_string(placeholderIndex);
     auto data = op::Data(name.c_str()).set_attr_index(placeholderIndex);
@@ -183,38 +180,55 @@ int32_t AddIndicesInput(
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     auto op0 = op::SparseApplyRMSProp("sparse_apply_rms_prop1");
 
     const int64_t rowNum = 4;
-    std::vector<int64_t> tensorShape = {rowNum, 8};  // var / ms / mom shape (N=4, inner=8)
-    std::vector<int64_t> gradShape = {2, 8};         // grad shape (M=2, inner=8)
-    std::vector<int64_t> indicesShape = {2};         // indices shape (M=2)
-    std::vector<int64_t> scalarShape = {1};          // lr / rho / momentum / epsilon
+    std::vector<int64_t> tensorShape = {rowNum, 8}; // var / ms / mom shape (N=4, inner=8)
+    std::vector<int64_t> gradShape = {2, 8};        // grad shape (M=2, inner=8)
+    std::vector<int64_t> indicesShape = {2};        // indices shape (M=2)
+    std::vector<int64_t> scalarShape = {1};         // lr / rho / momentum / epsilon
 
     int idx = 0;
     // 9 inputs — order must match REG_OP(SparseApplyRMSProp) .INPUT order
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_var(d); }, inDtype, tensorShape, 1.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_ms(d); }, inDtype, tensorShape, 0.5f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_mom(d); }, inDtype, tensorShape, 0.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_lr(d); }, inDtype, scalarShape, 0.01f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_rho(d); }, inDtype, scalarShape, 0.9f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_momentum(d); }, inDtype, scalarShape, 0.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { op0.set_input_grad(d); }, inDtype, gradShape, 0.2f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddIndicesInput(idx++, [&](Operator& d) { op0.set_input_indices(d); }, indicesShape, rowNum,
-                        graph, input, inputs) != SUCCESS) return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_var(d); }, inDtype, tensorShape, 1.0f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_ms(d); }, inDtype, tensorShape, 0.5f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_mom(d); }, inDtype, tensorShape, 0.0f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_lr(d); }, inDtype, scalarShape, 0.01f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_rho(d); }, inDtype, scalarShape, 0.9f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_momentum(d); }, inDtype, scalarShape, 0.0f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { op0.set_input_grad(d); }, inDtype, gradShape, 0.2f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddIndicesInput(
+            idx++, [&](Operator& d) { op0.set_input_indices(d); }, indicesShape, rowNum, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
 
     op0.set_attr_use_locking(false);
 

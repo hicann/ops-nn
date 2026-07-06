@@ -16,21 +16,14 @@
 #include "platform/platform_infos_def.h"
 #include "platform/platform_info.h"
 
-
 using namespace ge;
 using namespace op;
 
 class EmbeddingBagProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EmbeddingBagProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingBagProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EmbeddingBagProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingBagProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(EmbeddingBagProtoTest, infer_shape_test)
@@ -42,7 +35,7 @@ TEST_F(EmbeddingBagProtoTest, infer_shape_test)
     optiCompilationInfo.soc_version = "Ascend950PR_9589";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-    
+
     ge::op::EmbeddingBag op;
     op.UpdateInputDesc("weight", create_desc({1024, 4096}, ge::DT_FLOAT));
     op.UpdateInputDesc("indices", create_desc({1024}, ge::DT_INT32));

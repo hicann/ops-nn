@@ -23,16 +23,12 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void hard_swish_grad_v2(
-    GM_ADDR grad, GM_ADDR self, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR grad, GM_ADDR self, GM_ADDR out, GM_ADDR workspace,
+                                                         GM_ADDR tiling);
 
 class hard_swish_grad_v2_test : public testing::Test {
 protected:
-
-    static void SetUpTestCase()
-    {
-        cout << "hard_swish_grad_v2 SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "hard_swish_grad_v2 SetUp\n" << endl; }
 
     static void TearDownTestCase()
     {
@@ -41,11 +37,10 @@ protected:
     }
 };
 
-
 TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float_0)
 {
-    kernel_ut::SetupTestEnvironment(
-        "activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data", "hard_swish_grad_v2_data");
+    kernel_ut::SetupTestEnvironment("activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data",
+                                    "hard_swish_grad_v2_data");
     kernel_ut::RunGenData("./hard_swish_grad_v2_data", {"'(2, 4)'", "'float32'"});
     size_t M = 2;
     size_t N = 4;
@@ -89,8 +84,8 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float_0)
 
 TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float16_1)
 {
-    kernel_ut::SetupTestEnvironment(
-        "activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data", "hard_swish_grad_v2_data");
+    kernel_ut::SetupTestEnvironment("activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data",
+                                    "hard_swish_grad_v2_data");
     kernel_ut::RunGenData("./hard_swish_grad_v2_data", {"'(2, 4)'", "'float16'"});
     size_t M = 2;
     size_t N = 4;
@@ -134,8 +129,8 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float16_1)
 
 TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_bfloat16_t_2)
 {
-    kernel_ut::SetupTestEnvironment(
-        "activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data", "hard_swish_grad_v2_data");
+    kernel_ut::SetupTestEnvironment("activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data",
+                                    "hard_swish_grad_v2_data");
     kernel_ut::RunGenData("./hard_swish_grad_v2_data", {"'(2, 4)'", "'bfloat16_t'"});
     size_t M = 2;
     size_t N = 4;

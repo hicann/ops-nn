@@ -11,19 +11,19 @@
 /*!
  * \file add_layer_norm_quant_split_d.h
  * \brief kernel for split d axis case
- * 
+ *
  * 计算流程（分三个阶段）：
  * Phase 1: ComputeAddAndWriteWorkspace - 遍历所有 slice，计算 x = x1 + x2 + bias，累加 sum，写入 workspace
  * Phase 2: ComputeVarianceFromWorkspace - 遍历所有 slice，从 workspace 读取 x，计算 variance = sum((x-mean)^2) / N
  * Phase 3: for each slice - 计算 layernorm y = (x-mean)*rstd*gamma+beta，量化输出 y1 = quant(y)
- * 
+ *
  * 数据布局：
  * - 输入 x1, x2: shape [numFirstDim, numLastDim]，按 block 切分 first dim
  * - gamma, beta, scales, zeroPoints: shape [numLastDim]，per-last-dim 参数
  * - workspace: float 类型，存储中间结果 x，size = numFirstDim * numLastDim * sizeof(float)
- * 
+ *
  * Split-D 设计：当 D 维度 (numLastDim) 较大时，UB 无法容纳整行数据，按 slice 切分 D 维度处理
- * 
+ *
  * 同步安全原则：
  * - 每个子函数内部完成自己使用的 TQue 队列的完整生命周期（AllocTensor → EnQue → DeQue → FreeTensor）
  * - 不返回从 TQue 获取的 LocalTensor，不在函数间传递 LocalTensor 引用
@@ -40,16 +40,12 @@
 template <typename T, typename S, int TILING_KEY>
 class KernelAddLayerNormQuantSplitD : public KernelAddLayerNormQuantBase<T, TILING_KEY> {
 public:
-    __aicore__ inline KernelAddLayerNormQuantSplitD(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormQuantSplitD(TPipe* pipe) { Ppipe = pipe; }
 
-
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scales1, GM_ADDR scales2,
-        GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR layernormRes,
-        GM_ADDR outScale1, GM_ADDR outScale2, GM_ADDR workspace, const AddLayerNormQuantV2TilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scales1,
+                                GM_ADDR scales2, GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR layernormRes, GM_ADDR outScale1, GM_ADDR outScale2,
+                                GM_ADDR workspace, const AddLayerNormQuantV2TilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -64,7 +60,7 @@ public:
 
     /**
      * 主处理函数：按行遍历，每行分三个阶段处理
-     * 
+     *
      * Phase 1: 计算 x = x1 + x2 + bias，累加 sum 用于计算 mean，写入 workspace
      * Phase 2: 从 workspace 读取 x，计算 variance = sum((x-mean)^2) / N，得到 rstd
      * Phase 3: 遍历每个 slice，计算 layernorm y = (x-mean)*rstd*gamma+beta，量化输出
@@ -89,11 +85,13 @@ public:
             for (uint32_t sliceIdx = 0; sliceIdx < sliceNum; sliceIdx++) {
                 uint32_t curSliceSize = (sliceIdx == sliceNum - 1) ? tailSliceSize : sliceSize;
                 uint32_t curSliceAligned = (sliceIdx == sliceNum - 1) ? tailSliceSizeAligned : sliceSizeAligned;
-                uint32_t curSliceAlignedFp32 = (sliceIdx == sliceNum - 1) ? tailSliceSizeAlignedFp32 : sliceSizeAlignedFp32;
+                uint32_t curSliceAlignedFp32 = (sliceIdx == sliceNum - 1) ? tailSliceSizeAlignedFp32 :
+                                                                            sliceSizeAlignedFp32;
                 uint32_t colOffset = rowOffset + sliceIdx * sliceSize;
                 uint32_t sliceOffset = sliceIdx * sliceSize;
 
-                ComputeLayerNormAndQuant(colOffset, sliceOffset, curSliceSize, curSliceAligned, curSliceAlignedFp32, mean, rstd);
+                ComputeLayerNormAndQuant(colOffset, sliceOffset, curSliceSize, curSliceAligned, curSliceAlignedFp32,
+                                         mean, rstd);
             }
         }
     }
@@ -118,8 +116,8 @@ public:
         tailSliceSizeAlignedFp32 = tiling->tailSliceSizeAlignedFp32;
     }
 
-    __aicore__ inline void InitSplitDGlobalTensors(GM_ADDR scales1, GM_ADDR scales2,
-        GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR workspace)
+    __aicore__ inline void InitSplitDGlobalTensors(GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
+                                                   GM_ADDR zeroPoints2, GM_ADDR workspace)
     {
         if (scales1Exist) {
             scales1Gm.SetGlobalBuffer((__gm__ S*)scales1);
@@ -181,7 +179,7 @@ public:
     }
 
 private:
-    template<typename U>
+    template <typename U>
     __aicore__ inline void CopyGmToUb(LocalTensor<U> dst, GlobalTensor<U> src, uint32_t size)
     {
 #if __NPU_ARCH__ == 2201
@@ -197,7 +195,7 @@ private:
 #endif
     }
 
-    template<typename U>
+    template <typename U>
     __aicore__ inline void CopyUbToGm(GlobalTensor<U> dst, LocalTensor<U> src, uint32_t size)
     {
 #if __NPU_ARCH__ == 2201
@@ -213,12 +211,12 @@ private:
 
     /**
      * 搬运 x1, x2 到 UB，转换为 float，计算 x = x1 + x2
-     * 
+     *
      * 同步安全：
      * - inQueX 的完整生命周期（Alloc → EnQue → DeQue → Free）在本函数内完成
      * - 计算结果写入 TBuf xBufFp32/yBufFp32，不返回任何 LocalTensor
      * - 调用方通过 TBuf::Get 获取同一缓冲区读取结果
-     * 
+     *
      * @param colOffset: 当前 slice 在 GM 中的偏移
      * @param curSliceSize: 当前 slice 的元素个数
      * @param curSliceAligned: 对齐后的元素个数
@@ -246,7 +244,7 @@ private:
 
     /**
      * 处理 elewise bias: x = x + bias
-     * 
+     *
      * 同步安全：
      * - inQueBias 的完整生命周期在本函数内完成
      * - 从 TBuf xBufFp32 读取 x 并写回，不通过参数传递 LocalTensor
@@ -270,7 +268,7 @@ private:
 
     /**
      * 处理 broadcast bias: x = x + bias
-     * 
+     *
      * 同步安全：
      * - inQueBias 的完整生命周期在本函数内完成
      * - 从 TBuf xBufFp32 读取 x 并写回，不通过参数传递 LocalTensor
@@ -294,7 +292,7 @@ private:
 
     /**
      * 输出 xOut 到 GM
-     * 
+     *
      * 同步安全：
      * - outQueRes 的完整生命周期在本函数内完成
      * - 从 TBuf xBufFp32 读取数据，不通过参数传递 LocalTensor
@@ -313,7 +311,7 @@ private:
         }
         PipeBarrier<PIPE_V>();
         outQueRes.EnQue(xOutLocal);
-        
+
         LocalTensor<T> xOutDeq = outQueRes.DeQue<T>();
         CopyUbToGm<T>(this->xGm[colOffset], xOutDeq, curSliceSize);
         outQueRes.FreeTensor(xOutDeq);
@@ -321,7 +319,7 @@ private:
 
     /**
      * Phase 1: 计算 x = x1 + x2 + bias，累加 sum，写入 workspace
-     * 
+     *
      * 遍历所有 slice，对每个 slice：
      * 1. 从 GM 搬运 x1, x2 到 UB
      * 2. 转换为 float，计算 x = x1 + x2
@@ -329,7 +327,7 @@ private:
      * 4. 如果 isXOut，输出 x 到 GM
      * 5. 累加 sum += sum(x)
      * 6. 将 x 写入 workspace
-     * 
+     *
      * @return mean = sum / numLastDim
      */
     __aicore__ inline float ComputeAddAndWriteWorkspace(uint32_t rowOffset)
@@ -356,7 +354,7 @@ private:
             if constexpr (IS_BIAS_BROADCAST) {
                 AddBroadcastBias(sliceOffset, curSliceSize);
             }
-            
+
             // 输出 xOut
             if (this->isXOut) {
                 event_t eventVMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -371,7 +369,7 @@ private:
     }
 
     __aicore__ inline void AccumulateSumAndWriteWorkspace(uint32_t colOffset, uint32_t curSliceSize,
-        LocalTensor<float>& sumTensor)
+                                                          LocalTensor<float>& sumTensor)
     {
         LocalTensor<float> xFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yFp32 = yBufFp32.Get<float>();
@@ -391,13 +389,13 @@ private:
 
     /**
      * Phase 2: 从 workspace 读取 x，计算 variance = sum((x-mean)^2) / N
-     * 
+     *
      * 遍历所有 slice，对每个 slice：
      * 1. 从 workspace 读取 x 到 UB
      * 2. 计算 z = x - mean
      * 3. 计算 y = z * z
      * 4. 累加 ssd += sum(y)
-     * 
+     *
      * @return variance = ssd / numLastDim
      */
     __aicore__ inline float ComputeVarianceFromWorkspace(uint32_t rowOffset, float mean)
@@ -436,12 +434,12 @@ private:
 
     /**
      * 搬运 gamma/beta 到 UB，从 workspace 读取 x，计算 layernorm
-     * 
+     *
      * 同步安全：
      * - inQueGammaBeta 的完整生命周期在本函数内完成
      * - 计算结果写入 TBuf xBufFp32，不返回任何 LocalTensor
      * - 调用方通过 TBuf::Get 获取同一缓冲区读取结果
-     * 
+     *
      * @param colOffset: 当前 slice 在 GM 中的偏移
      * @param sliceOffset: 当前 slice 在 gamma/beta 中的偏移
      * @param size: 当前 slice 的元素个数
@@ -450,7 +448,7 @@ private:
      * @param rstd: 标准差的倒数
      */
     __aicore__ inline void CopyInGammaBetaAndComputeLN(uint32_t colOffset, uint32_t sliceOffset, uint32_t size,
-        uint32_t alignedSize, float mean, float rstd)
+                                                       uint32_t alignedSize, float mean, float rstd)
     {
         // 搬运 gamma 和 beta 到 UB
         // gamma 存储在 gammaBetaLocal[0:alignedSize]
@@ -492,7 +490,7 @@ private:
 
     /**
      * 输出 layernormRes 到 GM
-     * 
+     *
      * 同步安全：
      * - outQueRes 的完整生命周期在本函数内完成
      * - 从 TBuf xBufFp32 读取数据，不通过参数传递 LocalTensor
@@ -596,15 +594,16 @@ private:
 
     /**
      * Phase 3: 计算 layernorm 和量化（每个 slice）
-     * 
+     *
      * 1. 搬运 gamma/beta，从 workspace 读取 x，计算 layernorm
      * 2. 输出 layernormRes
      * 3. 搬运 scales/zeroPoints，量化，输出量化结果
-     * 
+     *
      * 各子函数均自包含队列生命周期，通过 TBuf 隐式传递中间结果
      */
-    __aicore__ inline void ComputeLayerNormAndQuant(uint32_t colOffset, uint32_t sliceOffset, uint32_t size, uint32_t alignedSize,
-        uint32_t alignedSizeFp32, float mean, float rstd)
+    __aicore__ inline void ComputeLayerNormAndQuant(uint32_t colOffset, uint32_t sliceOffset, uint32_t size,
+                                                    uint32_t alignedSize, uint32_t alignedSizeFp32, float mean,
+                                                    float rstd)
     {
         // 搬运 gamma/beta 并计算 layernorm，结果写入 TBuf xBufFp32
         CopyInGammaBetaAndComputeLN(colOffset, sliceOffset, size, alignedSize, mean, rstd);

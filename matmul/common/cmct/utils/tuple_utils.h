@@ -41,4 +41,3 @@ __aicore__ constexpr inline decltype(auto) GetIntegralConstant()
 }
 } // namespace Gemm
 } // namespace Cmct
-

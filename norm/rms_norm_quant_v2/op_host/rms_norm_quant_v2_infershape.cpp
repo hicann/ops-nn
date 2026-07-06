@@ -25,8 +25,8 @@ static constexpr int ATTR_INDEX_OF_DST_TYPE = 2;
 using namespace ge;
 
 namespace ops {
-static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {
-    DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
+static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2,
+                                                                  DT_FLOAT8_E4M3FN};
 static ge::graphStatus InferShape4RmsNormQuantV2(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShape4RmsNormQuantV2");
@@ -57,11 +57,9 @@ static graphStatus InferDataType4RmsNormQuantV2(gert::InferDataTypeContext* cont
         if (pDstDtype != nullptr) {
             int32_t dstDtype = *pDstDtype;
             yDtype = static_cast<ge::DataType>(dstDtype);
-            OP_CHECK_IF(
-                std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(context,
-                    "attr dst_type only support int8, int4, hifloat8, float8_e5m2, float8_e4m3fn"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
+                        OP_LOGE(context, "attr dst_type only support int8, int4, hifloat8, float8_e5m2, float8_e4m3fn"),
+                        return ge::GRAPH_FAILED);
         }
     }
     context->SetOutputDataType(OUTPUT_Y1_IDX, yDtype);

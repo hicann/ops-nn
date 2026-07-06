@@ -23,7 +23,6 @@
 #include "platform/platform_infos_def.h"
 #include "op_host/tiling_templates_registry.h"
 
-
 namespace optiling {
 BEGIN_TILING_DATA_DEF(QuantizeAddLayerNormTilingData)
 TILING_DATA_FIELD_DEF(uint32_t, numCore);

@@ -23,19 +23,12 @@
 using namespace std;
 using namespace op;
 
-class l2_matmulWeightNz_test : public testing::Test
-{
+class l2_matmulWeightNz_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_matmul_weight_nz_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_matmul_weight_nz_test TearDown" << endl;
-    }
-    static void MatMulCommonTest(TensorDesc a_desc, TensorDesc b_desc, TensorDesc out_desc,
-                                         aclnnStatus expect_status, int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION)
+    static void SetUpTestCase() { cout << "l2_matmul_weight_nz_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_matmul_weight_nz_test TearDown" << endl; }
+    static void MatMulCommonTest(TensorDesc a_desc, TensorDesc b_desc, TensorDesc out_desc, aclnnStatus expect_status,
+                                 int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION)
     {
         auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cubeMathType);
 

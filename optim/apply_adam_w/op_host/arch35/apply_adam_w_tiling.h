@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -30,29 +30,29 @@ struct ApplyAdamWCompileInfo {
 };
 
 class ApplyAdamWTiling {
- public:
-  explicit ApplyAdamWTiling(gert::TilingContext *context) : tilingContext_(context) {};
+public:
+    explicit ApplyAdamWTiling(gert::TilingContext* context) : tilingContext_(context){};
 
-  ge::graphStatus RunTiling();
-  ApplyAdamWTilingData* tiling_ = nullptr;
+    ge::graphStatus RunTiling();
+    ApplyAdamWTilingData* tiling_ = nullptr;
 
- protected:
-  ge::graphStatus DoElewiseTiling();
-  ge::graphStatus SetTilingData();
-  ge::graphStatus CheckIsScalar(size_t inputIdx);
-  ge::graphStatus CheckSameShape(size_t inputIdx, const gert::Shape& input0Shape);
-  ge::graphStatus CheckSameDtype(size_t inputIdx, const ge::DataType& input0Dtype);
-  ge::graphStatus CheckShapeAndType();
+protected:
+    ge::graphStatus DoElewiseTiling();
+    ge::graphStatus SetTilingData();
+    ge::graphStatus CheckIsScalar(size_t inputIdx);
+    ge::graphStatus CheckSameShape(size_t inputIdx, const gert::Shape& input0Shape);
+    ge::graphStatus CheckSameDtype(size_t inputIdx, const ge::DataType& input0Dtype);
+    ge::graphStatus CheckShapeAndType();
 
- private:
-  gert::TilingContext *tilingContext_;
-  uint64_t tilingKey = 0;
-  bool amsgradAttr_ = false;
-  bool maximizeAttr_ = false;
-  uint64_t dType = 0;
-  uint64_t schMode = 0;
-  uint64_t amsgrad = 0;
+private:
+    gert::TilingContext* tilingContext_;
+    uint64_t tilingKey = 0;
+    bool amsgradAttr_ = false;
+    bool maximizeAttr_ = false;
+    uint64_t dType = 0;
+    uint64_t schMode = 0;
+    uint64_t amsgrad = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // RUNTIME_V2_OP_IMPL_APPLY_ADAM_W_TILING_H_
+#endif // RUNTIME_V2_OP_IMPL_APPLY_ADAM_W_TILING_H_

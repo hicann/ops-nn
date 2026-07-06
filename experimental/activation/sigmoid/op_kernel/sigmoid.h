@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file sigmoid.h
@@ -28,23 +28,22 @@ constexpr int32_t BUFFER_NUM = 2;
 // FP32类型下，exp函数的最小输入值，用于裁剪
 constexpr float NEG_LN_FP32_MAX = -89.0f;
 // FP16类型下，exp函数的最小输入值，用于裁剪
-constexpr float  NEG_LN_FP16_MAX = -12.0; // half不是标准数据类型，不支持constexpr, 这里使用float类型的最小值
+constexpr float NEG_LN_FP16_MAX = -12.0; // half不是标准数据类型，不支持constexpr, 这里使用float类型的最小值
 
 #if defined(HIGH_PERFORMANCE) && HIGH_PERFORMANCE == 1
-    constexpr bool is_high_perf = true;
+constexpr bool is_high_perf = true;
 #else
-    constexpr bool is_high_perf = false;
+constexpr bool is_high_perf = false;
 #endif
 
 template <uint32_t schMode>
 class KernelSigmoid {
 public:
-    __aicore__ inline KernelSigmoid() {};
+    __aicore__ inline KernelSigmoid(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
-        uint64_t tailBlockNum);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                uint64_t finalBigTileNum, uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum);
     __aicore__ inline void Process();
 
 private:
@@ -57,9 +56,9 @@ private:
     AscendC::TPipe pipe;
     AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueueX;
     AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueueY;
-    
+
     AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpCommon;
-    AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpForPloy1; 
+    AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpForPloy1;
     AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpForPloy2;
     // 专门用于类型转换的 buffer (bf16/fp16 -> float)
     AscendC::TBuf<AscendC::QuePosition::VECCALC> tmpForCast;
@@ -78,10 +77,11 @@ private:
 };
 
 template <uint32_t schMode>
-__aicore__ inline void KernelSigmoid<schMode>::Init(
-    GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum,
-    uint64_t tailBlockNum)
+__aicore__ inline void KernelSigmoid<schMode>::Init(GM_ADDR x, GM_ADDR y, uint64_t smallCoreDataNum,
+                                                    uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
+                                                    uint64_t finalSmallTileNum, uint64_t tileDataNum,
+                                                    uint64_t smallTailDataNum, uint64_t bigTailDataNum,
+                                                    uint64_t tailBlockNum)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
 
@@ -106,37 +106,36 @@ __aicore__ inline void KernelSigmoid<schMode>::Init(
     pipe.InitBuffer(inQueueX, BUFFER_NUM, this->tileDataNum * sizeof(DTYPE_X));
     pipe.InitBuffer(outQueueY, BUFFER_NUM, this->tileDataNum * sizeof(DTYPE_Y));
 
-    // 分配临时Buffer逻辑
-    #if __NPU_ARCH__ == 2002
-    if constexpr (is_high_perf) { 
+// 分配临时Buffer逻辑
+#if __NPU_ARCH__ == 2002
+    if constexpr (is_high_perf) {
         // 310P 高性能模式 (Poly拟合)
         if constexpr (std::is_same_v<DTYPE_X, half>) { // half 类型不是基础数据类型，在Ascend C代码实现中应写为half
             pipe.InitBuffer(tmpForPloy1, tileDataNum * sizeof(half));
             pipe.InitBuffer(tmpForPloy2, tileDataNum * sizeof(half));
         } else {
-            pipe.InitBuffer(tmpForPloy1, tileDataNum * sizeof(float)); 
+            pipe.InitBuffer(tmpForPloy1, tileDataNum * sizeof(float));
             pipe.InitBuffer(tmpForPloy2, tileDataNum * sizeof(float));
         }
         // bf16需要额外分配用于cast的buffer
         if constexpr (std::is_same_v<DTYPE_X, bfloat16_t>) {
-            pipe.InitBuffer(tmpForCast, tileDataNum * sizeof(float)); 
+            pipe.InitBuffer(tmpForCast, tileDataNum * sizeof(float));
         }
-    } else 
-    #endif
-    if constexpr (std::is_same_v<DTYPE_X, bfloat16_t> || 
-        (!is_high_perf && std::is_same_v<DTYPE_X, half>)) { 
+    } else
+#endif
+        if constexpr (std::is_same_v<DTYPE_X, bfloat16_t> || (!is_high_perf && std::is_same_v<DTYPE_X, half>)) {
         // 这里的条件包含了 bf16，或者特定情况下的 fp16，都需要 cast 为 float 计算
         pipe.InitBuffer(tmpForCast, tileDataNum * sizeof(float));
         pipe.InitBuffer(tmpCommon, tileDataNum * sizeof(float));
         ones_float = tmpCommon.Get<float>();
-        
+
         constexpr float one_val = 1.0f;
         AscendC::Duplicate(ones_float, one_val, tileDataNum); // 初始化浮点数 1.0, 用于最后取倒数
-    } else { 
+    } else {
         // 直接使用原类型计算 (fp16 / fp32)
         pipe.InitBuffer(tmpCommon, tileDataNum * sizeof(DTYPE_X));
         ones = tmpCommon.Get<DTYPE_X>();
-        
+
         DTYPE_X one_val = static_cast<DTYPE_X>(1.0f); // DTYPE_X 可能为half， half不是基础数据类型，不支持constexpr
         AscendC::Duplicate(ones, one_val, tileDataNum);
     }
@@ -183,7 +182,7 @@ __aicore__ inline void KernelSigmoid<schMode>::ComputePoly()
 
         // 1. Cast: bf16 -> float
         AscendC::Cast(castTensor, xLocal, AscendC::RoundMode::CAST_NONE, processDataNum);
-        
+
         // 2. 计算流程 (全部使用 float 类型的 castTensor 和 tmpTensor)
         // x2 = x*x
         AscendC::Mul(tmpTensor1, castTensor, castTensor, processDataNum);
@@ -253,17 +252,16 @@ __aicore__ inline void KernelSigmoid<schMode>::ComputeStandard()
     AscendC::LocalTensor<DTYPE_Y> yLocal = outQueueY.AllocTensor<DTYPE_Y>();
 
     // 处理 需要类型转换 情况
-    if constexpr (std::is_same_v<DTYPE_X, bfloat16_t> || 
-        (!is_high_perf && std::is_same_v<DTYPE_X, half>)) {
+    if constexpr (std::is_same_v<DTYPE_X, bfloat16_t> || (!is_high_perf && std::is_same_v<DTYPE_X, half>)) {
         // 获取 float 类型的临时 buffer
         AscendC::LocalTensor<float> computeTensor = tmpForCast.Get<float>();
-        
+
         AscendC::Cast(computeTensor, xLocal, AscendC::RoundMode::CAST_NONE, processDataNum);
 
-        // 910 平台的 Clip 逻辑 (在 float 下做)
-        #if __NPU_ARCH__ == 1001
+// 910 平台的 Clip 逻辑 (在 float 下做)
+#if __NPU_ARCH__ == 1001
         AscendC::Maxs(computeTensor, computeTensor, NEG_LN_FP32_MAX, processDataNum);
-        #endif
+#endif
 
         // 计算 Sigmoid (float)
         // x = -x
@@ -281,13 +279,13 @@ __aicore__ inline void KernelSigmoid<schMode>::ComputeStandard()
         // 类型不变
         DTYPE_X n_one_val = static_cast<DTYPE_X>(-1.0f);
         DTYPE_X one_val = static_cast<DTYPE_X>(1.0f);
-        #if __NPU_ARCH__ == 1001
+#if __NPU_ARCH__ == 1001
         DTYPE_X ln_res_val = static_cast<DTYPE_X>(NEG_LN_FP16_MAX);
         if constexpr (std::is_same_v<DTYPE_X, float>) {
             ln_res_val = static_cast<DTYPE_X>(NEG_LN_FP32_MAX);
         }
         AscendC::Maxs(xLocal, xLocal, ln_res_val, processDataNum);
-        #endif
+#endif
 
         AscendC::Muls(xLocal, xLocal, n_one_val, processDataNum);
         AscendC::Exp(xLocal, xLocal, processDataNum);
@@ -304,27 +302,27 @@ __aicore__ inline void KernelSigmoid<schMode>::Process()
 {
     int32_t loopCount = this->tileNum;
     this->processDataNum = this->tileDataNum;
-    
+
     for (int32_t i = 0; i < loopCount - 1; i++) {
         CopyIn(i);
-        #if __NPU_ARCH__ == 2002
-        if constexpr (is_high_perf) { 
+#if __NPU_ARCH__ == 2002
+        if constexpr (is_high_perf) {
             ComputePoly();
-        } else 
-        #endif
+        } else
+#endif
         {
             ComputeStandard();
         }
         CopyOut(i);
     }
-    
+
     this->processDataNum = this->tailDataNum;
     CopyIn(loopCount - 1);
-    #if __NPU_ARCH__ == 2002
-    if constexpr (is_high_perf) { 
+#if __NPU_ARCH__ == 2002
+    if constexpr (is_high_perf) {
         ComputePoly();
-    } else 
-    #endif
+    } else
+#endif
     {
         ComputeStandard();
     }

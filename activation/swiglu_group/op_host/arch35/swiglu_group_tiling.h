@@ -16,7 +16,6 @@
 #ifndef SWIGLU_GROUP_TILING_H
 #define SWIGLU_GROUP_TILING_H
 
-
 #include <vector>
 #include <iostream>
 #include "register/op_impl_registry.h"
@@ -66,9 +65,7 @@ struct SwigluGroupCompileInfo {
 // ----------算子Tiling入参信息解析及check类----------
 class SwigluGroupTiling {
 public:
-    explicit SwigluGroupTiling(gert::TilingContext* tilingContext) : context_(tilingContext)
-    {
-    }
+    explicit SwigluGroupTiling(gert::TilingContext* tilingContext) : context_(tilingContext) {}
     ~SwigluGroupTiling() = default;
 
     ge::graphStatus GetPlatformInfo();
@@ -81,6 +78,7 @@ public:
     ge::graphStatus CalcGroupIndexTiling();
     void SetTilingData();
     void SetTilingKey();
+
 private:
     ge::graphStatus GetClampLimitAttr(const gert::RuntimeAttrs* attrs);
     ge::graphStatus CheckWeightInfo();
@@ -94,7 +92,7 @@ private:
     int64_t AddWeightSize(int64_t totalSize, int64_t rowFactor) const;
     int64_t CalcTotalSize(int64_t rowFactor, int64_t dFactor) const;
 
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     uint64_t tilingKey_ = 0;
     SwigluGroupTilingData tilingData_;
     uint64_t coreNum_ = 0;
@@ -111,7 +109,7 @@ private:
     int64_t rowLoopOfTailBlock_ = 0;
     int64_t rowFactor_ = 0;
     int64_t tailRowFactorOfFormerBlock_ = 0;
-    int64_t tailRowFactorOfTailBlock_= 0;
+    int64_t tailRowFactorOfTailBlock_ = 0;
     int64_t dLoop_ = 0;
     int64_t dFactor_ = 0;
     int64_t tailDFactor_ = 0;
@@ -125,5 +123,5 @@ private:
     bool hasGroupIndex_ = false;
 };
 
-}  // namespace optiling
-#endif  // SWIGLU_GROUP_TILING_H
+} // namespace optiling
+#endif // SWIGLU_GROUP_TILING_H

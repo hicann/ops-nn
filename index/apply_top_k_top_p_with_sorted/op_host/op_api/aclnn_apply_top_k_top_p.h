@@ -25,7 +25,8 @@ extern "C" {
 /**
  * @brief aclnnApplyTopKTopP的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
- * @param [in] logits: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [in] logits: npu
+ * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
  * @param [in] p: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
  * @param [in] k: npu device侧的aclTensor，数据类型支持INT32，支持非连续的Tensor，数据格式支持ND。
  * @param [in] out: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
@@ -52,4 +53,4 @@ ACLNN_API aclnnStatus aclnnApplyTopKTopP(void* workspace, uint64_t workspaceSize
 }
 #endif
 
-#endif  // OP_API_INC_APPLY_TOP_K_TOP_P_H_
+#endif // OP_API_INC_APPLY_TOP_K_TOP_P_H_

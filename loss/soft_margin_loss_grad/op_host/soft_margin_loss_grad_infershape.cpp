@@ -20,9 +20,12 @@ using namespace ge;
 
 namespace ops {
 
-static int64_t BroadcastDim(int64_t a, int64_t b) {
-    if (a == 1) return b;
-    if (b == 1) return a;
+static int64_t BroadcastDim(int64_t a, int64_t b)
+{
+    if (a == 1)
+        return b;
+    if (b == 1)
+        return a;
     return a; // a==b 时取任一；冲突由 tiling CheckBroadcastShape 拦截
 }
 

@@ -34,25 +34,15 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnApplyAdadeltaGetWorkspaceSize(
-    const aclTensor *var,
-    const aclTensor *accum,
-    const aclTensor *accumUpdate,
-    const aclScalar *lr,
-    const aclScalar *rho,
-    const aclScalar *epsilon,
-    const aclTensor *grad,
-    aclTensor *varOut,
-    aclTensor *accumOut,
-    aclTensor *accumUpdateOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnApplyAdadeltaGetWorkspaceSize(const aclTensor* var, const aclTensor* accum,
+                                                         const aclTensor* accumUpdate, const aclScalar* lr,
+                                                         const aclScalar* rho, const aclScalar* epsilon,
+                                                         const aclTensor* grad, aclTensor* varOut, aclTensor* accumOut,
+                                                         aclTensor* accumUpdateOut, uint64_t* workspaceSize,
+                                                         aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnApplyAdadelta(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnApplyAdadelta(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         aclrtStream stream);
 
 #ifdef __cplusplus
 }

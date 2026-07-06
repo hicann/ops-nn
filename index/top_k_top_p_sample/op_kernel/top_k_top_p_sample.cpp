@@ -19,9 +19,9 @@
 using namespace AscendC;
 using namespace TopKTopPSample;
 
-extern "C" __global__ __aicore__ void top_k_top_p_sample(
-    GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q,
-    GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKpSelect, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void top_k_top_p_sample(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q,
+                                                         GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKpSelect,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     GM_ADDR usrWorkspace = GetUserWorkspace(workspace);

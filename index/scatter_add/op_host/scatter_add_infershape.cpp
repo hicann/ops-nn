@@ -21,35 +21,37 @@ namespace ops {
 static constexpr size_t SC_IN_VAR_IDX = 0;
 static constexpr size_t SC_OUT_VAR_IDX = 0;
 
-graphStatus InferDataType4ScatterAdd(gert::InferDataTypeContext *context) {
-  OP_LOGD(context->GetNodeName(), "InferDataType4ScatterAdd enter");
-  auto input_x_dtype = context->GetInputDataType(0);
-  context->SetOutputDataType(0, input_x_dtype);
-  OP_LOGD(context->GetNodeName(), "InferDataType4ScatterAdd end");
-  return GRAPH_SUCCESS;
+graphStatus InferDataType4ScatterAdd(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "InferDataType4ScatterAdd enter");
+    auto input_x_dtype = context->GetInputDataType(0);
+    context->SetOutputDataType(0, input_x_dtype);
+    OP_LOGD(context->GetNodeName(), "InferDataType4ScatterAdd end");
+    return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShape4ScatterCommonInfer(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "Begin to do ScatterAddInfershape.");
-  const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
+static ge::graphStatus InferShape4ScatterCommonInfer(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do ScatterAddInfershape.");
+    const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
 
-  gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
+    gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
 
-  if (Ops::Base::IsUnknownRank(*var_shape)) {
-    OP_LOGD(context->GetNodeName(), "ScatterAdd input shape is UnknownRank, set output shape to (-2, )");
-    Ops::Base::SetUnknownRank(*output_shape);
+    if (Ops::Base::IsUnknownRank(*var_shape)) {
+        OP_LOGD(context->GetNodeName(), "ScatterAdd input shape is UnknownRank, set output shape to (-2, )");
+        Ops::Base::SetUnknownRank(*output_shape);
+        return ge::GRAPH_SUCCESS;
+    }
+
+    *output_shape = *var_shape;
+
+    OP_LOGD(context->GetNodeName(), "End to do ScatterAddInfershape.");
+
     return ge::GRAPH_SUCCESS;
-  }
-
-  *output_shape = *var_shape;
-
-  OP_LOGD(context->GetNodeName(), "End to do ScatterAddInfershape.");
-
-  return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(ScatterAdd).InferShape(InferShape4ScatterCommonInfer).InferDataType(InferDataType4ScatterAdd);
 
-}  // namespace ops
+} // namespace ops

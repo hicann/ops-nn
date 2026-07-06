@@ -22,8 +22,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
-namespace SyncBatchNormGatherStats
-{
+namespace SyncBatchNormGatherStats {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
@@ -35,11 +34,11 @@ using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
-template<typename T>
-class SyncBatchNormGatherStatsNFullLoad
-{
+template <typename T>
+class SyncBatchNormGatherStatsNFullLoad {
 public:
-    __aicore__ inline SyncBatchNormGatherStatsNFullLoad(const SyncBatchNormGatherStatsTilingData* tilingData, TPipe* pipeIn)
+    __aicore__ inline SyncBatchNormGatherStatsNFullLoad(const SyncBatchNormGatherStatsTilingData* tilingData,
+                                                        TPipe* pipeIn)
     {
         this->pipe = pipeIn;
         this->blockDim = tilingData->blockDim;
@@ -59,14 +58,15 @@ public:
         }
     }
 
-    __aicore__ inline void Init(GM_ADDR total_sum, GM_ADDR total_square_sum, GM_ADDR sample_count, GM_ADDR running_mean, 
-                                GM_ADDR running_var, GM_ADDR batch_mean, GM_ADDR batch_invstd, GM_ADDR running_mean_update, 
-                                GM_ADDR running_var_update)
+    __aicore__ inline void Init(GM_ADDR total_sum, GM_ADDR total_square_sum, GM_ADDR sample_count, GM_ADDR running_mean,
+                                GM_ADDR running_var, GM_ADDR batch_mean, GM_ADDR batch_invstd,
+                                GM_ADDR running_mean_update, GM_ADDR running_var_update)
     {
         auto blockIdx = GetBlockIdx();
-        
+
         int64_t cGmOffset = this->blockFormer * this->ubFormer * blockIdx;
-        int64_t nAlignLen = (this->nLen + (BLOCK_SIZE / sizeof(int32_t)) - 1) / (BLOCK_SIZE / sizeof(int32_t)) * (BLOCK_SIZE / sizeof(int32_t));
+        int64_t nAlignLen = (this->nLen + (BLOCK_SIZE / sizeof(int32_t)) - 1) / (BLOCK_SIZE / sizeof(int32_t)) *
+                            (BLOCK_SIZE / sizeof(int32_t));
 
         sumGm.SetGlobalBuffer((__gm__ T*)total_sum + cGmOffset);
         squareSumGm.SetGlobalBuffer((__gm__ T*)total_square_sum + cGmOffset);
@@ -109,7 +109,7 @@ public:
         LocalTensor<int64_t> countAllUb = countAllBuff.Get<int64_t>();
 
         Cast(castCountUb, countUb, RoundMode::CAST_NONE, this->nLen);
-        uint32_t shape[] = { 1, static_cast<uint32_t>(this->nLen)};
+        uint32_t shape[] = {1, static_cast<uint32_t>(this->nLen)};
         ReduceSum<int64_t, AscendC::Pattern::Reduce::AR, true>(countAllUb, castCountUb, shape, false);
         countQueue.FreeTensor(countUb);
 
@@ -138,8 +138,9 @@ private:
         LocalTensor<float> sumAllUb = sumAllBuff.Get<float>();
         LocalTensor<float> squareSumAllUb = squareSumAllBuff.Get<float>();
 
-        int64_t currentCAlignNum = (currentCNum + (BLOCK_SIZE / sizeof(T)) - 1) / (BLOCK_SIZE / sizeof(T)) * (BLOCK_SIZE / sizeof(T));
-        uint32_t shape[] = { static_cast<uint32_t>(this->nLen), static_cast<uint32_t>(currentCAlignNum)};
+        int64_t currentCAlignNum = (currentCNum + (BLOCK_SIZE / sizeof(T)) - 1) / (BLOCK_SIZE / sizeof(T)) *
+                                   (BLOCK_SIZE / sizeof(T));
+        uint32_t shape[] = {static_cast<uint32_t>(this->nLen), static_cast<uint32_t>(currentCAlignNum)};
         if constexpr (std::is_same<T, float16_t>::value || std::is_same<T, bfloat16_t>::value) {
             LocalTensor<float> fp32SumUb = castSumBuff.Get<float>();
             Cast(fp32SumUb, sumUb, RoundMode::CAST_NONE, this->nLen * currentCAlignNum);
@@ -174,13 +175,13 @@ private:
         __local_mem__ T* runningMeanOutLocal = (__local_mem__ T*)runningMeanOutUb.GetPhyAddr();
         __local_mem__ T* runningVarOutLocal = (__local_mem__ T*)runningVarOutUb.GetPhyAddr();
 
-        NFullLoadBatchNormVF(this->momentum, this->eps, currentCNum, int64CountAll,
-                            sumAllLocal, squareSumAllLocal, runningMeanLocal, runningVarLocal,
-                            batchMeanLocal, batchVarLocal, runningMeanOutLocal, runningVarOutLocal);
+        NFullLoadBatchNormVF(this->momentum, this->eps, currentCNum, int64CountAll, sumAllLocal, squareSumAllLocal,
+                             runningMeanLocal, runningVarLocal, batchMeanLocal, batchVarLocal, runningMeanOutLocal,
+                             runningVarOutLocal);
 
         runningMeanInQueue.FreeTensor(runningMeanUb);
         runningVarInQueue.FreeTensor(runningVarUb);
-        
+
         batchMeanQueue.EnQue(batchMeanUb);
         batchRstdQueue.EnQue(batchVarUb);
         runningMeanOutQueue.EnQue(runningMeanOutUb);
@@ -189,10 +190,12 @@ private:
     }
 
     __aicore__ inline void NFullLoadBatchNormVF(float momentum, float eps, int64_t currentCNum, int64_t int64CountAll,
-                                        __local_mem__ float* sumAllLocal, __local_mem__ float* squareSumAllLocal, 
-                                        __local_mem__ T* runningMeanLocal, __local_mem__ T* runningVarLocal,
-                                        __local_mem__ T* batchMeanLocal, __local_mem__ T* batchVarLocal,
-                                        __local_mem__ T* runningMeanOutLocal, __local_mem__ T* runningVarOutLocal)
+                                                __local_mem__ float* sumAllLocal,
+                                                __local_mem__ float* squareSumAllLocal,
+                                                __local_mem__ T* runningMeanLocal, __local_mem__ T* runningVarLocal,
+                                                __local_mem__ T* batchMeanLocal, __local_mem__ T* batchVarLocal,
+                                                __local_mem__ T* runningMeanOutLocal,
+                                                __local_mem__ T* runningVarOutLocal)
     {
         float float32CountAll = static_cast<float>(int64CountAll);
         float reciCountAll = float(1.0) / float32CountAll;
@@ -203,7 +206,7 @@ private:
 
         __VEC_SCOPE__
         {
-            RegTensor<float> sumAll;    
+            RegTensor<float> sumAll;
             RegTensor<float> squareSum;
             RegTensor<float> runningMean;
             RegTensor<float> runningVar;
@@ -234,7 +237,7 @@ private:
                 Muls(squareSum, squareSum, oneSubMomentum, pregLoop);
                 Add(runningVar, runningVar, squareSum, pregLoop);
                 StoreTensorForDtypeT(runningVarOutLocal + cIndex * VL_FP32, runningVar, pregLoop);
-            }  
+            }
         }
     }
 
@@ -242,7 +245,7 @@ private:
     {
         if constexpr (IsSameType<T, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src);
-        } else {  // fp16、bf16
+        } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src));
             Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
@@ -267,7 +270,7 @@ private:
         dataCopyExtParams.blockLen = this->nLen * sizeof(int32_t);
         dataCopyExtParams.srcStride = 0;
         dataCopyExtParams.dstStride = 0;
-        DataCopyPadExtParams<int32_t> dataCopyPadExtParams {false, 0, 0, 0};
+        DataCopyPadExtParams<int32_t> dataCopyPadExtParams{false, 0, 0, 0};
 
         LocalTensor<int32_t> countUb = countQueue.AllocTensor<int32_t>();
         DataCopyPad(countUb, countGm, dataCopyExtParams, dataCopyPadExtParams);
@@ -281,7 +284,7 @@ private:
         dataCopyExtParams.blockLen = currentCNum * sizeof(T);
         dataCopyExtParams.srcStride = (this->cLen - currentCNum) * sizeof(T);
         dataCopyExtParams.dstStride = 0;
-        DataCopyPadExtParams<T> dataCopyPadExtParams {false, 0, 0, 0};
+        DataCopyPadExtParams<T> dataCopyPadExtParams{false, 0, 0, 0};
 
         LocalTensor<T> sumUb = sumQueue.AllocTensor<T>();
         LocalTensor<T> squareSumUb = squareSumQueue.AllocTensor<T>();
@@ -291,13 +294,14 @@ private:
         squareSumQueue.EnQue(squareSumUb);
     }
 
-    __aicore__ inline void CopyInRunningMeanVar(int64_t offset, int64_t currentCNum) {
+    __aicore__ inline void CopyInRunningMeanVar(int64_t offset, int64_t currentCNum)
+    {
         DataCopyExtParams dataCopyExtParams;
         dataCopyExtParams.blockCount = 1;
         dataCopyExtParams.blockLen = currentCNum * sizeof(T);
         dataCopyExtParams.srcStride = 0;
         dataCopyExtParams.dstStride = 0;
-        DataCopyPadExtParams<T> dataCopyPadExtParams {false, 0, 0, 0};
+        DataCopyPadExtParams<T> dataCopyPadExtParams{false, 0, 0, 0};
 
         LocalTensor<T> runningMeanUb = runningMeanInQueue.AllocTensor<T>();
         LocalTensor<T> runningVarUb = runningVarInQueue.AllocTensor<T>();
@@ -307,7 +311,7 @@ private:
         runningVarInQueue.EnQue(runningVarUb);
     }
 
-    __aicore__ inline void CopyOut(int64_t offset, int64_t currentCNum) 
+    __aicore__ inline void CopyOut(int64_t offset, int64_t currentCNum)
     {
         LocalTensor<T> batchMeanLocal = batchMeanQueue.DeQue<T>();
         LocalTensor<T> batchVarLocal = batchRstdQueue.DeQue<T>();
@@ -345,7 +349,7 @@ private:
     /* variable */
     int64_t blockDim;
     int64_t blockFormer;
-    int64_t blockLoopNum; 
+    int64_t blockLoopNum;
     int64_t nLen;
     int64_t cLen;
     int64_t ubFormer;
@@ -357,7 +361,7 @@ private:
     TPipe* pipe;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> sumQueue;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> squareSumQueue;
-    TQue<QuePosition::VECIN, 1> countQueue; 
+    TQue<QuePosition::VECIN, 1> countQueue;
     TQue<QuePosition::VECIN, 1> runningMeanInQueue;
     TQue<QuePosition::VECIN, 1> runningVarInQueue;
 
@@ -377,4 +381,3 @@ private:
 };
 } // namespace SyncBatchNormGatherStats
 #endif
-

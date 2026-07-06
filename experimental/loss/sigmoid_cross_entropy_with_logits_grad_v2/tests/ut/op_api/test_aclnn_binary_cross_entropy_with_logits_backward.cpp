@@ -19,25 +19,13 @@
 
 using namespace std;
 
-enum Reduction
-{
-    None,
-    Mean,
-    Sum,
-    END
-};
+enum Reduction { None, Mean, Sum, END };
 
 class l2_binary_cross_entropy_with_logits_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "binary_cross_entropy_with_logits_backward_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "binary_cross_entropy_with_logits_backward_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "binary_cross_entropy_with_logits_backward_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "binary_cross_entropy_with_logits_backward_test TearDown" << endl; }
 };
 
 TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f16_reduce_valid)
@@ -55,9 +43,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f16_reduce_valid)
 
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -84,9 +71,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f32_reduce_valid)
 
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -113,9 +99,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f16_reduce_valid_
 
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -141,9 +126,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f32_reduce_none_n
     auto output = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -170,9 +154,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f16_reduce_valid_
 
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -199,9 +182,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_f32_reduce_valid_
 
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -227,9 +209,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_contiguous)
     auto output = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -251,9 +232,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_empty)
     auto gradInput = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     int64_t reduction = None;
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-        OUTPUT(gradInput));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(gradInput));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -280,9 +260,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_dtype_promotion)
     auto input = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
     auto output = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -306,9 +285,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_self_float32_type
     auto input = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
     auto output = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
@@ -330,9 +308,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_NC1HWC0)
     int64_t reduction = Mean;
     auto output = TensorDesc({1, 2, 3, 4, 16}, ACL_FLOAT, ACL_FORMAT_NC1HWC0).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -357,9 +334,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_FRACTAL_Z)
     int64_t reduction = Mean;
     auto output = TensorDesc({16, 16, 16, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_Z).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-        OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -383,9 +359,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_unsupport_dtype)
     auto input1 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 1);
     auto output1 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut_1 = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput1, input1, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output1));
+    auto ut_1 = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                          INPUT(gradOutput1, input1, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                          OUTPUT(output1));
 
     aclnnStatus aclRet_1 = ut_1.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet_1, ACLNN_ERR_PARAM_INVALID);
@@ -395,9 +371,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_unsupport_dtype)
     auto target2 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).Value(target_value);
     auto output2 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut_2 = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput2, input2, target2, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output2));
+    auto ut_2 = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                          INPUT(gradOutput2, input2, target2, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                          OUTPUT(output2));
 
     aclnnStatus aclRet_2 = ut_2.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet_2, ACLNN_ERR_PARAM_INVALID);
@@ -407,9 +383,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_unsupport_dtype)
     auto target3 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).Value(target_value);
     auto output3 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut_3 = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput3, input3, target3, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output3));
+    auto ut_3 = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                          INPUT(gradOutput3, input3, target3, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                          OUTPUT(output3));
 
     aclnnStatus aclRet_3 = ut_3.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet_3, ACLNN_ERR_PARAM_INVALID);
@@ -419,9 +395,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_unsupport_dtype)
     auto target4 = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(target_value);
     auto output4 = TensorDesc({1, 2, 3, 4, 5}, ACL_INT64, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut_4 = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput4, input4, target4, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output4));
+    auto ut_4 = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                          INPUT(gradOutput4, input4, target4, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                          OUTPUT(output4));
 
     aclnnStatus aclRet_4 = ut_4.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet_4, ACLNN_ERR_PARAM_INVALID);
@@ -437,9 +413,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_dimension8)
     int64_t reduction = Sum;
     auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                        OUTPUT(output));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -457,9 +433,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_out_format_invali
     int64_t reduction = Sum;
     auto output = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                        OUTPUT(output));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -477,9 +453,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_unsupport_shape)
     int64_t reduction = Sum;
     auto output = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output));
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                        OUTPUT(output));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -497,9 +473,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_null)
     int64_t reduction = Sum;
     auto output = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut1 = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT((aclTensor*)nullptr, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(output));
+    auto ut1 = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                         INPUT((aclTensor*)nullptr, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                         OUTPUT(output));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -525,9 +501,9 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_null)
     aclRet = ut3.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-    auto ut4 = OP_API_UT(
-        aclnnBinaryCrossEntropyWithLogitsBackward,
-        INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction), OUTPUT(nullptr));
+    auto ut4 = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                         INPUT(gradOutput, input, target, (aclTensor*)nullptr, (aclTensor*)nullptr, reduction),
+                         OUTPUT(nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     aclRet = ut4.TestGetWorkspaceSize(&workspace_size);
@@ -549,9 +525,8 @@ TEST_F(l2_binary_cross_entropy_with_logits_backward_test, case_bf16_reduce_valid
 
     vector<int64_t> reductions{None, Mean, Sum};
     for (auto reduction : reductions) {
-        auto ut = OP_API_UT(
-            aclnnBinaryCrossEntropyWithLogitsBackward, INPUT(gradOutput, input, target, weight, posWeight, reduction),
-            OUTPUT(output));
+        auto ut = OP_API_UT(aclnnBinaryCrossEntropyWithLogitsBackward,
+                            INPUT(gradOutput, input, target, weight, posWeight, reduction), OUTPUT(output));
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         auto curSoc = op::GetCurrentPlatformInfo().GetSocVersion();

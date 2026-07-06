@@ -46,8 +46,7 @@ struct BaseBlockArgs {
 
 class MatmulFp32BaseBlock {
 public:
-    __aicore__ inline MatmulFp32BaseBlock()
-    {}
+    __aicore__ inline MatmulFp32BaseBlock() {}
     template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
     __aicore__ inline void Init(const void* tilingData);
     __aicore__ inline void UpdateBasicIndex(uint64_t roundIdx, uint64_t blockIdx);
@@ -90,10 +89,10 @@ __aicore__ inline void MatmulFp32BaseBlock::UpdateBasicIndex(uint64_t roundIdx, 
 
 __aicore__ inline void MatmulFp32BaseBlock::UpdateBlockParams()
 {
-    params_.singleCoreM =
-        (params_.mCntIndex == (params_.mCnt - 1)) ? params_.mBaseTail : matmulFp32TilingData_->tCubeTiling.singleCoreM;
-    params_.singleCoreN =
-        (params_.nCntIndex == (params_.nCnt - 1)) ? params_.nBaseTail : matmulFp32TilingData_->tCubeTiling.singleCoreN;
+    params_.singleCoreM = (params_.mCntIndex == (params_.mCnt - 1)) ? params_.mBaseTail :
+                                                                      matmulFp32TilingData_->tCubeTiling.singleCoreM;
+    params_.singleCoreN = (params_.nCntIndex == (params_.nCnt - 1)) ? params_.nBaseTail :
+                                                                      matmulFp32TilingData_->tCubeTiling.singleCoreN;
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
@@ -102,12 +101,12 @@ __aicore__ inline void MatmulFp32BaseBlock::CalcGMOffset()
     if (params_.isTransposeA) {
         offset_.offsetA = params_.mCntIndex * matmulFp32TilingData_->tCubeTiling.singleCoreM;
     } else {
-        offset_.offsetA =
-            params_.mCntIndex * matmulFp32TilingData_->tCubeTiling.singleCoreM * matmulFp32TilingData_->tCubeTiling.Ka;
+        offset_.offsetA = params_.mCntIndex * matmulFp32TilingData_->tCubeTiling.singleCoreM *
+                          matmulFp32TilingData_->tCubeTiling.Ka;
     }
     if (params_.isTransposeB) {
-        offset_.offsetB =
-            params_.nCntIndex * matmulFp32TilingData_->tCubeTiling.singleCoreN * matmulFp32TilingData_->tCubeTiling.Kb;
+        offset_.offsetB = params_.nCntIndex * matmulFp32TilingData_->tCubeTiling.singleCoreN *
+                          matmulFp32TilingData_->tCubeTiling.Kb;
     } else {
         offset_.offsetB = params_.nCntIndex * matmulFp32TilingData_->tCubeTiling.singleCoreN;
     }

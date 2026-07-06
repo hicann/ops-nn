@@ -29,7 +29,7 @@ public:
      * @brief Constructor
      * @param [in] opDesc: op description
      */
-    explicit OpRunner(OperatorDesc *opDesc);
+    explicit OpRunner(OperatorDesc* opDesc);
 
     /**
      * @brief Destructor
@@ -94,13 +94,13 @@ public:
      * @return host address of the input
      */
     template <typename T>
-    T *GetInputBuffer(size_t index)
+    T* GetInputBuffer(size_t index)
     {
         if (index >= numInputs_) {
             ERROR_LOG("index out of range. index = %zu, numInputs = %zu", index, numInputs_);
             return nullptr;
         }
-        return reinterpret_cast<T *>(hostInputs_[index]);
+        return reinterpret_cast<T*>(hostInputs_[index]);
     }
 
     /**
@@ -110,14 +110,14 @@ public:
      * @return host address of the output
      */
     template <typename T>
-    const T *GetOutputBuffer(size_t index)
+    const T* GetOutputBuffer(size_t index)
     {
         if (index >= numOutputs_) {
             ERROR_LOG("index out of range. index = %zu, numOutputs = %zu", index, numOutputs_);
             return nullptr;
         }
 
-        return reinterpret_cast<T *>(hostOutputs_[index]);
+        return reinterpret_cast<T*>(hostOutputs_[index]);
     }
 
     /**
@@ -141,20 +141,20 @@ public:
 private:
     size_t numInputs_;
     size_t numOutputs_;
-    void *workspace_;
+    void* workspace_;
 
-    std::vector<aclDataBuffer *> inputBuffers_;
-    std::vector<aclDataBuffer *> outputBuffers_;
+    std::vector<aclDataBuffer*> inputBuffers_;
+    std::vector<aclDataBuffer*> outputBuffers_;
 
-    std::vector<void *> devInputs_;
-    std::vector<void *> devOutputs_;
+    std::vector<void*> devInputs_;
+    std::vector<void*> devOutputs_;
 
-    std::vector<void *> hostInputs_;
-    std::vector<void *> hostOutputs_;
+    std::vector<void*> hostInputs_;
+    std::vector<void*> hostOutputs_;
 
-    std::vector<aclTensor *> inputTensor_;
-    std::vector<aclTensor *> outputTensor_;
-    OperatorDesc *opDesc_;
+    std::vector<aclTensor*> inputTensor_;
+    std::vector<aclTensor*> outputTensor_;
+    OperatorDesc* opDesc_;
 };
 
-#endif  // OP_RUNNER_H
+#endif // OP_RUNNER_H

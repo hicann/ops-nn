@@ -22,19 +22,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void gemma_rms_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void gemma_rms_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd,
+                                                     GM_ADDR workspace, GM_ADDR tiling);
 
 class gemma_rms_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "gemma_rms_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "gemma_rms_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "gemma_rms_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "gemma_rms_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(gemma_rms_norm_test, test_case_0)

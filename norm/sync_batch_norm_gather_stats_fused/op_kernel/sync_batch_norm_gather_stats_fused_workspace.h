@@ -28,10 +28,10 @@ class SyncBatchNormGatherStatsFusedWorkspace {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedWorkspace(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar, GM_ADDR meanAllOut,
-        GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut, GM_ADDR workspace,
-        const SyncBatchNormGatherStatsFusedTilingDataWorkspace* tilingData, TPipe& pipeIn)
+    __aicore__ inline void Init(GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar,
+                                GM_ADDR meanAllOut, GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut,
+                                GM_ADDR workspace, const SyncBatchNormGatherStatsFusedTilingDataWorkspace* tilingData,
+                                TPipe& pipeIn)
     {
         pipe = pipeIn;
         nLength = tilingData->nLength;

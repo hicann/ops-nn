@@ -45,8 +45,8 @@ void CalL1TilingDefault(const MatmulV3CompileInfo& compileInfo, const MatMulV3Ar
         }
         bool condNoRes = resKL1 == 0;
         bool condKAlign256B = curKL1 % (BASIC_BLOCK_K_256_BYTE / args.aDtypeSize) == 0;
-        bool condKAlign =
-            resKL1 % kAlignUnit != 0 && (condKAlign256B || (!condKAlign256B && singleMteSize < L1_SINGLE_SIZE_LIMIT));
+        bool condKAlign = resKL1 % kAlignUnit != 0 &&
+                          (condKAlign256B || (!condKAlign256B && singleMteSize < L1_SINGLE_SIZE_LIMIT));
         bool condMteSize = resKL1 % kAlignUnit == 0 && curKL1 % kAlignUnit == 0 && singleMteSize < L1_SINGLE_SIZE_LIMIT;
         if (condNoRes || condKAlign || condMteSize) {
             resKL1 = curKL1;
@@ -62,18 +62,18 @@ void CalL1TilingDefault(const MatmulV3CompileInfo& compileInfo, const MatMulV3Ar
     return;
 }
 
-void CalL1Tiling310P(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+void CalL1Tiling310P(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
     runInfo.stepM = 1UL;
     runInfo.stepN = 1UL;
-    runInfo.depthA1 = 16UL;  // 16 is full use l1 space
-    runInfo.depthB1 = 16UL;  // 16 is full use l1 space
+    runInfo.depthA1 = 16UL; // 16 is full use l1 space
+    runInfo.depthB1 = 16UL; // 16 is full use l1 space
     runInfo.singleCoreM = runInfo.baseM;
     runInfo.singleCoreN = runInfo.baseN;
 
     if (args.aFormat == ge::FORMAT_ND || args.bFormat == ge::FORMAT_ND) {
-        runInfo.depthA1 = 6UL;  // 6为经验值
-        runInfo.depthB1 = 6UL;  // 6为经验值
+        runInfo.depthA1 = 6UL; // 6为经验值
+        runInfo.depthB1 = 6UL; // 6为经验值
     }
     runInfo.stepKa = runInfo.depthA1 / DB_SIZE;
     runInfo.stepKb = runInfo.depthB1 / DB_SIZE;
@@ -98,18 +98,18 @@ void CalL1Tiling310P(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args 
     return;
 }
 
-using CalL1TilingFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
+using CalL1TilingFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
 
 const static std::map<NpuArch, CalL1TilingFunc> CalL1TilingFuncMap = {
     {NpuArch::DAV_2002, CalL1Tiling310P},
 };
 
 // ------------------------------ ResetBase -------------------------------------------//
-void ResetBaseDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+void ResetBaseDefault(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
     runInfo.usedCoreNum = compileInfo.aicNum;
     runInfo.baseM = BASIC_BLOCK_SIZE_128;
-    runInfo.baseN = BASIC_BLOCK_SIZE_256;  // 256 is better base
+    runInfo.baseN = BASIC_BLOCK_SIZE_256; // 256 is better base
     runInfo.baseK = BASIC_BLOCK_K_128_BYTE / args.aDtypeSize;
     runInfo.stepM = BASE_STEP;
     runInfo.stepN = BASE_STEP;
@@ -124,28 +124,28 @@ void ResetBaseDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args
     runInfo.tailInfo.nTailMain = INIT_SPLIT_VALUE;
 }
 
-void ResetBaseDav3510(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+void ResetBaseDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
     ResetBaseDefault(compileInfo, args, runInfo);
     runInfo.baseM = BASIC_BLOCK_SIZE_256;
     runInfo.singleCoreM = runInfo.baseM;
 }
 
-using ResetBaseFunc = void (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, MatMulV3RunInfo &);
+using ResetBaseFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
 
 const static std::map<NpuArch, ResetBaseFunc> ResetBaseFuncMap = {
     {NpuArch::DAV_3510, ResetBaseDav3510},
 };
 
 // ------------------------------ GetL0C2Out -------------------------------------------//
-MatMulV3L0C2Out GetL0C2OutDefault(const MatmulV3CompileInfo & /* compileInfo */, const MatMulV3Args & /* args */,
-                              const MatMulV3RunInfo & /* runInfo */)
+MatMulV3L0C2Out GetL0C2OutDefault(const MatmulV3CompileInfo& /* compileInfo */, const MatMulV3Args& /* args */,
+                                  const MatMulV3RunInfo& /* runInfo */)
 {
     return MatMulV3L0C2Out::ON_THE_FLY;
 }
 
-MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
-                                const MatMulV3RunInfo &runInfo)
+MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                  const MatMulV3RunInfo& runInfo)
 {
     bool isValidMKN = args.kValue <= BASIC_BLOCK_SIZE_256 && args.mValue >= BASIC_BLOCK_SIZE_256;
     uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.singleCoreM);
@@ -165,15 +165,14 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo &compileInfo, const 
     return MatMulV3L0C2Out::ND_FIXPIPE_1_2;
 }
 
-using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo &, const MatMulV3Args &, const MatMulV3RunInfo &);
+using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, const MatMulV3RunInfo&);
 
 const static std::map<NpuArch, GetL0C2OutFunc> GetL0C2OutFuncMap = {
     {NpuArch::DAV_3510, GetL0C2OutDav3510},
 };
 
-uint64_t GetMaxBaseWithLimit(
-    const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-    uint64_t baseMNBufferLimit, uint64_t baseAlignUnit, bool isRightMatrix, bool isMemoryBound)
+uint64_t GetMaxBaseWithLimit(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                             uint64_t baseMNBufferLimit, uint64_t baseAlignUnit, bool isRightMatrix, bool isMemoryBound)
 {
     uint64_t shapeValue = isRightMatrix ? args.nValue : args.mValue;
     // baseK限制，cube bound场景需要掩盖fixp，约束baseK至少128B，其他场景不做约束
@@ -188,17 +187,16 @@ uint64_t GetMaxBaseWithLimit(
         maxBaseBlock = std::min(maxBaseBlock, compileInfo.btSize / DB_SIZE / DATA_SIZE_FP32);
     }
     // K内轴时，要求kL1至少256B对齐,目前batchmatmul固定内轴512B对齐
-    uint64_t kAlignUnit =
-        !args.isATrans || args.isBTrans ?
-            (isMemoryBound && args.batchInfo == nullptr ? BASIC_BLOCK_K_256_BYTE : BASIC_BLOCK_K_512_BYTE) /
-                args.aDtypeSize :
-            BASIC_BLOCK_SIZE_16;
-    uint64_t maxBaseMNWithKInner =
-        compileInfo.l1Size / (NUM_TWO * DB_SIZE * args.aDtypeSize * std::min(kAlignUnit, kAlignValue));
+    uint64_t kAlignUnit = !args.isATrans || args.isBTrans ?
+                              (isMemoryBound && args.batchInfo == nullptr ? BASIC_BLOCK_K_256_BYTE :
+                                                                            BASIC_BLOCK_K_512_BYTE) /
+                                  args.aDtypeSize :
+                              BASIC_BLOCK_SIZE_16;
+    uint64_t maxBaseMNWithKInner = compileInfo.l1Size /
+                                   (NUM_TWO * DB_SIZE * args.aDtypeSize * std::min(kAlignUnit, kAlignValue));
     maxBaseBlock = std::min(maxBaseBlock, maxBaseMNWithKInner);
     // 输入shape约束
-    maxBaseBlock =
-        std::min(ops::CeilAlign(shapeValue, baseAlignUnit), ops::FloorAlign(maxBaseBlock, baseAlignUnit));
+    maxBaseBlock = std::min(ops::CeilAlign(shapeValue, baseAlignUnit), ops::FloorAlign(maxBaseBlock, baseAlignUnit));
     if (shapeValue < baseAlignUnit) {
         maxBaseBlock = std::min(maxBaseBlock, ops::CeilAlign(shapeValue, BASIC_BLOCK_SIZE_16));
     }
@@ -209,8 +207,8 @@ static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCore
 {
     // 考虑尾轮优化负载均衡率，仅针对cubebound场景生效
     uint64_t batch = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
-    uint64_t totalRound =
-        batch * MathUtil::CeilDivision(args.mValue, baseM) * MathUtil::CeilDivision(args.nValue, baseN);
+    uint64_t totalRound = batch * MathUtil::CeilDivision(args.mValue, baseM) *
+                          MathUtil::CeilDivision(args.nValue, baseN);
     uint64_t mainRound = MathUtil::CeilDivision(totalRound, usedCoreNum) - 1;
     uint64_t totalTailSplit = ops::FloorDiv(usedCoreNum, (totalRound - usedCoreNum * mainRound));
     if (args.mValue <= BASIC_BLOCK_SIZE_16) {
@@ -255,8 +253,7 @@ static void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args&
     }
 }
 
-bool PreCheckFullLoad(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                      const MatMulV3RunInfo& runInfo)
+bool PreCheckFullLoad(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, const MatMulV3RunInfo& runInfo)
 {
     uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
     uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
@@ -265,37 +262,36 @@ bool PreCheckFullLoad(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args
     uint64_t bl1Size = nAlignedValue * kAlignedValue * args.bDtypeSize;
     uint64_t biasSize = args.hasBias ? runInfo.baseN * DB_SIZE * GetSizeByDataType(args.biasType) : 0;
     // 全载数据不超过3/4 L1 Buffer
-    return al1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL ||
-        bl1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL;
+    return al1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL || bl1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL;
 }
-}  // namespace
+} // namespace
 
 namespace optiling {
 namespace matmul_v3_advanced {
-void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
-                                     MatMulV3RunInfo &runInfo)
+void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                     MatMulV3RunInfo& runInfo)
 {
-    auto iter = (ResetBaseFuncMap.find(compileInfo.npuArch) == ResetBaseFuncMap.end())
-                    ? ResetBaseDefault
-                    : ResetBaseFuncMap.at(compileInfo.npuArch);
+    auto iter = (ResetBaseFuncMap.find(compileInfo.npuArch) == ResetBaseFuncMap.end()) ?
+                    ResetBaseDefault :
+                    ResetBaseFuncMap.at(compileInfo.npuArch);
     iter(compileInfo, args, runInfo);
 }
 
-void MatMulV3TilingHelper::CalL1Tiling(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
-                                       MatMulV3RunInfo &runInfo)
+void MatMulV3TilingHelper::CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                       MatMulV3RunInfo& runInfo)
 {
-    auto iter = (CalL1TilingFuncMap.find(compileInfo.npuArch) == CalL1TilingFuncMap.end())
-                    ? CalL1TilingDefault
-                    : CalL1TilingFuncMap.at(compileInfo.npuArch);
+    auto iter = (CalL1TilingFuncMap.find(compileInfo.npuArch) == CalL1TilingFuncMap.end()) ?
+                    CalL1TilingDefault :
+                    CalL1TilingFuncMap.at(compileInfo.npuArch);
     iter(compileInfo, args, runInfo);
 }
 
-MatMulV3L0C2Out MatMulV3TilingHelper::GetL0C2Out(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
-                                                 const MatMulV3RunInfo &runInfo)
+MatMulV3L0C2Out MatMulV3TilingHelper::GetL0C2Out(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                                 const MatMulV3RunInfo& runInfo)
 {
-    auto iter = (GetL0C2OutFuncMap.find(compileInfo.npuArch) == GetL0C2OutFuncMap.end())
-                    ? GetL0C2OutDefault
-                    : GetL0C2OutFuncMap.at(compileInfo.npuArch);
+    auto iter = (GetL0C2OutFuncMap.find(compileInfo.npuArch) == GetL0C2OutFuncMap.end()) ?
+                    GetL0C2OutDefault :
+                    GetL0C2OutFuncMap.at(compileInfo.npuArch);
     return iter(compileInfo, args, runInfo);
 }
 
@@ -307,9 +303,8 @@ bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* contex
     size_t selfDimNum = selfShape.GetDimNum();
     size_t mat2DimNum = mat2Shape.GetDimNum();
     // createView with TensorV2 & storageShape 1d ->  non contiguous
-    return (
-        context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE && selfDimNum == NUM_THREE &&
-        mat2DimNum == NUM_TWO);
+    return (context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE && selfDimNum == NUM_THREE &&
+            mat2DimNum == NUM_TWO);
 }
 
 bool MatMulV3TilingHelper::IsTransposeNonContiguous(const gert::TilingContext* context, uint64_t idx)
@@ -386,18 +381,22 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     double computePower = singleCoreComputePower * compileInfo.aicNum;
 
     // 切K场景，要求输出size同时小于L0C和UB
-    uint64_t baseMNBufferLimit = runInfo.usedCoreNum == compileInfo.aicNum ? compileInfo.l0CSize :
-                                 std::min(compileInfo.l0CSize, compileInfo.ubSize);
+    uint64_t baseMNBufferLimit = runInfo.usedCoreNum == compileInfo.aicNum ?
+                                     compileInfo.l0CSize :
+                                     std::min(compileInfo.l0CSize, compileInfo.ubSize);
 
     uint64_t batchNum = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
-    double l2CacheUsage =
-        std::max(static_cast<double>(batchNum * (args.mValue + args.nValue) * args.kValue * args.aDtypeSize) /
-                compileInfo.l2Size, 1.0);
-    runInfo.cubeBoundEdge =
-        (l2BW / computePower) + l2CacheUsage * (1 - l2BW / hbmBW) * cmr - (1 + l2BW / hbmBW) / args.kValue;
+    double l2CacheUsage = std::max(
+        static_cast<double>(batchNum * (args.mValue + args.nValue) * args.kValue * args.aDtypeSize) /
+            compileInfo.l2Size,
+        1.0);
+    runInfo.cubeBoundEdge = (l2BW / computePower) + l2CacheUsage * (1 - l2BW / hbmBW) * cmr -
+                            (1 + l2BW / hbmBW) / args.kValue;
     uint64_t baseMBest = std::min(ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_256);
-    uint64_t baseNBest = std::max(BASIC_BLOCK_SIZE_16, std::min(ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16),
-                         ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / baseMBest, BASIC_BLOCK_SIZE_16)));
+    uint64_t baseNBest = std::max(
+        BASIC_BLOCK_SIZE_16,
+        std::min(ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16),
+                 ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / baseMBest, BASIC_BLOCK_SIZE_16)));
     double cubeBoundParamBest = (1.0 / baseMBest) + (1.0 / baseNBest);
     bool isMemoryBound = cubeBoundParamBest > runInfo.cubeBoundEdge;
     uint64_t innerAlignUnit = isMemoryBound ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_64;
@@ -406,31 +405,32 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     double fixpBoundEdge = (args.mValue * args.nValue * hbmBW) / ((args.mValue + args.nValue) * l2BW);
     uint64_t baseMAlignUnit = args.isATrans ? innerAlignUnit / args.aDtypeSize : BASIC_BLOCK_SIZE_16;
     uint64_t baseNAlignUnit = (static_cast<double>(args.kValue) < fixpBoundEdge) ?
-        (BASIC_BLOCK_K_256_BYTE / args.bDtypeSize) :
-        (args.isBTrans ? BASIC_BLOCK_SIZE_16 : innerAlignUnit / args.bDtypeSize);
+                                  (BASIC_BLOCK_K_256_BYTE / args.bDtypeSize) :
+                                  (args.isBTrans ? BASIC_BLOCK_SIZE_16 : innerAlignUnit / args.bDtypeSize);
 
     // 计算候选解集的上界
-    uint64_t maxBaseM =
-        GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseMAlignUnit, false, isMemoryBound);
-    uint64_t maxBaseN =
-        GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseNAlignUnit, true, isMemoryBound);
+    uint64_t maxBaseM = GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseMAlignUnit, false, isMemoryBound);
+    uint64_t maxBaseN = GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseNAlignUnit, true, isMemoryBound);
 
     runInfo.baseM = std::max(BASIC_BLOCK_SIZE_16, std::min(maxBaseM, BASIC_BLOCK_SIZE_256));
-    runInfo.baseN = std::max(BASIC_BLOCK_SIZE_16,
+    runInfo.baseN = std::max(
+        BASIC_BLOCK_SIZE_16,
         std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / runInfo.baseM, baseNAlignUnit)));
     runInfo.cubeBoundParam = (1.0 / runInfo.baseM) + (1.0 / runInfo.baseN);
     runInfo.cubeBoundEdge = runInfo.cubeBoundEdge * CUBE_BOUND_RATIO;
     double balanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, runInfo.baseM, runInfo.baseN);
 
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlignUnit) {
-        uint64_t curMaxBaseN = std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM /
-                (PreCheckFullLoad(compileInfo, args, runInfo) ? DB_OFF_SIZE : 1), baseNAlignUnit));
+        uint64_t curMaxBaseN = std::min(
+            maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM /
+                                          (PreCheckFullLoad(compileInfo, args, runInfo) ? DB_OFF_SIZE : 1),
+                                      baseNAlignUnit));
         for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlignUnit) {
             double curCubeBoundParam = (1.0 / curBaseM) + (1.0 / curBaseN);
             double curBalanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, curBaseM, curBaseN);
             // 当前最优解满足负载均衡阈值时，本轮解集无法在计算访存拿到收益时过滤本轮解集
             bool skipCond = balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
-                curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
+                            curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
             if (skipCond) {
                 continue;
             }
@@ -439,7 +439,8 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
             // 综合评选负载均衡和计算访存能力
             bool balanceCond = ((curCubeBoundParam / curBalanceRate) < (runInfo.cubeBoundParam / balanceRate)) ||
                                ((std::abs(curCubeBoundParam / curBalanceRate - runInfo.cubeBoundParam / balanceRate) <
-                                 EPSILON) && curBalanceRate > balanceRate);
+                                 EPSILON) &&
+                                curBalanceRate > balanceRate);
             bool updateCond = cubeBoundCond || balanceCond;
             if (updateCond) {
                 if (cubeBoundCond) {
@@ -486,5 +487,5 @@ double MatMulV3TilingHelper::GetCoreFreq(fe::PlatFormInfos* platformInfo)
     platformInfo->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);
     return std::atoi(freqStr.c_str()) / static_cast<double>(THOUSAND_NUM);
 }
-}  // namespace matmul_v3_advanced
-}  // namespace optiling
+} // namespace matmul_v3_advanced
+} // namespace optiling

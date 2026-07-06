@@ -85,7 +85,7 @@ uint64_t Lcm(const uint64_t valueA, const uint64_t valueB)
     return (static_cast<uint64_t>(valueA) * valueB) / para2;
 }
 
-void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList)
+void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList)
 {
     uint64_t sqrtMax = static_cast<uint64_t>(sqrt(num));
     for (uint64_t i = 1; i <= sqrtMax; ++i) {
@@ -102,7 +102,7 @@ void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint6
     sort(resList.begin(), resList.end());
 }
 
-void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList)
+void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t>& resList)
 {
     CalcCommFactor(num, numMax, resList);
     for (uint64_t i = 2; i <= std::min(num, numMax); i *= CONST_VALUE_2) {
@@ -113,12 +113,12 @@ void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std
     sort(resList.begin(), resList.end());
 }
 
-void CalcCommFactorOfTwoNum(const uint64_t num1, const uint64_t num2, std::vector<uint64_t> &resList)
+void CalcCommFactorOfTwoNum(const uint64_t num1, const uint64_t num2, std::vector<uint64_t>& resList)
 {
     uint64_t minNum = std::min(num1, num2);
     for (uint64_t i = 1; i <= minNum; ++i) {
         if (num1 % i == 0 && num2 % i == 0) {
-                resList.emplace_back(i);
+            resList.emplace_back(i);
         }
     }
     sort(resList.begin(), resList.end());
@@ -172,7 +172,8 @@ int64_t FindMaxProductUnderLimit(int64_t a, int64_t limit)
     return mutiple - 1;
 }
 
-uint64_t DivideAndAlign(uint64_t num, uint64_t b, uint64_t c) {
+uint64_t DivideAndAlign(uint64_t num, uint64_t b, uint64_t c)
+{
     if (c == 0) {
         return num;
     }

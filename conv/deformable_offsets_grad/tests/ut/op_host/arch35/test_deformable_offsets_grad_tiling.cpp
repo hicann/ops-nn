@@ -24,15 +24,9 @@ using namespace ge;
 
 class DeformableOffsetsGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeformableOffsetsGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeformableOffsetsGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeformableOffsetsGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeformableOffsetsGradTiling TearDown" << std::endl; }
 };
 
 TEST_F(DeformableOffsetsGradTiling, deformable_offsets_grad_test_0)
@@ -50,21 +44,21 @@ TEST_F(DeformableOffsetsGradTiling, deformable_offsets_grad_test_0)
             {{{72, 1, 9, 240}, {72, 1, 9, 240}}, ge::DT_FLOAT16, ge::FORMAT_NHWC},
         },
         {
-            gert::TilingContextPara::OpAttr(
-                "strides", Ops::Cv::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 1})),
+            gert::TilingContextPara::OpAttr("strides",
+                                            Ops::Cv::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 1})),
             gert::TilingContextPara::OpAttr("pads", Ops::Cv::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})),
             gert::TilingContextPara::OpAttr("ksize", Ops::Cv::AnyValue::CreateFrom<std::vector<int64_t>>({2, 5})),
-            gert::TilingContextPara::OpAttr(
-                "dilations", Ops::Cv::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 1, 1})),
+            gert::TilingContextPara::OpAttr("dilations",
+                                            Ops::Cv::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 1, 1})),
             gert::TilingContextPara::OpAttr("data_format", Ops::Cv::AnyValue::CreateFrom<string>("NHWC")),
             gert::TilingContextPara::OpAttr("deformable_groups", Ops::Cv::AnyValue::CreateFrom<int64_t>(8)),
             gert::TilingContextPara::OpAttr("modulated", Ops::Cv::AnyValue::CreateFrom<bool>(true)),
         },
         &compileInfo);
     uint64_t expectTilingKey = 1001;
-    string expectTilingData =
-        "274877907945 274877907008 8589934593 4294967298 8589934593 21474836482 274877907016 4294967313 38654705665 "
-        "3478923509768 5257039970304 10436770529280 336450558099456 155520 ";
+    string expectTilingData = "274877907945 274877907008 8589934593 4294967298 8589934593 21474836482 274877907016 "
+                              "4294967313 38654705665 "
+                              "3478923509768 5257039970304 10436770529280 336450558099456 155520 ";
     std::vector<size_t> expectWorkspaces = {16777216};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }

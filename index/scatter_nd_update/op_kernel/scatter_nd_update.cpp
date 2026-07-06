@@ -23,9 +23,9 @@
 using namespace ScatterNdUpdate;
 
 template <typename VarT, template <typename, bool> class ScatterKernelT>
-__aicore__ inline void RunScatterAfterSync(
-    GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace,
-    const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
+__aicore__ inline void RunScatterAfterSync(GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace,
+                                           const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe,
+                                           bool isView)
 {
     AscendC::SyncAll();
     tpipe.Destroy();
@@ -40,9 +40,9 @@ __aicore__ inline void RunScatterAfterSync(
 }
 
 template <typename VarT, bool IsSort, typename IndexT, template <typename, bool> class ScatterKernelT>
-__aicore__ inline void RunLinearIndexAndScatter(
-    GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace,
-    const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
+__aicore__ inline void RunLinearIndexAndScatter(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace,
+                                                const ScatterNdUpdateArch32TilingData& tilingData,
+                                                AscendC::TPipe& tpipe, bool isView)
 {
     ScatterNdUpdate::LinearIndexKernel<IsSort, IndexT> op1(indices, workspace, tilingData, tpipe);
     op1.Process();
@@ -50,9 +50,9 @@ __aicore__ inline void RunLinearIndexAndScatter(
 }
 
 template <typename VarT>
-__aicore__ inline void RunLargeIndex(
-    GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
-    const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
+__aicore__ inline void RunLargeIndex(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
+                                     const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe,
+                                     bool isView)
 {
     if (isView) {
         ScatterNdUpdate::LargeIndexKernel<VarT, true> op(indices, updates, varRef, tilingData, tpipe);
@@ -65,24 +65,21 @@ __aicore__ inline void RunLargeIndex(
 
 #if defined(HIGH_PERFORMANCE) && HIGH_PERFORMANCE == 1
 template <typename VarT, typename IndicesT>
-__aicore__ inline void RunHp(
-    GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
-    const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
+__aicore__ inline void RunHp(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
+                             const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
 {
     if (isView) {
-        ScatterNdUpdate::ScatterNdUpdateHpKernel<VarT, IndicesT, true> op(
-            indices, updates, varRef, tilingData, tpipe);
+        ScatterNdUpdate::ScatterNdUpdateHpKernel<VarT, IndicesT, true> op(indices, updates, varRef, tilingData, tpipe);
         op.Process();
     } else {
-        ScatterNdUpdate::ScatterNdUpdateHpKernel<VarT, IndicesT, false> op(
-            indices, updates, varRef, tilingData, tpipe);
+        ScatterNdUpdate::ScatterNdUpdateHpKernel<VarT, IndicesT, false> op(indices, updates, varRef, tilingData, tpipe);
         op.Process();
     }
 }
 #endif
 
-extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                                      GM_ADDR varRef, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
+                                                        GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;

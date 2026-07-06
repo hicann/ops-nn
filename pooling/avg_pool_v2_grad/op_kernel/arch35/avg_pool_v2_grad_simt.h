@@ -30,7 +30,7 @@ using namespace AscendC;
 namespace AvgPoolV2GradSimtNamespace {
 using namespace AvgPoolV2Grad;
 
-constexpr size_t PARAM_NUM = 8; // 8 * 4 = 32B align
+constexpr size_t PARAM_NUM = 8;        // 8 * 4 = 32B align
 constexpr size_t TILING_DATA_NUM = 16; // 16 * 4 = 64B align
 
 constexpr size_t MAGIC_W_IDX = 0;
@@ -77,8 +77,7 @@ private:
 };
 
 template <typename VALUE_T, typename IDX_T, uint32_t FORMAT_T, uint32_t COUNTPAD_T, uint32_t DIV_T>
-__aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, DIV_T>::Init(
-    GM_ADDR x, GM_ADDR y)
+__aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, DIV_T>::Init(GM_ADDR x, GM_ADDR y)
 {
     x_.SetGlobalBuffer((__gm__ VALUE_T*)(x));
     y_.SetGlobalBuffer((__gm__ VALUE_T*)(y));
@@ -93,16 +92,15 @@ __aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, D
     Compute();
 }
 
-template <typename VALUE_T, typename IDX_T, typename ACC_VALUE_T, uint32_t FORMAT_T, uint32_t COUNTPAD_T, uint32_t DIV_T>
+template <typename VALUE_T, typename IDX_T, typename ACC_VALUE_T, uint32_t FORMAT_T, uint32_t COUNTPAD_T,
+          uint32_t DIV_T>
 __simt_callee__ __aicore__ inline static void CycleUpdateGradValue(
-    IDX_T channels, IDX_T height, IDX_T width, int32_t pooledWidth,
-    IDX_T phStart, IDX_T phEnd, IDX_T pwStart, IDX_T pwEnd,
-    int32_t strideH, int32_t strideW, int32_t padHL, int32_t padWL, int32_t padHR, int32_t padWR,
-    int32_t kernelH, int32_t kernelW, int32_t divisorOverride, const __gm__ VALUE_T* xDataSlice,
-    ACC_VALUE_T* gradient)
+    IDX_T channels, IDX_T height, IDX_T width, int32_t pooledWidth, IDX_T phStart, IDX_T phEnd, IDX_T pwStart,
+    IDX_T pwEnd, int32_t strideH, int32_t strideW, int32_t padHL, int32_t padWL, int32_t padHR, int32_t padWR,
+    int32_t kernelH, int32_t kernelW, int32_t divisorOverride, const __gm__ VALUE_T* xDataSlice, ACC_VALUE_T* gradient)
 {
-    for (IDX_T i = phStart; i < phEnd ; ++i) {
-        for (IDX_T j = pwStart; j < pwEnd ; ++j) {
+    for (IDX_T i = phStart; i < phEnd; ++i) {
+        for (IDX_T j = pwStart; j < pwEnd; ++j) {
             IDX_T hStart = i * strideH - padHL;
             IDX_T wStart = j * strideW - padWL;
             IDX_T hEnd = min(hStart + kernelH, height + padHR);
@@ -128,21 +126,21 @@ __simt_callee__ __aicore__ inline static void CycleUpdateGradValue(
                 }
             }
             if constexpr (FORMAT_T == FORMAT_NCHW_TYPE) {
-                *gradient += static_cast<ACC_VALUE_T>(xDataSlice[i * pooledWidth + j]) / static_cast<ACC_VALUE_T>(divideFactor);
+                *gradient += static_cast<ACC_VALUE_T>(xDataSlice[i * pooledWidth + j]) /
+                             static_cast<ACC_VALUE_T>(divideFactor);
             } else {
-                *gradient += static_cast<ACC_VALUE_T>(xDataSlice[(i * pooledWidth + j) * channels]) / static_cast<ACC_VALUE_T>(divideFactor);
+                *gradient += static_cast<ACC_VALUE_T>(xDataSlice[(i * pooledWidth + j) * channels]) /
+                             static_cast<ACC_VALUE_T>(divideFactor);
             }
         }
     }
 }
 
-template <typename VALUE_T, typename IDX_T, typename UIDX_T, typename ACC_VALUE_T,
-          uint32_t COUNTPAD_T, uint32_t DIV_T>
+template <typename VALUE_T, typename IDX_T, typename UIDX_T, typename ACC_VALUE_T, uint32_t COUNTPAD_T, uint32_t DIV_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNchwKernel(
-    const int64_t count, __ubuf__ UIDX_T* simtParam,
-    __ubuf__ int32_t* tilingDataParam, const __gm__ VALUE_T* xData,
-    const IDX_T channels, const IDX_T height, const IDX_T width,
-    const IDX_T pooledHeight, const IDX_T pooledWidth, __gm__ VALUE_T* yData)
+    const int64_t count, __ubuf__ UIDX_T* simtParam, __ubuf__ int32_t* tilingDataParam, const __gm__ VALUE_T* xData,
+    const IDX_T channels, const IDX_T height, const IDX_T width, const IDX_T pooledHeight, const IDX_T pooledWidth,
+    __gm__ VALUE_T* yData)
 {
     const auto& magicW = simtParam[MAGIC_W_IDX];
     const auto& shiftW = simtParam[SHIFT_W_IDX];
@@ -161,8 +159,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNch
     const auto& padWR = tilingDataParam[PAD_WR_IDX];
     const auto& divisorOverride = tilingDataParam[DIV_IDX];
 
-    for (IDX_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
-         index = index + gridDim.x * blockDim.x) {
+    for (IDX_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index = index + gridDim.x * blockDim.x) {
         UIDX_T dim0Idx = Simt::UintDiv(static_cast<UIDX_T>(index), magicW, shiftW);
         IDX_T w = index - dim0Idx * static_cast<UIDX_T>(width);
         UIDX_T dim1Idx = Simt::UintDiv(dim0Idx, magicH, shiftH);
@@ -180,20 +177,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNch
         ACC_VALUE_T gradient = 0;
         const __gm__ VALUE_T* xDataSlice = xData + n * pooledHeight * pooledWidth;
         CycleUpdateGradValue<VALUE_T, IDX_T, ACC_VALUE_T, FORMAT_NCHW_TYPE, COUNTPAD_T, DIV_T>(
-                            channels, height, width, pooledWidth, phStart, phEnd, pwStart, pwEnd,
-                            strideH, strideW, padHL, padWL, padHR, padWR,
-                            kernelH, kernelW, divisorOverride, xDataSlice, &gradient);
+            channels, height, width, pooledWidth, phStart, phEnd, pwStart, pwEnd, strideH, strideW, padHL, padWL, padHR,
+            padWR, kernelH, kernelW, divisorOverride, xDataSlice, &gradient);
         yData[index] = static_cast<VALUE_T>(gradient);
     }
 }
 
-template <typename VALUE_T,typename IDX_T, typename UIDX_T, typename ACC_VALUE_T,
-          uint32_t COUNTPAD_T, uint32_t DIV_T>
+template <typename VALUE_T, typename IDX_T, typename UIDX_T, typename ACC_VALUE_T, uint32_t COUNTPAD_T, uint32_t DIV_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNhwcKernel(
-    const int64_t count, __ubuf__ UIDX_T* simtParam,
-    __ubuf__ int32_t* tilingDataParam, const __gm__ VALUE_T* xData,
-    const IDX_T channels, const IDX_T height, const IDX_T width,
-    const IDX_T pooledHeight, const IDX_T pooledWidth, __gm__ VALUE_T* yData)
+    const int64_t count, __ubuf__ UIDX_T* simtParam, __ubuf__ int32_t* tilingDataParam, const __gm__ VALUE_T* xData,
+    const IDX_T channels, const IDX_T height, const IDX_T width, const IDX_T pooledHeight, const IDX_T pooledWidth,
+    __gm__ VALUE_T* yData)
 {
     const auto& magicW = simtParam[MAGIC_W_IDX];
     const auto& shiftW = simtParam[SHIFT_W_IDX];
@@ -212,8 +206,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNhw
     const auto& padWR = tilingDataParam[PAD_WR_IDX];
     const auto& divisorOverride = tilingDataParam[DIV_IDX];
 
-    for (IDX_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
-         index = index + gridDim.x * blockDim.x) {
+    for (IDX_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index = index + gridDim.x * blockDim.x) {
         UIDX_T dim0Idx = Simt::UintDiv(static_cast<UIDX_T>(index), magicC, shiftC);
         IDX_T c = index - dim0Idx * static_cast<UIDX_T>(channels);
         UIDX_T dim1Idx = Simt::UintDiv(dim0Idx, magicW, shiftW);
@@ -232,9 +225,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNhw
         ACC_VALUE_T gradient = 0;
         const __gm__ VALUE_T* xDataSlice = xData + n * channels * pooledHeight * pooledWidth + c;
         CycleUpdateGradValue<VALUE_T, IDX_T, ACC_VALUE_T, FORMAT_NHWC_TYPE, COUNTPAD_T, DIV_T>(
-                            channels, height, width, pooledWidth, phStart, phEnd, pwStart, pwEnd,
-                            strideH, strideW, padHL, padWL, padHR, padWR,
-                            kernelH, kernelW, divisorOverride, xDataSlice, &gradient);
+            channels, height, width, pooledWidth, phStart, phEnd, pwStart, pwEnd, strideH, strideW, padHL, padWL, padHR,
+            padWR, kernelH, kernelW, divisorOverride, xDataSlice, &gradient);
         yData[index] = static_cast<VALUE_T>(gradient);
     }
 }
@@ -286,7 +278,7 @@ __aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, D
     simtParam.SetValue(SHIFT_H_IDX, static_cast<UIDX_T>(shiftH));
     simtParam.SetValue(MAGIC_C_IDX, static_cast<UIDX_T>(magicC));
     simtParam.SetValue(SHIFT_C_IDX, static_cast<UIDX_T>(shiftC));
-    
+
     LocalTensor<int32_t> tilingDataParam = tilingDataBuf_.Get<int32_t>();
     tilingDataParam.SetValue(KERNEL_H_IDX, static_cast<int32_t>(kH));
     tilingDataParam.SetValue(KERNEL_W_IDX, static_cast<int32_t>(kW));
@@ -301,20 +293,16 @@ __aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, D
 
     if constexpr (FORMAT_T == FORMAT_NCHW_TYPE) {
         asc_vf_call<AvgPoolV2GradSimtNchwKernel<VALUE_T, IDX_T, UIDX_T, float, COUNTPAD_T, DIV_T>>(
-            dim3(THREAD_DIM), count,
-            (__ubuf__ UIDX_T*)simtParam.GetPhyAddr(),
-            (__ubuf__ int32_t*)tilingDataParam.GetPhyAddr(),
-            xAddr, inputChannel, inputHeight, inputWidth,
-            pooledHeight, pooledWidth, yAddr);
+            dim3(THREAD_DIM), count, (__ubuf__ UIDX_T*)simtParam.GetPhyAddr(),
+            (__ubuf__ int32_t*)tilingDataParam.GetPhyAddr(), xAddr, inputChannel, inputHeight, inputWidth, pooledHeight,
+            pooledWidth, yAddr);
     } else {
         asc_vf_call<AvgPoolV2GradSimtNhwcKernel<VALUE_T, IDX_T, UIDX_T, float, COUNTPAD_T, DIV_T>>(
-            dim3(THREAD_DIM), count,
-            (__ubuf__ UIDX_T*)simtParam.GetPhyAddr(),
-            (__ubuf__ int32_t*)tilingDataParam.GetPhyAddr(),
-            xAddr, inputChannel, inputHeight, inputWidth,
-            pooledHeight, pooledWidth, yAddr);
+            dim3(THREAD_DIM), count, (__ubuf__ UIDX_T*)simtParam.GetPhyAddr(),
+            (__ubuf__ int32_t*)tilingDataParam.GetPhyAddr(), xAddr, inputChannel, inputHeight, inputWidth, pooledHeight,
+            pooledWidth, yAddr);
     }
 }
 
-}
+} // namespace AvgPoolV2GradSimtNamespace
 #endif // CANN_AVG_POOL_V2_GRAD_SIMT_H

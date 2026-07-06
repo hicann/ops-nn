@@ -20,11 +20,11 @@ template <typename yType>
 class Conv3dDwInitOutput {
 public:
     __aicore__ inline Conv3dDwInitOutput() {}
-    __aicore__ inline void Init(GM_ADDR y, const Conv3DBackpropFilterV2TilingData *tilingData)
+    __aicore__ inline void Init(GM_ADDR y, const Conv3DBackpropFilterV2TilingData* tilingData)
     {
         InitTilingData(tilingData);
         // init global buffer
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
+        yGm_.SetGlobalBuffer((__gm__ yType*)y);
         pipe_.InitBuffer(localBuffer_, totalL1Size_);
     }
 
@@ -37,7 +37,8 @@ public:
         }
 
         uint32_t usedCoreNum = GetBlockNum();
-        uint64_t clearSizePerCore = AlignUp((outputSize_ + usedCoreNum - 1) / usedCoreNum, BLOCK_CUBE * BLOCK_CUBE); // Ceil(outputSize_, usedCoreNum)
+        uint64_t clearSizePerCore = AlignUp((outputSize_ + usedCoreNum - 1) / usedCoreNum,
+                                            BLOCK_CUBE * BLOCK_CUBE);          // Ceil(outputSize_, usedCoreNum)
         usedCoreNum = (outputSize_ + clearSizePerCore - 1) / clearSizePerCore; // Ceil(outputSize_, clearSizePerCore)
         if (GetBlockIdx() >= usedCoreNum) {
             SyncAllCores();
@@ -49,9 +50,9 @@ public:
         realClearSize = realClearSize > clearSizePerCore ? clearSizePerCore : realClearSize;
 
         LocalTensor<yType> popBuffer = localBuffer_.template Get<yType>();
-        uint32_t localSize = static_cast<uint64_t>(popBuffer.GetSize()) < realClearSize
-                                 ? popBuffer.GetSize()
-                                 : static_cast<uint32_t>(realClearSize);
+        uint32_t localSize = static_cast<uint64_t>(popBuffer.GetSize()) < realClearSize ?
+                                 popBuffer.GetSize() :
+                                 static_cast<uint32_t>(realClearSize);
         constexpr uint16_t MAX_BLOCK_NUM = (1 << 15) - 1;
         uint16_t repeatTime = Ceil(localSize * sizeof(yType) / ONE_BLK_SIZE, MAX_BLOCK_NUM);
         uint16_t blockNum = Ceil(localSize * sizeof(yType) / ONE_BLK_SIZE, repeatTime);
@@ -86,10 +87,7 @@ public:
         CrossCoreWaitFlag(SYNC_AIC_FLAG);
     }
 
-    __aicore__ inline void Destroy()
-    {
-        pipe_.Destroy();
-    }
+    __aicore__ inline void Destroy() { pipe_.Destroy(); }
 
 protected:
     uint32_t totalL1Size_;
@@ -98,7 +96,7 @@ protected:
     TBuf<TPosition::TSCM> localBuffer_;
     GlobalTensor<yType> yGm_;
 
-    __aicore__ inline void InitTilingData(const Conv3DBackpropFilterV2TilingData *tilingData)
+    __aicore__ inline void InitTilingData(const Conv3DBackpropFilterV2TilingData* tilingData)
     {
         totalL1Size_ = tilingData->params.totalL1Size;
         uint32_t cout1 = tilingData->dwTiling.cout1G;
@@ -109,6 +107,6 @@ protected:
         outputSize_ = mSize * nSize * tilingData->dwTiling.group;
     }
 };
-}  // namespace AscendC
+} // namespace AscendC
 
-#endif  // CONV3D_BACKPROP_FILTER_V2_INIT_OUTPUT_H
+#endif // CONV3D_BACKPROP_FILTER_V2_INIT_OUTPUT_H

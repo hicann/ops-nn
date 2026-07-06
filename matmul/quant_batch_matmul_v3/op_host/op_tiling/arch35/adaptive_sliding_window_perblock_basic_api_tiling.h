@@ -22,8 +22,8 @@ namespace optiling {
 class AdaptiveSlidingWindowPerblockBasicAPITiling : public AdaptiveSlidingWindowTiling {
 public:
     explicit AdaptiveSlidingWindowPerblockBasicAPITiling(gert::TilingContext* context);
-    AdaptiveSlidingWindowPerblockBasicAPITiling(
-        gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
+    AdaptiveSlidingWindowPerblockBasicAPITiling(gert::TilingContext* context,
+                                                DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
     ~AdaptiveSlidingWindowPerblockBasicAPITiling() override = default;
 
     ge::graphStatus DoLibApiTiling() override;

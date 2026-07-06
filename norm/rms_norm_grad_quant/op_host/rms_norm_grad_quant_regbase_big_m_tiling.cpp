@@ -72,15 +72,13 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DoOpTiling()
 
 ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTiling()
 {
-    OP_TILING_CHECK(
-        DgammaDoTilingStg0() != ge::GRAPH_SUCCESS,
-        OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 0 failed."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(DgammaDoTilingStg0() != ge::GRAPH_SUCCESS,
+                    OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 0 failed."),
+                    return ge::GRAPH_PARAM_INVALID);
 
-    OP_TILING_CHECK(
-        DgammaDoTilingStg1() != ge::GRAPH_SUCCESS,
-        OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 1 failed."),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(DgammaDoTilingStg1() != ge::GRAPH_SUCCESS,
+                    OP_LOGI(context_->GetNodeName(), "Big M template dgamma do tiling stage 1 failed."),
+                    return ge::GRAPH_PARAM_INVALID);
 
     OP_LOGD(context_->GetNodeName(), "Big M template dgamma tiling success.");
 
@@ -110,8 +108,8 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTilingStg0()
     int64_t cacheBufferCountMainBlock = 1;
     int64_t resultCacheIDMainBlock = 0;
     if (basicBlockLoopMainBlock != 0) {
-        cacheBufferCountMainBlock =
-            ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
+        cacheBufferCountMainBlock = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopMainBlock)));
         resultCacheIDMainBlock = GetCacheID(basicBlockLoopMainBlock - 1);
     }
 
@@ -124,8 +122,8 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTilingStg0()
     int64_t cacheBufferCountTailBlock = 1;
     int64_t resultCacheIDTailBlock = 0;
     if (basicBlockLoopTailBlock != 0) {
-        cacheBufferCountTailBlock =
-            ULONG_BIT_LEN - static_cast<int64_t>(__builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
+        cacheBufferCountTailBlock = ULONG_BIT_LEN - static_cast<int64_t>(
+                                                        __builtin_clzl(static_cast<uint64_t>(basicBlockLoopTailBlock)));
         resultCacheIDTailBlock = GetCacheID(basicBlockLoopTailBlock - 1);
     }
 
@@ -137,14 +135,12 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTilingStg0()
     int64_t nFactorMax = (ubSize_ - mFactorBlockAligned * sizeof(float) * CONST_THREE) /
                          (mFactorBlockAligned * (CONST_SIX * dyDtypeSize + sizeof(float)) +
                           sizeof(float) * (CONST_THREE + cacheBufferCountMainBlock));
-    OP_TILING_CHECK(
-        nFactorMax < blockSize_ / gammaDefaultNfactor,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "Big M template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
-            "nFactorMax: %ld.",
-            rows_, cols_, ubSize_, nFactorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(nFactorMax < blockSize_ / gammaDefaultNfactor,
+                    OP_LOGI(context_->GetNodeName(),
+                            "Big M template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
+                            "nFactorMax: %ld.",
+                            rows_, cols_, ubSize_, nFactorMax),
+                    return ge::GRAPH_PARAM_INVALID);
 
     int64_t dyBlockLen = blockSize_ / dyDtypeSize;
     int64_t nFactorBlockAligned = Ops::Base::FloorAlign(nFactorMax, dyBlockLen);
@@ -191,9 +187,8 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DgammaDoTilingStg1()
 
     OP_TILING_CHECK(
         aInnerMax < blockLen,
-        OP_LOGI(
-            context_->GetNodeName(), "Big M template is not capable for dgamma compute,  aInnerMax in stage1 is %ld .",
-            aInnerMax),
+        OP_LOGI(context_->GetNodeName(),
+                "Big M template is not capable for dgamma compute,  aInnerMax in stage1 is %ld .", aInnerMax),
         return ge::GRAPH_PARAM_INVALID);
 
     int64_t aInnerMaxAligned = Ops::Base::FloorAlign(aInnerMax, blockLen);
@@ -229,7 +224,7 @@ ge::graphStatus RmsNormGradQuantBigMTiling::GetWorkspaceSize()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     workspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
-    
+
     int64_t wsSize = usedCoreNumDgamma_ * cols_ * sizeof(float) + workspaceSize_;
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
@@ -239,25 +234,23 @@ ge::graphStatus RmsNormGradQuantBigMTiling::GetWorkspaceSize()
 
 ge::graphStatus RmsNormGradQuantBigMTiling::PostTiling()
 {
-    int64_t usedCoreNums = usedCoreNumDx_ > usedCoreNumDgamma_ ? usedCoreNumDx_ : usedCoreNumDgamma_; // usedCoreNumDx_ 为0？
+    int64_t usedCoreNums = usedCoreNumDx_ > usedCoreNumDgamma_ ? usedCoreNumDx_ :
+                                                                 usedCoreNumDgamma_; // usedCoreNumDx_ 为0？
     context_->SetBlockDim(usedCoreNums);
     context_->SetScheduleMode(1); // Set to batch mode, all cores start simultaneously
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %lu.", aivCoreNum_);
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(tilingData_) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(tilingData_),
-            rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(tilingData_) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(tilingData_), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&tilingData_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData_)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData_)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(tilingData_));
     return ge::GRAPH_SUCCESS;
 }

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #ifndef RMS_NORM_DYNAMIC_QUANT_TILING_DEF_H_
@@ -42,30 +43,30 @@ struct RmsNormDynamicQuantTilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                       \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                     \
     RmsNormDynamicQuantTilingData tilingData;                                          \
     INIT_TILING_DATA(RmsNormDynamicQuantTilingData, tilingDataPointer, tilingPointer); \
-    (tilingData).useCore = tilingDataPointer->useCore;                                    \
-    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                            \
-    (tilingData).numLastDim = tilingDataPointer->numLastDim;                              \
-    (tilingData).numLastDimAligned = tilingDataPointer->numLastDimAligned;                \
-    (tilingData).firstDimPerCore = tilingDataPointer->firstDimPerCore;                    \
-    (tilingData).firstDimPerCoreTail = tilingDataPointer->firstDimPerCoreTail;            \
-    (tilingData).firstDimPerLoop = tilingDataPointer->firstDimPerLoop;                    \
-    (tilingData).lastDimLoopNum = tilingDataPointer->lastDimLoopNum;                      \
-    (tilingData).lastDimSliceLen = tilingDataPointer->lastDimSliceLen;                    \
-    (tilingData).lastDimSliceLenTail = tilingDataPointer->lastDimSliceLenTail;            \
-    (tilingData).smoothNum1 = tilingDataPointer->smoothNum1;                              \
-    (tilingData).epsilon = tilingDataPointer->epsilon;                                    \
-    (tilingData).avgFactor = tilingDataPointer->avgFactor;                                \
-    (tilingData).outQuant1Flag = tilingDataPointer->outQuant1Flag;                        \
+    (tilingData).useCore = tilingDataPointer->useCore;                                 \
+    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                         \
+    (tilingData).numLastDim = tilingDataPointer->numLastDim;                           \
+    (tilingData).numLastDimAligned = tilingDataPointer->numLastDimAligned;             \
+    (tilingData).firstDimPerCore = tilingDataPointer->firstDimPerCore;                 \
+    (tilingData).firstDimPerCoreTail = tilingDataPointer->firstDimPerCoreTail;         \
+    (tilingData).firstDimPerLoop = tilingDataPointer->firstDimPerLoop;                 \
+    (tilingData).lastDimLoopNum = tilingDataPointer->lastDimLoopNum;                   \
+    (tilingData).lastDimSliceLen = tilingDataPointer->lastDimSliceLen;                 \
+    (tilingData).lastDimSliceLenTail = tilingDataPointer->lastDimSliceLenTail;         \
+    (tilingData).smoothNum1 = tilingDataPointer->smoothNum1;                           \
+    (tilingData).epsilon = tilingDataPointer->epsilon;                                 \
+    (tilingData).avgFactor = tilingDataPointer->avgFactor;                             \
+    (tilingData).outQuant1Flag = tilingDataPointer->outQuant1Flag;                     \
     (tilingData).betaFlag = tilingDataPointer->betaFlag;
 
-#endif  // RMS_NORM_DYNAMIC_QUANT_TILING_DEF_H_
+#endif // RMS_NORM_DYNAMIC_QUANT_TILING_DEF_H_

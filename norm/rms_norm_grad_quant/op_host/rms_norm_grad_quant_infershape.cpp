@@ -33,9 +33,8 @@ static constexpr int RMS_NORM_GRAD_QUANT_ATTR_IDX_DST_TYPE = 2;
 static constexpr int RMS_NORM_GRAD_QUANT_OUTPUT_IDX_DX = 0;
 static constexpr int RMS_NORM_GRAD_QUANT_OUTPUT_IDX_DGAMMA = 1;
 
-static const std::vector<ge::DataType> RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST = {
-    ge::DT_HIFLOAT8, ge::DT_INT8};
-    
+static const std::vector<ge::DataType> RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST = {ge::DT_HIFLOAT8, ge::DT_INT8};
+
 static ge::graphStatus InferShape4RmsNormGradQuant(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShape4RmsNormGradQuant.");
@@ -68,11 +67,9 @@ static graphStatus InferDataType4RmsNormGradQuant(gert::InferDataTypeContext* co
         const int64_t* dstTypePtr = attrs->GetAttrPointer<int64_t>(RMS_NORM_GRAD_QUANT_ATTR_IDX_DST_TYPE);
         if (dstTypePtr != nullptr) {
             dxDtype = static_cast<ge::DataType>(*dstTypePtr);
-            OP_CHECK_IF(
-                std::find(RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST.begin(), RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST.end(), dxDtype) == RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST.end(),
-                OP_LOGE(context,
-                        "attr dst_type only support 2(int8), 34(hifloat8)"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(std::find(RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST.begin(), RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST.end(),
+                                  dxDtype) == RMS_NORM_GRAD_QUANT_OUT_TYPE_LIST.end(),
+                        OP_LOGE(context, "attr dst_type only support 2(int8), 34(hifloat8)"), return ge::GRAPH_FAILED);
         }
     }
     context->SetOutputDataType(RMS_NORM_GRAD_QUANT_OUTPUT_IDX_DX, dxDtype);
@@ -83,5 +80,7 @@ static graphStatus InferDataType4RmsNormGradQuant(gert::InferDataTypeContext* co
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(RmsNormGradQuant).InferShape(InferShape4RmsNormGradQuant).InferDataType(InferDataType4RmsNormGradQuant);
+IMPL_OP_INFERSHAPE(RmsNormGradQuant)
+    .InferShape(InferShape4RmsNormGradQuant)
+    .InferDataType(InferDataType4RmsNormGradQuant);
 } // namespace ops

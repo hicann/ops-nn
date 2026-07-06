@@ -22,20 +22,20 @@ namespace ge {
 * The format must be FRACTAL_NZ, NC1HWC0 or NDC1HWC0.
 * @li deq_scale: A required Tensor. Must be one of the following types: float16,
 * uint64. The format must be NC1HWC0 or NDC1HWC0. If deq_scale is 1D tensor,
-* shape must be same as the last dimension of x. Otherwise the number of 
-* dimensions should be equal to x, the last dimension of shape should be 
+* shape must be same as the last dimension of x. Otherwise the number of
+* dimensions should be equal to x, the last dimension of shape should be
 * the same as x, others must be 1. \n
 
 * @par Attributes:
 * @li sqrt_mode: An optional bool, specifying whether to perform square root
 * on "scale", either "True" or "False". Defaults to "False".
-* @li relu_flag: An optional bool, specifying whether to perform ReLU, 
+* @li relu_flag: An optional bool, specifying whether to perform ReLU,
 * either "True" or "False". Defaults to "False".
 * @li dtype: An optional int32, specifying the output data type. Defaults to "0"
 * , represents dtype "DT_FLOAT". \n
 
 * @par Outputs:
-* y: The dequantized output tensor of type float16 or float32. The format must 
+* y: The dequantized output tensor of type float16 or float32. The format must
 * be FRACTAL_NZ, NC1HWC0 or NDC1HWC0. The shape is same as x. \n
 
 * @par Third-party framework compatibility

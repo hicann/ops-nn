@@ -22,20 +22,20 @@ using namespace std;
 using namespace ge;
 using namespace ut_util;
 
-struct ThresholdGradV2DCompileInfo { uint64_t coreNum; uint64_t ubSize; };
+struct ThresholdGradV2DCompileInfo {
+    uint64_t coreNum;
+    uint64_t ubSize;
+};
 
 class ThresholdGradV2DTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "ThresholdGradV2DTilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "ThresholdGradV2DTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ThresholdGradV2DTilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ThresholdGradV2DTilingTest TearDown" << std::endl; }
 };
 
 static void InitPlatform(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
-                         map<string, string>& aicoreSpec, map<string, string>& intrinsics, map<string, string>& socVersion)
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string hardwareInfo = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -51,8 +51,8 @@ static void InitPlatform(fe::PlatFormInfos& platFormInfo, map<string, string>& s
 }
 
 static void DoThresholdGradV2DTilingCase(std::initializer_list<int64_t>& inputShape1,
-    std::initializer_list<int64_t>& inputShape2, std::initializer_list<int64_t>& outputShape,
-    ge::DataType inputDtype)
+                                         std::initializer_list<int64_t>& inputShape2,
+                                         std::initializer_list<int64_t>& outputShape, ge::DataType inputDtype)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -77,7 +77,8 @@ static void DoThresholdGradV2DTilingCase(std::initializer_list<int64_t>& inputSh
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr) << "tiling_parse not registered for " << opType;
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -117,63 +118,72 @@ static void DoThresholdGradV2DTilingCase(std::initializer_list<int64_t>& inputSh
     EXPECT_EQ(tilingFunc(tiling_context), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_fp32_2d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_fp32_2d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {2, 128};
     std::initializer_list<int64_t> outputShape = {2, 128};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_fp16_2d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_fp16_2d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {2, 128};
     std::initializer_list<int64_t> outputShape = {2, 128};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT16);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_bf16_2d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_bf16_2d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {2, 128};
     std::initializer_list<int64_t> outputShape = {2, 128};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_BF16);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_int32_2d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_int32_2d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {2, 128};
     std::initializer_list<int64_t> outputShape = {2, 128};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_INT32);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_int8_2d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_int8_2d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {2, 128};
     std::initializer_list<int64_t> outputShape = {2, 128};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_INT8);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_uint8_2d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_uint8_2d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 128};
     std::initializer_list<int64_t> inputShape2 = {2, 128};
     std::initializer_list<int64_t> outputShape = {2, 128};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_UINT8);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_fp32_4d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_fp32_4d)
+{
     std::initializer_list<int64_t> inputShape1 = {2, 4, 8, 16};
     std::initializer_list<int64_t> inputShape2 = {2, 4, 8, 16};
     std::initializer_list<int64_t> outputShape = {2, 4, 8, 16};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_fp16_1d) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_fp16_1d)
+{
     std::initializer_list<int64_t> inputShape1 = {1024};
     std::initializer_list<int64_t> inputShape2 = {1024};
     std::initializer_list<int64_t> outputShape = {1024};
     DoThresholdGradV2DTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT16);
 }
 
-TEST_F(ThresholdGradV2DTilingTest, tiling_failed_unsupported_dtype) {
+TEST_F(ThresholdGradV2DTilingTest, tiling_failed_unsupported_dtype)
+{
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
     map<string, string> aicoreSpec;

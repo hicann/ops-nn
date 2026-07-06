@@ -63,64 +63,64 @@ constexpr int64_t WORKSIZE = 16 * 1024 * 1024; // 16 * 1024 * 1024: 16M LibApiWo
 // singleCoreBatch, singleCoreGroup, singleCoreCout, singleCoreCin, singleCoreHo,
 // al0Pbuffer, bl0Pbuffer, cl0Pbuffer, al1Pbuffer, bl1Pbuffer, baseM, baseK, baseN,
 // stepM, stepN, stepKa, stepKb, iterateOrder}
-const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_B3 {
+const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_B3{
     {"16_20_4_128_128_4_130_130_3_3_3_1_1_1_0_0_0_0_0_0_1_1_1",
-    {20, 1, 1, 1, 1, 1, 16, 1, 1, 64, 192, 128, 2, 2, 1, 2, 2, 64, 64, 256, 1, 1, 8, 8 ,1, 98304}},
+     {20, 1, 1, 1, 1, 1, 16, 1, 1, 64, 192, 128, 2, 2, 1, 2, 2, 64, 64, 256, 1, 1, 8, 8, 1, 98304}},
     {"16_20_8_64_64_8_66_66_3_3_3_1_1_1_0_0_0_0_0_0_1_1_1",
-    {20, 1, 1, 1, 1, 1, 16, 1, 1, 128, 384, 64, 2, 2, 1, 2, 2, 128, 64, 256, 1, 1, 4, 4, 1, 131072}},
+     {20, 1, 1, 1, 1, 1, 16, 1, 1, 128, 384, 64, 2, 2, 1, 2, 2, 128, 64, 256, 1, 1, 4, 4, 1, 131072}},
 };
-const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_B2 {
+const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_B2{
     {"8_20_1_128_128_4_130_130_3_3_3_1_1_1_0_0_0_0_0_0_1_1_1",
-    {2, 1, 1, 1, 6, 2, 80, 1, 1, 16, 96, 22, 2, 2, 2, 2, 1, 16, 16, 864, 1, 1, 176, 44, 1, 112320}},
+     {2, 1, 1, 1, 6, 2, 80, 1, 1, 16, 96, 22, 2, 2, 2, 2, 1, 16, 16, 864, 1, 1, 176, 44, 1, 112320}},
 };
-const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_TMP {
+const std::map<std::string, Ops::NN::Conv::TilingValueDw> TILINGDATA_MAP_TMP{
     {"1_1_1_27_4_1_1_1_336_135_26_53_4_52_151_151_253_253_140_140_1_3_3",
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
 };
 // key:
 // "N_Do_Co1_Ho_Wo_Ci1_Hi_Wi_Dk_Hk_Wk_strideD_strideH_strideW_
 // _padFront_padBack_padUp_padDown_padLeft_padRight_dilationD_dilationH_dilationW_realG_coreNum"
 // value: group_dim
-const std::map<std::string, int32_t> TILINGDATA_MAP_DETERMINISTIC {
+const std::map<std::string, int32_t> TILINGDATA_MAP_DETERMINISTIC{
     {"2_1_1_4096_1_1_4098_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_144_24", {24}},
     {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_32_24", {24}},
     {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_24_24", {24}},
     {"2_1_1_4096_1_1_4098_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_144_20", {18}},
     {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_32_20", {20}},
-    {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_24_20", {20}}
-};
+    {"2_1_1_1024_1_1_1026_1_1_3_1_1_1_1_0_0_0_0_0_0_1_1_1_24_20", {20}}};
 
-int32_t CalcHi(int32_t ho, int32_t stride_h, int32_t kernel_h_dilation, int32_t ori_hi) {
-    return static_cast<int32_t>(std::min(
-        static_cast<int64_t>(ho - 1) * stride_h + kernel_h_dilation, static_cast<int64_t>(ori_hi)));
+int32_t CalcHi(int32_t ho, int32_t stride_h, int32_t kernel_h_dilation, int32_t ori_hi)
+{
+    return static_cast<int32_t>(
+        std::min(static_cast<int64_t>(ho - 1) * stride_h + kernel_h_dilation, static_cast<int64_t>(ori_hi)));
 }
 
-int32_t CalcHo(int64_t k, int32_t wo, const std::string &op_type) {
-  OP_LOGE_IF((k == 0 || wo == 0), 0, op_type, "ho is 0 in CalcHo function.");
-  // 完整K是ho*wo，k可能超int32，但是下面除完以后的wo不可能超int32
-  int32_t ho = static_cast<int32_t>(Ops::Base::CeilDiv(k, static_cast<int64_t>(wo)));
-  if (k % wo == 0 || wo % k == 0) {
-    return ho;
-  } else {
-    return ho + 1;
-  }
+int32_t CalcHo(int64_t k, int32_t wo, const std::string& op_type)
+{
+    OP_LOGE_IF((k == 0 || wo == 0), 0, op_type, "ho is 0 in CalcHo function.");
+    // 完整K是ho*wo，k可能超int32，但是下面除完以后的wo不可能超int32
+    int32_t ho = static_cast<int32_t>(Ops::Base::CeilDiv(k, static_cast<int64_t>(wo)));
+    if (k % wo == 0 || wo % k == 0) {
+        return ho;
+    } else {
+        return ho + 1;
+    }
 }
-}  // namespace
+} // namespace
 
 namespace Ops {
 namespace NN {
 namespace Conv {
 bool Conv3DBackpropFilterV2Tiling::IsSocVersion91095() const
 {
-    return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch
-        == NpuArch::DAV_3510;
+    return context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
 }
 
 void Conv3DBackpropFilterV2Tiling::Reset()
 {
-    OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                                 0, context_->GetRawTilingData()->GetCapacity()) != EOK,
-                        CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
+    OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), 0,
+                             context_->GetRawTilingData()->GetCapacity()) != EOK,
+                    CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return );
     libApiWorkSpaceSize_ = 0U;
     opName_ = nullptr;
 }
@@ -158,8 +158,10 @@ ge::graphStatus Conv3DBackpropFilterV2Tiling::DoOpTiling()
     dtypeByte_ = runInfo_.a_dtype_bytes;
     coreNum_ = context_->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->core_num;
 
-    OP_TILING_CHECK(context_->GetInputDesc(X_INDEX)->GetStorageFormat() == ge::FORMAT_NCDHW,
-        CUBE_INNER_ERR_REPORT(opName_, "Group, FP32, deterministic computing scenarios and 5D format scenarios are mutually exclusive"),
+    OP_TILING_CHECK(
+        context_->GetInputDesc(X_INDEX)->GetStorageFormat() == ge::FORMAT_NCDHW,
+        CUBE_INNER_ERR_REPORT(
+            opName_, "Group, FP32, deterministic computing scenarios and 5D format scenarios are mutually exclusive"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -181,24 +183,24 @@ uint64_t Conv3DBackpropFilterV2Tiling::GetTilingKey() const
 
 ge::graphStatus Conv3DBackpropFilterV2Tiling::GetWorkspaceSize()
 {
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     size_t sysWorkspaceSize = WORKSIZE;
     size_t usrWorkspaceSize = 0;
-    uint64_t dimNum = tilingData_.params.mDim * tilingData_.params.nDim *
-                          tilingData_.params.batchDim * tilingData_.params.kDim *
-                          tilingData_.params.groupDim * tilingData_.params.dkDim;
+    uint64_t dimNum = tilingData_.params.mDim * tilingData_.params.nDim * tilingData_.params.batchDim *
+                      tilingData_.params.kDim * tilingData_.params.groupDim * tilingData_.params.dkDim;
     if (enableDeterministic_) { // enable deterministic calculation
         size_t singleSize = tilingData_.dwTiling.baseM * tilingData_.dwTiling.baseN;
         usrWorkspaceSize = DB_ON * sizeof(int32_t) * dimNum * singleSize;
-    } else if (context_->GetInputDesc(X_INDEX)->GetStorageFormat() == ge::FORMAT_NCDHW) { // Transdata merge and determinstic calculation are mutually exclusive.
+    } else if (context_->GetInputDesc(X_INDEX)->GetStorageFormat() ==
+               ge::FORMAT_NCDHW) { // Transdata merge and determinstic calculation are mutually exclusive.
         auto singleCoreHo = tilingData_.dwTiling.singleCoreHo;
-        uint32_t singleCoreHi = (singleCoreHo - 1) * tilingData_.dwTiling.strideH
-            + (tilingData_.dwTiling.hk - 1) * tilingData_.dwTiling.dilationH + 1;
+        uint32_t singleCoreHi = (singleCoreHo - 1) * tilingData_.dwTiling.strideH +
+                                (tilingData_.dwTiling.hk - 1) * tilingData_.dwTiling.dilationH + 1;
         singleCoreHi = (singleCoreHi < tilingData_.dwTiling.hi) ? singleCoreHi : tilingData_.dwTiling.hi;
         auto singleCoreCin = tilingData_.dwTiling.singleCoreCin;
-        uint64_t singleCoreTransdataSize = singleCoreCin * singleCoreHi * tilingData_.dwTiling.wi
-            * ge::GetSizeByDataType(ge::DT_BF16) * DB_ON;
+        uint64_t singleCoreTransdataSize = singleCoreCin * singleCoreHi * tilingData_.dwTiling.wi *
+                                           ge::GetSizeByDataType(ge::DT_BF16) * DB_ON;
         usrWorkspaceSize = coreNum_ * singleCoreTransdataSize;
     }
     workspaces[0] = sysWorkspaceSize + usrWorkspaceSize;
@@ -210,11 +212,11 @@ ge::graphStatus Conv3DBackpropFilterV2Tiling::PostTiling()
     OP_LOGD(opName_, "final tiling data size: %zu", sizeof(Conv3DBackpropFilterV2TilingData));
 
     OP_TILING_CHECK(sizeof(Conv3DBackpropFilterV2TilingData) % sizeof(uint64_t) != 0,
-                    CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] not aligned to 8", sizeof(Conv3DBackpropFilterV2TilingData)),
+                    CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] not aligned to 8",
+                                          sizeof(Conv3DBackpropFilterV2TilingData)),
                     return ge::GRAPH_FAILED);
-    context_->SetBlockDim(tilingData_.params.mDim * tilingData_.params.nDim *
-                          tilingData_.params.batchDim * tilingData_.params.kDim *
-                          tilingData_.params.groupDim * tilingData_.params.dkDim);
+    context_->SetBlockDim(tilingData_.params.mDim * tilingData_.params.nDim * tilingData_.params.batchDim *
+                          tilingData_.params.kDim * tilingData_.params.groupDim * tilingData_.params.dkDim);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                            &tilingData_, sizeof(Conv3DBackpropFilterV2TilingData));
     if (ret != EOK) {
@@ -226,7 +228,7 @@ ge::graphStatus Conv3DBackpropFilterV2Tiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv3DBackpropFilterV2Tiling::SetShapeTiling(TConv3DDwTiling &dwt)
+void Conv3DBackpropFilterV2Tiling::SetShapeTiling(TConv3DDwTiling& dwt)
 {
     // shape
     dwt.batch = runInfo_.batch;
@@ -235,8 +237,8 @@ void Conv3DBackpropFilterV2Tiling::SetShapeTiling(TConv3DDwTiling &dwt)
     dwt.cout1G = runInfo_.cout1_g;
     dwt.cin1G = runInfo_.cin1_g;
     dwt.dout = runInfo_.dout;
-    dwt.wo = runInfo_.wo;  // dedy o
-    dwt.ho = runInfo_.ho;  // dedy h
+    dwt.wo = runInfo_.wo; // dedy o
+    dwt.ho = runInfo_.ho; // dedy h
     dwt.wi = runInfo_.wi;
     dwt.hi = runInfo_.hi;
     dwt.di = runInfo_.di;
@@ -245,7 +247,7 @@ void Conv3DBackpropFilterV2Tiling::SetShapeTiling(TConv3DDwTiling &dwt)
     dwt.dk = runInfo_.kd;
 }
 
-void Conv3DBackpropFilterV2Tiling::SetAttrTiling(TConv3DDwTiling &dwt)
+void Conv3DBackpropFilterV2Tiling::SetAttrTiling(TConv3DDwTiling& dwt)
 {
     tilingData_.params.totalL1Size = TOTAL_L1_SIZE;
     tilingData_.dwTiling.channelSize = runInfo_.k0;
@@ -290,8 +292,8 @@ int32_t Conv3DBackpropFilterV2Tiling::GetDimFactor(const int64_t& value, const s
     return dimFactor;
 }
 
-void Conv3DBackpropFilterV2Tiling::GetBatchDim(
-    CoreDimDw& coreDim, int32_t dMaxFactor, int32_t batchDepthMaxFactor) const
+void Conv3DBackpropFilterV2Tiling::GetBatchDim(CoreDimDw& coreDim, int32_t dMaxFactor,
+                                               int32_t batchDepthMaxFactor) const
 {
     coreDim.dDim = MathUtil::GetGcd(dMaxFactor, batchDepthMaxFactor);
     coreDim.batchDim = batchDepthMaxFactor / coreDim.dDim;
@@ -331,9 +333,9 @@ void Conv3DBackpropFilterV2Tiling::GetCoreDim(CoreDimDw& coreDim, uint32_t curCo
     int32_t singleCoreCin = Ops::Base::CeilDiv(runInfo_.cin1_g, remainFactor) * BLOCK_CUBE;
     int32_t nDim = Ops::Base::CeilDiv(runInfo_.cin1_g * BLOCK_CUBE, singleCoreCin);
     bool kSplit = maxK >= static_cast<int64_t>(remainFactor) * (BEST_BASE_K / dtypeByte_) &&
-                    runInfo_.ho >= remainFactor && kDim == remainFactor;
+                  runInfo_.ho >= remainFactor && kDim == remainFactor;
     bool nSplit = maxN >= remainFactor * static_cast<int64_t>(BEST_BASE_N) && runInfo_.ci1 >= remainFactor &&
-                    nDim == remainFactor;
+                  nDim == remainFactor;
     // 两个else if的意义：首先希望从iter大的轴去切，但是泛化场景中，有些case是由于wo或者kh kw很大使得该轴iter很大，
     // 可以切分的ho cin反而不满足切分条件
     if (iterK >= iterN) {
@@ -360,7 +362,7 @@ void Conv3DBackpropFilterV2Tiling::SetTilingParamByDimInfo(TilingValueDw& tiling
 {
     // singleCore
     tilingParams.singleCoreBatch = static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.batch, coreDim.batchDim)) *
-                                    Ops::Base::CeilDiv(runInfo_.dout, coreDim.dDim);
+                                   Ops::Base::CeilDiv(runInfo_.dout, coreDim.dDim);
     tilingParams.singleCoreGroup = 1;
     tilingParams.singleCoreDk = 1;
     tilingParams.singleCoreCout = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.cout1_g), coreDim.mDim) * BLOCK_CUBE;
@@ -370,8 +372,8 @@ void Conv3DBackpropFilterV2Tiling::SetTilingParamByDimInfo(TilingValueDw& tiling
     tilingParams.batchDim = coreDim.batchDim * coreDim.dDim;
     tilingParams.groupDim = 1;
     tilingParams.dkDim = 1;
-    tilingParams.mDim =
-        Ops::Base::CeilDiv(runInfo_.cout1_g * BLOCK_CUBE, static_cast<int32_t>(tilingParams.singleCoreCout));
+    tilingParams.mDim = Ops::Base::CeilDiv(runInfo_.cout1_g * BLOCK_CUBE,
+                                           static_cast<int32_t>(tilingParams.singleCoreCout));
     tilingParams.kDim = Ops::Base::CeilDiv(runInfo_.ho, static_cast<int32_t>(tilingParams.singleCoreHo));
     tilingParams.nDim = Ops::Base::CeilDiv(runInfo_.cin1_g * BLOCK_CUBE, singleCoreCin);
 }
@@ -388,8 +390,8 @@ void Conv3DBackpropFilterV2Tiling::InitCalTilingValue(TilingValueDw& tilingParam
     tilingParams.stepKa = tbeTiling_.k_al1 / tbeTiling_.k_l0;
     tilingParams.stepKb = tbeTiling_.k_bl1 / tbeTiling_.k_l0;
     // pingpong buffer
-    tilingParams.al0Pbuffer = DB_ON;  // 默认开
-    tilingParams.bl0Pbuffer = DB_ON;  // 默认开
+    tilingParams.al0Pbuffer = DB_ON; // 默认开
+    tilingParams.bl0Pbuffer = DB_ON; // 默认开
     tilingParams.cl0Pbuffer = static_cast<uint32_t>(tbeTiling_.db_l0c);
     tilingParams.al1Pbuffer = static_cast<uint32_t>(tbeTiling_.db_al1);
     tilingParams.bl1Pbuffer = static_cast<uint32_t>(tbeTiling_.db_bl1);
@@ -411,11 +413,11 @@ void Conv3DBackpropFilterV2Tiling::InitCalTilingValue(TilingValueDw& tilingParam
     // direction. Also, the same problem may appear in AL1, but currently
     // it is too troublesome to find a testcase to hit the condition. As
     // this is a temporary solution, we keep the fix for Bl1 only.
-    if (tilingParams.stepN > 1 && Ops::Base::CeilDiv(kIter, static_cast<uint64_t>(tilingParams.stepKb)) >
-        tilingParams.bl1Pbuffer) {
+    if (tilingParams.stepN > 1 &&
+        Ops::Base::CeilDiv(kIter, static_cast<uint64_t>(tilingParams.stepKb)) > tilingParams.bl1Pbuffer) {
         tilingParams.stepN = 1;
-        OP_LOGD(opName_, "stepN is set to be 1 when Ceil(kIter:%lu, stepKb:%d) > bl1Pbuffer:%d",
-            kIter, tilingParams.stepKb, tilingParams.bl1Pbuffer);
+        OP_LOGD(opName_, "stepN is set to be 1 when Ceil(kIter:%lu, stepKb:%d) > bl1Pbuffer:%d", kIter,
+                tilingParams.stepKb, tilingParams.bl1Pbuffer);
     }
 
     tilingParams.iterateOrder = 1;
@@ -428,10 +430,9 @@ void Conv3DBackpropFilterV2Tiling::CalCoreDimTiling(TilingValueDw& tilingParams,
     GetCoreDim(coreDim, coreNum_);
     SetTilingParamByDimInfo(tilingParams, coreDim);
     // 至少用满80%的核，否则走tbe
-    uint64_t coreNumUsed = static_cast<uint64_t>(tilingParams.batchDim) * tilingParams.mDim *
-                            tilingParams.kDim * tilingParams.nDim;
-    enableTbeBlock = coreNumUsed < static_cast<uint64_t>(coreNum_ * CORE_USED_THRESHOLD) ||
-                        coreNumUsed > coreNum_;
+    uint64_t coreNumUsed = static_cast<uint64_t>(tilingParams.batchDim) * tilingParams.mDim * tilingParams.kDim *
+                           tilingParams.nDim;
+    enableTbeBlock = coreNumUsed < static_cast<uint64_t>(coreNum_ * CORE_USED_THRESHOLD) || coreNumUsed > coreNum_;
 }
 
 uint32_t Conv3DBackpropFilterV2Tiling::CalCin(const uint32_t& nL1Size)
@@ -456,7 +457,7 @@ uint32_t Conv3DBackpropFilterV2Tiling::CalCin(const uint32_t& nL1Size)
     return (ci + extendLine) * tilingData_.dwTiling.channelSize;
 }
 
-int64_t Conv3DBackpropFilterV2Tiling::CalBL1Bound(const TilingValueDw &tilingParams)
+int64_t Conv3DBackpropFilterV2Tiling::CalBL1Bound(const TilingValueDw& tilingParams)
 {
     int64_t kBL1Size = static_cast<int64_t>(tilingParams.baseK) * tilingParams.stepKb;
     int32_t hoCal = CalcHo(kBL1Size, runInfo_.wo, opName_);
@@ -466,16 +467,16 @@ int64_t Conv3DBackpropFilterV2Tiling::CalBL1Bound(const TilingValueDw &tilingPar
     return static_cast<int64_t>(hiCal) * runInfo_.wi * ci;
 }
 
-void Conv3DBackpropFilterV2Tiling::UpdateBaseStep(uint32_t &stepKa, uint32_t &stepKb, TilingValueDw &tilingParams)
+void Conv3DBackpropFilterV2Tiling::UpdateBaseStep(uint32_t& stepKa, uint32_t& stepKb, TilingValueDw& tilingParams)
 {
     // 根据A B的size，粗略分配al1 bl1
-    uint64_t amat = tilingParams.singleCoreHo * static_cast<uint64_t>(runInfo_.wo) *
-                    tilingParams.baseM * tilingParams.stepM;
+    uint64_t amat = tilingParams.singleCoreHo * static_cast<uint64_t>(runInfo_.wo) * tilingParams.baseM *
+                    tilingParams.stepM;
     uint32_t ci = CalCin(tilingParams.baseN * tilingParams.stepN);
     int32_t kernelHDilation = (runInfo_.kh - 1) * runInfo_.dilation_h + 1;
     uint64_t bmat = static_cast<uint64_t>(runInfo_.wi) * static_cast<uint64_t>(ci) *
-                    CalcHi(static_cast<int32_t>(tilingParams.singleCoreHo),
-                                            runInfo_.stride_h, kernelHDilation, runInfo_.hi);
+                    CalcHi(static_cast<int32_t>(tilingParams.singleCoreHo), runInfo_.stride_h, kernelHDilation,
+                           runInfo_.hi);
     float abRatio = static_cast<float>(amat) / static_cast<float>(amat + bmat);
     uint64_t al1 = static_cast<uint64_t>(L1_SIZE * abRatio) / tilingParams.al1Pbuffer;
     uint64_t bl1 = static_cast<uint64_t>(L1_SIZE * (1 - abRatio)) / tilingParams.bl1Pbuffer;
@@ -484,19 +485,16 @@ void Conv3DBackpropFilterV2Tiling::UpdateBaseStep(uint32_t &stepKa, uint32_t &st
                         static_cast<uint64_t>(tilingParams.stepM) * static_cast<uint64_t>(dtypeByte_);
     uint64_t al1DivWoMBytes = al1 / std::max(woMBytes, uint64_t(1));
     uint32_t hoA1 = std::max(static_cast<uint64_t>(1), al1DivWoMBytes);
-    stepKa = std::max(static_cast<uint64_t>(MIN_STEPK),
-                        hoA1 * static_cast<uint64_t>(runInfo_.wo) / tilingParams.baseK);
+    stepKa = std::max(static_cast<uint64_t>(MIN_STEPK), hoA1 * static_cast<uint64_t>(runInfo_.wo) / tilingParams.baseK);
     // 根据bl1反推hi,hi反推ho, 保证至少搬一行
-    uint32_t hi = std::max(static_cast<uint64_t>(1),
-                            bl1 / (static_cast<uint64_t>(runInfo_.wi) * ci * dtypeByte_));
-    uint32_t hoB1 = std::max(static_cast<int64_t>(1),
-                             static_cast<int64_t>((hi - 1 - (runInfo_.kh - 1) * runInfo_.dilation_h) /
-                                                    runInfo_.stride_h + 1));
-    stepKb = std::max(static_cast<uint64_t>(MIN_STEPK),
-                        hoB1 * static_cast<uint64_t>(runInfo_.wo) / tilingParams.baseK);
+    uint32_t hi = std::max(static_cast<uint64_t>(1), bl1 / (static_cast<uint64_t>(runInfo_.wi) * ci * dtypeByte_));
+    uint32_t hoB1 = std::max(
+        static_cast<int64_t>(1),
+        static_cast<int64_t>((hi - 1 - (runInfo_.kh - 1) * runInfo_.dilation_h) / runInfo_.stride_h + 1));
+    stepKb = std::max(static_cast<uint64_t>(MIN_STEPK), hoB1 * static_cast<uint64_t>(runInfo_.wo) / tilingParams.baseK);
     // 计算stepK的最大值
     uint64_t maxKIter = Ops::Base::CeilDiv(tilingParams.singleCoreHo * static_cast<uint64_t>(runInfo_.wo),
-                                     static_cast<uint64_t>(tilingParams.baseK));
+                                           static_cast<uint64_t>(tilingParams.baseK));
     stepKa = std::min(maxKIter, static_cast<uint64_t>(stepKa));
     stepKb = std::min(maxKIter, static_cast<uint64_t>(stepKb));
     // 调整Ka Kb为倍数关系
@@ -508,28 +506,28 @@ void Conv3DBackpropFilterV2Tiling::UpdateBaseStep(uint32_t &stepKa, uint32_t &st
 }
 
 void Conv3DBackpropFilterV2Tiling::UpdateBaseBlock(uint32_t& baseM, uint32_t& baseK, uint32_t& baseN,
-    TilingValueDw& tilingParams)
+                                                   TilingValueDw& tilingParams)
 {
     uint64_t maxSingleCoreK = tilingParams.singleCoreHo * static_cast<uint64_t>(runInfo_.wo);
     uint64_t maxSingleCoreN = tilingParams.singleCoreCin * static_cast<uint64_t>(runInfo_.kh) *
-                                static_cast<uint64_t>(runInfo_.kw);
+                              static_cast<uint64_t>(runInfo_.kw);
     // 如果baseM baseN很小，适当增大baseK，使得L0装尽可能多的数据，例如baseM&baseN<=128，baseK：64-->128
     baseM = (tilingParams.singleCoreCout > BEST_BASE_M) ? BEST_BASE_M : tilingParams.singleCoreCout;
     baseN = (maxSingleCoreN > static_cast<uint64_t>(BEST_BASE_N)) ? BEST_BASE_N : maxSingleCoreN;
-    std::vector<uint32_t> baseFactor ={2, 4, 8};
+    std::vector<uint32_t> baseFactor = {2, 4, 8};
     for (uint32_t num : baseFactor) {
         if (baseM * num <= BEST_BASE_N && baseN * num <= BEST_BASE_N) {
             baseK = (maxSingleCoreK > static_cast<uint64_t>(BEST_BASE_K / dtypeByte_ * num)) ?
-                    (BEST_BASE_K / dtypeByte_ * num) :
-                    Ops::Base::CeilAlign(maxSingleCoreK, static_cast<uint64_t>(BLOCK_CUBE));
+                        (BEST_BASE_K / dtypeByte_ * num) :
+                        Ops::Base::CeilAlign(maxSingleCoreK, static_cast<uint64_t>(BLOCK_CUBE));
         }
     }
     // 如果baseM <= 64 && maxSingleCoreN >= 512, 改用基本块组合SECOND_BASE_MKN:64 32 512
     if (baseM <= SECOND_BASE_M && maxSingleCoreK < maxSingleCoreN && SECOND_BASE_N <= maxSingleCoreN) {
-            baseK = (maxSingleCoreK > static_cast<uint64_t>(SECOND_BASE_K / dtypeByte_)) ?
+        baseK = (maxSingleCoreK > static_cast<uint64_t>(SECOND_BASE_K / dtypeByte_)) ?
                     (SECOND_BASE_K / dtypeByte_) :
                     Ops::Base::CeilAlign(maxSingleCoreK, static_cast<uint64_t>(BLOCK_CUBE));
-            baseN = (maxSingleCoreN > static_cast<uint64_t>(SECOND_BASE_N)) ? (SECOND_BASE_N) : maxSingleCoreN;
+        baseN = (maxSingleCoreN > static_cast<uint64_t>(SECOND_BASE_N)) ? (SECOND_BASE_N) : maxSingleCoreN;
     }
 }
 
@@ -563,8 +561,8 @@ bool Conv3DBackpropFilterV2Tiling::CalBaseBlockTiling(TilingValueDw& tilingParam
     uint64_t bl1Bound = CalBL1Bound(tilingParams);
     tilingParams.bl1Bound = bl1Bound;
     uint64_t l1UsedSize = bl1Bound * tilingParams.bl1Pbuffer * dtypeByte_ +
-                          tilingParams.stepM * tilingParams.baseM * tilingParams.baseK *
-                          tilingParams.stepKa * tilingParams.al1Pbuffer * dtypeByte_;
+                          tilingParams.stepM * tilingParams.baseM * tilingParams.baseK * tilingParams.stepKa *
+                              tilingParams.al1Pbuffer * dtypeByte_;
     if (!enableTBEtiling && CheckL0Size(baseM, baseN, baseK, dtypeByte_) && l1UsedSize < L1_SIZE) {
         return true;
     }
@@ -587,12 +585,11 @@ void Conv3DBackpropFilterV2Tiling::InitTilingValue(TilingValueDw& tilingParams)
         tbeTiling_.d_dim = 1;
         tbeTiling_.k_dim = 1;
     }
-    OP_LOGD(opName_, "batch_dim:%d, group_dim:%d, d_dim:%d, m_dim:%d, n_dim:%d, k_dim:%d",
-                        tbeTiling_.batch_dim, tbeTiling_.group_dim, tbeTiling_.d_dim,
-                        tbeTiling_.m_dim, tbeTiling_.n_dim, tbeTiling_.k_dim);
+    OP_LOGD(opName_, "batch_dim:%d, group_dim:%d, d_dim:%d, m_dim:%d, n_dim:%d, k_dim:%d", tbeTiling_.batch_dim,
+            tbeTiling_.group_dim, tbeTiling_.d_dim, tbeTiling_.m_dim, tbeTiling_.n_dim, tbeTiling_.k_dim);
     // singleCore
     tilingParams.singleCoreBatch = static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.batch, tbeTiling_.batch_dim)) *
-                            Ops::Base::CeilDiv(runInfo_.dout, tbeTiling_.d_dim);
+                                   Ops::Base::CeilDiv(runInfo_.dout, tbeTiling_.d_dim);
     tilingParams.singleCoreGroup = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.real_g), tbeTiling_.group_dim);
 
     uint32_t c0 = tilingData_.dwTiling.channelSize;
@@ -601,34 +598,33 @@ void Conv3DBackpropFilterV2Tiling::InitTilingValue(TilingValueDw& tilingParams)
         tilingParams.dkDim = MathUtil::GetGcd(tbeTiling_.n_dim, runInfo_.kd);
         tilingParams.singleCoreDk = Ops::Base::CeilDiv(runInfo_.kd, static_cast<int32_t>(tilingParams.dkDim));
         tilingParams.nDim = tbeTiling_.n_dim / tilingParams.dkDim;
-        tilingParams.singleCoreCin =
-            Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.cin1_g), tilingParams.nDim) * c0;
-        tilingParams.nDim =
-            Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.cin1_g) * c0, tilingParams.singleCoreCin);
+        tilingParams.singleCoreCin = Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.cin1_g), tilingParams.nDim) * c0;
+        tilingParams.nDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.cin1_g) * c0, tilingParams.singleCoreCin);
     } else {
         tilingParams.dkDim = 1;
         tilingParams.singleCoreDk = 1;
-        tilingParams.singleCoreCin =
-            Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.cin1_g) * runInfo_.kd,
-                static_cast<uint32_t>(tbeTiling_.n_dim)) * c0;
-        tilingParams.nDim =
-            Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.cin1_g) * c0 * runInfo_.kd, tilingParams.singleCoreCin);
+        tilingParams.singleCoreCin = Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.cin1_g) * runInfo_.kd,
+                                                        static_cast<uint32_t>(tbeTiling_.n_dim)) *
+                                     c0;
+        tilingParams.nDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.cin1_g) * c0 * runInfo_.kd,
+                                               tilingParams.singleCoreCin);
     }
-    tilingParams.singleCoreCout =
-            Ops::Base::CeilAlign(Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.cout1_g), tbeTiling_.m_dim) * c0,
-                static_cast<uint32_t>(BLOCK_CUBE));
-    tilingParams.mDim =
-            Ops::Base::CeilDiv(runInfo_.cout1_g * c0, tilingParams.singleCoreCout);
+    tilingParams.singleCoreCout = Ops::Base::CeilAlign(
+        Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.cout1_g), tbeTiling_.m_dim) * c0,
+        static_cast<uint32_t>(BLOCK_CUBE));
+    tilingParams.mDim = Ops::Base::CeilDiv(runInfo_.cout1_g * c0, tilingParams.singleCoreCout);
     tilingParams.singleCoreHo = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.ho), tbeTiling_.k_dim);
     // core alloc
-    int64_t batch_dout_single_core = Ops::Base::CeilDiv(runInfo_.batch, tbeTiling_.batch_dim) * (runInfo_.dout / tbeTiling_.d_dim);
-    tilingParams.batchDim = Ops::Base::CeilDiv(static_cast<int64_t>(runInfo_.batch) * runInfo_.dout, batch_dout_single_core);
+    int64_t batch_dout_single_core = Ops::Base::CeilDiv(runInfo_.batch, tbeTiling_.batch_dim) *
+                                     (runInfo_.dout / tbeTiling_.d_dim);
+    tilingParams.batchDim = Ops::Base::CeilDiv(static_cast<int64_t>(runInfo_.batch) * runInfo_.dout,
+                                               batch_dout_single_core);
     tilingParams.groupDim = tbeTiling_.group_dim;
     tilingParams.kDim = Ops::Base::CeilDiv(runInfo_.ho, static_cast<int32_t>(tilingParams.singleCoreHo));
     InitCalTilingValue(tilingParams);
 }
 
-void Conv3DBackpropFilterV2Tiling::SetTilingValue(TConv3DDwTiling &dwt, const TilingValueDw& tilingParams)
+void Conv3DBackpropFilterV2Tiling::SetTilingValue(TConv3DDwTiling& dwt, const TilingValueDw& tilingParams)
 {
     tilingData_.params.groupDim = tilingParams.groupDim;
     tilingData_.params.batchDim = tilingParams.batchDim;
@@ -665,7 +661,7 @@ void Conv3DBackpropFilterV2Tiling::SetTilingValue(TConv3DDwTiling &dwt, const Ti
 
 void Conv3DBackpropFilterV2Tiling::SetDwTilingFromTbeTiling()
 {
-    TConv3DDwTiling &dwt = tilingData_.dwTiling;
+    TConv3DDwTiling& dwt = tilingData_.dwTiling;
     TilingValueDw tilingParams;
     SetShapeTiling(dwt);
     SetAttrTiling(dwt);
@@ -678,20 +674,21 @@ void Conv3DBackpropFilterV2Tiling::SetDwTilingFromTbeTiling()
     // "N_Do_Co1_Ho_Wo_Ci1_Hi_Wi_Dk_Hk_Wk_strideD_strideH_strideW_
     // _padFront_padBack_padUp_padDown_padLeft_padRight_dilationD_dilationH_dilationW"
     std::string key = std::to_string(runInfo_.batch) + "_" + std::to_string(runInfo_.dout) + "_" +
-                    std::to_string(runInfo_.cout1_g) + "_" + std::to_string(runInfo_.ho) + "_" +
-                    std::to_string(runInfo_.wo) + "_" + std::to_string(runInfo_.cin1_g) + "_" +
-                    std::to_string(runInfo_.hi) + "_" +
-                    std::to_string(runInfo_.wi) + "_" + std::to_string(runInfo_.kd) + "_" +
-                    std::to_string(runInfo_.kh) + "_" + std::to_string(runInfo_.kw) + "_" +
-                    std::to_string(runInfo_.stride_d) + "_" + std::to_string(runInfo_.stride_h) + "_" +
-                    std::to_string(runInfo_.stride_w) + "_" + std::to_string(runInfo_.pad_f) + "_" +
-                    std::to_string(runInfo_.pad_b) + "_" + std::to_string(runInfo_.pad_u) + "_" +
-                    std::to_string(runInfo_.pad_d) + "_" + std::to_string(runInfo_.pad_l) + "_" +
-                    std::to_string(runInfo_.pad_r) + "_" + std::to_string(runInfo_.dilation_d) + "_" +
-                    std::to_string(runInfo_.dilation_h) + "_" + std::to_string(runInfo_.dilation_w);
+                      std::to_string(runInfo_.cout1_g) + "_" + std::to_string(runInfo_.ho) + "_" +
+                      std::to_string(runInfo_.wo) + "_" + std::to_string(runInfo_.cin1_g) + "_" +
+                      std::to_string(runInfo_.hi) + "_" + std::to_string(runInfo_.wi) + "_" +
+                      std::to_string(runInfo_.kd) + "_" + std::to_string(runInfo_.kh) + "_" +
+                      std::to_string(runInfo_.kw) + "_" + std::to_string(runInfo_.stride_d) + "_" +
+                      std::to_string(runInfo_.stride_h) + "_" + std::to_string(runInfo_.stride_w) + "_" +
+                      std::to_string(runInfo_.pad_f) + "_" + std::to_string(runInfo_.pad_b) + "_" +
+                      std::to_string(runInfo_.pad_u) + "_" + std::to_string(runInfo_.pad_d) + "_" +
+                      std::to_string(runInfo_.pad_l) + "_" + std::to_string(runInfo_.pad_r) + "_" +
+                      std::to_string(runInfo_.dilation_d) + "_" + std::to_string(runInfo_.dilation_h) + "_" +
+                      std::to_string(runInfo_.dilation_w);
     if (coreNum_ == CORE_NUM_910B3 && TILINGDATA_MAP_B3.find(key) != TILINGDATA_MAP_B3.end() && !enableDeterministic_) {
         tilingParams = TILINGDATA_MAP_B3.at(key);
-    } else if (coreNum_ == CORE_NUM_910B2 && TILINGDATA_MAP_B2.find(key) != TILINGDATA_MAP_B2.end() && !enableDeterministic_) {
+    } else if (coreNum_ == CORE_NUM_910B2 && TILINGDATA_MAP_B2.find(key) != TILINGDATA_MAP_B2.end() &&
+               !enableDeterministic_) {
         tilingParams = TILINGDATA_MAP_B2.at(key);
     } else if (TILINGDATA_MAP_TMP.find(key) != TILINGDATA_MAP_TMP.end() && !enableDeterministic_) {
         InitTilingValue(tilingParams);
@@ -699,7 +696,8 @@ void Conv3DBackpropFilterV2Tiling::SetDwTilingFromTbeTiling()
     } else if (enableDeterministic_) {
         key = key + "_" + std::to_string(runInfo_.real_g) + "_" + std::to_string(coreNum_);
         deterministicGroupDim_ = TILINGDATA_MAP_DETERMINISTIC.find(key) != TILINGDATA_MAP_DETERMINISTIC.end() ?
-                                 TILINGDATA_MAP_DETERMINISTIC.at(key) : 1;
+                                     TILINGDATA_MAP_DETERMINISTIC.at(key) :
+                                     1;
         InitTilingValue(tilingParams);
     } else {
         InitTilingValue(tilingParams);
@@ -709,35 +707,31 @@ void Conv3DBackpropFilterV2Tiling::SetDwTilingFromTbeTiling()
 
 void Conv3DBackpropFilterV2Tiling::PrintTilingData()
 {
-    TConv3DDwTiling &tiling = tilingData_.dwTiling;
+    TConv3DDwTiling& tiling = tilingData_.dwTiling;
     std::stringstream ss;
-    ss << "batch: " << tiling.batch << " cin: " << tiling.cin << " cout: " << tiling.cout
-       << " cin1G: " << tiling.cin1G << " cout1G: " << tiling.cout1G << " dout: " << tiling.dout
-       << " ho: " << tiling.ho << " wo: " << tiling.wo << " di: " << tiling.di
-       << " hi: " << tiling.hi << " wi: " << tiling.wi << " dk: " << tiling.dk
-       << " hk: " << tiling.hk << " wk: " << tiling.wk << " group: " << tiling.group
-       << " strideD: " << tiling.strideD << " strideH: " << tiling.strideH
-       << " strideW: " << tiling.strideW << " padFront: " << tiling.padFront
-       << " padBack: " << tiling.padBack << " padUp: " << tiling.padUp
-       << " padDown: " << tiling.padDown << " padLeft: " << tiling.padLeft
-       << " padRight: " << tiling.padRight << " dilationD: " << tiling.dilationD
+    ss << "batch: " << tiling.batch << " cin: " << tiling.cin << " cout: " << tiling.cout << " cin1G: " << tiling.cin1G
+       << " cout1G: " << tiling.cout1G << " dout: " << tiling.dout << " ho: " << tiling.ho << " wo: " << tiling.wo
+       << " di: " << tiling.di << " hi: " << tiling.hi << " wi: " << tiling.wi << " dk: " << tiling.dk
+       << " hk: " << tiling.hk << " wk: " << tiling.wk << " group: " << tiling.group << " strideD: " << tiling.strideD
+       << " strideH: " << tiling.strideH << " strideW: " << tiling.strideW << " padFront: " << tiling.padFront
+       << " padBack: " << tiling.padBack << " padUp: " << tiling.padUp << " padDown: " << tiling.padDown
+       << " padLeft: " << tiling.padLeft << " padRight: " << tiling.padRight << " dilationD: " << tiling.dilationD
        << " dilationH: " << tiling.dilationH << " dilationW: " << tiling.dilationW
        << " channelSize: " << tiling.channelSize << " al0Pbuffer: " << tiling.al0Pbuffer
        << " bl0Pbuffer: " << tiling.bl0Pbuffer << " cl0Pbuffer: " << tiling.cl0Pbuffer
        << " al1Pbuffer: " << tiling.al1Pbuffer << " bl1Pbuffer: " << tiling.bl1Pbuffer
        << " singleCoreBatch: " << tiling.singleCoreBatch << " singleCoreGroup: " << tiling.singleCoreGroup
        << " singleCoreCout: " << tiling.singleCoreCout << " singleCoreCin: " << tiling.singleCoreCin
-       << " singleCoreHo: " << tiling.singleCoreHo << " baseM: " << tiling.baseM
-       << " baseK: " << tiling.baseK << " baseN: " << tiling.baseN << " m0: " << tiling.m0
-       << " k0: " << tiling.k0 << " n0: " << tiling.n0 << " stepM: " << tiling.stepM
-       << " stepN: " << tiling.stepN << " stepKa: " << tiling.stepKa << " stepKb: " << tiling.stepKb
-       << " iterateOrder: " << tiling.iterateOrder << " hf32Flag: " << tiling.hf32Flag
+       << " singleCoreHo: " << tiling.singleCoreHo << " baseM: " << tiling.baseM << " baseK: " << tiling.baseK
+       << " baseN: " << tiling.baseN << " m0: " << tiling.m0 << " k0: " << tiling.k0 << " n0: " << tiling.n0
+       << " stepM: " << tiling.stepM << " stepN: " << tiling.stepN << " stepKa: " << tiling.stepKa
+       << " stepKb: " << tiling.stepKb << " iterateOrder: " << tiling.iterateOrder << " hf32Flag: " << tiling.hf32Flag
        << " enableDeterministic_: " << (enableDeterministic_ ? "true" : "false");
 
     OP_LOGD(opName_, "api tiling: %s", ss.str().c_str());
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropFilterV2", Conv3DBackpropFilterV2Tiling, 1);
-}
-}
-}
+} // namespace Conv
+} // namespace NN
+} // namespace Ops

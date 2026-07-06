@@ -146,4 +146,4 @@ struct BCEGSumHasNoWeight {
 };
 
 } // namespace BinaryCrossEntropyGrad
-#endif //ASCENDC_BINARY_CORSS_ENTROPY_GRAD_DAG_H_
+#endif // ASCENDC_BINARY_CORSS_ENTROPY_GRAD_DAG_H_

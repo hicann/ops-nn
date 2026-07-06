@@ -35,7 +35,5 @@ static ge::graphStatus InferDataType4ScatterMax(gert::InferDataTypeContext* cont
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ScatterMax)
-    .InferShape(InferShape4ScatterMax)
-    .InferDataType(InferDataType4ScatterMax);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(ScatterMax).InferShape(InferShape4ScatterMax).InferDataType(InferDataType4ScatterMax);
+} // namespace ops

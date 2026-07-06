@@ -28,4 +28,4 @@ ACLNN_API aclnnStatus aclnnTransQuantParam(const float* scaleArray, uint64_t sca
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_TRANS_QUANT_PARAM_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_TRANS_QUANT_PARAM_H_

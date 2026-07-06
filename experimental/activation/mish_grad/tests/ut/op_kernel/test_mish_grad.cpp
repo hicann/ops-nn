@@ -27,14 +27,8 @@ using namespace std;
 
 class mish_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "mish_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "mish_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "mish_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "mish_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(mish_grad_test, test_case_0)
@@ -68,13 +62,12 @@ TEST_F(mish_grad_test, test_case_0)
     tilingDatafromBin->tailBlockNum = 0;
     tilingDatafromBin->haveTanhx = 0;
 
-    auto KernelMishGrad = [](GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling) {
-        ::mish_grad<0>(grad, x, tanhx, x_grad, workspace, tiling);
-    };
+    auto KernelMishGrad = [](GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace,
+                             GM_ADDR tiling) { ::mish_grad<0>(grad, x, tanhx, x_grad, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelMishGrad, blockDim, grad, x, tanhx, x_grad, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelMishGrad, blockDim, grad, x, tanhx, x_grad, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(grad);
     AscendC::GmFree(x);

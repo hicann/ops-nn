@@ -25,13 +25,14 @@ using namespace std;
 
 class l2_foreach_addcmul_scalar_v2_test : public testing::Test {
 protected:
-  static void SetUpTestCase() { cout << "foreach_addcmul_scalar_test SetUp" << endl; }
+    static void SetUpTestCase() { cout << "foreach_addcmul_scalar_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "foreach_addcmul_scalar_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "foreach_addcmul_scalar_test TearDown" << endl; }
 };
 
 // private format
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_private_format) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_private_format)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -51,7 +52,8 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
 }
 
 // self and out diffrent shape
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_shape_different) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_shape_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 4}};
@@ -71,7 +73,8 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
 }
 
 // self and x2 diffrent shape
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_input_shape_different) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_input_shape_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     vector<vector<int64_t>> x2Dims = {{2, 4}};
     auto scalar_desc = ScalarDesc(1.0);
@@ -91,7 +94,8 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_fp16) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_fp16)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -110,7 +114,8 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_fp32) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_fp32)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -129,7 +134,8 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_int32) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_int32)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc((int32_t)1);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -149,7 +155,8 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
 }
 
 // not supported dtype
-TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_not_supported_shape) {
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_not_supported_shape)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 4}};
@@ -187,4 +194,3 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }*/
-

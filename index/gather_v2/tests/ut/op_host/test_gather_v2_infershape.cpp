@@ -22,15 +22,9 @@
 
 class GatherV2InfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GatherV2InfershapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GatherV2InfershapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GatherV2InfershapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GatherV2InfershapeTest TearDown" << std::endl; }
 };
 
 TEST_F(GatherV2InfershapeTest, gather_v2_infershape_test_1)

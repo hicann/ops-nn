@@ -25,29 +25,22 @@
 
 using namespace ForeachNonFiniteCheckAndUnscaleTest;
 
-extern "C" __global__ __aicore__ void foreach_non_finite_check_and_unscale(
-    GM_ADDR scaled_grads, GM_ADDR found_inf, GM_ADDR inv_scale, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_non_finite_check_and_unscale(GM_ADDR scaled_grads, GM_ADDR found_inf,
+                                                                           GM_ADDR inv_scale, GM_ADDR workspace,
+                                                                           GM_ADDR tiling);
 
-class foreach_non_finite_check_and_unscale_test : public testing::Test
-{
+class foreach_non_finite_check_and_unscale_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_non_finite_check_and_unscale_test SetUp\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_non_finite_check_and_unscale_test SetUp\n" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_non_finite_check_and_unscale_test TearDown\n" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "foreach_non_finite_check_and_unscale_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_non_finite_check_and_unscale_test, test_case_half_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_non_finite_check_and_unscale/tests/ut/op_kernel/f_n_f_c_a_u_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_non_finite_check_and_unscale/tests/ut/op_kernel/f_n_f_c_a_u_data ./");
     system("chmod -R 755 ./f_n_f_c_a_u_data/");
     system("cd ./f_n_f_c_a_u_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 2");
 
@@ -83,9 +76,8 @@ TEST_F(foreach_non_finite_check_and_unscale_test, test_case_half_1)
 TEST_F(foreach_non_finite_check_and_unscale_test, test_case_bfloat16_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_non_finite_check_and_unscale/tests/ut/op_kernel/f_n_f_c_a_u_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_non_finite_check_and_unscale/tests/ut/op_kernel/f_n_f_c_a_u_data ./");
     system("chmod -R 755 ./f_n_f_c_a_u_data/");
     system("cd ./f_n_f_c_a_u_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 3");
 

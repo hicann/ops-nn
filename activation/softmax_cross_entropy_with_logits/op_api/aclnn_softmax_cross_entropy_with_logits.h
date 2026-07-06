@@ -21,7 +21,7 @@ extern "C" {
  * @brief aclnnSoftmaxCrossEntropyWithLogits的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 功能描述：计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。
- * 计算公式：  
+ * 计算公式：
  * loss = -Σ (y_i * log(softmax(x_i)))
  * backprop = softmax(x_i) - y_i
  * 其中，$x_i$对应输入的features，$y_i$对应输入的labels。
@@ -30,8 +30,10 @@ extern "C" {
  * @param [in] loss: 输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16。支持非连续Tensor，数据格式支持ND。
  * @param [in] backprop: 输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16。支持非连续Tensor，数据格式支持ND。
  */
-ACLNN_API aclnnStatus aclnnSoftmaxCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* features, aclTensor* labels, aclTensor* loss, aclTensor* backprop, uint64_t* workspaceSize,
-                                                aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnSoftmaxCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* features, aclTensor* labels,
+                                                                         aclTensor* loss, aclTensor* backprop,
+                                                                         uint64_t* workspaceSize,
+                                                                         aclOpExecutor** executor);
 
 /**
  * @brief aclnnSoftmaxCrossEntropyWithLogits的第二段接口，用于执行计算。
@@ -41,11 +43,11 @@ ACLNN_API aclnnStatus aclnnSoftmaxCrossEntropyWithLogitsGetWorkspaceSize(const a
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(void* workspace, uint64_t workspaceSize,
+                                                         aclOpExecutor* executor, const aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_SOFTMAX_CROSS_ENTROPY_WITH_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_SOFTMAX_CROSS_ENTROPY_WITH_H_

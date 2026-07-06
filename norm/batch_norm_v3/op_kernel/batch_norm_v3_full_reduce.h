@@ -21,41 +21,35 @@
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-#define BRC_IMPL(FUNC_IMPL, D_T, S0_T, S1_T, LINE_LENGTH, I_LOOP, I_REMAIN, J_LOOP, J_REMAIN, REP_STRIDE)        \
-    do {                                                                                                         \
-        /* 切分保证I_LOOP和J_LOOP不会同时大于0 */                                                     \
-        for (int64_t i = 0; i < (I_LOOP); i++) {                                                                 \
-            FUNC_IMPL(                                                                                           \
-                (D_T)[i * UINT8_MAX_NUM * (LINE_LENGTH)], (S0_T)[i * UINT8_MAX_NUM * (LINE_LENGTH)], S1_T, J_REMAIN, \
-                UINT8_MAX_NUM, {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                                            \
-        }                                                                                                        \
-        if (I_REMAIN) {                                                                                          \
-            for (int64_t j = 0; j < (J_LOOP); j++) {                                                             \
-                FUNC_IMPL(                                                                                       \
-                    (D_T)[j * ELEM_PER_REP_FP32], (S0_T)[j * ELEM_PER_REP_FP32], (S1_T)[j * ELEM_PER_REP_FP32],  \
-                    ELEM_PER_REP_FP32, I_REMAIN, {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                          \
-            }                                                                                                    \
-            if (J_REMAIN) {                                                                                      \
-                FUNC_IMPL(                                                                                       \
-                    (D_T)[(I_LOOP) * UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP) * ELEM_PER_REP_FP32],              \
-                    (S0_T)[(I_LOOP) * UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP) * ELEM_PER_REP_FP32],              \
-                    (S1_T)[(J_LOOP) * ELEM_PER_REP_FP32], J_REMAIN, I_REMAIN, {1, 1, 1, REP_STRIDE, REP_STRIDE, 0}); \
-            }                                                                                                    \
-        }                                                                                                        \
+#define BRC_IMPL(FUNC_IMPL, D_T, S0_T, S1_T, LINE_LENGTH, I_LOOP, I_REMAIN, J_LOOP, J_REMAIN, REP_STRIDE)             \
+    do {                                                                                                              \
+        /* 切分保证I_LOOP和J_LOOP不会同时大于0 */                                                          \
+        for (int64_t i = 0; i < (I_LOOP); i++) {                                                                      \
+            FUNC_IMPL((D_T)[i * UINT8_MAX_NUM * (LINE_LENGTH)], (S0_T)[i * UINT8_MAX_NUM * (LINE_LENGTH)], S1_T,      \
+                      J_REMAIN, UINT8_MAX_NUM, {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                                 \
+        }                                                                                                             \
+        if (I_REMAIN) {                                                                                               \
+            for (int64_t j = 0; j < (J_LOOP); j++) {                                                                  \
+                FUNC_IMPL((D_T)[j * ELEM_PER_REP_FP32], (S0_T)[j * ELEM_PER_REP_FP32], (S1_T)[j * ELEM_PER_REP_FP32], \
+                          ELEM_PER_REP_FP32, I_REMAIN, {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                         \
+            }                                                                                                         \
+            if (J_REMAIN) {                                                                                           \
+                FUNC_IMPL((D_T)[(I_LOOP)*UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP)*ELEM_PER_REP_FP32],                 \
+                          (S0_T)[(I_LOOP)*UINT8_MAX_NUM * (LINE_LENGTH) + (J_LOOP)*ELEM_PER_REP_FP32],                \
+                          (S1_T)[(J_LOOP)*ELEM_PER_REP_FP32], J_REMAIN, I_REMAIN,                                     \
+                          {1, 1, 1, REP_STRIDE, REP_STRIDE, 0});                                                      \
+            }                                                                                                         \
+        }                                                                                                             \
     } while (0)
 
 template <typename T1, typename T2, int PARALLEL_MODE>
 class BatchNormV3FullReduce : public BatchNormV3Base<T1, T2> {
 public:
-    __aicore__ inline BatchNormV3FullReduce(TPipe* pipe)
-    {
-        this->pipe_ = pipe;
-    }
+    __aicore__ inline BatchNormV3FullReduce(TPipe* pipe) { this->pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR var, GM_ADDR y, GM_ADDR mean_out,
-        GM_ADDR var_out, GM_ADDR save_mean, GM_ADDR save_var,
-        const BatchNormV3FullReduceTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
+                                GM_ADDR mean_out, GM_ADDR var_out, GM_ADDR save_mean, GM_ADDR save_var,
+                                const BatchNormV3FullReduceTilingData* __restrict tilingData)
     {
         patternR1 = tilingData->patternR1;
         patternA = tilingData->patternA;
@@ -85,8 +79,8 @@ public:
         dichotomizeAddDiffSize = tilingData->dichotomizeAddDiffSize;
         coefficient0 = tilingData->coefficient0;
         coefficient1 = tilingData->coefficient1;
-        uint64_t aGmBlockOffset =
-            static_cast<uint64_t>(this->blockIdx) * static_cast<uint64_t>(tilingData->blockFactor);
+        uint64_t aGmBlockOffset = static_cast<uint64_t>(this->blockIdx) *
+                                  static_cast<uint64_t>(tilingData->blockFactor);
         uint64_t aR0GmBlockOffset = aGmBlockOffset * patternR0;
         this->xGm.SetGlobalBuffer((__gm__ T1*)x + aR0GmBlockOffset);
         this->weightGm.SetGlobalBuffer((__gm__ T2*)weight + aGmBlockOffset);
@@ -156,8 +150,8 @@ private:
             xQueue.EnQue(xTensorHalf);
             xTensorHalf = xQueue.DeQue<T1>();
             if constexpr (PARALLEL_MODE == FULL_REDUCE_A_PARALLEL_MODE) {
-                int64_t calcXNum =
-                    (aProcNum * patternR0 + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK * patternR1;
+                int64_t calcXNum = (aProcNum * patternR0 + X_NUM_PER_BLOCK - 1) / X_NUM_PER_BLOCK * X_NUM_PER_BLOCK *
+                                   patternR1;
                 Cast(xTensor, xTensorHalf[rUbSize], RoundMode::CAST_NONE, calcXNum);
             } else {
                 Cast(xTensor, xTensorHalf[rUbSize], RoundMode::CAST_NONE, aProcNum * patternR1 * patternR0Align);
@@ -255,9 +249,8 @@ private:
             int64_t jRemain = calLineLength % ELEM_PER_REP_FP32;
             uint8_t repStride = static_cast<uint8_t>(aR0Align / B32_BLOCK_ALIGN_NUM);
             if (aR0Align < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM) && (jLoop < patternR1)) {
-                BRC_IMPL(
-                    Sub, xTensor, xTensor, saveMeanTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
-                    jRemain, repStride);
+                BRC_IMPL(Sub, xTensor, xTensor, saveMeanTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
+                         jRemain, repStride);
             } else {
                 for (int64_t r1Idx = 0; r1Idx < patternR1; r1Idx++) {
                     Sub(xTensor[r1Idx * aR0Align], xTensor[r1Idx * aR0Align], saveMeanTensor, calLineLength);
@@ -332,24 +325,20 @@ private:
             int64_t jRemain = calLineLength % ELEM_PER_REP_FP32;
             uint8_t repStride = static_cast<uint8_t>(aR0Align / B32_BLOCK_ALIGN_NUM);
             if (aR0Align < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM) && (jLoop < patternR1)) {
-                BRC_IMPL(
-                    Div, xTensor, xTensor, stdTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop, jRemain,
-                    repStride);
+                BRC_IMPL(Div, xTensor, xTensor, stdTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
+                         jRemain, repStride);
                 PipeBarrier<PIPE_V>();
-                BRC_IMPL(
-                    Mul, xTensor, xTensor, weightTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop, jRemain,
-                    repStride);
+                BRC_IMPL(Mul, xTensor, xTensor, weightTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
+                         jRemain, repStride);
                 PipeBarrier<PIPE_V>();
                 if constexpr (!IsSameType<T1, float>::value) {
-                    BRC_IMPL(
-                        Add, xTensor, xTensor, biasTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
-                        jRemain, repStride);
+                    BRC_IMPL(Add, xTensor, xTensor, biasTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
+                             jRemain, repStride);
                     PipeBarrier<PIPE_V>();
                     Cast(yTensor, xTensor, b16RoundMode, calcXNum);
                 } else {
-                    BRC_IMPL(
-                        Add, yTensor, xTensor, biasTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
-                        jRemain, repStride);
+                    BRC_IMPL(Add, yTensor, xTensor, biasTensor, aR0Align, repeatForLoopNum, repeatForRemainNum, jLoop,
+                             jRemain, repStride);
                 }
             } else {
                 for (int64_t r1Idx = 0; r1Idx < patternR1; r1Idx++) {
@@ -443,9 +432,8 @@ private:
             intriParams.srcStride = static_cast<uint32_t>((patternA - 1) * patternR0 * sizeof(T1));
             intriParams.dstStride = 0;
             for (int64_t aNum = 0; aNum < aProcNum; aNum++) {
-                DataCopyPad(
-                    inTensor[patternR1 * patternR0Align * aNum], this->xGm[(aGmOffset + aNum) * patternR0], intriParams,
-                    padParams);
+                DataCopyPad(inTensor[patternR1 * patternR0Align * aNum], this->xGm[(aGmOffset + aNum) * patternR0],
+                            intriParams, padParams);
             }
         } else {
             intriParams.blockCount = static_cast<uint16_t>(aProcNum);
@@ -453,15 +441,14 @@ private:
             intriParams.srcStride = 0;
             intriParams.dstStride = static_cast<uint32_t>((patternR1 - 1) * patternR0Align / X_NUM_PER_BLOCK);
             for (int64_t r1Idx = 0; r1Idx < patternR1; r1Idx++) {
-                DataCopyPad(
-                    inTensor[r1Idx * patternR0Align], this->xGm[(r1Idx * patternA + aGmOffset) * patternR0],
-                    intriParams, padParams);
+                DataCopyPad(inTensor[r1Idx * patternR0Align], this->xGm[(r1Idx * patternA + aGmOffset) * patternR0],
+                            intriParams, padParams);
             }
         }
     }
 
-    __aicore__ inline void CopyInXAParallel(
-        const LocalTensor<T1>& inTensor, int64_t eleNum, int64_t eleNumAlign, int64_t aGmOffset)
+    __aicore__ inline void CopyInXAParallel(const LocalTensor<T1>& inTensor, int64_t eleNum, int64_t eleNumAlign,
+                                            int64_t aGmOffset)
     {
         DataCopyPadExtParams<T1> padParams = {true, 0, static_cast<uint8_t>(eleNumAlign - eleNum), 0};
         DataCopyExtParams intriParams;
@@ -482,9 +469,8 @@ private:
             intriParams.srcStride = 0;
             intriParams.dstStride = static_cast<uint32_t>((patternA - 1) * patternR0 * sizeof(T1));
             for (int64_t aNum = 0; aNum < aProcNum; aNum++) {
-                DataCopyPad(
-                    this->yGm[(aGmOffset + aNum) * patternR0], outTensor[patternR1 * patternR0Align * aNum],
-                    intriParams);
+                DataCopyPad(this->yGm[(aGmOffset + aNum) * patternR0], outTensor[patternR1 * patternR0Align * aNum],
+                            intriParams);
             }
         } else {
             intriParams.blockCount = static_cast<uint16_t>(aProcNum);
@@ -492,9 +478,8 @@ private:
             intriParams.srcStride = static_cast<uint32_t>((patternR1 - 1) * patternR0Align / X_NUM_PER_BLOCK);
             intriParams.dstStride = 0;
             for (int64_t r1Idx = 0; r1Idx < patternR1; r1Idx++) {
-                DataCopyPad(
-                    this->yGm[(r1Idx * patternA + aGmOffset) * patternR0], outTensor[r1Idx * patternR0Align],
-                    intriParams);
+                DataCopyPad(this->yGm[(r1Idx * patternA + aGmOffset) * patternR0], outTensor[r1Idx * patternR0Align],
+                            intriParams);
             }
         }
     }
@@ -509,8 +494,8 @@ private:
         DataCopyPad(this->yGm[aGmOffset * patternR0], outTensor, intriParams);
     }
 
-    __aicore__ inline void CopyInWeightOrBias(
-        const LocalTensor<T2>& inTensor, GlobalTensor<T2> inGm, int64_t eleNum, int64_t gmOffset)
+    __aicore__ inline void CopyInWeightOrBias(const LocalTensor<T2>& inTensor, GlobalTensor<T2> inGm, int64_t eleNum,
+                                              int64_t gmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -521,8 +506,8 @@ private:
         DataCopyPad(inTensor, inGm[gmOffset], intriParams, padParams);
     }
 
-    __aicore__ inline void CopyOutMeanOrVar(
-        GlobalTensor<float> outGm, LocalTensor<float>& outTensor, int64_t eleNum, int64_t gmOffset)
+    __aicore__ inline void CopyOutMeanOrVar(GlobalTensor<float> outGm, LocalTensor<float>& outTensor, int64_t eleNum,
+                                            int64_t gmOffset)
     {
         DataCopyParams intriParams;
         intriParams.blockCount = 1;
@@ -532,8 +517,8 @@ private:
         DataCopyPad(outGm[gmOffset], outTensor, intriParams);
     }
 
-    __aicore__ inline void CopyInMeanOrVar(
-        LocalTensor<float>& inTensor, GlobalTensor<float> inGm, int64_t eleNum, int64_t gmOffset)
+    __aicore__ inline void CopyInMeanOrVar(LocalTensor<float>& inTensor, GlobalTensor<float> inGm, int64_t eleNum,
+                                           int64_t gmOffset)
     {
         DataCopyPadParams padParams{false, 0, 0, 0};
         DataCopyParams intriParams;
@@ -557,24 +542,21 @@ private:
             if ((forLoopNum < patternR1) && (patternR0Align < (UINT8_MAX_NUM * B32_BLOCK_ALIGN_NUM))) {
                 // patternR1 不会大于255, 循环走进去的条件forLoopNum >= 1,则patternR0 >= 64, 64*255 > rUbSize
                 for (int64_t i = 0; i < forLoopNum; i++) {
-                    Adds(
-                        calcTensor[i * ELEM_PER_REP_FP32], calcTensor[i * ELEM_PER_REP_FP32], negMean,
-                        ELEM_PER_REP_FP32, patternR1, {1, 1, repStride, repStride});
+                    Adds(calcTensor[i * ELEM_PER_REP_FP32], calcTensor[i * ELEM_PER_REP_FP32], negMean,
+                         ELEM_PER_REP_FP32, patternR1, {1, 1, repStride, repStride});
                 }
                 if (forRemainNum > 0) {
                     for (int64_t i = 0; i < repeatForLoopNum; i++) {
-                        Adds(
-                            calcTensor[forLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align],
-                            calcTensor[forLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align], negMean,
-                            forRemainNum, UINT8_MAX_NUM, {1, 1, repStride, repStride});
+                        Adds(calcTensor[forLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align],
+                             calcTensor[forLoopNum * ELEM_PER_REP_FP32 + i * UINT8_MAX_NUM * patternR0Align], negMean,
+                             forRemainNum, UINT8_MAX_NUM, {1, 1, repStride, repStride});
                     }
                     if (repeatForRemainNum > 0) {
-                        Adds(
-                            calcTensor
-                                [forLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
-                            calcTensor
-                                [forLoopNum * ELEM_PER_REP_FP32 + repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
-                            negMean, forRemainNum, repeatForRemainNum, {1, 1, repStride, repStride});
+                        Adds(calcTensor[forLoopNum * ELEM_PER_REP_FP32 +
+                                        repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
+                             calcTensor[forLoopNum * ELEM_PER_REP_FP32 +
+                                        repeatForLoopNum * UINT8_MAX_NUM * patternR0Align],
+                             negMean, forRemainNum, repeatForRemainNum, {1, 1, repStride, repStride});
                     }
                 }
             } else {
@@ -613,19 +595,18 @@ private:
         int64_t repeatForLoop = lineNum / UINT8_MAX_NUM;
         int64_t repeatForRemain = lineNum % UINT8_MAX_NUM;
         for (int64_t i = 0; i < repeatForLoop; i++) {
-            WholeReduceSum<float>(
-                dstTensor[i * UINT8_MAX_NUM], srcTensor[i * UINT8_MAX_NUM * lineLength], sumNum, UINT8_MAX_NUM, 1, 1,
-                lineLength / B32_BLOCK_ALIGN_NUM);
+            WholeReduceSum<float>(dstTensor[i * UINT8_MAX_NUM], srcTensor[i * UINT8_MAX_NUM * lineLength], sumNum,
+                                  UINT8_MAX_NUM, 1, 1, lineLength / B32_BLOCK_ALIGN_NUM);
         }
         if (repeatForRemain) {
-            WholeReduceSum<float>(
-                dstTensor[repeatForLoop * UINT8_MAX_NUM], srcTensor[repeatForLoop * UINT8_MAX_NUM * lineLength], sumNum,
-                repeatForRemain, 1, 1, lineLength / B32_BLOCK_ALIGN_NUM);
+            WholeReduceSum<float>(dstTensor[repeatForLoop * UINT8_MAX_NUM],
+                                  srcTensor[repeatForLoop * UINT8_MAX_NUM * lineLength], sumNum, repeatForRemain, 1, 1,
+                                  lineLength / B32_BLOCK_ALIGN_NUM);
         }
     }
 
-    __aicore__ inline void DoAParallelReduce(
-        LocalTensor<float>& dstTensor, LocalTensor<float>& srcTensor, int64_t lineLength)
+    __aicore__ inline void DoAParallelReduce(LocalTensor<float>& dstTensor, LocalTensor<float>& srcTensor,
+                                             int64_t lineLength)
     {
         /*
         函数实现patternR1行的二分累加，累加结果为一行

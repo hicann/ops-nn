@@ -18,27 +18,12 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::array<const aclTensor *, 5> SingleLayerLstmGrad(
-    const aclTensor *x,
-    const aclTensor *w,
-    const aclTensor *b,
-    const aclTensor *y,
-    const aclTensor *initH,
-    const aclTensor *initC,
-    const aclTensor *h,
-    const aclTensor *c,
-    const aclTensor *dy,
-    const aclTensor *dh,
-    const aclTensor *dc,
-    const aclTensor *i,
-    const aclTensor *j,
-    const aclTensor *f,
-    const aclTensor *o,
-    const aclTensor *tanhc,
-    const aclTensor *seqLength,
-    const char *direction,
-    const char *gateOrder,
-    aclOpExecutor *executor);
+const std::array<const aclTensor*, 5> SingleLayerLstmGrad(
+    const aclTensor* x, const aclTensor* w, const aclTensor* b, const aclTensor* y, const aclTensor* initH,
+    const aclTensor* initC, const aclTensor* h, const aclTensor* c, const aclTensor* dy, const aclTensor* dh,
+    const aclTensor* dc, const aclTensor* i, const aclTensor* j, const aclTensor* f, const aclTensor* o,
+    const aclTensor* tanhc, const aclTensor* seqLength, const char* direction, const char* gateOrder,
+    aclOpExecutor* executor);
 
 }
 

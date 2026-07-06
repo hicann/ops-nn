@@ -26,26 +26,27 @@ static constexpr int64_t INT64_SIZE = 8;
 static constexpr int64_t UB_RESVERVED_SIZE = 5120;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t DOUBLE_BUFFER = 2;
-static constexpr int64_t THRESHOLD= 2;
+static constexpr int64_t THRESHOLD = 2;
 static constexpr int64_t KERNEL_OFFSET = 1;
 static constexpr int64_t DOUBLE = 2;
 
-void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingContext* context_, int64_t ubSize_, int64_t coreNum_)
+void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingContext* context_, int64_t ubSize_,
+                                                                int64_t coreNum_)
 {
     baseData.vRegSize = Ops::Base::GetVRegSize(context_);
     baseData.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
-    baseData.inputBytes = inputData->inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE; 
+    baseData.inputBytes = inputData->inputDtype == ge::DT_FLOAT ? FLOAT32_SIZE : FLOAT16_SIZE;
     baseData.indexBytes = inputData->isInt32Meet ? INT64_SIZE : INT32_SIZE;
-    baseData.availableUb = ubSize_ - UB_RESVERVED_SIZE; 
-    baseData.totalCoreNum = coreNum_; 
-    baseData.coreUsedForBestPerformance = baseData.totalCoreNum; 
+    baseData.availableUb = ubSize_ - UB_RESVERVED_SIZE;
+    baseData.totalCoreNum = coreNum_;
+    baseData.coreUsedForBestPerformance = baseData.totalCoreNum;
 
-    int64_t oneBlockNumT1 = baseData.ubBlockSize / baseData.inputBytes; 
-    int64_t oneBlockNumT2 = baseData.ubBlockSize / baseData.indexBytes; 
+    int64_t oneBlockNumT1 = baseData.ubBlockSize / baseData.inputBytes;
+    int64_t oneBlockNumT2 = baseData.ubBlockSize / baseData.indexBytes;
 
-    baseData.maxDataNumInOneBlock = std::max(oneBlockNumT1, oneBlockNumT2); 
+    baseData.maxDataNumInOneBlock = std::max(oneBlockNumT1, oneBlockNumT2);
 
-    baseData.proDataNumInOneBeatT2 = baseData.vRegSize / baseData.ubBlockSize * oneBlockNumT2;  
+    baseData.proDataNumInOneBeatT2 = baseData.vRegSize / baseData.ubBlockSize * oneBlockNumT2;
     baseData.inputNCSize = inputData->nX * inputData->cX;
 
     baseData.isPad = 0;
@@ -76,23 +77,31 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::InitializationVars(gert::TilingCont
 void Pool3DGradNCDHWSmallKernelCommonTiling::DoBufferCalculate()
 {
     // The calculation only involves inner.
-    int64_t dInputInner = Ops::Base::CeilDiv(splitData.dOutputInner + inputData->dKernel - 1, inputData->dStride); 
-    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride); 
-    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride); 
-    int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.maxDataNumInOneBlock); 
+    int64_t dInputInner = Ops::Base::CeilDiv(splitData.dOutputInner + inputData->dKernel - 1, inputData->dStride);
+    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData->hKernel - 1, inputData->hStride);
+    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData->wKernel - 1, inputData->wStride);
+    int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.maxDataNumInOneBlock);
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.maxDataNumInOneBlock);
-    int64_t wInputAligned = Ops::Base::CeilAlign(splitData.wOutputInner + ((inputData->wKernel - KERNEL_OFFSET) * inputData->wDilation) * DOUBLE, baseData.maxDataNumInOneBlock); 
+    int64_t wInputAligned = Ops::Base::CeilAlign(
+        splitData.wOutputInner + ((inputData->wKernel - KERNEL_OFFSET) * inputData->wDilation) * DOUBLE,
+        baseData.maxDataNumInOneBlock);
 
-    int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInnerAligned;   
+    int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInnerAligned;
     int64_t outputPlaneSizeDHW = splitData.dOutputInner * splitData.hOutputInner * wOutputInnerAligned;
 
-    splitData.inputBufferSize = splitData.highAxisInner * (splitData.dOutputInner + ((inputData->dKernel - KERNEL_OFFSET) * inputData->dDilation) * DOUBLE) *
-                                (splitData.hOutputInner + ((inputData->hKernel - KERNEL_OFFSET) * inputData->hDilation) * DOUBLE)  * wInputAligned * baseData.inputBytes;
+    splitData.inputBufferSize = splitData.highAxisInner *
+                                (splitData.dOutputInner +
+                                 ((inputData->dKernel - KERNEL_OFFSET) * inputData->dDilation) * DOUBLE) *
+                                (splitData.hOutputInner +
+                                 ((inputData->hKernel - KERNEL_OFFSET) * inputData->hDilation) * DOUBLE) *
+                                wInputAligned * baseData.inputBytes;
     splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeDHW * baseData.inputBytes;
-    splitData.argmaxBufferSize = splitData.highAxisInner * dInputInner * hInputInner * wInputInner * (inputData->isInt32Meet ? INT64_SIZE : INT32_SIZE);
-    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE; 
+    splitData.argmaxBufferSize = splitData.highAxisInner * dInputInner * hInputInner * wInputInner *
+                                 (inputData->isInt32Meet ? INT64_SIZE : INT32_SIZE);
+    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE;
 
-    int64_t tmpTotalBufferSize =  splitData.inputBufferSize + splitData.outputBufferSize + splitData.gradBufferSize + splitData.argmaxBufferSize;
+    int64_t tmpTotalBufferSize = splitData.inputBufferSize + splitData.outputBufferSize + splitData.gradBufferSize +
+                                 splitData.argmaxBufferSize;
     splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
     if (baseData.isPad == 1) {
         splitData.totalBufferSize += splitData.inputBufferSize;
@@ -101,12 +110,13 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DoBufferCalculate()
 
 bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetTargetCoreNum() const
 {
-    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner); 
+    int64_t tmpWOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner);
     int64_t tmpHOutputOuter = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputInner);
     int64_t tmpDOutputOuter = Ops::Base::CeilDiv(inputData->dX, splitData.dOutputInner);
     int64_t tmpHighAxisOutputOuter = Ops::Base::CeilDiv(baseData.inputNCSize, splitData.highAxisInner);
 
-    return tmpDOutputOuter * tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >= baseData.coreUsedForBestPerformance;
+    return tmpDOutputOuter * tmpWOutputOuter * tmpHOutputOuter * tmpHighAxisOutputOuter >=
+           baseData.coreUsedForBestPerformance;
 }
 
 bool Pool3DGradNCDHWSmallKernelCommonTiling::IsMeetUBSize()
@@ -155,7 +165,7 @@ bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignD()
     splitData.hOutputInner = inputData->hX;
     splitData.wOutputInner = inputData->wX;
     int64_t halfInput = inputData->dX / 2;
-    splitData.dOutputInner = inputData->dStride; 
+    splitData.dOutputInner = inputData->dStride;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
         int64_t left = 1;
         int64_t right = Ops::Base::CeilDiv(halfInput, inputData->dStride);
@@ -173,7 +183,7 @@ bool Pool3DGradNCDHWSmallKernelCommonTiling::TrySplitAlignD()
             }
         }
 
-        splitData.dOutputInner = bestSplit * inputData->dStride; 
+        splitData.dOutputInner = bestSplit * inputData->dStride;
         return true;
     } else {
         return false;
@@ -256,11 +266,12 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::SplitUnalignDHW()
         splitData.dOutputInner = inputData->dX;
     }
 
-    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner); 
+    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner);
     splitData.hOutputOuter = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputInner);
     splitData.dOutputOuter = Ops::Base::CeilDiv(inputData->dX, splitData.dOutputInner);
 
-    while (splitData.hOutputInner != 1 || splitData.dOutputInner != 1 || splitData.wOutputInner > baseData.proDataNumInOneBeatT2) {
+    while (splitData.hOutputInner != 1 || splitData.dOutputInner != 1 ||
+           splitData.wOutputInner > baseData.proDataNumInOneBeatT2) {
         if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
             DynamicAdjustmentDWH();
         } else {
@@ -278,7 +289,7 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DynamicAdjustmentDWH()
         splitData.dOutputOuter++;
         splitData.dOutputInner = Ops::Base::CeilDiv(inputData->dX, splitData.dOutputOuter);
         return;
-    } 
+    }
     if (splitData.hOutputInner != 1) {
         splitData.hOutputOuter++;
         splitData.hOutputInner = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputOuter);
@@ -290,7 +301,7 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DynamicAdjustmentDWH()
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::SearchBestTiling()
 {
-    splitData.isCheckRange = 0; 
+    splitData.isCheckRange = 0;
     if (TrySplitNC()) {
         return;
     }
@@ -316,9 +327,9 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DoUBTiling()
 {
     SearchBestTiling();
     DoBufferCalculate();
-    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner); 
-    int64_t tempWOutputTail = inputData->wX % splitData.wOutputInner; 
-    splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail; 
+    splitData.wOutputOuter = Ops::Base::CeilDiv(inputData->wX, splitData.wOutputInner);
+    int64_t tempWOutputTail = inputData->wX % splitData.wOutputInner;
+    splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail;
 
     splitData.hOutputOuter = Ops::Base::CeilDiv(inputData->hX, splitData.hOutputInner);
     int64_t tempHOutputTail = inputData->hX % splitData.hOutputInner;
@@ -335,11 +346,12 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::DoUBTiling()
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter * splitData.dOutputOuter; 
-    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum); 
-    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum); 
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1); 
+    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter *
+                                  splitData.dOutputOuter;
+    splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
+    splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::PrintBaseData() const
@@ -405,47 +417,48 @@ void Pool3DGradNCDHWSmallKernelCommonTiling::PrintSplitData() const
 
 void Pool3DGradNCDHWSmallKernelCommonTiling::SetTilingData(gert::TilingContext* context)
 {
-    Pool3DGradNameSpace::Pool3DGradNCDHWTilingData* tilingData = context->GetTilingData<Pool3DGradNameSpace::Pool3DGradNCDHWTilingData>();
-    tilingData->dArgmax=inputData->dGrad;
-    tilingData->hArgmax=inputData->hGrad;
-    tilingData->wArgmax=inputData->wGrad;
-    tilingData->dOutput=inputData->dX;
-    tilingData->hOutput=inputData->hX;
-    tilingData->wOutput=inputData->wX;
-    tilingData->dKernel=inputData->dKernel;
-    tilingData->hKernel=inputData->hKernel;
-    tilingData->wKernel=inputData->wKernel;
-    tilingData->dStride=inputData->dStride;
-    tilingData->hStride=inputData->hStride;
-    tilingData->wStride=inputData->wStride;
-    tilingData->padD=inputData->dPad;
-    tilingData->padH=inputData->hPad;
-    tilingData->padW=inputData->wPad;
-    tilingData->dilationD=inputData->dDilation;
-    tilingData->dilationH=inputData->hDilation;
-    tilingData->dilationW=inputData->wDilation;
-    tilingData->highAxisInner=splitData.highAxisInner;
-    tilingData->highAxisTail=splitData.highAxisTail;
-    tilingData->highAxisOuter=splitData.highAxisOuter;
-    tilingData->dOutputInner=splitData.dOutputInner;
-    tilingData->dOutputTail=splitData.dOutputTail;
-    tilingData->dOutputOuter=splitData.dOutputOuter;
-    tilingData->hOutputInner=splitData.hOutputInner;
-    tilingData->hOutputTail=splitData.hOutputTail;
-    tilingData->hOutputOuter=splitData.hOutputOuter;
-    tilingData->wOutputInner=splitData.wOutputInner;
-    tilingData->wOutputTail=splitData.wOutputTail;
-    tilingData->wOutputOuter=splitData.wOutputOuter;
-    tilingData->normalCoreProcessNum=splitData.normalCoreProcessNum;
-    tilingData->tailCoreProcessNum=splitData.tailCoreProcessNum;
-    tilingData->usedCoreNum=splitData.usedCoreNum;
-    tilingData->inputBufferSize=splitData.inputBufferSize;
-    tilingData->outputBufferSize=splitData.outputBufferSize;
-    tilingData->gradBufferSize=splitData.gradBufferSize;
-    tilingData->argmaxBufferSize=splitData.argmaxBufferSize;
-    tilingData->dProBatchSize=baseData.dProBatchSize;
-    tilingData->hProBatchSize=baseData.hProBatchSize;
-    tilingData->wProBatchSize=baseData.wProBatchSize;
+    Pool3DGradNameSpace::Pool3DGradNCDHWTilingData*
+        tilingData = context->GetTilingData<Pool3DGradNameSpace::Pool3DGradNCDHWTilingData>();
+    tilingData->dArgmax = inputData->dGrad;
+    tilingData->hArgmax = inputData->hGrad;
+    tilingData->wArgmax = inputData->wGrad;
+    tilingData->dOutput = inputData->dX;
+    tilingData->hOutput = inputData->hX;
+    tilingData->wOutput = inputData->wX;
+    tilingData->dKernel = inputData->dKernel;
+    tilingData->hKernel = inputData->hKernel;
+    tilingData->wKernel = inputData->wKernel;
+    tilingData->dStride = inputData->dStride;
+    tilingData->hStride = inputData->hStride;
+    tilingData->wStride = inputData->wStride;
+    tilingData->padD = inputData->dPad;
+    tilingData->padH = inputData->hPad;
+    tilingData->padW = inputData->wPad;
+    tilingData->dilationD = inputData->dDilation;
+    tilingData->dilationH = inputData->hDilation;
+    tilingData->dilationW = inputData->wDilation;
+    tilingData->highAxisInner = splitData.highAxisInner;
+    tilingData->highAxisTail = splitData.highAxisTail;
+    tilingData->highAxisOuter = splitData.highAxisOuter;
+    tilingData->dOutputInner = splitData.dOutputInner;
+    tilingData->dOutputTail = splitData.dOutputTail;
+    tilingData->dOutputOuter = splitData.dOutputOuter;
+    tilingData->hOutputInner = splitData.hOutputInner;
+    tilingData->hOutputTail = splitData.hOutputTail;
+    tilingData->hOutputOuter = splitData.hOutputOuter;
+    tilingData->wOutputInner = splitData.wOutputInner;
+    tilingData->wOutputTail = splitData.wOutputTail;
+    tilingData->wOutputOuter = splitData.wOutputOuter;
+    tilingData->normalCoreProcessNum = splitData.normalCoreProcessNum;
+    tilingData->tailCoreProcessNum = splitData.tailCoreProcessNum;
+    tilingData->usedCoreNum = splitData.usedCoreNum;
+    tilingData->inputBufferSize = splitData.inputBufferSize;
+    tilingData->outputBufferSize = splitData.outputBufferSize;
+    tilingData->gradBufferSize = splitData.gradBufferSize;
+    tilingData->argmaxBufferSize = splitData.argmaxBufferSize;
+    tilingData->dProBatchSize = baseData.dProBatchSize;
+    tilingData->hProBatchSize = baseData.hProBatchSize;
+    tilingData->wProBatchSize = baseData.wProBatchSize;
 }
 
 ge::graphStatus Pool3DGradNCDHWSmallKernelCommonTiling::DoOpTiling(gert::TilingContext* context)
@@ -460,19 +473,15 @@ ge::graphStatus Pool3DGradNCDHWSmallKernelCommonTiling::DoOpTiling(gert::TilingC
 
 ge::graphStatus Pool3DGradNCDHWSmallKernelCommonTiling::PostTiling(gert::TilingContext* context_, uint64_t key)
 {
-    Pool3DGradNameSpace::Pool3DGradNCDHWTilingData* tilingData = context_->GetTilingData<Pool3DGradNameSpace::Pool3DGradNCDHWTilingData>();
+    Pool3DGradNameSpace::Pool3DGradNCDHWTilingData*
+        tilingData = context_->GetTilingData<Pool3DGradNameSpace::Pool3DGradNCDHWTilingData>();
     context_->SetTilingKey(key);
     context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 
-Pool3DGradNCDHWSplitInfo& Pool3DGradNCDHWSmallKernelCommonTiling::GetSplitData()
-{
-    return splitData;
-}
+Pool3DGradNCDHWSplitInfo& Pool3DGradNCDHWSmallKernelCommonTiling::GetSplitData() { return splitData; }
 
-Pool3DGradNCDHWBaseInfo& Pool3DGradNCDHWSmallKernelCommonTiling::GetBaseData() {
-    return baseData;
-}
+Pool3DGradNCDHWBaseInfo& Pool3DGradNCDHWSmallKernelCommonTiling::GetBaseData() { return baseData; }
 
 } // namespace optiling

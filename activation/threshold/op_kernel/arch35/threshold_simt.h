@@ -32,12 +32,9 @@ using namespace AscendC;
 constexpr uint32_t THREAD_NUM = 512;
 
 template <typename T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void ThresholdSimtKernel(
-    int64_t totalElements,
-    float threshold,
-    __gm__ T* input,
-    __gm__ T* output)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ThresholdSimtKernel(int64_t totalElements,
+                                                                                     float threshold, __gm__ T* input,
+                                                                                     __gm__ T* output)
 {
     // Output constants in target dtype (0.0 and 1.0 are exactly representable in all FP formats)
     const T one = static_cast<T>(1.0f);
@@ -45,9 +42,7 @@ inline void ThresholdSimtKernel(
 
     // Grid-Stride loop: each thread traverses all elements
     for (uint64_t idx = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-         idx < static_cast<uint64_t>(totalElements);
-         idx += static_cast<uint64_t>(blockDim.x) * gridDim.x)
-    {
+         idx < static_cast<uint64_t>(totalElements); idx += static_cast<uint64_t>(blockDim.x) * gridDim.x) {
         // Upcast to float32 for comparison, matching golden semantics
         // (golden converts input to float32 and compares with float32 threshold)
         float valF32 = static_cast<float>(input[idx]);
@@ -64,12 +59,7 @@ __aicore__ inline void Process(GM_ADDR input, GM_ADDR output, const ThresholdTil
     __gm__ T* inputGm = (__gm__ T*)input;
     __gm__ T* outputGm = (__gm__ T*)output;
 
-    asc_vf_call<ThresholdSimtKernel<T>>(
-        dim3(THREAD_NUM),
-        totalElements,
-        threshold,
-        inputGm,
-        outputGm);
+    asc_vf_call<ThresholdSimtKernel<T>>(dim3(THREAD_NUM), totalElements, threshold, inputGm, outputGm);
 }
 
 } // namespace NsThreshold

@@ -11,28 +11,29 @@
  * \file leaky_relu_grad_tiling.h
  * \brief leaky_relu_grad_tiling
  */
- 
- #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_
- #define OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_
- 
+
+#ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_
+#define OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_
+
 #include "op_host/tiling_base.h"
- namespace optiling {
- using namespace Ops::NN::Optiling;
- class LeakyReluGradTiling : public TilingBaseClass {
-    public:
-     explicit LeakyReluGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
-    protected:
-     bool IsCapable() override;
-     ge::graphStatus GetPlatformInfo() override;
-     ge::graphStatus GetShapeAttrsInfo() override;
-     ge::graphStatus DoOpTiling() override;
-     ge::graphStatus DoLibApiTiling() override;
-     uint64_t GetTilingKey() const override;
-     ge::graphStatus GetWorkspaceSize() override;
-     ge::graphStatus PostTiling() override;
- 
-    private:
-     uint64_t tilingKey = 0;
- };
- }  // namespace optiling
- #endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_
+namespace optiling {
+using namespace Ops::NN::Optiling;
+class LeakyReluGradTiling : public TilingBaseClass {
+public:
+    explicit LeakyReluGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    uint64_t tilingKey = 0;
+};
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_LEAKY_RELU_GRAD_TILING_H_

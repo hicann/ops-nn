@@ -24,10 +24,9 @@ using namespace AscendC;
 template <typename T>
 class ScaledMaskedSoftmaxGradV2LargeHeadDim : public ScaledMaskedSoftmaxGradV2Base<T> {
 public:
-    __aicore__ inline ScaledMaskedSoftmaxGradV2LargeHeadDim()
-    {}
-    __aicore__ inline void Init(
-        const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData, TPipe* pipeIn);
+    __aicore__ inline ScaledMaskedSoftmaxGradV2LargeHeadDim() {}
+    __aicore__ inline void Init(const GmTensor* gmTensor, const ScaledMaskedSoftmaxGradV2TilingData& tilingData,
+                                TPipe* pipeIn);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessBit16();
     __aicore__ inline void ProcessBit32();
@@ -37,11 +36,11 @@ protected:
     TBuf<TPosition::VECCALC> inBufferY;
 
     __aicore__ inline void SetParams(uint64_t& loop);
-    __aicore__ inline void ComputeSoftmaxGradBit16(
-        LocalTensor<T>& yGradLocal, LocalTensor<T>& yLocal, LocalTensor<float>& tmpBufYGrad,
-        LocalTensor<float>& tmpBufY, const uint64_t& currentLoop);
-    __aicore__ inline void DoSoftmaxGrad(
-        LocalTensor<float>& yGradLocal, LocalTensor<float>& yLocal, const uint64_t& currentLoop);
+    __aicore__ inline void ComputeSoftmaxGradBit16(LocalTensor<T>& yGradLocal, LocalTensor<T>& yLocal,
+                                                   LocalTensor<float>& tmpBufYGrad, LocalTensor<float>& tmpBufY,
+                                                   const uint64_t& currentLoop);
+    __aicore__ inline void DoSoftmaxGrad(LocalTensor<float>& yGradLocal, LocalTensor<float>& yLocal,
+                                         const uint64_t& currentLoop);
     __aicore__ inline void ComputeReduceSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal);
     __aicore__ inline void DoScaleAndMask(LocalTensor<float>& tmpOutLocal, LocalTensor<bool>& maskLocal);
 
@@ -162,8 +161,9 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::ComputeSoftmaxG
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::DoSoftmaxGrad(
-    LocalTensor<float>& yGradLocal, LocalTensor<float>& yLocal, const uint64_t& currentLoop)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::DoSoftmaxGrad(LocalTensor<float>& yGradLocal,
+                                                                               LocalTensor<float>& yLocal,
+                                                                               const uint64_t& currentLoop)
 {
     LocalTensor<float> sumTmpBuf = this->sharedBuffer.template Get<float>();
     Mul(yGradLocal, yGradLocal, yLocal, this->calcNum);
@@ -177,9 +177,8 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::DoSoftmaxGrad(
     ComputeReduceSum(sumTmpBuf, yGradLocal);
     PipeBarrier<PIPE_V>();
     for (uint64_t i = 0; i < this->lineNum; ++i) {
-        Muls(
-            yLocal[i * this->paddedHeadDim_], yLocal[i * this->paddedHeadDim_], sumTmpBuf.GetValue(i), MASK_LEN_B32,
-            this->paddedHeadDim_ / MASK_LEN_B32, repeatParams);
+        Muls(yLocal[i * this->paddedHeadDim_], yLocal[i * this->paddedHeadDim_], sumTmpBuf.GetValue(i), MASK_LEN_B32,
+             this->paddedHeadDim_ / MASK_LEN_B32, repeatParams);
     }
     PipeBarrier<PIPE_V>();
     Sub(yGradLocal, yGradLocal, yLocal, this->calcNum);
@@ -193,22 +192,21 @@ __aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::DoSoftmaxGrad(
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::ComputeReduceSum(
-    LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::ComputeReduceSum(LocalTensor<float>& dstLocal,
+                                                                                  LocalTensor<float>& srcLocal)
 {
     uint64_t repeatTimes = this->paddedHeadDim_ / MASK_LEN_B32;
     for (uint64_t i = 0; i < this->lineNum; ++i) {
-        WholeReduceSum(
-            dstLocal[i * MASK_LEN_B32], srcLocal[i * this->paddedHeadDim_], MASK_LEN_B32, repeatTimes, BLK_STRIDE,
-            BLK_STRIDE, REP_STRIDE);
+        WholeReduceSum(dstLocal[i * MASK_LEN_B32], srcLocal[i * this->paddedHeadDim_], MASK_LEN_B32, repeatTimes,
+                       BLK_STRIDE, BLK_STRIDE, REP_STRIDE);
         PipeBarrier<PIPE_V>();
         WholeReduceSum(dstLocal[i], dstLocal[i * MASK_LEN_B32], repeatTimes, 1, BLK_STRIDE, BLK_STRIDE, REP_STRIDE);
     }
 }
 
 template <typename T>
-__aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::DoScaleAndMask(
-    LocalTensor<float>& tmpOutLocal, LocalTensor<bool>& maskLocal)
+__aicore__ inline void ScaledMaskedSoftmaxGradV2LargeHeadDim<T>::DoScaleAndMask(LocalTensor<float>& tmpOutLocal,
+                                                                                LocalTensor<bool>& maskLocal)
 {
     if (this->scale_ != DEFAULT_SCALE) {
         Muls(tmpOutLocal, tmpOutLocal, this->scale_, this->calcNum);

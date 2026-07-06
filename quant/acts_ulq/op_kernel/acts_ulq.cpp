@@ -20,14 +20,12 @@
 using TilingData4 = ActsUlqTilingData<4>;
 using TilingData8 = ActsUlqTilingData<8>;
 
-template<int RANK>
-__global__ __aicore__ void acts_ulq(
-    GM_ADDR x, GM_ADDR clamp_min, GM_ADDR clamp_max,
-    GM_ADDR y, GM_ADDR clamp_min_mask, GM_ADDR clamp_max_mask, GM_ADDR x_clamped_loss,
-    GM_ADDR workspace, GM_ADDR tiling)
+template <int RANK>
+__global__ __aicore__ void acts_ulq(GM_ADDR x, GM_ADDR clamp_min, GM_ADDR clamp_max, GM_ADDR y, GM_ADDR clamp_min_mask,
+                                    GM_ADDR clamp_max_mask, GM_ADDR x_clamped_loss, GM_ADDR workspace, GM_ADDR tiling)
 {
-    GM_ADDR ins[3]   = {x, clamp_min, clamp_max};
-    GM_ADDR outs[4]  = {y, clamp_min_mask, clamp_max_mask, x_clamped_loss};
+    GM_ADDR ins[3] = {x, clamp_min, clamp_max};
+    GM_ADDR outs[4] = {y, clamp_min_mask, clamp_max_mask, x_clamped_loss};
 
     REGISTER_NONE_TILING;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);

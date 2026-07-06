@@ -31,17 +31,17 @@ namespace optiling {
 namespace {
 constexpr int32_t MX_BASIC_API_TILING_PRIORITY = 0;
 constexpr int32_t CUBE_BASIC_API_TILING_PRIORITY = 1;
-constexpr const char *OP_NAME = "QuantBatchMatmulInplaceAdd";
-const std::vector<int32_t> INPLACE_ADD_TILING_PRIORITIES = {
-    MX_BASIC_API_TILING_PRIORITY, CUBE_BASIC_API_TILING_PRIORITY};
+constexpr const char* OP_NAME = "QuantBatchMatmulInplaceAdd";
+const std::vector<int32_t> INPLACE_ADD_TILING_PRIORITIES = {MX_BASIC_API_TILING_PRIORITY,
+                                                            CUBE_BASIC_API_TILING_PRIORITY};
 
 template <typename Context>
-const char *GetValidOpName(Context *context)
+const char* GetValidOpName(Context* context)
 {
     if (context == nullptr) {
         return OP_NAME;
     }
-    const char *nodeName = context->GetNodeName();
+    const char* nodeName = context->GetNodeName();
     if (nodeName != nullptr && nodeName[0] != '\0') {
         return nodeName;
     }
@@ -52,28 +52,26 @@ const char *GetValidOpName(Context *context)
 static ge::graphStatus QuantBatchMatmulInplaceAddTilingFunc(gert::TilingContext* context)
 {
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulInplaceAdd", "TilingContext is null!");
-    const char *opName = GetValidOpName(context);
+    const char* opName = GetValidOpName(context);
 
     auto compileInfoPtr = context->GetCompileInfo<QuantBatchMatmulV3CompileInfo>();
-    OP_LOGE_IF(
-        compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The compileInfoPtr is null!");
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The compileInfoPtr is null!");
     if (!compileInfoPtr->supportL12BtBf16) {
-        OP_LOGD(
-            "QuantBatchMatmulInplaceAddTilingFunc",
-            "Do op tiling failed, only supports on Ascend 950PR/Ascend 950DT for now.");
+        OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc",
+                "Do op tiling failed, only supports on Ascend 950PR/Ascend 950DT for now.");
         return ge::GRAPH_FAILED;
     }
 
     OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Using the basic api tiling strategy.");
     ResetQuantBatchMatmulV3InputParams();
-    return TilingRegistryArch::GetInstance().DoTilingImpl(
-        context, INPLACE_ADD_TILING_PRIORITIES, static_cast<int32_t>(compileInfoPtr->npuArch));
+    return TilingRegistryArch::GetInstance().DoTilingImpl(context, INPLACE_ADD_TILING_PRIORITIES,
+                                                          static_cast<int32_t>(compileInfoPtr->npuArch));
 }
 
 static ge::graphStatus TilingPrepareForQuantBatchMatmulInplaceAdd(gert::TilingParseContext* context)
 {
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulInplaceAdd", "TilingParseContext is null!");
-    const char *opName = GetValidOpName(context);
+    const char* opName = GetValidOpName(context);
     auto platformInfoPtr = context->GetPlatformInfo();
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, opName, "The platformInfoPtr is null!");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);

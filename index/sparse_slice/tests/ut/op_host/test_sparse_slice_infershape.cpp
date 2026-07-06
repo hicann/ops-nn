@@ -25,15 +25,9 @@
 
 class SparseSliceRt2UTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SparseSliceRt2UTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseSliceRt2UTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SparseSliceRt2UTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SparseSliceRt2UTest TearDown" << std::endl; }
 };
 
 TEST_F(SparseSliceRt2UTest, InferShape_succ_1)

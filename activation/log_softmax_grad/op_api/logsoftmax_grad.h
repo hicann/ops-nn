@@ -13,10 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-aclTensor *LogSoftmaxGrad(const aclTensor *grad_output,
-                          const aclTensor *output,
-                          int64_t dim,
-                          aclOpExecutor *executor);
+aclTensor* LogSoftmaxGrad(const aclTensor* grad_output, const aclTensor* output, int64_t dim, aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_LOGSOFTMAX_GRAD_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_LOGSOFTMAX_GRAD_H_

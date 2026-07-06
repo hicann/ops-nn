@@ -66,8 +66,7 @@ public:
     explicit AntiMxQuantTailAxisTiling(gert::TilingContext* context, const AntiMxQuantTilingParam& tilingParam)
         : context_(context), tilingParam_(tilingParam), tilingData_{}
     {}
-    ~AntiMxQuantTailAxisTiling()
-    {}
+    ~AntiMxQuantTailAxisTiling() {}
     ge::graphStatus DoTiling();
 
 private:

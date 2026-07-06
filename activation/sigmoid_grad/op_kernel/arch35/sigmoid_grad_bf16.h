@@ -18,19 +18,20 @@
 #include "kernel_operator.h"
 
 namespace SigmoidGrad {
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::MaskReg;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
+using AscendC::TBuf;
 using AscendC::TPipe;
 using AscendC::TQue;
-using AscendC::TBuf;
+using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::RegTensor;
 
 // y is bfloat16, dy is bfloat16, z is bfloat16
 class SigmoidGradBf16 {
 public:
-    __aicore__ inline SigmoidGradBf16() {};
-    __aicore__ inline void Init(GM_ADDR y, GM_ADDR dy, GM_ADDR z, GM_ADDR workspace, const SigmoidGradTilingData* tilingDataPtr, TPipe* pipePtr)
+    __aicore__ inline SigmoidGradBf16(){};
+    __aicore__ inline void Init(GM_ADDR y, GM_ADDR dy, GM_ADDR z, GM_ADDR workspace,
+                                const SigmoidGradTilingData* tilingDataPtr, TPipe* pipePtr)
     {
         pipePtr_ = pipePtr;
         tilingDataPtr_ = tilingDataPtr;
@@ -46,8 +47,10 @@ public:
 
     __aicore__ inline void Process()
     {
-        int64_t ubLoopNum = AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1 ? tilingDataPtr_->ubLoopOfTailBlock : tilingDataPtr_->ubLoopOfFormerBlock;
-        int64_t tailExtent = AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1 ? tilingDataPtr_->ubTailOfTailBlock : tilingDataPtr_->ubTailOfFormerBlock;
+        int64_t ubLoopNum = AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1 ? tilingDataPtr_->ubLoopOfTailBlock :
+                                                                                   tilingDataPtr_->ubLoopOfFormerBlock;
+        int64_t tailExtent = AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1 ? tilingDataPtr_->ubTailOfTailBlock :
+                                                                                    tilingDataPtr_->ubTailOfFormerBlock;
         for (int64_t ubLoopIdx = 0; ubLoopIdx < ubLoopNum; ubLoopIdx += 1) {
             int64_t i0Extent = ubLoopIdx == ubLoopNum - 1 ? tailExtent : tilingDataPtr_->ubFormer;
             CopyIn0(i0Extent, ubLoopIdx);
@@ -65,7 +68,10 @@ private:
         AscendC::DataCopyPadExtParams<bfloat16_t> dataCopyPadExtParams;
         dataCopyExtParams.blockCount = 1;
         dataCopyExtParams.blockLen = i0Extent * sizeof(bfloat16_t);
-        AscendC::DataCopyPad(bufferIn0_[0], inputGmY_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer], dataCopyExtParams, dataCopyPadExtParams);
+        AscendC::DataCopyPad(
+            bufferIn0_[0],
+            inputGmY_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer],
+            dataCopyExtParams, dataCopyPadExtParams);
         queIn0_.EnQue<bfloat16_t>(bufferIn0_);
     }
 
@@ -76,7 +82,10 @@ private:
         AscendC::DataCopyPadExtParams<bfloat16_t> dataCopyPadExtParams;
         dataCopyExtParams.blockCount = 1;
         dataCopyExtParams.blockLen = i0Extent * sizeof(bfloat16_t);
-        AscendC::DataCopyPad(bufferIn1_[0], inputGmDy_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer], dataCopyExtParams, dataCopyPadExtParams);
+        AscendC::DataCopyPad(
+            bufferIn1_[0],
+            inputGmDy_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer],
+            dataCopyExtParams, dataCopyPadExtParams);
         queIn1_.EnQue<bfloat16_t>(bufferIn1_);
     }
 
@@ -85,7 +94,8 @@ private:
         bufferIn0_ = queIn0_.DeQue<bfloat16_t>();
         bufferIn1_ = queIn1_.DeQue<bfloat16_t>();
         bufferOut0_ = queOut0_.AllocTensor<bfloat16_t>();
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             RegTensor<bfloat16_t> vreg0;
             RegTensor<float> vreg1;
             RegTensor<float> vreg2;
@@ -98,26 +108,27 @@ private:
             MaskReg preg0;
             uint32_t size = i0Extent;
             preg0 = AscendC::MicroAPI::CreateMask<float>();
-            AscendC::MicroAPI::Duplicate<float, AscendC::MicroAPI::MaskMergeMode::ZEROING, float>(vreg2, static_cast<float>(1.0), preg0);
-            uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) / 
-                (AscendC::VECTOR_REG_WIDTH / sizeof(float));
-            __local_mem__ bfloat16_t* bufferIn0Addr = (__local_mem__ bfloat16_t *)bufferIn0_.GetPhyAddr();
-            __local_mem__ bfloat16_t* bufferIn1Addr = (__local_mem__ bfloat16_t *)bufferIn1_.GetPhyAddr();
-            __local_mem__ bfloat16_t* bufferOut0Addr = (__local_mem__ bfloat16_t *)bufferOut0_.GetPhyAddr();
+            AscendC::MicroAPI::Duplicate<float, AscendC::MicroAPI::MaskMergeMode::ZEROING, float>(
+                vreg2, static_cast<float>(1.0), preg0);
+            uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) /
+                                 (AscendC::VECTOR_REG_WIDTH / sizeof(float));
+            __local_mem__ bfloat16_t* bufferIn0Addr = (__local_mem__ bfloat16_t*)bufferIn0_.GetPhyAddr();
+            __local_mem__ bfloat16_t* bufferIn1Addr = (__local_mem__ bfloat16_t*)bufferIn1_.GetPhyAddr();
+            __local_mem__ bfloat16_t* bufferOut0Addr = (__local_mem__ bfloat16_t*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg5, 
-                    bufferIn1Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
+                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    vreg5, bufferIn1Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg6, vreg5, preg0);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, 
-                    bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
+                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg1, vreg0, preg0);
                 AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2, vreg1, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg6, vreg3, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg7, vreg4, vreg1, preg0);
                 AscendC::MicroAPI::Cast<bfloat16_t, float, castTrait1>(vreg8, vreg7, preg0);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(bufferOut0Addr + 
-                    i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg8, preg0);
+                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                    bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg8, preg0);
             }
         }
         queIn0_.FreeTensor(bufferIn0_);
@@ -131,7 +142,9 @@ private:
         AscendC::DataCopyExtParams dataCopyExtParams;
         dataCopyExtParams.blockCount = 1;
         dataCopyExtParams.blockLen = i0Extent * sizeof(bfloat16_t);
-        AscendC::DataCopyPad(outputGmZ_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer], bufferOut0_[0], dataCopyExtParams);
+        AscendC::DataCopyPad(
+            outputGmZ_[tilingDataPtr_->blockFormer * AscendC::GetBlockIdx() + ubLoopIdx * tilingDataPtr_->ubFormer],
+            bufferOut0_[0], dataCopyExtParams);
         queOut0_.FreeTensor(bufferOut0_);
     }
 
@@ -148,15 +161,11 @@ private:
     LocalTensor<bfloat16_t> bufferIn1_;
     LocalTensor<bfloat16_t> bufferOut0_;
     constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
     constexpr static AscendC::MicroAPI::CastTrait castTrait1 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 };
 
 } // namespace SigmoidGrad

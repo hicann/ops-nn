@@ -48,25 +48,17 @@ constexpr uint32_t THREAD_NUM_VF = (sizeof(IDX_T) == 4) ? 1024 : 512;
 
 // ========== Cast helpers with __simt_callee__ (required for VF callee chain) ==========
 
-__simt_callee__ inline float CastBf16ToFloat(bfloat16_t val)
-{
-    return __bfloat162float(val);
-}
+__simt_callee__ inline float CastBf16ToFloat(bfloat16_t val) { return __bfloat162float(val); }
 
-__simt_callee__ inline bfloat16_t CastFloatToBf16(float val)
-{
-    return __float2bfloat16_rn(val);
-}
+__simt_callee__ inline bfloat16_t CastFloatToBf16(float val) { return __float2bfloat16_rn(val); }
 
 // ========== Direct compute kernel (float32, int32) ==========
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachAddListDirectSimt(
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachAddListDirectSimt(
     IDX_T count, __gm__ T* x1, __gm__ T* x2, T alphaVal, __gm__ T* y)
 {
-    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx());
-         index < count;
+    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx()); index < count;
          index += static_cast<IDX_T>(Simt::GetThreadNum())) {
         y[index] = x1[index] + x2[index] * alphaVal;
     }
@@ -75,12 +67,10 @@ inline void OpForeachAddListDirectSimt(
 // ========== FP16 Cast compute kernel: y = x1 + x2 * alpha (via FP32 intermediate for precision) ==========
 
 template <typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachAddListFp16CastSimt(
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachAddListFp16CastSimt(
     IDX_T count, __gm__ half* x1, __gm__ half* x2, float alphaVal, __gm__ half* y)
 {
-    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx());
-         index < count;
+    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx()); index < count;
          index += static_cast<IDX_T>(Simt::GetThreadNum())) {
         float x1_val = __half2float(x1[index]);
         float x2_val = __half2float(x2[index]);
@@ -92,13 +82,10 @@ inline void OpForeachAddListFp16CastSimt(
 // ========== BF16 Cast compute kernel: y = x1 + x2 * alpha (via FP32 intermediate) ==========
 
 template <typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>)
-inline void OpForeachAddListBf16CastSimt(
-    IDX_T count, __gm__ bfloat16_t* x1, __gm__ bfloat16_t* x2,
-    float alphaVal, __gm__ bfloat16_t* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachAddListBf16CastSimt(
+    IDX_T count, __gm__ bfloat16_t* x1, __gm__ bfloat16_t* x2, float alphaVal, __gm__ bfloat16_t* y)
 {
-    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx());
-         index < count;
+    for (IDX_T index = static_cast<IDX_T>(Simt::GetThreadIdx()); index < count;
          index += static_cast<IDX_T>(Simt::GetThreadNum())) {
         float x1_val = CastBf16ToFloat(x1[index]);
         float x2_val = CastBf16ToFloat(x2[index]);
@@ -111,10 +98,8 @@ inline void OpForeachAddListBf16CastSimt(
 
 // FP16 Process: iterates tensors, dispatches FP16 Cast VF kernel with IDX_T selection
 // Uses FP32 intermediate for y = x1 + x2 * alpha to avoid FP16 accumulation precision loss
-__aicore__ inline void ForeachAddListProcessFp16(
-    float alphaVal,
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-    const ForeachAddListTilingData* tilingData)
+__aicore__ inline void ForeachAddListProcessFp16(float alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                 const ForeachAddListTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     if (coreId >= tilingData->needCoreNum) {
@@ -142,23 +127,21 @@ __aicore__ inline void ForeachAddListProcessFp16(
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 // 32-bit fast path: 1024 threads
                 Simt::VF_CALL<OpForeachAddListFp16CastSimt<int32_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
             } else {
                 // 64-bit path: 512 threads (for very large tensors)
-                Simt::VF_CALL<OpForeachAddListFp16CastSimt<int64_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                Simt::VF_CALL<OpForeachAddListFp16CastSimt<int64_t>>(Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
+                                                                     x1_t + localStart, x2_t + localStart, alphaVal,
+                                                                     y_t + localStart);
             }
         }
     }
 }
 
 // FP32 Process: iterates tensors, dispatches direct FP32 VF kernel with IDX_T selection
-__aicore__ inline void ForeachAddListProcessFp32(
-    float alphaVal,
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-    const ForeachAddListTilingData* tilingData)
+__aicore__ inline void ForeachAddListProcessFp32(float alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                 const ForeachAddListTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     if (coreId >= tilingData->needCoreNum) {
@@ -186,23 +169,21 @@ __aicore__ inline void ForeachAddListProcessFp32(
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 // 32-bit fast path: 1024 threads
                 Simt::VF_CALL<OpForeachAddListDirectSimt<float, int32_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
             } else {
                 // 64-bit path: 512 threads
                 Simt::VF_CALL<OpForeachAddListDirectSimt<float, int64_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                    Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, alphaVal,
+                    y_t + localStart);
             }
         }
     }
 }
 
 // INT32 Process: iterates tensors, dispatches direct INT32 VF kernel with IDX_T selection
-__aicore__ inline void ForeachAddListProcessInt32(
-    int32_t alphaVal,
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-    const ForeachAddListTilingData* tilingData)
+__aicore__ inline void ForeachAddListProcessInt32(int32_t alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachAddListTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     if (coreId >= tilingData->needCoreNum) {
@@ -230,23 +211,21 @@ __aicore__ inline void ForeachAddListProcessInt32(
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 // 32-bit fast path: 1024 threads
                 Simt::VF_CALL<OpForeachAddListDirectSimt<int32_t, int32_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
             } else {
                 // 64-bit path: 512 threads
                 Simt::VF_CALL<OpForeachAddListDirectSimt<int32_t, int64_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                    Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, alphaVal,
+                    y_t + localStart);
             }
         }
     }
 }
 
 // BF16 Process: iterates tensors, dispatches BF16 cast VF kernel with IDX_T selection
-__aicore__ inline void ForeachAddListProcessBf16(
-    float alphaVal,
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-    const ForeachAddListTilingData* tilingData)
+__aicore__ inline void ForeachAddListProcessBf16(float alphaVal, GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                 const ForeachAddListTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     if (coreId >= tilingData->needCoreNum) {
@@ -274,13 +253,13 @@ __aicore__ inline void ForeachAddListProcessBf16(
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 // 32-bit fast path: 1024 threads
                 Simt::VF_CALL<OpForeachAddListBf16CastSimt<int32_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount),
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                    Simt::Dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, alphaVal, y_t + localStart);
             } else {
                 // 64-bit path: 512 threads
-                Simt::VF_CALL<OpForeachAddListBf16CastSimt<int64_t>>(
-                    Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
-                    x1_t + localStart, x2_t + localStart, alphaVal, y_t + localStart);
+                Simt::VF_CALL<OpForeachAddListBf16CastSimt<int64_t>>(Simt::Dim3(THREAD_NUM_VF<int64_t>), localCount,
+                                                                     x1_t + localStart, x2_t + localStart, alphaVal,
+                                                                     y_t + localStart);
             }
         }
     }

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -34,8 +35,7 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-    int64_t
-    GetShapeSize(const std::vector<int64_t>& shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shapeSize = 1;
     for (auto i : shape) {
@@ -76,7 +76,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -127,7 +127,8 @@ int aclnnDynamicMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> y1OutDeviceAddrPtr(y1OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建mxscale1Out aclTensor
-    ret = CreateAclTensor(mxscale1OutHostData, mxscale1OutShape, &mxscale1OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscale1Out);
+    ret = CreateAclTensor(mxscale1OutHostData, mxscale1OutShape, &mxscale1OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &mxscale1Out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscale1OutTensorPtr(mxscale1Out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscale1OutDeviceAddrPtr(mxscale1OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -137,19 +138,21 @@ int aclnnDynamicMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> y2OutDeviceAddrPtr(y2OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建mxscale2Out aclTensor
-    ret = CreateAclTensor(mxscale2OutHostData, mxscale2OutShape, &mxscale2OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscale2Out);
+    ret = CreateAclTensor(mxscale2OutHostData, mxscale2OutShape, &mxscale2OutDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                          &mxscale2Out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscale2OutTensorPtr(mxscale2Out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscale2OutDeviceAddrPtr(mxscale2OutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
     // 调用aclnnDynamicMxQuantWithDualAxis第一段接口
-    ret = aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize(x, roundModeOptional, dstType, scaleAlg, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
+    ret = aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize(x, roundModeOptional, dstType, scaleAlg, y1Out, mxscale1Out,
+                                                          y2Out, mxscale2Out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -169,16 +172,14 @@ int aclnnDynamicMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size1 = GetShapeSize(y1OutShape);
     auto size2 = GetShapeSize(y2OutShape);
-    std::vector<uint8_t> y1OutData(
-        size1, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
-    std::vector<uint8_t> y2OutData(
-        size2, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> y1OutData(size1, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> y2OutData(size2, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
     ret = aclrtMemcpy(y1OutData.data(), y1OutData.size() * sizeof(y1OutData[0]), y1OutDeviceAddr,
-                    size1 * sizeof(y1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST) && 
-                    aclrtMemcpy(y2OutData.data(), y2OutData.size() * sizeof(y2OutData[0]), y2OutDeviceAddr,
-                    size2 * sizeof(y2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+                      size1 * sizeof(y1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST) &&
+          aclrtMemcpy(y2OutData.data(), y2OutData.size() * sizeof(y2OutData[0]), y2OutDeviceAddr,
+                      size2 * sizeof(y2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y1Out and y2Out from device to host failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     for (int64_t i = 0; i < size1; i++) {
         LOG_PRINT("y1Out[%ld] is: %d\n", i, y1OutData[i]);
     }
@@ -187,18 +188,18 @@ int aclnnDynamicMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
     }
     size1 = GetShapeSize(mxscale1OutShape);
     size2 = GetShapeSize(mxscale2OutShape);
-    std::vector<uint8_t> mxscale1OutData(
-        size1, 0);  // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
-    std::vector<uint8_t> mxscale2OutData(
-        size2, 0);  // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
-    ret = aclrtMemcpy(mxscale1OutData.data(), mxscale1OutData.size() * sizeof(mxscale1OutData[0]), mxscale1OutDeviceAddr,
-                    size1 * sizeof(mxscale1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    std::vector<uint8_t> mxscale1OutData(size1,
+                                         0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    std::vector<uint8_t> mxscale2OutData(size2,
+                                         0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    ret = aclrtMemcpy(mxscale1OutData.data(), mxscale1OutData.size() * sizeof(mxscale1OutData[0]),
+                      mxscale1OutDeviceAddr, size1 * sizeof(mxscale1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy mxscale1Out from device to host failed. ERROR: %d\n", ret);
-            return ret);
-    ret = aclrtMemcpy(mxscale2OutData.data(), mxscale2OutData.size() * sizeof(mxscale2OutData[0]), mxscale2OutDeviceAddr,
-                    size2 * sizeof(mxscale2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+              return ret);
+    ret = aclrtMemcpy(mxscale2OutData.data(), mxscale2OutData.size() * sizeof(mxscale2OutData[0]),
+                      mxscale2OutDeviceAddr, size2 * sizeof(mxscale2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy mxscale2Out from device to host failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     for (int64_t i = 0; i < size1; i++) {
         LOG_PRINT("mxscale1Out[%ld] is: %d\n", i, mxscale1OutData[i]);
     }
@@ -215,7 +216,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = aclnnDynamicMxQuantWithDualAxisTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisTest failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisTest failed. ERROR: %d\n", ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

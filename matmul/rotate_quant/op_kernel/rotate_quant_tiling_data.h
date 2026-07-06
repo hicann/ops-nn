@@ -19,30 +19,30 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 namespace RotateQuantOpt {
-    constexpr uint64_t STRUCT_ALIGNAS = 8;
-    #pragma pack(push, 8)
-    struct alignas(STRUCT_ALIGNAS) RotateQuantTilingData {
-        int32_t M;
-        int32_t N;
-        int32_t K;
-        int32_t loopM;
-        int64_t dstType;
-        int64_t stepLoop;
-        int32_t numBlocks;
-        int32_t aicCoreNum;
-        int32_t aivCoreNum;
-        uint32_t multiRowNumHeadCore;
-        uint32_t headCoreNum;
-        uint32_t rowPerHeadCore;
-        uint32_t rowPerCubeHeadCore;
-        uint32_t rowPerCubeTailCore;
-        uint32_t rowPerVectorTailCore;
-        uint32_t rowPerVectorLastCore;
-        uint32_t lastUbRows;
-        uint32_t ubSize;
-        AscendC::tiling::TCubeTiling matmulTiling;
-    };
-    #pragma pack(pop)
-}  // RotateQuantOpt
+constexpr uint64_t STRUCT_ALIGNAS = 8;
+#pragma pack(push, 8)
+struct alignas(STRUCT_ALIGNAS) RotateQuantTilingData {
+    int32_t M;
+    int32_t N;
+    int32_t K;
+    int32_t loopM;
+    int64_t dstType;
+    int64_t stepLoop;
+    int32_t numBlocks;
+    int32_t aicCoreNum;
+    int32_t aivCoreNum;
+    uint32_t multiRowNumHeadCore;
+    uint32_t headCoreNum;
+    uint32_t rowPerHeadCore;
+    uint32_t rowPerCubeHeadCore;
+    uint32_t rowPerCubeTailCore;
+    uint32_t rowPerVectorTailCore;
+    uint32_t rowPerVectorLastCore;
+    uint32_t lastUbRows;
+    uint32_t ubSize;
+    AscendC::tiling::TCubeTiling matmulTiling;
+};
+#pragma pack(pop)
+} // namespace RotateQuantOpt
 
-#endif  // ROTATE_QUANT_TILING_DATA_H
+#endif // ROTATE_QUANT_TILING_DATA_H

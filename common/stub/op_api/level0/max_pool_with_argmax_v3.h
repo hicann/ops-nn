@@ -12,12 +12,11 @@
 
 #include "opdev/op_executor.h"
 
-namespace l0op
-{
+namespace l0op {
 const std::tuple<const aclTensor*, const aclTensor*> MaxPoolWithArgmaxV3(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
     const op::DataType dtype, const aclIntArray* dilation, bool ceilMode, std::string& dataFormat,
     aclOpExecutor* executor);
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_MAX_POOL_WITH_ARGMAX_V3_H_
+#endif // OP_API_INC_LEVEL0_MAX_POOL_WITH_ARGMAX_V3_H_

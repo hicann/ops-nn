@@ -126,8 +126,7 @@ struct BatchmatmulRunParas {
     ge::DataType bias_dtype = ge::DT_FLOAT16;
 };
 
-class CacheTilingData
-{
+class CacheTilingData {
 public:
     uint64_t tiling_id;
     int64_t n_cub = 1;
@@ -195,7 +194,7 @@ public:
 };
 
 struct QuantBatchMatmulRunParas {
-    bool initFlag = false;  // 避免重复解析flag
+    bool initFlag = false; // 避免重复解析flag
     bool transA = false;
     bool transB = false;
     bool hasBias = false;
@@ -239,20 +238,13 @@ struct QuantBatchMatmulRunParas {
     uint64_t groupSizeM = 0UL;
     uint64_t groupSizeK = 0UL;
     uint64_t groupSizeN = 0UL;
-    const char *opName = nullptr;
+    const char* opName = nullptr;
     ge::Format aFormat = ge::FORMAT_ND;
     ge::Format bFormat = ge::FORMAT_ND;
     ge::Format cFormat = ge::FORMAT_ND;
 };
 
-enum class QbmmType : uint32_t
-{
-    Perchannel = 0,
-    Pertoken = 1,
-    KN = 2,
-    Basic = 3,
-    BasicLimit =4
-};
+enum class QbmmType : uint32_t { Perchannel = 0, Pertoken = 1, KN = 2, Basic = 3, BasicLimit = 4 };
 
 struct WeightQuantBatchMatmulCacheTilingParas {
     uint64_t mSize = 0;

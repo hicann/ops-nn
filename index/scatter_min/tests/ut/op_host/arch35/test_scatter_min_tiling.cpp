@@ -71,12 +71,12 @@ ge::graphStatus RunScatterMinTiling(gert::StorageShape varShape, gert::StorageSh
     platform_info.Init();
     ScatterReduceCompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     auto parse_ctx = kernel_holder.GetContext<gert::TilingParseContext>();
     if (!parse_ctx->GetPlatformInfo()->Init()) {
         return ge::GRAPH_FAILED;
@@ -125,7 +125,7 @@ ge::graphStatus RunScatterMinTiling(gert::StorageShape varShape, gert::StorageSh
     }
     return st;
 }
-}  // namespace
+} // namespace
 
 class ScatterMinTiling : public testing::Test {
 protected:

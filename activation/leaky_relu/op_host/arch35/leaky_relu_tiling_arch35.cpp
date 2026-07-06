@@ -34,16 +34,14 @@ using namespace ge;
 using namespace LeakyReluOp;
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 const uint64_t SYS_WORKSPACE = 16777216; // 16M
-  
-class LeakyReluTiling
-{
+
+class LeakyReluTiling {
 public:
-    explicit LeakyReluTiling(gert::TilingContext *context) : tilingContext(context) {};
+    explicit LeakyReluTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
-    LeakyReluTilingData *tiling = nullptr;
+    LeakyReluTilingData* tiling = nullptr;
 
 protected:
     ge::graphStatus SetTilingData();
@@ -52,7 +50,7 @@ private:
     uint64_t schMode = 0;
     uint64_t dType = 0;
     ge::DataType outputDtype = ge::DT_UNDEFINED;
-    gert::TilingContext *tilingContext;
+    gert::TilingContext* tilingContext;
 };
 
 ge::graphStatus LeakyReluTiling::SetTilingData()
@@ -62,7 +60,7 @@ ge::graphStatus LeakyReluTiling::SetTilingData()
     auto rawTilingData = tilingContext->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
 
-    size_t *currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = SYS_WORKSPACE;
 
@@ -98,31 +96,29 @@ ge::graphStatus LeakyReluTiling::RunTiling()
         dType = static_cast<uint64_t>(TPL_FP16);
         // fp16需要cast成fp32处理
         OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluCastDag<half>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp16"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp16"), return ge::GRAPH_FAILED);
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = static_cast<uint64_t>(TPL_BF16);
         // bf16需要cast成fp32处理
         OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluCastDag<half>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for bf16"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for bf16"), return ge::GRAPH_FAILED);
     } else if (this->outputDtype == ge::DT_FLOAT) {
         // fp32直接使用原生DAG
         dType = static_cast<uint64_t>(TPL_FP32);
         OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluDag<float>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"),
-                        return ge::GRAPH_FAILED);
+                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
+                                  ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+                                  "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     tiling->negativeSlope = negativeSlope;
-    
+
     return SetTilingData();
 }
 
-static ge::graphStatus TilingForLeakyRelu(gert::TilingContext *context)
+static ge::graphStatus TilingForLeakyRelu(gert::TilingContext* context)
 {
     OP_LOGD("LeakyReluTiling", "Enter TilingForLeakyRelu");
     if (context == nullptr) {
@@ -139,7 +135,7 @@ static ge::graphStatus TilingForLeakyRelu(gert::TilingContext *context)
 
 ge::graphStatus TilingPrepareForLeakyRelu(gert::TilingParseContext* context)
 {
-    auto compileInfoPtr = context -> GetCompiledInfo<LeakrReluCompileInfo>();
+    auto compileInfoPtr = context->GetCompiledInfo<LeakrReluCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
@@ -150,4 +146,4 @@ ge::graphStatus TilingPrepareForLeakyRelu(gert::TilingParseContext* context)
 }
 
 IMPL_OP_OPTILING(LeakyRelu).Tiling(TilingForLeakyRelu).TilingParse<LeakrReluCompileInfo>(TilingPrepareForLeakyRelu);
-}  
+} // namespace optiling

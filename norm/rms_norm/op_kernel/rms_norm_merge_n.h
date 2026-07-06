@@ -25,8 +25,7 @@ class KernelRmsNormMergeN {
 #define IS_GAMMA_FP32 (is_same<T_GAMMA, float>::value)
 #define IS_MIX_DTYPE ((!IS_X_FP32) && IS_GAMMA_FP32)
 public:
-    __aicore__ inline KernelRmsNormMergeN()
-    {}
+    __aicore__ inline KernelRmsNormMergeN() {}
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
@@ -85,8 +84,8 @@ public:
     {
         CopyInGamma();
         LocalTensor<float> gammaLocal = inQueueGamma.DeQue<float>();
-        if(isPerformance != 1) {
-          BroadCastGamma(gammaLocal);
+        if (isPerformance != 1) {
+            BroadCastGamma(gammaLocal);
         }
         for (uint32_t i_o = 0; i_o < rowLoop - 1; i_o++) {
             DoMainCompute(i_o, rowFactor, gammaLocal);
@@ -101,21 +100,22 @@ public:
         uint64_t elementNum = static_cast<uint64_t>(calcRowNum) * static_cast<uint64_t>(numColAlign);
         CopyIn(gmBias, calcRowNum);
         if (isNorm == 1) {
-          ComputeSingleRow(i_o, calcRowNum, gammaLocal, gmBias);
+            ComputeSingleRow(i_o, calcRowNum, gammaLocal, gmBias);
         } else {
-          Compute(i_o, gammaLocal, calcRowNum, elementNum);
+            Compute(i_o, gammaLocal, calcRowNum, elementNum);
         }
         CopyOutY(gmBias, calcRowNum);
     }
 
 private:
     __aicore__ inline void CopyIn(uint32_t gm_bias, uint32_t calc_row_num)
-    {    
+    {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         if (isNumColAlign) {
             DataCopyCustom<T>(xLocal, xGm[gm_bias], calc_row_num * numCol);
         } else {
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
             // only support v220
             DataCopyParams copyParams;
             copyParams.blockLen = numCol * sizeof(T);
@@ -160,32 +160,33 @@ private:
     {
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
-        if(isPerformance == 1) {
-          LocalTensor<float> xFp32 = xFp32Buf.Get<float>();
-          repeatByRow(xFp32, xFp32, gammaLocal, calcRowNum, 0);
-          if constexpr (is_same<T, half>::value) {
-              Cast(yLocal, xFp32, RoundMode::CAST_NONE, elementNum);
-          } else {
-              Cast(yLocal, xFp32, RoundMode::CAST_RINT, elementNum);
-          }
+        if (isPerformance == 1) {
+            LocalTensor<float> xFp32 = xFp32Buf.Get<float>();
+            repeatByRow(xFp32, xFp32, gammaLocal, calcRowNum, 0);
+            if constexpr (is_same<T, half>::value) {
+                Cast(yLocal, xFp32, RoundMode::CAST_NONE, elementNum);
+            } else {
+                Cast(yLocal, xFp32, RoundMode::CAST_RINT, elementNum);
+            }
         } else {
-          if constexpr (is_same<T, float>::value) {
-              Mul(yLocal, sqx, gammaLocal, elementNum);
-          } else {
-              Mul(sqx, sqx, gammaLocal, elementNum);
-              PipeBarrier<PIPE_V>();
-              if constexpr (is_same<T, half>::value) {
-                  Cast(yLocal, sqx, RoundMode::CAST_NONE, elementNum);
-              } else {
-                  Cast(yLocal, sqx, RoundMode::CAST_RINT, elementNum);
-              }
-          }
+            if constexpr (is_same<T, float>::value) {
+                Mul(yLocal, sqx, gammaLocal, elementNum);
+            } else {
+                Mul(sqx, sqx, gammaLocal, elementNum);
+                PipeBarrier<PIPE_V>();
+                if constexpr (is_same<T, half>::value) {
+                    Cast(yLocal, sqx, RoundMode::CAST_NONE, elementNum);
+                } else {
+                    Cast(yLocal, sqx, RoundMode::CAST_RINT, elementNum);
+                }
+            }
         }
         PipeBarrier<PIPE_V>();
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void ComputeSingleRow(uint32_t i_o, uint32_t calc_row_num, LocalTensor<float> gammaLocal, uint32_t gm_bias)
+    __aicore__ inline void ComputeSingleRow(uint32_t i_o, uint32_t calc_row_num, LocalTensor<float> gammaLocal,
+                                            uint32_t gm_bias)
     {
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
@@ -214,7 +215,7 @@ private:
             } else {
                 Muls(sqx, xFp32[rowOffset], rstdValue, numColAlign);
             }
-            PipeBarrier<PIPE_V>(); 
+            PipeBarrier<PIPE_V>();
             Mul(sqx, sqx, gammaLocal, numCol);
             if constexpr (is_same<T, half>::value) {
                 Cast(yLocal[rowOffset], sqx, RoundMode::CAST_NONE, numCol);
@@ -228,13 +229,14 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void Compute(uint32_t i_o, LocalTensor<float> gammaLocal, uint32_t calcRowNum, uint32_t elementNum)
+    __aicore__ inline void Compute(uint32_t i_o, LocalTensor<float> gammaLocal, uint32_t calcRowNum,
+                                   uint32_t elementNum)
     {
         LocalTensor<T> xLocal = inQueueX.DeQue<T>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();
         LocalTensor<float> tmpLocal = tmpBuf.Get<float>();
         LocalTensor<float> xFp32;
-        
+
         // 1. Cast x and Cal x^2
         if constexpr (is_same<T, float>::value) {
             Mul(sqx, xLocal, xLocal, elementNum);
@@ -262,7 +264,7 @@ private:
         PipeBarrier<PIPE_V>();
         outQueueRstd.EnQue<float>(rstdLocal);
         CopyOutRstd(i_o, calcRowNum);
-        
+
         // 4. Y = x * rstd * gamma
         if (isPerformance == 1) {
             doPerformanceRstd(sqx, rstdLocal, calcRowNum);
@@ -293,7 +295,8 @@ private:
         if (isNumColAlign) {
             DataCopyCustom<T>(yGm[progress], yLocal, calc_row_num * numCol);
         } else {
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
             // only support v220
             DataCopyParams copyParams;
             copyParams.blockLen = numCol * sizeof(T);
@@ -307,71 +310,83 @@ private:
     __aicore__ inline void CopyOutRstd(uint32_t outer_progress, uint32_t num)
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
-#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) || (defined(__CCE_AICORE__) && __CCE_AICORE__ == 200)
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) ||                        \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)) || \
+    (defined(__CCE_AICORE__) && __CCE_AICORE__ == 200)
         DataCopyCustom<float>(rstdGm[outer_progress * rowFactor], rstdLocal, num);
 #endif
         outQueueRstd.FreeTensor(rstdLocal);
     }
 
-    __aicore__ inline void doPerformanceRstd(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local, uint32_t calcRowNum)
+    __aicore__ inline void doPerformanceRstd(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local,
+                                             uint32_t calcRowNum)
     {
         uint32_t splidRow = 240;
         uint32_t rowRepeatLoop = calcRowNum / splidRow;
         uint32_t rowRepeatTail = calcRowNum - rowRepeatLoop * splidRow;
-        for(uint32_t r_i = 0; r_i < rowRepeatLoop; r_i ++) {
+        for (uint32_t r_i = 0; r_i < rowRepeatLoop; r_i++) {
             Brcb(dstLocal[r_i * splidRow * MOV_8], src1Local[r_i * splidRow], splidRow, {1, 8});
             PipeBarrier<PIPE_V>();
         }
-        
-        if(rowRepeatTail > 0) {
-            Brcb(dstLocal[rowRepeatLoop * splidRow * MOV_8], src1Local[rowRepeatLoop * splidRow], rowRepeatTail, {1, 8});
+
+        if (rowRepeatTail > 0) {
+            Brcb(dstLocal[rowRepeatLoop * splidRow * MOV_8], src1Local[rowRepeatLoop * splidRow], rowRepeatTail,
+                 {1, 8});
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void repeatByRow(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local, const LocalTensor<float>& src2Local, uint32_t calc_row_num, uint32_t type)
+    __aicore__ inline void repeatByRow(const LocalTensor<float>& dstLocal, const LocalTensor<float>& src1Local,
+                                       const LocalTensor<float>& src2Local, uint32_t calc_row_num, uint32_t type)
     {
         uint32_t singlT = 255;
         uint32_t rowRepeatLoop = calc_row_num / singlT;
         uint32_t rowRepeatTail = calc_row_num - rowRepeatLoop * singlT;
-        for(uint32_t r_i = 0; r_i < rowRepeatLoop; r_i ++) {
+        for (uint32_t r_i = 0; r_i < rowRepeatLoop; r_i++) {
             uint32_t offset2 = 0;
             if (type == 1) {
-              offset2 = r_i * singlT * MOV_8;
+                offset2 = r_i * singlT * MOV_8;
             }
             uint32_t offset1 = r_i * singlT * numColAlign;
             mulRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], singlT, type);
         }
-        if(rowRepeatTail > 0) {
+        if (rowRepeatTail > 0) {
             uint32_t offset2 = 0;
             if (type == 1) {
-              offset2 = rowRepeatLoop * singlT * MOV_8;
+                offset2 = rowRepeatLoop * singlT * MOV_8;
             }
             uint32_t offset1 = rowRepeatLoop * singlT * numColAlign;
             mulRepeat(dstLocal[offset1], src1Local[offset1], src2Local[offset2], rowRepeatTail, type);
         }
     }
 
-    __aicore__ inline void mulRepeat(LocalTensor<float> dstLocal, LocalTensor<float> src1Local, LocalTensor<float> src2Local, uint32_t calcRowNum, uint8_t isRstd)
+    __aicore__ inline void mulRepeat(LocalTensor<float> dstLocal, LocalTensor<float> src1Local,
+                                     LocalTensor<float> src2Local, uint32_t calcRowNum, uint8_t isRstd)
     {
         if (isRstd == 1) {
-          for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
-              Mul(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local, NUM_PER_REP_FP32, calcRowNum, {1, 1, 0, dstRepStride, dstRepStride, 1});
-              PipeBarrier<PIPE_V>();
-          }
-          if(mulTail > 0) {
-              Mul(dstLocal[mulLoop * NUM_PER_REP_FP32], src1Local[mulLoop * NUM_PER_REP_FP32], src2Local, mulTail, calcRowNum, {1, 1, 0, dstRepStride, dstRepStride, 1});
-              PipeBarrier<PIPE_V>();
-          }
+            for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
+                Mul(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local, NUM_PER_REP_FP32,
+                    calcRowNum, {1, 1, 0, dstRepStride, dstRepStride, 1});
+                PipeBarrier<PIPE_V>();
+            }
+            if (mulTail > 0) {
+                Mul(dstLocal[mulLoop * NUM_PER_REP_FP32], src1Local[mulLoop * NUM_PER_REP_FP32], src2Local, mulTail,
+                    calcRowNum, {1, 1, 0, dstRepStride, dstRepStride, 1});
+                PipeBarrier<PIPE_V>();
+            }
         } else {
-          for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
-              Mul(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32], src2Local[m_i * NUM_PER_REP_FP32], NUM_PER_REP_FP32, calcRowNum, {1, 1, 1, dstRepStride, dstRepStride, 0});
-              PipeBarrier<PIPE_V>();
-          }
-          if(mulTail > 0) {
-              Mul(dstLocal[mulLoop * NUM_PER_REP_FP32], src1Local[mulLoop * NUM_PER_REP_FP32], src2Local[mulLoop * NUM_PER_REP_FP32], mulTail, calcRowNum, {1, 1, 1, dstRepStride, dstRepStride, 0});
-              PipeBarrier<PIPE_V>();
-          }
+            for (uint32_t m_i = 0; m_i < mulLoop; m_i++) {
+                Mul(dstLocal[m_i * NUM_PER_REP_FP32], src1Local[m_i * NUM_PER_REP_FP32],
+                    src2Local[m_i * NUM_PER_REP_FP32], NUM_PER_REP_FP32, calcRowNum,
+                    {1, 1, 1, dstRepStride, dstRepStride, 0});
+                PipeBarrier<PIPE_V>();
+            }
+            if (mulTail > 0) {
+                Mul(dstLocal[mulLoop * NUM_PER_REP_FP32], src1Local[mulLoop * NUM_PER_REP_FP32],
+                    src2Local[mulLoop * NUM_PER_REP_FP32], mulTail, calcRowNum,
+                    {1, 1, 1, dstRepStride, dstRepStride, 0});
+                PipeBarrier<PIPE_V>();
+            }
         }
     }
 

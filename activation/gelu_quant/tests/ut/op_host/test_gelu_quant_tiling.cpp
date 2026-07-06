@@ -70,28 +70,16 @@ struct GeluQuantData {
 
 class TilingGeluQuant : public ::testing::TestWithParam<GeluQuantData> {
 protected:
-    void SetUp() override
-    {
-        std::cout << "TilingGeluQuant SetUp" << std::endl;
-    }
+    void SetUp() override { std::cout << "TilingGeluQuant SetUp" << std::endl; }
 
-    void TearDown() override
-    {
-        std::cout << "TilingGeluQuant TearDown" << std::endl;
-    }
+    void TearDown() override { std::cout << "TilingGeluQuant TearDown" << std::endl; }
 };
 
 class TilingGeluQuantRegbase : public ::testing::TestWithParam<GeluQuantData> {
 protected:
-    void SetUp() override
-    {
-        std::cout << "TilingGeluQuant SetUp" << std::endl;
-    }
+    void SetUp() override { std::cout << "TilingGeluQuant SetUp" << std::endl; }
 
-    void TearDown() override
-    {
-        std::cout << "TilingGeluQuant TearDown" << std::endl;
-    }
+    void TearDown() override { std::cout << "TilingGeluQuant TearDown" << std::endl; }
 };
 
 TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
@@ -123,19 +111,19 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -146,28 +134,27 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .SetOpType("GeluQuant")
-            .NodeIoNum(3, 2)
-            .IrInstanceNum({1, 1, 1})
-            .InputShapes({&test_params.x_shape, &test_params.input_scale_shape, &test_params.input_offset_shape})
-            .OutputShapes({&test_params.y_shape, &test_params.out_scale_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"approximate", Ops::NN::AnyValue::CreateFrom<string>(test_params.approximate)},
-                 {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.quant_mode)},
-                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
-                 {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.round_mode)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("GeluQuant")
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes(
+                          {&test_params.x_shape, &test_params.input_scale_shape, &test_params.input_offset_shape})
+                      .OutputShapes({&test_params.y_shape, &test_params.out_scale_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"approximate", Ops::NN::AnyValue::CreateFrom<string>(test_params.approximate)},
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.quant_mode)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.round_mode)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -224,19 +211,19 @@ TEST_P(TilingGeluQuant, gelu_quant_tiling)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -246,28 +233,27 @@ TEST_P(TilingGeluQuant, gelu_quant_tiling)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .SetOpType("GeluQuant")
-            .NodeIoNum(3, 2)
-            .IrInstanceNum({1, 1, 1})
-            .InputShapes({&test_params.x_shape, &test_params.input_scale_shape, &test_params.input_offset_shape})
-            .OutputShapes({&test_params.y_shape, &test_params.out_scale_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"approximate", Ops::NN::AnyValue::CreateFrom<string>(test_params.approximate)},
-                 {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.quant_mode)},
-                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
-                 {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.round_mode)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("GeluQuant")
+                      .NodeIoNum(3, 2)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes(
+                          {&test_params.x_shape, &test_params.input_scale_shape, &test_params.input_offset_shape})
+                      .OutputShapes({&test_params.y_shape, &test_params.out_scale_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, test_params.dataType2, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, test_params.dataType1, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"approximate", Ops::NN::AnyValue::CreateFrom<string>(test_params.approximate)},
+                                  {"quant_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.quant_mode)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(test_params.dst_type)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(test_params.round_mode)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

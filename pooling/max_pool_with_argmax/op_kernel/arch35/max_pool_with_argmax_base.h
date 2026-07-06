@@ -60,8 +60,8 @@ __simd_callee__ inline void GenGatterIndex2DVF(MicroAPI::RegTensor<T>& indexReg,
 }
 
 template <typename T>
-__simd_callee__ inline void GenGatterIndex3DVF(
-    MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__simd_callee__ inline void GenGatterIndex3DVF(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
+                                               T rate1D = 1)
 {
     MicroAPI::Arange(indexReg, 0);
     MicroAPI::RegTensor<T> segmentScalarReg;
@@ -87,8 +87,8 @@ __simd_callee__ inline void GenGatterIndex3DVF(
 }
 
 template <typename T>
-__aicore__ inline void GenGatterIndex3D(
-    MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void GenGatterIndex3D(MicroAPI::RegTensor<T>& indexReg, T rate3D, T num2D, T rate2D, T num1D,
+                                        T rate1D = 1)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;
@@ -114,8 +114,8 @@ __aicore__ inline void GenGatterIndex3D(
 }
 
 template <typename T>
-__aicore__ inline void GenGatterIndex4D(
-    MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D, T rate2D, T num1D, T rate1D = 1)
+__aicore__ inline void GenGatterIndex4D(MicroAPI::RegTensor<T>& indexReg, T rate4D, T num3D, T rate3D, T num2D,
+                                        T rate2D, T num1D, T rate1D = 1)
 {
     AscendC::MicroAPI::Arange(indexReg, 0);
     AscendC::MicroAPI::RegTensor<T> segmentScalarReg;

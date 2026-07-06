@@ -14,25 +14,18 @@
 using namespace std;
 
 class OpApiUtEnvironment : public testing::Environment {
-  public:
-    OpApiUtEnvironment() {
-        cout << "OpApiUtEnvironment new" << endl;
-    }
-    ~OpApiUtEnvironment() {
-        cout << "OpApiUtEnvironment delete" << endl;
-    }
-    virtual void SetUp() {
-        cout << "Global Environment SetpUp." << endl;
-    }
+public:
+    OpApiUtEnvironment() { cout << "OpApiUtEnvironment new" << endl; }
+    ~OpApiUtEnvironment() { cout << "OpApiUtEnvironment delete" << endl; }
+    virtual void SetUp() { cout << "Global Environment SetpUp." << endl; }
 
-    virtual void TearDown() {
-      cout << "Global Environment TearDown" << endl;
-    }
+    virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 };
 
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc,argv);
-  testing::AddGlobalTestEnvironment(new OpApiUtEnvironment());
+int main(int argc, char** argv)
+{
+    testing::InitGoogleTest(&argc, argv);
+    testing::AddGlobalTestEnvironment(new OpApiUtEnvironment());
 
-  return RUN_ALL_TESTS();
+    return RUN_ALL_TESTS();
 }

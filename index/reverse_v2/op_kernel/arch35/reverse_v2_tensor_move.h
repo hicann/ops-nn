@@ -27,12 +27,14 @@ template <typename T>
 class ReverseV2TensorMoveKernel {
 public:
     __aicore__ inline ReverseV2TensorMoveKernel(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const TensorMoveTilingData &tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const TensorMoveTilingData& tilingData);
     __aicore__ inline void Process();
+
 private:
-    __aicore__ inline void ParseTilingData(const TensorMoveTilingData &tilingData);
+    __aicore__ inline void ParseTilingData(const TensorMoveTilingData& tilingData);
     __aicore__ inline void CopyIn(int64_t offset, int64_t dataLen);
     __aicore__ inline void CopyOut(int64_t offset, int64_t dataLen);
+
 private:
     TPipe pipe_;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> dataQueue_;
@@ -51,21 +53,21 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ReverseV2TensorMoveKernel<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const TensorMoveTilingData &tilingData)
+__aicore__ inline void ReverseV2TensorMoveKernel<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                          const TensorMoveTilingData& tilingData)
 {
     blockIdx_ = GetBlockIdx();
     ParseTilingData(tilingData);
     blockOffset_ = GetBlockIdx() * blockFactor_ * ubFactor_;
-    xGm_.SetGlobalBuffer((__gm__ T *)(x) + blockOffset_);
-    yGm_.SetGlobalBuffer((__gm__ T *)(y) + blockOffset_);
+    xGm_.SetGlobalBuffer((__gm__ T*)(x) + blockOffset_);
+    yGm_.SetGlobalBuffer((__gm__ T*)(y) + blockOffset_);
 
-    bufferSize_ = ubFactor_  * sizeof(T);
+    bufferSize_ = ubFactor_ * sizeof(T);
     pipe_.InitBuffer(dataQueue_, DB_BUFFER, bufferSize_);
 }
 
 template <typename T>
-__aicore__ inline void ReverseV2TensorMoveKernel<T>::ParseTilingData(const TensorMoveTilingData &tilingData)
+__aicore__ inline void ReverseV2TensorMoveKernel<T>::ParseTilingData(const TensorMoveTilingData& tilingData)
 {
     totalCoreNum_ = tilingData.totalCoreNum;
     usedCoreNum_ = tilingData.usedCoreNum;
@@ -78,32 +80,22 @@ __aicore__ inline void ReverseV2TensorMoveKernel<T>::ParseTilingData(const Tenso
 template <typename T>
 __aicore__ inline void ReverseV2TensorMoveKernel<T>::CopyIn(int64_t offset, int64_t dataLen)
 {
-  DataCopyExtParams inParams = {
-    static_cast<uint16_t>(1),
-    static_cast<uint32_t>(dataLen * sizeof(T)),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0)
-  };
-  DataCopyPadExtParams<T> padParams = { false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0) };
-  LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
-  DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
-  dataQueue_.EnQue(xLocal);
+    DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
+    LocalTensor<T> xLocal = dataQueue_.AllocTensor<T>();
+    DataCopyPad(xLocal, xGm_[offset], inParams, padParams);
+    dataQueue_.EnQue(xLocal);
 }
 
 template <typename T>
 __aicore__ inline void ReverseV2TensorMoveKernel<T>::CopyOut(int64_t offset, int64_t dataLen)
 {
-  DataCopyExtParams outParams = {
-    static_cast<uint16_t>(1),
-    static_cast<uint32_t>(dataLen * sizeof(T)),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0),
-    static_cast<uint32_t>(0)
-  };
-  LocalTensor<T> yLocal = dataQueue_.DeQue<T>();
-  DataCopyPad(yGm_[offset], yLocal, outParams);
-  dataQueue_.FreeTensor(yLocal);
+    DataCopyExtParams outParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(T)),
+                                   static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    LocalTensor<T> yLocal = dataQueue_.DeQue<T>();
+    DataCopyPad(yGm_[offset], yLocal, outParams);
+    dataQueue_.FreeTensor(yLocal);
 }
 
 template <typename T>
@@ -132,6 +124,6 @@ __aicore__ inline void ReverseV2TensorMoveKernel<T>::Process()
     CopyOut(offset, dataLen);
 }
 
-}  // namespace TensorMove
+} // namespace ReverseV2
 
-#endif  // REVERSE_V2_TENSOR_MOVE_H_
+#endif // REVERSE_V2_TENSOR_MOVE_H_

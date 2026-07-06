@@ -18,23 +18,23 @@
 namespace ops {
 class SmoothL1LossV2 : public OpDef {
 public:
-    explicit SmoothL1LossV2(const char *name) : OpDef(name)
+    explicit SmoothL1LossV2(const char* name) : OpDef(name)
     {
         this->Input("predict")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Input("label")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND });
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("sigma").AttrType(OPTIONAL).Float(1.0);
         this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 

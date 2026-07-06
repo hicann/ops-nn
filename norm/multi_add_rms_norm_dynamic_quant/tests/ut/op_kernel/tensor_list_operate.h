@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file tensor_list_operate.h
  * \brief
  */
@@ -21,12 +21,14 @@
 #include "data_utils.h"
 
 template <typename T1, typename T2>
-inline T1 CeilA2B(T1 a, T2 b) {
+inline T1 CeilA2B(T1 a, T2 b)
+{
     return (a + b - 1) / b;
 }
 
 template <typename T>
-uint8_t* CreateTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, int arg_pos, char* p_name) {
+uint8_t* CreateTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, int arg_pos, char* p_name)
+{
     uint64_t tensorListDescCount = 1 + shapeInfos.size() * 2;
     for (auto s : shapeInfos) {
         tensorListDescCount += s.size();
@@ -53,7 +55,7 @@ uint8_t* CreateTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos, 
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
         if (arg_pos != 0) {
             std::stringstream fileName;
-            fileName << "./multi_add_rms_norm_dynamic_quant_data/"<< d_type << "_" << p_name << "_" << i <<".bin";
+            fileName << "./multi_add_rms_norm_dynamic_quant_data/" << d_type << "_" << p_name << "_" << i << ".bin";
             ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
         }
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
@@ -62,7 +64,9 @@ uint8_t* CreateTensorList(const std::vector<std::vector<uint64_t>>& shapeInfos, 
 }
 
 template <typename T>
-void FreeTensorList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, int arg_pos, char* p_name) {
+void FreeTensorList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, int arg_pos,
+                    char* p_name)
+{
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
     for (size_t i = 0; i < shapeInfos.size(); i++) {
@@ -73,7 +77,7 @@ void FreeTensorList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& sha
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
         if (arg_pos == 0) {
             std::stringstream fileName;
-            fileName << "./multi_add_rms_norm_dynamic_quant_data/"<< d_type << "_" << p_name << "_" << i <<".bin";
+            fileName << "./multi_add_rms_norm_dynamic_quant_data/" << d_type << "_" << p_name << "_" << i << ".bin";
             WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
         }
         AscendC::GmFree((void*)(tensorAddr));

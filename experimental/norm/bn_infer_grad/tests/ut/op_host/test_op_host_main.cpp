@@ -22,10 +22,10 @@ using namespace std;
 
 class OpHostUtEnvironment : public testing::Environment {
 public:
-    OpHostUtEnvironment(char** argv) : argv_(argv)
-    {}
+    OpHostUtEnvironment(char** argv) : argv_(argv) {}
 
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
         cout << "Global Environment SetUp." << endl;
 
         std::filesystem::path currDir = argv_[0];
@@ -50,15 +50,14 @@ public:
         cout << "OpImplSpaceRegistryV2 initialized successfully" << endl;
     }
 
-    virtual void TearDown() {
-        cout << "Global Environment TearDown" << endl;
-    }
+    virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 
 private:
     char** argv_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     testing::InitGoogleTest(&argc, argv);
     testing::AddGlobalTestEnvironment(new OpHostUtEnvironment(argv));
     return RUN_ALL_TESTS();

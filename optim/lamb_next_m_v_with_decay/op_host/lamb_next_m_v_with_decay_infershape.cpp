@@ -34,12 +34,10 @@ static ge::graphStatus InferShape4LambNextMVWithDecay(gert::InferShapeContext* c
     for (size_t i = 0; i < OUT_NUM; i++) {
         auto out = context->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, out);
-        OP_CHECK_IF(
-            !BroadcastShape(g2, m, out),
-            OP_LOGE(
-                context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*g2).c_str(),
-                ToString(*m).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!BroadcastShape(g2, m, out),
+                    OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*g2).c_str(),
+                            ToString(*m).c_str()),
+                    return ge::GRAPH_FAILED);
     }
     return GRAPH_SUCCESS;
 }

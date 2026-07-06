@@ -18,17 +18,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-aclnnStatus ThnnFusedLstmCell(
-    const aclTensor *inputGates,
-    const aclTensor *hiddenGates,
-    const aclTensor *cx,
-    const aclTensor *inputBias,
-    const aclTensor *hiddenBias,
-    aclTensor *hy,
-    aclTensor *cy,
-    aclTensor *storage,
-    aclOpExecutor *executor
-);
+aclnnStatus ThnnFusedLstmCell(const aclTensor* inputGates, const aclTensor* hiddenGates, const aclTensor* cx,
+                              const aclTensor* inputBias, const aclTensor* hiddenBias, aclTensor* hy, aclTensor* cy,
+                              aclTensor* storage, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_THNN_FUSED_LSTM_CELL_OP_H_

@@ -62,8 +62,7 @@ struct DynamicMxQuantWithDualAxisTilingParam {
     float invDstTypeMax{0.0};
 };
 
-enum class RoundModeList
-{
+enum class RoundModeList {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -75,10 +74,8 @@ enum class RoundModeList
 
 class DynamicMxQuantWithDualAxisTiling {
 public:
-    explicit DynamicMxQuantWithDualAxisTiling(gert::TilingContext* context) : context_(context)
-    {}
-    ~DynamicMxQuantWithDualAxisTiling()
-    {}
+    explicit DynamicMxQuantWithDualAxisTiling(gert::TilingContext* context) : context_(context) {}
+    ~DynamicMxQuantWithDualAxisTiling() {}
     ge::graphStatus DoTiling();
 
 private:

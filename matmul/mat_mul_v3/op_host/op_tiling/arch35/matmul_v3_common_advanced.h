@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_common_advanced.h
  * \brief
@@ -86,7 +85,7 @@ struct MatMulV3BatchInfo {
 };
 
 struct MatMulV3Args {
-    const char *opName = nullptr;
+    const char* opName = nullptr;
     bool isATrans = false;
     bool isBTrans = false;
     bool isHf32 = false;
@@ -112,7 +111,7 @@ struct MatMulV3Args {
     bool hasX3Input = false;
     bool isForceGrpAccForFp32 = false;
     bool isAvoidTensorApi = false;
-    MatMulV3BatchInfo *batchInfo = nullptr;
+    MatMulV3BatchInfo* batchInfo = nullptr;
 };
 
 struct MatMulV3TailInfo {
@@ -172,8 +171,8 @@ struct MatMulV3RunInfo {
     uint64_t l1BufferNum = 2UL;
     uint64_t mBaseTailSplitCnt = 1UL;
     uint64_t nBaseTailSplitCnt = 1UL;
-    double defaultBalance = 0.0;    // 默认负载均衡率
-    double redundantData = 0.0;    // 默认重复搬运量
+    double defaultBalance = 0.0; // 默认负载均衡率
+    double redundantData = 0.0;  // 默认重复搬运量
     uint64_t totalDataAmount = 1UL;
     uint64_t mergeBatchAL1 = 1UL;
     uint64_t mergeBatchBL1 = 1UL;
@@ -187,6 +186,5 @@ struct MatMulV3RunInfo {
     BatchMatMulV3ToMulInfo bmmToMulInfo;
     MatMulV3ToMulInfo mmToMulInfo;
 };
-}
-}
-
+} // namespace matmul_v3_advanced
+} // namespace optiling

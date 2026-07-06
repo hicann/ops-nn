@@ -35,7 +35,6 @@ protected:
     }
 };
 
-
 TEST_F(glu_test, test_case_1)
 {
 #undef DTYPE_INPUT

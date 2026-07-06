@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file ms_deform_attn_310p.h
  * \brief
@@ -19,14 +18,12 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 
-namespace MultiScaleDeformableAttn
-{
+namespace MultiScaleDeformableAttn {
 
 using namespace AscendC;
 
 template <typename T>
-class KernelMultiScaleDeformableAttn310P
-{
+class KernelMultiScaleDeformableAttn310P {
 public:
     __aicore__ inline KernelMultiScaleDeformableAttn310P(){};
     __aicore__ inline void Init(GM_ADDR value, GM_ADDR valueSpatialShapes, GM_ADDR valueLevelStartIndex,
@@ -67,8 +64,8 @@ private:
                                        int32_t loopOffset, int16_t loopElems, LocalTensor<int32_t> coorUb,
                                        LocalTensor<float> xLocal, int64_t valueOffset);
     __aicore__ inline void ValueGMCopy(int16_t cIdx, int32_t calCElems, int64_t doubleChannelAlign, int16_t i,
-                                       int64_t base, int64_t offset, LocalTensor<float> xLocal, LocalTensor<int32_t> coorUb,
-                                       DataCopyParams params);
+                                       int64_t base, int64_t offset, LocalTensor<float> xLocal,
+                                       LocalTensor<int32_t> coorUb, DataCopyParams params);
     __aicore__ inline void MTE2ForLargeC(int16_t cIdx, int32_t calCElems, int64_t doubleChannelAlign, int64_t xLocation,
                                          int64_t coordVal, LocalTensor<float> xLocal);
     __aicore__ inline void calculateEachPointValue(int32_t nIdx, int32_t calCElems, int32_t channelAlign,
@@ -88,9 +85,11 @@ private:
                                           int64_t weightBaseOffset, LocalTensor<float> outValueUbSum,
                                           LocalTensor<float> output, LocalTensor<float> gridOutput);
     __aicore__ inline void outTransCal(int16_t loopElems, LocalTensor<float> outTransTensor, LocalTensor<float> tmpOut,
-                                       int32_t sumOutputLen, int32_t outRepeatLen, int32_t tailNum, int32_t copyNum, bool tailByteAlign);
-    __aicore__ inline void outTransCopyOut(bool isDataCopy, int32_t copyDstStride, int32_t copySrcStride, int64_t outputGmBaseOffset,
-                                           int16_t loopElems, LocalTensor<float> outTransTensor, int32_t outRepeatLen, int32_t tailNum,
+                                       int32_t sumOutputLen, int32_t outRepeatLen, int32_t tailNum, int32_t copyNum,
+                                       bool tailByteAlign);
+    __aicore__ inline void outTransCopyOut(bool isDataCopy, int32_t copyDstStride, int32_t copySrcStride,
+                                           int64_t outputGmBaseOffset, int16_t loopElems,
+                                           LocalTensor<float> outTransTensor, int32_t outRepeatLen, int32_t tailNum,
                                            int32_t outRepeatLenAlign, int32_t copyNum);
 
 private:
@@ -249,50 +248,50 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::Init(
     // 初始化tiling
     ParseTilingData(tilingData);
 
-    InitGM(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output);                               // 1KB
+    InitGM(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output); // 1KB
 
-    pipe.InitBuffer(gridOutQue_, OUT_UB_SIZE_GENERAL);  // 16KB
-    pipe.InitBuffer(tmpOutQue_, OUT_UB_SIZE_GENERAL);   // 16KB
-    pipe.InitBuffer(workLocalQue_, 1024);               // 1KB
+    pipe.InitBuffer(gridOutQue_, OUT_UB_SIZE_GENERAL); // 16KB
+    pipe.InitBuffer(tmpOutQue_, OUT_UB_SIZE_GENERAL);  // 16KB
+    pipe.InitBuffer(workLocalQue_, 1024);              // 1KB
 
     // buffer申请初始化
-    pipe.InitBuffer(gridQueue_, 1, GRID_UB_SIZE_4_GENERAL);  // 4KB
-    pipe.InitBuffer(dupBuf_, 2048);                          // 2KB
-    pipe.InitBuffer(dupBuf3_, 2048);                         // 2KB
-    pipe.InitBuffer(dupBuf4_, 2048);                         // 2KB
-    pipe.InitBuffer(dupBuf6_, 2048);                         // 2KB
-    pipe.InitBuffer(dupBuf8_, 2048);                         // 2KB
-    pipe.InitBuffer(dupBuf9_, 2048);                         // 2KB
+    pipe.InitBuffer(gridQueue_, 1, GRID_UB_SIZE_4_GENERAL); // 4KB
+    pipe.InitBuffer(dupBuf_, 2048);                         // 2KB
+    pipe.InitBuffer(dupBuf3_, 2048);                        // 2KB
+    pipe.InitBuffer(dupBuf4_, 2048);                        // 2KB
+    pipe.InitBuffer(dupBuf6_, 2048);                        // 2KB
+    pipe.InitBuffer(dupBuf8_, 2048);                        // 2KB
+    pipe.InitBuffer(dupBuf9_, 2048);                        // 2KB
 
-    pipe.InitBuffer(xBuf_, X_UB_SIZE_4_GENERAL);              // 64KB
-    pipe.InitBuffer(inputXYFPBuf_, GRID_UB_SIZE_4_GENERAL);   // 4KB
-    pipe.InitBuffer(weightBuf_, Y_UB_SIZE_4_GENERAL * 4);     // 8KB
-    pipe.InitBuffer(weightTmpBuf_, Y_UB_SIZE_4_GENERAL * 4);  // 8KB
-    pipe.InitBuffer(intTmpBuf_, Y_UB_SIZE_4_GENERAL);         // 2KB
-    pipe.InitBuffer(coorBuf_, Y_UB_SIZE_4_GENERAL);           // 2KB
+    pipe.InitBuffer(xBuf_, X_UB_SIZE_4_GENERAL);             // 64KB
+    pipe.InitBuffer(inputXYFPBuf_, GRID_UB_SIZE_4_GENERAL);  // 4KB
+    pipe.InitBuffer(weightBuf_, Y_UB_SIZE_4_GENERAL * 4);    // 8KB
+    pipe.InitBuffer(weightTmpBuf_, Y_UB_SIZE_4_GENERAL * 4); // 8KB
+    pipe.InitBuffer(intTmpBuf_, Y_UB_SIZE_4_GENERAL);        // 2KB
+    pipe.InitBuffer(coorBuf_, Y_UB_SIZE_4_GENERAL);          // 2KB
 
-    pipe.InitBuffer(outValueBuf_, OUT_UB_SIZE_4_GENERAL);  // 64KB
-    pipe.InitBuffer(outValueBuf2_, OUT_UB_SIZE_GENERAL);   // 16KB
+    pipe.InitBuffer(outValueBuf_, OUT_UB_SIZE_4_GENERAL); // 64KB
+    pipe.InitBuffer(outValueBuf2_, OUT_UB_SIZE_GENERAL);  // 16KB
 
-    pipe.InitBuffer(maskBuf_, MASK_SIZE);   // 960B
-    pipe.InitBuffer(maskBuf3_, MASK_SIZE);  // 960B
-    pipe.InitBuffer(maskBuf4_, MASK_SIZE);  // 960B
-    pipe.InitBuffer(maskBuf6_, MASK_SIZE);  // 960B
-    pipe.InitBuffer(maskBuf8_, MASK_SIZE);  // 960B
-    pipe.InitBuffer(maskBuf9_, MASK_SIZE);  // 960B
+    pipe.InitBuffer(maskBuf_, MASK_SIZE);  // 960B
+    pipe.InitBuffer(maskBuf3_, MASK_SIZE); // 960B
+    pipe.InitBuffer(maskBuf4_, MASK_SIZE); // 960B
+    pipe.InitBuffer(maskBuf6_, MASK_SIZE); // 960B
+    pipe.InitBuffer(maskBuf8_, MASK_SIZE); // 960B
+    pipe.InitBuffer(maskBuf9_, MASK_SIZE); // 960B
 
-    pipe.InitBuffer(weightMaskBuf_, WEIGHT_MASK_SIZE);   // 320B
-    pipe.InitBuffer(weightMaskBuf2_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf3_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf4_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf5_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf6_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf7_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf8_, WEIGHT_MASK_SIZE);  // 320B
-    pipe.InitBuffer(weightMaskBuf9_, WEIGHT_MASK_SIZE);  // 320B
+    pipe.InitBuffer(weightMaskBuf_, WEIGHT_MASK_SIZE);  // 320B
+    pipe.InitBuffer(weightMaskBuf2_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf3_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf4_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf5_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf6_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf7_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf8_, WEIGHT_MASK_SIZE); // 320B
+    pipe.InitBuffer(weightMaskBuf9_, WEIGHT_MASK_SIZE); // 320B
 
-    pipe.InitBuffer(bufferMaskBuf_, BLOCK_SIZE);              // 32B
-    pipe.InitBuffer(bufferBuf_, BLOCK_SIZE * CHANNEL_BLOCK);  // 4K
+    pipe.InitBuffer(bufferMaskBuf_, BLOCK_SIZE);             // 32B
+    pipe.InitBuffer(bufferBuf_, BLOCK_SIZE * CHANNEL_BLOCK); // 4K
 
     LocalTensor<uint32_t> bufPattern = bufferMaskBuf_.Get<uint32_t>();
     bufPattern.SetValue(0, 0b11111111);
@@ -313,13 +312,13 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::InitGM(GM_ADDR val
     valueSpatialShapesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(valueSpatialShapes));
     valueLevelStartIndexGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(valueLevelStartIndex));
 
-    locationLen = 1024;                                            // 1024
-    attentionWeightsLen = GRID_UB_SIZE_4_GENERAL;                  // 4096
-    outputLen = GRID_UB_SIZE_4_GENERAL / numPoints_;               // 1024
+    locationLen = 1024;                              // 1024
+    attentionWeightsLen = GRID_UB_SIZE_4_GENERAL;    // 4096
+    outputLen = GRID_UB_SIZE_4_GENERAL / numPoints_; // 1024
 
-    pipe.InitBuffer(locationQue_, locationLen * B32_BYTE_SIZE);                                 // 4KB
-    pipe.InitBuffer(attentionWeightsQue_, (attentionWeightsLen / embedDims_) * B32_BYTE_SIZE);  // 2KB
-    pipe.InitBuffer(outputQue_, outputLen * B32_BYTE_SIZE);  // 4K
+    pipe.InitBuffer(locationQue_, locationLen * B32_BYTE_SIZE);                                // 4KB
+    pipe.InitBuffer(attentionWeightsQue_, (attentionWeightsLen / embedDims_) * B32_BYTE_SIZE); // 2KB
+    pipe.InitBuffer(outputQue_, outputLen * B32_BYTE_SIZE);                                    // 4K
 }
 
 template <typename T>
@@ -331,19 +330,19 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ClearGM()
     int32_t coreSplitCount = batchSize_ * numHeads_ * embedDims_ / needCoreNum_;
     int64_t gmSize = coreSplitCount * numQueries_;
     int32_t loopTime = gmSize / 4096;
-    int32_t tailGmsize = gmSize  % 4096;
+    int32_t tailGmsize = gmSize % 4096;
 
     event_t eventVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventVToMTE3);
     WaitFlag<HardEvent::V_MTE3>(eventVToMTE3);
-    int64_t outGMOffset = gmSize * blockIDX ;
+    int64_t outGMOffset = gmSize * blockIDX;
     for (int32_t i = 0; i < loopTime; i++) {
         DataCopy(outputGm_[outGMOffset + i * 4096], zeroTensor, 4096);
     }
     if (tailGmsize > 0) {
         int32_t lastGmSize = tailGmsize / 8 * 8;
         int32_t lastTailGmsize = tailGmsize % 8;
-        outGMOffset = outGMOffset + loopTime * 4096 ;
+        outGMOffset = outGMOffset + loopTime * 4096;
         if (lastGmSize > 0) {
             DataCopy(outputGm_[outGMOffset], zeroTensor, lastGmSize);
         }
@@ -408,9 +407,11 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::CoordinatesFrameRa
                                                                                     int32_t upBound)
 {
     Mins(iIntUb, iIntUb, upBound, CAL_H_W_BLOCK);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Maxs(iIntUb, iIntUb, 0, CAL_H_W_BLOCK);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 }
 
 /**
@@ -436,9 +437,10 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::CoordinatesGetMask
     CompareScalar<float, uint8_t, false>(maskYUb, iYFpUb, static_cast<float>(inputH_ - 1), CMPMODE::LE,
                                          MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK, {1, 1, 8, 8});
 
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
-    int32_t maskNum = (MASK_UB_SIZE + 1) / 2;  // 除2数据量按照uint16类型折半
+    int32_t maskNum = (MASK_UB_SIZE + 1) / 2; // 除2数据量按照uint16类型折半
     auto maskTmpXUbTmp = maskTmpXUb.ReinterpretCast<uint16_t>();
     auto maskXUbTmp = maskXUb.ReinterpretCast<uint16_t>();
     auto maskTmpYUbTmp = maskTmpYUb.ReinterpretCast<uint16_t>();
@@ -448,10 +450,12 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::CoordinatesGetMask
                          {1, 1, 1, 8, 8, 8});
     And<uint16_t, false>(maskYUbTmp, maskTmpYUbTmp, maskYUbTmp, MASK_PLACEHOLDER, MASK_UB_SIZE / B32_MASK,
                          {1, 1, 1, 8, 8, 8});
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     And<uint16_t, false>(maskXUbTmp, maskYUbTmp, maskXUbTmp, MASK_PLACEHOLDER, MASK_UB_SIZE / B32_MASK,
                          {1, 1, 1, 8, 8, 8});
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     maskXUb = maskXUbTmp.ReinterpretCast<uint8_t>();
     maskYUb = maskYUbTmp.ReinterpretCast<uint8_t>();
 }
@@ -475,7 +479,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ClipCoordinates(
     LocalTensor<uint8_t> maskXUb = wMaskUb;
     LocalTensor<uint8_t> maskYUb = maskUb;
     LocalTensor<uint8_t> maskTmpXUb = maskUb[MASK_UB_SIZE];
-    LocalTensor<uint8_t> maskTmpYUb = maskUb[MASK_UB_SIZE * 2];  // 2: iY temp mask
+    LocalTensor<uint8_t> maskTmpYUb = maskUb[MASK_UB_SIZE * 2]; // 2: iY temp mask
     CoordinatesGetMaskWithRange(iXFpUb, iYFpUb, maskXUb, maskYUb, maskTmpXUb, maskTmpYUb);
 
     if (id == 1) {
@@ -484,17 +488,20 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ClipCoordinates(
         LocalTensor<int32_t> inputYIntTmpUb = tmpIntUb;
         Adds<int32_t, false>(inputXIntTmpUb, iXIntUb, 0, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK, {1, 1, 8, 8});
         Adds<int32_t, false>(inputYIntTmpUb, iYIntUb, 0, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK, {1, 1, 8, 8});
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         // 重计算坐标，使坐标不超过边界
         CoordinatesFrameRange(inputXIntTmpUb, (int32_t)(inputW_ - 1));
         CoordinatesFrameRange(inputYIntTmpUb, (int32_t)(inputH_ - 1));
 
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
 
         // cood = y + x * IW
         Muls<int32_t, false>(inputYIntTmpUb, inputYIntTmpUb, (int32_t)inputW_, MASK_PLACEHOLDER,
                              CAL_H_W_BLOCK / B32_MASK, {1, 1, 8, 8});
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         Add<int32_t, false>(coorUb, coorUb, inputYIntTmpUb, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
                             {1, 1, 1, 8, 8, 8});
     }
@@ -555,11 +562,9 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::MTE2ForNHWC(
 }
 
 template <typename T>
-__aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ValueGMCopy(int16_t cIdx, int32_t calCElems,
-                                                                          int64_t doubleChannelAlign, int16_t i,
-                                                                          int64_t base, int64_t offset,
-                                                                          LocalTensor<float> xLocal, LocalTensor<int32_t> coorUb,
-                                                                          DataCopyParams params)
+__aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ValueGMCopy(
+    int16_t cIdx, int32_t calCElems, int64_t doubleChannelAlign, int16_t i, int64_t base, int64_t offset,
+    LocalTensor<float> xLocal, LocalTensor<int32_t> coorUb, DataCopyParams params)
 {
     event_t eventSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
 
@@ -589,18 +594,12 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::ValueGMCopy(int16_
     } else {
         MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0, coordVal_0, xLocal);
         MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign, coordVal_1, xLocal);
-        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 2, coordVal_2,
-                      xLocal);
-        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 3, coordVal_3,
-                      xLocal);
-        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 4, coordVal_4,
-                      xLocal);
-        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 5, coordVal_5,
-                      xLocal);
-        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 6, coordVal_6,
-                      xLocal);
-        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 7, coordVal_7,
-                      xLocal);
+        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 2, coordVal_2, xLocal);
+        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 3, coordVal_3, xLocal);
+        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 4, coordVal_4, xLocal);
+        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 5, coordVal_5, xLocal);
+        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 6, coordVal_6, xLocal);
+        MTE2ForLargeC(cIdx, calCElems, doubleChannelAlign, xLocation_0 + doubleChannelAlign * 7, coordVal_7, xLocal);
     }
 }
 
@@ -618,7 +617,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::MTE2ForLargeC(int1
         int64_t xLocationOffset = xLocation + i * doubleChannelAlign / 2;
         int64_t valueGMOffset = coordVal + i * inputW_ * inputC_;
         DataCopy(xLocal[xLocationOffset], valueGm_[valueGMOffset], params);
-        PipeBarrier<PIPE_ALL>();;
+        PipeBarrier<PIPE_ALL>();
+        ;
     }
 }
 
@@ -639,7 +639,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::CoordinatesSelectS
     uint8_t repeat = Ceil(calNum, B32_VECTOR_MASK);
     Select<float, uint8_t, false>(oFpUb, maskUb, iFpUb, scalarVal, SELMODE::VSEL_TENSOR_SCALAR_MODE, B32_VECTOR_MASK,
                                   repeat, repParams);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 }
 
 template <typename T>
@@ -653,7 +654,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::calculateEachPoint
         Mul<float, false>(outValueUb[outOffset], outValueUb[outOffset], weightUb[weightsOffset], MASK_PLACEHOLDER,
                           calCElems, {1, 1, 1, 16, 16, 0});
     }
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Add<float, false>(outValueUbSum, outValueUbSum, outValueUb, MASK_PLACEHOLDER,
                       TRANSE_REP_STRIDE * channelAlign / B32_MASK, {1, 1, 1, 8, 8, 8});
 }
@@ -668,7 +670,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PointBilinear2(
     int64_t attentionOffset)
 {
     SetMaskNorm();
-    SetVectorMask<float, MaskMode::NORMAL>(0xffffffffffffffff, 0xffffffffffffffff);  // 逐bit模式
+    SetVectorMask<float, MaskMode::NORMAL>(0xffffffffffffffff, 0xffffffffffffffff); // 逐bit模式
 
     Muls<int32_t, false>(coordinatesUb, coordinatesUb, (int32_t)inputC_, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
                          {1, 1, 8, 8});
@@ -681,7 +683,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PointBilinear2(
 
     LocalTensor<float> outValueUbSum = outValueBuf2_.Get<float>();
 
-    int32_t maskNum = (MASK_UB_SIZE + 1) / 2;  // 除2数据量按照uint16类型折半
+    int32_t maskNum = (MASK_UB_SIZE + 1) / 2; // 除2数据量按照uint16类型折半
 
     auto weightMaskUbTmp1 = weightMaskUb.ReinterpretCast<uint16_t>();
     auto weightMaskUbTmp2 = weightMaskUb2.ReinterpretCast<uint16_t>();
@@ -838,7 +840,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PointBilinear2(
             uint32_t srcShape[2] = {1, (uint32_t)8};
 
             BroadCast<float, 2, 0>(dupUb9, weightMaskUbTmpfp32_9, dstShape, srcShape);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
 
             Select<float, uint32_t, false>(outValueUb4, dupUbU32_9, outValueUb4, outValueUb2,
                                            SELMODE::VSEL_TENSOR_TENSOR_MODE, 64, calCElems * (TRANSE_REP_STRIDE / 64),
@@ -846,14 +849,16 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PointBilinear2(
 
             BroadCast<float, 2, 0>(dupUb6, weightMaskUbTmpfp32_6, dstShape, srcShape);
 
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Select<float, uint32_t, false>(outValueUb4, dupUbU32_6, outValueUb4, outValueUb3,
                                            SELMODE::VSEL_TENSOR_TENSOR_MODE, 64, calCElems * (TRANSE_REP_STRIDE / 64),
                                            repParams);
 
             BroadCast<float, 2, 0>(dupUb8, weightMaskUbTmpfp32_8, dstShape, srcShape);
 
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Select<float, uint32_t, false>(outValueUb4, dupUbU32_8, outValueUb4, outValueUb,
                                            SELMODE::VSEL_TENSOR_TENSOR_MODE, 64, calCElems * (TRANSE_REP_STRIDE / 64),
                                            repParams);
@@ -864,7 +869,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PointBilinear2(
 
             BroadCast<float, 2, 0>(dupUb3, weightMaskUbTmpfp32_3, dstShape, srcShape);
 
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             Select<float, uint32_t, false>(outValueUb2, dupUbU32, outValueUb2, outValueUb,
                                            SELMODE::VSEL_TENSOR_TENSOR_MODE, 64, calCElems * (TRANSE_REP_STRIDE / 64),
                                            repParams);
@@ -874,7 +880,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PointBilinear2(
             Select<float, uint32_t, false>(outValueUb4, dupUbU32_4, outValueUb4, (float)0.0,
                                            SELMODE::VSEL_TENSOR_SCALAR_MODE, 64, calCElems * (TRANSE_REP_STRIDE / 64),
                                            repParams);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
 
             calculateEachPointValue(nIdx, calCElems, channelAlign, loopOffset, weightUb, outValueUb, outValueUbSum);
             calculateEachPointValue(nIdx, calCElems, channelAlign, loopOffset, weightUb2, outValueUb2, outValueUbSum);
@@ -907,10 +914,11 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::GridOutForNCHW(
     LocalTensor<float> bufTensor = bufferBuf_.Get<float>();
     if (alignmentType_ != ALIGNMENT_TYPE_1) {
         if (loopElemsAlign != loopElems) {
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             for (int16_t i = 0; i < calCElems; i++) {
-                GatherMask(bufTensor[i * BLOCK_NUM], outValueUbSum[i * TRANSE_REP_STRIDE + loopElems - BLOCK_NUM], bufPattern,
-                           true, mask, {1, 1, 8, 8}, rsvdCnt);
+                GatherMask(bufTensor[i * BLOCK_NUM], outValueUbSum[i * TRANSE_REP_STRIDE + loopElems - BLOCK_NUM],
+                           bufPattern, true, mask, {1, 1, 8, 8}, rsvdCnt);
             }
         }
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte2);
@@ -918,12 +926,14 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::GridOutForNCHW(
         for (int16_t i = 0; i < calCElems; i++) {
             DataCopy(gridOutput[i * TRANSE_REP_STRIDE], outValueUbSum[i * TRANSE_REP_STRIDE], loopElems);
             if (loopElemsAlign != loopElems) {
-                DataCopy(gridOutput[i * TRANSE_REP_STRIDE + loopElems - BLOCK_NUM], bufTensor[i * BLOCK_NUM], BLOCK_NUM);
+                DataCopy(gridOutput[i * TRANSE_REP_STRIDE + loopElems - BLOCK_NUM], bufTensor[i * BLOCK_NUM],
+                         BLOCK_NUM);
             }
         }
     } else {
         if (loopElemsAlign != loopElems) {
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
             for (int16_t i = 0; i < calCElems; i++) {
                 Duplicate(outValueUbSum[i * TRANSE_REP_STRIDE + loopElems], 0.0f, loopElemsAlign - loopElems);
             }
@@ -950,7 +960,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::OutTranspose(int32
                                                                            LocalTensor<float> xLocal,
                                                                            LocalTensor<float> outValueUb)
 {
-    TransposeParamsExt transposeParams {1, (uint16_t)(channelAlign * 4), 1, (uint16_t)TRANSE_REP_STRIDE, TransposeType::TRANSPOSE_NHWC2NCHW};
+    TransposeParamsExt transposeParams{1, (uint16_t)(channelAlign * 4), 1, (uint16_t)TRANSE_REP_STRIDE,
+                                       TransposeType::TRANSPOSE_NHWC2NCHW};
     Transpose<float>(outValueUb, xLocal, xLocal.ReinterpretCast<uint8_t>(), transposeParams);
 }
 
@@ -967,7 +978,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
     WaitFlag<HardEvent::V_MTE2>(eventIdVToMTE2);
 
     LocalTensor<T> gridLocal = gridQueue_.AllocTensor<T>();
-    DataCopy(gridLocal, location, calHWElemsAlign * 2);  // calHWElemsAlign = 512
+    DataCopy(gridLocal, location, calHWElemsAlign * 2); // calHWElemsAlign = 512
 
     gridQueue_.EnQue(gridLocal);
     gridQueue_.DeQue();
@@ -986,16 +997,18 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
 
     uint8_t src0RepeatStride = 8;
     uint8_t src1RepeatStride = 8;
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     LocalTensor<float> inputXFpLocal = gridLocal;
     LocalTensor<float> inputYFpLocal = gridLocal[CAL_H_W_BLOCK];
     // 分别取x和y
     GatherMask(inputXFpLocal, inputXYUb, xPattern, true, mask, {1, 1, src0RepeatStride, src1RepeatStride}, rsvdCnt);
     GatherMask(inputYFpLocal, inputXYUb, yPattern, true, mask, {1, 1, src0RepeatStride, src1RepeatStride}, rsvdCnt);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
     SetMaskNorm();
-    SetVectorMask<float, MaskMode::NORMAL>(0xffffffffffffffff, 0xffffffffffffffff);  // 逐bit模式
+    SetVectorMask<float, MaskMode::NORMAL>(0xffffffffffffffff, 0xffffffffffffffff); // 逐bit模式
 
     // unnormlize处理
     Muls<float, false>(inputXFpLocal, inputXFpLocal, (float)((float)0.5 * inputW_), MASK_PLACEHOLDER,
@@ -1003,11 +1016,13 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
     Muls<float, false>(inputYFpLocal, inputYFpLocal, (float)((float)0.5 * inputH_), MASK_PLACEHOLDER,
                        CAL_H_W_BLOCK / B32_MASK, {1, 1, 8, 8});
 
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Adds<float, false>(inputXFpLocal, inputXFpLocal, (float)(-0.5), MASK_PLACEHOLDER, CAL_H_W_BLOCK * 2 / B32_MASK,
                        {1, 1, 8, 8});
 
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
     // tmpOutQue_
     LocalTensor<int32_t> inputXWIntLocal = tmpOutQue_.Get<int32_t>(CAL_H_W_BLOCK);
@@ -1022,7 +1037,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
 
     Cast(inputXWIntLocal, inputXFpLocal, RoundMode::CAST_FLOOR, CAL_H_W_BLOCK);
     Cast(inputYWIntLocal, inputYFpLocal, RoundMode::CAST_FLOOR, CAL_H_W_BLOCK);
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Cast(inputXWFpLocal, inputXWIntLocal, RoundMode::CAST_NONE, CAL_H_W_BLOCK);
     Cast(inputYWFpLocal, inputYWIntLocal, RoundMode::CAST_NONE, CAL_H_W_BLOCK);
     // 分别计算左上，右上，左下，右下的坐标
@@ -1032,7 +1048,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
                        {1, 1, 8, 8});
     Adds<float, false>(inputYEFpLocal, inputYWFpLocal, (float)1.0, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
                        {1, 1, 8, 8});
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
     LocalTensor<float> nwWeightLocal = weightBuf_.Get<float>(CAL_H_W_BLOCK);
     LocalTensor<float> neWeightLocal = weightBuf_.GetWithOffset<float>(CAL_H_W_BLOCK, CAL_H_W_BLOCK * 4);
@@ -1053,7 +1070,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
     Sub<float, false>(weightTmp3Local, inputYFpLocal, inputYWFpLocal, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
                       {1, 1, 1, 8, 8, 8});
 
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
     Mul<float, false>(nwWeightLocal, weightTmpLocal, weightTmp2Local, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
                       {1, 1, 1, 8, 8, 8});
     Mul<float, false>(neWeightLocal, weightTmp1Local, weightTmp2Local, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
@@ -1062,7 +1080,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::PerLoopCompute(
                       {1, 1, 1, 8, 8, 8});
     Mul<float, false>(seWeightLocal, weightTmp1Local, weightTmp3Local, MASK_PLACEHOLDER, CAL_H_W_BLOCK / B32_MASK,
                       {1, 1, 1, 8, 8, 8});
-    PipeBarrier<PIPE_V>();;
+    PipeBarrier<PIPE_V>();
+    ;
 
     LocalTensor<int32_t> coordinatesLocal = coorBuf_.Get<int32_t>(CAL_H_W_BLOCK);
 
@@ -1152,7 +1171,8 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::InputGenerate(int6
 
     Muls(location, location, (float)2, locationLength);
     Adds(location, location, (float)(-1), locationLength);
-    PipeBarrier<PIPE_ALL>();;
+    PipeBarrier<PIPE_ALL>();
+    ;
 }
 
 template <typename T>
@@ -1207,14 +1227,14 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::OutputGenerate(
         copyDstStride = (numQueries_ - tailNum) / 8;
     }
 
-    outTransCopyOut(isDataCopy, copyDstStride, copySrcStride, outputGmBaseOffset, loopElems,
-        outTransTensor, outRepeatLen, tailNum, outRepeatLenAlign, copyNum);
+    outTransCopyOut(isDataCopy, copyDstStride, copySrcStride, outputGmBaseOffset, loopElems, outTransTensor,
+                    outRepeatLen, tailNum, outRepeatLenAlign, copyNum);
 }
 
 template <typename T>
 __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::outTransCal(
-    int16_t loopElems, LocalTensor<float> outTransTensor, LocalTensor<float> tmpOut,
-    int32_t sumOutputLen, int32_t outRepeatLen, int32_t tailNum, int32_t copyNum, bool tailByteAlign)
+    int16_t loopElems, LocalTensor<float> outTransTensor, LocalTensor<float> tmpOut, int32_t sumOutputLen,
+    int32_t outRepeatLen, int32_t tailNum, int32_t copyNum, bool tailByteAlign)
 {
     if (loopElems == 128) {
         TransposeParamsExt transposeParams;
@@ -1224,10 +1244,12 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::outTransCal(
         transposeParams.wSize = (uint16_t)sumOutputLen;
         transposeParams.transposeType = TransposeType::TRANSPOSE_NHWC2NCHW;
         Transpose<float>(outTransTensor, tmpOut, tmpOut.ReinterpretCast<uint8_t>(), transposeParams);
-        PipeBarrier<PIPE_V>();;
+        PipeBarrier<PIPE_V>();
+        ;
         for (int32_t i = 1; i < numPoints_; i++) {
             Add(outTransTensor, outTransTensor, outTransTensor[sumOutputLen * i], sumOutputLen);
-            PipeBarrier<PIPE_V>();;
+            PipeBarrier<PIPE_V>();
+            ;
         }
     } else {
         for (int32_t i = 0; i < sumOutputLen; i++) {
@@ -1249,9 +1271,9 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::outTransCal(
 
 template <typename T>
 __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::outTransCopyOut(
-    bool isDataCopy, int32_t copyDstStride, int32_t copySrcStride, int64_t outputGmBaseOffset,
-    int16_t loopElems, LocalTensor<float> outTransTensor, int32_t outRepeatLen, int32_t tailNum,
-    int32_t outRepeatLenAlign, int32_t copyNum)
+    bool isDataCopy, int32_t copyDstStride, int32_t copySrcStride, int64_t outputGmBaseOffset, int16_t loopElems,
+    LocalTensor<float> outTransTensor, int32_t outRepeatLen, int32_t tailNum, int32_t outRepeatLenAlign,
+    int32_t copyNum)
 {
     event_t eventIdSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     event_t eventIdVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -1283,10 +1305,12 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::outTransCopyOut(
                     SetAtomicNone();
                 } else {
                     // outRepeatLen没有32对齐处理：临时存储outTransTensor中一行的值,补0 32对齐后再拷入
-                    PipeBarrier<PIPE_V>();;
+                    PipeBarrier<PIPE_V>();
+                    ;
                     LocalTensor<float> tmpOutTransTensor = workLocalQue_.Get<float>();
                     Duplicate(tmpOutTransTensor, 0.0f, tmpOutTransTensor.GetSize());
-                    PipeBarrier<PIPE_V>();;
+                    PipeBarrier<PIPE_V>();
+                    ;
                     Add(tmpOutTransTensor, tmpOutTransTensor, outTransTensor[i * outRepeatLen], outRepeatLen);
                     SetFlag<HardEvent::V_MTE3>(eventIdVToMTE3);
                     WaitFlag<HardEvent::V_MTE3>(eventIdVToMTE3);
@@ -1338,5 +1362,5 @@ __aicore__ inline void KernelMultiScaleDeformableAttn310P<T>::MSDAProcess()
     }
 }
 
-}  // namespace MultiScaleDeformableAttn
-#endif  // MS_DEFORM_ATTN_310P
+} // namespace MultiScaleDeformableAttn
+#endif // MS_DEFORM_ATTN_310P

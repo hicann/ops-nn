@@ -20,23 +20,15 @@
 #include "op_host/tiling_util.h"
 
 namespace optiling {
-class ForeachReduceRegbaseTiling : public ForeachBaseClass
-{
+class ForeachReduceRegbaseTiling : public ForeachBaseClass {
 public:
-    explicit ForeachReduceRegbaseTiling(gert::TilingContext* context) : ForeachBaseClass(context)
-    {}
+    explicit ForeachReduceRegbaseTiling(gert::TilingContext* context) : ForeachBaseClass(context) {}
     ~ForeachReduceRegbaseTiling() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachReduceRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachReduceRegbaseTiling::Reset(context); }
 
 protected:
-    bool IsCapable() override
-    {
-        return Ops::NN::OpTiling::IsRegbaseSocVersion(context_);
-    }
+    bool IsCapable() override { return Ops::NN::OpTiling::IsRegbaseSocVersion(context_); }
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;

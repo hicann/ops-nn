@@ -94,7 +94,7 @@ public:
     __aicore__ inline QuantBmmAswBlock() {}
     // 防止忘记对X2_C0_SIZE赋值，所以在Init里赋值
     template <class x2Type, bool isLut>
-    __aicore__ inline void Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData, uint32_t blockIdx);
+    __aicore__ inline void Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData, uint32_t blockIdx);
     __aicore__ inline void UpdateBasicIndex(uint64_t roundIdx);
     __aicore__ inline void UpdateBasicIndex4AL1FullLoad(uint64_t roundIdx);
     __aicore__ inline void UpdateBasicIndex4BL1FullLoad(uint64_t roundIdx);
@@ -122,7 +122,7 @@ public:
     ASWOffsetParam offset_;
     PerBlockUBParam ubParams_;
     PerBlockMmParam mmParams_;
-    const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData_;
+    const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData_;
     uint32_t X2_C0_SIZE;
 
 private:
@@ -143,8 +143,8 @@ __aicore__ inline void QuantBmmAswBlock::LoadBalanceInit()
     params_.nBaseTailLast = params_.nBaseTail - (params_.nBaseTailSplitCnt - 1) * params_.nBaseTailMain;
 }
 
-template<class x2Type, bool isLut>
-__aicore__ inline void QuantBmmAswBlock::Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams *tilingData,
+template <class x2Type, bool isLut>
+__aicore__ inline void QuantBmmAswBlock::Init(const DequantBmm::QuantBatchMatmulV3TilingDataParams* tilingData,
                                               uint32_t blockIdx)
 {
     params_.mSplitAddrOffset = 0UL;
@@ -154,7 +154,8 @@ __aicore__ inline void QuantBmmAswBlock::Init(const DequantBmm::QuantBatchMatmul
     params_.mCnt = DequantBmm::CeilDiv(tilingData_->matmulTiling.M, tilingData_->matmulTiling.baseM);
     params_.nCnt = DequantBmm::CeilDiv(tilingData_->matmulTiling.N, tilingData_->matmulTiling.baseN);
     params_.totalCnt = params_.mCnt * params_.nCnt;
-    params_.totalTailTile = static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.mTailTile) * static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.nTailTile);
+    params_.totalTailTile = static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.mTailTile) *
+                            static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.nTailTile);
     params_.round = DequantBmm::CeilDiv(params_.totalCnt, tilingData_->matmulTiling.usedCoreNum);
     params_.mCoreNum = DequantBmm::Min(WINDOW_LEN, params_.mCnt);
     params_.mainRow = params_.mCnt / params_.mCoreNum - 1UL;
@@ -199,11 +200,11 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBasicIndex4AL1FullLoad(uint64_t r
     uint64_t newBlockIdx = (roundIdx == params_.round - 1UL) ? (blockIdx_ / params_.totalTailTile) : blockIdx_;
     params_.index = newBlockIdx + roundIdx * tilingData_->matmulTiling.usedCoreNum;
     params_.mIndex = blockIdx_ % params_.mCnt;
-    uint64_t newNTailTile =
-        (roundIdx == params_.round - 1UL) ? static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.nTailTile) : 1UL;
-    params_.nIndex =
-        roundIdx * tilingData_->matmulTiling.usedCoreNum / params_.mCnt % params_.nCnt +
-        blockIdx_ / params_.mCnt / newNTailTile;
+    uint64_t newNTailTile = (roundIdx == params_.round - 1UL) ?
+                                static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.nTailTile) :
+                                1UL;
+    params_.nIndex = roundIdx * tilingData_->matmulTiling.usedCoreNum / params_.mCnt % params_.nCnt +
+                     blockIdx_ / params_.mCnt / newNTailTile;
 }
 
 __aicore__ inline void QuantBmmAswBlock::UpdateBasicIndex4BL1FullLoad(uint64_t roundIdx)
@@ -211,11 +212,11 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBasicIndex4BL1FullLoad(uint64_t r
     uint64_t newBlockIdx = (roundIdx == params_.round - 1UL) ? (blockIdx_ / params_.totalTailTile) : blockIdx_;
     params_.index = newBlockIdx + roundIdx * tilingData_->matmulTiling.usedCoreNum;
     params_.nIndex = blockIdx_ % params_.nCnt;
-    uint64_t newMTailTile =
-        (roundIdx == params_.round - 1UL) ? static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.mTailTile) : 1UL;
-    params_.mIndex =
-        roundIdx * tilingData_->matmulTiling.usedCoreNum / params_.nCnt % params_.mCnt +
-        blockIdx_ / params_.nCnt / newMTailTile;
+    uint64_t newMTailTile = (roundIdx == params_.round - 1UL) ?
+                                static_cast<uint64_t>(tilingData_->adaptiveSlidingWin.mTailTile) :
+                                1UL;
+    params_.mIndex = roundIdx * tilingData_->matmulTiling.usedCoreNum / params_.nCnt % params_.mCnt +
+                     blockIdx_ / params_.nCnt / newMTailTile;
 }
 
 template <bool bTrans, CubeFormat formatX2>
@@ -223,14 +224,12 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams(uint64_t roundIdx)
 {
     params_.singleCoreM = tilingData_->matmulTiling.baseM;
     if (params_.mIndex >= params_.mBaseNormCnt) {
-        params_.singleCoreM =
-            (params_.mIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast : params_.mBaseTailMain;
+        params_.singleCoreM = (params_.mIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast : params_.mBaseTailMain;
     }
 
     params_.singleCoreN = tilingData_->matmulTiling.baseN;
     if (params_.nIndex >= params_.nBaseNormCnt) {
-        params_.singleCoreN =
-            (params_.nIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast : params_.nBaseTailMain;
+        params_.singleCoreN = (params_.nIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast : params_.nBaseTailMain;
     }
     if (tilingData_->adaptiveSlidingWin.mTailTile == 1 && tilingData_->adaptiveSlidingWin.nTailTile == 1) {
         return;
@@ -245,7 +244,7 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams(uint64_t roundIdx)
         // weight INT4时，N轴切分必须为偶数，向上对齐到2的倍数
         singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, 2);
 #endif
-        if constexpr (formatX2 !=  CubeFormat::ND) {
+        if constexpr (formatX2 != CubeFormat::ND) {
             if constexpr (bTrans) {
                 singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, CUBE_BLOCK);
             } else {
@@ -285,13 +284,11 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams4AL1FullLoad(uint64_t 
 {
     params_.singleCoreM = tilingData_->matmulTiling.baseM;
     if (params_.mIndex >= params_.mBaseNormCnt) {
-        params_.singleCoreM =
-            (params_.mIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast : params_.mBaseTailMain;
+        params_.singleCoreM = (params_.mIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast : params_.mBaseTailMain;
     }
     params_.singleCoreN = tilingData_->matmulTiling.baseN;
     if (params_.nIndex >= params_.nBaseNormCnt) {
-        params_.singleCoreN =
-            (params_.nIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast : params_.nBaseTailMain;
+        params_.singleCoreN = (params_.nIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast : params_.nBaseTailMain;
     }
     if (tilingData_->adaptiveSlidingWin.mTailTile == 1 && tilingData_->adaptiveSlidingWin.nTailTile == 1) {
         return;
@@ -305,7 +302,7 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams4AL1FullLoad(uint64_t 
         // weight INT4时，N轴切分必须为偶数，向上对齐到2的倍数
         singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, 2);
 #endif
-        if constexpr (formatX2 !=  CubeFormat::ND) {
+        if constexpr (formatX2 != CubeFormat::ND) {
             if constexpr (bTrans) {
                 singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, CUBE_BLOCK);
             } else {
@@ -392,7 +389,7 @@ __aicore__ inline void QuantBmmAswBlock::CalcGMOffset()
         nOffset = nOffset -
                   (params_.nIndex - params_.nBaseNormCnt) * (tilingData_->matmulTiling.baseN - params_.nBaseTailMain);
     }
-    
+
     if constexpr (aTrans) {
         offset_.offsetA = mOffset;
     } else {
@@ -417,15 +414,15 @@ __aicore__ inline void QuantBmmAswBlock::CalcGMOffset()
         } else {
             // (n1, k1, k0, n0)
             uint64_t kAlign = DequantBmm::Align16(tilingData_->matmulTiling.Kb);
-            offset_.offsetB = nOffset * kAlign;  // tiling保证切到n1
-            offset_.offsetB +=
-                offset_.batchBOffset * kAlign * DequantBmm::Align(tilingData_->matmulTiling.N, X2_C0_SIZE);
+            offset_.offsetB = nOffset * kAlign; // tiling保证切到n1
+            offset_.offsetB += offset_.batchBOffset * kAlign *
+                               DequantBmm::Align(tilingData_->matmulTiling.N, X2_C0_SIZE);
         }
     }
 
     if constexpr (isLut) {
-        offset_.offsetX2Table =
-            params_.nIndex * DequantBmm::CeilDiv(tilingData_->matmulTiling.Kb, tilingData_->matmulTiling.baseK);
+        offset_.offsetX2Table = params_.nIndex *
+                                DequantBmm::CeilDiv(tilingData_->matmulTiling.Kb, tilingData_->matmulTiling.baseK);
 #if (ORIG_DTYPE_X2 == DT_INT4)
         // 1个int4的index有16个可能的int8，即2个uint64的qtable
         offset_.offsetX2Table *= 2UL;
@@ -492,9 +489,10 @@ __aicore__ inline void QuantBmmAswBlock::UpdatePerBlockUBParam()
     ubParams_.fixpipeSplitN = params_.singleCoreN > PER_BLOCK_SIZE || params_.singleCoreM == 1;
     ubParams_.offsetM = params_.mIndex * tilingData_->matmulTiling.baseM + params_.mSplitAddrOffset;
     ubParams_.offsetN = params_.nIndex * tilingData_->matmulTiling.baseN + params_.nSplitAddrOffset;
-    ubParams_.singleM = ubParams_.fixpipeSplitN
-                            ? params_.singleCoreM
-                            : DequantBmm::CeilDiv(params_.singleCoreM, static_cast<uint64_t>(DequantBmm::GetTaskRation()));
+    ubParams_.singleM = ubParams_.fixpipeSplitN ?
+                            params_.singleCoreM :
+                            DequantBmm::CeilDiv(params_.singleCoreM,
+                                                static_cast<uint64_t>(DequantBmm::GetTaskRation()));
     ubParams_.singleN = mmParams_.fixpipeD;
     if (AscendC::GetSubBlockIdx() == 1) {
         auto ubParamsRes = ubParams_.fixpipeSplitN ? 0 : ubParams_.singleM;
@@ -523,10 +521,10 @@ __aicore__ inline void QuantBmmAswBlock::UpdatePerBlockMmParam()
         } else {
             mmParams_.fixSrcStride = DequantBmm::Align(params_.singleCoreM, static_cast<uint64_t>(BMM_BLOCK_NUM));
         }
-        mmParams_.fixpipeM =
-            mmParams_.fixpipeSplitN
-                ? params_.singleCoreM
-                : DequantBmm::Align(params_.singleCoreM, static_cast<uint64_t>(DequantBmm::GetTaskRation()));
+        mmParams_.fixpipeM = mmParams_.fixpipeSplitN ?
+                                 params_.singleCoreM :
+                                 DequantBmm::Align(params_.singleCoreM,
+                                                   static_cast<uint64_t>(DequantBmm::GetTaskRation()));
     }
     if (mmParams_.fixpipeSplitN) {
         mmParams_.fixpipeN = DequantBmm::Align(params_.singleCoreN, static_cast<uint64_t>(DATA_BLOCK));
@@ -536,4 +534,4 @@ __aicore__ inline void QuantBmmAswBlock::UpdatePerBlockMmParam()
         mmParams_.fixpipeD = mmParams_.fixpipeN;
     }
 }
-}  // namespace QuantBatchMatmulV3
+} // namespace QuantBatchMatmulV3

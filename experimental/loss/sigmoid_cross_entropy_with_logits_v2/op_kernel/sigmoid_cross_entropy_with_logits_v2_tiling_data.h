@@ -20,12 +20,12 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 struct SigmoidCrossEntropyWithLogitsV2TilingData {
-	uint32_t totalLength;
-	uint32_t tileNum;
-	uint32_t tileLength;
-	uint8_t has_weight;
-	uint8_t has_pos_weight;
-	uint32_t dtype_enum;
+    uint32_t totalLength;
+    uint32_t tileNum;
+    uint32_t tileLength;
+    uint8_t has_weight;
+    uint8_t has_pos_weight;
+    uint32_t dtype_enum;
 };
 
 #endif // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_V2_TILING_DATA_H

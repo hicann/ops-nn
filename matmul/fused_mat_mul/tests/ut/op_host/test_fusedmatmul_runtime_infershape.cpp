@@ -26,54 +26,58 @@ using namespace ge;
 using namespace op;
 
 template <typename T>
-std::string DebugString(const std::vector<T>& v) {
-  std::ostringstream oss;
-  oss << "[";
-  if (v.size() > 0) {
-    for (size_t i = 0; i < v.size() - 1; ++i) {
-      oss << v[i] << ", ";
+std::string DebugString(const std::vector<T>& v)
+{
+    std::ostringstream oss;
+    oss << "[";
+    if (v.size() > 0) {
+        for (size_t i = 0; i < v.size() - 1; ++i) {
+            oss << v[i] << ", ";
+        }
+        oss << v[v.size() - 1];
     }
-    oss << v[v.size() - 1];
-  }
-  oss << "]";
-  return oss.str();
+    oss << "]";
+    return oss.str();
 }
 
-bool IsUnknownRankShape(const std::vector<int64_t>& shape_vec) {
-  if (shape_vec.size() == 1 && shape_vec[0] == -2) {
-    return true;
-  }
-  return false;
+bool IsUnknownRankShape(const std::vector<int64_t>& shape_vec)
+{
+    if (shape_vec.size() == 1 && shape_vec[0] == -2) {
+        return true;
+    }
+    return false;
 }
 
-bool IsUnKnownShape(const std::vector<int64_t>& shape_vec) {
-  auto found = find(shape_vec.begin(), shape_vec.end(), -1);
-  return found != shape_vec.end();
+bool IsUnKnownShape(const std::vector<int64_t>& shape_vec)
+{
+    auto found = find(shape_vec.begin(), shape_vec.end(), -1);
+    return found != shape_vec.end();
 }
 
-bool IsUnknown(const std::vector<int64_t>& shape_vec) {
-  return (IsUnKnownShape(shape_vec) || IsUnknownRankShape(shape_vec));
+bool IsUnknown(const std::vector<int64_t>& shape_vec)
+{
+    return (IsUnKnownShape(shape_vec) || IsUnknownRankShape(shape_vec));
 }
 
 gert::KernelRunContextHolder CreateFusedMatMulHolder(gert::StorageShape& shape_x1, gert::StorageShape& shape_x2,
                                                      gert::StorageShape& shape_bias, gert::StorageShape& shape_x3,
-                                                     gert::StorageShape& shape_y, const bool &transpose_x1,
-                                                     const bool &transpose_x2, const bool &enable_hf32,
-                                                     const std::string &fused_op_type)
+                                                     gert::StorageShape& shape_y, const bool& transpose_x1,
+                                                     const bool& transpose_x2, const bool& enable_hf32,
+                                                     const std::string& fused_op_type)
 {
     gert::KernelRunContextHolder holder;
 
     holder = gert::InferShapeContextFaker()
-                         .NodeIoNum(4, 1)
-                         .IrInstanceNum({1, 1, 1, 1})
-                         .InputShapes({&shape_x1, &shape_x2, &shape_bias, &shape_x3})
-                         .OutputShapes({&shape_y})
-                         .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x1)},
-                                     {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x2)},
-                                     {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(enable_hf32)},
-                                     {"fused_op_type", Ops::NN::AnyValue::CreateFrom<std::string>(fused_op_type)},
-                                     {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
-                         .Build();
+                 .NodeIoNum(4, 1)
+                 .IrInstanceNum({1, 1, 1, 1})
+                 .InputShapes({&shape_x1, &shape_x2, &shape_bias, &shape_x3})
+                 .OutputShapes({&shape_y})
+                 .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x1)},
+                             {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x2)},
+                             {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(enable_hf32)},
+                             {"fused_op_type", Ops::NN::AnyValue::CreateFrom<std::string>(fused_op_type)},
+                             {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                 .Build();
     return holder;
 }
 
@@ -102,20 +106,11 @@ void CheckContext(gert::KernelRunContextHolder& holder, const RES_TUPLE& expecte
     EXPECT_EQ(Ops::Base::ToString(*shape), DebugString(get<0>(expected)));
 }
 
-class FusedMatMulRuntimeProtoTest : public testing::TestWithParam<CASE_TUPLE>
-{
+class FusedMatMulRuntimeProtoTest : public testing::TestWithParam<CASE_TUPLE> {
 public:
-    FusedMatMulRuntimeProtoTest()
-    {
-    }
-    static void SetUpTestSuite()
-    {
-        setenv("ASCEND_GLOBAL_LOG_LEVEL", "0", true);
-    }
-    static void TearDownTestSuite()
-    {
-        unsetenv("ASCEND_GLOBAL_LOG_LEVEL");
-    }
+    FusedMatMulRuntimeProtoTest() {}
+    static void SetUpTestSuite() { setenv("ASCEND_GLOBAL_LOG_LEVEL", "0", true); }
+    static void TearDownTestSuite() { unsetenv("ASCEND_GLOBAL_LOG_LEVEL"); }
 };
 
 TEST_P(FusedMatMulRuntimeProtoTest, General)
@@ -129,8 +124,7 @@ TEST_P(FusedMatMulRuntimeProtoTest, General)
     auto vec_shape_x2 = get<0>(tuple_x2);
     auto vec_shape_bias = get<0>(tuple_bias);
     auto vec_shape_x3 = get<0>(tuple_x3);
-    if (IsUnknown(vec_shape_x1) || IsUnknown(vec_shape_x2) || IsUnknown(vec_shape_bias) ||
-        IsUnknown(vec_shape_x3)) {
+    if (IsUnknown(vec_shape_x1) || IsUnknown(vec_shape_x2) || IsUnknown(vec_shape_bias) || IsUnknown(vec_shape_x3)) {
         // NOTE not support dynamic yet
         return;
     }

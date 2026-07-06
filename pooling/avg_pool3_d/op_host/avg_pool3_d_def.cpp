@@ -20,7 +20,8 @@ class AvgPool3D : public OpDef {
 public:
     const std::vector<ge::DataType> AvgPool3DXDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
     const std::vector<ge::Format> AvgPool3DXFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-    explicit AvgPool3D(const char* name) : OpDef(name) {
+    explicit AvgPool3D(const char* name) : OpDef(name)
+    {
         this->Input("x")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
@@ -31,57 +32,43 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Attr("ksize")
-            .AttrType(REQUIRED)
-            .ListInt();
-        this->Attr("strides")
-            .AttrType(REQUIRED)
-            .ListInt();
-        this->Attr("pads")
-            .AttrType(REQUIRED)
-            .ListInt();
-        this->Attr("ceil_mode")
-            .AttrType(OPTIONAL)
-            .Bool(false);
-        this->Attr("count_include_pad")
-            .AttrType(OPTIONAL)
-            .Bool(true);
-        this->Attr("divisor_override")
-            .AttrType(OPTIONAL)
-            .Int(0);
-        this->Attr("data_format")
-            .AttrType(OPTIONAL)
-            .String("NDHWC");
+        this->Attr("ksize").AttrType(REQUIRED).ListInt();
+        this->Attr("strides").AttrType(REQUIRED).ListInt();
+        this->Attr("pads").AttrType(REQUIRED).ListInt();
+        this->Attr("ceil_mode").AttrType(OPTIONAL).Bool(false);
+        this->Attr("count_include_pad").AttrType(OPTIONAL).Bool(true);
+        this->Attr("divisor_override").AttrType(OPTIONAL).Int(0);
+        this->Attr("data_format").AttrType(OPTIONAL).String("NDHWC");
 
         OpAICoreConfig config;
         config.DynamicCompileStaticFlag(true)
-              .DynamicRankSupportFlag(true)
-              .DynamicShapeSupportFlag(true)
-              .NeedCheckSupportFlag(false);
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false);
         this->AICore().AddConfig("ascend910b", config);
         this->AICore().AddConfig("ascend910_93", config);
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.Input("x")
-             .ParamType(REQUIRED)
-             .DataType(AvgPool3DXDataType)
-             .Format(AvgPool3DXFormat)
-             .UnknownShapeFormat(AvgPool3DXFormat)
-             .AutoContiguous();
+            .ParamType(REQUIRED)
+            .DataType(AvgPool3DXDataType)
+            .Format(AvgPool3DXFormat)
+            .UnknownShapeFormat(AvgPool3DXFormat)
+            .AutoContiguous();
         aiCoreConfig.Output("y")
-             .ParamType(REQUIRED)
-             .DataType(AvgPool3DXDataType)
-             .Format(AvgPool3DXFormat)
-             .UnknownShapeFormat(AvgPool3DXFormat)
-             .AutoContiguous();
+            .ParamType(REQUIRED)
+            .DataType(AvgPool3DXDataType)
+            .Format(AvgPool3DXFormat)
+            .UnknownShapeFormat(AvgPool3DXFormat)
+            .AutoContiguous();
 
         aiCoreConfig.DynamicCompileStaticFlag(true)
-             .DynamicFormatFlag(false)
-             .DynamicRankSupportFlag(true)
-             .DynamicShapeSupportFlag(true)
-             .NeedCheckSupportFlag(false)
-             .PrecisionReduceFlag(true)
-             .ExtendCfgInfo("opFile.value", "avg_pool3_d_apt");
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "avg_pool3_d_apt");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
@@ -114,4 +101,4 @@ private:
 };
 
 OP_ADD(AvgPool3D);
-}  // namespace ops
+} // namespace ops

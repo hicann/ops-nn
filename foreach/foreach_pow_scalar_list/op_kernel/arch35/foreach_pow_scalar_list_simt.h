@@ -44,10 +44,21 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T>
-struct ComputeType { using type = T; };
-template <> struct ComputeType<half> { using type = float; };
-template <> struct ComputeType<bfloat16_t> { using type = float; };
-template <> struct ComputeType<int32_t> { using type = int64_t; };
+struct ComputeType {
+    using type = T;
+};
+template <>
+struct ComputeType<half> {
+    using type = float;
+};
+template <>
+struct ComputeType<bfloat16_t> {
+    using type = float;
+};
+template <>
+struct ComputeType<int32_t> {
+    using type = int64_t;
+};
 
 static __simt_callee__ inline bool SimtIsNaN(float v)
 {
@@ -72,7 +83,8 @@ static __simt_callee__ inline bool SimtIsNegInf(float v)
 
 static __simt_callee__ inline bool IsIntegerExp(float exp)
 {
-    if (fabsf(exp) >= FLOAT_MANTISSA_INT_THRESHOLD) return true;
+    if (fabsf(exp) >= FLOAT_MANTISSA_INT_THRESHOLD)
+        return true;
     float rounded = rintf(exp);
     return fabsf(exp - rounded) < 1e-6f;
 }
@@ -133,31 +145,51 @@ template <typename T>
 __simt_callee__ inline float ConvertToFloat(T val);
 
 template <>
-__simt_callee__ inline float ConvertToFloat<float>(float val) { return val; }
+__simt_callee__ inline float ConvertToFloat<float>(float val)
+{
+    return val;
+}
 
 template <>
-__simt_callee__ inline float ConvertToFloat<half>(half val) { return __half2float(val); }
+__simt_callee__ inline float ConvertToFloat<half>(half val)
+{
+    return __half2float(val);
+}
 
 template <>
-__simt_callee__ inline float ConvertToFloat<bfloat16_t>(bfloat16_t val) { return __bfloat162float(val); }
+__simt_callee__ inline float ConvertToFloat<bfloat16_t>(bfloat16_t val)
+{
+    return __bfloat162float(val);
+}
 
 template <typename T>
 __simt_callee__ inline T ConvertFromFloat(float val);
 
 template <>
-__simt_callee__ inline float ConvertFromFloat<float>(float val) { return val; }
+__simt_callee__ inline float ConvertFromFloat<float>(float val)
+{
+    return val;
+}
 
 template <>
-__simt_callee__ inline half ConvertFromFloat<half>(float val) { return __float2half(val); }
+__simt_callee__ inline half ConvertFromFloat<half>(float val)
+{
+    return __float2half(val);
+}
 
 template <>
-__simt_callee__ inline bfloat16_t ConvertFromFloat<bfloat16_t>(float val) { return __float2bfloat16(val); }
+__simt_callee__ inline bfloat16_t ConvertFromFloat<bfloat16_t>(float val)
+{
+    return __float2bfloat16(val);
+}
 
 __simt_callee__ inline int64_t SimtPowInt(int64_t base, int64_t exp)
 {
     if (exp < 0) {
-        if (base == 1) return 1;
-        if (base == -1) return (exp % 2 == 0) ? 1 : -1;
+        if (base == 1)
+            return 1;
+        if (base == -1)
+            return (exp % 2 == 0) ? 1 : -1;
         return 0;
     }
     int64_t result = 1;
@@ -210,16 +242,22 @@ static __simt_callee__ inline float SimtPowFloatSafe(float bF, float eF)
     }
     if (SimtIsPosInf(eF)) {
         float absB = fabsf(bF);
-        if (absB > 1.0f) return FloatToInf(true);
-        if (absB < 1.0f) return 0.0f;
-        if (bF == -1.0f) return 1.0f;
+        if (absB > 1.0f)
+            return FloatToInf(true);
+        if (absB < 1.0f)
+            return 0.0f;
+        if (bF == -1.0f)
+            return 1.0f;
         return 0.0f;
     }
     if (SimtIsNegInf(eF)) {
         float absB = fabsf(bF);
-        if (absB > 1.0f) return 0.0f;
-        if (absB < 1.0f) return FloatToInf(true);
-        if (bF == -1.0f) return 1.0f;
+        if (absB > 1.0f)
+            return 0.0f;
+        if (absB < 1.0f)
+            return FloatToInf(true);
+        if (bF == -1.0f)
+            return 1.0f;
         return FloatToInf(true);
     }
     if (bF < 0.0f && IsIntegerExp(eF)) {
@@ -229,8 +267,7 @@ static __simt_callee__ inline float SimtPowFloatSafe(float bF, float eF)
 }
 
 template <typename T, typename S>
-__simt_callee__ inline void PowComputeBody(
-    __gm__ T* xData, __gm__ T* yData, S scalarVal, uint64_t idx)
+__simt_callee__ inline void PowComputeBody(__gm__ T* xData, __gm__ T* yData, S scalarVal, uint64_t idx)
 {
     using C = typename ComputeType<T>::type;
     if (static_cast<C>(xData[idx]) == static_cast<C>(1)) {
@@ -253,13 +290,10 @@ __simt_callee__ inline void PowComputeBody(
 }
 
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachPowScalarListSimt32(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR scalars,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachPowScalarListSimt32(int32_t tensorCount,
+                                                                                         __gm__ int64_t* tensorElements,
+                                                                                         GM_ADDR xList, GM_ADDR scalars,
+                                                                                         GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -273,11 +307,8 @@ inline void OpForeachPowScalarListSimt32(
         __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
         S scalarVal = scalarsGm[t];
 
-        uint32_t tid = static_cast<uint32_t>(
-            blockIdx.x * blockDim.x +
-            threadIdx.x);
-        uint32_t stride = static_cast<uint32_t>(
-            blockDim.x * gridDim.x);
+        uint32_t tid = static_cast<uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+        uint32_t stride = static_cast<uint32_t>(blockDim.x * gridDim.x);
 
         for (uint32_t idx = tid; idx < static_cast<uint32_t>(count); idx += stride) {
             PowComputeBody<T, S>(xData, yData, scalarVal, static_cast<uint64_t>(idx));
@@ -286,13 +317,8 @@ inline void OpForeachPowScalarListSimt32(
 }
 
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_64)
-inline void OpForeachPowScalarListSimt64(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR scalars,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_64) inline void OpForeachPowScalarListSimt64(
+    int32_t tensorCount, __gm__ int64_t* tensorElements, GM_ADDR xList, GM_ADDR scalars, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -306,11 +332,8 @@ inline void OpForeachPowScalarListSimt64(
         __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
         S scalarVal = scalarsGm[t];
 
-        uint64_t tid = static_cast<uint64_t>(
-            blockIdx.x * blockDim.x +
-            threadIdx.x);
-        uint64_t stride = static_cast<uint64_t>(
-            blockDim.x * gridDim.x);
+        uint64_t tid = static_cast<uint64_t>(blockIdx.x * blockDim.x + threadIdx.x);
+        uint64_t stride = static_cast<uint64_t>(blockDim.x * gridDim.x);
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             PowComputeBody<T, S>(xData, yData, scalarVal, idx);
@@ -319,34 +342,20 @@ inline void OpForeachPowScalarListSimt64(
 }
 
 template <typename T, typename S>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
-    const __gm__ ForeachPowScalarListTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
+                               const __gm__ ForeachPowScalarListTilingData* tilingGm)
 {
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachPowScalarListTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachPowScalarListTilingData*>(tilingGm)) +
         offsetof(ForeachPowScalarListTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
     constexpr int64_t kUint32Max = 0xFFFFFFFFLL;
     if (tilingGm->totalElements <= kUint32Max) {
-        asc_vf_call<OpForeachPowScalarListSimt32<T, S>>(
-            dim3(THREAD_NUM),
-            tensorCount,
-            elemCounts,
-            x,
-            scalars,
-            y);
+        asc_vf_call<OpForeachPowScalarListSimt32<T, S>>(dim3(THREAD_NUM), tensorCount, elemCounts, x, scalars, y);
     } else {
-        asc_vf_call<OpForeachPowScalarListSimt64<T, S>>(
-            dim3(THREAD_NUM_64),
-            tensorCount,
-            elemCounts,
-            x,
-            scalars,
-            y);
+        asc_vf_call<OpForeachPowScalarListSimt64<T, S>>(dim3(THREAD_NUM_64), tensorCount, elemCounts, x, scalars, y);
     }
 }
 

@@ -63,31 +63,28 @@
 int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t size = 1;
-    for (auto d : shape) size *= d;
+    for (auto d : shape)
+        size *= d;
     return size;
 }
 
 // CPU Golden（fp32，用于与 NPU 结果比对，或 Mock 模式下直接演示计算）
-void ComputeApplyRmsPropGoldenFP32(
-    const std::vector<float>& var_in,
-    const std::vector<float>& ms_in,
-    const std::vector<float>& mom_in,
-    float lr, float rho, float momentum, float epsilon,
-    const std::vector<float>& grad,
-    std::vector<float>& var_out,
-    std::vector<float>& ms_out,
-    std::vector<float>& mom_out)
+void ComputeApplyRmsPropGoldenFP32(const std::vector<float>& var_in, const std::vector<float>& ms_in,
+                                   const std::vector<float>& mom_in, float lr, float rho, float momentum, float epsilon,
+                                   const std::vector<float>& grad, std::vector<float>& var_out,
+                                   std::vector<float>& ms_out, std::vector<float>& mom_out)
 {
     size_t n = var_in.size();
-    var_out.resize(n); ms_out.resize(n); mom_out.resize(n);
+    var_out.resize(n);
+    ms_out.resize(n);
+    mom_out.resize(n);
     const double one_minus_rho = 1.0 - static_cast<double>(rho);
     for (size_t i = 0; i < n; ++i) {
         double g = grad[i];
         double ms_new = ms_in[i] + one_minus_rho * (g * g - ms_in[i]);
         double denom = std::sqrt(epsilon + ms_new);
         double inv_sqrt = (denom > 0.0) ? (1.0 / denom) : 0.0;
-        double mom_new = static_cast<double>(momentum) * mom_in[i] +
-                         static_cast<double>(lr) * g * inv_sqrt;
+        double mom_new = static_cast<double>(momentum) * mom_in[i] + static_cast<double>(lr) * g * inv_sqrt;
         double var_new = var_in[i] - mom_new;
         ms_out[i] = static_cast<float>(ms_new);
         mom_out[i] = static_cast<float>(mom_new);
@@ -111,11 +108,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 // 通用 aclTensor 创建（fp32 示例）
-int CreateAclTensor(const std::vector<float>& hostData,
-                    const std::vector<int64_t>& shape,
-                    void** deviceAddr,
-                    aclDataType dataType,
-                    aclTensor** tensor)
+int CreateAclTensor(const std::vector<float>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(float);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -132,13 +126,11 @@ int CreateAclTensor(const std::vector<float>& hostData,
         }
     }
 
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType,
-                              strides.empty() ? nullptr : strides.data(),
-                              0, aclFormat::ACL_FORMAT_ND,
-                              shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.empty() ? nullptr : strides.data(), 0,
+                              aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
-#endif  // !USE_MOCK_ACLNN
+#endif // !USE_MOCK_ACLNN
 
 // -----------------------------------------------------------------------------
 // 主函数
@@ -150,14 +142,14 @@ int main()
     LOG_PRINT("============================================\n");
 
     // ------------------ 1. 构造输入数据（fp32） ------------------
-    std::vector<int64_t> shape = {16};  // 小 shape 便于打印
+    std::vector<int64_t> shape = {16}; // 小 shape 便于打印
     int64_t n = GetShapeSize(shape);
 
     std::vector<float> var_host(n), ms_host(n), mom_host(n), grad_host(n);
     for (int64_t i = 0; i < n; ++i) {
-        var_host[i]  = static_cast<float>(1.0 + 0.1 * i);      // 1.0 ~ 2.5
-        ms_host[i]   = static_cast<float>(0.1 + 0.01 * i);     // 0.1 ~ 0.25
-        mom_host[i]  = 0.0f;
+        var_host[i] = static_cast<float>(1.0 + 0.1 * i); // 1.0 ~ 2.5
+        ms_host[i] = static_cast<float>(0.1 + 0.01 * i); // 0.1 ~ 0.25
+        mom_host[i] = 0.0f;
         grad_host[i] = static_cast<float>(0.5 - 0.05 * (i % 8));
     }
     const float lr = 0.01f;
@@ -166,24 +158,19 @@ int main()
     const float epsilon = 1e-7f;
 
     LOG_PRINT("输入 shape = [%ld]，dtype = fp32\n", static_cast<long>(shape[0]));
-    LOG_PRINT("scalar 参数：lr=%.4f rho=%.4f momentum=%.4f epsilon=%.0e\n\n",
-              lr, rho, momentum, epsilon);
+    LOG_PRINT("scalar 参数：lr=%.4f rho=%.4f momentum=%.4f epsilon=%.0e\n\n", lr, rho, momentum, epsilon);
 
     // ------------------ 2. 计算 CPU Golden（用于对比 / Mock 展示） ------------------
     std::vector<float> var_gold, ms_gold, mom_gold;
-    ComputeApplyRmsPropGoldenFP32(var_host, ms_host, mom_host,
-                                   lr, rho, momentum, epsilon, grad_host,
-                                   var_gold, ms_gold, mom_gold);
+    ComputeApplyRmsPropGoldenFP32(var_host, ms_host, mom_host, lr, rho, momentum, epsilon, grad_host, var_gold, ms_gold,
+                                  mom_gold);
 
 #ifdef USE_MOCK_ACLNN
     // --- Mock 模式：直接打印 CPU Golden，验证示例代码逻辑 ---
     LOG_PRINT("[Mock 模式] 未调用 NPU，直接展示 CPU Golden 结果：\n");
     for (int64_t i = 0; i < n; ++i) {
-        LOG_PRINT("  i=%ld  var=%.6f -> %.6f   ms=%.6f -> %.6f   mom=%.6f -> %.6f\n",
-                  static_cast<long>(i),
-                  var_host[i], var_gold[i],
-                  ms_host[i],  ms_gold[i],
-                  mom_host[i], mom_gold[i]);
+        LOG_PRINT("  i=%ld  var=%.6f -> %.6f   ms=%.6f -> %.6f   mom=%.6f -> %.6f\n", static_cast<long>(i), var_host[i],
+                  var_gold[i], ms_host[i], ms_gold[i], mom_host[i], mom_gold[i]);
     }
     LOG_PRINT("\n[Mock 模式] 示例流程演示完成。\n");
     return 0;
@@ -213,7 +200,7 @@ int main()
     std::vector<float> out_zero(n, 0.0f);
     ret = CreateAclTensor(out_zero, shape, &var_out_dev, ACL_FLOAT, &var_out_t);
     CHECK_RET(ret == 0, return ret);
-    ret = CreateAclTensor(out_zero, shape, &ms_out_dev,  ACL_FLOAT, &ms_out_t);
+    ret = CreateAclTensor(out_zero, shape, &ms_out_dev, ACL_FLOAT, &ms_out_t);
     CHECK_RET(ret == 0, return ret);
     ret = CreateAclTensor(out_zero, shape, &mom_out_dev, ACL_FLOAT, &mom_out_t);
     CHECK_RET(ret == 0, return ret);
@@ -222,37 +209,29 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     ret = aclnnApplyRmsPropGetWorkspaceSize(
-        var_t, ms_t, mom_t, grad_t,
-        static_cast<double>(lr), static_cast<double>(rho),
-        static_cast<double>(momentum), static_cast<double>(epsilon),
-        var_out_t, ms_out_t, mom_out_t,
-        &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnApplyRmsPropGetWorkspaceSize failed. ERROR: %d\n", ret);
-              return ret);
+        var_t, ms_t, mom_t, grad_t, static_cast<double>(lr), static_cast<double>(rho), static_cast<double>(momentum),
+        static_cast<double>(epsilon), var_out_t, ms_out_t, mom_out_t, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnApplyRmsPropGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // ------------------ 6. 根据 workspaceSize 申请 device 内存 ------------------
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS,
-                  LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
 
     // ------------------ 7. 调用 aclnnApplyRmsProp 第二段接口（执行 Kernel） ------------------
     ret = aclnnApplyRmsProp(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnApplyRmsProp failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnApplyRmsProp failed. ERROR: %d\n", ret); return ret);
 
     // ------------------ 8. Stream 同步 ------------------
     ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // ------------------ 9. 将输出拷回 Host（方案 A：从 var_out_dev/ms_out_dev/mom_out_dev） ------------------
     std::vector<float> var_out(n), ms_out(n), mom_out(n);
     aclrtMemcpy(var_out.data(), n * sizeof(float), var_out_dev, n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
-    aclrtMemcpy(ms_out.data(),  n * sizeof(float), ms_out_dev,  n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    aclrtMemcpy(ms_out.data(), n * sizeof(float), ms_out_dev, n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     aclrtMemcpy(mom_out.data(), n * sizeof(float), mom_out_dev, n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
 
     // ------------------ 10. 打印结果并与 CPU Golden 简单比对 ------------------
@@ -260,24 +239,30 @@ int main()
     int mismatch = 0;
     for (int64_t i = 0; i < n; ++i) {
         double dv = std::abs(var_out[i] - var_gold[i]);
-        double dm = std::abs(ms_out[i]  - ms_gold[i]);
+        double dm = std::abs(ms_out[i] - ms_gold[i]);
         double dn = std::abs(mom_out[i] - mom_gold[i]);
-        if (dv > 1e-3 || dm > 1e-3 || dn > 1e-3) mismatch++;
-        LOG_PRINT("  i=%ld  var=%.6f (gold %.6f)  ms=%.6f (gold %.6f)  mom=%.6f (gold %.6f)\n",
-                  static_cast<long>(i),
-                  var_out[i], var_gold[i],
-                  ms_out[i],  ms_gold[i],
-                  mom_out[i], mom_gold[i]);
+        if (dv > 1e-3 || dm > 1e-3 || dn > 1e-3)
+            mismatch++;
+        LOG_PRINT("  i=%ld  var=%.6f (gold %.6f)  ms=%.6f (gold %.6f)  mom=%.6f (gold %.6f)\n", static_cast<long>(i),
+                  var_out[i], var_gold[i], ms_out[i], ms_gold[i], mom_out[i], mom_gold[i]);
     }
-    LOG_PRINT("\n不一致元素数 (|delta| > 1e-3): %d / %ld\n",
-              mismatch, static_cast<long>(n));
+    LOG_PRINT("\n不一致元素数 (|delta| > 1e-3): %d / %ld\n", mismatch, static_cast<long>(n));
 
     // ------------------ 11. 资源释放 ------------------
-    aclDestroyTensor(var_t); aclDestroyTensor(ms_t);
-    aclDestroyTensor(mom_t); aclDestroyTensor(grad_t);
-    aclDestroyTensor(var_out_t); aclDestroyTensor(ms_out_t); aclDestroyTensor(mom_out_t);
-    aclrtFree(var_dev); aclrtFree(ms_dev); aclrtFree(mom_dev); aclrtFree(grad_dev);
-    aclrtFree(var_out_dev); aclrtFree(ms_out_dev); aclrtFree(mom_out_dev);
+    aclDestroyTensor(var_t);
+    aclDestroyTensor(ms_t);
+    aclDestroyTensor(mom_t);
+    aclDestroyTensor(grad_t);
+    aclDestroyTensor(var_out_t);
+    aclDestroyTensor(ms_out_t);
+    aclDestroyTensor(mom_out_t);
+    aclrtFree(var_dev);
+    aclrtFree(ms_dev);
+    aclrtFree(mom_dev);
+    aclrtFree(grad_dev);
+    aclrtFree(var_out_dev);
+    aclrtFree(ms_out_dev);
+    aclrtFree(mom_out_dev);
     if (workspaceSize > 0 && workspaceAddr != nullptr) {
         aclrtFree(workspaceAddr);
     }
@@ -288,5 +273,5 @@ int main()
 
     LOG_PRINT("\nApplyRmsProp aclnn 调用示例执行完成。\n");
     return mismatch == 0 ? 0 : 1;
-#endif  // USE_MOCK_ACLNN
+#endif // USE_MOCK_ACLNN
 }

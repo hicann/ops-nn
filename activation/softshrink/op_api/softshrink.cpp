@@ -21,34 +21,36 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SoftShrink);
 
-static const std::initializer_list<DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                          DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-static inline bool IsAiCoreSupport(DataType inputDtype) {
-  // 只需要判断dtype
-  return CheckType(inputDtype, AICORE_DTYPE_SUPPORT_LIST);
+static inline bool IsAiCoreSupport(DataType inputDtype)
+{
+    // 只需要判断dtype
+    return CheckType(inputDtype, AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AICORE算子kernel
-static inline const aclTensor* SoftShrinkAiCore(const aclTensor* input,
-                                                float lambd,
-                                                aclTensor* output,
-                                                aclOpExecutor* executor) {
-  L0_DFX(SoftShrinkAiCore, input, lambd, output);
-  // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore SoftShrink算子加入任务队列
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftShrink, OP_INPUT(input), OP_OUTPUT(output), OP_ATTR(lambd));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftShrinkAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return output;
+static inline const aclTensor* SoftShrinkAiCore(const aclTensor* input, float lambd, aclTensor* output,
+                                                aclOpExecutor* executor)
+{
+    L0_DFX(SoftShrinkAiCore, input, lambd, output);
+    // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore SoftShrink算子加入任务队列
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftShrink, OP_INPUT(input), OP_OUTPUT(output), OP_ATTR(lambd));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftShrinkAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    return output;
 }
 
-const aclTensor* SoftShrink(const aclTensor* input, float lambd, aclOpExecutor* executor) {
-  auto output = executor->AllocTensor(input->GetViewShape(), input->GetDataType());
+const aclTensor* SoftShrink(const aclTensor* input, float lambd, aclOpExecutor* executor)
+{
+    auto output = executor->AllocTensor(input->GetViewShape(), input->GetDataType());
 
-  if (IsAiCoreSupport(input->GetDataType())) {
-    return SoftShrinkAiCore(input, lambd, output, executor);
-  }
+    if (IsAiCoreSupport(input->GetDataType())) {
+        return SoftShrinkAiCore(input, lambd, output, executor);
+    }
 
-  return nullptr;
+    return nullptr;
 }
-}  // namespace l0op
+} // namespace l0op

@@ -19,17 +19,14 @@
 #include "sparse4to2quant_matmul_update.h"
 
 namespace AscendC {
-template <
-    typename x1Type, typename x2Type, typename yType, CubeFormat x1Format, CubeFormat x2Format, bool aTrans = false,
-    bool bTrans = true, class UPDATE_TYPE = Sparse4to2QuantMatmulUpdate>
+template <typename x1Type, typename x2Type, typename yType, CubeFormat x1Format, CubeFormat x2Format,
+          bool aTrans = false, bool bTrans = true, class UPDATE_TYPE = Sparse4to2QuantMatmulUpdate>
 class Sparse4to2QuantMatmul {
 public:
-    __aicore__ inline Sparse4to2QuantMatmul()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index, GM_ADDR bias, GM_ADDR xScale, GM_ADDR sparseWeightScale,
-        GM_ADDR y, GM_ADDR workSpace, const SparseQmm::Sparse4to2QuantMatmulTilingData* __restrict tilingData,
-        TPipe* tPipe)
+    __aicore__ inline Sparse4to2QuantMatmul() {}
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index, GM_ADDR bias, GM_ADDR xScale,
+                                GM_ADDR sparseWeightScale, GM_ADDR y, GM_ADDR workSpace,
+                                const SparseQmm::Sparse4to2QuantMatmulTilingData* __restrict tilingData, TPipe* tPipe)
     {
         blockIdx_ = GetBlockIdx();
         if ASCEND_IS_AIV {
@@ -99,9 +96,8 @@ private:
         ubTmpBuffer_ = tilingData->params.needUbBuffer;
     }
 
-    __aicore__ inline void InitGlobalBuffers(
-        GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index, GM_ADDR bias, GM_ADDR xScale, GM_ADDR sparseWeightScale,
-        GM_ADDR y, GM_ADDR workSpace)
+    __aicore__ inline void InitGlobalBuffers(GM_ADDR x, GM_ADDR sparseWeight, GM_ADDR index, GM_ADDR bias,
+                                             GM_ADDR xScale, GM_ADDR sparseWeightScale, GM_ADDR y, GM_ADDR workSpace)
     {
         if (isPerTensor_) {
             scaleScalar_ = *((__gm__ float*)sparseWeightScale);
@@ -138,24 +134,23 @@ private:
         pipe_->InitBuffer(broadcastFp32Tmp_, ubCalcM_ * ubCalcN_ * sizeof(float));
     }
 
-    __aicore__ inline void OneTileCompute(
-        uint64_t mTileIndex, uint64_t nTileIndex, uint64_t pingOffsetC, bool& pongSwitch)
+    __aicore__ inline void OneTileCompute(uint64_t mTileIndex, uint64_t nTileIndex, uint64_t pingOffsetC,
+                                          bool& pongSwitch)
     {
         for (uint64_t j = 0; j < block_.realRound_; j++) {
             // 更新此次基本块的大小和输入输出地址
             update_.template UpdateBlockParamsAndCalcGmOffset<x1Format, x2Format, aTrans, bTrans>(
                 block_.params_, offset_, mTileIndex, nTileIndex);
             offsetWorkspaceC_ = pingOffsetC + pongSwitch * baseM_ * baseN_;
-            BasicMMDequantCompute(
-                block_.params_.singleCoreM, block_.params_.singleCoreN, C2V_PING_FLAG | pongSwitch,
-                V2C_PING_FLAG | pongSwitch);
+            BasicMMDequantCompute(block_.params_.singleCoreM, block_.params_.singleCoreN, C2V_PING_FLAG | pongSwitch,
+                                  V2C_PING_FLAG | pongSwitch);
             pongSwitch = !pongSwitch;
             block_.UpdateBlockIndex();
         }
     }
 
-    __aicore__ inline void BasicMMDequantCompute(
-        uint32_t CurAicM, uint32_t CurAicN, uint16_t v2cSyncFlag, uint16_t c2vSyncFlag)
+    __aicore__ inline void BasicMMDequantCompute(uint32_t CurAicM, uint32_t CurAicN, uint16_t v2cSyncFlag,
+                                                 uint16_t c2vSyncFlag)
     {
         if ASCEND_IS_AIC {
             if (++loop_ > 2) { // 2表示跳过第一次ping和第一次pong
@@ -182,9 +177,9 @@ private:
         mm_.GetTensorC(mmOutGm_[offsetWorkspaceC_], 0, true);
     }
 
-    __aicore__ inline void PertokenCalculate(
-        uint32_t basicBlockComputeInfo[], uint32_t mUbLoopIdx, DataCopyPadParams& padParams,
-        LocalTensor<float>& dstLocalFp32, LocalTensor<float>& tmpdstLocal)
+    __aicore__ inline void PertokenCalculate(uint32_t basicBlockComputeInfo[], uint32_t mUbLoopIdx,
+                                             DataCopyPadParams& padParams, LocalTensor<float>& dstLocalFp32,
+                                             LocalTensor<float>& tmpdstLocal)
 
     {
         uint32_t curAivN = basicBlockComputeInfo[0];
@@ -255,9 +250,8 @@ private:
             LocalTensor<uint8_t> tmpLocal = vecQueTmp_.Get<uint8_t>();
             // datacopypad 32B aligned
             SparseQmm::SetGm2UbParams(gm2UbParams, curAivM, curAivN);
-            SparseQmm::CopyMmOutToLocal(
-                srcLocal, curMmOutGm, gm2UbParams, padParams,
-                offsetWorkspaceC_ + mUbLoopIdx * ubCalcM_ * curAicN + subBlockoffset * curAicN);
+            SparseQmm::CopyMmOutToLocal(srcLocal, curMmOutGm, gm2UbParams, padParams,
+                                        offsetWorkspaceC_ + mUbLoopIdx * ubCalcM_ * curAicN + subBlockoffset * curAicN);
             if (hasBias_ != 0) {
                 BiasTensorInit(dstLocalFp32, biasFp32, oriBiasBf16, oriBiasFp16, oriBiasFp32);
                 BiasGm2Ub(oriBiasBf16, oriBiasFp16, oriBiasFp32, padParams, curAicN);
@@ -285,32 +279,30 @@ private:
             // dst from ub -> gm
             SparseQmm::SetUb2GmParams<yType>(ub2GmParams, curAivM, curAivN, n_);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID2);
-            SparseQmm::CopyUbToGm<yType>(
-                offset_.offsetC + mUbLoopIdx * ubCalcM_ * n_ + subBlockoffset * n_, ub2GmParams, dstLocal, yGm_,
-                vecQueOut_);
+            SparseQmm::CopyUbToGm<yType>(offset_.offsetC + mUbLoopIdx * ubCalcM_ * n_ + subBlockoffset * n_,
+                                         ub2GmParams, dstLocal, yGm_, vecQueOut_);
         }
     }
 
-    __aicore__ inline void BiasTensorInit(
-        LocalTensor<float>& /* dstLocalFp32 */, LocalTensor<float>& biasFp32, LocalTensor<bfloat16_t>& oriBiasBf16,
-        LocalTensor<half>& oriBiasFp16, LocalTensor<float>& oriBiasFp32)
+    __aicore__ inline void BiasTensorInit(LocalTensor<float>& /* dstLocalFp32 */, LocalTensor<float>& biasFp32,
+                                          LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                          LocalTensor<float>& oriBiasFp32)
     {
         biasFp32 = biasFp32Tmp_.Get<float>();
         oriBiasBf16 = vecQueBias_.AllocTensor<bfloat16_t>(); // free in CalBiasAdd
     }
 
-    __aicore__ inline void BiasGm2Ub(
-        LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16, LocalTensor<float>& oriBiasFp32,
-        DataCopyPadParams padParams, uint32_t curAivN)
+    __aicore__ inline void BiasGm2Ub(LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                     LocalTensor<float>& oriBiasFp32, DataCopyPadParams padParams, uint32_t curAivN)
     {
         DataCopyParams bias2UbParams{1, 0, 0, 0};
         bias2UbParams.blockLen = curAivN * biasDtypeSize_;
         DataCopyPad(oriBiasBf16, biasGmBf16_[offset_.offsetBias], bias2UbParams, padParams);
     }
 
-    __aicore__ inline void CalBiasAdd(
-        LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32, LocalTensor<bfloat16_t>& oriBiasBf16,
-        LocalTensor<half>& oriBiasFp16, LocalTensor<float>& oriBiasFp32, uint32_t curAivN, uint32_t curAivM)
+    __aicore__ inline void CalBiasAdd(LocalTensor<float>& dstLocalFp32, LocalTensor<float>& biasFp32,
+                                      LocalTensor<bfloat16_t>& oriBiasBf16, LocalTensor<half>& oriBiasFp16,
+                                      LocalTensor<float>& oriBiasFp32, uint32_t curAivN, uint32_t curAivM)
     {
         uint32_t computedAivN = SparseQmm::Align(curAivN, 8U); // 8: 32B aligened for int32_t
         uint32_t ubResAlignedN = SparseQmm::Align(curAivN);    // 16: sizeof(ytype) is 2 , 32B / 2

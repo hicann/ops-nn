@@ -21,13 +21,13 @@
 #define _APPLY_ADADELTA_TILING_DATA_H_
 
 struct ApplyAdadeltaTilingData {
-    int64_t totalNum = 0;       // Total number of elements
-    int64_t blockFactor = 0;    // Number of elements per core (aligned to UB block)
-    int64_t ubFactor = 0;       // Number of elements per UB loop iteration (aligned to UB block)
-    float   lr = 0.0f;          // Learning rate (from aclScalar, stored as fp32)
-    float   rho = 0.0f;         // Decay coefficient
-    float   epsilon = 0.0f;     // Numerical stability constant
-    float   oneMinusRho = 0.0f; // 1 - rho, pre-computed to avoid Kernel redundant computation
+    int64_t totalNum = 0;     // Total number of elements
+    int64_t blockFactor = 0;  // Number of elements per core (aligned to UB block)
+    int64_t ubFactor = 0;     // Number of elements per UB loop iteration (aligned to UB block)
+    float lr = 0.0f;          // Learning rate (from aclScalar, stored as fp32)
+    float rho = 0.0f;         // Decay coefficient
+    float epsilon = 0.0f;     // Numerical stability constant
+    float oneMinusRho = 0.0f; // 1 - rho, pre-computed to avoid Kernel redundant computation
 };
 
 #endif

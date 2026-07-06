@@ -18,4 +18,4 @@
 using namespace ge;
 namespace ops {
 IMPL_OP_INFERSHAPE(ThresholdV2).InferShape(Ops::Base::InferShape4Elewise);
-}  // namespace ops
+} // namespace ops

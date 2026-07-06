@@ -22,18 +22,14 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr uint64_t POOL_TILING_KEY_SIMT_NCHW_INT32 = 911100;
 static constexpr uint64_t POOL_TILING_KEY_SIMT_NHWC_INT32 = 911101;
 static constexpr uint64_t POOL_TILING_KEY_SIMT_NCHW_INT64 = 911110;
 static constexpr uint64_t POOL_TILING_KEY_SIMT_NHWC_INT64 = 911111;
 
-bool PoolSimtTiling::IsCapable()
-{
-    return true;
-}
+bool PoolSimtTiling::IsCapable() { return true; }
 
 ge::graphStatus PoolSimtTiling::DoOpTiling()
 {
@@ -41,10 +37,7 @@ ge::graphStatus PoolSimtTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus PoolSimtTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus PoolSimtTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t PoolSimtTiling::GetTilingKey() const
 {
@@ -86,8 +79,7 @@ ge::graphStatus PoolSimtTiling::PostTiling()
 
 void PoolSimtTiling::SetTilingData()
 {
-    AvgPool::AvgPoolSimtTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolSimtTilingData>();
+    AvgPool::AvgPoolSimtTilingData* tilingData = context_->GetTilingData<AvgPool::AvgPoolSimtTilingData>();
     tilingData->nDim = inputData.batches;
     tilingData->cDim = inputData.channels;
     tilingData->hInDim = inputData.inputShape[H_DIM];
@@ -108,8 +100,7 @@ void PoolSimtTiling::SetTilingData()
 
 void PoolSimtTiling::DumpTilingInfo()
 {
-    AvgPool::AvgPoolSimtTilingData* tilingData =
-        context_->GetTilingData<AvgPool::AvgPoolSimtTilingData>();
+    AvgPool::AvgPoolSimtTilingData* tilingData = context_->GetTilingData<AvgPool::AvgPoolSimtTilingData>();
     std::ostringstream str;
     str << " nDim:" << tilingData->nDim;
     str << " cDim:" << tilingData->cDim;
@@ -131,26 +122,14 @@ void PoolSimtTiling::DumpTilingInfo()
 }
 
 //////////////////////////////// AvgPoolSimtTiling /////////////////////////////////
-ge::graphStatus AvgPoolSimtTiling::GetPlatformInfo()
-{
-    return GetAvgPoolPlatformInfo(context_, ubSize, coreNum);
-}
+ge::graphStatus AvgPoolSimtTiling::GetPlatformInfo() { return GetAvgPoolPlatformInfo(context_, ubSize, coreNum); }
 
-ge::graphStatus AvgPoolSimtTiling::GetShapeAttrsInfo()
-{
-    return GetAvgPoolShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus AvgPoolSimtTiling::GetShapeAttrsInfo() { return GetAvgPoolShapeAttrsInfo(context_, inputData); }
 //////////////////////////////// AvgPoolV2SimtTiling ////////////////////////////////
-ge::graphStatus AvgPoolV2SimtTiling::GetPlatformInfo()
-{
-    return GetAvgPoolV2PlatformInfo(context_, ubSize, coreNum);
-}
+ge::graphStatus AvgPoolV2SimtTiling::GetPlatformInfo() { return GetAvgPoolV2PlatformInfo(context_, ubSize, coreNum); }
 
-ge::graphStatus AvgPoolV2SimtTiling::GetShapeAttrsInfo()
-{
-    return GetAvgPoolV2ShapeAttrsInfo(context_, inputData);
-}
+ge::graphStatus AvgPoolV2SimtTiling::GetShapeAttrsInfo() { return GetAvgPoolV2ShapeAttrsInfo(context_, inputData); }
 
 REGISTER_TILING_TEMPLATE("AvgPool", AvgPoolSimtTiling, 19);
 REGISTER_TILING_TEMPLATE("AvgPoolV2", AvgPoolV2SimtTiling, 19);
-}  // namespace optiling
+} // namespace optiling

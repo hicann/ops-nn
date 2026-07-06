@@ -19,20 +19,13 @@ using namespace std;
 
 class l2_fused_bias_leaky_relu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_fused_bias_leaky_relu_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_fused_bias_leaky_relu_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_fused_bias_leaky_relu_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_fused_bias_leaky_relu_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& biasShape, const vector<int64_t>& yShape,
-        aclDataType xDtype, aclDataType biasDtype, aclDataType yDtype,
-        double negativeSlope, double scale, aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& biasShape, const vector<int64_t>& yShape,
+                    aclDataType xDtype, aclDataType biasDtype, aclDataType yDtype, double negativeSlope, double scale,
+                    aclnnStatus expectRet)
     {
         auto x = TensorDesc(xShape, xDtype, ACL_FORMAT_ND).ValueRange(-2, 2);
         auto bias = TensorDesc(biasShape, biasDtype, ACL_FORMAT_ND).ValueRange(-1, 1);
@@ -56,7 +49,8 @@ TEST_F(l2_fused_bias_leaky_relu_test, ascend950_success_float32_2d)
 
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_success_float32_4d)
 {
-    CommonTest({2, 4, 8, 16}, {2, 4, 8, 16}, {2, 4, 8, 16}, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_SUCCESS);
+    CommonTest({2, 4, 8, 16}, {2, 4, 8, 16}, {2, 4, 8, 16}, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373,
+               ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_success_float16)
@@ -66,7 +60,8 @@ TEST_F(l2_fused_bias_leaky_relu_test, ascend950_success_float16)
 
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_success_float16_2d)
 {
-    CommonTest({8, 1024}, {8, 1024}, {8, 1024}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, 0.2, 1.414213562373, ACLNN_SUCCESS);
+    CommonTest({8, 1024}, {8, 1024}, {8, 1024}, ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16, 0.2, 1.414213562373,
+               ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_success_negative_slope_zero)
@@ -104,7 +99,8 @@ TEST_F(l2_fused_bias_leaky_relu_test, ascend950_param_invalid_dtype_mismatch)
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_param_invalid_shape_mismatch)
 {
     CommonTest({1024}, {512}, {1024}, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_ERR_PARAM_INVALID);
-    CommonTest({2, 1024}, {1024}, {2, 1024}, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({2, 1024}, {1024}, {2, 1024}, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373,
+               ACLNN_ERR_PARAM_INVALID);
     CommonTest({1024}, {1024}, {512}, ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -127,12 +123,12 @@ TEST_F(l2_fused_bias_leaky_relu_test, ascend950_param_nullptr)
 
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_max_dim)
 {
-    CommonTest({1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}, 
-               ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_SUCCESS);
+    CommonTest({1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FLOAT,
+               ACL_FLOAT, 0.2, 1.414213562373, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_fused_bias_leaky_relu_test, ascend950_dim_overflow)
 {
-    CommonTest({1, 2, 3, 4, 5, 6, 7, 8, 9}, {1, 2, 3, 4, 5, 6, 7, 8, 9}, {1, 2, 3, 4, 5, 6, 7, 8, 9}, 
-               ACL_FLOAT, ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_ERR_PARAM_INVALID);
+    CommonTest({1, 2, 3, 4, 5, 6, 7, 8, 9}, {1, 2, 3, 4, 5, 6, 7, 8, 9}, {1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT,
+               ACL_FLOAT, ACL_FLOAT, 0.2, 1.414213562373, ACLNN_ERR_PARAM_INVALID);
 }

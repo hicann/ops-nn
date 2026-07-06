@@ -68,10 +68,7 @@ public:
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
@@ -133,10 +130,7 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
     return valueNum;
 }
 
-inline static int64_t RoundUp(int64_t a, int64_t b)
-{
-    return CeilDiv(a, b) * b;
-}
+inline static int64_t RoundUp(int64_t a, int64_t b) { return CeilDiv(a, b) * b; }
 
 ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetPlatformInfo()
 {
@@ -196,7 +190,7 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
             return ge::GRAPH_FAILED);
         tilingData.set_r1(xStorageShape.GetDim(DIM_0));
         tilingData.set_a0(xStorageShape.GetDim(DIM_1));
@@ -208,7 +202,7 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCDHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
             return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
@@ -217,8 +211,8 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
         tilingData.set_a0(a0);
         tilingData.set_r0(r0);
     } else {
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
-            ge::TypeUtils::FormatToSerialString(format).c_str(), "NCHW or NCDHW");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(format).c_str(),
+                                   "NCHW or NCDHW");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -242,23 +236,23 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoOpTiling()
     int64_t elemAlignNum = blockSize / elemSize;
 
     // ub tiling
-    int64_t aGatherLimit =
-        tilingData.get_aBlockFactor() > MAX_COMMON_PARELLEL ? MAX_COMMON_PARELLEL : tilingData.get_aBlockFactor();
+    int64_t aGatherLimit = tilingData.get_aBlockFactor() > MAX_COMMON_PARELLEL ? MAX_COMMON_PARELLEL :
+                                                                                 tilingData.get_aBlockFactor();
     tilingData.set_aGatherLimit(aGatherLimit);
 
     int32_t totalUBSize = aicoreParams_.ubSize;
     uint64_t smallUbNum = RoundUp(tilingData.get_aGatherLimit() * FLOAT32_BYTES, blockSize);
     uint64_t smallUbSize = (smallUbNum * SMALL_BUFFER_NUM * DOUBLE_BUFFER) * FLOAT32_BYTES;
 
-    int64_t binaryAddBufNum =
-        (totalUBSize / (DOUBLE_BUFFER * LARGE_BUFFER_NUM_QUEUE * elemSize)) / tilingData.get_vlLenFp32();
+    int64_t binaryAddBufNum = (totalUBSize / (DOUBLE_BUFFER * LARGE_BUFFER_NUM_QUEUE * elemSize)) /
+                              tilingData.get_vlLenFp32();
     int64_t binaryAddBufSize = ((binaryAddBufNum * FLOAT32_BYTES + blockSize - 1) / blockSize) * blockSize;
 
     uint64_t ubRemain = totalUBSize - smallUbSize - binaryAddBufSize - blockSize * BLOCK_RESERVE_NUMBER;
 
     // processSize is max ub size.
-    int64_t ubSize =
-        ubRemain / (DOUBLE_BUFFER * elemSize * LARGE_BUFFER_NUM_QUEUE + FLOAT32_BYTES * LARGE_BUFFER_NUM_TMP);
+    int64_t ubSize = ubRemain /
+                     (DOUBLE_BUFFER * elemSize * LARGE_BUFFER_NUM_QUEUE + FLOAT32_BYTES * LARGE_BUFFER_NUM_TMP);
     int64_t ubSizeAlign = ubSize / elemAlignNum * elemAlignNum;
 
     if (r0 >= ubSizeAlign) {
@@ -316,15 +310,9 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t BatchNormV3WelfordReduceTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_WELFORD_REDUCE;
-}
+uint64_t BatchNormV3WelfordReduceTilingBase::GetTilingKey() const { return TILINGKEY_WELFORD_REDUCE; }
 
 ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetWorkspaceSize()
 {
@@ -339,12 +327,10 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::PostTiling()
     auto rawTilingData = context_->GetRawTilingData();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    OP_CHECK_IF(
-        tilingData.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            tilingData.GetDataSize(), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingData.GetDataSize() > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        tilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData.GetDataSize());
 

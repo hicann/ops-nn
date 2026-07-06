@@ -26,13 +26,11 @@ using namespace AscendC;
 constexpr uint32_t BUFFER_NUM = 2;
 
 template <typename T>
-class GroupNormSiluEmpty
-{
+class GroupNormSiluEmpty {
 public:
     __aicore__ inline GroupNormSiluEmpty(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluRegbaseTilingData* tilingData)
     {
         tiling_ = tilingData;
         blockIdx_ = GetBlockIdx();
@@ -50,8 +48,8 @@ public:
         }
 
         uint32_t numPerCoreLoop = CeilDiv(numPerCore_, innerNumPerCore_);
-        uint32_t numPerCoreTail =
-            numPerCore_ % innerNumPerCore_ == 0 ? innerNumPerCore_ : numPerCore_ % innerNumPerCore_;
+        uint32_t numPerCoreTail = numPerCore_ % innerNumPerCore_ == 0 ? innerNumPerCore_ :
+                                                                        numPerCore_ % innerNumPerCore_;
         uint32_t numPerCoreOneLoop = innerNumPerCore_;
         for (uint64_t i = 0; i < numPerCoreLoop; i++) {
             if (i == numPerCoreLoop - 1) {

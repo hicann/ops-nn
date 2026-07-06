@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file sync_batch_norm_gather_stats_fused_compute.h
  * \brief
  */
@@ -31,10 +31,10 @@ template <typename T>
 class SyncBatchNormGatherStatsFusedRunningCompute {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedRunningCompute(){};
-    __aicore__ inline void initBuffer(
-        TPipe& pipe, GlobalTensor<T>& runningVarOutTensorGM, GlobalTensor<T>& invstdAllOutTensorGM,
-        GlobalTensor<T>& runningVarInTensorGM, GlobalTensor<float>& workspaceGM, float countSum, float momentum,
-        float eps, int64_t workspaceNum)
+    __aicore__ inline void initBuffer(TPipe& pipe, GlobalTensor<T>& runningVarOutTensorGM,
+                                      GlobalTensor<T>& invstdAllOutTensorGM, GlobalTensor<T>& runningVarInTensorGM,
+                                      GlobalTensor<float>& workspaceGM, float countSum, float momentum, float eps,
+                                      int64_t workspaceNum)
     {
         pipe_ = pipe;
         pipe_.InitBuffer(queueRunningVarIn_, DOUBLE_BUFFER, COL_TEMPLATE * sizeof(float));
@@ -123,9 +123,8 @@ public:
         if constexpr (IsSameType<T, float>::value) {
             DataCopyPad(buffer2_, runningVarInTensorGM_[offset], intriParams, padParamsT);
         } else {
-            DataCopyPad(
-                buffer2_.ReinterpretCast<T>()[colSize + rightPad], runningVarInTensorGM_[offset], intriParams,
-                padParamsT);
+            DataCopyPad(buffer2_.ReinterpretCast<T>()[colSize + rightPad], runningVarInTensorGM_[offset], intriParams,
+                        padParamsT);
         }
 
         if constexpr (!IsSameType<T, float>::value) {

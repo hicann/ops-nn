@@ -27,8 +27,8 @@ struct RmsNormQuantV2RegbaseFullLoadTilingData {
     int64_t divMode;     // quant mode
     int64_t dstDtype;    // output dtype
     float epsilon;
-    float avgFactor;     // 1.0 / R
-    uint32_t rstdFlag;   // 0=no rstd output, 1=output rstd
+    float avgFactor;   // 1.0 / R
+    uint32_t rstdFlag; // 0=no rstd output, 1=output rstd
 };
 
 struct RmsNormQuantV2RegbaseRecomputeTilingData {
@@ -47,8 +47,8 @@ struct RmsNormQuantV2RegbaseRecomputeTilingData {
     uint64_t divMode;       // quant mode
     uint64_t dstDtype;      // output dtype
     float epsilon;
-    float avgFactor;        // 1.0 / R
-    uint32_t rstdFlag;      // 0=no rstd output, 1=output rstd
+    float avgFactor;   // 1.0 / R
+    uint32_t rstdFlag; // 0=no rstd output, 1=output rstd
 };
 
 #endif

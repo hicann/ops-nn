@@ -19,12 +19,12 @@
 #define __SPARSE_APPLY_ADAGRAD_V2_TILING_DATA_H__
 
 struct SparseApplyAdagradV2TilingData {
-    int32_t needCoreNum = 0;            // 需要启动的核数
-    int64_t totalSparseElements = 0;    // 总工作量 = N * innerDim
-    int64_t N = 0;                      // 稀疏索引数量（indices 第一维大小）
-    int64_t innerDim = 0;               // var/accum 内部维度展平大小（从第二维起各维乘积）
-    int64_t firstDim = 0;               // var/accum 第一维大小（用于索引越界校验）
-    int32_t updateSlots = 0;            // 是否更新累积器（1=true, 0=false）
+    int32_t needCoreNum = 0;         // 需要启动的核数
+    int64_t totalSparseElements = 0; // 总工作量 = N * innerDim
+    int64_t N = 0;                   // 稀疏索引数量（indices 第一维大小）
+    int64_t innerDim = 0;            // var/accum 内部维度展平大小（从第二维起各维乘积）
+    int64_t firstDim = 0;            // var/accum 第一维大小（用于索引越界校验）
+    int32_t updateSlots = 0;         // 是否更新累积器（1=true, 0=false）
 };
 
 #endif // __SPARSE_APPLY_ADAGRAD_V2_TILING_DATA_H__

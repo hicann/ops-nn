@@ -24,18 +24,17 @@ constexpr int32_t BUFFER_NUM = 1;
 constexpr int64_t BLOCK_DATA = 32;
 constexpr int64_t REPEAT_DATA = 256;
 
-constexpr uint16_t FP16_EXPONENT_ALL_1_MASK = 0x7C00;  // 指数位全为1的掩码（5位指数位）
-constexpr uint16_t FP16_MANTISSA_NON_ZERO_MASK = 0x03FF;  // 尾数位非0的掩码（10位尾数位）
+constexpr uint16_t FP16_EXPONENT_ALL_1_MASK = 0x7C00;    // 指数位全为1的掩码（5位指数位）
+constexpr uint16_t FP16_MANTISSA_NON_ZERO_MASK = 0x03FF; // 尾数位非0的掩码（10位尾数位）
 
-constexpr uint32_t FP32_EXPONENT_ALL_1_MASK = 0x7F800000;  // 指数位全为1的掩码（8位指数位）
-constexpr uint32_t FP32_MANTISSA_NON_ZERO_MASK = 0x007FFFFF;  // 尾数位非0的掩码（23位尾数位）
+constexpr uint32_t FP32_EXPONENT_ALL_1_MASK = 0x7F800000;    // 指数位全为1的掩码（8位指数位）
+constexpr uint32_t FP32_MANTISSA_NON_ZERO_MASK = 0x007FFFFF; // 尾数位非0的掩码（23位尾数位）
 
 template <typename T>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB, TBuf<>& workLocalUB, uint32_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB,
+                                   TBuf<>& workLocalUB, uint32_t dataCount)
     {
         LocalTensor<T> maxOutLocal = maxUB.Get<T>();
         LocalTensor<T> workLocal = workLocalUB.Get<T>();
@@ -43,8 +42,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void GetMask(
-        LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<uint16_t>& mask, uint32_t dataCount)
+    __aicore__ inline void GetMask(LocalTensor<T>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<uint16_t>& mask,
+                                   uint32_t dataCount)
     {
         uint32_t dataCountAlign = (dataCount + REPEAT_DATA - 1) / REPEAT_DATA *
                                   REPEAT_DATA; // Compare函数要求保证dataCountAlign个元素所占空间256字节对齐
@@ -60,12 +59,10 @@ public:
 };
 
 template <>
-class InnerComputer<bfloat16_t>
-{
+class InnerComputer<bfloat16_t> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB, TBuf<>& workLocalUB,
-        uint32_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, TBuf<>& maxUB,
+                                   TBuf<>& workLocalUB, uint32_t dataCount)
     {
         LocalTensor<float> maxOutLocal = maxUB.Get<float>();
         LocalTensor<float> workLocal = workLocalUB.Get<float>();
@@ -75,9 +72,8 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void GetMask(
-        LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32, LocalTensor<uint16_t>& mask,
-        uint32_t dataCount)
+    __aicore__ inline void GetMask(LocalTensor<bfloat16_t>& xLocal, LocalTensor<float>& castToFP32,
+                                   LocalTensor<uint16_t>& mask, uint32_t dataCount)
     {
         uint32_t dataCountAlign = (dataCount + REPEAT_DATA - 1) / REPEAT_DATA *
                                   REPEAT_DATA; // Compare函数要求保证dataCountAlign个元素所占空间256字节对齐
@@ -93,13 +89,11 @@ public:
 };
 
 template <typename T1, typename T2>
-class AdaptiveMaxPool3dBigPool
-{
+class AdaptiveMaxPool3dBigPool {
 public:
     __aicore__ inline AdaptiveMaxPool3dBigPool(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
-        const AdaptiveMaxPool3dBigPoolTilingData* __restrict tiling, int64_t dataType);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, TPipe* pipe_in,
+                                const AdaptiveMaxPool3dBigPoolTilingData* __restrict tiling, int64_t dataType);
     __aicore__ inline void Process();
 
 private:
@@ -128,10 +122,7 @@ private:
         return (inputValue + upperValue - 1) / upperValue * upperValue;
     }
 
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     __aicore__ inline int64_t startIndex(int64_t idx, int64_t inLen, int64_t outLen)
     {
@@ -172,10 +163,12 @@ private:
     {
         if (inputDataTypeKey == 1) { // 输入数据为fp16
             uint16_t nan = *reinterpret_cast<uint16_t*>(&value);
-            return (nan & FP16_EXPONENT_ALL_1_MASK) == FP16_EXPONENT_ALL_1_MASK && (nan & FP16_MANTISSA_NON_ZERO_MASK) != 0;
+            return (nan & FP16_EXPONENT_ALL_1_MASK) == FP16_EXPONENT_ALL_1_MASK &&
+                   (nan & FP16_MANTISSA_NON_ZERO_MASK) != 0;
         } else { // 输入数据为fp32或bf16
             uint32_t nan = *reinterpret_cast<uint32_t*>(&value);
-            return (nan & FP32_EXPONENT_ALL_1_MASK) == FP32_EXPONENT_ALL_1_MASK && (nan & FP32_MANTISSA_NON_ZERO_MASK) != 0;
+            return (nan & FP32_EXPONENT_ALL_1_MASK) == FP32_EXPONENT_ALL_1_MASK &&
+                   (nan & FP32_MANTISSA_NON_ZERO_MASK) != 0;
         }
         return false;
     }
@@ -406,8 +399,8 @@ __aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::dhwCopyInput(int64_t
 }
 
 template <typename T1, typename T2>
-__aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::hwCopyInput(
-    int64_t offset, int64_t blockLen, int64_t blockCount)
+__aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::hwCopyInput(int64_t offset, int64_t blockLen,
+                                                                        int64_t blockCount)
 {
     LocalTensor<T1> xLocal = inputQue.AllocTensor<T1>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T1);
@@ -440,8 +433,8 @@ __aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::hwCopyInput(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::wCopyInput(
-    int64_t offset, int64_t blockLen, int64_t blockCount, int64_t dLen)
+__aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::wCopyInput(int64_t offset, int64_t blockLen,
+                                                                       int64_t blockCount, int64_t dLen)
 {
     LocalTensor<T1> xLocal = inputQue.AllocTensor<T1>();
     int64_t blockLenAlign = CeilValue(blockLen, BLOCK_NUM_T1);
@@ -518,8 +511,8 @@ __aicore__ inline int32_t AdaptiveMaxPool3dBigPool<T1, T2>::Compute(int64_t data
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::GetIndexWithLastNan(
-    LocalTensor<uint16_t> maskNanLocal, int64_t dataCount, int32_t& index)
+__aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::GetIndexWithLastNan(LocalTensor<uint16_t> maskNanLocal,
+                                                                             int64_t dataCount, int32_t& index)
 {
     LocalTensor<float> indicesLocal = indicesInitUB.Get<float>();
     LocalTensor<float> indicesMaxLocal = inputCastUB.Get<float>();
@@ -542,8 +535,8 @@ __aicore__ inline void AdaptiveMaxPool3dBigPool<T1, T2>::GetIndexWithLastNan(
  * 功能：计算所求max值在该nc中的真实Index
  */
 template <typename T1, typename T2>
-__aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::RestoreIndex(
-    int32_t index, int64_t dLen, int64_t hLen, int64_t wLen)
+__aicore__ inline int64_t AdaptiveMaxPool3dBigPool<T1, T2>::RestoreIndex(int32_t index, int64_t dLen, int64_t hLen,
+                                                                         int64_t wLen)
 {
     int64_t realIndex = 0;
     if (wLen == w && hLen == h) {

@@ -24,8 +24,8 @@ template <typename T, int32_t QUEUE_DEPTH>
 class KernelAvgPool3dReduceD {
 public:
     __aicore__ inline KernelAvgPool3dReduceD() {}
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling,
+                                TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
@@ -34,8 +34,8 @@ private:
     __aicore__ inline void CopyOut(int64_t offset, int64_t len);
     __aicore__ inline void DataCopyOutNonPad(LocalTensor<T>& outputLocal, int64_t offset, int64_t validDataLen);
     __aicore__ inline void ReduceMeanDWindow(int64_t dIdx);
-    __aicore__ inline void ReduceSumDWindow(
-      const Index& index, LocalTensor<float>& sumBufLocal, int64_t startOffset, int64_t len);
+    __aicore__ inline void ReduceSumDWindow(const Index& index, LocalTensor<float>& sumBufLocal, int64_t startOffset,
+                                            int64_t len);
 
     int64_t hwLength;
     int64_t tileHW;
@@ -48,12 +48,15 @@ private:
 };
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::InitTiling(const AvgPool3DTilingData* __restrict__ tiling) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::InitTiling(
+    const AvgPool3DTilingData* __restrict__ tiling)
+{
     poolMem.inputShape = PoolShape(tiling->inN, tiling->inC, tiling->inD, tiling->inH, tiling->inW);
     poolMem.outputShape = PoolShape(tiling->inN, tiling->inC, tiling->outD, tiling->outH, tiling->outW);
 
     poolMem.poolParam = PoolParameter(tiling->kD, tiling->kH, tiling->kW, tiling->dD, tiling->dH, tiling->dW,
-                              tiling->pD, tiling->pH, tiling->pW, tiling->divisorOverride, tiling->countIncludePad);
+                                      tiling->pD, tiling->pH, tiling->pW, tiling->divisorOverride,
+                                      tiling->countIncludePad);
 
     poolMem.numPerBlock = GetDataBlockSizeInBytes() / sizeof(T);
 
@@ -61,9 +64,9 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::InitTiling(const 
     tileHW = tiling->tileHW;
 
     ncdBlockLength = GetBlockIdx() < tiling->formerNum ? tiling->formerLength : tiling->tailLength;
-    ncdOffset = GetBlockIdx() < tiling->formerNum
-      ? tiling->formerLength * GetBlockIdx()
-      : tiling->formerNum * tiling->formerLength + tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
+    ncdOffset = GetBlockIdx() < tiling->formerNum ?
+                    tiling->formerLength * GetBlockIdx() :
+                    tiling->formerNum * tiling->formerLength + tiling->tailLength * (GetBlockIdx() - tiling->formerNum);
     poolMem.nextCoreAddrOffset = (ncdOffset + ncdBlockLength) * hwLength;
     poolMem.atomicAddNum = tiling->atomicAddNum;
     hwTailLength = hwLength % tileHW;
@@ -73,7 +76,8 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::InitTiling(const 
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::CopyIn(int64_t offset, int64_t len) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::CopyIn(int64_t offset, int64_t len)
+{
     LocalTensor<T> inputLocal = poolMem.inputQueue.template AllocTensor<T>();
 #if __CCE_AICORE__ < 220
     if constexpr (std::is_same_v<T, float>) {
@@ -104,9 +108,11 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::CopyIn(int64_t of
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::DataCopyOutNonPad(
-    LocalTensor<T>& outputLocal, int64_t offset, int64_t validDataLen) {
-    if ((validDataLen < poolMem.numPerBlock) && (offset + validDataLen * poolMem.atomicAddNum >= poolMem.nextCoreAddrOffset)) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::DataCopyOutNonPad(LocalTensor<T>& outputLocal,
+                                                                                 int64_t offset, int64_t validDataLen)
+{
+    if ((validDataLen < poolMem.numPerBlock) &&
+        (offset + validDataLen * poolMem.atomicAddNum >= poolMem.nextCoreAddrOffset)) {
         uint64_t mask0 = (1ul << poolMem.numPerBlock) - (1ul << validDataLen);
         uint64_t mask[2] = {mask0, 0};
         Duplicate<T>(outputLocal, 0, mask, 1, 1, 1);
@@ -120,14 +126,16 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::DataCopyOutNonPad
         uint32_t mask = poolMem.numPerBlock * 2;
         uint64_t gatherOffset = hwTailAlign - mask;
         HandleTailMask(outputLocal, gatherOffset, poolMem, mask);
-        DataCopy(poolMem.outputGlobal[poolMem.nextCoreAddrOffset - poolMem.numPerBlock], outputLocal[gatherOffset], poolMem.numPerBlock);
+        DataCopy(poolMem.outputGlobal[poolMem.nextCoreAddrOffset - poolMem.numPerBlock], outputLocal[gatherOffset],
+                 poolMem.numPerBlock);
     } else {
         DataCopy(poolMem.outputGlobal[offset], outputLocal, hwTailAlign);
     }
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::CopyOut(int64_t offset, int64_t len) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::CopyOut(int64_t offset, int64_t len)
+{
     LocalTensor<T> outputLocal = poolMem.outputQueue.template DeQue<T>();
 #if __CCE_AICORE__ < 220
     if (len == tileHW) {
@@ -137,17 +145,18 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::CopyOut(int64_t o
         DataCopyOutNonPad(outputLocal, offset, len);
     }
 #else
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(len * sizeof(T)), static_cast<uint32_t>(0), 
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(len * sizeof(T)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPad(poolMem.outputGlobal[offset], outputLocal, copyParams);
 #endif
     poolMem.outputQueue.FreeTensor(outputLocal);
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::ReduceSumDWindow(
-    const Index& index, LocalTensor<float>& sumBufLocal, int64_t startOffset, int64_t len) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::ReduceSumDWindow(const Index& index,
+                                                                                LocalTensor<float>& sumBufLocal,
+                                                                                int64_t startOffset, int64_t len)
+{
     int64_t dstart = index.D.start;
     int64_t dend = index.D.end;
 
@@ -168,13 +177,14 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::ReduceSumDWindow(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::ReduceMeanDWindow(int64_t dIdx) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::ReduceMeanDWindow(int64_t dIdx)
+{
     Index index;
 
     uint64_t ncIdx = dIdx / poolMem.outputShape.D;
     uint64_t outputDIdx = dIdx % poolMem.outputShape.D;
-    index.D.Compute(outputDIdx, poolMem.inputShape.D, poolMem.poolParam.kernelD, poolMem.poolParam.strideD, poolMem.poolParam.padD,
-                    poolMem.poolParam.countIncludePad);
+    index.D.Compute(outputDIdx, poolMem.inputShape.D, poolMem.poolParam.kernelD, poolMem.poolParam.strideD,
+                    poolMem.poolParam.padD, poolMem.poolParam.countIncludePad);
 
     int64_t poolSize = poolMem.poolParam.divisorOverride ? poolMem.poolParam.divisorOverride : index.D.poolSize;
     float factor = 1.0f / static_cast<float>(poolSize);
@@ -200,8 +210,10 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::ReduceMeanDWindow
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const AvgPool3DTilingData* __restrict__ tiling, TPipe* pipe) {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                                    const AvgPool3DTilingData* __restrict__ tiling,
+                                                                    TPipe* pipe)
+{
     InitTiling(tiling);
 
     poolMem.pipe = pipe;
@@ -218,7 +230,8 @@ __aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::Init(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::Process() {
+__aicore__ inline void KernelAvgPool3dReduceD<T, QUEUE_DEPTH>::Process()
+{
 #if __CCE_AICORE__ < 220
     int64_t curOutputPointIdx = ncdBlockLength + ncdOffset - 1;
     AvgPool3d::HandleAtomicAddWithTail(poolMem, curOutputPointIdx, hwTailLength);

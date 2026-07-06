@@ -30,6 +30,5 @@ constexpr uint64_t ND_NZ_DIM_DIFF = 2;
 constexpr uint64_t BATCH_DIM_MAX = 6;
 constexpr uint64_t NUM_EIGHT = 8UL;
 constexpr uint64_t MAX_BIAS_DIM = 3UL;
-}
-}
-
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

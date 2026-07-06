@@ -69,8 +69,8 @@ uint8_t* CreateTensorListForeachSubScalarList(const std::vector<std::vector<uint
 }
 
 template <typename T>
-void FreeTensorListForeachSubScalarList(
-    uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+void FreeTensorListForeachSubScalarList(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos,
+                                        char* d_type)
 {
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;

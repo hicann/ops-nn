@@ -37,7 +37,5 @@ static graphStatus InferDtypeForIndexFill(gert::InferDataTypeContext* context)
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(IndexFill)
-    .InferShape(InferShapeForIndexFill)
-    .InferDataType(InferDtypeForIndexFill);
+IMPL_OP_INFERSHAPE(IndexFill).InferShape(InferShapeForIndexFill).InferDataType(InferDtypeForIndexFill);
 } // namespace ops

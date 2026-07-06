@@ -23,8 +23,8 @@ using namespace AscendC;
 using namespace ThresholdOp;
 
 template <uint64_t schMode, uint8_t valueMode>
-__global__ __aicore__ void threshold_v2(
-    GM_ADDR x, GM_ADDR threshold, GM_ADDR value, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void threshold_v2(GM_ADDR x, GM_ADDR threshold, GM_ADDR value, GM_ADDR y, GM_ADDR workspace,
+                                        GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EleBaseTilingDataV2);
     GET_TILING_DATA_WITH_STRUCT(EleBaseTilingDataV2, tilingData, tiling);

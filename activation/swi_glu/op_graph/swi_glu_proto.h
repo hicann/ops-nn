@@ -18,31 +18,31 @@
 
 #include "graph/operator_reg.h"
 
-namespace ge{
-    /**
-    * @brief Compute the SwiGlu,
-    * where the activations function in GLU is Swish.
+namespace ge {
+/**
+* @brief Compute the SwiGlu,
+* where the activations function in GLU is Swish.
 
-    * @par Inputs:
-    * One input, including:
-    * @x: A Tensor. Must be one of the following types: bfloat16, float16, float32.
+* @par Inputs:
+* One input, including:
+* @x: A Tensor. Must be one of the following types: bfloat16, float16, float32.
 
-    * @par Outputs:
-    * one output, including:
-    * @y: A Tensor. Must be one of the following types: bfloat16, float16, float32.
+* @par Outputs:
+* one output, including:
+* @y: A Tensor. Must be one of the following types: bfloat16, float16, float32.
 
-    * @par Attributes:
-    * one attribute, including:
-    * @li dim: A optional int. The dimension to be split, default is -1.
+* @par Attributes:
+* one attribute, including:
+* @li dim: A optional int. The dimension to be split, default is -1.
 
-    * @par Third-party framework compatibility:
-    * New operator SwiGlu.
-    */
-    REG_OP(SwiGlu)
-        .INPUT(x, "T")
-        .OUTPUT(y, "T")
-        .DATATYPE(T, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
-        .ATTR(dim, Int, -1)
-        .OP_END_FACTORY_REG(SwiGlu)
-}
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SWI_GLU_PROTO_H_
+* @par Third-party framework compatibility:
+* New operator SwiGlu.
+*/
+REG_OP(SwiGlu)
+    .INPUT(x, "T")
+    .OUTPUT(y, "T")
+    .DATATYPE(T, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .ATTR(dim, Int, -1)
+    .OP_END_FACTORY_REG(SwiGlu)
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SWI_GLU_PROTO_H_

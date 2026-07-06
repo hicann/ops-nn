@@ -31,15 +31,9 @@ static constexpr uint64_t GELU_GRAD_COMMON_TILING_PRIORITY = 0;
 const int64_t ASCEND_WORKSPACE = 16777216; // 16M
 const int64_t INPUT_Y_INDEX = 2;
 
-ge::graphStatus GeluGradTiling::GetShapeAttrsInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GeluGradTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
 
-bool GeluGradTiling::IsCapable()
-{
-    return true;
-}
+bool GeluGradTiling::IsCapable() { return true; }
 
 ge::graphStatus GeluGradTiling::DoOpTiling()
 {
@@ -47,112 +41,88 @@ ge::graphStatus GeluGradTiling::DoOpTiling()
     auto dyInputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyInputDesc);
     ge::DataType dyInputDtype = dyInputDesc->GetDataType();
-    OP_CHECK_IF(
-        dyInputDtype != ge::DT_FLOAT16 && dyInputDtype != ge::DT_BF16 && dyInputDtype != ge::DT_FLOAT,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "dy",
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
-            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dyInputDtype != ge::DT_FLOAT16 && dyInputDtype != ge::DT_BF16 && dyInputDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "dy",
+                                                      ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
+                                                      "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
+                return ge::GRAPH_FAILED);
 
     auto xInputDesc = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     ge::DataType xInputDtype = xInputDesc->GetDataType();
-    OP_CHECK_IF(
-        xInputDtype != dyInputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "dy, x",
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(xInputDtype),
-            "The dtypes of dy and x must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xInputDtype != dyInputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, x",
+                                                       ge::TypeUtils::DataTypeToSerialString(dyInputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(xInputDtype),
+                                                       "The dtypes of dy and x must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto yInputDesc = context_->GetInputDesc(INPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yInputDesc);
     ge::DataType yInputDtype = yInputDesc->GetDataType();
-    OP_CHECK_IF(
-        yInputDtype != dyInputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "dy, y",
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(yInputDtype),
-            "The dtypes of dy and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yInputDtype != dyInputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, y",
+                                                       ge::TypeUtils::DataTypeToSerialString(dyInputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(yInputDtype),
+                                                       "The dtypes of dy and y must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     ge::DataType outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        outputDtype != dyInputDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "dy, z",
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(outputDtype),
-            "The dtypes of dy and z must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputDtype != dyInputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, z",
+                                                       ge::TypeUtils::DataTypeToSerialString(dyInputDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(outputDtype),
+                                                       "The dtypes of dy and z must be the same"),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (dyInputDtype == ge::DT_FLOAT16) {
         BroadcastBaseTiling<GeluGradDAG<half>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<half>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<half>::OpDag> failed"),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (dyInputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<GeluGradDAG<bfloat16_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<bfloat16_t>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<bfloat16_t>::OpDag> failed"),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (dyInputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<GeluGradDAG<float>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
-        OP_CHECK_IF(
-            baseTilingResult == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<float>::OpDag> failed"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradDag<float>::OpDag> failed"),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "dy",
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
-            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "dy",
+                                              ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
+                                              "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GeluGradTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GeluGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t GeluGradTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t GeluGradTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus GeluGradTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GeluGradTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus GeluGradTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GeluGradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus GeluGradTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GeluGradTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus Tiling4GeluGrad(gert::TilingContext* tilingContextGen)
 {
-    OP_CHECK_IF(
-        tilingContextGen == nullptr, OP_LOGE("Tiling4GeluGrad", "Tiling context is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingContextGen == nullptr, OP_LOGE("Tiling4GeluGrad", "Tiling context is null"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(tilingContextGen->GetNodeName(), "Enter Tiling4GeluGrad");
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4GeluGrad rt2.0 is running.");
     GeluGradTiling tiling(tilingContextGen);

@@ -27,23 +27,15 @@
 #include "foreach_tiling_def.h"
 
 namespace optiling {
-class ForeachRegbaseTiling : public ForeachBaseClass
-{
+class ForeachRegbaseTiling : public ForeachBaseClass {
 public:
-    explicit ForeachRegbaseTiling(gert::TilingContext* context) : ForeachBaseClass(context)
-    {}
+    explicit ForeachRegbaseTiling(gert::TilingContext* context) : ForeachBaseClass(context) {}
     ~ForeachRegbaseTiling() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachBaseClass::Reset(context); }
 
 protected:
-    bool IsCapable() override
-    {
-        return Ops::NN::OpTiling::IsRegbaseSocVersion(context_);
-    }
+    bool IsCapable() override { return Ops::NN::OpTiling::IsRegbaseSocVersion(context_); }
     // 检查output shape
     ge::graphStatus CheckOutput();
     // Finalize UB split: given per-element UB bytes, compute and store inputsTensorUbSize.
@@ -80,17 +72,12 @@ private:
     const char* GetFirstTensorName() const;
 };
 
-class ForeachRegbaseTilingUnaryScalar : public ForeachRegbaseTiling
-{
+class ForeachRegbaseTilingUnaryScalar : public ForeachRegbaseTiling {
 public:
-    explicit ForeachRegbaseTilingUnaryScalar(gert::TilingContext* context) : ForeachRegbaseTiling(context)
-    {}
+    explicit ForeachRegbaseTilingUnaryScalar(gert::TilingContext* context) : ForeachRegbaseTiling(context) {}
     ~ForeachRegbaseTilingUnaryScalar() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -98,17 +85,12 @@ protected:
     ge::graphStatus DoOpTiling() override;
 };
 
-class ForeachRegbaseTilingTernaryScalar : public ForeachRegbaseTiling
-{
+class ForeachRegbaseTilingTernaryScalar : public ForeachRegbaseTiling {
 public:
-    explicit ForeachRegbaseTilingTernaryScalar(gert::TilingContext* context) : ForeachRegbaseTiling(context)
-    {}
+    explicit ForeachRegbaseTilingTernaryScalar(gert::TilingContext* context) : ForeachRegbaseTiling(context) {}
     ~ForeachRegbaseTilingTernaryScalar() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -123,8 +105,7 @@ private:
 };
 
 // ternary + per-tensor 标量列表（addcmul_list/addcdiv_list）：复用 TernaryScalar 全部逻辑，仅标量校验换成列表校验
-class ForeachRegbaseTilingTernaryScalarList : public ForeachRegbaseTilingTernaryScalar
-{
+class ForeachRegbaseTilingTernaryScalarList : public ForeachRegbaseTilingTernaryScalar {
 public:
     explicit ForeachRegbaseTilingTernaryScalarList(gert::TilingContext* context)
         : ForeachRegbaseTilingTernaryScalar(context)
@@ -135,17 +116,12 @@ protected:
     ge::graphStatus CheckScalarParam() override;
 };
 
-class ForeachRegbaseTilingBinaryScalar : public ForeachRegbaseTiling
-{
+class ForeachRegbaseTilingBinaryScalar : public ForeachRegbaseTiling {
 public:
-    explicit ForeachRegbaseTilingBinaryScalar(gert::TilingContext* context) : ForeachRegbaseTiling(context)
-    {}
+    explicit ForeachRegbaseTilingBinaryScalar(gert::TilingContext* context) : ForeachRegbaseTiling(context) {}
     ~ForeachRegbaseTilingBinaryScalar() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -163,34 +139,24 @@ private:
 
 // Two tensor-list inputs (x1, x2), no scalar. Used by in-place binary foreach ops
 // (mul_list/div_list). UB budget accounts for 2 inputs + 1 output.
-class ForeachRegbaseTilingBinary : public ForeachRegbaseTiling
-{
+class ForeachRegbaseTilingBinary : public ForeachRegbaseTiling {
 public:
-    explicit ForeachRegbaseTilingBinary(gert::TilingContext* context) : ForeachRegbaseTiling(context)
-    {}
+    explicit ForeachRegbaseTilingBinary(gert::TilingContext* context) : ForeachRegbaseTiling(context) {}
     ~ForeachRegbaseTilingBinary() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
 };
 
-class ForeachRegbaseTilingUnaryScalarList : public ForeachRegbaseTiling
-{
+class ForeachRegbaseTilingUnaryScalarList : public ForeachRegbaseTiling {
 public:
-    explicit ForeachRegbaseTilingUnaryScalarList(gert::TilingContext* context) : ForeachRegbaseTiling(context)
-    {}
+    explicit ForeachRegbaseTilingUnaryScalarList(gert::TilingContext* context) : ForeachRegbaseTiling(context) {}
     ~ForeachRegbaseTilingUnaryScalarList() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -202,17 +168,12 @@ private:
     ge::graphStatus CheckShape(uint32_t idx);
 };
 
-class ForeachRegbaseTilingUnaryScalarList2 : public ForeachRegbaseTiling
-{
+class ForeachRegbaseTilingUnaryScalarList2 : public ForeachRegbaseTiling {
 public:
-    explicit ForeachRegbaseTilingUnaryScalarList2(gert::TilingContext* context) : ForeachRegbaseTiling(context)
-    {}
+    explicit ForeachRegbaseTilingUnaryScalarList2(gert::TilingContext* context) : ForeachRegbaseTiling(context) {}
     ~ForeachRegbaseTilingUnaryScalarList2() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -223,34 +184,25 @@ private:
     ge::graphStatus CheckScalarList(int64_t scalarIdx);
 };
 
-class ForeachRegbaseTilingUnaryScalarListWithInt : public ForeachRegbaseTilingUnaryScalarList
-{
+class ForeachRegbaseTilingUnaryScalarListWithInt : public ForeachRegbaseTilingUnaryScalarList {
 public:
     explicit ForeachRegbaseTilingUnaryScalarListWithInt(gert::TilingContext* context)
         : ForeachRegbaseTilingUnaryScalarList(context)
     {}
     ~ForeachRegbaseTilingUnaryScalarListWithInt() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTilingUnaryScalarList::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTilingUnaryScalarList::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class ForeachRegbaseTilingUnary : public ForeachRegbaseTilingUnaryScalar
-{
+class ForeachRegbaseTilingUnary : public ForeachRegbaseTilingUnaryScalar {
 public:
-    explicit ForeachRegbaseTilingUnary(gert::TilingContext* context) : ForeachRegbaseTilingUnaryScalar(context)
-    {}
+    explicit ForeachRegbaseTilingUnary(gert::TilingContext* context) : ForeachRegbaseTilingUnaryScalar(context) {}
     ~ForeachRegbaseTilingUnary() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        ForeachRegbaseTiling::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { ForeachRegbaseTiling::Reset(context); }
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;

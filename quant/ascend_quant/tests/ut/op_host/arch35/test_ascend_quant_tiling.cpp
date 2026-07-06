@@ -33,21 +33,15 @@ using namespace std;
 
 class AscendQuantRegbaseTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AscendQuantRegbaseTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AscendQuantRegbaseTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AscendQuantRegbaseTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AscendQuantRegbaseTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    ge::DataType xDtype, ge::DataType yDtype, gert::StorageShape xShape, gert::StorageShape yShape, float scale,
-    float offset, bool sqrt_mode, string round_mode, int64_t dst_type, int64_t expectTilingKey, string expectTilingData,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType xDtype, ge::DataType yDtype, gert::StorageShape xShape,
+                            gert::StorageShape yShape, float scale, float offset, bool sqrt_mode, string round_mode,
+                            int64_t dst_type, int64_t expectTilingKey, string expectTilingData,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -88,8 +82,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -109,12 +103,11 @@ static void ExecuteTestCase(
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"scale", Ops::NN::AnyValue::CreateFrom<float>(scale)},
-                           {"offset", Ops::NN::AnyValue::CreateFrom<float>(offset)},
-                           {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(sqrt_mode)},
-                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dst_type)}})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(scale)},
+                                  {"offset", Ops::NN::AnyValue::CreateFrom<float>(offset)},
+                                  {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(sqrt_mode)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dst_type)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -149,9 +142,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_round_001)
     int64_t dst_type = 2;
     int64_t expectTilingKey = 8;
     string expectTilingData = "64 8192 128 128 128 0 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_floor_002)
@@ -167,9 +159,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_floor_002)
     int64_t dst_type = 2;
     int64_t expectTilingKey = 9;
     string expectTilingData = "64 8192 128 128 128 1 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_ceil_003)
@@ -185,9 +176,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_ceil_003)
     int64_t dst_type = 2;
     int64_t expectTilingKey = 10;
     string expectTilingData = "64 8192 128 128 128 2 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_trunc_004)
@@ -203,9 +193,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_trunc_004)
     int64_t dst_type = 2;
     int64_t expectTilingKey = 11;
     string expectTilingData = "64 8192 128 128 128 3 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_fp32_int4_005)
@@ -221,9 +210,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_fp32_int4_005)
     int64_t dst_type = 29;
     int64_t expectTilingKey = 8;
     string expectTilingData = "64 8192 128 128 128 0 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_fp16_int8_006)
@@ -239,9 +227,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_fp16_int8_006)
     int64_t dst_type = 2;
     int64_t expectTilingKey = 8;
     string expectTilingData = "64 8192 128 128 128 0 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_fp16_int4_007)
@@ -257,9 +244,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_fp16_int4_007)
     int64_t dst_type = 29;
     int64_t expectTilingKey = 8;
     string expectTilingData = "64 8192 128 128 128 0 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_x_dtype)
@@ -275,9 +261,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_x_dtype)
     int64_t dst_type = 2;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_y_dtype)
@@ -293,9 +278,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_y_dtype)
     int64_t dst_type = 0;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_dst_type)
@@ -311,9 +295,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_dst_type)
     int64_t dst_type = 1;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_y_dst_type_not_same)
@@ -329,9 +312,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_y_dst_type_not_same)
     int64_t dst_type = 29;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_round_mode)
@@ -347,9 +329,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_round_mode)
     int64_t dst_type = 2;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_x_shape)
@@ -365,9 +346,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_x_shape)
     int64_t dst_type = 29;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_x_dim)
@@ -383,9 +363,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_invalid_x_dim)
     int64_t dst_type = 2;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_empty_x)
@@ -401,9 +380,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_empty_x)
     int64_t dst_type = 2;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_x_y_shape_not_same)
@@ -419,9 +397,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_x_y_shape_not_same)
     int64_t dst_type = 2;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_fp8_e5m2_round)
@@ -437,9 +414,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_fp8_e5m2_round)
     int64_t dst_type = 35;
     int64_t expectTilingKey = 12;
     string expectTilingData = "64 8192 128 128 128 4 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_fp8_e4m3_round)
@@ -455,9 +431,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_fp8_e4m3_round)
     int64_t dst_type = 36;
     int64_t expectTilingKey = 12;
     string expectTilingData = "64 8192 128 128 128 4 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_hi8_round)
@@ -473,9 +448,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_hi8_round)
     int64_t dst_type = 34;
     int64_t expectTilingKey = 8;
     string expectTilingData = "64 8192 128 128 128 0 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_hi8_hybrid)
@@ -491,9 +465,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_hi8_hybrid)
     int64_t dst_type = 34;
     int64_t expectTilingKey = 13;
     string expectTilingData = "64 8192 128 128 128 5 4575657222490554368 ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_fp8_invalid_round_mode)
@@ -509,9 +482,8 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_fp8_invalid_round_mode)
     int64_t dst_type = 35;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }
 
 TEST_F(AscendQuantRegbaseTiling, test_tiling_hi8_invalid_round_mode)
@@ -527,7 +499,6 @@ TEST_F(AscendQuantRegbaseTiling, test_tiling_hi8_invalid_round_mode)
     int64_t dst_type = 34;
     int64_t expectTilingKey = -1;
     string expectTilingData = " ";
-    ExecuteTestCase(
-        xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
-        expectTilingData, ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, xShape, yShape, scale, offset, sqrt_mode, round_mode, dst_type, expectTilingKey,
+                    expectTilingData, ge::GRAPH_FAILED);
 }

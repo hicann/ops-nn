@@ -18,13 +18,9 @@
 
 using namespace ScaledMaskedSoftmaxGradV2;
 
-extern "C" __global__ __aicore__ void scaled_masked_softmax_grad_v2(
-    const GM_ADDR yGrad,
-    const GM_ADDR y,
-    const GM_ADDR mask,
-    const GM_ADDR xGrad,
-    GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void scaled_masked_softmax_grad_v2(const GM_ADDR yGrad, const GM_ADDR y,
+                                                                    const GM_ADDR mask, const GM_ADDR xGrad,
+                                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
     TPipe pipeIn;

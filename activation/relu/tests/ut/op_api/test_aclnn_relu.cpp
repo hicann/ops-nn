@@ -15,15 +15,9 @@
 
 class l2_relu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_relu_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_relu_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_relu_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_relu_test TearDown" << std::endl; }
 };
 
 // self的数据类型不在支持范围内

@@ -157,8 +157,8 @@ static void UbSplitTiling(const gert::TilingContext* context)
     uint64_t reserveUb = lnTmpBufByte + weightTmpBufByte + smoothingLossBufByte + reduceCalcTmpBufByte +
                          reduceResTmpBufByte + workLocalByte;
     // label smoothing
-    bool needWeightBuf =
-        crossEntropyLossTiling.get_labelSmoothing() > 0 && context->GetOptionalInputDesc(INPUT_WEIGHT_IDX) != nullptr;
+    bool needWeightBuf = crossEntropyLossTiling.get_labelSmoothing() > 0 &&
+                         context->GetOptionalInputDesc(INPUT_WEIGHT_IDX) != nullptr;
     uint64_t inputUbByte = 0;
     uint64_t castTmpBufByte = 0;
     uint64_t probOutBufByte = 0;
@@ -180,8 +180,8 @@ static void UbSplitTiling(const gert::TilingContext* context)
         weightBuf = needWeightBuf ? NUM_2 : 0;
         inputUbByte = ((maxUbSize - reserveUb) / (DOUBLE_BUFFER + NUM_1 + NUM_2 + weightBuf)) / BLOCK_512 * BLOCK_512;
         oneBatchByte = CeilDiv(targetNum * NUM_2, BLOCK_32) * BLOCK_32;
-        inputUbByte =
-            inputUbByte >= oneBatchByte ? oneBatchByte : inputUbByte; // 小shape一次搬入一个batch，暂不考虑多载的情况。
+        inputUbByte = inputUbByte >= oneBatchByte ? oneBatchByte :
+                                                    inputUbByte; // 小shape一次搬入一个batch，暂不考虑多载的情况。
         castTmpBufByte = NUM_2 * inputUbByte;
         probOutBufByte = inputUbByte;
         weight4SmoothingBufByte = needWeightBuf ? castTmpBufByte : 0;
@@ -274,8 +274,8 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
     const float* labelSmoothingAttr = attrs->GetAttrPointer<float>(ATTR_LABEL_SMOOTHING_IDX);
     labelSmoothing = labelSmoothingAttr == nullptr ? 0.0 : *labelSmoothingAttr;
     if (labelSmoothing < 0.0 || labelSmoothing > 1.0) {
-        OP_LOGE_FOR_INVALID_VALUE(
-            context->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(), "in [0.0, 1.0]");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(),
+                                  "in [0.0, 1.0]");
         return ge::GRAPH_FAILED;
     }
     crossEntropyLossTiling.set_labelSmoothing(labelSmoothing);
@@ -298,30 +298,22 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context)
     bool validDtype = inputDtype == ge::DT_BF16 || inputDtype == ge::DT_FLOAT || inputDtype == ge::DT_FLOAT16;
     OP_CHECK_IF(
         !validDtype,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "input",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
-            "BF16, FLOAT or FLOAT16"),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "input",
+                                  ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(), "BF16, FLOAT or FLOAT16"),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (targetDtype != ge::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "target",
-            ge::TypeUtils::DataTypeToSerialString(targetDtype).c_str(),
-            "INT64"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((targetDtype != ge::DT_INT64),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "target",
+                                          ge::TypeUtils::DataTypeToSerialString(targetDtype).c_str(), "INT64"),
+                return ge::GRAPH_FAILED);
     // optional input
     auto weight = context->GetOptionalInputDesc(INPUT_WEIGHT_IDX);
     if (weight != nullptr) {
         auto weightDtype = weight->GetDataType();
-        OP_CHECK_IF(
-            (weightDtype != ge::DT_FLOAT),
-            OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "weight",
-                ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
-                "FP32"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "weight",
+                                              ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(), "FP32"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -350,7 +342,7 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
         OP_CHECK_IF(
             (weightShape.GetDim(0) != inputShape.GetDim(DIM_1)),
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "input and weight",
+                context->GetNodeName(), "input and weight",
                 (std::to_string(inputShape.GetDim(DIM_1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
                 "The dim 1 of input should be same as the shape size of weight"),
             return ge::GRAPH_FAILED);
@@ -389,20 +381,16 @@ ge::graphStatus Tiling4CrossEntropyLoss(gert::TilingContext* context)
         return Tiling4CrossEntropyLossRegbase(context);
     }
 
-    OP_CHECK_IF(
-        GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingAttr failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckInputDtype(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(nodeName, "CheckInputDtype failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckInputShape(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(nodeName, "CheckInputShape failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetTilingData(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingData failed."),
-        return ge::GRAPH_FAILED);
-    crossEntropyLossTiling.SaveToBuffer(
-        context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    OP_CHECK_IF(GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingAttr failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputDtype failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputShape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingData(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingData failed."),
+                return ge::GRAPH_FAILED);
+    crossEntropyLossTiling.SaveToBuffer(context->GetRawTilingData()->GetData(),
+                                        context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(crossEntropyLossTiling.GetDataSize());
     PrintInfo(context);
     OP_LOGD(nodeName, "Tiling4CrossEntropyLoss end");
@@ -418,8 +406,7 @@ ge::graphStatus TilingParse4CrossEntropyLoss(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-struct CrossEntropyLossCompileInfo {
-};
+struct CrossEntropyLossCompileInfo {};
 
 IMPL_OP_OPTILING(CrossEntropyLoss)
     .Tiling(Tiling4CrossEntropyLoss)

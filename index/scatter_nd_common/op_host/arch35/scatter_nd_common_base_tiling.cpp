@@ -20,15 +20,14 @@ using namespace ge;
 
 namespace optiling {
 constexpr uint64_t ASCENDC_WORKSPACE = static_cast<uint64_t>(16) * 1024 * 1024;
-static constexpr uint64_t CASTMODE1 = 1;   // int32 Cast int16
-static constexpr uint64_t CASTMODE2 = 2;   // int64 Cast int32
-static constexpr uint64_t CASTMODE3 = 3;   // int64 Cast int16
-static constexpr uint64_t CASTMODE4 = 4;   // int32 Cast uint8
-static constexpr uint64_t CASTMODE5 = 5;   // int64 Cast uint8
+static constexpr uint64_t CASTMODE1 = 1; // int32 Cast int16
+static constexpr uint64_t CASTMODE2 = 2; // int64 Cast int32
+static constexpr uint64_t CASTMODE3 = 3; // int64 Cast int16
+static constexpr uint64_t CASTMODE4 = 4; // int32 Cast uint8
+static constexpr uint64_t CASTMODE5 = 5; // int64 Cast uint8
 
 static constexpr uint16_t RANK_MIN_VALUE = 1;
 static constexpr uint16_t RANK_MAX_VALUE = 7;
-
 
 ge::graphStatus ScatterNdCommonBaseTiling::GetCastType()
 {
@@ -36,21 +35,21 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetCastType()
 
     if (indiceDtype_ == ge::DT_INT32) {
         if (varInAxis_ < UINT8_MAX) {
-            indiceCastMode_ = CASTMODE4;          // int32 Cast uint8
+            indiceCastMode_ = CASTMODE4; // int32 Cast uint8
             indiceCastDtype_ = ge::DT_UINT8;
         } else if (varInAxis_ < INT16_MAX) {
-            indiceCastMode_ = CASTMODE1;          // int32 Cast int16
+            indiceCastMode_ = CASTMODE1; // int32 Cast int16
             indiceCastDtype_ = ge::DT_INT16;
         }
     } else {
         if (varInAxis_ < UINT8_MAX) {
-            indiceCastMode_ = CASTMODE5;          // int64 Cast uint8
+            indiceCastMode_ = CASTMODE5; // int64 Cast uint8
             indiceCastDtype_ = ge::DT_UINT8;
         } else if (varInAxis_ < INT16_MAX) {
-            indiceCastMode_ = CASTMODE3;          // int64 Cast int16
+            indiceCastMode_ = CASTMODE3; // int64 Cast int16
             indiceCastDtype_ = ge::DT_INT16;
         } else if (varInAxis_ < INT32_MAX) {
-            indiceCastMode_ = CASTMODE2;          // int64 Cast int32
+            indiceCastMode_ = CASTMODE2; // int64 Cast int32
             indiceCastDtype_ = ge::DT_INT32;
         }
     }
@@ -70,7 +69,6 @@ void ScatterNdCommonBaseTiling::SetStride()
     }
 }
 
-
 ge::graphStatus ScatterNdCommonBaseTiling::GetPlatformInfo()
 {
     auto compileInfo = context_->GetCompileInfo<ScatterNdCommonCompileInfo>();
@@ -82,7 +80,6 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetPlatformInfo()
     OP_CHECK_IF(ubSize_ <= 0, OP_LOGE(context_, "GetPlatformInfo get ub size <= 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
-
 
 uint32_t ScatterNdCommonBaseTiling::GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend)
 {
@@ -100,7 +97,6 @@ uint32_t ScatterNdCommonBaseTiling::GetSortTmpSize(ge::DataType dataType, uint32
     return maxValue;
 }
 
-
 ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
 {
     auto opName = context_->GetNodeName();
@@ -110,75 +106,81 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, var);
     auto varShapeSize = var->GetShapeSize();
     OP_CHECK_IF((varShapeSize <= 0),
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "var", std::to_string(varShapeSize).c_str(),
-                                                                       "The shape size of var must be greater than 0."),
-            return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "var", std::to_string(varShapeSize).c_str(),
+                                                          "The shape size of var must be greater than 0."),
+                return ge::GRAPH_FAILED);
     auto varDesc = context_->GetInputDesc(INPUT_IDX_UPDATES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, varDesc);
     auto varDtype = varDesc->GetDataType();
     varTypeSize_ = ge::GetSizeByDataType(varDtype);
-    OP_CHECK_IF(
-        varTypeSize_ <= 0,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var", std::to_string(varDtype).c_str(), "The dtype size of var must be greater than 0."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varTypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var", std::to_string(varDtype).c_str(),
+                                                      "The dtype size of var must be greater than 0."),
+                return ge::GRAPH_FAILED);
 
     auto indices = context_->GetInputTensor(INPUT_IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indices);
     indiceShapeSize_ = indices->GetShapeSize();
-    OP_CHECK_IF((indiceShapeSize_ < 0),
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "indice", std::to_string(indiceShapeSize_).c_str(),
-                                                      "The shape size of indice must be greater than or equal to 0."),
-            return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (indiceShapeSize_ < 0),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "indice", std::to_string(indiceShapeSize_).c_str(),
+                                                  "The shape size of indice must be greater than or equal to 0."),
+        return ge::GRAPH_FAILED);
     auto indicesDesc = context_->GetInputDesc(INPUT_IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesDesc);
     indiceDtype_ = indicesDesc->GetDataType();
     indicesTypeSize_ = ge::GetSizeByDataType(indiceDtype_);
-    
+
     auto indiceShape = indices->GetStorageShape();
     auto indiceDims = indiceShape.GetDimNum();
     rankSize_ = indiceShape.GetDim(indiceDims - 1);
     OP_CHECK_IF(
         (RANK_MIN_VALUE > static_cast<uint16_t>(rankSize_) || static_cast<uint16_t>(rankSize_) > RANK_MAX_VALUE),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "rankSize", std::to_string(rankSize_).c_str(), "The value of rankSize must be greater than or equal to 1 and less than or equal to 7."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName, "rankSize", std::to_string(rankSize_).c_str(),
+            "The value of rankSize must be greater than or equal to 1 and less than or equal to 7."),
         return ge::GRAPH_FAILED);
-    
+
     auto updates = context_->GetInputTensor(INPUT_IDX_UPDATES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updates);
     updateShapeSize_ = updates->GetShapeSize();
-    OP_CHECK_IF((updateShapeSize_ < 0),
-                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "updates", std::to_string(updateShapeSize_).c_str(),
-                                                      "The shape size of updates must be greater than or equal to 0."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (updateShapeSize_ < 0),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "updates", std::to_string(updateShapeSize_).c_str(),
+                                                  "The shape size of updates must be greater than or equal to 0."),
+        return ge::GRAPH_FAILED);
 
     auto updateDesc = context_->GetInputDesc(INPUT_IDX_UPDATES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updateDesc);
     updateDtype_ = updateDesc->GetDataType();
-    OP_CHECK_IF(
-            (updateDtype_ != varDtype),
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "updates", std::to_string(updateDtype_).c_str(), "The dtype of updates must be the same as dtype of var."),
-          return ge::GRAPH_FAILED);
+    OP_CHECK_IF((updateDtype_ != varDtype),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "updates", std::to_string(updateDtype_).c_str(),
+                                                      "The dtype of updates must be the same as dtype of var."),
+                return ge::GRAPH_FAILED);
 
     auto outputShape = context_->GetOutputShape(OUTPUT_IDX_SHAPE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto shapeValue = outputShape->GetStorageShape();
     uint64_t shapeRank = shapeValue.GetDimNum();
     OP_CHECK_IF((shapeRank < rankSize_),
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "var", std::to_string(shapeRank).c_str(), ("The shape dim of var must be greater than or equal to" + std::to_string(rankSize_)).c_str()),
-            return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    opName, "var", std::to_string(shapeRank).c_str(),
+                    ("The shape dim of var must be greater than or equal to" + std::to_string(rankSize_)).c_str()),
+                return ge::GRAPH_FAILED);
 
     for (uint64_t idx = 0; idx < shapeRank; idx++) {
-      outPutShape_[idx] = shapeValue.GetDim(idx);
-      outputShapeSize_ *= outPutShape_[idx];
+        outPutShape_[idx] = shapeValue.GetDim(idx);
+        outputShapeSize_ *= outPutShape_[idx];
     }
 
     if (indiceShapeSize_ == 0 || updateShapeSize_ == 0) {
         return ge::GRAPH_SUCCESS;
     }
     // indicesAxis_ equal updatesInAxis
-    indicesAxis_ = indiceShapeSize_ / rankSize_; // g
+    indicesAxis_ = indiceShapeSize_ / rankSize_;  // g
     afterAxis_ = updateShapeSize_ / indicesAxis_; // n
-    varInAxis_ = varShapeSize / afterAxis_; // m
-    if (varInAxis_ < INT32_MAX) { // rank维索引合一可能超过int32最大值
+    varInAxis_ = varShapeSize / afterAxis_;       // m
+    if (varInAxis_ < INT32_MAX) {                 // rank维索引合一可能超过int32最大值
         outOfSetTypeSize_ = indicesTypeSize_;
         outOfSetDtype_ = indiceDtype_;
     } else {
@@ -189,25 +191,13 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool ScatterNdCommonBaseTiling::IsCapable()
-{
-    return true;
-}
+bool ScatterNdCommonBaseTiling::IsCapable() { return true; }
 
-ge::graphStatus ScatterNdCommonBaseTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterNdCommonBaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus ScatterNdCommonBaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterNdCommonBaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t ScatterNdCommonBaseTiling::GetTilingKey() const
-{
-    return 0;
-}
+uint64_t ScatterNdCommonBaseTiling::GetTilingKey() const { return 0; }
 
 ge::graphStatus ScatterNdCommonBaseTiling::GetWorkspaceSize()
 {
@@ -218,9 +208,6 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterNdCommonBaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus ScatterNdCommonBaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
 } // namespace optiling

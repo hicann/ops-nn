@@ -22,14 +22,14 @@ using namespace AscendC;
 using namespace matmul;
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = MatmulAswBlock,
-    const MatmulConfig &MM_CFG = MM_CFG_NO_PRELOAD>
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD>
 class MatmulAswKernel {
 public:
     __aicore__ inline MatmulAswKernel() {}
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM, const void *tilingData, TPipe *pipe);
+                                GM_ADDR workspaceGM, const void* tilingData, TPipe* pipe);
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM,
-        GM_ADDR workspaceGM);
+                                              GM_ADDR workspaceGM);
     __aicore__ inline void UpdateBias(uint64_t kIndex);
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM);
     __aicore__ inline void Process(uint8_t enAtomic = 0);
@@ -47,14 +47,13 @@ protected:
     GlobalTensor<B_T> bGlobal_;
     GlobalTensor<C_T> cGlobal_;
     GlobalTensor<BiasT> biasGlobal_;
-    TPipe *pipe_;
+    TPipe* pipe_;
 };
 
-
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Init(GM_ADDR aGM,
-    GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM, const void *tilingData,
-    TPipe *pipe)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Init(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
+    const void* tilingData, TPipe* pipe)
 {
     pipe_ = pipe;
     block_.template Init<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE>(tilingData);
@@ -63,17 +62,20 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
     mm_.Init(&block_.matmulTilingData_->tCubeTiling, pipe_);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
-__aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::InitInputs(GM_ADDR aGM,
-    GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::InitInputs(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM)
 {
-    aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM),
+    aGlobal_.SetGlobalBuffer(
+        reinterpret_cast<__gm__ A_T*>(aGM),
         static_cast<uint64_t>(block_.matmulTilingData_->tCubeTiling.M) * block_.matmulTilingData_->tCubeTiling.Ka);
-    bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(bGM),
+    bGlobal_.SetGlobalBuffer(
+        reinterpret_cast<__gm__ B_T*>(bGM),
         static_cast<uint64_t>(block_.matmulTilingData_->tCubeTiling.Kb) * block_.matmulTilingData_->tCubeTiling.N);
-    cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(cGM),
+    cGlobal_.SetGlobalBuffer(
+        reinterpret_cast<__gm__ C_T*>(cGM),
         static_cast<uint64_t>(block_.matmulTilingData_->tCubeTiling.M) * block_.matmulTilingData_->tCubeTiling.N);
-    biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT *>(biasGM), block_.matmulTilingData_->tCubeTiling.N);
+    biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(biasGM), block_.matmulTilingData_->tCubeTiling.N);
     // 右矩阵UNCACHE
     if (block_.matmulTilingData_->l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
         block_.matmulTilingData_->l2CacheDisable == L2CacheMode::B_L2_CACHE_DISABLE) {
@@ -86,8 +88,7 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
     }
 }
 
-
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig &MM_CFG>
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UpdateGlobalTensor(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
 {
@@ -143,4 +144,3 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
 }
 
 } // namespace MatmulV3Advanced
-

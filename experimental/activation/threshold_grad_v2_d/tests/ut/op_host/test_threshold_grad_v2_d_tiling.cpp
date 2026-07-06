@@ -27,18 +27,13 @@ using namespace ge;
 
 class ThresholdGradV2DTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ThresholdGradV2DTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ThresholdGradV2DTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ThresholdGradV2DTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ThresholdGradV2DTiling TearDown" << std::endl; }
 };
 
-TEST_F(ThresholdGradV2DTiling, threshold_grad_v2_float32_success) {
+TEST_F(ThresholdGradV2DTiling, threshold_grad_v2_float32_success)
+{
     // input
     gert::StorageShape x1_shape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
     gert::StorageShape x2_shape = {{1, 2, 8, 16}, {1, 2, 8, 16}};
@@ -68,12 +63,12 @@ TEST_F(ThresholdGradV2DTiling, threshold_grad_v2_float32_success) {
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
@@ -86,19 +81,19 @@ TEST_F(ThresholdGradV2DTiling, threshold_grad_v2_float32_success) {
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
-                        .SetOpType("ThresholdGradV2D")
-                        .NodeIoNum(2, 1)
-                        .IrInstanceNum({1, 1})
-                        .InputShapes({&x1_shape, &x2_shape})
-                        .OutputShapes({&y_shape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType("ThresholdGradV2D")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1_shape, &x2_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context, nullptr);
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);

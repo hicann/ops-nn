@@ -36,8 +36,8 @@ enum class CubeFormat : uint8_t {
 
 enum class QuantMode : std::uint8_t {
     NO_QUANT = 0,
-    SCALAR_QUANT,   // perTensor量化模式，Scale shape为(1)
-    VECTOR_QUANT,   // perChannel量化模式，Scale shape和结果的channel一致
+    SCALAR_QUANT, // perTensor量化模式，Scale shape为(1)
+    VECTOR_QUANT, // perChannel量化模式，Scale shape和结果的channel一致
     UNDEFINED
 };
 
@@ -86,9 +86,9 @@ struct GetDstType<bfloat16_t> {
 // ConvType，定义卷积输入输出对象的属性
 template <TPosition POSITION, CubeFormat FORMAT, typename T>
 struct ConvType {
-    constexpr static TPosition pos = POSITION;    // Convolution输入或输出时的scope
-    constexpr static CubeFormat format = FORMAT;  // Convolution输入或者输出的format
-    using Type = T;                               // Convolution输入或输出的数据类型
+    constexpr static TPosition pos = POSITION;   // Convolution输入或输出时的scope
+    constexpr static CubeFormat format = FORMAT; // Convolution输入或者输出的format
+    using Type = T;                              // Convolution输入或输出的数据类型
 };
 
 struct Conv3dConfig {
@@ -122,8 +122,8 @@ struct ConvBpContext {
     using eType = E;
     using fType = F;
     using SrcT = typename A::Type;
-    using SrcAT = typename C::Type;    // dedy Type
-    using SrcBT = typename A::Type;    // filter Type
+    using SrcAT = typename C::Type; // dedy Type
+    using SrcBT = typename A::Type; // filter Type
     using DstT = typename D::Type;
     using BiasT = typename E::Type;
     using ScaleT = typename F::Type;
@@ -147,5 +147,5 @@ struct ConvBpContext {
         __aicore__ inline _() {}
     };
 };
-}  // namespace Convolution3DBackprop
+} // namespace Convolution3DBackprop
 #endif

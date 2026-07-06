@@ -28,19 +28,18 @@ static op::Shape GetOutPutShape(const aclTensor* x)
     return outputShape;
 }
 
-std::tuple<aclTensor*, aclTensor*> DynamicQuant(
-    const aclTensor* x, const aclTensor* smoothScalesOptional, const aclTensor* groupIndexsOptional, int32_t dstType,
-    aclOpExecutor* executor)
+std::tuple<aclTensor*, aclTensor*> DynamicQuant(const aclTensor* x, const aclTensor* smoothScalesOptional,
+                                                const aclTensor* groupIndexsOptional, int32_t dstType,
+                                                aclOpExecutor* executor)
 {
     L0_DFX(DynamicQuant, x, smoothScalesOptional, groupIndexsOptional);
-    auto yOut = executor->AllocTensor(
-        x->GetStorageShape(), x->GetViewShape(), op::DataType(dstType), x->GetStorageFormat(), x->GetOriginalFormat());
+    auto yOut = executor->AllocTensor(x->GetStorageShape(), x->GetViewShape(), op::DataType(dstType),
+                                      x->GetStorageFormat(), x->GetOriginalFormat());
 
     auto scaleShape = GetOutPutShape(x);
     auto scaleOut = executor->AllocTensor(scaleShape, op::DataType::DT_FLOAT);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        DynamicQuant, OP_INPUT(x, smoothScalesOptional, groupIndexsOptional), OP_OUTPUT(yOut, scaleOut),
-        OP_ATTR(dstType));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(DynamicQuant, OP_INPUT(x, smoothScalesOptional, groupIndexsOptional),
+                                           OP_OUTPUT(yOut, scaleOut), OP_ATTR(dstType));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DynamicQuant launch kernel failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

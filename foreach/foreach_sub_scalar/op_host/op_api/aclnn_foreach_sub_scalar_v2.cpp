@@ -53,10 +53,9 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
     for (uint64_t i = 0; i < self->Size(); i++) {
         // 输入输出的格式需要一致
         if ((*self)[i]->GetStorageFormat() != (*out)[i]->GetStorageFormat()) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal. self [%s], out [%s].",
-                ToString((*self)[i]->GetStorageShape()).GetString(),
-                ToString((*out)[i]->GetStorageShape()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be equal. self [%s], out [%s].",
+                    ToString((*self)[i]->GetStorageShape()).GetString(),
+                    ToString((*out)[i]->GetStorageShape()).GetString());
             return false;
         }
 
@@ -71,13 +70,12 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
 
 static const std::initializer_list<ge::DataType>& GetDtypeSupportList()
 {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
-        OP_LOGE(
-            ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return EMPTY_LIST;
     }
 }
@@ -86,9 +84,8 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
 {
     const auto& dtypeSupportList = GetDtypeSupportList();
     if (dtypeSupportList.size() == 0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
     if (self->Size() == 0) {
@@ -145,9 +142,9 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecForeachSubScalarV2GetWorkspaceSize(
-    const aclTensorList* x, const aclScalar* scalar, const aclTensorList* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+static aclnnStatus ExecForeachSubScalarV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar,
+                                                          const aclTensorList* out, uint64_t* workspaceSize,
+                                                          aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -192,16 +189,15 @@ static aclnnStatus ExecForeachSubScalarV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnForeachSubScalarV2GetWorkspaceSize(
-    const aclTensorList* x, const aclScalar* scalar, aclTensorList* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnForeachSubScalarV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar, aclTensorList* out,
+                                                    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnForeachSubScalarV2, DFX_IN(x, scalar), DFX_OUT(out));
     return ExecForeachSubScalarV2GetWorkspaceSize(x, scalar, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnForeachSubScalarV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnForeachSubScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnForeachSubScalarV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

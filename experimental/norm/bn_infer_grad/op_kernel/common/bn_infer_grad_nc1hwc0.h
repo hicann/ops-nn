@@ -47,9 +47,8 @@ class BnInferGradNc1hwc0 {
 public:
     __aicore__ inline BnInferGradNc1hwc0() {}
 
-    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR scale, GM_ADDR batchVariance,
-                                 GM_ADDR xBackprop, GM_ADDR workspace,
-                                 const BnInferGradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR grads, GM_ADDR scale, GM_ADDR batchVariance, GM_ADDR xBackprop,
+                                GM_ADDR workspace, const BnInferGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -65,10 +64,10 @@ private:
     TPipe pipe;
     TQue<QuePosition::VECIN, 2> inQueueGrads;
     TQue<QuePosition::VECOUT, 2> outQueueResult;
-    TBuf<QuePosition::VECCALC> invStdBuf;         // 完整 inv_std (alignedC)
-    TBuf<QuePosition::VECCALC> invStdExpandBuf;    // 展开后 inv_std (tileHW * C0)
-    TBuf<QuePosition::VECCALC> scaleBuf;           // scale 数据
-    TBuf<QuePosition::VECCALC> varianceBuf;        // batch_variance 数据
+    TBuf<QuePosition::VECCALC> invStdBuf;       // 完整 inv_std (alignedC)
+    TBuf<QuePosition::VECCALC> invStdExpandBuf; // 展开后 inv_std (tileHW * C0)
+    TBuf<QuePosition::VECCALC> scaleBuf;        // scale 数据
+    TBuf<QuePosition::VECCALC> varianceBuf;     // batch_variance 数据
     // 以下仅在混合精度路径（fp16/bf16）中使用
     TBuf<QuePosition::VECCALC> castBuf;
     TBuf<QuePosition::VECCALC> resultFp32Buf;
@@ -93,17 +92,17 @@ private:
     int64_t tileHW_ = 0;
     int64_t numTilesHW_ = 0;
     int64_t lastTileHW_ = 0;
-    int64_t tileLen_ = 0;  // = tileHW_ * C0_
+    int64_t tileLen_ = 0; // = tileHW_ * C0_
 
     // 多核参数
-    int64_t taskStart_ = 0;    // 当前核的起始任务索引
-    int64_t coreTasks_ = 0;    // 当前核处理的任务数
+    int64_t taskStart_ = 0; // 当前核的起始任务索引
+    int64_t coreTasks_ = 0; // 当前核处理的任务数
 };
 
 template <typename T>
 __aicore__ inline void BnInferGradNc1hwc0<T>::Init(GM_ADDR grads, GM_ADDR scale, GM_ADDR batchVariance,
-                                                     GM_ADDR xBackprop, GM_ADDR workspace,
-                                                     const BnInferGradTilingData* tilingData)
+                                                   GM_ADDR xBackprop, GM_ADDR workspace,
+                                                   const BnInferGradTilingData* tilingData)
 {
     totalElements_ = tilingData->totalElements;
     channelSize_ = tilingData->channelSize;

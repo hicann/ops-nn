@@ -32,11 +32,10 @@ constexpr int32_t RIGHT_SHIFT_LENGTH = 31;
 namespace AscendC {
 
 template <typename T_DATA, typename T_IDX>
-class GatherElementsV2LastDim
-{
+class GatherElementsV2LastDim {
 public:
-    __aicore__ inline GatherElementsV2LastDim(
-        GM_ADDR x, GM_ADDR index, GM_ADDR y, const GatherElementsV2TilingData& tiling, TPipe* pipe)
+    __aicore__ inline GatherElementsV2LastDim(GM_ADDR x, GM_ADDR index, GM_ADDR y,
+                                              const GatherElementsV2TilingData& tiling, TPipe* pipe)
     {
         InitParams(x, index, y, tiling, pipe);
     }
@@ -103,8 +102,8 @@ public:
         WaitFlag<HardEvent::V_MTE3>(eventId);
     };
 
-    __aicore__ inline void InitParams(
-        GM_ADDR x, GM_ADDR index, GM_ADDR y, const GatherElementsV2TilingData tiling, TPipe* pipe)
+    __aicore__ inline void InitParams(GM_ADDR x, GM_ADDR index, GM_ADDR y, const GatherElementsV2TilingData tiling,
+                                      TPipe* pipe)
     {
         pipe_ = pipe;
         blockIdx_ = GetBlockIdx();
@@ -315,10 +314,8 @@ public:
         int64_t tmpXGmOffset = 0;
         while (nbrust > 0) {
             GetGmOffset(tmpOffset, tmpXGmOffset);
-            uint16_t moveBrust =
-                min(nbrust,
-                    static_cast<uint16_t>(
-                        indexShapeArray_[penultimateDimensionIndex_] - indexOffsetArray_[penultimateDimensionIndex_]));
+            uint16_t moveBrust = min(nbrust, static_cast<uint16_t>(indexShapeArray_[penultimateDimensionIndex_] -
+                                                                   indexOffsetArray_[penultimateDimensionIndex_]));
             DataCopyExtParams copyParams = {moveBrust, static_cast<uint32_t>(length * sizeof(T_DATA)), 0, 0, 0};
             DataCopyPadExtParams<T_DATA> padParams = {true, 0, 0, 0};
             DataCopyPad(xTensor_[xOffset_ + tensorOffset], xGm_[tmpXGmOffset], copyParams, padParams);
@@ -332,9 +329,8 @@ public:
     {
         ShiftRight(indexTensor_[ubStorageIdxCount_], indexTensor_, RIGHT_SHIFT_LENGTH, length);
 
-        Muls(
-            indexTensor_[ubStorageIdxCount_], indexTensor_[ubStorageIdxCount_], -static_cast<int32_t>(xAxisSize_),
-            length);
+        Muls(indexTensor_[ubStorageIdxCount_], indexTensor_[ubStorageIdxCount_], -static_cast<int32_t>(xAxisSize_),
+             length);
 
         Add(indexTensor_, indexTensor_, indexTensor_[ubStorageIdxCount_], length);
     }
@@ -343,9 +339,8 @@ public:
     {
         DoNegativeIndices(length);
         CreateVecIndex(indexTensor_[ubStorageIdxCount_], 0, length);
-        Muls(
-            indexTensor_[ubStorageIdxCount_], indexTensor_[ubStorageIdxCount_], static_cast<int32_t>(xAxisSize_),
-            length);
+        Muls(indexTensor_[ubStorageIdxCount_], indexTensor_[ubStorageIdxCount_], static_cast<int32_t>(xAxisSize_),
+             length);
         Add(indexTensor_, indexTensor_, indexTensor_[ubStorageIdxCount_], length);
         GatherData<T_DATA>(0, length);
     }
@@ -386,12 +381,10 @@ public:
             CompareScalar(upMaskTensor_, castFloatTargetTensor, upLimit, CMPMODE::LT, alignLength);
             PipeBarrier<PIPE_V>();
             Adds(indexTensor_[ubStorageIdxCount_], indexTensor_, negDownLimit, length);
-            Select(
-                castFloatTargetTensor[ubStorageIdxCount_], downMaskTensor_, castFloatTargetTensor[ubStorageIdxCount_],
-                0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, length);
-            Select(
-                castFloatTargetTensor[ubStorageIdxCount_], upMaskTensor_, castFloatTargetTensor[ubStorageIdxCount_],
-                0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, length);
+            Select(castFloatTargetTensor[ubStorageIdxCount_], downMaskTensor_,
+                   castFloatTargetTensor[ubStorageIdxCount_], 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, length);
+            Select(castFloatTargetTensor[ubStorageIdxCount_], upMaskTensor_, castFloatTargetTensor[ubStorageIdxCount_],
+                   0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, length);
             GatherData<T_DATA>(yPartTensor_, 0, ubStorageIdxCount_, length);
             xGmOffset_ = xGmOffset_ + xCountLength;
         }
@@ -413,9 +406,8 @@ public:
             yTensorOffset = i * yAlignLength;
             GetGmOffset(tmpOffset, xGmBaseOffset);
             if (xGmBaseOffset < INT_MAX - NUM_TWO * xAxisSize_) {
-                Adds(
-                    indexTensor_[indexTensorOffset], indexTensor_[indexTensorOffset], static_cast<int32_t>(xGmBaseOffset),
-                    length);
+                Adds(indexTensor_[indexTensorOffset], indexTensor_[indexTensorOffset],
+                     static_cast<int32_t>(xGmBaseOffset), length);
                 for (int64_t j = 0; j < length; j++) {
                     idx = static_cast<int64_t>(indexTensor_.GetValue(j + indexTensorOffset));
                     T_DATA data = xGm_.GetValue(idx);
@@ -433,8 +425,8 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void GatherData(
-        LocalTensor<T> targetTensor, int64_t dataOffset, int64_t indexOffset, int64_t length)
+    __aicore__ inline void GatherData(LocalTensor<T> targetTensor, int64_t dataOffset, int64_t indexOffset,
+                                      int64_t length)
     {
         Muls(indexTensor_[indexOffset], indexTensor_[indexOffset], static_cast<int32_t>(sizeof(T_DATA)), length);
         Gather(targetTensor, xTensor_, gatherOffsetTensor_[indexOffset], static_cast<uint32_t>(0), length);
@@ -448,12 +440,10 @@ public:
         int64_t xTensorOffset = idx * xAxisAlignSize_;
         int64_t indexTensorOffset = idx * indexAxisAlignSize_;
         int64_t yTensorOffset = idx * yAxisAlignSize_;
-        Muls(
-            indexTensor_[indexTensorOffset], indexTensor_[indexTensorOffset], static_cast<int32_t>(sizeof(T_DATA)),
-            length);
-        Gather(
-            yTensor_[yTensorOffset], xTensor_[xTensorOffset], gatherOffsetTensor_[indexTensorOffset],
-            static_cast<uint32_t>(0), length);
+        Muls(indexTensor_[indexTensorOffset], indexTensor_[indexTensorOffset], static_cast<int32_t>(sizeof(T_DATA)),
+             length);
+        Gather(yTensor_[yTensorOffset], xTensor_[xTensorOffset], gatherOffsetTensor_[indexTensorOffset],
+               static_cast<uint32_t>(0), length);
     }
 
     template <typename T>

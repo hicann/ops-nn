@@ -12,7 +12,7 @@
  * \file dynamic_dual_level_mx_quant_proto.h
  * \brief
  */
- 
+
 #ifndef OPS_NN_DEV_DYNAMIC_DUAL_LEVEL_MX_QUANT_PROTO_H
 #define OPS_NN_DEV_DYNAMIC_DUAL_LEVEL_MX_QUANT_PROTO_H
 
@@ -26,7 +26,7 @@ namespace ge {
 * @par Inputs:
 * @li x: An input tensor of type float16 or bfloat16.the input x last dimension of the shape must be divisible by 2.
 * The shape supports at least 1 dimension, and at most 7 dimensions.
-* @li smooth_scale: An optional tensor, the smooth scale for x  
+* @li smooth_scale: An optional tensor, the smooth scale for x
 
 * @par Attributes:
 * @li round_mode: An optional string.

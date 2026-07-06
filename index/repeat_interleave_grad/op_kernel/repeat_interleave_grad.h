@@ -21,44 +21,46 @@ using namespace AscendC;
 template <typename GRAD_T, typename INDEX_T>
 class KernelRepeatInterleaveGrad {
 public:
-  __aicore__ inline KernelRepeatInterleaveGrad() {}
-  __aicore__ inline void Init(GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad, GM_ADDR workspace, const RepeatInterleaveGradTilingData *__restrict tiling)
-  {
-    InitComputeInfo(tiling);
+    __aicore__ inline KernelRepeatInterleaveGrad() {}
+    __aicore__ inline void Init(GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad, GM_ADDR workspace,
+                                const RepeatInterleaveGradTilingData* __restrict tiling)
+    {
+        InitComputeInfo(tiling);
 
-    // get start index for current core, core parallel
-    input_grad_gm.SetGlobalBuffer((__gm__ GRAD_T*)input_grad);
-    repeats_gm.SetGlobalBuffer((__gm__ INDEX_T*)repeats);
-    output_grad_gm.SetGlobalBuffer((__gm__ GRAD_T*)output_grad);
+        // get start index for current core, core parallel
+        input_grad_gm.SetGlobalBuffer((__gm__ GRAD_T*)input_grad);
+        repeats_gm.SetGlobalBuffer((__gm__ INDEX_T*)repeats);
+        output_grad_gm.SetGlobalBuffer((__gm__ GRAD_T*)output_grad);
 
-    // pipe alloc memory to queue, the unit is Bytes
-    pipe.InitBuffer(input_grad_in_queue, BUFFER_NUM, element_num_each_loop * sizeof(GRAD_T));
-    pipe.InitBuffer(output_grad_out_queue, BUFFER_NUM, element_num_each_loop * sizeof(GRAD_T));
+        // pipe alloc memory to queue, the unit is Bytes
+        pipe.InitBuffer(input_grad_in_queue, BUFFER_NUM, element_num_each_loop * sizeof(GRAD_T));
+        pipe.InitBuffer(output_grad_out_queue, BUFFER_NUM, element_num_each_loop * sizeof(GRAD_T));
 
-    pipe.InitBuffer(input_grad_fp32_buf, BUFFER_NUM * element_num_each_loop * sizeof(float));
-    pipe.InitBuffer(output_grad_fp32_buf, BUFFER_NUM * element_num_each_loop * sizeof(float));
-  }
+        pipe.InitBuffer(input_grad_fp32_buf, BUFFER_NUM * element_num_each_loop * sizeof(float));
+        pipe.InitBuffer(output_grad_fp32_buf, BUFFER_NUM * element_num_each_loop * sizeof(float));
+    }
 
-  __aicore__ inline void Process()
-  {
-    for (int64_t batch_dim_index = 0; batch_dim_index < batch_dim_num_core; batch_dim_index++) {
-        batch_dim_index_gm = batch_index_start_core + batch_dim_index;
-        input_grad_repeat_offset_gm = batch_dim_index_gm * repeats_i_grad_dim_num * data_dim_num + loop_offset_start_core;
+    __aicore__ inline void Process()
+    {
+        for (int64_t batch_dim_index = 0; batch_dim_index < batch_dim_num_core; batch_dim_index++) {
+            batch_dim_index_gm = batch_index_start_core + batch_dim_index;
+            input_grad_repeat_offset_gm = batch_dim_index_gm * repeats_i_grad_dim_num * data_dim_num +
+                                          loop_offset_start_core;
 
-        for (int64_t repeats_index=0; repeats_index < repeats_o_grad_dim_num; repeats_index++) {
-            repeats_num = repeats_gm.GetValue(repeats_index);
+            for (int64_t repeats_index = 0; repeats_index < repeats_o_grad_dim_num; repeats_index++) {
+                repeats_num = repeats_gm.GetValue(repeats_index);
 
-            for (int64_t loop_index = 0; loop_index < loop_times; loop_index++) {
-                ComputeEachLoop(repeats_index, loop_index);
+                for (int64_t loop_index = 0; loop_index < loop_times; loop_index++) {
+                    ComputeEachLoop(repeats_index, loop_index);
+                }
+
+                input_grad_repeat_offset_gm = input_grad_repeat_offset_gm + repeats_num * data_dim_num;
             }
-
-            input_grad_repeat_offset_gm = input_grad_repeat_offset_gm + repeats_num * data_dim_num;
         }
     }
-  }
 
 private:
-    __aicore__ inline void InitComputeInfo(const RepeatInterleaveGradTilingData *__restrict tiling)
+    __aicore__ inline void InitComputeInfo(const RepeatInterleaveGradTilingData* __restrict tiling)
     {
         batch_dim_num = tiling->batch_dim_num;
         repeats_i_grad_dim_num = tiling->repeats_i_grad_dim_num;
@@ -105,7 +107,8 @@ private:
         DataCopyPadExtParams<GRAD_T> pad_params{false, 0, 0, 0};
 
         for (int64_t repeats_num_index = 0; repeats_num_index < repeats_num; repeats_num_index++) {
-            input_grad_offset_gm = input_grad_repeat_offset_gm + loop_index * element_num_each_loop + repeats_num_index * data_dim_num;
+            input_grad_offset_gm = input_grad_repeat_offset_gm + loop_index * element_num_each_loop +
+                                   repeats_num_index * data_dim_num;
             input_grad_local = input_grad_in_queue.AllocTensor<GRAD_T>();
             DataCopyPad(input_grad_local, input_grad_gm[input_grad_offset_gm], copy_params, pad_params);
 
@@ -115,7 +118,7 @@ private:
                 Cast(input_grad_fp32, input_grad_local, RoundMode::CAST_NONE, element_num_loop);
             } else if constexpr (std::is_same<GRAD_T, float>::value) {
                 uint64_t mask = 64;
-                Copy(input_grad_fp32, input_grad_local, mask, (element_num_loop + mask -1) / mask, {1, 1, 8, 8});
+                Copy(input_grad_fp32, input_grad_local, mask, (element_num_loop + mask - 1) / mask, {1, 1, 8, 8});
             }
             PipeBarrier<PIPE_V>();
             Add(output_grad_fp32, output_grad_fp32, input_grad_fp32, element_num_loop);
@@ -129,12 +132,14 @@ private:
             Cast(output_grad_local, output_grad_fp32, RoundMode::CAST_RINT, element_num_loop);
         } else if constexpr (std::is_same<GRAD_T, float>::value) {
             uint64_t mask = 64;
-            Copy(output_grad_local, output_grad_fp32, mask, (element_num_loop + mask -1) / mask, {1, 1, 8, 8});
+            Copy(output_grad_local, output_grad_fp32, mask, (element_num_loop + mask - 1) / mask, {1, 1, 8, 8});
         }
         PipeBarrier<PIPE_V>();
         output_grad_out_queue.EnQue<GRAD_T>(output_grad_local);
         output_grad_local = output_grad_out_queue.DeQue<GRAD_T>();
-        output_grad_offset_gm = batch_dim_index_gm * repeats_o_grad_dim_num * data_dim_num + repeats_index * data_dim_num + loop_offset_start_core + loop_index * element_num_each_loop;
+        output_grad_offset_gm = batch_dim_index_gm * repeats_o_grad_dim_num * data_dim_num +
+                                repeats_index * data_dim_num + loop_offset_start_core +
+                                loop_index * element_num_each_loop;
         DataCopyPad(output_grad_gm[output_grad_offset_gm], output_grad_local, copy_params);
         output_grad_out_queue.FreeTensor(output_grad_local);
     }

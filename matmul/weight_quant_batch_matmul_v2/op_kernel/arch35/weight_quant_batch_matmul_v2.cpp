@@ -45,7 +45,7 @@
 #include "n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 
 #if defined(A16) && (defined(WQBMMV2_S4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)) || defined(WEIGHT_F8_INPUT) || \
-    defined(MICROSCALING))
+                     defined(MICROSCALING))
 #include "cmct_convertor.h"
 using WeightQuantBatchMatmulV2::InvokeKernel;
 #endif
@@ -66,88 +66,83 @@ using namespace WeightQuantBatchMatmulV2::Arch35;
 constexpr MatmulConfigMode configMode = MatmulConfigMode::CONFIG_NORM;
 constexpr MatmulBatchParams batchParams{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::MULTI_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams);
-constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
+constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false,
+                                                  BatchOutMode::SINGLE_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIGS[] = {
-    {2, 512},   // idx 0
-    {4, 512},   // idx 1
-    {2, 1024},  // idx 2
-    {4, 256},   // idx 3
-    {2, 512},   // idx 4, int8 {2, 512}, int4 {4, 512}
-    {2, 256},   // idx 5
-    {4, 1024},  // idx 6
+    {2, 512},  // idx 0
+    {4, 512},  // idx 1
+    {2, 1024}, // idx 2
+    {4, 256},  // idx 3
+    {2, 512},  // idx 4, int8 {2, 512}, int4 {4, 512}
+    {2, 256},  // idx 5
+    {4, 1024}, // idx 6
 };
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_0 = VEC_ANTIQUANT_CONFIGS[0];
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_1 = VEC_ANTIQUANT_CONFIGS[1];
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_5 = VEC_ANTIQUANT_CONFIGS[5];
-#define INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, templateClass, ...)                            \
-    do {                                                                                                         \
-        GET_TILING_DATA_WITH_STRUCT(                                                                             \
-            wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams, tilingDataIn, tiling);     \
-        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_ANTIQUANT_SCALE, DtypeBias, DTYPE_Y, __VA_ARGS__> op;         \
-        op.Init(                                                                                                 \
-            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
-            &tPipe);                                                                                             \
-        op.Process();                                                                                            \
+#define INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, templateClass, ...)                                  \
+    do {                                                                                                               \
+        GET_TILING_DATA_WITH_STRUCT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams, tilingDataIn, tiling); \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_ANTIQUANT_SCALE, DtypeBias, DTYPE_Y, __VA_ARGS__> op;               \
+        op.Init(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn,   \
+                &tPipe);                                                                                               \
+        op.Process();                                                                                                  \
     } while (0)
 #endif
 
 #if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__
-#define INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(DtypeBias, templateClass, ...)                                   \
-    do {                                                                                                          \
-        GET_TILING_DATA_WITH_STRUCT(                                                                              \
-            wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams, tilingDataIn, tiling); \
-        templateClass<DTYPE_X, DTYPE_WEIGHT, DtypeBias, DTYPE_Y, __VA_ARGS__> op;                                 \
-        op.Init(                                                                                                  \
-            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn,  \
-            &tPipe);                                                                                              \
-        op.Process();                                                                                             \
+#define INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(DtypeBias, templateClass, ...)                                      \
+    do {                                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams, tilingDataIn,   \
+                                    tiling);                                                                         \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DtypeBias, DTYPE_Y, __VA_ARGS__> op;                                    \
+        op.Init(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
+                &tPipe);                                                                                             \
+        op.Process();                                                                                                \
     } while (0)
 
-#define INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(templateClass, ...)                                                      \
-    do {                                                                                                         \
-        GET_TILING_DATA_WITH_STRUCT(WeightQuantBatchMatmulV2TilingData, tilingDataIn, tiling);                   \
-        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                               \
-        op.Init(                                                                                                 \
-            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
-            &tPipe);                                                                                             \
-        op.Process();                                                                                            \
+#define INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(templateClass, ...)                                                          \
+    do {                                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(WeightQuantBatchMatmulV2TilingData, tilingDataIn, tiling);                       \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                                   \
+        op.Init(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
+                &tPipe);                                                                                             \
+        op.Process();                                                                                                \
     } while (0)
 #endif
 
 #if __CUBE_S8S4_S4S4__
-#define INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(templateClass, ...)                                                  \
-    do {                                                                                                         \
-        GET_TILING_DATA_WITH_STRUCT(                                                                             \
-            wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams, tilingDataIn, tiling);    \
-        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                               \
-        op.Init(                                                                                                 \
-            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
-            &tPipe);                                                                                             \
-        op.Process();                                                                                            \
+#define INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(templateClass, ...)                                                      \
+    do {                                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams, tilingDataIn,       \
+                                    tiling);                                                                         \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                                   \
+        op.Init(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
+                &tPipe);                                                                                             \
+        op.Process();                                                                                                \
     } while (0)
 
-#define INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(templateClass, ...)  \
-    do {                                                                                                         \
-        GET_TILING_DATA_WITH_STRUCT(                                                                             \
-            wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams, tilingDataIn, tiling);    \
-        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                               \
-        op.Init(                                                                                                 \
-            x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
-            &tPipe);                                                                                             \
-        op.Process();                                                                                            \
+#define INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(templateClass, ...)                                                   \
+    do {                                                                                                             \
+        GET_TILING_DATA_WITH_STRUCT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams, tilingDataIn,       \
+                                    tiling);                                                                         \
+        templateClass<DTYPE_X, DTYPE_WEIGHT, DTYPE_BIAS, DTYPE_Y, __VA_ARGS__> op;                                   \
+        op.Init(x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, userWS, &tilingDataIn, \
+                &tPipe);                                                                                             \
+        op.Process();                                                                                                \
     } while (0)
 #endif
 
-template <
-    int SOC_VERSION_TYPE, int SUB_SOC_VERSION_TYPE, int ANTIQUANT_SCENARIO, int ALGORITHM, int SUB_ALGORITHM,
-    int TEMPLATE_CUSTOM, int API_CONSTEXPR, bool TRANS_A, bool TRANS_B, int ANTIQUANT_TYPE, int QUANT_TYPE,
-    bool HAS_ANTIQUANT_OFFSET, bool HAS_BIAS, bool IS_BIAS_FP32, bool IS_WEIGHT_NZ>
-__global__ __aicore__ void weight_quant_batch_matmul_v2(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
-    GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+template <int SOC_VERSION_TYPE, int SUB_SOC_VERSION_TYPE, int ANTIQUANT_SCENARIO, int ALGORITHM, int SUB_ALGORITHM,
+          int TEMPLATE_CUSTOM, int API_CONSTEXPR, bool TRANS_A, bool TRANS_B, int ANTIQUANT_TYPE, int QUANT_TYPE,
+          bool HAS_ANTIQUANT_OFFSET, bool HAS_BIAS, bool IS_BIAS_FP32, bool IS_WEIGHT_NZ>
+__global__ __aicore__ void weight_quant_batch_matmul_v2(GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale,
+                                                        GM_ADDR antiquantOffset, GM_ADDR quantScale,
+                                                        GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
+                                                        GM_ADDR tiling)
 {
     GM_ADDR userWS = GetUserWorkspace(workspace);
     if (userWS == nullptr) {
@@ -163,21 +158,20 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
     static constexpr QuantType quantType = static_cast<QuantType>(QUANT_TYPE);
     if constexpr (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ANTI_REG_SCSC) {
 #if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)))
-        INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(
-            DtypeBias, WeightQuantBatchMatmulV2RegBaseKernel, TRANS_A, TRANS_B, HAS_ANTIQUANT_OFFSET, antiquantType,
-            IS_WEIGHT_NZ);
+        INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(DtypeBias, WeightQuantBatchMatmulV2RegBaseKernel, TRANS_A, TRANS_B,
+                                                 HAS_ANTIQUANT_OFFSET, antiquantType, IS_WEIGHT_NZ);
 #endif
-    } else if (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_TAIL_RESPLIT || SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK) {
-#if defined(A16) && (defined(WQBMMV2_S4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)) || defined(WEIGHT_F8_INPUT) || defined(MICROSCALING))
-        InvokeKernel<
-            TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32, IS_WEIGHT_NZ>(
-            KERNEL_PARAMS);
+    } else if (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_TAIL_RESPLIT ||
+               SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK) {
+#if defined(A16) && (defined(WQBMMV2_S4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)) || defined(WEIGHT_F8_INPUT) || \
+                     defined(MICROSCALING))
+        InvokeKernel<TEMPLATE_CUSTOM, TRANS_A, TRANS_B, ANTIQUANT_TYPE, HAS_ANTIQUANT_OFFSET, IS_BIAS_FP32,
+                     IS_WEIGHT_NZ>(KERNEL_PARAMS);
 #endif
     } else if (SUB_ALGORITHM == WQBMMV2_SUB_ALGO_CUSTOM_BACKWARD_COMPATIBLE) {
 #if defined(A16) && defined(WQBMMV2_S8) && !defined(WEIGHT_ND)
-        INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(
-            WeightQuantBatchMatmulV2CustomWeightNzKernel, TRANS_A, TRANS_B, antiquantType, HAS_ANTIQUANT_OFFSET,
-            quantType);
+        INVOKE_WEIGHT_QUANT_BMM_OP_IMPL(WeightQuantBatchMatmulV2CustomWeightNzKernel, TRANS_A, TRANS_B, antiquantType,
+                                        HAS_ANTIQUANT_OFFSET, quantType);
 #endif
     }
 #elif defined(__DAV_310R6__)
@@ -185,121 +179,300 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
     // 该分支处理bias与A类型一致的情况
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
     REGISTER_TILING_DEFAULT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams);
-    #if (defined(FORMAT_WEIGHT) && (FORMAT_WEIGHT != FORMAT_FRACTAL_NZ))
-    if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+#if (defined(FORMAT_WEIGHT) && (FORMAT_WEIGHT != FORMAT_FRACTAL_NZ))
+    if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                  ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                  SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                  TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                  API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                  ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR &&
+                  HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false &&
+                  IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {
             false, true, QuantType::PER_CHANNEL, false, QuantType::PER_TENSOR, CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_0);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_0);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {false,         true, QuantType::PER_CHANNEL, true, QuantType::PER_TENSOR,
                                                CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_0);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_0);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {
             false, false, QuantType::PER_CHANNEL, false, QuantType::PER_TENSOR, CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_5);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_5);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {
             false, false, QuantType::PER_CHANNEL, true, QuantType::PER_TENSOR, CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_5);
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_5);
     }
-    #endif
-    #if defined(ORIG_DTYPE_X) && defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16
-    #undef DTYPE_BIAS
-    #define DTYPE_BIAS float
+#endif
+#if defined(ORIG_DTYPE_X) && defined(DT_BF16) && ORIG_DTYPE_X == DT_BF16
+#undef DTYPE_BIAS
+#define DTYPE_BIAS float
     // 该分支处理A数据类型为BF16且bias为fp32的情况
-    if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
+    if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                  ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                  SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                  TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                  API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                  ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR &&
+                  HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {
             false, true, QuantType::PER_CHANNEL, false, QuantType::PER_TENSOR, CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_0);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true && HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_0);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {false,         true, QuantType::PER_CHANNEL, true, QuantType::PER_TENSOR,
                                                CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_0);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_0);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {
             false, false, QuantType::PER_CHANNEL, false, QuantType::PER_TENSOR, CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_5);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true && HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_5);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_ASCEND910_55 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_VECTOR_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_N_FIRST_BASIC_BLOCK &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_256_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == true &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == true && IS_WEIGHT_NZ == false) {
         static constexpr WqmmConfig wqmmCfg = {
             false, false, QuantType::PER_CHANNEL, true, QuantType::PER_TENSOR, CubeFormat::ND};
-        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias,
-            WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg, VEC_ANTIQUANT_CONFIG_5);
+        INVOKE_WEIGHT_QUANT_BMM_ADAPTIVE_SPLIT_OP_IMPL(DtypeBias, WeightQuantBatchMatmulV2BasicBlockController, wqmmCfg,
+                                                       VEC_ANTIQUANT_CONFIG_5);
     }
-    #endif
+#endif
 #else
-    #ifndef DTYPE_BIAS
-    #define DTYPE_BIAS DTYPE_X
-    #endif
+#ifndef DTYPE_BIAS
+#define DTYPE_BIAS DTYPE_X
+#endif
     REGISTER_TILING_DEFAULT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams);
-    #if (defined(FORMAT_WEIGHT) && (FORMAT_WEIGHT != FORMAT_FRACTAL_NZ))
-    if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+#if (defined(FORMAT_WEIGHT) && (FORMAT_WEIGHT != FORMAT_FRACTAL_NZ))
+    if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                  ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                  SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                  TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                  API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                  ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR &&
+                  HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false &&
+                  IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, false, QuantType::PER_TENSOR,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, false, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
-        INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, true, QuantType::PER_TENSOR,
-                                            false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
-        INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, true, QuantType::PER_TENSOR,
-                                            false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, true, QuantType::PER_TENSOR, false,
+                                            QuantType::PER_TENSOR);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+        INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, true, QuantType::PER_TENSOR, false,
+                                            QuantType::PER_TENSOR);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, true, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, true, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, false, QuantType::PER_TENSOR,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, true, QuantType::PER_TENSOR,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, false, QuantType::PER_TENSOR,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, true, QuantType::PER_TENSOR,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, false, QuantType::PER_TENSOR,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, false, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, true, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == true && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, false, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == false && TRANS_B == true &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, false, true, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT && ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW && TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 && API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL && QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false && HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_SOC_VERSION_TYPE == WQBMMV2_DEFAULT &&
+                         ANTIQUANT_SCENARIO == WQBMMV2_DEFAULT && ALGORITHM == WQBMMV2_ALGO_FIXPIPE_ANTIQUANT &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ASW &&
+                         TEMPLATE_CUSTOM == WQBMMV2_TEMPLATE_MTE2_INNER_SIZE_512_BUF_NUM_2 &&
+                         API_CONSTEXPR == WQBMMV2_DEFAULT && TRANS_A == true && TRANS_B == false &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL &&
+                         QUANT_TYPE == WQBMMV2_QUANT_TYPE_PER_TENSOR && HAS_ANTIQUANT_OFFSET == false &&
+                         HAS_BIAS == false && IS_BIAS_FP32 == false && IS_WEIGHT_NZ == false) {
         INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(WeightQuantBatchMatmulV2ASWKernel, true, false, QuantType::PER_CHANNEL,
                                             false, QuantType::PER_TENSOR);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
-        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_TENSOR,
-                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
-        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL,
-                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH_NO_BATCH_OUT && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
-        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_TENSOR,
-                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH_NO_BATCH_OUT);
-    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 && SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH_NO_BATCH_OUT && ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
-        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A), static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL,
-                                            false, QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH_NO_BATCH_OUT);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A),
+                                               static_cast<bool>(TRANS_B), QuantType::PER_TENSOR, false,
+                                               QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A),
+                                               static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL, false,
+                                               QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH_NO_BATCH_OUT &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_TENSOR) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A),
+                                               static_cast<bool>(TRANS_B), QuantType::PER_TENSOR, false,
+                                               QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH_NO_BATCH_OUT);
+    } else if constexpr (SOC_VERSION_TYPE == WQBMMV2_SOC_SUPPORT_MMAD_S8S4 &&
+                         SUB_ALGORITHM == WQBMMV2_SUB_ALGO_ITERATE_BATCH_NO_BATCH_OUT &&
+                         ANTIQUANT_TYPE == WQBMMV2_ANTIQUANT_TYPE_PER_CHANNEL) {
+        INVOKE_WEIGHT_QUANT_BMM_ITERBATCH_IMPL(WeightQuantBatchMatmulV2IterBatchKernel, static_cast<bool>(TRANS_A),
+                                               static_cast<bool>(TRANS_B), QuantType::PER_CHANNEL, false,
+                                               QuantType::PER_TENSOR, MM_CFG_MULTI_BATCH_NO_BATCH_OUT);
     }
 #endif
 #endif

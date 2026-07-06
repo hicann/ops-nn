@@ -30,8 +30,8 @@ using namespace RepeatInterleaveGrad;
 using namespace Ops::Base::ReduceOpTmpl;
 
 template <REDUCE_TPL_PARAM, uint32_t TemplateNum>
-__global__ __aicore__ void repeat_interleave_grad(
-    GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void repeat_interleave_grad(GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     if constexpr (TemplateNum == RIG::IS_REDUCE_T) {
         // repeat is int

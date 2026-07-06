@@ -17,7 +17,8 @@
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
+static ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, int64_t input_idx,
+                                                    int64_t output_idx)
 {
     auto in_shape = context->GetInputShape(input_idx);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
@@ -27,8 +28,9 @@ static ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* con
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShapeForLogSoftmaxGrad(gert::InferShapeContext* context) {
-  return CopyShapeInput2OutputWithIdx(context, 1, 0);
+static ge::graphStatus InferShapeForLogSoftmaxGrad(gert::InferShapeContext* context)
+{
+    return CopyShapeInput2OutputWithIdx(context, 1, 0);
 }
 IMPL_OP_INFERSHAPE(LogSoftmaxGrad).InferShape(InferShapeForLogSoftmaxGrad);
-}  // namespace ops
+} // namespace ops

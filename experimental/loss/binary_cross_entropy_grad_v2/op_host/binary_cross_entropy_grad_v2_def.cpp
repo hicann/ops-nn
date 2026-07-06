@@ -68,7 +68,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "binary_cross_entropy_grad_v2");    
+            .ExtendCfgInfo("opFile.value", "binary_cross_entropy_grad_v2");
         this->AICore().AddConfig("ascend910b", aicoreConfig);
     }
 };

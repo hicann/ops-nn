@@ -18,36 +18,19 @@ namespace ops {
 
 class IndexFillD : public OpDef {
 public:
-const std::vector<ge::DataType> xDataType = {
-    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL};
-const std::vector<ge::Format> xFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-explicit IndexFillD(const char* name) : OpDef(name) {
-   this->Input("x")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Input("assist1")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Input("assist2")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Output("y")
-       .ParamType(REQUIRED)
-       .DataType(xDataType)
-       .Format(xFormat)
-       .UnknownShapeFormat(xFormat);
-   this->Attr("dim").AttrType(REQUIRED).Int();
+    const std::vector<ge::DataType> xDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT32, ge::DT_BOOL};
+    const std::vector<ge::Format> xFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+    explicit IndexFillD(const char* name) : OpDef(name)
+    {
+        this->Input("x").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Input("assist1").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Input("assist2").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Output("y").ParamType(REQUIRED).DataType(xDataType).Format(xFormat).UnknownShapeFormat(xFormat);
+        this->Attr("dim").AttrType(REQUIRED).Int();
 
-    this->AICore().AddConfig("ascend910b"); // 其他的soc版本补充部分配置项
-}
+        this->AICore().AddConfig("ascend910b"); // 其他的soc版本补充部分配置项
+    }
 };
 
 OP_ADD(IndexFillD);
-}  // namespace ops
+} // namespace ops

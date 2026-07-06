@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -27,17 +27,13 @@ extern "C" __global__ __aicore__ void fast_gelu(GM_ADDR x, GM_ADDR y, GM_ADDR wo
 
 class fast_gelu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "fast_gelu_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "fast_gelu_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "fast_gelu TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./fast_gelu_data");
     }
 };
-
 
 TEST_F(fast_gelu_test, test_case_fp32_1)
 {
@@ -47,7 +43,7 @@ TEST_F(fast_gelu_test, test_case_fp32_1)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/fast_gelu/tests/ut/op_kernel/fast_gelu_data", "fast_gelu_data");

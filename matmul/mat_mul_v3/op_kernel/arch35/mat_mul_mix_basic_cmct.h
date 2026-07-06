@@ -23,28 +23,28 @@ namespace MatmulV3Advanced {
 using namespace Cmct;
 using namespace Cmct::Gemm;
 
-template<uint64_t OpType, class OutType>
+template <uint64_t OpType, class OutType>
 struct FusionOpSelector;
 
-template<class OutType>
+template <class OutType>
 struct FusionOpSelector<OP_TYPE_MUL, OutType> {
     using type = Block::FusionMul<OutType, OutType>;
 };
 
-template<class OutType>
+template <class OutType>
 struct FusionOpSelector<OP_TYPE_ADD, OutType> {
     using type = Block::FusionAdd<OutType, OutType>;
 };
 
-template<class OutType>
+template <class OutType>
 struct FusionOpSelector<0, OutType> {
     using type = Block::DefaultFusion<OutType, OutType>;
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT,
-          class B_LAYOUT, class C_LAYOUT, uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
-__aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
-    GM_ADDR yGM, GM_ADDR x3GM, const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
+          uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
+__aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR x3GM,
+                                                    const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -65,9 +65,8 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
 
     // 定义MMAD类型
     using DispatchPolicy = MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE, FUSED_OP_TYPE>;
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
-        DispatchPolicy>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     // 定义Fusion类型
     using FusionOp = typename FusionOpSelector<FUSED_OP_TYPE, OutType>::type;
@@ -81,13 +80,12 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
     // 定义Kernel类型
     using MatmulKernel = Kernel::KernelMatmulMixWithoutQue<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-        {aGM, bGM, yGM, biasGM},                           // gm addr
-        {yGM, {x3GM}},                                     // epilogue and fusion args
-        {&tilingData}};
+    Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
+                     {aGM, bGM, yGM, biasGM},                           // gm addr
+                     {yGM, {x3GM}},                                     // epilogue and fusion args
+                     {&tilingData}};
 
     MatmulKernel mm;
     mm(params);
 }
-}
+} // namespace MatmulV3Advanced

@@ -18,7 +18,6 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 
-
 namespace SwiGluGrad {
 using namespace AscendC;
 
@@ -29,16 +28,13 @@ const uint32_t SPLIT_HALF = 2;
 static constexpr uint32_t ONE_BLK_SIZE = platform::GetUbBlockSize();
 constexpr uint32_t ONE_VL_SIZE = platform::GetVRegSize();
 
-__aicore__ inline uint32_t RoundDownToVL(uint32_t x)
-{
-    return x / ONE_VL_SIZE * ONE_VL_SIZE;
-}
+__aicore__ inline uint32_t RoundDownToVL(uint32_t x) { return x / ONE_VL_SIZE * ONE_VL_SIZE; }
 
-static constexpr MicroAPI::CastTrait castTraitB162B32 = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-    MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN };
+static constexpr MicroAPI::CastTrait castTraitB162B32 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
-static constexpr MicroAPI::CastTrait castTraitB322B16 = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-    MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT };
+static constexpr MicroAPI::CastTrait castTraitB322B16 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
+                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
 class SwiGluGradBaseKernel {
@@ -47,32 +43,34 @@ public:
     __aicore__ inline bool InitBase(const GluBaseTilingData& tilingData);
 
 protected:
-    __aicore__ inline void LoadOneTensor(const __local_mem__ void *input, MicroAPI::RegTensor<float> &dst, MicroAPI::MaskReg &preg, uint32_t offset);
-    __aicore__ inline void StoreOneTensor(const __local_mem__ void *output, MicroAPI::RegTensor<float> &src, MicroAPI::MaskReg &preg, uint32_t offset);
-    __aicore__ inline void Compute(LocalTensor<T> &xATensor, LocalTensor<T> &xBTensor, LocalTensor<T> &gradTensor,
-                                            LocalTensor<T> &outATensor, LocalTensor<T> &outBTensor, int64_t dataCount);
+    __aicore__ inline void LoadOneTensor(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+                                         MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void StoreOneTensor(const __local_mem__ void* output, MicroAPI::RegTensor<float>& src,
+                                          MicroAPI::MaskReg& preg, uint32_t offset);
+    __aicore__ inline void Compute(LocalTensor<T>& xATensor, LocalTensor<T>& xBTensor, LocalTensor<T>& gradTensor,
+                                   LocalTensor<T>& outATensor, LocalTensor<T>& outBTensor, int64_t dataCount);
 
 protected:
     // tiling Data
-    int64_t rowTotalA_ {0}; // A部分的总行宽
-    int64_t colTotalA_ {0}; // A部分的总列宽
-    int64_t colTotal_ {0};  // A + B总列宽
-    int64_t rowBase_ {0};   // 正常核处理行大小
-    int64_t colBase_ {0};
-    int64_t rowTail_ {0};   // 尾核处理行大小
-    int64_t colTail_ {0};
-    uint64_t ubSize_ {0};
-    uint32_t rowTileNum_ {0};   // A部分行方向切分后个数
-    uint32_t colTileNum_ {0};   // A部分列方向切分后个数
-    uint32_t usedCoreNum_ {0};
+    int64_t rowTotalA_{0}; // A部分的总行宽
+    int64_t colTotalA_{0}; // A部分的总列宽
+    int64_t colTotal_{0};  // A + B总列宽
+    int64_t rowBase_{0};   // 正常核处理行大小
+    int64_t colBase_{0};
+    int64_t rowTail_{0}; // 尾核处理行大小
+    int64_t colTail_{0};
+    uint64_t ubSize_{0};
+    uint32_t rowTileNum_{0}; // A部分行方向切分后个数
+    uint32_t colTileNum_{0}; // A部分列方向切分后个数
+    uint32_t usedCoreNum_{0};
 
     // vars
-    int64_t rowProcess_ {0};
-    int64_t colProcess_ {0};
-    int64_t partAStart_ {0};
-    int64_t partBStart_ {0};
-    int64_t gradStart_ {0};
-    int32_t blockIdx_ {0};
+    int64_t rowProcess_{0};
+    int64_t colProcess_{0};
+    int64_t partAStart_{0};
+    int64_t partBStart_{0};
+    int64_t gradStart_{0};
+    int32_t blockIdx_{0};
 
     float beta_ = -1.0;
     static constexpr uint16_t vfFp32Block_ = platform::GetVRegSize() / sizeof(float);
@@ -116,49 +114,52 @@ __aicore__ inline bool SwiGluGradBaseKernel<T>::InitBase(const GluBaseTilingData
 }
 
 template <typename T>
-__aicore__ inline void SwiGluGradBaseKernel<T>::LoadOneTensor(const __local_mem__ void *input, MicroAPI::RegTensor<float> &dst,
-    MicroAPI::MaskReg &preg, uint32_t offset)
+__aicore__ inline void SwiGluGradBaseKernel<T>::LoadOneTensor(const __local_mem__ void* input,
+                                                              MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg,
+                                                              uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
-        DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half *)(input) + offset);
+        DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t *)(input) + offset);
+        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t*)(input) + offset);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
-        DataCopy(dst, (__local_mem__ float *)(input) + offset);
+        DataCopy(dst, (__local_mem__ float*)(input) + offset);
     }
 }
 
 template <typename T>
-__aicore__ inline void SwiGluGradBaseKernel<T>::StoreOneTensor(const __local_mem__ void *output, MicroAPI::RegTensor<float> &src,
-    MicroAPI::MaskReg &preg, uint32_t offset)
+__aicore__ inline void SwiGluGradBaseKernel<T>::StoreOneTensor(const __local_mem__ void* output,
+                                                               MicroAPI::RegTensor<float>& src, MicroAPI::MaskReg& preg,
+                                                               uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        DataCopy<half, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ half *)(output) + offset, xFp16, preg);
+        DataCopy<half, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ half*)(output) + offset, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ bfloat16_t *)(output) + offset, xBf16,
-            preg);
+        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ bfloat16_t*)(output) + offset, xBf16,
+                                                                 preg);
     } else {
-        DataCopy((__local_mem__ float *)(output) + offset, src, preg);
+        DataCopy((__local_mem__ float*)(output) + offset, src, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void SwiGluGradBaseKernel<T>::Compute(LocalTensor<T> &xATensor, LocalTensor<T> &xBTensor, LocalTensor<T> &gradTensor,
-                                        LocalTensor<T> &outATensor, LocalTensor<T> &outBTensor, int64_t dataCount)
+__aicore__ inline void SwiGluGradBaseKernel<T>::Compute(LocalTensor<T>& xATensor, LocalTensor<T>& xBTensor,
+                                                        LocalTensor<T>& gradTensor, LocalTensor<T>& outATensor,
+                                                        LocalTensor<T>& outBTensor, int64_t dataCount)
 {
-    __local_mem__ T *ubSrcAddrA = (__local_mem__ T *)xATensor.GetPhyAddr();
-    __local_mem__ T *ubSrcAddrB = (__local_mem__ T *)xBTensor.GetPhyAddr();
-    __local_mem__ T *ubGradAddr = (__local_mem__ T *)gradTensor.GetPhyAddr();
-    __local_mem__ T *ubDstAddrA = (__local_mem__ T *)outATensor.GetPhyAddr();
-    __local_mem__ T *ubDstAddrB = (__local_mem__ T *)outBTensor.GetPhyAddr();
+    __local_mem__ T* ubSrcAddrA = (__local_mem__ T*)xATensor.GetPhyAddr();
+    __local_mem__ T* ubSrcAddrB = (__local_mem__ T*)xBTensor.GetPhyAddr();
+    __local_mem__ T* ubGradAddr = (__local_mem__ T*)gradTensor.GetPhyAddr();
+    __local_mem__ T* ubDstAddrA = (__local_mem__ T*)outATensor.GetPhyAddr();
+    __local_mem__ T* ubDstAddrB = (__local_mem__ T*)outBTensor.GetPhyAddr();
 
     uint16_t repeatTimes = (dataCount + vfFp32Block_ - 1) / vfFp32Block_;
 
@@ -192,15 +193,15 @@ __aicore__ inline void SwiGluGradBaseKernel<T>::Compute(LocalTensor<T> &xATensor
             // outA part
             Muls(dstA, dstB, beta, preg);   // -sigmoid
             Adds(dstA, dstA, -beta, preg);  // 1 - sigmoid
-            Mul(dstA, dstA, srcA, preg); // (1 - sigmoid) * A
-            Adds(dstA, dstA, -beta, preg); // 1 + (1 - sigmoid) * A
+            Mul(dstA, dstA, srcA, preg);    // (1 - sigmoid) * A
+            Adds(dstA, dstA, -beta, preg);  // 1 + (1 - sigmoid) * A
             Mul(tempReg, grad, dstB, preg); // grad * sigmoid
             Mul(dstA, dstA, tempReg, preg); // grad * sigmoid * (1 + (1 - sigmoid) * A)
-            Mul(dstA, dstA, srcB, preg); // grad * sigmoid * (1 + (1 - sigmoid) * A) * B
+            Mul(dstA, dstA, srcB, preg);    // grad * sigmoid * (1 + (1 - sigmoid) * A) * B
 
             // outB part
             Mul(dstB, dstB, grad, preg); // grad * sigmoid
-            Mul(dstB, dstB, srcA, preg);   // grad * sigmoid * A
+            Mul(dstB, dstB, srcA, preg); // grad * sigmoid * A
 
             StoreOneTensor(ubDstAddrA, dstA, preg, offset);
             StoreOneTensor(ubDstAddrB, dstB, preg, offset);
@@ -208,6 +209,6 @@ __aicore__ inline void SwiGluGradBaseKernel<T>::Compute(LocalTensor<T> &xATensor
     }
 }
 
-}
+} // namespace SwiGluGrad
 
 #endif

@@ -66,8 +66,7 @@ __aicore__ inline T CeilAlign(T x, T y)
 template <typename TX, typename TGrad, typename TArgmax, typename TY, bool isOverlap>
 class MaxPool3DGradWithArgmaxCutKBase {
 public:
-    __aicore__ inline MaxPool3DGradWithArgmaxCutKBase()
-    {}
+    __aicore__ inline MaxPool3DGradWithArgmaxCutKBase() {}
 
     __aicore__ inline void InitParams(const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
     {
@@ -154,8 +153,8 @@ public:
         pipe->InitBuffer(indexColBuf, params_.baseNc * singleBlock * sizeof(TArgmax));
     }
 
-    __aicore__ inline void GenKernelIndicesWithTranspose(
-        const LocalTensor<TArgmax>& dstLocal, const GenIndicesParams& genParams)
+    __aicore__ inline void GenKernelIndicesWithTranspose(const LocalTensor<TArgmax>& dstLocal,
+                                                         const GenIndicesParams& genParams)
     {
         const uint64_t dCount = genParams.dCount;
         const uint64_t colCount = genParams.colCount;
@@ -195,9 +194,8 @@ public:
         }
         PipeBarrier<PIPE_V>();
         if (j != rowCount) {
-            Adds(
-                dstLocal[j * colCount * vlValue], dstLocal[0], increaseHValue * jvIndex,
-                (rowCount - j) * vlValue * colCount);
+            Adds(dstLocal[j * colCount * vlValue], dstLocal[0], increaseHValue * jvIndex,
+                 (rowCount - j) * vlValue * colCount);
             PipeBarrier<PIPE_V>();
         }
         PipeBarrier<PIPE_V>();
@@ -206,17 +204,15 @@ public:
         int32_t k = 1;
         int32_t kvIndex = 1;
         for (; k * BINARY_MUL <= dCount; k = k * BINARY_MUL) {
-            Adds(
-                dstLocal[k * rowCount * colCount * vlValue], dstLocal[0], increaseDValue * kvIndex,
-                k * vlValue * colCount * rowCount);
+            Adds(dstLocal[k * rowCount * colCount * vlValue], dstLocal[0], increaseDValue * kvIndex,
+                 k * vlValue * colCount * rowCount);
             kvIndex *= BINARY_MUL;
             PipeBarrier<PIPE_V>();
         }
         PipeBarrier<PIPE_V>();
         if (k != dCount) {
-            Adds(
-                dstLocal[k * rowCount * colCount * vlValue], dstLocal[0], increaseDValue * kvIndex,
-                (dCount - k) * vlValue * colCount * rowCount);
+            Adds(dstLocal[k * rowCount * colCount * vlValue], dstLocal[0], increaseDValue * kvIndex,
+                 (dCount - k) * vlValue * colCount * rowCount);
         }
         PipeBarrier<PIPE_V>();
     }
@@ -228,8 +224,8 @@ public:
         DataCopyExtParams copyParamsArgmax;
         copyParamsArgmax.blockCount = block_.ncShape;
         copyParamsArgmax.blockLen = block_.dohowoShape * sizeof(TArgmax);
-        copyParamsArgmax.srcStride =
-            (params_.doDim * params_.hoDim * params_.woDim - block_.dohowoShape) * sizeof(TArgmax);
+        copyParamsArgmax.srcStride = (params_.doDim * params_.hoDim * params_.woDim - block_.dohowoShape) *
+                                     sizeof(TArgmax);
         copyParamsArgmax.dstStride = 0;
         DataCopyPadExtParams<TArgmax> padArgmax{false, 0, 0, 0};
         DataCopyPad(argmaxUb, argmaxGm[block_.offsetArgmax], copyParamsArgmax, padArgmax);
@@ -284,21 +280,21 @@ public:
         block_.hiShape = (block_.hoShape - 1) * params_.sh + params_.kh;
         block_.wiShape = (block_.woShape - 1) * params_.sw + params_.kw;
         block_.dohowoShape = block_.doShape * block_.hoShape * block_.woShape;
-        block_.dohowoAlign8 =
-            (block_.doShape * block_.hoShape * block_.woShape + BLOCK_NUM_32 - 1) / BLOCK_NUM_32 * BLOCK_NUM_32;
-        block_.dohowoAlign16 =
-            (block_.doShape * block_.hoShape * block_.woShape + BLOCK_NUM_16 - 1) / BLOCK_NUM_16 * BLOCK_NUM_16;
+        block_.dohowoAlign8 = (block_.doShape * block_.hoShape * block_.woShape + BLOCK_NUM_32 - 1) / BLOCK_NUM_32 *
+                              BLOCK_NUM_32;
+        block_.dohowoAlign16 = (block_.doShape * block_.hoShape * block_.woShape + BLOCK_NUM_16 - 1) / BLOCK_NUM_16 *
+                               BLOCK_NUM_16;
         block_.offsetGrad = block_.ncCntIndex * params_.baseNc * params_.doDim * params_.hoDim * params_.woDim +
                             block_.doCntIndex * params_.baseDo * params_.hoDim * params_.woDim +
                             block_.hoCntIndex * params_.baseHo * params_.woDim + block_.woCntIndex * params_.baseWo;
         block_.offsetArgmax = block_.ncCntIndex * params_.baseNc * params_.doDim * params_.hoDim * params_.woDim +
                               block_.doCntIndex * params_.baseDo * params_.hoDim * params_.woDim +
                               block_.hoCntIndex * params_.baseHo * params_.woDim + block_.woCntIndex * params_.baseWo;
-        block_.offsetY =
-            block_.ncCntIndex * params_.doDim * params_.hiDim * params_.wiDim +
-            ((block_.doCntIndex * params_.baseDo) * params_.sd - params_.padDTop) * params_.hiDim * params_.wiDim +
-            ((block_.hoCntIndex * params_.baseHo) * params_.sh - params_.padHTop) * params_.wiDim +
-            (block_.woCntIndex * params_.baseWo) * params_.sw - params_.padWTop;
+        block_.offsetY = block_.ncCntIndex * params_.doDim * params_.hiDim * params_.wiDim +
+                         ((block_.doCntIndex * params_.baseDo) * params_.sd - params_.padDTop) * params_.hiDim *
+                             params_.wiDim +
+                         ((block_.hoCntIndex * params_.baseHo) * params_.sh - params_.padHTop) * params_.wiDim +
+                         (block_.woCntIndex * params_.baseWo) * params_.sw - params_.padWTop;
         baseDataNum = params_.baseNc * block_.doShape * block_.hoShape * block_.woShape;
     }
 
@@ -343,26 +339,22 @@ public:
         yCastQue.FreeTensor(yCastUb);
     }
 
-    __aicore__ inline void SelectGradOut(
-        const LocalTensor<TGrad>& gradTranUb, const LocalTensor<TArgmax>& argmaxTranUb,
-        const LocalTensor<TArgmax>& indexColUb, LocalTensor<float>& tmpGradUb)
+    __aicore__ inline void SelectGradOut(const LocalTensor<TGrad>& gradTranUb, const LocalTensor<TArgmax>& argmaxTranUb,
+                                         const LocalTensor<TArgmax>& indexColUb, LocalTensor<float>& tmpGradUb)
     {
         LocalTensor<uint8_t> maskUb = maskBuf.Get<uint8_t>();
         Compare(maskUb, indexColUb, argmaxTranUb, CMPMODE::EQ, baseDataNum);
         PipeBarrier<PIPE_V>();
         if constexpr (std::is_same<TGrad, bfloat16_t>::value) {
-            Select(
-                tmpGradUb.template ReinterpretCast<half>()[baseDataNum], maskUb,
-                gradTranUb.template ReinterpretCast<half>(), static_cast<half>(ZERO), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                baseDataNum);
+            Select(tmpGradUb.template ReinterpretCast<half>()[baseDataNum], maskUb,
+                   gradTranUb.template ReinterpretCast<half>(), static_cast<half>(ZERO),
+                   SELMODE::VSEL_TENSOR_SCALAR_MODE, baseDataNum);
             PipeBarrier<PIPE_V>();
-            Cast(
-                tmpGradUb, tmpGradUb.template ReinterpretCast<bfloat16_t>()[baseDataNum], RoundMode::CAST_NONE,
-                baseDataNum);
+            Cast(tmpGradUb, tmpGradUb.template ReinterpretCast<bfloat16_t>()[baseDataNum], RoundMode::CAST_NONE,
+                 baseDataNum);
         } else if constexpr (std::is_same<TGrad, half>::value) {
-            Select(
-                tmpGradUb.template ReinterpretCast<half>()[baseDataNum], maskUb, gradTranUb, static_cast<half>(ZERO),
-                SELMODE::VSEL_TENSOR_SCALAR_MODE, baseDataNum);
+            Select(tmpGradUb.template ReinterpretCast<half>()[baseDataNum], maskUb, gradTranUb, static_cast<half>(ZERO),
+                   SELMODE::VSEL_TENSOR_SCALAR_MODE, baseDataNum);
             PipeBarrier<PIPE_V>();
             Cast(tmpGradUb, tmpGradUb.ReinterpretCast<half>()[baseDataNum], RoundMode::CAST_NONE, baseDataNum);
         } else if constexpr (std::is_same<TGrad, float>::value) {
@@ -374,8 +366,8 @@ public:
     __aicore__ inline void CalcDepadParamsD(uint64_t kdIdx)
     {
         uint64_t dpStartOffset = block_.doCntIndex * params_.baseDo * params_.sd + kdIdx;
-        uint64_t dpEndOffset =
-            block_.doCntIndex * params_.baseDo * params_.sd + (block_.doShape - 1) * params_.sd + kdIdx;
+        uint64_t dpEndOffset = block_.doCntIndex * params_.baseDo * params_.sd + (block_.doShape - 1) * params_.sd +
+                               kdIdx;
         if (dpStartOffset >= params_.padDTop && dpEndOffset < (params_.diDim + params_.padDTop)) {
             // All data in dp is valid
             depad_.padDStartOffset = 0;
@@ -398,19 +390,20 @@ public:
                                        (params_.padDTop + params_.diDim - 1 - dpStartOffset) / params_.sd :
                                        0;
         }
-        depad_.diStartOffset =
-            (depad_.padDStartOffset + block_.doCntIndex * params_.baseDo) * params_.sd + kdIdx - params_.padDTop;
+        depad_.diStartOffset = (depad_.padDStartOffset + block_.doCntIndex * params_.baseDo) * params_.sd + kdIdx -
+                               params_.padDTop;
         // Consider distinguishing whether dp is entirely in the left padding scenario
-        depad_.diValid =
-            depad_.padDEndOffset >= depad_.padDStartOffset ? depad_.padDEndOffset + 1 - depad_.padDStartOffset : 0;
+        depad_.diValid = depad_.padDEndOffset >= depad_.padDStartOffset ?
+                             depad_.padDEndOffset + 1 - depad_.padDStartOffset :
+                             0;
         depad_.diValid = depad_.diStartOffset > (params_.diDim - 1) ? 0 : depad_.diValid;
     }
 
     __aicore__ inline void CalcDepadParamsH(uint64_t khIdx)
     {
         uint64_t hpStartOffset = block_.hoCntIndex * params_.baseHo * params_.sh + khIdx;
-        uint64_t hpEndOffset =
-            block_.hoCntIndex * params_.baseHo * params_.sh + (block_.hoShape - 1) * params_.sh + khIdx;
+        uint64_t hpEndOffset = block_.hoCntIndex * params_.baseHo * params_.sh + (block_.hoShape - 1) * params_.sh +
+                               khIdx;
         if (hpStartOffset >= params_.padHTop && hpEndOffset < (params_.hiDim + params_.padHTop)) {
             depad_.padHStartOffset = 0;
             depad_.padHEndOffset = block_.hoShape - 1;
@@ -428,18 +421,19 @@ public:
                                        (params_.padHTop + params_.hiDim - 1 - hpStartOffset) / params_.sh :
                                        0;
         }
-        depad_.hiStartOffset =
-            (depad_.padHStartOffset + block_.hoCntIndex * params_.baseHo) * params_.sh + khIdx - params_.padHTop;
-        depad_.hiValid =
-            depad_.padHEndOffset >= depad_.padHStartOffset ? depad_.padHEndOffset + 1 - depad_.padHStartOffset : 0;
+        depad_.hiStartOffset = (depad_.padHStartOffset + block_.hoCntIndex * params_.baseHo) * params_.sh + khIdx -
+                               params_.padHTop;
+        depad_.hiValid = depad_.padHEndOffset >= depad_.padHStartOffset ?
+                             depad_.padHEndOffset + 1 - depad_.padHStartOffset :
+                             0;
         depad_.hiValid = depad_.hiStartOffset > (params_.hiDim - 1) ? 0 : depad_.hiValid;
     }
 
     __aicore__ inline void CalcDepadParamsW(uint64_t kwIdx)
     {
         uint64_t wpStartOffset = block_.woCntIndex * params_.baseWo * params_.sw + kwIdx;
-        uint64_t wpEndOffset =
-            block_.woCntIndex * params_.baseWo * params_.sw + (block_.woShape - 1) * params_.sw + kwIdx;
+        uint64_t wpEndOffset = block_.woCntIndex * params_.baseWo * params_.sw + (block_.woShape - 1) * params_.sw +
+                               kwIdx;
         if ((wpStartOffset >= params_.padWTop) && (wpEndOffset < params_.wiDim + params_.padWTop)) {
             depad_.padWStartOffset = 0;
             depad_.padWEndOffset = block_.woShape - 1;
@@ -457,22 +451,23 @@ public:
                                        (params_.padWTop + params_.wiDim - 1 - wpStartOffset) / params_.sw :
                                        0;
         }
-        depad_.wiStartOffset =
-            (depad_.padWStartOffset + block_.woCntIndex * params_.baseWo) * params_.sw + kwIdx - params_.padWTop;
-        depad_.wiValid =
-            depad_.padWEndOffset >= depad_.padWStartOffset ? depad_.padWEndOffset + 1 - depad_.padWStartOffset : 0;
+        depad_.wiStartOffset = (depad_.padWStartOffset + block_.woCntIndex * params_.baseWo) * params_.sw + kwIdx -
+                               params_.padWTop;
+        depad_.wiValid = depad_.padWEndOffset >= depad_.padWStartOffset ?
+                             depad_.padWEndOffset + 1 - depad_.padWStartOffset :
+                             0;
         depad_.wiValid = depad_.wiStartOffset > (params_.wiDim - 1) ? 0 : depad_.wiValid;
-        depad_.wiValidAlign =
-            (!isOverlap && (std::is_same<TGrad, half>::value || std::is_same<TGrad, bfloat16_t>::value)) ?
-                depad_.wiValid * BLOCK_NUM_16 :
-                depad_.wiValid * BLOCK_NUM_32;
+        depad_.wiValidAlign = (!isOverlap &&
+                               (std::is_same<TGrad, half>::value || std::is_same<TGrad, bfloat16_t>::value)) ?
+                                  depad_.wiValid * BLOCK_NUM_16 :
+                                  depad_.wiValid * BLOCK_NUM_32;
     }
 
     __aicore__ inline void CalcDepadParamsH()
     {
         uint64_t hpStartOffset = block_.hoCntIndex * params_.baseHo * params_.sh;
-        uint64_t hpEndOffset =
-            block_.hoCntIndex * params_.baseHo * params_.sh + (block_.hoShape - 1) * params_.sh + params_.kh - 1;
+        uint64_t hpEndOffset = block_.hoCntIndex * params_.baseHo * params_.sh + (block_.hoShape - 1) * params_.sh +
+                               params_.kh - 1;
         if (hpStartOffset >= params_.padHTop && hpEndOffset < (params_.hiDim + params_.padHTop)) {
             depad_.hiValid = block_.hiShape;
             depad_.hiStartOffset = block_.hoCntIndex * params_.baseHo * params_.sh - params_.padHTop;
@@ -496,8 +491,8 @@ public:
     __aicore__ inline void CalcDepadParamsW()
     {
         uint64_t wpStartOffset = block_.woCntIndex * params_.baseWo * params_.sw;
-        uint64_t wpEndOffset =
-            block_.woCntIndex * params_.baseWo * params_.sw + (block_.woShape - 1) * params_.sw + params_.kw - 1;
+        uint64_t wpEndOffset = block_.woCntIndex * params_.baseWo * params_.sw + (block_.woShape - 1) * params_.sw +
+                               params_.kw - 1;
         if ((wpStartOffset >= params_.padWTop) && (wpEndOffset < params_.wiDim + params_.padWTop)) {
             depad_.wiValid = block_.wiShape;
             depad_.wiStartOffset = block_.woCntIndex * params_.baseWo * params_.sw - params_.padWTop;
@@ -516,10 +511,10 @@ public:
             depad_.padWStartOffset = 0;
         }
         depad_.padWEndOffset = depad_.padWStartOffset + depad_.wiValid - 1;
-        depad_.wiValidAlign =
-            (!isOverlap && (std::is_same<TGrad, half>::value || std::is_same<TGrad, bfloat16_t>::value)) ?
-                CeilAlign<uint64_t>(depad_.wiValid, BLOCK_NUM_16) :
-                CeilAlign<uint64_t>(depad_.wiValid, BLOCK_NUM_32);
+        depad_.wiValidAlign = (!isOverlap &&
+                               (std::is_same<TGrad, half>::value || std::is_same<TGrad, bfloat16_t>::value)) ?
+                                  CeilAlign<uint64_t>(depad_.wiValid, BLOCK_NUM_16) :
+                                  CeilAlign<uint64_t>(depad_.wiValid, BLOCK_NUM_32);
     }
 
     __aicore__ inline void CastAndCarryOut()

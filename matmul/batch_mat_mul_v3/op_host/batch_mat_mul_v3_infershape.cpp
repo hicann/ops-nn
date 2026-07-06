@@ -22,7 +22,8 @@ static ge::graphStatus InferShapeForBatchMatMulV3(gert::InferShapeContext* conte
 }
 
 // 由于编译期InferShapeRange在InferShape之后，因此该函数无需重复InferShape的dtype校验
-static ge::graphStatus InferShapeRangeForBatchMatMulV3(gert::InferShapeRangeContext *context) {
+static ge::graphStatus InferShapeRangeForBatchMatMulV3(gert::InferShapeRangeContext* context)
+{
     return Ops::NN::InferShapeRangeForBatchMatMul(context, 0, BATCH_MATMUL_BIAS_IDX);
 }
 } // namespace

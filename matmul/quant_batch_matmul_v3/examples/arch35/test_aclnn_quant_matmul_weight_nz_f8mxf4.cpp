@@ -59,9 +59,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -78,9 +77,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -105,9 +103,9 @@ float Bf16ToFloat(uint16_t h)
 }
 
 template <typename T>
-int CreateAclTensorWithFormat(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, int64_t** storageShape,
-    uint64_t* storageShapeSize, void** deviceAddr, aclDataType dataType, aclTensor** tensor, aclFormat format)
+int CreateAclTensorWithFormat(const std::vector<T>& hostData, const std::vector<int64_t>& shape, int64_t** storageShape,
+                              uint64_t* storageShapeSize, void** deviceAddr, aclDataType dataType, aclTensor** tensor,
+                              aclFormat format)
 {
     auto size = hostData.size() * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -123,8 +121,8 @@ int CreateAclTensorWithFormat(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, format, *storageShape, *storageShapeSize, *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, format, *storageShape,
+                              *storageShapeSize, *deviceAddr);
     return 0;
 }
 
@@ -209,16 +207,14 @@ int AclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastCalculateSizeAndFormat failed. ERROR: %d\n", ret);
               return ret);
 
-    ret = CreateAclTensorWithFormat(
-        x2NzHostData, x2Shape, &dstShape, &dstShapeSize, &x2NzDeviceAddr, srcDtype, &x2Nz,
-        static_cast<aclFormat>(actualFormat));
+    ret = CreateAclTensorWithFormat(x2NzHostData, x2Shape, &dstShape, &dstShapeSize, &x2NzDeviceAddr, srcDtype, &x2Nz,
+                                    static_cast<aclFormat>(actualFormat));
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2NzTensorPtr(x2Nz, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x2NzDeviceAddrPtr(x2NzDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
 
-    ret = CreateAclTensorWithFormat(
-        x2NzFp4HostData, x2Shape, &dstShape, &dstShapeSize, &x2NzFp4DeviceAddr, aclDataType::ACL_FLOAT4_E2M1, &x2NzFp4,
-        static_cast<aclFormat>(actualFormat));
+    ret = CreateAclTensorWithFormat(x2NzFp4HostData, x2Shape, &dstShape, &dstShapeSize, &x2NzFp4DeviceAddr,
+                                    aclDataType::ACL_FLOAT4_E2M1, &x2NzFp4, static_cast<aclFormat>(actualFormat));
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2NzFp4TensorPtr(x2NzFp4, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x2NzFp4DeviceAddrPtr(x2NzFp4DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
@@ -262,10 +258,11 @@ int AclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
     // 调用aclnnQuantMatmulWeightNz第一段接口
     workspaceSize = 0;
     executor = nullptr;
-    ret = aclnnQuantMatmulWeightNzGetWorkspaceSize(
-        x1, x2NzFp4, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, bias, transposeX1, transposeX2, groupSize,
-        out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    ret = aclnnQuantMatmulWeightNzGetWorkspaceSize(x1, x2NzFp4, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr,
+                                                   bias, transposeX1, transposeX2, groupSize, out, &workspaceSize,
+                                                   &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -284,11 +281,10 @@ int AclnnQuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
-    std::vector<uint16_t> resultData(
-        size, 0); // C语言中无法直接打印fp16的数据，需要用uint16读出来，自行通过二进制转成fp16
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    std::vector<uint16_t> resultData(size,
+                                     0); // C语言中无法直接打印fp16的数据，需要用uint16读出来，自行通过二进制转成fp16
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %.1f\n", i, Bf16ToFloat(resultData[i]));

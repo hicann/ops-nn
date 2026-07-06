@@ -26,14 +26,8 @@ using namespace std;
 
 class add_example_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_example_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_example_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_example_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_example_test TearDown\n" << endl; }
 };
 
 TEST_F(add_example_test, test_case_0)
@@ -56,7 +50,6 @@ TEST_F(add_example_test, test_case_0)
 
     AddExampleTilingData* tilingDatafromBin = reinterpret_cast<AddExampleTilingData*>(tiling);
 
-
     tilingDatafromBin->totalNum = 32 * 4 * 4 * 4;
     tilingDatafromBin->blockFactor = 8;
     tilingDatafromBin->ubFactor = 8;
@@ -67,13 +60,7 @@ TEST_F(add_example_test, test_case_0)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(AddExampleKernel,
-        numBlocks,
-        x,
-        y,
-        z,
-        workspace,
-        (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(AddExampleKernel, numBlocks, x, y, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);

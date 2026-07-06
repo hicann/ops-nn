@@ -28,13 +28,13 @@ namespace optiling {
 using namespace std;
 using namespace AdaptiveAvgPool2dOp;
 struct AdaptiveAvgPool2dBigKernelInfo {
-    int64_t blockFactor {0};
-    int64_t blockTail {0};
-    int64_t totalIdx {0};
-    int64_t coreNums {0};
-    int64_t maxCount {0};
-    int64_t kernelMinHW {0};
-    int64_t batchCount {1};
+    int64_t blockFactor{0};
+    int64_t blockTail{0};
+    int64_t totalIdx{0};
+    int64_t coreNums{0};
+    int64_t maxCount{0};
+    int64_t kernelMinHW{0};
+    int64_t batchCount{1};
 };
 
 class AdaptiveAvgPool2dBigKernelTiling : public AdaptivePool2dBaseTiling {

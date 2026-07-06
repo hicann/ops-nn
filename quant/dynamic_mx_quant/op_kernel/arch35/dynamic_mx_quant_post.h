@@ -36,13 +36,12 @@ public:
     __aicore__ inline void Init(GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void CopyIn(int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t blockLen, int64_t blockCount);
-    __aicore__ inline void CopyInPaddingZero(
-        int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t axisSize1, int64_t axisSize2, int64_t axisSize3);
+    __aicore__ inline void CopyInPaddingZero(int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t axisSize1,
+                                             int64_t axisSize2, int64_t axisSize3);
     __aicore__ inline void ComputeInterleave(uint32_t elementNum);
     __aicore__ inline void CopyOut(int64_t scaleGmOffset, int64_t blockLen, int64_t blockCount);
-    __aicore__ inline void ComputeInterleaveVF(
-        __local_mem__ uint8_t* LocalAddr1, __local_mem__ uint8_t* LocalAddr2, __local_mem__ uint8_t* ScaleAddr,
-        uint32_t elementNum);
+    __aicore__ inline void ComputeInterleaveVF(__local_mem__ uint8_t* LocalAddr1, __local_mem__ uint8_t* LocalAddr2,
+                                               __local_mem__ uint8_t* ScaleAddr, uint32_t elementNum);
 
 private:
     __aicore__ inline void TailAxisCompute();
@@ -89,8 +88,8 @@ private:
     int64_t nonTailAxisTemplate_ = 0;
 };
 
-__aicore__ inline void DynamicMxQuantPost::Init(
-    GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData)
+__aicore__ inline void DynamicMxQuantPost::Init(GM_ADDR mxScale, GM_ADDR workspace,
+                                                const DynamicMxQuantTilingData* tilingData)
 {
     SyncAll();
     blockIdx_ = GetBlockIdx();
@@ -119,17 +118,17 @@ __aicore__ inline void DynamicMxQuantPost::Init(
             // 可以放下完整的多行
             rowPerLoop_ = (rowPerLoop_ < (firstSize_ / DIGIT_TWO)) ? rowPerLoop_ : (firstSize_ / DIGIT_TWO);
             rowPerLoop_ = (rowPerLoop_ < MAX_MTE_BLOCK_COUNT) ? rowPerLoop_ : MAX_MTE_BLOCK_COUNT;
-            rowLoopBlockCount_ =
-                (firstSize_ / DIGIT_TWO + rowPerLoop_ - 1) / rowPerLoop_; // ceil(preAxisSize_ / rowPerLoop_)
+            rowLoopBlockCount_ = (firstSize_ / DIGIT_TWO + rowPerLoop_ - 1) /
+                                 rowPerLoop_; // ceil(preAxisSize_ / rowPerLoop_)
             colLoopBlockCount_ = 1;
             colLoopBlockSize_ = lastSize_; // 每次处理完整行，无需列分块
         } else {
             // 无法放下完整的一行，需要按列分块
             rowPerLoop_ = 1;                       // 每次只能处理1行的部分
             colLoopBlockSize_ = SCALE_BUFFER_SIZE; // 每次处理的列数
-            colLoopBlockCount_ =
-                (lastSize_ + colLoopBlockSize_ - 1) / colLoopBlockSize_; // ceil(lastSizeAlign_ / colLoopBlockSize_)
-            rowLoopBlockCount_ = firstSize_ / DIGIT_TWO;                 // 每行需要分多次处理
+            colLoopBlockCount_ = (lastSize_ + colLoopBlockSize_ - 1) /
+                                 colLoopBlockSize_;      // ceil(lastSizeAlign_ / colLoopBlockSize_)
+            rowLoopBlockCount_ = firstSize_ / DIGIT_TWO; // 每行需要分多次处理
         }
         if (axisSize_ % DIGIT_TWO == 0) {
             nonTailAxisTemplate_ = NON_TAIL_AXIS_NON_ZERO;
@@ -144,8 +143,8 @@ __aicore__ inline void DynamicMxQuantPost::Init(
         }
     } else {
         lastSize_ = axisSize_ * postAxisSize_;
-        lastSizeAlign_ =
-            (axisSize_ * postAxisSize_ + FP8_OUT_ELE_PER_BLK - 1) / FP8_OUT_ELE_PER_BLK * FP8_OUT_ELE_PER_BLK;
+        lastSizeAlign_ = (axisSize_ * postAxisSize_ + FP8_OUT_ELE_PER_BLK - 1) / FP8_OUT_ELE_PER_BLK *
+                         FP8_OUT_ELE_PER_BLK;
         lastPadSize_ = (axisSize_ + DIGIT_TWO - 1) / DIGIT_TWO * DIGIT_TWO * postAxisSize_;
 
         rowPerLoop_ = SCALE_BUFFER_SIZE / lastSizeAlign_;
@@ -295,8 +294,8 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisZeroLargeCompute()
                 int64_t colSize = (k == colLoopBlockCount_ - 1) ? lastSize_ - k * colLoopBlockSize_ : colLoopBlockSize_;
                 int64_t wsGmOffset1 = i * axisSize_ * lastSize_ + j * DIGIT_TWO * lastSize_ + k * colLoopBlockSize_;
                 int64_t wsGmOffset2 = wsGmOffset1 + lastSize_;
-                int64_t scaleGmOffset =
-                    i * (axisSize_ + 1) * lastSize_ + j * DIGIT_TWO * lastSize_ + DIGIT_TWO * k * colLoopBlockSize_;
+                int64_t scaleGmOffset = i * (axisSize_ + 1) * lastSize_ + j * DIGIT_TWO * lastSize_ +
+                                        DIGIT_TWO * k * colLoopBlockSize_;
                 if (j == rowLoopNum - 1) {
                     CopyInPaddingZero(wsGmOffset1, wsGmOffset2, colSize, 1, 1);
                 } else {
@@ -373,15 +372,14 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisCompute()
     }
 }
 
-__aicore__ inline void DynamicMxQuantPost::CopyIn(
-    int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t blockLen, int64_t blockCount)
+__aicore__ inline void DynamicMxQuantPost::CopyIn(int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t blockLen,
+                                                  int64_t blockCount)
 {
-    MultiCopyLoopInfo<COPY_WITH_DIM_2> loopInfo = {
-        {1, static_cast<uint32_t>(COPY_WITH_DIM_2 * blockLen)},
-        {1, static_cast<uint32_t>(blockLen)},
-        {static_cast<uint32_t>(blockLen), static_cast<uint32_t>(blockCount)},
-        {0, 0},
-        {0, 0}};
+    MultiCopyLoopInfo<COPY_WITH_DIM_2> loopInfo = {{1, static_cast<uint32_t>(COPY_WITH_DIM_2 * blockLen)},
+                                                   {1, static_cast<uint32_t>(blockLen)},
+                                                   {static_cast<uint32_t>(blockLen), static_cast<uint32_t>(blockCount)},
+                                                   {0, 0},
+                                                   {0, 0}};
     MultiCopyParams<uint8_t, COPY_WITH_DIM_2> params = {loopInfo, 0};
     static constexpr MultiCopyConfig config = {false};
     auto localBuf1 = inQueue1_.AllocTensor<uint8_t>();
@@ -392,8 +390,8 @@ __aicore__ inline void DynamicMxQuantPost::CopyIn(
     inQueue2_.EnQue(localBuf2);
 }
 
-__aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(
-    int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t axisSize1, int64_t axisSize2, int64_t axisSize3)
+__aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(int64_t wsGmOffset1, int64_t wsGmOffset2,
+                                                             int64_t axisSize1, int64_t axisSize2, int64_t axisSize3)
 {
     MultiCopyLoopInfo<COPY_WITH_DIM_3> loopInfo1 = {
         {1, static_cast<uint32_t>(DIGIT_TWO * axisSize1),
@@ -454,9 +452,9 @@ __aicore__ inline void DynamicMxQuantPost::CopyOut(int64_t scaleGmOffset, int64_
     scaleQueue.FreeTensor(scale);
 }
 
-__aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(
-    __local_mem__ uint8_t* localAddr1, __local_mem__ uint8_t* localAddr2, __local_mem__ uint8_t* scaleAddr,
-    uint32_t elementNum)
+__aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(__local_mem__ uint8_t* localAddr1,
+                                                               __local_mem__ uint8_t* localAddr2,
+                                                               __local_mem__ uint8_t* scaleAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(uint8_t);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;

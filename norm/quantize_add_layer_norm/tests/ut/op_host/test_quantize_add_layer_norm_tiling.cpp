@@ -23,31 +23,23 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class QuantizeAddLayerNormTiling : public testing::Test
-{
+class QuantizeAddLayerNormTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantizeAddLayerNormTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantizeAddLayerNormTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantizeAddLayerNormTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantizeAddLayerNormTiling TearDown" << std::endl; }
 };
 
 TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_001)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{8192, 5120}, {8192, 5120}};
-    gert::StorageShape gamma_shape = {
-        {
-            5120,
-        },
-        {
-            5120,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          5120,
+                                      },
+                                      {
+                                          5120,
+                                      }};
     gert::StorageShape out_shape = {{8192, 5120}, {8192, 5120}};
 
     string compile_info_string = R"({
@@ -66,8 +58,7 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_001)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct QuantizeAddLayerNormCompileInfo {
-    };
+    struct QuantizeAddLayerNormCompileInfo {};
     QuantizeAddLayerNormCompileInfo compile_info;
 
     std::string op_type("QuantizeAddLayerNorm");
@@ -76,19 +67,19 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -97,32 +88,30 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_001)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(7, 2)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-            .InputShapes(
-                {&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-            .OutputShapes({&out_shape, &out_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                 {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(65535)},
-                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)},
-                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape})
+                      .OutputShapes({&out_shape, &out_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(65535)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)},
+                                  {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -136,20 +125,19 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_001)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1101);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_002)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{40, 11264}, {40, 11264}};
-    gert::StorageShape gamma_shape = {
-        {
-            11264,
-        },
-        {
-            11264,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          11264,
+                                      },
+                                      {
+                                          11264,
+                                      }};
     gert::StorageShape out_shape = {{40, 11264}, {40, 11264}};
 
     string compile_info_string = R"({
@@ -168,8 +156,7 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_002)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct QuantizeAddLayerNormCompileInfo {
-    };
+    struct QuantizeAddLayerNormCompileInfo {};
     QuantizeAddLayerNormCompileInfo compile_info;
 
     std::string op_type("QuantizeAddLayerNorm");
@@ -178,19 +165,19 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_002)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -199,32 +186,30 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_002)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(7, 2)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-            .InputShapes(
-                {&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-            .OutputShapes({&out_shape, &out_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                 {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-65535)},
-                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)},
-                 {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(7, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape})
+                      .OutputShapes({&out_shape, &out_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-65535)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-5)},
+                                  {"additional_output", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -238,5 +223,5 @@ TEST_F(QuantizeAddLayerNormTiling, quantize_add_layer_norm_tiling_002)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1102);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }

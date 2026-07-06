@@ -41,13 +41,9 @@ struct OffsetParams {
 template <typename TX, typename TGrad, typename TArgmax, typename TY, bool IsOverlap>
 class MaxPool3DGradWithArgmaxNormal {
 public:
-    __aicore__ inline MaxPool3DGradWithArgmaxNormal(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
-        const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
+    __aicore__ inline MaxPool3DGradWithArgmaxNormal(TPipe* pipe) { pipe_ = pipe; }
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
+                                const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
     {
         // load tiling data
         InitParams(tiling);
@@ -176,41 +172,41 @@ public:
 
         for (uint64_t r = 0; r < para_.baseNc / TRANS_ADDR_LEN; r++) {
             for (uint64_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                argmaxAddrList_[r][i] =
-                    (uint64_t)(argmaxUb[r * TRANS_ADDR_LEN * para_.baseDoHoWoAlign8 + i * para_.baseDoHoWoAlign8]
-                                   .GetPhyAddr());
-                argmaxTranAddrList_[r][i] =
-                    (uint64_t)(argmaxTranUb[r * TRANS_ADDR_LEN + i / NUM_TWO * para_.baseNc + i % NUM_TWO *
-                                            BLOCK_NUM_32].GetPhyAddr());
+                argmaxAddrList_[r][i] = (uint64_t)(argmaxUb[r * TRANS_ADDR_LEN * para_.baseDoHoWoAlign8 +
+                                                            i * para_.baseDoHoWoAlign8]
+                                                       .GetPhyAddr());
+                argmaxTranAddrList_[r][i] = (uint64_t)(argmaxTranUb[r * TRANS_ADDR_LEN + i / NUM_TWO * para_.baseNc +
+                                                                    i % NUM_TWO * BLOCK_NUM_32]
+                                                           .GetPhyAddr());
 
                 if constexpr (is_same<TGrad, float>::value) {
-                    gradAddrList_[r][i] =
-                        (uint64_t)(gradUb[r * TRANS_ADDR_LEN * para_.baseDoHoWoAlign8 + i * para_.baseDoHoWoAlign8]
-                                       .GetPhyAddr());
-                    gradTranAddrList_[r][i] =
-                        (uint64_t)(gradTranUb[r * TRANS_ADDR_LEN + i / NUM_TWO * para_.baseNc + i % NUM_TWO *
-                                              BLOCK_NUM_32].GetPhyAddr());
+                    gradAddrList_[r][i] = (uint64_t)(gradUb[r * TRANS_ADDR_LEN * para_.baseDoHoWoAlign8 +
+                                                            i * para_.baseDoHoWoAlign8]
+                                                         .GetPhyAddr());
+                    gradTranAddrList_[r][i] = (uint64_t)(gradTranUb[r * TRANS_ADDR_LEN + i / NUM_TWO * para_.baseNc +
+                                                                    i % NUM_TWO * BLOCK_NUM_32]
+                                                             .GetPhyAddr());
                 } else {
-                    gradAddrList_[r][i] =
-                        (uint64_t)(gradUb[r * TRANS_ADDR_LEN * para_.baseDoHoWoAlign16 + i * para_.baseDoHoWoAlign16]
-                                       .GetPhyAddr());
-                    gradTranAddrList_[r][i] =
-                        (uint64_t)(gradTranUb[r * TRANS_ADDR_LEN + i * para_.baseNc].GetPhyAddr());
+                    gradAddrList_[r][i] = (uint64_t)(gradUb[r * TRANS_ADDR_LEN * para_.baseDoHoWoAlign16 +
+                                                            i * para_.baseDoHoWoAlign16]
+                                                         .GetPhyAddr());
+                    gradTranAddrList_[r][i] = (uint64_t)(gradTranUb[r * TRANS_ADDR_LEN + i * para_.baseNc]
+                                                             .GetPhyAddr());
                 }
                 // copy out
                 if constexpr (is_same<TY, float>::value || IsOverlap) {
-                    yTranAddrList_[r][i] = (uint64_t)(yTranUbFp32
-                                                          [r * TRANS_ADDR_LEN + i % BLOCK_NUM_32 * para_.baseNc +
-                                                           i / BLOCK_NUM_32 * BLOCK_NUM_32].GetPhyAddr());
-                    yAddrList_[r][i] = (uint64_t)(yUbFp32
-                                                      [r * TRANS_ADDR_LEN * para_.baseDiHiWiAlign +
-                                                       (i % NUM_TWO * BLOCK_NUM_32 + i / NUM_TWO) *
-                                                       para_.baseDiHiWiAlign].GetPhyAddr());
+                    yTranAddrList_[r][i] = (uint64_t)(yTranUbFp32[r * TRANS_ADDR_LEN + i % BLOCK_NUM_32 * para_.baseNc +
+                                                                  i / BLOCK_NUM_32 * BLOCK_NUM_32]
+                                                          .GetPhyAddr());
+                    yAddrList_[r][i] = (uint64_t)(yUbFp32[r * TRANS_ADDR_LEN * para_.baseDiHiWiAlign +
+                                                          (i % NUM_TWO * BLOCK_NUM_32 + i / NUM_TWO) *
+                                                              para_.baseDiHiWiAlign]
+                                                      .GetPhyAddr());
                 } else {
                     yTranAddrList_[r][i] = (uint64_t)(yTranUb[r * TRANS_ADDR_LEN + i * para_.baseNc].GetPhyAddr());
-                    yAddrList_[r][i] =
-                        (uint64_t)(yUb[r * TRANS_ADDR_LEN * para_.baseDiHiWiAlign + i * para_.baseDiHiWiAlign]
-                                       .GetPhyAddr());
+                    yAddrList_[r][i] = (uint64_t)(yUb[r * TRANS_ADDR_LEN * para_.baseDiHiWiAlign +
+                                                      i * para_.baseDiHiWiAlign]
+                                                      .GetPhyAddr());
                 }
             }
         }
@@ -329,10 +325,10 @@ public:
                 block_.padHTop = (core_.offsetYH + block_.offsetYH > para_.padHTop) ?
                                      0 :
                                      para_.padHTop - core_.offsetYH - block_.offsetYH;
-                block_.padHBottom =
-                    (core_.offsetYH + block_.offsetYH + block_.hiShape > para_.padHTop + para_.hiDim) ?
-                        core_.offsetYH + block_.offsetYH + block_.hiShape - para_.padHTop - para_.hiDim :
-                        0;
+                block_.padHBottom = (core_.offsetYH + block_.offsetYH + block_.hiShape > para_.padHTop + para_.hiDim) ?
+                                        core_.offsetYH + block_.offsetYH + block_.hiShape - para_.padHTop -
+                                            para_.hiDim :
+                                        0;
                 block_.hiValid = block_.hiShape - block_.padHTop - block_.padHBottom;
                 for (uint64_t woCntIndex = 0; woCntIndex < incoreWCnt; woCntIndex++) {
                     block_.woCntIndex = woCntIndex;
@@ -342,10 +338,11 @@ public:
                     block_.padWTop = (core_.offsetYW + block_.offsetYW > para_.padWTop) ?
                                          0 :
                                          para_.padWTop - core_.offsetYW - block_.offsetYW;
-                    block_.padWBottom =
-                        (core_.offsetYW + block_.offsetYW + block_.wiShape > para_.padWTop + para_.wiDim) ?
-                            core_.offsetYW + block_.offsetYW + block_.wiShape - para_.padWTop - para_.wiDim :
-                            0;
+                    block_.padWBottom = (core_.offsetYW + block_.offsetYW + block_.wiShape >
+                                         para_.padWTop + para_.wiDim) ?
+                                            core_.offsetYW + block_.offsetYW + block_.wiShape - para_.padWTop -
+                                                para_.wiDim :
+                                            0;
                     block_.wiValid = block_.wiShape - block_.padWTop - block_.padWBottom;
 
                     block_.dohowoShape = block_.doShape * block_.hoShape * block_.woShape;
@@ -354,8 +351,8 @@ public:
                                           block_.hoCntIndex * para_.baseHo * para_.woDim +
                                           block_.woCntIndex * para_.baseWo; // 和offsetGrad是一致的
                     block_.offsetGrad = block_.offsetArgmax;
-                    block_.offsetY =
-                        block_.offsetYD * para_.hiDim * para_.wiDim + block_.offsetYH * para_.wiDim + block_.offsetYW;
+                    block_.offsetY = block_.offsetYD * para_.hiDim * para_.wiDim + block_.offsetYH * para_.wiDim +
+                                     block_.offsetYW;
                     CalcBlock();
                 }
             }
@@ -406,18 +403,16 @@ public:
                                         khId * para_.baseWi * para_.baseNc + kwId * para_.baseNc;
                     Img2ColPart(tmpIndexUb, xIndexUb[offsetIn]);
                     PipeBarrier<PIPE_V>();
-                    Compare(
-                        maskUb, tmpIndexUb, argmaxTranUb, CMPMODE::EQ,
-                        AlignUp(block_.dohowoShape * para_.baseNc, B32_VECTOR_MASK));
+                    Compare(maskUb, tmpIndexUb, argmaxTranUb, CMPMODE::EQ,
+                            AlignUp(block_.dohowoShape * para_.baseNc, B32_VECTOR_MASK));
                     PipeBarrier<PIPE_V>();
                     if constexpr (is_same<TGrad, float>::value) {
                         SelectGrad(tmpGradUb, maskUb, gradTranUb);
                     } else {
                         SelectGrad(tmpGradUb[block_.dohowoShape * para_.baseNc], maskUb, gradTranUb);
                         PipeBarrier<PIPE_V>();
-                        Cast(
-                            tmpGradUbFp32, tmpGradUb[block_.dohowoShape * para_.baseNc], RoundMode::CAST_NONE,
-                            block_.dohowoShape * para_.baseNc);
+                        Cast(tmpGradUbFp32, tmpGradUb[block_.dohowoShape * para_.baseNc], RoundMode::CAST_NONE,
+                             block_.dohowoShape * para_.baseNc);
                     }
                     PipeBarrier<PIPE_V>();
                     // ((doShape * hoShape * woShape), 64) -> (diShape * hiShape * Align(wiShape), 64)
@@ -436,9 +431,8 @@ public:
         PipeBarrier<PIPE_V>();
         if constexpr (!IsOverlap) {
             if constexpr (is_same<TY, half>::value) {
-                Cast(
-                    yTranUb, yTranUbFp32, RoundMode::CAST_NONE,
-                    para_.baseDiHiWiAlign * para_.baseNc); // 也可以只cast valid
+                Cast(yTranUb, yTranUbFp32, RoundMode::CAST_NONE,
+                     para_.baseDiHiWiAlign * para_.baseNc); // 也可以只cast valid
             } else if constexpr (is_same<TY, bfloat16_t>::value) {
                 Cast(yTranUb, yTranUbFp32, RoundMode::CAST_RINT, para_.baseDiHiWiAlign * para_.baseNc);
             }
@@ -486,30 +480,26 @@ public:
         // 3. Gen hiShape * wiShape * vL
         uint64_t hIdx = 1;
         for (; hIdx * DOUBLING_FACTOR <= para_.baseHi; hIdx = hIdx * DOUBLING_FACTOR) {
-            Adds(
-                dstLocal[hIdx * para_.baseWi * para_.baseNc], dstLocal, (int32_t)(hIdx * para_.wiDim),
-                hIdx * para_.baseWi * para_.baseNc); // offset hIdx * para_.baseWi * para_.baseNc
+            Adds(dstLocal[hIdx * para_.baseWi * para_.baseNc], dstLocal, (int32_t)(hIdx * para_.wiDim),
+                 hIdx * para_.baseWi * para_.baseNc); // offset hIdx * para_.baseWi * para_.baseNc
             PipeBarrier<PIPE_V>();
         }
         if (hIdx != para_.baseHi) {
-            Adds(
-                dstLocal[hIdx * para_.baseWi * para_.baseNc], dstLocal, (int32_t)(hIdx * para_.wiDim),
-                (para_.baseHi - hIdx) * para_.baseWi * para_.baseNc);
+            Adds(dstLocal[hIdx * para_.baseWi * para_.baseNc], dstLocal, (int32_t)(hIdx * para_.wiDim),
+                 (para_.baseHi - hIdx) * para_.baseWi * para_.baseNc);
             PipeBarrier<PIPE_V>();
         }
         // 4. Gen diShape * hiShape * wiShape * vL
         uint64_t dIdx = 1;
         for (; dIdx * DOUBLING_FACTOR <= para_.baseDi; dIdx = dIdx * DOUBLING_FACTOR) {
-            Adds(
-                dstLocal[dIdx * para_.baseHi * para_.baseWi * para_.baseNc], dstLocal,
-                (int32_t)(dIdx * para_.hiDim * para_.wiDim), dIdx * para_.baseHi * para_.baseWi * para_.baseNc);
+            Adds(dstLocal[dIdx * para_.baseHi * para_.baseWi * para_.baseNc], dstLocal,
+                 (int32_t)(dIdx * para_.hiDim * para_.wiDim), dIdx * para_.baseHi * para_.baseWi * para_.baseNc);
             PipeBarrier<PIPE_V>();
         }
         if (dIdx != para_.baseDi) {
-            Adds(
-                dstLocal[dIdx * para_.baseHi * para_.baseWi * para_.baseNc], dstLocal,
-                (int32_t)(dIdx * para_.hiDim * para_.wiDim),
-                (para_.baseDi - dIdx) * para_.baseHi * para_.baseWi * para_.baseNc);
+            Adds(dstLocal[dIdx * para_.baseHi * para_.baseWi * para_.baseNc], dstLocal,
+                 (int32_t)(dIdx * para_.hiDim * para_.wiDim),
+                 (para_.baseDi - dIdx) * para_.baseHi * para_.baseWi * para_.baseNc);
             PipeBarrier<PIPE_V>();
         }
     }
@@ -547,21 +537,19 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void Img2ColPartWAdds(
-        const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, T firstValue, uint64_t mask,
-        uint8_t baseRepStride, uint64_t loopRepeatTimes, uint64_t tailReatTimes)
+    __aicore__ inline void Img2ColPartWAdds(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal,
+                                            T firstValue, uint64_t mask, uint8_t baseRepStride,
+                                            uint64_t loopRepeatTimes, uint64_t tailReatTimes)
     {
         if (block_.woShape <= MAX_REP_NUM) {
-            Adds(
-                dstLocal, srcLocal, firstValue, mask, block_.woShape,
-                {1, 1, baseRepStride, static_cast<uint8_t>(para_.sw * baseRepStride)});
+            Adds(dstLocal, srcLocal, firstValue, mask, block_.woShape,
+                 {1, 1, baseRepStride, static_cast<uint8_t>(para_.sw * baseRepStride)});
         } else {
             for (uint64_t repeatLoopIdx = 0; repeatLoopIdx < loopRepeatTimes; repeatLoopIdx++) {
                 uint8_t curRepeatTimes = repeatLoopIdx == (loopRepeatTimes - 1) ? tailReatTimes : MAX_REP_NUM;
-                Adds(
-                    dstLocal[MAX_REP_NUM * repeatLoopIdx * baseRepStride * BLOCK_NUM_32],
-                    srcLocal[MAX_REP_NUM * repeatLoopIdx * para_.sw * baseRepStride * BLOCK_NUM_32], firstValue, mask,
-                    curRepeatTimes, {1, 1, baseRepStride, static_cast<uint8_t>(para_.sw * baseRepStride)});
+                Adds(dstLocal[MAX_REP_NUM * repeatLoopIdx * baseRepStride * BLOCK_NUM_32],
+                     srcLocal[MAX_REP_NUM * repeatLoopIdx * para_.sw * baseRepStride * BLOCK_NUM_32], firstValue, mask,
+                     curRepeatTimes, {1, 1, baseRepStride, static_cast<uint8_t>(para_.sw * baseRepStride)});
             }
         }
     }
@@ -579,13 +567,12 @@ public:
             uint8_t baseRepStride = para_.baseNc / 8;
             for (uint64_t doIdx = 0; doIdx < block_.doShape; doIdx++) {
                 for (uint64_t hoIdx = 0; hoIdx < block_.hoShape; hoIdx++) {
-                    uint64_t dstOffset =
-                        doIdx * para_.baseHo * para_.baseWo * para_.baseNc + hoIdx * para_.baseWo * para_.baseNc;
+                    uint64_t dstOffset = doIdx * para_.baseHo * para_.baseWo * para_.baseNc +
+                                         hoIdx * para_.baseWo * para_.baseNc;
                     uint64_t srcOffset = doIdx * para_.sd * para_.baseHi * para_.baseWi * para_.baseNc +
                                          hoIdx * para_.sh * para_.baseWi * para_.baseNc;
-                    Img2ColPartWAdds(
-                        dstLocal[dstOffset], srcLocal[srcOffset], firstValue, mask, baseRepStride, loopRepeatTimes,
-                        tailReatTimes);
+                    Img2ColPartWAdds(dstLocal[dstOffset], srcLocal[srcOffset], firstValue, mask, baseRepStride,
+                                     loopRepeatTimes, tailReatTimes);
                 }
             }
         } else {
@@ -605,9 +592,9 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void Col2ImgPartWAdd(
-        const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal, uint64_t mask, uint8_t baseRepStride,
-        uint64_t loopRepeatTimes, uint64_t tailReatTimes)
+    __aicore__ inline void Col2ImgPartWAdd(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal,
+                                           uint64_t mask, uint8_t baseRepStride, uint64_t loopRepeatTimes,
+                                           uint64_t tailReatTimes)
     {
         if (block_.woShape <= MAX_REP_NUM) {
             Add(dstLocal, dstLocal, srcLocal, mask, block_.woShape,
@@ -639,10 +626,10 @@ public:
                     uint64_t dstOffset = doIdx * para_.sd * para_.baseHi * para_.baseWiAlign * para_.baseNc +
                                          hoIdx * para_.sh * para_.baseWiAlign * para_.baseNc;
 
-                    uint64_t srcOffset =
-                        doIdx * para_.baseHo * para_.baseWo * para_.baseNc + hoIdx * para_.baseWo * para_.baseNc;
-                    Col2ImgPartWAdd(
-                        dstLocal[dstOffset], srcLocal[srcOffset], mask, baseRepStride, loopRepeatTimes, tailReatTimes);
+                    uint64_t srcOffset = doIdx * para_.baseHo * para_.baseWo * para_.baseNc +
+                                         hoIdx * para_.baseWo * para_.baseNc;
+                    Col2ImgPartWAdd(dstLocal[dstOffset], srcLocal[srcOffset], mask, baseRepStride, loopRepeatTimes,
+                                    tailReatTimes);
                 }
             }
         } else {
@@ -663,20 +650,18 @@ public:
         }
     }
 
-    __aicore__ inline void SelectGrad(
-        const LocalTensor<TGrad>& dstLocal, const LocalTensor<uint8_t>& maskUb, const LocalTensor<TGrad>& src0Local)
+    __aicore__ inline void SelectGrad(const LocalTensor<TGrad>& dstLocal, const LocalTensor<uint8_t>& maskUb,
+                                      const LocalTensor<TGrad>& src0Local)
     {
         // 注意BF16做reinterpret
         if constexpr (is_same<TY, bfloat16_t>::value) {
             LocalTensor<half> dstLocalFp16 = dstLocal.template ReinterpretCast<half>();
             LocalTensor<half> src0LocalFp16 = src0Local.template ReinterpretCast<half>();
-            Select(
-                dstLocalFp16, maskUb, src0LocalFp16, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                block_.dohowoShape * para_.baseNc);
+            Select(dstLocalFp16, maskUb, src0LocalFp16, static_cast<half>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                   block_.dohowoShape * para_.baseNc);
         } else {
-            Select(
-                dstLocal, maskUb, src0Local, static_cast<TGrad>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                block_.dohowoShape * para_.baseNc);
+            Select(dstLocal, maskUb, src0Local, static_cast<TGrad>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                   block_.dohowoShape * para_.baseNc);
         }
     }
 
@@ -688,11 +673,11 @@ public:
         // baseNc)中，当结果存在前pad时，需要将前pad消除
         //
         if (block_.padDTop > 0 || block_.padHTop > 0 || block_.padWTop > 0) {
-            uint64_t padOffset =
-                block_.padDTop * para_.baseHi * para_.baseWiAlign + block_.padHTop * para_.baseWiAlign + block_.padWTop;
+            uint64_t padOffset = block_.padDTop * para_.baseHi * para_.baseWiAlign +
+                                 block_.padHTop * para_.baseWiAlign + block_.padWTop;
             // 暂时拷贝pad后面的所有数据
-            Adds(
-                dstLocal, dstLocal[padOffset * para_.baseNc], 0.0f, (para_.baseDiHiWiAlign - padOffset) * para_.baseNc);
+            Adds(dstLocal, dstLocal[padOffset * para_.baseNc], 0.0f,
+                 (para_.baseDiHiWiAlign - padOffset) * para_.baseNc);
         }
     }
 
@@ -721,12 +706,11 @@ public:
 
                 copyParamsY.dstStride = (para_.diDim * para_.hiDim * para_.wiDim - block_.wiValid) * sizeof(T);
                 uint64_t srcOffset = diIdx * para_.baseHi * para_.baseWiAlign + hiIdx * para_.baseWiAlign;
-                uint64_t blockPadOffset =
-                    block_.padDTop * para_.hiDim * para_.wiDim + block_.padHTop * para_.wiDim + block_.padWTop;
+                uint64_t blockPadOffset = block_.padDTop * para_.hiDim * para_.wiDim + block_.padHTop * para_.wiDim +
+                                          block_.padWTop;
                 uint64_t dstOffset = core_.offsetY + block_.offsetY + blockPadOffset - para_.padGmOffset;
-                DataCopyPad(
-                    outGm[dstOffset + diIdx * para_.hiDim * para_.wiDim + hiIdx * para_.wiDim], yUb[srcOffset],
-                    copyParamsY);
+                DataCopyPad(outGm[dstOffset + diIdx * para_.hiDim * para_.wiDim + hiIdx * para_.wiDim], yUb[srcOffset],
+                            copyParamsY);
             }
         }
 

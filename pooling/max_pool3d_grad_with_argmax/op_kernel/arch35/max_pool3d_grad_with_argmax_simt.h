@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /* !
  * \file max_pool3d_grad_with_argmax_simt.h
  * \brief max_pool3d_grad_with_argmax implied by simt
@@ -40,29 +40,28 @@ constexpr static uint32_t MAGIC_STRIDE_W_IDX = 12;
 template <typename VALUE_T, typename INDICES_T, typename OFFSET_T, int64_t CHANNEL_LAST>
 class MaxPool3DGradWithArgmaxSimt {
 public:
-    __aicore__ inline MaxPool3DGradWithArgmaxSimt(TPipe *pipe,
-                                                  const MaxPool3DGradWithArgmaxTilingDataV35 *__restrict__ tilingData)
+    __aicore__ inline MaxPool3DGradWithArgmaxSimt(TPipe* pipe,
+                                                  const MaxPool3DGradWithArgmaxTilingDataV35* __restrict__ tilingData)
         : pipe_(pipe), tilingData_(tilingData)
-    {
-    }
+    {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y);
     __aicore__ inline void Process();
 
 private:
-    TPipe *pipe_;
+    TPipe* pipe_;
     AscendC::GlobalTensor<VALUE_T> x_;
     AscendC::GlobalTensor<VALUE_T> grad_;
     AscendC::GlobalTensor<INDICES_T> argmax_;
     AscendC::GlobalTensor<VALUE_T> y_;
-    const MaxPool3DGradWithArgmaxTilingDataV35 *tilingData_;
+    const MaxPool3DGradWithArgmaxTilingDataV35* tilingData_;
     TBuf<TPosition::VECCALC> simtTilingDataBuf_;
     TBuf<TPosition::VECCALC> paramBuf_;
 };
 
 template <typename OFFSET_T>
 __simt_callee__ __aicore__ inline static OFFSET_T PStart(int64_t size, int64_t pad, int64_t kernel, int64_t dilation,
-                                         OFFSET_T magicStride, OFFSET_T shiftStride)
+                                                         OFFSET_T magicStride, OFFSET_T shiftStride)
 {
     if (size + pad < ((kernel - 1) * dilation + 1)) {
         return 0;
@@ -76,8 +75,8 @@ __simt_callee__ __aicore__ inline static OFFSET_T PStart(int64_t size, int64_t p
 }
 
 template <typename OFFSET_T>
-__simt_callee__ __aicore__ inline static OFFSET_T PEnd(int64_t size, int64_t pad, int64_t poolSize, OFFSET_T magicStride,
-                                       OFFSET_T shiftStride)
+__simt_callee__ __aicore__ inline static OFFSET_T PEnd(int64_t size, int64_t pad, int64_t poolSize,
+                                                       OFFSET_T magicStride, OFFSET_T shiftStride)
 {
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     OFFSET_T pEnd = size + pad;
@@ -89,11 +88,9 @@ __simt_callee__ __aicore__ inline static OFFSET_T PEnd(int64_t size, int64_t pad
 template <typename VALUE_T, typename INDICES_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArgmaxNcdhw(
     __ubuf__ OFFSET_T* simtParams, const __gm__ VALUE_T* gradY, const int64_t nDims, const int64_t cDims,
-    const int64_t dDims, const int64_t hDims, const int64_t wDims,
-    const int64_t dOutDim, const int64_t hOutDim, const int64_t wOutDim,
-    const int64_t kernelD, const int64_t kernelH, const int64_t kernelW,
-    const int64_t padD, const int64_t padH, const int64_t padW,
-    const int64_t dilationD, const int64_t dilationH, const int64_t dilationW,
+    const int64_t dDims, const int64_t hDims, const int64_t wDims, const int64_t dOutDim, const int64_t hOutDim,
+    const int64_t wOutDim, const int64_t kernelD, const int64_t kernelH, const int64_t kernelW, const int64_t padD,
+    const int64_t padH, const int64_t padW, const int64_t dilationD, const int64_t dilationH, const int64_t dilationW,
     __gm__ VALUE_T* gradX, __gm__ INDICES_T* argmax)
 {
     OFFSET_T magicC = simtParams[MAGIC_C_IDX];
@@ -112,8 +109,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
     OFFSET_T shiftStrideW = simtParams[MAGIC_STRIDE_W_IDX + 1];
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = nDims * cDims * dDims * hDims * wDims;
-    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
-         index += gridDim.x * blockDim.x) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index += gridDim.x * blockDim.x) {
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
         DIV_T w = index - temp1 * static_cast<DIV_T>(wDims);
         DIV_T temp2 = Simt::UintDiv(temp1, static_cast<DIV_T>(magicH), static_cast<DIV_T>(shiftH));
@@ -150,11 +146,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
 template <typename VALUE_T, typename INDICES_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArgmaxNdhwc(
     __ubuf__ OFFSET_T* simtParam, const __gm__ VALUE_T* gradY, const int64_t nDims, const int64_t cDims,
-    const int64_t dDims, const int64_t hDims, const int64_t wDims,
-    const int64_t dOutDim, const int64_t hOutDim, const int64_t wOutDim,
-    const int64_t kernelD, const int64_t kernelH, const int64_t kernelW,
-    const int64_t padD, const int64_t padH, const int64_t padW,
-    const int64_t dilationD, const int64_t dilationH, const int64_t dilationW,
+    const int64_t dDims, const int64_t hDims, const int64_t wDims, const int64_t dOutDim, const int64_t hOutDim,
+    const int64_t wOutDim, const int64_t kernelD, const int64_t kernelH, const int64_t kernelW, const int64_t padD,
+    const int64_t padH, const int64_t padW, const int64_t dilationD, const int64_t dilationH, const int64_t dilationW,
     __gm__ VALUE_T* gradX, __gm__ INDICES_T* argmax)
 {
     OFFSET_T magicC = simtParam[MAGIC_C_IDX];
@@ -173,8 +167,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
     OFFSET_T shiftStrideW = simtParam[MAGIC_STRIDE_W_IDX + 1];
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = nDims * cDims * dDims * hDims * wDims;
-    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
-         index += gridDim.x * blockDim.x) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index += gridDim.x * blockDim.x) {
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicC), static_cast<DIV_T>(shiftC));
         DIV_T c = index - temp1 * static_cast<DIV_T>(cDims);
         DIV_T temp2 = Simt::UintDiv(temp1, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
@@ -214,10 +207,10 @@ __aicore__ inline void MaxPool3DGradWithArgmaxSimt<VALUE_T, INDICES_T, OFFSET_T,
                                                                                                      GM_ADDR argmax,
                                                                                                      GM_ADDR y)
 {
-    x_.SetGlobalBuffer((__gm__ VALUE_T *)(x));
-    grad_.SetGlobalBuffer((__gm__ VALUE_T *)(grad));
-    argmax_.SetGlobalBuffer((__gm__ INDICES_T *)(argmax));
-    y_.SetGlobalBuffer((__gm__ VALUE_T *)(y));
+    x_.SetGlobalBuffer((__gm__ VALUE_T*)(x));
+    grad_.SetGlobalBuffer((__gm__ VALUE_T*)(grad));
+    argmax_.SetGlobalBuffer((__gm__ INDICES_T*)(argmax));
+    y_.SetGlobalBuffer((__gm__ VALUE_T*)(y));
     pipe_->InitBuffer(simtTilingDataBuf_, TILING_DATA_NUM * sizeof(int64_t));
     pipe_->InitBuffer(paramBuf_, SIMT_PARAMS_NUM * sizeof(OFFSET_T));
 }
@@ -227,7 +220,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxSimt<VALUE_T, INDICES_T, OFFSET_T,
 {
     LocalTensor<int64_t> simtTilingData = simtTilingDataBuf_.Get<int64_t>();
     LocalTensor<OFFSET_T> simtParam = paramBuf_.Get<OFFSET_T>();
-    const int64_t *tilingPtr = reinterpret_cast<const int64_t *>(tilingData_);
+    const int64_t* tilingPtr = reinterpret_cast<const int64_t*>(tilingData_);
     for (uint32_t i = 0; i < TILING_DATA_NUM; ++i) {
         simtTilingData.SetValue(i, tilingPtr[i]);
     }
@@ -264,20 +257,20 @@ __aicore__ inline void MaxPool3DGradWithArgmaxSimt<VALUE_T, INDICES_T, OFFSET_T,
     simtParam.SetValue(MAGIC_STRIDE_W_IDX, static_cast<OFFSET_T>(magicStrideW));
     simtParam.SetValue(MAGIC_STRIDE_W_IDX + 1, static_cast<OFFSET_T>(shiftStrideW));
     DataSyncBarrier<MemDsbT::UB>();
-    auto gradData = (__gm__ VALUE_T *)grad_.GetPhyAddr();
-    auto outputData = (__gm__ VALUE_T *)y_.GetPhyAddr();
-    auto indicesData = (__gm__ INDICES_T *)argmax_.GetPhyAddr();
+    auto gradData = (__gm__ VALUE_T*)grad_.GetPhyAddr();
+    auto outputData = (__gm__ VALUE_T*)y_.GetPhyAddr();
+    auto indicesData = (__gm__ INDICES_T*)argmax_.GetPhyAddr();
 
     if constexpr (CHANNEL_LAST == 1) {
         asc_vf_call<MaxPool3DGradWithArgmaxNdhwc<VALUE_T, INDICES_T, OFFSET_T>>(
-            dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
+            dim3(THREAD_DIM), (__ubuf__ OFFSET_T*)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
             simtTilingData(1), simtTilingData(2), simtTilingData(3), simtTilingData(4), simtTilingData(5),
             simtTilingData(6), simtTilingData(7), simtTilingData(8), simtTilingData(9), simtTilingData(10),
             simtTilingData(14), simtTilingData(15), simtTilingData(16), simtTilingData(17), simtTilingData(18),
             simtTilingData(19), outputData, indicesData);
     } else {
         asc_vf_call<MaxPool3DGradWithArgmaxNcdhw<VALUE_T, INDICES_T, OFFSET_T>>(
-            dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
+            dim3(THREAD_DIM), (__ubuf__ OFFSET_T*)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
             simtTilingData(1), simtTilingData(2), simtTilingData(3), simtTilingData(4), simtTilingData(5),
             simtTilingData(6), simtTilingData(7), simtTilingData(8), simtTilingData(9), simtTilingData(10),
             simtTilingData(14), simtTilingData(15), simtTilingData(16), simtTilingData(17), simtTilingData(18),
@@ -285,6 +278,6 @@ __aicore__ inline void MaxPool3DGradWithArgmaxSimt<VALUE_T, INDICES_T, OFFSET_T,
     }
 }
 
-}
+} // namespace MaxPool3DGradWithArgmaxOp
 
-#endif  //MAX_POOL3D_GRAD_WITH_ARGMAX_SIMT_H
+#endif // MAX_POOL3D_GRAD_WITH_ARGMAX_SIMT_H

@@ -35,10 +35,7 @@ class KernelAddLayerNorm {
 #define IS_BETAGAMMA_NEEDCAST (!is_same<T_GAMMA, float>::value)
 
 public:
-    __aicore__ inline KernelAddLayerNorm(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNorm(TPipe* pipe) { Ppipe = pipe; }
 
     __aicore__ inline uint32_t CEIL_DIV(uint32_t x2, uint32_t y)
     {
@@ -48,27 +45,19 @@ public:
         return 0;
     }
 
-    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-    {
-        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-    }
+    __aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-    __aicore__ inline uint32_t MIN_KERNEL(uint32_t x, uint32_t y)
-    {
-        return x < y ? x : y;
-    }
+    __aicore__ inline uint32_t MIN_KERNEL(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-    __aicore__ inline uint32_t MAX_KERNEL(uint32_t x, uint32_t y)
-    {
-        return x > y ? x : y;
-    }
+    __aicore__ inline uint32_t MAX_KERNEL(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x, __gm__ uint8_t* workspace,
-        uint32_t num_core_, uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
-        uint32_t l_first_dim_per_core_, uint32_t first_dim_per_time_, uint32_t last_dim_per_time_, float eps_,
-        float aveNum_, uint32_t col_move_cnt_, uint32_t col_tail_, uint32_t workspace_size)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* x, __gm__ uint8_t* workspace, uint32_t num_core_,
+                                uint32_t num_Last_dim_, uint32_t num_first_dim_, uint32_t nl_first_dim_per_core_,
+                                uint32_t l_first_dim_per_core_, uint32_t first_dim_per_time_,
+                                uint32_t last_dim_per_time_, float eps_, float aveNum_, uint32_t col_move_cnt_,
+                                uint32_t col_tail_, uint32_t workspace_size)
     {
         num_core = num_core_;
         num_last_dim = num_Last_dim_;
@@ -744,9 +733,8 @@ private:
             if constexpr (IS_X1_NEEDCAST) {
                 auto y_buf = y_buf_local.template ReinterpretCast<T_X1>();
                 for (uint32_t i = 0; i < row_count; i++) {
-                    Cast(
-                        add_buf_local[i * num_last_dim_aligned], y_buf[i * numLastDimAlignedMixDtype],
-                        RoundMode::CAST_NONE, num_last_dim);
+                    Cast(add_buf_local[i * num_last_dim_aligned], y_buf[i * numLastDimAlignedMixDtype],
+                         RoundMode::CAST_NONE, num_last_dim);
                 }
             } else {
                 Adds(add_buf_local, x1_local, ZERO, elementCount);
@@ -778,9 +766,8 @@ private:
             if constexpr (IS_X2_NEEDCAST) {
                 auto y_buf = x_local_fp32.template ReinterpretCast<T_X2>();
                 for (uint32_t i = 0; i < row_count; i++) {
-                    Cast(
-                        x2_local[i * num_last_dim_aligned], y_buf[i * numLastDimAlignedMixDtype], RoundMode::CAST_NONE,
-                        num_last_dim);
+                    Cast(x2_local[i * num_last_dim_aligned], y_buf[i * numLastDimAlignedMixDtype], RoundMode::CAST_NONE,
+                         num_last_dim);
                 }
                 PipeBarrier<PIPE_V>();
                 Add(add_buf_local, x2_local, add_buf_local, elementCount);
@@ -1012,8 +999,8 @@ private:
         }
     }
 
-    __aicore__ inline void precision_compute(
-        int32_t nums, LocalTensor<T_GAMMA>& gamma_local, LocalTensor<T_GAMMA>& beta_local)
+    __aicore__ inline void precision_compute(int32_t nums, LocalTensor<T_GAMMA>& gamma_local,
+                                             LocalTensor<T_GAMMA>& beta_local)
     {
         LocalTensor<T> y_local = y_que.template AllocTensor<T>();
 #if OUTPUT_MEAN_RSTD == 1
@@ -1097,8 +1084,8 @@ private:
         y_que.EnQue(y_local);
     }
 
-    __aicore__ inline void precision_compute_big_n(
-        int32_t nums, LocalTensor<T_GAMMA>& gamma_local, LocalTensor<T_GAMMA>& beta_local)
+    __aicore__ inline void precision_compute_big_n(int32_t nums, LocalTensor<T_GAMMA>& gamma_local,
+                                                   LocalTensor<T_GAMMA>& beta_local)
     {
         LocalTensor<T> y_local = y_que.template AllocTensor<T>();
         LocalTensor<float> x_local_fp32 = x_buf_fp32.Get<float>();
@@ -1216,8 +1203,8 @@ private:
         y_que.EnQue(y_local);
     }
 
-    __aicore__ inline void precision_compute_single_row(
-        LocalTensor<T_GAMMA>& gamma_local, LocalTensor<T_GAMMA>& beta_local)
+    __aicore__ inline void precision_compute_single_row(LocalTensor<T_GAMMA>& gamma_local,
+                                                        LocalTensor<T_GAMMA>& beta_local)
     {
 #if OUTPUT_MEAN_RSTD == 1
         LocalTensor<float> mean_local = mean_que.template AllocTensor<float>();

@@ -81,4 +81,4 @@ ACLNN_API aclnnStatus aclnnInverse(void* workspace, uint64_t workspaceSize, aclO
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_INVERSE_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_INVERSE_H_

@@ -49,8 +49,7 @@ class GeluMulND {
 public:
     TPipe pipe;
     __aicore__ inline GeluMulND(){};
-    __aicore__ inline void Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace,
-                                const GeluMulTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, const GeluMulTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -58,14 +57,12 @@ private:
     __aicore__ inline void SmallTailProcess();
     __aicore__ inline void CopyIn(int64_t inputOffset, DataCopyExtParams dataCopyParams);
     __aicore__ inline void Compute(int64_t dataCount);
-    __aicore__ inline void ComputeGeluErf(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
-                                          LocalTensor<float> &xSquared, int64_t calCount);
-    __aicore__ inline void ComputeGeluTanh(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
-                                           int64_t calCount);
+    __aicore__ inline void ComputeGeluErf(LocalTensor<float>& castFp32, LocalTensor<float>& tempRes,
+                                          LocalTensor<float>& xSquared, int64_t calCount);
+    __aicore__ inline void ComputeGeluTanh(LocalTensor<float>& castFp32, LocalTensor<float>& tempRes, int64_t calCount);
     __aicore__ inline void CopyOut(int64_t outputOffset, int64_t dataCount, DataCopyExtParams dataCopyParams);
 
 private:
-
     TBuf<QuePosition::VECCALC> ubTBuf;
     LocalTensor<uint8_t> tmpTensor;
 
@@ -75,8 +72,8 @@ private:
     LocalTensor<T> x1Tensor;
     LocalTensor<T> x2Tensor;
 
-    LocalTensor<float> tempResTensor;   // Gelu计算tanh模式或者erf模式均用到的临时空间
-    LocalTensor<float> xSquaredTensor;   // Gelu计算erf模式用到的临时空间
+    LocalTensor<float> tempResTensor;  // Gelu计算tanh模式或者erf模式均用到的临时空间
+    LocalTensor<float> xSquaredTensor; // Gelu计算erf模式用到的临时空间
 
     LocalTensor<float> x1TensorFp32;
     LocalTensor<float> x2TensorFp32;
@@ -101,7 +98,8 @@ private:
 
 template <typename T>
 __aicore__ inline void GeluMulND<T>::Init(GM_ADDR input, GM_ADDR output, GM_ADDR workspace,
-                                              const GeluMulTilingData* tilingData) {
+                                          const GeluMulTilingData* tilingData)
+{
     inputGm.SetGlobalBuffer((__gm__ T*)input);
     outputGm.SetGlobalBuffer((__gm__ T*)output);
 
@@ -119,7 +117,8 @@ __aicore__ inline void GeluMulND<T>::Init(GM_ADDR input, GM_ADDR output, GM_ADDR
 }
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::Process() {
+__aicore__ inline void GeluMulND<T>::Process()
+{
     if (blockIdx >= needCoreNumber) {
         return;
     }
@@ -131,7 +130,8 @@ __aicore__ inline void GeluMulND<T>::Process() {
 }
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::BigTailProcess() {
+__aicore__ inline void GeluMulND<T>::BigTailProcess()
+{
     int32_t loopNum = batchSize / needCoreNumber;
     int32_t loopRemain = batchSize % needCoreNumber;
     if (loopRemain > 0 && blockIdx < loopRemain) {
@@ -150,7 +150,7 @@ __aicore__ inline void GeluMulND<T>::BigTailProcess() {
         SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID1);
         for (int32_t j = 0; j < eachLineLoop; j++) {
             uint32_t dataCount = PPMaxCalNum;
-            if (j == eachLineLoop -1 && remain > 0) {
+            if (j == eachLineLoop - 1 && remain > 0) {
                 dataCount = remain;
             }
             int32_t localOffset = j * PPMaxCalNum;
@@ -167,25 +167,21 @@ __aicore__ inline void GeluMulND<T>::BigTailProcess() {
 }
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::CopyIn(int64_t inputOffset, DataCopyExtParams dataCopyParams) {
-
-    x1Tensor = pingPongFlag ?
-            tmpTensor[MAX_UB_SIZE / 2].ReinterpretCast<T>() :
-            tmpTensor[0].ReinterpretCast<T>();
-    x2Tensor = pingPongFlag ?
-            tmpTensor[PPMaxCalNum * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
-            tmpTensor[PPMaxCalNum * sizeof(float)].ReinterpretCast<T>();
+__aicore__ inline void GeluMulND<T>::CopyIn(int64_t inputOffset, DataCopyExtParams dataCopyParams)
+{
+    x1Tensor = pingPongFlag ? tmpTensor[MAX_UB_SIZE / 2].ReinterpretCast<T>() : tmpTensor[0].ReinterpretCast<T>();
+    x2Tensor = pingPongFlag ? tmpTensor[PPMaxCalNum * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
+                              tmpTensor[PPMaxCalNum * sizeof(float)].ReinterpretCast<T>();
     WaitFlag<HardEvent::MTE3_MTE2>(eventId);
 
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
     if (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, half>) {
         int32_t elementByte = PPMaxCalNum * sizeof(T);
-        x1Tmp = pingPongFlag ?
-                tmpTensor[elementByte + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
-                tmpTensor[elementByte].ReinterpretCast<T>();
+        x1Tmp = pingPongFlag ? tmpTensor[elementByte + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
+                               tmpTensor[elementByte].ReinterpretCast<T>();
         x2Tmp = pingPongFlag ?
-                tmpTensor[elementByte + PPMaxCalNum * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
-                tmpTensor[elementByte + PPMaxCalNum * sizeof(float)].ReinterpretCast<T>();
+                    tmpTensor[elementByte + PPMaxCalNum * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<T>() :
+                    tmpTensor[elementByte + PPMaxCalNum * sizeof(float)].ReinterpretCast<T>();
         DataCopyPad(x1Tmp, inputGm[inputOffset], dataCopyParams, padParams);
         DataCopyPad(x2Tmp, inputGm[inputOffset + d], dataCopyParams, padParams);
     } else {
@@ -198,7 +194,8 @@ __aicore__ inline void GeluMulND<T>::CopyIn(int64_t inputOffset, DataCopyExtPara
 }
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::Compute(int64_t dataCount) {
+__aicore__ inline void GeluMulND<T>::Compute(int64_t dataCount)
+{
     x1TensorFp32 = x1Tensor.template ReinterpretCast<float>();
     x2TensorFp32 = x2Tensor.template ReinterpretCast<float>();
     if (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, half>) {
@@ -208,17 +205,17 @@ __aicore__ inline void GeluMulND<T>::Compute(int64_t dataCount) {
         PipeBarrier<PIPE_V>();
     }
     tempResTensor = pingPongFlag ?
-        tmpTensor[PPMaxCalNum * 2 * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<float>() :
-        tmpTensor[PPMaxCalNum * 2 * sizeof(float)].ReinterpretCast<float>();
+                        tmpTensor[PPMaxCalNum * 2 * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<float>() :
+                        tmpTensor[PPMaxCalNum * 2 * sizeof(float)].ReinterpretCast<float>();
 
     if (approximateMode == 0) {
         xSquaredTensor = pingPongFlag ?
-            tmpTensor[PPMaxCalNum * 3 * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<float>() :
-            tmpTensor[PPMaxCalNum * 3 * sizeof(float)].ReinterpretCast<float>();
+                             tmpTensor[PPMaxCalNum * 3 * sizeof(float) + MAX_UB_SIZE / 2].ReinterpretCast<float>() :
+                             tmpTensor[PPMaxCalNum * 3 * sizeof(float)].ReinterpretCast<float>();
 
         ComputeGeluErf(x1TensorFp32, tempResTensor, xSquaredTensor, dataCount);
 
-    } else if (approximateMode == 1){
+    } else if (approximateMode == 1) {
         ComputeGeluTanh(x1TensorFp32, tempResTensor, dataCount);
     }
 
@@ -228,19 +225,17 @@ __aicore__ inline void GeluMulND<T>::Compute(int64_t dataCount) {
 
 #if __CCE_AICORE__ == 330
 template <typename T>
-__aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
-                                        LocalTensor<float> &xSquared, int64_t calCount)
+__aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float>& castFp32, LocalTensor<float>& tempRes,
+                                                    LocalTensor<float>& xSquared, int64_t calCount)
 {
     Muls(tempRes, castFp32, ERF_SQRT_TWO_REC, calCount);
     PiperBarrier<PIPE_V>();
 
-    static constexpr ErfConfig config = {
-        ErfAlgo::SUBSECTION_POLYNOMIAL_APPROXIMATION
-    };
+    static constexpr ErfConfig config = {ErfAlgo::SUBSECTION_POLYNOMIAL_APPROXIMATION};
     Erf<float, false, config>(tempRes, tempRes, calCount);
     PipeBarrier<PIPE_V>();
 
-    //0.5 * (1 + erf(x / sqrt(2)))
+    // 0.5 * (1 + erf(x / sqrt(2)))
     Adds(tempRes, tempRes, ERF_ONE, calCount);
     PipeBarrier<PIPE_V>();
     Muls(tempRes, tempRes, ERF_DOT_FIVE, calCount);
@@ -252,8 +247,8 @@ __aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32
 }
 #else
 template <typename T>
-__aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
-                                        LocalTensor<float> &xSquared, int64_t calCount)
+__aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float>& castFp32, LocalTensor<float>& tempRes,
+                                                    LocalTensor<float>& xSquared, int64_t calCount)
 {
     Maxs(castFp32, castFp32, ERF_MAX, calCount);
     PipeBarrier<PIPE_V>();
@@ -310,8 +305,8 @@ __aicore__ inline void GeluMulND<T>::ComputeGeluErf(LocalTensor<float> &castFp32
 #endif
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::ComputeGeluTanh(LocalTensor<float> &castFp32, LocalTensor<float> &tempRes,
-                                           int64_t calCount)
+__aicore__ inline void GeluMulND<T>::ComputeGeluTanh(LocalTensor<float>& castFp32, LocalTensor<float>& tempRes,
+                                                     int64_t calCount)
 {
     Mul(tempRes, castFp32, castFp32, calCount); // x^2
     PipeBarrier<PIPE_V>();
@@ -332,8 +327,8 @@ __aicore__ inline void GeluMulND<T>::ComputeGeluTanh(LocalTensor<float> &castFp3
 }
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::CopyOut(int64_t outputOffset, int64_t dataCount,
-                                                 DataCopyExtParams dataCopyParams) {
+__aicore__ inline void GeluMulND<T>::CopyOut(int64_t outputOffset, int64_t dataCount, DataCopyExtParams dataCopyParams)
+{
     if (std::is_same_v<T, half>) {
         Cast(x1Tensor, x1TensorFp32, RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
@@ -348,8 +343,8 @@ __aicore__ inline void GeluMulND<T>::CopyOut(int64_t outputOffset, int64_t dataC
 }
 
 template <typename T>
-__aicore__ inline void GeluMulND<T>::SmallTailProcess() {
-
+__aicore__ inline void GeluMulND<T>::SmallTailProcess()
+{
     auto oneBlockNum = ONE_BLOCK_SIZE / sizeof(T);
     auto dAlign = (d + oneBlockNum - 1) / oneBlockNum * oneBlockNum;
     int32_t n = PPMaxCalNum / dAlign;
@@ -363,7 +358,6 @@ __aicore__ inline void GeluMulND<T>::SmallTailProcess() {
     }
     int32_t loopNum_0 = eachCoreNum / n;
     int32_t loopRemain = eachCoreNum % n;
-
 
     if (loopRemain > 0) {
         loopNum_0++;
@@ -393,8 +387,7 @@ __aicore__ inline void GeluMulND<T>::SmallTailProcess() {
 
         CopyIn(totalOffset + localOffset, dataCopyParamsIn);
         Compute(tmpCalNum * dAlign);
-        DataCopyExtParams dataCopyParamsOut{tmpCalNum, static_cast<uint32_t>(d * sizeof(T)),
-                                            0, 0, 0};
+        DataCopyExtParams dataCopyParamsOut{tmpCalNum, static_cast<uint32_t>(d * sizeof(T)), 0, 0, 0};
         CopyOut((totalOffset + localOffset) / 2, tmpCalNum * dAlign, dataCopyParamsOut);
         pingPongFlag = 1 - pingPongFlag;
     }
@@ -402,5 +395,5 @@ __aicore__ inline void GeluMulND<T>::SmallTailProcess() {
     WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID1);
 }
 
-}
+} // namespace GeluMul
 #endif

@@ -74,7 +74,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
 
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
-    auto ascendcPlatform = platform_ascendc:: PlatformAscendC(context->GetPlatformInfo());
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -82,25 +82,23 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SoftPlusV2TilingFunc(gert::TilingContext *context) {
+static ge::graphStatus SoftPlusV2TilingFunc(gert::TilingContext* context)
+{
     // 获取平台运行信息
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 获取WorkspaceSize信息
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 获取shape信息
     int64_t totalIdx = 0;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // handle empty input
     if (totalIdx <= 0) {
@@ -114,9 +112,8 @@ static ge::graphStatus SoftPlusV2TilingFunc(gert::TilingContext *context) {
     // 设置tiling信息
     SoftPlusV2TilingData* tiling = context->GetTilingData<SoftPlusV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftPlusV2TilingData), 0, sizeof(SoftPlusV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftPlusV2TilingData), 0, sizeof(SoftPlusV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     uint32_t totalLength = static_cast<uint32_t>(totalIdx);
     // 确保totalLength能被BLOCK_DIM整除，向上取整
     uint32_t alignedLength = (totalLength + BLOCK_DIM - 1) / BLOCK_DIM * BLOCK_DIM;
@@ -128,5 +125,5 @@ static ge::graphStatus SoftPlusV2TilingFunc(gert::TilingContext *context) {
 
 // tiling注册入口.
 IMPL_OP_OPTILING(SoftPlusV2).Tiling(SoftPlusV2TilingFunc);
-} 
+} // namespace optiling
 // namespace optiling

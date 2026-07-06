@@ -33,19 +33,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void confusion_softmax_grad(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void confusion_softmax_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                             GM_ADDR tiling);
 
 class confusion_softmax_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "confusion_softmax_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "confusion_softmax_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "confusion_softmax_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "confusion_softmax_grad_test TearDown\n" << endl; }
 };
 
 std::string Shape2Str(const std::vector<int64_t>& shape)
@@ -71,8 +65,8 @@ static inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void ExcuteTestCase(
-    const std::vector<int64_t>& shape, const std::string& dtype, int64_t tilingKey, uint32_t blockNum, uint8_t* tiling)
+void ExcuteTestCase(const std::vector<int64_t>& shape, const std::string& dtype, int64_t tilingKey, uint32_t blockNum,
+                    uint8_t* tiling)
 {
     uint32_t typeSize = 4;
     if (dtype != "float") {

@@ -29,17 +29,13 @@ using namespace op;
 
 #define ACLNN_MAX_SHAPE_RANK 8
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool IsDtypeSupported(DataType dtype)
-{
-    return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsDtypeSupported(DataType dtype) { return CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST); }
 
-static bool CheckNotNull(const aclTensor* self, const aclScalar* threshold,
-                          const aclScalar* value, const aclTensor* out)
+static bool CheckNotNull(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                         const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(threshold, return false);
@@ -51,8 +47,7 @@ static bool CheckNotNull(const aclTensor* self, const aclScalar* threshold,
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK(IsDtypeSupported(self->GetDataType()),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "self dtype not supported: dtype=%d. Supports FLOAT/FLOAT16/BFLOAT16.",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dtype not supported: dtype=%d. Supports FLOAT/FLOAT16/BFLOAT16.",
                      static_cast<int>(self->GetDataType())),
              return false);
     OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
@@ -66,35 +61,26 @@ static bool CheckShape(const aclTensor* self, const aclTensor* out)
 
     auto selfShape = self->GetViewShape();
     auto outShape = out->GetViewShape();
-    OP_CHECK(selfShape == outShape,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "self and out must have the same shape."),
+    OP_CHECK(selfShape == outShape, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self and out must have the same shape."),
              return false);
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* threshold,
-                                const aclScalar* value, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                               const aclTensor* out)
 {
-    CHECK_COND(CheckNotNull(self, threshold, value, out),
-               ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed");
+    CHECK_COND(CheckNotNull(self, threshold, value, out), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed");
     CHECK_COND(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID,
-               "CheckDtypeValid failed: self_dtype=%d, out_dtype=%d",
-               static_cast<int>(self->GetDataType()),
+               "CheckDtypeValid failed: self_dtype=%d, out_dtype=%d", static_cast<int>(self->GetDataType()),
                static_cast<int>(out->GetDataType()));
-    CHECK_COND(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID,
-               "CheckShape failed: self_dim=%zu, out_dim=%zu",
+    CHECK_COND(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID, "CheckShape failed: self_dim=%zu, out_dim=%zu",
                self->GetViewShape().GetDimNum(), out->GetViewShape().GetDimNum());
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnThresholdV2GetWorkspaceSize(
-    const aclTensor* self,
-    const aclScalar* threshold,
-    const aclScalar* value,
-    aclTensor*       out,
-    uint64_t*        workspaceSize,
-    aclOpExecutor**  executor)
+extern "C" aclnnStatus aclnnThresholdV2GetWorkspaceSize(const aclTensor* self, const aclScalar* threshold,
+                                                        const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
+                                                        aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnThresholdV2, DFX_IN(self, threshold, value), DFX_OUT(out));
 
@@ -116,8 +102,7 @@ extern "C" aclnnStatus aclnnThresholdV2GetWorkspaceSize(
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    const aclTensor* opResult = l0op::ThresholdV2(selfContiguous, thresholdF, valueF,
-                                                    uniqueExecutor.get());
+    const aclTensor* opResult = l0op::ThresholdV2(selfContiguous, thresholdF, valueF, uniqueExecutor.get());
     CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResult = l0op::ViewCopy(opResult, out, uniqueExecutor.get());
@@ -128,11 +113,8 @@ extern "C" aclnnStatus aclnnThresholdV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-extern "C" aclnnStatus aclnnThresholdV2(
-    void* workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor* executor,
-    aclrtStream stream)
+extern "C" aclnnStatus aclnnThresholdV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnThresholdV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

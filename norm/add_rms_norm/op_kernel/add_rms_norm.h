@@ -18,16 +18,13 @@
 
 using namespace AscendC;
 using namespace RmsNorm;
-  
+
 template <typename T, int32_t MODE>
 class KernelAddRmsNorm {
 public:
-    __aicore__ inline KernelAddRmsNorm(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, const AddRMSNormTilingData* tiling)
+    __aicore__ inline KernelAddRmsNorm(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR x,
+                                GM_ADDR workspace, const AddRMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
         this->numRow = tiling->num_row;
@@ -45,17 +42,21 @@ public:
             this->rowWork = this->numRow - (GetBlockNum() - 1) * this->blockFactor;
         }
         // get start index for current core, core parallel
-        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
-        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+        x1Gm.SetGlobalBuffer((__gm__ T*)x1 + blockIdx_ * this->blockFactor * this->numCol,
+                             this->rowWork * this->numCol);
+        x2Gm.SetGlobalBuffer((__gm__ T*)x2 + blockIdx_ * this->blockFactor * this->numCol,
+                             this->rowWork * this->numCol);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, this->numCol);
         yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
 
         if constexpr (MODE == ADD_RMS_NORM_MODE) {
             rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * this->blockFactor, this->blockFactor);
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
+                                this->rowWork * this->numCol);
         }
         if constexpr (MODE == PRE_RMS_NORM_MODE) {
-            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol, this->rowWork * this->numCol);
+            xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * this->blockFactor * this->numCol,
+                                this->rowWork * this->numCol);
         }
 
         // pipe alloc memory to queue, the unit is Bytes
@@ -90,7 +91,9 @@ public:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            uint64_t gm_bias = (static_cast<uint64_t>(i_o) * static_cast<uint64_t>(this->rowFactor) + static_cast<uint64_t>(i_i)) * static_cast<uint64_t>(this->numCol);
+            uint64_t gm_bias = (static_cast<uint64_t>(i_o) * static_cast<uint64_t>(this->rowFactor) +
+                                static_cast<uint64_t>(i_i)) *
+                               static_cast<uint64_t>(this->numCol);
             CopyIn(gm_bias);
             Compute(i_i, gammaLocal, rstdLocal);
             CopyOutY(gm_bias);
@@ -197,8 +200,8 @@ private:
         outQueueY.EnQue<float>(yLocal);
     }
 
-    __aicore__ inline void Compute(
-        uint32_t inner_progress, LocalTensor<bfloat16_t> gammaLocal, LocalTensor<float> rstdLocal)
+    __aicore__ inline void Compute(uint32_t inner_progress, LocalTensor<bfloat16_t> gammaLocal,
+                                   LocalTensor<float> rstdLocal)
     {
         LocalTensor<float> x_fp32 = xFp32Buf.Get<float>();
         LocalTensor<float> sqx = sqxBuf.Get<float>();

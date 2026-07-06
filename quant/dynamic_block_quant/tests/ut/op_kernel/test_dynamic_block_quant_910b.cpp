@@ -22,26 +22,18 @@
 #include "tikicpulib.h"
 #include "data_utils.h"
 
-extern "C" __global__ __aicore__ void dynamic_block_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace, GM_ADDR tiling);
-class dynamic_block_quant_910b : public testing::Test
-{
+extern "C" __global__ __aicore__ void dynamic_block_quant(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+                                                          GM_ADDR tiling);
+class dynamic_block_quant_910b : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "dynamic_block_quant_910b_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "dynamic_block_quant_910b_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "dynamic_block_quant_910b_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "dynamic_block_quant_910b_test TearDown\n" << std::endl; }
 };
 
 TEST_F(dynamic_block_quant_910b, test_case_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../quant/dynamic_block_quant/tests/ut/op_kernel/dynamic_block_quant_data_910b ./");
+    system("cp -rf "
+           "../../../../quant/dynamic_block_quant/tests/ut/op_kernel/dynamic_block_quant_data_910b ./");
     system("chmod -R 755 ./dynamic_block_quant_data_910b/");
     system("cd ./dynamic_block_quant_data_910b/ && python3 gen_data.py '(1, 128)' 'float16'");
 

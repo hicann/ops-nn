@@ -28,15 +28,9 @@ using namespace ge;
 
 class CTCLossV2GradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "CTCLossV2Grad Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "CTCLossV2Grad Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "CTCLossV2Grad Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "CTCLossV2Grad Tiling TearDown" << std::endl; }
 };
 
 TEST_F(CTCLossV2GradTiling, test_rt2_success)
@@ -80,21 +74,21 @@ TEST_F(CTCLossV2GradTiling, test_rt2_success)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // 模拟 tilingParseFunc
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(4, 2)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(4, 2)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     std::cout << "test>> kernel_holder.GetContext" << std::endl;
@@ -121,9 +115,8 @@ TEST_F(CTCLossV2GradTiling, test_rt2_success)
                       .SetOpType("CTCLossV2Grad")
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&gradOutShape, &logProbsShape, &targetsShape, &inputLengthsShape, &targetLengthsShape,
-                           &lossShape, &logAlphaShape})
+                      .InputShapes({&gradOutShape, &logProbsShape, &targetsShape, &inputLengthsShape,
+                                    &targetLengthsShape, &lossShape, &logAlphaShape})
                       .OutputShapes({&gradShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -135,10 +128,9 @@ TEST_F(CTCLossV2GradTiling, test_rt2_success)
                       .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
-                           {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"blank", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")},
+                                  {"zero_infinity", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

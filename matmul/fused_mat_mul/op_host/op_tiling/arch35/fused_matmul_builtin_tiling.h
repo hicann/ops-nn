@@ -33,14 +33,13 @@ protected:
     ge::graphStatus GetArgs() override;
     ge::graphStatus CheckArgs() override;
 
-    ge::graphStatus GetBmmBiasInfo(
-        const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo) override;
-    ge::graphStatus GetBatchInfo(
-        const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo) override;
+    ge::graphStatus GetBmmBiasInfo(const gert::TilingContext& context, MatMulV3Args& args,
+                                   MatMulV3BatchInfo& batchInfo) override;
+    ge::graphStatus GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
+                                 MatMulV3BatchInfo& batchInfo) override;
 
 private:
     NpuArch npuArch_;
 };
 } // namespace fused_matmul
 } // namespace optiling
-

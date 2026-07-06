@@ -21,28 +21,29 @@ namespace l0op {
 
 OP_TYPE_REGISTER(FusedCrossEntropyLossWithMaxSum);
 
-const std::tuple<aclTensor*,aclTensor*>FusedCrossEntropyLossWithMaxSum(const aclTensor* logitsMax, const aclTensor* sumExpLogits,
-                                                        const aclTensor* predictedLogits, float labelSmoothing, const aclTensor* inputOptional,
-                                                        const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional, aclTensor* lossOut,
-                                                        aclTensor* softMaxOutOptional, aclOpExecutor *executor) {
-  lossOut = executor->AllocTensor(logitsMax->GetViewShape(), logitsMax->GetDataType());
-  if (vocabParallelLogitsOptional != nullptr) {
-      softMaxOutOptional = executor->AllocTensor(vocabParallelLogitsOptional->GetViewShape(), logitsMax->GetDataType());
-  } else {
-    op::Shape softMaxOutShape;
-    softMaxOutShape.AppendDim(0);
-      softMaxOutOptional = executor->AllocTensor(
-        softMaxOutShape, softMaxOutShape, logitsMax->GetDataType(), logitsMax->GetStorageFormat(),
-        logitsMax->GetOriginalFormat());
-  }
+const std::tuple<aclTensor*, aclTensor*> FusedCrossEntropyLossWithMaxSum(
+    const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits, float labelSmoothing,
+    const aclTensor* inputOptional, const aclTensor* weightOptional, const aclTensor* vocabParallelLogitsOptional,
+    aclTensor* lossOut, aclTensor* softMaxOutOptional, aclOpExecutor* executor)
+{
+    lossOut = executor->AllocTensor(logitsMax->GetViewShape(), logitsMax->GetDataType());
+    if (vocabParallelLogitsOptional != nullptr) {
+        softMaxOutOptional = executor->AllocTensor(vocabParallelLogitsOptional->GetViewShape(),
+                                                   logitsMax->GetDataType());
+    } else {
+        op::Shape softMaxOutShape;
+        softMaxOutShape.AppendDim(0);
+        softMaxOutOptional = executor->AllocTensor(softMaxOutShape, softMaxOutShape, logitsMax->GetDataType(),
+                                                   logitsMax->GetStorageFormat(), logitsMax->GetOriginalFormat());
+    }
 
-  L0_DFX(FusedCrossEntropyLossWithMaxSum, logitsMax, sumExpLogits, predictedLogits, labelSmoothing, 
-            inputOptional, weightOptional, vocabParallelLogitsOptional, lossOut, softMaxOutOptional);
+    L0_DFX(FusedCrossEntropyLossWithMaxSum, logitsMax, sumExpLogits, predictedLogits, labelSmoothing, inputOptional,
+           weightOptional, vocabParallelLogitsOptional, lossOut, softMaxOutOptional);
 
-  ADD_TO_LAUNCHER_LIST_AICORE(FusedCrossEntropyLossWithMaxSum,
-                              OP_INPUT(logitsMax, sumExpLogits, predictedLogits, inputOptional, weightOptional, vocabParallelLogitsOptional),
-                              OP_OUTPUT(lossOut, softMaxOutOptional),
-                              OP_ATTR(labelSmoothing));
-  return std::tuple<aclTensor*, aclTensor*>(lossOut, softMaxOutOptional);
+    ADD_TO_LAUNCHER_LIST_AICORE(
+        FusedCrossEntropyLossWithMaxSum,
+        OP_INPUT(logitsMax, sumExpLogits, predictedLogits, inputOptional, weightOptional, vocabParallelLogitsOptional),
+        OP_OUTPUT(lossOut, softMaxOutOptional), OP_ATTR(labelSmoothing));
+    return std::tuple<aclTensor*, aclTensor*>(lossOut, softMaxOutOptional);
 }
-} // l0op
+} // namespace l0op

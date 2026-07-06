@@ -63,8 +63,7 @@ struct Conv3dIntf {
     constexpr static bool kPreLoadAFlag = false;
     constexpr static bool kPreLoadBFlag = false;
     constexpr static bool kPreLoadABFlag = false;
-    constexpr static bool kPreLoadFlag =
-        kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
+    constexpr static bool kPreLoadFlag = kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
     constexpr static bool iterateMFirstFlag = ConvParam::iterOrder == 0;
     constexpr static bool iterateNFirstFlag = ConvParam::iterOrder == 1;
 
@@ -77,18 +76,19 @@ struct Conv3dIntf {
     constexpr static uint64_t k0 = C0_SIZE / sizeof(WeightT);
     constexpr static uint64_t k0FmapTail = C0_SIZE / sizeof(FmapT);
     constexpr static bool isDeQuantFlag = AscendC::IsSameType<FmapT, int8_t>::value &&
-        (AscendC::IsSameType<BiasT, half>::value || AscendC::IsSameType<BiasT, bfloat16_t>::value ||
-         AscendC::IsSameType<BiasT, float>::value);
-    constexpr static bool isQuantScene = !isDeQuantFlag &&
-        (AscendC::IsSameType<L0cT, int32_t>::value && AscendC::IsSameType<OutputT, half>::value) ||
-        AscendC::IsSameType<FmapT, hifloat8_t>::value || AscendC::IsSameType<FmapT, fp8_e4m3fn_t>::value;
+                                          (AscendC::IsSameType<BiasT, half>::value ||
+                                           AscendC::IsSameType<BiasT, bfloat16_t>::value ||
+                                           AscendC::IsSameType<BiasT, float>::value);
+    constexpr static bool isQuantScene = !isDeQuantFlag && (AscendC::IsSameType<L0cT, int32_t>::value &&
+                                                            AscendC::IsSameType<OutputT, half>::value) ||
+                                         AscendC::IsSameType<FmapT, hifloat8_t>::value ||
+                                         AscendC::IsSameType<FmapT, fp8_e4m3fn_t>::value;
     constexpr static bool c04Flag = false;
     constexpr static bool c04NDFlag = false;
     constexpr static bool weightUbTrans = false;
     constexpr static bool isDmaFlag = false;
     constexpr static bool isInnerBatchFlag = false;
-    constexpr static bool groupOptFlag =
-        ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV);
+    constexpr static bool groupOptFlag = ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV);
     constexpr static bool groupOptNDFlag = ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
                                            formatWeight != ConvFormat::FRACTAL_Z;
     constexpr static bool groupOptNZFlag = false;
@@ -115,7 +115,7 @@ public:
 
     __aicore__ inline Conv3dIntf() {}
 
-    __aicore__ inline void Init(const void *__restrict cubeTiling)
+    __aicore__ inline void Init(const void* __restrict cubeTiling)
     {
         using local = typename Ext::Init;
         if constexpr (CONV_CHECK_FUN(local, Conv3dFunc, this, cubeTiling)) {
@@ -123,7 +123,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmap(const GlobalTensor<FmapT> &fmap)
+    __aicore__ inline void SetFmap(const GlobalTensor<FmapT>& fmap)
     {
         using local = typename Ext::SetFmap;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, fmap)) {
@@ -131,7 +131,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetWeight(const GlobalTensor<WeightT> &weight)
+    __aicore__ inline void SetWeight(const GlobalTensor<WeightT>& weight)
     {
         using local = typename Ext::SetWeight;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, weight)) {
@@ -139,7 +139,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetBias(const GlobalTensor<BiasT> &bias)
+    __aicore__ inline void SetBias(const GlobalTensor<BiasT>& bias)
     {
         using local = typename Ext::SetBias;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, bias)) {
@@ -150,16 +150,17 @@ public:
     __aicore__ inline void SetScale(const GlobalTensor<ScaleT>& scale)
     {
         using local = typename Ext::SetScale;
-        if constexpr(CONV_CHECK_FUN(local, ConvFunc, this, scale)) {
+        if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, scale)) {
             local::call(this, scale);
         }
     }
 
-    __aicore__ inline void SetSingleOutputShape(
-        uint64_t singleCo, uint64_t singleDo, uint64_t singleHo, uint64_t singleWo, uint64_t singleCoreBatch)
+    __aicore__ inline void SetSingleOutputShape(uint64_t singleCo, uint64_t singleDo, uint64_t singleHo,
+                                                uint64_t singleWo, uint64_t singleCoreBatch)
     {
         using local = typename Ext::SetSingleOutputShape;
-        if constexpr (CONV_CHECK_FUN(local, Conv3dFunc, this, singleCo, singleDo, singleHo, singleWo, singleCoreBatch)) {
+        if constexpr (CONV_CHECK_FUN(local, Conv3dFunc, this, singleCo, singleDo, singleHo, singleWo,
+                                     singleCoreBatch)) {
             local::call(this, singleCo, singleDo, singleHo, singleWo, singleCoreBatch);
         }
     }
@@ -180,8 +181,8 @@ public:
         }
     }
 
-    __aicore__ inline void SetFmapStartPosition(
-        int64_t diStartPos, int64_t hiStartPos, int64_t wiStartPos, int64_t ciStartPos)
+    __aicore__ inline void SetFmapStartPosition(int64_t diStartPos, int64_t hiStartPos, int64_t wiStartPos,
+                                                int64_t ciStartPos)
     {
         using local = typename Ext::SetFmapStartPosition;
         if constexpr (CONV_CHECK_FUN(local, Conv3dFunc, this, diStartPos, hiStartPos, wiStartPos, ciStartPos)) {
@@ -220,7 +221,7 @@ public:
             local::call(this);
         }
     }
-    
+
     __aicore__ inline void ConvPostProcess()
     {
         using local = typename Ext::ConvPostProcess;
@@ -230,7 +231,7 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void IterateAll(const GlobalTensor<OutputT> &output, bool enPartialSum = false)
+    __aicore__ inline void IterateAll(const GlobalTensor<OutputT>& output, bool enPartialSum = false)
     {
         using local = typename Ext::IterateAll;
         if constexpr (CONV_CHECK_FUN_TEMPLATE(local, ConvFunc, sync, this, output, enPartialSum)) {
@@ -258,7 +259,7 @@ private:
     }
 
     template <bool sync = true>
-    __aicore__ inline void GetTensorC(const GlobalTensor<OutputT> &output, bool enSequentialWrite = false)
+    __aicore__ inline void GetTensorC(const GlobalTensor<OutputT>& output, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
         if constexpr (CONV_CHECK_FUN_TEMPLATE(local, ConvFunc, sync, this, output, enSequentialWrite)) {
@@ -267,6 +268,6 @@ private:
     }
 };
 
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif // CONV3D_V2_INTF_H

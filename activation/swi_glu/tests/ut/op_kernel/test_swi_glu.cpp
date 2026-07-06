@@ -23,20 +23,16 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void swi_glu(GM_ADDR input_gm, GM_ADDR output_gm,
-                                                GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void swi_glu(GM_ADDR input_gm, GM_ADDR output_gm, GM_ADDR workspace, GM_ADDR tiling);
 
 class swi_glu_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-      cout << "swi_glu_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-      cout << "swi_glu_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "swi_glu_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "swi_glu_test TearDown\n" << endl; }
 };
 
-TEST_F(swi_glu_test, test_case_fp16) {
+TEST_F(swi_glu_test, test_case_fp16)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 640 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 640 * sizeof(int16_t);
@@ -74,7 +70,8 @@ TEST_F(swi_glu_test, test_case_fp16) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp32) {
+TEST_F(swi_glu_test, test_case_fp32)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int32_t);
     size_t outputByteSize = 256 * 320 * sizeof(int32_t);
@@ -112,7 +109,8 @@ TEST_F(swi_glu_test, test_case_fp32) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_bf16) {
+TEST_F(swi_glu_test, test_case_bf16)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 320 * sizeof(int16_t);
@@ -150,7 +148,8 @@ TEST_F(swi_glu_test, test_case_bf16) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp16_noalign) {
+TEST_F(swi_glu_test, test_case_fp16_noalign)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 300 * sizeof(int16_t);
@@ -188,7 +187,8 @@ TEST_F(swi_glu_test, test_case_fp16_noalign) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp32_noalign) {
+TEST_F(swi_glu_test, test_case_fp32_noalign)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 600 * 2 * sizeof(int32_t);
     size_t outputByteSize = 256 * 600 * sizeof(int32_t);
@@ -226,7 +226,8 @@ TEST_F(swi_glu_test, test_case_fp32_noalign) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_bf16_noalign) {
+TEST_F(swi_glu_test, test_case_bf16_noalign)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 600 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 600 * sizeof(int16_t);
@@ -264,7 +265,8 @@ TEST_F(swi_glu_test, test_case_bf16_noalign) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp16_no_buffer) {
+TEST_F(swi_glu_test, test_case_fp16_no_buffer)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 640 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 640 * sizeof(int16_t);
@@ -302,7 +304,8 @@ TEST_F(swi_glu_test, test_case_fp16_no_buffer) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp32_no_buffer) {
+TEST_F(swi_glu_test, test_case_fp32_no_buffer)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int32_t);
     size_t outputByteSize = 256 * 320 * sizeof(int32_t);
@@ -340,7 +343,8 @@ TEST_F(swi_glu_test, test_case_fp32_no_buffer) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_bf16_no_buffer) {
+TEST_F(swi_glu_test, test_case_bf16_no_buffer)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 320 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 320 * sizeof(int16_t);
@@ -378,7 +382,8 @@ TEST_F(swi_glu_test, test_case_bf16_no_buffer) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp16_noalign_no_buffer) {
+TEST_F(swi_glu_test, test_case_fp16_noalign_no_buffer)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 300 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 300 * sizeof(int16_t);
@@ -416,7 +421,8 @@ TEST_F(swi_glu_test, test_case_fp16_noalign_no_buffer) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_fp32_noalign_no_buffer) {
+TEST_F(swi_glu_test, test_case_fp32_noalign_no_buffer)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 600 * 2 * sizeof(int32_t);
     size_t outputByteSize = 256 * 600 * sizeof(int32_t);
@@ -454,7 +460,8 @@ TEST_F(swi_glu_test, test_case_fp32_noalign_no_buffer) {
     AscendC::GmFree(tiling);
 }
 
-TEST_F(swi_glu_test, test_case_bf16_noalign_no_buffer) {
+TEST_F(swi_glu_test, test_case_bf16_noalign_no_buffer)
+{
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     size_t inputByteSize = 256 * 600 * 2 * sizeof(int16_t);
     size_t outputByteSize = 256 * 600 * sizeof(int16_t);

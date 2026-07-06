@@ -27,12 +27,10 @@ static ge::graphStatus CheckInputShapeEqual(gert::InferShapeContext* context, co
     for (size_t idx = 1; idx < INPUT_NUM; ++idx) {
         auto inputShape = context->GetInputShape(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
-        OP_CHECK_IF(
-            ToString(*inputShape) != ToString(*firstShape),
-            OP_LOGE(
-                context->GetNodeName(), "shape %s and %s must be equal for AdamApplyOneWithDecay!",
-                ToString(*firstShape).c_str(), ToString(*inputShape).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(ToString(*inputShape) != ToString(*firstShape),
+                    OP_LOGE(context->GetNodeName(), "shape %s and %s must be equal for AdamApplyOneWithDecay!",
+                            ToString(*firstShape).c_str(), ToString(*inputShape).c_str()),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -41,10 +39,9 @@ static ge::graphStatus InferShape4AdamApplyOneWithDecay(gert::InferShapeContext*
 {
     auto input0_shape = context->GetInputShape(INPUT0_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, input0_shape);
-    OP_CHECK_IF(
-        CheckInputShapeEqual(context, input0_shape) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "input shapes must be equal for AdamApplyOneWithDecay"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShapeEqual(context, input0_shape) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "input shapes must be equal for AdamApplyOneWithDecay"),
+                return ge::GRAPH_FAILED);
 
     for (size_t idx = 0; idx < OUTPUT_NUM; ++idx) {
         auto outputShape = context->GetOutputShape(idx);

@@ -21,18 +21,11 @@
 
 using namespace std;
 
-class l2_quantize_test : public testing::Test
-{
+class l2_quantize_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "quantize_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "quantize_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "quantize_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "quantize_test TearDown" << endl; }
 };
 
 // CheckNotNull
@@ -44,8 +37,8 @@ TEST_F(l2_quantize_test, quantize_testcase_001_exception_null_x)
     int32_t axis = 1;
     const vector<int64_t>& outShape = {3, 2};
     auto outTensorDesc = TensorDesc(outShape, dType, ACL_FORMAT_ND).ValidCount(6);
-    auto ut = OP_API_UT(
-        aclnnQuantize, INPUT((aclTensor*)nullptr, scalesDesc, zeroPointsDesc, dType, axis), OUTPUT(outTensorDesc));
+    auto ut = OP_API_UT(aclnnQuantize, INPUT((aclTensor*)nullptr, scalesDesc, zeroPointsDesc, dType, axis),
+                        OUTPUT(outTensorDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -61,8 +54,8 @@ TEST_F(l2_quantize_test, quantize_testcase_002_exception_null_scales)
     int32_t axis = 1;
     const vector<int64_t>& outShape = {3, 2};
     auto outTensorDesc = TensorDesc(outShape, dType, ACL_FORMAT_ND).ValidCount(6);
-    auto ut =
-        OP_API_UT(aclnnQuantize, INPUT(xDesc, (aclTensor*)nullptr, zeroPointsDesc, dType, axis), OUTPUT(outTensorDesc));
+    auto ut = OP_API_UT(aclnnQuantize, INPUT(xDesc, (aclTensor*)nullptr, zeroPointsDesc, dType, axis),
+                        OUTPUT(outTensorDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -78,9 +71,8 @@ TEST_F(l2_quantize_test, quantize_testcase_003_exception_null_out)
     aclDataType dType = ACL_INT8;
     int32_t axis = 1;
     const vector<int64_t>& outShape = {3, 2};
-    auto ut = OP_API_UT(
-        aclnnQuantize, INPUT((aclTensor*)nullptr, scalesDesc, zeroPointsDesc, dType, axis),
-        OUTPUT((aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnQuantize, INPUT((aclTensor*)nullptr, scalesDesc, zeroPointsDesc, dType, axis),
+                        OUTPUT((aclTensor*)nullptr));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -198,12 +190,12 @@ TEST_F(l2_quantize_test, quantize_testcase_010_normal_fp32_no_zeroPoints)
     int32_t axis = 1;
     const vector<int64_t>& outShape = {3, 2};
 
-    auto xTensorDesc =
-        TensorDesc(xShape, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.5f, 1.2f, 1.3f, 1.4f, 2.9f, 3.2f});
+    auto xTensorDesc = TensorDesc(xShape, ACL_FLOAT, ACL_FORMAT_ND)
+                           .Value(vector<float>{0.5f, 1.2f, 1.3f, 1.4f, 2.9f, 3.2f});
     auto scalesTensorDesc = TensorDesc(scalesShape, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.5f, 0.8f});
     auto outTensorDesc = TensorDesc(outShape, dType, ACL_FORMAT_ND).ValidCount(6);
-    auto ut = OP_API_UT(
-        aclnnQuantize, INPUT(xTensorDesc, scalesTensorDesc, (aclTensor*)nullptr, dType, axis), OUTPUT(outTensorDesc));
+    auto ut = OP_API_UT(aclnnQuantize, INPUT(xTensorDesc, scalesTensorDesc, (aclTensor*)nullptr, dType, axis),
+                        OUTPUT(outTensorDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

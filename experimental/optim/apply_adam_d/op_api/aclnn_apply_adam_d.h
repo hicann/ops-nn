@@ -30,14 +30,16 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnApplyAdamDGetWorkspaceSize(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, bool useLocking, bool useNesterov, aclTensor* varOut,
-    aclTensor* mOut, aclTensor* vOut, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnApplyAdamDGetWorkspaceSize(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                                      const aclTensor* beta1Power, const aclTensor* beta2Power,
+                                                      const aclTensor* lr, const aclTensor* beta1,
+                                                      const aclTensor* beta2, const aclTensor* epsilon,
+                                                      const aclTensor* grad, bool useLocking, bool useNesterov,
+                                                      aclTensor* varOut, aclTensor* mOut, aclTensor* vOut,
+                                                      uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus
-aclnnApplyAdamD(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnApplyAdamD(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                      aclrtStream stream);
 
 #ifdef __cplusplus
 }

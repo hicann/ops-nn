@@ -19,8 +19,6 @@ const int INDEX_INPUT_PREDICT = 0;
 const int INDEX_INPUT_LABEL = 1;
 const int INDEX_INPUT_DOUT = 2;
 const int INDEX_OUTPUT_GRADIENT = 0;
-}  // namespace
+} // namespace
 
-namespace optiling {
-
-}  // namespace optiling
+namespace optiling {} // namespace optiling

@@ -17,7 +17,8 @@
 #define ADD_LAYER_NORM_QUANT_HELPER_H_
 
 #include "kernel_operator.h"
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113 || _NPU_ARCH__ == 2002))
+#if __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113 || _NPU_ARCH__ == 2002))
 #include "impl/dav_c220/kernel_operator_reg_others_impl.h"
 #endif
 
@@ -53,11 +54,9 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
 __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
 {
@@ -67,25 +66,15 @@ __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     return 0;
 }
 
-__aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-{
-    return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-}
+__aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-__aicore__ inline uint32_t TWO_NUMS_MIN(uint32_t x, uint32_t y)
-{
-    return x < y ? x : y;
-}
+__aicore__ inline uint32_t TWO_NUMS_MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-__aicore__ inline uint32_t TWO_NUMS_MAX(uint32_t x, uint32_t y)
-{
-    return x > y ? x : y;
-}
+__aicore__ inline uint32_t TWO_NUMS_MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyEx(
-    const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
-    const DataCopyPadParams& padParams = {})
+__aicore__ inline void DataCopyEx(const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
+                                  const DataCopyPadParams& padParams = {})
 {
     int32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
@@ -125,9 +114,9 @@ __aicore__ inline void DataCopyEx(
 }
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyExV2(
-    const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T> &tmp, const uint32_t len, const uint32_t count = 1,
-    const DataCopyPadParams& padParam = {})
+__aicore__ inline void DataCopyExV2(const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T>& tmp,
+                                    const uint32_t len, const uint32_t count = 1,
+                                    const DataCopyPadParams& padParam = {})
 {
     constexpr int32_t NUM_PER_BLOCK = ONE_BLK_SIZE / sizeof(T);
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
@@ -167,14 +156,14 @@ __aicore__ inline void DataCopyExV2(
 }
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyExAlign(
-    const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T> &tmp, const uint32_t len, uint32_t stride, const uint32_t count = 1,
-    const DataCopyPadParams& padParams = {})
+__aicore__ inline void DataCopyExAlign(const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T>& tmp,
+                                       const uint32_t len, uint32_t stride, const uint32_t count = 1,
+                                       const DataCopyPadParams& padParams = {})
 {
     DataCopyParams copyParams;
     copyParams.blockLen = len * sizeof(T);
     copyParams.blockCount = count;
-    
+
     if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
         copyParams.dstStride = stride;
         DataCopyPad(dst, src, copyParams, padParams);
@@ -277,9 +266,8 @@ __aicore__ inline void ReduceSumInplace(const LocalTensor<float>& src_local, int
     WholeReduceSum(src_local, src_local, mask, 1, 8, 1, 8);
 }
 
-__aicore__ inline void DivScalarFP32(
-    LocalTensor<float>& dstTensor, LocalTensor<float>& dividendTensor, LocalTensor<float>& tmpTensor,
-    float divisorScalar, uint32_t count)
+__aicore__ inline void DivScalarFP32(LocalTensor<float>& dstTensor, LocalTensor<float>& dividendTensor,
+                                     LocalTensor<float>& tmpTensor, float divisorScalar, uint32_t count)
 {
     uint32_t repsFp32 = count >> 6;                        // 6 is devide 64
     uint32_t offsetsFp32 = count & 0xffffffc0;             // 0xffffffc0 is floor by 64

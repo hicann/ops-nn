@@ -41,7 +41,7 @@ using namespace QuantBatchMatmulInplaceAddArch35TilingKey;
 #define QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH 0
 #endif
 
-#define QBMIIA_PARAM_LIST_DEF                                                                                          \
+#define QBMIIA_PARAM_LIST_DEF \
     GM_ADDR x1, GM_ADDR x2, GM_ADDR x2Scale, GM_ADDR yIn, GM_ADDR x1Scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling
 
 #define QBMIIA_PARAM_LIST x1, x2, x2Scale, yIn, x1Scale, y, workspace, tiling
@@ -87,7 +87,7 @@ class QuantBatchMatmulInplaceAddTestUtils {
 public:
     static constexpr uint32_t MAX_NUM_BLOCKS = 4;
 
-    static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+    static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
     {
         auto delimiterLen = delimiter.size();
         string::size_type currPos = 0;
@@ -120,12 +120,13 @@ public:
         return exePath;
     }
 
-    static vector<QuantBatchMatmulInplaceAddTestParam> GetParams(const string &socVersion, const string &testSuite)
+    static vector<QuantBatchMatmulInplaceAddTestParam> GetParams(const string& socVersion, const string& testSuite)
     {
         vector<QuantBatchMatmulInplaceAddTestParam> params;
         string rootPath(GetExeDirPath() + "../../../../");
-        string casePath(rootPath +
-                        "matmul/quant_batch_matmul_inplace_add/tests/ut/op_kernel/test_quant_batch_matmul_inplace_add.csv");
+        string casePath(
+            rootPath +
+            "matmul/quant_batch_matmul_inplace_add/tests/ut/op_kernel/test_quant_batch_matmul_inplace_add.csv");
         ifstream csvData(casePath, ios::in);
         if (!csvData.is_open()) {
             cout << "cannot open case file " << casePath << ", maybe not exist" << endl;
@@ -172,12 +173,9 @@ public:
     }
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
-    static constexpr bool IsMxWithoutBatchUtSupported()
-    {
-        return QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH != 0;
-    }
+    static constexpr bool IsMxWithoutBatchUtSupported() { return QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH != 0; }
 
-    static bool IsMxWithoutBatchTilingData(const QuantBatchMatmulInplaceAddTestParam &param)
+    static bool IsMxWithoutBatchTilingData(const QuantBatchMatmulInplaceAddTestParam& param)
     {
         constexpr uint64_t kernelTypeShift = 4UL;
         constexpr uint64_t kernelTypeMask = 0xFUL;
@@ -186,12 +184,12 @@ public:
                kernelType == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH;
     }
 
-    static bool ShouldSkipMxWithoutBatchUt(const QuantBatchMatmulInplaceAddTestParam &param)
+    static bool ShouldSkipMxWithoutBatchUt(const QuantBatchMatmulInplaceAddTestParam& param)
     {
         return IsMxWithoutBatchTilingData(param) && !IsMxWithoutBatchUtSupported();
     }
 
-    static size_t GetTilingDataSize(const QuantBatchMatmulInplaceAddTestParam &param)
+    static size_t GetTilingDataSize(const QuantBatchMatmulInplaceAddTestParam& param)
     {
         if (IsMxWithoutBatchTilingData(param)) {
             return sizeof(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData);
@@ -199,8 +197,8 @@ public:
         return sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
     }
 
-    static void InitDefaultTilingData(const QuantBatchMatmulInplaceAddTestParam &param,
-                                      QMMIA::QuantBatchMatmulInplaceAddTilingData &tilingData)
+    static void InitDefaultTilingData(const QuantBatchMatmulInplaceAddTestParam& param,
+                                      QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData)
     {
         memset(&tilingData, 0, sizeof(tilingData));
         tilingData.params.batchA = static_cast<uint32_t>(param.batchA > 0 ? param.batchA : 1);
@@ -223,8 +221,8 @@ public:
     }
 
     static void InitDefaultWithoutBatchTilingData(
-        const QuantBatchMatmulInplaceAddTestParam &param,
-        QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData &tilingData)
+        const QuantBatchMatmulInplaceAddTestParam& param,
+        QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData& tilingData)
     {
         constexpr uint8_t MX_PERGROUP_MODE = 0x1U << 3;
         memset(&tilingData, 0, sizeof(tilingData));
@@ -246,7 +244,7 @@ public:
         tilingData.dbL0C = 2;
     }
 
-    static void FillTilingBuffer(const QuantBatchMatmulInplaceAddTestParam &param, uint8_t *tiling)
+    static void FillTilingBuffer(const QuantBatchMatmulInplaceAddTestParam& param, uint8_t* tiling)
     {
         size_t tilingDataSize = GetTilingDataSize(param);
         if (param.tilingData.empty() || param.tilingData == "AUTO") {
@@ -266,14 +264,14 @@ public:
         SplitStr2Vec(param.tilingData, " ", tilingDataStr);
         vector<int32_t> tilingDataInt;
         tilingDataInt.reserve(tilingDataStr.size());
-        for (auto &tilingValue : tilingDataStr) {
+        for (auto& tilingValue : tilingDataStr) {
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
         ASSERT_EQ(tilingDataInt.size() * sizeof(int32_t), tilingDataSize);
         memcpy(tiling, tilingDataInt.data(), tilingDataSize);
     }
 
-    static size_t GetX1ScaleBytes(const QuantBatchMatmulInplaceAddTestParam &param)
+    static size_t GetX1ScaleBytes(const QuantBatchMatmulInplaceAddTestParam& param)
     {
         if (!param.hasX1Scale) {
             return 0;
@@ -285,7 +283,7 @@ public:
         return sizeof(float);
     }
 
-    static size_t GetX2ScaleBytes(const QuantBatchMatmulInplaceAddTestParam &param)
+    static size_t GetX2ScaleBytes(const QuantBatchMatmulInplaceAddTestParam& param)
     {
         if (!param.hasX2Scale) {
             return 0;
@@ -300,8 +298,8 @@ public:
         return sizeof(float);
     }
 
-    static void TestOneParamCase950(const QuantBatchMatmulInplaceAddTestParam &param,
-                                    decltype(s_funcMapApt) &funcMapApt)
+    static void TestOneParamCase950(const QuantBatchMatmulInplaceAddTestParam& param,
+                                    decltype(s_funcMapApt)& funcMapApt)
     {
         if (ShouldSkipMxWithoutBatchUt(param)) {
 #ifdef __CCE_KT_TEST__
@@ -323,14 +321,14 @@ public:
         size_t tilingDataSize = GetTilingDataSize(param);
         size_t workspaceSize = 16 * 1024 * 1024 + 50 * 1024 * 1024;
 
-        uint8_t *x1 = static_cast<uint8_t *>(AscendC::GmAlloc(shapeX1));
-        uint8_t *x2 = static_cast<uint8_t *>(AscendC::GmAlloc(shapeX2));
-        uint8_t *yIn = static_cast<uint8_t *>(AscendC::GmAlloc(shapeY));
-        uint8_t *y = static_cast<uint8_t *>(AscendC::GmAlloc(shapeY));
-        uint8_t *x1Scale = shapeX1Scale > 0 ? static_cast<uint8_t *>(AscendC::GmAlloc(shapeX1Scale)) : nullptr;
-        uint8_t *x2Scale = shapeX2Scale > 0 ? static_cast<uint8_t *>(AscendC::GmAlloc(shapeX2Scale)) : nullptr;
-        uint8_t *workspace = static_cast<uint8_t *>(AscendC::GmAlloc(workspaceSize));
-        uint8_t *tiling = static_cast<uint8_t *>(AscendC::GmAlloc(tilingDataSize));
+        uint8_t* x1 = static_cast<uint8_t*>(AscendC::GmAlloc(shapeX1));
+        uint8_t* x2 = static_cast<uint8_t*>(AscendC::GmAlloc(shapeX2));
+        uint8_t* yIn = static_cast<uint8_t*>(AscendC::GmAlloc(shapeY));
+        uint8_t* y = static_cast<uint8_t*>(AscendC::GmAlloc(shapeY));
+        uint8_t* x1Scale = shapeX1Scale > 0 ? static_cast<uint8_t*>(AscendC::GmAlloc(shapeX1Scale)) : nullptr;
+        uint8_t* x2Scale = shapeX2Scale > 0 ? static_cast<uint8_t*>(AscendC::GmAlloc(shapeX2Scale)) : nullptr;
+        uint8_t* workspace = static_cast<uint8_t*>(AscendC::GmAlloc(workspaceSize));
+        uint8_t* tiling = static_cast<uint8_t*>(AscendC::GmAlloc(tilingDataSize));
 
         memset(x1, 1, shapeX1);
         memset(x2, 1, shapeX2);

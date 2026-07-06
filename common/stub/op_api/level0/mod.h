@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef OP_API_INC_LEVEL0_MOD_H_
 #define OP_API_INC_LEVEL0_MOD_H_
 

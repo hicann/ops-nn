@@ -142,9 +142,7 @@ public:
             para.tailCountLength = td_->tileLength - td_->welfordUpdateTail;
             para.abRec = 1.0f / static_cast<float>(td_->tileLength);
             para.rRec = 1.0f / static_cast<float>(td_->N);
-            WelfordFinalize<true>(
-                meanTensor[cacheCount], varianceTensor[cacheCount], mean_, variance_, shared_,
-                para);
+            WelfordFinalize<true>(meanTensor[cacheCount], varianceTensor[cacheCount], mean_, variance_, shared_, para);
 
             // Normalize
             for (int64_t welfordUpdateCount = 0; welfordUpdateCount < td_->welfordUpdateTimes; welfordUpdateCount++) {
@@ -214,12 +212,10 @@ private:
                 copyInParamsTail.blockLen = tailSize * sizeof(M);
                 copyInParamsTail.srcStride = 0;
                 copyInParamsTail.dstStride = 0;
-                DataCopyPad(
-                    meanGm[paramAddr + castDmaLoops * VL_F32], meanTensor[castDmaLoops * VL_MEAN].ReinterpretCast<M>(),
-                    copyInParamsTail);
-                DataCopyPad(
-                    rstdGm[paramAddr + castDmaLoops * VL_F32], rstdTensor[castDmaLoops * VL_MEAN].ReinterpretCast<M>(),
-                    copyInParamsTail);
+                DataCopyPad(meanGm[paramAddr + castDmaLoops * VL_F32],
+                            meanTensor[castDmaLoops * VL_MEAN].ReinterpretCast<M>(), copyInParamsTail);
+                DataCopyPad(rstdGm[paramAddr + castDmaLoops * VL_F32],
+                            rstdTensor[castDmaLoops * VL_MEAN].ReinterpretCast<M>(), copyInParamsTail);
             }
             outQueueMean.FreeTensor(meanTensor);
             outQueueRstd.FreeTensor(rstdTensor);
@@ -238,8 +234,8 @@ private:
         paramAddr += cacheCount;
     }
 
-    __aicore__ inline void WelfordInitialize(
-        const LocalTensor<float>& mean, const LocalTensor<float>& variance, const int64_t elemCnt)
+    __aicore__ inline void WelfordInitialize(const LocalTensor<float>& mean, const LocalTensor<float>& variance,
+                                             const int64_t elemCnt)
     {
         // WelfordInitialize
         welfordCount = 0;
@@ -309,33 +305,27 @@ private:
         para.rLengthWithPadding = elemCnt;
 
         if (td_->nullptrGamma == 0 && td_->nullptrBeta == 0) {
-            constexpr static NormalizeConfig hasGammaBetaNormalizeConfig = {
-                ReducePattern::AR,-1,false,false,false
-            };
-            Normalize<U, T, false, hasGammaBetaNormalizeConfig>(
-                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
-                xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+            constexpr static NormalizeConfig hasGammaBetaNormalizeConfig = {ReducePattern::AR, -1, false, false, false};
+            Normalize<U, T, false, hasGammaBetaNormalizeConfig>(yTensor, rstdTensor[cacheCount], meanTensor[cacheCount],
+                                                                varianceTensor[cacheCount], xTensor, gammaTensor,
+                                                                betaTensor, shared_, td_->epsilon, para);
         } else if (td_->nullptrGamma == 0 && !td_->nullptrBeta == 0) {
-            constexpr static NormalizeConfig hasGammaNoBetaNormalizeConfig = {
-                ReducePattern::AR,-1,true,false,false
-            };
+            constexpr static NormalizeConfig hasGammaNoBetaNormalizeConfig = {ReducePattern::AR, -1, true, false,
+                                                                              false};
             Normalize<U, T, false, hasGammaNoBetaNormalizeConfig>(
-                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
-                xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+                yTensor, rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], xTensor,
+                gammaTensor, betaTensor, shared_, td_->epsilon, para);
         } else if (!td_->nullptrGamma == 0 && td_->nullptrBeta == 0) {
-            constexpr static NormalizeConfig noGammaHasBetaNormalizeConfig = {
-                ReducePattern::AR,-1,false,true,false
-            };
+            constexpr static NormalizeConfig noGammaHasBetaNormalizeConfig = {ReducePattern::AR, -1, false, true,
+                                                                              false};
             Normalize<U, T, false, noGammaHasBetaNormalizeConfig>(
-                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
-                xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+                yTensor, rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], xTensor,
+                gammaTensor, betaTensor, shared_, td_->epsilon, para);
         } else if (!td_->nullptrGamma == 0 && !td_->nullptrBeta == 0) {
-            constexpr static NormalizeConfig noGammaNoBetaNormalizeConfig = {
-                ReducePattern::AR,-1,true,true,false
-            };
+            constexpr static NormalizeConfig noGammaNoBetaNormalizeConfig = {ReducePattern::AR, -1, true, true, false};
             Normalize<U, T, false, noGammaNoBetaNormalizeConfig>(
-                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
-                xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+                yTensor, rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], xTensor,
+                gammaTensor, betaTensor, shared_, td_->epsilon, para);
         }
 
         inQueueX.FreeTensor(xTensor);

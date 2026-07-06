@@ -1,12 +1,12 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file op_runner.h
@@ -29,7 +29,7 @@ public:
      * @brief Constructor
      * @param [in] opDesc: op description
      */
-    explicit OpRunner(OperatorDesc *opDesc);
+    explicit OpRunner(OperatorDesc* opDesc);
 
     /**
      * @brief Destructor
@@ -107,13 +107,14 @@ public:
      * @param [in] index: input index
      * @return host address of the input
      */
-    template <typename T> T *GetInputBuffer(size_t index)
+    template <typename T>
+    T* GetInputBuffer(size_t index)
     {
         if (index >= numInputs_) {
             ERROR_LOG("index out of range. index = %zu, numInputs = %zu", index, numInputs_);
             return nullptr;
         }
-        return reinterpret_cast<T *>(hostInputs_[index]);
+        return reinterpret_cast<T*>(hostInputs_[index]);
     }
 
     /**
@@ -122,14 +123,15 @@ public:
      * @param [in] index: output index
      * @return host address of the output
      */
-    template <typename T> const T *GetOutputBuffer(size_t index)
+    template <typename T>
+    const T* GetOutputBuffer(size_t index)
     {
         if (index >= numOutputs_) {
             ERROR_LOG("index out of range. index = %zu, numOutputs = %zu", index, numOutputs_);
             return nullptr;
         }
 
-        return reinterpret_cast<T *>(hostOutputs_[index]);
+        return reinterpret_cast<T*>(hostOutputs_[index]);
     }
 
     /**
@@ -153,20 +155,20 @@ public:
 private:
     size_t numInputs_;
     size_t numOutputs_;
-    void *workspace_;
+    void* workspace_;
 
-    std::vector<aclDataBuffer *> inputBuffers_;
-    std::vector<aclDataBuffer *> outputBuffers_;
+    std::vector<aclDataBuffer*> inputBuffers_;
+    std::vector<aclDataBuffer*> outputBuffers_;
 
-    std::vector<void *> devInputs_;
-    std::vector<void *> devOutputs_;
+    std::vector<void*> devInputs_;
+    std::vector<void*> devOutputs_;
 
-    std::vector<void *> hostInputs_;
-    std::vector<void *> hostOutputs_;
+    std::vector<void*> hostInputs_;
+    std::vector<void*> hostOutputs_;
 
-    std::vector<aclTensor *> inputTensor_;
-    std::vector<aclTensor *> outputTensor_;
-    OperatorDesc *opDesc_;
+    std::vector<aclTensor*> inputTensor_;
+    std::vector<aclTensor*> outputTensor_;
+    OperatorDesc* opDesc_;
 };
 
 #endif // OP_RUNNER_H

@@ -22,10 +22,7 @@
 
 namespace l0op {
 
-const aclTensor* ThresholdV2(const aclTensor* self,
-                              float thresholdF,
-                              float valueF,
-                              aclOpExecutor* executor);
+const aclTensor* ThresholdV2(const aclTensor* self, float thresholdF, float valueF, aclOpExecutor* executor);
 
 } // namespace l0op
 

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -16,12 +16,11 @@
 #include "op_common/op_host/infershape_elewise_util.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 
 static ge::graphStatus InferShape4Sigmoid(gert::InferShapeContext* context)
 {
     return Ops::Base::InferShape4Elewise(context);
 }
 IMPL_OP_INFERSHAPE(Sigmoid).InferShape(InferShape4Sigmoid);
-}  // namespace ops
+} // namespace ops

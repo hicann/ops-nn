@@ -23,18 +23,12 @@
 #include "pooling/avg_pool/op_host/avg_pool_tiling_common.h"
 #include "pooling/avg_pool/op_kernel/arch35/avg_pool_struct.h"
 
-namespace optiling
-{
-class AvgPoolCommonNHWCBigKernelTiling : public TilingBaseClass
-{
+namespace optiling {
+class AvgPoolCommonNHWCBigKernelTiling : public TilingBaseClass {
 public:
-    explicit AvgPoolCommonNHWCBigKernelTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit AvgPoolCommonNHWCBigKernelTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~AvgPoolCommonNHWCBigKernelTiling() override
-    {
-    }
+    ~AvgPoolCommonNHWCBigKernelTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -63,35 +57,25 @@ public:
     int64_t onceOutNum_{1};
 };
 
-class AvgPoolNHWCBigKernelTiling : public AvgPoolCommonNHWCBigKernelTiling
-{
+class AvgPoolNHWCBigKernelTiling : public AvgPoolCommonNHWCBigKernelTiling {
 public:
-    explicit AvgPoolNHWCBigKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCBigKernelTiling(context)
-    {
-    }
-    ~AvgPoolNHWCBigKernelTiling() override
-    {
-    }
+    explicit AvgPoolNHWCBigKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCBigKernelTiling(context) {}
+    ~AvgPoolNHWCBigKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class AvgPoolV2NHWCBigKernelTiling : public AvgPoolCommonNHWCBigKernelTiling
-{
+class AvgPoolV2NHWCBigKernelTiling : public AvgPoolCommonNHWCBigKernelTiling {
 public:
-    explicit AvgPoolV2NHWCBigKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCBigKernelTiling(context)
-    {
-    }
-    ~AvgPoolV2NHWCBigKernelTiling() override
-    {
-    }
+    explicit AvgPoolV2NHWCBigKernelTiling(gert::TilingContext* context) : AvgPoolCommonNHWCBigKernelTiling(context) {}
+    ~AvgPoolV2NHWCBigKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
-}  // namespace optiling
+} // namespace optiling
 
 #endif

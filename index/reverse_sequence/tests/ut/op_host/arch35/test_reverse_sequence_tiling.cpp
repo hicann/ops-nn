@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -33,22 +34,15 @@
 using namespace std;
 using namespace ge;
 
-class ReverseSequenceTiling : public testing::Test
-{
+class ReverseSequenceTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReverseSequenceTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReverseSequenceTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReverseSequenceTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReverseSequenceTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -60,9 +54,8 @@ static string to_string(void *buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType seq_dtype,
-                            gert::StorageShape data_shape, gert::StorageShape seq_shape,
-                            int64_t batchDim, int64_t seqDim, uint64_t tilingKeyValue,
+static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType seq_dtype, gert::StorageShape data_shape,
+                            gert::StorageShape seq_shape, int64_t batchDim, int64_t seqDim, uint64_t tilingKeyValue,
                             string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
@@ -101,8 +94,10 @@ static void ExecuteTestCase(ge::DataType data_dtype, ge::DataType seq_dtype,
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -168,7 +163,8 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_float16) // BS
     int64_t batchDim = 0;
     int64_t seqDim = 1;
 
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_INT64, shape1, shape2, batchDim, seqDim, tilingKeyValue, expectTilingData, 0);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_INT64, shape1, shape2, batchDim, seqDim, tilingKeyValue, expectTilingData,
+                    0);
 }
 
 TEST_F(ReverseSequenceTiling, test_tiling_ascendc_int16) // SB
@@ -194,7 +190,6 @@ TEST_F(ReverseSequenceTiling, test_tiling_ascendc_float32) // A0SA1B -> ASB
 
     ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT64, shape1, shape2, batchDim, seqDim, tilingKeyValue, expectTilingData, 0);
 }
-
 
 TEST_F(ReverseSequenceTiling, test_tiling_ascendc_int32) // ABS
 {

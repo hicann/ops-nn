@@ -38,16 +38,13 @@ constexpr int64_t PER_CORE_ALIGN = 32;
 
 struct SparseApplyFtrlCompileInfo {};
 
-static ge::graphStatus SetupSparseApplyFtrlTilingData(
-    gert::TilingContext* context, uint64_t ubSize,
-    int64_t numIndices, int64_t innerSize, int64_t firstDim,
-    int64_t needCoreNum)
+static ge::graphStatus SetupSparseApplyFtrlTilingData(gert::TilingContext* context, uint64_t ubSize, int64_t numIndices,
+                                                      int64_t innerSize, int64_t firstDim, int64_t needCoreNum)
 {
     auto* tilingPtr = context->GetTilingData<SparseApplyFtrlTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingPtr);
-    OP_CHECK_IF(memset_s(tilingPtr, sizeof(SparseApplyFtrlTilingData), 0,
-        sizeof(SparseApplyFtrlTilingData)) != EOK,
-        OP_LOGE(context, "memset tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingPtr, sizeof(SparseApplyFtrlTilingData), 0, sizeof(SparseApplyFtrlTilingData)) != EOK,
+                OP_LOGE(context, "memset tiling data error"), return ge::GRAPH_FAILED);
 
     tilingPtr->numIndices = numIndices;
     tilingPtr->innerSize = innerSize;
@@ -58,9 +55,8 @@ static ge::graphStatus SetupSparseApplyFtrlTilingData(
     auto indicesDesc = context->GetInputDesc(INDICES_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
     auto indicesDtype = indicesDesc->GetDataType();
-    uint64_t schMode = (indicesDtype == ge::DT_INT32) ?
-        static_cast<uint64_t>(SPARSE_APPLY_FTRL_SCH_MODE_INT32) :
-        static_cast<uint64_t>(SPARSE_APPLY_FTRL_SCH_MODE_INT64);
+    uint64_t schMode = (indicesDtype == ge::DT_INT32) ? static_cast<uint64_t>(SPARSE_APPLY_FTRL_SCH_MODE_INT32) :
+                                                        static_cast<uint64_t>(SPARSE_APPLY_FTRL_SCH_MODE_INT64);
     uint64_t tilingKey = GET_TPL_TILING_KEY(schMode);
     context->SetTilingKey(tilingKey);
 
@@ -73,12 +69,10 @@ static ge::graphStatus SetupSparseApplyFtrlTilingData(
     ws[0] = static_cast<size_t>(sysWorkspaceSize);
 
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
-        OP_LOGE(context, "ubSize %lu <= dcacheSize(%u) + STATIC_UB_ESTIMATE", ubSize, DCACHE_SIZE),
-        return ge::GRAPH_FAILED);
-    auto res = context->SetLocalMemorySize(
-        static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ubSize %lu <= dcacheSize(%u) + STATIC_UB_ESTIMATE", ubSize, DCACHE_SIZE),
+                return ge::GRAPH_FAILED);
+    auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE - STATIC_UB_ESTIMATE));
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize failed"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -111,16 +105,13 @@ static ge::graphStatus SparseApplyFtrlTilingFunc(gert::TilingContext* context)
     int64_t perCoreElements = Ops::Base::CeilDiv(totalElements, coreNum);
     perCoreElements = std::max(perCoreElements, PER_CORE_MIN);
     perCoreElements = Ops::Base::CeilAlign(perCoreElements, PER_CORE_ALIGN);
-    int64_t needCoreNum = (totalElements > 0) ?
-        Ops::Base::CeilDiv(totalElements, perCoreElements) : 1;
+    int64_t needCoreNum = (totalElements > 0) ? Ops::Base::CeilDiv(totalElements, perCoreElements) : 1;
     needCoreNum = std::max(needCoreNum, (int64_t)1);
 
-    return SetupSparseApplyFtrlTilingData(context, ubSize, numIndices, innerSize,
-                                          firstDim, needCoreNum);
+    return SetupSparseApplyFtrlTilingData(context, ubSize, numIndices, innerSize, firstDim, needCoreNum);
 }
 
-static ge::graphStatus TilingParseForSparseApplyFtrl(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForSparseApplyFtrl([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

@@ -22,8 +22,7 @@
 #include "op_kernel/math_util.h"
 #include "op_kernel/platform_util.h"
 
-namespace ReverseV2
-{
+namespace ReverseV2 {
 
 using namespace AscendC;
 
@@ -43,9 +42,9 @@ const int32_t INDEX_7 = 7;
 constexpr int64_t TWO_DIMS = 2;
 constexpr int64_t THREE_DIMS = 3;
 
-__simd_vf__ inline void AreaReverseSmallTailVf(
-    __ubuf__ int8_t* xPtr, __ubuf__ int8_t* yPtr, int32_t dim1, int32_t dim2Stride, int32_t repeatNum,
-    uint16_t dim2Loop, uint16_t dim1Loop, uint16_t dim0Loop)
+__simd_vf__ inline void AreaReverseSmallTailVf(__ubuf__ int8_t* xPtr, __ubuf__ int8_t* yPtr, int32_t dim1,
+                                               int32_t dim2Stride, int32_t repeatNum, uint16_t dim2Loop,
+                                               uint16_t dim1Loop, uint16_t dim0Loop)
 {
     AscendC::MicroAPI::RegTensor<int8_t> inReg;
     uint32_t sreg = dim2Stride;
@@ -67,9 +66,9 @@ __simd_vf__ inline void AreaReverseSmallTailVf(
     }
 }
 
-__simd_vf__ inline void AreaReverseVf(
-    __ubuf__ int8_t* xPtr, __ubuf__ int8_t* yPtr, int32_t dim1, int32_t dim2Size, int32_t dim2Stride, int32_t repeatNum,
-    uint16_t dim0Loop, uint16_t dim1Loop, uint16_t dim2Loop)
+__simd_vf__ inline void AreaReverseVf(__ubuf__ int8_t* xPtr, __ubuf__ int8_t* yPtr, int32_t dim1, int32_t dim2Size,
+                                      int32_t dim2Stride, int32_t repeatNum, uint16_t dim0Loop, uint16_t dim1Loop,
+                                      uint16_t dim2Loop)
 {
     AscendC::MicroAPI::RegTensor<int8_t> inReg;
     for (uint16_t i = 0; i < dim0Loop; i++) {
@@ -100,7 +99,7 @@ public:
     __aicore__ inline void Compute(int64_t outBlockOffset, int64_t dimInNum, int64_t splitIdx);
     __aicore__ inline void AreaReverse(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0,
                                        int32_t dim1, int32_t dim2);
-    __aicore__ inline void AreaReverseSmallTail(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0, 
+    __aicore__ inline void AreaReverseSmallTail(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0,
                                                 int32_t dim1, int32_t dim2);
     __aicore__ inline int64_t CalcDimUbStride(int64_t dim, int64_t tailNum);
     __aicore__ inline void CalcUbStride(int64_t tailDimNum);
@@ -203,8 +202,8 @@ __aicore__ inline void ReverseV2Simd::Process()
         int64_t inBlockOffset = 0;
         int64_t outBlockOffset = 0;
         int64_t splitIdx = GetBlockOffsetAndIdx(idx, inBlockOffset, outBlockOffset);
-        int64_t splitDimIn =
-            splitIdx == tilingData_->splitDimLoop - 1 ? tilingData_->splitDimTailInNum : tilingData_->splitDimInNum;
+        int64_t splitDimIn = splitIdx == tilingData_->splitDimLoop - 1 ? tilingData_->splitDimTailInNum :
+                                                                         tilingData_->splitDimInNum;
         inBlockOffset += splitIdx * tilingData_->splitDimInNum * xStride_[tilingData_->splitDim];
         int64_t inUbBlockCount = tilingData_->splitDim == tilingData_->dimNum - 1 ? 1 : splitDimIn;
         for (int64_t i = tilingData_->splitDim + 1; i < tilingData_->dimNum - 1; i++) {
@@ -214,8 +213,8 @@ __aicore__ inline void ReverseV2Simd::Process()
         if ((blockIdx_ == tilingData_->usedCoreNum - 1) && (idx == endIdx - 1)) {
             coreDimInNum = tilingData_->splitDimTailInNum;
         }
-        int64_t inUbBlockLen = tilingData_->splitDim == tilingData_->dimNum - 1 ? coreDimInNum
-                                                                                : xShape_[tilingData_->dimNum - 1];
+        int64_t inUbBlockLen = tilingData_->splitDim == tilingData_->dimNum - 1 ? coreDimInNum :
+                                                                                  xShape_[tilingData_->dimNum - 1];
         int64_t srcOffset = inBlockOffset * tilingData_->dtypeSize;
         CopyIn(srcOffset, inUbBlockCount, inUbBlockLen);
         Compute(outBlockOffset, splitDimIn, splitIdx);
@@ -330,7 +329,7 @@ __aicore__ inline int64_t ReverseV2Simd::GetOutOffset(int32_t idx, int32_t split
     return outUbOffset;
 }
 
-__aicore__ inline int64_t ReverseV2Simd::GetBlockOffsetAndIdx(int64_t idx, int64_t& inBlockOffset, 
+__aicore__ inline int64_t ReverseV2Simd::GetBlockOffsetAndIdx(int64_t idx, int64_t& inBlockOffset,
                                                               int64_t& outBlcokOffset)
 {
     int64_t tmpIdx = idx;
@@ -361,8 +360,8 @@ __aicore__ inline void ReverseV2Simd::AreaReverseSmallTail(__local_mem__ int8_t*
     uint16_t dim2Loop = (dim2Stride + repeatNum - 1) / repeatNum;
     uint16_t dim1Loop = static_cast<uint16_t>(dim1);
     uint16_t dim0Loop = static_cast<uint16_t>(dim0);
-    AreaReverseSmallTailVf(
-        (__ubuf__ int8_t*)xPtr, (__ubuf__ int8_t*)yPtr, dim1, dim2Stride, repeatNum, dim2Loop, dim1Loop, dim0Loop);
+    AreaReverseSmallTailVf((__ubuf__ int8_t*)xPtr, (__ubuf__ int8_t*)yPtr, dim1, dim2Stride, repeatNum, dim2Loop,
+                           dim1Loop, dim0Loop);
 }
 
 __aicore__ inline void ReverseV2Simd::AreaReverse(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0,
@@ -374,11 +373,10 @@ __aicore__ inline void ReverseV2Simd::AreaReverse(__local_mem__ int8_t* xPtr, __
     uint16_t dim2Loop = (dim2Stride + repeatNum - 1) / repeatNum;
     uint16_t dim1Loop = static_cast<uint16_t>(dim1);
     uint16_t dim0Loop = static_cast<uint16_t>(dim0);
-    AreaReverseVf(
-        (__ubuf__ int8_t*)xPtr, (__ubuf__ int8_t*)yPtr, dim1, dim2Size, dim2Stride, repeatNum, dim0Loop, dim1Loop,
-        dim2Loop);
+    AreaReverseVf((__ubuf__ int8_t*)xPtr, (__ubuf__ int8_t*)yPtr, dim1, dim2Size, dim2Stride, repeatNum, dim0Loop,
+                  dim1Loop, dim2Loop);
 }
 
-}  // namespace ReverseV2
+} // namespace ReverseV2
 
-#endif  // ASCENDC_REVERSE_V2_SIMD_H
+#endif // ASCENDC_REVERSE_V2_SIMD_H

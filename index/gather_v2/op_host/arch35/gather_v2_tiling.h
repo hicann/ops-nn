@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file gather_v2_tiling.h
  * \brief
@@ -136,23 +135,17 @@ REGISTER_TILING_DATA_CLASS(GatherV2_3000000000, GatherV2TilingDataEmptyInput)
 
 class Gatherv2TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit Gatherv2TilingBase(gert::TilingContext *context) : TilingBaseClass(context)
-    {
-        Reset();
-    }
+    explicit Gatherv2TilingBase(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~Gatherv2TilingBase() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         TilingBaseClass::Reset(context);
         Reset();
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
@@ -192,11 +185,14 @@ private:
     bool IsGaAllLoad();
     bool IsSimdTwoDim();
     bool IsSimtTwoDim();
-    void LastGatherUbTiling(int32_t &inputUbSize, int32_t &indiceUbSize, int32_t &outUbSize, int32_t &indiceCastUbSize, int32_t &inputNum, int32_t &indicesNum, int32_t &ubCols, int32_t &ubRows, int64_t blockFactor, int64_t gFactor);
-    void CalcMaxUbcolAndIndiceFactor(int32_t &ubCols, int32_t ubRows, int32_t ubSize, int32_t minCols, int32_t inputNum, int32_t outputNum, int32_t indiceNUm, int32_t castUbRatio);
+    void LastGatherUbTiling(int32_t& inputUbSize, int32_t& indiceUbSize, int32_t& outUbSize, int32_t& indiceCastUbSize,
+                            int32_t& inputNum, int32_t& indicesNum, int32_t& ubCols, int32_t& ubRows,
+                            int64_t blockFactor, int64_t gFactor);
+    void CalcMaxUbcolAndIndiceFactor(int32_t& ubCols, int32_t ubRows, int32_t ubSize, int32_t minCols, int32_t inputNum,
+                                     int32_t outputNum, int32_t indiceNUm, int32_t castUbRatio);
     int64_t aivNum_ = 0;
 
-    const char *opName_ = "";
+    const char* opName_ = "";
     GatherV2TilingData gatherV2TilingData_;
     GatherV2LastTilingData lastTilingdata_;
     GatherV2GaAllLoadTilingData gaAllLoadTilingdata_;
@@ -231,5 +227,5 @@ private:
     int32_t ubBlockSize_ = 32;
     int32_t vRegSize_ = 256;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHERV2_H
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHERV2_H

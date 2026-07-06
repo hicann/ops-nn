@@ -24,16 +24,15 @@
 
 using namespace Ops::Base;
 
-namespace Renorm
-{
+namespace Renorm {
 
-constexpr uint32_t TEMPLATE_P0 = 0;       // 0.0
-constexpr uint32_t TEMPLATE_P1 = 1;       // 1.0
-constexpr uint32_t TEMPLATE_P2 = 2;       // 2.0
-constexpr uint32_t TEMPLATE_P3 = 3;       // 3.0
-constexpr uint32_t TEMPLATE_P_NINF = 4;   // -inf
-constexpr uint32_t TEMPLATE_P_INF = 5;    // inf
-constexpr uint32_t TEMPLATE_P_OTHER = 6;  // other
+constexpr uint32_t TEMPLATE_P0 = 0;      // 0.0
+constexpr uint32_t TEMPLATE_P1 = 1;      // 1.0
+constexpr uint32_t TEMPLATE_P2 = 2;      // 2.0
+constexpr uint32_t TEMPLATE_P3 = 3;      // 3.0
+constexpr uint32_t TEMPLATE_P_NINF = 4;  // -inf
+constexpr uint32_t TEMPLATE_P_INF = 5;   // inf
+constexpr uint32_t TEMPLATE_P_OTHER = 6; // other
 
 constexpr int CAST_MODE_NONE = 0;
 constexpr int CAST_MODE_RINT = 1;
@@ -53,11 +52,11 @@ struct RenormP0Dag {
 
     using Cast0 = Bind<Vec::Cast<PromoteT, T, CAST_MODE_NONE>, OpCopyIn0>;
     using ConstZero = MAKE_CONST(PromoteT, 0);
-    using OpMask = Bind<Vec::Compare<uint8_t, PromoteT, COMPARE_MODE_EQ>, Cast0, ConstZero>;  // EQ
+    using OpMask = Bind<Vec::Compare<uint8_t, PromoteT, COMPARE_MODE_EQ>, Cast0, ConstZero>; // EQ
     using ConstOne = MAKE_CONST(PromoteT, 1);
     using DupZero = Bind<Vec::Duplicate<PromoteT>, ConstZero>;
-    using OpSel =
-        Bind<Vec::Select<uint8_t, PromoteT, SEL_MODE_TENSOR_SCALAR>, OpMask, DupZero, ConstOne>;  // tensor scalar
+    using OpSel = Bind<Vec::Select<uint8_t, PromoteT, SEL_MODE_TENSOR_SCALAR>, OpMask, DupZero,
+                       ConstOne>; // tensor scalar
     using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpSel>;
 
     // 竞品没有max, epsilon通过tiling参数传递
@@ -140,7 +139,7 @@ struct RenormP3Dag {
     // 计算缩放因子
     using Mins0 = Bind<Vec::Mins<PromoteT>, OpMaxs, Placeholder::Var<PromoteT, 2>>;
     using Div0 = Bind<Vec::Div<PromoteT>, Mins0, OpMaxs>;
-   
+
     using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, Div0>;
 
     using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
@@ -164,7 +163,7 @@ struct RenormPInfDag {
     // 计算缩放因子
     using Mins0 = Bind<Vec::Mins<PromoteT>, OpMaxs, Placeholder::Var<PromoteT, 1>>;
     using Div0 = Bind<Vec::Div<PromoteT>, Mins0, OpMaxs>;
-   
+
     using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, Div0>;
 
     using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
@@ -173,7 +172,7 @@ struct RenormPInfDag {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
- // -inf: min(abs(x))
+// -inf: min(abs(x))
 template <typename T, typename PromoteT = T, typename OutT = T>
 struct RenormPNInfDag {
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
@@ -214,8 +213,8 @@ struct RenormPOtherDag {
     // 计算缩放因子
     using Mins0 = Bind<Vec::Mins<PromoteT>, OpMaxs, Placeholder::Var<PromoteT, 3>>;
     using Div0 = Bind<Vec::Div<PromoteT>, Mins0, OpMaxs>;
-   
-    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, Div0>;    
+
+    using Cast1 = Bind<Vec::Cast<OutT, PromoteT, CAST_MODE_RINT>, Div0>;
 
     using OpCopyOut = Bind<Vec::CopyOut<OutT>, Placeholder::Out0<OutT>, Cast1>;
     using Outputs = Elems<OpCopyOut>;
@@ -223,6 +222,6 @@ struct RenormPOtherDag {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
-}  // namespace Renorm
+} // namespace Renorm
 
 #endif

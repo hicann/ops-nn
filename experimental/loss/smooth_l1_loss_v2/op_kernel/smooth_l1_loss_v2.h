@@ -93,8 +93,8 @@ class KernelSmoothL1LossV2 {
 public:
     __aicore__ inline KernelSmoothL1LossV2(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace, const SmoothL1LossV2TilingData& tiling)
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace,
+                                const SmoothL1LossV2TilingData& tiling)
     {
         ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
         (void)tiling.finalBigTileNum;
@@ -201,8 +201,8 @@ private:
         }
     }
 
-    __aicore__ inline void InitReductionAndWorkspace(
-        GM_ADDR workspace, uint64_t totalDataNum, float sigma, int reduction)
+    __aicore__ inline void InitReductionAndWorkspace(GM_ADDR workspace, uint64_t totalDataNum, float sigma,
+                                                     int reduction)
     {
         this->sigma = sigma;
         this->reduction = reduction;
@@ -236,8 +236,8 @@ private:
         }
     }
 
-    __aicore__ inline void InitGlobalBuffers(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR loss, uint64_t globalBufferIndex, int reduction)
+    __aicore__ inline void InitGlobalBuffers(GM_ADDR predict, GM_ADDR label, GM_ADDR loss, uint64_t globalBufferIndex,
+                                             int reduction)
     {
         predictGm.SetGlobalBuffer((__gm__ TYPE_PREDICT*)predict + globalBufferIndex, this->coreDataNum);
         labelGm.SetGlobalBuffer((__gm__ TYPE_LABEL*)label + globalBufferIndex, this->coreDataNum);
@@ -264,8 +264,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyGmToLocalAligned(
-        AscendC::LocalTensor<T> dst, AscendC::GlobalTensor<T> src, uint64_t count)
+    __aicore__ inline void CopyGmToLocalAligned(AscendC::LocalTensor<T> dst, AscendC::GlobalTensor<T> src,
+                                                uint64_t count)
     {
         if (count == 0) {
             return;
@@ -276,8 +276,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyLocalToGmAligned(
-        AscendC::GlobalTensor<T> dst, AscendC::LocalTensor<T> src, uint64_t count)
+    __aicore__ inline void CopyLocalToGmAligned(AscendC::GlobalTensor<T> dst, AscendC::LocalTensor<T> src,
+                                                uint64_t count)
     {
         if (count == 0) {
             return;
@@ -287,8 +287,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void CopyLocalToLocalAligned(
-        AscendC::LocalTensor<T> dst, AscendC::LocalTensor<T> src, uint64_t count)
+    __aicore__ inline void CopyLocalToLocalAligned(AscendC::LocalTensor<T> dst, AscendC::LocalTensor<T> src,
+                                                   uint64_t count)
     {
         if (count == 0) {
             return;
@@ -311,8 +311,8 @@ private:
     }
 
     template <typename DST, typename SRC>
-    __aicore__ inline void ConvertLocalByScalar(
-        AscendC::LocalTensor<DST> dst, AscendC::LocalTensor<SRC> src, uint64_t count)
+    __aicore__ inline void ConvertLocalByScalar(AscendC::LocalTensor<DST> dst, AscendC::LocalTensor<SRC> src,
+                                                uint64_t count)
     {
         if (count == 0) {
             return;
@@ -330,9 +330,10 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeSmoothL1FloatCore(
-        AscendC::LocalTensor<TYPE_PREDICT> predictLocal, AscendC::LocalTensor<TYPE_LABEL> labelLocal,
-        AscendC::LocalTensor<float> diff, AscendC::LocalTensor<float> absDiff)
+    __aicore__ inline void ComputeSmoothL1FloatCore(AscendC::LocalTensor<TYPE_PREDICT> predictLocal,
+                                                    AscendC::LocalTensor<TYPE_LABEL> labelLocal,
+                                                    AscendC::LocalTensor<float> diff,
+                                                    AscendC::LocalTensor<float> absDiff)
     {
         float sigmaVal = this->sigma;
         float invSigma = (sigmaVal == 0.0f) ? 0.0f : 1.0f / sigmaVal;

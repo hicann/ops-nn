@@ -19,9 +19,8 @@
 #include "max_pool3d_with_argmax_v2_tiling_base.h"
 #include "../op_kernel/arch35/max_pool3d_with_argmax_v2_tiling_struct.h"
 
-namespace optiling
-{
-const int64_t NCDHW_DIMS = 5;   
+namespace optiling {
+const int64_t NCDHW_DIMS = 5;
 const int64_t KERNEL_POS = 0;
 const int64_t STRIDE_POS = 1;
 const int64_t PADDING_POS = 2;
@@ -50,7 +49,6 @@ constexpr int64_t MAX_THREAD_NUM = 512;
 constexpr int64_t DEFAULT_THREAD_NUM = 256;
 constexpr int64_t KERNEL_SIZE_THRESHOLD = 64;
 
-
 constexpr size_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
 
 struct InputSIMTInfo {
@@ -64,16 +62,11 @@ struct InputSIMTInfo {
     std::string data_format;
 };
 
-class MaxPool3DWithArgmaxV2TilingSIMT : public MaxPool3DWithArgmaxV2BaseTiling
-{
+class MaxPool3DWithArgmaxV2TilingSIMT : public MaxPool3DWithArgmaxV2BaseTiling {
 public:
-    explicit MaxPool3DWithArgmaxV2TilingSIMT(gert::TilingContext* context) : MaxPool3DWithArgmaxV2BaseTiling(context)
-    {
-    }
+    explicit MaxPool3DWithArgmaxV2TilingSIMT(gert::TilingContext* context) : MaxPool3DWithArgmaxV2BaseTiling(context) {}
 
-    ~MaxPool3DWithArgmaxV2TilingSIMT() override
-    {
-    }
+    ~MaxPool3DWithArgmaxV2TilingSIMT() override {}
 
 protected:
     bool IsCapable() override;
@@ -93,8 +86,8 @@ protected:
 
 private:
     uint64_t GenerateTilingKey(uint64_t innerKey);
-    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* tilingData_ = 
-        context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData>();
+    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData*
+        tilingData_ = context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData>();
     InputSIMTInfo inputData;
     int nDimPos = 0;
     int cDimPos = 1;
@@ -105,5 +98,5 @@ private:
     bool isThreadNum512 = false;
 };
 
-}  // namespace optiling
-#endif  // MAX_POOL3D_WITH_ARGMAX_V2_SIMT_TILING_H
+} // namespace optiling
+#endif // MAX_POOL3D_WITH_ARGMAX_V2_SIMT_TILING_H

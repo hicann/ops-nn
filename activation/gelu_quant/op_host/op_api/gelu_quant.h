@@ -15,9 +15,10 @@
 
 namespace l0op {
 
-std::tuple<aclTensor*, aclTensor*> GeluQuant(
-    const aclTensor* self, const aclTensor* inputScaleOptional, const aclTensor* inputOffsetOptional,
-    const char* approximate, const char* quantMode, const char* roundMode, int64_t dstType, aclOpExecutor* executor);
+std::tuple<aclTensor*, aclTensor*> GeluQuant(const aclTensor* self, const aclTensor* inputScaleOptional,
+                                             const aclTensor* inputOffsetOptional, const char* approximate,
+                                             const char* quantMode, const char* roundMode, int64_t dstType,
+                                             aclOpExecutor* executor);
 
 } // namespace l0op
 

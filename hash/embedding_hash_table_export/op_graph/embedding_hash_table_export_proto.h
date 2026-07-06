@@ -60,4 +60,4 @@ REG_OP(EmbeddingHashTableExport)
     .OP_END_FACTORY_REG(EmbeddingHashTableExport)
 
 } // namespace ge
-#endif  // EMBEDDING_HASH_TABLE_EXPORT_PROTO_H_
+#endif // EMBEDDING_HASH_TABLE_EXPORT_PROTO_H_

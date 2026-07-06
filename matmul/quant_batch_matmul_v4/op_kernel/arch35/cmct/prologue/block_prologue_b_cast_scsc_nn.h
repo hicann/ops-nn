@@ -28,7 +28,7 @@ public:
     using Params = typename PrologueCmct::Params;
 
     __aicore__ inline BlockPrologueNN() = default;
-    __aicore__ inline BlockPrologueNN(const Params &params) : PrologueCmct(params) {}
+    __aicore__ inline BlockPrologueNN(const Params& params) : PrologueCmct(params) {}
 
     template <class ProblemShape>
     __aicore__ inline static Params ToUnderlyingArguments(
@@ -51,6 +51,5 @@ public:
                 .hasBias = bool(tiling->matmulTiling.isBias)};
     }
 };
-}  // namespace Prologue
-}  // namespace QuantBatchMatmulV4
-
+} // namespace Prologue
+} // namespace QuantBatchMatmulV4

@@ -42,20 +42,20 @@ class DualLevelQuantBatchMatmulVectorCompute {
 public:
     __aicore__ inline DualLevelQuantBatchMatmulVectorCompute(){};
 
-    __aicore__ inline void Init(
-        __gm__ x1Level0ScaleType* x1Level0Scale, __gm__ x2Level0ScaleType* x2Level0Scale, __gm__ biasType* bias,
-        __gm__ yType* y);
-    __aicore__ inline void CopyX1Level0ScaleToUb(
-        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params);
-    __aicore__ inline void CopyX2Level0ScaleAndBiasToUb(
-        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void Init(__gm__ x1Level0ScaleType* x1Level0Scale, __gm__ x2Level0ScaleType* x2Level0Scale,
+                                __gm__ biasType* bias, __gm__ yType* y);
+    __aicore__ inline void CopyX1Level0ScaleToUb(const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                                 const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void CopyX2Level0ScaleAndBiasToUb(const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                                        const L0CopyAndCalcParams& l0Params);
     __aicore__ inline void InitUb(uint64_t cFp32BufId, uint64_t nL1Offset);
-    __aicore__ inline void AntiQuantCompute(
-        uint64_t cFp32BufId, uint64_t cvLoopIdx, uint64_t mL1Offset, uint64_t nL1Offset, LocalTensor<float>& cTmpFp32Ub,
-        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params);
-    __aicore__ inline void CopyUbToGm(
-        uint64_t cFp32BufId, uint64_t mL1Offset, uint64_t nL1Offset,
-        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void AntiQuantCompute(uint64_t cFp32BufId, uint64_t cvLoopIdx, uint64_t mL1Offset,
+                                            uint64_t nL1Offset, LocalTensor<float>& cTmpFp32Ub,
+                                            const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                            const L0CopyAndCalcParams& l0Params);
+    __aicore__ inline void CopyUbToGm(uint64_t cFp32BufId, uint64_t mL1Offset, uint64_t nL1Offset,
+                                      const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                      const L0CopyAndCalcParams& l0Params);
 
     __aicore__ inline void WaitVectorFlag();
     __aicore__ inline void SetMte3ToV(uint64_t cFp32BufId);
@@ -67,12 +67,14 @@ public:
     __aicore__ inline void SetVToMTE2ForX2();
 
     __aicore__ inline uint64_t CalcRealMSizeForVec(uint64_t totalMSize, uint64_t mUbSize);
-    __aicore__ inline void CopyX1Level0ScaleToUbForAllKDim(
-        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params,
-        uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound, uint64_t vectorMOffset);
-    __aicore__ inline void CopyX1Level0ScaleToUbForTileKDim(
-        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params,
-        uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound, uint64_t vectorMOffset);
+    __aicore__ inline void CopyX1Level0ScaleToUbForAllKDim(const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                                           const L0CopyAndCalcParams& l0Params,
+                                                           uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound,
+                                                           uint64_t vectorMOffset);
+    __aicore__ inline void CopyX1Level0ScaleToUbForTileKDim(const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                                            const L0CopyAndCalcParams& l0Params,
+                                                            uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound,
+                                                            uint64_t vectorMOffset);
 
 private:
     static constexpr uint64_t CV_LOOP_NUM = 2;
@@ -107,9 +109,9 @@ private:
 };
 
 DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::Init(
-    __gm__ x1Level0ScaleType* x1Level0Scale, __gm__ x2Level0ScaleType* x2Level0Scale, __gm__ biasType* bias,
-    __gm__ yType* y)
+__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::Init(__gm__ x1Level0ScaleType* x1Level0Scale,
+                                                      __gm__ x2Level0ScaleType* x2Level0Scale, __gm__ biasType* bias,
+                                                      __gm__ yType* y)
 {
     x1Level0ScaleB32Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(x1Level0Scale));
     x2Level0ScaleB32Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(x2Level0Scale));
@@ -139,7 +141,7 @@ __aicore__ inline uint64_t DLQBMM_VEC_COMPUTE_CLASS::CalcRealMSizeForVec(uint64_
  * - mL0Size: 每轮L0处理的大小（min(128, mL1Size)），分两轮处理完mL1Size
  * - mUbSize: 每个vector core处理的大小（ceil(mL0Size/2)，典型值64）
  * - 两个vector core分别处理每轮的前半段和后半段
- * 
+ *
  * 切分处理：
  * 1. mL1Size < 256: 第二轮数据不足128，vec1可能无数据需要处理
  * 2. mL0Size为奇数: 第一轮vec1的处理量 = mL0Size - mUbSize < mUbSize
@@ -150,10 +152,12 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUb(
     const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params)
 {
     // 计算K方向需要搬运的group数量
-    uint64_t x1Level0ScaleGroupNum =
-        basicBlockParam.kGmOffset + basicBlockParam.level0ScaleKUbSize > basicBlockParam.kSize ?
-            Ops::Base::CeilDiv(basicBlockParam.kSize - basicBlockParam.kGmOffset, basicBlockParam.level0GroupSize) :
-            Ops::Base::CeilDiv(basicBlockParam.level0ScaleKUbSize, basicBlockParam.level0GroupSize);
+    uint64_t x1Level0ScaleGroupNum = basicBlockParam.kGmOffset + basicBlockParam.level0ScaleKUbSize >
+                                             basicBlockParam.kSize ?
+                                         Ops::Base::CeilDiv(basicBlockParam.kSize - basicBlockParam.kGmOffset,
+                                                            basicBlockParam.level0GroupSize) :
+                                         Ops::Base::CeilDiv(basicBlockParam.level0ScaleKUbSize,
+                                                            basicBlockParam.level0GroupSize);
 
     // 第一轮：处理M方向 [0, mL0Size) 范围的数据
     uint64_t realML0Size = DualLevelQuantBatchMatmul::Arch35::Min<uint64_t>(l0Params.mL0Size, l0Params.mL1Size);
@@ -164,11 +168,11 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUb(
     // - K方向多倍载入一次全部搬运：scale的K维度覆盖全部K轴
     // - K方向部分搬运：scale的K维度只覆盖部分K轴
     if (basicBlockParam.level0ScaleKUbSize > basicBlockParam.kSize) {
-        CopyX1Level0ScaleToUbForAllKDim(
-            basicBlockParam, l0Params, x1Level0ScaleGroupNum, realMFirstRound, vectorMOffset);
+        CopyX1Level0ScaleToUbForAllKDim(basicBlockParam, l0Params, x1Level0ScaleGroupNum, realMFirstRound,
+                                        vectorMOffset);
     } else {
-        CopyX1Level0ScaleToUbForTileKDim(
-            basicBlockParam, l0Params, x1Level0ScaleGroupNum, realMFirstRound, vectorMOffset);
+        CopyX1Level0ScaleToUbForTileKDim(basicBlockParam, l0Params, x1Level0ScaleGroupNum, realMFirstRound,
+                                         vectorMOffset);
     }
 }
 
@@ -195,12 +199,10 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUbForAllKDim
         if (realMSecondRound > 0) {
             uint64_t secondRoundBlockLen = realMSecondRound * x1Level0ScaleGroupNum;
             DataCopyPad2D<float>(
-                x1Level0ScaleB32Ub_
-                    [mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET +
-                     realMFirstRound * x1Level0ScaleGroupNum],
-                x1Level0ScaleB32Gm_
-                    [(basicBlockParam.mGmOffset + l0Params.mL0Size + vectorMOffset) *
-                     basicBlockParam.level0ScaleGmGroupNum],
+                x1Level0ScaleB32Ub_[mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET +
+                                    realMFirstRound * x1Level0ScaleGroupNum],
+                x1Level0ScaleB32Gm_[(basicBlockParam.mGmOffset + l0Params.mL0Size + vectorMOffset) *
+                                    basicBlockParam.level0ScaleGmGroupNum],
                 1, secondRoundBlockLen, X1_SCALE_B32_OFFSET, secondRoundBlockLen);
         }
     }
@@ -215,9 +217,8 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUbForTileKDi
     if (realMFirstRound > 0) {
         DataCopyPad2D<float>(
             x1Level0ScaleB32Ub_[mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET],
-            x1Level0ScaleB32Gm_
-                [(basicBlockParam.mGmOffset + vectorMOffset) * basicBlockParam.level0ScaleGmGroupNum +
-                 basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize],
+            x1Level0ScaleB32Gm_[(basicBlockParam.mGmOffset + vectorMOffset) * basicBlockParam.level0ScaleGmGroupNum +
+                                basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize],
             realMFirstRound, x1Level0ScaleGroupNum, X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE,
             basicBlockParam.level0ScaleGmGroupNum);
     }
@@ -226,12 +227,11 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUbForTileKDi
         uint64_t realMSecondRound = CalcRealMSizeForVec(l0Params.mL1Size - l0Params.mL0Size, basicBlockParam.mUbSize);
         if (realMSecondRound > 0) {
             DataCopyPad2D<float>(
-                x1Level0ScaleB32Ub_
-                    [mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET + X1_LEVEL0_SCALE_B32_OFFSET],
-                x1Level0ScaleB32Gm_
-                    [(basicBlockParam.mGmOffset + l0Params.mL0Size + vectorMOffset) *
-                         basicBlockParam.level0ScaleGmGroupNum +
-                     basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize],
+                x1Level0ScaleB32Ub_[mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET +
+                                    X1_LEVEL0_SCALE_B32_OFFSET],
+                x1Level0ScaleB32Gm_[(basicBlockParam.mGmOffset + l0Params.mL0Size + vectorMOffset) *
+                                        basicBlockParam.level0ScaleGmGroupNum +
+                                    basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize],
                 realMSecondRound, x1Level0ScaleGroupNum, X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE,
                 basicBlockParam.level0ScaleGmGroupNum);
         }
@@ -245,9 +245,9 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX2Level0ScaleAndBiasToUb(
     uint64_t ubX2ScaleBlockLen = Ops::Base::CeilDiv(l0Params.kL1Size, basicBlockParam.level0GroupSize);
     DataCopyPad2D<float>(
         x2Level0ScaleB32Ub_[mte2BufIdx_ % DOUBLE_BUFFER_NUM * B_SCALE_B32_OFFSET],
-        x2Level0ScaleB32Gm_
-            [Ops::Base::CeilDiv(basicBlockParam.kGmOffset, basicBlockParam.level0GroupSize) * basicBlockParam.nSize +
-             basicBlockParam.nGmOffset],
+        x2Level0ScaleB32Gm_[Ops::Base::CeilDiv(basicBlockParam.kGmOffset, basicBlockParam.level0GroupSize) *
+                                basicBlockParam.nSize +
+                            basicBlockParam.nGmOffset],
         ubX2ScaleBlockLen, l0Params.nL1Size, basicBlockParam.nSize, B_SCALE_B32_OFFSET);
 
     if constexpr (hasBias) {
@@ -255,9 +255,9 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX2Level0ScaleAndBiasToUb(
             return;
         }
         // BIAS 的 N 轴的搬运量
-        DataCopyPad2D<float>(
-            biasB32Ub_[mte2BufIdx_ % DOUBLE_BUFFER_NUM * BIAS_B32_OFFSET], biasB32Gm_[basicBlockParam.nGmOffset], 1,
-            l0Params.nL1Size, BIAS_B32_OFFSET, l0Params.nL1Size);
+        DataCopyPad2D<float>(biasB32Ub_[mte2BufIdx_ % DOUBLE_BUFFER_NUM * BIAS_B32_OFFSET],
+                             biasB32Gm_[basicBlockParam.nGmOffset], 1, l0Params.nL1Size, BIAS_B32_OFFSET,
+                             l0Params.nL1Size);
     }
 }
 
@@ -277,9 +277,8 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::InitUb(uint64_t cFp32BufId, uin
     } else {
         // 没有bias全填充成0
         // 4:bias的每个数据为4 byte; 256:每次处理(64 * 4)byte的数据
-        InitUbToZero(
-            C_B32_OFFSET * 4 / 256,
-            (__ubuf__ int32_t*)cFp32Ub_.template ReinterpretCast<int32_t>().GetPhyAddr(cFp32BufId * C_B32_OFFSET));
+        InitUbToZero(C_B32_OFFSET * 4 / 256, (__ubuf__ int32_t*)cFp32Ub_.template ReinterpretCast<int32_t>().GetPhyAddr(
+                                                 cFp32BufId * C_B32_OFFSET));
     }
 }
 
@@ -288,14 +287,14 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::AntiQuantCompute(
     uint64_t cFp32BufId, uint64_t cvLoopIdx, uint64_t mL1Offset, uint64_t nL1Offset, LocalTensor<float>& cTmpFp32Ub,
     const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params)
 {
-    uint64_t groupNumIdx =
-        basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize % X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE;
+    uint64_t groupNumIdx = basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize %
+                           X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE;
     // 2:表示在L0C到UB之前会将数据沿M轴切为两半，在计算UB上M轴的偏移量时候需要除2，向上取整是为了应对mL1Offset为奇数的情况
     uint64_t mUbOffset = Ops::Base::CeilDiv<uint64_t>(mL1Offset, 2);
-    __ubuf__ float* cTmpFp32Addr =
-        (__ubuf__ float*)cTmpFp32Ub.GetPhyAddr(cvLoopIdx % CV_LOOP_NUM * C_TMP_FP32_UB_OFFSET);
-    __ubuf__ float* cFp32Addr =
-        (__ubuf__ float*)cFp32Ub_.GetPhyAddr(cFp32BufId * C_B32_OFFSET + mUbOffset * L0C_BASE_N);
+    __ubuf__ float* cTmpFp32Addr = (__ubuf__ float*)cTmpFp32Ub.GetPhyAddr(cvLoopIdx % CV_LOOP_NUM *
+                                                                          C_TMP_FP32_UB_OFFSET);
+    __ubuf__ float* cFp32Addr = (__ubuf__ float*)cFp32Ub_.GetPhyAddr(cFp32BufId * C_B32_OFFSET +
+                                                                     mUbOffset * L0C_BASE_N);
     __ubuf__ float* x2Level0ScaleAddr = (__ubuf__ float*)x2Level0ScaleB32Ub_.GetPhyAddr(
         mte2BufIdx_ % DOUBLE_BUFFER_NUM * B_SCALE_B32_OFFSET + nL1Offset);
     uint64_t x1ScaleGroupSizeNum = basicBlockParam.level0ScaleKUbSize > basicBlockParam.kSize ?
@@ -306,39 +305,35 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::AntiQuantCompute(
         groupNumIdx);
     if (basicBlockParam.kGmOffset + basicBlockParam.l0BaseK < basicBlockParam.kSize) {
         if (l0Params.nL0Size <= SINGLE_REG_PROCESS_SIZE) {
-            MulAdd<float>(
-                cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
-                x1ScaleGroupSizeNum);
+            MulAdd<float>(cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
+                          x1ScaleGroupSizeNum);
         } else {
-            MulDoubleAdd<float>(
-                cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
-                x1ScaleGroupSizeNum);
+            MulDoubleAdd<float>(cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
+                                x1ScaleGroupSizeNum);
         }
     } else {
         if (l0Params.nL0Size <= SINGLE_REG_PROCESS_SIZE) {
-            MulAdd<yType>(
-                cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
-                x1ScaleGroupSizeNum);
+            MulAdd<yType>(cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
+                          x1ScaleGroupSizeNum);
         } else {
-            MulDoubleAdd<yType>(
-                cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
-                x1ScaleGroupSizeNum);
+            MulDoubleAdd<yType>(cTmpFp32Addr, cFp32Addr, x1Level0ScaleAddr, x2Level0ScaleAddr, basicBlockParam.mUbSize,
+                                x1ScaleGroupSizeNum);
         }
     }
 }
 
 DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(
-    uint64_t cFp32BufId, uint64_t mL1Offset, uint64_t nL1Offset,
-    const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params)
+__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(uint64_t cFp32BufId, uint64_t mL1Offset, uint64_t nL1Offset,
+                                                            const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam,
+                                                            const L0CopyAndCalcParams& l0Params)
 {
     SetFlag<HardEvent::V_MTE3>(EVENT_V_MTE3_ID);
     WaitFlag<HardEvent::V_MTE3>(EVENT_V_MTE3_ID);
 
-    uint64_t realML0Size =
-        mL1Offset + l0Params.mL0Size > l0Params.mL1Size ? l0Params.mL1Size - mL1Offset : l0Params.mL0Size;
-    uint64_t realNL0Size =
-        nL1Offset + l0Params.nL0Size > l0Params.nL1Size ? l0Params.nL1Size - nL1Offset : l0Params.nL0Size;
+    uint64_t realML0Size = mL1Offset + l0Params.mL0Size > l0Params.mL1Size ? l0Params.mL1Size - mL1Offset :
+                                                                             l0Params.mL0Size;
+    uint64_t realNL0Size = nL1Offset + l0Params.nL0Size > l0Params.nL1Size ? l0Params.nL1Size - nL1Offset :
+                                                                             l0Params.nL0Size;
     uint64_t mUbSize = Ops::Base::CeilDiv<uint64_t>(realML0Size, 2);
     uint64_t mOutSize = GetSubBlockIdx() == 0 ? mUbSize : realML0Size - mUbSize;
 
@@ -368,8 +363,7 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(
     if (mOutSize > 0) {
         // 2* ：此时cFp32Ub_上的数据被cast为bf16或fp16，所占数据亮缩小了1倍，因此在设置srcFullDim0参数时需要乘2
         DataCopyPad2D(
-            yGm_
-                [(basicBlockParam.mGmOffset + mL1Offset + GetSubBlockIdx() * mUbSize) * basicBlockParam.nSize +
+            yGm_[(basicBlockParam.mGmOffset + mL1Offset + GetSubBlockIdx() * mUbSize) * basicBlockParam.nSize +
                  nL1Offset + basicBlockParam.nGmOffset],
             cFp32Ub_[cFp32BufId * C_B32_OFFSET + L0C_BASE_N * mL1Offset / 2].template ReinterpretCast<yType>(),
             mOutSize, realNL0Size, 2 * L0C_BASE_N, basicBlockParam.nSize);
@@ -389,10 +383,7 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::WaitMte3ToV(uint64_t cFp32BufId
 }
 
 DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
-__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::WaitVToMte2ForX1()
-{
-    WaitFlag<HardEvent::V_MTE2>(EVENT_V_MTE2_ID_X1);
-}
+__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::WaitVToMte2ForX1() { WaitFlag<HardEvent::V_MTE2>(EVENT_V_MTE2_ID_X1); }
 
 DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::SetVToMte2ForX1()
@@ -414,7 +405,6 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::SetVToMTE2ForX2()
     mte2BufIdx_++;
 }
 
-
 DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::WaitVectorFlag()
 {
@@ -432,4 +422,3 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::SetAndWaitMte2ToV()
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

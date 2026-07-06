@@ -24,24 +24,19 @@
 #include "tensor_list_operate.h"
 
 extern "C" __global__ __aicore__ void foreach_add_scalar_list(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR outputs,
-                                                                           GM_ADDR workspace,
-                                                                           GM_ADDR tiling);
+                                                              GM_ADDR workspace, GM_ADDR tiling);
 
 class foreach_add_scalar_list_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "foreach_add_scalar_list_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "foreach_add_scalar_list_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_add_scalar_list_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_add_scalar_list_test TearDown\n" << std::endl; }
 };
 
-TEST_F(foreach_add_scalar_list_test, test_case_float_1) {
+TEST_F(foreach_add_scalar_list_test, test_case_float_1)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
     system("chmod -R 755 ./add_scalar_data/");
     system("cd ./add_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -58,7 +53,7 @@ TEST_F(foreach_add_scalar_list_test, test_case_float_1) {
 
     uint8_t* x1 = CreateTensorListForeachAddScalar<float>(shapeInfos, "float32"); // input tensor
     uint8_t* x2 = CreateTensorListForeachAddScalar<float>(shapeInfos, "float32"); // output tensor
-    float* scalar = (float*)AscendC::GmAlloc(sizeof(float)*3);
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
 
     for (int i = 0; i < 3; i++) {
         scalar[i] = i;
@@ -76,11 +71,11 @@ TEST_F(foreach_add_scalar_list_test, test_case_float_1) {
     system("cd ./add_scalar_data/ && python3 compare_data.py 'float32'");
 }
 
-TEST_F(foreach_add_scalar_list_test, test_case_float16_2) {
+TEST_F(foreach_add_scalar_list_test, test_case_float16_2)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
     system("chmod -R 755 ./add_scalar_data/");
     system("cd ./add_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -97,7 +92,7 @@ TEST_F(foreach_add_scalar_list_test, test_case_float16_2) {
 
     uint8_t* x1 = CreateTensorListForeachAddScalar<half>(shapeInfos, "float16"); // input tensor
     uint8_t* x2 = CreateTensorListForeachAddScalar<half>(shapeInfos, "float16"); // output tensor
-    float* scalar = (float*)AscendC::GmAlloc(sizeof(float)*3);
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
 
     for (int i = 0; i < 3; i++) {
         scalar[i] = i;
@@ -115,11 +110,11 @@ TEST_F(foreach_add_scalar_list_test, test_case_float16_2) {
     system("cd ./add_scalar_data/ && python3 compare_data.py 'float16'");
 }
 
-TEST_F(foreach_add_scalar_list_test, test_case_int32_3) {
+TEST_F(foreach_add_scalar_list_test, test_case_int32_3)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
     system("chmod -R 755 ./add_scalar_data/");
     system("cd ./add_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'int32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -137,7 +132,7 @@ TEST_F(foreach_add_scalar_list_test, test_case_int32_3) {
     uint8_t* x1 = CreateTensorListForeachAddScalar<int32_t>(shapeInfos, "int32"); // input tensor
     uint8_t* x2 = CreateTensorListForeachAddScalar<int32_t>(shapeInfos, "int32"); // output tensor
     uint8_t* x3 = (uint8_t*)AscendC::GmAlloc(sizeof(int32_t));
-    float* scalar = (float*)AscendC::GmAlloc(sizeof(float)*3);
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
 
     for (int i = 0; i < 3; i++) {
         scalar[i] = i;
@@ -155,11 +150,11 @@ TEST_F(foreach_add_scalar_list_test, test_case_int32_3) {
     system("cd ./add_scalar_data/ && python3 compare_data.py 'int32'");
 }
 
-TEST_F(foreach_add_scalar_list_test, test_case_blfoat16_4) {
+TEST_F(foreach_add_scalar_list_test, test_case_blfoat16_4)
+{
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_add_scalar_list/tests/ut/op_kernel/add_scalar_data ./");
     system("chmod -R 755 ./add_scalar_data/");
     system("cd ./add_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -177,7 +172,7 @@ TEST_F(foreach_add_scalar_list_test, test_case_blfoat16_4) {
     uint8_t* x1 = CreateTensorListForeachAddScalar<bfloat16_t>(shapeInfos, "bfloat16_t"); // input tensor
     uint8_t* x2 = CreateTensorListForeachAddScalar<bfloat16_t>(shapeInfos, "bfloat16_t"); // output tensor
     uint8_t* x3 = (uint8_t*)AscendC::GmAlloc(sizeof(float));
-    float* scalar = (float*)AscendC::GmAlloc(sizeof(float)*3);
+    float* scalar = (float*)AscendC::GmAlloc(sizeof(float) * 3);
 
     for (int i = 0; i < 3; i++) {
         scalar[i] = i;

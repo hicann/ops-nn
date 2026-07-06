@@ -18,7 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*> SoftmaxCrossEntropyWithLogits(const aclTensor *features, const aclTensor *labels, aclOpExecutor *executor);
+std::tuple<aclTensor*, aclTensor*> SoftmaxCrossEntropyWithLogits(const aclTensor* features, const aclTensor* labels,
+                                                                 aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_GELU_H_

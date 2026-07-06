@@ -11,12 +11,12 @@
 /*!
  * \file index_fill_d_tiling_data.h
  * \brief tiling data struct
-*/
+ */
 
 #ifndef _INDEX_FILL_D_TILING_DATA_H_
 #define _INDEX_FILL_D_TILING_DATA_H_
 
-struct IndexFillDTilingData{
+struct IndexFillDTilingData {
     uint64_t smallCoreDataNum;
     uint64_t bigCoreDataNum;
     uint64_t finalBigTileNum;
@@ -25,6 +25,6 @@ struct IndexFillDTilingData{
     uint64_t smallTailDataNum;
     uint64_t bigTailDataNum;
     uint64_t tailBlockNum;
-} ;
+};
 
 #endif

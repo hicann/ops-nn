@@ -31,13 +31,9 @@
 using namespace std;
 
 class mat_mul_v3_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "mat_mul_v3_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "mat_mul_v3_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "mat_mul_v3_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "mat_mul_v3_test TearDown\n" << endl; }
 };
 
 struct HcclCombinOpParam {
@@ -47,7 +43,8 @@ struct HcclCombinOpParam {
     uint32_t rankDim;
 };
 
-TEST_F(mat_mul_v3_test, mat_mul_v3_test_1) {
+TEST_F(mat_mul_v3_test, mat_mul_v3_test_1)
+{
     // {{16, 16}, {16, 16}}
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
@@ -62,12 +59,12 @@ TEST_F(mat_mul_v3_test, mat_mul_v3_test_1) {
     size_t tilingSize = sizeof(MatmulTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *aGM = (uint8_t *)AscendC::GmAlloc(shape_a);
-    uint8_t *bGM = (uint8_t *)AscendC::GmAlloc(shape_b);
-    uint8_t *biasGM = nullptr;
-    uint8_t *offsetWGM = nullptr;
-    uint8_t *output = (uint8_t *)AscendC::GmAlloc(shape_output);
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+    uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shape_a);
+    uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shape_b);
+    uint8_t* biasGM = nullptr;
+    uint8_t* offsetWGM = nullptr;
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(shape_output);
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
 
     memset(aGM, 0, shape_a);
     memset(bGM, 0, shape_b);
@@ -79,13 +76,13 @@ TEST_F(mat_mul_v3_test, mat_mul_v3_test_1) {
     system("cd ./mat_mul_v3_data/ && python3 gen_data_fp32.py 16 16 16");
     // system("cd ./fa_data/ && python3 gen_tiling.py case2");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/mat_mul_v3_data/shape_a.bin", shape_a, aGM, shape_a);
     ReadFile(path + "/mat_mul_v3_data/shape_b.bin", shape_b, bGM, shape_b);
     ReadFile(path + "/mat_mul_v3_data/shape_output.bin", shape_output, output, shape_output);
 
-    MatmulTilingData *tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
+    MatmulTilingData* tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
     tiling_data->matmulTiling.usedCoreNum = 20;
     tiling_data->matmulTiling.M = 16;
     tiling_data->matmulTiling.N = 16;

@@ -22,7 +22,8 @@ the output will be [[0, 3] [3, 2] [1, 3]].
 * Two inputs, including:
 * @li x: A tensor. Must be one of the following types:
 *     float16, float32, bfloat16, int8, int16, int32, int64, uint8. \n
-* @li boundaries: A sorted 1-dim tensor with same type as x. It gives the boundary of the buckets. Must be one of the following types:
+* @li boundaries: A sorted 1-dim tensor with same type as x. It gives the boundary of the buckets. Must be one of the
+following types:
 *     float16, float32, bfloat16, int8, int16, int32, int64, uint8. \n
 
 * @par Attributes:
@@ -30,7 +31,7 @@ the output will be [[0, 3] [3, 2] [1, 3]].
 * @li right: An optional true or false. If true, return upperbound index. If false return lowerbound index.
 
 * @par Outputs:
-* y: A tensor with the same shape as 'x', each value of input replaced with bucket index. 
+* y: A tensor with the same shape as 'x', each value of input replaced with bucket index.
 * Must be one of the following types: int32, int64. \n
 
 * @par Third-party framework compatibility

@@ -25,15 +25,18 @@ OP_TYPE_REGISTER(QuantUpdateScatter);
 
 const aclTensor* QuantUpdateScatter(const aclTensor* selfRef, const aclTensor* indices, const aclTensor* updates,
                                     const aclTensor* quantScales, const aclTensor* quantZeroPoints,
-                                    const std::string& reduce, int64_t axis, int64_t quantAxis,
-                                    aclOpExecutor* executor, bool reciprocalScale, const char* roundMode) {
-  L0_DFX(QuantUpdateScatter, selfRef, indices, updates, quantScales, quantZeroPoints,
-         reduce, axis, quantAxis, reciprocalScale, roundMode);
+                                    const std::string& reduce, int64_t axis, int64_t quantAxis, aclOpExecutor* executor,
+                                    bool reciprocalScale, const char* roundMode)
+{
+    L0_DFX(QuantUpdateScatter, selfRef, indices, updates, quantScales, quantZeroPoints, reduce, axis, quantAxis,
+           reciprocalScale, roundMode);
 
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(QuantUpdateScatter, OP_INPUT(selfRef, indices, updates, quantScales, quantZeroPoints),
-                                         OP_OUTPUT(selfRef), OP_ATTR(reduce, axis, quantAxis, reciprocalScale, roundMode));
-  OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "QuantUpdateScatter ADD_TO_LAUNCHER_LIST_AICORE failed."),
-                                         return nullptr);                                         
-  return selfRef;
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        QuantUpdateScatter, OP_INPUT(selfRef, indices, updates, quantScales, quantZeroPoints), OP_OUTPUT(selfRef),
+        OP_ATTR(reduce, axis, quantAxis, reciprocalScale, roundMode));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "QuantUpdateScatter ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return selfRef;
 }
-}  // namespace l0op
+} // namespace l0op

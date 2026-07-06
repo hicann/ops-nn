@@ -13,7 +13,7 @@
 namespace ops {
 class SwishV2 : public OpDef {
 public:
-    explicit SwishV2(const char *name) : OpDef(name)
+    explicit SwishV2(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -44,4 +44,4 @@ public:
 };
 
 OP_ADD(SwishV2);
-}  // namespace ops
+} // namespace ops

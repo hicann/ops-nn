@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file max_pool_grad_with_argmax_tiling_simt.h
@@ -15,7 +15,7 @@
 #ifndef MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H
 #define MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H
 
-#include <array> 
+#include <array>
 #include "max_pool_grad_with_argmax_tiling.h"
 #include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_simt_tiling_common.h"
 namespace optiling {
@@ -23,14 +23,9 @@ namespace optiling {
 class MaxPoolGradWithArgmaxTilingSIMT : public MaxPoolGradWithArgmaxBaseTiling {
 public:
     explicit MaxPoolGradWithArgmaxTilingSIMT(gert::TilingContext* context)
-        : MaxPoolGradWithArgmaxBaseTiling(context), 
-          SimtBase(new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData))
-    {
-    }
-    ~MaxPoolGradWithArgmaxTilingSIMT() override
-    {
-        delete SimtBase;
-    }
+        : MaxPoolGradWithArgmaxBaseTiling(context), SimtBase(new MaxPoolGradWithArgmaxSIMTTilingCommon(&inputData))
+    {}
+    ~MaxPoolGradWithArgmaxTilingSIMT() override { delete SimtBase; }
 
 private:
     MaxPoolGradWithArgmaxSIMTTilingCommon* SimtBase;
@@ -40,6 +35,6 @@ private:
     ge::graphStatus PostTiling() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // CANN_MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H
+#endif // CANN_MAX_POOL_GRAD_WITH_ARGMAX_TILING_SIMT_H

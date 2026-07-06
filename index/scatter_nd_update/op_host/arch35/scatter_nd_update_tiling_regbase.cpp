@@ -79,20 +79,18 @@ ge::graphStatus ScatterNdUpdateTiling::GetPlatformInfo()
     OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(opName, "fail to get platform info"), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto aivNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (aivNum <= 0), OP_LOGE(opName, "ScatterNdUpdateTiling fail to get totalCoreNum_."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((aivNum <= 0), OP_LOGE(opName, "ScatterNdUpdateTiling fail to get totalCoreNum_."),
+                return ge::GRAPH_FAILED);
     totalCoreNum_ = aivNum;
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
-    OP_CHECK_IF(
-        (ubSizePlatForm <= DCACHE_SIZE), OP_LOGE(opName, "ub size less than Dcache Size. please check"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSizePlatForm <= DCACHE_SIZE), OP_LOGE(opName, "ub size less than Dcache Size. please check"),
+                return ge::GRAPH_FAILED);
     // UB Size Need reserve space for Dcache / CCEC Compile Stack.
     ubSize_ = ubSizePlatForm - DCACHE_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_CHECK_IF(
-        (res != ge::GRAPH_SUCCESS), OP_LOGE(opName, "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(opName, "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -106,8 +104,8 @@ ge::graphStatus ScatterNdUpdateTiling::ValidateVarInfo(const gert::Tensor* var, 
         outputShapeSize *= varOriginShape.GetDim(i);
     }
     if (outputShapeSize <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            opName, "var", std::to_string(outputShapeSize).c_str(), "varShapeSize must be greater than 0");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "var", std::to_string(outputShapeSize).c_str(),
+                                                  "varShapeSize must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -127,13 +125,13 @@ ge::graphStatus ScatterNdUpdateTiling::ValidateVarInfo(const gert::Tensor* var, 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterNdUpdateTiling::ValidateIndicesInfo(
-    const gert::Tensor* indices, gert::Shape& indiceShape, int64_t& indiceDims)
+ge::graphStatus ScatterNdUpdateTiling::ValidateIndicesInfo(const gert::Tensor* indices, gert::Shape& indiceShape,
+                                                           int64_t& indiceDims)
 {
     indiceShapeSize = indices->GetShapeSize();
     if (indiceShapeSize < 0UL) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            opName, "indices", std::to_string(indiceShapeSize).c_str(), "indices shapeSize cannot be negative");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "indices", std::to_string(indiceShapeSize).c_str(),
+                                                  "indices shapeSize cannot be negative");
         return ge::GRAPH_FAILED;
     }
     auto indicesDesc = context_->GetInputDesc(INPUT_IDX_INDICES);
@@ -145,28 +143,28 @@ ge::graphStatus ScatterNdUpdateTiling::ValidateIndicesInfo(
     indiceDims = indiceShape.GetDimNum();
     rankSize_ = indiceShape.GetDim(indiceDims - 1);
     if (indiceDims < TWO) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            opName, "indices", std::to_string(indiceDims).c_str(), "The number of dimensions must be >= 2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "indices", std::to_string(indiceDims).c_str(),
+                                                 "The number of dimensions must be >= 2");
         return ge::GRAPH_FAILED;
     }
 
     if (RANK_MIN_VALUE > static_cast<uint16_t>(rankSize_) || static_cast<uint16_t>(rankSize_) > RANK_MAX_VALUE) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            opName, "rankSize", std::to_string(rankSize_).c_str(), "rankSize must be in the range [1, 7]");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "rankSize", std::to_string(rankSize_).c_str(),
+                                              "rankSize must be in the range [1, 7]");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterNdUpdateTiling::HandleNonContiguousCase(
-    const gert::Tensor* var, const gert::Shape& varOriginShape)
+ge::graphStatus ScatterNdUpdateTiling::HandleNonContiguousCase(const gert::Tensor* var,
+                                                               const gert::Shape& varOriginShape)
 {
     auto varViewStride = context_->GetInputStride(INPUT_IDX_VAR);
     constexpr uint16_t MAX_INDICES_RANK_FOR_VIEW = 4;
     if (static_cast<uint16_t>(rankSize_) > MAX_INDICES_RANK_FOR_VIEW) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            opName, "rankSize", std::to_string(rankSize_).c_str(), "In non-contiguous scenarios, rankSize must be <= 4.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "rankSize", std::to_string(rankSize_).c_str(),
+                                              "In non-contiguous scenarios, rankSize must be <= 4.");
         return ge::GRAPH_FAILED;
     }
 
@@ -186,7 +184,8 @@ ge::graphStatus ScatterNdUpdateTiling::HandleNonContiguousCase(
     }
 
     if (!nonIndexAxesContiguous) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var", "non-contiguous strides", "non-indexed axis strides must be contiguous");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var", "non-contiguous strides",
+                                              "non-indexed axis strides must be contiguous");
         return ge::GRAPH_FAILED;
     }
 
@@ -213,8 +212,8 @@ ge::graphStatus ScatterNdUpdateTiling::ValidateUpdatesInfo(const gert::Tensor* u
 {
     updateShapeSize = updates->GetShapeSize();
     if (updateShapeSize < 0UL) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            opName, "updates", std::to_string(updateShapeSize).c_str(), "updates shapeSize must not be negative.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "updates", std::to_string(updateShapeSize).c_str(),
+                                                  "updates shapeSize must not be negative.");
         return ge::GRAPH_FAILED;
     }
 
@@ -223,20 +222,20 @@ ge::graphStatus ScatterNdUpdateTiling::ValidateUpdatesInfo(const gert::Tensor* u
     updateShape = updates->GetStorageShape();
     updateDtype_ = updateDesc->GetDataType();
     if (updateDtype_ != varDtype_) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName, "updates, var", Ops::Base::ToString(updateDtype_).c_str(), "updates and var must have the same dtype");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName, "updates, var", Ops::Base::ToString(updateDtype_).c_str(),
+                                               "updates and var must have the same dtype");
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(
-    const gert::Shape& varOriginShape, gert::Shape& indiceShape, gert::Shape& updateShape)
+ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(const gert::Shape& varOriginShape,
+                                                              gert::Shape& indiceShape, gert::Shape& updateShape)
 {
     if (shapeRank_ < rankSize_) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            opName, "var", std::to_string(shapeRank_).c_str(), "var dimension count must be >= rankSize.");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "var", std::to_string(shapeRank_).c_str(),
+                                                 "var dimension count must be >= rankSize.");
         return ge::GRAPH_FAILED;
     }
 
@@ -245,16 +244,16 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(
         OP_LOGI(opName, "outPutShape[%lld] = %lld", idx, outPutShape[idx]);
     }
 
-    OP_LOGI(
-        opName, "After outPutShape calculation, shapeRank_: %lld, outputShapeSize: %llu", shapeRank_, outputShapeSize);
+    OP_LOGI(opName, "After outPutShape calculation, shapeRank_: %lld, outputShapeSize: %llu", shapeRank_,
+            outputShapeSize);
 
     if (indiceShapeSize == 0UL || updateShapeSize == 0UL) {
         return ge::GRAPH_SUCCESS;
     }
 
     if (CheckScatterNdUpdateTensorShape(indiceShape, updateShape, varOriginShape)) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName, "updates, output", "updates_shape, output_shape", "The trailing dimension counts of updateRank and outputRank must match");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "updates, output", "updates_shape, output_shape",
+                                               "The trailing dimension counts of updateRank and outputRank must match");
         return ge::GRAPH_FAILED;
     }
 
@@ -317,8 +316,8 @@ ge::graphStatus ScatterNdUpdateTiling::GetShapeAttrsInfo()
         auto varViewStride = context_->GetInputStride(INPUT_IDX_VAR);
         if (varViewStride != nullptr && varViewStride->GetDimNum() != 0) {
             status = HandleNonContiguousCase(var, varOriginShape);
-            OP_TILING_CHECK(
-                status != ge::GRAPH_SUCCESS, OP_LOGE(opName, "HandleNonContiguousCase failed"), return status);
+            OP_TILING_CHECK(status != ge::GRAPH_SUCCESS, OP_LOGE(opName, "HandleNonContiguousCase failed"),
+                            return status);
         } else {
             status = HandleContiguousCase();
             OP_TILING_CHECK(status != ge::GRAPH_SUCCESS, OP_LOGE(opName, "HandleContiguousCase failed"), return status);
@@ -343,8 +342,9 @@ ge::graphStatus ScatterNdUpdateTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ScatterNdUpdateTiling::CheckScatterNdUpdateTensorShape(
-    const gert::Shape& indiceShape, const gert::Shape& updateShape, const gert::Shape& outputShape)
+ge::graphStatus ScatterNdUpdateTiling::CheckScatterNdUpdateTensorShape(const gert::Shape& indiceShape,
+                                                                       const gert::Shape& updateShape,
+                                                                       const gert::Shape& outputShape)
 {
     int64_t indiceDims = indiceShape.GetDimNum();
     int64_t updateDims = updateShape.GetDimNum();
@@ -378,18 +378,17 @@ ge::graphStatus ScatterNdUpdateTiling::CheckScatterNdUpdateTensorShape(
 void ScatterNdUpdateTiling::BlockTiling()
 {
     auto typeSize = ge::GetSizeByDataType(updateDtype_);
-    OP_CHECK_IF(typeSize == 0, OP_LOGE(opName, "typeSize is 0"), return);
+    OP_CHECK_IF(typeSize == 0, OP_LOGE(opName, "typeSize is 0"), return );
     alignFactor = Ops::Base::GetUbBlockSize(context_) / typeSize;
     auto blockFactor = Ops::Base::CeilDiv(updateShapeSize, static_cast<uint64_t>(totalCoreNum_));
     auto blockAlignFactor = Ops::Base::CeilDiv(blockFactor, alignFactor) * alignFactor;
     blockTilingSize = std::max(static_cast<uint64_t>(blockAlignFactor), MIN_TILING_SIZE);
     blockNum = Ops::Base::CeilDiv(updateShapeSize, blockTilingSize);
     tailBlockTilingSize = updateShapeSize - blockTilingSize * (blockNum - 1UL);
-    OP_LOGD(
-        opName,
-        "updateShapeSize = %lld, blockFactor = %lld, blockAlignFactor = %lld,"
-        "blockTilingSize = %d, tailBlockTilingSize = %d",
-        updateShapeSize, blockFactor, blockAlignFactor, blockTilingSize, tailBlockTilingSize);
+    OP_LOGD(opName,
+            "updateShapeSize = %lld, blockFactor = %lld, blockAlignFactor = %lld,"
+            "blockTilingSize = %d, tailBlockTilingSize = %d",
+            updateShapeSize, blockFactor, blockAlignFactor, blockTilingSize, tailBlockTilingSize);
 }
 
 ge::graphStatus ScatterNdUpdateTiling::UbTiling()
@@ -401,9 +400,8 @@ ge::graphStatus ScatterNdUpdateTiling::UbTiling()
     auto halfUbSize = ubSize_ / DB_BUFFER;
     auto indiceNum = indiceShapeSize / rankSize_;
     sliceSize = updateShapeSize / indiceNum;
-    OP_CHECK_IF(
-        sliceSize == static_cast<uint64_t>(0), OP_LOGE(opName, "sliceSize %lu is zero. please check.", sliceSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sliceSize == static_cast<uint64_t>(0),
+                OP_LOGE(opName, "sliceSize %lu is zero. please check.", sliceSize), return ge::GRAPH_FAILED);
     auto updateTypeSize = ge::GetSizeByDataType(updateDtype_);
     indiceDtype_ = context_->GetInputDesc(INPUT_IDX_INDICES)->GetDataType();
     auto indiceTypeSize = ge::GetSizeByDataType(indiceDtype_);
@@ -428,9 +426,8 @@ ge::graphStatus ScatterNdUpdateTiling::SortTiling()
     if (indiceShapeSize == static_cast<uint64_t>(0) || updateShapeSize == static_cast<uint64_t>(0)) {
         return ge::GRAPH_SUCCESS;
     }
-    OP_CHECK_IF(
-        sliceSize == static_cast<uint64_t>(0), OP_LOGE(opName, "sliceSize %lu is zero. please check.", sliceSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sliceSize == static_cast<uint64_t>(0),
+                OP_LOGE(opName, "sliceSize %lu is zero. please check.", sliceSize), return ge::GRAPH_FAILED);
     int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context_);
 
     // 分核策略：每个核平分行数
@@ -472,11 +469,10 @@ ge::graphStatus ScatterNdUpdateTiling::SortTiling()
     }
     blockTilingSize = eachCoreLoop * ubTilingSize;
     tailBlockTilingSize = rows - blockTilingSize * (blockNum - 1UL);
-    OP_LOGD(
-        opName,
-        "rows = %lld, blockTilingSize = %lld, tailBlockTilingSize = %lld,"
-        "blockNum = %d ,eachCoreLoop = %d ,",
-        rows, blockTilingSize, tailBlockTilingSize, blockNum, eachCoreLoop);
+    OP_LOGD(opName,
+            "rows = %lld, blockTilingSize = %lld, tailBlockTilingSize = %lld,"
+            "blockNum = %d ,eachCoreLoop = %d ,",
+            rows, blockTilingSize, tailBlockTilingSize, blockNum, eachCoreLoop);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -496,8 +492,8 @@ uint32_t ScatterNdUpdateTiling::GetSortTmpSize(ge::DataType dataType, uint32_t l
     return maxValue;
 }
 
-int64_t ScatterNdUpdateTiling::GetRestAvailableSize(
-    int64_t sampleNum, int64_t valueTypeBytes, int64_t originalSize, int64_t postAxisSize, ge::DataType idType)
+int64_t ScatterNdUpdateTiling::GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes, int64_t originalSize,
+                                                    int64_t postAxisSize, ge::DataType idType)
 {
     int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     int64_t occupy = Ops::Base::CeilAlign(sampleNum * rankSize_ * indicesTypeSize_, ubBlock) +
@@ -526,8 +522,8 @@ void ScatterNdUpdateTiling::InitFactors(int64_t halfUbSize, int64_t indicesSize,
     indicesFactor_ = halfUbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
 }
 
-void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(
-    int64_t halfUbSize, int64_t indicesSize, int64_t alignNum, int64_t ubBlock)
+void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(int64_t halfUbSize, int64_t indicesSize, int64_t alignNum,
+                                                     int64_t ubBlock)
 {
     int64_t oneBlockSize = indicesSize + varTypeSize_ * eachCoreAfterAxisCount_;
     indicesFactor_ = halfUbSize / oneBlockSize;
@@ -548,14 +544,14 @@ void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
             --indicesFactor_;
-            restSize =
-                halfUbSize - (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
-                              Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
-                              Ops::Base::CeilAlign(indicesFactor_ * (outOfSetTypeSize_ + TWO * ALIGN_SIZE), ubBlock) +
-                              Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) +
-                              Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES + 1), ubBlock) +
-                              indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*eachCoreAfterAxisCount_, ubBlock) +
-                              GetSortTmpSize(outOfSetDtype_, indicesFactor_, false));
+            restSize = halfUbSize -
+                       (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
+                        Ops::Base::CeilAlign(indicesFactor_ * (outOfSetTypeSize_ + TWO * ALIGN_SIZE), ubBlock) +
+                        Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) +
+                        Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES + 1), ubBlock) +
+                        indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*eachCoreAfterAxisCount_, ubBlock) +
+                        GetSortTmpSize(outOfSetDtype_, indicesFactor_, false));
             if (indicesFactor_ > indicesAxis_) {
                 indicesFactor_ = indicesAxis_;
                 break;
@@ -564,11 +560,11 @@ void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(
     }
 }
 
-void ScatterNdUpdateTiling::HandleIndicesFactorLeOne(
-    int64_t halfUbSize, int64_t indicesSize, int64_t alignNum, int64_t ubBlock)
+void ScatterNdUpdateTiling::HandleIndicesFactorLeOne(int64_t halfUbSize, int64_t indicesSize, int64_t alignNum,
+                                                     int64_t ubBlock)
 {
-    int64_t roughMaxElemByUb =
-        (halfUbSize > indicesSize) ? (halfUbSize - indicesSize) / (varTypeSize_ + FP32_BYTES) : 0;
+    int64_t roughMaxElemByUb = (halfUbSize > indicesSize) ? (halfUbSize - indicesSize) / (varTypeSize_ + FP32_BYTES) :
+                                                            0;
     int64_t initAfterAxis = std::min(eachCoreAfterAxisCount_, roughMaxElemByUb);
     afterAxisFactor_ = Ops::Base::FloorAlign(initAfterAxis, alignNum);
     indicesFactor_ = RoughMaxIdxByUb(afterAxisFactor_, halfUbSize, indicesSize);
@@ -639,8 +635,8 @@ void ScatterNdUpdateTiling::DoOpTilingSplitAfter()
     int64_t oneIndexSize = static_cast<int64_t>(rankSize_) * indicesTypeSize_;
     needInt64_ = outOfSetTypeSize_ == sizeof(int64_t);
 
-    int64_t indicesSize =
-        oneIndexSize + outOfSetTypeSize_ + (outOfSetTypeSize_ + TWO * ALIGN_SIZE) + INT32_BYTES + (INT32_BYTES + 1);
+    int64_t indicesSize = oneIndexSize + outOfSetTypeSize_ + (outOfSetTypeSize_ + TWO * ALIGN_SIZE) + INT32_BYTES +
+                          (INT32_BYTES + 1);
     int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
     ComputeCoreSplitAfterAxis();
     InitFactors(halfUbSize, indicesSize, alignNum);
@@ -681,13 +677,14 @@ void ScatterNdUpdateTiling::DoOpTilingSimdSplitIndices()
      * indicesFactor_ * eachCoreAfterAxisCount_: updatesQue_
      */
     int64_t ubBlock = Ops::Base::GetUbBlockSize(context_);
-    int64_t indicesAlignSize =
-        Ops::Base::CeilAlign(oneIndexSize, ubBlock) + Ops::Base::CeilAlign(outOfSetTypeSize_, ubBlock) +
-        Ops::Base::CeilAlign(outOfSetTypeSize_ + TWO * ALIGN_SIZE, ubBlock) +
-        Ops::Base::CeilAlign(INT32_BYTES, ubBlock) + Ops::Base::CeilAlign(INT32_BYTES + 1, ubBlock);
+    int64_t indicesAlignSize = Ops::Base::CeilAlign(oneIndexSize, ubBlock) +
+                               Ops::Base::CeilAlign(outOfSetTypeSize_, ubBlock) +
+                               Ops::Base::CeilAlign(outOfSetTypeSize_ + TWO * ALIGN_SIZE, ubBlock) +
+                               Ops::Base::CeilAlign(INT32_BYTES, ubBlock) +
+                               Ops::Base::CeilAlign(INT32_BYTES + 1, ubBlock);
 
-    int64_t updateAlignSize =
-        Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + GetSortTmpSize(outOfSetDtype_, 1, false);
+    int64_t updateAlignSize = Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) +
+                              GetSortTmpSize(outOfSetDtype_, 1, false);
     if (indicesAlignSize + updateAlignSize > halfUbSize) {
         int64_t indicesSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesAlignSize);
         /* indicesBuf_ + outOfstBuf_ */
@@ -744,8 +741,8 @@ void ScatterNdUpdateTiling::DoOpTilingForSimdMask()
     int64_t oneIndexSize = static_cast<int64_t>(rankSize_) * indicesTypeSize_;
     int64_t halfUbSize = static_cast<int64_t>((ubSize_ - maskSize - RESERVE_SIZE) / DB_BUFFER);
 
-    int64_t indicesAlignSize =
-        Ops::Base::CeilAlign(oneIndexSize, ubBlock) + Ops::Base::CeilAlign(indicesTypeSize_, ubBlock);
+    int64_t indicesAlignSize = Ops::Base::CeilAlign(oneIndexSize, ubBlock) +
+                               Ops::Base::CeilAlign(indicesTypeSize_, ubBlock);
     int64_t updateAlignSize = Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock);
     int64_t colTotalAlign = Ops::Base::CeilAlign(afterAxis_, alignNum);
     if (colTotalAlign * varTypeSize_ < ROW_THRESH_SIZE) {
@@ -824,14 +821,16 @@ void ScatterNdUpdateTiling::CalcDeterministicIndicesSplit(int64_t ubBlock)
 
     while (end - start > 1) {
         mid = (end + start) / TWO;
-        int64_t totalIndexSize =
-            Ops::Base::CeilAlign(mid * rankSize_ * indicesTypeSize_, ubBlockSize) +                 // indice
-            Ops::Base::CeilAlign(mid * outOfSetTypeSize_, ubBlockSize) +                            // outOfsetBuf
-            Ops::Base::CeilAlign(mid * outOfSetTypeSize_, ubBlockSize) + TWO * ubBlockSize +        // sortIndiceBuf
-            Ops::Base::CeilAlign(mid * static_cast<int64_t>(sizeof(uint32_t)), ubBlockSize) +       // updateOrigin
-            Ops::Base::CeilAlign((mid + 1) * static_cast<int64_t>(sizeof(uint32_t)), ubBlockSize) + // uniqeIdCount
-            Ops::Base::CeilAlign(STRIDE_MAX_VALUE * indicesTypeSize_, ubBlockSize) +                // strideBuf
-            MIN_HANDLE_SIZE * FP32_BYTES;                                                           // maxScore
+        int64_t totalIndexSize = Ops::Base::CeilAlign(mid * rankSize_ * indicesTypeSize_, ubBlockSize) + // indice
+                                 Ops::Base::CeilAlign(mid * outOfSetTypeSize_, ubBlockSize) +            // outOfsetBuf
+                                 Ops::Base::CeilAlign(mid * outOfSetTypeSize_, ubBlockSize) +
+                                 TWO * ubBlockSize + // sortIndiceBuf
+                                 Ops::Base::CeilAlign(mid * static_cast<int64_t>(sizeof(uint32_t)),
+                                                      ubBlockSize) + // updateOrigin
+                                 Ops::Base::CeilAlign((mid + 1) * static_cast<int64_t>(sizeof(uint32_t)),
+                                                      ubBlockSize) + // uniqeIdCount
+                                 Ops::Base::CeilAlign(STRIDE_MAX_VALUE * indicesTypeSize_, ubBlockSize) + // strideBuf
+                                 MIN_HANDLE_SIZE * FP32_BYTES;                                            // maxScore
         sortTmpSize = GetSortTmpSize(outOfSetDtype_, mid, false);
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, ubBlockSize);
         int64_t tmpToTalSize = totalIndexSize + sortTmpSize + static_cast<int64_t>(MIN_TILING_SIZE);
@@ -962,9 +961,8 @@ ge::graphStatus ScatterNdUpdateTiling::SetStride()
         OP_LOGI(opName, "Input is view, checking non-contiguous scenario");
         auto varViewStride = context_->GetInputStride(INPUT_IDX_VAR);
         if (varViewStride != nullptr && varViewStride->GetDimNum() != 0) {
-            OP_LOGI(
-                opName, "Processing non-contiguous scenario for stride, rankSize: %u, varViewStride dimNum: %zu",
-                rankSize_, varViewStride->GetDimNum());
+            OP_LOGI(opName, "Processing non-contiguous scenario for stride, rankSize: %u, varViewStride dimNum: %zu",
+                    rankSize_, varViewStride->GetDimNum());
             for (int16_t dim = 0; dim < static_cast<int16_t>(shapeRank_); ++dim) {
                 strideList[dim] = varViewStride->GetStride(dim);
                 OP_LOGI(opName, "Non-contiguous stride[%d]: %llu (from view stride)", dim, strideList[dim]);
@@ -982,9 +980,8 @@ ge::graphStatus ScatterNdUpdateTiling::SetStride()
     strideList[shapeRank_ - ONE] = static_cast<uint64_t>(1);
     for (int16_t dim = static_cast<int16_t>(shapeRank_ - TWO); dim >= 0; --dim) {
         strideList[dim] = strideList[dim + 1] * varOriginShape.GetDim(dim + 1);
-        OP_LOGI(
-            opName, "Contiguous stride[%d]: %llu (shape[%d]: %lld, stride[%d]: %llu)", dim, strideList[dim], dim + 1,
-            varOriginShape.GetDim(dim + 1), dim + 1, strideList[dim + 1]);
+        OP_LOGI(opName, "Contiguous stride[%d]: %llu (shape[%d]: %lld, stride[%d]: %llu)", dim, strideList[dim],
+                dim + 1, varOriginShape.GetDim(dim + 1), dim + 1, strideList[dim + 1]);
     }
     return ge::GRAPH_SUCCESS;
 }

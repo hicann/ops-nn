@@ -22,15 +22,9 @@ using namespace std;
 
 class l2_fast_gelu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "fast_gelu_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "fast_gelu_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "fast_gelu_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "fast_gelu_test TearDown" << endl; }
 };
 
 TEST_F(l2_fast_gelu_test, test_fast_gelu_float32)

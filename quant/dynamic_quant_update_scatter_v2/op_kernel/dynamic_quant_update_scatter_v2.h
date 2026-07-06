@@ -23,14 +23,10 @@ using namespace AscendC;
 template <typename xDtype, typename yDtype>
 class DynamicQuantUpdateScatterV2 : public DynamicQuantUpdateScatterV2Base {
 public:
-    __aicore__ inline DynamicQuantUpdateScatterV2(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantUpdateScatterV2(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR indices, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-        const DynamicQuantUpdateScatterV2TilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
+                                const DynamicQuantUpdateScatterV2TilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitParams();

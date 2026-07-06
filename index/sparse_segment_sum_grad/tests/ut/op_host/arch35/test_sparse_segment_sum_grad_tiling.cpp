@@ -29,24 +29,14 @@ using namespace ge;
 
 class SparseSegmentSumGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SparseSegmentSumGradTiling SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "SparseSegmentSumGradTiling TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseSegmentSumGradTiling SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "SparseSegmentSumGradTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype,
-                            ge::DataType segment_ids_dtype,
-                            gert::StorageShape grad_shape,
-                            gert::StorageShape indices_shape,
-                            gert::StorageShape segment_ids_shape,
-                            gert::StorageShape output_dim0_shape,
-                            gert::StorageShape output_shape,
-                            int64_t expectN, int64_t expectInnerSize,
+static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype, ge::DataType segment_ids_dtype,
+                            gert::StorageShape grad_shape, gert::StorageShape indices_shape,
+                            gert::StorageShape segment_ids_shape, gert::StorageShape output_dim0_shape,
+                            gert::StorageShape output_shape, int64_t expectN, int64_t expectInnerSize,
                             int64_t expectOutputDim0, int64_t expectTotalOutput,
                             ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
@@ -77,10 +67,11 @@ static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype,
 
     std::vector<void*> parse_outputs = {reinterpret_cast<void*>(&compile_info)};
     gert::KernelRunContextHolder kernel_holder = gert::KernelRunContextFaker()
-                             .KernelIONum(4, 1)
-                             .Inputs({const_cast<char*>("{}"), reinterpret_cast<void*>(&platform_info)})
-                             .Outputs(parse_outputs)
-                             .Build();
+                                                     .KernelIONum(4, 1)
+                                                     .Inputs({const_cast<char*>("{}"),
+                                                              reinterpret_cast<void*>(&platform_info)})
+                                                     .Outputs(parse_outputs)
+                                                     .Build();
 
     gert::TilingParseContext* parse_ctx = kernel_holder.GetContext<gert::TilingParseContext>();
     ASSERT_TRUE(parse_ctx->GetPlatformInfo()->Init());
@@ -98,21 +89,22 @@ static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype,
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     gert::KernelRunContextHolder holder = gert::TilingContextFaker()
-                      .SetOpType(op_type)
-                      .NodeIoNum(4, 1)
-                      .IrInstanceNum({1, 1, 1, 1})
-                      .InputShapes({&grad_shape, &indices_shape, &segment_ids_shape, &output_dim0_shape})
-                      .OutputShapes({&output_shape})
-                      .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, grad_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, segment_ids_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, grad_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
+                                              .SetOpType(op_type)
+                                              .NodeIoNum(4, 1)
+                                              .IrInstanceNum({1, 1, 1, 1})
+                                              .InputShapes(
+                                                  {&grad_shape, &indices_shape, &segment_ids_shape, &output_dim0_shape})
+                                              .OutputShapes({&output_shape})
+                                              .CompileInfo(&compile_info)
+                                              .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                                              .NodeInputTd(0, grad_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                              .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                              .NodeInputTd(2, segment_ids_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                              .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                              .NodeOutputTd(0, grad_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                                              .TilingData(param.get())
+                                              .Workspace(ws_size)
+                                              .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context, nullptr);
@@ -137,24 +129,14 @@ static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype,
 
 TEST_F(SparseSegmentSumGradTiling, fp32_int32_basic)
 {
-    ExecuteTestCase(
-        ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
-        gert::StorageShape({4, 2}, {4, 2}),
-        gert::StorageShape({4}, {4}),
-        gert::StorageShape({4}, {4}),
-        gert::StorageShape({}, {}),
-        gert::StorageShape({4, 2}, {4, 2}),
-        4, 2, 4, 8);
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
+                    gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
+                    gert::StorageShape({4, 2}, {4, 2}), 4, 2, 4, 8);
 }
 
 TEST_F(SparseSegmentSumGradTiling, fp16_int64_basic)
 {
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_INT64, ge::DT_INT64,
-        gert::StorageShape({8, 16}, {8, 16}),
-        gert::StorageShape({8}, {8}),
-        gert::StorageShape({8}, {8}),
-        gert::StorageShape({}, {}),
-        gert::StorageShape({16, 16}, {16, 16}),
-        8, 16, 16, 256);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_INT64, ge::DT_INT64, gert::StorageShape({8, 16}, {8, 16}),
+                    gert::StorageShape({8}, {8}), gert::StorageShape({8}, {8}), gert::StorageShape({}, {}),
+                    gert::StorageShape({16, 16}, {16, 16}), 8, 16, 16, 256);
 }

@@ -22,13 +22,11 @@ namespace GroupNormSilu {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class GroupNormSiluB16 : public GroupNormSiluBase<T1>
-{
+class GroupNormSiluB16 : public GroupNormSiluBase<T1> {
 public:
     __aicore__ inline GroupNormSiluB16(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-        const GroupNormSiluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd,
+                                GM_ADDR workspace, const GroupNormSiluTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -39,16 +37,16 @@ private:
     __aicore__ inline void ComputeSumX(const int64_t& num);
     __aicore__ inline void CastMeanAndRstd(const int64_t& copyNum);
     __aicore__ inline void ComputeSilu(const int64_t& loopNum);
-    __aicore__ inline void ComputeForMeanAlign(
-        LocalTensor<T1>& meanOut, LocalTensor<T1>& rstdOut, const int64_t& groups);
+    __aicore__ inline void ComputeForMeanAlign(LocalTensor<T1>& meanOut, LocalTensor<T1>& rstdOut,
+                                               const int64_t& groups);
     __aicore__ inline void ComputeOneLoop(const int64_t& loopNum);
     __aicore__ inline void ComputeMultipleLoop(const int64_t& loopNum);
     __aicore__ inline void AccumulateXandX2OneLoop(const int64_t& outIdx);
     __aicore__ inline void AccumulateXandX2MultipleLoop(const int64_t& outIdx);
     __aicore__ inline void CalcSilu(const float& scale, const float& bias, const int64_t& calcNum);
     __aicore__ inline void CopyOutY(const int64_t& yOffset, const int64_t& copyNum);
-    __aicore__ inline void CopyOutYWithPad(
-        const float& scale, const float& bias, const int64_t& yOffset, const int64_t& copyNum);
+    __aicore__ inline void CopyOutYWithPad(const float& scale, const float& bias, const int64_t& yOffset,
+                                           const int64_t& copyNum);
     __aicore__ inline void CopyOutMeanAndRstd(const int64_t& copyNum);
     __aicore__ inline void ProcessPerCore(const int64_t& loopNum);
     constexpr static int32_t bufferNum = 2;
@@ -93,9 +91,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluB16<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
-    const GroupNormSiluTilingData* tilingData)
+__aicore__ inline void GroupNormSiluB16<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR silu,
+                                                      GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace,
+                                                      const GroupNormSiluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     tiling = tilingData;
@@ -272,8 +270,8 @@ __aicore__ inline void GroupNormSiluB16<T1, T2>::ComputeMultipleLoop(const int64
                 CalcSilu(scale, bias, tiling->processSize);
                 CopyOutY(xOffset, tiling->processSize);
             }
-            int64_t tailOffset =
-                outIdx * tiling->elemNum + dIdx * tiling->hwNum + (tiling->innerLoopNum - 1) * tiling->processSize;
+            int64_t tailOffset = outIdx * tiling->elemNum + dIdx * tiling->hwNum +
+                                 (tiling->innerLoopNum - 1) * tiling->processSize;
             CopyInX<false>(tailOffset, tiling->innerLoopTail);
             CalcSilu(scale, bias, tiling->innerLoopTail);
             CopyOutYWithPad(scale, bias, tailOffset, tiling->innerLoopTail);
@@ -397,8 +395,8 @@ __aicore__ inline void GroupNormSiluB16<T1, T2>::CopyOutY(const int64_t& yOffset
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSiluB16<T1, T2>::CopyOutYWithPad(
-    const float& scale, const float& bias, const int64_t& yOffset, const int64_t& copyNum)
+__aicore__ inline void GroupNormSiluB16<T1, T2>::CopyOutYWithPad(const float& scale, const float& bias,
+                                                                 const int64_t& yOffset, const int64_t& copyNum)
 {
     LocalTensor<T1> outSilu = outQueueSilu.DeQue<T1>();
 #if __CCE_AICORE__ == 220

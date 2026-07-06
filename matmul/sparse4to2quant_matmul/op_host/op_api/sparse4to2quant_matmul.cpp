@@ -29,9 +29,9 @@ constexpr int64_t TYPE_BF16 = 27L;
 constexpr int64_t TYPE_INT32 = 3L;
 constexpr int64_t TYPE_FP32 = 0L;
 
-const aclTensor* Sparse4to2QuantMatmul(
-    const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* index, const aclTensor* xScale,
-    const aclTensor* sparseWeightScale, const aclTensor* bias, int64_t dtype, aclOpExecutor* executor)
+const aclTensor* Sparse4to2QuantMatmul(const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* index,
+                                       const aclTensor* xScale, const aclTensor* sparseWeightScale,
+                                       const aclTensor* bias, int64_t dtype, aclOpExecutor* executor)
 {
     L0_DFX(Sparse4to2QuantMatmul, x, sparseWeight, index, xScale, sparseWeightScale, bias, dtype);
     if (executor == nullptr) {
@@ -41,15 +41,14 @@ const aclTensor* Sparse4to2QuantMatmul(
     Format format = Format::FORMAT_ND;
     auto output = executor->AllocTensor(outType, format, format);
     OP_CHECK_NULL(output, return nullptr);
-    auto ret = INFER_SHAPE(
-        Sparse4to2QuantMatmul, OP_INPUT(x, sparseWeight, index, xScale, sparseWeightScale, bias), OP_OUTPUT(output),
-        OP_ATTR(dtype));
+    auto ret = INFER_SHAPE(Sparse4to2QuantMatmul, OP_INPUT(x, sparseWeight, index, xScale, sparseWeightScale, bias),
+                           OP_OUTPUT(output), OP_ATTR(dtype));
     OP_CHECK_INFERSHAPE(ret != ACLNN_SUCCESS, return nullptr, "Sparse4to2QuantMatmul InferShape failed.");
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        Sparse4to2QuantMatmul, OP_INPUT(x, sparseWeight, index, xScale, sparseWeightScale, bias), OP_OUTPUT(output),
-        OP_ATTR(dtype));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        ret != ACLNN_SUCCESS, return nullptr, "Sparse4to2QuantMatmul ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(Sparse4to2QuantMatmul,
+                                      OP_INPUT(x, sparseWeight, index, xScale, sparseWeightScale, bias),
+                                      OP_OUTPUT(output), OP_ATTR(dtype));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
+                                         "Sparse4to2QuantMatmul ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return output;
 }
 } // namespace l0op

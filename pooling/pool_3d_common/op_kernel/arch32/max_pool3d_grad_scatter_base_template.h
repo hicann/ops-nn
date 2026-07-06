@@ -25,14 +25,11 @@ using namespace AscendC;
 using namespace MaxPool3DGradCommon;
 
 // 通用的 Base 模板类
-template <typename TX, typename TGrad, typename TArgmax, typename TY,
-          typename TilingData, typename ParamsType, typename BlockType>
+template <typename TX, typename TGrad, typename TArgmax, typename TY, typename TilingData, typename ParamsType,
+          typename BlockType>
 class MaxPool3DGradScatterBaseTemplate {
 public:
-    __aicore__ inline MaxPool3DGradScatterBaseTemplate(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline MaxPool3DGradScatterBaseTemplate(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void InitParams(const TilingData* __restrict__ tiling)
     {
@@ -66,20 +63,19 @@ public:
         params_.ubSize = tiling->totalUBSize;
         uint64_t blockId = GetBlockIdx();
         if (params_.preCoreNum == 0 || blockId < params_.preCoreNum) { // 前preCoreNum个核
-            params_.ncIndex =
-                blockId * params_.ncCntRound; // 由于轮数为向上取整，所以当前核nc数的起始位置为 每个核平均nc数*核数
+            params_.ncIndex = blockId *
+                              params_.ncCntRound; // 由于轮数为向上取整，所以当前核nc数的起始位置为 每个核平均nc数*核数
             params_.ncRealRound = params_.ncCntRound;
         } else {
-            params_.ncIndex =
-                params_.preCoreNum * (params_.ncCntRound) + (blockId - params_.preCoreNum) * tiling->ncRoundTail;
+            params_.ncIndex = params_.preCoreNum * (params_.ncCntRound) +
+                              (blockId - params_.preCoreNum) * tiling->ncRoundTail;
             params_.ncRealRound = tiling->ncRoundTail;
         }
         params_.realRound = params_.ncRealRound * params_.doCnt * params_.hoCnt *
                             params_.woCnt; // 处理的base矩阵个数，包括base矩阵和tail矩阵
     }
 
-    __aicore__ inline void InitInputsOutputs(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, 
-                                             GM_ADDR y, GM_ADDR usrWorkspace)
+    __aicore__ inline void InitInputsOutputs(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace)
     {
         gradGm.SetGlobalBuffer((__gm__ TGrad*)grad);
         argmaxGm.SetGlobalBuffer((__gm__ TArgmax*)argmax);
@@ -102,22 +98,22 @@ public:
 
     __aicore__ inline void InitUbBuffer()
     {
-        pipe_->InitBuffer(
-            gradQue, 1, params_.baseNc * params_.baseDo * params_.baseHo * params_.baseWo * sizeof(TGrad));
-        pipe_->InitBuffer(
-            argmaxQue, 1, params_.baseNc * params_.baseDo * params_.baseHo * params_.baseWo * sizeof(TArgmax));
+        pipe_->InitBuffer(gradQue, 1,
+                          params_.baseNc * params_.baseDo * params_.baseHo * params_.baseWo * sizeof(TGrad));
+        pipe_->InitBuffer(argmaxQue, 1,
+                          params_.baseNc * params_.baseDo * params_.baseHo * params_.baseWo * sizeof(TArgmax));
     }
 
     template <typename T>
-    __aicore__ inline void CopyInDataGeneric(
-        GlobalTensor<T>& sourceGm, TQue<QuePosition::VECIN, 1>& targetQue, uint64_t dataOffset)
+    __aicore__ inline void CopyInDataGeneric(GlobalTensor<T>& sourceGm, TQue<QuePosition::VECIN, 1>& targetQue,
+                                             uint64_t dataOffset)
     {
         LocalTensor<T> dataUb = targetQue.AllocTensor<T>();
         const uint32_t elementSize = sizeof(T);
-        
+
         // 计算基础块长度
         const uint32_t baseblockLen = block_.doShape * block_.hoShape * block_.woShape * elementSize;
-        
+
         if (params_.baseWo == params_.woDim) {
             // 情况1: 宽度维度相同，可以使用连续拷贝
             if (baseblockLen > UNIT_BLOCK_LEN && baseblockLen % UNIT_BLOCK_LEN == 0) {
@@ -128,14 +124,14 @@ public:
                 copyParams.srcStride = 0;
                 copyParams.dstStride = 0;
                 DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-                
+
                 DataCopyPad(dataUb, sourceGm[dataOffset], copyParams, padParams);
             } else {
                 // 块长度不是 UNIT_BLOCK_LEN 的整数倍，需要分块拷贝
                 DataCopyExtParams copyParams;
                 const uint32_t totalBlockLen = block_.ncShape * baseblockLen;
                 const uint16_t baseBlockCount = totalBlockLen / UNIT_BLOCK_LEN;
-                
+
                 // 拷贝基础块
                 copyParams.blockCount = baseBlockCount;
                 copyParams.blockLen = UNIT_BLOCK_LEN;
@@ -143,17 +139,16 @@ public:
                 copyParams.dstStride = 0;
                 DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
                 DataCopyPad(dataUb, sourceGm[dataOffset], copyParams, padParams);
-                
+
                 // 拷贝尾部剩余数据
                 const uint32_t tailBlockLen = totalBlockLen % UNIT_BLOCK_LEN;
                 if (tailBlockLen != 0) {
                     copyParams.blockCount = 1;
                     copyParams.blockLen = tailBlockLen;
                     padParams.isPad = true;
-                    DataCopyPad(
-                        dataUb[baseBlockCount * (UNIT_BLOCK_LEN / elementSize)],
-                        sourceGm[dataOffset + baseBlockCount * (UNIT_BLOCK_LEN / elementSize)],
-                        copyParams, padParams);
+                    DataCopyPad(dataUb[baseBlockCount * (UNIT_BLOCK_LEN / elementSize)],
+                                sourceGm[dataOffset + baseBlockCount * (UNIT_BLOCK_LEN / elementSize)], copyParams,
+                                padParams);
                 }
             }
         } else {
@@ -165,26 +160,18 @@ public:
                 copyParams.srcStride = (params_.woDim - block_.woShape) * elementSize;
                 copyParams.dstStride = 0;
                 DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
-                
-                DataCopyPad(
-                    dataUb[loopidx * block_.hoShape * block_.woShape],
-                    sourceGm[dataOffset + loopidx * params_.hoDim * params_.woDim], 
-                    copyParams, padParams);
+
+                DataCopyPad(dataUb[loopidx * block_.hoShape * block_.woShape],
+                            sourceGm[dataOffset + loopidx * params_.hoDim * params_.woDim], copyParams, padParams);
             }
         }
-        
+
         targetQue.EnQue(dataUb);
     }
 
-    __aicore__ inline void CopyInGrad()
-    {
-        CopyInDataGeneric<TGrad>(gradGm, gradQue, block_.offsetGrad);
-    }
+    __aicore__ inline void CopyInGrad() { CopyInDataGeneric<TGrad>(gradGm, gradQue, block_.offsetGrad); }
 
-    __aicore__ inline void CopyInArgmax()
-    {
-        CopyInDataGeneric<TArgmax>(argmaxGm, argmaxQue, block_.offsetArgmax);
-    }
+    __aicore__ inline void CopyInArgmax() { CopyInDataGeneric<TArgmax>(argmaxGm, argmaxQue, block_.offsetArgmax); }
 
 public:
     ParamsType params_;

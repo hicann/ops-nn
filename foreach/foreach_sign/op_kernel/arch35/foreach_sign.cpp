@@ -16,40 +16,32 @@
 
 #include "foreach_sign_simt.h"
 
-enum class ForeachSignTilingKey : uint32_t
-{
-    TILING_KEY_FLOAT   = 0,
+enum class ForeachSignTilingKey : uint32_t {
+    TILING_KEY_FLOAT = 0,
     TILING_KEY_FLOAT16 = 1,
-    TILING_KEY_INT8    = 2,
-    TILING_KEY_INT32   = 3,
-    TILING_KEY_INT64   = 4,
-    TILING_KEY_BF16    = 5,
+    TILING_KEY_INT8 = 2,
+    TILING_KEY_INT32 = 3,
+    TILING_KEY_INT64 = 4,
+    TILING_KEY_BF16 = 5,
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_sign(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_sign(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachSignTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachSignTilingData, tilingData, tiling);
 
-    if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSignTilingKey::TILING_KEY_FLOAT)) {
+    if constexpr (schMode == static_cast<uint32_t>(ForeachSignTilingKey::TILING_KEY_FLOAT)) {
         NsForeachSign::Process<float>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSignTilingKey::TILING_KEY_FLOAT16)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSignTilingKey::TILING_KEY_FLOAT16)) {
         NsForeachSign::Process<half>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSignTilingKey::TILING_KEY_INT8)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSignTilingKey::TILING_KEY_INT8)) {
         NsForeachSign::Process<int8_t>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSignTilingKey::TILING_KEY_INT32)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSignTilingKey::TILING_KEY_INT32)) {
         NsForeachSign::Process<int32_t>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSignTilingKey::TILING_KEY_INT64)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSignTilingKey::TILING_KEY_INT64)) {
         NsForeachSign::Process<int64_t>(x, y, &tilingData);
-    } else if constexpr (schMode == static_cast<uint32_t>(
-            ForeachSignTilingKey::TILING_KEY_BF16)) {
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachSignTilingKey::TILING_KEY_BF16)) {
         NsForeachSign::Process<bfloat16_t>(x, y, &tilingData);
     }
 }

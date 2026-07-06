@@ -18,4 +18,4 @@
 using namespace ge;
 namespace ops {
 IMPL_OP_INFERSHAPE(ReluGrad).InferShape(Ops::Base::InferShape4Broadcast);
-}  // namespace ops
+} // namespace ops

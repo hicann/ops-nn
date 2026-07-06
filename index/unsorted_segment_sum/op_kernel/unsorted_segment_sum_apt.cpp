@@ -46,8 +46,8 @@ using namespace UnsortedSegmentSum;
 #define TEMPLATE_DETERMINISTIC_BIG_INNERDIM 8000
 #define TEMPLATE_DETERMINISTIC_SMALL_INNERDIM 9000
 
-extern "C" __global__ __aicore__ void unsorted_segment_sum(
-    GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void unsorted_segment_sum(GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments,
+                                                           GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
@@ -62,9 +62,8 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(
         op.Init(x, segment_ids, output);
         op.Process();
     } else if (TILING_KEY_IS(TEMPLATE_SIMD_NON_SORT)) {
-        if constexpr (
-            std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
-            std::is_same<int64_t, DTYPE_X>::value) {
+        if constexpr (std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
+                      std::is_same<int64_t, DTYPE_X>::value) {
             return;
         } else {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumSimdNonSortTilingData, tilingData, tiling);
@@ -73,9 +72,8 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(
             op.Process();
         }
     } else if (TILING_KEY_IS(TEMPLATE_SIMD_DYN_SORT)) {
-        if constexpr (
-            std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
-            std::is_same<int64_t, DTYPE_X>::value) {
+        if constexpr (std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
+                      std::is_same<int64_t, DTYPE_X>::value) {
             return;
         } else {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumSimdDynSortTilingData, tilingData, tiling);
@@ -142,9 +140,8 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(
         op.Init(x, segment_ids, output, workspace);
         op.Process();
     } else if (TILING_KEY_IS(TEMPLATE_ADD_TILING_KEY)) {
-        if constexpr (
-            std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
-            std::is_same<int64_t, DTYPE_X>::value) {
+        if constexpr (std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
+                      std::is_same<int64_t, DTYPE_X>::value) {
             return;
         } else {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumOutFlTilingData, tilingData, tiling);
@@ -186,18 +183,16 @@ extern "C" __global__ __aicore__ void unsorted_segment_sum(
             op.Process();
         }
     } else if (TILING_KEY_IS(TEMPLATE_DETERMINISTIC_BIG_INNERDIM)) {
-        if constexpr (
-            std::is_same<float, DTYPE_X>::value || std::is_same<half, DTYPE_X>::value ||
-            std::is_same<bfloat16_t, DTYPE_X>::value) {
+        if constexpr (std::is_same<float, DTYPE_X>::value || std::is_same<half, DTYPE_X>::value ||
+                      std::is_same<bfloat16_t, DTYPE_X>::value) {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDeterministicBigInnerDimTilingData, tilingData, tiling);
             UnsortedSegmentSum::USSKernelDeterministicBigInnerDim<DTYPE_X, DTYPE_SEGMENT_IDS> op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
         }
     } else if (TILING_KEY_IS(TEMPLATE_DETERMINISTIC_SMALL_INNERDIM)) {
-        if constexpr (
-            std::is_same<float, DTYPE_X>::value || std::is_same<half, DTYPE_X>::value ||
-            std::is_same<bfloat16_t, DTYPE_X>::value) {
+        if constexpr (std::is_same<float, DTYPE_X>::value || std::is_same<half, DTYPE_X>::value ||
+                      std::is_same<bfloat16_t, DTYPE_X>::value) {
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSumDetermSmallInnerDimTilingData, tilingData, tiling);
             UnsortedSegmentSum::USSKernelDeterministicSmallInnerDim<DTYPE_X, DTYPE_SEGMENT_IDS> op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);

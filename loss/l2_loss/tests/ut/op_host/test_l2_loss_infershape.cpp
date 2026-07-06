@@ -17,15 +17,9 @@
 
 class L2LossInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "L2LossInfershapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "L2LossInfershapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "L2LossInfershapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "L2LossInfershapeTest TearDown" << std::endl; }
 };
 
 TEST_F(L2LossInfershapeTest, kl_div_loss_grad_test7)

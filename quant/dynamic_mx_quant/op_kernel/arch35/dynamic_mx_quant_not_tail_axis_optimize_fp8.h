@@ -26,18 +26,18 @@ template <typename T, typename U, const bool isTail>
 class DynamicMxQuantNotTailAxisOptimizeFP8 : public DynamicMxQuantBaseFP8<T, U, isTail> {
 public:
     __aicore__ inline DynamicMxQuantNotTailAxisOptimizeFP8(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, const DynamicMxQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace,
+                                const DynamicMxQuantTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void SplitPreAxisCompute(int64_t ubFactor, int64_t blockSizeIdx);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeOCP(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeOCP(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                      __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode>
-    __aicore__ inline void ComputeCuBLAS(
-        int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeCuBLAS(int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr,
+                                         __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr);
 
 private:
     TBuf<QuePosition::VECCALC> maxExpBuf_;
@@ -111,8 +111,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Proce
 }
 
 template <typename T, typename U, const bool isTail>
-__aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::SplitPreAxisCompute(
-    int64_t ubFactor, int64_t blockSizeIdx)
+__aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::SplitPreAxisCompute(int64_t ubFactor,
+                                                                                               int64_t blockSizeIdx)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -126,11 +126,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Split
         int64_t blockCount = this->BlockCountInCurCompute(blockSizeIdx + i + 1);
         offset += blockCount * this->postAxisSize_;
         if (this->scaleAlg_) {
-            ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputeCuBLAS<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr,
+                                                                       mxScaleAddr, yAddr);
         } else {
-            ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
-                this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
+            ComputeOCP<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(this->postAxisSize_, blockCount, xAddr, mxScaleAddr,
+                                                                    yAddr);
         }
     }
     this->inQueue_.template FreeTensor(x);
@@ -145,11 +145,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
 {
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(T);     // 寄存器单次处理能处理的长度
     constexpr uint32_t vfNum = Ops::Base::GetVRegSize() / sizeof(float); // cast到FP32后单个寄存器中的元素个数
-    uint16_t rowsSingleLoop =
-        static_cast<uint16_t>(min(blockCount, static_cast<int64_t>(vfLen) / dataLen)); // 单次处理能处理的行数
-    uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen);      // 单次处理长度
-    uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);        // 循环数
-    uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;        // 尾循环处理的行数
+    uint16_t rowsSingleLoop = static_cast<uint16_t>(
+        min(blockCount, static_cast<int64_t>(vfLen) / dataLen));                  // 单次处理能处理的行数
+    uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen); // 单次处理长度
+    uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);   // 循环数
+    uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;   // 尾循环处理的行数
     uint32_t loopNum0 = dataLenSingleLoop <= vfNum ? dataLenSingleLoop : vfNum;
     uint32_t loopNum1 = dataLenSingleLoop <= vfNum ? 0 : (dataLenSingleLoop - vfNum);
     if (rowsTailLoop == 0) {
@@ -158,10 +158,9 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
     uint16_t dataLenTailLoop = rowsTailLoop * static_cast<uint16_t>(dataLen); // 尾循环处理的长度
     uint32_t tailLoopNum0 = dataLenTailLoop <= vfNum ? dataLenTailLoop : vfNum;
     uint32_t tailLoopNum1 = dataLenTailLoop <= vfNum ? 0 : (dataLenTailLoop - vfNum);
-    uint16_t loopSize = static_cast<uint16_t>(
-        DIGIT_SIXTY_THREE -
-        AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(rowsSingleLoop))); // 求最大指数行的二分次数
-    uint16_t rows = 1 << loopSize;                                               // 最接近rowsSingleLoop的2次方数
+    uint16_t loopSize = static_cast<uint16_t>(DIGIT_SIXTY_THREE - AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(
+                                                                      rowsSingleLoop))); // 求最大指数行的二分次数
+    uint16_t rows = 1 << loopSize; // 最接近rowsSingleLoop的2次方数
     uint16_t expOffset = rows * static_cast<uint16_t>(dataLen);
     uint16_t FP8_BF16_MAX_EXP = 0;
     if constexpr (IsSame<U, fp8_e4m3fn_t>::value) {
@@ -212,14 +211,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::MaskReg invalidDataMask;
         Reg::MaskReg specialDataMask;
         Reg::MaskReg maskAll = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        static constexpr Reg::CastTrait castTraitZero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitOne = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTrait32to8 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTrait32to8 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         Reg::Duplicate(fp8MaxExpRegTensor, FP8_BF16_MAX_EXP);
         Reg::Duplicate(maxEle, BF16_MAX_EXP);
         Reg::Duplicate(nan, BF16_NAN_CUSTOM);
@@ -247,8 +246,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             }
             Reg::Max(expMax, expMax, exp, pnumMask);
         }
-        this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(
-            xAddr, (regLoop - 1) * dataLenSingleLoop, x, tailPnumMask);
+        this->template LoadData<RoundMode::CAST_TRUNC, roundMode>(xAddr, (regLoop - 1) * dataLenSingleLoop, x,
+                                                                  tailPnumMask);
         if constexpr (IsSame<T, half>::value) {
             Reg::And(xSelectRegTensor, (Reg::RegTensor<uint16_t>&)x, invalidMaskFp16, tailPnumMask);
             Reg::Compare<uint16_t, CMPMODE::NE>(invalidDataMask, xSelectRegTensor, invalidMaskFp16, tailPnumMask);
@@ -316,9 +315,9 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             if constexpr (IsSame<T, half>::value) {
                 Reg::Cast<float, T, castTraitZero>(yZero, x, pnumMask);
                 Reg::Cast<float, T, castTraitOne>(yOne, x, pnumMask);
-                Reg::Cast<float, bfloat16_t, castTraitZero>(
-                    reversedShareExpRegTensorFP32Zero, (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor,
-                    pnumMask);
+                Reg::Cast<float, bfloat16_t, castTraitZero>(reversedShareExpRegTensorFP32Zero,
+                                                            (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor,
+                                                            pnumMask);
                 Reg::Cast<float, bfloat16_t, castTraitOne>(
                     reversedShareExpRegTensorFP32One, (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor, pnumMask);
                 Reg::Mul(yZero, yZero, reversedShareExpRegTensorFP32Zero, maskAll);
@@ -342,14 +341,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             Reg::DataCopyUnAlign(addr1, outOne, u1, loopNum1);
             Reg::DataCopyUnAlignPost(addr1, u1, 0);
         }
-        this->template LoadData<toBf16RoundMode, roundMode, true>(
-            xAddr, (regLoop - 1) * dataLenSingleLoop, x, tailPnumMask);
+        this->template LoadData<toBf16RoundMode, roundMode, true>(xAddr, (regLoop - 1) * dataLenSingleLoop, x,
+                                                                  tailPnumMask);
         if constexpr (IsSame<T, half>::value) {
             Reg::Cast<float, T, castTraitZero>(yZero, x, tailPnumMask);
             Reg::Cast<float, T, castTraitOne>(yOne, x, tailPnumMask);
-            Reg::Cast<float, bfloat16_t, castTraitZero>(
-                reversedShareExpRegTensorFP32Zero, (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor,
-                tailPnumMask);
+            Reg::Cast<float, bfloat16_t, castTraitZero>(reversedShareExpRegTensorFP32Zero,
+                                                        (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor,
+                                                        tailPnumMask);
             Reg::Cast<float, bfloat16_t, castTraitOne>(
                 reversedShareExpRegTensorFP32One, (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor, tailPnumMask);
             Reg::Mul(yZero, yZero, reversedShareExpRegTensorFP32Zero, maskAll);
@@ -381,19 +380,18 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
     int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
 {
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(T); // 寄存器单次处理能处理的长度
-    uint16_t rowsSingleLoop =
-        static_cast<uint16_t>(min(blockCount, static_cast<int64_t>(vfLen) / dataLen)); // 单次处理能处理的行数
-    uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen);      // 单次处理长度
-    uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);        // 循环数
-    uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;        // 尾循环处理的行数
+    uint16_t rowsSingleLoop = static_cast<uint16_t>(
+        min(blockCount, static_cast<int64_t>(vfLen) / dataLen));                  // 单次处理能处理的行数
+    uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen); // 单次处理长度
+    uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);   // 循环数
+    uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;   // 尾循环处理的行数
     if (rowsTailLoop == 0) {
         rowsTailLoop = rowsSingleLoop;
     }
     uint16_t dataLenTailLoop = rowsTailLoop * static_cast<uint16_t>(dataLen); // 尾循环处理的长度
-    uint16_t loopSize = static_cast<uint16_t>(
-        DIGIT_SIXTY_THREE -
-        AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(rowsSingleLoop))); // 求最大指数行的二分次数
-    uint16_t rows = 1 << loopSize;                                               // 最接近rowsSingleLoop的2次方数
+    uint16_t loopSize = static_cast<uint16_t>(DIGIT_SIXTY_THREE - AscendC::ScalarCountLeadingZero(static_cast<uint64_t>(
+                                                                      rowsSingleLoop))); // 求最大指数行的二分次数
+    uint16_t rows = 1 << loopSize; // 最接近rowsSingleLoop的2次方数
     uint16_t expOffset = rows * static_cast<uint16_t>(dataLen);
     uint32_t INV_DTYPE_MAX = 0;
     if constexpr (IsSame<U, fp8_e4m3fn_t>::value) {
@@ -442,16 +440,16 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::UnalignReg u0;
         Reg::UnalignReg u1;
 
-        static constexpr Reg::CastTrait castTraitZero = {
-            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTraitOne = {
-            Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-        static constexpr Reg::CastTrait castTrait32to8 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {
-            Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
-        static constexpr Reg::CastTrait castTraitFp32ToBf16 = {
-            Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
+        static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTraitOne = {Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN,
+                                                        Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
+        static constexpr Reg::CastTrait castTrait32to8 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                          Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        static constexpr Reg::CastTrait castTraitFp32ToBf16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                               Reg::MaskMergeMode::ZEROING, toBf16RoundMode};
         Reg::Duplicate(nan, FP32_NAN_CUSTOM);
         Reg::Duplicate(tmp16RegTensor, BF16_MAX);
         Reg::Duplicate(absMaskFP32RegTensor, FP32_MX_MAX_EXP);
@@ -470,8 +468,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             Reg::And(exp, (Reg::RegTensor<uint16_t>&)x, tmp16RegTensor, pnumMask);
             Reg::Max(expMax, expMax, exp, pnumMask);
         }
-        this->template LoadData<RoundMode::UNKNOWN, roundMode>(
-            xAddr, (regLoop - 1) * dataLenSingleLoop, x, tailPnumMask);
+        this->template LoadData<RoundMode::UNKNOWN, roundMode>(xAddr, (regLoop - 1) * dataLenSingleLoop, x,
+                                                               tailPnumMask);
         Reg::And(exp, (Reg::RegTensor<uint16_t>&)x, tmp16RegTensor, tailPnumMask);
         Reg::Max(exp, expMax, exp, tailPnumMask);
         Reg::Copy<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, tailPnumMask);
@@ -505,11 +503,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::Compare<uint32_t, CMPMODE::LT>(infMask, maxFP32RegTensor, absMaskFP32RegTensor, mask);
         Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, maxFP32RegTensor, fp32ZeroRegTensor, mask);
 
-        Reg::Maxs((Reg::RegTensor<float>&)maxFP32RegTensor, (Reg::RegTensor<float>&)maxFP32RegTensor, this->maxLowBound_, mask);
+        Reg::Maxs((Reg::RegTensor<float>&)maxFP32RegTensor, (Reg::RegTensor<float>&)maxFP32RegTensor,
+                  this->maxLowBound_, mask);
 
-        Reg::Mul(
-            (Reg::RegTensor<float>&)maxFP32RegTensor, (Reg::RegTensor<float>&)maxFP32RegTensor,
-            (Reg::RegTensor<float>&)invMaxRegTensor, mask);
+        Reg::Mul((Reg::RegTensor<float>&)maxFP32RegTensor, (Reg::RegTensor<float>&)maxFP32RegTensor,
+                 (Reg::RegTensor<float>&)invMaxRegTensor, mask);
         Reg::Duplicate(invMaxRegTensor, FP8_DEFAULT_MAX_EXP);
         // 右移获取指数位
         Reg::ShiftRights(expFP32RegTensor, maxFP32RegTensor, FP32_SHR_NUM, mask);
@@ -542,8 +540,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::Select<uint32_t>(extractExpRegTensor, extractExpRegTensor, nan, infMask);
         Reg::Select<uint32_t>(extractExpRegTensor, extractExpRegTensor, fp32ZeroRegTensor, zeroMask);
 
-        Reg::Cast<bfloat16_t, float, castTraitFp32ToBf16>(
-            (Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor, (Reg::RegTensor<float>&)extractExpRegTensor, mask);
+        Reg::Cast<bfloat16_t, float, castTraitFp32ToBf16>((Reg::RegTensor<bfloat16_t>&)reversedShareExpRegTensor,
+                                                          (Reg::RegTensor<float>&)extractExpRegTensor, mask);
         Reg::DeInterleave(reversedShareExpRegTensor, tmp16RegTensor, reversedShareExpRegTensor, tmp16RegTensor);
         auto scaleAddr = maxExpAddr;
         for (uint16_t i = 0; i < rowsSingleLoop; i++) {

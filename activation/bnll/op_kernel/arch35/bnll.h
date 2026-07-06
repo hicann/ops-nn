@@ -59,8 +59,8 @@ private:
 };
 
 template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
-__aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::Init(
-    GM_ADDR x, GM_ADDR y, const BNLLTilingData* tilingData)
+__aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR y,
+                                                                      const BNLLTilingData* tilingData)
 {
     int64_t startOffset = tilingData->blockFactor * static_cast<int64_t>(AscendC::GetBlockIdx());
     int64_t remaining = tilingData->totalNum - startOffset;
@@ -98,8 +98,7 @@ __aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::Init(
 }
 
 template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
-__aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T_IN> xLocal = inQueueX_.template AllocTensor<T_IN>();
     DataCopyExtParams copyParams;
@@ -113,8 +112,7 @@ __aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::CopyIn(
 }
 
 template <typename T_IN, typename T_COMPUTE, int BUFFER_MODE>
-__aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T_IN> yLocal = outQueueY_.template DeQue<T_IN>();
     DataCopyExtParams copyParams;
@@ -176,14 +174,14 @@ __aicore__ inline void KernelBNLL<T_IN, T_COMPUTE, BUFFER_MODE>::Compute(int64_t
     // work3 = exp(-|x|)     (exp branch result, also needed for Ln branch)
 
     // -- Step 3: Compute ln(1 + exp(-|x|)) into work2 --
-    Adds(work2, work3, static_cast<T_COMPUTE>(1), elemCount);  // work2 = 1 + exp(-|x|)
-    Ln(work2, work2, elemCount);                                 // work2 = ln(1 + exp(-|x|))
+    Adds(work2, work3, static_cast<T_COMPUTE>(1), elemCount); // work2 = 1 + exp(-|x|)
+    Ln(work2, work2, elemCount);                              // work2 = ln(1 + exp(-|x|))
 
     // -- Step 4: Select between exp and ln branches based on |x| --
     // For |x| > THRESHOLD: use exp(-|x|) [work3]
     // For |x| <= THRESHOLD: use ln(1+exp(-|x|)) [work2]
     // Check: input > THRESHOLD (positive large)
-    Duplicate<T_COMPUTE>(work1, THRESHOLD, elemCount);  // reuse work1 temporarily
+    Duplicate<T_COMPUTE>(work1, THRESHOLD, elemCount); // reuse work1 temporarily
     Compare(cmpMask, inputFp32, work1, CMPMODE::GT, alignedCount);
     Select(work2, cmpMask, work3, work2, SELMODE::VSEL_TENSOR_TENSOR_MODE, elemCount);
 

@@ -40,8 +40,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -68,8 +68,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements,
-                                    ge::DataType& dataType)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements, ge::DataType& dataType)
 {
     // Get input shape
     auto inputX = context->GetInputShape(0);
@@ -81,9 +80,8 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& total
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
-    const std::set<ge::DataType> supportedDtype = {
-        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8
-    };
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32,
+                                                   ge::DT_INT8};
     if (supportedDtype.count(dataType) == 0) {
         OP_LOGE(context, "Selu: unsupported dtype %d", static_cast<int>(dataType));
         return ge::GRAPH_FAILED;
@@ -105,28 +103,24 @@ static ge::graphStatus SeluTilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape info
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT;
-    OP_CHECK_IF(
-        GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace size
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Compute tiling parameters
     SeluTilingData* tiling = context->GetTilingData<SeluTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SeluTilingData), 0, sizeof(SeluTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SeluTilingData), 0, sizeof(SeluTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Determine typeSize and computeTypeSize based on dtype
     int64_t typeSize = 4;        // default: sizeof(float)
@@ -186,9 +180,7 @@ static ge::graphStatus SeluTilingFunc(gert::TilingContext* context)
     //   ubDivisor = (2*typeSize + 2*computeTypeSize) / typeSize
     int64_t ubDivisor = (2 * typeSize + 2 * computeTypeSize) / typeSize;
 
-    int64_t ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor),
-        ubBlockSize);
+    int64_t ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor), ubBlockSize);
     OP_CHECK_IF(ubFactor <= 0, OP_LOGE(context, "Selu: ubFactor is %ld, UB too small", ubFactor),
                 return ge::GRAPH_FAILED);
 

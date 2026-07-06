@@ -23,8 +23,8 @@ using namespace AscendC;
 using namespace ScatterAddWithSorted;
 
 template <uint64_t TEMPLATE_MODE, uint64_t IS_SCALAR, uint64_t IS_DETERM, uint64_t ADDR_TYPE>
-__global__ __aicore__ void scatter_add_with_sorted(
-    GM_ADDR var, GM_ADDR updates, GM_ADDR indices, GM_ADDR pos, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void scatter_add_with_sorted(GM_ADDR var, GM_ADDR updates, GM_ADDR indices, GM_ADDR pos,
+                                                   GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);

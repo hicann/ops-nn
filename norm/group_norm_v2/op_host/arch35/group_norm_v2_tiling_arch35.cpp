@@ -44,12 +44,13 @@ static const int64_t MAX_CHANNEL_SIZE = 4096;
 static const int64_t MAX_NUM_PER_CORE = 2048;
 static const float DEFAULT_EPS = 1e-5;
 
-inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context) {
-  auto json_str = context->GetCompiledJson();
-  OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
-  std::unique_ptr<nlohmann::json> parsed_object_cinfo =
-      std::make_unique<nlohmann::json>(nlohmann::json::parse(json_str));
-  return parsed_object_cinfo;
+inline std::unique_ptr<nlohmann::json> GetCompileInfoJson(gert::TilingParseContext* context)
+{
+    auto json_str = context->GetCompiledJson();
+    OP_CHECK_IF(json_str == nullptr, OP_LOGE(context->GetNodeName(), "json_str is nullptr!"), return nullptr);
+    std::unique_ptr<nlohmann::json> parsed_object_cinfo = std::make_unique<nlohmann::json>(
+        nlohmann::json::parse(json_str));
+    return parsed_object_cinfo;
 }
 
 struct WelfordTilingInitResult {
@@ -63,7 +64,7 @@ struct WelfordTilingInitResult {
     bool checkResult{false};
 };
 
-inline static ge::graphStatus GroupNormV2SetTilingData(gert::TilingContext *context, GroupNormV2TilingData &tilingData)
+inline static ge::graphStatus GroupNormV2SetTilingData(gert::TilingContext* context, GroupNormV2TilingData& tilingData)
 {
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
@@ -86,13 +87,9 @@ inline static int64_t DownAlign(int64_t a, int64_t b)
     return (a / b) * b;
 }
 
-inline static int64_t RoundUp(int64_t a, int64_t b)
-{
-    return CeilDiv(a, b) * b;
-}
+inline static int64_t RoundUp(int64_t a, int64_t b) { return CeilDiv(a, b) * b; }
 
-
-static bool isMixType(const gert::TilingContext *context)
+static bool isMixType(const gert::TilingContext* context)
 {
     auto xDtype = context->GetInputDesc(INPUT_IDX_X)->GetDataType();
     int64_t xDtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(xDtype));
@@ -104,23 +101,24 @@ static bool isMixType(const gert::TilingContext *context)
     return true;
 }
 
-static ge::graphStatus CheckInputXShape(const gert::TilingContext *context, const gert::Shape &xShape)
+static ge::graphStatus CheckInputXShape(const gert::TilingContext* context, const gert::Shape& xShape)
 {
     size_t xDims = xShape.GetDimNum();
     for (size_t i = 0; i < xDims; i++) {
         int64_t curDim = xShape.GetDim(i);
-        OP_CHECK_IF((curDim <= 0),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
-                Ops::Base::ToString(xShape).c_str(),
-                ("The dim[" + std::to_string(i) + "] of x must be greater than 0, got " +
-                 std::to_string(curDim)).c_str()),
+        OP_CHECK_IF(
+            (curDim <= 0),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "x", Ops::Base::ToString(xShape).c_str(),
+                ("The dim[" + std::to_string(i) + "] of x must be greater than 0, got " + std::to_string(curDim))
+                    .c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 // GNV2支持两种混合精度(bfloat16, float32, float32) (float16, float32, float32)
-static ge::graphStatus CheckMixType(const ge::DataType &xDtype, const ge::DataType &gammaDtype)
+static ge::graphStatus CheckMixType(const ge::DataType& xDtype, const ge::DataType& gammaDtype)
 {
     if (xDtype == gammaDtype) {
         return ge::GRAPH_SUCCESS;
@@ -134,7 +132,7 @@ static ge::graphStatus CheckMixType(const ge::DataType &xDtype, const ge::DataTy
     return ge::GRAPH_FAILED;
 }
 
-static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
+static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
 {
     // check x
     auto inputX = context->GetInputTensor(INPUT_IDX_X);
@@ -142,10 +140,10 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
     auto xDtype = context->GetInputDesc(INPUT_IDX_X)->GetDataType();
     int64_t xDtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(xDtype));
     OP_CHECK_IF((xDtypeSize <= 0),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
-            "The dtype size of x must be greater than 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+                                                      "The dtype size of x must be greater than 0"),
+                return ge::GRAPH_FAILED);
     auto xShape = inputX->GetStorageShape();
     int64_t channel = xShape.GetDim(DIM_1);
     if (CheckInputXShape(context, xShape) != ge::GRAPH_SUCCESS) {
@@ -158,27 +156,30 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
     auto gammaShape = gammaShapePtr->GetStorageShape();
     uint64_t gammaSizes = gammaShape.GetDim(DIM_0);
     OP_CHECK_IF(gammaShape.GetDimNum() != 1,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gamma",
-            std::to_string(gammaShape.GetDimNum()).c_str(),
-            "The shape dim of gamma must be 1"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gamma",
+                                                         std::to_string(gammaShape.GetDimNum()).c_str(),
+                                                         "The shape dim of gamma must be 1"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(gammaSizes != channel,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
-            Ops::Base::ToString(gammaShape).c_str(),
-            ("The shape of gamma must be the same as channel(dim[1] of input x) size, "
-             "got gamma size = " + std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "gamma", Ops::Base::ToString(gammaShape).c_str(),
+                    ("The shape of gamma must be the same as channel(dim[1] of input x) size, "
+                     "got gamma size = " +
+                     std::to_string(gammaSizes) + ", channel = " + std::to_string(channel))
+                        .c_str()),
+                return ge::GRAPH_FAILED);
     auto betaShapePtr = context->GetInputShape(INPUT_IDX_BETA);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaShapePtr);
     auto betaShape = betaShapePtr->GetStorageShape();
     int64_t betaSizes = betaShape.GetDim(DIM_0);
     OP_CHECK_IF((betaShape.GetDimNum() != 1 || betaSizes != channel),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "beta",
-            Ops::Base::ToString(betaShape).c_str(),
-            ("The shape dim of beta should be 1, and the shape of beta must be the same as "
-             "channel(dim[1] of input x) size, got beta size = " +
-             std::to_string(betaSizes) + ", channel = " + std::to_string(channel)).c_str()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "beta", Ops::Base::ToString(betaShape).c_str(),
+                    ("The shape dim of beta should be 1, and the shape of beta must be the same as "
+                     "channel(dim[1] of input x) size, got beta size = " +
+                     std::to_string(betaSizes) + ", channel = " + std::to_string(channel))
+                        .c_str()),
+                return ge::GRAPH_FAILED);
     auto gammaDtypePtr = context->GetInputDesc(INPUT_IDX_GAMMA);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaDtypePtr);
     auto gammaDtype = gammaDtypePtr->GetDataType();
@@ -188,21 +189,24 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
     auto betaDtype = betaDtypePtr->GetDataType();
     int64_t betaDtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(betaDtype));
     OP_CHECK_IF((gammaDtypeSize < 0 || gammaDtypeSize != betaDtypeSize),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "gamma",
-            (ge::TypeUtils::DataTypeToSerialString(gammaDtype)).c_str(),
-            "The datatype size of gamma must be greater than or equal to 0, and the dtype of gamma must be same as beta."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF((CheckMixType(xDtype, gammaDtype) == ge::GRAPH_FAILED),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, gamma, beta",
-            (ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
-             ge::TypeUtils::DataTypeToSerialString(gammaDtype) + ", " +
-             ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "gamma",
+                                                      (ge::TypeUtils::DataTypeToSerialString(gammaDtype)).c_str(),
+                                                      "The datatype size of gamma must be greater than or equal to 0, "
+                                                      "and the dtype of gamma must be same as beta."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (CheckMixType(xDtype, gammaDtype) == ge::GRAPH_FAILED),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "x, gamma, beta",
+            (ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(gammaDtype) +
+             ", " + ge::TypeUtils::DataTypeToSerialString(betaDtype))
+                .c_str(),
             "The dtype of gamma and beta must be the same as x, or be float32 when x is float16 or bfloat16"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckAttrParams(const gert::TilingContext *context)
+static ge::graphStatus CheckAttrParams(const gert::TilingContext* context)
 {
     auto inputX = context->GetInputTensor(INPUT_IDX_X);
     auto xShape = inputX->GetStorageShape();
@@ -210,22 +214,24 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext *context)
     // check num_groups
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int64_t *numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
-    OP_CHECK_IF((*numGroups <= 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups",
-            std::to_string(*numGroups).c_str(), "num_groups must be bigger than 0."),
+    const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
+    OP_CHECK_IF(
+        (*numGroups <= 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups", std::to_string(*numGroups).c_str(),
+                                              "num_groups must be bigger than 0."),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF((channel % *numGroups != 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups",
-            std::to_string(*numGroups).c_str(),
-            ("channel(dim[1] of input x) must be integer multiples of num_groups, "
-             "got channel = " + std::to_string(channel) + ", num_groups = " + std::to_string(*numGroups)).c_str()),
+    OP_CHECK_IF(
+        (channel % *numGroups != 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups", std::to_string(*numGroups).c_str(),
+                                              ("channel(dim[1] of input x) must be integer multiples of num_groups, "
+                                               "got channel = " +
+                                               std::to_string(channel) + ", num_groups = " + std::to_string(*numGroups))
+                                                  .c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static int64_t GetOptionalInputTensorSize(const gert::TilingContext *context, int64_t index,
-    int64_t specifiedValue = 0)
+static int64_t GetOptionalInputTensorSize(const gert::TilingContext* context, int64_t index, int64_t specifiedValue = 0)
 {
     auto tensorDesc = context->GetInputDesc(index);
     if (tensorDesc == nullptr) {
@@ -249,8 +255,8 @@ static int64_t GetOptionalInputTensorSize(const gert::TilingContext *context, in
     return numUbSize;
 }
 
-static void GetDichotomyAddParams(const gert::TilingContext *context, int64_t r, int64_t &power, int64_t &dichotomyK,
-    int64_t &extraSize, int64_t &lastNum)
+static void GetDichotomyAddParams(const gert::TilingContext* context, int64_t r, int64_t& power, int64_t& dichotomyK,
+                                  int64_t& extraSize, int64_t& lastNum)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t vl = compileInfo->vectorLength / FLOAT32_BYTES;
@@ -273,19 +279,19 @@ static void GetDichotomyAddParams(const gert::TilingContext *context, int64_t r,
     }
 }
 
-static ge::graphStatus SetAttrParams(const gert::TilingContext *context, GroupNormV2TilingData &tilingData)
+static ge::graphStatus SetAttrParams(const gert::TilingContext* context, GroupNormV2TilingData& tilingData)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    const int64_t *numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
-    const float *epsilonPtr = attrs->GetAttrPointer<float>(INDEX_EPSILON);
+    const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
+    const float* epsilonPtr = attrs->GetAttrPointer<float>(INDEX_EPSILON);
     float eps = epsilonPtr == nullptr ? DEFAULT_EPS : *epsilonPtr;
     tilingData.set_numGroups(*numGroups);
     tilingData.set_epsilon(eps);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetTilingParams(const gert::TilingContext *context, GroupNormV2TilingData &tilingData)
+static ge::graphStatus SetTilingParams(const gert::TilingContext* context, GroupNormV2TilingData& tilingData)
 {
     auto inputX = context->GetInputTensor(INPUT_IDX_X);
     auto xShape = inputX->GetStorageShape();
@@ -302,7 +308,7 @@ static ge::graphStatus SetTilingParams(const gert::TilingContext *context, Group
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetBlockTiling(const gert::TilingContext *context, GroupNormV2TilingData &tilingData)
+static ge::graphStatus SetBlockTiling(const gert::TilingContext* context, GroupNormV2TilingData& tilingData)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     auto inputX = context->GetInputTensor(INPUT_IDX_X);
@@ -311,7 +317,7 @@ static ge::graphStatus SetBlockTiling(const gert::TilingContext *context, GroupN
     tilingData.set_numPerCore(CeilDiv(shapeN * tilingData.get_numGroups(), compileInfo->coreNum));
     tilingData.set_realCoreNum(CeilDiv(shapeN * tilingData.get_numGroups(), tilingData.get_numPerCore()));
     tilingData.set_numLastCore(shapeN * tilingData.get_numGroups() -
-        tilingData.get_numPerCore() * (tilingData.get_realCoreNum() - 1));
+                               tilingData.get_numPerCore() * (tilingData.get_realCoreNum() - 1));
     int64_t xShapeSize = xShape.GetShapeSize();
     if (xShapeSize == 0) {
         tilingData.set_realCoreNum(-1);
@@ -319,13 +325,13 @@ static ge::graphStatus SetBlockTiling(const gert::TilingContext *context, GroupN
     return ge::GRAPH_SUCCESS;
 }
 
-static void SetUbTiling(GroupNormV2TilingData &tilingData)
+static void SetUbTiling(GroupNormV2TilingData& tilingData)
 {
     tilingData.set_loopNum(CeilDiv(tilingData.get_elemNum(), tilingData.get_processSize()));
     tilingData.set_loopTail(tilingData.get_elemNum() - tilingData.get_processSize() * (tilingData.get_loopNum() - 1));
     tilingData.set_innerLoopNum(CeilDiv(tilingData.get_hwNum(), tilingData.get_processSize()));
     tilingData.set_innerLoopTail(tilingData.get_hwNum() -
-        tilingData.get_processSize() * (tilingData.get_innerLoopNum() - 1));
+                                 tilingData.get_processSize() * (tilingData.get_innerLoopNum() - 1));
 }
 
 /*
@@ -343,8 +349,8 @@ static void SetUbTiling(GroupNormV2TilingData &tilingData)
   在非全载模板下，二分累加的UB额外空间不会影响normalize+swish阶段一次可载入的R轴大小
   当Gamma或者Beta非空，并且和输入数据类型不一致时，认为是mix type场景
 */
-static void SetTilingKey4Ascend950(const gert::TilingContext *context, int64_t &maxReduceCount, int64_t &ubRemain,
-    bool &isReduceFullLoad, GroupNormV2TilingData &tilingData)
+static void SetTilingKey4Ascend950(const gert::TilingContext* context, int64_t& maxReduceCount, int64_t& ubRemain,
+                                   bool& isReduceFullLoad, GroupNormV2TilingData& tilingData)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t ubSize = compileInfo->ubSize;
@@ -352,8 +358,8 @@ static void SetTilingKey4Ascend950(const gert::TilingContext *context, int64_t &
     int64_t reduceCount = tilingData.get_shapeD() * tilingData.get_hwNum();
     int64_t gammaUbSize = GetOptionalInputTensorSize(context, INPUT_IDX_GAMMA);
     int64_t betaUbSize = GetOptionalInputTensorSize(context, INPUT_IDX_BETA);
-    int64_t realNumPerCore = std::min(MAX_NUM_PER_CORE,
-        static_cast<int64_t>(std::max(tilingData.get_numPerCore(), tilingData.get_numLastCore())));
+    int64_t realNumPerCore = std::min(
+        MAX_NUM_PER_CORE, static_cast<int64_t>(std::max(tilingData.get_numPerCore(), tilingData.get_numLastCore())));
     int64_t meanUbSize = RoundUp(realNumPerCore * FLOAT32_BYTES, blockSize);
     int64_t rstdUbSize = RoundUp(realNumPerCore * FLOAT32_BYTES, blockSize);
 
@@ -373,12 +379,11 @@ static void SetTilingKey4Ascend950(const gert::TilingContext *context, int64_t &
     int64_t dichotomyAddExtraSize = 0;
     int64_t dichotomyAddLastNum = 0;
     GetDichotomyAddParams(context, reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddExtraSize,
-        dichotomyAddLastNum);
+                          dichotomyAddLastNum);
     otherUbSize += dichotomyAddExtraSize;
 
     ubRemain = ubSize <= otherUbSize ? 0 : ubSize - otherUbSize;
-    OP_CHECK_IF((xDtypeSize == 0),
-        OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return );
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
 
     if (maxReduceCount > reduceCount) {
@@ -403,8 +408,8 @@ static void SetTilingKey4Ascend950(const gert::TilingContext *context, int64_t &
             maxReduceCount = newMaxReduceCount;
             ubRemain = newUbRemain;
             int64_t tilingKey = mixType ?
-                static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE) :
-                static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_TWOPASS_GENERALIZED);
+                                    static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_TWOPASS_GENERALIZED_MIX_TYPE) :
+                                    static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_TWOPASS_GENERALIZED);
             tilingData.set_tilingKey(tilingKey);
             return;
         }
@@ -415,8 +420,8 @@ static void SetTilingKey4Ascend950(const gert::TilingContext *context, int64_t &
     if (isLargeChannel) {
         ubRemain = ubSize - meanAndRstdSize;
         int64_t tilingKey = mixType ?
-            static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE) :
-            static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_WELFORD_GENERALIZED);
+                                static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_WELFORD_GENERALIZED_MIX_TYPE) :
+                                static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_WELFORD_GENERALIZED);
         tilingData.set_tilingKey(tilingKey);
     } else {
         ubRemain = ubSize - meanAndRstdSize - gammaUbSize - betaUbSize;
@@ -427,7 +432,7 @@ static void SetTilingKey4Ascend950(const gert::TilingContext *context, int64_t &
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
 }
 
-static void SetDichotomyAddParams(const gert::TilingContext *context, GroupNormV2TilingData &tilingData)
+static void SetDichotomyAddParams(const gert::TilingContext* context, GroupNormV2TilingData& tilingData)
 {
     int64_t reduceCount = tilingData.get_shapeD() * tilingData.get_hwNum();
     int64_t dichotomyAddPower = 0;
@@ -435,24 +440,22 @@ static void SetDichotomyAddParams(const gert::TilingContext *context, GroupNormV
     int64_t dichotomyAddExtraSize = 0;
     int64_t dichotomyAddLastNum = 0;
     GetDichotomyAddParams(context, reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddExtraSize,
-        dichotomyAddLastNum);
+                          dichotomyAddLastNum);
     tilingData.set_dichotomyAddPower(dichotomyAddPower);
     tilingData.set_dichotomyAddK(dichotomyAddK);
     tilingData.set_dichotomyAddLastNum(dichotomyAddLastNum);
 }
 
-static void SetWelfordParallelN(const gert::TilingContext *context, int64_t xDtypeSize, int64_t ubRemain,
-    GroupNormV2TilingData &tilingData)
+static void SetWelfordParallelN(const gert::TilingContext* context, int64_t xDtypeSize, int64_t ubRemain,
+                                GroupNormV2TilingData& tilingData)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t blockSize = compileInfo->blockSize;
-    OP_CHECK_IF((xDtypeSize == 0),
-        OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return );
     int64_t coeff = FLOAT32_BYTES / xDtypeSize;
     int64_t totalNum = BUFFER_NUM * (coeff + 1);
     int64_t welfordBase = blockSize / xDtypeSize;
-    OP_CHECK_IF((totalNum == 0),
-        OP_LOGE(context->GetNodeName(), "TotalNum is zero."), return);
+    OP_CHECK_IF((totalNum == 0), OP_LOGE(context->GetNodeName(), "TotalNum is zero."), return );
     int64_t maxParallelN = DownAlign((ubRemain / xDtypeSize) / totalNum, welfordBase);
 
     int64_t dichotomyAddPower = 0;
@@ -460,21 +463,21 @@ static void SetWelfordParallelN(const gert::TilingContext *context, int64_t xDty
     int64_t dichotomyAddExtraSize = 0;
     int64_t dichotomyAddLastNum = 0;
     GetDichotomyAddParams(context, maxParallelN, dichotomyAddPower, dichotomyAddK, dichotomyAddExtraSize,
-        dichotomyAddLastNum);
-    int64_t ubCurUse =
-        maxParallelN * BUFFER_NUM * xDtypeSize + dichotomyAddExtraSize + maxParallelN * BUFFER_NUM * FLOAT32_BYTES;
+                          dichotomyAddLastNum);
+    int64_t ubCurUse = maxParallelN * BUFFER_NUM * xDtypeSize + dichotomyAddExtraSize +
+                       maxParallelN * BUFFER_NUM * FLOAT32_BYTES;
     while (ubCurUse > ubRemain) {
         maxParallelN -= welfordBase;
         GetDichotomyAddParams(context, maxParallelN, dichotomyAddPower, dichotomyAddK, dichotomyAddExtraSize,
-            dichotomyAddLastNum);
-        ubCurUse =
-            maxParallelN * BUFFER_NUM * xDtypeSize + dichotomyAddExtraSize + maxParallelN * BUFFER_NUM * FLOAT32_BYTES;
+                              dichotomyAddLastNum);
+        ubCurUse = maxParallelN * BUFFER_NUM * xDtypeSize + dichotomyAddExtraSize +
+                   maxParallelN * BUFFER_NUM * FLOAT32_BYTES;
     }
 
     if (maxParallelN > tilingData.get_elemNum()) {
         maxParallelN = tilingData.get_elemNum();
         GetDichotomyAddParams(context, maxParallelN, dichotomyAddPower, dichotomyAddK, dichotomyAddExtraSize,
-            dichotomyAddLastNum);
+                              dichotomyAddLastNum);
     }
     tilingData.set_dichotomyAddPower(dichotomyAddPower);
     tilingData.set_dichotomyAddK(dichotomyAddK);
@@ -482,45 +485,43 @@ static void SetWelfordParallelN(const gert::TilingContext *context, int64_t xDty
     tilingData.set_parallelN(maxParallelN);
 }
 
-static void SetUbTiling4TwoPass(const gert::TilingContext *context, GroupNormV2TilingData &tilingData,
-    int64_t maxReduceCount, int64_t xDtypeSize)
+static void SetUbTiling4TwoPass(const gert::TilingContext* context, GroupNormV2TilingData& tilingData,
+                                int64_t maxReduceCount, int64_t xDtypeSize)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t blockSize = compileInfo->blockSize;
     int64_t elemNum = tilingData.get_elemNum();
-    OP_CHECK_IF((xDtypeSize == 0),
-        OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return );
     int64_t elemNumAlign = RoundUp(elemNum, blockSize / xDtypeSize);
     SetDichotomyAddParams(context, tilingData);
-    OP_CHECK_IF((elemNumAlign == 0),
-        OP_LOGE(context->GetNodeName(), "ElemNumAlign is zero."), return);
+    OP_CHECK_IF((elemNumAlign == 0), OP_LOGE(context->GetNodeName(), "ElemNumAlign is zero."), return );
     int64_t count = maxReduceCount / elemNumAlign;
     int64_t processSize = count * elemNumAlign;
     tilingData.set_processSize(processSize);
 }
 
-static WelfordTilingInitResult InitWelfordTilingCommon(const gert::TilingContext *context, 
-    GroupNormV2TilingData &tilingData, int64_t blockSize, int64_t xDtypeSize) {
+static WelfordTilingInitResult InitWelfordTilingCommon(const gert::TilingContext* context,
+                                                       GroupNormV2TilingData& tilingData, int64_t blockSize,
+                                                       int64_t xDtypeSize)
+{
     WelfordTilingInitResult result{};
     result.hwNum = tilingData.get_hwNum();
-    OP_CHECK_IF((xDtypeSize == 0),
-        OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return result);
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return result);
     result.hwNumAlign = RoundUp(result.hwNum, blockSize / xDtypeSize);
-    OP_CHECK_IF((result.hwNumAlign == 0),
-        OP_LOGE(context->GetNodeName(), "HwNumAlign is zero."), return result);
+    OP_CHECK_IF((result.hwNumAlign == 0), OP_LOGE(context->GetNodeName(), "HwNumAlign is zero."), return result);
     result.checkResult = true;
     return result;
 }
 
-static void SetUbTiling4WelfordPerf(const gert::TilingContext *context, GroupNormV2TilingData &tilingData,
-    int64_t maxReduceCount, int64_t ubRemain, int64_t xDtypeSize)
+static void SetUbTiling4WelfordPerf(const gert::TilingContext* context, GroupNormV2TilingData& tilingData,
+                                    int64_t maxReduceCount, int64_t ubRemain, int64_t xDtypeSize)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t blockSize = compileInfo->blockSize;
     SetWelfordParallelN(context, xDtypeSize, ubRemain, tilingData);
     WelfordTilingInitResult result = InitWelfordTilingCommon(context, tilingData, blockSize, xDtypeSize);
-    OP_CHECK_IF((result.checkResult == false),
-        OP_LOGE(context->GetNodeName(), "InitWelfordTilingCommon Failed."), return);
+    OP_CHECK_IF((result.checkResult == false), OP_LOGE(context->GetNodeName(), "InitWelfordTilingCommon Failed."),
+                return );
     int64_t count = maxReduceCount / result.hwNumAlign;
     if (count >= 1) {
         result.loopNum = CeilDiv(tilingData.get_shapeD(), count);
@@ -541,19 +542,20 @@ static void SetUbTiling4WelfordPerf(const gert::TilingContext *context, GroupNor
     tilingData.set_innerLoopNum(result.innerLoopNum);
     tilingData.set_innerLoopTail(result.innerLoopTail);
 }
-static void SetUbTiling4WelfordGeneralized(const gert::TilingContext *context, GroupNormV2TilingData &tilingData,
-    int64_t ubRemain, int64_t xDtypeSize)
+static void SetUbTiling4WelfordGeneralized(const gert::TilingContext* context, GroupNormV2TilingData& tilingData,
+                                           int64_t ubRemain, int64_t xDtypeSize)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t blockSize = compileInfo->blockSize;
     WelfordTilingInitResult result = InitWelfordTilingCommon(context, tilingData, blockSize, xDtypeSize);
-    OP_CHECK_IF((result.checkResult == false),
-        OP_LOGE(context->GetNodeName(), "InitWelfordTilingCommon Failed."), return);
+    OP_CHECK_IF((result.checkResult == false), OP_LOGE(context->GetNodeName(), "InitWelfordTilingCommon Failed."),
+                return );
     int64_t maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
     int64_t count = maxReduceCount / result.hwNumAlign;
     int64_t gammaRealSize = GetOptionalInputTensorSize(context, INPUT_IDX_GAMMA, count);
     int64_t betaRealSize = GetOptionalInputTensorSize(context, INPUT_IDX_BETA, count);
-    int64_t curUbSize = gammaRealSize + betaRealSize + count * result.hwNumAlign * xDtypeSize * BUFFER_NUM * DOUBLE_BUFFER;
+    int64_t curUbSize = gammaRealSize + betaRealSize +
+                        count * result.hwNumAlign * xDtypeSize * BUFFER_NUM * DOUBLE_BUFFER;
     while (curUbSize > ubRemain && count >= 1) {
         count--;
         int64_t gammaRealSize = GetOptionalInputTensorSize(context, INPUT_IDX_GAMMA, count);
@@ -586,8 +588,8 @@ static void SetUbTiling4WelfordGeneralized(const gert::TilingContext *context, G
     tilingData.set_innerLoopTail(result.innerLoopTail);
 }
 
-static void SetUbTiling4Welford(const gert::TilingContext *context, GroupNormV2TilingData &tilingData,
-    int64_t maxReduceCount, int64_t ubRemain, int64_t xDtypeSize)
+static void SetUbTiling4Welford(const gert::TilingContext* context, GroupNormV2TilingData& tilingData,
+                                int64_t maxReduceCount, int64_t ubRemain, int64_t xDtypeSize)
 {
     if (tilingData.get_tilingKey() == static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_WELFORD_PERF) ||
         tilingData.get_tilingKey() == static_cast<int64_t>(GroupNormV2TilingKey::TILINGKEY_WELFORD_PERF_MIX_TYPE)) {
@@ -596,8 +598,8 @@ static void SetUbTiling4Welford(const gert::TilingContext *context, GroupNormV2T
     return SetUbTiling4WelfordGeneralized(context, tilingData, ubRemain, xDtypeSize);
 }
 
-static void SetUbTiling4Ascend950(const gert::TilingContext *context, int64_t maxReduceCount, int64_t ubRemain,
-    bool isReduceFullLoad, GroupNormV2TilingData &tilingData)
+static void SetUbTiling4Ascend950(const gert::TilingContext* context, int64_t maxReduceCount, int64_t ubRemain,
+                                  bool isReduceFullLoad, GroupNormV2TilingData& tilingData)
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t ubSize = compileInfo->ubSize;
@@ -610,7 +612,7 @@ static void SetUbTiling4Ascend950(const gert::TilingContext *context, int64_t ma
     }
 }
 
-static void SetTilingForAscend950(const gert::TilingContext *context, GroupNormV2TilingData &tilingData)
+static void SetTilingForAscend950(const gert::TilingContext* context, GroupNormV2TilingData& tilingData)
 {
     int64_t maxReduceCount = 0;
     int64_t ubRemain = 0;
@@ -619,65 +621,64 @@ static void SetTilingForAscend950(const gert::TilingContext *context, GroupNormV
     SetUbTiling4Ascend950(context, maxReduceCount, ubRemain, reduceFullLoad, tilingData);
 }
 
-ge::graphStatus SetTilingData(gert::TilingContext *context)
+ge::graphStatus SetTilingData(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Start running Tiling4GroupNormV2.");
     OP_CHECK_IF((CheckInputParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "InputParams is invalid."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "InputParams is invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF((CheckAttrParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
 
     GroupNormV2TilingData tilingData;
     OP_CHECK_IF((SetAttrParams(context, tilingData) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "Set attrParams failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Set attrParams failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF((SetTilingParams(context, tilingData) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "Set tilingParams failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Set tilingParams failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF((SetBlockTiling(context, tilingData) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeName(), "Set blockTiling failed."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Set blockTiling failed."), return ge::GRAPH_FAILED);
     SetUbTiling(tilingData);
     SetTilingForAscend950(context, tilingData);
     OP_CHECK_IF(GroupNormV2SetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeType(), "GroupNormV2SetTilingData set tiling data fail."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeType(), "GroupNormV2SetTilingData set tiling data fail."),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
-    size_t *workspaces = context->GetWorkspaceSizes(1);
+    size_t* workspaces = context->GetWorkspaceSizes(1);
     workspaces[0] = RESERVED_WORKSPACE_SIZE_950;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus Tiling4GroupNormV2(gert::TilingContext *context)
+static ge::graphStatus Tiling4GroupNormV2(gert::TilingContext* context)
 {
     auto compile_info = context->GetCompileInfo<GroupNormV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
 
     // get input shape info
     auto input_first = context->GetInputShape(0);
-    OP_CHECK_IF(input_first == nullptr,
-        OP_LOGE(context->GetNodeName(), "get input_first failed."), return ge::GRAPH_FAILED);
-    const gert::Shape &input_shape = input_first->GetStorageShape();
+    OP_CHECK_IF(input_first == nullptr, OP_LOGE(context->GetNodeName(), "get input_first failed."),
+                return ge::GRAPH_FAILED);
+    const gert::Shape& input_shape = input_first->GetStorageShape();
 
     const int32_t input_dim_size = input_shape.GetDimNum();
     OP_CHECK_IF(input_dim_size < MIN_LEN,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x",
-            std::to_string(input_dim_size).c_str(),
-            "greater than or equal to 2"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(input_dim_size).c_str(),
+                                             "greater than or equal to 2"),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "GroupNormV2 tik_compile_info is null, runs ascendc tiling func");
     ge::graphStatus set_tiling_data_statues = SetTilingData(context);
     return set_tiling_data_statues;
 }
 
-static ge::graphStatus TilingPrepare4GroupNormV2(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4GroupNormV2(gert::TilingParseContext* context)
 {
     OP_LOGD(context->GetNodeName(), "begin to get compile info for GroupNormV2.");
     auto compile_info = GetCompileInfoPtr<GroupNormV2CompileInfo>(context);
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
     std::unique_ptr<nlohmann::json> parsed_object_cinfo = GetCompileInfoJson(context);
     OP_CHECK_NULL_WITH_CONTEXT(context, parsed_object_cinfo);
-    const nlohmann::json &vars = (*parsed_object_cinfo)["vars"];
-    const nlohmann::json &all_vars = (*parsed_object_cinfo)["_vars"];
+    const nlohmann::json& vars = (*parsed_object_cinfo)["vars"];
+    const nlohmann::json& all_vars = (*parsed_object_cinfo)["_vars"];
     if (vars.empty() && all_vars.empty()) {
         OP_LOGD(context->GetNodeName(), "GroupNormV2 no need to parse compile info.");
         auto platform_info = context->GetPlatformInfo();
@@ -685,20 +686,21 @@ static ge::graphStatus TilingPrepare4GroupNormV2(gert::TilingParseContext *conte
         auto ascendc_platform = platform_ascendc::PlatformAscendC(platform_info);
         compile_info->coreNum = ascendc_platform.GetCoreNumAiv();
         OP_CHECK_IF((compile_info->coreNum <= 0),
-            OP_LOGE(context->GetNodeName(), "Get coreNum failed, coreNum: %d", compile_info->coreNum),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "Get coreNum failed, coreNum: %d", compile_info->coreNum),
+                    return ge::GRAPH_FAILED);
         uint64_t ubSize;
         ascendc_platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
         compile_info->ubSize = static_cast<int64_t>(ubSize);
         OP_CHECK_IF((compile_info->ubSize <= 0),
-            OP_LOGE(context->GetNodeName(), "Get ubSize failed, ubSize: %ld", compile_info->ubSize),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "Get ubSize failed, ubSize: %ld", compile_info->ubSize),
+                    return ge::GRAPH_FAILED);
         compile_info->blockSize = Ops::Base::GetUbBlockSize(context);
         OP_CHECK_IF((compile_info->blockSize <= 0),
-            OP_LOGE(context->GetNodeName(), "Get blockSize failed, blockSize: %ld", compile_info->blockSize),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context->GetNodeName(), "Get blockSize failed, blockSize: %ld", compile_info->blockSize),
+                    return ge::GRAPH_FAILED);
         compile_info->vectorLength = Ops::Base::GetVRegSize(context);
-        OP_CHECK_IF((compile_info->vectorLength <= 0),
+        OP_CHECK_IF(
+            (compile_info->vectorLength <= 0),
             OP_LOGE(context->GetNodeName(), "Get vectorLength failed, vectorLength: %ld", compile_info->vectorLength),
             return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;

@@ -16,8 +16,7 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_BLOCK_SPLIT_R = 600000;
 
 constexpr int64_t DOUBLE_BUFFER_NUM = 2;
@@ -37,7 +36,7 @@ constexpr int64_t WSP_RESERVED_SIZE = 16L * 1024L * 1024L;
 constexpr int64_t CACHE_LINE_SIZE = 256;
 constexpr int64_t SPLIT_R_TEMPLATE_A_THRESHOLD = 512;
 
-}  // namespace
+} // namespace
 static int64_t FindBinaryQuotient(int64_t len)
 {
     int64_t binaryQuotient = 1;
@@ -48,20 +47,13 @@ static int64_t FindBinaryQuotient(int64_t len)
     return binaryQuotient;
 }
 
-namespace optiling
-{
-class BatchNormBlockSplitRTiling : public BatchNormRegbaseTilingBase
-{
+namespace optiling {
+class BatchNormBlockSplitRTiling : public BatchNormRegbaseTilingBase {
 public:
-    explicit BatchNormBlockSplitRTiling(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context)
-    {
-    }
+    explicit BatchNormBlockSplitRTiling(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context) {}
     ~BatchNormBlockSplitRTiling() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        BatchNormRegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { BatchNormRegbaseTilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override
@@ -148,12 +140,12 @@ ge::graphStatus BatchNormBlockSplitRTiling::DoOpTiling()
     batchNormTilingData.set_aUbTail(aUbTail);
     int64_t aAlignSize = aUbFactor * FLOAT32_BYTES;
     int64_t fp32EleNumPerBlock = blockSize_ / FLOAT32_BYTES;
-    int64_t rFactorMaxAlignSize =
-        Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.ubSize) / (aAlignSize * (inOutNodeNum + TBUF_NODE_NUM)),
-                       fp32EleNumPerBlock) *
-        FLOAT32_BYTES;
-    int64_t blockDimAlignSize =
-        Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.blockDim), fp32EleNumPerBlock) * FLOAT32_BYTES;
+    int64_t rFactorMaxAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.ubSize) /
+                                                           (aAlignSize * (inOutNodeNum + TBUF_NODE_NUM)),
+                                                       fp32EleNumPerBlock) *
+                                  FLOAT32_BYTES;
+    int64_t blockDimAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.blockDim), fp32EleNumPerBlock) *
+                                FLOAT32_BYTES;
     int64_t ubSizeCanUse = aicoreParams_.ubSize - blockDimAlignSize - rFactorMaxAlignSize -
                            aAlignSize * (runningMeanVarNodeNum + gammaBetaNodeNum + BATCH_MEAN_VAR_NODE_NUM);
     int64_t rUbFactor = Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM));
@@ -211,10 +203,7 @@ ge::graphStatus BatchNormBlockSplitRTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormBlockSplitRTiling::GetTilingKey() const
-{
-    return TILINGKEY_BLOCK_SPLIT_R;
-}
+uint64_t BatchNormBlockSplitRTiling::GetTilingKey() const { return TILINGKEY_BLOCK_SPLIT_R; }
 
 ge::graphStatus BatchNormBlockSplitRTiling::PostTiling()
 {
@@ -225,9 +214,8 @@ ge::graphStatus BatchNormBlockSplitRTiling::PostTiling()
                                                   batchNormTilingData.get_patternAAlign() * FLOAT32_BYTES;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(batchNormTilingData.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     batchNormTilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormTilingData.GetDataSize());
@@ -238,4 +226,4 @@ ge::graphStatus BatchNormBlockSplitRTiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormBlockSplitRTiling, 12000);
-}  // namespace optiling
+} // namespace optiling

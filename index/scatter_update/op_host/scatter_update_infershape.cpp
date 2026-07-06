@@ -13,7 +13,6 @@
  * \brief ScatterUpdate InferShape RT2.0 implementation
  */
 
-
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
 #include "log/log.h"
@@ -23,38 +22,39 @@ namespace ops {
 static constexpr size_t SC_IN_VAR_IDX = 0;
 static constexpr size_t SC_OUT_VAR_IDX = 0;
 
-
-graphStatus InferDataType4ScatterUpdate(gert::InferDataTypeContext *context) {
-  OP_LOGD(context->GetNodeName(), "InferDataType4ScatterUpdate enter");
-  auto input_x_dtype = context->GetInputDataType(0);
-  context->SetOutputDataType(0, input_x_dtype);
-  OP_LOGD(context->GetNodeName(), "InferDataType4ScatterUpdate end");
-  return GRAPH_SUCCESS;
+graphStatus InferDataType4ScatterUpdate(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "InferDataType4ScatterUpdate enter");
+    auto input_x_dtype = context->GetInputDataType(0);
+    context->SetOutputDataType(0, input_x_dtype);
+    OP_LOGD(context->GetNodeName(), "InferDataType4ScatterUpdate end");
+    return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShape4ScatterUpdate(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "Begin to do ScatterUpdate Infershape.");
-  const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
+static ge::graphStatus InferShape4ScatterUpdate(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do ScatterUpdate Infershape.");
+    const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
 
-  gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
+    gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
 
-  if (Ops::Base::IsUnknownRank(*var_shape)) {
-    OP_LOGD(context->GetNodeName(), "input shape is UnknownRank, set output shape to (-2, )");
-    Ops::Base::SetUnknownRank(*output_shape);
+    if (Ops::Base::IsUnknownRank(*var_shape)) {
+        OP_LOGD(context->GetNodeName(), "input shape is UnknownRank, set output shape to (-2, )");
+        Ops::Base::SetUnknownRank(*output_shape);
+        return ge::GRAPH_SUCCESS;
+    }
+
+    *output_shape = *var_shape;
+
+    OP_LOGD(context->GetNodeName(), "output_shape = %s.", Ops::Base::ToString(*output_shape).c_str());
+    OP_LOGD(context->GetNodeName(), "End to do ScatterUpdate Infershape.");
+
     return ge::GRAPH_SUCCESS;
-  }
-
-  *output_shape = *var_shape;
-
-  OP_LOGD(context->GetNodeName(), "output_shape = %s.", Ops::Base::ToString(*output_shape).c_str());
-  OP_LOGD(context->GetNodeName(), "End to do ScatterUpdate Infershape.");
-
-  return ge::GRAPH_SUCCESS;
 }
 
 // register infershape for ScatterUpdate op
 IMPL_OP(ScatterUpdate).InferShape(InferShape4ScatterUpdate).InferDataType(InferDataType4ScatterUpdate);
 
-}  // namespace ops
+} // namespace ops

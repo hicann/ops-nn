@@ -20,8 +20,7 @@
 
 namespace MSELossV2Namespace {
 template <typename T>
-class MSELossV2Sum : public MSELossV2Base<T>
-{
+class MSELossV2Sum : public MSELossV2Base<T> {
 public:
     __aicore__ inline MSELossV2Sum(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : MSELossV2Base<T>(pipe, tilingData)
@@ -38,9 +37,8 @@ public:
         MSELossV2Base<T>::Init(dst, src0, src1, usrWorkspace);
 
         this->dstGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dst));
-        this->usrGlobal.SetGlobalBuffer(
-            reinterpret_cast<__gm__ float*>(
-                usrWorkspace + this->BYTES_PER_BLOCK * (AscendC::GetBlockNum() + AscendC::GetBlockIdx())));
+        this->usrGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(
+            usrWorkspace + this->BYTES_PER_BLOCK * (AscendC::GetBlockNum() + AscendC::GetBlockIdx())));
     }
 
     __aicore__ inline void Process()
@@ -53,9 +51,8 @@ public:
             this->Compute(cast0Local, cast1Local, this->tileLength);
         }
         if (this->isLastCore && this->tailElems) {
-            MSELossV2Base<T>::CopyIn(
-                cast0Local, cast1Local, this->epochs * this->tileLength,
-                this->tailTileLength + MSELossV2Base<T>::FLOAT_COUNT_PER_BLOCK);
+            MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, this->epochs * this->tileLength,
+                                     this->tailTileLength + MSELossV2Base<T>::FLOAT_COUNT_PER_BLOCK);
             this->Compute(cast0Local, cast1Local, this->tailTileLength + this->tailElems);
         } else if (this->tailTileLength) {
             MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, this->epochs * this->tileLength, this->tailTileLength);
@@ -65,8 +62,8 @@ public:
     }
 
 private:
-    __aicore__ inline void Compute(
-        const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1, uint64_t tileLength)
+    __aicore__ inline void Compute(const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1,
+                                   uint64_t tileLength)
     {
         AscendC::Sub<float>(cast0, cast0, cast1, tileLength);
         AscendC::Mul<float>(cast1, cast0, cast0, tileLength);
@@ -74,8 +71,8 @@ private:
     }
 
 protected:
-    __aicore__ inline void ReduceSumBisect(
-        const AscendC::LocalTensor<float>& srcLocal, uint64_t tileLength, const float scale)
+    __aicore__ inline void ReduceSumBisect(const AscendC::LocalTensor<float>& srcLocal, uint64_t tileLength,
+                                           const float scale)
     {
         uint64_t offset;
         while (tileLength > this->FLOATS_PER_BLOCK) {
@@ -118,8 +115,8 @@ protected:
             this->downloadQue.template FreeTensor<float>(dstLocal);
             this->uploadQue.template EnQue<T>(castLocal);
             castLocal = this->uploadQue.template DeQue<T>();
-            AscendC::DataCopyExtParams copyParams{
-                1, MSELossV2Base<T>::HALF_SIZE, 0, 0, 0}; // copy only first number to global
+            AscendC::DataCopyExtParams copyParams{1, MSELossV2Base<T>::HALF_SIZE, 0, 0,
+                                                  0}; // copy only first number to global
             AscendC::DataCopyPad(this->dstGlobal, castLocal, copyParams);
 #endif
             this->uploadQue.template FreeTensor<T>(castLocal);
@@ -140,8 +137,7 @@ protected:
 };
 
 template <>
-class MSELossV2Sum<float> : public MSELossV2Base<float>
-{
+class MSELossV2Sum<float> : public MSELossV2Base<float> {
 public:
     __aicore__ inline MSELossV2Sum(AscendC::TPipe* pipe, const MSELossV2TilingData* tilingData)
         : MSELossV2Base<float>(pipe, tilingData)
@@ -158,9 +154,8 @@ public:
         MSELossV2Base<float>::Init(dst, src0, src1, usrWorkspace);
 
         this->dstGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(dst));
-        this->usrGlobal.SetGlobalBuffer(
-            reinterpret_cast<__gm__ float*>(
-                usrWorkspace + this->BYTES_PER_BLOCK * (AscendC::GetBlockNum() + AscendC::GetBlockIdx())));
+        this->usrGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(
+            usrWorkspace + this->BYTES_PER_BLOCK * (AscendC::GetBlockNum() + AscendC::GetBlockIdx())));
     }
 
     __aicore__ inline void Process()
@@ -171,8 +166,8 @@ public:
         }
 
         if (this->isLastCore && this->tailElems) {
-            MSELossV2Base<float>::CopyIn(
-                this->epochs * this->tileLength, this->tailTileLength + MSELossV2Base<float>::FLOAT_COUNT_PER_BLOCK);
+            MSELossV2Base<float>::CopyIn(this->epochs * this->tileLength,
+                                         this->tailTileLength + MSELossV2Base<float>::FLOAT_COUNT_PER_BLOCK);
             this->Compute(this->tailTileLength + this->tailElems);
         } else if (this->tailTileLength) {
             MSELossV2Base<float>::CopyIn(this->epochs * this->tileLength, this->tailTileLength);
@@ -197,8 +192,8 @@ private:
     }
 
 protected:
-    __aicore__ inline void ReduceSumBisect(
-        const AscendC::LocalTensor<float>& srcLocal, uint64_t tileLength, const float scale)
+    __aicore__ inline void ReduceSumBisect(const AscendC::LocalTensor<float>& srcLocal, uint64_t tileLength,
+                                           const float scale)
     {
         uint64_t offset;
         while (tileLength > this->FLOATS_PER_BLOCK) {

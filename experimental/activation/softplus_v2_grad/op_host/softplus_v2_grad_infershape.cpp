@@ -20,7 +20,8 @@ using namespace ge;
 namespace ops {
 static constexpr int64_t IDX_0 = 0;
 
-static ge::graphStatus InferShapeSoftplusV2Grad(gert::InferShapeContext* context) {
+static ge::graphStatus InferShapeSoftplusV2Grad(gert::InferShapeContext* context)
+{
     // get input shapes
     const gert::Shape* xShape = context->GetInputShape(IDX_0);
 
@@ -33,4 +34,4 @@ static ge::graphStatus InferShapeSoftplusV2Grad(gert::InferShapeContext* context
 }
 
 IMPL_OP_INFERSHAPE(SoftplusV2Grad).InferShape(InferShapeSoftplusV2Grad);
-}  // namespace ops
+} // namespace ops

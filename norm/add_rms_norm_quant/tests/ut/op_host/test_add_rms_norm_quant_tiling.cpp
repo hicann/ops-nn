@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <iostream>
 #include <fstream>
@@ -24,18 +25,11 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class AddRmsNormQuantTiling : public testing::Test
-{
+class AddRmsNormQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddRmsNormQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddRmsNormQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddRmsNormQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddRmsNormQuantTiling TearDown" << std::endl; }
 };
 
 struct AddRmsNormQuantCompileInfo {
@@ -46,16 +40,15 @@ struct AddRmsNormQuantCompileInfo {
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{24, 1, 2560}, {24, 1, 2560}};
     gert::StorageShape input_shape_x2 = {{24, 1, 2560}, {24, 1, 2560}};
-    gert::StorageShape gamma_shape = {
-        {
-            2560,
-        },
-        {
-            2560,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          2560,
+                                      },
+                                      {
+                                          2560,
+                                      }};
     gert::StorageShape out_shape_y = {{24, 1, 2560}, {24, 1, 2560}};
     gert::StorageShape out_shape_x = {{24, 1, 2560}, {24, 1, 2560}};
 
@@ -84,19 +77,19 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -108,9 +101,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -125,10 +117,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -145,21 +136,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_001)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 3);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_002)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{64, 1, 2560}, {64, 1, 2560}};
     gert::StorageShape input_shape_x2 = {{64, 1, 2560}, {64, 1, 2560}};
-    gert::StorageShape gamma_shape = {
-        {
-            2560,
-        },
-        {
-            2560,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          2560,
+                                      },
+                                      {
+                                          2560,
+                                      }};
     gert::StorageShape out_shape_y = {{64, 1, 2560}, {64, 1, 2560}};
     gert::StorageShape out_shape_x = {{64, 1, 2560}, {64, 1, 2560}};
 
@@ -187,19 +177,19 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_002)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -211,9 +201,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_002)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -228,10 +217,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_002)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -248,21 +236,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_002)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 0);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{64, 1, 25600}, {64, 1, 25600}};
     gert::StorageShape input_shape_x2 = {{64, 1, 25600}, {64, 1, 25600}};
-    gert::StorageShape gamma_shape = {
-        {
-            25600,
-        },
-        {
-            25600,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          25600,
+                                      },
+                                      {
+                                          25600,
+                                      }};
     gert::StorageShape out_shape_y = {{64, 1, 25600}, {64, 1, 25600}};
     gert::StorageShape out_shape_x = {{64, 1, 25600}, {64, 1, 25600}};
 
@@ -290,19 +277,19 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -314,9 +301,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -331,10 +317,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"divMode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -351,21 +336,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_tiling_003)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape gamma_shape = {
-        {
-            256,
-        },
-        {
-            256,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          256,
+                                      },
+                                      {
+                                          256,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
@@ -396,21 +380,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -424,9 +408,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -441,10 +424,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -466,21 +448,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1172);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape input_shape_x2 = {{12, 2048, 6656}, {12, 2048, 6656}};
-    gert::StorageShape gamma_shape = {
-        {
-            6656,
-        },
-        {
-            6656,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          6656,
+                                      },
+                                      {
+                                          6656,
+                                      }};
     gert::StorageShape out_shape_y = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
@@ -511,21 +492,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -539,9 +520,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -556,10 +536,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -581,21 +560,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1170);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -626,21 +604,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -654,9 +632,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -671,10 +648,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -696,32 +672,30 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1171);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
-    gert::StorageShape scales_shape = {
-        {
-            2,
-            1,
-            20480,
-        },
-        {
-            2,
-            1,
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
+    gert::StorageShape scales_shape = {{
+                                           2,
+                                           1,
+                                           20480,
+                                       },
+                                       {
+                                           2,
+                                           1,
+                                           20480,
+                                       }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -752,21 +726,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -780,9 +754,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape, &scales_shape,
-                           &scales_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape,
+                                    &scales_shape, &scales_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -797,10 +770,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -819,21 +791,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_hifloat8)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape gamma_shape = {
-        {
-            256,
-        },
-        {
-            256,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          256,
+                                      },
+                                      {
+                                          256,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
@@ -864,21 +835,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_hifloat8)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -892,9 +863,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_hifloat8)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -909,11 +879,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_hifloat8)
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -935,21 +904,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_hifloat8)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1172);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape input_shape_x2 = {{12, 2048, 6656}, {12, 2048, 6656}};
-    gert::StorageShape gamma_shape = {
-        {
-            6656,
-        },
-        {
-            6656,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          6656,
+                                      },
+                                      {
+                                          6656,
+                                      }};
     gert::StorageShape out_shape_y = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
@@ -980,21 +948,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1008,9 +976,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1025,11 +992,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1051,21 +1017,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_hifloat8)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1170);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -1096,21 +1061,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1124,9 +1089,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1141,11 +1105,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1167,32 +1130,30 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_hifloat8)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1171);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hifloat8)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
-    gert::StorageShape scales_shape = {
-        {
-            2,
-            1,
-            20480,
-        },
-        {
-            2,
-            1,
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
+    gert::StorageShape scales_shape = {{
+                                           2,
+                                           1,
+                                           20480,
+                                       },
+                                       {
+                                           2,
+                                           1,
+                                           20480,
+                                       }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -1223,21 +1184,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1251,9 +1212,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape, &scales_shape,
-                           &scales_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape,
+                                    &scales_shape, &scales_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1268,11 +1228,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
                       .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1291,21 +1250,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_hif
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e5m2)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape gamma_shape = {
-        {
-            256,
-        },
-        {
-            256,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          256,
+                                      },
+                                      {
+                                          256,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
@@ -1336,21 +1294,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e5m2)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1364,9 +1322,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e5m2)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1381,11 +1338,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e5m2)
                       .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1407,21 +1363,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e5m2)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1172);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape input_shape_x2 = {{12, 2048, 6656}, {12, 2048, 6656}};
-    gert::StorageShape gamma_shape = {
-        {
-            6656,
-        },
-        {
-            6656,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          6656,
+                                      },
+                                      {
+                                          6656,
+                                      }};
     gert::StorageShape out_shape_y = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
@@ -1452,21 +1407,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1480,9 +1435,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1497,11 +1451,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
                       .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1523,21 +1476,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e5m2
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1170);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -1568,21 +1520,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1596,9 +1548,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1613,11 +1564,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
                       .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1639,32 +1589,30 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e5m2
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1171);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_float8_e5m2)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
-    gert::StorageShape scales_shape = {
-        {
-            2,
-            1,
-            20480,
-        },
-        {
-            2,
-            1,
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
+    gert::StorageShape scales_shape = {{
+                                           2,
+                                           1,
+                                           20480,
+                                       },
+                                       {
+                                           2,
+                                           1,
+                                           20480,
+                                       }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -1695,21 +1643,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1723,9 +1671,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape, &scales_shape,
-                           &scales_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape,
+                                    &scales_shape, &scales_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1740,11 +1687,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
                       .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1763,21 +1709,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e4m3fn)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape gamma_shape = {
-        {
-            256,
-        },
-        {
-            256,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          256,
+                                      },
+                                      {
+                                          256,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
@@ -1808,21 +1753,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e4m3fn)
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -1835,9 +1780,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e4m3fn)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1852,11 +1796,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e4m3fn)
                       .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1878,21 +1821,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1172_float8_e4m3fn)
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1172);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3fn)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape input_shape_x2 = {{12, 2048, 6656}, {12, 2048, 6656}};
-    gert::StorageShape gamma_shape = {
-        {
-            6656,
-        },
-        {
-            6656,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          6656,
+                                      },
+                                      {
+                                          6656,
+                                      }};
     gert::StorageShape out_shape_y = {{12, 2048, 6656}, {12, 2048, 6656}};
     gert::StorageShape out_shape_x = {{12, 2048, 6656}, {12, 2048, 6656}};
 
@@ -1923,21 +1865,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -1951,9 +1893,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -1968,11 +1909,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
                       .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1994,21 +1934,20 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1170_cut_m_float8_e4m3
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1170);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3fn)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -2039,21 +1978,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2067,9 +2006,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2084,11 +2022,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
                       .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2110,32 +2047,30 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_1171_cut_n_float8_e4m3
 
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 1171);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_float8_e4m3fn)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape_x1 = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape input_shape_x2 = {{2, 1, 20480}, {2, 1, 20480}};
-    gert::StorageShape gamma_shape = {
-        {
-            20480,
-        },
-        {
-            20480,
-        }};
-    gert::StorageShape scales_shape = {
-        {
-            2,
-            1,
-            20480,
-        },
-        {
-            2,
-            1,
-            20480,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          20480,
+                                      },
+                                      {
+                                          20480,
+                                      }};
+    gert::StorageShape scales_shape = {{
+                                           2,
+                                           1,
+                                           20480,
+                                       },
+                                       {
+                                           2,
+                                           1,
+                                           20480,
+                                       }};
     gert::StorageShape out_shape_y = {{2, 1, 20480}, {2, 1, 20480}};
     gert::StorageShape out_shape_x = {{2, 1, 20480}, {2, 1, 20480}};
 
@@ -2166,21 +2101,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2194,9 +2129,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape, &scales_shape,
-                           &scales_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &scales_shape, &scales_shape,
+                                    &scales_shape, &scales_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2211,11 +2145,10 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
                       .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2234,20 +2167,19 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_shape_check_failed_flo
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_beta_dtype_mismatch)
 {
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape gamma_shape = {
-        {
-            256,
-        },
-        {
-            256,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          256,
+                                      },
+                                      {
+                                          256,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
@@ -2274,21 +2206,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_beta_dtype_mismatch)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2301,9 +2233,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_beta_dtype_mismatch)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2318,10 +2249,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_beta_dtype_mismatch)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2341,13 +2271,12 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp16)
 {
     gert::StorageShape input_shape_x1 = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape input_shape_x2 = {{2, 1, 256}, {2, 1, 256}};
-    gert::StorageShape gamma_shape = {
-        {
-            256,
-        },
-        {
-            256,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          256,
+                                      },
+                                      {
+                                          256,
+                                      }};
     gert::StorageShape out_shape_y = {{2, 1, 256}, {2, 1, 256}};
     gert::StorageShape out_shape_x = {{2, 1, 256}, {2, 1, 256}};
 
@@ -2375,21 +2304,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp16)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
     auto gen_simplifiedkey_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormQuant")->gen_simplifiedkey;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2402,9 +2331,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp16)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2419,10 +2347,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp16)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2448,13 +2375,12 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_bf16)
 {
     gert::StorageShape input_shape_x1 = {{4, 1, 512}, {4, 1, 512}};
     gert::StorageShape input_shape_x2 = {{4, 1, 512}, {4, 1, 512}};
-    gert::StorageShape gamma_shape = {
-        {
-            512,
-        },
-        {
-            512,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          512,
+                                      },
+                                      {
+                                          512,
+                                      }};
     gert::StorageShape out_shape_y = {{4, 1, 512}, {4, 1, 512}};
     gert::StorageShape out_shape_x = {{4, 1, 512}, {4, 1, 512}};
 
@@ -2481,21 +2407,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_bf16)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2508,9 +2434,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_bf16)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2525,10 +2450,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_bf16)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -2551,13 +2475,12 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp32)
 {
     gert::StorageShape input_shape_x1 = {{8, 1, 128}, {8, 1, 128}};
     gert::StorageShape input_shape_x2 = {{8, 1, 128}, {8, 1, 128}};
-    gert::StorageShape gamma_shape = {
-        {
-            128,
-        },
-        {
-            128,
-        }};
+    gert::StorageShape gamma_shape = {{
+                                          128,
+                                      },
+                                      {
+                                          128,
+                                      }};
     gert::StorageShape out_shape_y = {{8, 1, 128}, {8, 1, 128}};
     gert::StorageShape out_shape_x = {{8, 1, 128}, {8, 1, 128}};
 
@@ -2584,21 +2507,21 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp32)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -2611,9 +2534,8 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp32)
                       .SetOpType(op_type)
                       .NodeIoNum(8, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape, &gamma_shape,
-                           &gamma_shape, &gamma_shape})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape, &gamma_shape, &gamma_shape,
+                                    &gamma_shape, &gamma_shape, &gamma_shape})
                       .OutputShapes({&out_shape_y, &out_shape_y, &out_shape_x})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -2628,10 +2550,9 @@ TEST_F(AddRmsNormQuantTiling, add_rms_norm_regbase_tiling_with_beta_fp32)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                           {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();

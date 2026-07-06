@@ -71,7 +71,7 @@ inline void InitSingleLayerLstmGradTilingDataTest(uint8_t* tiling, SingleLayerLs
     memcpy(data, tiling, sizeof(SingleLayerLstmGradTilingDataTest));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                    \
-    SingleLayerLstmGradTilingDataTest tiling_data;                  \
+#define GET_TILING_DATA(tiling_data, tiling_arg)   \
+    SingleLayerLstmGradTilingDataTest tiling_data; \
     InitSingleLayerLstmGradTilingDataTest(tiling_arg, &tiling_data)
 #endif // FUSED_LINEAR_ONLINE_MAX_SUM_TILING_H_TEST_KERNEL

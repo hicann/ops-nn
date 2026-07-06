@@ -42,5 +42,5 @@ REG_OP(LogSoftmaxGrad)
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(axis, ListInt, {-1})
     .OP_END_FACTORY_REG(LogSoftmaxGrad)
-}  // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_LOG_SOFTMAX_GRAD_OPS_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_LOG_SOFTMAX_GRAD_OPS_H_

@@ -23,8 +23,7 @@
 
 using namespace ge;
 
-namespace ops
-{
+namespace ops {
 static constexpr size_t INDEX_KSIZE = 0;
 static constexpr size_t INDEX_STRIDES = 1;
 static constexpr size_t INDEX_PADS = 2;
@@ -87,8 +86,8 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
     auto indices_dtype = indices_td->GetDataType();
     OP_LOGD(context->GetNodeName(), "indices_dtype = %d", indices_dtype);
     if (input_format != FORMAT_ND && input_format != FORMAT_NCDHW && input_format != FORMAT_NDHWC) {
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "input_format",
-            Ops::Base::ToString(input_format).c_str(), "ND, NCDHW or NDHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "input_format", Ops::Base::ToString(input_format).c_str(),
+                                   "ND, NCDHW or NDHWC");
         return GRAPH_FAILED;
     }
 
@@ -105,8 +104,8 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OPS_CHECK_NULL_WITH_CONTEXT(context, ksize);
     if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize",
-            std::to_string(ksize->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
@@ -114,8 +113,8 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OPS_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
-            std::to_string(strides->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
@@ -123,8 +122,8 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, pads);
     if (pads->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads",
-            std::to_string(pads->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads", std::to_string(pads->GetSize()).c_str(),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
@@ -132,8 +131,8 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OPS_CHECK_NULL_WITH_CONTEXT(context, dilation);
     if (dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation",
-            std::to_string(dilation->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation", std::to_string(dilation->GetSize()).c_str(),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
     auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
@@ -150,7 +149,7 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
         input_h_dim = input_h_dim - 1;
         input_w_dim = input_w_dim - 1;
     }
-    
+
     const gert::Shape* in_shape = context->GetInputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, in_shape);
     gert::Shape* out_max_shape = context->GetOutputShape(INDEX_OUT_MAX);

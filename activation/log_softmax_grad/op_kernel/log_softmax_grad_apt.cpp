@@ -27,15 +27,14 @@
 using namespace AscendC;
 using namespace LogSoftmaxGradOps;
 
-namespace
-{
+namespace {
 #define TILINGKEY_AR_SMALL_R 500
 #define TILINGKEY_AR 1000
 #define TILINGKEY_AR_RECOMPUTE 2000
 #define TILINGKEY_ARA 10000
 #define TILINGKEY_ARA_RECOMPUTE 20000
 
-}  // namespace
+} // namespace
 
 #define LOG_SOFTMAX_AR_SMALL_R_IMPL(INPUT_TYPE)                                           \
     do {                                                                                  \
@@ -57,38 +56,38 @@ namespace
         op.Process();                                                               \
     } while (0)
 
-#define LOG_SOFTMAX_AR_RECOMPUTE_IMPL(INPUT_TYPE)                                               \
-    do {                                                                                        \
-        GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARRecomputeTilingData, tilingDataIn, tiling);    \
-        const SoftmaxGradARRecomputeTilingData* __restrict tilingData = &tilingDataIn;          \
-        TPipe pipe;                                                                             \
-        LogSoftmaxGradArRecompute<INPUT_TYPE> op(&pipe);                                        \
-        op.Init(grad, x, y, tilingData);                                                        \
-        op.Process();                                                                           \
+#define LOG_SOFTMAX_AR_RECOMPUTE_IMPL(INPUT_TYPE)                                            \
+    do {                                                                                     \
+        GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARRecomputeTilingData, tilingDataIn, tiling); \
+        const SoftmaxGradARRecomputeTilingData* __restrict tilingData = &tilingDataIn;       \
+        TPipe pipe;                                                                          \
+        LogSoftmaxGradArRecompute<INPUT_TYPE> op(&pipe);                                     \
+        op.Init(grad, x, y, tilingData);                                                     \
+        op.Process();                                                                        \
     } while (0)
 
-#define LOG_SOFTMAX_ARA_IMPL(INPUT_TYPE)                                 \
+#define LOG_SOFTMAX_ARA_IMPL(INPUT_TYPE)                                               \
     do {                                                                               \
         GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARATilingData, tiling_data_in, tiling); \
         const SoftmaxGradARATilingData* __restrict tilingData = &tiling_data_in;       \
         TPipe pipe;                                                                    \
-        LogSoftmaxGradARA<INPUT_TYPE> op(tilingData);                        \
-        op.Init(grad, x, y, &pipe);                                 \
+        LogSoftmaxGradARA<INPUT_TYPE> op(tilingData);                                  \
+        op.Init(grad, x, y, &pipe);                                                    \
         op.Process();                                                                  \
     } while (0)
 
-#define LOG_SOFTMAX_ARA_RECOMPUTE_IMPL(INPUT_TYPE)                                \
+#define LOG_SOFTMAX_ARA_RECOMPUTE_IMPL(INPUT_TYPE)                                              \
     do {                                                                                        \
         GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARARecomputeTilingData, tiling_data_in, tiling); \
         const SoftmaxGradARARecomputeTilingData* __restrict tilingData = &tiling_data_in;       \
         TPipe pipe;                                                                             \
-        LogSoftmaxGradARARecompute<INPUT_TYPE> op(tilingData);                        \
-        op.Init(grad, x, y, &pipe);                                          \
+        LogSoftmaxGradARARecompute<INPUT_TYPE> op(tilingData);                                  \
+        op.Init(grad, x, y, &pipe);                                                             \
         op.Process();                                                                           \
     } while (0)
 
-extern "C" __global__ __aicore__ void log_softmax_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y,
-                                                   GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void log_softmax_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                       GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

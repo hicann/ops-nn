@@ -63,13 +63,11 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("has_bias").AttrType(OPTIONAL).Bool(false);
         OpAICoreConfig aicore_config;
-        aicore_config.DynamicCompileStaticFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true);
+        aicore_config.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
     }
 };
 
 OP_ADD(ThnnFusedLstmCellGrad);
-}
+} // namespace ops

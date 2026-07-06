@@ -105,9 +105,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("use_locking")
-            .AttrType(OPTIONAL)
-            .Bool(false);
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

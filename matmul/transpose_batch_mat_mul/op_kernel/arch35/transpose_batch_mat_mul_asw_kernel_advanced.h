@@ -33,9 +33,9 @@ class TransposeBatchMatMulAswKernel {
 public:
     __aicore__ inline TransposeBatchMatMulAswKernel() {}
     __aicore__ inline void Init(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR scalesGM,
-        GM_ADDR workspaceGM, const void *tilingData, TPipe *pipe);
+                                GM_ADDR workspaceGM, const void* tilingData, TPipe* pipe);
     __aicore__ inline void UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR scalesGM,
-        GM_ADDR workspaceGM);
+                                              GM_ADDR workspaceGM);
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR scalesGM);
     __aicore__ inline void Process(uint8_t enAtomic = 0);
     __aicore__ inline void End() { mm_.End(); }
@@ -54,7 +54,7 @@ protected:
     GlobalTensor<C_T> cGlobal_;
     GlobalTensor<BiasT> biasGlobal_;
     GlobalTensor<uint64_t> scalesGlobal_;
-    TPipe *pipe_;
+    TPipe* pipe_;
 };
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, TBMM_MODE MODE, class BLOCK_TYPE,
@@ -73,21 +73,24 @@ __aicore__ inline void TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIA
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, TBMM_MODE MODE, class BLOCK_TYPE,
           const MatmulConfig& MM_CFG>
-__aicore__ inline void
-TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE, MM_CFG>::InitInputs(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR scalesGM)
+__aicore__ inline void TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE,
+                                                     MM_CFG>::InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM,
+                                                                         GM_ADDR biasGM, GM_ADDR scalesGM)
 {
-    aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM), block_.params_.aBatchDimAll *
-        static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *
-        static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka));
-    bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(bGM), block_.params_.bBatchDimAll *
-        static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) *
-        static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N));
-    cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(cGM), block_.params_.cBatchDimAll *
-        static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *
-        static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N));
-    biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT *>(biasGM),
-        block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N);
+    aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(aGM),
+                             block_.params_.aBatchDimAll *
+                                 static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *
+                                 static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka));
+    bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ B_T*>(bGM),
+                             block_.params_.bBatchDimAll *
+                                 static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) *
+                                 static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N));
+    cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T*>(cGM),
+                             block_.params_.cBatchDimAll *
+                                 static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *
+                                 static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N));
+    biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(biasGM),
+                                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N);
     if constexpr (sizeof(C_T) == 1) {
         auto scalesSize = block_.params_.cBatchDimAll *
                           static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N);
@@ -101,47 +104,44 @@ __aicore__ inline void
 TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE, MM_CFG>::SetOrgShape()
 {
     if constexpr (MODE == TBMM_MODE::TRANS_BMM_TRANS || MODE == TBMM_MODE::TRANS_BMM_TRANS_TRANS) {
-        uint64_t mergeBatchK =
-            block_.params_.cBatchDimAll * block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb;
+        uint64_t mergeBatchK = block_.params_.cBatchDimAll *
+                               block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb;
         if constexpr (B_TYPE::format == CubeFormat::NZ) {
-            mm_.SetOrgShape(
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M, block_.params_.alignedOriN, mergeBatchK,
-                block_.params_.alignedKbSize,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N * block_.params_.cBatchDimAll /
-                    block_.batchSplitFactor_);
+            mm_.SetOrgShape(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M, block_.params_.alignedOriN,
+                            mergeBatchK, block_.params_.alignedKbSize,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N *
+                                block_.params_.cBatchDimAll / block_.batchSplitFactor_);
         } else {
-            mm_.SetOrgShape(
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N, mergeBatchK,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N * block_.params_.cBatchDimAll /
-                    block_.batchSplitFactor_);
+            mm_.SetOrgShape(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N, mergeBatchK,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N *
+                                block_.params_.cBatchDimAll / block_.batchSplitFactor_);
         }
     } else if constexpr (MODE == TBMM_MODE::BMM_TRANS || MODE == TBMM_MODE::BMM_TRANS_TRANS) {
         if constexpr (B_TYPE::format == CubeFormat::NZ) {
-            mm_.SetOrgShape(
-                block_.params_.cBatchDimAll * block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M,
-                block_.params_.alignedOriN, block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka,
-                block_.params_.alignedKbSize,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N * block_.params_.cBatchDimAll /
-                    block_.batchSplitFactor_);
+            mm_.SetOrgShape(block_.params_.cBatchDimAll * block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M,
+                            block_.params_.alignedOriN, block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka,
+                            block_.params_.alignedKbSize,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N *
+                                block_.params_.cBatchDimAll / block_.batchSplitFactor_);
         } else {
-            mm_.SetOrgShape(
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb,
-                block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N * block_.params_.cBatchDimAll /
-                    block_.batchSplitFactor_);
+            mm_.SetOrgShape(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb,
+                            block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N *
+                                block_.params_.cBatchDimAll / block_.batchSplitFactor_);
         }
     }
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, TBMM_MODE MODE, class BLOCK_TYPE,
           const MatmulConfig& MM_CFG>
-__aicore__ inline void
-TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE, MM_CFG>::UpdateGlobalTensor(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR scalesGM, GM_ADDR workspaceGM)
+__aicore__ inline void TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYPE,
+                                                     MM_CFG>::UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM,
+                                                                                 GM_ADDR biasGM, GM_ADDR scalesGM,
+                                                                                 GM_ADDR workspaceGM)
 {
     InitInputs(aGM, bGM, cGM, biasGM, scalesGM);
 }
@@ -166,7 +166,7 @@ TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYP
                 block_.template CalcGMOffset<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE>();
 
                 mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
-                    block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK);
+                                   block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.singleCoreK);
                 if constexpr (sizeof(C_T) == 1) {
                     mm_.SetQuantVector(scalesGlobal_[block_.offset_.offsetScales]);
                 }
@@ -185,4 +185,3 @@ TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYP
 }
 
 } // namespace TransposeBatchMatMulAdvanced
-

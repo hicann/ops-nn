@@ -19,10 +19,7 @@ using namespace Ops::Base;
 using namespace ge;
 namespace ops {
 
-static ge::graphStatus InferShape4Elu(gert::InferShapeContext* context)
-{
-    return InferShape4Elewise(context);
-}
+static ge::graphStatus InferShape4Elu(gert::InferShapeContext* context) { return InferShape4Elewise(context); }
 
 IMPL_OP_INFERSHAPE(Elu).InferShape(InferShape4Elu);
 

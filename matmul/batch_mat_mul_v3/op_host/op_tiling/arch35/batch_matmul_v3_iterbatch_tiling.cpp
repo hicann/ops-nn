@@ -40,10 +40,9 @@ ge::graphStatus BatchMatMulV3IterBatchTiling::DoOpTiling()
     uint64_t baseKb = compileInfo_.l0BSize / DB_SIZE / runInfo_.baseN / args_.bDtypeSize;
     uint64_t baseK = std::min(baseKa, baseKb) / BASIC_BLOCK_SIZE_16 * BASIC_BLOCK_SIZE_16;
     uint64_t singleCoreK = (baseK < runInfo_.singleCoreK || iterBatch_ <= 4UL) ? // 4 avoid issueque
-        runInfo_.singleCoreK / DB_SIZE : runInfo_.singleCoreK;
-    runInfo_.baseK = std::max(ops::CeilAlign(
-                              std::min(singleCoreK, baseK), BASIC_BLOCK_SIZE_16),
-                              runInfo_.baseK);
+                               runInfo_.singleCoreK / DB_SIZE :
+                               runInfo_.singleCoreK;
+    runInfo_.baseK = std::max(ops::CeilAlign(std::min(singleCoreK, baseK), BASIC_BLOCK_SIZE_16), runInfo_.baseK);
     runInfo_.stepKa = ops::CeilDiv(runInfo_.singleCoreK, runInfo_.baseK);
     runInfo_.stepKb = runInfo_.stepKa;
     runInfo_.stepM = ops::CeilDiv(runInfo_.singleCoreM, runInfo_.baseM);
@@ -54,8 +53,11 @@ ge::graphStatus BatchMatMulV3IterBatchTiling::DoOpTiling()
 
     // need align to 2 for db in api
     iterBatch_ = ops::FloorAlign(iterBatch_, 2UL);
-    batchOutNum_ = isEnableMultiBatch ? std::min(ops::FloorDiv(compileInfo_.l0CSize,
-        (runInfo_.baseM * runInfo_.baseN * runInfo_.dbL0C * sizeof(float))), iterBatch_) : 1UL;
+    batchOutNum_ = isEnableMultiBatch ?
+                       std::min(ops::FloorDiv(compileInfo_.l0CSize,
+                                              (runInfo_.baseM * runInfo_.baseN * runInfo_.dbL0C * sizeof(float))),
+                                iterBatch_) :
+                       1UL;
     if (iterBatch_ == batchOutNum_) {
         batchOutNum_ = iterBatch_ >> 1;
     }
@@ -76,7 +78,7 @@ bool BatchMatMulV3IterBatchTiling::IsCapable()
     }
     bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
                            batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
-    if (isNotEqualBatch)  {
+    if (isNotEqualBatch) {
         return false;
     }
     // get align m,k,n value
@@ -101,14 +103,14 @@ bool BatchMatMulV3IterBatchTiling::IsCapable()
     uint64_t iterBatchL0A = ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE, alignMValue * alignKValue * args_.aDtypeSize);
     uint64_t iterBatchL0B = ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE, alignKValue * alignNValue * args_.aDtypeSize);
     uint64_t iterBatchL0C = ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE, alignMValue * alignNValue * DATA_SIZE_FP32);
-    uint64_t iterBatchL1 = ops::FloorDiv(compileInfo_.l1Size / DB_SIZE, (alignMValue * alignKValue + alignKValue *
-                                         alignNValue) * args_.aDtypeSize);
+    uint64_t iterBatchL1 = ops::FloorDiv(compileInfo_.l1Size / DB_SIZE,
+                                         (alignMValue * alignKValue + alignKValue * alignNValue) * args_.aDtypeSize);
     constexpr static double defaultBalanceOfBatch = 0.8;
     if (std::min({iterBatchL0A, iterBatchL0B, iterBatchL0C}) < 1UL) {
         // if l0 can not load multi part of batch, calculate to avoid formulate unbalance issue.
         double avgIterBatch = static_cast<double>(batchInfo_->batchC) / static_cast<double>(compileInfo_.aicNum);
-        double actualMaxIterBatch = static_cast<double>(ops::CeilDiv(ops::CeilDiv(batchInfo_->batchC, iterBatchL1),
-                                    compileInfo_.aicNum) * iterBatchL1);
+        double actualMaxIterBatch = static_cast<double>(
+            ops::CeilDiv(ops::CeilDiv(batchInfo_->batchC, iterBatchL1), compileInfo_.aicNum) * iterBatchL1);
         double formulateBalanceRateOfBatch = avgIterBatch / actualMaxIterBatch; // calculate fb rate of batch
         if (formulateBalanceRateOfBatch < defaultBalanceOfBatch) {
             OP_LOGI(args_.opName, "FormulateBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
@@ -126,10 +128,7 @@ uint64_t BatchMatMulV3IterBatchTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-uint64_t BatchMatMulV3IterBatchTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t BatchMatMulV3IterBatchTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus BatchMatMulV3IterBatchTiling::GetTilingData(TilingResult& tiling) const
 {

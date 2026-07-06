@@ -19,18 +19,11 @@
 using namespace op;
 using namespace std;
 
-class l2_group_norm_test : public testing::Test
-{
+class l2_group_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "group_norm_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "group_norm_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "group_norm_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "group_norm_test TearDown" << endl; }
 };
 
 // TEST_F(l2_group_norm_test, case_float_normal)
@@ -97,9 +90,8 @@ TEST_F(l2_group_norm_test, case_invalid_dtype_abnormal)
         auto out_desc = TensorDesc({2, 3, 4}, ValidList[i], ACL_FORMAT_ND);
         auto mean_out_desc = TensorDesc({2, 1}, ValidList[i], ACL_FORMAT_ND);
         auto rstd_out_desc = TensorDesc({2, 1}, ValidList[i], ACL_FORMAT_ND);
-        auto ut = OP_API_UT(
-            aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-            OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+        auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                            OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
         uint64_t workspace_size = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -121,9 +113,8 @@ TEST_F(l2_group_norm_test, case_gamma_not_1d_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -144,9 +135,8 @@ TEST_F(l2_group_norm_test, case_beta_not_1d_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -167,9 +157,8 @@ TEST_F(l2_group_norm_test, case_1d_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -329,9 +318,8 @@ TEST_F(l2_group_norm_test, case_9d_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -353,9 +341,8 @@ TEST_F(l2_group_norm_test, case_self_nullptr_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT((aclTensor*)nullptr, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT((aclTensor*)nullptr, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -422,9 +409,8 @@ TEST_F(l2_group_norm_test, case_out_nullptr_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT((aclTensor*)nullptr, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT((aclTensor*)nullptr, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -445,9 +431,8 @@ TEST_F(l2_group_norm_test, case_mean_out_nullptr_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, (aclTensor*)nullptr, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, (aclTensor*)nullptr, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -468,9 +453,8 @@ TEST_F(l2_group_norm_test, case_rstd_out_nullptr_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, (aclTensor*)nullptr));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -491,9 +475,8 @@ TEST_F(l2_group_norm_test, case_diff_dtype_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -514,9 +497,8 @@ TEST_F(l2_group_norm_test, case_group_not_gt0_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -537,9 +519,8 @@ TEST_F(l2_group_norm_test, case_self_numel_ne_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -560,9 +541,8 @@ TEST_F(l2_group_norm_test, case_gamma_ne_C_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -583,9 +563,8 @@ TEST_F(l2_group_norm_test, case_beta_ne_C_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -606,9 +585,8 @@ TEST_F(l2_group_norm_test, case_self_shpe_ne_gn_out_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -629,9 +607,8 @@ TEST_F(l2_group_norm_test, case_mean_shpe_ne_abnormal)
     auto mean_out_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -652,9 +629,8 @@ TEST_F(l2_group_norm_test, case_rstd_shpe_ne_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -675,9 +651,8 @@ TEST_F(l2_group_norm_test, case_empty_normal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -698,9 +673,8 @@ TEST_F(l2_group_norm_test, case_C_not_div_group_abnormal)
     auto mean_out_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -744,9 +718,8 @@ TEST_F(l2_group_norm_test, case_self_ne_N_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -767,9 +740,8 @@ TEST_F(l2_group_norm_test, case_self_ne_C_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -790,9 +762,8 @@ TEST_F(l2_group_norm_test, case_self_ne_HxW_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -813,9 +784,8 @@ TEST_F(l2_group_norm_test, case_self_format_ne_out_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -836,9 +806,8 @@ TEST_F(l2_group_norm_test, case_self_private_format_abnormal)
     auto mean_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto rstd_out_desc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
-        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
+    auto ut = OP_API_UT(aclnnGroupNorm, INPUT(self_desc, gamma_desc, beta_desc, N, C, HxW, group, eps),
+                        OUTPUT(out_desc, mean_out_desc, rstd_out_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

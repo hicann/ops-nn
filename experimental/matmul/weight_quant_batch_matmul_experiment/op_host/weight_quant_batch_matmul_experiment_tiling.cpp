@@ -23,7 +23,7 @@
 using WeightQuantBatchMatmulExperimental::WeightQuantBatchMatmulExperimentTilingData;
 namespace optiling {
 namespace weight_quant_batch_matmul_experiment {
-constexpr uint32_t WS_SYS_SIZE = 16U * 1024U * 1024U;  // 16MB
+constexpr uint32_t WS_SYS_SIZE = 16U * 1024U * 1024U; // 16MB
 constexpr uint32_t DB_SIZE = 2UL;
 constexpr uint32_t BLOCK_BYTE_SIZE = 32UL;
 constexpr uint32_t H_ALIGNED = 16UL;
@@ -55,7 +55,7 @@ struct WeightQuantBatchMatmulExperimentCompileInfo {
 };
 
 struct WeightQuantBatchMatmulExperimentArgs {
-    const char *opName = nullptr;
+    const char* opName = nullptr;
     ge::DataType xType = ge::DT_FLOAT;
     ge::DataType weightType = ge::DT_FLOAT;
     ge::DataType yType = ge::DT_FLOAT;
@@ -77,11 +77,11 @@ inline uint64_t CeilDiv(uint64_t x, uint64_t align)
 
 inline uint64_t CeilAlign(uint64_t x, uint64_t align) { return CeilDiv(x, align) * align; }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext *context,
-                                       WeightQuantBatchMatmulExperimentCompileInfo *compileInfoPtr)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context,
+                                       WeightQuantBatchMatmulExperimentCompileInfo* compileInfoPtr)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context->GetNodeName(), "context is null"), return ge::GRAPH_FAILED);
-    fe::PlatFormInfos *platformInfos = context->GetPlatformInfo();
+    fe::PlatFormInfos* platformInfos = context->GetPlatformInfo();
     OP_CHECK_IF(platformInfos == nullptr, OP_LOGE(context->GetNodeName(), "platform info is null"),
                 return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfos);
@@ -104,7 +104,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext *context,
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext *context, WeightQuantBatchMatmulExperimentArgs *argsPtr)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, WeightQuantBatchMatmulExperimentArgs* argsPtr)
 {
     argsPtr->opName = context->GetNodeName();
     OP_CHECK_IF(argsPtr->opName == nullptr, OP_LOGE("weight_quant_batch_matmul_experiment", "get op name invalid"),
@@ -150,21 +150,21 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext *context, WeightQua
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus DoOpTiling(WeightQuantBatchMatmulExperimentTilingData *tilingDataPtr,
-                                  WeightQuantBatchMatmulExperimentCompileInfo *compileInfoPtr,
-                                  WeightQuantBatchMatmulExperimentArgs *argsPtr)
+static ge::graphStatus DoOpTiling(WeightQuantBatchMatmulExperimentTilingData* tilingDataPtr,
+                                  WeightQuantBatchMatmulExperimentCompileInfo* compileInfoPtr,
+                                  WeightQuantBatchMatmulExperimentArgs* argsPtr)
 {
     tilingDataPtr->matmulTiling.usedCoreNum = compileInfoPtr->aicNum;
     tilingDataPtr->matmulTiling.M = argsPtr->mValue;
     tilingDataPtr->matmulTiling.N = argsPtr->nValue;
     tilingDataPtr->matmulTiling.Ka = argsPtr->kValue;
     tilingDataPtr->matmulTiling.Kb = argsPtr->kValue;
-    tilingDataPtr->matmulTiling.singleCoreM = 3 * argsPtr->mValue;  // 实际执行mm的shape，m轴展开了3倍
-    tilingDataPtr->matmulTiling.singleCoreN = 512;                  // 示例代码，n默认按照512切分
+    tilingDataPtr->matmulTiling.singleCoreM = 3 * argsPtr->mValue; // 实际执行mm的shape，m轴展开了3倍
+    tilingDataPtr->matmulTiling.singleCoreN = 512;                 // 示例代码，n默认按照512切分
     tilingDataPtr->matmulTiling.singleCoreK = argsPtr->kValue;
     tilingDataPtr->matmulTiling.baseM = CeilAlign(tilingDataPtr->matmulTiling.singleCoreM, 16);
     tilingDataPtr->matmulTiling.baseN = tilingDataPtr->matmulTiling.singleCoreN;
-    tilingDataPtr->matmulTiling.baseK = 128;  // 示例代码，group size 固定128
+    tilingDataPtr->matmulTiling.baseK = 128; // 示例代码，group size 固定128
     tilingDataPtr->matmulTiling.depthA1 = 2;
     tilingDataPtr->matmulTiling.depthB1 = 2;
     tilingDataPtr->matmulTiling.stepM = 1;
@@ -177,13 +177,13 @@ static ge::graphStatus DoOpTiling(WeightQuantBatchMatmulExperimentTilingData *ti
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus PostTiling(gert::TilingContext *context,
-                                  WeightQuantBatchMatmulExperimentCompileInfo *compileInfoPtr,
-                                  WeightQuantBatchMatmulExperimentTilingData *tilingDataPtr)
+static ge::graphStatus PostTiling(gert::TilingContext* context,
+                                  WeightQuantBatchMatmulExperimentCompileInfo* compileInfoPtr,
+                                  WeightQuantBatchMatmulExperimentTilingData* tilingDataPtr)
 {
     size_t tilingDataSize = sizeof(WeightQuantBatchMatmulExperimentTilingData);
     auto ret = memcpy_s(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity(),
-                        reinterpret_cast<void *>(tilingDataPtr), tilingDataSize);
+                        reinterpret_cast<void*>(tilingDataPtr), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
@@ -200,13 +200,13 @@ static ge::graphStatus PostTiling(gert::TilingContext *context,
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetWorkspaceSize(gert::TilingContext *context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
-    size_t usrSize = 64 * 1024 * 1024;  // workspace统一预留64M
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t usrSize = 64 * 1024 * 1024; // workspace统一预留64M
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
@@ -214,13 +214,13 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext *context)
 // 1.Tiling需要获取的运行环境信息，包括可用核数、UB大小等，并将获取到的信息传递给'CompileInfo'
 // 由于自动生成的aclnn接口实现不调用该函数，直接返回'ge::GRAPH_SUCCESS'即可
 static ge::graphStatus TilingParseForWeightQuantBatchMatmulExperiment(
-    [[maybe_unused]] gert::TilingParseContext *context)
+    [[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
 // 2. Tiling计算主入口
-static ge::graphStatus WeightQuantBatchMatmulExperimentTilingFunc(gert::TilingContext *context)
+static ge::graphStatus WeightQuantBatchMatmulExperimentTilingFunc(gert::TilingContext* context)
 {
     // 2.1 平台信息
     WeightQuantBatchMatmulExperimentCompileInfo compileInfo;
@@ -239,8 +239,8 @@ static ge::graphStatus WeightQuantBatchMatmulExperimentTilingFunc(gert::TilingCo
     }
 
     // 2.3 计算Tiling参数
-    WeightQuantBatchMatmulExperimentTilingData* tilingDataPtr =
-        context->GetTilingData<WeightQuantBatchMatmulExperimentTilingData>();
+    WeightQuantBatchMatmulExperimentTilingData*
+        tilingDataPtr = context->GetTilingData<WeightQuantBatchMatmulExperimentTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingDataPtr);
     ret = DoOpTiling(tilingDataPtr, compileInfoPtr, argsPtr);
     if (ret != ge::GRAPH_SUCCESS) {
@@ -262,5 +262,5 @@ static ge::graphStatus WeightQuantBatchMatmulExperimentTilingFunc(gert::TilingCo
 IMPL_OP_OPTILING(WeightQuantBatchMatmulExperiment)
     .Tiling(WeightQuantBatchMatmulExperimentTilingFunc)
     .TilingParse<WeightQuantBatchMatmulExperimentCompileInfo>(TilingParseForWeightQuantBatchMatmulExperiment);
-}  // namespace weight_quant_batch_matmul_experiment
-}  // namespace optiling
+} // namespace weight_quant_batch_matmul_experiment
+} // namespace optiling

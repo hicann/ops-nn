@@ -20,8 +20,8 @@ class KernelLayerNormQuantSplitD {
 public:
     __aicore__ inline KernelLayerNormQuantSplitD() {}
 
-    __aicore__ inline void Init(__gm__ uint8_t *x, __gm__ uint8_t *gamma, __gm__ uint8_t *beta, __gm__ uint8_t *scale,
-                                __gm__ uint8_t *offset, __gm__ uint8_t *z, LayerNormQuantRegTilingData tilingData)
+    __aicore__ inline void Init(__gm__ uint8_t* x, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* scale,
+                                __gm__ uint8_t* offset, __gm__ uint8_t* z, LayerNormQuantRegTilingData tilingData)
     {
         half_num = 2;
         num_core = tilingData.numCore;
@@ -45,10 +45,10 @@ public:
         tail_slice_size = tilingData.tailSliceSize;
         gm_offset_ = static_cast<uint64_t>(nl_first_dim_per_core) * num_last_dim;
 
-        x_gm.SetGlobalBuffer((__gm__ T *)x + AscendC::GetBlockIdx() * gm_offset_);
-        z_gm.SetGlobalBuffer((__gm__ int8_t *)z + AscendC::GetBlockIdx() * gm_offset_);
-        gamma_gm.SetGlobalBuffer((__gm__ T *)gamma);
-        beta_gm.SetGlobalBuffer((__gm__ T *)beta);
+        x_gm.SetGlobalBuffer((__gm__ T*)x + AscendC::GetBlockIdx() * gm_offset_);
+        z_gm.SetGlobalBuffer((__gm__ int8_t*)z + AscendC::GetBlockIdx() * gm_offset_);
+        gamma_gm.SetGlobalBuffer((__gm__ T*)gamma);
+        beta_gm.SetGlobalBuffer((__gm__ T*)beta);
 
         pipe.InitBuffer(x_que, BUFFER_NUM, row_step * RoundUp(slice_size) * sizeof(T));
         pipe.InitBuffer(z_que, BUFFER_NUM, row_step * RoundUp(slice_size) * INT8_DATA_BYTE);
@@ -91,28 +91,29 @@ public:
     }
 
 private:
-
-    __aicore__ inline void GetScaleAndOffset(__gm__ uint8_t *scale, __gm__ uint8_t *offset)
+    __aicore__ inline void GetScaleAndOffset(__gm__ uint8_t* scale, __gm__ uint8_t* offset)
     {
         AscendC::GlobalTensor<T> gm_s;
-        gm_s.SetGlobalBuffer((__gm__ T *)scale);
+        gm_s.SetGlobalBuffer((__gm__ T*)scale);
         LocalTensor<T> tmpFp16 = x_buf_fp32.Get<T>();
         DataCopy(tmpFp16, gm_s, BLOCK_SIZE / sizeof(T));
         if constexpr (AscendC::IsSameType<T, half>::value || AscendC::IsSameType<T, float>::value) {
             SetFlag<HardEvent::MTE2_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_S>(EVENT_ID0);
-            inputScale = 1 / (static_cast<float>(tmpFp16.GetValue(0)) == 0 ? 1 : static_cast<float>(tmpFp16.GetValue(0)));
-        } else if constexpr (AscendC::IsSameType<T, bfloat16_t>::value){
+            inputScale = 1 /
+                         (static_cast<float>(tmpFp16.GetValue(0)) == 0 ? 1 : static_cast<float>(tmpFp16.GetValue(0)));
+        } else if constexpr (AscendC::IsSameType<T, bfloat16_t>::value) {
             LocalTensor<float> tmpFp32 = y_buf_fp32.Get<float>();
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             Cast(tmpFp32, tmpFp16, AscendC::RoundMode::CAST_NONE, 1);
             SetFlag<HardEvent::V_S>(EVENT_ID0);
             WaitFlag<HardEvent::V_S>(EVENT_ID0);
-            inputScale = 1 / (static_cast<float>(tmpFp32.GetValue(0)) == 0 ? 1 : static_cast<float>(tmpFp32.GetValue(0)));
+            inputScale = 1 /
+                         (static_cast<float>(tmpFp32.GetValue(0)) == 0 ? 1 : static_cast<float>(tmpFp32.GetValue(0)));
         }
         AscendC::GlobalTensor<int8_t> gm_o;
-        gm_o.SetGlobalBuffer((__gm__ int8_t *)offset);
+        gm_o.SetGlobalBuffer((__gm__ int8_t*)offset);
         LocalTensor<int8_t> tmpInt8 = x_buf_fp32.Get<int8_t>();
         DataCopy(tmpInt8, gm_o, BLOCK_SIZE / sizeof(int8_t));
         SetFlag<HardEvent::MTE2_S>(EVENT_ID0);
@@ -120,8 +121,8 @@ private:
         inputOffset = static_cast<float>(tmpInt8.GetValue(0));
     }
 
-    __aicore__ inline void GetSliceOffsetAndSizeRegBase(uint32_t row_offset, uint32_t sid, uint32_t &slice_offset,
-                                                 uint64_t &col_offset, uint32_t &eleNum)
+    __aicore__ inline void GetSliceOffsetAndSizeRegBase(uint32_t row_offset, uint32_t sid, uint32_t& slice_offset,
+                                                        uint64_t& col_offset, uint32_t& eleNum)
     {
         slice_offset = sid * slice_size;
         col_offset = row_offset + slice_offset;
@@ -177,12 +178,12 @@ private:
         LocalTensor<float> z_local_fp32 = z_buf_fp32.Get<float>();
         LocalTensor<float> y_local_fp32 = y_buf_fp32.Get<float>();
         PipeBarrier<PIPE_V>();
-        if constexpr (IsSameType<T, half>::value ||IsSameType<T, bfloat16_t>::value){
-                Cast(x_local_fp32, x_local2, AscendC::RoundMode::CAST_NONE, size);
+        if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
+            Cast(x_local_fp32, x_local2, AscendC::RoundMode::CAST_NONE, size);
         } else {
             Adds(x_local_fp32, x_local2, 0, size);
         }
-        
+
         PipeBarrier<PIPE_V>();
         ReduceSum(z_local_fp32, x_local_fp32, y_local_fp32, size);
         PipeBarrier<PIPE_V>();
@@ -218,7 +219,7 @@ private:
         LocalTensor<float> y_local_fp32 = y_buf_fp32.Get<float>();
         LocalTensor<float> z_local_fp32 = z_buf_fp32.Get<float>();
         PipeBarrier<PIPE_V>();
-        if constexpr (IsSameType<T, half>::value ||IsSameType<T, bfloat16_t>::value){
+        if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
             Cast(x_local_fp32, x_local2, AscendC::RoundMode::CAST_NONE, size);
         } else {
             Adds(x_local_fp32, x_local2, 0, size);
@@ -276,12 +277,12 @@ private:
         LocalTensor<float> y_local_fp32 = y_buf_fp32.Get<float>();
         LocalTensor<float> z_local_fp32 = z_buf_fp32.Get<float>();
         PipeBarrier<PIPE_V>();
-        if constexpr (IsSameType<T, half>::value ||IsSameType<T, bfloat16_t>::value){
+        if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
             Cast(x_local_fp32, x_local, AscendC::RoundMode::CAST_NONE, nums);
         } else {
             Adds(x_local_fp32, x_local, 0, nums);
         }
-        
+
         PipeBarrier<PIPE_V>();
         Duplicate(y_local_fp32, mean, nums);
         PipeBarrier<PIPE_V>();
@@ -323,7 +324,7 @@ private:
 
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;  // 搬多少块
-        dataCopyParams.blockLen = size;  // 搬多长
+        dataCopyParams.blockLen = size; // 搬多长
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
 
@@ -337,7 +338,7 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> z_que;
     TQue<TPosition::VECIN, BUFFER_NUM> gamma_que;
     TQue<TPosition::VECIN, BUFFER_NUM> beta_que;
-    
+
     TBuf<TPosition::VECCALC> x_buf_fp32;
     TBuf<TPosition::VECCALC> y_buf_fp32;
     TBuf<TPosition::VECCALC> z_buf_fp32;

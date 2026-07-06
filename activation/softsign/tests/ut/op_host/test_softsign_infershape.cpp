@@ -19,168 +19,170 @@
 #include "platform/platform_info.h"
 
 class SoftsignProtoTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "Softsign Proto Test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "Softsign Proto Test SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "Softsign Proto Test TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "Softsign Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(SoftsignProtoTest, softsign_infershape_1d_fp32_test) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(SoftsignProtoTest, softsign_infershape_1d_fp32_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
 
-  gert::Shape input_shape_0 = {128};
-  gert::Shape output_shape_0 = {};
+    gert::Shape input_shape_0 = {128};
+    gert::Shape output_shape_0 = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_0})
-                    .OutputShapes({&output_shape_0})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(SoftsignProtoTest, softsign_infershape_2d_fp16_test) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(SoftsignProtoTest, softsign_infershape_2d_fp16_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
 
-  gert::Shape input_shape_0 = {8, 16};
-  gert::Shape output_shape_0 = {};
+    gert::Shape input_shape_0 = {8, 16};
+    gert::Shape output_shape_0 = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_0})
-                    .OutputShapes({&output_shape_0})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(SoftsignProtoTest, softsign_infershape_3d_bf16_test) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(SoftsignProtoTest, softsign_infershape_3d_bf16_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
 
-  gert::Shape input_shape_0 = {4, 3, 4};
-  gert::Shape output_shape_0 = {};
+    gert::Shape input_shape_0 = {4, 3, 4};
+    gert::Shape output_shape_0 = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_0})
-                    .OutputShapes({&output_shape_0})
-                    .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(SoftsignProtoTest, softsign_infershape_scalar_test) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(SoftsignProtoTest, softsign_infershape_scalar_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
 
-  gert::Shape input_shape_0 = {};
-  gert::Shape output_shape_0 = {};
+    gert::Shape input_shape_0 = {};
+    gert::Shape output_shape_0 = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_0})
-                    .OutputShapes({&output_shape_0})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(SoftsignProtoTest, softsign_infershape_empty_test) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(SoftsignProtoTest, softsign_infershape_empty_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
 
-  gert::Shape input_shape_0 = {0};
-  gert::Shape output_shape_0 = {};
+    gert::Shape input_shape_0 = {0};
+    gert::Shape output_shape_0 = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_0})
-                    .OutputShapes({&output_shape_0})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(SoftsignProtoTest, softsign_infershape_high_rank_test) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(SoftsignProtoTest, softsign_infershape_high_rank_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Softsign")->infer_shape;
 
-  gert::Shape input_shape_0 = {2, 3, 4, 5, 6};
-  gert::Shape output_shape_0 = {};
+    gert::Shape input_shape_0 = {2, 3, 4, 5, 6};
+    gert::Shape output_shape_0 = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_0})
-                    .OutputShapes({&output_shape_0})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

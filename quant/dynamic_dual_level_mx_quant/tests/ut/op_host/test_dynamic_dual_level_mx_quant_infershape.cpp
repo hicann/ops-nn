@@ -24,16 +24,13 @@ using namespace ge;
 
 class DynamicDualLevelMxQuantTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "dynamic_dual_level_mx_quant test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "dynamic_dual_level_mx_quant test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "dynamic_dual_level_mx_quant test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "dynamic_dual_level_mx_quant test TearDown" << std::endl; }
 };
 
-TEST_F(DynamicDualLevelMxQuantTest, dynamic_dual_level_mx_quant_case_1) {
+TEST_F(DynamicDualLevelMxQuantTest, dynamic_dual_level_mx_quant_case_1)
+{
     ge::op::DynamicDualLevelMxQuant quant_op;
     ge::TensorDesc XDesc;
     ge::Shape xShape({128, 512});
@@ -41,9 +38,9 @@ TEST_F(DynamicDualLevelMxQuantTest, dynamic_dual_level_mx_quant_case_1) {
     XDesc.SetShape(xShape);
     XDesc.SetOriginShape(xShape);
     quant_op.UpdateInputDesc("x", XDesc);
-	quant_op.SetAttr("round_mode", "rint");
-	quant_op.SetAttr("level0_block_size", 512);
-	quant_op.SetAttr("level1_block_size", 32);
+    quant_op.SetAttr("round_mode", "rint");
+    quant_op.SetAttr("level0_block_size", 512);
+    quant_op.SetAttr("level1_block_size", 32);
 
     Runtime2TestParam param{{"round_mode", "level0_block_size", "level1_block_size"}};
     EXPECT_EQ(InferShapeTest(quant_op, param), ge::GRAPH_SUCCESS);

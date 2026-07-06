@@ -15,8 +15,7 @@
 
 #include "avg_pool_v2_grad_nhwc_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace AvgPoolV2Grad;
 
 static constexpr uint64_t TILING_KEY_NHWC = 2;
@@ -68,7 +67,8 @@ void AvgPoolV2GradCommonNHWCTiling::InitializationVars()
     baseData.moveDataNumCacheLine = CACHE_LINE_SIZE / baseData.gradBytes;
 
     baseData.isPad = 0;
-    if (inputData.pad[TOP_PAD_INDEX] != 0 || inputData.pad[BOTTOM_PAD_INDEX] != 0 || inputData.pad[LEFT_PAD_INDEX] != 0 || inputData.pad[RIGHT_PAD_INDEX] != 0) {
+    if (inputData.pad[TOP_PAD_INDEX] != 0 || inputData.pad[BOTTOM_PAD_INDEX] != 0 ||
+        inputData.pad[LEFT_PAD_INDEX] != 0 || inputData.pad[RIGHT_PAD_INDEX] != 0) {
         baseData.isPad = 1;
     }
 
@@ -94,10 +94,9 @@ uint64_t AvgPoolV2GradCommonNHWCTiling::GetTilingKey() const
     uint64_t format = FORMAT_NHWC;
     uint64_t countIncludePad = inputData.countIncludePad;
     uint64_t isPad = 0;
-    uint64_t tilingKey = GET_TPL_TILING_KEY(
-        schMode, format, static_cast<uint64_t>(inputData.isInt32Meet), isPad,
-        static_cast<uint64_t>(splitData.isCheckRange), countIncludePad, static_cast<uint64_t>(inputData.hasDivisor)
-    );
+    uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, format, static_cast<uint64_t>(inputData.isInt32Meet), isPad,
+                                            static_cast<uint64_t>(splitData.isCheckRange), countIncludePad,
+                                            static_cast<uint64_t>(inputData.hasDivisor));
 
     return tilingKey;
 }
@@ -105,8 +104,10 @@ uint64_t AvgPoolV2GradCommonNHWCTiling::GetTilingKey() const
 void AvgPoolV2GradCommonNHWCTiling::DoBufferCalculate()
 {
     // The calculation only involves inner.
-    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData.kernelSize[H_DIM] - 1, inputData.stride[H_DIM]);
-    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData.kernelSize[W_DIM] - 1, inputData.stride[W_DIM]);
+    int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner + inputData.kernelSize[H_DIM] - 1,
+                                             inputData.stride[H_DIM]);
+    int64_t wInputInner = Ops::Base::CeilDiv(splitData.wOutputInner + inputData.kernelSize[W_DIM] - 1,
+                                             inputData.stride[W_DIM]);
 
     int64_t inputPlaneSizeHW = hInputInner * wInputInner;
     int64_t outputPlaneSizeHW = splitData.hOutputInner * splitData.wOutputInner;
@@ -242,8 +243,8 @@ bool AvgPoolV2GradCommonNHWCTiling::TrySplitAlignC()
     splitData.hOutputInner = inputData.stride[H_DIM];
     splitData.wOutputInner = inputData.stride[W_DIM];
 
-    int64_t tmpCAligned =
-        inputData.channels < baseData.moveDataNumCacheLine ? inputData.channels : baseData.moveDataNumCacheLine;
+    int64_t tmpCAligned = inputData.channels < baseData.moveDataNumCacheLine ? inputData.channels :
+                                                                               baseData.moveDataNumCacheLine;
     splitData.cOutputInner = tmpCAligned;
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
         int64_t left = 1;
@@ -276,8 +277,8 @@ void AvgPoolV2GradCommonNHWCTiling::SplitUnalignHWC()
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         splitData.hOutputInner = inputData.stride[H_DIM];
         splitData.wOutputInner = inputData.stride[W_DIM];
-        int64_t tmpCAligned =
-            inputData.channels < baseData.moveDataNumCacheLine ? inputData.channels : baseData.moveDataNumCacheLine;
+        int64_t tmpCAligned = inputData.channels < baseData.moveDataNumCacheLine ? inputData.channels :
+                                                                                   baseData.moveDataNumCacheLine;
         splitData.cOutputInner = tmpCAligned;
     } else {
         splitData.wOutputInner = inputData.inputShape[W_DIM];
@@ -303,23 +304,23 @@ void AvgPoolV2GradCommonNHWCTiling::SplitUnalignHWC()
         splitData.cOutputInner = baseData.proDataNumInOneBeat;
         return;
     } else {
-            int64_t left = 1;
-            int64_t right = Ops::Base::CeilDiv(inputData.channels / 2, baseData.proDataNumInOneBeat);
-            int64_t bestSplit = 1;
-            while (left <= right) {
-                int64_t mid = left + (right - left) / 2;
-                splitData.cOutputInner = mid * baseData.proDataNumInOneBeat;
+        int64_t left = 1;
+        int64_t right = Ops::Base::CeilDiv(inputData.channels / 2, baseData.proDataNumInOneBeat);
+        int64_t bestSplit = 1;
+        while (left <= right) {
+            int64_t mid = left + (right - left) / 2;
+            splitData.cOutputInner = mid * baseData.proDataNumInOneBeat;
 
-                if (IsMeetUBSize()) {
-                    bestSplit = mid;
-                    left = mid + 1;
-                } else {
-                    right = mid - 1;
-                }
+            if (IsMeetUBSize()) {
+                bestSplit = mid;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
             }
-            splitData.cOutputInner = bestSplit * baseData.proDataNumInOneBeat;
-            return;
         }
+        splitData.cOutputInner = bestSplit * baseData.proDataNumInOneBeat;
+        return;
+    }
 }
 
 void AvgPoolV2GradCommonNHWCTiling::DynamicAdjustmentWH()
@@ -393,12 +394,12 @@ void AvgPoolV2GradCommonNHWCTiling::DoUBTiling()
 
 void AvgPoolV2GradCommonNHWCTiling::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum =
-        splitData.nOutputOuter * splitData.cOutputOuter * splitData.hOutputOuter * splitData.wOutputOuter;
+    splitData.totalBaseBlockNum = splitData.nOutputOuter * splitData.cOutputOuter * splitData.hOutputOuter *
+                                  splitData.wOutputOuter;
     splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
     splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void AvgPoolV2GradCommonNHWCTiling::PrintBaseData() const
@@ -518,10 +519,7 @@ ge::graphStatus AvgPoolV2GradCommonNHWCTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AvgPoolV2GradCommonNHWCTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AvgPoolV2GradCommonNHWCTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AvgPoolV2GradCommonNHWCTiling::GetWorkspaceSize()
 {
@@ -533,14 +531,16 @@ ge::graphStatus AvgPoolV2GradCommonNHWCTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AvgPoolV2GradNHWCTiling::GetPlatformInfo() {
+ge::graphStatus AvgPoolV2GradNHWCTiling::GetPlatformInfo()
+{
     return GetAvgPoolV2GradPlatformInfo(context_, ubSize, coreNum);
 }
 
-ge::graphStatus AvgPoolV2GradNHWCTiling::GetShapeAttrsInfo() {
+ge::graphStatus AvgPoolV2GradNHWCTiling::GetShapeAttrsInfo()
+{
     return GetAvgPoolV2GradShapeAttrsInfo(context_, inputData);
 }
 
 REGISTER_OPS_TILING_TEMPLATE(AvgPoolV2Grad, AvgPoolV2GradNHWCTiling, 3);
 
-}  // namespace optiling
+} // namespace optiling

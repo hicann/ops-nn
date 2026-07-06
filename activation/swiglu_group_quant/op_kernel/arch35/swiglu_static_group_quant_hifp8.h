@@ -22,13 +22,14 @@ namespace SwigluGroupQuantStaticHifp8Ops {
 using namespace AscendC;
 
 template <typename T>
-class SwigluGroupQuantStaticHifp8Kernel : public SwigluGroupQuantHifp8BaseOps::SwigluGroupQuantHifp8KernelBase<SwigluGroupQuantStaticHifp8Kernel<T>, T> {
+class SwigluGroupQuantStaticHifp8Kernel
+    : public SwigluGroupQuantHifp8BaseOps::SwigluGroupQuantHifp8KernelBase<SwigluGroupQuantStaticHifp8Kernel<T>, T> {
 public:
     __aicore__ inline SwigluGroupQuantStaticHifp8Kernel() {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y,
-                                GM_ADDR yOrigin, GM_ADDR workspace,
-                                const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe);
+                                GM_ADDR yOrigin, GM_ADDR workspace, const SwigluGroupQuantHifp8TilingData* tilingData,
+                                TPipe* pipe);
 
 public:
     __aicore__ inline void ProcessGroupQuant();
@@ -42,9 +43,11 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::Init(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale, GM_ADDR y, GM_ADDR yOrigin,
-    GM_ADDR workspace, const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe)
+__aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::Init(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex,
+                                                                  GM_ADDR scale, GM_ADDR y, GM_ADDR yOrigin,
+                                                                  GM_ADDR workspace,
+                                                                  const SwigluGroupQuantHifp8TilingData* tilingData,
+                                                                  TPipe* pipe)
 {
     this->InitBase(x, weight, groupIndex, y, yOrigin, workspace, tilingData, pipe);
     scaleGm_.SetGlobalBuffer((__gm__ float*)scale);
@@ -68,15 +71,15 @@ __aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::ProcessGroupQuant()
 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::ProcessGroup(int64_t groupIdx, int64_t tokenStart,
-    int64_t tokenEnd)
+                                                                          int64_t tokenEnd)
 {
     float invScale = scaleGm_.GetValue(groupIdx);
     ProcessTokensWithScale(tokenStart, tokenEnd, invScale);
 }
 
 template <typename T>
-__aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::ProcessTokensWithScale(
-    int64_t tokenStart, int64_t tokenEnd, float invScale)
+__aicore__ inline void SwigluGroupQuantStaticHifp8Kernel<T>::ProcessTokensWithScale(int64_t tokenStart,
+                                                                                    int64_t tokenEnd, float invScale)
 {
     int64_t tokenIdx = tokenStart;
     while (tokenIdx < tokenEnd) {

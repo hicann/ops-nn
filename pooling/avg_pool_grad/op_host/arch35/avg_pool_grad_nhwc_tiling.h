@@ -19,21 +19,18 @@
 #include "avg_pool_grad_tiling_base.h"
 #include "../../../avg_pool_v2_grad/op_host/arch35/avg_pool_v2_grad_nhwc_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 
 class AvgPoolGradNHWCTiling : public AvgPoolV2GradCommonNHWCTiling {
 public:
-    explicit AvgPoolGradNHWCTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNHWCTiling(context)
-    {}
-    ~AvgPoolGradNHWCTiling() override
-    {}
+    explicit AvgPoolGradNHWCTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNHWCTiling(context) {}
+    ~AvgPoolGradNHWCTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

@@ -53,29 +53,27 @@ inline void InitSoloTilingData(uint8_t* tiling, T* const_data)
     tiling_struct tiling_data;                                              \
     InitSoloTilingData(tiling_arg, &tiling_data)
 
-inline __aicore__ int32_t AlignDiv32(int32_t n) {
-    return ((n + 31) & ~31) / 32;
-}
+inline __aicore__ int32_t AlignDiv32(int32_t n) { return ((n + 31) & ~31) / 32; }
 
 #define COPY_ARR(arrA, arrB, count)        \
     for (uint16_t i = 0; i < count; i++) { \
         arrA[i] = arrB[i];                 \
     }
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
 #define GET_TILING_DATA(tilingData, tilingPointer)                                                        \
-    ForeachCommonTilingData tilingData;                                                 \
-    INIT_TILING_DATA(ForeachCommonTilingData, tilingDataPointer, tilingPointer);        \
-    (tilingData).inputsTensorUbSize = tilingDataPointer->inputsTensorUbSize;                                \
+    ForeachCommonTilingData tilingData;                                                                   \
+    INIT_TILING_DATA(ForeachCommonTilingData, tilingDataPointer, tilingPointer);                          \
+    (tilingData).inputsTensorUbSize = tilingDataPointer->inputsTensorUbSize;                              \
     COPY_ARR((tilingData).tensorDataCountList, tilingDataPointer->tensorDataCountList, MAX_TENSOR_CONT)   \
     COPY_ARR((tilingData).tensorStartList, tilingDataPointer->tensorStartList, MAX_CORE_CONT)             \
     COPY_ARR((tilingData).tensorEndList, tilingDataPointer->tensorEndList, MAX_CORE_CONT)                 \
     COPY_ARR((tilingData).tensorStartOffsetList, tilingDataPointer->tensorStartOffsetList, MAX_CORE_CONT) \
     COPY_ARR((tilingData).tensorEndOffsetList, tilingDataPointer->tensorEndOffsetList, MAX_CORE_CONT)
-#endif  // FOREACH_ABS_INPLACE_TILING_DEF_H
+#endif // FOREACH_ABS_INPLACE_TILING_DEF_H

@@ -135,9 +135,10 @@ private:
     int set_cnt = 0;
 };
 
-template <typename CType, typename DType>	
-__aicore__ inline void CalMatrix(LocalTensor<CType> c, LocalTensor<DType> a, LocalTensor<DType> b, uint16_t m, uint16_t k,
-    uint16_t n, uint8_t unitFlag, bool kDirectionAlign, bool cmatrixSource, bool cmatrixInitVal)
+template <typename CType, typename DType>
+__aicore__ inline void CalMatrix(LocalTensor<CType> c, LocalTensor<DType> a, LocalTensor<DType> b, uint16_t m,
+                                 uint16_t k, uint16_t n, uint8_t unitFlag, bool kDirectionAlign, bool cmatrixSource,
+                                 bool cmatrixInitVal)
 {
     MmadParams mmadParams;
     mmadParams.m = m;
@@ -150,12 +151,15 @@ __aicore__ inline void CalMatrix(LocalTensor<CType> c, LocalTensor<DType> a, Loc
 }
 
 template <typename T>
-__aicore__ inline void CopyGmToL1(LocalTensor<T> dst, GlobalTensor<T> src, uint32_t realN, uint32_t realD, uint32_t ceilD)
+__aicore__ inline void CopyGmToL1(LocalTensor<T> dst, GlobalTensor<T> src, uint32_t realN, uint32_t realD,
+                                  uint32_t ceilD)
 {
     // nd2zz
     uint32_t tailN = realN % CEIL_SIZE;
     if (tailN < realN) {
-        DataCopy(dst, src, Nd2NzParams(realN / CEIL_SIZE, CEIL_SIZE, realD, CEIL_SIZE * realD, realD, CEIL_SIZE, 1, CEIL_SIZE * ceilD));
+        DataCopy(dst, src,
+                 Nd2NzParams(realN / CEIL_SIZE, CEIL_SIZE, realD, CEIL_SIZE * realD, realD, CEIL_SIZE, 1,
+                             CEIL_SIZE * ceilD));
     }
     if (tailN != 0) {
         int offsetN = realN / CEIL_SIZE * CEIL_SIZE;
@@ -169,7 +173,9 @@ __aicore__ inline void CopyXToL1(LocalTensor<T> dst, GlobalTensor<T> src, bool u
     if (useSlowCopy) {
         CopyGmToL1(dst, src, shape.M, shape.N, shape.Nceil);
     } else {
-        DataCopy(dst, src, Nd2NzParams(shape.Mceil / CEIL_SIZE, CEIL_SIZE, shape.N, CEIL_SIZE * shape.N, shape.N, CEIL_SIZE, 1, CEIL_SIZE * shape.Nceil));
+        DataCopy(dst, src,
+                 Nd2NzParams(shape.Mceil / CEIL_SIZE, CEIL_SIZE, shape.N, CEIL_SIZE * shape.N, shape.N, CEIL_SIZE, 1,
+                             CEIL_SIZE * shape.Nceil));
     }
 }
 
@@ -188,48 +194,50 @@ __aicore__ inline void CalReduceMax(LocalTensor<T> srcTensor, int32_t len, event
 }
 
 template <HardEvent evt>
-__aicore__ inline void SetEvtFlag() {
+__aicore__ inline void SetEvtFlag()
+{
     event_t eventFlag = static_cast<event_t>(GetTPipePtr()->FetchEventID(evt));
     SetFlag<evt>(eventFlag);
     WaitFlag<evt>(eventFlag);
 }
 
 struct DataCopyStruct {
-uint32_t blockCount = 0;
-uint32_t blockLen = 0;
-uint32_t srcStride = 0;
-uint32_t dstStride = 0;
-bool isPad = false;
-uint8_t leftPad = 0;
-uint8_t rightPad = 0;
+    uint32_t blockCount = 0;
+    uint32_t blockLen = 0;
+    uint32_t srcStride = 0;
+    uint32_t dstStride = 0;
+    bool isPad = false;
+    uint8_t leftPad = 0;
+    uint8_t rightPad = 0;
 };
 
 template <typename T>
-__aicore__ inline void DataCopyInContiguous(LocalTensor<T> dstTensor, GlobalTensor<T> srcTensor, DataCopyStruct dataCopyStruct, uint32_t tileLength) {
+__aicore__ inline void DataCopyInContiguous(LocalTensor<T> dstTensor, GlobalTensor<T> srcTensor,
+                                            DataCopyStruct dataCopyStruct, uint32_t tileLength)
+{
     DataCopyExtParams dataCopyParams;
     DataCopyPadExtParams<T> padParams{dataCopyStruct.isPad, dataCopyStruct.leftPad, dataCopyStruct.rightPad, 0};
     dataCopyParams.blockLen = dataCopyStruct.blockLen;
     dataCopyParams.blockCount = dataCopyStruct.blockCount;
     dataCopyParams.srcStride = dataCopyStruct.srcStride;
     dataCopyParams.dstStride = dataCopyStruct.dstStride;
-    DataCopyPad(dstTensor[(sizeof(T) == 2) * tileLength],
-        srcTensor,
-        dataCopyParams,
-        padParams);
+    DataCopyPad(dstTensor[(sizeof(T) == 2) * tileLength], srcTensor, dataCopyParams, padParams);
 }
 
 __aicore__ inline void CalReduceMaxOne(LocalTensor<half> srcTensor, int32_t rowNum, int32_t colAlign, int32_t colSize)
 {
-    int32_t repeatTimes = (colSize - 1) >> LOG2_128;   // 除128
+    int32_t repeatTimes = (colSize - 1) >> LOG2_128; // 除128
     uint8_t repeatStride = colAlign >> LOG2_16;
     BinaryRepeatParams repeatParams = {1, 1, 1, repeatStride, repeatStride, repeatStride};
     for (int64_t i = 1; i < repeatTimes; i++) {
         Max(srcTensor, srcTensor[i * BASE_SIZE], srcTensor, BASE_SIZE, rowNum, repeatParams);
         PipeBarrier<PIPE_V>();
     }
-    Max(srcTensor, srcTensor[repeatTimes * BASE_SIZE], srcTensor, colSize - repeatTimes * BASE_SIZE, rowNum, repeatParams);
+    Max(srcTensor, srcTensor[repeatTimes * BASE_SIZE], srcTensor, colSize - repeatTimes * BASE_SIZE, rowNum,
+        repeatParams);
     PipeBarrier<PIPE_V>();
-    WholeReduceMax(srcTensor, srcTensor, colSize < BASE_SIZE ? colSize : BASE_SIZE, rowNum, 1, 1, repeatStride, ReduceOrder::ORDER_ONLY_VALUE);
+    WholeReduceMax(srcTensor, srcTensor, colSize < BASE_SIZE ? colSize : BASE_SIZE, rowNum, 1, 1, repeatStride,
+                   ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
 }
 } // namespace FlatQuantNS

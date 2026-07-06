@@ -12,8 +12,8 @@
 #define OP_API_INC_LEVEL0_ADAPTIVE_MAX_POOL2D_H
 #include "opdev/op_executor.h"
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool2d(
-    const aclTensor* self, const aclIntArray* outputSize, aclOpExecutor* executor);
+std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool2d(const aclTensor* self, const aclIntArray* outputSize,
+                                                     aclOpExecutor* executor);
 }
 
 #endif

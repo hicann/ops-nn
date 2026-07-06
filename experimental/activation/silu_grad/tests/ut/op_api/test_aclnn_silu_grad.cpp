@@ -28,7 +28,8 @@ protected:
     static void TearDownTestCase() { std::cout << "SiluGradOpApiTest TearDown" << std::endl; }
 };
 
-TEST_F(SiluGradOpApiTest, aclnnSiluBackward_float){
+TEST_F(SiluGradOpApiTest, aclnnSiluBackward_float)
+{
     auto dyDesc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto xDesc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto dxDesc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
@@ -42,7 +43,8 @@ TEST_F(SiluGradOpApiTest, aclnnSiluBackward_float){
     ut.TestPrecision();
 }
 
-TEST_F(SiluGradOpApiTest, aclnnSiluBackward_float16){
+TEST_F(SiluGradOpApiTest, aclnnSiluBackward_float16)
+{
     auto dyDesc = TensorDesc({256, 256}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto xDesc = TensorDesc({256, 256}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto dxDesc = TensorDesc({256, 256}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
@@ -56,7 +58,8 @@ TEST_F(SiluGradOpApiTest, aclnnSiluBackward_float16){
     ut.TestPrecision();
 }
 
-TEST_F(SiluGradOpApiTest, aclnnSiluBackward_bfloat16){
+TEST_F(SiluGradOpApiTest, aclnnSiluBackward_bfloat16)
+{
     auto dyDesc = TensorDesc({25, 16, 1023}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto xDesc = TensorDesc({25, 16, 1023}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto dxDesc = TensorDesc({25, 16, 1023}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);

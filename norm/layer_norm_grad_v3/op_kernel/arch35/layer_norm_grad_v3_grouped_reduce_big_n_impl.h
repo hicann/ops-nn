@@ -18,8 +18,7 @@
 
 #include "layer_norm_grad_v3_grouped_reduce.h"
 
-namespace LayerNormGradV3
-{
+namespace LayerNormGradV3 {
 using namespace AscendC;
 
 template <typename T, typename PD_GAMMA_TYPE>
@@ -73,9 +72,9 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNGammaBeta<T, PD_GAMMA_TYP
     cacheTensor0 = cacheBuffer0.Get<float>();
     cacheTensor1 = cacheBuffer1.Get<float>();
 
-    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop
-                              ? td_->gammaBetaMfactor
-                              : (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
+    int64_t mfactorMain = td_->gammaBetaBasicBlockLoop ?
+                              td_->gammaBetaMfactor :
+                              (td_->row == td_->gammaBetaMfactor ? td_->gammaBetaMfactor : td_->gammaBetaMtail);
     int64_t loopCount = td_->gammaBetaBasicBlockLoop ? td_->gammaBetaBasicBlockLoop : 1;
     for (int64_t ni = 0; ni < NTotalloop; ++ni) {
         LayerNormGradV3Base::GammaBetaPrologueCommon<PD_GAMMA_TYPE>(td_, outQueueSum, beta_, gamma_);
@@ -90,21 +89,21 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNGammaBeta<T, PD_GAMMA_TYP
             if (td_->gammaBetaBasicBlockLoop > 0 &&
                 ((basicBlockIdx < td_->gammaBetaMainFoldCount) ||
                  (basicBlockIdx == td_->gammaBetaMainFoldCount && td_->gammaBetaMtail > 0))) {
-                const int64_t mfactorFold =
-                    (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor : td_->gammaBetaMtail;
+                const int64_t mfactorFold = (basicBlockIdx < td_->gammaBetaMainFoldCount) ? td_->gammaBetaMfactor :
+                                                                                            td_->gammaBetaMtail;
                 LayerNormGradV3Base::ProcessGammaBetaFoldBlockCommon<T>(
                     td_, ni, basicBlockIdx, mfactorFold, nfactor, dyMain_, xMain_, inQueueDy, inQueueX, inQueueParam,
                     dyInTensorGM, xInTensorGM, rstdInTensorGM, meanInTensorGM);
             }
 
-            LayerNormGradV3Base::GammaBetaProcessSummationCommon(
-                td_, basicBlockIdx, mfactorMain, nfactor, tempTensor, dyMain_, xMain_, cacheTensor0, cacheTensor1,
-                inQueueDy, inQueueX);
+            LayerNormGradV3Base::GammaBetaProcessSummationCommon(td_, basicBlockIdx, mfactorMain, nfactor, tempTensor,
+                                                                 dyMain_, xMain_, cacheTensor0, cacheTensor1, inQueueDy,
+                                                                 inQueueX);
         }
 
-        LayerNormGradV3Base::GammaBetaEpilogueCommon<PD_GAMMA_TYPE>(
-            td_, ni * td_->gammaBetaNfactor, nfactor, outQueueSum, cacheTensor0, cacheTensor1, beta_, gamma_,
-            pdBetaOutTensorGM, pdGammaOutTensorGM);
+        LayerNormGradV3Base::GammaBetaEpilogueCommon<PD_GAMMA_TYPE>(td_, ni * td_->gammaBetaNfactor, nfactor,
+                                                                    outQueueSum, cacheTensor0, cacheTensor1, beta_,
+                                                                    gamma_, pdBetaOutTensorGM, pdGammaOutTensorGM);
     }
 }
 
@@ -167,7 +166,8 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::Init(
     pipe_->InitBuffer(cacheBuffer1, cacheBufSize);
 
     pipe_->InitBuffer(inQueueGamma, 2, td_->backwardNfactorBlockAligned * sizeof(float));
-    pipe_->InitBuffer(reduceSumTempBuffer, td_->backwardMfactorBlockAligned * td_->backwardNfactorBlockAligned * sizeof(float));
+    pipe_->InitBuffer(reduceSumTempBuffer,
+                      td_->backwardMfactorBlockAligned * td_->backwardNfactorBlockAligned * sizeof(float));
 }
 
 template <typename T, typename U>
@@ -181,9 +181,10 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::Process()
         sum1Tensor = cacheTensor0[ResultCacheID * td_->backwardMfactorBlockAligned];
         sum2Tensor = cacheTensor1[ResultCacheID * td_->backwardMfactorBlockAligned];
 
-        int64_t mainNfactor =
-            BasicBlockLoop ? td_->backwardNfactorBlockAligned
-                           : (nToProcess_ == td_->backwardNfactorBlockAligned ? td_->backwardNfactorBlockAligned : Ntail);
+        int64_t mainNfactor = BasicBlockLoop ?
+                                  td_->backwardNfactorBlockAligned :
+                                  (nToProcess_ == td_->backwardNfactorBlockAligned ? td_->backwardNfactorBlockAligned :
+                                                                                     Ntail);
         int64_t loopCount = BasicBlockLoop ? BasicBlockLoop : 1;
 
         for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
@@ -193,12 +194,13 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::Process()
 
             for (int64_t basicBlockIdx = 0; basicBlockIdx < loopCount; ++basicBlockIdx) {
                 ProcessMainBlock(mi, basicBlockIdx, mFactor, mainNfactor);
-                PRELOAD(2);  // 2*2K
-                if (BasicBlockLoop && (basicBlockIdx < MainFoldCount || (basicBlockIdx == MainFoldCount && Ntail > 0))) {
+                PRELOAD(2); // 2*2K
+                if (BasicBlockLoop &&
+                    (basicBlockIdx < MainFoldCount || (basicBlockIdx == MainFoldCount && Ntail > 0))) {
                     int64_t foldNFactor = basicBlockIdx < MainFoldCount ? td_->backwardNfactorBlockAligned : Ntail;
                     ProcessFoldBlock(mi, basicBlockIdx, mFactor, foldNFactor);
                 }
-                PRELOAD(2);  // 2*2K
+                PRELOAD(2); // 2*2K
                 ProcessSummation(mi, basicBlockIdx, mFactor, mainNfactor);
             }
 
@@ -228,12 +230,12 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::Process()
         return;
     }
 
-    PRELOAD(4);  // 4*2K
+    PRELOAD(4); // 4*2K
     for (int64_t mi = 0; mi < td_->backwardMTotalLoop; ++mi) {
         int64_t mfactor = mi == (td_->backwardMTotalLoop - 1) ? td_->backwardMtail : td_->backwardMfactor;
         PostPrologue(mi, mfactor);
 
-        PRELOAD(2);  // 2*2K
+        PRELOAD(2); // 2*2K
         int64_t totalN = Nloop + (Ntail > 0 ? 1 : 0);
         for (int64_t ni = 0; ni < totalN; ++ni) {
             const int64_t nfactor = (ni < Nloop) ? td_->backwardNfactorBlockAligned : Ntail;
@@ -504,6 +506,6 @@ __aicore__ inline void LayerNormGradV3GroupedReduceBigNBackward<T, U>::PostProlo
     inQueueX.FreeTensor(tempSum2);
 }
 
-}  // namespace LayerNormGradV3
+} // namespace LayerNormGradV3
 
-#endif  // LAYER_NORM_GRAD_V3_GROUPED_REDUCE_BIG_N_IMPL_
+#endif // LAYER_NORM_GRAD_V3_GROUPED_REDUCE_BIG_N_IMPL_

@@ -32,8 +32,8 @@ extern "C" {
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
 
-static const std::initializer_list<DataType> FOREACH_ROUND_SCALAR_SUPPORT_LIST = {
-    DataType::DT_INT8, DataType::DT_INT64};
+static const std::initializer_list<DataType> FOREACH_ROUND_SCALAR_SUPPORT_LIST = {DataType::DT_INT8,
+                                                                                  DataType::DT_INT64};
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
@@ -47,13 +47,12 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scal
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
-        OP_LOGE(
-            ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return EMPTY_LIST;
     }
 }
@@ -74,9 +73,8 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
 {
     const auto& dtypeSupportList = GetDtypeSupportList();
     if (dtypeSupportList.size() == 0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
     if (self->Size() == 0) {
@@ -126,9 +124,9 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecForeachRoundOffNumberV2GetWorkspaceSize(
-    const aclTensorList* x, const aclScalar* scalar, const aclTensorList* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+static aclnnStatus ExecForeachRoundOffNumberV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar,
+                                                               const aclTensorList* out, uint64_t* workspaceSize,
+                                                               aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -168,16 +166,16 @@ static aclnnStatus ExecForeachRoundOffNumberV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnForeachRoundOffNumberV2GetWorkspaceSize(
-    const aclTensorList* x, const aclScalar* roundMode, aclTensorList* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnForeachRoundOffNumberV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* roundMode,
+                                                         aclTensorList* out, uint64_t* workspaceSize,
+                                                         aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnForeachRoundOffNumberV2, DFX_IN(x, roundMode), DFX_OUT(out));
     return ExecForeachRoundOffNumberV2GetWorkspaceSize(x, roundMode, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnForeachRoundOffNumberV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnForeachRoundOffNumberV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnForeachRoundOffNumberV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

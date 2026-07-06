@@ -22,15 +22,16 @@ namespace ops {
 
 constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
-inline bool IsConstTensor(const gert::Tensor* input_tensor) {
-  if (input_tensor != nullptr) {
-    if (input_tensor->GetAddr() == nullptr) {
-      // empty tensor
-      return input_tensor->GetShapeSize() == 0;
+inline bool IsConstTensor(const gert::Tensor* input_tensor)
+{
+    if (input_tensor != nullptr) {
+        if (input_tensor->GetAddr() == nullptr) {
+            // empty tensor
+            return input_tensor->GetShapeSize() == 0;
+        }
+        return true;
     }
-    return true;
-  }
-  return false;
+    return false;
 }
 
 static constexpr size_t SC_OUT_VAR_IDX = 0;
@@ -38,32 +39,32 @@ static constexpr size_t SC_OUT_VAR_IDX = 0;
 // ---------------ScatterNd Ops START-----------------
 static constexpr int64_t SC_IN_SHAPE_IDX = 2;
 
-static ge::graphStatus Infershape4Nd(gert::InferShapeContext* context) {
-  OP_LOGD(context->GetNodeName(), "Begin to do ScatterNdInfershape.");
+static ge::graphStatus Infershape4Nd(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do ScatterNdInfershape.");
 
-  const gert::Tensor* shape_tensor = context->GetInputTensor(SC_IN_SHAPE_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, shape_tensor);
-  gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
+    const gert::Tensor* shape_tensor = context->GetInputTensor(SC_IN_SHAPE_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, shape_tensor);
+    gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
 
-  ge::DataType shape_dtype = shape_tensor->GetDataType();
-  OP_CHECK_IF(shape_dtype != ge::DT_INT32 && shape_dtype != ge::DT_INT64,
-           OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "shape",
-               ge::TypeUtils::DataTypeToSerialString(shape_dtype).c_str(), "int32, int64"),
-           return ge::GRAPH_FAILED);
+    ge::DataType shape_dtype = shape_tensor->GetDataType();
+    OP_CHECK_IF(shape_dtype != ge::DT_INT32 && shape_dtype != ge::DT_INT64,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "shape",
+                                          ge::TypeUtils::DataTypeToSerialString(shape_dtype).c_str(), "int32, int64"),
+                return ge::GRAPH_FAILED);
 
-  if (IsConstTensor(shape_tensor)) {
-    OP_CHECK_IF(!Ops::Base::GetConstIntToShape(context, SC_IN_SHAPE_IDX, *output_shape),
-             OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "shape"),
-             return ge::GRAPH_FAILED);
-  } else {
-    output_shape->SetDimNum(0);
-    output_shape->AppendDim(UNKNOWN_DIM_VALUE_);
-  }
-  return ge::GRAPH_SUCCESS;
+    if (IsConstTensor(shape_tensor)) {
+        OP_CHECK_IF(!Ops::Base::GetConstIntToShape(context, SC_IN_SHAPE_IDX, *output_shape),
+                    OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "shape"), return ge::GRAPH_FAILED);
+    } else {
+        output_shape->SetDimNum(0);
+        output_shape->AppendDim(UNKNOWN_DIM_VALUE_);
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(ScatterNd).InferShape(Infershape4Nd).InputsDataDependency({SC_IN_SHAPE_IDX});
 // ---------------ScatterNd Ops END-----------------
 
-}  // namespace ops
+} // namespace ops

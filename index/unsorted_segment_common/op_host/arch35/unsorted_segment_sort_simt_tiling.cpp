@@ -23,7 +23,7 @@ static constexpr int64_t DOUBLE = 2;
 static constexpr uint64_t TEMPLATE_SORT_SIMT = 4100;
 static constexpr uint32_t ALIGN_SIZE = 128;
 
-bool UnsortedSegmentSortSimtTiling::IsCapable() 
+bool UnsortedSegmentSortSimtTiling::IsCapable()
 {
     if (inputOuterDim_ / outputOuterDim_ >= IN_OUT_RATE_THRESHOLD && innerDim_ < INNER_DIM_THRESHOLD) {
         return true;
@@ -54,8 +54,8 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::CalcTiling()
                                  Ops::Base::CeilAlign(mid * sizeof(uint32_t), ubBlockSize_);
         sortTmpSize = GetSortTmpSize(idType_, mid, false);
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, static_cast<int64_t>(ubBlockSize_));
-        int64_t tmpTotalSize =
-            totalIndexSize + sortTmpSize + Ops::Base::CeilAlign(mid * innerDim_ * dataTypeBytes_, ubBlockSize_) * DOUBLE;
+        int64_t tmpTotalSize = totalIndexSize + sortTmpSize +
+                               Ops::Base::CeilAlign(mid * innerDim_ * dataTypeBytes_, ubBlockSize_) * DOUBLE;
         if (tmpTotalSize <= static_cast<int64_t>(ubSize_)) {
             start = mid;
         } else {
@@ -79,8 +79,8 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::CalcTiling()
                        rowUb * eachCoreLoop * (static_cast<int64_t>(usedCoreNum_) - 1) - rowUb * (tailCoreLoop - 1);
     }
 
-    UnsortedSegment::UnsortedSegmentSortSimtTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSortSimtTilingData>();
+    UnsortedSegment::UnsortedSegmentSortSimtTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSortSimtTilingData>();
 
     tilingData->inputOuterDim = inputOuterDim_;
     tilingData->outputOuterDim = outputOuterDim_;
@@ -110,9 +110,9 @@ ge::graphStatus UnsortedSegmentSortSimtTiling::PostTiling()
 }
 
 void UnsortedSegmentSortSimtTiling::DumpTilingInfo()
-{   
-    UnsortedSegment::UnsortedSegmentSortSimtTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSortSimtTilingData>();
+{
+    UnsortedSegment::UnsortedSegmentSortSimtTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSortSimtTilingData>();
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", inputOuterDim: " << tilingData->inputOuterDim;

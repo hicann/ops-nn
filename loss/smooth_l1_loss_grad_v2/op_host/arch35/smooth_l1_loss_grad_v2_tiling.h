@@ -21,9 +21,10 @@
 
 namespace optiling {
 
-class SmoothL1LossGradV2TilingClass : public Ops::NN::Optiling::TilingBaseClass{
+class SmoothL1LossGradV2TilingClass : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit SmoothL1LossGradV2TilingClass(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
+    explicit SmoothL1LossGradV2TilingClass(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
+    {}
 
 protected:
     bool IsCapable() override;
@@ -45,9 +46,10 @@ protected:
 
     template <typename T>
     ge::graphStatus DoScalarDagTilingForType();
+
 private:
     uint64_t tilingKey = 0;
-    const char *reducationStr = "";
+    const char* reducationStr = "";
     ge::DataType inputDtype;
     uint32_t doutIsScalar = 0;
     float sigma = 1.0f;

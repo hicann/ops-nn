@@ -23,9 +23,9 @@ namespace ge {
 * followed by per-token symmetric dynamic quantization or per-group dynamic MX quantization. \n
 *
 * @par Inputs:
-* @li x: A tensor. Input data for rotation and quantization. 
+* @li x: A tensor. Input data for rotation and quantization.
 * Must be one of the following types: float16, bfloat16. The format supports ND.
-* @li rot: A tensor. Rotation matrix. 
+* @li rot: A tensor. Rotation matrix.
 * Must be one of the following types: float16, bfloat16. Has the same type as input "x".
 * The format supports ND.
 * @li alpha: A tensor. Optional scaling coefficient for clamp range limitation.
@@ -48,7 +48,8 @@ namespace ge {
 
 * @par Constraints:
 * Atlas A3 supports per-token dynamic quantization.Atlas A5 supports per-group dynamic MX quantization.
-* Atlas A3 Training Series Products/Atlas A3 Inference Series Products, Atlas A2 Training Series Products/Atlas A2 Inference Series Products, Atlas 950 Series Products: \n
+* Atlas A3 Training Series Products/Atlas A3 Inference Series Products, Atlas A2 Training Series Products/Atlas A2
+Inference Series Products, Atlas 950 Series Products: \n
 * - x shape is [M, N], rot shape is [K, K]. rot must be a square matrix.
 * - N must be a multiple of K, and N must be divisible by 8.
 * - x and rot must have the same data type.
@@ -77,17 +78,17 @@ namespace ge {
 */
 REG_OP(RotateQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
- 	.INPUT(rot, TensorType({DT_FLOAT16, DT_BF16}))
- 	.OPTIONAL_INPUT(alpha, TensorType({DT_BF16}))
- 	.OUTPUT(y, TensorType({DT_INT8, DT_INT4, DT_FLOAT4_E2M1, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
- 	.OUTPUT(scale, TensorType({DT_FLOAT32, DT_FLOAT8_E8M0}))
- 	.ATTR(y_dtype, Int, DT_INT8)
- 	.ATTR(axis, Int, -1)
- 	.ATTR(round_mode, String, "rint")
- 	.ATTR(scale_alg, Int, 0)
- 	.ATTR(dst_type_max, Float, 0.0)
- 	.ATTR(trans, Bool, false)
- 	.OP_END_FACTORY_REG(RotateQuant)
+    .INPUT(rot, TensorType({DT_FLOAT16, DT_BF16}))
+    .OPTIONAL_INPUT(alpha, TensorType({DT_BF16}))
+    .OUTPUT(y, TensorType({DT_INT8, DT_INT4, DT_FLOAT4_E2M1, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+    .OUTPUT(scale, TensorType({DT_FLOAT32, DT_FLOAT8_E8M0}))
+    .ATTR(y_dtype, Int, DT_INT8)
+    .ATTR(axis, Int, -1)
+    .ATTR(round_mode, String, "rint")
+    .ATTR(scale_alg, Int, 0)
+    .ATTR(dst_type_max, Float, 0.0)
+    .ATTR(trans, Bool, false)
+    .OP_END_FACTORY_REG(RotateQuant)
 } // namespace ge
 
 #endif // OPS_ROTATE_QUANT_PROTO_H_

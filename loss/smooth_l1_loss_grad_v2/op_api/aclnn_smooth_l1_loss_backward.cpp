@@ -28,24 +28,19 @@ using namespace op;
 extern "C" {
 #endif
 
-enum class Reduction : int64_t {
-    NONE = 0,
-    MEAN,
-    SUM,
-    END
-};
+enum class Reduction : int64_t { NONE = 0, MEAN, SUM, END };
 
 static const std::string REDUCTION_STR[] = {"none", "mean", "sum"};
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                               DataType::DT_BF16};
 
-static bool CheckNotNull(const aclTensor *gradOut, const aclTensor *self, const aclTensor *target,
-                         const aclTensor *gradInput)
+static bool CheckNotNull(const aclTensor* gradOut, const aclTensor* self, const aclTensor* target,
+                         const aclTensor* gradInput)
 {
     OP_CHECK_NULL(gradOut, return false);
     OP_CHECK_NULL(self, return false);
@@ -55,8 +50,8 @@ static bool CheckNotNull(const aclTensor *gradOut, const aclTensor *self, const 
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradOut, const aclTensor *self, const aclTensor *target,
-                            const aclTensor *gradInput)
+static bool CheckDtypeValid(const aclTensor* gradOut, const aclTensor* self, const aclTensor* target,
+                            const aclTensor* gradInput)
 {
     auto DTYPE_SUPPORT_LIST = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
     // 检查gradOut的数据类型是否在SmoothL1LossBackward算子的支持列表内
@@ -71,29 +66,29 @@ static bool CheckDtypeValid(const aclTensor *gradOut, const aclTensor *self, con
     return true;
 }
 
-static bool CheckPromoteType(const aclTensor *gradOut, const aclTensor *self, const aclTensor *target,
-                             const aclTensor *gradInput, op::DataType &promoteType)
+static bool CheckPromoteType(const aclTensor* gradOut, const aclTensor* self, const aclTensor* target,
+                             const aclTensor* gradInput, op::DataType& promoteType)
 {
     auto DTYPE_SUPPORT_LIST = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
     // 检查gradOut和self能否做数据类型推导
     promoteType = op::PromoteType(gradOut->GetDataType(), self->GetDataType());
     OP_CHECK(promoteType != DataType::DT_UNDEFINED,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOut dtype %s and self dtype %s can not promote dtype.",
-                    op::ToString(gradOut->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString()),
-            return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOut dtype %s and self dtype %s can not promote dtype.",
+                     op::ToString(gradOut->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString()),
+             return false);
 
     op::DataType savedPromoteType = promoteType;
     promoteType = op::PromoteType(promoteType, target->GetDataType());
     OP_CHECK(promoteType != DataType::DT_UNDEFINED,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOut dtype %s and target dtype %s can not promote dtype.",
-                    op::ToString(savedPromoteType).GetString(), op::ToString(target->GetDataType()).GetString()),
-            return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOut dtype %s and target dtype %s can not promote dtype.",
+                     op::ToString(savedPromoteType).GetString(), op::ToString(target->GetDataType()).GetString()),
+             return false);
 
     // 检查推导后的数据类型是否在算子支持的数据类型之内
     OP_CHECK(CheckType(promoteType, DTYPE_SUPPORT_LIST),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promote dtype %s should be in dtype support list [%s].",
-                    op::ToString(promoteType).GetString(), op::ToString(DTYPE_SUPPORT_LIST).GetString()),
-            return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promote dtype %s should be in dtype support list [%s].",
+                     op::ToString(promoteType).GetString(), op::ToString(DTYPE_SUPPORT_LIST).GetString()),
+             return false);
 
     // 检查推导后的数据类型能否转换为输出的数据类型
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, gradInput->GetDataType(), return false);
@@ -114,18 +109,16 @@ static inline bool CheckShape(const aclTensor* gradOut, const aclTensor* self, c
 }
 
 static bool CheckShapeBroadcast(const aclTensor* gradOut, const aclTensor* self, const aclTensor* target,
-                                const aclTensor* gradInput, op::Shape &resultShape)
+                                const aclTensor* gradInput, op::Shape& resultShape)
 {
     // gradOut、self、 target的shape必须能够进行broadcast
     op::Shape broadcastShapeMid;
     OP_CHECK(BroadcastInferShape(gradOut->GetViewShape(), self->GetViewShape(), broadcastShapeMid),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Broadcast %s and %s failed.",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
                      op::ToString(gradOut->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString()),
              return false);
     OP_CHECK(BroadcastInferShape(broadcastShapeMid, target->GetViewShape(), resultShape),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "Broadcast %s and %s failed.",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Broadcast %s and %s failed.",
                      op::ToString(broadcastShapeMid).GetString(), op::ToString(target->GetViewShape()).GetString()),
              return false);
     // result shape 与指定的输出gradInput shape 必须相等
@@ -140,21 +133,19 @@ static bool CheckShapeBroadcast(const aclTensor* gradOut, const aclTensor* self,
 static inline bool CheckReduction(int64_t reduction)
 {
     OP_CHECK(reduction <= static_cast<int64_t>(Reduction::SUM) && reduction >= static_cast<int64_t>(Reduction::NONE),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but got %ld", reduction),
-            return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Reduction should be between 0 and 2, but got %ld", reduction),
+             return false);
     return true;
 }
 
 static inline bool CheckBeta(float beta)
 {
-    OP_CHECK(beta >= 0,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta should be greater than or equal to 0"),
-             return false);
+    OP_CHECK(beta >= 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta should be greater than or equal to 0"), return false);
     return true;
 }
 
 static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* self, const aclTensor* target,
-                               int64_t reduction, float beta, const aclTensor *gradInput)
+                               int64_t reduction, float beta, const aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOut, self, target, gradInput), ACLNN_ERR_PARAM_NULLPTR);
@@ -176,21 +167,21 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* self, 
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus CheckReformat(const aclTensor *input)
+static inline aclnnStatus CheckReformat(const aclTensor* input)
 {
     input = l0op::ReFormat(input, static_cast<op::Format>(ACL_FORMAT_ND));
-    OP_CHECK(input != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input tensor with TransData return nullptr."),
+    OP_CHECK(input != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input tensor with TransData return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSmoothL1LossBackwardGetWorkspaceSize(const aclTensor *gradOut, const aclTensor *self,
-                                                      const aclTensor *target, int64_t reduction,
-                                                      float beta, aclTensor *gradInput,
-                                                      uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnSmoothL1LossBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* self,
+                                                      const aclTensor* target, int64_t reduction, float beta,
+                                                      aclTensor* gradInput, uint64_t* workspaceSize,
+                                                      aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    
+
     L2_DFX_PHASE_1(aclnnSmoothL1LossBackward, DFX_IN(gradOut, self, target, reduction, beta), DFX_OUT(gradInput));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -266,7 +257,7 @@ aclnnStatus aclnnSmoothL1LossBackwardGetWorkspaceSize(const aclTensor *gradOut, 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSmoothL1LossBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+aclnnStatus aclnnSmoothL1LossBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                       aclrtStream stream)
 {
     // 固定写法，调用框架能力，完成计算

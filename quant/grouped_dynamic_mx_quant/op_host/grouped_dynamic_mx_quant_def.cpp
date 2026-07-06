@@ -22,20 +22,20 @@ static constexpr int32_t DEFAULT_BLOCK_SIZE = 32;
 static constexpr int32_t DEFAULT_SCALE_ALG = 0;
 static constexpr float DEFAULT_DST_TYPE_MAX_VALUE = 0.0;
 
-static const std::vector<ge::DataType> groupedDynamicMxQuantXDataType = {
-    ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::DataType> groupedDynamicMxQuantXDataType = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16,
+                                                                         ge::DT_BF16};
 
-static const std::vector<ge::DataType> groupedDynamicMxQuantGroupIndexDataType = {
-    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32};
+static const std::vector<ge::DataType> groupedDynamicMxQuantGroupIndexDataType = {ge::DT_INT32, ge::DT_INT32,
+                                                                                  ge::DT_INT32, ge::DT_INT32};
 
-static const std::vector<ge::DataType> groupedDynamicMxQuantYDataType = {
-    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,ge::DT_FLOAT8_E5M2};
+static const std::vector<ge::DataType> groupedDynamicMxQuantYDataType = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+                                                                         ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2};
 
-static const std::vector<ge::DataType> groupedDynamicMxQuantMxScaleDataType = {
-    ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0};
+static const std::vector<ge::DataType> groupedDynamicMxQuantMxScaleDataType = {ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0,
+                                                                               ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0};
 
-static const std::vector<ge::Format> groupedDynamicMxQuantNDFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::Format> groupedDynamicMxQuantNDFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                                      ge::FORMAT_ND};
 
 class GroupedDynamicMxQuant : public OpDef {
 public:
@@ -82,4 +82,4 @@ public:
 };
 
 OP_ADD(GroupedDynamicMxQuant);
-}  // namespace ops
+} // namespace ops

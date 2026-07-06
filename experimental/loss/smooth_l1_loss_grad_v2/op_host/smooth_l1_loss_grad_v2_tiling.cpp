@@ -28,8 +28,7 @@ using namespace Ops::NN::OpTiling;
 #define UB_DATA_NUM_OTHER 12U
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr uint32_t WS_SYS_SIZE = 0;
-struct SmoothL1LossGradV2CompileInfo {
-};
+struct SmoothL1LossGradV2CompileInfo {};
 
 static ge::graphStatus TilingParseForSmoothL1LossGradV2([[maybe_unused]] gert::TilingParseContext* context)
 {
@@ -59,8 +58,8 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    OP_CHECK_IF(
-        currentWorkspace == nullptr, OP_LOGE(context, "workspace array is nullptr"), return ge::GRAPH_FAILED); //
+    OP_CHECK_IF(currentWorkspace == nullptr, OP_LOGE(context, "workspace array is nullptr"),
+                return ge::GRAPH_FAILED); //
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
@@ -77,9 +76,8 @@ static std::string GetReductionAttr(gert::TilingContext* context)
             reduction = *attr;
         }
     }
-    std::transform(reduction.begin(), reduction.end(), reduction.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
+    std::transform(reduction.begin(), reduction.end(), reduction.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return reduction;
 }
 
@@ -109,9 +107,9 @@ static int GetReductionType(const std::string& reduction)
     return -1;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext* context, uint32_t blockSize, uint64_t ubSize, uint64_t& inputNum, uint64_t& inputBytes,
-    uint64_t& tileBlockNum, uint64_t& tileDataNum, uint64_t& inputLengthAlgin32)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint32_t blockSize, uint64_t ubSize,
+                                         uint64_t& inputNum, uint64_t& inputBytes, uint64_t& tileBlockNum,
+                                         uint64_t& tileDataNum, uint64_t& inputLengthAlgin32)
 {
     OP_CHECK_IF(blockSize == 0, OP_LOGE(context, "blockSize is 0"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
@@ -172,11 +170,12 @@ static ge::graphStatus GetShapeAttrsInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(
-    gert::TilingContext* context, uint32_t blockSize, uint64_t inputLengthAlgin32, int64_t coreNum,
-    uint64_t tileBlockNum, uint64_t inputBytes, uint64_t tileDataNum, uint64_t& smallCoreDataNum,
-    uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum, uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum,
-    uint64_t& finalBigTileNum, uint64_t& tailBlockNum)
+static ge::graphStatus CalculateCoreBlockNums(gert::TilingContext* context, uint32_t blockSize,
+                                              uint64_t inputLengthAlgin32, int64_t coreNum, uint64_t tileBlockNum,
+                                              uint64_t inputBytes, uint64_t tileDataNum, uint64_t& smallCoreDataNum,
+                                              uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum,
+                                              uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum,
+                                              uint64_t& finalBigTileNum, uint64_t& tailBlockNum)
 {
     if (blockSize == 0) {
         OP_LOGE(context, "blockSize is 0");
@@ -219,9 +218,8 @@ static ge::graphStatus SmoothL1LossGradV2TilingFunc(gert::TilingContext* context
     OP_CHECK_IF(blockSize == 0, OP_LOGE(context, "blockSize is 0"), return ge::GRAPH_FAILED);
     SmoothL1LossGradV2TilingData* tiling = context->GetTilingData<SmoothL1LossGradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SmoothL1LossGradV2TilingData), 0, sizeof(SmoothL1LossGradV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SmoothL1LossGradV2TilingData), 0, sizeof(SmoothL1LossGradV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     int64_t coreNum;
@@ -229,14 +227,14 @@ static ge::graphStatus SmoothL1LossGradV2TilingFunc(gert::TilingContext* context
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     uint64_t inputNum, inputBytes, tileBlockNum, tileDataNum, inputLengthAlgin32;
-    ret = GetShapeAttrsInfo(
-        context, blockSize, ubSize, inputNum, inputBytes, tileBlockNum, tileDataNum, inputLengthAlgin32);
+    ret = GetShapeAttrsInfo(context, blockSize, ubSize, inputNum, inputBytes, tileBlockNum, tileDataNum,
+                            inputLengthAlgin32);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     const std::string reductionStr = GetReductionAttr(context);
     int reductionType = GetReductionType(reductionStr);
-    OP_CHECK_IF(
-        reductionType < 0, OP_LOGE(context, "Invalid reduction: %s", reductionStr.c_str()), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(reductionType < 0, OP_LOGE(context, "Invalid reduction: %s", reductionStr.c_str()),
+                return ge::GRAPH_FAILED);
     float sigma = GetSigmaAttr(context);
     if (tileDataNum >= inputNum) {
         coreNum = 1;
@@ -252,9 +250,9 @@ static ge::graphStatus SmoothL1LossGradV2TilingFunc(gert::TilingContext* context
     }
     uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum,
         tailBlockNum;
-    ret = CalculateCoreBlockNums(
-        context, blockSize, inputLengthAlgin32, coreNum, tileBlockNum, inputBytes, tileDataNum, smallCoreDataNum,
-        bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum);
+    ret = CalculateCoreBlockNums(context, blockSize, inputLengthAlgin32, coreNum, tileBlockNum, inputBytes, tileDataNum,
+                                 smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum,
+                                 finalBigTileNum, tailBlockNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateCoreBlockNums error"), return ge::GRAPH_FAILED);
 
     auto doutShape = context->GetInputShape(2);
@@ -274,9 +272,8 @@ static ge::graphStatus SmoothL1LossGradV2TilingFunc(gert::TilingContext* context
     tiling->sigma = sigma;
     tiling->reduction = reductionType;
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     uint64_t tilingKey = GET_TPL_TILING_KEY(0);
     context->SetTilingKey(tilingKey);
     context->SetBlockDim(coreNum);

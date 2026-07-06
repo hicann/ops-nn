@@ -24,8 +24,8 @@ namespace l0op {
 OP_TYPE_REGISTER(Modulate);
 
 // AICore的执行逻辑
-static const aclTensor* ModulateAiCore(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* shift, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* ModulateAiCore(const aclTensor* self, const aclTensor* scale, const aclTensor* shift,
+                                       aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(ModulateAiCore, self, scale, shift, out);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Modulate, OP_INPUT(self, scale, shift), OP_OUTPUT(out));
@@ -34,8 +34,8 @@ static const aclTensor* ModulateAiCore(
 }
 
 // 目前只有AICore
-const aclTensor* Modulate(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* shift, aclOpExecutor* executor)
+const aclTensor* Modulate(const aclTensor* self, const aclTensor* scale, const aclTensor* shift,
+                          aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
     CHECK_RET(out != nullptr, nullptr);

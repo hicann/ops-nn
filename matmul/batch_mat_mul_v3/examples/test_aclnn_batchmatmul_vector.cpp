@@ -60,9 +60,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请Device侧内存
@@ -80,9 +79,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -90,9 +88,8 @@ int CreateAclTensor(
  * @brief 封装 aclnnBatchMatMul 调用：GetWorkspaceSize → 申请workspace → 执行 → 同步 → 拷贝结果
  * @return ACL_SUCCESS 表示成功，其他值表示失败
  */
-int RunBatchMatMul(
-    aclTensor* self, aclTensor* mat2, aclTensor* out, int8_t cubeMathType,
-    aclrtStream stream, void* outDeviceAddr, std::vector<float>& resultData)
+int RunBatchMatMul(aclTensor* self, aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclrtStream stream,
+                   void* outDeviceAddr, std::vector<float>& resultData)
 {
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
@@ -117,9 +114,8 @@ int RunBatchMatMul(
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
-        resultData.size() * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      resultData.size() * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     // 释放workspace

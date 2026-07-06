@@ -61,18 +61,19 @@ struct PoolVars {
 };
 
 struct BlockVar {
-    int64_t curNcIdx = 0;     // 当前nc块索引
-    int64_t curNcFactor = 0;  // 当前nc块因子
-    int64_t curDoIdx = 0;     // 当前do块索引
-    int64_t curDoFactor = 0;  // 当前do块因子
-    int64_t curHoIdx = 0;     // 当前ho块索引
-    int64_t curHoFactor = 0;  // 当前ho块因子
-    int64_t curWoIdx = 0;     // 当前wo块索引
-    int64_t curWoFactor = 0;  // 当前wo块因子
+    int64_t curNcIdx = 0;    // 当前nc块索引
+    int64_t curNcFactor = 0; // 当前nc块因子
+    int64_t curDoIdx = 0;    // 当前do块索引
+    int64_t curDoFactor = 0; // 当前do块因子
+    int64_t curHoIdx = 0;    // 当前ho块索引
+    int64_t curHoFactor = 0; // 当前ho块因子
+    int64_t curWoIdx = 0;    // 当前wo块索引
+    int64_t curWoFactor = 0; // 当前wo块因子
 };
 
 template <typename TilingDataT>
-__aicore__ inline void InitPoolVars(PoolVars& poolVars, const TilingDataT* __restrict__ tiling) {
+__aicore__ inline void InitPoolVars(PoolVars& poolVars, const TilingDataT* __restrict__ tiling)
+{
     poolVars.totalIdx = tiling->totalIdx;
     poolVars.blockFactor = tiling->blockFactor;
     poolVars.blockTail = tiling->blockTail;
@@ -90,8 +91,8 @@ __aicore__ inline void InitPoolVars(PoolVars& poolVars, const TilingDataT* __res
     poolVars.ncTail = tiling->ncTail;
 }
 
-__aicore__ inline BlockVar 
-CalcBlockVar(int64_t curIdx, const PoolVars& poolVars) {
+__aicore__ inline BlockVar CalcBlockVar(int64_t curIdx, const PoolVars& poolVars)
+{
     BlockVar indices;
     indices.curNcIdx = curIdx / (poolVars.doOuter * poolVars.hoOuter * poolVars.woOuter);
     indices.curNcFactor = indices.curNcIdx == (poolVars.ncOuter - 1) ? poolVars.ncTail : poolVars.ncFactor;
@@ -107,15 +108,10 @@ CalcBlockVar(int64_t curIdx, const PoolVars& poolVars) {
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void CopyInputData(
-    TQue<QuePosition::VECIN, QUEUE_DEPTH>& inputQue, 
-    GlobalTensor<T>& xGm, 
-    int64_t curNcFactor, 
-    uint8_t diFactor, 
-    uint8_t hiFactor, 
-    uint8_t wiFactor, 
-    int64_t xGmOffset, 
-    const PoolVars& poolVars) {
+__aicore__ inline void CopyInputData(TQue<QuePosition::VECIN, QUEUE_DEPTH>& inputQue, GlobalTensor<T>& xGm,
+                                     int64_t curNcFactor, uint8_t diFactor, uint8_t hiFactor, uint8_t wiFactor,
+                                     int64_t xGmOffset, const PoolVars& poolVars)
+{
     LocalTensor<T> xLocal = inputQue.template AllocTensor<T>();
     const uint8_t wiFactor16Align = Ceil(wiFactor, 32 / sizeof(T)) * 32 / sizeof(T);
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -134,10 +130,10 @@ __aicore__ inline void CopyInputData(
     inputQue.EnQue(xLocal);
 }
 
-
 template <typename T>
-__aicore__ inline void OutTranspose(
-    LocalTensor<float> xLocalTrans, LocalTensor<float> xLocal, int32_t rowNum, int32_t colNum) {
+__aicore__ inline void OutTranspose(LocalTensor<float> xLocalTrans, LocalTensor<float> xLocal, int32_t rowNum,
+                                    int32_t colNum)
+{
     LocalTensor<float> dstList[16];
     LocalTensor<float> srcList[16];
 
@@ -190,15 +186,11 @@ __aicore__ inline void OutTranspose(
 }
 
 template <typename T, int32_t QUEUE_DEPTH>
-__aicore__ inline void TransposeInput(
-    TQue<QuePosition::VECIN, QUEUE_DEPTH>& inputQue, 
-    TBuf<TPosition::VECCALC>& inputTransBuffer, 
-    TBuf<TPosition::VECCALC>& mulWBuffer, 
-    int64_t curNcFactor, 
-    uint8_t diFactor, 
-    uint8_t hiFactor, 
-    uint8_t wiFactor, 
-    const PoolVars& poolVars) {
+__aicore__ inline void TransposeInput(TQue<QuePosition::VECIN, QUEUE_DEPTH>& inputQue,
+                                      TBuf<TPosition::VECCALC>& inputTransBuffer, TBuf<TPosition::VECCALC>& mulWBuffer,
+                                      int64_t curNcFactor, uint8_t diFactor, uint8_t hiFactor, uint8_t wiFactor,
+                                      const PoolVars& poolVars)
+{
     const uint8_t wiFactor16Align = Ceil(wiFactor, 32 / sizeof(T)) * 32 / sizeof(T);
     const uint8_t wiFactorAlign = Ceil(wiFactor, 8) * 8;
     LocalTensor<T> xLocal = inputQue.template DeQue<T>();
@@ -207,16 +199,14 @@ __aicore__ inline void TransposeInput(
         OutTranspose<T>(xLocalTransVL, xLocal, poolVars.VL_NUM, diFactor * hiFactor * wiFactorAlign);
     } else {
         LocalTensor<float> xLocalCast = mulWBuffer.Get<float>();
-        UnaryRepeatParams repeatCastParams{
-            (uint16_t)(wiFactorAlign / 8), (uint16_t)(wiFactor16Align / 8),
-            (uint8_t)(wiFactorAlign / 8 * Ceil(diFactor * hiFactor, 2)),
-            (uint8_t)(wiFactor16Align / 8 * Ceil(diFactor * hiFactor, 2))};
+        UnaryRepeatParams repeatCastParams{(uint16_t)(wiFactorAlign / 8), (uint16_t)(wiFactor16Align / 8),
+                                           (uint8_t)(wiFactorAlign / 8 * Ceil(diFactor * hiFactor, 2)),
+                                           (uint8_t)(wiFactor16Align / 8 * Ceil(diFactor * hiFactor, 2))};
 
         Cast(xLocalCast, xLocal, RoundMode::CAST_NONE, wiFactor16Align * curNcFactor * diFactor * hiFactor);
         PipeBarrier<PIPE_V>();
-        Adds(
-            xLocalCast, xLocalCast, float(0.0), uint8_t(wiFactorAlign * Ceil(diFactor * hiFactor, 2)), curNcFactor * 2,
-            repeatCastParams);
+        Adds(xLocalCast, xLocalCast, float(0.0), uint8_t(wiFactorAlign * Ceil(diFactor * hiFactor, 2)), curNcFactor * 2,
+             repeatCastParams);
 
         PipeBarrier<PIPE_V>();
         OutTranspose<T>(xLocalTransVL, xLocalCast, poolVars.VL_NUM, diFactor * hiFactor * wiFactorAlign);

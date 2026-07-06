@@ -20,15 +20,9 @@
 
 class DeformableOffsetsInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeformableOffsetsInfershape SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeformableOffsetsInfershape SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeformableOffsetsInfershape TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeformableOffsetsInfershape TearDown" << std::endl; }
 };
 
 TEST_F(DeformableOffsetsInfershape, deformable_offsets_infer_shape_test)

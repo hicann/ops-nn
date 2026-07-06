@@ -58,8 +58,7 @@ __aicore__ inline void SetValueAdapter<bfloat16_t>(LocalTensor<bfloat16_t>& outL
 
 // this is actually ord=1
 template <typename P, uint8_t modelCode>
-class NormAdapter
-{
+class NormAdapter {
 public:
     __aicore__ inline void AbsAndPowerAdapt(LocalTensor<P>& dataLocal, int64_t dataCount)
     {
@@ -77,8 +76,7 @@ public:
 };
 
 template <typename P>
-class NormAdapter<P, NORM_MODEL_CODE>
-{
+class NormAdapter<P, NORM_MODEL_CODE> {
 public:
     __aicore__ inline void AbsAndPowerAdapt(LocalTensor<P>& dataLocal, int64_t dataCount)
     {
@@ -95,12 +93,12 @@ public:
 };
 
 template <typename T, typename P, uint8_t modelCode>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void SquareAndReduceRound1Compute(
-        NormAdapter<float, modelCode>& normAdapter, LocalTensor<T>& dataLocal, LocalTensor<P>& tempLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount, uint16_t tempIndex)
+    __aicore__ inline void SquareAndReduceRound1Compute(NormAdapter<float, modelCode>& normAdapter,
+                                                        LocalTensor<T>& dataLocal, LocalTensor<P>& tempLocal,
+                                                        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount,
+                                                        int64_t dataCount, uint16_t tempIndex)
     {
         uint32_t castTimes = 0;
         uint32_t castDatacountRemainder = 0;
@@ -113,12 +111,12 @@ public:
         }
 
         for (uint32_t i = 0; i < castTimes; i++) {
-            SquareAndReduceRound1ComputePerCast(
-                normAdapter, dataLocal, float32Tensor, maxCastDataCount, i, maxCastDataCount);
+            SquareAndReduceRound1ComputePerCast(normAdapter, dataLocal, float32Tensor, maxCastDataCount, i,
+                                                maxCastDataCount);
         }
         if (castDatacountRemainder > 0) {
-            SquareAndReduceRound1ComputePerCast(
-                normAdapter, dataLocal, float32Tensor, maxCastDataCount, castTimes, castDatacountRemainder);
+            SquareAndReduceRound1ComputePerCast(normAdapter, dataLocal, float32Tensor, maxCastDataCount, castTimes,
+                                                castDatacountRemainder);
             castTimes++;
         }
         PipeBarrier<PIPE_V>();
@@ -133,9 +131,9 @@ public:
         WaitFlag<HardEvent::S_V>(eventIDSToV);
     }
 
-    __aicore__ inline void ReduceRound2AndSqrtCompute(
-        NormAdapter<float, modelCode>& normAdapter, LocalTensor<P>& dataLocal, LocalTensor<T>& outLocal,
-        int64_t dataCount)
+    __aicore__ inline void ReduceRound2AndSqrtCompute(NormAdapter<float, modelCode>& normAdapter,
+                                                      LocalTensor<P>& dataLocal, LocalTensor<T>& outLocal,
+                                                      int64_t dataCount)
     {
         if (dataCount > 1) {
             PipeBarrier<PIPE_V>();
@@ -149,9 +147,11 @@ public:
     }
 
 private:
-    __aicore__ inline void SquareAndReduceRound1ComputePerCast(
-        NormAdapter<float, modelCode>& normAdapter, LocalTensor<T>& dataLocal, LocalTensor<float>& float32Tensor,
-        uint32_t maxCastDataCount, uint16_t index, int64_t dataCount)
+    __aicore__ inline void SquareAndReduceRound1ComputePerCast(NormAdapter<float, modelCode>& normAdapter,
+                                                               LocalTensor<T>& dataLocal,
+                                                               LocalTensor<float>& float32Tensor,
+                                                               uint32_t maxCastDataCount, uint16_t index,
+                                                               int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, dataLocal[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -171,12 +171,12 @@ private:
 };
 
 template <typename P, uint8_t modelCode>
-class InnerComputer<float, P, modelCode>
-{
+class InnerComputer<float, P, modelCode> {
 public:
-    __aicore__ inline void SquareAndReduceRound1Compute(
-        NormAdapter<float, modelCode>& normAdapter, LocalTensor<float>& dataLocal, LocalTensor<P>& tempLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount, uint16_t tempIndex)
+    __aicore__ inline void SquareAndReduceRound1Compute(NormAdapter<float, modelCode>& normAdapter,
+                                                        LocalTensor<float>& dataLocal, LocalTensor<P>& tempLocal,
+                                                        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount,
+                                                        int64_t dataCount, uint16_t tempIndex)
     {
         PipeBarrier<PIPE_V>();
         normAdapter.AbsAndPowerAdapt(dataLocal, dataCount);
@@ -191,9 +191,9 @@ public:
         SetFlag<HardEvent::S_V>(eventIDSToV);
         WaitFlag<HardEvent::S_V>(eventIDSToV);
     }
-    __aicore__ inline void ReduceRound2AndSqrtCompute(
-        NormAdapter<float, modelCode>& normAdapter, LocalTensor<float>& dataLocal, LocalTensor<float>& outLocal,
-        int64_t dataCount)
+    __aicore__ inline void ReduceRound2AndSqrtCompute(NormAdapter<float, modelCode>& normAdapter,
+                                                      LocalTensor<float>& dataLocal, LocalTensor<float>& outLocal,
+                                                      int64_t dataCount)
     {
         if (dataCount > 1) {
             PipeBarrier<PIPE_V>();
@@ -206,12 +206,11 @@ public:
 };
 
 template <typename T, typename P, uint8_t modelCode>
-class ForeachNormND
-{
+class ForeachNormND {
 public:
     __aicore__ inline ForeachNormND(){};
-    __aicore__ inline void Init(
-        GM_ADDR inputs, GM_ADDR output, GM_ADDR workspace, const ForeachReduceTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR inputs, GM_ADDR output, GM_ADDR workspace,
+                                const ForeachReduceTilingData* tilingData)
     {
         blockIdx = GetBlockIdx();
         blockNum = GetBlockNum();
@@ -342,9 +341,8 @@ private:
             if (cachedPartialCount == cachedPartialCountMax || i == copyTimes - 1) {
                 if (cachedPartialCount > 1) {
                     PipeBarrier<PIPE_V>();
-                    ReduceSum<P>(
-                        tempLocal[partialStartOffset], tempLocal[partialStartOffset], tempLocal[partialStartOffset],
-                        cachedPartialCount);
+                    ReduceSum<P>(tempLocal[partialStartOffset], tempLocal[partialStartOffset],
+                                 tempLocal[partialStartOffset], cachedPartialCount);
                 }
                 PipeBarrier<PIPE_V>();
                 Add(tempLocal, tempLocal, tempLocal[partialStartOffset], 1);
@@ -359,8 +357,8 @@ private:
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
 
-        DataCopyExtParams copyParams{
-            1, static_cast<uint32_t>(sizeof(P)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(sizeof(P)), 0, 0,
+                                     0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPad(workTensorGM[1ULL * offset], tempLocal, copyParams);
 
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
@@ -373,8 +371,8 @@ private:
     {
         LocalTensor<T> dataLocal = dataQueue.AllocTensor<T>();
 
-        DataCopyExtParams copyParams{
-            1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0,
+                                     0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPadExtParams<T> padParams{true, 0, 0, 0};
         DataCopyPad(dataLocal, inTensorGM[1ULL * index * maxDataCount], copyParams, padParams);
 
@@ -385,8 +383,8 @@ private:
     {
         LocalTensor<T> dataLocal = dataQueue.DeQue<T>();
 
-        computer.SquareAndReduceRound1Compute(
-            normAdapter, dataLocal, tempLocal, float32Tensor, maxCastDataCount, dataCount, index);
+        computer.SquareAndReduceRound1Compute(normAdapter, dataLocal, tempLocal, float32Tensor, maxCastDataCount,
+                                              dataCount, index);
 
         dataQueue.FreeTensor(dataLocal);
     }
@@ -395,8 +393,8 @@ private:
     {
         LocalTensor<P> dataLocal = dataQueue.AllocTensor<P>();
 
-        DataCopyExtParams copyParams{
-            1, static_cast<uint32_t>(dataCount * sizeof(P)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(P)), 0, 0,
+                                     0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPadExtParams<P> padParams{true, 0, 0, 0};
         DataCopyPad(dataLocal, workTensorGM[1ULL * offset], copyParams, padParams);
 
@@ -414,8 +412,8 @@ private:
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
 
-        DataCopyExtParams copyParams2{
-            1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
+        DataCopyExtParams copyParams2{1, static_cast<uint32_t>(sizeof(T)), 0, 0,
+                                      0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPad(outTensorGM, outLocal, copyParams2);
 
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
@@ -444,8 +442,8 @@ private:
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
 
-        DataCopyExtParams copyParams2{
-            1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
+        DataCopyExtParams copyParams2{1, static_cast<uint32_t>(sizeof(T)), 0, 0,
+                                      0}; // 结构体DataCopyExtParams最后一个参数是rsv保留位
         DataCopyPad(outTensorGM, outLocal, copyParams2);
 
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));

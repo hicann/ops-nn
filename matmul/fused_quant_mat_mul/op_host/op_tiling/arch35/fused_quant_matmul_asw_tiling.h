@@ -14,7 +14,6 @@
  */
 #pragma once
 
-
 #include "../fused_quant_matmul_common.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_cube_tiling.h"
 #include "../../../op_kernel/arch35/fused_quant_mat_mul_tilingkey.h"
@@ -25,7 +24,7 @@ using FusedQuantMatMulCompileInfo = QuantBatchMatmulV3CompileInfo;
 
 class FusedQuantMatMulASWTiling : public AdaptiveSlidingWindowCubeTiling {
 public:
-    explicit FusedQuantMatMulASWTiling(gert::TilingContext *context) : AdaptiveSlidingWindowCubeTiling(context)
+    explicit FusedQuantMatMulASWTiling(gert::TilingContext* context) : AdaptiveSlidingWindowCubeTiling(context)
     {
         inputParams_.Reset();
     }
@@ -47,10 +46,10 @@ protected:
     uint32_t GetX3Idx() const { return X3_INDEX_FQMM; }
 
     bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape,
-                    const std::vector<const gert::StorageShape *> &optionalInputShape,
-                    const std::vector<int64_t> &dimValueOfMKN) const;
-    bool AnalyzeX2TableAttr(const gert::StorageShape *x2TableShape) const;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+                    const std::vector<const gert::StorageShape*>& optionalInputShape,
+                    const std::vector<int64_t>& dimValueOfMKN) const;
+    bool AnalyzeX2TableAttr(const gert::StorageShape* x2TableShape) const;
     bool CheckUnsupportedOptionInputs();
     ge::graphStatus CheckContext() override;
     bool AnalyzeDtype() override;

@@ -27,25 +27,20 @@ struct integral_constant {
 using false_type = integral_constant<bool, false>;
 using true_type = integral_constant<bool, true>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
 constexpr int INT32_OFFSET = 31;
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t SMALL_MODE = 1;
 
 template <typename T, typename U>
-class KernelScatterElementsV2
-{
+class KernelScatterElementsV2 {
 public:
-    __aicore__ inline KernelScatterElementsV2()
-    {}
-    __aicore__ inline void Init(
-        const ScatterElementsV2TilingData* __restrict tiling_data, TPipe* tmpPipe, GM_ADDR input, GM_ADDR indices,
-        GM_ADDR updates)
+    __aicore__ inline KernelScatterElementsV2() {}
+    __aicore__ inline void Init(const ScatterElementsV2TilingData* __restrict tiling_data, TPipe* tmpPipe,
+                                GM_ADDR input, GM_ADDR indices, GM_ADDR updates)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
 
@@ -66,9 +61,9 @@ public:
     __aicore__ inline void CopyInIndex(int indicesIndex)
     {
         if constexpr (IS_CAST_INT) {
-            DataCopyPadGm2UBImpl(
-                (__ubuf__ uint32_t*)indicesLocal.GetPhyAddr(), (__gm__ uint32_t*)indicesGm[indicesIndex].GetPhyAddr(),
-                indicesExtParams, padParams); // datacopypad int64
+            DataCopyPadGm2UBImpl((__ubuf__ uint32_t*)indicesLocal.GetPhyAddr(),
+                                 (__gm__ uint32_t*)indicesGm[indicesIndex].GetPhyAddr(), indicesExtParams,
+                                 padParams); // datacopypad int64
         } else {
             DataCopyPad(indices32Local, indicesGm[indicesIndex], indicesExtParams, uPadParams);
         }
@@ -119,7 +114,8 @@ public:
                 int divisor = includeSelf != 0 ? hitCount + 1 : hitCount;
                 if constexpr (IsCastFloatType()) {
                     if (IsCastFloat()) {
-                        inputTemp.SetValue(i, ScatterElementsV2NS::MeanDivideValue<float>(inputTemp.GetValue(i), divisor));
+                        inputTemp.SetValue(i,
+                                           ScatterElementsV2NS::MeanDivideValue<float>(inputTemp.GetValue(i), divisor));
                         continue;
                     }
                 } else {
@@ -141,10 +137,10 @@ public:
                 currentIndices = indicesLast;
             }
             inputExtParams = {(uint16_t)1, static_cast<uint32_t>(currentIndices * inputOneTime * sizeof(T)), 0, 0, 0};
-            indicesExtParams = {
-                (uint16_t)1, static_cast<uint32_t>(currentIndices * indicesOneTime * sizeof(U)), 0, 0, 0};
-            updatesExtParams = {
-                (uint16_t)1, static_cast<uint32_t>(currentIndices * updatesOneTime * sizeof(T)), 0, 0, 0};
+            indicesExtParams = {(uint16_t)1, static_cast<uint32_t>(currentIndices * indicesOneTime * sizeof(U)), 0, 0,
+                                0};
+            updatesExtParams = {(uint16_t)1, static_cast<uint32_t>(currentIndices * updatesOneTime * sizeof(T)), 0, 0,
+                                0};
             PIPE_MTE3_MTE2();
             CopyInIndex(indicesIndex);
             DataCopyPad(updatesLocal, updatesGm[updatesIndex], updatesExtParams, tPadParams);
@@ -205,9 +201,9 @@ public:
                         PipeBarrier<PIPE_V>();
                     }
                     CastUpdatesToFloat(updatesAlign);
-                    Adds(
-                        indices32Local, indices32Local, static_cast<int>(-i * pieceEach - currentPiece * inputOnePiece),
-                        static_cast<int>(indicesAlign));
+                    Adds(indices32Local, indices32Local,
+                         static_cast<int>(-i * pieceEach - currentPiece * inputOnePiece),
+                         static_cast<int>(indicesAlign));
                     PIPE_V_S();
                     for (uint64_t k = 0; k < currentIndices; ++k) {
                         auto kIndex = indices32Local.GetValue(k);
@@ -226,25 +222,29 @@ public:
         FreeLocalTensors();
     }
 
-    __aicore__ inline void PIPE_MTE3_MTE2() {
+    __aicore__ inline void PIPE_MTE3_MTE2()
+    {
         int32_t eventIDMTE3ToMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);
     }
 
-    __aicore__ inline void PIPE_MTE2_V() {
+    __aicore__ inline void PIPE_MTE2_V()
+    {
         int32_t eventIDMTE2ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
     }
 
-    __aicore__ inline void PIPE_V_MTE3() {
+    __aicore__ inline void PIPE_V_MTE3()
+    {
         int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     }
 
-    __aicore__ inline void PIPE_V_S() {
+    __aicore__ inline void PIPE_V_S()
+    {
         int32_t eventIDVToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIDVToS);
         WaitFlag<HardEvent::V_S>(eventIDVToS);
@@ -406,10 +406,7 @@ private:
                mode <= ScatterElementsV2NS::SCATTER_MODE_REDUCTION_END;
     }
 
-    __aicore__ inline bool IsCastFloat() const
-    {
-        return IsCastFloatType() && NeedHitCount();
-    }
+    __aicore__ inline bool IsCastFloat() const { return IsCastFloatType() && NeedHitCount(); }
 
     __aicore__ static constexpr bool IsCastFloatType()
     {

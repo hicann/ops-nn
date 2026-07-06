@@ -33,20 +33,20 @@ public:
 private:
     __aicore__ inline void ProcessPreCore(int32_t loopNum, int32_t tailNum, int32_t loopNumOut, int32_t loopTail);
     __aicore__ inline void ComputeOut(uint64_t arNum, uint64_t loopGm, LocalTensor<T2>& dstInt32);
-    __aicore__ inline void ComputeIds(
-        uint64_t& loopGm, int32_t loopCore, int32_t beforeNumOut, LocalTensor<uint32_t>& maskUbSize);
+    __aicore__ inline void ComputeIds(uint64_t& loopGm, int32_t loopCore, int32_t beforeNumOut,
+                                      LocalTensor<uint32_t>& maskUbSize);
 };
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, const NonZeroTilingData* tilingData)
+__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape,
+                                                                     const NonZeroTilingData* tilingData)
 {
     this->InitBase(x, y, outShape, tilingData);
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ComputeOut(
-    uint64_t arNum, uint64_t loopGm, LocalTensor<T2>& dstInt32)
+__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ComputeOut(uint64_t arNum, uint64_t loopGm,
+                                                                           LocalTensor<T2>& dstInt32)
 {
     this->inQueX_.template EnQue<QuePosition::VECCALC, QuePosition::VECOUT>(dstInt32);
     LocalTensor<T2> outUbSize = this->inQueX_.template DeQue<QuePosition::VECCALC, QuePosition::VECOUT, T2>();
@@ -60,8 +60,9 @@ __aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ComputeOut(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ComputeIds(
-    uint64_t& loopGm, int32_t loopCore, int32_t beforeNumOut, LocalTensor<uint32_t>& maskUbSize)
+__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ComputeIds(uint64_t& loopGm, int32_t loopCore,
+                                                                           int32_t beforeNumOut,
+                                                                           LocalTensor<uint32_t>& maskUbSize)
 {
     LocalTensor<T2> dstUbInt64 = this->inQueX_.template AllocTensor<T2>();
     this->inQueX_.template EnQue<QuePosition::VECIN, QuePosition::VECCALC>(dstUbInt64);
@@ -98,8 +99,8 @@ __aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ComputeIds(
 }
 
 template <typename T1, typename T2, int TILING_KEY>
-__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ProcessPreCore(
-    int32_t loopNum, int32_t tailNum, int32_t loopNumOut, int32_t loopTail)
+__aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ProcessPreCore(int32_t loopNum, int32_t tailNum,
+                                                                               int32_t loopNumOut, int32_t loopTail)
 {
     LocalTensor<uint32_t> addUbSize = this->addUb_.template Get<uint32_t>();
     LocalTensor<uint32_t> maskUbSize = this->maskUb_.template Get<uint32_t>();
@@ -118,9 +119,8 @@ __aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::ProcessPreCore(
 template <typename T1, typename T2, int TILING_KEY>
 __aicore__ inline void NonZeroFullLoadDim1<T1, T2, TILING_KEY>::Process()
 {
-    ProcessPreCore(
-        this->tilingData_->loopNumPerCore, this->tilingData_->loopTailPerCore, this->tilingData_->loopNumO,
-        this->tilingData_->loopTailO);
+    ProcessPreCore(this->tilingData_->loopNumPerCore, this->tilingData_->loopTailPerCore, this->tilingData_->loopNumO,
+                   this->tilingData_->loopTailO);
 }
 } // namespace NonZero
 #endif

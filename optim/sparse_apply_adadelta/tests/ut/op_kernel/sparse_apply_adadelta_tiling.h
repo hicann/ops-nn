@@ -25,24 +25,23 @@
 
 #define __aicore__
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t *tiling, SparseApplyAdadeltaTilingData *constData)
-{
-    const __gm__ uint32_t *src = (const __gm__ uint32_t *)tiling;
-    uint32_t *dst = (uint32_t *)constData;
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, SparseApplyAdadeltaTilingData* constData) {
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)constData;
     for (size_t i = 0; i < sizeof(SparseApplyAdadeltaTilingData) / 4; i++) {
         *(dst + i) = *(src + i);
     }
 }
 #else
-inline void InitTilingData(uint8_t *tiling, SparseApplyAdadeltaTilingData *constData)
+inline void InitTilingData(uint8_t* tiling, SparseApplyAdadeltaTilingData* constData)
 {
     memcpy(constData, tiling, sizeof(SparseApplyAdadeltaTilingData));
 }
 #endif // __NPU_TILING__
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct *tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct *>((__ubuf__ uint8_t *)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
@@ -52,7 +51,7 @@ inline void InitTilingData(uint8_t *tiling, SparseApplyAdadeltaTilingData *const
     InitTilingData(tilingArg, &tilingData)
 
 #define GET_TILING_DATA(tilingData, tilingArg) \
-    SparseApplyAdadeltaTilingData tilingData;    \
+    SparseApplyAdadeltaTilingData tilingData;  \
     InitTilingData(tilingArg, &tilingData)
 
 #endif // _I_SPARSE_APPLY_ADADELTA_TILING_H_

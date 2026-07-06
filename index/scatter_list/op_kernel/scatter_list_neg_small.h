@@ -22,24 +22,22 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListNegSmall : public ScatterListBase<T1>
-{
+class ScatterListNegSmall : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListNegSmall(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-        const ScatterListTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut,
+                                GM_ADDR workspace, const ScatterListTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void CopyIn(const uint64_t& CoreBatchNum);
     __aicore__ inline void CopyOut(const uint64_t& CoreBatchNum);
-    __aicore__ inline void DataCopySmallPad(
-        DataCopyExtParams& copyParams, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb, const int64_t& dim0Idx,
-        const int64_t& dim1Idx, const int64_t& srcGmOffset);
-    __aicore__ inline void DataCopySmallNoPad(
-        DataCopyParams& copyParams, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb, const int64_t& dim0Idx,
-        const int64_t& dim1Idx, const int64_t& srcGmOffset);
+    __aicore__ inline void DataCopySmallPad(DataCopyExtParams& copyParams, LocalTensor<T1>& updatesUb,
+                                            LocalTensor<T2>& indiceUb, const int64_t& dim0Idx, const int64_t& dim1Idx,
+                                            const int64_t& srcGmOffset);
+    __aicore__ inline void DataCopySmallNoPad(DataCopyParams& copyParams, LocalTensor<T1>& updatesUb,
+                                              LocalTensor<T2>& indiceUb, const int64_t& dim0Idx, const int64_t& dim1Idx,
+                                              const int64_t& srcGmOffset);
     constexpr static int32_t bufferNum = 1;
 
 private:
@@ -60,9 +58,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegSmall<T1, T2>::Init(
-    GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR tempOut, GM_ADDR workspace,
-    const ScatterListTilingData* tilingData)
+__aicore__ inline void ScatterListNegSmall<T1, T2>::Init(GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask,
+                                                         GM_ADDR tempOut, GM_ADDR workspace,
+                                                         const ScatterListTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     this->ParseTilingData(tilingData, m_tilingData);
@@ -101,8 +99,8 @@ __aicore__ inline void ScatterListNegSmall<T1, T2>::CopyIn(const uint64_t& CoreB
     LocalTensor<T2> indiceUb = indiceInQueue.AllocTensor<T2>();
     LocalTensor<T1> updatesUb = updatesInQueue.AllocTensor<T1>();
     DataCopy(indiceUb, indiceGm, m_tilingData.indiceCount);
-    DataCopy(
-        updatesUb, updatesGm[blockIdx * m_tilingData.preCoreUpdateDim23], CoreBatchNum * m_tilingData.srcBatchStride);
+    DataCopy(updatesUb, updatesGm[blockIdx * m_tilingData.preCoreUpdateDim23],
+             CoreBatchNum * m_tilingData.srcBatchStride);
     if (!maskIsNull) {
         LocalTensor<uint8_t> maskUb = maskInQueue.AllocTensor<uint8_t>();
         DataCopy(maskUb, maskGm, m_tilingData.maskCount);
@@ -114,9 +112,10 @@ __aicore__ inline void ScatterListNegSmall<T1, T2>::CopyIn(const uint64_t& CoreB
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegSmall<T1, T2>::DataCopySmallPad(
-    DataCopyExtParams& copyParams, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb, const int64_t& dim0Idx,
-    const int64_t& dim1Idx, const int64_t& srcGmOffset)
+__aicore__ inline void ScatterListNegSmall<T1, T2>::DataCopySmallPad(DataCopyExtParams& copyParams,
+                                                                     LocalTensor<T1>& updatesUb,
+                                                                     LocalTensor<T2>& indiceUb, const int64_t& dim0Idx,
+                                                                     const int64_t& dim1Idx, const int64_t& srcGmOffset)
 {
     if (m_tilingData.indiceDims == 1) {
         int64_t dim2OffsetIdx = indiceUb.GetValue(dim0Idx);
@@ -140,9 +139,11 @@ __aicore__ inline void ScatterListNegSmall<T1, T2>::DataCopySmallPad(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void ScatterListNegSmall<T1, T2>::DataCopySmallNoPad(
-    DataCopyParams& copyParams, LocalTensor<T1>& updatesUb, LocalTensor<T2>& indiceUb, const int64_t& dim0Idx,
-    const int64_t& dim1Idx, const int64_t& srcGmOffset)
+__aicore__ inline void ScatterListNegSmall<T1, T2>::DataCopySmallNoPad(DataCopyParams& copyParams,
+                                                                       LocalTensor<T1>& updatesUb,
+                                                                       LocalTensor<T2>& indiceUb,
+                                                                       const int64_t& dim0Idx, const int64_t& dim1Idx,
+                                                                       const int64_t& srcGmOffset)
 {
     int64_t dim2OffsetIdx = indiceUb.GetValue(dim0Idx);
     int64_t dstGmOffset = dim1Idx * m_tilingData.dstBatchStride + dim2OffsetIdx;

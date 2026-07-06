@@ -43,18 +43,26 @@ ge::graphStatus TilingPrepareIndexForAscendC(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     ci->core_num = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((ci->core_num <= 0), OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "core_num", std::to_string(ci->core_num).c_str(), "> 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (ci->core_num <= 0),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "core_num", std::to_string(ci->core_num).c_str(), "> 0"),
+        return ge::GRAPH_FAILED);
     uint64_t indexUbSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, indexUbSize);
     ci->ubSize = static_cast<int64_t>(indexUbSize);
-    OP_CHECK_IF((ci->ubSize <= 0), OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ubSize", std::to_string(ci->ubSize).c_str(), "> 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ci->ubSize <= 0),
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ubSize", std::to_string(ci->ubSize).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingPrepare4Index(gert::TilingParseContext* context)
 {
     auto compile_info = context->GetCompiledInfo<IndexCompileInfo>();
-    OP_CHECK_IF(compile_info == nullptr, OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(context->GetNodeName(), "tiling", "compile_info", "null", "compile info cannot be null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compile_info == nullptr,
+                OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(context->GetNodeName(), "tiling", "compile_info", "null",
+                                                       "compile info cannot be null"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4Index Simt Mode success!");
     auto ret = TilingPrepareIndexForAscendC(context);
     if (ret != ge::GRAPH_SUCCESS) {

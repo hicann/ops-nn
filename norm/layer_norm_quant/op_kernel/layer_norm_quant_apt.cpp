@@ -16,7 +16,8 @@
 #include "./arch35/layer_norm_quant_regbase_spilt_d.h"
 
 extern "C" __global__ __aicore__ void layer_norm_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR scale,
-                                                       GM_ADDR offset, GM_ADDR z, GM_ADDR scale_out, GM_ADDR workspace, GM_ADDR tiling)
+                                                       GM_ADDR offset, GM_ADDR z, GM_ADDR scale_out, GM_ADDR workspace,
+                                                       GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if (g_coreType == AIC) {

@@ -24,5 +24,5 @@ struct TilingForApplyTopKTopPWithSortedCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-}  // namespace optiling
-#endif  // __APPLY_TOP_K_TOP_P_WITH_SORTED_COMPILE_INFO_H__
+} // namespace optiling
+#endif // __APPLY_TOP_K_TOP_P_WITH_SORTED_COMPILE_INFO_H__

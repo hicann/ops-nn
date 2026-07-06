@@ -33,11 +33,12 @@ constexpr static int32_t INPUT_DOUT_IDX = 2;
 constexpr static int32_t OUTPUT_IDX = 0;
 static const std::map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1}, {"mean", 2}};
 
-inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
-  if (in_shape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return in_shape;
+inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
 }
 
 ge::graphStatus MseLossGradTilingClass::GetShapeAttrsInfo()
@@ -57,32 +58,29 @@ ge::graphStatus MseLossGradTilingClass::GetShapeAttrsInfo()
     ge::DataType outputDType = outputDesc->GetDataType();
     if (predictDType != labelDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(labelDType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and label",
-            dtypeMsg.c_str(), "The dtypes of input predict and input label must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and label", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (predictDType != doutDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(doutDType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and dout",
-            dtypeMsg.c_str(), "The dtypes of input predict and input dout must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and dout", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and input dout must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (predictDType != outputDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(outputDType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and y",
-            dtypeMsg.c_str(), "The dtypes of input predict and output y must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and y", dtypeMsg.c_str(),
+                                               "The dtypes of input predict and output y must be the same");
         return ge::GRAPH_FAILED;
     }
     this->inputDtype = predictDType;
     return ge::GRAPH_SUCCESS;
 }
 
-bool MseLossGradTilingClass::IsCapable()
-{
-    return true;
-}
+bool MseLossGradTilingClass::IsCapable() { return true; }
 
 ge::graphStatus MseLossGradTilingClass::CheckDoutIsScalar()
 {
@@ -103,9 +101,9 @@ ge::graphStatus MseLossGradTilingClass::CalcReduceMeanCof()
 
     this->reducationStr = attrs->GetAttrPointer<char>(0);
     auto iter = STR_2_INT.find(this->reducationStr);
-    OP_CHECK_IF((iter == STR_2_INT.end()),
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr,
-            "none, mean or sum"),
+    OP_CHECK_IF(
+        (iter == STR_2_INT.end()),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr, "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->reduceMeanCof = 2.0f;
     int64_t dimVal = 1;
@@ -118,8 +116,8 @@ ge::graphStatus MseLossGradTilingClass::CalcReduceMeanCof()
             if (inputShape.GetDim(i) != 0) {
                 dimVal = dimVal * inputShape.GetDim(i);
             } else {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "predict",
-                    ToString(inputShape).c_str(),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "predict", ToString(inputShape).c_str(),
                     "Input predict cannot be an empty tensor when the attribute reduction is mean");
                 return ge::GRAPH_FAILED;
             }
@@ -136,26 +134,26 @@ ge::graphStatus MseLossGradTilingClass::DoScalarDagOpTiling()
         BroadcastBaseTiling<MseLossGradOp::MseLossGradScalarDag<half, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
         OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradScalarDag<bfloat16_t, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
         OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradScalarDag<float, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
         OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
-            ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -167,26 +165,26 @@ ge::graphStatus MseLossGradTilingClass::DoTensorDagOpTiling()
         BroadcastBaseTiling<MseLossGradOp::MseLossGradDag<half, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
         OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_BF16) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradDag<bfloat16_t, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
         OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else if (this->inputDtype == ge::DT_FLOAT) {
         BroadcastBaseTiling<MseLossGradOp::MseLossGradDag<float, float>::OpDag> brcBaseTiling(context_);
         brcBaseTiling.SetScalar(this->reduceMeanCof);
         OP_CHECK_IF((brcBaseTiling.DoTiling() == ge::GRAPH_FAILED),
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
-            ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(this->inputDtype).c_str(),
+                                  "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
 
@@ -196,46 +194,28 @@ ge::graphStatus MseLossGradTilingClass::DoTensorDagOpTiling()
 ge::graphStatus MseLossGradTilingClass::DoOpTiling()
 {
     OP_CHECK_IF(CheckDoutIsScalar() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "check dout is scalar failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcReduceMeanCof() == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "get reduceMeanCof failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "check dout is scalar failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcReduceMeanCof() == ge::GRAPH_FAILED, OP_LOGE(context_->GetNodeName(), "get reduceMeanCof failed"),
+                return ge::GRAPH_FAILED);
     if (this->doutIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
         OP_CHECK_IF(DoScalarDagOpTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is scalar"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is scalar"), return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(DoTensorDagOpTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is tensor"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "do tiling failed, when dout is tensor"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MseLossGradTilingClass::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MseLossGradTilingClass::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t MseLossGradTilingClass::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t MseLossGradTilingClass::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus MseLossGradTilingClass::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MseLossGradTilingClass::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus MseLossGradTilingClass::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MseLossGradTilingClass::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus MseLossGradTilingClass::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MseLossGradTilingClass::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus TilingForMseLossGrad(gert::TilingContext* context)
 {
@@ -258,13 +238,13 @@ ge::graphStatus MseLossGradTilingPrepareAscendC(gert::TilingParseContext* contex
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %lu", compileInfo->coreNum),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %lu", compileInfo->coreNum),
+                return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
     OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %lu", compileInfo->ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %lu", compileInfo->ubSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

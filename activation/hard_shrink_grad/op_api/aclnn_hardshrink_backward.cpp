@@ -35,8 +35,8 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_BF16, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
@@ -50,8 +50,8 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
     }
 }
 
-inline static bool CheckNotNull(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* lambd, const aclTensor* gradInput)
+inline static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* lambd,
+                                const aclTensor* gradInput)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -61,8 +61,8 @@ inline static bool CheckNotNull(
     return true;
 }
 
-inline static bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* /* lambd */, const aclTensor* gradInput)
+inline static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* /* lambd */,
+                                   const aclTensor* gradInput)
 {
     auto dtypeSupportList = GetDtypeSupportList();
     // 检查gradOutput的数据类型是否在HardShrinkBackward算子的支持列表内
@@ -75,26 +75,23 @@ inline static bool CheckDtypeValid(
     return true;
 }
 
-inline static bool CheckPromoteType(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, op::DataType& promoteType)
+inline static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput,
+                                    op::DataType& promoteType)
 {
     // 检查gradOutput和self能否做数据类型推导
     promoteType = op::PromoteType(gradOutput->GetDataType(), self->GetDataType());
     OP_CHECK(
         promoteType != DataType::DT_UNDEFINED,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and self dtype %s can not promote dtype.",
-            op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString()),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and self dtype %s can not promote dtype.",
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString()),
         return false);
 
     // 检查推导后的数据类型是否在算子支持的数据类型之内
     auto dtypeSupportList = GetDtypeSupportList();
-    OP_CHECK(
-        CheckType(promoteType, dtypeSupportList),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "promote dtype %s should be in dtype support list [%s].",
-            op::ToString(promoteType).GetString(), op::ToString(dtypeSupportList).GetString()),
-        return false);
+    OP_CHECK(CheckType(promoteType, dtypeSupportList),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promote dtype %s should be in dtype support list [%s].",
+                     op::ToString(promoteType).GetString(), op::ToString(dtypeSupportList).GetString()),
+             return false);
 
     // 检查推导后的数据类型能否转换为输出的数据类型
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, gradInput->GetDataType(), return false);
@@ -110,8 +107,8 @@ inline static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self
     return true;
 }
 
-static bool CheckShapeBroadcast(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, op::Shape& resultShape)
+static bool CheckShapeBroadcast(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput,
+                                op::Shape& resultShape)
 {
     // gradOutput、self的shape必须能够进行broadcast
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(gradOutput, self, resultShape, return false);
@@ -120,8 +117,8 @@ static bool CheckShapeBroadcast(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* lambd, const aclTensor* gradInput)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* lambd,
+                               const aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, lambd, gradInput), ACLNN_ERR_PARAM_NULLPTR);
@@ -137,8 +134,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static std::tuple<const aclTensor *, const aclTensor *> BroadcastTo(const aclTensor *gradOutput, const aclTensor *self,
-                                                                    aclOpExecutor *executor) {
+static std::tuple<const aclTensor*, const aclTensor*> BroadcastTo(const aclTensor* gradOutput, const aclTensor* self,
+                                                                  aclOpExecutor* executor)
+{
     Shape shapeBroadcast;
     if (!BroadcastInferShape(self->GetViewShape(), gradOutput->GetViewShape(), shapeBroadcast)) {
         return std::tuple(nullptr, nullptr);
@@ -156,9 +154,9 @@ static std::tuple<const aclTensor *, const aclTensor *> BroadcastTo(const aclTen
     return std::tie(gradOutput, self);
 }
 
-aclnnStatus aclnnHardshrinkBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclScalar* lambd, aclTensor* gradInput,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnHardshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                    const aclScalar* lambd, aclTensor* gradInput,
+                                                    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -234,8 +232,8 @@ aclnnStatus aclnnHardshrinkBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardshrinkBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnHardshrinkBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    const aclrtStream stream)
 {
     // 固定写法，调用框架能力，完成计算
     L2_DFX_PHASE_2(aclnnHardshrinkBackward);

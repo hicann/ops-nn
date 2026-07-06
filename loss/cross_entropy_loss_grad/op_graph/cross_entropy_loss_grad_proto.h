@@ -23,17 +23,25 @@ namespace ge {
 
 * @par Inputs:
 * Six inputs, including:
-* @li grad_loss: A 1D tensor or scalar of type float16 or float32 or bfloat16, specifying the backpropagation gradient. When reduction is "none", the shape is [N], when reduction is "sum" or "mean", it is scalar. N is batch size.
-* @li log_prob: A 2D tensor of type float16 or float32 or bfloat16. Has the same dtype as grad_loss, specifying the logarithmized probabilities of the outputs. Shape only support [N, C], where N is batch size, C is class.
-* @li target: A 1D tensor of type int32 or int64, specifying the target value. It represent the target squences. Shape is [N]. The range of values is [0, C).
+* @li grad_loss: A 1D tensor or scalar of type float16 or float32 or bfloat16, specifying the backpropagation gradient.
+When reduction is "none", the shape is [N], when reduction is "sum" or "mean", it is scalar. N is batch size.
+* @li log_prob: A 2D tensor of type float16 or float32 or bfloat16. Has the same dtype as grad_loss, specifying the
+logarithmized probabilities of the outputs. Shape only support [N, C], where N is batch size, C is class.
+* @li target: A 1D tensor of type int32 or int64, specifying the target value. It represent the target squences. Shape
+is [N]. The range of values is [0, C).
 * @li weight: An optional 1D tensor of type float32, specifying the weight value. Shape is [C].
-* @li grad_zloss: An optional ND tensor of type float16 or float32 or bfloat16. Has the same dtype as grad_loss. Reserved.
-* @li lse_gor_zloss: An optional ND tensor of type float16 or float32 or bfloat16. Has the same dtype as grad_loss. Reserved.
+* @li grad_zloss: An optional ND tensor of type float16 or float32 or bfloat16. Has the same dtype as grad_loss.
+Reserved.
+* @li lse_gor_zloss: An optional ND tensor of type float16 or float32 or bfloat16. Has the same dtype as grad_loss.
+Reserved.
 
 * @par Attributes:
-* @li reduction: A character string from "none", "mean", and "sum", specifying the gradient output mode. Defaults to "mean" .
-* @li ignore_index: An optional int. Specifies a target value that is ignored and does not contribute to the input gradient. Defaults to -100.
-* @li label_smoothing: An optional float attr in [0.0, 1.0]. Specifies the amount of smoothing when computing the loss. Defaults to 0.0.
+* @li reduction: A character string from "none", "mean", and "sum", specifying the gradient output mode. Defaults to
+"mean" .
+* @li ignore_index: An optional int. Specifies a target value that is ignored and does not contribute to the input
+gradient. Defaults to -100.
+* @li label_smoothing: An optional float attr in [0.0, 1.0]. Specifies the amount of smoothing when computing the loss.
+Defaults to 0.0.
 * @li lse_square_scale_for_zloss: An optional float attr, Default: 0.0. Reserved.
 
 * @par Outputs:

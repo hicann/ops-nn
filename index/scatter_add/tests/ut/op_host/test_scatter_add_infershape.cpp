@@ -18,17 +18,14 @@
 using namespace ge;
 
 class scatter_add : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "scatter_add SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "scatter_add SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "scatter_add TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "scatter_add TearDown" << std::endl; }
 };
 
-TEST_F(scatter_add, scatter_add_infershape_diff_test_1) {
+TEST_F(scatter_add, scatter_add_infershape_diff_test_1)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -57,7 +54,8 @@ TEST_F(scatter_add, scatter_add_infershape_diff_test_1) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(scatter_add, scatter_add_infershape_diff_test_2) {
+TEST_F(scatter_add, scatter_add_infershape_diff_test_2)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -86,7 +84,8 @@ TEST_F(scatter_add, scatter_add_infershape_diff_test_2) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(scatter_add, scatter_add_infershape_diff_test_3) {
+TEST_F(scatter_add, scatter_add_infershape_diff_test_3)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;

@@ -37,8 +37,8 @@ extern "C" {
 #endif
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> ASCEND310P_DTYPE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                                        op::DataType::DT_FLOAT};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
@@ -51,8 +51,8 @@ static const std::string TENSOR_OUT_NAME = "out";
 static const std::string TENSOR_MEAN_OUT_NAME = "meanOut";
 static const std::string TENSOR_RSTD_OUT_NAME = "rstdOut";
 
-static bool CheckNotNull(
-    const aclTensor* self, const aclTensor* out, const aclTensor* meanOut, const aclTensor* rstdOut)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* out, const aclTensor* meanOut,
+                         const aclTensor* rstdOut)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
@@ -70,9 +70,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList(const NpuArch&
     }
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
-    const aclTensor* meanOut, const aclTensor* rstdOut, const NpuArch& npuArch)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, const aclTensor* out,
+                            const aclTensor* meanOut, const aclTensor* rstdOut, const NpuArch& npuArch)
 {
     // 检查self的数据类型是否在支持列表内
     auto supportList = GetDtypeSupportList(npuArch);
@@ -124,37 +123,31 @@ static bool CheckDtypeValid(
 static bool CheckAttr(const aclTensor* self, int64_t group, double eps, const NpuArch& npuArch)
 {
     // 检查group是否大于0
-    OP_CHECK(
-        group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
-        return false);
+    OP_CHECK(group > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected group to be greater than 0, got %ld.", group),
+             return false);
     if (!Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
-        OP_CHECK(
-            self->GetViewShape()[0] > 0,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected N to be greater than 0, got %ld.", self->GetViewShape()[0]),
-            return false);
-        OP_CHECK(
-            self->GetViewShape()[1] > 0,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C to be greater than 0, got %ld.", self->GetViewShape()[1]),
-            return false);
+        OP_CHECK(self->GetViewShape()[0] > 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected N to be greater than 0, got %ld.", self->GetViewShape()[0]),
+                 return false);
+        OP_CHECK(self->GetViewShape()[1] > 0,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C to be greater than 0, got %ld.", self->GetViewShape()[1]),
+                 return false);
     }
     // 检查eps是否大于0
-    OP_CHECK(
-        eps > 0.0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected eps to be greater than 0, got %lf.", eps), return false);
+    OP_CHECK(eps > 0.0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected eps to be greater than 0, got %lf.", eps),
+             return false);
     // 检查C是否能被group整除
-    OP_CHECK(
-        self->GetViewShape()[1] % group == 0,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected number of channels in input to be divisible by group, "
-            "but got input of shape %s and group=%ld.",
-            op::ToString(self->GetViewShape()).GetString(), group),
-        return false);
+    OP_CHECK(self->GetViewShape()[1] % group == 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "Expected number of channels in input to be divisible by group, "
+                     "but got input of shape %s and group=%ld.",
+                     op::ToString(self->GetViewShape()).GetString(), group),
+             return false);
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, const aclTensor* out,
-    const aclTensor* meanOut, const aclTensor* rstdOut)
+static bool CheckShape(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group,
+                       const aclTensor* out, const aclTensor* meanOut, const aclTensor* rstdOut)
 {
     // 检查x维度是否大于等于2
     OP_CHECK_MIN_DIM(self, BN_MIN_SUPPORT_DIMS_NUMS, return false);
@@ -172,22 +165,20 @@ static bool CheckShape(
     // 检查(gamma是否为空指针)或者(gamma维度是否为1且元素数量是否等于C)
     if (gamma != nullptr &&
         (gamma->GetViewShape().GetDimNum() != 1 || gamma->GetViewShape()[0] != self->GetViewShape()[1])) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected weight to be a vector of size equal to the number of channels in "
-            "input, but got weight of shape %s and input of shape %s.",
-            op::ToString(gamma->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected weight to be a vector of size equal to the number of channels in "
+                "input, but got weight of shape %s and input of shape %s.",
+                op::ToString(gamma->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
     // 检查(beta是否为空指针)或者(beta维度是否为1且元素数量是否等于C)
     if (beta != nullptr &&
         (beta->GetViewShape().GetDimNum() != 1 || beta->GetViewShape()[0] != self->GetViewShape()[1])) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected bias to be a vector of size equal to the number of channels in "
-            "input, but got weight of shape %s and input of shape %s.",
-            op::ToString(beta->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected bias to be a vector of size equal to the number of channels in "
+                "input, but got weight of shape %s and input of shape %s.",
+                op::ToString(beta->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
@@ -200,15 +191,15 @@ static void CheckFormat(const aclTensor* tensor, const std::string& tensorName)
         return;
     }
     if (tensor->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW("Format of input tensor [%s] gets FRACTAL_NZ, this format may lead to precision failure", 
+        OP_LOGW("Format of input tensor [%s] gets FRACTAL_NZ, this format may lead to precision failure",
                 tensorName.c_str());
     }
     return;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, aclTensor* out,
-    aclTensor* meanOut, aclTensor* rstdOut, const NpuArch& npuArch)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group,
+                               double eps, aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut,
+                               const NpuArch& npuArch)
 {
     CheckFormat(self, TENSOR_SELF_NAME);
     CheckFormat(gamma, TENSOR_GAMMA_NAME);
@@ -255,8 +246,8 @@ static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* GetGamma(
-    const aclTensor* self, const aclTensor* gamma, int64_t size, aclOpExecutor* executor, const NpuArch& npuArch)
+static const aclTensor* GetGamma(const aclTensor* self, const aclTensor* gamma, int64_t size, aclOpExecutor* executor,
+                                 const NpuArch& npuArch)
 {
     const aclTensor* gammaContiguous = nullptr;
     if (gamma) {
@@ -269,8 +260,8 @@ static const aclTensor* GetGamma(
     return gammaContiguous;
 }
 
-static const aclTensor* GetBeta(
-    const aclTensor* self, const aclTensor* beta, int64_t size, aclOpExecutor* executor, const NpuArch& npuArch)
+static const aclTensor* GetBeta(const aclTensor* self, const aclTensor* beta, int64_t size, aclOpExecutor* executor,
+                                const NpuArch& npuArch)
 {
     const aclTensor* betaContiguous = nullptr;
     if (beta) {
@@ -283,9 +274,9 @@ static const aclTensor* GetBeta(
     return betaContiguous;
 }
 
-aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, aclTensor* out,
-    aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta,
+                                               int64_t group, double eps, aclTensor* out, aclTensor* meanOut,
+                                               aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGroupNormSilu, DFX_IN(self, gamma, beta, group, eps), DFX_OUT(out, meanOut, rstdOut));
     // 固定写法，创建OpExecutor
@@ -319,18 +310,18 @@ aclnnStatus aclnnGroupNormSiluGetWorkspaceSize(
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gammaContiguous =
-        GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutor.get(), SOC_VERSION);
-    auto betaContiguous =
-        GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutor.get(), SOC_VERSION);
+    auto gammaContiguous = GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutor.get(),
+                                    SOC_VERSION);
+    auto betaContiguous = GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutor.get(),
+                                  SOC_VERSION);
     if (!Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
         CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     // 调用GroupNormSilu计算
-    auto result = l0op::GroupNormSilu(
-        selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps), true, uniqueExecutor.get());
+    auto result = l0op::GroupNormSilu(selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps),
+                                      true, uniqueExecutor.get());
     auto y = std::get<0>(result);
     CHECK_RET(y != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto mean = std::get<1>(result);
@@ -362,12 +353,13 @@ aclnnStatus aclnnGroupNormSilu(void* workspace, uint64_t workspaceSize, aclOpExe
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnGroupNormSiluV2GetWorkspaceSize(
-    const aclTensor* self, const aclTensor* gamma, const aclTensor* beta, int64_t group, double eps, bool activateSilu,
-    aclTensor* out, aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGroupNormSiluV2GetWorkspaceSize(const aclTensor* self, const aclTensor* gamma, const aclTensor* beta,
+                                                 int64_t group, double eps, bool activateSilu, aclTensor* out,
+                                                 aclTensor* meanOut, aclTensor* rstdOut, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnGroupNormSiluV2, DFX_IN(self, gamma, beta, group, eps, activateSilu), DFX_OUT(out, meanOut, rstdOut));
+    L2_DFX_PHASE_1(aclnnGroupNormSiluV2, DFX_IN(self, gamma, beta, group, eps, activateSilu),
+                   DFX_OUT(out, meanOut, rstdOut));
     // 固定写法，创建OpExecutor
     auto uniqueExecutorV2 = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutorV2.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -399,18 +391,17 @@ aclnnStatus aclnnGroupNormSiluV2GetWorkspaceSize(
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutorV2.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gammaContiguous =
-        GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutorV2.get(), SOC_VERSION);
-    auto betaContiguous =
-        GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutorV2.get(), SOC_VERSION);
+    auto gammaContiguous = GetGamma(selfContiguous, gamma, selfContiguous->GetViewShape()[1], uniqueExecutorV2.get(),
+                                    SOC_VERSION);
+    auto betaContiguous = GetBeta(selfContiguous, beta, selfContiguous->GetViewShape()[1], uniqueExecutorV2.get(),
+                                  SOC_VERSION);
     if (!Ops::NN::AclnnUtil::IsRegbase(SOC_VERSION)) {
         CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     // 调用GroupNormSilu计算
-    auto result = l0op::GroupNormSilu(
-        selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps), activateSilu,
-        uniqueExecutorV2.get());
+    auto result = l0op::GroupNormSilu(selfContiguous, gammaContiguous, betaContiguous, group, static_cast<float>(eps),
+                                      activateSilu, uniqueExecutorV2.get());
     auto y = std::get<0>(result);
     CHECK_RET(y != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto mean = std::get<1>(result);

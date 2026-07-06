@@ -27,22 +27,16 @@ using namespace ge;
 
 class MaxPoolGradWithArgmaxV3Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolGradWithArgmaxV3Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolGradWithArgmaxV3Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPoolGradWithArgmaxV3Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPoolGradWithArgmaxV3Tiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
-    ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format,
-    uint64_t except_tilingkey, std::string expect)
+static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape,
+                            gert::StorageShape argmaxShape, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+                            std::vector<int64_t> pads, std::vector<int64_t> dilation, ge::DataType dtype,
+                            int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format,
+                            uint64_t except_tilingkey, std::string expect)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -73,21 +67,21 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -107,14 +101,13 @@ static void ExecuteTestCase(
                       .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, index_dtype_enum, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -155,11 +148,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test1)
     bool ceil_mode = false;
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
-    std::string expect =
-        "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 30720 30720 1 1 1 1 1 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    std::string
+        expect = "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 30720 30720 1 1 1 1 1 1 1 1 1 1 ";
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test2)
@@ -178,11 +170,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test2)
     bool ceil_mode = false;
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
-    std::string expect =
-        "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    std::string
+        expect = "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test3)
@@ -201,11 +192,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test3)
     bool ceil_mode = false;
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
-    std::string expect =
-        "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    std::string
+        expect = "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test4)
@@ -224,11 +214,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test4)
     bool ceil_mode = false;
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
-    std::string expect =
-        "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    std::string
+        expect = "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 20480 40960 1 1 1 1 1 1 1 1 1 1 ";
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test5)
@@ -247,11 +236,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test5)
     bool ceil_mode = false;
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
-    std::string expect =
-        "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 12288 49152 1 1 1 1 1 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    std::string
+        expect = "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 12288 49152 1 1 1 1 1 1 1 1 1 1 ";
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test6)
@@ -270,11 +258,10 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test6)
     bool ceil_mode = false;
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
-    std::string expect =
-        "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 12288 49152 1 1 1 1 1 1 1 1 1 1 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    std::string
+        expect = "1 1 64 64 64 64 64 64 0 0 1 1 1 1 6 64 64 1 64 64 1 1 1 6 61440 12288 49152 1 1 1 1 1 1 1 1 1 1 ";
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test7)
@@ -294,9 +281,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test7)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1152 384 384 1 1 100 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test8)
@@ -316,9 +302,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test8)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 768 1 1 100 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test9)
@@ -338,9 +323,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test9)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 768 1 1 100 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test10)
@@ -360,9 +344,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test10)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1152 384 768 1 1 100 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test11)
@@ -382,9 +365,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test11)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 1536 1 1 100 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test12)
@@ -404,9 +386,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NCHW_Test12)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 900;
     std::string expect = "1 4 2 22 2 6 2 6 0 0 1 1 6 6 66 2 2 1 22 22 1 2 2 33 1536 384 1536 1 1 100 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test1)
@@ -426,9 +407,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test1)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 502;
     std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 4800 1792 1792 1 1 502 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test2)
@@ -448,9 +428,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test2)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 502;
     std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 502 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test3)
@@ -470,9 +449,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test3)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 701;
     std::string expect = "10 16 2 18 30 2 2 2 2 1 1 1 1 1 1 16 5 3 4 30 30 1 2 2 1 1 1 64 9600 1792 3328 1 1 701 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test4)
@@ -492,17 +470,17 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test4)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 800;
     std::string expect = "1 1 3 64 64 64 64 64 64 0 0 1 1 1 1 2 2 2 32 64 64 1 3 3 1 1 1 64 4096 384 384 1 1 800 ";
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
-        ceil_mode, data_format, except_tilingkey, expect);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                    dtype_index, ceil_mode, data_format, except_tilingkey, expect);
 }
 
 // ==================== OP_LOGE_FOR Error Branch UT Cases ====================
 
-static void ExecuteErrorTestCase(
-    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
-    ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format)
+static void ExecuteErrorTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape,
+                                 gert::StorageShape argmaxShape, std::vector<int64_t> ksize,
+                                 std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
+                                 ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode,
+                                 std::string data_format)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -530,21 +508,21 @@ static void ExecuteErrorTestCase(
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -563,14 +541,13 @@ static void ExecuteErrorTestCase(
                       .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, index_dtype_enum, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
-                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -601,8 +578,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_x_shapedim)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: x shapeSize <= 0 (line 116)
@@ -621,8 +598,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_x_shapesize_zero)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_DTYPE: x dtype not float/float16/bf16 (line 126)
@@ -641,8 +618,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_x_dtype)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: grad shapeSize <= 0 (line 136)
@@ -661,8 +638,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_grad_shapesize_zero)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: argmax shapeSize <= 0 (line 146)
@@ -681,8 +658,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_argmax_shapesize_zero)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_DTYPE: argmax dtype not int32/int64 (line 155)
@@ -701,8 +678,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_argmax_dtype)
     ge::DataType dtype_index = ge::DT_FLOAT;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: grad shape != argmax shape (line 161)
@@ -721,8 +698,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_grad_argmax_shape_mismatch)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: y shape != x shape (line 170)
@@ -741,8 +718,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_y_x_shape_mismatch)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_VALUE_WITH_REASON: data_format not NCHW/NHWC (line 201)
@@ -761,8 +738,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_data_format)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCWH";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: kernelSize <= 0 (line 211)
@@ -781,8 +758,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_kernel_size_zero)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: stride <= 0 (line 221)
@@ -801,8 +778,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_stride_zero)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: pad > kernel/2 (line 231)
@@ -821,8 +798,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_pad_exceed_kernel)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: dilation <= 0 (line 242)
@@ -841,8 +818,8 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_dilation_zero)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }
 
 // OP_LOGE_FOR_INVALID_SHAPESIZE: grad shape mismatch with expected (line 85, CheckGradShape)
@@ -861,6 +838,6 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_grad_shape_mismatch_expected)
     ge::DataType dtype_index = ge::DT_INT32;
     bool ceil_mode = false;
     std::string data_format = "NCHW";
-    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
-                         index_dtype, dtype_index, ceil_mode, data_format);
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype,
+                         dtype_index, ceil_mode, data_format);
 }

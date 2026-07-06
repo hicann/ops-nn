@@ -44,7 +44,7 @@ class SoftsignKernel {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline SoftsignKernel() {};
+    __aicore__ inline SoftsignKernel(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SoftsignTilingData* tilingData);
     __aicore__ inline void Process();
@@ -68,8 +68,7 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void SoftsignKernel<T, BUFFER_MODE>::Init(
-    GM_ADDR x, GM_ADDR y, const SoftsignTilingData* tilingData)
+__aicore__ inline void SoftsignKernel<T, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR y, const SoftsignTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -150,7 +149,7 @@ class SoftsignCastKernel {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline SoftsignCastKernel() {};
+    __aicore__ inline SoftsignCastKernel(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SoftsignTilingData* tilingData);
     __aicore__ inline void Process();
@@ -176,8 +175,8 @@ private:
 };
 
 template <typename TIn, int BUFFER_MODE>
-__aicore__ inline void SoftsignCastKernel<TIn, BUFFER_MODE>::Init(
-    GM_ADDR x, GM_ADDR y, const SoftsignTilingData* tilingData)
+__aicore__ inline void SoftsignCastKernel<TIn, BUFFER_MODE>::Init(GM_ADDR x, GM_ADDR y,
+                                                                  const SoftsignTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;

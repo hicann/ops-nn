@@ -20,18 +20,11 @@
 #include "ut_op_common.h"
 #include "../../../op_graph/fake_quant_affine_cachemask_proto.h"
 
-class FakeQuantAffineCachemaskTest : public testing::Test
-{
+class FakeQuantAffineCachemaskTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "fake_quant_affine_cachemask test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "fake_quant_affine_cachemask test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "fake_quant_affine_cachemask test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "fake_quant_affine_cachemask test TearDown" << std::endl; }
 };
 
 TEST_F(FakeQuantAffineCachemaskTest, fake_quant_affine_cachemask_test_infer_shape)

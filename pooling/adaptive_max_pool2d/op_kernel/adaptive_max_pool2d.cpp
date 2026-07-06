@@ -19,14 +19,15 @@
 #include "./arch35/adaptive_max_pool2d_simt.h"
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void adaptive_max_pool2d(
-    GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void adaptive_max_pool2d(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace,
+                                                          GM_ADDR tiling)
 {
     AscendC::TPipe pipeBase;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);
     if (TILING_KEY_IS(0)) {
-        AdaptiveMaxPool2DWithSimt::AdaptiveMaxPool2DSimt<DTYPE_X, DTYPE_INDICES, int32_t, uint32_t> op(&pipeBase, &tilingData);
+        AdaptiveMaxPool2DWithSimt::AdaptiveMaxPool2DSimt<DTYPE_X, DTYPE_INDICES, int32_t, uint32_t> op(&pipeBase,
+                                                                                                       &tilingData);
         op.Init(x, y, indices);
         op.Process();
     }

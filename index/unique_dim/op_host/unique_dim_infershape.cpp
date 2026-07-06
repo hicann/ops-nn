@@ -25,27 +25,27 @@ static constexpr size_t OUT_IDX = 0;
 static constexpr size_t INDICES_IDX = 1;
 static constexpr size_t COUNTS_IDX = 2;
 
-static ge::graphStatus InferShape4UniqueDim(gert::InferShapeContext *context)
+static ge::graphStatus InferShape4UniqueDim(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferShape4UniqueDim begin");
 
     // Validate dim attribute
     auto attrs = context->GetAttrs();
     if (attrs != nullptr && attrs->GetAttrNum() >= 1) {
-        const int64_t *dim = attrs->GetAttrPointer<int64_t>(0);
+        const int64_t* dim = attrs->GetAttrPointer<int64_t>(0);
         if (dim != nullptr && *dim != 0) {
             OP_LOGE(context->GetNodeName(), "UniqueDim only supports dim=0, got dim=%ld", *dim);
             return GRAPH_FAILED;
         }
     }
 
-    const gert::Shape *xShape = context->GetInputShape(0);
+    const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
-    gert::Shape *yShape = context->GetOutputShape(OUT_IDX);
+    gert::Shape* yShape = context->GetOutputShape(OUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
-    gert::Shape *idxShape = context->GetOutputShape(INDICES_IDX);
+    gert::Shape* idxShape = context->GetOutputShape(INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, idxShape);
-    gert::Shape *countShape = context->GetOutputShape(COUNTS_IDX);
+    gert::Shape* countShape = context->GetOutputShape(COUNTS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, countShape);
 
     if (IsUnknownRank(*xShape)) {
@@ -86,7 +86,7 @@ static ge::graphStatus InferShape4UniqueDim(gert::InferShapeContext *context)
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDtype4UniqueDim(gert::InferDataTypeContext *context)
+static ge::graphStatus InferDtype4UniqueDim(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "InferDtype4UniqueDim begin");
     auto inputDtype = context->GetInputDataType(0);
@@ -97,7 +97,7 @@ static ge::graphStatus InferDtype4UniqueDim(gert::InferDataTypeContext *context)
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShapeRange4UniqueDim(gert::InferShapeRangeContext *context)
+static ge::graphStatus InferShapeRange4UniqueDim(gert::InferShapeRangeContext* context)
 {
     auto xRange = context->GetInputShapeRange(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xRange);
@@ -140,9 +140,10 @@ static ge::graphStatus InferShapeRange4UniqueDim(gert::InferShapeRangeContext *c
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(UniqueDim).InferShape(InferShape4UniqueDim)
-                          .InferDataType(InferDtype4UniqueDim)
-                          .InferShapeRange(InferShapeRange4UniqueDim)
-                          .OutputShapeDependOnCompute({OUT_IDX, INDICES_IDX, COUNTS_IDX});
+IMPL_OP_INFERSHAPE(UniqueDim)
+    .InferShape(InferShape4UniqueDim)
+    .InferDataType(InferDtype4UniqueDim)
+    .InferShapeRange(InferShapeRange4UniqueDim)
+    .OutputShapeDependOnCompute({OUT_IDX, INDICES_IDX, COUNTS_IDX});
 
-}  // namespace ops
+} // namespace ops

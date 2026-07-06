@@ -18,23 +18,22 @@
 
 #include "unsorted_segment_base.h"
 
-namespace UnsortedSegmentSum
-{
+namespace UnsortedSegmentSum {
 constexpr int64_t DOUBLE = 2;
 constexpr int64_t MAX_INDEX_NUM = 1024;
 using namespace AscendC;
 
 template <typename TX, typename Index, typename CAST_T, uint32_t castType>
-class KernelUnsortedSegmentSortSimt
-{
+class KernelUnsortedSegmentSortSimt {
 public:
     __aicore__ inline KernelUnsortedSegmentSortSimt(const UnsortedSegmentSumSortSimtTilingData* tiling, TPipe* pipe)
-            : tilingData_(tiling), pipe_(pipe){};
+        : tilingData_(tiling), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output);
     __aicore__ inline void Process();
     __aicore__ inline void CopyInX(int64_t baseCoreOffset, int64_t loopIdx, int64_t stride, int64_t length);
     __aicore__ inline void CopyInIndex(int64_t baseCoreOffset, int64_t loopIdx, int64_t stride, int64_t length);
     __aicore__ inline void ProcessEachLoop(uint32_t maxIndexNum);
+
 private:
     TPipe* pipe_;
     const UnsortedSegmentSumSortSimtTilingData* tilingData_;
@@ -52,7 +51,8 @@ private:
     uint32_t shiftOffset_ = 0;
 };
 template <typename TX, typename Index, typename CAST_T, uint32_t castType>
-__aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+__aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType>::Init(GM_ADDR x, GM_ADDR segmentIds,
+                                                                                        GM_ADDR output)
 {
     InitGm<TX>(output, tilingData_->outputOuterDim * tilingData_->innerDim);
 
@@ -62,13 +62,13 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
     uint32_t ubBlockSize = Ops::Base::GetUbBlockSize();
     shiftOffset_ = ubBlockSize / sizeof(CAST_T);
     uint32_t inputOutputSize = Ops::Base::CeilAlign(
-            static_cast<uint32_t>(tilingData_->innerDim * tilingData_->maxIndexNum * sizeof(TX)), ubBlockSize);
-    uint32_t alignIndexSize =
-            Ops::Base::CeilAlign(static_cast<uint32_t>(tilingData_->maxIndexNum * sizeof(Index)), ubBlockSize);
-    uint32_t alignCastIndexSize =
-            Ops::Base::CeilAlign(static_cast<uint32_t>(tilingData_->maxIndexNum * sizeof(CAST_T)), ubBlockSize);
-    uint32_t sortedIndexSize =
-            Ops::Base::CeilAlign(static_cast<uint32_t>(tilingData_->maxIndexNum * sizeof(uint32_t)), ubBlockSize);
+        static_cast<uint32_t>(tilingData_->innerDim * tilingData_->maxIndexNum * sizeof(TX)), ubBlockSize);
+    uint32_t alignIndexSize = Ops::Base::CeilAlign(static_cast<uint32_t>(tilingData_->maxIndexNum * sizeof(Index)),
+                                                   ubBlockSize);
+    uint32_t alignCastIndexSize = Ops::Base::CeilAlign(static_cast<uint32_t>(tilingData_->maxIndexNum * sizeof(CAST_T)),
+                                                       ubBlockSize);
+    uint32_t sortedIndexSize = Ops::Base::CeilAlign(static_cast<uint32_t>(tilingData_->maxIndexNum * sizeof(uint32_t)),
+                                                    ubBlockSize);
     pipe_->InitBuffer(inQueueX_, DOUBLE, inputOutputSize);
     pipe_->InitBuffer(inQueueIndex_, DOUBLE, alignIndexSize);
     pipe_->InitBuffer(sortedIndexBuf_, sortedIndexSize);
@@ -84,8 +84,10 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
     return;
 }
 template <typename TX, typename Index, typename CAST_T, uint32_t castType>
-__aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType>::CopyInX(
-        int64_t baseCoreOffset, int64_t loopIdx, int64_t stride, int64_t length)
+__aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType>::CopyInX(int64_t baseCoreOffset,
+                                                                                           int64_t loopIdx,
+                                                                                           int64_t stride,
+                                                                                           int64_t length)
 {
     LocalTensor<TX> xLocal = inQueueX_.AllocTensor<TX>();
     int64_t offset = baseCoreOffset + loopIdx * stride;
@@ -101,8 +103,10 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
     return;
 }
 template <typename TX, typename Index, typename CAST_T, uint32_t castType>
-__aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType>::CopyInIndex(
-        int64_t baseCoreOffset, int64_t loopIdx, int64_t stride, int64_t length)
+__aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType>::CopyInIndex(int64_t baseCoreOffset,
+                                                                                               int64_t loopIdx,
+                                                                                               int64_t stride,
+                                                                                               int64_t length)
 {
     LocalTensor<Index> indexLocal = inQueueIndex_.AllocTensor<Index>();
     int64_t offset = baseCoreOffset + loopIdx * stride;
@@ -132,25 +136,25 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
 
     if constexpr (castType == CAST_NO) {
         LocalTensor<uint8_t> shareTmpBufferLocal = sortTmpBuf_.Get<uint8_t>();
-        AscendC::Sort<CAST_T, false, config>(
-            dstSortedResult, sortedIndexLocal, indexLocal, shareTmpBufferLocal, maxIndexNum);
+        AscendC::Sort<CAST_T, false, config>(dstSortedResult, sortedIndexLocal, indexLocal, shareTmpBufferLocal,
+                                             maxIndexNum);
     } else {
         LocalTensor<CAST_T> indicesCastLocal = castKeyIdxBuf_.Get<CAST_T>();
         LocalTensor<int32_t> noDupRes = sortTmpBuf_.Get<int32_t>();
         IndicesSortCast<Index, CAST_T, castType>(indexLocal, indicesCastLocal, noDupRes, maxIndexNum);
         LocalTensor<uint8_t> shareTmpBufferLocal = sortTmpBuf_.Get<uint8_t>();
-        AscendC::Sort<CAST_T, false, config>(
-            dstSortedResult, sortedIndexLocal, indicesCastLocal, shareTmpBufferLocal, maxIndexNum);
+        AscendC::Sort<CAST_T, false, config>(dstSortedResult, sortedIndexLocal, indicesCastLocal, shareTmpBufferLocal,
+                                             maxIndexNum);
     }
 
     LocalTensor<int32_t> cumSumLocal = sortTmpBuf_.Get<int32_t>();
     int32_t uniqueIndexNum = ComputeUniqueIdNum<CAST_T>(sortedSegmentLocal, cumSumLocal, maxIndexNum);
 
-    uint32_t currentMaxThread =
-            (tilingData_->maxThread) >= SORT_THREAD_DIM_LAUNCH_BOUND ? SORT_THREAD_DIM_LAUNCH_BOUND : tilingData_->maxThread;
+    uint32_t currentMaxThread = (tilingData_->maxThread) >= SORT_THREAD_DIM_LAUNCH_BOUND ?
+                                    SORT_THREAD_DIM_LAUNCH_BOUND :
+                                    tilingData_->maxThread;
     int32_t threadBlock = currentMaxThread / tilingData_->innerDim;
-    threadBlock =
-    threadBlock < uniqueIndexNum ? threadBlock : uniqueIndexNum;
+    threadBlock = threadBlock < uniqueIndexNum ? threadBlock : uniqueIndexNum;
     __ubuf__ uint32_t* sortedIndexAddr = (__ubuf__ uint32_t*)sortedIndexLocal.GetPhyAddr();
     __ubuf__ CAST_T* sortedSengmentAddr = (__ubuf__ CAST_T*)dstSortedResult.GetPhyAddr();
     __ubuf__ TX* inputAddr = (__ubuf__ TX*)xLocal.GetPhyAddr();
@@ -174,14 +178,14 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
         return;
     }
 
-    int64_t currLoopTimes =
-         (blockIdx == tilingData_->usedCoreNum - 1) ? tilingData_->tailCoreUbLoopTimes : tilingData_->oneCoreUbLoopTimes;
-    int64_t baseCoreOffset =
-        blockIdx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum * tilingData_->innerDim;
+    int64_t currLoopTimes = (blockIdx == tilingData_->usedCoreNum - 1) ? tilingData_->tailCoreUbLoopTimes :
+                                                                         tilingData_->oneCoreUbLoopTimes;
+    int64_t baseCoreOffset = blockIdx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum *
+                             tilingData_->innerDim;
     int64_t baseCoreOffsetIndex = blockIdx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum;
     int64_t length = tilingData_->maxIndexNum * tilingData_->innerDim;
-    uint32_t tailSize =
-        (blockIdx == tilingData_->usedCoreNum - 1) ? tilingData_->tailIndexNum : tilingData_->maxIndexNum;
+    uint32_t tailSize = (blockIdx == tilingData_->usedCoreNum - 1) ? tilingData_->tailIndexNum :
+                                                                     tilingData_->maxIndexNum;
     for (int64_t i = 0; i < currLoopTimes - 1; i++) {
         CopyInX(baseCoreOffset, i, length, length);
         CopyInIndex(baseCoreOffsetIndex, i, tilingData_->maxIndexNum, tilingData_->maxIndexNum);
@@ -192,5 +196,5 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
     ProcessEachLoop(tailSize);
     return;
 }
-}
+} // namespace UnsortedSegmentSum
 #endif

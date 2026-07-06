@@ -28,8 +28,8 @@ template <typename T, typename IndicesT = int, bool isViewStride0 = false>
 class ScatterNdUpdateHpKernel {
 public:
     __aicore__ inline ScatterNdUpdateHpKernel() = delete;
-    __aicore__ inline ScatterNdUpdateHpKernel(
-        GM_ADDR indices, GM_ADDR updates, GM_ADDR output, const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+    __aicore__ inline ScatterNdUpdateHpKernel(GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
+                                              const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -82,7 +82,8 @@ public:
 
     __aicore__ inline void InitBuffers(TPipe& pipe)
     {
-        uint64_t coeff = std::is_same_v<IndicesT, int64_t> ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) : (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
+        uint64_t coeff = std::is_same_v<IndicesT, int64_t> ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) :
+                                                             (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
         uint64_t slotBytes = rowsPerBatch_ * rowBytesAligned_;
         pipe.InitBuffer(allUbBuf_, coeff * indexTileLength_ * sizeof(int));
         pipe.InitBuffer(slotBufA_, slotBytes);
@@ -129,8 +130,8 @@ public:
             if constexpr (std::is_same_v<IndicesT, int64_t>) {
                 CastToInt32(rows);
             }
-            ComputeLinearIndexFromIndices(
-                indicesLocal_, indicesOriginLocal_, addTmpLocal_, rangeLocal_, indicesMask_, indexDim_, rows);
+            ComputeLinearIndexFromIndices(indicesLocal_, indicesOriginLocal_, addTmpLocal_, rangeLocal_, indicesMask_,
+                                          indexDim_, rows);
             PipeVToS();
             ScatterTile(t, rows);
         }
@@ -194,9 +195,8 @@ public:
     }
 
     template <bool IsAligned>
-    __aicore__ inline void DoBatch(
-        uint64_t batchBegin, uint64_t batchRows, uint64_t gmIn, const DataCopyPadExtParams<T>& pad,
-        const DataCopyExtParams& pout)
+    __aicore__ inline void DoBatch(uint64_t batchBegin, uint64_t batchRows, uint64_t gmIn,
+                                   const DataCopyPadExtParams<T>& pad, const DataCopyExtParams& pout)
     {
         event_t evt = pingPongFlag_ ? EVENT_ID1 : EVENT_ID0;
         LocalTensor<T> buf = pingPongFlag_ ? slotBufB_.template Get<T>() : slotBufA_.template Get<T>();
@@ -220,8 +220,8 @@ public:
         uint64_t idx = batchBegin;
         for (uint64_t k = 0; k < batchRows; ++k) {
             uint64_t linearIndex = static_cast<uint64_t>(indicesLocal_.GetValue(idx));
-            uint64_t gmOut = ResolveOutOffset<isViewStride0>(
-                linearIndex, scatterLength_, firstDimStrideRows_, varStride0Elements_, 0);
+            uint64_t gmOut = ResolveOutOffset<isViewStride0>(linearIndex, scatterLength_, firstDimStrideRows_,
+                                                             varStride0Elements_, 0);
             DataCopyPad(outputGm_[gmOut], buf[ubOffset], pout);
             ubOffset += slotElements_;
             ++idx;
@@ -239,9 +239,9 @@ public:
             for (uint64_t s = 0; s < scatterTileNum_; ++s) {
                 uint64_t len = (s == scatterTileNum_ - 1) ? scatterTileTail_ : scatterTileLength_;
                 uint64_t gmIn = srcRow * scatterLength_ + s * scatterTileLength_;
-                uint64_t gmOut = ResolveOutOffset<isViewStride0>(
-                    static_cast<uint64_t>(linearIndex), scatterLength_, firstDimStrideRows_, varStride0Elements_,
-                    s * scatterTileLength_);
+                uint64_t gmOut = ResolveOutOffset<isViewStride0>(static_cast<uint64_t>(linearIndex), scatterLength_,
+                                                                 firstDimStrideRows_, varStride0Elements_,
+                                                                 s * scatterTileLength_);
                 event_t evt = pingPongFlag_ ? EVENT_ID1 : EVENT_ID0;
                 LocalTensor<T> buf = pingPongFlag_ ? slotBufB_.template Get<T>() : slotBufA_.template Get<T>();
                 pingPongFlag_ = 1 - pingPongFlag_;

@@ -19,8 +19,7 @@
 namespace optiling {
 class GroupNormGradEmptyTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit GroupNormGradEmptyTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit GroupNormGradEmptyTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     // 1、获取INPUT/OUTPUT/ATTR信息
@@ -57,8 +56,8 @@ private:
     const char* opName = "GroupNormGrad";
     GroupNormGradEmptyTilingData tilingData;
     uint32_t aivCoreNum_;
-    uint64_t rows_; 
-    uint64_t cols_; 
+    uint64_t rows_;
+    uint64_t cols_;
     uint64_t usedCoreNumDG_;
     uint64_t colsPerCoreDG_;
     uint64_t colsPerUBDG_;
@@ -68,7 +67,7 @@ private:
     uint64_t coreUbBlockCount_;
     uint64_t colsLastCoreDG_;
     uint64_t ubSize_;
-    
+
     uint32_t isMultiColset_;
     uint32_t sysWorkspaceSize_ = 0;
     int64_t workSpaceSize_ = 0;

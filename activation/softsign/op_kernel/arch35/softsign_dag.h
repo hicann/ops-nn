@@ -49,19 +49,19 @@ template <typename U, typename T = float>
 struct GraphSoftsign {
     using ConstOne = MAKE_CONST(float, 1);
 
-    using OpCopyIn  = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
-    using OpCastIn  = Bind<Vec::Cast<T, U, 0>, OpCopyIn>;
-    using OpSaveX   = Bind<Vec::Copy<T>, OpCastIn>;
-    using OpAbs     = Bind<Vec::Abs<T>, OpCastIn>;
-    using OpAdds    = Bind<Vec::Adds<T>, OpAbs, ConstOne>;
-    using OpDiv     = Bind<Vec::Div<T>, OpSaveX, OpAdds>;
+    using OpCopyIn = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
+    using OpCastIn = Bind<Vec::Cast<T, U, 0>, OpCopyIn>;
+    using OpSaveX = Bind<Vec::Copy<T>, OpCastIn>;
+    using OpAbs = Bind<Vec::Abs<T>, OpCastIn>;
+    using OpAdds = Bind<Vec::Adds<T>, OpAbs, ConstOne>;
+    using OpDiv = Bind<Vec::Div<T>, OpSaveX, OpAdds>;
     using OpCastOut = Bind<Vec::Cast<U, T, 1>, OpDiv>;
     using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpCastOut>;
 
     using Outputs = Elems<OpCopyOut>;
-    using OpDag   = DAGSch<Outputs>;
+    using OpDag = DAGSch<Outputs>;
 };
 
 } // namespace SoftsignOp
 
-#endif  // SOFTSIGN_DAG_H
+#endif // SOFTSIGN_DAG_H

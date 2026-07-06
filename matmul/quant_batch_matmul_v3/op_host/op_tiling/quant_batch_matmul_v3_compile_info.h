@@ -37,5 +37,5 @@ struct QuantBatchMatmulV3CompileInfo {
     std::string socVersionStr = "";
 };
 
-}
+} // namespace optiling
 #endif // __OP_HOST_QUANT_BATCH_MATMUL_V3_COMPILE_INFO_H__

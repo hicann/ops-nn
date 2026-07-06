@@ -64,13 +64,12 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum, uint64_t& typeLength, uint64_t& tileBlockNum,
-    uint64_t& tileDataNum, uint64_t& inputLengthAlign32)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize, uint64_t& inputNum,
+                                         uint64_t& typeLength, uint64_t& tileBlockNum, uint64_t& tileDataNum,
+                                         uint64_t& inputLengthAlign32)
 {
-    OP_CHECK_IF(
-        context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr || context->GetInputShape(0) == nullptr, OP_LOGE(context, "context is nullptr"),
+                return ge::GRAPH_FAILED);
     inputNum = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
     uint32_t dtypeLen = 0;
     ge::TypeUtils::GetDataTypeLength(context->GetInputDesc(0)->GetDataType(), dtypeLen);
@@ -84,8 +83,8 @@ static ge::graphStatus GetShapeAttrsInfo(
         OP_LOGE(context, "typeLength is 0");
         return ge::GRAPH_FAILED;
     }
-    uint64_t ubDataNumber =
-        (context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT) ? UB_DATA_NUM_FLOAT : UB_DATA_NUM_OTHER;
+    uint64_t ubDataNumber = (context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT) ? UB_DATA_NUM_FLOAT :
+                                                                                        UB_DATA_NUM_OTHER;
     tileBlockNum = (ubSize / BLOCK_SIZE) / ubDataNumber;
     tileBlockNum = tileBlockNum <= BLOCK_ALIGN_NUM ? tileBlockNum : tileBlockNum / BLOCK_ALIGN_NUM * BLOCK_ALIGN_NUM;
     tileDataNum = (tileBlockNum * BLOCK_SIZE) / typeLength;
@@ -93,11 +92,12 @@ static ge::graphStatus GetShapeAttrsInfo(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CalculateCoreBlockNums(
-    gert::TilingContext* context, uint64_t inputLengthAlign32, int64_t coreNum, uint64_t tileBlockNum,
-    uint64_t typeLength, uint64_t tileDataNum, uint64_t& smallCoreDataNum, uint64_t& bigCoreDataNum,
-    uint64_t& smallTailDataNum, uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum, uint64_t& finalBigTileNum,
-    uint64_t& tailBlockNum)
+static ge::graphStatus CalculateCoreBlockNums(gert::TilingContext* context, uint64_t inputLengthAlign32,
+                                              int64_t coreNum, uint64_t tileBlockNum, uint64_t typeLength,
+                                              uint64_t tileDataNum, uint64_t& smallCoreDataNum,
+                                              uint64_t& bigCoreDataNum, uint64_t& smallTailDataNum,
+                                              uint64_t& bigTailDataNum, uint64_t& finalSmallTileNum,
+                                              uint64_t& finalBigTileNum, uint64_t& tailBlockNum)
 {
     if (0 == BLOCK_SIZE || 0 == coreNum || 0 == tileBlockNum || 0 == typeLength) {
         OP_LOGE(context, "BLOCK_SIZE is 0 or coreNum is 0 or tileBlockNum is 0 or typeLength is 0");
@@ -125,9 +125,8 @@ static ge::graphStatus GeluTilingFunc(gert::TilingContext* context)
 {
     GeluTilingData* tiling = context->GetTilingData<GeluTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(GeluTilingData), 0, sizeof(GeluTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(GeluTilingData), 0, sizeof(GeluTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     int64_t coreNum;
@@ -152,9 +151,9 @@ static ge::graphStatus GeluTilingFunc(gert::TilingContext* context)
 
     uint64_t smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum;
     uint64_t finalSmallTileNum, finalBigTileNum, tailBlockNum;
-    ret = CalculateCoreBlockNums(
-        context, inputLengthAlign32, usedcoreNum, tileBlockNum, typeLength, tileDataNum, smallCoreDataNum,
-        bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum, finalBigTileNum, tailBlockNum);
+    ret = CalculateCoreBlockNums(context, inputLengthAlign32, usedcoreNum, tileBlockNum, typeLength, tileDataNum,
+                                 smallCoreDataNum, bigCoreDataNum, smallTailDataNum, bigTailDataNum, finalSmallTileNum,
+                                 finalBigTileNum, tailBlockNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "CalculateCoreBlockNums error"), return ge::GRAPH_FAILED);
 
     tiling->smallCoreDataNum = static_cast<uint64_t>(smallCoreDataNum);
@@ -166,9 +165,8 @@ static ge::graphStatus GeluTilingFunc(gert::TilingContext* context)
     tiling->finalBigTileNum = static_cast<uint64_t>(finalBigTileNum);
     tiling->tailBlockNum = static_cast<uint64_t>(tailBlockNum);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     uint64_t tilingKey = 0;
     tilingKey = GET_TPL_TILING_KEY(0);

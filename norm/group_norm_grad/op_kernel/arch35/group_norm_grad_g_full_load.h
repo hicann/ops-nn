@@ -26,38 +26,38 @@ class GroupNormGradGFullLoad : public GroupNormGradBase<T, U> {
 public:
     __aicore__ inline GroupNormGradGFullLoad() : GroupNormGradBase<T, U>(){};
     __aicore__ inline ~GroupNormGradGFullLoad(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-        GM_ADDR workspace, const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx,
+                                GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR workspace,
+                                const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void InitBuffer(const GroupNormGradRegBaseTilingData* tilingData);
-    __aicore__ inline void Compute(
-        int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
-        const float mean, const float rstd);
-    __aicore__ inline void VFMode0DbetaDsOneHw(
-        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-        const LocalTensor<float>& dgamma);
-    __aicore__ inline void VFMode0DbetaDs(
-        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-        const LocalTensor<float>& dgamma);
-    __aicore__ inline void ComputeMode0Dx(
-        int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
-        LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor, const float mean, const float rstd);
-    __aicore__ inline void VFComputeMode0DxOneHw(
-        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const float rstd);
-    __aicore__ inline void VFComputeMode0Dx(
-        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const float rstd);
+    __aicore__ inline void Compute(int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
+                                   const LocalTensor<T>& dxTensor, const float mean, const float rstd);
+    __aicore__ inline void VFMode0DbetaDsOneHw(const LocalTensor<T>& x, const LocalTensor<T>& dy,
+                                               const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma);
+    __aicore__ inline void VFMode0DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
+                                          const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma);
+    __aicore__ inline void ComputeMode0Dx(int32_t taskIdx, const LocalTensor<T>& xTensor,
+                                          const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
+                                          LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor,
+                                          const float mean, const float rstd);
+    __aicore__ inline void VFComputeMode0DxOneHw(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
+                                                 const LocalTensor<T>& dyTensor, const LocalTensor<float>& gammaTensor,
+                                                 const float C2, const float C3, const float rstd);
+    __aicore__ inline void VFComputeMode0Dx(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
+                                            const LocalTensor<T>& dyTensor, const LocalTensor<float>& gammaTensor,
+                                            const float C2, const float C3, const float rstd);
     __aicore__ inline void Stage1Process();
 };
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::Init(
-    GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
-    GM_ADDR workspace, const GroupNormGradRegBaseTilingData* __restrict tilingData, TPipe* pipeIn)
+__aicore__ inline void GroupNormGradGFullLoad<T, U>::Init(GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
+                                                          GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta,
+                                                          GM_ADDR workspace,
+                                                          const GroupNormGradRegBaseTilingData* __restrict tilingData,
+                                                          TPipe* pipeIn)
 {
     this->pipe = pipeIn;
     this->InitCommon(dy, mean, rstd, x, gamma, dx, dgamma, dbeta, workspace, tilingData);
@@ -133,17 +133,15 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::InitBuffer(const GroupNormG
     // for cast mean, rstd, for store sum1, sum2
     this->pipe->InitBuffer(this->tempMeanBuf_, CeilAlign(this->mode0UbCapGNum_, this->elemUPerBlock_) * sizeof(U));
     this->pipe->InitBuffer(this->tempRstdBuf_, CeilAlign(this->mode0UbCapGNum_, this->elemUPerBlock_) * sizeof(U));
-    uint32_t gElemAllocSpace =
-        CeilAlign(static_cast<uint32_t>(this->eleNumPerG_ * this->mode0UbCapGNum_), this->elemTPerBlock_) *
-        sizeof(T);
+    uint32_t gElemAllocSpace = CeilAlign(static_cast<uint32_t>(this->eleNumPerG_ * this->mode0UbCapGNum_),
+                                         this->elemTPerBlock_) *
+                               sizeof(T);
     uint32_t cGAllocSpace = CeilAlign(this->C_G_, this->elemUPerBlock_) * sizeof(float);
     // VEC_IN
     this->pipe->InitBuffer(this->inQueDy_, DOUBLE_BUFFER, gElemAllocSpace);
     this->pipe->InitBuffer(this->inQueX_, DOUBLE_BUFFER, gElemAllocSpace);
-    this->pipe->InitBuffer(
-        this->inQueMean_, 1, CeilAlign(this->mode0UbCapGNum_, this->PF32_PER_BLOCK) * sizeof(float));
-    this->pipe->InitBuffer(
-        this->inQueRstd_, 1, CeilAlign(this->mode0UbCapGNum_, this->PF32_PER_BLOCK) * sizeof(float));
+    this->pipe->InitBuffer(this->inQueMean_, 1, CeilAlign(this->mode0UbCapGNum_, this->PF32_PER_BLOCK) * sizeof(float));
+    this->pipe->InitBuffer(this->inQueRstd_, 1, CeilAlign(this->mode0UbCapGNum_, this->PF32_PER_BLOCK) * sizeof(float));
     this->pipe->InitBuffer(this->inQueGamma_, 1, cGAllocSpace);
     // VEC_OUT
     this->pipe->InitBuffer(this->outQueDx_, DOUBLE_BUFFER, gElemAllocSpace);
@@ -158,9 +156,10 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::InitBuffer(const GroupNormG
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::Compute(
-    int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
-    const float mean, const float rstd)
+__aicore__ inline void GroupNormGradGFullLoad<T, U>::Compute(int32_t taskIdx, const LocalTensor<T>& xTensor,
+                                                             const LocalTensor<T>& dyTensor,
+                                                             const LocalTensor<T>& dxTensor, const float mean,
+                                                             const float rstd)
 {
     LocalTensor<float> dbetaTensor = this->outQueDbeta_.template AllocTensor<float>();
     LocalTensor<float> dsTensor = this->outQueDs_.template AllocTensor<float>();
@@ -189,9 +188,10 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::Compute(
   dgamma = reducesum(x * dy)
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDsOneHw(
-    const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-    const LocalTensor<float>& dgamma)
+__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDsOneHw(const LocalTensor<T>& x,
+                                                                         const LocalTensor<T>& dy,
+                                                                         const LocalTensor<float>& dbeta,
+                                                                         const LocalTensor<float>& dgamma)
 {
     __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
     __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
@@ -242,9 +242,9 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDsOneHw(
   dgamma = reducesum(x * dy)
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDs(
-    const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-    const LocalTensor<float>& dgamma)
+__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
+                                                                    const LocalTensor<float>& dbeta,
+                                                                    const LocalTensor<float>& dgamma)
 {
     __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
     __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
@@ -388,9 +388,11 @@ dyTensor = dyTensor * rstd * gamma
 dyTensor = dyTensor - xTensor
 */
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(
-    const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-    const LocalTensor<float>& gammaTensor, const float C2, const float C3, float rstdScalar)
+__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(const LocalTensor<T>& dstTensor,
+                                                                      const LocalTensor<T>& xTensor,
+                                                                      const LocalTensor<T>& dyTensor,
+                                                                      const LocalTensor<float>& gammaTensor,
+                                                                      const float C2, const float C3, float rstdScalar)
 
 {
     __ubuf__ T* ubX = (__ubuf__ T*)xTensor.GetPhyAddr();
@@ -413,7 +415,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(
         RegTensor<float> vregX;
         RegTensor<float> vregDy;
         RegTensor<float> vregGamma;
- 	    MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
+        MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
         for (uint16_t cgIdx = 0; cgIdx < static_cast<uint16_t>(this->C_G_); cgIdx++) {
             MaskReg preg;
             uint32_t ubOffSet = cgIdx * eleNumPerC;

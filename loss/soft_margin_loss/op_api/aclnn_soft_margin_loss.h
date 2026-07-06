@@ -56,4 +56,4 @@ ACLNN_API aclnnStatus aclnnSoftMarginLoss(void* workspace, uint64_t workspaceSiz
 }
 #endif
 
-#endif  // OP_API_INC_SOFT_MARGIN_LOSS_H_
+#endif // OP_API_INC_SOFT_MARGIN_LOSS_H_

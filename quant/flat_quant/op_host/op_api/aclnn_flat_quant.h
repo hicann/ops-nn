@@ -63,4 +63,4 @@ ACLNN_API aclnnStatus aclnnFlatQuant(void* workspace, uint64_t workspaceSize, ac
 }
 #endif
 
-#endif  // OP_API_INC_FLAT_QUANT_H_
+#endif // OP_API_INC_FLAT_QUANT_H_

@@ -22,31 +22,30 @@
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct CrossEntropyLossGradTilingData {
-  uint64_t reduction = 1;
-  uint64_t ignoreIndex = -100;
-  float labelSmoothing = 0.0;
-  uint64_t rowVal = 1;
-  uint64_t colVal = 1;
-  uint64_t frontCoreNum = 0;
-  uint64_t tailCoreNum = 0;
-  uint64_t usedCoreNum = 0;
-  uint64_t frontRowNum = 0;
-  uint64_t tailRowNum = 0;
-  uint64_t alignColLoopNum = 0;
-  uint64_t colLoop = 0;
-  uint64_t colLoopNumTail = 0;
-  uint64_t targetSize = 0;
-  uint64_t targetCastSize = 0;
-  uint64_t gradLossSize = 0;
-  uint64_t gradLossFp32Size = 0;
-  uint64_t ignoreSize = 0;
-  uint64_t maskSize = 0;
-  uint64_t targetWeightSize = 0;
-  uint64_t tBuf1Size = 0;
-  uint64_t tBuf2Size = 0;
-  uint64_t tBuf3Size = 0;
+    uint64_t reduction = 1;
+    uint64_t ignoreIndex = -100;
+    float labelSmoothing = 0.0;
+    uint64_t rowVal = 1;
+    uint64_t colVal = 1;
+    uint64_t frontCoreNum = 0;
+    uint64_t tailCoreNum = 0;
+    uint64_t usedCoreNum = 0;
+    uint64_t frontRowNum = 0;
+    uint64_t tailRowNum = 0;
+    uint64_t alignColLoopNum = 0;
+    uint64_t colLoop = 0;
+    uint64_t colLoopNumTail = 0;
+    uint64_t targetSize = 0;
+    uint64_t targetCastSize = 0;
+    uint64_t gradLossSize = 0;
+    uint64_t gradLossFp32Size = 0;
+    uint64_t ignoreSize = 0;
+    uint64_t maskSize = 0;
+    uint64_t targetWeightSize = 0;
+    uint64_t tBuf1Size = 0;
+    uint64_t tBuf2Size = 0;
+    uint64_t tBuf3Size = 0;
 };
 
 inline void InitCrossEntropyLossGradTilingData(uint8_t* tiling, CrossEntropyLossGradTilingData* const_data)
@@ -54,7 +53,7 @@ inline void InitCrossEntropyLossGradTilingData(uint8_t* tiling, CrossEntropyLoss
     memcpy(const_data, tiling, sizeof(CrossEntropyLossGradTilingData));
 }
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  CrossEntropyLossGradTilingData tilingData;                           \
-  InitCrossEntropyLossGradTilingData(tilingPointer, &tilingData)
+#define GET_TILING_DATA(tilingData, tilingPointer) \
+    CrossEntropyLossGradTilingData tilingData;     \
+    InitCrossEntropyLossGradTilingData(tilingPointer, &tilingData)
 #endif

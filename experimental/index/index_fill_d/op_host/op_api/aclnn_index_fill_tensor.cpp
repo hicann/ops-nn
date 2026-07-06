@@ -40,8 +40,8 @@ constexpr size_t MAX_DIM = 8;
 
 // 列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
-    op::DataType::DT_BOOL,    op::DataType::DT_BF16};
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BOOL,
+    op::DataType::DT_BF16};
 
 static bool CheckNotNull(const aclTensor* self, const aclIntArray* index, const aclScalar* value, const aclTensor* out)
 {
@@ -65,15 +65,14 @@ static bool CheckShape(const aclTensor* self, const aclIntArray* index, int64_t 
     auto selfShape = self->GetViewShape();
     auto selfDim = static_cast<int64_t>(selfShape.GetDimNum());
     if ((dim < 0 && (dim * (-1)) > selfDim && selfDim > 0) || (dim < 0 && (dim * (-1)) > 1 && selfDim == 0)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dim value error, abs(input dim[%ld]) is greater than self dim[%ld].", dim,
-            selfDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value error, abs(input dim[%ld]) is greater than self dim[%ld].", dim,
+                selfDim);
         return false;
     }
 
     if ((dim != 0 && dim >= selfDim) || (dim == 0 && dim > selfDim)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dim value error, input dim[%ld] is greater than self dim[%ld].", dim, selfDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value error, input dim[%ld] is greater than self dim[%ld].", dim,
+                selfDim);
         return false;
     }
 
@@ -81,9 +80,8 @@ static bool CheckShape(const aclTensor* self, const aclIntArray* index, int64_t 
     for (int64_t i = 0; i < static_cast<int64_t>(index->Size()); i++) {
         auto dimSize = selfDim == 0 ? 1 : static_cast<int64_t>(selfShape.GetDim(transferDim));
         if ((*index)[i] >= dimSize || (*index)[i] < (-dimSize)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Index value[%ld] is out of range, it should be smaller than [%ld].",
-                (*index)[i], dimSize);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Index value[%ld] is out of range, it should be smaller than [%ld].",
+                    (*index)[i], dimSize);
             return false;
         }
     }
@@ -110,8 +108,8 @@ static bool CheckPromoteType(const aclScalar* value)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, int64_t dim, const aclIntArray* index, const aclScalar* value, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclIntArray* index, const aclScalar* value,
+                               const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, index, value, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -145,9 +143,8 @@ static const aclTensor* ReshapeTensor(const aclTensor* self, const aclIntArray* 
     return reshapedTensor;
 }
 
-static const aclTensor* GenerateAssistMatrix(
-    const aclTensor* self, const aclIntArray* index, int64_t dim, bool flag, float value, op::DataType type,
-    aclOpExecutor* executor)
+static const aclTensor* GenerateAssistMatrix(const aclTensor* self, const aclIntArray* index, int64_t dim, bool flag,
+                                             float value, op::DataType type, aclOpExecutor* executor)
 {
     int64_t blocksize = 0;
     int64_t blocknum = 1;
@@ -208,9 +205,9 @@ static void CheckFormat(const aclTensor* self)
     }
 }
 
-aclnnStatus IndexFillAiCore(
-    const aclTensor* self, int64_t dim, const aclIntArray* index, const aclScalar* value, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor, UniqueExecutor& uniqueExecutor)
+aclnnStatus IndexFillAiCore(const aclTensor* self, int64_t dim, const aclIntArray* index, const aclScalar* value,
+                            aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor,
+                            UniqueExecutor& uniqueExecutor)
 {
     //  固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
@@ -237,9 +234,9 @@ aclnnStatus IndexFillAiCore(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclIntArray* index, const aclScalar* value, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclIntArray* index,
+                                                 const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -285,11 +282,11 @@ aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(
 
     index = uniqueExecutor.get()->AllocIntArray(appendIndex, indexNum);
 
-    const aclTensor* assist1 =
-        GenerateAssistMatrix(self, index, dim, true, 0, self->GetDataType(), uniqueExecutor.get());
+    const aclTensor* assist1 = GenerateAssistMatrix(self, index, dim, true, 0, self->GetDataType(),
+                                                    uniqueExecutor.get());
     CHECK_RET(assist1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    const aclTensor* assist2 =
-        GenerateAssistMatrix(self, index, dim, false, fillVal, self->GetDataType(), uniqueExecutor.get());
+    const aclTensor* assist2 = GenerateAssistMatrix(self, index, dim, false, fillVal, self->GetDataType(),
+                                                    uniqueExecutor.get());
     CHECK_RET(assist2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
@@ -317,15 +314,15 @@ aclnnStatus aclnnIndexFillTensor(void* workspace, uint64_t workspaceSize, aclOpE
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceIndexFillTensorGetWorkspaceSize(
-    aclTensor* selfRef, int64_t dim, const aclIntArray* index, const aclScalar* value, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnInplaceIndexFillTensorGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclIntArray* index,
+                                                        const aclScalar* value, uint64_t* workspaceSize,
+                                                        aclOpExecutor** executor)
 {
     return aclnnIndexFillTensorGetWorkspaceSize(selfRef, dim, index, value, selfRef, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceIndexFillTensor(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnInplaceIndexFillTensor(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceIndexFillTensor);
     // 固定写法，调用框架能力，完成计算

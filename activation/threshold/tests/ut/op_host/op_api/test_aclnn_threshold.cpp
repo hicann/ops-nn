@@ -15,15 +15,9 @@
 
 class l2_threshold_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_threshold_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_threshold_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_threshold_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_threshold_test TearDown" << std::endl; }
 };
 
 // self为空指针

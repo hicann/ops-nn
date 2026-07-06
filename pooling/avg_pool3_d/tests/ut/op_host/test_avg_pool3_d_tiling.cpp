@@ -47,34 +47,32 @@ struct AvgPool3DTilingRuntime2TestParam {
 };
 
 class AvgPool3DTilingTest : public testing::TestWithParam<AvgPool3DTilingRuntime2TestParam> {
-  protected:
-      static void SetUpTestCase() {
-          std::cout << "AvgPool3DTilingTest SetUp" << std::endl;
-      }
+protected:
+    static void SetUpTestCase() { std::cout << "AvgPool3DTilingTest SetUp" << std::endl; }
 
-      static void TearDownTestCase() {
-          std::cout << "AvgPool3DTilingTest TearDown" << std::endl;
-      }
+    static void TearDownTestCase() { std::cout << "AvgPool3DTilingTest TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tiling_data) {
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
     auto data = tiling_data->GetData();
     string result;
     for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int32_t)) {
-        result += std::to_string((reinterpret_cast<const int32_t *>(tiling_data->GetData())[i / sizeof(int32_t)]));
+        result += std::to_string((reinterpret_cast<const int32_t*>(tiling_data->GetData())[i / sizeof(int32_t)]));
         result += " ";
     }
 
     return result;
 }
 
-TEST_P(AvgPool3DTilingTest, general_cases) {
+TEST_P(AvgPool3DTilingTest, general_cases)
+{
     AvgPool3DTilingRuntime2TestParam param = GetParam();
     std::cout << "run case " << param.case_name << std::endl;
 
     gert::StorageShape x_shape = {param.x_shape, param.x_shape};
     std::vector<gert::StorageShape> output_shapes(1, {param.y_shape, param.y_shape});
-    std::vector<void *> output_shapes_ref(1);
+    std::vector<void*> output_shapes_ref(1);
 
     for (size_t i = 0; i < output_shapes.size(); ++i) {
         output_shapes_ref[i] = &output_shapes[i];
@@ -83,10 +81,11 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
     fe::PlatFormInfos platform_info;
     optiling::avgPool3DTilingCompileInfo::AvgPool3DCubeCompileInfo compile_info;
     auto kernel_holder = gert::KernelRunContextFaker()
-                      .KernelIONum(2, 1)
-                      .Inputs({const_cast<char *>(param.compile_info.c_str()), reinterpret_cast<void *>(&platform_info)})
-                      .Outputs({&compile_info})
-                      .Build();
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(param.compile_info.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     std::string op_type("AvgPool3D");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -109,7 +108,7 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
                       .NodeInputTd(0, ge::DT_FLOAT16, param.x_format, param.x_format)
                       .NodeOutputTd(0, ge::DT_FLOAT16, param.y_format, param.y_format)
                       .CompileInfo(&compile_info)
-                      .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .TilingData(tiling_data.get())
                       .Build();
 
@@ -118,7 +117,7 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
         ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     } else {
         ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-      return;
+        return;
     }
     auto tiling_key = tiling_context->GetTilingKey();
     auto block_dim = tiling_context->GetBlockDim();
@@ -129,20 +128,26 @@ TEST_P(AvgPool3DTilingTest, general_cases) {
 }
 
 static AvgPool3DTilingRuntime2TestParam general_cases_params[] = {
-    {"avg_pool3d_tiling_dynamic_batch_invalid_dim", R"({"_pattern": "conv3d", "push_status": 0, "fmap_c1": 233, "tiling_type": "dynamic_tiling", "repo_seeds": {"10000": 32}, "tiling_range": {"10000": [1, 35]}, "block_dim": {"10000": 32}, "_vars": {"10000": ["batch_n"]}})",
-      {32, 16, 1, 56, 56}, {32, 15, 1, 56, 56, 16},
-      ge::FORMAT_NDHWC, ge::FORMAT_NDC1HWC0,
-      true, false, 32, 10000, "56 56 "
-    },
+    {"avg_pool3d_tiling_dynamic_batch_invalid_dim",
+     R"({"_pattern": "conv3d", "push_status": 0, "fmap_c1": 233, "tiling_type": "dynamic_tiling", "repo_seeds": {"10000": 32}, "tiling_range": {"10000": [1, 35]}, "block_dim": {"10000": 32}, "_vars": {"10000": ["batch_n"]}})",
+     {32, 16, 1, 56, 56},
+     {32, 15, 1, 56, 56, 16},
+     ge::FORMAT_NDHWC,
+     ge::FORMAT_NDC1HWC0,
+     true,
+     false,
+     32,
+     10000,
+     "56 56 "},
 };
 
 INSTANTIATE_TEST_CASE_P(AvgPool3D, AvgPool3DTilingTest, testing::ValuesIn(general_cases_params));
 
-static void Execute310PTestCase(gert::StorageShape xShape,
-                            gert::StorageShape yShape, std::vector<int64_t> ksize,
-                            std::vector<int64_t> strides, std::vector<int64_t> pads, bool ceil_mode, bool count_include_pad, 
-                            int64_t divisor_override, std::string data_format, ge::DataType dtype,
-                            uint64_t except_tilingkey, std::string expect) {
+static void Execute310PTestCase(gert::StorageShape xShape, gert::StorageShape yShape, std::vector<int64_t> ksize,
+                                std::vector<int64_t> strides, std::vector<int64_t> pads, bool ceil_mode,
+                                bool count_include_pad, int64_t divisor_override, std::string data_format,
+                                ge::DataType dtype, uint64_t except_tilingkey, std::string expect)
+{
     dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
@@ -169,12 +174,11 @@ static void Execute310PTestCase(gert::StorageShape xShape,
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>("{}"), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>("{}"), reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -192,26 +196,25 @@ static void Execute310PTestCase(gert::StorageShape xShape,
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
-                        .SetOpType(op_type)
-                        .NodeIoNum(1, 1)
-                        .IrInstanceNum({1})
-                        .InputShapes({&xShape})
-                        .OutputShapes({&yShape})
-                        .CompileInfo(&compile_info)
-                        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                        .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                        .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                                    {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                                    {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
-                                    {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
-                                    {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(count_include_pad)},
-                                    {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(divisor_override)},
-                                    {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}
-                                    })
-                        .TilingData(param.get())
-                        .Workspace(ws_size)
-                        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(count_include_pad)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(divisor_override)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -229,17 +232,14 @@ static void Execute310PTestCase(gert::StorageShape xShape,
 }
 
 class AvgPool3DTiling310PTest : public testing::TestWithParam<AvgPool3DTilingRuntime2TestParam> {
-  protected:
-      static void SetUpTestCase() {
-          std::cout << "AvgPool3DTiling310PTest SetUp" << std::endl;
-      }
+protected:
+    static void SetUpTestCase() { std::cout << "AvgPool3DTiling310PTest SetUp" << std::endl; }
 
-      static void TearDownTestCase() {
-          std::cout << "AvgPool3DTiling310PTest TearDown" << std::endl;
-      }
+    static void TearDownTestCase() { std::cout << "AvgPool3DTiling310PTest TearDown" << std::endl; }
 };
 
-TEST_F(AvgPool3DTiling310PTest, AvgPool3DTiling_NCDHW_Kernel1) {
+TEST_F(AvgPool3DTiling310PTest, AvgPool3DTiling_NCDHW_Kernel1)
+{
     gert::StorageShape xShape = {{20, 16, 50, 44, 31}, {20, 16, 50, 44, 31}};
     gert::StorageShape yShape = {{20, 16, 25, 22, 15}, {20, 16, 25, 22, 15}};
     std::vector<int64_t> ksize = {2};
@@ -253,6 +253,6 @@ TEST_F(AvgPool3DTiling310PTest, AvgPool3DTiling_NCDHW_Kernel1) {
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 50;
     std::string expect = "";
-    Execute310PTestCase(xShape, yShape, ksize, strides, pads, ceil_mode, count_include_pad, divisor_override, data_format,
-        dtype, except_tilingkey, expect);
+    Execute310PTestCase(xShape, yShape, ksize, strides, pads, ceil_mode, count_include_pad, divisor_override,
+                        data_format, dtype, except_tilingkey, expect);
 }

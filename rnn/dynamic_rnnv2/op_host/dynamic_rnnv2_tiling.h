@@ -18,9 +18,9 @@
 #include "log/log.h"                           // 如果涉及LOG日志打印
 #include "register/op_impl_registry.h"         // 必需
 #include "register/tilingdata_base.h"          // 必需
-#include "op_host/tiling_base.h"                // 如果涉及TilingBaseClass类继承
+#include "op_host/tiling_base.h"               // 如果涉及TilingBaseClass类继承
 #include "op_host/tiling_templates_registry.h" // 如果涉及TilingBaseClass类继承
-#include "util/math_util.h"                   // 如果涉及CeilDiv等对齐运算
+#include "util/math_util.h"                    // 如果涉及CeilDiv等对齐运算
 
 namespace optiling {
 constexpr int32_t DST_SHAPE_SIZE = 3;
@@ -32,17 +32,17 @@ constexpr int32_t WORK_SPACE_INDEX_TWO = 2;
 const std::vector<int32_t> WORKSPACE_SIZES = {4096, 4194304, 4194304};
 
 struct DynamicRNNV2TilingData {
-  int32_t sequenceLength{0};
-  int32_t dynamicrnnBatch{0};
-  int32_t chequeIndex{-1};
+    int32_t sequenceLength{0};
+    int32_t dynamicrnnBatch{0};
+    int32_t chequeIndex{-1};
 };
 
 struct DynamicRNNV2CompileInfo : public optiling::CompileInfoBase {
-  std::vector<std::vector<int64_t>> tuneShapeList;
+    std::vector<std::vector<int64_t>> tuneShapeList;
 };
 
 class DynamicRNNV2Tiling : public LstmBaseTiling {
-  protected:
+protected:
     bool CheckParamsShape(gert::TilingContext* context) override;
     bool CheckInitParamsShape(gert::TilingContext* context) override;
     bool CheckAttrOps(gert::TilingContext* context) override;
@@ -52,5 +52,5 @@ class DynamicRNNV2Tiling : public LstmBaseTiling {
     ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicRnnTiling& dynamicRnnParams) override;
 };
 
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_RNN_V2_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_RNN_V2_H_

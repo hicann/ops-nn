@@ -27,21 +27,16 @@ struct integralConstant {
 using true_type = integralConstant<bool, true>;
 using false_type = integralConstant<bool, false>;
 template <typename, typename>
-struct isSame : public false_type {
-};
+struct isSame : public false_type {};
 template <typename Tp>
-struct isSame<Tp, Tp> : public true_type {
-};
+struct isSame<Tp, Tp> : public true_type {};
 
 template <typename T>
-class KernelScatterAddFloatWithSorted
-{
+class KernelScatterAddFloatWithSorted {
 public:
-    __aicore__ inline KernelScatterAddFloatWithSorted()
-    {}
-    __aicore__ inline void Init(
-        const ScatterAddWithSortedTilingData* __restrict tiling_data, TPipe* tmpPipe, GM_ADDR var, GM_ADDR value,
-        GM_ADDR sorted_index, GM_ADDR pos, GM_ADDR output)
+    __aicore__ inline KernelScatterAddFloatWithSorted() {}
+    __aicore__ inline void Init(const ScatterAddWithSortedTilingData* __restrict tiling_data, TPipe* tmpPipe,
+                                GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index, GM_ADDR pos, GM_ADDR output)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
 
@@ -249,25 +244,29 @@ public:
         inQueuePos.FreeTensor(posLocal);
     }
 
-    __aicore__ inline void PIPE_MTE2_V() {
+    __aicore__ inline void PIPE_MTE2_V()
+    {
         int32_t eventIDMTE2ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
     }
 
-    __aicore__ inline void PIPE_MTE2_S() {
+    __aicore__ inline void PIPE_MTE2_S()
+    {
         int32_t eventIDMTE2ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     }
 
-    __aicore__ inline void PIPE_V_MTE3() {
+    __aicore__ inline void PIPE_V_MTE3()
+    {
         int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
     }
 
-    __aicore__ inline void PIPE_S_MTE3() {
+    __aicore__ inline void PIPE_S_MTE3()
+    {
         int32_t eventIDSToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
         SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
         WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);

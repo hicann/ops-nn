@@ -16,8 +16,7 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_RA_WELFORD = 500000;
 
 constexpr int64_t BINARY_ADD_COEF = 2;
@@ -28,22 +27,15 @@ constexpr int64_t MEAN_VAR_BUFFER_NUM = 2;
 constexpr int64_t RUNNING_MEAN_VAR_BUFFER_NUM = 4;
 constexpr int64_t BETA_GAMMA_BUFFER_NUM = 2;
 constexpr int64_t DOUBLE_BUFFER_NUM = 2;
-}  // namespace
+} // namespace
 
-namespace optiling
-{
-class BatchNormRAWelfordTilingBase : public BatchNormRegbaseTilingBase
-{
+namespace optiling {
+class BatchNormRAWelfordTilingBase : public BatchNormRegbaseTilingBase {
 public:
-    explicit BatchNormRAWelfordTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context)
-    {
-    }
+    explicit BatchNormRAWelfordTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context) {}
     ~BatchNormRAWelfordTilingBase() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        BatchNormRegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { BatchNormRegbaseTilingBase::Reset(context); }
 
 protected:
     bool IsCapable() override
@@ -93,10 +85,10 @@ ge::graphStatus BatchNormRAWelfordTilingBase::BinaryAddTiling(int64_t elemSize, 
     int64_t ubSizeCanUse = aicoreParams_.ubSize - runningMeanVarSize - saveMeanRstdSize - betaGammaSize;
     int64_t rFactor = ubSizeCanUse / (xSizePerR + ySizePerR + tmpMeanM2PerR + tmpCountPerR);
     rFactor = Ops::Base::FloorAlign(rFactor, RA_BINARY_ADD_THRESHOLD);
-    OP_CHECK_IF(rFactor == 0, OP_LOGE(context_->GetNodeName(), "rfactor is 0."),
-                return ge::GRAPH_FAILED);
-    int64_t rFactorAlign =
-        Ops::Base::CeilAlign(static_cast<int64_t>(rFactor * sizeof(float)), static_cast<int64_t>(blockSize_)) / sizeof(float);
+    OP_CHECK_IF(rFactor == 0, OP_LOGE(context_->GetNodeName(), "rfactor is 0."), return ge::GRAPH_FAILED);
+    int64_t rFactorAlign = Ops::Base::CeilAlign(static_cast<int64_t>(rFactor * sizeof(float)),
+                                                static_cast<int64_t>(blockSize_)) /
+                           sizeof(float);
     if ((rFactor != rFactorAlign) &&
         ((rFactor * (xSizePerR + ySizePerR + tmpMeanM2PerR) + rFactorAlign * tmpCountPerR) > ubSizeCanUse)) {
         rFactor -= RA_BINARY_ADD_THRESHOLD;
@@ -167,10 +159,7 @@ ge::graphStatus BatchNormRAWelfordTilingBase::DoOpTiling()
     return BinaryAddTiling(elemSize, aFactor);
 }
 
-uint64_t BatchNormRAWelfordTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_RA_WELFORD;
-}
+uint64_t BatchNormRAWelfordTilingBase::GetTilingKey() const { return TILINGKEY_RA_WELFORD; }
 
 ge::graphStatus BatchNormRAWelfordTilingBase::PostTiling()
 {
@@ -179,9 +168,8 @@ ge::graphStatus BatchNormRAWelfordTilingBase::PostTiling()
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(batchNormTilingData.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     batchNormTilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormTilingData.GetDataSize());
@@ -190,4 +178,4 @@ ge::graphStatus BatchNormRAWelfordTilingBase::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormRAWelfordTilingBase, 15000);
-}  // namespace optiling
+} // namespace optiling

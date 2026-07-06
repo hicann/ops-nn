@@ -1,12 +1,12 @@
- /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 #include <iostream>
 #include <fstream>
@@ -27,21 +27,15 @@ using namespace ge;
 
 class MaxPoolGradWithArgmaxTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolGradWithArgmaxTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolGradWithArgmaxTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPoolGradWithArgmaxTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPoolGradWithArgmaxTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string padding, ge::DataType dtype,  ge::DataType dtypeIdx,
-    bool include_batch_in_index, std::string data_format, uint64_t except_tilingkey)
+static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape,
+                            gert::StorageShape argmaxShape, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+                            std::string padding, ge::DataType dtype, ge::DataType dtypeIdx, bool include_batch_in_index,
+                            std::string data_format, uint64_t except_tilingkey)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -73,21 +67,21 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs(std::vector<void*>{&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs(std::vector<void*>{&compile_info})
+                             .Build();
 
-    ASSERT_TRUE((kernel_holder.GetContext<gert::TilingParseContext>()) ->GetPlatformInfo()->Init());
+    ASSERT_TRUE((kernel_holder.GetContext<gert::TilingParseContext>())->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
     ASSERT_EQ(tiling_parse_func((kernel_holder.GetContext<gert::KernelContext>())), ge::GRAPH_SUCCESS);
 
@@ -148,9 +142,8 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test701)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 701;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
-        include_batch_in_index, data_format, except_tilingkey);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test700)
@@ -169,9 +162,8 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test700)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 700;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
-        include_batch_in_index, data_format, except_tilingkey);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NCHW_Test801)
@@ -189,9 +181,8 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NCHW_Test801)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 801;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
-        include_batch_in_index, data_format, except_tilingkey);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NCHW_Test803)
@@ -210,11 +201,9 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NCHW_Test803)
     std::string data_format = "NCHW";
     uint64_t except_tilingkey = 803;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
-        include_batch_in_index, data_format, except_tilingkey);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
-
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test802)
 {
@@ -234,14 +223,8 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test802)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 802;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape,
-        ksize, strides, pads,
-        dtype, dtypeIdx,
-        include_batch_in_index,
-        data_format,
-        except_tilingkey
-    );
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test804)
@@ -262,14 +245,8 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test804)
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 804;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape,
-        ksize, strides, pads,
-        dtype, dtypeIdx,
-        include_batch_in_index,
-        data_format,
-        except_tilingkey
-    );
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test500)
@@ -286,10 +263,9 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test500)
     bool include_batch_in_index = false;
     std::string data_format = "NHWC";
     uint64_t except_tilingkey = 500;
-    
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
-        include_batch_in_index, data_format, except_tilingkey);
+
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test501)
@@ -303,14 +279,13 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test501)
     std::vector<int64_t> strides = {{1, 3, 3, 1}};
     std::string pads = "SAME";
     ge::DataType dtype = ge::DT_FLOAT;
-    ge::DataType dtypeIdx = ge::DT_INT64;  
+    ge::DataType dtypeIdx = ge::DT_INT64;
     bool include_batch_in_index = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 501;  
+    uint64_t except_tilingkey = 501;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
-        include_batch_in_index, data_format, except_tilingkey);
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test510)
@@ -326,19 +301,13 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test510)
 
     std::string pads = "SAME";
     ge::DataType dtype = ge::DT_FLOAT;
-    ge::DataType dtypeIdx = ge::DT_INT64;   
+    ge::DataType dtypeIdx = ge::DT_INT64;
     bool include_batch_in_index = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 510;      
+    uint64_t except_tilingkey = 510;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape,
-        ksize, strides, pads,
-        dtype, dtypeIdx,  
-        include_batch_in_index,
-        data_format,
-        except_tilingkey
-    );
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test601)
@@ -353,20 +322,14 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test601)
     std::vector<int64_t> strides = {1, 2, 2, 1};
 
     std::string pads = "VALID";
-    ge::DataType dtype = ge::DT_FLOAT;      
-    ge::DataType dtypeIdx = ge::DT_INT32;   
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::DataType dtypeIdx = ge::DT_INT32;
     bool include_batch_in_index = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 601;       
+    uint64_t except_tilingkey = 601;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape,
-        ksize, strides, pads,
-        dtype, dtypeIdx,  
-        include_batch_in_index,
-        data_format,
-        except_tilingkey
-    );
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }
 
 TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test600)
@@ -381,18 +344,12 @@ TEST_F(MaxPoolGradWithArgmaxTiling, MaxPoolGradWithArgmaxTiling_NHWC_Test600)
     std::vector<int64_t> strides = {1, 6, 5, 1};
 
     std::string pads = "VALID";
-    ge::DataType dtype = ge::DT_FLOAT;      
-    ge::DataType dtypeIdx = ge::DT_INT64;   
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::DataType dtypeIdx = ge::DT_INT64;
     bool include_batch_in_index = false;
     std::string data_format = "NHWC";
-    uint64_t except_tilingkey = 600;       
+    uint64_t except_tilingkey = 600;
 
-    ExecuteTestCase(
-        xShape, yShape, gradShape, argmaxShape,
-        ksize, strides, pads,
-        dtype, dtypeIdx,  
-        include_batch_in_index,
-        data_format,
-        except_tilingkey
-    );
+    ExecuteTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dtype, dtypeIdx,
+                    include_batch_in_index, data_format, except_tilingkey);
 }

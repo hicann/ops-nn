@@ -16,8 +16,7 @@
 #include "platform/platform_info.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t FLOAT16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
@@ -29,8 +28,8 @@ static constexpr int64_t KSIZE_ONE_TILING_KEY = 800;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t CACHE_LINE_SIZE = 128;
-static constexpr int64_t MIN_DATA_SIZE   = 1024;
-static constexpr int64_t ALIGN_LENTH     = 512;
+static constexpr int64_t MIN_DATA_SIZE = 1024;
+static constexpr int64_t ALIGN_LENTH = 512;
 
 void MaxPoolGradWithArgmaxV3KsizeOneTiling::InitializationVars()
 {
@@ -73,8 +72,7 @@ void MaxPoolGradWithArgmaxV3KsizeOneTiling::InitializationVars()
 
 bool MaxPoolGradWithArgmaxV3KsizeOneTiling::IsCapable()
 {
-    if (inputData.hStride != 1 || inputData.wStride != 1 ||
-        inputData.hKernel != 1 || inputData.wKernel != 1) {
+    if (inputData.hStride != 1 || inputData.wStride != 1 || inputData.hKernel != 1 || inputData.wKernel != 1) {
         return false;
     }
 
@@ -97,14 +95,13 @@ void MaxPoolGradWithArgmaxV3KsizeOneTiling::DoUBTiling()
     coreData = std::max(coreData, MIN_DATA_SIZE);
     usedCoreNum_ = Ops::Base::CeilDiv(inputData.gradShapeSize, coreData);
     // 512字节对齐
-    blockFactor_ = coreData; 
+    blockFactor_ = coreData;
     tailBlockFactor_ = inputData.gradShapeSize - (usedCoreNum_ - 1) * blockFactor_;
     coreLoop_ = Ops::Base::CeilDiv(blockFactor_, ubFactor_);
     tailUbFactor_ = blockFactor_ - (coreLoop_ - 1) * ubFactor_;
     tailCoreLoop_ = Ops::Base::CeilDiv(tailBlockFactor_, ubFactor_);
     tailCoreTailUbFactor_ = tailBlockFactor_ - (tailCoreLoop_ - 1) * ubFactor_;
 }
-
 
 void MaxPoolGradWithArgmaxV3KsizeOneTiling::PrintBaseData() const
 {
@@ -150,8 +147,9 @@ void MaxPoolGradWithArgmaxV3KsizeOneTiling::PrintTilingData() const
 
 void MaxPoolGradWithArgmaxV3KsizeOneTiling::SetTilingData()
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData*
+        tilingData = context_->GetTilingData<
+            MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData>();
     tilingData->usedCoreNum = usedCoreNum_;
     tilingData->blockFactor = blockFactor_;
     tilingData->tailBlockFactor = tailBlockFactor_;
@@ -174,12 +172,13 @@ ge::graphStatus MaxPoolGradWithArgmaxV3KsizeOneTiling::DoOpTiling()
 
 ge::graphStatus MaxPoolGradWithArgmaxV3KsizeOneTiling::PostTiling()
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData*
+        tilingData = context_->GetTilingData<
+            MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData>();
     context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3KsizeOneTiling, 0);
 
-}  // namespace optiling
+} // namespace optiling

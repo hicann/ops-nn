@@ -42,15 +42,15 @@ static __aicore__ inline void CalOut2L1ScalarParams(Intf* self, Out2L1ScalarPara
         } else {
             CalOut2B1Params(self, params);
         }
-        uint64_t singleShapeHi =
-            self->ctx.singleShapeHo_ * self->ctx.tiling_->strideH + self->ctx.strideKernelDilationH;
+        uint64_t singleShapeHi = self->ctx.singleShapeHo_ * self->ctx.tiling_->strideH +
+                                 self->ctx.strideKernelDilationH;
         params.singleShapeHi = self->ctx.tiling_->hi > singleShapeHi ? singleShapeHi : self->ctx.tiling_->hi;
     }
 }
 
 template <class Intf>
-__aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(
-    Intf* self, uint64_t curLoopBatchDoutIdx, Out2L1ScalarParams& params, bool& skipCurrentDinCompute)
+__aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(Intf* self, uint64_t curLoopBatchDoutIdx,
+                                                       Out2L1ScalarParams& params, bool& skipCurrentDinCompute)
 {
     int32_t curBatchIdx = curLoopBatchDoutIdx / self->ctx.tiling_->dout;
     int32_t curDoutIdx = curLoopBatchDoutIdx - curBatchIdx * self->ctx.tiling_->dout;
@@ -76,8 +76,8 @@ __aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(
 
     int64_t batchOffsetAIncre = static_cast<int64_t>(curBatchIdx - preBatchIdx) * self->ctx.tiling_->cout *
                                 self->ctx.tiling_->dout * self->ctx.tiling_->ho * self->ctx.tiling_->wo;
-    int64_t doutOffsetAIncre =
-        static_cast<int64_t>(curDoutIdx - preDoutIdx) * self->ctx.tiling_->ho * self->ctx.tiling_->wo;
+    int64_t doutOffsetAIncre = static_cast<int64_t>(curDoutIdx - preDoutIdx) * self->ctx.tiling_->ho *
+                               self->ctx.tiling_->wo;
     if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
         doutOffsetAIncre = doutOffsetAIncre * self->ctx.tiling_->cout;
     }
@@ -94,8 +94,8 @@ __aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(
 }
 
 template <class Intf, class src0_T>
-__aicore__ inline void LoadToA1(
-    Intf* self, bool cachePosA1, uint64_t kaIdx, const Out2L1ScalarParams& params, bool isLoadA1, uint64_t kaStepIdx)
+__aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, const Out2L1ScalarParams& params,
+                                bool isLoadA1, uint64_t kaStepIdx)
 {
     if (!isLoadA1) {
         return;
@@ -133,8 +133,8 @@ __aicore__ inline void LoadToA1(
 }
 
 template <class Intf, class src1_T>
-__aicore__ inline void LoadToB1(
-    Intf* self, bool cachePosB1, const Out2L1ScalarParams& params, uint64_t kbStepIdx, bool& skipCurrentHiCompute)
+__aicore__ inline void LoadToB1(Intf* self, bool cachePosB1, const Out2L1ScalarParams& params, uint64_t kbStepIdx,
+                                bool& skipCurrentHiCompute)
 {
     skipCurrentHiCompute = false;
     if (params.isLoad2L1B) {
@@ -144,8 +144,8 @@ __aicore__ inline void LoadToB1(
             return;
         }
         LocalTensor<typename Intf::SrcT> useB1Buf = cachePosB1 ?
-                                                    self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
-                                                    self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
+                                                        self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
+                                                        self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
         uint64_t out2B1SrcAddrOffset = CalB1GmOffset(self, hiParams.b1SrcHi, params);
         if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
             LoadToB1Dn2Nz(self, hiParams.hiCopyLen, out2B1SrcAddrOffset, params, useB1Buf);
@@ -165,8 +165,8 @@ __aicore__ inline void LoadToB1(
 }
 
 template <class Intf, class src1_T>
-__aicore__ inline void LoadToB1SplitKernelHW(
-    Intf* self, bool cachePosB1, const Out2L1ScalarParams& params, uint64_t kbStepIdx, uint64_t hkIdx, bool& skipCurrentHiCompute)
+__aicore__ inline void LoadToB1SplitKernelHW(Intf* self, bool cachePosB1, const Out2L1ScalarParams& params,
+                                             uint64_t kbStepIdx, uint64_t hkIdx, bool& skipCurrentHiCompute)
 {
     skipCurrentHiCompute = false;
     // 需要载入BL1的条件为，被计算的BL0块是BL1上的第一块数据，一次载入完整BL1大小
@@ -183,18 +183,19 @@ __aicore__ inline void LoadToB1SplitKernelHW(
             return;
         }
         LocalTensor<typename Intf::SrcT> useB1Buf = cachePosB1 ?
-                                                    self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
-                                                    self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
+                                                        self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
+                                                        self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
 
         // 得到gm的偏移量
         uint64_t out2B1SrcAddrOffset = 0;
         if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-            out2B1SrcAddrOffset =
-                params.out2B1SrcAddr + static_cast<uint64_t>(hiParams.b1SrcHi + hiParams.hiUpValidOffset) * self->ctx.tiling_->wi;
+            out2B1SrcAddrOffset = params.out2B1SrcAddr +
+                                  static_cast<uint64_t>(hiParams.b1SrcHi + hiParams.hiUpValidOffset) *
+                                      self->ctx.tiling_->wi;
         } else if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
-            out2B1SrcAddrOffset = 
-                params.out2B1SrcAddr + static_cast<uint64_t>(hiParams.b1SrcHi + hiParams.hiUpValidOffset) * self->ctx.tiling_->wi *
-                self->ctx.tiling_->cin;
+            out2B1SrcAddrOffset = params.out2B1SrcAddr +
+                                  static_cast<uint64_t>(hiParams.b1SrcHi + hiParams.hiUpValidOffset) *
+                                      self->ctx.tiling_->wi * self->ctx.tiling_->cin;
         }
 
         if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {

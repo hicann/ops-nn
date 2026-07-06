@@ -14,9 +14,8 @@
  */
 #include "avg_pool_common.h"
 
-namespace optiling
-{
-    
+namespace optiling {
+
 // Integer division rounding to -Infinity
 int64_t AvgPoolDivRtn(const int64_t x, const int64_t y)
 {
@@ -31,4 +30,4 @@ int64_t AvgPoolDivRtn(const int64_t x, const int64_t y)
     return q;
 }
 
-}  // namespace optiling
+} // namespace optiling

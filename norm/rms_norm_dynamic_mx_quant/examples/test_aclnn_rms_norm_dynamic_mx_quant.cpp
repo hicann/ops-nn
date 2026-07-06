@@ -59,8 +59,8 @@ bool CheckHardwareSupport()
         return true;
     }
 
-    LOG_PRINT(
-        "Warning: This operator only supports Ascend950, current SOC '%s' is not supported. Skip test.\n", socName);
+    LOG_PRINT("Warning: This operator only supports Ascend950, current SOC '%s' is not supported. Skip test.\n",
+              socName);
     return false;
 }
 
@@ -78,9 +78,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -98,9 +97,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -243,9 +241,8 @@ int main()
     aclOpExecutor* executor = nullptr;
 
     // 调用aclnnRmsNormDynamicMxQuant第一段接口
-    ret = aclnnRmsNormDynamicMxQuantGetWorkspaceSize(
-        x, gamma, nullptr, epsilon, scaleAlg, roundMode, dstType, outputRstd, y, mxscale, rstd, &workspaceSize,
-        &executor);
+    ret = aclnnRmsNormDynamicMxQuantGetWorkspaceSize(x, gamma, nullptr, epsilon, scaleAlg, roundMode, dstType,
+                                                     outputRstd, y, mxscale, rstd, &workspaceSize, &executor);
 
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("aclnnRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -285,9 +282,8 @@ int main()
     {
         auto size = GetShapeSize(yShape);
         std::vector<uint8_t> yResult(size, 0);
-        ret = aclrtMemcpy(
-            yResult.data(), yResult.size() * sizeof(uint8_t), yDeviceAddr, size * sizeof(uint8_t),
-            ACL_MEMCPY_DEVICE_TO_HOST);
+        ret = aclrtMemcpy(yResult.data(), yResult.size() * sizeof(uint8_t), yDeviceAddr, size * sizeof(uint8_t),
+                          ACL_MEMCPY_DEVICE_TO_HOST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("copy y from device to host failed. ERROR: %d\n", ret);
             releaseResources();
@@ -301,9 +297,8 @@ int main()
 
         size = GetShapeSize(mxscaleShape);
         std::vector<uint8_t> mxscaleResult(size, 0);
-        ret = aclrtMemcpy(
-            mxscaleResult.data(), mxscaleResult.size() * sizeof(uint8_t), mxscaleDeviceAddr, size * sizeof(uint8_t),
-            ACL_MEMCPY_DEVICE_TO_HOST);
+        ret = aclrtMemcpy(mxscaleResult.data(), mxscaleResult.size() * sizeof(uint8_t), mxscaleDeviceAddr,
+                          size * sizeof(uint8_t), ACL_MEMCPY_DEVICE_TO_HOST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("copy mxscale from device to host failed. ERROR: %d\n", ret);
             releaseResources();
@@ -317,9 +312,8 @@ int main()
 
         size = GetShapeSize(rstdShape);
         std::vector<float> rstdResult(size, 0.0f);
-        ret = aclrtMemcpy(
-            rstdResult.data(), rstdResult.size() * sizeof(float), rstdDeviceAddr, size * sizeof(float),
-            ACL_MEMCPY_DEVICE_TO_HOST);
+        ret = aclrtMemcpy(rstdResult.data(), rstdResult.size() * sizeof(float), rstdDeviceAddr, size * sizeof(float),
+                          ACL_MEMCPY_DEVICE_TO_HOST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("copy rstd from device to host failed. ERROR: %d\n", ret);
             releaseResources();

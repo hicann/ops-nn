@@ -17,26 +17,22 @@
 
 using namespace ge;
 
-namespace optiling
-{
-class ConfusionSoftmaxGradTilingARRecompute : virtual public ConfusionSoftmaxGradTilingBase, public SoftmaxGradTilingARRecompute
-{
+namespace optiling {
+class ConfusionSoftmaxGradTilingARRecompute : virtual public ConfusionSoftmaxGradTilingBase,
+                                              public SoftmaxGradTilingARRecompute {
 public:
     explicit ConfusionSoftmaxGradTilingARRecompute(gert::TilingContext* context)
         : Ops::NN::Optiling::TilingBaseClass(context),
-        SoftmaxGradTilingBase(context),
-        ConfusionSoftmaxGradTilingBase(context),
-        SoftmaxGradTilingARRecompute(context)
-    {
-    }
+          SoftmaxGradTilingBase(context),
+          ConfusionSoftmaxGradTilingBase(context),
+          SoftmaxGradTilingARRecompute(context)
+    {}
     ~ConfusionSoftmaxGradTilingARRecompute() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 };
 
-REGISTER_OPS_TILING_TEMPLATE(ConfusionSoftmaxGrad, ConfusionSoftmaxGradTilingARRecompute, TEMPLATE_AR_RECOMPUTE_PRIORITY);
-}  // namespace optiling
+REGISTER_OPS_TILING_TEMPLATE(ConfusionSoftmaxGrad, ConfusionSoftmaxGradTilingARRecompute,
+                             TEMPLATE_AR_RECOMPUTE_PRIORITY);
+} // namespace optiling

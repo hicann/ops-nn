@@ -38,11 +38,11 @@ extern "C" {
 #endif
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT};
-static const std::initializer_list<DataType> BF16_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<DataType> BF16_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                        op::DataType::DT_BF16};
 
-static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self,
-                              const aclTensor *buffer, aclTensor *gradInput)
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* buffer,
+                         aclTensor* gradInput)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -52,22 +52,24 @@ static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self,
     return true;
 }
 
-static inline const std::initializer_list<op::DataType>& GetInputDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-    return BF16_DTYPE_SUPPORT_LIST;
-  } else {
-    return DTYPE_SUPPORT_LIST;
-  }
+static inline const std::initializer_list<op::DataType>& GetInputDtypeSupportList()
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+        return BF16_DTYPE_SUPPORT_LIST;
+    } else {
+        return DTYPE_SUPPORT_LIST;
+    }
 }
 
-static inline const std::initializer_list<op::DataType>& GetOutputDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
-    return BF16_DTYPE_SUPPORT_LIST;
-  } else {
-    return DTYPE_SUPPORT_LIST;
-  }
+static inline const std::initializer_list<op::DataType>& GetOutputDtypeSupportList()
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+        return BF16_DTYPE_SUPPORT_LIST;
+    } else {
+        return DTYPE_SUPPORT_LIST;
+    }
 }
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self,
@@ -97,8 +99,8 @@ static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self,
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self,
-                                  const aclTensor* buffer, aclTensor* gradInput)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* buffer,
+                               aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, buffer, gradInput), ACLNN_ERR_PARAM_NULLPTR);
@@ -113,7 +115,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
 }
 
 aclnnStatus aclnnLogSigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
-    const aclTensor* buffer, aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+                                                    const aclTensor* buffer, aclTensor* gradInput,
+                                                    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -158,7 +161,7 @@ aclnnStatus aclnnLogSigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput,
 }
 
 aclnnStatus aclnnLogSigmoidBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-    aclrtStream stream)
+                                    aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnLogSigmoidBackward);
     // 固定写法，调用框架能力，完成计算

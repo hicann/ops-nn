@@ -150,9 +150,8 @@ private:
         extParam.blockLen = B32_BLOCK_ALIGN_NUM * this->usedGroupCore * sizeof(float);
         DataCopyPadExtParams<float> padExtParam;
         padExtParam.isPad = false;
-        LoadOneTensor(
-            this->workSpaceGm_[this->wsReduceOffset], this->reduceUbTensor, extParam, padExtParam,
-            this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
+        LoadOneTensor(this->workSpaceGm_[this->wsReduceOffset], this->reduceUbTensor, extParam, padExtParam,
+                      this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
         float sum = 0.0;
         TPipeSetWaitFlag<HardEvent::MTE2_S>();
         for (int16_t i = 0; i < this->usedGroupCore; i++) {
@@ -178,9 +177,8 @@ private:
         extParam.blockLen = B32_BLOCK_ALIGN_NUM * this->usedGroupCore * sizeof(float);
         DataCopyPadExtParams<float> padExtParam;
         padExtParam.isPad = false;
-        LoadOneTensor(
-            this->workSpaceGm_[this->wsReduceInputOffset], this->reduceInputUbTensor, extParam, padExtParam,
-            this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
+        LoadOneTensor(this->workSpaceGm_[this->wsReduceInputOffset], this->reduceInputUbTensor, extParam, padExtParam,
+                      this->usedGroupCore * B32_BLOCK_ALIGN_NUM);
         TPipeSetWaitFlag<HardEvent::MTE2_S>();
         float sum = 0.0;
         for (int16_t i = 0; i < this->usedGroupCore; i++) {

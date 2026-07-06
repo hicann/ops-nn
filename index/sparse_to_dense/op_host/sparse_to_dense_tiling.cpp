@@ -23,8 +23,7 @@
 #include "sparse_to_dense_tiling.h"
 
 using namespace AscendC;
-namespace optiling
-{
+namespace optiling {
 constexpr int64_t INDICES_IDX = 0;
 constexpr int64_t SHAPE_IDX = 1;
 constexpr int64_t VALUES_IDX = 2;
@@ -34,21 +33,21 @@ constexpr int64_t ATTR_VALIDATE_INDICES_IDX = 0;
 constexpr int64_t DIM_NUM_2 = 2;
 constexpr int64_t DCACHE_SIZE_SIMT = 32 * 1024;
 constexpr int64_t MIN_THREAD_NUM = 128;
-constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216;  // 16M
+constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16777216; // 16M
 constexpr int64_t MAX_INT32_NUM = 2147483647;
 constexpr int64_t SINGLE_CORE_SPARSE_NUM = 1024;
 constexpr int64_t SINGLE_CORE_DENSE_NUM = 8192;
 
-
-static const std::set<ge::DataType> VALUE_DTYPE = {ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32,
-                                                   ge::DT_BF16, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BOOL};
+static const std::set<ge::DataType> VALUE_DTYPE = {ge::DT_INT8,    ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16,
+                                                   ge::DT_INT32,   ge::DT_BF16,  ge::DT_INT64, ge::DT_FLOAT,
+                                                   ge::DT_FLOAT16, ge::DT_BOOL};
 static const std::set<ge::DataType> INDICES_DTYPE = {ge::DT_INT32, ge::DT_INT64};
 
 template <typename T>
-ge::graphStatus SparseToDenseTiling::GetIntValue(const gert::Tensor *constTensor, gert::Shape &constShape)
+ge::graphStatus SparseToDenseTiling::GetIntValue(const gert::Tensor* constTensor, gert::Shape& constShape)
 {
     OP_LOGI(opName_, "SparseToDenseTiling::GetIntValue begin.");
-    const T *constValue = constTensor->GetData<T>();
+    const T* constValue = constTensor->GetData<T>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, constValue);
     OP_LOGD(opName_, "SparseToDenseTiling::GetIntValue constValue=%d.", constValue[0]);
     const size_t constNum = constTensor->GetShapeSize();
@@ -60,10 +59,7 @@ ge::graphStatus SparseToDenseTiling::GetIntValue(const gert::Tensor *constTensor
     return ge::GRAPH_SUCCESS;
 }
 
-bool SparseToDenseTiling::IsCapable()
-{
-    return true;
-}
+bool SparseToDenseTiling::IsCapable() { return true; }
 
 ge::graphStatus SparseToDenseTiling::GetPlatformInfo()
 {
@@ -72,7 +68,7 @@ ge::graphStatus SparseToDenseTiling::GetPlatformInfo()
     totalCoreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
     OP_CHECK_IF((ubSize_ <= DCACHE_SIZE_SIMT), OP_LOGE(opName_, "ub size less than Dcache Size"),
-                     return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
     ubSize_ = ubSize_ - DCACHE_SIZE_SIMT;
     return ge::GRAPH_SUCCESS;
 }
@@ -93,7 +89,8 @@ ge::graphStatus SparseToDenseTiling::GetShapeAttrsInfo()
     indicesFirstDim_ = indicesDimNum_ == 0 ? 1 : indicesShape.GetDim(0);
     indicesLastDim_ = indicesDimNum_ > 1 ? indicesShape.GetDim(1) : 1;
     if (indicesDimNum_ > DIM_NUM_2) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "Number of dimensions of indices", std::to_string(indicesDimNum_).c_str(), "2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "Number of dimensions of indices", std::to_string(indicesDimNum_).c_str(),
+                                     "2");
         return ge::GRAPH_FAILED;
     }
 
@@ -102,7 +99,8 @@ ge::graphStatus SparseToDenseTiling::GetShapeAttrsInfo()
     auto outputShapeShape = outputShapeShapePtr->GetStorageShape();
     outputShapeDimNum_ = outputShapeShape.GetDimNum();
     if (outputShapeDimNum_ != 1) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "Number of dimensions of output_shape", std::to_string(outputShapeDimNum_).c_str(), "1");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "Number of dimensions of output_shape",
+                                     std::to_string(outputShapeDimNum_).c_str(), "1");
         return ge::GRAPH_FAILED;
     }
 
@@ -112,7 +110,8 @@ ge::graphStatus SparseToDenseTiling::GetShapeAttrsInfo()
     valueDimNum_ = static_cast<int64_t>(valuesShape.GetDimNum());
     valueSize_ = valuesShape.GetShapeSize();
     if (valueDimNum_ > 1) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "Number of dimensions of values", std::to_string(valueDimNum_).c_str(), "1");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "Number of dimensions of values", std::to_string(valueDimNum_).c_str(),
+                                     "1");
         return ge::GRAPH_FAILED;
     }
 
@@ -145,8 +144,10 @@ ge::graphStatus SparseToDenseTiling::CheckInputDtype()
     indicesDtype_ = indicesPtr->GetDataType();
     if (INDICES_DTYPE.find(indicesDtype_) == INDICES_DTYPE.end()) {
         OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
-            (ge::TypeUtils::DataTypeToSerialString(indicesDtype_) + "(" + std::to_string(static_cast<int32_t>(indicesDtype_)) + ")").c_str(),
-            "[DT_INT32(3), DT_INT64(9)]");
+                                  (ge::TypeUtils::DataTypeToSerialString(indicesDtype_) + "(" +
+                                   std::to_string(static_cast<int32_t>(indicesDtype_)) + ")")
+                                      .c_str(),
+                                  "[DT_INT32(3), DT_INT64(9)]");
         return ge::GRAPH_FAILED;
     }
 
@@ -155,8 +156,10 @@ ge::graphStatus SparseToDenseTiling::CheckInputDtype()
     auto outputShapeDtype = outputShapePtr->GetDataType();
     if (outputShapeDtype != indicesDtype_) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "output_shape, indices",
-            (ge::TypeUtils::DataTypeToSerialString(outputShapeDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(indicesDtype_)).c_str(),
-            "expected outputShape dtype to be equal to indices dtype");
+                                               (ge::TypeUtils::DataTypeToSerialString(outputShapeDtype) + ", " +
+                                                ge::TypeUtils::DataTypeToSerialString(indicesDtype_))
+                                                   .c_str(),
+                                               "expected outputShape dtype to be equal to indices dtype");
         return ge::GRAPH_FAILED;
     }
 
@@ -165,8 +168,11 @@ ge::graphStatus SparseToDenseTiling::CheckInputDtype()
     valuesDtype_ = valuesPtr->GetDataType();
     if (VALUE_DTYPE.find(valuesDtype_) == VALUE_DTYPE.end()) {
         OP_LOGE_FOR_INVALID_DTYPE(opName_, "values",
-            (ge::TypeUtils::DataTypeToSerialString(valuesDtype_) + "(" + std::to_string(static_cast<int32_t>(valuesDtype_)) + ")").c_str(),
-            "[DT_INT8(2), DT_UINT8(3), DT_INT16(5), DT_UINT16(4), DT_INT32(1), DT_BF16(27), DT_INT64(9), DT_FLOAT(0), DT_FLOAT16(4), DT_BOOL(30)]");
+                                  (ge::TypeUtils::DataTypeToSerialString(valuesDtype_) + "(" +
+                                   std::to_string(static_cast<int32_t>(valuesDtype_)) + ")")
+                                      .c_str(),
+                                  "[DT_INT8(2), DT_UINT8(3), DT_INT16(5), DT_UINT16(4), DT_INT32(1), DT_BF16(27), "
+                                  "DT_INT64(9), DT_FLOAT(0), DT_FLOAT16(4), DT_BOOL(30)]");
         return ge::GRAPH_FAILED;
     }
 
@@ -175,8 +181,10 @@ ge::graphStatus SparseToDenseTiling::CheckInputDtype()
     auto defaultValueDtype = defaultValuePtr->GetDataType();
     if (defaultValueDtype != valuesDtype_) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "default_value, values",
-            (ge::TypeUtils::DataTypeToSerialString(defaultValueDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(valuesDtype_)).c_str(),
-            "expected defaultValueDtype to be equal to values dtype");
+                                               (ge::TypeUtils::DataTypeToSerialString(defaultValueDtype) + ", " +
+                                                ge::TypeUtils::DataTypeToSerialString(valuesDtype_))
+                                                   .c_str(),
+                                               "expected defaultValueDtype to be equal to values dtype");
         return ge::GRAPH_FAILED;
     }
 
@@ -185,8 +193,10 @@ ge::graphStatus SparseToDenseTiling::CheckInputDtype()
     auto outputDtype = outputPtr->GetDataType();
     if (outputDtype != valuesDtype_) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "y, values",
-            (ge::TypeUtils::DataTypeToSerialString(outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(valuesDtype_)).c_str(),
-            "expected output dtype to be equal to values dtype");
+                                               (ge::TypeUtils::DataTypeToSerialString(outputDtype) + ", " +
+                                                ge::TypeUtils::DataTypeToSerialString(valuesDtype_))
+                                                   .c_str(),
+                                               "expected output dtype to be equal to values dtype");
         return ge::GRAPH_FAILED;
     }
 
@@ -207,13 +217,15 @@ ge::graphStatus SparseToDenseTiling::CheckInputShape()
     if (indicesDimNum_ <= 1) {
         if (numDims_ != 1) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "Number of dimensions of output",
-                std::to_string(numDims_).c_str(), "If indicesDimNum is 0 or 1, outputDimNum must be 1");
+                                                     std::to_string(numDims_).c_str(),
+                                                     "If indicesDimNum is 0 or 1, outputDimNum must be 1");
             return ge::GRAPH_FAILED;
         }
     } else {
         if (numDims_ != indicesLastDim_) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "Number of dimensions of output",
-                std::to_string(numDims_).c_str(), "If indicesDimNum is 2, outputDimNum should be equal to last dim of indices");
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                opName_, "Number of dimensions of output", std::to_string(numDims_).c_str(),
+                "If indicesDimNum is 2, outputDimNum should be equal to last dim of indices");
             return ge::GRAPH_FAILED;
         }
     }
@@ -222,8 +234,8 @@ ge::graphStatus SparseToDenseTiling::CheckInputShape()
         isValuesScalar_ = 1;
     } else {
         if (valueSize_ != indicesFirstDim_) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "Size of values",
-                std::to_string(valueSize_).c_str(), "Size of values should be equal to dim_0 of indices");
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "Size of values", std::to_string(valueSize_).c_str(),
+                                                      "Size of values should be equal to dim_0 of indices");
             return ge::GRAPH_FAILED;
         }
     }
@@ -235,16 +247,15 @@ ge::graphStatus SparseToDenseTiling::DoOpTiling()
 {
     OP_LOGD(opName_, "SparseToDense tiling DoOpTiling.");
     numValues_ = indicesFirstDim_;
-    
+
     for (uint32_t i = 0; i < numDims_; i++) {
         outSize_ *= outputShape_.GetDim(i);
     }
 
     int64_t valuesTypeSize = ge::GetSizeByDataType(valuesDtype_);
-    OP_CHECK_IF(valuesTypeSize <= 0, OP_LOGE(opName_, "get valuesTypeSize size fail."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(valuesTypeSize <= 0, OP_LOGE(opName_, "get valuesTypeSize size fail."), return ge::GRAPH_FAILED);
     int64_t valuesUbBlock = Ops::Base::GetUbBlockSize(context_) / valuesTypeSize;
-    if (outSize_ <= SINGLE_CORE_DENSE_NUM && numValues_ <= SINGLE_CORE_SPARSE_NUM ) {
+    if (outSize_ <= SINGLE_CORE_DENSE_NUM && numValues_ <= SINGLE_CORE_SPARSE_NUM) {
         defaultValueUsedCoreNum_ = 1;
         normCoreHandleDefaultValues_ = outSize_;
 
@@ -295,10 +306,7 @@ void SparseToDenseTiling::SetTilingData()
     tilingData->validateIndices = validateIndices_;
 }
 
-ge::graphStatus SparseToDenseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SparseToDenseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t SparseToDenseTiling::GetTilingKey() const
 {
@@ -310,10 +318,7 @@ uint64_t SparseToDenseTiling::GetTilingKey() const
     return tilingKey;
 }
 
-ge::graphStatus SparseToDenseTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus SparseToDenseTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus SparseToDenseTiling::PostTiling()
 {
@@ -324,9 +329,8 @@ ge::graphStatus SparseToDenseTiling::PostTiling()
     context_->SetBlockDim(useCoreNum_);
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_CHECK_IF(
-        (res != ge::GRAPH_SUCCESS), OP_LOGE(opName_, "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(opName_, "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -368,18 +372,16 @@ ge::graphStatus TilingPrepareForSparseToDense(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(SparseToDense)
     .Tiling(TilingForSparseToDense)
     .TilingParse<SparseToDenseCompileInfo>(TilingPrepareForSparseToDense)
-    .TilingInputsDataDependency({ SHAPE_IDX });
-}  // namespace optiling
+    .TilingInputsDataDependency({SHAPE_IDX});
+} // namespace optiling

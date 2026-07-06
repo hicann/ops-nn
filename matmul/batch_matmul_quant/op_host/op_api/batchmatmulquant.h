@@ -13,9 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* BatchMatmulQuant(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* bias, const bool adjX1,
-    const bool adjX2, aclOpExecutor* executor);
+const aclTensor* BatchMatmulQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam,
+                                  const aclTensor* bias, const bool adjX1, const bool adjX2, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_BATCHMATMUL_QUANT_OP_H_

@@ -31,8 +31,7 @@
 
 using namespace Ops::Base;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int32_t SIZE8 = 8;
 static constexpr int32_t SIZE4 = 4;
 static constexpr int32_t SIZE2 = 2;
@@ -47,11 +46,11 @@ static ge::graphStatus DoTiling(gert::TilingContext* context, ReduceOpInputParam
     } else if (ge::GetSizeByDataType(opInput.inputDtype) == SIZE2) {
         status = Tiling4ReduceOp<PreluGradReduce::PreluGradReduceDag<half, float>::OpDag>(context, opInput, key);
     }
-    OP_TILING_CHECK(
-        (status == ge::GRAPH_FAILED),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context->GetNodeName(), "PReluGradReduce Tiling failed, dtype should be in (bfloat16/float16/float/int32/int64)"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((status == ge::GRAPH_FAILED),
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context->GetNodeName(),
+                        "PReluGradReduce Tiling failed, dtype should be in (bfloat16/float16/float/int32/int64)"),
+                    return ge::GRAPH_FAILED);
     return status;
 }
 
@@ -83,7 +82,7 @@ static ge::graphStatus GetPreluGradReduceAxes(const gert::TilingContext* context
             opInput.axes.push_back(i);
         }
         if (opInput.axes.size() > 1) {
-           opInput.axes.erase(opInput.axes.begin() + 1); 
+            opInput.axes.erase(opInput.axes.begin() + 1);
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -127,7 +126,7 @@ static ge::graphStatus TilingPrepare4PreluGradReduce(gert::TilingParseContext* c
     OP_CHECK_IF(
         (compileInfo->vectorCoreNum == 0UL),
         OP_LOGE(context->GetNodeName(), "TilingPrepare4PreluGradReduce GetHardwareInfo Failed, vectorCoreNum:%lu",
-                                        compileInfo->vectorCoreNum),
+                compileInfo->vectorCoreNum),
         return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
@@ -154,11 +153,10 @@ static ge::graphStatus TilingPrepare4PreluGradReduce(gert::TilingParseContext* c
         return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = Ops::Base::GetVRegSize(context);
-    OP_CHECK_IF(
-        compileInfo->vRegSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "TilingPrepare4PreluGradReduce GetHardwareInfo Failed, vRegSize:%lu.",
-                compileInfo->vRegSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->vRegSize == 0UL,
+                OP_LOGE(context->GetNodeName(), "TilingPrepare4PreluGradReduce GetHardwareInfo Failed, vRegSize:%lu.",
+                        compileInfo->vRegSize),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%lu, ubSize:%lu, cacheLineSize:%lu, ubBlockSize:%lu, vRegSize:%lu",
             compileInfo->vectorCoreNum, compileInfo->ubSize, compileInfo->cacheLineSize, compileInfo->ubBlockSize,
@@ -167,5 +165,7 @@ static ge::graphStatus TilingPrepare4PreluGradReduce(gert::TilingParseContext* c
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(PReluGradReduce).Tiling(Tiling4PreluGradReduce).TilingParse<ReduceOpCompileInfo>(TilingPrepare4PreluGradReduce);
-}  // namespace optiling
+IMPL_OP_OPTILING(PReluGradReduce)
+    .Tiling(Tiling4PreluGradReduce)
+    .TilingParse<ReduceOpCompileInfo>(TilingPrepare4PreluGradReduce);
+} // namespace optiling

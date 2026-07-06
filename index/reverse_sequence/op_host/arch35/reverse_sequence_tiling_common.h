@@ -27,8 +27,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "util/math_util.h"
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int32_t allDims = 5;
 
 struct ReverseInputInfo {
@@ -46,9 +45,9 @@ struct ReverseInputInfo {
     int64_t comBineType = 0;
 };
 
-ge::graphStatus GetReverseSequencePlatformInfo(gert::TilingContext *context, uint64_t& ubSize, uint64_t& coreNum);
-ge::graphStatus GetReverseSequenceShapeAttrsInfo(gert::TilingContext *context, ReverseInputInfo& inputData);
+ge::graphStatus GetReverseSequencePlatformInfo(gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum);
+ge::graphStatus GetReverseSequenceShapeAttrsInfo(gert::TilingContext* context, ReverseInputInfo& inputData);
 
-}  // namespace optiling
- 
+} // namespace optiling
+
 #endif

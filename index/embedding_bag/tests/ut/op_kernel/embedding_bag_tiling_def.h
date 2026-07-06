@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 struct EmbeddingBagTilingData {
     int64_t formerOffsetNum;
     int64_t tailOffsetNum;

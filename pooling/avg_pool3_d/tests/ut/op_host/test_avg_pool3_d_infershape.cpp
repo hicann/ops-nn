@@ -15,11 +15,11 @@
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
+using ge::FORMAT_DHWCN;
+using ge::FORMAT_NCDHW;
+using ge::FORMAT_ND;
 using ge::FORMAT_NDC1HWC0;
 using ge::FORMAT_NDHWC;
-using ge::FORMAT_NCDHW;
-using ge::FORMAT_DHWCN;
-using ge::FORMAT_ND;
 
 struct AvgPool3DProtoTestParam {
     string case_name;
@@ -40,10 +40,10 @@ struct AvgPool3DProtoTestParam {
     bool result;
 };
 
-class AvgPool3DRuntimeProtoTest : public testing::TestWithParam<AvgPool3DProtoTestParam> {
-};
+class AvgPool3DRuntimeProtoTest : public testing::TestWithParam<AvgPool3DProtoTestParam> {};
 
-TEST_P(AvgPool3DRuntimeProtoTest, general_cases) {
+TEST_P(AvgPool3DRuntimeProtoTest, general_cases)
+{
     AvgPool3DProtoTestParam param = GetParam();
     std::cout << "run case " << param.case_name << std::endl;
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AvgPool3D")->infer_shape;
@@ -70,7 +70,7 @@ TEST_P(AvgPool3DRuntimeProtoTest, general_cases) {
 
     if (param.result) {
         ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-        gert::Shape *output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+        gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
         ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(gert::Shape(param.y_ori_shape)));
     } else {
         ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
@@ -78,35 +78,83 @@ TEST_P(AvgPool3DRuntimeProtoTest, general_cases) {
 }
 
 static AvgPool3DProtoTestParam general_cases_params[] = {
-    { "avgpool3d_NDHWC_NDHWC_false_SAME",
-      {40, 48, 14, 14, 3}, {40, 48, 7, 5, 3}, FORMAT_NDHWC, FORMAT_NDHWC,
-      {3, 5, 3, 3, 3}, {1, 1, 2, 3, 1}, {-1, -1, -1, -1, -1, -1}, false, "NDHWC", "SAME", true
-    },
+    {"avgpool3d_NDHWC_NDHWC_false_SAME",
+     {40, 48, 14, 14, 3},
+     {40, 48, 7, 5, 3},
+     FORMAT_NDHWC,
+     FORMAT_NDHWC,
+     {3, 5, 3, 3, 3},
+     {1, 1, 2, 3, 1},
+     {-1, -1, -1, -1, -1, -1},
+     false,
+     "NDHWC",
+     "SAME",
+     true},
 
-    { "avgpool3d_NCDHW_NCDHW_false_VALID",
-      {8, 28, 8, 60, 88}, {8, 28, 4, 30, 44}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {32, 28, 1, 2, 2}, {1, 1, 2, 2, 2}, {0, 0, 0, 0, 0, 0}, false, "NCDHW", "VALID", true
-    },
+    {"avgpool3d_NCDHW_NCDHW_false_VALID",
+     {8, 28, 8, 60, 88},
+     {8, 28, 4, 30, 44},
+     FORMAT_NCDHW,
+     FORMAT_NCDHW,
+     {32, 28, 1, 2, 2},
+     {1, 1, 2, 2, 2},
+     {0, 0, 0, 0, 0, 0},
+     false,
+     "NCDHW",
+     "VALID",
+     true},
 
-    { "avgpool3d_ND_NCDHW_false_VALID",
-      {8, 28, 8, 60, 88}, {8, 28, 4, 30, 44}, FORMAT_ND, FORMAT_NCDHW,
-      {32, 28, 1, 2, 2}, {1, 1, 2, 2, 2}, {0, 0, 0, 0, 0, 0}, false, "NCDHW", "VALID", false
-    },
+    {"avgpool3d_ND_NCDHW_false_VALID",
+     {8, 28, 8, 60, 88},
+     {8, 28, 4, 30, 44},
+     FORMAT_ND,
+     FORMAT_NCDHW,
+     {32, 28, 1, 2, 2},
+     {1, 1, 2, 2, 2},
+     {0, 0, 0, 0, 0, 0},
+     false,
+     "NCDHW",
+     "VALID",
+     false},
 
-    { "avgpool3d_NCDHW_ND_false_VALID",
-      {8, 28, 8, 60, 88}, {8, 28, 4, 30, 44}, FORMAT_NCDHW, FORMAT_ND,
-      {32, 28, 1, 2, 2}, {1, 1, 2, 2, 2}, {0, 0, 0, 0, 0, 0}, false, "NCDHW", "VALID", false
-    },
+    {"avgpool3d_NCDHW_ND_false_VALID",
+     {8, 28, 8, 60, 88},
+     {8, 28, 4, 30, 44},
+     FORMAT_NCDHW,
+     FORMAT_ND,
+     {32, 28, 1, 2, 2},
+     {1, 1, 2, 2, 2},
+     {0, 0, 0, 0, 0, 0},
+     false,
+     "NCDHW",
+     "VALID",
+     false},
 
-    { "avgpool3d_NCDHW_ND_false_VALID_PadsLen1",
-      {8, 28, 8, 60, 88}, {8, 28, 4, 30, 44}, FORMAT_NCDHW, FORMAT_ND,
-      {32, 28, 1, 2, 2}, {1, 1, 2, 2, 2}, {0}, false, "NCDHW", "VALID", false
-    },
+    {"avgpool3d_NCDHW_ND_false_VALID_PadsLen1",
+     {8, 28, 8, 60, 88},
+     {8, 28, 4, 30, 44},
+     FORMAT_NCDHW,
+     FORMAT_ND,
+     {32, 28, 1, 2, 2},
+     {1, 1, 2, 2, 2},
+     {0},
+     false,
+     "NCDHW",
+     "VALID",
+     false},
 
-    { "avgpool3d_NCDHW_ND_false_VALID_PadsLen3",
-      {8, 28, 8, 60, 88}, {8, 28, 4, 30, 44}, FORMAT_NCDHW, FORMAT_ND,
-      {32, 28, 1, 2, 2}, {1, 1, 2, 2, 2}, {0, 0, 0}, false, "NCDHW", "VALID", false
-    },
+    {"avgpool3d_NCDHW_ND_false_VALID_PadsLen3",
+     {8, 28, 8, 60, 88},
+     {8, 28, 4, 30, 44},
+     FORMAT_NCDHW,
+     FORMAT_ND,
+     {32, 28, 1, 2, 2},
+     {1, 1, 2, 2, 2},
+     {0, 0, 0},
+     false,
+     "NCDHW",
+     "VALID",
+     false},
 
 };
 

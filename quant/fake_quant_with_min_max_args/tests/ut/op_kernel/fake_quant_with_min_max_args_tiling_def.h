@@ -14,25 +14,25 @@
 #include "kernel_tiling/kernel_tiling.h"
 #define __CCE_UT_TEST__
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                                  \
-    FakeQuantWithMinMaxArgsTilingData tilingData;                                               \
-    INIT_TILING_DATA(FakeQuantWithMinMaxArgsTilingData, tilingDataPointer, tilingPointer);                  \
-    (tilingData).totalLen = tilingDataPointer->totalLen;                                  \
-    (tilingData).numCore = tilingDataPointer->numCore;                                    \
-    (tilingData).blockFactor = tilingDataPointer->blockFactor;                              \
-    (tilingData).blockTailFactor = tilingDataPointer->blockTailFactor;                    \
-    (tilingData).baseLen = tilingDataPointer->baseLen;                                    \
-    (tilingData).nudgedMin = tilingDataPointer->nudgedMin;                                \
-    (tilingData).nudgedMax = tilingDataPointer->nudgedMax;                                \
-    (tilingData).scale = tilingDataPointer->scale;                                  \
-    (tilingData).scaleInv = tilingDataPointer->scaleInv;                                \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                         \
+    FakeQuantWithMinMaxArgsTilingData tilingData;                                          \
+    INIT_TILING_DATA(FakeQuantWithMinMaxArgsTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).totalLen = tilingDataPointer->totalLen;                                   \
+    (tilingData).numCore = tilingDataPointer->numCore;                                     \
+    (tilingData).blockFactor = tilingDataPointer->blockFactor;                             \
+    (tilingData).blockTailFactor = tilingDataPointer->blockTailFactor;                     \
+    (tilingData).baseLen = tilingDataPointer->baseLen;                                     \
+    (tilingData).nudgedMin = tilingDataPointer->nudgedMin;                                 \
+    (tilingData).nudgedMax = tilingDataPointer->nudgedMax;                                 \
+    (tilingData).scale = tilingDataPointer->scale;                                         \
+    (tilingData).scaleInv = tilingDataPointer->scaleInv;                                   \
     (tilingData).quantZero = tilingDataPointer->quantZero;
 
 #endif

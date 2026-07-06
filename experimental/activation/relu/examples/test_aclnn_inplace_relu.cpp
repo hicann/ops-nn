@@ -19,14 +19,14 @@
 #include "aclnnop/aclnn_relu.h"
 
 #define CHECK_RET(cond, expr) \
-    do { \
-        if (!(cond)) { \
-            expr; \
-        } \
+    do {                      \
+        if (!(cond)) {        \
+            expr;             \
+        }                     \
     } while (0)
 
 namespace {
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shape_size = 1;
     for (int64_t dim : shape) {
@@ -35,7 +35,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return shape_size;
 }
 
-std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
+std::vector<int64_t> MakeStrides(const std::vector<int64_t>& shape)
 {
     if (shape.empty()) {
         return {};
@@ -47,16 +47,16 @@ std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
     return strides;
 }
 
-aclError CreateAclTensor(const std::vector<int64_t> &shape, aclDataType dtype, void *device_addr, aclTensor **tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
-    const int64_t *shape_ptr = shape.empty() ? nullptr : shape.data();
-    const int64_t *strides_ptr = strides.empty() ? nullptr : strides.data();
-    *tensor = aclCreateTensor(
-        shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(), device_addr);
+    const int64_t* shape_ptr = shape.empty() ? nullptr : shape.data();
+    const int64_t* strides_ptr = strides.empty() ? nullptr : strides.data();
+    *tensor = aclCreateTensor(shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(),
+                              device_addr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
-}  // namespace
+} // namespace
 
 int main()
 {
@@ -68,10 +68,10 @@ int main()
     const std::vector<float> expected = {0.0f, 0.0f, 0.0f, 2.0f, 3.0f, 0.0f, 6.0f, 0.0f};
     uint64_t workspace_size = 0;
     aclrtStream stream = nullptr;
-    void *device_addr = nullptr;
-    void *workspace = nullptr;
-    aclTensor *self = nullptr;
-    aclOpExecutor *executor = nullptr;
+    void* device_addr = nullptr;
+    void* workspace = nullptr;
+    aclTensor* self = nullptr;
+    aclOpExecutor* executor = nullptr;
     bool acl_initialized = false;
     bool device_set = false;
 

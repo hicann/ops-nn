@@ -49,19 +49,16 @@ using Cmct::Gemm::CeilDiv;
 using Cmct::Gemm::CreateTensor;
 using Cmct::Gemm::Get;
 
-template <
-    TPosition Position, CubeFormat Format, typename Type, bool IsTrans = false, LayoutMode Layout = LayoutMode::NONE,
-    bool IbShare = false>
+template <TPosition Position, CubeFormat Format, typename Type, bool IsTrans = false,
+          LayoutMode Layout = LayoutMode::NONE, bool IbShare = false>
 struct MatmulL1GmType : AscendC::MatmulType<Position, Format, Type, IsTrans, Layout, IbShare> {
     constexpr static TPosition srcPos = TPosition::GM;
 };
 
-template <
-    uint64_t AivNum, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_,
-    class TileCopy_, class TileMmad_>
-class BlockMmad<
-    MmadAPrefetchBAntiquantScmc<AivNum>, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
-    TileMmad_> {
+template <uint64_t AivNum, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+          class BiasType_, class TileCopy_, class TileMmad_>
+class BlockMmad<MmadAPrefetchBAntiquantScmc<AivNum>, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_,
+                TileCopy_, TileMmad_> {
 public:
     using L1TileShape = L1TileShape_;
     using L0TileShape = L0TileShape_;
@@ -107,34 +104,32 @@ public:
     };
 
     template <typename ProblemShape, typename Tiling>
-    __aicore__ inline static Params ToUnderlyingArguments(
-        const ProblemShape& problemShape, const Arguments& args, Tiling const* tiling)
+    __aicore__ inline static Params ToUnderlyingArguments(const ProblemShape& problemShape, const Arguments& args,
+                                                          Tiling const* tiling)
     {
         auto baseM = static_cast<uint32_t>(tiling->matmulTiling.baseM);
         auto baseN = static_cast<uint32_t>(tiling->matmulTiling.baseN);
         auto baseK = static_cast<uint32_t>(tiling->matmulTiling.baseK);
         auto stepKa = static_cast<uint32_t>(tiling->matmulTiling.stepKa);
         auto stepKb = static_cast<uint32_t>(tiling->matmulTiling.stepKb);
-        return {
-            .ptrA = args.ptrA,
-            .ptrC = args.ptrC,
-            .ptrBias = args.ptrBias,
-            .layoutA = args.layoutA,
-            .layoutC = args.layoutC,
-            .layoutBias = args.layoutBias,
-            .tileShapeL1 = AscendC::MakeShape(baseM, baseN, stepKa * baseK, stepKb * baseK),
-            .tileShapeL0 = AscendC::MakeShape(baseM, baseN, baseK),
-            .isBias = bool(tiling->matmulTiling.isBias),
-            .aPreloadSize = tiling->aPreloadSize,
-            .xSize = tiling->mSize * tiling->kSize,
-            .kSize = tiling->kSize,
-            .matmulTiling = &(tiling->matmulTiling)};
+        return {.ptrA = args.ptrA,
+                .ptrC = args.ptrC,
+                .ptrBias = args.ptrBias,
+                .layoutA = args.layoutA,
+                .layoutC = args.layoutC,
+                .layoutBias = args.layoutBias,
+                .tileShapeL1 = AscendC::MakeShape(baseM, baseN, stepKa * baseK, stepKb * baseK),
+                .tileShapeL0 = AscendC::MakeShape(baseM, baseN, baseK),
+                .isBias = bool(tiling->matmulTiling.isBias),
+                .aPreloadSize = tiling->aPreloadSize,
+                .xSize = tiling->mSize * tiling->kSize,
+                .kSize = tiling->kSize,
+                .matmulTiling = &(tiling->matmulTiling)};
     }
 
     template <class TensorA, class TensorBias, class TensorC, class Shape>
-    __aicore__ inline void operator()(
-        const TensorA& tensorA, const TensorBias& tensorBias, const TensorC& tensorC, const Shape& actualShape,
-        [[maybe_unused]] const Params& params)
+    __aicore__ inline void operator()(const TensorA& tensorA, const TensorBias& tensorBias, const TensorC& tensorC,
+                                      const Shape& actualShape, [[maybe_unused]] const Params& params)
     {
         mL1Len_ = Get<0>(actualShape);
         nL1Len_ = Get<1>(actualShape);
@@ -174,8 +169,8 @@ public:
         weightF16L1DbOffset_ = L1_SIZE * KB_ELEM<half> - weightL1Space;
         uint64_t aF16L1Offset = weightL1Space + biasL1Space; // A要跳过WeightL1_P0 + Bias_P0
         if (isBias_) {
-            uint64_t aF16L1Space =
-                L1_SIZE * KB_ELEM<ElementA> - DOUBLE_BUFFER_NUM * aF16L1Offset; // L1上A可占据剩余空间
+            uint64_t aF16L1Space = L1_SIZE * KB_ELEM<ElementA> -
+                                   DOUBLE_BUFFER_NUM * aF16L1Offset; // L1上A可占据剩余空间
             aF16L1DbOffset_ = aF16L1Space >> 1;
             if constexpr (IsSameType<ElementBias, float>::value) {
                 biasL1_ = CreateTensor<BiasL1TensorTrait>((weightL1Space >> 1) * sizeof(ElementBias));
@@ -271,9 +266,8 @@ private:
     }
 
     template <typename TensorA, typename TensorBias>
-    __aicore__ inline void CopyAAndBiasGmToL1(
-        const TensorA& tensorA, const TensorBias& tensorBias, int64_t kaGmOffset, int64_t kbL1RealSize,
-        int64_t biasRealN, uint64_t cvLoopIdx)
+    __aicore__ inline void CopyAAndBiasGmToL1(const TensorA& tensorA, const TensorBias& tensorBias, int64_t kaGmOffset,
+                                              int64_t kbL1RealSize, int64_t biasRealN, uint64_t cvLoopIdx)
     {
         if (al1DbNum_ > SINGLE_BUFFER_NUM) {
             AscendC::Nd2NzParams nd2nzParams;
@@ -335,8 +329,8 @@ private:
             nd2nzParams.srcNdMatrixStride = 2 * nd2nzParams.dValue;
             nd2nzParams.dstNzC0Stride = CeilAlign(nd2nzParams.nValue, static_cast<uint16_t>(BLOCK_CUBE));
             nd2nzParams.dstNzNStride = 1;
-            nd2nzParams.dstNzMatrixStride =
-                nd2nzParams.dstNzC0Stride * CeilAlign(nd2nzParams.dValue, static_cast<uint32_t>(BLOCK_CUBE));
+            nd2nzParams.dstNzMatrixStride = nd2nzParams.dstNzC0Stride *
+                                            CeilAlign(nd2nzParams.dValue, static_cast<uint32_t>(BLOCK_CUBE));
 
             LocalTensor<ElementA> tmpAF16L1;
             tmpAF16L1.address_ = aF16L1_.address_;
@@ -373,11 +367,10 @@ private:
 
     __aicore__ inline void LaunchMatmul(int64_t kbOffset, uint64_t kbL1RealSize, uint64_t nSize)
     {
-        mmObj_.SetOrgShape(
-            CeilAlign(mL1Len_, static_cast<uint64_t>(BLOCK_CUBE)),
-            CeilAlign(nL1Len_, static_cast<uint64_t>(BLOCK_CUBE)),
-            CeilAlign(kbL1RealSize, static_cast<uint64_t>(BLOCK_CUBE)),
-            CeilAlign(kbL1RealSize, static_cast<uint64_t>(BLOCK_CUBE)), nSize);
+        mmObj_.SetOrgShape(CeilAlign(mL1Len_, static_cast<uint64_t>(BLOCK_CUBE)),
+                           CeilAlign(nL1Len_, static_cast<uint64_t>(BLOCK_CUBE)),
+                           CeilAlign(kbL1RealSize, static_cast<uint64_t>(BLOCK_CUBE)),
+                           CeilAlign(kbL1RealSize, static_cast<uint64_t>(BLOCK_CUBE)), nSize);
         LocalTensor<ElementA> tmpAF16L1;
         tmpAF16L1.address_ = aF16L1_.address_;
         if (al1DbNum_ == SINGLE_BUFFER_NUM) {
@@ -393,13 +386,11 @@ private:
                 // L1A: |0|2|4|      |1|3|
                 //      |A0:0~128KB  |A1:128KB~256KB|
                 // 第5块（block = 5），在A1中偏移为3（blockOffset = 3），块内偏移量为m * (3 * k)
-                mmObj_.SetTensorA(
-                    tmpAF16L1
-                        [(cvLoopIdx_ & 1) * aF16L1DbOffset_ +
-                         CeilAlign(mL1Len_, static_cast<uint64_t>(BLOCK_CUBE)) *
-                             // 2块block
-                             (static_cast<uint64_t>(kbOffset) / (kbL1Size_ * 2) * kbL1Size_)],
-                    A_TRANS);
+                mmObj_.SetTensorA(tmpAF16L1[(cvLoopIdx_ & 1) * aF16L1DbOffset_ +
+                                            CeilAlign(mL1Len_, static_cast<uint64_t>(BLOCK_CUBE)) *
+                                                // 2块block
+                                                (static_cast<uint64_t>(kbOffset) / (kbL1Size_ * 2) * kbL1Size_)],
+                                  A_TRANS);
             } else {
                 mmObj_.SetTensorA(tmpAF16L1[CeilAlign(mL1Len_, static_cast<uint64_t>(BLOCK_CUBE)) * kbOffset], A_TRANS);
             }
@@ -485,11 +476,11 @@ private:
     bool isBias_;
     uint64_t cvLoopIdx_ = 0;
 
-    using MatmulImplType = AscendC::MatmulImpl<
-        MatmulL1GmType<TPosition::TSCM, CubeFormat::NZ, ElementA, A_TRANS>,
-        MatmulL1GmType<TPosition::TSCM, CubeFormat::NZ, ElementA, B_TRANS>,
-        AscendC::MatmulType<TPosition::GM, CubeFormat::ND, ElementC>,
-        AscendC::MatmulType<TPosition::TSCM, CubeFormat::ND, ElementBias>, CFG_MDL>;
+    using MatmulImplType = AscendC::MatmulImpl<MatmulL1GmType<TPosition::TSCM, CubeFormat::NZ, ElementA, A_TRANS>,
+                                               MatmulL1GmType<TPosition::TSCM, CubeFormat::NZ, ElementA, B_TRANS>,
+                                               AscendC::MatmulType<TPosition::GM, CubeFormat::ND, ElementC>,
+                                               AscendC::MatmulType<TPosition::TSCM, CubeFormat::ND, ElementBias>,
+                                               CFG_MDL>;
     MatmulImplType mmObj_;
     // (n1,k1,k0,n0)
     using BL1TensorTrait = typename TensorTraitL1<IsZn2D<LayoutB>::value, ElementA, AscendC::TPosition::B1>::Type;
@@ -502,4 +493,3 @@ private:
     AscendC::LocalTensor<BiasL1TensorTrait> biasL1_;
 };
 } // namespace Cmct::Gemm::Block
-

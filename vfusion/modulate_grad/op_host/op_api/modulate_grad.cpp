@@ -12,29 +12,31 @@
 #include "opdev/make_op_executor.h"
 #include <tuple>
 
-namespace l0op{
-    OP_TYPE_REGISTER(ModulateGrad);
-    std::tuple<const aclTensor*,const aclTensor*,const aclTensor*> ModulateGrad(const aclTensor *grad_output, const aclTensor *input, const aclTensor *scale, 
-                                    const aclTensor * shift, aclOpExecutor *executor){
-                                        L0_DFX(ModulateGrad,grad_output, input, scale, shift);
+namespace l0op {
+OP_TYPE_REGISTER(ModulateGrad);
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ModulateGrad(const aclTensor* grad_output,
+                                                                              const aclTensor* input,
+                                                                              const aclTensor* scale,
+                                                                              const aclTensor* shift,
+                                                                              aclOpExecutor* executor)
+{
+    L0_DFX(ModulateGrad, grad_output, input, scale, shift);
 
-                                        auto grad_inputShape = grad_output->GetViewShape();
-                                        const aclTensor* grad_scale = nullptr;
-                                        const aclTensor* grad_shift = nullptr;
-                                        if (scale != nullptr){
-                                            auto grad_scaleShape = scale->GetViewShape();
-                                            grad_scale = executor->AllocTensor(grad_scaleShape, scale->GetDataType());
-                                        }
-                                        if (shift != nullptr){
-                                            auto grad_shiftShape = shift->GetViewShape();
-                                            grad_shift = executor->AllocTensor(grad_shiftShape, shift->GetDataType());
-                                        }
-                                        const aclTensor* grad_input = executor->AllocTensor(grad_inputShape, grad_output->GetDataType());
-                                        ADD_TO_LAUNCHER_LIST_AICORE(ModulateGrad,
-                                                                OP_INPUT(grad_output,input,scale,shift),
-                                                                OP_OUTPUT(grad_input,grad_scale,grad_shift)
-                                                                );
-                                        return std::make_tuple(grad_input,grad_scale,grad_shift);
+    auto grad_inputShape = grad_output->GetViewShape();
+    const aclTensor* grad_scale = nullptr;
+    const aclTensor* grad_shift = nullptr;
+    if (scale != nullptr) {
+        auto grad_scaleShape = scale->GetViewShape();
+        grad_scale = executor->AllocTensor(grad_scaleShape, scale->GetDataType());
     }
+    if (shift != nullptr) {
+        auto grad_shiftShape = shift->GetViewShape();
+        grad_shift = executor->AllocTensor(grad_shiftShape, shift->GetDataType());
+    }
+    const aclTensor* grad_input = executor->AllocTensor(grad_inputShape, grad_output->GetDataType());
+    ADD_TO_LAUNCHER_LIST_AICORE(ModulateGrad, OP_INPUT(grad_output, input, scale, shift),
+                                OP_OUTPUT(grad_input, grad_scale, grad_shift));
+    return std::make_tuple(grad_input, grad_scale, grad_shift);
 }
-//namespace l0op
+} // namespace l0op
+  // namespace l0op

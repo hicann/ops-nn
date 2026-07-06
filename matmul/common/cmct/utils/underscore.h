@@ -23,4 +23,3 @@ struct Underscore : _0 {};
 static constexpr Underscore _;
 } // namespace Gemm
 } // namespace Cmct
-

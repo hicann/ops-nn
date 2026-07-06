@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_abs_proto.h"
 
-class ForeachAbsTest : public testing::Test
-{
+class ForeachAbsTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachAbs SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachAbs SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachAbs TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachAbs TearDown" << std::endl; }
 };
 
 TEST_F(ForeachAbsTest, infer_shape_known_success)

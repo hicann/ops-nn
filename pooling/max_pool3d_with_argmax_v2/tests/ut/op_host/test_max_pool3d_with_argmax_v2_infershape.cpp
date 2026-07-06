@@ -19,18 +19,11 @@
 using namespace ge;
 using namespace op;
 
-class MaxPool3DWithArgmaxV2InferShapeTest : public testing::Test
-{
+class MaxPool3DWithArgmaxV2InferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPool3DWithArgmaxV2 InferShape Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPool3DWithArgmaxV2 InferShape Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPool3DWithArgmaxV2 InferShape Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPool3DWithArgmaxV2 InferShape Test TearDown" << std::endl; }
 };
 
 TEST_F(MaxPool3DWithArgmaxV2InferShapeTest, max_pool3d_with_argmax_v2_infershape_test1)

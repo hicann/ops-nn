@@ -75,74 +75,74 @@ constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t SPLIT_N = 512;
 constexpr int16_t SHR_NUM_FOR_FP4 = 4;
 
-constexpr uint32_t vfLen8 = platform::GetVRegSize() / sizeof(uint8_t);     // 256
-constexpr uint32_t vfLen16 = platform::GetVRegSize() / sizeof(uint16_t);   // 128
-constexpr uint32_t vfLen32 = platform::GetVRegSize() / sizeof(uint32_t);   // 64
-constexpr uint32_t vfLen16Double = vfLen16 * DIGIT_TWO;                    // 256
-constexpr uint32_t vfLen8Double = vfLen8 * DIGIT_TWO;                      // 512
+constexpr uint32_t vfLen8 = platform::GetVRegSize() / sizeof(uint8_t);   // 256
+constexpr uint32_t vfLen16 = platform::GetVRegSize() / sizeof(uint16_t); // 128
+constexpr uint32_t vfLen32 = platform::GetVRegSize() / sizeof(uint32_t); // 64
+constexpr uint32_t vfLen16Double = vfLen16 * DIGIT_TWO;                  // 256
+constexpr uint32_t vfLen8Double = vfLen8 * DIGIT_TWO;                    // 512
 constexpr int64_t UBBlockSize_ = platform::GetUbBlockSize();
 constexpr uint16_t elementAfterReduce_ = platform::GetVRegSize() / UBBlockSize_; // 8
 
 // Cast traits for FP8_E8M0 to BF16 (2 layouts: ZERO=even indices, ONE=odd indices)
 static constexpr AscendC::Reg::CastTrait castTraitFp8E8M0ToBf16_0 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 static constexpr AscendC::Reg::CastTrait castTraitFp8E8M0ToBf16_1 = {
-    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 
 // Cast traits for BF16 to FP32 (2 layouts for 128 BF16 -> 2 FP32 registers)
 static constexpr AscendC::Reg::CastTrait castTraitBf16ToFp32_0 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 static constexpr AscendC::Reg::CastTrait castTraitBf16ToFp32_1 = {
-    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 
 // Cast trait for FP32 to BF16 (single layout, used by FP4 path BF16->FP16)
 static constexpr AscendC::Reg::CastTrait castTraitFp32ToBf16 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 // Cast traits for FP32 to BF16 (2 layouts for multi-layout Cast + Add merge)
 static constexpr AscendC::Reg::CastTrait castTraitFp32ToBf16_0 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 static constexpr AscendC::Reg::CastTrait castTraitFp32ToBf16_1 = {
-    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 // Cast trait for FP32 to FP16 (single layout, used by FP4 path BF16->FP16)
 static constexpr AscendC::Reg::CastTrait castTraitBf16ToFp16 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 // Cast traits for FP32 to FP16 (2 layouts for multi-layout Cast + Add merge)
 static constexpr AscendC::Reg::CastTrait castTraitFp32ToFp16_0 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 static constexpr AscendC::Reg::CastTrait castTraitFp32ToFp16_1 = {
-    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
 
 // Cast traits for FP8 to FP32 (4 layouts for 256 FP8 -> 4 FP32 registers)
 static constexpr AscendC::Reg::CastTrait castTraitFp8ToFp32_0 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 static constexpr AscendC::Reg::CastTrait castTraitFp8ToFp32_1 = {
-    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 static constexpr AscendC::Reg::CastTrait castTraitFp8ToFp32_2 = {
-    AscendC::Reg::RegLayout::TWO, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::TWO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 static constexpr AscendC::Reg::CastTrait castTraitFp8ToFp32_3 = {
-    AscendC::Reg::RegLayout::THREE, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::THREE, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 
 // Cast trait for FP4 to BF16 (only UNKNOWN layout, need interleave + shift for all 4 values)
 static constexpr AscendC::Reg::CastTrait castTraitFp4ToBf16 = {
-    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 
 } // namespace AntiMxQuant
 

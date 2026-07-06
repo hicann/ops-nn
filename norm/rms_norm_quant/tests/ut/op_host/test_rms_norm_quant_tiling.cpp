@@ -29,15 +29,9 @@ using namespace ge;
 
 class RmsNormAtbTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RmsNormAtbTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RmsNormAtbTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RmsNormAtbTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RmsNormAtbTiling TearDown" << std::endl; }
 };
 
 struct NormCommonCompileInfo {
@@ -47,11 +41,10 @@ struct NormCommonCompileInfo {
 };
 
 template <typename T, bool EN_QUANT, bool EN_PRE_POST>
-void TilingTest(
-    std::string opName, std::initializer_list<int64_t>& xShape, std::initializer_list<int64_t>& gammaShape,
-    std::initializer_list<int64_t>& betaShape, std::initializer_list<int64_t>& resultShape, float epsilon,
-    bool gemma_mode, bool high_precision_mode, ge::DataType datatype, ge::Format format, const ge::graphStatus status,
-    uint64_t tilingKeyValue)
+void TilingTest(std::string opName, std::initializer_list<int64_t>& xShape, std::initializer_list<int64_t>& gammaShape,
+                std::initializer_list<int64_t>& betaShape, std::initializer_list<int64_t>& resultShape, float epsilon,
+                bool gemma_mode, bool high_precision_mode, ge::DataType datatype, ge::Format format,
+                const ge::graphStatus status, uint64_t tilingKeyValue)
 {
     std::string op_type(opName);
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -81,19 +74,19 @@ void TilingTest(
     // 编译信息
     NormCommonCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -142,12 +135,10 @@ void TilingTest(
                              .NodeInputTd(4, ge::DT_INT8, format, format)
                              .NodeOutputTd(0, resdatatype, format, format)
                              .TilingData(param.get())
-                             .NodeAttrs({
-                                 {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)},
-                                 {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                 {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                 {"dstType", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}
-                             })
+                             .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)},
+                                         {"high_precision_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                         {"gemma_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                         {"dstType", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                              .Workspace(ws_size)
                              .Build();
 
@@ -156,8 +147,8 @@ void TilingTest(
     holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    holderBuilder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                       intrinsics);
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), status);
@@ -180,9 +171,8 @@ TEST_F(RmsNormAtbTiling, RmsNormQuantTilingData_test_float16_success_tilingKey_0
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
 
     // PreRmsNorm  RmsNormQuant  PreRmsNormQuant
-    TilingTest<int64_t, true, false>(
-        "RmsNormQuant", xShape, gamma, beta, result, epsilon, true, true, ge::DT_FLOAT16, ge::FORMAT_ND, status,
-        0b0100000001);
+    TilingTest<int64_t, true, false>("RmsNormQuant", xShape, gamma, beta, result, epsilon, true, true, ge::DT_FLOAT16,
+                                     ge::FORMAT_ND, status, 0b0100000001);
 }
 
 TEST_F(RmsNormAtbTiling, RmsNormQuantTilingData_test_bfloat16_success_tilingKey_0b1_1_1_0_011011)
@@ -195,7 +185,6 @@ TEST_F(RmsNormAtbTiling, RmsNormQuantTilingData_test_bfloat16_success_tilingKey_
     float epsilon = 0.01;
     const ge::graphStatus status = ge::GRAPH_SUCCESS;
 
-    TilingTest<int64_t, true, false>(
-        "RmsNormQuant", xShape, gamma, beta, result, epsilon, true, true, ge::DT_BF16, ge::FORMAT_ND, status,
-        0b0100011011);
+    TilingTest<int64_t, true, false>("RmsNormQuant", xShape, gamma, beta, result, epsilon, true, true, ge::DT_BF16,
+                                     ge::FORMAT_ND, status, 0b0100011011);
 }

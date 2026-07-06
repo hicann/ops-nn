@@ -31,21 +31,19 @@ struct TilingResult {
 
 class MatMulTilingCfg {
 public:
-    MatMulTilingCfg(
-        bool needUpdateIn, const void* compileInfoIn, const void* argsIn, MatMulV3TilingKey* tilingKeyObjIn = nullptr)
+    MatMulTilingCfg(bool needUpdateIn, const void* compileInfoIn, const void* argsIn,
+                    MatMulV3TilingKey* tilingKeyObjIn = nullptr)
         : needUpdate(needUpdateIn), compileInfo(compileInfoIn), args(argsIn), tilingKeyObj(tilingKeyObjIn)
     {}
 
-    virtual ~MatMulTilingCfg() {};
+    virtual ~MatMulTilingCfg(){};
 
-    virtual ge::graphStatus Update(const TilingResult& /*result*/) {
-        return ge::GRAPH_SUCCESS;
-    };
+    virtual ge::graphStatus Update(const TilingResult& /*result*/) { return ge::GRAPH_SUCCESS; };
 
 public:
     const bool needUpdate = false;     // true: Tiling结果通过Update返回； false: Tiling结果填充到context中
-    const void *compileInfo = nullptr; // 编译信息，用于生成TilingKey
-    const void *args = nullptr;        // 算子参数，用于生成TilingKey
-    MatMulV3TilingKey *tilingKeyObj = nullptr; // tilingkey函数指针， 用于:生成TilingKey
+    const void* compileInfo = nullptr; // 编译信息，用于生成TilingKey
+    const void* args = nullptr;        // 算子参数，用于生成TilingKey
+    MatMulV3TilingKey* tilingKeyObj = nullptr; // tilingkey函数指针， 用于:生成TilingKey
 };
 } // namespace optiling

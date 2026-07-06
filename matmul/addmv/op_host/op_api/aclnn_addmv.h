@@ -21,9 +21,10 @@ extern "C" {
  * @brief aclnnAddmv的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
-ACLNN_API aclnnStatus aclnnAddmvGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,
-    aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnAddmvGetWorkspaceSize(const aclTensor* self, const aclTensor* mat, const aclTensor* vec,
+                                                 const aclScalar* alpha, const aclScalar* beta, aclTensor* out,
+                                                 int8_t cubeMathType, uint64_t* workspaceSize,
+                                                 aclOpExecutor** executor);
 
 /**
  * @brief aclnnAddmv的第二段接口，用于执行计算。

@@ -22,15 +22,10 @@
 #include "pooling/avg_pool/op_kernel/arch35/avg_pool_struct.h"
 
 namespace optiling {
-class AvgPoolCommonBigKernelTiling : public TilingBaseClass
-{
+class AvgPoolCommonBigKernelTiling : public TilingBaseClass {
 public:
-    explicit AvgPoolCommonBigKernelTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
-    ~AvgPoolCommonBigKernelTiling() override
-    {
-    }
+    explicit AvgPoolCommonBigKernelTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AvgPoolCommonBigKernelTiling() override {}
 
 protected:
     void DoUBTiling();
@@ -42,6 +37,7 @@ protected:
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
     void SetTilingData();
+
 public:
     AvgPoolInputInfo inputData_;
     uint64_t coreNum_ = 1;
@@ -53,35 +49,25 @@ public:
     int64_t isSigOut_{0};
 };
 
-class AvgPoolBigKernelTiling : public AvgPoolCommonBigKernelTiling
-{
+class AvgPoolBigKernelTiling : public AvgPoolCommonBigKernelTiling {
 public:
-    explicit AvgPoolBigKernelTiling(gert::TilingContext* context) : AvgPoolCommonBigKernelTiling(context)
-    {
-    }
-    ~AvgPoolBigKernelTiling() override
-    {
-    }
+    explicit AvgPoolBigKernelTiling(gert::TilingContext* context) : AvgPoolCommonBigKernelTiling(context) {}
+    ~AvgPoolBigKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class AvgPoolV2BigKernelTiling : public AvgPoolCommonBigKernelTiling
-{
+class AvgPoolV2BigKernelTiling : public AvgPoolCommonBigKernelTiling {
 public:
-    explicit AvgPoolV2BigKernelTiling(gert::TilingContext* context) : AvgPoolCommonBigKernelTiling(context)
-    {
-    }
-    ~AvgPoolV2BigKernelTiling() override
-    {
-    }
+    explicit AvgPoolV2BigKernelTiling(gert::TilingContext* context) : AvgPoolCommonBigKernelTiling(context) {}
+    ~AvgPoolV2BigKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-}  // namespace optiling
-#endif  // AVG_POOL_BIG_KERNEL_TILING_H
+} // namespace optiling
+#endif // AVG_POOL_BIG_KERNEL_TILING_H

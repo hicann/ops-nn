@@ -4,15 +4,16 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
  * \file adaptive_pool3d_tiling.h
  * \brief
  * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (51) USING BLANK LINES.
- * 
+ *
  */
 
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPTIVE_POOL3D_TILING_H_
@@ -74,10 +75,8 @@ struct AdaptivePool3dCompileInfo {
 
 class AdaptivePool3dBaseTiling : public TilingBaseClass {
 public:
-    explicit AdaptivePool3dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~AdaptivePool3dBaseTiling() override
-    {}
+    explicit AdaptivePool3dBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~AdaptivePool3dBaseTiling() override {}
 
     BaseInput input_;
 
@@ -96,6 +95,6 @@ protected:
     uint64_t CalKernelSizeOneDimMax(uint64_t inSize, uint64_t outSize);
 };
 
-}// namespace optiling
+} // namespace optiling
 
 #endif

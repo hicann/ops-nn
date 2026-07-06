@@ -33,15 +33,9 @@ using namespace ge;
 
 class ReluV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReluV2TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReluV2TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReluV2TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReluV2TilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)

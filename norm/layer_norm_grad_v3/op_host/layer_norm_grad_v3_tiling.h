@@ -27,8 +27,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 constexpr uint64_t LNG_TEMPLATE_KEY_WEIGHT = 100;
 constexpr uint64_t LNG_DETERMINISTIC_KEY_WEIGHT = 10;
 constexpr uint64_t B32_BLOCK_ALIGN_NUM = 8;
@@ -48,20 +47,20 @@ REGISTER_TILING_DATA_CLASS(LayerNormGradV3, LayerNormGradV3TilingData)
 
 // LayerNormGradV3TilingDataTranspose
 BEGIN_TILING_DATA_DEF(LayerNormGradV3TilingDataTranspose)
-TILING_DATA_FIELD_DEF(uint64_t, row);                          // 输入tensor的行
-TILING_DATA_FIELD_DEF(uint64_t, col);                          // 输入tensor的列，即reduce的轴
-TILING_DATA_FIELD_DEF(uint64_t, numBlocks);                     // 实际使用的core数量
-TILING_DATA_FIELD_DEF(uint64_t, blockFormer);                  // 整核处理的row大小
-TILING_DATA_FIELD_DEF(uint64_t, blockTail);                    // 尾核处理的row大小
-TILING_DATA_FIELD_DEF(uint64_t, ubFormer);                     // ub整循环处理的row大小
-TILING_DATA_FIELD_DEF(uint64_t, ubLoopOfFormerBlock);          // 整核处理的ub循环次数
-TILING_DATA_FIELD_DEF(uint64_t, ubLoopOfTailBlock);            // 尾核处理的ub循环次数
-TILING_DATA_FIELD_DEF(uint64_t, ubTailOfFormerBlock);          // 整核ub尾循环处理的row大小
-TILING_DATA_FIELD_DEF(uint64_t, ubTailOfTailBlock);            // 尾核ub尾循环处理的row大小
-TILING_DATA_FIELD_DEF(uint64_t, bFormer);                      // ubFormer借轴大小，ubFormer->16*bFormer
-TILING_DATA_FIELD_DEF(uint64_t, dichotomizeAddDiffSize);       // row与小于row的最近二次幂的差值
-TILING_DATA_FIELD_DEF(uint64_t, deterministicComputeWspSize);  // 确定性计算需要的pdGamma或pdBeta workspace size大小
-TILING_DATA_FIELD_DEF(float, coefficient);                     // 1/col
+TILING_DATA_FIELD_DEF(uint64_t, row);                    // 输入tensor的行
+TILING_DATA_FIELD_DEF(uint64_t, col);                    // 输入tensor的列，即reduce的轴
+TILING_DATA_FIELD_DEF(uint64_t, numBlocks);              // 实际使用的core数量
+TILING_DATA_FIELD_DEF(uint64_t, blockFormer);            // 整核处理的row大小
+TILING_DATA_FIELD_DEF(uint64_t, blockTail);              // 尾核处理的row大小
+TILING_DATA_FIELD_DEF(uint64_t, ubFormer);               // ub整循环处理的row大小
+TILING_DATA_FIELD_DEF(uint64_t, ubLoopOfFormerBlock);    // 整核处理的ub循环次数
+TILING_DATA_FIELD_DEF(uint64_t, ubLoopOfTailBlock);      // 尾核处理的ub循环次数
+TILING_DATA_FIELD_DEF(uint64_t, ubTailOfFormerBlock);    // 整核ub尾循环处理的row大小
+TILING_DATA_FIELD_DEF(uint64_t, ubTailOfTailBlock);      // 尾核ub尾循环处理的row大小
+TILING_DATA_FIELD_DEF(uint64_t, bFormer);                // ubFormer借轴大小，ubFormer->16*bFormer
+TILING_DATA_FIELD_DEF(uint64_t, dichotomizeAddDiffSize); // row与小于row的最近二次幂的差值
+TILING_DATA_FIELD_DEF(uint64_t, deterministicComputeWspSize); // 确定性计算需要的pdGamma或pdBeta workspace size大小
+TILING_DATA_FIELD_DEF(float, coefficient);                    // 1/col
 TILING_DATA_FIELD_DEF(float, placeHolder);
 END_TILING_DATA_DEF;
 
@@ -207,7 +206,6 @@ TILING_DATA_FIELD_DEF(int32_t, pdbetaIsRequire);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(LayerNormGradV3_500, LayerNormGradV3TilingDataRecompute)
 
-
 // LayerNormGradV3TilingDataGroupedReduceBigM
 BEGIN_TILING_DATA_DEF(LayerNormGradV3TilingDataGroupedReduceBigM)
 TILING_DATA_FIELD_DEF(int64_t, row);
@@ -350,12 +348,9 @@ struct LayerNormGradV3CompileInfo {
     bool isRegBase = false;
 };
 
-class LayerNormGradV3TilingBase : public Ops::NN::Optiling::TilingBaseClass
-{
+class LayerNormGradV3TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit LayerNormGradV3TilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {
-    }
+    explicit LayerNormGradV3TilingBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
     ~LayerNormGradV3TilingBase() override = default;
     ParamsLayerNormGradV3 commonParams;
 
@@ -372,12 +367,9 @@ protected:
     int64_t GetCacheID(const int64_t idx);
 };
 
-class LayerNormGradV3WorkspaceTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3WorkspaceTiling : public LayerNormGradV3TilingBase {
 public:
-    explicit LayerNormGradV3WorkspaceTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    explicit LayerNormGradV3WorkspaceTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context) {}
     ~LayerNormGradV3WorkspaceTiling() override = default;
     LayerNormGradV3TilingDataWorkspace td_;
 
@@ -389,12 +381,9 @@ protected:
     uint64_t GetTilingKey() const override;
 };
 
-class LayerNormGradV3SingleReadTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3SingleReadTiling : public LayerNormGradV3TilingBase {
 public:
-    explicit LayerNormGradV3SingleReadTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    explicit LayerNormGradV3SingleReadTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context) {}
     ~LayerNormGradV3SingleReadTiling() override = default;
     LayerNormGradV3TilingDataSingleRead td_;
 
@@ -414,12 +403,9 @@ private:
     bool dbFlag;
 };
 
-class LayerNormGradV3TransposeTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3TransposeTiling : public LayerNormGradV3TilingBase {
 public:
-    explicit LayerNormGradV3TransposeTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    explicit LayerNormGradV3TransposeTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context) {}
     ~LayerNormGradV3TransposeTiling() override = default;
     LayerNormGradV3TilingDataTranspose td_;
 
@@ -435,12 +421,9 @@ private:
     uint32_t FindDichotomizeAddDiffSize();
 };
 
-class LayerNormGradV3CommonTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3CommonTiling : public LayerNormGradV3TilingBase {
 public:
-    explicit LayerNormGradV3CommonTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    explicit LayerNormGradV3CommonTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context) {}
     ~LayerNormGradV3CommonTiling() override = default;
     LayerNormGradV3TilingDataCommon td_;
 
@@ -462,12 +445,9 @@ private:
     int64_t colAlignM_{-1};
 };
 
-class LayerNormGradV3RecomputeTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3RecomputeTiling : public LayerNormGradV3TilingBase {
 public:
-    explicit LayerNormGradV3RecomputeTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    explicit LayerNormGradV3RecomputeTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context) {}
     ~LayerNormGradV3RecomputeTiling() override = default;
     LayerNormGradV3TilingDataRecompute td_;
 
@@ -483,12 +463,10 @@ private:
     ge::graphStatus BackwardKernelTiling();
 };
 
-class LayerNormGradV3GroupedReduceBigMTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3GroupedReduceBigMTiling : public LayerNormGradV3TilingBase {
 public:
     explicit LayerNormGradV3GroupedReduceBigMTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    {}
     ~LayerNormGradV3GroupedReduceBigMTiling() override = default;
     LayerNormGradV3TilingDataGroupedReduceBigM td_;
 
@@ -504,12 +482,10 @@ private:
     ge::graphStatus BackwardKernelTiling();
 };
 
-class LayerNormGradV3GroupedReduceBigNTiling : public LayerNormGradV3TilingBase
-{
+class LayerNormGradV3GroupedReduceBigNTiling : public LayerNormGradV3TilingBase {
 public:
     explicit LayerNormGradV3GroupedReduceBigNTiling(gert::TilingContext* context) : LayerNormGradV3TilingBase(context)
-    {
-    }
+    {}
     ~LayerNormGradV3GroupedReduceBigNTiling() override = default;
     LayerNormGradV3TilingDataGroupedReduceBigN td_;
 
@@ -525,10 +501,9 @@ private:
     ge::graphStatus BackwardKernelTiling();
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-namespace ops
-{
+namespace ops {
 template <typename T>
 inline auto CeilAlign(T num1, T num2) -> T
 {
@@ -552,5 +527,5 @@ inline auto CeilDiv(T num1, T num2) -> T
 {
     return Ops::Base::CeilDiv(num1, num2);
 }
-}  // namespace ops
-#endif  // LAYER_NORM_GRAD_V3_TILING_H
+} // namespace ops
+#endif // LAYER_NORM_GRAD_V3_TILING_H

@@ -20,8 +20,7 @@
 #include "../inc/kernel_utils.h"
 #include "op_kernel/math_util.h"
 
-namespace AvgPool
-{
+namespace AvgPool {
 using namespace AscendC;
 
 struct ComputeParam {
@@ -38,8 +37,7 @@ struct ComputeParam {
 constexpr int32_t SPARSE_THRESHOLD = 64;
 
 template <typename T>
-class AvgPoolSmallKernel
-{
+class AvgPoolSmallKernel {
 public:
     __aicore__ inline AvgPoolSmallKernel(TPipe* pipe, const AvgPoolNCHWSmallKernelTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -49,26 +47,23 @@ public:
 private:
     template <typename M, typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
-    __aicore__ inline void CopyInMultiRowsSparse(int64_t offset, const ComputeParam &param, int32_t inCols, int64_t colsInUb,
-                                                                      int64_t channelStride);
+    __aicore__ inline void CopyInMultiRowsSparse(int64_t offset, const ComputeParam& param, int32_t inCols,
+                                                 int64_t colsInUb, int64_t channelStride);
     __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
                                            uint32_t colsInUb);
     __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen);
     template <typename M, typename U>
-    __aicore__ inline void ComputeMultiRow(const ComputeParam &param);
+    __aicore__ inline void ComputeMultiRow(const ComputeParam& param);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleRow(const ComputeParam &param);
+    __aicore__ inline void ComputeSingleRow(const ComputeParam& param);
     template <typename M, typename U>
-    __aicore__ inline void ComputeMultiBatch(const ComputeParam &param);
+    __aicore__ inline void ComputeMultiBatch(const ComputeParam& param);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleKernel(const ComputeParam &param);
+    __aicore__ inline void ComputeSingleKernel(const ComputeParam& param);
     template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements, uint32_t wIn,
-                                          uint32_t hStride, uint32_t wStride, LocalTensor<U>& indexLocal);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements,
+                                          uint32_t wIn, uint32_t hStride, uint32_t wStride, LocalTensor<U>& indexLocal);
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -128,7 +123,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
     uint32_t outUbFactorH = tilingData_->outUbFactorH;
     bool isSparse = (outUbFactorH != 1 && sH > kH && tilingData_->wInDim * sH * sizeof(T) > SPARSE_THRESHOLD) ||
                     (outUbFactorH == 1 && tilingData_->hInDim > kH &&
-                        tilingData_->wInDim * tilingData_->hInDim * sizeof(T) > SPARSE_THRESHOLD);
+                     tilingData_->wInDim * tilingData_->hInDim * sizeof(T) > SPARSE_THRESHOLD);
     int64_t startIdx = 0;
     int64_t endIdx = 0;
     if (GetBlockIdx() < tilingData_->blockTail) {
@@ -159,8 +154,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
         int64_t nIdx = idx / (tilingData_->hLoop * tilingData_->wLoop);
         int64_t hIdx = (idx - nIdx * tilingData_->hLoop * tilingData_->wLoop) / tilingData_->wLoop;
         int64_t wIdx = idx % tilingData_->wLoop;
-        int64_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                   : tilingData_->ubFactorN;
+        int64_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                     tilingData_->ubFactorN;
         int64_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * outUbFactorH : outUbFactorH;
         int64_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
         int64_t rowStart = hIdx * sH * outUbFactorH;
@@ -170,7 +165,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
                             rowStart * tilingData_->wInDim + colStart;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->hOutDim * tilingData_->wOutDim +
                             hIdx * outUbFactorH * tilingData_->wOutDim + wIdx * outUbFactorW;
-        int64_t inRows = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim : (rows - 1) * sH + tilingData_->kH;
+        int64_t inRows = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim :
+                                                                  (rows - 1) * sH + tilingData_->kH;
         int64_t inCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + tilingData_->kW;
 
         ComputeParam param = {n, inRows, colsInUb, rows, cols, sH, sW, batchElementsIn};
@@ -196,8 +192,9 @@ __aicore__ inline void AvgPoolSmallKernel<T>::BaseCompute()
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRowsSparse(int64_t offset, const ComputeParam &param, int32_t inCols, int64_t colsInUb,
-                                                                      int64_t channelStride)
+__aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRowsSparse(int64_t offset, const ComputeParam& param,
+                                                                    int32_t inCols, int64_t colsInUb,
+                                                                    int64_t channelStride)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyExtParams extParams;
@@ -243,7 +240,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRowsSparse(int64_t offs
 
 template <typename T>
 __aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount,
-                                                                int64_t blockLen, uint32_t colsInUb)
+                                                              int64_t blockLen, uint32_t colsInUb)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     int64_t channelStride = blockCount * colsInUb;
@@ -274,7 +271,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::CopyInMultiRows(int64_t offset, in
 
 template <typename T>
 __aicore__ inline void AvgPoolSmallKernel<T>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
-                                                           int64_t blockLen)
+                                                         int64_t blockLen)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -288,9 +285,9 @@ __aicore__ inline void AvgPoolSmallKernel<T>::CopyMaxOut(int64_t offset, int64_t
 
 template <typename T>
 template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void AvgPoolSmallKernel<T>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t batchElements,
-                                                               uint32_t wIn, uint32_t hStride, uint32_t wStride,
-                                                               LocalTensor<U>& indexLocal)
+__aicore__ inline void AvgPoolSmallKernel<T>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut,
+                                                             uint32_t batchElements, uint32_t wIn, uint32_t hStride,
+                                                             uint32_t wStride, LocalTensor<U>& indexLocal)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         GenGatherIndexSingleRow<U>(wStride, indexLocal);
@@ -305,7 +302,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::GenGatherIndex(uint32_t hFactorOut
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiBatch(const ComputeParam &param)
+__aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiBatch(const ComputeParam& param)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -338,8 +335,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiBatch(const ComputePar
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        AvgPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride, oneLoopElements,
-                                tailLoopElements, 0, 0, 0, 0, divisor);
+        AvgPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride,
+                                oneLoopElements, tailLoopElements, 0, 0, 0, 0, divisor);
     }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -347,7 +344,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiBatch(const ComputePar
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiRow(const ComputeParam &param)
+__aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiRow(const ComputeParam& param)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -391,7 +388,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiRow(const ComputeParam
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputeParam &param)
+__aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputeParam& param)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -442,8 +439,8 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputePara
             {
                 MicroAPI::RegTensor<U> v0;
                 MicroAPI::DataCopy(v0, indexAddr);
-                AvgPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, param.inCols,
-                                    num, tailW, 0, 0, 0, 0, divisor);
+                AvgPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                    param.inCols, num, tailW, 0, 0, 0, 0, divisor);
             }
         }
     }
@@ -453,7 +450,7 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputePara
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleKernel(const ComputeParam &param)
+__aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleKernel(const ComputeParam& param)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
@@ -485,60 +482,94 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleKernel(const ComputeP
 
     switch (regNum) {
         case 1:
-            AvgPoolSingleKernelCommon<T, U, ONE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, ONE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                 divisor);
             break;
         case 2:
-            AvgPoolSingleKernelCommon<T, U, TWO>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, TWO>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                 divisor);
             break;
         case 3:
-            AvgPoolSingleKernelCommon<T, U, THREE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, THREE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                   oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                   divisor);
             break;
         case 4:
-            AvgPoolSingleKernelCommon<T, U, FOUR>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, FOUR>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                  oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                  divisor);
             break;
         case 5:
-            AvgPoolSingleKernelCommon<T, U, FIVE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, FIVE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                  oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                  divisor);
             break;
         case 6:
-            AvgPoolSingleKernelCommon<T, U, SIX>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, SIX>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                 divisor);
             break;
         case 7:
-            AvgPoolSingleKernelCommon<T, U, SEVEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, SEVEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                   oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                   divisor);
             break;
         case 8:
-            AvgPoolSingleKernelCommon<T, U, EIGHT>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, EIGHT>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                   oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                   divisor);
             break;
         case 9:
-            AvgPoolSingleKernelCommon<T, U, NINE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, NINE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                  oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                  divisor);
             break;
         case 10:
-            AvgPoolSingleKernelCommon<T, U, TEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, TEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                 oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements,
+                                                 divisor);
             break;
         case 11:
-            AvgPoolSingleKernelCommon<T, U, ELEVEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, ELEVEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                    oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                    tailLoopElements, divisor);
             break;
         case 12:
-            AvgPoolSingleKernelCommon<T, U, TWELVE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, TWELVE>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                    oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                    tailLoopElements, divisor);
             break;
         case 13:
-            AvgPoolSingleKernelCommon<T, U, THIRTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, THIRTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                      oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                      tailLoopElements, divisor);
             break;
         case 14:
-            AvgPoolSingleKernelCommon<T, U, FOURTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, FOURTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                      oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                      tailLoopElements, divisor);
             break;
         case 15:
-            AvgPoolSingleKernelCommon<T, U, FIFTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, FIFTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                     oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                     tailLoopElements, divisor);
             break;
         case 16:
-            AvgPoolSingleKernelCommon<T, U, SIXTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, tailLoopElements, divisor);
+            AvgPoolSingleKernelCommon<T, U, SIXTEEN>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                                     oneChannelElements, oneLoopStrideH, oneLoopStrideW,
+                                                     tailLoopElements, divisor);
             break;
         default:
-            AvgPoolSingleKernelDefault<T, U>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW, oneChannelElements, oneLoopStrideH, oneLoopStrideW, divisor, regNum, kernelSize);
+            AvgPoolSingleKernelDefault<T, U>(dstLocalAddr, xLocalAddr, indexAddr, loopN, loopH, loopW,
+                                             oneChannelElements, oneLoopStrideH, oneLoopStrideW, divisor, regNum,
+                                             kernelSize);
             break;
     }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
 
-}  // namespace AvgPool
-#endif  // AVG_POOL_NCHW_SMALL_KERNEL_H_
+} // namespace AvgPool
+#endif // AVG_POOL_NCHW_SMALL_KERNEL_H_

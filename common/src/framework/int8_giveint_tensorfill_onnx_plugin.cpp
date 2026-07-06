@@ -16,43 +16,43 @@ using ge::Operator;
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status  ParseParamsInt8GivenIntTensorFill(const Message* op_src, ge::Operator& op_dest) {
-  const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
-  if (nullptr == node) {
-    OP_LOGE("ParseParamsInt8GivenIntTensorFill", "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  std::vector<int32_t> vals;
-  std::vector<int64_t> dims;
-  for (auto &attr : node->attribute()) {
-    if (attr.name() == "values") {
-      int num = attr.ints_size();
-      for (int i = 0; i < num; ++i) {
-        vals.push_back(attr.ints(i));
-      }
-    } else if(attr.name() == "shape") {
-      int num = attr.ints_size();
-      for (int i = 0; i < num; ++i) {
-        dims.push_back(attr.ints(i));
-      }
+static Status ParseParamsInt8GivenIntTensorFill(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
+    if (nullptr == node) {
+        OP_LOGE("ParseParamsInt8GivenIntTensorFill", "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
-  
-  if (vals.empty()) {
-    OP_LOGE("ParseParamsInt8GivenIntTensorFill", "Must have attr values");
-    return FAILED;
-  }
 
-  if (dims.empty()) {
-    dims.push_back((int64_t)vals.size());
-  }
+    std::vector<int32_t> vals;
+    std::vector<int64_t> dims;
+    for (auto& attr : node->attribute()) {
+        if (attr.name() == "values") {
+            int num = attr.ints_size();
+            for (int i = 0; i < num; ++i) {
+                vals.push_back(attr.ints(i));
+            }
+        } else if (attr.name() == "shape") {
+            int num = attr.ints_size();
+            for (int i = 0; i < num; ++i) {
+                dims.push_back(attr.ints(i));
+            }
+        }
+    }
 
-  ge::Tensor value_tensor = Vec2Tensor(vals, dims, ge::DT_INT32);
-  op_dest.SetAttr("value", value_tensor);
-  return SUCCESS;
+    if (vals.empty()) {
+        OP_LOGE("ParseParamsInt8GivenIntTensorFill", "Must have attr values");
+        return FAILED;
+    }
+
+    if (dims.empty()) {
+        dims.push_back((int64_t)vals.size());
+    }
+
+    ge::Tensor value_tensor = Vec2Tensor(vals, dims, ge::DT_INT32);
+    op_dest.SetAttr("value", value_tensor);
+    return SUCCESS;
 }
-
 
 REGISTER_CUSTOM_OP("Constant")
     .FrameworkType(ONNX)
@@ -67,4 +67,4 @@ REGISTER_CUSTOM_OP("Constant")
                    ge::AscendString("ai.onnx::16::Int8GivenIntTensorFill")})
     .ParseParamsFn(ParseParamsInt8GivenIntTensorFill)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

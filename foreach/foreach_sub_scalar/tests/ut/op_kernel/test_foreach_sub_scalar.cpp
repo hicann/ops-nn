@@ -23,28 +23,20 @@
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
 #include "tensor_list_operate.h"
 
-extern "C" __global__ __aicore__ void foreach_sub_scalar(
-    GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void foreach_sub_scalar(GM_ADDR x, GM_ADDR scalar, GM_ADDR y, GM_ADDR workspace,
+                                                         GM_ADDR tiling);
 
-class foreach_sub_scalar_test : public testing::Test
-{
+class foreach_sub_scalar_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_sub_scalar_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_sub_scalar_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_sub_scalar_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_sub_scalar_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_sub_scalar_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_sub_scalar/tests/ut/op_kernel/sub_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_sub_scalar/tests/ut/op_kernel/sub_scalar_data ./");
     system("chmod -R 755 ./sub_scalar_data/");
     system("cd ./sub_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -82,9 +74,8 @@ TEST_F(foreach_sub_scalar_test, test_case_float_1)
 TEST_F(foreach_sub_scalar_test, test_case_float16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_sub_scalar/tests/ut/op_kernel/sub_scalar_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_sub_scalar/tests/ut/op_kernel/sub_scalar_data ./");
     system("chmod -R 755 ./sub_scalar_data/");
     system("cd ./sub_scalar_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 15 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

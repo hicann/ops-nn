@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file multi_scale_deformable_attn_function.cpp
  * \brief
@@ -22,45 +21,49 @@
 #endif
 
 extern "C" __global__ __aicore__ void multi_scale_deformable_attn_function(GM_ADDR value, GM_ADDR valueSpatialShapes,
-    GM_ADDR valueLevelStartIndex, GM_ADDR samplingLocations, GM_ADDR attentionWeights, GM_ADDR output,
-    GM_ADDR workspace, GM_ADDR tiling)
+                                                                           GM_ADDR valueLevelStartIndex,
+                                                                           GM_ADDR samplingLocations,
+                                                                           GM_ADDR attentionWeights, GM_ADDR output,
+                                                                           GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 #if __CCE_AICORE__ == 200
     if (TILING_KEY_IS(1)) {
         MultiScaleDeformableAttn::KernelMultiScaleDeformableAttn310P<float> op;
-        op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output, &tilingData);
+        op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output,
+                &tilingData);
         op.MSDAProcess();
     }
 #else
     TPipe pipe;
     if (TILING_KEY_IS(1002)) {
         KernelMultiScaleDeformableAttnOpt<2, 16> op(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations,
-            attentionWeights, output, &tilingData, &pipe);
+                                                    attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(1004)) {
         KernelMultiScaleDeformableAttnOpt<4, 16> op(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations,
-            attentionWeights, output, &tilingData, &pipe);
+                                                    attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(1008)) {
         KernelMultiScaleDeformableAttnOpt<8, 16> op(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations,
-            attentionWeights, output, &tilingData, &pipe);
+                                                    attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(2002)) {
         KernelMultiScaleDeformableAttnOpt<2, 32> op(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations,
-            attentionWeights, output, &tilingData, &pipe);
+                                                    attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(2004)) {
         KernelMultiScaleDeformableAttnOpt<4, 32> op(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations,
-            attentionWeights, output, &tilingData, &pipe);
+                                                    attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(2008)) {
         KernelMultiScaleDeformableAttnOpt<8, 32> op(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations,
-            attentionWeights, output, &tilingData, &pipe);
+                                                    attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(0)) {
         KernelMultiScaleDeformableAttn op;
-        op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output, &tilingData, &pipe);
+        op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output,
+                &tilingData, &pipe);
         op.InitBuffer();
         op.GetLocalTensor();
         op.ClearOutput();

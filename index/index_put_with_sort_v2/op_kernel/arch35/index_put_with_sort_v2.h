@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -23,8 +23,7 @@
 #include "simt_api/asc_simt.h"
 #include "index_put_with_sort_v2_struct.h"
 
-namespace AscendC
-{
+namespace AscendC {
 static constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t TILING_NUM = 36;
 constexpr size_t NON_INDEXED_DIM_SIZE_OFFSET = 2;
@@ -47,7 +46,8 @@ using AccumType = std::conditional_t<
     std::conditional_t<std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>, float, T>>;
 
 template <typename TX, typename AccumT, bool ACCUMULATE, typename IdxT>
-__simt_callee__ __aicore__ inline void WriteBack(__gm__ TX* output, IdxT idx, AccumT value) {
+__simt_callee__ __aicore__ inline void WriteBack(__gm__ TX* output, IdxT idx, AccumT value)
+{
     if constexpr (ACCUMULATE) {
         output[idx] = static_cast<TX>(value + static_cast<AccumT>(output[idx]));
     } else {
@@ -55,9 +55,12 @@ __simt_callee__ __aicore__ inline void WriteBack(__gm__ TX* output, IdxT idx, Ac
     }
 }
 
-template <typename TX, typename TIDX, bool ACCUMULATE, bool ALL_INDEXED, bool INDEXED_BLOCK_MODE, uint16_t LAUNCH_BOUND_LIMIT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPutV2(__gm__ TX* output, __gm__ TIDX* sortIndices,
-    __gm__ int32_t* posIdx, __gm__ TX* values, __ubuf__ int64_t* tilingUb, __ubuf__ calcParams<uint64_t>* calcParamsPtr) {
+template <typename TX, typename TIDX, bool ACCUMULATE, bool ALL_INDEXED, bool INDEXED_BLOCK_MODE,
+          uint16_t LAUNCH_BOUND_LIMIT>
+__simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPutV2(
+    __gm__ TX* output, __gm__ TIDX* sortIndices, __gm__ int32_t* posIdx, __gm__ TX* values, __ubuf__ int64_t* tilingUb,
+    __ubuf__ calcParams<uint64_t>* calcParamsPtr)
+{
     const auto& nonIndexedDimNum = tilingUb[0];
     const auto& indexedDimSize = tilingUb[1];
     const auto& nonIndexedDimSize = tilingUb[NON_INDEXED_DIM_SIZE_OFFSET];
@@ -109,9 +112,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
 
                     // 将一维索引k分解为多维索引
                     for (uint64_t i = 0; i < nonIndexedDimNum; i++) {
-                        const uint64_t idxI = AscendC::Simt::UintDiv(remaining, calcParamsPtr->m_[i], calcParamsPtr->shift_[i]);
+                        const uint64_t idxI = AscendC::Simt::UintDiv(remaining, calcParamsPtr->m_[i],
+                                                                     calcParamsPtr->shift_[i]);
                         remaining = remaining - idxI * nonIdxedStride[i]; // 剩余索引
-                        nonIdxedSelfIdx += idxI * nonIdxedSelfStride[i]; // 累加内存偏移
+                        nonIdxedSelfIdx += idxI * nonIdxedSelfStride[i];  // 累加内存偏移
                         nonIdxedValueIdx += idxI * nonIdxedValueStride[i];
                     }
                     res = static_cast<AccumT>(values[idxedValueIdx + nonIdxedValueIdx]);
@@ -125,34 +129,35 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
 template <typename TX, typename TIDX, bool ACCUMULATE, bool ALL_INDEXED, bool INDEXED_BLOCK_MODE>
 class IndexPutWithSortV2Kernel {
 public:
-    __aicore__ inline IndexPutWithSortV2Kernel(TPipe *pipe, const IndexPutWithSortV2TilingData *tilingData)
+    __aicore__ inline IndexPutWithSortV2Kernel(TPipe* pipe, const IndexPutWithSortV2TilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
-    __aicore__ inline void Init(GM_ADDR self, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR values,
-        GM_ADDR output) {
-        outputGm_.SetGlobalBuffer((__gm__ TX *)output);
-        indicesGm_.SetGlobalBuffer((__gm__ TIDX *)sortIndices);
-        posIdxGm_.SetGlobalBuffer((__gm__ int32_t *)posIdx);
-        valuesGm_.SetGlobalBuffer((__gm__ TX *)values);
+    __aicore__ inline void Init(GM_ADDR self, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR values, GM_ADDR output)
+    {
+        outputGm_.SetGlobalBuffer((__gm__ TX*)output);
+        indicesGm_.SetGlobalBuffer((__gm__ TIDX*)sortIndices);
+        posIdxGm_.SetGlobalBuffer((__gm__ int32_t*)posIdx);
+        valuesGm_.SetGlobalBuffer((__gm__ TX*)values);
 
         Ppipe_->InitBuffer(tilingBuf_, TILING_NUM * sizeof(int64_t));
         Ppipe_->InitBuffer(Buf_, sizeof(calcParams<uint64_t>));
     }
 
-    __aicore__ inline void Process() {
-        __gm__ TX *output = (__gm__ TX *)outputGm_.GetPhyAddr();
-        __gm__ TX *values = (__gm__ TX *)valuesGm_.GetPhyAddr();
-        __gm__ TIDX *sortIndices = (__gm__ TIDX *)indicesGm_.GetPhyAddr();
-        __gm__ int32_t *posIdx = (__gm__ int32_t *)posIdxGm_.GetPhyAddr();
+    __aicore__ inline void Process()
+    {
+        __gm__ TX* output = (__gm__ TX*)outputGm_.GetPhyAddr();
+        __gm__ TX* values = (__gm__ TX*)valuesGm_.GetPhyAddr();
+        __gm__ TIDX* sortIndices = (__gm__ TIDX*)indicesGm_.GetPhyAddr();
+        __gm__ int32_t* posIdx = (__gm__ int32_t*)posIdxGm_.GetPhyAddr();
 
         LocalTensor<int64_t> tilingUb = tilingBuf_.Get<int64_t>();
         const int64_t* tilingP = reinterpret_cast<const int64_t*>(tiling_);
-        #pragma unroll
+#pragma unroll
         for (size_t i = 0; i < TILING_NUM; i++) {
             tilingUb.SetValue(i, tilingP[i]);
         }
-        __ubuf__ int64_t *tilingUbAddr = (__ubuf__ int64_t *)tilingUb.GetPhyAddr();
+        __ubuf__ int64_t* tilingUbAddr = (__ubuf__ int64_t*)tilingUb.GetPhyAddr();
         __ubuf__ int64_t* nonIdxedStride = tilingUbAddr + NON_IDXED_STRIDE_OFFSET;
 
         LocalTensor<uint64_t> calcParamsUb = Buf_.Get<uint64_t>();
@@ -166,13 +171,13 @@ public:
         }
         constexpr uint16_t THREAD_NUM_LIMIT = ALL_INDEXED ? THREAD_NUM_FULL : THREAD_NUM_HALF;
         asc_vf_call<SimtIndexPutV2<TX, TIDX, ACCUMULATE, ALL_INDEXED, INDEXED_BLOCK_MODE, THREAD_NUM_LIMIT>>(
-                        dim3{tiling_->indexedThreadNum, tiling_->nonIndexedThreadNum, 1}, output, sortIndices, posIdx,
-                        values, tilingUbAddr, calcParamsPtr);
+            dim3{tiling_->indexedThreadNum, tiling_->nonIndexedThreadNum, 1}, output, sortIndices, posIdx, values,
+            tilingUbAddr, calcParamsPtr);
     }
 
 private:
-    TPipe *Ppipe_;
-    const IndexPutWithSortV2TilingData *tiling_;
+    TPipe* Ppipe_;
+    const IndexPutWithSortV2TilingData* tiling_;
     GlobalTensor<TX> outputGm_;
     GlobalTensor<TIDX> indicesGm_;
     GlobalTensor<int32_t> posIdxGm_;
@@ -181,5 +186,5 @@ private:
     TBuf<TPosition::VECCALC> tilingBuf_;
     TBuf<TPosition::VECCALC> Buf_;
 };
-}  // namespace AscendC
+} // namespace AscendC
 #endif // INDEX_PUT_WITH_SORT_V2_H

@@ -15,8 +15,7 @@
 
 namespace ops {
 // Inplace: x = log(x), x serves as both input and output (no Output declared).
-class ForeachLogInplace : public OpDef
-{
+class ForeachLogInplace : public OpDef {
 public:
     explicit ForeachLogInplace(const char* name) : OpDef(name)
     {
@@ -28,9 +27,7 @@ public:
             .AutoContiguous();
 
         OpAICoreConfig regbaseCfg;
-        regbaseCfg.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
 
         this->AICore().AddConfig("ascend950", regbaseCfg);
     }

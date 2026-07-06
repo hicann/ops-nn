@@ -13,8 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* HardSigmoidGrad(
-    const aclTensor* grads, const aclTensor* x, float alpha, float beta, aclOpExecutor* executor);
+const aclTensor* HardSigmoidGrad(const aclTensor* grads, const aclTensor* x, float alpha, float beta,
+                                 aclOpExecutor* executor);
 }
 
 #endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_HARDSIGMOID_GRAD_H_

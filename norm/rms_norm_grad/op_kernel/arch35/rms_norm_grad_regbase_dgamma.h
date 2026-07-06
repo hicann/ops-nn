@@ -29,9 +29,8 @@ public:
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma, __gm__ uint8_t* dx,
-        __gm__ uint8_t* dgamma)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma,
+                                __gm__ uint8_t* dx, __gm__ uint8_t* dgamma)
     {
         coreIdx_ = AscendC::GetBlockIdx();
         if (coreIdx_ >= tiling_->usedCoreNumDG) {
@@ -60,16 +59,15 @@ public:
         Ppipe_->InitBuffer(dgammaQueue_, BUFFER_NUM, ((rowsPerUB_ + 1) * colsPerLoopAlign_ * sizeof(float)));
 
         if (TILING_KEY == 7001) {
-            Ppipe_->InitBuffer(
-                binaryAddCacheQueue_, BUFFER_NUM,
-                ((tiling_->binaryAddKDG + RESERVESIZE) * colsPerLoopAlign_ * sizeof(float)));
+            Ppipe_->InitBuffer(binaryAddCacheQueue_, BUFFER_NUM,
+                               ((tiling_->binaryAddKDG + RESERVESIZE) * colsPerLoopAlign_ * sizeof(float)));
             Ppipe_->InitBuffer(dgammaQueue1_, BUFFER_NUM, ((rowsPerUB_ + 1) * colsPerLoopAlign_ * sizeof(float)));
         }
     }
 
-    __aicore__ inline void CopyInputsToUB(
-        LocalTensor<DY_TYPE> dyLocal, LocalTensor<X_TYPE> xLocal, LocalTensor<RSTD_TYPE> rstdLocal, int64_t inputOffset,
-        int32_t copyLen, int32_t curRowsNum, int32_t rstdOffset)
+    __aicore__ inline void CopyInputsToUB(LocalTensor<DY_TYPE> dyLocal, LocalTensor<X_TYPE> xLocal,
+                                          LocalTensor<RSTD_TYPE> rstdLocal, int64_t inputOffset, int32_t copyLen,
+                                          int32_t curRowsNum, int32_t rstdOffset)
     {
         // Datacopy Params for input_x & input_dy
         DataCopyPadExtParams<X_TYPE> padParams_x;
@@ -93,8 +91,8 @@ public:
         DataCopyPad(rstdLocal, rstdGm_[rstdOffset], dataCopyParams_rstd, padParams_rstd);
     }
 
-    __aicore__ inline void CopyDgammaToGm(
-        LocalTensor<float> outLocal, uint32_t dgammaGmOffset, int32_t curCols, int32_t dgammaUBOffset)
+    __aicore__ inline void CopyDgammaToGm(LocalTensor<float> outLocal, uint32_t dgammaGmOffset, int32_t curCols,
+                                          int32_t dgammaUBOffset)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
@@ -105,9 +103,9 @@ public:
         DataCopyPad(dgammaGm_[dgammaGmOffset], outLocal[dgammaUBOffset], dataCopyParams);
     }
 
-    __aicore__ inline void VFCalcPreDgamma(
-        __local_mem__ DY_TYPE* dyAddr, __local_mem__ X_TYPE* xAddr, __local_mem__ RSTD_TYPE* rstdAddr,
-        __local_mem__ float* dgammaOutAddr, uint16_t curUBLoopColsCount, int32_t curRowsNum)
+    __aicore__ inline void VFCalcPreDgamma(__local_mem__ DY_TYPE* dyAddr, __local_mem__ X_TYPE* xAddr,
+                                           __local_mem__ RSTD_TYPE* rstdAddr, __local_mem__ float* dgammaOutAddr,
+                                           uint16_t curUBLoopColsCount, int32_t curRowsNum)
     {
         uint16_t colsRegLoopCount = CEIL_DIV(curUBLoopColsCount, vlFp32_);
         uint32_t colsPerLoop = colsPerUB_;
@@ -118,8 +116,8 @@ public:
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             // 计算二分累加前的乘法计算
             for (uint16_t k = 0; k < static_cast<uint16_t>(curRowsNum); k++) {
-                CalcMulRes<DY_TYPE, X_TYPE, RSTD_TYPE, TILING_KEY>(
-                    dyAddr, xAddr, rstdAddr, dgammaOutAddr, pregMain, (k * colsRegLoopCount) * vlFp32_, k);
+                CalcMulRes<DY_TYPE, X_TYPE, RSTD_TYPE, TILING_KEY>(dyAddr, xAddr, rstdAddr, dgammaOutAddr, pregMain,
+                                                                   (k * colsRegLoopCount) * vlFp32_, k);
             }
         }
     }
@@ -137,8 +135,8 @@ public:
         }
     }
 
-    __aicore__ inline void VFBinaryReduceSumWithoutTail(
-        __local_mem__ float* dgammaOutAddr, uint16_t curUbLoopColsCount, int64_t rows)
+    __aicore__ inline void VFBinaryReduceSumWithoutTail(__local_mem__ float* dgammaOutAddr, uint16_t curUbLoopColsCount,
+                                                        int64_t rows)
     {
         uint32_t BinaryAddNumLevel2 = rows / REDUCEBY8ELENUM;
         uint32_t BinaryAddNumLevel1 = BinaryAddNumLevel2 <= REDUCEBY8ELENUM ? 1 : BinaryAddNumLevel2 / 16;
@@ -189,8 +187,8 @@ public:
         }
     }
 
-    __aicore__ inline void VFHandleTailRows(
-        __local_mem__ float* dgammaOutAddr, uint16_t rowsTail, uint64_t tailDataOffset)
+    __aicore__ inline void VFHandleTailRows(__local_mem__ float* dgammaOutAddr, uint16_t rowsTail,
+                                            uint64_t tailDataOffset)
     {
         uint32_t BinaryAddTailNum = (rowsTail + COMPRESSBY8ELENUM - 1) / COMPRESSBY8ELENUM;
 
@@ -199,17 +197,17 @@ public:
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             uint64_t rowsBoundLine = rows_ * vlFp32_;
             for (uint16_t i = 0; i < static_cast<uint16_t>(BinaryAddTailNum - 1); i++) {
-                reduceSumCompressedBy8WithOutPad(
-                    dgammaOutAddr, dgammaOutAddr + tailDataOffset, pregMain, i * vlFp32_ * COMPRESSBY8ELENUM, vlFp32_);
+                reduceSumCompressedBy8WithOutPad(dgammaOutAddr, dgammaOutAddr + tailDataOffset, pregMain,
+                                                 i * vlFp32_ * COMPRESSBY8ELENUM, vlFp32_);
             }
-            reduceSumCompressedBy8WithPad(
-                dgammaOutAddr, dgammaOutAddr, pregMain, (BinaryAddTailNum - 1) * vlFp32_ * COMPRESSBY8ELENUM,
-                rowsBoundLine, vlFp32_, tailDataOffset);
+            reduceSumCompressedBy8WithPad(dgammaOutAddr, dgammaOutAddr, pregMain,
+                                          (BinaryAddTailNum - 1) * vlFp32_ * COMPRESSBY8ELENUM, rowsBoundLine, vlFp32_,
+                                          tailDataOffset);
         }
     }
 
-    __aicore__ inline void VFHandleTailRowsWithTwoBuffer(
-        __local_mem__ float* dgammaOutAddr, __local_mem__ float* dgammaOutAddr1, uint64_t tailRowsNum)
+    __aicore__ inline void VFHandleTailRowsWithTwoBuffer(__local_mem__ float* dgammaOutAddr,
+                                                         __local_mem__ float* dgammaOutAddr1, uint64_t tailRowsNum)
     {
         uint32_t BinaryAddTailNum = (tailRowsNum + COMPRESSBY8ELENUM - 1) / COMPRESSBY8ELENUM;
         uint32_t tailDataOffset = 0;
@@ -219,12 +217,12 @@ public:
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             uint64_t rowsBoundLine = tailRowsNum * vlFp32_;
             for (uint16_t i = 0; i < static_cast<uint16_t>(BinaryAddTailNum - 1); i++) {
-                reduceSumCompressedBy8WithOutPad(
-                    dgammaOutAddr, dgammaOutAddr1, pregMain, i * vlFp32_ * COMPRESSBY8ELENUM, vlFp32_);
+                reduceSumCompressedBy8WithOutPad(dgammaOutAddr, dgammaOutAddr1, pregMain,
+                                                 i * vlFp32_ * COMPRESSBY8ELENUM, vlFp32_);
             }
-            reduceSumCompressedBy8WithPad(
-                dgammaOutAddr, dgammaOutAddr1, pregMain, (BinaryAddTailNum - 1) * vlFp32_ * COMPRESSBY8ELENUM,
-                rowsBoundLine, vlFp32_, tailDataOffset);
+            reduceSumCompressedBy8WithPad(dgammaOutAddr, dgammaOutAddr1, pregMain,
+                                          (BinaryAddTailNum - 1) * vlFp32_ * COMPRESSBY8ELENUM, rowsBoundLine, vlFp32_,
+                                          tailDataOffset);
         }
     }
 
@@ -270,8 +268,8 @@ public:
         dgammaQueue_.FreeTensor(dgammaOutLocal);
     }
 
-    __aicore__ inline void CalcLargeRowsDgamma(
-        uint32_t inputOffset, uint32_t currentCols, uint32_t i, LocalTensor<float> binaryAddCacheLocal)
+    __aicore__ inline void CalcLargeRowsDgamma(uint32_t inputOffset, uint32_t currentCols, uint32_t i,
+                                               LocalTensor<float> binaryAddCacheLocal)
     {
         LocalTensor<RSTD_TYPE> rstdLocal = rstdQueue_.template AllocTensor<RSTD_TYPE>();
         LocalTensor<DY_TYPE> dyLocal = dyQueue_.template AllocTensor<DY_TYPE>();
@@ -304,9 +302,9 @@ public:
         dgammaQueue_.FreeTensor(dgammaOutLocal);
     }
 
-    __aicore__ inline void CalcLargeRowsDgammaWithPad(
-        uint32_t inputOffset, uint32_t tailDyXOffset, uint32_t tailRstdOffset, uint32_t currentCols, uint32_t i,
-        LocalTensor<float> binaryAddCacheLocal)
+    __aicore__ inline void CalcLargeRowsDgammaWithPad(uint32_t inputOffset, uint32_t tailDyXOffset,
+                                                      uint32_t tailRstdOffset, uint32_t currentCols, uint32_t i,
+                                                      LocalTensor<float> binaryAddCacheLocal)
     {
         LocalTensor<RSTD_TYPE> rstdLocal = rstdQueue_.template AllocTensor<RSTD_TYPE>();
         LocalTensor<DY_TYPE> dyLocal = dyQueue_.template AllocTensor<DY_TYPE>();
@@ -454,8 +452,8 @@ public:
         }
         int64_t inputOffset = 0;
         int64_t outputOffset = 0;
-        bool isPowerofTwoRows =
-            (tiling_->tailBlockCountwithPadDG + tiling_->tailBlockCountWithoutPadDG) == 0 ? true : false;
+        bool isPowerofTwoRows = (tiling_->tailBlockCountwithPadDG + tiling_->tailBlockCountWithoutPadDG) == 0 ? true :
+                                                                                                                false;
         if (isPowerofTwoRows) {
             for (uint32_t curLoop = 0; curLoop < colsUbLoopCount_; curLoop++) {
                 outputOffset = curLoop * colsPerUB_ + gmOffset_;

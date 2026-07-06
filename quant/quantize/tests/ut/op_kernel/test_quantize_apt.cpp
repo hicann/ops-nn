@@ -25,19 +25,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void quantize(
-    GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void quantize(GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
+                                               GM_ADDR workspace, GM_ADDR tiling);
 
 class quantize_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "quantize_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "quantize_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "quantize_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "quantize_test TearDown\n" << endl; }
 };
 
 TEST_F(quantize_test, test_case_per_tensor_no_offset_fp16_to_int8)
@@ -80,8 +74,8 @@ TEST_F(quantize_test, test_case_per_tensor_no_offset_fp16_to_int8)
 
     ICPU_SET_TILING_KEY(0);
 
-    auto quantize_kernel = [](GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y,
-                              GM_ADDR workSpace, GM_ADDR tiling) {
+    auto quantize_kernel = [](GM_ADDR x, GM_ADDR scales, GM_ADDR zero_points, GM_ADDR y, GM_ADDR workSpace,
+                              GM_ADDR tiling) {
         ::quantize<TPL_PER_TENSOR, TPL_NONE, TPL_DIV_MODE_DIV, TPL_ROUND_MODE_NONE, TPL_NO_SQRT_MODE>(
             x, scales, zero_points, y, workSpace, tiling);
     };

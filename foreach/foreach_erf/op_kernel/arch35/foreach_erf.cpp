@@ -28,8 +28,7 @@ __global__ __aicore__ void foreach_erf(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, 
     GET_TILING_DATA_WITH_STRUCT(ForeachErfTilingData, tilingData, tiling);
 
     // Access tiling data via GM pointer to avoid stack overflow with large struct
-    const __gm__ ForeachErfTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachErfTilingData*>(tiling);
+    const __gm__ ForeachErfTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachErfTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachErfTilingKey::TILING_KEY_FLOAT)) {
         NsForeachErf::Process<float>(x, y, tilingGm);

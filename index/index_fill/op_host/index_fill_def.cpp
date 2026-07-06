@@ -15,25 +15,28 @@
 #include <cstdint>
 #include "register/op_def_registry.h"
 namespace {
-    static const std::vector<ge::DataType> xDataType = {
-        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL,
-        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL};
-    static const std::vector<ge::Format> formatList = {
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-    static const std::vector<ge::DataType> indicesDataType = {
-            ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-            ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
-    static const std::vector<ge::DataType> ascend950XDataType = {
-        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_DOUBLE,
-        ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64, ge::DT_INT32, ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_DOUBLE};
-    static const std::vector<ge::Format> ascend950FormatList = {
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-            ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-    static const std::vector<ge::DataType> ascend950IndicesDataType = {
-            ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-            ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
-}
+static const std::vector<ge::DataType> xDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_INT64,
+                                                    ge::DT_INT32,   ge::DT_BOOL,  ge::DT_FLOAT16, ge::DT_FLOAT,
+                                                    ge::DT_BF16,    ge::DT_INT64, ge::DT_INT32,   ge::DT_BOOL};
+static const std::vector<ge::Format> formatList = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> indicesDataType = {ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                                                          ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64,
+                                                          ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::DataType> ascend950XDataType = {
+    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,   ge::DT_INT64,   ge::DT_INT32, ge::DT_BOOL,  ge::DT_INT8,
+    ge::DT_UINT8,   ge::DT_INT16, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,  ge::DT_INT64,
+    ge::DT_INT32,   ge::DT_BOOL,  ge::DT_INT8,   ge::DT_UINT8,   ge::DT_INT16, ge::DT_DOUBLE};
+static const std::vector<ge::Format> ascend950FormatList = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> ascend950IndicesDataType = {
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+} // namespace
 
 namespace ops {
 class IndexFill : public OpDef {
@@ -41,7 +44,11 @@ public:
     explicit IndexFill(const char* name) : OpDef(name)
     {
         this->Input("x").ParamType(REQUIRED).DataType(xDataType).Format(formatList).UnknownShapeFormat(formatList);
-        this->Input("indices").ParamType(REQUIRED).DataType(indicesDataType).Format(formatList).UnknownShapeFormat(formatList);
+        this->Input("indices")
+            .ParamType(REQUIRED)
+            .DataType(indicesDataType)
+            .Format(formatList)
+            .UnknownShapeFormat(formatList);
         this->Input("value").ParamType(REQUIRED).DataType(xDataType).Format(formatList).UnknownShapeFormat(formatList);
         this->Output("y").ParamType(REQUIRED).DataType(xDataType).Format(formatList).UnknownShapeFormat(formatList);
         this->Attr("dim").AttrType(REQUIRED).Int();
@@ -84,4 +91,4 @@ public:
 };
 
 OP_ADD(IndexFill);
-}  // namespace ops
+} // namespace ops

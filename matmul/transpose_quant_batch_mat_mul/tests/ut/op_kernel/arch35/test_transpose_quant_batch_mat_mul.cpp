@@ -30,7 +30,7 @@
 using namespace std;
 
 class transpose_quant_batch_mat_mul_test : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { cout << "transpose_quant_batch_mat_mul_test SetUp\n" << endl; }
     static void TearDownTestCase() { cout << "transpose_quant_batch_mat_mul_test TearDown\n" << endl; }
 };
@@ -43,7 +43,8 @@ struct HcclCombinOpParam {
 };
 
 // Test 1: MXFP8, medium size (M=64, Batch=1, K=64, N=64)
-TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_medium) {
+TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_medium)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
     int32_t M = 64;
@@ -53,8 +54,8 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
 
     size_t shape_x1 = M * Batch * K * sizeof(int8_t);
     size_t shape_x2 = Batch * K * N * sizeof(int8_t);
-    size_t shape_x1_scale = M  * sizeof(float);
-    size_t shape_x2_scale = N  * sizeof(float);
+    size_t shape_x1_scale = M * sizeof(float);
+    size_t shape_x2_scale = N * sizeof(float);
     size_t shape_output = M * Batch * N * sizeof(uint16_t);
 
     size_t sysWorkspaceSize = 20UL * 1024UL * 1024UL;
@@ -64,35 +65,38 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
     size_t tilingSize = sizeof(BatchMatMulV3TilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *x1GM = (uint8_t *)AscendC::GmAlloc(shape_x1);
-    uint8_t *x2GM = (uint8_t *)AscendC::GmAlloc(shape_x2);
-    uint8_t *biasGM = nullptr;
-    uint8_t *x1_scaleGM = (uint8_t *)AscendC::GmAlloc(shape_x1_scale);
-    uint8_t *x2_scaleGM = (uint8_t *)AscendC::GmAlloc(shape_x2_scale);
-    uint8_t *outputGM = (uint8_t *)AscendC::GmAlloc(shape_output);
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
-    
+    uint8_t* x1GM = (uint8_t*)AscendC::GmAlloc(shape_x1);
+    uint8_t* x2GM = (uint8_t*)AscendC::GmAlloc(shape_x2);
+    uint8_t* biasGM = nullptr;
+    uint8_t* x1_scaleGM = (uint8_t*)AscendC::GmAlloc(shape_x1_scale);
+    uint8_t* x2_scaleGM = (uint8_t*)AscendC::GmAlloc(shape_x2_scale);
+    uint8_t* outputGM = (uint8_t*)AscendC::GmAlloc(shape_output);
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+
     memset(x1GM, 0, shape_x1);
     memset(x2GM, 0, shape_x2);
     memset(x1_scaleGM, 0, shape_x1_scale);
     memset(x2_scaleGM, 0, shape_x2_scale);
     memset(outputGM, 0, shape_output);
 
-    system("cp -r ../../../../matmul/transpose_quant_batch_mat_mul/tests/ut/op_kernel/transpose_quant_batch_mat_mul_data ./");
+    system("cp -r "
+           "../../../../matmul/transpose_quant_batch_mat_mul/tests/ut/op_kernel/transpose_quant_batch_mat_mul_data ./");
     system("chmod -R 755 ./transpose_quant_batch_mat_mul_data/");
     system("cd ./transpose_quant_batch_mat_mul_data/ && rm -rf ./*bin");
     system("cd ./transpose_quant_batch_mat_mul_data/ && python3 gen_data.py 64 1 64 64 1,0,2 0,1,2 1,0,2 0");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x1.bin", shape_x1, x1GM, shape_x1);
     ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x2.bin", shape_x2, x2GM, shape_x2);
-    ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x1_scale.bin", shape_x1_scale, x1_scaleGM, shape_x1_scale);
-    ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x2_scale.bin", shape_x2_scale, x2_scaleGM, shape_x2_scale);
+    ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x1_scale.bin", shape_x1_scale, x1_scaleGM,
+             shape_x1_scale);
+    ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_x2_scale.bin", shape_x2_scale, x2_scaleGM,
+             shape_x2_scale);
     ReadFile(path + "/transpose_quant_batch_mat_mul_data/shape_output.bin", shape_output, outputGM, shape_output);
 
-    BatchMatMulV3TilingData *tiling_data = reinterpret_cast<BatchMatMulV3TilingData*>(tiling);
-    
+    BatchMatMulV3TilingData* tiling_data = reinterpret_cast<BatchMatMulV3TilingData*>(tiling);
+
     tiling_data->matMulTilingData.tCubeTiling.usedCoreNum = 4;
     tiling_data->matMulTilingData.tCubeTiling.M = M;
     tiling_data->matMulTilingData.tCubeTiling.N = N;
@@ -157,15 +161,16 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
     tiling_data->batchOutNum = 1;
     tiling_data->batchSplitFactor = 1;
 
-    auto transpose_quant_batch_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, 
-                                                     GM_ADDR x2_scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::transpose_quant_batch_mat_mul<TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2, 
-                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2, 
-                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE, 
-                                        TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8>(x1, x2, bias, x1_scale, x2_scale, y, workspace, tiling);
+    auto transpose_quant_batch_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
+                                                    GM_ADDR x2_scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+        ::transpose_quant_batch_mat_mul<
+            TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X1_1_0_2, TRANSPOSE_QUANT_BATCH_MAT_MUL_PERM_X2_0_1_2,
+            TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE, TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8>(
+            x1, x2, bias, x1_scale, x2_scale, y, workspace, tiling);
     };
-    ICPU_RUN_KF(transpose_quant_batch_mat_mul_wrapper, 4, x1GM, x2GM, nullptr, x1_scaleGM, x2_scaleGM, outputGM, workspace, tiling);
-    
+    ICPU_RUN_KF(transpose_quant_batch_mat_mul_wrapper, 4, x1GM, x2GM, nullptr, x1_scaleGM, x2_scaleGM, outputGM,
+                workspace, tiling);
+
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)x1GM);

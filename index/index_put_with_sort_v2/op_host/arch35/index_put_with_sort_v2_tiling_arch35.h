@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -28,12 +28,9 @@ constexpr int64_t B4_SIZE = 4;
 constexpr int64_t B2_SIZE = 2;
 constexpr int64_t B1_SIZE = 1;
 
-class IndexPutWithSortV2Tiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class IndexPutWithSortV2Tiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit IndexPutWithSortV2Tiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit IndexPutWithSortV2Tiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetPlatformInfo() override;
@@ -57,7 +54,7 @@ protected:
     int64_t nonIndexedDimSize_{1};
 
     int64_t selfDims_[MAX_DIM_NUM] = {0};
-    int64_t indexedSizes_[MAX_DIM_NUM] = {0};  // 看需不需要类成员
+    int64_t indexedSizes_[MAX_DIM_NUM] = {0}; // 看需不需要类成员
     int64_t nonIdxedDims_[MAX_DIM_NUM] = {0};
 
     int64_t nonIdxedStride_[MAX_DIM_NUM] = {1, 1, 1, 1, 1, 1, 1, 1};
@@ -82,5 +79,5 @@ protected:
     void SetTilingData();
     void LogTilingResult();
 };
-}  // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_H
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_H

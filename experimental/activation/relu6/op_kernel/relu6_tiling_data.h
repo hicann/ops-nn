@@ -32,10 +32,10 @@
 #include <cstdint>
 
 struct Relu6TilingData {
-    int64_t totalNum = 0;     // 总元素数量
-    int64_t blockFactor = 0;  // 每个核处理的元素数量
-    int64_t ubFactor = 0;     // 每次 UB 循环处理的元素数量
-    int32_t dataType = 0;     // 数据类型：0=float16, 1=float, 2=int32, 3=bfloat16
+    int64_t totalNum = 0;    // 总元素数量
+    int64_t blockFactor = 0; // 每个核处理的元素数量
+    int64_t ubFactor = 0;    // 每次 UB 循环处理的元素数量
+    int32_t dataType = 0;    // 数据类型：0=float16, 1=float, 2=int32, 3=bfloat16
 };
 
 #endif // _RELU6_TILING_DATA_H_

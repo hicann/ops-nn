@@ -27,8 +27,8 @@ inline T1 CeilA2B(T1 a, T2 b)
 }
 
 template <typename T>
-uint8_t* CreateTensorListForeachMaximumScalar(
-    const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, int arg_pos)
+uint8_t* CreateTensorListForeachMaximumScalar(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type,
+                                              int arg_pos)
 {
     uint64_t tensorListDescCount = 1 + shapeInfos.size() * 2;
     for (auto s : shapeInfos) {
@@ -65,8 +65,8 @@ uint8_t* CreateTensorListForeachMaximumScalar(
 }
 
 template <typename T>
-void FreeTensorListForeachMaximumScalar(
-    uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type, int arg_pos)
+void FreeTensorListForeachMaximumScalar(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos,
+                                        char* d_type, int arg_pos)
 {
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;

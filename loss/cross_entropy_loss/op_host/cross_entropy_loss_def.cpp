@@ -21,8 +21,7 @@ static const std::vector<ge::DataType> weightDtype = {ge::DT_FLOAT, ge::DT_FLOAT
                                                       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
 static const std::vector<ge::Format> xFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                                 ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-class CrossEntropyLoss : public OpDef
-{
+class CrossEntropyLoss : public OpDef {
 public:
     explicit CrossEntropyLoss(const char* name) : OpDef(name)
     {
@@ -106,9 +105,7 @@ public:
             .Format(xFormat)
             .UnknownShapeFormat(xFormat);
 
-        regbaseConfig.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true);
+        regbaseConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", regbaseConfig);
     }
 };

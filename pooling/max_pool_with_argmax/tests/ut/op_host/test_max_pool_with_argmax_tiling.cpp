@@ -27,7 +27,7 @@ using namespace std;
 using namespace ge;
 
 template <typename T>
-static string to_string(void *buf, size_t size)
+static string to_string(void* buf, size_t size)
 {
     std::string result;
     const T* data = reinterpret_cast<const T*>(buf);
@@ -41,22 +41,16 @@ static string to_string(void *buf, size_t size)
 
 class MaxPoolWithArgmaxTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "MaxPoolWithArgmaxTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "MaxPoolWithArgmaxTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "MaxPoolWithArgmaxTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "MaxPoolWithArgmaxTiling TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    gert::StorageShape& xStorageShape, gert::StorageShape& yStorageShape, gert::StorageShape& argmaxStorageShape,
-    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string pads, ge::DataType dtype, int64_t index_dtype,
-    bool includeBatchInIndex, std::string data_format, bool nan_prop, uint64_t except_tilingkey, std::string expect,
-    ge::graphStatus expect_status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(gert::StorageShape& xStorageShape, gert::StorageShape& yStorageShape,
+                            gert::StorageShape& argmaxStorageShape, std::vector<int64_t> ksize,
+                            std::vector<int64_t> strides, std::string pads, ge::DataType dtype, int64_t index_dtype,
+                            bool includeBatchInIndex, std::string data_format, bool nan_prop, uint64_t except_tilingkey,
+                            std::string expect, ge::graphStatus expect_status = ge::GRAPH_SUCCESS)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -92,21 +86,21 @@ static void ExecuteTestCase(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -130,14 +124,13 @@ static void ExecuteTestCase(
                       .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(pads)},
-                           {"Targmax", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
-                           {"includeBatchInIndex", Ops::NN::AnyValue::CreateFrom<bool>(includeBatchInIndex)},
-                           {"dataFormat", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
-                           {"nanProp", Ops::NN::AnyValue::CreateFrom<bool>(nan_prop)}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(pads)},
+                                  {"Targmax", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
+                                  {"includeBatchInIndex", Ops::NN::AnyValue::CreateFrom<bool>(includeBatchInIndex)},
+                                  {"dataFormat", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)},
+                                  {"nanProp", Ops::NN::AnyValue::CreateFrom<bool>(nan_prop)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -179,9 +172,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800001)
     bool nan_prop = false;
     uint64_t except_tilingkey = 800001;
     std::string expect = "2 3 3 1 1 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 2 2 1 1 1 1 128 32 32 0 0 0 0 0 0 0 0 800001 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800002)
@@ -198,10 +190,10 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800002)
     std::string data_format = "NHWC";
     bool nan_prop = false;
     uint64_t except_tilingkey = 800002;
-    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 64 64 1 1 1 2 114688 256 256 1 1 7 1 10 64 64 1 800002 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 64 64 1 1 1 2 114688 256 256 1 1 7 1 10 64 64 "
+                         "1 800002 ";
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800011)
@@ -219,9 +211,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800011)
     bool nan_prop = true;
     uint64_t except_tilingkey = 800011;
     std::string expect = "2 3 3 1 1 2 2 2 2 0 0 1 1 1 1 1 1 1 1 1 2 2 1 1 1 1 128 32 32 0 0 0 0 0 0 0 0 800011 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800012)
@@ -238,10 +229,10 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Big_C_800012)
     std::string data_format = "NHWC";
     bool nan_prop = true;
     uint64_t except_tilingkey = 800012;
-    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 64 64 1 1 1 2 114688 256 256 1 1 7 1 10 64 64 1 800012 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    std::string expect = "64 3 64 1 1 64 64 64 64 0 30 1 1 2 1 1 1 1 1 1 64 64 1 1 1 2 114688 256 256 1 1 7 1 10 64 64 "
+                         "1 800012 ";
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nchw_500001)
@@ -259,9 +250,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nchw_500001)
     bool nan_prop = false;
     uint64_t except_tilingkey = 500001;
     std::string expect = "224 1 7 8 8 12 2 2 4 5 6 6 1 0 0 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nhwc_500102)
@@ -279,9 +269,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nhwc_500102)
     bool nan_prop = true;
     uint64_t except_tilingkey = 500102;
     std::string expect = "256 6 11 15 19 7 4 2 4 3 6 4 1 0 0 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nchw_500101_test1)
@@ -299,9 +288,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nchw_500101_test1)
     bool nan_prop = true;
     uint64_t except_tilingkey = 500101;
     std::string expect = "256 16 19 23 20 23 3 3 6 6 6 8 0 0 0 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nchw_500101_test2)
@@ -319,9 +307,8 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Simt_Nchw_500101_test2)
     bool nan_prop = true;
     uint64_t except_tilingkey = 500101;
     std::string expect = "256 21 19 23 20 23 4 3 6 6 6 8 2 0 0 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700001)
@@ -338,10 +325,10 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700001)
     std::string data_format = "NHWC";
     bool nan_prop = false;
     uint64_t except_tilingkey = 700001;
-    std::string expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 4 1 2 13 13 1 2 2 60 2496 256 256 0 0 0 0 0 0 0 0 700001 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    std::string
+        expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 4 1 2 13 13 1 2 2 60 2496 256 256 0 0 0 0 0 0 0 0 700001 ";
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700011)
@@ -358,10 +345,10 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700011)
     std::string data_format = "NHWC";
     bool nan_prop = true;
     uint64_t except_tilingkey = 700011;
-    std::string expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 4 1 2 13 13 1 2 2 60 2496 256 256 0 0 0 0 0 0 0 0 700011 ";
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, except_tilingkey, expect);
+    std::string
+        expect = "13 12 17 4 5 3 4 3 3 0 0 1 1 15 1 1 4 4 1 2 13 13 1 2 2 60 2496 256 256 0 0 0 0 0 0 0 0 700011 ";
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, except_tilingkey, expect);
 }
 
 // ======================== Failure Cases ========================
@@ -379,9 +366,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_input_dim)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_dtype)
@@ -397,9 +383,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_dtype)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_y_argmax_shape_mismatch)
@@ -415,9 +400,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_y_argmax_shape_mismatch)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_data_format)
@@ -433,9 +417,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_data_format)
     bool includeBatchInIndex = false;
     std::string data_format = "INVALID";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_ksize_n_not_one)
@@ -451,9 +434,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_ksize_n_not_one)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_ksize_hw_zero)
@@ -469,9 +451,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_ksize_hw_zero)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_strides_n_not_one)
@@ -487,9 +468,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_strides_n_not_one)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_strides_hw_zero)
@@ -505,9 +485,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_strides_hw_zero)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_padding)
@@ -523,9 +502,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_padding)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_include_batch_in_index_true)
@@ -541,9 +519,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_include_batch_in_index_true)
     bool includeBatchInIndex = true;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_y_shape_mismatch_valid)
@@ -559,9 +536,8 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_y_shape_mismatch_valid)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }
 
 TEST_F(MaxPoolWithArgmaxTiling, fail_y_shape_mismatch_same)
@@ -577,7 +553,6 @@ TEST_F(MaxPoolWithArgmaxTiling, fail_y_shape_mismatch_same)
     bool includeBatchInIndex = false;
     std::string data_format = "NHWC";
     bool nan_prop = false;
-    ExecuteTestCase(
-        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
-        nan_prop, 0, "", ge::GRAPH_FAILED);
+    ExecuteTestCase(xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype,
+                    includeBatchInIndex, data_format, nan_prop, 0, "", ge::GRAPH_FAILED);
 }

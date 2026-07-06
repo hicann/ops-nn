@@ -23,16 +23,15 @@
 
 namespace optiling {
 struct BinaryCrossEntropyGradCompileInfo {
-  ge::DataType dtype;
-  bool reductionIsNone{false};
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
+    ge::DataType dtype;
+    bool reductionIsNone{false};
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
 };
 
-class BinaryCrossEntropyGradTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class BinaryCrossEntropyGradTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit BinaryCrossEntropyGradTiling(gert::TilingContext* context) : TilingBaseClass(context) {};
+    explicit BinaryCrossEntropyGradTiling(gert::TilingContext* context) : TilingBaseClass(context){};
 
 protected:
     bool IsCapable() override;
@@ -50,8 +49,9 @@ protected:
     float CalcMeanCof();
     ge::graphStatus RunFp16BroadcastTiling(float meanCof);
     ge::graphStatus RunFp32BroadcastTiling(float meanCof);
+
 private:
-    const char *reductionStr = "";
+    const char* reductionStr = "";
     bool isReductionNone = false;
     bool isReductionMean = false;
     bool isReductionSum = false;
@@ -63,5 +63,5 @@ private:
     uint64_t hasWeight_ = 0;
     float meanCof_ = 0.0f;
 };
-}  // namespace optiling
-#endif  // OPS_OP_TILING_RUNTIME_BINARY_CORSS_ENTROPY_GRAD_TILING_H
+} // namespace optiling
+#endif // OPS_OP_TILING_RUNTIME_BINARY_CORSS_ENTROPY_GRAD_TILING_H

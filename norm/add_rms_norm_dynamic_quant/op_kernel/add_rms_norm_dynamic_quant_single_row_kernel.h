@@ -21,15 +21,11 @@
 template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddRmsNormDynamicQuantSingleRow : public KernelAddRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddRmsNormDynamicQuantSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormDynamicQuantSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
-        GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2, GM_ADDR workspace,
-        const AddRmsNormDynamicQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR beta,
+                                GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2,
+                                GM_ADDR workspace, const AddRmsNormDynamicQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2, beta);
@@ -181,9 +177,8 @@ private:
                 Muls(yLocalFp32, xLocalFp32, (float)1.0, this->numLastDim); // yLocalFp32 <-- y * 1
                 PipeBarrier<PIPE_V>();
             }
-            ScaleTensor(
-                yLocalFp32, tmpTensor, scalesLocalOut,
-                idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+            ScaleTensor(yLocalFp32, tmpTensor, scalesLocalOut,
+                        idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
             PipeBarrier<PIPE_V>();
             inRowsQue.FreeTensor(tmpTensor);
             RoundFloat2IntQuant<T_Y>(y2Local, yLocalFp32, this->numLastDim);
@@ -199,8 +194,8 @@ private:
                 Muls(yLocalFp32, xLocalFp32, (float)1.0, this->numLastDim); // yLocalFp32 <-- y * smooth1
                 PipeBarrier<PIPE_V>();
             }
-            ScaleTensor(
-                yLocalFp32, xLocalFp32, scalesLocalOut, idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+            ScaleTensor(yLocalFp32, xLocalFp32, scalesLocalOut,
+                        idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
             PipeBarrier<PIPE_V>();
             RoundFloat2IntQuant<T_Y>(y1Local, yLocalFp32, this->numLastDim);
         }
@@ -209,8 +204,8 @@ private:
     }
 
     // srcTensor <- srcTensor / max(abs(srcTensor))
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor1, LocalTensor<float>& scaleTensor, int32_t idx)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor1,
+                                       LocalTensor<float>& scaleTensor, int32_t idx)
     {
         Abs(tmpTensor1, srcTensor, this->numLastDim); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();

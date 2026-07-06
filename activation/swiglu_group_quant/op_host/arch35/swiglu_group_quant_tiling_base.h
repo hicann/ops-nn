@@ -32,13 +32,13 @@
 namespace optiling {
 
 struct TilingRequiredParaInfo {
-    const gert::CompileTimeTensorDesc *desc;
-    const gert::StorageShape *shape;
+    const gert::CompileTimeTensorDesc* desc;
+    const gert::StorageShape* shape;
 };
 
 struct TilingOptionalParaInfo {
-    const gert::CompileTimeTensorDesc *desc;
-    const gert::Tensor *tensor;
+    const gert::CompileTimeTensorDesc* desc;
+    const gert::Tensor* tensor;
 };
 
 struct SwigluGroupQuantCompileInfo {
@@ -98,6 +98,6 @@ REGISTER_TILING_DATA_CLASS(SwigluGroupQuant_4000, SwigluGroupQuantHifp8TilingDat
 
 REGISTER_TILING_DATA_CLASS(SwigluGroupQuant_4100, SwigluGroupQuantHifp8TilingData)
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SWIGLU_GROUP_QUANT_TILING_BASE_H
+#endif // SWIGLU_GROUP_QUANT_TILING_BASE_H

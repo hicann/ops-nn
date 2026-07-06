@@ -39,8 +39,8 @@ using namespace optiling;
 
 class ThresholdV2TilingTestParam {
 public:
-    void Prepare(ThresholdCompileInfo &compileInfo) const;
-    void InvokeTilingFunc(ThresholdCompileInfo &compileInfo) const;
+    void Prepare(ThresholdCompileInfo& compileInfo) const;
+    void InvokeTilingFunc(ThresholdCompileInfo& compileInfo) const;
     void Test() const;
     std::string socVersion;
     std::string caseName;
@@ -66,7 +66,7 @@ public:
     std::string comment;
 };
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
 {
     auto delimiterLen = delimiter.size();
     std::string::size_type currPos = 0;
@@ -82,7 +82,7 @@ static void SplitStr2Vec(const string &input, const string &delimiter, vector<st
     }
 }
 
-static int64_t SafeStol(const string &str, int64_t defaultVal = 0)
+static int64_t SafeStol(const string& str, int64_t defaultVal = 0)
 {
     if (str.empty()) {
         return defaultVal;
@@ -94,12 +94,12 @@ static int64_t SafeStol(const string &str, int64_t defaultVal = 0)
     }
 }
 
-static std::vector<int64_t> ParseShape(const std::string &shapeStr)
+static std::vector<int64_t> ParseShape(const std::string& shapeStr)
 {
     std::vector<int64_t> shape;
     std::vector<std::string> dims;
     SplitStr2Vec(shapeStr, "_", dims);
-    for (auto &dim : dims) {
+    for (auto& dim : dims) {
         if (!dim.empty()) {
             shape.push_back(SafeStol(dim));
         }
@@ -107,7 +107,7 @@ static std::vector<int64_t> ParseShape(const std::string &shapeStr)
     return shape;
 }
 
-static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext *tilingContext, string &compileInfoStr)
+static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext* tilingContext, string& compileInfoStr)
 {
     map<string, string> soc_version_infos = {{"Short_SoC_version", socVersion}, {"NpuArch", "3510"}};
     map<string, string> socInfos;
@@ -135,7 +135,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 }
 
-static std::vector<ThresholdV2TilingTestParam> GetParams(const std::string &socVersion)
+static std::vector<ThresholdV2TilingTestParam> GetParams(const std::string& socVersion)
 {
     std::vector<ThresholdV2TilingTestParam> params;
     std::string rootPath(GetExeDirPath() + "../../../../");
@@ -146,10 +146,9 @@ static std::vector<ThresholdV2TilingTestParam> GetParams(const std::string &socV
         return params;
     }
 
-    map<string, ge::DataType> dtypeMap = {{"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT},
-                                          {"BF16", ge::DT_BF16},       {"INT8", ge::DT_INT8},
-                                          {"UINT8", ge::DT_UINT8},     {"INT32", ge::DT_INT32},
-                                          {"INT64", ge::DT_INT64},     {"DOUBLE", ge::DT_DOUBLE}};
+    map<string, ge::DataType> dtypeMap = {
+        {"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT}, {"BF16", ge::DT_BF16},   {"INT8", ge::DT_INT8},
+        {"UINT8", ge::DT_UINT8},     {"INT32", ge::DT_INT32}, {"INT64", ge::DT_INT64}, {"DOUBLE", ge::DT_DOUBLE}};
 
     std::string line;
     while (std::getline(csvData, line)) {
@@ -192,7 +191,7 @@ static std::vector<ThresholdV2TilingTestParam> GetParams(const std::string &socV
     return params;
 }
 
-static gert::Shape BuildShape(const std::vector<int64_t> &shapeVec)
+static gert::Shape BuildShape(const std::vector<int64_t>& shapeVec)
 {
     gert::Shape shape;
     for (auto dim : shapeVec) {
@@ -201,7 +200,7 @@ static gert::Shape BuildShape(const std::vector<int64_t> &shapeVec)
     return shape;
 }
 
-void ThresholdV2TilingTestParam::Prepare(ThresholdCompileInfo &compileInfo) const
+void ThresholdV2TilingTestParam::Prepare(ThresholdCompileInfo& compileInfo) const
 {
     compileInfo.coreNum = coreNum > 0 ? coreNum : 64;
     compileInfo.ubSize = 262144;
@@ -229,31 +228,30 @@ void ThresholdV2TilingTestParam::Prepare(ThresholdCompileInfo &compileInfo) cons
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(3, 1)
-            .IrInstanceNum({1, 1, 1})
-            .InputShapes({&xShape, &thresholdShape, &valueShape})
-            .OutputShapes({&outputShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-            .NodeInputTd(0, dtypeX, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, dtypeThreshold, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, dtypeValue, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, dtypeOutput, ge::FORMAT_ND, ge::FORMAT_ND)
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &thresholdShape, &valueShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, dtypeX, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dtypeThreshold, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dtypeValue, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtypeOutput, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     string compileInfoStr;
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     InitPlatformInfo(socVersion, tilingContext, compileInfoStr);
 }
 
-void ThresholdV2TilingTestParam::InvokeTilingFunc(ThresholdCompileInfo &compileInfo) const
+void ThresholdV2TilingTestParam::InvokeTilingFunc(ThresholdCompileInfo& compileInfo) const
 {
     gert::StorageShape xShape;
     gert::StorageShape thresholdShape;
@@ -280,27 +278,26 @@ void ThresholdV2TilingTestParam::InvokeTilingFunc(ThresholdCompileInfo &compileI
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(3, 1)
-            .IrInstanceNum({1, 1, 1})
-            .InputShapes({&xShape, &thresholdShape, &valueShape})
-            .OutputShapes({&outputShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-            .NodeInputTd(0, dtypeX, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, dtypeThreshold, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, dtypeValue, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, dtypeOutput, ge::FORMAT_ND, ge::FORMAT_ND)
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &thresholdShape, &valueShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, dtypeX, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dtypeThreshold, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dtypeValue, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtypeOutput, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     string compileInfoStr;
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     InitPlatformInfo(socVersion, tilingContext, compileInfoStr);
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -328,33 +325,23 @@ void ThresholdV2TilingTestParam::Test() const
 
 class TestThresholdV2Tiling : public testing::TestWithParam<ThresholdV2TilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ThresholdV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ThresholdV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ThresholdV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ThresholdV2Tiling TearDown" << std::endl; }
 };
 
-TEST_P(TestThresholdV2Tiling, generalTest)
-{
-    GetParam().Test();
-}
+TEST_P(TestThresholdV2Tiling, generalTest) { GetParam().Test(); }
 
 INSTANTIATE_TEST_CASE_P(ThresholdV2Arch35, TestThresholdV2Tiling, testing::ValuesIn(GetParams("Ascend950")));
 
-static void ThreadFunc(const ThresholdV2TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
-                       size_t threadNum)
+static void ThreadFunc(const ThresholdV2TilingTestParam* params, size_t testcaseNum, size_t threadIdx, size_t threadNum)
 {
     for (size_t idx = threadIdx; idx < testcaseNum; idx += threadNum) {
         params[idx].Test();
     }
 }
 
-static void TestMultiThread(const ThresholdV2TilingTestParam *params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThread(const ThresholdV2TilingTestParam* params, size_t testcaseNum, size_t threadNum)
 {
     std::thread threads[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {

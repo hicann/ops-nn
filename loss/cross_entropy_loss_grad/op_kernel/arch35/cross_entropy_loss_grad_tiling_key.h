@@ -20,44 +20,37 @@
 #define CROSS_ENTROPY_LOSS_GRAD_MODE_1 1
 #define CROSS_ENTROPY_LOSS_GRAD_MODE_2 2
 
+#define CROSS_ENTROPY_LOSS_GRAD_TPL_KEY_DECL()                                                                        \
+    ASCENDC_TPL_UINT_DECL(schId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2),        \
+        ASCENDC_TPL_UINT_DECL(reductionKey, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1, \
+                              CROSS_ENTROPY_LOSS_GRAD_MODE_2),                                                        \
+        ASCENDC_TPL_UINT_DECL(isWeight, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1),    \
+        ASCENDC_TPL_UINT_DECL(labelS, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1),      \
+        ASCENDC_TPL_UINT_DECL(isIgnore, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1)
 
-#define CROSS_ENTROPY_LOSS_GRAD_TPL_KEY_DECL()                                                  \
-    ASCENDC_TPL_UINT_DECL(schId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2),             \
-        ASCENDC_TPL_UINT_DECL(reductionKey, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST,            \
-        CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2),                          \
-        ASCENDC_TPL_UINT_DECL(isWeight, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST,             \
-        CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1),                                                     \
-        ASCENDC_TPL_UINT_DECL(labelS, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST,               \
-        CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1),                 \
-        ASCENDC_TPL_UINT_DECL(isIgnore, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST,               \
-        CROSS_ENTROPY_LOSS_GRAD_MODE_0, 1)
+#define CROSS_ENTROPY_LOSS_GRAD_TPL_AR_KEY_SEL()                                                       \
+    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 0),                                               \
+        ASCENDC_TPL_UINT_SEL(reductionKey, ASCENDC_TPL_UI_LIST, 0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2), \
+        ASCENDC_TPL_UINT_SEL(isWeight, ASCENDC_TPL_UI_LIST, 0, 1),                                     \
+        ASCENDC_TPL_UINT_SEL(labelS, ASCENDC_TPL_UI_LIST, 0, 1),                                       \
+        ASCENDC_TPL_UINT_SEL(isIgnore, ASCENDC_TPL_UI_LIST, 0, 1)
 
-#define CROSS_ENTROPY_LOSS_GRAD_TPL_AR_KEY_SEL()                                           \
-    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 0),                                    \
-    ASCENDC_TPL_UINT_SEL(reductionKey, ASCENDC_TPL_UI_LIST, 0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2),  \
-    ASCENDC_TPL_UINT_SEL(isWeight, ASCENDC_TPL_UI_LIST, 0, 1),                              \
-    ASCENDC_TPL_UINT_SEL(labelS, ASCENDC_TPL_UI_LIST, 0, 1),      \
-    ASCENDC_TPL_UINT_SEL(isIgnore, ASCENDC_TPL_UI_LIST, 0, 1)                                   \
+#define CROSS_ENTROPY_LOSS_GRAD_TPL_FULL_LOAD_KEY_SEL()                                                \
+    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 1),                                               \
+        ASCENDC_TPL_UINT_SEL(reductionKey, ASCENDC_TPL_UI_LIST, 0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2), \
+        ASCENDC_TPL_UINT_SEL(isWeight, ASCENDC_TPL_UI_LIST, 0, 1),                                     \
+        ASCENDC_TPL_UINT_SEL(labelS, ASCENDC_TPL_UI_LIST, 0, 1),                                       \
+        ASCENDC_TPL_UINT_SEL(isIgnore, ASCENDC_TPL_UI_LIST, 0, 1)
 
-#define CROSS_ENTROPY_LOSS_GRAD_TPL_FULL_LOAD_KEY_SEL()                                           \
-    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, 1),                                    \
-    ASCENDC_TPL_UINT_SEL(reductionKey, ASCENDC_TPL_UI_LIST, 0, 1, CROSS_ENTROPY_LOSS_GRAD_MODE_2),  \
-    ASCENDC_TPL_UINT_SEL(isWeight, ASCENDC_TPL_UI_LIST, 0, 1),                              \
-    ASCENDC_TPL_UINT_SEL(labelS, ASCENDC_TPL_UI_LIST, 0, 1),      \
-    ASCENDC_TPL_UINT_SEL(isIgnore, ASCENDC_TPL_UI_LIST, 0, 1)                                 \
-
-#define CROSS_ENTROPY_LOSS_GRAD_TPL_EMPTY_KEY_SEL()                                              \
-    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, CROSS_ENTROPY_LOSS_GRAD_MODE_2),            \
-    ASCENDC_TPL_UINT_SEL(reductionKey, ASCENDC_TPL_UI_LIST, 0), \
-    ASCENDC_TPL_UINT_SEL(isWeight, ASCENDC_TPL_UI_LIST, 0),                                 \
-    ASCENDC_TPL_UINT_SEL(labelS, ASCENDC_TPL_UI_LIST, 0),                                    \
-    ASCENDC_TPL_UINT_SEL(isIgnore, ASCENDC_TPL_UI_LIST, 0)                                    \
+#define CROSS_ENTROPY_LOSS_GRAD_TPL_EMPTY_KEY_SEL()                                                                   \
+    ASCENDC_TPL_UINT_SEL(schId, ASCENDC_TPL_UI_LIST, CROSS_ENTROPY_LOSS_GRAD_MODE_2),                                 \
+        ASCENDC_TPL_UINT_SEL(reductionKey, ASCENDC_TPL_UI_LIST, 0),                                                   \
+        ASCENDC_TPL_UINT_SEL(isWeight, ASCENDC_TPL_UI_LIST, 0), ASCENDC_TPL_UINT_SEL(labelS, ASCENDC_TPL_UI_LIST, 0), \
+        ASCENDC_TPL_UINT_SEL(isIgnore, ASCENDC_TPL_UI_LIST, 0)
 
 ASCENDC_TPL_ARGS_DECL(CrossEntropyLossGrad, CROSS_ENTROPY_LOSS_GRAD_TPL_KEY_DECL());
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(CROSS_ENTROPY_LOSS_GRAD_TPL_AR_KEY_SEL()),
-    ASCENDC_TPL_ARGS_SEL(CROSS_ENTROPY_LOSS_GRAD_TPL_FULL_LOAD_KEY_SEL()),
-    ASCENDC_TPL_ARGS_SEL(CROSS_ENTROPY_LOSS_GRAD_TPL_EMPTY_KEY_SEL())
-);
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(CROSS_ENTROPY_LOSS_GRAD_TPL_AR_KEY_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CROSS_ENTROPY_LOSS_GRAD_TPL_FULL_LOAD_KEY_SEL()),
+                ASCENDC_TPL_ARGS_SEL(CROSS_ENTROPY_LOSS_GRAD_TPL_EMPTY_KEY_SEL()));
 #endif

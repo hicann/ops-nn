@@ -70,7 +70,8 @@ bool CheckHardwareSupport()
         return true;
     }
 
-    LOG_PRINT("Warning: This operator only supports Ascend950, current SOC '%s' is not supported. Skip test.\n", socName);
+    LOG_PRINT("Warning: This operator only supports Ascend950, current SOC '%s' is not supported. Skip test.\n",
+              socName);
     return false;
 }
 
@@ -82,9 +83,8 @@ void Finalize(int32_t deviceId, aclrtStream stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -102,9 +102,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -178,15 +177,15 @@ int main()
     ret = CreateAclTensor(x1_host_data, x1_shape, &x1_device_addr, aclDataType::ACL_FLOAT16, &x1);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1TensorPtr(x1, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x1DeviceAddrPtr(x1_device_addr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor x1 failed. ERROR: %d\n", ret);
-              Finalize(deviceId, stream); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor x1 failed. ERROR: %d\n", ret); Finalize(deviceId, stream);
+              return ret);
 
     // 创建x2 aclTensor (FP16输入)
     ret = CreateAclTensor(x2_host_data, x2_shape, &x2_device_addr, aclDataType::ACL_FLOAT16, &x2);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2TensorPtr(x2, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x2DeviceAddrPtr(x2_device_addr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor x2 failed. ERROR: %d\n", ret);
-              Finalize(deviceId, stream); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor x2 failed. ERROR: %d\n", ret); Finalize(deviceId, stream);
+              return ret);
 
     // 创建gamma aclTensor (FP16输入)
     ret = CreateAclTensor(gamma_host_data, gamma_shape, &gamma_device_addr, aclDataType::ACL_FLOAT16, &gamma);
@@ -196,8 +195,7 @@ int main()
               Finalize(deviceId, stream); return ret);
 
     // 创建y_out aclTensor (FP8 E4M3FN输出)
-    ret = CreateAclTensor(y_out_host_data, y_out_shape, &y_out_device_addr,
-                          aclDataType::ACL_FLOAT8_E4M3FN, &y_out);
+    ret = CreateAclTensor(y_out_host_data, y_out_shape, &y_out_device_addr, aclDataType::ACL_FLOAT8_E4M3FN, &y_out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yOutTensorPtr(y_out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(y_out_device_addr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor y_out failed. ERROR: %d\n", ret);
@@ -219,8 +217,7 @@ int main()
               Finalize(deviceId, stream); return ret);
 
     // 创建rstd_out aclTensor (float输出)
-    ret = CreateAclTensor(rstd_out_host_data, rstd_out_shape, &rstd_out_device_addr,
-                          aclDataType::ACL_FLOAT, &rstd_out);
+    ret = CreateAclTensor(rstd_out_host_data, rstd_out_shape, &rstd_out_device_addr, aclDataType::ACL_FLOAT, &rstd_out);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> rstdOutTensorPtr(rstd_out, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> rstdOutDeviceAddrPtr(rstd_out_device_addr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor rstd_out failed. ERROR: %d\n", ret);
@@ -232,12 +229,11 @@ int main()
 
     // 调用aclnnAddRmsNormDynamicMxQuant第一段接口
     LOG_PRINT("Calling aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize...\n");
-    ret = aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize(
-        x1, x2, gamma, nullptr, epsilon, quant_alg, round_mode_optional, dst_type, output_rstd,
-        y_out, x_out, mxscale_out, rstd_out, &workspace_size, &executor);
+    ret = aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize(x1, x2, gamma, nullptr, epsilon, quant_alg, round_mode_optional,
+                                                        dst_type, output_rstd, y_out, x_out, mxscale_out, rstd_out,
+                                                        &workspace_size, &executor);
 
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               Finalize(deviceId, stream); return ret);
 
     LOG_PRINT("Workspace size: %lu bytes (%.2f KB)\n", workspace_size, workspace_size / 1024.0);
@@ -246,8 +242,7 @@ int main()
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspace_size > 0) {
         ret = aclrtMalloc(&workspace_addr, workspace_size, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS,
-                  LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
         workspaceAddrPtr.reset(workspace_addr);
     }
@@ -255,14 +250,12 @@ int main()
     // 调用aclnnAddRmsNormDynamicMxQuant第二段接口
     LOG_PRINT("Calling aclnnAddRmsNormDynamicMxQuant...\n");
     ret = aclnnAddRmsNormDynamicMxQuant(workspaceAddrPtr.get(), workspace_size, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnAddRmsNormDynamicMxQuant failed. ERROR: %d\n", ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormDynamicMxQuant failed. ERROR: %d\n", ret);
               Finalize(deviceId, stream); return ret);
 
     // 4. 同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
               Finalize(deviceId, stream); return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧
@@ -270,10 +263,9 @@ int main()
         // 拷贝y_out结果
         auto size = GetShapeSize(y_out_shape);
         std::vector<uint8_t> y_out_result(size, 0);
-        ret = aclrtMemcpy(y_out_result.data(), y_out_result.size() * sizeof(y_out_result[0]),
-                          yOutDeviceAddrPtr.get(), size * sizeof(uint8_t), ACL_MEMCPY_DEVICE_TO_HOST);
-        CHECK_RET(ret == ACL_SUCCESS,
-                  LOG_PRINT("copy y_out from device to host failed. ERROR: %d\n", ret);
+        ret = aclrtMemcpy(y_out_result.data(), y_out_result.size() * sizeof(y_out_result[0]), yOutDeviceAddrPtr.get(),
+                          size * sizeof(uint8_t), ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
         LOG_PRINT("Output yOut (first 10 values):\n");
@@ -284,10 +276,9 @@ int main()
         // 拷贝x_out结果
         size = GetShapeSize(x_out_shape);
         std::vector<uint16_t> x_out_result(size, 0);
-        ret = aclrtMemcpy(x_out_result.data(), x_out_result.size() * sizeof(x_out_result[0]),
-                          xOutDeviceAddrPtr.get(), size * sizeof(uint16_t), ACL_MEMCPY_DEVICE_TO_HOST);
-        CHECK_RET(ret == ACL_SUCCESS,
-                  LOG_PRINT("copy x_out from device to host failed. ERROR: %d\n", ret);
+        ret = aclrtMemcpy(x_out_result.data(), x_out_result.size() * sizeof(x_out_result[0]), xOutDeviceAddrPtr.get(),
+                          size * sizeof(uint16_t), ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy x_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
         LOG_PRINT("Output xOut (first 10 values):\n");
@@ -300,8 +291,7 @@ int main()
         std::vector<uint8_t> mxscale_out_result(size, 0);
         ret = aclrtMemcpy(mxscale_out_result.data(), mxscale_out_result.size() * sizeof(mxscale_out_result[0]),
                           mxscaleOutDeviceAddrPtr.get(), size * sizeof(uint8_t), ACL_MEMCPY_DEVICE_TO_HOST);
-        CHECK_RET(ret == ACL_SUCCESS,
-                  LOG_PRINT("copy mxscale_out from device to host failed. ERROR: %d\n", ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy mxscale_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
         LOG_PRINT("MX scale values:\n");
@@ -314,8 +304,7 @@ int main()
         std::vector<float> rstd_out_result(size, 0.0f);
         ret = aclrtMemcpy(rstd_out_result.data(), rstd_out_result.size() * sizeof(rstd_out_result[0]),
                           rstdOutDeviceAddrPtr.get(), size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
-        CHECK_RET(ret == ACL_SUCCESS,
-                  LOG_PRINT("copy rstd_out from device to host failed. ERROR: %d\n", ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy rstd_out from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
         LOG_PRINT("Rstd values:\n");

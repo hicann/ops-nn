@@ -13,10 +13,10 @@
 
 namespace ops {
 
-static ge::graphStatus InferShape4Relu(gert::InferShapeContext *context)
+static ge::graphStatus InferShape4Relu(gert::InferShapeContext* context)
 {
     return Ops::Base::InferShape4Elewise(context);
 }
 
 IMPL_OP_INFERSHAPE(Relu).InferShape(InferShape4Relu);
-}  // namespace ops
+} // namespace ops

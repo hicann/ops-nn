@@ -14,7 +14,8 @@
 
 template <typename T>
 __aicore__ inline void KernelSoftplusV2Grad<T>::Init(TPipe* pipeIn, GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-                                                     GM_ADDR workspace, const SoftplusV2GradTilingData& tilingData) {
+                                                     GM_ADDR workspace, const SoftplusV2GradTilingData& tilingData)
+{
     ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
 
     this->pipe = pipeIn;
@@ -58,7 +59,7 @@ __aicore__ inline void KernelSoftplusV2Grad<T>::Init(TPipe* pipeIn, GM_ADDR grad
     gradInputGm.SetGlobalBuffer(gradInputT + globalOffset, this->coreDataNum);
 
     // 使用512字节对齐（DataCopy）和256字节对齐（计算）
-    uint32_t dataCopyAlignment = 512;  // DataCopy改为512字节对齐
+    uint32_t dataCopyAlignment = 512; // DataCopy改为512字节对齐
     uint32_t computeAlignment = 256;
 
     // 由于host侧已处理对齐，kernel侧直接使用对齐后的长度
@@ -84,7 +85,8 @@ __aicore__ inline void KernelSoftplusV2Grad<T>::Init(TPipe* pipeIn, GM_ADDR grad
 }
 
 template <typename T>
-__aicore__ inline void KernelSoftplusV2Grad<T>::Process() {
+__aicore__ inline void KernelSoftplusV2Grad<T>::Process()
+{
     int32_t loopCount = this->tileNum;
     for (int32_t i = 0; i < loopCount - 1; i++) {
         this->processDataNum = this->tileDataNum;
@@ -101,7 +103,8 @@ __aicore__ inline void KernelSoftplusV2Grad<T>::Process() {
 }
 
 template <typename T>
-__aicore__ inline void KernelSoftplusV2Grad<T>::CopyIn(int32_t progress) {
+__aicore__ inline void KernelSoftplusV2Grad<T>::CopyIn(int32_t progress)
+{
     // host侧已处理对齐，kernel侧直接使用实际数据长度
     uint32_t copyLength = this->processDataNum;
     uint32_t offset = progress * this->tileDataNum;
@@ -116,7 +119,8 @@ __aicore__ inline void KernelSoftplusV2Grad<T>::CopyIn(int32_t progress) {
 }
 
 template <typename T>
-__aicore__ inline void KernelSoftplusV2Grad<T>::CopyOut(int32_t progress) {
+__aicore__ inline void KernelSoftplusV2Grad<T>::CopyOut(int32_t progress)
+{
     // host侧已处理对齐，kernel侧直接使用实际数据长度
     uint32_t copyLength = this->processDataNum;
     uint32_t offset = progress * this->tileDataNum;
@@ -127,7 +131,8 @@ __aicore__ inline void KernelSoftplusV2Grad<T>::CopyOut(int32_t progress) {
 }
 
 template <typename T>
-__aicore__ inline void KernelSoftplusV2Grad<T>::Compute(int32_t progress) {
+__aicore__ inline void KernelSoftplusV2Grad<T>::Compute(int32_t progress)
+{
     const float one_val = 1.0f;
     const float neg_one = -1.0f;
 
@@ -194,7 +199,8 @@ __aicore__ inline void KernelSoftplusV2Grad<T>::Compute(int32_t progress) {
 }
 
 extern "C" __global__ __aicore__ void softplus_v2_grad(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-                                                       GM_ADDR workspace, GM_ADDR tiling) {
+                                                       GM_ADDR workspace, GM_ADDR tiling)
+{
     REGISTER_TILING_DEFAULT(SoftplusV2GradTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftplusV2GradTilingData, tilingData, tiling);
 

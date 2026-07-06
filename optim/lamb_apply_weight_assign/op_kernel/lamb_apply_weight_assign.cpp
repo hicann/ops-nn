@@ -22,9 +22,9 @@ using namespace AscendC;
 using namespace Ops::Base;
 
 template <uint64_t schMode>
-__global__ __aicore__ void lamb_apply_weight_assign(
-    GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input_param, GM_ADDR output0,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void lamb_apply_weight_assign(GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3,
+                                                    GM_ADDR input_param, GM_ADDR output0, GM_ADDR workspace,
+                                                    GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     // half/fp32 both compute in float (div needs float precision).

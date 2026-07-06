@@ -16,9 +16,9 @@
 namespace l0op {
 constexpr size_t X_V3_OUT_NUM = 2;
 
-const std::array<aclTensor*, X_V3_OUT_NUM> LayerNormXBackpropV3(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean,
-    const aclTensor* weight, aclOpExecutor* executor);
+const std::array<aclTensor*, X_V3_OUT_NUM> LayerNormXBackpropV3(const aclTensor* gradOut, const aclTensor* input,
+                                                                const aclTensor* rstd, const aclTensor* mean,
+                                                                const aclTensor* weight, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_LAYER_NORM_X_BACKPROP_V3_H_

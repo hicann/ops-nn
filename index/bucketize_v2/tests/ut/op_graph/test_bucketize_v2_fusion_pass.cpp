@@ -38,19 +38,19 @@ protected:
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
-    static GNode CreateBucketizeNode(es::EsGraphBuilder &graphBuilder, const std::string &nodeName)
+    static GNode CreateBucketizeNode(es::EsGraphBuilder& graphBuilder, const std::string& nodeName)
     {
-        auto *graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+        auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
         auto bucketize = es::CompliantNodeBuilder(graph)
-                        .OpType("Bucketize")
-                        .Name(nodeName.c_str())
-                        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-                        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                        .Build();
+                             .OpType("Bucketize")
+                             .Name(nodeName.c_str())
+                             .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
         return bucketize;
     }
 
-    static void SetBucketizeAttrs(GNode &bucketize, std::vector<float32_t> boundaries, bool right, DataType dtype)
+    static void SetBucketizeAttrs(GNode& bucketize, std::vector<float32_t> boundaries, bool right, DataType dtype)
     {
         AscendString attrNameBoundaries("boundaries");
         AscendString attrNameRight("right");
@@ -60,8 +60,7 @@ protected:
         bucketize.SetAttr(attrNameDtype, dtype);
     }
 
-    static void InferShapeForBucketize(DataType dtype, Shape &shapeX,
-        es::EsTensorHolder &x, GNode &bucketize)
+    static void InferShapeForBucketize(DataType dtype, Shape& shapeX, es::EsTensorHolder& x, GNode& bucketize)
     {
         TensorDesc xOutputDesc;
         x.GetProducer()->GetOutputDesc(0, xOutputDesc);
@@ -82,7 +81,7 @@ protected:
         bucketize.UpdateOutputDesc(0, bucketizeOutputDesc);
     }
 
-    bool FindBucketizeV2Node(std::shared_ptr<Graph> &graph)
+    bool FindBucketizeV2Node(std::shared_ptr<Graph>& graph)
     {
         for (auto node : graph->GetAllNodes()) {
             AscendString type;
@@ -115,13 +114,13 @@ TEST_F(BucketizeFusionPassTest, fusionSuccess950Float)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNode");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});
@@ -145,13 +144,13 @@ TEST_F(BucketizeFusionPassTest, fusionSuccess950Float16)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNodeFP16");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});
@@ -175,13 +174,13 @@ TEST_F(BucketizeFusionPassTest, fusionSuccess950Int32)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNodeInt32");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});
@@ -205,8 +204,8 @@ TEST_F(BucketizeFusionPassTest, fusionSuccess950Int64Output)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNodeInt64Out");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
@@ -218,7 +217,7 @@ TEST_F(BucketizeFusionPassTest, fusionSuccess950Int64Output)
     bucketizeOutputDesc.SetShape(shapeX);
     bucketize.UpdateOutputDesc(0, bucketizeOutputDesc);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});
@@ -242,13 +241,13 @@ TEST_F(BucketizeFusionPassTest, unsupportedDtypeDoubleFail)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNodeDouble");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});
@@ -281,13 +280,13 @@ TEST_F(BucketizeFusionPassTest, unsupportedPlatform910_93Fail)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNode910");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});
@@ -320,13 +319,13 @@ TEST_F(BucketizeFusionPassTest, unsupportedPlatform910BFail)
     auto bucketize = CreateBucketizeNode(graphBuilder, "BucketizeNode910B");
 
     SetBucketizeAttrs(bucketize, boundaries, false, outputDtype);
-    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(),
-        *x.GetProducer(), x.GetProducerOutIndex(), bucketize, 0);
+    auto status = es::AddEdgeAndUpdatePeerDesc(*graphBuilder.GetCGraphBuilder()->GetGraph(), *x.GetProducer(),
+                                               x.GetProducerOutIndex(), bucketize, 0);
     ASSERT_EQ(status, GRAPH_SUCCESS);
 
     InferShapeForBucketize(dtype, shapeX, x, bucketize);
 
-    auto *yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
+    auto* yHolder = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(bucketize, 0);
     auto bucketizeTensor = es::EsTensorHolder(yHolder);
 
     std::shared_ptr<Graph> graph = graphBuilder.BuildAndReset({bucketizeTensor});

@@ -29,15 +29,9 @@ namespace {
 // ----------------InitEmbeddingHashTable-------------------
 class InitEmbeddingHashTableProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "InitEmbeddingHashTable Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "InitEmbeddingHashTable Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "InitEmbeddingHashTable Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "InitEmbeddingHashTable Proto Test TearDown" << std::endl; }
 };
 
 //   pass cases

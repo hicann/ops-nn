@@ -63,9 +63,8 @@ inline static bool IsFormatSupport(const aclTensor* input, const std::string& in
 {
     OP_CHECK_NULL(input, return false);
     if (input->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "%s's format should be ND, but actually is %s.", inputName.c_str(),
-            op::ToString(input->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s's format should be ND, but actually is %s.", inputName.c_str(),
+                op::ToString(input->GetStorageFormat()).GetString());
         return false;
     }
     return true;
@@ -75,16 +74,15 @@ inline static bool IsDimSupport(const aclTensor* input, std::vector<uint64_t>& d
 {
     OP_CHECK_NULL(input, return false);
     if (input->GetViewShape().GetDimNum() < dimRange[0] || input->GetViewShape().GetDimNum() > dimRange[1]) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "%s's dim-num should be in the range of [%lu, %lu], but actually is %zu.",
-            inputName.c_str(), dimRange[0], dimRange[1], input->GetViewShape().GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s's dim-num should be in the range of [%lu, %lu], but actually is %zu.",
+                inputName.c_str(), dimRange[0], dimRange[1], input->GetViewShape().GetDimNum());
         return false;
     }
     return true;
 }
 
-inline static bool CheckNotNull(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* deqScale, const aclTensor* out)
+inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* deqScale,
+                                const aclTensor* out)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
@@ -93,8 +91,8 @@ inline static bool CheckNotNull(
     return true;
 }
 
-inline static bool CheckDtypeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, const aclTensor* out)
+inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                   const aclTensor* deqScale, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x1, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(x2, DTYPE_SUPPORT_LIST, return false);
@@ -106,8 +104,8 @@ inline static bool CheckDtypeValid(
     return true;
 }
 
-inline static bool CheckFormatVaild(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, const aclTensor* out)
+inline static bool CheckFormatVaild(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                    const aclTensor* deqScale, const aclTensor* out)
 {
     CHECK_RET(IsFormatSupport(x1, "x1"), false);
     CHECK_RET(IsFormatSupport(x2, "x2"), false);
@@ -128,9 +126,8 @@ inline static bool CheckDimVaild(const aclTensor* x1, const aclTensor* x2, const
     op::Shape x2Shape = x2->GetViewShape();
     // 检查x1与x2是否维度一致
     if (x1Shape.GetDimNum() != x2Shape.GetDimNum()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The tensor shapes of x1 and x2, %s and %s, have different dim-num",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The tensor shapes of x1 and x2, %s and %s, have different dim-num",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
     }
     // bias是否只支持1维
     if (bias != nullptr) {
@@ -152,10 +149,9 @@ static int64_t InferOutputShape(const aclTensor* x1, const aclTensor* x2, std::v
         auto shortDimValue = i < vaildOffset ? 1 : shortShapeTensor->GetViewShape().GetDim(i - vaildOffset);
         auto longDimValue = longShapeTensor->GetViewShape().GetDim(i);
         if (shortDimValue > 1 && longDimValue > 1 && shortDimValue != longDimValue) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "current short dim value %ld and long dim value %ld are not supported for boardcasting", shortDimValue,
-                longDimValue);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "current short dim value %ld and long dim value %ld are not supported for boardcasting",
+                    shortDimValue, longDimValue);
             return OUTPUT_INFER_FAIL;
         }
         int64_t curBatchValue = static_cast<int64_t>(std::max(shortDimValue, longDimValue));
@@ -165,44 +161,41 @@ static int64_t InferOutputShape(const aclTensor* x1, const aclTensor* x2, std::v
     return inferedOutbatchValue;
 }
 
-static inline bool CheckOutShape(
-    const aclTensor* out, int64_t x1MDim, int64_t x2NDim, const std::vector<int64_t>& batchRecord)
+static inline bool CheckOutShape(const aclTensor* out, int64_t x1MDim, int64_t x2NDim,
+                                 const std::vector<int64_t>& batchRecord)
 {
     auto outDimNum = out->GetViewShape().GetDimNum();
     int64_t outMDim = out->GetViewShape().GetDim(outDimNum - PENULTIMATE_DIM);
     int64_t outNDim = out->GetViewShape().GetDim(outDimNum - 1);
     size_t inferedOutDimNum = batchRecord.size() + 2;
     if (inferedOutDimNum != outDimNum) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Infered output dim num %zu is not equal to actual out dim num %zu.",
-            inferedOutDimNum, outDimNum);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Infered output dim num %zu is not equal to actual out dim num %zu.",
+                inferedOutDimNum, outDimNum);
         return false;
     }
     if (outMDim != x1MDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Out first dim should be equal to x1 m dim, but out first dim is %ld, x1 m is %ld.", outMDim, x1MDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Out first dim should be equal to x1 m dim, but out first dim is %ld, x1 m is %ld.", outMDim, x1MDim);
         return false;
     }
     if (outNDim != x2NDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Out second dim should be equal to x2 n dim, but out second dim is %ld, x2 n is %ld.", outNDim, x2NDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Out second dim should be equal to x2 n dim, but out second dim is %ld, x2 n is %ld.", outNDim, x2NDim);
         return false;
     }
     for (size_t i = 0; i < outDimNum - PENULTIMATE_DIM; i++) {
         if (out->GetViewShape().GetDim(i) != batchRecord[i]) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Output dim %ld is not equal to infered output dim num %ld at dim index %zu.",
-                out->GetViewShape().GetDim(i), batchRecord[i], i);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Output dim %ld is not equal to infered output dim num %ld at dim index %zu.",
+                    out->GetViewShape().GetDim(i), batchRecord[i], i);
             return false;
         }
     }
     return true;
 }
 
-static inline std::tuple<int64_t, int64_t, int64_t, int64_t> GetX1X2DimValue(
-    const aclTensor* x1, const aclTensor* x2, bool adjX1, bool adjX2)
+static inline std::tuple<int64_t, int64_t, int64_t, int64_t> GetX1X2DimValue(const aclTensor* x1, const aclTensor* x2,
+                                                                             bool adjX1, bool adjX2)
 {
     auto x1DimNum = x1->GetViewShape().GetDimNum();
     auto x2DimNum = x2->GetViewShape().GetDimNum();
@@ -231,19 +224,17 @@ static bool CheckShapeValid(tupleTensor mandatoryTensors, bool adjX1, bool adjX2
     // 检查x1与x2 batch是否一致
     for (size_t i = 0; i < dimTensorX - INPUT_DIM_MIN_VALUE; i++) {
         if (x1Shape[i] != x2Shape[i]) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The tensor shapes of x1 and x2, %s and %s, have different batch-dim at shape index %zu",
-                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString(), i);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The tensor shapes of x1 and x2, %s and %s, have different batch-dim at shape index %zu",
+                    op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString(), i);
             return false;
         }
     }
 
     // 检查x1K与x2K是否相等
     if (x1KDim != x2KDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The tensor shapes of x1 and x2, %s and %s, have different k-dim",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The tensor shapes of x1 and x2, %s and %s, have different k-dim",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
 
@@ -251,12 +242,10 @@ static bool CheckShapeValid(tupleTensor mandatoryTensors, bool adjX1, bool adjX2
     if (bias != nullptr) {
         op::Shape biasShape = bias->GetViewShape();
         int64_t biasNDim = biasShape[0]; // 0: 取bias的N
-        OP_CHECK(
-            biasNDim == x2NDim,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "bias 1st-dim should be equal to x2 n-dim %ld, but actually is %ld.", x2NDim,
-                biasNDim),
-            return false);
+        OP_CHECK(biasNDim == x2NDim,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bias 1st-dim should be equal to x2 n-dim %ld, but actually is %ld.",
+                         x2NDim, biasNDim),
+                 return false);
     }
 
     std::vector<int64_t> batchRecord;
@@ -269,8 +258,8 @@ static bool CheckShapeValid(tupleTensor mandatoryTensors, bool adjX1, bool adjX2
     return true;
 }
 
-static bool CheckShapeValidV2(
-    tupleTensor mandatoryTensors, const aclTensor* deqScale, bool adjX1, bool adjX2, const aclTensor* out)
+static bool CheckShapeValidV2(tupleTensor mandatoryTensors, const aclTensor* deqScale, bool adjX1, bool adjX2,
+                              const aclTensor* out)
 {
     auto x1 = std::get<INDEX_X1>(mandatoryTensors);
     auto x2 = std::get<INDEX_X2>(mandatoryTensors);
@@ -297,9 +286,8 @@ static bool CheckShapeValidV2(
     OP_LOGD("n is %ld, deqScale shape is %ld, transA: %d, transB: %d", n, t, adjX1, adjX2);
     if ((n + static_cast<int64_t>(ALIGN_NUM) - 1) / static_cast<int64_t>(ALIGN_NUM) * static_cast<int64_t>(ALIGN_NUM) !=
         t) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "deqScale shape %s is invalid.",
-            op::ToString(deqScale->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "deqScale shape %s is invalid.",
+                op::ToString(deqScale->GetViewShape()).GetString());
         return false;
     }
 
@@ -312,14 +300,13 @@ static aclnnStatus CheckSupportSocVersion()
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
         return ACLNN_SUCCESS;
     }
-    OP_LOGE(
-        ACLNN_ERR_RUNTIME_ERROR, "QuantBatchMatmul/V2 support for %s is not implemented",
-        op::ToString(socVersion).GetString());
+    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "QuantBatchMatmul/V2 support for %s is not implemented",
+            op::ToString(socVersion).GetString());
     return ACLNN_ERR_RUNTIME_ERROR;
 }
 
-inline static aclnnStatus CheckParams(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, const aclTensor* out)
+inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                      const aclTensor* deqScale, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x1, x2, deqScale, out), ACLNN_ERR_INNER_NULLPTR);
@@ -336,8 +323,8 @@ inline static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-inline static aclnnStatus CheckParamsV2(
-    tupleTensor mandatoryTensors, const aclTensor* deqScale, bool adjX1, bool adjX2, const aclTensor* out)
+inline static aclnnStatus CheckParamsV2(tupleTensor mandatoryTensors, const aclTensor* deqScale, bool adjX1, bool adjX2,
+                                        const aclTensor* out)
 {
     auto x1 = std::get<INDEX_X1>(mandatoryTensors);
     auto x2 = std::get<INDEX_X2>(mandatoryTensors);
@@ -355,8 +342,8 @@ inline static aclnnStatus CheckParamsV2(
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* ProcessEmptyTensor(
-    const aclTensor* x1, const aclTensor* bias, const aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* ProcessEmptyTensor(const aclTensor* x1, const aclTensor* bias, const aclTensor* out,
+                                           aclOpExecutor* executor)
 {
     // 获取shape信息
     op::Shape outShape = out->GetViewShape();
@@ -375,9 +362,9 @@ static const aclTensor* ProcessEmptyTensor(
     return fillTensor;
 }
 
-static const aclTensor* BuildQuantMatMulGraph(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, bool adjX1, bool adjX2,
-    aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* BuildQuantMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                              const aclTensor* deqScale, bool adjX1, bool adjX2, aclTensor* out,
+                                              aclOpExecutor* executor)
 {
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
@@ -395,9 +382,9 @@ static const aclTensor* BuildQuantMatMulGraph(
 }
 } // namespace
 
-aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, float deqScale, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnQuantMatmulGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                             float deqScale, aclTensor* out, uint64_t* workspaceSize,
+                                             aclOpExecutor** executor)
 {
     DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulGetWorkspaceSize", "December 2026", "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmul, DFX_IN(x1, x2, bias, deqScale), DFX_OUT(out));
@@ -437,7 +424,8 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
     CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 构建matmul计算图
-    auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScaleTensor, x1TransposeValue, x2TransposeValue, out, unique_executor.get());
+    auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScaleTensor, x1TransposeValue, x2TransposeValue, out,
+                                           unique_executor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (matmulOut->IsEmpty()) {
         // 当输出为空tensor的场景，空tensor处理
@@ -463,11 +451,12 @@ aclnnStatus aclnnQuantMatmul(void* workspace, uint64_t workspaceSize, aclOpExecu
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* deqScale, bool adjX1, bool adjX2,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                               const aclTensor* deqScale, bool adjX1, bool adjX2, aclTensor* out,
+                                               uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV2GetWorkspaceSize", "December 2026", "aclnnQuantMatmulV5GetWorkspaceSize");
+    DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV2GetWorkspaceSize", "December 2026",
+                             "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmulV2, DFX_IN(x1, x2, bias, deqScale, adjX1, adjX2), DFX_OUT(out));
 
     // 固定写法，创建OpExecutor
@@ -495,7 +484,8 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
     bool biasTransposeValue = false;
     CHECK_RET(TensorContiguousProcess(bias, biasTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
     bool deqScaleTransposeValue = false;
-    CHECK_RET(TensorContiguousProcess(deqScale, deqScaleTransposeValue, unique_executor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(TensorContiguousProcess(deqScale, deqScaleTransposeValue, unique_executor.get()),
+              ACLNN_ERR_INNER_NULLPTR);
 
     // 构建matmul计算图
     auto matmulOut = BuildQuantMatMulGraph(x1, x2, bias, deqScale, adjX1, adjX2, out, unique_executor.get());
@@ -516,8 +506,8 @@ aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnQuantMatmulV2(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnQuantMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                               const aclrtStream stream)
 {
     DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV2", "December 2026", "aclnnQuantMatmulV5");
     L2_DFX_PHASE_2(aclnnQuantMatmulV2);

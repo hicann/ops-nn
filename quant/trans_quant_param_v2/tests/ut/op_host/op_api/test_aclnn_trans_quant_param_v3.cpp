@@ -22,18 +22,11 @@
 using namespace op;
 using namespace std;
 
-class l2_trans_quant_param_v3_test : public testing::Test
-{
+class l2_trans_quant_param_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_trans_quant_param_v3_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_trans_quant_param_v3_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_trans_quant_param_v3_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_trans_quant_param_v3_test TearDown" << endl; }
 };
 
 TEST_F(l2_trans_quant_param_v3_test, test_trans_quant_param_first_api)

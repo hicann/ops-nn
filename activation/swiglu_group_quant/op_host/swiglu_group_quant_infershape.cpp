@@ -64,8 +64,8 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
 
     int64_t xRank = static_cast<int64_t>(xShape->GetDimNum());
     OP_CHECK_IF(xRank < 1,
-        OP_LOGE(context->GetNodeName(), "The rank of x should be greater than 0, but is %ld.", xRank),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "The rank of x should be greater than 0, but is %ld.", xRank),
+                return ge::GRAPH_FAILED);
     int64_t splitDim = xRank - 1;
 
     if (xShape->GetDim(splitDim) == UNKNOWN_DIM_VALUE) {
@@ -80,10 +80,10 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     }
 
     OP_CHECK_IF(xShape->GetDim(splitDim) < 0 || xShape->GetDim(splitDim) % NUM_TWO != 0,
-        OP_LOGE(context->GetNodeName(),
-                "The last dimension of x should be non-negative and divisible by 2, but got %ld.",
-                xShape->GetDim(splitDim)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(),
+                        "The last dimension of x should be non-negative and divisible by 2, but got %ld.",
+                        xShape->GetDim(splitDim)),
+                return ge::GRAPH_FAILED);
 
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
@@ -94,8 +94,9 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
     const int64_t* dstTypePtr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
-    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ? ge::DT_HIFLOAT8 :
-        (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
+    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ?
+                               ge::DT_HIFLOAT8 :
+                               (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
     bool isMxFp4Quant = dstType == ge::DT_FLOAT4_E1M2 || dstType == ge::DT_FLOAT4_E2M1;
 
     *yShape = *xShape;
@@ -146,10 +147,11 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
     bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
     const int64_t* dstTypePtr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
-    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ? ge::DT_HIFLOAT8 :
-        (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
-    OP_CHECK_IF(std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), dstType) ==
-                    Y_SUPPORT_DTYPE_SET.end(),
+    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ?
+                               ge::DT_HIFLOAT8 :
+                               (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
+    OP_CHECK_IF(
+        std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), dstType) == Y_SUPPORT_DTYPE_SET.end(),
         OP_LOGE(context->GetNodeName(),
                 "dst_type is illegal, only supports FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2 or HIFLOAT8, "
                 "but got %d(%s).",
@@ -157,7 +159,8 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(OUTPUT_IDX_Y, dstType);
 
-    context->SetOutputDataType(OUTPUT_IDX_Y_SCALE, isMxQuant && !isDynamicHif8Quant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT);
+    context->SetOutputDataType(OUTPUT_IDX_Y_SCALE,
+                               isMxQuant && !isDynamicHif8Quant ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT);
 
     auto xDtype = context->GetInputDataType(INPUT_IDX_X);
     context->SetOutputDataType(OUTPUT_IDX_Y_ORIGIN, xDtype);
@@ -166,7 +169,5 @@ graphStatus InferDtype4SwigluGroupQuant(gert::InferDataTypeContext* context)
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SwigluGroupQuant)
-    .InferShape(InferShape4SwigluGroupQuant)
-    .InferDataType(InferDtype4SwigluGroupQuant);
+IMPL_OP_INFERSHAPE(SwigluGroupQuant).InferShape(InferShape4SwigluGroupQuant).InferDataType(InferDtype4SwigluGroupQuant);
 } // namespace ops

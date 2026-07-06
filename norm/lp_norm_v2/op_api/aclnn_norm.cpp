@@ -40,19 +40,19 @@ constexpr size_t MAX_DIM_LEN = 8;
 constexpr float INT_MAX_F = static_cast<float>(INT_MAX);
 constexpr float INT_MIN_F = static_cast<float>(INT_MIN);
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_FLOAT = {op::DataType::DT_FLOAT};
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_FLOAT16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_FLOAT16 = {op::DataType::DT_FLOAT,
+                                                                               op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BF16 = {
-    op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BF16 = {op::DataType::DT_FLOAT,
+                                                                            op::DataType::DT_BF16};
 
-static inline bool CheckNotNull(
-    const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, const aclTensor* out)
+static inline bool CheckNotNull(const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim,
+                                const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(pScalar, return false);
@@ -103,13 +103,11 @@ static inline bool CheckDtypeConvertValid(const aclTensor* self, const aclTensor
         DTYPE_CONVERT_LIST = DTYPE_SUPPORT_LIST_BF16;
     }
     auto dtype = out->GetDataType();
-    OP_CHECK(
-        CheckType(dtype, DTYPE_CONVERT_LIST),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "For self with dtype %s, dtype should be %s, but got %s.",
-            op::ToString(selfDtype).GetString(), op::ToString(DTYPE_CONVERT_LIST).GetString(),
-            op::ToString(dtype).GetString()),
-        return false);
+    OP_CHECK(CheckType(dtype, DTYPE_CONVERT_LIST),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For self with dtype %s, dtype should be %s, but got %s.",
+                     op::ToString(selfDtype).GetString(), op::ToString(DTYPE_CONVERT_LIST).GetString(),
+                     op::ToString(dtype).GetString()),
+             return false);
 
     return true;
 }
@@ -119,9 +117,8 @@ static inline bool CheckPromoteType(const aclTensor* self, const aclTensor* out)
     // 检查self和other能否做数据类型推导
     op::DataType normPromoteType = op::PromoteType(self->GetDataType(), out->GetDataType());
     if (normPromoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input dtype %s and output dtype %s can not promote dtype.",
-            op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dtype %s and output dtype %s can not promote dtype.",
+                op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
         return false;
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -142,9 +139,8 @@ static bool CheckDimValid(const aclTensor* self, const aclIntArray* dim)
     // 获取dim元素
     for (size_t i = 0; i < dim->Size(); i++) {
         if (dim->operator[](i) >= selfDimNum || dim->operator[](i) < (-selfDimNum)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "provided dim %ld not in the range of input tensor size %ld.",
-                dim->operator[](i), selfDimNum);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "provided dim %ld not in the range of input tensor size %ld.",
+                    dim->operator[](i), selfDimNum);
             return false;
         }
     }
@@ -210,10 +206,7 @@ static inline bool CheckShape(const aclTensor* self, const aclTensor* out, const
     return true;
 }
 
-static bool IsFloatEqual(float a, float b, float epsilon = 1e-6f)
-{
-    return std::fabs(a - b) < epsilon;
-}
+static bool IsFloatEqual(float a, float b, float epsilon = 1e-6f) { return std::fabs(a - b) < epsilon; }
 
 static float CalculateValP(const aclScalar* pScalar)
 {
@@ -227,8 +220,8 @@ static float CalculateValP(const aclScalar* pScalar)
     }
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, bool keepdim, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, bool keepdim,
+                               const aclTensor* out)
 {
     // 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, pScalar, dim, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -277,42 +270,43 @@ static inline bool CheckOrdValue(const aclScalar* ord)
     auto it = std::find(attrPSupportValue.cbegin(), attrPSupportValue.cend(), pValue);
     std::stringstream sStream;
     std::for_each(attrPSupportValue.cbegin(), attrPSupportValue.cend(), [&](float value) { sStream << value << ", "; });
-    OP_CHECK(
-        it != attrPSupportValue.cend(),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ord must one of [inf, -inf, %s], but find %f.", sStream.str().c_str(), pValue),
-        return false);
+    OP_CHECK(it != attrPSupportValue.cend(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ord must one of [inf, -inf, %s], but find %f.", sStream.str().c_str(),
+                     pValue),
+             return false);
     return true;
 }
 
-
-static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputParams& inputParams, aclOpExecutor* executor)
+static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputParams& inputParams,
+                                       aclOpExecutor* executor)
 {
     auto epsilon = static_cast<float>(0);
 
     const aclTensor* lpNormOut;
     bool isPromoteValid = CheckDtypeConvertValid(inputParams.self, inputParams.out);
-    if(isPromoteValid) {
-        lpNormOut = l0op::LpNormV2(selfContiguous, inputParams.out, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
+    if (isPromoteValid) {
+        lpNormOut = l0op::LpNormV2(selfContiguous, inputParams.out, inputParams.p, inputParams.dims,
+                                   inputParams.keepDims, epsilon, executor);
         CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else if (!isPromoteValid) {
         auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
         CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        lpNormOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
+        lpNormOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, inputParams.p, inputParams.dims,
+                                   inputParams.keepDims, epsilon, executor);
         CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         lpNormOut = l0op::Cast(lpNormOut, inputParams.out->GetDataType(), executor);
         CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    
+
     auto viewCopyResult = l0op::ViewCopy(lpNormOut, inputParams.out, executor);
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnNormGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, bool keepdim, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnNormGetWorkspaceSize(const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim,
+                                      bool keepdim, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

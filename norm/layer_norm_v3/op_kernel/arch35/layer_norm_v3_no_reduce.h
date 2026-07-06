@@ -67,10 +67,10 @@ public:
         CopyInGammaBeta();
         gammaBetaInUb_ = gammaBetaQueue_.template DeQue<U>();
         int64_t ubLoopNum = GetBlockIdx() == GetBlockNum() - 1 ? tl_->tailBlockUbLoops : tl_->formerBlockUbLoops;
-        int64_t tailA =
-            GetBlockIdx() == GetBlockNum() - 1 ?
-                tl_->a - tl_->aBlockFactor * (GetBlockNum() - 1) - (tl_->tailBlockUbLoops - 1) * tl_->aUbFactor :
-                tl_->aBlockFactor - (tl_->formerBlockUbLoops - 1) * tl_->aUbFactor;
+        int64_t tailA = GetBlockIdx() == GetBlockNum() - 1 ?
+                            tl_->a - tl_->aBlockFactor * (GetBlockNum() - 1) -
+                                (tl_->tailBlockUbLoops - 1) * tl_->aUbFactor :
+                            tl_->aBlockFactor - (tl_->formerBlockUbLoops - 1) * tl_->aUbFactor;
         // ub循环
         for (int64_t ubLoopIdx = 0; ubLoopIdx < ubLoopNum; ubLoopIdx++) {
             int64_t currentA = ubLoopIdx == ubLoopNum - 1 ? tailA : tl_->aUbFactor;
@@ -153,8 +153,8 @@ private:
         yQueue_.EnQue(yOutUb);
     }
 
-    __aicore__ inline void CalculateMeanVar(
-        __local_mem__ T* xInUb, __local_mem__ M* meanInUb, __local_mem__ float* tmpUb, uint64_t currentANum)
+    __aicore__ inline void CalculateMeanVar(__local_mem__ T* xInUb, __local_mem__ M* meanInUb,
+                                            __local_mem__ float* tmpUb, uint64_t currentANum)
     {
         uint16_t aLoop = static_cast<uint16_t>((currentANum + VL_B32 - 1) / VL_B32);
         uint32_t sreg = static_cast<uint32_t>(currentANum);
@@ -205,8 +205,8 @@ private:
                 if constexpr (!IsOutRstd) {
                     StoreRegForDtype(rstdOutUb, varReg, pregLoop, (a * VL_B32));
                 }
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilon);
                 if constexpr (IsOutRstd) {
                     StoreRegForDtype(rstdOutUb, rstdReg, pregLoop, (a * VL_B32));
@@ -216,9 +216,8 @@ private:
         }
     }
     template <bool hasGammaFlag, bool hasBetaFlag>
-    __aicore__ inline void CalculateY(
-        __local_mem__ T* xInUb, __local_mem__ U* betaInUb, __local_mem__ U* gammaInUb, __local_mem__ T* yOutUb,
-        __local_mem__ float* tmpUb, int64_t currentANum)
+    __aicore__ inline void CalculateY(__local_mem__ T* xInUb, __local_mem__ U* betaInUb, __local_mem__ U* gammaInUb,
+                                      __local_mem__ T* yOutUb, __local_mem__ float* tmpUb, int64_t currentANum)
     {
         uint16_t aLoop = static_cast<uint16_t>((currentANum + VL_B32 - 1) / VL_B32);
         uint32_t sreg = static_cast<uint32_t>(currentANum);
@@ -270,8 +269,8 @@ private:
     }
 
     template <typename H>
-    __aicore__ inline void LoadsTensorForDtypeT(
-        const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst, MicroAPI::MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadsTensorForDtypeT(const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst,
+                                                MicroAPI::MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<H, float>::value) {
             DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);

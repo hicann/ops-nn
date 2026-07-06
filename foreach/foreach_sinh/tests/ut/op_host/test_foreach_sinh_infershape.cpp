@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_sinh_proto.h"
 
-class ForeachSinhTest : public testing::Test
-{
+class ForeachSinhTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSinh SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSinh SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSinh TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSinh TearDown" << std::endl; }
 };
 
 TEST_F(ForeachSinhTest, infer_shape_known_success)

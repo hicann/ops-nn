@@ -25,19 +25,18 @@ namespace optiling {
 using namespace QuantUpdateScatter;
 using namespace std;
 
-const set<ge::DataType> INPUT_VAR_SUPPORT_DTYPE_SET = {
-    ge::DT_INT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+const set<ge::DataType> INPUT_VAR_SUPPORT_DTYPE_SET = {ge::DT_INT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN,
+                                                       ge::DT_FLOAT8_E5M2};
 const set<ge::DataType> INPUT_INDICES_SUPPORT_DTYPE_SET = {ge::DT_INT32, ge::DT_INT64};
 const set<ge::DataType> INPUT_UPDATES_SUPPORT_DTYPE_SET = {ge::DT_BF16, ge::DT_FLOAT16};
 const set<ge::DataType> INPUT_SCALE_SUPPORT_DTYPE_SET = {ge::DT_BF16, ge::DT_FLOAT};
 const set<ge::DataType> INPUT_ZERO_POINT_SUPPORT_DTYPE_SET = {ge::DT_BF16, ge::DT_INT32};
-const set<ge::DataType> OUTPUT_VAR_SUPPORT_DTYPE_SET = {
-    ge::DT_INT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
-const map<ge::DataType, vector<string>> DTYPE_ROUND_MODE_MAP = {
-    {ge::DT_INT8, {"rint"}},
-    {ge::DT_HIFLOAT8, {"round", "hybrid"}},
-    {ge::DT_FLOAT8_E4M3FN, {"rint"}},
-    {ge::DT_FLOAT8_E5M2, {"rint"}}};
+const set<ge::DataType> OUTPUT_VAR_SUPPORT_DTYPE_SET = {ge::DT_INT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN,
+                                                        ge::DT_FLOAT8_E5M2};
+const map<ge::DataType, vector<string>> DTYPE_ROUND_MODE_MAP = {{ge::DT_INT8, {"rint"}},
+                                                                {ge::DT_HIFLOAT8, {"round", "hybrid"}},
+                                                                {ge::DT_FLOAT8_E4M3FN, {"rint"}},
+                                                                {ge::DT_FLOAT8_E5M2, {"rint"}}};
 
 const map<ge::DataType, string> DTYPE_ROUND_MODE_LOG_MAP = {
     {ge::DT_INT8, "int8 datatype only support 'rint', currently is: "},
@@ -116,8 +115,8 @@ void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLargeQuant()
 void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLittleQuant()
 {
     OP_LOGD(context_->GetNodeName(), "enter CalcTilingDataForLargeBatchLittleQuant");
-    int64_t updateDim3Align =
-        tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() * tilingData_.get_updateOriLastDimAlign();
+    int64_t updateDim3Align = tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() *
+                              tilingData_.get_updateOriLastDimAlign();
     int64_t innerLoopEle = maxUpdatesSize_ / BYTES_ONE_BLOCK * BYTES_ONE_BLOCK / updateDtypeSize_ / BUFFER_NUM /
                            updateDim3Align * updateDim3Align;
     tilingData_.set_innerLoopFullRpt(innerLoopEle / updateDim3Align);
@@ -126,12 +125,10 @@ void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeBatchLittleQuant()
         return;
     }
     tilingData_.set_innerLoopEle(tilingData_.get_innerLoopFullRpt() * tilingData_.get_updateOriLastDim());
-    tilingData_.set_innerLoopTimes(
-        updateNewShape_.GetDim(DIM_2) * updateNewShape_.GetDim(DIM_3) / tilingData_.get_updateOriLastDim() /
-        tilingData_.get_innerLoopFullRpt());
-    tilingData_.set_innerLoopTailRpt(
-        updateNewShape_.GetDim(DIM_2) * updateNewShape_.GetDim(DIM_3) / tilingData_.get_updateOriLastDim() %
-        tilingData_.get_innerLoopFullRpt());
+    tilingData_.set_innerLoopTimes(updateNewShape_.GetDim(DIM_2) * updateNewShape_.GetDim(DIM_3) /
+                                   tilingData_.get_updateOriLastDim() / tilingData_.get_innerLoopFullRpt());
+    tilingData_.set_innerLoopTailRpt(updateNewShape_.GetDim(DIM_2) * updateNewShape_.GetDim(DIM_3) /
+                                     tilingData_.get_updateOriLastDim() % tilingData_.get_innerLoopFullRpt());
     tilingData_.set_innerLoopTail(tilingData_.get_innerLoopTailRpt() * tilingData_.get_updateOriLastDim());
     tilingData_.set_innerLoopTimesLastCore(0);
     tilingData_.set_innerLoopTailLastCore(0);
@@ -164,10 +161,10 @@ void QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLargeQuant()
 ge::graphStatus QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLittleQuant()
 {
     OP_LOGD(context_->GetNodeName(), "enter CalcTilingDataForLargeEleLittleQuant");
-    int64_t updateDim3Align =
-        tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() * tilingData_.get_updateOriLastDimAlign();
-    int64_t innerLoopEle =
-        maxUpdatesSize_ / updateDtypeSize_ / BUFFER_NUM / updateDim3Align * updateDim3Align; // 一次可处理的update数
+    int64_t updateDim3Align = tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() *
+                              tilingData_.get_updateOriLastDimAlign();
+    int64_t innerLoopEle = maxUpdatesSize_ / updateDtypeSize_ / BUFFER_NUM / updateDim3Align *
+                           updateDim3Align; // 一次可处理的update数
     if (innerLoopEle == 0) {
         OP_LOGE(context_->GetNodeName(), "innerLoopEle is 0");
         return ge::GRAPH_FAILED;
@@ -175,16 +172,16 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLittle
     tilingData_.set_innerLoopEle(innerLoopEle);
     // 核内切update[2]
     tilingData_.set_innerLoopFullRpt(tilingData_.get_innerLoopEle() / updateDim3Align); // 一次可搬入的update[2]个数
-    tilingData_.set_innerLoopTimes(
-        tilingData_.get_eachCoreBsNum() * updateDim3Align / tilingData_.get_innerLoopEle()); // 循环次数
+    tilingData_.set_innerLoopTimes(tilingData_.get_eachCoreBsNum() * updateDim3Align /
+                                   tilingData_.get_innerLoopEle()); // 循环次数
     tilingData_.set_innerLoopTail(tilingData_.get_eachCoreBsNum() * updateDim3Align % tilingData_.get_innerLoopEle());
     tilingData_.set_innerLoopTailRpt(tilingData_.get_innerLoopTail() / updateDim3Align);
 
-    tilingData_.set_innerLoopTimesLastCore(
-        tilingData_.get_lastCoreBsNum() * updateDim3Align / tilingData_.get_innerLoopEle()); // 循环次数
+    tilingData_.set_innerLoopTimesLastCore(tilingData_.get_lastCoreBsNum() * updateDim3Align /
+                                           tilingData_.get_innerLoopEle()); // 循环次数
     tilingData_.set_innerLoopFullRptLastCore(tilingData_.get_innerLoopFullRpt());
-    tilingData_.set_innerLoopTailLastCore(
-        tilingData_.get_lastCoreBsNum() * updateDim3Align % tilingData_.get_innerLoopEle());
+    tilingData_.set_innerLoopTailLastCore(tilingData_.get_lastCoreBsNum() * updateDim3Align %
+                                          tilingData_.get_innerLoopEle());
     tilingData_.set_innerLoopTailRptLastCore(tilingData_.get_innerLoopTailLastCore() / updateDim3Align);
 
     return ge::GRAPH_SUCCESS;
@@ -192,13 +189,14 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::CalcTilingDataForLargeEleLittle
 
 ge::graphStatus QuantUpdateScatterRegbaseTiling::GetTilingNeg2()
 {
-    int64_t updateDim3Align =
-        tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() * tilingData_.get_updateOriLastDimAlign();
+    int64_t updateDim3Align = tilingData_.get_updateDim3() / tilingData_.get_updateOriLastDim() *
+                              tilingData_.get_updateOriLastDimAlign();
     int64_t updateDim23Align = tilingData_.get_updateDim2() * updateDim3Align;
     // UB放不下一个-1（aligned）& -2轴的场景
     if ((updateDim23Align * updateDtypeSize_ * BUFFER_NUM) > maxUpdatesSize_) {
         int64_t indicesNeededUb = BYTES_ONE_BLOCK;
-        maxUpdatesSize_ = static_cast<int64_t>((calcUbSize_ - indicesNeededUb - quantScalesUbSize_ - quantZeroPointsUbSize_) * GetUpdateUbRatio(false));
+        maxUpdatesSize_ = static_cast<int64_t>(
+            (calcUbSize_ - indicesNeededUb - quantScalesUbSize_ - quantZeroPointsUbSize_) * GetUpdateUbRatio(false));
         if (maxUpdatesSize_ < 0) {
             OP_LOGD(context_->GetNodeName(), "GetTilingNeg2 maxUpdatesSize is 0");
             maxUpdatesSize_ = 0;
@@ -209,15 +207,14 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::GetTilingNeg2()
         if (updateNewShape_.GetDim(DIM_0) * updateNewShape_.GetDim(DIM_1) < updateNewShapeDim2) {
             tilingData_.set_eachCoreBsNum(Ops::Base::CeilDiv(updateNewShapeDim2, actualCoreNum_));
             tilingData_.set_coreNum(Ops::Base::CeilDiv(updateNewShapeDim2, tilingData_.get_eachCoreBsNum()));
-            tilingData_.set_lastCoreBsNum(
-                updateNewShapeDim2 - tilingData_.get_eachCoreBsNum() * (tilingData_.get_coreNum() - 1));
+            tilingData_.set_lastCoreBsNum(updateNewShapeDim2 -
+                                          tilingData_.get_eachCoreBsNum() * (tilingData_.get_coreNum() - 1));
 
             if (maxInnerLoopEle > updateDim3Align) {
                 splitMode_ = TPL_MODE_LARGE_ELE_LITTLE_QUANT;
-                OP_CHECK_IF(
-                    ge::GRAPH_SUCCESS != CalcTilingDataForLargeEleLittleQuant(),
-                    OP_LOGE(context_->GetNodeName(), "CalcTilingDataForLargeEleLittleQuant failed."),
-                    return ge::GRAPH_FAILED);
+                OP_CHECK_IF(ge::GRAPH_SUCCESS != CalcTilingDataForLargeEleLittleQuant(),
+                            OP_LOGE(context_->GetNodeName(), "CalcTilingDataForLargeEleLittleQuant failed."),
+                            return ge::GRAPH_FAILED);
             } else {
                 maxUpdatesSize_ = static_cast<int64_t>((calcUbSize_ - indicesNeededUb) * GetUpdateUbRatio(true));
                 splitMode_ = TPL_MODE_LARGE_ELE_LARGE_QUANT;
@@ -258,7 +255,8 @@ void QuantUpdateScatterRegbaseTiling::UpdateTilingParam()
     // 量化后的type对齐，防止vst时不对齐
     int64_t updateOriLastDim = updateOriginShape_.GetDim(updateOriginShape_.GetDimNum() - 1);
     if (updateOriLastDim == 0) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateOriLastDim), "last dim of updates must not be 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateOriLastDim),
+                                                 "last dim of updates must not be 0");
         return;
     }
     int64_t updateOriLastDimAligned = Ops::Base::CeilAlign(updateOriLastDim, varBlockSize);
@@ -281,10 +279,10 @@ void QuantUpdateScatterRegbaseTiling::UpdateTilingParam()
     tilingData_.set_varDim2(varNewShape_.GetDim(DIM_2));
     tilingData_.set_varDim3(varNewShape_.GetDim(DIM_3));
 
-    tilingData_.set_srcFirBsStride(
-        updateNewShape_.GetDim(DIM_1) * updateNewShape_.GetDim(DIM_2) * updateNewShape_.GetDim(DIM_3));
-    tilingData_.set_dstFirSecBsStride(
-        varNewShape_.GetDim(DIM_1) * varNewShape_.GetDim(DIM_2) * varNewShape_.GetDim(DIM_3));
+    tilingData_.set_srcFirBsStride(updateNewShape_.GetDim(DIM_1) * updateNewShape_.GetDim(DIM_2) *
+                                   updateNewShape_.GetDim(DIM_3));
+    tilingData_.set_dstFirSecBsStride(varNewShape_.GetDim(DIM_1) * varNewShape_.GetDim(DIM_2) *
+                                      varNewShape_.GetDim(DIM_3));
 
     if (quantZeroPointsElements_ == 0) {
         zeroPointsType_ = TPL_NONE;
@@ -295,7 +293,9 @@ void QuantUpdateScatterRegbaseTiling::UpdateTilingParam()
             zeroPointsType_ = TPL_BF16;
         } else {
             zeroPointsType_ = TPL_NONE;
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "quant_zero_points", ge::TypeUtils::DataTypeToSerialString(quantZeroPointsDtype_), "[DT_BF16, DT_INT32]");
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "quant_zero_points",
+                                      ge::TypeUtils::DataTypeToSerialString(quantZeroPointsDtype_),
+                                      "[DT_BF16, DT_INT32]");
         }
     }
     return;
@@ -304,19 +304,20 @@ void QuantUpdateScatterRegbaseTiling::UpdateTilingParam()
 ge::graphStatus QuantUpdateScatterRegbaseTiling::GetTilingParam()
 {
     UpdateTilingParam();
-    int64_t tilingUbReserved = Ops::Base::CeilAlign(static_cast<int64_t>(sizeof(QuantUpdateScatterTilingData)), BYTES_ONE_BLOCK) + RESERVED_BYTES;
+    int64_t tilingUbReserved = Ops::Base::CeilAlign(static_cast<int64_t>(sizeof(QuantUpdateScatterTilingData)),
+                                                    BYTES_ONE_BLOCK) +
+                               RESERVED_BYTES;
     calcUbSize_ = ubSize_ - tilingUbReserved;
-    maxUpdatesSize_ =
-        static_cast<int64_t>((calcUbSize_ - indexUbSize_ - quantScalesUbSize_ - quantZeroPointsUbSize_) * GetUpdateUbRatio(false));
+    maxUpdatesSize_ = static_cast<int64_t>((calcUbSize_ - indexUbSize_ - quantScalesUbSize_ - quantZeroPointsUbSize_) *
+                                           GetUpdateUbRatio(false));
     if (maxUpdatesSize_ < 0) {
         OP_LOGD(context_->GetNodeName(), "GetTilingParam maxUpdatesSize is 0");
         maxUpdatesSize_ = 0;
     }
     OP_LOGD(context_->GetNodeName(), "maxUpdatesSize_: %ld", maxUpdatesSize_);
 
-    OP_CHECK_IF(
-        ge::GRAPH_SUCCESS != GetTilingNeg2(), OP_LOGE(context_->GetNodeName(), "some case not support."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != GetTilingNeg2(), OP_LOGE(context_->GetNodeName(), "some case not support."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -388,26 +389,31 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::PrepareTilingParams()
 
 ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyNullTenosr() const
 {
-    OP_CHECK_IF(
-        varOriginShape_.GetDimNum() != updateOriginShape_.GetDimNum(),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "var, updates", std::to_string(varOriginShape_.GetDimNum()) + ", " + std::to_string(updateOriginShape_.GetDimNum()), "The shape dim of var must be the same as the shape dim of updates"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varOriginShape_.GetDimNum() != updateOriginShape_.GetDimNum(),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "var, updates",
+                    std::to_string(varOriginShape_.GetDimNum()) + ", " + std::to_string(updateOriginShape_.GetDimNum()),
+                    "The shape dim of var must be the same as the shape dim of updates"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        varOriginShape_.GetDimNum() * indicesShapeRank_ == 0,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "var, indices", std::to_string(varOriginShape_.GetDimNum()) + ", " + std::to_string(indicesShapeRank_), "The shape dim of var and indices must not be 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varOriginShape_.GetDimNum() * indicesShapeRank_ == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "var, indices",
+                    std::to_string(varOriginShape_.GetDimNum()) + ", " + std::to_string(indicesShapeRank_),
+                    "The shape dim of var and indices must not be 0"),
+                return ge::GRAPH_FAILED);
 
     int64_t dataNum = varOriginShape_.GetShapeSize();
     int64_t indicesNum = indicesOriginShape_.GetShapeSize();
     int64_t updateNum = updateOriginShape_.GetShapeSize();
     int64_t quantScalesNum = quantScalesElements_;
-    OP_CHECK_IF(
-        dataNum == 0 || indicesNum == 0 || updateNum == 0 || quantScalesNum == 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-            context_->GetNodeName(),
-            "var, indices, updates, quant_scales",
-            std::to_string(dataNum) + ", " + std::to_string(indicesNum) + ", " + std::to_string(updateNum) + ", " + std::to_string(quantScalesNum),
-            "var, indices, updates, and quant_scales do not support empty tensor"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataNum == 0 || indicesNum == 0 || updateNum == 0 || quantScalesNum == 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context_->GetNodeName(), "var, indices, updates, quant_scales",
+                    std::to_string(dataNum) + ", " + std::to_string(indicesNum) + ", " + std::to_string(updateNum) +
+                        ", " + std::to_string(quantScalesNum),
+                    "var, indices, updates, and quant_scales do not support empty tensor"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -416,34 +422,28 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyParamsDtype() const
 {
     OP_CHECK_IF(
         INPUT_VAR_SUPPORT_DTYPE_SET.count(varDtype_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(),
-            "var", ge::TypeUtils::DataTypeToSerialString(varDtype_), "[DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "var", ge::TypeUtils::DataTypeToSerialString(varDtype_),
+                                  "[DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        INPUT_INDICES_SUPPORT_DTYPE_SET.count(indexDtype_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "indices", ge::TypeUtils::DataTypeToSerialString(indexDtype_), "[DT_INT32, DT_INT64]"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        INPUT_UPDATES_SUPPORT_DTYPE_SET.count(updateDtype_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(),
-            "updates", ge::TypeUtils::DataTypeToSerialString(updateDtype_), "[DT_BF16, DT_FLOAT16]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(INPUT_INDICES_SUPPORT_DTYPE_SET.count(indexDtype_) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices",
+                                          ge::TypeUtils::DataTypeToSerialString(indexDtype_), "[DT_INT32, DT_INT64]"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(INPUT_UPDATES_SUPPORT_DTYPE_SET.count(updateDtype_) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "updates",
+                                          ge::TypeUtils::DataTypeToSerialString(updateDtype_), "[DT_BF16, DT_FLOAT16]"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         INPUT_SCALE_SUPPORT_DTYPE_SET.count(quantScalesDtype_) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(),
-            "quant_scales", ge::TypeUtils::DataTypeToSerialString(quantScalesDtype_), "[DT_BF16, DT_FLOAT]"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "quant_scales",
+                                  ge::TypeUtils::DataTypeToSerialString(quantScalesDtype_), "[DT_BF16, DT_FLOAT]"),
         return ge::GRAPH_FAILED);
     if (quantZeroPointsDtypeSize_ != 0) {
-        OP_CHECK_IF(
-            INPUT_ZERO_POINT_SUPPORT_DTYPE_SET.count(quantZeroPointsDtype_) == 0,
-            OP_LOGE_FOR_INVALID_DTYPE(
-                context_->GetNodeName(),
-                "quant_zero_points", ge::TypeUtils::DataTypeToSerialString(quantZeroPointsDtype_), "[DT_BF16, DT_INT32]"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(INPUT_ZERO_POINT_SUPPORT_DTYPE_SET.count(quantZeroPointsDtype_) == 0,
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "quant_zero_points",
+                                              ge::TypeUtils::DataTypeToSerialString(quantZeroPointsDtype_),
+                                              "[DT_BF16, DT_INT32]"),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -454,10 +454,15 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingQuantParams()
     int64_t updateDimNum = updateOriginShape_.GetDimNum();
     OP_CHECK_IF(
         (updateDimNum < 3 || updateDimNum > 8),
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDimNum), "The shape dim of updates must be within the range [3, 8]"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDimNum),
+                                                 "The shape dim of updates must be within the range [3, 8]"),
+        return ge::GRAPH_FAILED);
     int64_t dataDimNum = varOriginShape_.GetDimNum();
     OP_CHECK_IF(
-        (updateDimNum != dataDimNum), OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "updates, var", std::to_string(updateDimNum) + ", " + std::to_string(dataDimNum), "The shape dim of updates must be the same as the shape dim of var"),
+        (updateDimNum != dataDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "updates, var",
+                                                  std::to_string(updateDimNum) + ", " + std::to_string(dataDimNum),
+                                                  "The shape dim of updates must be the same as the shape dim of var"),
         return ge::GRAPH_FAILED);
 
     auto attrs = context_->GetAttrs();
@@ -466,29 +471,32 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingQuantParams()
     const char* reduceAxisPtr = attrs->GetAttrPointer<char>(ATTR_REDUCE_INDEX);
     string reduceAxis(reduceAxisPtr);
 
-    OP_CHECK_IF(
-        reduceAxis != "update", OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "reduce", reduceAxis, "The value of reduce must be [update]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(reduceAxis != "update",
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "reduce", reduceAxis,
+                                                      "The value of reduce must be [update]"),
+                return ge::GRAPH_FAILED);
 
     // axis attribute
     const auto axisPtr = attrs->GetAttrPointer<int64_t>(ATTR_AXIS_INDEX);
     int64_t axis = (axisPtr == nullptr) ? -2 : *axisPtr;
     absAxis_ = (axis < 0) ? axis + updateDimNum : axis;
-    OP_CHECK_IF(
-        (absAxis_ > updateDimNum - 2 || absAxis_ < 1),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "axis", std::to_string(axis),
-            "The value of axis must be within the range [1, " + std::to_string(updateDimNum - 2) + "] or [-" + std::to_string(updateDimNum) + ", -2]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((absAxis_ > updateDimNum - 2 || absAxis_ < 1),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis),
+                                                      "The value of axis must be within the range [1, " +
+                                                          std::to_string(updateDimNum - 2) + "] or [-" +
+                                                          std::to_string(updateDimNum) + ", -2]"),
+                return ge::GRAPH_FAILED);
 
     // quant_axis attribute
     const auto quantAxisPtr = attrs->GetAttrPointer<int64_t>(ATTR_QUANT_AXIS_INDEX);
     int64_t quantAxis = (quantAxisPtr == nullptr) ? -1 : *quantAxisPtr;
 
     absQuantAxis_ = (quantAxis < 0) ? quantAxis + updateDimNum : quantAxis;
-    OP_CHECK_IF(
-        (absQuantAxis_ != updateDimNum - 1),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_axis", std::to_string(quantAxis), "The value of quant_axis must be -1 or " + std::to_string(updateDimNum - 1)), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((absQuantAxis_ != updateDimNum - 1),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "quant_axis", std::to_string(quantAxis),
+                    "The value of quant_axis must be -1 or " + std::to_string(updateDimNum - 1)),
+                return ge::GRAPH_FAILED);
 
     // reciprocal attribute
     const auto reciprocalPtr = attrs->GetAttrPointer<bool>(ATTR_RECIPROCAL_INDEX);
@@ -498,33 +506,33 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingQuantParams()
     // round_mode attribute
     const char* roundModePtr = attrs->GetAttrPointer<char>(ATTR_ROUND_MODE_INDEX);
     string roundMode((roundModePtr) ? roundModePtr : "rint");
-    OP_CHECK_IF(
-        !CheckRoundMode(varDtype_, roundMode), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, "The value of round_mode must be [rint, round, hybrid]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckRoundMode(varDtype_, roundMode),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode,
+                                                      "The value of round_mode must be [rint, round, hybrid]"),
+                return ge::GRAPH_FAILED);
 
     auto it = ROUND_MODE_TPL_MAP.find(roundMode);
     if (it != ROUND_MODE_TPL_MAP.end()) {
         castRoundMode_ = it->second;
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, "The value of round_mode must be [rint, round, hybrid]");
-	return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode,
+                                              "The value of round_mode must be [rint, round, hybrid]");
+        return ge::GRAPH_FAILED;
     }
     int64_t quantScalesNum = quantScalesElements_;
     int64_t quantZeroPointsElements = quantZeroPointsElements_;
-    OP_CHECK_IF(
-        (quantScalesNum != updateOriginShape_.GetDim(absQuantAxis_)),
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-            context_->GetNodeName(), "quant_scales, updates",
-            std::to_string(quantScalesNum) + ", " + std::to_string(updateOriginShape_.GetDim(absQuantAxis_)),
-            "The shape size of quant_scales must equal the last dim of updates"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (quantScalesNum != quantZeroPointsElements) && (quantZeroPointsElements != 0),
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
-            context_->GetNodeName(), "quant_scales, quant_zero_points",
-            std::to_string(quantScalesNum) + ", " + std::to_string(quantZeroPointsElements),
-            "The shape size of quant_scales must be the same as the shape size of quant_zero_points"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((quantScalesNum != updateOriginShape_.GetDim(absQuantAxis_)),
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context_->GetNodeName(), "quant_scales, updates",
+                    std::to_string(quantScalesNum) + ", " + std::to_string(updateOriginShape_.GetDim(absQuantAxis_)),
+                    "The shape size of quant_scales must equal the last dim of updates"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((quantScalesNum != quantZeroPointsElements) && (quantZeroPointsElements != 0),
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context_->GetNodeName(), "quant_scales, quant_zero_points",
+                    std::to_string(quantScalesNum) + ", " + std::to_string(quantZeroPointsElements),
+                    "The shape size of quant_scales must be the same as the shape size of quant_zero_points"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -567,38 +575,47 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::MergeDims()
 
 ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingParams() const
 {
-    OP_CHECK_IF(
-        updateOriginShape_[0] != indicesOriginShape_[0],
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates, indices", Ops::Base::ToString(updateOriginShape_) + ", " + Ops::Base::ToString(indicesOriginShape_), "dim[0] of updates must be equal to dim[0] of indices"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        updateOriginShape_[0] > varOriginShape_[0],
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "updates", Ops::Base::ToString(updateOriginShape_), "dim[0] of updates must be less than dim[0] of var"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        updateOriginShape_[absAxis_] > varOriginShape_[absAxis_],
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "updates", Ops::Base::ToString(updateOriginShape_), "dim[axis] of updates must be less than dim[axis] of var"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(updateOriginShape_[0] != indicesOriginShape_[0],
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "updates, indices",
+                    Ops::Base::ToString(updateOriginShape_) + ", " + Ops::Base::ToString(indicesOriginShape_),
+                    "dim[0] of updates must be equal to dim[0] of indices"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(updateOriginShape_[0] > varOriginShape_[0],
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "updates",
+                                                      Ops::Base::ToString(updateOriginShape_),
+                                                      "dim[0] of updates must be less than dim[0] of var"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(updateOriginShape_[absAxis_] > varOriginShape_[absAxis_],
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "updates",
+                                                      Ops::Base::ToString(updateOriginShape_),
+                                                      "dim[axis] of updates must be less than dim[axis] of var"),
+                return ge::GRAPH_FAILED);
 
     for (int64_t i = 1; i < static_cast<int64_t>(updateOriginShape_.GetDimNum()); i++) {
         if (i == absAxis_) {
             continue;
         }
         if (updateOriginShape_[i] != varOriginShape_[i]) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates, var", Ops::Base::ToString(updateOriginShape_) + ", " + Ops::Base::ToString(varOriginShape_), "dim[" + std::to_string(i) + "] of updates must be equal to dim[" + std::to_string(i) + "] of var");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "updates, var",
+                Ops::Base::ToString(updateOriginShape_) + ", " + Ops::Base::ToString(varOriginShape_),
+                "dim[" + std::to_string(i) + "] of updates must be equal to dim[" + std::to_string(i) + "] of var");
             return ge::GRAPH_FAILED;
         }
     }
 
     if (indicesShapeRank_ != ONE_INDICES && indicesShapeRank_ != TWO_INDICES) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices", std::to_string(indicesShapeRank_), "The shape dim of indices must be 1 or 2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices", std::to_string(indicesShapeRank_),
+                                                 "The shape dim of indices must be 1 or 2");
         return ge::GRAPH_FAILED;
     }
 
     if (indicesShapeRank_ == TWO_INDICES) {
-        OP_CHECK_IF(
-            indicesOriginShape_[1] != 2, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "indices", std::to_string(indicesOriginShape_[1]), "2"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(indicesOriginShape_[1] != 2,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "indices",
+                                                 std::to_string(indicesOriginShape_[1]), "2"),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -627,43 +644,38 @@ void QuantUpdateScatterRegbaseTiling::PrintDebugInfo()
         tilingData_.get_srcFirBsStride(), tilingData_.get_dstFirSecBsStride(), tilingData_.get_updateDim0(),
         tilingData_.get_updateDim1(), tilingData_.get_updateDim2(), tilingData_.get_updateDim3(),
         tilingData_.get_updateOriLastDim(), tilingData_.get_updateOriLastDimAlign());
-    OP_LOGD(
-        context_->GetNodeName(),
-        "[QuantUpdateScatter]tilingKey: %lu, splitMode_: %lu, zeroPointsType_: %lu, divMode_: %lu, roundMode_: %lu",
-        tilingKey_, splitMode_, zeroPointsType_, divMode_, castRoundMode_);
+    OP_LOGD(context_->GetNodeName(),
+            "[QuantUpdateScatter]tilingKey: %lu, splitMode_: %lu, zeroPointsType_: %lu, divMode_: %lu, roundMode_: %lu",
+            tilingKey_, splitMode_, zeroPointsType_, divMode_, castRoundMode_);
 }
 
 ge::graphStatus QuantUpdateScatterRegbaseTiling::DoTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Enter quant_update_scatter_regbase dotiling!");
-    OP_CHECK_IF(
-        PrepareTilingParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "PrepareTilingParams failed!"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyNullTenosr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "VerifyNullTenosr failed!"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyParamsDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "VerifyParamsDtype return failed."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyTilingQuantParams() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "VerifyTilingQuantParams return failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        VerifyTilingParams() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "VerifyTilingParams failed!"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        MergeDims() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "MergeDims failed!"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetTilingParam() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "GetTilingParam failed!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(PrepareTilingParams() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "PrepareTilingParams failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyNullTenosr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "VerifyNullTenosr failed!"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyParamsDtype() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "VerifyParamsDtype return failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyTilingQuantParams() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "VerifyTilingQuantParams return failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(VerifyTilingParams() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "VerifyTilingParams failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(MergeDims() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "MergeDims failed!"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingParam() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "GetTilingParam failed!"),
+                return ge::GRAPH_FAILED);
     tilingKey_ = GET_TPL_TILING_KEY(splitMode_, zeroPointsType_, divMode_, castRoundMode_);
     PrintDebugInfo();
 
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, rawTilingData);
     if (tilingData_.GetDataSize() > rawTilingData->GetCapacity()) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(),"TilingDataSize,Capacity",std::to_string(tilingData_.GetDataSize())+","+std::to_string(rawTilingData->GetCapacity()), "The value of TilingDataSize must be greater than that of Capacity");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            context_->GetNodeName(), "TilingDataSize,Capacity",
+            std::to_string(tilingData_.GetDataSize()) + "," + std::to_string(rawTilingData->GetCapacity()),
+            "The value of TilingDataSize must be greater than that of Capacity");
         return ge::GRAPH_FAILED;
     }
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
@@ -677,7 +689,8 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::DoTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus Tiling4QuantUpdateScatter(gert::TilingContext* context) {
+static ge::graphStatus Tiling4QuantUpdateScatter(gert::TilingContext* context)
+{
     auto compileInfo = context->GetCompileInfo<QuantUpdateScatterCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD(context->GetNodeName(), "Enter new QuantUpdateScatterTiling");
@@ -685,9 +698,7 @@ static ge::graphStatus Tiling4QuantUpdateScatter(gert::TilingContext* context) {
     return tiling.DoTiling();
 }
 
-static ge::graphStatus TilingPrepare4QuantUpdateScatter(gert::TilingParseContext* context) {
-    return ge::GRAPH_SUCCESS;
-}
+static ge::graphStatus TilingPrepare4QuantUpdateScatter(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
 
 IMPL_OP_OPTILING(QuantUpdateScatter)
     .Tiling(Tiling4QuantUpdateScatter)

@@ -22,6 +22,6 @@ namespace conv3d {
 using namespace AscendC;
 using namespace conv;
 
-}  // namespace conv3d
+} // namespace conv3d
 
-#endif  // CONV3D_V2_UTIL_H
+#endif // CONV3D_V2_UTIL_H

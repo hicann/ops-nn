@@ -33,8 +33,8 @@
 #define NO_CHECK_RANGE_TILING_KEY_NCHW_INT64 110
 #define CHECK_RANGE_TILING_KEY_NCHW_INT64 111
 #define KSIZE_ONE_TILING_KEY 800
-#define SIMT_NCHW_INT32_TILING_KEY  900
-#define SIMT_NCHW_INT64_TILING_KEY  901
+#define SIMT_NCHW_INT32_TILING_KEY 900
+#define SIMT_NCHW_INT64_TILING_KEY 901
 
 #define NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC 500
 #define CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC 501
@@ -53,8 +53,8 @@
 constexpr int NCHW = 0;
 constexpr int NHWC = 1;
 using namespace MaxPoolGradWithArgmaxNHWCNameSpace;
-extern "C" __global__ __aicore__ void max_pool_grad_with_argmax_v3(
-    GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void max_pool_grad_with_argmax_v3(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y,
+                                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
     AscendC::TPipe pipeBase;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
@@ -93,8 +93,7 @@ extern "C" __global__ __aicore__ void max_pool_grad_with_argmax_v3(
     } else if (TILING_KEY_IS(KSIZE_ONE_TILING_KEY)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 800", MaxPoolGradWithArgmaxSizeOneTilingCommonData);
         GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxSizeOneTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxV3KsizeOneNameSpace::MaxPoolGradWithArgmaxV3KsizeOne<DTYPE_X> op(
-            tilingDataIn, pipeBase);
+        MaxPoolGradWithArgmaxV3KsizeOneNameSpace::MaxPoolGradWithArgmaxV3KsizeOne<DTYPE_X> op(tilingDataIn, pipeBase);
         op.Init(x, grad, argmax, y);
         op.Process();
     } else if (TILING_KEY_IS(SIMT_NCHW_INT32_TILING_KEY)) {
@@ -110,76 +109,124 @@ extern "C" __global__ __aicore__ void max_pool_grad_with_argmax_v3(
         op.Init(x, grad, argmax, y);
         op.Process();
     } else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<DTYPE_X, DTYPE_ARGMAX, 0, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<DTYPE_X, DTYPE_ARGMAX, 0,
+                                                                                        VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 501", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<DTYPE_X, DTYPE_ARGMAX, 1, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 501",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCBase<DTYPE_X, DTYPE_ARGMAX, 1,
+                                                                                        VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC_INT64)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 510", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCInt64Base<DTYPE_X, DTYPE_ARGMAX, 0, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 510",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCInt64Base<DTYPE_X, DTYPE_ARGMAX, 0,
+                                                                                             VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(CHECK_RANGE_TILING_KEY_NHWC_MERGE_HWC_INT64)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 511", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCInt64Base<DTYPE_X, DTYPE_ARGMAX, 1, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 511",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeHWCInt64Base<DTYPE_X, DTYPE_ARGMAX, 1,
+                                                                                             VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int32_t, 0, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int32_t,
+                                                                                       0, VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 601", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int32_t, 1, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 601",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int32_t,
+                                                                                       1, VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC_INT64)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 610", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int64_t, 0, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 610",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int64_t,
+                                                                                       0, VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(CHECK_RANGE_TILING_KEY_NHWC_MERGE_WC_INT64)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 611", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int64_t, 1, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 611",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCMergeWCBase<DTYPE_X, DTYPE_ARGMAX, int64_t,
+                                                                                       1, VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_BIGC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int32_t, 0, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 700",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int32_t, 0,
+                                                                                    VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(CHECK_RANGE_TILING_KEY_NHWC_BIGC)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 701", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int32_t, 1, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 701",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int32_t, 1,
+                                                                                    VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
-    }    else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_BIGC_INT64)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 710", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int64_t, 0, VER_V3> op;
+    } else if (TILING_KEY_IS(NO_CHECK_RANGE_TILING_KEY_NHWC_BIGC_INT64)) {
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 710",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int64_t, 0,
+                                                                                    VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
     } else if (TILING_KEY_IS(CHECK_RANGE_TILING_KEY_NHWC_BIGC_INT64)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 711", MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData, tilingDataIn, tiling);
-        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int64_t, 1, VER_V3> op;
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 711",
+                                      MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNHWCTilingCommonData,
+                                    tilingDataIn, tiling);
+        MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxKernelNHWCBigcBase<DTYPE_X, DTYPE_ARGMAX, int64_t, 1,
+                                                                                    VER_V3>
+            op;
         op.Init(x, grad, argmax, y, pipeBase, tilingDataIn);
         op.Process();
-    } 
+    }
 }

@@ -49,4 +49,4 @@ ACLNN_API aclnnStatus aclnnLogSoftmax(void* workspace, uint64_t workspaceSize, a
 }
 #endif
 
-#endif  // OP_API_INC_LOGSOFTMAX_H_
+#endif // OP_API_INC_LOGSOFTMAX_H_

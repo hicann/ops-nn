@@ -21,8 +21,8 @@ constexpr uint32_t INDEX_FAST_COPY_BYTES = 16 * 1024;
 template <typename T, typename IndexT>
 class IndexKernel {
 public:
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-        GM_ADDR y, const optiling::IndexTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices, GM_ADDR y,
+                                const optiling::IndexTilingData* tiling)
     {
         tiling_ = tiling;
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
@@ -86,8 +86,8 @@ private:
         return true;
     }
 
-    __aicore__ inline void DecodeOffset(uint64_t offset, const uint64_t* shape, const uint64_t* stride,
-        uint32_t rank, uint64_t* coord) const
+    __aicore__ inline void DecodeOffset(uint64_t offset, const uint64_t* shape, const uint64_t* stride, uint32_t rank,
+                                        uint64_t* coord) const
     {
         (void)shape;
         for (uint32_t i = 0; i < rank; ++i) {
@@ -231,13 +231,13 @@ private:
             } else {
                 uint64_t indexCoord[INDEX_MAX_RANK] = {0};
                 DecodeOffset(prefixOffset, tiling_->get_indexShape(), tiling_->get_indexStride(),
-                    tiling_->get_indexRank(), indexCoord);
+                             tiling_->get_indexRank(), indexCoord);
                 srcBase = CalcLeadingInputBase(indexCoord);
             }
             const uint64_t dstBase = prefixOffset * tailSize;
             for (uint64_t tailOffset = 0; tailOffset < tailSize; tailOffset += maxCopyElems) {
-                const uint64_t copyElems = (tailSize - tailOffset) < maxCopyElems ?
-                    (tailSize - tailOffset) : maxCopyElems;
+                const uint64_t copyElems = (tailSize - tailOffset) < maxCopyElems ? (tailSize - tailOffset) :
+                                                                                    maxCopyElems;
                 LocalTensor<T> local = copyQueue_.template AllocTensor<T>();
                 DataCopyExtParams copyParams{1, static_cast<uint32_t>(copyElems * sizeof(T)), 0, 0, 0};
                 DataCopyPad(local, xGm_[srcBase + tailOffset], copyParams, {});
@@ -272,7 +272,7 @@ private:
             } else {
                 uint64_t indexCoord[INDEX_MAX_RANK] = {0};
                 DecodeOffset(prefixOffset, tiling_->get_indexShape(), tiling_->get_indexStride(),
-                    tiling_->get_indexRank(), indexCoord);
+                             tiling_->get_indexRank(), indexCoord);
                 srcOffset = CalcLeadingInputBase(indexCoord);
             }
             yGm_.SetValue(prefixOffset, xGm_.GetValue(srcOffset));
@@ -292,5 +292,5 @@ private:
     uint32_t blockIdx_ = 0;
     uint32_t blockNum_ = 1;
 };
-}  // namespace IndexExperimental
-#endif  // OPS_NN_EXPERIMENTAL_INDEX_KERNEL_INDEX_KERNEL_H_
+} // namespace IndexExperimental
+#endif // OPS_NN_EXPERIMENTAL_INDEX_KERNEL_INDEX_KERNEL_H_

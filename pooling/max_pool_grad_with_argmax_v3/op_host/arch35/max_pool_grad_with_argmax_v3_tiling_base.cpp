@@ -82,12 +82,12 @@ static bool CheckGradShape(const MaxPoolGradWithArgmaxInputInfoCommon& inputData
 
     if (tmpHGrad != inputData.hGrad || tmpWGrad != inputData.wGrad || inputData.nX != inputData.nGrad ||
         inputData.cX != inputData.cGrad) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE(
-            "MaxPoolGradWithArgmaxV3", "grad shape",
-            "(" + std::to_string(inputData.nGrad) + "," + std::to_string(inputData.cGrad) + "," +
-                std::to_string(inputData.hGrad) + "," + std::to_string(inputData.wGrad) + ")",
-            "(" + std::to_string(inputData.nX) + "," + std::to_string(inputData.cX) + "," + std::to_string(tmpHGrad) +
-                "," + std::to_string(tmpWGrad) + ")");
+        OP_LOGE_FOR_INVALID_SHAPESIZE("MaxPoolGradWithArgmaxV3", "grad shape",
+                                      "(" + std::to_string(inputData.nGrad) + "," + std::to_string(inputData.cGrad) +
+                                          "," + std::to_string(inputData.hGrad) + "," +
+                                          std::to_string(inputData.wGrad) + ")",
+                                      "(" + std::to_string(inputData.nX) + "," + std::to_string(inputData.cX) + "," +
+                                          std::to_string(tmpHGrad) + "," + std::to_string(tmpWGrad) + ")");
         return false;
     }
     return true;
@@ -109,15 +109,14 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto xShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
     if (xShape.GetDimNum() != DIMS_FOUR) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "input shape", std::to_string(xShape.GetDimNum()),
-            std::to_string(DIMS_FOUR));
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "input shape", std::to_string(xShape.GetDimNum()),
+                                     std::to_string(DIMS_FOUR));
         return ge::GRAPH_FAILED;
     }
     if (xShape.GetShapeSize() <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "input shape size", std::to_string(xShape.GetShapeSize()),
-            "input shape size should be larger than zero");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "input shape size",
+                                                  std::to_string(xShape.GetShapeSize()),
+                                                  "input shape size should be larger than zero");
         return ge::GRAPH_FAILED;
     }
 
@@ -126,9 +125,9 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     inputData.inputDtype = inputDesc->GetDataType();
     if (inputData.inputDtype != ge::DataType::DT_BF16 && inputData.inputDtype != ge::DataType::DT_FLOAT16 &&
         inputData.inputDtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "input data type",
-            ge::TypeUtils::DataTypeToSerialString(inputData.inputDtype).c_str(), "float, float16, bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "input data type",
+                                  ge::TypeUtils::DataTypeToSerialString(inputData.inputDtype).c_str(),
+                                  "float, float16, bfloat16");
         return ge::GRAPH_FAILED;
     }
 
@@ -136,9 +135,9 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGrad);
     auto gradShape = Ops::Base::EnsureNotScalar(inputGrad->GetStorageShape());
     if (gradShape.GetShapeSize() <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "grad shape size", std::to_string(gradShape.GetShapeSize()),
-            "grad shape size should be larger than zero");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "grad shape size",
+                                                  std::to_string(gradShape.GetShapeSize()),
+                                                  "grad shape size should be larger than zero");
         return ge::GRAPH_FAILED;
     }
     inputData.gradShapeSize = gradShape.GetShapeSize();
@@ -146,25 +145,24 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputArgmax);
     auto argmaxShape = Ops::Base::EnsureNotScalar(inputArgmax->GetStorageShape());
     if (argmaxShape.GetShapeSize() <= 0) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "argmax shape size", std::to_string(argmaxShape.GetShapeSize()),
-            "argmax shape size should be larger than zero");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "argmax shape size",
+                                                  std::to_string(argmaxShape.GetShapeSize()),
+                                                  "argmax shape size should be larger than zero");
         return ge::GRAPH_FAILED;
     }
     auto inputArgmaxDesc = context_->GetInputDesc(INPUT_ARGMAX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputArgmaxDesc);
     auto argmaxDtype = inputArgmaxDesc->GetDataType();
     if (argmaxDtype != ge::DataType::DT_INT32 && argmaxDtype != ge::DataType::DT_INT64) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "argmax data type", ge::TypeUtils::DataTypeToSerialString(argmaxDtype).c_str(),
-            "int32, int64");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "argmax data type",
+                                  ge::TypeUtils::DataTypeToSerialString(argmaxDtype).c_str(), "int32, int64");
         return ge::GRAPH_FAILED;
     }
 
     if (gradShape != argmaxShape) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "grad shape", std::to_string(gradShape.GetShapeSize()),
-            "grad shape should be same with argmax shape");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "grad shape",
+                                                  std::to_string(gradShape.GetShapeSize()),
+                                                  "grad shape should be same with argmax shape");
         return ge::GRAPH_FAILED;
     }
 
@@ -172,9 +170,9 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outY);
     auto yShape = Ops::Base::EnsureNotScalar(outY->GetStorageShape());
     if (yShape != xShape) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "output shape", std::to_string(yShape.GetShapeSize()),
-            "output shape should be same with input shape");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "output shape",
+                                                  std::to_string(yShape.GetShapeSize()),
+                                                  "output shape should be same with input shape");
         return ge::GRAPH_FAILED;
     }
 
@@ -204,8 +202,8 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
         inputData.hGrad = gradShape.GetDim(DIM_ONE);
         inputData.wGrad = gradShape.GetDim(DIM_TWO);
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "data_format", inputFormatPtr, "The supported data formats are NCHW/NHWC");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "data_format", inputFormatPtr,
+                                              "The supported data formats are NCHW/NHWC");
         return ge::GRAPH_FAILED;
     }
 
@@ -291,8 +289,5 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 } // namespace optiling

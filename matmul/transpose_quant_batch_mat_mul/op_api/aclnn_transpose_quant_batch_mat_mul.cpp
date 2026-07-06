@@ -50,9 +50,8 @@ static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST_HIFP8 = {
 static const std::initializer_list<op::DataType> X1_SCALE_SUPPORT_LIST_MXFP8 = {DataType::DT_FLOAT8_E8M0};
 static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST_MXFP8 = {DataType::DT_FLOAT8_E8M0};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_BF16};
-static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_HIFP8 = {DataType::DT_FLOAT16,
-                                                                                 DataType::DT_BF16,
-                                                                                 DataType::DT_HIFLOAT8};
+static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_HIFP8 = {
+    DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8};
 static constexpr size_t EXPECTED_DIM = 3;
 static constexpr size_t EXPECTED_SCALE_DIM = 1;
 static constexpr size_t EXPECTED_MX_SCALE_DIM = 4;
@@ -68,108 +67,114 @@ static const int64_t NUM_TWO = 2;
 static const int64_t NUM_THREE = 3;
 static const char* const OP_NAME = "aclnnTransposeQuantBatchMatMulGetWorkspaceSize";
 
-static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2Scale)
+{
     if (x1Scale == nullptr || x2Scale == nullptr) {
-         return false;
-     }
+        return false;
+    }
     return x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
            x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
-static inline bool IsHIFP8(const aclTensor *x1, const aclTensor *x2) {
+static inline bool IsHIFP8(const aclTensor* x1, const aclTensor* x2)
+{
     return x1->GetDataType() == op::DataType::DT_HIFLOAT8 && x2->GetDataType() == op::DataType::DT_HIFLOAT8;
 }
 
-inline static bool CheckNotNull(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* out, const aclTensor* x1Scale, const aclTensor* x2Scale,
-    const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY)
+inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* out,
+                                const aclTensor* x1Scale, const aclTensor* x2Scale, const aclIntArray* permX1,
+                                const aclIntArray* permX2, const aclIntArray* permY)
 {
     OP_CHECK(x1 != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x1", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "x1", "null").c_str()),
-        return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 OP_NAME, "x1", "nullptr", Ops::NN::FormatString("The value of %s cannot be %s", "x1", "null").c_str()),
+             return false);
     OP_CHECK(x2 != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x2", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "x2", "null").c_str()),
-        return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 OP_NAME, "x2", "nullptr", Ops::NN::FormatString("The value of %s cannot be %s", "x2", "null").c_str()),
+             return false);
     // hifp8 场景, 支持x1Scale为空
     if (!IsHIFP8(x1, x2)) {
         OP_CHECK(x1Scale != nullptr,
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x1Scale", "nullptr",
-                Ops::NN::FormatString("The value of %s cannot be %s", "x1Scale", "null").c_str()),
-            return false);
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     OP_NAME, "x1Scale", "nullptr",
+                     Ops::NN::FormatString("The value of %s cannot be %s", "x1Scale", "null").c_str()),
+                 return false);
     }
     OP_CHECK(x2Scale != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x2Scale", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "x2Scale", "null").c_str()),
-        return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 OP_NAME, "x2Scale", "nullptr",
+                 Ops::NN::FormatString("The value of %s cannot be %s", "x2Scale", "null").c_str()),
+             return false);
     OP_CHECK(permX1 != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "permX1", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "permX1", "null").c_str()),
-        return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 OP_NAME, "permX1", "nullptr",
+                 Ops::NN::FormatString("The value of %s cannot be %s", "permX1", "null").c_str()),
+             return false);
     OP_CHECK(permX2 != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "permX2", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "permX2", "null").c_str()),
-        return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 OP_NAME, "permX2", "nullptr",
+                 Ops::NN::FormatString("The value of %s cannot be %s", "permX2", "null").c_str()),
+             return false);
     OP_CHECK(permY != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "permY", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "permY", "null").c_str()),
-        return false);
-    OP_CHECK(out != nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "out", "nullptr",
-            Ops::NN::FormatString("The value of %s cannot be %s", "out", "null").c_str()),
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 OP_NAME, "permY", "nullptr",
+                 Ops::NN::FormatString("The value of %s cannot be %s", "permY", "null").c_str()),
+             return false);
+    OP_CHECK(
+        out != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "out", "nullptr", Ops::NN::FormatString("The value of %s cannot be %s", "out", "null").c_str()),
         return false);
     return true;
 }
 
-static inline bool CheckDtypeHIFP8(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale) {
+static inline bool CheckDtypeHIFP8(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                   const aclTensor* x2Scale)
+{
     // HIFP8 场景：INT64 scale 转换为 UINT64
     if (x1Scale != nullptr && x1Scale->GetDataType() == op::DataType::DT_INT64) {
-        (void)const_cast<aclTensor *>(x1Scale)->SetDataType(op::DataType::DT_UINT64);
+        (void)const_cast<aclTensor*>(x1Scale)->SetDataType(op::DataType::DT_UINT64);
     }
     if (x2Scale->GetDataType() == op::DataType::DT_INT64) {
-        (void)const_cast<aclTensor *>(x2Scale)->SetDataType(op::DataType::DT_UINT64);
+        (void)const_cast<aclTensor*>(x2Scale)->SetDataType(op::DataType::DT_UINT64);
     }
     // HIFP8 dtype 检查
     if (!CheckType(x1->GetDataType(), X_SUPPORT_LIST_HIFP8)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
-            Ops::NN::FormatString(
-                "The dtype of %s must be in %s", "x1", op::ToString(X_SUPPORT_LIST_HIFP8).GetString())
+            Ops::NN::FormatString("The dtype of %s must be in %s", "x1", op::ToString(X_SUPPORT_LIST_HIFP8).GetString())
                 .c_str());
         return false;
     }
     if (!CheckType(x2->GetDataType(), X_SUPPORT_LIST_HIFP8)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
-            Ops::NN::FormatString(
-                "The dtype of %s must be in %s", "x2", op::ToString(X_SUPPORT_LIST_HIFP8).GetString())
+            Ops::NN::FormatString("The dtype of %s must be in %s", "x2", op::ToString(X_SUPPORT_LIST_HIFP8).GetString())
                 .c_str());
         return false;
     }
     if (x1Scale != nullptr && !CheckType(x1Scale->GetDataType(), X1_SCALE_SUPPORT_LIST_HIFP8)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             OP_NAME, "x1Scale", op::ToString(x1Scale->GetDataType()).GetString(),
-            Ops::NN::FormatString(
-                "The dtype of %s must be in %s", "x1Scale", op::ToString(X1_SCALE_SUPPORT_LIST_HIFP8).GetString())
+            Ops::NN::FormatString("The dtype of %s must be in %s", "x1Scale",
+                                  op::ToString(X1_SCALE_SUPPORT_LIST_HIFP8).GetString())
                 .c_str());
         return false;
     }
     if (!CheckType(x2Scale->GetDataType(), X2_SCALE_SUPPORT_LIST_HIFP8)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             OP_NAME, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
-            Ops::NN::FormatString(
-                "The dtype of %s must be in %s", "x2Scale", op::ToString(X2_SCALE_SUPPORT_LIST_HIFP8).GetString())
+            Ops::NN::FormatString("The dtype of %s must be in %s", "x2Scale",
+                                  op::ToString(X2_SCALE_SUPPORT_LIST_HIFP8).GetString())
                 .c_str());
         return false;
     }
     return true;
 }
 
-inline static bool CheckDtypeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale, const aclTensor* out,
-    int32_t dtype)
+inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                   const aclTensor* x2Scale, const aclTensor* out, int32_t dtype)
 {
     if (!IsMicroScaling(x1Scale, x2Scale)) {
         if (IsHIFP8(x1, x2)) {
@@ -179,32 +184,32 @@ inline static bool CheckDtypeValid(
             if (!CheckType(x1->GetDataType(), X1_SUPPORT_LIST_FP8)) {
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                     OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
-                    Ops::NN::FormatString(
-                        "The dtype of %s must be in %s", "x1", op::ToString(X1_SUPPORT_LIST_FP8).GetString())
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x1",
+                                          op::ToString(X1_SUPPORT_LIST_FP8).GetString())
                         .c_str());
                 return false;
             }
             if (!CheckType(x2->GetDataType(), X2_SUPPORT_LIST_FP8)) {
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                     OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
-                    Ops::NN::FormatString(
-                        "The dtype of %s must be in %s", "x2", op::ToString(X2_SUPPORT_LIST_FP8).GetString())
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x2",
+                                          op::ToString(X2_SUPPORT_LIST_FP8).GetString())
                         .c_str());
                 return false;
             }
             if (!CheckType(x1Scale->GetDataType(), X1_SCALE_SUPPORT_LIST_FP8)) {
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                     OP_NAME, "x1Scale", op::ToString(x1Scale->GetDataType()).GetString(),
-                    Ops::NN::FormatString(
-                        "The dtype of %s must be in %s", "x1Scale", op::ToString(X1_SCALE_SUPPORT_LIST_FP8).GetString())
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x1Scale",
+                                          op::ToString(X1_SCALE_SUPPORT_LIST_FP8).GetString())
                         .c_str());
                 return false;
             }
             if (!CheckType(x2Scale->GetDataType(), X2_SCALE_SUPPORT_LIST_FP8)) {
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                     OP_NAME, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
-                    Ops::NN::FormatString(
-                        "The dtype of %s must be in %s", "x2Scale", op::ToString(X2_SCALE_SUPPORT_LIST_FP8).GetString())
+                    Ops::NN::FormatString("The dtype of %s must be in %s", "x2Scale",
+                                          op::ToString(X2_SCALE_SUPPORT_LIST_FP8).GetString())
                         .c_str());
                 return false;
             }
@@ -212,34 +217,32 @@ inline static bool CheckDtypeValid(
     } else {
         // MXFP8 场景
         if (!CheckType(x1->GetDataType(), X_SUPPORT_LIST_MXFP8)) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
-                Ops::NN::FormatString(
-                    "The dtype of %s must be in %s", "x1", op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
-                    .c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
+                                                  Ops::NN::FormatString("The dtype of %s must be in %s", "x1",
+                                                                        op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
+                                                      .c_str());
             return false;
         }
         if (!CheckType(x2->GetDataType(), X_SUPPORT_LIST_MXFP8)) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
-                Ops::NN::FormatString(
-                    "The dtype of %s must be in %s", "x2", op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
-                    .c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
+                                                  Ops::NN::FormatString("The dtype of %s must be in %s", "x2",
+                                                                        op::ToString(X_SUPPORT_LIST_MXFP8).GetString())
+                                                      .c_str());
             return false;
         }
         if (!CheckType(x1Scale->GetDataType(), X1_SCALE_SUPPORT_LIST_MXFP8)) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 OP_NAME, "x1Scale", op::ToString(x1Scale->GetDataType()).GetString(),
-                Ops::NN::FormatString(
-                    "The dtype of %s must be in %s", "x1Scale", op::ToString(X1_SCALE_SUPPORT_LIST_MXFP8).GetString())
+                Ops::NN::FormatString("The dtype of %s must be in %s", "x1Scale",
+                                      op::ToString(X1_SCALE_SUPPORT_LIST_MXFP8).GetString())
                     .c_str());
             return false;
         }
         if (!CheckType(x2Scale->GetDataType(), X2_SCALE_SUPPORT_LIST_MXFP8)) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 OP_NAME, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
-                Ops::NN::FormatString(
-                    "The dtype of %s must be in %s", "x2Scale", op::ToString(X2_SCALE_SUPPORT_LIST_MXFP8).GetString())
+                Ops::NN::FormatString("The dtype of %s must be in %s", "x2Scale",
+                                      op::ToString(X2_SCALE_SUPPORT_LIST_MXFP8).GetString())
                     .c_str());
             return false;
         }
@@ -249,8 +252,8 @@ inline static bool CheckDtypeValid(
         if (!CheckType(out->GetDataType(), OUT_DTYPE_SUPPORT_LIST_HIFP8)) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 OP_NAME, "out", op::ToString(out->GetDataType()).GetString(),
-                Ops::NN::FormatString(
-                    "The dtype of %s must be in %s", "out", op::ToString(OUT_DTYPE_SUPPORT_LIST_HIFP8).GetString())
+                Ops::NN::FormatString("The dtype of %s must be in %s", "out",
+                                      op::ToString(OUT_DTYPE_SUPPORT_LIST_HIFP8).GetString())
                     .c_str());
             return false;
         }
@@ -258,8 +261,8 @@ inline static bool CheckDtypeValid(
         if (!CheckType(out->GetDataType(), OUT_DTYPE_SUPPORT_LIST)) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 OP_NAME, "out", op::ToString(out->GetDataType()).GetString(),
-                Ops::NN::FormatString(
-                    "The dtype of %s must be in %s", "out", op::ToString(OUT_DTYPE_SUPPORT_LIST).GetString())
+                Ops::NN::FormatString("The dtype of %s must be in %s", "out",
+                                      op::ToString(OUT_DTYPE_SUPPORT_LIST).GetString())
                     .c_str());
             return false;
         }
@@ -273,8 +276,7 @@ inline static bool CheckDtypeValid(
     return true;
 }
 
-inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, int64_t m,
-                                     int64_t numGroup, bool isMxFp)
+inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, int64_t m, int64_t numGroup, bool isMxFp)
 {
     OP_LOGD("X1Scale %s", op::ToString(x1Scale->GetViewShape()).GetString());
     auto dimTensorScale = x1Scale->GetViewShape().GetDimNum();
@@ -282,9 +284,8 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 OP_NAME, "x1Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
-                Ops::NN::FormatString(
-                    "In %s scene, the shape dim of %s must be %d", "MXFp8", "x1Scale",
-                    static_cast<int>(EXPECTED_MX_SCALE_DIM))
+                Ops::NN::FormatString("In %s scene, the shape dim of %s must be %d", "MXFp8", "x1Scale",
+                                      static_cast<int>(EXPECTED_MX_SCALE_DIM))
                     .c_str());
             return false;
         }
@@ -293,9 +294,8 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
             x1Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 OP_NAME, "x1Scale", op::ToString(x1Scale->GetViewShape()).GetString(),
-                Ops::NN::FormatString(
-                    "In %s scene, the shape of %s must be %s", "MXFp8", "x1Scale",
-                    Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, batch, numGroup).c_str())
+                Ops::NN::FormatString("In %s scene, the shape of %s must be %s", "MXFp8", "x1Scale",
+                                      Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, batch, numGroup).c_str())
                     .c_str());
             return false;
         }
@@ -309,8 +309,8 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
         if (x1Scale->GetViewShape().GetDim(0) != m) {
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                 OP_NAME, "x1Scale", Ops::NN::FormatString("%ld", x1Scale->GetViewShape().GetDim(0)).c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x1Scale", "m-axis", "x1", m)
+                Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x1Scale", "m-axis", "x1",
+                                      m)
                     .c_str());
             return false;
         }
@@ -318,8 +318,8 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
     return true;
 }
 
-inline static bool CheckScalex2Valid(
-    const aclTensor* x2Scale, int64_t batch, int64_t n, int64_t numGroup, const aclIntArray* permX2, bool isMxFp)
+inline static bool CheckScalex2Valid(const aclTensor* x2Scale, int64_t batch, int64_t n, int64_t numGroup,
+                                     const aclIntArray* permX2, bool isMxFp)
 {
     OP_LOGD("X2Scale %s", op::ToString(x2Scale->GetViewShape()).GetString());
     auto dimTensorScale = x2Scale->GetViewShape().GetDimNum();
@@ -329,9 +329,8 @@ inline static bool CheckScalex2Valid(
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 OP_NAME, "x2Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
-                Ops::NN::FormatString(
-                    "In %s scene, the shape dim of %s must be %d", "MXFp8", "x2Scale",
-                    static_cast<int>(EXPECTED_MX_SCALE_DIM))
+                Ops::NN::FormatString("In %s scene, the shape dim of %s must be %d", "MXFp8", "x2Scale",
+                                      static_cast<int>(EXPECTED_MX_SCALE_DIM))
                     .c_str());
             return false;
         }
@@ -356,11 +355,11 @@ inline static bool CheckScalex2Valid(
             return false;
         }
         if (scaleDim0 != n) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-                OP_NAME, "x2Scale", Ops::NN::FormatString("%ld", scaleDim0).c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x2Scale", "n-axis", "x2", n)
-                    .c_str());
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(OP_NAME, "x2Scale",
+                                                      Ops::NN::FormatString("%ld", scaleDim0).c_str(),
+                                                      Ops::NN::FormatString("%s of %s must be equal to %s of %s (%ld)",
+                                                                            "Shape[0]", "x2Scale", "n-axis", "x2", n)
+                                                          .c_str());
             return false;
         }
     }
@@ -384,25 +383,22 @@ inline static bool CheckScaleValid(const aclTensor* x1Scale, const aclTensor* x2
     return true;
 }
 
-static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
-                           bool isMxFp, bool isHIFP8)
+static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY, bool isMxFp,
+                           bool isHIFP8)
 {
     if (permX1->Size() != EXPECTED_DIM) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            OP_NAME, "permX1",
-            std::to_string(permX1->Size()).c_str(), std::to_string(EXPECTED_DIM).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(OP_NAME, "permX1", std::to_string(permX1->Size()).c_str(),
+                                     std::to_string(EXPECTED_DIM).c_str());
         return false;
     }
     if (permX2->Size() != EXPECTED_DIM) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            OP_NAME, "permX2",
-            std::to_string(permX2->Size()).c_str(), std::to_string(EXPECTED_DIM).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(OP_NAME, "permX2", std::to_string(permX2->Size()).c_str(),
+                                     std::to_string(EXPECTED_DIM).c_str());
         return false;
     }
     if (permY->Size() != EXPECTED_DIM) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            OP_NAME, "permY",
-            std::to_string(permY->Size()).c_str(), std::to_string(EXPECTED_DIM).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(OP_NAME, "permY", std::to_string(permY->Size()).c_str(),
+                                     std::to_string(EXPECTED_DIM).c_str());
         return false;
     }
     // 当前支持转置场景
@@ -415,7 +411,8 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     auto allowedPermY = ((*permY)[kDim0] == 1 && (*permY)[kDim1] == 0 && (*permY)[kDim2] == 2);     // 1 0 2    // 1 0 2
     std::string permX2ErrorInfo = "[0, 1, 2].";
     if (isMxFp || isHIFP8) {
-        allowedPermX2 = allowedPermX2 || ((*permX2)[kDim0] == 0 && (*permX2)[kDim1] == NUM_TWO && (*permX2)[kDim2] == 1);
+        allowedPermX2 = allowedPermX2 ||
+                        ((*permX2)[kDim0] == 0 && (*permX2)[kDim1] == NUM_TWO && (*permX2)[kDim2] == 1);
         permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
     }
 
@@ -463,16 +460,14 @@ static bool CheckBatchAndKDimsValid(op::Shape& x1Shape, op::Shape& x2Shape, int6
     return true;
 }
 
-static bool CheckShapeValid(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
-    const aclIntArray* permX1, const aclIntArray* permX2, bool isMxFp)
+static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                            const aclTensor* x2Scale, const aclIntArray* permX1, const aclIntArray* permX2, bool isMxFp)
 {
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
     if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            OP_NAME, "x1, x2",
-            Ops::NN::FormatString("%zu, %zu", x1Shape.GetDimNum(), x2Shape.GetDimNum()).c_str(),
+            OP_NAME, "x1, x2", Ops::NN::FormatString("%zu, %zu", x1Shape.GetDimNum(), x2Shape.GetDimNum()).c_str(),
             Ops::NN::FormatString("The shape dims of %s must be %zu", "x1, x2", EXPECTED_DIM).c_str());
         return false;
     }
@@ -490,11 +485,10 @@ static bool CheckShapeValid(
     if (!isMxFp && !isHIFP8) {
         // Check shape k n
         if (x1KDim != TQBMM_VALID_K || n != TQBMM_VALID_N) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                OP_NAME, "x2", op::ToString(x2Shape).GetString(),
-                Ops::NN::FormatString(
-                    "The k-axis and n-axis of %s must be %d and %d", "x2", TQBMM_VALID_K, TQBMM_VALID_N)
-                    .c_str());
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(OP_NAME, "x2", op::ToString(x2Shape).GetString(),
+                                                  Ops::NN::FormatString("The k-axis and n-axis of %s must be %d and %d",
+                                                                        "x2", TQBMM_VALID_K, TQBMM_VALID_N)
+                                                      .c_str());
             return false;
         }
     } else if (isMxFp) {
@@ -514,8 +508,8 @@ static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp)
     if (!isMxFp) {
         OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             OP_NAME, "x2", "FRACTAL_NZ",
-            Ops::NN::FormatString("In %s case, the format of %s cannot be %s",
-                                  "non-mxfp8 mode", "x2", "FRACTAL_NZ").c_str());
+            Ops::NN::FormatString("In %s case, the format of %s cannot be %s", "non-mxfp8 mode", "x2", "FRACTAL_NZ")
+                .c_str());
         return false;
     }
     auto storageShapeDim = x2->GetStorageShape().GetDimNum();
@@ -523,8 +517,8 @@ static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp)
         storageShapeDim == EXPECTED_NZ_DIM,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             OP_NAME, "x2", Ops::NN::FormatString("%zu", storageShapeDim).c_str(),
-            Ops::NN::FormatString("The storage shape dim of %s must be %d", "x2",
-                                  static_cast<int>(EXPECTED_NZ_DIM)).c_str()),
+            Ops::NN::FormatString("The storage shape dim of %s must be %d", "x2", static_cast<int>(EXPECTED_NZ_DIM))
+                .c_str()),
         return false);
     return true;
 }
@@ -544,22 +538,22 @@ static inline bool InferGroupSize(int64_t& groupSize, bool isMxFp)
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             OP_NAME, "groupSizeM, groupSizeN, groupSizeK",
             Ops::NN::FormatString("%lu, %lu, %lu", groupSizeM, groupSizeN, groupSizeK).c_str(),
-            Ops::NN::FormatString(
-                "The values of %s must be %s, and the value of %s must be %d", "groupSizeM and groupSizeN", "0 or 1",
-                "groupSizeK", static_cast<int>(SUPPORTED_GROUP_SIZE))
+            Ops::NN::FormatString("The values of %s must be %s, and the value of %s must be %d",
+                                  "groupSizeM and groupSizeN", "0 or 1", "groupSizeK",
+                                  static_cast<int>(SUPPORTED_GROUP_SIZE))
                 .c_str());
         return false;
     }
-    OP_LOGD(
-        "Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN, groupSizeK);
+    OP_LOGD("Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+            groupSizeK);
     groupSize = groupSizeK;
     return true;
 }
 
-inline static aclnnStatus CheckParams(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale, aclTensor* out,
-    int32_t dtype, const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
-    int32_t batch_split_factor, int64_t groupSize)
+inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                      const aclTensor* x2Scale, aclTensor* out, int32_t dtype,
+                                      const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
+                                      int32_t batch_split_factor, int64_t groupSize)
 {
     // Only support DAV_3510
     if (!IsNpuArch3510Series()) {
@@ -601,40 +595,39 @@ inline static aclnnStatus CheckParams(
     CHECK_RET(InferGroupSize(groupSize, isMxFp), ACLNN_ERR_PARAM_INVALID);
     if (batch_split_factor != 1) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            OP_NAME, "batchSplitFactor",
-            Ops::NN::FormatString("%d", batch_split_factor).c_str(),
+            OP_NAME, "batchSplitFactor", Ops::NN::FormatString("%d", batch_split_factor).c_str(),
             Ops::NN::FormatString("The value of %s must be %d", "batchSplitFactor", 1).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* BuildTransposeQuantBatchMatMulGraph(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale, int32_t dtype,
-    int64_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
-    int32_t batchSplitFactor, aclOpExecutor* executor)
+static const aclTensor* BuildTransposeQuantBatchMatMulGraph(const aclTensor* x1, const aclTensor* x2,
+                                                            const aclTensor* x1Scale, const aclTensor* x2Scale,
+                                                            int32_t dtype, int64_t groupSize, const aclIntArray* permX1,
+                                                            const aclIntArray* permX2, const aclIntArray* permY,
+                                                            int32_t batchSplitFactor, aclOpExecutor* executor)
 {
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
-    OP_CHECK(
-        contiguousX1 != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 perprocess failed, contiguous return nullptr."), return nullptr);
+    OP_CHECK(contiguousX1 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 perprocess failed, contiguous return nullptr."),
+             return nullptr);
     auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
-    OP_CHECK(
-        reformX1 != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 perprocess failed, reformat return nullptr."), return nullptr);
+    OP_CHECK(reformX1 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 perprocess failed, reformat return nullptr."),
+             return nullptr);
 
     auto contiguousX2 = l0op::Contiguous(x2, executor);
-    OP_CHECK(
-        contiguousX2 != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 perprocess failed, contiguous return nullptr."), return nullptr);
+    OP_CHECK(contiguousX2 != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 perprocess failed, contiguous return nullptr."),
+             return nullptr);
     auto reformX2 = contiguousX2;
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != op::Format::FORMAT_FRACTAL_NZ) {
         reformX2 = l0op::ReFormat(contiguousX2, op::Format::FORMAT_ND);
-        OP_CHECK(
-            reformX2 != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 perprocess failed, reformat return nullptr."),
-            return nullptr);
+        OP_CHECK(reformX2 != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 perprocess failed, reformat return nullptr."),
+                 return nullptr);
     } else {
         reformX2->SetStorageShape(x2->GetStorageShape());
     }
@@ -642,24 +635,21 @@ static const aclTensor* BuildTransposeQuantBatchMatMulGraph(
     auto contiguousX1Scale = x1Scale;
     if (contiguousX1Scale != nullptr) {
         contiguousX1Scale = l0op::Contiguous(x1Scale, executor);
-        OP_CHECK(
-            contiguousX1Scale != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1Scale perprocess failed, contiguous return nullptr."),
-            return nullptr);
+        OP_CHECK(contiguousX1Scale != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1Scale perprocess failed, contiguous return nullptr."),
+                 return nullptr);
     }
     auto contiguousX2Scale = x2Scale;
     if (contiguousX2Scale != nullptr) {
         contiguousX2Scale = l0op::Contiguous(x2Scale, executor);
-        OP_CHECK(
-            contiguousX2Scale != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2Scale perprocess failed, contiguous return nullptr."),
-            return nullptr);
+        OP_CHECK(contiguousX2Scale != nullptr,
+                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2Scale perprocess failed, contiguous return nullptr."),
+                 return nullptr);
     }
 
     // Invoke tqbmmm l0 api
-    return l0op::TransposeQuantBatchMatMul(
-        reformX1, reformX2, nullptr, contiguousX1Scale, contiguousX2Scale, dtype, groupSize, permX1, permX2, permY,
-        batchSplitFactor, executor);
+    return l0op::TransposeQuantBatchMatMul(reformX1, reformX2, nullptr, contiguousX1Scale, contiguousX2Scale, dtype,
+                                           groupSize, permX1, permX2, permY, batchSplitFactor, executor);
 }
 
 aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
@@ -667,10 +657,9 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     int32_t dtype, int64_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
     int32_t batchSplitFactor, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnTransposeQuantBatchMatMul,
-        DFX_IN(x1, x2, bias, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor),
-        DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnTransposeQuantBatchMatMul,
+                   DFX_IN(x1, x2, bias, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor),
+                   DFX_OUT(out));
 
     // 固定写法, 创建OpExecutor
     auto unique_executor = CREATE_EXECUTOR();
@@ -683,8 +672,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     if (x1->IsEmpty() || x2->IsEmpty()) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             OP_NAME, "x1, x2",
-            Ops::NN::FormatString(
-                "%s, %s", op::ToString(x1->GetViewShape()).GetString(), op::ToString(x2->GetViewShape()).GetString())
+            Ops::NN::FormatString("%s, %s", op::ToString(x1->GetViewShape()).GetString(),
+                                  op::ToString(x2->GetViewShape()).GetString())
                 .c_str(),
             Ops::NN::FormatString("%s cannot be empty tensors", "x1, x2").c_str());
         return ACLNN_ERR_PARAM_INVALID;
@@ -697,8 +686,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     }
     // 构建matmul计算图
     const aclTensor* tqbmmOut = nullptr;
-    tqbmmOut = BuildTransposeQuantBatchMatMulGraph(
-        x1, x2, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor, unique_executor.get());
+    tqbmmOut = BuildTransposeQuantBatchMatMulGraph(x1, x2, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY,
+                                                   batchSplitFactor, unique_executor.get());
     CHECK_RET(tqbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     tqbmmOut = l0op::Cast(tqbmmOut, out->GetDataType(), unique_executor.get());
@@ -711,8 +700,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnTransposeQuantBatchMatMul(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnTransposeQuantBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnTransposeQuantBatchMatMul);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
@@ -723,10 +712,9 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
     int32_t dtype, int64_t groupSize, const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
     int32_t batchSplitFactor, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnTransposeQuantBatchMatMulWeightNz,
-        DFX_IN(x1, x2, bias, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor),
-        DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnTransposeQuantBatchMatMulWeightNz,
+                   DFX_IN(x1, x2, bias, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor),
+                   DFX_OUT(out));
 
     // 固定写法, 创建OpExecutor
     auto unique_executor = CREATE_EXECUTOR();
@@ -739,8 +727,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
     // x2 format must be NZ
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
-            OP_NAME, "x2",
-            op::ToString(x2->GetStorageFormat()).GetString(),
+            OP_NAME, "x2", op::ToString(x2->GetStorageFormat()).GetString(),
             Ops::NN::FormatString("The format of %s must be %s", "x2", "FRACTAL_NZ").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -749,7 +736,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             OP_NAME, "x1, x2",
             Ops::NN::FormatString("%s, %s", op::ToString(x1->GetViewShape()).GetString(),
-                                  op::ToString(x2->GetViewShape()).GetString()).c_str(),
+                                  op::ToString(x2->GetViewShape()).GetString())
+                .c_str(),
             Ops::NN::FormatString("The shapes of %s cannot be %s", "x1, x2", "empty").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -762,8 +750,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
     }
     // 构建matmul计算图
     const aclTensor* tqbmmOut = nullptr;
-    tqbmmOut = BuildTransposeQuantBatchMatMulGraph(
-        x1, x2, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor, unique_executor.get());
+    tqbmmOut = BuildTransposeQuantBatchMatMulGraph(x1, x2, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY,
+                                                   batchSplitFactor, unique_executor.get());
     CHECK_RET(tqbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     tqbmmOut = l0op::Cast(tqbmmOut, out->GetDataType(), unique_executor.get());
@@ -776,8 +764,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                   const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnTransposeQuantBatchMatMulWeightNz);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

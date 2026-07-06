@@ -78,8 +78,8 @@ private:
 };
 
 template <typename T_IDX, typename T_VAL, bool ADJ_A, bool ADJ_B>
-__aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::Init(
-    GM_ADDR x1Indices, GM_ADDR x1Values, GM_ADDR x2, GM_ADDR y)
+__aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::Init(GM_ADDR x1Indices, GM_ADDR x1Values,
+                                                                                    GM_ADDR x2, GM_ADDR y)
 {
     currCoreIdx_ = static_cast<uint32_t>(GetBlockIdx());
     InitGlobalTensor(x1Indices, x1Values, x2, y);
@@ -87,15 +87,16 @@ __aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::I
 }
 
 template <typename T_IDX, typename T_VAL, bool ADJ_A, bool ADJ_B>
-__aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::InitGlobalTensor(
-    GM_ADDR x1Indices, GM_ADDR x1Values, GM_ADDR x2, GM_ADDR y)
+__aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::InitGlobalTensor(GM_ADDR x1Indices,
+                                                                                                GM_ADDR x1Values,
+                                                                                                GM_ADDR x2, GM_ADDR y)
 {
     x1IndicesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T_IDX*>(x1Indices));
     x1ValuesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T_VAL*>(x1Values));
     x2Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ T_VAL*>(x2));
     yGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T_VAL*>(y));
-    yOutputGm_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ T_VAL*>(y) + currCoreIdx_ * tilingData_->initAndOutFormerCoreElemNum);
+    yOutputGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T_VAL*>(y) +
+                               currCoreIdx_ * tilingData_->initAndOutFormerCoreElemNum);
 }
 
 template <typename T_IDX, typename T_VAL, bool ADJ_A, bool ADJ_B>
@@ -126,4 +127,3 @@ __aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::P
 }
 
 } // namespace SparseTensorDenseMatMul
-

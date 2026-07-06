@@ -37,13 +37,11 @@ class FakeQuantWithMinMaxVarsGradientRegbase {
 public:
     __aicore__ inline FakeQuantWithMinMaxVarsGradientRegbase(
         const FakeQuantWithMinMaxVarsGradientTilingData* tilingData)
-        : tilingData_(tilingData) {}
+        : tilingData_(tilingData)
+    {}
 
-    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR x,
-                                GM_ADDR minGm, GM_ADDR maxGm,
-                                GM_ADDR backpropsWrtX,
-                                GM_ADDR backpropWrtMin,
-                                GM_ADDR backpropWrtMax);
+    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR x, GM_ADDR minGm, GM_ADDR maxGm, GM_ADDR backpropsWrtX,
+                                GM_ADDR backpropWrtMin, GM_ADDR backpropWrtMax);
     __aicore__ inline void Process();
 
 private:
@@ -78,12 +76,11 @@ private:
 };
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::Init(
-    GM_ADDR gradients, GM_ADDR x,
-    GM_ADDR minGm, GM_ADDR maxGm,
-    GM_ADDR backpropsWrtX,
-    GM_ADDR backpropWrtMin,
-    GM_ADDR backpropWrtMax)
+__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::Init(GM_ADDR gradients, GM_ADDR x,
+                                                                             GM_ADDR minGm, GM_ADDR maxGm,
+                                                                             GM_ADDR backpropsWrtX,
+                                                                             GM_ADDR backpropWrtMin,
+                                                                             GM_ADDR backpropWrtMax)
 {
     blockIdx_ = GetBlockIdx();
 
@@ -202,8 +199,7 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::Process(
 }
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::CopyIn(
-    int64_t gmOffset, int64_t dataCount)
+__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::CopyIn(int64_t gmOffset, int64_t dataCount)
 {
     LocalTensor<float> gLocal = inQueueG_.AllocTensor<float>();
     LocalTensor<float> xLocal = inQueueX_.AllocTensor<float>();
@@ -221,8 +217,7 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::CopyIn(
 }
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::CopyOut(
-    int64_t gmOffset, int64_t dataCount)
+__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::CopyOut(int64_t gmOffset, int64_t dataCount)
 {
     LocalTensor<float> yLocal = outQueueY_.DeQue<float>();
     DataCopyExtParams params;
@@ -236,8 +231,7 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::CopyOut(
 }
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputePassthrough(
-    int64_t dataCount)
+__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputePassthrough(int64_t dataCount)
 {
     LocalTensor<float> gLocal = inQueueG_.DeQue<float>();
     LocalTensor<float> xLocal = inQueueX_.DeQue<float>();
@@ -258,8 +252,7 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputeP
         for (uint16_t i = 0; i < vfLoopNum; ++i) {
             mask = AscendC::Reg::UpdateMask<float>(count);
             AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vG, gAddr + i * VL);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
-                yAddr + i * VL, vG, mask);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(yAddr + i * VL, vG, mask);
         }
     }
 
@@ -269,8 +262,7 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputeP
 }
 
 template <uint64_t SchMode>
-__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputeNormal(
-    int64_t dataCount)
+__aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputeNormal(int64_t dataCount)
 {
     LocalTensor<float> gLocal = inQueueG_.DeQue<float>();
     LocalTensor<float> xLocal = inQueueX_.DeQue<float>();
@@ -331,10 +323,9 @@ __aicore__ inline void FakeQuantWithMinMaxVarsGradientRegbase<SchMode>::ComputeN
             // backprops_wrt_x = gradients * mask + sign-bit re-injection
             AscendC::Reg::Mul(vOut, vG, vMask, mask);
             AscendC::Reg::And(vSignG, (AscendC::Reg::RegTensor<uint32_t>&)vG, vSignMask, mask);
-            AscendC::Reg::Or((AscendC::Reg::RegTensor<uint32_t>&)vOut,
-                             (AscendC::Reg::RegTensor<uint32_t>&)vOut, vSignG, mask);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(
-                yAddr + i * VL, vOut, mask);
+            AscendC::Reg::Or((AscendC::Reg::RegTensor<uint32_t>&)vOut, (AscendC::Reg::RegTensor<uint32_t>&)vOut, vSignG,
+                             mask);
+            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_NORM_B32>(yAddr + i * VL, vOut, mask);
 
             // below_min: x < nudgedMin → Select(vG, vZero, ltMask)
             AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(geMask, vX, nudgedMin, mask);

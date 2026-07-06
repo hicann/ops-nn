@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -27,17 +27,13 @@ extern "C" __global__ __aicore__ void gelu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADD
 
 class gelu_grad_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "gelu_grad_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "gelu_grad_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "gelu_grad_v2 TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./gelu_grad_v2_data");
     }
 };
-
 
 TEST_F(gelu_grad_v2_test, test_case_fp32_tanh)
 {
@@ -49,10 +45,11 @@ TEST_F(gelu_grad_v2_test, test_case_fp32_tanh)
     uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(zByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    kernel_ut::SetupTestEnvironment("activation/gelu_grad_v2/tests/ut/op_kernel/gelu_grad_v2_data", "gelu_grad_v2_data");
+    kernel_ut::SetupTestEnvironment("activation/gelu_grad_v2/tests/ut/op_kernel/gelu_grad_v2_data",
+                                    "gelu_grad_v2_data");
     kernel_ut::RunGenData("./gelu_grad_v2_data", {"'(256)'", "float32", "tanh"});
 
     std::string path = kernel_ut::GetTestWorkDir();

@@ -77,11 +77,9 @@ struct InputSIMTInfo {
 
 class MaxPoolWithArgmaxV3TilingSIMT : public MaxPoolWithArgmaxV3BaseTiling {
 public:
-    explicit MaxPoolWithArgmaxV3TilingSIMT(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context)
-    {}
+    explicit MaxPoolWithArgmaxV3TilingSIMT(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context) {}
 
-    ~MaxPoolWithArgmaxV3TilingSIMT() override
-    {}
+    ~MaxPoolWithArgmaxV3TilingSIMT() override {}
 
 protected:
     // 获取INPUT/OUTPUT/ATTR信息

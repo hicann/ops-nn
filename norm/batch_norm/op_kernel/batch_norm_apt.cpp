@@ -29,8 +29,7 @@
 using namespace AscendC;
 using namespace BatchNormOps;
 
-namespace
-{
+namespace {
 #define TILINGKEY_FULL_REDUCE 200000
 #define TILINGKEY_RAR_BLOCK_SPLIT_R 250000
 #define TILINGKEY_RA_FULL_REDUCE 400000
@@ -42,7 +41,7 @@ namespace
 #define TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A 901000
 #define TILINGKEY_INFER 910000
 #define TILINGKEY_INFER_SMALL_AB1 911000
-}  // namespace
+} // namespace
 
 extern "C" __global__ __aicore__ void batch_norm(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR mean,
                                                  GM_ADDR variance, GM_ADDR y, GM_ADDR batch_mean,

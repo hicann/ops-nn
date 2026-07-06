@@ -18,31 +18,31 @@
 #define __CCE_UT_TEST__
 #define __CCE_AICORE__ 220
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-  __ubuf__ tilingStruct* tilingDataPointer =                                \
-      reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-  CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
+    CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                           \
-  GroupNormSiluTilingData tilingData;                                          \
-  INIT_TILING_DATA(GroupNormSiluTilingData, tilingDataPointer, tilingPointer); \
-  (tilingData).numGroups = tilingDataPointer->numGroups;                 \
-  (tilingData).hwNum = tilingDataPointer->hwNum;                         \
-  (tilingData).elemNum = tilingDataPointer->elemNum;                     \
-  (tilingData).shapeC = tilingDataPointer->shapeC;                       \
-  (tilingData).shapeD = tilingDataPointer->shapeD;                       \
-  (tilingData).realCoreNum = tilingDataPointer->realCoreNum;             \
-  (tilingData).numPerCore = tilingDataPointer->numPerCore;               \
-  (tilingData).numLastCore = tilingDataPointer->numLastCore;             \
-  (tilingData).processSize = tilingDataPointer->processSize;             \
-  (tilingData).loopNum = tilingDataPointer->loopNum;                     \
-  (tilingData).loopTail = tilingDataPointer->loopTail;                   \
-  (tilingData).innerLoopNum = tilingDataPointer->innerLoopNum;           \
-  (tilingData).innerLoopTail = tilingDataPointer->innerLoopTail;         \
-  (tilingData).tilingKey = tilingDataPointer->tilingKey;                 \
-  (tilingData).epsilon = tilingDataPointer->epsilon;                 \
-  (tilingData).activateSilu = tilingDataPointer->activateSilu;
+#define GET_TILING_DATA(tilingData, tilingPointer)                               \
+    GroupNormSiluTilingData tilingData;                                          \
+    INIT_TILING_DATA(GroupNormSiluTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).numGroups = tilingDataPointer->numGroups;                       \
+    (tilingData).hwNum = tilingDataPointer->hwNum;                               \
+    (tilingData).elemNum = tilingDataPointer->elemNum;                           \
+    (tilingData).shapeC = tilingDataPointer->shapeC;                             \
+    (tilingData).shapeD = tilingDataPointer->shapeD;                             \
+    (tilingData).realCoreNum = tilingDataPointer->realCoreNum;                   \
+    (tilingData).numPerCore = tilingDataPointer->numPerCore;                     \
+    (tilingData).numLastCore = tilingDataPointer->numLastCore;                   \
+    (tilingData).processSize = tilingDataPointer->processSize;                   \
+    (tilingData).loopNum = tilingDataPointer->loopNum;                           \
+    (tilingData).loopTail = tilingDataPointer->loopTail;                         \
+    (tilingData).innerLoopNum = tilingDataPointer->innerLoopNum;                 \
+    (tilingData).innerLoopTail = tilingDataPointer->innerLoopTail;               \
+    (tilingData).tilingKey = tilingDataPointer->tilingKey;                       \
+    (tilingData).epsilon = tilingDataPointer->epsilon;                           \
+    (tilingData).activateSilu = tilingDataPointer->activateSilu;
 
 #endif

@@ -73,25 +73,19 @@ using namespace ge;
 
 class TestApplyAddSignTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TestApplyAddSignTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TestApplyAddSignTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TestApplyAddSignTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TestApplyAddSignTiling TearDown" << std::endl; }
 };
 
 // TilingKey constants (raw GE DataType enum integer passed via ASCENDC_TPL_SEL_PARAM)
-static constexpr uint64_t TILING_KEY_FP32 = 0;   // ge::DT_FLOAT
-static constexpr uint64_t TILING_KEY_FP16 = 1;   // ge::DT_FLOAT16
-static constexpr uint64_t TILING_KEY_BF16 = 27;  // ge::DT_BF16
+static constexpr uint64_t TILING_KEY_FP32 = 0;  // ge::DT_FLOAT
+static constexpr uint64_t TILING_KEY_FP16 = 1;  // ge::DT_FLOAT16
+static constexpr uint64_t TILING_KEY_BF16 = 27; // ge::DT_BF16
 
-static void InitPlatForm(
-    fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos, map<string, string>& aicoreSpec,
-    map<string, string>& intrinsics, map<string, string>& socVersion)
+static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics,
+                         map<string, string>& socVersion)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -126,16 +120,10 @@ struct ApplyAddSignTilingResult {
 // All inputs share the same dtype (matches Op def: var/m/lr/alpha/sign_decay/
 // beta/grad all bound to the same dtype list and selected together).
 static ApplyAddSignTilingResult DoApplyAddSignTilingCase(
-    const std::initializer_list<int64_t>& varShape,
-    const std::initializer_list<int64_t>& mShape,
-    const std::initializer_list<int64_t>& lrShape,
-    const std::initializer_list<int64_t>& alphaShape,
-    const std::initializer_list<int64_t>& signDecayShape,
-    const std::initializer_list<int64_t>& betaShape,
-    const std::initializer_list<int64_t>& gradShape,
-    ge::DataType tensorDtype,
-    ge::Format inputFormat,
-    bool useLocking)
+    const std::initializer_list<int64_t>& varShape, const std::initializer_list<int64_t>& mShape,
+    const std::initializer_list<int64_t>& lrShape, const std::initializer_list<int64_t>& alphaShape,
+    const std::initializer_list<int64_t>& signDecayShape, const std::initializer_list<int64_t>& betaShape,
+    const std::initializer_list<int64_t>& gradShape, ge::DataType tensorDtype, ge::Format inputFormat, bool useLocking)
 {
     ApplyAddSignTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0, 0};
 
@@ -178,9 +166,8 @@ static ApplyAddSignTilingResult DoApplyAddSignTilingCase(
                       .SetOpType(opType)
                       .NodeIoNum(7, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&varStorage, &mStorage, &lrStorage,
-                           &alphaStorage, &signDecayStorage, &betaStorage, &gradStorage})
+                      .InputShapes({&varStorage, &mStorage, &lrStorage, &alphaStorage, &signDecayStorage, &betaStorage,
+                                    &gradStorage})
                       .OutputShapes({&varStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -192,8 +179,7 @@ static ApplyAddSignTilingResult DoApplyAddSignTilingCase(
                       .NodeInputTd(5, tensorDtype, inputFormat, inputFormat)  // beta
                       .NodeInputTd(6, tensorDtype, inputFormat, inputFormat)  // grad
                       .NodeOutputTd(0, tensorDtype, inputFormat, inputFormat) // var
-                      .NodeAttrs(
-                          {{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
+                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -210,10 +196,8 @@ static ApplyAddSignTilingResult DoApplyAddSignTilingCase(
     if (result.status == ge::GRAPH_SUCCESS) {
         result.tilingKey = tiling_context->GetTilingKey();
         auto rawTilingData = tiling_context->GetRawTilingData();
-        if (rawTilingData != nullptr &&
-            rawTilingData->GetDataSize() >= sizeof(ApplyAddSignTilingData)) {
-            const auto* td = reinterpret_cast<const ApplyAddSignTilingData*>(
-                rawTilingData->GetData());
+        if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(ApplyAddSignTilingData)) {
+            const auto* td = reinterpret_cast<const ApplyAddSignTilingData*>(rawTilingData->GetData());
             result.dim0 = td->dim0;
             result.blockFactor = td->blockFactor;
             result.ubFactor = td->ubFactor;
@@ -225,16 +209,11 @@ static ApplyAddSignTilingResult DoApplyAddSignTilingCase(
 
 // Convenience wrapper: build a "valid" context where var/m/grad share the same
 // shape and lr/alpha/sign_decay/beta are shape {1}. Returns the tiling result.
-static ApplyAddSignTilingResult DoApplyAddSignValidCase(
-    const std::initializer_list<int64_t>& tensorShape,
-    ge::DataType tensorDtype,
-    bool useLocking = false)
+static ApplyAddSignTilingResult DoApplyAddSignValidCase(const std::initializer_list<int64_t>& tensorShape,
+                                                        ge::DataType tensorDtype, bool useLocking = false)
 {
-    return DoApplyAddSignTilingCase(
-        tensorShape, tensorShape,
-        {1}, {1}, {1}, {1},
-        tensorShape,
-        tensorDtype, ge::FORMAT_ND, useLocking);
+    return DoApplyAddSignTilingCase(tensorShape, tensorShape, {1}, {1}, {1}, {1}, tensorShape, tensorDtype,
+                                    ge::FORMAT_ND, useLocking);
 }
 
 // =====================================================================
@@ -250,7 +229,7 @@ TEST_F(TestApplyAddSignTiling, apply_add_sign_fp32_small)
     EXPECT_EQ(result.dim0, 256);
     // blockFactor must be 32B aligned (=8 elements for fp32)
     EXPECT_GT(result.blockFactor, 0);
-    EXPECT_GE(result.ubFactor, 8);  // MIN_UB_FACTOR_BYTES(32) / fp32 typeSize(4) = 8
+    EXPECT_GE(result.ubFactor, 8); // MIN_UB_FACTOR_BYTES(32) / fp32 typeSize(4) = 8
     // signTmpSize fallback minimum is 512 (per ComputeSignTmpSize)
     EXPECT_GE(result.signTmpSize, 0U);
 }
@@ -290,7 +269,7 @@ TEST_F(TestApplyAddSignTiling, apply_add_sign_fp16_medium)
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, TILING_KEY_FP16);
     EXPECT_EQ(result.dim0, 64L * 1024);
-    EXPECT_GE(result.ubFactor, 16);  // MIN_UB_FACTOR_BYTES(32) / fp16 typeSize(2) = 16
+    EXPECT_GE(result.ubFactor, 16); // MIN_UB_FACTOR_BYTES(32) / fp16 typeSize(2) = 16
 }
 
 // =====================================================================
@@ -383,8 +362,7 @@ TEST_F(TestApplyAddSignTiling, apply_add_sign_m_shape_mismatch)
     auto result = DoApplyAddSignTilingCase(
         /*var=*/{2048}, /*m=*/{1024},
         /*lr=*/{1}, /*alpha=*/{1}, /*sign_decay=*/{1}, /*beta=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -397,8 +375,7 @@ TEST_F(TestApplyAddSignTiling, apply_add_sign_grad_shape_mismatch)
     auto result = DoApplyAddSignTilingCase(
         /*var=*/{2048}, /*m=*/{2048},
         /*lr=*/{1}, /*alpha=*/{1}, /*sign_decay=*/{1}, /*beta=*/{1},
-        /*grad=*/{1024},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*grad=*/{1024}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -411,8 +388,7 @@ TEST_F(TestApplyAddSignTiling, apply_add_sign_lr_not_scalar)
     auto result = DoApplyAddSignTilingCase(
         /*var=*/{2048}, /*m=*/{2048},
         /*lr=*/{2}, /*alpha=*/{1}, /*sign_decay=*/{1}, /*beta=*/{1},
-        /*grad=*/{2048},
-        ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
+        /*grad=*/{2048}, ge::DT_FLOAT, ge::FORMAT_ND, /*useLocking=*/false);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
@@ -436,7 +412,7 @@ TEST_F(TestApplyAddSignTiling, apply_add_sign_rank_8_boundary)
     auto result = DoApplyAddSignValidCase({2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT, /*useLocking=*/false);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey, TILING_KEY_FP32);
-    EXPECT_EQ(result.dim0, 256);  // 2^8
+    EXPECT_EQ(result.dim0, 256); // 2^8
 }
 
 // =====================================================================

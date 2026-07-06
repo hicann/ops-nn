@@ -19,14 +19,14 @@ using namespace AscendC;
 
 using namespace GeluMul;
 
-extern "C" __global__ __aicore__ void gelu_mul(GM_ADDR input, GM_ADDR output,
-                                               GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void gelu_mul(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 
     GM_ADDR userWs = nullptr;
 
-#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (TILING_KEY_IS(1)) {
         GeluMulND<half> op;
         op.Init(input, output, userWs, &tilingData);

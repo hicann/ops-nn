@@ -30,8 +30,7 @@ static constexpr int32_t MAX_AXIS_VALUE = 2;
 static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType> OUT_DTYPE_SUPPORT_LIST_INT = {
     op::DataType::DT_INT8, op::DataType::DT_INT32, op::DataType::DT_INT4};
@@ -47,8 +46,8 @@ static const std::initializer_list<DataType> EMPTY_LIST = {};
 static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> SCALE_OFFSET_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<DataType>& GetInDtypeSupportList()
 {
@@ -57,7 +56,7 @@ static const std::initializer_list<DataType>& GetInDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201:{
+        case NpuArch::DAV_2201: {
             return X_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
         case NpuArch::DAV_2002:
@@ -88,7 +87,7 @@ static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201:{
+        case NpuArch::DAV_2201: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
         case NpuArch::DAV_2002:
@@ -124,8 +123,8 @@ static bool CheckDtypeCompatible(const aclTensor* x, const aclTensor* scale)
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, const aclTensor* y, int32_t dstType)
+static bool CheckDtypeValid(const aclTensor* x, const aclTensor* scale, const aclTensor* offset, const aclTensor* y,
+                            int32_t dstType)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(x, GetInDtypeSupportList(), return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(y, GetOutDtypeSupportList(), return false);
@@ -135,16 +134,15 @@ static bool CheckDtypeValid(
         OP_CHECK_DTYPE_NOT_SAME(scale, offset, return false);
     }
     if (!CheckDtypeCompatible(x, scale)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "dtype of input x:%s is not compatible with scale:%s.",
-            op::ToString(x->GetDataType()).GetString(), op::ToString(scale->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dtype of input x:%s is not compatible with scale:%s.",
+                op::ToString(x->GetDataType()).GetString(), op::ToString(scale->GetDataType()).GetString());
         return false;
     }
 
     if (static_cast<int32_t>(y->GetDataType()) != dstType) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "dstType:%d(%s) must be able to represent the y dtype[%s].", dstType,
-            op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(y->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%d(%s) must be able to represent the y dtype[%s].", dstType,
+                op::ToString(static_cast<op::DataType>(dstType)).GetString(),
+                op::ToString(y->GetDataType()).GetString());
         return false;
     }
 
@@ -180,10 +178,9 @@ static bool CheckDim(const aclTensor* x, const aclTensor* scale, const aclTensor
     int64_t xDim = xShape.GetDim(xAxis);
     int64_t scaleDim = scaleShape.GetDim(scaleAxis);
     if (scaleDim != xDim && scaleDim != 1) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "scale dim(%ld)'s value(%ld) is invalid, should be same as x dim(%ld)'s value(%ld) or 1", scaleAxis,
-            scaleDim, xAxis, xDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "scale dim(%ld)'s value(%ld) is invalid, should be same as x dim(%ld)'s value(%ld) or 1", scaleAxis,
+                scaleDim, xAxis, xDim);
         return false;
     }
 
@@ -220,9 +217,8 @@ static bool CheckInt32OutputShape(const aclTensor* x, const aclTensor* y)
         dimInput = x->GetViewShape().GetDim(i);
         dimOutput = y->GetViewShape().GetDim(i);
         if (dimInput != dimOutput) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "the dim(%ld) of x must be same with y, x is (%ld), y is (%ld).", i, dimInput,
-                dimOutput);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the dim(%ld) of x must be same with y, x is (%ld), y is (%ld).", i,
+                    dimInput, dimOutput);
             return false;
         }
     }
@@ -239,16 +235,15 @@ static bool CheckInt4LastDim(const aclTensor* x)
     }
     int64_t lastDimInput = x->GetViewShape().GetDim(dimNum - 1);
     if (lastDimInput % INT4_NUMS_IN_INT8_SPACE) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "if y dtype is int4, x last dim must be divisible by 2, last dim is (%ld).",
-            lastDimInput);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "if y dtype is int4, x last dim must be divisible by 2, last dim is (%ld).",
+                lastDimInput);
         return false;
     }
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* x, const aclTensor* y, const aclTensor* scale, const aclTensor* offset, int32_t axis)
+static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* scale, const aclTensor* offset,
+                       int32_t axis)
 {
     // x和y的shape必须一致
     if (y->GetDataType() != op::DataType::DT_INT32) {
@@ -285,17 +280,15 @@ static bool CheckRoundMode(const char* roundMode, int32_t dstType)
     const std::string mode = std::string(roundMode);
     if (dstType == op::DataType::DT_HIFLOAT8) {
         if (mode != "round" && mode != "hybrid") {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "check roundMode failed, roundMode[%s] not in ['round','hybrid'] for hifloat8.", mode.c_str());
             return false;
         }
     } else if (dstType == op::DataType::DT_FLOAT8_E4M3FN || dstType == op::DataType::DT_FLOAT8_E5M2) {
         if (mode != "round") {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "check roundMode failed, roundMode[%s] not in ['round'] for float8_e5m2/float8_e4m3fn.",
-                mode.c_str());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "check roundMode failed, roundMode[%s] not in ['round'] for float8_e5m2/float8_e4m3fn.",
+                    mode.c_str());
             return false;
         }
     } else {
@@ -332,8 +325,8 @@ static bool CheckAxis(const aclTensor* x, int32_t axis)
     return true;
 }
 
-static aclnnStatus Int42Int32PackedTensor(
-    const aclTensor* y, const aclTensor*& outTensor, const int32_t& dstType, aclOpExecutor* executor)
+static aclnnStatus Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTensor, const int32_t& dstType,
+                                          aclOpExecutor* executor)
 {
     if (dstType != op::DataType::DT_INT32) {
         OP_LOGD("current aclnnAscendQuantV3 output does not need to pack.");
@@ -363,9 +356,8 @@ static aclnnStatus CheckInputScalar(const aclTensor* x)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, const char* roundMode, int32_t dstType,
-    int32_t axis, const aclTensor* y)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* scale, const aclTensor* offset,
+                               const char* roundMode, int32_t dstType, int32_t axis, const aclTensor* y)
 {
     CHECK_RET(CheckNotNull(x, scale, y), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckInputScalar(x), ACLNN_ERR_PARAM_INVALID);
@@ -381,9 +373,9 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAscendQuantV3GetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* offset, bool sqrtMode, const char* roundMode,
-    int32_t dstType, int32_t axis, const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAscendQuantV3GetWorkspaceSize(const aclTensor* x, const aclTensor* scale, const aclTensor* offset,
+                                               bool sqrtMode, const char* roundMode, int32_t dstType, int32_t axis,
+                                               const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAscendQuantV3, DFX_IN(x, scale, offset, roundMode, sqrtMode, dstType), DFX_OUT(y));
     // 固定写法，创建OpExecutor
@@ -427,8 +419,8 @@ aclnnStatus aclnnAscendQuantV3GetWorkspaceSize(
         yDtype = op::DataType::DT_INT4;
         OP_LOGD("aclnnAscendQuantV3 real output is int4.");
     }
-    auto ascendQuantV2Result = l0op::AscendQuantV2(
-        selfContiguous, scaleCast, offsetCast, sqrtMode, roundMode, yDtype, axis, uniqueExecutor.get());
+    auto ascendQuantV2Result = l0op::AscendQuantV2(selfContiguous, scaleCast, offsetCast, sqrtMode, roundMode, yDtype,
+                                                   axis, uniqueExecutor.get());
     CHECK_RET(ascendQuantV2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 如果输出是Int4，需要转成Int32，8个Int4输出拼成1个Int32

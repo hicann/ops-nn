@@ -32,11 +32,10 @@ using namespace InplaceIndexFill;
 
 // SetMaskSimt: 使用 Sort+Unique 去重后的结果填充 mask
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(
-    __local_mem__ INDEX_TYPE* indicesLocalAddr,
-    __local_mem__ int32_t* uniqueIndicesAddr,
-    __gm__ int8_t* mask,
-    COM_T processNum, COM_T n, int64_t length);
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
+                                                                             __local_mem__ int32_t* uniqueIndicesAddr,
+                                                                             __gm__ int8_t* mask, COM_T processNum,
+                                                                             COM_T n, int64_t length);
 
 // ============================================================================
 // 主类定义
@@ -46,8 +45,8 @@ class InplaceIndexFillDenseIndicesImpl {
 public:
     __aicore__ inline InplaceIndexFillDenseIndicesImpl(
         const InplaceIndexFill::InplaceIndexFillSimtDenseIndicesTilingData* tilingData, TPipe* pipe)
-        : pipe_(pipe), tilingData_(tilingData),
-          blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum()) {}
+        : pipe_(pipe), tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum())
+    {}
 
     __aicore__ inline void Init(GM_ADDR indices, GM_ADDR value, GM_ADDR workspace);
     __aicore__ inline void Process(__gm__ T_X* x);
@@ -91,19 +90,13 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 // CopyInIndices：将 indices 的一个分片搬入 UB
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>::CopyInIndices(
-    int64_t offset, int64_t dataLen)
+__aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>::CopyInIndices(int64_t offset,
+                                                                                               int64_t dataLen)
 {
-    DataCopyExtParams inParams = {
-        static_cast<uint16_t>(1),
-        static_cast<uint32_t>(dataLen * sizeof(INDEX_TYPE)),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)
-    };
-    DataCopyPadExtParams<INDEX_TYPE> padParams = {
-        false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<INDEX_TYPE>(0)
-    };
+    DataCopyExtParams inParams = {static_cast<uint16_t>(1), static_cast<uint32_t>(dataLen * sizeof(INDEX_TYPE)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyPadExtParams<INDEX_TYPE> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                                  static_cast<INDEX_TYPE>(0)};
     LocalTensor<INDEX_TYPE> indicesLocal = indicesQueue_.AllocTensor<INDEX_TYPE>();
     DataCopyPad(indicesLocal, indicesGm_[offset], inParams, padParams);
     indicesQueue_.EnQue(indicesLocal);
@@ -113,11 +106,10 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 // SetMaskSimt：使用去重后的唯一索引填充 mask
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(
-    __local_mem__ INDEX_TYPE* indicesLocalAddr,
-    __local_mem__ int32_t* uniqueIndicesAddr,
-    __gm__ int8_t* mask,
-    COM_T processNum, COM_T n, int64_t length)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
+                                                                             __local_mem__ int32_t* uniqueIndicesAddr,
+                                                                             __gm__ int8_t* mask, COM_T processNum,
+                                                                             COM_T n, int64_t length)
 {
     COM_T threadIdx = static_cast<COM_T>(Simt::GetThreadIdx());
     COM_T threadNum = static_cast<COM_T>(Simt::GetThreadNum());
@@ -158,16 +150,12 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
     uint32_t uniqueNum = SortAndUnique(sortedOut, uniqueIndicesOut, indicesLocal, length);
     COM_T n = static_cast<COM_T>(tilingData_->n);
     // sortedOut 的实际数据起始地址需要跳过前哨兵区
-    __local_mem__ INDEX_TYPE* actualSortOut =
-        ((__local_mem__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
+    __local_mem__ INDEX_TYPE* actualSortOut = ((__local_mem__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
 
     // 用去重后的唯一索引填充 mask
-    Simt::VF_CALL<SetMaskSimt<T_X, INDEX_TYPE, COM_T>>(
-        Simt::Dim3{SIMT_THREAD_NUM},
-        actualSortOut,
-        (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
-        (__gm__ int8_t*)maskGm_.GetPhyAddr(),
-        uniqueNum, n, length);
+    Simt::VF_CALL<SetMaskSimt<T_X, INDEX_TYPE, COM_T>>(Simt::Dim3{SIMT_THREAD_NUM}, actualSortOut,
+                                                       (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
+                                                       (__gm__ int8_t*)maskGm_.GetPhyAddr(), uniqueNum, n, length);
 
     indicesQueue_.FreeTensor(indicesLocal);
 }
@@ -193,8 +181,7 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 
     // 将 totalBlocks 分配给各核
     int64_t tailBlocksPerCore = totalBlocks / usedCoreNum;
-    int64_t frontBlocksPerCore = totalBlocks % usedCoreNum == 0
-        ? tailBlocksPerCore : tailBlocksPerCore + 1;
+    int64_t frontBlocksPerCore = totalBlocks % usedCoreNum == 0 ? tailBlocksPerCore : tailBlocksPerCore + 1;
     int64_t frontCoreNum = totalBlocks % usedCoreNum;
 
     // 计算当前核的块范围 [start, end)
@@ -207,15 +194,13 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
         end = start + loop;
     } else {
         loop = tailBlocksPerCore;
-        start = frontBlocksPerCore * frontCoreNum +
-                (blockIdx_ - frontCoreNum) * tailBlocksPerCore;
+        start = frontBlocksPerCore * frontCoreNum + (blockIdx_ - frontCoreNum) * tailBlocksPerCore;
         end = start + loop;
     }
 
     // 初始化 UB buffer
     int64_t vfLen = platform::GetVRegSize() / sizeof(INDEX_TYPE);
-    int64_t indicesBuffSize = ops::CeilDiv(indicesUbFactor + 1, vfLen) * vfLen
-                            * sizeof(INDEX_TYPE) + UB_AGLIN_VALUE;
+    int64_t indicesBuffSize = ops::CeilDiv(indicesUbFactor + 1, vfLen) * vfLen * sizeof(INDEX_TYPE) + UB_AGLIN_VALUE;
     pipe_->Reset();
     pipe_->InitBuffer(indicesQueue_, SIMT_DB_BUFFER, indicesUbFactor * sizeof(INDEX_TYPE));
     pipe_->InitBuffer(indicesBuff_, indicesBuffSize);
@@ -240,8 +225,8 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 // Init
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>::Init(
-    GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
+__aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>::Init(GM_ADDR indices, GM_ADDR value,
+                                                                                      GM_ADDR workspace)
 {
     valueGm_.SetGlobalBuffer((__gm__ T_X*)(value));
     indicesGm_.SetGlobalBuffer((__gm__ INDEX_TYPE*)(indices));
@@ -266,8 +251,8 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
     COM_T q = static_cast<COM_T>(tilingData_->q);
     COM_T n = static_cast<COM_T>(tilingData_->n);
 
-    InplaceIndexFillCommon::CallMaskBasedFill<T_X, INDEX_TYPE, COM_T>(
-        x, (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue, n, p, q);
+    InplaceIndexFillCommon::CallMaskBasedFill<T_X, INDEX_TYPE, COM_T>(x, (__gm__ int8_t*)maskGm_.GetPhyAddr(),
+                                                                      fillValue, n, p, q);
 }
 
 } // namespace InplaceIndexFillDenseIndices

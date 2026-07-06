@@ -29,9 +29,8 @@ class ApplyAdagradD {
 public:
     __aicore__ inline ApplyAdagradD() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
-                                GM_ADDR var_out, GM_ADDR accum_out,
-                                const ApplyAdagradDTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad, GM_ADDR var_out,
+                                GM_ADDR accum_out, const ApplyAdagradDTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -54,16 +53,16 @@ private:
     // Scratch VECCALC buffers
     // For float16/bfloat16: 4 float32 scratch tensors (varF, accumF, gradF, tmpF)
     // For float32: 1 scratch tensor (tmpF, same dtype T) — reused for both grad_square and sqrtAccum
-    TBuf<QuePosition::VECCALC> tmpBuf0;   // varF       (float16/bf16) OR tmpF (float32)
-    TBuf<QuePosition::VECCALC> tmpBuf1;   // accumF     (float16/bf16 only)
-    TBuf<QuePosition::VECCALC> tmpBuf2;   // gradF      (float16/bf16 only)
-    TBuf<QuePosition::VECCALC> tmpBuf3;   // tmpF       (float16/bf16 only)
+    TBuf<QuePosition::VECCALC> tmpBuf0; // varF       (float16/bf16) OR tmpF (float32)
+    TBuf<QuePosition::VECCALC> tmpBuf1; // accumF     (float16/bf16 only)
+    TBuf<QuePosition::VECCALC> tmpBuf2; // gradF      (float16/bf16 only)
+    TBuf<QuePosition::VECCALC> tmpBuf3; // tmpF       (float16/bf16 only)
 
     // Global memory tensors
     GlobalTensor<T> gmVar;
     GlobalTensor<T> gmAccum;
     GlobalTensor<T> gmGrad;
-    GlobalTensor<T> gmLrRaw;   // lr scalar on GM (dtype=T, shape=[1])
+    GlobalTensor<T> gmLrRaw; // lr scalar on GM (dtype=T, shape=[1])
     GlobalTensor<T> gmVarOut;
     GlobalTensor<T> gmAccumOut;
 
@@ -72,24 +71,22 @@ private:
     uint32_t tileDataNum;
     uint32_t tailDataNum;
     uint32_t processDataNum;
-    float    lrScalar;
-    int32_t  updateSlots;  // runtime: 1=true, 0=false
+    float lrScalar;
+    int32_t updateSlots; // runtime: 1=true, 0=false
 };
 
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 template <typename T>
-__aicore__ inline void ApplyAdagradD<T>::Init(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR accum_out,
-    const ApplyAdagradDTilingData* tilingData)
+__aicore__ inline void ApplyAdagradD<T>::Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad, GM_ADDR var_out,
+                                              GM_ADDR accum_out, const ApplyAdagradDTilingData* tilingData)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint32_t blockIdx = AscendC::GetBlockIdx();
 
-    this->tileDataNum  = static_cast<uint32_t>(tilingData->tileDataNum);
-    this->updateSlots  = tilingData->updateSlots;
+    this->tileDataNum = static_cast<uint32_t>(tilingData->tileDataNum);
+    this->updateSlots = tilingData->updateSlots;
     if (this->tileDataNum == 0) {
         this->tileDataNum = 1;
     }
@@ -97,15 +94,14 @@ __aicore__ inline void ApplyAdagradD<T>::Init(
     uint64_t globalOffset = static_cast<uint64_t>(tilingData->bigCoreDataNum) * blockIdx;
     if (blockIdx < static_cast<uint32_t>(tilingData->tailBlockNum)) {
         this->coreDataNum = static_cast<uint32_t>(tilingData->bigCoreDataNum);
-        this->tileNum     = static_cast<uint32_t>(tilingData->finalBigTileNum);
+        this->tileNum = static_cast<uint32_t>(tilingData->finalBigTileNum);
         this->tailDataNum = static_cast<uint32_t>(tilingData->bigTailDataNum);
     } else {
         this->coreDataNum = static_cast<uint32_t>(tilingData->smallCoreDataNum);
-        this->tileNum     = static_cast<uint32_t>(tilingData->finalSmallTileNum);
+        this->tileNum = static_cast<uint32_t>(tilingData->finalSmallTileNum);
         this->tailDataNum = static_cast<uint32_t>(tilingData->smallTailDataNum);
-        globalOffset -= static_cast<uint64_t>(
-            (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
-            (blockIdx - tilingData->tailBlockNum));
+        globalOffset -= static_cast<uint64_t>((tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                                              (blockIdx - tilingData->tailBlockNum));
     }
 
     uint64_t totalDataNum = static_cast<uint64_t>(tilingData->totalDataNum);
@@ -131,20 +127,19 @@ __aicore__ inline void ApplyAdagradD<T>::Init(
     gmAccumOut.SetGlobalBuffer((__gm__ T*)accum_out + globalOffset, this->coreDataNum);
 
     // Init VECIN/VECOUT double-buffers
-    pipe.InitBuffer(inQueueVar,    BUFFER_NUM, this->tileDataNum * sizeof(T));
-    pipe.InitBuffer(inQueueAccum,  BUFFER_NUM, this->tileDataNum * sizeof(T));
-    pipe.InitBuffer(inQueueGrad,   BUFFER_NUM, this->tileDataNum * sizeof(T));
-    pipe.InitBuffer(outQueueVar,   BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(inQueueVar, BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(inQueueAccum, BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(inQueueGrad, BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(outQueueVar, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(outQueueAccum, BUFFER_NUM, this->tileDataNum * sizeof(T));
 
     // Init scratch buffers based on dtype (mirrors hard_swish_v2)
-    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value ||
-                  AscendC::Std::is_same<T, half>::value) {
+    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value || AscendC::Std::is_same<T, half>::value) {
         // Need 4 float32 scratch tensors
-        pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(float));  // varF
-        pipe.InitBuffer(tmpBuf1, this->tileDataNum * sizeof(float));  // accumF
-        pipe.InitBuffer(tmpBuf2, this->tileDataNum * sizeof(float));  // gradF
-        pipe.InitBuffer(tmpBuf3, this->tileDataNum * sizeof(float));  // tmpF (sqrtAccum/grad_square)
+        pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(float)); // varF
+        pipe.InitBuffer(tmpBuf1, this->tileDataNum * sizeof(float)); // accumF
+        pipe.InitBuffer(tmpBuf2, this->tileDataNum * sizeof(float)); // gradF
+        pipe.InitBuffer(tmpBuf3, this->tileDataNum * sizeof(float)); // tmpF (sqrtAccum/grad_square)
     } else {
         // float32: only 1 scratch tensor needed (tmpF)
         pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(T));
@@ -168,27 +163,24 @@ __aicore__ inline void ApplyAdagradD<T>::Init(
         gmLrU16.SetGlobalBuffer((__gm__ uint16_t*)lr, 1);
         uint16_t raw = gmLrU16.GetValue(0);
         uint32_t sign = (raw >> 15) & 0x1U;
-        uint32_t exp  = (raw >> 10) & 0x1FU;
+        uint32_t exp = (raw >> 10) & 0x1FU;
         uint32_t mant = raw & 0x3FFU;
         uint32_t u32;
         if (exp == 0) {
             if (mant == 0) {
-                u32 = sign << 31;                     // zero
+                u32 = sign << 31; // zero
             } else {
                 int k = 9;
                 for (; k >= 0; --k) {
-                    if ((mant >> k) & 1U) break;       // highest set bit
+                    if ((mant >> k) & 1U)
+                        break; // highest set bit
                 }
-                u32 = (sign << 31) |
-                      (static_cast<uint32_t>(k + 103) << 23) |
-                      ((mant << (23 - k)) & 0x7FFFFFU);
+                u32 = (sign << 31) | (static_cast<uint32_t>(k + 103) << 23) | ((mant << (23 - k)) & 0x7FFFFFU);
             }
         } else if (exp == 31) {
-            u32 = (sign << 31) | (0xFFU << 23) | (mant << 13);  // inf / NaN
+            u32 = (sign << 31) | (0xFFU << 23) | (mant << 13); // inf / NaN
         } else {
-            u32 = (sign << 31) |
-                  (static_cast<uint32_t>(exp + 112) << 23) |
-                  (mant << 13);
+            u32 = (sign << 31) | (static_cast<uint32_t>(exp + 112) << 23) | (mant << 13);
         }
         float f;
         __builtin_memcpy(&f, &u32, sizeof(f));
@@ -204,13 +196,13 @@ __aicore__ inline void ApplyAdagradD<T>::Init(
 template <typename T>
 __aicore__ inline void ApplyAdagradD<T>::CopyIn(int32_t progress)
 {
-    LocalTensor<T> varLocal   = inQueueVar.AllocTensor<T>();
+    LocalTensor<T> varLocal = inQueueVar.AllocTensor<T>();
     LocalTensor<T> accumLocal = inQueueAccum.AllocTensor<T>();
-    LocalTensor<T> gradLocal  = inQueueGrad.AllocTensor<T>();
+    LocalTensor<T> gradLocal = inQueueGrad.AllocTensor<T>();
 
-    DataCopy(varLocal,   gmVar  [progress * this->tileDataNum], this->processDataNum);
+    DataCopy(varLocal, gmVar[progress * this->tileDataNum], this->processDataNum);
     DataCopy(accumLocal, gmAccum[progress * this->tileDataNum], this->processDataNum);
-    DataCopy(gradLocal,  gmGrad [progress * this->tileDataNum], this->processDataNum);
+    DataCopy(gradLocal, gmGrad[progress * this->tileDataNum], this->processDataNum);
 
     inQueueVar.EnQue(varLocal);
     inQueueAccum.EnQue(accumLocal);
@@ -223,10 +215,10 @@ __aicore__ inline void ApplyAdagradD<T>::CopyIn(int32_t progress)
 template <typename T>
 __aicore__ inline void ApplyAdagradD<T>::CopyOut(int32_t progress)
 {
-    LocalTensor<T> varOutLocal   = outQueueVar.DeQue<T>();
+    LocalTensor<T> varOutLocal = outQueueVar.DeQue<T>();
     LocalTensor<T> accumOutLocal = outQueueAccum.DeQue<T>();
 
-    DataCopy(gmVarOut  [progress * this->tileDataNum], varOutLocal,   this->processDataNum);
+    DataCopy(gmVarOut[progress * this->tileDataNum], varOutLocal, this->processDataNum);
     DataCopy(gmAccumOut[progress * this->tileDataNum], accumOutLocal, this->processDataNum);
 
     outQueueVar.FreeTensor(varOutLocal);
@@ -248,29 +240,28 @@ __aicore__ inline void ApplyAdagradD<T>::CopyOut(int32_t progress)
 template <typename T>
 __aicore__ inline void ApplyAdagradD<T>::Compute(int32_t progress)
 {
-    LocalTensor<T> varLocal   = inQueueVar.DeQue<T>();
+    LocalTensor<T> varLocal = inQueueVar.DeQue<T>();
     LocalTensor<T> accumLocal = inQueueAccum.DeQue<T>();
-    LocalTensor<T> gradLocal  = inQueueGrad.DeQue<T>();
+    LocalTensor<T> gradLocal = inQueueGrad.DeQue<T>();
 
-    LocalTensor<T> varOutLocal   = outQueueVar.AllocTensor<T>();
+    LocalTensor<T> varOutLocal = outQueueVar.AllocTensor<T>();
     LocalTensor<T> accumOutLocal = outQueueAccum.AllocTensor<T>();
 
     uint32_t cnt = this->processDataNum;
 
-    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value ||
-                  AscendC::Std::is_same<T, half>::value) {
+    if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value || AscendC::Std::is_same<T, half>::value) {
         // --- float16 / bfloat16 path ---
-        LocalTensor<float> varF   = tmpBuf0.Get<float>();
+        LocalTensor<float> varF = tmpBuf0.Get<float>();
         LocalTensor<float> accumF = tmpBuf1.Get<float>();
-        LocalTensor<float> gradF  = tmpBuf2.Get<float>();
-        LocalTensor<float> tmpF   = tmpBuf3.Get<float>();
+        LocalTensor<float> gradF = tmpBuf2.Get<float>();
+        LocalTensor<float> tmpF = tmpBuf3.Get<float>();
 
         // Cast inputs to float32
-        Cast(varF,   varLocal,   RoundMode::CAST_NONE, cnt);
+        Cast(varF, varLocal, RoundMode::CAST_NONE, cnt);
         PipeBarrier<PIPE_V>();
         Cast(accumF, accumLocal, RoundMode::CAST_NONE, cnt);
         PipeBarrier<PIPE_V>();
-        Cast(gradF,  gradLocal,  RoundMode::CAST_NONE, cnt);
+        Cast(gradF, gradLocal, RoundMode::CAST_NONE, cnt);
         PipeBarrier<PIPE_V>();
 
         if (this->updateSlots) {
@@ -297,19 +288,19 @@ __aicore__ inline void ApplyAdagradD<T>::Compute(int32_t progress)
         PipeBarrier<PIPE_V>();
 
         // TBE adds vadds(var, 0) and vadds(accum, 0) before cast back
-        Adds(varF,   varF,   static_cast<float>(0), cnt);
+        Adds(varF, varF, static_cast<float>(0), cnt);
         PipeBarrier<PIPE_V>();
         Adds(accumF, accumF, static_cast<float>(0), cnt);
         PipeBarrier<PIPE_V>();
 
         // Cast results back to T
         if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value) {
-            Cast(varOutLocal,   varF,   RoundMode::CAST_RINT, cnt);
+            Cast(varOutLocal, varF, RoundMode::CAST_RINT, cnt);
             PipeBarrier<PIPE_V>();
             Cast(accumOutLocal, accumF, RoundMode::CAST_RINT, cnt);
         } else {
             // float16
-            Cast(varOutLocal,   varF,   RoundMode::CAST_ROUND, cnt);
+            Cast(varOutLocal, varF, RoundMode::CAST_ROUND, cnt);
             PipeBarrier<PIPE_V>();
             Cast(accumOutLocal, accumF, RoundMode::CAST_ROUND, cnt);
         }
@@ -343,7 +334,7 @@ __aicore__ inline void ApplyAdagradD<T>::Compute(int32_t progress)
         PipeBarrier<PIPE_V>();
 
         // Move results to output tensors (add 0 covers full cnt regardless of size)
-        Adds(varOutLocal,   varLocal,   static_cast<T>(0), cnt);
+        Adds(varOutLocal, varLocal, static_cast<T>(0), cnt);
         PipeBarrier<PIPE_V>();
         Adds(accumOutLocal, accumLocal, static_cast<T>(0), cnt);
     }

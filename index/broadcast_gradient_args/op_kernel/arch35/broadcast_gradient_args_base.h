@@ -21,11 +21,13 @@
 namespace BroadcastGradientArgs {
 using namespace AscendC;
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB322B64 = { AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN };
+constexpr static AscendC::MicroAPI::CastTrait castTraitB322B64 = {
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 
-constexpr static AscendC::MicroAPI::CastTrait castTraitB642B32 = { AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN };
+constexpr static AscendC::MicroAPI::CastTrait castTraitB642B32 = {
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::UNKNOWN};
 
 constexpr int64_t FIRST_UINT64_SHAPE_DIM_ONE = 0x80000001;
 constexpr int64_t UINT64_SHAPE_DIM_ONE = 1;
@@ -41,6 +43,7 @@ template <typename T>
 class BroadcastGradientArgsBase {
 public:
     __aicore__ inline BroadcastGradientArgsBase() {}
+
 protected:
     /* global memory address */
     GlobalTensor<T> x1Gm;
@@ -51,7 +54,6 @@ protected:
     /*system virable*/
     int16_t blockSize = GetDataBlockSizeInBytes();
     uint32_t vlLen = GetVecLen();
-    
 };
-}
-#endif  // BROADCAST_GRADIENT_ARGS_BASE_H
+} // namespace BroadcastGradientArgs
+#endif // BROADCAST_GRADIENT_ARGS_BASE_H

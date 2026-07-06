@@ -23,21 +23,14 @@
 #include "ada_layer_norm_quant_tiling_def.h"
 #include "data_utils.h"
 
-extern "C" __global__ __aicore__ void ada_layer_norm_quant(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR weight, GM_ADDR bias, GM_ADDR smooth_scales, GM_ADDR out,
-    GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ada_layer_norm_quant(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR weight,
+                                                           GM_ADDR bias, GM_ADDR smooth_scales, GM_ADDR out,
+                                                           GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling);
 
-class ada_layer_norm_quant_test : public testing::Test
-{
+class ada_layer_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ada_layer_norm_quant_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ada_layer_norm_quant_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ada_layer_norm_quant_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ada_layer_norm_quant_test TearDown\n" << std::endl; }
 };
 
 TEST_F(ada_layer_norm_quant_test, test_case_bfloat16_1)
@@ -78,7 +71,8 @@ TEST_F(ada_layer_norm_quant_test, test_case_bfloat16_1)
 
     ICPU_SET_TILING_KEY(1);
 
-    ICPU_RUN_KF(ada_layer_norm_quant, blockDim, x, scale, shift, weight, bias, smoothScales, out, quantScale, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(ada_layer_norm_quant, blockDim, x, scale, shift, weight, bias, smoothScales, out, quantScale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)x);
     AscendC::GmFree((void*)scale);
@@ -98,7 +92,7 @@ TEST_F(ada_layer_norm_quant_test, test_case_bfloat16_2)
     size_t scaleByteSize = 1 * 10000 * sizeof(bfloat16_t);
     size_t weightByteSize = 10000 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 1 * 10000 * sizeof(int8_t);
-    size_t quantScaleByteSize = 1 * 1* sizeof(float);
+    size_t quantScaleByteSize = 1 * 1 * sizeof(float);
     uint32_t blockDim = 1;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
@@ -130,7 +124,8 @@ TEST_F(ada_layer_norm_quant_test, test_case_bfloat16_2)
 
     ICPU_SET_TILING_KEY(1);
 
-    ICPU_RUN_KF(ada_layer_norm_quant, blockDim, x, scale, shift, weight, bias, smoothScales, out, quantScale, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(ada_layer_norm_quant, blockDim, x, scale, shift, weight, bias, smoothScales, out, quantScale, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree((void*)x);
     AscendC::GmFree((void*)scale);

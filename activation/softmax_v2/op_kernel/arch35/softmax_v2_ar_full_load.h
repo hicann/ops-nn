@@ -25,22 +25,17 @@
 #define INFINITY (__builtin_inff())
 #endif
 
-namespace SoftmaxV2Ops
-{
+namespace SoftmaxV2Ops {
 using namespace AscendC;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
-constexpr static uint32_t BLOCK_SIZE = 32;  // 32B
+constexpr static uint32_t BLOCK_SIZE = 32; // 32B
 constexpr static uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T_in, typename T_out>
-class SoftmaxV2AR : public SoftmaxV2OpsBase
-{
+class SoftmaxV2AR : public SoftmaxV2OpsBase {
 public:
-    __aicore__ inline SoftmaxV2AR(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline SoftmaxV2AR(TPipe* pipe) { pipe_ = pipe; };
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const SoftmaxV2ARTilingData* tilingData);
     __aicore__ inline void Process();
@@ -77,7 +72,7 @@ private:
 
     TBuf<> tmpLocalBuffer_;
 
-    int64_t blockA_ = 0;  // 获取分块操作中的单个块的大小
+    int64_t blockA_ = 0; // 获取分块操作中的单个块的大小
     const SoftmaxV2ARTilingData* tl_ = nullptr;
 };
 
@@ -87,9 +82,9 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::Init(GM_ADDR x, GM_ADDR y, cons
     this->tl_ = tilingData;
     // GM not need align.
     // 获取分块操作中的单个块的大小。判断是否是最后一块，是最后一块，则等于剩余元素的数量，否则等于固定的单核处理的行数
-    this->blockA_ = (AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1)
-                        ? (tl_->a - tl_->aBlockFactor * (AscendC::GetBlockNum() - 1))
-                        : tl_->aBlockFactor;
+    this->blockA_ = (AscendC::GetBlockIdx() == AscendC::GetBlockNum() - 1) ?
+                        (tl_->a - tl_->aBlockFactor * (AscendC::GetBlockNum() - 1)) :
+                        tl_->aBlockFactor;
     int64_t aGmOffset = tl_->aBlockFactor * AscendC::GetBlockIdx() * tl_->r;
     // 初始化GM Tensor
     xGm_.SetGlobalBuffer((__gm__ T_in*)x + aGmOffset);
@@ -237,8 +232,8 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::SecondNormComputePost(const Loc
             uint32_t count = static_cast<uint32_t>(rSize);
             AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg, dReg;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 DataCopy(aReg, (__local_mem__ float*)src + i * static_cast<uint32_t>(stride));
@@ -265,8 +260,8 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::SecondNormComputePost(const Loc
             uint32_t count = static_cast<uint32_t>(rSize - VL_FP32);
             AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg, dReg, eReg;
             AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            AscendC::MicroAPI::MaskReg pFull =
-                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::MaskReg
+                pFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 DataCopy(aReg, (__local_mem__ float*)src0 + i * static_cast<uint32_t>(stride));
@@ -306,10 +301,10 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::SecondNormCompute(const LocalTe
         return;
     }
 
-    int64_t ceilVLCount =
-        ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
-    int64_t floorVLCount =
-        ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    int64_t ceilVLCount = ops::CeilDiv(static_cast<int64_t>(rSize * sizeof(float)),
+                                       static_cast<int64_t>(GetVRegSize()));
+    int64_t floorVLCount = ops::FloorDiv(static_cast<int64_t>(rSize * sizeof(float)),
+                                         static_cast<int64_t>(GetVRegSize()));
     int64_t foldPoint = FindNearestPower2(ceilVLCount);
 
     uint16_t outerLoopTimes = aSize;
@@ -319,8 +314,8 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::SecondNormCompute(const LocalTe
     uint16_t unFoldLoopTimes = foldPoint + foldPoint - ceilVLCount;
     uint32_t outerLoopStride = stride;
     uint32_t innerLoopStride = VL_FP32;
-    uint32_t outerLoopDstStride =
-        ops::Aligned(static_cast<int64_t>(foldPoint), static_cast<int64_t>(GetUbBlockSize() / sizeof(float)));
+    uint32_t outerLoopDstStride = ops::Aligned(static_cast<int64_t>(foldPoint),
+                                               static_cast<int64_t>(GetUbBlockSize() / sizeof(float)));
 
     int64_t foldSrcBOffset = foldPoint * VL_FP32;
     int64_t tailSrcAOffset = mainFoldLoopTimes * VL_FP32;
@@ -425,5 +420,5 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::CopyOutY(const LocalTensor<T_ou
     DataCopyPad(yGm_[offset], yOutUb, copyOutParams);
 }
 
-}  // namespace SoftmaxV2Ops
-#endif  // SOFTMAX_V2_AR_FULL_LOAD_H
+} // namespace SoftmaxV2Ops
+#endif // SOFTMAX_V2_AR_FULL_LOAD_H

@@ -27,16 +27,18 @@ using namespace AscendC;
 
 constexpr int32_t DOUBLE_BUFFER = 2;
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 class IndexFillSimdImpl {
 public:
-    __aicore__ inline IndexFillSimdImpl(const IndexFillSimdTilingData& tilingData, TPipe& pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline IndexFillSimdImpl(const IndexFillSimdTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void Process();
 
 private:
-    static __simt_vf__ __aicore__ inline void IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum, __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n);
+    static __simt_vf__ __aicore__ inline void IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum,
+                                                                    __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask,
+                                                                    COM_T indicesNum, uint64_t n);
     __aicore__ inline void InitMask(uint64_t length);
     __aicore__ inline void ProcessCopy();
     __aicore__ inline int8_t GetMask(uint64_t startIdx, uint64_t endIdx);
@@ -75,7 +77,7 @@ __aicore__ inline static uint64_t Mod(uint64_t value, uint64_t factor)
     return value % factor;
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::InitMask(uint64_t length)
 {
     __gm__ int8_t* basePtr = (__gm__ int8_t*)maskGm_.GetPhyAddr();
@@ -112,8 +114,9 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::InitMask(uint64_
     AscendC::Fill(subMask, len, zero);
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
-__aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR y, GM_ADDR workspace)
+template <typename T, typename INDEX_TYPE, typename COM_T>
+__aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value,
+                                                                     GM_ADDR y, GM_ADDR workspace)
 {
     if (GetBlockIdx() >= GetBlockNum()) {
         return;
@@ -130,15 +133,16 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Init(GM_ADDR x, 
 
     pipe_.InitBuffer(xQueue_, DOUBLE_BUFFER, tilingData_.blockFactorUbFactorQ * sizeof(T));
     pipe_.InitBuffer(valueQueue_, 1, tilingData_.blockFactorUbFactorQ * sizeof(T));
-    pipe_.InitBuffer(indicesBuf_, tilingData_.blockFactorUbBufferMask * sizeof(int8_t));  //分配固定大小索引缓冲区
+    pipe_.InitBuffer(indicesBuf_, tilingData_.blockFactorUbBufferMask * sizeof(int8_t)); //分配固定大小索引缓冲区
 
     InitMask(tilingData_.n);
     SyncAll();
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum,
-__gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
+template <typename T, typename INDEX_TYPE, typename COM_T>
+__simt_vf__ __aicore__
+LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::IndexFillSimtMaskFill(
+    uint64_t blockIdx, uint64_t blockNum, __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
 {
     COM_T threadIdxLocal = static_cast<COM_T>(blockIdx * blockDim.x + threadIdx.x);
     COM_T threadNum = static_cast<COM_T>(blockNum * blockDim.x);
@@ -167,11 +171,11 @@ __aicore__ inline void CommonCopyOut(GlobalTensor<T> dstGm, LocalTensor<T> srcLo
     DataCopyPad(dstGm[offset], srcLocal, dataCoptExtParams);
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline int8_t IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::GetMask(uint64_t startIdx, uint64_t endIdx)
 {
     uint64_t startNIdx = startIdx % tilingData_.n;
-    //UB中没有所需索引，需重新拷贝
+    // UB中没有所需索引，需重新拷贝
     if (startNIdx >= indicesOffsetBase_ + curIndexSize_ || startNIdx < indicesOffsetBase_) {
         uint64_t startPIdx = Div(startIdx, tilingData_.n);
         uint64_t endPIdx = Div(endIdx, tilingData_.n);
@@ -192,10 +196,12 @@ __aicore__ inline int8_t IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::GetMask(uint64
         } else {
             //拷贝部分索引
             if (endPIdx == startPIdx) {
-                copyLen = min(static_cast<uint64_t>(endNIdx - startNIdx + 1), static_cast<uint64_t>(tilingData_.blockFactorUbBufferMask));
+                copyLen = min(static_cast<uint64_t>(endNIdx - startNIdx + 1),
+                              static_cast<uint64_t>(tilingData_.blockFactorUbBufferMask));
                 indicesOffsetBase_ = startNIdx;
             } else {
-                copyLen = min(static_cast<uint64_t>(tilingData_.n - startNIdx), static_cast<uint64_t>(tilingData_.blockFactorUbBufferMask));
+                copyLen = min(static_cast<uint64_t>(tilingData_.n - startNIdx),
+                              static_cast<uint64_t>(tilingData_.blockFactorUbBufferMask));
                 indicesOffsetBase_ = startNIdx;
             }
         }
@@ -212,7 +218,7 @@ __aicore__ inline int8_t IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::GetMask(uint64
     return indicesLocal.GetValue(startNIdx - indicesOffsetBase_);
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::ProcessCopy()
 {
     T valScalar = varGm_.GetValue(0);
@@ -275,7 +281,8 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::ProcessCopy()
             startIdx = blockIdx_ * (tilingData_.blockFactorPN + 1);
             endIdx = startIdx + tilingData_.blockFactorPN + 1;
         } else {
-            startIdx = tilingData_.tailBlockNumPN * (tilingData_.blockFactorPN + 1) + (blockIdx_ - tilingData_.tailBlockNumPN) * tilingData_.blockFactorPN;
+            startIdx = tilingData_.tailBlockNumPN * (tilingData_.blockFactorPN + 1) +
+                       (blockIdx_ - tilingData_.tailBlockNumPN) * tilingData_.blockFactorPN;
             endIdx = startIdx + tilingData_.blockFactorPN;
         }
 
@@ -317,7 +324,7 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::ProcessCopy()
     }
 }
 
-template<typename T, typename INDEX_TYPE, typename COM_T>
+template <typename T, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Process()
 {
     if (GetBlockIdx() >= GetBlockNum()) {
@@ -326,10 +333,11 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Process()
     uint64_t n = tilingData_.n;
     COM_T indicesNum = static_cast<COM_T>(tilingData_.indicesNum);
     asc_vf_call<IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::IndexFillSimtMaskFill>(
-        dim3(THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indicesGm_.GetPhyAddr()), (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, n);
+        dim3(THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indicesGm_.GetPhyAddr()),
+        (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, n);
     SyncAll();
 
     ProcessCopy();
 }
-}
-#endif  // INDEX_FILL_SIMD_IMPL_H
+} // namespace IndexFill
+#endif // INDEX_FILL_SIMD_IMPL_H

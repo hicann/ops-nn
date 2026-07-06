@@ -17,8 +17,8 @@
 using namespace ForeachDivScalar;
 
 template <typename T, typename ScalarT>
-__aicore__ inline void ForeachDivScalarImpl(
-    GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachDivScalarImpl(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace,
+                                            GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
@@ -27,8 +27,8 @@ __aicore__ inline void ForeachDivScalarImpl(
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_div_scalar(
-    GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_div_scalar(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR outputs,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {

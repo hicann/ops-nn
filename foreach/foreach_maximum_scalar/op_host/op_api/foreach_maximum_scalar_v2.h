@@ -13,7 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensorList *ForeachMaximumScalarV2(const aclTensorList *x, const aclTensor *scalar, const aclTensorList *out, aclOpExecutor *executor);
+const aclTensorList* ForeachMaximumScalarV2(const aclTensorList* x, const aclTensor* scalar, const aclTensorList* out,
+                                            aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_FOREACH_MAXIMUM_SCALAR_V2_OP_H

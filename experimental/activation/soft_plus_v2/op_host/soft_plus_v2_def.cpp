@@ -27,29 +27,28 @@
 namespace ops {
 class SoftPlusV2 : public OpDef {
 public:
-  explicit SoftPlusV2(const char *name) : OpDef(name) {
-    this->Input("x")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+    explicit SoftPlusV2(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
 
-        
-    this->Output("z")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("z")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND});
 
-
-    OpAICoreConfig aicoreConfig;
-    aicoreConfig.DynamicCompileStaticFlag(true)
-        .DynamicFormatFlag(false)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .PrecisionReduceFlag(true)
-        .ExtendCfgInfo("opFile.value", "soft_plus_v2");    // 这里制定的值会对应到kernel入口文件名.cpp
-    this->AICore().AddConfig("ascend910b", aicoreConfig);
-  }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "soft_plus_v2"); // 这里制定的值会对应到kernel入口文件名.cpp
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
+    }
 };
 OP_ADD(SoftPlusV2);
 } // namespace ops

@@ -46,9 +46,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -63,9 +62,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     if (*tensor == nullptr) {
         LOG_PRINT("aclCreateTensor returned nullptr.\n");
         return -1;
@@ -73,9 +71,8 @@ int CreateAclTensor(
     return 0;
 }
 
-static void ComputeExpected(
-    const std::vector<float>& predictHostData, const std::vector<float>& labelHostData, int64_t reduction,
-    std::vector<float>& expected)
+static void ComputeExpected(const std::vector<float>& predictHostData, const std::vector<float>& labelHostData,
+                            int64_t reduction, std::vector<float>& expected)
 {
     expected.resize(predictHostData.size());
     float sum = 0.0f;
@@ -184,9 +181,8 @@ static int RunL1LossCase(aclrtStream stream, int64_t reduction)
 
     auto size = GetShapeSize(outShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     PrintVector("aclnnL1Loss result", resultData, reduction);
 

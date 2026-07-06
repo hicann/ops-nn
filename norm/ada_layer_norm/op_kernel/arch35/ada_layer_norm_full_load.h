@@ -24,12 +24,12 @@ template <typename T, typename U, typename Y, uint8_t OP_CODE>
 class AdaLayerNormFullLoad {
 public:
     __aicore__ inline AdaLayerNormFullLoad(){};
-    __aicore__ inline void InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData);
-    __aicore__ inline void InitQuant(const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData *tilingData);
+    __aicore__ inline void InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData* tilingData);
+    __aicore__ inline void InitQuant(const GmAddr* gmAddr, GM_ADDR workspace, const AdaLayerNormTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData *tilingData);
+    __aicore__ inline void ParseTilingData(const AdaLayerNormTilingData* tilingData);
     __aicore__ inline void FastProcess();
     __aicore__ inline void ProcessLayerNorm(RowRange range, int64_t batchCount);
     __aicore__ inline void Adaption(uint16_t rowNum, int64_t batchCount);
@@ -101,7 +101,8 @@ private:
 };
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitV2(const GmAddr* gmAddr, const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitV2(const GmAddr* gmAddr,
+                                                                      const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(xQueue, DOUBLE_BUFFER, DATA_COUNT * sizeof(float));
@@ -129,7 +130,7 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitV2(const GmAd
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
 __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::InitQuant(const GmAddr* gmAddr, GM_ADDR workspace,
-    const AdaLayerNormTilingData *tilingData)
+                                                                         const AdaLayerNormTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     pipe.InitBuffer(xQueue, DOUBLE_BUFFER, DATA_COUNT * sizeof(float));
@@ -182,7 +183,7 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::Process()
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::ParseTilingData(const AdaLayerNormTilingData *tilingData)
+__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::ParseTilingData(const AdaLayerNormTilingData* tilingData)
 {
     int32_t blockNum = HALF_BLOCK_NUM;
     if constexpr (std::is_same_v<T, float>) {
@@ -302,21 +303,21 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::ProcessLayerNorm(
     para.rLength = hiddenDim;
     para.rLengthWithPadding = hiddenDimCeil;
     if (hasWeight && hasBias) {
-        LayerNorm<float, float, true, hasGammaBetaConfig>(
-            normLocal, meanLocal[batchCount], rstdLocal[batchCount], xLocal, weightLocal, biasLocal, 
-            epsilon, tmpLocal, para, layerNormTiling);
+        LayerNorm<float, float, true, hasGammaBetaConfig>(normLocal, meanLocal[batchCount], rstdLocal[batchCount],
+                                                          xLocal, weightLocal, biasLocal, epsilon, tmpLocal, para,
+                                                          layerNormTiling);
     } else if (!hasWeight && hasBias) {
-        LayerNorm<float, float, true, noGammaHasBetaConfig>(
-            normLocal, meanLocal[batchCount], rstdLocal[batchCount], xLocal, weightLocal, biasLocal, 
-            epsilon, tmpLocal, para, layerNormTiling);
+        LayerNorm<float, float, true, noGammaHasBetaConfig>(normLocal, meanLocal[batchCount], rstdLocal[batchCount],
+                                                            xLocal, weightLocal, biasLocal, epsilon, tmpLocal, para,
+                                                            layerNormTiling);
     } else if (hasWeight && !hasBias) {
-        LayerNorm<float, float, true, hasGammaNoBetaConfig>(
-            normLocal, meanLocal[batchCount], rstdLocal[batchCount], xLocal, weightLocal, biasLocal, 
-            epsilon, tmpLocal, para, layerNormTiling);
+        LayerNorm<float, float, true, hasGammaNoBetaConfig>(normLocal, meanLocal[batchCount], rstdLocal[batchCount],
+                                                            xLocal, weightLocal, biasLocal, epsilon, tmpLocal, para,
+                                                            layerNormTiling);
     } else {
-        LayerNorm<float, float, true, noGammaNoBetaConfig>(
-            normLocal, meanLocal[batchCount], rstdLocal[batchCount], xLocal, weightLocal, biasLocal, 
-            epsilon, tmpLocal, para, layerNormTiling);
+        LayerNorm<float, float, true, noGammaNoBetaConfig>(normLocal, meanLocal[batchCount], rstdLocal[batchCount],
+                                                           xLocal, weightLocal, biasLocal, epsilon, tmpLocal, para,
+                                                           layerNormTiling);
     }
     PipeBarrier<PIPE_V>();
     xQueue.FreeTensor(xLocal);
@@ -338,17 +339,18 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::Adaption(uint16_t
     }
 
     if (hasSmooth) {
-        AdaptionVF<T, OUT_DTYPE, OP_CODE, true>(rowNum, hiddenDim, hiddenDimCeil, quantFactor, normAddr, 
-            scaleAddr, shiftAddr, smoothAddr, outAddr, quantScaleAddr);
+        AdaptionVF<T, OUT_DTYPE, OP_CODE, true>(rowNum, hiddenDim, hiddenDimCeil, quantFactor, normAddr, scaleAddr,
+                                                shiftAddr, smoothAddr, outAddr, quantScaleAddr);
     } else {
-        AdaptionVF<T, OUT_DTYPE, OP_CODE, false>(rowNum, hiddenDim, hiddenDimCeil, quantFactor, normAddr, 
-            scaleAddr, shiftAddr, smoothAddr, outAddr, quantScaleAddr);
+        AdaptionVF<T, OUT_DTYPE, OP_CODE, false>(rowNum, hiddenDim, hiddenDimCeil, quantFactor, normAddr, scaleAddr,
+                                                 shiftAddr, smoothAddr, outAddr, quantScaleAddr);
     }
     outQueue.EnQue<OUT_DTYPE>(outLocal);
 }
 
 template <typename T, typename U, typename Y, uint8_t OP_CODE>
-__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint16_t rowNum, int64_t batchCount) {
+__aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint16_t rowNum, int64_t batchCount)
+{
     uint16_t rowLoopTimes = rowNum >> 1;
     uint16_t tailLoopTimes = rowNum & 1;
     uint16_t colLoopTimes = static_cast<uint16_t>(CeilA2B(hiddenDim, V_LENGTH));
@@ -378,7 +380,7 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
             DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + i);
             DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale2, quantScaleAddr + i + rowLoopTimes);
             uint32_t sreg = hiddenDim;
-            for (uint16_t j = 0; j < colLoopTimes;j ++) {
+            for (uint16_t j = 0; j < colLoopTimes; j++) {
                 pregLoop = UpdateMask<float>(sreg);
                 DataCopy(x1, outAddr + j * V_LENGTH);
                 DataCopy(x2, outAddr2 + j * V_LENGTH);
@@ -410,7 +412,7 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
         for (uint16_t i = 0; i < tailLoopTimes; i++) {
             DataCopy<float, LoadDist::DIST_BRC_B32>(quantScale1, quantScaleAddr + rowLoopTimes + rowLoopTimes);
             uint32_t sreg = hiddenDim;
-            for (uint16_t j = 0; j < colLoopTimes;j ++) {
+            for (uint16_t j = 0; j < colLoopTimes; j++) {
                 pregLoop = UpdateMask<float>(sreg);
                 DataCopy(x1, outAddr2 + j * V_LENGTH);
                 Div(x1, x1, quantScale1, pregLoop);
@@ -427,10 +429,10 @@ __aicore__ inline void AdaLayerNormFullLoad<T, U, Y, OP_CODE>::DynamicQuant(uint
             }
         }
     }
-    
+
     quantOutQueue.EnQue<Y>(quantOutLocal);
     outQueue.FreeTensor(outLocal);
 }
-}  // namespace AdaLayerNormNS
+} // namespace AdaLayerNormNS
 
-#endif  // ADA_LAYER_NORM_FULL_LOAD_H
+#endif // ADA_LAYER_NORM_FULL_LOAD_H

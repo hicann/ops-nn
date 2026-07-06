@@ -26,28 +26,29 @@ static const int64_t BITS_PER_B8 = 8;
 
 const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*> FusedLinearOnlineMaxSum(
     const aclTensor* input, const aclTensor* weight, const aclTensor* target, int64_t vocabStartIndex,
-    int64_t vocabEndIndex, bool vocabParallelLogitsOutFlag, aclOpExecutor* executor) {
-    auto logitsMaxLocal = executor->AllocTensor(
-        target->GetStorageShape(), target->GetOriginalShape(), DataType::DT_FLOAT, target->GetStorageFormat(),
-        target->GetOriginalFormat());
-    
-    auto sumExpLogitsLocal = executor->AllocTensor(
-        target->GetStorageShape(), target->GetOriginalShape(), DataType::DT_FLOAT, target->GetStorageFormat(),
-        target->GetOriginalFormat());
-    
-    auto predictedLogitsLocal = executor->AllocTensor(
-        target->GetStorageShape(), target->GetOriginalShape(), DataType::DT_FLOAT, target->GetStorageFormat(),
-        target->GetOriginalFormat());
+    int64_t vocabEndIndex, bool vocabParallelLogitsOutFlag, aclOpExecutor* executor)
+{
+    auto logitsMaxLocal = executor->AllocTensor(target->GetStorageShape(), target->GetOriginalShape(),
+                                                DataType::DT_FLOAT, target->GetStorageFormat(),
+                                                target->GetOriginalFormat());
+
+    auto sumExpLogitsLocal = executor->AllocTensor(target->GetStorageShape(), target->GetOriginalShape(),
+                                                   DataType::DT_FLOAT, target->GetStorageFormat(),
+                                                   target->GetOriginalFormat());
+
+    auto predictedLogitsLocal = executor->AllocTensor(target->GetStorageShape(), target->GetOriginalShape(),
+                                                      DataType::DT_FLOAT, target->GetStorageFormat(),
+                                                      target->GetOriginalFormat());
 
     op::Shape targetMaskShape;
     int64_t dimSize0 = target->GetViewShape().GetDim(0);
     targetMaskShape.AppendDim((dimSize0 + BITS_PER_B8 - 1) / BITS_PER_B8);
-    auto targetMask = executor->AllocTensor(
-        targetMaskShape, targetMaskShape, DataType::DT_UINT8, target->GetStorageFormat(), target->GetOriginalFormat());
+    auto targetMask = executor->AllocTensor(targetMaskShape, targetMaskShape, DataType::DT_UINT8,
+                                            target->GetStorageFormat(), target->GetOriginalFormat());
 
-    auto maskedTarget = executor->AllocTensor(
-        target->GetStorageShape(), target->GetOriginalShape(), target->GetDataType(), target->GetStorageFormat(),
-        target->GetOriginalFormat());
+    auto maskedTarget = executor->AllocTensor(target->GetStorageShape(), target->GetOriginalShape(),
+                                              target->GetDataType(), target->GetStorageFormat(),
+                                              target->GetOriginalFormat());
 
     op::Shape vocabParallelLogitsOutShape;
     if (vocabParallelLogitsOutFlag) {
@@ -57,19 +58,19 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, acl
     } else {
         vocabParallelLogitsOutShape.AppendDim(0);
     }
-    auto vocabParallelLogitsOut = executor->AllocTensor(
-        vocabParallelLogitsOutShape, vocabParallelLogitsOutShape, input->GetDataType(), input->GetStorageFormat(),
-        input->GetOriginalFormat());
+    auto vocabParallelLogitsOut = executor->AllocTensor(vocabParallelLogitsOutShape, vocabParallelLogitsOutShape,
+                                                        input->GetDataType(), input->GetStorageFormat(),
+                                                        input->GetOriginalFormat());
 
     L0_DFX(FusedLinearOnlineMaxSum, input, weight, target, vocabStartIndex, vocabEndIndex, vocabParallelLogitsOutFlag,
            logitsMaxLocal, sumExpLogitsLocal, predictedLogitsLocal, targetMask, maskedTarget, vocabParallelLogitsOut);
 
     ADD_TO_LAUNCHER_LIST_AICORE(FusedLinearOnlineMaxSum, OP_INPUT(input, weight, target),
-        OP_OUTPUT(logitsMaxLocal, sumExpLogitsLocal, predictedLogitsLocal, targetMask, maskedTarget,
-                  vocabParallelLogitsOut),
-        OP_ATTR(vocabStartIndex, vocabEndIndex, vocabParallelLogitsOutFlag));
+                                OP_OUTPUT(logitsMaxLocal, sumExpLogitsLocal, predictedLogitsLocal, targetMask,
+                                          maskedTarget, vocabParallelLogitsOut),
+                                OP_ATTR(vocabStartIndex, vocabEndIndex, vocabParallelLogitsOutFlag));
 
     return std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*>(
         logitsMaxLocal, sumExpLogitsLocal, predictedLogitsLocal, targetMask, maskedTarget, vocabParallelLogitsOut);
 }
-}  // namespace l0op
+} // namespace l0op

@@ -76,10 +76,7 @@ int64_t RmsNormDynamicMxQuantRecomputeTiling::GetCacheId(int64_t idx) const
 // ============================================================
 // IsCapable: recompute 至少需要 numN >= baseN(64) 才能做一次 ub 间二分
 // ============================================================
-bool RmsNormDynamicMxQuantRecomputeTiling::IsCapable()
-{
-    return numN_ > baseN_;
-}
+bool RmsNormDynamicMxQuantRecomputeTiling::IsCapable() { return numN_ > baseN_; }
 
 // ============================================================
 // CalcMxQuantParams: 计算 mx quant 相关参数
@@ -99,19 +96,16 @@ ge::graphStatus RmsNormDynamicMxQuantRecomputeTiling::ExpandBaseN()
 {
     while (baseN_ * CONST_TWO <= numN_ && GetUbSize(baseN_ * CONST_TWO) <= ubSize_) {
         baseN_ *= CONST_TWO;
-        OP_LOGD(
-            context_->GetNodeName(), "baseN*2: %ld, GetUbSize: %ld, ubSize_: %ld.", baseN_ * 2, GetUbSize(baseN_ * 2),
-            ubSize_);
+        OP_LOGD(context_->GetNodeName(), "baseN*2: %ld, GetUbSize: %ld, ubSize_: %ld.", baseN_ * 2,
+                GetUbSize(baseN_ * 2), ubSize_);
     }
     OP_LOGI(context_->GetNodeName(), "baseN: %ld, GetUbSize: %ld, ubSize_: %ld.", baseN_, GetUbSize(baseN_), ubSize_);
 
-    OP_CHECK_IF(
-        GetUbSize(baseN_) > ubSize_,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "recompute_template: input shape (%ld, %ld) too large, UB required %ld > UB size %ld.", numM_, numN_,
-            GetUbSize(baseN_), ubSize_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetUbSize(baseN_) > ubSize_,
+                OP_LOGE(context_->GetNodeName(),
+                        "recompute_template: input shape (%ld, %ld) too large, UB required %ld > UB size %ld.", numM_,
+                        numN_, GetUbSize(baseN_), ubSize_),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -143,8 +137,9 @@ void RmsNormDynamicMxQuantRecomputeTiling::CalcNSplit(NSplitResult& result)
     }
 
     result.powerSplit = GetPowerSplit(baseN_, numN_);
-    result.mainFoldCount =
-        (static_cast<int64_t>(result.powerSplit) * baseN_ > numN_) ? 0 : (numN_ - result.powerSplit * baseN_) / baseN_;
+    result.mainFoldCount = (static_cast<int64_t>(result.powerSplit) * baseN_ > numN_) ?
+                               0 :
+                               (numN_ - result.powerSplit * baseN_) / baseN_;
     result.foldTail = numN_ % baseN_;
     result.resultCacheId = GetCacheId(result.powerSplit - 1);
 }
@@ -152,8 +147,8 @@ void RmsNormDynamicMxQuantRecomputeTiling::CalcNSplit(NSplitResult& result)
 // ============================================================
 // FillTilingData: 填充 tiling data
 // ============================================================
-void RmsNormDynamicMxQuantRecomputeTiling::FillTilingData(
-    const MxQuantParams& mxParams, const CoreSplitResult& coreSplit, const NSplitResult& nSplit)
+void RmsNormDynamicMxQuantRecomputeTiling::FillTilingData(const MxQuantParams& mxParams,
+                                                          const CoreSplitResult& coreSplit, const NSplitResult& nSplit)
 {
     tilingData_.usedCoreNum = usedCoreNum_;
     tilingData_.mPerCore = coreSplit.mPerCore;
@@ -198,10 +193,9 @@ ge::graphStatus RmsNormDynamicMxQuantRecomputeTiling::DoOpTiling()
 
     usedCoreNum_ = std::min(numM_, totalCoreNum_);
     if (usedCoreNum_ == 0) {
-        OP_LOGD(
-            context_->GetNodeName(),
-            "DoOpTiling failed, usedCoreNum must not be 0, input shape: (%ld, %ld), total core num: %ld.", numM_, numN_,
-            totalCoreNum_);
+        OP_LOGD(context_->GetNodeName(),
+                "DoOpTiling failed, usedCoreNum must not be 0, input shape: (%ld, %ld), total core num: %ld.", numM_,
+                numN_, totalCoreNum_);
         return ge::GRAPH_FAILED;
     }
 
@@ -213,12 +207,11 @@ ge::graphStatus RmsNormDynamicMxQuantRecomputeTiling::DoOpTiling()
 
     FillTilingData(mxParams, coreSplit, nSplit);
 
-    OP_LOGI(
-        context_->GetNodeName(),
-        "Recompute Tiling: usedCoreNum: %ld, numM: %ld, numN: %ld, baseM: %ld, baseN: %ld, mPerCore: %ld, "
-        "mTailCores: %ld, nUbLoops: %ld, binAddQuotient: %ld, powerSplit: %ld, mainFoldCount: %ld, foldTail: %ld.",
-        usedCoreNum_, numM_, numN_, baseM_, baseN_, coreSplit.mPerCore, coreSplit.mTailCores, nSplit.nUbLoops,
-        nSplit.binAddQuotient, nSplit.powerSplit, nSplit.mainFoldCount, nSplit.foldTail);
+    OP_LOGI(context_->GetNodeName(),
+            "Recompute Tiling: usedCoreNum: %ld, numM: %ld, numN: %ld, baseM: %ld, baseN: %ld, mPerCore: %ld, "
+            "mTailCores: %ld, nUbLoops: %ld, binAddQuotient: %ld, powerSplit: %ld, mainFoldCount: %ld, foldTail: %ld.",
+            usedCoreNum_, numM_, numN_, baseM_, baseN_, coreSplit.mPerCore, coreSplit.mTailCores, nSplit.nUbLoops,
+            nSplit.binAddQuotient, nSplit.powerSplit, nSplit.mainFoldCount, nSplit.foldTail);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -243,9 +236,8 @@ ge::graphStatus RmsNormDynamicMxQuantRecomputeTiling::PostTiling()
     workspaces[0] = workspaceSize_;
 
     size_t tilingDataSize = sizeof(tilingData_);
-    errno_t ret = memcpy_s(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&tilingData_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
     OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "memcpy_s failed."), return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 

@@ -17,7 +17,8 @@
 
 using namespace ge;
 namespace ops {
-[[maybe_unused]] static ge::graphStatus InferShapeForIndexPutV2(gert::InferShapeContext* context) {
+[[maybe_unused]] static ge::graphStatus InferShapeForIndexPutV2(gert::InferShapeContext* context)
+{
     auto in_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
     auto out_shape = context->GetOutputShape(0);
@@ -27,4 +28,4 @@ namespace ops {
 }
 
 IMPL_OP_INFERSHAPE(IndexPutV2).InferShape(InferShapeForIndexPutV2);
-}  // namespace ops
+} // namespace ops

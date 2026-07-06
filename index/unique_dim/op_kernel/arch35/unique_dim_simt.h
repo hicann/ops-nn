@@ -19,7 +19,7 @@ using namespace AscendC;
 constexpr int32_t SIMT_BLOCK_DIM = 256;
 constexpr int32_t ITEMS_PER_THREAD = 2;
 constexpr int32_t SIMT_TILE_SIZE = SIMT_BLOCK_DIM * ITEMS_PER_THREAD; // 512
-constexpr int32_t GM_BLOCK_DIM = 2048; // more threads for GM-bound ops (transpose, copy)
+constexpr int32_t GM_BLOCK_DIM = 2048;                                // more threads for GM-bound ops (transpose, copy)
 
 // ============================================================
 // Scalar compare helper: bf16/double use totalOrder via unsigned integer
@@ -30,14 +30,26 @@ constexpr int32_t GM_BLOCK_DIM = 2048; // more threads for GM-bound ops (transpo
 template <typename T, typename U>
 __simt_callee__ __aicore__ inline int SimtCompareTotalOrder(T lhs, T rhs, U signBit)
 {
-    U lu = *reinterpret_cast<const U *>(&lhs);
-    U ru = *reinterpret_cast<const U *>(&rhs);
-    if (lu == signBit) lu = 0;  // -0 → +0
-    if (ru == signBit) ru = 0;
-    if (lu & signBit) { lu = ~lu; } else { lu ^= signBit; }
-    if (ru & signBit) { ru = ~ru; } else { ru ^= signBit; }
-    if (lu < ru) return -1;
-    if (lu > ru) return 1;
+    U lu = *reinterpret_cast<const U*>(&lhs);
+    U ru = *reinterpret_cast<const U*>(&rhs);
+    if (lu == signBit)
+        lu = 0; // -0 → +0
+    if (ru == signBit)
+        ru = 0;
+    if (lu & signBit) {
+        lu = ~lu;
+    } else {
+        lu ^= signBit;
+    }
+    if (ru & signBit) {
+        ru = ~ru;
+    } else {
+        ru ^= signBit;
+    }
+    if (lu < ru)
+        return -1;
+    if (lu > ru)
+        return 1;
     return 0;
 }
 
@@ -46,16 +58,16 @@ template <typename T>
 __simt_callee__ __aicore__ inline bool SimtIsNan(T val)
 {
     if constexpr (IsSameType<T, bfloat16_t>::value) {
-        uint16_t u = *reinterpret_cast<const uint16_t *>(&val);
+        uint16_t u = *reinterpret_cast<const uint16_t*>(&val);
         return (u & 0x7F80U) == 0x7F80U && (u & 0x007FU) != 0;
     } else if constexpr (IsSameType<T, half>::value) {
-        uint16_t u = *reinterpret_cast<const uint16_t *>(&val);
+        uint16_t u = *reinterpret_cast<const uint16_t*>(&val);
         return (u & 0x7C00U) == 0x7C00U && (u & 0x03FFU) != 0;
     } else if constexpr (IsSameType<T, float>::value) {
-        uint32_t u = *reinterpret_cast<const uint32_t *>(&val);
+        uint32_t u = *reinterpret_cast<const uint32_t*>(&val);
         return (u & 0x7F800000U) == 0x7F800000U && (u & 0x007FFFFFU) != 0;
     } else if constexpr (IsSameType<T, double>::value) {
-        uint64_t u = *reinterpret_cast<const uint64_t *>(&val);
+        uint64_t u = *reinterpret_cast<const uint64_t*>(&val);
         return (u & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL && (u & 0x000FFFFFFFFFFFFFULL) != 0;
     } else {
         return false;
@@ -73,8 +85,10 @@ __simt_callee__ __aicore__ inline int SimtScalarCompare(T lhs, T rhs)
     } else if constexpr (IsSameType<T, double>::value) {
         return SimtCompareTotalOrder<T, uint64_t>(lhs, rhs, 0x8000000000000000ULL);
     } else {
-        if (lhs < rhs) return -1;
-        if (lhs > rhs) return 1;
+        if (lhs < rhs)
+            return -1;
+        if (lhs > rhs)
+            return 1;
         return 0;
     }
 }
@@ -85,7 +99,7 @@ __simt_callee__ __aicore__ inline int SimtScalarCompare(T lhs, T rhs)
 // Sentinel -1 sorts last (greater than any real index)
 // ============================================================
 template <typename T>
-__simt_callee__ __aicore__ inline int SimtRowCompare(__gm__ T *inputFlat, int64_t rowLen, int64_t a, int64_t b)
+__simt_callee__ __aicore__ inline int SimtRowCompare(__gm__ T* inputFlat, int64_t rowLen, int64_t a, int64_t b)
 {
     if (a == -1 && b == -1) {
         return 0;
@@ -110,7 +124,8 @@ __simt_callee__ __aicore__ inline int SimtRowCompare(__gm__ T *inputFlat, int64_
 // Dedup variant: same single-pass comparison, but also treats NaN as not-equal
 // (for sorting NaN compares equal to preserve stable order; for dedup NaN must be unique)
 template <typename T>
-__simt_callee__ __aicore__ inline int SimtRowCompareDedup(__gm__ T *dataPtr, int64_t rowSize, int64_t rowA, int64_t rowB)
+__simt_callee__ __aicore__ inline int SimtRowCompareDedup(__gm__ T* dataPtr, int64_t rowSize, int64_t rowA,
+                                                          int64_t rowB)
 {
     if (rowA == -1 && rowB == -1) {
         return 0;
@@ -138,8 +153,8 @@ __simt_callee__ __aicore__ inline int SimtRowCompareDedup(__gm__ T *dataPtr, int
 // ============================================================
 // Simt Phase 0: Initialize indices [0, 1, ..., numInp-1]
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtInitIndices(int64_t coreStart, int64_t coreLen, __gm__ uint32_t *indices)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtInitIndices(int64_t coreStart, int64_t coreLen,
+                                                                                __gm__ uint32_t* indices)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -159,8 +174,9 @@ inline void SimtInitIndices(int64_t coreStart, int64_t coreLen, __gm__ uint32_t 
 // ============================================================
 // Simt copy utility: dst[i] = src[i] for i in [start, end)
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtCopyRange(int64_t start, int64_t end, __gm__ uint32_t *src, __gm__ uint32_t *dst)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtCopyRange(int64_t start, int64_t end,
+                                                                              __gm__ uint32_t* src,
+                                                                              __gm__ uint32_t* dst)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -182,10 +198,10 @@ inline void SimtCopyRange(int64_t start, int64_t end, __gm__ uint32_t *src, __gm
 // Each core processes [coreStart, coreStart+coreLen) in the flat index space.
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM)
-inline void SimtTransposeDim(int64_t coreStart, int64_t coreLen,
-                              int64_t outerSize, int64_t dkSize, int64_t innerSize,
-                              __gm__ T *src, __gm__ T *dst)
+__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM) inline void SimtTransposeDim(int64_t coreStart, int64_t coreLen,
+                                                                               int64_t outerSize, int64_t dkSize,
+                                                                               int64_t innerSize, __gm__ T* src,
+                                                                               __gm__ T* dst)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -212,8 +228,8 @@ inline void SimtTransposeDim(int64_t coreStart, int64_t coreLen,
 // Simt flat copy: dst[i] = src[i] for i in [coreStart, coreStart+coreLen)
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM)
-inline void SimtCopyFlat(int64_t coreStart, int64_t coreLen, __gm__ T *src, __gm__ T *dst)
+__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM) inline void SimtCopyFlat(int64_t coreStart, int64_t coreLen,
+                                                                           __gm__ T* src, __gm__ T* dst)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -234,10 +250,10 @@ inline void SimtCopyFlat(int64_t coreStart, int64_t coreLen, __gm__ T *src, __gm
 // Simt Phase 3: Adjacent diff
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtAdjacentDiff(int64_t coreStart, int64_t coreLen,
-                             __gm__ uint32_t *indices, __gm__ uint32_t *flags,
-                             __gm__ T *inputFlat, int64_t rowLen)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtAdjacentDiff(int64_t coreStart, int64_t coreLen,
+                                                                                 __gm__ uint32_t* indices,
+                                                                                 __gm__ uint32_t* flags,
+                                                                                 __gm__ T* inputFlat, int64_t rowLen)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -264,10 +280,10 @@ inline void SimtAdjacentDiff(int64_t coreStart, int64_t coreLen,
 // ============================================================
 // Simt Phase 4 Step 1: Local inclusive scan within core
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtLocalScan(int64_t coreStart, int64_t coreLen,
-                          __gm__ uint32_t *flags, int64_t coreId,
-                          __gm__ uint32_t *partialSum, int64_t psStride)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtLocalScan(int64_t coreStart, int64_t coreLen,
+                                                                              __gm__ uint32_t* flags, int64_t coreId,
+                                                                              __gm__ uint32_t* partialSum,
+                                                                              int64_t psStride)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -291,10 +307,10 @@ inline void SimtLocalScan(int64_t coreStart, int64_t coreLen,
 // ============================================================
 // Simt Phase 4 Step 4: Add global prefix to local scan results
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtAddGlobalPrefix(int64_t coreStart, int64_t coreLen,
-                                __gm__ uint32_t *flags, int64_t coreId,
-                                __gm__ uint32_t *globalPrefix)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtAddGlobalPrefix(int64_t coreStart, int64_t coreLen,
+                                                                                    __gm__ uint32_t* flags,
+                                                                                    int64_t coreId,
+                                                                                    __gm__ uint32_t* globalPrefix)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -316,10 +332,10 @@ inline void SimtAddGlobalPrefix(int64_t coreStart, int64_t coreLen,
 // Simt Phase 5: Scatter inverse indices
 // Reads uint32_t workspace, writes int64_t output
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtScatterInverse(int64_t coreStart, int64_t coreLen,
-                               __gm__ uint32_t *sortedBackup, __gm__ uint32_t *flags,
-                               __gm__ int64_t *inverseOut)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtScatterInverse(int64_t coreStart, int64_t coreLen,
+                                                                                   __gm__ uint32_t* sortedBackup,
+                                                                                   __gm__ uint32_t* flags,
+                                                                                   __gm__ int64_t* inverseOut)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -341,11 +357,9 @@ inline void SimtScatterInverse(int64_t coreStart, int64_t coreLen,
 // ============================================================
 // Simt Phase 6: Unique detect
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtUniqueDetect(int64_t coreStart, int64_t coreLen,
-                             __gm__ uint32_t *indices, __gm__ uint32_t *flags,
-                             __gm__ uint32_t *compactKeys,
-                             __gm__ uint32_t *positions, int64_t returnCounts)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtUniqueDetect(
+    int64_t coreStart, int64_t coreLen, __gm__ uint32_t* indices, __gm__ uint32_t* flags, __gm__ uint32_t* compactKeys,
+    __gm__ uint32_t* positions, int64_t returnCounts)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -375,11 +389,10 @@ inline void SimtUniqueDetect(int64_t coreStart, int64_t coreLen,
 // Simt Gather rows
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM)
-inline void SimtGatherRows(int64_t eStart, int64_t eLen,
-                           __gm__ uint32_t *compactKeys,
-                           __gm__ T *inputFlat, __gm__ T *valueOut,
-                           int64_t rowLen)
+__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM) inline void SimtGatherRows(int64_t eStart, int64_t eLen,
+                                                                             __gm__ uint32_t* compactKeys,
+                                                                             __gm__ T* inputFlat, __gm__ T* valueOut,
+                                                                             int64_t rowLen)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -413,9 +426,9 @@ inline void SimtGatherRows(int64_t eStart, int64_t eLen,
 // Simt Compute Counts
 // Reads uint32_t positions, writes int64_t counts output
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtComputeCounts(int64_t cntStart, int64_t cntEnd,
-                              __gm__ uint32_t *positions, __gm__ int64_t *countsOut)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtComputeCounts(int64_t cntStart, int64_t cntEnd,
+                                                                                  __gm__ uint32_t* positions,
+                                                                                  __gm__ int64_t* countsOut)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -436,10 +449,9 @@ inline void SimtComputeCounts(int64_t cntStart, int64_t cntEnd,
 // Simt global prefix scan (Phase 4 Step 2)
 // Thread 0 scans partialSum, writes globalPrefix and totalUnique
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtGlobalPrefixScan(int64_t coreNum, int64_t psStride,
-                                  __gm__ uint32_t *partialSum,
-                                  __gm__ uint32_t *globalPrefix)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtGlobalPrefixScan(int64_t coreNum, int64_t psStride,
+                                                                                     __gm__ uint32_t* partialSum,
+                                                                                     __gm__ uint32_t* globalPrefix)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -464,8 +476,8 @@ inline void SimtGlobalPrefixScan(int64_t coreNum, int64_t psStride,
 // ============================================================
 // Simt write single uint32_t value
 // ============================================================
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtWriteValue(__gm__ uint32_t *dst, int64_t offset, uint32_t value)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtWriteValue(__gm__ uint32_t* dst, int64_t offset,
+                                                                               uint32_t value)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);

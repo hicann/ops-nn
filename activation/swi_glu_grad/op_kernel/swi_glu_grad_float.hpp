@@ -17,7 +17,7 @@
 #include "kernel_operator.h"
 
 using namespace AscendC;
-template<typename aType, typename bType, typename lType, typename mType, typename nType, uint16_t bufferNum>
+template <typename aType, typename bType, typename lType, typename mType, typename nType, uint16_t bufferNum>
 class SwiGluGradVector {
 public:
     __aicore__ inline SwiGluGradVector() {}
@@ -44,7 +44,7 @@ protected:
     GlobalTensor<nType> nGm;
 };
 
-template<typename aType, typename bType, typename lType, typename mType, typename nType, uint16_t bufferNum>
+template <typename aType, typename bType, typename lType, typename mType, typename nType, uint16_t bufferNum>
 __aicore__ inline void SwiGluGradVector<aType, bType, lType, mType, nType, bufferNum>::InitUbBuffer(uint64_t tileLength)
 {
     // pipe alloc memory to queue, the unit is Bytes
@@ -60,13 +60,13 @@ __aicore__ inline void SwiGluGradVector<aType, bType, lType, mType, nType, buffe
     sigLocal = sigQueue.Get<float>();
 }
 
-template<typename aType, typename bType, typename lType, typename mType, typename nType, uint16_t bufferNum>
+template <typename aType, typename bType, typename lType, typename mType, typename nType, uint16_t bufferNum>
 __aicore__ inline void SwiGluGradVector<aType, bType, lType, mType, nType, bufferNum>::Compute(uint64_t tileLength)
 {
     // tbuf::templocaltensor
     // deque input tensors from VECIN queue
-    //calc sigLocal
-    LocalTensor<aType> aLocal = inQueueA.template DeQue<aType>(); //input a
+    // calc sigLocal
+    LocalTensor<aType> aLocal = inQueueA.template DeQue<aType>(); // input a
     Muls(sigLocal, aLocal, beta, tileLength);
     PipeBarrier<PIPE_V>();
     Exp(sigLocal, sigLocal, tileLength);
@@ -97,7 +97,7 @@ __aicore__ inline void SwiGluGradVector<aType, bType, lType, mType, nType, buffe
 
     Muls(mLocal, mLocal, -beta, tileLength);
     Add(mLocal, mLocal, sigLocal, tileLength);
-    LocalTensor<bType> bLocal = inQueueB.template DeQue<bType>(); //input b
+    LocalTensor<bType> bLocal = inQueueB.template DeQue<bType>(); // input b
     Mul(mLocal, mLocal, bLocal, tileLength);
     inQueueB.template FreeTensor(bLocal);
 

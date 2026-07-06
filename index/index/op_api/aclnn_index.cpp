@@ -91,14 +91,14 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_DOUBLE, op::DataType::DT_INT16};
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_REGBASE = {
-    op::DataType::DT_FLOAT,  op::DataType::DT_FLOAT16, op::DataType::DT_INT64, op::DataType::DT_INT32,
-    op::DataType::DT_BOOL,   op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16,
+    op::DataType::DT_FLOAT,  op::DataType::DT_FLOAT16, op::DataType::DT_INT64,    op::DataType::DT_INT32,
+    op::DataType::DT_BOOL,   op::DataType::DT_INT8,    op::DataType::DT_UINT8,    op::DataType::DT_BF16,
     op::DataType::DT_DOUBLE, op::DataType::DT_INT16,   op::DataType::DT_COMPLEX64};
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBASE = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64, op::DataType::DT_INT32,
-    op::DataType::DT_BOOL,  op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16,
-    op::DataType::DT_COMPLEX64};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64,
+    op::DataType::DT_INT32, op::DataType::DT_BOOL,    op::DataType::DT_INT8,
+    op::DataType::DT_UINT8, op::DataType::DT_BF16,    op::DataType::DT_COMPLEX64};
 
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT64, op::DataType::DT_INT32, op::DataType::DT_BOOL};
@@ -169,9 +169,8 @@ static void CheckShape(const aclTensor* self, const aclTensorList* indices)
     }
     bool indicesSizeInvalid = (selfDimNum > 0 && indicesSize > selfDimNum);
     if (indicesSizeInvalid) {
-        OP_LOGW(
-            "indices size must not greater than self dim nums, bug got indices size %zu and self dim nums %zu",
-            indicesSize, selfDimNum);
+        OP_LOGW("indices size must not greater than self dim nums, bug got indices size %zu and self dim nums %zu",
+                indicesSize, selfDimNum);
     }
 }
 
@@ -244,8 +243,8 @@ static const inline std::initializer_list<DataType>& GetAicoreSupportDtypeList()
     return AICORE_DTYPE_SUPPORT_LIST;
 }
 
-bool check_index_aicore(
-    const aclTensor* self, const FVector<const aclTensor*, 8>& indices, const FVector<int64_t, 8>& masks)
+bool check_index_aicore(const aclTensor* self, const FVector<const aclTensor*, 8>& indices,
+                        const FVector<int64_t, 8>& masks)
 {
     // indices don't support bool
     for (size_t idx = 0; idx < indices.size(); idx++) {
@@ -276,19 +275,17 @@ bool check_index_aicore(
         }
     }
 
-    bool dataSizeInvalid =
-        ((curArch != NpuArch::DAV_2201 &&
-          (!isRegbase)) &&
-         self->GetViewShape().GetDimNum() == indices.size() &&
-         indices[0]->GetViewShape().GetShapeSize() > DATA_LIMIT_MULTI_INDEX);
+    bool dataSizeInvalid = ((curArch != NpuArch::DAV_2201 && (!isRegbase)) &&
+                            self->GetViewShape().GetDimNum() == indices.size() &&
+                            indices[0]->GetViewShape().GetShapeSize() > DATA_LIMIT_MULTI_INDEX);
     if (dataSizeInvalid) {
         return false;
     }
     return true;
 }
 
-static op::ShapeVector GetTransposedOutputShape(
-    const FVector<const aclTensor*, 8>& allDefinedIndices, const aclTensor* self, int64_t masksNum, int64_t indicesNum)
+static op::ShapeVector GetTransposedOutputShape(const FVector<const aclTensor*, 8>& allDefinedIndices,
+                                                const aclTensor* self, int64_t masksNum, int64_t indicesNum)
 {
     // construct output shape after transpose
     op::ShapeVector transposedOutputShape;
@@ -341,7 +338,8 @@ static bool IsUseNonContiguous(const aclTensor* self, const aclTensorList* indic
     return check_index_aicore(self, allDefinedIndices, masks);
 }
 
-IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* executor, bool isNonContiguous){
+IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* executor, bool isNonContiguous)
+{
     IndicesInfo indicesInfo;
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     // 封装输入输出Tensor
@@ -351,9 +349,9 @@ IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* 
         if (curIndice->GetViewShape().GetShapeSize() != 0) {
             indicesInfo.indicesNum += 1;
             if (isNonContiguous) {
-                auto indexNonContiguous = executor->CreateView(
-                    curIndice, curIndice->GetViewShape(), curIndice->GetStorageShape(), curIndice->GetViewStrides(),
-                    curIndice->GetViewOffset());
+                auto indexNonContiguous = executor->CreateView(curIndice, curIndice->GetViewShape(),
+                                                               curIndice->GetStorageShape(),
+                                                               curIndice->GetViewStrides(), curIndice->GetViewOffset());
                 indicesInfo.allDefinedIndices.emplace_back(indexNonContiguous);
             } else {
                 auto indexContiguous = l0op::Contiguous(curIndice, executor);
@@ -366,12 +364,14 @@ IndicesInfo ProcessIndicesAndMasks(const aclTensorList* indices, aclOpExecutor* 
         indicesInfo.masksNum += 1;
     }
 
-    indicesInfo.indicesDim = indicesInfo.indicesNum > 0 ? indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum() : 0UL;
+    indicesInfo.indicesDim = indicesInfo.indicesNum > 0 ? indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum() :
+                                                          0UL;
     OP_LOGI("masksNum is %zu, indicesNum is %zu", indicesInfo.masksNum, indicesInfo.indicesNum);
     return indicesInfo;
 }
 
-ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesInfo& indicesInfo){
+ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesInfo& indicesInfo)
+{
     ChooseInfo chooseInfo;
     size_t xDim = self->GetViewShape().GetDimNum();
     auto indicesDim = indicesInfo.indicesDim;
@@ -400,19 +400,22 @@ ChooseInfo CalculateOutputShapeAndTransposeFlag(const aclTensor* self, IndicesIn
     chooseInfo.isAicore = check_index_aicore(self, indicesInfo.allDefinedIndices, indicesInfo.masks);
     // small tail size will use transpose
     bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
-    chooseInfo.isNeedTranspose = chooseInfo.isAicore && indicesInfo.masksNum > indicesInfo.indicesNum && chooseInfo.tailSize < TAIL_SIZE_LIMIT && !isRegbase;
+    chooseInfo.isNeedTranspose = chooseInfo.isAicore && indicesInfo.masksNum > indicesInfo.indicesNum &&
+                                 chooseInfo.tailSize < TAIL_SIZE_LIMIT && !isRegbase;
     if (chooseInfo.isNeedTranspose) {
         indicesInfo.masks.clear();
         for (int64_t i = 0; i < indicesInfo.indicesNum; i++) {
-           indicesInfo.masks.emplace_back(1);
+            indicesInfo.masks.emplace_back(1);
         }
     }
     return chooseInfo;
 }
 
-const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const IndicesInfo& indicesInfo, const ChooseInfo& chooseInfo, aclOpExecutor* executor) {
+const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const IndicesInfo& indicesInfo,
+                            const ChooseInfo& chooseInfo, aclOpExecutor* executor)
+{
     const aclTensor* selfContiguous = nullptr;
-    if (!chooseInfo.isNonContiguous){
+    if (!chooseInfo.isNonContiguous) {
         selfContiguous = l0op::Contiguous(self, executor);
         CHECK_RET(selfContiguous != nullptr, nullptr);
     }
@@ -434,8 +437,8 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
         auto indicesDimNum = indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum();
         auto perm = GetPerm(indicesInfo.masksNum, indicesInfo.indicesNum, selfDimNum, executor);
         selfContiguous = l0op::Transpose(selfContiguous, perm, executor);
-        opOut = l0op::IndexAiCore(
-            selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+        opOut = l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape,
+                                  IndicesTensorList, executor);
         auto permBack = GetPermBack(indicesInfo.masksNum - indicesInfo.indicesNum, indicesDimNum, outDimNum, executor);
         opOut = l0op::Transpose(opOut, permBack, executor);
     } else if (aicoreNotNeedTranspose) {
@@ -444,13 +447,13 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
         if (isOutEqualSelf) {
             opOut = selfContiguous;
         } else if (chooseInfo.isNonContiguous) {
-            auto newself = executor->CreateView(
-                self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
-            opOut = l0op::IndexAiCore(
-                newself, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+            auto newself = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(),
+                                                self->GetViewStrides(), self->GetViewOffset());
+            opOut = l0op::IndexAiCore(newself, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList,
+                                      executor);
         } else {
-            opOut = l0op::IndexAiCore(
-                selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+            opOut = l0op::IndexAiCore(selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape,
+                                      IndicesTensorList, executor);
         }
     } else {
         if (self->GetDataType() == op::DataType::DT_COMPLEX64) {
@@ -460,16 +463,15 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
         if (selfContiguous->GetViewShape().GetDimNum() == 0) {
             opOut = selfContiguous;
         } else {
-            opOut = l0op::IndexAiCpu(
-                selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
+            opOut = l0op::IndexAiCpu(selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape,
+                                     IndicesTensorList, executor);
         }
     }
     return opOut;
 }
 
-aclnnStatus aclnnIndexGetWorkspaceSize(
-    const aclTensor* self, const aclTensorList* indices, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorList* indices, aclTensor* out,
+                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnIndex, DFX_IN(self, indices), DFX_OUT(out));
@@ -496,17 +498,18 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
             for (int64_t i = 0; i < indicesSize; ++i) {
                 const aclTensor* curIndices = (*indices)[i];
                 op::DataType curDataType = curIndices->GetDataType();
-                if (!curIndices->IsEmpty() && (curDataType == op::DataType::DT_INT64 || curDataType == op::DataType::DT_INT32)) {
+                if (!curIndices->IsEmpty() &&
+                    (curDataType == op::DataType::DT_INT64 || curDataType == op::DataType::DT_INT32)) {
                     const aclTensor* curIndicesTensor = l0op::Contiguous(curIndices, uniqueExecutor.get());
                     CHECK_RET(curIndicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
                     indicesTensors.emplace_back(curIndicesTensor);
                     dimMask.emplace_back(true);
-                }
-                else{
+                } else {
                     dimMask.emplace_back(false);
                 }
             }
-            aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesTensors.size());
+            aclTensorList* IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(),
+                                                                                     indicesTensors.size());
             CHECK_RET(IndicesTensorList != nullptr, ACLNN_ERR_INNER_NULLPTR);
             FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
             for (size_t i = 0; i < dimMask.size(); i++) {
@@ -515,13 +518,14 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
                     boundsVec.emplace_back(bound);
                 }
             }
-            aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
-            const aclTensor *boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
+            aclIntArray* boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
+            const aclTensor* boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray,
+                                                                                  op::ToOpDataType(ACL_INT64));
             CHECK_RET(boundsTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
             l0op::IndexCheck(boundsTensor, IndicesTensorList, uniqueExecutor.get());
         }
     }
-    
+
     bool isNonContiguous = IsUseNonContiguous(self, indices);
     OP_LOGI("isNonContiguous is %s", isNonContiguous ? "true" : "false");
 
@@ -530,12 +534,14 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
     ChooseInfo chooseInfo = CalculateOutputShapeAndTransposeFlag(self, indicesInfo);
     chooseInfo.isNonContiguous = isNonContiguous;
     if (chooseInfo.outputDim > MAX_DIM_LEN) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Outputshape Dim should be less than or equal 8, but got [%zu]", chooseInfo.outputDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Outputshape Dim should be less than or equal 8, but got [%zu]",
+                chooseInfo.outputDim);
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // construct output shape after transpose
-    op::ShapeVector transposedOutputShape = GetTransposedOutputShape(indicesInfo.allDefinedIndices, self, indicesInfo.masksNum, indicesInfo.indicesNum);
+    op::ShapeVector transposedOutputShape = GetTransposedOutputShape(indicesInfo.allDefinedIndices, self,
+                                                                     indicesInfo.masksNum, indicesInfo.indicesNum);
     if (chooseInfo.isNeedTranspose == 1) {
         ToShape(transposedOutputShape, chooseInfo.outputShape);
         chooseInfo.permMasksNum = indicesInfo.indicesNum;

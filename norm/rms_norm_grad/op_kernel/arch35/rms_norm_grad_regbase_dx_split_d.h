@@ -25,13 +25,12 @@ using namespace AscendC;
 template <typename T_DY, typename T_X, typename T_GAMMA, typename T_DGAMMA>
 class RegbaseDxSplitD {
 public:
-        __aicore__ inline RegbaseDxSplitD(TPipe* pipe, const RmsNormGradRegbaseDxTilingData* tilingData)
+    __aicore__ inline RegbaseDxSplitD(TPipe* pipe, const RmsNormGradRegbaseDxTilingData* tilingData)
         : Ppipe_(pipe), tiling_(tilingData)
     {}
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma, __gm__ uint8_t* dx,
-        __gm__ uint8_t* dgamma)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma,
+                                __gm__ uint8_t* dx, __gm__ uint8_t* dgamma)
     {
         usedCoreNum_ = tiling_->usedCoreNumDx;
         uint32_t coreIdx = GetBlockIdx();
@@ -123,8 +122,8 @@ public:
         Duplicate(level2Local, 0.0f, ONCE_VECTOR_SIZE);
     }
 
-    __aicore__ inline void ComputeIntoMultiLevel(
-        int64_t count, uint32_t& level0Offset, uint32_t& level1Offset, uint32_t& level2Offset)
+    __aicore__ inline void ComputeIntoMultiLevel(int64_t count, uint32_t& level0Offset, uint32_t& level1Offset,
+                                                 uint32_t& level2Offset)
     {
         LocalTensor<float> level0Local = level0Buf_.Get<float>();
         LocalTensor<float> level1Local = level1Buf_.Get<float>();
@@ -217,7 +216,8 @@ public:
                 if constexpr (IsBody) {
                     DataCopy(reduceAddr + static_cast<uint32_t>(i * oneRepeat), mulReg3, maskReg);
                 } else {
-                    DataCopy(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3, maskReg); // 注意补零
+                    DataCopy(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3,
+                             maskReg); // 注意补零
                 }
             }
         }
@@ -227,8 +227,8 @@ public:
         inQueueX_.FreeTensor(xLocal);
     }
 
-    __aicore__ inline void WholeReduceSum(
-        LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t count, int32_t dstOffset)
+    __aicore__ inline void WholeReduceSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t count,
+                                          int32_t dstOffset)
     {
         // 对齐到512BYTE, reduce需要
         int64_t countBlockAlign = AlignUp(count, FLOAT_NUM_BLOCK); // 搬入已对齐
@@ -294,7 +294,8 @@ public:
                 } else {
                     RegTensor<T_X> dxRegB16;
                     Cast<T_X, float, castTraitB322B16>(dxRegB16, dxReg, maskReg);
-                    DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegB16, maskReg);
+                    DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegB16,
+                                                            maskReg);
                 }
             }
         }

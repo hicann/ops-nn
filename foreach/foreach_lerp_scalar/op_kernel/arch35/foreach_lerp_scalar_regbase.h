@@ -30,15 +30,13 @@ constexpr float FLOAT_NUM_NEG = -0.5f;
 constexpr float FLOAT_NUM_POS = 0.5f;
 constexpr float FLOAT_NUM_ONE = 1.0f;
 template <typename T, typename Tiling>
-class ForeachLerpScalarRegbase : public ForeachRegbaseBinary<T, Tiling, ForeachLerpScalarRegbase<T, Tiling>>
-{
+class ForeachLerpScalarRegbase : public ForeachRegbaseBinary<T, Tiling, ForeachLerpScalarRegbase<T, Tiling>> {
 public:
     using Base = ForeachRegbaseBinary<T, Tiling, ForeachLerpScalarRegbase<T, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachLerpScalarRegbase() : Base(*this){};
-    __aicore__ inline void Init(
-        GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR weight, GM_ADDR outputs, GM_ADDR workspace, const Tiling* tilingData,
-        TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR weight, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(tensor1, tensor2, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ float*)weight, 1);
@@ -46,8 +44,8 @@ public:
     }
 
     template <bool needExchange>
-    __aicore__ inline void DoCompute(
-        LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal, LocalTensor<T> outLocal, int64_t dataCount)
+    __aicore__ inline void DoCompute(LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal,
+                                     LocalTensor<T> outLocal, int64_t dataCount)
     {
         // tensor1 + weight * (tensor2 - tensor1)
         // tensor2 + (tensor2 - tensor1) * (weight - 1)
@@ -83,8 +81,8 @@ public:
         }
     }
 
-    __aicore__ inline void Compute(
-        LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal, LocalTensor<T> outLocal, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T> tensorOneLocal, LocalTensor<T> tensorTwoLocal,
+                                   LocalTensor<T> outLocal, int64_t dataCount)
     {
         if (weightVal_ < FLOAT_NUM_POS && weightVal_ > FLOAT_NUM_NEG) {
             DoCompute<true>(tensorOneLocal, tensorTwoLocal, outLocal, dataCount);

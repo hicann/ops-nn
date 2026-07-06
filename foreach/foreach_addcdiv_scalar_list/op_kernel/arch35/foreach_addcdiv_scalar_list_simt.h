@@ -44,21 +44,14 @@ __aicore__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx
 // ========== float32 direct compute VF kernel ==========
 
 template <typename T, typename MidT = T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAddcdivScalarListSimtKernel(
-    int64_t perTensorElementNum,
-    __gm__ MidT* x1_i_gm,
-    __gm__ MidT* x2_i_gm,
-    __gm__ MidT* x3_i_gm,
-    __gm__ MidT* scalars_gm,
-    __gm__ MidT* y_i_gm,
-    int32_t tensorIdx)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScalarListSimtKernel(
+    int64_t perTensorElementNum, __gm__ MidT* x1_i_gm, __gm__ MidT* x2_i_gm, __gm__ MidT* x3_i_gm,
+    __gm__ MidT* scalars_gm, __gm__ MidT* y_i_gm, int32_t tensorIdx)
 {
     MidT scalar_val = scalars_gm[tensorIdx];
 
-    for (uint64_t index = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum()
-            + AscendC::Simt::GetThreadIdx());
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                                AscendC::Simt::GetThreadIdx());
          index < static_cast<uint64_t>(perTensorElementNum);
          index += static_cast<uint32_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         MidT x1_val = x1_i_gm[index];
@@ -74,22 +67,15 @@ inline void OpForeachAddcdivScalarListSimtKernel(
 
 // ========== float16 VF kernel (float32 intermediate compute) ==========
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAddcdivScalarListFp16SimtKernel(
-    int64_t perTensorElementNum,
-    __gm__ half* x1_i_gm,
-    __gm__ half* x2_i_gm,
-    __gm__ half* x3_i_gm,
-    __gm__ half* scalars_gm,
-    __gm__ half* y_i_gm,
-    int32_t tensorIdx)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScalarListFp16SimtKernel(
+    int64_t perTensorElementNum, __gm__ half* x1_i_gm, __gm__ half* x2_i_gm, __gm__ half* x3_i_gm,
+    __gm__ half* scalars_gm, __gm__ half* y_i_gm, int32_t tensorIdx)
 {
     half scalarFp16 = scalars_gm[tensorIdx];
     float scalar_val = static_cast<float>(scalarFp16);
 
-    for (uint64_t index = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum()
-            + AscendC::Simt::GetThreadIdx());
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                                AscendC::Simt::GetThreadIdx());
          index < static_cast<uint64_t>(perTensorElementNum);
          index += static_cast<uint32_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         // Read half inputs, promote to float32 for intermediate computation
@@ -108,22 +94,15 @@ inline void OpForeachAddcdivScalarListFp16SimtKernel(
 
 // ========== bfloat16 VF kernel (float32 intermediate compute) ==========
 
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAddcdivScalarListBf16SimtKernel(
-    int64_t perTensorElementNum,
-    __gm__ bfloat16_t* x1_i_gm,
-    __gm__ bfloat16_t* x2_i_gm,
-    __gm__ bfloat16_t* x3_i_gm,
-    __gm__ bfloat16_t* scalars_gm,
-    __gm__ bfloat16_t* y_i_gm,
-    int32_t tensorIdx)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcdivScalarListBf16SimtKernel(
+    int64_t perTensorElementNum, __gm__ bfloat16_t* x1_i_gm, __gm__ bfloat16_t* x2_i_gm, __gm__ bfloat16_t* x3_i_gm,
+    __gm__ bfloat16_t* scalars_gm, __gm__ bfloat16_t* y_i_gm, int32_t tensorIdx)
 {
     bfloat16_t scalarBf16 = scalars_gm[tensorIdx];
     float scalar_val = static_cast<float>(scalarBf16);
 
-    for (uint64_t index = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum()
-            + AscendC::Simt::GetThreadIdx());
+    for (uint64_t index = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                                AscendC::Simt::GetThreadIdx());
          index < static_cast<uint64_t>(perTensorElementNum);
          index += static_cast<uint32_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         float x1_val = static_cast<float>(x1_i_gm[index]);
@@ -141,13 +120,11 @@ inline void OpForeachAddcdivScalarListBf16SimtKernel(
 // ========== float32 Process function ==========
 
 template <typename T, typename MidT = T>
-__aicore__ inline void Process(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3,
-    GM_ADDR scalars, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
+                               GM_ADDR tiling)
 {
-    __gm__ const ForeachAddcdivScalarListTilingData* tilingData =
-        reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
+    __gm__ const ForeachAddcdivScalarListTilingData*
+        tilingData = reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
     __gm__ MidT* scalars_gm = reinterpret_cast<__gm__ MidT*>(scalars);
 
     for (int32_t i = 0; i < tilingData->tensorNum; i++) {
@@ -159,23 +136,20 @@ __aicore__ inline void Process(
         __gm__ MidT* x1_i_gm = SimtGetTensorAddr<MidT>(x1, i);
         __gm__ MidT* x2_i_gm = SimtGetTensorAddr<MidT>(x2, i);
         __gm__ MidT* x3_i_gm = SimtGetTensorAddr<MidT>(x3, i);
-        __gm__ MidT* y_i_gm  = SimtGetTensorAddr<MidT>(y, i);
+        __gm__ MidT* y_i_gm = SimtGetTensorAddr<MidT>(y, i);
 
         AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListSimtKernel<T, MidT>>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
+            AscendC::Simt::Dim3(THREAD_NUM), elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
     }
 }
 
 // ========== float16 Process function (float32 intermediate compute) ==========
 
-__aicore__ inline void ProcessFp16(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3,
-    GM_ADDR scalars, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void ProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
+                                   GM_ADDR tiling)
 {
-    __gm__ const ForeachAddcdivScalarListTilingData* tilingData =
-        reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
+    __gm__ const ForeachAddcdivScalarListTilingData*
+        tilingData = reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
     __gm__ half* scalars_gm = reinterpret_cast<__gm__ half*>(scalars);
 
     for (int32_t i = 0; i < tilingData->tensorNum; i++) {
@@ -187,23 +161,20 @@ __aicore__ inline void ProcessFp16(
         __gm__ half* x1_i_gm = SimtGetTensorAddr<half>(x1, i);
         __gm__ half* x2_i_gm = SimtGetTensorAddr<half>(x2, i);
         __gm__ half* x3_i_gm = SimtGetTensorAddr<half>(x3, i);
-        __gm__ half* y_i_gm  = SimtGetTensorAddr<half>(y, i);
+        __gm__ half* y_i_gm = SimtGetTensorAddr<half>(y, i);
 
         AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListFp16SimtKernel>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
+            AscendC::Simt::Dim3(THREAD_NUM), elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
     }
 }
 
 // ========== bfloat16 Process function ==========
 
-__aicore__ inline void ProcessBf16(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3,
-    GM_ADDR scalars, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void ProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR workspace,
+                                   GM_ADDR tiling)
 {
-    __gm__ const ForeachAddcdivScalarListTilingData* tilingData =
-        reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
+    __gm__ const ForeachAddcdivScalarListTilingData*
+        tilingData = reinterpret_cast<__gm__ const ForeachAddcdivScalarListTilingData*>(tiling);
     __gm__ bfloat16_t* scalars_gm = reinterpret_cast<__gm__ bfloat16_t*>(scalars);
 
     for (int32_t i = 0; i < tilingData->tensorNum; i++) {
@@ -215,11 +186,10 @@ __aicore__ inline void ProcessBf16(
         __gm__ bfloat16_t* x1_i_gm = SimtGetTensorAddr<bfloat16_t>(x1, i);
         __gm__ bfloat16_t* x2_i_gm = SimtGetTensorAddr<bfloat16_t>(x2, i);
         __gm__ bfloat16_t* x3_i_gm = SimtGetTensorAddr<bfloat16_t>(x3, i);
-        __gm__ bfloat16_t* y_i_gm  = SimtGetTensorAddr<bfloat16_t>(y, i);
+        __gm__ bfloat16_t* y_i_gm = SimtGetTensorAddr<bfloat16_t>(y, i);
 
         AscendC::Simt::VF_CALL<OpForeachAddcdivScalarListBf16SimtKernel>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
+            AscendC::Simt::Dim3(THREAD_NUM), elementNum, x1_i_gm, x2_i_gm, x3_i_gm, scalars_gm, y_i_gm, i);
     }
 }
 

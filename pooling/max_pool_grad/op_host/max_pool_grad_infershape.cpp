@@ -58,24 +58,22 @@ static ge::graphStatus CheckAttrsValid(const gert::InferShapeContext* context)
 
     auto strides = attrs->GetListInt(STRIDES_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        strides->GetSize() != NCHW_DIM_NUM,
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(), "4"),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(strides->GetSize() != NCHW_DIM_NUM,
+                OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
+                                             std::to_string(strides->GetSize()).c_str(), "4"),
+                return GRAPH_FAILED);
 
     const char* padding = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, padding);
     std::string paddingStr = padding;
-    OP_CHECK_IF(
-        paddingStr != "VALID" && paddingStr != "SAME",
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding", paddingStr.c_str(), "VALID or SAME"),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(paddingStr != "VALID" && paddingStr != "SAME",
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding", paddingStr.c_str(), "VALID or SAME"),
+                return GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus HandleUnknownShape(
-    const gert::InferShapeContext* context, const gert::Shape* x1Shape, const gert::Shape* x2Shape,
-    const gert::Shape* gradShape, gert::Shape* yShape)
+static ge::graphStatus HandleUnknownShape(const gert::InferShapeContext* context, const gert::Shape* x1Shape,
+                                          const gert::Shape* x2Shape, const gert::Shape* gradShape, gert::Shape* yShape)
 {
     size_t x1DimNum = x1Shape->GetDimNum();
     if (Ops::Base::IsUnknownShape(*x1Shape) || Ops::Base::IsUnknownShape(*x2Shape) ||
@@ -104,10 +102,10 @@ ge::graphStatus InferShapeForMaxPoolGrad(gert::InferShapeContext* context)
     auto x1Desc = context->GetInputDesc(X1_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1Desc);
     auto xOriFormat = x1Desc->GetOriginFormat();
-    OP_CHECK_IF(
-        xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC,
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(xOriFormat).c_str(), "ND, NCHW, NHWC"),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC,
+                OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
+                                           ge::TypeUtils::FormatToSerialString(xOriFormat).c_str(), "ND, NCHW, NHWC"),
+                return GRAPH_FAILED);
 
     ge::graphStatus ret = CheckAttrsValid(context);
     if (ret != GRAPH_SUCCESS) {

@@ -17,22 +17,19 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
-class LogSoftmaxV2TilingARRecompute : public LogSoftmaxV2TilingBase, public SoftmaxV2TilingARRecompute
-{
+class LogSoftmaxV2TilingARRecompute : public LogSoftmaxV2TilingBase, public SoftmaxV2TilingARRecompute {
 public:
     explicit LogSoftmaxV2TilingARRecompute(gert::TilingContext* context)
         : TilingBaseClass(context),
           SoftmaxV2TilingBase(context),
           LogSoftmaxV2TilingBase(context),
           SoftmaxV2TilingARRecompute(context)
-    {
-    }
+    {}
 
     ~LogSoftmaxV2TilingARRecompute() override = default;
 };
 
 REGISTER_OPS_TILING_TEMPLATE(LogSoftmaxV2, LogSoftmaxV2TilingARRecompute, TEMPLATE_AR_RECOMPUTE_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

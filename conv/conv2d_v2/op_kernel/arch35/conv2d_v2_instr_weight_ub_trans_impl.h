@@ -25,13 +25,9 @@ using namespace AscendC;
 template <class Intf>
 class WeightLoadGM2UBTools {
 public:
-    __aicore__ inline WeightLoadGM2UBTools()
-    {}
+    __aicore__ inline WeightLoadGM2UBTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
     __aicore__ inline void LoadGM2UB()
     {
@@ -51,10 +47,8 @@ private:
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = 1;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP0_INDEX] = 1;
             // NDDMA Loop1 params
-            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] =
-                self_->ctx.convTilingData->coutOffsetBlock;
-            copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] =
-                self_->ctx.convTilingData->bUbKStep;
+            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->coutOffsetBlock;
+            copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->bUbKStep;
             copyParams.constantValue = 0;
         }
         // NDDMA Loop0 params
@@ -65,20 +59,20 @@ private:
         copyParams.loopInfo.loopRpSize[NDDMA_LOOP1_INDEX] = self_->ctx.currentNLoopRpSize;
 
         uint64_t srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-            self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep) *
-            self_->ctx.convTilingData->coutOffsetBlock +
-            self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 +
-            self_->ctx.vecKIter * self_->ctx.convTilingData->bUbKStep;
+                              self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep) *
+                                 self_->ctx.convTilingData->coutOffsetBlock +
+                             self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 +
+                             self_->ctx.vecKIter * self_->ctx.convTilingData->bUbKStep;
 
         LocalTensor<NddmaT> ndTensorNddma = self_->ctx.ndUbBuf.template Get<NddmaT>();
         if constexpr (sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8) {
             GlobalTensor<NddmaT> bgmNddma;
-            bgmNddma.SetGlobalBuffer((__gm__ NddmaT *)self_->ctx.bgm.GetPhyAddr());
-            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(
-                ndTensorNddma, bgmNddma[srcOffset], copyParams);
+            bgmNddma.SetGlobalBuffer((__gm__ NddmaT*)self_->ctx.bgm.GetPhyAddr());
+            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(ndTensorNddma, bgmNddma[srcOffset],
+                                                                           copyParams);
         } else {
-            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(
-                ndTensorNddma, self_->ctx.bgm[srcOffset], copyParams);
+            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(ndTensorNddma, self_->ctx.bgm[srcOffset],
+                                                                           copyParams);
         }
     }
 
@@ -86,24 +80,24 @@ private:
     {
         repeatParams.blockLen = self_->ctx.currentUbKStep / Intf::k0;
         repeatParams.blockCount = self_->ctx.currentUbNStep;
-        repeatParams.srcStride = (self_->ctx.convTilingData->singleCoreCi *
-            self_->ctx.convTilingData->kernelHxkernelW - self_->ctx.currentUbKStep) / Intf::k0;
-        repeatParams.dstStride = 
-            (self_->ctx.convTilingData->bUbKStep - self_->ctx.currentUbKStep) / Intf::k0;
+        repeatParams.srcStride = (self_->ctx.convTilingData->singleCoreCi * self_->ctx.convTilingData->kernelHxkernelW -
+                                  self_->ctx.currentUbKStep) /
+                                 Intf::k0;
+        repeatParams.dstStride = (self_->ctx.convTilingData->bUbKStep - self_->ctx.currentUbKStep) / Intf::k0;
 
         uint64_t srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-            self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep) *
-            self_->ctx.convTilingData->coutOffsetBlock +
-            self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 +
-            self_->ctx.vecKIter * self_->ctx.convTilingData->bUbKStep;
+                              self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep) *
+                                 self_->ctx.convTilingData->coutOffsetBlock +
+                             self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 +
+                             self_->ctx.vecKIter * self_->ctx.convTilingData->bUbKStep;
 
         DataCopy<typename Intf::WeightT>(self_->ctx.ndTensor, self_->ctx.bgm[srcOffset], repeatParams);
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     using NddmaT = typename Conditional<(sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8), uint8_t,
-        typename Intf::WeightT>::type;
+                                        typename Intf::WeightT>::type;
     DataCopyParams repeatParams;
     MultiCopyParams<NddmaT, NDDMA_DIMS_NO_TRANS> copyParams;
 };
@@ -111,10 +105,9 @@ private:
 template <class Intf>
 class WeightND2NZTools {
 public:
-    __aicore__ inline WeightND2NZTools()
-    {}
+    __aicore__ inline WeightND2NZTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
 
@@ -127,14 +120,13 @@ public:
             SetIndex();
         }
 
-        uint16_t ciLoopTimes = self_->ctx.convTilingData->bUbKStep /
-            self_->ctx.convTilingData->kernelHxkernelW / Intf::k0;
+        uint16_t ciLoopTimes = self_->ctx.convTilingData->bUbKStep / self_->ctx.convTilingData->kernelHxkernelW /
+                               Intf::k0;
         uint16_t coLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * co0LoopTimes;
         uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
         uint32_t srcCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0;
         uint32_t srcCoStride = coPerReg * self_->ctx.convTilingData->bUbKStep;
-        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW *
-            Intf::k0 * self_->ctx.currentUbNStepAilgn;
+        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.currentUbNStepAilgn;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.currentUbNStepAilgn;
         uint32_t dstCoStride = coPerReg * Intf::k0;
 
@@ -150,9 +142,9 @@ public:
                 vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
             }
 
-            __local_mem__ SrcT *srcAddr = (__local_mem__ SrcT *)self_->ctx.ndTensor.GetPhyAddr();
-            __local_mem__ DstT *dstAddr = (__local_mem__ DstT *)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)self_->ctx.ndTensor.GetPhyAddr();
+            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
 
             MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
 
@@ -163,16 +155,16 @@ public:
                         uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
                                              coOptIndex * dstCoStride;
 
-                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(
-                            gatherReg, srcAddr + srcOffset, indexReg, gatherMaskReg);
+                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
+                                                                     gatherMaskReg);
 
                         if constexpr (Intf::isQuantScene) {
                             // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
                             MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                (MicroAPI::RegTensor<uint8_t> &)gatherReg, gatherReg);
+                                (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
                         }
-                        MicroAPI::DataCopy<DstT>(
-                            dstAddr + dstOffset, (MicroAPI::RegTensor<DstT> &)gatherReg, vstsMaskReg);
+                        MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
+                                                 vstsMaskReg);
                     }
                 }
             }
@@ -191,7 +183,7 @@ private:
         SetFlag<HardEvent::S_V>(eventId);
         WaitFlag<HardEvent::S_V>(eventId);
 
-        __local_mem__ IndexT *indexAddr = (__local_mem__ IndexT *)indexTensor.GetPhyAddr();
+        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
         uint16_t repeatTimes = static_cast<uint16_t>(REG_SIZE / sizeof(IndexT) / Intf::k0 - 1);
         uint8_t dstOffset = Intf::k0;
         uint8_t elesPerRepeat = Intf::k0;
@@ -213,13 +205,13 @@ private:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     using SrcT = typename Conditional<Intf::isQuantScene, int8_t, typename Intf::WeightT>::type;
     using DstT = typename Conditional<Intf::isQuantScene, int8_t, typename Intf::WeightT>::type;
     using RegT = typename Conditional<Intf::isQuantScene, int16_t, typename Intf::WeightT>::type;
-    using IndexT = typename Conditional<
-        AscendC::IsSameType<typename Intf::WeightT, float>::value, uint32_t, uint16_t>::type;
+    using IndexT = typename Conditional<AscendC::IsSameType<typename Intf::WeightT, float>::value, uint32_t,
+                                        uint16_t>::type;
 
     LocalTensor<IndexT> indexTensor;
 
@@ -230,13 +222,9 @@ private:
 template <class Intf>
 class WeightUB2L1Tools {
 public:
-    __aicore__ inline WeightUB2L1Tools()
-    {}
+    __aicore__ inline WeightUB2L1Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
     __aicore__ inline void LoadUB2L1()
     {
@@ -248,7 +236,7 @@ public:
         copyParams.dstStride = self_->ctx.convTilingData->nBL1 - self_->ctx.currentUbNStepAilgn;
 
         uint64_t dstOffset = self_->ctx.vecKIter * self_->ctx.convTilingData->nBL1 *
-                             self_->ctx.convTilingData->bUbKStep +
+                                 self_->ctx.convTilingData->bUbKStep +
                              self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep * Intf::k0;
 
         if (self_->ctx.vecId == 1) {
@@ -259,7 +247,7 @@ public:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 
     DataCopyParams copyParams;
 };

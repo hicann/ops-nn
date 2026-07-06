@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <iostream>
 #include <fstream>
@@ -14,7 +14,7 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <gtest/gtest.h>    
+#include <gtest/gtest.h>
 #include "../../../op_kernel/sigmoid_tiling_data.h"
 #include "log/log.h"
 #include "ut_op_common.h"
@@ -34,23 +34,16 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class SigmoidTilingTest : public testing::Test
-{
+class SigmoidTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SigmoidTilingTest Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "SigmoidTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SigmoidTilingTest Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "SigmoidTilingTest TearDown" << std::endl; }
 };
 
 TEST_F(SigmoidTilingTest, sigmoid_001)
 {
-    gert::StorageShape x_shape = {{2,2}, {2,2}};
-    gert::StorageShape output_shapes = {{2,2}, {2,2}};
+    gert::StorageShape x_shape = {{2, 2}, {2, 2}};
+    gert::StorageShape output_shapes = {{2, 2}, {2, 2}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -68,8 +61,7 @@ TEST_F(SigmoidTilingTest, sigmoid_001)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
 
-    struct SigmoidCompileInfo {
-    };
+    struct SigmoidCompileInfo {};
     SigmoidCompileInfo compile_info;
 
     std::string op_type("Sigmoid");
@@ -78,19 +70,19 @@ TEST_F(SigmoidTilingTest, sigmoid_001)
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(1, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(1, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -99,7 +91,7 @@ TEST_F(SigmoidTilingTest, sigmoid_001)
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    
+
     // ����ο����룺����IrInstanceNum������ʵ����Ϊ{1}��ƥ��1�����룩
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(1, 1)
@@ -116,7 +108,7 @@ TEST_F(SigmoidTilingTest, sigmoid_001)
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    
+
     // �ؼ��޸ģ�����ο����룬��TilingContext��PlatformInfo��������ƽ̨��Դ����
     tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);

@@ -19,19 +19,19 @@
 #ifndef FOREACH_BINARY_OP_TILING_DATA_H
 #define FOREACH_BINARY_OP_TILING_DATA_H
 
-constexpr uint16_t MAX_TENSOR_CONT = 256;   // Max tensor count (aligned with Ascend existing impl)
-constexpr uint16_t MAX_CORE_CONT = 80;      // Max core count (ascend950 AIV cores)
+constexpr uint16_t MAX_TENSOR_CONT = 256; // Max tensor count (aligned with Ascend existing impl)
+constexpr uint16_t MAX_CORE_CONT = 80;    // Max core count (ascend950 AIV cores)
 
 class ForeachBinaryOpTilingData {
 public:
-    int32_t needCoreNum;                                          // Number of cores needed
-    int32_t tensorCount;                                          // Tensor list length
-    int64_t totalElements;                                        // Total elements across all tensors
-    int64_t tensorDataCountList[MAX_TENSOR_CONT];                 // Element count per tensor
-    uint16_t tensorStartList[MAX_CORE_CONT];                      // Start tensor index per core
-    uint16_t tensorEndList[MAX_CORE_CONT];                        // End tensor index per core
-    int64_t tensorStartOffsetList[MAX_CORE_CONT];                 // Offset in start tensor per core
-    int64_t tensorEndOffsetList[MAX_CORE_CONT];                   // Offset in end tensor per core (inclusive)
+    int32_t needCoreNum;                          // Number of cores needed
+    int32_t tensorCount;                          // Tensor list length
+    int64_t totalElements;                        // Total elements across all tensors
+    int64_t tensorDataCountList[MAX_TENSOR_CONT]; // Element count per tensor
+    uint16_t tensorStartList[MAX_CORE_CONT];      // Start tensor index per core
+    uint16_t tensorEndList[MAX_CORE_CONT];        // End tensor index per core
+    int64_t tensorStartOffsetList[MAX_CORE_CONT]; // Offset in start tensor per core
+    int64_t tensorEndOffsetList[MAX_CORE_CONT];   // Offset in end tensor per core (inclusive)
 };
 
 #endif // FOREACH_BINARY_OP_TILING_DATA_H

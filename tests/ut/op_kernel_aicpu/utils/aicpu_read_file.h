@@ -19,113 +19,116 @@
 
 bool ReadFile(std::string file_name, Eigen::half output[], uint64_t size);
 
-template<typename T>
-bool ReadFile(std::string file_name, std::vector<T> &output) {
-  try {
-    std::ifstream in_file{file_name};
-    if (!in_file.is_open()) {
-      std::cout << "open file: " << file_name << " failed." << std::endl;
-      return false;
+template <typename T>
+bool ReadFile(std::string file_name, std::vector<T>& output)
+{
+    try {
+        std::ifstream in_file{file_name};
+        if (!in_file.is_open()) {
+            std::cout << "open file: " << file_name << " failed." << std::endl;
+            return false;
+        }
+        T tmp;
+        while (in_file >> tmp) {
+            output.push_back(tmp);
+        }
+        in_file.close();
+    } catch (std::exception& e) {
+        std::cout << "read file " << file_name << " failed, " << e.what() << std::endl;
+        return false;
     }
-    T tmp;
-    while (in_file >> tmp) {
-      output.push_back(tmp);
-    }
-    in_file.close();
-  } catch (std::exception &e) {
-    std::cout << "read file " << file_name << " failed, "
-              << e.what() << std::endl;
-    return false;
-  }
-  return true;
+    return true;
 }
 
-template<typename T>
-bool ReadFile(std::string file_name, T output[], uint64_t size) {
-  try {
-    std::ifstream in_file{file_name};
-    if (!in_file.is_open()) {
-      std::cout << "open file: " << file_name << " failed." << std::endl;
-      return false;
-    }
+template <typename T>
+bool ReadFile(std::string file_name, T output[], uint64_t size)
+{
+    try {
+        std::ifstream in_file{file_name};
+        if (!in_file.is_open()) {
+            std::cout << "open file: " << file_name << " failed." << std::endl;
+            return false;
+        }
 
-    T tmp;
-    uint64_t index = 0;
-    while (in_file >> tmp) {
-      if (index >= size) {
-        break;
-      }
-      output[index] = tmp;
-      index++;
+        T tmp;
+        uint64_t index = 0;
+        while (in_file >> tmp) {
+            if (index >= size) {
+                break;
+            }
+            output[index] = tmp;
+            index++;
+        }
+        in_file.close();
+    } catch (std::exception& e) {
+        std::cout << "read file " << file_name << " failed,  " << e.what() << std::endl;
+        return false;
     }
-    in_file.close();
-  } catch (std::exception &e) {
-    std::cout << "read file " << file_name << " failed,  " << e.what() << std::endl;
-    return false;
-  }
-  return true;
+    return true;
 }
 
 template <typename T,
           typename std::enable_if<!(std::is_floating_point<T>::value || std::is_same<T, Eigen::half>::value ||
                                     std::is_same<T, Eigen::bfloat16>::value),
                                   T>::type* = nullptr>
-bool ReadFile2(std::string file_name, T output[], uint64_t size) {
-  try {
-    std::ifstream in_file{file_name};
-    if (!in_file.is_open()) {
-      std::cout << "open file: " << file_name << " failed." << std::endl;
-      return false;
-    }
+bool ReadFile2(std::string file_name, T output[], uint64_t size)
+{
+    try {
+        std::ifstream in_file{file_name};
+        if (!in_file.is_open()) {
+            std::cout << "open file: " << file_name << " failed." << std::endl;
+            return false;
+        }
 
-    T tmp;
-    uint64_t index = 0;
-    while (in_file >> tmp) {
-      if (index >= size) {
-        break;
-      }
-      output[index] = tmp;
-      index++;
+        T tmp;
+        uint64_t index = 0;
+        while (in_file >> tmp) {
+            if (index >= size) {
+                break;
+            }
+            output[index] = tmp;
+            index++;
+        }
+        in_file.close();
+    } catch (std::exception& e) {
+        std::cout << "read file " << file_name << " failed, " << e.what() << std::endl;
+        return false;
     }
-    in_file.close();
-  } catch (std::exception& e) {
-    std::cout << "read file " << file_name << " failed, " << e.what() << std::endl;
-    return false;
-  }
-  return true;
+    return true;
 }
 
 template <typename T, typename std::enable_if<std::is_floating_point<T>::value || std::is_same<T, Eigen::half>::value ||
                                                   std::is_same<T, Eigen::bfloat16>::value,
                                               T>::type* = nullptr>
-bool ReadFile2(std::string file_name, T output[], uint64_t size) {
-  try {
-    std::ifstream in_file{file_name};
-    if (!in_file.is_open()) {
-      std::cout << "open file: " << file_name << " failed." << std::endl;
-      return false;
-    }
+bool ReadFile2(std::string file_name, T output[], uint64_t size)
+{
+    try {
+        std::ifstream in_file{file_name};
+        if (!in_file.is_open()) {
+            std::cout << "open file: " << file_name << " failed." << std::endl;
+            return false;
+        }
 
-    std::string tmp;
-    uint64_t index = 0;
-    while (in_file >> tmp) {
-      if (index >= size) {
-        break;
-      }
-      if (tmp == "inf") {
-        output[index++] = static_cast<T>(INFINITY);
-      } else if (tmp == "nan") {
-        output[index++] = static_cast<T>(std::nan("1"));
-      } else {
-        output[index++] = static_cast<T>(std::stod(tmp));
-      }
+        std::string tmp;
+        uint64_t index = 0;
+        while (in_file >> tmp) {
+            if (index >= size) {
+                break;
+            }
+            if (tmp == "inf") {
+                output[index++] = static_cast<T>(INFINITY);
+            } else if (tmp == "nan") {
+                output[index++] = static_cast<T>(std::nan("1"));
+            } else {
+                output[index++] = static_cast<T>(std::stod(tmp));
+            }
+        }
+        in_file.close();
+    } catch (std::exception& e) {
+        std::cout << "read file " << file_name << " failed, " << e.what() << std::endl;
+        return false;
     }
-    in_file.close();
-  } catch (std::exception& e) {
-    std::cout << "read file " << file_name << " failed, " << e.what() << std::endl;
-    return false;
-  }
-  return true;
+    return true;
 }
 
 #endif

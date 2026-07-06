@@ -18,8 +18,7 @@
 
 #include "inplace_index_add_tiling_arch35.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(InplaceIndexAddSimtTilingData)
 TILING_DATA_FIELD_DEF(int64_t, preAxis);
 TILING_DATA_FIELD_DEF(int64_t, varInAxis);
@@ -71,11 +70,9 @@ REGISTER_TILING_DATA_CLASS(InplaceIndexAdd_101127, InplaceIndexAddSimtTilingData
 REGISTER_TILING_DATA_CLASS(InplaceIndexAdd_101109, InplaceIndexAddSimtTilingData)
 REGISTER_TILING_DATA_CLASS(InplaceIndexAdd_101112, InplaceIndexAddSimtTilingData)
 
-class InplaceIndexAddSimtTiling : public InplaceIndexAddTiling
-{
+class InplaceIndexAddSimtTiling : public InplaceIndexAddTiling {
 public:
-    explicit InplaceIndexAddSimtTiling(gert::TilingContext* context) : InplaceIndexAddTiling(context)
-    {}
+    explicit InplaceIndexAddSimtTiling(gert::TilingContext* context) : InplaceIndexAddTiling(context) {}
     ~InplaceIndexAddSimtTiling() override = default;
 
 protected:
@@ -89,5 +86,5 @@ protected:
     void SetTilingData();
     InplaceIndexAddSimtTilingData tilingData_;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_

@@ -15,14 +15,15 @@
 
 #include "threshold_grad_v2_d.h"
 
-
 template <uint32_t schMode>
-__global__ __aicore__ void threshold_grad_v2_d(GM_ADDR input_gradient, GM_ADDR input_feature, GM_ADDR output_backprops, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void threshold_grad_v2_d(GM_ADDR input_gradient, GM_ADDR input_feature, GM_ADDR output_backprops,
+                                               GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ThresholdGradV2DTilingData);
     GET_TILING_DATA_WITH_STRUCT(ThresholdGradV2DTilingData, tilingData, tiling);
     NsThresholdGradV2D::KernelThresholdGradV2D<DTYPE_INPUT_GRADIENT> op; // 算子kernel实例获取
-    op.Init(input_gradient, input_feature, output_backprops, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
-       tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.threshold);
+    op.Init(input_gradient, input_feature, output_backprops, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum,
+            tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
+            tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.threshold);
     op.Process();
 }

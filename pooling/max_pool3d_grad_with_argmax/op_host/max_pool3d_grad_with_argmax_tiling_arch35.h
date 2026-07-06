@@ -28,7 +28,6 @@
 #include "tiling/tiling_api.h"
 #include "op_common/op_host/util/platform_util.h"
 
-
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 using namespace MaxPool3DGradWithArgmaxOp;
@@ -117,10 +116,8 @@ struct MaxPool3DGradWithArgmaxNCDHWSplitInfo {
 
 class MaxPool3DGradWithArgmaxTilingBaseV35 : public TilingBaseClass {
 public:
-    explicit MaxPool3DGradWithArgmaxTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
-    ~MaxPool3DGradWithArgmaxTilingBaseV35() override
-    {}
+    explicit MaxPool3DGradWithArgmaxTilingBaseV35(gert::TilingContext* context) : TilingBaseClass(context) {}
+    ~MaxPool3DGradWithArgmaxTilingBaseV35() override {}
 
     const std::string nodeName = "MaxPool3DGradWithArgmax";
     MaxPool3DGradWithArgmaxTilingDataV35* tilingData_ = context_->GetTilingData<MaxPool3DGradWithArgmaxTilingDataV35>();
@@ -153,8 +150,7 @@ public:
     explicit MaxPool3DGradWithArgmaxTilingSimt(gert::TilingContext* context)
         : MaxPool3DGradWithArgmaxTilingBaseV35(context)
     {}
-    ~MaxPool3DGradWithArgmaxTilingSimt() override
-    {}
+    ~MaxPool3DGradWithArgmaxTilingSimt() override {}
 
 protected:
     bool IsCapable() override;
@@ -169,10 +165,9 @@ public:
         : MaxPool3DGradWithArgmaxTilingBaseV35(context)
     {}
 
-    ~MaxPool3DGradWithArgmaxNCDHWTiling() override
-    {}
-    MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData* tilingData =
-        context_->GetTilingData<MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData>();
+    ~MaxPool3DGradWithArgmaxNCDHWTiling() override {}
+    MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData*
+        tilingData = context_->GetTilingData<MaxPool3DGradWithArgmaxOp::MaxPool3DGradWithArgmaxNCDHWTilingData>();
 
 private:
     void DoUBTiling();
@@ -202,7 +197,6 @@ private:
     MaxPool3DGradWithArgmaxNCDHWSplitInfo splitData;
 };
 
-
-}  // namespace optiling
+} // namespace optiling
 
 #endif

@@ -103,25 +103,16 @@ void RunKernelTest(float alpha, float scale, float inputScale, bool isResult)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
 }
-}  // namespace
+} // namespace
 
 class elu_grad_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "elu_grad_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "elu_grad_v2_test SetUp\n" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "elu_grad_v2_test TearDown\n" << endl;
-    }
+    static void TearDownTestCase() { cout << "elu_grad_v2_test TearDown\n" << endl; }
 };
 
-TEST_F(elu_grad_v2_test, test_exp_mode)
-{
-    RunKernelTest<ELU_GRAD_V2_TPL_SCH_MODE_SAFE_EXP>(1.2F, 0.7F, 1.1F, false);
-}
+TEST_F(elu_grad_v2_test, test_exp_mode) { RunKernelTest<ELU_GRAD_V2_TPL_SCH_MODE_SAFE_EXP>(1.2F, 0.7F, 1.1F, false); }
 
 TEST_F(elu_grad_v2_test, test_result_mode)
 {

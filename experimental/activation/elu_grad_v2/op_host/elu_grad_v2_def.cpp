@@ -42,4 +42,4 @@ public:
     }
 };
 OP_ADD(EluGradV2);
-} 
+} // namespace ops

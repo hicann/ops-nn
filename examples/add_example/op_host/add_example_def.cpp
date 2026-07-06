@@ -11,7 +11,7 @@
 /*!
  * \file add_example_def.cpp
  * \brief Add算子的定义
- * 
+ *
  * 本文件定义了Add算子的接口，包括输入输出规格、支持的数据类型、格式以及AI Core编译配置。
  * 算子定义对于在CANN框架中注册和验证算子是必需的。
  */
@@ -20,14 +20,13 @@
 namespace ops {
 /*!
  * \brief Add算子类定义
- * 
+ *
  * 该类定义了执行元素级加法的Add算子，接收两个输入张量并产生一个相同形状的输出张量。
- * 
+ *
  * 支持的数据类型: FLOAT, INT32
  * 支持的格式: ND (n维格式)
  */
-class AddExample : public OpDef
-{
+class AddExample : public OpDef {
 public:
     /*!
      * \brief Add算子的构造函数
@@ -49,7 +48,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND}) // 未确定大小shape对应的format格式
             .AutoContiguous();                                  // 内存自动连续化
         // 定义输入x2的规格
-        this->Input("x2")                                       // 输入x2名称定义
+        this->Input("x2") // 输入x2名称定义
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_INT32})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
@@ -65,20 +64,21 @@ public:
 
         // AI Core编译配置
         OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)    // 启用静态动态编译标志
-            .DynamicFormatFlag(false)                   // 禁用动态格式标志
-            .DynamicRankSupportFlag(true)               // 启用动态rank支持
-            .DynamicShapeSupportFlag(true)              // 启用动态shape支持
-            .NeedCheckSupportFlag(false)                 // 禁用检查支持标志
-            .PrecisionReduceFlag(true)                  // 启用精度降低标志
-            .ExtendCfgInfo("opFile.value", "add_example");    // 指定的kernel入口文件名
+        aicoreConfig
+            .DynamicCompileStaticFlag(true)                // 启用静态动态编译标志
+            .DynamicFormatFlag(false)                      // 禁用动态格式标志
+            .DynamicRankSupportFlag(true)                  // 启用动态rank支持
+            .DynamicShapeSupportFlag(true)                 // 启用动态shape支持
+            .NeedCheckSupportFlag(false)                   // 禁用检查支持标志
+            .PrecisionReduceFlag(true)                     // 启用精度降低标志
+            .ExtendCfgInfo("opFile.value", "add_example"); // 指定的kernel入口文件名
         // 为不同SOC版本添加AI Core配置
-        this->AICore().AddConfig("ascend910b", aicoreConfig);  // Ascend 910B芯片配置
+        this->AICore().AddConfig("ascend910b", aicoreConfig);   // Ascend 910B芯片配置
         this->AICore().AddConfig("ascend910_93", aicoreConfig); // Ascend 910A芯片配置
         this->AICore().AddConfig("ascend950", aicoreConfig);    // Ascend 950芯片配置
     }
 };
 
 // 将Add算子添加到算子库中
-OP_ADD(AddExample); 
+OP_ADD(AddExample);
 } // namespace ops

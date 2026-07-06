@@ -23,15 +23,9 @@
 
 class BatchNormInfershapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "BatchNormTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "BatchNormTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "BatchNormTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "BatchNormTest TearDown" << std::endl; }
 };
 
 TEST_F(BatchNormInfershapeTest, batch_norm_infershape_test_0)
@@ -55,8 +49,8 @@ TEST_F(BatchNormInfershapeTest, batch_norm_infershape_test_0)
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(5, 6)
                       .IrInstanceNum({1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1})
-                      .InputShapes({&input_x_shape, &input_scale_shape, &input_scale_shape,
-                                    &input_scale_shape, &input_scale_shape})
+                      .InputShapes({&input_x_shape, &input_scale_shape, &input_scale_shape, &input_scale_shape,
+                                    &input_scale_shape})
                       .OutputShapes({&output_shape})
                       .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
@@ -111,8 +105,7 @@ TEST_F(BatchNormInfershapeTest, batch_norm_inferdtype_test_0)
                               .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                               .NodeOutputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeAttrs(
-                                  {{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                              .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                               .InputDataTypes({&dfp16, &dfp32, &dfp32, &dfp32, &dfp32})
                               .OutputDataTypes({&dfp16, &dfp32, &dfp32, &dfp32, &dfp32, &dfp32})
                               .Build();

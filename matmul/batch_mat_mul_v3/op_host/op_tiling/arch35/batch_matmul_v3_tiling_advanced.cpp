@@ -36,17 +36,16 @@ ge::graphStatus BatchMatMulV3Tiling::DoTiling()
     }
     MatMulV3BatchInfo tempBatchInfo;
     OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
-       CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"),
-       return ge::GRAPH_FAILED);
+                    CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
-    MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void *>(&args_));
+    MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    NpuArch npuArch = static_cast<const MatmulV3CompileInfo *>(tilingCfg.compileInfo)->npuArch;
-    MMRegisterCfg registerCfg{ "BatchMatMulV3", npuArch, strategy::GetBatchMatMulV3Priorities(npuArch) };
+    NpuArch npuArch = static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    MMRegisterCfg registerCfg{"BatchMatMulV3", npuArch, strategy::GetBatchMatMulV3Priorities(npuArch)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 
-ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &context, MatMulV3Args& args,
+ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext& context, MatMulV3Args& args,
                                                     MatMulV3BatchInfo& batchInfo)
 {
     if (!args_.hasBias) {
@@ -64,8 +63,8 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
     if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             args.opName, "bias, out",
-            Ops::NN::FormatString(
-                "%s, %s", Ops::Base::ToString(biasShape).c_str(), Ops::Base::ToString(outputShape).c_str())
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(biasShape).c_str(),
+                                  Ops::Base::ToString(outputShape).c_str())
                 .c_str(),
             Ops::NN::FormatString("%s of %s must be equal to %s of %s", "Last dim", "bias", "last dim", "out").c_str());
         return ge::GRAPH_FAILED;
@@ -84,12 +83,11 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
             batchInfo.batchA2 != batchInfo.batchB2 || batchInfo.batchA3 != batchInfo.batchB3) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 args.opName, "self, mat2",
-                Ops::NN::FormatString(
-                    "%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetOriginShape()).c_str(),
-                    Ops::Base::ToString(context.GetInputShape(1)->GetOriginShape()).c_str())
+                Ops::NN::FormatString("%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetOriginShape()).c_str(),
+                                      Ops::Base::ToString(context.GetInputShape(1)->GetOriginShape()).c_str())
                     .c_str(),
-                Ops::NN::FormatString(
-                    "When optional parameter %s exists, %s of %s must be the same", "bias", "batch-axis", "self, mat2")
+                Ops::NN::FormatString("When optional parameter %s exists, %s of %s must be the same", "bias",
+                                      "batch-axis", "self, mat2")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -101,9 +99,8 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
               batchBias0 == batchInfo.batchC0)) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 args.opName, "bias, out",
-                Ops::NN::FormatString(
-                    "%s, %s", Ops::Base::ToString(biasShape).c_str(),
-                    Ops::Base::ToString(context.GetOutputShape(0)->GetOriginShape()).c_str())
+                Ops::NN::FormatString("%s, %s", Ops::Base::ToString(biasShape).c_str(),
+                                      Ops::Base::ToString(context.GetOutputShape(0)->GetOriginShape()).c_str())
                     .c_str(),
                 Ops::NN::FormatString("%s of %s must be equal to %s of %s", "Batch-axis", "bias", "batch-axis", "out")
                     .c_str());
@@ -115,7 +112,7 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &context, MatMulV3Args& args,
+ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
                                                   MatMulV3BatchInfo& batchInfo)
 {
     auto aShape = context.GetInputShape(0)->GetOriginShape();
@@ -128,8 +125,8 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
     if (aDims > BATCH_DIM_MAX || bDims > BATCH_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             args.opName, "self, mat2", Ops::NN::FormatString("%zu, %zu", aDims, bDims).c_str(),
-            Ops::NN::FormatString(
-                "The shape dims of %s must be %s %llu", "self, mat2", "less than or equal to", BATCH_DIM_MAX)
+            Ops::NN::FormatString("The shape dims of %s must be %s %llu", "self, mat2", "less than or equal to",
+                                  BATCH_DIM_MAX)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -149,7 +146,7 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
     batchInfo.batchB = batchInfo.batchB0 * batchInfo.batchB1 * batchInfo.batchB2 * batchInfo.batchB3;
     batchInfo.batchC = batchInfo.batchC0 * batchInfo.batchC1 * batchInfo.batchC2 * batchInfo.batchC3;
 
-    //Check if one of the batch size is zero
+    // Check if one of the batch size is zero
     bool isBatchZero = (batchInfo.batchA == 0UL || batchInfo.batchB == 0UL);
     if (isBatchZero) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
@@ -187,7 +184,7 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
 
 void BatchMatMulV3Tiling::MergeBatchAndMAxis(MatMulV3Args& args, MatMulV3BatchInfo& batchInfo)
 {
-    if (batchInfo.batchB != 1UL || args.isATrans){
+    if (batchInfo.batchB != 1UL || args.isATrans) {
         return;
     }
     OP_LOGD(args.opName, "Merge Batch and M axis");
@@ -205,5 +202,5 @@ void BatchMatMulV3Tiling::MergeBatchAndMAxis(MatMulV3Args& args, MatMulV3BatchIn
     batchInfo.batchC = 1UL;
     return;
 }
-}
-}
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

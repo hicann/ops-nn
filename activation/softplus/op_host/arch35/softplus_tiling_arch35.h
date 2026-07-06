@@ -21,7 +21,7 @@ namespace optiling {
 
 class SoftplusTiling {
 public:
-    explicit SoftplusTiling(gert::TilingContext* context) : tilingContext_(context) {};
+    explicit SoftplusTiling(gert::TilingContext* context) : tilingContext_(context){};
     ge::graphStatus RunTiling();
 
 protected:

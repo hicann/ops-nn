@@ -95,9 +95,8 @@ inline void GetTilingDataBig(GluTilingData& tilingData, TilingParam& tilingParam
     }
 }
 
-inline void GetTilingData(
-    ge::DataType dtype, GluTilingData& tilingData, TilingParam& tilingParam, int64_t commonBufSize,
-    int64_t singleBufSize)
+inline void GetTilingData(ge::DataType dtype, GluTilingData& tilingData, TilingParam& tilingParam,
+                          int64_t commonBufSize, int64_t singleBufSize)
 {
     if (dtype == ge::DT_FLOAT) {
         tilingParam.blockSize = FP32_BLOCK_SIZE;
@@ -138,13 +137,12 @@ inline ge::graphStatus CheckInputParams(gert::TilingContext* context)
     auto dtype = context->GetInputDesc(INPUT_IDX)->GetDataType();
     int32_t typeSize = ge::GetSizeByDataType(dtype);
 
-    OP_CHECK_IF(
-        dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16 && dtype != ge::DT_FLOAT,
-        OP_LOGE(context, "input dtype only support fp16, fp32, bf16 currently, please check."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16 && dtype != ge::DT_FLOAT,
+                OP_LOGE(context, "input dtype only support fp16, fp32, bf16 currently, please check."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (typeSize <= 0), OP_LOGE(context, "typeSize is invalid %d, please check.", typeSize), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((typeSize <= 0), OP_LOGE(context, "typeSize is invalid %d, please check.", typeSize),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -164,19 +162,15 @@ inline size_t GetAttrSplitDim(const gert::TilingContext* context)
 
     size_t splitDimU = splitDim < 0 ? splitDim + inputShapeSize : splitDim;
 
-    OP_CHECK_IF(
-        (splitDimU >= inputShapeSize),
-        OP_LOGE(
-            context, "The value of attr [dim] must be in the range [-%zu, %zu], but got [%zu].", inputShapeSize,
-            inputShapeSize, splitDimU),
-        return SPLIT_ERROR_STATUS);
+    OP_CHECK_IF((splitDimU >= inputShapeSize),
+                OP_LOGE(context, "The value of attr [dim] must be in the range [-%zu, %zu], but got [%zu].",
+                        inputShapeSize, inputShapeSize, splitDimU),
+                return SPLIT_ERROR_STATUS);
 
-    OP_CHECK_IF(
-        (inputShape.GetDim(splitDimU) % SPLIT_FACTOR != 0),
-        OP_LOGE(
-            context, "The dim of: %zu can not be split with factor: %u on value %ld.", splitDimU, SPLIT_FACTOR,
-            inputShape.GetDim(splitDimU)),
-        return SPLIT_ERROR_STATUS);
+    OP_CHECK_IF((inputShape.GetDim(splitDimU) % SPLIT_FACTOR != 0),
+                OP_LOGE(context, "The dim of: %zu can not be split with factor: %u on value %ld.", splitDimU,
+                        SPLIT_FACTOR, inputShape.GetDim(splitDimU)),
+                return SPLIT_ERROR_STATUS);
 
     return splitDimU;
 }
@@ -206,27 +200,24 @@ inline ge::graphStatus GetTilingParam(const gert::TilingContext* context, Tiling
     tilingParam.coreNum = compileInfo->totalCoreNum;
     tilingParam.ubSize = compileInfo->ubSizePlatForm;
 
-    OP_LOGI(
-        context, "tilingParm is x:%ld, coreNum: %ld, ubSize: %lu splitDim: %zu", tilingParam.x, tilingParam.coreNum,
-        tilingParam.ubSize, splitDim);
+    OP_LOGI(context, "tilingParm is x:%ld, coreNum: %ld, ubSize: %lu splitDim: %zu", tilingParam.x, tilingParam.coreNum,
+            tilingParam.ubSize, splitDim);
 
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus RunCommonTiling(
-    gert::TilingContext* context, int64_t commonBufSize, int64_t singleBufSize, size_t workspaceSize)
+inline ge::graphStatus RunCommonTiling(gert::TilingContext* context, int64_t commonBufSize, int64_t singleBufSize,
+                                       size_t workspaceSize)
 {
     OP_LOGD(context, "RunCommonTiling enter.");
     context->SetScheduleMode(BATCH_MODE);
 
-    OP_CHECK_IF(
-        CheckInputParams(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InputParams not valid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputParams(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InputParams not valid."),
+                return ge::GRAPH_FAILED);
 
     TilingParam tilingParam;
-    OP_CHECK_IF(
-        GetTilingParam(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Get Tiling Param Failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingParam(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Get Tiling Param Failed."),
+                return ge::GRAPH_FAILED);
 
     auto dtype = context->GetInputDesc(INPUT_IDX)->GetDataType();
     GluTilingData tilingData;
@@ -235,9 +226,8 @@ inline ge::graphStatus RunCommonTiling(
 
     tilingData.set_ny(tilingParam.ny);
 
-    OP_CHECK_IF(
-        SetTilingDataForGlu(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GluSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingDataForGlu(context, tilingData) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GluSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
@@ -246,14 +236,13 @@ inline ge::graphStatus RunCommonTiling(
 
     workspaces[0] = workspaceSize;
 
-    OP_LOGD(
-        context,
-        "tilingData is splitSize:%ld, group:%ld, realCoreNum:%ld, numPerCore:%ld, loopNum:%ld, \
+    OP_LOGD(context, "tilingData is splitSize:%ld, group:%ld, realCoreNum:%ld, numPerCore:%ld, loopNum:%ld, \
            tailLoopNum:%ld,nLastTailGroup:%ld, lastTailGroup:%ld, tilingKey:%ld, blockSize:%ld, \
            ny: %ld",
-        tilingData.get_splitSize(), tilingData.get_group(), tilingData.get_realCoreNum(), tilingData.get_numPerCore(),
-        tilingData.get_loopNum(), tilingData.get_tailLoopNum(), tilingData.get_nLastTailGroup(),
-        tilingData.get_lastTailGroup(), tilingData.get_tilingKey(), tilingData.get_blockSize(), tilingData.get_ny());
+            tilingData.get_splitSize(), tilingData.get_group(), tilingData.get_realCoreNum(),
+            tilingData.get_numPerCore(), tilingData.get_loopNum(), tilingData.get_tailLoopNum(),
+            tilingData.get_nLastTailGroup(), tilingData.get_lastTailGroup(), tilingData.get_tilingKey(),
+            tilingData.get_blockSize(), tilingData.get_ny());
 
     OP_LOGD(context, "RunCommonTiling exit.");
     return ge::GRAPH_SUCCESS;

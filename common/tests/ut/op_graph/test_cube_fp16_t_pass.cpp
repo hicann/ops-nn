@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,31 +8,20 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- #include "gtest/gtest.h"
+#include "gtest/gtest.h"
 #include "cube_utils/cube_fp16_t.h"
 
 using namespace std;
-namespace ops
-{
+namespace ops {
 
-class fp16_t_test : public testing::Test
-{
+class fp16_t_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "fp16_t_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "fp16_t_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "fp16_t_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "fp16_t_test TearDown" << std::endl; }
 };
 
-static void CheckVal(fp16_t a)
-{
-    std::cout << static_cast<float>(a);
-}
+static void CheckVal(fp16_t a) { std::cout << static_cast<float>(a); }
 
 TEST_F(fp16_t_test, fp16_t_test_1)
 {
@@ -54,4 +43,4 @@ TEST_F(fp16_t_test, fp16_t_test_1)
     fp16_t resVal = val;
     resVal = largeVal;
 }
-}  // namespace ops
+} // namespace ops

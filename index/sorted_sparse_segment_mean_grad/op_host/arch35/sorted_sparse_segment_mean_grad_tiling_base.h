@@ -25,7 +25,7 @@
 #include "error_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "register/op_def_registry.h"
-#include "index/sorted_sparse_segment_mean_grad/op_kernel/arch35/sorted_sparse_segment_mean_grad_struct.h" 
+#include "index/sorted_sparse_segment_mean_grad/op_kernel/arch35/sorted_sparse_segment_mean_grad_struct.h"
 using namespace std;
 
 namespace optiling {
@@ -52,39 +52,37 @@ struct SortedSparseSegmentMeanGradCompileInfo {
 };
 
 class SortedSparseSegmentMeanGradBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
- public:
-  explicit SortedSparseSegmentMeanGradBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {
-  }
+public:
+    explicit SortedSparseSegmentMeanGradBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-  ~SortedSparseSegmentMeanGradBaseTiling() override = default;
+    ~SortedSparseSegmentMeanGradBaseTiling() override = default;
 
- protected:
-  bool IsCapable() override;
-  ge::graphStatus GetPlatformInfo() override;
-  ge::graphStatus GetShapeAttrsInfo() override;
-  ge::graphStatus DoOpTiling() override;
-  ge::graphStatus DoLibApiTiling() override;
-  uint64_t GetTilingKey() const override;
-  ge::graphStatus GetWorkspaceSize() override;
-  ge::graphStatus PostTiling() override;
-  void PrintHardwareData() const;
-  void PrintInputData() const;
+protected:
+    bool IsCapable() override;
+    ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    void PrintHardwareData() const;
+    void PrintInputData() const;
 
- private:
+private:
     ge::graphStatus GetXInfoAndCheck();
     ge::graphStatus GetYInfoAndCheck();
     ge::graphStatus GetIndicesInfoAndCheck();
     ge::graphStatus GetSegmentIdsInfoAndCheck();
     ge::graphStatus GetOutputDim0InfoAndCheck();
     ge::graphStatus GetIndicesLocationInfoAndCheck();
- 
- public : 
-   SortedSparseSegmentMeanGradInputInfo inputData;
-   SortedSparseSegmentMeanGradHardwareInfo hardwareData;
-   gert::Shape xShape_;
-   gert::Shape indicesShape_;
- };
- }  // namespace optiling
- 
- #endif
- 
+
+public:
+    SortedSparseSegmentMeanGradInputInfo inputData;
+    SortedSparseSegmentMeanGradHardwareInfo hardwareData;
+    gert::Shape xShape_;
+    gert::Shape indicesShape_;
+};
+} // namespace optiling
+
+#endif

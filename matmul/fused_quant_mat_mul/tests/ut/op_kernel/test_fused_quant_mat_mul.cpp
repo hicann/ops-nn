@@ -31,13 +31,9 @@
 using namespace std;
 
 class fused_quant_mat_mul_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "fused_quant_mat_mul_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "fused_quant_mat_mul_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "fused_quant_mat_mul_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "fused_quant_mat_mul_test TearDown\n" << endl; }
 };
 
 struct HcclCombinOpParam {
@@ -47,7 +43,8 @@ struct HcclCombinOpParam {
     uint32_t rankDim;
 };
 
-TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
+TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
     size_t m = 60;
@@ -66,20 +63,20 @@ TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
     size_t usrWorkspaceSize = 0;
     size_t allWorkspaceSize = usrWorkspaceSize + sysWorkspaceSize;
 
-    uint8_t *x1GM = (uint8_t *)AscendC::GmAlloc(x1Size);
-    uint8_t *x2GM = (uint8_t *)AscendC::GmAlloc(x2Size);
-    uint8_t *biasGM = (uint8_t *)AscendC::GmAlloc(biasSize);
-    uint8_t *x1ScaleGM = (uint8_t *)AscendC::GmAlloc(x1ScaleSize);
-    uint8_t *x2ScaleGM = (uint8_t *)AscendC::GmAlloc(x2ScaleSize);
-    uint8_t *yScaleGM = nullptr;
-    uint8_t *x1OffsetGM = nullptr;
-    uint8_t *x2OffsetGM = nullptr;
-    uint8_t *yOffsetGM = nullptr;
-    uint8_t *x2TableGM = nullptr;
-    uint8_t *x3GM = nullptr;
-    uint8_t *yGM = (uint8_t *)AscendC::GmAlloc(ySize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(allWorkspaceSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
+    uint8_t* x1GM = (uint8_t*)AscendC::GmAlloc(x1Size);
+    uint8_t* x2GM = (uint8_t*)AscendC::GmAlloc(x2Size);
+    uint8_t* biasGM = (uint8_t*)AscendC::GmAlloc(biasSize);
+    uint8_t* x1ScaleGM = (uint8_t*)AscendC::GmAlloc(x1ScaleSize);
+    uint8_t* x2ScaleGM = (uint8_t*)AscendC::GmAlloc(x2ScaleSize);
+    uint8_t* yScaleGM = nullptr;
+    uint8_t* x1OffsetGM = nullptr;
+    uint8_t* x2OffsetGM = nullptr;
+    uint8_t* yOffsetGM = nullptr;
+    uint8_t* x2TableGM = nullptr;
+    uint8_t* x3GM = nullptr;
+    uint8_t* yGM = (uint8_t*)AscendC::GmAlloc(ySize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(allWorkspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
     memset(x1GM, 0, x1Size);
     memset(x2GM, 0, x2Size);
@@ -93,7 +90,7 @@ TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
     system("cd ./fused_quant_mat_mul_data/ && rm -rf ./*bin");
     system("cd ./fused_quant_mat_mul_data/ && python3 gen_data_fp32.py 60 787 11 0"); // 0:x2pertensor 1:x2perchannel
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/fused_quant_mat_mul_data/x1.bin", x1Size, x1GM, x1Size);
     ReadFile(path + "/fused_quant_mat_mul_data/x2.bin", x2Size, x2GM, x2Size);
@@ -101,9 +98,9 @@ TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
     ReadFile(path + "/fused_quant_mat_mul_data/x1_scale.bin", x1ScaleSize, x1ScaleGM, x1ScaleSize);
     ReadFile(path + "/fused_quant_mat_mul_data/x2_scale.bin", x2ScaleSize, x2ScaleGM, x2ScaleSize);
 
-    QuantBatchMatmulV3TilingData *tiling_data = reinterpret_cast<QuantBatchMatmulV3TilingData*>(tiling);
+    QuantBatchMatmulV3TilingData* tiling_data = reinterpret_cast<QuantBatchMatmulV3TilingData*>(tiling);
     tiling_data->params.batchA = 1;
-    tiling_data->params.batchB= 1;
+    tiling_data->params.batchB = 1;
     tiling_data->params.batchC = 1;
     tiling_data->params.batchA1 = 0;
     tiling_data->params.batchA2 = 0;
@@ -127,7 +124,7 @@ TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
     tiling_data->params.needUbBuffer = 7680;
     tiling_data->params.realSingleCoreM = 0;
     tiling_data->params.realSingleCoreN = 0;
-    tiling_data->params.biasDtype = 0; 
+    tiling_data->params.biasDtype = 0;
     tiling_data->params.ubSize = 0;
     tiling_data->params.isMClash = 0;
     tiling_data->params.isNClash = 0;
@@ -153,7 +150,7 @@ TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
     tiling_data->matmulTiling.isBias = 1;
     tiling_data->matmulTiling.transLength = 0;
     tiling_data->matmulTiling.iterateOrder = 0;
-    tiling_data->matmulTiling.shareMode = 0; 
+    tiling_data->matmulTiling.shareMode = 0;
     tiling_data->matmulTiling.shareL1Size = 98432;
     tiling_data->matmulTiling.shareL0CSize = 8192;
     tiling_data->matmulTiling.shareUbSize = 0;
@@ -177,15 +174,14 @@ TEST_F(fused_quant_mat_mul_test, fused_quant_mat_mul_test_1) {
     tiling_data->tileL2cacheTiling.isBasicTiling = 1;
 
     auto fused_quant_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale,
-                                            GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset,
-                                            GM_ADDR x2_table, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::fused_quant_mat_mul<1, 1, 1, 0, 3>(
-            x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, x2_table, x3, y, workspace, tiling);
+                                          GM_ADDR y_scale, GM_ADDR x1_offset, GM_ADDR x2_offset, GM_ADDR y_offset,
+                                          GM_ADDR x2_table, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+        ::fused_quant_mat_mul<1, 1, 1, 0, 3>(x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset,
+                                             x2_table, x3, y, workspace, tiling);
     };
 
-    ICPU_RUN_KF(
-        fused_quant_mat_mul_wrapper, 24, x1GM, x2GM, biasGM, x1ScaleGM, x2ScaleGM, yScaleGM, x1OffsetGM, x2OffsetGM,
-        yOffsetGM, x2TableGM, x3GM, yGM, workspace, tiling);
+    ICPU_RUN_KF(fused_quant_mat_mul_wrapper, 24, x1GM, x2GM, biasGM, x1ScaleGM, x2ScaleGM, yScaleGM, x1OffsetGM,
+                x2OffsetGM, yOffsetGM, x2TableGM, x3GM, yGM, workspace, tiling);
 
     AscendC::GmFree((void*)x1GM);
     AscendC::GmFree((void*)x2GM);

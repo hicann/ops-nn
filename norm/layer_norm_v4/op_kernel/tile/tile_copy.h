@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -29,7 +29,8 @@ public:
     __aicore__ inline TileCopy() {}
 
     template <typename T>
-    __aicore__ inline void operator()(const LocalTensor<float> xLocal, const GlobalTensor<T> xGlobal, uint32_t dataSize) {
+    __aicore__ inline void operator()(const LocalTensor<float> xLocal, const GlobalTensor<T> xGlobal, uint32_t dataSize)
+    {
         uint32_t dataBytesSize = dataSize * sizeof(T);
         TEventID eventIdMte2ToV = GetTPipePtr()->FetchEventID(HardEvent::MTE2_V);
         if constexpr (IsSameType<T, float>::value) {

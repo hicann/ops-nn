@@ -36,7 +36,7 @@ class BatchNormInferLastChannelContinuousA {
     static constexpr uint16_t VECTOR_LENGTH = BatchNormOps::VECTOR_LENGTH;
     static constexpr uint16_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
     static constexpr int64_t BLOCK_SIZE = BatchNormOps::BLOCK_SIZE;
-    static constexpr int32_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
+    static constexpr int32_t MEAN_VAR_OUTPUT_COUNT = 2; // mean, var
 
     constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
@@ -103,8 +103,8 @@ public:
         PrepareParamCache();
 
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {
-            int64_t curTileBLen =
-                curIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail : tilingData_->tileBlockBLen;
+            int64_t curTileBLen = curIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail :
+                                                                        tilingData_->tileBlockBLen;
             int64_t xOffset = curIdx * tilingData_->totalALen * tilingData_->tileBlockBLen;
 
             CopyInX(xOffset, curTileBLen);
@@ -114,10 +114,7 @@ public:
     }
 
 private:
-    __aicore__ inline int64_t AlignUp(int64_t value, int64_t base) const
-    {
-        return (value + base - 1) / base * base;
-    }
+    __aicore__ inline int64_t AlignUp(int64_t value, int64_t base) const { return (value + base - 1) / base * base; }
 
     __aicore__ inline void CopyInX(int64_t xGmOffset, int64_t curTileBLen)
     {
@@ -186,8 +183,8 @@ private:
         __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
         __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
 
-        VFPrepareParamCache(
-            gammaLocal, betaLocal, meanLocal, varLocal, gammaFp32Local, betaFp32Local, meanFp32Local, rstdFp32Local);
+        VFPrepareParamCache(gammaLocal, betaLocal, meanLocal, varLocal, gammaFp32Local, betaFp32Local, meanFp32Local,
+                            rstdFp32Local);
         CopyOutMeanVar(tilingData_->tileBlockALen);
 
         betaQueue_.FreeTensor<T_GAMMA>(beta);
@@ -198,7 +195,9 @@ private:
 
     __aicore__ inline void CopyOutMeanVar(int64_t curTileALen)
     {
-        if (GetBlockIdx() != 0) { return; }
+        if (GetBlockIdx() != 0) {
+            return;
+        }
 
         DataCopyExtParams extParams;
         extParams.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
@@ -216,8 +215,8 @@ private:
 
         meanVarOutQueue_.EnQue<QuePosition::GM, QuePosition::VECIN, T_RUNNING_MEAN>(meanVarBuf);
 
-        LocalTensor<T_RUNNING_MEAN> meanVarOut =
-            meanVarOutQueue_.DeQue<QuePosition::VECOUT, QuePosition::GM, T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> meanVarOut = meanVarOutQueue_
+                                                     .DeQue<QuePosition::VECOUT, QuePosition::GM, T_RUNNING_MEAN>();
 
         DataCopyPad(batchMeanGm_[0], meanVarOut, extParams);
         DataCopyPad(reserveSpace1Gm_[0], meanVarOut, extParams);
@@ -251,9 +250,10 @@ private:
     }
 
     __aicore__ inline void VFPrepareParamCache(__local_mem__ T_GAMMA* gammaLocal, __local_mem__ T_GAMMA* betaLocal,
-        __local_mem__ T_RUNNING_MEAN* meanLocal, __local_mem__ T_RUNNING_MEAN* varLocal,
-        __local_mem__ float* gammaFp32Local, __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local,
-        __local_mem__ float* rstdFp32Local)
+                                               __local_mem__ T_RUNNING_MEAN* meanLocal,
+                                               __local_mem__ T_RUNNING_MEAN* varLocal,
+                                               __local_mem__ float* gammaFp32Local, __local_mem__ float* betaFp32Local,
+                                               __local_mem__ float* meanFp32Local, __local_mem__ float* rstdFp32Local)
     {
         __VEC_SCOPE__
         {
@@ -285,8 +285,8 @@ private:
     }
 
     __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ float* gammaFp32Local,
-        __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local, __local_mem__ float* rstdFp32Local,
-        __local_mem__ T* yLocal, int64_t curTileBLen)
+                                       __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local,
+                                       __local_mem__ float* rstdFp32Local, __local_mem__ T* yLocal, int64_t curTileBLen)
     {
         __VEC_SCOPE__
         {
@@ -322,8 +322,8 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadParamForDtypeT(
-        __local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadParamForDtypeT(__local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
+                                              uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
@@ -334,15 +334,14 @@ private:
         }
     }
 
-    __aicore__ inline void LoadRunningParamForDtypeT(
-        __local_mem__ T_RUNNING_MEAN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadRunningParamForDtypeT(__local_mem__ T_RUNNING_MEAN* src, RegTensor<float>& dst,
+                                                     MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<T_RUNNING_MEAN, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
         } else {
             RegTensor<T_RUNNING_MEAN> srcB16;
-            DataCopy<T_RUNNING_MEAN, LoadDist::DIST_UNPACK_B16>(
-                srcB16, ((__local_mem__ T_RUNNING_MEAN*)src + offset));
+            DataCopy<T_RUNNING_MEAN, LoadDist::DIST_UNPACK_B16>(srcB16, ((__local_mem__ T_RUNNING_MEAN*)src + offset));
             Cast<float, T_RUNNING_MEAN, castTraitB162B32>(dst, srcB16, preg);
         }
     }

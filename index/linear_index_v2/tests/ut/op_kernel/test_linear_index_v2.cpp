@@ -32,8 +32,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void linear_index_v2(
-    GM_ADDR indexList, GM_ADDR stride, GM_ADDR valueSize, GM_ADDR output, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void linear_index_v2(GM_ADDR indexList, GM_ADDR stride, GM_ADDR valueSize,
+                                                      GM_ADDR output, GM_ADDR workSpace, GM_ADDR tiling);
 class linear_index_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase() { cout << "linear_index_v2_test SetUp\n" << endl; }
@@ -52,8 +52,8 @@ TEST_F(linear_index_v2_test, test_case_0)
     size_t output_size = 3 * sizeof(int);
     size_t tiling_size = sizeof(LinearIndexV2TilingData);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/linear_index_v2/tests/ut/op_kernel/linear_index_v2_data", "linear_index_v2_data");
+    kernel_ut::SetupTestEnvironment("index/linear_index_v2/tests/ut/op_kernel/linear_index_v2_data",
+                                    "linear_index_v2_data");
     kernel_ut::RunGenData("./linear_index_v2_data", {});
     kernel_ut::RunGenTiling("./linear_index_v2_data", {"test_case_continuous"});
 

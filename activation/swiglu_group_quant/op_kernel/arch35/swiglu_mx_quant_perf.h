@@ -24,12 +24,11 @@ using namespace AscendC;
 template <typename T0, typename T1, typename T2, bool outputOrigin>
 class SwigluMxQuantPerf {
 public:
-    __aicore__ inline SwigluMxQuantPerf()
-    {}
+    __aicore__ inline SwigluMxQuantPerf() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, GM_ADDR yOrigin,
-        GM_ADDR workspace, const SwigluGroupQuantTilingData* tilingDataPtr, TPipe* pipePtr)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
+                                GM_ADDR yOrigin, GM_ADDR workspace, const SwigluGroupQuantTilingData* tilingDataPtr,
+                                TPipe* pipePtr)
     {
         pipe = pipePtr;
         tilingData = tilingDataPtr;
@@ -40,37 +39,35 @@ public:
 
         pipe->InitBufPool(tBufPool, tilingData->ubSize);
         ProcessGroupIndexTiling(groupIndex, tilingData, tBufPool, groupIndexQue, groupIndexSumBuf, groupIndexGm,
-            groupSumLocal, hasGroupIndex_, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
-            rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+                                groupSumLocal, hasGroupIndex_, usedCoreNums, rowOfFormerBlock, rowOfTailBlock,
+                                rowLoopOfFormerBlock, rowLoopOfTailBlock, tailRowFactorOfFormerBlock,
+                                tailRowFactorOfTailBlock);
 
         if (weight != nullptr) {
             hasWeight_ = true;
             weightGm.SetGlobalBuffer((__gm__ float*)weight);
-            tBufPool.InitBuffer(
-                weightQue, DOUBLE_BUFFER_NUM, RoundUp<float>(tilingData->rowFactor) * sizeof(float));
+            tBufPool.InitBuffer(weightQue, DOUBLE_BUFFER_NUM, RoundUp<float>(tilingData->rowFactor) * sizeof(float));
         }
         if constexpr (outputOrigin) {
             yOriginGm.SetGlobalBuffer((__gm__ T0*)yOrigin);
-            tBufPool.InitBuffer(
-                yOriginQue,
-                DOUBLE_BUFFER_NUM,
-                tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
+            tBufPool.InitBuffer(yOriginQue, DOUBLE_BUFFER_NUM,
+                                tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
         }
 
-        tBufPool.InitBuffer(
-            x0Que, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
-        tBufPool.InitBuffer(
-            x1Que, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
-        tBufPool.InitBuffer(
-            yQue, DOUBLE_BUFFER_NUM, tilingData->rowFactor * RoundUp<T1>(tilingData->dFactor) * sizeof(T1));
+        tBufPool.InitBuffer(x0Que, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
+        tBufPool.InitBuffer(x1Que, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T0>(tilingData->dFactor) * sizeof(T0));
+        tBufPool.InitBuffer(yQue, DOUBLE_BUFFER_NUM,
+                            tilingData->rowFactor * RoundUp<T1>(tilingData->dFactor) * sizeof(T1));
         // scale 在ub内连续写，拷出时采用Compact模式进行搬出
         int64_t scaleColNum = CeilDiv(tilingData->dFactor, PER_MX_FP16);
-        tBufPool.InitBuffer(
-            scaleQue, DOUBLE_BUFFER_NUM, RoundUp<T2>(tilingData->rowFactor * scaleColNum) * sizeof(T2));
+        tBufPool.InitBuffer(scaleQue, DOUBLE_BUFFER_NUM, RoundUp<T2>(tilingData->rowFactor * scaleColNum) * sizeof(T2));
 
         tBufPool.InitBuffer(yFp32Buf, tilingData->rowFactor * RoundUp<float>(tilingData->dFactor) * sizeof(float));
         tBufPool.InitBuffer(invScaleBuf, tilingData->rowFactor *
-            RoundUp<float>(CeilDiv(tilingData->dFactor, BLOCK_SIZE / sizeof(float))) * sizeof(float));
+                                             RoundUp<float>(CeilDiv(tilingData->dFactor, BLOCK_SIZE / sizeof(float))) *
+                                             sizeof(float));
 
         yFp32Local = yFp32Buf.template Get<float>();
         invScaleLocal = invScaleBuf.template Get<float>();
@@ -87,10 +84,9 @@ public:
             return;
         }
         int64_t curBlockIdx = GetBlockIdx();
-        int64_t rowOuterLoop =
-            (curBlockIdx == usedCoreNums - 1) ? rowLoopOfTailBlock : rowLoopOfFormerBlock;
+        int64_t rowOuterLoop = (curBlockIdx == usedCoreNums - 1) ? rowLoopOfTailBlock : rowLoopOfFormerBlock;
         int64_t tailRowFactor = (curBlockIdx == usedCoreNums - 1) ? tailRowFactorOfTailBlock :
-                                                                     tailRowFactorOfFormerBlock;
+                                                                    tailRowFactorOfFormerBlock;
         int64_t x0GmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->d;
         int64_t x1GmBaseOffset = x0GmBaseOffset + tilingData->splitD;
         int64_t yGmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->splitD;
@@ -101,29 +97,27 @@ public:
             // copy in weight
             if (hasWeight_) {
                 weightLocal = weightQue.template AllocTensor<float>();
-                CopyIn(weightGm[weightGmBaseOffset + rowOuterIdx * tilingData->rowFactor],
-                    weightLocal, 1, curRowFactor);
+                CopyIn(weightGm[weightGmBaseOffset + rowOuterIdx * tilingData->rowFactor], weightLocal, 1,
+                       curRowFactor);
                 weightQue.template EnQue(weightLocal);
                 weightLocal = weightQue.template DeQue<float>();
             }
 
             for (int64_t dLoopIdx = 0; dLoopIdx < tilingData->dLoop; dLoopIdx++) {
-                int64_t curDFactor =
-                    (dLoopIdx == tilingData->dLoop - 1) ? tilingData->tailDFactor : tilingData->dFactor;
+                int64_t curDFactor = (dLoopIdx == tilingData->dLoop - 1) ? tilingData->tailDFactor :
+                                                                           tilingData->dFactor;
                 int64_t scaleDFactor = CeilDiv(curDFactor, PER_MX_FP16);
-                int64_t xBaseOffset =
-                    rowOuterIdx * tilingData->rowFactor * tilingData->d + dLoopIdx * tilingData->dFactor;
+                int64_t xBaseOffset = rowOuterIdx * tilingData->rowFactor * tilingData->d +
+                                      dLoopIdx * tilingData->dFactor;
                 x0Local = x0Que.template AllocTensor<T0>();
-                CopyIn(
-                    xGm[x0GmBaseOffset + xBaseOffset],
-                    x0Local, curRowFactor, curDFactor, tilingData->d - curDFactor);
+                CopyIn(xGm[x0GmBaseOffset + xBaseOffset], x0Local, curRowFactor, curDFactor,
+                       tilingData->d - curDFactor);
                 x0Que.template EnQue(x0Local);
                 x0Local = x0Que.template DeQue<T0>();
 
                 x1Local = x1Que.template AllocTensor<T0>();
-                CopyIn(
-                    xGm[x1GmBaseOffset + xBaseOffset],
-                    x1Local, curRowFactor, curDFactor, tilingData->d - curDFactor);
+                CopyIn(xGm[x1GmBaseOffset + xBaseOffset], x1Local, curRowFactor, curDFactor,
+                       tilingData->d - curDFactor);
                 x1Que.template EnQue(x1Local);
                 x1Local = x1Que.template DeQue<T0>();
 
@@ -135,23 +129,23 @@ public:
                 scaleLocal = scaleQue.template AllocTensor<T2>();
                 if (hasClampLimit_) {
                     if (hasWeight_) {
-                        VFProcessSwigluMxFp8InvScale<T0, T1, true, outputOrigin, true>(yOriginLocal, yFp32Local,
-                            scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal, x0Local, x1Local,
-                            weightLocal, clampLimit_, curRowFactor, curDFactor);
+                        VFProcessSwigluMxFp8InvScale<T0, T1, true, outputOrigin, true>(
+                            yOriginLocal, yFp32Local, scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal,
+                            x0Local, x1Local, weightLocal, clampLimit_, curRowFactor, curDFactor);
                     } else {
-                        VFProcessSwigluMxFp8InvScale<T0, T1, true, outputOrigin, false>(yOriginLocal, yFp32Local,
-                            scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal, x0Local, x1Local,
-                            weightLocal, clampLimit_, curRowFactor, curDFactor);
+                        VFProcessSwigluMxFp8InvScale<T0, T1, true, outputOrigin, false>(
+                            yOriginLocal, yFp32Local, scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal,
+                            x0Local, x1Local, weightLocal, clampLimit_, curRowFactor, curDFactor);
                     }
                 } else {
                     if (hasWeight_) {
-                        VFProcessSwigluMxFp8InvScale<T0, T1, false, outputOrigin, true>(yOriginLocal, yFp32Local,
-                            scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal, x0Local, x1Local,
-                            weightLocal, clampLimit_, curRowFactor, curDFactor);
+                        VFProcessSwigluMxFp8InvScale<T0, T1, false, outputOrigin, true>(
+                            yOriginLocal, yFp32Local, scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal,
+                            x0Local, x1Local, weightLocal, clampLimit_, curRowFactor, curDFactor);
                     } else {
-                        VFProcessSwigluMxFp8InvScale<T0, T1, false, outputOrigin, false>(yOriginLocal, yFp32Local,
-                            scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal, x0Local, x1Local,
-                            weightLocal, clampLimit_, curRowFactor, curDFactor);
+                        VFProcessSwigluMxFp8InvScale<T0, T1, false, outputOrigin, false>(
+                            yOriginLocal, yFp32Local, scaleLocal.template ReinterpretCast<uint8_t>(), invScaleLocal,
+                            x0Local, x1Local, weightLocal, clampLimit_, curRowFactor, curDFactor);
                     }
                 }
 
@@ -162,16 +156,18 @@ public:
 
                 yQue.template EnQue(yLocal);
                 yLocal = yQue.template DeQue<T1>();
-                CopyOut(yLocal, yGm[yGmBaseOffset + rowOuterIdx * tilingData->rowFactor *
-                    tilingData->splitD + dLoopIdx * tilingData->dFactor],
-                    curRowFactor, curDFactor, tilingData->splitD - curDFactor);
+                CopyOut(yLocal,
+                        yGm[yGmBaseOffset + rowOuterIdx * tilingData->rowFactor * tilingData->splitD +
+                            dLoopIdx * tilingData->dFactor],
+                        curRowFactor, curDFactor, tilingData->splitD - curDFactor);
                 yQue.template FreeTensor(yLocal);
 
                 scaleQue.template EnQue(scaleLocal);
                 scaleLocal = scaleQue.template DeQue<T2>();
-                CopyOut<T2, AscendC::PaddingMode::Compact>(scaleLocal,
-                    scaleGm[scaleGmBaseOffset + rowOuterIdx * tilingData->rowFactor *
-                        tilingData->scaleCol + dLoopIdx * CeilDiv(tilingData->dFactor, PER_MX_FP16)],
+                CopyOut<T2, AscendC::PaddingMode::Compact>(
+                    scaleLocal,
+                    scaleGm[scaleGmBaseOffset + rowOuterIdx * tilingData->rowFactor * tilingData->scaleCol +
+                            dLoopIdx * CeilDiv(tilingData->dFactor, PER_MX_FP16)],
                     curRowFactor, scaleDFactor, tilingData->scaleCol - scaleDFactor);
                 scaleQue.template FreeTensor(scaleLocal);
 
@@ -180,9 +176,10 @@ public:
                     int64_t yOriginGmBaseOffset = curBlockIdx * rowOfFormerBlock * tilingData->splitD;
                     yOriginQue.template EnQue(yOriginLocal);
                     yOriginLocal = yOriginQue.template DeQue<T0>();
-                    CopyOut(yOriginLocal, yOriginGm[yOriginGmBaseOffset + rowOuterIdx * tilingData->rowFactor *
-                        tilingData->splitD + dLoopIdx * tilingData->dFactor],
-                        curRowFactor, curDFactor, tilingData->splitD - curDFactor);
+                    CopyOut(yOriginLocal,
+                            yOriginGm[yOriginGmBaseOffset + rowOuterIdx * tilingData->rowFactor * tilingData->splitD +
+                                      dLoopIdx * tilingData->dFactor],
+                            curRowFactor, curDFactor, tilingData->splitD - curDFactor);
                     yOriginQue.template FreeTensor(yOriginLocal);
                 }
             }

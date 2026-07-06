@@ -26,19 +26,13 @@
 namespace ops {
 
 // 4 input dtypes  ×  2 output dtypes  =  8 combinations.
-static const std::vector<ge::DataType> INPUT_X_DTYPE  = {
-    ge::DT_INT8,           ge::DT_INT8,
-    ge::DT_HIFLOAT8,       ge::DT_HIFLOAT8,
-    ge::DT_FLOAT8_E5M2,    ge::DT_FLOAT8_E5M2,
-    ge::DT_FLOAT8_E4M3FN,  ge::DT_FLOAT8_E4M3FN};
-static const std::vector<ge::DataType> OUTPUT_Y_DTYPE = {
-    ge::DT_FLOAT16,        ge::DT_FLOAT,
-    ge::DT_FLOAT16,        ge::DT_FLOAT,
-    ge::DT_FLOAT16,        ge::DT_FLOAT,
-    ge::DT_FLOAT16,        ge::DT_FLOAT};
-static const std::vector<ge::Format>   FORMAT_ND_LIST = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> INPUT_X_DTYPE = {ge::DT_INT8,          ge::DT_INT8,         ge::DT_HIFLOAT8,
+                                                        ge::DT_HIFLOAT8,      ge::DT_FLOAT8_E5M2,  ge::DT_FLOAT8_E5M2,
+                                                        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN};
+static const std::vector<ge::DataType> OUTPUT_Y_DTYPE = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                                         ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+static const std::vector<ge::Format> FORMAT_ND_LIST = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class AscendAntiQuant : public OpDef {
 public:
@@ -71,4 +65,4 @@ public:
 };
 
 OP_ADD(AscendAntiQuant);
-}  // namespace ops
+} // namespace ops

@@ -39,7 +39,7 @@ TEST_F(l2_softshrink_test, case_1)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_2)
@@ -54,7 +54,7 @@ TEST_F(l2_softshrink_test, case_2)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_3)
@@ -69,7 +69,7 @@ TEST_F(l2_softshrink_test, case_3)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_4)
@@ -97,7 +97,7 @@ TEST_F(l2_softshrink_test, case_5)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_6)
@@ -112,7 +112,7 @@ TEST_F(l2_softshrink_test, case_6)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_7)
@@ -140,7 +140,7 @@ TEST_F(l2_softshrink_test, case_8)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_9)
@@ -155,7 +155,7 @@ TEST_F(l2_softshrink_test, case_9)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_10)
@@ -170,7 +170,7 @@ TEST_F(l2_softshrink_test, case_10)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_11)
@@ -185,7 +185,7 @@ TEST_F(l2_softshrink_test, case_11)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_12)
@@ -200,7 +200,7 @@ TEST_F(l2_softshrink_test, case_12)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_13)
@@ -220,7 +220,8 @@ TEST_F(l2_softshrink_test, case_14)
 {
     auto tensor_desc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {1, 4, 3}).ValueRange(-20, 20);
     auto lambd = ScalarDesc(1.0f);
-    auto out_tensor_desc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {1, 4, 3}).Precision(0.0001, 0.0001);
+    auto out_tensor_desc = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {1, 4, 3})
+                               .Precision(0.0001, 0.0001);
 
     auto ut = OP_API_UT(aclnnSoftshrink, INPUT(tensor_desc, lambd), OUTPUT(out_tensor_desc));
     // SAMPLE: only test GetWorkspaceSize
@@ -228,7 +229,7 @@ TEST_F(l2_softshrink_test, case_14)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_15)
@@ -269,7 +270,7 @@ TEST_F(l2_softshrink_test, case_17)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_18)
@@ -310,7 +311,7 @@ TEST_F(l2_softshrink_test, case_24)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_25)
@@ -325,7 +326,7 @@ TEST_F(l2_softshrink_test, case_25)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 TEST_F(l2_softshrink_test, case_26)
@@ -340,5 +341,5 @@ TEST_F(l2_softshrink_test, case_26)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    //ut.TestPrecision();
+    // ut.TestPrecision();
 }

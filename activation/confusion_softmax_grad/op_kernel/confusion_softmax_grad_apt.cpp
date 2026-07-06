@@ -20,45 +20,45 @@
 using namespace AscendC;
 using namespace ConfusionSoftmaxGradOps;
 
-namespace
-{
+namespace {
 #define TILINGKEY_AR_SMALL_R 500
 #define TILINGKEY_AR 1000
 #define TILINGKEY_AR_RECOMPUTE 2000
 
-}  // namespace
+} // namespace
 
-#define CONFUSION_SOFTMAX_GRAD_AR_SMALL_R_IMPL(INPUT_TYPE)                               \
-    do {                                                                          \
+#define CONFUSION_SOFTMAX_GRAD_AR_SMALL_R_IMPL(INPUT_TYPE)                                \
+    do {                                                                                  \
         GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARSmallRTilingData, tilingDataIn, tiling); \
         const SoftmaxGradARSmallRTilingData* __restrict tilingData = &tilingDataIn;       \
-        TPipe pipe;                                                               \
-        ConfusionSoftmaxGradARSmallR<INPUT_TYPE> op(&pipe);                           \
-        op.Init(grad, x, y, tilingData);                                                \
-        op.Process();                                                             \
+        TPipe pipe;                                                                       \
+        ConfusionSoftmaxGradARSmallR<INPUT_TYPE> op(&pipe);                               \
+        op.Init(grad, x, y, tilingData);                                                  \
+        op.Process();                                                                     \
     } while (0)
 
-#define CONFUSION_SOFTMAX_GRAD_AR_IMPL(INPUT_TYPE)                               \
-    do {                                                                          \
+#define CONFUSION_SOFTMAX_GRAD_AR_IMPL(INPUT_TYPE)                                  \
+    do {                                                                            \
         GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARTilingData, tilingDataIn, tiling); \
         const SoftmaxGradARTilingData* __restrict tilingData = &tilingDataIn;       \
-        TPipe pipe;                                                               \
-        ConfusionSoftmaxGradAR<INPUT_TYPE> op(&pipe);                           \
-        op.Init(grad, x, y, tilingData);                                                \
-        op.Process();                                                             \
+        TPipe pipe;                                                                 \
+        ConfusionSoftmaxGradAR<INPUT_TYPE> op(&pipe);                               \
+        op.Init(grad, x, y, tilingData);                                            \
+        op.Process();                                                               \
     } while (0)
 
-#define CONFUSION_SOFTMAX_GRAD_AR_RECOMPUTE_IMPL(INPUT_TYPE)                                   \
-    do {                                                                                        \
-        GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARRecomputeTilingData, tilingDataIn, tiling);      \
-        const SoftmaxGradARRecomputeTilingData* __restrict tilingData = &tilingDataIn;            \
-        TPipe pipe;                                                                             \
-        ConfusionSoftmaxGradArRecompute<INPUT_TYPE> op(&pipe);                                \
-        op.Init(grad, x, y, tilingData);                                                              \
-        op.Process();                                                                           \
+#define CONFUSION_SOFTMAX_GRAD_AR_RECOMPUTE_IMPL(INPUT_TYPE)                                 \
+    do {                                                                                     \
+        GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARRecomputeTilingData, tilingDataIn, tiling); \
+        const SoftmaxGradARRecomputeTilingData* __restrict tilingData = &tilingDataIn;       \
+        TPipe pipe;                                                                          \
+        ConfusionSoftmaxGradArRecompute<INPUT_TYPE> op(&pipe);                               \
+        op.Init(grad, x, y, tilingData);                                                     \
+        op.Process();                                                                        \
     } while (0)
 
-extern "C" __global__ __aicore__ void confusion_softmax_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void confusion_softmax_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                                             GM_ADDR tiling)
 {
     if (g_coreType == AIC) {
         return;

@@ -28,19 +28,21 @@ template <typename T>
 class MaxPoolGradWithArgmaxV3KsizeOne {
 public:
     __aicore__ inline MaxPoolGradWithArgmaxV3KsizeOne(
-        const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData &tilingData, TPipe& pipe):
-        tilingData_(tilingData), pipe_(pipe) {};
+        const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y);
     __aicore__ inline void Process();
+
 private:
     __aicore__ inline void CopyIn(int64_t offset, int64_t dataLen);
     __aicore__ inline void CopyOut(int64_t offset, int64_t dataLen);
+
 private:
-    TPipe &pipe_;
+    TPipe& pipe_;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DB_BUFFER> dataQueue_;
     GlobalTensor<T> gradGm_;
     GlobalTensor<T> yGm_;
-    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData &tilingData_;
+    const MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSizeOneTilingCommonData& tilingData_;
     int64_t blockIdx_ = 0;
 };
 
@@ -49,10 +51,10 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3KsizeOne<T>::Init(GM_ADDR x, GM_AD
 {
     blockIdx_ = GetBlockIdx();
     int64_t blockOffset = blockIdx_ * tilingData_.blockFactor;
-    gradGm_.SetGlobalBuffer((__gm__ T *)(grad) + blockOffset);
-    yGm_.SetGlobalBuffer((__gm__ T *)(y) + blockOffset);
+    gradGm_.SetGlobalBuffer((__gm__ T*)(grad) + blockOffset);
+    yGm_.SetGlobalBuffer((__gm__ T*)(y) + blockOffset);
 
-    int64_t bufferSize = tilingData_.ubFactor  * sizeof(T);
+    int64_t bufferSize = tilingData_.ubFactor * sizeof(T);
     pipe_.InitBuffer(dataQueue_, DB_BUFFER, bufferSize);
 }
 
@@ -64,7 +66,7 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3KsizeOne<T>::CopyIn(int64_t offset
     extParams.blockLen = dataLen * sizeof(T);
     extParams.srcStride = 0;
     extParams.dstStride = 0;
-    DataCopyPadExtParams<T> padParams = { false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0) };
+    DataCopyPadExtParams<T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<T>(0)};
     LocalTensor<T> gradLocal = dataQueue_.AllocTensor<T>();
     DataCopyPad(gradLocal, gradGm_[offset], extParams, padParams);
     dataQueue_.EnQue(gradLocal);
@@ -110,6 +112,6 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3KsizeOne<T>::Process()
     CopyOut(offset, dataLen);
 }
 
-}  // namespace MaxPoolGradWithArgmaxV3KsizeOneNameSpace
+} // namespace MaxPoolGradWithArgmaxV3KsizeOneNameSpace
 
-#endif  // MAX_POOL_GRAD_WITH_ARGMAX_V3_KSIZE_ONE_H_
+#endif // MAX_POOL_GRAD_WITH_ARGMAX_V3_KSIZE_ONE_H_

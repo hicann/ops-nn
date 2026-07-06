@@ -32,14 +32,14 @@ constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t SCALE_NUM = 16; // Ceil(512 / 32)
 
 // Per-512-element data sizes (bytes) for different dtypes
-constexpr int64_t BYTES_OF_INPUT_FP4_PER_512 = 256;     // 512 * 0.5
-constexpr int64_t BYTES_OF_INPUT_FP8_PER_512 = 512;     // 512 * 1
+constexpr int64_t BYTES_OF_INPUT_FP4_PER_512 = 256;         // 512 * 0.5
+constexpr int64_t BYTES_OF_INPUT_FP8_PER_512 = 512;         // 512 * 1
 constexpr int64_t BYTES_OF_OUTPUT_FP16_BF16_PER_512 = 1024; // 512 * 2
 constexpr int64_t BYTES_OF_OUTPUT_FP32_PER_512 = 2048;      // 512 * 4
-constexpr int64_t BYTES_OF_SCALE_PER_BLOCK = 16;        // 16 * 1 (FP8_E8M0)
-constexpr int64_t BYTES_OF_UINT32_BUF_PER_BLOCK = 64;   // 16 * 4
-constexpr int64_t BYTES_OF_UINT16_BUF_PER_BLOCK = 32;   // 16 * 2
-constexpr int64_t NUM_OF_BLOCKSIZE_PER_512 = 16;   // 512 / 32
+constexpr int64_t BYTES_OF_SCALE_PER_BLOCK = 16;            // 16 * 1 (FP8_E8M0)
+constexpr int64_t BYTES_OF_UINT32_BUF_PER_BLOCK = 64;       // 16 * 4
+constexpr int64_t BYTES_OF_UINT16_BUF_PER_BLOCK = 32;       // 16 * 2
+constexpr int64_t NUM_OF_BLOCKSIZE_PER_512 = 16;            // 512 / 32
 
 ge::graphStatus AntiMxQuantTailAxisTiling::SetTilingParams()
 {
@@ -60,8 +60,8 @@ ge::graphStatus AntiMxQuantTailAxisTiling::SetTilingParams()
     uint64_t tilingDataSize = sizeof(tilingData_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     auto rawTilingData = context_->GetRawTilingData();
-    errno_t ret = memcpy_s(
-        rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData_), tilingDataSize);
+    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(),
+                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret = %d", ret);
         return ge::GRAPH_FAILED;
@@ -72,16 +72,15 @@ ge::graphStatus AntiMxQuantTailAxisTiling::SetTilingParams()
 
 void AntiMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "tilingData is ubSize:%ld, dstType:%ld, "
-        "totalCoreNum:%ld, usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, "
-        "rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, "
-        "rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld.",
-        tilingData_.ubSize, tilingData_.dstType,
-        tilingData_.totalCoreNum, tilingData_.usedCoreNum, tilingData_.rowTileNum, tilingData_.colTileNum,
-        tilingData_.rowNum, tilingData_.colNum, tilingData_.colNormalBlockNum, tilingData_.colTailLen,
-        tilingData_.rowNormalBlockNum, tilingData_.rowTailLen, tilingData_.maxUbBlockNum);
+    OP_LOGI(context_->GetNodeName(),
+            "tilingData is ubSize:%ld, dstType:%ld, "
+            "totalCoreNum:%ld, usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, "
+            "rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, "
+            "rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld.",
+            tilingData_.ubSize, tilingData_.dstType, tilingData_.totalCoreNum, tilingData_.usedCoreNum,
+            tilingData_.rowTileNum, tilingData_.colTileNum, tilingData_.rowNum, tilingData_.colNum,
+            tilingData_.colNormalBlockNum, tilingData_.colTailLen, tilingData_.rowNormalBlockNum,
+            tilingData_.rowTailLen, tilingData_.maxUbBlockNum);
 }
 
 std::set<int64_t> AntiMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum) const
@@ -100,8 +99,8 @@ std::set<int64_t> AntiMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum)
 ge::graphStatus AntiMxQuantTailAxisTiling::AutoTiling()
 {
     // Calculate available cores
-    tilingParam_.usedCoreNum =
-        std::min(tilingParam_.totalCoreNum, tilingParam_.rowBlockLoopNum * tilingParam_.colBlockLoopNum);
+    tilingParam_.usedCoreNum = std::min(tilingParam_.totalCoreNum,
+                                        tilingParam_.rowBlockLoopNum * tilingParam_.colBlockLoopNum);
     tilingParam_.usedCoreNum = tilingParam_.usedCoreNum == 0 ? 1 : tilingParam_.usedCoreNum;
 
     // Find split combinations
@@ -219,19 +218,18 @@ ge::graphStatus AntiMxQuantTailAxisTiling::DoTiling()
     tilingParam_.rowBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.rowNum, SPLIT_M);
     tilingParam_.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.colNum, SPLIT_N);
 
-    OP_CHECK_IF(
-        AutoTiling() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "The auto tiling failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(AutoTiling() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "The auto tiling failed."),
+                return ge::GRAPH_FAILED);
 
     tilingParam_.rowNormalBlockNum = Ops::Base::CeilDiv(tilingParam_.rowBlockLoopNum, tilingParam_.rowTileNum);
     tilingParam_.colNormalBlockNum = Ops::Base::CeilDiv(tilingParam_.colBlockLoopNum, tilingParam_.colTileNum);
     tilingParam_.rowTileNum = Ops::Base::CeilDiv(tilingParam_.rowBlockLoopNum, tilingParam_.rowNormalBlockNum);
     tilingParam_.colTileNum = Ops::Base::CeilDiv(tilingParam_.colBlockLoopNum, tilingParam_.colNormalBlockNum);
     tilingParam_.usedCoreNum = tilingParam_.rowTileNum * tilingParam_.colTileNum;
-    tilingParam_.rowTailLen =
-        tilingParam_.rowNum - (tilingParam_.rowNormalBlockNum * (tilingParam_.rowTileNum - DIGIT_ONE));
-    tilingParam_.colTailLen =
-        tilingParam_.colNum - (tilingParam_.colNormalBlockNum * SPLIT_N * (tilingParam_.colTileNum - DIGIT_ONE));
+    tilingParam_.rowTailLen = tilingParam_.rowNum -
+                              (tilingParam_.rowNormalBlockNum * (tilingParam_.rowTileNum - DIGIT_ONE));
+    tilingParam_.colTailLen = tilingParam_.colNum -
+                              (tilingParam_.colNormalBlockNum * SPLIT_N * (tilingParam_.colTileNum - DIGIT_ONE));
 
     // Calculate maxUbBlockNum based on dtype combination
     int64_t bytesPerBlock = CalcBytesPerBlock();
@@ -239,9 +237,8 @@ ge::graphStatus AntiMxQuantTailAxisTiling::DoTiling()
     tilingParam_.maxUbBlockNum = maxUbBlockNum512 * NUM_OF_BLOCKSIZE_PER_512;
 
     CalcTilingKey();
-    OP_CHECK_IF(
-        SetTilingParams() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "AntiMxQuantTailAxisTiling set tiling data failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingParams() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_, "AntiMxQuantTailAxisTiling set tiling data failed."), return ge::GRAPH_FAILED);
 
     context_->SetBlockDim(tilingData_.usedCoreNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);

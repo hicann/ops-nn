@@ -24,13 +24,14 @@ using namespace AscendC;
 constexpr float EPS_NON_GROUP = 1e-8f;
 
 template <typename T>
-class SwigluGroupQuantDynamicHifp8Kernel : public SwigluGroupQuantHifp8BaseOps::SwigluGroupQuantHifp8KernelBase<SwigluGroupQuantDynamicHifp8Kernel<T>, T> {
+class SwigluGroupQuantDynamicHifp8Kernel
+    : public SwigluGroupQuantHifp8BaseOps::SwigluGroupQuantHifp8KernelBase<SwigluGroupQuantDynamicHifp8Kernel<T>, T> {
 public:
     __aicore__ inline SwigluGroupQuantDynamicHifp8Kernel() {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR yScale,
-                                GM_ADDR yOrigin, GM_ADDR workspace,
-                                const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe);
+                                GM_ADDR yOrigin, GM_ADDR workspace, const SwigluGroupQuantHifp8TilingData* tilingData,
+                                TPipe* pipe);
 
 public:
     __aicore__ inline void ProcessGroupQuant();
@@ -42,8 +43,8 @@ protected:
     __aicore__ inline void ProcessCoreMax(int64_t tokenStart, int64_t tokenEnd, GlobalTensor<float> coreMaxGm);
     __aicore__ inline void ProcessSwigluQuant(int64_t tokenStart, int64_t tokenEnd);
     __aicore__ inline void ComputeTileMax(LocalTensor<float>& reduceMaxLocalTensor,
-                                          LocalTensor<float>& xFloatLocalTensor,
-                                          int64_t tileIdx, int64_t curTileTokens);
+                                          LocalTensor<float>& xFloatLocalTensor, int64_t tileIdx,
+                                          int64_t curTileTokens);
     __aicore__ inline void CopyOutCoreMax(LocalTensor<float>& reduceMaxLocalTensor, GlobalTensor<float> coreMaxGm);
     __aicore__ inline void ComputeGlobalMax();
     __aicore__ inline void WaitVToS();
@@ -58,9 +59,11 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::Init(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR yScale, GM_ADDR yOrigin,
-    GM_ADDR workspace, const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe)
+__aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::Init(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex,
+                                                                   GM_ADDR y, GM_ADDR yScale, GM_ADDR yOrigin,
+                                                                   GM_ADDR workspace,
+                                                                   const SwigluGroupQuantHifp8TilingData* tilingData,
+                                                                   TPipe* pipe)
 {
     dstTypeMax_ = tilingData->dstTypeMax;
     this->InitBase(x, weight, groupIndex, y, yOrigin, workspace, tilingData, pipe);
@@ -82,7 +85,7 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessNonGroupQua
 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessNonGroupQuantAndScale(int64_t tokenStart,
-    int64_t tokenEnd)
+                                                                                           int64_t tokenEnd)
 {
     ProcessCoreMax(tokenStart, tokenEnd, coreMaxGm_[this->blockIdx_]);
     SyncAll();
@@ -94,8 +97,8 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessNonGroupQua
 }
 
 template <typename T>
-__aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessCoreMax(int64_t tokenStart,
-    int64_t tokenEnd, GlobalTensor<float> coreMaxGm)
+__aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessCoreMax(int64_t tokenStart, int64_t tokenEnd,
+                                                                             GlobalTensor<float> coreMaxGm)
 {
     LocalTensor<float> reduceMaxLocalTensor = reduceMaxQueue_.template AllocTensor<float>();
     int64_t tokenIdx = tokenStart, tileIdx = 0;
@@ -126,8 +129,7 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessCoreMax(int
 }
 
 template <typename T>
-__aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessSwigluQuant(int64_t tokenStart,
-    int64_t tokenEnd)
+__aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessSwigluQuant(int64_t tokenStart, int64_t tokenEnd)
 {
     int64_t tokenIdx = tokenStart;
     while (tokenIdx < tokenEnd) {
@@ -158,7 +160,7 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessGroupQuant(
 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessGroup(int64_t groupIdx, int64_t tokenStart,
-    int64_t tokenEnd)
+                                                                           int64_t tokenEnd)
 {
     int64_t tokensInGroup = tokenEnd - tokenStart;
     this->numTiles_ = this->CeilDiv(tokensInGroup, this->tileTokens_);
@@ -171,11 +173,13 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ProcessGroup(int64
 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ComputeTileMax(LocalTensor<float>& reduceMaxLocalTensor,
-    LocalTensor<float>& xFloatLocalTensor, int64_t tileIdx, int64_t curTileTokens)
+                                                                             LocalTensor<float>& xFloatLocalTensor,
+                                                                             int64_t tileIdx, int64_t curTileTokens)
 {
     int64_t computeSize = curTileTokens * this->dimH_;
     LocalTensor<float> x0FloatLocalTensor = xFloatLocalTensor;
-    LocalTensor<float> tmpLocalTensor = xFloatLocalTensor[this->tileLength_ * SwigluGroupQuantHifp8BaseOps::TMP_BUFFER_INDEX];
+    LocalTensor<float>
+        tmpLocalTensor = xFloatLocalTensor[this->tileLength_ * SwigluGroupQuantHifp8BaseOps::TMP_BUFFER_INDEX];
     Abs(tmpLocalTensor, x0FloatLocalTensor, static_cast<uint32_t>(computeSize));
     PipeBarrier<PIPE_V>();
     Maxs(tmpLocalTensor, tmpLocalTensor, EPS_NON_GROUP, static_cast<uint32_t>(computeSize));
@@ -189,7 +193,8 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ComputeTileMax(Loc
     }
 
     if (tileIdx == this->numTiles_ - 1) {
-        uint32_t reduceCount = (this->numTiles_ > 1) ? static_cast<uint32_t>(this->tileLength_) : static_cast<uint32_t>(computeSize);
+        uint32_t reduceCount = (this->numTiles_ > 1) ? static_cast<uint32_t>(this->tileLength_) :
+                                                       static_cast<uint32_t>(computeSize);
         ReduceMax<float>(reduceMaxLocalTensor, reduceMaxLocalTensor, tmpLocalTensor, reduceCount, false);
         PipeBarrier<PIPE_V>();
     }
@@ -197,7 +202,7 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ComputeTileMax(Loc
 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::CopyOutCoreMax(LocalTensor<float>& reduceMaxLocalTensor,
-    GlobalTensor<float> coreMaxGm)
+                                                                             GlobalTensor<float> coreMaxGm)
 {
     this->WaitVToMte3();
     DataCopyParams copyParams(1, sizeof(float), 0, 0);
@@ -216,7 +221,8 @@ __aicore__ inline void SwigluGroupQuantDynamicHifp8Kernel<T>::ComputeGlobalMax()
         DataCopyPad(reduceMaxLocalTensor, coreMaxGm_, coreMaxCopyParams, padParams);
         reduceMaxQueue_.EnQue<float>(reduceMaxLocalTensor);
         reduceMaxLocalTensor = reduceMaxQueue_.template DeQue<float>();
-        ReduceMax<float>(reduceMaxLocalTensor, reduceMaxLocalTensor, tmpLocalTensor, static_cast<uint32_t>(this->usedCoreNum_), false);
+        ReduceMax<float>(reduceMaxLocalTensor, reduceMaxLocalTensor, tmpLocalTensor,
+                         static_cast<uint32_t>(this->usedCoreNum_), false);
         PipeBarrier<PIPE_V>();
         Divs(reduceMaxLocalTensor, reduceMaxLocalTensor, dstTypeMax_, 1);
         this->WaitVToMte3();

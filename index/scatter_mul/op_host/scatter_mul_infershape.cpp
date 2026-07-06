@@ -35,7 +35,5 @@ static ge::graphStatus InferDataType4ScatterMul(gert::InferDataTypeContext* cont
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ScatterMul)
-    .InferShape(InferShape4ScatterMul)
-    .InferDataType(InferDataType4ScatterMul);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(ScatterMul).InferShape(InferShape4ScatterMul).InferDataType(InferDataType4ScatterMul);
+} // namespace ops

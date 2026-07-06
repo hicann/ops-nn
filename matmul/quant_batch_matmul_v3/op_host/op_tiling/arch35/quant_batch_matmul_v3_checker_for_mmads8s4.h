@@ -24,28 +24,26 @@ namespace optiling {
 
 class QuantBatchMatmulV3Checker4MmadS8S4 : public QuantBatchMatmulV3CheckerBase {
 public:
-    QuantBatchMatmulV3Checker4MmadS8S4(gert::TilingContext *context, const QuantBatchMatmulInfo &inputParams)
+    QuantBatchMatmulV3Checker4MmadS8S4(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
         : QuantBatchMatmulV3CheckerBase(context, inputParams)
-    {
-    }
+    {}
 
     ~QuantBatchMatmulV3Checker4MmadS8S4() override = default;
     bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape, const gert::StorageShape *biasShape,
-                    const gert::StorageShape *pertokenShape, const std::vector<int64_t> &dimValueOfMKN) const override;
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
 
 protected:
     virtual bool CheckDtypesInRange() const;
     virtual bool CheckABDtypes() const;
 
-    bool CheckShapeInRangeForOptionalInputs(const gert::StorageShape *biasShape,
-                                            const gert::StorageShape *offsetShape) const;
+    bool CheckShapeInRangeForOptionalInputs(const gert::StorageShape* biasShape,
+                                            const gert::StorageShape* offsetShape) const;
     bool CheckBias(const gert::StorageShape* biasShape) const;
     virtual bool CheckOffset(const gert::StorageShape* offsetShape) const;
-    bool CheckDimValue(const gert::Shape &scaleShape, const gert::StorageShape *biasShape,
-                       const gert::StorageShape *offsetShape, const std::vector<int64_t> &dimValueOfMKN) const;
-    bool CheckShapeInBoundary(const gert::Shape &shape, uint32_t shapeIdx) const;
+    bool CheckDimValue(const gert::Shape& scaleShape, const gert::StorageShape* biasShape,
+                       const gert::StorageShape* offsetShape, const std::vector<int64_t>& dimValueOfMKN) const;
+    bool CheckShapeInBoundary(const gert::Shape& shape, uint32_t shapeIdx) const;
     virtual bool ExtraInputCheck() const;
 };
-}  // namespace optiling
-
+} // namespace optiling

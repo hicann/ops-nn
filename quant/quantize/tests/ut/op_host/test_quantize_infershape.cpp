@@ -25,17 +25,14 @@
 
 class QuantizeTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "quantize test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "quantize test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "quantize test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "quantize test TearDown" << std::endl; }
 };
 
-TEST_F(QuantizeTest, quantize_test_case_1) {
-//------------------------
+TEST_F(QuantizeTest, quantize_test_case_1)
+{
+    //------------------------
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Quantize")->infer_shape;
     gert::StorageShape Shape = {{3, 4, 5, 6}, {3, 4, 5, 6}};
     gert::StorageShape scalesShape = {{}, {}};
@@ -44,7 +41,7 @@ TEST_F(QuantizeTest, quantize_test_case_1) {
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 1)
                       .IrInstanceNum({1, 1})
-                      .InputShapes({&Shape,&scalesShape, &zeroPointShape})
+                      .InputShapes({&Shape, &scalesShape, &zeroPointShape})
                       .OutputShapes({&yShape})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)

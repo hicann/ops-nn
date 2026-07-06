@@ -36,23 +36,19 @@ static constexpr int64_t UINT16_MAX_NUM = 65535;
 static int64_t SIMT_CACHE_SIZE = static_cast<int64_t>(32 * 1024);
 static constexpr int64_t DOUBLE = 2;
 
-void GatherElementsSimtTiling::Reset()
-{
-    opName_ = nullptr;
-}
+void GatherElementsSimtTiling::Reset() { opName_ = nullptr; }
 
-bool GatherElementsSimtTiling::IsCapable()
-{
-    return true;
-}
+bool GatherElementsSimtTiling::IsCapable() { return true; }
 
 ge::graphStatus GatherElementsSimtTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        auto compileInfoPtr = static_cast<const GatherElementsCompileInfo *>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName_, "tiling", "compile_info", "null", "compile info cannot be null"),
-            return ge::GRAPH_FAILED);
+        auto compileInfoPtr = static_cast<const GatherElementsCompileInfo*>(context_->GetCompileInfo());
+        OP_CHECK_IF(compileInfoPtr == nullptr,
+                    OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName_, "tiling", "compile_info", "null",
+                                                           "compile info cannot be null"),
+                    return ge::GRAPH_FAILED);
         coreNum_ = static_cast<int64_t>(compileInfoPtr->core_num);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ub_size);
         OP_LOGD(opName_, "Get aivNum form compileInfo is: %ld", coreNum_);
@@ -65,26 +61,24 @@ ge::graphStatus GatherElementsSimtTiling::GetPlatformInfo()
         OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
-        (std::to_string(coreNum_) + ", " + std::to_string(ubSize_)).c_str(), "> 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
+                                          (std::to_string(coreNum_) + ", " + std::to_string(ubSize_)).c_str(), "> 0"),
+                return ge::GRAPH_FAILED);
     aicoreParams_.numBlocks = coreNum_;
     aicoreParams_.ubSize = static_cast<int64_t>(ubSize_ - SIMT_CACHE_SIZE);
     OP_CHECK_IF((aicoreParams_.ubSize <= 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "ubSize",
-        std::to_string(ubSize_).c_str(),
-        "ubSize should be bigger than SIMT_CACHE_SIZE"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "ubSize", std::to_string(ubSize_).c_str(),
+                                                      "ubSize should be bigger than SIMT_CACHE_SIZE"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-inline bool GatherElementsSimtTiling::ParamTypeIsInvalid(ge::DataType &x)
+inline bool GatherElementsSimtTiling::ParamTypeIsInvalid(ge::DataType& x)
 {
-    std::set<ge::DataType> supportedDtype = {
-        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BOOL,
-        ge::DT_INT8,  ge::DT_UINT8,   ge::DT_INT16, ge::DT_UINT16,
-        ge::DT_INT32, ge::DT_UINT32,  ge::DT_INT64, ge::DT_UINT64,
-        ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN };
+    std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT,       ge::DT_FLOAT16,     ge::DT_BF16,         ge::DT_BOOL,
+                                             ge::DT_INT8,        ge::DT_UINT8,       ge::DT_INT16,        ge::DT_UINT16,
+                                             ge::DT_INT32,       ge::DT_UINT32,      ge::DT_INT64,        ge::DT_UINT64,
+                                             ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN};
     return supportedDtype.count(x) == 0;
 }
 
@@ -94,25 +88,28 @@ ge::graphStatus GatherElementsSimtTiling::GetInAndOutInfo()
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
-    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x",
-        Ops::Base::ToString(xDtype_).c_str(),
-        "dtype should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN]"),
+    OP_CHECK_IF(
+        ParamTypeIsInvalid(xDtype_),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "x", Ops::Base::ToString(xDtype_).c_str(),
+            "dtype should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, "
+            "DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN]"),
         return ge::GRAPH_FAILED);
     auto indexDesc = context_->GetRequiredInputDesc(IN_INDEX_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
     indexDtype_ = indexDesc->GetDataType();
     OP_CHECK_IF((indexDtype_ != ge::DataType::DT_INT32) && (indexDtype_ != ge::DataType::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index",
-        Ops::Base::ToString(indexDtype_).c_str(),
-        "dtype should be in [DT_INT32, DT_INT64]"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(),
+                                                      "dtype should be in [DT_INT32, DT_INT64]"),
+                return ge::GRAPH_FAILED);
     auto yDesc = context_->GetOutputDesc(OUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
-    OP_CHECK_IF(yDtype != xDtype_, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, y",
-        (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(yDtype)).c_str(),
-        "x and y should have same dtype"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDtype != xDtype_,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    opName_, "x, y", (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(yDtype)).c_str(),
+                    "x and y should have same dtype"),
+                return ge::GRAPH_FAILED);
 
     auto xStorageShape = context_->GetInputShape(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xStorageShape);
@@ -129,14 +126,15 @@ ge::graphStatus GatherElementsSimtTiling::GetInAndOutInfo()
 
     dimSize_ = static_cast<int64_t>(indexShape_.GetDimNum());
     OP_CHECK_IF(dimSize_ > MAX_DIM_LEN_EIGHT,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index",
-        std::to_string(dimSize_).c_str(), "dimSize should not larger than 8"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index", std::to_string(dimSize_).c_str(),
+                                                         "dimSize should not larger than 8"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(yShape_ != indexShape_,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "index, y",
-        (Ops::Base::ToString(indexShape_) + ", " + Ops::Base::ToString(yShape_)).c_str(),
-        "index and y should have same shape"),
+    OP_CHECK_IF(
+        yShape_ != indexShape_,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName_, "index, y", (Ops::Base::ToString(indexShape_) + ", " + Ops::Base::ToString(yShape_)).c_str(),
+            "index and y should have same shape"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -145,15 +143,14 @@ inline ge::graphStatus GatherElementsSimtTiling::GetAttrInfo()
 {
     auto const attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    auto *axis = attrs->GetAttrPointer<int64_t>(ATTR_DIM_IDX);
+    auto* axis = attrs->GetAttrPointer<int64_t>(ATTR_DIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, axis);
 
     auto axisVal = static_cast<int64_t>(*axis);
     OP_CHECK_IF(axisVal < -dimSize_ || axisVal >= dimSize_,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "axis",
-        std::to_string(axisVal).c_str(),
-        "axis value should be in range [-dimSize, dimSize-1]"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "axis", std::to_string(axisVal).c_str(),
+                                                      "axis value should be in range [-dimSize, dimSize-1]"),
+                return ge::GRAPH_FAILED);
 
     axis_ = axisVal < 0 ? axisVal + dimSize_ : axisVal;
     for (int64_t i = 0; i < dimSize_; i++) {
@@ -161,10 +158,11 @@ inline ge::graphStatus GatherElementsSimtTiling::GetAttrInfo()
             continue;
         }
         OP_CHECK_IF(xShape_.GetDim(i) < indexShape_.GetDim(i),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, index",
-            (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
-            "x should larger than or equal to index of each dim value, except axis"),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        opName_, "x, index",
+                        (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
+                        "x should larger than or equal to index of each dim value, except axis"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -184,7 +182,7 @@ ge::graphStatus GatherElementsSimtTiling::GetShapeAttrsInfo()
     return resAttr;
 }
 
-inline int GatherElementsSimtTiling::HandleCount(int &count, int i, int j)
+inline int GatherElementsSimtTiling::HandleCount(int& count, int i, int j)
 {
     int val = 1;
     for (int k = i; k < j; k++) {
@@ -194,9 +192,10 @@ inline int GatherElementsSimtTiling::HandleCount(int &count, int i, int j)
         count += (j - i - 1);
     }
     return val;
-} 
+}
 
-void GatherElementsSimtTiling::CalculateFullLoadCondition(int64_t xDtypeSize, int64_t indexDtypeSize) {
+void GatherElementsSimtTiling::CalculateFullLoadCondition(int64_t xDtypeSize, int64_t indexDtypeSize)
+{
     xAfterAxis_ = xShape_.GetDim(axis_);
     idxAfterAxis_ = indexShape_.GetDim(axis_);
     for (int64_t i = axis_ + 1; i < dimSize_; i++) {
@@ -204,9 +203,9 @@ void GatherElementsSimtTiling::CalculateFullLoadCondition(int64_t xDtypeSize, in
         idxAfterAxis_ = idxAfterAxis_ * indexShape_.GetDim(i);
     }
     OP_CHECK_IF((idxAfterAxis_ == static_cast<int64_t>(0)),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "idxAfterAxis",
-        std::to_string(idxAfterAxis_).c_str(), "idxAfterAxis should not be 0"),
-        return );
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "idxAfterAxis", std::to_string(idxAfterAxis_).c_str(),
+                                                      "idxAfterAxis should not be 0"),
+                return );
     int64_t xPerAxisEncludeDim1 = 1;
     int64_t idxPerAxisEncludeDim1 = 1;
     for (int64_t i = 1; i < axis_; i++) {
@@ -218,12 +217,14 @@ void GatherElementsSimtTiling::CalculateFullLoadCondition(int64_t xDtypeSize, in
     uint64_t yPerUbSize = static_cast<uint64_t>(idxAfterAxis_ * xDtypeSize);
     uint64_t idxPerUbSize = static_cast<uint64_t>(idxAfterAxis_ * indexDtypeSize);
     xLoadInUbNum_ = ubSize_ / ((Ops::Base::CeilAlign(xPerUbSize, static_cast<uint64_t>(blockSize)) +
-                    Ops::Base::CeilAlign(yPerUbSize, static_cast<uint64_t>(blockSize)) + Ops::Base::CeilAlign(idxPerUbSize, static_cast<uint64_t>(blockSize))) * 
-                    DOUBLE);
+                                Ops::Base::CeilAlign(yPerUbSize, static_cast<uint64_t>(blockSize)) +
+                                Ops::Base::CeilAlign(idxPerUbSize, static_cast<uint64_t>(blockSize))) *
+                               DOUBLE);
     xUbFactor_ = xAfterAxis_ * xLoadInUbNum_;
     indexLoadInUbNum_ = xLoadInUbNum_;
-    if (xLoadInUbNum_ > 0 && xShape_.GetDim(axis_) <= UINT16_MAX_NUM && idxAfterAxis_ > MIN_IDX_AFTER_AXIS && dimSize_ - axis_ <= THREE &&
-        xPerAxisEncludeDim1 / idxPerAxisEncludeDim1 <= TWO && xAfterAxis_ / idxAfterAxis_ < MIN_RATIO) {
+    if (xLoadInUbNum_ > 0 && xShape_.GetDim(axis_) <= UINT16_MAX_NUM && idxAfterAxis_ > MIN_IDX_AFTER_AXIS &&
+        dimSize_ - axis_ <= THREE && xPerAxisEncludeDim1 / idxPerAxisEncludeDim1 <= TWO &&
+        xAfterAxis_ / idxAfterAxis_ < MIN_RATIO) {
         isFullLoad_ = 1;
     }
 }
@@ -414,7 +415,7 @@ void GatherElementsSimtTiling::ReductionDim()
     m_tilingData_.set_xStrideArr(tempEightArray);
     std::copy(indexStrideArr_.begin(), indexStrideArr_.end(), tempEightArray);
     m_tilingData_.set_indexStrideArr(tempEightArray);
-    
+
     int64_t lengthIsEightArray[MAX_DIM_LEN_EIGHT] = {0, 0, 0, 0, 0, 0, 0, 0};
     std::copy(indexShapeArr_.begin(), indexShapeArr_.end(), lengthIsEightArray);
     m_tilingData_.set_indexShape(lengthIsEightArray);
@@ -444,23 +445,23 @@ void GatherElementsSimtTiling::CalcuCore()
 }
 
 template <typename T>
-static std::string ToString(const T* value, size_t size) {
-  std::string r = "[";
-  for (size_t i = 0; i < size; i++) {
-    r = r + std::to_string(value[i]) + ", ";
-  }
-  r = r + "]";
-  return r;
+static std::string ToString(const T* value, size_t size)
+{
+    std::string r = "[";
+    for (size_t i = 0; i < size; i++) {
+        r = r + std::to_string(value[i]) + ", ";
+    }
+    r = r + "]";
+    return r;
 }
 
 void GatherElementsSimtTiling::PrintTilingData()
 {
     OP_LOGI(opName_, "axis = %ld, usedCore = %ld, perCoreNum = %ld, tailCoreNum = %ld, \
 xStrideArr = %s, indexStrideArr = %s",
-        m_tilingData_.get_axis(), m_tilingData_.get_usedCore(),
-        m_tilingData_.get_perCoreNum(), m_tilingData_.get_tailCoreNum(),
-        ToString(m_tilingData_.get_xStrideArr(), MAX_DIM_LEN_EIGHT).c_str(),
-        ToString(m_tilingData_.get_indexStrideArr(), MAX_DIM_LEN_EIGHT).c_str());
+            m_tilingData_.get_axis(), m_tilingData_.get_usedCore(), m_tilingData_.get_perCoreNum(),
+            m_tilingData_.get_tailCoreNum(), ToString(m_tilingData_.get_xStrideArr(), MAX_DIM_LEN_EIGHT).c_str(),
+            ToString(m_tilingData_.get_indexStrideArr(), MAX_DIM_LEN_EIGHT).c_str());
 }
 void GatherElementsSimtTiling::GetMagicAndShift()
 {
@@ -468,24 +469,26 @@ void GatherElementsSimtTiling::GetMagicAndShift()
     constexpr int64_t QUICK_DIV_NUM_32 = 32;
     for (int64_t i = static_cast<int64_t>(MAX_DIM_LEN) - dimSize_; i < M_SHIFT_OFFSET; i++) {
         shift_[i] = std::ceil(std::log2(indexStrideArr_[i]));
-        magic_[i] = 
-            std::ceil(std::exp2(shift_[i] + QUICK_DIV_NUM_32) / indexStrideArr_[i]) - std::exp2(QUICK_DIV_NUM_32);
+        magic_[i] = std::ceil(std::exp2(shift_[i] + QUICK_DIV_NUM_32) / indexStrideArr_[i]) -
+                    std::exp2(QUICK_DIV_NUM_32);
     }
     m_tilingData_.set_shift(shift_);
     m_tilingData_.set_magic(magic_);
-    return ;
+    return;
 }
 
 ge::graphStatus GatherElementsSimtTiling::DoOpTiling()
 {
     int64_t xDtypeSize = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF((xDtypeSize == -1),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", Ops::Base::ToString(xDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", Ops::Base::ToString(xDtype_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
     int64_t indexDtypeSize = ge::GetSizeByDataType(indexDtype_);
     OP_CHECK_IF((indexDtypeSize == -1),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(),
+                                                      "failed to get dtype size, dtype may be unsupported"),
+                return ge::GRAPH_FAILED);
     CalculateFullLoadCondition(xDtypeSize, indexDtypeSize);
     if (isFullLoad_ > 0) {
         ComputeCoreNum();
@@ -502,10 +505,7 @@ ge::graphStatus GatherElementsSimtTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GatherElementsSimtTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GatherElementsSimtTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t GatherElementsSimtTiling::GetTilingKey() const
 {

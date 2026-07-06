@@ -17,15 +17,12 @@
 
 #include "batch_norm_base.h"
 
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 constexpr static int64_t FULL_REDUCE_DICHOTOMY_ADD_COEFF = 2;
 
 template <typename T1, typename T2>
-class BatchNormFullReduce
-{
+class BatchNormFullReduce {
 public:
-
     __aicore__ inline BatchNormFullReduce(const BatchNormFullReduceRegbaseTilingData* tilingData, TPipe* pipeIn)
     {
         this->pipe = pipeIn;
@@ -59,10 +56,10 @@ public:
     {
         auto blockIdx = GetBlockIdx();
 
-        this->r1r0Align =
-            (((this->r1 * this->r0 * sizeof(T1) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(T1);
-        this->singleA = (blockIdx == this->blockNum - 1) ? (this->a - this->aBlockFactor * (this->blockNum - 1))
-                                                         : this->aBlockFactor;
+        this->r1r0Align = (((this->r1 * this->r0 * sizeof(T1) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                          sizeof(T1);
+        this->singleA = (blockIdx == this->blockNum - 1) ? (this->a - this->aBlockFactor * (this->blockNum - 1)) :
+                                                           this->aBlockFactor;
 
         int64_t aGmOffset = this->aBlockFactor * blockIdx;
         int64_t arGmOffset = aGmOffset * this->r0;
@@ -83,8 +80,8 @@ public:
         int64_t aFactorAlign = (((this->aFactor * sizeof(T2) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(T2);
         pipe->InitBuffer(betaQueue, DOUBLE_BUFFER, aFactorAlign * sizeof(T2));
         pipe->InitBuffer(gammaQueue, DOUBLE_BUFFER, aFactorAlign * sizeof(T2));
-        int64_t aFactorAlignF32 =
-            (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / FLOAT_BYTES;
+        int64_t aFactorAlignF32 = (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                                  FLOAT_BYTES;
         pipe->InitBuffer(batchMeanQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
         pipe->InitBuffer(batchRstdQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
 
@@ -99,8 +96,8 @@ public:
         pipe->InitBuffer(xQueue, DOUBLE_BUFFER, xBufferSize * sizeof(T1));
         pipe->InitBuffer(yQueue, DOUBLE_BUFFER, xBufferSize * sizeof(T1));
 
-        int64_t binaryAddBufSize =
-            (((binaryAddQuotient / VL_FP32) * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE;
+        int64_t binaryAddBufSize = (((binaryAddQuotient / VL_FP32) * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) *
+                                   BLOCK_SIZE;
         if (binaryAddBufSize > 0) {
             pipe->InitBuffer(binaryAddBuf, binaryAddBufSize);
         }
@@ -112,8 +109,8 @@ public:
         for (int64_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             int64_t offset = ubLoopIdx * this->aFactor * this->r0;
             int64_t aOffset = ubLoopIdx * this->aFactor;
-            int64_t currentA =
-                (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) : this->aFactor;
+            int64_t currentA = (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) :
+                                                               this->aFactor;
             ProcessUB(offset, aOffset, currentA);
         }
     }
@@ -629,16 +626,16 @@ private:
                 Div(r, one, var, pregLoop);
                 Sqrt(y, r, pregLoop);
                 Muls(t, var, float(-0.5), pregLoop);
-                Mul(t, t, y, pregLoop);                 // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);               // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);             // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);   // -1 * x
-                Mula(s, t3, r, pregLoop);               // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop);  // (-1) * y
-                Mula(r, t4, rstd, pregLoop);            // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);              // s + x * t
-                Mul(s, s, rstd, pregLoop);              // e * y
-                Mula(rstd, s, scalar1, pregLoop);       // y + y * e * 0.5
+                Mul(t, t, y, pregLoop);                // -0.5 * x * y
+                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
+                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
+                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
+                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
+                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
+                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
+                Mula(s, var, r, pregLoop);             // s + x * t
+                Mul(s, s, rstd, pregLoop);             // e * y
+                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
                 CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
                 Select(rstd, scalarZero, rstd, cmpRegZero);
                 CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
@@ -765,6 +762,6 @@ private:
 
     TBuf<TPosition::VECCALC> binaryAddBuf;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_FULL_REDUCE_H

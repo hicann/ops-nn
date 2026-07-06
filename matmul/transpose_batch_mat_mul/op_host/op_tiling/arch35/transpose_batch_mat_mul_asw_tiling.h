@@ -23,16 +23,13 @@ namespace transpose_batch_mat_mul_advanced {
 using namespace matmul_v3_advanced;
 class TransposeBatchMatMulAswTiling : public MatMulV3BaseTiling {
 public:
-    TransposeBatchMatMulAswTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    TransposeBatchMatMulAswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BaseTiling(context, cfg){};
 
     ~TransposeBatchMatMulAswTiling() override = default;
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
+    bool IsCapable() override { return true; };
 
     ge::graphStatus DoOpTiling() override;
 
@@ -54,6 +51,5 @@ private:
     TBMMBatchSplit batchSplitMode_ = TBMMBatchSplit::BATCH_SPLIT_FALSE;
     uint32_t batchSplitFactor_ = 1;
 };
-}
-}
-
+} // namespace transpose_batch_mat_mul_advanced
+} // namespace optiling

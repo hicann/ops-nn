@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_pow_scalar_proto.h"
 
-class ForeachPowScalarTest : public testing::Test
-{
+class ForeachPowScalarTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachPowScalar SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachPowScalar SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachPowScalar TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachPowScalar TearDown" << std::endl; }
 };
 
 TEST_F(ForeachPowScalarTest, infer_shape_known_success)

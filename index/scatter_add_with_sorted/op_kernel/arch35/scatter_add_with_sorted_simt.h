@@ -1,12 +1,12 @@
 /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License")
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License")
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 #ifndef SCATTER_ADD_WITH_SORTED_SIMT_H
 #define SCATTER_ADD_WITH_SORTED_SIMT_H
@@ -119,7 +119,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddWithS
     }
 }
 
-template<typename T, typename U, typename ADDR_T, bool isUpdateScalar, bool withPos>
+template <typename T, typename U, typename ADDR_T, bool isUpdateScalar, bool withPos>
 class ScatterAddWithSortedSIMT {
 public:
     __aicore__ inline ScatterAddWithSortedSIMT(const ScatterAddWithSortedSimtTilingData& tilingData)
@@ -139,17 +139,19 @@ private:
     ADDR_T indicesBlockNum_ = 0;
 };
 
-template<typename T, typename U, typename ADDR_T, bool isUpdateScalar, bool withPos>
-__aicore__ inline void ScatterAddWithSortedSIMT<T, U, ADDR_T, isUpdateScalar, withPos>::Init(
-                        GM_ADDR var, GM_ADDR updates, GM_ADDR indices, GM_ADDR pos)
+template <typename T, typename U, typename ADDR_T, bool isUpdateScalar, bool withPos>
+__aicore__ inline void ScatterAddWithSortedSIMT<T, U, ADDR_T, isUpdateScalar, withPos>::Init(GM_ADDR var,
+                                                                                             GM_ADDR updates,
+                                                                                             GM_ADDR indices,
+                                                                                             GM_ADDR pos)
 {
     blockIdx_ = GetBlockIdx();
     if (blockIdx_ >= tilingData_.usedCoreNum) {
         return;
     }
-    
-    varGm_.SetGlobalBuffer((__gm__ T *)(var));
-    updatesGm_.SetGlobalBuffer((__gm__ T *)(updates));
+
+    varGm_.SetGlobalBuffer((__gm__ T*)(var));
+    updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
     indicesGm_.SetGlobalBuffer((__gm__ U*)indices);
     posGm_.SetGlobalBuffer((__gm__ U*)pos);
 
@@ -159,7 +161,7 @@ __aicore__ inline void ScatterAddWithSortedSIMT<T, U, ADDR_T, isUpdateScalar, wi
     }
 }
 
-template<typename T, typename U, typename ADDR_T, bool isUpdateScalar, bool withPos>
+template <typename T, typename U, typename ADDR_T, bool isUpdateScalar, bool withPos>
 __aicore__ inline void ScatterAddWithSortedSIMT<T, U, ADDR_T, isUpdateScalar, withPos>::Process()
 {
     if (blockIdx_ >= tilingData_.usedCoreNum) {
@@ -176,15 +178,16 @@ __aicore__ inline void ScatterAddWithSortedSIMT<T, U, ADDR_T, isUpdateScalar, wi
     ADDR_T updatesBlockNum = indicesBlockNum_ * totalCol;
 
     bool isNoCutIndices = tilingData_.indicesNum <= tilingData_.varShape[0] * TWO;
-    isNoCutIndices = isNoCutIndices || (tilingData_.indicesNum <= tilingData_.varShape[0] * TEN && tilingData_.varShape[1] <= TWO);
+    isNoCutIndices = isNoCutIndices ||
+                     (tilingData_.indicesNum <= tilingData_.varShape[0] * TEN && tilingData_.varShape[1] <= TWO);
     if (isNoCutIndices) {
         ADDR_T magic = 0;
         ADDR_T shift = 0;
         GetUintDivMagicAndShift(magic, shift, totalCol);
-        asc_vf_call<ScatterAddWithSortedSimtCompute<T, U, ADDR_T, isUpdateScalar, withPos>>(dim3(THREAD_NUM), 
-                totalCol, indicesBlockOffset, indicesBlockNum, varFirstDimSize, magic, shift, updateScalarValue,
-                (__gm__ T*)(varGm_.GetPhyAddr()), (__gm__ U*)(indicesGm_.GetPhyAddr()), (__gm__ U*)(posGm_.GetPhyAddr()),
-                (__gm__ T*)(updatesGm_.GetPhyAddr()));
+        asc_vf_call<ScatterAddWithSortedSimtCompute<T, U, ADDR_T, isUpdateScalar, withPos>>(
+            dim3(THREAD_NUM), totalCol, indicesBlockOffset, indicesBlockNum, varFirstDimSize, magic, shift,
+            updateScalarValue, (__gm__ T*)(varGm_.GetPhyAddr()), (__gm__ U*)(indicesGm_.GetPhyAddr()),
+            (__gm__ U*)(posGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()));
     } else {
         uint32_t currentMaxThread = updatesBlockNum >= THREAD_NUM ? THREAD_NUM : updatesBlockNum;
         uint32_t threadNumRow = currentMaxThread / totalCol;
@@ -193,13 +196,14 @@ __aicore__ inline void ScatterAddWithSortedSIMT<T, U, ADDR_T, isUpdateScalar, wi
         ADDR_T threadIndicesNum = ops::CeilDiv(indicesBlockNum, static_cast<ADDR_T>(threadNumRow));
         threadNumRow = ops::CeilDiv(indicesBlockNum, threadIndicesNum);
         ADDR_T tailThreadRowIndicesNum = indicesBlockNum - threadIndicesNum * (threadNumRow - 1);
-    
+
         asc_vf_call<ScatterAddWithSortedSimtComputeCutIndices<T, U, ADDR_T, isUpdateScalar, withPos>>(
-                dim3({static_cast<uint32_t>(totalCol), threadNumRow}), threadIndicesNum, tailThreadRowIndicesNum,
-                indicesBlockOffset, varFirstDimSize, updateScalarValue, (__gm__ T*)(varGm_.GetPhyAddr()),
-                (__gm__ U*)(indicesGm_.GetPhyAddr()), (__gm__ U*)(posGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()));
+            dim3({static_cast<uint32_t>(totalCol), threadNumRow}), threadIndicesNum, tailThreadRowIndicesNum,
+            indicesBlockOffset, varFirstDimSize, updateScalarValue, (__gm__ T*)(varGm_.GetPhyAddr()),
+            (__gm__ U*)(indicesGm_.GetPhyAddr()), (__gm__ U*)(posGm_.GetPhyAddr()),
+            (__gm__ T*)(updatesGm_.GetPhyAddr()));
     }
 }
 
-}
+} // namespace ScatterAddWithSorted
 #endif

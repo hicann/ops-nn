@@ -29,8 +29,9 @@
 
 using namespace SparseTensorDenseMatMul;
 
-extern "C" __global__ __aicore__ void sparse_tensor_dense_mat_mul(
-    GM_ADDR x1_indices, GM_ADDR x1_values, GM_ADDR x1_shape, GM_ADDR x2, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sparse_tensor_dense_mat_mul(GM_ADDR x1_indices, GM_ADDR x1_values,
+                                                                  GM_ADDR x1_shape, GM_ADDR x2, GM_ADDR y,
+                                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     if (g_coreType == AIC) {

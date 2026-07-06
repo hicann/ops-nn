@@ -18,8 +18,8 @@
 namespace optiling {
 
 static constexpr int64_t ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD = 128;
-static constexpr int64_t BIG_KERNEL_B2_MAX_COUNT =
-    32640; // FloorAlign(max_int16, VRegSize/sizeof(int16_t) int16最大值对)向下对齐
+static constexpr int64_t
+    BIG_KERNEL_B2_MAX_COUNT = 32640; // FloorAlign(max_int16, VRegSize/sizeof(int16_t) int16最大值对)向下对齐
 static constexpr int64_t UB_MAX_INDICES_USE_COUNT = 1024;
 static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t FLOAT16_BYTPES = 2;
@@ -34,8 +34,8 @@ bool AdaptiveMaxPool3dBigKernelTiling::IsCapable()
     uint64_t kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
     bigKernelInfo.kernelMaxDHW = kernelDMax * kernelHMax * kernelWMax;
     bool isCapable = bigKernelInfo.kernelMaxDHW >= ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD;
-    OP_LOGD(
-        context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling IsCapable check: %s", isCapable ? "true" : "false");
+    OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling IsCapable check: %s",
+            isCapable ? "true" : "false");
     return isCapable;
 }
 
@@ -89,8 +89,8 @@ void AdaptiveMaxPool3dBigKernelTiling::PrintTilingData() const
 }
 void AdaptiveMaxPool3dBigKernelTiling::SetTilingData()
 {
-    AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData* tilingData =
-        context_->GetTilingData<AdaptivePool3dBigKernelTilingData>();
+    AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData*
+        tilingData = context_->GetTilingData<AdaptivePool3dBigKernelTilingData>();
     tilingData->nc = input_.nIn * input_.cIn;
     tilingData->dInDim = input_.dIn;
     tilingData->hInDim = input_.hIn;
@@ -110,8 +110,8 @@ ge::graphStatus AdaptiveMaxPool3dBigKernelTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling DoOpTiling start.");
     if (GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "AdaptiveMaxPool3d", "indices", "unexpected", "dtype must be DT_INT32 or DT_INT64");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON("AdaptiveMaxPool3d", "indices", "unexpected",
+                                              "dtype must be DT_INT32 or DT_INT64");
         return ge::GRAPH_FAILED;
     }
     DoBlockTiling();

@@ -24,26 +24,27 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-                                                                                    DataType::DT_FLOAT16,
-                                                                                    DataType::DT_BF16};
+static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT_SUPPORT_LIST = {DataType::DT_FLOAT,
-                                                                    DataType::DT_DOUBLE};
+                                                                                  DataType::DT_DOUBLE};
 
 static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT16_SUPPORT_LIST = {DataType::DT_FLOAT16,
-                                                                    DataType::DT_DOUBLE};
+                                                                                    DataType::DT_DOUBLE};
 
-static const std::initializer_list<DataType> EMPTY_LIST  = {};
+static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+{
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(scalar, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out) {
+static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
+{
     for (uint64_t i = 0; i < self->Size(); i++) {
         // self格式不能是私有格式
         if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
@@ -54,20 +55,22 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
     return true;
 }
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
-  } else {
-    return EMPTY_LIST;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+    } else {
+        return EMPTY_LIST;
+    }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+{
     const auto& dtypeSupportList = GetDtypeSupportList();
     if (dtypeSupportList.size() == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
+                op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
 
@@ -80,11 +83,11 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtyte, return false);
-	}
+    }
 
     for (uint64_t i = 0; i < out->Size(); i++) {
         OP_CHECK_DTYPE_NOT_MATCH((*out)[i], selfDtyte, return false);
-	}
+    }
 
     // check the releation of self and scalar
     if (selfDtyte == DataType::DT_BF16 || selfDtyte == DataType::DT_FLOAT) {
@@ -95,7 +98,8 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     return true;
 }
 
-static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out) {
+static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
+{
     // tensor 维度检查
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
@@ -108,7 +112,8 @@ static inline bool CheckShape(const aclTensorList* self, const aclTensorList* ou
     return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
@@ -120,9 +125,11 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecForeachDivScalarV2GetWorkspaceSize(const aclTensorList *x,  const aclScalar *scalar, const aclTensorList *out, uint64_t *workspaceSize,
-                                             aclOpExecutor **executor) {
-     // 固定写法，创建OpExecutor
+static aclnnStatus ExecForeachDivScalarV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar,
+                                                          const aclTensorList* out, uint64_t* workspaceSize,
+                                                          aclOpExecutor** executor)
+{
+    // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
@@ -138,7 +145,7 @@ static aclnnStatus ExecForeachDivScalarV2GetWorkspaceSize(const aclTensorList *x
     }
 
     // self如果非连续，需要转连续
-    std::vector<const aclTensor *> tensorsVec;
+    std::vector<const aclTensor*> tensorsVec;
     for (size_t i = 0; i < x->Size(); ++i) {
         auto secondContiguous = l0op::Contiguous((*x)[i], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -149,7 +156,7 @@ static aclnnStatus ExecForeachDivScalarV2GetWorkspaceSize(const aclTensorList *x
 
     // sclar to tensor
     const aclTensor* otherTensor;
-    if ((*x)[0]->GetDataType() ==  DataType::DT_BF16) {
+    if ((*x)[0]->GetDataType() == DataType::DT_BF16) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
     } else {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
@@ -165,18 +172,16 @@ static aclnnStatus ExecForeachDivScalarV2GetWorkspaceSize(const aclTensorList *x
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnForeachDivScalarV2GetWorkspaceSize(
-    const aclTensorList *x,
-    const aclScalar *scalar,
-    aclTensorList *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+aclnnStatus aclnnForeachDivScalarV2GetWorkspaceSize(const aclTensorList* x, const aclScalar* scalar, aclTensorList* out,
+                                                    uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnForeachDivScalarV2, DFX_IN(x, scalar), DFX_OUT(out));
     return ExecForeachDivScalarV2GetWorkspaceSize(x, scalar, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnForeachDivScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream) {
+aclnnStatus aclnnForeachDivScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    const aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnForeachDivScalarV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }

@@ -28,13 +28,13 @@ namespace optiling {
 using namespace std;
 using namespace AdaptivePool3DTiling;
 struct AdaptiveAvgPool3dBigKernelInfo {
-    int64_t blockFactor {0};
-    int64_t blockTail {0};
-    int64_t totalIdx {0};
-    int64_t coreNums {0};
-    int64_t maxCount {0};
-    int64_t kernelMaxDHW {0};
-    int64_t batchCount {1};
+    int64_t blockFactor{0};
+    int64_t blockTail{0};
+    int64_t totalIdx{0};
+    int64_t coreNums{0};
+    int64_t maxCount{0};
+    int64_t kernelMaxDHW{0};
+    int64_t batchCount{1};
 };
 
 class AdaptiveAvgPool3dBigKernelTiling : public AdaptivePool3dBaseTiling {
@@ -51,7 +51,7 @@ private:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
-    
+
     AdaptiveAvgPool3dBigKernelInfo avgBigKernelInfo;
 };
 } // namespace optiling

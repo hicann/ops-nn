@@ -27,13 +27,13 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
-constexpr uint32_t WS_SYS_SIZE = 32U;     // workspace 占位 32B（无实际使用）
+constexpr uint32_t WS_SYS_SIZE = 32U; // workspace 占位 32B（无实际使用）
 // 双缓冲阈值：数据量 > 阈值启用双缓冲
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 // 系统/流水线开销预留（防止 UB 满分配后 pipe 控制结构溢出）
@@ -41,7 +41,8 @@ constexpr int64_t UB_RESERVE_BYTES = 8 * 1024;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -78,11 +79,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto outShape = EnsureNotScalar(outStorage->GetStorageShape());
 
     OP_CHECK_IF(
-        varShape.GetShapeSize() != deltaShape.GetShapeSize() ||
-            varShape.GetShapeSize() != outShape.GetShapeSize(),
-        OP_LOGE(
-            context, "ApplyProximalGradientDescent: var/delta/varOut shape size mismatch: var=%ld, delta=%ld, varOut=%ld",
-            varShape.GetShapeSize(), deltaShape.GetShapeSize(), outShape.GetShapeSize()),
+        varShape.GetShapeSize() != deltaShape.GetShapeSize() || varShape.GetShapeSize() != outShape.GetShapeSize(),
+        OP_LOGE(context,
+                "ApplyProximalGradientDescent: var/delta/varOut shape size mismatch: var=%ld, delta=%ld, varOut=%ld",
+                varShape.GetShapeSize(), deltaShape.GetShapeSize(), outShape.GetShapeSize()),
         return ge::GRAPH_FAILED);
 
     totalIdx = varShape.GetShapeSize();
@@ -110,27 +110,22 @@ static ge::graphStatus ApplyProximalGradientDescentTilingFunc(gert::TilingContex
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalIdx;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
-    ApplyProximalGradientDescentTilingData* tiling =
-        context->GetTilingData<ApplyProximalGradientDescentTilingData>();
+    ApplyProximalGradientDescentTilingData* tiling = context->GetTilingData<ApplyProximalGradientDescentTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyProximalGradientDescentTilingData), 0,
-                 sizeof(ApplyProximalGradientDescentTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ApplyProximalGradientDescentTilingData), 0,
+                         sizeof(ApplyProximalGradientDescentTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context);
     tiling->totalNum = totalIdx;
@@ -166,11 +161,10 @@ static ge::graphStatus ApplyProximalGradientDescentTilingFunc(gert::TilingContex
     } else { // DT_FLOAT16
         bytesPerElem = useDoubleBuffer ? 32 : 26;
     }
-    int64_t usableUbSize =
-        (static_cast<int64_t>(ubSize) > UB_RESERVE_BYTES) ?
-        (static_cast<int64_t>(ubSize) - UB_RESERVE_BYTES) : static_cast<int64_t>(ubSize);
-    tiling->ubFactor = Ops::Base::FloorAlign(
-        Ops::Base::FloorDiv(usableUbSize, bytesPerElem), ubBlockSize);
+    int64_t usableUbSize = (static_cast<int64_t>(ubSize) > UB_RESERVE_BYTES) ?
+                               (static_cast<int64_t>(ubSize) - UB_RESERVE_BYTES) :
+                               static_cast<int64_t>(ubSize);
+    tiling->ubFactor = Ops::Base::FloorAlign(Ops::Base::FloorDiv(usableUbSize, bytesPerElem), ubBlockSize);
 
     context->SetBlockDim(usedCoreNum);
 
@@ -183,8 +177,7 @@ static ge::graphStatus ApplyProximalGradientDescentTilingFunc(gert::TilingContex
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForApplyProximalGradientDescent(
-    [[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForApplyProximalGradientDescent([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

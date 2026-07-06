@@ -29,8 +29,7 @@ __global__ __aicore__ void foreach_log2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     REGISTER_TILING_DEFAULT(ForeachLog2TilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachLog2TilingData, tilingData, tiling);
 
-    const __gm__ ForeachLog2TilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachLog2TilingData*>(tiling);
+    const __gm__ ForeachLog2TilingData* tilingGm = reinterpret_cast<const __gm__ ForeachLog2TilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachLog2TilingKey::TILING_KEY_FLOAT)) {
         NsForeachLog2::Process<float, float>(x, y, tilingGm);

@@ -53,4 +53,4 @@ REG_OP(HardShrinkGrad)
     .OP_END_FACTORY_REG(HardShrinkGrad)
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_HARD_SHRINK_GRAD_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_HARD_SHRINK_GRAD_OPS_H_

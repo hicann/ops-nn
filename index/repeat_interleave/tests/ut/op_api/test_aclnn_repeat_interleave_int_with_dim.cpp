@@ -25,20 +25,13 @@ using namespace std;
 
 class l2_repeat_interleave_dim_int_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "repeat_interleave_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "repeat_interleave_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "repeat_interleave_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "repeat_interleave_test TearDown" << std::endl; }
 
-    void test_run(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        int64_t repeats, int64_t dim, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype,
-        aclFormat outFormat)
+    void test_run(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
+                  int64_t repeats, int64_t dim, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype,
+                  aclFormat outFormat)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat).Precision(0.00001, 0.00001);
@@ -49,10 +42,9 @@ protected:
         EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
     }
 
-    void test_run_invalid(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        int64_t repeats, int64_t dim, int64_t outputSize, vector<int64_t> outDims, aclDataType outDtype,
-        aclFormat outFormat)
+    void test_run_invalid(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat,
+                          vector<int64_t> selfRange, int64_t repeats, int64_t dim, int64_t outputSize,
+                          vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto out = TensorDesc(outDims, outDtype, outFormat).Precision(0.00001, 0.00001);
@@ -120,10 +112,10 @@ TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_08)
 TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_10)
 {
     test_run_invalid({2, 3, 3}, ACL_DOUBLE, ACL_FORMAT_ND, {-10, 10}, 2, 1, 6, {2, 6, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
-    test_run_invalid(
-        {2, 3, 3}, ACL_COMPLEX64, ACL_FORMAT_ND, {-10, 10}, 2, 1, 6, {2, 6, 3}, ACL_COMPLEX64, ACL_FORMAT_ND);
-    test_run_invalid(
-        {2, 3, 3}, ACL_COMPLEX128, ACL_FORMAT_ND, {-10, 10}, 2, 1, 6, {2, 6, 3}, ACL_COMPLEX128, ACL_FORMAT_ND);
+    test_run_invalid({2, 3, 3}, ACL_COMPLEX64, ACL_FORMAT_ND, {-10, 10}, 2, 1, 6, {2, 6, 3}, ACL_COMPLEX64,
+                     ACL_FORMAT_ND);
+    test_run_invalid({2, 3, 3}, ACL_COMPLEX128, ACL_FORMAT_ND, {-10, 10}, 2, 1, 6, {2, 6, 3}, ACL_COMPLEX128,
+                     ACL_FORMAT_ND);
 }
 
 // self.dtype = out.dtype
@@ -163,18 +155,16 @@ TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_12)
 TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_13)
 {
     test_run({2, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 2, 1, 6, {2, 6, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
-    test_run(
-        {2, 2, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW, {-10, 10}, 2, 1, 4, {2, 4, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
-    test_run(
-        {2, 2, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NHWC, {-10, 10}, 2, 1, 4, {2, 4, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NHWC);
-    test_run(
-        {2, 2, 1, 2}, ACL_FLOAT16, ACL_FORMAT_HWCN, {-10, 10}, 2, 1, 4, {2, 4, 1, 2}, ACL_FLOAT16, ACL_FORMAT_HWCN);
-    test_run(
-        {2, 1, 1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NDHWC, {-10, 10}, 2, 1, 2, {2, 2, 1, 2, 2}, ACL_FLOAT16,
-        ACL_FORMAT_NDHWC);
-    test_run(
-        {2, 1, 1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCDHW, {-10, 10}, 2, 1, 2, {2, 2, 1, 2, 2}, ACL_FLOAT16,
-        ACL_FORMAT_NCDHW);
+    test_run({2, 2, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW, {-10, 10}, 2, 1, 4, {2, 4, 1, 2}, ACL_FLOAT16,
+             ACL_FORMAT_NCHW);
+    test_run({2, 2, 1, 2}, ACL_FLOAT16, ACL_FORMAT_NHWC, {-10, 10}, 2, 1, 4, {2, 4, 1, 2}, ACL_FLOAT16,
+             ACL_FORMAT_NHWC);
+    test_run({2, 2, 1, 2}, ACL_FLOAT16, ACL_FORMAT_HWCN, {-10, 10}, 2, 1, 4, {2, 4, 1, 2}, ACL_FLOAT16,
+             ACL_FORMAT_HWCN);
+    test_run({2, 1, 1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NDHWC, {-10, 10}, 2, 1, 2, {2, 2, 1, 2, 2}, ACL_FLOAT16,
+             ACL_FORMAT_NDHWC);
+    test_run({2, 1, 1, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCDHW, {-10, 10}, 2, 1, 2, {2, 2, 1, 2, 2}, ACL_FLOAT16,
+             ACL_FORMAT_NCDHW);
 }
 
 ///////////////////////////////////////
@@ -247,13 +237,11 @@ TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_18)
     // 1维
     test_run({5}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 5, 0, 25, {25}, ACL_FLOAT16, ACL_FORMAT_ND);
     // 8维
-    test_run(
-        {1, 2, 1, 2, 1, 1, 1, 2}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 3, 2, 3, {1, 2, 3, 2, 1, 1, 1, 2}, ACL_FLOAT16,
-        ACL_FORMAT_ND);
+    test_run({1, 2, 1, 2, 1, 1, 1, 2}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 3, 2, 3, {1, 2, 3, 2, 1, 1, 1, 2},
+             ACL_FLOAT16, ACL_FORMAT_ND);
     // 9维
-    test_run_invalid(
-        {1, 2, 1, 2, 1, 1, 1, 2, 1}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 2, 1, 4, {1, 4, 1, 2, 1, 1, 1, 2, 1},
-        ACL_FLOAT16, ACL_FORMAT_ND);
+    test_run_invalid({1, 2, 1, 2, 1, 1, 1, 2, 1}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 2, 1, 4,
+                     {1, 4, 1, 2, 1, 1, 1, 2, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
 }
 
 ///////////////////////////////////////
@@ -271,8 +259,8 @@ TEST_F(l2_repeat_interleave_dim_int_test, l2_repeat_interleave_dim_int_test_19)
     test_run({2, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, 5, 2, 15, {2, 3, 15}, ACL_FLOAT16, ACL_FORMAT_ND);
 
     // dim为 -N - 1
-    test_run_invalid(
-        {2, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, -2, -4, 6, {2, 6, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    test_run_invalid({2, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, -2, -4, 6, {2, 6, 3}, ACL_FLOAT16,
+                     ACL_FORMAT_ND);
     // dim为 N
     test_run_invalid({2, 3, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, -2, 3, 6, {2, 6, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 }

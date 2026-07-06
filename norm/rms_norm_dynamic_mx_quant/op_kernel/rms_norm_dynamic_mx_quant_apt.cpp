@@ -27,8 +27,8 @@ using namespace RmsNormDynamicMxQuantNs;
 REGISTER_TILING_DEFAULT(RmsNormDynamicMxQuantFullLoadTilingData);
 
 template <int8_t COMPUTE_MODE, int8_t OPTIMIZE_MODE>
-__global__ __aicore__ void rms_norm_dynamic_mx_quant(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void rms_norm_dynamic_mx_quant(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                     GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -30,11 +30,11 @@ namespace ge {
  * x_grad: A tensor. Shape, datatype and format is the same as x.
  */
 REG_OP(MishGrad)
-    .INPUT(grad, TensorType({ DT_FLOAT, DT_FLOAT16, DT_BF16 }))
-    .INPUT(x, TensorType({ DT_FLOAT, DT_FLOAT16, DT_BF16 }))
-    .OPTIONAL_INPUT(tanhx, TensorType({ DT_FLOAT, DT_FLOAT16, DT_BF16 }))
-    .OUTPUT(x_grad, TensorType({ DT_FLOAT, DT_FLOAT16, DT_BF16 }))
+    .INPUT(grad, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OPTIONAL_INPUT(tanhx, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .OUTPUT(x_grad, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OP_END_FACTORY_REG(MishGrad)
-    
-}
+
+} // namespace ge
 #endif

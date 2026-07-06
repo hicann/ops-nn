@@ -43,8 +43,8 @@ ge::graphStatus AdaptiveAvgPool2dBigKernelTiling::CheckOutputDtypeInfo()
     auto outputDtype = outputDesc->GetDataType();
     if (outputDtype != ge::DT_FLOAT && outputDtype != ge::DT_FLOAT16 && outputDtype != ge::DT_BF16) {
         std::string outputDtypeStr = std::to_string(static_cast<int32_t>(outputDtype));
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName_, "output", outputDtypeStr.c_str(), "[0(DT_FLOAT), 1(DT_FLOAT16), 27(DT_BF16)]");
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "output", outputDtypeStr.c_str(),
+                                  "[0(DT_FLOAT), 1(DT_FLOAT16), 27(DT_BF16)]");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -145,8 +145,8 @@ ge::graphStatus AdaptiveAvgPool2dBigKernelTiling::DoOpTiling()
     const char* opName_ = "AdaptiveAvgPool2d";
     OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool2dBigKernelTiling DoOpTiling start.");
     if (CheckOutputDtypeInfo() != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            opName_, "output", "unexpected_dtype", "AdaptiveAvgPool2d output dtype unexpected");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "output", "unexpected_dtype",
+                                              "AdaptiveAvgPool2d output dtype unexpected");
         return ge::GRAPH_FAILED;
     }
     DoBlockTiling();

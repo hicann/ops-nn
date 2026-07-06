@@ -19,21 +19,27 @@
 template <typename T>
 class KernelDeepNormGradCutD : public KernelDeepNormGradBase<T> {
 public:
-    __aicore__ inline KernelDeepNormGradCutD()
-    {}
-    __aicore__ inline void InitGM(
-        GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean, GM_ADDR dataGamma,
-        GM_ADDR outputPdX, GM_ADDR outputPdGx, GM_ADDR outputPdGamma, GM_ADDR outputPdBeta)
+    __aicore__ inline KernelDeepNormGradCutD() {}
+    __aicore__ inline void InitGM(GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean,
+                                  GM_ADDR dataGamma, GM_ADDR outputPdX, GM_ADDR outputPdGx, GM_ADDR outputPdGamma,
+                                  GM_ADDR outputPdBeta)
     {
-        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
-        xGm.SetGlobalBuffer((__gm__ T*)dataX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
-        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                             static_cast<uint64_t>(nDeal) * dDimNum);
+        xGm.SetGlobalBuffer((__gm__ T*)dataX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                            static_cast<uint64_t>(nDeal) * dDimNum);
+        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+                             static_cast<uint64_t>(nDeal) * dDimNum);
         meanGm.SetGlobalBuffer((__gm__ float*)dataMean + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
         rstdGm.SetGlobalBuffer((__gm__ float*)dataRstd + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
         gammaGm.SetGlobalBuffer((__gm__ T*)dataGamma, dDimNum);
 
-        outputPdXGm.SetGlobalBuffer((__gm__ T*)outputPdX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
-        outputPdGxGm.SetGlobalBuffer((__gm__ T*)outputPdGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        outputPdXGm.SetGlobalBuffer(
+            (__gm__ T*)outputPdX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+            static_cast<uint64_t>(nDeal) * dDimNum);
+        outputPdGxGm.SetGlobalBuffer(
+            (__gm__ T*)outputPdGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum,
+            static_cast<uint64_t>(nDeal) * dDimNum);
         outputPdBetaGm.SetGlobalBuffer((__gm__ float*)outputPdBeta, dDimNum);
         outputPdGammaGm.SetGlobalBuffer((__gm__ float*)outputPdGamma, dDimNum);
         // use atomicadd, need init beta&gamma
@@ -68,10 +74,9 @@ public:
         }
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean, GM_ADDR dataGamma,
-        GM_ADDR outputPdX, GM_ADDR outputPdGx, GM_ADDR outputPdGamma, GM_ADDR outputPdBeta,
-        DeepNormGradTilingData tiling, GM_ADDR usrWorkspace)
+    __aicore__ inline void Init(GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean,
+                                GM_ADDR dataGamma, GM_ADDR outputPdX, GM_ADDR outputPdGx, GM_ADDR outputPdGamma,
+                                GM_ADDR outputPdBeta, DeepNormGradTilingData tiling, GM_ADDR usrWorkspace)
     {
         useCoreNum = tiling.useCoreNum;
         nDimNum = tiling.nDimNum;
@@ -87,8 +92,8 @@ public:
 
         // init GM
         nDeal = (GetBlockIdx() != useCoreNum - 1) ? nDealPerCore : nDealLastCore;
-        InitGM(
-            dataDy, dataX, dataGx, dataRstd, dataMean, dataGamma, outputPdX, outputPdGx, outputPdGamma, outputPdBeta);
+        InitGM(dataDy, dataX, dataGx, dataRstd, dataMean, dataGamma, outputPdX, outputPdGx, outputPdGamma,
+               outputPdBeta);
 
         // cut D
         uint32_t dDimNumAlloc = dDimNum;
@@ -131,11 +136,12 @@ public:
 #endif
     }
 
-    __aicore__ inline void ProcessFirstPart(
-        const LocalTensor<float>& dyFp32Local, const LocalTensor<float>& xFp32Local,
-        const LocalTensor<float>& gxFp32Local, const LocalTensor<float>& gammaFp32Local,
-        const LocalTensor<float>& tmpVarPdLocal, const LocalTensor<float>& tmpMeanPdLocal, uint32_t dDimNumUB,
-        const uint32_t processID)
+    __aicore__ inline void ProcessFirstPart(const LocalTensor<float>& dyFp32Local, const LocalTensor<float>& xFp32Local,
+                                            const LocalTensor<float>& gxFp32Local,
+                                            const LocalTensor<float>& gammaFp32Local,
+                                            const LocalTensor<float>& tmpVarPdLocal,
+                                            const LocalTensor<float>& tmpMeanPdLocal, uint32_t dDimNumUB,
+                                            const uint32_t processID)
     {
         for (uint32_t cutDIndex = 0; cutDIndex < cutDTime; cutDIndex++) {
             dDimNumUB = dDimNum;
@@ -147,8 +153,8 @@ public:
 
             CopyInCutD(processID, cutDIndex, dDimNumUB);
             CopyInGamma(cutDIndex, dDimNumUB);
-            PrecisionComputeCutDFirstPart(
-                dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, tmpVarPdLocal, tmpMeanPdLocal, dDimNumUB);
+            PrecisionComputeCutDFirstPart(dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, tmpVarPdLocal,
+                                          tmpMeanPdLocal, dDimNumUB);
         }
     }
 
@@ -167,16 +173,14 @@ public:
 
             CopyInCutD(processID, cutDIndex, dDimNumUB);
             CopyInGamma(cutDIndex, dDimNumUB);
-            PrecisionComputeCutDSecondPart(
-                dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, outputPdXLocal, outputPdGxLocal, tmpVarPdLocal,
-                tmpMeanPdLocal, dDimNumUB);
+            PrecisionComputeCutDSecondPart(dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, outputPdXLocal,
+                                           outputPdGxLocal, tmpVarPdLocal, tmpMeanPdLocal, dDimNumUB);
             CopyOutX(processID, cutDIndex, dDimNumUB);
         }
     }
 
-    __aicore__ inline void ProcessThirdPart(
-        const LocalTensor<float>& dyFp32Local, const LocalTensor<float>& xFp32Local,
-        const LocalTensor<float>& gxFp32Local)
+    __aicore__ inline void ProcessThirdPart(const LocalTensor<float>& dyFp32Local, const LocalTensor<float>& xFp32Local,
+                                            const LocalTensor<float>& gxFp32Local)
     {
         for (uint32_t cutDIndex = 0; cutDIndex < cutDTime; cutDIndex++) {
             uint32_t dDimNumUB = dDimNum;
@@ -238,12 +242,11 @@ public:
             // mean&rstd
             CopyInMeanRstd(iDeal);
 
-            ProcessFirstPart(
-                dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, tmpVarPdLocal, tmpMeanPdLocal, dDimNum, iDeal);
+            ProcessFirstPart(dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, tmpVarPdLocal, tmpMeanPdLocal,
+                             dDimNum, iDeal);
 
-            ProcessSecondPart(
-                dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, outputPdXLocal, outputPdGxLocal, tmpVarPdLocal,
-                tmpMeanPdLocal, dDimNum, iDeal);
+            ProcessSecondPart(dyFp32Local, xFp32Local, gxFp32Local, gammaFp32Local, outputPdXLocal, outputPdGxLocal,
+                              tmpVarPdLocal, tmpMeanPdLocal, dDimNum, iDeal);
 
             CopyOutMeanRstd();
         }
@@ -258,7 +261,8 @@ private:
         LocalTensor<T> xLocal = xQue.AllocTensor<T>();
         LocalTensor<T> gxLocal = gxQue.AllocTensor<T>();
 
-        uint64_t offsetND = static_cast<uint64_t>(processID) * static_cast<uint64_t>(dDimNum) + static_cast<uint64_t>(cutDIndex) * static_cast<uint64_t>(cutDPerTime);
+        uint64_t offsetND = static_cast<uint64_t>(processID) * static_cast<uint64_t>(dDimNum) +
+                            static_cast<uint64_t>(cutDIndex) * static_cast<uint64_t>(cutDPerTime);
 #if __CCE_AICORE__ == 220
         // dy&x&gx
         DataCopyParams dataCopyParamsND{(uint16_t)1, (uint16_t)(processElem * sizeof(T)), 0, 0};
@@ -406,12 +410,11 @@ private:
             gxQue.FreeTensor(inputGx);
             gammaQue.FreeTensor(inputGamma);
 
-            MainComputeFirstPart(
-                dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, gammaFp32Local, tmpVarPdLocal,
-                tmpMeanPdLocal, processElem);
+            MainComputeFirstPart(dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, gammaFp32Local,
+                                 tmpVarPdLocal, tmpMeanPdLocal, processElem);
         } else {
-            MainComputeFirstPart(
-                inputDy, inputX, inputGx, inputRstd, inputMean, inputGamma, tmpVarPdLocal, tmpMeanPdLocal, processElem);
+            MainComputeFirstPart(inputDy, inputX, inputGx, inputRstd, inputMean, inputGamma, tmpVarPdLocal,
+                                 tmpMeanPdLocal, processElem);
 
             dyQue.FreeTensor(inputDy);
             xQue.FreeTensor(inputX);
@@ -423,10 +426,12 @@ private:
         rstdQue.EnQue(inputRstd);
     }
 
-    __aicore__ inline void MainComputeFirstPart(
-        const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX, const LocalTensor<float>& inputGx,
-        const LocalTensor<float>& inputRstd, const LocalTensor<float>& inputMean, const LocalTensor<float>& inputGamma,
-        const LocalTensor<float>& tmpVarPdLocal, const LocalTensor<float>& tmpMeanPdLocal, const uint32_t processElem)
+    __aicore__ inline void MainComputeFirstPart(const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX,
+                                                const LocalTensor<float>& inputGx, const LocalTensor<float>& inputRstd,
+                                                const LocalTensor<float>& inputMean,
+                                                const LocalTensor<float>& inputGamma,
+                                                const LocalTensor<float>& tmpVarPdLocal,
+                                                const LocalTensor<float>& tmpMeanPdLocal, const uint32_t processElem)
     {
         // x_hp = alpha * x1 + x2
         Axpy(inputGx, inputX, alphaVal, processElem);
@@ -491,9 +496,8 @@ private:
         LocalTensor<T> outputPdGx = outputPdGxQue.AllocTensor<T>();
 
         if constexpr (is_same<T, float>::value) {
-            MainComputeSecondPart(
-                inputDy, inputX, inputGx, inputRstd, inputMean, inputGamma, outputPdX, outputPdGx, tmpVarPdLocal,
-                tmpMeanPdLocal, processElem);
+            MainComputeSecondPart(inputDy, inputX, inputGx, inputRstd, inputMean, inputGamma, outputPdX, outputPdGx,
+                                  tmpVarPdLocal, tmpMeanPdLocal, processElem);
 
             dyQue.FreeTensor(inputDy);
             xQue.FreeTensor(inputX);
@@ -510,9 +514,8 @@ private:
             gxQue.FreeTensor(inputGx);
             gammaQue.FreeTensor(inputGamma);
 
-            MainComputeSecondPart(
-                dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, gammaFp32Local, outputPdXLocal,
-                outputPdGxLocal, tmpVarPdLocal, tmpMeanPdLocal, processElem);
+            MainComputeSecondPart(dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, gammaFp32Local,
+                                  outputPdXLocal, outputPdGxLocal, tmpVarPdLocal, tmpMeanPdLocal, processElem);
 
             if constexpr (is_same<T, half>::value) {
                 Cast(outputPdX, outputPdXLocal, RoundMode::CAST_NONE, processElem);
@@ -576,10 +579,12 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void PrecisionComputeCutDThirdPart(
-        const LocalTensor<float>& dyFp32Local, const LocalTensor<float>& xFp32Local,
-        const LocalTensor<float>& gxFp32Local, const LocalTensor<float>& dgammaFp32,
-        const LocalTensor<float>& dbetaFp32, const uint32_t processElem)
+    __aicore__ inline void PrecisionComputeCutDThirdPart(const LocalTensor<float>& dyFp32Local,
+                                                         const LocalTensor<float>& xFp32Local,
+                                                         const LocalTensor<float>& gxFp32Local,
+                                                         const LocalTensor<float>& dgammaFp32,
+                                                         const LocalTensor<float>& dbetaFp32,
+                                                         const uint32_t processElem)
     {
         LocalTensor<T> inputDy = dyQue.DeQue<T>();
         LocalTensor<T> inputX = xQue.DeQue<T>();
@@ -599,8 +604,8 @@ private:
             xQue.FreeTensor(inputX);
             gxQue.FreeTensor(inputGx);
 
-            MainComputeThirdPart(
-                dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, dgammaFp32, dbetaFp32, processElem);
+            MainComputeThirdPart(dyFp32Local, xFp32Local, gxFp32Local, inputRstd, inputMean, dgammaFp32, dbetaFp32,
+                                 processElem);
         } else {
             MainComputeThirdPart(inputDy, inputX, inputGx, inputRstd, inputMean, dgammaFp32, dbetaFp32, processElem);
 
@@ -610,10 +615,10 @@ private:
         }
     }
 
-    __aicore__ inline void MainComputeThirdPart(
-        const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX, const LocalTensor<float>& inputGx,
-        LocalTensor<float>& inputRstd, LocalTensor<float>& inputMean, const LocalTensor<float>& outputPdGamma,
-        const LocalTensor<float>& outputPdBeta, const uint32_t processElem)
+    __aicore__ inline void MainComputeThirdPart(const LocalTensor<float>& inputDy, const LocalTensor<float>& inputX,
+                                                const LocalTensor<float>& inputGx, LocalTensor<float>& inputRstd,
+                                                LocalTensor<float>& inputMean, const LocalTensor<float>& outputPdGamma,
+                                                const LocalTensor<float>& outputPdBeta, const uint32_t processElem)
     {
         // x_hp = alpha * x1 + x2
         Axpy(inputGx, inputX, alphaVal, processElem);

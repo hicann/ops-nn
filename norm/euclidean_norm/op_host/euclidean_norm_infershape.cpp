@@ -46,8 +46,8 @@ constexpr bool kKeepDimsDefault = false; // op_def: Attr("keep_dims").AttrType(O
 // 解析 axes tensor 内容到 int64 数组：
 //   axesNum == 0 时按 "all reduce" 展开 axes = [0..xRank-1]（与 tiling::ParseAxesTensor 一致）；
 //   否则按 int32 / int64 dtype 读，归一化负数到 [0, xRank)，重复/越界报错（GRAPH_FAILED）。
-static bool LoadAxesFromTensor(
-    const gert::Tensor* axesTensor, int64_t xRank, std::vector<int64_t>& axesOut, std::string& errMsg)
+static bool LoadAxesFromTensor(const gert::Tensor* axesTensor, int64_t xRank, std::vector<int64_t>& axesOut,
+                               std::string& errMsg)
 {
     const int64_t axesNum = axesTensor->GetShapeSize();
     if (axesNum == 0) {
@@ -106,8 +106,8 @@ static bool LoadAxesFromTensor(
     return true;
 }
 
-static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context,
-                                         const gert::Shape* xShape, gert::Shape* yShape)
+static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context, const gert::Shape* xShape,
+                                         gert::Shape* yShape)
 {
     if (xShape->GetDimNum() != 0) {
         return GRAPH_SUCCESS;
@@ -120,8 +120,7 @@ static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context,
 
     const gert::Tensor* axesTensor = context->GetInputTensor(kInputAxesIdx);
     if (axesTensor != nullptr && axesTensor->GetShapeSize() > 0) {
-        OP_LOGE(context->GetNodeName(), "scalar input: axes must be empty, got %ld axes",
-                axesTensor->GetShapeSize());
+        OP_LOGE(context->GetNodeName(), "scalar input: axes must be empty, got %ld axes", axesTensor->GetShapeSize());
         return GRAPH_FAILED;
     }
 
@@ -130,8 +129,8 @@ static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context,
     } else {
         *yShape = gert::Shape();
     }
-    OP_LOGD(context->GetNodeName(), "scalar input: keepDims=%d, yShape dims=%zu",
-            static_cast<int>(keepDims), yShape->GetDimNum());
+    OP_LOGD(context->GetNodeName(), "scalar input: keepDims=%d, yShape dims=%zu", static_cast<int>(keepDims),
+            yShape->GetDimNum());
     return GRAPH_SUCCESS;
 }
 
@@ -175,8 +174,8 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
     std::vector<int64_t> axes;
     std::string errMsg;
     if (!LoadAxesFromTensor(axesTensor, xRank, axes, errMsg)) {
-        OP_LOGE(
-            context->GetNodeName(), "%s; xRank=%ld, axes size=%ld", errMsg.c_str(), xRank, axesTensor->GetShapeSize());
+        OP_LOGE(context->GetNodeName(), "%s; xRank=%ld, axes size=%ld", errMsg.c_str(), xRank,
+                axesTensor->GetShapeSize());
         return GRAPH_FAILED;
     }
 
@@ -186,9 +185,8 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
                                Ops::Base::ReduceDimsWithKeepDims<int64_t>(xShape, axes.data(), axesSize, yShape) :
                                Ops::Base::ReduceDimsWithoutKeepDims<int64_t>(xShape, axes.data(), axesSize, yShape);
 
-    OP_LOGD(
-        context->GetNodeName(), "End InferShape: keepDims=%d, xRank=%ld, axes.size=%zu, outDim=%zu, status=%d",
-        static_cast<int>(keepDims), xRank, axes.size(), yShape->GetDimNum(), static_cast<int>(stat));
+    OP_LOGD(context->GetNodeName(), "End InferShape: keepDims=%d, xRank=%ld, axes.size=%zu, outDim=%zu, status=%d",
+            static_cast<int>(keepDims), xRank, axes.size(), yShape->GetDimNum(), static_cast<int>(stat));
     return stat;
 }
 

@@ -23,8 +23,7 @@ using namespace AscendC;
 template <typename T>
 class KernelAvgPool3DGradBase {
 public:
-    __aicore__ inline KernelAvgPool3DGradBase()
-    {}
+    __aicore__ inline KernelAvgPool3DGradBase() {}
 
 protected:
     __aicore__ inline int64_t min(int64_t a, int64_t b);
@@ -167,8 +166,8 @@ __aicore__ inline void KernelAvgPool3DGradBase<T>::CalcIndex(int64_t index)
 }
 
 template <typename T>
-__aicore__ inline void KernelAvgPool3DGradBase<T>::CopyIn(
-    int64_t n, int64_t d, int64_t h, int64_t w, int64_t c, int64_t ubIndex)
+__aicore__ inline void KernelAvgPool3DGradBase<T>::CopyIn(int64_t n, int64_t d, int64_t h, int64_t w, int64_t c,
+                                                          int64_t ubIndex)
 {
     auto dstUbOffset = ubIndex * this->cAlign;
     auto srcGmOffset = n * (this->outD * this->outH * this->outW * this->cTotal) +

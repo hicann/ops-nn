@@ -18,17 +18,17 @@ namespace aicpu {
 class ReverseSequenceMsCpuKernel : public CpuKernel {
 public:
     ~ReverseSequenceMsCpuKernel() = default;
-    uint32_t Compute(CpuKernelContext &ctx) override;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 
 private:
-    KernelStatus GetInputAndCheck(CpuKernelContext &ctx);
+    KernelStatus GetInputAndCheck(CpuKernelContext& ctx);
 
-    std::vector<void *> ioAddrs_;
+    std::vector<void*> ioAddrs_;
     std::vector<int64_t> xShape_;
 
     DataType xDtype_ = DT_INT32;
     DataType seqLengthsDtype_ = DT_INT32;
 };
-}  // namespace aicpu
+} // namespace aicpu
 
-#endif  //  OPS_NN_INDEX_REVERSE_SEQUENCE_AICPU_H
+#endif //  OPS_NN_INDEX_REVERSE_SEQUENCE_AICPU_H

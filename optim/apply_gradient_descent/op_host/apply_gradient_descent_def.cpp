@@ -16,40 +16,25 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> dataType = {
-    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT
-};
+static const std::vector<ge::DataType> dataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> dataFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class ApplyGradientDescent : public OpDef {
-    public:
-        explicit ApplyGradientDescent(const char* name) : OpDef (name) {
-            this->Input("var")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Input("alpha")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Input("delta")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Output("var")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+public:
+    explicit ApplyGradientDescent(const char* name) : OpDef(name)
+    {
+        this->Input("var").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Input("alpha").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Input("delta").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Output("var").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
 
 OP_ADD(ApplyGradientDescent);

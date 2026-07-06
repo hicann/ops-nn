@@ -51,14 +51,13 @@ static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* target, int6
 }
 
 // AiCore的执行逻辑
-static aclTensor* LpLossAiCore(
-    const aclTensor* self, const aclTensor* target, int64_t p, int64_t reduction, aclTensor* out,
-    aclOpExecutor* executor)
+static aclTensor* LpLossAiCore(const aclTensor* self, const aclTensor* target, int64_t p, int64_t reduction,
+                               aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(LpLossAiCore, self, target, p, reduction, out);
 
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(LpLoss, OP_INPUT(self, target), OP_OUTPUT(out), OP_ATTR(p, REDUCTION[reduction]));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpLoss, OP_INPUT(self, target), OP_OUTPUT(out),
+                                           OP_ATTR(p, REDUCTION[reduction]));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
@@ -66,8 +65,8 @@ static aclTensor* LpLossAiCore(
     return out;
 }
 
-const aclTensor* LpLoss(
-    const aclTensor* self, const aclTensor* target, int64_t p, int64_t reduction, aclOpExecutor* executor)
+const aclTensor* LpLoss(const aclTensor* self, const aclTensor* target, int64_t p, int64_t reduction,
+                        aclOpExecutor* executor)
 {
     L0_DFX(LpLoss, self, target, p, reduction);
 
@@ -79,9 +78,8 @@ const aclTensor* LpLoss(
     // 对self和target的shape进行broadcast
     op::Shape broadcastShape;
     if (!BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), broadcastShape)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Self tensor shape:%s and target tensor shape:%s can't broadcast.",
-            ToString(self->GetViewShape()).GetString(), ToString(target->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self tensor shape:%s and target tensor shape:%s can't broadcast.",
+                ToString(self->GetViewShape()).GetString(), ToString(target->GetViewShape()).GetString());
         return nullptr;
     }
 

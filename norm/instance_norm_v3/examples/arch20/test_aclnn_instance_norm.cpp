@@ -46,9 +46,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -65,9 +64,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -134,8 +132,8 @@ int main()
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     LOG_PRINT("\nUse aclnnInstanceNorm Non-Bias Port.");
-    ret = aclnnInstanceNormGetWorkspaceSize(
-        x, gamma, beta, dataFormat, eps, y, mean, variance, &workspaceSize, &executor);
+    ret = aclnnInstanceNormGetWorkspaceSize(x, gamma, beta, dataFormat, eps, y, mean, variance, &workspaceSize,
+                                            &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInstanceNormGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -158,9 +156,8 @@ int main()
     // 5.1 拷贝出不带bias的输出
     auto size = GetShapeSize(yShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== InstanceNorm non-bias: y output");
     for (int64_t i = 0; i < size; i++) {
@@ -169,9 +166,8 @@ int main()
 
     auto outputMeanSize = GetShapeSize(reduceShape);
     std::vector<float> resultDataMean(outputMeanSize, 0);
-    ret = aclrtMemcpy(
-        resultDataMean.data(), resultDataMean.size() * sizeof(resultDataMean[0]), meanDeviceAddr,
-        outputMeanSize * sizeof(resultDataMean[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataMean.data(), resultDataMean.size() * sizeof(resultDataMean[0]), meanDeviceAddr,
+                      outputMeanSize * sizeof(resultDataMean[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== InstanceNorm non-bias: mean output");
     for (int64_t i = 0; i < outputMeanSize; i++) {
@@ -180,9 +176,8 @@ int main()
 
     auto outputVarSize = GetShapeSize(reduceShape);
     std::vector<float> resultDataVar(outputVarSize, 0);
-    ret = aclrtMemcpy(
-        resultDataVar.data(), resultDataVar.size() * sizeof(resultDataVar[0]), varianceDeviceAddr,
-        outputVarSize * sizeof(resultDataVar[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultDataVar.data(), resultDataVar.size() * sizeof(resultDataVar[0]), varianceDeviceAddr,
+                      outputVarSize * sizeof(resultDataVar[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== InstanceNorm non-bias: rstd output");
     for (int64_t i = 0; i < outputVarSize; i++) {

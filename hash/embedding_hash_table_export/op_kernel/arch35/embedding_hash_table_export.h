@@ -40,14 +40,12 @@ constexpr uint8_t FILTER_FLAG_MASK = 0b00000010;
 constexpr uint8_t VALID_FLAG_MASK = 0b00000001;
 
 template <typename T>
-class EmbeddingHashTableExport
-{
+class EmbeddingHashTableExport {
 public:
     __aicore__ inline EmbeddingHashTableExport(){};
-    __aicore__ inline void Init(
-        GM_ADDR tableHandles, GM_ADDR tableSizes, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys,
-        GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
-        EmbeddingHashTableExportTilingData tilingData);
+    __aicore__ inline void Init(GM_ADDR tableHandles, GM_ADDR tableSizes, GM_ADDR embeddingDims, GM_ADDR bucketSizes,
+                                GM_ADDR keys, GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
+                                EmbeddingHashTableExportTilingData tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void SingleTableCompute(int64_t tableIndex);
 
@@ -105,10 +103,11 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void EmbeddingHashTableExport<T>::Init(
-    GM_ADDR tableHandles, GM_ADDR tableSizes, GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys,
-    GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
-    EmbeddingHashTableExportTilingData tilingData)
+__aicore__ inline void EmbeddingHashTableExport<T>::Init(GM_ADDR tableHandles, GM_ADDR tableSizes,
+                                                         GM_ADDR embeddingDims, GM_ADDR bucketSizes, GM_ADDR keys,
+                                                         GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values,
+                                                         GM_ADDR workspace,
+                                                         EmbeddingHashTableExportTilingData tilingData)
 {
     blockIdx_ = GetBlockIdx();
 
@@ -147,8 +146,8 @@ __aicore__ inline void EmbeddingHashTableExport<T>::SingleTableCompute(int64_t t
 
     tableAddr_ = tableHandleStructGm_.GetValue(0);
     embeddingDims_ = embeddingDimsGm.GetValue(tableIndex);
-    keyWidthByte_ =
-        KEY_VALUE_OFFSET_OF_BYTE + (sizeof(T) * embeddingDims_ + BYTE_COUNT_8 - 1) / BYTE_COUNT_8 * BYTE_COUNT_8;
+    keyWidthByte_ = KEY_VALUE_OFFSET_OF_BYTE +
+                    (sizeof(T) * embeddingDims_ + BYTE_COUNT_8 - 1) / BYTE_COUNT_8 * BYTE_COUNT_8;
     keyWidthByteD8_ = keyWidthByte_ / BYTE_COUNT_8;
     keyWidthByteDT_ = keyWidthByte_ / sizeof(T);
     bucketSize_ = bucketSizesGm.GetValue(tableIndex);
@@ -170,9 +169,11 @@ __aicore__ inline void EmbeddingHashTableExport<T>::SingleTableCompute(int64_t t
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void SaveToCoreSyncWorkspace(
-    int64_t maxCoreNum, int64_t maxThreadNum, int64_t tableIndx, int64_t blockIdx, int64_t usedCoreNum,
-    __gm__ int64_t* coreSyncWorkspaceGm, __ubuf__ int64_t* threadCountKeysToExportUB)
+__simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void SaveToCoreSyncWorkspace(int64_t maxCoreNum, int64_t maxThreadNum,
+                                                                           int64_t tableIndx, int64_t blockIdx,
+                                                                           int64_t usedCoreNum,
+                                                                           __gm__ int64_t* coreSyncWorkspaceGm,
+                                                                           __ubuf__ int64_t* threadCountKeysToExportUB)
 {
     if (blockIdx >= usedCoreNum) {
         return;
@@ -184,9 +185,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void SaveToCoreSyncWorkspace(
 }
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void AtomicSubToGm(
-    int64_t maxCoreNum, int64_t maxThreadNum, int64_t blockIdx, int64_t usedCoreNum,
-    __gm__ int64_t* tableHandleStructGm, __ubuf__ int64_t* threadCountReFreshExportFlagUB)
+__simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void AtomicSubToGm(int64_t maxCoreNum, int64_t maxThreadNum,
+                                                                 int64_t blockIdx, int64_t usedCoreNum,
+                                                                 __gm__ int64_t* tableHandleStructGm,
+                                                                 __ubuf__ int64_t* threadCountReFreshExportFlagUB)
 {
     if (blockIdx >= usedCoreNum) {
         return;
@@ -217,9 +219,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void CountP
         __gm__ uint8_t* tableAddrU8 = reinterpret_cast<__gm__ uint8_t*>(tableAddr);
 
         for (int64_t i = 0; i < curThreadProcessKeys; i++) {
-            uint8_t flag = tableAddrU8
-                [keyWidthByte * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
-                 KEY_FLAG_OFFSET_OF_BYTE];
+            uint8_t flag = tableAddrU8[keyWidthByte * (blockIdx * normalCoreProcessKeys +
+                                                       threadIdx.x * normalThreadProcessKeys + i) +
+                                       KEY_FLAG_OFFSET_OF_BYTE];
 
             if ((flag & VALID_FLAG_MASK) && !(flag & EVICTED_FLAG_MASK) &&
                 (exportMode != 1 || !(flag & EXPORT_FLAG_MASK))) {
@@ -274,16 +276,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
 
     int64_t curThreadProcessKeys = threadIdx.x < (usedThreadNum - 1) ? normalThreadProcessKeys : tailThreadProcessKeys;
     for (int64_t i = 0; i < curThreadProcessKeys; i++) {
-        uint8_t flag = tableAddrU8
-            [keyWidthByte * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
-             KEY_FLAG_OFFSET_OF_BYTE];
+        uint8_t flag = tableAddrU8[keyWidthByte *
+                                       (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
+                                   KEY_FLAG_OFFSET_OF_BYTE];
         if ((flag & VALID_FLAG_MASK) && !(flag & EVICTED_FLAG_MASK) &&
             (exportMode != 1 || !(flag & EXPORT_FLAG_MASK))) {
-            int64_t key = tableAddrI64
-                [keyWidthByteD8 * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i)];
+            int64_t key = tableAddrI64[keyWidthByteD8 *
+                                       (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i)];
             outKeyGm[offset + positionIndex] = key;
-            uint64_t counter = tableAddrU64
-                [keyWidthByteD8 * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) + 1];
+            uint64_t counter = tableAddrU64[keyWidthByteD8 * (blockIdx * normalCoreProcessKeys +
+                                                              threadIdx.x * normalThreadProcessKeys + i) +
+                                            1];
             outCounterGm[offset + positionIndex] = counter;
 
             if (FILTER_FLAG_MASK & flag) {
@@ -292,15 +295,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
                 outFilterFlagGm[offset + positionIndex] = 0;
             }
             for (int64_t j = 0; j < embeddingDims; j++) {
-                outValueGm[(offset + positionIndex) * embeddingDims + j] = tableAddrT
-                    [keyWidthByteDT * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
-                     KEY_VALUE_OFFSET_OF_BYTE / sizeof(T) + j];
+                outValueGm[(offset + positionIndex) * embeddingDims +
+                           j] = tableAddrT[keyWidthByteDT * (blockIdx * normalCoreProcessKeys +
+                                                             threadIdx.x * normalThreadProcessKeys + i) +
+                                           KEY_VALUE_OFFSET_OF_BYTE / sizeof(T) + j];
             }
             // 刷新导出flag, 只在第一次导出时刷新
             if (!(flag & EXPORT_FLAG_MASK)) {
-                tableAddrU8
-                    [keyWidthByte * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
-                     KEY_FLAG_OFFSET_OF_BYTE] |= EXPORT_FLAG_MASK;
+                tableAddrU8[keyWidthByte *
+                                (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
+                            KEY_FLAG_OFFSET_OF_BYTE] |= EXPORT_FLAG_MASK;
                 curThreadRefreshExportFlagNum++;
             }
             positionIndex++;
@@ -316,21 +320,20 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Process()
         Duplicate(threadCountKeysToExportUB_, int64_t(0), maxThreadNum_ * BUFFER_LENGTH);
         Duplicate(threadCountReFreshExportFlagUB_, int64_t(0), maxThreadNum_ * BUFFER_LENGTH);
         SingleTableCompute(tableIndx);
-        asc_vf_call<CountPerThread<T>>(
-            dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, blockIdx_, usedCoreNum_,
-            usedThreadNum_, normalThreadProcessKeys_, tailThreadProcessKeys_, tableAddr_, keyWidthByte_,
-            normalCoreProcessKeys_, exportMode_, (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
-        ReduceSum<int64_t>(
-            threadCountKeysToExportUB_[maxThreadNum_], threadCountKeysToExportUB_, threadCountReFreshExportFlagUB_,
-            usedThreadNum_);
-        asc_vf_call<SaveToCoreSyncWorkspace<T>>(
-            dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, tableIndx, blockIdx_, usedCoreNum_,
-            coreSyncWorkspaceGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
+        asc_vf_call<CountPerThread<T>>(dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_,
+                                       blockIdx_, usedCoreNum_, usedThreadNum_, normalThreadProcessKeys_,
+                                       tailThreadProcessKeys_, tableAddr_, keyWidthByte_, normalCoreProcessKeys_,
+                                       exportMode_, (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
+        ReduceSum<int64_t>(threadCountKeysToExportUB_[maxThreadNum_], threadCountKeysToExportUB_,
+                           threadCountReFreshExportFlagUB_, usedThreadNum_);
+        asc_vf_call<SaveToCoreSyncWorkspace<T>>(dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, tableIndx,
+                                                blockIdx_, usedCoreNum_, coreSyncWorkspaceGm_.GetPhyAddr(0),
+                                                (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
         SyncAll();
-        asc_vf_call<CalcOffset<T>>(
-            dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, tableIndx, blockIdx_,
-            coreSyncWorkspaceGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr(),
-            (__ubuf__ int64_t*)threadCountKeysToExportSumUB_.GetPhyAddr());
+        asc_vf_call<CalcOffset<T>>(dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, tableIndx,
+                                   blockIdx_, coreSyncWorkspaceGm_.GetPhyAddr(0),
+                                   (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr(),
+                                   (__ubuf__ int64_t*)threadCountKeysToExportSumUB_.GetPhyAddr());
         asc_vf_call<ExportPerThread<T>>(
             dim3{static_cast<uint32_t>(maxThreadNum_)}, blockIdx_, usedCoreNum_, usedThreadNum_,
             normalThreadProcessKeys_, tailThreadProcessKeys_, tableAddr_, keyWidthByte_, normalCoreProcessKeys_,
@@ -339,12 +342,11 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Process()
             outCounterGm_.GetPhyAddr(0), outFilterFlagGm_.GetPhyAddr(0), outValueGm_.GetPhyAddr(0),
             (__ubuf__ int64_t*)threadCountReFreshExportFlagUB_.GetPhyAddr(),
             (__ubuf__ int64_t*)threadCountKeysToExportSumUB_.GetPhyAddr());
-        ReduceSum<int64_t>(
-            threadCountReFreshExportFlagUB_[maxThreadNum_], threadCountReFreshExportFlagUB_, threadCountKeysToExportUB_,
-            usedThreadNum_);
-        asc_vf_call<AtomicSubToGm<T>>(
-            dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, blockIdx_, usedCoreNum_,
-            tableHandleStructGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountReFreshExportFlagUB_.GetPhyAddr());
+        ReduceSum<int64_t>(threadCountReFreshExportFlagUB_[maxThreadNum_], threadCountReFreshExportFlagUB_,
+                           threadCountKeysToExportUB_, usedThreadNum_);
+        asc_vf_call<AtomicSubToGm<T>>(dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, blockIdx_,
+                                      usedCoreNum_, tableHandleStructGm_.GetPhyAddr(0),
+                                      (__ubuf__ int64_t*)threadCountReFreshExportFlagUB_.GetPhyAddr());
         SyncAll();
     }
 }

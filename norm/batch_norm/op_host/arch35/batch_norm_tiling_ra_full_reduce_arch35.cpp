@@ -16,8 +16,7 @@
 
 using namespace ge;
 
-namespace
-{
+namespace {
 constexpr int64_t TILINGKEY_RA_FULL_REDUCE = 400000;
 
 constexpr int64_t SMALL_BUFFER_NUM = 8;
@@ -30,17 +29,13 @@ constexpr int64_t BINARY_ADD_COEF_FOUR = 4;
 constexpr int64_t RA_BINARY_ADD_THRESHOLD = 8;
 constexpr int64_t CHANGE_TO_WELFORD_THRESHOLD = 64;
 
-}  // namespace
+} // namespace
 
-namespace optiling
-{
+namespace optiling {
 
-class BatchNormRAFullReduceTilingBase : public BatchNormRegbaseTilingBase
-{
+class BatchNormRAFullReduceTilingBase : public BatchNormRegbaseTilingBase {
 public:
-    explicit BatchNormRAFullReduceTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context)
-    {
-    }
+    explicit BatchNormRAFullReduceTilingBase(gert::TilingContext* context) : BatchNormRegbaseTilingBase(context) {}
     ~BatchNormRAFullReduceTilingBase() override = default;
 
     void Reset(gert::TilingContext* context) override
@@ -170,10 +165,7 @@ ge::graphStatus BatchNormRAFullReduceTilingBase::DoOpTiling()
     return BinaryAddTiling();
 }
 
-uint64_t BatchNormRAFullReduceTilingBase::GetTilingKey() const
-{
-    return TILINGKEY_RA_FULL_REDUCE;
-}
+uint64_t BatchNormRAFullReduceTilingBase::GetTilingKey() const { return TILINGKEY_RA_FULL_REDUCE; }
 
 ge::graphStatus BatchNormRAFullReduceTilingBase::PostTiling()
 {
@@ -182,9 +174,8 @@ ge::graphStatus BatchNormRAFullReduceTilingBase::PostTiling()
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(batchNormTilingData.GetDataSize() > rawTilingData->GetCapacity(),
-                OP_LOGE(context_->GetNodeName(),
-                    "actual tiling data size %zu > context tiling data size %zu",
-                    batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        batchNormTilingData.GetDataSize(), rawTilingData->GetCapacity()),
                 return ge::GRAPH_FAILED);
     batchNormTilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormTilingData.GetDataSize());
@@ -193,4 +184,4 @@ ge::graphStatus BatchNormRAFullReduceTilingBase::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNorm, BatchNormRAFullReduceTilingBase, 10000);
-}  // namespace optiling
+} // namespace optiling

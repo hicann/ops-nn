@@ -31,8 +31,7 @@ class KernelSigmoidGrad {
 public:
     __aicore__ inline KernelSigmoidGrad(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR z, const SigmoidGradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, const SigmoidGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -59,8 +58,8 @@ private:
 };
 
 template <typename TYPE_X>
-__aicore__ inline void KernelSigmoidGrad<TYPE_X>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR z, const SigmoidGradTilingData* tilingData)
+__aicore__ inline void KernelSigmoidGrad<TYPE_X>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR z,
+                                                       const SigmoidGradTilingData* tilingData)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -74,7 +73,8 @@ __aicore__ inline void KernelSigmoidGrad<TYPE_X>::Init(
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (coreId - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (coreId - tilingData->tailBlockNum);
     }
     xGm.SetGlobalBuffer((__gm__ TYPE_X*)x + globalBufferIndex, this->coreDataNum);
     yGm.SetGlobalBuffer((__gm__ TYPE_X*)y + globalBufferIndex, this->coreDataNum);
@@ -137,7 +137,6 @@ __aicore__ inline void KernelSigmoidGrad<TYPE_X>::Compute(int32_t progress)
         inQueueX.FreeTensor(xLocal);
         inQueueY.FreeTensor(yLocal);
     }
-
 }
 
 template <typename TYPE_X>

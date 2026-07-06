@@ -17,9 +17,8 @@
 using namespace ForeachAddcdivList;
 
 template <typename T, typename ScalarT>
-__aicore__ inline void ForeachAddcdivListImpl(
-    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachAddcdivListImpl(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars,
+                                              GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
@@ -28,18 +27,17 @@ __aicore__ inline void ForeachAddcdivListImpl(
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_addcdiv_list(
-    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcdiv_list(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2,
+                                                           GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachAddcdivListImpl<half, half>(
-            inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+        ForeachAddcdivListImpl<half, half>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
         ForeachAddcdivListImpl<float, float>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachAddcdivListImpl<bfloat16_t, bfloat16_t>(
-            inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+        ForeachAddcdivListImpl<bfloat16_t, bfloat16_t>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling,
+                                                       &pipeOp);
     }
 }

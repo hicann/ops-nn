@@ -24,27 +24,39 @@ namespace ge {
 
 *@par Inputs:
 * Six inputs, including:
-*@li y_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW, for the gradient.
-*@li x: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW, the same shape with "y_backprop".
+*@li y_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW, for the
+gradient.
+*@li x: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW, the same shape
+with "y_backprop".
 *@li scale: A 1D Tensor of type float32, with format ND, shape must be C channel.
-*@li reserve_space_1: A 1D Tensor of type float32, with format ND, shape must be C channel. It is an output of BatchNorm.
-* When in training mode, it represents the saved mean of "x". And in inference mode, it represents the running mean of "x".
-*@li reserve_space_2: A 1D Tensor of type float32, with format ND, shape must be C channel. It is an output of BatchNorm.
-*@li reserve_space_3: A 1D optional Tensor of type float32, with format ND. Not used and not involved in calculations. When in training mode,
-* it represents the saved inverse standard deviation of "x" And in inference mode, it represents the running variance of "x".  \n
+*@li reserve_space_1: A 1D Tensor of type float32, with format ND, shape must be C channel. It is an output of
+BatchNorm.
+* When in training mode, it represents the saved mean of "x". And in inference mode, it represents the running mean of
+"x".
+*@li reserve_space_2: A 1D Tensor of type float32, with format ND, shape must be C channel. It is an output of
+BatchNorm.
+*@li reserve_space_3: A 1D optional Tensor of type float32, with format ND. Not used and not involved in calculations.
+When in training mode,
+* it represents the saved inverse standard deviation of "x" And in inference mode, it represents the running variance of
+"x".  \n
 
 *@par Attributes:
-*@li epsilon: An optional float32. Defaults to "1e-4". A small float number used to add with running variance of "x" in inference mode.
+*@li epsilon: An optional float32. Defaults to "1e-4". A small float number used to add with running variance of "x" in
+inference mode.
 *@li data_format: An optional string. Defaults to "NHWC". Should be same as y_backprop/x/x_backprop's dtype.
 *@li is_training: An optional bool. Defaults to "true". Specifies the operation is for training (default) or inference.
-*@li output_mask: An optional ListBool. Defaults to [true, false, false]. Valid only in inference mode, it determines whether
+*@li output_mask: An optional ListBool. Defaults to [true, false, false]. Valid only in inference mode, it determines
+whether
 * the outputs "x_backprop", "scale_backprop" and "offset_backprop" contain actual reseluts. \n
 
 *@par Outputs:
-*@li x_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW. For the offset of "x".
+*@li x_backprop: A 4D or 5D Tensor of type bfloat16, float16 or float32, with format NCHW, NHWC, NDHWC or NCDHW. For the
+offset of "x".
 * the same shape with "x".
-*@li scale_backprop: A Tensor of type float32, with format ND, for the offset of "scale", the same shape format with scale.
-*@li offset_backprop: A Tensor of type float32, with format ND, for the offset of "offset", the same shape format with scale.
+*@li scale_backprop: A Tensor of type float32, with format ND, for the offset of "scale", the same shape format with
+scale.
+*@li offset_backprop: A Tensor of type float32, with format ND, for the offset of "offset", the same shape format with
+scale.
 *@li reserve_space_4: A Tensor of type float32, with shape ND. The same shape format with scale.
 *@li reserve_space_5: A Tensor of type float32, with shape ND. The same shape format with scale. \n
 

@@ -24,15 +24,9 @@ using namespace std;
 
 class l2_max_pool2d_with_indices_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2_max_pool2d_with_indices_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_max_pool2d_with_indices_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_max_pool2d_with_indices_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_max_pool2d_with_indices_test TearDown" << std::endl; }
 };
 
 // 正常场景：数据类型为float
@@ -56,9 +50,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_float)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -91,9 +85,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_bfloat16_int64)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_BF16, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT64, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -126,9 +120,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_float_stride_null)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -157,9 +151,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_kernel_size2)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -192,9 +186,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_ceilMode_true)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -227,9 +221,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_ceilMode_false)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -262,9 +256,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_nbatch0)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -297,9 +291,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_nInputPlane0)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -327,9 +321,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_int)
     auto out_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -357,9 +351,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_normal_self_nullptr)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -387,9 +381,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_kernel_nullptr)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -417,9 +411,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_indices_float)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -447,9 +441,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_out_int)
     auto out_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -477,9 +471,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_self_out_diff)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT16, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -507,9 +501,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_self_2d)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -537,9 +531,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_self_5d)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -565,9 +559,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_self_privateFormat)
     auto self_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FRACTAL_Z_3D);
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FRACTAL_Z_3D);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -594,9 +588,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_kenelSize_0)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -624,9 +618,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_kernelValue_0)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -654,9 +648,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_strideValue_0)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -684,9 +678,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_padValue)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -714,9 +708,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_dilation)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -744,9 +738,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_paddingSize)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -774,9 +768,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_dilationSize)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -804,9 +798,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_out_indices_diff)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -834,9 +828,9 @@ TEST_F(l2_max_pool2d_with_indices_test, ascend910B2_abnormal_out_shape)
     auto out_tensor_desc = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT32, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnMaxPool2dWithIndices, INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
-        OUTPUT(out_tensor_desc, indices_tensor_desc));
+    auto ut = OP_API_UT(aclnnMaxPool2dWithIndices,
+                        INPUT(self_desc, kernel_desc, stride_desc, padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(out_tensor_desc, indices_tensor_desc));
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

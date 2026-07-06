@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_to_multi_mul_tiling.h
  * \brief
@@ -21,10 +20,10 @@ namespace optiling {
 namespace matmul_v3_advanced {
 class MatMulV3ToVectorTiling : public MatMulV3BaseTiling {
 public:
-    MatMulV3ToVectorTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    MatMulV3ToVectorTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg){};
 
     ~MatMulV3ToVectorTiling() override = default;
+
 protected:
     bool IsCapable() override;
 
@@ -34,10 +33,10 @@ protected:
 
     uint64_t GetTilingKey() const override;
 
-    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+
 private:
     static constexpr uint64_t BASE = 64;
 };
-} // namespace matmul_v3
+} // namespace matmul_v3_advanced
 } // namespace optiling
-

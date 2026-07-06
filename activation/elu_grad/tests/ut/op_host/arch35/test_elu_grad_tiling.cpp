@@ -27,15 +27,9 @@ using namespace ge;
 
 class EluGradTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "EluGradTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EluGradTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "EluGradTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EluGradTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -115,9 +109,9 @@ void TestEluGradTilingTest(const ge::DataType Dtype, const int tiling_key_, cons
     ASSERT_EQ(tiling_data_result, tiling_data_target);
 }
 
-void TestEluGradTilingTestFailed(
-    gert::StorageShape& InShape_0, gert::StorageShape& InShape_1, gert::StorageShape& OutShape,
-    const ge::DataType In0Dtype, const ge::DataType In1Dtype, const ge::DataType OutDtype)
+void TestEluGradTilingTestFailed(gert::StorageShape& InShape_0, gert::StorageShape& InShape_1,
+                                 gert::StorageShape& OutShape, const ge::DataType In0Dtype, const ge::DataType In1Dtype,
+                                 const ge::DataType OutDtype)
 {
     std::string op_type("EluGrad");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);

@@ -49,15 +49,9 @@ struct AdaptiveMaxPool3dCompileInfo {
 
 class AdaptiveMaxPool3dTilingTest : public testing::TestWithParam<AdaptiveMaxPool3dTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3dTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveMaxPool3dTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3dTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveMaxPool3dTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -107,18 +101,18 @@ TEST_P(AdaptiveMaxPool3dTilingTest, test_case_adaptive_max_pool3d_tiling)
     // compile info
     optiling::AdaptiveMaxPool3dCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -203,26 +197,22 @@ static AdaptiveMaxPool3dTilingTestParam cases[] = {
      40,
      311000UL,
      "1 64 32 32 32 1 1 1 40 40 64 1 24 "},
-     {"test_case_big_pool_bfloat16",
-      {1, 1, 32, 32, 32},
-      {1, 64, 32, 32, 32},
-      {1, 1, 1},
-      ge::DT_BF16,
-      1,
-      312000UL,
-      "1 1 32 32 32 1 1 1 40 1 1 0 1 "},
+    {"test_case_big_pool_bfloat16",
+     {1, 1, 32, 32, 32},
+     {1, 64, 32, 32, 32},
+     {1, 1, 1},
+     ge::DT_BF16,
+     1,
+     312000UL,
+     "1 1 32 32 32 1 1 1 40 1 1 0 1 "},
 };
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3d, AdaptiveMaxPool3dTilingTest, testing::ValuesIn(cases));
 
 // ======================== Tiling Failure Cases ========================
 
-static void ExecuteTilingFailureTest(
-    const gert::StorageShape& x_shape,
-    const gert::StorageShape& y_shape,
-    const std::vector<int64_t>& output_size,
-    ge::DataType data_type,
-    ge::Format format,
-    ge::graphStatus expect_result)
+static void ExecuteTilingFailureTest(const gert::StorageShape& x_shape, const gert::StorageShape& y_shape,
+                                     const std::vector<int64_t>& output_size, ge::DataType data_type, ge::Format format,
+                                     ge::graphStatus expect_result)
 {
     string op_type("AdaptiveMaxPool3d");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -247,18 +237,18 @@ static void ExecuteTilingFailureTest(
     platform_info.Init();
     optiling::AdaptiveMaxPool3dCompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto tiling_data = gert::TilingData::CreateCap(4096);
@@ -268,22 +258,21 @@ static void ExecuteTilingFailureTest(
 
     gert::StorageShape indices_shape = {y_shape};
 
-    auto holder =
-        gert::TilingContextFaker()
-            .SetOpType("AdaptiveMaxPool3d")
-            .NodeIoNum(1, 2)
-            .IrInstanceNum({1})
-            .InputShapes({const_cast<gert::StorageShape*>(&x_shape)})
-            .OutputShapes({const_cast<gert::StorageShape*>(&y_shape), &indices_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, data_type, format, format)
-            .NodeOutputTd(0, data_type, format, format)
-            .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(output_size)}})
-            .TilingData(tiling_data.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AdaptiveMaxPool3d")
+                      .NodeIoNum(1, 2)
+                      .IrInstanceNum({1})
+                      .InputShapes({const_cast<gert::StorageShape*>(&x_shape)})
+                      .OutputShapes({const_cast<gert::StorageShape*>(&y_shape), &indices_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, data_type, format, format)
+                      .NodeOutputTd(0, data_type, format, format)
+                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(output_size)}})
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

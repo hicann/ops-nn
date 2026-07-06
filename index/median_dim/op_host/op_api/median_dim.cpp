@@ -22,11 +22,13 @@ namespace l0op {
 
 OP_TYPE_REGISTER(MedianDim);
 
-static const std::tuple<aclTensor*, aclTensor*> MedianDimAiCore(const aclTensor *self, int64_t dim, bool keepDim,
-                                                         aclTensor *valuesOut, aclTensor *indicesOut, 
-                                                         aclOpExecutor *executor) {
+static const std::tuple<aclTensor*, aclTensor*> MedianDimAiCore(const aclTensor* self, int64_t dim, bool keepDim,
+                                                                aclTensor* valuesOut, aclTensor* indicesOut,
+                                                                aclOpExecutor* executor)
+{
     L0_DFX(MedianDimAiCore, self, dim, keepDim, valuesOut, indicesOut);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MedianDim, OP_INPUT(self), OP_OUTPUT(valuesOut, indicesOut), OP_ATTR(dim, keepDim));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MedianDim, OP_INPUT(self), OP_OUTPUT(valuesOut, indicesOut),
+                                           OP_ATTR(dim, keepDim));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MedianDimAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
@@ -34,8 +36,8 @@ static const std::tuple<aclTensor*, aclTensor*> MedianDimAiCore(const aclTensor 
     return std::tuple<aclTensor*, aclTensor*>(valuesOut, indicesOut);
 }
 
-static bool MedianDimInferShape(const op::Shape &selfShape, int64_t dim,
-                         bool keepDims, op::Shape &reduceShape) {
+static bool MedianDimInferShape(const op::Shape& selfShape, int64_t dim, bool keepDims, op::Shape& reduceShape)
+{
     int64_t reduceDim = 1;
     for (size_t i = 0; i < selfShape.GetDimNum(); i++) {
         if (keepDims) {
@@ -53,12 +55,13 @@ static bool MedianDimInferShape(const op::Shape &selfShape, int64_t dim,
     return true;
 }
 
-const std::tuple<aclTensor*, aclTensor*> MedianDim(const aclTensor *self, int64_t dim, bool keepDim, aclOpExecutor *executor) {
+const std::tuple<aclTensor*, aclTensor*> MedianDim(const aclTensor* self, int64_t dim, bool keepDim,
+                                                   aclOpExecutor* executor)
+{
     op::Shape reduceShape;
     MedianDimInferShape(self->GetViewShape(), dim, keepDim, reduceShape);
     auto values = executor->AllocTensor(reduceShape, self->GetDataType());
     auto indices = executor->AllocTensor(reduceShape, DataType::DT_INT32);
     return MedianDimAiCore(self, dim, keepDim, values, indices, executor);
 }
-}  // namespace l0op
- 
+} // namespace l0op

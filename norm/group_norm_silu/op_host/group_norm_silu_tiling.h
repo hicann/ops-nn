@@ -95,8 +95,7 @@ struct GroupNormSiluCompileInfo {
     uint32_t blockSizePlatform = 0;
 };
 
-enum class GroupNormSiluTilingKey : int64_t
-{
+enum class GroupNormSiluTilingKey : int64_t {
     TILINGKEY_SMALL_SHAPE_B16 = 1011,       // small shape and dtype is b16(float16/bfloat16)
     TILINGKEY_SMALL_SHAPE_MIXTYPE = 1012,   // small shape and mixed dtype
     TILINGKEY_SMALL_SHAPE_B32 = 102,        // small shape and dtype is b32(float32)

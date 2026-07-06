@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -23,22 +23,18 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void mish_grad(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void mish_grad(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad,
+                                                GM_ADDR workspace, GM_ADDR tiling);
 
 class mish_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "mish_grad_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "mish_grad_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "mish_grad TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./mish_grad_data");
     }
 };
-
 
 TEST_F(mish_grad_test, test_case_fp32_1)
 {
@@ -51,7 +47,7 @@ TEST_F(mish_grad_test, test_case_fp32_1)
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* tanhx = nullptr;
     uint8_t* x_grad = (uint8_t*)AscendC::GmAlloc(x_gradByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/mish_grad/tests/ut/op_kernel/mish_grad_data", "mish_grad_data");
@@ -64,12 +60,11 @@ TEST_F(mish_grad_test, test_case_fp32_1)
     tilingDatafromBin->dim0 = 256;
     tilingDatafromBin->coreNum = 1;
     tilingDatafromBin->ubFormer = 1024;
-    
+
     ReadFile(path + "/mish_grad_data/input_grad.bin", gradByteSize, grad, gradByteSize);
     ReadFile(path + "/mish_grad_data/input_x.bin", xByteSize, x, xByteSize);
-    auto KernelMishGrad = [](GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace, GM_ADDR tiling) {
-        ::mish_grad<0, TPL_FP32>(grad, x, tanhx, x_grad, workspace, tiling);
-    };
+    auto KernelMishGrad = [](GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR x_grad, GM_ADDR workspace,
+                             GM_ADDR tiling) { ::mish_grad<0, TPL_FP32>(grad, x, tanhx, x_grad, workspace, tiling); };
     ICPU_SET_TILING_KEY(1003);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelMishGrad, blockDim, grad, x, tanhx, x_grad, workspace, (uint8_t*)(tilingDatafromBin));

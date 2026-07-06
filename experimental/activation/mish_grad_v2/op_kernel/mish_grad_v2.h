@@ -30,7 +30,7 @@ __aicore__ inline int64_t AlignUp(int64_t value, int64_t align)
 }
 
 template <typename T>
-__aicore__ inline void CopyOutTile(GlobalTensor<T> &yGm, TQue<TPosition::VECOUT, BUFFER_NUM> &outQueueY,
+__aicore__ inline void CopyOutTile(GlobalTensor<T>& yGm, TQue<TPosition::VECOUT, BUFFER_NUM>& outQueueY,
                                    int64_t progress, int64_t tileLength, int64_t validLength)
 {
     LocalTensor<T> yLocal = outQueueY.DeQue<T>();
@@ -58,8 +58,7 @@ __aicore__ inline void ComputeCoreCommon(LocalTensor<float> gradLocal, LocalTens
 }
 
 __aicore__ inline void ComputeTanhxCommon(LocalTensor<float> xLocal, LocalTensor<float> tanhxLocal,
-                                          LocalTensor<float> tmp0, LocalTensor<float> tmp1,
-                                          int64_t alignedLength)
+                                          LocalTensor<float> tmp0, LocalTensor<float> tmp1, int64_t alignedLength)
 {
     Relu(tanhxLocal, xLocal, alignedLength);
     Abs(tmp0, xLocal, alignedLength);
@@ -76,7 +75,7 @@ public:
     __aicore__ inline KernelMishGradFloat() {}
 
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR y,
-                                const MishGradV2TilingData *tilingData, TPipe *pipe)
+                                const MishGradV2TilingData* tilingData, TPipe* pipe)
     {
         pipe_ = pipe;
         hasTanhx_ = tilingData->haveTanhx != 0;
@@ -84,21 +83,21 @@ public:
         if (blockIdx < tilingData->formerNum) {
             blockLength_ = tilingData->formerLength;
             int64_t offset = tilingData->formerLength * blockIdx;
-            gradGm_.SetGlobalBuffer((__gm__ float *)grad + offset, tilingData->formerLength);
-            xGm_.SetGlobalBuffer((__gm__ float *)x + offset, tilingData->formerLength);
+            gradGm_.SetGlobalBuffer((__gm__ float*)grad + offset, tilingData->formerLength);
+            xGm_.SetGlobalBuffer((__gm__ float*)x + offset, tilingData->formerLength);
             if (hasTanhx_) {
-                tanhxGm_.SetGlobalBuffer((__gm__ float *)tanhx + offset, tilingData->formerLength);
+                tanhxGm_.SetGlobalBuffer((__gm__ float*)tanhx + offset, tilingData->formerLength);
             }
-            yGm_.SetGlobalBuffer((__gm__ float *)y + offset, tilingData->formerLength);
+            yGm_.SetGlobalBuffer((__gm__ float*)y + offset, tilingData->formerLength);
         } else {
             blockLength_ = tilingData->tailLength;
             int64_t offset = tilingData->formerLength * tilingData->formerNum;
-            gradGm_.SetGlobalBuffer((__gm__ float *)grad + offset, tilingData->tailLength);
-            xGm_.SetGlobalBuffer((__gm__ float *)x + offset, tilingData->tailLength);
+            gradGm_.SetGlobalBuffer((__gm__ float*)grad + offset, tilingData->tailLength);
+            xGm_.SetGlobalBuffer((__gm__ float*)x + offset, tilingData->tailLength);
             if (hasTanhx_) {
-                tanhxGm_.SetGlobalBuffer((__gm__ float *)tanhx + offset, tilingData->tailLength);
+                tanhxGm_.SetGlobalBuffer((__gm__ float*)tanhx + offset, tilingData->tailLength);
             }
-            yGm_.SetGlobalBuffer((__gm__ float *)y + offset, tilingData->tailLength);
+            yGm_.SetGlobalBuffer((__gm__ float*)y + offset, tilingData->tailLength);
         }
 
         tileLength_ = tilingData->tileLength;
@@ -181,7 +180,7 @@ private:
     }
 
 private:
-    TPipe *pipe_ = nullptr;
+    TPipe* pipe_ = nullptr;
     TQue<TPosition::VECIN, BUFFER_NUM> inQueueGrad_;
     TQue<TPosition::VECIN, BUFFER_NUM> inQueueX_;
     TQue<TPosition::VECIN, BUFFER_NUM> inQueueTanhx_;
@@ -203,7 +202,7 @@ public:
     __aicore__ inline KernelMishGradCast() {}
 
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR x, GM_ADDR tanhx, GM_ADDR y,
-                                const MishGradV2TilingData *tilingData, TPipe *pipe)
+                                const MishGradV2TilingData* tilingData, TPipe* pipe)
     {
         pipe_ = pipe;
         hasTanhx_ = tilingData->haveTanhx != 0;
@@ -211,21 +210,21 @@ public:
         if (blockIdx < tilingData->formerNum) {
             blockLength_ = tilingData->formerLength;
             int64_t offset = tilingData->formerLength * blockIdx;
-            gradGm_.SetGlobalBuffer((__gm__ T *)grad + offset, tilingData->formerLength);
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->formerLength);
+            gradGm_.SetGlobalBuffer((__gm__ T*)grad + offset, tilingData->formerLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->formerLength);
             if (hasTanhx_) {
-                tanhxGm_.SetGlobalBuffer((__gm__ T *)tanhx + offset, tilingData->formerLength);
+                tanhxGm_.SetGlobalBuffer((__gm__ T*)tanhx + offset, tilingData->formerLength);
             }
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->formerLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->formerLength);
         } else {
             blockLength_ = tilingData->tailLength;
             int64_t offset = tilingData->formerLength * tilingData->formerNum;
-            gradGm_.SetGlobalBuffer((__gm__ T *)grad + offset, tilingData->tailLength);
-            xGm_.SetGlobalBuffer((__gm__ T *)x + offset, tilingData->tailLength);
+            gradGm_.SetGlobalBuffer((__gm__ T*)grad + offset, tilingData->tailLength);
+            xGm_.SetGlobalBuffer((__gm__ T*)x + offset, tilingData->tailLength);
             if (hasTanhx_) {
-                tanhxGm_.SetGlobalBuffer((__gm__ T *)tanhx + offset, tilingData->tailLength);
+                tanhxGm_.SetGlobalBuffer((__gm__ T*)tanhx + offset, tilingData->tailLength);
             }
-            yGm_.SetGlobalBuffer((__gm__ T *)y + offset, tilingData->tailLength);
+            yGm_.SetGlobalBuffer((__gm__ T*)y + offset, tilingData->tailLength);
         }
 
         tileLength_ = tilingData->tileLength;
@@ -268,7 +267,8 @@ private:
     __aicore__ inline void CopyIn(int64_t progress, int64_t validLength, int64_t alignedLength)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(validLength * sizeof(T)), 0, 0, 0};
-        DataCopyPadExtParams<T> padParams{true, 0, static_cast<uint8_t>(alignedLength - validLength), static_cast<T>(0)};
+        DataCopyPadExtParams<T> padParams{true, 0, static_cast<uint8_t>(alignedLength - validLength),
+                                          static_cast<T>(0)};
 
         LocalTensor<T> gradLocal = inQueueGrad_.AllocTensor<T>();
         LocalTensor<T> xLocal = inQueueX_.AllocTensor<T>();
@@ -317,7 +317,7 @@ private:
     }
 
 private:
-    TPipe *pipe_ = nullptr;
+    TPipe* pipe_ = nullptr;
     TQue<TPosition::VECIN, BUFFER_NUM> inQueueGrad_;
     TQue<TPosition::VECIN, BUFFER_NUM> inQueueX_;
     TQue<TPosition::VECIN, BUFFER_NUM> inQueueTanhx_;
@@ -337,6 +337,6 @@ private:
     bool hasTanhx_ = false;
 };
 
-}  // namespace NsMishGradV2
+} // namespace NsMishGradV2
 
 #endif

@@ -65,7 +65,7 @@ constexpr uint64_t WORK_SPACE_SIZE_APT = 48 * 1024 * 1024;
 
 class FlatQuantTiling {
 public:
-    explicit FlatQuantTiling(gert::TilingContext* context) : tilingContext_(context) {};
+    explicit FlatQuantTiling(gert::TilingContext* context) : tilingContext_(context){};
     ge::graphStatus RunBigKernelTiling();
 
 private:
@@ -200,8 +200,8 @@ ge::graphStatus FlatQuantTiling::SetTilingContextAndSaveData()
     tilingContext_->SetBlockDim(compileInfo->coreNum);
     tilingContext_->SetTilingKey(mmMode_);
     // 保存tiling数据
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
@@ -266,9 +266,9 @@ void FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
     if (outDtype == ge::DT_FLOAT4_E2M1) {
         if (IsRegbaseSocVersion(tilingContext_)) {
             int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
-            workspaces[0] =
-                useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
-                WORK_SPACE_SIZE_APT;
+            workspaces[0] = useAivNum *
+                                (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
+                            WORK_SPACE_SIZE_APT;
         }
         return;
     }
@@ -276,9 +276,9 @@ void FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
     int64_t alignedK = K;
     if (mmMode_ == MM_HIGH_MODE) {
         int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
-        workspaces[0] =
-            useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
-            WORK_SPACE_SIZE;
+        workspaces[0] = useAivNum *
+                            (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
+                        WORK_SPACE_SIZE;
     } else if (mmMode_ == MM_DOUBLE_MODE) {
         alignedK += (alignedK % FACTOR_TWO);
         workspaces[0] = (alignedK * mAlign_ * N + mAlign_ * mAlign_) * BYTE_LEN_2 + WORK_SPACE_SIZE;
@@ -330,44 +330,43 @@ ge::graphStatus FlatQuantTiling::GetTCubeTiling()
 bool FlatQuantTiling::CheckShapes() const
 {
     OP_CHECK_IF(xShape_.GetDimNum() != DIM_THREE,
-        OP_LOGE(tilingContext_->GetNodeName(), "x shape dims must be 3, got %zu.", xShape_.GetDimNum()),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "x shape dims must be 3, got %zu.", xShape_.GetDimNum()),
+                return false);
     OP_CHECK_IF(p1Shape_.GetDimNum() != DIM_TWO,
-        OP_LOGE(tilingContext_->GetNodeName(), "p1 shape dims must be 2, got %zu.", p1Shape_.GetDimNum()),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "p1 shape dims must be 2, got %zu.", p1Shape_.GetDimNum()),
+                return false);
     OP_CHECK_IF(hasP2_ && p2Shape_.GetDimNum() != DIM_TWO,
-        OP_LOGE(tilingContext_->GetNodeName(), "p2 shape dims must be 2, got %zu.", p2Shape_.GetDimNum()),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "p2 shape dims must be 2, got %zu.", p2Shape_.GetDimNum()),
+                return false);
 
     int64_t K = xShape_.GetDim(INDEX_ZERO);
     int64_t M = xShape_.GetDim(INDEX_ONE);
     int64_t N = xShape_.GetDim(INDEX_TWO);
     OP_CHECK_IF(K > MAX_K_SIZE || M > MAX_MN_SIZE || N > MAX_MN_SIZE,
-        OP_LOGE(tilingContext_->GetNodeName(), "K[%ld]/M[%ld]/N[%ld] exceeds limit %d/%d/%d.",
-                K, M, N, MAX_K_SIZE, MAX_MN_SIZE, MAX_MN_SIZE),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "K[%ld]/M[%ld]/N[%ld] exceeds limit %d/%d/%d.", K, M, N,
+                        MAX_K_SIZE, MAX_MN_SIZE, MAX_MN_SIZE),
+                return false);
     OP_CHECK_IF(p1Shape_.GetDim(INDEX_ZERO) != M || p1Shape_.GetDim(INDEX_ONE) != M,
-        OP_LOGE(tilingContext_->GetNodeName(), "p1 shape must be [%ld,%ld], got [%ld,%ld].",
-                M, M, p1Shape_.GetDim(INDEX_ZERO), p1Shape_.GetDim(INDEX_ONE)),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "p1 shape must be [%ld,%ld], got [%ld,%ld].", M, M,
+                        p1Shape_.GetDim(INDEX_ZERO), p1Shape_.GetDim(INDEX_ONE)),
+                return false);
     bool isP2ZeroShape = (p2Shape_.GetDim(INDEX_ZERO) == 0 && p2Shape_.GetDim(INDEX_ONE) == 0);
     bool isP2NormalShape = (p2Shape_.GetDim(INDEX_ZERO) == N && p2Shape_.GetDim(INDEX_ONE) == N);
     OP_CHECK_IF(!isP2ZeroShape && !isP2NormalShape,
-        OP_LOGE(tilingContext_->GetNodeName(), "p2 shape must be [0,0] or [%ld,%ld], got [%ld,%ld].",
-                N, N, p2Shape_.GetDim(INDEX_ZERO), p2Shape_.GetDim(INDEX_ONE)),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "p2 shape must be [0,0] or [%ld,%ld], got [%ld,%ld].", N, N,
+                        p2Shape_.GetDim(INDEX_ZERO), p2Shape_.GetDim(INDEX_ONE)),
+                return false);
 
     return true;
 }
 
 bool FlatQuantTiling::CheckClipRatio() const
 {
-    OP_CHECK_IF(clipRatio_ == nullptr,
-        OP_LOGE(tilingContext_->GetNodeName(), "clip_ratio attribute is null."),
-        return false);
+    OP_CHECK_IF(clipRatio_ == nullptr, OP_LOGE(tilingContext_->GetNodeName(), "clip_ratio attribute is null."),
+                return false);
     OP_CHECK_IF(*clipRatio_ <= ZERO_FLOAT || *clipRatio_ > ONE_FLOAT,
-        OP_LOGE(tilingContext_->GetNodeName(), "clip_ratio must be in (0, 1], got %f.", *clipRatio_),
-        return false);
+                OP_LOGE(tilingContext_->GetNodeName(), "clip_ratio must be in (0, 1], got %f.", *clipRatio_),
+                return false);
     return true;
 }
 
@@ -375,8 +374,7 @@ bool FlatQuantTiling::CheckDstDtype(ge::DataType outDtype) const
 {
     if (dstDtype_ != nullptr && outDtype == ge::DT_FLOAT4_E2M1) {
         OP_CHECK_IF(*dstDtype_ != ge::DT_FLOAT4_E2M1,
-            OP_LOGE(tilingContext_->GetNodeName(), "dst_dtype mismatch for FLOAT4 output."),
-            return false);
+                    OP_LOGE(tilingContext_->GetNodeName(), "dst_dtype mismatch for FLOAT4 output."), return false);
     }
     return true;
 }
@@ -385,7 +383,8 @@ bool FlatQuantTiling::CheckDstTypeMax(ge::DataType outDtype) const
 {
     if (dstTypeMax_ != nullptr && outDtype == ge::DT_FLOAT4_E2M1) {
         float localDstTypeMax = *dstTypeMax_;
-        OP_CHECK_IF(localDstTypeMax != ZERO_FLOAT && (localDstTypeMax < SIX_FLOAT || localDstTypeMax > TWELVE_FLOAT),
+        OP_CHECK_IF(
+            localDstTypeMax != ZERO_FLOAT && (localDstTypeMax < SIX_FLOAT || localDstTypeMax > TWELVE_FLOAT),
             OP_LOGE(tilingContext_->GetNodeName(), "dst_type_max[%f] must be 0 or in range [6, 12].", localDstTypeMax),
             return false);
     }
@@ -445,17 +444,14 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
     NpuArch npuArch = ascendcPlatform.GetCurNpuArch();
     bool IsArch3510 = npuArch == NpuArch::DAV_3510;
 
-    OP_LOGI(
-        "FlatQuant", "parse compile info success soc:%d, aicNum:%ld, aivNum:%ld",
-        static_cast<int>(compileInfo->socVersion), compileInfo->coreNum, compileInfo->aivNum);
-    OP_CHECK_IF(
-        compileInfo->coreNum <= 0, OP_LOGE(context->GetNodeName(), "FlatQuant is not supported for aicNum <=0 "),
-        return ge::GRAPH_FAILED);
+    OP_LOGI("FlatQuant", "parse compile info success soc:%d, aicNum:%ld, aivNum:%ld",
+            static_cast<int>(compileInfo->socVersion), compileInfo->coreNum, compileInfo->aivNum);
+    OP_CHECK_IF(compileInfo->coreNum <= 0,
+                OP_LOGE(context->GetNodeName(), "FlatQuant is not supported for aicNum <=0 "), return ge::GRAPH_FAILED);
     if (IsArch3510) {
-        OP_CHECK_IF(
-            compileInfo->aivNum != (compileInfo->coreNum * 2), // aivNum must == aicNum*2
-            OP_LOGE(context->GetNodeName(), "FlatQuantTiling is only supported for aivNum == aicNum*2 "),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfo->aivNum != (compileInfo->coreNum * 2), // aivNum must == aicNum*2
+                    OP_LOGE(context->GetNodeName(), "FlatQuantTiling is only supported for aivNum == aicNum*2 "),
+                    return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;

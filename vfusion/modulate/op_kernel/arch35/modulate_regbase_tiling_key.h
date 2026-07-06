@@ -10,7 +10,7 @@
 
 /*!
  * \file modulate_regbase_tiling_key.h
- * \brief modulate_regbase_tiling_key.h declare 
+ * \brief modulate_regbase_tiling_key.h declare
  */
 
 #ifndef MODULATE_REGBASE_TILING_KEY_H
@@ -22,20 +22,16 @@
 
 // 模板参数
 ASCENDC_TPL_ARGS_DECL(Modulate,
-    ASCENDC_TPL_UINT_DECL(tilingStrategy, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, \
-                          MODULATE_TILING_L, MODULATE_TILING_D), // LIST模式, 穷举
-    ASCENDC_TPL_BOOL_DECL(isScale, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(isShift, 0, 1)
-);
+                      ASCENDC_TPL_UINT_DECL(tilingStrategy, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, MODULATE_TILING_L,
+                                            MODULATE_TILING_D), // LIST模式, 穷举
+                      ASCENDC_TPL_BOOL_DECL(isScale, 0, 1), ASCENDC_TPL_BOOL_DECL(isShift, 0, 1));
 
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
 ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(tilingStrategy, ASCENDC_TPL_UI_RANGE, 1, MODULATE_TILING_L, MODULATE_TILING_D), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
-        ASCENDC_TPL_BOOL_SEL(isScale, 0, 1),
-        ASCENDC_TPL_BOOL_SEL(isShift, 0, 1)
-    ),
-);
+        ASCENDC_TPL_UINT_SEL(tilingStrategy, ASCENDC_TPL_UI_RANGE, 1, MODULATE_TILING_L,
+                             MODULATE_TILING_D), // RANGE模式, 第一个值1表示范围个数1，后两个值表示范围起、终位置
+        ASCENDC_TPL_BOOL_SEL(isScale, 0, 1), ASCENDC_TPL_BOOL_SEL(isShift, 0, 1)), );
 
 #endif // MODULATE_REGBASE_TILING_KEY_H

@@ -17,8 +17,9 @@
 
 namespace ops {
 class SoftplusV2Grad : public OpDef {
-   public:
-    explicit SoftplusV2Grad(const char* name) : OpDef(name) {
+public:
+    explicit SoftplusV2Grad(const char* name) : OpDef(name)
+    {
         // 输入定义：gradOutput（梯度输入）、self（原输入）
         this->Input("gradOutput")
             .ParamType(REQUIRED)
@@ -48,4 +49,4 @@ class SoftplusV2Grad : public OpDef {
 
 // 注册算子
 OP_ADD(SoftplusV2Grad);
-}  // namespace ops
+} // namespace ops

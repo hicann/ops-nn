@@ -26,12 +26,15 @@ using namespace AscendC;
 using namespace ApplyGradientDescentNs;
 
 template <uint64_t schMode>
-__global__ __aicore__ void apply_gradient_descent(GM_ADDR var, GM_ADDR alpha, GM_ADDR delta, GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling) {
+__global__ __aicore__ void apply_gradient_descent(GM_ADDR var, GM_ADDR alpha, GM_ADDR delta, GM_ADDR var_out,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(ApplyGradientDescentTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyGradientDescentTilingData, tilingData, tiling);
     TPipe pipe;
-    ElementwiseSch<schMode, ApplyGradientDescentOp::ApplyGradientDescentDAG<DTYPE_VAR>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+    ElementwiseSch<schMode, ApplyGradientDescentOp::ApplyGradientDescentDAG<DTYPE_VAR>::OpDag> sch(
+        &(tilingData.baseTiling), &pipe);
     sch.Init(var, alpha, delta, var_out);
     sch.Process();
 }

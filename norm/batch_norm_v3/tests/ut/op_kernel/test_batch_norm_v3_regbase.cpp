@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -28,21 +29,15 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void batch_norm_v3(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean, GM_ADDR variance, GM_ADDR y, GM_ADDR mean_out,
-    GM_ADDR variance_out, GM_ADDR batch_mean, GM_ADDR batch_rstd, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void batch_norm_v3(GM_ADDR x, GM_ADDR weight, GM_ADDR bias, GM_ADDR mean,
+                                                    GM_ADDR variance, GM_ADDR y, GM_ADDR mean_out, GM_ADDR variance_out,
+                                                    GM_ADDR batch_mean, GM_ADDR batch_rstd, GM_ADDR workspace,
+                                                    GM_ADDR tiling);
 
-class batch_norm_v3_test : public testing::Test
-{
+class batch_norm_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "batch_norm_v3_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "batch_norm_v3_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "batch_norm_v3_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "batch_norm_v3_test TearDown\n" << endl; }
 };
 
 TEST_F(batch_norm_v3_test, test_case_0001)
@@ -72,8 +67,8 @@ TEST_F(batch_norm_v3_test, test_case_0001)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    BatchNormV3WelfordRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<BatchNormV3WelfordRegbaseTilingData*>(tiling);
+    BatchNormV3WelfordRegbaseTilingData* tilingDatafromBin = reinterpret_cast<BatchNormV3WelfordRegbaseTilingData*>(
+        tiling);
 
     tilingDatafromBin->r1 = 1;
     tilingDatafromBin->r0 = 15521;
@@ -98,9 +93,8 @@ TEST_F(batch_norm_v3_test, test_case_0001)
     float momentum = 0.1;
 
     ICPU_SET_TILING_KEY(30000);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, gamma, gamma, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, gamma, gamma, mean, variance, y, mean_out, variance_out, batch_mean,
+                batch_rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -144,8 +138,8 @@ TEST_F(batch_norm_v3_test, test_case_0002)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    BatchNormV3WelfordRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<BatchNormV3WelfordRegbaseTilingData*>(tiling);
+    BatchNormV3WelfordRegbaseTilingData* tilingDatafromBin = reinterpret_cast<BatchNormV3WelfordRegbaseTilingData*>(
+        tiling);
 
     tilingDatafromBin->r1 = 8;
     tilingDatafromBin->r0 = 2048;
@@ -170,9 +164,8 @@ TEST_F(batch_norm_v3_test, test_case_0002)
     float momentum = 0.1;
 
     ICPU_SET_TILING_KEY(30000);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, gamma, gamma, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, gamma, gamma, mean, variance, y, mean_out, variance_out, batch_mean,
+                batch_rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -216,8 +209,8 @@ TEST_F(batch_norm_v3_test, test_case_0003)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    BatchNormV3FullReduceRegbaseTilingData* tilingDatafromBin =
-        reinterpret_cast<BatchNormV3FullReduceRegbaseTilingData*>(tiling);
+    BatchNormV3FullReduceRegbaseTilingData*
+        tilingDatafromBin = reinterpret_cast<BatchNormV3FullReduceRegbaseTilingData*>(tiling);
 
     tilingDatafromBin->r1 = 1;
     tilingDatafromBin->r0 = 4096;
@@ -234,9 +227,8 @@ TEST_F(batch_norm_v3_test, test_case_0003)
     tilingDatafromBin->momentum = 0.1;
 
     ICPU_SET_TILING_KEY(200000);
-    ICPU_RUN_KF(
-        batch_norm_v3, blockDim, x, gamma, gamma, mean, variance, y, mean_out, variance_out, batch_mean, batch_rstd,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(batch_norm_v3, blockDim, x, gamma, gamma, mean, variance, y, mean_out, variance_out, batch_mean,
+                batch_rstd, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

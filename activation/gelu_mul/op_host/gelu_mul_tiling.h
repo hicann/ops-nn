@@ -12,7 +12,7 @@
  * \file gelu_mul_tiling_def.h
  * \brief gelu_mul_tiling_def
  */
- 
+
 #ifndef GELU_MUL_TILING_DEF_H
 #define GELU_MUL_TILING_DEF_H
 
@@ -33,6 +33,6 @@ TILING_DATA_FIELD_DEF(uint32_t, needCoreNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GeluMul, GeluMulTilingData)
-}  // namespace optiling
+} // namespace optiling
 
 #endif

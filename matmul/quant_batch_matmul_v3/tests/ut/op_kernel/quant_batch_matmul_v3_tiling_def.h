@@ -17,7 +17,6 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "quant_batch_matmul_v3_kernel_tiling_data.h"
 
-
 constexpr uint16_t MAX_TENSOR_CONT = 256;
 constexpr uint16_t MAX_CORE_CONT = 64;
 
@@ -26,11 +25,11 @@ inline void InitQuantBatchMatmulV3TilingData(uint8_t* tiling, QuantBatchMatmulV3
     memcpy(const_data, tiling, sizeof(QuantBatchMatmulV3TilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                                        \
-    QuantBatchMatmulV3TilingData tiling_data;                                                 \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    QuantBatchMatmulV3TilingData tiling_data;    \
     InitQuantBatchMatmulV3TilingData(tiling_arg, &tiling_data)
 
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
-    QuantBatchMatmulV3TilingData tiling_data; \
+    QuantBatchMatmulV3TilingData tiling_data;                               \
     InitQuantBatchMatmulV3TilingData(tiling_arg, &tiling_data);
-#endif  // QUANT_BATCH_MATMUL_V3_TILING_DEF_H
+#endif // QUANT_BATCH_MATMUL_V3_TILING_DEF_H

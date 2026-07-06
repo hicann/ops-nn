@@ -109,10 +109,7 @@ public:
         }
     }
 
-    __host_aicore__ static Params InitParams(Arguments const /* &args */, GM_ADDR /* workspaceGm */)
-    {
-        return {};
-    }
+    __host_aicore__ static Params InitParams(Arguments const /* &args */, GM_ADDR /* workspaceGm */) { return {}; }
 };
 } // namespace Block
 } // namespace Gemm

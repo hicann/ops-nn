@@ -16,21 +16,19 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 // A5 64核场景特化门限值
 static constexpr int64_t A_CHANGE_SHAPE = 200000;
 static constexpr int64_t MAX_A_CHANGE_SHAPE = 6000000;
-class ConfusionSoftmaxGradTilingARSmallR : virtual public ConfusionSoftmaxGradTilingBase, public SoftmaxGradTilingARSmallR
-{
+class ConfusionSoftmaxGradTilingARSmallR : virtual public ConfusionSoftmaxGradTilingBase,
+                                           public SoftmaxGradTilingARSmallR {
 public:
     explicit ConfusionSoftmaxGradTilingARSmallR(gert::TilingContext* context)
         : Ops::NN::Optiling::TilingBaseClass(context),
-        SoftmaxGradTilingBase(context),
-        ConfusionSoftmaxGradTilingBase(context),
-        SoftmaxGradTilingARSmallR(context)
-    {
-    }
+          SoftmaxGradTilingBase(context),
+          ConfusionSoftmaxGradTilingBase(context),
+          SoftmaxGradTilingARSmallR(context)
+    {}
     ~ConfusionSoftmaxGradTilingARSmallR() override = default;
 
 protected:
@@ -41,7 +39,7 @@ protected:
         }
         if (yDtype_ == ge::DT_FLOAT && r_ <= CONST_FOUR && a1_ > A_CHANGE_SHAPE && a1_ < MAX_A_CHANGE_SHAPE) {
             return true;
-        } 
+        }
         if (yDtype_ != ge::DT_FLOAT && r_ <= CONST_EIGHT && a1_ > A_CHANGE_SHAPE) {
             return true;
         }
@@ -51,4 +49,4 @@ protected:
 };
 
 REGISTER_TILING_TEMPLATE("ConfusionSoftmaxGrad", ConfusionSoftmaxGradTilingARSmallR, TEMPLATE_AR_SMALL_R_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

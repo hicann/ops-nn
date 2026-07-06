@@ -24,29 +24,23 @@
 
 class ChamferDistanceGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ChamferDistanceGradTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ChamferDistanceGradTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ChamferDistanceGradTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ChamferDistanceGradTest TearDown" << std::endl; }
 };
 TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_fp32)
 {
     ge::op::ChamferDistanceGrad op;
-    op.UpdateInputDesc(
-        "xyz1", create_desc_with_ori({20, 15, 2}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15, 2}, ge::FORMAT_ND));
-    op.UpdateInputDesc(
-        "xyz2", create_desc_with_ori({20, 15, 2}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15, 2}, ge::FORMAT_ND));
+    op.UpdateInputDesc("xyz1",
+                       create_desc_with_ori({20, 15, 2}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15, 2}, ge::FORMAT_ND));
+    op.UpdateInputDesc("xyz2",
+                       create_desc_with_ori({20, 15, 2}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15, 2}, ge::FORMAT_ND));
     op.UpdateInputDesc("idx1", create_desc_with_ori({20, 15}, ge::DT_INT32, ge::FORMAT_ND, {20, 15}, ge::FORMAT_ND));
     op.UpdateInputDesc("idx2", create_desc_with_ori({20, 15}, ge::DT_INT32, ge::FORMAT_ND, {20, 15}, ge::FORMAT_ND));
-    op.UpdateInputDesc(
-        "grad_dist1", create_desc_with_ori({20, 15}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15}, ge::FORMAT_ND));
-    op.UpdateInputDesc(
-        "grad_dist2", create_desc_with_ori({20, 15}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15}, ge::FORMAT_ND));
+    op.UpdateInputDesc("grad_dist1",
+                       create_desc_with_ori({20, 15}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15}, ge::FORMAT_ND));
+    op.UpdateInputDesc("grad_dist2",
+                       create_desc_with_ori({20, 15}, ge::DT_FLOAT, ge::FORMAT_ND, {20, 15}, ge::FORMAT_ND));
     std::vector<int64_t> expected_output_shape = {20, 15, 2};
     Runtime2TestParam chamfer_distance_grad_param{{}};
     EXPECT_EQ(InferShapeTest(op, chamfer_distance_grad_param), ge::GRAPH_SUCCESS);
@@ -64,20 +58,20 @@ TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_dtype_fp32)
         ge::DataType inputRef1 = ge::DT_FLOAT;
         ge::DataType inputRef2 = ge::DT_INT32;
         ge::DataType outputRef = ge::DT_FLOAT;
-        auto contextHolder =
-            gert::InferDataTypeContextFaker()
-                .NodeIoNum(6, 2)
-                .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                .InputDataTypes({&inputRef1, &inputRef1, &inputRef2, &inputRef2, &inputRef1, &inputRef1})
-                .OutputDataTypes({&outputRef, &outputRef})
-                .Build();
+        auto contextHolder = gert::InferDataTypeContextFaker()
+                                 .NodeIoNum(6, 2)
+                                 .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .InputDataTypes(
+                                     {&inputRef1, &inputRef1, &inputRef2, &inputRef2, &inputRef1, &inputRef1})
+                                 .OutputDataTypes({&outputRef, &outputRef})
+                                 .Build();
         auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

@@ -17,7 +17,7 @@
 
 namespace {
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t size = 1;
     for (int64_t dim : shape) {
@@ -26,7 +26,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return size;
 }
 
-std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
+std::vector<int64_t> MakeStrides(const std::vector<int64_t>& shape)
 {
     if (shape.empty()) {
         return {};
@@ -38,18 +38,17 @@ std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
     return strides;
 }
 
-aclError CreateAclTensor(
-    const std::vector<int64_t> &shape, aclDataType dtype, void *device_addr, aclTensor **tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
-    const int64_t *shape_ptr = shape.empty() ? nullptr : shape.data();
-    const int64_t *strides_ptr = strides.empty() ? nullptr : strides.data();
-    *tensor = aclCreateTensor(
-        shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(), device_addr);
+    const int64_t* shape_ptr = shape.empty() ? nullptr : shape.data();
+    const int64_t* strides_ptr = strides.empty() ? nullptr : strides.data();
+    *tensor = aclCreateTensor(shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(),
+                              device_addr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
 
-}  // namespace
+} // namespace
 
 int main()
 {
@@ -59,14 +58,14 @@ int main()
     bool aclInitialized = false;
     bool deviceSet = false;
     aclrtStream stream = nullptr;
-    void *grad_device = nullptr;
-    void *self_device = nullptr;
-    void *out_device = nullptr;
-    void *workspace = nullptr;
-    aclTensor *grad_tensor = nullptr;
-    aclTensor *self_tensor = nullptr;
-    aclTensor *out_tensor = nullptr;
-    aclOpExecutor *executor = nullptr;
+    void* grad_device = nullptr;
+    void* self_device = nullptr;
+    void* out_device = nullptr;
+    void* workspace = nullptr;
+    aclTensor* grad_tensor = nullptr;
+    aclTensor* self_tensor = nullptr;
+    aclTensor* out_tensor = nullptr;
+    aclOpExecutor* executor = nullptr;
     uint64_t workspace_size = 0;
 
     const std::vector<int64_t> shape = {4, 2};
@@ -142,8 +141,7 @@ int main()
         goto CLEANUP;
     }
 
-    ret = aclnnHardsigmoidBackwardGetWorkspaceSize(
-        grad_tensor, self_tensor, out_tensor, &workspace_size, &executor);
+    ret = aclnnHardsigmoidBackwardGetWorkspaceSize(grad_tensor, self_tensor, out_tensor, &workspace_size, &executor);
     if (ret != ACL_SUCCESS) {
         exitCode = ret;
         goto CLEANUP;

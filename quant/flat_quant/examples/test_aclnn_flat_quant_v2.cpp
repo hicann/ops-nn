@@ -1,12 +1,12 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <iostream>
 #include <vector>
@@ -47,9 +47,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -67,9 +66,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -110,27 +108,27 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建kroneckerP1 aclTensor
-    ret = CreateAclTensor(
-        kroneckerP1HostData, kroneckerP1Shape, &kroneckerP1DeviceAddr, aclDataType::ACL_FLOAT16, &kroneckerP1);
+    ret = CreateAclTensor(kroneckerP1HostData, kroneckerP1Shape, &kroneckerP1DeviceAddr, aclDataType::ACL_FLOAT16,
+                          &kroneckerP1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建kroneckerP2 aclTensor
-    ret = CreateAclTensor(
-        kroneckerP2HostData, kroneckerP2Shape, &kroneckerP2DeviceAddr, aclDataType::ACL_FLOAT16, &kroneckerP2);
+    ret = CreateAclTensor(kroneckerP2HostData, kroneckerP2Shape, &kroneckerP2DeviceAddr, aclDataType::ACL_FLOAT16,
+                          &kroneckerP2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT32, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建quantScale aclTensor
-    ret = CreateAclTensor(
-        quantScaleHostData, quantScaleShape, &quantScaleDeviceAddr, aclDataType::ACL_FLOAT, &quantScale);
+    ret = CreateAclTensor(quantScaleHostData, quantScaleShape, &quantScaleDeviceAddr, aclDataType::ACL_FLOAT,
+                          &quantScale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 3. 调用CANN算子库API，需要修改为具体的API
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnFlatQuantV2第一段接口
-    ret = aclnnFlatQuantV2GetWorkspaceSize(
-        x, kroneckerP1, kroneckerP2, clipRatio, dstTypeMax, out, quantScale, &workspaceSize, &executor);
+    ret = aclnnFlatQuantV2GetWorkspaceSize(x, kroneckerP1, kroneckerP2, clipRatio, dstTypeMax, out, quantScale,
+                                           &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFlatQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -147,9 +145,8 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
     std::vector<int32_t> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(int32_t),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(int32_t), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
@@ -157,9 +154,8 @@ int main()
 
     auto quantScaleSize = GetShapeSize(quantScaleShape);
     std::vector<float> quantScaleResultData(quantScaleSize, 0);
-    ret = aclrtMemcpy(
-        quantScaleResultData.data(), quantScaleResultData.size() * sizeof(quantScaleResultData[0]),
-        quantScaleDeviceAddr, quantScaleSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(quantScaleResultData.data(), quantScaleResultData.size() * sizeof(quantScaleResultData[0]),
+                      quantScaleDeviceAddr, quantScaleSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < quantScaleSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, quantScaleResultData[i]);

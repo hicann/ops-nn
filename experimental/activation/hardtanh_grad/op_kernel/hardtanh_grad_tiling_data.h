@@ -25,7 +25,7 @@ struct HardtanhGradTilingData {
     uint64_t smallTailDataNum;
     uint64_t bigTailDataNum;
     uint64_t tailBlockNum;
-    uint64_t maskTileDataNum; 
+    uint64_t maskTileDataNum;
     float max;
     float min;
 };

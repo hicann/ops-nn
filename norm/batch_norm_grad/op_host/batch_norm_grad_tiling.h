@@ -44,15 +44,17 @@ constexpr int64_t PARAM_ATTRS_DATA_FORMAT_INDEX = 1;
 constexpr int64_t PARAM_ATTRS_ISTRAING_INDEX = 2;
 constexpr int64_t PARAM_ATTRS_OUTPUT_MASK = 3;
 
-constexpr int64_t PARAM_INPUT_DY = 0;                       // dy
-constexpr int64_t PARAM_INPUT_WEIGHT_INDEX = 2;             // wweight、scale
-constexpr int64_t PARAM_INPUT_RUNNINGVAR_INDEX = 4;         // reserve_space2  train模式：rstd，infer模式：var
-constexpr int64_t PARAM_OUTPUT_DX_INDEX = 0;                // x_backprop
+constexpr int64_t PARAM_INPUT_DY = 0;               // dy
+constexpr int64_t PARAM_INPUT_WEIGHT_INDEX = 2;     // wweight、scale
+constexpr int64_t PARAM_INPUT_RUNNINGVAR_INDEX = 4; // reserve_space2  train模式：rstd，infer模式：var
+constexpr int64_t PARAM_OUTPUT_DX_INDEX = 0;        // x_backprop
 
 constexpr float DEFAULT_EPSILON = 1e-4;
 
-static constexpr const char* inputParamNames[] = {"y_backprop", "x", "scale", "reserve_space_1", "reserve_space_2", "reserve_space_3"};
-static constexpr const char* outputParamNames[] = {"x_backprop", "scale_backprop", "offset_backprop", "reserve_space_4", "reserve_space_5"};
+static constexpr const char* inputParamNames[] = {"y_backprop",     "x", "scale", "reserve_space_1", "reserve_space_2",
+                                                  "reserve_space_3"};
+static constexpr const char* outputParamNames[] = {"x_backprop", "scale_backprop", "offset_backprop", "reserve_space_4",
+                                                   "reserve_space_5"};
 
 BEGIN_TILING_DATA_DEF(BatchNormGradBaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, r1Dim);          // R1AR0 R外轴
@@ -254,10 +256,10 @@ BEGIN_TILING_DATA_DEF(BatchNormGradInferTilingData)
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradInferDxTilingData, baseTilingData);
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradBinaryAddTilingData, generalBinAddTilingData); // 整块的二分累加参数
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradBinaryAddTilingData, tailBinAddTilingData); // 整块+尾块的二分累加参数
-TILING_DATA_FIELD_DEF(int64_t, blockNum);       // 参与计算的所有核数
-TILING_DATA_FIELD_DEF(int64_t, tailBlockNum);   // 尾核的个数
-TILING_DATA_FIELD_DEF(int64_t, formerBlockDim); // 整核分配的A轴个数，aDim/blockNum 向下取整
-TILING_DATA_FIELD_DEF(int64_t, tailBlockDim);   // 尾核分配的A轴个数，aDim/blockNum 向上取整
+TILING_DATA_FIELD_DEF(int64_t, blockNum);                                             // 参与计算的所有核数
+TILING_DATA_FIELD_DEF(int64_t, tailBlockNum);                                         // 尾核的个数
+TILING_DATA_FIELD_DEF(int64_t, formerBlockDim);            // 整核分配的A轴个数，aDim/blockNum 向下取整
+TILING_DATA_FIELD_DEF(int64_t, tailBlockDim);              // 尾核分配的A轴个数，aDim/blockNum 向上取整
 TILING_DATA_FIELD_DEF(int64_t, ubRDimFactor);              // 一次完整的UB内，循环执行R轴的个数
 TILING_DATA_FIELD_DEF(int64_t, ubRDimFactorAlign);         // 一次完整的UB内，循环对齐到block的R轴大小
 TILING_DATA_FIELD_DEF(int64_t, ubRDimLoopNum);             // 核内R轴UB循环的次数
@@ -440,8 +442,7 @@ protected:
     BatchNormGradBaseTilingData& baseTilingData;
 };
 
-class BatchNormGradRARFullLoadTilingBase : public BatchNormGradTilingBase
-{
+class BatchNormGradRARFullLoadTilingBase : public BatchNormGradTilingBase {
 public:
     explicit BatchNormGradRARFullLoadTilingBase(gert::TilingContext* context)
         : BatchNormGradTilingBase(context, tilingData.baseTilingData)
@@ -465,8 +466,7 @@ private:
     BatchNormGradRARFullLoadTilingData tilingData;
 };
 
-class BatchNormGradRARRecomputeTilingBase : public BatchNormGradTilingBase
-{
+class BatchNormGradRARRecomputeTilingBase : public BatchNormGradTilingBase {
 public:
     explicit BatchNormGradRARRecomputeTilingBase(gert::TilingContext* context)
         : BatchNormGradTilingBase(context, tilingData.baseTilingData)
@@ -505,8 +505,7 @@ private:
     BatchNormGradRARRecomputeTilingData tilingData;
 };
 
-class BatchNormGradRAFullLoadTilingBase : public BatchNormGradTilingBase
-{
+class BatchNormGradRAFullLoadTilingBase : public BatchNormGradTilingBase {
 public:
     explicit BatchNormGradRAFullLoadTilingBase(gert::TilingContext* context)
         : BatchNormGradTilingBase(context, tilingData.baseTilingData)
@@ -535,8 +534,7 @@ private:
     BatchNormGradRAFullLoadTilingData tilingData;
 };
 
-class BatchNormGradRARecomputeTilingBase : public BatchNormGradTilingBase
-{
+class BatchNormGradRARecomputeTilingBase : public BatchNormGradTilingBase {
 public:
     explicit BatchNormGradRARecomputeTilingBase(gert::TilingContext* context)
         : BatchNormGradTilingBase(context, tilingData.baseTilingData)

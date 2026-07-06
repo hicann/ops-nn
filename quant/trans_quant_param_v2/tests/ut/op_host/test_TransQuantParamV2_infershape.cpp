@@ -18,15 +18,9 @@
 
 class TransQuantParamV2Test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "TransQuantParamV2 test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "TransQuantParamV2 test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "TransQuantParamV2 test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "TransQuantParamV2 test TearDown" << std::endl; }
 };
 
 TEST_F(TransQuantParamV2Test, trans_quant_paramV2_test_case_1)

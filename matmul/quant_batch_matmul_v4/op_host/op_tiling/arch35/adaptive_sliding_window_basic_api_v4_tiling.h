@@ -16,53 +16,29 @@
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_perblock_basic_api_tiling.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
-
 namespace optiling {
-
 
 class AdaptiveSlidingWindowBasicTilingV4 : public AdaptiveSlidingWindowPerblockBasicAPITiling {
 public:
-    explicit AdaptiveSlidingWindowBasicTilingV4(gert::TilingContext *context)
+    explicit AdaptiveSlidingWindowBasicTilingV4(gert::TilingContext* context)
         : AdaptiveSlidingWindowPerblockBasicAPITiling(context)
-        {
-            inputParams_.Reset();
-        }
+    {
+        inputParams_.Reset();
+    }
     ~AdaptiveSlidingWindowBasicTilingV4() override = default;
     uint64_t GetTilingKey() const override;
 
 protected:
-    bool CheckPerTileShape(
-        const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& pertokenShape,
-        const gert::Shape& scaleShape);
+    bool CheckPerTileShape(const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& pertokenShape,
+                           const gert::Shape& scaleShape);
     bool CheckPertileDtype();
-    uint32_t GetX1Idx() const override
-    {
-        return X1_INDEX_V4;
-    }
-    uint32_t GetX2Idx() const override
-    {
-        return X2_INDEX_V4;
-    }
-    uint32_t GetScaleIdx() const override
-    {
-        return X2_SCALE_INDEX_V4;
-    }
-    uint32_t GetOffsetIdx() const override
-    {
-        return X2_OFFSET_INDEX_V4;
-    }
-    uint32_t GetBiasIdx() const override
-    {
-        return BIAS_INDEX_V4;
-    }
-    uint32_t GetPertokenIdx() const override
-    {
-        return X1_SCALE_INDEX_V4;
-    }
-    uint32_t GetX2TableIdx() const
-    {
-        return X2_TABLE_INDEX_V4;
-    }
+    uint32_t GetX1Idx() const override { return X1_INDEX_V4; }
+    uint32_t GetX2Idx() const override { return X2_INDEX_V4; }
+    uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX_V4; }
+    uint32_t GetOffsetIdx() const override { return X2_OFFSET_INDEX_V4; }
+    uint32_t GetBiasIdx() const override { return BIAS_INDEX_V4; }
+    uint32_t GetPertokenIdx() const override { return X1_SCALE_INDEX_V4; }
+    uint32_t GetX2TableIdx() const { return X2_TABLE_INDEX_V4; }
 
     bool IsCapable() override;
     bool CheckDtype() const override;
@@ -70,18 +46,17 @@ protected:
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
     bool CheckInputValidInPertileMode(const gert::Shape& scaleShape, const gert::Shape& pertokenShape,
-                                       const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckDimValidInPertileMode(size_t x1ShapeLen, size_t x2ShapeLen,
-                                     size_t pertokenShapeLen, size_t scaleShapeLen) const;
+                                      const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
+    bool CheckDimValidInPertileMode(size_t x1ShapeLen, size_t x2ShapeLen, size_t pertokenShapeLen,
+                                    size_t scaleShapeLen) const;
     bool CheckBatchValidInPertileMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
-                                       const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
+                                      const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
     bool CheckGroupValidInPertileMode() const;
-    bool CheckShapeValidInPertileMode(const gert::Shape& scaleShape,
-                                       const gert::Shape& pertoken, const gert::Shape& x1Shape,
-                                       const gert::Shape& x2Shape) const;
+    bool CheckShapeValidInPertileMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
+                                      const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
     bool SetPlatformInfoForTiling() override;
     bool CheckCoreNum() const override;
- 
+
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
-}  // namespace optiling
+} // namespace optiling

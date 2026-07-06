@@ -13,7 +13,6 @@
  * \brief
  */
 
-
 #pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
@@ -23,10 +22,10 @@ namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3MergeBatchBasicApiTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3MergeBatchBasicApiTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    BatchMatMulV3MergeBatchBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BaseTiling(context, cfg){};
 
-    ~BatchMatMulV3MergeBatchBasicApiTiling() override {};
+    ~BatchMatMulV3MergeBatchBasicApiTiling() override{};
 
 protected:
     bool IsCapable() override;
@@ -48,6 +47,5 @@ private:
 
     uint64_t CalBatchL0WithPolynomial(double singleBatchSize, uint64_t mValue) const;
 };
-}
-}
-
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

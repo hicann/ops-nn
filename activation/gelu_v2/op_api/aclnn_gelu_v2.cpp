@@ -20,11 +20,7 @@ using namespace op;
 extern "C" {
 #endif
 
-enum Approximate
-{
-    NONE = 0,
-    TANH = 1
-};
+enum Approximate { NONE = 0, TANH = 1 };
 
 const std::string GetApproximateStr(int64_t approximate)
 {
@@ -35,8 +31,8 @@ const std::string GetApproximateStr(int64_t approximate)
     }
 }
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                   DataType::DT_BF16};
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
@@ -87,8 +83,8 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* y)
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeluV2GetWorkspaceSize(
-    const aclTensor* x, int64_t approximate, aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeluV2GetWorkspaceSize(const aclTensor* x, int64_t approximate, aclTensor* y, uint64_t* workspaceSize,
+                                        aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeluV2, DFX_IN(x, approximate), DFX_OUT(y));
 

@@ -26,31 +26,26 @@ using namespace ge;
 using namespace ut_util;
 
 class ApplyAdamDTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "ApplyAdamDTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "ApplyAdamDTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "ApplyAdamDTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "ApplyAdamDTiling TearDown" << std::endl; }
 };
 
-
-static string TilingData2Str(const gert::TilingData *tilingDataV)
+static string TilingData2Str(const gert::TilingData* tilingDataV)
 {
     auto data = tilingDataV->GetData();
     string result;
     for (size_t i = 0; i < tilingDataV->GetDataSize(); i += sizeof(int64_t)) {
-        result += std::to_string((reinterpret_cast<const int64_t *>(tilingDataV->GetData())[i / sizeof(int64_t)]));
+        result += std::to_string((reinterpret_cast<const int64_t*>(tilingDataV->GetData())[i / sizeof(int64_t)]));
         result += " ";
     }
 
     return result;
 }
 
-static void InitPlatForm(fe::PlatFormInfos &platformInfo, map<string, string> &socInfos,
-    map<string, string> &aicoreSpec, map<string, string> &intrinsics)
+static void InitPlatForm(fe::PlatFormInfos& platformInfo, map<string, string>& socInfos,
+                         map<string, string>& aicoreSpec, map<string, string>& intrinsics)
 {
     string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -65,25 +60,27 @@ static void InitPlatForm(fe::PlatFormInfos &platformInfo, map<string, string> &s
     platformInfo.Init();
 }
 
-static string to_string(const std::stringstream& tiling_data) {
-  auto data = tiling_data.str();
-  string result;
-  int64_t tmp = 0;
-  for (size_t i = 0; i < data.length(); i += sizeof(int64_t)) {
-    memcpy(&tmp, data.c_str() + i, sizeof(tmp));
-    result += std::to_string(tmp);
-    result += " ";
-  }
+static string to_string(const std::stringstream& tiling_data)
+{
+    auto data = tiling_data.str();
+    string result;
+    int64_t tmp = 0;
+    for (size_t i = 0; i < data.length(); i += sizeof(int64_t)) {
+        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
-static void DoTest(gert::StorageShape &var, gert::StorageShape &m, gert::StorageShape &v,
-                   gert::StorageShape &beta1Power, gert::StorageShape &beta2Power, gert::StorageShape &lr,
-                   gert::StorageShape &beta1, gert::StorageShape &beta2, gert::StorageShape &epsilon, gert::StorageShape &grad,
-                   gert::StorageShape &var_out, gert::StorageShape &m_out, gert::StorageShape &v_out,
-                   ge::DataType varDtype, ge::Format format, bool useLocking, bool useNesterov,
-                   int64_t expectKey, string &expectData) {
+static void DoTest(gert::StorageShape& var, gert::StorageShape& m, gert::StorageShape& v,
+                   gert::StorageShape& beta1Power, gert::StorageShape& beta2Power, gert::StorageShape& lr,
+                   gert::StorageShape& beta1, gert::StorageShape& beta2, gert::StorageShape& epsilon,
+                   gert::StorageShape& grad, gert::StorageShape& var_out, gert::StorageShape& m_out,
+                   gert::StorageShape& v_out, ge::DataType varDtype, ge::Format format, bool useLocking,
+                   bool useNesterov, int64_t expectKey, string& expectData)
+{
     optiling::ElewiseCompileInfo compileInfo;
     compileInfo.isAscendC = true;
     compileInfo.coreNum = 64;
@@ -103,15 +100,15 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &m, gert::Storage
     auto param = gert::TilingData::CreateCap(8192);
     ASSERT_NE(param, nullptr);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(32);
-    auto wsSize = reinterpret_cast<gert::ContinuousVector *>(workspaceSizeHoler.get());
-    
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
+
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&var, &m, &v, &beta1Power, &beta2Power, &lr, &beta1, &beta2, &epsilon, &grad})
                       .OutputShapes({&var_out, &m_out, &v_out})
                       .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, varDtype, format, format)
                       .NodeInputTd(1, varDtype, format, format)
                       .NodeInputTd(2, varDtype, format, format)
@@ -131,7 +128,7 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &m, gert::Storage
                       .Workspace(wsSize)
                       .Build();
 
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -146,23 +143,24 @@ static void DoTest(gert::StorageShape &var, gert::StorageShape &m, gert::Storage
     auto tilingDataResult = TilingData2Str(tilingContext->GetRawTilingData());
 }
 
-#define RUN_TEST_WITH_SHAPE(...) do {\
-    gert::StorageShape var = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    gert::StorageShape m = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    gert::StorageShape v = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    gert::StorageShape beta1Power = {{1}, {1}};\
-    gert::StorageShape beta2Power = {{1}, {1}};\
-    gert::StorageShape lr = {{1}, {1}};\
-    gert::StorageShape beta1 = {{1}, {1}};\
-    gert::StorageShape beta2 = {{1}, {1}};\
-    gert::StorageShape epsilon = {{1}, {1}};\
-    gert::StorageShape grad = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    gert::StorageShape var_out = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    gert::StorageShape m_out = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    gert::StorageShape v_out = {{__VA_ARGS__}, {__VA_ARGS__}};\
-    DoTest(var, m, v,beta1Power, beta2Power, lr,beta1, beta2, epsilon, grad,\
-           var_out, m_out, v_out, varDtype, dataFormat, useLocking, useNesterov,expectKey, expectData);\
-} while(0)
+#define RUN_TEST_WITH_SHAPE(...)                                                                                    \
+    do {                                                                                                            \
+        gert::StorageShape var = {{__VA_ARGS__}, {__VA_ARGS__}};                                                    \
+        gert::StorageShape m = {{__VA_ARGS__}, {__VA_ARGS__}};                                                      \
+        gert::StorageShape v = {{__VA_ARGS__}, {__VA_ARGS__}};                                                      \
+        gert::StorageShape beta1Power = {{1}, {1}};                                                                 \
+        gert::StorageShape beta2Power = {{1}, {1}};                                                                 \
+        gert::StorageShape lr = {{1}, {1}};                                                                         \
+        gert::StorageShape beta1 = {{1}, {1}};                                                                      \
+        gert::StorageShape beta2 = {{1}, {1}};                                                                      \
+        gert::StorageShape epsilon = {{1}, {1}};                                                                    \
+        gert::StorageShape grad = {{__VA_ARGS__}, {__VA_ARGS__}};                                                   \
+        gert::StorageShape var_out = {{__VA_ARGS__}, {__VA_ARGS__}};                                                \
+        gert::StorageShape m_out = {{__VA_ARGS__}, {__VA_ARGS__}};                                                  \
+        gert::StorageShape v_out = {{__VA_ARGS__}, {__VA_ARGS__}};                                                  \
+        DoTest(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, var_out, m_out, v_out, varDtype, \
+               dataFormat, useLocking, useNesterov, expectKey, expectData);                                         \
+    } while (0)
 
 TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1000)
 {
@@ -171,8 +169,7 @@ TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1000)
     bool useLocking = false;
     bool useNesterov = false;
     int64_t expectKey = 103;
-    string expectData =
-      "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
+    string expectData = "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
     RUN_TEST_WITH_SHAPE(64, 10, 10, 32);
 }
 
@@ -183,8 +180,7 @@ TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1001)
     bool useLocking = false;
     bool useNesterov = false;
     int64_t expectKey = 101;
-    string expectData =
-      "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
+    string expectData = "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
     RUN_TEST_WITH_SHAPE(64, 10, 10, 32);
 }
 
@@ -195,8 +191,7 @@ TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1002)
     bool useLocking = false;
     bool useNesterov = false;
     int64_t expectKey = 102;
-    string expectData =
-      "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
+    string expectData = "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
     RUN_TEST_WITH_SHAPE(64, 10, 10, 32);
 }
 
@@ -207,8 +202,7 @@ TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1003)
     bool useLocking = false;
     bool useNesterov = true;
     int64_t expectKey = 103;
-    string expectData =
-      "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
+    string expectData = "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
     RUN_TEST_WITH_SHAPE(64, 10, 10, 32);
 }
 
@@ -219,8 +213,7 @@ TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1004)
     bool useLocking = false;
     bool useNesterov = true;
     int64_t expectKey = 101;
-    string expectData =
-      "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
+    string expectData = "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
     RUN_TEST_WITH_SHAPE(64, 10, 10, 32);
 }
 
@@ -231,7 +224,6 @@ TEST_F(ApplyAdamDTiling, apply_adam_d_tiling_1005)
     bool useLocking = false;
     bool useNesterov = true;
     int64_t expectKey = 102;
-    string expectData =
-      "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
+    string expectData = "40001 64 245760 0 0 64 32 10 10 5 5 1 5 5 32 25 38 5 5 32 0 0 4611686019501129728 25 ";
     RUN_TEST_WITH_SHAPE(64, 10, 10, 32);
 }

@@ -28,10 +28,7 @@ constexpr static int64_t B16_SIZE = 2;
 constexpr static int64_t B32_ALIGN_NUM = 32 / sizeof(float);
 constexpr static int64_t BLOCK_BYTES = 32;
 
-static inline int64_t CeilDiv(int64_t a, int64_t b)
-{
-    return b == 0 ? a : (a + b - 1) / b;
-}
+static inline int64_t CeilDiv(int64_t a, int64_t b) { return b == 0 ? a : (a + b - 1) / b; }
 
 bool LayerNormV3WelfordMultiReduceTiling::IsCapable()
 {
@@ -86,8 +83,8 @@ bool LayerNormV3WelfordMultiReduceTiling::IsValidTileLength(int64_t tileLength, 
         // cutR1: gamma/beta TBuf resident with fixed r0
         // Packed gamma/beta buffers replace resident buffers when r0 is small
         int64_t vlFp32 = commonParams.vlFp32;
-        bool needPacked = (gammaFixedR0 < vlFp32 / CONSTANT_TWO) &&
-                          (!commonParams.gammaNullPtr) && (!commonParams.betaNullPtr);
+        bool needPacked = (gammaFixedR0 < vlFp32 / CONSTANT_TWO) && (!commonParams.gammaNullPtr) &&
+                          (!commonParams.betaNullPtr);
         if (commonParams.paramDtype == ge::DT_FLOAT16 || commonParams.paramDtype == ge::DT_BF16) {
             gammaSize = needPacked ? (vlFp32 * B16_SIZE) : (gammaFixedR0 * B16_SIZE);
             betaSize = gammaSize;
@@ -106,20 +103,18 @@ bool LayerNormV3WelfordMultiReduceTiling::IsValidTileLength(int64_t tileLength, 
 
     uint32_t maxValue{0}, minValue{0};
     ge::Shape tensorShape({1, tileLength});
-    AscendC::GetWelfordUpdateMaxMinTmpSize(
-        tensorShape, B32_SIZE, gammaBetaTypeSize, false, true, maxValue, minValue);
+    AscendC::GetWelfordUpdateMaxMinTmpSize(tensorShape, B32_SIZE, gammaBetaTypeSize, false, true, maxValue, minValue);
     int64_t apiTempSize = static_cast<int64_t>(minValue);
     AscendC::GetWelfordFinalizeMaxMinTmpSize(tensorShape, B32_SIZE, false, maxValue, minValue);
     apiTempSize += static_cast<int64_t>(minValue);
-    AscendC::GetNormalizeMaxMinTmpSize(
-        tensorShape, B32_SIZE, gammaBetaTypeSize, true, true, false, maxValue, minValue);
+    AscendC::GetNormalizeMaxMinTmpSize(tensorShape, B32_SIZE, gammaBetaTypeSize, true, true, false, maxValue, minValue);
     apiTempSize += static_cast<int64_t>(minValue);
 
     td_.set_welfordTempSize(welfordTempSize);
     td_.set_apiTempBufferSize(apiTempSize);
 
-    int64_t totalSize =
-        (xSize + ySize) + (meanSize + rstdSize) + (gammaSize + betaSize) + welfordTempSize + apiTempSize;
+    int64_t totalSize = (xSize + ySize) + (meanSize + rstdSize) + (gammaSize + betaSize) + welfordTempSize +
+                        apiTempSize;
     return (totalSize <= static_cast<int64_t>(commonParams.ubSizePlatForm));
 }
 
@@ -138,8 +133,9 @@ ge::graphStatus LayerNormV3WelfordMultiReduceTiling::DoOpTiling()
     td_.set_epsilon(commonParams.eps);
 
     // r0Align: r0 aligned to 32B boundary in elements
-    int64_t tensorTypeSize = (commonParams.tensorDtype == ge::DT_FLOAT16 ||
-                              commonParams.tensorDtype == ge::DT_BF16) ? B16_SIZE : B32_SIZE;
+    int64_t tensorTypeSize = (commonParams.tensorDtype == ge::DT_FLOAT16 || commonParams.tensorDtype == ge::DT_BF16) ?
+                                 B16_SIZE :
+                                 B32_SIZE;
     int64_t r0AlignedBytes = CeilDiv(r0 * tensorTypeSize, BLOCK_BYTES) * BLOCK_BYTES;
     int64_t r0Align = r0AlignedBytes / tensorTypeSize;
     td_.set_r0Align(r0Align);
@@ -169,8 +165,8 @@ ge::graphStatus LayerNormV3WelfordMultiReduceTiling::DoLibApiTiling()
     while (IsValidTileLength(tileLengthCutR0 + CONSTANT_TWO * TILELENGTH_STEP_SIZE, 0)) {
         tileLengthCutR0 += TILELENGTH_STEP_SIZE;
     }
-    OP_CHECK_IF(
-        (tileLengthCutR0 == 0), OP_LOGE(context_->GetNodeName(), "tileLengthCutR0 must greater than 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tileLengthCutR0 == 0), OP_LOGE(context_->GetNodeName(), "tileLengthCutR0 must greater than 0"),
+                return ge::GRAPH_FAILED);
     // Step 2: decide cutR1 or cutR0
     int64_t r0Align = td_.get_r0Align();
     int64_t vlFp32 = commonParams.vlFp32;
@@ -191,11 +187,11 @@ ge::graphStatus LayerNormV3WelfordMultiReduceTiling::DoLibApiTiling()
         while (IsValidTileLength(tileLength + CONSTANT_TWO * TILELENGTH_STEP_SIZE, r0)) {
             tileLength += TILELENGTH_STEP_SIZE;
         }
-        OP_CHECK_IF(
-            (tileLength == 0), OP_LOGE(context_->GetNodeName(), "tileLength must greater than 0"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF((tileLength == 0), OP_LOGE(context_->GetNodeName(), "tileLength must greater than 0"),
+                    return ge::GRAPH_FAILED);
         td_.set_tileLength(tileLength);
-        OP_CHECK_IF(
-            (r0Align == 0), OP_LOGE(context_->GetNodeName(), "r0Align must greater than 0"), return ge::GRAPH_FAILED);    
+        OP_CHECK_IF((r0Align == 0), OP_LOGE(context_->GetNodeName(), "r0Align must greater than 0"),
+                    return ge::GRAPH_FAILED);
         int64_t r1Factor = tileLength / r0Align;
         if (r1Factor < 1) {
             r1Factor = 1;
@@ -223,15 +219,17 @@ ge::graphStatus LayerNormV3WelfordMultiReduceTiling::DoLibApiTiling()
         int64_t gammaPackedSize = 0;
         if (r1ComputeFactor > 1) {
             int64_t paramTypeSize = (commonParams.paramDtype == ge::DT_FLOAT16 ||
-                                      commonParams.paramDtype == ge::DT_BF16) ? B16_SIZE : B32_SIZE;
+                                     commonParams.paramDtype == ge::DT_BF16) ?
+                                        B16_SIZE :
+                                        B32_SIZE;
             gammaPackedSize = r1ComputeFactor * r0Align * paramTypeSize;
         }
         td_.set_gammaPackedSize(gammaPackedSize);
     }
 
     int64_t tileLength = td_.get_tileLength();
-    OP_CHECK_IF(
-        (tileLength == 0), OP_LOGE(context_->GetNodeName(), "tileLength must greater than 0"), return ge::GRAPH_FAILED);  
+    OP_CHECK_IF((tileLength == 0), OP_LOGE(context_->GetNodeName(), "tileLength must greater than 0"),
+                return ge::GRAPH_FAILED);
     int64_t welfordUpdateTimes = n / tileLength;
     int64_t welfordUpdateTail = n - welfordUpdateTimes * tileLength;
     td_.set_welfordUpdateTimes(welfordUpdateTimes);

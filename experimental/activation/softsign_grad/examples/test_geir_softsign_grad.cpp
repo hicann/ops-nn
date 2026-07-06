@@ -46,29 +46,28 @@ using std::map;
 using std::string;
 using std::vector;
 
-#define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                \
-    vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                               \
-    auto placeholder##inputIndex = op::Data("placeholder" #inputIndex).set_attr_index(inputIndex - 1);          \
-    TensorDesc placeholder##inputIndex##_desc =                                                                 \
-        TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND, inputDtype);                          \
-    placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                            \
-    placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                        \
-    Tensor tensor_placeholder##inputIndex;                                                                      \
-    ret = GenInputData(                                                                                         \
-        placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc,        \
-        inputDtype, inputIndex);                                                                                \
-    if (ret != SUCCESS) {                                                                                       \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                          \
-        return FAILED;                                                                                          \
-    }                                                                                                           \
-    placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                \
-    input.push_back(tensor_placeholder##inputIndex);                                                            \
-    graph.AddOp(placeholder##inputIndex);                                                                       \
-    softsignGradOp.set_input_##inputName(placeholder##inputIndex);                                              \
+#define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                  \
+    vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                 \
+    auto placeholder##inputIndex = op::Data("placeholder" #inputIndex).set_attr_index(inputIndex - 1);            \
+    TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND, \
+                                                           inputDtype);                                           \
+    placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                              \
+    placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                          \
+    Tensor tensor_placeholder##inputIndex;                                                                        \
+    ret = GenInputData(placeholder##inputIndex##_shape, tensor_placeholder##inputIndex,                           \
+                       placeholder##inputIndex##_desc, inputDtype, inputIndex);                                   \
+    if (ret != SUCCESS) {                                                                                         \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                            \
+        return FAILED;                                                                                            \
+    }                                                                                                             \
+    placeholder##inputIndex.update_input_desc_x(placeholder##inputIndex##_desc);                                  \
+    input.push_back(tensor_placeholder##inputIndex);                                                              \
+    graph.AddOp(placeholder##inputIndex);                                                                         \
+    softsignGradOp.set_input_##inputName(placeholder##inputIndex);                                                \
     inputs.push_back(placeholder##inputIndex);
 
-#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                            \
-    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype);     \
+#define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                       \
+    TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype); \
     softsignGradOp.update_output_desc_##outputName(outputName##outputIndex##_desc);
 
 string GetTime()
@@ -90,8 +89,8 @@ uint32_t GetDataTypeSize(DataType dt)
     return 4;
 }
 
-int32_t GenInputData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, int inputIndex)
+int32_t GenInputData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                     int inputIndex)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -131,9 +130,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
     // 创建 SoftsignGrad 算子节点
@@ -228,8 +226,7 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Number of outputs: %d\n", GetTime().c_str(), output_num);
     for (int i = 0; i < output_num; i++) {
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        printf("%s - INFO - [XIR]: output %d shape size = %ld, dtype = %d\n",
-               GetTime().c_str(), i, output_shape,
+        printf("%s - INFO - [XIR]: output %d shape size = %ld, dtype = %d\n", GetTime().c_str(), i, output_shape,
                static_cast<int>(output[i].GetTensorDesc().GetDataType()));
 
         if (output[i].GetTensorDesc().GetDataType() == DT_FLOAT && output_shape > 0) {

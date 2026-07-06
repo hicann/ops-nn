@@ -36,4 +36,4 @@ ACLNN_API aclnnStatus aclnnMaxUnpool2dBackward(void* workspace, uint64_t workspa
 }
 #endif
 
-#endif  // OP_API_INC_MAX_UNPOOL2d_BACKWARD_H_
+#endif // OP_API_INC_MAX_UNPOOL2d_BACKWARD_H_

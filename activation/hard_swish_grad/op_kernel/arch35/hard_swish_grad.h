@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  *
  * NOTE: Portions of this code were AI-generated and have been
@@ -48,9 +48,9 @@ class HardSwishGrad {
     using ComputeType = std::conditional_t<NEED_CAST, float, T>;
 
 public:
-    __aicore__ inline HardSwishGrad() {};
-    __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self,
-        GM_ADDR gradInput, const HardSwishGradTilingData* tilingData);
+    __aicore__ inline HardSwishGrad(){};
+    __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                const HardSwishGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -63,9 +63,9 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> gradOutputQueue;
     TQue<QuePosition::VECIN, BUFFER_NUM> selfQueue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> gradInputQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf;    // fp32: derivative; fp16: selfFp32/gradOutFp32
-    TBuf<QuePosition::VECCALC> tmpBuf2;   // fp32: mask; fp16: derivFp32
-    TBuf<QuePosition::VECCALC> maskBuf;   // mask buffer for Compares/Select
+    TBuf<QuePosition::VECCALC> tmpBuf;  // fp32: derivative; fp16: selfFp32/gradOutFp32
+    TBuf<QuePosition::VECCALC> tmpBuf2; // fp32: mask; fp16: derivFp32
+    TBuf<QuePosition::VECCALC> maskBuf; // mask buffer for Compares/Select
 
     GlobalTensor<T> gradOutputGM;
     GlobalTensor<T> selfGM;
@@ -76,14 +76,11 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-    const HardSwishGradTilingData* tilingData)
+__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                                           const HardSwishGradTilingData* tilingData)
 {
-    int64_t remainderLength =
-        tilingData->totalNum - tilingData->blockFactor * GetBlockIdx();
-    blockLength_ = (remainderLength > tilingData->blockFactor)
-        ? tilingData->blockFactor : remainderLength;
+    int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * GetBlockIdx();
+    blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
     ubLength_ = tilingData->ubFactor;
 
     int64_t offset = tilingData->blockFactor * GetBlockIdx();
@@ -111,8 +108,7 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Init(
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T> gradOutLocal = gradOutputQueue.template AllocTensor<T>();
     LocalTensor<T> selfLocal = selfQueue.template AllocTensor<T>();
@@ -123,18 +119,15 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::CopyIn(
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
 
-    DataCopyPad(gradOutLocal, gradOutputGM[progress * ubLength_], copyParams,
-        {false, 0, 0, 0});
-    DataCopyPad(selfLocal, selfGM[progress * ubLength_], copyParams,
-        {false, 0, 0, 0});
+    DataCopyPad(gradOutLocal, gradOutputGM[progress * ubLength_], copyParams, {false, 0, 0, 0});
+    DataCopyPad(selfLocal, selfGM[progress * ubLength_], copyParams, {false, 0, 0, 0});
 
     gradOutputQueue.EnQue(gradOutLocal);
     selfQueue.EnQue(selfLocal);
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
-    int64_t currentNum)
+__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(int64_t currentNum)
 {
     LocalTensor<T> gradOutLocal = gradOutputQueue.template DeQue<T>();
     LocalTensor<T> selfLocal = selfQueue.template DeQue<T>();
@@ -152,24 +145,24 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
 
         // Group 1: Cast self → fp32, then linear part + first Compares (independent)
         Cast(selfFp32, selfLocal, RoundMode::CAST_NONE, alignedNum);
-           // Muls & Compares both read selfFp32
+        // Muls & Compares both read selfFp32
         Muls(derivFp32, selfFp32, (1.0f / 3.0f), alignedNum);
-        Adds(derivFp32, derivFp32, 0.5f, alignedNum);                     // chain on derivFp32
-        Compares(maskLocal, selfFp32, -3.0f, CMPMODE::GE, alignedNum);    // reads selfFp32 only
-           // Select reads both derivFp32 and maskLocal
+        Adds(derivFp32, derivFp32, 0.5f, alignedNum);                  // chain on derivFp32
+        Compares(maskLocal, selfFp32, -3.0f, CMPMODE::GE, alignedNum); // reads selfFp32 only
+                                                                       // Select reads both derivFp32 and maskLocal
 
         // Group 2: first Select + second Compares (WAR on mask, independent of deriv write)
         Select(derivFp32, maskLocal, derivFp32, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         Compares(maskLocal, selfFp32, 3.0f, CMPMODE::LE, alignedNum);
-           // next Select reads both mask and deriv
+        // next Select reads both mask and deriv
 
         // Group 3: second Select, then reuse selfFp32 for gradOut cast
         Select(derivFp32, maskLocal, derivFp32, 1.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
-           // ensure all reads of selfFp32 done before overwrite
+        // ensure all reads of selfFp32 done before overwrite
         Cast(selfFp32, gradOutLocal, RoundMode::CAST_NONE, alignedNum);
         Mul(derivFp32, selfFp32, derivFp32, alignedNum);
         Cast(resultLocal, derivFp32, RoundMode::CAST_RINT, alignedNum);
-           // ensure result ready before EnQue
+        // ensure result ready before EnQue
     } else {
         // fp32 path: compute directly
         LocalTensor<T> derivLocal = tmpBuf.Get<T>();
@@ -177,19 +170,20 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
 
         // Group 1: linear part + first Compares (Compares reads selfLocal, independent of deriv)
         Muls(derivLocal, selfLocal, (T)(1.0 / 3.0), alignedNum);
-        Adds(derivLocal, derivLocal, (T)0.5, alignedNum);                   // chain on derivLocal
-        Compares(maskLocal, selfLocal, (T)(-3.0), CMPMODE::GE, alignedNum); // reads selfLocal only
-           // Select reads both derivLocal and maskLocal
+        Adds(derivLocal, derivLocal, (T)0.5, alignedNum); // chain on derivLocal
+        Compares(maskLocal, selfLocal, (T)(-3.0), CMPMODE::GE,
+                 alignedNum); // reads selfLocal only
+                              // Select reads both derivLocal and maskLocal
 
         // Group 2: first Select + second Compares (WAR on mask)
         Select(derivLocal, maskLocal, derivLocal, (T)0.0, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         Compares(maskLocal, selfLocal, (T)3.0, CMPMODE::LE, alignedNum);
-           // next Select reads both mask and deriv
+        // next Select reads both mask and deriv
 
         // Group 3: second Select + final multiply
         Select(derivLocal, maskLocal, derivLocal, (T)1.0, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
         Mul(resultLocal, gradOutLocal, derivLocal, alignedNum);
-           // ensure result ready before EnQue
+        // ensure result ready before EnQue
     }
 
     gradInputQueue.template EnQue<T>(resultLocal);
@@ -198,8 +192,7 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
 }
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     LocalTensor<T> resultLocal = gradInputQueue.template DeQue<T>();
     DataCopyParams copyParams;
@@ -216,8 +209,7 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Process()
 {
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {
-        int64_t currentNum = (i == (loopCount - 1))
-            ? (blockLength_ - ubLength_ * i) : ubLength_;
+        int64_t currentNum = (i == (loopCount - 1)) ? (blockLength_ - ubLength_ * i) : ubLength_;
         CopyIn(i, currentNum);
         Compute(currentNum);
         CopyOut(i, currentNum);

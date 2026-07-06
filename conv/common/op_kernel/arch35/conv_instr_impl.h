@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv_instr_impl.h
  * \brief
@@ -26,31 +26,25 @@ using namespace conv;
 template <class Intf, typename ChannelWiseT>
 class LoadChannelWiseL1Tools {
 public:
-    __aicore__ inline LoadChannelWiseL1Tools()
-    {}
+    __aicore__ inline LoadChannelWiseL1Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
-    __aicore__ inline void SetN(uint64_t n)
-    {
-        currentNL0_ = n;
-    }
+    __aicore__ inline void SetN(uint64_t n) { currentNL0_ = n; }
 
-    __aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT> &tensorL1,
-        const GlobalTensor<ChannelWiseT> &tensorGm, uint64_t loadNum, uint64_t gmStartAddr)
+    __aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT>& tensorL1,
+                                                     const GlobalTensor<ChannelWiseT>& tensorGm, uint64_t loadNum,
+                                                     uint64_t gmStartAddr)
     {
         uint64_t byteNum = sizeof(ChannelWiseT);
         InitConstValueParams<ChannelWiseT> initParams;
         DataCopyParams dataCopyParams;
         uint16_t initDataNum = AlignB(loadNum, BLOCK_L0_N) * byteNum / C0_SIZE;
         if constexpr (Intf::groupOptPreloadFlag) {
-            initParams = InitConstValueParams<ChannelWiseT>(1,
-                static_cast<uint16_t>(initDataNum * self_->ctx.singleGroupOpt), 0, 0);
+            initParams = InitConstValueParams<ChannelWiseT>(
+                1, static_cast<uint16_t>(initDataNum * self_->ctx.singleGroupOpt), 0, 0);
             dataCopyParams = DataCopyParams(self_->ctx.singleGroupOpt, loadNum * byteNum,
-                (self_->ctx.convTilingData->coutOpt - loadNum) * byteNum, 0);
+                                            (self_->ctx.convTilingData->coutOpt - loadNum) * byteNum, 0);
         } else {
             initParams = InitConstValueParams<ChannelWiseT>(1, static_cast<uint16_t>(initDataNum), 0, 0);
             dataCopyParams = DataCopyParams(1, loadNum * byteNum, 0, 0);
@@ -62,47 +56,39 @@ public:
         DataCopyPad<ChannelWiseT>(tensorL1, tensorGm[gmStartAddr], dataCopyParams, padParams);
     }
 
-    __aicore__ inline void LoadChannelWiseL1(const LocalTensor<ChannelWiseT> &tensorL1,
-                                             const GlobalTensor<ChannelWiseT> &tensorGm)
+    __aicore__ inline void LoadChannelWiseL1(const LocalTensor<ChannelWiseT>& tensorL1,
+                                             const GlobalTensor<ChannelWiseT>& tensorGm)
     {
         if constexpr (Intf::isKL1NL0FullLoad) {
             LoadChannelWiseL1FullLoad(tensorL1, tensorGm, currentNL0_, 0);
         } else {
             uint64_t tensorGmOffset = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
-                self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
+                                      self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
             LoadChannelWiseL1FullLoad(tensorL1, tensorGm, currentNL0_, tensorGmOffset);
         }
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t currentNL0_ = 0;
 };
 
 template <class Intf, typename BiasL1T, typename BiasBtT>
 class LoadBiasBtTools {
 public:
-    __aicore__ inline LoadBiasBtTools()
-    {}
+    __aicore__ inline LoadBiasBtTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
-    __aicore__ inline void SetN(uint64_t n)
-    {
-        currentNL0_ = n;
-    }
+    __aicore__ inline void SetN(uint64_t n) { currentNL0_ = n; }
 
-    __aicore__ inline void LoadBiasBt(const LocalTensor<BiasBtT> &biasBt,
-                                      const LocalTensor<BiasL1T> &biasL1)
+    __aicore__ inline void LoadBiasBt(const LocalTensor<BiasBtT>& biasBt, const LocalTensor<BiasL1T>& biasL1)
     {
         if ASCEND_IS_AIV {
             return;
         }
         uint32_t offset = 0;
-        
+
         if (self_->ctx.convTilingData->biasFullLoadFlag) {
             if constexpr (!Intf::isKL1NL0FullLoad) {
                 offset += self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
@@ -119,17 +105,16 @@ public:
     }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t currentNL0_ = 0;
 };
 
 template <class Intf>
 class LoadBL0Tools {
 public:
-    __aicore__ inline LoadBL0Tools()
-    {}
+    __aicore__ inline LoadBL0Tools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
+    __aicore__ inline void SetParams(Intf* self)
     {
         self_ = self;
         nStep_ = self_->ctx.convTilingData->nL0 / BLOCK_L0_N;
@@ -140,8 +125,10 @@ public:
         if constexpr (Intf::isKL1NL0FullLoad) {
             ratioOfNToN0 = n / BLOCK_L0_N;
         } else {
-            ratioOfNToN0 = (self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter && self_->ctx.nL0Iter == self_->ctx.maxNL0Iter) ?
-                n / BLOCK_L0_N : self_->ctx.convTilingData->nStep;
+            ratioOfNToN0 = (self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter &&
+                            self_->ctx.nL0Iter == self_->ctx.maxNL0Iter) ?
+                               n / BLOCK_L0_N :
+                               self_->ctx.convTilingData->nStep;
         }
     }
 
@@ -158,7 +145,8 @@ public:
         param_.SetIfTranspose(false);
     }
 
-     __aicore__ inline void LoadBL0(const uint64_t &KStartPosition, const uint64_t &kStep, const LocalTensor<typename Intf::WeightT> &bl0)
+    __aicore__ inline void LoadBL0(const uint64_t& KStartPosition, const uint64_t& kStep,
+                                   const LocalTensor<typename Intf::WeightT>& bl0)
     {
         param_.SetKStartPosition(static_cast<uint32_t>(KStartPosition));
         param_.SetKStep(static_cast<uint16_t>(kStep));
@@ -167,7 +155,7 @@ public:
 #endif
     }
 
-    __aicore__ inline void FullLoadBL0(const LocalTensor<typename Intf::WeightT> &bl0)
+    __aicore__ inline void FullLoadBL0(const LocalTensor<typename Intf::WeightT>& bl0)
     {
         static uint32_t isLoaded = false;
         if (isLoaded) {
@@ -186,8 +174,9 @@ public:
         param_.SetIfTranspose(false);
         LoadData<TPosition::B2, TPosition::B1, typename Intf::WeightT>(bl0, self_->ctx.bl1, param_);
     }
+
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
     uint64_t ratioOfNToN0 = 0;
     uint64_t nStep_ = 0;
     Load2DBitModeParam param_;
@@ -196,15 +185,12 @@ private:
 template <class Intf>
 class MMadTools {
 public:
-    __aicore__ inline MMadTools()
-    {}
+    __aicore__ inline MMadTools() {}
 
-    __aicore__ inline void SetParams(Intf *self)
-    {
-        self_ = self;
-    }
+    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
 
-    __aicore__ inline void Mad(const uint64_t &kIter, const LocalTensor<typename Intf::FmapT> &al0, const LocalTensor<typename Intf::WeightT> &bl0, const MmadParams &mmadParams)
+    __aicore__ inline void Mad(const uint64_t& kIter, const LocalTensor<typename Intf::FmapT>& al0,
+                               const LocalTensor<typename Intf::WeightT>& bl0, const MmadParams& mmadParams)
     {
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::MULTI_BATCH)) {
             uint32_t srcOffset = 0;
@@ -214,27 +200,24 @@ public:
             for (uint32_t batchIdx = 0; batchIdx < self_->ctx.innerBatch; batchIdx++) {
                 Mmad<typename Intf::L0cT, typename Intf::FmapT, typename Intf::WeightT>(
                     self_->ctx.cl0[dstOffset], al0[srcOffset], bl0, mmadParams);
-                    srcOffset += srcBatchStride;
-                    dstOffset += dstBatchStride;
+                srcOffset += srcBatchStride;
+                dstOffset += dstBatchStride;
             }
         } else {
-            Mmad<typename Intf::L0cT, typename Intf::FmapT, typename Intf::WeightT>(
-                self_->ctx.cl0, al0, bl0, mmadParams);
+            Mmad<typename Intf::L0cT, typename Intf::FmapT, typename Intf::WeightT>(self_->ctx.cl0, al0, bl0,
+                                                                                    mmadParams);
         }
     }
 
 private:
-    __aicore__ inline bool IsKL0Tail(const uint64_t &kIter)
-    {
-        return kIter == self_->ctx.maxKL0Iter;
-    }
+    __aicore__ inline bool IsKL0Tail(const uint64_t& kIter) { return kIter == self_->ctx.maxKL0Iter; }
 
 private:
-    Intf *self_ = nullptr;
+    Intf* self_ = nullptr;
 };
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
-__aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
+__aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf* self)
 {
     // quant conv2d/conv3d: must be vector quant
     // extend conv2d: may be scalar or vector quant
@@ -308,7 +291,7 @@ __aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
 }
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
-__aicore__ inline QuantMode_t GetQuantPreInt32(Intf *self)
+__aicore__ inline QuantMode_t GetQuantPreInt32(Intf* self)
 {
     // l0c (int32) -> ddr(fp16/int8)
     if constexpr (AscendC::IsSameType<OutputT, half>::value) {
@@ -359,7 +342,7 @@ __aicore__ inline QuantMode_t GetQuantPreInt32(Intf *self)
 }
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
-__aicore__ inline QuantMode_t GetQuantPreFp32(Intf *self)
+__aicore__ inline QuantMode_t GetQuantPreFp32(Intf* self)
 {
     // l0c (fp32) -> ddr(fp32/fp16/bf16/int8)
     if constexpr (AscendC::IsSameType<OutputT, float>::value) {
@@ -390,7 +373,7 @@ __aicore__ inline QuantMode_t GetQuantPreFp32(Intf *self)
 }
 
 template <class Intf, typename OutputT, uint64_t FixpipeIdx = 0>
-__aicore__ inline QuantMode_t GetQuantPre(Intf *self)
+__aicore__ inline QuantMode_t GetQuantPre(Intf* self)
 {
     if constexpr (AscendC::IsSameType<typename Intf::FmapT, hifloat8_t>::value ||
                   AscendC::IsSameType<typename Intf::FmapT, fp8_e4m3fn_t>::value) {
@@ -408,6 +391,6 @@ __aicore__ inline QuantMode_t GetQuantPre(Intf *self)
     return QuantMode_t::F322F16;
 }
 
-};
+}; // namespace ConvFunc
 
 #endif // CONV_INSTR_IMPL_H

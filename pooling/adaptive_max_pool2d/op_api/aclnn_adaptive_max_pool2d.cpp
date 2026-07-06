@@ -56,8 +56,8 @@ static constexpr int64_t DIM_D = 2;
 constexpr size_t MAX_VECTOR_SIZE = 32;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE,
+                                                                       op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_ASCEND910B = {
     op::DataType::DT_FLOAT, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -96,8 +96,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static bool CheckNotNull(
-    const aclTensor* self, const aclIntArray* outputSize, const aclTensor* output, const aclTensor* indices)
+static bool CheckNotNull(const aclTensor* self, const aclIntArray* outputSize, const aclTensor* output,
+                         const aclTensor* indices)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(outputSize, return false);
@@ -134,11 +134,10 @@ static bool CheckInpuNullTensor(const aclTensor* self)
 
     for (size_t i = 1; i < dimNum; ++i) {
         if (inputShape.GetDim(i) <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "adaptive_max_pooling2d():expected input to have non-empty spatiak dimensions, "
-                "but input has sizes %zu with dimension %zu being empty.",
-                dimNum, i);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "adaptive_max_pooling2d():expected input to have non-empty spatiak dimensions, "
+                    "but input has sizes %zu with dimension %zu being empty.",
+                    dimNum, i);
             return false;
         }
     }
@@ -154,9 +153,8 @@ static bool CheckOutputSize(const aclIntArray* outputSize)
     }
     for (size_t i = 0; i < size; ++i) {
         if ((*outputSize)[i] <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "outputSize value should greater than 0, but the sizes of %zu is %ld.", i,
-                (*outputSize)[i]);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize value should greater than 0, but the sizes of %zu is %ld.", i,
+                    (*outputSize)[i]);
             return false;
         }
     }
@@ -167,16 +165,15 @@ static bool CheckInputFormat(const aclTensor* self)
 {
     auto input_format = self->GetViewFormat();
     if (input_format != op::Format::FORMAT_NHWC && input_format != op::Format::FORMAT_NCHW) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Input format only support NHWC[%d] or NCHW[%d], but now is %d.",
-            op::Format::FORMAT_NHWC, op::Format::FORMAT_NCHW, input_format);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input format only support NHWC[%d] or NCHW[%d], but now is %d.",
+                op::Format::FORMAT_NHWC, op::Format::FORMAT_NCHW, input_format);
         return false;
     }
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclIntArray* outputSize, const aclTensor* output, const aclTensor* indices)
+static aclnnStatus CheckParams(const aclTensor* self, const aclIntArray* outputSize, const aclTensor* output,
+                               const aclTensor* indices)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, outputSize, output, indices), ACLNN_ERR_PARAM_NULLPTR);
@@ -195,16 +192,11 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ProcessAndCopyResults(
-    const aclTensor* outResult, 
-    const aclTensor* indicesResultCast,
-    aclTensor* outputOut, 
-    aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static aclnnStatus ProcessAndCopyResults(const aclTensor* outResult, const aclTensor* indicesResultCast,
+                                         aclTensor* outputOut, aclTensor* indicesOut, aclOpExecutor* executor)
 {
     auto resShapeVector = op::ToShapeVector(outputOut->GetViewShape());
-    aclIntArray* resShapeArray =
-        executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
+    aclIntArray* resShapeArray = executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
     CHECK_RET(resShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto resTranReshapeOut = l0op::Reshape(outResult, resShapeArray, executor);
     CHECK_RET(resTranReshapeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -218,23 +210,19 @@ static aclnnStatus ProcessAndCopyResults(
     auto resTranReshapeIndices = l0op::Reshape(indicesResultCast, resShapeArray, executor);
     CHECK_RET(resTranReshapeIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    resTranReshapeIndices =
-        l0op::ReFormat(resTranReshapeIndices, indicesOut->GetStorageFormat(), executor);
+    resTranReshapeIndices = l0op::ReFormat(resTranReshapeIndices, indicesOut->GetStorageFormat(), executor);
     CHECK_RET(resTranReshapeIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResultIndices = l0op::ViewCopy(resTranReshapeIndices, indicesOut, executor);
     CHECK_RET(viewCopyResultIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    
+
     return ACLNN_SUCCESS;
 }
 
 // 转MaxPool3D
-static aclnnStatus HandleMaxPool3DCase(
-    const aclTensor* inputContiguousReshape, 
-    const std::vector<int64_t>& kernelSizeArr,
-    aclTensor* outputOut, 
-    aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static aclnnStatus HandleMaxPool3DCase(const aclTensor* inputContiguousReshape,
+                                       const std::vector<int64_t>& kernelSizeArr, aclTensor* outputOut,
+                                       aclTensor* indicesOut, aclOpExecutor* executor)
 {
     const aclIntArray* kernelSize = executor->AllocIntArray(kernelSizeArr.data(), kernelSizeArr.size());
     CHECK_RET(kernelSize != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -249,13 +237,11 @@ static aclnnStatus HandleMaxPool3DCase(
     bool ceilMode = false;
     std::string dataFormat = "NCDHW";
 
-    inputContiguousReshape =
-        l0op::ReFormat(inputContiguousReshape, op::Format::FORMAT_NCDHW, executor);
+    inputContiguousReshape = l0op::ReFormat(inputContiguousReshape, op::Format::FORMAT_NCDHW, executor);
     CHECK_RET(inputContiguousReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto [outResult, indicesResult] = l0op::MaxPool3DWithArgmaxV2Ncdhw(
-        inputContiguousReshape, kernelSize, stride, padding, dilation, ceilMode, dataFormat,
-        executor);
+        inputContiguousReshape, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor);
     CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto indicesResultCast = l0op::Cast(indicesResult, op::DataType::DT_INT64, executor);
@@ -265,24 +251,19 @@ static aclnnStatus HandleMaxPool3DCase(
     if (ret != ACLNN_SUCCESS) {
         return ret;
     }
-    
+
     return ACLNN_SUCCESS;
 }
 
 // AdaptiveMaxPool2d的处理逻辑
-static aclnnStatus ProcessAdaptiveMaxPoolResults(
-    const aclTensor* outResult, 
-    const aclTensor* indicesResult,
-    aclTensor* outputOut, 
-    aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static aclnnStatus ProcessAdaptiveMaxPoolResults(const aclTensor* outResult, const aclTensor* indicesResult,
+                                                 aclTensor* outputOut, aclTensor* indicesOut, aclOpExecutor* executor)
 {
     auto indicesResultCast = l0op::Cast(indicesResult, op::DataType::DT_INT64, executor);
     CHECK_RET(indicesResultCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto resShapeVector = op::ToShapeVector(outputOut->GetViewShape());
-    aclIntArray* resShapeArray =
-        executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
+    aclIntArray* resShapeArray = executor->AllocIntArray(resShapeVector.data(), resShapeVector.size());
     CHECK_RET(resShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto resTranReshapeOut = l0op::Reshape(outResult, resShapeArray, executor);
     CHECK_RET(resTranReshapeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -293,15 +274,12 @@ static aclnnStatus ProcessAdaptiveMaxPoolResults(
     CHECK_RET(resTranReshapeIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResultIndices = l0op::ViewCopy(resTranReshapeIndices, indicesOut, executor);
     CHECK_RET(viewCopyResultIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    
+
     return ACLNN_SUCCESS;
 }
 
 // NHWC->NCHW
-static aclnnStatus ConvertNHWCtoNCHW(
-    const aclTensor*& inputContiguous,
-    const aclTensor* self,
-    aclOpExecutor* executor)
+static aclnnStatus ConvertNHWCtoNCHW(const aclTensor*& inputContiguous, const aclTensor* self, aclOpExecutor* executor)
 {
     if (self->GetViewFormat() == op::Format::FORMAT_NHWC) {
         std::vector<int64_t> valuePerm{INDEX_DIM0, INDEX_DIM3, INDEX_DIM1, INDEX_DIM2};
@@ -313,9 +291,8 @@ static aclnnStatus ConvertNHWCtoNCHW(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus Handle910DCase(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static aclnnStatus Handle910DCase(const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut,
+                                  aclTensor* indicesOut, aclOpExecutor* executor)
 {
     auto inputContiguous = l0op::Contiguous(self, executor);
     CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -341,24 +318,22 @@ static aclnnStatus Handle910DCase(
         inputContiguousReshape = View3Das4D(inputContiguous, executor);
     } else if (ifTranMaxPool3D) { // 转max3d
         inputContiguousReshape = inputDimNum == 3 ? View3Das5D(inputContiguous, executor) :
-                                 View4Das5D(inputContiguous, executor);
+                                                    View4Das5D(inputContiguous, executor);
     }
     if (ifTranMaxPool3D) {
         int64_t kernelDSize = 1;
         int64_t kernelHSize = inputContiguousReshape->GetViewShape()[INDEX_DIM3] / (*outputSize)[INDEX_DIM0];
         int64_t kernelWSize = inputContiguousReshape->GetViewShape()[INDEX_DIM4] / (*outputSize)[INDEX_DIM1];
         std::vector<int64_t> kernelSizeArr = {kernelDSize, kernelHSize, kernelWSize};
-        ret = HandleMaxPool3DCase(inputContiguousReshape, kernelSizeArr, outputOut, indicesOut,
-                                  executor);
+        ret = HandleMaxPool3DCase(inputContiguousReshape, kernelSizeArr, outputOut, indicesOut, executor);
         if (ret != ACLNN_SUCCESS) {
             return ret;
         }
     } else {
-        auto [outResult, indicesResult] =
-            l0op::AdaptiveMaxPool2d(inputContiguousReshape, outputSize, executor);
+        auto [outResult, indicesResult] = l0op::AdaptiveMaxPool2d(inputContiguousReshape, outputSize, executor);
         CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        
+
         ret = ProcessAdaptiveMaxPoolResults(outResult, indicesResult, outputOut, indicesOut, executor);
         if (ret != ACLNN_SUCCESS) {
             return ret;
@@ -367,9 +342,8 @@ static aclnnStatus Handle910DCase(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus Handle910BCase(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static aclnnStatus Handle910BCase(const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut,
+                                  aclTensor* indicesOut, aclOpExecutor* executor)
 {
     // 将2d参数转换为3d可以使用的参数
     int64_t newOutputSizeData[] = {1, (*outputSize)[0], (*outputSize)[1]};
@@ -390,7 +364,7 @@ static aclnnStatus Handle910BCase(
     std::vector<int64_t> valueShape(NCDHW_DIM_NUM);
     valueShape[0] = inputDimNum == static_cast<int64_t>(NCHW_DIM_NUM) ? inputContiguousShape.GetDim(0) : 1;
     valueShape[1] = inputDimNum == static_cast<int64_t>(NCHW_DIM_NUM) ? inputContiguousShape.GetDim(1) :
-                    inputContiguousShape.GetDim(0);
+                                                                        inputContiguousShape.GetDim(0);
     valueShape[DIM_D] = 1;
     for (int64_t i = inputDimNum - static_cast<int64_t>(OUTPUT_SIZE_NUM); i < inputDimNum; i++) {
         valueShape[NCDHW_DIM_NUM - inputDimNum + i] = inputContiguousShape.GetDim(i);
@@ -408,17 +382,16 @@ static aclnnStatus Handle910BCase(
         int64_t kernelHSize = inputContiguousReshape->GetViewShape()[INDEX_DIM3] / (*newOutputSize)[INDEX_DIM1];
         int64_t kernelWSize = inputContiguousReshape->GetViewShape()[INDEX_DIM4] / (*newOutputSize)[INDEX_DIM2];
         std::vector<int64_t> kernelSizeArr = {kernelDSize, kernelHSize, kernelWSize};
-        
+
         ret = HandleMaxPool3DCase(inputContiguousReshape, kernelSizeArr, outputOut, indicesOut, executor);
         if (ret != ACLNN_SUCCESS) {
             return ret;
         }
     } else {
-        auto [outResult, indicesResult] =
-            l0op::AdaptiveMaxPool3d(inputContiguousReshape, newOutputSize, executor);
+        auto [outResult, indicesResult] = l0op::AdaptiveMaxPool3d(inputContiguousReshape, newOutputSize, executor);
         CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        
+
         ret = ProcessAdaptiveMaxPoolResults(outResult, indicesResult, outputOut, indicesOut, executor);
         if (ret != ACLNN_SUCCESS) {
             return ret;
@@ -427,9 +400,8 @@ static aclnnStatus Handle910BCase(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus HandleGeneralCase(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    aclOpExecutor* executor)
+static aclnnStatus HandleGeneralCase(const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut,
+                                     aclTensor* indicesOut, aclOpExecutor* executor)
 {
     auto selfContiguous = l0op::Contiguous(self, executor);
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -477,9 +449,9 @@ static aclnnStatus HandleGeneralCase(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnAdaptiveMaxPool2dGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAdaptiveMaxPool2dGetWorkspaceSize(const aclTensor* self, const aclIntArray* outputSize,
+                                                   aclTensor* outputOut, aclTensor* indicesOut, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAdaptiveMaxPool2d, DFX_IN(self, outputSize), DFX_OUT(outputOut, indicesOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -495,15 +467,14 @@ aclnnStatus aclnnAdaptiveMaxPool2dGetWorkspaceSize(
     }
 
     if (IsSocVersion910D() && !(IsSelfDtypeDouble(self))) {
-        CHECK_RET(
-            Handle910DCase(self, outputSize, outputOut, indicesOut, uniqueExecutor.get()) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(Handle910DCase(self, outputSize, outputOut, indicesOut, uniqueExecutor.get()) == ACLNN_SUCCESS,
+                  ACLNN_ERR_INNER_NULLPTR);
     } else if (IsSocVersion910B() && !(IsSelfDtypeDouble(self))) {
         CHECK_RET(Handle910BCase(self, outputSize, outputOut, indicesOut, uniqueExecutor.get()) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+                  ACLNN_ERR_INNER_NULLPTR);
     } else {
         CHECK_RET(HandleGeneralCase(self, outputSize, outputOut, indicesOut, uniqueExecutor.get()) == ACLNN_SUCCESS,
-            ACLNN_ERR_INNER_NULLPTR);
+                  ACLNN_ERR_INNER_NULLPTR);
     }
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);

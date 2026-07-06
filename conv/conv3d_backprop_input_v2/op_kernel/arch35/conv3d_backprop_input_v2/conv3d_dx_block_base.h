@@ -24,12 +24,12 @@
 
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS int32_t
-#define FORMAT_BIAS FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带bias输入场景
+#define FORMAT_BIAS FORMAT_MAX // FORMAT_MAX意为数据格式不支持，用以表达不带bias输入场景
 #endif
 
 #ifndef DTYPE_SCALE
 #define DTYPE_SCALE uint64_t
-#define FORMAT_SCALE FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带scale输入场景
+#define FORMAT_SCALE FORMAT_MAX // FORMAT_MAX意为数据格式不支持，用以表达不带scale输入场景
 #endif
 
 namespace AscendC {
@@ -68,10 +68,9 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetScaleFormat(int
 }
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    typename biasType, int biasFormat,
-    uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-    uint8_t b1Condition = TPL_GM_TO_L1,
-    bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
+          int scaleFormat = FORMAT_MAX>
 class Conv3dDxBase {
 protected:
     uint8_t loopDirect_ = LOOP_DMN;
@@ -98,15 +97,16 @@ protected:
     static constexpr Convolution3DBackprop::CubeFormat biasCubeFormat = GetFormat(biasFormat);
     static constexpr Convolution3DBackprop::CubeFormat scaleCubeFormat = GetScaleFormat(scaleFormat);
     using filterDxType = Convolution3DBackprop::ConvType<TPosition::GM, filterCubeFormat, filterType>;
-    using inputSizeDxType =
-        Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND, int32_t>;
+    using inputSizeDxType = Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND,
+                                                            int32_t>;
     using dedyDxType = Convolution3DBackprop::ConvType<TPosition::GM, dedyCubeFormat, dedyType>;
     using yDxType = Convolution3DBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
     using biasDxType = Convolution3DBackprop::ConvType<TPosition::GM, biasCubeFormat, biasType>;
     using scaleDxType = Convolution3DBackprop::ConvType<TPosition::GM, scaleCubeFormat, scaleType>;
-    static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode,b1Condition, enableC04Flag};
+    static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag};
     Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, biasDxType,
-        scaleDxType, conv3dConfig> dedx_;
+                                               scaleDxType, conv3dConfig>
+        dedx_;
 
     GlobalTensor<filterType> filterGm_;
     GlobalTensor<dedyType> dedyGm_;
@@ -167,7 +167,7 @@ protected:
                 cinStrideB_ = 1;
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::FRACTALZ) {
                 cinStrideB_ = static_cast<uint64_t>(tiling_->c0);
-            } else {  // DHWCN
+            } else { // DHWCN
                 cinStrideB_ = static_cast<uint64_t>(tiling_->cout);
             }
         }
@@ -183,21 +183,22 @@ protected:
             groupStrideA_ = coutStrideA_ * tiling_->coutG;
             if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
                 if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
-                    groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->cinG / tiling_->enlarge * cinStrideB_;
+                    groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->cinG / tiling_->enlarge *
+                                    cinStrideB_;
                 } else {
                     groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->cinG * cinStrideB_;
                 }
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
                 if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
                     groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->dk * tiling_->hk * tiling_->wk *
-                        tiling_->cinG / tiling_->enlarge;
+                                    tiling_->cinG / tiling_->enlarge;
                 } else {
                     groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->dk * tiling_->hk * tiling_->wk *
-                        tiling_->cinG;
+                                    tiling_->cinG;
                 }
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::FRACTALZ) {
                 groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->hk * tiling_->wk * tiling_->cinG;
-            } else {  // DHWCN
+            } else { // DHWCN
                 groupStrideB_ = static_cast<uint64_t>(tiling_->coutG);
             }
             groupStrideC_ = cinStrideC_ * tiling_->cinG;
@@ -242,8 +243,8 @@ protected:
         uint64_t mOffsetC = mCoreIdx_ * tiling_->singleCoreM;
         if constexpr (kernelSplitMode == TPL_SPLIT_KERNEL_H) {
             // singleCoreM 不一定会对齐wi，当不对齐时，需要计算非整行时输出地址
-            uint64_t curSkipMSize = (mOffsetC / tiling_->wi) *
-                static_cast<uint64_t>(tiling_->wi) * (tiling_->strideH - 1);
+            uint64_t curSkipMSize = (mOffsetC / tiling_->wi) * static_cast<uint64_t>(tiling_->wi) *
+                                    (tiling_->strideH - 1);
             mOffsetC += curSkipMSize;
         } else if constexpr (kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             uint64_t splitWi = DivCeil(tiling_->wi, tiling_->strideW);
@@ -292,7 +293,7 @@ protected:
                 offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
             } else if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
                 offsetScale_ = 0;
-            }            
+            }
         }
     }
 
@@ -307,6 +308,6 @@ protected:
         CalcScaleOffset(groupIdx);
     }
 };
-}
+} // namespace AscendC
 
 #endif // CONV3D_BACKPROP_INPUT_ROWC_BLOCK_ADVANCE_H

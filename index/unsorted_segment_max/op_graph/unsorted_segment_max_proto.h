@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #ifndef UNSORTED_SEGMENT_MAX_PROTO_H
 #define UNSORTED_SEGMENT_MAX_PROTO_H
@@ -26,7 +26,8 @@ namespace ge {
 
 * @par Inputs:
 * Three inputs, including:
-* @li x: A Tensor of type double, float32, float16, bfloat16, int8, int16, int32, int64, uint8, uint16, uint32, uint64, format is ND. bank of shape must greater zero.
+* @li x: A Tensor of type double, float32, float16, bfloat16, int8, int16, int32, int64, uint8, uint16, uint32, uint64,
+format is ND. bank of shape must greater zero.
 * @li segment_ids: A Tensor of type int32, int64, whose shape is a prefix of "x", format is ND.
 * @li num_segments: A 1D Tensor contains a single element of type int32, int64, format is ND.
 * Indicates the output segment.
@@ -44,4 +45,4 @@ REG_OP(UnsortedSegmentMax)
     .OUTPUT(y, TensorType::RealNumberType())
     .OP_END_FACTORY_REG(UnsortedSegmentMax)
 } // namespace ge
-#endif  // UNSORTED_SEGMENT_MAX_PROTO_H
+#endif // UNSORTED_SEGMENT_MAX_PROTO_H

@@ -19,15 +19,9 @@
 
 class SyncBatchNormBackwardElemtInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardElemt Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SyncBatchNormBackwardElemt Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SyncBatchNormBackwardElemt Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SyncBatchNormBackwardElemt Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(SyncBatchNormBackwardElemtInferShapeTest, SyncBatchNormBackwardElemt_infershape_case_0)
@@ -134,9 +128,8 @@ TEST_F(SyncBatchNormBackwardElemtInferShapeTest, SyncBatchNormBackwardElemt_Infe
                                   .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .InputDataTypes(
-                                      {&input_ref_fp16, &input_ref_fp16, &input_ref_fp16, &input_ref_fp16,
-                                       &input_ref_fp16, &input_ref_fp16, &input_ref_fp16})
+                                  .InputDataTypes({&input_ref_fp16, &input_ref_fp16, &input_ref_fp16, &input_ref_fp16,
+                                                   &input_ref_fp16, &input_ref_fp16, &input_ref_fp16})
                                   .OutputDataTypes({&output_ref_fp16})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -167,9 +160,8 @@ TEST_F(SyncBatchNormBackwardElemtInferShapeTest, SyncBatchNormBackwardElemt_Infe
                                   .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .InputDataTypes(
-                                      {&input_ref_fp32, &input_ref_fp32, &input_ref_fp32, &input_ref_fp32,
-                                       &input_ref_fp32, &input_ref_fp32, &input_ref_fp32})
+                                  .InputDataTypes({&input_ref_fp32, &input_ref_fp32, &input_ref_fp32, &input_ref_fp32,
+                                                   &input_ref_fp32, &input_ref_fp32, &input_ref_fp32})
                                   .OutputDataTypes({&output_ref_fp32})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();
@@ -200,9 +192,8 @@ TEST_F(SyncBatchNormBackwardElemtInferShapeTest, SyncBatchNormBackwardElemt_Infe
                                   .NodeInputTd(5, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(6, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .InputDataTypes(
-                                      {&input_ref_bf16, &input_ref_bf16, &input_ref_bf16, &input_ref_bf16,
-                                       &input_ref_bf16, &input_ref_bf16, &input_ref_bf16})
+                                  .InputDataTypes({&input_ref_bf16, &input_ref_bf16, &input_ref_bf16, &input_ref_bf16,
+                                                   &input_ref_bf16, &input_ref_bf16, &input_ref_bf16})
                                   .OutputDataTypes({&output_ref_bf16})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();

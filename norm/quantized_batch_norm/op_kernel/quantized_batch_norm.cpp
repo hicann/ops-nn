@@ -27,9 +27,10 @@ constexpr static int R0_NOT_ALIGN = 0;
 constexpr static int R0_ALIGN = 1;
 }; // namespace
 
-extern "C" __global__ __aicore__ void quantized_batch_norm(
-    GM_ADDR x, GM_ADDR mean, GM_ADDR var, GM_ADDR input_scale, GM_ADDR input_zero_point, GM_ADDR output_scale,
-    GM_ADDR output_zero_point, GM_ADDR weight, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void quantized_batch_norm(GM_ADDR x, GM_ADDR mean, GM_ADDR var, GM_ADDR input_scale,
+                                                           GM_ADDR input_zero_point, GM_ADDR output_scale,
+                                                           GM_ADDR output_zero_point, GM_ADDR weight, GM_ADDR bias,
+                                                           GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (g_coreType == AIC) {
@@ -41,33 +42,33 @@ extern "C" __global__ __aicore__ void quantized_batch_norm(
     const QuantizedBatchNormWelfordTilingData* __restrict tilingData = &tiling_data_in;
     if (TILING_KEY_IS(1000)) {
         QuantizedBatchNormWelford<DTYPE_X, DTYPE_WEIGHT, R0_SPLIT_NOT_ALIGN_MODE, R0_NOT_ALIGN> op(&pipe);
-        op.Init(
-            x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y, tilingData);
+        op.Init(x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y,
+                tilingData);
         op.Process();
     } else if (TILING_KEY_IS(1001)) {
         QuantizedBatchNormWelford<DTYPE_X, DTYPE_WEIGHT, R0_SPLIT_ALIGN_MODE, R0_NOT_ALIGN> op(&pipe);
-        op.Init(
-            x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y, tilingData);
+        op.Init(x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y,
+                tilingData);
         op.Process();
     } else if (TILING_KEY_IS(1002)) {
         QuantizedBatchNormWelford<DTYPE_X, DTYPE_WEIGHT, R1_SPLIT_NOT_ALIGN_MODE, R0_NOT_ALIGN> op(&pipe);
-        op.Init(
-            x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y, tilingData);
+        op.Init(x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y,
+                tilingData);
         op.Process();
     } else if (TILING_KEY_IS(1003)) {
         QuantizedBatchNormWelford<DTYPE_X, DTYPE_WEIGHT, R1_SPLIT_ALIGN_MODE, R0_NOT_ALIGN> op(&pipe);
-        op.Init(
-            x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y, tilingData);
+        op.Init(x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y,
+                tilingData);
         op.Process();
     } else if (TILING_KEY_IS(1012)) {
         QuantizedBatchNormWelford<DTYPE_X, DTYPE_WEIGHT, R1_SPLIT_NOT_ALIGN_MODE, R0_ALIGN> op(&pipe);
-        op.Init(
-            x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y, tilingData);
+        op.Init(x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y,
+                tilingData);
         op.Process();
     } else if (TILING_KEY_IS(1013)) {
         QuantizedBatchNormWelford<DTYPE_X, DTYPE_WEIGHT, R1_SPLIT_ALIGN_MODE, R0_ALIGN> op(&pipe);
-        op.Init(
-            x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y, tilingData);
+        op.Init(x, mean, var, input_scale, input_zero_point, output_scale, output_zero_point, weight, bias, y,
+                tilingData);
         op.Process();
     }
 }

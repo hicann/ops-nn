@@ -33,13 +33,12 @@ static ge::graphStatus InferShapeEluV2(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeEluV2(gert::InferDataTypeContext *context)
+static ge::graphStatus InferDataTypeEluV2(gert::InferDataTypeContext* context)
 {
     const auto inputDataType = context->GetInputDataType(0);
     context->SetOutputDataType(0, inputDataType);
     return ge::GRAPH_SUCCESS;
 }
-
 
 IMPL_OP_INFERSHAPE(EluV2).InferShape(InferShapeEluV2).InferDataType(InferDataTypeEluV2);
 } // namespace ops

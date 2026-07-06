@@ -67,17 +67,19 @@ platform_ascendc::SocVersion addRmsNormSocVersion;
 uint8_t getPerformanceFlag(uint32_t num_col, gert::Shape x_shape, gert::Shape gamma_shape, uint32_t xDtypeKey)
 {
     uint8_t isPerformance = 0;
-    if(addRmsNormSocVersion != platform_ascendc::SocVersion::ASCEND910B) {
+    if (addRmsNormSocVersion != platform_ascendc::SocVersion::ASCEND910B) {
         return isPerformance;
     }
     size_t xDimNum = x_shape.GetDimNum();
     size_t gammaDimNum = gamma_shape.GetDimNum();
-    bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) && gammaDimNum == PERFORMANC_DIM_ONE);
-    bool sizeOk = num_col <= PERFORMANC_DIM_THREE_MAX && 
-        ((xDimNum == PERFORMANC_DIM_TWO && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX) || 
-         (xDimNum == PERFORMANC_DIM_THREE && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX && x_shape.GetDim(PERFORMANC_DIM_ONE) <= PERFORMANC_DIM_TWO_MAX));
+    bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) &&
+                  gammaDimNum == PERFORMANC_DIM_ONE);
+    bool sizeOk = num_col <= PERFORMANC_DIM_THREE_MAX &&
+                  ((xDimNum == PERFORMANC_DIM_TWO && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX) ||
+                   (xDimNum == PERFORMANC_DIM_THREE && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX &&
+                    x_shape.GetDim(PERFORMANC_DIM_ONE) <= PERFORMANC_DIM_TWO_MAX));
     bool dtypeOk = (xDtypeKey == DTYPE_KEY_FP16 || xDtypeKey == DTYPE_KEY_BF16);
-    if(dimOK && sizeOk && dtypeOk) {
+    if (dimOK && sizeOk && dtypeOk) {
         isPerformance = 1;
     }
     return isPerformance;
@@ -110,7 +112,7 @@ static bool CheckNullptr(const gert::TilingContext* context)
     const gert::StorageShape* x_shape = context->GetOutputShape(RMS_OUTPUT_X_INDEX);
 
     norm_key = RMS_NORM_KEY;
-    if(rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() <= 0){
+    if (rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() <= 0) {
         norm_key = POST_RMS_NORM;
     } else if (rstd_shape->GetOriginShape().GetShapeSize() <= 0 && x_shape->GetOriginShape().GetShapeSize() > 0) {
         norm_key = PRE_RMS_NORM;
@@ -120,7 +122,7 @@ static bool CheckNullptr(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, x2_shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, gamma_shape);
     OP_CHECK_NULL_WITH_CONTEXT(context, y_shape);
-      
+
     if (norm_key == RMS_NORM_KEY) {
         OP_CHECK_NULL_WITH_CONTEXT(context, rstd_shape);
         OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);
@@ -145,24 +147,21 @@ static bool CheckInputOutputDim(const gert::TilingContext* context)
     size_t rstdDimNum = rstd_shape->GetStorageShape().GetDimNum();
     size_t xDimNum = x_shape->GetStorageShape().GetDimNum();
 
-    OP_CHECK_IF(
-        x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context->GetNodeName(), "x1", std::to_string(x1DimNum).c_str(), "within the range [1, 8]"),
-        return false);
+    OP_CHECK_IF(x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x1", std::to_string(x1DimNum).c_str(),
+                                             "within the range [1, 8]"),
+                return false);
     if (norm_key == RMS_NORM_KEY) {
-        OP_CHECK_IF(
-            gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(
-                context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(), "within the range [1, 8]"),
-            return false);
-        OP_CHECK_IF(
-            x1DimNum < gammaDimNum,
-            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                context->GetNodeName(), "x1 and gamma",
-                (std::to_string(x1DimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
-                "The shape dim of x1 should be greater than or equal to the shape dim of gamma"),
-            return false);
+        OP_CHECK_IF(gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+                                                 "within the range [1, 8]"),
+                    return false);
+        OP_CHECK_IF(x1DimNum < gammaDimNum,
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        context->GetNodeName(), "x1 and gamma",
+                        (std::to_string(x1DimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
+                        "The shape dim of x1 should be greater than or equal to the shape dim of gamma"),
+                    return false);
     } else if (norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM) {
         OP_CHECK_IF(
             gammaDimNum != 2,
@@ -176,22 +175,21 @@ static bool CheckInputOutputDim(const gert::TilingContext* context)
             "The shape dims of x1 and y should be the same"),
         return false);
 
-    OP_CHECK_IF(
-        x1DimNum != x2DimNum,
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context->GetNodeName(), "x1 and x2",
-            (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "The shape dims of x1 and x2 should be the same"),
-        return false);
+    OP_CHECK_IF(x1DimNum != x2DimNum,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "x1 and x2",
+                    (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
+                    "The shape dims of x1 and x2 should be the same"),
+                return false);
 
     if (norm_key == RMS_NORM_KEY) {
         OP_CHECK_IF(
             (yDimNum != xDimNum) || (xDimNum != x1DimNum) || (rstdDimNum != x1DimNum),
-            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                context->GetNodeName(), "y, x, rstd and x1",
-                (std::to_string(yDimNum) + ", " + std::to_string(xDimNum) + ", " + std::to_string(rstdDimNum) +
-                 " and " + std::to_string(x1DimNum)).c_str(),
-                "The shape dims of y, x, rstd and x1 should be the same"),
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y, x, rstd and x1",
+                                                      (std::to_string(yDimNum) + ", " + std::to_string(xDimNum) + ", " +
+                                                       std::to_string(rstdDimNum) + " and " + std::to_string(x1DimNum))
+                                                          .c_str(),
+                                                      "The shape dims of y, x, rstd and x1 should be the same"),
             return false);
     } else if (norm_key == PRE_RMS_NORM) {
         OP_CHECK_IF(
@@ -219,37 +217,34 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
     size_t gammaDimNum = gamma_shape->GetStorageShape().GetDimNum();
 
     for (uint32_t i = 0; i < x1DimNum; i++) {
-        OP_CHECK_IF(
-            x1_shape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context->GetNodeName(), "x1", Ops::Base::ToString(x1_shape->GetStorageShape()).c_str(),
-                "x1 cannot be an empty tensor"),
-            return false);
-        OP_CHECK_IF(
-            x2_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context->GetNodeName(), "x2 and x1",
-                (Ops::Base::ToString(x2_shape->GetStorageShape()) + " and " +
-                 Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                "The shapes of x2 and x1 should be the same"),
-            return false);
-        OP_CHECK_IF(
-            (y_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i)),
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                context->GetNodeName(), "y and x1",
-                (Ops::Base::ToString(y_shape->GetStorageShape()) + " and " +
-                 Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                "The shapes of y and x1 should be the same"),
-            return false);
+        OP_CHECK_IF(x1_shape->GetStorageShape().GetDim(i) == 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1",
+                                                          Ops::Base::ToString(x1_shape->GetStorageShape()).c_str(),
+                                                          "x1 cannot be an empty tensor"),
+                    return false);
+        OP_CHECK_IF(x2_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x2 and x1",
+                                                           (Ops::Base::ToString(x2_shape->GetStorageShape()) + " and " +
+                                                            Ops::Base::ToString(x1_shape->GetStorageShape()))
+                                                               .c_str(),
+                                                           "The shapes of x2 and x1 should be the same"),
+                    return false);
+        OP_CHECK_IF((y_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i)),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "y and x1",
+                                                           (Ops::Base::ToString(y_shape->GetStorageShape()) + " and " +
+                                                            Ops::Base::ToString(x1_shape->GetStorageShape()))
+                                                               .c_str(),
+                                                           "The shapes of y and x1 should be the same"),
+                    return false);
         // x out shape check by mode
         if (norm_key == RMS_NORM_KEY || norm_key == PRE_RMS_NORM) {
             OP_CHECK_IF(
                 (x_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i)),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    context->GetNodeName(), "x and x1",
-                    (Ops::Base::ToString(x_shape->GetStorageShape()) + " and " +
-                     Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                    "The shapes of x and x1 should be the same"),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x and x1",
+                                                       (Ops::Base::ToString(x_shape->GetStorageShape()) + " and " +
+                                                        Ops::Base::ToString(x1_shape->GetStorageShape()))
+                                                           .c_str(),
+                                                       "The shapes of x and x1 should be the same"),
                 return false);
         }
     }
@@ -258,12 +253,13 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
         for (uint32_t i = 0; i < x1DimNum - gammaDimNum; i++) {
             OP_CHECK_IF(
                 rstd_shape->GetStorageShape().GetDim(i) != x2_shape->GetStorageShape().GetDim(i),
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    context->GetNodeName(), "rstd and x1",
-                    (Ops::Base::ToString(rstd_shape->GetStorageShape()) + " and " +
-                     Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                    ("The shape of rstd should be the same as the first " + std::to_string(x1DimNum - gammaDimNum) +
-                     " dim of x1").c_str()),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x1",
+                                                       (Ops::Base::ToString(rstd_shape->GetStorageShape()) + " and " +
+                                                        Ops::Base::ToString(x1_shape->GetStorageShape()))
+                                                           .c_str(),
+                                                       ("The shape of rstd should be the same as the first " +
+                                                        std::to_string(x1DimNum - gammaDimNum) + " dim of x1")
+                                                           .c_str()),
                 return false);
         }
         for (uint32_t i = 0; i < gammaDimNum; i++) {
@@ -273,34 +269,33 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                     context->GetNodeName(), "gamma and x1",
                     (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +
-                     Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
+                     Ops::Base::ToString(x1_shape->GetStorageShape()))
+                        .c_str(),
                     ("The shape of gamma should be equal to the last " + std::to_string(gammaDimNum) + " dim of x1")
                         .c_str()),
                 return false);
-            OP_CHECK_IF(
-                rstd_shape->GetStorageShape().GetDim(x1DimNum - 1 - i) != 1,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    context->GetNodeName(), "rstd",
-                    Ops::Base::ToString(rstd_shape->GetStorageShape()).c_str(),
-                    ("The " + std::to_string(x1DimNum - 1 - i) + "th dimension of rstd must be 1").c_str()),
-                return false);
+            OP_CHECK_IF(rstd_shape->GetStorageShape().GetDim(x1DimNum - 1 - i) != 1,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            context->GetNodeName(), "rstd", Ops::Base::ToString(rstd_shape->GetStorageShape()).c_str(),
+                            ("The " + std::to_string(x1DimNum - 1 - i) + "th dimension of rstd must be 1").c_str()),
+                        return false);
         }
     } else if (norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM) {
         OP_CHECK_IF(
-            (gamma_shape->GetStorageShape().GetDim(0) != 1 ||
-             gamma_shape->GetStorageShape().GetDim(gammaDimNum - 1) != x1_shape->GetStorageShape().GetDim(x1DimNum - 1)),
+            (gamma_shape->GetStorageShape().GetDim(0) != 1 || gamma_shape->GetStorageShape().GetDim(gammaDimNum - 1) !=
+                                                                  x1_shape->GetStorageShape().GetDim(x1DimNum - 1)),
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 context->GetNodeName(), "gamma and x1",
                 (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +
-                 Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
+                 Ops::Base::ToString(x1_shape->GetStorageShape()))
+                    .c_str(),
                 "The first dim of gamma should be 1 and the last dim of gamma and x1 must be the same"),
             return false);
     }
     return true;
 }
 
-static void GetCompileParameters(
-    gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize)
+static void GetCompileParameters(gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize)
 {
     auto ptrCompileInfo = reinterpret_cast<const AddRmsNormCompileInfo*>(context->GetCompileInfo());
     if (ptrCompileInfo == nullptr) {
@@ -340,13 +335,14 @@ static ge::graphStatus GetEpsilonParameter(gert::TilingContext* context, float& 
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     epsilon = *attrs->GetFloat(0);
     OP_CHECK_IF(epsilon < 0,
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon", std::to_string(epsilon).c_str(),
-            "greater than or equal to zero"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon", std::to_string(epsilon).c_str(),
+                                          "greater than or equal to zero"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static void CalculateBlockParameters(
-    uint32_t numRow, uint32_t numCore, uint32_t& blockFactor, uint32_t& latsBlockFactor, uint32_t& useCoreNum)
+static void CalculateBlockParameters(uint32_t numRow, uint32_t numCore, uint32_t& blockFactor,
+                                     uint32_t& latsBlockFactor, uint32_t& useCoreNum)
 {
     blockFactor = 1U;
     uint32_t tileNum = Ops::Base::CeilDiv(numRow, numCore * blockFactor);
@@ -363,11 +359,10 @@ static ge::DataType SetDataTypeParameters(gert::TilingContext* context, uint32_t
     return data_type;
 }
 
-static void DetermineModeParameters(
-    AddRMSNormTilingData* tiling, 
-    uint32_t numCol, uint32_t& ubFactor, uint32_t& rowFactor, uint32_t blockFactor, 
-    uint32_t latsBlockFactor, ge::DataType dataType, uint32_t dtypKey, uint64_t ubSize,
-    uint32_t dataPerBlock, uint32_t numColAlign, uint32_t& modeKey, uint32_t isPerformance)
+static void DetermineModeParameters(AddRMSNormTilingData* tiling, uint32_t numCol, uint32_t& ubFactor,
+                                    uint32_t& rowFactor, uint32_t blockFactor, uint32_t latsBlockFactor,
+                                    ge::DataType dataType, uint32_t dtypKey, uint64_t ubSize, uint32_t dataPerBlock,
+                                    uint32_t numColAlign, uint32_t& modeKey, uint32_t isPerformance)
 {
     if (numCol > ubFactor) {
         modeKey = MODE_SPLIT_D;
@@ -385,11 +380,11 @@ static void DetermineModeParameters(
 
         uint32_t mulLoopFp32 = numColAlign / 64;
         uint32_t mulTailFp32 = numColAlign - mulLoopFp32 * 64;
-        uint8_t dstRepStrideFp32 = numColAlign / 8; 
+        uint8_t dstRepStrideFp32 = numColAlign / 8;
 
         uint32_t mulLoopFp16 = numColAlign / 128;
         uint32_t mulTailFp16 = numColAlign - mulLoopFp16 * 128;
-        uint8_t dstRepStrideFp16 = numColAlign / 16; 
+        uint8_t dstRepStrideFp16 = numColAlign / 16;
 
         tiling->set_is_performance(isPerformance);
         tiling->set_mul_loop_fp32(mulLoopFp32);
@@ -420,10 +415,9 @@ static void DetermineModeParameters(
     tiling->set_last_block_row_tail(lastBlockRowTail);
 }
 
-static void SetTilingParameters(
-    AddRMSNormTilingData* tiling, uint32_t num_row, uint32_t num_col, uint32_t numColAlign, 
-    uint32_t block_factor, uint32_t latsBlockFactor, uint32_t row_factor,
-    uint32_t ub_factor, float epsilon)
+static void SetTilingParameters(AddRMSNormTilingData* tiling, uint32_t num_row, uint32_t num_col, uint32_t numColAlign,
+                                uint32_t block_factor, uint32_t latsBlockFactor, uint32_t row_factor,
+                                uint32_t ub_factor, float epsilon)
 {
     const float avg_factor = (num_col == 0) ? 0 : 1.0f / num_col;
     tiling->set_num_row(num_row);
@@ -437,8 +431,8 @@ static void SetTilingParameters(
     tiling->set_avg_factor(avg_factor);
 }
 
-static void SaveTilingData(
-    gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t dtype_key, uint32_t mode_key)
+static void SaveTilingData(gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t dtype_key,
+                           uint32_t mode_key)
 {
     const uint32_t tiling_key = (dtype_key * 10 + mode_key) + norm_key;
     context->SetTilingKey(tiling_key);
@@ -456,26 +450,23 @@ static void SetWorkspaceSize(gert::TilingContext* context)
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
 }
 
-static void LogTilingResults(
-    gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t mode_key, uint32_t dtype_key,
-    uint32_t use_core_num, float epsilon)
+static void LogTilingResults(gert::TilingContext* context, AddRMSNormTilingData* tiling, uint32_t mode_key,
+                             uint32_t dtype_key, uint32_t use_core_num, float epsilon)
 {
     OP_LOGI(context, "Tiling Key: %u", (dtype_key * TEN + mode_key) + norm_key);
     OP_LOGI(context, "Block Dim: %u", use_core_num);
     OP_LOGI(context, "usr Workspace: 256");
-    OP_LOGI(
-        context,
-        "num_row: %d, num_col: %d, block_factor: %d, row_factor: %d, ub_factor: %d, epsilon: %f, avg_factor: %f",
-        tiling->get_num_row(), tiling->get_num_col(), tiling->get_block_factor(), tiling->get_row_factor(),
-        tiling->get_ub_factor(), epsilon, tiling->get_avg_factor());
+    OP_LOGI(context,
+            "num_row: %d, num_col: %d, block_factor: %d, row_factor: %d, ub_factor: %d, epsilon: %f, avg_factor: %f",
+            tiling->get_num_row(), tiling->get_num_col(), tiling->get_block_factor(), tiling->get_row_factor(),
+            tiling->get_ub_factor(), epsilon, tiling->get_avg_factor());
 }
 
 static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
 {
     OP_LOGI("Tiling4AddRmsNorm", "Enter Tiling4AddRmsNorm");
     OP_CHECK_IF(!CheckNullptr(context), OP_LOGE(context, "Input shape invalid (nullptr)."), return false);
-    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE(context, "Input shape invalid."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE(context, "Input shape invalid."), return ge::GRAPH_FAILED);
 
     AddRMSNormTilingData tiling;
     uint32_t num_core;
@@ -513,13 +504,11 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
     const gert::Shape x1_shape = context->GetInputShape(0)->GetStorageShape();
     const gert::Shape gamma_shape = context->GetInputShape(2)->GetStorageShape();
     uint8_t isPerformance = getPerformanceFlag(num_col, x1_shape, gamma_shape, dtype_key);
-    DetermineModeParameters(
-        &tiling, 
-        num_col, ub_factor, row_factor, block_factor, latsBlockFactor, 
-        data_type, dtype_key, ub_size, data_per_block, 
-        numColAlign, mode_key, isPerformance);
+    DetermineModeParameters(&tiling, num_col, ub_factor, row_factor, block_factor, latsBlockFactor, data_type,
+                            dtype_key, ub_size, data_per_block, numColAlign, mode_key, isPerformance);
 
-    SetTilingParameters(&tiling, num_row, num_col, numColAlign, block_factor, latsBlockFactor, row_factor, ub_factor, epsilon);
+    SetTilingParameters(&tiling, num_row, num_col, numColAlign, block_factor, latsBlockFactor, row_factor, ub_factor,
+                        epsilon);
     SaveTilingData(context, &tiling, dtype_key, mode_key);
 
     SetWorkspaceSize(context);

@@ -37,4 +37,4 @@ static ge::graphStatus InferDataTypeForAscendAntiQuant(gert::InferDataTypeContex
 }
 
 IMPL_OP_INFERSHAPE(AscendAntiQuant).InferShape(InferShape4Elewise).InferDataType(InferDataTypeForAscendAntiQuant);
-}  // namespace ops
+} // namespace ops

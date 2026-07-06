@@ -16,7 +16,6 @@
 #include "runtime_kb_api.h"
 #include <memory>
 
-
 namespace optiling {
 namespace conv_ops_tiling {
 bool Conv2dBaseTiling::GetTilingFromRepo()
@@ -44,15 +43,15 @@ bool Conv2dBaseTiling::QueryTilingBank(std::string socHardWareVersion, uint32_t 
     shared_ptr<void> inputArgs = nullptr;
     size_t inputArgsSize = 0;
     GetTilingInputArgs(inputArgs, inputArgsSize);
-    uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv2DV2", socHardWareVersion,
-        aicoreNum, tuningTiling);
+    uint32_t ret = Ops::NN::QueryBank(inputArgs.get(), inputArgsSize, "Conv2DV2", socHardWareVersion, aicoreNum,
+                                      tuningTiling);
     if (ret != 0 || tuningTiling == nullptr) {
         return false;
     }
     return TranslateRepoTiling(tuningTiling);
 }
 
-void Conv2dBaseTiling::GetTilingInputArgs(shared_ptr<void> &inputArgs, size_t &size)
+void Conv2dBaseTiling::GetTilingInputArgs(shared_ptr<void>& inputArgs, size_t& size)
 {
     shared_ptr<tuningtiling::Conv2DV2InputArgs> conv2DInput = std::make_shared<tuningtiling::Conv2DV2InputArgs>();
 
@@ -87,7 +86,7 @@ void Conv2dBaseTiling::GetTilingInputArgs(shared_ptr<void> &inputArgs, size_t &s
     std::array<uint8_t, UINT64_BYTE_COUNT> byteValues{};
     if (flagInfo_.extendConvFlag) {
         byteValues = {fixpipeInfo_.dualOutput, fixpipeInfo_.quantMode0, fixpipeInfo_.reluMode0, fixpipeInfo_.clipMode0,
-                      fixpipeInfo_.quantMode1, fixpipeInfo_.reluMode1, fixpipeInfo_.clipMode1};
+                      fixpipeInfo_.quantMode1, fixpipeInfo_.reluMode1,  fixpipeInfo_.clipMode1};
     }
     convBase_.SetBitsFromBool(conv2DInput->reserverdParam1, bitValues);
     convBase_.SetBytesFromUint8(conv2DInput->reserverdParam2, byteValues);
@@ -100,7 +99,7 @@ void Conv2dBaseTiling::GetTilingInputArgs(shared_ptr<void> &inputArgs, size_t &s
     PrintInputArgs(conv2DInput);
 }
 
-bool Conv2dBaseTiling::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
+bool Conv2dBaseTiling::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& tuningTiling)
 {
     auto convRepoTiling = static_pointer_cast<tuningtiling::Conv2DV2TunnerTiling>(tuningTiling);
     if (convRepoTiling == nullptr) {
@@ -218,8 +217,9 @@ void Conv2dBaseTiling::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv2DV2Tu
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
         singleGroups = convRepoTiling->enlarge > 0 ? convRepoTiling->enlarge : optGroupInfo_.enlarge;
         singleGroupOpt = convRepoTiling->enlarge > 0 ?
-            ConvCeilDiv(ConvCeilDiv(convRepoTiling->groups, convRepoTiling->enlarge), convRepoTiling->groupDim) :
-            ConvCeilDiv(optGroupInfo_.groupOpt, convRepoTiling->groupDim);
+                             ConvCeilDiv(ConvCeilDiv(convRepoTiling->groups, convRepoTiling->enlarge),
+                                         convRepoTiling->groupDim) :
+                             ConvCeilDiv(optGroupInfo_.groupOpt, convRepoTiling->groupDim);
     }
 
     tilingData_.set_singleCoreGroups(singleGroups);
@@ -243,9 +243,13 @@ void Conv2dBaseTiling::SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling
         tilingData_.set_bUbNStep(static_cast<uint32_t>(conv2dApiTiling_.CalcC04UbLoadNsize(c04Info_)));
         tilingData_.set_bUbKStep(0);
     } else if (convRepoTiling->isWeightUbTransFlag != 0) {
-        conv_tiling::ConvWeightUbTransParams params = {convRepoTiling->nBL1, convRepoTiling->kBL1,
-            static_cast<uint64_t>(convRepoTiling->kernelH), static_cast<uint64_t>(convRepoTiling->kernelW),
-            convOpsConstParams_.k0, convOpsConstParams_.n0, dtypeMap.at(descInfo_.weightDtype)};
+        conv_tiling::ConvWeightUbTransParams params = {convRepoTiling->nBL1,
+                                                       convRepoTiling->kBL1,
+                                                       static_cast<uint64_t>(convRepoTiling->kernelH),
+                                                       static_cast<uint64_t>(convRepoTiling->kernelW),
+                                                       convOpsConstParams_.k0,
+                                                       convOpsConstParams_.n0,
+                                                       dtypeMap.at(descInfo_.weightDtype)};
         conv2dApiTiling_.GetWeightUBTiling(params);
         tilingData_.set_bUbNStep(params.bUbNStep);
         tilingData_.set_bUbKStep(params.bUbKStep);
@@ -255,9 +259,12 @@ void Conv2dBaseTiling::SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling
     }
 
     if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG) {
-        conv_tiling::ConvDmaParams params = {convRepoTiling->hoL1, convRepoTiling->woL1,
-            static_cast<uint64_t>(convRepoTiling->khL1), static_cast<uint64_t>(convRepoTiling->kwL1),
-            convOpsConstParams_.k0, dtypeMap.at(descInfo_.fMapDtype)};
+        conv_tiling::ConvDmaParams params = {convRepoTiling->hoL1,
+                                             convRepoTiling->woL1,
+                                             static_cast<uint64_t>(convRepoTiling->khL1),
+                                             static_cast<uint64_t>(convRepoTiling->kwL1),
+                                             convOpsConstParams_.k0,
+                                             dtypeMap.at(descInfo_.fMapDtype)};
         conv2dApiTiling_.GetDmaUbTiling(params);
         tilingData_.set_khUb(params.khUb);
         tilingData_.set_kwUb(params.kwUb);
@@ -285,8 +292,7 @@ void Conv2dBaseTiling::TranslateRunInfo(shared_ptr<tuningtiling::Conv2DV2TunnerT
     tilingData_.set_win(convRepoTiling->orgWi);
     tilingData_.set_batchDim(convRepoTiling->batchDim);
     tilingData_.set_hoDim(convRepoTiling->hoDim);
-    tilingData_.set_woDim(featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG ?
-            convRepoTiling->woDim : 1);
+    tilingData_.set_woDim(featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG ? convRepoTiling->woDim : 1);
     tilingData_.set_nDim(convRepoTiling->nDim);
     tilingData_.set_cin(convRepoTiling->orgCi);
     tilingData_.set_cout(convRepoTiling->orgCo);
@@ -313,7 +319,7 @@ uint32_t Conv2dBaseTiling::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2Tun
 
     if (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG) {
         aL1SpaceSize = convRepoTiling->hoL1 * ConvAlignB(convRepoTiling->woL1, convOpsConstParams_.m0) *
-            convRepoTiling->kAL1 * fmapSize;
+                       convRepoTiling->kAL1 * fmapSize;
         return static_cast<uint32_t>(aL1SpaceSize);
     }
 
@@ -321,22 +327,23 @@ uint32_t Conv2dBaseTiling::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2Tun
         if (static_cast<bool>(convRepoTiling->isC04Flag) && convRepoTiling->innerBatch > 1) {
             aL1SpaceSize = C04_CIN_SIZE * convRepoTiling->orgHi * convRepoTiling->orgWi;
         } else {
-            uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ? convRepoTiling->hoL1 : convRepoTiling->singleCoreHo;
+            uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ? convRepoTiling->hoL1 :
+                                                                                    convRepoTiling->singleCoreHo;
             uint64_t hoL1Max = std::min(mL1Max / convRepoTiling->orgWo + 2, convRepoTiling->orgHo);
-            uint64_t hiAL1Max = ConvInferHiL1(hoL1Max, convRepoTiling->orgHi, convRepoTiling->kernelH, convRepoTiling->dilationH,
-                convRepoTiling->strideH);
+            uint64_t hiAL1Max = ConvInferHiL1(hoL1Max, convRepoTiling->orgHi, convRepoTiling->kernelH,
+                                              convRepoTiling->dilationH, convRepoTiling->strideH);
             aL1SpaceSize = tilingData_.get_cinAInCore() * hiAL1Max * convRepoTiling->orgWi;
         }
     } else {
-        uint64_t hiAL1Max = ConvInferHiL1(convRepoTiling->hoL1, convRepoTiling->orgHi, convRepoTiling->kernelH, convRepoTiling->dilationH,
-            convRepoTiling->strideH);
+        uint64_t hiAL1Max = ConvInferHiL1(convRepoTiling->hoL1, convRepoTiling->orgHi, convRepoTiling->kernelH,
+                                          convRepoTiling->dilationH, convRepoTiling->strideH);
         uint64_t wiAL1Max = 0;
         if (static_cast<bool>(convRepoTiling->isC04Flag) && convRepoTiling->orgWo == convRepoTiling->woL1) {
             wiAL1Max = convRepoTiling->orgWi;
             aL1SpaceSize = ConvAlignB(hiAL1Max * wiAL1Max, C0_SIZE / (fmapSize * C04_CIN_SIZE)) * C04_CIN_SIZE;
         } else {
-            wiAL1Max = ConvInferWiL1(convRepoTiling->woL1, convRepoTiling->orgWi, convRepoTiling->kernelW, convRepoTiling->dilationW,
-                convRepoTiling->strideW);
+            wiAL1Max = ConvInferWiL1(convRepoTiling->woL1, convRepoTiling->orgWi, convRepoTiling->kernelW,
+                                     convRepoTiling->dilationW, convRepoTiling->strideW);
             aL1SpaceSize = tilingData_.get_cinAInCore() * hiAL1Max * wiAL1Max;
         }
     }
@@ -349,9 +356,11 @@ void Conv2dBaseTiling::SetUnionDataXt(shared_ptr<tuningtiling::Conv2DV2TunnerTil
 {
     conv_tiling::UnionDataXt unionDataXt;
     unionDataXt.bf.kernelW = static_cast<uint64_t>(convRepoTiling->kernelW);
-    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelW) & 0x100) >> 8; // 8 kernelW lower 8 bit
+    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelW) & 0x100) >>
+                                         8; // 8 kernelW lower 8 bit
     unionDataXt.bf.kernelH = static_cast<uint64_t>(convRepoTiling->kernelH);
-    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelH) & 0x100) >> 8; // 8 kernelH lower 8 bit
+    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelH) & 0x100) >>
+                                         8; // 8 kernelH lower 8 bit
     unionDataXt.bf.dilationH = static_cast<uint64_t>(convRepoTiling->dilationH);
     unionDataXt.bf.dilationW = static_cast<uint64_t>(convRepoTiling->dilationW);
     unionDataXt.bf.strideH = static_cast<uint64_t>(convRepoTiling->strideH) & 0x3f;
@@ -363,40 +372,25 @@ void Conv2dBaseTiling::PrintInputArgs(shared_ptr<tuningtiling::Conv2DV2InputArgs
 {
     stringstream ss;
     ss << paramInfo_.nodeType.c_str() << "ops tiling input args: aDtype: " << conv2DInput->aDtype
-    << ", bDtype: " << conv2DInput->bDtype
-    << ", cDtype: " << conv2DInput->cDtype
-    << ", biasDtype: " << conv2DInput->biasDtype
-    << ", aShapeN: " << conv2DInput->aShapeN
-    << ", aShapeH: " << conv2DInput->aShapeH
-    << ", aShapeW: " << conv2DInput->aShapeW
-    << ", bShapeN: " << conv2DInput->bShapeN
-    << ", bShapeC: " << conv2DInput->bShapeC
-    << ", bShapeH: " << conv2DInput->bShapeH
-    << ", bShapeW: " << conv2DInput->bShapeW
-    << ", cShapeH: " << conv2DInput->cShapeH
-    << ", cShapeW: " << conv2DInput->cShapeW
-    << ", aFormat: " << conv2DInput->aFormat
-    << ", bFormat: " << conv2DInput->bFormat
-    << ", cFormat: " << conv2DInput->cFormat
-    << ", groups: " << conv2DInput->groups
-    << ", strideH: " << conv2DInput->strideH
-    << ", strideW: " << conv2DInput->strideW
-    << ", dilationH: " << conv2DInput->dilationH
-    << ", dilationW: " << conv2DInput->dilationW
-    << ", padTop: " << conv2DInput->padTop
-    << ", padBottom: " << conv2DInput->padBottom
-    << ", padLeft: " << conv2DInput->padLeft
-    << ", padRight: " << conv2DInput->padRight
-    << ", biasFlag: " << conv2DInput->biasFlag
-    << ", hf32Flag: " << conv2DInput->hf32Flag
-    << ", reserverdParam1: " << conv2DInput->reserverdParam1
-    << ", reserverdParam2: " << conv2DInput->reserverdParam2
-    << ", reserverdParam3: " << conv2DInput->reserverdParam3
-    << ", reserverdParam4: " << conv2DInput->reserverdParam4
-    << ", reserverdParam5: " << conv2DInput->reserverdParam5
-    << ", reserverdParam6: " << conv2DInput->reserverdParam6;
+       << ", bDtype: " << conv2DInput->bDtype << ", cDtype: " << conv2DInput->cDtype
+       << ", biasDtype: " << conv2DInput->biasDtype << ", aShapeN: " << conv2DInput->aShapeN
+       << ", aShapeH: " << conv2DInput->aShapeH << ", aShapeW: " << conv2DInput->aShapeW
+       << ", bShapeN: " << conv2DInput->bShapeN << ", bShapeC: " << conv2DInput->bShapeC
+       << ", bShapeH: " << conv2DInput->bShapeH << ", bShapeW: " << conv2DInput->bShapeW
+       << ", cShapeH: " << conv2DInput->cShapeH << ", cShapeW: " << conv2DInput->cShapeW
+       << ", aFormat: " << conv2DInput->aFormat << ", bFormat: " << conv2DInput->bFormat
+       << ", cFormat: " << conv2DInput->cFormat << ", groups: " << conv2DInput->groups
+       << ", strideH: " << conv2DInput->strideH << ", strideW: " << conv2DInput->strideW
+       << ", dilationH: " << conv2DInput->dilationH << ", dilationW: " << conv2DInput->dilationW
+       << ", padTop: " << conv2DInput->padTop << ", padBottom: " << conv2DInput->padBottom
+       << ", padLeft: " << conv2DInput->padLeft << ", padRight: " << conv2DInput->padRight
+       << ", biasFlag: " << conv2DInput->biasFlag << ", hf32Flag: " << conv2DInput->hf32Flag
+       << ", reserverdParam1: " << conv2DInput->reserverdParam1 << ", reserverdParam2: " << conv2DInput->reserverdParam2
+       << ", reserverdParam3: " << conv2DInput->reserverdParam3 << ", reserverdParam4: " << conv2DInput->reserverdParam4
+       << ", reserverdParam5: " << conv2DInput->reserverdParam5
+       << ", reserverdParam6: " << conv2DInput->reserverdParam6;
     OP_LOGD(context_->GetNodeName(), "%s", ss.str().c_str());
 }
 
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

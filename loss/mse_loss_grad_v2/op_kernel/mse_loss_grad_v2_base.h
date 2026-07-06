@@ -19,18 +19,17 @@
 #include "kernel_operator.h"
 using namespace AscendC;
 
-__aicore__ constexpr TQueConfig GetMyTQueConfig(
-    bool nd2nzIn, bool nz2ndIn, bool scmBlockGroupIn, uint32_t bufferLenIn, uint32_t bufferNumberIn,
-    uint32_t consumerSizeIn, const TPosition consumerIn[])
+__aicore__ constexpr TQueConfig GetMyTQueConfig(bool nd2nzIn, bool nz2ndIn, bool scmBlockGroupIn, uint32_t bufferLenIn,
+                                                uint32_t bufferNumberIn, uint32_t consumerSizeIn,
+                                                const TPosition consumerIn[])
 {
-    return {
-        nd2nzIn,
-        nz2ndIn,
-        scmBlockGroupIn,
-        bufferLenIn,
-        bufferNumberIn,
-        consumerSizeIn,
-        {consumerIn[1], consumerIn[2], consumerIn[3], consumerIn[4], consumerIn[5], consumerIn[6], consumerIn[7]}};
+    return {nd2nzIn,
+            nz2ndIn,
+            scmBlockGroupIn,
+            bufferLenIn,
+            bufferNumberIn,
+            consumerSizeIn,
+            {consumerIn[1], consumerIn[2], consumerIn[3], consumerIn[4], consumerIn[5], consumerIn[6], consumerIn[7]}};
 }
 
 const constexpr TPosition tp[8] = {TPosition::MAX, TPosition::MAX, TPosition::MAX, TPosition::MAX,
@@ -38,11 +37,9 @@ const constexpr TPosition tp[8] = {TPosition::MAX, TPosition::MAX, TPosition::MA
 constexpr TQueConfig conf = GetMyTQueConfig(false, false, false, 0, 1, 0, tp);
 
 template <typename inType>
-class KernelMseLossGradBase
-{
+class KernelMseLossGradBase {
 public:
-    __aicore__ inline KernelMseLossGradBase()
-    {}
+    __aicore__ inline KernelMseLossGradBase() {}
     template <typename T1>
     __aicore__ inline T1 CeilAlign(T1 a)
     {

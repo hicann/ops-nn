@@ -41,16 +41,11 @@ static Status ParseParamsCommonGRU(const Message* op_src, ge::Operator& op_dest)
 
 REGISTER_CUSTOM_OP("CommonGRU")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::GRU"), 
-                   ge::AscendString("ai.onnx::9::GRU"), 
-                   ge::AscendString("ai.onnx::10::GRU"), 
-                   ge::AscendString("ai.onnx::11::GRU"), 
-                   ge::AscendString("ai.onnx::12::GRU"),
-                   ge::AscendString("ai.onnx::13::GRU"), 
-                   ge::AscendString("ai.onnx::14::GRU"), 
-                   ge::AscendString("ai.onnx::15::GRU"), 
-                   ge::AscendString("ai.onnx::16::GRU"), 
-                   ge::AscendString("ai.onnx::17::GRU"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::GRU"), ge::AscendString("ai.onnx::9::GRU"),
+                   ge::AscendString("ai.onnx::10::GRU"), ge::AscendString("ai.onnx::11::GRU"),
+                   ge::AscendString("ai.onnx::12::GRU"), ge::AscendString("ai.onnx::13::GRU"),
+                   ge::AscendString("ai.onnx::14::GRU"), ge::AscendString("ai.onnx::15::GRU"),
+                   ge::AscendString("ai.onnx::16::GRU"), ge::AscendString("ai.onnx::17::GRU"),
                    ge::AscendString("ai.onnx::18::GRU")})
     .ParseParamsFn(ParseParamsCommonGRU)
     .ImplyType(ImplyType::TVM);

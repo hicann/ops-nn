@@ -37,7 +37,6 @@ static const gert::Shape g_vec_1_shape = {1};
 const std::string OP_NAME = "RmsNormGrad";
 static const std::vector<std::string> inputNames = {"dy", "x", "rstd", "gamma"};
 
-
 ge::graphStatus RmsNormGradEmptyTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo(); // 判断条件修改
@@ -54,31 +53,26 @@ ge::graphStatus RmsNormGradEmptyTiling::GetPlatformInfo()
 ge::graphStatus RmsNormGradEmptyTiling::CheckShapeAllPositive(gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape.GetDim(i) < 0,
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i, shape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape.GetDim(i) < 0,
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i,
+                            shape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus RmsNormGradEmptyTiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
 {
-    OP_CHECK_IF(
-        shape0.GetDimNum() != shape1.GetDimNum(),
-        OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %lu vs %lu", shape0.GetDimNum(),
-            shape1.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shape0.GetDimNum() != shape1.GetDimNum(),
+                OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %lu vs %lu", shape0.GetDimNum(),
+                        shape1.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < shape0.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape0.GetDim(i) != shape1.GetDim(i),
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, shape0.GetDim(i),
-                shape1.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape0.GetDim(i) != shape1.GetDim(i),
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, shape0.GetDim(i),
+                            shape1.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -108,7 +102,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape0 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
-            "Input dy has negative axes");
+                                              "Input dy has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -118,7 +112,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape1 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(storageShape1).c_str(),
-            "Input x has negative axes");
+                                              "Input x has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -126,7 +120,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
         std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
-            "The shapes of input dy and input x must be the same");
+                                               "The shapes of input dy and input x must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -136,7 +130,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape2 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
-            "Input rstd has negative axes");
+                                              "Input rstd has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -146,7 +140,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape3 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
-            "Input gamma has negative axes");
+                                              "Input gamma has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -169,8 +163,8 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsDtypeAndFormat()
         // check dtype
         auto dtype = inputDesc->GetDataType();
         if (dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), inputNames[i].c_str(),
-                ToString(dtype).c_str(), "FLOAT, FLOAT16 or BF16");
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), inputNames[i].c_str(), ToString(dtype).c_str(),
+                                      "FLOAT, FLOAT16 or BF16");
             return ge::GRAPH_FAILED;
         }
     }
@@ -198,15 +192,9 @@ ge::graphStatus RmsNormGradEmptyTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool RmsNormGradEmptyTiling::IsCapable()
-{
-    return true;
-}
+bool RmsNormGradEmptyTiling::IsCapable() { return true; }
 
-uint64_t RmsNormGradEmptyTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t RmsNormGradEmptyTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus RmsNormGradEmptyTiling::PostTiling()
 {
@@ -219,10 +207,7 @@ ge::graphStatus RmsNormGradEmptyTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradEmptyTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus RmsNormGradEmptyTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus RmsNormGradEmptyTiling::GetWorkspaceSize()
 {
@@ -275,30 +260,27 @@ ge::graphStatus RmsNormGradEmptyTiling::CalcTilingDataDgamma()
         lastCoreBlockCount_ = 0;
         lastCoreTailUbCols_ = colsLastCoreDG_;
     } else {
-        //UB最多存放多少列
-        //colsPerUBDG_ = ubSize_ / (BUFFER_NUM * FLOATBYTESIZE);
+        // UB最多存放多少列
+        // colsPerUBDG_ = ubSize_ / (BUFFER_NUM * FLOATBYTESIZE);
         int maxRowsNumDG_ = ubSize_ / (BUFFER_NUM * FLOATBYTESIZE);
         colsPerUBDG_ = std::pow(TWO, NearestLowerPowerOfTwo(maxRowsNumDG_));
-        OP_CHECK_IF(
-            maxRowsNumDG_ <= 0, OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %d.", maxRowsNumDG_),
-            return ge::GRAPH_FAILED);
-        coreUbBlockCount_ = (colsPerCoreDG_ + colsPerUBDG_ -1) / colsPerUBDG_ - 1;
+        OP_CHECK_IF(maxRowsNumDG_ <= 0,
+                    OP_LOGE(context_->GetNodeName(), "The maxRowsNumDG_ size is neg: %d.", maxRowsNumDG_),
+                    return ge::GRAPH_FAILED);
+        coreUbBlockCount_ = (colsPerCoreDG_ + colsPerUBDG_ - 1) / colsPerUBDG_ - 1;
         tailUbCols_ = colsPerCoreDG_ - colsPerUBDG_ * coreUbBlockCount_;
         if (colsPerUBDG_ > colsLastCoreDG_) {
             lastCoreBlockCount_ = 0;
             lastCoreTailUbCols_ = colsLastCoreDG_;
         } else {
-            lastCoreBlockCount_ = (colsLastCoreDG_ + colsPerUBDG_ -1) / colsPerUBDG_ - 1;
+            lastCoreBlockCount_ = (colsLastCoreDG_ + colsPerUBDG_ - 1) / colsPerUBDG_ - 1;
             lastCoreTailUbCols_ = colsLastCoreDG_ - colsPerUBDG_ * lastCoreBlockCount_;
         }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-void RmsNormGradEmptyTiling::LogTilingResult()
-{
-    OP_LOGI(OP_NAME, "rows: %ld, cols_: %ld", rows_, cols_);
-}
+void RmsNormGradEmptyTiling::LogTilingResult() { OP_LOGI(OP_NAME, "rows: %ld, cols_: %ld", rows_, cols_); }
 
 ge::graphStatus RmsNormGradEmptyTiling::DoOpTiling()
 {

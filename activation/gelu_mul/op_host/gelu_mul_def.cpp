@@ -18,34 +18,33 @@
 namespace ops {
 
 class GeluMul : public OpDef {
- public:
-  explicit GeluMul(const char* name) : OpDef(name) {
-    this->Input("input")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+public:
+    explicit GeluMul(const char* name) : OpDef(name)
+    {
+        this->Input("input")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    this->Attr("approximate")
-        .AttrType(OPTIONAL)
-        .String("none");
+        this->Attr("approximate").AttrType(OPTIONAL).String("none");
 
-    this->Output("output")
-        .ParamType(REQUIRED)
-        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-        .AutoContiguous();
+        this->Output("output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
 
-    this->AICore().AddConfig("ascend910b");
-    this->AICore().AddConfig("ascend910_93");
-    this->AICore().AddConfig("ascend950");
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend950");
 
-    OpAICoreConfig config_kirin = GetKirinCoreConfig();
-    this->AICore().AddConfig("kirinx90", config_kirin);
+        OpAICoreConfig config_kirin = GetKirinCoreConfig();
+        this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
-  }
+    }
 
 private:
     OpAICoreConfig GetKirinCoreConfig() const
@@ -74,4 +73,4 @@ private:
 };
 
 OP_ADD(GeluMul);
-}  // namespace ops
+} // namespace ops

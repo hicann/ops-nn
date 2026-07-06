@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file test_aclnn_quant_matmul_v5_perblock.cpp
-* \brief Test case for perblock quantization matmul
-*/
+ * \file test_aclnn_quant_matmul_v5_perblock.cpp
+ * \brief Test case for perblock quantization matmul
+ */
 
 #include <iostream>
 #include <memory>
@@ -62,9 +62,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -81,9 +80,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -120,7 +118,7 @@ int AclnnQuantMatmulV5PerblockTest(int32_t deviceId, aclrtStream& stream)
     // - N % 256 == 0
     constexpr int64_t M = 128;
     constexpr int64_t K = 4096;
-    constexpr int64_t N = 512;  // N must be multiple of 256 (baseN)
+    constexpr int64_t N = 512; // N must be multiple of 256 (baseN)
     constexpr int64_t groupSizeM = 1;
     constexpr int64_t groupSizeK = 128;
     constexpr int64_t groupSizeN = 128;
@@ -130,9 +128,10 @@ int AclnnQuantMatmulV5PerblockTest(int32_t deviceId, aclrtStream& stream)
     // x2: [N, K] (transposed, so shape is [N, K]), dtype = INT8
     std::vector<int64_t> x2Shape = {N, K};
     // x1Scale: [M, CeilDiv(K, groupSizeK)], dtype = FLOAT
-    std::vector<int64_t> x1ScaleShape = {M, (K + groupSizeK - 1) / groupSizeK};  // [128, 32]
+    std::vector<int64_t> x1ScaleShape = {M, (K + groupSizeK - 1) / groupSizeK}; // [128, 32]
     // x2Scale: [CeilDiv(N, groupSizeN), CeilDiv(K, groupSizeK)] (transposed), dtype = FLOAT
-    std::vector<int64_t> x2ScaleShape = {(N + groupSizeN - 1) / groupSizeN, (K + groupSizeK - 1) / groupSizeK};  // [4, 32]
+    std::vector<int64_t> x2ScaleShape = {(N + groupSizeN - 1) / groupSizeN,
+                                         (K + groupSizeK - 1) / groupSizeK}; // [4, 32]
     // bias: [N], dtype = FLOAT
     std::vector<int64_t> biasShape = {N};
     // output: [M, N], dtype = BF16
@@ -208,13 +207,13 @@ int AclnnQuantMatmulV5PerblockTest(int32_t deviceId, aclrtStream& stream)
     LOG_PRINT("Testing perblock quantization matmul:\n");
     LOG_PRINT("  M=%ld, K=%ld, N=%ld\n", M, K, N);
     LOG_PRINT("  x1Shape=[%ld, %ld], x2Shape=[%ld, %ld]\n", x1Shape[0], x1Shape[1], x2Shape[0], x2Shape[1]);
-    LOG_PRINT("  x1ScaleShape=[%ld, %ld], x2ScaleShape=[%ld, %ld]\n", x1ScaleShape[0], x1ScaleShape[1], x2ScaleShape[0], x2ScaleShape[1]);
+    LOG_PRINT("  x1ScaleShape=[%ld, %ld], x2ScaleShape=[%ld, %ld]\n", x1ScaleShape[0], x1ScaleShape[1], x2ScaleShape[0],
+              x2ScaleShape[1]);
     LOG_PRINT("  biasShape=[%ld], outShape=[%ld, %ld]\n", biasShape[0], outShape[0], outShape[1]);
     LOG_PRINT("  transposeX1=%d, transposeX2=%d, groupSize=0x%lx\n", transposeX1, transposeX2, groupSize);
 
-    ret = aclnnQuantMatmulV5GetWorkspaceSize(
-        x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, bias, transposeX1, transposeX2, groupSize, out,
-        &workspaceSize, &executor);
+    ret = aclnnQuantMatmulV5GetWorkspaceSize(x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, bias,
+                                             transposeX1, transposeX2, groupSize, out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV5GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -239,9 +238,8 @@ int AclnnQuantMatmulV5PerblockTest(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧
     auto size = GetShapeSize(outShape);
     std::vector<uint16_t> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     // Print first few results for verification
@@ -258,7 +256,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = AclnnQuantMatmulV5PerblockTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulV5PerblockTest failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulV5PerblockTest failed. ERROR: %d\n", ret);
+                   return ret);
     Finalize(deviceId, stream);
     return 0;
 }

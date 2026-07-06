@@ -27,15 +27,9 @@ using namespace ge;
 
 class SigmoidCrossEntropyWithLogitsV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SigmoidCrossEntropyWithLogitsV2TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SigmoidCrossEntropyWithLogitsV2TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SigmoidCrossEntropyWithLogitsV2TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SigmoidCrossEntropyWithLogitsV2TilingTest TearDown" << std::endl; }
 };
 
 TEST_F(SigmoidCrossEntropyWithLogitsV2TilingTest, test_tiling_fp16_001)
@@ -62,24 +56,23 @@ TEST_F(SigmoidCrossEntropyWithLogitsV2TilingTest, test_tiling_fp16_001)
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct SigmoidCrossEntropyWithLogitsV2CompileInfo {
-    };
+    struct SigmoidCrossEntropyWithLogitsV2CompileInfo {};
     SigmoidCrossEntropyWithLogitsV2CompileInfo compile_info;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(1024 * 1024);

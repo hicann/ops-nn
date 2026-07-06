@@ -32,7 +32,8 @@
 #include "mat_mul_optimized_fixpipe_algorithm.h"
 #endif
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #include "mat_mul_multi_core_splitk_kernel.h"
 #endif
 
@@ -66,290 +67,237 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 
 // ND_NZ_FP32场景支持走入多个模板
 
-#define MMV3_IMPL(templateFunc, cFormat, ...)                                                                                 \
-    do {                                                                                                             \
-        using cType = MatmulType<AscendC::TPosition::GM, cFormat, DTYPE_Y>;                                         \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                             \
-        if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 0) {                          \
-            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, false>;                            \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                            \
-            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user);                    \
-        } else if (tilingData.matmulRunInfo.transA == 1 && tilingData.matmulRunInfo.transB == 0) {                   \
-            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, true>;                             \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                            \
-            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user);                    \
-        } else if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 1) {                   \
-            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, false>;                            \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                             \
-            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user);                    \
-        } else {                                                                                                     \
-            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, true>;                             \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                             \
-            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user);                    \
-        }                                                                                                            \
-    } while(0)
+#define MMV3_IMPL(templateFunc, cFormat, ...)                                                                  \
+    do {                                                                                                       \
+        using cType = MatmulType<AscendC::TPosition::GM, cFormat, DTYPE_Y>;                                    \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                       \
+        if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 0) {                    \
+            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, false>;                      \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                      \
+            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user); \
+        } else if (tilingData.matmulRunInfo.transA == 1 && tilingData.matmulRunInfo.transB == 0) {             \
+            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, true>;                       \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                      \
+            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user); \
+        } else if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 1) {             \
+            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, false>;                      \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                       \
+            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user); \
+        } else {                                                                                               \
+            using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, true>;                       \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                       \
+            templateFunc<aType, bType, cType, biasType, __VA_ARGS__>(aGM, bGM, cGM, biasGM, tilingData, user); \
+        }                                                                                                      \
+    } while (0)
 
-#define MMV3_IMPL_CLASS(templateClass, aFormat, ...)                                                                 \
-    do {                                                                                                             \
-        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;                                         \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                             \
-        TPipe pipe;                                                                                                  \
-        if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 0) {                          \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;                              \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                            \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        } else if (tilingData.matmulRunInfo.transA == 1 && tilingData.matmulRunInfo.transB == 0) {                   \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;                               \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                            \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        } else if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 1) {                   \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;                              \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                             \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        } else {                                                                                                     \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;                               \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                             \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        }                                                                                                            \
+#define MMV3_IMPL_CLASS(templateClass, aFormat, ...)                                               \
+    do {                                                                                           \
+        using cType = MatmulType<AscendC::TPosition::GM, format_y, DTYPE_Y>;                       \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;           \
+        TPipe pipe;                                                                                \
+        if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 0) {        \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;            \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;          \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        } else if (tilingData.matmulRunInfo.transA == 1 && tilingData.matmulRunInfo.transB == 0) { \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;             \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;          \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        } else if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 1) { \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;            \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;           \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        } else {                                                                                   \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;             \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;           \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        }                                                                                          \
     } while (0)
 
 // cFormat is for tempCGlobal Nz out, not cTensor out
-#define MMV3_IMPL_C_CLASS(templateClass, aFormat, cFormat, ...)                                                      \
-    do {                                                                                                             \
-        using cType = MatmulType<AscendC::TPosition::GM, cFormat, DTYPE_Y>;                                          \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                             \
-        TPipe pipe;                                                                                                  \
-        if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 0) {                          \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;                              \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                            \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        } else if (tilingData.matmulRunInfo.transA == 1 && tilingData.matmulRunInfo.transB == 0) {                   \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;                               \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;                            \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        } else if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 1) {                   \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;                              \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                             \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        } else {                                                                                                     \
-            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;                               \
-            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;                             \
-            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                            \
-            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                     \
-            op.Process();                                                                                            \
-        }                                                                                                            \
+#define MMV3_IMPL_C_CLASS(templateClass, aFormat, cFormat, ...)                                    \
+    do {                                                                                           \
+        using cType = MatmulType<AscendC::TPosition::GM, cFormat, DTYPE_Y>;                        \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;           \
+        TPipe pipe;                                                                                \
+        if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 0) {        \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;            \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;          \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        } else if (tilingData.matmulRunInfo.transA == 1 && tilingData.matmulRunInfo.transB == 0) { \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;             \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, false>;          \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        } else if (tilingData.matmulRunInfo.transA == 0 && tilingData.matmulRunInfo.transB == 1) { \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, false>;            \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;           \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        } else {                                                                                   \
+            using aType = MatmulType<AscendC::TPosition::GM, aFormat, DTYPE_X1, true>;             \
+            using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, true>;           \
+            templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                          \
+            op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                   \
+            op.Process();                                                                          \
+        }                                                                                          \
     } while (0)
 
-#define MMV3_IMPL_CLASS_TRANS(tilingData, tilingGM, transA, transB, templateClass, ...)                              \
-    do {                                                                                                             \
-        uint64_t tilingdata_offset = (sizeof(MatMulV3TilingData) > TILINGDATA_OFFSET) ? 0 :                          \
-            MMV3DivFloor(GetCurrentBlockIdx(), MMV3DivCeil(GetBlockNum(), TILINGDATA_SPLIT_NUM)) * TILINGDATA_OFFSET;\
-        GET_TILING_DATA_WITH_STRUCT(MatMulV3TilingData, tilingData, tilingGM + tilingdata_offset);                   \
-        using cType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_Y>;                                   \
-        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                             \
-        TPipe pipe;                                                                                                  \
-        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;                               \
-        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;                               \
-        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                                \
-        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                                         \
-        op.Process();                                                                                                \
+#define MMV3_IMPL_CLASS_TRANS(tilingData, tilingGM, transA, transB, templateClass, ...)                   \
+    do {                                                                                                  \
+        uint64_t tilingdata_offset = (sizeof(MatMulV3TilingData) > TILINGDATA_OFFSET) ?                   \
+                                         0 :                                                              \
+                                         MMV3DivFloor(GetCurrentBlockIdx(),                               \
+                                                      MMV3DivCeil(GetBlockNum(), TILINGDATA_SPLIT_NUM)) * \
+                                             TILINGDATA_OFFSET;                                           \
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3TilingData, tilingData, tilingGM + tilingdata_offset);        \
+        using cType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_Y>;                        \
+        using biasType = MatmulType<AscendC::TPosition::GM, CubeFormat::ND, DTYPE_BIAS>;                  \
+        TPipe pipe;                                                                                       \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, DTYPE_X1, transA>;                    \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, DTYPE_X2, transB>;                    \
+        templateClass<aType, bType, cType, biasType, __VA_ARGS__> op;                                     \
+        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, user, &tilingData, &pipe);                              \
+        op.Process();                                                                                     \
     } while (0)
 
 template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT, int FP32ADDMM>
-__global__ __aicore__ void mat_mul_v3(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
+__global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM,
+                                      GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     REGISTER_TILING_DEFAULT(MatmulTilingData);
-    __gm__ uint8_t *user = GetUserWorkspace(workspaceGM);
+    __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
     GET_TILING_DATA(tilingData, tilingGM);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ < 220
     // 第一个模板使用mix类型的，使得整个算子的coreType在dyn场景都为mix，静态则根据选择的tilingkey决定coreType
     if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseUnAlignedKernel, format_x1, MatmulBaseBlock, MM_CFG_VEC_ND2NZ
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_VEC_ND2NZ
-        );
+                  FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
+        MMV3_IMPL_CLASS(MatmulBaseUnAlignedKernel, format_x1, MatmulBaseBlock, MM_CFG_VEC_ND2NZ);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
+        MMV3_IMPL_CLASS(MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_VEC_ND2NZ);
     }
 #elif defined(FORMAT_X1) && FORMAT_X1 == FORMAT_FRACTAL_NZ && defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
-    if constexpr ( 
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K && 
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE && 
-        SPECIALOPT == MAT_MUL_V3_K_SHIFT) { 
-        MMV3_IMPL_CLASS( 
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_K_SHIFT 
-        );
-    } else if constexpr ( 
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K && 
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) { 
-        MMV3_IMPL_CLASS( 
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD 
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_C_CLASS( 
-            MatmulBaseVectorNz2NdKernel, format_x1, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
+    if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                  FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE &&
+                  SPECIALOPT == MAT_MUL_V3_K_SHIFT) {
+        MMV3_IMPL_CLASS(MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_K_SHIFT);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
+        MMV3_IMPL_CLASS(MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
+        MMV3_IMPL_C_CLASS(MatmulBaseVectorNz2NdKernel, format_x1, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
     }
 #else
-    if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE &&
-        SPECIALOPT == MAT_MUL_V3_K_SHIFT) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_K_SHIFT
-        );
+    if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                  FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE &&
+                  SPECIALOPT == MAT_MUL_V3_K_SHIFT) {
+        MMV3_IMPL_CLASS(MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_K_SHIFT);
     } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseUnAlignedKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatMulSingleCoreSplitKKernel, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_MK
-        );
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
+        MMV3_IMPL_CLASS(MatmulBaseUnAlignedKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
+        MMV3_IMPL_CLASS(MatMulSingleCoreSplitKKernel, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_MK);
     } else if constexpr (
 #if ORIG_DTYPE_BIAS == ORIG_DTYPE_X1
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_NKM_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatMulSingleCoreSplitKKernel, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_NK, true
-        );
+        MMV3_IMPL_CLASS(MatMulSingleCoreSplitKKernel, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_NK,
+                        true);
     } else if constexpr (
 #endif
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatMulUnAlignedSingleCoreSplitKKernel, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_MK
-        );
+        MMV3_IMPL_CLASS(MatMulUnAlignedSingleCoreSplitKKernel, format_x1, MatmulSingleCoreSplitKBaseBlock,
+                        MM_CFG_PRELOAD_MK);
     } else if constexpr (
 #if (ORIG_DTYPE_X1 == DT_FLOAT16 || ORIG_DTYPE_X1 == DT_BF16) && ORIG_DTYPE_BIAS == ORIG_DTYPE_X1
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K_GM_TO_L1 &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatMulUnAlignedSingleCoreSplitKKernelGmToL1, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_MK
-        );
+        MMV3_IMPL_CLASS(MatMulUnAlignedSingleCoreSplitKKernelGmToL1, format_x1, MatmulSingleCoreSplitKBaseBlock,
+                        MM_CFG_PRELOAD_MK);
     } else if constexpr (
 #if defined(FORMAT_X2) && FORMAT_X2 != FORMAT_FRACTAL_NZ
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K_GM_TO_L1 &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatMulSingleCoreSplitKKernelGmToL1, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_MK
-        );
+        MMV3_IMPL_CLASS(MatMulSingleCoreSplitKKernelGmToL1, format_x1, MatmulSingleCoreSplitKBaseBlock,
+                        MM_CFG_PRELOAD_MK);
     } else if constexpr (
 #endif
 #endif
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL(
-            MatMulKernelDeterministicSplitK, format_x1, FIXPIPE_OPT_SELECT::BASE
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL(
-            MatMulUnAlignedKernelDeterministicSplitK, format_x1, FIXPIPE_OPT_SELECT::BASE
-        );
+        MMV3_IMPL(MatMulKernelDeterministicSplitK, format_x1, FIXPIPE_OPT_SELECT::BASE);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
+        MMV3_IMPL(MatMulUnAlignedKernelDeterministicSplitK, format_x1, FIXPIPE_OPT_SELECT::BASE);
     } else if constexpr (
 #if ORIG_DTYPE_X1 == DT_FLOAT
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_MULTI_CORE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL(
-            MatMulMultiCoreSplitK, format_x1, FIXPIPE_OPT_SELECT::BASE
-        );
+        MMV3_IMPL(MatMulMultiCoreSplitK, format_x1, FIXPIPE_OPT_SELECT::BASE);
     } else if constexpr (
 #endif
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
+        MMV3_IMPL_CLASS(MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
     } else if constexpr (
 #if ORIG_DTYPE_X1 == DT_FLOAT
         LOADMODE == MAT_MUL_V3_AL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernelAL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_MDL
-        );
+        MMV3_IMPL_CLASS(MatmulBaseKernelAL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_MDL);
     } else if constexpr (
 #endif
 #if ORIG_DTYPE_BIAS == ORIG_DTYPE_X1
         LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseKernelBL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
+        MMV3_IMPL_CLASS(MatmulBaseKernelBL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
     } else if constexpr (
 #endif
         LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_BASE_ENABLE_ALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseUnalignedNKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseUnAlignedKernelBL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE_PARALLEL) {
-        MMV3_IMPL_CLASS(
-            MatmulCvpBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_BASE_ENABLE_ALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL_CLASS(
-            MatmulBaseAToNZWithBL1FixpipeKernel, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>
-        );
+        MMV3_IMPL_CLASS(MatmulBaseUnalignedNKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
+                        MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2> >);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
+        MMV3_IMPL_CLASS(MatmulBaseUnAlignedKernelBL1FullLoad, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
+                        MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2> >);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE_PARALLEL) {
+        MMV3_IMPL_CLASS(MatmulCvpBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_BASE_ENABLE_ALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
+        MMV3_IMPL_CLASS(MatmulBaseAToNZWithBL1FixpipeKernel, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
+                        MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2> >);
     } else if constexpr (
 #if ORIG_DTYPE_X1 == DT_FLOAT
         LOADMODE == MAT_MUL_V3_BL1_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL_C_CLASS(
-            MatmulBaseUnalignedNKernel, format_x1, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
-            MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2>>, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT
-        );
+        MMV3_IMPL_C_CLASS(MatmulBaseUnalignedNKernel, format_x1, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD,
+                          MatmulCallBackFunc<nullptr, nullptr, CopyBL1<format_x2> >,
+                          FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT);
     } else if constexpr (
 #endif
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&
         FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
-        MMV3_IMPL(
-            MatMulKernelDeterministicSplitK, CubeFormat::NZ, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT
-        );
-    } else if constexpr (
-        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&
-        FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
-        MMV3_IMPL(
-            MatMulUnAlignedKernelDeterministicSplitK, CubeFormat::NZ, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT
-        );
+        MMV3_IMPL(MatMulKernelDeterministicSplitK, CubeFormat::NZ, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT);
+    } else if constexpr (LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_DETERMINISTIC_SPLIT_K &&
+                         FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_TRUE) {
+        MMV3_IMPL(MatMulUnAlignedKernelDeterministicSplitK, CubeFormat::NZ, FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT);
     }
 #endif
 }

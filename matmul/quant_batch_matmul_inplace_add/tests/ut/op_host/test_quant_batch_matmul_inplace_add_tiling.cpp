@@ -73,8 +73,7 @@ struct QuantBatchMatmulInplaceAddTilingTestParam {
 
 bool IsMxFp8Param(const QuantBatchMatmulInplaceAddTilingTestParam& param)
 {
-    return param.groupSize > 0 &&
-           (param.x1Dtype == ge::DT_FLOAT8_E4M3FN || param.x1Dtype == ge::DT_FLOAT8_E5M2) &&
+    return param.groupSize > 0 && (param.x1Dtype == ge::DT_FLOAT8_E4M3FN || param.x1Dtype == ge::DT_FLOAT8_E5M2) &&
            (param.x2Dtype == ge::DT_FLOAT8_E4M3FN || param.x2Dtype == ge::DT_FLOAT8_E5M2);
 }
 
@@ -93,7 +92,8 @@ static QuantBatchMatmulInplaceAddTilingCsvLoadResult LoadParams()
     QuantBatchMatmulInplaceAddTilingCsvLoadResult result;
     string rootPath(ut_str::GetExeDirPath() + "../../../../");
     string casePath(
-        rootPath + "matmul/quant_batch_matmul_inplace_add/tests/ut/op_host/test_quant_batch_matmul_inplace_add_tiling.csv");
+        rootPath +
+        "matmul/quant_batch_matmul_inplace_add/tests/ut/op_host/test_quant_batch_matmul_inplace_add_tiling.csv");
     ifstream csvData(casePath, ios::in);
     if (!csvData.is_open()) {
         result.errors.push_back("cannot open case file: " + casePath);
@@ -157,21 +157,18 @@ static QuantBatchMatmulInplaceAddTilingCsvLoadResult LoadParams()
     return result;
 }
 
-static const QuantBatchMatmulInplaceAddTilingCsvLoadResult &GetParamsLoadResult()
+static const QuantBatchMatmulInplaceAddTilingCsvLoadResult& GetParamsLoadResult()
 {
     static const QuantBatchMatmulInplaceAddTilingCsvLoadResult result = LoadParams();
     return result;
 }
 
-static vector<QuantBatchMatmulInplaceAddTilingTestParam> GetParams()
-{
-    return GetParamsLoadResult().params;
-}
+static vector<QuantBatchMatmulInplaceAddTilingTestParam> GetParams() { return GetParamsLoadResult().params; }
 
-static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddTilingTestParam> &info)
+static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddTilingTestParam>& info)
 {
     string name = info.param.caseName;
-    for (char &ch : name) {
+    for (char& ch : name) {
         if (!std::isalnum(static_cast<unsigned char>(ch))) {
             ch = '_';
         }
@@ -180,28 +177,22 @@ static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInpl
 }
 
 class QuantBatchMatmulInplaceAddTiling : public testing::TestWithParam<QuantBatchMatmulInplaceAddTilingTestParam> {
- protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantBatchMatmulInplaceAddTiling SetUp" << std::endl;
-    }
+protected:
+    static void SetUpTestCase() { std::cout << "QuantBatchMatmulInplaceAddTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantBatchMatmulInplaceAddTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantBatchMatmulInplaceAddTiling TearDown" << std::endl; }
 };
 
 TEST(QuantBatchMatmulInplaceAddTilingCsv, ShouldLoadValidCases)
 {
-    const auto &loadResult = GetParamsLoadResult();
-    for (const auto &error : loadResult.errors) {
+    const auto& loadResult = GetParamsLoadResult();
+    for (const auto& error : loadResult.errors) {
         ADD_FAILURE() << error;
     }
     EXPECT_FALSE(loadResult.params.empty());
 }
 
-static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &param)
+static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& param)
 {
     std::cout << "run case " << param.caseName << std::endl;
     const int64_t k0 = 64;
@@ -262,8 +253,8 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     }
     yInputShape.MutableOriginShape() = gert::Shape({param.m, param.n});
     yInputShape.MutableStorageShape() = gert::Shape({param.m, param.n});
-    if (param.x1Dtype == ge::DT_HIFLOAT8 && param.x2Dtype == ge::DT_HIFLOAT8 &&
-        param.x1ScaleDtype == ge::DT_FLOAT && param.x2ScaleDtype == ge::DT_FLOAT) {
+    if (param.x1Dtype == ge::DT_HIFLOAT8 && param.x2Dtype == ge::DT_HIFLOAT8 && param.x1ScaleDtype == ge::DT_FLOAT &&
+        param.x2ScaleDtype == ge::DT_FLOAT) {
         x1ScaleShape.MutableOriginShape() = gert::Shape({1});
         x1ScaleShape.MutableStorageShape() = gert::Shape({1});
         x2ScaleShape.MutableOriginShape() = gert::Shape({1});
@@ -299,13 +290,13 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(5, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&x1Shape, &x2Shape, param.hasX2Scale ? &x2ScaleShape : nullptr,
-                                    &yInputShape, param.hasX1Scale ? &x1ScaleShape : nullptr})
+                      .InputShapes({&x1Shape, &x2Shape, param.hasX2Scale ? &x2ScaleShape : nullptr, &yInputShape,
+                                    param.hasX1Scale ? &x1ScaleShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -323,7 +314,7 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
                       .SetOpType(opType)
                       .Build();
 
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -355,20 +346,15 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
         ASSERT_EQ(tilingContext->GetTilingKey(), param.expectTilingKey);
         ASSERT_EQ(tilingContext->GetBlockDim(), param.expectBlockDim);
         size_t expectTilingDataSize = IsMxFp8Param(param) ?
-            sizeof(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData) :
-            sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
+                                          sizeof(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData) :
+                                          sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
         ASSERT_EQ(tilingContext->GetRawTilingData()->GetDataSize(), expectTilingDataSize);
     }
 }
 
-TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest)
-{
-    TestOneParamCase(GetParam());
-}
+TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest) { TestOneParamCase(GetParam()); }
 
-INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAdd950,
-                         QuantBatchMatmulInplaceAddTiling,
-                         testing::ValuesIn(GetParams()),
-                         SanitizeCaseName);
+INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAdd950, QuantBatchMatmulInplaceAddTiling,
+                         testing::ValuesIn(GetParams()), SanitizeCaseName);
 
 } // namespace

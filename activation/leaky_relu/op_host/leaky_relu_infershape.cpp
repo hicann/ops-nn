@@ -16,8 +16,7 @@
 #include "infershape_elewise_util.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 
 IMPL_OP_INFERSHAPE(LeakyRelu).InferShape(Ops::Base::InferShape4Elewise);
 

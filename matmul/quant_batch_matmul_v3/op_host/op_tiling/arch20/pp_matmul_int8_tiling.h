@@ -22,7 +22,7 @@ namespace optiling {
 
 class PpMatmulInt8Tiling : public QuantBatchMatmulV3TilingBase {
 public:
-    explicit PpMatmulInt8Tiling(gert::TilingContext *context);
+    explicit PpMatmulInt8Tiling(gert::TilingContext* context);
     ~PpMatmulInt8Tiling() override = default;
 
     bool IsCapable() override;
@@ -47,7 +47,7 @@ private:
 protected:
     pp_matmul::PpMatmulDefaultTilingData ppMatmulDefaultTilingData_{};
     PpMatmulTilingData tilingDataSelf_{};
-    PpMatmulTilingData &tilingData_;
+    PpMatmulTilingData& tilingData_;
 };
-}  // namespace optiling
-#endif  // PP_MATMUL_INT8_TILING_H
+} // namespace optiling
+#endif // PP_MATMUL_INT8_TILING_H

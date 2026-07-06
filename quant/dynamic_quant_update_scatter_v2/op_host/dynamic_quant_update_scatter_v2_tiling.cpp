@@ -62,7 +62,8 @@ private:
     ge::graphStatus CheckOpInputShape(gert::TilingContext* context) const;
     ge::graphStatus CheckAttrs(gert::TilingContext* context);
     ge::graphStatus CheckOpShape(gert::TilingContext* context);
-    ge::graphStatus CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape2Dim) const;
+    ge::graphStatus CheckOpDim(const gert::StorageShape* shape1, const gert::StorageShape* shape2,
+                               uint32_t shape2Dim) const;
     ge::graphStatus CheckOpParams(gert::TilingContext* context);
     ge::graphStatus SetTilingData(gert::TilingContext* context, ge::DataType xDtype);
     void CalculateMaxUbSizePerRow(ge::DataType xDtype);
@@ -99,7 +100,8 @@ uint32_t DynamicQuantUpdateScatterV2Tiling::AlignUp(uint32_t base, uint32_t a) c
     return static_cast<uint32_t>(a + base - static_cast<uint32_t>(1)) / base * base;
 }
 
-void DynamicQuantUpdateScatterV2Tiling::SetTilingKey(gert::TilingContext* context, ge::DataType dataType, bool useDb) const
+void DynamicQuantUpdateScatterV2Tiling::SetTilingKey(gert::TilingContext* context, ge::DataType dataType,
+                                                     bool useDb) const
 {
     if (useDb) {
         if (dataType == ge::DT_BF16) {
@@ -117,8 +119,9 @@ void DynamicQuantUpdateScatterV2Tiling::SetTilingKey(gert::TilingContext* contex
     context->SetTilingKey(TILING_KEY_HALF);
 }
 
-ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpDim(
-    const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape2Dim) const
+ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpDim(const gert::StorageShape* shape1,
+                                                              const gert::StorageShape* shape2,
+                                                              uint32_t shape2Dim) const
 {
     for (uint32_t i = 0; i < shape2Dim; i++) {
         if (shape1->GetStorageShape().GetDim(i) != shape2->GetStorageShape().GetDim(i)) {
@@ -160,25 +163,22 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpInputShape(gert::Tilin
     auto scaleShape = context->GetInputShape(VAR_SCALE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape);
     size_t scaleDimNum = scaleShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        (CheckOpDim(varShape, scaleShape, scaleDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "scale shape is wrong, must be same as var first 2 dim."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpDim(varShape, scaleShape, scaleDimNum) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "scale shape is wrong, must be same as var first 2 dim."), return ge::GRAPH_FAILED);
 
     auto offsetShape = context->GetInputShape(VAR_OFFSET_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, offsetShape);
     size_t offsetDimNum = offsetShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        (CheckOpDim(varShape, offsetShape, offsetDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "offset shape is wrong, must be same as var first 2 dim."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpDim(varShape, offsetShape, offsetDimNum) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "offset shape is wrong, must be same as var first 2 dim."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpShape(gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        (CheckOpInputShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input shape check failed!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input shape check failed!"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -235,17 +235,14 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckInputDtype(gert::TilingC
 
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpParams(gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        (CheckInputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "x or indices dtype is invalid"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckInputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "x or indices dtype is invalid"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOutputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "op output dtype is invalid"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOutputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "op output dtype is invalid"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        (CheckOpShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input or output shape is invalid"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input or output shape is invalid"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -300,7 +297,7 @@ void DynamicQuantUpdateScatterV2Tiling::CalculateMaxUbSizePerRow(ge::DataType xD
 
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::GetCompileInfo(gert::TilingContext* context)
 {
-    auto compileInfo =context->GetCompileInfo<DynamicQuantUpdateScatterV2CompileInfo>();
+    auto compileInfo = context->GetCompileInfo<DynamicQuantUpdateScatterV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     vectorCoreNum = compileInfo->vectorCoreNum;
     ubSize = compileInfo->ubSize;
@@ -314,12 +311,10 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::GetCompileInfo(gert::TilingCo
 
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::RunFusionKernelTiling(gert::TilingContext* context)
 {
-    OP_CHECK_IF(
-        (GetCompileInfo(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (CheckOpParams(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((GetCompileInfo(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CheckOpParams(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."), return ge::GRAPH_FAILED);
 
     // 合并B*S
     const gert::StorageShape* xShape = context->GetInputShape(X_INDEX);
@@ -382,12 +377,10 @@ static ge::graphStatus TilingPrepareForDynamicQuantUpdateScatterV2(gert::TilingP
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-        OP_LOGE(
-            context, "DynamicQuantUpdateScatterV2 GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
-            compileInfo->vectorCoreNum, compileInfo->ubSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
+                OP_LOGE(context, "DynamicQuantUpdateScatterV2 GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
+                        compileInfo->vectorCoreNum, compileInfo->ubSize),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 
     return ge::GRAPH_SUCCESS;

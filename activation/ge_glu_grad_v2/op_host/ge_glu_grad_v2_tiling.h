@@ -42,8 +42,7 @@ struct GeGluGradV2CompileInfo {
     bool isRegbase{false};
 };
 
-enum class GeGluGradV2TilingKey : uint64_t
-{
+enum class GeGluGradV2TilingKey : uint64_t {
     TILING_KEY_TANH_101 = 101,
     TILING_KEY_TANH_102,
     TILING_KEY_TANH_103,

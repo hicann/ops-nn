@@ -21,18 +21,11 @@
 
 using namespace std;
 
-class AdaLayerNormTiling : public testing::Test
-{
+class AdaLayerNormTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaLayerNormTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaLayerNormTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaLayerNormTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaLayerNormTiling TearDown" << std::endl; }
 };
 
 TEST_F(AdaLayerNormTiling, AdaLayerNormTiling_001)

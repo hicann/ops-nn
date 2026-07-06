@@ -31,18 +31,15 @@ static ge::graphStatus Tiling4AscendQuant(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "AscendQuantTiling running.");
     auto compile_info = reinterpret_cast<const AscendQuantCompileInfo*>(context->GetCompileInfo());
-    OP_CHECK_IF(
-        compile_info == nullptr, OP_LOGE(context->GetNodeName(), "compile_info is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compile_info == nullptr, OP_LOGE(context->GetNodeName(), "compile_info is null."),
+                return ge::GRAPH_FAILED);
 
     ascendquantregbase::AscendQuantRegbase tiling(context);
     ge::graphStatus status = tiling.DoAscendQuantTiling();
     return status;
 }
 
-static ge::graphStatus TilingPrepare4AscendQuant(gert::TilingParseContext* context)
-{
-    return GRAPH_SUCCESS;
-}
+static ge::graphStatus TilingPrepare4AscendQuant(gert::TilingParseContext* context) { return GRAPH_SUCCESS; }
 
 IMPL_OP_OPTILING(AscendQuant).Tiling(Tiling4AscendQuant).TilingParse<AscendQuantCompileInfo>(TilingPrepare4AscendQuant);
 } // namespace optiling

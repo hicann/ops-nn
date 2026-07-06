@@ -25,5 +25,5 @@ namespace ConvolutionBackprop {
 #define REGISTER_DW_IMPL(name, context, impl, intf)             \
     template <class X_T, class W_TYPE, class DEDY_T, class Y_T> \
     using name = intf<context<X_T, W_TYPE, DEDY_T, Y_T>, impl>
-}  // namespace ConvolutionBackprop
+} // namespace ConvolutionBackprop
 #endif

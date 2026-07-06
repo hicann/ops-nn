@@ -80,8 +80,8 @@ __aicore__ inline void DuplicateNegInf(LocalTensor<T>& localTensor, int32_t data
 }
 
 template <typename T>
-__aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal,  LocalTensor<float> sumLocal,
-        float val, int64_t rowNum, int64_t colNum, int64_t colNumAlign)
+__aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal, LocalTensor<float> sumLocal, float val,
+                                            int64_t rowNum, int64_t colNum, int64_t colNumAlign)
 {
     __local_mem__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
     __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
@@ -90,7 +90,7 @@ __aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal,  LocalTe
     uint16_t loopCnt = (uint16_t)((colNum + vfLen - 1) / vfLen);
     uint32_t counter = colNum;
     uint16_t numRows = static_cast<uint16_t>(rowNum);
-    
+
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::MaskReg maskRegUpdate;
@@ -104,8 +104,8 @@ __aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal,  LocalTe
                 uint32_t weightOffset = colOffset + j * colNumAlign;
                 ops::LoadOneTensorForDtypeT<T>(weightLocalAddr, weightCastReg, maskRegUpdate, weightOffset);
                 AscendC::MicroAPI::Muls(weightCastReg, weightCastReg, val, maskRegUpdate);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    sumCastReg, sumCastReg, weightCastReg, maskRegUpdate);
+                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(sumCastReg, sumCastReg,
+                                                                                         weightCastReg, maskRegUpdate);
             }
             ops::StoreOneTensorForDtypeT<float>(sumLocalAddr, sumCastReg, maskRegUpdate, colOffset);
         }
@@ -113,8 +113,8 @@ __aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal,  LocalTe
 }
 
 template <typename T>
-__aicore__ inline void ComputeSum(LocalTensor<T> weightLocal,  LocalTensor<float> sumLocal,
-            int64_t rowNum, int64_t colNum, int64_t colNumAlign)
+__aicore__ inline void ComputeSum(LocalTensor<T> weightLocal, LocalTensor<float> sumLocal, int64_t rowNum,
+                                  int64_t colNum, int64_t colNumAlign)
 {
     __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
     __local_mem__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
@@ -136,8 +136,8 @@ __aicore__ inline void ComputeSum(LocalTensor<T> weightLocal,  LocalTensor<float
             for (uint16_t j = 0; j < numRows; ++j) {
                 uint32_t weightOffset = colOffset + j * colNumAlign;
                 ops::LoadOneTensorForDtypeT<T>(weightLocalAddr, weightCastReg, maskRegUpdate, weightOffset);
-                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
-                    sumCastReg, sumCastReg, weightCastReg, maskRegUpdate);
+                AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(sumCastReg, sumCastReg,
+                                                                                         weightCastReg, maskRegUpdate);
             }
             ops::StoreOneTensorForDtypeT<float>(sumLocalAddr, sumCastReg, maskRegUpdate, colOffset);
         }
@@ -169,7 +169,6 @@ __aicore__ inline void DivForMean(LocalTensor<T> sumLocal, int64_t count, int64_
         }
     }
 }
-
 
 template <typename T, typename U, typename E, typename I>
 class EmbeddingBagRegBaseIndx1dBase {
@@ -279,8 +278,8 @@ public:
         this->inQueueperSampleWeights_.template EnQue(perSampleWeightsLocal_);
     }
 
-    __aicore__ inline void CopyIndicesNoPerSampleFromGm(
-        int64_t indiceOffsen, int64_t indicesFactorNumber, LocalTensor<U> indicesLocal_)
+    __aicore__ inline void CopyIndicesNoPerSampleFromGm(int64_t indiceOffsen, int64_t indicesFactorNumber,
+                                                        LocalTensor<U> indicesLocal_)
     {
         DataCopyExtParams copyExtParamsGrad;
         copyExtParamsGrad.blockCount = 1;
@@ -302,8 +301,8 @@ public:
         DataCopyPad(weightLocal_, weightGm_[weightOffset], copyExtParamsGrad, padParamsGrad);
     }
 
-    __aicore__ inline void CopyWeightNoPerSampleFromGm(
-        int64_t weightOffset, int64_t colNormalNum, LocalTensor<T> weightLocal_)
+    __aicore__ inline void CopyWeightNoPerSampleFromGm(int64_t weightOffset, int64_t colNormalNum,
+                                                       LocalTensor<T> weightLocal_)
     {
         DataCopyExtParams copyExtParamsGrad;
         copyExtParamsGrad.blockCount = 1;
@@ -314,8 +313,8 @@ public:
         DataCopyPad(weightLocal_, weightGm_[weightOffset], copyExtParamsGrad, padParamsGrad);
     }
 
-    __aicore__ inline void CopyOffset2bagToGm(
-        int64_t offset2bagOffset, int64_t outOffset2bagNumber, int64_t curOffsetStart)
+    __aicore__ inline void CopyOffset2bagToGm(int64_t offset2bagOffset, int64_t outOffset2bagNumber,
+                                              int64_t curOffsetStart)
     {
         LocalTensor<I> offset2bagLocal_ = outQueueOffset2bag_.Get<I>();
         Duplicate(offset2bagLocal_, static_cast<I>(curOffsetStart), static_cast<int32_t>(outOffset2bagNumber));
@@ -352,7 +351,7 @@ public:
                 if constexpr (sizeof(I) / sizeof(E) == DIGIT_2) {
                     AscendC::MicroAPI::MaskPack(maskERegUpdate, maskIRegUpdate);
                 } else {
-                     maskERegUpdate = AscendC::MicroAPI::UpdateMask<E>(counter);
+                    maskERegUpdate = AscendC::MicroAPI::UpdateMask<E>(counter);
                 }
                 auto offsetsLocalAddrUpdate = offsetsLocalAddr + i * vfISizeNum_;
                 auto bagSizeLocalAddrUpdate = bagSizeLocalAddr + i * vfISizeNum_;
@@ -363,21 +362,20 @@ public:
                     offsetsShiftOneReg, offsetsShiftOneReg, offsetsReg, maskERegUpdate);
 
                 if constexpr (sizeof(I) / sizeof(E) == DIGIT_2) {
-                    AscendC::MicroAPI::UnPack(
-                        (AscendC::MicroAPI::RegTensor<I>&)offsetsShiftOneReg,
-                        (AscendC::MicroAPI::RegTensor<E>&)offsetsShiftOneReg);
+                    AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<I>&)offsetsShiftOneReg,
+                                              (AscendC::MicroAPI::RegTensor<E>&)offsetsShiftOneReg);
                     AscendC::MicroAPI::Cast<I, E, castTraitInt32Int64>(bagSizeReg, offsetsShiftOneReg, maskIRegUpdate);
                     AscendC::MicroAPI::DataCopy(bagSizeLocalAddrUpdate, bagSizeReg, maskIRegUpdate);
                 } else {
-                    AscendC::MicroAPI::DataCopy(bagSizeLocalAddrUpdate,  offsetsShiftOneReg, maskERegUpdate);
+                    AscendC::MicroAPI::DataCopy(bagSizeLocalAddrUpdate, offsetsShiftOneReg, maskERegUpdate);
                 }
             }
         }
         outQueueBagSize_.EnQue(bagSizeLocal);
     }
-    
-    __aicore__ inline void ComputeAdd(
-        int64_t number, uint16_t indicesNumber, LocalTensor<float> outYLocal, LocalTensor<T> weightLocal)
+
+    __aicore__ inline void ComputeAdd(int64_t number, uint16_t indicesNumber, LocalTensor<float> outYLocal,
+                                      LocalTensor<T> weightLocal)
     {
         int32_t eventIDMTE2ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
@@ -403,7 +401,7 @@ public:
             for (uint16_t i = 0; i < loopCnt; ++i) {
                 maskRegUpdate = AscendC::MicroAPI::UpdateMask<float>(counter);
                 uint32_t colOffset = i * floatSizeNum_;
-                
+
                 ops::LoadOneTensorForDtypeT<float>(outYLocalAddr, outYCastReg, maskRegUpdate, colOffset);
                 for (uint16_t j = 0; j < indicesNumber; ++j) {
                     uint32_t weightOffset = i * floatSizeNum_ + j * weightDimFactor_; // weight
@@ -416,9 +414,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeAddPerSample(
-        int64_t number, uint16_t indicesNumber, LocalTensor<float> outYLocal, LocalTensor<T> weightLocal,
-        LocalTensor<float> perSampleLocal)
+    __aicore__ inline void ComputeAddPerSample(int64_t number, uint16_t indicesNumber, LocalTensor<float> outYLocal,
+                                               LocalTensor<T> weightLocal, LocalTensor<float> perSampleLocal)
     {
         int32_t eventIDMTE2ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
@@ -462,9 +459,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeMax(
-        int64_t number, uint16_t indicesNumber, LocalTensor<T>& outYLocal, LocalTensor<T>& weightLocal,
-        LocalTensor<I>& maxIndicesLocal)
+    __aicore__ inline void ComputeMax(int64_t number, uint16_t indicesNumber, LocalTensor<T>& outYLocal,
+                                      LocalTensor<T>& weightLocal, LocalTensor<I>& maxIndicesLocal)
     {
         int32_t eventIDSToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventIDSToV);
@@ -521,19 +517,22 @@ public:
                     AscendC::MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, weightReg, outYReg, tMaskRegUpdate);
 
                     if constexpr (sizeof(I) / sizeof(T) == DIGIT_1) {
-                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1), iMaskRegUpdate);
+                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                                         iMaskRegUpdate);
                         AscendC::MicroAPI::MaskOr(cmpMask, initMask, cmpMask, iMaskRegUpdate);
                         AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMask);
                     } else if constexpr (sizeof(I) / sizeof(T) == DIGIT_2) {
                         AscendC::MicroAPI::MaskUnPack(cmpMaskT2, cmpMask);
-                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1), iMaskRegUpdate);
+                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                                         iMaskRegUpdate);
                         AscendC::MicroAPI::MaskOr(cmpMaskT2, initMask, cmpMaskT2, iMaskRegUpdate);
                         AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT2);
                         AscendC::MicroAPI::MaskPack(cmpMask, cmpMaskT2);
                     } else if (sizeof(I) / sizeof(T) == DIGIT_4) {
                         AscendC::MicroAPI::MaskUnPack(cmpMaskT2, cmpMask);
                         AscendC::MicroAPI::MaskUnPack(cmpMaskT4, cmpMaskT2);
-                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1), iMaskRegUpdate);
+                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                                         iMaskRegUpdate);
                         AscendC::MicroAPI::MaskOr(cmpMaskT4, initMask, cmpMaskT4, iMaskRegUpdate);
                         AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT4);
                         AscendC::MicroAPI::MaskPack(cmpMaskT2, cmpMaskT4);
@@ -550,9 +549,9 @@ public:
         WaitFlag<HardEvent::V_S>(eventIDVToS);
     }
 
-    __aicore__ inline void ComputeWeightAdd(
-        int64_t weightNumber, int64_t updateIndiceOffsen, LocalTensor<T> weightLocal_,
-        LocalTensor<T> perSampleWeightsLocal_, LocalTensor<T> outYLocal_)
+    __aicore__ inline void ComputeWeightAdd(int64_t weightNumber, int64_t updateIndiceOffsen,
+                                            LocalTensor<T> weightLocal_, LocalTensor<T> perSampleWeightsLocal_,
+                                            LocalTensor<T> outYLocal_)
     {
         int32_t eventIDMTE2ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
@@ -579,8 +578,8 @@ public:
         DataCopyPad(yGm_[weightOffset], outYLocal, copyParam);
     }
 
-    __aicore__ inline void CopyMaxIndicesToGm(
-        int64_t weightOffset, int64_t weightNumber, LocalTensor<I> maxIndicesLocal)
+    __aicore__ inline void CopyMaxIndicesToGm(int64_t weightOffset, int64_t weightNumber,
+                                              LocalTensor<I> maxIndicesLocal)
     {
         DataCopyExtParams copyParam{1, static_cast<uint32_t>(weightNumber * sizeof(I)), 0, 0, 0};
         DataCopyPad(maxIndicesGm_[weightOffset], maxIndicesLocal, copyParam);
@@ -588,7 +587,7 @@ public:
 
     __aicore__ inline void DisposalBagSize(GlobalTensor<I> globalTensor, int64_t inclueLastOfst)
     {
-        if (inclueLastOfst && GetBlockIdx() == 0) { 
+        if (inclueLastOfst && GetBlockIdx() == 0) {
             LocalTensor<I> dataDupLocal = maxIndicesCalcBuf_.Get<I>();
             Duplicate(dataDupLocal, (I)0, 1);
             event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -601,4 +600,3 @@ public:
 };
 
 #endif // EMBEDDING_BAG_H_REGBASE_COMMON_H
-

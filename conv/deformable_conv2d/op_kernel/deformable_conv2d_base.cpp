@@ -85,8 +85,8 @@ __aicore__ inline void DeformableConv2dND<T>::AdjustStandard(SlideRange range)
 template <typename T>
 __aicore__ inline void DeformableConv2dND<T>::CopyInOffset(SlideRange range)
 {
-    int64_t offsetIndex =
-        (range.nIdx * outSize + range.ohIdx * outW + range.owStart) * OFFSET_C * deformableGroups * kSize;
+    int64_t offsetIndex = (range.nIdx * outSize + range.ohIdx * outW + range.owStart) * OFFSET_C * deformableGroups *
+                          kSize;
     int64_t xOffset = offsetIndex + range.groupStart * kSize;
     int64_t yOffset = xOffset + deformableGroups * kSize;
     int64_t maskOffset = yOffset + deformableGroups * kSize;
@@ -137,38 +137,38 @@ __aicore__ inline void DeformableConv2dND<T>::CalculateWeight(SlideRange range)
     PipeBarrier<PIPE_V>();
     Adds(xyIntCeilTensor, xyIntFloorTensor, static_cast<int32_t>(1), range.xyDataCount);
     PipeBarrier<PIPE_V>();
-    Muls(ltIndexTensor, xyIntFloorTensor[range.dataCount], intInW, range.dataCount);  // y0*inW
-    Muls(rtIndexTensor, xyIntFloorTensor[range.dataCount], intInW, range.dataCount);  // y0*inW
-    Muls(lbIndexTensor, xyIntCeilTensor[range.dataCount], intInW, range.dataCount);   // y1*inW
-    Muls(rbIndexTensor, xyIntCeilTensor[range.dataCount], intInW, range.dataCount);   // y1*inW
+    Muls(ltIndexTensor, xyIntFloorTensor[range.dataCount], intInW, range.dataCount); // y0*inW
+    Muls(rtIndexTensor, xyIntFloorTensor[range.dataCount], intInW, range.dataCount); // y0*inW
+    Muls(lbIndexTensor, xyIntCeilTensor[range.dataCount], intInW, range.dataCount);  // y1*inW
+    Muls(rbIndexTensor, xyIntCeilTensor[range.dataCount], intInW, range.dataCount);  // y1*inW
     PipeBarrier<PIPE_V>();
-    Add(ltIndexTensor, ltIndexTensor, xyIntFloorTensor, range.dataCount);  // y0*inW + x0
-    Add(rtIndexTensor, rtIndexTensor, xyIntCeilTensor, range.dataCount);   // y0*inW + x1
-    Add(lbIndexTensor, lbIndexTensor, xyIntFloorTensor, range.dataCount);  // y1*inW + x0
-    Add(rbIndexTensor, rbIndexTensor, xyIntCeilTensor, range.dataCount);   // y1*inW + x1
+    Add(ltIndexTensor, ltIndexTensor, xyIntFloorTensor, range.dataCount); // y0*inW + x0
+    Add(rtIndexTensor, rtIndexTensor, xyIntCeilTensor, range.dataCount);  // y0*inW + x1
+    Add(lbIndexTensor, lbIndexTensor, xyIntFloorTensor, range.dataCount); // y1*inW + x0
+    Add(rbIndexTensor, rbIndexTensor, xyIntCeilTensor, range.dataCount);  // y1*inW + x1
     PipeBarrier<PIPE_V>();
 
     Cast(xyFloorTensor, xyIntFloorTensor, RoundMode::CAST_NONE, range.xyDataCount);
     Cast(xyCeilTensor, xyIntCeilTensor, RoundMode::CAST_NONE, range.xyDataCount);
     PipeBarrier<PIPE_V>();
-    CompareScalar(ltMaskLocal0, xyFloorTensor, 0.0f, CMPMODE::GE, range.dataCount);                       // 0 <= x0
-    CompareScalar(ltMaskLocal1, xyFloorTensor, floatInW, CMPMODE::LT, range.dataCount);                   // x0 < inW
-    CompareScalar(lbMaskLocal0, xyFloorTensor[range.dataCount], 0.0f, CMPMODE::GE, range.dataCount);      // 0 <= y0
-    CompareScalar(lbMaskLocal1, xyFloorTensor[range.dataCount], floatInH, CMPMODE::LT, range.dataCount);  // y0 < inH
-    CompareScalar(rtMaskLocal0, xyCeilTensor, 0.0f, CMPMODE::GE, range.dataCount);                        // 0 <= x1
-    CompareScalar(rtMaskLocal1, xyCeilTensor, floatInW, CMPMODE::LT, range.dataCount);                    // x1 < inW
-    CompareScalar(rbMaskLocal0, xyCeilTensor[range.dataCount], 0.0f, CMPMODE::GE, range.dataCount);       // 0 <= y1
-    CompareScalar(rbMaskLocal1, xyCeilTensor[range.dataCount], floatInH, CMPMODE::LT, range.dataCount);   // y1 < inH
+    CompareScalar(ltMaskLocal0, xyFloorTensor, 0.0f, CMPMODE::GE, range.dataCount);                      // 0 <= x0
+    CompareScalar(ltMaskLocal1, xyFloorTensor, floatInW, CMPMODE::LT, range.dataCount);                  // x0 < inW
+    CompareScalar(lbMaskLocal0, xyFloorTensor[range.dataCount], 0.0f, CMPMODE::GE, range.dataCount);     // 0 <= y0
+    CompareScalar(lbMaskLocal1, xyFloorTensor[range.dataCount], floatInH, CMPMODE::LT, range.dataCount); // y0 < inH
+    CompareScalar(rtMaskLocal0, xyCeilTensor, 0.0f, CMPMODE::GE, range.dataCount);                       // 0 <= x1
+    CompareScalar(rtMaskLocal1, xyCeilTensor, floatInW, CMPMODE::LT, range.dataCount);                   // x1 < inW
+    CompareScalar(rbMaskLocal0, xyCeilTensor[range.dataCount], 0.0f, CMPMODE::GE, range.dataCount);      // 0 <= y1
+    CompareScalar(rbMaskLocal1, xyCeilTensor[range.dataCount], floatInH, CMPMODE::LT, range.dataCount);  // y1 < inH
     PipeBarrier<PIPE_V>();
-    And(ltMaskLocal0Tmp, ltMaskLocal0Tmp, ltMaskLocal1Tmp, AND_SIZE);  // 0 <= x0 < inW
-    And(lbMaskLocal0Tmp, lbMaskLocal0Tmp, lbMaskLocal1Tmp, AND_SIZE);  // 0 <= y0 < inH
-    And(rtMaskLocal0Tmp, rtMaskLocal0Tmp, rtMaskLocal1Tmp, AND_SIZE);  // 0 <= x1 < inW
-    And(rbMaskLocal0Tmp, rbMaskLocal0Tmp, rbMaskLocal1Tmp, AND_SIZE);  // 0 <= y1 < inH
+    And(ltMaskLocal0Tmp, ltMaskLocal0Tmp, ltMaskLocal1Tmp, AND_SIZE); // 0 <= x0 < inW
+    And(lbMaskLocal0Tmp, lbMaskLocal0Tmp, lbMaskLocal1Tmp, AND_SIZE); // 0 <= y0 < inH
+    And(rtMaskLocal0Tmp, rtMaskLocal0Tmp, rtMaskLocal1Tmp, AND_SIZE); // 0 <= x1 < inW
+    And(rbMaskLocal0Tmp, rbMaskLocal0Tmp, rbMaskLocal1Tmp, AND_SIZE); // 0 <= y1 < inH
     PipeBarrier<PIPE_V>();
-    And(ltMaskLocal1Tmp, ltMaskLocal0Tmp, lbMaskLocal0Tmp, AND_SIZE);  // 0 <= x0 < inW && 0 <= y0 < inH
-    And(lbMaskLocal1Tmp, ltMaskLocal0Tmp, rbMaskLocal0Tmp, AND_SIZE);  // 0 <= x0 < inW && 0 <= y1 < inH
-    And(rtMaskLocal1Tmp, rtMaskLocal0Tmp, lbMaskLocal0Tmp, AND_SIZE);  // 0 <= x1 < inW && 0 <= y0 < inH
-    And(rbMaskLocal1Tmp, rtMaskLocal0Tmp, rbMaskLocal0Tmp, AND_SIZE);  // 0 <= x1 < inW && 0 <= y1 < inH
+    And(ltMaskLocal1Tmp, ltMaskLocal0Tmp, lbMaskLocal0Tmp, AND_SIZE); // 0 <= x0 < inW && 0 <= y0 < inH
+    And(lbMaskLocal1Tmp, ltMaskLocal0Tmp, rbMaskLocal0Tmp, AND_SIZE); // 0 <= x0 < inW && 0 <= y1 < inH
+    And(rtMaskLocal1Tmp, rtMaskLocal0Tmp, lbMaskLocal0Tmp, AND_SIZE); // 0 <= x1 < inW && 0 <= y0 < inH
+    And(rbMaskLocal1Tmp, rtMaskLocal0Tmp, rbMaskLocal0Tmp, AND_SIZE); // 0 <= x1 < inW && 0 <= y1 < inH
     PipeBarrier<PIPE_V>();
 }
 

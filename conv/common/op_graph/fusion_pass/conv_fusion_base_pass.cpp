@@ -21,25 +21,28 @@ using namespace ConvFusionUtils;
 using namespace ge;
 using namespace fusion;
 
-bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode &node)
+bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& node)
 {
     auto boundary = ConstructBoundary(node);
-    FUSION_PASS_CHECK(boundary == nullptr,
+    FUSION_PASS_CHECK(
+        boundary == nullptr,
         OP_LOGE("ConvFusionBasePass", "Construct boundary for %s failed.", convDescInfo.nodeNameStr.c_str()),
         return false);
 
     auto replacement = Replacement(node);
-    FUSION_PASS_CHECK(replacement == nullptr,
+    FUSION_PASS_CHECK(
+        replacement == nullptr,
         OP_LOGE("ConvFusionBasePass", "Construct replacement for %s failed.", convDescInfo.nodeNameStr.c_str()),
         return false);
 
     FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS,
-        OP_LOGE("ConvFusionBasePass", "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()), return false);
+                      OP_LOGE("ConvFusionBasePass", "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()),
+                      return false);
 
     return true;
 }
 
-Status ConvFusionBasePass::Run(GraphPtr &graph, CustomPassContext &pass_context)
+Status ConvFusionBasePass::Run(GraphPtr& graph, CustomPassContext& pass_context)
 {
     std::string fusionName = "ConvFusionBasePass";
     OP_LOGD(fusionName, "Begin to do %s.", fusionName.c_str());
@@ -50,7 +53,7 @@ Status ConvFusionBasePass::Run(GraphPtr &graph, CustomPassContext &pass_context)
     FUSION_PASS_CHECK(matchedNodes.empty(), OP_LOGD(fusionName, "No matched node, exit."), return GRAPH_NOT_CHANGED);
 
     int32_t effectTimes = 0;
-    for (auto &node : matchedNodes) {
+    for (auto& node : matchedNodes) {
         InitMember();
         FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(node, convDescInfo), return FAILED);
 

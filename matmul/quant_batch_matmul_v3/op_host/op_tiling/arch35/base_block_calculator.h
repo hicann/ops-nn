@@ -27,18 +27,12 @@ struct BaseBlockRes {
     bool useTailWinLogic = true;
 };
 
-enum class BaseBlockMode
-{
-    DEFAULT = 0,
-    PERBLOCK,
-    MMAD_S8S4
-};
+enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4 };
 
 class BaseBlockCalculator {
 public:
-    BaseBlockCalculator(
-        const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
-        uint64_t batchCoreCnt = 1UL);
+    BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
+                        uint64_t batchCoreCnt = 1UL);
     virtual ~BaseBlockCalculator() = default;
 
     bool Compute(BaseBlockMode mode);
@@ -55,12 +49,10 @@ private:
     uint64_t GetBaseKAlignSize() const;
     bool OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode);
     void OptimizeBaseBlockForLoadBalance();
-    void SearchLoadBalanceBaseBlock(
-        uint64_t roundLimit, uint64_t originLastRoundUsedCore, double originMemoryComputeScore,
-        uint64_t& bestBaseM, uint64_t& bestBaseN) const;
-    bool ShouldSkipLoadBalanceCandidate(
-        uint64_t curBaseM, uint64_t curBaseN, uint64_t originLastRoundUsedCore,
-        double originMemoryComputeScore) const;
+    void SearchLoadBalanceBaseBlock(uint64_t roundLimit, uint64_t originLastRoundUsedCore,
+                                    double originMemoryComputeScore, uint64_t& bestBaseM, uint64_t& bestBaseN) const;
+    bool ShouldSkipLoadBalanceCandidate(uint64_t curBaseM, uint64_t curBaseN, uint64_t originLastRoundUsedCore,
+                                        double originMemoryComputeScore) const;
     void TryApplyLoadBalanceBase(uint64_t bestBaseM, uint64_t bestBaseN);
     bool AdjustBaseBlockDefault();
     void TrySwapBaseMNForMxFalseTrue(uint64_t& baseM, uint64_t& baseN) const;
@@ -70,8 +62,8 @@ private:
     uint64_t GetSingleCoreMaxRound(uint64_t baseM, uint64_t baseN) const;
     double GetBalanceRate(uint64_t baseM, uint64_t baseN) const;
     uint64_t GetLastRoundBlockCnt(uint64_t baseM, uint64_t baseN) const;
-    bool CalculateOptimalSplit(
-        uint64_t& baseM, uint64_t& baseN, uint64_t baseMAlignNum, uint64_t baseNAlignNum, uint64_t baseKAlignNum) const;
+    bool CalculateOptimalSplit(uint64_t& baseM, uint64_t& baseN, uint64_t baseMAlignNum, uint64_t baseNAlignNum,
+                               uint64_t baseKAlignNum) const;
     bool IsMxBackwardTrans() const;
 
     const QuantBatchMatmulInfo& inputParams_;

@@ -116,8 +116,8 @@ void AddRmsNormDynamicQuantTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(A
         tilingKey += UB_TILING_POLICY_SINGLE_ROW;
     } else {
         tilingKey += UB_TILING_POLICY_SLICE_D;
-        size_t workspaceRowsNum =
-            GetworkspaceRowsNum(this->outQuant1Flag, this->outQuant2Flag, this->smoothNum1_, this->smoothNum2_);
+        size_t workspaceRowsNum = GetworkspaceRowsNum(this->outQuant1Flag, this->outQuant2Flag, this->smoothNum1_,
+                                                      this->smoothNum2_);
         usrSize = this->useCore_ * this->numLastDim_ * sizeof(float) * workspaceRowsNum;
     }
 
@@ -130,35 +130,31 @@ void AddRmsNormDynamicQuantTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(A
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = this->sysWorkspaceSize_ + usrSize;
 
-    OP_LOGI(
-        "SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata useCore_: %lu, smoothNum1_: %u, smoothNum2_: %u",
-        this->useCore_, this->smoothNum1_, this->smoothNum2_);
-    OP_LOGI(
-        "Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata N: %lu, D:%lu, DAligned: %lu", numFirstDim_, numLastDim_,
-        numLastDimAligned_);
-    OP_LOGI(
-        "Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
-        firstDimPerCore_, firstDimPerCoreTail_);
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata useCore_: %lu, smoothNum1_: %u, smoothNum2_: %u",
+            this->useCore_, this->smoothNum1_, this->smoothNum2_);
+    OP_LOGI("Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata N: %lu, D:%lu, DAligned: %lu", numFirstDim_,
+            numLastDim_, numLastDimAligned_);
+    OP_LOGI("Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
+            firstDimPerCore_, firstDimPerCoreTail_);
     OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata firstDimPerLoop_: %lu", firstDimPerLoop_);
-    OP_LOGI(
-        "Set TilingDataAndTilingKeyAndWorkSpace",
-        "Tilingdata lastDimSliceLen_: %lu, lastDimLoopNum_: %lu, lastDimSliceLenTail_: %lu", lastDimSliceLen_,
-        lastDimLoopNum_, lastDimSliceLenTail_);
+    OP_LOGI("Set TilingDataAndTilingKeyAndWorkSpace",
+            "Tilingdata lastDimSliceLen_: %lu, lastDimLoopNum_: %lu, lastDimSliceLenTail_: %lu", lastDimSliceLen_,
+            lastDimLoopNum_, lastDimSliceLenTail_);
     OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata eps_: %f, avgFactor_: %f", eps_, avgFactor_);
-    OP_LOGI(
-        "Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey, usrSize);
+    OP_LOGI("Set TilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey,
+            usrSize);
 }
 
 bool AddRmsNormDynamicQuantTilingHelper::DoTiling()
 {
-    OP_TILING_CHECK(
-        (nullptr == context_), OP_LOGE("AddRmsNormDynamicQuantTiling", "Helper context_ get nullptr, return failed."),
-        return false);
+    OP_TILING_CHECK((nullptr == context_),
+                    OP_LOGE("AddRmsNormDynamicQuantTiling", "Helper context_ get nullptr, return failed."),
+                    return false);
     OP_TILING_CHECK(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"), return false);
-    OP_TILING_CHECK(
-        !GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"), return false);
-    OP_TILING_CHECK(
-        !DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"), return false);
+    OP_TILING_CHECK(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"),
+                    return false);
+    OP_TILING_CHECK(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"),
+                    return false);
     OP_TILING_CHECK(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling falied, return false"), return false);
     return true;
 }
@@ -170,9 +166,8 @@ bool AddRmsNormDynamicQuantTilingHelper::DoBlockTiling()
     this->useCore_ = Ops::Base::CeilDiv(this->numFirstDim_, this->firstDimPerCore_);
     this->firstDimPerCore_ = Ops::Base::CeilDiv(this->numFirstDim_, this->useCore_);
     this->firstDimPerCoreTail_ = this->numFirstDim_ - this->firstDimPerCore_ * (this->useCore_ - 1);
-    OP_LOGI(
-        "DoBlockTiling", "BlockTiling Factor: useCore_: %lu, firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
-        this->useCore_, this->firstDimPerCore_, this->firstDimPerCoreTail_);
+    OP_LOGI("DoBlockTiling", "BlockTiling Factor: useCore_: %lu, firstDimPerCore_: %lu, firstDimPerCoreTail_: %lu",
+            this->useCore_, this->firstDimPerCore_, this->firstDimPerCoreTail_);
     return true;
 }
 
@@ -194,8 +189,8 @@ bool AddRmsNormDynamicQuantTilingHelper::GetBaseInfo()
     }
 
     auto attrs = context_->GetAttrs();
-    OP_TILING_CHECK(
-        nullptr == attrs, OP_LOGE(context_->GetNodeName(), "Get attrs nullptr, return false."), return false);
+    OP_TILING_CHECK(nullptr == attrs, OP_LOGE(context_->GetNodeName(), "Get attrs nullptr, return false."),
+                    return false);
 
     const float* epsPtr = attrs->GetFloat(EPS_IDX);
     if (epsPtr != nullptr) {
@@ -215,25 +210,23 @@ bool AddRmsNormDynamicQuantTilingHelper::GetBaseInfo()
     if (!ValidateBaseParameters()) {
         return false;
     }
-    OP_LOGI(
-        "GetBaseInfo", "socCoreNum: %lu, ubSize: %lu, sysWorkspaceSize: %lu, epsilon: %f", this->socCoreNums_,
-        this->ubSize_, this->sysWorkspaceSize_, this->eps_);
+    OP_LOGI("GetBaseInfo", "socCoreNum: %lu, ubSize: %lu, sysWorkspaceSize: %lu, epsilon: %f", this->socCoreNums_,
+            this->ubSize_, this->sysWorkspaceSize_, this->eps_);
 
     return true;
 }
 
 bool AddRmsNormDynamicQuantTilingHelper::ValidateBaseParameters()
 {
-    OP_TILING_CHECK(
-        this->eps_ <= 0,
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "epsilon", std::to_string(this->eps_).c_str(),
-            "greater than zero"), return false);
-    OP_TILING_CHECK(
-        (this->ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."),
-        return false);
-    OP_TILING_CHECK(
-        (this->socCoreNums_ <= 0),
-        OP_LOGE(context_->GetNodeName(), "socCoreNums_ less or equal than zero, please check."), return false);
+    OP_TILING_CHECK(this->eps_ <= 0,
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "epsilon", std::to_string(this->eps_).c_str(),
+                                              "greater than zero"),
+                    return false);
+    OP_TILING_CHECK((this->ubSize_ <= 0),
+                    OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."), return false);
+    OP_TILING_CHECK((this->socCoreNums_ <= 0),
+                    OP_LOGE(context_->GetNodeName(), "socCoreNums_ less or equal than zero, please check."),
+                    return false);
 
     return true;
 }
@@ -251,8 +244,8 @@ ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType
 bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutput()
 {
     // 检查输入输出形状
-    OP_TILING_CHECK(
-        CheckInputOutputShape() == false, OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."), return false);
+    OP_TILING_CHECK(CheckInputOutputShape() == false, OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."),
+                    return false);
 
     // 验证输出数据类型
     auto y1DataType = context_->GetOutputDesc(Y1_IDX)->GetDataType();
@@ -260,7 +253,8 @@ bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutput()
     std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_INT4};
     if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes)) ||
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes)) || (y1DataType != y2DataType)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y1 and y2",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "y1 and y2",
             (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
             "The dtypes of y1 and y2 should be int8 or int4, and y1, y2 should have the same dtype");
         return false;
@@ -296,8 +290,8 @@ bool AddRmsNormDynamicQuantTilingHelper::CalculateShapeParameters()
     auto y1DataType = context_->GetOutputDesc(Y1_IDX)->GetDataType();
     uint32_t alignSize = y1DataType == ge::DT_INT4 ? INT4_ALIGN_SIZE : BLOCK_SIZE;
     this->dstType_ = static_cast<uint32_t>(y1DataType);
-    this->numLastDimAligned_ =
-        Ops::Base::CeilDiv(numCol, static_cast<uint64_t>(alignSize)) * static_cast<uint64_t>(alignSize);
+    this->numLastDimAligned_ = Ops::Base::CeilDiv(numCol, static_cast<uint64_t>(alignSize)) *
+                               static_cast<uint64_t>(alignSize);
 
     // 计算平均因子
     this->avgFactor_ = 1.0 / (static_cast<float>(this->numLastDim_));
@@ -339,9 +333,9 @@ bool AddRmsNormDynamicQuantTilingHelper::SetFlagsAndCheckConsistency()
 
     // 检查量化标志和可选输入的一致性
     if (this->outQuant1Flag == INT_NEGATIVE_ONE && this->outQuant2Flag == INT_NEGATIVE_ONE) {
-        OP_TILING_CHECK(
-            (!smooth1Exist) && (smooth2Exist),
-            OP_LOGE(context_->GetNodeName(), "Smooth2 exist but smooth1 not exist, bad input."), return false);
+        OP_TILING_CHECK((!smooth1Exist) && (smooth2Exist),
+                        OP_LOGE(context_->GetNodeName(), "Smooth2 exist but smooth1 not exist, bad input."),
+                        return false);
     }
 
     return true;
@@ -394,11 +388,10 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckUbNormalTiling()
     int64_t rowCommons = coexistingRowsNum * this->numLastDimAligned_ + 2 * sizeof(float);
     int64_t rowStep = ubAvaliable1 / rowCommons;
     bool ret = (rowStep >= 1);
-    OP_LOGI(
-        this->context_->GetNodeName(),
-        "CheckUbNormalTiling, ret:%d, ubConst: %ld, ubAvaliable=%ld, coexistingRowsNum: %ld, rowStep: %ld, "
-        "rowCommons: %ld",
-        ret, ubConst, ubAvaliable1, coexistingRowsNum, rowStep, rowCommons);
+    OP_LOGI(this->context_->GetNodeName(),
+            "CheckUbNormalTiling, ret:%d, ubConst: %ld, ubAvaliable=%ld, coexistingRowsNum: %ld, rowStep: %ld, "
+            "rowCommons: %ld",
+            ret, ubConst, ubAvaliable1, coexistingRowsNum, rowStep, rowCommons);
     if (ret) {
         // No mutilN now. max RowStep = 16
         this->firstDimPerLoop_ = (rowStep <= MAX_ROW_STEP) ? rowStep : MAX_ROW_STEP;
@@ -465,8 +458,8 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
     AddRmsNormDynamicQuantTilingData tiling;
     AddRmsNormDynamicQuantTilingHelper instanceNormV3TilingHelper(context);
     bool status = instanceNormV3TilingHelper.DoTiling();
-    OP_TILING_CHECK(
-        !status, OP_LOGE(context->GetNodeName(), "DoTiling Failed, return Failed."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!status, OP_LOGE(context->GetNodeName(), "DoTiling Failed, return Failed."),
+                    return ge::GRAPH_FAILED);
     instanceNormV3TilingHelper.SetTilingDataAndTilingKeyAndWorkSpace(&tiling);
 
     return ge::GRAPH_SUCCESS;
@@ -521,38 +514,38 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckInputOutputShape()
     size_t scale1DimNum = scale1Shape->GetStorageShape().GetDimNum();
     size_t scale2DimNum = scale2Shape->GetStorageShape().GetDimNum();
 
-    OP_LOGI(
-        this->context_->GetNodeName(),
-        "ShapeDim info: x1.dim=%zu, x2.dim=%zu, gamma.dim=%zu, y1.dim=%zu, y2.dim=%zu, x.dim=%zu, scale1.dim=%zu, "
-        "scale2.dim=%zu",
-        x1DimNum, x2DimNum, gammaDimNum, y1DimNum, y2DimNum, xDimNum, scale1DimNum, scale2DimNum);
+    OP_LOGI(this->context_->GetNodeName(),
+            "ShapeDim info: x1.dim=%zu, x2.dim=%zu, gamma.dim=%zu, y1.dim=%zu, y2.dim=%zu, x.dim=%zu, scale1.dim=%zu, "
+            "scale2.dim=%zu",
+            x1DimNum, x2DimNum, gammaDimNum, y1DimNum, y2DimNum, xDimNum, scale1DimNum, scale2DimNum);
 
     bool hasZeroDimTensor = x1DimNum <= 0 || x2DimNum <= 0 || gammaDimNum <= 0;
     OP_TILING_CHECK(
         (hasZeroDimTensor),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(this->context_->GetNodeName(), "x1, x2 and gamma",
-            (std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum) + " and " +
-             std::to_string(gammaDimNum)).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            this->context_->GetNodeName(), "x1, x2 and gamma",
+            (std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum) + " and " + std::to_string(gammaDimNum))
+                .c_str(),
             "The shape dims of x1, x2 and gamma should be greater than 0"),
         return false);
-    OP_TILING_CHECK(
-        ((x1DimNum != x2DimNum)),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(this->context_->GetNodeName(), "x1 and x2",
-            (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "The shape dims of x1 and x2 should be equal"), return false);
+    OP_TILING_CHECK(((x1DimNum != x2DimNum)),
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        this->context_->GetNodeName(), "x1 and x2",
+                        (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
+                        "The shape dims of x1 and x2 should be equal"),
+                    return false);
     OP_TILING_CHECK(
         ((gammaDimNum != 1)),
         OP_LOGE_FOR_INVALID_SHAPEDIM(this->context_->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(), "1"),
         return false);
     gert::Shape shapeOfX = xShape->GetStorageShape();
     gert::Shape shapeOfGamma = gammaShape->GetStorageShape();
-    OP_TILING_CHECK(
-        (shapeOfX[xDimNum - 1] != shapeOfGamma[gammaDimNum - 1]),
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "gamma and x1",
-            (Ops::Base::ToString(shapeOfGamma) + " and " + Ops::Base::ToString(shapeOfX)).c_str(),
-            "gamma shape isn't consistent with the last dimension of x1"),
-        return false);
+    OP_TILING_CHECK((shapeOfX[xDimNum - 1] != shapeOfGamma[gammaDimNum - 1]),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "gamma and x1",
+                        (Ops::Base::ToString(shapeOfGamma) + " and " + Ops::Base::ToString(shapeOfX)).c_str(),
+                        "gamma shape isn't consistent with the last dimension of x1"),
+                    return false);
     return true;
 }
 

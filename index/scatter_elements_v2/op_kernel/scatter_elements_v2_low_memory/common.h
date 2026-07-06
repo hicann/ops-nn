@@ -10,7 +10,7 @@
 
 /*!
  * \file common.h
- * \brief 
+ * \brief
  */
 
 #ifndef COMMON_H
@@ -39,14 +39,14 @@ constexpr uint64_t INDICES_LOCAL_LENGTH = 2048;
 constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t MTE_UPDATES_MODE = 2; // updates dimvalue超过indices，但仍批量搬运
 
-constexpr uint32_t MAX_BATCH_PARTS = 5;           // 批次分割的最大parts数
-constexpr uint32_t GATHER_BATCH_SIZE = 32;        // gather批量大小
-constexpr uint32_t TRANSPOSE_WEIGHT_UNIT = 8;     // 转置权重单元
-constexpr uint32_t TRANSPOSE_TASK_UNIT = 16;      // 转置任务单元
-constexpr uint32_t OFFSET_TABLE_SIZE = 128;       // 偏移表大小
-constexpr uint32_t ALL_UB_SIZE = CACHE_CAPACITY * 3 * 4;  // UB总大小 192KB
-constexpr uint32_t LOOP_UNROLL_SIZE = 8;          // 循环展开大小
-constexpr uint32_t AGG_INDICES_NUM = 1024;           // 聚合indices数
+constexpr uint32_t MAX_BATCH_PARTS = 5;                  // 批次分割的最大parts数
+constexpr uint32_t GATHER_BATCH_SIZE = 32;               // gather批量大小
+constexpr uint32_t TRANSPOSE_WEIGHT_UNIT = 8;            // 转置权重单元
+constexpr uint32_t TRANSPOSE_TASK_UNIT = 16;             // 转置任务单元
+constexpr uint32_t OFFSET_TABLE_SIZE = 128;              // 偏移表大小
+constexpr uint32_t ALL_UB_SIZE = CACHE_CAPACITY * 3 * 4; // UB总大小 192KB
+constexpr uint32_t LOOP_UNROLL_SIZE = 8;                 // 循环展开大小
+constexpr uint32_t AGG_INDICES_NUM = 1024;               // 聚合indices数
 
 using namespace AscendC;
 
@@ -97,44 +97,50 @@ __aicore__ inline int64_t MeanDivideValue<int64_t>(int64_t value, int32_t diviso
 }
 
 // cpu等待vector计算单元完成计算
-__aicore__ inline void PIPE_V_S() {
+__aicore__ inline void PIPE_V_S()
+{
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIDVToS);
     WaitFlag<HardEvent::V_S>(eventIDVToS);
 }
 // cpu等待MTE2搬运单元完成搬运
-__aicore__ inline void PIPE_MTE2_S() {
+__aicore__ inline void PIPE_MTE2_S()
+{
     event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
 }
 // cpu等待MTE3搬运单元完成搬运
-__aicore__ inline void PIPE_MTE3_S() {
+__aicore__ inline void PIPE_MTE3_S()
+{
     event_t eventIDMTE3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
     SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
     WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
 }
 // mte3等待cpu完成计算
-__aicore__ inline void PIPE_S_MTE3() {
+__aicore__ inline void PIPE_S_MTE3()
+{
     event_t eventIDSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
     WaitFlag<HardEvent::S_MTE3>(eventIDSToMTE3);
 }
 // mte2等待cpu完成计算
-__aicore__ inline void PIPE_S_MTE2() {
+__aicore__ inline void PIPE_S_MTE2()
+{
     event_t eventIDSToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
     WaitFlag<HardEvent::S_MTE2>(eventIDSToMTE2);
 }
 // V等待cpu完成计算
-__aicore__ inline void PIPE_S_V() {
+__aicore__ inline void PIPE_S_V()
+{
     event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventIDSToV);
     WaitFlag<HardEvent::S_V>(eventIDSToV);
 }
 
-__aicore__ inline void TransposeFloat(
-        LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, const uint64_t& h, const uint64_t& w)
+__aicore__ inline void TransposeFloat(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, const uint64_t& h,
+                                      const uint64_t& w)
 {
     uint64_t srcList[HALF_BYTE_ALIGNMENT];
     uint64_t dstList[HALF_BYTE_ALIGNMENT];
@@ -146,9 +152,9 @@ __aicore__ inline void TransposeFloat(
     for (size_t j = 0; j < hAlign / HALF_BYTE_ALIGNMENT; j++) {
         for (size_t i = 0; i < HALF_BYTE_ALIGNMENT; i++) {
             srcList[i] = (uint64_t)(srcLocal[j * HALF_BYTE_ALIGNMENT * wAlign + i * wAlign].GetPhyAddr());
-            dstList[i] =
-                (uint64_t)(dstLocal[j * HALF_BYTE_ALIGNMENT + i / blockPerTransLen * hAlign + i % blockPerTransLen * blockNum]
-                                .GetPhyAddr());
+            dstList[i] = (uint64_t)(dstLocal[j * HALF_BYTE_ALIGNMENT + i / blockPerTransLen * hAlign +
+                                             i % blockPerTransLen * blockNum]
+                                        .GetPhyAddr());
         }
         TransDataTo5HDParams transDataParamsFloat;
         transDataParamsFloat.repeatTimes = wAlign / blockNum;
@@ -163,8 +169,8 @@ __aicore__ inline void TransposeFloat(
     }
 }
 
-__aicore__ inline void TransposeHalf(
-        LocalTensor<half>& dstLocal, LocalTensor<half>& srcLocal, const uint64_t& h, const uint64_t& w)
+__aicore__ inline void TransposeHalf(LocalTensor<half>& dstLocal, LocalTensor<half>& srcLocal, const uint64_t& h,
+                                     const uint64_t& w)
 {
     uint64_t srcList[HALF_BYTE_ALIGNMENT];
     uint64_t dstList[HALF_BYTE_ALIGNMENT];
@@ -189,5 +195,5 @@ __aicore__ inline void TransposeHalf(
         TransDataTo5HD<half>(dstList, srcList, transDataParamsHalf);
     }
 }
-}
+} // namespace ScatterElementsV2NS
 #endif

@@ -34,8 +34,8 @@ using namespace ge;
 using namespace Ops::Base;
 
 namespace ops {
-static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {
-    DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_INT4};
+static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2,
+                                                                  DT_FLOAT8_E4M3FN, DT_INT4};
 static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gammaShape, gert::Shape* reduceShape)
 {
     size_t gammaDimNum = gammaShape->GetDimNum();
@@ -48,9 +48,8 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         xDimValue1 = xShape->GetDim(i);
         reduceShape->SetDim(i, xDimValue1);
-        OP_LOGI(
-            "InferShape4AddRmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i,
-            reduceShape->GetDim(i));
+        OP_LOGI("InferShape4AddRmsNormDynamicQuant InferReduceShape", "reduceShape[%zu] = [%zu]", i,
+                reduceShape->GetDim(i));
     }
     return true;
 }

@@ -20,8 +20,7 @@
 #include "tiling/tiling_api.h"
 
 namespace optiling {
-struct FatreluMulCompileInfo {
-};
+struct FatreluMulCompileInfo {};
 
 BEGIN_TILING_DATA_DEF(FatreluMulTilingData)
 

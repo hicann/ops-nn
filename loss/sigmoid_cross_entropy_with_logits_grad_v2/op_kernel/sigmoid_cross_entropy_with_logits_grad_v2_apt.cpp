@@ -23,9 +23,10 @@ using namespace SigmoidCrossEntropyWithLogitsGradV2Op;
 using namespace SigmoidCrossEntropyWithLogitsGradV2Struct;
 
 template <uint64_t Mode, uint32_t HAS_WEIGHT, uint32_t HAS_POS_WEIGHT, uint32_t IS_MEAN>
-__global__ __aicore__ void sigmoid_cross_entropy_with_logits_grad_v2(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR dout, GM_ADDR weight, GM_ADDR posWeight, GM_ADDR gradient,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sigmoid_cross_entropy_with_logits_grad_v2(GM_ADDR predict, GM_ADDR target, GM_ADDR dout,
+                                                                     GM_ADDR weight, GM_ADDR posWeight,
+                                                                     GM_ADDR gradient, GM_ADDR workspace,
+                                                                     GM_ADDR tiling)
 {
     if (HAS_WEIGHT) {
         if (HAS_POS_WEIGHT) {

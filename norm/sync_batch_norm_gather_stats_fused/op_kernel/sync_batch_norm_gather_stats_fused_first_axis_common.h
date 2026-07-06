@@ -37,10 +37,10 @@ class SyncBatchNormGatherStatsFusedFirstAxisCommon {
 public:
     __aicore__ inline SyncBatchNormGatherStatsFusedFirstAxisCommon(){};
 
-    __aicore__ inline void Init(
-        GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar, GM_ADDR meanAllOut,
-        GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut, GM_ADDR workspace,
-        const SyncBatchNormGatherStatsFusedTilingDataFirstAxisCommon* tilingData, TPipe& pipeIn)
+    __aicore__ inline void Init(GM_ADDR mean, GM_ADDR invstd, GM_ADDR counts, GM_ADDR runningMean, GM_ADDR runningVar,
+                                GM_ADDR meanAllOut, GM_ADDR invstdAllOut, GM_ADDR runningMeanOut, GM_ADDR runningVarOut,
+                                GM_ADDR workspace,
+                                const SyncBatchNormGatherStatsFusedTilingDataFirstAxisCommon* tilingData, TPipe& pipeIn)
     {
         pipe = pipeIn;
         nLength = tilingData->nLength;
@@ -65,8 +65,8 @@ public:
         meanAllResultworkspaceGM.SetGlobalBuffer((__gm__ float*)workspace, cAlign);
         varAllResultworkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + cAlign, cAlign);
         workspaceGMOri.SetGlobalBuffer((__gm__ float*)workspace + 2 * cAlign, wsLenPerBlock * blockNum);
-        countsReduceWorkspace.SetGlobalBuffer(
-            (__gm__ float*)workspace + (2 + blockNum * WORKSPACE_NUM) * cAlign, GetBlockNum());
+        countsReduceWorkspace.SetGlobalBuffer((__gm__ float*)workspace + (2 + blockNum * WORKSPACE_NUM) * cAlign,
+                                              GetBlockNum());
         InitOutput<float>(countsReduceWorkspace[GetBlockIdx()], 1, 0.0f);
 
         if (GetBlockIdx() < tilingData->blockNum) {
@@ -165,9 +165,8 @@ private:
     __aicore__ inline void ComputeGlobalMeanDterministic()
     {
         SyncBatchNormGatherStatsFusedDeterminsticCompute<T> op;
-        op.initBuffer2(
-            pipe, meanAllResultworkspaceGM, meanAllOutGm, runningMeanGm, runningMeanOutGm, workspaceGMOri,
-            WORKSPACE_NUM, momentum);
+        op.initBuffer2(pipe, meanAllResultworkspaceGM, meanAllOutGm, runningMeanGm, runningMeanOutGm, workspaceGMOri,
+                       WORKSPACE_NUM, momentum);
         op.MeanAllDeterministicWithRunningMeanUpdate(cAlign, blockNum, cLength);
     }
 
@@ -181,9 +180,8 @@ private:
     __aicore__ inline void ComputeGlobalInvstdWithRunningVar()
     {
         SyncBatchNormGatherStatsFusedRunningCompute<T> op;
-        op.initBuffer(
-            pipe, runningVarOutGm, invstdAllOutGm, runningVarGm, varAllResultworkspaceGM, countsSumScalar, momentum,
-            eps, 1);
+        op.initBuffer(pipe, runningVarOutGm, invstdAllOutGm, runningVarGm, varAllResultworkspaceGM, countsSumScalar,
+                      momentum, eps, 1);
         op.FinalComputeProcess(cAlign, 1, cLength);
     }
 
@@ -196,42 +194,44 @@ private:
     __aicore__ inline void ComputeGlobalVar(const int64_t ubIdx, const int64_t curRowNum);
 
     template <typename dType>
-    __aicore__ inline void BlockBroadcast(
-        const LocalTensor<dType>& dst, const LocalTensor<dType>& src, const int64_t curRowsNum);
+    __aicore__ inline void BlockBroadcast(const LocalTensor<dType>& dst, const LocalTensor<dType>& src,
+                                          const int64_t curRowsNum);
 
-    __aicore__ inline void BinElemWithInlinedNLastBrcFP32(const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum,void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t, const BinaryRepeatParams&));
+    __aicore__ inline void BinElemWithInlinedNLastBrcFP32(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                                          const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                                          void (*func)(const LocalTensor<float>&,
+                                                                       const LocalTensor<float>&,
+                                                                       const LocalTensor<float>&, uint64_t, uint8_t,
+                                                                       const BinaryRepeatParams&));
 
-    __aicore__ inline void NlastReduceSumLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum);
-    __aicore__ inline void LastBrcFP32LargeStride(
-        const LocalTensor<float>& output, const LocalTensor<float>& input0, const LocalTensor<float>& input1, const int64_t curRowsNum,
-        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
-    __aicore__ inline void NlastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum);
+    __aicore__ inline void NlastReduceSumLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                                     const int64_t curRowsNum);
+    __aicore__ inline void LastBrcFP32LargeStride(const LocalTensor<float>& output, const LocalTensor<float>& input0,
+                                                  const LocalTensor<float>& input1, const int64_t curRowsNum,
+                                                  void (*func)(const LocalTensor<float>&, const LocalTensor<float>&,
+                                                               const LocalTensor<float>&, uint64_t, uint8_t,
+                                                               const BinaryRepeatParams&));
+    __aicore__ inline void NlastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                          const int64_t curRowsNum);
 
-    __aicore__ inline void BinElemNLastBrcLargeStride(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum, void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+    __aicore__ inline void BinElemNLastBrcLargeStride(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                                      const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                                      void (*func)(const LocalTensor<float>&, const LocalTensor<float>&,
+                                                                   const LocalTensor<float>&, uint64_t, uint8_t,
+                                                                   const BinaryRepeatParams&));
 
     __aicore__ inline void BinElemWithInlinedLastBrcFP32(
         const LocalTensor<float>& output, const LocalTensor<float>& input0, const LocalTensor<float>& input1,
         const int64_t rows,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&));
+        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
+                     const BinaryRepeatParams&));
 
-    __aicore__ inline void LastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const LocalTensor<float>& tmp,
-        const int64_t curRowsNum, const int64_t curColNum);
+    __aicore__ inline void LastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                         const LocalTensor<float>& tmp, const int64_t curRowsNum,
+                                         const int64_t curColNum);
 
-    __aicore__ inline void LastReduceSumLargeStride(
-        const LocalTensor<float>& tmp, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const int64_t curColNum);
+    __aicore__ inline void LastReduceSumLargeStride(const LocalTensor<float>& tmp, const LocalTensor<float>& src,
+                                                    const int64_t curRowsNum, const int64_t curColNum);
 
 private:
     TPipe pipe;

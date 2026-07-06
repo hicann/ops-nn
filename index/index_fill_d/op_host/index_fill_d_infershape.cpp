@@ -12,7 +12,6 @@
 #include "register/op_impl_registry.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 IMPL_OP_INFERSHAPE(IndexFillD).InferShape(Ops::Base::InferShape4Elewise);
-}  // namespace ops
+} // namespace ops

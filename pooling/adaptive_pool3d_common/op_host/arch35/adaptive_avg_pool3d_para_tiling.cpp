@@ -28,16 +28,14 @@ namespace optiling {
 
 bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
 {
-    OP_TILING_CHECK(
-        GetAndCheckDataFormat() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetAndCheckDataFormat fail."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetAndCheckDataFormat() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetAndCheckDataFormat fail."), return ge::GRAPH_FAILED);
     if (input_.dataFormat != ge::Format::FORMAT_NCDHW) {
         OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling only support attr data_format NCDHW");
         return false;
     }
     if (ge::GetSizeByDataType(input_.xDtype) == 0) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            "AdaptiveAvgPool3d", "x", "unknown/unsupported", "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
+        OP_LOGE_FOR_INVALID_DTYPE("AdaptiveAvgPool3d", "x", "unknown/unsupported", "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
         return false;
     }
     avgComptuteInfo_.vfLen = Ops::Base::GetVRegSize(context_) / ge::GetSizeByDataType(input_.xDtype);
@@ -52,8 +50,8 @@ bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
     avgComptuteInfo_.kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     avgComptuteInfo_.kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
 
-    bool isKernelSizeMeet =
-        (avgComptuteInfo_.kernelDMax * avgComptuteInfo_.kernelHMax * avgComptuteInfo_.kernelWMax < KERNEL_SIZE_LIMIT);
+    bool isKernelSizeMeet = (avgComptuteInfo_.kernelDMax * avgComptuteInfo_.kernelHMax * avgComptuteInfo_.kernelWMax <
+                             KERNEL_SIZE_LIMIT);
     bool isNcLenEnough = input_.nIn * input_.cIn >= (avgComptuteInfo_.vfLen / DOUBLE);
     /* 计算只处理一个窗口占用的UB */
     auto occupyUbSize = CalOccupySize();
@@ -73,8 +71,8 @@ bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
     ubUseEnough = ubUseEnough && (wiDataLen % avgComptuteInfo_.alignNum) > (avgComptuteInfo_.alignNum / DOUBLE);
 
     bool isCapable = isKernelSizeMeet && isNcLenEnough && isUbSizeEnough && ubUseEnough;
-    OP_LOGD(
-        context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling IsCapable check: %s", isCapable ? "true" : "false");
+    OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling IsCapable check: %s",
+            isCapable ? "true" : "false");
     return isCapable;
 }
 
@@ -111,12 +109,12 @@ void AdaptiveAvgPool3dParaPoolTiling::CalUbBlockFactor()
     avgComptuteInfo_.ncTail = input_.nIn * input_.cIn - (avgComptuteInfo_.ncOuter - 1) * avgComptuteInfo_.ncFactor;
 
     /* 总共的UB块 */
-    avgComptuteInfo_.totalOuter =
-        avgComptuteInfo_.ncOuter * avgComptuteInfo_.woOuter * avgComptuteInfo_.hoOuter * avgComptuteInfo_.doOuter;
+    avgComptuteInfo_.totalOuter = avgComptuteInfo_.ncOuter * avgComptuteInfo_.woOuter * avgComptuteInfo_.hoOuter *
+                                  avgComptuteInfo_.doOuter;
     avgComptuteInfo_.blockFactor = Ops::Base::CeilDiv(avgComptuteInfo_.totalOuter, input_.coreNum);
     avgComptuteInfo_.useCoreNum = Ops::Base::CeilDiv(avgComptuteInfo_.totalOuter, avgComptuteInfo_.blockFactor);
-    avgComptuteInfo_.blockTail =
-        avgComptuteInfo_.totalOuter - (avgComptuteInfo_.useCoreNum - 1) * avgComptuteInfo_.blockFactor;
+    avgComptuteInfo_.blockTail = avgComptuteInfo_.totalOuter -
+                                 (avgComptuteInfo_.useCoreNum - 1) * avgComptuteInfo_.blockFactor;
 }
 
 /*
@@ -133,13 +131,13 @@ uint64_t AdaptiveAvgPool3dParaPoolTiling::CalOccupySize()
 {
     CalMaxUbSplitSize();
     uint64_t dataBlock = Ops::Base::GetUbBlockSize(context_);
-    auto occupySize =
-        avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(input_.xDtype) +
-        avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(ge::DT_FLOAT) * MAX_UB_BUFFER_NUM +
-        Ops::Base::CeilAlign(avgComptuteInfo_.maxDimOut * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
-        Ops::Base::CeilAlign(avgComptuteInfo_.doFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
-        Ops::Base::CeilAlign(avgComptuteInfo_.hoFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
-        Ops::Base::CeilAlign(avgComptuteInfo_.woFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock);
+    auto occupySize = avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(input_.xDtype) +
+                      avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(ge::DT_FLOAT) * MAX_UB_BUFFER_NUM +
+                      Ops::Base::CeilAlign(avgComptuteInfo_.maxDimOut * ge::GetSizeByDataType(ge::DT_INT32),
+                                           dataBlock) +
+                      Ops::Base::CeilAlign(avgComptuteInfo_.doFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
+                      Ops::Base::CeilAlign(avgComptuteInfo_.hoFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
+                      Ops::Base::CeilAlign(avgComptuteInfo_.woFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock);
     return occupySize;
 }
 
@@ -197,9 +195,8 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::SearchUbFactor()
     }
     BinarySearch(avgComptuteInfo_.woFactor);
 
-    OP_LOGD(
-        context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", avgComptuteInfo_.doFactor,
-        avgComptuteInfo_.hoFactor, avgComptuteInfo_.woFactor);
+    OP_LOGD(context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", avgComptuteInfo_.doFactor,
+            avgComptuteInfo_.hoFactor, avgComptuteInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -219,9 +216,8 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::SearchOuter()
     }
     SearchOuterSingle(avgComptuteInfo_.woFactor);
 
-    OP_LOGD(
-        context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", avgComptuteInfo_.doFactor,
-        avgComptuteInfo_.hoFactor, avgComptuteInfo_.woFactor);
+    OP_LOGD(context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", avgComptuteInfo_.doFactor,
+            avgComptuteInfo_.hoFactor, avgComptuteInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -248,20 +244,17 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::InitUbFactor()
 
 ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::DoTilingForUbFactor()
 {
-    OP_CHECK_IF(
-        InitUbFactor() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling init ubfactor failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        SearchUbFactor() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling search ubfactor failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitUbFactor() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling init ubfactor failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SearchUbFactor() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling search ubfactor failed"),
+                return ge::GRAPH_FAILED);
 
     CalUbBlockFactor();
-    OP_CHECK_IF(
-        SearchOuter() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling search outer failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SearchOuter() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling search outer failed"),
+                return ge::GRAPH_FAILED);
 
     CalUbBlockFactor();
     CalMaxUbSplitSize();
@@ -278,9 +271,9 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::DoOpTiling()
 
 void AdaptiveAvgPool3dParaPoolTiling::SetTilingData()
 {
-    AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData* tilingData =
-        context_->GetTilingData<AdaptivePool3dParaKernelTilingData>();
-    OP_CHECK_IF(tilingData == nullptr, OP_LOGE(context_->GetNodeName(), "tilingData is null"), return);
+    AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData*
+        tilingData = context_->GetTilingData<AdaptivePool3dParaKernelTilingData>();
+    OP_CHECK_IF(tilingData == nullptr, OP_LOGE(context_->GetNodeName(), "tilingData is null"), return );
 
     tilingData->useCoreNum = avgComptuteInfo_.useCoreNum;
     tilingData->dIn = input_.dIn;

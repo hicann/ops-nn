@@ -35,8 +35,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16, op::DataType::DT_FLOAT16};
 
@@ -96,9 +96,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* out,
+                                                     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -132,8 +131,8 @@ aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
 
     float alpha = 0.16666666;
     float beta = 0.5;
-    auto hardsigmoidGradOut =
-        l0op::HardSigmoidGrad(gradOutputContiguousCasted, selfContiguousCasted, alpha, beta, uniqueExecutor.get());
+    auto hardsigmoidGradOut = l0op::HardSigmoidGrad(gradOutputContiguousCasted, selfContiguousCasted, alpha, beta,
+                                                    uniqueExecutor.get());
     CHECK_RET(hardsigmoidGradOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto hardsigmoidGradOutCast = l0op::Cast(hardsigmoidGradOut, out->GetDataType(), uniqueExecutor.get());
@@ -148,8 +147,8 @@ aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnHardsigmoidBackward(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnHardsigmoidBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                     aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnHardsigmoidBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

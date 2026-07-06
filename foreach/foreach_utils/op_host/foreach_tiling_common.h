@@ -40,16 +40,11 @@ struct ForeachSoloCompileInfo {
     platform_ascendc::SocVersion socVersion;
 };
 
-class ForeachBaseClass : public Ops::NN::Optiling::TilingBaseClass
-{
+class ForeachBaseClass : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ForeachBaseClass(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit ForeachBaseClass(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    void Reset(gert::TilingContext* context) override
-    {
-        TilingBaseClass::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
 
 protected:
     ge::graphStatus GetPlatformInfo() override;

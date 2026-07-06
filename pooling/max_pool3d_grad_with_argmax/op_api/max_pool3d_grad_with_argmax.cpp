@@ -53,38 +53,35 @@ static inline bool IsAiCoreSupport(const aclTensor* gradOutput)
 {
     const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListBySocVersion();
     if (!CheckType(gradOutput->GetDataType(), dtypeSupportList)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "gradOutput dtype not supported. support list is %s",
-            op::ToString(dtypeSupportList).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput dtype not supported. support list is %s",
+                op::ToString(dtypeSupportList).GetString());
         return false;
     }
     return true;
 }
 
-const inline aclTensor* MaxPool3DGradWithArgmaxAiCore(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
-    aclTensor* gradInput, aclOpExecutor* executor)
+const inline aclTensor* MaxPool3DGradWithArgmaxAiCore(const aclTensor* gradOutput, const aclTensor* self,
+                                                      const aclTensor* indices, const aclIntArray* kernelSize,
+                                                      const aclIntArray* stride, const aclIntArray* padding,
+                                                      const aclIntArray* dilation, bool ceilMode, aclTensor* gradInput,
+                                                      aclOpExecutor* executor)
 {
-    L0_DFX(
-        MaxPool3DGradWithArgmaxAiCore, gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode,
-        gradInput);
+    L0_DFX(MaxPool3DGradWithArgmaxAiCore, gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode,
+           gradInput);
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        ADD_TO_LAUNCHER_LIST_AICORE(
-            MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
-            OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, "NCDHW"));
+        ADD_TO_LAUNCHER_LIST_AICORE(MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
+                                    OP_ATTR(kernelSize, stride, padding, dilation, ceilMode, "NCDHW"));
     } else {
-        ADD_TO_LAUNCHER_LIST_AICORE(
-            MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
-            OP_ATTR(kernelSize, stride, padding, dilation, ceilMode));
+        ADD_TO_LAUNCHER_LIST_AICORE(MaxPool3DGradWithArgmax, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput),
+                                    OP_ATTR(kernelSize, stride, padding, dilation, ceilMode));
     }
     return gradInput;
 }
 
-const aclTensor* MaxPool3DGradWithArgmax(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclIntArray* kernelSize,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
-    aclOpExecutor* executor)
+const aclTensor* MaxPool3DGradWithArgmax(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                                         const aclIntArray* kernelSize, const aclIntArray* stride,
+                                         const aclIntArray* padding, const aclIntArray* dilation, bool ceilMode,
+                                         aclOpExecutor* executor)
 {
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kernelD = kernelRef[0];
@@ -120,8 +117,8 @@ const aclTensor* MaxPool3DGradWithArgmax(
 
     if (IsAiCoreSupport(gradOutput)) {
         // 调用算子计算
-        return MaxPool3DGradWithArgmaxAiCore(
-            gradOutput, self, indices, kernelSize3, stride3, padding3, dilation3, ceilMode, gradInput, executor);
+        return MaxPool3DGradWithArgmaxAiCore(gradOutput, self, indices, kernelSize3, stride3, padding3, dilation3,
+                                             ceilMode, gradInput, executor);
     } else {
         // 当前没有匹配的aicpu算子
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "no dtype support on AICPU");

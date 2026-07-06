@@ -15,43 +15,44 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class AdaLayerNorm : public OpDef {
-    public:
-        explicit AdaLayerNorm(const char* name) : OpDef(name) {
-            this->Input("x")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("scale")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("shift")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("weight")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("bias")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("out")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
-            this->AICore().AddConfig("ascend910b");
-            this->AICore().AddConfig("ascend910_93");
-        }
-    };
-    OP_ADD(AdaLayerNorm);
-}
+class AdaLayerNorm : public OpDef {
+public:
+    explicit AdaLayerNorm(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("scale")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("shift")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("weight")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("out")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-5);
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+    }
+};
+OP_ADD(AdaLayerNorm);
+} // namespace ops

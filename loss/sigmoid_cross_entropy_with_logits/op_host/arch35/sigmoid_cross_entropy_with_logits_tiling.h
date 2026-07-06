@@ -29,25 +29,25 @@ struct SigmoidCrossEntropyWithLogitsCompileInfo {
 };
 
 class SigmoidCrossEntropyWithLogitsTiling {
- public:
-  explicit SigmoidCrossEntropyWithLogitsTiling(gert::TilingContext *context) : tilingContext_(context) {};
+public:
+    explicit SigmoidCrossEntropyWithLogitsTiling(gert::TilingContext* context) : tilingContext_(context){};
 
-  ge::graphStatus RunTiling();
+    ge::graphStatus RunTiling();
 
- protected:
-  ge::graphStatus DoElewiseTiling();
-  ge::graphStatus CalcInputDtype();
-  ge::graphStatus CalcOutputDtype();
-  ge::graphStatus CheckShape();
-  ge::graphStatus CheckSameShape(int32_t inputIdx, const gert::Shape& input0Shape);
+protected:
+    ge::graphStatus DoElewiseTiling();
+    ge::graphStatus CalcInputDtype();
+    ge::graphStatus CalcOutputDtype();
+    ge::graphStatus CheckShape();
+    ge::graphStatus CheckSameShape(int32_t inputIdx, const gert::Shape& input0Shape);
 
- private:
-  gert::TilingContext *tilingContext_;
-  ge::DataType inputDtype_ = ge::DT_UNDEFINED;
-  ge::DataType outputDtype_ = ge::DT_UNDEFINED;
-  uint64_t dType_ = 0;
-  uint64_t tilingKey_ = 0;
+private:
+    gert::TilingContext* tilingContext_;
+    ge::DataType inputDtype_ = ge::DT_UNDEFINED;
+    ge::DataType outputDtype_ = ge::DT_UNDEFINED;
+    uint64_t dType_ = 0;
+    uint64_t tilingKey_ = 0;
 };
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_TILING_H_
+#endif // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_TILING_H_

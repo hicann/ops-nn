@@ -25,8 +25,8 @@ const aclTensor* Gelu(const aclTensor* self, aclOpExecutor* executor)
 
     auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(Gelu, OP_INPUT(self), OP_OUTPUT(out));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return nullptr, "Gelu ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "Gelu ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 }
 } // namespace l0op

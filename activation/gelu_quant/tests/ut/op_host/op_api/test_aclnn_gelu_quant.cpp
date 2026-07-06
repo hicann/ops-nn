@@ -21,18 +21,11 @@
 using namespace op;
 using namespace std;
 
-class l2_gelu_quant_test : public testing::Test
-{
+class l2_gelu_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_gelu_quant_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_gelu_quant_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_gelu_quant_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_gelu_quant_test TearDown" << endl; }
 };
 
 TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_bf16_E4M3_tanh_dynamic_rint_scale)
@@ -54,9 +47,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_bf16_E4M3_tanh_dynamic_rint_scal
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E4M3FN);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -76,9 +69,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_fp16_hi8_none_static_round_scale
     const char* quantMode = "static";
     const char* roundMode = "round";
     int64_t dstType = static_cast<int64_t>(ACL_HIFLOAT8);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -98,9 +91,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_fp32_uint8_tanh_static_round_sca
     const char* quantMode = "static";
     const char* roundMode = "round";
     int64_t dstType = static_cast<int64_t>(ACL_UINT8);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -124,9 +117,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_fp32_E5M2_none_dynamic_rint_scal
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -188,11 +181,10 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_self_nullptr_fail)
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_UINT8);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant,
-        INPUT(
-            (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT((aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, approximate, quantMode,
+                              roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -313,9 +305,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_quantMode_fail)
     const char* quantMode = "dy";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -340,9 +332,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_roundMode_fail)
     const char* quantMode = "dynamic";
     const char* roundMode = "round";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -363,9 +355,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_self_Dim_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -398,9 +390,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_self_Dim_fail)
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -421,9 +413,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_outScale_Dim8_fail)
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -440,9 +432,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_Dim_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -463,9 +455,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_offset_Dim_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -486,9 +478,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_self_y_shape_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -513,9 +505,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_outScale_shape_fail)
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -536,9 +528,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_self_scale_dtype_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -559,9 +551,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_self_dtype_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -582,9 +574,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_dtype_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -609,9 +601,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_offset_dtype_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -636,9 +628,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_scale_offset_dtype_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -659,9 +651,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_y_dtype_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT16);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -682,9 +674,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_static_y_dsttype_diff_fail)
     const char* quantMode = "static";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT16);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, (aclTensor*)nullptr, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, (aclTensor*)nullptr));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -733,9 +725,9 @@ TEST_F(l2_gelu_quant_test, ascend950_gelu_quant_dynamic_scale_offset__fail)
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, (aclTensor*)nullptr, offset_desc, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, (aclTensor*)nullptr, offset_desc, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
@@ -760,9 +752,9 @@ TEST_F(l2_gelu_quant_test, ascend910B2_gelu_quant_fp32_E5M2_none_dynamic_rint_sc
     const char* quantMode = "dynamic";
     const char* roundMode = "rint";
     int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
-    auto ut = OP_API_UT(
-        aclnnGeluQuant, INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
-        OUTPUT(y_desc, outScale_desc));
+    auto ut = OP_API_UT(aclnnGeluQuant,
+                        INPUT(x_desc, scale_desc, offset_desc, approximate, quantMode, roundMode, dstType),
+                        OUTPUT(y_desc, outScale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }

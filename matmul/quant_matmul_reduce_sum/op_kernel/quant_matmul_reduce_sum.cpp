@@ -55,9 +55,11 @@ __aicore__ inline void RunQuantMatmulReduceSum(const QbmmRSComputeInitParams* __
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void quant_matmul_reduce_sum(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR dims, GM_ADDR bias, GM_ADDR x1Scale, GM_ADDR x2Scale, GM_ADDR yScale,
-    GM_ADDR x1Offset, GM_ADDR x2Offset, GM_ADDR yOffset, GM_ADDR x2Table, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void quant_matmul_reduce_sum(GM_ADDR x1, GM_ADDR x2, GM_ADDR dims, GM_ADDR bias,
+                                                              GM_ADDR x1Scale, GM_ADDR x2Scale, GM_ADDR yScale,
+                                                              GM_ADDR x1Offset, GM_ADDR x2Offset, GM_ADDR yOffset,
+                                                              GM_ADDR x2Table, GM_ADDR y, GM_ADDR workspace,
+                                                              GM_ADDR tiling)
 {
     QbmmRSComputeInitParams initParams;
     // 预留参数拦截
@@ -82,9 +84,9 @@ extern "C" __global__ __aicore__ void quant_matmul_reduce_sum(
     KERNEL_TASK_TYPE(0, KERNEL_TYPE_MIX_AIC_1_2);
     TILING_KEY_IS(1);
     KERNEL_TASK_TYPE(1, KERNEL_TYPE_MIX_AIC_1_1);
-    #if TILING_KEY_VAR == 0
-        RunQuantMatmulReduceSum<false, false, false>(&initParams);
-    #elif TILING_KEY_VAR == 1
-        RunQuantMatmulReduceSum<false, false, false>(&initParams);
-    #endif
+#if TILING_KEY_VAR == 0
+    RunQuantMatmulReduceSum<false, false, false>(&initParams);
+#elif TILING_KEY_VAR == 1
+    RunQuantMatmulReduceSum<false, false, false>(&initParams);
+#endif
 }

@@ -61,41 +61,40 @@ constexpr int64_t kCmpAlignElemFp32 = 256 / static_cast<int64_t>(sizeof(float));
 // (IN 8*4 + OUT 6*4 + scratch 24 + mask 1 = 81B / 4B), 24 keeps headroom.  Any
 // change to the buffer layout below MUST update both constants together.
 constexpr int64_t kUbFp32Slots = 24;
-static_assert(kUbFp32Slots == 24,
-              "UB fp32 slot count must stay in sync with host tiling constant "
-              "UB_FP32_SLOTS in apply_ftrl_tiling.cpp; update both together when "
-              "adding/removing UB buffers.");
+static_assert(kUbFp32Slots == 24, "UB fp32 slot count must stay in sync with host tiling constant "
+                                  "UB_FP32_SLOTS in apply_ftrl_tiling.cpp; update both together when "
+                                  "adding/removing UB buffers.");
 
 // Scalar staging buffer (32B) for the bf16 scalar borrow path.
 constexpr int32_t kScalarBufBytes = 32;
 
-using AscendC::TPipe;
-using AscendC::TQue;
-using AscendC::TBuf;
-using AscendC::QuePosition;
-using AscendC::GlobalTensor;
-using AscendC::LocalTensor;
-using AscendC::DataCopyExtParams;
-using AscendC::DataCopyPadExtParams;
-using AscendC::DataCopyPad;
-using AscendC::GetBlockIdx;
-using AscendC::Cast;
+using AscendC::Abs;
 using AscendC::Add;
-using AscendC::Sub;
+using AscendC::Adds;
+using AscendC::Cast;
+using AscendC::CMPMODE;
+using AscendC::CompareScalar;
+using AscendC::DataCopyExtParams;
+using AscendC::DataCopyPad;
+using AscendC::DataCopyPadExtParams;
+using AscendC::Div;
+using AscendC::Duplicate;
+using AscendC::Exp;
+using AscendC::GetBlockIdx;
+using AscendC::GlobalTensor;
+using AscendC::Ln;
+using AscendC::LocalTensor;
 using AscendC::Mul;
 using AscendC::Muls;
-using AscendC::Adds;
-using AscendC::Abs;
-using AscendC::Div;
-using AscendC::Ln;
-using AscendC::Exp;
-using AscendC::Duplicate;
-using AscendC::CompareScalar;
-using AscendC::Select;
 using AscendC::PipeBarrier;
-using AscendC::CMPMODE;
-using AscendC::SELMODE;
+using AscendC::QuePosition;
 using AscendC::RoundMode;
+using AscendC::Select;
+using AscendC::SELMODE;
+using AscendC::Sub;
+using AscendC::TBuf;
+using AscendC::TPipe;
+using AscendC::TQue;
 
 template <typename T, bool PAD_TAIL = true, bool HAS_L1 = true>
 class ApplyFtrl {
@@ -103,8 +102,7 @@ class ApplyFtrl {
     static constexpr bool IS_FLOAT = std::is_same<T, float>::value;
     // half/fp32 scalars cast directly from a register; bf16 must borrow via a
     // LocalTensor + Vector Cast (bisheng forbids bf16 scalar static_cast).
-    static constexpr bool DIRECT_SCALAR =
-        std::is_same<T, float>::value || std::is_same<T, half>::value;
+    static constexpr bool DIRECT_SCALAR = std::is_same<T, float>::value || std::is_same<T, half>::value;
     // DMA alignment block (32B): fp32 -> 8, half/bf16 -> 16 elements.  DataCopyPad
     // rightPadding cannot span more than one 32B block, so the tail is padded only
     // to this granularity; the remaining [nDma, nComp) gap is filled in the fp32
@@ -114,9 +112,8 @@ class ApplyFtrl {
 public:
     __aicore__ inline ApplyFtrl() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad,
-                                GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower,
-                                GM_ADDR varOut, const ApplyFtrlTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr, GM_ADDR l1,
+                                GM_ADDR l2, GM_ADDR lrPower, GM_ADDR varOut, const ApplyFtrlTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -156,8 +153,8 @@ private:
     TBuf<QuePosition::VECCALC> bScalarF32_;
 
     GlobalTensor<T> varGm_;
-    GlobalTensor<T> accumGm_;    // read + in-place write back (Ref Tensor).
-    GlobalTensor<T> linearGm_;   // read + in-place write back (Ref Tensor).
+    GlobalTensor<T> accumGm_;  // read + in-place write back (Ref Tensor).
+    GlobalTensor<T> linearGm_; // read + in-place write back (Ref Tensor).
     GlobalTensor<T> gradGm_;
     GlobalTensor<T> varOutGm_;
 
@@ -209,10 +206,9 @@ __aicore__ inline float ApplyFtrl<T, PAD_TAIL, HAS_L1>::LoadScalar(GM_ADDR gmAdd
 // Init
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Init(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower,
-    GM_ADDR varOut, const ApplyFtrlTilingData* tilingData)
+__aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Init(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad,
+                                                            GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower,
+                                                            GM_ADDR varOut, const ApplyFtrlTilingData* tilingData)
 {
     ubFactor_ = tilingData->ubFactor;
 
@@ -238,24 +234,24 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Init(
     varOutGm_.SetGlobalBuffer((__gm__ T*)varOut + blockOffset_, blockLen_);
 
     // UB buffers (sized to ubFactor_; ubFactor_ is a 256B/64-element multiple).
-    pipe_.InitBuffer(qVar_,    2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(qAccum_,  2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(qVar_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(qAccum_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(qLinear_, 2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(qGrad_,   2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(qVarOut_,    2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(qAccumOut_,  2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(qGrad_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(qVarOut_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(qAccumOut_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(qLinearOut_, 2, ubFactor_ * sizeof(T));
 
     if constexpr (!IS_FLOAT) {
-        pipe_.InitBuffer(bVarF_,    ubFactor_ * sizeof(float));
-        pipe_.InitBuffer(bAccumF_,  ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(bVarF_, ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(bAccumF_, ubFactor_ * sizeof(float));
         pipe_.InitBuffer(bLinearF_, ubFactor_ * sizeof(float));
-        pipe_.InitBuffer(bGradF_,   ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(bGradF_, ubFactor_ * sizeof(float));
     }
-    pipe_.InitBuffer(bAccumNew_,  ubFactor_ * sizeof(float));
-    pipe_.InitBuffer(bPowNew_,    ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(bAccumNew_, ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(bPowNew_, ubFactor_ * sizeof(float));
     pipe_.InitBuffer(bLinearNew_, ubFactor_ * sizeof(float));
-    pipe_.InitBuffer(bQuad_,      ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(bQuad_, ubFactor_ * sizeof(float));
     pipe_.InitBuffer(bTmpA_, ubFactor_ * sizeof(float));
     pipe_.InitBuffer(bTmpB_, ubFactor_ * sizeof(float));
     pipe_.InitBuffer(bMask_, ubFactor_ * sizeof(uint8_t));
@@ -289,8 +285,7 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Init(
 //   PAD_TAIL=0 / 32B-aligned tile -> rightPad == 0 (fast path unchanged).
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::CopyInTile(
-    int64_t gmOffset, int64_t currentNum, int64_t nDma)
+__aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::CopyInTile(int64_t gmOffset, int64_t currentNum, int64_t nDma)
 {
     LocalTensor<T> varLocal = qVar_.template AllocTensor<T>();
     LocalTensor<T> accumLocal = qAccum_.template AllocTensor<T>();
@@ -308,10 +303,10 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::CopyInTile(
     DataCopyPadExtParams<T> padZero{true, 0, rightPad, static_cast<T>(0)};
     DataCopyPadExtParams<T> padOne{true, 0, rightPad, static_cast<T>(1.0f)};
 
-    DataCopyPad(varLocal,    varGm_[gmOffset],    copyParams, padZero);
-    DataCopyPad(accumLocal,  accumGm_[gmOffset],  copyParams, padOne);
+    DataCopyPad(varLocal, varGm_[gmOffset], copyParams, padZero);
+    DataCopyPad(accumLocal, accumGm_[gmOffset], copyParams, padOne);
     DataCopyPad(linearLocal, linearGm_[gmOffset], copyParams, padZero);
-    DataCopyPad(gradLocal,   gradGm_[gmOffset],   copyParams, padZero);
+    DataCopyPad(gradLocal, gradGm_[gmOffset], copyParams, padZero);
 
     qVar_.EnQue(varLocal);
     qAccum_.EnQue(accumLocal);
@@ -428,11 +423,11 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Compute(int64_t nDma, int
             //   linear_t <  0 -> (-l1 - linear_t)   [negVal in bTmpB]
             // (linear_t == 0 yields posVal = l1, but |0| > l1 is false so the gate
             //  zeroes it -> consistent with sign(0)*l1 - 0 = 0.)
-            Muls(bTmpA, bLinearNew, -1.0f, n);          // -linear_t
-            Adds(bTmpA, bTmpA, l1Scalar_, n);           // posVal = l1 - linear_t
-            Adds(bTmpB, bTmpA, -2.0f * l1Scalar_, n);   // negVal = -l1 - linear_t
+            Muls(bTmpA, bLinearNew, -1.0f, n);        // -linear_t
+            Adds(bTmpA, bTmpA, l1Scalar_, n);         // posVal = l1 - linear_t
+            Adds(bTmpB, bTmpA, -2.0f * l1Scalar_, n); // negVal = -l1 - linear_t
             CompareScalar(mask, bLinearNew, 0.0f, CMPMODE::GE, n);
-            Select(bPowNew, mask, bTmpA, bTmpB, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);  // x_res
+            Select(bPowNew, mask, bTmpA, bTmpB, SELMODE::VSEL_TENSOR_TENSOR_MODE, n); // x_res
 
             // var_true = x_res / quadratic
             Div(bTmpA, bPowNew, bQuad, n);
@@ -440,8 +435,8 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Compute(int64_t nDma, int
             // gate: |linear_t| > l1 ? var_true : 0
             Abs(bTmpB, bLinearNew, n);
             CompareScalar(mask, bTmpB, l1Scalar_, CMPMODE::GT, n);
-            Duplicate(bPowNew, 0.0f, n);                // zeros (bPowNew free after S6)
-            Select(bTmpB, mask, bTmpA, bPowNew, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);  // var
+            Duplicate(bPowNew, 0.0f, n);                                              // zeros (bPowNew free after S6)
+            Select(bTmpB, mask, bTmpA, bPowNew, SELMODE::VSEL_TENSOR_TENSOR_MODE, n); // var
         }
     } else {
         // HAS_L1=0 compile-time fast path: var = -linear_t / quadratic.
@@ -477,8 +472,7 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Compute(int64_t nDma, int
 // own input GM (Ref Tensor in-place); var goes to var_out.
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::CopyOutTile(
-    int64_t gmOffset, int64_t currentNum)
+__aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::CopyOutTile(int64_t gmOffset, int64_t currentNum)
 {
     LocalTensor<T> accumOutLocal = qAccumOut_.template DeQue<T>();
     LocalTensor<T> linearOutLocal = qLinearOut_.template DeQue<T>();
@@ -490,9 +484,9 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::CopyOutTile(
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
 
-    DataCopyPad(accumGm_[gmOffset],  accumOutLocal,  copyParams);
+    DataCopyPad(accumGm_[gmOffset], accumOutLocal, copyParams);
     DataCopyPad(linearGm_[gmOffset], linearOutLocal, copyParams);
-    DataCopyPad(varOutGm_[gmOffset], varOutLocal,    copyParams);
+    DataCopyPad(varOutGm_[gmOffset], varOutLocal, copyParams);
 
     qAccumOut_.FreeTensor(accumOutLocal);
     qLinearOut_.FreeTensor(linearOutLocal);
@@ -515,14 +509,13 @@ __aicore__ inline void ApplyFtrl<T, PAD_TAIL, HAS_L1>::Process()
         int64_t gmOffset = i * ubFactor_;
         int64_t currentNum = (i == (loopCount - 1)) ? (blockLen_ - gmOffset) : ubFactor_;
         int64_t nDma = ((currentNum + kDmaBlockElem - 1) / kDmaBlockElem) * kDmaBlockElem;
-        int64_t nComp =
-            ((currentNum + kCmpAlignElemFp32 - 1) / kCmpAlignElemFp32) * kCmpAlignElemFp32;
+        int64_t nComp = ((currentNum + kCmpAlignElemFp32 - 1) / kCmpAlignElemFp32) * kCmpAlignElemFp32;
         CopyInTile(gmOffset, currentNum, nDma);
         Compute(nDma, nComp);
         CopyOutTile(gmOffset, currentNum);
     }
 }
 
-}  // namespace NsApplyFtrl
+} // namespace NsApplyFtrl
 
-#endif  // APPLY_FTRL_KERNEL_H
+#endif // APPLY_FTRL_KERNEL_H

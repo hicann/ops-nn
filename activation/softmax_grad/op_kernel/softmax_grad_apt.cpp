@@ -22,24 +22,23 @@
 using namespace AscendC;
 using namespace SoftmaxGradOps;
 
-namespace
-{
+namespace {
 #define TILINGKEY_AR_SMALL_R 500
 #define TILINGKEY_AR 1000
 #define TILINGKEY_AR_RECOMPUTE 2000
 #define TILINGKEY_ARA 10000
 #define TILINGKEY_ARA_RECOMPUTE 20000
 
-}  // namespace
+} // namespace
 
-#define softmax_grad_AR_SMALL_R_IMPL(INPUT_TYPE)                                            \
-    do {                                                                            \
+#define softmax_grad_AR_SMALL_R_IMPL(INPUT_TYPE)                                          \
+    do {                                                                                  \
         GET_TILING_DATA_WITH_STRUCT(SoftmaxGradARSmallRTilingData, tilingDataIn, tiling); \
         const SoftmaxGradARSmallRTilingData* __restrict tilingData = &tilingDataIn;       \
-        TPipe pipe;                                                                 \
+        TPipe pipe;                                                                       \
         SoftmaxGradARSmallR<INPUT_TYPE> op(&pipe);                                        \
-        op.Init(softmax, grad_softmax, grad_x, tilingData);                         \
-        op.Process();                                                               \
+        op.Init(softmax, grad_softmax, grad_x, tilingData);                               \
+        op.Process();                                                                     \
     } while (0)
 
 #define softmax_grad_AR_IMPL(INPUT_TYPE)                                            \

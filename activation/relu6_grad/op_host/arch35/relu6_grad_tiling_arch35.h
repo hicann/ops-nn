@@ -25,7 +25,7 @@ using namespace Ops::Base;
 
 class Relu6GradTiling : public TilingBaseClass {
 public:
-    explicit Relu6GradTiling(gert::TilingContext* context) : TilingBaseClass(context) {};
+    explicit Relu6GradTiling(gert::TilingContext* context) : TilingBaseClass(context){};
 
 protected:
     bool IsCapable() override;

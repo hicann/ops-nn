@@ -15,16 +15,15 @@
 using namespace NsSparseSegmentSumGrad;
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_segment_sum_grad(
-    GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds,
-    GM_ADDR outputDim0, GM_ADDR output,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_segment_sum_grad(GM_ADDR grad, GM_ADDR indices, GM_ADDR segmentIds,
+                                                   GM_ADDR outputDim0, GM_ADDR output, GM_ADDR workspace,
+                                                   GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseSegmentSumGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseSegmentSumGradTilingData, tilingData, tiling);
 
     if constexpr (schMode == MODE_SCATTER) {
-        Process<DTYPE_GRAD, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(
-            grad, indices, segmentIds, outputDim0, output, &tilingData);
+        Process<DTYPE_GRAD, DTYPE_INDICES, DTYPE_SEGMENT_IDS>(grad, indices, segmentIds, outputDim0, output,
+                                                              &tilingData);
     }
 }

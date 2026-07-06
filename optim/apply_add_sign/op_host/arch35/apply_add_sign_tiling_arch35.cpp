@@ -48,10 +48,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr int64_t TYPE_SIZE_FP32 = 4;
@@ -60,7 +60,8 @@ constexpr int64_t MIN_UB_FACTOR_BYTES = 32;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -96,20 +97,18 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto mInput = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, mInput);
     auto mShape = EnsureNotScalar(mInput->GetStorageShape());
-    OP_CHECK_IF(
-        mShape.GetShapeSize() != varShape.GetShapeSize(),
-        OP_LOGE(context, "ApplyAddSign: m.shape != var.shape: m=%ld, var=%ld",
-                mShape.GetShapeSize(), varShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(mShape.GetShapeSize() != varShape.GetShapeSize(),
+                OP_LOGE(context, "ApplyAddSign: m.shape != var.shape: m=%ld, var=%ld", mShape.GetShapeSize(),
+                        varShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     auto gradInput = context->GetInputShape(6);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradInput);
     auto gradShape = EnsureNotScalar(gradInput->GetStorageShape());
-    OP_CHECK_IF(
-        gradShape.GetShapeSize() != varShape.GetShapeSize(),
-        OP_LOGE(context, "ApplyAddSign: grad.shape != var.shape: grad=%ld, var=%ld",
-                gradShape.GetShapeSize(), varShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradShape.GetShapeSize() != varShape.GetShapeSize(),
+                OP_LOGE(context, "ApplyAddSign: grad.shape != var.shape: grad=%ld, var=%ld", gradShape.GetShapeSize(),
+                        varShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     // 校验标量参数：1-element Tensor（rank=0 或 shape={1} 均可，参考 sibling apply_adadelta::IsScalarShape）
     // lr/alpha/sign_decay/beta 分别为 input[2]/[3]/[4]/[5]，GE-IR 图模式构图通常传入 shape={1}。
@@ -117,11 +116,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         auto scalarInput = context->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarInput);
         auto scalarShape = scalarInput->GetStorageShape();
-        OP_CHECK_IF(
-            scalarShape.GetShapeSize() != 1,
-            OP_LOGE(context, "ApplyAddSign: input[%d] must be 1-element scalar tensor, got shape_size=%ld",
-                    i, scalarShape.GetShapeSize()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(scalarShape.GetShapeSize() != 1,
+                    OP_LOGE(context, "ApplyAddSign: input[%d] must be 1-element scalar tensor, got shape_size=%ld", i,
+                            scalarShape.GetShapeSize()),
+                    return ge::GRAPH_FAILED);
     }
 
     *totalIdx = varShape.GetShapeSize();
@@ -131,8 +129,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
-    OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "ApplyAddSign: invalid dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtype.count(*dataType) == 0, OP_LOGE(context, "ApplyAddSign: invalid dtype"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -156,12 +154,12 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 //   填充 blockFactor/ubFactor=1 以兼容 Kernel Init 对 InitBuffer 容量要求;
 //   Kernel Process 通过 dim0==0 提前 return,不会触碰 buffer 但需要其合法分配。
 // ============================================================================
-static ge::graphStatus SetEmptyTensorTiling(
-    gert::TilingContext* context, ApplyAddSignTilingData* tiling, ge::DataType dataType)
+static ge::graphStatus SetEmptyTensorTiling(gert::TilingContext* context, ApplyAddSignTilingData* tiling,
+                                            ge::DataType dataType)
 {
     tiling->blockFactor = 1;
     tiling->ubFactor = 1;
-    tiling->signTmpSize = 256U;  // Kernel 兜底大小
+    tiling->signTmpSize = 256U; // Kernel 兜底大小
     context->SetBlockDim(1);
     ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType));
     return ge::GRAPH_SUCCESS;
@@ -177,31 +175,26 @@ static ge::graphStatus SetEmptyTensorTiling(
 // ubFactor 下限: MIN_UB_FACTOR_BYTES / ioTypeSize (fp32=8 / fp16+bf16=16),
 // 且 ubFactor ≤ blockFactor (防止 DataCopyPad 越界)。
 // ============================================================================
-static ge::graphStatus ComputeBlockAndUbSplit(
-    gert::TilingContext* context, ApplyAddSignTilingData* tiling,
-    int64_t totalIdx, int64_t coreNum, uint64_t ubSize, ge::DataType dataType,
-    int64_t* usedCoreNum)
+static ge::graphStatus ComputeBlockAndUbSplit(gert::TilingContext* context, ApplyAddSignTilingData* tiling,
+                                              int64_t totalIdx, int64_t coreNum, uint64_t ubSize, ge::DataType dataType,
+                                              int64_t* usedCoreNum)
 {
     int64_t ubBlockSize = GetUbBlockSize(context);
     tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
     *usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
-    OP_CHECK_IF(*usedCoreNum <= 0,
-                OP_LOGE(context, "ApplyAddSign: invalid usedCoreNum=%ld", *usedCoreNum),
+    OP_CHECK_IF(*usedCoreNum <= 0, OP_LOGE(context, "ApplyAddSign: invalid usedCoreNum=%ld", *usedCoreNum),
                 return ge::GRAPH_FAILED);
 
     int64_t ioTypeSize = (dataType == ge::DT_FLOAT) ? 4 : 2;
     constexpr int64_t CALC_TYPE_SIZE = 4;
-    constexpr int64_t NUM_IO_BUFFERS_EQUIV = 8;   // 4 queues × BUF_NUM=2
-    constexpr int64_t NUM_CALC_BUFFERS = 16;      // 与 op_kernel TBuf 实际数量对齐
-    constexpr int64_t NUM_AUX_BUFFERS_EQUIV = 2;  // signTmp + nanMask + 对齐余量
-    int64_t bytesPerElem = NUM_IO_BUFFERS_EQUIV * ioTypeSize
-                         + NUM_CALC_BUFFERS * CALC_TYPE_SIZE
-                         + NUM_AUX_BUFFERS_EQUIV * CALC_TYPE_SIZE;
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem),
-        ubBlockSize);
+    constexpr int64_t NUM_IO_BUFFERS_EQUIV = 8;  // 4 queues × BUF_NUM=2
+    constexpr int64_t NUM_CALC_BUFFERS = 16;     // 与 op_kernel TBuf 实际数量对齐
+    constexpr int64_t NUM_AUX_BUFFERS_EQUIV = 2; // signTmp + nanMask + 对齐余量
+    int64_t bytesPerElem = NUM_IO_BUFFERS_EQUIV * ioTypeSize + NUM_CALC_BUFFERS * CALC_TYPE_SIZE +
+                           NUM_AUX_BUFFERS_EQUIV * CALC_TYPE_SIZE;
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem), ubBlockSize);
 
-    int64_t minUbFactor = MIN_UB_FACTOR_BYTES / ioTypeSize;  // fp32=8, fp16/bf16=16
+    int64_t minUbFactor = MIN_UB_FACTOR_BYTES / ioTypeSize; // fp32=8, fp16/bf16=16
     if (tiling->ubFactor < minUbFactor) {
         tiling->ubFactor = minUbFactor;
     }
@@ -225,8 +218,7 @@ static void ComputeSignTmpSize(ApplyAddSignTilingData* tiling, ge::DataType data
     uint32_t signMaxVal = 0;
     uint32_t signMinVal = 0;
     AscendC::GetSignMaxMinTmpSize(signSrcShape, signTypeSize,
-                                   /*isReuseSource*/ false,
-                                   signMaxVal, signMinVal);
+                                  /*isReuseSource*/ false, signMaxVal, signMinVal);
     tiling->signTmpSize = (signMinVal > 0) ? signMinVal : 512U;
 }
 
@@ -252,14 +244,13 @@ static ge::graphStatus ApplyAddSignTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(GetShapeAttrsInfo(context, &totalIdx, &dataType) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ApplyAddSignTilingData* tiling = context->GetTilingData<ApplyAddSignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyAddSignTilingData), 0, sizeof(ApplyAddSignTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ApplyAddSignTilingData), 0, sizeof(ApplyAddSignTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     tiling->dim0 = totalIdx;
 
     if (totalIdx == 0) {
@@ -268,8 +259,7 @@ static ge::graphStatus ApplyAddSignTilingFunc(gert::TilingContext* context)
 
     int64_t usedCoreNum;
     OP_CHECK_IF(
-        ComputeBlockAndUbSplit(context, tiling, totalIdx, coreNum, ubSize, dataType, &usedCoreNum)
-            != ge::GRAPH_SUCCESS,
+        ComputeBlockAndUbSplit(context, tiling, totalIdx, coreNum, ubSize, dataType, &usedCoreNum) != ge::GRAPH_SUCCESS,
         OP_LOGE(context, "ComputeBlockAndUbSplit error"), return ge::GRAPH_FAILED);
 
     ComputeSignTmpSize(tiling, dataType);
@@ -286,6 +276,8 @@ static ge::graphStatus TilingParseForApplyAddSign([[maybe_unused]] gert::TilingP
 
 struct ApplyAddSignCompileInfo {};
 
-IMPL_OP_OPTILING(ApplyAddSign).Tiling(ApplyAddSignTilingFunc).TilingParse<ApplyAddSignCompileInfo>(TilingParseForApplyAddSign);
+IMPL_OP_OPTILING(ApplyAddSign)
+    .Tiling(ApplyAddSignTilingFunc)
+    .TilingParse<ApplyAddSignCompileInfo>(TilingParseForApplyAddSign);
 
 } // namespace optiling

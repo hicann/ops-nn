@@ -28,15 +28,9 @@
 
 class IndexPutV2 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "IndexPutV2 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "IndexPutV2 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "IndexPutV2 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "IndexPutV2 TearDown" << std::endl; }
 };
 
 TEST_F(IndexPutV2, IndexPutV2_infershape_case_1)
@@ -76,9 +70,9 @@ TEST_F(IndexPutV2, IndexPutV2_InferDtype_case_1)
                                   .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                                   .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeAttrs(
-                                      {{"accumulate", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                                  .InputDataTypes({&input_x_ref, &input_vaule_ref, &input_indexed_sizes_ref, &input_indexed_strides_ref, &input_indices_ref})
+                                  .NodeAttrs({{"accumulate", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                                  .InputDataTypes({&input_x_ref, &input_vaule_ref, &input_indexed_sizes_ref,
+                                                   &input_indexed_strides_ref, &input_indices_ref})
                                   .OutputDataTypes({&output_y_ref})
                                   .Build();
         auto context = context_holder.GetContext<gert::InferDataTypeContext>();

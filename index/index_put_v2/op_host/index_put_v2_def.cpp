@@ -30,11 +30,12 @@ static const std::vector<ge::DataType> constType = {
 static const std::vector<ge::DataType> indicesType = {
     ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
     ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32};
-}
+} // namespace
 namespace ops {
 class IndexPutV2 : public OpDef {
 public:
-    explicit IndexPutV2(const char *name) : OpDef(name) {
+    explicit IndexPutV2(const char* name) : OpDef(name)
+    {
         this->Input("x").ParamType(REQUIRED).DataType(valueType).Format(format).UnknownShapeFormat(format);
         this->Input("value").ParamType(REQUIRED).DataType(valueType).Format(format).UnknownShapeFormat(format);
         this->Input("indexed_sizes")

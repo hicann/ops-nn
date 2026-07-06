@@ -45,8 +45,7 @@ constexpr int64_t DIM_4 = 4;
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
 constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
 
-class BatchNormGradInferBase : public Ops::NN::Optiling::TilingBaseClass
-{
+class BatchNormGradInferBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
     explicit BatchNormGradInferBase(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
     {
@@ -61,34 +60,22 @@ public:
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
 
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
-    ge::graphStatus DoOpTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoOpTiling() override { return ge::GRAPH_SUCCESS; }
     // 4、计算高阶API的TilingData
     ge::graphStatus DoLibApiTiling() override;
     // 5、计算TilingKey
-    uint64_t GetTilingKey() const override
-    {
-        return 0;
-    }
+    uint64_t GetTilingKey() const override { return 0; }
     // 6、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override;
     // 7、保存Tiling数据
-    ge::graphStatus PostTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus PostTiling() override { return ge::GRAPH_SUCCESS; }
 
     void Reset();
     void CalcBasicInfo();
@@ -97,6 +84,7 @@ protected:
     ge::graphStatus CheckSmallShapesValid();
     ge::graphStatus CheckDtypeValid();
     const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape);
+
 protected:
     const char* opName_ = "BatchNormGradInferBase";
 
@@ -129,6 +117,6 @@ protected:
     ge::DataType runningVarDtype_{ge::DataType::DT_FLOAT};
 };
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

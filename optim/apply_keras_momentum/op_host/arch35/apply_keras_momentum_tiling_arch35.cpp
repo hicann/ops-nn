@@ -23,8 +23,8 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr size_t WORKSPACE_NUM = 1;
@@ -70,10 +70,8 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-                                            int64_t* totalElements,
-                                            ge::DataType* dataType,
-                                            uint8_t* useNesterov)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType,
+                                         uint8_t* useNesterov)
 {
     auto inputVar = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
@@ -85,8 +83,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
     *dataType = inputDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
-    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0,
-                OP_LOGE(context, "Unsupported dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0, OP_LOGE(context, "Unsupported dtype"), return ge::GRAPH_FAILED);
 
     const bool* useNesterovAttr = context->GetAttrs()->GetAttrPointer<bool>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, useNesterovAttr);
@@ -103,8 +100,8 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static void CalcUbTiling(ApplyKerasMomentumTilingData* tiling, uint64_t ubSize,
-                          uint32_t minDtypeBits, ge::DataType dataType)
+static void CalcUbTiling(ApplyKerasMomentumTilingData* tiling, uint64_t ubSize, uint32_t minDtypeBits,
+                         ge::DataType dataType)
 {
     uint32_t bufferDivisor = (dataType == ge::DT_FLOAT) ? FP32_UB_BYTES_PER_ELEM : HALF_UB_BYTES_PER_ELEM;
     uint32_t maxElemNum = static_cast<uint32_t>(ubSize / bufferDivisor);
@@ -113,7 +110,8 @@ static void CalcUbTiling(ApplyKerasMomentumTilingData* tiling, uint64_t ubSize,
         return;
     }
     uint32_t alignFactor = UB_ALIGN_BITS / minDtypeBits;
-    if (alignFactor == 0) alignFactor = 1;
+    if (alignFactor == 0)
+        alignFactor = 1;
     tiling->tileLength = (maxElemNum / alignFactor) * alignFactor;
     if (tiling->tileLength == 0) {
         tiling->tileLength = alignFactor;
@@ -121,20 +119,22 @@ static void CalcUbTiling(ApplyKerasMomentumTilingData* tiling, uint64_t ubSize,
     tiling->ubFormer = tiling->tileLength;
 }
 
-static void CalcBlockTiling(ApplyKerasMomentumTilingData* tiling, int64_t totalElements,
-                             uint32_t minDtypeBits, int64_t coreNum)
+static void CalcBlockTiling(ApplyKerasMomentumTilingData* tiling, int64_t totalElements, uint32_t minDtypeBits,
+                            int64_t coreNum)
 {
-    uint32_t calcCoreNum = static_cast<uint32_t>(
-        (totalElements * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS);
+    uint32_t calcCoreNum = static_cast<uint32_t>((totalElements * minDtypeBits + MIN_TILING_BITS - 1) /
+                                                 MIN_TILING_BITS);
     calcCoreNum = std::min(calcCoreNum, static_cast<uint32_t>(coreNum));
-    if (calcCoreNum == 0) calcCoreNum = 1;
+    if (calcCoreNum == 0)
+        calcCoreNum = 1;
 
     tiling->blockFormer = CeilAlign(
         static_cast<int64_t>(CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(calcCoreNum))),
         static_cast<int64_t>(ELEM_ALIGN_FACTOR));
     if (tiling->blockFormer > tiling->tileLength) {
         tiling->blockFormer = (tiling->tileLength / ELEM_ALIGN_FACTOR) * ELEM_ALIGN_FACTOR;
-        if (tiling->blockFormer == 0) tiling->blockFormer = ELEM_ALIGN_FACTOR;
+        if (tiling->blockFormer == 0)
+            tiling->blockFormer = ELEM_ALIGN_FACTOR;
     }
     tiling->blockNum = static_cast<uint32_t>(
         CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFormer)));
@@ -143,17 +143,14 @@ static void CalcBlockTiling(ApplyKerasMomentumTilingData* tiling, int64_t totalE
 
 static void CalcUbLoopInfo(ApplyKerasMomentumTilingData* tiling, int64_t totalElements)
 {
-    tiling->ubLoopOfFormerBlock = CeilDiv(
-        static_cast<int64_t>(tiling->blockFormer), static_cast<int64_t>(tiling->ubFormer));
-    tiling->ubTailOfFormerBlock = tiling->blockFormer -
-        (tiling->ubLoopOfFormerBlock - 1) * tiling->ubFormer;
+    tiling->ubLoopOfFormerBlock = CeilDiv(static_cast<int64_t>(tiling->blockFormer),
+                                          static_cast<int64_t>(tiling->ubFormer));
+    tiling->ubTailOfFormerBlock = tiling->blockFormer - (tiling->ubLoopOfFormerBlock - 1) * tiling->ubFormer;
 
-    int64_t blockTail = totalElements -
-        static_cast<int64_t>(tiling->blockNum - 1) * tiling->blockFormer;
-    tiling->ubLoopOfTailBlock = CeilDiv(
-        blockTail, static_cast<int64_t>(tiling->ubFormer));
-    tiling->ubTailOfTailBlock = static_cast<uint32_t>(
-        blockTail - static_cast<int64_t>(tiling->ubLoopOfTailBlock - 1) * tiling->ubFormer);
+    int64_t blockTail = totalElements - static_cast<int64_t>(tiling->blockNum - 1) * tiling->blockFormer;
+    tiling->ubLoopOfTailBlock = CeilDiv(blockTail, static_cast<int64_t>(tiling->ubFormer));
+    tiling->ubTailOfTailBlock = static_cast<uint32_t>(blockTail - static_cast<int64_t>(tiling->ubLoopOfTailBlock - 1) *
+                                                                      tiling->ubFormer);
 }
 
 static ge::graphStatus ApplyKerasMomentumTilingFunc(gert::TilingContext* context)
@@ -171,8 +168,8 @@ static ge::graphStatus ApplyKerasMomentumTilingFunc(gert::TilingContext* context
     OP_CHECK_IF(GetShapeAttrsInfo(context, &totalElements, &dataType, &useNesterov) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ApplyKerasMomentumTilingData* tiling = context->GetTilingData<ApplyKerasMomentumTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);

@@ -21,13 +21,15 @@ namespace ops {
 namespace {
 static const size_t ATTR_INDEX_OF_DST_TYPE = 0;
 
-std::map<std::string, ge::DataType> QUANTIZE_SUPPORT_MAP = {
-    {"torch.quint8", ge::DataType::DT_UINT8},     {"torch.qint8", ge::DataType::DT_INT8},
-    {"torch.qint32", ge::DataType::DT_UINT32},    {"torch.hifloat8", ge::DataType::DT_HIFLOAT8},
-    {"torch.float8_e4m3fn", ge::DataType::DT_FLOAT8_E4M3FN},
-    {"torch.float8_e5m2", ge::DataType::DT_FLOAT8_E5M2}};
+std::map<std::string, ge::DataType> QUANTIZE_SUPPORT_MAP = {{"torch.quint8", ge::DataType::DT_UINT8},
+                                                            {"torch.qint8", ge::DataType::DT_INT8},
+                                                            {"torch.qint32", ge::DataType::DT_UINT32},
+                                                            {"torch.hifloat8", ge::DataType::DT_HIFLOAT8},
+                                                            {"torch.float8_e4m3fn", ge::DataType::DT_FLOAT8_E4M3FN},
+                                                            {"torch.float8_e5m2", ge::DataType::DT_FLOAT8_E5M2}};
 
-static ge::graphStatus QuantizeInferDataType(gert::InferDataTypeContext* context) {
+static ge::graphStatus QuantizeInferDataType(gert::InferDataTypeContext* context)
+{
     OP_LOGD(context->GetNodeName(), "QuantizeInferDataType begin");
     const auto& attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -40,11 +42,12 @@ static ge::graphStatus QuantizeInferDataType(gert::InferDataTypeContext* context
     return GRAPH_SUCCESS;
 };
 
-static ge::graphStatus InferShapeForQuantize(gert::InferShapeContext *context) {
+static ge::graphStatus InferShapeForQuantize(gert::InferShapeContext* context)
+{
     OP_LOGD("Begin InferShapeForQuantize");
     return Ops::Base::InferShape4Elewise(context);
 }
 }; // namespace
 
 IMPL_OP_INFERSHAPE(Quantize).InferShape(InferShapeForQuantize).InferDataType(QuantizeInferDataType);
-}  // namespace ops
+} // namespace ops

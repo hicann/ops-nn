@@ -23,24 +23,16 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void logit_grad(GM_ADDR x, GM_ADDR dy, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
-class logit_grad_test : public testing::Test
-{
+class logit_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "logit_grad SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "logit_grad TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "logit_grad SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "logit_grad TearDown\n" << endl; }
 };
 
 TEST_F(logit_grad_test, test_logit_grad_float_0)
 {
-    system(
-        "cp -rf "
-        "../../../../loss/logit_grad/tests/ut/op_kernel/logit_grad_data ./");
+    system("cp -rf "
+           "../../../../loss/logit_grad/tests/ut/op_kernel/logit_grad_data ./");
     system("chmod -R 755 ./logit_grad_data/");
     system("cd ./logit_grad_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'float32'");
     size_t M = 2;
@@ -90,9 +82,8 @@ TEST_F(logit_grad_test, test_logit_grad_float_0)
 
 TEST_F(logit_grad_test, test_logit_grad_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../loss/logit_grad/tests/ut/op_kernel/logit_grad_data ./");
+    system("cp -rf "
+           "../../../../loss/logit_grad/tests/ut/op_kernel/logit_grad_data ./");
     system("chmod -R 755 ./logit_grad_data/");
     system("cd ./logit_grad_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'float16'");
     size_t M = 2;
@@ -142,9 +133,8 @@ TEST_F(logit_grad_test, test_logit_grad_float16_1)
 
 TEST_F(logit_grad_test, test_logit_grad_bfloat16_2)
 {
-    system(
-        "cp -rf "
-        "../../../../loss/logit_grad/tests/ut/op_kernel/logit_grad_data ./");
+    system("cp -rf "
+           "../../../../loss/logit_grad/tests/ut/op_kernel/logit_grad_data ./");
     system("chmod -R 755 ./logit_grad_data/");
     system("cd ./logit_grad_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'bfloat16_t'");
     size_t M = 2;

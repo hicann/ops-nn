@@ -13,9 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ReluGrad(const aclTensor *gradOutput,
-                          const aclTensor *self,
-                          aclOpExecutor *executor);
+const aclTensor* ReluGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor);
 
 }
 

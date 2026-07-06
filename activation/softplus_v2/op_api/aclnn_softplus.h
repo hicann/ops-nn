@@ -69,4 +69,4 @@ ACLNN_API aclnnStatus aclnnSoftplus(void* workspace, uint64_t workspaceSize, acl
 }
 #endif
 
-#endif  // OP_API_INC_SOFTPLUS_H_
+#endif // OP_API_INC_SOFTPLUS_H_

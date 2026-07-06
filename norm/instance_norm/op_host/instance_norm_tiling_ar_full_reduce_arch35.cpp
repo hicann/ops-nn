@@ -45,8 +45,9 @@ bool InstanceNormARFullReduceTiling::IsCapable()
         }
     }
     OP_CHECK_IF(r > R_MAX_VALUE,
-        OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. actual r is %ld, larger than %ld", r, R_MAX_VALUE),
-        return false);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR full load template is not capable. actual r is %ld, larger than %ld", r, R_MAX_VALUE),
+                return false);
     uint64_t ubfp32 = ubBlockSize / sizeof(float);
     // 数据类型的元素宽度
     int64_t elemSize = FP32_BYTE;
@@ -70,7 +71,7 @@ bool InstanceNormARFullReduceTiling::IsCapable()
 
     // 输入输出：
     // inQueueX_:       rAlign_ * cInner_ * sizeof(T_X)         # rAlign_ * sizeof(T_X) 已经32B对齐
-    // inQueueGamma_:   cInner_ * sizeof(T_BETA)       # 32B 对齐 
+    // inQueueGamma_:   cInner_ * sizeof(T_BETA)       # 32B 对齐
     // inQueueBeta_:    cInner_ * sizeof(T_BETA)       # 32B 对齐
     // outQueueY_:      rAlign_ * cInner_ * sizeof(T_X)         # rAlign_ * sizeof(T_X) 已经32B对齐
     // outQueueMean_:   cInner_ * sizeof(T_MEAN)        # 32B 对齐
@@ -81,8 +82,8 @@ bool InstanceNormARFullReduceTiling::IsCapable()
     // binaryAddBuf_:   cInner_ * binAddBufferOneline
     // 计算可全载的行数
     uint64_t cInner = (aicoreParams_.ubSize - RESERVER_FOR_ALIGN) /
-        ((rAlign * elemSize * NUM_2 + gammaElemSize * NUM_2 + meanElemSize * NUM_2) * NUM_2 + sizeof(float) +
-         binAddBufferOneline);
+                      ((rAlign * elemSize * NUM_2 + gammaElemSize * NUM_2 + meanElemSize * NUM_2) * NUM_2 +
+                       sizeof(float) + binAddBufferOneline);
     if (cInner < 1) {
         return false;
     }
@@ -94,30 +95,23 @@ bool InstanceNormARFullReduceTiling::IsCapable()
     uint64_t perCoreCnt = Ops::Base::CeilDiv(totalTileCnt, aicoreParams_.blockDim);
     blockNum_ = Ops::Base::CeilDiv(totalTileCnt, perCoreCnt);
 
-    td_.numN  = a1;
-    td_.numC  = a0;
-    td_.numR  = r;
-    td_.rAlign  = rAlign;
-    td_.cInner  = cInner;
-    td_.cOuter  = cOuter;
-    td_.cTail  = cTail;
-    td_.binaryAddQuotient  = binAddQuotient;
-    td_.perCoreCnt  = perCoreCnt;
-    td_.epsilon  = epsilon;
-    td_.avgFactor  = 1.0 / r;
+    td_.numN = a1;
+    td_.numC = a0;
+    td_.numR = r;
+    td_.rAlign = rAlign;
+    td_.cInner = cInner;
+    td_.cOuter = cOuter;
+    td_.cTail = cTail;
+    td_.binaryAddQuotient = binAddQuotient;
+    td_.perCoreCnt = perCoreCnt;
+    td_.epsilon = epsilon;
+    td_.avgFactor = 1.0 / r;
     return true;
 }
 
+ge::graphStatus InstanceNormARFullReduceTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus InstanceNormARFullReduceTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
-uint64_t InstanceNormARFullReduceTiling::GetTilingKey() const
-{
-    return TILINGKEY_AR_FULL_REDUCE;
-}
+uint64_t InstanceNormARFullReduceTiling::GetTilingKey() const { return TILINGKEY_AR_FULL_REDUCE; }
 
 ge::graphStatus InstanceNormARFullReduceTiling::PostTiling()
 {
@@ -126,20 +120,17 @@ ge::graphStatus InstanceNormARFullReduceTiling::PostTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
-    OP_CHECK_IF(
-        sizeof(td_) > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            sizeof(td_), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(td_), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     auto capSize = rawTilingData->GetCapacity();
     void* ptrData = rawTilingData->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
     void* ptrStruct = static_cast<void*>(&td_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
-    OP_CHECK_IF(
-        memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
-        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(td_)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
     rawTilingData->SetDataSize(sizeof(td_));
     return ge::GRAPH_SUCCESS;
 }

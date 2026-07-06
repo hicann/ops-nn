@@ -22,7 +22,7 @@
 /*!
  * \file relu_v2.h
  * \brief
-*/
+ */
 #ifndef RELUV2_H
 #define RELUV2_H
 
@@ -42,7 +42,7 @@ class ReluV2 {
 public:
     __aicore__ inline ReluV2(){};
 
-    __aicore__ inline void Init(GM_ADDR x,  GM_ADDR z, const ReluV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR z, const ReluV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -66,28 +66,28 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ReluV2<T>::Init(GM_ADDR x,  GM_ADDR z, const ReluV2TilingData* tilingData)
+__aicore__ inline void ReluV2<T>::Init(GM_ADDR x, GM_ADDR z, const ReluV2TilingData* tilingData)
 {
-        ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
-        uint32_t coreNum = AscendC::GetBlockIdx();
-        uint32_t globalBufferIndex = tilingData->bigCoreDataNum * AscendC::GetBlockIdx();
-        this->tileDataNum = tilingData->tileDataNum;
-        if (coreNum < tilingData->tailBlockNum) { 
-          this->coreDataNum = tilingData->bigCoreDataNum;
-          this->tileNum = tilingData->finalBigTileNum;
-          this->tailDataNum = tilingData->bigTailDataNum;
-        }
-        else { 
-          this->coreDataNum = tilingData->smallCoreDataNum;
-          this->tileNum = tilingData->finalSmallTileNum;
-          this->tailDataNum = tilingData->smallTailDataNum;
-          globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
-        }
-        inputGMX.SetGlobalBuffer((__gm__ T*)x + globalBufferIndex, this->coreDataNum);
-        outputGMZ.SetGlobalBuffer((__gm__ T*)z + globalBufferIndex, this->coreDataNum);
-        pipe.InitBuffer(inputQueueX, BUFFER_NUM, this->tileDataNum * sizeof(T));
-        pipe.InitBuffer(outputQueueZ, BUFFER_NUM, this->tileDataNum * sizeof(T));
-        pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(float));
+    ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
+    uint32_t coreNum = AscendC::GetBlockIdx();
+    uint32_t globalBufferIndex = tilingData->bigCoreDataNum * AscendC::GetBlockIdx();
+    this->tileDataNum = tilingData->tileDataNum;
+    if (coreNum < tilingData->tailBlockNum) {
+        this->coreDataNum = tilingData->bigCoreDataNum;
+        this->tileNum = tilingData->finalBigTileNum;
+        this->tailDataNum = tilingData->bigTailDataNum;
+    } else {
+        this->coreDataNum = tilingData->smallCoreDataNum;
+        this->tileNum = tilingData->finalSmallTileNum;
+        this->tailDataNum = tilingData->smallTailDataNum;
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+    }
+    inputGMX.SetGlobalBuffer((__gm__ T*)x + globalBufferIndex, this->coreDataNum);
+    outputGMZ.SetGlobalBuffer((__gm__ T*)z + globalBufferIndex, this->coreDataNum);
+    pipe.InitBuffer(inputQueueX, BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(outputQueueZ, BUFFER_NUM, this->tileDataNum * sizeof(T));
+    pipe.InitBuffer(tmpBuf0, this->tileDataNum * sizeof(float));
 }
 
 template <typename T>
@@ -112,7 +112,7 @@ __aicore__ inline void ReluV2<T>::Compute(int32_t progress)
     AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
     AscendC::LocalTensor<T> zLocal = outputQueueZ.AllocTensor<T>();
     if constexpr (AscendC::Std::is_same<T, bfloat16_t>::value) {
-        AscendC::LocalTensor<float> tmp0 = tmpBuf0.Get<float>(); 
+        AscendC::LocalTensor<float> tmp0 = tmpBuf0.Get<float>();
         // 将输入从bfloat16转换为float
         AscendC::Cast(tmp0, xLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         PipeBarrier<PIPE_V>();
@@ -120,11 +120,11 @@ __aicore__ inline void ReluV2<T>::Compute(int32_t progress)
         AscendC::Maxs(tmp0, tmp0, static_cast<float>(0), this->processDataNum);
         PipeBarrier<PIPE_V>();
         // 将结果从float转换回bfloat16
-        AscendC::Cast(zLocal, tmp0,AscendC::RoundMode::CAST_ROUND, this->processDataNum);
-    }else{
+        AscendC::Cast(zLocal, tmp0, AscendC::RoundMode::CAST_ROUND, this->processDataNum);
+    } else {
         AscendC::Maxs(zLocal, xLocal, static_cast<T>(0), this->processDataNum);
     }
-    
+
     outputQueueZ.EnQue<T>(zLocal);
     inputQueueX.FreeTensor(xLocal);
 }

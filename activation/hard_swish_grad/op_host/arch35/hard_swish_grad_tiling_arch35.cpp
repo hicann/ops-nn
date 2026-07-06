@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  *
  * NOTE: Portions of this code were AI-generated and have been
@@ -33,8 +33,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -45,30 +45,27 @@ constexpr int64_t SIZE_11 = 11;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
     return in_shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context,
-    uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-    int64_t& totalIdx, ge::DataType& dataType)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalIdx, ge::DataType& dataType)
 {
     auto inputGradOutput = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGradOutput);
@@ -79,12 +76,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
     auto shapeSelf = EnsureNotScalar(inputSelf->GetStorageShape());
 
     // shape validation: grad_output and self must have the same shape
-    OP_CHECK_IF(
-        shapeGradOutput.GetShapeSize() != shapeSelf.GetShapeSize(),
-        OP_LOGE(context,
-            "HardSwishGrad: grad_output and self shape mismatch: %ld vs %ld",
-            shapeGradOutput.GetShapeSize(), shapeSelf.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shapeGradOutput.GetShapeSize() != shapeSelf.GetShapeSize(),
+                OP_LOGE(context, "HardSwishGrad: grad_output and self shape mismatch: %ld vs %ld",
+                        shapeGradOutput.GetShapeSize(), shapeSelf.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalIdx = shapeGradOutput.GetShapeSize();
 
@@ -106,13 +101,13 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and dtype
     int64_t totalIdx;
     ge::DataType dataType;
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Set workspace
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
@@ -120,12 +115,10 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
     currentWorkspace[0] = WS_SYS_SIZE;
 
     // 4. Compute tiling parameters
-    HardSwishGradTilingData* tiling =
-        context->GetTilingData<HardSwishGradTilingData>();
+    HardSwishGradTilingData* tiling = context->GetTilingData<HardSwishGradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(HardSwishGradTilingData), 0,
-        sizeof(HardSwishGradTilingData)) != EOK,OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardSwishGradTilingData), 0, sizeof(HardSwishGradTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (totalIdx == 0) {
         tiling->totalNum = 0;
@@ -154,9 +147,7 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
     constexpr int64_t VECTOR_ALIGN_ELEM = 256 / static_cast<int64_t>(sizeof(float));
     int64_t ubBlockSize = GetUbBlockSize(context);
     int64_t alignUnit = std::max(ubBlockSize, VECTOR_ALIGN_ELEM);
-    tiling->ubFactor = FloorAlign(
-        FloorDiv((static_cast<int64_t>(ubSize) / typeSize), bufferNum),
-        alignUnit);
+    tiling->ubFactor = FloorAlign(FloorDiv((static_cast<int64_t>(ubSize) / typeSize), bufferNum), alignUnit);
 
     context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
 
@@ -166,8 +157,7 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForHardSwishGrad(
-    gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForHardSwishGrad(gert::TilingParseContext* context)
 {
     auto compileInfoPtr = context->GetCompiledInfo<HardSwishGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);

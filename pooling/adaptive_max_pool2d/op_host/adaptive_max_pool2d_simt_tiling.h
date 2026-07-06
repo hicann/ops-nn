@@ -18,9 +18,8 @@
 
 #include "adaptive_max_pool2d_tiling_base.h"
 
-namespace optiling
-{
-const int64_t NCHW_DIMS = 4;   
+namespace optiling {
+const int64_t NCHW_DIMS = 4;
 const int64_t N_DIM_ = 0;
 const int64_t C_DIM_ = 1;
 const int64_t H_DIM_ = 2;
@@ -40,16 +39,11 @@ struct InputSIMTInfo {
     int64_t kernelWMax;
 };
 
-class AdaMaxPool2dTilingSIMT : public AdaMaxPool2dBaseTiling
-{
+class AdaMaxPool2dTilingSIMT : public AdaMaxPool2dBaseTiling {
 public:
-    explicit AdaMaxPool2dTilingSIMT(gert::TilingContext* context) : AdaMaxPool2dBaseTiling(context)
-    {
-    }
+    explicit AdaMaxPool2dTilingSIMT(gert::TilingContext* context) : AdaMaxPool2dBaseTiling(context) {}
 
-    ~AdaMaxPool2dTilingSIMT() override
-    {
-    }
+    ~AdaMaxPool2dTilingSIMT() override {}
 
 protected:
     bool IsCapable() override;
@@ -77,5 +71,5 @@ private:
     uint64_t ubSize_ = 0;
 };
 
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPTIVE_MAX_POOL2D_SIMT_TILING_H
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_ADAPTIVE_MAX_POOL2D_SIMT_TILING_H

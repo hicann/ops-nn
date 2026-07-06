@@ -49,8 +49,7 @@ static ge::graphStatus InferShape4MaxPoolWithArgmaxV3(gert::InferShapeContext* c
     const auto* dilationsList = attrs->GetListInt(3);
     const bool* ceilModePtr = attrs->GetBool(4);
 
-    if (kernelSizeList == nullptr || stridesList == nullptr ||
-        padsList == nullptr || dilationsList == nullptr) {
+    if (kernelSizeList == nullptr || stridesList == nullptr || padsList == nullptr || dilationsList == nullptr) {
         return ge::GRAPH_FAILED;
     }
 

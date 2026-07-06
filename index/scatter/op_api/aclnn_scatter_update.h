@@ -63,4 +63,4 @@ ACLNN_API aclnnStatus aclnnInplaceScatterUpdate(void* workspace, uint64_t worksp
 }
 #endif
 
-#endif  // OP_API_INC_SCATTER_UPDATE_H_
+#endif // OP_API_INC_SCATTER_UPDATE_H_

@@ -37,29 +37,29 @@ struct CTCLossV3TilingDataTest {
 };
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                           \
+#define GET_TILING_DATA(tilingData, tilingPointer)                               \
     CTCLossV3TilingDataTest tilingData;                                          \
     INIT_TILING_DATA(CTCLossV3TilingDataTest, tilingDataPointer, tilingPointer); \
-    (tilingData).sliceLength = tilingDataPointer->sliceLength;               \
-    (tilingData).sliceLengthTail = tilingDataPointer->sliceLengthTail;       \
-    (tilingData).probSliceNum = tilingDataPointer->probSliceNum;             \
-    (tilingData).maxTargetLength = tilingDataPointer->maxTargetLength;       \
-    (tilingData).symbleSet = tilingDataPointer->symbleSet;                   \
-    (tilingData).batchSize = tilingDataPointer->batchSize;                   \
-    (tilingData).timeStep = tilingDataPointer->timeStep;                     \
-    (tilingData).targetsDimNum = tilingDataPointer->targetsDimNum;           \
-    (tilingData).targetsDimLength = tilingDataPointer->targetsDimLength;     \
-    (tilingData).targetsNum = tilingDataPointer->targetsNum;                 \
-    (tilingData).taskPerCore = tilingDataPointer->taskPerCore;               \
-    (tilingData).taskTailCore = tilingDataPointer->taskTailCore;             \
-    (tilingData).blank = tilingDataPointer->blank;                           \
+    (tilingData).sliceLength = tilingDataPointer->sliceLength;                   \
+    (tilingData).sliceLengthTail = tilingDataPointer->sliceLengthTail;           \
+    (tilingData).probSliceNum = tilingDataPointer->probSliceNum;                 \
+    (tilingData).maxTargetLength = tilingDataPointer->maxTargetLength;           \
+    (tilingData).symbleSet = tilingDataPointer->symbleSet;                       \
+    (tilingData).batchSize = tilingDataPointer->batchSize;                       \
+    (tilingData).timeStep = tilingDataPointer->timeStep;                         \
+    (tilingData).targetsDimNum = tilingDataPointer->targetsDimNum;               \
+    (tilingData).targetsDimLength = tilingDataPointer->targetsDimLength;         \
+    (tilingData).targetsNum = tilingDataPointer->targetsNum;                     \
+    (tilingData).taskPerCore = tilingDataPointer->taskPerCore;                   \
+    (tilingData).taskTailCore = tilingDataPointer->taskTailCore;                 \
+    (tilingData).blank = tilingDataPointer->blank;                               \
     (tilingData).zeroInfinity = tilingDataPointer->zeroInfinity;
 
 #define DTYPE_LOG_PROBS float

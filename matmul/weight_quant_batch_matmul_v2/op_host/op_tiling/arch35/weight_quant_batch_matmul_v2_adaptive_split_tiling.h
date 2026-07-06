@@ -21,8 +21,7 @@
 
 namespace optiling {
 namespace weight_quant_batch_matmul_v2 {
-class WeightQuantBatchMatmulV2TilingAS : public WeightQuantBatchMatmulV2Tiling
-{
+class WeightQuantBatchMatmulV2TilingAS : public WeightQuantBatchMatmulV2Tiling {
 public:
     explicit WeightQuantBatchMatmulV2TilingAS(gert::TilingContext* context) : WeightQuantBatchMatmulV2Tiling(context)
     {
@@ -45,10 +44,7 @@ protected:
     ge::graphStatus DoOpTiling() override;
 
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
 
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;
@@ -83,17 +79,14 @@ private:
     void SetDefaultMatmulTiling();
     void SetPreLoad();
     void EnlargeBaseK(uint64_t l0aMaxBaseK);
-    void EnlargeBaseKInFullloadA(
-        uint64_t maxBaseK, uint64_t minKL1, uint64_t maxL1, const std::vector<uint64_t>& l0BaseKList,
-        const std::vector<uint64_t>& l1KList);
-    void EnlargeBaseKNotFullloadA(
-        uint64_t maxBaseK, uint64_t maxKL1, const std::vector<uint64_t>& l0BaseKList,
-        const std::vector<uint64_t>& l1KList);
+    void EnlargeBaseKInFullloadA(uint64_t maxBaseK, uint64_t minKL1, uint64_t maxL1,
+                                 const std::vector<uint64_t>& l0BaseKList, const std::vector<uint64_t>& l1KList);
+    void EnlargeBaseKNotFullloadA(uint64_t maxBaseK, uint64_t maxKL1, const std::vector<uint64_t>& l0BaseKList,
+                                  const std::vector<uint64_t>& l1KList);
     bool IsWeight4Nz() const;
-    void ReSetTilingAfterExtendedBaseN(
-        uint64_t extendedBaseN, uint64_t firstTailBlockL1Size, uint64_t firstTailBlockCount,
-        uint64_t secondTailBlockL1Size, uint64_t secondTailBlockCount) const;
+    void ReSetTilingAfterExtendedBaseN(uint64_t extendedBaseN, uint64_t firstTailBlockL1Size,
+                                       uint64_t firstTailBlockCount, uint64_t secondTailBlockL1Size,
+                                       uint64_t secondTailBlockCount) const;
 };
 } // namespace weight_quant_batch_matmul_v2
 } // namespace optiling
-

@@ -47,10 +47,10 @@ TILING_DATA_FIELD_DEF(uint32_t, ub_calc_tail_num);
 TILING_DATA_FIELD_DEF(uint32_t, ub_calc_tail_tail);
 TILING_DATA_FIELD_DEF(uint32_t, ub_calc_tail_loop);
 TILING_DATA_FIELD_DEF(uint32_t, fixed_output);
-TILING_DATA_FIELD_DEF(uint32_t, chunk_size);      // 单次处理的列维度大小
-TILING_DATA_FIELD_DEF(uint32_t, chunk_num);       // chunk 总数
-TILING_DATA_FIELD_DEF(uint32_t, chunk_tail);      // 最后一个 chunk 的大小
-TILING_DATA_FIELD_DEF(uint32_t, need_chunk);      // 是否需要分块处理标志
+TILING_DATA_FIELD_DEF(uint32_t, chunk_size); // 单次处理的列维度大小
+TILING_DATA_FIELD_DEF(uint32_t, chunk_num);  // chunk 总数
+TILING_DATA_FIELD_DEF(uint32_t, chunk_tail); // 最后一个 chunk 的大小
+TILING_DATA_FIELD_DEF(uint32_t, need_chunk); // 是否需要分块处理标志
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(RmsNormGrad, RmsNormGradTilingData);
@@ -91,7 +91,6 @@ REGISTER_TILING_DATA_CLASS(RmsNormGrad_7000, RmsNormGradRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(RmsNormGrad_7001, RmsNormGradRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(RmsNormGrad_7010, RmsNormGradRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(RmsNormGrad_7011, RmsNormGradRegbaseTilingData);
-
 
 BEGIN_TILING_DATA_DEF(RmsNormGradBigMTilingData)
 TILING_DATA_FIELD_DEF_STRUCT(RmsNormGradRegbaseDxTilingData, dxTilingData);
@@ -142,8 +141,7 @@ REGISTER_TILING_DATA_CLASS(RmsNormGrad_8000, RmsNormGradEmptyTilingData);
 
 class RmsNormGradRegbaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit RmsNormGradRegbaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit RmsNormGradRegbaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetPlatformInfo() override;
@@ -212,10 +210,9 @@ protected:
     void LogTilingResult();
 };
 
-class RmsNormGradEmptyTiling : public Ops::NN::Optiling::TilingBaseClass  {
+class RmsNormGradEmptyTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit RmsNormGradEmptyTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit RmsNormGradEmptyTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
@@ -257,11 +254,9 @@ private:
     void LogTilingResult();
 };
 
-class RmsNormGradBigMTiling : public RmsNormGradRegbaseTiling
-{
+class RmsNormGradBigMTiling : public RmsNormGradRegbaseTiling {
 public:
-    explicit RmsNormGradBigMTiling(gert::TilingContext* context) : RmsNormGradRegbaseTiling(context)
-    {}
+    explicit RmsNormGradBigMTiling(gert::TilingContext* context) : RmsNormGradRegbaseTiling(context) {}
 
 protected:
     bool IsCapable() override;

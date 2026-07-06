@@ -27,7 +27,8 @@ using namespace ge;
 
 namespace {
 
-static string TilingData2Str(const gert::TilingData* tiling_data) {
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
     if (tiling_data == nullptr) {
         return "";
     }
@@ -82,7 +83,8 @@ struct TilingTestParam {
     ge::Format bias_ori_format;
 };
 
-static string to_string(const std::stringstream& tiling_data) {
+static string to_string(const std::stringstream& tiling_data)
+{
     auto data = tiling_data.str();
     string result;
     int32_t tmp = 0;
@@ -96,20 +98,16 @@ static string to_string(const std::stringstream& tiling_data) {
 }
 
 class TransposeBatchMatMulTilingRuntime : public testing::TestWithParam<TilingTestParam> {
-  virtual void SetUp() {
-  }
+    virtual void SetUp() {}
 
 protected:
-  static void SetUpTestCase() {
-    std::cout << "TransposeBatchMatMulTilingRuntime SetUp" << std::endl;
-  }
+    static void SetUpTestCase() { std::cout << "TransposeBatchMatMulTilingRuntime SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "TransposeBatchMatMulTilingRuntime TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "TransposeBatchMatMulTilingRuntime TearDown" << std::endl; }
 };
 
-TEST_P(TransposeBatchMatMulTilingRuntime, general_cases) {
+TEST_P(TransposeBatchMatMulTilingRuntime, general_cases)
+{
     TilingTestParam param = GetParam();
     gert::StorageShape x1_shape = {param.x1_shape, param.x1_shape};
     gert::StorageShape x2_shape = {param.x2_shape, param.x2_shape};
@@ -124,12 +122,12 @@ TEST_P(TransposeBatchMatMulTilingRuntime, general_cases) {
     platform_info.Init();
 
     optiling::MatmulV3CompileInfo compile_info;
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(param.compile_info.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(param.compile_info.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
@@ -193,131 +191,410 @@ static TilingTestParam ascend910B_cases_params[] = {
       "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {2, 64, 128}, {2, 128, 256}, {2, 64, 256}, false, 0, 0, 24, 0,
-    "24 64 256 128 128 64 256 128 64 256 64 32 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 4 2 0 0 123 123 0 0 0 0 0 0 0 0 0 0 0 0 24 2 2 2 1 1 1 1 1 1 1 1 1 2 2 2 0 0 64 2 0 0 1 0 ",
-    {0, 1, 2}, {0, 1, 2}, {0, 1, 2}, 1
-    },
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 64, 128},
+     {2, 128, 256},
+     {2, 64, 256},
+     false,
+     0,
+     0,
+     24,
+     0,
+     "24 64 256 128 128 64 256 128 64 256 64 32 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 4 2 0 0 123 123 0 0 0 0 0 0 0 0 0 0 0 0 24 2 2 2 1 1 1 1 1 1 1 1 1 2 2 2 0 0 64 2 0 0 1 0 ",
+     {0, 1, 2},
+     {0, 1, 2},
+     {0, 1, 2},
+     1},
     {"TransposeBatchMatMul_basic_test02",
-      "TransposeBatchMatMul",
-      R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"enable_hf32":0},
+     "TransposeBatchMatMul",
+     R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"enable_hf32":0},
        "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
        "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
        "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
        "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {64, 2, 128}, {2, 128, 256}, {2, 64, 256}, false, 0, 0, 24, 32,
-     "24 64 256 128 128 64 256 128 64 256 64 32 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 4 2 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 2 2 2 1 1 1 1 1 1 1 1 1 2 2 2 0 0 64 2 0 0 1 0 ",
-     {1, 0, 2}, {0, 1, 2}, {0, 1, 2}, 1
-    },
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {64, 2, 128},
+     {2, 128, 256},
+     {2, 64, 256},
+     false,
+     0,
+     0,
+     24,
+     32,
+     "24 64 256 128 128 64 256 128 64 256 64 32 8 1 1 0 0 0 0 69632 16384 0 1 1 1 1 16 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 4 2 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 2 2 2 1 1 1 1 1 1 1 1 1 2 2 2 0 0 64 2 0 0 1 0 ",
+     {1, 0, 2},
+     {0, 1, 2},
+     {0, 1, 2},
+     1},
     {"TransposeBatchMatMul_basic_test03",
-      "TransposeBatchMatMul",
-      R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"enable_hf32":0, "batch_split_factor":2},
+     "TransposeBatchMatMul",
+     R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"enable_hf32":0, "batch_split_factor":2},
        "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
        "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
        "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
        "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {48, 128, 144}, {128, 144, 512}, {48, 128, 512}, false, 0, 0, 24, 32,
-     "24 48 512 144 144 48 512 144 48 512 32 80 8 1 1 0 0 0 0 104448 16384 0 1 1 1 1 40 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 3 2 0 0 213 123 1 0 0 0 0 0 0 0 16 144 0 0 24 128 128 128 1 1 1 1 1 1 1 1 1 128 128 128 0 0 48 128 0 0 1 0 ",
-     {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1
-    },
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {48, 128, 144},
+     {128, 144, 512},
+     {48, 128, 512},
+     false,
+     0,
+     0,
+     24,
+     32,
+     "24 48 512 144 144 48 512 144 48 512 32 80 8 1 1 0 0 0 0 104448 16384 0 1 1 1 1 40 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 0 1 1 3 2 0 0 213 123 1 0 0 0 0 0 0 0 16 144 0 0 24 128 128 128 1 1 1 1 1 1 1 1 1 128 128 128 0 0 "
+     "48 128 0 0 1 0 ",
+     {1, 0, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     1},
     {"TransposeBatchMatMul_base_load_balance_01",
-      "TransposeBatchMatMul",
-      R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"enable_hf32":0, "batch_split_factor":2},
+     "TransposeBatchMatMul",
+     R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"enable_hf32":0, "batch_split_factor":2},
        "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
        "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mknb", "fused_double_operand_num": 0,
        "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "socVersion": "Ascend910B" },
        "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {1, 8, 4096}, {8, 4096, 1024}, {1, 8, 1024}, false, 0, 0, 24, 32,
-     "24 1 1024 4096 4096 1 384 4096 16 384 32 256 8 1 1 0 0 0 0 393216 16384 0 1 1 1 1 128 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 8 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 8 8 8 1 1 1 1 1 1 1 1 1 8 8 8 0 0 1 8 0 0 1 0 ",
-     {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1
-    }
-};
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {1, 8, 4096},
+     {8, 4096, 1024},
+     {1, 8, 1024},
+     false,
+     0,
+     0,
+     24,
+     32,
+     "24 1 1024 4096 4096 1 384 4096 16 384 32 256 8 1 1 0 0 0 0 393216 16384 0 1 1 1 1 128 4 0 0 2 2 1 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 0 0 0 1 1 1 8 0 0 213 123 0 0 0 0 0 0 0 0 0 0 0 0 24 8 8 8 1 1 1 1 1 1 1 1 1 8 8 8 0 0 1 8 0 0 1 "
+     "0 ",
+     {1, 0, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     1}};
 
 static TilingTestParam ascend950_cases_params[] = {
-  {
-    "TransposeBatchMatMul_950_test_iterbatch_1", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+    {"TransposeBatchMatMul_950_test_iterbatch_1",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {32, 32, 512}, false, 0, 0, 32, 1UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
-    {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_2", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 128, 512},
+     {32, 32, 512},
+     false,
+     0,
+     0,
+     32,
+     1UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
+     {1, 0, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     1},
+    {"TransposeBatchMatMul_950_test_iterbatch_2",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 512}, false, 0, 0, 32, 17UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
-    {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 1
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_3", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 512, 128},
+     {32, 32, 512},
+     false,
+     0,
+     0,
+     32,
+     17UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
+     {1, 0, 2},
+     {0, 2, 1},
+     {1, 0, 2},
+     1},
+    {"TransposeBatchMatMul_950_test_iterbatch_3",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {4, 32, 4096}, false, 0, 0, 32, 257UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
-    {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 4
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_4", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 128, 512},
+     {4, 32, 4096},
+     false,
+     0,
+     0,
+     32,
+     257UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
+     {1, 0, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     4},
+    {"TransposeBatchMatMul_950_test_iterbatch_4",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 4096}, false, 0, 0, 32, 273UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
-    {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 4
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_5", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 512, 128},
+     {32, 32, 4096},
+     false,
+     0,
+     0,
+     32,
+     273UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
+     {1, 0, 2},
+     {0, 2, 1},
+     {1, 0, 2},
+     4},
+    {"TransposeBatchMatMul_950_test_iterbatch_5",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {32, 32, 512}, false, 0, 0, 32, 0UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
-    {0, 1, 2}, {0, 1, 2}, {1, 0, 2}, 1
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_6", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 128, 512},
+     {32, 32, 512},
+     false,
+     0,
+     0,
+     32,
+     0UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
+     {0, 1, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     1},
+    {"TransposeBatchMatMul_950_test_iterbatch_6",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 512}, false, 0, 0, 32, 16UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
-    {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, 1
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_7", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 512, 128},
+     {32, 32, 512},
+     false,
+     0,
+     0,
+     32,
+     16UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 258 256 1 0 ",
+     {0, 1, 2},
+     {0, 2, 1},
+     {1, 0, 2},
+     1},
+    {"TransposeBatchMatMul_950_test_iterbatch_7",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 128, 512}, {32, 32, 4096}, false, 0, 0, 32, 256UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
-    {0, 1, 2}, {0, 1, 2}, {1, 0, 2}, 4
-  },{
-    "TransposeBatchMatMul_950_test_iterbatch_8", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 128, 512},
+     {32, 32, 4096},
+     false,
+     0,
+     0,
+     32,
+     256UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
+     {0, 1, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     4},
+    {"TransposeBatchMatMul_950_test_iterbatch_8",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {32, 32, 128}, {32, 512, 128}, {32, 32, 4096}, false, 0, 0, 32, 272UL,
-    "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
-    {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, 4
-  },{
-    "TransposeBatchMatMul_950_base_load_balance_1", "TransposeBatchMatMul", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 32, 128},
+     {32, 512, 128},
+     {32, 32, 4096},
+     false,
+     0,
+     0,
+     32,
+     272UL,
+     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 258 256 1 0 ",
+     {0, 1, 2},
+     {0, 2, 1},
+     {1, 0, 2},
+     4},
+    {"TransposeBatchMatMul_950_base_load_balance_1",
+     "TransposeBatchMatMul",
+     R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
       "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {1, 4, 4096}, {4, 4096, 1024}, {1, 4, 1024}, false, 0, 0, 32, 1UL,
-    "32 1 1024 4096 4096 16 128 4096 16 128 128 4 4 1 1 0 0 0 0 393216 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 4 4 4 1 1 1 1 1 1 1 1 1 1 4 4 4 0 1 1 16 128 256 258 16 1 0 ",
-    {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1
-  }
-};
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {1, 4, 4096},
+     {4, 4096, 1024},
+     {1, 4, 1024},
+     false,
+     0,
+     0,
+     32,
+     1UL,
+     "32 1 1024 4096 4096 16 128 4096 16 128 128 4 4 1 1 0 0 0 0 393216 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 "
+     "0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 4 4 4 1 1 1 1 1 1 1 1 1 1 4 4 4 0 1 1 16 128 256 258 16 1 0 ",
+     {1, 0, 2},
+     {0, 1, 2},
+     {1, 0, 2},
+     1}};
 
-INSTANTIATE_TEST_CASE_P(TransposeBatchMatMul910B, TransposeBatchMatMulTilingRuntime, testing::ValuesIn(ascend910B_cases_params));
-INSTANTIATE_TEST_CASE_P(TransposeBatchMatMul950, TransposeBatchMatMulTilingRuntime, testing::ValuesIn(ascend950_cases_params));
+INSTANTIATE_TEST_CASE_P(TransposeBatchMatMul910B, TransposeBatchMatMulTilingRuntime,
+                        testing::ValuesIn(ascend910B_cases_params));
+INSTANTIATE_TEST_CASE_P(TransposeBatchMatMul950, TransposeBatchMatMulTilingRuntime,
+                        testing::ValuesIn(ascend950_cases_params));
 
 } // namespace

@@ -32,22 +32,13 @@ constexpr size_t MAX_DIM_LEN = 8;
 constexpr float RELU_THRESHOLD = 0.0f;
 
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT,
-    op::DataType::DT_FLOAT16,
-    op::DataType::DT_INT8,
-    op::DataType::DT_UINT8,
-    op::DataType::DT_INT32,
-    op::DataType::DT_INT64};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT8,
+    op::DataType::DT_UINT8, op::DataType::DT_INT32,   op::DataType::DT_INT64};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT,
-    op::DataType::DT_FLOAT16,
-    op::DataType::DT_BF16,
-    op::DataType::DT_INT8,
-    op::DataType::DT_UINT8,
-    op::DataType::DT_INT32,
-    op::DataType::DT_INT64};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_INT8,
+    op::DataType::DT_UINT8, op::DataType::DT_INT32,   op::DataType::DT_INT64};
 
-static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -59,8 +50,8 @@ static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
     return ASCEND910_DTYPE_SUPPORT_LIST;
 }
 
-static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self, const aclScalar *threshold,
-                         const aclTensor *out)
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* threshold,
+                         const aclTensor* out)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -69,7 +60,7 @@ static bool CheckNotNull(const aclTensor *gradOutput, const aclTensor *self, con
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
@@ -80,7 +71,7 @@ static bool CheckDtypeValid(const aclTensor *gradOutput, const aclTensor *self, 
     return true;
 }
 
-static bool CheckShape(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *out)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(gradOutput, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -90,13 +81,13 @@ static bool CheckShape(const aclTensor *gradOutput, const aclTensor *self, const
     return true;
 }
 
-static bool CheckThresholdValue(const aclScalar *threshold)
+static bool CheckThresholdValue(const aclScalar* threshold)
 {
     return std::fabs(threshold->ToFloat() - RELU_THRESHOLD) <= std::numeric_limits<float>::epsilon();
 }
 
-static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *self, const aclScalar *threshold,
-                               const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* threshold,
+                               const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(gradOutput, self, threshold, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(gradOutput, self, out), ACLNN_ERR_PARAM_INVALID);
@@ -105,9 +96,9 @@ static aclnnStatus CheckParams(const aclTensor *gradOutput, const aclTensor *sel
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecThresholdBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self,
-                                                         const aclScalar *threshold, aclTensor *out,
-                                                         uint64_t *workspaceSize, aclOpExecutor **executor)
+static aclnnStatus ExecThresholdBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                         const aclScalar* threshold, aclTensor* out,
+                                                         uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -136,18 +127,18 @@ static aclnnStatus ExecThresholdBackwardGetWorkspaceSize(const aclTensor *gradOu
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
-}  // namespace
+} // namespace
 
-aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self,
-                                                   const aclScalar *threshold, aclTensor *out,
-                                                   uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                   const aclScalar* threshold, aclTensor* out, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnThresholdBackward, DFX_IN(gradOutput, self, threshold), DFX_OUT(out));
     return ExecThresholdBackwardGetWorkspaceSize(gradOutput, self, threshold, out, workspaceSize, executor);
 }
 
-aclnnStatus aclnnThresholdBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+aclnnStatus aclnnThresholdBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                    const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnThresholdBackward);

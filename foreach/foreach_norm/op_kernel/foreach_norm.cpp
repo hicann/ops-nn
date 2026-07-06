@@ -34,10 +34,10 @@ constexpr uint8_t POSITIVE_INF_SCALAR_NORM_MODEL_CODE = 3;
 constexpr uint8_t NEGATIVE_INF_SCALAR_NORM_MODEL_CODE = 4;
 constexpr uint8_t DEFAULT_SCALAR_NORM_MODEL_CODE = 5;
 
-extern "C" __global__ __aicore__ void foreach_norm(
-    GM_ADDR inputs, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_norm(GM_ADDR inputs, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace,
+                                                   GM_ADDR tiling)
 {
-    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0); 
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     GET_TILING_DATA(tilingData, tiling);
     if (workspace == nullptr) {
         return;

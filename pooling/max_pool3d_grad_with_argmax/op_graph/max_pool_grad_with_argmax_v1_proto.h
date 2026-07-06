@@ -1,12 +1,12 @@
 /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 #ifndef OPS_POOLING_MAX_POOL_GRAD_WITH_ARGMAX_V1_PROTO_H_
 #define OPS_POOLING_MAX_POOL_GRAD_WITH_ARGMAX_V1_PROTO_H_
@@ -50,9 +50,10 @@ namespace ge {
 * strides[0] = 1, strides[3] = 1, 1 <= strides[1] <= 2048, 1 <= strides[2] <= 2048.
 * @li pads: A list that has length 4:
 * pads[0] = 1, pads[3] = 1, 0 <= pads[1] <= (ksize[1]//2), 0 <= pads[2] <= (ksize[2]//2).
-* @li x: Format NCHW can only support float. 
+* @li x: Format NCHW can only support float.
 * @li argmax: format NCHW can only support int32, format NC1HWC0 can only support uint16,
-* specifying when the dtype of argmax is int32, argmax must be index; when the dtype of argmax is uint16, argmax must be mask.
+* specifying when the dtype of argmax is int32, argmax must be index; when the dtype of argmax is uint16, argmax must be
+mask.
 * @li dilation: A list that has length 4:
 * dilation[0] = 1, dilation[1] = 1, dilation[2] = 1, dilation[3] = 1.
 

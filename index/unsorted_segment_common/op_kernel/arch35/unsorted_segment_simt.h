@@ -18,20 +18,18 @@
 
 #include "unsorted_segment_base.h"
 
-namespace UnsortedSegment
-{
+namespace UnsortedSegment {
 using namespace AscendC;
 constexpr uint64_t MAX_INT32_NUM = 2147483647;
 
 template <typename T, typename Index, typename SimtAtomicFunc, typename GmInitFunc>
-class KernelUnsortedSegment
-{
+class KernelUnsortedSegment {
 public:
     __aicore__ inline KernelUnsortedSegment(const UnsortedSegmentSimtTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
-                                
+
     {
         InitGm<T, GmInitFunc>(output, td_->outputOuterDim * td_->innerDim);
 
@@ -78,5 +76,5 @@ private:
     AscendC::GlobalTensor<T> xGm, outputGm;
     AscendC::GlobalTensor<Index> segmentIdsGm;
 };
-}  // namespace UnsortedSegment
+} // namespace UnsortedSegment
 #endif

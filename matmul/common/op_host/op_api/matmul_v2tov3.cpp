@@ -18,7 +18,7 @@
 
 namespace Ops {
 namespace NN {
-static void ConvertTensor(const aclTensor*src, gert::Tensor&dst)
+static void ConvertTensor(const aclTensor* src, gert::Tensor& dst)
 {
     if (src != nullptr) {
         dst.MutableOriginShape() = src->GetViewShape();
@@ -30,13 +30,11 @@ static void ConvertTensor(const aclTensor*src, gert::Tensor&dst)
 }
 
 // 包间接口的适配，做透传，参数封装的价值不大
-bool MmCheckHitV3Shape(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1, const bool transposeX2,
-    op::Format mat2_format, bool supportSplitK)
+bool MmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1,
+                       const bool transposeX2, op::Format mat2_format, bool supportSplitK)
 {
-    using FuncType = bool (*)(
-        const gert::Tensor*, const gert::Tensor*, const gert::Tensor*, const bool, const bool, op::Format, bool,
-        uint32_t, const std::string&);
+    using FuncType = bool (*)(const gert::Tensor*, const gert::Tensor*, const gert::Tensor*, const bool, const bool,
+                              op::Format, bool, uint32_t, const std::string&);
     const char* symbolName = "LegacyMmCheckHitV3Shape";
     static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);
     if (func == nullptr) {
@@ -49,20 +47,18 @@ bool MmCheckHitV3Shape(
         ConvertTensor(x1, x1Tensor);
         ConvertTensor(x2, x2Tensor);
         ConvertTensor(bias, biasTensor);
-        gert::Tensor *biasPtr = bias == nullptr ? nullptr: &biasTensor;
-        return func(
-            &x1Tensor, &x2Tensor, biasPtr, transposeX1, transposeX2, mat2_format, supportSplitK,
-            op::GetCurrentPlatformInfo().GetCubeCoreNum(), op::GetCurrentPlatformInfo().GetSocLongVersion());
+        gert::Tensor* biasPtr = bias == nullptr ? nullptr : &biasTensor;
+        return func(&x1Tensor, &x2Tensor, biasPtr, transposeX1, transposeX2, mat2_format, supportSplitK,
+                    op::GetCurrentPlatformInfo().GetCubeCoreNum(), op::GetCurrentPlatformInfo().GetSocLongVersion());
     }
 }
 
-bool BmmCheckHitV3Shape(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1, const bool adjX2,
-    op::Format self_format, op::Format mat2_format, const bool enableFp16Bf16InFp32Out)
+bool BmmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool adjX1,
+                        const bool adjX2, op::Format self_format, op::Format mat2_format,
+                        const bool enableFp16Bf16InFp32Out)
 {
-    using FuncType = bool (*)(
-        const gert::Tensor*, const gert::Tensor*, const gert::Tensor*, const bool, const bool, op::Format, op::Format,
-        const bool, uint32_t, const std::string&, op::SocVersion);
+    using FuncType = bool (*)(const gert::Tensor*, const gert::Tensor*, const gert::Tensor*, const bool, const bool,
+                              op::Format, op::Format, const bool, uint32_t, const std::string&, op::SocVersion);
     const char* symbolName = "LegacyBmmCheckHitV3Shape";
     static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);
     if (func == nullptr) {
@@ -76,10 +72,9 @@ bool BmmCheckHitV3Shape(
         ConvertTensor(x2, x2Tensor);
         ConvertTensor(bias, biasTensor);
         gert::Tensor* biasPtr = bias == nullptr ? nullptr : &biasTensor;
-        return func(
-            &x1Tensor, &x2Tensor, biasPtr, adjX1, adjX2, self_format, mat2_format, enableFp16Bf16InFp32Out,
-            op::GetCurrentPlatformInfo().GetCubeCoreNum(), op::GetCurrentPlatformInfo().GetSocLongVersion(),
-            op::GetCurrentPlatformInfo().GetSocVersion());
+        return func(&x1Tensor, &x2Tensor, biasPtr, adjX1, adjX2, self_format, mat2_format, enableFp16Bf16InFp32Out,
+                    op::GetCurrentPlatformInfo().GetCubeCoreNum(), op::GetCurrentPlatformInfo().GetSocLongVersion(),
+                    op::GetCurrentPlatformInfo().GetSocVersion());
     }
 }
 } // namespace NN

@@ -13,9 +13,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *MaxPoolV3(const aclTensor *self, const aclIntArray *kernelShape, const aclIntArray *strides,
-                           const aclIntArray *pads, const std::string &dataFormat, const int64_t ceilMode,
-                           aclOpExecutor *executor);
-} // l0op
+const aclTensor* MaxPoolV3(const aclTensor* self, const aclIntArray* kernelShape, const aclIntArray* strides,
+                           const aclIntArray* pads, const std::string& dataFormat, const int64_t ceilMode,
+                           aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_MAX_POOL_V3_H_

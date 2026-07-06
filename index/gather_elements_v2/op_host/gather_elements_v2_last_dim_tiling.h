@@ -43,8 +43,7 @@ constexpr float MASK_SIZE_RATE = 1.0f / 4;
 
 class GatherElementsV2LastDimTiling {
 public:
-    explicit GatherElementsV2LastDimTiling(gert::TilingContext* context) : context_(context)
-    {}
+    explicit GatherElementsV2LastDimTiling(gert::TilingContext* context) : context_(context) {}
     ge::graphStatus Init();
     ge::graphStatus MergeAxis(const gert::StorageShape* xShape, const gert::StorageShape* indexShape);
     void SetShape();
@@ -115,18 +114,17 @@ ge::graphStatus GatherElementsV2LastDimTiling::Init()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GatherElementsV2LastDimTiling::MergeAxis(
-    const gert::StorageShape* xShape, const gert::StorageShape* indexShape)
+ge::graphStatus GatherElementsV2LastDimTiling::MergeAxis(const gert::StorageShape* xShape,
+                                                         const gert::StorageShape* indexShape)
 {
     gert::Shape xOriginShape = xShape->GetStorageShape();
     gert::Shape indexOriginShape = indexShape->GetStorageShape();
     auto xDimNum = static_cast<int>(xOriginShape.GetDimNum());
     auto indexDimNum = static_cast<int>(indexOriginShape.GetDimNum());
 
-    OP_CHECK_IF(
-        xDimNum != indexDimNum,
-        OP_LOGE(context_, "The dim %d of x and the dim %d of index are not equal.", xDimNum, indexDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDimNum != indexDimNum,
+                OP_LOGE(context_, "The dim %d of x and the dim %d of index are not equal.", xDimNum, indexDimNum),
+                return ge::GRAPH_FAILED);
 
     int i = 0;
     // 合轴，将相邻且相同大小的轴和为一个轴。
@@ -223,10 +221,10 @@ void GatherElementsV2LastDimTiling::DoUBSlice()
         int64_t perGroupSize = xAxisSize_ * xDSize_ + indexAxisSize_ * indexDSize_ + indexAxisSize_ * indexDSize_;
         eachCalculationLines_ = Ops::Base::FloorDiv(ubSizePlatForm_, perGroupSize);
         xBufferSize_ = Ops::Base::CeilAlign(xAxisSize_ * xDSize_ * eachCalculationLines_, BLOCK_SIZE_T * xDsizeRatio_);
-        indexBufferSize_ =
-            Ops::Base::CeilAlign(indexAxisSize_ * indexDSize_ * eachCalculationLines_, BLOCK_SIZE_T * DOUBLE_TIME);
-        yBufferSize_ =
-            Ops::Base::CeilAlign(indexAxisSize_ * indexDSize_ * eachCalculationLines_, BLOCK_SIZE_T * xDsizeRatio_);
+        indexBufferSize_ = Ops::Base::CeilAlign(indexAxisSize_ * indexDSize_ * eachCalculationLines_,
+                                                BLOCK_SIZE_T * DOUBLE_TIME);
+        yBufferSize_ = Ops::Base::CeilAlign(indexAxisSize_ * indexDSize_ * eachCalculationLines_,
+                                            BLOCK_SIZE_T * xDsizeRatio_);
     } else if (batchProcess_) {
         int64_t perGroupSize = xAlignSize_ + indexAlignSize_ + yAlignSize_;
         eachCalculationLines_ = Ops::Base::FloorDiv(ubSizePlatForm_, perGroupSize);
@@ -252,8 +250,8 @@ void GatherElementsV2LastDimTiling::DoUBSlice()
         xBufferSize_ = ubSizePlatForm_ / DOUBLE_TIME;
         xSliceNum_ = Ops::Base::CeilDiv(xAlignSize_, xBufferSize_);
         reservedXSize_ = xAxisSize_ - (xSliceNum_ - 1) * xBufferSize_ / xDSize_;
-        indexBufferSize_ =
-            static_cast<float>(xBufferSize_) / (indexDSize_ + xDSize_ * DOUBLE_TIME + MASK_SIZE_RATE) * indexDSize_;
+        indexBufferSize_ = static_cast<float>(xBufferSize_) / (indexDSize_ + xDSize_ * DOUBLE_TIME + MASK_SIZE_RATE) *
+                           indexDSize_;
         indexBufferSize_ = Ops::Base::CeilAlign(indexBufferSize_, BLOCK_SIZE_T * INT64_DSIZE);
         indexSliceNum_ = Ops::Base::CeilDiv(indexAlignSize_, indexBufferSize_);
         yBufferSize_ = indexBufferSize_ / indexDSize_ * xDSize_;
@@ -273,10 +271,9 @@ void GatherElementsV2LastDimTiling::DoScalarMode()
         int64_t idxBLockSize = Ops::Base::CeilDiv(indexAlignSize_, BLOCK_SIZE_T * DOUBLE_TIME) * DOUBLE_TIME;
         int64_t yBlockSize = Ops::Base::CeilDiv(indexAxisSize_ * xRealDsize_, BLOCK_SIZE_T);
         eachCalculationLines_ = ubSizePlatForm_ / BLOCK_SIZE_T / (idxBLockSize + yBlockSize);
-        bool multRowProcessFlag =
-            eachCalculationLines_ > 1 &&
-            (nonCollectingAxisSzie_ > totalCoreNum_ ||
-             (nonCollectingAxisSzie_ <= totalCoreNum_ && indexAxisSize_ < totalCoreNum_ * BLOCK_SIZE_T));
+        bool multRowProcessFlag = eachCalculationLines_ > 1 && (nonCollectingAxisSzie_ > totalCoreNum_ ||
+                                                                (nonCollectingAxisSzie_ <= totalCoreNum_ &&
+                                                                 indexAxisSize_ < totalCoreNum_ * BLOCK_SIZE_T));
         if (multRowProcessFlag) {
             indexBufferSize_ = eachCalculationLines_ * idxBLockSize * BLOCK_SIZE_T;
             yBufferSize_ = eachCalculationLines_ * yBlockSize * BLOCK_SIZE_T;
@@ -287,8 +284,8 @@ void GatherElementsV2LastDimTiling::DoScalarMode()
                 indexSliceNum_ = totalCoreNum_ / nonCollectingAxisSzie_;
                 scalarModeLength_ = indexSliceNum_ * nonCollectingAxisSzie_;
             }
-            indexBufferSize_ =
-                Ops::Base::CeilAlign(indexAlignSize_ / indexSliceNum_ + INT64_DSIZE, BLOCK_SIZE_T * DOUBLE_TIME);
+            indexBufferSize_ = Ops::Base::CeilAlign(indexAlignSize_ / indexSliceNum_ + INT64_DSIZE,
+                                                    BLOCK_SIZE_T * DOUBLE_TIME);
             yBufferSize_ = indexBufferSize_ / indexDSize_ * xRealDsize_;
             yBufferSize_ = Ops::Base::CeilAlign(yBufferSize_, BLOCK_SIZE_T);
             reservedIndexSize_ = indexAxisSize_ - (indexSliceNum_ - 1) * indexBufferSize_ / indexDSize_;

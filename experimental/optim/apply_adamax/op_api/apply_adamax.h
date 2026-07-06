@@ -34,10 +34,9 @@ struct ApplyAdamaxOutputs {
     const aclTensor* vOut;
 };
 
-ApplyAdamaxOutputs ApplyAdamax(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad,
-    float beta1Power, float lr, float beta1, float beta2, float epsilon,
-    aclOpExecutor* executor);
+ApplyAdamaxOutputs ApplyAdamax(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* grad,
+                               float beta1Power, float lr, float beta1, float beta2, float epsilon,
+                               aclOpExecutor* executor);
 
 } // namespace l0op
 

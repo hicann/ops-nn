@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "common/inc/legacy_common_manager.h"
 
@@ -21,7 +21,7 @@ static const std::string BUILTIN_SO_NAME = "libophost_nn.so";
 static const std::string CUSTOM_SO_NAME = "libcust_opmaster_rt2.0.so";
 static const std::string LEGACY_SO_NAME = "libophost_comm_legacy.so";
 static const Ops::NN::LegacyCommonMgr LEGACY_COMMMON_MGR;
-}
+} // namespace
 
 namespace Ops {
 namespace NN {

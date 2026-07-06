@@ -20,8 +20,8 @@ class KernelLayerNormQuantNormal {
 public:
     __aicore__ inline KernelLayerNormQuantNormal() {}
 
-    __aicore__ inline void Init(__gm__ uint8_t *x, __gm__ uint8_t *gamma, __gm__ uint8_t *beta, __gm__ uint8_t *scale,
-                                __gm__ uint8_t *offset, __gm__ uint8_t *z, LayerNormQuantRegTilingData tilingData)
+    __aicore__ inline void Init(__gm__ uint8_t* x, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* scale,
+                                __gm__ uint8_t* offset, __gm__ uint8_t* z, LayerNormQuantRegTilingData tilingData)
     {
         half_num = 2;
         num_core = tilingData.numCore;
@@ -45,12 +45,12 @@ public:
         slice_size = tilingData.sliceSize;
         row_tail_ = (row_work % first_dim_per_times == 0) ? first_dim_per_times : (row_work % first_dim_per_times);
         gm_offset_ = static_cast<uint64_t>(nl_first_dim_per_core) * num_last_dim;
-        copyLenAlign = BLOCK_ALIGN(num_last_dim * sizeof(T), 32) / sizeof(T);  // 向上对齐
+        copyLenAlign = BLOCK_ALIGN(num_last_dim * sizeof(T), 32) / sizeof(T); // 向上对齐
 
-        x_gm.SetGlobalBuffer((__gm__ T *)x + AscendC::GetBlockIdx() * gm_offset_);
-        z_gm.SetGlobalBuffer((__gm__ int8_t *)z + AscendC::GetBlockIdx() * gm_offset_);
-        gamma_gm.SetGlobalBuffer((__gm__ T *)gamma);
-        beta_gm.SetGlobalBuffer((__gm__ T *)beta);
+        x_gm.SetGlobalBuffer((__gm__ T*)x + AscendC::GetBlockIdx() * gm_offset_);
+        z_gm.SetGlobalBuffer((__gm__ int8_t*)z + AscendC::GetBlockIdx() * gm_offset_);
+        gamma_gm.SetGlobalBuffer((__gm__ T*)gamma);
+        beta_gm.SetGlobalBuffer((__gm__ T*)beta);
 
         pipe.InitBuffer(x_que, BUFFER_NUM, row_step * RoundUp(slice_size) * sizeof(T));
         pipe.InitBuffer(z_que, BUFFER_NUM, row_step * RoundUp(slice_size) * INT8_DATA_BYTE);
@@ -96,7 +96,6 @@ public:
     }
 
 private:
-
     __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
     {
         return (blockSize > 0) ? (x + blockSize - 1) / blockSize * blockSize : 0;
@@ -113,8 +112,8 @@ private:
         padParams.rightPadding = copyLenAlign - num_last_dim;
 
         DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = size;  // 搬多少块
-        dataCopyParams.blockLen = num_last_dim * sizeof(T);  // 搬多长
+        dataCopyParams.blockCount = size;                   // 搬多少块
+        dataCopyParams.blockLen = num_last_dim * sizeof(T); // 搬多长
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
 
@@ -122,7 +121,8 @@ private:
         x_que.EnQue(x_local);
     }
 
-    __aicore__ inline void FastCopyInGammaBeta(){
+    __aicore__ inline void FastCopyInGammaBeta()
+    {
         LocalTensor<T> beta_local = beta_que.AllocTensor<T>();
         LocalTensor<T> gamma_local = gamma_que.AllocTensor<T>();
 
@@ -161,7 +161,7 @@ private:
         return ave_local_temp;
     }
 
-    __aicore__ inline float ComputeNormalVariance(LocalTensor<float>& x_local_fp32,float ave_local_temp)
+    __aicore__ inline float ComputeNormalVariance(LocalTensor<float>& x_local_fp32, float ave_local_temp)
     {
         LocalTensor<float> y_local_fp32 = y_buf_fp32.Get<float>();
         LocalTensor<float> z_local_fp32 = z_buf_fp32.Get<float>();
@@ -196,7 +196,7 @@ private:
         LocalTensor<float> x_local_fp32 = x_buf_fp32.Get<float>();
         LocalTensor<float> z_local_fp32 = z_buf_fp32.Get<float>();
         for (uint64_t rid = 0; rid < nums; ++rid) {
-            if constexpr (IsSameType<T, half>::value ||IsSameType<T, bfloat16_t>::value){
+            if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
                 Cast(x_local_fp32, x_local[rid * copyLenAlign], AscendC::RoundMode::CAST_NONE, num_last_dim);
             } else {
                 Adds(x_local_fp32, x_local[rid * copyLenAlign], 0, num_last_dim);
@@ -207,7 +207,7 @@ private:
             SetFlag<HardEvent::S_V>(EVENT_ID0);
             WaitFlag<HardEvent::S_V>(EVENT_ID0);
             PipeBarrier<PIPE_V>();
-            
+
             float var_local_temp = ComputeNormalVariance(x_local_fp32, ave_local_temp);
             SetFlag<HardEvent::S_V>(EVENT_ID2);
             WaitFlag<HardEvent::S_V>(EVENT_ID2);
@@ -219,7 +219,7 @@ private:
             Div(y_local_fp32, y_local_fp32, x_local_fp32, num_last_dim);
             PipeBarrier<PIPE_V>();
             ComputeNormalLayerNorm(x_local_fp32, y_local_fp32, gamma_local, beta_local, z_local_fp32, num_last_dim);
-            
+
             PipeBarrier<PIPE_V>();
             Muls(z_local_fp32, z_local_fp32, inputScale, num_last_dim);
             PipeBarrier<PIPE_V>();
@@ -248,8 +248,8 @@ private:
         padParams.rightPadding = copyLenAlign - num_last_dim;
 
         DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = size;  // 搬多少块
-        dataCopyParams.blockLen = num_last_dim * 1;  // 搬多长
+        dataCopyParams.blockCount = size;           // 搬多少块
+        dataCopyParams.blockLen = num_last_dim * 1; // 搬多长
         dataCopyParams.srcStride = 0;
         dataCopyParams.dstStride = 0;
 
@@ -258,17 +258,17 @@ private:
         z_que.FreeTensor(z);
     }
 
-    __aicore__ inline void GetScaleAndOffset(__gm__ uint8_t *scale, __gm__ uint8_t *offset)
+    __aicore__ inline void GetScaleAndOffset(__gm__ uint8_t* scale, __gm__ uint8_t* offset)
     {
         AscendC::GlobalTensor<T> gm_s;
-        gm_s.SetGlobalBuffer((__gm__ T *)scale);
+        gm_s.SetGlobalBuffer((__gm__ T*)scale);
         LocalTensor<T> tmpFp16 = x_buf_fp32.Get<T>();
         DataCopy(tmpFp16, gm_s, BLOCK_SIZE / sizeof(T));
         if constexpr (AscendC::IsSameType<T, half>::value || AscendC::IsSameType<T, float>::value) {
             SetFlag<HardEvent::MTE2_S>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_S>(EVENT_ID0);
             inputScale = 1 / ((float)(tmpFp16.GetValue(0)) == 0 ? 1 : (float)(tmpFp16.GetValue(0)));
-        } else if constexpr (AscendC::IsSameType<T, bfloat16_t>::value){
+        } else if constexpr (AscendC::IsSameType<T, bfloat16_t>::value) {
             LocalTensor<float> tmpFp32 = y_buf_fp32.Get<float>();
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
@@ -278,7 +278,7 @@ private:
             inputScale = 1 / ((float)(tmpFp32.GetValue(0)) == 0 ? 1 : (float)(tmpFp32.GetValue(0)));
         }
         AscendC::GlobalTensor<int8_t> gm_o;
-        gm_o.SetGlobalBuffer((__gm__ int8_t *)offset);
+        gm_o.SetGlobalBuffer((__gm__ int8_t*)offset);
         LocalTensor<int8_t> tmpInt8 = x_buf_fp32.Get<int8_t>();
         DataCopy(tmpInt8, gm_o, BLOCK_SIZE / sizeof(int8_t));
         SetFlag<HardEvent::MTE2_S>(EVENT_ID0);

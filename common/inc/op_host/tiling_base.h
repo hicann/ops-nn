@@ -57,11 +57,9 @@ struct CompileInfoCommon {
     uint32_t rsvd;
 };
 
-class TilingBaseClass
-{
+class TilingBaseClass {
 public:
-    explicit TilingBaseClass(gert::TilingContext* context) : context_(context)
-    {}
+    explicit TilingBaseClass(gert::TilingContext* context) : context_(context) {}
 
     virtual ~TilingBaseClass() = default;
 
@@ -104,10 +102,7 @@ public:
     }
 
     // 更新 context
-    virtual void Reset(gert::TilingContext* context)
-    {
-        context_ = context;
-    }
+    virtual void Reset(gert::TilingContext* context) { context_ = context; }
 
 protected:
     virtual bool IsCapable() = 0;
@@ -126,10 +121,7 @@ protected:
     // 7、保存Tiling数据
     virtual ge::graphStatus PostTiling() = 0;
     // 8、Dump Tiling数据
-    virtual void DumpTilingInfo()
-    {
-        OP_LOGD(context_, "%ld", DefaultTilingInfoDump());
-    }
+    virtual void DumpTilingInfo() { OP_LOGD(context_, "%ld", DefaultTilingInfoDump()); }
 
     int64_t DefaultTilingInfoDump()
     {
@@ -174,8 +166,8 @@ protected:
         return oss.str();
     }
 
-    [[nodiscard]] std::string GetTensorDebugStr(
-        const gert::StorageShape* shape, const gert::CompileTimeTensorDesc* tensor) const
+    [[nodiscard]] std::string GetTensorDebugStr(const gert::StorageShape* shape,
+                                                const gert::CompileTimeTensorDesc* tensor) const
     {
         if (shape == nullptr || tensor == nullptr) {
             return "nil ";

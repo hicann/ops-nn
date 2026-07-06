@@ -16,8 +16,9 @@
 
 namespace ops {
 class EluGradV2 : public OpDef {
-   public:
-    explicit EluGradV2(const char* name) : OpDef(name) {
+public:
+    explicit EluGradV2(const char* name) : OpDef(name)
+    {
         this->Input("grads")
             .ParamType(REQUIRED)
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
@@ -49,4 +50,4 @@ class EluGradV2 : public OpDef {
 };
 
 OP_ADD(EluGradV2);
-}  // namespace ops
+} // namespace ops

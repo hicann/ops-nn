@@ -21,7 +21,7 @@
 /*!
  * \file softmax_v2_tiling_data.h
  * \brief tiling data struct
-*/
+ */
 #ifndef _SOFTMAXV2_TILING_DATA_H_
 #define _SOFTMAXV2_TILING_DATA_H_
 

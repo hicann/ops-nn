@@ -27,51 +27,52 @@ using namespace MaskedScatter;
 #define TILING_KEY_BIT_WIDTH_4_PREFIX_SUM_INT64 41
 #define TILING_KEY_BIT_WIDTH_8_PREFIX_SUM_INT64 81
 
-extern "C" __global__ __aicore__ void masked_scatter(
-    GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-  if (workspace == nullptr) {
+extern "C" __global__ __aicore__ void masked_scatter(GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y,
+                                                     GM_ADDR workspace, GM_ADDR tiling)
+{
+    if (workspace == nullptr) {
+        return;
+    }
+    SetSysWorkspace(workspace);
+    GM_ADDR userWs = GetUserWorkspace(workspace);
+    if (userWs == nullptr) {
+        return;
+    }
+    GET_TILING_DATA(tilingData, tiling);
+    TPipe pipe;
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_1_PREFIX_SUM_INT32)) {
+        MaskedScatter::MaskedScatterImpl<int8_t, int32_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_2_PREFIX_SUM_INT32)) {
+        MaskedScatter::MaskedScatterImpl<int16_t, int32_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_4_PREFIX_SUM_INT32)) {
+        MaskedScatter::MaskedScatterImpl<int32_t, int32_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_8_PREFIX_SUM_INT32)) {
+        MaskedScatter::MaskedScatterImpl<int64_t, int32_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_1_PREFIX_SUM_INT64)) {
+        MaskedScatter::MaskedScatterImpl<int8_t, int64_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_2_PREFIX_SUM_INT64)) {
+        MaskedScatter::MaskedScatterImpl<int16_t, int64_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_4_PREFIX_SUM_INT64)) {
+        MaskedScatter::MaskedScatterImpl<int32_t, int64_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_8_PREFIX_SUM_INT64)) {
+        MaskedScatter::MaskedScatterImpl<int64_t, int64_t> op(tilingData, pipe);
+        op.Init(x, mask, updates, y, userWs);
+        op.Process();
+    }
     return;
-  }
-  SetSysWorkspace(workspace);
-  GM_ADDR userWs = GetUserWorkspace(workspace);
-  if (userWs == nullptr) {
-    return;
-  }
-  GET_TILING_DATA(tilingData, tiling);
-  TPipe pipe;
-  KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
-  if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_1_PREFIX_SUM_INT32)) {
-    MaskedScatter::MaskedScatterImpl<int8_t, int32_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_2_PREFIX_SUM_INT32)) {
-    MaskedScatter::MaskedScatterImpl<int16_t, int32_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_4_PREFIX_SUM_INT32)) {
-    MaskedScatter::MaskedScatterImpl<int32_t, int32_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_8_PREFIX_SUM_INT32)) {
-    MaskedScatter::MaskedScatterImpl<int64_t, int32_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_1_PREFIX_SUM_INT64)) {
-    MaskedScatter::MaskedScatterImpl<int8_t, int64_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_2_PREFIX_SUM_INT64)) {
-    MaskedScatter::MaskedScatterImpl<int16_t, int64_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_4_PREFIX_SUM_INT64)) {
-    MaskedScatter::MaskedScatterImpl<int32_t, int64_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  } else if (TILING_KEY_IS(TILING_KEY_BIT_WIDTH_8_PREFIX_SUM_INT64)) {
-    MaskedScatter::MaskedScatterImpl<int64_t, int64_t> op(tilingData, pipe);
-    op.Init(x, mask, updates, y, userWs);
-    op.Process();
-  }
-  return;
 }

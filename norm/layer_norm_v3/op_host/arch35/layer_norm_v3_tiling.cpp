@@ -24,8 +24,8 @@
 namespace optiling {
 using namespace Ops::NN::OpTiling;
 
-ge::graphStatus TilingPrepare4LayerNormV3CompileInfo(
-    gert::TilingParseContext* context, LayerNormV3CompileInfo* compileInfo)
+ge::graphStatus TilingPrepare4LayerNormV3CompileInfo(gert::TilingParseContext* context,
+                                                     LayerNormV3CompileInfo* compileInfo)
 {
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -33,25 +33,19 @@ ge::graphStatus TilingPrepare4LayerNormV3CompileInfo(
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     auto npuArch = ascendcPlatform.GetCurNpuArch();
     compileInfo->isAscend310P = npuArch == NpuArch::DAV_2002;
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "Get core num failed, core num: %u", static_cast<uint32_t>(compileInfo->coreNum)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0),
+                OP_LOGE(context->GetNodeName(), "Get core num failed, core num: %u",
+                        static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "Get ub size failed, ub size: %u",
-            static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
-        return ge::GRAPH_FAILED);
-    compileInfo->isRegBase = (IsRegbaseSocVersion(context) ||
-                              npuArch == NpuArch::DAV_5102) ?
-                                 true :
-                                 false;
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
+                OP_LOGE(context->GetNodeName(), "Get ub size failed, ub size: %u",
+                        static_cast<uint32_t>(compileInfo->ubSizePlatForm)),
+                return ge::GRAPH_FAILED);
+    compileInfo->isRegBase = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102) ? true : false;
     compileInfo->blockSize = Ops::Base::GetUbBlockSize(context);
     compileInfo->vectorLength = Ops::Base::GetVRegSize(context);
     OP_LOGD(context->GetNodeName(), "TilingPrepare4LayerNormV3 exit.");
@@ -64,8 +58,8 @@ ge::graphStatus Tiling4LayerNormV3ForAscendC(gert::TilingContext* context)
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-ge::graphStatus TilingPrepare4LayerNormV3ForAscendC(
-    gert::TilingParseContext* context, LayerNormV3CompileInfo& regbaseCompileInfo)
+ge::graphStatus TilingPrepare4LayerNormV3ForAscendC(gert::TilingParseContext* context,
+                                                    LayerNormV3CompileInfo& regbaseCompileInfo)
 {
     OP_LOGD(context->GetNodeName(), "TilingPrepare4LayerNormV3ForAscendC enter.");
     return TilingPrepare4LayerNormV3CompileInfo(context, &regbaseCompileInfo);

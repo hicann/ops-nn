@@ -25,17 +25,16 @@ template <typename T1, typename T2>
 class GroupNormSwishLargeB16 : public GroupNormSwishBase<T1, T2> {
 public:
     __aicore__ inline GroupNormSwishLargeB16(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-        const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                const GroupNormSwishTilingData* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ProcessPerCore(const int64_t groupNum);
     __aicore__ inline void Compute(const int64_t groupBegin, const int64_t groupEnd);
     __aicore__ inline void CalcMeanAndRstd(const int64_t groupId);
-    __aicore__ inline void CalcMeanAndRstdInner(
-        const int64_t groupId, const int64_t loopTimesBegin, const int64_t loopTimesEnd);
+    __aicore__ inline void CalcMeanAndRstdInner(const int64_t groupId, const int64_t loopTimesBegin,
+                                                const int64_t loopTimesEnd);
     __aicore__ inline void ComputeSum(const int64_t num, const int64_t index);
     __aicore__ inline void CalcGroupNormSwish(const int64_t groupBegin, const int64_t groupId);
     __aicore__ inline void CalcGroupNormSwishInner(const float scale, const float bias, const int64_t num);
@@ -51,9 +50,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
-    const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y,
+                                                            GM_ADDR mean, GM_ADDR rstd,
+                                                            const GroupNormSwishTilingData* tilingData, TPipe* pipeIn)
 {
     GroupNormSwishBase<T1, T2>::InitGlobal(x, gamma, beta, y, mean, rstd, tilingData, pipeIn);
     GroupNormSwishBase<T1, T2>::InitLocal(inQueSize, outQueSize, meanBufSize * 2);
@@ -113,8 +112,9 @@ __aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcMeanAndRstd(const int
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcMeanAndRstdInner(
-    const int64_t groupId, const int64_t loopTimesBegin, const int64_t loopTimesEnd)
+__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcMeanAndRstdInner(const int64_t groupId,
+                                                                            const int64_t loopTimesBegin,
+                                                                            const int64_t loopTimesEnd)
 {
     for (int64_t i = loopTimesBegin; i < loopTimesEnd - 1; i++) {
         this->CopyInX(groupId * this->tiling->numPerGroup + i * this->tiling->numPerLoop, this->tiling->numPerLoop);
@@ -124,9 +124,8 @@ __aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcMeanAndRstdInner(
         this->CopyInX((groupId + 1) * this->tiling->numPerGroup - this->tiling->numTailLoop, this->tiling->numTailLoop);
         ComputeSum(this->tiling->numTailLoop, loopTimesEnd - 1 - loopTimesBegin);
     } else {
-        this->CopyInX(
-            groupId * this->tiling->numPerGroup + (loopTimesEnd - 1) * this->tiling->numPerLoop,
-            this->tiling->numPerLoop);
+        this->CopyInX(groupId * this->tiling->numPerGroup + (loopTimesEnd - 1) * this->tiling->numPerLoop,
+                      this->tiling->numPerLoop);
         ComputeSum(this->tiling->numPerLoop, loopTimesEnd - 1 - loopTimesBegin);
     }
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -167,8 +166,8 @@ __aicore__ inline void GroupNormSwishLargeB16<T1, T2>::ComputeSum(const int64_t 
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcGroupNormSwish(
-    const int64_t groupBegin, const int64_t groupId)
+__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcGroupNormSwish(const int64_t groupBegin,
+                                                                          const int64_t groupId)
 {
     int64_t groupIdGlobal = (this->blockIdx * this->tiling->groupPerCore + groupId) % this->tiling->numGroups;
     int64_t channelIdGlobal = groupIdGlobal * this->tiling->shapeD;
@@ -219,15 +218,14 @@ __aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcGroupNormSwish(
         }
         for (int64_t j = 0; j < loopDTimes - 1; j++) {
             this->CopyInX(xOffset, this->tiling->numPerLoop);
-            CalcGroupNormSwishInner(
-                gammaLocal(currentId - startChannelId), betaLocal(currentId - startChannelId),
-                this->tiling->numPerLoop);
+            CalcGroupNormSwishInner(gammaLocal(currentId - startChannelId), betaLocal(currentId - startChannelId),
+                                    this->tiling->numPerLoop);
             this->CopyOutY(xOffset, this->tiling->numPerLoop);
             xOffset += this->tiling->numPerLoop;
         }
         this->CopyInX(xOffset, loopDTail);
-        CalcGroupNormSwishInner(
-            gammaLocal(currentId - startChannelId), betaLocal(currentId - startChannelId), loopDTail);
+        CalcGroupNormSwishInner(gammaLocal(currentId - startChannelId), betaLocal(currentId - startChannelId),
+                                loopDTail);
         this->CopyOutY(xOffset, loopDTail);
         xOffset += loopDTail;
     }
@@ -236,8 +234,8 @@ __aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcGroupNormSwish(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcGroupNormSwishInner(
-    const float scale, const float bias, const int64_t num)
+__aicore__ inline void GroupNormSwishLargeB16<T1, T2>::CalcGroupNormSwishInner(const float scale, const float bias,
+                                                                               const int64_t num)
 {
     LocalTensor<T1> xUb = this->inQueueX.template DeQue<T1>();
     Cast(this->x1Ub32, xUb, RoundMode::CAST_NONE, num);

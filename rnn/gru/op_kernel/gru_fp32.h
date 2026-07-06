@@ -36,14 +36,14 @@ struct TRnnOffsets {
 
 //  UB分块信息结构
 struct tailSize {
-    int64_t tailSingleCoreN{0};     //  N维度尾块大小，即最后一个N分块的元素数量
-    int64_t tailSingleCoreM{0};     //  M维度尾块大小，即最后一个M分块的元素数量
-    int64_t notTailNCoreCount{0};   //  N维度完整分块的数量，即除去最后一个尾块的分块数量
-    int64_t notTailMCoreCount{0};   //  M维度完整分块的数量，即除去最后一个尾块的分块数量
-    int32_t nCoreLoop{0};           //  N维度分块的总循环次数，包括尾块
-    int32_t mCoreLoop{0};           //  M维度分块的总循环次数，包括尾块
-    int64_t nCoreIndx{0};           //  当前处理的N维度分块索引
-    int64_t mCoreIndx{0};           //  当前处理的M维度分块索引
+    int64_t tailSingleCoreN{0};   //  N维度尾块大小，即最后一个N分块的元素数量
+    int64_t tailSingleCoreM{0};   //  M维度尾块大小，即最后一个M分块的元素数量
+    int64_t notTailNCoreCount{0}; //  N维度完整分块的数量，即除去最后一个尾块的分块数量
+    int64_t notTailMCoreCount{0}; //  M维度完整分块的数量，即除去最后一个尾块的分块数量
+    int32_t nCoreLoop{0};         //  N维度分块的总循环次数，包括尾块
+    int32_t mCoreLoop{0};         //  M维度分块的总循环次数，包括尾块
+    int64_t nCoreIndx{0};         //  当前处理的N维度分块索引
+    int64_t mCoreIndx{0};         //  当前处理的M维度分块索引
 };
 
 template <typename T>
@@ -51,10 +51,10 @@ class GruFP32 {
 public:
     __aicore__ inline GruFP32() = default;
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR wi, GM_ADDR wh, GM_ADDR bi, GM_ADDR bh,
-                                GM_ADDR batch_sizes, GM_ADDR init_h, GM_ADDR y, GM_ADDR output_h,
-                                GM_ADDR r, GM_ADDR z, GM_ADDR n, GM_ADDR n_h,
-                                const GruTilingData* __restrict gruTiling, GM_ADDR workspace) {
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR wi, GM_ADDR wh, GM_ADDR bi, GM_ADDR bh, GM_ADDR batch_sizes,
+                                GM_ADDR init_h, GM_ADDR y, GM_ADDR output_h, GM_ADDR r, GM_ADDR z, GM_ADDR n,
+                                GM_ADDR n_h, const GruTilingData* __restrict gruTiling, GM_ADDR workspace)
+    {
         this->tiling = gruTiling;
         this->inputMMTiling = this->tiling->inputMMParam;
         this->hiddenMMTiling = this->tiling->hiddenMMParam;
@@ -63,7 +63,8 @@ public:
         this->InitVectorBuf();
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         //  计算input的matmul
         this->ProcessInputMM();
         SyncAll();
@@ -80,8 +81,8 @@ public:
                 if (this->tiling->isSeqLength != 0) {
                     this->inputGm.initHGm = this->outputGm.outHGm;
                 } else {
-                    this->inputGm.initHGm = 
-                        this->outputGm.outHGm[(this->tiling->timeStep - 1) * this->tiling->batch * this->tiling->hiddenSize];
+                    this->inputGm.initHGm = this->outputGm.outHGm[(this->tiling->timeStep - 1) * this->tiling->batch *
+                                                                  this->tiling->hiddenSize];
                 }
             } else {
                 this->inputGm.initHGm = this->outputGm.outHGm;
@@ -89,7 +90,7 @@ public:
         }
 
         int64_t tIdx = this->tiling->isInith == 0 ? 1 : 0;
-        for(; tIdx < this->tiling->timeStep; tIdx++) {
+        for (; tIdx < this->tiling->timeStep; tIdx++) {
             SyncAll();
             //  计算hidden的matmul
             this->ProcessHiddenMM(tIdx);
@@ -104,8 +105,8 @@ public:
                 //  不定长:outHGm紧凑[B,H],每步覆盖写活跃batch
                 this->inputGm.initHGm = this->outputGm.outHGm;
             } else if (this->tiling->direction == 1) {
-                this->inputGm.initHGm = 
-                    this->outputGm.outHGm[(this->tiling->timeStep - 1 - tIdx) * this->tiling->batch * this->tiling->hiddenSize];
+                this->inputGm.initHGm = this->outputGm.outHGm[(this->tiling->timeStep - 1 - tIdx) *
+                                                              this->tiling->batch * this->tiling->hiddenSize];
             } else {
                 this->inputGm.initHGm = this->outputGm.outHGm[tIdx * this->tiling->batch * this->tiling->hiddenSize];
             }
@@ -116,16 +117,17 @@ public:
 
     // describe Matmul input/output dtype&format
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-                    matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-                    matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
-                    matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>>
-                    inputMM;
-    
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>>
+        inputMM;
+
     matmul::Matmul<matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-                    matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
-                    matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
-                    matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>>
-                    hiddenMM;
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float>,
+                   matmul::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, T>>
+        hiddenMM;
+
 private:
     // input GlobalTensors
     struct InputGm {
@@ -150,22 +152,22 @@ private:
         AscendC::GlobalTensor<T> outNHGm;
         AscendC::GlobalTensor<float> inputMMWorkspace;
         AscendC::GlobalTensor<float> hiddenMMWorkspace;
-    };  
+    };
 
     // LocalTensor
-    AscendC::LocalTensor<float> ubLocal1; 
-    AscendC::LocalTensor<float> ubLocal2; 
-    AscendC::LocalTensor<float> ubLocal3; 
-    AscendC::LocalTensor<float> ubLocal4; 
-    AscendC::LocalTensor<float> ubLocal5; 
+    AscendC::LocalTensor<float> ubLocal1;
+    AscendC::LocalTensor<float> ubLocal2;
+    AscendC::LocalTensor<float> ubLocal3;
+    AscendC::LocalTensor<float> ubLocal4;
+    AscendC::LocalTensor<float> ubLocal5;
     AscendC::LocalTensor<half> ubFp16;
 
-    TBuf<AscendC::TPosition::VECCALC> buf1; 
+    TBuf<AscendC::TPosition::VECCALC> buf1;
     TBuf<AscendC::TPosition::VECCALC> buf2;
     TBuf<AscendC::TPosition::VECCALC> buf3;
     TBuf<AscendC::TPosition::VECCALC> buf4;
     TBuf<AscendC::TPosition::VECCALC> buf5;
-    TBuf<AscendC::TPosition::VECCALC> buf6; 
+    TBuf<AscendC::TPosition::VECCALC> buf6;
 
     OutputGm outputGm;
     InputGm inputGm;
@@ -184,15 +186,17 @@ private:
     const GruTilingData* __restrict tiling;
     TCubeTiling inputMMTiling;
     TCubeTiling hiddenMMTiling;
-    
-    __aicore__ inline int64_t Ceil(int64_t x, int64_t y) {
+
+    __aicore__ inline int64_t Ceil(int64_t x, int64_t y)
+    {
         if (y == 0) {
             return x;
         }
         return (x + y - 1) / y;
     }
     //  计算所有数据分给所有核
-    __aicore__ inline void CalcGMOffset(TCubeTiling& param, TRnnOffsets& offset, tailSize& mmTail, int32_t kSize) {
+    __aicore__ inline void CalcGMOffset(TCubeTiling& param, TRnnOffsets& offset, tailSize& mmTail, int32_t kSize)
+    {
         //  计算M、N方向上的核数
         mmTail.mCoreLoop = this->Ceil(param.M, param.singleCoreM);
         mmTail.nCoreLoop = this->Ceil(param.N, param.singleCoreN);
@@ -216,18 +220,20 @@ private:
         offset.BOffset = mmTail.nCoreIndx * param.singleCoreN;
         offset.BiasOffset = mmTail.nCoreIndx * param.singleCoreN;
 
-        offset.COffset = mmTail.mCoreIndx * param.N * param.singleCoreM + 
-                            mmTail.nCoreIndx * param.singleCoreN;
+        offset.COffset = mmTail.mCoreIndx * param.N * param.singleCoreM + mmTail.nCoreIndx * param.singleCoreN;
     }
 
     __aicore__ inline void InitGlobalBuffers(GM_ADDR x, GM_ADDR wi, GM_ADDR wh, GM_ADDR bi, GM_ADDR bh,
-                                            GM_ADDR batch_sizes, GM_ADDR init_h, GM_ADDR y, GM_ADDR output_h,
-                                            GM_ADDR r, GM_ADDR z, GM_ADDR n, GM_ADDR n_h, GM_ADDR workspace) {
-        this->CalcGMOffset(this->inputMMTiling, this->inputOffsets, this->inputTail, static_cast<int32_t>(this->tiling->inputSize));
-        this->CalcGMOffset(this->hiddenMMTiling, this->hiddenOffsets, this->hiddenTail, static_cast<int32_t>(this->tiling->hiddenSize));
+                                             GM_ADDR batch_sizes, GM_ADDR init_h, GM_ADDR y, GM_ADDR output_h,
+                                             GM_ADDR r, GM_ADDR z, GM_ADDR n, GM_ADDR n_h, GM_ADDR workspace)
+    {
+        this->CalcGMOffset(this->inputMMTiling, this->inputOffsets, this->inputTail,
+                           static_cast<int32_t>(this->tiling->inputSize));
+        this->CalcGMOffset(this->hiddenMMTiling, this->hiddenOffsets, this->hiddenTail,
+                           static_cast<int32_t>(this->tiling->hiddenSize));
 
-        this->calBlockSize  = 32 / sizeof(T);
-        this->floatCalBlockSize  = 32 / sizeof(float);
+        this->calBlockSize = 32 / sizeof(T);
+        this->floatCalBlockSize = 32 / sizeof(float);
         //  1个时刻的h状态大小
         this->oneCellSize = this->tiling->batch * this->tiling->hiddenSize;
         this->allCellSize = this->oneCellSize * GRU_GATE_SIZE;
@@ -237,59 +243,62 @@ private:
 
         //  绑定输入
         this->inputGm.xGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x),
-                                this->tiling->totalSteps * this->tiling->inputSize);
+                                          this->tiling->totalSteps * this->tiling->inputSize);
         this->inputGm.weightInputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(wi),
-                                this->tiling->inputSize * GRU_GATE_SIZE * this->tiling->hiddenSize);
-        this->inputGm.weightHiddenGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(wh),
-                                this->tiling->hiddenSize * GRU_GATE_SIZE * this->tiling->hiddenSize);
+                                                    this->tiling->inputSize * GRU_GATE_SIZE * this->tiling->hiddenSize);
+        this->inputGm.weightHiddenGm.SetGlobalBuffer(
+            reinterpret_cast<__gm__ T*>(wh), this->tiling->hiddenSize * GRU_GATE_SIZE * this->tiling->hiddenSize);
         if (this->tiling->isBias == 1) {
             this->inputGm.biasInputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(bi),
-                                GRU_GATE_SIZE * this->tiling->hiddenSize);
+                                                      GRU_GATE_SIZE * this->tiling->hiddenSize);
             this->inputGm.biasHiddenGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(bh),
-                                GRU_GATE_SIZE * this->tiling->hiddenSize);
+                                                       GRU_GATE_SIZE * this->tiling->hiddenSize);
         }
-        
+
         if (this->tiling->isInith == 1) {
             this->inputGm.initHGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(init_h),
-                                this->tiling->batch * this->tiling->hiddenSize);
+                                                  this->tiling->batch * this->tiling->hiddenSize);
         }
 
         if (this->tiling->isSeqLength != 0) {
             this->inputGm.batchSizesGm.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(batch_sizes),
-                                this->tiling->timeStep);
+                                                       this->tiling->timeStep);
         }
 
         //  绑定输出
         this->outputGm.outYGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(y),
-                                this->tiling->totalSteps * this->tiling->hiddenSize);
+                                              this->tiling->totalSteps * this->tiling->hiddenSize);
         if (this->tiling->isSeqLength != 0) {
             this->outputGm.outHGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(output_h),
-                                this->tiling->batch * this->tiling->hiddenSize);
+                                                  this->tiling->batch * this->tiling->hiddenSize);
         } else {
-            this->outputGm.outHGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(output_h),
-                                this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
+            this->outputGm.outHGm.SetGlobalBuffer(
+                reinterpret_cast<__gm__ T*>(output_h),
+                this->tiling->timeStep * this->tiling->batch * this->tiling->hiddenSize);
         }
-        
+
         if (this->tiling->isTraining == 1) {
             this->outputGm.outRGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(r),
-                                this->tiling->totalSteps * this->tiling->hiddenSize);
+                                                  this->tiling->totalSteps * this->tiling->hiddenSize);
             this->outputGm.outZGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(z),
-                                this->tiling->totalSteps * this->tiling->hiddenSize);
+                                                  this->tiling->totalSteps * this->tiling->hiddenSize);
             this->outputGm.outNGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(n),
-                                this->tiling->totalSteps * this->tiling->hiddenSize);
+                                                  this->tiling->totalSteps * this->tiling->hiddenSize);
             this->outputGm.outNHGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(n_h),
-                                this->tiling->totalSteps * this->tiling->hiddenSize);
+                                                   this->tiling->totalSteps * this->tiling->hiddenSize);
         }
 
         int64_t totalMMSize = this->tiling->totalSteps * GRU_GATE_SIZE * this->tiling->hiddenSize;
-        this->outputGm.inputMMWorkspace.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace),
-                        totalMMSize);
-        this->outputGm.hiddenMMWorkspace.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace) + totalMMSize, 
-                        this->tiling->timeStep * this->tiling->batch * GRU_GATE_SIZE * this->tiling->hiddenSize);
+        this->outputGm.inputMMWorkspace.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace), totalMMSize);
+        this->outputGm.hiddenMMWorkspace.SetGlobalBuffer(
+            reinterpret_cast<__gm__ float*>(workspace) + totalMMSize,
+            this->tiling->timeStep * this->tiling->batch * GRU_GATE_SIZE * this->tiling->hiddenSize);
     }
 
-    __aicore__ inline void InitVectorBuf() {
-        auto size = this->tiling->baseM * this->Ceil(this->tiling->baseN, this->calBlockSize) * this->calBlockSize * FLOAT_BYTES;
+    __aicore__ inline void InitVectorBuf()
+    {
+        auto size = this->tiling->baseM * this->Ceil(this->tiling->baseN, this->calBlockSize) * this->calBlockSize *
+                    FLOAT_BYTES;
 
         this->pipe.Reset();
         this->pipe.InitBuffer(buf1, size);
@@ -310,7 +319,8 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessInputMM() {
+    __aicore__ inline void ProcessInputMM()
+    {
         if (GetBlockIdx() < this->inputMMTiling.usedCoreNum) {
             this->inputMM.SetTensorA(this->inputGm.xGm[this->inputOffsets.AOffset]);
             this->inputMM.SetTensorB(this->inputGm.weightInputGm[this->inputOffsets.BOffset]);
@@ -336,16 +346,16 @@ private:
         }
     }
 
-    __aicore__ inline void ProcessHiddenMM(int64_t tIdx) {
+    __aicore__ inline void ProcessHiddenMM(int64_t tIdx)
+    {
         if (GetBlockIdx() < this->hiddenMMTiling.usedCoreNum) {
             if (this->tiling->direction == 1) {
-                this->hiddenOffsets.COffset = 
-                    this->oriHiddenOffsets.COffset + (this->tiling->timeStep - 1 - tIdx) * this->allCellSize;
+                this->hiddenOffsets.COffset = this->oriHiddenOffsets.COffset +
+                                              (this->tiling->timeStep - 1 - tIdx) * this->allCellSize;
             } else {
-                this->hiddenOffsets.COffset = 
-                    this->oriHiddenOffsets.COffset + tIdx * this->allCellSize;
+                this->hiddenOffsets.COffset = this->oriHiddenOffsets.COffset + tIdx * this->allCellSize;
             }
-            
+
             this->hiddenMM.SetTensorA(this->inputGm.initHGm[this->hiddenOffsets.AOffset]);
             this->hiddenMM.SetTensorB(this->inputGm.weightHiddenGm[this->hiddenOffsets.BOffset]);
             if (this->tiling->isBias == 1) {
@@ -365,10 +375,11 @@ private:
                     actualM = curBatch - coreStartM;
                 }
                 int64_t tailN = (this->hiddenTail.nCoreIndx == this->hiddenTail.notTailNCoreCount) ?
-                                this->hiddenTail.tailSingleCoreN : this->hiddenMMTiling.singleCoreN;
+                                    this->hiddenTail.tailSingleCoreN :
+                                    this->hiddenMMTiling.singleCoreN;
                 this->hiddenMM.SetTail(actualM, tailN);
             } else {
-                if (this->hiddenTail.nCoreIndx == this->hiddenTail.notTailNCoreCount && 
+                if (this->hiddenTail.nCoreIndx == this->hiddenTail.notTailNCoreCount &&
                     this->hiddenTail.mCoreIndx == this->hiddenTail.notTailMCoreCount) {
                     this->hiddenMM.SetTail(this->hiddenTail.tailSingleCoreM, this->hiddenTail.tailSingleCoreN);
                 } else if (this->hiddenTail.nCoreIndx == this->hiddenTail.notTailNCoreCount) {
@@ -377,13 +388,14 @@ private:
                     this->hiddenMM.SetTail(this->hiddenTail.tailSingleCoreM, this->hiddenMMTiling.singleCoreN);
                 }
             }
-            
+
             this->hiddenMM.IterateAll(this->outputGm.hiddenMMWorkspace[this->hiddenOffsets.COffset], false);
         }
     }
 
     //  处理初试时间步
-    __aicore__ inline void ProcessInitHZero() {
+    __aicore__ inline void ProcessInitHZero()
+    {
         auto coreIndex = GetBlockIdx();
         int64_t vecMIndx = coreIndex / this->tiling->nCnt;
         int64_t vecNIndx = coreIndex % this->tiling->nCnt;
@@ -410,8 +422,9 @@ private:
         }
     }
 
-    __aicore__ inline void CopyGateFromWorkspace(LocalTensor<float> &ub, GlobalTensor<float> &gm, int64_t offset,
-                                                int64_t calcM, int64_t calcN, int64_t rowLen) {
+    __aicore__ inline void CopyGateFromWorkspace(LocalTensor<float>& ub, GlobalTensor<float>& gm, int64_t offset,
+                                                 int64_t calcM, int64_t calcN, int64_t rowLen)
+    {
         DataCopyParams dataCopyParams;
         dataCopyParams.blockCount = calcM;
         dataCopyParams.blockLen = calcN * sizeof(float);
@@ -427,8 +440,9 @@ private:
         DataCopyPad(ub, gm[offset], dataCopyParams, padParams);
     }
 
-    __aicore__ inline void CopyFormHGm(LocalTensor<float> &ub, GlobalTensor<T> &gm, int64_t offset, int64_t calcM,
-                                        int64_t calcN, int64_t rowLen) {
+    __aicore__ inline void CopyFormHGm(LocalTensor<float>& ub, GlobalTensor<T>& gm, int64_t offset, int64_t calcM,
+                                       int64_t calcN, int64_t rowLen)
+    {
         if constexpr (std::is_same_v<T, half>) {
             DataCopyParams dataCopyParams;
             dataCopyParams.blockCount = calcM;
@@ -447,10 +461,9 @@ private:
             PipeBarrier<PIPE_ALL>();
             for (int i = 0; i < calcM; i++) {
                 Cast(ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i],
-                     ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i],
-                     RoundMode::CAST_NONE, calcN);
+                     ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i], RoundMode::CAST_NONE, calcN);
             }
-            
+
             PipeBarrier<PIPE_V>();
         } else {
             DataCopyParams dataCopyParams;
@@ -467,17 +480,16 @@ private:
 
             DataCopyPad(ub, gm[offset], dataCopyParams, padParams);
         }
-        
     }
 
-    __aicore__ inline void CopyToOutput(GlobalTensor<T> &gm, LocalTensor<float> &ub, int64_t offset,
-                                        int64_t calcM, int64_t calcN, int64_t rowLen) {
+    __aicore__ inline void CopyToOutput(GlobalTensor<T>& gm, LocalTensor<float>& ub, int64_t offset, int64_t calcM,
+                                        int64_t calcN, int64_t rowLen)
+    {
         if constexpr (std::is_same_v<T, half>) {
             auto ubH = this->ubFp16;
             for (int i = 0; i < calcM; i++) {
                 Cast(ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i],
-                    ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i],
-                     RoundMode::CAST_RINT, calcN);
+                     ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i], RoundMode::CAST_RINT, calcN);
             }
             PipeBarrier<PIPE_V>();
 
@@ -497,11 +509,12 @@ private:
             dataCopyParams.dstStride = (rowLen - calcN) * sizeof(float);
 
             DataCopyPad(gm[offset], ub, dataCopyParams);
-        }    
+        }
     }
-    
-    __aicore__ inline void CopyBiasFromGM(LocalTensor<float> &ub, GlobalTensor<T> &gm, int64_t offset,
-                                        int64_t calcM, int64_t calcN) {
+
+    __aicore__ inline void CopyBiasFromGM(LocalTensor<float>& ub, GlobalTensor<T>& gm, int64_t offset, int64_t calcM,
+                                          int64_t calcN)
+    {
         int64_t alignedCalcN = this->Ceil(calcN, this->calBlockSize) * this->calBlockSize;
         int64_t calcSizeAlign = calcM * alignedCalcN;
 
@@ -544,7 +557,8 @@ private:
         }
     }
 
-    __aicore__ inline int64_t GetInputMMRowOffset(int64_t seqIdx) {
+    __aicore__ inline int64_t GetInputMMRowOffset(int64_t seqIdx)
+    {
         int64_t offset = 0;
         for (int64_t i = 0; i < seqIdx; i++) {
             offset += this->inputGm.batchSizesGm.GetValue(i);
@@ -552,35 +566,37 @@ private:
         return offset;
     }
 
-    __aicore__ inline void ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx, 
-                                    int64_t vecMIndx, int64_t vecNIndx) {
+    __aicore__ inline void ProcessVectorOnce(int64_t tIdx, int64_t mIdx, int64_t nIdx, int64_t vecMIndx,
+                                             int64_t vecNIndx)
+    {
         bool isTailM = (vecMIndx == this->tiling->mCnt - 1);
         bool isTailN = (vecNIndx == this->tiling->nCnt - 1);
         auto curCoreM = isTailM ? this->tiling->singleCoreMTail : this->tiling->singleCoreM;
         auto curCoreN = isTailN ? this->tiling->singleCoreNTail : this->tiling->singleCoreN;
 
         // 核内，当前UB计算的M、N大小
-        int64_t calcM = (mIdx == this->Ceil(curCoreM, this->tiling->baseM) - 1) 
-                        ? (curCoreM - mIdx * this->tiling->baseM) : this->tiling->baseM;
-        int64_t calcN = (nIdx == this->Ceil(curCoreN, this->tiling->baseN) - 1) 
-                        ? (curCoreN - nIdx * this->tiling->baseN) : this->tiling->baseN;
+        int64_t calcM = (mIdx == this->Ceil(curCoreM, this->tiling->baseM) - 1) ?
+                            (curCoreM - mIdx * this->tiling->baseM) :
+                            this->tiling->baseM;
+        int64_t calcN = (nIdx == this->Ceil(curCoreN, this->tiling->baseN) - 1) ?
+                            (curCoreN - nIdx * this->tiling->baseN) :
+                            this->tiling->baseN;
         // 对齐后的实际计算长度
         int64_t calcSizeAlign = calcM * this->Ceil(calcN, this->calBlockSize) * this->calBlockSize;
 
         // 全局偏移计算
-        auto coreStartM = vecMIndx * this->tiling->singleCoreM;    //  核起始行
-        auto blockStartM = mIdx * this->tiling->baseM;  //  UB内起始行
-        auto allStartM = coreStartM + blockStartM;      //  总的起始行
+        auto coreStartM = vecMIndx * this->tiling->singleCoreM; //  核起始行
+        auto blockStartM = mIdx * this->tiling->baseM;          //  UB内起始行
+        auto allStartM = coreStartM + blockStartM;              //  总的起始行
 
-        auto coreStartN = vecNIndx * this->tiling->singleCoreN;    //  核起始列
-        auto blockStartN = nIdx * this->tiling->baseN;  //  UB内起始列
-        auto allStartN = coreStartN + blockStartN;      //  总的起始列
+        auto coreStartN = vecNIndx * this->tiling->singleCoreN; //  核起始列
+        auto blockStartN = nIdx * this->tiling->baseN;          //  UB内起始列
+        auto allStartN = coreStartN + blockStartN;              //  总的起始列
 
         int64_t seqIdx = (this->tiling->direction == 1) ? (this->tiling->timeStep - 1 - tIdx) : tIdx;
         //  gm里的门偏移
         auto curBatch = this->tiling->batch;
         if (this->tiling->isSeqLength != 0) {
-            
             curBatch = this->inputGm.batchSizesGm.GetValue(seqIdx);
             if (allStartM >= curBatch) {
                 return;
@@ -611,13 +627,14 @@ private:
         auto hPrevAddr = allStartM * this->tiling->hiddenSize + allStartN;
 
         //  输出偏移
-        auto baseOut = tIdx * this->tiling->batch * this->tiling->hiddenSize + allStartM * this->tiling->hiddenSize + allStartN;
+        auto baseOut = tIdx * this->tiling->batch * this->tiling->hiddenSize + allStartM * this->tiling->hiddenSize +
+                       allStartN;
         auto compactBaseOut = inputMMRow * this->tiling->hiddenSize + allStartN;
         if (this->tiling->direction == 1) {
             baseOut = (this->tiling->timeStep - tIdx - 1) * this->tiling->batch * this->tiling->hiddenSize +
-                        allStartM * this->tiling->hiddenSize + allStartN;
+                      allStartM * this->tiling->hiddenSize + allStartN;
         }
-        
+
         //  不定长:outHGm紧凑，直接写allStartM*H + allStartN
         if (this->tiling->isSeqLength != 0) {
             baseOut = allStartM * this->tiling->hiddenSize + allStartN;
@@ -636,7 +653,7 @@ private:
         PipeBarrier<PIPE_ALL>();
 
         Add(ubResetGate, ubInputR, ubHiddenR, calcSizeAlign);
-        Sigmoid(ubResetGate, ubResetGate, calcSizeAlign);   //  r = sigmoid(i_r + h_r)  Ub3
+        Sigmoid(ubResetGate, ubResetGate, calcSizeAlign); //  r = sigmoid(i_r + h_r)  Ub3
         PipeBarrier<PIPE_ALL>();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outRGm, ubResetGate, compactBaseOut, calcM, calcN, outputRowLen);
@@ -651,9 +668,9 @@ private:
         CopyGateFromWorkspace(ubInputZ, this->outputGm.inputMMWorkspace, inputGateZ, calcM, calcN, workspaceRowLen);
         CopyGateFromWorkspace(ubHiddenZ, this->outputGm.hiddenMMWorkspace, hiddenGateZ, calcM, calcN, workspaceRowLen);
         PipeBarrier<PIPE_ALL>();
-        
+
         Add(ubUpdateGate, ubInputZ, ubHiddenZ, calcSizeAlign);
-        Sigmoid(ubUpdateGate, ubUpdateGate, calcSizeAlign);   // z = sigmoid(i_z + h_z)  Ub4
+        Sigmoid(ubUpdateGate, ubUpdateGate, calcSizeAlign); // z = sigmoid(i_z + h_z)  Ub4
         PipeBarrier<PIPE_ALL>();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outZGm, ubUpdateGate, compactBaseOut, calcM, calcN, outputRowLen);
@@ -676,7 +693,7 @@ private:
 
         Mul(ubHiddenN, ubResetGate, ubHiddenN, calcSizeAlign);
         Add(ubNewGate, ubInputN, ubHiddenN, calcSizeAlign);
-        Tanh(ubNewGate, ubNewGate, calcSizeAlign);          //  n = tanh(i_n + r * h_n) Ub5
+        Tanh(ubNewGate, ubNewGate, calcSizeAlign); //  n = tanh(i_n + r * h_n) Ub5
         PipeBarrier<PIPE_ALL>();
         if (this->tiling->isTraining == 1) {
             CopyToOutput(this->outputGm.outNGm, ubNewGate, compactBaseOut, calcM, calcN, outputRowLen);
@@ -705,30 +722,33 @@ private:
         PipeBarrier<PIPE_ALL>();
         CopyToOutput(this->outputGm.outYGm, ubHt, compactBaseOut, calcM, calcN, outputRowLen);
         PipeBarrier<PIPE_ALL>();
-    } 
+    }
 
-    __aicore__ inline void ProcessVectorInitH(int64_t mIdx, int64_t nIdx, int64_t vecMIndx, int64_t vecNIndx) {
+    __aicore__ inline void ProcessVectorInitH(int64_t mIdx, int64_t nIdx, int64_t vecMIndx, int64_t vecNIndx)
+    {
         bool isTailM = (vecMIndx == this->tiling->mCnt - 1);
         bool isTailN = (vecNIndx == this->tiling->nCnt - 1);
         auto curCoreM = isTailM ? this->tiling->singleCoreMTail : this->tiling->singleCoreM;
         auto curCoreN = isTailN ? this->tiling->singleCoreNTail : this->tiling->singleCoreN;
 
         // 核内，当前UB计算的M、N大小
-        int64_t calcN = (nIdx == this->Ceil(curCoreN, this->tiling->baseN) - 1) 
-                        ? (curCoreN - nIdx * this->tiling->baseN) : this->tiling->baseN;
-        int64_t calcM = (mIdx == this->Ceil(curCoreM, this->tiling->baseM) - 1) 
-                        ? (curCoreM - mIdx * this->tiling->baseM) : this->tiling->baseM;
+        int64_t calcN = (nIdx == this->Ceil(curCoreN, this->tiling->baseN) - 1) ?
+                            (curCoreN - nIdx * this->tiling->baseN) :
+                            this->tiling->baseN;
+        int64_t calcM = (mIdx == this->Ceil(curCoreM, this->tiling->baseM) - 1) ?
+                            (curCoreM - mIdx * this->tiling->baseM) :
+                            this->tiling->baseM;
         // 对齐后的实际计算长度
         int64_t calcSizeAlign = calcM * this->Ceil(calcN, this->calBlockSize) * this->calBlockSize;
 
         // 全局偏移计算
-        auto coreStartM = vecMIndx * this->tiling->singleCoreM;    //  核起始行
-        auto blockStartM = mIdx * this->tiling->baseM;  //  UB内起始行
-        auto allStartM = blockStartM + coreStartM;      //  总的起始行
+        auto coreStartM = vecMIndx * this->tiling->singleCoreM; //  核起始行
+        auto blockStartM = mIdx * this->tiling->baseM;          //  UB内起始行
+        auto allStartM = blockStartM + coreStartM;              //  总的起始行
 
-        auto coreStartN = vecNIndx * this->tiling->singleCoreN;    //  核起始列
-        auto blockStartN = nIdx * this->tiling->baseN;  //  UB内起始列
-        auto allStartN = coreStartN + blockStartN;      //  总的起始列
+        auto coreStartN = vecNIndx * this->tiling->singleCoreN; //  核起始列
+        auto blockStartN = nIdx * this->tiling->baseN;          //  UB内起始列
+        auto allStartN = coreStartN + blockStartN;              //  总的起始列
 
         int64_t seqIdx = (this->tiling->direction == 1) ? (this->tiling->timeStep - 1) : 0;
         if (this->tiling->isSeqLength != 0) {
@@ -762,7 +782,8 @@ private:
         if (this->tiling->direction == 1) {
             tIdx = this->tiling->timeStep - 1;
         }
-        auto baseOut = tIdx * this->tiling->batch * this->tiling->hiddenSize + allStartM * this->tiling->hiddenSize + allStartN;
+        auto baseOut = tIdx * this->tiling->batch * this->tiling->hiddenSize + allStartM * this->tiling->hiddenSize +
+                       allStartN;
 
         //  不定长:outHGm紧凑，直接写allStartM*H + allStartN
         if (this->tiling->isSeqLength != 0) {
@@ -833,7 +854,7 @@ private:
             CopyToOutput(this->outputGm.outNHGm, ubHiddenN, compactBaseOut, calcM, calcN, outputRowLen);
             PipeBarrier<PIPE_ALL>();
         }
-        
+
         Mul(ubHiddenN, ubResetGate, ubHiddenN, calcSizeAlign);
         Add(ubNewGate, ubInputN, ubHiddenN, calcSizeAlign);
         Tanh(ubNewGate, ubNewGate, calcSizeAlign);
@@ -857,7 +878,8 @@ private:
         CopyToOutput(this->outputGm.outYGm, ubHt, compactBaseOut, calcM, calcN, outputRowLen);
     }
 
-    __aicore__ inline void ProcessVector(int64_t tIdx) {
+    __aicore__ inline void ProcessVector(int64_t tIdx)
+    {
         auto CoreIndex = GetBlockIdx();
         int64_t vecMIndx = CoreIndex / this->tiling->nCnt;
         int64_t vecNIndx = CoreIndex % this->tiling->nCnt;
@@ -881,7 +903,7 @@ private:
             for (int64_t k = 0; k < coreLoopN; ++k) {
                 ProcessVectorOnce(tIdx, j, k, vecMIndx, vecNIndx);
             }
-        } 
+        }
     }
 };
 

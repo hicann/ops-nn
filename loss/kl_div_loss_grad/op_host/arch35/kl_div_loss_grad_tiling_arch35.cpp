@@ -15,11 +15,9 @@
 #include "kl_div_loss_grad_tiling_arch35.h"
 
 namespace {
-  const size_t INPUT_GRAD_INDEX = 0;
-  const size_t INPUT_INPUT_INDEX = 1;
-  const size_t INPUT_TARGET_INDEX = 2;
-}
+const size_t INPUT_GRAD_INDEX = 0;
+const size_t INPUT_INPUT_INDEX = 1;
+const size_t INPUT_TARGET_INDEX = 2;
+} // namespace
 
-namespace optiling {
-
-}  // namespace optiling
+namespace optiling {} // namespace optiling

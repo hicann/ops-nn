@@ -40,11 +40,7 @@ enum class ConvFormat {
     UNDEFINED
 };
 
-enum class ConvGroupType {
-    NORMAL_CONV = 0,
-    ORI_GROUP_CONV,
-    OPT_GROUP_CONV
-};
+enum class ConvGroupType { NORMAL_CONV = 0, ORI_GROUP_CONV, OPT_GROUP_CONV };
 
 enum class ConvDtype {
     FLOAT16 = 0,
@@ -88,8 +84,8 @@ struct FixpipeInfo {
     uint8_t clipMode1 = 0;
     uint8_t dualOutput = 0;
     float channelWiseCoeff = 0;
-// channelWiseCoeff represents the sum of the multiples of the byte width of the data type of the channelwise
-// parameter in fixpipe compared to the byte width of FP16 (two bytes).
+    // channelWiseCoeff represents the sum of the multiples of the byte width of the data type of the channelwise
+    // parameter in fixpipe compared to the byte width of FP16 (two bytes).
 };
 
 constexpr uint32_t CONST_VALUE_0 = 0;
@@ -138,7 +134,7 @@ constexpr size_t BITS_PER_BYTE = 8;
 constexpr uint32_t SWEET_POINT_AI_FP16 = 144;
 
 constexpr int8_t ROUND_MODE_RINT = 1;
-constexpr int8_t ROUND_MODE_ROUND  = 2;
+constexpr int8_t ROUND_MODE_ROUND = 2;
 constexpr int8_t ROUND_MODE_HYBRID = 3;
 
 constexpr uint64_t MAX_40_BIT_NUM = 1099511627775;
@@ -244,23 +240,26 @@ constexpr size_t NDHWC_D_IDX = 1;
 constexpr size_t NDHWC_H_IDX = 2;
 constexpr size_t NDHWC_W_IDX = 3;
 constexpr size_t NDHWC_C_IDX = 4;
-static std::map<ge::DataType, ConvDtype> dtypeMap = {
-    {ge::DT_FLOAT16, ConvDtype::FLOAT16}, {ge::DT_FLOAT, ConvDtype::FLOAT32},
-    {ge::DT_BF16, ConvDtype::BFLOAT16}, {ge::DT_INT8, ConvDtype::INT8},
-    {ge::DT_INT64, ConvDtype::INT64}, {ge::DT_UINT64, ConvDtype::UINT64},
-    {ge::DT_INT32, ConvDtype::INT32}, {ge::DT_HIFLOAT8, ConvDtype::HIFLOAT8},
-    {ge::DT_FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN},
-    {ge::DT_INT16, ConvDtype::INT16},
-    {ge::DT_UINT8, ConvDtype::UINT8},
-    {ge::DT_UINT16, ConvDtype::UINT16},
-    {ge::DT_UINT32, ConvDtype::UINT32},
-    {ge::DT_DOUBLE, ConvDtype::DOUBLE},
-    {ge::DT_INT4, ConvDtype::INT4},
-    {ge::DT_UNDEFINED, ConvDtype::UNDEFINED}
-};
+static std::map<ge::DataType, ConvDtype> dtypeMap = {{ge::DT_FLOAT16, ConvDtype::FLOAT16},
+                                                     {ge::DT_FLOAT, ConvDtype::FLOAT32},
+                                                     {ge::DT_BF16, ConvDtype::BFLOAT16},
+                                                     {ge::DT_INT8, ConvDtype::INT8},
+                                                     {ge::DT_INT64, ConvDtype::INT64},
+                                                     {ge::DT_UINT64, ConvDtype::UINT64},
+                                                     {ge::DT_INT32, ConvDtype::INT32},
+                                                     {ge::DT_HIFLOAT8, ConvDtype::HIFLOAT8},
+                                                     {ge::DT_FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN},
+                                                     {ge::DT_INT16, ConvDtype::INT16},
+                                                     {ge::DT_UINT8, ConvDtype::UINT8},
+                                                     {ge::DT_UINT16, ConvDtype::UINT16},
+                                                     {ge::DT_UINT32, ConvDtype::UINT32},
+                                                     {ge::DT_DOUBLE, ConvDtype::DOUBLE},
+                                                     {ge::DT_INT4, ConvDtype::INT4},
+                                                     {ge::DT_UNDEFINED, ConvDtype::UNDEFINED}};
 
 struct AscendOpsMknMap {
-    int32_t getByIndex(uint32_t idx) const {
+    int32_t getByIndex(uint32_t idx) const
+    {
         if (idx > MKN_MAX_SIZE - 1) {
             return MKN_VALUE_DEFAULT;
         }
@@ -271,10 +270,11 @@ struct AscendOpsMknMap {
 
 struct ascendOpsCubeMkn {
     int8_t toIdx[static_cast<uint8_t>(ConvDtype::UNDEFINED) + 1] = {0};
-    AscendOpsMknMap maps[3] = {{CUBE_UNIT, FP16_CUBE_UNIT, CUBE_UNIT}, // fp16
-                               {CUBE_UNIT, FP32_CUBE_UNIT, CUBE_UNIT}, // fp32
+    AscendOpsMknMap maps[3] = {{CUBE_UNIT, FP16_CUBE_UNIT, CUBE_UNIT},  // fp16
+                               {CUBE_UNIT, FP32_CUBE_UNIT, CUBE_UNIT},  // fp32
                                {CUBE_UNIT, INT8_CUBE_UNIT, CUBE_UNIT}}; // int8 hif8 fp8
-    uint32_t GetMKN(ConvDtype dType, uint32_t idx) const {
+    uint32_t GetMKN(ConvDtype dType, uint32_t idx) const
+    {
         return maps[toIdx[static_cast<uint8_t>(dType)]].getByIndex(idx);
     }
     ascendOpsCubeMkn()
@@ -405,12 +405,7 @@ struct NumBlocksRange {
     std::vector<uint32_t> groupRange;
 };
 
-enum class ConvAscendcFeatureFlag : uint8_t {
-    IS_LOAD3D_FLAG = 0,
-    IS_CONV1D_FLAG,
-    IS_DMA_FLAG,
-    INVALID
-};
+enum class ConvAscendcFeatureFlag : uint8_t { IS_LOAD3D_FLAG = 0, IS_CONV1D_FLAG, IS_DMA_FLAG, INVALID };
 
 struct ConvAscendcTilingInfo {
     ConvAscendcShapesInfo shapeInfo;
@@ -444,21 +439,11 @@ struct ConvTilingKeyPara {
 };
 
 static std::map<ge::DataType, uint32_t> dtypeSizeTab = {
-    {ge::DataType::DT_FLOAT16, 2},
-    {ge::DataType::DT_FLOAT, 4},
-    {ge::DataType::DT_BF16, 2},
-    {ge::DataType::DT_INT8, 1},
-    {ge::DataType::DT_INT64, 8},
-    {ge::DataType::DT_UINT64, 8},
-    {ge::DataType::DT_INT32, 4},
-    {ge::DataType::DT_HIFLOAT8, 1},
-    {ge::DataType::DT_FLOAT8_E4M3FN, 1},
-    {ge::DataType::DT_INT16, 2},
-    {ge::DataType::DT_UINT8, 1},
-    {ge::DataType::DT_UINT16, 2},
-    {ge::DataType::DT_UINT32, 4},
-    {ge::DataType::DT_UNDEFINED, 0}
-};
-}
-}
+    {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_FLOAT, 4},    {ge::DataType::DT_BF16, 2},
+    {ge::DataType::DT_INT8, 1},    {ge::DataType::DT_INT64, 8},    {ge::DataType::DT_UINT64, 8},
+    {ge::DataType::DT_INT32, 4},   {ge::DataType::DT_HIFLOAT8, 1}, {ge::DataType::DT_FLOAT8_E4M3FN, 1},
+    {ge::DataType::DT_INT16, 2},   {ge::DataType::DT_UINT8, 1},    {ge::DataType::DT_UINT16, 2},
+    {ge::DataType::DT_UINT32, 4},  {ge::DataType::DT_UNDEFINED, 0}};
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

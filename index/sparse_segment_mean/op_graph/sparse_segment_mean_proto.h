@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_SPARSE_SEGMENT_MEAN_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_SPARSE_SEGMENT_MEAN_H_
 #include "graph/operator_reg.h"
@@ -39,5 +39,5 @@ REG_OP(SparseSegmentMean)
     .OUTPUT(y, TensorType({DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BFLOAT16}))
     .OP_END_FACTORY_REG(SparseSegmentMean)
 
-}
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SPARSE_SEGMENT_MEAN_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SPARSE_SEGMENT_MEAN_H_

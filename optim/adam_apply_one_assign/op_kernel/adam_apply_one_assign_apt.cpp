@@ -9,7 +9,7 @@
  */
 /*!
  * \file adam_apply_one_assign_apt.cpp
- * \brief 
+ * \brief
  */
 #include "kernel_operator.h"
 #include "arch35/adam_apply_one_assign_kernel.h"
@@ -18,12 +18,11 @@
 using TilingData4 = AdamTilingData<4>;
 using TilingData8 = AdamTilingData<8>;
 
-template<int RANK>
-__global__ __aicore__ void adam_apply_one_assign(
-    GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input4,
-    GM_ADDR mul0_x, GM_ADDR mul1_x, GM_ADDR mul2_x, GM_ADDR mul3_x, GM_ADDR add2_y,
-    GM_ADDR out_input1, GM_ADDR out_input2, GM_ADDR out_input3,
-    GM_ADDR workspace, GM_ADDR tiling)
+template <int RANK>
+__global__ __aicore__ void adam_apply_one_assign(GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3,
+                                                 GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x, GM_ADDR mul2_x,
+                                                 GM_ADDR mul3_x, GM_ADDR add2_y, GM_ADDR out_input1, GM_ADDR out_input2,
+                                                 GM_ADDR out_input3, GM_ADDR workspace, GM_ADDR tiling)
 {
     GM_ADDR ins[10] = {input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x, mul3_x, add2_y};
     GM_ADDR outs[3] = {out_input1, out_input2, out_input3};

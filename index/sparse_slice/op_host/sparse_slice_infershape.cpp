@@ -49,9 +49,8 @@ constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
         output_shape->SetDim(i, UNKNOWN_DIM_VALUE_);
@@ -101,20 +100,18 @@ static ge::graphStatus InferShapeRangeForSparseSlice(gert::InferShapeRangeContex
     y_shape_range->GetMax()->SetDim(kOutputIndex0, point_dim);
     y_shape_range->GetMin()->SetDimNum(OUTPUT_VALUES_SHAPE_RANK);
     y_shape_range->GetMin()->SetDim(kOutputIndex0, point_dim);
-    OP_LOGD(
-        context->GetNodeName(), "Get y_indices_range MAX %s.",
-        Ops::Base::ToString(*(y_indices_range->GetMax())).c_str());
-    OP_LOGD(
-        context->GetNodeName(), "Get y_indices_range MIN %s.",
-        Ops::Base::ToString(*(y_indices_range->GetMin())).c_str());
-    OP_LOGD(
-        context->GetNodeName(), "Get y_values_range MAX %s.", Ops::Base::ToString(*(y_values_range->GetMax())).c_str());
-    OP_LOGD(
-        context->GetNodeName(), "Get y_values_range MIN %s.", Ops::Base::ToString(*(y_values_range->GetMin())).c_str());
-    OP_LOGD(
-        context->GetNodeName(), "Get y_shape_range MAX %s.", Ops::Base::ToString(*(y_shape_range->GetMax())).c_str());
-    OP_LOGD(
-        context->GetNodeName(), "Get y_shape_range MIN %s.", Ops::Base::ToString(*(y_shape_range->GetMin())).c_str());
+    OP_LOGD(context->GetNodeName(), "Get y_indices_range MAX %s.",
+            Ops::Base::ToString(*(y_indices_range->GetMax())).c_str());
+    OP_LOGD(context->GetNodeName(), "Get y_indices_range MIN %s.",
+            Ops::Base::ToString(*(y_indices_range->GetMin())).c_str());
+    OP_LOGD(context->GetNodeName(), "Get y_values_range MAX %s.",
+            Ops::Base::ToString(*(y_values_range->GetMax())).c_str());
+    OP_LOGD(context->GetNodeName(), "Get y_values_range MIN %s.",
+            Ops::Base::ToString(*(y_values_range->GetMin())).c_str());
+    OP_LOGD(context->GetNodeName(), "Get y_shape_range MAX %s.",
+            Ops::Base::ToString(*(y_shape_range->GetMax())).c_str());
+    OP_LOGD(context->GetNodeName(), "Get y_shape_range MIN %s.",
+            Ops::Base::ToString(*(y_shape_range->GetMin())).c_str());
     OP_LOGI(context->GetNodeName(), "InferShapeRangeForSparseSlice run success");
     return GRAPH_SUCCESS;
 }

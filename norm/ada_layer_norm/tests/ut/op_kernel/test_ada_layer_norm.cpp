@@ -23,21 +23,13 @@
 #include "ada_layer_norm_tiling_def.h"
 #include "data_utils.h"
 
-extern "C" __global__ __aicore__ void ada_layer_norm(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR weight, GM_ADDR bias, GM_ADDR out, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ada_layer_norm(GM_ADDR x, GM_ADDR scale, GM_ADDR shift, GM_ADDR weight,
+                                                     GM_ADDR bias, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling);
 
-class ada_layer_norm_test : public testing::Test
-{
+class ada_layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ada_layer_norm_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ada_layer_norm_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ada_layer_norm_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ada_layer_norm_test TearDown\n" << std::endl; }
 };
 
 TEST_F(ada_layer_norm_test, test_case_bfloat16_1)
@@ -62,7 +54,7 @@ TEST_F(ada_layer_norm_test, test_case_bfloat16_1)
     tilingDatafromBin->seqLen = 16;
     tilingDatafromBin->hiddenDim = 128;
     tilingDatafromBin->epsilon = 0.00001f;
-    tilingDatafromBin->aveFactor = static_cast<float>(1.0/128.0);
+    tilingDatafromBin->aveFactor = static_cast<float>(1.0 / 128.0);
     tilingDatafromBin->hasWeight = 1;
     tilingDatafromBin->hasBias = 1;
     tilingDatafromBin->hasSmooth = 0;
@@ -108,7 +100,7 @@ TEST_F(ada_layer_norm_test, test_case_bfloat16_2)
     tilingDatafromBin->seqLen = 1;
     tilingDatafromBin->hiddenDim = 10000;
     tilingDatafromBin->epsilon = 0.00001f;
-    tilingDatafromBin->aveFactor = static_cast<float>(1.0/10000.0);
+    tilingDatafromBin->aveFactor = static_cast<float>(1.0 / 10000.0);
     tilingDatafromBin->hasWeight = 1;
     tilingDatafromBin->hasBias = 1;
     tilingDatafromBin->hasSmooth = 0;

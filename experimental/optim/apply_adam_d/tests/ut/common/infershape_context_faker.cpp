@@ -38,15 +38,12 @@ InferShapeContextFaker& InferShapeContextFaker::NodeOutputTd(int32_t index, ge::
     return *this;
 }
 
-InferShapeContextFaker& InferShapeContextFaker::InputTensors(const std::vector<Tensor *>& inputTensors)
+InferShapeContextFaker& InferShapeContextFaker::InputTensors(const std::vector<Tensor*>& inputTensors)
 {
     OpInferShapeContextBuilder::InputTensors(inputTensors);
     return *this;
 }
 
-ContextHolder<InferShapeContext> InferShapeContextFaker::Build()
-{
-    return OpInferShapeContextBuilder::Build();
-}
+ContextHolder<InferShapeContext> InferShapeContextFaker::Build() { return OpInferShapeContextBuilder::Build(); }
 
 } // namespace gert

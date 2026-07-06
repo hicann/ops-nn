@@ -23,11 +23,12 @@ using namespace std;
 
 class l2_shrink_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {std::cout << "shrink_test Setup" << std::endl;}
-    static void TearDownTestCase() {std::cout << "shrink_test TearDown" << std::endl;}
+    static void SetUpTestCase() { std::cout << "shrink_test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "shrink_test TearDown" << std::endl; }
 };
 
-TEST_F(l2_shrink_test, case_1){
+TEST_F(l2_shrink_test, case_1)
+{
     auto tensor_desc = TensorDesc({5, 6, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-20, 20);
     auto lambd = ScalarDesc(1.0f);
     auto bias = ScalarDesc(0.0f);
@@ -40,7 +41,8 @@ TEST_F(l2_shrink_test, case_1){
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_shrink_test, case_2){
+TEST_F(l2_shrink_test, case_2)
+{
     auto tensor_desc = TensorDesc({5, 6, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
     auto lambd = ScalarDesc(1.0f);
     auto bias = ScalarDesc(0.0f);
@@ -53,7 +55,8 @@ TEST_F(l2_shrink_test, case_2){
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_shrink_test, case_3){
+TEST_F(l2_shrink_test, case_3)
+{
     auto tensor_desc = TensorDesc({5, 6, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-20, 20);
     auto lambd = ScalarDesc(1.0f);
     auto bias = ScalarDesc(0.0f);
@@ -66,7 +69,8 @@ TEST_F(l2_shrink_test, case_3){
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_shrink_test, case_4){
+TEST_F(l2_shrink_test, case_4)
+{
     auto tensor_desc = TensorDesc({5, 6, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
     auto lambd = ScalarDesc(1.0f);
     auto bias = ScalarDesc(0.0f);

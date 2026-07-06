@@ -65,8 +65,8 @@ TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BinaryAddTilingData, binaryAddTiling
 TILING_DATA_FIELD_DEF(int64_t, formerUbDim);         // 一次完整的UB内，循环执行A轴的次数
 TILING_DATA_FIELD_DEF(int64_t, ubLoopOfFormerBlock); // 整核进行UB循环的次数，formerBlockDim/formerUbDim 向上取整
 TILING_DATA_FIELD_DEF(int64_t, ubTailOfFormerBlock); // 整核最后一轮UB循环，处理的A轴个数
-TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock);   // 尾核进行UB循环的次数，tailBlockDim/formerUbDim 向上取整
-TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock);   // 尾核最后一轮UB循环，处理的A轴个数
+TILING_DATA_FIELD_DEF(int64_t, ubLoopOfTailBlock); // 尾核进行UB循环的次数，tailBlockDim/formerUbDim 向上取整
+TILING_DATA_FIELD_DEF(int64_t, ubTailOfTailBlock); // 尾核最后一轮UB循环，处理的A轴个数
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000000, BatchNormGradV3RARFullLoadTilingData);
@@ -74,7 +74,7 @@ REGISTER_TILING_DATA_CLASS(BatchNormGradV3_10000000, BatchNormGradV3RARFullLoadT
 BEGIN_TILING_DATA_DEF(BatchNormGradV3RARRecomputeTilingData)
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BaseTilingData, baseTilingData);
 TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BinaryAddTilingData, generalBinAddTilingData); // 整块的二分累加参数
-TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BinaryAddTilingData, tailBinAddTilingData);    // 整块+尾块的二分累加参数
+TILING_DATA_FIELD_DEF_STRUCT(BatchNormGradV3BinaryAddTilingData, tailBinAddTilingData); // 整块+尾块的二分累加参数
 TILING_DATA_FIELD_DEF(int64_t, ubRDimFactor);              // 一次完整的UB内，循环执行R轴的个数
 TILING_DATA_FIELD_DEF(int64_t, ubRDimFactorAlign);         // 一次完整的UB内，循环对齐到block的R轴大小
 TILING_DATA_FIELD_DEF(int64_t, ubRDimLoopNum);             // 核内R轴UB循环的次数
@@ -167,8 +167,8 @@ REGISTER_TILING_DATA_CLASS(BatchNormGradV3_50000000, BatchNormGradV3RASplitRTili
 
 // inference - channel last format tiling data (NHWC format)
 BEGIN_TILING_DATA_DEF(BatchNormGradV3InferChannelLastTilingData)
-TILING_DATA_FIELD_DEF(int64_t, totalTiles);        // total tile count for grad
-TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);      // tiles per core for grad
+TILING_DATA_FIELD_DEF(int64_t, totalTiles);   // total tile count for grad
+TILING_DATA_FIELD_DEF(int64_t, tilesPerCore); // tiles per core for grad
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNums);
 TILING_DATA_FIELD_DEF(int64_t, totalALen);
 TILING_DATA_FIELD_DEF(int64_t, aOuter);
@@ -185,8 +185,8 @@ REGISTER_TILING_DATA_CLASS(BatchNormGradV3_900000, BatchNormGradV3InferChannelLa
 
 // BatchNormGradV3 inference tiling data for NCHW/NCDHW format
 BEGIN_TILING_DATA_DEF(BatchNormGradV3InferTilingData)
-TILING_DATA_FIELD_DEF(int64_t, totalTiles);        // grad total tile count
-TILING_DATA_FIELD_DEF(int64_t, tilesPerCore);      // grad tiles per core
+TILING_DATA_FIELD_DEF(int64_t, totalTiles);   // grad total tile count
+TILING_DATA_FIELD_DEF(int64_t, tilesPerCore); // grad tiles per core
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNums);
 TILING_DATA_FIELD_DEF(int64_t, totalB0Len);
 TILING_DATA_FIELD_DEF(int64_t, totalALen);

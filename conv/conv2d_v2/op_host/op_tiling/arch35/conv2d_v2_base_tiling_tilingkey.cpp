@@ -32,10 +32,9 @@ uint64_t Conv2dBaseTiling::GetGroupTypeVal()
     }
 
     // Condition group 1: L1 full-load flag
-    uint64_t weightKSize = ConvCeilDiv(optGroupInfo_.enlarge, convOpsConstParams_.k0) *
-                           shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
-    bool kL1FullLoadFlag = weightKSize == tilingData_.get_kBL1() &&
-        weightKSize == tilingData_.get_kAL1();
+    uint64_t weightKSize = ConvCeilDiv(optGroupInfo_.enlarge, convOpsConstParams_.k0) * shapeInfo_.kh * shapeInfo_.kw *
+                           convOpsConstParams_.k0;
+    bool kL1FullLoadFlag = weightKSize == tilingData_.get_kBL1() && weightKSize == tilingData_.get_kAL1();
     bool nBL1FullloadFlag = tilingData_.get_singleCoreCo() <= tilingData_.get_nBL1();
     bool l1FullLoad = kL1FullLoadFlag && nBL1FullloadFlag;
 
@@ -44,10 +43,8 @@ uint64_t Conv2dBaseTiling::GetGroupTypeVal()
     bool tilingModeOk = flagInfo_.mSplitModeFlag;
 
     // Condition group 3: format & dtype
-    bool formatOk = descInfo_.fMapFormat == ge::FORMAT_NCHW &&
-        !IsWeightNZFormat(descInfo_.weightFormat);
-    bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 ||
-                    descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
+    bool formatOk = descInfo_.fMapFormat == ge::FORMAT_NCHW && !IsWeightNZFormat(descInfo_.weightFormat);
+    bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 || descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
 
     // Condition group 4: single-core split
@@ -72,13 +69,12 @@ uint64_t Conv2dBaseTiling::GetSmallWeightVal()
     }
 
     uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
-    uint64_t weightKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
-                           shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-                           ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t weightKSize = flagInfo_.enableC04Flag ?
+                               ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                               ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
     int64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
-    if (weightKSize == tilingData_.get_kBL1() &&
-        weightKSize == tilingData_.get_kAL1() &&
+    if (weightKSize == tilingData_.get_kBL1() && weightKSize == tilingData_.get_kAL1() &&
         tilingData_.get_nL0() == singleCoreNSize) {
         if (weightKSize * singleCoreNSize * weightDtypeSize <= apiInputPlatformInfo.l0BSize) {
             return CONV_WEIGHT_SMALLER_THAN_BL0;
@@ -95,21 +91,21 @@ uint64_t Conv2dBaseTiling::GetFmpTilingVal()
         return FMP_OTHER;
     }
     uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
-    uint64_t fmpKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
-                        shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-                        ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t fmpKSize = flagInfo_.enableC04Flag ?
+                            ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                            ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     bool kAL1FullloadFlag = tilingData_.get_kAL1() == fmpKSize;
     if (flagInfo_.mSplitModeFlag) {
         return GetFmpTilingValForMSplit(kAL1FullloadFlag);
     }
     return GetFmpTilingValForHWSplit(kAL1FullloadFlag);
 }
- 
+
 uint64_t Conv2dBaseTiling::GetFmpTilingValForMSplit(bool kAL1FullloadFlag)
 {
     bool mL1FullloadFlag = tilingData_.get_innerBatch() == 1 ?
-        tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1() :
-        tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
+                               tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1() :
+                               tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
     bool mL0FullloadFlag = tilingData_.get_hoL1() == tilingData_.get_hoL0();
     if (kAL1FullloadFlag && mL1FullloadFlag) {
         return FULLLOAD_AL1;
@@ -132,9 +128,9 @@ uint64_t Conv2dBaseTiling::GetWeightTilingVal()
     bool kBL1FullloadFlag = false;
     bool nBL1FullloadFlag = false;
     uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
-    uint64_t weightKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
-                           shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-                           ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t weightKSize = flagInfo_.enableC04Flag ?
+                               ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                               ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
     if (tilingData_.get_kBL1() == weightKSize) {
         kBL1FullloadFlag = true;
@@ -169,19 +165,19 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     }
 
     uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
-    uint64_t fmpKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
-                        shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-                        ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
-    uint64_t weightKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
-                           shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
-                           ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t fmpKSize = flagInfo_.enableC04Flag ?
+                            ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                            ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t weightKSize = flagInfo_.enableC04Flag ?
+                               ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                               ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
 
     bool kAL1FullloadFlag = tilingData_.get_kAL1() == fmpKSize;
     bool kBL1FullloadFlag = tilingData_.get_kBL1() == weightKSize;
     bool mL1FullloadFlag = tilingData_.get_innerBatch() == 1 ?
-                           tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1() :
-                           tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
+                               tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1() :
+                               tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
     bool nL1FullloadFlag = tilingData_.get_nBL1() == singleCoreNSize;
 
     bool al1Fullload = kAL1FullloadFlag && mL1FullloadFlag;
@@ -198,11 +194,9 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     // NCHW weight: extra format + dtype + nodeType + convGroup restrictions.
     // Kernel side only implements NCHW weight for the non-NZ small-kernel path,
     // so fmap format must be NCHW to keep tiling/kernel consistent.
-    bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 ||
-                    descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
+    bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 || descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
-    if (descInfo_.fMapFormat == ge::FORMAT_NCHW &&
-        paramInfo_.nodeType == "Conv2DV2" &&
+    if (descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
         flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk) {
         return CONV_SMALL_KERNEL;
     }
@@ -217,8 +211,7 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
     // Not support weight ub, multi-batch, N-L0 mismatch, C04.
     if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) ||
         static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) != 1 ||
-        tilingData_.get_nL0() != tilingData_.get_nBL1() ||
-        flagInfo_.enableC04Flag) {
+        tilingData_.get_nL0() != tilingData_.get_nBL1() || flagInfo_.enableC04Flag) {
         return true;
     }
 
@@ -231,15 +224,14 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
     }
     return false;
 }
- 
+
 uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
 {
     bool hoL1FullloadFlag = tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1();
     bool woL1FullloadFlag = false;
     if (tilingData_.get_singleCoreWo() <= tilingData_.get_woL1() &&
         !(ConvCeilDiv(tilingData_.get_singleCoreWo(), tilingData_.get_woL0()) > 1 &&
-        tilingData_.get_singleCoreWo() % convOpsConstParams_.m0 > 0 &&
-        tilingData_.get_hoL0() > 1)) {
+          tilingData_.get_singleCoreWo() % convOpsConstParams_.m0 > 0 && tilingData_.get_hoL0() > 1)) {
         woL1FullloadFlag = true;
     }
     bool hoL0FullloadFlag = tilingData_.get_hoL1() == tilingData_.get_hoL0();
@@ -254,8 +246,7 @@ uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
 
 uint64_t Conv2dBaseTiling::GetL1PingPongVal()
 {
-    uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.get_pBufferFlag() &
-        L1A_L1B_PB_FLAG_MASK) >> L1_PB_OFFSET;
+    uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.get_pBufferFlag() & L1A_L1B_PB_FLAG_MASK) >> L1_PB_OFFSET;
     // in group conv: only care about bl1 pingpong
     if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
         if (l1PingPong == L1_PB_BL1_OPEN || l1PingPong == L1_PB_ALL_OPEN) {
@@ -281,9 +272,10 @@ uint64_t Conv2dBaseTiling::GetEnableInnerBatch()
 {
     if (tilingData_.get_innerBatch() > 1) {
         return shapeInfo_.kh == 1 && shapeInfo_.kw == 1 && attrInfo_.padTop == 0 && attrInfo_.padBottom == 0 &&
-            attrInfo_.padLeft == 0 && attrInfo_.padRight == 0 && attrInfo_.strideH == 1 && attrInfo_.strideW == 1 &&
-            attrInfo_.dilationH == 1 && attrInfo_.dilationW == 1 ?
-            CONV_INNER_BATCH_KERNEL_1X1_MULTI : CONV_INNER_BATCH_MULTI;
+                       attrInfo_.padLeft == 0 && attrInfo_.padRight == 0 && attrInfo_.strideH == 1 &&
+                       attrInfo_.strideW == 1 && attrInfo_.dilationH == 1 && attrInfo_.dilationW == 1 ?
+                   CONV_INNER_BATCH_KERNEL_1X1_MULTI :
+                   CONV_INNER_BATCH_MULTI;
     }
     return CONV_INNER_BATCH_SINGLE;
 }
@@ -316,8 +308,8 @@ void Conv2dBaseTiling::ReSetTilingKeyPara()
         tilingKeyPara_.fmpTiling = FMP_OTHER;
     }
     bool sceneFlag = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV &&
-        tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE && tilingData_.get_innerBatch() == 1 &&
-        tilingData_.get_hoL1() == tilingData_.get_hoL0();
+                     tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE && tilingData_.get_innerBatch() == 1 &&
+                     tilingData_.get_hoL1() == tilingData_.get_hoL0();
     if (!flagInfo_.mSplitModeFlag) {
         sceneFlag = sceneFlag && tilingData_.get_woL1() == tilingData_.get_woL0();
     }
@@ -354,7 +346,7 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
     tilingKeyPara_.enableSmallChannel = static_cast<uint64_t>(flagInfo_.enableC04Flag);
     tilingKeyPara_.weightUbTrans = GetWeightUbTrans();
     tilingKeyPara_.fmapCppyMode = GetFmapCopyMode();
-    tilingKeyPara_.innerBatch =  GetEnableInnerBatch();
+    tilingKeyPara_.innerBatch = GetEnableInnerBatch();
     tilingKeyPara_.disContinuous = static_cast<uint64_t>(flagInfo_.disContinuousFlag);
     if (IsWeightNZFormat(descInfo_.weightFormat)) {
         tilingKeyPara_.batchOne = static_cast<uint64_t>(tilingData_.get_singleCoreBatch() == 1);
@@ -364,64 +356,34 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
     tilingKeyPara_.smallKernel = GetSmallKernelVal();
     ReSetTilingKeyPara();
     if (IsWeightNZFormat(descInfo_.weightFormat)) {
-        tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling,
-                                        tilingKeyPara_.weightTiling,
-                                        tilingKeyPara_.l1PingPong,
-                                        tilingKeyPara_.l0PingPong,
-                                        tilingKeyPara_.outputOrder,
-                                        tilingKeyPara_.iterOrder,
-                                        tilingKeyPara_.groupType,
-                                        tilingKeyPara_.enableSmallChannel,
-                                        tilingKeyPara_.weightUbTrans,
-                                        tilingKeyPara_.fmapCppyMode,
-                                        tilingKeyPara_.innerBatch,
-                                        tilingKeyPara_.disContinuous,
-                                        tilingKeyPara_.batchOne,
-                                        tilingKeyPara_.noPad,
-                                        tilingKeyPara_.smallWeight,
-                                        tilingKeyPara_.smallKernel);
+        tilingKey_ = GET_TPL_TILING_KEY(
+            tilingKeyPara_.fmpTiling, tilingKeyPara_.weightTiling, tilingKeyPara_.l1PingPong, tilingKeyPara_.l0PingPong,
+            tilingKeyPara_.outputOrder, tilingKeyPara_.iterOrder, tilingKeyPara_.groupType,
+            tilingKeyPara_.enableSmallChannel, tilingKeyPara_.weightUbTrans, tilingKeyPara_.fmapCppyMode,
+            tilingKeyPara_.innerBatch, tilingKeyPara_.disContinuous, tilingKeyPara_.batchOne, tilingKeyPara_.noPad,
+            tilingKeyPara_.smallWeight, tilingKeyPara_.smallKernel);
     } else {
-        tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling,
-                                        tilingKeyPara_.weightTiling,
-                                        tilingKeyPara_.l1PingPong,
-                                        tilingKeyPara_.l0PingPong,
-                                        tilingKeyPara_.outputOrder,
-                                        tilingKeyPara_.iterOrder,
-                                        tilingKeyPara_.groupType,
-                                        tilingKeyPara_.enableSmallChannel,
-                                        tilingKeyPara_.weightUbTrans,
-                                        tilingKeyPara_.fmapCppyMode,
-                                        tilingKeyPara_.innerBatch,
-                                        tilingKeyPara_.disContinuous,
-                                        0,
-                                        0,
-                                        0,
-                                        tilingKeyPara_.smallKernel);
+        tilingKey_ = GET_TPL_TILING_KEY(
+            tilingKeyPara_.fmpTiling, tilingKeyPara_.weightTiling, tilingKeyPara_.l1PingPong, tilingKeyPara_.l0PingPong,
+            tilingKeyPara_.outputOrder, tilingKeyPara_.iterOrder, tilingKeyPara_.groupType,
+            tilingKeyPara_.enableSmallChannel, tilingKeyPara_.weightUbTrans, tilingKeyPara_.fmapCppyMode,
+            tilingKeyPara_.innerBatch, tilingKeyPara_.disContinuous, 0, 0, 0, tilingKeyPara_.smallKernel);
     }
 
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: c04 mode status is: %d",
-            paramInfo_.nodeType.c_str(), flagInfo_.enableC04Flag);
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: c04 mode status is: %d", paramInfo_.nodeType.c_str(),
+            flagInfo_.enableC04Flag);
     std::stringstream ss;
-    ss << paramInfo_.nodeType << " AscendC: tiling key: " << tilingKey_
-       << ". fmpTiling[" << tilingKeyPara_.fmpTiling
-       << "], weightTiling[" << tilingKeyPara_.weightTiling
-       << "], l1PingPong[" << tilingKeyPara_.l1PingPong
-       << "], l0PingPong[" << tilingKeyPara_.l0PingPong
-       << "], outputOrder[" << tilingKeyPara_.outputOrder
-       << "], iterOrder[" << tilingKeyPara_.iterOrder
-       << "], groupType[" << tilingKeyPara_.groupType
-       << "], enableSmallChannel[" << tilingKeyPara_.enableSmallChannel
-       << "], weightUbTrans[" << tilingKeyPara_.weightUbTrans
-       << "], fmapCppyMode[" << tilingKeyPara_.fmapCppyMode
-       << "], innerBatch[" << tilingKeyPara_.innerBatch
-       << "], disContinuous[" << tilingKeyPara_.disContinuous
-       << "], batchOne[" << tilingKeyPara_.batchOne
-       << "], noPad[" << tilingKeyPara_.noPad
-       << "], smallWeight[" << tilingKeyPara_.smallWeight
-       << "], smallKernel[" << tilingKeyPara_.smallKernel
-       << "].";
+    ss << paramInfo_.nodeType << " AscendC: tiling key: " << tilingKey_ << ". fmpTiling[" << tilingKeyPara_.fmpTiling
+       << "], weightTiling[" << tilingKeyPara_.weightTiling << "], l1PingPong[" << tilingKeyPara_.l1PingPong
+       << "], l0PingPong[" << tilingKeyPara_.l0PingPong << "], outputOrder[" << tilingKeyPara_.outputOrder
+       << "], iterOrder[" << tilingKeyPara_.iterOrder << "], groupType[" << tilingKeyPara_.groupType
+       << "], enableSmallChannel[" << tilingKeyPara_.enableSmallChannel << "], weightUbTrans["
+       << tilingKeyPara_.weightUbTrans << "], fmapCppyMode[" << tilingKeyPara_.fmapCppyMode << "], innerBatch["
+       << tilingKeyPara_.innerBatch << "], disContinuous[" << tilingKeyPara_.disContinuous << "], batchOne["
+       << tilingKeyPara_.batchOne << "], noPad[" << tilingKeyPara_.noPad << "], smallWeight["
+       << tilingKeyPara_.smallWeight << "], smallKernel[" << tilingKeyPara_.smallKernel << "].";
     OP_LOGD(context_->GetNodeName(), "%s", ss.str().c_str());
     return ge::GRAPH_SUCCESS;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

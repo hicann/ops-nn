@@ -107,9 +107,8 @@ TEST_F(TestGroupNormTiling, group_norm_tiling_fp16_small_group)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
-                           {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001f)}})
+                      .NodeAttrs({{"num_groups", Ops::NN::AnyValue::CreateFrom<int64_t>(4)},
+                                  {"eps", Ops::NN::AnyValue::CreateFrom<float>(0.00001f)}})
                       .TilingData(tilingData.get())
                       .Workspace(workspace)
                       .Build();

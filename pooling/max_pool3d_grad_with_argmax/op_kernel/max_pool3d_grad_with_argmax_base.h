@@ -115,8 +115,8 @@ protected:
     uint64_t processedIm2colCopyPartW = UINT8_MAX * im2colCopyFullIters;
     uint8_t im2colCopyRepeatTimesTail = partW - processedIm2colCopyPartW;
 
-    const uint8_t im2colAddRepeatTimes =
-        kW / vecProcBlocks; // if equal to 1 it means that repeatTimes = kH can take place
+    const uint8_t im2colAddRepeatTimes = kW /
+                                         vecProcBlocks; // if equal to 1 it means that repeatTimes = kH can take place
     uint8_t stripPadRepeatTimes = widthOut / vecProcBlocks;
 
     const uint64_t processedIm2colAddDataSrc = im2colAddRepeatTimes * vecProcLength;
@@ -140,10 +140,10 @@ protected:
     const uint64_t coreNum = GetBlockNum();
     const uint64_t coreIdx = GetBlockIdx();
 
-    CopyRepeatParams Im2colNewParams = {
-        static_cast<uint16_t>(dW), 1, static_cast<uint16_t>(sW), static_cast<uint16_t>(kernelDHW)};
-    CopyRepeatParams Im2colNewParamsTail = {
-        static_cast<uint16_t>(dW), 1, static_cast<uint16_t>(dH* partOutW), static_cast<uint16_t>(kW)};
+    CopyRepeatParams Im2colNewParams = {static_cast<uint16_t>(dW), 1, static_cast<uint16_t>(sW),
+                                        static_cast<uint16_t>(kernelDHW)};
+    CopyRepeatParams Im2colNewParamsTail = {static_cast<uint16_t>(dW), 1, static_cast<uint16_t>(dH* partOutW),
+                                            static_cast<uint16_t>(kW)};
 
     CopyRepeatParams PadStripParams = {1, 1, VEC_PROC_BLOCKS, VEC_PROC_BLOCKS};
 
@@ -225,14 +225,15 @@ protected:
         transDataParamsReverse.dstHighHalf = false;
         transDataParamsReverse.srcHighHalf = false;
         transDataParamsReverse.repeatTimes = transAlignRoundPartOutSize / NCHW_CONV_ADDR_LIST_SIZE;
-        transDataParamsReverse.dstRepStride =
-            (transDataParamsReverse.repeatTimes == 1) ? 0 : NCHW_CONV_ADDR_LIST_SIZE / blockLength;
+        transDataParamsReverse.dstRepStride = (transDataParamsReverse.repeatTimes == 1) ?
+                                                  0 :
+                                                  NCHW_CONV_ADDR_LIST_SIZE / blockLength;
         transDataParamsReverse.srcRepStride = (transDataParamsReverse.repeatTimes == 1) ? 0 : NCHW_CONV_ADDR_LIST_SIZE;
     }
 
     template <typename V, bool indices = false>
-    __aicore__ void CopyIn(
-        TQue<TPosition::VECIN, 1>& inQue, GlobalTensor<V> srcGm, const uint64_t& partNC, const uint64_t& partIn)
+    __aicore__ void CopyIn(TQue<TPosition::VECIN, 1>& inQue, GlobalTensor<V> srcGm, const uint64_t& partNC,
+                           const uint64_t& partIn)
     {
         constexpr uint64_t curBlockLen = BLOCK_SIZE / sizeof(V);
         const uint64_t downPartIn = this->RoundDownBlock(partIn, curBlockLen);
@@ -267,13 +268,13 @@ protected:
         } else {
             if (downPartIn == partIn && this->inputSize % curBlockLen == 0) {
                 if ((this->inputSize - partIn) / curBlockLen < MAX_UINT16) {
-                    DataCopyParams copyParams{
-                        static_cast<uint16_t>(partNC), static_cast<uint16_t>(partIn / curBlockLen),
-                        static_cast<uint16_t>((this->inputSize - partIn) / curBlockLen), 0};
+                    DataCopyParams copyParams{static_cast<uint16_t>(partNC),
+                                              static_cast<uint16_t>(partIn / curBlockLen),
+                                              static_cast<uint16_t>((this->inputSize - partIn) / curBlockLen), 0};
                     DataCopy(dstUb, srcGm, copyParams);
                 } else {
-                    DataCopyParams copyParams{
-                        static_cast<uint16_t>(1), static_cast<uint16_t>(partIn / curBlockLen), 0, 0};
+                    DataCopyParams copyParams{static_cast<uint16_t>(1), static_cast<uint16_t>(partIn / curBlockLen), 0,
+                                              0};
                     for (uint64_t nc = 0; nc < partNC; ++nc) {
                         DataCopy(dstUb[nc * roundSize], srcGm[nc * this->inputSize], copyParams);
                     }
@@ -290,8 +291,8 @@ protected:
     }
 
     template <bool indicesTrans = false>
-    __aicore__ inline void PrepareInput(
-        const LocalTensor<half>& srcUb, LocalTensor<half>& dstUb, const uint64_t& dataSize)
+    __aicore__ inline void PrepareInput(const LocalTensor<half>& srcUb, LocalTensor<half>& dstUb,
+                                        const uint64_t& dataSize)
     {
         const uint64_t partAlignDhwInp = RoundUpBlock(dataSize, blockLength);
         uint64_t dstLocalList[NCHW_CONV_ADDR_LIST_SIZE];
@@ -307,8 +308,8 @@ protected:
     }
 
     template <bool indicesTrans = false>
-    __aicore__ inline void PrepareInput(
-        const LocalTensor<float>& srcUb, LocalTensor<float>& dstUb, const uint64_t& dataSize)
+    __aicore__ inline void PrepareInput(const LocalTensor<float>& srcUb, LocalTensor<float>& dstUb,
+                                        const uint64_t& dataSize)
     {
         uint64_t partAlignDhwInp;
         if constexpr (indicesTrans) {
@@ -345,9 +346,9 @@ protected:
     }
 
     template <bool subOffset = false>
-    __aicore__ inline void IndexRecalcFirst(
-        LocalTensor<float>& dTensor, LocalTensor<float>& hTensor, LocalTensor<float>& wTensor, const uint64_t& len,
-        const int64_t& dOff = 0, const int64_t& hOff = 0)
+    __aicore__ inline void IndexRecalcFirst(LocalTensor<float>& dTensor, LocalTensor<float>& hTensor,
+                                            LocalTensor<float>& wTensor, const uint64_t& len, const int64_t& dOff = 0,
+                                            const int64_t& hOff = 0)
     {
         float coeffH = 1.f / float((int)this->widthOut);
         float coeffD = float(1.f / float((int)this->widthOut)) / float((int)this->heightOut);
@@ -355,9 +356,8 @@ protected:
 
         LocalTensor<float> tmp = dTensor[sizeUb1];
 
-        Copy(
-            tmp, dTensor, vecProcLengthFloat, RoundUpBlock(len, vecProcLengthFloat) / vecProcLengthFloat,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(tmp, dTensor, vecProcLengthFloat, RoundUpBlock(len, vecProcLengthFloat) / vecProcLengthFloat,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         PipeBarrier<PIPE_V>();
 
         // d component
@@ -389,9 +389,8 @@ protected:
             PipeBarrier<PIPE_V>();
         }
 
-        Copy(
-            tmp, hTensor, vecProcLengthFloat, RoundUpBlock(len, vecProcLengthFloat) / vecProcLengthFloat,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(tmp, hTensor, vecProcLengthFloat, RoundUpBlock(len, vecProcLengthFloat) / vecProcLengthFloat,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         PipeBarrier<PIPE_V>();
 
         Muls(hTensor, hTensor, coeffH, len); // (i % ((Hin * Win)) * 1 / Win
@@ -410,8 +409,8 @@ protected:
         Add(wTensor, tmp, wTensor, len); // i % (Hin * Win) % Win
     }
 
-    __aicore__ inline void IndexRecalcSecond(
-        LocalTensor<float>& dTensor, LocalTensor<float>& hTensor, LocalTensor<float>& wTensor, const uint64_t& len)
+    __aicore__ inline void IndexRecalcSecond(LocalTensor<float>& dTensor, LocalTensor<float>& hTensor,
+                                             LocalTensor<float>& wTensor, const uint64_t& len)
     {
         Muls(dTensor, dTensor, 1.f / this->dD, len);
         Muls(hTensor, hTensor, 1.f / this->dH, len);
@@ -442,9 +441,8 @@ protected:
 
         for (uint64_t dstOff = 0, blocks = 0; blocks < rowLen * blockLength;
              blocks += blockLength, dstOff += alInt8Offset) {
-            Compare<T, uint8_t, false>(
-                masks[dstOff], srcIndices[blocks], kernelIndexes, CMPMODE::EQ, mask, blockAlKernelDHW / mask,
-                {1, 0, 1, BLOCKS_IN_REP, 0, BLOCKS_IN_REP});
+            Compare<T, uint8_t, false>(masks[dstOff], srcIndices[blocks], kernelIndexes, CMPMODE::EQ, mask,
+                                       blockAlKernelDHW / mask, {1, 0, 1, BLOCKS_IN_REP, 0, BLOCKS_IN_REP});
         }
 
         PipeBarrier<PIPE_V>();
@@ -454,28 +452,26 @@ protected:
 
         for (uint64_t srcOff = 0, dstOff = 0, maskOff = 0; dstOff < wholeRow;
              dstOff += blockKernelDHW, srcOff += blockLength, maskOff += alInt8Offset) {
-            Select<T>(
-                dstTensor[dstOff], masks[maskOff], srcDst[srcOff], static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                mask, blockAlKernelDHW / mask, {1, 0, 0, BLOCKS_IN_REP, 0, 1});
+            Select<T>(dstTensor[dstOff], masks[maskOff], srcDst[srcOff], static_cast<T>(0),
+                      SELMODE::VSEL_TENSOR_SCALAR_MODE, mask, blockAlKernelDHW / mask, {1, 0, 0, BLOCKS_IN_REP, 0, 1});
         }
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CompareSelectBlockKernel(
-        LocalTensor<T>& srcDst, LocalTensor<T>& dstTensor, const uint64_t& rowLen)
+    __aicore__ inline void CompareSelectBlockKernel(LocalTensor<T>& srcDst, LocalTensor<T>& dstTensor,
+                                                    const uint64_t& rowLen)
     {
         LocalTensor<T> srcIndices = srcDst[sizeUb1];
         auto maskOff = (MAX_REPEAT_TIMES + 1) * BLOCKS_IN_REP;
 
         uint64_t maxRep = 0;
         for (maxRep = 0; maxRep < rowLen / MAX_REPEAT_TIMES; maxRep++) {
-            Compare<T>(
-                masks[maskOff * maxRep], srcIndices[MAX_REPEAT_TIMES * maxRep * blockLength], kernelIndexes,
-                CMPMODE::EQ, blockKernelDHW, MAX_REPEAT_TIMES, {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, 0});
+            Compare<T>(masks[maskOff * maxRep], srcIndices[MAX_REPEAT_TIMES * maxRep * blockLength], kernelIndexes,
+                       CMPMODE::EQ, blockKernelDHW, MAX_REPEAT_TIMES, {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, 0});
         }
-        Compare<T>(
-            masks[maskOff * maxRep], srcIndices[MAX_REPEAT_TIMES * maxRep * blockLength], kernelIndexes, CMPMODE::EQ,
-            blockKernelDHW, rowLen % MAX_REPEAT_TIMES, {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, 0});
+        Compare<T>(masks[maskOff * maxRep], srcIndices[MAX_REPEAT_TIMES * maxRep * blockLength], kernelIndexes,
+                   CMPMODE::EQ, blockKernelDHW, rowLen % MAX_REPEAT_TIMES,
+                   {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, 0});
 
         PipeBarrier<PIPE_V>();
         auto event0 = pipe.FetchEventID(HardEvent::S_V);
@@ -483,21 +479,21 @@ protected:
         WaitFlag<HardEvent::S_V>(event0);
 
         for (maxRep = 0; maxRep < rowLen / MAX_REPEAT_TIMES; maxRep++) {
-            Select<T>(
-                dstTensor[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep],
-                srcDst[MAX_REPEAT_TIMES * maxRep * blockLength], static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                blockKernelDHW, MAX_REPEAT_TIMES, {1, 0, 0, static_cast<uint8_t>(kernelDHW), 1, 1});
+            Select<T>(dstTensor[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep],
+                      srcDst[MAX_REPEAT_TIMES * maxRep * blockLength], static_cast<T>(0),
+                      SELMODE::VSEL_TENSOR_SCALAR_MODE, blockKernelDHW, MAX_REPEAT_TIMES,
+                      {1, 0, 0, static_cast<uint8_t>(kernelDHW), 1, 1});
         }
-        Select<T>(
-            dstTensor[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep],
-            srcDst[MAX_REPEAT_TIMES * maxRep * blockLength], static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-            blockKernelDHW, rowLen % MAX_REPEAT_TIMES, {1, 0, 0, static_cast<uint8_t>(kernelDHW), 1, 1});
+        Select<T>(dstTensor[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep],
+                  srcDst[MAX_REPEAT_TIMES * maxRep * blockLength], static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                  blockKernelDHW, rowLen % MAX_REPEAT_TIMES, {1, 0, 0, static_cast<uint8_t>(kernelDHW), 1, 1});
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void Im2ColAddSingleKernel(
-        const uint64_t& dOff, uint32_t& srcOffset, const LocalTensor<T>& srcTensor, const uint64_t& curDepthOff_,
-        const uint64_t& curPartOutW, bool& addMulti, bool& addTail, bool& onlyTail, bool& overUint8)
+    __aicore__ inline void Im2ColAddSingleKernel(const uint64_t& dOff, uint32_t& srcOffset,
+                                                 const LocalTensor<T>& srcTensor, const uint64_t& curDepthOff_,
+                                                 const uint64_t& curPartOutW, bool& addMulti, bool& addTail,
+                                                 bool& onlyTail, bool& overUint8)
     {
         for (uint64_t curDepthOut = dOff; curDepthOut < dOff + kD * curDepthOff_;
              srcOffset += sliceOff, curDepthOut += curDepthOff_) {
@@ -538,9 +534,9 @@ protected:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void Im2ColCopySingleWOut(
-        const LocalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, const uint64_t& curDepthOff_,
-        const uint64_t& curPartOutW, bool& addMulti, bool& addTail, bool& onlyTail)
+    __aicore__ inline void Im2ColCopySingleWOut(const LocalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor,
+                                                const uint64_t& curDepthOff_, const uint64_t& curPartOutW,
+                                                bool& addMulti, bool& addTail, bool& onlyTail)
     {
         uint64_t srcOffset = 0;
         uint64_t dstOffset = 0;
@@ -549,41 +545,35 @@ protected:
             for (uint64_t curKH = 0; curKH < kH; ++curKH) {
                 if (addMulti && !onlyTail) {
                     for (uint64_t curIter = 0; curIter < im2colCopyFullIters; ++curIter) {
-                        Copy(
-                            dstTensor
-                                [curKD * curDepthOff_ + curKH * dH * curPartOutW * blockLength +
-                                 curIter * UINT8_MAX * dW * kW * blockLength],
-                            srcTensor
-                                [curKD * kH * kW * blockLength + curKH * kW * blockLength +
-                                 curIter * UINT8_MAX * kernelDHW * blockLength],
-                            kW * blockLength, UINT8_MAX, Im2colNewParams);
+                        Copy(dstTensor[curKD * curDepthOff_ + curKH * dH * curPartOutW * blockLength +
+                                       curIter * UINT8_MAX * dW * kW * blockLength],
+                             srcTensor[curKD * kH * kW * blockLength + curKH * kW * blockLength +
+                                       curIter * UINT8_MAX * kernelDHW * blockLength],
+                             kW * blockLength, UINT8_MAX, Im2colNewParams);
                     }
                 }
 
                 if (addTail) {
                     if (!onlyTail) {
-                        Copy(
-                            dstTensor
-                                [curKD * curDepthOff_ + curKH * dH * curPartOutW * blockLength +
-                                 processedIm2colCopyPartW * dW * kW * blockLength],
-                            srcTensor
-                                [curKD * kH * kW * blockLength + curKH * kW * blockLength +
-                                 processedIm2colCopyPartW * kernelDHW * blockLength],
-                            kW * blockLength, im2colCopyRepeatTimesTail, Im2colNewParams);
+                        Copy(dstTensor[curKD * curDepthOff_ + curKH * dH * curPartOutW * blockLength +
+                                       processedIm2colCopyPartW * dW * kW * blockLength],
+                             srcTensor[curKD * kH * kW * blockLength + curKH * kW * blockLength +
+                                       processedIm2colCopyPartW * kernelDHW * blockLength],
+                             kW * blockLength, im2colCopyRepeatTimesTail, Im2colNewParams);
                     } else {
-                        Copy(
-                            dstTensor[curKD * curDepthOff_ + curKH * dH * curPartOutW * blockLength],
-                            srcTensor[curKD * kH * kW * blockLength + curKH * kW * blockLength], kW * blockLength,
-                            im2colCopyRepeatTimesTail, Im2colNewParams);
+                        Copy(dstTensor[curKD * curDepthOff_ + curKH * dH * curPartOutW * blockLength],
+                             srcTensor[curKD * kH * kW * blockLength + curKH * kW * blockLength], kW * blockLength,
+                             im2colCopyRepeatTimesTail, Im2colNewParams);
                     }
                 }
             }
         }
     }
 
-    __aicore__ inline void Im2ColCopySingleKernel(
-        const uint64_t& dOff, uint32_t& srcOffset, const LocalTensor<T>& srcTensor, const uint64_t& curDepthOff_,
-        const uint64_t& curPartOutW, bool& addMulti, bool& addTail, bool& onlyTail)
+    __aicore__ inline void Im2ColCopySingleKernel(const uint64_t& dOff, uint32_t& srcOffset,
+                                                  const LocalTensor<T>& srcTensor, const uint64_t& curDepthOff_,
+                                                  const uint64_t& curPartOutW, bool& addMulti, bool& addTail,
+                                                  bool& onlyTail)
     {
         for (uint64_t curDepthOut = dOff; curDepthOut < dOff + kD * curDepthOff_;
              srcOffset += sliceOff, curDepthOut += curDepthOff_) {
@@ -591,9 +581,8 @@ protected:
                 if (addMulti) {
                     for (uint64_t curKhSlice = srcOffset, tmpBufOffset = curDepthOut; curKhSlice < srcOffset + sliceOff;
                          curKhSlice += (kW * blockLength), tmpBufOffset += dH * curPartOutW * blockLength) {
-                        Copy(
-                            tmpBuf[tmpBufOffset], srcTensor[curKhSlice], vecProcLength, im2colAddRepeatTimes,
-                            Im2colNewParams);
+                        Copy(tmpBuf[tmpBufOffset], srcTensor[curKhSlice], vecProcLength, im2colAddRepeatTimes,
+                             Im2colNewParams);
                     }
                 } else { // kW can be passed in a single repeat => repeatTimes = kH can take place
                     Copy(tmpBuf[curDepthOut], srcTensor[srcOffset], vecProcLength, kH, Im2colNewParams);
@@ -615,34 +604,34 @@ protected:
     }
 
     template <bool overlapKernels = false>
-    __aicore__ inline void Im2Col(
-        uint64_t dOff, uint32_t& srcOffset, const LocalTensor<T>& srcTensor, const uint64_t& curDepthOff_,
-        const uint64_t& curPartOutW, const uint64_t& curPartW, bool& addMulti, bool& addTail, bool& onlyTail,
-        bool& overUint8)
+    __aicore__ inline void Im2Col(uint64_t dOff, uint32_t& srcOffset, const LocalTensor<T>& srcTensor,
+                                  const uint64_t& curDepthOff_, const uint64_t& curPartOutW, const uint64_t& curPartW,
+                                  bool& addMulti, bool& addTail, bool& onlyTail, bool& overUint8)
     {
         if constexpr (overlapKernels) {
             for (uint64_t i = 0; i < curPartW; ++i, dOff += gmWOff) {
-                Im2ColAddSingleKernel(
-                    dOff, srcOffset, srcTensor, curDepthOff_, curPartOutW, addMulti, addTail, onlyTail, overUint8);
+                Im2ColAddSingleKernel(dOff, srcOffset, srcTensor, curDepthOff_, curPartOutW, addMulti, addTail,
+                                      onlyTail, overUint8);
             }
         } else {
             if (this->im2colSingleWOut) [[likely]] {
-                Im2ColCopySingleWOut(
-                    tmpBuf[dOff], srcTensor[srcOffset], curDepthOff_, curPartOutW, addMulti, addTail, onlyTail);
+                Im2ColCopySingleWOut(tmpBuf[dOff], srcTensor[srcOffset], curDepthOff_, curPartOutW, addMulti, addTail,
+                                     onlyTail);
                 srcOffset += curPartW * blockKernelDHW;
             } else {
                 for (uint64_t i = 0; i < curPartW; ++i, dOff += gmWOff) {
-                    Im2ColCopySingleKernel(
-                        dOff, srcOffset, srcTensor, curDepthOff_, curPartOutW, addMulti, addTail, onlyTail);
+                    Im2ColCopySingleKernel(dOff, srcOffset, srcTensor, curDepthOff_, curPartOutW, addMulti, addTail,
+                                           onlyTail);
                 }
             }
         }
     }
 
-    __aicore__ inline void StripPad(
-        const uint64_t pD, const uint64_t pH, const uint64_t pW, const uint64_t realPartOutD,
-        const uint64_t realPartOutH, const uint64_t realPartOutW, const uint64_t origPartOutD,
-        const uint64_t origPartOutH, const uint64_t origPartOutW, bool smallSingleMask, bool doTail)
+    __aicore__ inline void StripPad(const uint64_t pD, const uint64_t pH, const uint64_t pW,
+                                    const uint64_t realPartOutD, const uint64_t realPartOutH,
+                                    const uint64_t realPartOutW, const uint64_t origPartOutD,
+                                    const uint64_t origPartOutH, const uint64_t origPartOutW, bool smallSingleMask,
+                                    bool doTail)
     {
         uint64_t origPartOutHW = origPartOutH * origPartOutW;
         uint64_t dstOffset = 0, srcOffset = 0;
@@ -660,9 +649,8 @@ protected:
                     }
                     Copy(tmpBuf[dstOffset], srcTensor[curHOffset], vecProcLength, stripPadRepeatTimes, PadStripParams);
                     if (doTail) {
-                        Copy(
-                            tmpBuf[dstOffset + processedStripPadData], srcTensor[curHOffset + processedStripPadData],
-                            stripPadTail, 1, PadStripParams);
+                        Copy(tmpBuf[dstOffset + processedStripPadData], srcTensor[curHOffset + processedStripPadData],
+                             stripPadTail, 1, PadStripParams);
                     }
                     dstOffset += (realPartOutW * blockLength);
                 }
@@ -676,13 +664,11 @@ protected:
                 const uint64_t wholeOffsetSrc = wholeRepeatTimes * cycleOffsetSrc;
 
                 for (uint64_t i = 0; i < wholeRepeatTimes; i++) {
-                    Copy(
-                        tmpBuf[i * cycleOffsetDst + dstOffset], srcTensor[i * cycleOffsetSrc + srcOffset], copyLen,
-                        MAX_REPEAT_TIMES, PadStripParams);
+                    Copy(tmpBuf[i * cycleOffsetDst + dstOffset], srcTensor[i * cycleOffsetSrc + srcOffset], copyLen,
+                         MAX_REPEAT_TIMES, PadStripParams);
                 }
-                Copy(
-                    tmpBuf[wholeOffsetDst + dstOffset], srcTensor[wholeOffsetSrc + srcOffset], copyLen, tailRepeatTimes,
-                    PadStripParams);
+                Copy(tmpBuf[wholeOffsetDst + dstOffset], srcTensor[wholeOffsetSrc + srcOffset], copyLen,
+                     tailRepeatTimes, PadStripParams);
 
                 dstOffset += realPartOutH * realPartOutW * blockLength;
             }
@@ -691,19 +677,18 @@ protected:
     }
 
     template <typename V>
-    __aicore__ inline void TransposeBack(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const uint64_t& partNC,
-        const uint64_t& dataLen)
+    __aicore__ inline void TransposeBack(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                         const uint64_t& partNC, const uint64_t& dataLen)
     {
         uint64_t dstLocalList[NCHW_CONV_ADDR_LIST_SIZE];
         uint64_t srcLocalList[NCHW_CONV_ADDR_LIST_SIZE];
         LocalTensor<float> tmp = srcTensor[blockLength];
         LocalTensor<float> tmp2 = dstTensor[blockLength];
         for (int64_t i = 0; i < blockLength; ++i) {
-            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] =
-                (uint64_t)srcTensor[NCHW_CONV_ADDR_LIST_SIZE * i].GetPhyAddr();
-            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] =
-                (uint64_t)tmp[NCHW_CONV_ADDR_LIST_SIZE * i].GetPhyAddr();
+            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] = (uint64_t)srcTensor[NCHW_CONV_ADDR_LIST_SIZE * i]
+                                                                           .GetPhyAddr();
+            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] = (uint64_t)tmp[NCHW_CONV_ADDR_LIST_SIZE * i]
+                                                                               .GetPhyAddr();
             dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] = (uint64_t)dstTensor[i * dataLen].GetPhyAddr();
             dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] = (uint64_t)tmp2[i * dataLen].GetPhyAddr();
         }
@@ -714,9 +699,8 @@ protected:
     }
 
     template <typename V>
-    __aicore__ inline void TransposeBack(
-        const LocalTensor<half>& dstTensor, const LocalTensor<half>& srcTensor, const uint64_t& partNC,
-        const uint64_t& dataLen)
+    __aicore__ inline void TransposeBack(const LocalTensor<half>& dstTensor, const LocalTensor<half>& srcTensor,
+                                         const uint64_t& partNC, const uint64_t& dataLen)
     {
         uint64_t dstLocalList[NCHW_CONV_ADDR_LIST_SIZE];
         uint64_t srcLocalList[NCHW_CONV_ADDR_LIST_SIZE];
@@ -730,8 +714,8 @@ protected:
     }
 
     template <typename V, typename L>
-    __aicore__ inline void TransposeBack(
-        const LocalTensor<L>& dstTensor, const uint64_t& partNC, const uint64_t& dataLen)
+    __aicore__ inline void TransposeBack(const LocalTensor<L>& dstTensor, const uint64_t& partNC,
+                                         const uint64_t& dataLen)
     {
         TransposeBack<V>(dstTensor, tmpBuf, partNC, dataLen);
     }
@@ -804,13 +788,13 @@ public:
           valSize(valSize)
     {
         ASSERT(coreNum != 0 && "block dim can not be zero!");
-        batchesCurCore =
-            batchesPerCore + (blockLength * (coreIdx + 1) <= leftOverBatches ?
-                                  blockLength :
-                                  (blockLength * coreIdx < leftOverBatches ? leftOverBatches % blockLength : 0));
-        batchOffset =
-            batchesPerCore * coreIdx +
-            ((coreIdx < (leftOverBatches + blockLength - 1) / blockLength) ? blockLength * coreIdx : leftOverBatches);
+        batchesCurCore = batchesPerCore +
+                         (blockLength * (coreIdx + 1) <= leftOverBatches ?
+                              blockLength :
+                              (blockLength * coreIdx < leftOverBatches ? leftOverBatches % blockLength : 0));
+        batchOffset = batchesPerCore * coreIdx + ((coreIdx < (leftOverBatches + blockLength - 1) / blockLength) ?
+                                                      blockLength * coreIdx :
+                                                      leftOverBatches);
 
         im2ColAddParams.dstBlkStride = dW;
         im2ColAddParams.src0BlkStride = dW;
@@ -847,8 +831,8 @@ public:
         }
     }
 
-    __aicore__ inline void GMInit(
-        GM_ADDR gradOutput, GM_ADDR self, GM_ADDR indices, GM_ADDR gradInput, GM_ADDR workspace)
+    __aicore__ inline void GMInit(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR indices, GM_ADDR gradInput,
+                                  GM_ADDR workspace)
     {
         uint64_t inputOffsetPerCore = batchOffset * inputSize;
         uint64_t outputOffsetPerCore = batchOffset * outSize;

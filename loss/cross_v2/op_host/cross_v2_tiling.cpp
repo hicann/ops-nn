@@ -19,8 +19,7 @@
 #include "platform/platform_infos_def.h"
 
 namespace optiling {
-struct CrossV2CompileInfo {
-};
+struct CrossV2CompileInfo {};
 const uint32_t X1_IDX = 0;
 const uint32_t X2_IDX = 1;
 const uint32_t DIM_IDX = 0;
@@ -51,10 +50,7 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
     return (value + factor - 1) / factor;
 }
 
-inline static int64_t RoundUp(int64_t a, int64_t b)
-{
-    return CeilDiv(a, b) * b;
-}
+inline static int64_t RoundUp(int64_t a, int64_t b) { return CeilDiv(a, b) * b; }
 
 inline int64_t DimProcess(const int64_t shape[], int64_t dimNum, int64_t dimIdx)
 {
@@ -120,8 +116,8 @@ void GetTilingData(ge::DataType dtype, int64_t inputBytes, uint64_t ubSize, Tili
     return;
 }
 
-void GetTilingDataOneStep(
-    ge::DataType dtype, int64_t inputBytes, uint64_t ubSize, TilingData& tilingData, uint32_t& coreNum)
+void GetTilingDataOneStep(ge::DataType dtype, int64_t inputBytes, uint64_t ubSize, TilingData& tilingData,
+                          uint32_t& coreNum)
 {
     int64_t& batchSize = tilingData.batchSize;
     int64_t& tileNum = tilingData.tileNum;
@@ -151,9 +147,8 @@ void GetTilingDataOneStep(
     return;
 }
 
-void SetTiling(
-    gert::TilingContext* context, const TilingData& tilingData, const uint32_t& coreNum, uint32_t sysWorkspaceSize,
-    CrossV2TilingData& tiling)
+void SetTiling(gert::TilingContext* context, const TilingData& tilingData, const uint32_t& coreNum,
+               uint32_t sysWorkspaceSize, CrossV2TilingData& tiling)
 {
     tiling.set_stepSize(tilingData.stepSize);
     tiling.set_tileNum(tilingData.tileNum);
@@ -193,10 +188,9 @@ ge::graphStatus TilingFuncForCrossV2(gert::TilingContext* context)
     const gert::StorageShape* x1StorageShape = context->GetInputShape(X1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1StorageShape);
     auto x1Shape = x1StorageShape->GetStorageShape();
-    OP_CHECK_IF(
-        x1Shape.GetShapeSize() == 0,
-        OP_LOGE(context->GetNodeName(), "the x1Shape of input should not be empty tensor"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(x1Shape.GetShapeSize() == 0,
+                OP_LOGE(context->GetNodeName(), "the x1Shape of input should not be empty tensor"),
+                return ge::GRAPH_FAILED);
     int64_t dimNum = x1Shape.GetDimNum();
     int64_t shape[MAX_SHAPE_DIM];
     TilingData tilingData;
@@ -212,19 +206,17 @@ ge::graphStatus TilingFuncForCrossV2(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
     GetBatchAndStepSize(shape, dimNum, dim, tilingData.batchSize, tilingData.stepSize);
-    OP_CHECK_IF(
-        tilingData.batchSize < 1 || tilingData.stepSize < 1,
-        OP_LOGE(context->GetNodeName(), "batchSize and stepSize should not less than 1!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingData.batchSize < 1 || tilingData.stepSize < 1,
+                OP_LOGE(context->GetNodeName(), "batchSize and stepSize should not less than 1!"),
+                return ge::GRAPH_FAILED);
     uint32_t typeLength = 0;
     auto x1Desc = context->GetInputDesc(X1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1Desc);
     ge::DataType dtype = x1Desc->GetDataType();
     ge::TypeUtils::GetDataTypeLength(dtype, typeLength);
     int64_t inputBytes = static_cast<int64_t>(typeLength);
-    OP_CHECK_IF(
-        inputBytes == 0, OP_LOGE(context->GetNodeName(), "inputBytes should not be 0!"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputBytes == 0, OP_LOGE(context->GetNodeName(), "inputBytes should not be 0!"),
+                return ge::GRAPH_FAILED);
     if (tilingData.stepSize > THRESHOLD_STEP_SIZE) {
         GetTilingData(dtype, inputBytes, ubSize, tilingData, coreNum);
         context->SetTilingKey(TILING_DEFAULT_MODE);

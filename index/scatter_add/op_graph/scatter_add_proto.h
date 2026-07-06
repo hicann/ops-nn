@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ADD_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ADD_H_
 
@@ -15,7 +15,6 @@
 #include "graph/operator.h"
 
 namespace ge {
-
 
 /**
 * @brief Adds sparse "updates" to a variable reference.
@@ -40,13 +39,13 @@ namespace ge {
 * Compatible with the TensorFlow operator ScatterAdd.
 */
 REG_OP(ScatterAdd)
-    .INPUT(var, TensorType({DT_FLOAT16,DT_FLOAT,DT_INT32,DT_INT8,DT_UINT8,DT_BF16}))
+    .INPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16}))
     .INPUT(indices, TensorType::IndexNumberType())
-    .INPUT(updates, TensorType({DT_FLOAT16,DT_FLOAT,DT_INT32,DT_INT8,DT_UINT8,DT_BF16}))
-    .OUTPUT(var, TensorType({DT_FLOAT16,DT_FLOAT,DT_INT32,DT_INT8,DT_UINT8,DT_BF16}))
+    .INPUT(updates, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16}))
+    .OUTPUT(var, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterAdd)
 
-}
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ADD_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ADD_H_

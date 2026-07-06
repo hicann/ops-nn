@@ -24,25 +24,22 @@
 using namespace std;
 
 class L1LossGradTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "L1LossGradTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "L1LossGradTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "L1LossGradTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "L1LossGradTiling TearDown" << std::endl; }
 };
 
-static string to_string(const std::stringstream &tiling_data) {
-  auto data = tiling_data.str();
-  string result;
-  int32_t tmp = 0;
-  for (size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
-    memcpy(&tmp, data.c_str() + i, sizeof(tmp));
-    result += std::to_string(tmp);
-    result += " ";
-  }
+static string to_string(const std::stringstream& tiling_data)
+{
+    auto data = tiling_data.str();
+    string result;
+    int32_t tmp = 0;
+    for (size_t i = 0; i < data.length(); i += sizeof(int32_t)) {
+        memcpy(&tmp, data.c_str() + i, sizeof(tmp));
+        result += std::to_string(tmp);
+        result += " ";
+    }
 
-  return result;
+    return result;
 }

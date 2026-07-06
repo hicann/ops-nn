@@ -18,27 +18,24 @@
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status  ParseParamsNpuFastGelu(const Message *op_src, ge::Operator &op_dest) {
-  const NodeProto *node = dynamic_cast<const NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
+static Status ParseParamsNpuFastGelu(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
+    }
 
-  return SUCCESS;
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("FastGelu")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::11::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::12::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::13::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::14::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::15::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::16::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::17::NPUFastGelu"),
-                 ge::AscendString("ai.onnx::18::NPUFastGelu")})
-  .ParseParamsFn(ParseParamsNpuFastGelu)
-  .ImplyType(ImplyType::TVM);
-} // domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("npu::1::NPUFastGelu"), ge::AscendString("ai.onnx::11::NPUFastGelu"),
+                   ge::AscendString("ai.onnx::12::NPUFastGelu"), ge::AscendString("ai.onnx::13::NPUFastGelu"),
+                   ge::AscendString("ai.onnx::14::NPUFastGelu"), ge::AscendString("ai.onnx::15::NPUFastGelu"),
+                   ge::AscendString("ai.onnx::16::NPUFastGelu"), ge::AscendString("ai.onnx::17::NPUFastGelu"),
+                   ge::AscendString("ai.onnx::18::NPUFastGelu")})
+    .ParseParamsFn(ParseParamsNpuFastGelu)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

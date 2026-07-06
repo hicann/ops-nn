@@ -29,7 +29,7 @@ using namespace ge;
 using namespace gert;
 using namespace optiling;
 
-struct AvgPoolTilingParseInfo: CubeTilingCommonParseInfo {
+struct AvgPoolTilingParseInfo : CubeTilingCommonParseInfo {
     int64_t stridesH;
     int64_t stridesW;
     int64_t kSizeH;
@@ -73,28 +73,26 @@ struct AvgPoolTilingRuntime2TestParam {
 };
 
 class AvgPoolTilingRunTime2 : public testing::TestWithParam<AvgPoolTilingRuntime2TestParam> {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "AvgPoolTilingRunTime2 SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "AvgPoolTilingRunTime2 SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "AvgPoolTilingRunTime2 TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "AvgPoolTilingRunTime2 TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData *tilingData) {
-  auto data = tilingData->GetData();
-  string result;
-  for (size_t i = 0; i < tilingData->GetDataSize(); i += sizeof(int32_t)) {
-    result += std::to_string((reinterpret_cast<const int32_t *>(tilingData->GetData())[i / sizeof(int32_t)]));
-    result += " ";
-  }
+static string TilingData2Str(const gert::TilingData* tilingData)
+{
+    auto data = tilingData->GetData();
+    string result;
+    for (size_t i = 0; i < tilingData->GetDataSize(); i += sizeof(int32_t)) {
+        result += std::to_string((reinterpret_cast<const int32_t*>(tilingData->GetData())[i / sizeof(int32_t)]));
+        result += " ";
+    }
 
-  return result;
+    return result;
 }
 
-TEST_P(AvgPoolTilingRunTime2, general_cases) {
+TEST_P(AvgPoolTilingRunTime2, general_cases)
+{
     AvgPoolTilingRuntime2TestParam param = GetParam();
     cout << "run case " << param.caseName << endl;
 
@@ -122,10 +120,10 @@ TEST_P(AvgPoolTilingRunTime2, general_cases) {
 
     AvgPoolTilingParseInfo opInfo;
     auto kernelHolder = gert::KernelRunContextFaker()
-        .KernelIONum(1, 1)
-        .Inputs({const_cast<char *>(param.compileInfo.c_str())})
-        .Outputs({&opInfo})
-        .Build();
+                            .KernelIONum(1, 1)
+                            .Inputs({const_cast<char*>(param.compileInfo.c_str())})
+                            .Outputs({&opInfo})
+                            .Build();
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), GRAPH_SUCCESS);
 
     StorageShape xShape = {param.xOriginShape, param.xStorageShape};
@@ -135,21 +133,21 @@ TEST_P(AvgPoolTilingRunTime2, general_cases) {
         make_pair("strides", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>(param.strides)),
         make_pair("padding", Ops::NN::AnyValue::CreateFrom<string>(param.padding)),
         make_pair("data_format", Ops::NN::AnyValue::CreateFrom<string>(param.dataFormat)),
-        };
+    };
     auto tilingData = gert::TilingData::CreateCap(2048);
     auto holder = gert::TilingContextFaker()
-        .SetOpType(param.opType)
-        .NodeIoNum(1, 1)
-        .IrInstanceNum({1})
-        .InputShapes({&xShape})
-        .OutputShapes({&yShape})
-        .NodeAttrs(attrsPairs)
-        .NodeInputTd(0, DT_FLOAT16, param.xOriginFormat, param.xStorageFormat)
-        .NodeOutputTd(0, DT_FLOAT16, param.yOriginFormat, param.yStorageFormat)
-        .CompileInfo(&opInfo)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .TilingData(tilingData.get())
-        .Build();
+                      .SetOpType(param.opType)
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs(attrsPairs)
+                      .NodeInputTd(0, DT_FLOAT16, param.xOriginFormat, param.xStorageFormat)
+                      .NodeOutputTd(0, DT_FLOAT16, param.yOriginFormat, param.yStorageFormat)
+                      .CompileInfo(&opInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tilingData.get())
+                      .Build();
 
     TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -177,18 +175,28 @@ TEST_P(AvgPoolTilingRunTime2, general_cases) {
 }
 
 static AvgPoolTilingRuntime2TestParam general_cases_params[] = {
-    {   "AvgPool_tiling_dynamic_invalidStride", "AvgPool",
-        R"({"_pattern": "Convolution", "push_status": 0,)"\
-        R"("tiling_type": "default_tiling", "default_range": {"10000": [1, 2147483647, 16, 16, 16, 16]},)"\
-        R"("block_dim": {"10000": 1}, "strides_h": 64, "strides_w" : 64, "k_size_h": 2, "k_size_w": 2,)"\
-        R"("filter" : 1, "_vars": {"10000": ["batch_n"]}})",
-        {1, 32, 16, 16}, Format::FORMAT_NCHW,
-        {1, 32, 16, 16}, Format::FORMAT_NCHW,
-        {1, 64, 16, 16}, Format::FORMAT_NCHW,
-        {1, 64, 16, 16}, Format::FORMAT_NCHW,
-        {1, 1, 1, 1}, {1, 1, 1, 1}, "VALID", "NCHW",
-        1, 10000, "1 ", false
-    },
+    {"AvgPool_tiling_dynamic_invalidStride",
+     "AvgPool",
+     R"({"_pattern": "Convolution", "push_status": 0,)"
+     R"("tiling_type": "default_tiling", "default_range": {"10000": [1, 2147483647, 16, 16, 16, 16]},)"
+     R"("block_dim": {"10000": 1}, "strides_h": 64, "strides_w" : 64, "k_size_h": 2, "k_size_w": 2,)"
+     R"("filter" : 1, "_vars": {"10000": ["batch_n"]}})",
+     {1, 32, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 32, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 64, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 64, 16, 16},
+     Format::FORMAT_NCHW,
+     {1, 1, 1, 1},
+     {1, 1, 1, 1},
+     "VALID",
+     "NCHW",
+     1,
+     10000,
+     "1 ",
+     false},
 };
 
 INSTANTIATE_TEST_CASE_P(AvgPool, AvgPoolTilingRunTime2, testing::ValuesIn(general_cases_params));

@@ -51,4 +51,4 @@ ACLNN_API aclnnStatus aclnnSoftshrinkBackward(void* workspace, uint64_t workspac
 }
 #endif
 
-#endif  // OP_API_INC_SOFT_SHRINK_BACKWARD_H_
+#endif // OP_API_INC_SOFT_SHRINK_BACKWARD_H_

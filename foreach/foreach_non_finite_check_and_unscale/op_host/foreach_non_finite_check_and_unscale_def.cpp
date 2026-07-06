@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class ForeachNonFiniteCheckAndUnscale : public OpDef
-{
+class ForeachNonFiniteCheckAndUnscale : public OpDef {
 public:
     explicit ForeachNonFiniteCheckAndUnscale(const char* name) : OpDef(name)
     {

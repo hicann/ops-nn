@@ -20,11 +20,9 @@
 // Total: O(K*log(n) + n) comparisons vs O(n*log(n)) for per-element binary search.
 // ============================================================
 template <typename T>
-__simt_callee__ __aicore__ inline void SimtMergePathImpl(
-    int64_t globalTid, int64_t totalThreads,
-    int64_t start, int64_t mid, int64_t end,
-    __gm__ uint32_t *src, __gm__ uint32_t *dst,
-    __gm__ T *inputFlat, int64_t rowLen)
+__simt_callee__ __aicore__ inline void SimtMergePathImpl(int64_t globalTid, int64_t totalThreads, int64_t start,
+                                                         int64_t mid, int64_t end, __gm__ uint32_t* src,
+                                                         __gm__ uint32_t* dst, __gm__ T* inputFlat, int64_t rowLen)
 {
     int64_t leftLen = mid - start;
     int64_t rightLen = end - mid;
@@ -53,9 +51,8 @@ __simt_callee__ __aicore__ inline void SimtMergePathImpl(
         int64_t j = myOutStart - m;
         int cmp = 0;
         if (j > 0) {
-            cmp = SimtRowCompare<T>(inputFlat, rowLen,
-                  static_cast<int64_t>(src[start + m]),
-                  static_cast<int64_t>(src[mid + j - 1]));
+            cmp = SimtRowCompare<T>(inputFlat, rowLen, static_cast<int64_t>(src[start + m]),
+                                    static_cast<int64_t>(src[mid + j - 1]));
         }
         if (j > 0 && cmp <= 0) {
             lo = m + 1;
@@ -69,10 +66,9 @@ __simt_callee__ __aicore__ inline void SimtMergePathImpl(
 
     // Step 2: Sequential merge from (iPos, jPos)
     for (int64_t outLocal = myOutStart; outLocal < myOutEnd; outLocal++) {
-        if (iPos < leftLen && (jPos >= rightLen ||
-            SimtRowCompare<T>(inputFlat, rowLen,
-                static_cast<int64_t>(src[mid + jPos]),
-                static_cast<int64_t>(src[start + iPos])) >= 0)) {
+        if (iPos < leftLen &&
+            (jPos >= rightLen || SimtRowCompare<T>(inputFlat, rowLen, static_cast<int64_t>(src[mid + jPos]),
+                                                   static_cast<int64_t>(src[start + iPos])) >= 0)) {
             dst[start + outLocal] = src[start + iPos];
             iPos++;
         } else {
@@ -87,11 +83,10 @@ __simt_callee__ __aicore__ inline void SimtMergePathImpl(
 // Computes binary search to find merge position, writes result to UB.
 // ============================================================
 template <typename T>
-__simt_callee__ __aicore__ inline void SimtMergeOneUBElement(
-    int32_t outIdx, int32_t pairSize, int32_t mergeWidth,
-    int64_t tileLen, int32_t rOff, int32_t wOff,
-    __gm__ T *inputFlat, int64_t rowLen,
-    __local_mem__ int64_t *ubBuf)
+__simt_callee__ __aicore__ inline void SimtMergeOneUBElement(int32_t outIdx, int32_t pairSize, int32_t mergeWidth,
+                                                             int64_t tileLen, int32_t rOff, int32_t wOff,
+                                                             __gm__ T* inputFlat, int64_t rowLen,
+                                                             __local_mem__ int64_t* ubBuf)
 {
     int32_t pairIdx = outIdx / pairSize;
     int32_t leftStart = pairIdx * pairSize;
@@ -99,9 +94,9 @@ __simt_callee__ __aicore__ inline void SimtMergeOneUBElement(
     int32_t localOut = outIdx - leftStart;
 
     int64_t leftLen = (mergeWidth < (tileLen - leftStart)) ? mergeWidth :
-                      ((tileLen > leftStart) ? (tileLen - leftStart) : 0);
+                                                             ((tileLen > leftStart) ? (tileLen - leftStart) : 0);
     int64_t rightLen = (mergeWidth < (tileLen - rightStart)) ? mergeWidth :
-                       ((tileLen > rightStart) ? (tileLen - rightStart) : 0);
+                                                               ((tileLen > rightStart) ? (tileLen - rightStart) : 0);
 
     if (localOut >= leftLen + rightLen) {
         ubBuf[wOff + outIdx] = -1;
@@ -117,8 +112,8 @@ __simt_callee__ __aicore__ inline void SimtMergeOneUBElement(
         int64_t jIdx = localOut - mid;
         int cmp = 0;
         if (jIdx > 0 && (rightStart + jIdx - 1) < tileLen) {
-            cmp = SimtRowCompare<T>(inputFlat, rowLen,
-                ubBuf[rOff + leftStart + mid], ubBuf[rOff + rightStart + jIdx - 1]);
+            cmp = SimtRowCompare<T>(inputFlat, rowLen, ubBuf[rOff + leftStart + mid],
+                                    ubBuf[rOff + rightStart + jIdx - 1]);
         }
         if (jIdx > 0 && cmp <= 0) {
             lo = mid + 1;
@@ -130,9 +125,8 @@ __simt_callee__ __aicore__ inline void SimtMergeOneUBElement(
     int64_t iIdx = lo;
     int64_t jIdx2 = localOut - lo;
 
-    if (iIdx < leftLen && (jIdx2 >= rightLen ||
-        SimtRowCompare<T>(inputFlat, rowLen,
-            ubBuf[rOff + rightStart + jIdx2], ubBuf[rOff + leftStart + iIdx]) >= 0)) {
+    if (iIdx < leftLen && (jIdx2 >= rightLen || SimtRowCompare<T>(inputFlat, rowLen, ubBuf[rOff + rightStart + jIdx2],
+                                                                  ubBuf[rOff + leftStart + iIdx]) >= 0)) {
         ubBuf[wOff + outIdx] = ubBuf[rOff + leftStart + iIdx];
     } else {
         ubBuf[wOff + outIdx] = ubBuf[rOff + rightStart + jIdx2];
@@ -145,11 +139,9 @@ __simt_callee__ __aicore__ inline void SimtMergeOneUBElement(
 // Returns true if final result is in first half of UB, false if in second half.
 // ============================================================
 template <typename T>
-__simt_callee__ __aicore__ inline bool SimtTileMergeRounds(
-    int32_t tid, int32_t threadNum,
-    int64_t tileLen,
-    __gm__ T *inputFlat, int64_t rowLen,
-    __local_mem__ int64_t *ubBuf)
+__simt_callee__ __aicore__ inline bool SimtTileMergeRounds(int32_t tid, int32_t threadNum, int64_t tileLen,
+                                                           __gm__ T* inputFlat, int64_t rowLen,
+                                                           __local_mem__ int64_t* ubBuf)
 {
     constexpr int32_t HALF = SIMT_TILE_SIZE;
     bool readFirst = true;
@@ -160,8 +152,7 @@ __simt_callee__ __aicore__ inline bool SimtTileMergeRounds(
         int32_t wOff = readFirst ? HALF : 0;
 
         for (int32_t outIdx = tid; outIdx < SIMT_TILE_SIZE; outIdx += threadNum) {
-            SimtMergeOneUBElement<T>(outIdx, pairSize, mergeWidth, tileLen, rOff, wOff,
-                                      inputFlat, rowLen, ubBuf);
+            SimtMergeOneUBElement<T>(outIdx, pairSize, mergeWidth, tileLen, rOff, wOff, inputFlat, rowLen, ubBuf);
         }
         __syncthreads();
         readFirst = !readFirst;
@@ -176,12 +167,10 @@ __simt_callee__ __aicore__ inline bool SimtTileMergeRounds(
 // cooperatively merges via double-buffered UB.
 // ============================================================
 template <typename T>
-__simt_callee__ __aicore__ inline void SimtSortOneTile(
-    int32_t tid, int32_t threadNum,
-    int64_t tileLen, int64_t tileGlobalStart,
-    __gm__ uint32_t *indices,
-    __gm__ T *inputFlat, int64_t rowLen,
-    __local_mem__ int64_t *ubBuf)
+__simt_callee__ __aicore__ inline void SimtSortOneTile(int32_t tid, int32_t threadNum, int64_t tileLen,
+                                                       int64_t tileGlobalStart, __gm__ uint32_t* indices,
+                                                       __gm__ T* inputFlat, int64_t rowLen,
+                                                       __local_mem__ int64_t* ubBuf)
 {
     constexpr int32_t HALF = SIMT_TILE_SIZE;
 
@@ -195,7 +184,11 @@ __simt_callee__ __aicore__ inline void SimtSortOneTile(
     // Sorting network for 2 elements (1 compare-and-swap)
     {
         int c = SimtRowCompare<T>(inputFlat, rowLen, items[0], items[1]);
-        if (c > 0) { int64_t tmp = items[0]; items[0] = items[1]; items[1] = tmp; }
+        if (c > 0) {
+            int64_t tmp = items[0];
+            items[0] = items[1];
+            items[1] = tmp;
+        }
     }
 
     // Write sorted items to first half of UB
@@ -219,12 +212,9 @@ __simt_callee__ __aicore__ inline void SimtSortOneTile(
 // Merges sorted tiles from indices/sortBuf in successive doubling widths.
 // ============================================================
 template <typename T>
-__simt_callee__ __aicore__ inline void SimtMergeTilesGM(
-    int32_t tid, int32_t threadNum,
-    int64_t coreStart, int64_t coreLen,
-    int64_t tileSize,
-    __gm__ uint32_t *indices, __gm__ uint32_t *sortBuf,
-    __gm__ T *inputFlat, int64_t rowLen)
+__simt_callee__ __aicore__ inline void SimtMergeTilesGM(int32_t tid, int32_t threadNum, int64_t coreStart,
+                                                        int64_t coreLen, int64_t tileSize, __gm__ uint32_t* indices,
+                                                        __gm__ uint32_t* sortBuf, __gm__ T* inputFlat, int64_t rowLen)
 {
     int64_t width = tileSize;
     int32_t round = 0;
@@ -235,8 +225,8 @@ __simt_callee__ __aicore__ inline void SimtMergeTilesGM(
             int64_t mid = coreStart + ((s + width < coreLen) ? s + width : coreLen);
             int64_t end = coreStart + ((s + 2 * width < coreLen) ? s + 2 * width : coreLen);
 
-            __gm__ uint32_t *src = (round % 2 == 0) ? indices : sortBuf;
-            __gm__ uint32_t *dst = (round % 2 == 0) ? sortBuf : indices;
+            __gm__ uint32_t* src = (round % 2 == 0) ? indices : sortBuf;
+            __gm__ uint32_t* dst = (round % 2 == 0) ? sortBuf : indices;
 
             if (mid >= end) {
                 // Unmerged tail: copy from src to dst as-is
@@ -246,8 +236,8 @@ __simt_callee__ __aicore__ inline void SimtMergeTilesGM(
                 continue;
             }
 
-            SimtMergePathImpl<T>(static_cast<int64_t>(tid), static_cast<int64_t>(threadNum),
-                                  start, mid, end, src, dst, inputFlat, rowLen);
+            SimtMergePathImpl<T>(static_cast<int64_t>(tid), static_cast<int64_t>(threadNum), start, mid, end, src, dst,
+                                 inputFlat, rowLen);
         }
         __syncthreads();
         width *= 2;
@@ -269,12 +259,9 @@ __simt_callee__ __aicore__ inline void SimtMergeTilesGM(
 // Uses identity indices (no Phase0 dependency).
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtPhase1AllInOne(int64_t coreStart, int64_t coreLen,
-                                int64_t tileSize, int64_t numLocalTiles,
-                                __gm__ uint32_t *indices, __gm__ uint32_t *sortBuf,
-                                __gm__ T *inputFlat, int64_t rowLen,
-                                __local_mem__ int64_t *ubBuf)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtPhase1AllInOne(
+    int64_t coreStart, int64_t coreLen, int64_t tileSize, int64_t numLocalTiles, __gm__ uint32_t* indices,
+    __gm__ uint32_t* sortBuf, __gm__ T* inputFlat, int64_t rowLen, __local_mem__ int64_t* ubBuf)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -289,8 +276,7 @@ inline void SimtPhase1AllInOne(int64_t coreStart, int64_t coreLen,
         int64_t tileOff = t * tileSize;
         int64_t tileLen = (tileOff + tileSize <= coreLen) ? tileSize : (coreLen - tileOff);
         int64_t tileGlobalStart = coreStart + tileOff;
-        SimtSortOneTile<T>(tid, threadNum, tileLen, tileGlobalStart,
-                           indices, inputFlat, rowLen, ubBuf);
+        SimtSortOneTile<T>(tid, threadNum, tileLen, tileGlobalStart, indices, inputFlat, rowLen, ubBuf);
     }
 
     // Ensure all tiles written to GM before merge reads them
@@ -298,8 +284,7 @@ inline void SimtPhase1AllInOne(int64_t coreStart, int64_t coreLen,
 
     // Step 2: Multi-round merge from GM
     if (numLocalTiles > 1) {
-        SimtMergeTilesGM<T>(tid, threadNum, coreStart, coreLen, tileSize,
-                            indices, sortBuf, inputFlat, rowLen);
+        SimtMergeTilesGM<T>(tid, threadNum, coreStart, coreLen, tileSize, indices, sortBuf, inputFlat, rowLen);
     }
 
     __syncthreads();
@@ -314,11 +299,11 @@ inline void SimtPhase1AllInOne(int64_t coreStart, int64_t coreLen,
 // Each core's threads handle a disjoint subrange of the output.
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtMergePathPair(int64_t coreId, int64_t coreNum,
-                               int64_t start, int64_t mid, int64_t end,
-                               __gm__ uint32_t *src, __gm__ uint32_t *dst,
-                               __gm__ T *inputFlat, int64_t rowLen)
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM) inline void SimtMergePathPair(int64_t coreId, int64_t coreNum,
+                                                                                  int64_t start, int64_t mid,
+                                                                                  int64_t end, __gm__ uint32_t* src,
+                                                                                  __gm__ uint32_t* dst,
+                                                                                  __gm__ T* inputFlat, int64_t rowLen)
 {
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
@@ -328,8 +313,7 @@ inline void SimtMergePathPair(int64_t coreId, int64_t coreNum,
     int32_t threadNum = blockDim.x;
     int64_t globalTid = coreId * static_cast<int64_t>(threadNum) + tid;
     int64_t totalThreads = coreNum * static_cast<int64_t>(threadNum);
-    SimtMergePathImpl<T>(globalTid, totalThreads,
-                          start, mid, end, src, dst, inputFlat, rowLen);
+    SimtMergePathImpl<T>(globalTid, totalThreads, start, mid, end, src, dst, inputFlat, rowLen);
     __syncthreads();
     if (threadIdx.x == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);

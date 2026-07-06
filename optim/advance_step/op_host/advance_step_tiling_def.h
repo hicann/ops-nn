@@ -38,16 +38,11 @@ constexpr uint16_t MAX_CORE_COUNT = 48;
 
 struct AdvanceStepCompileInfo {};
 
-enum class UB_TILING_POLICY : uint32_t
-{
-    ONE_CORE_NO_SPEC = 1,
-    FULL_LOAD = 2
-};
+enum class UB_TILING_POLICY : uint32_t { ONE_CORE_NO_SPEC = 1, FULL_LOAD = 2 };
 
 class AdvanceStepTilingHelper {
 public:
-    explicit AdvanceStepTilingHelper(gert::TilingContext* context) : context_(context)
-    {}
+    explicit AdvanceStepTilingHelper(gert::TilingContext* context) : context_(context) {}
 
     ~AdvanceStepTilingHelper() = default;
     ge::graphStatus DoTiling();

@@ -14,10 +14,11 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* DualLevelQuantBatchMatmul(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Level0Scale, const aclTensor* x2Level0Scale,
-    const aclTensor* x1Level1Scale, const aclTensor* x2Level1Scale, const aclTensor* optionalBias, int64_t dtype,
-    bool transposeX1, bool transposeX2, int64_t level0GroupSize, int64_t level1GroupSize, aclOpExecutor* executor);
+const aclTensor* DualLevelQuantBatchMatmul(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Level0Scale,
+                                           const aclTensor* x2Level0Scale, const aclTensor* x1Level1Scale,
+                                           const aclTensor* x2Level1Scale, const aclTensor* optionalBias, int64_t dtype,
+                                           bool transposeX1, bool transposeX2, int64_t level0GroupSize,
+                                           int64_t level1GroupSize, aclOpExecutor* executor);
 }
 
 #endif // OP_API_COMMON_INC_LEVEL0_OP_DUAL_LEVEL_QUANT_MATMUL_H

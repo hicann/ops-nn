@@ -17,7 +17,9 @@
 
 using namespace ge;
 
-inline ge::graphStatus CopyShapeInputToOutputWithIdx(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx) {
+inline ge::graphStatus CopyShapeInputToOutputWithIdx(gert::InferShapeContext* context, int64_t input_idx,
+                                                     int64_t output_idx)
+{
     auto in_shape = context->GetInputShape(input_idx);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
     auto out_shape = context->GetOutputShape(output_idx);
@@ -26,8 +28,7 @@ inline ge::graphStatus CopyShapeInputToOutputWithIdx(gert::InferShapeContext* co
     return ge::GRAPH_SUCCESS;
 }
 
-namespace ops
-{
+namespace ops {
 constexpr size_t INPUT_INDEX = 1;
 constexpr size_t OUTPUT_INDEX = 0;
 
@@ -37,4 +38,4 @@ static ge::graphStatus InferShape4EluGradV2(gert::InferShapeContext* context)
 }
 
 IMPL_OP_INFERSHAPE(EluGradV2).InferShape(InferShape4EluGradV2);
-}  // namespace ops
+} // namespace ops

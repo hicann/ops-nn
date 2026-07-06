@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_minimum_scalar_proto.h"
 
-class ForeachMinimumScalarTest : public testing::Test
-{
+class ForeachMinimumScalarTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMinimumScalar SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMinimumScalar SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMinimumScalar TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMinimumScalar TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMinimumScalarTest, infer_shape_known_success)

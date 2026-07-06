@@ -23,10 +23,8 @@ namespace optiling {
 
 class AvgPoolGradTilingSIMT : public AvgPoolV2GradTilingSIMT {
 public:
-    explicit AvgPoolGradTilingSIMT(gert::TilingContext* context) : AvgPoolV2GradTilingSIMT(context)
-    {}
-    ~AvgPoolGradTilingSIMT() override
-    {}
+    explicit AvgPoolGradTilingSIMT(gert::TilingContext* context) : AvgPoolV2GradTilingSIMT(context) {}
+    ~AvgPoolGradTilingSIMT() override {}
 
 protected:
     ge::graphStatus GetPlatformInfo() override;

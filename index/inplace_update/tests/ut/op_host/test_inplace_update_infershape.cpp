@@ -21,72 +21,70 @@
 #include "platform/platform_info.h"
 
 class InplaceUpdateInfershapeTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "InplaceUpdate Infershape Test SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "InplaceUpdate Infershape Test SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "InplaceUpdate Infershape Test TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "InplaceUpdate Infershape Test TearDown" << std::endl; }
 };
 
-TEST_F(InplaceUpdateInfershapeTest, infershape_1d_fp16) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(InplaceUpdateInfershapeTest, infershape_1d_fp16)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceUpdate")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceUpdate")->infer_shape;
 
-  gert::Shape x_shape = {45};
-  gert::Shape indices_shape = {28};
-  gert::Shape v_shape = {28};
-  gert::Shape output_shape = {};
+    gert::Shape x_shape = {45};
+    gert::Shape indices_shape = {28};
+    gert::Shape v_shape = {28};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x_shape, &indices_shape, &v_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x_shape, &indices_shape, &v_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(InplaceUpdateInfershapeTest, infershape_2d_fp32) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+TEST_F(InplaceUpdateInfershapeTest, infershape_2d_fp32)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceUpdate")->infer_shape;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceUpdate")->infer_shape;
 
-  gert::Shape x_shape = {10, 4};
-  gert::Shape indices_shape = {3};
-  gert::Shape v_shape = {3, 4};
-  gert::Shape output_shape = {};
+    gert::Shape x_shape = {10, 4};
+    gert::Shape indices_shape = {3};
+    gert::Shape v_shape = {3, 4};
+    gert::Shape output_shape = {};
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(3, 1)
-                    .IrInstanceNum({1, 1, 1})
-                    .InputShapes({&x_shape, &indices_shape, &v_shape})
-                    .OutputShapes({&output_shape})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x_shape, &indices_shape, &v_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

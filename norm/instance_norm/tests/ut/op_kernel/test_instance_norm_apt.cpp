@@ -26,20 +26,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void instance_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean_out, GM_ADDR variance_out, GM_ADDR workspace,
-    GM_ADDR tiling);
+extern "C" __global__ __aicore__ void instance_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean_out,
+                                                    GM_ADDR variance_out, GM_ADDR workspace, GM_ADDR tiling);
 
 class instance_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << " instance_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << " instance_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << " instance_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << " instance_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(instance_norm_test, test_case_200000)
@@ -62,8 +55,8 @@ TEST_F(instance_norm_test, test_case_200000)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    InstanceNormARFullReduceTilingData* tilingDatafromBin =
-        reinterpret_cast<InstanceNormARFullReduceTilingData*>(tiling);
+    InstanceNormARFullReduceTilingData* tilingDatafromBin = reinterpret_cast<InstanceNormARFullReduceTilingData*>(
+        tiling);
 
     tilingDatafromBin->numN = 64;
     tilingDatafromBin->numC = 1;
@@ -78,8 +71,8 @@ TEST_F(instance_norm_test, test_case_200000)
     tilingDatafromBin->avgFactor = 1.0 / numR;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(200000);
-    ICPU_RUN_KF(
-        instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -111,8 +104,7 @@ TEST_F(instance_norm_test, test_case_300000)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    InstanceNormARWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<InstanceNormARWelfordTilingData*>(tiling);
+    InstanceNormARWelfordTilingData* tilingDatafromBin = reinterpret_cast<InstanceNormARWelfordTilingData*>(tiling);
 
     tilingDatafromBin->a1 = 2;
     tilingDatafromBin->a0 = 1;
@@ -130,8 +122,8 @@ TEST_F(instance_norm_test, test_case_300000)
     tilingDatafromBin->apiTempBufferSize = 42240;
     tilingDatafromBin->epsilon = 0.001;
     ICPU_SET_TILING_KEY(300000);
-    ICPU_RUN_KF(
-        instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -163,8 +155,8 @@ TEST_F(instance_norm_test, test_case_400000)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    InstanceNormARAFullReduceTilingData* tilingDatafromBin =
-        reinterpret_cast<InstanceNormARAFullReduceTilingData*>(tiling);
+    InstanceNormARAFullReduceTilingData* tilingDatafromBin = reinterpret_cast<InstanceNormARAFullReduceTilingData*>(
+        tiling);
 
     tilingDatafromBin->usedCoreNum = 33;
     tilingDatafromBin->totalTiles = 66;
@@ -182,8 +174,8 @@ TEST_F(instance_norm_test, test_case_400000)
     tilingDatafromBin->epsilon = 0.001;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(400000);
-    ICPU_RUN_KF(
-        instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -215,8 +207,7 @@ TEST_F(instance_norm_test, test_case_500000)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    InstanceNormARAWelfordTilingData* tilingDatafromBin =
-        reinterpret_cast<InstanceNormARAWelfordTilingData*>(tiling);
+    InstanceNormARAWelfordTilingData* tilingDatafromBin = reinterpret_cast<InstanceNormARAWelfordTilingData*>(tiling);
 
     tilingDatafromBin->a1 = 2;
     tilingDatafromBin->r = 1000;
@@ -235,8 +226,8 @@ TEST_F(instance_norm_test, test_case_500000)
     tilingDatafromBin->epsilon = 0.001;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(500000);
-    ICPU_RUN_KF(
-        instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(instance_norm, blockDim, x, gamma, beta, y, mean_out, variance_out, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

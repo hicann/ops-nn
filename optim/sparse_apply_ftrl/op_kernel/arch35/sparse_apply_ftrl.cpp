@@ -21,26 +21,19 @@
 #include "sparse_apply_ftrl_simt.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void sparse_apply_ftrl(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR linear,
-    GM_ADDR grad, GM_ADDR indices,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower,
-    GM_ADDR varOut, GM_ADDR accumOut, GM_ADDR linearOut,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sparse_apply_ftrl(GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR indices,
+                                             GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR lrPower, GM_ADDR varOut,
+                                             GM_ADDR accumOut, GM_ADDR linearOut, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SparseApplyFtrlTilingData);
     GET_TILING_DATA_WITH_STRUCT(SparseApplyFtrlTilingData, tilingData, tiling);
 
     if constexpr (schMode == SPARSE_APPLY_FTRL_SCH_MODE_INT32) {
-        NsSparseApplyFtrl::Process<float, int32_t>(
-            var, accum, linear, grad, indices,
-            lr, l1, l2, lrPower,
-            varOut, accumOut, linearOut, &tilingData);
+        NsSparseApplyFtrl::Process<float, int32_t>(var, accum, linear, grad, indices, lr, l1, l2, lrPower, varOut,
+                                                   accumOut, linearOut, &tilingData);
     }
     if constexpr (schMode == SPARSE_APPLY_FTRL_SCH_MODE_INT64) {
-        NsSparseApplyFtrl::Process<float, int64_t>(
-            var, accum, linear, grad, indices,
-            lr, l1, l2, lrPower,
-            varOut, accumOut, linearOut, &tilingData);
+        NsSparseApplyFtrl::Process<float, int64_t>(var, accum, linear, grad, indices, lr, l1, l2, lrPower, varOut,
+                                                   accumOut, linearOut, &tilingData);
     }
 }

@@ -18,8 +18,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *InplaceScatterAddAiCore(const aclTensor *self, const aclTensor *index,
-                                       const aclTensor *source, aclOpExecutor *executor);
+const aclTensor* InplaceScatterAddAiCore(const aclTensor* self, const aclTensor* index, const aclTensor* source,
+                                         aclOpExecutor* executor);
 }
 
 #endif

@@ -20,15 +20,14 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 
 namespace AntiMxQuantOp {
-#define TPL_AXIS_TAIL     0
+#define TPL_AXIS_TAIL 0
 #define TPL_AXIS_NOT_TAIL 1
 
-ASCENDC_TPL_ARGS_DECL(
-    AntiMxQuant,
-    ASCENDC_TPL_UINT_DECL(axisMode, 1, ASCENDC_TPL_UI_LIST, TPL_AXIS_TAIL, TPL_AXIS_NOT_TAIL));
+ASCENDC_TPL_ARGS_DECL(AntiMxQuant,
+                      ASCENDC_TPL_UINT_DECL(axisMode, 1, ASCENDC_TPL_UI_LIST, TPL_AXIS_TAIL, TPL_AXIS_NOT_TAIL));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
-    ASCENDC_TPL_UINT_SEL(axisMode, ASCENDC_TPL_UI_LIST, TPL_AXIS_TAIL, TPL_AXIS_NOT_TAIL)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(axisMode, ASCENDC_TPL_UI_LIST, TPL_AXIS_TAIL,
+                                                          TPL_AXIS_NOT_TAIL)));
 
 } // namespace AntiMxQuantOp
 

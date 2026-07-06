@@ -25,9 +25,8 @@ using namespace Common::OpKernel;
 constexpr uint8_t ADD_LIST_BYTE_PER_BLOCK = 32;
 
 template <typename T>
-__aicore__ void AddListNormalAdapter(
-    const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal1, const LocalTensor<T>& srcLocal2,
-    const T& scalarVal, const int32_t& uValue)
+__aicore__ void AddListNormalAdapter(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal1,
+                                     const LocalTensor<T>& srcLocal2, const T& scalarVal, const int32_t& uValue)
 {
     Muls(srcLocal2, srcLocal2, scalarVal, uValue);
     PipeBarrier<PIPE_V>();
@@ -35,9 +34,8 @@ __aicore__ void AddListNormalAdapter(
 }
 
 template <typename T>
-__aicore__ void AddListFloatAdapter(
-    const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal1, const LocalTensor<T>& srcLocal2,
-    const T& scalarVal, const int32_t& uValue)
+__aicore__ void AddListFloatAdapter(const LocalTensor<T>& dstLocal, const LocalTensor<T>& srcLocal1,
+                                    const LocalTensor<T>& srcLocal2, const T& scalarVal, const int32_t& uValue)
 {
     Axpy<T, T>(srcLocal1, srcLocal2, scalarVal, uValue);
     if (dstLocal.GetPhyAddr() != srcLocal1.GetPhyAddr()) {
@@ -51,8 +49,8 @@ __aicore__ void AddListFloatAdapter(
     }
 }
 
-extern "C" __global__ __aicore__ void foreach_add_list(
-    GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR alpha, GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_add_list(GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR alpha,
+                                                       GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

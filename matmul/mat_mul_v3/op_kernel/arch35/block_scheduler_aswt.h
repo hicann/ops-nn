@@ -29,12 +29,7 @@ constexpr int64_t FP32_K_SWITCH_THRESHOLD = 268435456; // 1024 * 32 * 8192
 constexpr int64_t FP32_SPLIT_K_THRESHOLD1 = 1024;
 constexpr int64_t FP32_SPLIT_K_THRESHOLD2 = 8192;
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    int64_t FullLoadMode_ = 0
->
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, int64_t FullLoadMode_ = 0>
 class BlockSchedulerAswtBuiltIn {
 public:
     int64_t mTileNum_{0};
@@ -104,8 +99,8 @@ public:
     };
 
 public:
-    __aicore__ inline BlockSchedulerAswtBuiltIn(
-        const ProblemShape& shape, int64_t blockIdx, int64_t blockNum, const Params& params, bool isFp32=false, bool isNdFormat=true)
+    __aicore__ inline BlockSchedulerAswtBuiltIn(const ProblemShape& shape, int64_t blockIdx, int64_t blockNum,
+                                                const Params& params, bool isFp32 = false, bool isNdFormat = true)
         : blockIdx_(blockIdx), blockNum_(blockNum), isFp32_(isFp32), isNdFormat_(isNdFormat)
     {
         k_ = shape.k;
@@ -165,35 +160,17 @@ public:
         tailWindow_ = mTileNum_ - mainRow_ * mainWindow_;
     }
 
-    __aicore__ inline void DisableSplitSingleK()
-    {
-        isSplitSingleK_ = false;
-    }
+    __aicore__ inline void DisableSplitSingleK() { isSplitSingleK_ = false; }
 
-    __aicore__ inline int64_t GetTileNum()
-    {
-        return tileNum_ * batch_;
-    }
+    __aicore__ inline int64_t GetTileNum() { return tileNum_ * batch_; }
 
-    __aicore__ inline bool Gethf32Flag()
-    {
-        return isHf32_ > 0;
-    }
+    __aicore__ inline bool Gethf32Flag() { return isHf32_ > 0; }
 
-    __aicore__ inline uint64_t GetL1BuferNum_()
-    {
-        return static_cast<uint64_t>(l1BuferNum_);
-    }
+    __aicore__ inline uint64_t GetL1BuferNum_() { return static_cast<uint64_t>(l1BuferNum_); }
 
-    __aicore__ inline bool GetL0cDB()
-    {
-        return l0cDB_ > 1;
-    }
+    __aicore__ inline bool GetL0cDB() { return l0cDB_ > 1; }
 
-    __aicore__ inline bool GetUbDB()
-    {
-        return ubDB_ > 1;
-    }
+    __aicore__ inline bool GetUbDB() { return ubDB_ > 1; }
 
     __aicore__ inline bool GetAL2CacheDisable()
     {
@@ -217,13 +194,9 @@ public:
         return {mL1NormCnt_, mL1TailMain_, nL1NormCnt_, nL1TailMain_};
     }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape() {
-        return {mL1_, nL1_, kL1_, 1};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape() { return {mL1_, nL1_, kL1_, 1}; }
 
-    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape() {
-        return {baseM_, baseN_, baseK_, 1};
-    }
+    __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape() { return {baseM_, baseN_, baseK_, 1}; }
 
     __aicore__ inline int64_t GetBlockNum(ProblemShape shape, int64_t blockNum)
     {
@@ -268,7 +241,8 @@ public:
     }
 
     template <CubeFormat LayoutB = CubeFormat::ND, bool TransB_ = false, class B_T>
-    __aicore__ inline BlockL1L0Shape GetBlockShape(int64_t tileIdx, int64_t mOffset, int64_t nOffset, int64_t kOffset=0)
+    __aicore__ inline BlockL1L0Shape GetBlockShape(int64_t tileIdx, int64_t mOffset, int64_t nOffset,
+                                                   int64_t kOffset = 0)
     {
         UpdateMNTileIdx(tileIdx);
         int64_t blkM = mL1_;
@@ -378,10 +352,7 @@ public:
         return {mOffset, nOffset, kOffset, batchIdx};
     }
 
-    __aicore__ inline Shape<int64_t, int64_t> GetSplitOffset()
-    {
-        return {mSplitOffset_, nSplitOffset_};
-    }
+    __aicore__ inline Shape<int64_t, int64_t> GetSplitOffset() { return {mSplitOffset_, nSplitOffset_}; }
 
 private:
     __aicore__ inline void UpdateMNTileIdx(int64_t tmpIdx)
@@ -411,58 +382,24 @@ private:
     }
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInAswtScheduler<>,
-    TransA_,
-    TransB_
-> {
-  using SchedulerOp = BlockSchedulerAswtBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::BuiltInAswtScheduler<>, TransA_,
+                              TransB_> {
+    using SchedulerOp = BlockSchedulerAswtBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_>;
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInAswtScheduler<B_FULL_LOAD_MODE>,
-    TransA_,
-    TransB_
-> {
-  using SchedulerOp = BlockSchedulerAswtBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_, B_FULL_LOAD_MODE>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_,
+                              Cmct::Gemm::BuiltInAswtScheduler<B_FULL_LOAD_MODE>, TransA_, TransB_> {
+    using SchedulerOp = BlockSchedulerAswtBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_, B_FULL_LOAD_MODE>;
 };
 
-template <
-    class ProblemShape_,
-    class L1TileShape_,
-    class L0TileShape_,
-    bool TransA_,
-    bool TransB_>
-struct BlockSchedulerSelector<
-    ProblemShape_,
-    L1TileShape_,
-    L0TileShape_,
-    Cmct::Gemm::BuiltInAswtScheduler<A_FULL_LOAD_MODE>,
-    TransA_,
-    TransB_
-> {
-  using SchedulerOp = BlockSchedulerAswtBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE>;
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_,
+                              Cmct::Gemm::BuiltInAswtScheduler<A_FULL_LOAD_MODE>, TransA_, TransB_> {
+    using SchedulerOp = BlockSchedulerAswtBuiltIn<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE>;
 };
 
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

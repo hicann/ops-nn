@@ -51,41 +51,41 @@ struct AddLayerNormQuantV2TilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                      \
-    AddLayerNormQuantV2TilingData tilingData;                                           \
-    INIT_TILING_DATA(AddLayerNormQuantV2TilingData, tilingDataPointer, tilingPointer);  \
-    (tilingData).numCore = tilingDataPointer->numCore;                                  \
-    (tilingData).numLastDim = tilingDataPointer->numLastDim;                            \
-    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                          \
-    (tilingData).firstDimPerCore = tilingDataPointer->firstDimPerCore;                  \
-    (tilingData).firstDimPerCoreTail = tilingDataPointer->firstDimPerCoreTail;          \
-    (tilingData).numLastDimAlign32 = tilingDataPointer->numLastDimAlign32;              \
-    (tilingData).firstDimPerTime = tilingDataPointer->firstDimPerTime;                  \
-    (tilingData).lastDimPerTime = tilingDataPointer->lastDimPerTime;                    \
-    (tilingData).eps = tilingDataPointer->eps;                                          \
-    (tilingData).aveFactor = tilingDataPointer->aveFactor;                              \
-    (tilingData).colMoveCnt = tilingDataPointer->colMoveCnt;                            \
-    (tilingData).sliceSize = tilingDataPointer->sliceSize;                              \
-    (tilingData).colTail = tilingDataPointer->colTail;                                  \
-    (tilingData).isXOut = tilingDataPointer->isXOut;                                    \
-    (tilingData).scaleOffsetMode = tilingDataPointer->scaleOffsetMode;                  \
-    (tilingData).isPerTensor = tilingDataPointer->isPerTensor;                          \
-    (tilingData).sliceNum = tilingDataPointer->sliceNum;                                \
-    (tilingData).workspaceSize = tilingDataPointer->workspaceSize;                      \
-    (tilingData).numLastDimAlign = tilingDataPointer->numLastDimAlign;                  \
-    (tilingData).tailSliceSize = tilingDataPointer->tailSliceSize;                      \
-    (tilingData).mulLoopFp32 = tilingDataPointer->mulLoopFp32;                          \
-    (tilingData).mulTailFp32 = tilingDataPointer->mulTailFp32;                          \
-    (tilingData).dstRepStrideFp32 = tilingDataPointer->dstRepStrideFp32;                \
-    (tilingData).firstDimPerTimeTail = tilingDataPointer->firstDimPerTimeTail;          \
-    (tilingData).rowTailPerBlock = tilingDataPointer->rowTailPerBlock;                  \
-    (tilingData).rowTailLastBlock = tilingDataPointer->rowTailLastBlock;                \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                     \
+    AddLayerNormQuantV2TilingData tilingData;                                          \
+    INIT_TILING_DATA(AddLayerNormQuantV2TilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).numCore = tilingDataPointer->numCore;                                 \
+    (tilingData).numLastDim = tilingDataPointer->numLastDim;                           \
+    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                         \
+    (tilingData).firstDimPerCore = tilingDataPointer->firstDimPerCore;                 \
+    (tilingData).firstDimPerCoreTail = tilingDataPointer->firstDimPerCoreTail;         \
+    (tilingData).numLastDimAlign32 = tilingDataPointer->numLastDimAlign32;             \
+    (tilingData).firstDimPerTime = tilingDataPointer->firstDimPerTime;                 \
+    (tilingData).lastDimPerTime = tilingDataPointer->lastDimPerTime;                   \
+    (tilingData).eps = tilingDataPointer->eps;                                         \
+    (tilingData).aveFactor = tilingDataPointer->aveFactor;                             \
+    (tilingData).colMoveCnt = tilingDataPointer->colMoveCnt;                           \
+    (tilingData).sliceSize = tilingDataPointer->sliceSize;                             \
+    (tilingData).colTail = tilingDataPointer->colTail;                                 \
+    (tilingData).isXOut = tilingDataPointer->isXOut;                                   \
+    (tilingData).scaleOffsetMode = tilingDataPointer->scaleOffsetMode;                 \
+    (tilingData).isPerTensor = tilingDataPointer->isPerTensor;                         \
+    (tilingData).sliceNum = tilingDataPointer->sliceNum;                               \
+    (tilingData).workspaceSize = tilingDataPointer->workspaceSize;                     \
+    (tilingData).numLastDimAlign = tilingDataPointer->numLastDimAlign;                 \
+    (tilingData).tailSliceSize = tilingDataPointer->tailSliceSize;                     \
+    (tilingData).mulLoopFp32 = tilingDataPointer->mulLoopFp32;                         \
+    (tilingData).mulTailFp32 = tilingDataPointer->mulTailFp32;                         \
+    (tilingData).dstRepStrideFp32 = tilingDataPointer->dstRepStrideFp32;               \
+    (tilingData).firstDimPerTimeTail = tilingDataPointer->firstDimPerTimeTail;         \
+    (tilingData).rowTailPerBlock = tilingDataPointer->rowTailPerBlock;                 \
+    (tilingData).rowTailLastBlock = tilingDataPointer->rowTailLastBlock;               \
     (tilingData).gmOffset = tilingDataPointer->gmOffset;
 #endif

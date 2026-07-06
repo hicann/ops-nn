@@ -26,17 +26,16 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <
-    class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
-    class BiasType_, class TileCopy_>
+template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+          class BiasType_, class TileCopy_>
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithOutQue<>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<
-            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>,
+                                   DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_ADD>,
             DispatchPolicy_> ||
@@ -155,9 +154,10 @@ public:
 
 public:
     template <uint64_t FULL_LOAD_MODE_ = B_FULL_LOAD_MODE>
-    __aicore__ inline void Init(
-        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, uint64_t l1BufNum,
-        bool l0cDB, const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam, bool isSplitSingleK = false)
+    __aicore__ inline void Init(const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0,
+                                bool isBias, uint64_t l1BufNum, bool l0cDB,
+                                const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam,
+                                bool isSplitSingleK = false)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -198,14 +198,11 @@ public:
         innerBatch_ = Get<2>(nonContinuousParam);
     }
 
-    __aicore__ inline void SetDualParam(bool splitM)
-    {
-        splitM_ = splitM;
-    }
+    __aicore__ inline void SetDualParam(bool splitM) { splitM_ = splitM; }
 
     // For FP32: L1 copy needs no modification
-    __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T> &aGlobal,
-        const AscendC::LocalTensor<A_T> &al1Local, uint64_t curML1, uint64_t curKL1)
+    __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal,
+                                    const AscendC::LocalTensor<A_T>& al1Local, uint64_t curML1, uint64_t curKL1)
     {
         AscendC::Nd2NzParams nd2nzParams;
         if (srcNdStride_ != 1 && sliceM_ != 0) { // For Slice
@@ -247,9 +244,8 @@ public:
     }
 
     template <CubeFormat LayoutB = CubeFormat::ND>
-    __aicore__ inline void CopyInB1(
-        const AscendC::GlobalTensor<B_T>& bGlobal, const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1,
-        uint64_t curKL1)
+    __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<B_T>& bGlobal,
+                                    const AscendC::LocalTensor<B_T>& bl1Local, uint64_t curNL1, uint64_t curKL1)
     {
         AscendC::Nd2NzParams nd2nzParams;
         nd2nzParams.ndNum = 1;
@@ -281,9 +277,9 @@ public:
             uint64_t nkDim = BType::isTrans ? n_ : k_;
             dataCopyParams.blockCount = Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilAlign(dDim, C0_SIZE), C0_SIZE);
             dataCopyParams.blockLen = Cmct::Gemm::CeilAlign(nDim, AscendC::BLOCK_CUBE) * BLOCK_BYTE_SIZE;
-            dataCopyParams.srcStride =
-                (Cmct::Gemm::CeilAlign(nkDim, AscendC::BLOCK_CUBE) - Cmct::Gemm::CeilAlign(nDim, AscendC::BLOCK_CUBE)) *
-                BLOCK_BYTE_SIZE;
+            dataCopyParams.srcStride = (Cmct::Gemm::CeilAlign(nkDim, AscendC::BLOCK_CUBE) -
+                                        Cmct::Gemm::CeilAlign(nDim, AscendC::BLOCK_CUBE)) *
+                                       BLOCK_BYTE_SIZE;
             dataCopyParams.dstStride = 0;
             AscendC::DataCopyPadExtParams<B_T> padParams{false, 0, 0, 0};
             AscendC::DataCopyPad(bl1Local, bGlobal, dataCopyParams, padParams);
@@ -291,7 +287,7 @@ public:
     }
 
     // 重载函数，适用于A全载场景
-    __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<B_T> &aGlobal, uint64_t curML1, uint64_t curKL1)
+    __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<B_T>& aGlobal, uint64_t curML1, uint64_t curKL1)
     {
         // A全载-AL1搬入偏移位置：*AL1*-BL1Ping-BL1Pong-BiasPing-BiasPong
         CopyInA1(aGlobal, l1Local_, curML1, curKL1);
@@ -305,18 +301,18 @@ public:
         CopyInB1<LayoutB>(bGlobal, l1Local_[aL1OneBuffer_ * l1BufNum_], curNL1, curKL1);
     }
 
-    __aicore__ inline void CopyInC1(const AscendC::GlobalTensor<Bias_T> &biasGlobal, uint64_t curNL1)
+    __aicore__ inline void CopyInC1(const AscendC::GlobalTensor<Bias_T>& biasGlobal, uint64_t curNL1)
     {
         if (isBias_) {
             // B全载-Bias搬入偏移位置：AL1Ping-AL1Pong-BL1-*Bias*
-            AscendC::LocalTensor<Bias_T> biasL1Local =
-                l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_].template ReinterpretCast<Bias_T>();
+            AscendC::LocalTensor<Bias_T> biasL1Local = l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_]
+                                                           .template ReinterpretCast<Bias_T>();
             CopyInC1(biasGlobal, biasL1Local, curNL1);
         }
     }
 
-    __aicore__ inline void CopyInC1(
-        const AscendC::GlobalTensor<Bias_T> &biasGlobal, const AscendC::LocalTensor<Bias_T> &cl1Local, uint64_t curNL1)
+    __aicore__ inline void CopyInC1(const AscendC::GlobalTensor<Bias_T>& biasGlobal,
+                                    const AscendC::LocalTensor<Bias_T>& cl1Local, uint64_t curNL1)
     {
         AscendC::DataCopyPadParams padParams;
         // 单位为Byte
@@ -324,8 +320,8 @@ public:
         AscendC::DataCopyPad(cl1Local, biasGlobal, biasParam, padParams);
     }
 
-    __aicore__ inline void CopyInC2(const AscendC::LocalTensor<Bias_T> &biasL1Local,
-        const AscendC::LocalTensor<L0cType> &biasBt, uint64_t nl1Align, bool needBias)
+    __aicore__ inline void CopyInC2(const AscendC::LocalTensor<Bias_T>& biasL1Local,
+                                    const AscendC::LocalTensor<L0cType>& biasBt, uint64_t nl1Align, bool needBias)
     {
         if (!needBias) {
             return;
@@ -338,8 +334,8 @@ public:
         AscendC::DataCopy(biasBt, biasL1Local, biasParam);
     }
 
-    __aicore__ inline void CopyInA2(const AscendC::LocalTensor<A_T> &a2Local, const AscendC::LocalTensor<A_T> &al1Local,
-        uint64_t curML1, uint64_t curKL1, uint64_t mL0, uint64_t kL0)
+    __aicore__ inline void CopyInA2(const AscendC::LocalTensor<A_T>& a2Local, const AscendC::LocalTensor<A_T>& al1Local,
+                                    uint64_t curML1, uint64_t curKL1, uint64_t mL0, uint64_t kL0)
     {
         if constexpr (!AType::isTrans) {
             // (M, K) use LoadData2D
@@ -376,8 +372,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInB2(const AscendC::LocalTensor<B_T> &b2Local, const AscendC::LocalTensor<B_T> &bl1Local,
-        uint64_t curNL1, uint64_t curKL1, uint64_t nL0, uint64_t kL0)
+    __aicore__ inline void CopyInB2(const AscendC::LocalTensor<B_T>& b2Local, const AscendC::LocalTensor<B_T>& bl1Local,
+                                    uint64_t curNL1, uint64_t curKL1, uint64_t nL0, uint64_t kL0)
     {
         if constexpr (BType::isTrans) {
             // (N, K) use LoadData2D
@@ -421,9 +417,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOutForFixedPoint(
-        const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
-        uint64_t baseN)
+    __aicore__ inline void CopyOutForFixedPoint(const AscendC::GlobalTensor<C_T>& cGlobal,
+                                                AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN)
     {
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         fixpipeParams.nSize = static_cast<uint16_t>(baseN);
@@ -433,8 +428,8 @@ public:
         fixpipeParams.params = {1, static_cast<uint16_t>(baseM), static_cast<uint16_t>(baseN)};
         fixpipeParams.quantPre = QuantMode_t::DEQF16;
         const float FIX_VAL_RECIPROCAL = 1.0f / (1 << 16);
-        const uint64_t quantScalar =
-            static_cast<const uint64_t>(*reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
+        const uint64_t quantScalar = static_cast<const uint64_t>(
+            *reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
         fixpipeParams.deqScalar = quantScalar;
         fixpipeParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION; // 3 unitflag
         fixpipeParams.params.ndNum = 1;
@@ -448,9 +443,8 @@ public:
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
     }
 
-    __aicore__ inline void CopyOutForOther(
-        const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
-        uint64_t baseN)
+    __aicore__ inline void CopyOutForOther(const AscendC::GlobalTensor<C_T>& cGlobal,
+                                           AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN)
     {
         if (isSplitSingleK_) {
             PipeBarrier<PIPE_FIX>();
@@ -477,7 +471,7 @@ public:
             intriParams.reluPre = 0;
         }
         intriParams.nz2ndEn = true;
-        intriParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION;  // 3 unitflag
+        intriParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION; // 3 unitflag
         AscendC::SetFixpipeNz2ndFlag(1, 1, 1);
         AscendC::DataCopy(cGlobal, c1Local, intriParams);
         if (isSplitSingleK_ && isEndSplitK_) {
@@ -485,9 +479,8 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOut(
-        const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
-        uint64_t baseN)
+    __aicore__ inline void CopyOut(const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local,
+                                   uint64_t baseM, uint64_t baseN)
     {
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         CopyOutForFixedPoint(cGlobal, c1Local, baseM, baseN);
@@ -497,9 +490,8 @@ public:
     }
 
     // fixpipe CopyOut实现c01拷贝到UB
-    __aicore__ inline void CopyOut(
-        const AscendC::LocalTensor<C_T>& dstLocal, AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM,
-        uint64_t baseN)
+    __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& dstLocal, AscendC::LocalTensor<L0cType>& c1Local,
+                                   uint64_t baseM, uint64_t baseN)
     {
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
@@ -525,25 +517,25 @@ public:
     }
 
     // 重载GlobalTensor
-    __aicore__ inline void DoubleCopyOut(
-        const AscendC::GlobalTensor<C_T>& cGlobal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
+    __aicore__ inline void DoubleCopyOut(const AscendC::GlobalTensor<C_T>& cGlobal, uint64_t l0cOffset, uint64_t baseM,
+                                         uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         return CopyOut(cGlobal, c1Local, baseM, baseN);
     }
 
-    __aicore__ inline void DoubleCopyOutTwoFixpipe(
-        const AscendC::LocalTensor<C_T> &dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
+    __aicore__ inline void DoubleCopyOutTwoFixpipe(const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset,
+                                                   uint64_t baseM, uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;  // ROW_MAJOR默认使能NZ2ND
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
         uint64_t halfBaseM = Cmct::Gemm::CeilDiv(baseM, SPLIT_M_ALIGN);
         // 第一条Fixpipe指令
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
         fixpipeParams.mSize = halfBaseM;
         fixpipeParams.dstStride = fixpipeParams.nSize;
-        fixpipeParams.srcStride = Cmct::Gemm::Align(baseM, AscendC::BLOCK_CUBE);// M方向stride
+        fixpipeParams.srcStride = Cmct::Gemm::Align(baseM, AscendC::BLOCK_CUBE); // M方向stride
         if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {
             fixpipeParams.quantPre = QuantMode_t::F322BF16;
         } else if (AscendC::IsSameType<C_T, half>::value) {
@@ -552,11 +544,11 @@ public:
             fixpipeParams.quantPre = QuantMode_t::NoQuant;
         }
         fixpipeParams.dualDstCtl = 0;
-        fixpipeParams.unitFlag = 0;                                            // no unitflag
-        fixpipeParams.subBlockId = 0;                                          // aiv0
-        fixpipeParams.params.ndNum = 1;                                        // ndNum
-        fixpipeParams.params.srcNdStride = 1;                                  // srcNdStride
-        fixpipeParams.params.dstNdStride = 1;                                  // dstNdStride
+        fixpipeParams.unitFlag = 0;           // no unitflag
+        fixpipeParams.subBlockId = 0;         // aiv0
+        fixpipeParams.params.ndNum = 1;       // ndNum
+        fixpipeParams.params.srcNdStride = 1; // srcNdStride
+        fixpipeParams.params.dstNdStride = 1; // dstNdStride
         AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
 
         // 第二条Fixpipe指令
@@ -565,13 +557,13 @@ public:
         }
         // LOC偏移[M/2*16]
         AscendC::LocalTensor<L0cType> c1LocalNext = c1Local_[l0cOffset + halfBaseM * AscendC::BLOCK_CUBE];
-        fixpipeParams.mSize = baseM - halfBaseM;    // baseM - baseM/2
-        fixpipeParams.subBlockId = 1;               // aiv1
+        fixpipeParams.mSize = baseM - halfBaseM; // baseM - baseM/2
+        fixpipeParams.subBlockId = 1;            // aiv1
         AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1LocalNext, fixpipeParams);
     }
 
-    __aicore__ inline void DoubleCopyOutDualSplitM(
-        const AscendC::LocalTensor<C_T> &dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
+    __aicore__ inline void DoubleCopyOutDualSplitM(const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset,
+                                                   uint64_t baseM, uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
@@ -595,8 +587,8 @@ public:
 
     // Fixpipe: copy L0C to UB of two aiv
     // 非随路quantPre走DUAL_DST_SPLIT_M单指令(性能优), 需要Quant走两条Fixpipe兼容
-    __aicore__ inline void DoubleCopyOut(
-        const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
+    __aicore__ inline void DoubleCopyOut(const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset, uint64_t baseM,
+                                         uint64_t baseN)
     {
         if constexpr (AscendC::IsSameType<C_T, float>::value) {
             // splitM不支持quantPre
@@ -607,26 +599,26 @@ public:
     }
 
     template <typename T, CubeFormat LayoutB = CubeFormat::ND>
-    __aicore__ inline void operator()(
-        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
-        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t mOffset, uint64_t nOffset,
-        bool isFirstTile = false, bool isAllLoc2Ub = false, uint64_t blkK = 0, bool isFirstSplitK = false,
-        bool isEndSplitK = false)
+    __aicore__ inline void operator()(T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
+                                      AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape,
+                                      uint64_t mOffset, uint64_t nOffset, bool isFirstTile = false,
+                                      bool isAllLoc2Ub = false, uint64_t blkK = 0, bool isFirstSplitK = false,
+                                      bool isEndSplitK = false)
     {
         if (fullLoadMode_ == A_FULL_LOAD_MODE) {
             return DoAFullLoad<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, mOffset);
         } else if (isAllLoc2Ub) {
             return DoAllLoc2UbAswt(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset);
         } else {
-            return DoBFullLoadOrAswt<T, LayoutB>(
-                cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile, blkK, isFirstSplitK, isEndSplitK);
+            return DoBFullLoadOrAswt<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile,
+                                                 blkK, isFirstSplitK, isEndSplitK);
         }
     }
 
     template <typename T>
-    __aicore__ inline void DoAllLoc2UbAswt(
-        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
-        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t nL1Offset)
+    __aicore__ inline void DoAllLoc2UbAswt(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
+                                           AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal,
+                                           TupleL1L0Shape tileShape, uint64_t nL1Offset)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
@@ -661,7 +653,8 @@ public:
             // 普通模板-2buffer-AL1搬入偏移位置：*AL1Ping*-BL1Ping-BiasPing|*AL1Pong*-BL1Pong-BiasPong
             // 普通模板-4buffer-AL1搬入偏移位置: *AL1Ping-AL1Pong*-BL1Ping-BL1Pong-BiasPing-BiasPong
             uint64_t offsetAl1 = (DispatchPolicy::fullLoadMode == 0 && l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
-                                 (HALF_L1_SIZE * l1BufId) : aL1OneBuffer_ * l1BufId;
+                                     (HALF_L1_SIZE * l1BufId) :
+                                     aL1OneBuffer_ * l1BufId;
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             uint64_t biasBufId = abL1LoopCnt_ & 0x1;
 
@@ -671,8 +664,9 @@ public:
                     // 普通模板-2buffer-Bias搬入偏移位置：AL1Ping-BL1Ping-*BiasPing*|AL1Pong-BL1Pong-*BiasPong*
                     // 普通模板-4buffer-Bias搬入偏移位置: AL1Ping-AL1Pong-BL1Ping-BL1Pong-*BiasPing-BiasPong*
                     biasL1LocalInit = l1Local_[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
-                        HALF_L1_SIZE * l1BufId + aL1OneBuffer_ + bL1OneBuffer_ :
-                        aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufNum_].template ReinterpretCast<Bias_T>();
+                                                   HALF_L1_SIZE * l1BufId + aL1OneBuffer_ + bL1OneBuffer_ :
+                                                   aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufNum_]
+                                          .template ReinterpretCast<Bias_T>();
                     biasL1Local = biasL1LocalInit[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ? 0 : nL1_ * l1BufId];
                     CopyInC1(biasGlobal, biasL1Local, curNL1);
                 }
@@ -680,8 +674,8 @@ public:
                 // 普通模板-2buffer-BL1搬入偏移位置：AL1Ping-*BL1Ping*-BiasPing|AL1Pong-*BL1Pong*-BiasPong
                 // 普通模板-4buffer-BL1搬入偏移位置: AL1Ping-AL1Pong-*BL1Ping-BL1Pong*-BiasPing-BiasPong
                 uint64_t offsetBl1 = (l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
-                                     (HALF_L1_SIZE * l1BufId + aL1OneBuffer_) :
-                                     (aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufId);
+                                         (HALF_L1_SIZE * l1BufId + aL1OneBuffer_) :
+                                         (aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufId);
                 bl1Local = l1Local_[offsetBl1];
                 uint64_t offsetB = BType::isTrans ? kL1OffsetLength : kL1OffsetLength * n_;
                 CopyInB1(bGlobal[offsetB], bl1Local, curNL1, curKL1);
@@ -691,8 +685,8 @@ public:
                 bl1Local = l1Local_[aL1OneBuffer_ * l1BufNum_];
                 kl1Offset = kL1OffsetLength;
                 // B全载-Bias搬入偏移位置：AL1Ping-AL1Pong-BL1-*Bias*
-                biasL1LocalInit =
-                    l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_].template ReinterpretCast<Bias_T>();
+                biasL1LocalInit = l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_]
+                                      .template ReinterpretCast<Bias_T>();
                 biasL1Local = biasL1LocalInit[nL1Offset];
                 kbL1Size = kAlign_;
             }
@@ -710,9 +704,8 @@ public:
                 CopyInA2(l0aLocal_[l0Offset], l1Local_[offsetAl1], curML1, curKL1, curML0, curK0);
                 offsetAl1 += AType::isTrans ? baseK_ * C0_SIZE : ml1Align * baseK_;
                 // copy bias to bt
-                CopyInC2(
-                    biasL1Local, biasBt_[baseN_ * biasBufId], Cmct::Gemm::Align(mmadParams.n, AscendC::BLOCK_CUBE),
-                    NeedBias(iter0, iter1));
+                CopyInC2(biasL1Local, biasBt_[baseN_ * biasBufId], Cmct::Gemm::Align(mmadParams.n, AscendC::BLOCK_CUBE),
+                         NeedBias(iter0, iter1));
                 uint64_t offsetBl1 = 0;
                 if constexpr (BType::isTrans) {
                     offsetBl1 = nL1Offset * C0_SIZE + (kl1Offset + iter1 * baseK_) * nl1Align;
@@ -724,7 +717,7 @@ public:
                 AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(static_cast<uint16_t>(mte1Flag));
                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(static_cast<uint16_t>(mte1Flag));
                 mmadParams.k = curK0;
-                mmadParams.unitFlag = 0;  // no unitFlag
+                mmadParams.unitFlag = 0; // no unitFlag
                 mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !isBias_);
                 Mmad(mmadParams, l0cOffset, l0Offset, baseN_ * biasBufId, NeedBias(iter0, iter1));
                 AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(static_cast<uint16_t>(mte1Flag));
@@ -751,10 +744,11 @@ public:
     }
 
     template <typename T, CubeFormat LayoutB>
-    __aicore__ inline void DoBFullLoadOrAswt(
-        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
-        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t nL1Offset, bool isFirstTile,
-        uint64_t blkK = 0, bool isFirstSplitK = false, bool isEndSplitK = false)
+    __aicore__ inline void DoBFullLoadOrAswt(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
+                                             AscendC::GlobalTensor<B_T> bGlobal,
+                                             AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape,
+                                             uint64_t nL1Offset, bool isFirstTile, uint64_t blkK = 0,
+                                             bool isFirstSplitK = false, bool isEndSplitK = false)
     {
         if (isSplitSingleK_) {
             blkK_ = blkK;
@@ -808,8 +802,8 @@ public:
             // 普通模板-2buffer-AL1搬入偏移位置：*AL1Ping*-BL1Ping-BiasPing|*AL1Pong*-BL1Pong-BiasPong
             // 普通模板-4buffer-AL1搬入偏移位置: *AL1Ping-AL1Pong*-BL1Ping-BL1Pong-BiasPing-BiasPong
             uint64_t offsetAl1 = (DispatchPolicy::fullLoadMode == 0 && l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
-                                 (HALF_L1_SIZE * l1BufId) :
-                                 aL1OneBuffer_ * l1BufId;
+                                     (HALF_L1_SIZE * l1BufId) :
+                                     aL1OneBuffer_ * l1BufId;
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
             uint64_t biasBufId = abL1LoopCnt_ & 0x1;
 
@@ -819,8 +813,9 @@ public:
                     // 普通模板-2buffer-Bias搬入偏移位置：AL1Ping-BL1Ping-*BiasPing*|AL1Pong-BL1Pong-*BiasPong*
                     // 普通模板-4buffer-Bias搬入偏移位置: AL1Ping-AL1Pong-BL1Ping-BL1Pong-*BiasPing-BiasPong*
                     biasL1LocalInit = l1Local_[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
-                        HALF_L1_SIZE * l1BufId + aL1OneBuffer_ + bL1OneBuffer_ :
-                        aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufNum_].template ReinterpretCast<Bias_T>();
+                                                   HALF_L1_SIZE * l1BufId + aL1OneBuffer_ + bL1OneBuffer_ :
+                                                   aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufNum_]
+                                          .template ReinterpretCast<Bias_T>();
                     biasL1Local = biasL1LocalInit[(l1BufNum_ == DOUBLE_BUFFER_COUNT) ? 0 : nL1_ * l1BufId];
                     CopyInC1(biasGlobal, biasL1Local, curNL1);
                 }
@@ -828,8 +823,8 @@ public:
                 // 普通模板-2buffer-BL1搬入偏移位置：AL1Ping-*BL1Ping*-BiasPing|AL1Pong-*BL1Pong*-BiasPong
                 // 普通模板-4buffer-BL1搬入偏移位置: AL1Ping-AL1Pong-*BL1Ping-BL1Pong*-BiasPing-BiasPong
                 uint64_t offsetBl1 = (l1BufNum_ == DOUBLE_BUFFER_COUNT) ?
-                                     (HALF_L1_SIZE * l1BufId + aL1OneBuffer_) :
-                                     (aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufId);
+                                         (HALF_L1_SIZE * l1BufId + aL1OneBuffer_) :
+                                         (aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_ * l1BufId);
                 bl1Local = l1Local_[offsetBl1];
                 uint64_t offsetB = BType::isTrans ? kL1OffsetLength : kL1OffsetLength * n_;
                 if constexpr (LayoutB == CubeFormat::NZ) {
@@ -846,8 +841,8 @@ public:
                 bl1Local = l1Local_[aL1OneBuffer_ * l1BufNum_];
                 kl1Offset = kL1OffsetLength;
                 // B全载-Bias搬入偏移位置：AL1Ping-AL1Pong-BL1-*Bias*
-                biasL1LocalInit =
-                    l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_].template ReinterpretCast<Bias_T>();
+                biasL1LocalInit = l1Local_[aL1OneBuffer_ * l1BufNum_ + bL1OneBuffer_]
+                                      .template ReinterpretCast<Bias_T>();
                 biasL1Local = biasL1LocalInit[nL1Offset];
                 kbL1Size = kAlign_;
             }
@@ -865,10 +860,8 @@ public:
                 CopyInA2(l0aLocal_[l0Offset], l1Local_[offsetAl1], curML1, curKL1, curML0, curK0);
                 offsetAl1 += AType::isTrans ? baseK_ * C0_SIZE : ml1Align * baseK_;
                 // copy bias to bt
-                CopyInC2(biasL1Local,
-                    biasBt_[baseN_ * biasBufId],
-                    Cmct::Gemm::Align(mmadParams.n, AscendC::BLOCK_CUBE),
-                    NeedBias(iter0, iter1));
+                CopyInC2(biasL1Local, biasBt_[baseN_ * biasBufId], Cmct::Gemm::Align(mmadParams.n, AscendC::BLOCK_CUBE),
+                         NeedBias(iter0, iter1));
                 uint64_t offsetBl1 = 0;
                 if constexpr (BType::isTrans) {
                     offsetBl1 = nL1Offset * C0_SIZE + (kl1Offset + iter1 * baseK_) * nl1Align;
@@ -911,9 +904,9 @@ public:
 
     // A全载mmad
     template <typename T, CubeFormat LayoutB>
-    __aicore__ inline void DoAFullLoad(
-        T cTensor, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
-        AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape, uint64_t mL1Offset)
+    __aicore__ inline void DoAFullLoad(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
+                                       AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal,
+                                       TupleL1L0Shape tileShape, uint64_t mL1Offset)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
@@ -927,8 +920,8 @@ public:
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
         // A全载-Bias搬入偏移位置：AL1-BL1Ping-BL1Pong-*BiasPing-BiasPong*
-        AscendC::LocalTensor<Bias_T> biasL1LocalInit =
-            l1Local_[aL1OneBuffer_ + bL1OneBuffer_ * l1BufNum_].template ReinterpretCast<Bias_T>();
+        AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_[aL1OneBuffer_ + bL1OneBuffer_ * l1BufNum_]
+                                                           .template ReinterpretCast<Bias_T>();
         AscendC::LocalTensor<A_T> aL1Local;
 
         uint64_t l0cOffset = (l0cPingPong_ & 0x1) * HALF_L0C_SIZE;
@@ -960,7 +953,7 @@ public:
                 CopyInC1(biasGlobal, biasL1Local, curNL1);
             }
             // A -> L1
-            aL1Local = l1Local_;  // biasL1 -> AL1 -> BL1
+            aL1Local = l1Local_; // biasL1 -> AL1 -> BL1
             kL1Offset = iter0 * kL1_;
             kaL1Size = kAlign_;
 
@@ -979,10 +972,8 @@ public:
                 offsetBl1 += BType::isTrans ? nl1Align * baseK_ : baseK_ * C0_SIZE;
 
                 // copy bias
-                CopyInC2(biasL1Local,
-                    biasBt_[baseN_ * (abL1LoopCnt_ & 0x1)],
-                    Cmct::Gemm::Align(mmadParams.n, AscendC::BLOCK_CUBE),
-                    NeedBias(iter0, iter1));
+                CopyInC2(biasL1Local, biasBt_[baseN_ * (abL1LoopCnt_ & 0x1)],
+                         Cmct::Gemm::Align(mmadParams.n, AscendC::BLOCK_CUBE), NeedBias(iter0, iter1));
 
                 uint64_t offsetAl1 = 0;
                 if constexpr (AType::isTrans) {
@@ -998,10 +989,10 @@ public:
 
                 mmadParams.k = curK0;
                 // 进行mad计算, 设置unitflag状态，3表示最后一次累加，2表示非最后一次累加
-                mmadParams.unitFlag = enableL0cPingPong_
-                                          ? 0
-                                          : ((iter0 + 1 == kL1Iter_ && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION
-                                                                                             : NON_FINAL_ACCUMULATION);
+                mmadParams.unitFlag = enableL0cPingPong_ ?
+                                          0 :
+                                          ((iter0 + 1 == kL1Iter_ && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION :
+                                                                                             NON_FINAL_ACCUMULATION);
                 mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && !isBias_);
                 // mmad
                 Mmad(mmadParams, l0cOffset, l0Offset, baseN_ * (abL1LoopCnt_ & 0x1), NeedBias(iter0, iter1));
@@ -1036,13 +1027,13 @@ private:
         }
     }
 
-    __aicore__ inline void Mmad(
-        AscendC::MmadParams &mmadParams, uint64_t l0cOffset, uint64_t l0abOffset, uint64_t biasOffset, bool needBias)
+    __aicore__ inline void Mmad(AscendC::MmadParams& mmadParams, uint64_t l0cOffset, uint64_t l0abOffset,
+                                uint64_t biasOffset, bool needBias)
     {
         mmadParams.cmatrixSource = needBias;
         if (needBias) {
-            AscendC::Mmad(
-                c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], biasBt_[biasOffset], mmadParams);
+            AscendC::Mmad(c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], biasBt_[biasOffset],
+                          mmadParams);
         } else {
             mmadParams.cmatrixSource = false;
             AscendC::Mmad(c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], mmadParams);
@@ -1073,6 +1064,6 @@ private:
     AscendC::LocalTensor<L0cType> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE / sizeof(L0cType)};
     AscendC::LocalTensor<A_T> l1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE / sizeof(A_T)};
 };
-}  // namespace Block
-}  // namespace Gemm
-}  // namespace Cmct
+} // namespace Block
+} // namespace Gemm
+} // namespace Cmct

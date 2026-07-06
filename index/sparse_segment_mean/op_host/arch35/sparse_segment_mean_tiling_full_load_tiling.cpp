@@ -41,15 +41,14 @@ static constexpr int64_t NEED_NUM1 = 3;
 static constexpr int64_t NEED_NUM2 = 2;
 static constexpr int64_t NUM_TWO = 2;
 
-
 bool SparseSegmentMeanFullLoadTiling::IsCapable()
 {
     int64_t allCoreNum = std::min(hardwareData.coreNum, inputData.outterSize);
     fullLoadData.normalCoreIndicesNum = Ops::Base::CeilDiv(inputData.outterSize, allCoreNum);
     fullLoadData.usedCoreNum = Ops::Base::CeilDiv(inputData.outterSize, fullLoadData.normalCoreIndicesNum);
 
-    fullLoadData.xBufferSize =
-        Ops::Base::CeilAlign(inputData.gatherSize * inputData.innerSize * inputData.inputBytes, AGLIN_VALUE);
+    fullLoadData.xBufferSize = Ops::Base::CeilAlign(inputData.gatherSize * inputData.innerSize * inputData.inputBytes,
+                                                    AGLIN_VALUE);
     fullLoadData.indicesBufferSize = Ops::Base::CeilAlign(inputData.outterSize * inputData.indicesBytes, AGLIN_VALUE);
     // 单核分配的indices个数需要大于等于x的索引个数;
     if (inputData.gatherSize > inputData.outterSize / fullLoadData.usedCoreNum) {
@@ -58,9 +57,11 @@ bool SparseSegmentMeanFullLoadTiling::IsCapable()
     // innerSize和outterSize的值需要满足准入条件;
     if (inputData.innerSize > MIN_SIZE &&
         (inputData.outterSize / inputData.gatherSize < Duplicate_NUM1 ||
-         inputData.outterSize / fullLoadData.usedCoreNum > NEED_NUM1 || inputData.innerSize >= MAX_SIZE || inputData.innerSize <= MIN_SIZE) &&
+         inputData.outterSize / fullLoadData.usedCoreNum > NEED_NUM1 || inputData.innerSize >= MAX_SIZE ||
+         inputData.innerSize <= MIN_SIZE) &&
         (inputData.outterSize / inputData.gatherSize < Duplicate_NUM2 ||
-         inputData.outterSize / fullLoadData.usedCoreNum > NEED_NUM2 || inputData.innerSize >= TOP_SIZE || inputData.innerSize < MAX_SIZE)) {
+         inputData.outterSize / fullLoadData.usedCoreNum > NEED_NUM2 || inputData.innerSize >= TOP_SIZE ||
+         inputData.innerSize < MAX_SIZE)) {
         return false;
     }
     // BufferSize的总大小需要小于ubSize;
@@ -73,7 +74,7 @@ bool SparseSegmentMeanFullLoadTiling::IsCapable()
 
 uint64_t SparseSegmentMeanFullLoadTiling::GetTilingKey() const
 {
-    if(fullLoadData.useSimtMode == SIMT_BINARY_ADD_TYPE) {
+    if (fullLoadData.useSimtMode == SIMT_BINARY_ADD_TYPE) {
         return FULL_LOAD_SMALL_INNER_TILING_KEY;
     }
     return FULL_LOAD_LARGE_INNER_TILING_KEY;
@@ -103,7 +104,8 @@ void SparseSegmentMeanFullLoadTiling::ThreadTiling()
         if (oneCoreMaxSegNum > MAX_THREAD_BLOCKS) {
             // 16组线程一次处理不完一个核的segmentNum
             specialBlockTiling_ = true;
-            int64_t oneCoreMaxSegNumUp16 = Ops::Base::CeilAlign(oneCoreMaxSegNum, MAX_THREAD_BLOCKS); // 正常核处理的segmentNum需要与16向上对齐
+            int64_t oneCoreMaxSegNumUp16 = Ops::Base::CeilAlign(
+                oneCoreMaxSegNum, MAX_THREAD_BLOCKS); // 正常核处理的segmentNum需要与16向上对齐
             if (inputData.segmentNum % oneCoreMaxSegNumUp16 > MAX_THREAD_BLOCKS) {
                 // 剩下的seg数量大于16，还需要至少2个核处理
                 int64_t tmpCoreNum = hardwareData.coreNum - 1;

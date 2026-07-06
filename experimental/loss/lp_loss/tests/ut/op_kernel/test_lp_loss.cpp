@@ -41,8 +41,7 @@ static constexpr auto dec = ::dec;
 
 namespace {
 
-enum class LpLossTestDtype : uint32_t
-{
+enum class LpLossTestDtype : uint32_t {
     FLOAT32 = 0,
     FLOAT16 = 1,
     BF16 = 2,
@@ -50,11 +49,10 @@ enum class LpLossTestDtype : uint32_t
 
 static LpLossTestDtype gCurrentDtype = LpLossTestDtype::FLOAT32;
 
-struct LpLossCompileInfo {
-};
+struct LpLossCompileInfo {};
 
-extern "C" __global__ __aicore__ void lp_loss(
-    GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void lp_loss(GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace,
+                                              GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(LpLossTilingData);
     GET_TILING_DATA_WITH_STRUCT(LpLossTilingData, tilingData, tiling);
@@ -166,8 +164,8 @@ std::vector<float> ReadOutputAsFloat(const uint8_t* output, uint32_t dataCount)
     return result;
 }
 
-static void ExpectVectorNear(
-    const std::vector<float>& actual, const std::vector<float>& expected, float rtol, float atol)
+static void ExpectVectorNear(const std::vector<float>& actual, const std::vector<float>& expected, float rtol,
+                             float atol)
 {
     ASSERT_EQ(actual.size(), expected.size());
     for (size_t index = 0; index < actual.size(); ++index) {
@@ -181,30 +179,23 @@ static void ExpectVectorNear(
 
 class LpLossTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "lp_loss_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "lp_loss_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "lp_loss_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "lp_loss_test TearDown" << std::endl; }
 };
 
 TEST_F(LpLossTest, test_case_float16_none)
 {
     LpLossCompileInfo compileInfo{};
-    gert::TilingContextPara tilingContextPara(
-        "LpLoss",
-        {
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        MakeAttrs(1, "none"), &compileInfo);
+    gert::TilingContextPara tilingContextPara("LpLoss",
+                                              {
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1, "none"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -247,16 +238,15 @@ TEST_F(LpLossTest, test_case_float16_none)
 TEST_F(LpLossTest, test_case_float32_none)
 {
     LpLossCompileInfo compileInfo{};
-    gert::TilingContextPara tilingContextPara(
-        "LpLoss",
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1, "none"), &compileInfo);
+    gert::TilingContextPara tilingContextPara("LpLoss",
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1, "none"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -299,16 +289,15 @@ TEST_F(LpLossTest, test_case_float32_none)
 TEST_F(LpLossTest, test_case_float32_sum)
 {
     LpLossCompileInfo compileInfo{};
-    gert::TilingContextPara tilingContextPara(
-        "LpLoss",
-        {
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1, "sum"), &compileInfo);
+    gert::TilingContextPara tilingContextPara("LpLoss",
+                                              {
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1, "sum"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -352,16 +341,15 @@ TEST_F(LpLossTest, test_case_float32_sum)
 TEST_F(LpLossTest, test_case_float32_mean)
 {
     LpLossCompileInfo compileInfo{};
-    gert::TilingContextPara tilingContextPara(
-        "LpLoss",
-        {
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1, "mean"), &compileInfo);
+    gert::TilingContextPara tilingContextPara("LpLoss",
+                                              {
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1, "mean"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);

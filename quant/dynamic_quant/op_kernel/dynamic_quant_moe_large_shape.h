@@ -21,17 +21,12 @@ using namespace AscendC;
 
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 template <typename T1, typename T2, typename T3, typename yDtype>
-class DynamicQuantMoeLargeShape : public DynamicQuantBase
-{
+class DynamicQuantMoeLargeShape : public DynamicQuantBase {
 public:
-    __aicore__ inline DynamicQuantMoeLargeShape(TPipe* pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantMoeLargeShape(TPipe* pipe) { pPipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_indexs, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_indexs, GM_ADDR y, GM_ADDR scale,
+                                GM_ADDR offset, GM_ADDR workSpace, const DynamicQuantTilingData* __restrict tilingData)
     {
         ParseTilingData(tilingData);
         InitLargeShapeParams(offset);
@@ -79,7 +74,7 @@ public:
             }
             LoopProcess(offsetBase, smoothBaseOffset, scale);
             scaleLocal.SetValue(i % scaleMaxLength, 1 / scale);
-            if ((i +1) % scaleMaxLength == 0 || i == loopCnt - 1) {
+            if ((i + 1) % scaleMaxLength == 0 || i == loopCnt - 1) {
                 scaleQueue.EnQue<float>(scaleLocal);
                 if (i == loopCnt - 1) {
                     CopyScalesOut(loopCnt - scaleIdx * scaleMaxLength, scaleIdx * scaleMaxLength);
@@ -119,7 +114,7 @@ public:
             scaleLocal.SetValue(i % scaleMaxLength, scale);
             offsetLocal.SetValue(i % scaleMaxLength, offset);
 
-            if ((i +1) % scaleMaxLength == 0 || i == loopCnt - 1) {
+            if ((i + 1) % scaleMaxLength == 0 || i == loopCnt - 1) {
                 offsetQueue.EnQue<float>(offsetLocal);
                 scaleQueue.EnQue<float>(scaleLocal);
 
@@ -139,10 +134,11 @@ public:
     }
 
 private:
-    __aicore__ inline void InitAndSetBuffer(
-        GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_indexs, GM_ADDR y, GM_ADDR scale, GM_ADDR offset)
+    __aicore__ inline void InitAndSetBuffer(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_indexs, GM_ADDR y,
+                                            GM_ADDR scale, GM_ADDR offset)
     {
-        scaleMaxLength = tilingData_.ubSize - UB_RESERVED_LENGTH - THIRTY_TWO - tilingData_.innerLoopEle * sizeof(float) * DOUBLE;
+        scaleMaxLength = tilingData_.ubSize - UB_RESERVED_LENGTH - THIRTY_TWO -
+                         tilingData_.innerLoopEle * sizeof(float) * DOUBLE;
 
         smoothGm.SetGlobalBuffer((__gm__ T2*)smooth_scales);
         pPipe->InitBuffer(smoothQueue, BUFFER_NUM, tilingData_.innerLoopEle * sizeof(T2));
@@ -159,14 +155,13 @@ private:
                 offsetGm.SetGlobalBuffer((__gm__ float*)offset + baseRow, rowPerHeadCore);
             }
         } else {
-            inGm.SetGlobalBuffer(
-                (__gm__ T1*)x + tilingData_.headCoreNum * static_cast<int64_t>(lenHead) + (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(lenTail),
-                lenTail);
+            inGm.SetGlobalBuffer((__gm__ T1*)x + tilingData_.headCoreNum * static_cast<int64_t>(lenHead) +
+                                     (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(lenTail),
+                                 lenTail);
             baseRow = tilingData_.headCoreNum * rowPerHeadCore + (blockIdx - tilingData_.headCoreNum) * rowPerTailCore;
-            outGm.SetGlobalBuffer(
-                (__gm__ yDtype*)y + tilingData_.headCoreNum * static_cast<int64_t>(outLenHead) +
-                    (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(outLenTail),
-                outLenTail);
+            outGm.SetGlobalBuffer((__gm__ yDtype*)y + tilingData_.headCoreNum * static_cast<int64_t>(outLenHead) +
+                                      (blockIdx - tilingData_.headCoreNum) * static_cast<int64_t>(outLenTail),
+                                  outLenTail);
             scaleGm.SetGlobalBuffer((__gm__ float*)scale + baseRow, rowPerTailCore);
             if (isAsymmetrical) {
                 offsetGm.SetGlobalBuffer((__gm__ float*)offset + baseRow, rowPerTailCore);
@@ -213,8 +208,8 @@ private:
         }
     }
 
-    __aicore__ inline void LoopProcessAsymmetrical(
-        uint32_t offsetBase, uint32_t smoothBaseOffset, float& scale, float& offset)
+    __aicore__ inline void LoopProcessAsymmetrical(uint32_t offsetBase, uint32_t smoothBaseOffset, float& scale,
+                                                   float& offset)
     {
         float maxUpdateValue = MIN_FLOAT_VALUE;
         float minUpdateValue = MAX_FLOAT_VALUE;
@@ -230,8 +225,8 @@ private:
         if (tilingData_.innerLoopTail > 0) {
             srcOffset = offsetBase + tilingData_.innerLoopTimes * tilingData_.innerLoopEle;
             smoothOffset = smoothBaseOffset + tilingData_.innerLoopTimes * tilingData_.innerLoopEle;
-            ComputeMaxAndMinValue(
-                srcOffset, smoothOffset, tilingData_.innerLoopTail, rightPadding, maxUpdateValue, minUpdateValue);
+            ComputeMaxAndMinValue(srcOffset, smoothOffset, tilingData_.innerLoopTail, rightPadding, maxUpdateValue,
+                                  minUpdateValue);
         }
 
         GetScaleAndOffset(maxUpdateValue, minUpdateValue, scale, offset);
@@ -303,16 +298,16 @@ private:
         offsetQueue.FreeTensor(offsetLocal);
     }
 
-    __aicore__ inline void QuantCompute(
-        uint32_t offset, uint32_t scaleOffset, float scale, float offsetOut, uint32_t elementNum, uint8_t rightPadding)
+    __aicore__ inline void QuantCompute(uint32_t offset, uint32_t scaleOffset, float scale, float offsetOut,
+                                        uint32_t elementNum, uint8_t rightPadding)
     {
         CopyInByEle(offset, scaleOffset, elementNum, rightPadding);
         Compute(scale, offsetOut, elementNum);
         CopyOut(offset, elementNum);
     }
 
-    __aicore__ inline void ComputeMaxValue(
-        uint32_t offset, uint32_t scaleOffset, uint32_t elementNum, uint8_t rightPadding, float& maxUpdateValue)
+    __aicore__ inline void ComputeMaxValue(uint32_t offset, uint32_t scaleOffset, uint32_t elementNum,
+                                           uint8_t rightPadding, float& maxUpdateValue)
     {
         CopyInByEle(offset, scaleOffset, elementNum, rightPadding);
         ComputeGetMaxValue(elementNum, maxUpdateValue);
@@ -386,9 +381,8 @@ private:
         inQueue.FreeTensor(inLocal);
     }
 
-    __aicore__ inline void ComputeMaxAndMinValue(
-        uint32_t offset, uint32_t scaleOffset, uint32_t elementNum, uint8_t rightPadding, float& maxUpdateValue,
-        float& minUpdateValue)
+    __aicore__ inline void ComputeMaxAndMinValue(uint32_t offset, uint32_t scaleOffset, uint32_t elementNum,
+                                                 uint8_t rightPadding, float& maxUpdateValue, float& minUpdateValue)
     {
         CopyInByEle(offset, scaleOffset, elementNum, rightPadding);
         ComputeGetMaxAndMinValue(elementNum, maxUpdateValue, minUpdateValue);

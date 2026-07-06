@@ -22,10 +22,10 @@
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MaskMergeMode;
 using AscendC::MicroAPI::LoadDist;
+using AscendC::MicroAPI::MaskMergeMode;
+using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
@@ -45,9 +45,8 @@ public:
         tilingData_ = tilingDataInput;
     }
 
-    __aicore__ inline void Init(
-        GM_ADDR xInput, GM_ADDR gammaInput, GM_ADDR betaInput, GM_ADDR meanInput, GM_ADDR varInput, GM_ADDR yOutput,
-        TPipe* pipeInput)
+    __aicore__ inline void Init(GM_ADDR xInput, GM_ADDR gammaInput, GM_ADDR betaInput, GM_ADDR meanInput,
+                                GM_ADDR varInput, GM_ADDR yOutput, TPipe* pipeInput)
     {
         pipe_ = pipeInput;
 
@@ -85,8 +84,8 @@ public:
             // ping、pang搬运首次或者tile块沿B轴换列时需要拷贝mean、var、beta、gamma
             bool needCopy = (curIdx <= beginIdx + 1) || (curRowIdx <= 1);
 
-            int64_t curTileBLen =
-                curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail : tilingData_->tileBlockBLen;
+            int64_t curTileBLen = curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail :
+                                                                           tilingData_->tileBlockBLen;
 
             int64_t curTileALen = tilingData_->tileBlockALen;
             int64_t ubStrideT = 0;
@@ -189,10 +188,10 @@ private:
         varQueue_.FreeTensor<T_RUNNING_MEAN>(var);
     }
 
-    __aicore__ inline void VFNormalize(
-        __local_mem__ T* xLocal, __local_mem__ T_GAMMA* gammaLocal, __local_mem__ T_GAMMA* betaLocal,
-        __local_mem__ T_RUNNING_MEAN* meanLocal, __local_mem__ T_RUNNING_MEAN* varLocal, __local_mem__ T* yLocal,
-        uint16_t curTileBLen, uint16_t curTileALen)
+    __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ T_GAMMA* gammaLocal,
+                                       __local_mem__ T_GAMMA* betaLocal, __local_mem__ T_RUNNING_MEAN* meanLocal,
+                                       __local_mem__ T_RUNNING_MEAN* varLocal, __local_mem__ T* yLocal,
+                                       uint16_t curTileBLen, uint16_t curTileALen)
     {
         __VEC_SCOPE__
         {
@@ -217,13 +216,14 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         runningVarTmp, ((__local_mem__ T_RUNNING_MEAN*)varLocal + offset));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp, pregMaskFp32);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp,
+                                                                                                 pregMaskFp32);
                 } else {
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(var, varLocal + offset);
                 }
 
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load mean
@@ -232,8 +232,8 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         runningMeanTmp, ((__local_mem__ T_RUNNING_MEAN*)meanLocal + offset));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(
-                        mean, runningMeanTmp, pregMaskFp32);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp,
+                                                                                                 pregMaskFp32);
                 } else {
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(mean, meanLocal + offset);
                 }
@@ -259,8 +259,8 @@ private:
                     } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         Cast<T, float, NormCommon::castTraitB322B16>(xFp16, y, pregMaskFp32);
-                        DataCopy<T, StoreDist::DIST_PACK_B32>(
-                            ((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMaskFp32);
+                        DataCopy<T, StoreDist::DIST_PACK_B32>(((__local_mem__ T*)yLocal) + xOffset, xFp16,
+                                                              pregMaskFp32);
                     }
                 }
             }
@@ -268,8 +268,8 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadTensorForDtypeT(
-        __local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadTensorForDtypeT(__local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
+                                               uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
             DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);

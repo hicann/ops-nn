@@ -49,21 +49,31 @@ string GetTime()
 
 uint32_t GetDataTypeSize(DataType dt)
 {
-    if (dt == ge::DT_FLOAT) return 4;
-    if (dt == ge::DT_FLOAT16) return 2;
-    if (dt == ge::DT_BF16) return 2;
-    if (dt == ge::DT_INT16) return 2;
-    if (dt == ge::DT_UINT16) return 2;
-    if (dt == ge::DT_INT32) return 4;
-    if (dt == ge::DT_UINT32) return 4;
-    if (dt == ge::DT_INT64) return 8;
-    if (dt == ge::DT_UINT64) return 8;
-    if (dt == ge::DT_INT8) return 1;
+    if (dt == ge::DT_FLOAT)
+        return 4;
+    if (dt == ge::DT_FLOAT16)
+        return 2;
+    if (dt == ge::DT_BF16)
+        return 2;
+    if (dt == ge::DT_INT16)
+        return 2;
+    if (dt == ge::DT_UINT16)
+        return 2;
+    if (dt == ge::DT_INT32)
+        return 4;
+    if (dt == ge::DT_UINT32)
+        return 4;
+    if (dt == ge::DT_INT64)
+        return 8;
+    if (dt == ge::DT_UINT64)
+        return 8;
+    if (dt == ge::DT_INT8)
+        return 1;
     return 1;
 }
 
-int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc,
-                     DataType data_type, float low, float high, unsigned int seed)
+int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                     float low, float high, unsigned int seed)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -91,9 +101,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 
 // CPU Golden: ActsULQ computation (float32 precision)
 // cmin and cmax are scalars (broadcast to all elements)
-void ActsUlqGolden(const float* data, const float* cmin, const float* cmax,
-                   float* out, float* min_mask, float* max_mask, float* loss,
-                   size_t size, bool fixed_min)
+void ActsUlqGolden(const float* data, const float* cmin, const float* cmax, float* out, float* min_mask,
+                   float* max_mask, float* loss, size_t size, bool fixed_min)
 {
     const float step = 255.0f;
     const float eps = 1.192092896e-07f;
@@ -133,8 +142,7 @@ void ActsUlqGolden(const float* data, const float* cmin, const float* cmax,
     }
 }
 
-bool CompareFloat(const float* golden, const float* actual, size_t size,
-                  float rtol, float atol, const char* name)
+bool CompareFloat(const float* golden, const float* actual, size_t size, float rtol, float atol, const char* name)
 {
     int fail_count = 0;
     int first_fail_idx = -1;
@@ -160,8 +168,8 @@ bool CompareFloat(const float* golden, const float* actual, size_t size,
         float diff = std::abs(first_actual - first_golden);
         float threshold = atol + rtol * std::abs(first_golden);
         printf("    [FAIL] %s: %d/%zu mismatches\n", name, fail_count, size);
-        printf("           first fail [%d]: golden=%.8g actual=%.8g diff=%.4e tol=%.4e\n",
-               first_fail_idx, first_golden, first_actual, diff, threshold);
+        printf("           first fail [%d]: golden=%.8g actual=%.8g diff=%.4e tol=%.4e\n", first_fail_idx, first_golden,
+               first_actual, diff, threshold);
         return false;
     }
 }
@@ -185,17 +193,15 @@ bool CompareMask(const float* golden, const float* actual, size_t size, const ch
         return true;
     } else {
         printf("    [FAIL] %s: %d/%zu mismatches\n", name, fail_count, size);
-        printf("           first fail [%d]: golden=%.1f actual=%.1f\n",
-               first_fail_idx, golden[first_fail_idx], actual[first_fail_idx]);
+        printf("           first fail [%d]: golden=%.1f actual=%.1f\n", first_fail_idx, golden[first_fail_idx],
+               actual[first_fail_idx]);
         return false;
     }
 }
 
-int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input,
-                     std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-                     Graph& graph, bool fixed_min,
-                     float*& data_host, float*& cmin_host, float*& cmax_host,
-                     size_t& total_elems)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph, bool fixed_min, float*& data_host, float*& cmin_host,
+                     float*& cmax_host, size_t& total_elems)
 {
     Status ret = SUCCESS;
     auto acts_ulq1 = op::ActsULQ("acts_ulq1");
@@ -311,8 +317,8 @@ int main(int argc, char* argv[])
     float* cmax_host = nullptr;
     size_t total_elems = 0;
 
-    ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph, fixed_min,
-                           data_host, cmin_host, cmax_host, total_elems);
+    ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph, fixed_min, data_host, cmin_host, cmax_host,
+                           total_elems);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [GEIR]: CreateOppInGraph failed\n", GetTime().c_str());
         return FAILED;
@@ -355,8 +361,7 @@ int main(int argc, char* argv[])
     float* golden_min_mask = new float[total_elems];
     float* golden_max_mask = new float[total_elems];
     float* golden_loss = new float[total_elems];
-    ActsUlqGolden(data_host, cmin_host, cmax_host,
-                  golden_out, golden_min_mask, golden_max_mask, golden_loss,
+    ActsUlqGolden(data_host, cmin_host, cmax_host, golden_out, golden_min_mask, golden_max_mask, golden_loss,
                   total_elems, fixed_min);
 
     // Compare NPU output with golden

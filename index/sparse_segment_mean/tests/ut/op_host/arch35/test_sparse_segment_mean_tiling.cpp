@@ -32,18 +32,14 @@ using namespace ut_util;
 using namespace ge;
 
 class SparseSegmentMeanTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SparseSegmentMeanTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SparseSegmentMeanTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SparseSegmentMeanTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SparseSegmentMeanTiling TearDown" << std::endl; }
 };
 
-
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_1) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_1)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -72,20 +68,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_1) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -93,26 +90,26 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_1) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape x = {{2,4}, {2,4}};
+    gert::StorageShape x = {{2, 4}, {2, 4}};
     gert::StorageShape indices = {{2}, {2}};
     gert::StorageShape id = {{2}, {2}};
     gert::StorageShape y = {{1, 4}, {1, 4}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -127,8 +124,8 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_1) {
     ASSERT_EQ(tiling_key, 300);
 }
 
-
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_2) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_2)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -157,20 +154,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_2) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -178,26 +176,26 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_2) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape x = {{64,64}, {64,64}};
+    gert::StorageShape x = {{64, 64}, {64, 64}};
     gert::StorageShape indices = {{64}, {64}};
     gert::StorageShape id = {{64}, {64}};
-    gert::StorageShape y = {{64,64}, {64,64}};
+    gert::StorageShape y = {{64, 64}, {64, 64}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -212,8 +210,8 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_2) {
     ASSERT_EQ(tiling_key, 200);
 }
 
-
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_3) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_3)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -242,20 +240,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_3) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -263,26 +262,26 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_3) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape x = {{64,64}, {64,64}};
+    gert::StorageShape x = {{64, 64}, {64, 64}};
     gert::StorageShape indices = {{64}, {64}};
     gert::StorageShape id = {{64}, {64}};
-    gert::StorageShape y = {{64,64}, {64,64}};
+    gert::StorageShape y = {{64, 64}, {64, 64}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -294,7 +293,8 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simt_tiling_3) {
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_1) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_1)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -323,20 +323,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_1) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -344,26 +345,26 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_1) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape x = {{64,2049}, {64,2049}};
+    gert::StorageShape x = {{64, 2049}, {64, 2049}};
     gert::StorageShape indices = {{64}, {64}};
     gert::StorageShape id = {{64}, {64}};
-    gert::StorageShape y = {{64,2049}, {64,2049}};
+    gert::StorageShape y = {{64, 2049}, {64, 2049}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -378,7 +379,8 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_1) {
     ASSERT_EQ(tiling_key, 400);
 }
 
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_2) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_2)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -407,20 +409,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_2) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -428,26 +431,26 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_2) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape x = {{64,2049}, {64,2049}};
+    gert::StorageShape x = {{64, 2049}, {64, 2049}};
     gert::StorageShape indices = {{64}, {64}};
     gert::StorageShape id = {{64}, {64}};
-    gert::StorageShape y = {{64,2049}, {64,2049}};
+    gert::StorageShape y = {{64, 2049}, {64, 2049}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -462,7 +465,8 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_2) {
     ASSERT_EQ(tiling_key, 400);
 }
 
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_3) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_3)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -491,20 +495,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_3) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -512,26 +517,26 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_3) {
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape x = {{64,2049}, {64,2049}};
+    gert::StorageShape x = {{64, 2049}, {64, 2049}};
     gert::StorageShape indices = {{64}, {64}};
     gert::StorageShape id = {{64}, {64}};
-    gert::StorageShape y = {{64,2049}, {64,2049}};
+    gert::StorageShape y = {{64, 2049}, {64, 2049}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -546,7 +551,8 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_simd_tiling_3) {
     ASSERT_EQ(tiling_key, 400);
 }
 
-TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_Full_Load_tiling_1) {
+TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_Full_Load_tiling_1)
+{
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
@@ -575,20 +581,21 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_Full_Load_tiling_1) {
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
- 
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
                                                                                             intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -602,20 +609,20 @@ TEST_F(SparseSegmentMeanTiling, SparseSegmentMean_Full_Load_tiling_1) {
     gert::StorageShape y = {{1, 2}, {1, 2}};
 
     auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(3, 1)
-        .IrInstanceNum({1,1,1})
-        .InputShapes({&x, &indices, &id})
-        .OutputShapes({&y})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &id})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);

@@ -25,9 +25,8 @@ template <typename T, uint64_t reduction>
 class KernelNLLLossEmpty {
 public:
     __aicore__ inline KernelNLLLossEmpty(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight, GM_ADDR workspace,
-        NLLLossACTilingData tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight,
+                                GM_ADDR workspace, NLLLossACTilingData tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -36,9 +35,9 @@ private:
 };
 
 template <typename T, uint64_t reduction>
-__aicore__ inline void KernelNLLLossEmpty<T, reduction>::Init(
-    GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y, GM_ADDR totalWeight, GM_ADDR workspace,
-    NLLLossACTilingData tilingData)
+__aicore__ inline void KernelNLLLossEmpty<T, reduction>::Init(GM_ADDR x, GM_ADDR target, GM_ADDR weight, GM_ADDR y,
+                                                              GM_ADDR totalWeight, GM_ADDR workspace,
+                                                              NLLLossACTilingData tilingData)
 {
     yGm_.SetGlobalBuffer((__gm__ T*)y);
     totalWeightGm_.SetGlobalBuffer((__gm__ T*)totalWeight);

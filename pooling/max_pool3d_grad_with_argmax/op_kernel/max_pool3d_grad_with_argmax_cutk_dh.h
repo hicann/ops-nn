@@ -26,13 +26,9 @@ using namespace MaxPool3DGradWithArgmaxComm;
 template <typename TX, typename TGrad, typename TArgmax, typename TY, bool isOverlap>
 class MaxPool3DGradWithArgmaxCutKDH : public MaxPool3DGradWithArgmaxCutKBase<TX, TGrad, TArgmax, TY, isOverlap> {
 public:
-    __aicore__ inline MaxPool3DGradWithArgmaxCutKDH(TPipe* tmpPipe)
-    {
-        this->pipe = tmpPipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
-        const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
+    __aicore__ inline MaxPool3DGradWithArgmaxCutKDH(TPipe* tmpPipe) { this->pipe = tmpPipe; }
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR grad, GM_ADDR argmax, GM_ADDR y, GM_ADDR usrWorkspace,
+                                const MaxPool3DGradWithArgmaxTilingData* __restrict__ tiling)
     {
         // load tiling data
         this->InitParams(tiling);
@@ -80,8 +76,8 @@ public:
                                           (ncLoop * GetBlockIdx() + ncLoopIdx + this->params_.ncCnt % GetBlockNum());
             for (uint64_t index = 0; index < totalCnt; index++) {
                 this->CalBlockParams(index);
-                if constexpr (
-                    isOverlap && (std::is_same<TGrad, half>::value || std::is_same<TGrad, bfloat16_t>::value)) {
+                if constexpr (isOverlap &&
+                              (std::is_same<TGrad, half>::value || std::is_same<TGrad, bfloat16_t>::value)) {
                     CalcBlockKDH<float>(this->workspaceGm);
                 } else {
                     CalcBlockKDH<TY>(this->yGm);
@@ -99,14 +95,13 @@ public:
                 uint64_t srcOffset = doIdx * this->block_.hoShape * this->block_.wiShape * this->params_.baseNc +
                                      hoIdx * this->block_.wiShape * this->params_.baseNc +
                                      this->depad_.padWStartOffset * this->params_.baseNc;
-                uint64_t dstOffset =
-                    (doIdx - this->depad_.padDStartOffset) * this->depad_.hiValid * this->depad_.wiValidAlign *
-                        this->params_.baseNc +
-                    (hoIdx - this->depad_.padHStartOffset) * this->depad_.wiValidAlign * this->params_.baseNc;
+                uint64_t dstOffset = (doIdx - this->depad_.padDStartOffset) * this->depad_.hiValid *
+                                         this->depad_.wiValidAlign * this->params_.baseNc +
+                                     (hoIdx - this->depad_.padHStartOffset) * this->depad_.wiValidAlign *
+                                         this->params_.baseNc;
 
-                Adds(
-                    yTranDepadUb[dstOffset], yTranUb[srcOffset], static_cast<T>(0), VL_FP32, this->depad_.wiValid,
-                    {1, 1, VL_FP32 * sizeof(T) / BLOCK_SIZE, VL_FP32 * sizeof(T) / BLOCK_SIZE});
+                Adds(yTranDepadUb[dstOffset], yTranUb[srcOffset], static_cast<T>(0), VL_FP32, this->depad_.wiValid,
+                     {1, 1, VL_FP32 * sizeof(T) / BLOCK_SIZE, VL_FP32 * sizeof(T) / BLOCK_SIZE});
             }
         }
         PipeBarrier<PIPE_V>();
@@ -124,11 +119,11 @@ public:
                     0};
                 uint64_t srcOffset = ncLoop * this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign +
                                      dIdx * this->depad_.hiValid * this->depad_.wiValidAlign;
-                uint64_t dstOffset =
-                    (ncLoop + this->block_.ncCntIndex * this->params_.baseNc) * this->params_.diDim *
-                        this->params_.hiDim * this->params_.wiDim +
-                    (this->depad_.diStartOffset + dIdx * this->params_.sd) * this->params_.hiDim * this->params_.wiDim +
-                    this->depad_.hiStartOffset * this->params_.wiDim + this->depad_.wiStartOffset;
+                uint64_t dstOffset = (ncLoop + this->block_.ncCntIndex * this->params_.baseNc) * this->params_.diDim *
+                                         this->params_.hiDim * this->params_.wiDim +
+                                     (this->depad_.diStartOffset + dIdx * this->params_.sd) * this->params_.hiDim *
+                                         this->params_.wiDim +
+                                     this->depad_.hiStartOffset * this->params_.wiDim + this->depad_.wiStartOffset;
                 DataCopyPad(dstGm[dstOffset], yUb[srcOffset], copyParams);
             }
         }
@@ -148,8 +143,8 @@ public:
         }
     }
 
-    __aicore__ inline void Img2ColPartKDH(
-        const LocalTensor<TArgmax>& indexColUb, const LocalTensor<TArgmax>& indexImgUb, uint64_t kwIdx)
+    __aicore__ inline void Img2ColPartKDH(const LocalTensor<TArgmax>& indexColUb,
+                                          const LocalTensor<TArgmax>& indexImgUb, uint64_t kwIdx)
     {
         uint64_t dstOffset = 0;
         uint64_t srcOffset = 0;
@@ -160,9 +155,8 @@ public:
                                 hoIdx * this->block_.woShape * this->params_.baseNc;
                     srcOffset = doIdx * this->block_.hoShape * this->block_.wiShape * this->params_.baseNc +
                                 hoIdx * this->block_.wiShape * this->params_.baseNc + kwIdx * this->params_.baseNc;
-                    Adds(
-                        indexColUb[dstOffset], indexImgUb[srcOffset], 0, VL_FP32, this->block_.woShape,
-                        {1, 1, VL_FP32_BLOCK, static_cast<uint8_t>(this->params_.sw * VL_FP32_BLOCK)});
+                    Adds(indexColUb[dstOffset], indexImgUb[srcOffset], 0, VL_FP32, this->block_.woShape,
+                         {1, 1, VL_FP32_BLOCK, static_cast<uint8_t>(this->params_.sw * VL_FP32_BLOCK)});
                 }
             }
         } else {
@@ -182,18 +176,17 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void Col2ImgPartKDH(
-        const LocalTensor<float>& yTranUb, const LocalTensor<float>& tmpGradUb, uint64_t kwIdx)
+    __aicore__ inline void Col2ImgPartKDH(const LocalTensor<float>& yTranUb, const LocalTensor<float>& tmpGradUb,
+                                          uint64_t kwIdx)
     {
         uint64_t dstOffset = 0;
         uint64_t srcOffset = 0;
-        BinaryRepeatParams addRepeatParams = {
-            1,
-            1,
-            1,
-            static_cast<uint8_t>(this->params_.sw * VL_FP32_BLOCK),
-            static_cast<uint8_t>(VL_FP32_BLOCK),
-            static_cast<uint8_t>(this->params_.sw * VL_FP32_BLOCK)};
+        BinaryRepeatParams addRepeatParams = {1,
+                                              1,
+                                              1,
+                                              static_cast<uint8_t>(this->params_.sw * VL_FP32_BLOCK),
+                                              static_cast<uint8_t>(VL_FP32_BLOCK),
+                                              static_cast<uint8_t>(this->params_.sw * VL_FP32_BLOCK)};
         if (this->params_.sw * VL_FP32_BLOCK <= MAX_REP_NUM) {
             for (uint64_t doIdx = 0; doIdx < this->block_.doShape; doIdx++) {
                 for (uint64_t hoIdx = 0; hoIdx < this->block_.hoShape; hoIdx++) {
@@ -222,9 +215,10 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CalcGradSubProcessKDH(
-        const LocalTensor<TArgmax>& indexImgUb, const LocalTensor<TArgmax>& argmaxTranUb,
-        const LocalTensor<TGrad>& gradTranUb, const LocalTensor<float>& yTranUb, uint64_t kwIdx)
+    __aicore__ inline void CalcGradSubProcessKDH(const LocalTensor<TArgmax>& indexImgUb,
+                                                 const LocalTensor<TArgmax>& argmaxTranUb,
+                                                 const LocalTensor<TGrad>& gradTranUb,
+                                                 const LocalTensor<float>& yTranUb, uint64_t kwIdx)
     {
         LocalTensor<TArgmax> indexColUb = this->indexColBuf.template Get<TArgmax>();
         LocalTensor<float> tmpGradUb = this->tmpGradBuf.template Get<float>();
@@ -234,9 +228,8 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void CalcGradKDH(
-        const GlobalTensor<T>& dstGm, const LocalTensor<TArgmax>& argmaxTranUb, const LocalTensor<TGrad>& gradTranUb,
-        uint64_t kdIdx, uint64_t khIdx)
+    __aicore__ inline void CalcGradKDH(const GlobalTensor<T>& dstGm, const LocalTensor<TArgmax>& argmaxTranUb,
+                                       const LocalTensor<TGrad>& gradTranUb, uint64_t kdIdx, uint64_t khIdx)
     {
         LocalTensor<TArgmax> indexImgUb = this->indexImgBuf.template Get<TArgmax>();
         LocalTensor<float> yUb = this->yQue.template AllocTensor<float>();
@@ -253,12 +246,14 @@ public:
             genIndicesParams.dCount = this->block_.doShape;
             genIndicesParams.colCount = this->block_.wiShape;
             genIndicesParams.rowCount = this->block_.hoShape;
-            genIndicesParams.firstValue =
-                ((this->block_.doCntIndex * this->params_.baseDo) * this->params_.sd + kdIdx - this->params_.padDTop) *
-                    this->params_.hiDim * this->params_.wiDim +
-                ((this->block_.hoCntIndex * this->params_.baseHo) * this->params_.sh + khIdx - this->params_.padHTop) *
-                    this->params_.wiDim +
-                (this->block_.woCntIndex * this->params_.baseWo) * this->params_.sw - this->params_.padWTop;
+            genIndicesParams.firstValue = ((this->block_.doCntIndex * this->params_.baseDo) * this->params_.sd + kdIdx -
+                                           this->params_.padDTop) *
+                                              this->params_.hiDim * this->params_.wiDim +
+                                          ((this->block_.hoCntIndex * this->params_.baseHo) * this->params_.sh + khIdx -
+                                           this->params_.padHTop) *
+                                              this->params_.wiDim +
+                                          (this->block_.woCntIndex * this->params_.baseWo) * this->params_.sw -
+                                          this->params_.padWTop;
             genIndicesParams.increaseDValue = this->params_.hiDim * this->params_.wiDim * this->params_.sd;
             genIndicesParams.increaseHValue = this->params_.wiDim * this->params_.sh;
             genIndicesParams.vlValue = VL_FP32;
@@ -288,30 +283,30 @@ public:
     }
 
     template <typename T>
-    __aicore__ inline void TranBackAndMoveOut(
-        const GlobalTensor<T>& dstGm, const LocalTensor<float> yUb, const LocalTensor<float> yTranDepadUb)
+    __aicore__ inline void TranBackAndMoveOut(const GlobalTensor<T>& dstGm, const LocalTensor<float> yUb,
+                                              const LocalTensor<float> yTranDepadUb)
     {
         int32_t eventIdVToMte3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         if constexpr (!isOverlap) {
             if constexpr (std::is_same<TY, float>::value) {
-                TransposeBase8M16<float>(
-                    yUb, yTranDepadUb, this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign,
-                    this->params_.baseNc);
+                TransposeBase8M16<float>(yUb, yTranDepadUb,
+                                         this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign,
+                                         this->params_.baseNc);
                 SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
                 WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
                 CopyOutKDH<TY>(yUb, dstGm);
             } else {
-                TransposeBase16M16<TY>(
-                    yUb.ReinterpretCast<TY>(), yTranDepadUb.ReinterpretCast<TY>(),
-                    this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign, this->params_.baseNc);
+                TransposeBase16M16<TY>(yUb.ReinterpretCast<TY>(), yTranDepadUb.ReinterpretCast<TY>(),
+                                       this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign,
+                                       this->params_.baseNc);
                 SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
                 WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
                 CopyOutKDH<T>(yUb.ReinterpretCast<T>(), dstGm);
             }
         } else {
-            TransposeBase8M16<float>(
-                yUb, yTranDepadUb, this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign,
-                this->params_.baseNc);
+            TransposeBase8M16<float>(yUb, yTranDepadUb,
+                                     this->depad_.diValid * this->depad_.hiValid * this->depad_.wiValidAlign,
+                                     this->params_.baseNc);
             SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
             SetAtomicAdd<float>();

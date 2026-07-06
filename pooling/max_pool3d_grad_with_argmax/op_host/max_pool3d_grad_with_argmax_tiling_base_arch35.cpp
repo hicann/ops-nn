@@ -79,9 +79,9 @@ bool MaxPool3DGradWithArgmaxTilingBaseV35::CheckInputShape()
     }
     for (uint32_t i = 0; i < xDimNum; i++) {
         if (xShape->GetStorageShape().GetDim(i) == 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                opName_, "x", std::to_string(xShape->GetStorageShape().GetDim(i)).c_str(),
-                "Input x shape can not be 0.");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "x",
+                                                  std::to_string(xShape->GetStorageShape().GetDim(i)).c_str(),
+                                                  "Input x shape can not be 0.");
             return false;
         }
     }
@@ -107,12 +107,11 @@ bool MaxPool3DGradWithArgmaxTilingBaseV35::CheckInputShape()
     uint64_t xCDim = xShape->GetStorageShape().GetDim(cPosIdx);
     uint64_t gradCDim = gradShape->GetStorageShape().GetDim(cPosIdx);
     if ((xNDim != gradNDim) || (xCDim != gradCDim)) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName_, "x, grad",
-            (std::to_string(xNDim) + ", " + std::to_string(xCDim) + " vs " + std::to_string(gradNDim) + ", " +
-             std::to_string(gradCDim))
-                .c_str(),
-            "Input N,C dim check invalid, not equal.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, grad",
+                                               (std::to_string(xNDim) + ", " + std::to_string(xCDim) + " vs " +
+                                                std::to_string(gradNDim) + ", " + std::to_string(gradCDim))
+                                                   .c_str(),
+                                               "Input N,C dim check invalid, not equal.");
         return false;
     }
 
@@ -132,21 +131,19 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::CheckInputDtype()
     auto yOutDataType = context_->GetOutputDesc(Y_INDEX)->GetDataType();
 
     if (xDataType != gradDataType) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName_, "x, grad",
-            (std::to_string(static_cast<int32_t>(xDataType)) + ", " +
-             std::to_string(static_cast<int32_t>(gradDataType)))
-                .c_str(),
-            "x data type not equal grad data type.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, grad",
+                                               (std::to_string(static_cast<int32_t>(xDataType)) + ", " +
+                                                std::to_string(static_cast<int32_t>(gradDataType)))
+                                                   .c_str(),
+                                               "x data type not equal grad data type.");
         return ge::GRAPH_FAILED;
     }
     if (xDataType != yOutDataType) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName_, "x, y",
-            (std::to_string(static_cast<int32_t>(xDataType)) + ", " +
-             std::to_string(static_cast<int32_t>(yOutDataType)))
-                .c_str(),
-            "x data type not equal y data type.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, y",
+                                               (std::to_string(static_cast<int32_t>(xDataType)) + ", " +
+                                                std::to_string(static_cast<int32_t>(yOutDataType)))
+                                                   .c_str(),
+                                               "x data type not equal y data type.");
         return ge::GRAPH_FAILED;
     }
     if ((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16)) {
@@ -195,25 +192,25 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::CheckAttrShape()
     auto dilationsVector = attrs->GetListInt(DILATION_ATTR_INDEX)->GetData();
     for (uint32_t i = 0; i < static_cast<uint32_t>(kSizeDimNum); i++) {
         if (kSizeVector[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("kSize[") + std::to_string(i) + "]").c_str(),
-                std::to_string(kSizeVector[i]).c_str(), "kSize value should bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("kSize[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(kSizeVector[i]).c_str(),
+                                                  "kSize value should bigger than 0");
             return ge::GRAPH_FAILED;
         }
     }
     for (uint32_t i = 0; i < static_cast<uint32_t>(stridesDimNum); i++) {
         if (stridesVector[i] <= 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("strides[") + std::to_string(i) + "]").c_str(),
-                std::to_string(stridesVector[i]).c_str(), "strides value should bigger than 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("strides[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(stridesVector[i]).c_str(),
+                                                  "strides value should bigger than 0");
             return ge::GRAPH_FAILED;
         }
     }
     for (uint32_t i = 0; i < static_cast<uint32_t>(padsDimNum); i++) {
         if (padsVector[i] < 0) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(),
-                std::to_string(padsVector[i]).c_str(), "pads value should bigger or equal 0");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(),
+                                                  std::to_string(padsVector[i]).c_str(),
+                                                  "pads value should bigger or equal 0");
             return ge::GRAPH_FAILED;
         }
     }
@@ -377,13 +374,13 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::GetShapeAttrsInfo()
     OP_LOGD(context_->GetNodeName(), "Enter MaxPool3DGradWithArgmaxTilingBaseV35 GetShapeAttrsInfo.");
     const char* opName_ = "MaxPool3DGradWithArgmax";
     if (ge::GRAPH_SUCCESS != CheckInputDtype()) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName_, "x, grad, argmax", "invalid_dtypes", "The input dtype is invalid.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, grad, argmax", "invalid_dtypes",
+                                               "The input dtype is invalid.");
         return ge::GRAPH_FAILED;
     }
     if (!CheckInputShape()) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName_, "x, grad, argmax", "invalid_shapes", "The input relationship is invalid.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, grad, argmax", "invalid_shapes",
+                                               "The input relationship is invalid.");
         return ge::GRAPH_FAILED;
     }
     if (ge::GRAPH_SUCCESS != CheckAttrShape()) {

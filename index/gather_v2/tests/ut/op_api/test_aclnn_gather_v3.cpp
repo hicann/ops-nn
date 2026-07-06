@@ -21,120 +21,112 @@ using namespace op;
 using namespace std;
 
 class l2GatherV3Test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "gather_v3_test SetUp" << endl;
-  }
+protected:
+    static void SetUpTestCase() { cout << "gather_v3_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "gather_v3_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "gather_v3_test TearDown" << endl; }
 };
 
+TEST_F(l2GatherV3Test, case_1)
+{
+    auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto tensorIndicesDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5).Value(vector<int>{1, 2, 3, 4});
+    auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
 
-TEST_F(l2GatherV3Test, case_1) {
-  auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto tensorIndicesDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND)
-      .ValueRange(0, 5)
-      .Value(vector<int>{1,2,3,4});
-  auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  int64_t dim = 0;
-  int64_t batchDims = 0;
-  int64_t mode = 1;
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
 
-  auto ut = OP_API_UT(aclnnGatherV3,  // host api第二段接口名称
-                      INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode),   // host api输入
-                      OUTPUT(tensorOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
 }
 
 // indice nullptr
-TEST_F(l2GatherV3Test, case_2) {
-  auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto tensorIndicesDesc = nullptr;
-  auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherV3Test, case_2)
+{
+    auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto tensorIndicesDesc = nullptr;
+    auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  int64_t dim = 0;
-  int64_t batchDims = 0;
-  int64_t mode = 1;
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
 
-  auto ut = OP_API_UT(aclnnGatherV3,  // host api第二段接口名称
-                      INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode),   // host api输入
-                      OUTPUT(tensorOutDesc));
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // weight nullptr
-TEST_F(l2GatherV3Test, case_3) {
-  auto tensorWeightDesc = nullptr;
-  auto tensorIndicesDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND)
-      .ValueRange(0, 5)
-      .Value(vector<int>{1,2,3,4});
-  auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2GatherV3Test, case_3)
+{
+    auto tensorWeightDesc = nullptr;
+    auto tensorIndicesDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5).Value(vector<int>{1, 2, 3, 4});
+    auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  int64_t dim = 0;
-  int64_t batchDims = 0;
-  int64_t mode = 1;
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
 
-  auto ut = OP_API_UT(aclnnGatherV3,  // host api第二段接口名称
-                      INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode),   // host api输入
-                      OUTPUT(tensorOutDesc));
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // out nullptr
-TEST_F(l2GatherV3Test, case_4) {
-  auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto tensorIndicesDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND)
-      .ValueRange(0, 5)
-      .Value(vector<int>{1,2,3,4});
-  auto tensorOutDesc = nullptr;
+TEST_F(l2GatherV3Test, case_4)
+{
+    auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto tensorIndicesDesc = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 5).Value(vector<int>{1, 2, 3, 4});
+    auto tensorOutDesc = nullptr;
 
-  int64_t dim = 0;
-  int64_t batchDims = 0;
-  int64_t mode = 1;
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
 
-  auto ut = OP_API_UT(aclnnGatherV3,  // host api第二段接口名称
-                      INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode),   // host api输入
-                      OUTPUT(tensorOutDesc));
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // indices support int64, weight support float16
-TEST_F(l2GatherV3Test, case_5) {
-  auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto tensorIndicesDesc = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND)
-      .ValueRange(0, 5)
-      .Value(vector<int>{1,2,3,4});
-  auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2GatherV3Test, case_5)
+{
+    auto tensorWeightDesc = TensorDesc({10, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto tensorIndicesDesc = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 5).Value(vector<int>{1, 2, 3, 4});
+    auto tensorOutDesc = TensorDesc({4, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  int64_t dim = 0;
-  int64_t batchDims = 0;
-  int64_t mode = 1;
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
 
-  auto ut = OP_API_UT(aclnnGatherV3,  // host api第二段接口名称
-                      INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode),   // host api输入
-                      OUTPUT(tensorOutDesc));
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
 
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-  // SAMPLE: precision simulate
-  ut.TestPrecision();
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
 }
-

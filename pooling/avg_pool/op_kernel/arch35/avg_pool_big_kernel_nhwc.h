@@ -18,8 +18,7 @@
 #include "op_kernel/math_util.h"
 #include "avg_pool_struct.h"
 
-namespace AvgPool
-{
+namespace AvgPool {
 using namespace AscendC;
 
 static constexpr int32_t NO_SPLIT_KERNEL = 0;
@@ -30,8 +29,7 @@ static constexpr int64_t GATHER_THRES = 32;
 static constexpr int64_t MOV_ALIGN_THRES = 128;
 
 template <typename T>
-class AvgPoolNhwcBigKernel
-{
+class AvgPoolNhwcBigKernel {
 public:
     __aicore__ inline AvgPoolNhwcBigKernel(TPipe* pipe, const AvgPoolBigKernelNhwcTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -39,8 +37,7 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW,
-        int64_t& curInOffset);
+    __aicore__ inline void CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <int32_t SPLIT_MODE>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx);
     __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
@@ -66,10 +63,7 @@ private:
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
     __aicore__ inline void ComputeSum(LocalTensor<T>& xLocal, int64_t dataCount);
     __aicore__ inline void ComputeAvg(int64_t length);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
@@ -140,8 +134,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::Process()
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::CalcKernelSize(int64_t curIdx, int64_t& curkH,
-    int64_t& curkW, int64_t& curInOffset)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::CalcKernelSize(int64_t curIdx, int64_t& curkH, int64_t& curkW,
+                                                               int64_t& curInOffset)
 {
     int64_t cur2D = curIdx % outHW_;
     int64_t curN = curIdx / outHW_;
@@ -149,11 +143,13 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::CalcKernelSize(int64_t curIdx, i
     int64_t curWo = cur2D % tilingData_->wOutDim;
 
     int64_t curkPadH = 0;
-    CalcKernelSizeCore(PoolParamsForDim{tilingData_->hInDim, curHo, tilingData_->kH, tilingData_->sH,
-        tilingData_->tPad, tilingData_->bPad}, curkH, curkPadH, curOriginH_);
+    CalcKernelSizeCore(PoolParamsForDim{tilingData_->hInDim, curHo, tilingData_->kH, tilingData_->sH, tilingData_->tPad,
+                                        tilingData_->bPad},
+                       curkH, curkPadH, curOriginH_);
     int64_t curkPadW = 0;
-    CalcKernelSizeCore(PoolParamsForDim{tilingData_->wInDim, curWo, tilingData_->kW, tilingData_->sW,
-        tilingData_->lPad, tilingData_->rPad}, curkW, curkPadW, curOriginW_);
+    CalcKernelSizeCore(PoolParamsForDim{tilingData_->wInDim, curWo, tilingData_->kW, tilingData_->sW, tilingData_->lPad,
+                                        tilingData_->rPad},
+                       curkW, curkPadW, curOriginW_);
 
     curOriginIndex_ = (curOriginH_ * tilingData_->wInDim + curOriginW_) * tilingData_->channel;
     curInOffset = curN * inHW_ * tilingData_->channel + curOriginIndex_;
@@ -217,8 +213,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInSingleRow(int64_t offset, 
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInMultiRows(int64_t offset, int64_t hLen,
-    int64_t wLen, int64_t blockLen)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInMultiRows(int64_t offset, int64_t hLen, int64_t wLen,
+                                                                int64_t blockLen)
 {
     if (tilingData_->channel * sizeof(T) <= GATHER_THRES) {
         CopyInMultiRowsContiguous(offset, hLen, wLen * tilingData_->channel);
@@ -250,8 +246,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInMultiRows(int64_t offset, 
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInMultiRowsContiguous(int64_t offset,
-    int64_t hLen, int64_t wLen)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::CopyInMultiRowsContiguous(int64_t offset, int64_t hLen, int64_t wLen)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
 
@@ -312,8 +307,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeAvg(int64_t length)
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::NoSplitKernelProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                     int64_t curInOffset)
 {
     if (curkH * curkW == 0) {
         return;
@@ -323,8 +318,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::NoSplitKernelProcess(int32_t loc
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitKernelHProcess(int32_t localCurIdx,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitKernelHProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                    int64_t curInOffset)
 {
     if (curkH * curkW == 0) {
         return;
@@ -349,8 +344,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitKernelHProcess(int32_t loca
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitKernelWProcess(int32_t localCurIdx,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitKernelWProcess(int32_t localCurIdx, int64_t curkH, int64_t curkW,
+                                                                    int64_t curInOffset)
 {
     if (curkH * curkW == 0) {
         return;
@@ -360,7 +355,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitKernelWProcess(int32_t loca
     int64_t wFactor = tilingData_->inUbSize / channelAlign_;
     int64_t wLoops = ops::Ceil(curkW, wFactor);
     int64_t wTail = curkW - (wLoops - 1) * wFactor;
-    
+
     for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
         int64_t hOffset = curInOffset + hLoop * tilingData_->wInDim * tilingData_->channel;
         for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
@@ -408,8 +403,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSum(LocalTensor<T>& xLoca
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitChannelProcess(int32_t curIdx,
-    int64_t curkH, int64_t curkW, int64_t curInOffset)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::SplitChannelProcess(int32_t curIdx, int64_t curkH, int64_t curkW,
+                                                                    int64_t curInOffset)
 {
     if (curkH * curkW == 0) {
         InitOutLocal<true>(0);
@@ -464,7 +459,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::InitOutLocal(int32_t localCurIdx
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
 
-    if constexpr (!CLEAR) {  // kerel 全载场景无需merge，因此无需初始化output
+    if constexpr (!CLEAR) { // kerel 全载场景无需merge，因此无需初始化output
         return;
     }
     if constexpr (std::is_same<T, float>::value) {
@@ -474,10 +469,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::InitOutLocal(int32_t localCurIdx
         uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
         uint32_t num = maxLocalLen;
         __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
-        __VEC_SCOPE__
-        {
-            CustomDuplicate<T>(addr, num, repeatTimes);
-        }
+        __VEC_SCOPE__ { CustomDuplicate<T>(addr, num, repeatTimes); }
     } else {
         LocalTensor<float> sumLocal = sumBuf_.Get<float>();
         __local_mem__ float* dstAddr = (__local_mem__ float*)sumLocal.GetPhyAddr();
@@ -485,17 +477,13 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::InitOutLocal(int32_t localCurIdx
         uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
         uint32_t num = maxLocalLen;
         __local_mem__ float* addr = (__local_mem__ float*)dstAddr;
-        __VEC_SCOPE__
-        {
-            CustomDuplicate<float>(addr, num, repeatTimes);
-        }
+        __VEC_SCOPE__ { CustomDuplicate<float>(addr, num, repeatTimes); }
     }
 }
 
 template <typename T>
 template <bool MERGE, bool IS_LAST_LOOP>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNorm(int32_t localCurIdx, int64_t loop,
-    int64_t dataCount)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNorm(int32_t localCurIdx, int64_t loop, int64_t dataCount)
 {
     LocalTensor<T> maxOutLocal = outputBuf_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -541,8 +529,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNorm(int32_t localC
 
 template <typename T>
 template <bool MERGE, bool IS_LAST_LOOP>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNormForAvgNotFp32(int32_t localCurIdx,
-    int64_t loop, int64_t dataCount)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNormForAvgNotFp32(int32_t localCurIdx, int64_t loop,
+                                                                               int64_t dataCount)
 {
     LocalTensor<float> sumLocal = sumBuf_.Get<float>();
     LocalTensor<T> outLocal = outputBuf_.Get<T>();
@@ -598,8 +586,8 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNormForAvgNotFp32(i
 
 template <typename T>
 template <bool MERGE, bool IS_LAST_LOOP>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGatherForAvgNotFp32(int32_t localCurIdx,
-    int64_t loop, int64_t dataCount)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGatherForAvgNotFp32(int32_t localCurIdx, int64_t loop,
+                                                                                     int64_t dataCount)
 {
     LocalTensor<float> sumLocal = sumBuf_.Get<float>();
     LocalTensor<T> outLocal = outputBuf_.Get<T>();
@@ -671,7 +659,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGatherForAvgNot
 template <typename T>
 template <bool MERGE, bool IS_LAST_LOOP>
 __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGather(int32_t localCurIdx, int64_t loop,
-    int64_t dataCount)
+                                                                        int64_t dataCount)
 {
     LocalTensor<T> maxOutLocal = outputBuf_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
@@ -723,8 +711,7 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGather(int32_t 
 
 template <typename T>
 template <bool MERGE, bool IS_LAST_LOOP>
-__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingle(int32_t localCurIdx, int64_t loop,
-    int64_t dataCount)
+__aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingle(int32_t localCurIdx, int64_t loop, int64_t dataCount)
 {
     if (tilingData_->channel * sizeof(T) <= GATHER_THRES) {
         if constexpr (std::is_same<T, float>::value) {
@@ -741,5 +728,5 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingle(int32_t localCurId
     }
 }
 
-}  // namespace Pool3D
-#endif  // POOL_3D_NDHWC_BIG_KERNEL_H_
+} // namespace AvgPool
+#endif // POOL_3D_NDHWC_BIG_KERNEL_H_

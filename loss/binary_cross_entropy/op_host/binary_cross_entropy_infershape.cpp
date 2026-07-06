@@ -18,33 +18,37 @@
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShape4BinaryCrossEntropy(gert::InferShapeContext* context) {
-  auto attrs = context->GetAttrs();
-  OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-  auto reduction = attrs->GetAttrPointer<char>(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, reduction);
-  if (strcmp(reduction, "none") == 0) {
-    return Ops::Base::InferShape4Elewise(context);
-  }
-  auto out_shape = context->GetOutputShape(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-  out_shape->SetDimNum(0);
+static ge::graphStatus InferShape4BinaryCrossEntropy(gert::InferShapeContext* context)
+{
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    auto reduction = attrs->GetAttrPointer<char>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, reduction);
+    if (strcmp(reduction, "none") == 0) {
+        return Ops::Base::InferShape4Elewise(context);
+    }
+    auto out_shape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    out_shape->SetDimNum(0);
 
-  return ge::GRAPH_SUCCESS;
+    return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4BinaryCrossEntropy(gert::InferDataTypeContext *context) {
-  if (context == nullptr) {
-    return ge::GRAPH_FAILED;
-  }
-  OP_LOGD(context->GetNodeName(), "InferDataType4BinaryCrossEntropy enter");
-  auto inputXDtype = context->GetInputDataType(0);
-  context->SetOutputDataType(0, inputXDtype);
-  OP_LOGD(context->GetNodeName(), "set BinaryCrossEntropy output dtype: %s", Ops::Base::ToString(inputXDtype).c_str());
-  OP_LOGD(context->GetNodeName(), "InferDataType4BinaryCrossEntropy end");
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus InferDataType4BinaryCrossEntropy(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "InferDataType4BinaryCrossEntropy enter");
+    auto inputXDtype = context->GetInputDataType(0);
+    context->SetOutputDataType(0, inputXDtype);
+    OP_LOGD(context->GetNodeName(), "set BinaryCrossEntropy output dtype: %s",
+            Ops::Base::ToString(inputXDtype).c_str());
+    OP_LOGD(context->GetNodeName(), "InferDataType4BinaryCrossEntropy end");
+    return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(BinaryCrossEntropy).InferShape(InferShape4BinaryCrossEntropy)
-                                      .InferDataType(InferDataType4BinaryCrossEntropy);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(BinaryCrossEntropy)
+    .InferShape(InferShape4BinaryCrossEntropy)
+    .InferDataType(InferDataType4BinaryCrossEntropy);
+} // namespace ops

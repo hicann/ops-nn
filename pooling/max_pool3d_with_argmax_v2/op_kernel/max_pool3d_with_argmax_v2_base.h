@@ -179,13 +179,13 @@ public:
         // Split data betweeen cores :
         // 1) split blocks with 8 channels between cores
         // 2) then remaining channels give one of cores
-        batchesCurCore =
-            batchesPerCore + (blockLength * (coreIdx + 1) <= leftOverBatches ?
-                                  blockLength :
-                                  (blockLength * coreIdx < leftOverBatches ? leftOverBatches % blockLength : 0));
-        batchOffset =
-            batchesPerCore * coreIdx +
-            ((coreIdx < (leftOverBatches + blockLength - 1) / blockLength) ? blockLength * coreIdx : leftOverBatches);
+        batchesCurCore = batchesPerCore +
+                         (blockLength * (coreIdx + 1) <= leftOverBatches ?
+                              blockLength :
+                              (blockLength * coreIdx < leftOverBatches ? leftOverBatches % blockLength : 0));
+        batchOffset = batchesPerCore * coreIdx + ((coreIdx < (leftOverBatches + blockLength - 1) / blockLength) ?
+                                                      blockLength * coreIdx :
+                                                      leftOverBatches);
     }
 
     __aicore__ inline void GMInit(GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace)
@@ -225,8 +225,8 @@ public:
     }
 
 private:
-    __aicore__ inline void FindMax(
-        LocalTensor<T> src, LocalTensor<T> dst, uint32_t length, uint8_t inpStride, uint32_t rowLen)
+    __aicore__ inline void FindMax(LocalTensor<T> src, LocalTensor<T> dst, uint32_t length, uint8_t inpStride,
+                                   uint32_t rowLen)
     {
         uint32_t halfOffset = length * blockLength;
         BinaryRepeatParams pars{1, 1, 1, static_cast<uint8_t>(kernelDHW - halfKernelDHW), inpStride, inpStride};
@@ -251,8 +251,8 @@ private:
             (length - rep * BLOCKS_IN_REP) * blockLength, rowLen % MAX_REPEAT_TIMES, pars);
     }
 
-    __aicore__ inline void FindMin(
-        LocalTensor<T> src, LocalTensor<T> dst, uint32_t length, uint8_t inpStride, uint32_t rowLen)
+    __aicore__ inline void FindMin(LocalTensor<T> src, LocalTensor<T> dst, uint32_t length, uint8_t inpStride,
+                                   uint32_t rowLen)
     {
         uint32_t halfOffset = length * blockLength;
         BinaryRepeatParams pars{1, 1, 1, static_cast<uint8_t>(kernelDHW - halfKernelDHW), inpStride, inpStride};
@@ -278,21 +278,15 @@ private:
             (length - rep * BLOCKS_IN_REP) * blockLength, rowLen % MAX_REPEAT_TIMES, pars);
     }
 
-    __aicore__ inline uint32_t OutputCalcD(const uint32_t& size)
-    {
-        return (size - dD * (kD - 1) + sD - 1) / sD;
-    }
+    __aicore__ inline uint32_t OutputCalcD(const uint32_t& size) { return (size - dD * (kD - 1) + sD - 1) / sD; }
 
-    __aicore__ inline uint32_t OutputCalcH(const uint32_t& size)
-    {
-        return (size - dH * (kH - 1) + sH - 1) / sH;
-    }
+    __aicore__ inline uint32_t OutputCalcH(const uint32_t& size) { return (size - dH * (kH - 1) + sH - 1) / sH; }
 
     __aicore__ inline void CopyOutVals(const uint32_t& dstOffset, const uint32_t& partNC, const uint32_t& partOut);
 
 protected:
-    __aicore__ inline uint32_t RoundUpBlock(
-        const uint32_t& src, const uint32_t& blockLen = BLOCK_SIZE / sizeof(T)) const
+    __aicore__ inline uint32_t RoundUpBlock(const uint32_t& src,
+                                            const uint32_t& blockLen = BLOCK_SIZE / sizeof(T)) const
     {
         if (blockLen != 0) {
             return src != 0 ? (src + blockLen - 1) / blockLen * blockLen : blockLen;
@@ -308,10 +302,7 @@ protected:
         return blockLen;
     }
 
-    __aicore__ inline uint32_t OutputCalcW(const uint32_t& size)
-    {
-        return (size - dW * (kW - 1) + sW - 1) / sW;
-    }
+    __aicore__ inline uint32_t OutputCalcW(const uint32_t& size) { return (size - dW * (kW - 1) + sW - 1) / sW; }
 
     __aicore__ inline void CreateKernelIndexes()
     {
@@ -321,9 +312,8 @@ protected:
         SetFlag<HardEvent::S_V>(event0);
         WaitFlag<HardEvent::S_V>(event0);
 
-        Brcb(
-            kernelIndexes, transDataTensorUb1, alKernelDHW / BLOCKS_IN_REP,
-            {1, BLOCKS_IN_REP}); // Can't be done in place
+        Brcb(kernelIndexes, transDataTensorUb1, alKernelDHW / BLOCKS_IN_REP,
+             {1, BLOCKS_IN_REP}); // Can't be done in place
     }
 
     __aicore__ inline void PrepareInput(LocalTensor<half> srcUb, uint32_t dataSize)
@@ -350,8 +340,8 @@ protected:
         LocalTensor<float> tmp = transDataTensorUb1[blockLength * blockLength];
         LocalTensor<float> tmp2 = srcUb[blockLength];
         for (int32_t i = 0; i < blockLength; i++) {
-            dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] =
-                (uint64_t)transDataTensorUb1[i * blockLength].GetPhyAddr();
+            dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] = (uint64_t)transDataTensorUb1[i * blockLength]
+                                                                           .GetPhyAddr();
             dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] = (uint64_t)tmp[i * blockLength].GetPhyAddr();
             srcLocalList[i] = (uint64_t)srcUb[i * partAlignDhwInp].GetPhyAddr();
             srcLocalList[i + blockLength] = (uint64_t)tmp2[i * partAlignDhwInp].GetPhyAddr();
@@ -372,13 +362,11 @@ protected:
 
         for (maxRep = 0; maxRep + (MAX_REPEAT_TIMES - 1) * MAX_VEC_ELEMS_PER_REP_FP32 < rep;
              maxRep += MAX_REPEAT_TIMES * MAX_VEC_ELEMS_PER_REP_FP32) {
-            Copy(
-                idxs[dhVal + maxRep], src[maxRep], MAX_VEC_ELEMS_PER_REP_FP32, MAX_REPEAT_TIMES,
-                {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+            Copy(idxs[dhVal + maxRep], src[maxRep], MAX_VEC_ELEMS_PER_REP_FP32, MAX_REPEAT_TIMES,
+                 {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         }
-        Copy(
-            idxs[dhVal + maxRep], src[maxRep], MAX_VEC_ELEMS_PER_REP_FP32, remWholeReps,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(idxs[dhVal + maxRep], src[maxRep], MAX_VEC_ELEMS_PER_REP_FP32, remWholeReps,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         Copy(idxs[dhVal + rep], src[rep], remPart, 1, {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         PipeBarrier<PIPE_V>();
     }
@@ -404,34 +392,23 @@ protected:
         PipeBarrier<PIPE_V>();
 
         for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-            Copy(
-                dst[i * MAX_REPEAT_TIMES * mask], transDataTensorUb1[i * MAX_REPEAT_TIMES * mask], mask,
-                MAX_REPEAT_TIMES, {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+            Copy(dst[i * MAX_REPEAT_TIMES * mask], transDataTensorUb1[i * MAX_REPEAT_TIMES * mask], mask,
+                 MAX_REPEAT_TIMES, {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         }
-        Copy(
-            dst[wholeOffset], transDataTensorUb1[wholeOffset], mask, tailRepeatTimes,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
-        Copy(
-            dst[tailOffset], transDataTensorUb1[tailOffset], tailElemsPerRepeat, 1,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(dst[wholeOffset], transDataTensorUb1[wholeOffset], mask, tailRepeatTimes,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(dst[tailOffset], transDataTensorUb1[tailOffset], tailElemsPerRepeat, 1,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CastBF16(LocalTensor<float> src, LocalTensor<float> dst, uint32_t partNC)
-    {}
+    __aicore__ inline void CastBF16(LocalTensor<float> src, LocalTensor<float> dst, uint32_t partNC) {}
 
-    __aicore__ inline void CastBF16(LocalTensor<half> src, LocalTensor<half> dst, uint32_t partNC)
-    {}
+    __aicore__ inline void CastBF16(LocalTensor<half> src, LocalTensor<half> dst, uint32_t partNC) {}
 
-    __aicore__ inline void CastBF16Back(LocalTensor<half> src, uint32_t partNC)
-    {
-        queOutVals.EnQue<half>(src);
-    }
+    __aicore__ inline void CastBF16Back(LocalTensor<half> src, uint32_t partNC) { queOutVals.EnQue<half>(src); }
 
-    __aicore__ inline void CastBF16BackFloat(LocalTensor<float> src, uint32_t partNC)
-    {
-        queOutVals.EnQue<float>(src);
-    }
+    __aicore__ inline void CastBF16BackFloat(LocalTensor<float> src, uint32_t partNC) { queOutVals.EnQue<float>(src); }
 
     __aicore__ inline void CastBF16BackBFloat(LocalTensor<float> src, uint32_t partNC)
     {
@@ -454,8 +431,9 @@ protected:
         transDataParamsReverse.dstHighHalf = false;
         transDataParamsReverse.srcHighHalf = false;
         transDataParamsReverse.repeatTimes = transAlignRoundPartOutSize / NCHW_CONV_ADDR_LIST_SIZE;
-        transDataParamsReverse.dstRepStride =
-            (transDataParamsReverse.repeatTimes == 1) ? 0 : NCHW_CONV_ADDR_LIST_SIZE / blockLength;
+        transDataParamsReverse.dstRepStride = (transDataParamsReverse.repeatTimes == 1) ?
+                                                  0 :
+                                                  NCHW_CONV_ADDR_LIST_SIZE / blockLength;
         transDataParamsReverse.srcRepStride = (transDataParamsReverse.repeatTimes == 1) ? 0 : NCHW_CONV_ADDR_LIST_SIZE;
 
         transDataParams.dstHighHalf = false;
@@ -465,8 +443,8 @@ protected:
         transDataParams.srcRepStride = (transDataParams.repeatTimes == 1) ? 0 : NCHW_CONV_ADDR_LIST_SIZE / blockLength;
     }
 
-    __aicore__ inline void FindMaxRowPerKernel(
-        LocalTensor<T>& src, LocalTensor<T>& dst, LocalTensor<T>& tmp, uint32_t dhVal, uint32_t rowLen)
+    __aicore__ inline void FindMaxRowPerKernel(LocalTensor<T>& src, LocalTensor<T>& dst, LocalTensor<T>& tmp,
+                                               uint32_t dhVal, uint32_t rowLen)
     {
         // Find Max for each row by width
         uint32_t halfInd = halfKernelDHW;
@@ -486,15 +464,13 @@ protected:
             const uint32_t wholeOffsetSrc = wholeRepeatTimes * MAX_REPEAT_TIMES * blockKernelDHW;
 
             for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-                Copy(
-                    tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
-                    src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
-                    MAX_REPEAT_TIMES,
-                    {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+                Copy(tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
+                     src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
+                     MAX_REPEAT_TIMES,
+                     {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
             }
-            Copy(
-                tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
-                tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+            Copy(tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
+                 tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
         }
         PipeBarrier<PIPE_V>();
 
@@ -519,19 +495,17 @@ protected:
             const uint32_t roundDownRepeatTimes = (blockLength * partOutW) / mask;
             const uint32_t tailElemsPerRepeat = (blockLength * partOutW) % mask;
             Copy(dst[dhVal], curMax, mask, roundDownRepeatTimes, {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
-            Copy(
-                dst[dhVal + mask * roundDownRepeatTimes], curMax[mask * roundDownRepeatTimes], tailElemsPerRepeat, 1,
-                {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+            Copy(dst[dhVal + mask * roundDownRepeatTimes], curMax[mask * roundDownRepeatTimes], tailElemsPerRepeat, 1,
+                 {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         }
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void FindMaxRowPerRepeat(
-        LocalTensor<T>& src, LocalTensor<T>& dst, LocalTensor<T>& tmp, uint32_t dhVal, uint32_t rowLen)
+    __aicore__ inline void FindMaxRowPerRepeat(LocalTensor<T>& src, LocalTensor<T>& dst, LocalTensor<T>& tmp,
+                                               uint32_t dhVal, uint32_t rowLen)
     {
-        DataCopyParams copyEvenParams = {
-            static_cast<uint16_t>(rowLen), 1, static_cast<uint16_t>(kernelDHW - 1),
-            static_cast<uint16_t>((kernelDHW - 1) / MAX_DIV)};
+        DataCopyParams copyEvenParams = {static_cast<uint16_t>(rowLen), 1, static_cast<uint16_t>(kernelDHW - 1),
+                                         static_cast<uint16_t>((kernelDHW - 1) / MAX_DIV)};
         uint32_t halfInd = halfKernelDHW;
         uint32_t halfOffset = halfInd * blockLength;
         uint32_t wholeDataRow = blockKernelDHW * rowLen;
@@ -553,15 +527,13 @@ protected:
             const uint32_t wholeOffsetSrc = wholeRepeatTimes * MAX_REPEAT_TIMES * blockKernelDHW;
 
             for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-                Copy(
-                    tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
-                    src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
-                    MAX_REPEAT_TIMES,
-                    {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+                Copy(tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
+                     src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
+                     MAX_REPEAT_TIMES,
+                     {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
             }
-            Copy(
-                tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
-                tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+            Copy(tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
+                 tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
         }
         PipeBarrier<PIPE_V>();
 
@@ -594,9 +566,8 @@ protected:
             const uint32_t roundDownRepeatTimes = (blockLength * rowLen) / mask;
             const uint32_t tailElemsPerRepeat = (blockLength * rowLen) % mask;
             Copy(dst[dhVal], curMax, mask, roundDownRepeatTimes, {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
-            Copy(
-                dst[dhVal + mask * roundDownRepeatTimes], curMax[mask * roundDownRepeatTimes], tailElemsPerRepeat, 1,
-                {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+            Copy(dst[dhVal + mask * roundDownRepeatTimes], curMax[mask * roundDownRepeatTimes], tailElemsPerRepeat, 1,
+                 {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         }
         PipeBarrier<PIPE_V>();
     }
@@ -621,15 +592,13 @@ protected:
             const uint32_t wholeOffsetSrc = wholeRepeatTimes * MAX_REPEAT_TIMES * blockKernelDHW;
 
             for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-                Copy(
-                    tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
-                    src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
-                    MAX_REPEAT_TIMES,
-                    {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+                Copy(tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
+                     src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
+                     MAX_REPEAT_TIMES,
+                     {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
             }
-            Copy(
-                tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
-                tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+            Copy(tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
+                 tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
         }
         PipeBarrier<PIPE_V>();
 
@@ -677,15 +646,13 @@ protected:
             const uint32_t wholeOffsetSrc = wholeRepeatTimes * MAX_REPEAT_TIMES * blockKernelDHW;
 
             for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-                Copy(
-                    tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
-                    src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
-                    MAX_REPEAT_TIMES,
-                    {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+                Copy(tmp[i * MAX_REPEAT_TIMES * (halfKernelDHW + 1) * blockLength + halfOffset],
+                     src[i * MAX_REPEAT_TIMES * blockKernelDHW + blockKernelDHW - blockLength], blockLength,
+                     MAX_REPEAT_TIMES,
+                     {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
             }
-            Copy(
-                tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
-                tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
+            Copy(tmp[wholeOffsetDst + halfOffset], src[wholeOffsetSrc + blockKernelDHW - blockLength], blockLength,
+                 tailRepeatTimes, {1, 1, static_cast<uint16_t>(halfKernelDHW + 1), static_cast<uint16_t>(kernelDHW)});
         }
         PipeBarrier<PIPE_V>();
 
@@ -719,9 +686,8 @@ protected:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CompareSelect(
-        LocalTensor<T>& maxResult, LocalTensor<T>& srcDst, LocalTensor<uint8_t>& masks, LocalTensor<uint8_t>& nanmasks,
-        uint32_t rowLen, uint32_t dhVal)
+    __aicore__ inline void CompareSelect(LocalTensor<T>& maxResult, LocalTensor<T>& srcDst, LocalTensor<uint8_t>& masks,
+                                         LocalTensor<uint8_t>& nanmasks, uint32_t rowLen, uint32_t dhVal)
     {
         auto wholeRow = blockKernelDHW * rowLen;
         auto alInt8Offset = RoundUpBlock(blockKernelDHW / BITS_UINT8, BLOCK_LEN_UINT8);
@@ -729,9 +695,9 @@ protected:
         SetVectorMask<T, MaskMode::COUNTER>(mask);
         for (uint32_t curWidthOut = 0, dstOff = 0, blocks = dhVal; curWidthOut < wholeRow;
              curWidthOut += blockKernelDHW, blocks += blockLength, dstOff += alInt8Offset) {
-            Compare<T, uint8_t, false>(
-                masks[dstOff], maxResult[blocks], srcDst[curWidthOut], CMPMODE::EQ, MASK_PLACEHOLDER,
-                blockAlKernelDHW / mask, {1, 0, 1, BLOCKS_IN_REP, 0, BLOCKS_IN_REP});
+            Compare<T, uint8_t, false>(masks[dstOff], maxResult[blocks], srcDst[curWidthOut], CMPMODE::EQ,
+                                       MASK_PLACEHOLDER, blockAlKernelDHW / mask,
+                                       {1, 0, 1, BLOCKS_IN_REP, 0, BLOCKS_IN_REP});
             Compare<T>(nanmasks[dstOff], srcDst[curWidthOut], srcDst[curWidthOut], CMPMODE::EQ, blockAlKernelDHW);
         }
         PipeBarrier<PIPE_V>();
@@ -741,9 +707,8 @@ protected:
 
         for (uint32_t curWidthOut = 0, srcOff = 0; curWidthOut < wholeRow;
              curWidthOut += blockKernelDHW, srcOff += alInt8Offset) {
-            Select<T>(
-                srcDst[curWidthOut], masks[srcOff], kernelIndexes, static_cast<T>(1.f * kernelDHW), SELMODE::VSEL_TENSOR_SCALAR_MODE,
-                blockKernelDHW);
+            Select<T>(srcDst[curWidthOut], masks[srcOff], kernelIndexes, static_cast<T>(1.f * kernelDHW),
+                      SELMODE::VSEL_TENSOR_SCALAR_MODE, blockKernelDHW);
         }
         PipeBarrier<PIPE_V>();
 
@@ -752,83 +717,77 @@ protected:
 
         for (uint32_t curWidthOut = 0, srcOff = 0; curWidthOut < wholeRow;
              curWidthOut += blockKernelDHW, srcOff += alInt8Offset) {
-            Select<T>(
-                srcDst[curWidthOut], nanmasks[srcOff], srcDst[curWidthOut], kernelIndexes,
-                SELMODE::VSEL_TENSOR_TENSOR_MODE, blockKernelDHW);
+            Select<T>(srcDst[curWidthOut], nanmasks[srcOff], srcDst[curWidthOut], kernelIndexes,
+                      SELMODE::VSEL_TENSOR_TENSOR_MODE, blockKernelDHW);
         }
         PipeBarrier<PIPE_V>();
 
         Muls(kernelIndexes, kernelIndexes, (T)-1.f, blockKernelDHW);
     }
 
-    __aicore__ inline void CompareSelectBlockKernel(
-        LocalTensor<T>& maxResult, LocalTensor<T>& srcDst, LocalTensor<uint8_t>& masks, LocalTensor<uint8_t>& nanmasks,
-        uint32_t rowLen, uint32_t dhVal)
+    __aicore__ inline void CompareSelectBlockKernel(LocalTensor<T>& maxResult, LocalTensor<T>& srcDst,
+                                                    LocalTensor<uint8_t>& masks, LocalTensor<uint8_t>& nanmasks,
+                                                    uint32_t rowLen, uint32_t dhVal)
     {
         auto alInt8Offset = RoundUpBlock(blockKernelDHW, BLOCK_LEN_UINT8);
         auto maskOff = (MAX_REPEAT_TIMES + 1) * BLOCKS_IN_REP;
 
         uint32_t maxRep = 0;
         for (maxRep = 0; maxRep < rowLen / MAX_REPEAT_TIMES; maxRep++) {
-            Compare<T>(
-                masks[maskOff * maxRep], maxResult[dhVal + MAX_REPEAT_TIMES * maxRep * blockLength],
-                srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW, MAX_REPEAT_TIMES,
-                {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, static_cast<uint8_t>(kernelDHW)});
-            Compare<T>(
-                nanmasks[maskOff * maxRep], srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW],
-                srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW, MAX_REPEAT_TIMES,
-                {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW),
-                 static_cast<uint8_t>(kernelDHW)});
+            Compare<T>(masks[maskOff * maxRep], maxResult[dhVal + MAX_REPEAT_TIMES * maxRep * blockLength],
+                       srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW,
+                       MAX_REPEAT_TIMES,
+                       {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, static_cast<uint8_t>(kernelDHW)});
+            Compare<T>(nanmasks[maskOff * maxRep], srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW],
+                       srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW,
+                       MAX_REPEAT_TIMES,
+                       {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW),
+                        static_cast<uint8_t>(kernelDHW)});
         }
-        Compare<T>(
-            masks[maskOff * maxRep], maxResult[dhVal + MAX_REPEAT_TIMES * maxRep * blockLength],
-            srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW, rowLen % MAX_REPEAT_TIMES,
-            {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, static_cast<uint8_t>(kernelDHW)});
-        Compare<T>(
-            nanmasks[maskOff * maxRep], srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW],
-            srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW,
-            (rowLen % MAX_REPEAT_TIMES),
-            {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW),
-             static_cast<uint8_t>(kernelDHW)});
+        Compare<T>(masks[maskOff * maxRep], maxResult[dhVal + MAX_REPEAT_TIMES * maxRep * blockLength],
+                   srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW,
+                   rowLen % MAX_REPEAT_TIMES,
+                   {1, 0, 1, static_cast<uint8_t>(kernelDHW), 1, static_cast<uint8_t>(kernelDHW)});
+        Compare<T>(nanmasks[maskOff * maxRep], srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW],
+                   srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], CMPMODE::EQ, blockKernelDHW,
+                   (rowLen % MAX_REPEAT_TIMES),
+                   {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW),
+                    static_cast<uint8_t>(kernelDHW)});
         PipeBarrier<PIPE_V>();
         auto event0 = pipe->FetchEventID(HardEvent::S_V);
         SetFlag<HardEvent::S_V>(event0);
         WaitFlag<HardEvent::S_V>(event0);
 
         for (maxRep = 0; maxRep < rowLen / MAX_REPEAT_TIMES; maxRep++) {
-            Select<T>(
-                srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep], kernelIndexes,
-                static_cast<T>(1.f * kernelDHW), SELMODE::VSEL_TENSOR_SCALAR_MODE, blockKernelDHW, MAX_REPEAT_TIMES,
-                {1, 1, 1, static_cast<uint8_t>(kernelDHW), 0, 0});
+            Select<T>(srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep], kernelIndexes,
+                      static_cast<T>(1.f * kernelDHW), SELMODE::VSEL_TENSOR_SCALAR_MODE, blockKernelDHW,
+                      MAX_REPEAT_TIMES, {1, 1, 1, static_cast<uint8_t>(kernelDHW), 0, 0});
         }
-        Select<T>(
-            srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep], kernelIndexes, static_cast<T>(1.f * kernelDHW),
-            SELMODE::VSEL_TENSOR_SCALAR_MODE, blockKernelDHW, rowLen % MAX_REPEAT_TIMES,
-            {1, 1, 1, static_cast<uint8_t>(kernelDHW), 0, 0});
+        Select<T>(srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], masks[maskOff * maxRep], kernelIndexes,
+                  static_cast<T>(1.f * kernelDHW), SELMODE::VSEL_TENSOR_SCALAR_MODE, blockKernelDHW,
+                  rowLen % MAX_REPEAT_TIMES, {1, 1, 1, static_cast<uint8_t>(kernelDHW), 0, 0});
         PipeBarrier<PIPE_V>();
 
         Muls(kernelIndexes, kernelIndexes, (T)-1.f, blockKernelDHW);
         PipeBarrier<PIPE_V>();
 
         for (maxRep = 0; maxRep < rowLen / MAX_REPEAT_TIMES; maxRep++) {
-            Select<T>(
-                srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], nanmasks[maskOff * maxRep],
-                srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], kernelIndexes, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                blockKernelDHW, MAX_REPEAT_TIMES,
-                {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW), 0});
+            Select<T>(srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], nanmasks[maskOff * maxRep],
+                      srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], kernelIndexes,
+                      SELMODE::VSEL_TENSOR_TENSOR_MODE, blockKernelDHW, MAX_REPEAT_TIMES,
+                      {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW), 0});
         }
-        Select<T>(
-            srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], nanmasks[maskOff * maxRep],
-            srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], kernelIndexes, SELMODE::VSEL_TENSOR_TENSOR_MODE,
-            blockKernelDHW, rowLen % MAX_REPEAT_TIMES,
-            {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW), 0});
+        Select<T>(srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], nanmasks[maskOff * maxRep],
+                  srcDst[MAX_REPEAT_TIMES * maxRep * blockKernelDHW], kernelIndexes, SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                  blockKernelDHW, rowLen % MAX_REPEAT_TIMES,
+                  {1, 1, 1, static_cast<uint8_t>(kernelDHW), static_cast<uint8_t>(kernelDHW), 0});
         PipeBarrier<PIPE_V>();
 
         Muls(kernelIndexes, kernelIndexes, (T)-1.f, blockKernelDHW);
     }
 
-    __aicore__ inline void IndexRecalcFirst(
-        LocalTensor<float>& dTensor, LocalTensor<float>& hTensor, LocalTensor<float>& wTensor, uint32_t len)
+    __aicore__ inline void IndexRecalcFirst(LocalTensor<float>& dTensor, LocalTensor<float>& hTensor,
+                                            LocalTensor<float>& wTensor, uint32_t len)
     {
         float coeffH = 1.f / float(int(kW));
         float coeffD = coeffH / float(int(kH));
@@ -861,8 +820,8 @@ protected:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void IndexRecalcSecond(
-        LocalTensor<float>& dTensor, LocalTensor<float>& hTensor, LocalTensor<float>& wTensor, uint32_t len)
+    __aicore__ inline void IndexRecalcSecond(LocalTensor<float>& dTensor, LocalTensor<float>& hTensor,
+                                             LocalTensor<float>& wTensor, uint32_t len)
     {
         float coeffH = 1.f / float(int(this->kW));
         float coeffD = coeffH / float(int(this->kH));
@@ -884,9 +843,9 @@ protected:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void IndexRecalcThird(
-        LocalTensor<int>& dTmp, LocalTensor<int>& hTmp, LocalTensor<int>& wTmp, LocalTensor<int>& dTensor,
-        LocalTensor<int>& hTensor, LocalTensor<int>& wTensor, LocalTensor<float>& idxs, uint32_t len)
+    __aicore__ inline void IndexRecalcThird(LocalTensor<int>& dTmp, LocalTensor<int>& hTmp, LocalTensor<int>& wTmp,
+                                            LocalTensor<int>& dTensor, LocalTensor<int>& hTensor,
+                                            LocalTensor<int>& wTensor, LocalTensor<float>& idxs, uint32_t len)
     {
         auto tmpSize = this->RoundUpBlock(this->roundPartOutSize, BLOCK_LEN_FP32);
 
@@ -921,28 +880,27 @@ protected:
     __aicore__ void Im2ColNoDilationPerRepeat(const LocalTensor<T>& dst, uint32_t& dOff);
 
     template <typename V>
-    __aicore__ inline void TransposeBackVals(
-        LocalTensor<float>& reduceMaxResult, uint32_t partNC, uint64_t* dstLocalList, uint64_t* srcLocalList)
+    __aicore__ inline void TransposeBackVals(LocalTensor<float>& reduceMaxResult, uint32_t partNC,
+                                             uint64_t* dstLocalList, uint64_t* srcLocalList)
     {
         LocalTensor<float> tmp = reduceMaxResult[blockLength];
         LocalTensor<float> tmp2 = transDataTensorUb1[blockLength];
         for (int32_t i = 0; i < blockLength; i++) {
-            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] =
-                (uint64_t)reduceMaxResult[NCHW_CONV_ADDR_LIST_SIZE * i].GetPhyAddr();
-            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] =
-                (uint64_t)tmp[NCHW_CONV_ADDR_LIST_SIZE * i].GetPhyAddr();
-            dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i] =
-                (uint64_t)transDataTensorUb1[i * transAlignRoundPartOutSize].GetPhyAddr();
-            dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] =
-                (uint64_t)tmp2[i * transAlignRoundPartOutSize].GetPhyAddr();
+            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength *
+                         i] = (uint64_t)reduceMaxResult[NCHW_CONV_ADDR_LIST_SIZE * i].GetPhyAddr();
+            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i + 1] = (uint64_t)tmp[NCHW_CONV_ADDR_LIST_SIZE * i]
+                                                                               .GetPhyAddr();
+            dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength *
+                         i] = (uint64_t)transDataTensorUb1[i * transAlignRoundPartOutSize].GetPhyAddr();
+            dstLocalList[NCHW_CONV_ADDR_LIST_SIZE / blockLength * i +
+                         1] = (uint64_t)tmp2[i * transAlignRoundPartOutSize].GetPhyAddr();
         }
 
         TransDataTo5HD<float>(dstLocalList, srcLocalList, transDataParamsReverse); // Result store in transDataTensorUb1
         PipeBarrier<PIPE_V>();
 
-        Copy(
-            reduceMaxResult, transDataTensorUb1, mask, RoundUpBlock(valSize, mask) / mask,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(reduceMaxResult, transDataTensorUb1, mask, RoundUpBlock(valSize, mask) / mask,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         PipeBarrier<PIPE_V>();
 
         if constexpr (sizeof(V) == sizeof(bfloat16_t)) {
@@ -952,8 +910,8 @@ protected:
         }
     }
 
-    __aicore__ inline void TransposeBackVals(
-        LocalTensor<half>& reduceMaxResult, uint32_t partNC, uint64_t* dstLocalList, uint64_t* srcLocalList)
+    __aicore__ inline void TransposeBackVals(LocalTensor<half>& reduceMaxResult, uint32_t partNC,
+                                             uint64_t* dstLocalList, uint64_t* srcLocalList)
     {
         for (int32_t i = 0; i < NCHW_CONV_ADDR_LIST_SIZE; i++) {
             srcLocalList[i] = (uint64_t)reduceMaxResult[i * blockLength].GetPhyAddr();
@@ -963,9 +921,8 @@ protected:
         TransDataTo5HD<half>(dstLocalList, srcLocalList, transDataParamsReverse); // Result store in transDataTensorUb1
         PipeBarrier<PIPE_V>();
 
-        Copy(
-            reduceMaxResult, transDataTensorUb1, mask, RoundUpBlock(valSize, mask) / mask,
-            {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
+        Copy(reduceMaxResult, transDataTensorUb1, mask, RoundUpBlock(valSize, mask) / mask,
+             {1, 1, BLOCKS_IN_REP, BLOCKS_IN_REP});
         PipeBarrier<PIPE_V>();
 
         CastBF16Back(reduceMaxResult, partNC);
@@ -983,32 +940,35 @@ protected:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void TransposeBackIndsHalf(
-        LocalTensor<float>& idxs, uint64_t* dstLocalList, uint64_t* srcLocalList)
+    __aicore__ inline void TransposeBackIndsHalf(LocalTensor<float>& idxs, uint64_t* dstLocalList,
+                                                 uint64_t* srcLocalList)
     {
         LocalTensor<float> dst = this->transDataTensorUb1.template ReinterpretCast<float>();
 
         TransDataTo5HDParams transDataParamsReverseHalf;
         transDataParamsReverseHalf.dstHighHalf = false;
         transDataParamsReverseHalf.srcHighHalf = false;
-        transDataParamsReverseHalf.repeatTimes =
-            this->transAlignRoundPartOutSize / NCHW_CONV_ADDR_LIST_SIZE * TRANSDATA_MUTLIPLER;
-        transDataParamsReverseHalf.dstRepStride =
-            (transDataParamsReverseHalf.repeatTimes == TRANSDATA_MUTLIPLER) ? 0 : 1;
-        transDataParamsReverseHalf.srcRepStride =
-            (transDataParamsReverseHalf.repeatTimes == TRANSDATA_MUTLIPLER) ? 0 : NCHW_CONV_ADDR_LIST_SIZE;
+        transDataParamsReverseHalf.repeatTimes = this->transAlignRoundPartOutSize / NCHW_CONV_ADDR_LIST_SIZE *
+                                                 TRANSDATA_MUTLIPLER;
+        transDataParamsReverseHalf.dstRepStride = (transDataParamsReverseHalf.repeatTimes == TRANSDATA_MUTLIPLER) ? 0 :
+                                                                                                                    1;
+        transDataParamsReverseHalf.srcRepStride = (transDataParamsReverseHalf.repeatTimes == TRANSDATA_MUTLIPLER) ?
+                                                      0 :
+                                                      NCHW_CONV_ADDR_LIST_SIZE;
 
         for (int32_t i = 0; i < NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER; i++) {
             dstLocalList[TRANSDATA_MUTLIPLER * i] = (uint64_t)dst[i * this->transAlignRoundPartOutSize].GetPhyAddr();
             srcLocalList[i] = (uint64_t)idxs[i * NCHW_CONV_ADDR_LIST_SIZE].GetPhyAddr();
         }
         for (int32_t i = 0; i < NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER; i++) {
-            dstLocalList[TRANSDATA_MUTLIPLER * i + 1] =
-                (uint64_t)dst[(NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER + i) * this->transAlignRoundPartOutSize]
-                    .GetPhyAddr();
-            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER + i] =
-                (uint64_t)idxs[i * NCHW_CONV_ADDR_LIST_SIZE + NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER]
-                    .GetPhyAddr();
+            dstLocalList[TRANSDATA_MUTLIPLER * i + 1] = (uint64_t)
+                                                            dst[(NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER + i) *
+                                                                this->transAlignRoundPartOutSize]
+                                                                .GetPhyAddr();
+            srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER +
+                         i] = (uint64_t)
+                                  idxs[i * NCHW_CONV_ADDR_LIST_SIZE + NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER]
+                                      .GetPhyAddr();
         }
 
         TransDataTo5HD<float>(dstLocalList, srcLocalList, transDataParamsReverseHalf); // Result store in dst
@@ -1017,23 +977,23 @@ protected:
         if ((this->roundPartOutSize > (NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER)) &
             (this->roundPartOutSize <= NCHW_CONV_ADDR_LIST_SIZE)) {
             for (int32_t i = 0; i < NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER; i++) {
-                dstLocalList[TRANSDATA_MUTLIPLER * i] =
-                    (uint64_t)dst[i * this->transAlignRoundPartOutSize + BLOCK_LEN_FP32].GetPhyAddr();
-                srcLocalList[i] =
-                    (uint64_t)idxs[i * NCHW_CONV_ADDR_LIST_SIZE + NCHW_CONV_ADDR_LIST_SIZE * BLOCK_LEN_FP32]
-                        .GetPhyAddr();
+                dstLocalList[TRANSDATA_MUTLIPLER *
+                             i] = (uint64_t)dst[i * this->transAlignRoundPartOutSize + BLOCK_LEN_FP32].GetPhyAddr();
+                srcLocalList[i] = (uint64_t)
+                                      idxs[i * NCHW_CONV_ADDR_LIST_SIZE + NCHW_CONV_ADDR_LIST_SIZE * BLOCK_LEN_FP32]
+                                          .GetPhyAddr();
             }
             for (int32_t i = 0; i < NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER; i++) {
-                dstLocalList[TRANSDATA_MUTLIPLER * i + 1] =
-                    (uint64_t)
-                        dst[(NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER + i) * this->transAlignRoundPartOutSize +
-                            BLOCK_LEN_FP32]
-                            .GetPhyAddr();
-                srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER + i] =
-                    (uint64_t)idxs
-                        [i * NCHW_CONV_ADDR_LIST_SIZE + NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER +
-                         NCHW_CONV_ADDR_LIST_SIZE * BLOCK_LEN_FP32]
-                            .GetPhyAddr();
+                dstLocalList[TRANSDATA_MUTLIPLER * i +
+                             1] = (uint64_t)dst[(NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER + i) *
+                                                    this->transAlignRoundPartOutSize +
+                                                BLOCK_LEN_FP32]
+                                      .GetPhyAddr();
+                srcLocalList[NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER +
+                             i] = (uint64_t)idxs[i * NCHW_CONV_ADDR_LIST_SIZE +
+                                                 NCHW_CONV_ADDR_LIST_SIZE / TRANSDATA_MUTLIPLER +
+                                                 NCHW_CONV_ADDR_LIST_SIZE * BLOCK_LEN_FP32]
+                                      .GetPhyAddr();
             }
 
             TransDataTo5HD<float>(dstLocalList, srcLocalList, transDataParamsReverseHalf); // Result store in dst
@@ -1055,8 +1015,8 @@ protected:
                     static_cast<uint16_t>((this->outSize - downPartOut) / BLOCK_LEN_FP32)};
                 DataCopy(gmDst, idxs, params);
             } else {
-                DataCopyParams params{
-                    static_cast<uint16_t>(1), static_cast<uint16_t>(downPartOut / BLOCK_LEN_FP32), 0, 0};
+                DataCopyParams params{static_cast<uint16_t>(1), static_cast<uint16_t>(downPartOut / BLOCK_LEN_FP32), 0,
+                                      0};
                 for (uint32_t nc = 0; nc < partNC; nc++) {
                     DataCopy(gmDst[this->outSize * nc], idxs[this->transAlignRoundPartOutSize * nc], params);
                 }
@@ -1069,8 +1029,8 @@ protected:
                     static_cast<uint32_t>((this->outSize - partOut) * sizeof(float)), 0};
                 DataCopyPad(gmDst, idxs, params);
             } else {
-                DataCopyExtParams params{
-                    static_cast<uint16_t>(1), static_cast<uint32_t>(partOut * sizeof(float)), 0, 0, 0};
+                DataCopyExtParams params{static_cast<uint16_t>(1), static_cast<uint32_t>(partOut * sizeof(float)), 0, 0,
+                                         0};
                 for (uint32_t nc = 0; nc < partNC; nc++) {
                     DataCopyPad(gmDst[this->outSize * nc], idxs[this->transAlignRoundPartOutSize * nc], params);
                 }
@@ -1084,9 +1044,8 @@ protected:
     }
 
     template <typename V>
-    __aicore__ inline void TransposeBack(
-        LocalTensor<half>& reduceMaxResult, LocalTensor<float>& idxs, uint32_t partNC, uint32_t outputOffset,
-        uint32_t partOutReal)
+    __aicore__ inline void TransposeBack(LocalTensor<half>& reduceMaxResult, LocalTensor<float>& idxs, uint32_t partNC,
+                                         uint32_t outputOffset, uint32_t partOutReal)
     {
         uint64_t dstLocalList[NCHW_CONV_ADDR_LIST_SIZE];
         uint64_t srcLocalList[NCHW_CONV_ADDR_LIST_SIZE];
@@ -1099,9 +1058,8 @@ protected:
     }
 
     template <typename V>
-    __aicore__ inline void TransposeBack(
-        LocalTensor<float>& reduceMaxResult, LocalTensor<float>& idxs, uint32_t partNC, uint32_t outputOffset,
-        uint32_t partOutReal)
+    __aicore__ inline void TransposeBack(LocalTensor<float>& reduceMaxResult, LocalTensor<float>& idxs, uint32_t partNC,
+                                         uint32_t outputOffset, uint32_t partOutReal)
     {
         uint64_t dstLocalList[NCHW_CONV_ADDR_LIST_SIZE];
         uint64_t srcLocalList[NCHW_CONV_ADDR_LIST_SIZE];
@@ -1113,17 +1071,15 @@ protected:
         this->TransposeBackInds(idxs, dstLocalList, srcLocalList);
     }
 
-    __aicore__ inline void PaddingD(
-        LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad, const uint32_t pDL,
-        const uint32_t pDR)
+    __aicore__ inline void PaddingD(LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad,
+                                    const uint32_t pDL, const uint32_t pDR)
     {
         if (pDL != 0) {
             Duplicate<T>(dstUb, this->minFloat, this->partRoundDhwInp * this->blockLength);
             PipeBarrier<PIPE_V>();
 
-            DataCopy(
-                dstUb[pDL * this->partHwInp * this->blockLength], srcUb,
-                partDWoPad * this->partHwInp * this->blockLength);
+            DataCopy(dstUb[pDL * this->partHwInp * this->blockLength], srcUb,
+                     partDWoPad * this->partHwInp * this->blockLength);
             PipeBarrier<PIPE_V>();
 
             DataCopy(srcUb, dstUb, this->partRoundDhwInp * this->blockLength);
@@ -1131,16 +1087,15 @@ protected:
         }
 
         if (pDR != 0) {
-            Duplicate<T>(
-                srcUb[(partDWoPad + pDL) * this->partHwInp * this->blockLength], this->minFloat,
-                pDR * this->partHwInp * this->blockLength);
+            Duplicate<T>(srcUb[(partDWoPad + pDL) * this->partHwInp * this->blockLength], this->minFloat,
+                         pDR * this->partHwInp * this->blockLength);
             PipeBarrier<PIPE_V>();
         }
     }
 
-    __aicore__ inline void PaddingH(
-        LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad, const uint32_t& partHWoPad,
-        const uint32_t pHL, const uint32_t pHR, const uint32_t srcStride = 0)
+    __aicore__ inline void PaddingH(LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad,
+                                    const uint32_t& partHWoPad, const uint32_t pHL, const uint32_t pHR,
+                                    const uint32_t srcStride = 0)
     {
         if (pHL != 0 || pHR != 0) {
             Duplicate<T>(dstUb, this->minFloat, this->partRoundDhwInp * this->blockLength);
@@ -1157,17 +1112,17 @@ protected:
         }
     }
 
-    __aicore__ inline void PaddingW(
-        LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad, const uint32_t& partHWoPad,
-        const uint32_t& partWWoPad, const uint32_t pWL, const uint32_t pWR)
+    __aicore__ inline void PaddingW(LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad,
+                                    const uint32_t& partHWoPad, const uint32_t& partWWoPad, const uint32_t pWL,
+                                    const uint32_t pWR)
     {
         if (pWL != 0 || pWR != 0) {
             Duplicate<T>(dstUb, this->minFloat, this->partRoundDhwInp * this->blockLength);
             PipeBarrier<PIPE_V>();
 
-            DataCopyParams padParams = {
-                static_cast<uint16_t>(partDWoPad * partHWoPad), static_cast<uint16_t>(partWWoPad), 0,
-                static_cast<uint16_t>(this->roundW - partWWoPad)};
+            DataCopyParams padParams = {static_cast<uint16_t>(partDWoPad * partHWoPad),
+                                        static_cast<uint16_t>(partWWoPad), 0,
+                                        static_cast<uint16_t>(this->roundW - partWWoPad)};
 
             DataCopy(dstUb[pWL * this->blockLength], srcUb, padParams);
             PipeBarrier<PIPE_V>();
@@ -1179,8 +1134,8 @@ protected:
 };
 
 template <typename T, typename S>
-__aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColNoDilationPerRepeat(
-    const LocalTensor<T>& dst, uint32_t& dOff)
+__aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColNoDilationPerRepeat(const LocalTensor<T>& dst,
+                                                                                 uint32_t& dOff)
 {
     uint32_t sliceByWidthOffset = 0;
 
@@ -1193,14 +1148,13 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColNoDilationPerRepeat
         for (uint32_t curHeightOut = curDepthOut; curHeightOut < curDepthOut + kH * partW * blockLength;
              sliceByWidthOffset += kW * blockLength, curHeightOut += partW * blockLength) {
             for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-                Copy(
-                    dst[i * MAX_REPEAT_TIMES * blockKernelDHW + sliceByWidthOffset],
-                    transDataTensorUb1[i * MAX_REPEAT_TIMES * gmWOff + curHeightOut], kW * blockLength,
-                    MAX_REPEAT_TIMES, {1, 1, static_cast<uint16_t>(kernelDHW), static_cast<uint16_t>(sW)});
+                Copy(dst[i * MAX_REPEAT_TIMES * blockKernelDHW + sliceByWidthOffset],
+                     transDataTensorUb1[i * MAX_REPEAT_TIMES * gmWOff + curHeightOut], kW * blockLength,
+                     MAX_REPEAT_TIMES, {1, 1, static_cast<uint16_t>(kernelDHW), static_cast<uint16_t>(sW)});
             }
-            Copy(
-                dst[wholeOffsetDst + sliceByWidthOffset], transDataTensorUb1[wholeOffsetSrc + curHeightOut],
-                kW * blockLength, tailRepeatTimes, {1, 1, static_cast<uint16_t>(kernelDHW), static_cast<uint16_t>(sW)});
+            Copy(dst[wholeOffsetDst + sliceByWidthOffset], transDataTensorUb1[wholeOffsetSrc + curHeightOut],
+                 kW * blockLength, tailRepeatTimes,
+                 {1, 1, static_cast<uint16_t>(kernelDHW), static_cast<uint16_t>(sW)});
         }
     }
     dOff += gmWOff * partOutW;
@@ -1213,9 +1167,8 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColNoDilation(const Lo
     for (uint32_t curWidthOut = 0; curWidthOut < partOutW; ++curWidthOut, dOff += gmWOff) {
         for (uint32_t curDepthOut = dOff; curDepthOut < dOff + kD * curDepthOff;
              sliceByWidthOffset += sliceOff, curDepthOut += curDepthOff) {
-            Copy(
-                dst[sliceByWidthOffset], transDataTensorUb1[curDepthOut], kW * blockLength, kH,
-                {1, 1, static_cast<uint16_t>(kW), static_cast<uint16_t>(partW)});
+            Copy(dst[sliceByWidthOffset], transDataTensorUb1[curDepthOut], kW * blockLength, kH,
+                 {1, 1, static_cast<uint16_t>(kW), static_cast<uint16_t>(partW)});
         }
     }
 }
@@ -1224,8 +1177,8 @@ template <typename T, typename S>
 __aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColNoDilationBigKw(const LocalTensor<T>& dst, uint32_t& dOff)
 {
     uint32_t sliceByWidthOffset = 0;
-    DataCopyParams Im2colParams = {
-        static_cast<uint16_t>(kH), static_cast<uint16_t>(kW), static_cast<uint16_t>(partW - kW), 0};
+    DataCopyParams Im2colParams = {static_cast<uint16_t>(kH), static_cast<uint16_t>(kW),
+                                   static_cast<uint16_t>(partW - kW), 0};
 
     for (uint32_t curWidthOut = 0; curWidthOut < partOutW; ++curWidthOut, dOff += gmWOff) {
         for (uint32_t curDepthOut = dOff; curDepthOut < dOff + kD * curDepthOff;
@@ -1238,8 +1191,8 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColNoDilationBigKw(con
 template <typename T, typename S>
 __aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColHWDDilation(const LocalTensor<T>& dst, uint32_t& dOff)
 {
-    DataCopyParams Im2colParams = {
-        static_cast<uint16_t>(kW), static_cast<uint16_t>(1), static_cast<uint16_t>(dW - 1), 0};
+    DataCopyParams Im2colParams = {static_cast<uint16_t>(kW), static_cast<uint16_t>(1), static_cast<uint16_t>(dW - 1),
+                                   0};
     auto hOff = dH * roundW * blockLength;
 
     uint32_t sliceByWidthOffset = 0;
@@ -1254,8 +1207,9 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2Base<T, S>::Im2ColHWDDilation(const L
 }
 
 template <typename T, typename S>
-__aicore__ inline void KernelMaxPool3DWithArgmaxV2Base<T, S>::CopyOutVals(
-    const uint32_t& dstOffset, const uint32_t& partNC, const uint32_t& partOut)
+__aicore__ inline void KernelMaxPool3DWithArgmaxV2Base<T, S>::CopyOutVals(const uint32_t& dstOffset,
+                                                                          const uint32_t& partNC,
+                                                                          const uint32_t& partOut)
 {
     const uint32_t downPartOut = this->RoundDownBlock(partOut, this->blockLengthS);
     auto gmDst = this->yGm[dstOffset];

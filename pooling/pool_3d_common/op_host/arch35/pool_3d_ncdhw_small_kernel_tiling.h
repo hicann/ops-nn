@@ -25,8 +25,7 @@
 #include "max_pool_3d_tiling_common.h"
 #include "pool_3d_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(Pool3DNcdhwSmallKernelTilingData)
 TILING_DATA_FIELD_DEF(int64_t, dInDim);
 TILING_DATA_FIELD_DEF(int64_t, hInDim);
@@ -84,17 +83,12 @@ REGISTER_TILING_DATA_CLASS(AvgPool3D_300002, Pool3DNcdhwSmallKernelTilingData);
 REGISTER_TILING_DATA_CLASS(AvgPool3D_300003, Pool3DNcdhwSmallKernelTilingData);
 REGISTER_TILING_DATA_CLASS(AvgPool3D_300004, Pool3DNcdhwSmallKernelTilingData);
 
-class Pool3DNcdhwSmallKernelTiling : public TilingBaseClass
-{
+class Pool3DNcdhwSmallKernelTiling : public TilingBaseClass {
 public:
-    explicit Pool3DNcdhwSmallKernelTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {
-    }
+    explicit Pool3DNcdhwSmallKernelTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
-    ~Pool3DNcdhwSmallKernelTiling() override
-    {
-    }
-    
+    ~Pool3DNcdhwSmallKernelTiling() override {}
+
 protected:
     void DoUBTiling();
     void DoUBTilingSingle();
@@ -104,14 +98,14 @@ protected:
     uint64_t GetTilingKey() const override;
     bool IsCapable() override;
     bool IsBufferCapable();
-    int64_t CalcBufferSize(int64_t inDepths, int64_t inRows, int64_t inCols, int64_t outDepths, int64_t outRows, int64_t outCols,
-                                                   bool isPadding, bool needCalcDivisorBuffer=false);
+    int64_t CalcBufferSize(int64_t inDepths, int64_t inRows, int64_t inCols, int64_t outDepths, int64_t outRows,
+                           int64_t outCols, bool isPadding, bool needCalcDivisorBuffer = false);
     void CalcSplitMaxCols(int64_t minInDepths, int64_t minInRows);
     void CalcSplitMaxRows(int64_t minInDepth, int64_t maxInCols);
     void CalcSplitMaxBatch(int64_t oneBacthBuffer, int64_t oneBatchInputSize);
     void CalcSplitMaxDepth(int64_t maxInRows, int64_t maxInCols);
     void CalcDivsiorUbSize(bool isPad);
-    void CalcKernelAndPadInfo() ;
+    void CalcKernelAndPadInfo();
     void CalcEnableSplit();
     void CalcSparseMode();
     ge::graphStatus DoOpTiling() override;
@@ -170,34 +164,24 @@ protected:
     bool enableSplitW_{true};
 };
 
-class AvgPool3DNcdhwSmallKernelTiling : public Pool3DNcdhwSmallKernelTiling
-{
+class AvgPool3DNcdhwSmallKernelTiling : public Pool3DNcdhwSmallKernelTiling {
 public:
-    explicit AvgPool3DNcdhwSmallKernelTiling(gert::TilingContext* context) : Pool3DNcdhwSmallKernelTiling(context)
-    {
-    }
-    ~AvgPool3DNcdhwSmallKernelTiling() override
-    {
-    }
+    explicit AvgPool3DNcdhwSmallKernelTiling(gert::TilingContext* context) : Pool3DNcdhwSmallKernelTiling(context) {}
+    ~AvgPool3DNcdhwSmallKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
 
-class MaxPool3DNcdhwSmallKernelTiling : public Pool3DNcdhwSmallKernelTiling
-{
+class MaxPool3DNcdhwSmallKernelTiling : public Pool3DNcdhwSmallKernelTiling {
 public:
-    explicit MaxPool3DNcdhwSmallKernelTiling(gert::TilingContext* context) : Pool3DNcdhwSmallKernelTiling(context)
-    {
-    }
-    ~MaxPool3DNcdhwSmallKernelTiling() override
-    {
-    }
+    explicit MaxPool3DNcdhwSmallKernelTiling(gert::TilingContext* context) : Pool3DNcdhwSmallKernelTiling(context) {}
+    ~MaxPool3DNcdhwSmallKernelTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
 };
-}  // namespace optiling
+} // namespace optiling
 #endif

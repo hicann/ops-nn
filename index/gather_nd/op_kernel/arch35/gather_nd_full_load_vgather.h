@@ -56,7 +56,8 @@ __simd_vf__ inline void IndicesColBufVgVf(int32_t colFactor, __ubuf__ int32_t* h
     AscendC::MicroAPI::DataCopy(helpAddr, vd1, preg);
 }
 
-__simd_vf__ inline void InitXbufVgVf(uint32_t aSizeAligned, uint16_t computeSize, uint16_t repeatimes, __ubuf__ int8_t* xAddr)
+__simd_vf__ inline void InitXbufVgVf(uint32_t aSizeAligned, uint16_t computeSize, uint16_t repeatimes,
+                                     __ubuf__ int8_t* xAddr)
 {
     AscendC::MicroAPI::RegTensor<int8_t> zeroConstReg;
     AscendC::MicroAPI::Duplicate(zeroConstReg, int8_t(0));
@@ -69,12 +70,12 @@ __simd_vf__ inline void InitXbufVgVf(uint32_t aSizeAligned, uint16_t computeSize
     }
 }
 
-__simd_vf__ inline void DealByVgatherVf(
-    __ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr,
-    __ubuf__ uint32_t* helpAddr, int32_t indicesNumCurPro,
-    uint32_t aSizeAligned, uint32_t gaOffset, uint32_t yOffset,
-    uint16_t indicesLoopNum, uint16_t aAlignedLoopNum, uint16_t aNumPerLoop,
-    uint16_t vRegBlockNum, uint32_t blockStride, int32_t yInnerOffset, uint32_t tailANum)
+__simd_vf__ inline void DealByVgatherVf(__ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr,
+                                        __ubuf__ int8_t* yAddr, __ubuf__ uint32_t* helpAddr, int32_t indicesNumCurPro,
+                                        uint32_t aSizeAligned, uint32_t gaOffset, uint32_t yOffset,
+                                        uint16_t indicesLoopNum, uint16_t aAlignedLoopNum, uint16_t aNumPerLoop,
+                                        uint16_t vRegBlockNum, uint32_t blockStride, int32_t yInnerOffset,
+                                        uint32_t tailANum)
 {
     MicroAPI::RegTensor<uint32_t> indicesReg;
     MicroAPI::RegTensor<uint32_t> upIndex;
@@ -99,8 +100,7 @@ __simd_vf__ inline void DealByVgatherVf(
 
             MicroAPI::Add(indicesReg, indicesReg, curUpIndex, preg);
             MicroAPI::DataCopyGather(vd0, curXAddr, indicesReg, preg);
-            MicroAPI::DataCopy<int32_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY>(
-                curYAddr, vd0, blockStride, preg);
+            MicroAPI::DataCopy<int32_t, MicroAPI::DataCopyMode::DATA_BLOCK_COPY>(curYAddr, vd0, blockStride, preg);
             indicesAddr += vRegBlockNum;
             curYAddr += yInnerOffset;
         }
@@ -116,11 +116,10 @@ __simd_vf__ inline void DealByVgatherVf(
 }
 
 template <typename INDICES_T, const bool NIS>
-__simd_vf__ inline void DealIndicesBoundVf(
-    __ubuf__ int32_t* curIndicesAddr, __ubuf__ INDICES_T* indicesAddr,
-    __ubuf__ uint32_t* helpAddr, __ubuf__ int32_t* rankAddr,
-    int32_t indicesNum, uint16_t rank, int32_t aSizeAligned,
-    uint16_t computeSizeT, uint16_t repeatimes, int32_t indicesStride)
+__simd_vf__ inline void DealIndicesBoundVf(__ubuf__ int32_t* curIndicesAddr, __ubuf__ INDICES_T* indicesAddr,
+                                           __ubuf__ uint32_t* helpAddr, __ubuf__ int32_t* rankAddr, int32_t indicesNum,
+                                           uint16_t rank, int32_t aSizeAligned, uint16_t computeSizeT,
+                                           uint16_t repeatimes, int32_t indicesStride)
 {
     MicroAPI::RegTensor<uint32_t> upIndex;
     MicroAPI::RegTensor<uint32_t> curUpIndex;
@@ -135,7 +134,7 @@ __simd_vf__ inline void DealIndicesBoundVf(
     AscendC::MicroAPI::RegTensor<int32_t> tmpIndicesReg;
 
     uint32_t indicesMask = indicesNum;
-    
+
     MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
     MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
@@ -155,7 +154,7 @@ __simd_vf__ inline void DealIndicesBoundVf(
             AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
 
             MicroAPI::Adds(curUpIndex, curUpIndex, k, preg0);
-            
+
             MicroAPI::Add(indexIndicesReg, indicesOffset, curUpIndex, preg);
             MicroAPI::DataCopyGather(tmpIndicesReg, curIndicesAddr, indexIndicesReg, preg);
 
@@ -184,12 +183,11 @@ __simd_vf__ inline void DealIndicesBoundVf(
 }
 
 template <typename INDICES_T, const bool NIS>
-class GatherNdAllLoadV
-{
+class GatherNdAllLoadV {
 public:
     __aicore__ inline GatherNdAllLoadV(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR indices, GM_ADDR y, const GatherNdGaAllLoadTilingData* tilingData, TPipe* pipeIn);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y, const GatherNdGaAllLoadTilingData* tilingData,
+                                TPipe* pipeIn);
     __aicore__ inline void GenIndexBuf();
     __aicore__ inline void IndicesColBuf();
     __aicore__ inline void GenRankBuf();
@@ -201,15 +199,14 @@ public:
     __aicore__ inline void DealIndicesBound(__local_mem__ INDICES_T* indicesAddr, int32_t indicesNum);
     __aicore__ inline void CopyInIndices(LocalTensor<INDICES_T>& indicesLocal, int32_t burstLen, int32_t coreOffset);
     __aicore__ inline void CopyOutY(int32_t nBurst, int32_t indicesCoreOffset);
-    __aicore__ inline void DealByVgather(
-        int32_t indicesNumCurPro, __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
-        __local_mem__ int8_t* yAddr);
+    __aicore__ inline void DealByVgather(int32_t indicesNumCurPro, __local_mem__ int32_t* curIndicesAddr,
+                                         __local_mem__ int8_t* xAddr, __local_mem__ int8_t* yAddr);
 
 private:
     GlobalTensor<int8_t> xGm_;
     GlobalTensor<INDICES_T> indicesGm_;
     GlobalTensor<int8_t> yGm_;
-    TPipe *pipe_;
+    TPipe* pipe_;
     TBuf<QuePosition::VECCALC> xBuf_;
     TBuf<QuePosition::VECCALC> indicesBuf_;
     TBuf<QuePosition::VECCALC> tmpIndexBuf_;
@@ -224,8 +221,9 @@ private:
 };
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::Init(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR y, const GatherNdGaAllLoadTilingData* tilingData, TPipe* pipeIn)
+__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR y,
+                                                              const GatherNdGaAllLoadTilingData* tilingData,
+                                                              TPipe* pipeIn)
 {
     pipe_ = pipeIn;
 
@@ -235,7 +233,8 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::Init(
     // 先分核再分UB
     int64_t indicesIndex = blockIdx_ % tilingData_->indicesOuter;
     indicesGmOffset_ = indicesIndex * tilingData_->normalCoreIndicesNum;
-    curCoreIndicesNum_ = (indicesIndex + 1 == tilingData_->indicesOuter) ? tilingData_->tailCoreIndicesNum : tilingData_->normalCoreIndicesNum;
+    curCoreIndicesNum_ = (indicesIndex + 1 == tilingData_->indicesOuter) ? tilingData_->tailCoreIndicesNum :
+                                                                           tilingData_->normalCoreIndicesNum;
 
     if (blockIdx_ >= tilingData_->usedCoreNum) {
         return;
@@ -272,8 +271,7 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::IndicesColBuf()
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::IndicesProcess(
-    int32_t indicesNum, int32_t indicesNumOffset)
+__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::IndicesProcess(int32_t indicesNum, int32_t indicesNumOffset)
 {
     event_t eventIdMTE3toMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMTE3toMTE2);
@@ -321,22 +319,22 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::yProcess(int32_t indice
     for (int32_t y = 0; y < yloopCountWithGa; y++) {
         LocalTensor<int8_t> yLocal = yQueue_.AllocTensor<int8_t>();
         __local_mem__ int8_t* yAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
-        int32_t curIndicesNum = y == (yloopCountWithGa - 1) ?
-                                        indicesNum - (yloopCountWithGa - 1) * indicesNumByVGa :
-                                        indicesNumByVGa;
+        int32_t curIndicesNum = y == (yloopCountWithGa - 1) ? indicesNum - (yloopCountWithGa - 1) * indicesNumByVGa :
+                                                              indicesNumByVGa;
         int32_t indicesUbOffset = y * indicesNumByVGa;
         __local_mem__ int32_t* curIndicesAddr = (__local_mem__ int32_t*)indicesAddr + indicesUbOffset;
         DealByVgather(curIndicesNum, (__local_mem__ int32_t*)curIndicesAddr, xAddr, yAddr);
-        
+
         yQueue_.EnQue<int8_t>(yLocal);
         CopyOutY(curIndicesNum, indicesOffset + y * indicesNumByVGa);
     }
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::DealByVgather(
-    int32_t indicesNumCurPro, __local_mem__ int32_t* curIndicesAddr, __local_mem__ int8_t* xAddr,
-    __local_mem__ int8_t* yAddr)
+__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::DealByVgather(int32_t indicesNumCurPro,
+                                                                       __local_mem__ int32_t* curIndicesAddr,
+                                                                       __local_mem__ int8_t* xAddr,
+                                                                       __local_mem__ int8_t* yAddr)
 {
     constexpr uint16_t b32DtypeSize = 4;
     uint32_t ubBlockSize = platform::GetUbBlockSize();
@@ -357,17 +355,14 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::DealByVgather(
     int32_t yInnerOffset = vRegBlockNum * aSizeAligned / b32DtypeSize;
     uint32_t tailANum = tailIndices * aNumPerLoop;
 
-    DealByVgatherVf(
-        (__ubuf__ int32_t*)curIndicesAddr, (__ubuf__ int8_t*)xAddr, (__ubuf__ int8_t*)yAddr,
-        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), indicesNumCurPro,
-        aSizeAligned, gaOffset, yOffset,
-        indicesLoopNum, aAlignedLoopNum, aNumPerLoop,
-        vRegBlockNum, blockStride, yInnerOffset, tailANum);
+    DealByVgatherVf((__ubuf__ int32_t*)curIndicesAddr, (__ubuf__ int8_t*)xAddr, (__ubuf__ int8_t*)yAddr,
+                    (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), indicesNumCurPro, aSizeAligned, gaOffset, yOffset,
+                    indicesLoopNum, aAlignedLoopNum, aNumPerLoop, vRegBlockNum, blockStride, yInnerOffset, tailANum);
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::DealIndicesBound(
-    __local_mem__ INDICES_T* indicesAddr, int32_t indicesNum)
+__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::DealIndicesBound(__local_mem__ INDICES_T* indicesAddr,
+                                                                          int32_t indicesNum)
 {
     uint16_t rank = tilingData_->rank;
     int32_t aSizeAligned = tilingData_->aSizeAligned;
@@ -383,19 +378,19 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::DealIndicesBound(
 
     LocalTensor<int32_t> rankTensor = tmpRankBuf_.Get<int32_t>();
     __local_mem__ int32_t* rankAddr = (__local_mem__ int32_t*)rankTensor.GetPhyAddr();
-    for (int16_t x=0; x < tilingData_->rank; x++) {
+    for (int16_t x = 0; x < tilingData_->rank; x++) {
         rankAddr[x] = tilingData_->xShape[x];
     }
 
-    DealIndicesBoundVf<INDICES_T, NIS>(
-        (__ubuf__ int32_t*)indicesAddr, (__ubuf__ INDICES_T*)indicesAddr,
-        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), (__ubuf__ int32_t*)rankTensor.GetPhyAddr(),
-        indicesNum, rank, aSizeAligned, computeSizeT, repeatimes, indicesStride);
+    DealIndicesBoundVf<INDICES_T, NIS>((__ubuf__ int32_t*)indicesAddr, (__ubuf__ INDICES_T*)indicesAddr,
+                                       (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(),
+                                       (__ubuf__ int32_t*)rankTensor.GetPhyAddr(), indicesNum, rank, aSizeAligned,
+                                       computeSizeT, repeatimes, indicesStride);
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::CopyInIndices(
-    LocalTensor<INDICES_T>& indicesLocal, int32_t burstLen, int32_t coreOffset)
+__aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::CopyInIndices(LocalTensor<INDICES_T>& indicesLocal,
+                                                                       int32_t burstLen, int32_t coreOffset)
 {
     DataCopyPadExtParams<INDICES_T> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -405,10 +400,11 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::CopyInIndices(
 
     DataCopyExtParams dataCopyExtParams;
     dataCopyExtParams.blockCount = burstLen;
-    dataCopyExtParams.blockLen =  tilingData_->rank * sizeof(INDICES_T);
+    dataCopyExtParams.blockLen = tilingData_->rank * sizeof(INDICES_T);
     dataCopyExtParams.srcStride = 0;
     dataCopyExtParams.dstStride = 0;
-    DataCopyPad(indicesLocal, indicesGm_[(indicesGmOffset_ + coreOffset) * tilingData_->rank], dataCopyExtParams, dataCopyPadExtParams);
+    DataCopyPad(indicesLocal, indicesGm_[(indicesGmOffset_ + coreOffset) * tilingData_->rank], dataCopyExtParams,
+                dataCopyPadExtParams);
 }
 
 template <typename INDICES_T, const bool NIS>
@@ -460,13 +456,13 @@ __aicore__ inline void GatherNdAllLoadV<INDICES_T, NIS>::Process()
     CopyInX();
     for (int32_t i = 0; i < indicesLoopCount; i++) {
         int32_t indicesNums = i == (indicesLoopCount - 1) ?
-                                    curCoreIndicesNum_ - (indicesLoopCount - 1) * indicesBufEleNum :
-                                    indicesBufEleNum;
+                                  curCoreIndicesNum_ - (indicesLoopCount - 1) * indicesBufEleNum :
+                                  indicesBufEleNum;
         int32_t indicesNumOffset = i * indicesBufEleNum;
         IndicesProcess(indicesNums, indicesNumOffset);
 
         yProcess(indicesNums, indicesNumOffset);
     }
 }
-} // namespace gatherNd
+} // namespace GatherNd
 #endif // GATHER_ND_GA_FULL_LOAD_H

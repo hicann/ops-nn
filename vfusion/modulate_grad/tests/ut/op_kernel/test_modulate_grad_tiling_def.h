@@ -12,25 +12,24 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 #pragma pack(1)
 struct ModulateTilingData {
-        uint32_t B;
-        uint32_t L;
-        uint32_t D;
-        uint32_t dataType = 2;
-        uint32_t block_dim;
-        uint32_t dataTypeSize;
+    uint32_t B;
+    uint32_t L;
+    uint32_t D;
+    uint32_t dataType = 2;
+    uint32_t block_dim;
+    uint32_t dataTypeSize;
 
-        uint32_t splitB;
-        uint32_t coresPerB;
-        uint32_t usedCores;
-        uint32_t formerNum;
-        uint32_t formerLength;
-        uint32_t tailNum;
-        uint32_t tailLength;
-        uint32_t has_sacle;
-        uint32_t has_shift;
+    uint32_t splitB;
+    uint32_t coresPerB;
+    uint32_t usedCores;
+    uint32_t formerNum;
+    uint32_t formerLength;
+    uint32_t tailNum;
+    uint32_t tailLength;
+    uint32_t has_sacle;
+    uint32_t has_shift;
 };
 #pragma pack()
 
@@ -39,8 +38,8 @@ inline void InitModulateGradTilingData(uint8_t* tiling, ModulateGradTilingData* 
     memcpy(const_data, tiling, sizeof(ModulateGradTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                              \
-    ModulateGradTilingData tiling_data;                                           \
+#define GET_TILING_DATA(tiling_data, tiling_arg) \
+    ModulateGradTilingData tiling_data;          \
     InitModulateGradTilingData(tiling_arg, &tiling_data)
 
 #endif

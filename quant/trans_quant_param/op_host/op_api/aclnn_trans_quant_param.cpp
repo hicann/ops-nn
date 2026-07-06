@@ -24,8 +24,8 @@ extern "C" {
 namespace {
 static const size_t ALIGN_NUM = 16;
 
-static aclnnStatus CheckQuantParam(
-    const float* offsetArray, uint64_t offsetSize, const float* scaleArray, uint64_t scaleSize)
+static aclnnStatus CheckQuantParam(const float* offsetArray, uint64_t offsetSize, const float* scaleArray,
+                                   uint64_t scaleSize)
 {
     if (offsetArray != nullptr) {
         if (offsetSize < 1) {
@@ -57,18 +57,16 @@ static aclnnStatus CheckQuantParam(
 }
 }; // namespace
 
-aclnnStatus aclnnTransQuantParam(
-    const float* scaleArray, uint64_t scaleSize, const float* offsetArray, uint64_t offsetSize, uint64_t** quantParam,
-    uint64_t* quantParamSize)
+aclnnStatus aclnnTransQuantParam(const float* scaleArray, uint64_t scaleSize, const float* offsetArray,
+                                 uint64_t offsetSize, uint64_t** quantParam, uint64_t* quantParamSize)
 {
-    CHECK_RET(
-        CheckQuantParam(offsetArray, offsetSize, scaleArray, scaleSize) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK(
-        quantParam != nullptr, OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "The quantParam is nullptr, please check."),
-        return ACLNN_ERR_PARAM_NULLPTR);
-    OP_CHECK(
-        quantParamSize != nullptr, OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "The quantParamSize is nullptr, please check."),
-        return ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckQuantParam(offsetArray, offsetSize, scaleArray, scaleSize) == ACLNN_SUCCESS,
+              ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(quantParam != nullptr, OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "The quantParam is nullptr, please check."),
+             return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK(quantParamSize != nullptr,
+             OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "The quantParamSize is nullptr, please check."),
+             return ACLNN_ERR_PARAM_NULLPTR);
 
     // align
     *quantParamSize = (scaleSize > offsetSize) ? scaleSize : offsetSize;

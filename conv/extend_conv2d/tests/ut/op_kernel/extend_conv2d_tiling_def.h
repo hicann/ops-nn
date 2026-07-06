@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file extend_conv2d_tiling_def.h
  * \brief
@@ -131,8 +130,7 @@ struct TConv2DTiling {
     int8_t roundMode = 0;
 };
 
-struct Conv2DTilingData
-{
+struct Conv2DTilingData {
     uint64_t orgHi = 0;
     uint64_t orgWi = 0;
     uint64_t orgHo = 0;
@@ -232,13 +230,14 @@ struct Conv2DTilingData
 
 #pragma pack()
 
-inline void InitTilingData(uint8_t* tiling, Conv2DTilingData* constData) {
+inline void InitTilingData(uint8_t* tiling, Conv2DTilingData* constData)
+{
     if (constData != nullptr && tiling != nullptr) {
         memcpy_s(constData, sizeof(Conv2DTilingData), tiling, sizeof(Conv2DTilingData));
     }
 }
 
 #define GET_TILING_DATA(tilingData, tilingArg) \
-    Conv2DTilingData tilingData; \
+    Conv2DTilingData tilingData;               \
     InitTilingData(tilingArg, &tilingData)
 #endif

@@ -210,128 +210,128 @@ struct ComputeTypeGet {
     using type = typename std::conditional<sizeof(T) == B8, int8_t, T>::type;
 };
 
-extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workspace,
+                                                      GM_ADDR tiling)
 {
     using xType = typename ComputeTypeGet<DTYPE_X>::type;
     TPipe pipe;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_2_NO_CONTIGUOUS_SPECILA)) {   
+    if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_2_NO_CONTIGUOUS_SPECILA)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM3, DIM2, true> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_3_INT64_AXIS_2_NO_CONTIGUOUS_SPECILA)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_3_INT64_AXIS_2_NO_CONTIGUOUS_SPECILA)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint64_t, DIM3, DIM2, true> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_1_INT32_AXIS_0_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_1_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM1, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_0_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM2, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_1_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_1_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM2, DIM1, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_0_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM3, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_1_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_1_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM3, DIM1, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_2_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_2_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM3, DIM2, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    }  else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_0_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM4, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_1_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_1_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM4, DIM1, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_2_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_2_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM4, DIM2, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_3_NO_CONTIGUOUS)) {   
+    } else if (TILING_KEY_IS(SIMT_DIM_4_INT32_AXIS_3_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM4, DIM3, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_0_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM5, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_1_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_1_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM5, DIM1, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_2_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_2_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM5, DIM2, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_3_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_3_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM5, DIM3, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_4_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_5_INT32_AXIS_4_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM5, DIM4, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_0_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM6, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_1_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_1_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM6, DIM1, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_2_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_2_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM6, DIM2, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_3_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_3_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM6, DIM3, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_4_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_4_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM6, DIM4, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_5_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_6_INT32_AXIS_5_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM6, DIM5, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_DIM_7_INT32_AXIS_0_NO_CONTIGUOUS)) {  
+    } else if (TILING_KEY_IS(SIMT_DIM_7_INT32_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint32_t, DIM7, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
@@ -436,7 +436,7 @@ extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, 
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint64_t, DIM3, DIM2, false> op(pipe);
         op.Init(x, index, y, &tilingData);
         op.Process();
-    }  else if (TILING_KEY_IS(SIMT_DIM_4_INT64_AXIS_0_NO_CONTIGUOUS)) {
+    } else if (TILING_KEY_IS(SIMT_DIM_4_INT64_AXIS_0_NO_CONTIGUOUS)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsNoContiguousTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernelNoContiguous<xType, DTYPE_INDEX, uint64_t, DIM4, 0, false> op(pipe);
         op.Init(x, index, y, &tilingData);
@@ -589,15 +589,15 @@ extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, 
     } else if (TILING_KEY_IS(SIMT_DIM_1_INT32_AXIS_0)) {
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM1, 0> op(pipe);
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-        (__gm__ const GatherElementsTilingData*)tiling);
+                        (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_0)) {
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM2, 0> op(pipe);
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-        (__gm__ const GatherElementsTilingData*)tiling);
+                        (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT32_AXIS_1)) {
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM2, 1> op(pipe);
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-        (__gm__ const GatherElementsTilingData*)tiling);
+                        (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_3_INT32_AXIS_0)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint32_t, DIM3, 0> op(pipe);
@@ -766,15 +766,15 @@ extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, 
     } else if (TILING_KEY_IS(SIMT_DIM_1_INT64_AXIS_0)) {
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM1, 0> op(pipe);
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-        (__gm__ const GatherElementsTilingData*)tiling);
+                        (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT64_AXIS_0)) {
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM2, 0> op(pipe);
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-        (__gm__ const GatherElementsTilingData*)tiling);
+                        (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_2_INT64_AXIS_1)) {
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM2, 1> op(pipe);
         op.ProcessOptim((__gm__ xType*)x, (__gm__ DTYPE_INDEX*)index, (__gm__ volatile xType*)y,
-        (__gm__ const GatherElementsTilingData*)tiling);
+                        (__gm__ const GatherElementsTilingData*)tiling);
     } else if (TILING_KEY_IS(SIMT_DIM_3_INT64_AXIS_0)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
         GatherElements::GatherElementsKernel<xType, DTYPE_INDEX, uint64_t, DIM3, 0> op(pipe);
@@ -942,7 +942,8 @@ extern "C" __global__ __aicore__ void gather_elements(GM_ADDR x, GM_ADDR index, 
         op.Process();
     } else if (TILING_KEY_IS(DIM_1_AXIS_0)) {
         GET_TILING_DATA_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
-        GatherElements::GatherElementsFullLoadKernel<xType, DTYPE_INDEX, DIM1, 0> op(&tilingData, pipe);;
+        GatherElements::GatherElementsFullLoadKernel<xType, DTYPE_INDEX, DIM1, 0> op(&tilingData, pipe);
+        ;
         op.Init(x, index, y);
         op.Process();
     } else if (TILING_KEY_IS(DIM_2_AXIS_0)) {

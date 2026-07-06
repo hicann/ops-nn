@@ -21,16 +21,14 @@
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelAddLayerNormSoleStaticQuantSingleRowV2 : public KernelAddLayerNormQuantBase<T, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelAddLayerNormSoleStaticQuantSingleRowV2(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormSoleStaticQuantSingleRowV2(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* scales, __gm__ uint8_t* fakeScale, __gm__ uint8_t* offsets, __gm__ uint8_t* fakeOffsets,
-        __gm__ uint8_t* y, __gm__ uint8_t* fakeY, __gm__ uint8_t* x, __gm__ uint8_t* layernormRes, __gm__ uint8_t* fakeOut1, __gm__ uint8_t* fakeOut2,
-        __gm__ uint8_t* workspace, const AddLayerNormQuantV2TilingData* tiling)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* scales, __gm__ uint8_t* fakeScale,
+                                __gm__ uint8_t* offsets, __gm__ uint8_t* fakeOffsets, __gm__ uint8_t* y,
+                                __gm__ uint8_t* fakeY, __gm__ uint8_t* x, __gm__ uint8_t* layernormRes,
+                                __gm__ uint8_t* fakeOut1, __gm__ uint8_t* fakeOut2, __gm__ uint8_t* workspace,
+                                const AddLayerNormQuantV2TilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, beta, bias);
@@ -90,7 +88,7 @@ private:
     }
 
     __aicore__ inline void CopyInAddSingleRowFp32(uint64_t gmOffset, LocalTensor<float> tmpTensors,
-        LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
+                                                  LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
     {
         LocalTensor<float> x1Fp32 = tmpTensors[0];
         LocalTensor<float> x2Fp32 = tmpTensors[this->numLastDimAligned];
@@ -116,8 +114,9 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInAddSingleRowFp16(uint64_t gmOffset, LocalTensor<float> tmpTensors,
-        LocalTensor<T> x1In, LocalTensor<T> x2In, LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
+    __aicore__ inline void CopyInAddSingleRowFp16(uint64_t gmOffset, LocalTensor<float> tmpTensors, LocalTensor<T> x1In,
+                                                  LocalTensor<T> x2In, LocalTensor<T> biasIn,
+                                                  LocalTensor<T> tensor_local)
     {
         LocalTensor<float> xTensor = tmpTensors[0];
         LocalTensor<float> yTensor = tmpTensors[this->numLastDimAligned];
@@ -206,8 +205,8 @@ private:
         return rstdLocalTemp;
     }
 
-    __aicore__ inline void ApplyGammaBeta(
-        LocalTensor<float> xTensor, LocalTensor<float> tmpTensor, LocalTensor<T> gammaTensor, LocalTensor<T> betaTensor)
+    __aicore__ inline void ApplyGammaBeta(LocalTensor<float> xTensor, LocalTensor<float> tmpTensor,
+                                          LocalTensor<T> gammaTensor, LocalTensor<T> betaTensor)
     {
         CastToFloat<T>(tmpTensor, gammaTensor, this->numLastDimAligned);
         Mul(xTensor, tmpTensor, xTensor, this->numLastDim);
@@ -224,15 +223,14 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(
-            floatTensor.ReinterpretCast<half>(), floatTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
-            this->numLastDimAligned);
+        Cast(floatTensor.ReinterpretCast<half>(), floatTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             this->numLastDimAligned);
         PipeBarrier<PIPE_V>();
         Cast(yLocal, floatTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDimAligned);
     }
 
     __aicore__ inline void ApplyScaleOffsetAndQuantize(uint64_t gmOffset, LocalTensor<float> xTensor,
-        LocalTensor<float> tmpTensor, LocalTensor<T> tensor_local)
+                                                       LocalTensor<float> tmpTensor, LocalTensor<T> tensor_local)
     {
         if (this->isPerTensor) {
             Muls(xTensor, xTensor, perTensorScale, this->numLastDim);
@@ -329,7 +327,7 @@ private:
 
         if constexpr (is_same<T, float>::value) {
             Adds(resLocal, xTensor, ZERO, this->numLastDim);
-        } else if constexpr (is_same<T, half>::value){
+        } else if constexpr (is_same<T, half>::value) {
             Cast(resLocal, xTensor, RoundMode::CAST_NONE, this->numLastDimAligned);
         } else {
             Cast(resLocal, xTensor, RoundMode::CAST_RINT, this->numLastDimAligned);

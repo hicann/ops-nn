@@ -97,4 +97,4 @@ ACLNN_API aclnnStatus aclnnHardtanhBackward(void* workspace, uint64_t workspaceS
 }
 #endif
 
-#endif  // OP_API_INC_HARDTANH_BACKWARD_H_
+#endif // OP_API_INC_HARDTANH_BACKWARD_H_

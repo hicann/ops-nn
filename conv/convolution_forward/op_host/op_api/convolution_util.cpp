@@ -56,10 +56,10 @@ constexpr int64_t POSK_LIMIT = 65535;
 constexpr int64_t BLK_LEN = 32;
 constexpr int64_t CONST_DOUBLE = 2;
 std::map<op::DataType, uint32_t> gDataTypeSizeTab = {{op::DataType::DT_FLOAT16, 2}, {op::DataType::DT_FLOAT, 4},
-                                                        {op::DataType::DT_BF16, 2}, {op::DataType::DT_INT8, 1},
-                                                        {op::DataType::DT_UINT8, 1}, {op::DataType::DT_INT64, 8},
-                                                        {op::DataType::DT_UINT64, 8}, {op::DataType::DT_INT32, 4}};
-}  // namespace SplitWInfo
+                                                     {op::DataType::DT_BF16, 2},    {op::DataType::DT_INT8, 1},
+                                                     {op::DataType::DT_UINT8, 1},   {op::DataType::DT_INT64, 8},
+                                                     {op::DataType::DT_UINT64, 8},  {op::DataType::DT_INT32, 4}};
+} // namespace SplitWInfo
 
 namespace op {
 op::FVector<int64_t> ToFVector(const op::Shape& shapeT)
@@ -87,8 +87,7 @@ std::string FVectorToString(const op::FVector<int64_t>& vec)
     result += "]";
     return result;
 }
-}
-
+} // namespace op
 
 namespace ConvolutionUtil {
 
@@ -110,7 +109,7 @@ void Conv2DSplitWInfo::InitConv2DSplitWInfo(const aclTensor* input, const aclTen
 }
 
 bool Conv2DSplitWInfo::CanSwitchSplitW(const aclTensor* bias, aclTensor* output, int64_t groups,
-                                        const ConvolutionOpInfo& opInfo)
+                                       const ConvolutionOpInfo& opInfo)
 {
     if (!CheckBasicInfoInSplitW(groups, opInfo)) {
         OP_LOGD("Conv2d splitw only support groups is 1, dtypes are [FP16/BF16/FP32] and soc is A2 or A3.\n");
@@ -160,9 +159,9 @@ bool Conv2DSplitWInfo::CheckConv2DInput() const
 // padding = [pad_up, pad_down, pad_left, pad_right]
 bool Conv2DSplitWInfo::CheckConv2DTbeOptFlag(const ConvolutionOpInfo& opInfo)
 {
-// 校验Load2D规格，当满足Load2D优化规格时，conv2d走原始的TBE
+    // 校验Load2D规格，当满足Load2D优化规格时，conv2d走原始的TBE
     bool load2dFeature = (kh == 1 && kw == 1) && (strideH == 1 && strideW == 1) && hi != 1 &&
-                        (padU == 0 && padD == 0 && padL == 0 && padR == 0);
+                         (padU == 0 && padD == 0 && padL == 0 && padR == 0);
     bool supportDtype = (opInfo.inputDtype == op::DataType::DT_BF16 && opInfo.weightDtype == op::DataType::DT_BF16);
     bool canUseLoad2D = (load2dFeature && supportDtype);
     if (canUseLoad2D) {
@@ -177,7 +176,7 @@ bool Conv2DSplitWInfo::CheckConv2DTbeOptFlag(const ConvolutionOpInfo& opInfo)
 
     // 校验DMA,条件与非Load3D指令约束相同
     bool padDMAFlag = (padU > SplitWInfo::PAD_MAX || padD > SplitWInfo::PAD_MAX || padL > SplitWInfo::PAD_MAX ||
-                        padR > SplitWInfo::PAD_MAX);
+                       padR > SplitWInfo::PAD_MAX);
     bool strideDMAFlag = (strideH > SplitWInfo::STRIDEH_MAX || strideW > SplitWInfo::STRIDEH_MAX);
     bool dilationDMAFlag = (dilationH > SplitWInfo::DILATION_MAX || dilationW > SplitWInfo::DILATION_MAX);
     bool kernelDMAFlag = (kh > SplitWInfo::WEIGHT_MAX || kw > SplitWInfo::WEIGHT_MAX);
@@ -201,7 +200,7 @@ bool Conv2DSplitWInfo::CheckBasicInfoInSplitW(int64_t groups, const ConvolutionO
     const std::unordered_set<op::DataType> supportedDtypes{op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
                                                            op::DataType::DT_BF16};
     bool supportDtypeFlag = (supportedDtypes.count(opInfo.inputDtype) > 0) &&
-        (supportedDtypes.count(opInfo.weightDtype) > 0);
+                            (supportedDtypes.count(opInfo.weightDtype) > 0);
     if (!supportDtypeFlag) {
         return false;
     }
@@ -320,8 +319,8 @@ const aclTensor* View4dAs5dForInput(const aclTensor* input, aclOpExecutor* execu
     return reformatInput;
 }
 
-aclnnStatus ChangeConv2dAttrToConv3d(const aclIntArray* &stride, const aclIntArray* &padding,
-                                    const aclIntArray* &dilation, aclOpExecutor* executor)
+aclnnStatus ChangeConv2dAttrToConv3d(const aclIntArray*& stride, const aclIntArray*& padding,
+                                     const aclIntArray*& dilation, aclOpExecutor* executor)
 {
     stride = View2dAs3dForAttr(stride, 1, executor, false);
     CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -332,7 +331,7 @@ aclnnStatus ChangeConv2dAttrToConv3d(const aclIntArray* &stride, const aclIntArr
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus ChangeConv2dInputToConv3d(const aclTensor* &input, const aclTensor* &weight, aclOpExecutor* executor)
+aclnnStatus ChangeConv2dInputToConv3d(const aclTensor*& input, const aclTensor*& weight, aclOpExecutor* executor)
 {
     input = View4dAs5dForInput(input, executor);
     CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -407,7 +406,8 @@ void GetL1Size()
 }
 
 bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* input, const aclTensor* weight,
-    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, const aclTensor* bias)
+                    const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation,
+                    const aclTensor* bias)
 {
     int64_t orgKh = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::HI_INDEX));
     int64_t orgKw = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::WI_INDEX));
@@ -441,7 +441,7 @@ bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* inp
     uint64_t inputL1Size = 0;
     uint64_t orgWo = (win + padLeft + padRight - (dilationW * (orgKw - 1) + 1)) / strideW + 1;
     uint64_t hoAL1min = orgWo < static_cast<uint64_t>(m0) ? (m0 + orgWo - 1) / orgWo : 1;
-    uint64_t khDilated = (orgKh - 1) * dilationH + 1; 
+    uint64_t khDilated = (orgKh - 1) * dilationH + 1;
     uint64_t hiAL1min = Conv2DInferHiL1(hoAL1min, khDilated, hin, strideH);
     uint64_t kAL1min = k0;
     uint64_t woAL1min = m0;
@@ -499,14 +499,8 @@ uint64_t ConvAlignB(uint64_t a, uint64_t b)
     return ((a + b - 1) / b) * b;
 }
 
-std::string GeFormatToString(const ge::Format& geFormat)
-{
-    return op::ToString(geFormat).GetString();
-}
+std::string GeFormatToString(const ge::Format& geFormat) { return op::ToString(geFormat).GetString(); }
 
-std::string GeDtypeToString(const ge::DataType& geDtype)
-{
-    return op::ToString(geDtype).GetString();
-}
+std::string GeDtypeToString(const ge::DataType& geDtype) { return op::ToString(geDtype).GetString(); }
 
 } // namespace ConvolutionUtil

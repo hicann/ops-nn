@@ -82,4 +82,3 @@ TEST_F(LambNextRightProtoTest, lamb_next_right_case_fp16_4d)
     auto od1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
     ASSERT_EQ(Ops::Base::ToString(*od1), Ops::Base::ToString(expShape));
 }
-

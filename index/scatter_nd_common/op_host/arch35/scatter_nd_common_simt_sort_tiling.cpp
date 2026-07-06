@@ -27,7 +27,7 @@ static constexpr int64_t ALIGN_SIZE = 32;
 static constexpr int64_t MIN_HANDLE_SIZE = 128;
 static constexpr int64_t INT32_BYTES = 4;
 static constexpr int64_t FP32_BYTES = 4;
-static constexpr int64_t DCACHE_SIZE = 32768;  // 32k
+static constexpr int64_t DCACHE_SIZE = 32768; // 32k
 static constexpr int64_t INDICES_MIN_BLOCK_SIZE = 1024;
 static constexpr int64_t TEMPLATE_MODE_SIMT_SORT = 5;
 static constexpr uint64_t RESERVE_SIZE = 256;
@@ -36,10 +36,9 @@ static constexpr uint64_t MIN_TILING_SIZE = 128;
 
 bool ScatterNdCommonSimtSortTiling::IsSimtSortSupportType(ge::DataType updateDtype)
 {
-    if (updateDtype == ge::DT_FLOAT || updateDtype == ge::DT_FLOAT16
-        || updateDtype == ge::DT_INT32 || updateDtype == ge::DT_UINT32
-        || updateDtype == ge::DT_INT64 || updateDtype == ge::DT_UINT64
-        || updateDtype == ge::DT_BF16 || updateDtype == ge::DT_BOOL) {
+    if (updateDtype == ge::DT_FLOAT || updateDtype == ge::DT_FLOAT16 || updateDtype == ge::DT_INT32 ||
+        updateDtype == ge::DT_UINT32 || updateDtype == ge::DT_INT64 || updateDtype == ge::DT_UINT64 ||
+        updateDtype == ge::DT_BF16 || updateDtype == ge::DT_BOOL) {
         return true;
     }
     return false;
@@ -65,25 +64,26 @@ int64_t ScatterNdCommonSimtSortTiling::CalcOneIndexRowAlignSize(int64_t ubBlock)
     int64_t indicesRealTypeSize = indiceCastMode_ ? indiceCastDtypeSize_ : indicesTypeSize_;
     int64_t oneIndexSize = static_cast<int64_t>(rankSize_) * indicesTypeSize_;
 
-    return Ops::Base::CeilAlign(oneIndexSize, ubBlock) +                                  // indicesBuf_: 1个索引行的数据
-           Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +                              // outOfstBuf: 1个一维线性偏移值
-           Ops::Base::CeilAlign(indicesDtypeCastSize, ubBlock) +                          // castIndicesQue: 存放indices cast后的数据
-           Ops::Base::CeilAlign(indicesRealTypeSize + TWO * ALIGN_SIZE, ubBlock) +        // sortIndicesQue + 64字节padding
-           Ops::Base::CeilAlign(INT32_BYTES, ubBlock) +                                   // updateOriginIndexQue: 原始索引(1个)
-           Ops::Base::CeilAlign(INT32_BYTES * TWO, ubBlock) +                             // uniqueIdCountQue: 唯一索引计数(1个)
-           Ops::Base::CeilAlign(indicesTypeSize_, ubBlock);                               // updateSumIdxQue: 唯一索引位置(1个)
+    return Ops::Base::CeilAlign(oneIndexSize, ubBlock) +         // indicesBuf_: 1个索引行的数据
+           Ops::Base::CeilAlign(indicesTypeSize_, ubBlock) +     // outOfstBuf: 1个一维线性偏移值
+           Ops::Base::CeilAlign(indicesDtypeCastSize, ubBlock) + // castIndicesQue: 存放indices cast后的数据
+           Ops::Base::CeilAlign(indicesRealTypeSize + TWO * ALIGN_SIZE, ubBlock) + // sortIndicesQue + 64字节padding
+           Ops::Base::CeilAlign(INT32_BYTES, ubBlock) +       // updateOriginIndexQue: 原始索引(1个)
+           Ops::Base::CeilAlign(INT32_BYTES * TWO, ubBlock) + // uniqueIdCountQue: 唯一索引计数(1个)
+           Ops::Base::CeilAlign(indicesTypeSize_, ubBlock);   // updateSumIdxQue: 唯一索引位置(1个)
 }
 
 // 计算单个update行相关的UB缓冲总大小
 int64_t ScatterNdCommonSimtSortTiling::CalcOneUpdateRowAlignSize(int64_t ubBlock, ge::DataType sortTmpType)
 {
-    return Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) +                      // dataQueue: 完整afterAxis的一行update数据
-           Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) +                      // updateSumQue: 完整afterAxis的一行累加数据
-           GetSortTmpSize(sortTmpType, 1, false);                                          // sort需要的空间大小
+    return Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + // dataQueue: 完整afterAxis的一行update数据
+           Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) + // updateSumQue: 完整afterAxis的一行累加数据
+           GetSortTmpSize(sortTmpType, 1, false);                     // sort需要的空间大小
 }
 
 // 处理ub空间不足情况: indices 空间 + update 空间 > halfUbSize 时的分块策略
-void ScatterNdCommonSimtSortTiling::CalcTilingWhenTight(int64_t halfUbSize, int64_t indicesAlignSize, ge::DataType sortTmpType)
+void ScatterNdCommonSimtSortTiling::CalcTilingWhenTight(int64_t halfUbSize, int64_t indicesAlignSize,
+                                                        ge::DataType sortTmpType)
 {
     int64_t indicesSize = std::min(INDICES_MIN_BLOCK_SIZE, indicesAxis_ * indicesAlignSize);
     if (indicesAlignSize == 0) {
@@ -93,13 +93,15 @@ void ScatterNdCommonSimtSortTiling::CalcTilingWhenTight(int64_t halfUbSize, int6
     int64_t sortTmpSize = GetSortTmpSize(sortTmpType, indicesFactor_, false);
     int64_t restSize = halfUbSize - indicesFactor_ * indicesAlignSize - sortTmpSize;
     int64_t alignNum = ALIGN_SIZE / varTypeSize_;
-    afterAxisFactor_ = restSize / (indicesFactor_ * (varTypeSize_ + varTypeSize_));   // (update + updateSum)各占一个varTypeSize_大小的空间
+    afterAxisFactor_ = restSize / (indicesFactor_ *
+                                   (varTypeSize_ + varTypeSize_)); // (update + updateSum)各占一个varTypeSize_大小的空间
     afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
 }
 
 // 处理ub空间充裕时的分块策略
-void ScatterNdCommonSimtSortTiling::CalcTilingWhenSpacious(int64_t halfUbSize, int64_t ubBlock, int64_t indicesAlignSize,
-    int64_t updateAlignSize, ge::DataType sortTmpType)
+void ScatterNdCommonSimtSortTiling::CalcTilingWhenSpacious(int64_t halfUbSize, int64_t ubBlock,
+                                                           int64_t indicesAlignSize, int64_t updateAlignSize,
+                                                           ge::DataType sortTmpType)
 {
     int64_t alignNum = ALIGN_SIZE / varTypeSize_;
     int64_t indicesDtypeCastSize = indiceCastMode_ ? indiceCastDtypeSize_ : 0;
@@ -112,15 +114,15 @@ void ScatterNdCommonSimtSortTiling::CalcTilingWhenSpacious(int64_t halfUbSize, i
     int64_t restSize = static_cast<int64_t>(-1);
     while (restSize <= 0 && indicesFactor_ > 1) {
         int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
-                        Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
-                        Ops::Base::CeilAlign(indicesFactor_ * indicesDtypeCastSize, ubBlock) +
-                        Ops::Base::CeilAlign(indicesFactor_ * (indicesRealTypeSize + TWO * ALIGN_SIZE), ubBlock) +
-                        Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) +
-                        Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES * TWO), ubBlock) +
-                        Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
-                        indicesFactor_ * Ops::Base::CeilAlign(varTypeSize_ * afterAxisFactor_, ubBlock) +
-                        indicesFactor_ * Ops::Base::CeilAlign(varTypeSize_ * afterAxisFactor_, ubBlock) +
-                        GetSortTmpSize(sortTmpType, indicesFactor_, false);
+                         Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
+                         Ops::Base::CeilAlign(indicesFactor_ * indicesDtypeCastSize, ubBlock) +
+                         Ops::Base::CeilAlign(indicesFactor_ * (indicesRealTypeSize + TWO * ALIGN_SIZE), ubBlock) +
+                         Ops::Base::CeilAlign(indicesFactor_ * INT32_BYTES, ubBlock) +
+                         Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES * TWO), ubBlock) +
+                         Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
+                         indicesFactor_ * Ops::Base::CeilAlign(varTypeSize_ * afterAxisFactor_, ubBlock) +
+                         indicesFactor_ * Ops::Base::CeilAlign(varTypeSize_ * afterAxisFactor_, ubBlock) +
+                         GetSortTmpSize(sortTmpType, indicesFactor_, false);
         restSize = halfUbSize - occupy;
         if (indicesFactor_ > indicesAxis_) {
             indicesFactor_ = indicesAxis_;
@@ -132,7 +134,7 @@ void ScatterNdCommonSimtSortTiling::CalcTilingWhenSpacious(int64_t halfUbSize, i
 
 void ScatterNdCommonSimtSortTiling::DoOpTilingSplitIndices()
 {
-    ge::DataType sortTmpType = indiceCastMode_ ?  indiceCastDtype_ : indiceDtype_;
+    ge::DataType sortTmpType = indiceCastMode_ ? indiceCastDtype_ : indiceDtype_;
 
     int64_t halfUbSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE) / DB_BUFFER);
     halfUbSize = halfUbSize - MIN_HANDLE_SIZE * FP32_BYTES; // maxScore
@@ -145,7 +147,7 @@ void ScatterNdCommonSimtSortTiling::DoOpTilingSplitIndices()
     // 同地址优化:搬入多少行indices,就搬入相同行数的updates, strideBuf放在RESERVE_SIZE中
     auto ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     int64_t indicesAlignSize = CalcOneIndexRowAlignSize(ubBlock);
-    int64_t updateAlignSize  = CalcOneUpdateRowAlignSize(ubBlock, sortTmpType);
+    int64_t updateAlignSize = CalcOneUpdateRowAlignSize(ubBlock, sortTmpType);
     if (indicesAlignSize + updateAlignSize > halfUbSize) {
         CalcTilingWhenTight(halfUbSize, indicesAlignSize, sortTmpType);
     } else {
@@ -179,7 +181,8 @@ ge::graphStatus ScatterNdCommonSimtSortTiling::PostTiling()
     uint32_t usedLocalMemorySize = static_cast<uint32_t>(ubSize_ - DCACHE_SIZE);
     auto res = context_->SetLocalMemorySize(usedLocalMemorySize);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGD(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", usedLocalMemorySize), return ge::GRAPH_FAILED);
+                OP_LOGD(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", usedLocalMemorySize),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -198,7 +201,7 @@ uint64_t ScatterNdCommonSimtSortTiling::GetTilingKey() const
 
 void ScatterNdCommonSimtSortTiling::SetTilingData()
 {
-    ScatterNdCommonSimtSortTilingData *tilingData = context_->GetTilingData<ScatterNdCommonSimtSortTilingData>();
+    ScatterNdCommonSimtSortTilingData* tilingData = context_->GetTilingData<ScatterNdCommonSimtSortTilingData>();
     tilingData->indicesFactor = indicesFactor_;
     tilingData->afterAxis = afterAxis_;
     tilingData->varInAxis = varInAxis_;

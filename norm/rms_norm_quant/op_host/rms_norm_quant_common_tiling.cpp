@@ -26,7 +26,7 @@ namespace optiling {
 // const defination
 static constexpr uint32_t BYTE_32 = 32;
 
-static constexpr uint32_t SLICE_SIZE = 8192;          // 用于切分过长的行
+static constexpr uint32_t SLICE_SIZE = 8192;           // 用于切分过长的行
 static constexpr uint32_t SLICE_SIZE_WITH_BIAS = 8192; // 用于切分过长的行
 static constexpr uint32_t FP16_PER_BLOCK = 16;
 static constexpr size_t WORKAPCE_RESERVE = 16 * 1024 * 1024;
@@ -34,15 +34,9 @@ static constexpr uint32_t BIT_OFFSET_SIX = 6;
 constexpr uint32_t DST_TYPE_INDEX = 3;
 constexpr uint32_t CONST_ROUR = 8;
 // enum defination
-enum class PrePostType : uint32_t
-{
-    Norm = 0,
-    PreNorm = 1,
-    PostNorm = 2
-};
+enum class PrePostType : uint32_t { Norm = 0, PreNorm = 1, PostNorm = 2 };
 
-enum class NormType : uint32_t
-{ // 没用到
+enum class NormType : uint32_t { // 没用到
     LayerNorm = 0,
     RmsNorm = 1
 };
@@ -88,7 +82,8 @@ static ge::graphStatus PrepareForRmsNormCommonTiling(gert::TilingParseContext* c
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetQuantAttrs([[maybe_unused]]gert::TilingContext* context, NormCommonTilingData1* tilingDataPtr)
+static ge::graphStatus GetQuantAttrs([[maybe_unused]] gert::TilingContext* context,
+                                     NormCommonTilingData1* tilingDataPtr)
 {
     const char* quantMinFlagPtr = std::getenv("ASDOPS_QUANT_MIN_NEG_127");
     if (quantMinFlagPtr != nullptr && strcmp(quantMinFlagPtr, "1") == 0) {
@@ -113,10 +108,7 @@ void LogTilingData(const std::string& opName, NormCommonTilingData1* tilingDataP
     OP_LOGD(opName, "%s", tilingDataLogStringSS.str().c_str());
 }
 
-inline static int64_t RoundUp(int64_t a, int64_t b)
-{
-    return Ops::Base::CeilDiv(a, b) * b;
-}
+inline static int64_t RoundUp(int64_t a, int64_t b) { return Ops::Base::CeilDiv(a, b) * b; }
 
 // template defination and implementation
 template <bool EN_QUANT>
@@ -166,9 +158,8 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
     for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
         uint32_t dim = xShape.GetDim(i);
         OP_CHECK_IF(dim <= 0, OP_LOGD(opName, "In tensor X dim %d is invalid", i), return ge::GRAPH_PARAM_OUT_OF_RANGE);
-        OP_CHECK_IF(
-            numRow > std::numeric_limits<uint32_t>::max() / dim,
-            OP_LOGD(opName, "At dim %d, tmpNumRow is overflowed", i), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(numRow > std::numeric_limits<uint32_t>::max() / dim,
+                    OP_LOGD(opName, "At dim %d, tmpNumRow is overflowed", i), return ge::GRAPH_FAILED);
         numRow *= dim;
     }
 
@@ -181,16 +172,14 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
     numRow = numRow / gamma_size;
     tilingData.set_numRow(static_cast<uint32_t>(numRow)); // 修改
     uint32_t numCol = gamma_size;
-    OP_CHECK_IF(
-        numCol > std::numeric_limits<uint32_t>::max(), OP_LOGD(opName, "numCol is overflowed"),
-        return ge::GRAPH_PARAM_OUT_OF_RANGE);
+    OP_CHECK_IF(numCol > std::numeric_limits<uint32_t>::max(), OP_LOGD(opName, "numCol is overflowed"),
+                return ge::GRAPH_PARAM_OUT_OF_RANGE);
     tilingData.set_numCol(numCol);
     // calculate numCore
     tilingData.set_numCore(
         Ops::Base::CeilDiv(tilingData.get_numRow(), Ops::Base::CeilDiv(tilingData.get_numRow(), coreNumAiv)));
-    OP_CHECK_IF(
-        tilingData.get_numCore() > std::numeric_limits<uint32_t>::max() - tilingData.get_numRow(),
-        OP_LOGD(opName, "numRow + numCore is overflowed"), return ge::GRAPH_PARAM_OUT_OF_RANGE);
+    OP_CHECK_IF(tilingData.get_numCore() > std::numeric_limits<uint32_t>::max() - tilingData.get_numRow(),
+                OP_LOGD(opName, "numRow + numCore is overflowed"), return ge::GRAPH_PARAM_OUT_OF_RANGE);
     // calculate slice size
     auto betaTensorDesc = context->GetInputDesc(static_cast<int>(NormInputIndex::BETA));
     bool enableBeta = betaTensorDesc != nullptr;
@@ -200,15 +189,15 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
 
     auto yDtype = context->GetOutputDesc(static_cast<int>(NormOutputIndex::Y))->GetDataType();
     if (yDtype == ge::DT_INT4 && numCol % static_cast<int32_t>(CONST_ROUR) != 0) {
-      OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%u) of x should be divisible by 8.", numCol);
-      return ge::GRAPH_FAILED;
+        OP_LOGE(context->GetNodeName(), "if y datatype is int4, the last dim(%u) of x should be divisible by 8.",
+                numCol);
+        return ge::GRAPH_FAILED;
     }
 
     const uint32_t maxSliceSize = CalcMaxSliceSize<EN_QUANT>(prePostType, enableBeta, compileInfo->ubSize);
     tilingData.set_sliceSize(maxSliceSize);
-    OP_CHECK_IF(
-        tilingData.get_numCol() > std::numeric_limits<uint32_t>::max() - tilingData.get_sliceSize(),
-        OP_LOGD(opName, "numCol + sliceSize is overflowed"), return ge::GRAPH_PARAM_OUT_OF_RANGE);
+    OP_CHECK_IF(tilingData.get_numCol() > std::numeric_limits<uint32_t>::max() - tilingData.get_sliceSize(),
+                OP_LOGD(opName, "numCol + sliceSize is overflowed"), return ge::GRAPH_PARAM_OUT_OF_RANGE);
     // calculate avgFactor
     OP_CHECK_IF(numCol <= 0, OP_LOGE(opName, "The numCol size is neg: %ud.", numCol), return ge::GRAPH_PARAM_INVALID);
     float avgFactor = static_cast<float>(1.0 / numCol);
@@ -233,7 +222,8 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
     if (dstTypePtr != nullptr) {
         dstType = static_cast<int64_t>(*dstTypePtr);
     }
-    OP_CHECK_IF((dstType != ge::DT_INT8 && dstType != ge::DT_INT4), OP_LOGE(opName, "dstType can only be 2 or 29."), return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF((dstType != ge::DT_INT8 && dstType != ge::DT_INT4), OP_LOGE(opName, "dstType can only be 2 or 29."),
+                return ge::GRAPH_PARAM_INVALID);
     tilingData.set_dstType(dstType);
 
     if (EN_QUANT) { // if constexpr (EN_QUANT) 会有编译错误
@@ -243,9 +233,8 @@ static ge::graphStatus NormCommonTiling(gert::TilingContext* context, PrePostTyp
     ge::DataType dtype = context->GetInputDesc(static_cast<int>(NormInputIndex::X))->GetDataType();
 
     if (prePostType != PrePostType::Norm) {
-        OP_CHECK_IF(
-            tilingData.get_numCol() > std::numeric_limits<uint32_t>::max() - FP16_PER_BLOCK,
-            OP_LOGD(opName, "numCol + FP16_PER_BLOCK is overflowed"), return ge::GRAPH_PARAM_OUT_OF_RANGE);
+        OP_CHECK_IF(tilingData.get_numCol() > std::numeric_limits<uint32_t>::max() - FP16_PER_BLOCK,
+                    OP_LOGD(opName, "numCol + FP16_PER_BLOCK is overflowed"), return ge::GRAPH_PARAM_OUT_OF_RANGE);
     }
 
     uint32_t tilingKey = CalcNormTilingKey(&tilingData, dtype, enableBeta);
@@ -268,7 +257,8 @@ static ge::graphStatus RmsNormTilingFunc(gert::TilingContext* context)
 {
     std::string opName = context->GetNodeName();
     auto ret = NormCommonTiling<EN_QUANT>(context, PrePostType::Norm);
-    OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGD(opName, "RmsNormTilingFunc running error!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGD(opName, "RmsNormTilingFunc running error!"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -278,7 +268,8 @@ static ge::graphStatus PreRmsNormTilingFunc(gert::TilingContext* context)
 {
     std::string opName = context->GetNodeName();
     auto ret = NormCommonTiling<EN_QUANT>(context, PrePostType::PreNorm);
-    OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGD(opName, "PreRmsNormTilingFunc running error!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGD(opName, "PreRmsNormTilingFunc running error!"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -287,8 +278,8 @@ static ge::graphStatus PostRmsNormTilingFunc(gert::TilingContext* context)
 {
     std::string opName = context->GetNodeName();
     auto ret = NormCommonTiling<EN_QUANT>(context, PrePostType::PostNorm);
-    OP_CHECK_IF(
-        (ret == ge::GRAPH_FAILED), OP_LOGD(opName, "PostRmsNormTilingFunc running error!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ret == ge::GRAPH_FAILED), OP_LOGD(opName, "PostRmsNormTilingFunc running error!"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

@@ -73,21 +73,16 @@ ge::graphStatus AdamApplyOneTiling::GetShapeAttrsInfo()
         auto curDtype = outputDesc->GetDataType();
         if (curDtype != input0DType) {
             std::string paramNames = std::string(kOutputNames[outputIdx]) + " and input0";
-            std::string incorrectDtypes = 
-                Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
-                "Their dtypes should be the same");
+            std::string incorrectDtypes = Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
+                                                   "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdamApplyOneTiling::IsCapable()
-{
-    return true;
-}
+bool AdamApplyOneTiling::IsCapable() { return true; }
 
 ge::graphStatus AdamApplyOneTiling::DoOpTiling()
 {
@@ -97,60 +92,41 @@ ge::graphStatus AdamApplyOneTiling::DoOpTiling()
     if (input0DType == ge::DT_FLOAT16) {
         BroadcastBaseTiling<AdamApplyOneOp::AdamApplyOneCompute<half, half>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (input0DType == ge::DT_BF16) {
         BroadcastBaseTiling<AdamApplyOneOp::AdamApplyOneCompute<bfloat16_t, float>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (input0DType == ge::DT_FLOAT) {
         BroadcastBaseTiling<AdamApplyOneOp::AdamApplyOneCompute<float, float>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "input0", Ops::Base::ToString(input0DType).c_str(),
-            "fp16, bf16 or fp32");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "input0", Ops::Base::ToString(input0DType).c_str(),
+                                  "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdamApplyOneTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdamApplyOneTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t AdamApplyOneTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus AdamApplyOneTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdamApplyOneTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdamApplyOneTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus TilingForAdamApplyOne(gert::TilingContext* context)
 {

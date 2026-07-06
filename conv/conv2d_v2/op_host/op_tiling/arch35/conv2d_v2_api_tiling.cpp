@@ -32,7 +32,7 @@ using namespace std;
 #define UNUSED __attribute__((unused))
 
 namespace conv_tiling {
-int64_t Conv2dTiling::GetTiling(optiling::Conv2DTilingData &tiling)
+int64_t Conv2dTiling::GetTiling(optiling::Conv2DTilingData& tiling)
 {
     if (!CheckParams()) {
         OP_LOGE(nodeType, "conv2d api tiling check params failed.");
@@ -58,7 +58,7 @@ int64_t Conv2dTiling::GetTiling(optiling::Conv2DTilingData &tiling)
     return 0;
 }
 
-bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::Conv2DTilingData &tiling)
+bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::Conv2DTilingData& tiling)
 {
     if (!CheckTilingAlgorithmType(conv2DBasicBlockInfo, BB_PHASE_2)) {
         return false;
@@ -67,8 +67,8 @@ bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optilin
     InferCubeInfo();
     Infer5hdShape();
 
-    std::shared_ptr<ConvTilingAlgorithmBBmode> algoBBPtr = std::make_shared<ConvTilingAlgorithmBBmode>(this,
-        conv2DBasicBlockInfo);
+    std::shared_ptr<ConvTilingAlgorithmBBmode> algoBBPtr = std::make_shared<ConvTilingAlgorithmBBmode>(
+        this, conv2DBasicBlockInfo);
     int64_t ret = algoBBPtr->Process();
     if (ret == -1) {
         OP_LOGE(nodeType, "conv2d api tiling Process failed.");
@@ -116,7 +116,7 @@ int64_t Conv2dTiling::Compute()
             break;
         default:
             OP_LOGE(nodeType, "Unsupported output order %d, only support Mmode(%d) and HWmode(%d).",
-                static_cast<int>(outputOrder), static_cast<int>(OutputOrder::M), static_cast<int>(OutputOrder::HW));
+                    static_cast<int>(outputOrder), static_cast<int>(OutputOrder::M), static_cast<int>(OutputOrder::HW));
             return -1;
     }
     return algoPtr->Process();
@@ -314,7 +314,7 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
 {
     if (isDmaFlag) {
         ConvDmaParams params = {l1TilingInfo.hoAL1, l1TilingInfo.woAL1, l1TilingInfo.khL1,
-            l1TilingInfo.kwL1, cubeInfo.k0, descInfo.fMapType.dtype};
+                                l1TilingInfo.kwL1,  cubeInfo.k0,        descInfo.fMapType.dtype};
         GetDmaUbTiling(params);
         tiling.set_khUb(params.khUb);
         tiling.set_kwUb(params.kwUb);
@@ -322,8 +322,13 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
     }
 
     if (isC04Flag) {
-        ConvC04Info c04Info = {l1TilingInfo.nBL1, static_cast<uint64_t>(shapeInfo.orgkH),
-            static_cast<uint64_t>(shapeInfo.orgkW), cubeInfo.k0, cubeInfo.n0, dbValue.pbBL1, descInfo.weightType.dtype};
+        ConvC04Info c04Info = {l1TilingInfo.nBL1,
+                               static_cast<uint64_t>(shapeInfo.orgkH),
+                               static_cast<uint64_t>(shapeInfo.orgkW),
+                               cubeInfo.k0,
+                               cubeInfo.n0,
+                               dbValue.pbBL1,
+                               descInfo.weightType.dtype};
         tiling.set_bUbNStep(CalcC04UbLoadNsize(c04Info));
         tiling.set_bUbKStep(0);
         return;
@@ -332,15 +337,20 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
     uint64_t kernelHxkernelW = shapeInfo.orgkH * shapeInfo.orgkW;
     uint64_t weightKSize = AlignB(shapeInfo.orgCi, cubeInfo.k0) * kernelHxkernelW;
     bool weightUbSizeLimit = kernelHxkernelW * cubeInfo.k0 * cubeInfo.n0 * platformInfo.aivPerAic *
-        DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) <= (platformInfo.ubSize - VGATHER_REGISTER_SIZE);
+                                 DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) <=
+                             (platformInfo.ubSize - VGATHER_REGISTER_SIZE);
     bool weightUbFlag = attrInfo.groups == 1 && descInfo.weightType.format == ConvFormat::NCHW &&
- 	    !(descInfo.weightType.dtype == ConvDtype::FLOAT32 && !this->hf32Enable) &&
-        !(kernelHxkernelW == 1) && !(kernelHxkernelW % VGATHER_PERF_LIMIT == 0) && l1TilingInfo.kBL1 != weightKSize &&
-        dbValue.pbBL1 == DOUBLE_BUFFER_NUM && weightUbSizeLimit;
+                        !(descInfo.weightType.dtype == ConvDtype::FLOAT32 && !this->hf32Enable) &&
+                        !(kernelHxkernelW == 1) && !(kernelHxkernelW % VGATHER_PERF_LIMIT == 0) &&
+                        l1TilingInfo.kBL1 != weightKSize && dbValue.pbBL1 == DOUBLE_BUFFER_NUM && weightUbSizeLimit;
     if (weightUbFlag) {
-        ConvWeightUbTransParams params = {l1TilingInfo.nBL1, l1TilingInfo.kBL1,
-            static_cast<uint64_t>(shapeInfo.orgkH), static_cast<uint64_t>(shapeInfo.orgkW),
-            cubeInfo.k0, cubeInfo.n0, descInfo.weightType.dtype};
+        ConvWeightUbTransParams params = {l1TilingInfo.nBL1,
+                                          l1TilingInfo.kBL1,
+                                          static_cast<uint64_t>(shapeInfo.orgkH),
+                                          static_cast<uint64_t>(shapeInfo.orgkW),
+                                          cubeInfo.k0,
+                                          cubeInfo.n0,
+                                          descInfo.weightType.dtype};
         GetWeightUBTiling(params);
         tiling.set_bUbNStep(params.bUbNStep);
         tiling.set_bUbKStep(params.bUbKStep);
@@ -456,8 +466,8 @@ uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::Conv2DTilingData& tiling)
         if (isC04Flag && tiling.get_innerBatch() > 1) {
             aL1SpaceSize = C04_CIN_SIZE * tiling.get_orgHi() * tiling.get_orgWi();
         } else {
-            uint64_t mL1Max =
-                tiling.get_hoL1() < tiling.get_singleCoreHo() ? tiling.get_hoL1() : tiling.get_singleCoreHo();
+            uint64_t mL1Max = tiling.get_hoL1() < tiling.get_singleCoreHo() ? tiling.get_hoL1() :
+                                                                              tiling.get_singleCoreHo();
             uint64_t hoL1Max = std::min(mL1Max / tiling.get_orgWo() + CONST_VALUE_2, tiling.get_orgHo());
             uint64_t hiAL1Max = (hoL1Max - 1) * tiling.get_strideH() + dilatedKernelH;
             hiAL1Max = hiAL1Max > tiling.get_orgHi() ? tiling.get_orgHi() : hiAL1Max;
@@ -486,10 +496,7 @@ uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::Conv2DTilingData& tiling)
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
-void Conv2dTiling::SetOutputOrder(int8_t outOrder)
-{
-    this->outputOrder = outOrder;
-}
+void Conv2dTiling::SetOutputOrder(int8_t outOrder) { this->outputOrder = outOrder; }
 
 void Conv2dTiling::SetOrgWeightShape(int64_t orgCo, int64_t orgkH, int64_t orgkW)
 {
@@ -598,15 +605,9 @@ void Conv2dTiling::SetQuantScale(bool hasScaleFlag)
     }
 }
 
-void Conv2dTiling::SetExtendConvFlag(bool extendConvEnable)
-{
-    this->extendConvFlag = extendConvEnable;
-}
+void Conv2dTiling::SetExtendConvFlag(bool extendConvEnable) { this->extendConvFlag = extendConvEnable; }
 
-void Conv2dTiling::SetQuantConvFlag(bool quantConvEnable)
-{
-    this->quantConvFlag = quantConvEnable;
-}
+void Conv2dTiling::SetQuantConvFlag(bool quantConvEnable) { this->quantConvFlag = quantConvEnable; }
 
 void Conv2dTiling::SetFixpipeParams(FixpipeInfo& fixpipeInfo)
 {
@@ -620,30 +621,15 @@ void Conv2dTiling::SetFixpipeParams(FixpipeInfo& fixpipeInfo)
     shapeInfo.channelWiseCoeff = fixpipeInfo.channelWiseCoeff;
 }
 
-void Conv2dTiling::SetOffsetx(int8_t offsetx)
-{
-    attrInfo.offsetx = offsetx;
-}
+void Conv2dTiling::SetOffsetx(int8_t offsetx) { attrInfo.offsetx = offsetx; }
 
-void Conv2dTiling::SetC04Flag(bool isC04Enable)
-{
-    this->isC04Flag = isC04Enable;
-}
+void Conv2dTiling::SetC04Flag(bool isC04Enable) { this->isC04Flag = isC04Enable; }
 
-void Conv2dTiling::SetRoundMode(int8_t roundMode)
-{
-    attrInfo.roundMode = roundMode;
-}
+void Conv2dTiling::SetRoundMode(int8_t roundMode) { attrInfo.roundMode = roundMode; }
 
-void Conv2dTiling::SetDisContinuousFlag(bool disContinuous)
-{
-    this->disContinuousFlag = disContinuous;
-}
+void Conv2dTiling::SetDisContinuousFlag(bool disContinuous) { this->disContinuousFlag = disContinuous; }
 
-void Conv2dTiling::SetGroups(int32_t groups)
-{
-    attrInfo.groups = groups;
-}
+void Conv2dTiling::SetGroups(int32_t groups) { attrInfo.groups = groups; }
 
 void Conv2dTiling::SetOptGroupParams(int32_t enlarge, int64_t singleGroups, int64_t singleGroupOpt)
 {
@@ -674,22 +660,24 @@ void Conv2dTiling::CalcOptGroupParams(const ConvOriGroupInfo& oriGroupInfo, Conv
     uint32_t k0 = CUBE_MKN_TAB.GetMKN(oriGroupInfo.weightDtype, MKN_K_INDEX);
 
     optGroupInfo.enlarge = std::min(Lcm(Lcm(oriGroupInfo.ciPerGroup, k0) / oriGroupInfo.ciPerGroup,
-        Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup), static_cast<uint64_t>(oriGroupInfo.groups));
+                                        Lcm(oriGroupInfo.coPerGroup, n0) / oriGroupInfo.coPerGroup),
+                                    static_cast<uint64_t>(oriGroupInfo.groups));
     optGroupInfo.groupOpt = CeilDiv(oriGroupInfo.groups, optGroupInfo.enlarge);
     optGroupInfo.coutOpt = oriGroupInfo.coPerGroup * optGroupInfo.enlarge;
     optGroupInfo.cinOpt = oriGroupInfo.ciPerGroup * optGroupInfo.enlarge;
 }
 
-uint64_t Conv2dTiling::CalcC04UbLoadMaxNsize(const ConvC04Info &c04Info) const
+uint64_t Conv2dTiling::CalcC04UbLoadMaxNsize(const ConvC04Info& c04Info) const
 {
     uint64_t fullLoadK = AlignB(c04Info.orgkH * c04Info.orgkW * C04_CIN_SIZE, c04Info.k0);
     uint32_t weightDtypeSize = DTYPE_SIZE_TAB.at(c04Info.weightDtype);
-    uint64_t nMaxStep = ((platformInfo.ubSize - VGATHER_REGISTER_SIZE) / fullLoadK /
-        C04_VEC_USE_BUFF_NUM / weightDtypeSize / c04Info.n0) * c04Info.n0;
+    uint64_t nMaxStep = ((platformInfo.ubSize - VGATHER_REGISTER_SIZE) / fullLoadK / C04_VEC_USE_BUFF_NUM /
+                         weightDtypeSize / c04Info.n0) *
+                        c04Info.n0;
     return nMaxStep;
 }
 
-uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info &c04Info) const
+uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info& c04Info) const
 {
     if (c04Info.curNBL1 < c04Info.n0) {
         OP_LOGD(nodeType, "Ubsize is not enough to load even a n0 size block, c04 mode cannot be enabled.");
@@ -715,23 +703,21 @@ uint64_t Conv2dTiling::CalcC04UbLoadNsize(const ConvC04Info &c04Info) const
 
 bool Conv2dTiling::CheckAttrBeforeCoreBind()
 {
-    if (attrInfo.padLeft < 0 || attrInfo.padRight < 0 ||
-        attrInfo.padTop < 0 || attrInfo.padBottom < 0) {
-        OP_LOGE(nodeType,
-            "Illegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must >= 0.",
-            attrInfo.padTop, attrInfo.padBottom, attrInfo.padLeft, attrInfo.padRight);
+    if (attrInfo.padLeft < 0 || attrInfo.padRight < 0 || attrInfo.padTop < 0 || attrInfo.padBottom < 0) {
+        OP_LOGE(nodeType, "Illegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must >= 0.",
+                attrInfo.padTop, attrInfo.padBottom, attrInfo.padLeft, attrInfo.padRight);
         return false;
     }
 
     if (attrInfo.strideH <= 0 || attrInfo.strideW <= 0) {
-        OP_LOGE(nodeType, "Illegal attrs have set: strideH=%d, strideW=%d, which must > 0.",
-            attrInfo.strideH, attrInfo.strideW);
+        OP_LOGE(nodeType, "Illegal attrs have set: strideH=%d, strideW=%d, which must > 0.", attrInfo.strideH,
+                attrInfo.strideW);
         return false;
     }
 
     if (attrInfo.dilationH <= 0 || attrInfo.dilationW <= 0) {
-        OP_LOGE(nodeType, "Illegal attrs have set: dilationH=%d, dilationW=%d, which must > 0.",
-            attrInfo.dilationH, attrInfo.dilationW);
+        OP_LOGE(nodeType, "Illegal attrs have set: dilationH=%d, dilationW=%d, which must > 0.", attrInfo.dilationH,
+                attrInfo.dilationW);
         return false;
     }
     return true;
@@ -792,19 +778,23 @@ bool Conv2dTiling::CheckFmapShapeBeforeCoreBind()
     int64_t ciPerg = this->optGroupFlag ? shapeInfo.singleCi / shapeInfo.enlarge : shapeInfo.singleCi;
     if (ciPerg * attrInfo.groups != shapeInfo.orgCi) {
         OP_LOGE(nodeType, "only support groups * singleCi = orgCi, current groups: %d, singleCi: %ld, orgCi: %ld",
-            attrInfo.groups, ciPerg, shapeInfo.orgCi);
+                attrInfo.groups, ciPerg, shapeInfo.orgCi);
         return false;
     }
 
     if (attrInfo.strideH == 0 || attrInfo.strideW == 0) {
-        OP_LOGE(nodeType, "div zero when calculating output shape, strideH: %d, strideW: %d.",
-            attrInfo.strideH, attrInfo.strideW);
+        OP_LOGE(nodeType, "div zero when calculating output shape, strideH: %d, strideW: %d.", attrInfo.strideH,
+                attrInfo.strideW);
         return false;
     }
     shapeInfo.orgHo = (shapeInfo.orgHi + attrInfo.padTop + attrInfo.padBottom -
-                       attrInfo.dilationH * (shapeInfo.orgkH - 1) - 1) / attrInfo.strideH + 1;
+                       attrInfo.dilationH * (shapeInfo.orgkH - 1) - 1) /
+                          attrInfo.strideH +
+                      1;
     shapeInfo.orgWo = (shapeInfo.orgWi + attrInfo.padLeft + attrInfo.padRight -
-                       attrInfo.dilationW * (shapeInfo.orgkW - 1) - 1) / attrInfo.strideW + 1;
+                       attrInfo.dilationW * (shapeInfo.orgkW - 1) - 1) /
+                          attrInfo.strideW +
+                      1;
     if (shapeInfo.orgHo <= 0 || shapeInfo.orgWo <= 0) {
         OP_LOGE(nodeType, "Calculated output orgHo: %ld, orgWo: %ld, which must > 0", shapeInfo.orgHo, shapeInfo.orgWo);
         return false;
@@ -821,10 +811,9 @@ bool Conv2dTiling::CheckFmapShapeBBModePhase1()
 
 bool Conv2dTiling::CheckFeaMapShape()
 {
-    if (outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
-        (shapeInfo.singleHo <= 0 || shapeInfo.singleWo <= 0)) {
-        OP_LOGE(nodeType, "Input illegal singleHo: %ld, singleWo: %ld, which must > 0.",
-            shapeInfo.singleHo, shapeInfo.singleWo);
+    if (outputOrder == static_cast<int8_t>(OutputOrder::HW) && (shapeInfo.singleHo <= 0 || shapeInfo.singleWo <= 0)) {
+        OP_LOGE(nodeType, "Input illegal singleHo: %ld, singleWo: %ld, which must > 0.", shapeInfo.singleHo,
+                shapeInfo.singleWo);
         return false;
     }
     if (outputOrder == static_cast<int8_t>(OutputOrder::M) && shapeInfo.singleM <= 0) {
@@ -853,14 +842,14 @@ bool Conv2dTiling::CheckWeightShapeBeforeCoreBind()
     }
 
     if (shapeInfo.singlekW != shapeInfo.orgkW) {
-        OP_LOGE(nodeType, "Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld",
-            shapeInfo.singlekW, shapeInfo.orgkW);
+        OP_LOGE(nodeType, "Only support singlekW = orgkW, current singlekW: %ld, orgkW: %ld", shapeInfo.singlekW,
+                shapeInfo.orgkW);
         return false;
     }
 
     if (shapeInfo.singlekH != shapeInfo.orgkH) {
-        OP_LOGE(nodeType, "Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,",
-            shapeInfo.singlekH, shapeInfo.orgkH);
+        OP_LOGE(nodeType, "Only support singlekH = orgkH, current singlekH: %ld, orgkH: %ld,", shapeInfo.singlekH,
+                shapeInfo.orgkH);
         return false;
     }
 
@@ -876,8 +865,8 @@ bool Conv2dTiling::CheckWeightShapeBBModePhase1()
 bool Conv2dTiling::CheckWeightShape()
 {
     if (shapeInfo.singleCo <= 0 || static_cast<uint64_t>(shapeInfo.singleCo) > MAX_31_BIT_NUM) {
-        OP_LOGE(nodeType, "Input illegal SingleCo: %ld, which must in range [1, %lu].",
-            shapeInfo.singleCo, MAX_31_BIT_NUM);
+        OP_LOGE(nodeType, "Input illegal SingleCo: %ld, which must in range [1, %lu].", shapeInfo.singleCo,
+                MAX_31_BIT_NUM);
         return false;
     }
 
@@ -914,13 +903,9 @@ bool Conv2dTiling::CheckShape()
 bool Conv2dTiling::CheckFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv2dSupportFormatSet = {
-        {ConvFormat::NCHW, ConvFormat::NCHW},
-        {ConvFormat::NHWC, ConvFormat::HWCN},
-        {ConvFormat::NCHW, ConvFormat::FRACTAL_Z},
-        {ConvFormat::NCHW, ConvFormat::FRACTAL_Z_C04},
-        {ConvFormat::NHWC, ConvFormat::FRACTAL_Z},
-        {ConvFormat::NHWC, ConvFormat::FRACTAL_Z_C04}
-    };
+        {ConvFormat::NCHW, ConvFormat::NCHW},      {ConvFormat::NHWC, ConvFormat::HWCN},
+        {ConvFormat::NCHW, ConvFormat::FRACTAL_Z}, {ConvFormat::NCHW, ConvFormat::FRACTAL_Z_C04},
+        {ConvFormat::NHWC, ConvFormat::FRACTAL_Z}, {ConvFormat::NHWC, ConvFormat::FRACTAL_Z_C04}};
 
     if (conv2dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv2dSupportFormatSet.end()) {
@@ -951,13 +936,18 @@ bool Conv2dTiling::CheckBBmodeLimits(Conv2DBasicBlockInfo& conv2DBasicBlockInfo)
         groups = shapeInfo.singleGroupOpt; // actually not single, it is ori groupopt
     }
     if (!enableInnerBatch && CeilDiv(shapeInfo.orgWo * shapeInfo.orgHo, conv2DBasicBlockInfo.mTile) *
-        CeilDiv(shapeInfo.orgCo, conv2DBasicBlockInfo.nTile) * conv2DBasicBlockInfo.batch * groups <=
-        conv2DBasicBlockInfo.aicoreNum) {
+                                     CeilDiv(shapeInfo.orgCo, conv2DBasicBlockInfo.nTile) * conv2DBasicBlockInfo.batch *
+                                     groups <=
+                                 conv2DBasicBlockInfo.aicoreNum) {
         return false;
     }
-    if (enableInnerBatch && CeilDiv(CeilDiv(conv2DBasicBlockInfo.batch *  CeilDiv(shapeInfo.orgWo *
-        shapeInfo.orgHo, cubeInfo.m0) * cubeInfo.m0, conv2DBasicBlockInfo.mTile), innerBatch) *
-        CeilDiv(shapeInfo.orgCo, conv2DBasicBlockInfo.nTile) * groups <= conv2DBasicBlockInfo.aicoreNum &&
+    if (enableInnerBatch &&
+        CeilDiv(
+            CeilDiv(conv2DBasicBlockInfo.batch * CeilDiv(shapeInfo.orgWo * shapeInfo.orgHo, cubeInfo.m0) * cubeInfo.m0,
+                    conv2DBasicBlockInfo.mTile),
+            innerBatch) *
+                CeilDiv(shapeInfo.orgCo, conv2DBasicBlockInfo.nTile) * groups <=
+            conv2DBasicBlockInfo.aicoreNum &&
         CeilDiv(conv2DBasicBlockInfo.batch, conv2DBasicBlockInfo.aicoreNum) == CONST_VALUE_1) {
         return false;
     }
@@ -967,14 +957,14 @@ bool Conv2dTiling::CheckBBmodeLimits(Conv2DBasicBlockInfo& conv2DBasicBlockInfo)
         biasSize = DTYPE_SIZE_TAB.at(descInfo.biasType.dtype) * conv2DBasicBlockInfo.nTile;
     }
     if (hasScale) {
-        scaleSize = static_cast<int64_t>(shapeInfo.channelWiseCoeff *
-                    DTYPE_SIZE_TAB.at(descInfo.scaleType.dtype) * conv2DBasicBlockInfo.nTile);
+        scaleSize = static_cast<int64_t>(shapeInfo.channelWiseCoeff * DTYPE_SIZE_TAB.at(descInfo.scaleType.dtype) *
+                                         conv2DBasicBlockInfo.nTile);
     }
 
     int64_t availableL1Size = platformInfo.l1Size - biasSize - scaleSize;
     int64_t fMapDtypeSize = static_cast<int64_t>(DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype));
-    int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize /
-        static_cast<int64_t>(CONST_VALUE_2) / static_cast<int64_t>(cubeInfo.k0) / innerBatch;
+    int64_t maxHiWiL1 = availableL1Size / fMapDtypeSize / static_cast<int64_t>(CONST_VALUE_2) /
+                        static_cast<int64_t>(cubeInfo.k0) / innerBatch;
     if (maxHiWiL1 <= 0) {
         return false;
     }
@@ -993,9 +983,8 @@ bool Conv2dTiling::CheckFixpipeLimits()
     uint64_t fixpipeLoop2DstStrideLimit = MAX_32_BIT_NUM;
     uint64_t fixpipeLoop2DstStride = static_cast<uint64_t>(shapeInfo.orgHo) * shapeInfo.orgWo;
     if (descInfo.fMapType.format == ConvFormat::NCHW && fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
-        OP_LOGE(nodeType, 
-            "Output shape does not satisfy Fixpipe's limits: hout(%ld)*wout(%ld)=%lu, which must <= %lu",
-            shapeInfo.orgHo, shapeInfo.orgWo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
+        OP_LOGE(nodeType, "Output shape does not satisfy Fixpipe's limits: hout(%ld)*wout(%ld)=%lu, which must <= %lu",
+                shapeInfo.orgHo, shapeInfo.orgWo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
         return false;
     }
 
@@ -1004,9 +993,8 @@ bool Conv2dTiling::CheckFixpipeLimits()
     uint64_t fixpipeLoop3DstStride = shapeInfo.orgWo * shapeInfo.orgCo;
     if (descInfo.fMapType.format == ConvFormat::NHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         fixpipeLoop3DstStride > fixpipeLoop3DstStrideLimit) {
-        OP_LOGE(nodeType,
-            "Output shape does not satisfy Fixpipe's limits: wout(%ld)*cout(%ld)=%lu, which must <= %lu",
-            shapeInfo.orgWo, shapeInfo.orgCo, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
+        OP_LOGE(nodeType, "Output shape does not satisfy Fixpipe's limits: wout(%ld)*cout(%ld)=%lu, which must <= %lu",
+                shapeInfo.orgWo, shapeInfo.orgCo, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
         return false;
     }
 
@@ -1018,10 +1006,10 @@ bool Conv2dTiling::CheckDataCopyLimits()
     uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
     uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
     if (descInfo.fMapType.format == ConvFormat::NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
-        OP_LOGE(nodeType, 
-            "Fmap shape does not satisfy DataCopy's limits: hin(%ld)*win(%ld)*datatype size(%u)=%lu, must <= %lu",
-            shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
-            loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
+        OP_LOGE(nodeType,
+                "Fmap shape does not satisfy DataCopy's limits: hin(%ld)*win(%ld)*datatype size(%u)=%lu, must <= %lu",
+                shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype), loadAL1loop1SrcStride,
+                loadAL1loop1SrcStrideLimits);
         return false;
     }
     return true;
@@ -1035,9 +1023,9 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
     uint64_t nBL1min = cubeInfo.n0;
     uint64_t biasUsedL1Size = hasBias ? AlignB(nBL1min * DTYPE_SIZE_TAB.at(descInfo.biasType.dtype), C0_SIZE) : 0;
     uint64_t scaleUsedL1Size = AlignB(static_cast<uint64_t>(nBL1min * shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE),
-                                                            C0_SIZE);
+                                      C0_SIZE);
     uint64_t kBL1min = isC04 ? AlignB(C04_CIN_SIZE * shapeInfo.orgkH * shapeInfo.orgkW, cubeInfo.k0) :
-        (cubeInfo.k0 * shapeInfo.orgkH * shapeInfo.orgkW);
+                               (cubeInfo.k0 * shapeInfo.orgkH * shapeInfo.orgkW);
     uint64_t weightUsedL1Size = AlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t fmapUsedL1Size = 0;
     uint64_t hoAL1min = std::min(shapeInfo.orgWo < cubeInfo.m0 ? CeilDiv(cubeInfo.m0, shapeInfo.orgWo) : 1,
@@ -1055,13 +1043,15 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
     std::vector<int64_t> filterShape = {shapeInfo.orgCo, shapeInfo.orgCi, shapeInfo.orgkH, shapeInfo.orgkW};
     if (minL1LoadSize > platformInfo.l1Size) {
         if (platformInfo.npuArch == NpuArch::DAV_5102) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeType.c_str(), "x, filter",
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                nodeType.c_str(), "x, filter",
                 VectorsToString(std::vector<std::vector<int64_t>>{xShape, filterShape}, IntToString<int64_t>).c_str(),
-                FormatString("KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
-                    minL1LoadSize, platformInfo.l1Size).c_str());
+                FormatString("KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu", minL1LoadSize,
+                             platformInfo.l1Size)
+                    .c_str());
         } else {
             OP_LOGD(nodeType, "%s AscendC: KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
-                nodeType.c_str(), minL1LoadSize, platformInfo.l1Size);
+                    nodeType.c_str(), minL1LoadSize, platformInfo.l1Size);
         }
         return false;
     }
@@ -1073,9 +1063,8 @@ bool Conv2dTiling::CheckInstructionLimits()
     if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad(isC04Flag)) {
         this->isDmaFlag = true;
         if (platformInfo.npuArch == NpuArch::DAV_5102) {
-            OP_LOGE(nodeType,
-                "Conv2d does not support DMA mode. "
-                "Please adjust the parameters to satisfy Load3D constraints (see above error details).");
+            OP_LOGE(nodeType, "Conv2d does not support DMA mode. "
+                              "Please adjust the parameters to satisfy Load3D constraints (see above error details).");
             return false;
         }
     }
@@ -1099,8 +1088,8 @@ bool Conv2dTiling::CheckL1SizeLimit()
     uint64_t minBiasSize = hasBias ? AlignB(cubeInfo.n0 * DTYPE_SIZE_TAB.at(descInfo.biasType.dtype), C0_SIZE) : 0;
     uint64_t minScaleSize = 0;
     if (hasScale) {
-        minScaleSize = static_cast<int64_t>(shapeInfo.channelWiseCoeff *
-                       cubeInfo.n0 * DTYPE_SIZE_TAB.at(descInfo.scaleType.dtype));
+        minScaleSize = static_cast<int64_t>(shapeInfo.channelWiseCoeff * cubeInfo.n0 *
+                                            DTYPE_SIZE_TAB.at(descInfo.scaleType.dtype));
     }
 
     uint64_t minBL1Size = shapeInfo.orgkH * shapeInfo.orgkW * cubeInfo.n0 * cubeInfo.k0 * weightDtypeSize;
@@ -1112,8 +1101,7 @@ bool Conv2dTiling::CheckL1SizeLimit()
     minAL1Size = minHiAL1 * shapeInfo.orgWi * cubeInfo.k0 * fMapDtypeSize * innerBatch;
     uint64_t minL1LoadSize = minAL1Size + minBL1Size + minBiasSize + minScaleSize;
     if (minL1LoadSize > platformInfo.l1Size) {
-        OP_LOGD(nodeType, "CheckL1SizeLimit, minimum L1 size: %lu, maxL1Size: %lu",
-            minL1LoadSize, platformInfo.l1Size);
+        OP_LOGD(nodeType, "CheckL1SizeLimit, minimum L1 size: %lu, maxL1Size: %lu", minL1LoadSize, platformInfo.l1Size);
         return false;
     }
     return true;
@@ -1122,16 +1110,10 @@ bool Conv2dTiling::CheckL1SizeLimit()
 void Conv2dTiling::PrintConv2DBasicBlockInfoPhase1(UNUSED const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
 {
     OP_LOGD(nodeType,
-        "[Phase1]: fDim[%u], nDim[%u], groupDim[%u], mIn[%u], mTile[%u], nTile[%u], mCut[%u], nCut[%u], batch[%u]",
-        conv2DBasicBlockInfo.fDim,
-        conv2DBasicBlockInfo.nDim,
-        conv2DBasicBlockInfo.groupDim,
-        conv2DBasicBlockInfo.mIn,
-        conv2DBasicBlockInfo.mTile,
-        conv2DBasicBlockInfo.nTile,
-        conv2DBasicBlockInfo.mCut,
-        conv2DBasicBlockInfo.nCut,
-        conv2DBasicBlockInfo.batch);
+            "[Phase1]: fDim[%u], nDim[%u], groupDim[%u], mIn[%u], mTile[%u], nTile[%u], mCut[%u], nCut[%u], batch[%u]",
+            conv2DBasicBlockInfo.fDim, conv2DBasicBlockInfo.nDim, conv2DBasicBlockInfo.groupDim,
+            conv2DBasicBlockInfo.mIn, conv2DBasicBlockInfo.mTile, conv2DBasicBlockInfo.nTile, conv2DBasicBlockInfo.mCut,
+            conv2DBasicBlockInfo.nCut, conv2DBasicBlockInfo.batch);
 }
 
 bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase1(Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
@@ -1182,17 +1164,12 @@ bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase1(Conv2DBasicBlockInfo& conv2DB
 
 void Conv2dTiling::PrintConv2DBasicBlockInfoPhase2(UNUSED const Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
 {
-    OP_LOGD(nodeType,
+    OP_LOGD(
+        nodeType,
         "[Phase2]: batchDim[%u], mDim[%u], nDim[%u], groupDim[%u], mCut[%u], nCut[%u], mTile[%u], nTile[%u], mIn[%u],",
-        conv2DBasicBlockInfo.batchDim,
-        conv2DBasicBlockInfo.mDim,
-        conv2DBasicBlockInfo.nDim,
-        conv2DBasicBlockInfo.groupDim,
-        conv2DBasicBlockInfo.mCut,
-        conv2DBasicBlockInfo.nCut,
-        conv2DBasicBlockInfo.mTile,
-        conv2DBasicBlockInfo.nTile,
-        conv2DBasicBlockInfo.mIn);
+        conv2DBasicBlockInfo.batchDim, conv2DBasicBlockInfo.mDim, conv2DBasicBlockInfo.nDim,
+        conv2DBasicBlockInfo.groupDim, conv2DBasicBlockInfo.mCut, conv2DBasicBlockInfo.nCut, conv2DBasicBlockInfo.mTile,
+        conv2DBasicBlockInfo.nTile, conv2DBasicBlockInfo.mIn);
 }
 
 bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase2(Conv2DBasicBlockInfo& conv2DBasicBlockInfo) const
@@ -1224,7 +1201,7 @@ bool Conv2dTiling::CheckConv2DBasicBlockInfoPhase2(Conv2DBasicBlockInfo& conv2DB
     }
     if (conv2DBasicBlockInfo.iterateMNOrder == IterateMNOrder::INVALID) {
         OP_LOGE(nodeType, "iterateMNOrder is illegal which is: %u (INVALID)",
-                         static_cast<uint8_t>(conv2DBasicBlockInfo.iterateMNOrder));
+                static_cast<uint8_t>(conv2DBasicBlockInfo.iterateMNOrder));
         return false;
     }
     return true;
@@ -1269,8 +1246,8 @@ bool Conv2dTiling::CheckTilingAlgorithmType(Conv2DBasicBlockInfo& conv2DBasicBlo
         case static_cast<int8_t>(TilingAlgorithmType::FORMULAS):
         default:
             OP_LOGE(nodeType, "Unsupported tiling algorithm type %d, only support BASIC_BLOCK(%d) and FORMULAS(%d).",
-                tilingAlgorithmType, static_cast<int8_t>(TilingAlgorithmType::BASIC_BLOCK),
-                static_cast<int8_t>(TilingAlgorithmType::FORMULAS));
+                    tilingAlgorithmType, static_cast<int8_t>(TilingAlgorithmType::BASIC_BLOCK),
+                    static_cast<int8_t>(TilingAlgorithmType::FORMULAS));
             return false;
     }
     return true;
@@ -1283,8 +1260,8 @@ bool Conv2dTiling::GetCoreBindingDecisionFactor(Conv2DBasicBlockInfo& conv2DBasi
     }
 
     Infer5hdShape();
-    std::shared_ptr<ConvTilingAlgorithmBBmode> algoBBPtr = std::make_shared<ConvTilingAlgorithmBBmode>(this,
-        conv2DBasicBlockInfo);
+    std::shared_ptr<ConvTilingAlgorithmBBmode> algoBBPtr = std::make_shared<ConvTilingAlgorithmBBmode>(
+        this, conv2DBasicBlockInfo);
     algoBBPtr->AdjustM();
     algoBBPtr->AdjustN();
     algoBBPtr->CalcBestL1LoadStratgy();

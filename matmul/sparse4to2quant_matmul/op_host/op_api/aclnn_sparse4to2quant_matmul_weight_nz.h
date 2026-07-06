@@ -31,9 +31,9 @@ extern "C" {
  * @param [out] indexDimsNum: 压缩后的index矩阵shape数组长度（元素数）。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnTransSparse4to2Para(
-    const int8_t* weight, aclIntArray* shape, int8_t** sparseWeight, int64_t** sparseWeightDims,
-    uint64_t* sparseWeightDimsNum, uint8_t** index, int64_t** indexDims, uint64_t* indexDimsNum);
+ACLNN_API aclnnStatus aclnnTransSparse4to2Para(const int8_t* weight, aclIntArray* shape, int8_t** sparseWeight,
+                                               int64_t** sparseWeightDims, uint64_t* sparseWeightDimsNum,
+                                               uint8_t** index, int64_t** indexDims, uint64_t* indexDimsNum);
 
 /**
  * @brief aclnnSparse4to2QuantMatmulGetWorkspaceSize的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -58,13 +58,14 @@ ACLNN_API aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
 /**
  * @brief aclnnQuantMatmulWeightNz的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnSparse4to2QuantMatmulGetWorkspaceSize获取。
+ * @param [in] workspace_size: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnSparse4to2QuantMatmulGetWorkspaceSize获取。
  * @param [in] exector: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus
-aclnnSparse4to2QuantMatmulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(void* workspace, uint64_t workspaceSize,
+                                                         aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }

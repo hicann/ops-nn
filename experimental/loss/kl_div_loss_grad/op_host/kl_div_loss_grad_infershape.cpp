@@ -18,8 +18,8 @@
 using namespace ge;
 
 namespace ops {
-ge::graphStatus CopyShapeInput2OutputWithForKlDivLossGrad(
-    gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
+ge::graphStatus CopyShapeInput2OutputWithForKlDivLossGrad(gert::InferShapeContext* context, int64_t input_idx,
+                                                          int64_t output_idx)
 {
     auto in_shape = context->GetInputShape(input_idx);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);

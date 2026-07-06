@@ -17,8 +17,7 @@
 
 #include "batch_norm_base.h"
 
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
@@ -31,8 +30,7 @@ using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
 template <typename T1, typename T2>
-class BatchNormRAFullReduce
-{
+class BatchNormRAFullReduce {
 public:
     __aicore__ inline BatchNormRAFullReduce(const BatchNormRAFullReduceTilingData* tilingData, TPipe* pipeIn)
     {
@@ -58,9 +56,9 @@ public:
             this->oneSubMomentum = one - this->momentum;
         }
 
-        this->besselCorrectionFactor = this->r1 == 1
-                                           ? AscendC::NumericLimits<float>::QuietNaN()
-                                           : (static_cast<float>(this->r1) / static_cast<float>(this->r1 - 1));
+        this->besselCorrectionFactor = this->r1 == 1 ?
+                                           AscendC::NumericLimits<float>::QuietNaN() :
+                                           (static_cast<float>(this->r1) / static_cast<float>(this->r1 - 1));
         this->nFactor = static_cast<float>(1) / static_cast<float>(this->powerOfTwoForR);
         this->nCorrectionFactor = static_cast<float>(this->powerOfTwoForR) / static_cast<float>(this->r1);
     }
@@ -70,8 +68,8 @@ public:
     {
         auto blockIdx = GetBlockIdx();
 
-        this->singleA = (blockIdx == this->blockNum - 1) ? (this->a - this->aBlockFactor * (this->blockNum - 1))
-                                                         : this->aBlockFactor;
+        this->singleA = (blockIdx == this->blockNum - 1) ? (this->a - this->aBlockFactor * (this->blockNum - 1)) :
+                                                           this->aBlockFactor;
         int64_t aGmOffset = this->aBlockFactor * blockIdx;
         xGm.SetGlobalBuffer((__gm__ T1*)x + aGmOffset);
         betaGm.SetGlobalBuffer((__gm__ T2*)beta + aGmOffset);
@@ -96,8 +94,8 @@ public:
         }
         pipe->InitBuffer(yQueue, DOUBLE_BUFFER, this->r1 * aFactorAlign * sizeof(T1));
 
-        int64_t aFactorAlignF32 =
-            (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / FLOAT_BYTES;
+        int64_t aFactorAlignF32 = (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                                  FLOAT_BYTES;
 
         pipe->InitBuffer(betaQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(T2));
         pipe->InitBuffer(gammaQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(T2));
@@ -118,8 +116,8 @@ public:
         int64_t quotient = (this->singleA + this->aFactor - 1) / this->aFactor;
         for (int64_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             int64_t aOffset = ubLoopIdx * this->aFactor;
-            int64_t currentA =
-                (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) : this->aFactor;
+            int64_t currentA = (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) :
+                                                               this->aFactor;
             currentANumAlign = (((currentA * sizeof(T1) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(T1);
             ProcessUB(aOffset, currentA);
         }
@@ -519,10 +517,10 @@ private:
         uint16_t remainderTailCount = this->r1 - SCALE_COEF_FOUR;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ? validNumInXUb :
+                                                                           remainderOffset + ROW_THREE_OFFSET * aLength;
 
         uint16_t aLoopCount = ops::CeilDiv(currentA, static_cast<int64_t>(VL_FP32));
         __VEC_SCOPE__
@@ -581,18 +579,22 @@ private:
         uint32_t remainderTailOffset = quotientTailOffset + remainderOffset;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderTailOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderTailOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_THREE_OFFSET * aLength;
-        uint32_t remainderTailOffset4 =
-            (ROW_FOUR > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FOUR_OFFSET * aLength;
-        uint32_t remainderTailOffset5 =
-            (ROW_FIVE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FIVE_OFFSET * aLength;
-        uint32_t remainderTailOffset6 =
-            (ROW_SIX > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SIX_OFFSET * aLength;
-        uint32_t remainderTailOffset7 =
-            (ROW_SEVEN > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset4 = (ROW_FOUR > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FOUR_OFFSET * aLength;
+        uint32_t remainderTailOffset5 = (ROW_FIVE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FIVE_OFFSET * aLength;
+        uint32_t remainderTailOffset6 = (ROW_SIX > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_SIX_OFFSET * aLength;
+        uint32_t remainderTailOffset7 = (ROW_SEVEN > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
 
         uint16_t aLoopCount = ops::CeilDiv(currentA, static_cast<int64_t>(VL_FP32));
         __VEC_SCOPE__
@@ -796,10 +798,10 @@ private:
         uint16_t remainderTailCount = this->r1 - SCALE_COEF_FOUR;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ? validNumInXUb :
+                                                                           remainderOffset + ROW_THREE_OFFSET * aLength;
 
         uint16_t aLoopCount = ops::CeilDiv(currentA, static_cast<int64_t>(VL_FP32));
         __VEC_SCOPE__
@@ -857,18 +859,22 @@ private:
         uint32_t remainderTailOffset = quotientTailOffset + remainderOffset;
         uint32_t remainderTailOffset0 = (ROW_ZERO > remainderTailCount) ? validNumInXUb : remainderTailOffset;
         uint32_t remainderTailOffset1 = (ROW_ONE > remainderTailCount) ? validNumInXUb : remainderTailOffset + aLength;
-        uint32_t remainderTailOffset2 =
-            (ROW_TWO > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_TWO_OFFSET * aLength;
-        uint32_t remainderTailOffset3 =
-            (ROW_THREE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_THREE_OFFSET * aLength;
-        uint32_t remainderTailOffset4 =
-            (ROW_FOUR > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FOUR_OFFSET * aLength;
-        uint32_t remainderTailOffset5 =
-            (ROW_FIVE > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_FIVE_OFFSET * aLength;
-        uint32_t remainderTailOffset6 =
-            (ROW_SIX > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SIX_OFFSET * aLength;
-        uint32_t remainderTailOffset7 =
-            (ROW_SEVEN > remainderTailCount) ? validNumInXUb : remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
+        uint32_t remainderTailOffset2 = (ROW_TWO > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_TWO_OFFSET * aLength;
+        uint32_t remainderTailOffset3 = (ROW_THREE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_THREE_OFFSET * aLength;
+        uint32_t remainderTailOffset4 = (ROW_FOUR > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FOUR_OFFSET * aLength;
+        uint32_t remainderTailOffset5 = (ROW_FIVE > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_FIVE_OFFSET * aLength;
+        uint32_t remainderTailOffset6 = (ROW_SIX > remainderTailCount) ? validNumInXUb :
+                                                                         remainderTailOffset + ROW_SIX_OFFSET * aLength;
+        uint32_t remainderTailOffset7 = (ROW_SEVEN > remainderTailCount) ?
+                                            validNumInXUb :
+                                            remainderTailOffset + ROW_SEVEN_OFFSET * aLength;
 
         uint16_t aLoopCount = ops::CeilDiv(currentA, static_cast<int64_t>(VL_FP32));
         __VEC_SCOPE__
@@ -1066,16 +1072,16 @@ private:
                 Div(r, one, var, pregLoop);
                 Sqrt(y, r, pregLoop);
                 Muls(t, var, float(-0.5), pregLoop);
-                Mul(t, t, y, pregLoop);                 // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);               // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);             // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);   // -1 * x
-                Mula(s, t3, r, pregLoop);               // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop);  // (-1) * y
-                Mula(r, t4, rstd, pregLoop);            // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);              // s + x * t
-                Mul(s, s, rstd, pregLoop);              // e * y
-                Mula(rstd, s, scalar1, pregLoop);       // y + y * e * 0.5
+                Mul(t, t, y, pregLoop);                // -0.5 * x * y
+                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
+                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
+                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
+                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
+                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
+                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
+                Mula(s, var, r, pregLoop);             // s + x * t
+                Mul(s, s, rstd, pregLoop);             // e * y
+                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
                 CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
                 Select(rstd, scalarZero, rstd, cmpRegZero);
                 CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
@@ -1222,6 +1228,6 @@ private:
 
     TBuf<TPosition::VECCALC> castBuf;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_RA_FULL_REDUCE_H

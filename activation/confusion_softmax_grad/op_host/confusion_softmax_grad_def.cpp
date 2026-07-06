@@ -18,7 +18,7 @@
 namespace ops {
 class ConfusionSoftmaxGrad : public OpDef {
 public:
-    explicit ConfusionSoftmaxGrad(const char *name) : OpDef(name)
+    explicit ConfusionSoftmaxGrad(const char* name) : OpDef(name)
     {
         this->Input("grad")
             .ParamType(REQUIRED)
@@ -50,4 +50,4 @@ public:
 };
 
 OP_ADD(ConfusionSoftmaxGrad);
-}  // namespace ops
+} // namespace ops

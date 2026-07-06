@@ -20,9 +20,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AdaptiveAvgPool2dAssistMatrix);
 
-bool AssistMatrixInferShape(
-    const aclTensor* input, const aclIntArray* output_size, Shape& left_matrix_shape, Shape& right_matrix_shape,
-    Shape& mul_matrix)
+bool AssistMatrixInferShape(const aclTensor* input, const aclIntArray* output_size, Shape& left_matrix_shape,
+                            Shape& right_matrix_shape, Shape& mul_matrix)
 {
     auto shape = input->GetViewShape();
     size_t dim_num = shape.GetDimNum();
@@ -59,9 +58,9 @@ static const std::array<aclTensor*, 3> AdaptiveAvgPool2dAssistMatrixAiCpu(
     L0_DFX(AdaptiveAvgPool2dAssistMatrixAiCpu, input, output_size);
 
     static internal::AicpuTaskSpace space("AdaptiveAvgPool2dAssistMatrix");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        AdaptiveAvgPool2dAssistMatrix, OP_ATTR_NAMES({"output_size"}), OP_INPUT(input),
-        OP_OUTPUT(left_matrix, right_matrix, mul_matrix), OP_ATTR(output_size));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(AdaptiveAvgPool2dAssistMatrix, OP_ATTR_NAMES({"output_size"}),
+                                          OP_INPUT(input), OP_OUTPUT(left_matrix, right_matrix, mul_matrix),
+                                          OP_ATTR(output_size));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveAvgPool2dAssistMatrixAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed.");
         return {nullptr, nullptr, nullptr};
@@ -69,8 +68,8 @@ static const std::array<aclTensor*, 3> AdaptiveAvgPool2dAssistMatrixAiCpu(
     return {left_matrix, right_matrix, mul_matrix};
 }
 
-const std::array<aclTensor*, 3> AdaptiveAvgPool2dAssistMatrix(
-    const aclTensor* input, const aclTensor* origin_input, const aclIntArray* output_size, aclOpExecutor* executor)
+const std::array<aclTensor*, 3> AdaptiveAvgPool2dAssistMatrix(const aclTensor* input, const aclTensor* origin_input,
+                                                              const aclIntArray* output_size, aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveAvgPool2dAssistMatrix, input, output_size);
     Shape left_matrix_shape;

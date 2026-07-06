@@ -22,14 +22,11 @@ namespace optiling {
 
 class SwigluGroupQuantTiling {
 public:
-    explicit SwigluGroupQuantTiling(gert::TilingContext* tilingContext) : context_(tilingContext)
-    {
-    }
+    explicit SwigluGroupQuantTiling(gert::TilingContext* tilingContext) : context_(tilingContext) {}
     ~SwigluGroupQuantTiling() = default;
 
-    static ge::graphStatus GetPlatformInfoCommon(gert::TilingContext* context,
-                                                  uint64_t& coreNum, uint64_t& ubSize);
-    
+    static ge::graphStatus GetPlatformInfoCommon(gert::TilingContext* context, uint64_t& coreNum, uint64_t& ubSize);
+
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus DoOpTiling();
     ge::graphStatus GetWorkspaceSize();
@@ -43,6 +40,7 @@ public:
     ge::graphStatus CalcGroupIndexTiling();
     void SetTilingData();
     void SetTilingKey();
+
 private:
     using TotalSizeFunc = int64_t (SwigluGroupQuantTiling::*)(int64_t, int64_t) const;
 
@@ -61,7 +59,7 @@ private:
     int64_t CalcBlockQuantTotalSize(int64_t rowFactor, int64_t dFactor) const;
     int64_t CalcMxFp4QuantTotalSize(int64_t rowFactor, int64_t dFactor) const;
 
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     uint64_t tilingKey_ = 0;
     SwigluGroupQuantTilingData tilingData_;
     uint64_t coreNum_ = 0;
@@ -78,7 +76,7 @@ private:
     int64_t rowLoopOfTailBlock_ = 0;
     int64_t rowFactor_ = 0;
     int64_t tailRowFactorOfFormerBlock_ = 0;
-    int64_t tailRowFactorOfTailBlock_= 0;
+    int64_t tailRowFactorOfTailBlock_ = 0;
     int64_t dLoop_ = 0;
     int64_t dFactor_ = 0;
     int64_t tailDFactor_ = 0;
@@ -99,5 +97,5 @@ private:
     platform_ascendc::SocVersion socVersion_ = platform_ascendc::SocVersion::ASCEND910B;
 };
 
-}  // namespace optiling
-#endif  // SWIGLU_GROUP_QUANT_TILING_H
+} // namespace optiling
+#endif // SWIGLU_GROUP_QUANT_TILING_H

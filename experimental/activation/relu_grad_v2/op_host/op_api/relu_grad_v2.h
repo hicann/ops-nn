@@ -15,7 +15,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *ReluGradV2(const aclTensor *gradients, const aclTensor *features, aclOpExecutor *executor);
+const aclTensor* ReluGradV2(const aclTensor* gradients, const aclTensor* features, aclOpExecutor* executor);
 }
 
 #endif

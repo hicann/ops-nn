@@ -49,9 +49,9 @@ ge::graphStatus LambNextMVWithDecayTiling::GetShapeAttrsInfo()
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
     ge::DataType input0DType = input0Desc->GetDataType();
-    static const char* kInputNames[] = {"input_mul3", "input_mul2", "input_realdiv1", "input_mul1", "input_mul0",
-                                        "input_realdiv0", "input_mul4", "mul0_x", "mul1_sub", "mul2_x", "mul3_sub1",
-                                        "mul4_x", "add2_y"};
+    static const char* kInputNames[] = {"input_mul3",     "input_mul2", "input_realdiv1", "input_mul1", "input_mul0",
+                                        "input_realdiv0", "input_mul4", "mul0_x",         "mul1_sub",   "mul2_x",
+                                        "mul3_sub1",      "mul4_x",     "add2_y"};
     static const char* kOutputNames[] = {"y1", "y2", "y3", "y4"};
     for (int32_t inputIdx = 1; inputIdx < INPUT_NUM; inputIdx++) {
         auto inputDesc = context_->GetInputDesc(inputIdx);
@@ -74,39 +74,38 @@ ge::graphStatus LambNextMVWithDecayTiling::GetShapeAttrsInfo()
         auto curDtype = outputDesc->GetDataType();
         if (curDtype != input0DType) {
             std::string paramNames = std::string(kOutputNames[outputIdx]) + " and input0";
-            std::string incorrectDtypes = 
-                Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
-                "Their dtypes should be the same");
+            std::string incorrectDtypes = Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
+                                                   "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-bool LambNextMVWithDecayTiling::IsCapable()
-{
-    return true;
-}
+bool LambNextMVWithDecayTiling::IsCapable() { return true; }
 
 ge::graphStatus LambNextMVWithDecayTiling::DoOpTiling()
 {
-
-    // 空 tensor 应对(空进空出): 输出为空(0元素)时设 1 核(空转), 配合全0 tiling 数据(blockFormer=0)使 kernel 空转退出, 直接成功。
+    // 空 tensor 应对(空进空出): 输出为空(0元素)时设 1 核(空转), 配合全0 tiling 数据(blockFormer=0)使 kernel 空转退出,
+    // 直接成功。
     auto emptyTensorOutShape0 = context_->GetOutputShape(0);
     if (emptyTensorOutShape0 != nullptr && emptyTensorOutShape0->GetStorageShape().GetShapeSize() == 0) {
         auto emptyRawTiling = context_->GetRawTilingData();
         if (emptyRawTiling != nullptr && emptyRawTiling->GetData() != nullptr) {
             size_t emptyCap = emptyRawTiling->GetCapacity();
             uint8_t* emptyPtr = reinterpret_cast<uint8_t*>(emptyRawTiling->GetData());
-            for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) { emptyPtr[emptyIdx] = 0; }
+            for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) {
+                emptyPtr[emptyIdx] = 0;
+            }
             emptyRawTiling->SetDataSize(emptyCap);
         }
         size_t* emptyWs = context_->GetWorkspaceSizes(1);
-        if (emptyWs != nullptr) { emptyWs[0] = 0; }
+        if (emptyWs != nullptr) {
+            emptyWs[0] = 0;
+        }
         context_->SetBlockDim(1);
-        tilingKey = GET_TPL_TILING_KEY(1);  // schMode=1(已编译), 配合全0 tiling(blockFormer=0)空转
+        tilingKey = GET_TPL_TILING_KEY(1); // schMode=1(已编译), 配合全0 tiling(blockFormer=0)空转
         return ge::GRAPH_SUCCESS;
     }
     auto input0Desc = context_->GetInputDesc(0);
@@ -115,52 +114,34 @@ ge::graphStatus LambNextMVWithDecayTiling::DoOpTiling()
     if (input0DType == ge::DT_FLOAT16) {
         BroadcastBaseTiling<LambNextMVWithDecayOp::LambNextMVWithDecayCompute<half, float>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (input0DType == ge::DT_FLOAT) {
         BroadcastBaseTiling<LambNextMVWithDecayOp::LambNextMVWithDecayCompute<float, float>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "input_mul3", Ops::Base::ToString(input0DType).c_str(),
-            "fp16 or fp32");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "input_mul3", Ops::Base::ToString(input0DType).c_str(),
+                                  "fp16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LambNextMVWithDecayTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LambNextMVWithDecayTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t LambNextMVWithDecayTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t LambNextMVWithDecayTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus LambNextMVWithDecayTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LambNextMVWithDecayTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LambNextMVWithDecayTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LambNextMVWithDecayTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus LambNextMVWithDecayTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LambNextMVWithDecayTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus TilingForLambNextMVWithDecay(gert::TilingContext* context)
 {

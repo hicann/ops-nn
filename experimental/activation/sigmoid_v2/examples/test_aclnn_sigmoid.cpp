@@ -3,9 +3,9 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See
+ * LICENSE in the root of the software repository for the full text of the License.
  */
 
 /**
@@ -34,10 +34,10 @@
 #include "aclnnop/aclnn_sigmoid.h"
 
 #define CHECK_RET(cond, expr) \
-    do { \
-        if (!(cond)) { \
-            expr; \
-        } \
+    do {                      \
+        if (!(cond)) {        \
+            expr;             \
+        }                     \
     } while (0)
 
 namespace {
@@ -134,20 +134,18 @@ bool WriteFile(const std::string& path, const std::vector<char>& buffer)
     return stream.good();
 }
 
-aclError CreateAclTensor(
-    const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
     const int64_t* shape_ptr = shape.empty() ? nullptr : shape.data();
     const int64_t* strides_ptr = strides.empty() ? nullptr : strides.data();
-    *tensor = aclCreateTensor(
-        shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(), device_addr);
+    *tensor = aclCreateTensor(shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(),
+                              device_addr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
 
-int RunSigmoid(
-    const std::vector<char>& input_host, const std::vector<int64_t>& shape, const SigmoidConfig& config,
-    std::vector<char>* output_host, int32_t device_id)
+int RunSigmoid(const std::vector<char>& input_host, const std::vector<int64_t>& shape, const SigmoidConfig& config,
+               std::vector<char>* output_host, int32_t device_id)
 {
     aclrtStream stream = nullptr;
     void* input_device = nullptr;
@@ -241,7 +239,7 @@ int RunSmokeCase()
     std::memcpy(input_host.data(), input_values.data(), input_host.size());
 
     std::vector<char> output_host;
-    SigmoidConfig config {ACL_FLOAT, sizeof(float), "fp32"};
+    SigmoidConfig config{ACL_FLOAT, sizeof(float), "fp32"};
     int ret = RunSigmoid(input_host, {2, 2}, config, &output_host, 0);
     CHECK_RET(ret == ACL_SUCCESS, std::fprintf(stderr, "run sigmoid failed: %d\n", ret); return ret);
 
@@ -261,14 +259,12 @@ int RunSmokeCase()
 
 void PrintUsage(const char* program)
 {
-    std::fprintf(
-        stderr,
-        "Usage: %s [dtype shape_csv input_bin output_bin [device_id]]\n"
-        "Example: %s fp16 2,3 /tmp/in.bin /tmp/out.bin 0\n",
-        program,
-        program);
+    std::fprintf(stderr,
+                 "Usage: %s [dtype shape_csv input_bin output_bin [device_id]]\n"
+                 "Example: %s fp16 2,3 /tmp/in.bin /tmp/out.bin 0\n",
+                 program, program);
 }
-}  // namespace
+} // namespace
 
 int main(int argc, char** argv)
 {
@@ -280,7 +276,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    SigmoidConfig config {};
+    SigmoidConfig config{};
     CHECK_RET(ParseDtype(argv[1], &config), PrintUsage(argv[0]); return 1);
 
     std::vector<int64_t> shape;
@@ -290,10 +286,9 @@ int main(int argc, char** argv)
     CHECK_RET(ReadFile(argv[3], &input_host), std::fprintf(stderr, "failed to read input file\n"); return 1);
 
     const size_t expected_bytes = static_cast<size_t>(GetShapeSize(shape)) * config.element_size;
-    CHECK_RET(
-        input_host.size() == expected_bytes,
-        std::fprintf(stderr, "input size mismatch: got %zu expected %zu\n", input_host.size(), expected_bytes);
-        return 1);
+    CHECK_RET(input_host.size() == expected_bytes,
+              std::fprintf(stderr, "input size mismatch: got %zu expected %zu\n", input_host.size(), expected_bytes);
+              return 1);
 
     int32_t device_id = argc == 6 ? std::atoi(argv[5]) : 0;
     std::vector<char> output_host;

@@ -20,20 +20,17 @@
 namespace QuantBatchMatmulV4 {
 namespace Block {
 using Cmct::Gemm::Block::BlockMmad;
-template <
-    class DispatchPolicy, class L1TileShape_, class L0TileShape_, class ATypeTuple_, class BType_, class CType_,
-    class BiasType_, class TileCopy_, class TileMmad_>
-class BlockMmadNN
-    : public BlockMmad<
-          DispatchPolicy, L1TileShape_, L0TileShape_, ATypeTuple_, BType_, CType_, BiasType_, TileCopy_, TileMmad_> {
+template <class DispatchPolicy, class L1TileShape_, class L0TileShape_, class ATypeTuple_, class BType_, class CType_,
+          class BiasType_, class TileCopy_, class TileMmad_>
+class BlockMmadNN : public BlockMmad<DispatchPolicy, L1TileShape_, L0TileShape_, ATypeTuple_, BType_, CType_, BiasType_,
+                                     TileCopy_, TileMmad_> {
 public:
-    using MmadCmct = BlockMmad<
-        DispatchPolicy, L1TileShape_, L0TileShape_, ATypeTuple_, BType_, CType_, BiasType_, TileCopy_, TileMmad_>;
+    using MmadCmct = BlockMmad<DispatchPolicy, L1TileShape_, L0TileShape_, ATypeTuple_, BType_, CType_, BiasType_,
+                               TileCopy_, TileMmad_>;
     using Arguments = typename MmadCmct::Arguments;
     using Params = typename MmadCmct::Params;
     __aicore__ inline BlockMmadNN() = delete;
-    __aicore__ inline BlockMmadNN(const Params& params) : MmadCmct(params)
-    {}
+    __aicore__ inline BlockMmadNN(const Params& params) : MmadCmct(params) {}
     template <typename ProblemShape>
     __aicore__ inline static Params ToUnderlyingArguments(
         ProblemShape const& problemShape, Arguments const& args,
@@ -44,21 +41,19 @@ public:
         auto baseK = static_cast<uint32_t>(tiling->matmulTiling.baseK);
         auto baseM = static_cast<uint32_t>(tiling->matmulTiling.baseM);
         auto baseN = static_cast<uint32_t>(tiling->matmulTiling.baseN);
-        return {
-            .ptrA = args.ptrA,
-            .ptrC = args.ptrC,
-            .ptrAScale = args.ptrAScale,
-            .ptrBScale = args.ptrBScale,
-            .layoutA = args.layoutA,
-            .layoutC = args.layoutC,
-            .layoutScale = args.layoutScale,
-            .tileShapeL1 = AscendC::MakeShape(baseM, baseN, stepKa * baseK, stepKb * baseK),
-            .tileShapeL0 = AscendC::MakeShape(baseM, baseN, baseK),
-            .scaleFactor = tiling->matmulTiling.mxTypePara & 0xff, // 0xff：to obtain the lower 8 bits
-            .aL1BufNum = tiling->AL1Pingpong,
-            .isBias = bool(tiling->matmulTiling.isBias)};
+        return {.ptrA = args.ptrA,
+                .ptrC = args.ptrC,
+                .ptrAScale = args.ptrAScale,
+                .ptrBScale = args.ptrBScale,
+                .layoutA = args.layoutA,
+                .layoutC = args.layoutC,
+                .layoutScale = args.layoutScale,
+                .tileShapeL1 = AscendC::MakeShape(baseM, baseN, stepKa * baseK, stepKb * baseK),
+                .tileShapeL0 = AscendC::MakeShape(baseM, baseN, baseK),
+                .scaleFactor = tiling->matmulTiling.mxTypePara & 0xff, // 0xff：to obtain the lower 8 bits
+                .aL1BufNum = tiling->AL1Pingpong,
+                .isBias = bool(tiling->matmulTiling.isBias)};
     }
 };
 } // namespace Block
 } // namespace QuantBatchMatmulV4
-

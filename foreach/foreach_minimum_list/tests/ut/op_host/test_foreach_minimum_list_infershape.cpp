@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_minimum_list_proto.h"
 
-class ForeachMinimumListTest : public testing::Test
-{
+class ForeachMinimumListTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMinimumList SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMinimumList SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMinimumList TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMinimumList TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMinimumListTest, infer_shape_known_success)

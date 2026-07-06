@@ -19,13 +19,12 @@
 
 using namespace AscendC;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr uint64_t BATCH_NORM_GRAD_RAR_SPLIT_CORE_R0_TILING_KEY = 1100;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t CONST_TWO = 2;
 static constexpr int32_t ULONG_BIT_LEN = 64;
-static constexpr int64_t CACHE_BUFFER_COUNT_MAX = 63;  // 按int64最大值代入计算
+static constexpr int64_t CACHE_BUFFER_COUNT_MAX = 63; // 按int64最大值代入计算
 static constexpr int64_t FLOAT32_BYTES = 4;
 static constexpr int64_t FLOAT16_BYTES = 2;
 static constexpr int64_t R0_THRESHOLD = 102400;
@@ -40,13 +39,11 @@ static constexpr size_t BNG_WORKSPACE_RESERVED = 16 * 1024 * 1024;
 
 constexpr int64_t CONST_ONE = 1;
 
-class BatchNormGradRARSplitCoreR0 : public BatchNormGradTilingBase
-{
+class BatchNormGradRARSplitCoreR0 : public BatchNormGradTilingBase {
 public:
     explicit BatchNormGradRARSplitCoreR0(gert::TilingContext* context)
         : BatchNormGradTilingBase(context, tilingData_.baseTilingData)
-    {
-    }
+    {}
 
 protected:
     bool IsCapable() override;
@@ -141,16 +138,16 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::DoOpTilingStage0()
     // dbeta二分预处理，fp32直接用拷贝输入，b16增加cast输出缓存
     int64_t reduceTmpBufNum = dyDtype == ge::DT_FLOAT ? REDUCE_TMP_BUF_NUM_FP32 : REDUCE_TMP_BUF_NUM_FP16;
     // 切r0
-    int64_t factorMax =
-        (ubSize - aInnerAligned * FLOAT32_BYTES * (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) / dyBaseLen_ /
-        (DOUBLE_BUFFER * dyDtypeSize_ * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES);
+    int64_t factorMax = (ubSize -
+                         aInnerAligned * FLOAT32_BYTES * (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) /
+                        dyBaseLen_ / (DOUBLE_BUFFER * dyDtypeSize_ * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES);
 
-    OP_CHECK_IF(
-        factorMax <= 0,
-        OP_LOGE(context_, "BatchNormGrad RAR R0 split core template is not capable. Shape (%ld, %ld, %ld), "
-            "factorMax in stage0 is %ld .",
-            r1Dim, aDim, r0Dim, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(factorMax <= 0,
+                OP_LOGE(context_,
+                        "BatchNormGrad RAR R0 split core template is not capable. Shape (%ld, %ld, %ld), "
+                        "factorMax in stage0 is %ld .",
+                        r1Dim, aDim, r0Dim, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     int64_t r0FactorMax = Ops::Base::CeilDiv(r0Inner_, dyBaseLen_);
     int64_t r0Factor = factorMax <= r0FactorMax ? factorMax : r0FactorMax;
@@ -176,11 +173,11 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::DoOpTilingStage0()
             r1Outer, r0InnerOuter, cacheBufferCount);
 
     // 切a, 取（aInner + (blockFp32Nums_ -1)) == aAligned 简化计算
-    int64_t aInnerMax =
-        (ubSize -
-         (blockFp32Nums_ - CONST_ONE) * FLOAT32_BYTES * (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) /
-        (r1Inner * r0InnerInner * (dyDtypeSize_ * DOUBLE_BUFFER * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES) +
-         (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount + 2) * FLOAT32_BYTES);
+    int64_t aInnerMax = (ubSize - (blockFp32Nums_ - CONST_ONE) * FLOAT32_BYTES *
+                                      (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) /
+                        (r1Inner * r0InnerInner *
+                             (dyDtypeSize_ * DOUBLE_BUFFER * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES) +
+                         (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount + 2) * FLOAT32_BYTES);
 
     aInner = aInnerMax < aDim ? aInnerMax : aDim;
     aInnerAligned = Ops::Base::CeilAlign(aInner, blockFp32Nums_);
@@ -226,8 +223,9 @@ int64_t BatchNormGradRARSplitCoreR0::ComputeBinaryAddParams(int64_t fusedR, int6
     tilingData_.set_binAddCacheBufferCount(binAddCacheBufferCount);
     tilingData_.set_binAddResultCacheID(binAddResultCacheID);
 
-    int64_t lastCoreBinAddBasicBlockLoop =
-        lastCoreFusedR > 1 ? (1L << (ULONG_BIT_LEN - CONST_ONE - __builtin_clzl(lastCoreFusedR - CONST_ONE))) : 0;
+    int64_t lastCoreBinAddBasicBlockLoop = lastCoreFusedR > 1 ? (1L << (ULONG_BIT_LEN - CONST_ONE -
+                                                                        __builtin_clzl(lastCoreFusedR - CONST_ONE))) :
+                                                                0;
     int64_t lastCoreMainFoldCount = lastCoreFusedR - lastCoreBinAddBasicBlockLoop;
     int64_t lastCoreBinAddResultCacheID = 0;
     if (lastCoreBinAddBasicBlockLoop != 0) {
@@ -252,10 +250,11 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::DoOpTilingStage1()
                                   (FLOAT32_BYTES * usedCoreNums_ + (FLOAT32_BYTES + weightDtypeSize)));
 
     OP_CHECK_IF(factorMax <= 0,
-        OP_LOGE(context_, "BatchNormGrad RAR R0 split core template is not capable. Shape (%ld, %ld, %ld), "
-            "factorMax in stage1 is %ld .",
-            r1Dim, aDim, r0Dim, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+                OP_LOGE(context_,
+                        "BatchNormGrad RAR R0 split core template is not capable. Shape (%ld, %ld, %ld), "
+                        "factorMax in stage1 is %ld .",
+                        r1Dim, aDim, r0Dim, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     int64_t aFactorMax = Ops::Base::CeilDiv(aDim, weightBaseLen);
     int64_t aFactor = factorMax <= aFactorMax ? factorMax : aFactorMax;
@@ -284,10 +283,11 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::DoOpTilingStage2()
                         (DOUBLE_BUFFER * FLOAT32_BYTES * BIG_SHAPES_STG2);
 
     OP_CHECK_IF(factorMax <= 0,
-        OP_LOGE(context_, "BatchNormGrad RAR R0 split core template is not capable. Shape (%ld, %ld, %ld), "
-            "factorMax in stage2 is %ld .",
-            r1Dim, aDim, r0Dim, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+                OP_LOGE(context_,
+                        "BatchNormGrad RAR R0 split core template is not capable. Shape (%ld, %ld, %ld), "
+                        "factorMax in stage2 is %ld .",
+                        r1Dim, aDim, r0Dim, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     int64_t r0FactorMax = Ops::Base::CeilDiv(r0Inner_, dyBaseLen_);
     int64_t r0Factor = factorMax <= r0FactorMax ? factorMax : r0FactorMax;
@@ -331,10 +331,7 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::DoOpTilingStage2()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormGradRARSplitCoreR0::GetTilingKey() const
-{
-    return BATCH_NORM_GRAD_RAR_SPLIT_CORE_R0_TILING_KEY;
-}
+uint64_t BatchNormGradRARSplitCoreR0::GetTilingKey() const { return BATCH_NORM_GRAD_RAR_SPLIT_CORE_R0_TILING_KEY; }
 
 ge::graphStatus BatchNormGradRARSplitCoreR0::GetWorkspaceSize()
 {
@@ -351,7 +348,7 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::GetWorkspaceSize()
 ge::graphStatus BatchNormGradRARSplitCoreR0::PostTiling()
 {
     context_->SetBlockDim(usedCoreNums_);
-    context_->SetScheduleMode(CONST_ONE);  // Set to batch mode, all cores start simultaneously
+    context_->SetScheduleMode(CONST_ONE); // Set to batch mode, all cores start simultaneously
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
@@ -359,4 +356,4 @@ ge::graphStatus BatchNormGradRARSplitCoreR0::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(BatchNormGrad, BatchNormGradRARSplitCoreR0, 2100);
 
-}  // namespace optiling
+} // namespace optiling

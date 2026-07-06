@@ -23,6 +23,6 @@ using namespace std;
 
 template <typename T, typename U, typename Q>
 class TransposeBatchBackward : public TransposeBatchForward<T, U, Q> {};
-}
+} // namespace ScatterElementsV2NS
 
 #endif

@@ -48,9 +48,17 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
  * \brief Type promotion helper: low-precision types promote to float32 for computation
  */
 template <typename T>
-struct ComputeType { using type = T; };
-template <> struct ComputeType<half> { using type = float; };
-template <> struct ComputeType<bfloat16_t> { using type = float; };
+struct ComputeType {
+    using type = T;
+};
+template <>
+struct ComputeType<half> {
+    using type = float;
+};
+template <>
+struct ComputeType<bfloat16_t> {
+    using type = float;
+};
 
 /**
  * \brief NaN-propagating maximum for float type (IEEE 754-2019 maximum)
@@ -78,22 +86,16 @@ __simt_callee__ inline float SimtMaximum(float a, float b)
 /**
  * \brief Simple maximum for int32_t type (no NaN concept)
  */
-__simt_callee__ inline int32_t SimtMaximum(int32_t a, int32_t b)
-{
-    return (a >= b) ? a : b;
-}
+__simt_callee__ inline int32_t SimtMaximum(int32_t a, int32_t b) { return (a >= b) ? a : b; }
 
 /**
  * \brief SIMT VF kernel: compute max(x, scalar) for all elements across all tensors
  */
 template <typename T, typename S>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachMaximumScalarSimt(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList,
-    S scalarVal)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachMaximumScalarSimt(int32_t tensorCount,
+                                                                                       __gm__ int64_t* tensorElements,
+                                                                                       GM_ADDR xList, GM_ADDR yList,
+                                                                                       S scalarVal)
 {
     using C = typename ComputeType<T>::type;
 
@@ -106,11 +108,9 @@ inline void OpForeachMaximumScalarSimt(
         __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
         __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             C xVal = static_cast<C>(xData[idx]);
@@ -125,27 +125,20 @@ inline void OpForeachMaximumScalarSimt(
  * \brief Process entry: read scalar from GM, launch SIMT VF for foreach_maximum_scalar
  */
 template <typename T, typename S>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
-    const __gm__ ForeachMaximumScalarTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR scalar, GM_ADDR y,
+                               const __gm__ ForeachMaximumScalarTilingData* tilingGm)
 {
     __gm__ S* scalarGm = reinterpret_cast<__gm__ S*>(scalar);
     S scalarVal = *scalarGm;
 
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachMaximumScalarTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachMaximumScalarTilingData*>(tilingGm)) +
         offsetof(ForeachMaximumScalarTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
-    AscendC::Simt::VF_CALL<OpForeachMaximumScalarSimt<T, S>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        tensorCount,
-        elemCounts,
-        x,
-        y,
-        scalarVal);
+    AscendC::Simt::VF_CALL<OpForeachMaximumScalarSimt<T, S>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts,
+                                                             x, y, scalarVal);
 }
 
 } // namespace NsForeachMaximumScalar

@@ -24,19 +24,19 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(DeformableOffsetsGrad);
 
-const std::tuple<aclTensor*, aclTensor*> DeformableOffsetsGrad(
-    const aclTensor* grad_output, const aclTensor* input, const aclTensor* offsets, const aclIntArray* stride,
-    const aclIntArray* pads, const aclIntArray* kernel_size, const aclIntArray* dilations, bool modulated,
-    int64_t deformable_groups, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> DeformableOffsetsGrad(const aclTensor* grad_output, const aclTensor* input,
+                                                               const aclTensor* offsets, const aclIntArray* stride,
+                                                               const aclIntArray* pads, const aclIntArray* kernel_size,
+                                                               const aclIntArray* dilations, bool modulated,
+                                                               int64_t deformable_groups, aclOpExecutor* executor)
 {
     L0_DFX(DeformableOffsetsGrad, grad_output, input, offsets);
     const char* data_format = "NHWC";
-    auto grad_x = executor->AllocTensor(
-        input->GetStorageShape(), input->GetOriginalShape(), input->GetDataType(), input->GetStorageFormat(),
-        input->GetOriginalFormat());
-    auto grad_offsets = executor->AllocTensor(
-        offsets->GetStorageShape(), offsets->GetOriginalShape(), offsets->GetDataType(), offsets->GetStorageFormat(),
-        offsets->GetOriginalFormat());
+    auto grad_x = executor->AllocTensor(input->GetStorageShape(), input->GetOriginalShape(), input->GetDataType(),
+                                        input->GetStorageFormat(), input->GetOriginalFormat());
+    auto grad_offsets = executor->AllocTensor(offsets->GetStorageShape(), offsets->GetOriginalShape(),
+                                              offsets->GetDataType(), offsets->GetStorageFormat(),
+                                              offsets->GetOriginalFormat());
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         DeformableOffsetsGrad, OP_INPUT(grad_output, input, offsets), OP_OUTPUT(grad_x, grad_offsets),
         OP_ATTR(stride, pads, kernel_size, dilations, data_format, deformable_groups, modulated));

@@ -16,40 +16,36 @@
 
 namespace domi {
 
-static Status ParseParamsGatherNd(const Message* op_src, ge::Operator& op_dest) {
-  const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
-  if (nullptr == node) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  int batch_dims = 0;
-  for (const auto& attr : node->attribute()) {
-    if (attr.name() == "batch_dims") {
-      if (attr.i() != 0) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "only support batch_dims=0");
-	      return FAILED;
-      }
-      batch_dims = attr.i();
+static Status ParseParamsGatherNd(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
+    if (nullptr == node) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
-  op_dest.SetAttr("batch_dims", batch_dims);
-  return SUCCESS;
+
+    int batch_dims = 0;
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "batch_dims") {
+            if (attr.i() != 0) {
+                OP_LOGE(GetOpName(op_dest).c_str(), "only support batch_dims=0");
+                return FAILED;
+            }
+            batch_dims = attr.i();
+        }
+    }
+    op_dest.SetAttr("batch_dims", batch_dims);
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("GatherNd")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::GatherND"),
-                   ge::AscendString("ai.onnx::9::GatherND"),
-                   ge::AscendString("ai.onnx::10::GatherND"),
-                   ge::AscendString("ai.onnx::11::GatherND"),
-                   ge::AscendString("ai.onnx::12::GatherND"),
-                   ge::AscendString("ai.onnx::13::GatherND"),
-                   ge::AscendString("ai.onnx::14::GatherND"),
-                   ge::AscendString("ai.onnx::15::GatherND"),
-                   ge::AscendString("ai.onnx::16::GatherND"),
-                   ge::AscendString("ai.onnx::17::GatherND"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::GatherND"), ge::AscendString("ai.onnx::9::GatherND"),
+                   ge::AscendString("ai.onnx::10::GatherND"), ge::AscendString("ai.onnx::11::GatherND"),
+                   ge::AscendString("ai.onnx::12::GatherND"), ge::AscendString("ai.onnx::13::GatherND"),
+                   ge::AscendString("ai.onnx::14::GatherND"), ge::AscendString("ai.onnx::15::GatherND"),
+                   ge::AscendString("ai.onnx::16::GatherND"), ge::AscendString("ai.onnx::17::GatherND"),
                    ge::AscendString("ai.onnx::18::GatherND")})
     .ParseParamsFn(ParseParamsGatherNd)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

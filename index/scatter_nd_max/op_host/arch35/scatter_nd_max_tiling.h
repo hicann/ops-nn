@@ -24,35 +24,25 @@
 namespace optiling {
 
 // ---------------------------ScatterNdMax Simt Tiling---------------------------
-class ScatterNdMaxSimtTiling : public ScatterNdCommonSimtTiling
-{
+class ScatterNdMaxSimtTiling : public ScatterNdCommonSimtTiling {
 public:
-    explicit ScatterNdMaxSimtTiling(gert::TilingContext* context) : ScatterNdCommonSimtTiling(context)
-    {}
-    ~ScatterNdMaxSimtTiling() override
-    {}
+    explicit ScatterNdMaxSimtTiling(gert::TilingContext* context) : ScatterNdCommonSimtTiling(context) {}
+    ~ScatterNdMaxSimtTiling() override {}
 };
 
 // ---------------------------ScatterNdMax Simt Sort Tiling---------------------------
-class ScatterNdMaxSimtSortTiling : public ScatterNdCommonSimtSortTiling
-{
+class ScatterNdMaxSimtSortTiling : public ScatterNdCommonSimtSortTiling {
 public:
-    explicit ScatterNdMaxSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonSimtSortTiling(context)
-    {}
-    ~ScatterNdMaxSimtSortTiling() override
-    {}
+    explicit ScatterNdMaxSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonSimtSortTiling(context) {}
+    ~ScatterNdMaxSimtSortTiling() override {}
 };
 
 // ---------------------------ScatterNdMax Simd Sort Tiling---------------------------
-class ScatterNdMaxSimdSortTiling : public ScatterNdCommonSimdSortTiling
-{
+class ScatterNdMaxSimdSortTiling : public ScatterNdCommonSimdSortTiling {
 public:
-    explicit ScatterNdMaxSimdSortTiling(gert::TilingContext* context) : ScatterNdCommonSimdSortTiling(context)
-    {}
-    ~ScatterNdMaxSimdSortTiling() override
-    {}
+    explicit ScatterNdMaxSimdSortTiling(gert::TilingContext* context) : ScatterNdCommonSimdSortTiling(context) {}
+    ~ScatterNdMaxSimdSortTiling() override {}
 };
-
 
 } // namespace optiling
 #endif // SCATTER_ND_MAX_TILING_H

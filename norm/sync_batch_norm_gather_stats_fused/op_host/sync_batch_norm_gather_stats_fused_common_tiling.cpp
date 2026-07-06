@@ -8,11 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /* !
+/* !
  * \file sync_batch_norm_gather_stats_fused_common_tiling.cpp
  * \brief
  */
-
 
 #include "sync_batch_norm_gather_stats_fused_tiling.h"
 
@@ -38,10 +37,10 @@ static inline int64_t CommonCeilAlign(int64_t value, int64_t alignment)
 
 bool SyncBatchNormGatherStatsFusedCommonTiling::IsCapable()
 {
-    if (commonParams.cLength > COMMON_MAX_C || (commonParams.cLength < commonParams.nLength && commonParams.nLength > 255)) {
-        OP_LOGI(
-            context_, "SyncBatchNormGatherStatsFusedCommonTiling: cLength=%ld exceeds limit %ld", commonParams.cLength,
-            COMMON_MAX_C);
+    if (commonParams.cLength > COMMON_MAX_C ||
+        (commonParams.cLength < commonParams.nLength && commonParams.nLength > 255)) {
+        OP_LOGI(context_, "SyncBatchNormGatherStatsFusedCommonTiling: cLength=%ld exceeds limit %ld",
+                commonParams.cLength, COMMON_MAX_C);
         return false;
     }
     return true;
@@ -101,8 +100,8 @@ ge::graphStatus SyncBatchNormGatherStatsFusedCommonTiling::DoOpTiling()
     td_.set_cBufferByteSize(cFormerAlignM_ * COMMON_B32_DTYPE_SIZE);
     int64_t ubFormer = CalculateubFormer();
     if (ubFormer <= 0) {
-        OP_LOGE(
-            context_, "SyncBatchNormGatherStatsFusedCommonTiling: Calculate ubFormer failed, ubFormer=%ld", ubFormer);
+        OP_LOGE(context_, "SyncBatchNormGatherStatsFusedCommonTiling: Calculate ubFormer failed, ubFormer=%ld",
+                ubFormer);
         return ge::GRAPH_FAILED;
     }
 

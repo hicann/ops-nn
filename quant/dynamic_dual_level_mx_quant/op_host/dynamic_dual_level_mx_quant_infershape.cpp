@@ -48,9 +48,8 @@ graphStatus InferShapeForDynamicDualLevelMxQuant(gert::InferShapeContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, level1ScaleShape);
 
     std::string errMsg = optiling::ConcatString("Input x rank[", xShape->GetDimNum(), "] should be in [1, 7].");
-    OP_CHECK_IF(
-        xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
+                CUBE_INNER_ERR_REPORT(context->GetNodeName(), "%s", errMsg.c_str()), return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*xShape)) {
         OP_LOGD(context->GetNodeName(), "x shape is UnknownRank, set y, scale shape to (-2, )");
@@ -78,9 +77,8 @@ graphStatus InferShapeForDynamicDualLevelMxQuant(gert::InferShapeContext* contex
     *level0ScaleShape = *xShape;
     level0ScaleShape->SetDim(dim1, dimSize1);
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, level0Scale shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*level0ScaleShape).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, level0Scale shape is %s.", Shape2String(*xShape).c_str(),
+            Shape2String(*level0ScaleShape).c_str());
 
     int64_t dimSize2 = UNKNOWN_DIM_VALUE_;
     if (xShape->GetDim(dim1) != UNKNOWN_DIM_VALUE_) {
@@ -92,9 +90,8 @@ graphStatus InferShapeForDynamicDualLevelMxQuant(gert::InferShapeContext* contex
     level1ScaleShape->SetDim(dim1, dimSize2);
     level1ScaleShape->AppendDim(ALIGN_NUM);
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, level1Scale shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*level1ScaleShape).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, level1Scale shape is %s.", Shape2String(*xShape).c_str(),
+            Shape2String(*level1ScaleShape).c_str());
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForDynamicDualLevelMxQuant");
     return ge::GRAPH_SUCCESS;

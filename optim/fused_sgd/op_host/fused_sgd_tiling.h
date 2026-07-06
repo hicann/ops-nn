@@ -15,19 +15,17 @@
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_FUSED_SGD_TILING_H_
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_FUSED_SGD_TILING_H_
 
-
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base_util.h"
 #include "../op_kernel/fused_sgd_tiling_data.h"
 
 namespace optiling {
 
-struct FusedSgdCompileInfo {
-};
+struct FusedSgdCompileInfo {};
 
 class FusedSgdTiling {
 public:
-    explicit FusedSgdTiling(gert::TilingContext* context) : context_(context) {};
+    explicit FusedSgdTiling(gert::TilingContext* context) : context_(context){};
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus GetAttrInfo();
     ge::graphStatus GetInputTensorInfo();

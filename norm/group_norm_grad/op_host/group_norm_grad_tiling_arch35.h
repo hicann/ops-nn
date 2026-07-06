@@ -20,8 +20,7 @@ using namespace Ops::NN::Optiling;
 namespace optiling {
 class GroupNormGradRegBaseTiling : public TilingBaseClass {
 public:
-    explicit GroupNormGradRegBaseTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit GroupNormGradRegBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     // 1、获取INPUT/OUTPUT/ATTR信息
@@ -141,7 +140,7 @@ private:
     bool dxIsRequire_ = false;
     bool dgammaIsRequire_ = false;
     bool dbetaIsRequire_ = false;
-    
+
     // Stage2Mode2 Use
     int64_t cTileNum_ = 0;
     int64_t nTileNum_ = 0;

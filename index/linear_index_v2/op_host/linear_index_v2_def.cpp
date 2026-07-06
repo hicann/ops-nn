@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class LinearIndexV2 : public OpDef
-{
+class LinearIndexV2 : public OpDef {
 public:
     explicit LinearIndexV2(const char* name) : OpDef(name)
     {

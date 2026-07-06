@@ -24,8 +24,7 @@ const string CPU_ARCH_STR = "x86_64";
 
 class OpGraphUtEnvironment : public testing::Environment {
 public:
-    OpGraphUtEnvironment()
-    {}
+    OpGraphUtEnvironment() {}
     virtual void SetUp()
     {
         cout << "Global Environment SetpUp." << endl;
@@ -48,13 +47,12 @@ public:
         string mathHostSoPath;
         const char* ascendToolkitHome = getenv("ASCEND_TOOLKIT_HOME");
         if (ascendToolkitHome == nullptr || strlen(ascendToolkitHome) == 0) {
-            cout << "can not find env ASCEND_TOOLKIT_HOME." << endl; 
+            cout << "can not find env ASCEND_TOOLKIT_HOME." << endl;
         }
         string ascendRoot(ascendToolkitHome);
-        mathHostSoPath = ascendRoot + "/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/"
-                        + CPU_ARCH_STR
-                        + "/libophost_math.so";
-        if(access(mathHostSoPath.c_str(), R_OK) == -1) {
+        mathHostSoPath = ascendRoot + "/opp/built-in/op_impl/ai_core/tbe/op_host/lib/linux/" + CPU_ARCH_STR +
+                         "/libophost_math.so";
+        if (access(mathHostSoPath.c_str(), R_OK) == -1) {
             cout << "libophost_math.so could not be found. Please install ops-math package." << endl;
         } else {
             cout << "Success found libophost_math.so." << endl;
@@ -74,10 +72,7 @@ public:
         gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
     }
 
-    virtual void TearDown()
-    {
-        cout << "Global Environment TearDown" << endl;
-    }
+    virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 };
 
 int main(int argc, char** argv)

@@ -96,8 +96,7 @@ struct WeightQuantBatchMatmulV2ASWTilingDataParams {
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2TilingData
-{
+struct alignas(8) WeightQuantBatchMatmulV2TilingData {
     uint8_t vecBlockDimN;
     uint8_t vecBlockDimK;
     uint8_t cubeBlockDimN;
@@ -160,4 +159,3 @@ struct alignas(8) WeightQuantBatchMatmulV2TilingData
 };
 #pragma pack(pop)
 } // namespace wqbmmv2_tiling
-

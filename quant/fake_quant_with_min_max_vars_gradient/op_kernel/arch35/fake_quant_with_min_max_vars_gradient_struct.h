@@ -25,12 +25,12 @@
 #endif
 
 namespace FakeQuantWithMinMaxVarsGradientOp {
-ASCENDC_TPL_ARGS_DECL(
-    FakeQuantWithMinMaxVarsGradient,
-    ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_TPL_DEFAULT));
+ASCENDC_TPL_ARGS_DECL(FakeQuantWithMinMaxVarsGradient,
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST,
+                                            FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_TPL_DEFAULT));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
-    ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_TPL_DEFAULT)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
+                                                          FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_TPL_DEFAULT)));
 
 } // namespace FakeQuantWithMinMaxVarsGradientOp
 

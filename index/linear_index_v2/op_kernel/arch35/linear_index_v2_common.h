@@ -24,11 +24,9 @@ struct integralConstant {
 using true_type = integralConstant<bool, true>;
 using false_type = integralConstant<bool, false>;
 template <typename, typename>
-struct isSame : public false_type {
-};
+struct isSame : public false_type {};
 template <typename Tp>
-struct isSame<Tp, Tp> : public true_type {
-};
+struct isSame<Tp, Tp> : public true_type {};
 
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t BLOCK_SIZE = 32;

@@ -13,7 +13,6 @@
  * technically reviewed for functional accuracy and security
  */
 
-
 /**
  * \file soft_margin_loss_tiling.cpp
  * \brief SoftMarginLoss Tiling implementation
@@ -38,17 +37,19 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 
 // float32 + none: selfQueue(x2) + targetQueue(x2) + outputQueue(x2) + tmpBuf1(x1) + tmpBuf2(x1) = 8 float buffers
 constexpr int64_t BUFFER_NUM_FP32_NONE = 8;
-// float32 + reduce: selfQueue(x2) + targetQueue(x2) + tmpBuf1(x1) + tmpBuf2(x1) + tmpBuf3(x1) + reduceTmpBuf(x1) + partialSumBuf(x1) = 9
+// float32 + reduce: selfQueue(x2) + targetQueue(x2) + tmpBuf1(x1) + tmpBuf2(x1) + tmpBuf3(x1) + reduceTmpBuf(x1) +
+// partialSumBuf(x1) = 9
 constexpr int64_t BUFFER_NUM_FP32_REDUCE = 9;
-// float16 + none: selfQueue(x2,half=1eq) + targetQueue(x2,half=1eq) + outputQueue(x2,half=1eq) + tmpBuf1(float=2eq) + tmpBuf2(float=2eq) + tmpBuf3(float=2eq) = 6 float-equiv
+// float16 + none: selfQueue(x2,half=1eq) + targetQueue(x2,half=1eq) + outputQueue(x2,half=1eq) + tmpBuf1(float=2eq) +
+// tmpBuf2(float=2eq) + tmpBuf3(float=2eq) = 6 float-equiv
 constexpr int64_t BUFFER_NUM_FP16_NONE = 6;
 // float16 + reduce: similar with reduce buffers = 7
 constexpr int64_t BUFFER_NUM_FP16_REDUCE = 7;
@@ -88,10 +89,8 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get input shape and dtype
     auto inputShape = context->GetInputShape(0);
@@ -108,7 +107,7 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
     // while the UT framework stores them as raw int64. We try int64 first, and if the value is
     // out of valid range [0,2], fall back to reading as string.
     const auto* attrs = context->GetAttrs();
-    int64_t reduction = -1;  // -1 means not yet determined
+    int64_t reduction = -1; // -1 means not yet determined
     if (attrs != nullptr) {
         const int64_t* intPtr = attrs->GetInt(0);
         if (intPtr != nullptr && *intPtr >= 0 && *intPtr <= 2) {
@@ -125,7 +124,8 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
                 } else if (strcmp(reductionStr, "sum") == 0) {
                     reduction = 2;
                 } else {
-                    OP_LOGE(context, "SoftMarginLoss: invalid reduction string '%s', expected 0/1/2 or none/mean/sum", reductionStr);
+                    OP_LOGE(context, "SoftMarginLoss: invalid reduction string '%s', expected 0/1/2 or none/mean/sum",
+                            reductionStr);
                     return ge::GRAPH_FAILED;
                 }
                 OP_LOGI(context, "SoftMarginLoss: got reduction='%s' -> %ld", reductionStr, reduction);
@@ -143,10 +143,8 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
     // 4. Set TilingData
     SoftMarginLossTilingData* tiling = context->GetTilingData<SoftMarginLossTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftMarginLossTilingData), 0, sizeof(SoftMarginLossTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftMarginLossTilingData), 0, sizeof(SoftMarginLossTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Handle empty tensor
     if (totalNum == 0) {
@@ -163,10 +161,8 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
         } else {
             context->SetTilingKey(GET_TPL_TILING_KEY(reduction == 0 ? SML_TPL_SCH_MODE_2 : SML_TPL_SCH_MODE_3));
         }
-        OP_CHECK_IF(
-            GetWorkspaceSize(context, 0) != ge::GRAPH_SUCCESS,
-            OP_LOGE(context, "GetWorkspaceSize error"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(GetWorkspaceSize(context, 0) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                    return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -213,7 +209,7 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
             auto tilingKey = GET_TPL_TILING_KEY(SML_TPL_SCH_MODE_1);
             OP_LOGI(context, "SoftMarginLoss: setting tiling key for FP32_REDUCE, key=%lu", tilingKey);
             context->SetTilingKey(tilingKey);
-            usrWorkspaceSize = static_cast<size_t>(usedCoreNum) * 32;  // 32-byte aligned per core
+            usrWorkspaceSize = static_cast<size_t>(usedCoreNum) * 32; // 32-byte aligned per core
         }
     } else if (dtype == ge::DT_FLOAT16) {
         if (!isReduce) {
@@ -230,10 +226,8 @@ static ge::graphStatus SoftMarginLossTilingFunc(gert::TilingContext* context)
     }
 
     // 8. Set workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context, usrWorkspaceSize) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context, usrWorkspaceSize) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(usedCoreNum);
     return ge::GRAPH_SUCCESS;
@@ -246,6 +240,8 @@ static ge::graphStatus TilingParseForSoftMarginLoss([[maybe_unused]] gert::Tilin
 
 struct SoftMarginLossCompileInfo {};
 
-IMPL_OP_OPTILING(SoftMarginLoss).Tiling(SoftMarginLossTilingFunc).TilingParse<SoftMarginLossCompileInfo>(TilingParseForSoftMarginLoss);
+IMPL_OP_OPTILING(SoftMarginLoss)
+    .Tiling(SoftMarginLossTilingFunc)
+    .TilingParse<SoftMarginLossCompileInfo>(TilingParseForSoftMarginLoss);
 
 } // namespace optiling

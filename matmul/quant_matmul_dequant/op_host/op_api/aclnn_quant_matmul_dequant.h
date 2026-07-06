@@ -28,7 +28,8 @@ extern "C" {
  * @param [in] weightScale: npu device侧的aclTensor，支持非连续的Tensor，数据类型支持FLOAT和INT64，数据格式支持ND。
  * @param [in] biasOptional: npu device侧的aclTensor，支持非连续的Tensor，数据类型支持INT32，数据格式支持ND。
  * @param [in] xScaleOptional: npu device侧的aclTensor，支持非连续的Tensor，数据类型支持FLOAT和FLOAT16，数据格式支持ND。
- * @param [in] xOffsetOptional: npu device侧的aclTensor，支持非连续的Tensor，数据类型支持FLOAT和FLOAT16，数据格式支持ND。
+ * @param [in] xOffsetOptional: npu
+ * device侧的aclTensor，支持非连续的Tensor，数据类型支持FLOAT和FLOAT16，数据格式支持ND。
  * @param [in] smoothScaleOptional: npu device侧的aclTensor，支持非连续的Tensor，数据类型支持FLOAT16，数据格式支持ND。
  * @param [in] xQuantMode: host侧的char*类型，表示x的量化模式。
  * @param [in] transposeWeight: host侧的bool类型，表示weight是否转置。
@@ -37,25 +38,25 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnQuantMatmulDequantGetWorkspaceSize(const aclTensor *x, const aclTensor *weight, 
-                                                    const aclTensor *weightScale, const aclTensor *biasOptional, 
-                                                    const aclTensor *xScaleOptional, const aclTensor *xOffsetOptional, 
-                                                    const aclTensor *smoothScaleOptional, 
-                                                    char *xQuantMode, bool transposeWeight, const aclTensor *out, 
-                                                    uint64_t *workspaceSize, aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnQuantMatmulDequantGetWorkspaceSize(
+    const aclTensor* x, const aclTensor* weight, const aclTensor* weightScale, const aclTensor* biasOptional,
+    const aclTensor* xScaleOptional, const aclTensor* xOffsetOptional, const aclTensor* smoothScaleOptional,
+    char* xQuantMode, bool transposeWeight, const aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantMatmulDequant的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnQuantMatmulDequantGetWorkspaceSize获取。
+ * @param [in] workspace_size: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnQuantMatmulDequantGetWorkspaceSize获取。
  * @param [in] exector: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnQuantMatmulDequant(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnQuantMatmulDequant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_QUANT_MATMUL_DEQUANT_H_
+#endif // OP_API_INC_QUANT_MATMUL_DEQUANT_H_

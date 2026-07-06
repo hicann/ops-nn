@@ -27,9 +27,8 @@ static constexpr size_t BROADCASTGRADIENTARGS_OUT_IDX_Y1 = 0;
 static constexpr size_t BROADCASTGRADIENTARGS_OUT_IDX_Y2 = 1;
 
 template <typename T>
-static bool BroadcastGradientArgsTensorCheck(
-    const gert::Tensor* small_tensor, const gert::Tensor* big_tensor, size_t small_len, size_t big_len,
-    bool& shape_equal_flag)
+static bool BroadcastGradientArgsTensorCheck(const gert::Tensor* small_tensor, const gert::Tensor* big_tensor,
+                                             size_t small_len, size_t big_len, bool& shape_equal_flag)
 {
     const T* small_array = small_tensor->GetData<T>();
     const T* big_array = big_tensor->GetData<T>();
@@ -44,9 +43,8 @@ static bool BroadcastGradientArgsTensorCheck(
 }
 
 template <typename T>
-static void ComputeOutputDims(
-    const gert::Tensor* x1_tensor, const gert::Tensor* x2_tensor, size_t x1_len, size_t x2_len, size_t max_len,
-    size_t& y1_dim, size_t& y2_dim)
+static void ComputeOutputDims(const gert::Tensor* x1_tensor, const gert::Tensor* x2_tensor, size_t x1_len,
+                              size_t x2_len, size_t max_len, size_t& y1_dim, size_t& y2_dim)
 {
     const T* x1_array = x1_tensor->GetData<T>();
     const T* x2_array = x2_tensor->GetData<T>();
@@ -70,9 +68,11 @@ static void ComputeOutputDims(
 }
 
 template <typename T>
-static ge::graphStatus InferShape4BroadcastGradientArgsImpl(
-    const gert::InferShapeContext* context, const gert::Tensor* x1_tensor, const gert::Tensor* x2_tensor,
-    const gert::Shape* x1_shape, const gert::Shape* x2_shape, gert::Shape* y1_shape, gert::Shape* y2_shape)
+static ge::graphStatus InferShape4BroadcastGradientArgsImpl(const gert::InferShapeContext* context,
+                                                            const gert::Tensor* x1_tensor,
+                                                            const gert::Tensor* x2_tensor, const gert::Shape* x1_shape,
+                                                            const gert::Shape* x2_shape, gert::Shape* y1_shape,
+                                                            gert::Shape* y2_shape)
 {
     // 设置输出shape为-1
     y1_shape->SetDimNum(1);
@@ -153,12 +153,12 @@ graphStatus InferShape4BroadcastGradientArgs(gert::InferShapeContext* context)
 
     switch (x1_dtype) {
         case ge::DT_INT32: {
-            return InferShape4BroadcastGradientArgsImpl<int32_t>(
-                context, x1_tensor, x2_tensor, x1_shape, x2_shape, y1_shape, y2_shape);
+            return InferShape4BroadcastGradientArgsImpl<int32_t>(context, x1_tensor, x2_tensor, x1_shape, x2_shape,
+                                                                 y1_shape, y2_shape);
         }
         case ge::DT_INT64: {
-            return InferShape4BroadcastGradientArgsImpl<int64_t>(
-                context, x1_tensor, x2_tensor, x1_shape, x2_shape, y1_shape, y2_shape);
+            return InferShape4BroadcastGradientArgsImpl<int64_t>(context, x1_tensor, x2_tensor, x1_shape, x2_shape,
+                                                                 y1_shape, y2_shape);
         }
         default: {
             OP_LOGE(context->GetNodeName(), "x1 and x2 only support INT_32 or INT_64!");

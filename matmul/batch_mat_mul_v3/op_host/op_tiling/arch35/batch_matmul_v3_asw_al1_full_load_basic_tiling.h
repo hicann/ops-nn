@@ -23,8 +23,8 @@ namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3AswAL1FullLoadBasicTiling : public MatMulV3BasicAswtTiling {
 public:
-    BatchMatMulV3AswAL1FullLoadBasicTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BasicAswtTiling(context, cfg) {};
+    BatchMatMulV3AswAL1FullLoadBasicTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : MatMulV3BasicAswtTiling(context, cfg){};
 
     ~BatchMatMulV3AswAL1FullLoadBasicTiling() override = default;
 
@@ -34,9 +34,8 @@ protected:
     ge::graphStatus DoOpTiling() override;
 
     uint64_t GetTilingKey() const override;
-     
+
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 };
-}
-}
-
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

@@ -39,4 +39,4 @@ ACLNN_API aclnnStatus aclnnBinaryCrossEntropy(void* workspace, uint64_t workspac
 }
 #endif
 
-#endif  // OP_API_INC_BINARY_CROSS_ENTROPY_H_
+#endif // OP_API_INC_BINARY_CROSS_ENTROPY_H_

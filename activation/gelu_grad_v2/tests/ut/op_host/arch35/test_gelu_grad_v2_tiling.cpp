@@ -27,15 +27,9 @@ using namespace ge;
 
 class GeluGradV2TilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GeluGradV2TilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GeluGradV2TilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GeluGradV2TilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GeluGradV2TilingTest TearDown" << std::endl; }
 };
 
 TEST_F(GeluGradV2TilingTest, test_gelu_grad_v2_tiling_fp16_001)

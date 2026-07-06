@@ -23,29 +23,21 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-class DeepNormGradTiling : public testing::Test
-{
+class DeepNormGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DeepNormGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DeepNormGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DeepNormGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DeepNormGradTiling TearDown" << std::endl; }
 };
-struct DeepNormGradCompileInfo {
-};
+struct DeepNormGradCompileInfo {};
 
-inline void runTest(
-    gert::StorageShape& input_shape, gert::StorageShape& input1_shape, gert::StorageShape& input2_shape,
-    gert::StorageShape& input3_shape, gert::StorageShape& input4_shape, gert::StorageShape& input5_shape,
-    gert::StorageShape& out_shape, gert::StorageShape& out1_shape, gert::StorageShape& out2_shape,
-    gert::StorageShape& out3_shape, ge::DataType data_type, uint32_t tiling_key_expect)
+inline void runTest(gert::StorageShape& input_shape, gert::StorageShape& input1_shape, gert::StorageShape& input2_shape,
+                    gert::StorageShape& input3_shape, gert::StorageShape& input4_shape,
+                    gert::StorageShape& input5_shape, gert::StorageShape& out_shape, gert::StorageShape& out1_shape,
+                    gert::StorageShape& out2_shape, gert::StorageShape& out3_shape, ge::DataType data_type,
+                    uint32_t tiling_key_expect)
 {
-    //dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -64,8 +56,7 @@ inline void runTest(
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    struct DeepNormCompileInfo {
-    };
+    struct DeepNormCompileInfo {};
     DeepNormGradCompileInfo compile_info;
 
     std::string op_type("DeepNormGrad");
@@ -74,19 +65,19 @@ inline void runTest(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -95,28 +86,28 @@ inline void runTest(
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(6, 4)
-            .IrInstanceNum({6})
-            .InputShapes({&input_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape})
-            .OutputShapes({&out_shape, &out1_shape, &out2_shape, &out3_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 4)
+                      .IrInstanceNum({6})
+                      .InputShapes(
+                          {&input_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape})
+                      .OutputShapes({&out_shape, &out1_shape, &out2_shape, &out3_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, data_type, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(0.3)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -131,7 +122,7 @@ inline void runTest(
     // check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, tiling_key_expect);
-    //dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_0)
@@ -147,9 +138,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_0)
     gert::StorageShape out2_shape = {{1024}, {1024}};
     gert::StorageShape out3_shape = {{1024}, {1024}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_FLOAT, 0);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_FLOAT, 0);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_1)
@@ -165,9 +155,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_1)
     gert::StorageShape out2_shape = {{8192}, {8192}};
     gert::StorageShape out3_shape = {{8192}, {8192}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_FLOAT, 1);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_FLOAT, 1);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_2)
@@ -183,9 +172,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_2)
     gert::StorageShape out2_shape = {{9}, {9}};
     gert::StorageShape out3_shape = {{9}, {9}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_FLOAT, 2);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_FLOAT, 2);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_10)
@@ -201,9 +189,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_10)
     gert::StorageShape out2_shape = {{1024}, {1024}};
     gert::StorageShape out3_shape = {{1024}, {1024}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_FLOAT16, 10);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_FLOAT16, 10);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_11)
@@ -219,9 +206,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_11)
     gert::StorageShape out2_shape = {{8192}, {8192}};
     gert::StorageShape out3_shape = {{8192}, {8192}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_FLOAT16, 11);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_FLOAT16, 11);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_12)
@@ -237,9 +223,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_12)
     gert::StorageShape out2_shape = {{133}, {133}};
     gert::StorageShape out3_shape = {{133}, {133}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_FLOAT16, 12);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_FLOAT16, 12);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_20)
@@ -255,9 +240,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_20)
     gert::StorageShape out2_shape = {{1024}, {1024}};
     gert::StorageShape out3_shape = {{1024}, {1024}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_BF16, 20);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_BF16, 20);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_21)
@@ -273,9 +257,8 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_21)
     gert::StorageShape out2_shape = {{8192}, {8192}};
     gert::StorageShape out3_shape = {{8192}, {8192}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_BF16, 21);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_BF16, 21);
 }
 
 TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_22)
@@ -291,7 +274,6 @@ TEST_F(DeepNormGradTiling, deep_norm_grad_tiling_22)
     gert::StorageShape out2_shape = {{133}, {133}};
     gert::StorageShape out3_shape = {{133}, {133}};
 
-    runTest(
-        input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
-        out2_shape, out3_shape, ge::DT_BF16, 22);
+    runTest(input_shape, input1_shape, input2_shape, input3_shape, input4_shape, input5_shape, out_shape, out1_shape,
+            out2_shape, out3_shape, ge::DT_BF16, 22);
 }

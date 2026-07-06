@@ -23,7 +23,8 @@ using namespace AscendC;
 
 constexpr int32_t BLOCK = 32;
 
-template <typename T> struct VciTypeGet;
+template <typename T>
+struct VciTypeGet;
 template <>
 struct VciTypeGet<uint32_t> {
     using T = int32_t;
@@ -86,8 +87,8 @@ protected:
 };
 
 template <typename T, typename U>
-__aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::Init(
-    GM_ADDR grad, GM_ADDR x, GM_ADDR out, const GluBaseTilingData& tilingData)
+__aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::Init(GM_ADDR grad, GM_ADDR x, GM_ADDR out,
+                                                               const GluBaseTilingData& tilingData)
 {
     if (!this->InitBase(tilingData)) {
         return;
@@ -143,21 +144,19 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::CopyIn(int64_t offset,
     uint8_t rightPadNum = (xTotalNum + BLOCK_NUM - 1) / BLOCK_NUM * BLOCK_NUM - xTotalNum;
     uint8_t rightPadNumGrad = (gradTotalNum + BLOCK_NUM - 1) / BLOCK_NUM * BLOCK_NUM - gradTotalNum;
 
-    DataCopyExtParams copyParamForX{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(xTotalNum * sizeof(T)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamForX{static_cast<uint16_t>(1), static_cast<uint32_t>(xTotalNum * sizeof(T)),
+                                    static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-    DataCopyPadExtParams<T> padParams{
-        true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum), static_cast<uint8_t>(0)};
+    DataCopyPadExtParams<T> padParams{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNum),
+                                      static_cast<uint8_t>(0)};
 
     DataCopyPad(xTensor, xGm_[inputX], copyParamForX, padParams);
 
-    DataCopyExtParams copyParamForGrad{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(gradTotalNum * sizeof(T)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamForGrad{static_cast<uint16_t>(1), static_cast<uint32_t>(gradTotalNum * sizeof(T)),
+                                       static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-    DataCopyPadExtParams<T> padParamsForGrad{
-        true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNumGrad), static_cast<uint8_t>(0)};
+    DataCopyPadExtParams<T> padParamsForGrad{true, static_cast<uint8_t>(0), static_cast<uint8_t>(rightPadNumGrad),
+                                             static_cast<uint8_t>(0)};
     DataCopyPad(gradTensor, gradYGm_[grad], copyParamForGrad, padParamsForGrad);
 
     inQueX_.EnQue<T>(xTensor);
@@ -170,9 +169,8 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::CopyOut(int64_t offset
     LocalTensor<T> outTensor = outQueXGrad_.DeQue<T>();
     uint64_t partA = this->partAStart_ + offset;
 
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(rowLen * colLen * sizeof(T)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(rowLen * colLen * sizeof(T)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(outGm_[partA], outTensor, copyParams);
 

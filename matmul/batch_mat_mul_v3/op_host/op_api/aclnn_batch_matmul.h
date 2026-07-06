@@ -21,15 +21,15 @@ extern "C" {
  * @brief aclnnBatchMatMul的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
-ACLNN_API aclnnStatus aclnnBatchMatMulGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnBatchMatMulGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2, aclTensor* out,
+                                                       int8_t cubeMathType, uint64_t* workspaceSize,
+                                                       aclOpExecutor** executor);
 
 /**
  * @brief aclnnBatchMatMul的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus
-aclnnBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream);
 
 /**
  * @brief aclnnBatchMatMulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -52,20 +52,21 @@ aclnnBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executo
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnBatchMatMulWeightNzGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* self, const aclTensor* mat2,
+                                                               aclTensor* out, int8_t cubeMathType,
+                                                               uint64_t* workspaceSize, aclOpExecutor** executor);
 /**
  * @brief aclnnBatchMatMulWeightNz的第二段接口，用于执行计算。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnBatchMatMulWeightNzGetWorkspaceSize获取。
+ * @param [in] workspace_size: 在npu
+ * device侧申请的workspace大小，由第一段接口aclnnBatchMatMulWeightNzGetWorkspaceSize获取。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnBatchMatMulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnBatchMatMulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream);
 
 #ifdef __cplusplus
 }

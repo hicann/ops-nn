@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file test_adaptive_avg_pool3d_grad_tiling.cpp
  * \brief
  */
@@ -51,18 +51,11 @@ struct AdaptiveAvgPool3dGradCompileInfo {
     uint64_t ubSizePlatForm = 0;
 };
 
-class AdaptiveAvgPool3dGradTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dGradTilingTestParam>
-{
+class AdaptiveAvgPool3dGradTilingTest : public testing::TestWithParam<AdaptiveAvgPool3dGradTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dGradTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveAvgPool3dGradTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dGradTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dGradTilingTest TearDown" << std::endl; }
 };
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -110,18 +103,18 @@ TEST_P(AdaptiveAvgPool3dGradTilingTest, test_case_adaptive_avg_pool3d_grad_tilin
     // compile info
     AdaptiveAvgPool3dGradCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -200,7 +193,6 @@ static AdaptiveAvgPool3dGradTilingTestParam cases[] = {
 
 INSTANTIATE_TEST_CASE_P(AdaptiveAvgPool3dGrad, AdaptiveAvgPool3dGradTilingTest, testing::ValuesIn(cases));
 
-
 namespace {
 static void SetAscend950GlobalPlatformInfo()
 {
@@ -224,16 +216,11 @@ protected:
         SetAscend950GlobalPlatformInfo();
     }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool3dGradTiling950Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dGradTiling950Test TearDown" << std::endl; }
 };
 
-static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShape,
-                                                    gert::StorageShape xShape,
-                                                    gert::StorageShape xGradShape,
-                                                    ge::DataType dtype,
+static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShape, gert::StorageShape xShape,
+                                                    gert::StorageShape xGradShape, ge::DataType dtype,
                                                     uint64_t expect_tiling_key)
 {
     dlog_setlevel(0, 0, 0);
@@ -254,10 +241,7 @@ static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShap
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
-    std::map<std::string, std::string> soc_version_infos = {
-        {"Short_SoC_version", "Ascend950"},
-        {"NpuArch", "3510"}
-    };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     fe::PlatFormInfos platform_info;
     platform_info.Init();
@@ -269,21 +253,21 @@ static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShap
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -303,9 +287,7 @@ static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShap
                       .NodeInputTd(0, dtype, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeInputTd(1, dtype, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
                       .NodeOutputTd(0, dtype, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
-                      .NodeAttrs({
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}
-                      })
+                      .NodeAttrs({{"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")}})
                       .TilingData(tiling_data.get())
                       .Workspace(ws_size)
                       .Build();
@@ -315,10 +297,8 @@ static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShap
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 
     std::cout << "[950] before tiling_func" << std::endl;
     auto ret = tiling_func(tiling_context);
@@ -343,12 +323,7 @@ TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_25
     gert::StorageShape xShape = {{1, 1, 1, 1, 16777216}, {1, 1, 1, 1, 16777216}};
     gert::StorageShape xGradShape = {{1, 1, 1, 1, 16777216}, {1, 1, 1, 1, 16777216}};
 
-    ExecuteAdaptiveAvgPool3dGrad950TestCase(
-        yGradShape,
-        xShape,
-        xGradShape,
-        ge::DT_FLOAT,
-        33);
+    ExecuteAdaptiveAvgPool3dGrad950TestCase(yGradShape, xShape, xGradShape, ge::DT_FLOAT, 33);
 }
 
 TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_257_ascend950)
@@ -359,10 +334,5 @@ TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_25
     gert::StorageShape xShape = {{3, 30, 5, 1, 24}, {3, 30, 5, 1, 24}};
     gert::StorageShape xGradShape = {{3, 30, 5, 1, 24}, {3, 30, 5, 1, 24}};
 
-    ExecuteAdaptiveAvgPool3dGrad950TestCase(
-        yGradShape,
-        xShape,
-        xGradShape,
-        ge::DT_FLOAT,
-        18);
+    ExecuteAdaptiveAvgPool3dGrad950TestCase(yGradShape, xShape, xGradShape, ge::DT_FLOAT, 18);
 }

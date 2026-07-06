@@ -19,26 +19,26 @@
 
 namespace ge {
 /**
-* @brief Computes gradients for the exponential linear (Elu) operation.
-*
-* @par Inputs:
-* @li grads: An ND or 5HD tensor. Support 1D~8D. Must be one of the following types:
-* bfloat16, float16, float32, float64.
-* The backpropagated gradients to the corresponding Elu operation.
-* @li activations: A tensor. Has the same type, format and shape as "grads".
-* The outputs of the corresponding Elu operation.
-*
-* @par Outputs:
-* y: A tensor. Has the same type, format and shape as "grads".
-*
-* @par Third-party framework compatibility
-* Compatible with the TensorFlow operator EluGrad.
-*
-*/
+ * @brief Computes gradients for the exponential linear (Elu) operation.
+ *
+ * @par Inputs:
+ * @li grads: An ND or 5HD tensor. Support 1D~8D. Must be one of the following types:
+ * bfloat16, float16, float32, float64.
+ * The backpropagated gradients to the corresponding Elu operation.
+ * @li activations: A tensor. Has the same type, format and shape as "grads".
+ * The outputs of the corresponding Elu operation.
+ *
+ * @par Outputs:
+ * y: A tensor. Has the same type, format and shape as "grads".
+ *
+ * @par Third-party framework compatibility
+ * Compatible with the TensorFlow operator EluGrad.
+ *
+ */
 REG_OP(EluGrad)
     .INPUT(grads, TensorType({FloatingDataType, DT_BF16}))
     .INPUT(activations, TensorType({FloatingDataType, DT_BF16}))
     .OUTPUT(y, TensorType({FloatingDataType, DT_BF16}))
     .OP_END_FACTORY_REG(EluGrad)
 } // namespace ge
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_ELU_GRAD_OPS_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_ELU_GRAD_OPS_H_

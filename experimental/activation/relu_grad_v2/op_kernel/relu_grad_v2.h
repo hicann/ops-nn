@@ -46,7 +46,7 @@ public:
     __aicore__ inline KernelReluGradBase() = default;
 
     __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops,
-                                const ReluGradV2TilingData *tilingData, TPipe *pipe)
+                                const ReluGradV2TilingData* tilingData, TPipe* pipe)
     {
         pipe_ = pipe;
         InitGlobalTensors(gradients, features, backprops, tilingData);
@@ -54,7 +54,7 @@ public:
         pipe_->InitBuffer(inQueueGradients_, BUFFER_NUM, tileLength_ * sizeof(T));
         pipe_->InitBuffer(inQueueFeatures_, BUFFER_NUM, tileLength_ * sizeof(T));
         pipe_->InitBuffer(outQueueBackprops_, BUFFER_NUM, tileLength_ * sizeof(T));
-        static_cast<Derived *>(this)->InitExtraBuffers();
+        static_cast<Derived*>(this)->InitExtraBuffers();
     }
 
     __aicore__ inline void Process()
@@ -64,7 +64,7 @@ public:
             return;
         }
 
-        Derived *derived = static_cast<Derived *>(this);
+        Derived* derived = static_cast<Derived*>(this);
         int64_t alignNum = derived->GetAlignNum();
         for (int64_t i = 0; i < tileNum; ++i) {
             int64_t validLength = tileLength_;
@@ -78,10 +78,7 @@ public:
         }
     }
 
-    __aicore__ inline int64_t GetAlignNum() const
-    {
-        return DATA_COPY_ALIGN_BYTES / static_cast<int64_t>(sizeof(T));
-    }
+    __aicore__ inline int64_t GetAlignNum() const { return DATA_COPY_ALIGN_BYTES / static_cast<int64_t>(sizeof(T)); }
 
     __aicore__ inline int64_t GetComputeLength(int64_t validLength, int64_t paddedLength) const
     {
@@ -128,7 +125,7 @@ protected:
 
 private:
     __aicore__ inline void InitGlobalTensors(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops,
-                                             const ReluGradV2TilingData *tilingData)
+                                             const ReluGradV2TilingData* tilingData)
     {
         int64_t blockIdx = GetBlockIdx();
         int64_t offset = 0;
@@ -141,13 +138,13 @@ private:
         }
 
         blockLength_ = blockSize;
-        gradientsGm_.SetGlobalBuffer((__gm__ T *)gradients + offset, blockSize);
-        featuresGm_.SetGlobalBuffer((__gm__ T *)features + offset, blockSize);
-        backpropsGm_.SetGlobalBuffer((__gm__ T *)backprops + offset, blockSize);
+        gradientsGm_.SetGlobalBuffer((__gm__ T*)gradients + offset, blockSize);
+        featuresGm_.SetGlobalBuffer((__gm__ T*)features + offset, blockSize);
+        backpropsGm_.SetGlobalBuffer((__gm__ T*)backprops + offset, blockSize);
     }
 
 protected:
-    TPipe *pipe_ = nullptr;
+    TPipe* pipe_ = nullptr;
     GlobalTensor<T> gradientsGm_;
     GlobalTensor<T> featuresGm_;
     GlobalTensor<T> backpropsGm_;
@@ -211,8 +208,8 @@ public:
 
         for (int64_t idx = 0; idx < validLength; ++idx) {
             float featureValue = featuresFp32.GetValue(idx);
-            backpropsFp32.SetValue(idx, featureValue > 0.0f || featureValue != featureValue ? gradientsFp32.GetValue(idx)
-                                                                                            : 0.0f);
+            backpropsFp32.SetValue(
+                idx, featureValue > 0.0f || featureValue != featureValue ? gradientsFp32.GetValue(idx) : 0.0f);
         }
 
         Cast(backpropsLocal, backpropsFp32, RoundMode::CAST_ROUND, static_cast<uint32_t>(validLength));
@@ -225,6 +222,6 @@ private:
     TBuf<TPosition::VECCALC> backpropsFp32Buf_;
 };
 
-}  // namespace NsReluGradV2
+} // namespace NsReluGradV2
 
 #endif

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -17,9 +18,8 @@
 using namespace ForeachAddcmulScalar;
 
 template <typename T, typename ScalarT>
-__aicore__ inline void ForeachAddcmulScalarImpl(
-    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling, TPipe* tPipe)
+__aicore__ inline void ForeachAddcmulScalarImpl(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalar,
+                                                GM_ADDR outputs, GM_ADDR workspace, GM_ADDR tiling, TPipe* tPipe)
 {
     GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
     const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
@@ -28,20 +28,20 @@ __aicore__ inline void ForeachAddcmulScalarImpl(
     op.Process();
 }
 
-extern "C" __global__ __aicore__ void foreach_addcmul_scalar(
-    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcmul_scalar(GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2,
+                                                             GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                             GM_ADDR tiling)
 {
     TPipe pipeOp;
     if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
-        ForeachAddcmulScalarImpl<half, DTYPE_SCALAR>(
-            inputs, tensor1, tensor2, scalar, outputs, workspace, tiling, &pipeOp);
+        ForeachAddcmulScalarImpl<half, DTYPE_SCALAR>(inputs, tensor1, tensor2, scalar, outputs, workspace, tiling,
+                                                     &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
         ForeachAddcmulScalarImpl<float, float>(inputs, tensor1, tensor2, scalar, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_INT)) {
         ForeachAddcmulScalarImpl<int, int>(inputs, tensor1, tensor2, scalar, outputs, workspace, tiling, &pipeOp);
     } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
-        ForeachAddcmulScalarImpl<bfloat16_t, float>(
-            inputs, tensor1, tensor2, scalar, outputs, workspace, tiling, &pipeOp);
+        ForeachAddcmulScalarImpl<bfloat16_t, float>(inputs, tensor1, tensor2, scalar, outputs, workspace, tiling,
+                                                    &pipeOp);
     }
 }

@@ -26,12 +26,8 @@ using namespace MaxPool3DGradWithArgmaxComm;
 using namespace MaxPool3DGradScatterInternal;
 
 template <typename TX, typename TGrad, typename TArgmax, typename TY>
-using MaxPoolGradWithArgScatterBase = 
-    MaxPool3DGradScatterBaseTemplate<
-        TX, TGrad, TArgmax, TY,
-        MaxPool3DGradWithArgmaxTilingData,
-        TilingParams,
-        BlockParams>;
+using MaxPoolGradWithArgScatterBase = MaxPool3DGradScatterBaseTemplate<
+    TX, TGrad, TArgmax, TY, MaxPool3DGradWithArgmaxTilingData, TilingParams, BlockParams>;
 
 } // namespace MaxPool3DGradWithArgmax
 #endif // MAX_POOL_GRAD3D_WITH_ARGMAX_SCATTER_BASE_H

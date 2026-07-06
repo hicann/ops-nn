@@ -40,7 +40,7 @@ constexpr uint32_t CONST_512 = 512;
 constexpr uint32_t CONST_768 = 768;
 constexpr uint32_t CONST_1024 = 1024;
 constexpr uint32_t L1_DOUBLE_BUFFER_SIZE = 131072;
-constexpr uint32_t L0AB_DOUBLE_BUFFER_LEN_INT8 = 32768; 
+constexpr uint32_t L0AB_DOUBLE_BUFFER_LEN_INT8 = 32768;
 constexpr uint32_t BLOCK_SIZE_16 = 16;
 constexpr uint32_t BLOCK_SIZE_32 = 32;
 constexpr uint32_t CUBE_BLOCK_SIZE_INT8 = 512;
@@ -62,14 +62,13 @@ public:
         SetMasknorm();
     };
 
-    __aicore__ FORCE_INLINE void Init(GM_ADDR A, GM_ADDR B,
-                        GM_ADDR bias, GM_ADDR compress_index, GM_ADDR C,
-                        const MatmulCompressTilingDataArch20* tilingData)
+    __aicore__ FORCE_INLINE void Init(GM_ADDR A, GM_ADDR B, GM_ADDR bias, GM_ADDR compress_index, GM_ADDR C,
+                                      const MatmulCompressTilingDataArch20* tilingData)
     {
-        gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE *>(A));
-        gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t *>(B));
-        gm_c.SetGlobalBuffer(reinterpret_cast<__gm__ half *>(C));
-        gm_compress_index.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t *>(compress_index));
+        gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE*>(A));
+        gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(B));
+        gm_c.SetGlobalBuffer(reinterpret_cast<__gm__ half*>(C));
+        gm_compress_index.SetGlobalBuffer(reinterpret_cast<__gm__ int8_t*>(compress_index));
 
         b_ = tilingData->batch;
         m_ = tilingData->m;
@@ -93,9 +92,9 @@ public:
 
         uint32_t scale_space = 0;
         if constexpr (ENABLE_SCALE) {
-           scale_space = CONST_8 * CONST_1024;
+            scale_space = CONST_8 * CONST_1024;
         }
-        
+
         n_compress_num = CeilDiv(n_, copress_tiling_n_ * CONST_16);
         k_compress_num = CeilDiv<uint32_t>(k_, copress_tiling_k_ * align_k);
         compress_size = copress_tiling_k_ * copress_tiling_n_ * CUBE_BLOCK_SIZE_INT8;
@@ -109,12 +108,12 @@ public:
         l0_b_pong = buf.template GetBuffer<BufferType::ASCEND_L0B, IN_DTYPE>(L0AB_DOUBLE_BUFFER_LEN_INT8);
         ub_c = buf.template GetBuffer<BufferType::ASCEND_UB, half>(0 + scale_space);
         if constexpr (ENABLE_BIAS) {
-            gm_bias.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_TYPE *>(bias));
+            gm_bias.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_TYPE*>(bias));
             ub_bias = buf.template GetBuffer<BufferType::ASCEND_UB, BIAS_TYPE>(L1_DOUBLE_BUFFER_SIZE + scale_space);
         }
     }
 
-    __aicore__ FORCE_INLINE void GetIdx(uint32_t loop_idx, uint32_t &m_idx, uint32_t &n_idx)
+    __aicore__ FORCE_INLINE void GetIdx(uint32_t loop_idx, uint32_t& m_idx, uint32_t& n_idx)
     {
         uint32_t in_batch_idx = loop_idx % (m_loop_ * n_loop_);
         if constexpr (SWIZZLE_DIR == 0) { // Zn
@@ -186,7 +185,7 @@ public:
             src_offset_index = (b_idx * n_compress_num * k_compress_num +
                                 n_idx * CeilDiv(n0_, copress_tiling_n_ * BLOCK_SIZE_16) * k_compress_num) *
                                CONST_8;
-            load_unzip_index_from_gm(((__gm__ int8_t *)(gm_compress_index.GetPhyAddr() + src_offset_index)),
+            load_unzip_index_from_gm(((__gm__ int8_t*)(gm_compress_index.GetPhyAddr() + src_offset_index)),
                                      (uint64_t)index_k_all);
             for (uint32_t k_idx = 0; k_idx < k_loop_; ++k_idx) {
                 uint32_t k_actual = k_idx == k_loop_ - 1 ? k_ - k_idx * k0_ : k0_;
@@ -202,8 +201,8 @@ public:
                 WAIT_FLAG(MTE1, MTE2, l1_b_event);
                 for (uint32_t _n_idx = 0; _n_idx < index_num_n; _n_idx++) {
                     if (k_idx == k_loop_ - 1) {
-                        uint32_t copress_k_tile =
-                            (k_round - (index_num_k - 1) * (copress_tiling_k_ * block_size_k)) / block_size_k;
+                        uint32_t copress_k_tile = (k_round - (index_num_k - 1) * (copress_tiling_k_ * block_size_k)) /
+                                                  block_size_k;
                         uint32_t compress_tile_size = copress_k_tile * copress_tiling_n_ * CUBE_BLOCK_SIZE_INT8;
                         src_offset_compress_L1_size = _n_idx * ((index_num_k - 1) * compress_size + compress_tile_size);
                     } else {
@@ -211,9 +210,9 @@ public:
                     }
 
                     for (uint32_t _k_idx = 0; _k_idx < index_num_k; _k_idx++) {
-                        load_gm_to_cbuf_unzip((__cbuf__ half *)(((__cbuf__ int8_t *)l1_b.GetPhyAddr() +
-                                                                 src_offset_compress_L1_size + _k_idx * compress_size)),
-                                              (__gm__ half *)(((__gm__ int8_t *)gm_b.GetPhyAddr())));
+                        load_gm_to_cbuf_unzip((__cbuf__ half*)(((__cbuf__ int8_t*)l1_b.GetPhyAddr() +
+                                                                src_offset_compress_L1_size + _k_idx * compress_size)),
+                                              (__gm__ half*)(((__gm__ int8_t*)gm_b.GetPhyAddr())));
                     }
                 }
                 SET_FLAG(MTE2, MTE1, l1_b_event);
@@ -252,7 +251,8 @@ public:
                         //对于L1的解压缩数据为N方向连续，因此偏移的基块为compress_overlap_n_ * 512
                         for (uint32_t i = 0; i < k0_round / align_k; i++) {
                             dst_offset = n_round * i * align_k;
-                            src_offset = k_part_idx * k_part_len * n0_ + i * n0_ * align_k  + compress_overlap_n_ * CONST_512;
+                            src_offset = k_part_idx * k_part_len * n0_ + i * n0_ * align_k +
+                                         compress_overlap_n_ * CONST_512;
                             l1_to_l0_b<ArchType::ASCEND_V200, IN_DTYPE, true, DataFormat::ZN, DataFormat::NZ>(
                                 l0_b[dst_offset], // dst
                                 l1_b[src_offset], // src
@@ -282,11 +282,11 @@ public:
                             cmatrix_init_val = false;
                             AscendC::PipeBarrier<PIPE_MTE2>();
                             gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(ub_bias, gm_bias[n_idx * n0_],
-                                                                    0,           // sid
-                                                                    1,           // nBurst
-                                                                    n_round / CONST_8, // lenBurst(unit: 32B)
-                                                                    0,           // srcStride
-                                                                    0            // dstStride
+                                                                       0,                 // sid
+                                                                       1,                 // nBurst
+                                                                       n_round / CONST_8, // lenBurst(unit: 32B)
+                                                                       0,                 // srcStride
+                                                                       0                  // dstStride
                             );
                             SET_FLAG(MTE2, V, EVENT_ID0);
                             WAIT_FLAG(MTE2, V, EVENT_ID0);
@@ -302,17 +302,14 @@ public:
                         }
                         WAIT_FLAG(V, M, EVENT_ID0);
                     }
-                    uint32_t m_mad_actual =
-                        (m_actual == 1)
-                            ? 2
-                            : m_actual; // m_actual == 1 时，mad 指令会走 gemv 向量 × 矩阵模式，此时设为 2，避免走 gemv
+                    uint32_t m_mad_actual = (m_actual == 1) ? 2 : m_actual; // m_actual == 1 时，mad 指令会走 gemv 向量
+                                                                            // × 矩阵模式，此时设为 2，避免走 gemv
                     AscendC::PipeBarrier<PIPE_M>();
-                    mmad<ArchType::ASCEND_V200, IN_DTYPE, IN_DTYPE, MMAD_TYPE, false>(l0c, l0_a,
-                                                                                    l0_b,
-                                                                                    m_mad_actual, // m
-                                                                                    n_actual,     // n
-                                                                                    k0_actual,    // k
-                                                                                    cmatrix_init_val  // cmatrixInitVal
+                    mmad<ArchType::ASCEND_V200, IN_DTYPE, IN_DTYPE, MMAD_TYPE, false>(l0c, l0_a, l0_b,
+                                                                                      m_mad_actual,    // m
+                                                                                      n_actual,        // n
+                                                                                      k0_actual,       // k
+                                                                                      cmatrix_init_val // cmatrixInitVal
                     );
                     SET_FLAG(M, MTE1, l0_event);
                 }
@@ -322,24 +319,24 @@ public:
             AscendC::PipeBarrier<PIPE_MTE2>();
             if constexpr (ENABLE_SCALE) {
                 gm_to_ub<ArchType::ASCEND_V200, DESCALE_TYPE>(ub_scale, gm_scale[n_idx * n0_],
-                                                              0,           // sid
-                                                              1,           // nBurst
+                                                              0,                 // sid
+                                                              1,                 // nBurst
                                                               n_round / CONST_4, // lenBurst(unit: 32B)
-                                                              0,           // srcStride
-                                                              0            // dstStride
+                                                              0,                 // srcStride
+                                                              0                  // dstStride
                 );
             }
-            
+
             SET_FLAG(M, V, EVENT_ID0);
             WAIT_FLAG(M, V, EVENT_ID0);
             WAIT_FLAG(MTE3, V, EVENT_ID0);
             SET_FLAG(MTE2, V, EVENT_ID1);
             WAIT_FLAG(MTE2, V, EVENT_ID1);
             l0c_to_ub<ArchType::ASCEND_V200, MMAD_TYPE, half>(ub_c, l0c,
-                                                            (uint16_t)(n_round / BLOCK_SIZE_16), // nBurst
-                                                            (uint16_t)(m_round / BLOCK_SIZE_16), // lenBurst
-                                                            (uint16_t)0,                         // srcStride
-                                                            (uint16_t)0                          // dstStride
+                                                              (uint16_t)(n_round / BLOCK_SIZE_16), // nBurst
+                                                              (uint16_t)(m_round / BLOCK_SIZE_16), // lenBurst
+                                                              (uint16_t)0,                         // srcStride
+                                                              (uint16_t)0                          // dstStride
             );
             AscendC::PipeBarrier<PIPE_V>();
             if constexpr (ENABLE_BIAS) {
@@ -349,12 +346,12 @@ public:
                     for (uint32_t i = 0; i < n_round / CONST_16; i++) {
                         uint64_t curr_offset_c = i * m_round * BLOCK_SIZE_16 + m_actual * BLOCK_SIZE_16;
                         muls_v<ArchType::ASCEND_V200, half>(ub_c[curr_offset_c], ub_c[curr_offset_c],
-                                                            zero, // src1
-                                                            1,    // repeat
-                                                            1,    // dstBlockStride
-                                                            1,    // srcBlockStride
-                                                            CONST_2,    // dstRepeatStride
-                                                            CONST_2);   // srcRepeatStride
+                                                            zero,     // src1
+                                                            1,        // repeat
+                                                            1,        // dstBlockStride
+                                                            1,        // srcBlockStride
+                                                            CONST_2,  // dstRepeatStride
+                                                            CONST_2); // srcRepeatStride
                     }
                 }
             }
@@ -427,5 +424,5 @@ protected:
 };
 
 #endif
-}
+} // namespace MatmulCompressSpace
 #endif

@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -28,14 +28,14 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-inline static bool IsAiCoreSupport(const aclTensor *self)
+inline static bool IsAiCoreSupport(const aclTensor* self)
 {
     // Sigmoid只需要判断dtype
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AICORE算子kernel
-inline static const aclTensor *SigmoidAiCore(const aclTensor *self, aclTensor *sigmoidOut, aclOpExecutor *executor)
+inline static const aclTensor* SigmoidAiCore(const aclTensor* self, aclTensor* sigmoidOut, aclOpExecutor* executor)
 {
     L0_DFX(SigmoidAiCore, self, sigmoidOut);
     // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore Sigmoid算子加入任务队列
@@ -47,7 +47,7 @@ inline static const aclTensor *SigmoidAiCore(const aclTensor *self, aclTensor *s
 }
 
 // AICPU算子kernel
-inline static const aclTensor *SigmoidAiCpu(const aclTensor *self, aclTensor *sigmoidOut, aclOpExecutor *executor)
+inline static const aclTensor* SigmoidAiCpu(const aclTensor* self, aclTensor* sigmoidOut, aclOpExecutor* executor)
 {
     // 使用框架宏ADD_TO_CPU_LAUNCHER_LIST，将AiCpu Sigmoid算子加入任务队列
     // Sigmoid是算子的OpType，self是算子的输入，sigmoidOut是算子的输出
@@ -60,7 +60,7 @@ inline static const aclTensor *SigmoidAiCpu(const aclTensor *self, aclTensor *si
     return sigmoidOut;
 }
 
-const aclTensor *Sigmoid(const aclTensor *self, aclOpExecutor *executor)
+const aclTensor* Sigmoid(const aclTensor* self, aclOpExecutor* executor)
 {
     auto sigmoidOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
 
@@ -70,4 +70,4 @@ const aclTensor *Sigmoid(const aclTensor *self, aclOpExecutor *executor)
         return SigmoidAiCpu(self, sigmoidOut, executor);
     }
 }
-}
+} // namespace l0op

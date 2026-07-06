@@ -23,10 +23,8 @@ namespace optiling {
 
 class AvgPoolGradNCHWTiling : public AvgPoolV2GradCommonNCHWTiling {
 public:
-    explicit AvgPoolGradNCHWTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNCHWTiling(context)
-    {}
-    ~AvgPoolGradNCHWTiling() override
-    {}
+    explicit AvgPoolGradNCHWTiling(gert::TilingContext* context) : AvgPoolV2GradCommonNCHWTiling(context) {}
+    ~AvgPoolGradNCHWTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;

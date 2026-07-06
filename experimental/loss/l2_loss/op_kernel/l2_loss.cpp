@@ -10,7 +10,7 @@
 /*!
  * \file l2_loss.cpp
  * \brief
-*/
+ */
 #include "l2_loss.h"
 
 template <uint32_t schMode>

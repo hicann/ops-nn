@@ -16,20 +16,12 @@
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
 
-namespace ge
-{
-class GemmV3InferShape : public testing::Test
-{
+namespace ge {
+class GemmV3InferShape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "GemmV3 Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "GemmV3 Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "GemmV3 Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "GemmV3 Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(GemmV3InferShape, GemmV3_Test_TransA_False_And_TransB_False)
@@ -161,4 +153,4 @@ TEST_F(GemmV3InferShape, GemmV3_GemmV3_Test_Enable_Hf32_True)
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     EXPECT_EQ(Ops::Base::ToString(*output), "[2048, 64]");
 }
-}
+} // namespace ge

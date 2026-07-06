@@ -25,11 +25,12 @@ using namespace AscendC;
 using namespace conv3d;
 
 struct DataToFill {
-    __aicore__ inline DataToFill(uint64_t &singleCoreDim_, uint64_t &dimIdxStart_, bool &isDimTail_)
-        : singleCoreDim(singleCoreDim_), dimIdxStart(dimIdxStart_), isDimTail(isDimTail_) {}
-    uint64_t &singleCoreDim;
-    uint64_t &dimIdxStart;
-    bool &isDimTail;
+    __aicore__ inline DataToFill(uint64_t& singleCoreDim_, uint64_t& dimIdxStart_, bool& isDimTail_)
+        : singleCoreDim(singleCoreDim_), dimIdxStart(dimIdxStart_), isDimTail(isDimTail_)
+    {}
+    uint64_t& singleCoreDim;
+    uint64_t& dimIdxStart;
+    bool& isDimTail;
 };
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class CONV_CFG>
@@ -37,9 +38,8 @@ class KernelConv3DV2 {
 public:
     __aicore__ inline KernelConv3DV2() = default;
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR y, GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset, GM_ADDR y,
+                                GM_ADDR workspace, const Ops::NN::Conv3dV2::Conv3DV2TilingData* allTilingData)
     {
         if ASCEND_IS_AIV {
             blockIdx = blockIdx / subblocknum;
@@ -64,20 +64,17 @@ public:
     }
 
 protected:
-    __aicore__ inline void InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
+    __aicore__ inline void InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData* allTilingData)
     {
         this->allTilingData = allTilingData;
         this->conv3dRunInfo = &(allTilingData->convRunInfo);
         this->conv3dApiTiling = &(allTilingData->convApiTiling);
 
-        numBlocks = this->conv3dRunInfo->mDim * this->conv3dRunInfo->nDim * this->conv3dRunInfo->groupDim * this->conv3dRunInfo->doDim *
-                   this->conv3dRunInfo->batchDim;
+        numBlocks = this->conv3dRunInfo->mDim * this->conv3dRunInfo->nDim * this->conv3dRunInfo->groupDim *
+                    this->conv3dRunInfo->doDim * this->conv3dRunInfo->batchDim;
     }
 
-    __aicore__ inline uint64_t CeilDiv(const uint64_t &num, const uint64_t &by)
-    {
-        return (num + by - 1) / by;
-    }
+    __aicore__ inline uint64_t CeilDiv(const uint64_t& num, const uint64_t& by) { return (num + by - 1) / by; }
 
     __aicore__ inline void InitC1N1()
     {
@@ -86,8 +83,8 @@ protected:
         n1 = CeilDiv(conv3dRunInfo->cout, n0);
     }
 
-    __aicore__ inline bool CountIdxTail(const uint64_t &dataPerDim, const uint64_t &dim, const uint64_t &wholeDim,
-        const uint64_t &realWholeDim, DataToFill &curStruct)
+    __aicore__ inline bool CountIdxTail(const uint64_t& dataPerDim, const uint64_t& dim, const uint64_t& wholeDim,
+                                        const uint64_t& realWholeDim, DataToFill& curStruct)
     {
         const uint64_t dimIdx = (blockIdx / dataPerDim) % dim;
         const uint64_t maxDimPerCore = CeilDiv(wholeDim, dim);
@@ -106,8 +103,8 @@ protected:
     {
         const uint64_t dataPerBatchDim = conv3dRunInfo->mDim * conv3dRunInfo->nDim * conv3dRunInfo->doDim;
         DataToFill batchStruct(singleCoreBatch, batchIdxStart, isBatchDimTail);
-        bool isRealDim = CountIdxTail(
-            dataPerBatchDim, conv3dRunInfo->batchDim, conv3dRunInfo->batch, conv3dRunInfo->batch, batchStruct);
+        bool isRealDim = CountIdxTail(dataPerBatchDim, conv3dRunInfo->batchDim, conv3dRunInfo->batch,
+                                      conv3dRunInfo->batch, batchStruct);
         if (!isRealDim) [[unlikely]] {
             return false;
         }
@@ -119,8 +116,8 @@ protected:
     {
         const uint64_t dataPerDoDim = conv3dRunInfo->nDim * conv3dRunInfo->mDim;
         DataToFill doStruct(singleCoreDout, doIdxStart, isDoDimTail);
-        bool isRealDim =
-            CountIdxTail(dataPerDoDim, conv3dRunInfo->doDim, conv3dRunInfo->dout, conv3dRunInfo->dout, doStruct);
+        bool isRealDim = CountIdxTail(dataPerDoDim, conv3dRunInfo->doDim, conv3dRunInfo->dout, conv3dRunInfo->dout,
+                                      doStruct);
         if (!isRealDim) [[unlikely]] {
             return false;
         }
@@ -143,7 +140,7 @@ protected:
     {
         DataToFill mStruct(singleCoreM, mIdxStart, isMDimTail);
         const uint64_t totalM = conv3dRunInfo->wout * conv3dRunInfo->hout;
-        bool isRealDim = CountIdxTail(1, conv3dRunInfo->mDim, totalM, totalM, mStruct);  // dataPerMDim = 1
+        bool isRealDim = CountIdxTail(1, conv3dRunInfo->mDim, totalM, totalM, mStruct); // dataPerMDim = 1
         if (!isRealDim) [[unlikely]] {
             return false;
         }
@@ -153,20 +150,18 @@ protected:
 
     __aicore__ inline bool InitSingleCoreData()
     {
-        if (!InitSingleCoreDataWithBatch() || !InitSingleCoreDataWithDout() ||
-            !InitSingleCoreDataWithCout() || !InitSingleCoreDataWithM()) {
+        if (!InitSingleCoreDataWithBatch() || !InitSingleCoreDataWithDout() || !InitSingleCoreDataWithCout() ||
+            !InitSingleCoreDataWithM()) {
             return false;
         }
 
         return true;
     }
 
-    __aicore__ inline int64_t Max(const int64_t &left, const int64_t &right)
-    {
-        return left > right ? left : right;
-    }
+    __aicore__ inline int64_t Max(const int64_t& left, const int64_t& right) { return left > right ? left : right; }
 
-    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace)
+    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR scale,
+                                      GM_ADDR workspace)
     {
         fmapOneBatchSize = conv3dRunInfo->din * c1In * conv3dRunInfo->hin * conv3dRunInfo->win * c0In;
         if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
@@ -188,27 +183,25 @@ protected:
         if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             outputStartAddr = batchIdxStart * outputOneBatchSize +
                               nIdxStart * conv3dRunInfo->dout * conv3dRunInfo->hout * conv3dRunInfo->wout +
-                              doIdxStart * conv3dRunInfo->hout * conv3dRunInfo->wout +
-                              mIdxStart;
+                              doIdxStart * conv3dRunInfo->hout * conv3dRunInfo->wout + mIdxStart;
         }
-        ASC_OP_LOGD("[InitBuffer] fmStartAddr %d weightStartAddr %d outputStartAddr %d.\n",
-            fmStartAddr,
-            weightStartAddr,
-            outputStartAddr);
+        ASC_OP_LOGD("[InitBuffer] fmStartAddr %d weightStartAddr %d outputStartAddr %d.\n", fmStartAddr,
+                    weightStartAddr, outputStartAddr);
 
-        fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(x + fmStartAddr * sizeof(A_T)));
-        filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(filter + weightStartAddr * sizeof(B_T)));
-        outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(y + outputStartAddr * sizeof(C_T)));
+        fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(x + fmStartAddr * sizeof(A_T)));
+        filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ B_T*>(filter + weightStartAddr * sizeof(B_T)));
+        outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ C_T*>(y + outputStartAddr * sizeof(C_T)));
         if (conv3dRunInfo->hasBias) {
             uint64_t biasStartAddr = nIdxStart;
             ASC_OP_LOGD("[InitBuffer] biasStartAddr %d.\n", biasStartAddr);
-            biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_T *>(bias + biasStartAddr * sizeof(BIAS_T)));
+            biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_T*>(bias + biasStartAddr * sizeof(BIAS_T)));
         }
 
         if constexpr (CONV_CFG::quantType == static_cast<int8_t>(QuantType::PER_CHANNEL_NO_OFFSET)) {
             uint64_t wsStartAddr = (blockIdx * 4) * conv3dApiTiling->mL0 * conv3dApiTiling->nL0;
-            workspaceGm.SetGlobalBuffer(reinterpret_cast<__gm__ typename conv::GetDstType<A_T>::Type *>(workspace + wsStartAddr * sizeof(typename conv::GetDstType<A_T>::Type)));
-            scaleGm.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(scale + nIdxStart * sizeof(float)));
+            workspaceGm.SetGlobalBuffer(reinterpret_cast<__gm__ typename conv::GetDstType<A_T>::Type*>(
+                workspace + wsStartAddr * sizeof(typename conv::GetDstType<A_T>::Type)));
+            scaleGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(scale + nIdxStart * sizeof(float)));
         }
     }
 
@@ -220,11 +213,8 @@ protected:
         }
         int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD;
         int64_t hiIdxStart = (mIdxStart / conv3dRunInfo->wout) * conv3dRunInfo->strideH;
-        ASC_OP_LOGD("[Conv3DV2KernelImpl] doIdxStart %d mIdxStart %d diIdxStart %d hiIdxStart %d.\n",
-            doIdxStart,
-            mIdxStart,
-            diIdxStart,
-            hiIdxStart);
+        ASC_OP_LOGD("[Conv3DV2KernelImpl] doIdxStart %d mIdxStart %d diIdxStart %d hiIdxStart %d.\n", doIdxStart,
+                    mIdxStart, diIdxStart, hiIdxStart);
 
         conv.SetFmapStartPosition(Max(diIdxStart, 0), mIdxStart, 0);
         conv.SetWeight(filterGm);
@@ -272,9 +262,9 @@ protected:
     GlobalTensor<float> scaleGm;
 
     // Tiling data
-    const Ops::NN::Conv3dV2::TConv3DTiling *conv3dApiTiling;
-    const Ops::NN::Conv3dV2::Conv3DRunInfo *conv3dRunInfo;
-    const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData;
+    const Ops::NN::Conv3dV2::TConv3DTiling* conv3dApiTiling;
+    const Ops::NN::Conv3dV2::Conv3DRunInfo* conv3dRunInfo;
+    const Ops::NN::Conv3dV2::Conv3DV2TilingData* allTilingData;
 
     uint32_t blockIdx = GetBlockIdx();
     uint32_t subblocknum = GetSubBlockNum();

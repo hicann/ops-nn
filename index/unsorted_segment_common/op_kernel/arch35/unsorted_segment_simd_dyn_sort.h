@@ -24,9 +24,9 @@ constexpr uint32_t SORT_PADDING = 64;
 constexpr uint32_t HELP_FRE = 2;
 static constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-class KernelSimdDynSort
-{
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+class KernelSimdDynSort {
 public:
     __aicore__ inline KernelSimdDynSort(const UnsortedSegmentSimdDynSortTilingData* tiling, TPipe* pipe)
         : td_(tiling), pipe_(pipe){};
@@ -37,6 +37,7 @@ public:
     __aicore__ inline void Compute();
     __aicore__ inline void Process();
     using CAST_T = typename CastType<IDS_T, CAST_MODE>::type;
+
 private:
     AscendC::GlobalTensor<X_T> xGm_;
     AscendC::GlobalTensor<X_T> yGm_;
@@ -55,8 +56,10 @@ private:
     static constexpr uint32_t shiftOffset_ = ONE_BLOCK_SIZE / sizeof(CAST_T);
 };
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc,
+                                         CAST_MODE>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
 {
     InitGm<X_T, GmInitFunc>(output, td_->outputOuterDim * td_->innerDim);
 
@@ -82,9 +85,11 @@ __aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, 
     pipe_->InitBuffer(sharedTmpBuf_, Aligned(static_cast<uint64_t>(td_->sortSharedBufSize), ONE_BLOCK_SIZE));
 }
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::ProcessIndices(
-    uint64_t blockOffsetIdx, uint64_t sLoop, uint32_t rows, int64_t& arNum)
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc,
+                                         CAST_MODE>::ProcessIndices(uint64_t blockOffsetIdx, uint64_t sLoop,
+                                                                    uint32_t rows, int64_t& arNum)
 {
     LocalTensor<IDS_T> idsLocal = idsQue_.AllocTensor<IDS_T>();
     CopyIn(idsLocal, idsGm_, blockOffsetIdx + sLoop * td_->sortBaseS, 1, rows, 0);
@@ -114,8 +119,10 @@ __aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, 
     idsQue_.FreeTensor(idsLocal);
 }
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::ComputeXSum(uint32_t cols, uint32_t colsAlign, int64_t arNum)
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc,
+                                         CAST_MODE>::ComputeXSum(uint32_t cols, uint32_t colsAlign, int64_t arNum)
 {
     LocalTensor<uint32_t> sortedIdxLocal = sortedIdxBuf_.template Get<uint32_t>();
     LocalTensor<int32_t> noDupRes = noDupBuf_.template Get<int32_t>();
@@ -140,9 +147,11 @@ __aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, 
     outQueueRes_.EnQue<X_T>(resLocal);
 }
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::CopyResToGm(
-    uint32_t cols, uint32_t colsAlign, uint64_t ubOffset, int64_t& arNum)
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc,
+                                         CAST_MODE>::CopyResToGm(uint32_t cols, uint32_t colsAlign, uint64_t ubOffset,
+                                                                 int64_t& arNum)
 {
     LocalTensor<X_T> resLocal = outQueueRes_.DeQue<X_T>();
     LocalTensor<CAST_T> sortedKeyLocal = sortedKeyBuf_.Get<CAST_T>();
@@ -166,8 +175,10 @@ __aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, 
     outQueueRes_.FreeTensor(resLocal);
 }
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::Compute()
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+__aicore__ inline void
+KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::Compute()
 {
     uint64_t sIdx = GetBlockIdx() / td_->aTileNum;
     uint64_t aIdx = GetBlockIdx() % td_->aTileNum;
@@ -201,8 +212,10 @@ __aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, 
     }
 }
 
-template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc, uint32_t CAST_MODE>
-__aicore__ inline void KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::Process()
+template <typename X_T, typename IDS_T, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc,
+          typename SetAtomicModeFunc, uint32_t CAST_MODE>
+__aicore__ inline void
+KernelSimdDynSort<X_T, IDS_T, InitValueType, GmInitFunc, VectorComputeFunc, SetAtomicModeFunc, CAST_MODE>::Process()
 {
     if (GetBlockIdx() >= GetBlockNum()) {
         return;

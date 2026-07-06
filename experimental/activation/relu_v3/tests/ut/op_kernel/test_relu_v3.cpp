@@ -15,13 +15,10 @@
 #endif
 #include "../../../op_kernel/relu_v3.cpp"
 
-void *GmAllocAlign(size_t size)
-{
-    return GmAlloc(size + 31 >> 5 << 5);
-}
+void* GmAllocAlign(size_t size) { return GmAlloc(size + 31 >> 5 << 5); }
 
-template<typename T>
-constexpr const char *GetTorchType()
+template <typename T>
+constexpr const char* GetTorchType()
 {
     if constexpr (std::is_same_v<T, half>)
         return "float16";
@@ -39,26 +36,19 @@ constexpr const char *GetTorchType()
         static_assert(!std::is_same_v<T, T>);
 }
 
-template<typename... Args>
-int ExecuteCommand(const char *path, Args... args)
+template <typename... Args>
+int ExecuteCommand(const char* path, Args... args)
 {
     std::string command = path;
     ((command = command + " '" + args + "'"), ...);
     return std::system(command.c_str());
 }
 
-class relu_v3_test : public testing::Test
-{
+class relu_v3_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "relu_v3_test SetUp\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "relu_v3_test SetUp\n" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "relu_v3_test TearDown\n" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "relu_v3_test TearDown\n" << std::endl; }
 };
 
 TEST_F(relu_v3_test, test_case_0)
@@ -75,7 +65,7 @@ TEST_F(relu_v3_test, test_case_0)
     auto workspace = static_cast<GM_ADDR>(nullptr);
     auto tiling = static_cast<GM_ADDR>(GmAllocAlign(tiling_size));
 
-    auto tiling_data = reinterpret_cast<ReluV3TilingData *>(tiling);
+    auto tiling_data = reinterpret_cast<ReluV3TilingData*>(tiling);
     tiling_data->size = 448000;
 
     ICPU_SET_TILING_KEY(0);

@@ -52,7 +52,7 @@ constexpr uint32_t UB_SCALE_BLOCK_SIZE = 8;
 #else
 constexpr uint32_t UB_SCALE_BLOCK_SIZE = 4;
 #endif
-}  // namespace
+} // namespace
 
 using namespace PpMatMulNS;
 __aicore__ FORCE_INLINE uint32_t CeilDiv(const uint32_t dividend, const uint32_t divisor)
@@ -71,10 +71,7 @@ __aicore__ FORCE_INLINE uint32_t RoundUp(const uint32_t val, const uint32_t alig
     return (val + align - 1) / align * align;
 }
 
-__aicore__ FORCE_INLINE uint32_t Min(const uint32_t a, const uint32_t b)
-{
-    return a < b ? a : b;
-}
+__aicore__ FORCE_INLINE uint32_t Min(const uint32_t a, const uint32_t b) { return a < b ? a : b; }
 
 #if defined(__DAV_C100__) || defined(__DAV_M200__)
 template <uint32_t SWIZZL_DIR, bool TRANSPOSE_A, bool TRANSPOSE_B, bool SPLIT_K = false, typename IN_DTYPE = int8_t,
@@ -88,15 +85,15 @@ public:
         SetMasknorm();
     };
 
-    __aicore__ FORCE_INLINE void Init(__gm__ uint8_t *__restrict__ A, __gm__ uint8_t *__restrict__ B,
-                                          __gm__ uint8_t *__restrict__ bias, __gm__ uint8_t *__restrict__ scale,
-                                          __gm__ uint8_t *__restrict__ C, PpMatmulTilingData *tiling_data)
+    __aicore__ FORCE_INLINE void Init(__gm__ uint8_t* __restrict__ A, __gm__ uint8_t* __restrict__ B,
+                                      __gm__ uint8_t* __restrict__ bias, __gm__ uint8_t* __restrict__ scale,
+                                      __gm__ uint8_t* __restrict__ C, PpMatmulTilingData* tiling_data)
     {
-        gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE *>(A));
-        gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE *>(B));
-        gm_c.SetGlobalBuffer(reinterpret_cast<__gm__ OUT_TYPE *>(C));
-        gm_bias.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_TYPE *>(bias));
-        gm_scale.SetGlobalBuffer(reinterpret_cast<__gm__ DESCALE_TYPE *>(scale));
+        gm_a.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE*>(A));
+        gm_b.SetGlobalBuffer(reinterpret_cast<__gm__ IN_DTYPE*>(B));
+        gm_c.SetGlobalBuffer(reinterpret_cast<__gm__ OUT_TYPE*>(C));
+        gm_bias.SetGlobalBuffer(reinterpret_cast<__gm__ BIAS_TYPE*>(bias));
+        gm_scale.SetGlobalBuffer(reinterpret_cast<__gm__ DESCALE_TYPE*>(scale));
 
         b_ = tiling_data->batch;
         m_ = tiling_data->m;
@@ -136,10 +133,10 @@ public:
 #endif
     }
 
-    __aicore__ FORCE_INLINE void GetIdx(uint32_t loop_idx, uint64_t &m_idx, uint64_t &n_idx)
+    __aicore__ FORCE_INLINE void GetIdx(uint32_t loop_idx, uint64_t& m_idx, uint64_t& n_idx)
     {
         uint32_t in_batch_idx = loop_idx % (m_loop_ * n_loop_);
-        if constexpr (SWIZZL_DIR == 0) {  // Zn
+        if constexpr (SWIZZL_DIR == 0) { // Zn
             uint32_t tile_block_loop = (m_loop_ + swizzle_cnt_ - 1) / swizzle_cnt_;
             uint32_t tile_block_idx = in_batch_idx / (swizzle_cnt_ * n_loop_);
             uint32_t in_tile_block_idx = in_batch_idx % (swizzle_cnt_ * n_loop_);
@@ -150,7 +147,7 @@ public:
             }
             m_idx = tile_block_idx * swizzle_cnt_ + in_tile_block_idx % n_row;
             n_idx = in_tile_block_idx / n_row;
-        } else if constexpr (SWIZZL_DIR == 1) {  // Nz
+        } else if constexpr (SWIZZL_DIR == 1) { // Nz
             uint32_t tile_block_loop = (n_loop_ + swizzle_cnt_ - 1) / swizzle_cnt_;
             uint32_t tile_block_idx = in_batch_idx / (swizzle_cnt_ * m_loop_);
             uint32_t in_tile_block_idx = in_batch_idx % (swizzle_cnt_ * m_loop_);
@@ -214,11 +211,11 @@ public:
 
             WAIT_FLAG(V, MTE2, EVENT_ID0);
             gm_to_ub<ArchType::ASCEND_V200, BIAS_TYPE>(ub_bias, gm_bias[b_idx * n_ + n_idx * n0_],
-                                                       0,            // sid
-                                                       1,            // nBurst
-                                                       n_round / 8,  // lenBurst
-                                                       0,            // srcStride
-                                                       0             // dstStride
+                                                       0,           // sid
+                                                       1,           // nBurst
+                                                       n_round / 8, // lenBurst
+                                                       0,           // srcStride
+                                                       0            // dstStride
             );
             SET_FLAG(MTE2, V, EVENT_ID0);
 
@@ -244,10 +241,10 @@ public:
                 event_t l1_b_event = l1_ping_pong ? EVENT_ID2 : EVENT_ID3;
 
                 if (k_idx < last_kloop) {
-                    offset_a_next =
-                        b_idx * m_org_up * k_org_up + (k_idx + 1) * k0_ * m_org_up + m_idx * m0_ * BLOCK_SIZE_32;
-                    offset_b_next =
-                        b_idx * n_org_up * k_org_up + (k_idx + 1) * k0_ * n_org_up + n_idx * n0_ * BLOCK_SIZE_32;
+                    offset_a_next = b_idx * m_org_up * k_org_up + (k_idx + 1) * k0_ * m_org_up +
+                                    m_idx * m0_ * BLOCK_SIZE_32;
+                    offset_b_next = b_idx * n_org_up * k_org_up + (k_idx + 1) * k0_ * n_org_up +
+                                    n_idx * n0_ * BLOCK_SIZE_32;
                     AscendC::LocalTensor<IN_DTYPE> l1_buf_a_next = (1 - l1_ping_pong) ? l1_a_ping : l1_a_pong;
                     AscendC::LocalTensor<IN_DTYPE> l1_buf_b_next = (1 - l1_ping_pong) ? l1_b_ping : l1_b_pong;
                     event_t l1_a_event_next = (1 - l1_ping_pong) ? EVENT_ID0 : EVENT_ID1;
@@ -281,9 +278,9 @@ public:
                         WAIT_FLAG(MTE2, MTE1, l1_a_event);
                     }
                     WAIT_FLAG(M, MTE1, l0_event);
-                    l1_to_l0_a<ArchType::ASCEND_V200, IN_DTYPE, false, PpMatMulNS::DataFormat::ZN, PpMatMulNS::DataFormat::ZZ>(
-                        l0_a, l1_a[k_part_idx * k_part_len * m_round], m_round, k0_round, 1, m_round / 16,
-                        k0_round / 32, 1);
+                    l1_to_l0_a<ArchType::ASCEND_V200, IN_DTYPE, false, PpMatMulNS::DataFormat::ZN,
+                               PpMatMulNS::DataFormat::ZZ>(l0_a, l1_a[k_part_idx * k_part_len * m_round], m_round,
+                                                           k0_round, 1, m_round / 16, k0_round / 32, 1);
                     if (k_part_idx == k_part_loop - 1) {
                         SET_FLAG(MTE1, MTE2, l1_a_event);
                     }
@@ -292,15 +289,15 @@ public:
                     }
 
                     src_offset = k_part_idx * k_part_len * n_round;
-                    l1_to_l0_b<ArchType::ASCEND_V200, IN_DTYPE, false, PpMatMulNS::DataFormat::VECTOR, PpMatMulNS::DataFormat::VECTOR>(
-                        l0_b,              // dst
-                        l1_b[src_offset],  // src
-                        0,
-                        k0_round * n_round / 512,  // repeat
-                        0,
-                        1,  // srcStride
-                        0,
-                        0  // dstStride
+                    l1_to_l0_b<ArchType::ASCEND_V200, IN_DTYPE, false, PpMatMulNS::DataFormat::VECTOR,
+                               PpMatMulNS::DataFormat::VECTOR>(l0_b,             // dst
+                                                               l1_b[src_offset], // src
+                                                               0,
+                                                               k0_round * n_round / 512, // repeat
+                                                               0,
+                                                               1, // srcStride
+                                                               0,
+                                                               0 // dstStride
                     );
                     if (k_part_idx == k_part_loop - 1) {
                         SET_FLAG(MTE1, MTE2, l1_b_event);
@@ -324,10 +321,10 @@ public:
                     }
                     AscendC::PipeBarrier<PIPE_M>();
                     mmad<ArchType::ASCEND_V200, IN_DTYPE, IN_DTYPE, int32_t, false>(l0c, l0_a, l0_b,
-                                                                                    m_mmad_actual,  // m
-                                                                                    n_actual,       // n
-                                                                                    k0_actual,      // k
-                                                                                    0               // cmatrixInitVal
+                                                                                    m_mmad_actual, // m
+                                                                                    n_actual,      // n
+                                                                                    k0_actual,     // k
+                                                                                    0              // cmatrixInitVal
                     );
                     SET_FLAG(M, MTE1, l0_event);
                 }
@@ -336,11 +333,11 @@ public:
             AscendC::PipeBarrier<PIPE_MTE2>();
             WAIT_FLAG(V, MTE2, EVENT_ID1);
             gm_to_ub<ArchType::ASCEND_V200, DESCALE_TYPE>(ub_scale, gm_scale[b_idx * n_ + n_idx * n0_],
-                                                          0,                              // sid
-                                                          1,                              // nBurst
-                                                          n_round / UB_SCALE_BLOCK_SIZE,  // lenBurst
-                                                          0,                              // srcStride
-                                                          0                               // dstStride
+                                                          0,                             // sid
+                                                          1,                             // nBurst
+                                                          n_round / UB_SCALE_BLOCK_SIZE, // lenBurst
+                                                          0,                             // srcStride
+                                                          0                              // dstStride
             );
             SET_FLAG(M, V, EVENT_ID0);
             WAIT_FLAG(M, V, EVENT_ID0);
@@ -349,10 +346,10 @@ public:
             WAIT_FLAG(MTE2, V, EVENT_ID1);
 #if __CCE_AICORE__ == 100
             l0c_to_ub<ArchType::ASCEND_V200, int32_t, int32_t>(ub_c_i32, l0c.ReinterpretCast<int32_t>(),
-                                                               (uint16_t)(n_round / BLOCK_SIZE_16),  // nBurst
-                                                               (uint16_t)(m_round / BLOCK_SIZE_16),  // lenBurst
-                                                               (uint16_t)0,                          // srcStride
-                                                               (uint16_t)0                           // dstStride
+                                                               (uint16_t)(n_round / BLOCK_SIZE_16), // nBurst
+                                                               (uint16_t)(m_round / BLOCK_SIZE_16), // lenBurst
+                                                               (uint16_t)0,                         // srcStride
+                                                               (uint16_t)0                          // dstStride
             );
             AscendC::PipeBarrier<PIPE_V>();
 
@@ -360,21 +357,21 @@ public:
             uint32_t repeat_count = (m_round * n_round / 64) / 255;
             uint32_t repeat_remainder = (m_round * n_round / 64) % 255;
             for (uint32_t i = 0; i < repeat_count; ++i) {
-                conv_v<ArchType::ASCEND_V200, int32_t, float>(ub_c_fp32[i * MAX_NUMEL_INST_B32],  // dst
-                                                              ub_c_i32[i * MAX_NUMEL_INST_B32],   // src
-                                                              255,                                // repeat
-                                                              1,                                  // dstBlockStride
-                                                              1,                                  // srcBlockStride
-                                                              8,                                  // dstRepeatStride
-                                                              8);                                 // srcRepeatStride
+                conv_v<ArchType::ASCEND_V200, int32_t, float>(ub_c_fp32[i * MAX_NUMEL_INST_B32], // dst
+                                                              ub_c_i32[i * MAX_NUMEL_INST_B32],  // src
+                                                              255,                               // repeat
+                                                              1,                                 // dstBlockStride
+                                                              1,                                 // srcBlockStride
+                                                              8,                                 // dstRepeatStride
+                                                              8);                                // srcRepeatStride
             }
-            conv_v<ArchType::ASCEND_V200, int32_t, float>(ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32],  // dst
-                                                          ub_c_i32[repeat_count * MAX_NUMEL_INST_B32],   // src
-                                                          repeat_remainder,                              // repeat
-                                                          1,  // dstBlockStride
-                                                          1,  // srcBlockStride
-                                                          8,  // dstRepeatStride
-                                                          8   // srcRepeatStride
+            conv_v<ArchType::ASCEND_V200, int32_t, float>(ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32], // dst
+                                                          ub_c_i32[repeat_count * MAX_NUMEL_INST_B32],  // src
+                                                          repeat_remainder,                             // repeat
+                                                          1, // dstBlockStride
+                                                          1, // srcBlockStride
+                                                          8, // dstRepeatStride
+                                                          8  // srcRepeatStride
             );
             AscendC::PipeBarrier<PIPE_V>();
 
@@ -383,17 +380,17 @@ public:
             uint32_t m_repeat_remainder = m_round % 255;
             SetVectorMask<int8_t>((uint64_t)0x0, (uint64_t)0xffff);
             for (uint32_t i = 0; i < count; ++i) {
-                if (m_repeat_count > 0) {  // m_round 为 256时的处理，由于UB最大只能处理128K数据，max(m_round) = 256
+                if (m_repeat_count > 0) { // m_round 为 256时的处理，由于UB最大只能处理128K数据，max(m_round) = 256
                     mul_v<ArchType::ASCEND_V200, float>(ub_c_fp32[i * m_round * 16],
-                                                        ub_c_fp32[i * m_round * 16],  // src0
-                                                        ub_scale[i * 16],             // src1
-                                                        255,                          // repeat
-                                                        1,                            // dstBlockStride
-                                                        1,                            // src0BlockStride
-                                                        1,                            // src1BlockStride
-                                                        2,                            // dstRepeatStride
-                                                        2,                            // src0RepeatStride
-                                                        0                             // src1RepeatStride
+                                                        ub_c_fp32[i * m_round * 16], // src0
+                                                        ub_scale[i * 16],            // src1
+                                                        255,                         // repeat
+                                                        1,                           // dstBlockStride
+                                                        1,                           // src0BlockStride
+                                                        1,                           // src1BlockStride
+                                                        2,                           // dstRepeatStride
+                                                        2,                           // src0RepeatStride
+                                                        0                            // src1RepeatStride
                     );
                 }
                 // m_repeat_count为0时，等同于repeat计算m_round轮
@@ -405,29 +402,29 @@ public:
 
             SetVectorMask<int8_t>((uint64_t)-1, (uint64_t)-1);
             for (uint32_t i = 0; i < repeat_count; ++i) {
-                conv_v<ArchType::ASCEND_V200, float, half>(ub_c[i * MAX_NUMEL_INST_B32],       // dst
-                                                           ub_c_fp32[i * MAX_NUMEL_INST_B32],  // src
-                                                           255,                                // repeat
-                                                           1,                                  // dstBlockStride
-                                                           1,                                  // srcBlockStride
-                                                           4,                                  // dstRepeatStride
-                                                           8                                   // srcRepeatStride
+                conv_v<ArchType::ASCEND_V200, float, half>(ub_c[i * MAX_NUMEL_INST_B32],      // dst
+                                                           ub_c_fp32[i * MAX_NUMEL_INST_B32], // src
+                                                           255,                               // repeat
+                                                           1,                                 // dstBlockStride
+                                                           1,                                 // srcBlockStride
+                                                           4,                                 // dstRepeatStride
+                                                           8                                  // srcRepeatStride
                 );
             }
-            conv_v<ArchType::ASCEND_V200, float, half>(ub_c[repeat_count * MAX_NUMEL_INST_B32],  // dst
+            conv_v<ArchType::ASCEND_V200, float, half>(ub_c[repeat_count * MAX_NUMEL_INST_B32], // dst
                                                        ub_c_fp32[repeat_count * MAX_NUMEL_INST_B32],
-                                                       repeat_remainder,  // repeat
-                                                       1,                 // dstBlockStride
-                                                       1,                 // srcBlockStride
-                                                       4,                 // dstRepeatStride
-                                                       8                  // srcRepeatStride
+                                                       repeat_remainder, // repeat
+                                                       1,                // dstBlockStride
+                                                       1,                // srcBlockStride
+                                                       4,                // dstRepeatStride
+                                                       8                 // srcRepeatStride
             );
 #else
             l0c_to_ub<ArchType::ASCEND_V200, int32_t, half>(ub_c, l0c,
-                                                            (uint16_t)(n_round / BLOCK_SIZE_16),  // nBurst
-                                                            (uint16_t)(m_round / BLOCK_SIZE_16),  // lenBurst
-                                                            (uint16_t)0,                          // srcStride
-                                                            (uint16_t)0                           // dstStride
+                                                            (uint16_t)(n_round / BLOCK_SIZE_16), // nBurst
+                                                            (uint16_t)(m_round / BLOCK_SIZE_16), // lenBurst
+                                                            (uint16_t)0,                         // srcStride
+                                                            (uint16_t)0                          // dstStride
             );
 #endif
             SET_FLAG(V, MTE2, EVENT_ID1);
@@ -443,8 +440,8 @@ public:
             SET_FLAG(V, MTE3, EVENT_ID0);
             WAIT_FLAG(V, MTE3, EVENT_ID0);
             dst_offset = b_idx * m_org_up * n_org_up + n_idx * n0_ * m_org_up + m_idx * m0_ * 16;
-            ub_to_gm<ArchType::ASCEND_V200, OUT_TYPE, PpMatMulNS::DataFormat::NZ, PpMatMulNS::DataFormat::NZ>(gm_c[dst_offset], ub_c, m_round,
-                                                                                      m_round, m_org_up, n_round, n_round, n_org_up);
+            ub_to_gm<ArchType::ASCEND_V200, OUT_TYPE, PpMatMulNS::DataFormat::NZ, PpMatMulNS::DataFormat::NZ>(
+                gm_c[dst_offset], ub_c, m_round, m_round, m_org_up, n_round, n_round, n_org_up);
             SET_FLAG(MTE3, V, EVENT_ID0);
         }
         WAIT_FLAG(MTE1, MTE2, EVENT_ID0);
@@ -501,6 +498,6 @@ private:
 };
 
 #endif
-}
+} // namespace AscendC
 
-#endif  // PP_MATMUL_KERNEL_H
+#endif // PP_MATMUL_KERNEL_H

@@ -20,15 +20,9 @@ using namespace ge;
 
 class ReluGrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ReluGrad Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ReluGrad Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ReluGrad Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ReluGrad Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(ReluGrad, relugrad_tsest_1)

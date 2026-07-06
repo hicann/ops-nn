@@ -20,18 +20,11 @@
 
 using namespace std;
 
-class l2_add_rms_norm_quant_v2_test : public testing::Test
-{
+class l2_add_rms_norm_quant_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_rms_norm_quant_v2_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_rms_norm_quant_v2_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "add_rms_norm_quant_v2_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "add_rms_norm_quant_v2_test TearDown" << endl; }
 };
 
 TEST_F(l2_add_rms_norm_quant_v2_test, ascend950PR_9589_case_dyn_001)
@@ -67,12 +60,10 @@ TEST_F(l2_add_rms_norm_quant_v2_test, ascend950PR_9589_case_dyn_001)
     double eps = 1e-5;
     bool divMode = true;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, (aclTensor*)nullptr,
-            (aclTensor*)nullptr, tensor_desc_beta, axis, eps, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnAddRmsNormQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, tensor_desc_beta, axis, eps, divMode),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, (aclTensor*)nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
@@ -124,12 +115,10 @@ TEST_F(l2_add_rms_norm_quant_v2_test, ascend950PR_9589_case_stc_001)
     double eps = 1e-5;
     int64_t axis = -1L;
 
-    auto ut = OP_API_UT(
-        aclnnAddRmsNormQuantV2,
-        INPUT(
-            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2, tensor_desc_z1,
-            tensor_desc_z2, tensor_desc_beta, axis, eps, divMode),
-        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnAddRmsNormQuantV2,
+                        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1, tensor_desc_s2,
+                              tensor_desc_z1, tensor_desc_z2, tensor_desc_beta, axis, eps, divMode),
+                        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, (aclTensor*)nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;

@@ -26,10 +26,10 @@ using namespace AscendC;
 constexpr int32_t INDICES_DIM2 = 2;
 
 template <typename VAR_T, typename INDICES_T>
-class ScatterDeterministic
-{
+class ScatterDeterministic {
 public:
-    __aicore__ inline ScatterDeterministic(const ScatterTilingData* tiling, TPipe* pipe) : tilingData_(tiling), pipe_(pipe){};
+    __aicore__ inline ScatterDeterministic(const ScatterTilingData* tiling, TPipe* pipe)
+        : tilingData_(tiling), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y);
     __aicore__ inline void Process();
     __aicore__ inline void CopyInIndices(int64_t offset, uint32_t indicesLen);
@@ -53,7 +53,8 @@ private:
 };
 
 template <typename VAR_T, typename INDICES_T>
-__aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y)
+__aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                                                    GM_ADDR y)
 {
     indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)(indices));
     updatesGm_.SetGlobalBuffer((__gm__ VAR_T*)(updates));
@@ -127,8 +128,9 @@ __aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::CopyOutUpdates(in
 }
 
 template <typename VAR_T, typename INDICES_T>
-__aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::ProcessUpdates(
-               int64_t outOffsetBase, int64_t updatesOffsetBase, INDICES_T indicesDim1Value)
+__aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::ProcessUpdates(int64_t outOffsetBase,
+                                                                              int64_t updatesOffsetBase,
+                                                                              INDICES_T indicesDim1Value)
 {
     int64_t updatesLast2DimSize = tilingData_->updatesDim2 * tilingData_->updatesDim3;
     int64_t varLast2DimSize = tilingData_->inputDim2 * tilingData_->inputDim3;
@@ -137,10 +139,12 @@ __aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::ProcessUpdates(
             for (int64_t j = 0; j < updatesBlockColLoop_; j++) {
                 uint32_t updatesCount = j == updatesBlockColLoop_ - 1 ? updatesTailLoopSize_ :
                                                                         tilingData_->updatesColUbFactor;
-                int64_t updatesOffset = updatesOffsetBase + dim1Idx * updatesLast2DimSize + dim2Idx * tilingData_->updatesDim3 +
-                                        blockIdx_ * tilingData_->normBlockColNum + j * tilingData_->updatesColUbFactor;   
-                int64_t outOffset = outOffsetBase + dim1Idx * varLast2DimSize + (indicesDim1Value + dim2Idx) * tilingData_->updatesDim3 +
-                                    blockIdx_ * tilingData_->normBlockColNum + j * tilingData_->updatesColUbFactor;   
+                int64_t updatesOffset = updatesOffsetBase + dim1Idx * updatesLast2DimSize +
+                                        dim2Idx * tilingData_->updatesDim3 + blockIdx_ * tilingData_->normBlockColNum +
+                                        j * tilingData_->updatesColUbFactor;
+                int64_t outOffset = outOffsetBase + dim1Idx * varLast2DimSize +
+                                    (indicesDim1Value + dim2Idx) * tilingData_->updatesDim3 +
+                                    blockIdx_ * tilingData_->normBlockColNum + j * tilingData_->updatesColUbFactor;
 
                 CopyInUpdates(updatesOffset, updatesCount);
                 CopyOutUpdates(outOffset, updatesCount);
@@ -160,7 +164,7 @@ __aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::Process()
     int64_t varLast3DimSize = tilingData_->inputDim1 * tilingData_->inputDim2 * tilingData_->inputDim3;
     for (int64_t i = 0; i < tilingData_->indicesLoop; i++) {
         uint32_t indicesCount = i == tilingData_->indicesLoop - 1 ? tilingData_->indicesTailLoopNum :
-                                                                   tilingData_->indicesUbFactor;
+                                                                    tilingData_->indicesUbFactor;
         int64_t indicesOffset = i * tilingData_->indicesUbFactor;
         CopyInIndices(indicesOffset, indicesCount);
 
@@ -169,7 +173,7 @@ __aicore__ inline void ScatterDeterministic<VAR_T, INDICES_T>::Process()
         WaitFlag<HardEvent::MTE2_S>(eventIdMTE2toS);
         LocalTensor<INDICES_T> indicesLocal = indicesQue_.DeQue<INDICES_T>();
 
-        for (int32_t j = 0; j < indicesCount; j+=INDICES_DIM2) {
+        for (int32_t j = 0; j < indicesCount; j += INDICES_DIM2) {
             INDICES_T indicesDim0Value = indicesLocal.GetValue(j);
             INDICES_T indicesDim1Value = indicesLocal.GetValue(j + 1);
             int64_t outOffsetBase = indicesDim0Value * varLast3DimSize;

@@ -24,22 +24,21 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AdaptiveMaxPool3DGrad);
 
-const inline aclTensor* AdaptiveMaxPool3DGradAiCore(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput,
-    aclOpExecutor* executor)
+const inline aclTensor* AdaptiveMaxPool3DGradAiCore(const aclTensor* gradOutput, const aclTensor* self,
+                                                    const aclTensor* indices, aclTensor* gradInput,
+                                                    aclOpExecutor* executor)
 {
     L0_DFX(AdaptiveMaxPool3DGradAiCore, self, gradOutput, indices, gradInput);
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveMaxPool3DGrad, OP_INPUT(self, gradOutput, indices), OP_OUTPUT(gradInput));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveMaxPool3DGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AdaptiveMaxPool3DGrad, OP_INPUT(self, gradOutput, indices),
+                                           OP_OUTPUT(gradInput));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AdaptiveMaxPool3DGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return gradInput;
 }
 
-const aclTensor* AdaptiveMaxPool3DGrad( 
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclOpExecutor* executor)
+const aclTensor* AdaptiveMaxPool3DGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                                       aclOpExecutor* executor)
 {
     auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_NCDHW);
     if (gradInput == nullptr) {

@@ -21,17 +21,16 @@ namespace l0op {
 
 OP_TYPE_REGISTER(Sigmoid);
 
-const aclTensor *Sigmoid(const aclTensor *self, aclOpExecutor *executor)
+const aclTensor* Sigmoid(const aclTensor* self, aclOpExecutor* executor)
 {
     L0_DFX(Sigmoid, self);
-    auto *sigmoidOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
+    auto* sigmoidOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_ND);
     CHECK_RET(sigmoidOut != nullptr, nullptr);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Sigmoid, OP_INPUT(self), OP_OUTPUT(sigmoidOut));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Sigmoid ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Sigmoid ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return sigmoidOut;
 }
 
-}  // namespace l0op
+} // namespace l0op

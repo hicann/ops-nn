@@ -14,8 +14,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* Threshold(
-    const aclTensor* self, const aclScalar* threshold, const aclScalar* value, aclOpExecutor* executor);
+const aclTensor* Threshold(const aclTensor* self, const aclScalar* threshold, const aclScalar* value,
+                           aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_THRESHOLD_H_

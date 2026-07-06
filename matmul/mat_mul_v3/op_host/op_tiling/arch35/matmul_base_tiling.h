@@ -21,9 +21,9 @@
 namespace optiling {
 class MatMulBaseTiling {
 public:
-    MatMulBaseTiling(gert::TilingContext *context, MatMulTilingCfg &cfg) : context_(context), cfg_(cfg) {};
+    MatMulBaseTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : context_(context), cfg_(cfg){};
 
-    virtual ~MatMulBaseTiling() {};
+    virtual ~MatMulBaseTiling(){};
 
     ge::graphStatus DoTiling()
     {
@@ -70,11 +70,11 @@ protected:
     // 9、Dump Tiling数据
     virtual void DumpTilingInfo()
     {
-        auto buf = (uint32_t *)context_->GetRawTilingData()->GetData();
+        auto buf = (uint32_t*)context_->GetRawTilingData()->GetData();
         auto bufLen = context_->GetRawTilingData()->GetDataSize();
         std::ostringstream oss;
-        oss << "Start to dump tiling info. tilingkey:" << GetTilingKey() << ", tiling data size:" << bufLen <<
-            ", content:";
+        oss << "Start to dump tiling info. tilingkey:" << GetTilingKey() << ", tiling data size:" << bufLen
+            << ", content:";
         for (size_t i = 0; i < bufLen / sizeof(uint32_t); i++) {
             oss << *(buf + i) << ",";
             if (oss.str().length() > 640) { // Split according to 640 to avoid truncation
@@ -86,8 +86,7 @@ protected:
     }
 
 protected:
-    gert::TilingContext *context_ = nullptr;
-    MatMulTilingCfg &cfg_;
+    gert::TilingContext* context_ = nullptr;
+    MatMulTilingCfg& cfg_;
 };
 } // namespace optiling
-

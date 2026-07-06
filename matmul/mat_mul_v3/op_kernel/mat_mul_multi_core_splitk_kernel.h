@@ -11,8 +11,8 @@
  * \file mat_mul_multi_core_splitk_kernel.h
  * \brief
  */
- #ifndef __OP_KERNEL_MATMUL_V3_MULTI_CORE_SPLITK_KERNEL_H__
- #define __OP_KERNEL_MATMUL_V3_MULTI_CORE_SPLITK_KERNEL_H__
+#ifndef __OP_KERNEL_MATMUL_V3_MULTI_CORE_SPLITK_KERNEL_H__
+#define __OP_KERNEL_MATMUL_V3_MULTI_CORE_SPLITK_KERNEL_H__
 
 #include "mat_mul_deterministic_splitk_kernel.h"
 
@@ -23,7 +23,7 @@ constexpr uint16_t SYNC_AIC_FLAG = 1;
 namespace MatmulV3 {
 
 template <class C_T>
-__aicore__ inline void ClearOutput(GlobalTensor<C_T>& cGlobal, const TCubeTiling& tiling, TPipe &pipe)
+__aicore__ inline void ClearOutput(GlobalTensor<C_T>& cGlobal, const TCubeTiling& tiling, TPipe& pipe)
 {
     // Init output
     uint64_t c0Size = 32 / sizeof(C_T); // 清零数据32B对齐
@@ -51,7 +51,7 @@ __aicore__ inline void ClearOutput(GlobalTensor<C_T>& cGlobal, const TCubeTiling
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE>
 __aicore__ inline void MatMulBlockMultiCoreSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM,
-    const TCubeTiling& tiling, uint8_t enAtomic = 0)
+                                                  const TCubeTiling& tiling, uint8_t enAtomic = 0)
 {
     using A_T = typename A_TYPE::T;
     using B_T = typename B_TYPE::T;
@@ -59,9 +59,9 @@ __aicore__ inline void MatMulBlockMultiCoreSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_A
     GlobalTensor<A_T> aGlobal;
     GlobalTensor<B_T> bGlobal;
     GlobalTensor<C_T> cGlobal;
-    aGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ A_T *>(aGM), tiling.M * tiling.Ka);
-    bGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ B_T *>(bGM), tiling.Kb * tiling.N);
-    cGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ C_T *>(cGM), tiling.M * tiling.N);
+    aGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(aGM), tiling.M * tiling.Ka);
+    bGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ B_T*>(bGM), tiling.Kb * tiling.N);
+    cGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ C_T*>(cGM), tiling.M * tiling.N);
     TPipe pipe;
     if (!enAtomic) {
         ClearOutput<C_T>(cGlobal, tiling, pipe);
@@ -110,7 +110,8 @@ __aicore__ inline void MatMulBlockMultiCoreSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_A
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, FIXPIPE_OPT_SELECT FIXPIPE_OPT>
 __aicore__ inline void MatMulMultiCoreSplitK(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM,
-                                             const MatmulTilingData& matmulTilingData, GM_ADDR workspaceGM, uint8_t enAtomic = 0)
+                                             const MatmulTilingData& matmulTilingData, GM_ADDR workspaceGM,
+                                             uint8_t enAtomic = 0)
 {
     if ASCEND_IS_AIV {
         return;

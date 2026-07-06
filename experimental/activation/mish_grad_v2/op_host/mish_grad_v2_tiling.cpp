@@ -30,7 +30,7 @@ struct MishGradV2CompileInfo {};
 
 static const gert::Shape SCALAR_SHAPE = {1};
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &shape)
+static const gert::Shape& EnsureNotScalar(const gert::Shape& shape)
 {
     if (shape.GetDimNum() == 0) {
         return SCALAR_SHAPE;
@@ -38,9 +38,9 @@ static const gert::Shape &EnsureNotScalar(const gert::Shape &shape)
     return shape;
 }
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext *context, uint64_t &ubSize, int64_t &coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
-    auto *platformInfoPtr = context->GetPlatformInfo();
+    auto* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
@@ -50,31 +50,31 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext *context, uint64_t &u
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext *context, int64_t &totalLength,
-                                         ge::DataType &dataType, int64_t &haveTanhx)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType,
+                                         int64_t& haveTanhx)
 {
-    auto *gradShape = context->GetInputShape(0);
-    auto *xShape = context->GetInputShape(1);
+    auto* gradShape = context->GetInputShape(0);
+    auto* xShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
 
-    const gert::Shape &gradStorageShape = EnsureNotScalar(gradShape->GetStorageShape());
-    const gert::Shape &xStorageShape = EnsureNotScalar(xShape->GetStorageShape());
+    const gert::Shape& gradStorageShape = EnsureNotScalar(gradShape->GetStorageShape());
+    const gert::Shape& xStorageShape = EnsureNotScalar(xShape->GetStorageShape());
     OP_CHECK_IF(gradStorageShape != xStorageShape, OP_LOGE(context, "shape mismatch"), return ge::GRAPH_FAILED);
 
-    auto *gradDesc = context->GetInputDesc(0);
-    auto *xDesc = context->GetInputDesc(1);
+    auto* gradDesc = context->GetInputDesc(0);
+    auto* xDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     dataType = gradDesc->GetDataType();
     OP_CHECK_IF(xDesc->GetDataType() != dataType, OP_LOGE(context, "dtype mismatch"), return ge::GRAPH_FAILED);
 
     if (context->GetInputShape(2) != nullptr) {
-        auto *tanhxShape = context->GetInputShape(2);
-        auto *tanhxDesc = context->GetInputDesc(2);
+        auto* tanhxShape = context->GetInputShape(2);
+        auto* tanhxDesc = context->GetInputDesc(2);
         OP_CHECK_NULL_WITH_CONTEXT(context, tanhxShape);
         OP_CHECK_NULL_WITH_CONTEXT(context, tanhxDesc);
-        const gert::Shape &tanhxStorageShape = EnsureNotScalar(tanhxShape->GetStorageShape());
+        const gert::Shape& tanhxStorageShape = EnsureNotScalar(tanhxShape->GetStorageShape());
         OP_CHECK_IF(gradStorageShape != tanhxStorageShape, OP_LOGE(context, "tanhx shape mismatch"),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(tanhxDesc->GetDataType() != dataType, OP_LOGE(context, "tanhx dtype mismatch"),
@@ -91,18 +91,18 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext *context, int64_t &
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetWorkspaceSize(gert::TilingContext *context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t *currentWorkspace = context->GetWorkspaceSizes(1);
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus FillTilingData(MishGradV2TilingData *tiling, int64_t totalLength, ge::DataType dataType,
-                                      uint64_t ubSize, int64_t coreNum, int64_t haveTanhx, uint32_t &blockDim)
+static ge::graphStatus FillTilingData(MishGradV2TilingData* tiling, int64_t totalLength, ge::DataType dataType,
+                                      uint64_t ubSize, int64_t coreNum, int64_t haveTanhx, uint32_t& blockDim)
 {
     int64_t safeCoreNum = (coreNum <= 0) ? 1 : coreNum;
     if (totalLength <= 0) {
@@ -124,8 +124,7 @@ static ge::graphStatus FillTilingData(MishGradV2TilingData *tiling, int64_t tota
     int64_t dtypeSize = static_cast<int64_t>(typeLength);
     int64_t cacheLineElements = std::max<int64_t>(1, CACHE_LINE_BYTE_LENGTH / dtypeSize);
     int64_t totalLengthCore = (totalLength + safeCoreNum - 1) / safeCoreNum;
-    int64_t totalLengthCoreAlign =
-        ((totalLengthCore + cacheLineElements - 1) / cacheLineElements) * cacheLineElements;
+    int64_t totalLengthCoreAlign = ((totalLengthCore + cacheLineElements - 1) / cacheLineElements) * cacheLineElements;
     int64_t usedCoreNum = (totalLength + totalLengthCoreAlign - 1) / totalLengthCoreAlign;
     usedCoreNum = std::max<int64_t>(1, usedCoreNum);
     int64_t formerNum = usedCoreNum - 1;
@@ -148,7 +147,7 @@ static ge::graphStatus FillTilingData(MishGradV2TilingData *tiling, int64_t tota
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus MishGradV2TilingFunc(gert::TilingContext *context)
+static ge::graphStatus MishGradV2TilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
@@ -161,18 +160,18 @@ static ge::graphStatus MishGradV2TilingFunc(gert::TilingContext *context)
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType, haveTanhx) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
-    auto *tiling = context->GetTilingData<MishGradV2TilingData>();
+    auto* tiling = context->GetTilingData<MishGradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(MishGradV2TilingData), 0, sizeof(MishGradV2TilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     uint32_t blockDim = 1;
-    OP_CHECK_IF(FillTilingData(tiling, totalLength, dataType, ubSize, coreNum, haveTanhx, blockDim) !=
-                    ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "FillTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        FillTilingData(tiling, totalLength, dataType, ubSize, coreNum, haveTanhx, blockDim) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context, "FillTilingData error"), return ge::GRAPH_FAILED);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     context->SetBlockDim(blockDim);
@@ -180,12 +179,10 @@ static ge::graphStatus MishGradV2TilingFunc(gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingParseForMishGradV2([[maybe_unused]] gert::TilingParseContext *context)
+static ge::graphStatus TilingParseForMishGradV2([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(MishGradV2)
-    .Tiling(MishGradV2TilingFunc)
-    .TilingParse<MishGradV2CompileInfo>(TilingParseForMishGradV2);
-}  // namespace optiling
+IMPL_OP_OPTILING(MishGradV2).Tiling(MishGradV2TilingFunc).TilingParse<MishGradV2CompileInfo>(TilingParseForMishGradV2);
+} // namespace optiling

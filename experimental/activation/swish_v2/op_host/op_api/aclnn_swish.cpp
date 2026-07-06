@@ -29,17 +29,17 @@ extern "C" {
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                       op::DataType::DT_BF16};
 
-static bool CheckNotNull(const aclTensor *self, const aclTensor *out)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static bool CheckDtypeValidBetaToFloat(const aclScalar *betaOptional)
+static bool CheckDtypeValidBetaToFloat(const aclScalar* betaOptional)
 {
     if (betaOptional != nullptr && !CanCast(betaOptional->GetDataType(), DataType::DT_FLOAT)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "betaOptional dtype %s can not cast to float32.",
@@ -49,7 +49,7 @@ static bool CheckDtypeValidBetaToFloat(const aclScalar *betaOptional)
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
@@ -57,14 +57,14 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out)
     return true;
 }
 
-static bool CheckShape(const aclTensor *self, const aclTensor *out)
+static bool CheckShape(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_LEN, return false);
     return CheckSameShapeNotlimit1In1Out(self, out);
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclScalar *betaOptional, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* betaOptional, const aclTensor* out)
 {
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
@@ -73,12 +73,8 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclScalar *betaOptio
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSwishGetWorkspaceSize(
-    const aclTensor *self,
-    const aclScalar *betaOptional,
-    aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor)
+aclnnStatus aclnnSwishGetWorkspaceSize(const aclTensor* self, const aclScalar* betaOptional, aclTensor* out,
+                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnSwish, DFX_IN(self, betaOptional), DFX_OUT(out));
@@ -114,7 +110,7 @@ aclnnStatus aclnnSwishGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSwish(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)
+aclnnStatus aclnnSwish(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnSwish);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

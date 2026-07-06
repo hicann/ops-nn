@@ -82,9 +82,8 @@ ge::graphStatus TilingPrepare4GatherV2(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
-    OP_CHECK_IF(
-        compileInfo->coreNum <= 0 || compileInfo->ubSize <= RESERVED_UB_SIZE,
-        OP_LOGE(context, "invalid platform resource."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->coreNum <= 0 || compileInfo->ubSize <= RESERVED_UB_SIZE,
+                OP_LOGE(context, "invalid platform resource."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -108,12 +107,10 @@ ge::graphStatus Tiling4GatherV2(gert::TilingContext* context)
 
     auto* tiling = context->GetTilingData<GatherV2TilingData>();
     GatherV2TilingParams params;
-    OP_CHECK_IF(
-        !ge::TypeUtils::GetDataTypeLength(xDesc->GetDataType(), params.xBytes),
-        OP_LOGE(context, "failed to get x dtype length."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !ge::TypeUtils::GetDataTypeLength(indicesDesc->GetDataType(), params.indexBytes),
-        OP_LOGE(context, "failed to get indices dtype length."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ge::TypeUtils::GetDataTypeLength(xDesc->GetDataType(), params.xBytes),
+                OP_LOGE(context, "failed to get x dtype length."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ge::TypeUtils::GetDataTypeLength(indicesDesc->GetDataType(), params.indexBytes),
+                OP_LOGE(context, "failed to get indices dtype length."), return ge::GRAPH_FAILED);
     params.indicesCount = ShapeSize(indicesStorageShape);
     // axis is a scalar input tensor, not an attribute. This skeleton records a
     // conservative axis-0 tiling layout; production tiling should add const-axis
@@ -134,8 +131,9 @@ ge::graphStatus Tiling4GatherV2(gert::TilingContext* context)
         blockDim = 1;
     }
     params.perCore = (params.totalCount + blockDim - 1) / blockDim;
-    params.lastCore =
-        params.totalCount > params.perCore * (blockDim - 1) ? params.totalCount - params.perCore * (blockDim - 1) : 0;
+    params.lastCore = params.totalCount > params.perCore * (blockDim - 1) ?
+                          params.totalCount - params.perCore * (blockDim - 1) :
+                          0;
 
     SetGatherV2TilingData(tiling, params, static_cast<uint64_t>(xStorageShape.GetDim(defaultAxis)));
     context->SetBlockDim(blockDim);

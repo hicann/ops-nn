@@ -62,7 +62,8 @@ bool LayerNormV3RegBaseTwoPassPerfTiling::IsCapable()
         return false;
     }
 
-    if (static_cast<int64_t>(commonParams.normToParamsSize) != 1 || static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
+    if (static_cast<int64_t>(commonParams.normToParamsSize) != 1 ||
+        static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
         return false;
     }
 
@@ -146,10 +147,7 @@ ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::PostTiling()
 {

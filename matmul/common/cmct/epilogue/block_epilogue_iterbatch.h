@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -66,19 +66,12 @@ public:
         FusionParams fusionParams{};
     };
 
-    __aicore__ inline BlockEpilogueIterbatch()
-    {
-        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(EVENTID_MTE3_V);
-    }
+    __aicore__ inline BlockEpilogueIterbatch() { AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(EVENTID_MTE3_V); }
 
-    __aicore__ inline ~BlockEpilogueIterbatch()
-    {
-        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(EVENTID_MTE3_V);
-    }
+    __aicore__ inline ~BlockEpilogueIterbatch() { AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(EVENTID_MTE3_V); }
 
-    __aicore__ inline void Run(
-        int64_t offsetC, uint64_t baseM, uint64_t baseN, uint64_t curIterBatchL1, uint64_t mainIterBatchL0,
-        bool isLastTurn)
+    __aicore__ inline void Run(int64_t offsetC, uint64_t baseM, uint64_t baseN, uint64_t curIterBatchL1,
+                               uint64_t mainIterBatchL0, bool isLastTurn)
     {
         AscendC::GlobalTensor<DataTypeOut> tmpGlobal = outputGlobal_[offsetC];
 
@@ -98,12 +91,12 @@ public:
                 for (uint64_t iterML0 = 0; iterML0 < mL0Cnt; ++iterML0) {
                     if ((l0CEventID_ & 0x1) == AscendC::GetSubBlockIdx()) {
                         uint64_t curML0 = (iterML0 == mL0Cnt - 1) ? (m_ - (mL0Cnt - 1) * baseM) : baseM;
-                        uint64_t offsetCGMOfCopyOut =
-                            iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ + iterNL0 * baseN;
+                        uint64_t offsetCGMOfCopyOut = iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ +
+                                                      iterNL0 * baseN;
                         uint16_t blockCount = static_cast<uint16_t>(curIterBatchL0 * curML0);
                         uint32_t blockLen = static_cast<uint32_t>(curNL0 * sizeof(DataTypeOut));
-                        uint32_t srcStride = static_cast<uint32_t>(
-                            (CeilAlign(curNL0, AscendC::BLOCK_CUBE) - curNL0) * sizeof(DataTypeOut) / UB_ALIGN_SIZE);
+                        uint32_t srcStride = static_cast<uint32_t>((CeilAlign(curNL0, AscendC::BLOCK_CUBE) - curNL0) *
+                                                                   sizeof(DataTypeOut) / UB_ALIGN_SIZE);
                         uint32_t dstStride = static_cast<uint32_t>((n_ - curNL0) * sizeof(DataTypeOut));
                         AscendC::DataCopyExtParams copyParams{blockCount, blockLen, srcStride, dstStride, 0};
                         AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(0x0);
@@ -119,9 +112,8 @@ public:
         }
     }
 
-    __aicore__ inline void RunWithAdd(
-        int64_t offsetC, uint64_t baseM, uint64_t baseN, uint64_t curIterBatchL1, uint64_t mainIterBatchL0,
-        bool isLastTurn)
+    __aicore__ inline void RunWithAdd(int64_t offsetC, uint64_t baseM, uint64_t baseN, uint64_t curIterBatchL1,
+                                      uint64_t mainIterBatchL0, bool isLastTurn)
     {
         AscendC::GlobalTensor<DataTypeOut> tmpGlobal = outputGlobal_[offsetC];
 
@@ -140,15 +132,15 @@ public:
                 uint64_t blockShapeN = (iterNL0 == nL0Cnt - 1) ? (n_ - (nL0Cnt - 1) * baseN) : baseN;
                 for (uint64_t iterML0 = 0; iterML0 < mL0Cnt; ++iterML0) {
                     uint64_t blockShapeM = (iterML0 == mL0Cnt - 1) ? (m_ - (mL0Cnt - 1) * baseM) : baseM;
-                    uint64_t offsetCGMOfCopyOut =
-                        iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ + iterNL0 * baseN;
+                    uint64_t offsetCGMOfCopyOut = iter1 * mainIterBatchL0 * m_ * n_ + iterML0 * baseM * n_ +
+                                                  iterNL0 * baseN;
                     uint64_t blockShapeNAlign = CeilAlign(blockShapeN, AscendC::BLOCK_CUBE);
                     int64_t inputSize = static_cast<int64_t>(curIterBatchL0 * blockShapeM * blockShapeNAlign);
-                    int64_t stageSize = static_cast<int64_t>(
-                        AscendC::Std::min(stageSize_, inputSize) / blockShapeNAlign * blockShapeNAlign);
+                    int64_t stageSize = static_cast<int64_t>(AscendC::Std::min(stageSize_, inputSize) /
+                                                             blockShapeNAlign * blockShapeNAlign);
                     ASCENDC_ASSERT(stageSize > 0, {
-                        KERNEL_LOG(
-                            KERNEL_EORROR, "stageSize size limit %ld, %ld, %ld!", stageSize_, blockShapeM, blockShapeN);
+                        KERNEL_LOG(KERNEL_EORROR, "stageSize size limit %ld, %ld, %ld!", stageSize_, blockShapeM,
+                                   blockShapeN);
                     });
                     int64_t loop = 0;
                     int64_t stageOffset = 0;
@@ -161,19 +153,19 @@ public:
                             int64_t hasBatchOffset = offsetCGMOfCopyOut + offset;
                             fusionOffset = needNdDma_ ? 0 : batchX3_ > 1 ? hasBatchOffset + offsetC : fusionOffset;
                             AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(EVENTID_MTE3_V);
-                            fusionOp_(
-                                inLocal_[stageOffset], outputLocalTmp_, fusionOffset, static_cast<int64_t>(blockShapeM),
-                                static_cast<int64_t>(blockShapeN), static_cast<int64_t>(n_), stageSize);
+                            fusionOp_(inLocal_[stageOffset], outputLocalTmp_, fusionOffset,
+                                      static_cast<int64_t>(blockShapeM), static_cast<int64_t>(blockShapeN),
+                                      static_cast<int64_t>(n_), stageSize);
                             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENTID_V_MTE3);
                             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENTID_V_MTE3);
                             AscendC::DataCopyExtParams copyParams{
                                 static_cast<uint16_t>(stageSize / blockShapeNAlign),
                                 static_cast<uint32_t>(blockShapeN * sizeof(DataTypeOut)),
-                                static_cast<uint32_t>(
-                                    (blockShapeNAlign - blockShapeN) * sizeof(DataTypeOut) / UB_ALIGN_SIZE),
+                                static_cast<uint32_t>((blockShapeNAlign - blockShapeN) * sizeof(DataTypeOut) /
+                                                      UB_ALIGN_SIZE),
                                 static_cast<uint32_t>((n_ - blockShapeN) * sizeof(DataTypeOut)), 0};
-                            AscendC::DataCopyPad<DataTypeOut>(
-                                tmpGlobal[offsetCGMOfCopyOut + offset], outputLocal_, copyParams);
+                            AscendC::DataCopyPad<DataTypeOut>(tmpGlobal[offsetCGMOfCopyOut + offset], outputLocal_,
+                                                              copyParams);
                             AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(EVENTID_MTE3_V);
                             stageOffset += stageSize;
                             loop++;
@@ -189,9 +181,8 @@ public:
         }
     }
 
-    __aicore__ inline void Init(
-        Params const& params, const BlockShape& shape, uint64_t batchL0, uint64_t mL0, uint64_t nL0, int64_t batchX3,
-        bool needNdDma)
+    __aicore__ inline void Init(Params const& params, const BlockShape& shape, uint64_t batchL0, uint64_t mL0,
+                                uint64_t nL0, int64_t batchX3, bool needNdDma)
     {
         outputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeOut*>(params.cGmAddr));
         m_ = Get<DIMENSION_M>(shape);
@@ -202,9 +193,8 @@ public:
         if constexpr (!AscendC::Std::is_same_v<FusionOp, Block::DefaultFusion<DataTypeOut, DataTypeIn>>) {
             int64_t ubOffset = static_cast<int64_t>(batchL0 * mL0 * nL0);
             inLocal_ = ubLocal_[0];
-            fusionOp_.Init(
-                params.fusionParams, ubLocal_, static_cast<int64_t>(batchL0 * mL0), nL0, ubOffset, stageSize_, m_,
-                needNdDma_);
+            fusionOp_.Init(params.fusionParams, ubLocal_, static_cast<int64_t>(batchL0 * mL0), nL0, ubOffset,
+                           stageSize_, m_, needNdDma_);
             outputLocalTmp_ = ubLocal_[ubOffset];
             outputLocal_ = outputLocalTmp_.template ReinterpretCast<DataTypeOut>();
         }
@@ -213,14 +203,10 @@ public:
         });
     }
 
-    __aicore__ inline auto GetTensor()
-    {
-        return ubLocal_;
-    }
+    __aicore__ inline auto GetTensor() { return ubLocal_; }
 
-    __aicore__ inline void operator()(
-        int64_t offsetC, uint64_t baseM, uint64_t baseN, uint64_t curIterBatchL1, uint64_t mainIterBatchL0,
-        bool isLastTurn)
+    __aicore__ inline void operator()(int64_t offsetC, uint64_t baseM, uint64_t baseN, uint64_t curIterBatchL1,
+                                      uint64_t mainIterBatchL0, bool isLastTurn)
     {
         if constexpr (!AscendC::Std::is_same_v<FusionOp, Block::DefaultFusion<DataTypeOut, DataTypeIn>>) {
             RunWithAdd(offsetC, baseM, baseN, curIterBatchL1, mainIterBatchL0, isLastTurn);
@@ -237,4 +223,3 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

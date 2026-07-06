@@ -48,26 +48,22 @@ static graphStatus InferShapeForFakeQuantWithMinMaxVarsGradient(gert::InferShape
 
     // Validate gradients and x have identical shape
     OP_CHECK_IF(gradShape->GetDimNum() != xShape->GetDimNum(),
-                OP_LOGE(context, "gradients and x must have identical shape."),
-                return ge::GRAPH_FAILED);
+                OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
     for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
         OP_CHECK_IF(gradShape->GetDim(i) != xShape->GetDim(i),
-                    OP_LOGE(context, "gradients and x must have identical shape."),
-                    return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
     }
 
     // Validate min and max have shape (1,)
-    OP_CHECK_IF(minShape->GetDimNum() != 1 || minShape->GetDim(0) != 1,
-                OP_LOGE(context, "min must have shape (1,)."),
+    OP_CHECK_IF(minShape->GetDimNum() != 1 || minShape->GetDim(0) != 1, OP_LOGE(context, "min must have shape (1,)."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(maxShape->GetDimNum() != 1 || maxShape->GetDim(0) != 1,
-                OP_LOGE(context, "max must have shape (1,)."),
+    OP_CHECK_IF(maxShape->GetDimNum() != 1 || maxShape->GetDim(0) != 1, OP_LOGE(context, "max must have shape (1,)."),
                 return ge::GRAPH_FAILED);
 
     // Set output shapes
     gert::Shape* yShape = context->GetOutputShape(OUTPUT_IDX_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
-    *yShape = *xShape;  // backprops_wrt_x shape = x shape
+    *yShape = *xShape; // backprops_wrt_x shape = x shape
 
     gert::Shape* minOutShape = context->GetOutputShape(OUTPUT_IDX_MIN);
     OP_CHECK_NULL_WITH_CONTEXT(context, minOutShape);

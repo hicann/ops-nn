@@ -29,7 +29,8 @@ constexpr int64_t MAXSCORE_SORT_THRESHOLD = 128;
 template <typename VAR_T, typename IDX_T>
 class InplaceIndexAddDeterminsticNotQuant : public InplaceIndexAddBase<VAR_T, IDX_T, CAST_0> {
 public:
-    __aicore__ inline InplaceIndexAddDeterminsticNotQuant(const InplaceIndexAddDeterminsticTilingData& tilingData, TPipe& pipe)
+    __aicore__ inline InplaceIndexAddDeterminsticNotQuant(const InplaceIndexAddDeterminsticTilingData& tilingData,
+                                                          TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace);
     __aicore__ inline void CopyXToOut(__local_mem__ int8_t* inAddr, __local_mem__ int8_t* outAddr, int64_t dataCount);
@@ -39,7 +40,8 @@ public:
     __aicore__ inline void ProcessDeterminsticPre();
     __aicore__ inline void ProcessDeterminsticAfter();
     __aicore__ inline void Process();
-    __simd_vf__ inline void CopyXToOutVf(__ubuf__ int8_t* inAddr, __ubuf__ int8_t* outAddr, uint32_t totalBytes, uint16_t stride, uint16_t size);
+    __simd_vf__ inline void CopyXToOutVf(__ubuf__ int8_t* inAddr, __ubuf__ int8_t* outAddr, uint32_t totalBytes,
+                                         uint16_t stride, uint16_t size);
 
 private:
     GlobalTensor<VAR_T> var_;
@@ -61,8 +63,9 @@ private:
 };
 
 template <typename VAR_T, typename IDX_T>
-__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Init(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace)
+__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Init(GM_ADDR var, GM_ADDR indices,
+                                                                               GM_ADDR updates, GM_ADDR alpha,
+                                                                               GM_ADDR workspace)
 {
     var_.SetGlobalBuffer((__gm__ VAR_T*)(var));
     indices_.SetGlobalBuffer((__gm__ IDX_T*)(indices));
@@ -82,16 +85,17 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Init(
         alphaValue_ = alpha_(0);
     }
     if (tilingData_.isSplitPreAxis == 1) {
-        curPreAxisCount_ = 
-        (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCorePreAxisCount : 
-                                                                tilingData_.tailCorePreAxisCount);
+        curPreAxisCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCorePreAxisCount :
+                                                                                   tilingData_.tailCorePreAxisCount);
         return;
     }
 }
 
 template <typename VAR_T, typename IDX_T>
-__simd_vf__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOutVf(
-    __ubuf__ int8_t* inAddr, __ubuf__ int8_t* outAddr, uint32_t totalBytes, uint16_t stride, uint16_t size)
+__simd_vf__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOutVf(__ubuf__ int8_t* inAddr,
+                                                                                        __ubuf__ int8_t* outAddr,
+                                                                                        uint32_t totalBytes,
+                                                                                        uint16_t stride, uint16_t size)
 {
     AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
     uint32_t sreg = totalBytes;
@@ -106,8 +110,9 @@ __simd_vf__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyX
 }
 
 template <typename VAR_T, typename IDX_T>
-__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOut(
-    __local_mem__ int8_t* inAddr, __local_mem__ int8_t* outAddr, int64_t dataCount)
+__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOut(__local_mem__ int8_t* inAddr,
+                                                                                     __local_mem__ int8_t* outAddr,
+                                                                                     int64_t dataCount)
 {
     uint32_t totalBytes = dataCount * sizeof(VAR_T);
     uint16_t stride = platform::GetVRegSize();
@@ -117,8 +122,10 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXT
 }
 
 template <typename VAR_T, typename IDX_T>
-__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::ProcessPreSmallIndices(
-    int64_t preOfset, int64_t colIdx, int64_t preLen, int64_t colLen)
+__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::ProcessPreSmallIndices(int64_t preOfset,
+                                                                                                 int64_t colIdx,
+                                                                                                 int64_t preLen,
+                                                                                                 int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
@@ -128,11 +135,11 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     int64_t rowLen = preLen * tilingData_.updatesInAxis;
     CopyIn<IDX_T>(indicesLocal, indices_, tilingData_.updatesInAxis);
 
-    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen),
-                                    static_cast<uint32_t>(colLen * sizeof(VAR_T)),
+    DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
 
     int64_t startPreAxis = GetBlockIdx() * tilingData_.eachCorePreAxisCount + preOfset;
     int64_t rowOfset = (startPreAxis * tilingData_.updatesInAxis) * tilingData_.afterAxis;
@@ -154,13 +161,13 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    
+
     SetAtomicAdd<VAR_T>();
     for (int64_t preAxisIdx = 0; preAxisIdx < preLen; preAxisIdx++) {
         int64_t rowLocalOfset = preAxisIdx * tilingData_.updatesInAxis;
         for (int64_t i = 0; i < tilingData_.updatesInAxis; i++) {
             int64_t rowOutOfset = ((startPreAxis + preAxisIdx) * tilingData_.varInAxis + indicesLocal(i)) *
-                                    tilingData_.afterAxis;
+                                  tilingData_.afterAxis;
             int64_t outOfset = rowOutOfset + colIdx * tilingData_.afterAxisFactor;
             int64_t localOfset = (rowLocalOfset + i) * colLenAlignSize;
             CopyOut<VAR_T>(var_[outOfset], updateOutLocal[localOfset], colLen);
@@ -174,8 +181,10 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
 }
 
 template <typename VAR_T, typename IDX_T>
-__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::ProcessPreSingleLoop(
-    int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::ProcessPreSingleLoop(int64_t rowIdx,
+                                                                                               int64_t colIdx,
+                                                                                               int64_t rowLen,
+                                                                                               int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
@@ -185,7 +194,8 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -274,8 +284,10 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
 }
 
 template <typename VAR_T, typename IDX_T>
-__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::ProcessAfterSingleLoop(
-    int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
+__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::ProcessAfterSingleLoop(int64_t rowIdx,
+                                                                                                 int64_t colIdx,
+                                                                                                 int64_t rowLen,
+                                                                                                 int64_t colLen)
 {
     LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
@@ -285,7 +297,8 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(VAR_T)),
                                     static_cast<uint32_t>((tilingData_.afterAxis - colLen) * sizeof(VAR_T)),
                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
-    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<VAR_T>(0)};
+    DataCopyPadExtParams<VAR_T> padParams = {false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                             static_cast<VAR_T>(0)};
     indicesQue_.EnQue(indicesLocal);
 
     indicesLocal = indicesQue_.DeQue<IDX_T>();
@@ -296,7 +309,8 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
 
     for (int64_t preAxisIdx = 0; preAxisIdx < tilingData_.preAxis; preAxisIdx++) {
         int64_t rowOfset = (preAxisIdx * tilingData_.updatesInAxis + indicesOfset) * tilingData_.afterAxis;
-        int64_t updatesOfset = rowOfset + GetBlockIdx() * tilingData_.eachCoreAfterAxisCount + colIdx * tilingData_.afterAxisFactor;
+        int64_t updatesOfset = rowOfset + GetBlockIdx() * tilingData_.eachCoreAfterAxisCount +
+                               colIdx * tilingData_.afterAxisFactor;
         LocalTensor<VAR_T> updatesLocal = updatesQue_.AllocTensor<VAR_T>();
         DataCopyPad(updatesLocal, updates_[updatesOfset], copyParams, padParams);
         updatesQue_.EnQue(updatesLocal);
@@ -317,8 +331,9 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
         SetAtomicAdd<VAR_T>();
         for (int64_t i = 0; i < rowLen; i++) {
             rowOfset = (preAxisIdx * tilingData_.varInAxis + indicesLocal(i)) * tilingData_.afterAxis;
-            int64_t outOfset = rowOfset + GetBlockIdx() * tilingData_.eachCoreAfterAxisCount + colIdx * tilingData_.afterAxisFactor;
-            
+            int64_t outOfset = rowOfset + GetBlockIdx() * tilingData_.eachCoreAfterAxisCount +
+                               colIdx * tilingData_.afterAxisFactor;
+
             if (uniqueIdNumDuplicateIdx_ != rowLen) {
                 PipeBarrier<PIPE_MTE3>();
             }
@@ -342,10 +357,10 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     int64_t rowTailDataLen = tilingData_.indiceAxisTailNum;
 
     int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize :
-            tilingData_.updateLoopSize;
+                                                                                tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
     int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum :
-            tilingData_.updateTailNum;
+                                                                                    tilingData_.updateTailNum;
 
     for (int64_t rowIdx = 0; rowIdx < rowLoopNum - 1; rowIdx++) {
         for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
@@ -372,6 +387,6 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
         ProcessDeterminsticAfter();
     }
 }
-}  // namespace InplaceIndexAdd
+} // namespace InplaceIndexAdd
 
 #endif

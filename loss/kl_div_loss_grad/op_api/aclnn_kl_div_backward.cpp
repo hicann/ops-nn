@@ -32,22 +32,15 @@ using namespace op;
 extern "C" {
 #endif
 
-enum Reduction
-{
-    None = 0,
-    Mean = 1,
-    Sum = 2,
-    Batchmean = 3,
-    End
-};
+enum Reduction { None = 0, Mean = 1, Sum = 2, Batchmean = 3, End };
 
 static const char* REDUCTION_NONE = "none";
 static const char* REDUCTION_MEAN = "mean";
 static const char* REDUCTION_SUM = "sum";
 static const char* REDUCTION_BATCHMEAN = "batchmean";
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -65,8 +58,8 @@ static const inline std::initializer_list<DataType>& GetSupportDtypeList(SocVers
     return emptyDtypes;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            const aclTensor* out)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     const auto& supportList = GetSupportDtypeList(socVersion);
@@ -86,8 +79,8 @@ static bool CheckDtypeValid(
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static bool CheckShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* out)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                       const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(gradOutput, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
@@ -99,9 +92,8 @@ static bool CheckShape(
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, broadcastShape, return false);
     if (!BroadcastInferShape(gradOutput->GetViewShape(), broadcastShape, broadcastGradShape) ||
         broadcastShape != broadcastGradShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Except shape of gradOutput must broadcast to %s, but current is %s.",
-            op::ToString(broadcastShape).GetString(), op::ToString(gradOutput->GetViewShape()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Except shape of gradOutput must broadcast to %s, but current is %s.",
+                op::ToString(broadcastShape).GetString(), op::ToString(gradOutput->GetViewShape()).GetString());
         return false;
     }
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
@@ -109,8 +101,8 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull4Tensor(gradOutput, self, target, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -178,9 +170,9 @@ static const aclTensor* ReduceSumTensor(const aclTensor* grad, const op::Shape o
     return grad;
 }
 
-aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction, bool logTarget,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                               const aclTensor* target, int64_t reduction, bool logTarget,
+                                               aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -215,7 +207,8 @@ aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
     auto gradOutputCasted = gradOutputContiguous;
     auto selfCasted = selfContiguous;
     auto targetCasted = targetContiguous;
-    if (!(gradOutput->GetDataType() == op::DataType::DT_FLOAT16 && self->GetDataType() == op::DataType::DT_FLOAT16 && target->GetDataType() == op::DataType::DT_FLOAT16)) {
+    if (!(gradOutput->GetDataType() == op::DataType::DT_FLOAT16 && self->GetDataType() == op::DataType::DT_FLOAT16 &&
+          target->GetDataType() == op::DataType::DT_FLOAT16)) {
         auto promoteType = op::DataType::DT_FLOAT;
 
         // 将输入gradoutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用
@@ -239,8 +232,8 @@ aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
     CHECK_RET(selfBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行计算
-    auto grad = l0op::KlDivLossGrad(
-        gradOutputCasted, selfBroadcast, targetCasted, GetReductionStr(reduction), logTarget, uniqueExecutor.get());
+    auto grad = l0op::KlDivLossGrad(gradOutputCasted, selfBroadcast, targetCasted, GetReductionStr(reduction),
+                                    logTarget, uniqueExecutor.get());
     CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 根据grad的shape是否与out的shape相同，判断是否需要reduce

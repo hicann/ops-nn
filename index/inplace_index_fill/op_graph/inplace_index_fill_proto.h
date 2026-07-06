@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_INPLACE_INDEX_FILL_H_
 #define OPS_BUILT_IN_OP_PROTO_INC_INPLACE_INDEX_FILL_H_
 
@@ -16,11 +16,12 @@
 
 namespace ge {
 
-#define INPLACE_INDEX_FILL_SUPPORT_TYPES {                                  \
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8, \
-    ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL, \
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8, \
-    ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL}
+#define INPLACE_INDEX_FILL_SUPPORT_TYPES                                                                       \
+    {                                                                                                          \
+        ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16,     \
+            ge::DT_INT32, ge::DT_INT64, ge::DT_BOOL, ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16, \
+            ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_INT32, ge::DT_INT64, ge::DT_BOOL                   \
+    }
 REG_OP(InplaceIndexFill)
     .INPUT(x, TensorType(INPLACE_INDEX_FILL_SUPPORT_TYPES))
     .INPUT(indices, TensorType::IndexNumberType())
@@ -28,6 +29,6 @@ REG_OP(InplaceIndexFill)
     .OUTPUT(x, TensorType(INPLACE_INDEX_FILL_SUPPORT_TYPES))
     .REQUIRED_ATTR(dim, Int)
     .OP_END_FACTORY_REG(InplaceIndexFill)
-}
+} // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_INPLACE_INDEX_FILL_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_INPLACE_INDEX_FILL_H_

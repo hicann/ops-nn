@@ -37,8 +37,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -49,7 +49,8 @@ constexpr int64_t COMPARE_ALIGN_BYTES = 256;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -87,11 +88,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto selfShape = EnsureNotScalar(inputSelf->GetStorageShape());
 
     // Shape validation: grad_output and self must have same shape
-    OP_CHECK_IF(
-        gradOutputShape.GetShapeSize() != selfShape.GetShapeSize(),
-        OP_LOGE(context, "HardSigmoidGradV3: grad_output and self shape size mismatch: grad=%ld, self=%ld",
-                gradOutputShape.GetShapeSize(), selfShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradOutputShape.GetShapeSize() != selfShape.GetShapeSize(),
+                OP_LOGE(context, "HardSigmoidGradV3: grad_output and self shape size mismatch: grad=%ld, self=%ld",
+                        gradOutputShape.GetShapeSize(), selfShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalNum = gradOutputShape.GetShapeSize();
 
@@ -115,28 +115,22 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InitBasicTilingInfo(
-    gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum, int64_t& totalNum, ge::DataType& dataType)
+static ge::graphStatus InitBasicTilingInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum,
+                                           int64_t& totalNum, ge::DataType& dataType)
 {
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SetEmptyInputTiling(
-    gert::TilingContext* context, HardSigmoidGradV3TilingData* tiling, ge::DataType dataType)
+static ge::graphStatus SetEmptyInputTiling(gert::TilingContext* context, HardSigmoidGradV3TilingData* tiling,
+                                           ge::DataType dataType)
 {
     tiling->blockFactor = 0;
     tiling->ubFactor = 0;
@@ -147,13 +141,8 @@ static ge::graphStatus SetEmptyInputTiling(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus ComputeBlockTiling(
-    gert::TilingContext* context,
-    HardSigmoidGradV3TilingData* tiling,
-    uint64_t ubSize,
-    int64_t coreNum,
-    int64_t totalNum,
-    ge::DataType dataType)
+static ge::graphStatus ComputeBlockTiling(gert::TilingContext* context, HardSigmoidGradV3TilingData* tiling,
+                                          uint64_t ubSize, int64_t coreNum, int64_t totalNum, ge::DataType dataType)
 {
     int64_t typeSize = (dataType == ge::DT_FLOAT) ? 4 : 2;
     OP_CHECK_IF(typeSize <= 0, OP_LOGE(context, "typeSize is invalid"), return ge::GRAPH_FAILED);
@@ -218,36 +207,29 @@ static ge::graphStatus HardSigmoidGradV3TilingFunc(gert::TilingContext* context)
     int64_t coreNum = 0;
     int64_t totalNum = 0;
     ge::DataType dataType = ge::DT_UNDEFINED;
-    OP_CHECK_IF(
-        InitBasicTilingInfo(context, ubSize, coreNum, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "InitBasicTilingInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitBasicTilingInfo(context, ubSize, coreNum, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "InitBasicTilingInfo error"), return ge::GRAPH_FAILED);
 
     HardSigmoidGradV3TilingData* tiling = context->GetTilingData<HardSigmoidGradV3TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardSigmoidGradV3TilingData), 0, sizeof(HardSigmoidGradV3TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardSigmoidGradV3TilingData), 0, sizeof(HardSigmoidGradV3TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->totalNum = totalNum;
     if (totalNum == 0) {
         return SetEmptyInputTiling(context, tiling, dataType);
     }
 
-    OP_CHECK_IF(
-        ComputeBlockTiling(context, tiling, ubSize, coreNum, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ComputeBlockTiling error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeBlockTiling(context, tiling, ubSize, coreNum, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeBlockTiling error"), return ge::GRAPH_FAILED);
 
     // The BF16 full-tile kernel shares the same double-buffer UB model as FP32:
     // 3 queue buffers + 3 FP32 temp buffers + 1 compare mask = 25 bytes/element.
     // Disabling double buffer here deadlocks the pipelined Process() path when
     // fullTileNum > 1 because CopyIn(next) runs before Compute(curr) frees the
     // only queue slot.
-    OP_CHECK_IF(
-        SetTilingKey(context, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetTilingKey error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingKey(context, dataType) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetTilingKey error"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

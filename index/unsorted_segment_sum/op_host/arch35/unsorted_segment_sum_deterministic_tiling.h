@@ -38,13 +38,10 @@ REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3200, UnsortedSegmentSumDetermTili
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3201, UnsortedSegmentSumDetermTilingData);
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3202, UnsortedSegmentSumDetermTilingData);
 
-class UnsortedSegmentSumDetermTiling : public UnsortedSegmentSumBaseTiling
-{
+class UnsortedSegmentSumDetermTiling : public UnsortedSegmentSumBaseTiling {
 public:
-    explicit UnsortedSegmentSumDetermTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context)
-    {}
-    ~UnsortedSegmentSumDetermTiling() override
-    {}
+    explicit UnsortedSegmentSumDetermTiling(gert::TilingContext* context) : UnsortedSegmentSumBaseTiling(context) {}
+    ~UnsortedSegmentSumDetermTiling() override {}
 
 private:
     bool IsCapable() override;

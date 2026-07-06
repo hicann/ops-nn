@@ -24,46 +24,22 @@ extern "C" {
 #endif
 
 /**
-* @brief aclnnLstmBackward的第一段接口，根据具体的计算流程，计算workspace大小。
-* @domain aclnn_ops_train
-*/
+ * @brief aclnnLstmBackward的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @domain aclnn_ops_train
+ */
 ACLNN_API aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
-    const aclTensor *input,
-    const aclTensorList *hx,
-    const aclTensorList *params,
-    const aclTensor *dy,
-    const aclTensor *dh,
-    const aclTensor *dc,
-    const aclTensorList *i,
-    const aclTensorList *g,
-    const aclTensorList *f,
-    const aclTensorList *o,
-    const aclTensorList *h,
-    const aclTensorList *c,
-    const aclTensorList *tanhc,
-    const aclTensor *batchSizesOptional,
-    bool hasBias,
-    int64_t numLayers,
-    double dropout,
-    bool train,
-    bool bidirectional,
-    bool batchFirst,
-    const aclBoolArray *outputMask,
-    aclTensor *dxOut,
-    aclTensor *dhPrevOut,
-    aclTensor *dcPrevOut,
-    aclTensorList *dparamsOut,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+    const aclTensor* input, const aclTensorList* hx, const aclTensorList* params, const aclTensor* dy,
+    const aclTensor* dh, const aclTensor* dc, const aclTensorList* i, const aclTensorList* g, const aclTensorList* f,
+    const aclTensorList* o, const aclTensorList* h, const aclTensorList* c, const aclTensorList* tanhc,
+    const aclTensor* batchSizesOptional, bool hasBias, int64_t numLayers, double dropout, bool train,
+    bool bidirectional, bool batchFirst, const aclBoolArray* outputMask, aclTensor* dxOut, aclTensor* dhPrevOut,
+    aclTensor* dcPrevOut, aclTensorList* dparamsOut, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
-* @brief aclnnLstmBackward的第二段接口，用于执行计算。
-*/
-ACLNN_API aclnnStatus aclnnLstmBackward(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ * @brief aclnnLstmBackward的第二段接口，用于执行计算。
+ */
+ACLNN_API aclnnStatus aclnnLstmBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        aclrtStream stream);
 
 #ifdef __cplusplus
 }

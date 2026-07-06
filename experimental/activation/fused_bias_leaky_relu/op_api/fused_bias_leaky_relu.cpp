@@ -28,9 +28,7 @@ namespace l0op {
 
 OP_TYPE_REGISTER(FusedBiasLeakyRelu);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT};
 
 static bool IsAiCoreSupport(const aclTensor* x, const aclTensor* bias)
 {
@@ -45,9 +43,8 @@ static bool FusedBiasLeakyReluInferShape(const op::Shape& xShape, op::Shape& out
     return true;
 }
 
-static const aclTensor* FusedBiasLeakyReluAiCore(const aclTensor* x, const aclTensor* bias,
-                                                    double negativeSlope, double scale,
-                                                    const aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* FusedBiasLeakyReluAiCore(const aclTensor* x, const aclTensor* bias, double negativeSlope,
+                                                 double scale, const aclTensor* out, aclOpExecutor* executor)
 {
     L0_DFX(FusedBiasLeakyReluAiCore, x, bias, out);
 
@@ -55,19 +52,15 @@ static const aclTensor* FusedBiasLeakyReluAiCore(const aclTensor* x, const aclTe
     float fNegativeSlope = static_cast<float>(negativeSlope);
     float fScale = static_cast<float>(scale);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(FusedBiasLeakyRelu,
-        OP_INPUT(x, bias), OP_OUTPUT(out),
-        OP_ATTR(fNegativeSlope, fScale));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FusedBiasLeakyReluAiCore failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(FusedBiasLeakyRelu, OP_INPUT(x, bias), OP_OUTPUT(out),
+                                           OP_ATTR(fNegativeSlope, fScale));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "FusedBiasLeakyReluAiCore failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* FusedBiasLeakyRelu(const aclTensor* x, const aclTensor* bias,
-                                     double negativeSlope, double scale,
-                                     aclOpExecutor* executor)
+const aclTensor* FusedBiasLeakyRelu(const aclTensor* x, const aclTensor* bias, double negativeSlope, double scale,
+                                    aclOpExecutor* executor)
 {
     Shape outShape;
     const aclTensor* out = nullptr;

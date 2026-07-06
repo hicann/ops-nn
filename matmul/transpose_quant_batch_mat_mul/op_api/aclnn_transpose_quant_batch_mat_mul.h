@@ -44,8 +44,8 @@ ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
 /**
  * @brief aclnnTransposeBatchMatmul的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMul(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                     const aclrtStream stream);
 
 /**
  * @brief aclnnTransposeQuantBatchMatMulWeightNz的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -81,8 +81,8 @@ ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(void* workspace, uint64_t workspaceSize,
+                                                             aclOpExecutor* executor, const aclrtStream stream);
 
 #ifdef __cplusplus
 }

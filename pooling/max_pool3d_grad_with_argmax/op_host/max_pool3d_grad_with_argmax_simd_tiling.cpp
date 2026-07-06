@@ -81,9 +81,9 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::IsCapable()
     }
 
     int64_t outDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
- 	if (outDataCount > static_cast<int64_t>(MAX_INT32)) {
- 	    return false;
- 	}
+    if (outDataCount > static_cast<int64_t>(MAX_INT32)) {
+        return false;
+    }
     // ub is not enough
     splitData.highAxisInner = 1;
     splitData.dOutputInner = 1;
@@ -140,7 +140,7 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::DoBufferCalculateNC()
     int64_t dInputInner = std::min(
         Ops::Base::CeilDiv(splitData.dOutputInner + (inputData.dKernel - 1) * inputData.dDilation, inputData.dStride),
         inputData.dGrad);
-    
+
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.maxDataNumInOneBlock);
 
     int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInnerAligned;
@@ -386,7 +386,7 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::DoUBTiling()
     } else {
         DoBufferCalculate();
     }
-    
+
     splitData.wOutputOuter = Ops::Base::CeilDiv(inputData.wX, splitData.wOutputInner);
     int64_t tempWOutputTail = inputData.wX % splitData.wOutputInner;
     splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail;
@@ -406,12 +406,12 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::DoUBTiling()
 
 void MaxPool3DGradWithArgmaxNCDHWTiling::DoBlockTiling()
 {
-    splitData.totalBaseBlockNum =
-        splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter * splitData.dOutputOuter;
+    splitData.totalBaseBlockNum = splitData.highAxisOuter * splitData.hOutputOuter * splitData.wOutputOuter *
+                                  splitData.dOutputOuter;
     splitData.normalCoreProcessNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, baseData.totalCoreNum);
     splitData.usedCoreNum = Ops::Base::CeilDiv(splitData.totalBaseBlockNum, splitData.normalCoreProcessNum);
-    splitData.tailCoreProcessNum =
-        splitData.totalBaseBlockNum - splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
+    splitData.tailCoreProcessNum = splitData.totalBaseBlockNum -
+                                   splitData.normalCoreProcessNum * (splitData.usedCoreNum - 1);
 }
 
 void MaxPool3DGradWithArgmaxNCDHWTiling::PrintBaseData() const

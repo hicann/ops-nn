@@ -73,10 +73,8 @@ ge::graphStatus TilingPrepareForSwigluBackwardMxQuantWithDualAxis(gert::TilingPa
 
 class SwigluBackwardMxQuantWithDualAxisTiling {
 public:
-    explicit SwigluBackwardMxQuantWithDualAxisTiling(gert::TilingContext* context) : context_(context)
-    {}
-    ~SwigluBackwardMxQuantWithDualAxisTiling()
-    {}
+    explicit SwigluBackwardMxQuantWithDualAxisTiling(gert::TilingContext* context) : context_(context) {}
+    ~SwigluBackwardMxQuantWithDualAxisTiling() {}
     ge::graphStatus DoTiling();
 
 private:
@@ -85,11 +83,11 @@ private:
     ge::graphStatus CheckOutputScaleDtype();
     ge::graphStatus CheckShape();
     ge::graphStatus CheckScaleShape(const gert::Shape& mxScale1Shape, const gert::Shape& mxScale2Shape,
-        const gert::Shape& xShape);
+                                    const gert::Shape& xShape);
     ge::graphStatus CheckMxScale1Shape(const gert::Shape& mxScale1Shape, const gert::Shape& xShape, int64_t dimGradX,
-        int64_t batchDimCount);
+                                       int64_t batchDimCount);
     ge::graphStatus CheckMxScale2Shape(const gert::Shape& mxScale2Shape, const gert::Shape& xShape, int64_t dimGradX,
-        int64_t batchDimCount, int64_t expectScaleDimNum);
+                                       int64_t batchDimCount, int64_t expectScaleDimNum);
     ge::graphStatus CheckYShape(const gert::Shape& xShape, const gert::Shape& y1Shape, const gert::Shape& y2Shape);
     ge::graphStatus CheckGroupIndexShape();
     ge::graphStatus CheckYGradShape(const gert::Shape& xShape, int64_t xDimNum);

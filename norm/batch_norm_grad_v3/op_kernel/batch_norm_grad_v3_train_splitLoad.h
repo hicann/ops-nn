@@ -74,7 +74,8 @@ public:
             TPipeSetWaitFlag<HardEvent::V_S>();
             this->dyReduceValue = this->reduceUbTensor.GetValue(0) * meanDenominator;
             this->dyMulInputReduceValue = this->reduceInputUbTensor.GetValue(0);
-            this->dyMulInputReduceValue = this->dyMulInputReduceValue * this->rVar * this->rVar / (this->b0Dim * this->b1Dim);
+            this->dyMulInputReduceValue = this->dyMulInputReduceValue * this->rVar * this->rVar /
+                                          (this->b0Dim * this->b1Dim);
             if constexpr (SPLIT_MODE == BNGV3SplitMode::R0_SPLIT_MODE) {
                 ComputeDxForR0(j);
             } else {
@@ -161,6 +162,7 @@ private:
             this->CopyOutDxR1SplitMode(dyOffset);
         }
     }
+
 public:
     float meanDenominator;
 

@@ -23,13 +23,10 @@
 namespace BatchNormGrad {
 using namespace AscendC;
 
-
-template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1> class BatchNormGradRARSplitR1 {
+template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
+class BatchNormGradRARSplitR1 {
 public:
-    __aicore__ inline BatchNormGradRARSplitR1(TPipe *pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline BatchNormGradRARSplitR1(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline uint32_t CalcBinaryAddLastNum(uint32_t binaryAddQuotient)
     {
@@ -39,11 +36,12 @@ public:
         return VL_FP32;
     }
 
-    __aicore__ inline void Init(__gm__ uint8_t *dy, __gm__ uint8_t *x, __gm__ uint8_t *mean, __gm__ uint8_t *rstd,
-        __gm__ uint8_t *gamma, __gm__ uint8_t *dx, __gm__ uint8_t *dgamma, __gm__ uint8_t *dbeta,
-        __gm__ uint8_t *workspace, const BatchNormGradRARRecomputeTilingData *tilingData)
+    __aicore__ inline void Init(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* gamma, __gm__ uint8_t* dx, __gm__ uint8_t* dgamma,
+                                __gm__ uint8_t* dbeta, __gm__ uint8_t* workspace,
+                                const BatchNormGradRARRecomputeTilingData* tilingData)
     {
-        const BatchNormGradBaseTilingData &baseTilingData = tilingData->baseTilingData;
+        const BatchNormGradBaseTilingData& baseTilingData = tilingData->baseTilingData;
         r1Dim_ = baseTilingData.r1Dim;
         aDim_ = baseTilingData.aDim;
         r0Dim_ = baseTilingData.r0Dim;
@@ -61,25 +59,25 @@ public:
         ubRDimTailLoopNum_ = CeilDiv(r1Dim_, nFactor_) - ubRDimLoopNum_;
 
         gmOffset_ = GetBlockIdx() < baseTilingData.tailBlockNum ?
-            GetBlockIdx() * baseTilingData.tailBlockDim :
-            baseTilingData.tailBlockNum * baseTilingData.tailBlockDim +
-            (GetBlockIdx() - baseTilingData.tailBlockNum) * baseTilingData.formerBlockDim;
+                        GetBlockIdx() * baseTilingData.tailBlockDim :
+                        baseTilingData.tailBlockNum * baseTilingData.tailBlockDim +
+                            (GetBlockIdx() - baseTilingData.tailBlockNum) * baseTilingData.formerBlockDim;
 
-        aDimLoopNum_ =
-            GetBlockIdx() < baseTilingData.tailBlockNum ? baseTilingData.tailBlockDim : baseTilingData.formerBlockDim;
+        aDimLoopNum_ = GetBlockIdx() < baseTilingData.tailBlockNum ? baseTilingData.tailBlockDim :
+                                                                     baseTilingData.formerBlockDim;
 
         tailBinaryAddParam_.binaryAddQuotient = binaryAddParam_.binaryAddQuotient >> 1;
         tailBinaryAddParam_.binaryAddk = binaryAddParam_.binaryAddk > 1 ? binaryAddParam_.binaryAddk - 1 : 0;
         tailBinaryAddParam_.binaryAddLastNum = CalcBinaryAddLastNum(tailBinaryAddParam_.binaryAddQuotient);
 
-        dyGm_.SetGlobalBuffer((__gm__ DY_TYPE *)(dy) + gmOffset_ * r0Dim_);
-        xGm_.SetGlobalBuffer((__gm__ DY_TYPE *)(x) + gmOffset_ * r0Dim_);
-        meanGm_.SetGlobalBuffer((__gm__ float *)(mean) + gmOffset_);
-        rstdGm_.SetGlobalBuffer((__gm__ float *)(rstd) + gmOffset_);
-        gammaGm_.SetGlobalBuffer((__gm__ WEIGHT_TYPE *)(gamma) + gmOffset_);
-        dxGm_.SetGlobalBuffer((__gm__ DY_TYPE *)(dx) + gmOffset_ * r0Dim_);
-        dgammaGm_.SetGlobalBuffer((__gm__ WEIGHT_TYPE *)(dgamma) + gmOffset_);
-        dbetaGm_.SetGlobalBuffer((__gm__ WEIGHT_TYPE *)(dbeta) + gmOffset_);
+        dyGm_.SetGlobalBuffer((__gm__ DY_TYPE*)(dy) + gmOffset_ * r0Dim_);
+        xGm_.SetGlobalBuffer((__gm__ DY_TYPE*)(x) + gmOffset_ * r0Dim_);
+        meanGm_.SetGlobalBuffer((__gm__ float*)(mean) + gmOffset_);
+        rstdGm_.SetGlobalBuffer((__gm__ float*)(rstd) + gmOffset_);
+        gammaGm_.SetGlobalBuffer((__gm__ WEIGHT_TYPE*)(gamma) + gmOffset_);
+        dxGm_.SetGlobalBuffer((__gm__ DY_TYPE*)(dx) + gmOffset_ * r0Dim_);
+        dgammaGm_.SetGlobalBuffer((__gm__ WEIGHT_TYPE*)(dgamma) + gmOffset_);
+        dbetaGm_.SetGlobalBuffer((__gm__ WEIGHT_TYPE*)(dbeta) + gmOffset_);
 
         dyBufSize_ = RoundUpTwoBlock(rAlign_ * sizeof(DY_TYPE));
         xBufSize_ = RoundUpTwoBlock(rAlign_ * sizeof(DY_TYPE));
@@ -159,10 +157,7 @@ public:
         return ((basiBlockIdx + 1) & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1)) == 0;
     }
 
-    __aicore__ inline bool IsNeedUpdateLevel2Cache(uint64_t basiBlockIdx)
-    {
-        return ((basiBlockIdx + 1) & 0xffff) == 0;
-    }
+    __aicore__ inline bool IsNeedUpdateLevel2Cache(uint64_t basiBlockIdx) { return ((basiBlockIdx + 1) & 0xffff) == 0; }
 
     __aicore__ inline void UpdateCache(uint64_t basiBlockIdx)
     {
@@ -186,8 +181,8 @@ public:
     __aicore__ inline void UpdateFoldCache(uint64_t basiBlockIdx, uint64_t FoldLoopNum)
     {
         if (IsNeedUpdateFoldCache(basiBlockIdx)) {
-            uint64_t updateIdx =
-                ((basiBlockIdx & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1)) + 1) - FOLD_CACHE_CAPACITY;
+            uint64_t updateIdx = ((basiBlockIdx & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1)) + 1) -
+                                 FOLD_CACHE_CAPACITY;
             Add(dBetaCacheLocal_[updateIdx], dBetaCacheLocal_[updateIdx], dBetaFoldCacheLocal_, FOLD_CACHE_CAPACITY);
             Add(dGammaCacheLocal_[updateIdx], dGammaCacheLocal_[updateIdx], dGammaFoldCacheLocal_, FOLD_CACHE_CAPACITY);
         } else if (basiBlockIdx + 1 == FoldLoopNum) {
@@ -213,11 +208,11 @@ public:
         }
     }
 
-    __aicore__ inline void CustomReduceSum(const LocalTensor<float> &dstTensor, const LocalTensor<float> &srcTensor,
-        uint32_t idx)
+    __aicore__ inline void CustomReduceSum(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                           uint32_t idx)
     {
-        __ubuf__ float *dst = (__ubuf__ float *)dstTensor.GetPhyAddr();
-        __ubuf__ float *src = (__ubuf__ float *)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<float> x1;
@@ -230,10 +225,10 @@ public:
             MicroAPI::RegTensor<float> vlSum;
 
             MicroAPI::MaskReg pregAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::DataCopy(x1, (__local_mem__ float *)(src));
-            MicroAPI::DataCopy(x2, (__local_mem__ float *)(src) + 1 * VL_FP32);
-            MicroAPI::DataCopy(x3, (__local_mem__ float *)(src) + DIGIT_TWO * VL_FP32);
-            MicroAPI::DataCopy(x4, (__local_mem__ float *)(src) + DIGIT_THREE * VL_FP32);
+            MicroAPI::DataCopy(x1, (__local_mem__ float*)(src));
+            MicroAPI::DataCopy(x2, (__local_mem__ float*)(src) + 1 * VL_FP32);
+            MicroAPI::DataCopy(x3, (__local_mem__ float*)(src) + DIGIT_TWO * VL_FP32);
+            MicroAPI::DataCopy(x4, (__local_mem__ float*)(src) + DIGIT_THREE * VL_FP32);
             MicroAPI::Add(sum1, x1, x3, pregAll);
             MicroAPI::Add(sum2, x2, x4, pregAll);
             MicroAPI::Add(sum12, sum1, sum2, pregAll);
@@ -256,14 +251,14 @@ public:
         xInQue_.EnQue(xLocal);
         xLocal = xInQue_.template DeQue<DY_TYPE>();
         CalcDgamma(dyLocal, xLocal, meanLocal_, rstdLocal_, dGammaCacheLocal_, binaryAddTensor_, basicBlockIdx,
-            r1Factor * r0Dim_, binaryAddParam_);
+                   r1Factor * r0Dim_, binaryAddParam_);
 
         dyInQue_.FreeTensor(dyLocal);
         xInQue_.FreeTensor(xLocal);
     }
 
     __aicore__ inline void ProcessFoldBlock(uint64_t ni, uint64_t basicBlockIdx, uint64_t r1Factor,
-        uint64_t r1TailFactor, uint64_t r1TailTailFactor)
+                                            uint64_t r1TailFactor, uint64_t r1TailTailFactor)
     {
         uint64_t offset = ni * r0Dim_ + basicBlockIdx * nFactor_ * r0Dim_ * aDim_;
         uint32_t foldCacheIdx = static_cast<uint32_t>(basicBlockIdx & (FOLD_CACHE_CAPACITY - 1));
@@ -275,14 +270,14 @@ public:
         dyLocal = dyInQue_.template DeQue<DY_TYPE>();
 
         CalcDbetaFold(dyLocal, dBetaCacheLocal_, binaryAddTensor_, basicBlockIdx, r1Factor * r0Dim_,
-            r1TailFactor * r0Dim_, tailBinaryAddParam_);
+                      r1TailFactor * r0Dim_, tailBinaryAddParam_);
         LocalTensor<DY_TYPE> xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, offset, r1Factor);
         PrepareInX(xLocal, halfXBufOffset_, tailOffset, r1TailFactor);
         xInQue_.EnQue(xLocal);
         xLocal = xInQue_.template DeQue<DY_TYPE>();
         CalcDgammaFold(dyLocal, xLocal, meanLocal_, rstdLocal_, dGammaCacheLocal_, binaryAddTensor_, basicBlockIdx,
-            r1Factor * r0Dim_, r1TailFactor * r0Dim_, tailBinaryAddParam_);
+                       r1Factor * r0Dim_, r1TailFactor * r0Dim_, tailBinaryAddParam_);
 
         dyInQue_.FreeTensor(dyLocal);
         xInQue_.FreeTensor(xLocal);
@@ -298,7 +293,7 @@ public:
         dyLocal = dyInQue_.template DeQue<DY_TYPE>();
 
         CalcDbetaFold(dyLocal, dBetaFoldCacheLocal_, binaryAddTensor_, foldCacheIdx, r1Factor * r0Dim_,
-            r1TailTailFactor * r0Dim_, tailBinaryAddParam_);
+                      r1TailTailFactor * r0Dim_, tailBinaryAddParam_);
 
         xLocal = xInQue_.template AllocTensor<DY_TYPE>();
         PrepareInX(xLocal, 0, foldOffset, r1Factor);
@@ -308,7 +303,7 @@ public:
         xInQue_.EnQue(xLocal);
         xLocal = xInQue_.template DeQue<DY_TYPE>();
         CalcDgammaFold(dyLocal, xLocal, meanLocal_, rstdLocal_, dGammaFoldCacheLocal_, binaryAddTensor_, foldCacheIdx,
-            r1Factor * r0Dim_, r1TailTailFactor * r0Dim_, tailBinaryAddParam_);
+                       r1Factor * r0Dim_, r1TailTailFactor * r0Dim_, tailBinaryAddParam_);
 
         dyInQue_.FreeTensor(dyLocal);
         xInQue_.FreeTensor(xLocal);
@@ -330,7 +325,7 @@ public:
         dyLocal = dyInQue_.template DeQue<DY_TYPE>();
 
         CalcDx(xLocal, dyLocal, rstdLocal_, meanLocal_, gammaLocal_, dGammaLocal_, dBetaLocal_, r1Factor * r0Dim_,
-            r1Dim_ * r0Dim_);
+               r1Dim_ * r0Dim_);
 
         SetFlag<HardEvent::V_MTE3>(V_MTE3_EVENT + bufferIdx);
         WaitFlag<HardEvent::V_MTE3>(V_MTE3_EVENT + bufferIdx);
@@ -352,7 +347,7 @@ public:
             for (uint64_t basicBlockIdx = 0; basicBlockIdx < ubRDimTailLoopNum_; basicBlockIdx++) {
                 if (basicBlockIdx < ubRDimTailLoopNum_ - 1) {
                     ProcessFoldBlock(ni, basicBlockIdx, nFactor_ / DIGIT_TWO, nFactor_ / DIGIT_TWO,
-                        nFactor_ / DIGIT_TWO);
+                                     nFactor_ / DIGIT_TWO);
                 } else {
                     uint64_t tailRFactor = nFactor_ / DIGIT_TWO;
                     uint64_t tailTailRFactor = tailNFactor_ - tailRFactor;
@@ -378,14 +373,14 @@ public:
         }
     }
 
-    __aicore__ inline void PrepareInDy(LocalTensor<DY_TYPE> &dy, uint64_t dstOffset, uint64_t srcOffset,
-        uint64_t r1Factor)
+    __aicore__ inline void PrepareInDy(LocalTensor<DY_TYPE>& dy, uint64_t dstOffset, uint64_t srcOffset,
+                                       uint64_t r1Factor)
     {
         CopyInRAR(dy, dyGm_, dstOffset, srcOffset, r1Factor);
     }
 
-    __aicore__ inline void PrepareInX(LocalTensor<DY_TYPE> &x, uint64_t dstOffset, uint64_t srcOffset,
-        uint64_t r1Factor)
+    __aicore__ inline void PrepareInX(LocalTensor<DY_TYPE>& x, uint64_t dstOffset, uint64_t srcOffset,
+                                      uint64_t r1Factor)
     {
         CopyInRAR(x, xGm_, dstOffset, srcOffset, r1Factor);
     }
@@ -395,18 +390,19 @@ public:
         CopyInA(mean, meanGm_, offset, a);
     }
 
-    __aicore__ inline void PrepareRstd(LocalTensor<float> &rstd, uint64_t offset, uint64_t a)
+    __aicore__ inline void PrepareRstd(LocalTensor<float>& rstd, uint64_t offset, uint64_t a)
     {
         CopyInA(rstd, rstdGm_, offset, a);
     }
 
-    __aicore__ inline void PrepareInGamma(LocalTensor<WEIGHT_TYPE> &gamma, uint64_t offset, uint64_t a)
+    __aicore__ inline void PrepareInGamma(LocalTensor<WEIGHT_TYPE>& gamma, uint64_t offset, uint64_t a)
     {
         CopyInA(gamma, gammaGm_, offset, a);
     }
 
-    __aicore__ inline void CalcDbetaVF(const __local_mem__ DY_TYPE *data, const __local_mem__ float *out,
-        const __local_mem__ float *binaryAdd, uint32_t idx, uint32_t r, const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDbetaVF(const __local_mem__ DY_TYPE* data, const __local_mem__ float* out,
+                                       const __local_mem__ float* binaryAdd, uint32_t idx, uint32_t r,
+                                       const BinaryAddParam& binaryAddParam)
     {
         uint32_t binaryAddQuotient = binaryAddParam.binaryAddQuotient;
         uint32_t binaryAddQuotientOffset = binaryAddQuotient;
@@ -441,40 +437,40 @@ public:
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ, tmp, pregLoop);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + i, vlSum, pregMerge);
             }
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                 LoadOneTensor<DY_TYPE>(data, x, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 MicroAPI::ReduceSum(vlSum, x, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             uint16_t curBinaryAddLoop = binaryAddLoop;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoop = curBinaryAddLoop / DIGIT_TWO;
                 for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                    MicroAPI::DataCopy(binaryAddQ, ((__local_mem__ float *)binaryAdd) + j * VL_FP32);
+                    MicroAPI::DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAdd) + j * VL_FP32);
                     MicroAPI::DataCopy(binaryAddR,
-                        ((__local_mem__ float *)binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
+                                       ((__local_mem__ float*)binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
                     MicroAPI::Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                    MicroAPI::DataCopy((__local_mem__ float *)binaryAdd + j * VL_FP32, binaryAddQ, pregMain);
+                    MicroAPI::DataCopy((__local_mem__ float*)binaryAdd + j * VL_FP32, binaryAddQ, pregMain);
                 }
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             }
             uint32_t sreg2 = binaryAddParam.binaryAddLastNum;
             MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg2);
-            MicroAPI::DataCopy(sum, ((__local_mem__ float *)binaryAdd));
+            MicroAPI::DataCopy(sum, ((__local_mem__ float*)binaryAdd));
             MicroAPI::ReduceSum(dbeta, sum, pregLast);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)out + idxInLevel0Cache), dbeta, pregMerge);
+                ((__local_mem__ float*)out + idxInLevel0Cache), dbeta, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDbetaFoldVF(const __local_mem__ DY_TYPE *data, const __local_mem__ float *out,
-        const __local_mem__ float *binaryAdd, uint32_t idx, uint32_t r, uint32_t tailR,
-        const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDbetaFoldVF(const __local_mem__ DY_TYPE* data, const __local_mem__ float* out,
+                                           const __local_mem__ float* binaryAdd, uint32_t idx, uint32_t r,
+                                           uint32_t tailR, const BinaryAddParam& binaryAddParam)
     {
         uint32_t binaryAddQuotient = binaryAddParam.binaryAddQuotient;
         uint32_t binaryAddQuotientOffset = binaryAddQuotient;
@@ -516,7 +512,7 @@ public:
                 LoadOneTensor<DY_TYPE>(data, binaryAddR, pregLoop, i * VL_FP32 + binaryAddQuotientOffset);
                 LoadOneTensor<DY_TYPE>(data, binaryAddQTail, pregTailLoop, i * VL_FP32 + halfXBufOffset_);
                 LoadOneTensor<DY_TYPE>(data, binaryAddRTail, pregTailReminderLoop,
-                    i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
+                                       i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
                 MicroAPI::Add(tmp1, binaryAddQ, binaryAddQTail, pregTailLoop);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ, tmp1, pregTailLoop);
                 MicroAPI::Add(tmp2, binaryAddR, binaryAddRTail, pregTailReminderLoop);
@@ -525,44 +521,44 @@ public:
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ, tmp1, pregLoop);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + i, vlSum, pregMerge);
             }
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                 MicroAPI::MaskReg pregTailLoop = MicroAPI::UpdateMask<float>(sreg1);
                 LoadOneTensor<DY_TYPE>(data, x, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 LoadOneTensor<DY_TYPE>(data, xTail, pregTailLoop,
-                    (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
+                                       (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
                 MicroAPI::Add(tmp2, x, xTail, pregTailLoop);
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(x, tmp2, pregTailLoop);
                 MicroAPI::ReduceSum(vlSum, x, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             uint16_t curBinaryAddLoop = binaryAddLoop;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoop = curBinaryAddLoop / DIGIT_TWO;
                 for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                    MicroAPI::DataCopy(binaryAddQ, ((__local_mem__ float *)binaryAdd) + j * VL_FP32);
+                    MicroAPI::DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAdd) + j * VL_FP32);
                     MicroAPI::DataCopy(binaryAddR,
-                        ((__local_mem__ float *)binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
+                                       ((__local_mem__ float*)binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
                     MicroAPI::Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                    MicroAPI::DataCopy(((__local_mem__ float *)binaryAdd) + j * VL_FP32, binaryAddQ, pregMain);
+                    MicroAPI::DataCopy(((__local_mem__ float*)binaryAdd) + j * VL_FP32, binaryAddQ, pregMain);
                 }
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             }
             uint32_t sreg3 = binaryAddParam.binaryAddLastNum;
             MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg3);
-            MicroAPI::DataCopy(sum, ((__local_mem__ float *)binaryAdd));
+            MicroAPI::DataCopy(sum, ((__local_mem__ float*)binaryAdd));
             MicroAPI::ReduceSum(dbeta, sum, pregLast);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)out) + idxInLevel0Cache, dbeta, pregMerge);
+                ((__local_mem__ float*)out) + idxInLevel0Cache, dbeta, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDbetaLessThanVL64VF(const __local_mem__ DY_TYPE *data, const __local_mem__ float *out,
-        uint32_t idx, uint32_t r)
+    __aicore__ inline void CalcDbetaLessThanVL64VF(const __local_mem__ DY_TYPE* data, const __local_mem__ float* out,
+                                                   uint32_t idx, uint32_t r)
     {
         uint32_t idxInLevel0Cache = idx & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1);
         __VEC_SCOPE__
@@ -575,12 +571,13 @@ public:
             LoadOneTensor<DY_TYPE>(data, x, pregLoop, 0);
             MicroAPI::ReduceSum(sum, x, pregLoop);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)out) + idxInLevel0Cache, sum, pregMerge);
+                ((__local_mem__ float*)out) + idxInLevel0Cache, sum, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDbetaLessThanVL64FoldVF(const __local_mem__ DY_TYPE *data,
-        const __local_mem__ float *out, uint32_t idx, uint32_t r, uint32_t tailR)
+    __aicore__ inline void CalcDbetaLessThanVL64FoldVF(const __local_mem__ DY_TYPE* data,
+                                                       const __local_mem__ float* out, uint32_t idx, uint32_t r,
+                                                       uint32_t tailR)
     {
         uint32_t idxInLevel0Cache = idx & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1);
         __VEC_SCOPE__
@@ -600,37 +597,39 @@ public:
             MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(x, tmp, pregTailLoop);
             MicroAPI::ReduceSum(sum, x, pregLoop);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)out) + idxInLevel0Cache, sum, pregMerge);
+                ((__local_mem__ float*)out) + idxInLevel0Cache, sum, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDbeta(LocalTensor<DY_TYPE> &dy, LocalTensor<float> &dbeta, LocalTensor<float> &binaryAdd,
-        uint32_t idx, uint32_t r, const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDbeta(LocalTensor<DY_TYPE>& dy, LocalTensor<float>& dbeta, LocalTensor<float>& binaryAdd,
+                                     uint32_t idx, uint32_t r, const BinaryAddParam& binaryAddParam)
     {
         if (r <= VL_FP32) {
-            CalcDbetaLessThanVL64VF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(), (__local_mem__ float *)dbeta.GetPhyAddr(),
-                idx, r);
+            CalcDbetaLessThanVL64VF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ float*)dbeta.GetPhyAddr(),
+                                    idx, r);
         } else {
-            CalcDbetaVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(), (__local_mem__ float *)dbeta.GetPhyAddr(),
-                (__local_mem__ float *)binaryAdd.GetPhyAddr(), idx, r, binaryAddParam);
+            CalcDbetaVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ float*)dbeta.GetPhyAddr(),
+                        (__local_mem__ float*)binaryAdd.GetPhyAddr(), idx, r, binaryAddParam);
         }
     }
 
-    __aicore__ inline void CalcDbetaFold(LocalTensor<DY_TYPE> &dy, LocalTensor<float> &dbeta,
-        LocalTensor<float> &binaryAdd, uint32_t idx, uint32_t r, uint32_t tailR, const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDbetaFold(LocalTensor<DY_TYPE>& dy, LocalTensor<float>& dbeta,
+                                         LocalTensor<float>& binaryAdd, uint32_t idx, uint32_t r, uint32_t tailR,
+                                         const BinaryAddParam& binaryAddParam)
     {
         if (r <= VL_FP32) {
-            CalcDbetaLessThanVL64FoldVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(),
-                (__local_mem__ float *)dbeta.GetPhyAddr(), idx, r, tailR);
+            CalcDbetaLessThanVL64FoldVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(),
+                                        (__local_mem__ float*)dbeta.GetPhyAddr(), idx, r, tailR);
         } else {
-            CalcDbetaFoldVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(), (__local_mem__ float *)dbeta.GetPhyAddr(),
-                (__local_mem__ float *)binaryAdd.GetPhyAddr(), idx, r, tailR, binaryAddParam);
+            CalcDbetaFoldVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ float*)dbeta.GetPhyAddr(),
+                            (__local_mem__ float*)binaryAdd.GetPhyAddr(), idx, r, tailR, binaryAddParam);
         }
     }
 
-    __aicore__ inline void CalcDgammaVF(const __local_mem__ DY_TYPE *dyAddr, const __local_mem__ DY_TYPE *xAddr,
-        const __local_mem__ float *meanAddr, const __local_mem__ float *rstdAddr, const __local_mem__ float *dgammaAddr,
-        const __local_mem__ float *binaryAdd, uint32_t idx, uint32_t r, const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDgammaVF(const __local_mem__ DY_TYPE* dyAddr, const __local_mem__ DY_TYPE* xAddr,
+                                        const __local_mem__ float* meanAddr, const __local_mem__ float* rstdAddr,
+                                        const __local_mem__ float* dgammaAddr, const __local_mem__ float* binaryAdd,
+                                        uint32_t idx, uint32_t r, const BinaryAddParam& binaryAddParam)
     {
         uint32_t binaryAddQuotient = binaryAddParam.binaryAddQuotient;
         uint32_t binaryAddQuotientOffset = binaryAddQuotient;
@@ -656,8 +655,8 @@ public:
 
             MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float *)(rstdAddr));
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float*)(rstdAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float*)(meanAddr));
             uint32_t sreg0 = binaryAddRemainder;
             for (uint16_t i = 0; i < binaryAddRemainderLoop; i++) {
                 MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
@@ -679,7 +678,7 @@ public:
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp, pregLoop);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + i, vlSum, pregMerge);
             }
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
@@ -690,34 +689,35 @@ public:
                 MicroAPI::Mul(binaryAddQ1, rstdValue, binaryAddQ2, pregMain);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             uint16_t curBinaryAddLoop = binaryAddLoop;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoop = curBinaryAddLoop / DIGIT_TWO;
                 for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                    MicroAPI::DataCopy(binaryAddQ1, (__local_mem__ float *)(binaryAdd) + j * VL_FP32);
+                    MicroAPI::DataCopy(binaryAddQ1, (__local_mem__ float*)(binaryAdd) + j * VL_FP32);
                     MicroAPI::DataCopy(binaryAddR1,
-                        (__local_mem__ float *)(binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
+                                       (__local_mem__ float*)(binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
                     MicroAPI::Add(binaryAddQ1, binaryAddQ1, binaryAddR1, pregMain);
-                    MicroAPI::DataCopy(((__local_mem__ float *)binaryAdd) + j * VL_FP32, binaryAddQ1, pregMain);
+                    MicroAPI::DataCopy(((__local_mem__ float*)binaryAdd) + j * VL_FP32, binaryAddQ1, pregMain);
                 }
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             }
             uint32_t sreg2 = binaryAddParam.binaryAddLastNum;
             MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg2);
-            MicroAPI::DataCopy(sum, (__local_mem__ float *)(binaryAdd));
+            MicroAPI::DataCopy(sum, (__local_mem__ float*)(binaryAdd));
             MicroAPI::ReduceSum(dgamma, sum, pregLast);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)dgammaAddr) + idxInLevel0Cache, dgamma, pregMerge);
+                ((__local_mem__ float*)dgammaAddr) + idxInLevel0Cache, dgamma, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDgammaFoldVF(const __local_mem__ DY_TYPE *dyAddr, const __local_mem__ DY_TYPE *xAddr,
-        const __local_mem__ float *meanAddr, const __local_mem__ float *rstdAddr, const __local_mem__ float *dgammaAddr,
-        const __local_mem__ float *binaryAdd, uint32_t idx, uint32_t r, uint32_t tailR,
-        const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDgammaFoldVF(const __local_mem__ DY_TYPE* dyAddr, const __local_mem__ DY_TYPE* xAddr,
+                                            const __local_mem__ float* meanAddr, const __local_mem__ float* rstdAddr,
+                                            const __local_mem__ float* dgammaAddr, const __local_mem__ float* binaryAdd,
+                                            uint32_t idx, uint32_t r, uint32_t tailR,
+                                            const BinaryAddParam& binaryAddParam)
     {
         uint32_t binaryAddQuotient = binaryAddParam.binaryAddQuotient;
         uint32_t binaryAddQuotientOffset = binaryAddQuotient;
@@ -749,8 +749,8 @@ public:
 
             MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float *)(rstdAddr));
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float*)(rstdAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float*)(meanAddr));
             uint32_t sreg0 = binaryAddRemainder;
             uint32_t sreg1 = tailMain;
             uint32_t sreg2 = tailRemainder;
@@ -762,13 +762,13 @@ public:
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddR1, pregLoop, i * VL_FP32 + binaryAddQuotientOffset);
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ1Tail, pregTailLoop, i * VL_FP32 + halfXBufOffset_);
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddR1Tail, pregTailReminderLoop,
-                    i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
+                                       i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
 
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddQ2, pregMain, i * VL_FP32);
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddR2, pregLoop, i * VL_FP32 + binaryAddQuotientOffset);
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddQ2Tail, pregTailLoop, i * VL_FP32 + halfXBufOffset_);
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddR2Tail, pregTailReminderLoop,
-                    i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
+                                       i * VL_FP32 + binaryAddQuotientOffset + halfXBufOffset_);
 
                 MicroAPI::Sub(binaryAddQ2, binaryAddQ2, meanValue, pregMain);
                 MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
@@ -796,17 +796,17 @@ public:
                 MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp1, pregLoop);
                 MicroAPI::ReduceSum(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + i, vlSum, pregMerge);
             }
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                 MicroAPI::MaskReg pregTailLoop = MicroAPI::UpdateMask<float>(sreg1);
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ1, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ1Tail, pregTailLoop,
-                    (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
+                                       (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddQ2, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 LoadOneTensor<DY_TYPE>(xAddr, binaryAddQ2Tail, pregTailLoop,
-                    (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
+                                       (i + binaryAddRemainderLoop) * VL_FP32 + halfXBufOffset_);
                 MicroAPI::Sub(binaryAddQ2, binaryAddQ2, meanValue, pregMain);
                 MicroAPI::Mul(binaryAddQ2, binaryAddQ2, binaryAddQ1, pregMain);
                 MicroAPI::Mul(binaryAddQ1, rstdValue, binaryAddQ2, pregMain);
@@ -819,33 +819,35 @@ public:
 
                 MicroAPI::ReduceSum(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    (__local_mem__ float *)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
+                    (__local_mem__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             uint16_t curBinaryAddLoop = binaryAddLoop;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoop = curBinaryAddLoop / DIGIT_TWO;
                 for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                    MicroAPI::DataCopy(binaryAddQ1, (__local_mem__ float *)(binaryAdd) + j * VL_FP32);
+                    MicroAPI::DataCopy(binaryAddQ1, (__local_mem__ float*)(binaryAdd) + j * VL_FP32);
                     MicroAPI::DataCopy(binaryAddR1,
-                        (__local_mem__ float *)(binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
+                                       (__local_mem__ float*)(binaryAdd) + (j + curBinaryAddLoop) * VL_FP32);
                     MicroAPI::Add(binaryAddQ1, binaryAddQ1, binaryAddR1, pregMain);
-                    MicroAPI::DataCopy(((__local_mem__ float *)binaryAdd) + j * VL_FP32, binaryAddQ1, pregMain);
+                    MicroAPI::DataCopy(((__local_mem__ float*)binaryAdd) + j * VL_FP32, binaryAddQ1, pregMain);
                 }
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
             }
             uint32_t sreg3 = binaryAddParam.binaryAddLastNum;
             MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg3);
-            MicroAPI::DataCopy(sum, (__local_mem__ float *)(binaryAdd));
+            MicroAPI::DataCopy(sum, (__local_mem__ float*)(binaryAdd));
             MicroAPI::ReduceSum(dgamma, sum, pregLast);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)dgammaAddr) + idxInLevel0Cache, dgamma, pregMerge);
+                ((__local_mem__ float*)dgammaAddr) + idxInLevel0Cache, dgamma, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDgammaLessThanVLVF(const __local_mem__ DY_TYPE *dyAddr,
-        const __local_mem__ DY_TYPE *xAddr, const __local_mem__ float *meanAddr, const __local_mem__ float *rstdAddr,
-        const __local_mem__ float *dgammaAddr, uint32_t idx, uint32_t r)
+    __aicore__ inline void CalcDgammaLessThanVLVF(const __local_mem__ DY_TYPE* dyAddr,
+                                                  const __local_mem__ DY_TYPE* xAddr,
+                                                  const __local_mem__ float* meanAddr,
+                                                  const __local_mem__ float* rstdAddr,
+                                                  const __local_mem__ float* dgammaAddr, uint32_t idx, uint32_t r)
     {
         uint32_t idxInLevel0Cache = idx & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1);
         __VEC_SCOPE__
@@ -857,8 +859,8 @@ public:
             MicroAPI::RegTensor<float> sum;
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             uint32_t sreg0 = r;
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float *)(rstdAddr));
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float*)(rstdAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float*)(meanAddr));
 
             MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
             LoadOneTensor<DY_TYPE>(dyAddr, y, pregLoop, 0);
@@ -868,13 +870,16 @@ public:
             MicroAPI::Mul(x, x, rstdValue, pregLoop);
             MicroAPI::ReduceSum(sum, x, pregLoop);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)dgammaAddr) + idxInLevel0Cache, sum, pregMerge);
+                ((__local_mem__ float*)dgammaAddr) + idxInLevel0Cache, sum, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDgammaLessThanVLFoldVF(const __local_mem__ DY_TYPE *dyAddr,
-        const __local_mem__ DY_TYPE *xAddr, const __local_mem__ float *meanAddr, const __local_mem__ float *rstdAddr,
-        const __local_mem__ float *dgammaAddr, uint32_t idx, uint32_t r, uint32_t tailR)
+    __aicore__ inline void CalcDgammaLessThanVLFoldVF(const __local_mem__ DY_TYPE* dyAddr,
+                                                      const __local_mem__ DY_TYPE* xAddr,
+                                                      const __local_mem__ float* meanAddr,
+                                                      const __local_mem__ float* rstdAddr,
+                                                      const __local_mem__ float* dgammaAddr, uint32_t idx, uint32_t r,
+                                                      uint32_t tailR)
     {
         uint32_t idxInLevel0Cache = idx & (ONE_LEVEL_BINARRY_ADD_CACHE_CAPACITY - 1);
         __VEC_SCOPE__
@@ -890,8 +895,8 @@ public:
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             uint32_t sreg0 = r;
             uint32_t sreg1 = tailR;
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float *)(rstdAddr));
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float*)(rstdAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float*)(meanAddr));
 
             MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
             MicroAPI::MaskReg pregTailLoop = MicroAPI::UpdateMask<float>(sreg1);
@@ -911,53 +916,55 @@ public:
             MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(x, tmp, pregTailLoop);
             MicroAPI::ReduceSum(sum, x, pregLoop);
             MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                ((__local_mem__ float *)dgammaAddr) + idxInLevel0Cache, sum, pregMerge);
+                ((__local_mem__ float*)dgammaAddr) + idxInLevel0Cache, sum, pregMerge);
         }
     }
 
-    __aicore__ inline void CalcDgamma(LocalTensor<DY_TYPE> &dy, LocalTensor<DY_TYPE> &x, LocalTensor<float> &mean,
-        LocalTensor<float> &rstd, LocalTensor<float> &dgamma, LocalTensor<float> &binaryAdd, uint32_t idx, uint32_t r,
-        const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDgamma(LocalTensor<DY_TYPE>& dy, LocalTensor<DY_TYPE>& x, LocalTensor<float>& mean,
+                                      LocalTensor<float>& rstd, LocalTensor<float>& dgamma,
+                                      LocalTensor<float>& binaryAdd, uint32_t idx, uint32_t r,
+                                      const BinaryAddParam& binaryAddParam)
     {
         if (r <= VL_FP32) {
-            CalcDgammaLessThanVLVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(), (__local_mem__ DY_TYPE *)x.GetPhyAddr(),
-                (__local_mem__ float *)mean.GetPhyAddr(), (__local_mem__ float *)rstd.GetPhyAddr(),
-                (__local_mem__ float *)dgamma.GetPhyAddr(), idx, r);
+            CalcDgammaLessThanVLVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ DY_TYPE*)x.GetPhyAddr(),
+                                   (__local_mem__ float*)mean.GetPhyAddr(), (__local_mem__ float*)rstd.GetPhyAddr(),
+                                   (__local_mem__ float*)dgamma.GetPhyAddr(), idx, r);
         } else {
-            CalcDgammaVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(), (__local_mem__ DY_TYPE *)x.GetPhyAddr(),
-                (__local_mem__ float *)mean.GetPhyAddr(), (__local_mem__ float *)rstd.GetPhyAddr(),
-                (__local_mem__ float *)dgamma.GetPhyAddr(), (__local_mem__ float *)binaryAdd.GetPhyAddr(), idx, r,
-                binaryAddParam);
+            CalcDgammaVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ DY_TYPE*)x.GetPhyAddr(),
+                         (__local_mem__ float*)mean.GetPhyAddr(), (__local_mem__ float*)rstd.GetPhyAddr(),
+                         (__local_mem__ float*)dgamma.GetPhyAddr(), (__local_mem__ float*)binaryAdd.GetPhyAddr(), idx,
+                         r, binaryAddParam);
         }
     }
 
-    __aicore__ inline void CalcDgammaFold(LocalTensor<DY_TYPE> &dy, LocalTensor<DY_TYPE> &x, LocalTensor<float> &mean,
-        LocalTensor<float> &rstd, LocalTensor<float> &dgamma, LocalTensor<float> &binaryAdd, uint32_t idx, uint32_t r,
-        uint32_t tailR, const BinaryAddParam &binaryAddParam)
+    __aicore__ inline void CalcDgammaFold(LocalTensor<DY_TYPE>& dy, LocalTensor<DY_TYPE>& x, LocalTensor<float>& mean,
+                                          LocalTensor<float>& rstd, LocalTensor<float>& dgamma,
+                                          LocalTensor<float>& binaryAdd, uint32_t idx, uint32_t r, uint32_t tailR,
+                                          const BinaryAddParam& binaryAddParam)
     {
         if (r <= VL_FP32) {
-            CalcDgammaLessThanVLFoldVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(),
-                (__local_mem__ DY_TYPE *)x.GetPhyAddr(), (__local_mem__ float *)mean.GetPhyAddr(),
-                (__local_mem__ float *)rstd.GetPhyAddr(), (__local_mem__ float *)dgamma.GetPhyAddr(), idx, r, tailR);
+            CalcDgammaLessThanVLFoldVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ DY_TYPE*)x.GetPhyAddr(),
+                                       (__local_mem__ float*)mean.GetPhyAddr(), (__local_mem__ float*)rstd.GetPhyAddr(),
+                                       (__local_mem__ float*)dgamma.GetPhyAddr(), idx, r, tailR);
         } else {
-            CalcDgammaFoldVF((__local_mem__ DY_TYPE *)dy.GetPhyAddr(), (__local_mem__ DY_TYPE *)x.GetPhyAddr(),
-                (__local_mem__ float *)mean.GetPhyAddr(), (__local_mem__ float *)rstd.GetPhyAddr(),
-                (__local_mem__ float *)dgamma.GetPhyAddr(), (__local_mem__ float *)binaryAdd.GetPhyAddr(), idx, r,
-                tailR, binaryAddParam);
+            CalcDgammaFoldVF((__local_mem__ DY_TYPE*)dy.GetPhyAddr(), (__local_mem__ DY_TYPE*)x.GetPhyAddr(),
+                             (__local_mem__ float*)mean.GetPhyAddr(), (__local_mem__ float*)rstd.GetPhyAddr(),
+                             (__local_mem__ float*)dgamma.GetPhyAddr(), (__local_mem__ float*)binaryAdd.GetPhyAddr(),
+                             idx, r, tailR, binaryAddParam);
         }
     }
 
-    __aicore__ inline void CalcDx(LocalTensor<DY_TYPE> &x, LocalTensor<DY_TYPE> &dy, LocalTensor<float> &rstd,
-        LocalTensor<float> &mean, LocalTensor<WEIGHT_TYPE> &gamma, LocalTensor<float> &dgamma,
-        LocalTensor<float> &dbeta, uint32_t xFactor, uint32_t r)
+    __aicore__ inline void CalcDx(LocalTensor<DY_TYPE>& x, LocalTensor<DY_TYPE>& dy, LocalTensor<float>& rstd,
+                                  LocalTensor<float>& mean, LocalTensor<WEIGHT_TYPE>& gamma, LocalTensor<float>& dgamma,
+                                  LocalTensor<float>& dbeta, uint32_t xFactor, uint32_t r)
     {
-        __local_mem__ DY_TYPE *xAddr = (__local_mem__ DY_TYPE *)x.GetPhyAddr();
-        __local_mem__ DY_TYPE *dyAddr = (__local_mem__ DY_TYPE *)dy.GetPhyAddr();
-        __local_mem__ float *rstdAddr = (__local_mem__ float *)rstd.GetPhyAddr();
-        __local_mem__ float *meanAddr = (__local_mem__ float *)mean.GetPhyAddr();
-        __local_mem__ WEIGHT_TYPE *gammaAddr = (__local_mem__ WEIGHT_TYPE *)gamma.GetPhyAddr();
-        __local_mem__ float *dgammaAddr = (__local_mem__ float *)dgamma.GetPhyAddr();
-        __local_mem__ float *dbetaAddr = (__local_mem__ float *)dbeta.GetPhyAddr();
+        __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)x.GetPhyAddr();
+        __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dy.GetPhyAddr();
+        __local_mem__ float* rstdAddr = (__local_mem__ float*)rstd.GetPhyAddr();
+        __local_mem__ float* meanAddr = (__local_mem__ float*)mean.GetPhyAddr();
+        __local_mem__ WEIGHT_TYPE* gammaAddr = (__local_mem__ WEIGHT_TYPE*)gamma.GetPhyAddr();
+        __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgamma.GetPhyAddr();
+        __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbeta.GetPhyAddr();
 
         uint16_t VL = VL_FP32;
         uint16_t loopTimes = (xFactor + VL - 1) / VL;
@@ -980,11 +987,11 @@ public:
             MicroAPI::RegTensor<float> dx;
             MicroAPI::MaskReg preg = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
 
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float *)(rstdAddr));
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__local_mem__ float*)(rstdAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float*)(meanAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dgammaValue,
-                (__local_mem__ float *)(dgammaAddr));
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dbetaValue, (__local_mem__ float *)(dbetaAddr));
+                                                                        (__local_mem__ float*)(dgammaAddr));
+            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dbetaValue, (__local_mem__ float*)(dbetaAddr));
             LoadOneElement<WEIGHT_TYPE>(gammaAddr, gammaValue, preg, 0);
 
             uint32_t sregMask = (uint32_t)xFactor;
@@ -1007,11 +1014,11 @@ public:
         }
     }
 
-    __aicore__ inline void ReSaveDGammaDBeta(LocalTensor<float> &dgamma, LocalTensor<float> &dbeta)
+    __aicore__ inline void ReSaveDGammaDBeta(LocalTensor<float>& dgamma, LocalTensor<float>& dbeta)
     {
         if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {
-            __local_mem__ float *dgammaAddr = (__local_mem__ float *)dgamma.GetPhyAddr();
-            __local_mem__ float *dbetaAddr = (__local_mem__ float *)dbeta.GetPhyAddr();
+            __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgamma.GetPhyAddr();
+            __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbeta.GetPhyAddr();
 
             __VEC_SCOPE__
             {
@@ -1019,9 +1026,9 @@ public:
                 MicroAPI::RegTensor<float> dbetaValue;
                 MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
                 MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dgammaValue,
-                    (__local_mem__ float *)(dgammaAddr));
+                                                                            (__local_mem__ float*)(dgammaAddr));
                 MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dbetaValue,
-                    (__local_mem__ float *)(dbetaAddr));
+                                                                            (__local_mem__ float*)(dbetaAddr));
                 StoreOneElement<WEIGHT_TYPE>(dbetaAddr, dbetaValue, pregMerge, 0);
                 StoreOneElement<WEIGHT_TYPE>(dgammaAddr, dgammaValue, pregMerge, 0);
             }
@@ -1029,23 +1036,23 @@ public:
         return;
     }
 
-    __aicore__ inline void CopyOutDx(LocalTensor<DY_TYPE> &dx, uint64_t offset, uint32_t r1Factor)
+    __aicore__ inline void CopyOutDx(LocalTensor<DY_TYPE>& dx, uint64_t offset, uint32_t r1Factor)
     {
         CopyOutRAR(dx, dxGm_, offset, r1Factor);
     }
 
-    __aicore__ inline void CopyOutDgamma(LocalTensor<WEIGHT_TYPE> &dgamma, uint64_t meanOffset, uint32_t a)
+    __aicore__ inline void CopyOutDgamma(LocalTensor<WEIGHT_TYPE>& dgamma, uint64_t meanOffset, uint32_t a)
     {
         CopyOutA(dgamma, dgammaGm_, meanOffset, a);
     }
 
-    __aicore__ inline void CopyOutDbeta(LocalTensor<WEIGHT_TYPE> &dbeta, uint64_t meanOffset, uint32_t a)
+    __aicore__ inline void CopyOutDbeta(LocalTensor<WEIGHT_TYPE>& dbeta, uint64_t meanOffset, uint32_t a)
     {
         CopyOutA(dbeta, dbetaGm_, meanOffset, a);
     }
 
-    __aicore__ inline void CopyInRAR(LocalTensor<DY_TYPE> &localTensor, GlobalTensor<DY_TYPE> &globalTensor,
-        uint64_t localOffset, uint64_t globalOffset, uint64_t r1Factor)
+    __aicore__ inline void CopyInRAR(LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor,
+                                     uint64_t localOffset, uint64_t globalOffset, uint64_t r1Factor)
     {
         // RAR -> AR，R轴通过Compact Mode补pad到block对齐。
         DataCopyPadExtParams<DY_TYPE> dataCopyPadExtParams;
@@ -1059,12 +1066,12 @@ public:
         copyInParams.srcStride = (aDim_ - 1) * r0Dim_ * sizeof(DY_TYPE);
         copyInParams.dstStride = 0;
         DataCopyPad<DY_TYPE, PaddingMode::Compact>(localTensor[localOffset], globalTensor[globalOffset], copyInParams,
-            dataCopyPadExtParams);
+                                                   dataCopyPadExtParams);
     }
 
     template <typename U>
-    __aicore__ inline void CopyInA(LocalTensor<U> &localTensor, GlobalTensor<U> &globalTensor, uint64_t offset,
-        uint64_t a)
+    __aicore__ inline void CopyInA(LocalTensor<U>& localTensor, GlobalTensor<U>& globalTensor, uint64_t offset,
+                                   uint64_t a)
     {
         DataCopyPadExtParams<U> dataCopyPadExtParams;
         dataCopyPadExtParams.isPad = false;
@@ -1079,8 +1086,8 @@ public:
         DataCopyPad<U, PaddingMode::Compact>(localTensor, globalTensor[offset], copyInParams, dataCopyPadExtParams);
     }
 
-    __aicore__ inline void CopyOutRAR(LocalTensor<DY_TYPE> &localTensor, GlobalTensor<DY_TYPE> &globalTensor,
-        uint64_t offset, uint64_t r1Factor)
+    __aicore__ inline void CopyOutRAR(LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor,
+                                      uint64_t offset, uint64_t r1Factor)
     {
         // RR -> RAR
         DataCopyExtParams copyOutParams;
@@ -1091,8 +1098,8 @@ public:
         DataCopyPad<DY_TYPE, PaddingMode::Compact>(globalTensor[offset], localTensor, copyOutParams);
     }
 
-    __aicore__ inline void CopyOutA(LocalTensor<WEIGHT_TYPE> &localTensor, GlobalTensor<WEIGHT_TYPE> &globalTensor,
-        uint64_t offset, uint64_t a)
+    __aicore__ inline void CopyOutA(LocalTensor<WEIGHT_TYPE>& localTensor, GlobalTensor<WEIGHT_TYPE>& globalTensor,
+                                    uint64_t offset, uint64_t a)
     {
         DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = 1;
@@ -1103,7 +1110,7 @@ public:
     }
 
 private:
-    TPipe *pipe_ = nullptr;
+    TPipe* pipe_ = nullptr;
     TBuf<TPosition::VECCALC> binaryAddBuf_;
     TBuf<TPosition::VECCALC> cacheBuf_;
     TQue<QuePosition::VECIN, BUFFER_NUM> dyInQue_;
@@ -1121,38 +1128,38 @@ private:
     event_t V_MTE3_EVENT;
     event_t MTE3_MTE2_EVENT;
 
-    uint32_t r1Dim_{ 0 };
-    uint32_t aDim_{ 0 };
-    uint32_t r0Dim_{ 0 };
-    uint32_t rAlign_{ 0 };
-    uint32_t binaryAddQuotient_{ 0 };
-    uint32_t binaryAddK_{ 0 };
-    uint32_t binaryAddLastNum_{ 0 };
-    uint32_t aTailCoreNum_{ 0 };
-    uint32_t aDimTail_{ 0 };
-    uint32_t gmOffset_{ 0 };
-    uint32_t aDimLoopNum_{ 0 };
-    uint32_t dyBufSize_{ 0 };
-    uint32_t xBufSize_{ 0 };
-    uint32_t halfXBufOffset_{ 0 };
-    uint32_t xBufElemNum_{ 0 };
-    uint32_t meanBufSize_{ 0 };
-    uint32_t meanBufElemNum_{ 0 };
-    uint32_t gammaBufSize_{ 0 };
-    uint32_t gammaBufElemNum_{ 0 };
-    uint32_t binaryAddBufSize_{ 0 };
-    uint32_t binaryAddBufElemNum_{ 0 };
-    uint32_t blockNum_{ 0 };
-    uint64_t ubRDimLoopNum_{ 0 };
-    uint64_t nFactor_{ 0 };
-    uint64_t tailNFactor_{ 0 };
-    uint64_t ubRDimTailFactor_{ 0 };
-    uint64_t ubRDimTailTailFactor_{ 0 };
+    uint32_t r1Dim_{0};
+    uint32_t aDim_{0};
+    uint32_t r0Dim_{0};
+    uint32_t rAlign_{0};
+    uint32_t binaryAddQuotient_{0};
+    uint32_t binaryAddK_{0};
+    uint32_t binaryAddLastNum_{0};
+    uint32_t aTailCoreNum_{0};
+    uint32_t aDimTail_{0};
+    uint32_t gmOffset_{0};
+    uint32_t aDimLoopNum_{0};
+    uint32_t dyBufSize_{0};
+    uint32_t xBufSize_{0};
+    uint32_t halfXBufOffset_{0};
+    uint32_t xBufElemNum_{0};
+    uint32_t meanBufSize_{0};
+    uint32_t meanBufElemNum_{0};
+    uint32_t gammaBufSize_{0};
+    uint32_t gammaBufElemNum_{0};
+    uint32_t binaryAddBufSize_{0};
+    uint32_t binaryAddBufElemNum_{0};
+    uint32_t blockNum_{0};
+    uint64_t ubRDimLoopNum_{0};
+    uint64_t nFactor_{0};
+    uint64_t tailNFactor_{0};
+    uint64_t ubRDimTailFactor_{0};
+    uint64_t ubRDimTailTailFactor_{0};
 
-    uint32_t tailBinaryAddQuotient_{ 0 };
-    uint32_t tailBinaryAddK_{ 0 };
-    uint32_t tailBinaryAddLastNum_{ 0 };
-    uint64_t ubRDimTailLoopNum_{ 0 };
+    uint32_t tailBinaryAddQuotient_{0};
+    uint32_t tailBinaryAddK_{0};
+    uint32_t tailBinaryAddLastNum_{0};
+    uint64_t ubRDimTailLoopNum_{0};
     BinaryAddParam binaryAddParam_;
     BinaryAddParam tailBinaryAddParam_;
     LocalTensor<float> dBetaLocal_;

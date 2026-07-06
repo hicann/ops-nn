@@ -23,12 +23,11 @@
 #include "arch35/apply_adam_with_amsgrad_v2_kernel.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void apply_adam_with_amsgrad_v2(
-    GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat,
-    GM_ADDR beta1_power, GM_ADDR beta2_power, GM_ADDR lr,
-    GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
-    GM_ADDR var_out, GM_ADDR m_out, GM_ADDR v_out, GM_ADDR vhat_out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void apply_adam_with_amsgrad_v2(GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat,
+                                                      GM_ADDR beta1_power, GM_ADDR beta2_power, GM_ADDR lr,
+                                                      GM_ADDR beta1, GM_ADDR beta2, GM_ADDR epsilon, GM_ADDR grad,
+                                                      GM_ADDR var_out, GM_ADDR m_out, GM_ADDR v_out, GM_ADDR vhat_out,
+                                                      GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ApplyAdamWithAmsgradV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyAdamWithAmsgradV2TilingData, tilingData, tiling);
@@ -41,7 +40,7 @@ __global__ __aicore__ void apply_adam_with_amsgrad_v2(
     (void)beta2;
     (void)epsilon;
     (void)workspace;
-    (void)schMode;  // 占位轴（无其它分发维度），dtype 走构建系统注入的 DTYPE_VAR 宏
+    (void)schMode; // 占位轴（无其它分发维度），dtype 走构建系统注入的 DTYPE_VAR 宏
 
     NsApplyAdamWithAmsgradV2::ApplyAdamWithAmsgradV2<DTYPE_VAR> op;
     op.Init(var, m, v, vhat, grad, var_out, m_out, v_out, vhat_out, &tilingData);

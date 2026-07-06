@@ -47,12 +47,11 @@ constexpr int64_t MIN_GRAD_REDUCE_AXIS = 1024;
 constexpr int64_t MAX_GRAD_REDUCE_AXIS = 4096;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                   DataType::DT_BF16};
 
-inline static bool CheckNotNull(
-    const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* mean,
-    const aclTensor* rstd, const aclBoolArray* outputMask)
+inline static bool CheckNotNull(const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape,
+                                const aclTensor* mean, const aclTensor* rstd, const aclBoolArray* outputMask)
 {
     // 校验输入是否为空指针
     OP_CHECK_NULL(gradOut, return false);
@@ -76,10 +75,9 @@ inline static bool CheckOptionalDtype(const aclTensor* tensorOptional)
     return true;
 }
 
-static bool CheckDtype(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* weightOptional, const aclTensor* biasOptional, const aclTensor* gradInputOut,
-    const aclTensor* gradWeightOut, const aclTensor* gradBiasOut)
+static bool CheckDtype(const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
+                       const aclTensor* weightOptional, const aclTensor* biasOptional, const aclTensor* gradInputOut,
+                       const aclTensor* gradWeightOut, const aclTensor* gradBiasOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOut, DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
@@ -127,11 +125,10 @@ static bool CheckShapeEqual(const aclTensor* input, const aclIntArray* normalize
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* mean,
-    const aclTensor* rstd, const aclTensor* weightOptional, const aclTensor* biasOptional,
-    const aclBoolArray* outputMask, const aclTensor* gradInputOut, const aclTensor* gradWeightOut,
-    const aclTensor* gradBiasOut, int64_t M, int64_t N)
+static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape,
+                       const aclTensor* mean, const aclTensor* rstd, const aclTensor* weightOptional,
+                       const aclTensor* biasOptional, const aclBoolArray* outputMask, const aclTensor* gradInputOut,
+                       const aclTensor* gradWeightOut, const aclTensor* gradBiasOut, int64_t M, int64_t N)
 {
     // 1.检查输入维度是否小于8维
     OP_CHECK_MAX_DIM(gradOut, MAX_DIM_LEN, return false);
@@ -157,10 +154,9 @@ static bool CheckShape(
 
     // 2.检查normalizedShape的长度是否大于等于1
     if (normalizedShape->Size() < LEAST_NORMALIZED_SHAPE_LEN) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
-            normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
+                normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
         return false;
     }
     // 3.检查input维度是否不小于normalizedShape的长度
@@ -192,10 +188,9 @@ static bool CheckShape(
     // 8.校验mean和rstd的shape是否相等
     OP_CHECK_SHAPE_NOT_EQUAL(mean, rstd, return false);
     if (mean->GetViewShape().GetShapeSize() != M) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNormBackward mean shape size %s to be equal to %ld but check failed.",
-            ToString(mean->GetViewShape()).GetString(), M);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNormBackward mean shape size %s to be equal to %ld but check failed.",
+                ToString(mean->GetViewShape()).GetString(), M);
         return false;
     }
     // 9.校验输出shape间的关系
@@ -203,39 +198,34 @@ static bool CheckShape(
         OP_CHECK_SHAPE_NOT_EQUAL(gradInputOut, input, return false);
     }
     if ((*outputMask)[GRAD_WEIGHT_INDEX] && gradWeightOut->GetViewShape().GetShapeSize() != N) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNormBackward gradWeightOut shape size [%s] to be equal to [%ld] but check failed.",
-            ToString(gradWeightOut->GetViewShape()).GetString(), N);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNormBackward gradWeightOut shape size [%s] to be equal to [%ld] but check failed.",
+                ToString(gradWeightOut->GetViewShape()).GetString(), N);
         return false;
     }
     if ((*outputMask)[GRAD_BIAS_INDEX] && gradBiasOut->GetViewShape().GetShapeSize() != N) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNormBackward gradBiasOut shape size [%s] to be equal to [%ld] but check failed.",
-            ToString(gradBiasOut->GetViewShape()).GetString(), N);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected aclnnLayerNormBackward gradBiasOut shape size [%s] to be equal to [%ld] but check failed.",
+                ToString(gradBiasOut->GetViewShape()).GetString(), N);
         return false;
     }
 
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* mean,
-    const aclTensor* rstd, const aclTensor* weightOptional, const aclTensor* biasOptional,
-    const aclBoolArray* outputMask, aclTensor* gradInputOut, aclTensor* gradWeightOut, aclTensor* gradBiasOut,
-    int64_t M, int64_t N)
+static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape,
+                               const aclTensor* mean, const aclTensor* rstd, const aclTensor* weightOptional,
+                               const aclTensor* biasOptional, const aclBoolArray* outputMask, aclTensor* gradInputOut,
+                               aclTensor* gradWeightOut, aclTensor* gradBiasOut, int64_t M, int64_t N)
 {
     // 1. 检查数据类型是否在API支持的数据类型范围之内
     CHECK_RET(
         CheckDtype(gradOut, input, mean, rstd, weightOptional, biasOptional, gradInputOut, gradWeightOut, gradBiasOut),
         ACLNN_ERR_PARAM_INVALID);
     // 2. 检查入参间的shape关系
-    CHECK_RET(
-        CheckShape(
-            gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask, gradInputOut,
-            gradWeightOut, gradBiasOut, M, N),
-        ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask,
+                         gradInputOut, gradWeightOut, gradBiasOut, M, N),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -253,16 +243,17 @@ static aclnnStatus GenOutWithMask(const aclTensor* tempOut, const aclTensor* out
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* mean,
-    const aclTensor* rstd, const aclTensor* weightOptional, const aclTensor* biasOptional,
-    const aclBoolArray* outputMask, aclTensor* gradInputOut, aclTensor* gradWeightOut, aclTensor* gradBiasOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
+                                                   const aclIntArray* normalizedShape, const aclTensor* mean,
+                                                   const aclTensor* rstd, const aclTensor* weightOptional,
+                                                   const aclTensor* biasOptional, const aclBoolArray* outputMask,
+                                                   aclTensor* gradInputOut, aclTensor* gradWeightOut,
+                                                   aclTensor* gradBiasOut, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnLayerNormBackward,
-        DFX_IN(gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask),
-        DFX_OUT(gradInputOut, gradWeightOut, gradBiasOut));
+    L2_DFX_PHASE_1(aclnnLayerNormBackward,
+                   DFX_IN(gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask),
+                   DFX_OUT(gradInputOut, gradWeightOut, gradBiasOut));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -271,9 +262,8 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
     CHECK_RET(CheckNotNull(gradOut, input, normalizedShape, mean, rstd, outputMask), ACLNN_ERR_PARAM_NULLPTR);
     // outputMask长度只能为3
     if (outputMask->Size() != NORMALIZE_LEN) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Expected aclnnLayerNormBackward outputMask len to be 3, but got %zu.",
-            outputMask->Size());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected aclnnLayerNormBackward outputMask len to be 3, but got %zu.",
+                outputMask->Size());
         return ACLNN_ERR_PARAM_INVALID;
     }
     if ((*outputMask)[GRAD_INPUT_INDEX]) {
@@ -299,15 +289,12 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         N *= inputShape.GetDim(index);
     }
     // 固定写法，参数检查
-    auto ret = CheckParams(
-        gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask, gradInputOut,
-        gradWeightOut, gradBiasOut, M, N);
+    auto ret = CheckParams(gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask,
+                           gradInputOut, gradWeightOut, gradBiasOut, M, N);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // outputMask全为False时直接结束
-    if (!(*outputMask)[GRAD_INPUT_INDEX] &&
-        !(*outputMask)[GRAD_WEIGHT_INDEX] &&
-        !(*outputMask)[GRAD_BIAS_INDEX]) {
+    if (!(*outputMask)[GRAD_INPUT_INDEX] && !(*outputMask)[GRAD_WEIGHT_INDEX] && !(*outputMask)[GRAD_BIAS_INDEX]) {
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
@@ -361,17 +348,17 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         // npuArch 3510 支持更多的输出数据类型，只在不满足信息库条件时cast
         DataType gradWeightType = DataType::DT_FLOAT;
         if (Ops::NN::AclnnUtil::IsRegbase(curArch) &&
-            (!(*outputMask)[GRAD_BIAS_INDEX] || (gradBiasOut->GetDataType() == weightContiguous->GetDataType())) && 
+            (!(*outputMask)[GRAD_BIAS_INDEX] || (gradBiasOut->GetDataType() == weightContiguous->GetDataType())) &&
             (!(*outputMask)[GRAD_WEIGHT_INDEX] || (gradWeightOut->GetDataType() == weightContiguous->GetDataType()))) {
             gradWeightType = weightContiguous->GetDataType();
         }
         std::array<aclTensor*, GRAD_OUT_NUM> gradRes = l0op::LayerNormGradV3(
-            gradOutContiguous, inputContiguous, rstdContiguousFp32, meanContiguousFp32, weightContiguous, outputMask, gradWeightType,
-            uniqueExecutor.get());
+            gradOutContiguous, inputContiguous, rstdContiguousFp32, meanContiguousFp32, weightContiguous, outputMask,
+            gradWeightType, uniqueExecutor.get());
         // 根据mask处理输出
         GenOutWithMask(gradRes[GRAD_INPUT_INDEX], gradInputOut, (*outputMask)[GRAD_INPUT_INDEX], uniqueExecutor.get());
-        GenOutWithMask(
-            gradRes[GRAD_WEIGHT_INDEX], gradWeightOut, (*outputMask)[GRAD_WEIGHT_INDEX], uniqueExecutor.get());
+        GenOutWithMask(gradRes[GRAD_WEIGHT_INDEX], gradWeightOut, (*outputMask)[GRAD_WEIGHT_INDEX],
+                       uniqueExecutor.get());
         GenOutWithMask(gradRes[GRAD_BIAS_INDEX], gradBiasOut, (*outputMask)[GRAD_BIAS_INDEX], uniqueExecutor.get());
     } else {
         OP_LOGD("Entering into layer_norm_backward split ops Func.");
@@ -389,8 +376,8 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         }
         const aclTensor* meanCast = nullptr;
         const aclTensor* rstdCast = nullptr;
-        bool isMeanCastTempB16 =
-            (meanCastTemp->GetDataType() == DataType::DT_FLOAT16 || meanCastTemp->GetDataType() == DataType::DT_BF16);
+        bool isMeanCastTempB16 = (meanCastTemp->GetDataType() == DataType::DT_FLOAT16 ||
+                                  meanCastTemp->GetDataType() == DataType::DT_BF16);
         if (weightContiguous->GetDataType() == DataType::DT_FLOAT && isMeanCastTempB16) {
             meanCast = l0op::Cast(meanCastTemp, DataType::DT_FLOAT, uniqueExecutor.get());
             CHECK_RET(meanCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -406,8 +393,8 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
         auto TempWeightRes = xBackpropV3Res[1];
         CHECK_RET(TempWeightRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 调用layer_norm_beta_gamma_backprop_v2算子进行计算
-        std::array<aclTensor*, BETA_GAMMAX_NUM> betaGammaBackpropV2Res =
-            l0op::LayerNormBetaGammaBackpropV2(gradOutContiguous, TempWeightRes, normalizedShape, uniqueExecutor.get());
+        std::array<aclTensor*, BETA_GAMMAX_NUM> betaGammaBackpropV2Res = l0op::LayerNormBetaGammaBackpropV2(
+            gradOutContiguous, TempWeightRes, normalizedShape, uniqueExecutor.get());
         CHECK_RET(betaGammaBackpropV2Res[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaGammaBackpropV2Res[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 调用SqueezeNd将reduce的输出shape前面的1轴删除

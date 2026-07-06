@@ -36,31 +36,30 @@ static op::Shape RepeatInterleaveInferShape(const aclTensor* x, int64_t axis, in
 }
 
 // 只支持AICORE
-const aclTensor* RepeatInterleave(
-    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor)
+const aclTensor* RepeatInterleave(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
+                                  aclOpExecutor* executor)
 {
     L0_DFX(RepeatInterleave, x, repeats, axis, outputSize);
     op::Shape outShape = RepeatInterleaveInferShape(x, axis, outputSize);
     auto out = executor->AllocTensor(outShape, x->GetDataType(), x->GetViewFormat());
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleave, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
 // 只支持AICORE
-const aclTensor* RepeatInterleaveV2(
-    const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize, aclOpExecutor* executor)
+const aclTensor* RepeatInterleaveV2(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize,
+                                    aclOpExecutor* executor)
 {
     L0_DFX(RepeatInterleaveV2, x, repeats, axis, outputSize);
     op::Shape outShape = RepeatInterleaveInferShape(x, axis, outputSize);
     auto out = executor->AllocTensor(outShape, x->GetDataType(), x->GetViewFormat());
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleaveV2, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 } // namespace l0op

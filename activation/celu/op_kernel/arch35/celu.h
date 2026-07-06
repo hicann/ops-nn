@@ -144,8 +144,8 @@ __aicore__ inline void Celu<T>::Compute(int64_t currentNum)
     uint32_t alignedCount = ((currentNum * sizeof(T) + 255) / 256) * (256 / sizeof(T));
     AscendC::Duplicate(zerosBuf, static_cast<T>(0), alignedCount);
     AscendC::Compare(maskBuf, inputLocal, zerosBuf, AscendC::CMPMODE::GE, alignedCount);
-    AscendC::Select(outputLocal, maskBuf, outputLocal, negResult,
-        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, static_cast<uint32_t>(currentNum));
+    AscendC::Select(outputLocal, maskBuf, outputLocal, negResult, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                    static_cast<uint32_t>(currentNum));
 
     inputQueue.FreeTensor(inputLocal);
     outputQueue.EnQue(outputLocal);

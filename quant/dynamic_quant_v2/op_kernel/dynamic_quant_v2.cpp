@@ -26,9 +26,8 @@
 using namespace AscendC;
 using namespace DynamicQuantNDOpt;
 
-extern "C" __global__ __aicore__ void dynamic_quant_v2(
-    GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y,
+                                                       GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (x == nullptr || y == nullptr || scale == nullptr) {
         return;

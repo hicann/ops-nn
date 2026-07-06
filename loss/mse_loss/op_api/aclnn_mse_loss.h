@@ -53,4 +53,4 @@ ACLNN_API aclnnStatus aclnnMseLoss(void* workspace, uint64_t workspaceSize, aclO
 }
 #endif
 
-#endif  // OP_API_INC_MSE_LOSS_H_
+#endif // OP_API_INC_MSE_LOSS_H_

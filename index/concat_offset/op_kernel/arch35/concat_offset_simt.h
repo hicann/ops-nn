@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file concat_offset_simt.h
  * \brief
  */
@@ -35,14 +35,14 @@ constexpr uint32_t TBUF_SIZE = 8192;
 namespace ConcatOffset {
 using namespace AscendC;
 
-
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputer(GM_ADDR x, GM_ADDR y, uint32_t m0, uint32_t shift0, __local_mem__ T* tmpLocal,
-                                                     uint32_t perTensorShapeSize, uint32_t concatDim, uint32_t needCalNum)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputer(
+    GM_ADDR x, GM_ADDR y, uint32_t m0, uint32_t shift0, __local_mem__ T* tmpLocal, uint32_t perTensorShapeSize,
+    uint32_t concatDim, uint32_t needCalNum)
 {
-    for (uint32_t curCalIdx = static_cast<uint32_t>(threadIdx.x); curCalIdx < needCalNum; curCalIdx += static_cast<uint32_t>(blockDim.x))
-    {
-        uint32_t curCalIdx_y = Simt::UintDiv(curCalIdx, m0, shift0);  // threadIdx_y
+    for (uint32_t curCalIdx = static_cast<uint32_t>(threadIdx.x); curCalIdx < needCalNum;
+         curCalIdx += static_cast<uint32_t>(blockDim.x)) {
+        uint32_t curCalIdx_y = Simt::UintDiv(curCalIdx, m0, shift0);         // threadIdx_y
         uint32_t curCalIdx_x = curCalIdx - perTensorShapeSize * curCalIdx_y; // threadIdx_x
         if (curCalIdx_x == 0) {
             __gm__ uint64_t* xDataAddr = reinterpret_cast<__gm__ uint64_t*>(x);
@@ -66,13 +66,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
     }
 }
 
-
 template <typename T>
 class ConcatOffsetSimt {
 public:
-  __aicore__ inline ConcatOffsetSimt(){};
-  __aicore__ inline void Init(const ConcatOffsetTilingData* tilingData);
-  __aicore__ inline void Process(GM_ADDR x, GM_ADDR y);
+    __aicore__ inline ConcatOffsetSimt(){};
+    __aicore__ inline void Init(const ConcatOffsetTilingData* tilingData);
+    __aicore__ inline void Process(GM_ADDR x, GM_ADDR y);
 
 private:
     TPipe pipe_;
@@ -80,14 +79,12 @@ private:
     const ConcatOffsetTilingData* tilingData_ = nullptr;
 };
 
-
 template <typename T>
-__aicore__ inline void ConcatOffsetSimt<T>::Init(const ConcatOffsetTilingData* tilingData) 
+__aicore__ inline void ConcatOffsetSimt<T>::Init(const ConcatOffsetTilingData* tilingData)
 {
     tilingData_ = tilingData;
     pipe_.InitBuffer(tmpBuf_, TBUF_SIZE);
 }
-
 
 template <typename T>
 __aicore__ inline void ConcatOffsetSimt<T>::Process(GM_ADDR x, GM_ADDR y)
@@ -109,9 +106,9 @@ __aicore__ inline void ConcatOffsetSimt<T>::Process(GM_ADDR x, GM_ADDR y)
     uint32_t needCalNum = static_cast<uint32_t>(tilingData_->needCalNum);
     int32_t threadNum = static_cast<int32_t>(tilingData_->threadNum);
 
-    asc_vf_call<SimtComputer<T>>(dim3(threadNum), x, y, m0, shift0, (__local_mem__ T*) (tmpLocal.GetPhyAddr()),
-                                                                         perTensorShapeSize, concatDim, needCalNum);
+    asc_vf_call<SimtComputer<T>>(dim3(threadNum), x, y, m0, shift0, (__local_mem__ T*)(tmpLocal.GetPhyAddr()),
+                                 perTensorShapeSize, concatDim, needCalNum);
 }
 
-}  // namespace ConcatOffset
-#endif  // CONCAT_OFFSET_SIMT_H
+} // namespace ConcatOffset
+#endif // CONCAT_OFFSET_SIMT_H

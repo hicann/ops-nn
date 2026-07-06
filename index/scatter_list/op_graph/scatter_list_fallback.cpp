@@ -26,8 +26,7 @@ static const size_t MAX_TENSOR_NUM = 256;
 
 static graphStatus ScatterListHostExecuteFunc(OpExecuteContext* hostApiCtx)
 {
-    OP_CHECK_IF(
-        hostApiCtx == nullptr, OP_LOGE(hostApiCtx->GetNodeName(), "hostApiCtx is null"), return GRAPH_FAILED);
+    OP_CHECK_IF(hostApiCtx == nullptr, OP_LOGE(hostApiCtx->GetNodeName(), "hostApiCtx is null"), return GRAPH_FAILED);
     OP_LOGD(hostApiCtx->GetNodeName(), "ScatterListHostExecuteFunc in ");
 
     std::vector<const gert::Tensor*> geTenserListVar;
@@ -58,9 +57,8 @@ static graphStatus ScatterListHostExecuteFunc(OpExecuteContext* hostApiCtx)
 
     // execute opapi
     auto apiRet = EXEC_OPAPI_CMD(aclnnScatterList, ge_tenserListVar, indices, update, mask, reduce, *axis);
-    OP_CHECK_IF(
-        apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),
-        return GRAPH_FAILED);
+    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),
+                return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
 }

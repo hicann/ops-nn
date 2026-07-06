@@ -29,44 +29,36 @@ class ScatterupdateV2 : public OpDef {
 public:
     explicit ScatterupdateV2(const char* name) : OpDef(name)
     {
-        this->Input("input")                                       
-            .ParamType(REQUIRED)                                
-            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64,         
-                    ge::DT_UINT64,ge::DT_FLOAT16, ge::DT_INT16, ge::DT_UINT16, 
-                    ge::DT_BF16,ge::DT_INT8, ge::DT_UINT8})            
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND})            
-            .UnknownShapeFormat({ge::FORMAT_ND}) 
-            .AutoContiguous();                                 
-        this->Input("indices")                                       
+        this->Input("input")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND}) 
+            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64, ge::DT_FLOAT16,
+                       ge::DT_INT16, ge::DT_UINT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        this->Input("updates") 
+        this->Input("indices")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64,         
-                    ge::DT_UINT64,ge::DT_FLOAT16, ge::DT_INT16, ge::DT_UINT16, 
-                    ge::DT_BF16,ge::DT_INT8, ge::DT_UINT8})            
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND})   
+            .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                       ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("output") 
+        this->Input("updates")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64,         
-                    ge::DT_UINT64,ge::DT_FLOAT16, ge::DT_INT16, ge::DT_UINT16, 
-                    ge::DT_BF16,ge::DT_INT8, ge::DT_UINT8})            
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND,ge::FORMAT_ND})  
+            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64, ge::DT_FLOAT16,
+                       ge::DT_INT16, ge::DT_UINT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Output("output")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64, ge::DT_FLOAT16,
+                       ge::DT_INT16, ge::DT_UINT16, ge::DT_BF16, ge::DT_INT8, ge::DT_UINT8})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
 
@@ -77,8 +69,8 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "scatterupdate_v2");    
-        this->AICore().AddConfig("ascend910b", aicoreConfig); 
+            .ExtendCfgInfo("opFile.value", "scatterupdate_v2");
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
     }
 };
 OP_ADD(ScatterupdateV2); // 添加算子信息库

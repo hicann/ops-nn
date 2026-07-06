@@ -18,11 +18,11 @@
 
 #include <cstdint>
 
-constexpr int64_t kMaxInputSlots  = 3;
+constexpr int64_t kMaxInputSlots = 3;
 constexpr int64_t kMaxOutputSlots = 4;
-constexpr int64_t kPhysNodes      = 6;
-constexpr int64_t kCastBufs       = 1;
-constexpr int64_t kTotalBufsFp16  = kPhysNodes + kCastBufs;
+constexpr int64_t kPhysNodes = 6;
+constexpr int64_t kCastBufs = 1;
+constexpr int64_t kTotalBufsFp16 = kPhysNodes + kCastBufs;
 
 struct SplitResult {
     int64_t axis;
@@ -38,24 +38,24 @@ struct MultiCoreResult {
     int64_t cores_tail;
 };
 
-template<int64_t kRank>
+template <int64_t kRank>
 struct ActsUlqTilingData {
-    SplitResult     split;
+    SplitResult split;
     MultiCoreResult multicore;
-    int64_t         rank;
-    int64_t         per_buf_bytes;
-    int64_t         per_buf_elems;
-    int64_t         max_bro_shape[kRank];
+    int64_t rank;
+    int64_t per_buf_bytes;
+    int64_t per_buf_elems;
+    int64_t max_bro_shape[kRank];
 
-    int64_t         num_inputs;
-    int64_t         num_outputs;
-    int64_t         input_shapes [kMaxInputSlots][kRank];
-    int64_t         input_strides[kMaxInputSlots][kRank];
-    int64_t         output_shapes[kMaxOutputSlots][kRank];
-    int64_t         output_strides[kMaxOutputSlots][kRank];
+    int64_t num_inputs;
+    int64_t num_outputs;
+    int64_t input_shapes[kMaxInputSlots][kRank];
+    int64_t input_strides[kMaxInputSlots][kRank];
+    int64_t output_shapes[kMaxOutputSlots][kRank];
+    int64_t output_strides[kMaxOutputSlots][kRank];
 
-    int64_t         fixed_min;
-    int64_t         num_bits;
+    int64_t fixed_min;
+    int64_t num_bits;
 };
 
 #endif

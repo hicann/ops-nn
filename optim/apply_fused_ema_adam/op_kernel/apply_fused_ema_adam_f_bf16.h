@@ -22,13 +22,12 @@ namespace FusedEmaAdam {
 using namespace AscendC;
 
 template <typename T>
-class FusedEmaAdamF16 : public FusedEmaAdamBase<T>
-{
+class FusedEmaAdamF16 : public FusedEmaAdamBase<T> {
 public:
     __aicore__ inline FusedEmaAdamF16(){};
-    __aicore__ inline void Init(
-        GM_ADDR grad, GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR s, GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref,
-        GM_ADDR v_ref, GM_ADDR s_ref, const ApplyFusedEmaAdamTilingData& tiling, TPipe* pipe);
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR s, GM_ADDR step,
+                                GM_ADDR var_ref, GM_ADDR m_ref, GM_ADDR v_ref, GM_ADDR s_ref,
+                                const ApplyFusedEmaAdamTilingData& tiling, TPipe* pipe);
     __aicore__ inline void Process();
 
 protected:
@@ -56,9 +55,9 @@ protected:
 };
 
 template <typename T>
-__aicore__ inline void FusedEmaAdamF16<T>::Init(
-    GM_ADDR grad, GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR s, GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref,
-    GM_ADDR v_ref, GM_ADDR s_ref, const ApplyFusedEmaAdamTilingData& tiling, TPipe* pipe)
+__aicore__ inline void FusedEmaAdamF16<T>::Init(GM_ADDR grad, GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR s,
+                                                GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref, GM_ADDR v_ref,
+                                                GM_ADDR s_ref, const ApplyFusedEmaAdamTilingData& tiling, TPipe* pipe)
 {
     this->InitData(tiling);
     blockIdx = GetBlockIdx();
@@ -66,8 +65,8 @@ __aicore__ inline void FusedEmaAdamF16<T>::Init(
     if (blockIdx < this->frontCoreNum) {
         blockOffset = this->coreCalcNum * blockIdx;
     } else if (this->coreCalcNum - 1 != 0) {
-        blockOffset =
-            this->coreCalcNum * this->frontCoreNum + (blockIdx - this->frontCoreNum) * (this->coreCalcNum - 1);
+        blockOffset = this->coreCalcNum * this->frontCoreNum +
+                      (blockIdx - this->frontCoreNum) * (this->coreCalcNum - 1);
     }
 
     gmGrad.SetGlobalBuffer((__gm__ T*)grad + blockOffset);

@@ -16,9 +16,7 @@
 #include "register/op_impl_registry.h"
 
 namespace {
-class TestWeightQuantBatchMatmulV2InferShape : public testing::Test
-{
-};
+class TestWeightQuantBatchMatmulV2InferShape : public testing::Test {};
 
 TEST_F(TestWeightQuantBatchMatmulV2InferShape, InferShape)
 {
@@ -31,17 +29,16 @@ TEST_F(TestWeightQuantBatchMatmulV2InferShape, InferShape)
     gert::StorageShape antiQuantOffset = {{1664}, {1664}};
     gert::StorageShape yShape;
 
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(7, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-            .InputShapes({&xShape, &weightShape, &antiQuantScale, &antiQuantOffset, nullptr, nullptr, nullptr})
-            .OutputShapes({&yShape})
-            .NodeAttrs(
-                {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                 {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
-            .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &weightShape, &antiQuantScale, &antiQuantOffset, nullptr, nullptr, nullptr})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
@@ -66,9 +63,8 @@ TEST_F(TestWeightQuantBatchMatmulV2InferShape, UnknownDimNum)
                       .IrInstanceNum({1, 1, 1, 1})
                       .InputShapes({&xShape, &weightShape, &antiQuantScale, &antiQuantOffset})
                       .OutputShapes({&yShape})
-                      .NodeAttrs(
-                          {{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);

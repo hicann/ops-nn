@@ -14,9 +14,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* MatmulCompress(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* compressIndex, bool transposeX1,
-    bool transposeX2, int32_t compressK, int32_t compressN, aclOpExecutor* executor);
+const aclTensor* MatmulCompress(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                const aclTensor* compressIndex, bool transposeX1, bool transposeX2, int32_t compressK,
+                                int32_t compressN, aclOpExecutor* executor);
 }
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_MATMUL_COMPRESS_H

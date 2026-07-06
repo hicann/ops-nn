@@ -28,15 +28,9 @@ using namespace std;
 
 class BroadcastGradientArgsTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "BroadcastGradientArgsTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "BroadcastGradientArgsTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "BroadcastGradientArgsTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "BroadcastGradientArgsTilingTest TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -56,10 +50,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8 }, { 8 } };
-    gert::StorageShape x2Shape = { { 8 }, { 8 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8}, {8}};
+    gert::StorageShape x2Shape = {{8}, {8}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -89,12 +83,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -106,7 +100,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -115,9 +108,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -127,7 +120,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -141,8 +134,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "8 0 8 0 8 0 12208 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 8 0 8 0 12208 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -150,10 +142,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8 }, { 8 } };
-    gert::StorageShape x2Shape = { { 8 }, { 8 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8}, {8}};
+    gert::StorageShape x2Shape = {{8}, {8}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -183,12 +175,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -200,7 +192,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -209,9 +200,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -221,7 +212,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -235,8 +226,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "8 0 8 0 8 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 8 0 8 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -244,10 +234,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 3 }, { 3 } };
-    gert::StorageShape x2Shape = { { 8 }, { 8 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{3}, {3}};
+    gert::StorageShape x2Shape = {{8}, {8}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -277,12 +267,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -294,7 +284,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -303,9 +292,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -315,7 +304,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -329,8 +318,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "3 0 8 0 8 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "3 0 8 0 8 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -338,10 +326,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8 }, { 8 } };
-    gert::StorageShape x2Shape = { { 3 }, { 3 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8}, {8}};
+    gert::StorageShape x2Shape = {{3}, {3}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -371,12 +359,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -388,7 +376,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -397,9 +384,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -409,7 +396,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -423,8 +410,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "8 0 3 0 8 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 3 0 8 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -432,10 +418,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 0 }, { 0 } };
-    gert::StorageShape x2Shape = { { 8 }, { 8 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{0}, {0}};
+    gert::StorageShape x2Shape = {{8}, {8}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -465,12 +451,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -482,7 +468,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -491,9 +476,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -503,7 +488,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -517,8 +502,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "0 0 8 0 8 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "0 0 8 0 8 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -526,10 +510,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8 }, { 8 } };
-    gert::StorageShape x2Shape = { { 0 }, { 0 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8}, {8}};
+    gert::StorageShape x2Shape = {{0}, {0}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -559,12 +543,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -576,7 +560,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -585,9 +568,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -597,7 +580,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -611,8 +594,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "8 0 0 0 8 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 0 0 8 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -620,10 +602,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 0 }, { 0 } };
-    gert::StorageShape x2Shape = { { 0 }, { 0 } };
-    gert::StorageShape y1Shape = { { 0 }, { 0 } };
-    gert::StorageShape y2Shape = { { 0 }, { 0 } };
+    gert::StorageShape x1Shape = {{0}, {0}};
+    gert::StorageShape x2Shape = {{0}, {0}};
+    gert::StorageShape y1Shape = {{0}, {0}};
+    gert::StorageShape y2Shape = {{0}, {0}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -653,12 +635,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -670,7 +652,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -679,9 +660,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -691,7 +672,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -705,8 +686,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     ASSERT_EQ(tiling_key, 0);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "0 0 0 0 0 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "0 0 0 0 0 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -714,10 +694,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8, 9 }, { 8, 9 } };
-    gert::StorageShape x2Shape = { { 8 }, { 8 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8, 9}, {8, 9}};
+    gert::StorageShape x2Shape = {{8}, {8}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -747,12 +727,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -764,7 +744,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -773,9 +752,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -785,7 +764,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -802,10 +781,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8 }, { 8 } };
-    gert::StorageShape x2Shape = { { 8, 9 }, { 8, 9 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8}, {8}};
+    gert::StorageShape x2Shape = {{8, 9}, {8, 9}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -835,12 +814,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -852,7 +831,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -861,9 +839,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -873,7 +851,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -890,10 +868,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8, 9 }, { 8, 9 } };
-    gert::StorageShape x2Shape = { { 8, 6 }, { 8, 6 } };
-    gert::StorageShape y1Shape = { { 8 }, { 8 } };
-    gert::StorageShape y2Shape = { { 8 }, { 8 } };
+    gert::StorageShape x1Shape = {{8, 9}, {8, 9}};
+    gert::StorageShape x2Shape = {{8, 6}, {8, 6}};
+    gert::StorageShape y1Shape = {{8}, {8}};
+    gert::StorageShape y2Shape = {{8}, {8}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -923,12 +901,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -940,7 +918,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -949,9 +926,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -961,7 +938,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -978,10 +955,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape x2Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y2Shape = { { 88888 }, { 88888 } };
+    gert::StorageShape x1Shape = {{88888}, {88888}};
+    gert::StorageShape x2Shape = {{88888}, {88888}};
+    gert::StorageShape y1Shape = {{88888}, {88888}};
+    gert::StorageShape y2Shape = {{88888}, {88888}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1011,12 +988,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1028,7 +1005,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -1037,9 +1013,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -1049,7 +1025,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -1063,8 +1039,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     ASSERT_EQ(tiling_key, 1);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "88888 0 88888 0 88888 0 12208 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 88888 0 88888 0 12208 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -1072,10 +1047,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape x2Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y2Shape = { { 88888 }, { 88888 } };
+    gert::StorageShape x1Shape = {{88888}, {88888}};
+    gert::StorageShape x2Shape = {{88888}, {88888}};
+    gert::StorageShape y1Shape = {{88888}, {88888}};
+    gert::StorageShape y2Shape = {{88888}, {88888}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1105,12 +1080,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1122,7 +1097,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -1131,9 +1105,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -1143,7 +1117,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -1157,8 +1131,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     ASSERT_EQ(tiling_key, 1);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "88888 0 88888 0 88888 0 6096 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 88888 0 88888 0 6096 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -1166,10 +1139,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 8 }, { 8 } };
-    gert::StorageShape x2Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y2Shape = { { 88888 }, { 88888 } };
+    gert::StorageShape x1Shape = {{8}, {8}};
+    gert::StorageShape x2Shape = {{88888}, {88888}};
+    gert::StorageShape y1Shape = {{88888}, {88888}};
+    gert::StorageShape y2Shape = {{88888}, {88888}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1199,12 +1172,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1216,7 +1189,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -1225,9 +1197,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -1237,7 +1209,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -1251,8 +1223,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     ASSERT_EQ(tiling_key, 1);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "8 0 88888 0 88888 0 12208 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 88888 0 88888 0 12208 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -1260,10 +1231,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 88888 }, { 88888} };
-    gert::StorageShape x2Shape = { { 8 }, { 8 } };
-    gert::StorageShape y1Shape = { { 88888 }, { 88888} };
-    gert::StorageShape y2Shape = { { 88888 }, { 88888} };
+    gert::StorageShape x1Shape = {{88888}, {88888}};
+    gert::StorageShape x2Shape = {{8}, {8}};
+    gert::StorageShape y1Shape = {{88888}, {88888}};
+    gert::StorageShape y2Shape = {{88888}, {88888}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1293,12 +1264,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1310,7 +1281,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -1319,9 +1289,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -1331,7 +1301,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -1345,8 +1315,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     ASSERT_EQ(tiling_key, 1);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "88888 0 8 0 88888 0 12208 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 8 0 88888 0 12208 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -1354,10 +1323,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 0 }, { 0 } };
-    gert::StorageShape x2Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y2Shape = { { 88888 }, { 88888 } };
+    gert::StorageShape x1Shape = {{0}, {0}};
+    gert::StorageShape x2Shape = {{88888}, {88888}};
+    gert::StorageShape y1Shape = {{88888}, {88888}};
+    gert::StorageShape y2Shape = {{88888}, {88888}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1387,12 +1356,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1404,7 +1373,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -1413,9 +1381,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -1425,7 +1393,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -1439,8 +1407,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     ASSERT_EQ(tiling_key, 1);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "0 0 88888 0 88888 0 12208 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "0 0 88888 0 88888 0 12208 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
@@ -1448,10 +1415,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 {
     dlog_setlevel(0, 0, 0);
 
-    gert::StorageShape x1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape x2Shape = { { 0 }, { 0 } };
-    gert::StorageShape y1Shape = { { 88888 }, { 88888 } };
-    gert::StorageShape y2Shape = { { 88888 }, { 88888 } };
+    gert::StorageShape x1Shape = {{88888}, {88888}};
+    gert::StorageShape x2Shape = {{0}, {0}};
+    gert::StorageShape y1Shape = {{88888}, {88888}};
+    gert::StorageShape y2Shape = {{88888}, {88888}};
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -1481,12 +1448,12 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
@@ -1498,7 +1465,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
@@ -1507,9 +1473,9 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto holder = gert::TilingContextFaker()
                       .SetOpType("BroadcastGradientArgs")
                       .NodeIoNum(2, 2)
-                      .IrInstanceNum({ 1, 1 })
-                      .InputShapes({ &x1Shape, &x2Shape })
-                      .OutputShapes({ &y1Shape, &y2Shape })
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x1Shape, &x2Shape})
+                      .OutputShapes({&y1Shape, &y2Shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -1519,7 +1485,7 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -1533,7 +1499,6 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     ASSERT_EQ(tiling_key, 1);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-            "88888 0 0 0 88888 0 12208 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 0 0 88888 0 12208 0 ");
     dlog_setlevel(static_cast<int>(OP), 0, 1);
 }

@@ -83,8 +83,7 @@ struct GroupedDynamicBlockQuantTilingParam {
     int64_t maxUbRow = 0;
 };
 
-enum class RoundModeList : int64_t
-{
+enum class RoundModeList : int64_t {
     MODE_UNDEFINED = -1,
     MODE_NONE = 0,
     MODE_RINT = 1,

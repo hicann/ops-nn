@@ -14,26 +14,28 @@
 #include "aclnnop/aclnn_chamfer_distance_backward.h"
 
 #define CHECK_RET(cond, return_expr) \
-    do {                               \
-        if (!(cond)) {                   \
-        return_expr;                   \
-        }                                \
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
     } while (0)
 
-#define LOG_PRINT(message, ...)     \
-    do {                              \
+#define LOG_PRINT(message, ...)         \
+    do {                                \
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
     for (auto i : shape) {
         shapeSize *= i;
-  }
+    }
     return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream* stream) {
+int Init(int32_t deviceId, aclrtStream* stream)
+{
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
@@ -46,7 +48,8 @@ int Init(int32_t deviceId, aclrtStream* stream) {
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
+                    aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -59,7 +62,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = shape.size() - 2; i >= 0; i--) {
-       strides[i] = shape[i + 1] * strides[i + 1];
+        strides[i] = shape[i + 1] * strides[i + 1];
     }
 
     // 调用aclCreateTensor接口创建aclTensor
@@ -68,7 +71,8 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     return 0;
 }
 
-int main() {
+int main()
+{
     // 1.(固定写法)device/stream初始化, 参考acl对外接口列表
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
@@ -141,7 +145,8 @@ int main() {
     // 调用aclnnChamferDistanceBackward第一段接口
     ret = aclnnChamferDistanceBackwardGetWorkspaceSize(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2, gradXyz1, gradXyz2,
                                                        &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnChamferDistanceBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnChamferDistanceBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {

@@ -50,9 +50,8 @@ bool AdaptiveAvgPool2dSmallKernelTiling::IsCapable()
     bool isNcLenEnough = input_.nIn * input_.cIn >= (computeInfo_.vfLen / DOUBLE);
     /* 计算只处理一个窗口占用的UB */
     bool isCapable = isKernelSizeMeet && isNcLenEnough && IsMeetUbSize();
-    OP_LOGI(
-        context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling IsCapable check: %s",
-        isCapable ? "true" : "false");
+    OP_LOGI(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling IsCapable check: %s",
+            isCapable ? "true" : "false");
     return isCapable;
 }
 
@@ -68,8 +67,8 @@ void AdaptiveAvgPool2dSmallKernelTiling::CalMaxUbSplitSize()
 
     computeInfo_.inputQueSize = computeInfo_.ncFactor * hiDataLen * wiDataLenAlign * computeInfo_.xDtypeSize;
     uint64_t outTransAlign = Ops::Base::CeilAlign(hoNum * woNumAlign, TRANS_ADDR_LEN);
-    computeInfo_.resQue1Size =
-        std::max(hiDataLen * wiDataLenAlign, outTransAlign) * computeInfo_.ncFactor * sizeof(float);
+    computeInfo_.resQue1Size = std::max(hiDataLen * wiDataLenAlign, outTransAlign) * computeInfo_.ncFactor *
+                               sizeof(float);
     computeInfo_.resQue2Size = std::max(woNumAlign * hiDataLen, outTransAlign) * computeInfo_.ncFactor * sizeof(float);
 
     computeInfo_.maxDimOut = std::max(hoNum, woNum);
@@ -187,9 +186,9 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::InitUbFactor()
     uint64_t kernelH = computeInfo_.kernelHMax;
     uint64_t kernelW = computeInfo_.kernelWMax;
     if (kernelW <= 0 || kernelH <= 0) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            opName_, "kernelHMax, kernelWMax", (std::to_string(kernelH) + ", " + std::to_string(kernelW)).c_str(),
-            "Kernel size <= 0, not support");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "kernelHMax, kernelWMax",
+                                               (std::to_string(kernelH) + ", " + std::to_string(kernelW)).c_str(),
+                                               "Kernel size <= 0, not support");
         return ge::GRAPH_FAILED;
     }
 
@@ -248,8 +247,8 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::DoOpTiling()
 
 ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::SetTilingData()
 {
-    AdaptiveAvgPool2dOp::AdaptivePool2dSmallKernelTilingData* tilingData =
-        context_->GetTilingData<AdaptivePool2dSmallKernelTilingData>();
+    AdaptiveAvgPool2dOp::AdaptivePool2dSmallKernelTilingData*
+        tilingData = context_->GetTilingData<AdaptivePool2dSmallKernelTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
 
     tilingData->hIn = static_cast<int64_t>(input_.hIn);

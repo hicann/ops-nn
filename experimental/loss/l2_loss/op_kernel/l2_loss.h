@@ -26,7 +26,7 @@ using namespace AscendC;
 constexpr int32_t BUFFER_NUM = 2;
 constexpr int32_t DATA_CACHE_CLEAN_NEED = 64;
 constexpr int32_t SLOT_STRIDE = DATA_CACHE_CLEAN_NEED / sizeof(float);
-constexpr float   INV_SQRT2   = 0.70710678118654752f; // 1/√2 这是规定做法，不要考虑改这个
+constexpr float INV_SQRT2 = 0.70710678118654752f; // 1/√2 这是规定做法，不要考虑改这个
 template <typename T, uint32_t schMode>
 class L2Loss {
 public:
@@ -42,7 +42,7 @@ private:
 private:
     AscendC::TPipe pipe;
     AscendC::TQue<AscendC::QuePosition::VECIN, BUFFER_NUM> inQueueInput;
-    
+
     AscendC::GlobalTensor<T> xGm;
     AscendC::GlobalTensor<T> zGm;
     AscendC::GlobalTensor<float> workGm;
@@ -73,7 +73,8 @@ private:
 };
 
 template <typename T, uint32_t schMode>
-__aicore__ inline void L2Loss<T, schMode>::Init(GM_ADDR x, GM_ADDR z, GM_ADDR workspace, const L2LossTilingData* tilingData)
+__aicore__ inline void L2Loss<T, schMode>::Init(GM_ADDR x, GM_ADDR z, GM_ADDR workspace,
+                                                const L2LossTilingData* tilingData)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     this->blockIdx = AscendC::GetBlockIdx();
@@ -89,13 +90,13 @@ __aicore__ inline void L2Loss<T, schMode>::Init(GM_ADDR x, GM_ADDR z, GM_ADDR wo
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= static_cast<uint64_t>(tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (this->blockIdx - tilingData->tailBlockNum);
+        globalBufferIndex -= static_cast<uint64_t>(tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (this->blockIdx - tilingData->tailBlockNum);
     }
 
     // Compute the valid data count for this core to exclude padding added at tail.
     uint64_t inputNum64 = static_cast<uint64_t>(tilingData->inputNum);
-    this->validCoreDataNum = inputNum64 > globalBufferIndex ?
-                             static_cast<uint32_t>(inputNum64 - globalBufferIndex) : 0;
+    this->validCoreDataNum = inputNum64 > globalBufferIndex ? static_cast<uint32_t>(inputNum64 - globalBufferIndex) : 0;
     if (this->validCoreDataNum > this->coreDataNum) {
         this->validCoreDataNum = this->coreDataNum;
     }
@@ -130,9 +131,9 @@ __aicore__ inline void L2Loss<T, schMode>::Init(GM_ADDR x, GM_ADDR z, GM_ADDR wo
 
     // 预计算最后一个 tile 的有效长度，供 CopyIn 使用 DataCopyPad
     uint64_t processedBeforeLastTile = static_cast<uint64_t>(this->tileNum - 1) * this->tileDataNum;
-    this->lastTileValidLen = (this->validCoreDataNum > processedBeforeLastTile)
-                              ? static_cast<uint32_t>(this->validCoreDataNum - processedBeforeLastTile)
-                              : 0;
+    this->lastTileValidLen = (this->validCoreDataNum > processedBeforeLastTile) ?
+                                 static_cast<uint32_t>(this->validCoreDataNum - processedBeforeLastTile) :
+                                 0;
 
     this->globalOffset = globalBufferIndex;
 }
@@ -162,7 +163,7 @@ template <typename T, uint32_t schMode>
 __aicore__ inline void L2Loss<T, schMode>::L2LossAxesAll()
 {
     const uint32_t loopCount = this->tileNum;
-    const uint32_t tileLen   = this->tileDataNum;
+    const uint32_t tileLen = this->tileDataNum;
     const uint32_t lastTileLen = this->tailDataNum;
 
     // localSum 作为寄存器变量，不占 UB
@@ -246,7 +247,8 @@ __aicore__ inline void L2Loss<T, schMode>::L2LossAxesAll()
         AscendC::SetAtomicAdd<float>();
         AscendC::DataCopy(workGm, tmpBuf, SLOT_STRIDE);
         AscendC::SetAtomicNone();
-        AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::SINGLE_CACHE_LINE, AscendC::DcciDst::CACHELINE_OUT>(workGm[0]);
+        AscendC::DataCacheCleanAndInvalid<float, AscendC::CacheLine::SINGLE_CACHE_LINE,
+                                          AscendC::DcciDst::CACHELINE_OUT>(workGm[0]);
         AscendC::SyncAll<true>();
 
         if (this->blockIdx == 0) {

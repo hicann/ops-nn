@@ -10,6 +10,4 @@
 
 #include "plugin_util.h"
 
-namespace domi {
-
-} // namespace domi
+namespace domi {} // namespace domi

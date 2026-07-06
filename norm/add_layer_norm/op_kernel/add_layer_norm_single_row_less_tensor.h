@@ -33,10 +33,7 @@ class KernelAddLayerNormSingleRowLessTensor {
 #define IS_X_B16_GAMMA_B32 ((!IS_CAST_BEFORE_ADD) && (!is_same<T_X1, float>::value) && (IS_GAMMA_FP32))
 
 public:
-    __aicore__ inline KernelAddLayerNormSingleRowLessTensor(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddLayerNormSingleRowLessTensor(TPipe* pipe) { Ppipe = pipe; }
 
     __aicore__ inline uint32_t CEIL_DIV(uint32_t x3, uint32_t y)
     {
@@ -46,22 +43,16 @@ public:
         return 0;
     }
 
-    __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
-    {
-        return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE;
-    }
+    __aicore__ inline uint32_t ROUND_UP32(uint32_t x) { return (x + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE; }
 
-    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y)
-    {
-        return x < y ? x : y;
-    }
+    __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-    __aicore__ inline void Init(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias,
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x, __gm__ uint8_t* workspace,
-        uint32_t numCore_, uint32_t numLastDim_, uint32_t numFirstDim_, uint32_t nlFirstDimPerCore_,
-        uint32_t lFirstDimPerCore_, uint32_t firstDimPerTime_, uint32_t lastDimPerTime_, float eps_, float aveNum_,
-        uint32_t colMoveCnt_, uint32_t colTail_, uint32_t workspace_size)
+    __aicore__ inline void Init(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta,
+                                __gm__ uint8_t* bias, __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                __gm__ uint8_t* x, __gm__ uint8_t* workspace, uint32_t numCore_, uint32_t numLastDim_,
+                                uint32_t numFirstDim_, uint32_t nlFirstDimPerCore_, uint32_t lFirstDimPerCore_,
+                                uint32_t firstDimPerTime_, uint32_t lastDimPerTime_, float eps_, float aveNum_,
+                                uint32_t colMoveCnt_, uint32_t colTail_, uint32_t workspace_size)
     {
         numCore = numCore_;
         numLastDim = numLastDim_;
@@ -103,8 +94,8 @@ public:
         InitUBBuffer();
     }
 
-    __aicore__ inline void InitInputGMBuffer(
-        __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias)
+    __aicore__ inline void InitInputGMBuffer(__gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma,
+                                             __gm__ uint8_t* beta, __gm__ uint8_t* bias)
     {
         uint64_t gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
         uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
@@ -119,8 +110,8 @@ public:
         betaGm.SetGlobalBuffer((__gm__ T_GAMMA*)beta);
     }
 
-    __aicore__ inline void InitOutputGMBuffer(
-        __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x)
+    __aicore__ inline void InitOutputGMBuffer(__gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd,
+                                              __gm__ uint8_t* x)
     {
         uint64_t gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
         uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
@@ -166,8 +157,8 @@ public:
 
 private:
     template <typename T_NOCAST, typename T_NEEDCAST>
-    __aicore__ inline void CopyInAddWithCast(
-        GlobalTensor<T_NOCAST>& xNoCastGm, GlobalTensor<T_NEEDCAST>& xNeedCastGm, uint64_t gmOffset, uint32_t size)
+    __aicore__ inline void CopyInAddWithCast(GlobalTensor<T_NOCAST>& xNoCastGm, GlobalTensor<T_NEEDCAST>& xNeedCastGm,
+                                             uint64_t gmOffset, uint32_t size)
     {
         event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         auto xBufLocal = xBufFp32.Get<float>();

@@ -33,9 +33,9 @@ class DualLevelQuantBatchMatmulBasicBlockController {
 public:
     __aicore__ inline DualLevelQuantBatchMatmulBasicBlockController() = default;
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR x1Level0Scale, GM_ADDR x1Level1Scale, GM_ADDR x2Level0Scale,
-        GM_ADDR x2Level1Scale, GM_ADDR bias, GM_ADDR y, const DualLevelQuantBatchMatmulBasicTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR x1Level0Scale, GM_ADDR x1Level1Scale,
+                                GM_ADDR x2Level0Scale, GM_ADDR x2Level1Scale, GM_ADDR bias, GM_ADDR y,
+                                const DualLevelQuantBatchMatmulBasicTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -54,13 +54,12 @@ __aicore__ inline void DualLevelQuantBatchMatmulBasicBlockController<LOCAL_TEMPL
         blockIdx = blockIdx / AscendC::GetTaskRation();
     }
     block_.Init(tilingData, blockIdx);
-    basicBlock_.Init(
-        reinterpret_cast<__gm__ x1Type*>(x1), reinterpret_cast<__gm__ x2Type*>(x2),
-        reinterpret_cast<__gm__ x1Level0ScaleType*>(x1Level0Scale),
-        reinterpret_cast<__gm__ x1Level1ScaleType*>(x1Level1Scale),
-        reinterpret_cast<__gm__ x2Level0ScaleType*>(x2Level0Scale),
-        reinterpret_cast<__gm__ x2Level1ScaleType*>(x2Level1Scale), reinterpret_cast<__gm__ biasType*>(bias),
-        reinterpret_cast<__gm__ yType*>(y), tilingData);
+    basicBlock_.Init(reinterpret_cast<__gm__ x1Type*>(x1), reinterpret_cast<__gm__ x2Type*>(x2),
+                     reinterpret_cast<__gm__ x1Level0ScaleType*>(x1Level0Scale),
+                     reinterpret_cast<__gm__ x1Level1ScaleType*>(x1Level1Scale),
+                     reinterpret_cast<__gm__ x2Level0ScaleType*>(x2Level0Scale),
+                     reinterpret_cast<__gm__ x2Level1ScaleType*>(x2Level1Scale),
+                     reinterpret_cast<__gm__ biasType*>(bias), reinterpret_cast<__gm__ yType*>(y), tilingData);
 }
 
 LOCAL_TEMPLATE_CLASS_PARAMS
@@ -96,4 +95,3 @@ __aicore__ inline void DualLevelQuantBatchMatmulBasicBlockController<LOCAL_TEMPL
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

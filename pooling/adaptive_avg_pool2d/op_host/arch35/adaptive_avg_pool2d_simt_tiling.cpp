@@ -57,10 +57,10 @@ ge::graphStatus AdaptiveAvgPool2DTilingSimt::DoOpTiling()
     SetTilingData();
 
     int64_t outputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->hOutDim * tilingData_->wOutDim;
-    maxDivUseNum_ =
-        std::max({tilingData_->hInDim * tilingData_->hOutDim, tilingData_->wInDim * tilingData_->wOutDim, outputSize});
-    maxDivUseNum_ =
-        std::max({maxDivUseNum_, tilingData_->nDim * tilingData_->cDim * tilingData_->hInDim * tilingData_->wInDim});
+    maxDivUseNum_ = std::max(
+        {tilingData_->hInDim * tilingData_->hOutDim, tilingData_->wInDim * tilingData_->wOutDim, outputSize});
+    maxDivUseNum_ = std::max(
+        {maxDivUseNum_, tilingData_->nDim * tilingData_->cDim * tilingData_->hInDim * tilingData_->wInDim});
     threads_ = std::min(outputSize, MIN_THREAD);
     uint64_t kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     uint64_t kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
@@ -88,8 +88,8 @@ ge::graphStatus AdaptiveAvgPool2DTilingSimt::PostTiling()
     int64_t ubSize = input_.ubSize - DCACHE_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize);
     if (res != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
-            opName_, std::to_string(ubSize).c_str(), "ubSize", "AdaptiveAvgPool2d", "SetLocalMemorySize failed.");
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName_, std::to_string(ubSize).c_str(), "ubSize", "AdaptiveAvgPool2d",
+                                               "SetLocalMemorySize failed.");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

@@ -28,8 +28,7 @@ namespace Conv {
 using namespace AscendC;
 using namespace Ops::NN::Optiling;
 
-struct TilingValueDw
-{
+struct TilingValueDw {
     uint64_t batchDim;
     uint32_t groupDim;
     uint32_t dkDim;
@@ -58,8 +57,7 @@ struct TilingValueDw
     uint32_t bl1Bound;
 };
 
-struct CoreDimDw
-{
+struct CoreDimDw {
     int32_t batchDim = 1;
     int32_t dDim = 1;
     int32_t mDim = 1;
@@ -69,10 +67,10 @@ struct CoreDimDw
 
 class Conv3DBackpropFilterV2Tiling : public TilingBaseClass {
 public:
-    explicit Conv3DBackpropFilterV2Tiling(gert::TilingContext *context) : TilingBaseClass(context)  { Reset(); }
+    explicit Conv3DBackpropFilterV2Tiling(gert::TilingContext* context) : TilingBaseClass(context) { Reset(); }
     ~Conv3DBackpropFilterV2Tiling() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         TilingBaseClass::Reset(context);
         Reset();
@@ -97,8 +95,8 @@ protected:
 
     bool IsSocVersion91095() const;
     void Reset();
-    void SetShapeTiling(TConv3DDwTiling &dwt);
-    void SetAttrTiling(TConv3DDwTiling &dwt);
+    void SetShapeTiling(TConv3DDwTiling& dwt);
+    void SetAttrTiling(TConv3DDwTiling& dwt);
     void GetBatchDim(CoreDimDw& coreDim, int32_t dMaxFactor, int32_t batchDepthMaxFactor) const;
     void GetCoreDim(CoreDimDw& coreDim, uint32_t curCoreNum);
     void SetTilingParamByDimInfo(TilingValueDw& tilingParams, CoreDimDw& coreDim);
@@ -106,9 +104,9 @@ protected:
     int32_t GetDimFactor(const int64_t& value, const std::vector<int32_t>& factorLists) const;
     void CalCoreDimTiling(TilingValueDw& tilingParams, bool& enableTbeBlock);
     uint32_t CalCin(const uint32_t& nL1Size);
-    int64_t CalBL1Bound(const TilingValueDw &tilingParams);
+    int64_t CalBL1Bound(const TilingValueDw& tilingParams);
     void UpdateBaseBlock(uint32_t& baseM, uint32_t& baseK, uint32_t& baseN, TilingValueDw& tilingParams);
-    void UpdateBaseStep(uint32_t &stepKa, uint32_t &stepKb, TilingValueDw &tilingParams);
+    void UpdateBaseStep(uint32_t& stepKa, uint32_t& stepKb, TilingValueDw& tilingParams);
     bool CalBaseBlockTiling(TilingValueDw& tilingParams);
     void InitTilingValue(TilingValueDw& tilingParams);
     void InitSinglecoreParam(TilingValueDw& tilingParams);
@@ -122,15 +120,15 @@ protected:
     uint32_t libApiWorkSpaceSize_ = 0;
     uint32_t coreNum_ = 1;
     ge::DataType aDtype_ = ge::DT_FLOAT16;
-    const char *opName_ = "";
+    const char* opName_ = "";
     int32_t dtypeByte_ = 2;
     Conv3DBackpropFilterV2TilingData tilingData_;
     Conv3dBpFilterV2RunInfo runInfo_;
     Conv3dBackpropV2TBETilingData tbeTiling_;
 };
 
-}
-}
-}
+} // namespace Conv
+} // namespace NN
+} // namespace Ops
 
-#endif  // CONV3D_BACKPROP_FILTER_V2_BASE_TILING_H
+#endif // CONV3D_BACKPROP_FILTER_V2_BASE_TILING_H

@@ -25,7 +25,7 @@
 
 namespace {
 const size_t INDEX_PREDICT = 0;
-}  // namespace
+} // namespace
 
 namespace optiling {
 using namespace L1LossGradKernel;
@@ -57,27 +57,28 @@ ge::graphStatus L1LossGradTiling::GetShapeAttrsInfo()
 
     if (inputGradsDtype != inputPredictDtype) {
         std::string dtypeMsg = ToString(inputGradsDtype) + " and " + ToString(inputPredictDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and predict",
-            dtypeMsg.c_str(), "The dtypes of input grads and input predict must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and predict", dtypeMsg.c_str(),
+                                               "The dtypes of input grads and input predict must be the same");
         return ge::GRAPH_FAILED;
     }
-    
+
     if (inputGradsDtype != inputLabelDtype) {
         std::string dtypeMsg = ToString(inputGradsDtype) + " and " + ToString(inputLabelDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and label",
-            dtypeMsg.c_str(), "The dtypes of input grads and input label must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and label", dtypeMsg.c_str(),
+                                               "The dtypes of input grads and input label must be the same");
         return ge::GRAPH_FAILED;
     }
-   
-    OP_CHECK_IF(inputPredictDtype != ge::DT_FLOAT16 && inputPredictDtype != ge::DT_BF16 && inputPredictDtype != ge::DT_FLOAT,
+
+    OP_CHECK_IF(
+        inputPredictDtype != ge::DT_FLOAT16 && inputPredictDtype != ge::DT_BF16 && inputPredictDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(inputPredictDtype).c_str(),
-            "FLOAT, FLOAT16 or BF16"),
+                                  "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
 
     if (outputDtype != inputGradsDtype) {
         std::string dtypeMsg = ToString(outputDtype) + " and " + ToString(inputGradsDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and grads",
-            dtypeMsg.c_str(), "The dtypes of output y and input grads must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and grads", dtypeMsg.c_str(),
+                                               "The dtypes of output y and input grads must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -85,10 +86,7 @@ ge::graphStatus L1LossGradTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool L1LossGradTiling::IsCapable()
-{
-    return true;
-}
+bool L1LossGradTiling::IsCapable() { return true; }
 
 inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 {
@@ -107,11 +105,10 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
 
     const char* reductionAttr = attrs->GetAttrPointer<char>(REDUCTION_INDEX);
     const char* reduction = reductionAttr != nullptr ? reductionAttr : "mean";
-    
+
     OP_CHECK_IF(strcmp(reduction, "mean") != 0 && strcmp(reduction, "sum") != 0 && strcmp(reduction, "none") != 0,
-        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reduction,
-            "none, mean or sum"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reduction, "none, mean or sum"),
+                return ge::GRAPH_FAILED);
 
     if (strcmp(reduction, "mean") == 0) {
         auto labelStorageShape = context_->GetInputShape(INPUT_LABEL_INDEX);
@@ -124,8 +121,8 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
                 this->reduceElts_ = reduceEltsTemp;
             } else {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "label",
-                    ToString(inputLabelShape).c_str(),
-                    "Input label cannot be an empty tensor");
+                                                      ToString(inputLabelShape).c_str(),
+                                                      "Input label cannot be an empty tensor");
                 return ge::GRAPH_FAILED;
             }
         }
@@ -134,7 +131,8 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus L1LossGradTiling::CheckGradsIsScalar() {
+ge::graphStatus L1LossGradTiling::CheckGradsIsScalar()
+{
     auto gradsStorageShape = context_->GetInputShape(INPUT_GRADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradsStorageShape);
     const gert::Shape& inputGradsShape = EnsureNotScalar(gradsStorageShape->GetStorageShape());
@@ -147,92 +145,80 @@ ge::graphStatus L1LossGradTiling::CheckGradsIsScalar() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus L1LossGradTiling::DoTiling() {
+ge::graphStatus L1LossGradTiling::DoTiling()
+{
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->inputGradsIsScalar_ == static_cast<uint32_t>(ATTR_IS_TRUE)) {
         if (this->outputDtype_ == ge::DT_FLOAT16) {
-            BroadcastBaseTiling<L1LossGradScalarCast<half>::OpDag> brcBaseTiling(context_,
-                static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
+            BroadcastBaseTiling<L1LossGradScalarCast<half>::OpDag> brcBaseTiling(
+                context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
             brcBaseTiling.SetScalar(this->reduceElts_);
             baseTilingResult = brcBaseTiling.DoTiling();
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->inputGradsIsScalar_);
         } else if (this->outputDtype_ == ge::DT_BF16) {
-            BroadcastBaseTiling<L1LossGradScalarCast<bfloat16_t>::OpDag> brcBaseTiling(context_,     // bfloat16类型host没定义
+            BroadcastBaseTiling<L1LossGradScalarCast<bfloat16_t>::OpDag> brcBaseTiling(
+                context_, // bfloat16类型host没定义
                 static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
             brcBaseTiling.SetScalar(this->reduceElts_);
             baseTilingResult = brcBaseTiling.DoTiling();
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->inputGradsIsScalar_);
         } else {
-            BroadcastBaseTiling<L1LossGradScalarCast<float>::OpDag> brcBaseTiling(context_, 
-                static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
+            BroadcastBaseTiling<L1LossGradScalarCast<float>::OpDag> brcBaseTiling(
+                context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
             brcBaseTiling.SetScalar(this->reduceElts_);
             baseTilingResult = brcBaseTiling.DoTiling();
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->inputGradsIsScalar_);
-        } 
+        }
     } else {
         if (this->outputDtype_ == ge::DT_FLOAT16) {
-            BroadcastBaseTiling<L1LossGradCast<half>::OpDag> brcBaseTiling(context_,     
-                static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
+            BroadcastBaseTiling<L1LossGradCast<half>::OpDag> brcBaseTiling(
+                context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
             brcBaseTiling.SetScalar(this->reduceElts_);
             baseTilingResult = brcBaseTiling.DoTiling();
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->inputGradsIsScalar_);
         } else if (this->outputDtype_ == ge::DT_BF16) {
-            BroadcastBaseTiling<L1LossGradCast<bfloat16_t>::OpDag> brcBaseTiling(context_,     // bfloat16类型host没定义
+            BroadcastBaseTiling<L1LossGradCast<bfloat16_t>::OpDag> brcBaseTiling(
+                context_, // bfloat16类型host没定义
                 static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
             brcBaseTiling.SetScalar(this->reduceElts_);
             baseTilingResult = brcBaseTiling.DoTiling();
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->inputGradsIsScalar_);
         } else {
-            BroadcastBaseTiling<L1LossGradCast<float>::OpDag> brcBaseTiling(context_,    
-                static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
+            BroadcastBaseTiling<L1LossGradCast<float>::OpDag> brcBaseTiling(
+                context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
             brcBaseTiling.SetScalar(this->reduceElts_);
             baseTilingResult = brcBaseTiling.DoTiling();
             this->tilingKey_ = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->inputGradsIsScalar_);
-        } 
+        }
     }
     return baseTilingResult;
 }
 
-ge::graphStatus L1LossGradTiling::DoOpTiling() 
+ge::graphStatus L1LossGradTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "L1LossGradTiling RunTiling enter.");
     OP_CHECK_IF(CheckGradsIsScalar() == ge::GRAPH_FAILED,
-         OP_LOGE(context_->GetNodeName(), "check inputGrads is scalar failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "check inputGrads is scalar failed"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(CaluateReduceElts() == ge::GRAPH_FAILED,
-         OP_LOGE(context_->GetNodeName(), "get CaluateReduceElts failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_, "DoTiling failed"), return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "get CaluateReduceElts failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(DoTiling() == ge::GRAPH_FAILED, OP_LOGE(context_, "DoTiling failed"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
- ge::graphStatus L1LossGradTiling::DoLibApiTiling()
- {
-     return ge::GRAPH_SUCCESS;
- }
- 
- uint64_t L1LossGradTiling::GetTilingKey() const
- {
-     return tilingKey_;
- }
- 
- ge::graphStatus L1LossGradTiling::GetWorkspaceSize()
- {
-     return ge::GRAPH_SUCCESS;
- }
- 
- ge::graphStatus L1LossGradTiling::PostTiling()
- {
-     return ge::GRAPH_SUCCESS;
- }
- 
- ge::graphStatus L1LossGradTiling::GetPlatformInfo()
- {
-     return ge::GRAPH_SUCCESS;
- }
+ge::graphStatus L1LossGradTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-static ge::graphStatus TilingPrepareForL1LossGrad(gert::TilingParseContext* context) {
-    (void) context;
+uint64_t L1LossGradTiling::GetTilingKey() const { return tilingKey_; }
+
+ge::graphStatus L1LossGradTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus L1LossGradTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus L1LossGradTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
+
+static ge::graphStatus TilingPrepareForL1LossGrad(gert::TilingParseContext* context)
+{
+    (void)context;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -245,9 +231,7 @@ static ge::graphStatus Tiling4L1LossGrad(gert::TilingContext* tilingContextGen)
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(tilingContextGen);
 }
 // register tiling interface of the L1LossGrad.
-IMPL_OP_OPTILING(L1LossGrad)
-    .Tiling(Tiling4L1LossGrad)
-    .TilingParse<L1LossGradCompileInfo>(TilingPrepareForL1LossGrad);
+IMPL_OP_OPTILING(L1LossGrad).Tiling(Tiling4L1LossGrad).TilingParse<L1LossGradCompileInfo>(TilingPrepareForL1LossGrad);
 
 REGISTER_OPS_TILING_TEMPLATE(L1LossGrad, L1LossGradTiling, COMMON_TILING_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

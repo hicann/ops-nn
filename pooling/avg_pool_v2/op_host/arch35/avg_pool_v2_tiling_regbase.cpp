@@ -17,12 +17,11 @@
 
 using namespace AscendC;
 using Ops::NN::Optiling::TilingRegistry;
-namespace optiling
-{
+namespace optiling {
 
 ge::graphStatus Tiling4AvgPoolV2RegBase(gert::TilingContext* context)
 {
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-}  // namespace optiling
+} // namespace optiling

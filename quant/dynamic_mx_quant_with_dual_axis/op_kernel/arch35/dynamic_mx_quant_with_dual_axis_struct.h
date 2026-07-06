@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -30,11 +30,11 @@
 #define TPL_MODE_1 1
 
 namespace DynamicMxQuantWithDualAxisOp {
-ASCENDC_TPL_ARGS_DECL(
-    DynamicMxQuantWithDualAxis,
-    ASCENDC_TPL_UINT_DECL(mode, 1, ASCENDC_TPL_UI_LIST, TPL_MODE_0, TPL_MODE_1),
-    ASCENDC_TPL_UINT_DECL(roundMode, 3, ASCENDC_TPL_UI_LIST, TPL_RINT, TPL_ROUND, TPL_FLOOR),
-    ASCENDC_TPL_UINT_DECL(scaleAlg, 2, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_1, TPL_SCALE_ALG_2));
+ASCENDC_TPL_ARGS_DECL(DynamicMxQuantWithDualAxis,
+                      ASCENDC_TPL_UINT_DECL(mode, 1, ASCENDC_TPL_UI_LIST, TPL_MODE_0, TPL_MODE_1),
+                      ASCENDC_TPL_UINT_DECL(roundMode, 3, ASCENDC_TPL_UI_LIST, TPL_RINT, TPL_ROUND, TPL_FLOOR),
+                      ASCENDC_TPL_UINT_DECL(scaleAlg, 2, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_1,
+                                            TPL_SCALE_ALG_2));
 
 ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
     ASCENDC_TPL_UINT_SEL(mode, ASCENDC_TPL_UI_LIST, TPL_MODE_0, TPL_MODE_1),

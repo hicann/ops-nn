@@ -47,10 +47,7 @@ struct TilingParams : public TilingParamsCommon {
     uint64_t addMode = 0;
 };
 
-__aicore__ inline uint64_t FloorDiv(uint64_t x, uint64_t y)
-{
-    return y == 0 ? x : (uint64_t)(x / y);
-}
+__aicore__ inline uint64_t FloorDiv(uint64_t x, uint64_t y) { return y == 0 ? x : (uint64_t)(x / y); }
 
 } // namespace AdaptiveMaxPool3DGradComm
 

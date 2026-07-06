@@ -27,26 +27,23 @@ private:
     using yCopyDtype = std::conditional_t<IsSameType<yDtype, int4b_t>::value, uint8_t, yDtype>;
 
 public:
-    __aicore__ inline DynamicQuantRegbasePerChannnelSplitM(TPipe *pipe)
-    {
-        pPipe = pipe;
-    }
+    __aicore__ inline DynamicQuantRegbasePerChannnelSplitM(TPipe* pipe) { pPipe = pipe; }
 
     // 没有group_index输入
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
-        GM_ADDR workSpace, const DynamicQuantTilingDataArch35 *__restrict tilingData);
+                                GM_ADDR workSpace, const DynamicQuantTilingDataArch35* __restrict tilingData);
     __aicore__ inline void Process();
 
 private:
     __aicore__ inline void ReInit();
     template <bool copyInMax>
     __aicore__ inline void CopyIn(uint32_t bIdx, uint32_t mIdx, uint32_t nIdx);
-    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35 *tilingData);
+    __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35* tilingData);
 
     // __aicore__ inline void ComputeMinMax(uint32_t bIdx, uint32_t mIdx, uint32_t nIdx);
-    __aicore__ inline void ComputeMinMax(__ubuf__ xDtype *inAddr, __ubuf__ xDtype *smoothAddr,
-        __ubuf__ float *colMaxLocalAddr, __ubuf__ float *colMinLocalAddr, uint32_t nSize, uint16_t nLoopNum,
-        uint16_t mLoopNum);
+    __aicore__ inline void ComputeMinMax(__ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr,
+                                         __ubuf__ float* colMaxLocalAddr, __ubuf__ float* colMinLocalAddr,
+                                         uint32_t nSize, uint16_t nLoopNum, uint16_t mLoopNum);
 
     __aicore__ inline void CopyOutMinMax(uint32_t bIdx, uint32_t nIdx, uint32_t count);
     __aicore__ inline void Compute(uint32_t bIdx, uint32_t mIdx, uint32_t nIdx);
@@ -109,9 +106,9 @@ private:
 };
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
-__aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::Init(GM_ADDR x,
-    GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
-    const DynamicQuantTilingDataArch35 *__restrict tilingData)
+__aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::Init(
+    GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, GM_ADDR workSpace,
+    const DynamicQuantTilingDataArch35* __restrict tilingData)
 {
     DynamicQuantNDOpt::SetFloatOverflowModeForRegbase<yDtype>();
     ParseTilingData(tilingData);
@@ -123,22 +120,22 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
     // calc params
     curCoreProcessNum_ = blockIdx < headCoreNum_ ? blockPerHead_ : blockPerTail_;
-    blockStart_ = blockIdx < headCoreNum_ ? blockIdx * blockPerHead_
-                                          : headCoreNum_ * blockPerHead_ + (blockIdx - headCoreNum_) * blockPerTail_;
+    blockStart_ = blockIdx < headCoreNum_ ? blockIdx * blockPerHead_ :
+                                            headCoreNum_ * blockPerHead_ + (blockIdx - headCoreNum_) * blockPerTail_;
     blockEnd_ = blockStart_ + curCoreProcessNum_;
 
     batchStart_ = blockStart_ / (mBlockNum_ * nBlockNum_);
     batchEnd_ = blockEnd_ / (mBlockNum_ * nBlockNum_);
 
     // init buffers
-    inGm.SetGlobalBuffer((__gm__ xDtype *)x);
-    colMaxGm.SetGlobalBuffer((__gm__ float *)workSpace + (batchStart_ * nLen_));
-    outGm.SetGlobalBuffer((__gm__ yCopyDtype *)y);
-    scaleGm.SetGlobalBuffer((__gm__ float *)scale);
+    inGm.SetGlobalBuffer((__gm__ xDtype*)x);
+    colMaxGm.SetGlobalBuffer((__gm__ float*)workSpace + (batchStart_ * nLen_));
+    outGm.SetGlobalBuffer((__gm__ yCopyDtype*)y);
+    scaleGm.SetGlobalBuffer((__gm__ float*)scale);
     InitGlobalMemory<float>(colMaxGm, (batchEnd_ - batchStart_) * nLen_, NEG_INFINITY);
 
     if constexpr (isSymmetrical == false) {
-        colMinGm.SetGlobalBuffer((__gm__ float *)workSpace + (totalBatchLen_ * nLen_) + (batchStart_ * nLen_));
+        colMinGm.SetGlobalBuffer((__gm__ float*)workSpace + (totalBatchLen_ * nLen_) + (batchStart_ * nLen_));
         PipeBarrier<PIPE_ALL>();
         InitGlobalMemory<float>(colMinGm, (batchEnd_ - batchStart_) * nLen_, POS_INFINITY);
     }
@@ -149,7 +146,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
     SyncAll<true>();
     if constexpr (hasSmooth) {
-        smoothGm.SetGlobalBuffer((__gm__ xDtype *)smooth_scales);
+        smoothGm.SetGlobalBuffer((__gm__ xDtype*)smooth_scales);
         // smooth_scale is col-wise
         pPipe->InitBuffer(smoothQueue_, USE_BUFFER_NUM, mBlockSize_ * sizeof(xDtype));
     }
@@ -157,7 +154,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     pPipe->InitBuffer(inQueue_, USE_BUFFER_NUM, mBlockSize_ * nBlockSize_ * sizeof(xDtype));
     pPipe->InitBuffer(colMaxQueue_, USE_BUFFER_NUM, nBlockSize_ * sizeof(float));
     if constexpr (isSymmetrical == false) {
-        offsetGm.SetGlobalBuffer((__gm__ float *)offset);
+        offsetGm.SetGlobalBuffer((__gm__ float*)offset);
         pPipe->InitBuffer(colMinQueue_, USE_BUFFER_NUM, nBlockSize_ * sizeof(float));
     }
 }
@@ -185,7 +182,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::ParseTilingData(
-    const DynamicQuantTilingDataArch35 *tilingData)
+    const DynamicQuantTilingDataArch35* tilingData)
 {
     coreNum_ = tilingData->coreNum;
     headCoreNum_ = tilingData->headCoreNum;
@@ -198,7 +195,7 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     nBlockSize_ = tilingData->nBlockSize;
     nTailBlockSize_ = tilingData->nTailBlockSize;
     nTailBlockSizeAligned_ = ops::CeilAlign(nTailBlockSize_, DynamicQuantNDOpt::SIXTEEN);
-    if constexpr(IsSameType<yDtype, int4b_t>::value) {
+    if constexpr (IsSameType<yDtype, int4b_t>::value) {
         nTailBlockSizeAlignedB8_ = ops::CeilAlign(nTailBlockSize_, DynamicQuantNDOpt::SIXTY_FOUR);
     } else {
         nTailBlockSizeAlignedB8_ = ops::CeilAlign(nTailBlockSize_, DynamicQuantNDOpt::THIRTY_TWO);
@@ -247,8 +244,9 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
-    DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::PreProcessSingleBlock(
-        uint32_t bIdx, uint32_t mIdx, uint32_t nIdx)
+DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::PreProcessSingleBlock(uint32_t bIdx,
+                                                                                                      uint32_t mIdx,
+                                                                                                      uint32_t nIdx)
 {
     uint32_t count = nIdx + 1 == nBlockNum_ ? nTailBlockSize_ : nBlockSize_;
     uint32_t nSize = nIdx + 1 == nBlockNum_ ? nTailBlockSizeAligned_ : nBlockSize_;
@@ -262,19 +260,19 @@ __aicore__ inline void
     LocalTensor<float> colMinLocal;
     LocalTensor<xDtype> smoothLocal;
 
-    __ubuf__ xDtype *inAddr = (__ubuf__ xDtype *)inLocal.GetPhyAddr();
-    __ubuf__ xDtype *smoothAddr = nullptr;
+    __ubuf__ xDtype* inAddr = (__ubuf__ xDtype*)inLocal.GetPhyAddr();
+    __ubuf__ xDtype* smoothAddr = nullptr;
 
-    __ubuf__ float *colMaxLocalAddr = (__ubuf__ float *)colMaxLocal.GetPhyAddr();
-    __ubuf__ float *colMinLocalAddr = nullptr;
+    __ubuf__ float* colMaxLocalAddr = (__ubuf__ float*)colMaxLocal.GetPhyAddr();
+    __ubuf__ float* colMinLocalAddr = nullptr;
 
     if constexpr (hasSmooth) {
         smoothLocal = smoothQueue_.template DeQue<xDtype>();
-        smoothAddr = (__ubuf__ xDtype *)smoothLocal.GetPhyAddr();
+        smoothAddr = (__ubuf__ xDtype*)smoothLocal.GetPhyAddr();
     }
     if constexpr (!isSymmetrical) {
         colMinLocal = colMinQueue_.template AllocTensor<float>();
-        colMinLocalAddr = (__ubuf__ float *)colMinLocal.GetPhyAddr();
+        colMinLocalAddr = (__ubuf__ float*)colMinLocal.GetPhyAddr();
     }
 
     ComputeMinMax(inAddr, smoothAddr, colMaxLocalAddr, colMinLocalAddr, nSize, nLoopNum, mLoopNum);
@@ -292,8 +290,9 @@ __aicore__ inline void
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
-    DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::PostProcessSingleBlock(
-        uint32_t bIdx, uint32_t mIdx, uint32_t nIdx)
+DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::PostProcessSingleBlock(uint32_t bIdx,
+                                                                                                       uint32_t mIdx,
+                                                                                                       uint32_t nIdx)
 {
     CopyIn<true>(bIdx, mIdx, nIdx);
     Compute(bIdx, mIdx, nIdx);
@@ -313,10 +312,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
     LocalTensor<xDtype> inLocal = inQueue_.template AllocTensor<xDtype>();
     DataCopyExtParams copyParams = {static_cast<uint16_t>(mCopyEle),
-        static_cast<uint32_t>(nCopyInElePerRow * sizeof(xDtype)),
-        static_cast<uint32_t>((nLen_ - nCopyInElePerRow) * sizeof(xDtype)),
-        0,
-        0};
+                                    static_cast<uint32_t>(nCopyInElePerRow * sizeof(xDtype)),
+                                    static_cast<uint32_t>((nLen_ - nCopyInElePerRow) * sizeof(xDtype)), 0, 0};
     DataCopyPadExtParams<xDtype> padParams{true, 0, nCopyInPadNum, 0};
     DataCopyPad(inLocal, inGm[xOffset], copyParams, padParams);
     inQueue_.template EnQue(inLocal);
@@ -344,8 +341,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
 
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasSmooth, isSymmetrical>::ComputeMinMax(
-    __ubuf__ xDtype *inAddr, __ubuf__ xDtype *smoothAddr, __ubuf__ float *colMaxLocalAddr,
-    __ubuf__ float *colMinLocalAddr, uint32_t nSize, uint16_t nLoopNum, uint16_t mLoopNum)
+    __ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ float* colMaxLocalAddr,
+    __ubuf__ float* colMinLocalAddr, uint32_t nSize, uint16_t nLoopNum, uint16_t mLoopNum)
 {
     uint32_t vl = DynamicQuantNDOpt::SIXTY_FOUR;
     __VEC_SCOPE__
@@ -367,18 +364,18 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
                 MicroAPI::Duplicate<float>(vregColMax, 0.0f, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
                     MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregIn, (__ubuf__ xDtype *)(inAddr + i * vl + j * nSize));
+                        vregIn, (__ubuf__ xDtype*)(inAddr + i * vl + j * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
                         MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype *)(smoothAddr + j));
+                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
                     MicroAPI::Abs<float>(vregAbs, vregInFp32, preg0);
                     MicroAPI::Max<float>(vregColMax, vregAbs, vregColMax, preg0);
                 }
-                MicroAPI::DataCopy<float>((__ubuf__ float *)colMaxLocalAddr + i * vl, vregColMax, preg0);
+                MicroAPI::DataCopy<float>((__ubuf__ float*)colMaxLocalAddr + i * vl, vregColMax, preg0);
             }
         } else {
             for (uint16_t i = 0; i < nLoopNum; i++) {
@@ -387,19 +384,19 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
                 MicroAPI::Duplicate<float>(vregColMin, POS_INFINITY, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
                     MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregIn, (__ubuf__ xDtype *)(inAddr + i * vl + j * nSize));
+                        vregIn, (__ubuf__ xDtype*)(inAddr + i * vl + j * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype *)smoothAddr + j);
+                        MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
+                                                                                     (__ubuf__ xDtype*)smoothAddr + j);
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
                     MicroAPI::Max<float>(vregColMax, vregInFp32, vregColMax, preg0);
                     MicroAPI::Min<float>(vregColMin, vregInFp32, vregColMin, preg0);
                 }
-                MicroAPI::DataCopy<float>((__ubuf__ float *)colMaxLocalAddr + i * vl, vregColMax, preg0);
-                MicroAPI::DataCopy<float>((__ubuf__ float *)colMinLocalAddr + i * vl, vregColMin, preg0);
+                MicroAPI::DataCopy<float>((__ubuf__ float*)colMaxLocalAddr + i * vl, vregColMax, preg0);
+                MicroAPI::DataCopy<float>((__ubuf__ float*)colMinLocalAddr + i * vl, vregColMin, preg0);
             }
         }
     }
@@ -439,26 +436,26 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     LocalTensor<float> offsetLocal;
     LocalTensor<xDtype> smoothLocal;
 
-    __ubuf__ xDtype *inAddr = (__ubuf__ xDtype *)inLocal.GetPhyAddr();
-    __ubuf__ xDtype *smoothAddr;
+    __ubuf__ xDtype* inAddr = (__ubuf__ xDtype*)inLocal.GetPhyAddr();
+    __ubuf__ xDtype* smoothAddr;
 
-    __ubuf__ float *colMaxLocalAddr = (__ubuf__ float *)colMaxLocal.GetPhyAddr();
+    __ubuf__ float* colMaxLocalAddr = (__ubuf__ float*)colMaxLocal.GetPhyAddr();
 
-    __ubuf__ float *colMinLocalAddr;
-    __ubuf__ float *offsetLocalAddr;
+    __ubuf__ float* colMinLocalAddr;
+    __ubuf__ float* offsetLocalAddr;
 
-    __ubuf__ yCopyDtype *yAddr = (__ubuf__ yCopyDtype *)yLocal.GetPhyAddr();
-    __ubuf__ float *scaleLocalAddr = (__ubuf__ float *)scaleLocal.GetPhyAddr();
+    __ubuf__ yCopyDtype* yAddr = (__ubuf__ yCopyDtype*)yLocal.GetPhyAddr();
+    __ubuf__ float* scaleLocalAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
 
     if constexpr (hasSmooth) {
         smoothLocal = smoothQueue_.template DeQue<xDtype>();
-        smoothAddr = (__ubuf__ xDtype *)smoothLocal.GetPhyAddr();
+        smoothAddr = (__ubuf__ xDtype*)smoothLocal.GetPhyAddr();
     }
     if constexpr (!isSymmetrical) {
         colMinLocal = colMinQueueIn_.template DeQue<float>();
-        colMinLocalAddr = (__ubuf__ float *)colMinLocal.GetPhyAddr();
+        colMinLocalAddr = (__ubuf__ float*)colMinLocal.GetPhyAddr();
         offsetLocal = offsetQueue_.template AllocTensor<float>();
-        offsetLocalAddr = (__ubuf__ float *)offsetLocal.GetPhyAddr();
+        offsetLocalAddr = (__ubuf__ float*)offsetLocal.GetPhyAddr();
     }
 
     uint32_t vl = DynamicQuantNDOpt::SIXTY_FOUR;
@@ -502,16 +499,16 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
         if constexpr (isSymmetrical) {
             for (uint16_t i = 0; i < nLoopNum; i++) {
                 preg0 = MicroAPI::UpdateMask<float>(sregN);
-                MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float *)(colMaxLocalAddr + i * vl));
+                MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + i * vl));
                 MicroAPI::Mul<float>(vregScale, vregColMax, vregMaxFactor, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
                     auto outAddr = yAddr + i * vl + j * nSizeOut;
                     MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregIn, (__ubuf__ xDtype *)(inAddr + i * vl + j * nSize));
+                        vregIn, (__ubuf__ xDtype*)(inAddr + i * vl + j * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
                         MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype *)(smoothAddr + j));
+                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
@@ -525,27 +522,27 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
                         MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr, vregOut, preg0);
                     }
                 }
-                MicroAPI::DataCopy<float>((__ubuf__ float *)scaleLocalAddr + i * vl, vregScale, preg0);
+                MicroAPI::DataCopy<float>((__ubuf__ float*)scaleLocalAddr + i * vl, vregScale, preg0);
             }
         } else {
             MicroAPI::Duplicate<float>(vregOffsetVal, offsetValue_, pregAll);
             MicroAPI::Duplicate<float>(vregOffsetDivVal, offsetDivValue_, pregAll);
             for (uint16_t i = 0; i < nLoopNum; i++) {
                 preg0 = MicroAPI::UpdateMask<float>(sregN);
-                MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float *)(colMaxLocalAddr + i * vl));
-                MicroAPI::DataCopy<float>(vregColMin, (__ubuf__ float *)(colMinLocalAddr + i * vl));
+                MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + i * vl));
+                MicroAPI::DataCopy<float>(vregColMin, (__ubuf__ float*)(colMinLocalAddr + i * vl));
                 MicroAPI::Sub<float>(vregSub, vregColMax, vregColMin, preg0);
-                MicroAPI::Mul<float>(vregScale, vregSub, vregOffsetDivVal, preg0);                
+                MicroAPI::Mul<float>(vregScale, vregSub, vregOffsetDivVal, preg0);
                 MicroAPI::Div<float, &divHighPrecisionMode>(vregMaxDivScale, vregColMax, vregScale, preg0);
                 MicroAPI::Sub<float>(vregOffset, vregOffsetVal, vregMaxDivScale, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
                     auto outAddr = yAddr + i * vl + j * nSizeOut;
                     MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        vregIn, (__ubuf__ xDtype *)inAddr + i * vl + j * nSize);
+                        vregIn, (__ubuf__ xDtype*)inAddr + i * vl + j * nSize);
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
                         MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
-                            vregSmooth, (__ubuf__ xDtype *)(smoothAddr + j));
+                            vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                     }
@@ -560,8 +557,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
                         MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr, vregOut, preg0);
                     }
                 }
-                MicroAPI::DataCopy<float>((__ubuf__ float *)scaleLocalAddr + i * vl, vregScale, preg0);
-                MicroAPI::DataCopy<float>((__ubuf__ float *)offsetLocalAddr + i * vl, vregOffset, preg0);
+                MicroAPI::DataCopy<float>((__ubuf__ float*)scaleLocalAddr + i * vl, vregScale, preg0);
+                MicroAPI::DataCopy<float>((__ubuf__ float*)offsetLocalAddr + i * vl, vregOffset, preg0);
             }
         }
     }
@@ -601,10 +598,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     }
 
     DataCopyExtParams copyParams{static_cast<uint16_t>(mCopyEle),
-        static_cast<uint32_t>(nCopyInElePerRow * sizeof(yCopyDtype)),
-        0,
-        static_cast<uint32_t>((nLen_ - nCopyInElePerRow) * sizeof(yCopyDtype)) ,
-        0};
+                                 static_cast<uint32_t>(nCopyInElePerRow * sizeof(yCopyDtype)), 0,
+                                 static_cast<uint32_t>((nLen_ - nCopyInElePerRow) * sizeof(yCopyDtype)), 0};
     if constexpr (IsSameType<yDtype, int4b_t>::value) {
         copyParams.blockLen = copyParams.blockLen >> 1;
         copyParams.dstStride = copyParams.dstStride >> 1;
@@ -616,5 +611,5 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelSplitM<xDtype, yDtype, hasS
     scaleQueue_.template FreeTensor(scaleLocal);
 }
 
-}  // namespace DynamicQuantPerChannel
-#endif  // DYNAMIC_QUANT_REGBASE_PERCHANNEL_SPLIT_M_H
+} // namespace DynamicQuantPerChannel
+#endif // DYNAMIC_QUANT_REGBASE_PERCHANNEL_SPLIT_M_H

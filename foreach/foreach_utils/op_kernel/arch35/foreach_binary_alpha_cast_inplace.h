@@ -24,15 +24,13 @@ using namespace AscendC;
 // CRTP intermediate: Derived supplies ApplyBinaryOp(dst, a, b, dataCount) (Add/Sub of x1 and alpha*x2).
 // float/int compute directly; half/bfloat16 cast to float (bf16 scalar cast is unsupported on dav-3510).
 template <typename T, typename ScalarT, typename Tiling, typename Derived>
-class ForeachBinaryAlphaCastInplaceRegbase : public ForeachRegbaseBinary<T, Tiling, Derived>
-{
+class ForeachBinaryAlphaCastInplaceRegbase : public ForeachRegbaseBinary<T, Tiling, Derived> {
 public:
     using Base = ForeachRegbaseBinary<T, Tiling, Derived>;
     using Base::Process;
     __aicore__ inline ForeachBinaryAlphaCastInplaceRegbase() : Base(static_cast<Derived&>(*this)){};
-    __aicore__ inline void Init(
-        GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR alpha, GM_ADDR outputs, GM_ADDR workspace,
-        const Tiling* tilingData, TPipe* tPipe)
+    __aicore__ inline void Init(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR alpha, GM_ADDR outputs, GM_ADDR workspace,
+                                const Tiling* tilingData, TPipe* tPipe)
     {
         Base::Init(tensor1, tensor2, outputs, workspace, tilingData, tPipe);
         inScalarGM_.SetGlobalBuffer((__gm__ ScalarT*)alpha, 1);
@@ -47,8 +45,8 @@ public:
         }
     }
 
-    __aicore__ inline void Compute(
-        LocalTensor<T> in1Local, LocalTensor<T> in2Local, LocalTensor<T> outLocal, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T> in1Local, LocalTensor<T> in2Local, LocalTensor<T> outLocal,
+                                   int64_t dataCount)
     {
         if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
             Cast(cast1_, in1Local, RoundMode::CAST_NONE, dataCount);

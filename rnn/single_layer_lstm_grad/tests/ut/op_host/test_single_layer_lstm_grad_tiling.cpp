@@ -39,23 +39,15 @@ struct SingleLayerLstmGradCompileInfo {
     int64_t l1SizePlatForm = 0;
 };
 
-
 class SingleLayerLstmGradTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SingleLayerLstmGradTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SingleLayerLstmGradTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SingleLayerLstmGradTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SingleLayerLstmGradTiling TearDown" << std::endl; }
 };
 
-void TestSingleLayerLstmGradTiling(
-    int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize, ge::DataType dataType,
-    uint64_t expectTilingKey)
+void TestSingleLayerLstmGradTiling(int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize,
+                                   ge::DataType dataType, uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{timeStep, batch, inputSize}, {timeStep, batch, inputSize}};
@@ -120,9 +112,8 @@ void TestSingleLayerLstmGradTiling(
                       .NodeOutputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                        {{"direction", Ops::NN::AnyValue::CreateFrom<string>("UNIDIRECTIONAL")},
-                        {"gate_order", Ops::NN::AnyValue::CreateFrom<string>("ijfo")}})
+                      .NodeAttrs({{"direction", Ops::NN::AnyValue::CreateFrom<string>("UNIDIRECTIONAL")},
+                                  {"gate_order", Ops::NN::AnyValue::CreateFrom<string>("ijfo")}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -142,9 +133,8 @@ void TestSingleLayerLstmGradTiling(
     // dlog_setlevel(0, 3, 0);
 }
 
-void TestSingleLayerLstmGradDataTiling(
-    int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize, ge::DataType dataType,
-    uint64_t expectTilingKey)
+void TestSingleLayerLstmGradDataTiling(int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize,
+                                       ge::DataType dataType, uint64_t expectTilingKey)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{timeStep, batch, inputSize}, {timeStep, batch, inputSize}};
@@ -184,7 +174,8 @@ void TestSingleLayerLstmGradDataTiling(
                       .NodeIoNum(17, 5)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
                       .InputShapes({&xShape, &wShape, &bShape, &hShape, &inith0Shape, &inith0Shape, &hShape, &hShape,
-                        &hShape, &inith0Shape, &inith0Shape, &hShape, &hShape, &hShape, &hShape, &hShape, &hShape})
+                                    &hShape, &inith0Shape, &inith0Shape, &hShape, &hShape, &hShape, &hShape, &hShape,
+                                    &hShape})
                       .OutputShapes({&wShape, &bShape, &xShape, &inith0Shape, &inith0Shape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -210,9 +201,8 @@ void TestSingleLayerLstmGradDataTiling(
                       .NodeOutputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                        {{"direction", Ops::NN::AnyValue::CreateFrom<string>("UNIDIRECTIONAL")},
-                        {"gate_order", Ops::NN::AnyValue::CreateFrom<string>("ijfo")}})
+                      .NodeAttrs({{"direction", Ops::NN::AnyValue::CreateFrom<string>("UNIDIRECTIONAL")},
+                                  {"gate_order", Ops::NN::AnyValue::CreateFrom<string>("ijfo")}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -234,12 +224,14 @@ void TestSingleLayerLstmGradDataTiling(
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_tilingkey_0)
 {
-    std::cout << "run case: " << "single_layer_lstm_grad_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "single_layer_lstm_grad_tilingkey_0" << std::endl;
     TestSingleLayerLstmGradTiling(8, 40, 8, 16, ge::DT_FLOAT, 0);
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_tilingkey_seq_0)
 {
-    std::cout << "run case: " << "single_layer_lstm_grad_tilingkey_0" << std::endl;
+    std::cout << "run case: "
+              << "single_layer_lstm_grad_tilingkey_0" << std::endl;
     TestSingleLayerLstmGradDataTiling(8, 40, 8, 16, ge::DT_FLOAT, 0);
 }

@@ -27,8 +27,7 @@ public:
         : MaxPoolGradWithArgmaxV3BaseTiling(context), nchwTilingCommon(&inputData)
     {}
 
-    ~MaxPoolGradWithArgmaxV3NCHWTiling() override
-    {}
+    ~MaxPoolGradWithArgmaxV3NCHWTiling() override {}
 
 private:
     uint64_t GetTilingKey() const override;

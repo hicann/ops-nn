@@ -17,16 +17,13 @@
 
 class LpNormV2Test : public testing::Test {
 protected:
-  static void SetUpTestCase() {
-    std::cout << "LpNormV2 SetUp" << std::endl;
-  }
+    static void SetUpTestCase() { std::cout << "LpNormV2 SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "LpNormV2 TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "LpNormV2 TearDown" << std::endl; }
 };
 
-TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true) {
+TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -44,11 +41,10 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true) {
                       .IrInstanceNum({1}, {1})
                       .InputShapes({&xShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(1.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
@@ -60,7 +56,8 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp16_p_1_keepdim_true) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_2_keepdim_false) {
+TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_2_keepdim_false)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -78,11 +75,10 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_2_keepdim_false) {
                       .IrInstanceNum({1}, {1})
                       .InputShapes({&xShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
@@ -94,7 +90,8 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_2_keepdim_false) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_3_5_keepdim_false) {
+TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_3_5_keepdim_false)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -112,11 +109,10 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_3_5_keepdim_false) {
                       .IrInstanceNum({1}, {1})
                       .InputShapes({&xShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(3.5)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(3.5)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
@@ -128,7 +124,8 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_3_5_keepdim_false) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_0_keepdim_true) {
+TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_0_keepdim_true)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -146,11 +143,10 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_0_keepdim_true) {
                       .IrInstanceNum({1}, {1})
                       .InputShapes({&xShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
@@ -162,7 +158,8 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_fp32_p_0_keepdim_true) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_2_keepdim_true) {
+TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_2_keepdim_true)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -180,11 +177,10 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_2_keepdim_true) {
                       .IrInstanceNum({1}, {1})
                       .InputShapes({&xShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(2.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 2})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
@@ -196,7 +192,8 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_2_keepdim_true) {
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_neg_2_keepdim_false) {
+TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_neg_2_keepdim_false)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -214,11 +211,10 @@ TEST_F(LpNormV2Test, lp_norm_v2_infer_shape_dynamic_fp32_p_neg_2_keepdim_false) 
                       .IrInstanceNum({1}, {1})
                       .InputShapes({&xShape})
                       .OutputShapes({&outputShape})
-                      .NodeAttrs(
-                          {{"p", Ops::NN::AnyValue::CreateFrom<float>(-2.0)},
-                           {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({})},
-                           {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
+                      .NodeAttrs({{"p", Ops::NN::AnyValue::CreateFrom<float>(-2.0)},
+                                  {"axes", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({})},
+                                  {"keepdim", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();

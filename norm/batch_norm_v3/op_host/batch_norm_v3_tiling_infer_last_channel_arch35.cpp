@@ -197,28 +197,25 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::GetShapeAttrsInfo()
     }
 
     if (format == FORMAT_NHWC) {
-        OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NHWC_DIM_NUM,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NHWC format"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xStorageShape.GetDimNum() != NHWC_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x", std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "4D with NHWC format"),
+                    return ge::GRAPH_FAILED);
         fusedALen = xStorageShape.GetDim(DIM_3);
         fusedBLen = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
     } else if (format == FORMAT_NDHWC) {
-        OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NDHWC format"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x", std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "5D with NDHWC format"),
+                    return ge::GRAPH_FAILED);
         fusedALen = xStorageShape.GetDim(DIM_4);
         fusedBLen = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) *
                     xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCHW) {
-        OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NHWC_DIM_NUM,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(xStorageShape.GetDimNum() != NHWC_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x", std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "4D with NCHW format"),
+                    return ge::GRAPH_FAILED);
         bool hwIsOne = xStorageShape.GetDim(DIM_2) == 1 && xStorageShape.GetDim(DIM_3) == 1;
         if (!hwIsOne) {
             return ge::GRAPH_PARAM_INVALID;
@@ -226,13 +223,12 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::GetShapeAttrsInfo()
         fusedALen = xStorageShape.GetDim(DIM_1);
         fusedBLen = xStorageShape.GetDim(DIM_0);
     } else if (format == FORMAT_NCDHW) {
-        OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
-            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
-                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
-            return ge::GRAPH_FAILED);
-        bool dhwIsOne =
-            xStorageShape.GetDim(DIM_2) == 1 && xStorageShape.GetDim(DIM_3) == 1 && xStorageShape.GetDim(DIM_4) == 1;
+        OP_CHECK_IF(xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x", std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "5D with NCDHW format"),
+                    return ge::GRAPH_FAILED);
+        bool dhwIsOne = xStorageShape.GetDim(DIM_2) == 1 && xStorageShape.GetDim(DIM_3) == 1 &&
+                        xStorageShape.GetDim(DIM_4) == 1;
         if (!dhwIsOne) {
             return ge::GRAPH_PARAM_INVALID;
         }
@@ -253,16 +249,15 @@ int64_t BatchNormV3InferLastChannelTiling::GetBaseTilingAOuter() const
         return 0;
     }
     int64_t paramBytes = (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerWeightElement) * aTileBase;
-    int64_t ubBufferSize = (static_cast<int64_t>(aicoreParams_.ubSize) / DOUBLE_BUFFER - paramBytes) /
-                           bytesPerElement / INPUT_OUTPUT_NUM;
+    int64_t ubBufferSize = (static_cast<int64_t>(aicoreParams_.ubSize) / DOUBLE_BUFFER - paramBytes) / bytesPerElement /
+                           INPUT_OUTPUT_NUM;
     int64_t bFactorMax = ubBufferSize / aTileBase;
     if (bFactorMax <= 0) {
         return 0;
     }
     int64_t bInner = fusedBLen <= bFactorMax ? fusedBLen : bFactorMax;
-    int64_t elemBytes =
-        bInner * INPUT_OUTPUT_NUM * bytesPerElement + WEIGHT_BIAS_NUM * bytesPerWeightElement +
-        MEAN_VAR_NUM * FLOAT32_BYTES;
+    int64_t elemBytes = bInner * INPUT_OUTPUT_NUM * bytesPerElement + WEIGHT_BIAS_NUM * bytesPerWeightElement +
+                        MEAN_VAR_NUM * FLOAT32_BYTES;
     if (elemBytes <= 0) {
         return 0;
     }
@@ -273,8 +268,8 @@ int64_t BatchNormV3InferLastChannelTiling::GetBaseTilingAOuter() const
     return Ops::Base::CeilDiv(fusedALen, tileBlockALen);
 }
 
-ge::graphStatus BatchNormV3InferLastChannelTiling::FillLastChannelTilingForBSplit(
-    int64_t paramBytes, int64_t cacheBytes)
+ge::graphStatus BatchNormV3InferLastChannelTiling::FillLastChannelTilingForBSplit(int64_t paramBytes,
+                                                                                  int64_t cacheBytes)
 {
     int64_t perElemBytes = INPUT_OUTPUT_NUM * DOUBLE_BUFFER * bytesPerElement;
     int64_t elemFactorMax = (static_cast<int64_t>(aicoreParams_.ubSize) - paramBytes - cacheBytes) / perElemBytes;
@@ -282,7 +277,7 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::FillLastChannelTilingForBSpli
     bInner = bInner <= 0 ? 1 : bInner;
     bInner = fusedBLen <= bInner ? fusedBLen : bInner;
     while ((paramBytes + cacheBytes + bInner * fusedALen * INPUT_OUTPUT_NUM * DOUBLE_BUFFER * bytesPerElement >
-               static_cast<int64_t>(aicoreParams_.ubSize)) &&
+            static_cast<int64_t>(aicoreParams_.ubSize)) &&
            bInner > 1) {
         bInner--;
     }
@@ -310,18 +305,16 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::FillLastChannelTilingForBSpli
 
 ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
 {
-    auto alignUp = [](int64_t value, int64_t base) {
-        return (value + base - 1) / base * base;
-    };
+    auto alignUp = [](int64_t value, int64_t base) { return (value + base - 1) / base * base; };
 
     if (isSmallLastChannel) {
-        int64_t paramBytes =
-            DOUBLE_BUFFER * (MEAN_VAR_NUM * sizeof(float) + WEIGHT_BIAS_NUM * bytesPerWeightElement) * fusedALen;
+        int64_t paramBytes = DOUBLE_BUFFER * (MEAN_VAR_NUM * sizeof(float) + WEIGHT_BIAS_NUM * bytesPerWeightElement) *
+                             fusedALen;
         int64_t paramCacheElemLen = (static_cast<int64_t>(vlFp32) / fusedALen) * fusedALen;
         int64_t offsetBytes = alignUp(paramCacheElemLen * UINT32_BYTES, static_cast<int64_t>(blockSize));
-        int64_t cacheBytes = offsetBytes + SMALL_LAST_CHANNEL_CACHE_BUFFER_NUM *
-                                               alignUp(paramCacheElemLen * FLOAT32_BYTES,
-                                                   static_cast<int64_t>(blockSize));
+        int64_t cacheBytes = offsetBytes +
+                             SMALL_LAST_CHANNEL_CACHE_BUFFER_NUM *
+                                 alignUp(paramCacheElemLen * FLOAT32_BYTES, static_cast<int64_t>(blockSize));
         return FillLastChannelTilingForBSplit(paramBytes, cacheBytes);
     }
 
@@ -331,8 +324,8 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
                               baseAOuter <= maxContinuousAOuter;
     if (isContinuousLastChannel) {
         int64_t paramAlignLen = alignUp(fusedALen, static_cast<int64_t>(vlFp32));
-        int64_t paramBytes =
-            DOUBLE_BUFFER * (MEAN_VAR_NUM * sizeof(float) + WEIGHT_BIAS_NUM * bytesPerWeightElement) * paramAlignLen;
+        int64_t paramBytes = DOUBLE_BUFFER * (MEAN_VAR_NUM * sizeof(float) + WEIGHT_BIAS_NUM * bytesPerWeightElement) *
+                             paramAlignLen;
         int64_t paramCacheBytes = (MEAN_VAR_NUM + WEIGHT_BIAS_NUM) * FLOAT32_BYTES * paramAlignLen;
         return FillLastChannelTilingForBSplit(paramBytes, paramCacheBytes);
     }
@@ -340,7 +333,8 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
     // 切分A、B基本块， （B,A） -- >(Bouter, Aouter, Binner*Ainner*ATileBase)
     int64_t aInner = 1;
     int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
-                            (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerWeightElement) * aInner * aTileBase) /
+                            (MEAN_VAR_NUM * FLOAT32_BYTES + WEIGHT_BIAS_NUM * bytesPerWeightElement) * aInner *
+                                aTileBase) /
                            bytesPerElement / INPUT_OUTPUT_NUM;
 
     // 先按照B切分，再切A
@@ -350,9 +344,9 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
     int64_t bTail = fusedBLen % bInner;
     int64_t tileBlockBTail = bTail == 0 ? bInner : bTail;
 
-    int64_t aFactorMax =
-        aicoreParams_.ubSize / DOUBLE_BUFFER / aTileBase /
-        (bInner * INPUT_OUTPUT_NUM * bytesPerElement + WEIGHT_BIAS_NUM * bytesPerWeightElement + MEAN_VAR_NUM * FLOAT32_BYTES);
+    int64_t aFactorMax = aicoreParams_.ubSize / DOUBLE_BUFFER / aTileBase /
+                         (bInner * INPUT_OUTPUT_NUM * bytesPerElement + WEIGHT_BIAS_NUM * bytesPerWeightElement +
+                          MEAN_VAR_NUM * FLOAT32_BYTES);
     int64_t aInnerMax = fusedALen / aTileBase;
     aInner = aInnerMax <= aFactorMax ? aInnerMax : aFactorMax;
 
@@ -383,10 +377,7 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus BatchNormV3InferLastChannelTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus BatchNormV3InferLastChannelTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t BatchNormV3InferLastChannelTiling::GetTilingKey() const
 {
@@ -413,11 +404,10 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::PostTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     auto rawTilingData = context_->GetRawTilingData();
     currentWorkspace[0] = workspaceSize_;
-    OP_CHECK_IF(
-        tilingData.GetDataSize() > rawTilingData->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            tilingData.GetDataSize(), rawTilingData->GetCapacity()), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingData.GetDataSize() > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        tilingData.GetDataSize(), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData.GetDataSize());
 

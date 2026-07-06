@@ -52,20 +52,15 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachAbsSimtKernel(
-    IDX_T totalElements,
-    int32_t tensorCount,
-    __gm__ const int64_t* cumOffsets,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAbsSimtKernel(IDX_T totalElements,
+                                                                                   int32_t tensorCount,
+                                                                                   __gm__ const int64_t* cumOffsets,
+                                                                                   GM_ADDR xList, GM_ADDR yList)
 {
-    for (IDX_T flatIdx = static_cast<IDX_T>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum()
-            + AscendC::Simt::GetThreadIdx());
+    for (IDX_T flatIdx = static_cast<IDX_T>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                            AscendC::Simt::GetThreadIdx());
          flatIdx < totalElements;
-         flatIdx += static_cast<IDX_T>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
+         flatIdx += static_cast<IDX_T>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
         int32_t tensorId = tensorCount - 1;
         IDX_T prevCumSum = 0;
         for (int32_t t = 0; t < tensorCount; t++) {
@@ -88,8 +83,7 @@ inline void OpForeachAbsSimtKernel(
 template <typename T>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    __gm__ const ForeachAbsTilingData* tilingGM =
-        reinterpret_cast<__gm__ const ForeachAbsTilingData*>(tiling);
+    __gm__ const ForeachAbsTilingData* tilingGM = reinterpret_cast<__gm__ const ForeachAbsTilingData*>(tiling);
 
     int64_t totalElements = tilingGM->totalElements;
     int32_t tensorCount = tilingGM->tensorCount;
@@ -98,15 +92,11 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR 
     if (totalElements <= static_cast<int64_t>(INT32_MAX)) {
         using IDX_T = int32_t;
         AscendC::Simt::VF_CALL<OpForeachAbsSimtKernel<T, IDX_T>>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            static_cast<IDX_T>(totalElements), tensorCount,
-            cumOffsets, x, y);
+            AscendC::Simt::Dim3(THREAD_NUM), static_cast<IDX_T>(totalElements), tensorCount, cumOffsets, x, y);
     } else {
         using IDX_T = int64_t;
-        AscendC::Simt::VF_CALL<OpForeachAbsSimtKernel<T, IDX_T>>(
-            AscendC::Simt::Dim3(THREAD_NUM),
-            totalElements, tensorCount,
-            cumOffsets, x, y);
+        AscendC::Simt::VF_CALL<OpForeachAbsSimtKernel<T, IDX_T>>(AscendC::Simt::Dim3(THREAD_NUM), totalElements,
+                                                                 tensorCount, cumOffsets, x, y);
     }
 }
 

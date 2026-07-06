@@ -56,7 +56,7 @@ bool IsIndexedContinuous(const std::vector<int64_t>& indexedSizes)
 }
 
 ge::graphStatus BroadcastShape(const char* opName, const std::vector<std::vector<int64_t>>& shapes,
-    std::vector<int64_t>& outShape)
+                               std::vector<int64_t>& outShape)
 {
     size_t maxRank = 0;
     for (const auto& shape : shapes) {
@@ -82,7 +82,7 @@ ge::graphStatus BroadcastShape(const char* opName, const std::vector<std::vector
 }
 
 std::vector<int64_t> MakeOutputShape(const std::vector<int64_t>& xShape, const std::vector<int64_t>& indexedSizes,
-    const std::vector<int64_t>& indexShape)
+                                     const std::vector<int64_t>& indexShape)
 {
     std::vector<int64_t> yShape;
     if (!IsIndexedContinuous(indexedSizes)) {
@@ -108,7 +108,7 @@ std::vector<int64_t> MakeOutputShape(const std::vector<int64_t>& xShape, const s
     }
     return yShape;
 }
-}  // namespace
+} // namespace
 
 namespace ops {
 static ge::graphStatus InferShape4Index(gert::InferShapeContext* context)
@@ -176,4 +176,4 @@ IMPL_OP_INFERSHAPE(IndexAiCore)
     .InferDataType(InferDataType4Index)
     .InferShape(InferShape4Index)
     .InputsDataDependency({INPUT_INDEXED_SIZES});
-}  // namespace ops
+} // namespace ops

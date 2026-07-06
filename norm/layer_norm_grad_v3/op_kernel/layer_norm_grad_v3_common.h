@@ -36,14 +36,14 @@ template <typename T, typename U, bool isDeterministic>
 class LayerNormGradV3Common {
 public:
     __aicore__ inline LayerNormGradV3Common(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR pdGamma, GM_ADDR pdBeta,
-        GM_ADDR workspace, const LayerNormGradV3TilingDataCommon* tilingData, TPipe& pipeIn)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX,
+                                GM_ADDR pdGamma, GM_ADDR pdBeta, GM_ADDR workspace,
+                                const LayerNormGradV3TilingDataCommon* tilingData, TPipe& pipeIn)
     {
         // init gm inputs
         pipe = pipeIn;
-        int64_t curRowsNum =
-            (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail;
+        int64_t curRowsNum = (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer :
+                                                                           tilingData->blockTail;
         int64_t formerBlockLength = tilingData->blockFormer * tilingData->col;
         int64_t curBlockLength = curRowsNum * tilingData->col;
         int64_t wsLenPerBlock = tilingData->colAlignV * COMMON_CONSTANT_TWO;
@@ -158,9 +158,8 @@ private:
         // cast gamma to buffer4_
         buffer4_ = queue4_.DeQue<float>();
         if constexpr (!IsSameType<U, float>::value) {
-            Cast(
-                buffer4_, buffer4_.ReinterpretCast<U>()[tilingData->colAlignM], RoundMode::CAST_NONE,
-                tilingData->colAlignV);
+            Cast(buffer4_, buffer4_.ReinterpretCast<U>()[tilingData->colAlignM], RoundMode::CAST_NONE,
+                 tilingData->colAlignV);
             PipeBarrier<PIPE_V>();
         }
         // set reduce init value
@@ -174,8 +173,8 @@ private:
         buffer10_ = tmpTensor2_.Get<float>();
     }
 
-    __aicore__ inline void CopyInPhase1(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CopyInPhase1(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // copy_in dy to buffer1_
         buffer1_ = queue1_.AllocTensor<float>();
@@ -193,19 +192,17 @@ private:
         intriParams.srcStride = 0;
         intriParams.dstStride = 0;
         if constexpr (IsSameType<T, float>::value) {
-            DataCopyPad(
-                buffer1_.ReinterpretCast<T>(), dyInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx],
-                intriParams, padParams);
+            DataCopyPad(buffer1_.ReinterpretCast<T>(), dyInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx],
+                        intriParams, padParams);
         } else {
-            DataCopyPad(
-                buffer1_.ReinterpretCast<T>()[tilingData->wholeBufferElemNums],
-                dyInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], intriParams, padParams);
+            DataCopyPad(buffer1_.ReinterpretCast<T>()[tilingData->wholeBufferElemNums],
+                        dyInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], intriParams, padParams);
         }
         queue1_.EnQue(buffer1_);
     }
 
-    __aicore__ inline void ComputePhase1(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void ComputePhase1(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // reduce0 = reduce dy to tensor6
         buffer1_ = queue1_.DeQue<float>();
@@ -217,8 +214,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyInPhase2(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CopyInPhase2(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // copy_in mean to buffer2_
         buffer2_ = queue2_.AllocTensor<float>();
@@ -232,8 +229,8 @@ private:
         queue2_.EnQue(buffer2_);
     }
 
-    __aicore__ inline void ComputePhase2(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void ComputePhase2(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // block_broadcast_2 mean to buffer9_
         buffer2_ = queue2_.DeQue<float>();
@@ -242,8 +239,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyInPhase3(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CopyInPhase3(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // copy_in x to buffer0_
         buffer0_ = queue0_.AllocTensor<float>();
@@ -259,19 +256,17 @@ private:
         intriParamsV1.srcStride = 0;
         intriParamsV1.dstStride = 0;
         if constexpr (IsSameType<T, float>::value) {
-            DataCopyPad(
-                buffer0_.ReinterpretCast<T>(), xInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx],
-                intriParamsV1, padParams);
+            DataCopyPad(buffer0_.ReinterpretCast<T>(), xInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx],
+                        intriParamsV1, padParams);
         } else {
-            DataCopyPad(
-                buffer0_.ReinterpretCast<T>()[tilingData->wholeBufferElemNums],
-                xInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], intriParamsV1, padParams);
+            DataCopyPad(buffer0_.ReinterpretCast<T>()[tilingData->wholeBufferElemNums],
+                        xInTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], intriParamsV1, padParams);
         }
         queue0_.EnQue(buffer0_);
     }
 
-    __aicore__ inline void ComputePhase3(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void ComputePhase3(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const LayerNormGradV3TilingDataCommon* tilingData)
     {
         buffer0_ = queue0_.DeQue<float>();
         // sub_0 = x - block_broadcast_2 to buffer0_
@@ -283,8 +278,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyInPhase4(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CopyInPhase4(const int64_t outerIdx, const int64_t curRowsNum,
+                                        const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // copy_in rstd to buffer3_
         buffer3_ = queue3_.AllocTensor<float>();
@@ -298,8 +293,8 @@ private:
         queue3_.EnQue(buffer3_);
     }
 
-    __aicore__ inline void ComputePhase4(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void ComputePhase4(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // block_broadcast_1 rstd to buffer9_
         buffer3_ = queue3_.DeQue<float>();
@@ -361,8 +356,8 @@ private:
         queue5_.EnQue(buffer5_);
     }
 
-    __aicore__ inline void CopyOutPhase0(
-        const int64_t outerIdx, const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CopyOutPhase0(const int64_t outerIdx, const int64_t curRowsNum,
+                                         const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // copy_out mul_10 from buffer5_ to pdX
         buffer5_ = queue5_.DeQue<float>();
@@ -376,9 +371,8 @@ private:
         }
         intriParams.srcStride = 0;
         intriParams.dstStride = 0;
-        DataCopyPad(
-            pdXOutTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], buffer5_.ReinterpretCast<T>(),
-            intriParams);
+        DataCopyPad(pdXOutTensorGM_[tilingData->ubFormer * tilingData->col * outerIdx], buffer5_.ReinterpretCast<T>(),
+                    intriParams);
         queue5_.FreeTensor(buffer5_);
     }
 
@@ -428,23 +422,20 @@ private:
         op.FinalProcessDeterministic(tilingData->colAlignV, tilingData->blockNum, tilingData->col);
     }
 
-    __aicore__ inline void CastToFloat(
-        const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer, const int64_t curRowsNum,
-        const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CastToFloat(const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer,
+                                       const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
     {
         if (tilingData->colAlignM == tilingData->colAlignV || tilingData->colAlignV == tilingData->col) {
-            Cast(
-                buffer, buffer.ReinterpretCast<T>()[tilingData->wholeBufferElemNums], RoundMode::CAST_NONE,
-                curRowsNum * tilingData->colAlignV);
+            Cast(buffer, buffer.ReinterpretCast<T>()[tilingData->wholeBufferElemNums], RoundMode::CAST_NONE,
+                 curRowsNum * tilingData->colAlignV);
         } else {
             DataCopyParams copyIntriParams;
             copyIntriParams.blockCount = 1;
             copyIntriParams.blockLen = curRowsNum * tilingData->colAlignM / COMMON_CONSTANT_SIXTEEN;
             copyIntriParams.srcStride = 0;
             copyIntriParams.dstStride = 0;
-            DataCopy(
-                tmpBuffer.ReinterpretCast<T>(), buffer.ReinterpretCast<T>()[tilingData->wholeBufferElemNums],
-                copyIntriParams);
+            DataCopy(tmpBuffer.ReinterpretCast<T>(), buffer.ReinterpretCast<T>()[tilingData->wholeBufferElemNums],
+                     copyIntriParams);
             PipeBarrier<PIPE_V>();
             int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
             int64_t remainderCol = tilingData->colAlignV - formerColLoops * COMMON_B32_REPEAT_SIZE;
@@ -460,17 +451,15 @@ private:
                 int64_t dstRepeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignV;
                 for (int64_t j = 0; j < formerColLoops; j++) {
                     int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer[dstRepeatOffset + colOffset],
-                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
-                        COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT, intriParams);
+                    Cast(buffer[dstRepeatOffset + colOffset],
+                         tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
+                         COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT, intriParams);
                 }
                 if (likely(remainderCol != 0)) {
                     int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer[dstRepeatOffset + colOffset],
-                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE, remainderCol,
-                        COMMON_MAX_REPEAT, intriParams);
+                    Cast(buffer[dstRepeatOffset + colOffset],
+                         tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
+                         remainderCol, COMMON_MAX_REPEAT, intriParams);
                 }
             }
             if (likely(remainderRepeat != 0)) {
@@ -478,25 +467,22 @@ private:
                 int64_t dstRepeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignV;
                 for (int64_t j = 0; j < formerColLoops; j++) {
                     int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer[dstRepeatOffset + colOffset],
-                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
-                        COMMON_B32_REPEAT_SIZE, remainderRepeat, intriParams);
+                    Cast(buffer[dstRepeatOffset + colOffset],
+                         tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
+                         COMMON_B32_REPEAT_SIZE, remainderRepeat, intriParams);
                 }
                 if (likely(remainderCol != 0)) {
                     int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer[dstRepeatOffset + colOffset],
-                        tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE, remainderCol,
-                        remainderRepeat, intriParams);
+                    Cast(buffer[dstRepeatOffset + colOffset],
+                         tmpBuffer.ReinterpretCast<T>()[srcRepeatOffset + colOffset], RoundMode::CAST_NONE,
+                         remainderCol, remainderRepeat, intriParams);
                 }
             }
         }
     }
 
-    __aicore__ inline void CastToB16(
-        const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer, const int64_t curRowsNum,
-        const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void CastToB16(const LocalTensor<float>& buffer, const LocalTensor<float>& tmpBuffer,
+                                     const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
     {
         RoundMode b16RoundMode = IsSameType<T, bfloat16_t>::value ? RoundMode::CAST_ROUND : RoundMode::CAST_NONE;
         if (tilingData->colAlignM == tilingData->colAlignV || tilingData->colAlignV == tilingData->col) {
@@ -523,17 +509,15 @@ private:
                 int64_t dstRepeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignM;
                 for (int64_t j = 0; j < formerColLoops; j++) {
                     int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
-                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT,
-                        intriParams);
+                    Cast(buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                         tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, COMMON_B32_REPEAT_SIZE,
+                         COMMON_MAX_REPEAT, intriParams);
                 }
                 if (likely(remainderCol != 0)) {
                     int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
-                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, remainderCol, COMMON_MAX_REPEAT,
-                        intriParams);
+                    Cast(buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                         tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, remainderCol, COMMON_MAX_REPEAT,
+                         intriParams);
                 }
             }
             if (likely(remainderRepeat != 0)) {
@@ -541,25 +525,23 @@ private:
                 int64_t dstRepeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignM;
                 for (int64_t j = 0; j < formerColLoops; j++) {
                     int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
-                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, COMMON_B32_REPEAT_SIZE, remainderRepeat,
-                        intriParams);
+                    Cast(buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                         tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, COMMON_B32_REPEAT_SIZE, remainderRepeat,
+                         intriParams);
                 }
                 if (likely(remainderCol != 0)) {
                     int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
-                    Cast(
-                        buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
-                        tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, remainderCol, remainderRepeat,
-                        intriParams);
+                    Cast(buffer.ReinterpretCast<T>()[dstRepeatOffset + colOffset],
+                         tmpBuffer[srcRepeatOffset + colOffset], b16RoundMode, remainderCol, remainderRepeat,
+                         intriParams);
                 }
             }
         }
     }
 
     template <typename dType>
-    __aicore__ inline void BlockBroadcast(
-        const LocalTensor<dType>& dst, const LocalTensor<dType>& src, const int64_t curRowsNum)
+    __aicore__ inline void BlockBroadcast(const LocalTensor<dType>& dst, const LocalTensor<dType>& src,
+                                          const int64_t curRowsNum)
     {
         // repeat must less than 255
         Brcb(dst, src, (curRowsNum + CONSTANT_EIGHT - 1) / CONSTANT_EIGHT, {1, CONSTANT_EIGHT});
@@ -568,9 +550,8 @@ private:
     __aicore__ inline void BinElemWithInlinedLastBrcFP32(
         const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
         const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData,
-        void (*func)(
-            const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
-            const BinaryRepeatParams&))
+        void (*func)(const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
+                     const BinaryRepeatParams&))
     {
         // src1 need to do inline broadcast
         int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
@@ -588,40 +569,36 @@ private:
             int64_t repeatOffset = i * COMMON_MAX_REPEAT * tilingData->colAlignV;
             for (int64_t j = 0; j < formerColLoops; j++) {
                 int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
-                func(
-                    dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
-                    src1[i * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT,
-                    intriParams);
+                func(dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
+                     src1[i * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], COMMON_B32_REPEAT_SIZE, COMMON_MAX_REPEAT,
+                     intriParams);
             }
             if (likely(remainderCol != 0)) {
                 int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
-                func(
-                    dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
-                    src1[i * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], remainderCol, COMMON_MAX_REPEAT, intriParams);
+                func(dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
+                     src1[i * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], remainderCol, COMMON_MAX_REPEAT, intriParams);
             }
         }
         if (likely(remainderRepeat != 0)) {
             int64_t repeatOffset = repeatLoops * COMMON_MAX_REPEAT * tilingData->colAlignV;
             for (int64_t j = 0; j < formerColLoops; j++) {
                 int64_t colOffset = j * COMMON_B32_REPEAT_SIZE;
-                func(
-                    dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
-                    src1[repeatLoops * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], COMMON_B32_REPEAT_SIZE,
-                    remainderRepeat, intriParams);
+                func(dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
+                     src1[repeatLoops * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], COMMON_B32_REPEAT_SIZE,
+                     remainderRepeat, intriParams);
             }
             if (likely(remainderCol != 0)) {
                 int64_t colOffset = formerColLoops * COMMON_B32_REPEAT_SIZE;
-                func(
-                    dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
-                    src1[repeatLoops * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], remainderCol, remainderRepeat,
-                    intriParams);
+                func(dst[repeatOffset + colOffset], src0[repeatOffset + colOffset],
+                     src1[repeatLoops * COMMON_MAX_REPEAT * COMMON_B32_BLOCK_SIZE], remainderCol, remainderRepeat,
+                     intriParams);
             }
         }
     }
 
-    __aicore__ inline void MulWithInlinedNLastBrcFP32(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src0, const LocalTensor<float>& src1,
-        const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void MulWithInlinedNLastBrcFP32(const LocalTensor<float>& dst, const LocalTensor<float>& src0,
+                                                      const LocalTensor<float>& src1, const int64_t curRowsNum,
+                                                      const LayerNormGradV3TilingDataCommon* tilingData)
     {
         // src1 need to do inline broadcast
         int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
@@ -663,9 +640,8 @@ private:
         }
     }
 
-    __aicore__ inline void NlastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void NlastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                          const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
     {
         int64_t formerColLoops = tilingData->colAlignV / COMMON_B32_REPEAT_SIZE;
         int64_t remainderCol = tilingData->colAlignV - formerColLoops * COMMON_B32_REPEAT_SIZE;
@@ -707,24 +683,23 @@ private:
         }
     }
 
-    __aicore__ inline void LastReduceSum(
-        const LocalTensor<float>& dst, const LocalTensor<float>& src, const LocalTensor<float>& tmp,
-        const int64_t curRowsNum, const LayerNormGradV3TilingDataCommon* tilingData)
+    __aicore__ inline void LastReduceSum(const LocalTensor<float>& dst, const LocalTensor<float>& src,
+                                         const LocalTensor<float>& tmp, const int64_t curRowsNum,
+                                         const LayerNormGradV3TilingDataCommon* tilingData)
     {
         if (tilingData->colAlignV <= COMMON_B32_REPEAT_SIZE) {
             // curRowsNum may larger than 255
             int64_t repeatLoops = curRowsNum / COMMON_VC_MAX_REPEAT;
             int64_t remainderRepeat = curRowsNum - repeatLoops * COMMON_VC_MAX_REPEAT;
             for (int64_t i = 0; i < repeatLoops; i++) {
-                WholeReduceSum(
-                    dst[i * COMMON_VC_MAX_REPEAT], src[i * COMMON_VC_MAX_REPEAT * tilingData->colAlignV],
-                    tilingData->colAlignV, COMMON_VC_MAX_REPEAT, 1, 1, tilingData->colAlignV / COMMON_CONSTANT_EIGHT);
+                WholeReduceSum(dst[i * COMMON_VC_MAX_REPEAT], src[i * COMMON_VC_MAX_REPEAT * tilingData->colAlignV],
+                               tilingData->colAlignV, COMMON_VC_MAX_REPEAT, 1, 1,
+                               tilingData->colAlignV / COMMON_CONSTANT_EIGHT);
             }
             if (likely(remainderRepeat != 0)) {
-                WholeReduceSum(
-                    dst[repeatLoops * COMMON_VC_MAX_REPEAT],
-                    src[repeatLoops * COMMON_VC_MAX_REPEAT * tilingData->colAlignV], tilingData->colAlignV,
-                    remainderRepeat, 1, 1, tilingData->colAlignV / COMMON_CONSTANT_EIGHT);
+                WholeReduceSum(dst[repeatLoops * COMMON_VC_MAX_REPEAT],
+                               src[repeatLoops * COMMON_VC_MAX_REPEAT * tilingData->colAlignV], tilingData->colAlignV,
+                               remainderRepeat, 1, 1, tilingData->colAlignV / COMMON_CONSTANT_EIGHT);
             }
         } else {
             // curRowsNum must less than 255

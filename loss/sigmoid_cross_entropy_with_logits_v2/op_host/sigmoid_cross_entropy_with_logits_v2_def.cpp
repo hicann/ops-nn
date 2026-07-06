@@ -16,40 +16,40 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class SigmoidCrossEntropyWithLogitsV2 : public OpDef {
-    public:
-        explicit SigmoidCrossEntropyWithLogitsV2(const char *name) : OpDef(name) {
-            this->Input("predict")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("target")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("weight")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("pos_weight")
-                .ParamType(OPTIONAL)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("loss")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Attr("reduction").AttrType(OPTIONAL).String("mean");
+class SigmoidCrossEntropyWithLogitsV2 : public OpDef {
+public:
+    explicit SigmoidCrossEntropyWithLogitsV2(const char* name) : OpDef(name)
+    {
+        this->Input("predict")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("target")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("weight")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("pos_weight")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("loss")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
-    };
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
 
-    OP_ADD(SigmoidCrossEntropyWithLogitsV2);
+OP_ADD(SigmoidCrossEntropyWithLogitsV2);
 } // namespace ops
-

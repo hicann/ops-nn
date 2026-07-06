@@ -27,17 +27,35 @@ using namespace Index;
 template <uint32_t SIZE>
 struct ComputeTypeBySize;
 // X_DTYPE 0 is used by SIMD tiling as a placeholder
-template <> struct ComputeTypeBySize<INDEX_TPL_NONE> { using type = int8_t; };
-template <> struct ComputeTypeBySize<INDEX_TPL_B8> { using type = int8_t; };
-template <> struct ComputeTypeBySize<INDEX_TPL_B16> { using type = half; };
-template <> struct ComputeTypeBySize<INDEX_TPL_B32> { using type = float; };
-template <> struct ComputeTypeBySize<INDEX_TPL_B64> { using type = int64_t; };
-template <> struct ComputeTypeBySize<INDEX_TPL_B128> { using type = int4; };
+template <>
+struct ComputeTypeBySize<INDEX_TPL_NONE> {
+    using type = int8_t;
+};
+template <>
+struct ComputeTypeBySize<INDEX_TPL_B8> {
+    using type = int8_t;
+};
+template <>
+struct ComputeTypeBySize<INDEX_TPL_B16> {
+    using type = half;
+};
+template <>
+struct ComputeTypeBySize<INDEX_TPL_B32> {
+    using type = float;
+};
+template <>
+struct ComputeTypeBySize<INDEX_TPL_B64> {
+    using type = int64_t;
+};
+template <>
+struct ComputeTypeBySize<INDEX_TPL_B128> {
+    using type = int4;
+};
 
-template <uint32_t X_DTYPE, uint32_t FULL_LOAD_TYPE, bool IS_PERF, bool IS_SIMD, bool IS_NOCON,
-    bool IS_ACCUMULATE, bool IS_OVERLENGTH>
-__global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
-    GM_ADDR indices, GM_ADDR output, GM_ADDR workspace,GM_ADDR tiling)
+template <uint32_t X_DTYPE, uint32_t FULL_LOAD_TYPE, bool IS_PERF, bool IS_SIMD, bool IS_NOCON, bool IS_ACCUMULATE,
+          bool IS_OVERLENGTH>
+__global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
+                                 GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
@@ -60,10 +78,11 @@ __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR i
             "FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && IS_NOCON == false && IS_PERF == false && IS_SIMD == false",
             IndexSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexSimtTilingData, tilingData, tiling);
-        KernelIndex<inputComputeType, IndexAssign<inputComputeType, indexOffsetType>, DTYPE_INDICES, indexOffsetType> op;
+        KernelIndex<inputComputeType, IndexAssign<inputComputeType, indexOffsetType>, DTYPE_INDICES, indexOffsetType>
+            op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData);
         op.Process();
-    // ---------------- Perf SIMT --------------------
+        // ---------------- Perf SIMT --------------------
     } else if constexpr (FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && !IS_NOCON && IS_PERF && !IS_SIMD) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && IS_NOCON == false && IS_PERF == true && IS_SIMD == false",
@@ -71,14 +90,14 @@ __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR i
         Process<inputComputeType, DTYPE_INDICES, indexOffsetType>(
             (__gm__ inputComputeType*)output, (__gm__ inputComputeType*)inputX, indices,
             (__gm__ const IndexPerfSimtTilingData* __restrict)tiling);
-    // ---------------- SIMD -------------------------
+        // ---------------- SIMD -------------------------
     } else if constexpr (IS_SIMD) {
         REGISTER_TILING_FOR_TILINGKEY("IS_SIMD == true", IndexSimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexSimdTilingData, tilingData, tiling);
         IndexSimd<DTYPE_INDICES> op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, &tilingData);
         op.Process();
-    // ---------------- Full-load --------------------
+        // ---------------- Full-load --------------------
     } else if constexpr (FULL_LOAD_TYPE == INDEX_FULL_LOAD_1D) {
         REGISTER_TILING_FOR_TILINGKEY("FULL_LOAD_TYPE == INDEX_FULL_LOAD_1D", IndexFullLoadTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
@@ -97,14 +116,15 @@ __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR i
         KernelIndexFullLoad<inputComputeType, int32_t, DTYPE_INDICES, 1, DIM2> op(tPipe, tilingData);
         op.Init(inputX, indexedSizes, indices, output);
         op.Process();
-    // ---------------- Non-contiguous ---------------
+        // ---------------- Non-contiguous ---------------
     } else if constexpr (FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && IS_NOCON && !IS_PERF && !IS_SIMD) {
         REGISTER_TILING_FOR_TILINGKEY(
             "FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && IS_NOCON == true && IS_PERF == false && IS_SIMD == false",
             IndexNonContinuousTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexNonContinuousTilingData, tilingData, tiling);
-        KernelIndexNoContiguous<inputComputeType, IndexAssign<inputComputeType, indexOffsetType>,
-            DTYPE_INDICES, indexOffsetType> op;
+        KernelIndexNoContiguous<inputComputeType, IndexAssign<inputComputeType, indexOffsetType>, DTYPE_INDICES,
+                                indexOffsetType>
+            op;
         op.Init(output, inputX, indexedSizes, indexedStrides, indices, tilingData);
         op.Process();
     } else if constexpr (FULL_LOAD_TYPE == INDEX_NOT_FULL_LOAD && IS_NOCON && IS_PERF && !IS_SIMD) {

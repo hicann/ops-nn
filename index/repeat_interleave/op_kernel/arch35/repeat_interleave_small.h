@@ -39,8 +39,8 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B64 = {
 };
 
 template <typename U, typename V>
-__simd_callee__ inline void LoadData(
-    AscendC::MicroAPI::RegTensor<V>& dstReg, __ubuf__ U* srcAddr, uint16_t offset, AscendC::MicroAPI::MaskReg& maskReg)
+__simd_callee__ inline void LoadData(AscendC::MicroAPI::RegTensor<V>& dstReg, __ubuf__ U* srcAddr, uint16_t offset,
+                                     AscendC::MicroAPI::MaskReg& maskReg)
 {
     if constexpr (std::is_same_v<U, V>) {
         AscendC::MicroAPI::DataCopy(dstReg, srcAddr + offset);
@@ -52,15 +52,15 @@ __simd_callee__ inline void LoadData(
 }
 
 template <typename T>
-__simd_vf__ inline void IndexRepeatVf(
-    __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes, int32_t inputStride)
+__simd_vf__ inline void IndexRepeatVf(__ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes,
+                                      int32_t inputStride)
 {
     AscendC::MicroAPI::UnalignReg uIn;
     AscendC::MicroAPI::UnalignReg uOut;
     AscendC::MicroAPI::RegTensor<T> inputRegTensor;
     AscendC::MicroAPI::DataCopyUnAlignPre(uIn, inputAddr);
-    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-        inputRegTensor, uIn, inputAddr, inputStride);
+    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
+                                                                                            inputAddr, inputStride);
     for (uint16_t i = 0; i < repeatTimes; i++) {
         AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
             outputAddr, inputRegTensor, uOut, inputStride);
@@ -69,8 +69,8 @@ __simd_vf__ inline void IndexRepeatVf(
 }
 
 template <typename T, typename U>
-__simd_vf__ inline void IndexRepeatGroupVf(
-    __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, __ubuf__ U* repeatsLocalAddr, int32_t inputStride, int32_t repeatLen)
+__simd_vf__ inline void IndexRepeatGroupVf(__ubuf__ T* inputAddr, __ubuf__ T* outputAddr, __ubuf__ U* repeatsLocalAddr,
+                                           int32_t inputStride, int32_t repeatLen)
 {
     AscendC::MicroAPI::UnalignReg uIn;
     AscendC::MicroAPI::UnalignReg uOut;
@@ -78,8 +78,8 @@ __simd_vf__ inline void IndexRepeatGroupVf(
     for (uint16_t repeatIdx = 0; repeatIdx < static_cast<uint16_t>(repeatLen); repeatIdx++) {
         uint16_t repeatTimes = repeatsLocalAddr[repeatIdx];
         AscendC::MicroAPI::DataCopyUnAlignPre(uIn, inputAddr);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            inputRegTensor, uIn, inputAddr, inputStride);
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
+                                                                                                inputAddr, inputStride);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 outputAddr, inputRegTensor, uOut, inputStride);
@@ -88,8 +88,8 @@ __simd_vf__ inline void IndexRepeatGroupVf(
     }
 }
 
-__simd_vf__ inline void CopyXToOutSmallVf(
-    __ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr, uint32_t totalBytes, uint16_t size, uint16_t stride)
+__simd_vf__ inline void CopyXToOutSmallVf(__ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr,
+                                          uint32_t totalBytes, uint16_t size, uint16_t stride)
 {
     AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
     uint32_t sreg = totalBytes;
@@ -104,8 +104,8 @@ __simd_vf__ inline void CopyXToOutSmallVf(
 }
 
 template <typename U, typename V>
-__simd_vf__ inline void CustomReduceSumVf(
-    __ubuf__ U* srcAddr, __ubuf__ V* dstAddr, uint16_t vfLen, uint16_t loopSize, uint32_t dataLen)
+__simd_vf__ inline void CustomReduceSumVf(__ubuf__ U* srcAddr, __ubuf__ V* dstAddr, uint16_t vfLen, uint16_t loopSize,
+                                          uint32_t dataLen)
 {
     AscendC::MicroAPI::RegTensor<V> src;
     AscendC::MicroAPI::RegTensor<V> dst;
@@ -132,28 +132,26 @@ public:
     __aicore__ inline void Process();
     __aicore__ inline void CopyIn(int64_t repeatCount, int64_t inputOffset);
     __aicore__ inline void CopyInAlign(int64_t repeatCount, int64_t inputOffset);
-    __aicore__ inline void IndexRepeat(
-        __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes, int32_t inputStride);
-    __aicore__ inline void IndexRepeatGroup(
-        __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, const LocalTensor<U>& repeatsLocal, int32_t repeatLen,
-        int32_t inputStride);
+    __aicore__ inline void IndexRepeat(__ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes,
+                                       int32_t inputStride);
+    __aicore__ inline void IndexRepeatGroup(__ubuf__ T* inputAddr, __ubuf__ T* outputAddr,
+                                            const LocalTensor<U>& repeatsLocal, int32_t repeatLen, int32_t inputStride);
     __aicore__ inline void CopyOut(int64_t repeatCount);
     __aicore__ inline void CopyInRepeats(int64_t repeatCount, int64_t offset);
     __aicore__ inline int64_t ComputeOutputOffset(uint16_t repeatCount);
     __aicore__ inline int64_t CalcRepeatsPartStart(int64_t repeatCount);
     __aicore__ inline int64_t CalcOutputStartOfset();
     __aicore__ inline void CustomReduceSum(const LocalTensor<V>& dst, const LocalTensor<U>& src, uint16_t dataLen);
-    __aicore__ inline void IndexRepeatLarge(
-        __ubuf__ T* inputAddr, int64_t repeatTimes, int64_t outputRepeatsSum, int64_t outputOffset,
-        int64_t repeatsIndex);
+    __aicore__ inline void IndexRepeatLarge(__ubuf__ T* inputAddr, int64_t repeatTimes, int64_t outputRepeatsSum,
+                                            int64_t outputOffset, int64_t repeatsIndex);
     __aicore__ inline void CopyXToOut(int64_t repeatCount);
     __aicore__ inline void CopyOutY(int64_t repeatCount);
     __aicore__ inline void CopyOutData(int64_t repeatSum, int64_t outputOffset);
     __aicore__ inline void CopyOutSplit(int64_t repeatCount);
-    __aicore__ inline void CopyOutSplitImpl(
-        __ubuf__ T* inputAddr, int64_t outputOffset, const LocalTensor<U>& repeatsLocal, int64_t repeatCount);
-    __aicore__ inline void CopyOutSplitGroup(
-        __ubuf__ T* inputAddr, int64_t outputOffset, const LocalTensor<U>& repeatsLocal, int64_t repeatCount);
+    __aicore__ inline void CopyOutSplitImpl(__ubuf__ T* inputAddr, int64_t outputOffset,
+                                            const LocalTensor<U>& repeatsLocal, int64_t repeatCount);
+    __aicore__ inline void CopyOutSplitGroup(__ubuf__ T* inputAddr, int64_t outputOffset,
+                                             const LocalTensor<U>& repeatsLocal, int64_t repeatCount);
 
 private:
     TPipe& pipe_;
@@ -208,8 +206,8 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::Init(GM_ADDR x, GM_ADDR r
         currentRepeatCount_ = tilingData_.normalRepeatsCount;
     }
     repeatsFactorSum_ = tilingData_.ubFactor / tilingData_.mergedDims[MERGED_DIM_LENGTH - 1];
-    cpAlign_ =
-        Ops::Base::CeilAlign(tilingData_.mergedDims[MERGED_DIM_LENGTH - 1] * sizeof(T), UB_ALIGN_VALUE) / sizeof(T);
+    cpAlign_ = Ops::Base::CeilAlign(tilingData_.mergedDims[MERGED_DIM_LENGTH - 1] * sizeof(T), UB_ALIGN_VALUE) /
+               sizeof(T);
     repeatsFactorAlign_ = tilingData_.ubFactor / cpAlign_;
 }
 template <typename T, typename U, typename V>
@@ -224,8 +222,8 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyIn(int64_t repeatCoun
     dataCopyParams.srcStride = 0;
     dataCopyParams.dstStride = 0;
 
-    DataCopyPad(
-        inputLocal, xGm_[inputOffset * tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]], dataCopyParams, padParams);
+    DataCopyPad(inputLocal, xGm_[inputOffset * tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]], dataCopyParams,
+                padParams);
     inputQueue_.EnQue(inputLocal);
 
     CopyInRepeats(repeatCount, inputOffset);
@@ -244,16 +242,17 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyInAlign(int64_t repea
     dataCopyParams.srcStride = 0;
     dataCopyParams.dstStride = 0;
 
-    DataCopyPad(
-        inputLocal, xGm_[inputOffset * tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]], dataCopyParams, padParams);
+    DataCopyPad(inputLocal, xGm_[inputOffset * tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]], dataCopyParams,
+                padParams);
     inputQueue_.EnQue(inputLocal);
     CopyInRepeats(repeatCount, inputOffset);
     return;
 }
 
 template <typename T, typename U, typename V>
-__aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatLarge(
-    __ubuf__ T* inputAddr, int64_t repeatTimes, int64_t outputRepeatsSum, int64_t outputOffset, int64_t repeatsIndex)
+__aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatLarge(__ubuf__ T* inputAddr, int64_t repeatTimes,
+                                                                        int64_t outputRepeatsSum, int64_t outputOffset,
+                                                                        int64_t repeatsIndex)
 {
     int64_t loopCount = Ops::Base::CeilDiv(repeatTimes, outputRepeatsSum);
     uint16_t tailLoopTimes = repeatTimes - (loopCount - 1) * outputRepeatsSum;
@@ -264,9 +263,8 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatLarge(
     for (int64_t i = 0; i < loopCount - 1; i++) {
         outputLocal = outputQueue_.AllocTensor<T>();
         outLocalAddr = reinterpret_cast<__ubuf__ T*>(outputLocal[0].GetPhyAddr());
-        IndexRepeat(
-            inputAddrLocal, outLocalAddr, static_cast<uint16_t>(outputRepeatsSum),
-            tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]);
+        IndexRepeat(inputAddrLocal, outLocalAddr, static_cast<uint16_t>(outputRepeatsSum),
+                    tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]);
         outputQueue_.EnQue(outputLocal);
         CopyOutData(outputRepeatsSum, outputOffsetLocal);
         outputOffsetLocal += outputRepeatsSum * tilingData_.mergedDims[MERGED_DIM_LENGTH - 1];
@@ -281,17 +279,17 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatLarge(
 }
 
 template <typename T, typename U, typename V>
-__aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeat(
-    __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes, int32_t inputStride)
+__aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeat(__ubuf__ T* inputAddr, __ubuf__ T* outputAddr,
+                                                                   uint16_t repeatTimes, int32_t inputStride)
 {
     IndexRepeatVf<T>(inputAddr, outputAddr, repeatTimes, inputStride);
     return;
 }
 
 template <typename T, typename U, typename V>
-__aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatGroup(
-    __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, const LocalTensor<U>& repeatsLocal, int32_t repeatLen,
-    int32_t inputStride)
+__aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatGroup(__ubuf__ T* inputAddr, __ubuf__ T* outputAddr,
+                                                                        const LocalTensor<U>& repeatsLocal,
+                                                                        int32_t repeatLen, int32_t inputStride)
 {
     IndexRepeatGroupVf<T, U>(inputAddr, outputAddr, (__ubuf__ U*)repeatsLocal.GetPhyAddr(), inputStride, repeatLen);
     return;
@@ -314,8 +312,9 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutData(int64_t repea
 }
 
 template <typename T, typename U, typename V>
-__aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitImpl(
-    __ubuf__ T* inputAddr, int64_t outputOffset, const LocalTensor<U>& repeatsLocal, int64_t repeatCount)
+__aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitImpl(__ubuf__ T* inputAddr, int64_t outputOffset,
+                                                                        const LocalTensor<U>& repeatsLocal,
+                                                                        int64_t repeatCount)
 {
     LocalTensor<T> outputLocal;
     __ubuf__ T* outLocalAddr;
@@ -348,9 +347,8 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitImpl(
                 outputLocal = outputQueue_.AllocTensor<T>();
                 outLocalAddr = reinterpret_cast<__ubuf__ T*>(outputLocal[0].GetPhyAddr());
             }
-            IndexRepeat(
-                inputAddr, outLocalAddr, static_cast<uint16_t>(repeatTimes),
-                tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]);
+            IndexRepeat(inputAddr, outLocalAddr, static_cast<uint16_t>(repeatTimes),
+                        tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]);
             outLocalAddr = outLocalAddr + repeatTimes * tilingData_.mergedDims[MERGED_DIM_LENGTH - 1];
         }
         inputAddr = inputAddr + tilingData_.mergedDims[MERGED_DIM_LENGTH - 1];
@@ -364,8 +362,9 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitImpl(
 }
 
 template <typename T, typename U, typename V>
-__aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitGroup(
-    __ubuf__ T* inputAddr, int64_t outputOffset, const LocalTensor<U>& repeatsLocal, int64_t repeatCount)
+__aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitGroup(__ubuf__ T* inputAddr, int64_t outputOffset,
+                                                                         const LocalTensor<U>& repeatsLocal,
+                                                                         int64_t repeatCount)
 {
     int64_t repeatsSum = 0;
 
@@ -388,9 +387,8 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyOutSplitGroup(
         LocalTensor<T> outputLocal = outputQueue_.AllocTensor<T>();
         auto outLocalAddr = reinterpret_cast<__ubuf__ T*>(outputLocal[0].GetPhyAddr());
         if (repeatsSum <= repeatsFactorSum_) {
-            IndexRepeatGroup(
-                inputStartAddr, outLocalAddr, repeatsLocal[i * mainLen], handleRepeatCount,
-                tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]);
+            IndexRepeatGroup(inputStartAddr, outLocalAddr, repeatsLocal[i * mainLen], handleRepeatCount,
+                             tilingData_.mergedDims[MERGED_DIM_LENGTH - 1]);
             outputQueue_.EnQue(outputLocal);
             CopyOutData(repeatsSum, outputOffset);
             outputOffsetRepeat_ += repeatsSum;
@@ -511,8 +509,8 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyInRepeats(int64_t rep
 }
 
 template <typename T, typename U, typename V>
-__aicore__ inline void RepeatInterleaveSmall<T, U, V>::CustomReduceSum(
-    const LocalTensor<V>& dstLocal, const LocalTensor<U>& src, uint16_t dataLen)
+__aicore__ inline void RepeatInterleaveSmall<T, U, V>::CustomReduceSum(const LocalTensor<V>& dstLocal,
+                                                                       const LocalTensor<U>& src, uint16_t dataLen)
 {
     uint16_t vfLen = Ops::Base::GetVRegSize() / sizeof(V);
     uint16_t loopSize = (dataLen + vfLen - 1) / vfLen;
@@ -572,9 +570,8 @@ __aicore__ inline int64_t RepeatInterleaveSmall<T, U, V>::CalcOutputStartOfset()
     uint8_t alignSize = UB_ALIGN_VALUE / sizeof(U);
     LocalTensor<U> recordOfsetLocal = recordOffsetBuf_.AllocTensor<U>();
     LocalTensor<V> sumOutputLocal = outputOffsetBuf_.AllocTensor<V>();
-    DataCopyExtParams inParams = {
-        static_cast<uint16_t>(tilingData_.usedCoreNum), static_cast<uint32_t>(sizeof(U)),
-        static_cast<uint32_t>((cacheLineNum - 1) * sizeof(U)), 0, 0};
+    DataCopyExtParams inParams = {static_cast<uint16_t>(tilingData_.usedCoreNum), static_cast<uint32_t>(sizeof(U)),
+                                  static_cast<uint32_t>((cacheLineNum - 1) * sizeof(U)), 0, 0};
     DataCopyPadExtParams<U> padParams = {true, 0, static_cast<uint8_t>(alignSize - 1), 0};
     DataCopyPad(recordOfsetLocal, recordSumGm_, inParams, padParams);
 

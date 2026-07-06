@@ -46,4 +46,4 @@ IMPL_OP_INFERSHAPE(FakeQuantWithMinMaxVarsPerChannel)
     .InferShape(InferShape4FakeQuantWithMinMaxVarsPerChannel)
     .InferDataType(InferDataType4FakeQuantWithMinMaxVarsPerChannel);
 
-}  // namespace ops
+} // namespace ops

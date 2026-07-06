@@ -17,10 +17,7 @@
 namespace optiling {
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr int64_t MAX_THREAD_NUM = 1024;
-bool AdaptiveAvgPool2dGradTilingSimt::IsCapable()
-{
-    return true;
-}
+bool AdaptiveAvgPool2dGradTilingSimt::IsCapable() { return true; }
 
 ge::graphStatus AdaptiveAvgPool2dGradTilingSimt::DoOpTiling()
 {
@@ -52,12 +49,10 @@ bool AdaptiveAvgPool2dGradTilingSimt::NeedInt64(int64_t isize, int64_t osize) co
 uint64_t AdaptiveAvgPool2dGradTilingSimt::GetTilingKey() const
 {
     int64_t outDataCount = inputData_.nX * inputData_.cX * inputData_.hX * inputData_.wX;
-    bool needInt64 =
-        (outDataCount > static_cast<int64_t>(INT32_MAX) || 
-         NeedInt64(inputData_.hX, inputData_.hGrad) ||
-         NeedInt64(inputData_.wX, inputData_.wGrad) || 
-         inputData_.hGrad > static_cast<int64_t>(INT32_MAX) ||
-         inputData_.wGrad > static_cast<int64_t>(INT32_MAX));
+    bool needInt64 = (outDataCount > static_cast<int64_t>(INT32_MAX) || NeedInt64(inputData_.hX, inputData_.hGrad) ||
+                      NeedInt64(inputData_.wX, inputData_.wGrad) ||
+                      inputData_.hGrad > static_cast<int64_t>(INT32_MAX) ||
+                      inputData_.wGrad > static_cast<int64_t>(INT32_MAX));
     uint32_t idxDtype = needInt64 ? TPL_INT64 : TPL_INT32;
     uint32_t isChannelLast = 0;
     return GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, idxDtype, isChannelLast);

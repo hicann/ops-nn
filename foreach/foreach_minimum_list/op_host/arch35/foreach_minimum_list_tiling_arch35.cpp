@@ -50,10 +50,8 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -68,15 +66,11 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
     int64_t totalElements = 0;
     ForeachMinimumListTilingData* tiling = context->GetTilingData<ForeachMinimumListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachMinimumListTilingData), 0, sizeof(ForeachMinimumListTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachMinimumListTilingData), 0, sizeof(ForeachMinimumListTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        tensorNum > MAX_TENSOR_NUM,
-        OP_LOGE(context, "tensorNum should be less than or equal to 256"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM, OP_LOGE(context, "tensorNum should be less than or equal to 256"),
+                return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
@@ -94,8 +88,7 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
         tiling->lastCoreElements = 0;
         context->SetBlockDim(1);
     } else {
-        tiling->perCoreElements = std::min(static_cast<int64_t>(65536),
-            Ops::Base::CeilDiv(totalElements, coreNum));
+        tiling->perCoreElements = std::min(static_cast<int64_t>(65536), Ops::Base::CeilDiv(totalElements, coreNum));
         tiling->perCoreElements = Ops::Base::CeilAlign(tiling->perCoreElements, ALIGN_SIZE);
         tiling->needCoreNum = Ops::Base::CeilDiv(totalElements, tiling->perCoreElements);
         tiling->lastCoreElements = totalElements - tiling->perCoreElements * (tiling->needCoreNum - 1);

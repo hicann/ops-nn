@@ -16,31 +16,32 @@
 #include "../dynamic_rnn/LstmFP32.cpp"
 
 extern "C" __global__ __aicore__ void dynamic_rnn_v2(GM_ADDR inputX, GM_ADDR weightInput, GM_ADDR weightHidden,
-                                                  GM_ADDR bias, GM_ADDR seqLength,
-                                                  GM_ADDR initH, GM_ADDR initC, GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo,
-                                                  GM_ADDR mask, GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC,
-                                                  GM_ADDR outputI, GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO,
-                                                  GM_ADDR outputTanhC, GM_ADDR workspace, GM_ADDR rnnTiling) {
-  GET_TILING_DATA(tiling_data, rnnTiling);
-  const DynamicRNNTilingData* __restrict tilingData = &tiling_data;
-  const TCubeTiling* __restrict inputMMTiling = &(tilingData->inputMMParam);
-  const TCubeTiling* __restrict hiddenMMTiling = &(tilingData->hiddenMMParam);
+                                                     GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC,
+                                                     GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo, GM_ADDR mask,
+                                                     GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
+                                                     GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO,
+                                                     GM_ADDR outputTanhC, GM_ADDR workspace, GM_ADDR rnnTiling)
+{
+    GET_TILING_DATA(tiling_data, rnnTiling);
+    const DynamicRNNTilingData* __restrict tilingData = &tiling_data;
+    const TCubeTiling* __restrict inputMMTiling = &(tilingData->inputMMParam);
+    const TCubeTiling* __restrict hiddenMMTiling = &(tilingData->hiddenMMParam);
 
-  if (TILING_KEY_IS(10000001)) {
-    LstmMmSplitNDNDFP16<half> lstmOp;
-    REGIST_MATMUL_OBJ(&lstmOp.pipe, GetSysWorkSpacePtr(), lstmOp.inputMM, inputMMTiling,
-                       lstmOp.hiddenMM, hiddenMMTiling);
+    if (TILING_KEY_IS(10000001)) {
+        LstmMmSplitNDNDFP16<half> lstmOp;
+        REGIST_MATMUL_OBJ(&lstmOp.pipe, GetSysWorkSpacePtr(), lstmOp.inputMM, inputMMTiling, lstmOp.hiddenMM,
+                          hiddenMMTiling);
 
-    lstmOp.InitV2(inputX, weightInput, weightHidden, bias, seqLength, initH, initC, wCi, wCf, wCo, mask,
-                  outputY, outputH, outputC, outputI, outputJ, outputF, outputO, outputTanhC, &tiling_data, workspace);
-    lstmOp.Process();
-  } else if (TILING_KEY_IS(10000002)) {
-    LstmMmSplitNDNDFP32<float> lstmOp;
-    REGIST_MATMUL_OBJ(&lstmOp.pipe, GetSysWorkSpacePtr(), lstmOp.inputMM, inputMMTiling,
-                      lstmOp.hiddenMM, hiddenMMTiling);
+        lstmOp.InitV2(inputX, weightInput, weightHidden, bias, seqLength, initH, initC, wCi, wCf, wCo, mask, outputY,
+                      outputH, outputC, outputI, outputJ, outputF, outputO, outputTanhC, &tiling_data, workspace);
+        lstmOp.Process();
+    } else if (TILING_KEY_IS(10000002)) {
+        LstmMmSplitNDNDFP32<float> lstmOp;
+        REGIST_MATMUL_OBJ(&lstmOp.pipe, GetSysWorkSpacePtr(), lstmOp.inputMM, inputMMTiling, lstmOp.hiddenMM,
+                          hiddenMMTiling);
 
-    lstmOp.InitV2(inputX, weightInput, weightHidden, bias, seqLength, initH, initC, wCi, wCf, wCo, mask,
-                  outputY, outputH, outputC, outputI, outputJ, outputF, outputO, outputTanhC, &tiling_data, workspace);
-    lstmOp.Process();
-  }
+        lstmOp.InitV2(inputX, weightInput, weightHidden, bias, seqLength, initH, initC, wCi, wCf, wCo, mask, outputY,
+                      outputH, outputC, outputI, outputJ, outputF, outputO, outputTanhC, &tiling_data, workspace);
+        lstmOp.Process();
+    }
 }

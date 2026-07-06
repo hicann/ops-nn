@@ -33,8 +33,10 @@ class KernelThresholdGradV2D {
 public:
     __aicore__ inline KernelThresholdGradV2D(){};
 
-    __aicore__ inline void Init(GM_ADDR input_gradient, GM_ADDR input_feature, GM_ADDR output_backprops, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-        uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float threshold);
+    __aicore__ inline void Init(GM_ADDR input_gradient, GM_ADDR input_feature, GM_ADDR output_backprops,
+                                uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
+                                uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum,
+                                uint64_t bigTailDataNum, uint64_t tailBlockNum, float threshold);
     __aicore__ inline void Process();
 
 private:
@@ -58,8 +60,10 @@ private:
 };
 
 template <typename TYPE_INPUT_GRADIENT>
-__aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Init(GM_ADDR input_gradient, GM_ADDR input_feature, GM_ADDR output_backprops, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t finalBigTileNum,
-    uint64_t finalSmallTileNum, uint64_t tileDataNum, uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float threshold)
+__aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Init(
+    GM_ADDR input_gradient, GM_ADDR input_feature, GM_ADDR output_backprops, uint64_t smallCoreDataNum,
+    uint64_t bigCoreDataNum, uint64_t finalBigTileNum, uint64_t finalSmallTileNum, uint64_t tileDataNum,
+    uint64_t smallTailDataNum, uint64_t bigTailDataNum, uint64_t tailBlockNum, float threshold)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -76,9 +80,11 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Init(GM_ADDR
         this->tailDataNum = smallTailDataNum;
         globalBufferIndex -= (bigCoreDataNum - smallCoreDataNum) * (coreId - tailBlockNum);
     }
-    input_gradientGm.SetGlobalBuffer((__gm__ TYPE_INPUT_GRADIENT *)input_gradient + globalBufferIndex, this->coreDataNum);
-    input_featureGm.SetGlobalBuffer((__gm__ TYPE_INPUT_GRADIENT *)input_feature + globalBufferIndex, this->coreDataNum);
-    output_backpropsGm.SetGlobalBuffer((__gm__ TYPE_INPUT_GRADIENT *)output_backprops + globalBufferIndex, this->coreDataNum);
+    input_gradientGm.SetGlobalBuffer((__gm__ TYPE_INPUT_GRADIENT*)input_gradient + globalBufferIndex,
+                                     this->coreDataNum);
+    input_featureGm.SetGlobalBuffer((__gm__ TYPE_INPUT_GRADIENT*)input_feature + globalBufferIndex, this->coreDataNum);
+    output_backpropsGm.SetGlobalBuffer((__gm__ TYPE_INPUT_GRADIENT*)output_backprops + globalBufferIndex,
+                                       this->coreDataNum);
 
     pipe.InitBuffer(inQueueG, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_INPUT_GRADIENT));
     pipe.InitBuffer(inQueueF, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_INPUT_GRADIENT));
@@ -123,10 +129,12 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Compute(int3
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
         AscendC::Cast(tmp1Local, fLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(tmp2Local, tmp1Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::CompareScalar(maskLocal, tmp2Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT, this->processDataNum);
+        AscendC::CompareScalar(maskLocal, tmp2Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT,
+                               this->processDataNum);
         AscendC::Cast(tmp1Local, gLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(tmp2Local, tmp1Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Select(tmp2Local, maskLocal, tmp2Local, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Select(tmp2Local, maskLocal, tmp2Local, static_cast<float>(0.0),
+                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
         AscendC::Cast(tmp1Local, tmp2Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(outLocal, tmp1Local, AscendC::RoundMode::CAST_TRUNC, this->processDataNum);
         outQueueout.EnQue<int8_t>(outLocal);
@@ -141,10 +149,12 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Compute(int3
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
         AscendC::Cast(tmp1Local, fLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(tmp2Local, tmp1Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::CompareScalar(maskLocal, tmp2Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT, this->processDataNum);
+        AscendC::CompareScalar(maskLocal, tmp2Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT,
+                               this->processDataNum);
         AscendC::Cast(tmp1Local, gLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(tmp2Local, tmp1Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Select(tmp2Local, maskLocal, tmp2Local, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Select(tmp2Local, maskLocal, tmp2Local, static_cast<float>(0.0),
+                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
         AscendC::Cast(tmp1Local, tmp2Local, AscendC::RoundMode::CAST_NONE, this->processDataNum);
         AscendC::Cast(outLocal, tmp1Local, AscendC::RoundMode::CAST_TRUNC, this->processDataNum);
         outQueueout.EnQue<uint8_t>(outLocal);
@@ -157,9 +167,11 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Compute(int3
         AscendC::LocalTensor<float> tmp1Local = tmpQueue1.AllocTensor<float>();
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
         AscendC::Cast(tmp1Local, fLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::CompareScalar(maskLocal, tmp1Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT, this->processDataNum);
+        AscendC::CompareScalar(maskLocal, tmp1Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT,
+                               this->processDataNum);
         AscendC::Cast(tmp1Local, gLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Select(tmp1Local, maskLocal, tmp1Local, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Select(tmp1Local, maskLocal, tmp1Local, static_cast<float>(0.0),
+                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
         AscendC::Cast(outLocal, tmp1Local, AscendC::RoundMode::CAST_TRUNC, this->processDataNum);
         outQueueout.EnQue<int32_t>(outLocal);
         inQueueG.FreeTensor(gLocal);
@@ -171,9 +183,11 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Compute(int3
         AscendC::LocalTensor<float> tmp1Local = tmpQueue1.AllocTensor<float>();
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
         AscendC::Cast(tmp1Local, fLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::CompareScalar(maskLocal, tmp1Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT, this->processDataNum);
+        AscendC::CompareScalar(maskLocal, tmp1Local, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT,
+                               this->processDataNum);
         AscendC::Cast(tmp1Local, gLocal, AscendC::RoundMode::CAST_NONE, this->processDataNum);
-        AscendC::Select(tmp1Local, maskLocal, tmp1Local, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::Select(tmp1Local, maskLocal, tmp1Local, static_cast<float>(0.0),
+                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
         AscendC::Cast(outLocal, tmp1Local, AscendC::RoundMode::CAST_RINT, this->processDataNum);
         outQueueout.EnQue<bfloat16_t>(outLocal);
         inQueueG.FreeTensor(gLocal);
@@ -183,8 +197,10 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Compute(int3
         AscendC::LocalTensor<float> fLocal = inQueueF.DeQue<float>();
         AscendC::LocalTensor<float> outLocal = outQueueout.AllocTensor<float>();
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
-        AscendC::CompareScalar(maskLocal, fLocal, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT, this->processDataNum);
-        AscendC::Select(outLocal, maskLocal, gLocal, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::CompareScalar(maskLocal, fLocal, static_cast<float>(this->thresholdValue), AscendC::CMPMODE::GT,
+                               this->processDataNum);
+        AscendC::Select(outLocal, maskLocal, gLocal, static_cast<float>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                        this->processDataNum);
         outQueueout.EnQue<float>(outLocal);
         inQueueG.FreeTensor(gLocal);
         inQueueF.FreeTensor(fLocal);
@@ -193,8 +209,10 @@ __aicore__ inline void KernelThresholdGradV2D<TYPE_INPUT_GRADIENT>::Compute(int3
         AscendC::LocalTensor<half> fLocal = inQueueF.DeQue<half>();
         AscendC::LocalTensor<half> outLocal = outQueueout.AllocTensor<half>();
         AscendC::LocalTensor<uint8_t> maskLocal = tmpQueueMask.AllocTensor<uint8_t>();
-        AscendC::CompareScalar(maskLocal, fLocal, static_cast<half>(this->thresholdValue), AscendC::CMPMODE::GT, this->processDataNum);
-        AscendC::Select(outLocal, maskLocal, gLocal, static_cast<half>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, this->processDataNum);
+        AscendC::CompareScalar(maskLocal, fLocal, static_cast<half>(this->thresholdValue), AscendC::CMPMODE::GT,
+                               this->processDataNum);
+        AscendC::Select(outLocal, maskLocal, gLocal, static_cast<half>(0.0), AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE,
+                        this->processDataNum);
         outQueueout.EnQue<half>(outLocal);
         inQueueG.FreeTensor(gLocal);
         inQueueF.FreeTensor(fLocal);

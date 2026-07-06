@@ -56,13 +56,10 @@ struct ComputeInfo {
     uint64_t maxDimOut{0};
 };
 
-class AdaptiveAvgPool3dParaPoolTiling : public AdaptivePool3dBaseTiling
-{
+class AdaptiveAvgPool3dParaPoolTiling : public AdaptivePool3dBaseTiling {
 public:
-    explicit AdaptiveAvgPool3dParaPoolTiling(gert::TilingContext* context) : AdaptivePool3dBaseTiling(context)
-    {}
-    ~AdaptiveAvgPool3dParaPoolTiling() override
-    {}
+    explicit AdaptiveAvgPool3dParaPoolTiling(gert::TilingContext* context) : AdaptivePool3dBaseTiling(context) {}
+    ~AdaptiveAvgPool3dParaPoolTiling() override {}
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
@@ -82,7 +79,6 @@ private:
     void PrintTilingData() const;
     ComputeInfo avgComptuteInfo_;
 };
-
 
 } // namespace optiling
 #endif // ADAPTIVE_AVG_POOL3D_PARA_TILING_H

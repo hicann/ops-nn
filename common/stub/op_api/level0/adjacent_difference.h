@@ -13,7 +13,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-aclTensor *AdjacentDifference(const aclTensor *x, op::DataType yDtype, aclOpExecutor *executor);
+aclTensor* AdjacentDifference(const aclTensor* x, op::DataType yDtype, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_ADD_RMS_NORM_QUANT_H_

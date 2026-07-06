@@ -27,15 +27,9 @@ using namespace std;
 
 class l2_transpose_batch_mat_mul_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_transpose_batch_mat_mul_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_transpose_batch_mat_mul_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "l2_transpose_batch_mat_mul_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "l2_transpose_batch_mat_mul_test TearDown" << endl; }
 };
 
 TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_case_01)
@@ -650,8 +644,9 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weight_nz_case_cubeMath
     int64_t K0 = 16;
     int64_t N0 = 16;
     TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, 
-                                    {Batch, N / N0, K / K0, K0, N0}).ValueRange(-1, 1);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0})
+                             .ValueRange(-1, 1);
     vector<int64_t> perm_x1 = {1, 0, 2};
     vector<int64_t> perm_x2 = {0, 1, 2};
     vector<int64_t> perm_y = {1, 0, 2};

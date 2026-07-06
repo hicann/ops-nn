@@ -24,12 +24,11 @@ constexpr int32_t RIGHT_SHIFT_LEN = 31;
 
 namespace AscendC {
 template <typename T_X, typename T_IDX>
-class GatherElementsV2TransposeKernel : public GatherElementsV2KernelBase<T_X, T_IDX>
-{
+class GatherElementsV2TransposeKernel : public GatherElementsV2KernelBase<T_X, T_IDX> {
 public:
     __aicore__ inline GatherElementsV2TransposeKernel() = delete;
-    __aicore__ inline GatherElementsV2TransposeKernel(
-        GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workspace, const GatherElementsV2TilingData& tiling, TPipe& pipe)
+    __aicore__ inline GatherElementsV2TransposeKernel(GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workspace,
+                                                      const GatherElementsV2TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -70,9 +69,8 @@ public:
             if (carryTailNum_) {
                 uint64_t xBaseOffset = xBlockOffset + xPreDimOffset + postDimPartNum * carryNumAlign_;
                 uint64_t idxBaseOffset = idxBlockOffset + idxPreDimOffset + postDimPartNum * carryNumAlign_;
-                TransposeProcess(
-                    xBaseOffset, idxBaseOffset, carryTailNum_, this->Min(carryTailNum_, xCarryNumAlign_),
-                    this->Min(carryTailNum_, idxCarryNumAlign_));
+                TransposeProcess(xBaseOffset, idxBaseOffset, carryTailNum_, this->Min(carryTailNum_, xCarryNumAlign_),
+                                 this->Min(carryTailNum_, idxCarryNumAlign_));
                 this->MTE3ToMTE2Sync();
                 GatherProcess(carryTailNum_);
                 this->MTE3ToMTE2Sync();
@@ -115,9 +113,9 @@ private:
         workspaceBlockOffset_ = this->blockIdx_ * workspacePerBlock / sizeof(T_X);
     }
 
-    __aicore__ inline void ComputeProcessParams(
-        uint64_t& groupId, uint64_t& xGroupOffset, uint64_t& idxGroupOffset, uint64_t& groupCoreOffset,
-        uint64_t& curGroupPreDim, uint64_t& curGroupPostDim)
+    __aicore__ inline void ComputeProcessParams(uint64_t& groupId, uint64_t& xGroupOffset, uint64_t& idxGroupOffset,
+                                                uint64_t& groupCoreOffset, uint64_t& curGroupPreDim,
+                                                uint64_t& curGroupPostDim)
     {
         uint64_t groupCoreId;
         uint64_t xDimPerPre = this->xGatherDim_ * this->xPostDim_;
@@ -156,8 +154,8 @@ private:
             groupCoreOffset = groupCoreId * curGroupFormerPostDim;
         } else {
             curGroupPostDim = curGroupTailPostDim;
-            groupCoreOffset =
-                curGroupFormerNum * curGroupFormerPostDim + (groupCoreId - curGroupFormerNum) * curGroupTailPostDim;
+            groupCoreOffset = curGroupFormerNum * curGroupFormerPostDim +
+                              (groupCoreId - curGroupFormerNum) * curGroupTailPostDim;
         }
     }
 
@@ -169,11 +167,11 @@ private:
 
     __aicore__ inline void SetGmAddr(GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workspace)
     {
-        uint64_t usedWorkspaceLen =
-            this->Min(carryNumAlign_, this->Max(this->formerGroupFormerPostDim_, this->tailGroupFormerPostDim_));
-        uint64_t yWorkspaceOffset =
-            workspaceBlockOffset_ +
-            usedWorkspaceLen * CeilAlign(this->xGatherDim_ * sizeof(T_X), sizeof(T_IDX)) / sizeof(T_X);
+        uint64_t usedWorkspaceLen = this->Min(
+            carryNumAlign_, this->Max(this->formerGroupFormerPostDim_, this->tailGroupFormerPostDim_));
+        uint64_t yWorkspaceOffset = workspaceBlockOffset_ +
+                                    usedWorkspaceLen * CeilAlign(this->xGatherDim_ * sizeof(T_X), sizeof(T_IDX)) /
+                                        sizeof(T_X);
         uint64_t idxWorkspaceOffset = yWorkspaceOffset * sizeof(T_X) / sizeof(T_IDX);
         this->xGm_.SetGlobalBuffer((__gm__ T_X*)x);
         this->yGm_.SetGlobalBuffer((__gm__ T_X*)y);
@@ -183,9 +181,9 @@ private:
         idxWorkspaceGm_.SetGlobalBuffer((__gm__ T_IDX*)workspace + idxWorkspaceOffset);
     }
 
-    __aicore__ inline void TransposeProcess(
-        const uint64_t& xBaseOffset, const uint64_t& idxBaseOffset, const uint64_t& curCarryNum,
-        const uint64_t& curXCarryNum, const uint64_t& curIdxCarryNum)
+    __aicore__ inline void TransposeProcess(const uint64_t& xBaseOffset, const uint64_t& idxBaseOffset,
+                                            const uint64_t& curCarryNum, const uint64_t& curXCarryNum,
+                                            const uint64_t& curIdxCarryNum)
     {
         uint64_t xCarryOffset = 0;
         uint64_t idxCarryOffset = 0;
@@ -193,9 +191,9 @@ private:
         if (curXCarryNum) {
             for (size_t carryId = 0; carryId < curCarryNum / curXCarryNum; carryId++) {
                 xCarryOffset = carryId * curXCarryNum;
-                SubTransposeProcess<T_X, X_PROCESS>(
-                    xBaseOffset, xCarryOffset, curXCarryNum, this->xGatherDim_, this->xPostDim_, transParam_.xSliceNum,
-                    transParam_.xGatherDimSlice, transParam_.xGatherDimTail);
+                SubTransposeProcess<T_X, X_PROCESS>(xBaseOffset, xCarryOffset, curXCarryNum, this->xGatherDim_,
+                                                    this->xPostDim_, transParam_.xSliceNum, transParam_.xGatherDimSlice,
+                                                    transParam_.xGatherDimTail);
             }
         }
 
@@ -203,25 +201,25 @@ private:
         if (curIdxCarryNum) {
             for (size_t carryId = 0; carryId < curCarryNum / curIdxCarryNum; carryId++) {
                 idxCarryOffset = carryId * curIdxCarryNum;
-                SubTransposeProcess<T_IDX, IDX_PROCESS>(
-                    idxBaseOffset, idxCarryOffset, curIdxCarryNum, this->idxGatherDim_, this->idxPostDim_,
-                    transParam_.idxSliceNum, transParam_.idxGatherDimSlice, transParam_.idxGatherDimTail);
+                SubTransposeProcess<T_IDX, IDX_PROCESS>(idxBaseOffset, idxCarryOffset, curIdxCarryNum,
+                                                        this->idxGatherDim_, this->idxPostDim_, transParam_.idxSliceNum,
+                                                        transParam_.idxGatherDimSlice, transParam_.idxGatherDimTail);
             }
             uint64_t idxTailCarryNum = curCarryNum % curIdxCarryNum;
             if (idxTailCarryNum) {
                 idxCarryOffset = curCarryNum - idxTailCarryNum;
-                SubTransposeProcess<T_IDX, IDX_PROCESS>(
-                    idxBaseOffset, idxCarryOffset, idxTailCarryNum, this->idxGatherDim_, this->idxPostDim_,
-                    transParam_.idxSliceNum, transParam_.idxGatherDimSlice, transParam_.idxGatherDimTail);
+                SubTransposeProcess<T_IDX, IDX_PROCESS>(idxBaseOffset, idxCarryOffset, idxTailCarryNum,
+                                                        this->idxGatherDim_, this->idxPostDim_, transParam_.idxSliceNum,
+                                                        transParam_.idxGatherDimSlice, transParam_.idxGatherDimTail);
             }
         }
     }
 
     template <typename T, uint8_t PROCESS>
-    __aicore__ inline void SubTransposeProcess(
-        const uint64_t& baseOffset, const uint64_t& carryOffset, const uint64_t& curCarryNum, const uint64_t& gatherDim,
-        const uint64_t& postDim, const uint64_t& sliceNum, const uint64_t& gatherDimSlice,
-        const uint64_t& gatherDimTail)
+    __aicore__ inline void SubTransposeProcess(const uint64_t& baseOffset, const uint64_t& carryOffset,
+                                               const uint64_t& curCarryNum, const uint64_t& gatherDim,
+                                               const uint64_t& postDim, const uint64_t& sliceNum,
+                                               const uint64_t& gatherDimSlice, const uint64_t& gatherDimTail)
     {
         uint64_t dataOffset = 0;
         uint64_t workspaceOffset = 0;
@@ -260,8 +258,8 @@ private:
             }
             // tail
             if (gatherParam_.idxGatherDimTail) {
-                idxWorkspaceOffset =
-                    gatherId * this->idxGatherDim_ + gatherParam_.idxSliceNum * gatherParam_.idxGatherDimSlice;
+                idxWorkspaceOffset = gatherId * this->idxGatherDim_ +
+                                     gatherParam_.idxSliceNum * gatherParam_.idxGatherDimSlice;
                 CopyInIdx4Gather(idxWorkspaceOffset, this->xGatherDim_, gatherParam_.idxGatherDimTail);
                 DoNegativeIndices(this->xGatherDim_, gatherParam_.idxGatherDimSlice);
                 GatherInUb(this->xGatherDim_, gatherParam_.idxGatherDimTail);
@@ -295,24 +293,24 @@ private:
     }
 
     template <typename T, uint8_t PROCESS>
-    __aicore__ inline void CopyIn4Transpose(
-        const uint64_t& dataOffset, const uint64_t& gatherDimSlice, const uint64_t& curCarryNum)
+    __aicore__ inline void CopyIn4Transpose(const uint64_t& dataOffset, const uint64_t& gatherDimSlice,
+                                            const uint64_t& curCarryNum)
     {
         if constexpr (PROCESS == X_PROCESS) {
             LocalTensor<T> xLocal = dataInQue_.AllocTensor<T>();
             uint8_t padNum = (this->xAlign_ - curCarryNum % this->xAlign_) % this->xAlign_;
-            DataCopyExtParams copyParams{
-                static_cast<uint16_t>(gatherDimSlice), static_cast<uint32_t>(sizeof(T) * curCarryNum),
-                static_cast<uint32_t>((this->xPostDim_ - curCarryNum) * sizeof(T)), 0, 0};
+            DataCopyExtParams copyParams{static_cast<uint16_t>(gatherDimSlice),
+                                         static_cast<uint32_t>(sizeof(T) * curCarryNum),
+                                         static_cast<uint32_t>((this->xPostDim_ - curCarryNum) * sizeof(T)), 0, 0};
             DataCopyPadExtParams<T> padParams{true, 0, padNum, 0};
             DataCopyPad(xLocal, this->xGm_[dataOffset], copyParams, padParams);
             dataInQue_.EnQue<T>(xLocal);
         } else if constexpr (PROCESS == IDX_PROCESS) {
             LocalTensor<T> idxLocal = dataInQue_.AllocTensor<T>();
             uint8_t padNum = (this->idxAlign_ - curCarryNum % this->idxAlign_) % this->idxAlign_;
-            DataCopyExtParams copyParams{
-                static_cast<uint16_t>(gatherDimSlice), static_cast<uint32_t>(sizeof(T) * curCarryNum),
-                static_cast<uint32_t>((this->idxPostDim_ - curCarryNum) * sizeof(T)), 0, 0};
+            DataCopyExtParams copyParams{static_cast<uint16_t>(gatherDimSlice),
+                                         static_cast<uint32_t>(sizeof(T) * curCarryNum),
+                                         static_cast<uint32_t>((this->idxPostDim_ - curCarryNum) * sizeof(T)), 0, 0};
             DataCopyPadExtParams<T> padParams{true, 0, padNum, 0};
             DataCopyPad(idxLocal, this->idxGm_[dataOffset], copyParams, padParams);
             dataInQue_.EnQue<T>(idxLocal);
@@ -320,8 +318,8 @@ private:
     }
 
     template <typename T, uint8_t PROCESS>
-    __aicore__ inline void CopyOut2Workspace(
-        const uint64_t& workspaceOffset, const uint64_t& curCarryNum, const uint64_t& gatherDimSlice)
+    __aicore__ inline void CopyOut2Workspace(const uint64_t& workspaceOffset, const uint64_t& curCarryNum,
+                                             const uint64_t& gatherDimSlice)
     {
         if constexpr (PROCESS == X_PROCESS) {
             LocalTensor<T> xTransLocal = dataOutQue_.DeQue<T>();
@@ -351,12 +349,12 @@ private:
         dataInQue_.EnQue<T_X>(xLocal);
     }
 
-    __aicore__ inline void CopyInIdx4Gather(
-        const uint64_t& idxWorkspaceOffset, const uint64_t& xGatherDimSlice, const uint64_t& idxGatherDimSlice)
+    __aicore__ inline void CopyInIdx4Gather(const uint64_t& idxWorkspaceOffset, const uint64_t& xGatherDimSlice,
+                                            const uint64_t& idxGatherDimSlice)
     {
         LocalTensor<T_X> xLocal = dataInQue_.DeQue<T_X>();
-        LocalTensor<T_IDX> idxLocal =
-            xLocal[CeilAlign(xGatherDimSlice, this->xAlign_)].template ReinterpretCast<T_IDX>();
+        LocalTensor<T_IDX> idxLocal = xLocal[CeilAlign(xGatherDimSlice, this->xAlign_)]
+                                          .template ReinterpretCast<T_IDX>();
         DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(sizeof(T_IDX) * idxGatherDimSlice), 0, 0, 0};
         DataCopyPadExtParams<T_IDX> idxPadParams{true, 0, 0, 0};
         DataCopyPad(idxLocal, idxWorkspaceGm_[idxWorkspaceOffset], idxCopyParams, idxPadParams);
@@ -366,8 +364,8 @@ private:
     __aicore__ inline void GatherInUb(const uint64_t& xGatherDimSlice, const uint64_t& computeNum)
     {
         LocalTensor<T_X> xLocal = dataInQue_.DeQue<T_X>();
-        LocalTensor<T_IDX> idxLocal =
-            xLocal[CeilAlign(xGatherDimSlice, this->xAlign_)].template ReinterpretCast<T_IDX>();
+        LocalTensor<T_IDX> idxLocal = xLocal[CeilAlign(xGatherDimSlice, this->xAlign_)]
+                                          .template ReinterpretCast<T_IDX>();
         LocalTensor<T_X> yLocal = dataOutQue_.AllocTensor<T_X>();
 
         Muls(idxLocal, idxLocal, static_cast<T_IDX>(sizeof(T_X)), computeNum);
@@ -387,8 +385,8 @@ private:
         dataOutQue_.FreeTensor<T_X>(yLocal);
     }
 
-    __aicore__ inline void CopyIn4ReTranspose(
-        const uint64_t& yWorkspaceOffset, const uint64_t& curCarryNum, const uint64_t& gatherDimSlice)
+    __aicore__ inline void CopyIn4ReTranspose(const uint64_t& yWorkspaceOffset, const uint64_t& curCarryNum,
+                                              const uint64_t& gatherDimSlice)
     {
         LocalTensor<T_X> yLocal = dataInQue_.AllocTensor<T_X>();
         uint8_t yPadNum = (this->xAlign_ - gatherDimSlice % this->xAlign_) % this->xAlign_;
@@ -400,8 +398,8 @@ private:
         dataInQue_.EnQue<T_X>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY2Gm(
-        const uint64_t& yDataOffset, const uint64_t& curCarryNum, const uint64_t& gatherDimSlice)
+    __aicore__ inline void CopyOutY2Gm(const uint64_t& yDataOffset, const uint64_t& curCarryNum,
+                                       const uint64_t& gatherDimSlice)
     {
         LocalTensor<T_X> yTransLocal = dataOutQue_.DeQue<T_X>();
         DataCopyExtParams yCopyParams{
@@ -427,8 +425,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void TransposeByte4(
-        LocalTensor<T>& dstLocal, LocalTensor<T>& srcLocal, const uint64_t& h, const uint64_t& w)
+    __aicore__ inline void TransposeByte4(LocalTensor<T>& dstLocal, LocalTensor<T>& srcLocal, const uint64_t& h,
+                                          const uint64_t& w)
     {
         uint64_t srcList[TRANS_LEN];
         uint64_t dstList[TRANS_LEN];
@@ -440,9 +438,9 @@ private:
         for (size_t j = 0; j < hAlign / TRANS_LEN; j++) {
             for (size_t i = 0; i < TRANS_LEN; i++) {
                 srcList[i] = (uint64_t)(srcLocal[j * TRANS_LEN * wAlign + i * wAlign].GetPhyAddr());
-                dstList[i] =
-                    (uint64_t)(dstLocal[j * TRANS_LEN + i / blockPerTransLen * hAlign + i % blockPerTransLen * blockNum]
-                                   .GetPhyAddr());
+                dstList[i] = (uint64_t)(dstLocal[j * TRANS_LEN + i / blockPerTransLen * hAlign +
+                                                 i % blockPerTransLen * blockNum]
+                                            .GetPhyAddr());
             }
             TransDataTo5HDParams transDataParams;
             transDataParams.repeatTimes = wAlign / blockNum;
@@ -458,8 +456,8 @@ private:
     }
 
     template <typename T>
-    __aicore__ inline void TransposeByte2(
-        LocalTensor<T>& dstLocal, LocalTensor<T>& srcLocal, const uint64_t& h, const uint64_t& w)
+    __aicore__ inline void TransposeByte2(LocalTensor<T>& dstLocal, LocalTensor<T>& srcLocal, const uint64_t& h,
+                                          const uint64_t& w)
     {
         uint64_t srcList[TRANS_LEN];
         uint64_t dstList[TRANS_LEN];
@@ -485,14 +483,16 @@ private:
         }
     }
 
-    __aicore__ inline void DoNegativeIndices(const uint64_t &xGatherDimSlice, const uint64_t &idxGatherDimSlice)
+    __aicore__ inline void DoNegativeIndices(const uint64_t& xGatherDimSlice, const uint64_t& idxGatherDimSlice)
     {
         LocalTensor<T_X> xLocal = dataInQue_.DeQue<T_X>();
-        LocalTensor<T_IDX> idxLocal = xLocal[CeilAlign(xGatherDimSlice, this->xAlign_)].template ReinterpretCast<T_IDX>();
+        LocalTensor<T_IDX> idxLocal = xLocal[CeilAlign(xGatherDimSlice, this->xAlign_)]
+                                          .template ReinterpretCast<T_IDX>();
         uint64_t idxCountAlign = CeilAlign(idxGatherDimSlice, this->idxAlign_);
 
         ShiftRight(idxLocal[idxCountAlign], idxLocal, RIGHT_SHIFT_LEN, idxGatherDimSlice);
-        Muls(idxLocal[idxCountAlign], idxLocal[idxCountAlign], -static_cast<int32_t>(this->xGatherDim_), idxGatherDimSlice);
+        Muls(idxLocal[idxCountAlign], idxLocal[idxCountAlign], -static_cast<int32_t>(this->xGatherDim_),
+             idxGatherDimSlice);
         Add(idxLocal, idxLocal, idxLocal[idxCountAlign], idxGatherDimSlice);
 
         dataInQue_.EnQue<T_X>(xLocal);

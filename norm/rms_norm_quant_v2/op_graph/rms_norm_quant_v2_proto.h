@@ -51,7 +51,7 @@ namespace ge {
 * @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses
 multiplication.
 *               The type is bool. Defaults to true.
-* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FP8_E5M2, 
+* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FP8_E5M2,
 *               DT_FP8_E4M3FN. Defaults to DT_INT8.
 * @par Outputs
 * @li y1: A tensor. Describing the output of the first quant operation.

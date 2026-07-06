@@ -28,10 +28,8 @@ static ge::graphStatus InferShapeSoftMarginLoss(gert::InferShapeContext* context
 
     OP_CHECK_IF(
         *input_self_shape != *input_target_shape,
-        OP_LOGE(
-            context->GetNodeName(), "self shape %s must be same as target shape %s",
-            Ops::Base::ToString(*input_self_shape).c_str(),
-            Ops::Base::ToString(*input_target_shape).c_str()),
+        OP_LOGE(context->GetNodeName(), "self shape %s must be same as target shape %s",
+                Ops::Base::ToString(*input_self_shape).c_str(), Ops::Base::ToString(*input_target_shape).c_str()),
         return GRAPH_FAILED);
 
     auto out_shape = context->GetOutputShape(0);

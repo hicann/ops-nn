@@ -22,8 +22,7 @@
 #include "util/shape_util.h"
 
 using namespace ge;
-namespace ops
-{
+namespace ops {
 static constexpr size_t INDEX_KSIZE = 0;
 static constexpr size_t INDEX_STRIDES = 1;
 static constexpr size_t INDEX_PADS = 2;
@@ -44,12 +43,10 @@ static constexpr size_t INDEX_THREE = 3;
 static constexpr size_t KSIZE_STRIDES_FIXED_DIM_VALUE = 1;
 static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
-
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
-    OP_CHECK_IF(
-        output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(output_shape == nullptr, OP_LOGD("SetAllUnknownDim", "the output_shape is nullptr, return unsuccess"),
+                return ge::GRAPH_FAILED);
     output_shape->SetDimNum(rank);
     for (int64_t i = 0; i < rank; ++i) {
         output_shape->SetDim(i, UNKNOWN_DIM_VALUE_);
@@ -73,8 +70,8 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     OP_LOGD(context->GetNodeName(), "indices_dtype = %d", indices_dtype);
 
     if (input_format != FORMAT_ND && input_format != FORMAT_NCHW && input_format != FORMAT_NHWC) {
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
-            Ops::Base::ToString(input_format).c_str(), "ND, NCHW or NHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x", Ops::Base::ToString(input_format).c_str(),
+                                   "ND, NCHW or NHWC");
         return GRAPH_FAILED;
     }
 
@@ -84,8 +81,8 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OPS_CHECK_NULL_WITH_CONTEXT(context, ksize);
     if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize",
-            std::to_string(ksize->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
@@ -93,8 +90,8 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OPS_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
-            std::to_string(strides->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(),
+                                     std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
@@ -107,30 +104,30 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
         std::string attrMsg = std::to_string(ksize_data[INDEX_ZERO]) + " and " +
                               std::to_string(strides_data[INDEX_ZERO]);
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "ksize[0] and strides[0]", attrMsg.c_str(),
-            "ksize[0] and strides[0] should be 1");
+                                               "ksize[0] and strides[0] should be 1");
         return GRAPH_FAILED;
     }
     if (dataFormatStr == "NHWC") {
         if (ksize_data[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
             OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[3]",
-                std::to_string(ksize_data[INDEX_THREE]).c_str(), "1");
+                                      std::to_string(ksize_data[INDEX_THREE]).c_str(), "1");
             return GRAPH_FAILED;
         }
         if (strides_data[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
             OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[3]",
-                std::to_string(strides_data[INDEX_THREE]).c_str(), "1");
+                                      std::to_string(strides_data[INDEX_THREE]).c_str(), "1");
             return GRAPH_FAILED;
         }
     } else {
         // NCHW
         if (ksize_data[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
-            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[1]",
-                std::to_string(ksize_data[INDEX_ONE]).c_str(), "1");
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[1]", std::to_string(ksize_data[INDEX_ONE]).c_str(),
+                                      "1");
             return GRAPH_FAILED;
         }
         if (strides_data[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
             OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[1]",
-                std::to_string(strides_data[INDEX_ONE]).c_str(), "1");
+                                      std::to_string(strides_data[INDEX_ONE]).c_str(), "1");
             return GRAPH_FAILED;
         }
     }
@@ -178,9 +175,9 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
         if (outH < 0 || outW < 0) {
             std::string valMsg = "[" + std::to_string(in_shape->GetDim(h_dim)) + ", " +
                                  std::to_string(in_shape->GetDim(w_dim)) + "], [" +
-                                 std::to_string(strides_data[h_dim]) + ", " +
-                                 std::to_string(strides_data[w_dim]) + "]";
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "x[h_dim, w_dim], strides[h_dim, w_dim]", valMsg.c_str(),
+                                 std::to_string(strides_data[h_dim]) + ", " + std::to_string(strides_data[w_dim]) + "]";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                context->GetNodeName(), "x[h_dim, w_dim], strides[h_dim, w_dim]", valMsg.c_str(),
                 "these input values lead to inferred output H and W dimensions less than 0");
             return GRAPH_FAILED;
         }
@@ -193,13 +190,12 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
         int64_t outW = (in_shape->GetDim(w_dim) - ksize_data[w_dim] + strides_data[w_dim]) / strides_data[w_dim];
         if (outH < 0 || outW < 0) {
             std::string valMsg = "[" + std::to_string(in_shape->GetDim(h_dim)) + ", " +
-                                 std::to_string(in_shape->GetDim(w_dim)) + "], [" +
-                                 std::to_string(ksize_data[h_dim]) + ", " +
-                                 std::to_string(ksize_data[w_dim]) + "], [" +
-                                 std::to_string(strides_data[h_dim]) + ", " +
-                                 std::to_string(strides_data[w_dim]) + "]";
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "x[h_dim, w_dim], kernel_size[h_dim, w_dim], strides[h_dim, w_dim]", valMsg.c_str(),
-                "these input values lead to inferred output H and W dimensions less than 0");
+                                 std::to_string(in_shape->GetDim(w_dim)) + "], [" + std::to_string(ksize_data[h_dim]) +
+                                 ", " + std::to_string(ksize_data[w_dim]) + "], [" +
+                                 std::to_string(strides_data[h_dim]) + ", " + std::to_string(strides_data[w_dim]) + "]";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                context->GetNodeName(), "x[h_dim, w_dim], kernel_size[h_dim, w_dim], strides[h_dim, w_dim]",
+                valMsg.c_str(), "these input values lead to inferred output H and W dimensions less than 0");
             return GRAPH_FAILED;
         }
         out_shape->SetDim(h_dim, outH);
@@ -235,4 +231,4 @@ static ge::graphStatus InferDataTypeForMaxPoolWithArgmax(gert::InferDataTypeCont
 IMPL_OP_INFERSHAPE(MaxPoolWithArgmax)
     .InferShape(InferShapeForMaxPoolWithArgmax)
     .InferDataType(InferDataTypeForMaxPoolWithArgmax);
-}  // namespace ops
+} // namespace ops

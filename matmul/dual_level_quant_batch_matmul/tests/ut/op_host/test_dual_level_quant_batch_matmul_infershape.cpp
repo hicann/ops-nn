@@ -32,20 +32,18 @@ TEST_F(TestDualLevelQuantBatchMatmulInferShape, InferShape)
     gert::StorageShape x2Level1ScaleShape = {{1536, 112, 2}, {1536, 112, 2}};
     gert::StorageShape yShape;
 
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(7, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-            .InputShapes({&x1Shape, &x2Shape,
-                &x1Level0ScaleShape, &x1Level1ScaleShape, &x2Level0ScaleShape, &x2Level1ScaleShape, nullptr})
-            .OutputShapes({&yShape})
-            .NodeAttrs(
-                {{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                 {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                 {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                 {"level0_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(512)},
-                 {"level1_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
-            .Build();
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, &x1Level0ScaleShape, &x1Level1ScaleShape, &x2Level0ScaleShape,
+                                    &x2Level1ScaleShape, nullptr})
+                      .OutputShapes({&yShape})
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"level0_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(512)},
+                                  {"level1_group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(32)}})
+                      .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);

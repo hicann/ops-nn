@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -21,12 +21,10 @@ namespace Glu {
 using namespace AscendC;
 
 template <typename T>
-class GluSingleShape
-{
+class GluSingleShape {
 public:
     __aicore__ inline GluSingleShape(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
     __aicore__ inline void Process();
 
     constexpr static int32_t bufferNum = 2;
@@ -72,8 +70,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GluSingleShape<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
+__aicore__ inline void GluSingleShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -221,8 +218,7 @@ __aicore__ inline void GluSingleShape<T>::ComputeSigmoidAndMul(const int64_t& co
 }
 
 template <typename T>
-__aicore__ inline void GluSingleShape<T>::CopyOut(
-    const int64_t& index, const int64_t& count, const int64_t& group)
+__aicore__ inline void GluSingleShape<T>::CopyOut(const int64_t& index, const int64_t& count, const int64_t& group)
 {
     LocalTensor<T> outLocal = outQueue.DeQue<T>();
     DataCopyParams intriParams;

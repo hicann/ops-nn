@@ -10,7 +10,7 @@
 
 /*!
  * \file bucketize_v2_full_load_tiling.cpp
- * \brief 
+ * \brief
  */
 
 #include "bucketize_v2_full_load_tiling.h"
@@ -20,7 +20,7 @@
 
 namespace optiling {
 
-static constexpr int64_t MIN_INPUT_OUT_SIZE= 16 * 1024;
+static constexpr int64_t MIN_INPUT_OUT_SIZE = 16 * 1024;
 static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t DOUBLE_BUFFER = 2;
 static constexpr int64_t MIN_BLOCKFACTOR = 1024;
@@ -64,9 +64,11 @@ void BucketizeV2FullLoadTiling::DoUBTiling()
     boundBufSize_ = Ops::Base::CeilAlign(boundSize_ * boundDtypeSize_, ubBlockSize_);
     int64_t ubAvailable = static_cast<int64_t>(ubSize_) - boundBufSize_;
     int64_t inputUbAlignFactor = xDtypeSize_ == sizeof(int64_t) ? B64_LOAD_ONCE_REG_NUM * vRegLength_ : vRegLength_;
-    int64_t onceStoreVregNum = yDtypeSize_ == sizeof(int64_t) && xDtypeSize_ <= sizeof(int16_t) ? INDICE_B16_WRITE_B64_ONCE_REG_NUM : COMMON_WRITE_ONCE_REG_NUM;
+    int64_t onceStoreVregNum = yDtypeSize_ == sizeof(int64_t) && xDtypeSize_ <= sizeof(int16_t) ?
+                                   INDICE_B16_WRITE_B64_ONCE_REG_NUM :
+                                   COMMON_WRITE_ONCE_REG_NUM;
     int64_t outputUbAlignFactor = onceStoreVregNum * vRegLength_;
-    ubFactor_ = (ubAvailable / DOUBLE_BUFFER -  inputUbAlignFactor - outputUbAlignFactor) / (xDtypeSize_ + yDtypeSize_);
+    ubFactor_ = (ubAvailable / DOUBLE_BUFFER - inputUbAlignFactor - outputUbAlignFactor) / (xDtypeSize_ + yDtypeSize_);
     inUbSize_ = Ops::Base::CeilAlign(ubFactor_ * xDtypeSize_, inputUbAlignFactor);
     outUbSize_ = Ops::Base::CeilAlign(ubFactor_ * yDtypeSize_, outputUbAlignFactor);
     maxIter_ = GetUpLog2(boundSize_);
@@ -74,8 +76,7 @@ void BucketizeV2FullLoadTiling::DoUBTiling()
 
 void BucketizeV2FullLoadTiling::SetTilingData()
 {
-    BucketizeV2FullLoadTilingData* tilingData =
-    context_->GetTilingData<BucketizeV2FullLoadTilingData>();
+    BucketizeV2FullLoadTilingData* tilingData = context_->GetTilingData<BucketizeV2FullLoadTilingData>();
 
     tilingData->usedCoreNum = usedCoreNum_;
     tilingData->blockFactor = blockFactor_;
@@ -106,8 +107,7 @@ ge::graphStatus BucketizeV2FullLoadTiling::PostTiling()
 
 void BucketizeV2FullLoadTiling::DumpTilingInfo()
 {
-    BucketizeV2FullLoadTilingData* tilingData =
-    context_->GetTilingData<BucketizeV2FullLoadTilingData>();
+    BucketizeV2FullLoadTilingData* tilingData = context_->GetTilingData<BucketizeV2FullLoadTilingData>();
     std::string str;
     str += " usedCoreNum:" + std::to_string(tilingData->usedCoreNum);
     str += " blockFactor:" + std::to_string(tilingData->blockFactor);

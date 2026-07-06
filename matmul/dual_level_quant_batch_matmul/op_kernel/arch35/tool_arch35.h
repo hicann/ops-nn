@@ -47,9 +47,8 @@ static constexpr uint32_t L0B_BUFFER_SIZE_BYTE = 64 * 1024;
 static constexpr uint64_t MX_GROUPSIZE = 32;
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(
-    const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount, uint32_t blockLen,
-    uint32_t dstInnerLength, uint32_t srcInnerLength)
+__aicore__ inline void DataCopyPad2D(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount,
+                                     uint32_t blockLen, uint32_t dstInnerLength, uint32_t srcInnerLength)
 {
     DataCopyExtParams params;
     params.blockCount = blockCount;
@@ -63,8 +62,8 @@ __aicore__ inline void DataCopyPad2D(
         padParams.paddingValue = 0;
     }
 
-    if constexpr (
-        IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value || IsSameType<T, fp4x2_e1m2_t>::value) {
+    if constexpr (IsSameType<T, int4b_t>::value || IsSameType<T, fp4x2_e2m1_t>::value ||
+                  IsSameType<T, fp4x2_e1m2_t>::value) {
         // 4bit场景下， 跳转的步长、数据长度等需要除2
         params.blockLen = params.blockLen >> 1;
         params.srcStride = params.srcStride >> 1;
@@ -75,16 +74,15 @@ __aicore__ inline void DataCopyPad2D(
 }
 
 template <typename T, PaddingMode mode = PaddingMode::Normal>
-__aicore__ inline void DataCopyPad2D(
-    const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint32_t dim1, uint32_t dim0, uint32_t srcFullDim0,
-    uint32_t dstFullDim0)
+__aicore__ inline void DataCopyPad2D(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint32_t dim1,
+                                     uint32_t dim0, uint32_t srcFullDim0, uint32_t dstFullDim0)
 {
     DataCopyExtParams params;
     params.blockCount = dim1;
     params.blockLen = dim0 * sizeof(T);
     uint32_t dim0BlockNum = Ops::Base::CeilAlign(dim0, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(T)));
-    params.srcStride =
-        Ops::Base::CeilDiv((srcFullDim0 - dim0BlockNum) * sizeof(T), static_cast<uint64_t>(ONE_BLK_SIZE));
+    params.srcStride = Ops::Base::CeilDiv((srcFullDim0 - dim0BlockNum) * sizeof(T),
+                                          static_cast<uint64_t>(ONE_BLK_SIZE));
     params.dstStride = (dstFullDim0 - dim0) * sizeof(T);
     if constexpr (IsSameType<T, int4b_t>::value) {
         // int4场景下， 跳转的步长、数据长度等需要除2
@@ -102,4 +100,3 @@ __aicore__ inline T Min(T a, T b)
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-

@@ -15,14 +15,14 @@
 #ifndef OPP_GLU_TILING_HPP
 #define OPP_GLU_TILING_HPP
 
-template<typename T>
+template <typename T>
 __aicore__ inline T AlignUp(T num, T rnd)
 {
-    return (((rnd) == 0) ? 0 : (((num) + (rnd) - 1) / (rnd) * (rnd)));
+    return (((rnd) == 0) ? 0 : (((num) + (rnd)-1) / (rnd) * (rnd)));
 }
-template<typename T>
+template <typename T>
 __aicore__ inline T ISMAX(T num, T rnd)
 {
     return ((num) > (rnd)) ? (num) : (rnd);
 }
-#endif  // OPP_GLU_TILING_HPP
+#endif // OPP_GLU_TILING_HPP

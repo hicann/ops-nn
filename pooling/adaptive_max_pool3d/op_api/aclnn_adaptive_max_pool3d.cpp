@@ -50,13 +50,14 @@ const int W_DIM = -1;
 const int H_DIM = -2;
 const int D_DIM = -3;
 static bool isSelf4D = false;
-static const std::initializer_list<op::DataType> dtypeSupportList = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> dtypeSupportList = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                     op::DataType::DT_BF16};
 static const std::initializer_list<op::DataType> indicesSupportList = {op::DataType::DT_INT32};
-static const std::initializer_list<op::DataType> indicesDavSupportList = {op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> indicesDavSupportList = {op::DataType::DT_INT32,
+                                                                          op::DataType::DT_INT64};
 static const std::initializer_list<op::DataType> nullSupportList = {};
-static inline bool CheckNotNull(
-    const aclTensor* self, const aclIntArray* outputSize, const aclTensor* out, const aclTensor* indices)
+static inline bool CheckNotNull(const aclTensor* self, const aclIntArray* outputSize, const aclTensor* out,
+                                const aclTensor* indices)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(outputSize, return false);
@@ -95,7 +96,7 @@ static inline const std::initializer_list<DataType>& GetDtypeSupportList()
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
         return dtypeSupportList;
-    } 
+    }
     return nullSupportList;
 }
 
@@ -108,42 +109,37 @@ static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* out, 
         OP_CHECK_DTYPE_NOT_SUPPORT(indices, indicesDavSupportList, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(indices, indicesSupportList, return false);
-    }	
+    }
     return true;
-} 
+}
 
 // 校验输入输出格式
 static inline bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        if (self->GetStorageFormat() != ge::FORMAT_NCDHW && self->GetStorageFormat() != ge::FORMAT_NCHW && self->GetStorageFormat() != ge::FORMAT_ND) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
-                op::ToString(self->GetStorageFormat()).GetString());
+        if (self->GetStorageFormat() != ge::FORMAT_NCDHW && self->GetStorageFormat() != ge::FORMAT_NCHW &&
+            self->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
+                    op::ToString(self->GetStorageFormat()).GetString());
             return false;
         }
     } else {
         if (self->GetStorageFormat() != ge::FORMAT_NCDHW && self->GetStorageFormat() != ge::FORMAT_NCHW) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDHW or NCHW.");
             return false;
-        } 
-    } 
+        }
+    }
 
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
     return true;
 }
 
-static bool CheckOutputSize4DAV3510(
-    uint64_t size,
-    const aclIntArray* outputSize,
-    const op::Shape& selfShape,
-    const op::Shape& outputShape,
-    size_t offset)
+static bool CheckOutputSize4DAV3510(uint64_t size, const aclIntArray* outputSize, const op::Shape& selfShape,
+                                    const op::Shape& outputShape, size_t offset)
 {
     for (size_t i = 0; i < OUTPUT_SIZE_THREE; ++i) {
         if (size == static_cast<uint64_t>(OUTPUT_SIZE_THREE)) {
@@ -166,12 +162,13 @@ static bool CheckOutputSize4DAV3510(
     return true;
 }
 
-static bool CheckOutShape(
-    const aclTensor* self, const aclIntArray* outputSize, const aclTensor* out, const aclTensor* indices)
+static bool CheckOutShape(const aclTensor* self, const aclIntArray* outputSize, const aclTensor* out,
+                          const aclTensor* indices)
 {
     uint64_t size = outputSize->Size();
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        if (size != static_cast<uint64_t>(OUTPUT_SIZE_NONE) && size != static_cast<uint64_t>(OUTPUT_SIZE_ONE) && size != static_cast<uint64_t>(OUTPUT_SIZE_THREE)) {
+        if (size != static_cast<uint64_t>(OUTPUT_SIZE_NONE) && size != static_cast<uint64_t>(OUTPUT_SIZE_ONE) &&
+            size != static_cast<uint64_t>(OUTPUT_SIZE_THREE)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputSize length should be 0, 1 or 3.");
             return false;
         }
@@ -211,7 +208,7 @@ static bool CheckOutShape(
         if (indicesShape.GetDim(i) != outputShape.GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The [%lu] dim of outShape value should match the indicesShape value.", i);
             return false;
-        } 
+        }
     }
     return true;
 }
@@ -224,10 +221,9 @@ static inline bool checkDtypeSame(const aclTensor* self, const aclTensor* out)
 
 static inline bool checkPlatformValid()
 {
-    return (
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase());
-} 
+    return (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase());
+}
 
 static bool checkExceptiveValue(const aclTensor* self, const aclIntArray* outputSize, const aclTensor* indices)
 {
@@ -249,18 +245,16 @@ static bool checkExceptiveValue(const aclTensor* self, const aclIntArray* output
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         if (indices->GetDataType() == op::DataType::DT_INT32) {
-            OP_CHECK( (selfSize <= MAX_INT32),
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "The size of self is more than MAX_INT32, but the data type of indices should be int64."),
-            return false);
+            OP_CHECK((selfSize <= MAX_INT32),
+                     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                             "The size of self is more than MAX_INT32, but the data type of indices should be int64."),
+                     return false);
         }
     } else {
-        OP_CHECK(
-            (selfSize <= MAX_INT32),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The size of self should be less than or equal to 2^31 - 1, but got selfSize:%ld",
-                selfSize),
-        return false); 
+        OP_CHECK((selfSize <= MAX_INT32),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                         "The size of self should be less than or equal to 2^31 - 1, but got selfSize:%ld", selfSize),
+                 return false);
     }
 
     // outputSize中元素值小于0
@@ -273,8 +267,8 @@ static bool checkExceptiveValue(const aclTensor* self, const aclIntArray* output
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclIntArray* outputSize, const aclTensor* out, const aclTensor* indices)
+static aclnnStatus CheckParams(const aclTensor* self, const aclIntArray* outputSize, const aclTensor* out,
+                               const aclTensor* indices)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, outputSize, out, indices), ACLNN_ERR_PARAM_NULLPTR);
@@ -324,8 +318,8 @@ static inline const aclTensor* View5Das4D(const aclTensor* input, const op::Form
 }
 
 // execute maxpool
-static aclnnStatus DoMaxPool3D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclTensor* indices, aclOpExecutor* executor)
+static aclnnStatus DoMaxPool3D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclTensor* indices,
+                               aclOpExecutor* executor)
 {
     size_t kernelDSize = self->GetViewShape()[INDEX_DIM2] / (*outputSize)[INDEX_DIM0];
     size_t kernelHSize = self->GetViewShape()[INDEX_DIM3] / (*outputSize)[INDEX_DIM1];
@@ -348,20 +342,20 @@ static aclnnStatus DoMaxPool3D(
     std::string dataFormat = "NCDHW";
     const aclTensor* outResult = nullptr;
     const aclTensor* indicesResult = nullptr;
-    if (Ops::NN::AclnnUtil::IsRegbase()){
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto indicesDtype = indices->GetDataType();
-        std::tie(outResult, indicesResult) =
-            l0op::MaxPool3DWithArgmaxV2Ncdhw(self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor, indicesDtype);
+        std::tie(outResult, indicesResult) = l0op::MaxPool3DWithArgmaxV2Ncdhw(
+            self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor, indicesDtype);
     } else {
-        std::tie(outResult, indicesResult) = 
-            l0op::MaxPool3DWithArgmaxV2Ncdhw(self, kernelSize, stride, padding, dilation, ceilMode, dataFormat, executor);
+        std::tie(outResult, indicesResult) = l0op::MaxPool3DWithArgmaxV2Ncdhw(self, kernelSize, stride, padding,
+                                                                              dilation, ceilMode, dataFormat, executor);
     }
     CHECK_RET(outResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(indicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const op::Format& outFormat = out->GetStorageFormat();
-    auto outResultSqueezed =
-        isSelf4D ? View5Das4D(outResult, outFormat, executor) : l0op::ReFormat(outResult, outFormat, executor);
+    auto outResultSqueezed = isSelf4D ? View5Das4D(outResult, outFormat, executor) :
+                                        l0op::ReFormat(outResult, outFormat, executor);
     CHECK_RET(outResultSqueezed != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckReduceOutShape(outResultSqueezed, out), ACLNN_ERR_PARAM_INVALID);
 
@@ -383,8 +377,8 @@ static aclnnStatus DoMaxPool3D(
 }
 
 // input shape不能与output shape整除
-static aclnnStatus DoAdaptiveMaxPool3D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclTensor* indices, aclOpExecutor* executor)
+static aclnnStatus DoAdaptiveMaxPool3D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                       aclTensor* indices, aclOpExecutor* executor)
 {
     auto indicesDtype = indices->GetDataType();
     auto [outResult, indicesResult] = l0op::AdaptiveMaxPool3d(self, outputSize, executor, indicesDtype);
@@ -411,16 +405,20 @@ static aclnnStatus DoAdaptiveMaxPool3D(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus SelectAdaptiveMaxPool3D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclTensor* indices, aclOpExecutor* executor)
+static aclnnStatus SelectAdaptiveMaxPool3D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                           aclTensor* indices, aclOpExecutor* executor)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto selfShape = self->GetViewShape();
         size_t selfDimNum = selfShape.GetDimNum();
         const aclIntArray& outputRef = *outputSize;
         const int64_t outputD = (outputRef.Size() == 0) ? selfShape.GetDim(selfDimNum + D_DIM) : outputRef[0];
-        const int64_t outputH = (outputRef.Size() == 0) ? selfShape.GetDim(selfDimNum + H_DIM) : (outputRef.Size() == 1) ? outputD : outputRef[1];
-        const int64_t outputW = (outputRef.Size() == 0) ? selfShape.GetDim(selfDimNum + W_DIM) : (outputRef.Size() == 1) ? outputD : outputRef[2];
+        const int64_t outputH = (outputRef.Size() == 0) ? selfShape.GetDim(selfDimNum + H_DIM) :
+                                (outputRef.Size() == 1) ? outputD :
+                                                          outputRef[1];
+        const int64_t outputW = (outputRef.Size() == 0) ? selfShape.GetDim(selfDimNum + W_DIM) :
+                                (outputRef.Size() == 1) ? outputD :
+                                                          outputRef[2];
         FVector<int64_t> outputSizeData{outputD, outputH, outputW};
         aclIntArray* outputSize3 = executor->AllocIntArray(outputSizeData.data(), DHW_DIMS);
         int64_t dValueRemainder = self->GetViewShape()[INDEX_DIM2] % (*outputSize3)[INDEX_DIM0];
@@ -441,9 +439,9 @@ static aclnnStatus SelectAdaptiveMaxPool3D(
     }
 }
 
-aclnnStatus aclnnAdaptiveMaxPool3dGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* outputOut, aclTensor* indicesOut,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAdaptiveMaxPool3dGetWorkspaceSize(const aclTensor* self, const aclIntArray* outputSize,
+                                                   aclTensor* outputOut, aclTensor* indicesOut, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -457,11 +455,10 @@ aclnnStatus aclnnAdaptiveMaxPool3dGetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        if (self->IsEmpty() || 
-        (outputSize->Size() == OUTPUT_SIZE_NONE && self->IsEmpty()) || 
-        (outputSize->Size() == OUTPUT_SIZE_ONE &&  (*outputSize)[INDEX_DIM0] == 0) ||  
-        (outputSize->Size() == OUTPUT_SIZE_THREE &&  
-        (*outputSize)[INDEX_DIM0] * (*outputSize)[INDEX_DIM1] * (*outputSize)[INDEX_DIM2] == 0)) {
+        if (self->IsEmpty() || (outputSize->Size() == OUTPUT_SIZE_NONE && self->IsEmpty()) ||
+            (outputSize->Size() == OUTPUT_SIZE_ONE && (*outputSize)[INDEX_DIM0] == 0) ||
+            (outputSize->Size() == OUTPUT_SIZE_THREE &&
+             (*outputSize)[INDEX_DIM0] * (*outputSize)[INDEX_DIM1] * (*outputSize)[INDEX_DIM2] == 0)) {
             *workspaceSize = 0UL;
             uniqueExecutor.ReleaseTo(executor);
             return ACLNN_SUCCESS;

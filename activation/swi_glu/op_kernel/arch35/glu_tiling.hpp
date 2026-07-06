@@ -15,12 +15,12 @@
 #ifndef OPP_GLU_TILING_HPP
 #define OPP_GLU_TILING_HPP
 
-template<typename T>
+template <typename T>
 __aicore__ inline T AlignUp(T num, T rnd)
 {
-    return (((rnd) == 0) ? 0 : (((num) + (rnd) - 1) / (rnd) * (rnd)));
+    return (((rnd) == 0) ? 0 : (((num) + (rnd)-1) / (rnd) * (rnd)));
 }
-template<typename T>
+template <typename T>
 __aicore__ inline T ISMAX(T num, T rnd)
 {
     return ((num) > (rnd)) ? (num) : (rnd);
@@ -31,23 +31,24 @@ struct GluTilingData {
     uint32_t usedCoreNum = 0; // number of vector core. Don't move, must be in the first
 
     uint32_t isDoubleBuffer = 1; // is double buffer on?
-    uint64_t maxTileLen = 0; // number of calculations in one tile On each core. Unit: number of elements
+    uint64_t maxTileLen = 0;     // number of calculations in one tile On each core. Unit: number of elements
 
     // vector dimension on each core
     // Apply for memory based on the maximum number of vector cores, but use the memory based on usedCoreNum
-    uint64_t singleCoreBlockLens[MAX_CORE_NUMBER] = {0}; // BlockLen on each core may be different. Unit: number of elements
+    uint64_t singleCoreBlockLens[MAX_CORE_NUMBER] = {
+        0}; // BlockLen on each core may be different. Unit: number of elements
 };
 
 // tiling for single input tensor, the memory of the two input tenors
 struct GluSingleTilingData {
-    uint32_t is32BAligned = 1; // Is 32-byte aligned for split colLen?
+    uint32_t is32BAligned = 1;   // Is 32-byte aligned for split colLen?
     uint32_t isDoubleBuffer = 1; // is double buffer on?
 
     // eg: for shape:[8192,1,2*3904], totalRowLen is 8192
     uint64_t rowLen = 2; // row length for split vector, Unit:element
     // eg: for shape:[8192,1,2*3904], totalColLen is 3904
-    uint64_t colLen = 32; // column length for split vector, Unit:element
-    uint32_t baseRowLen = 2; // for one tile in one core, Unit:element
+    uint64_t colLen = 32;     // column length for split vector, Unit:element
+    uint32_t baseRowLen = 2;  // for one tile in one core, Unit:element
     uint32_t baseColLen = 16; // for one tile in one core, Unit:element
 };
-#endif  // OPP_GLU_TILING_HPP
+#endif // OPP_GLU_TILING_HPP

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include "gtest/gtest.h"
@@ -17,7 +18,6 @@
 
 using ge::FORMAT_NCDHW;
 using ge::FORMAT_ND;
-
 
 struct AdaptiveMaxPool3dProtoTestParam {
     string caseName;
@@ -33,19 +33,17 @@ struct AdaptiveMaxPool3dProtoTestParam {
     bool result;
 };
 
-class AdaptiveMaxPool3dRuntimeProtoTest : public testing::TestWithParam<AdaptiveMaxPool3dProtoTestParam> {
-};
+class AdaptiveMaxPool3dRuntimeProtoTest : public testing::TestWithParam<AdaptiveMaxPool3dProtoTestParam> {};
 
-TEST_P(AdaptiveMaxPool3dRuntimeProtoTest, general_cases) {
+TEST_P(AdaptiveMaxPool3dRuntimeProtoTest, general_cases)
+{
     AdaptiveMaxPool3dProtoTestParam param = GetParam();
     std::cout << "run case " << param.caseName << std::endl;
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveMaxPool3d")->infer_shape;
 
-
     gert::StorageShape xShape = {param.xOriShape, {}};
     gert::StorageShape yShape = {{}, {}};
     gert::StorageShape indicesShape = {{}, {}};
-
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(1, 2)
@@ -53,16 +51,17 @@ TEST_P(AdaptiveMaxPool3dRuntimeProtoTest, general_cases) {
                       .NodeInputTd(0, ge::DT_FLOAT16, param.xOriFormat, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, param.yOriFormat, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, param.yOriFormat, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.outputSize)},
-                                  {"indices_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(param.indicesDtype)}})
+                      .NodeAttrs(
+                          {{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.outputSize)},
+                           {"indices_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(param.indicesDtype)}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();
 
     if (param.result) {
         ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-        gert::Shape *output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-        gert::Shape *indices = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+        gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+        gert::Shape* indices = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
         ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(gert::Shape(param.yOriShape)));
         ASSERT_EQ(Ops::Base::ToString(*indices), Ops::Base::ToString(gert::Shape(param.yOriShape)));
     } else {
@@ -71,38 +70,35 @@ TEST_P(AdaptiveMaxPool3dRuntimeProtoTest, general_cases) {
 }
 
 static AdaptiveMaxPool3dProtoTestParam general_cases_params[] = {
-    { "AdaptiveMaxPool3dInfershapeSize3",
-      {3, 2, 14, 14, 3}, {3, 2, 7, 5, 3}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {7, 5, 3}, 3, true
-    },
-    { "AdaptiveMaxPool3dInfershapeSize2",
-      {3, 2, 14, 14, 3}, {3, 2, 7, 5, 3}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {7, 5}, 3, false
-    },
-    { "AdaptiveMaxPool3dInfershapeSize1",
-      {3, 2, 14, 14, 3}, {3, 2, 3, 3, 3}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {3}, 3, true
-    },
-    { "AdaptiveMaxPool3dInfershapeSize0",
-      {3, 2, 14, 14, 3}, {3, 2, 14, 14, 3}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {}, 3, true
-    },
-    { "AdaptiveMaxPool3dInfershapeSizeUnRank",
-      {-2}, {-2}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {}, 3, true
-    },
-    { "AdaptiveMaxPool3dInfershapeSizeUnShape",
-      {-1}, {-1}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {}, 3, true
-    },
-    { "AdaptiveMaxPool3dInfershapeInvalidDim6d",
-      {1, 2, 3, 4, 5, 6}, {1, 2, 3, 4, 5, 6}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {1, 1, 1}, 3, false
-    },
-    { "AdaptiveMaxPool3dInfershapeInvalidDim2d",
-      {1, 2}, {1, 2}, FORMAT_NCDHW, FORMAT_NCDHW,
-      {1, 1, 1}, 3, false
-    },
+    {"AdaptiveMaxPool3dInfershapeSize3",
+     {3, 2, 14, 14, 3},
+     {3, 2, 7, 5, 3},
+     FORMAT_NCDHW,
+     FORMAT_NCDHW,
+     {7, 5, 3},
+     3,
+     true},
+    {"AdaptiveMaxPool3dInfershapeSize2",
+     {3, 2, 14, 14, 3},
+     {3, 2, 7, 5, 3},
+     FORMAT_NCDHW,
+     FORMAT_NCDHW,
+     {7, 5},
+     3,
+     false},
+    {"AdaptiveMaxPool3dInfershapeSize1", {3, 2, 14, 14, 3}, {3, 2, 3, 3, 3}, FORMAT_NCDHW, FORMAT_NCDHW, {3}, 3, true},
+    {"AdaptiveMaxPool3dInfershapeSize0", {3, 2, 14, 14, 3}, {3, 2, 14, 14, 3}, FORMAT_NCDHW, FORMAT_NCDHW, {}, 3, true},
+    {"AdaptiveMaxPool3dInfershapeSizeUnRank", {-2}, {-2}, FORMAT_NCDHW, FORMAT_NCDHW, {}, 3, true},
+    {"AdaptiveMaxPool3dInfershapeSizeUnShape", {-1}, {-1}, FORMAT_NCDHW, FORMAT_NCDHW, {}, 3, true},
+    {"AdaptiveMaxPool3dInfershapeInvalidDim6d",
+     {1, 2, 3, 4, 5, 6},
+     {1, 2, 3, 4, 5, 6},
+     FORMAT_NCDHW,
+     FORMAT_NCDHW,
+     {1, 1, 1},
+     3,
+     false},
+    {"AdaptiveMaxPool3dInfershapeInvalidDim2d", {1, 2}, {1, 2}, FORMAT_NCDHW, FORMAT_NCDHW, {1, 1, 1}, 3, false},
 };
 
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3d, AdaptiveMaxPool3dRuntimeProtoTest, testing::ValuesIn(general_cases_params));
@@ -167,8 +163,7 @@ TEST(AdaptiveMaxPool3dInfer, fail_missing_indices_dtype)
                       .NodeOutputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(1, ge::DT_INT32, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeAttrs({{"output_size",
-                                   Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(
-                                       std::vector<int64_t>{1, 1, 1})}})
+                                   Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(std::vector<int64_t>{1, 1, 1})}})
                       .InputShapes({&xShape})
                       .OutputShapes({&yShape, &indicesShape})
                       .Build();

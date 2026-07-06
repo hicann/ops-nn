@@ -18,7 +18,8 @@
 namespace ops {
 class SyncBatchNormBackwardElemt : public OpDef {
 public:
-    explicit SyncBatchNormBackwardElemt(const char* name) : OpDef(name) {
+    explicit SyncBatchNormBackwardElemt(const char* name) : OpDef(name)
+    {
         this->Input("grad_output")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16})
@@ -67,7 +68,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        
+
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicShapeSupportFlag(true)

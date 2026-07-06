@@ -24,21 +24,15 @@ using namespace op;
 
 class l2_gemm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "gemm_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "gemm_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "gemm_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "gemm_test TearDown" << endl; }
 
-    void test_run(
-        vector<int64_t> ADims, aclDataType ADtype, aclFormat AFormat, vector<int64_t> ARange, vector<int64_t> BDims,
-        aclDataType BDtype, aclFormat BFormat, vector<int64_t> BRange, vector<int64_t> CDims, aclDataType CDtype,
-        aclFormat CFormat, vector<int64_t> CRange, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
-        float alpha, float beta, int64_t transA, int64_t transB, int8_t cubeMathType)
+    void test_run(vector<int64_t> ADims, aclDataType ADtype, aclFormat AFormat, vector<int64_t> ARange,
+                  vector<int64_t> BDims, aclDataType BDtype, aclFormat BFormat, vector<int64_t> BRange,
+                  vector<int64_t> CDims, aclDataType CDtype, aclFormat CFormat, vector<int64_t> CRange,
+                  vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat, float alpha, float beta,
+                  int64_t transA, int64_t transB, int8_t cubeMathType)
     {
         auto A = TensorDesc(ADims, ADtype, AFormat).ValueRange(ARange[0], ARange[1]);
         auto B = TensorDesc(BDims, BDtype, BFormat).ValueRange(BRange[0], BRange[1]);
@@ -51,11 +45,11 @@ protected:
         EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
     }
 
-    void test_run_inval(
-        vector<int64_t> ADims, aclDataType ADtype, aclFormat AFormat, vector<int64_t> ARange, vector<int64_t> BDims,
-        aclDataType BDtype, aclFormat BFormat, vector<int64_t> BRange, vector<int64_t> CDims, aclDataType CDtype,
-        aclFormat CFormat, vector<int64_t> CRange, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
-        float alpha, float beta, int64_t transA, int64_t transB, int8_t cubeMathType)
+    void test_run_inval(vector<int64_t> ADims, aclDataType ADtype, aclFormat AFormat, vector<int64_t> ARange,
+                        vector<int64_t> BDims, aclDataType BDtype, aclFormat BFormat, vector<int64_t> BRange,
+                        vector<int64_t> CDims, aclDataType CDtype, aclFormat CFormat, vector<int64_t> CRange,
+                        vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat, float alpha, float beta,
+                        int64_t transA, int64_t transB, int8_t cubeMathType)
     {
         auto A = TensorDesc(ADims, ADtype, AFormat).ValueRange(ARange[0], ARange[1]);
         auto B = TensorDesc(BDims, BDtype, BFormat).ValueRange(BRange[0], BRange[1]);
@@ -77,13 +71,12 @@ TEST_F(l2_gemm_test, case_various_dtype_valid)
     int64_t transA = 0;
     int64_t transB = 0;
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    test_run(
-        {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
-        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
-        cubeMathType);
+    test_run({16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16},
+             ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB,
+             cubeMathType);
+    test_run({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+             ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
+             cubeMathType);
 }
 
 // 正常流程，支持的数据类型
@@ -94,13 +87,12 @@ TEST_F(l2_gemm_test, case_various_dtype_valid2)
     int64_t transA = 0;
     int64_t transB = 0;
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    test_run(
-        {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
-        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
-        cubeMathType);
+    test_run({16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16},
+             ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB,
+             cubeMathType);
+    test_run({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+             ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
+             cubeMathType);
 }
 
 // 异常流程，不支持的数据类型
@@ -111,26 +103,23 @@ TEST_F(l2_gemm_test, case_various_dtype_invalid)
     int64_t transA = 0;
     int64_t transB = 0;
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-    test_run_inval(
-        {16, 16}, ACL_INT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_INT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_INT16,
-        ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_INT16, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run_inval(
-        {16, 16}, ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16,
-        ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run_inval({16, 16}, ACL_INT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_INT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+                   ACL_INT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_INT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
+                   cubeMathType);
+    test_run_inval({16, 16}, ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+                   ACL_UINT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_UINT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
+                   cubeMathType);
 }
 
 // 正常流程，有转置的情况
 TEST_F(l2_gemm_test, case_various_transpose_valid)
 {
-    test_run(
-        {4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 0, 1);
-    test_run(
-        {3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 1, 1);
-    test_run(
-        {4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
-        ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 1, 1);
+    test_run({4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 0, 1);
+    test_run({3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 1, 1);
+    test_run({4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {0, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 1, 1);
 }
 
 // beta == 0 场景
@@ -404,14 +393,13 @@ TEST_F(l2_gemm_test, case_output_shape)
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 
     // A: 2 x 5, B: 5 x 3, C: 2 x 3, out: 2 x 3
-    test_run(
-        {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 
     // A: 2 x 5, B: 5 x 3, C: 2 x 3, out: 2 x 4
-    test_run_inval(
-        {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 3}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 4}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run_inval({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 3},
+                   ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 4}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB,
+                   cubeMathType);
 }
 
 TEST_F(l2_gemm_test, test_hf32_trans)
@@ -444,37 +432,29 @@ TEST_F(l2_gemm_test, case_empty_tensor_3)
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
 
     // C: 2 x 2, A: 2 x 0, B: 0 x 2, out: 2 x 2
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 
     // C: 1 / 1 x 1, A: 2 x 0, B: 0 x 2, out: 2 x 2
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1, 1}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1, 1}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 
     // C: 0, A: 2 x 0, B: 0 x 2, out: 2 x 2  拦截报错
-    test_run_inval(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run_inval({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 2}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0}, ACL_FLOAT,
+                   ACL_FORMAT_ND, {-5, 5}, {2, 2}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 
     // C: 2 x 0, A: 2 x 0, B: 0 x 0, out: 0 x 0
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {2, 0}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
     // C: 0 / 1 / 1 x 1, A: 2 x 0, B: 0 x 0, out: 0 x 0
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
-    test_run(
-        {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1, 1}, ACL_FLOAT,
-        ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
+    test_run({2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1, 1}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 }
 
 // cubeMathType = USE_FP32_ADD 测试用例
@@ -485,10 +465,9 @@ TEST_F(l2_gemm_test, case_cubeMathType_USE_FP32_ADD)
     int64_t transA = 0;
     int64_t transB = 0;
     int8_t cubeMathType = USE_FP32_ADD;
-    test_run(
-        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
-        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, 
-        alpha, beta, transA, transB, cubeMathType);
+    test_run({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+             ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
+             cubeMathType);
 }
 
 // cubeMathType = KEEP_DTYPE 测试用例
@@ -499,8 +478,7 @@ TEST_F(l2_gemm_test, case_cubeMathType_KEEP_DTYPE)
     int64_t transA = 0;
     int64_t transB = 0;
     int8_t cubeMathType = KEEP_DTYPE;
-    test_run(
-        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
-        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, 
-        alpha, beta, transA, transB, cubeMathType);
+    test_run({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+             ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
+             cubeMathType);
 }

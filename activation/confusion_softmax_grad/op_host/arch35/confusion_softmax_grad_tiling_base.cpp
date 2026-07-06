@@ -15,12 +15,10 @@
 
 #include "confusion_softmax_grad_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 ge::graphStatus ConfusionSoftmaxGradTilingBase::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(context_ == nullptr, OP_LOGE("SoftmaxV2TilingBase", "context is nullptr."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_ == nullptr, OP_LOGE("SoftmaxV2TilingBase", "context is nullptr."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetDimsAndCheckShapeValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
@@ -58,4 +56,4 @@ IMPL_OP_OPTILING(ConfusionSoftmaxGrad)
     .Tiling(TilingForConfusionSoftmaxGrad)
     .TilingParse<SoftmaxGradCompileInfo>(TilingPrepareForSoftmaxGrad);
 
-}  // namespace optiling
+} // namespace optiling

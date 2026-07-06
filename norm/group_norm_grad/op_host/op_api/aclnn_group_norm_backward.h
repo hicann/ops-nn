@@ -22,17 +22,19 @@ extern "C" {
  * @brief aclnnGroupNormBackward的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  */
-ACLNN_API aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(
-    const aclTensor* gradOut, const aclTensor* input, const aclTensor* mean, const aclTensor* rstd,
-    const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW, int64_t group, const aclBoolArray* outputMask,
-    aclTensor* gradInput, aclTensor* gradGammaOut, aclTensor* gradBetaOut, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
+                                                             const aclTensor* mean, const aclTensor* rstd,
+                                                             const aclTensor* gamma, int64_t N, int64_t C, int64_t HxW,
+                                                             int64_t group, const aclBoolArray* outputMask,
+                                                             aclTensor* gradInput, aclTensor* gradGammaOut,
+                                                             aclTensor* gradBetaOut, uint64_t* workspaceSize,
+                                                             aclOpExecutor** executor);
 
 /**
  * @brief aclnnGroupNormBackward的第二段接口，用于执行计算。
  */
-ACLNN_API aclnnStatus
-aclnnGroupNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGroupNormBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                             const aclrtStream stream);
 
 #ifdef __cplusplus
 }

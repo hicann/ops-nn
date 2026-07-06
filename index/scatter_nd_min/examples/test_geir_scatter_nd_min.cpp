@@ -61,13 +61,20 @@ string GetTime()
 
 uint32_t GetDataTypeSize(DataType dt)
 {
-    if (dt == ge::DT_FLOAT) return 4;
-    if (dt == ge::DT_FLOAT16) return 2;
-    if (dt == ge::DT_BF16) return 2;
-    if (dt == ge::DT_INT8) return 1;
-    if (dt == ge::DT_HIFLOAT8) return 1;
-    if (dt == ge::DT_FLOAT8_E5M2) return 1;
-    if (dt == ge::DT_FLOAT8_E4M3FN) return 1;
+    if (dt == ge::DT_FLOAT)
+        return 4;
+    if (dt == ge::DT_FLOAT16)
+        return 2;
+    if (dt == ge::DT_BF16)
+        return 2;
+    if (dt == ge::DT_INT8)
+        return 1;
+    if (dt == ge::DT_HIFLOAT8)
+        return 1;
+    if (dt == ge::DT_FLOAT8_E5M2)
+        return 1;
+    if (dt == ge::DT_FLOAT8_E4M3FN)
+        return 1;
     return 1;
 }
 
@@ -129,9 +136,8 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
-    std::vector<Operator>& outputs, Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
 

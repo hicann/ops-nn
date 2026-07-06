@@ -19,21 +19,15 @@ using namespace std;
 
 class l2_group_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "l2_group_quant_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_group_quant_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "l2_group_quant_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_group_quant_test TearDown" << endl; }
 
 public:
-    void CommonTest(
-        const vector<int64_t>& xShape, const vector<int64_t>& scaleShape, const vector<int64_t>& groupIndexShape,
-        const vector<int64_t>& offsetShape, const vector<int64_t>& yShape, aclDataType xDtype, aclDataType scaleDtype,
-        aclDataType groupIndexDtype, aclDataType offsetDtype, aclDataType yDtype, aclDataType dstType, bool isOffset,
-        aclnnStatus expectRet)
+    void CommonTest(const vector<int64_t>& xShape, const vector<int64_t>& scaleShape,
+                    const vector<int64_t>& groupIndexShape, const vector<int64_t>& offsetShape,
+                    const vector<int64_t>& yShape, aclDataType xDtype, aclDataType scaleDtype,
+                    aclDataType groupIndexDtype, aclDataType offsetDtype, aclDataType yDtype, aclDataType dstType,
+                    bool isOffset, aclnnStatus expectRet)
     {
         auto x = TensorDesc(xShape, xDtype, ACL_FORMAT_ND).ValueRange(-2, 2);
         auto scale = TensorDesc(scaleShape, scaleDtype, ACL_FORMAT_ND);
@@ -43,12 +37,12 @@ public:
         aclnnStatus aclRet = ACLNN_SUCCESS;
         if (isOffset) {
             auto offset = TensorDesc(offsetShape, offsetDtype, ACL_FORMAT_ND);
-            auto ut = OP_API_UT(
-                aclnnGroupQuant, INPUT(x, scale, groupIndex, offset, static_cast<int32_t>(dstType)), OUTPUT(y));
+            auto ut = OP_API_UT(aclnnGroupQuant, INPUT(x, scale, groupIndex, offset, static_cast<int32_t>(dstType)),
+                                OUTPUT(y));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         } else {
-            auto ut = OP_API_UT(
-                aclnnGroupQuant, INPUT(x, scale, groupIndex, nullptr, static_cast<int32_t>(dstType)), OUTPUT(y));
+            auto ut = OP_API_UT(aclnnGroupQuant, INPUT(x, scale, groupIndex, nullptr, static_cast<int32_t>(dstType)),
+                                OUTPUT(y));
             aclRet = ut.TestGetWorkspaceSize(&workspace_size);
         }
         // EXPECT_EQ(aclRet, expectRet);
@@ -90,28 +84,21 @@ public:
 TEST_F(l2_group_quant_test, ascend910B2_param_invalid)
 {
     // invalid dtype
-    CommonTest(
-        {3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_INT32, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
-        ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT8, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
-        ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT4, ACL_INT8, true,
-        ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_INT32, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
+               ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT8, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
+               ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT4, ACL_INT8, true,
+               ACLNN_ERR_PARAM_INVALID);
 
     // invalid shape
-    CommonTest(
-        {3, 6}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
-        ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {3, 5}, {2, 5}, {2}, {2}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
-        ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 6}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
+               ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 5}, {2, 5}, {2}, {2}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT32, ACL_FLOAT, ACL_INT8, ACL_INT8, true,
+               ACLNN_ERR_PARAM_INVALID);
     // int4
-    CommonTest(
-        {3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT64, ACL_FLOAT, ACL_INT4, ACL_INT4, true,
-        ACLNN_ERR_PARAM_INVALID);
-    CommonTest(
-        {3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT64, ACL_FLOAT, ACL_INT32, ACL_INT32, true,
-        ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT64, ACL_FLOAT, ACL_INT4, ACL_INT4, true,
+               ACLNN_ERR_PARAM_INVALID);
+    CommonTest({3, 5}, {2, 5}, {2}, {1}, {3, 5}, ACL_FLOAT, ACL_FLOAT, ACL_INT64, ACL_FLOAT, ACL_INT32, ACL_INT32, true,
+               ACLNN_ERR_PARAM_INVALID);
 }

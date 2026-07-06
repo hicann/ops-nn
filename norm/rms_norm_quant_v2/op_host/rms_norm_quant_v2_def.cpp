@@ -17,40 +17,47 @@
 namespace ops {
 
 static const std::vector<ge::DataType> xDataTypeRegbase = {
-ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,   ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,   ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,   ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,   ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,   ge::DT_FLOAT16,  ge::DT_BF16
-};
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_BF16};
 static const std::vector<ge::DataType> scalesDataTypeRegbase = {
-ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_FLOAT16,  ge::DT_BF16,
-ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_FLOAT16,  ge::DT_BF16
-};
+    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16,
+    ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+    ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16};
 static const std::vector<ge::DataType> zeroPointsDataTypeRegbase = {
-ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_INT8,     ge::DT_INT8,
-ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_INT8,     ge::DT_INT8,
-ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_INT8,     ge::DT_INT8,
-ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_INT8,     ge::DT_INT8,
-ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,  ge::DT_INT8,     ge::DT_INT8
-};
+    ge::DT_INT32,   ge::DT_INT32, ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,
+    ge::DT_INT8,    ge::DT_INT8,  ge::DT_INT32,   ge::DT_INT32,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,
+    ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT32,   ge::DT_INT32,   ge::DT_FLOAT,
+    ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT32,
+    ge::DT_INT32,   ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT8,
+    ge::DT_INT8,    ge::DT_INT32, ge::DT_INT32,   ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT,
+    ge::DT_FLOAT,   ge::DT_INT8,  ge::DT_INT8};
 static const std::vector<ge::DataType> yDataTypeRegbase = {
-ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,   ge::DT_INT8,     ge::DT_INT8,
-ge::DT_INT4,     ge::DT_INT4,     ge::DT_INT4,     ge::DT_INT4,     ge::DT_INT4,     ge::DT_INT4,     ge::DT_INT4,   ge::DT_INT4,     ge::DT_INT4,
-ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
-ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
-ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8
-};
+    ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
+    ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT4,
+    ge::DT_INT4,          ge::DT_INT4,          ge::DT_INT4,          ge::DT_INT4,          ge::DT_INT4,
+    ge::DT_INT4,          ge::DT_INT4,          ge::DT_INT4,          ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E5M2,   ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,
+    ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8};
 static const std::vector<ge::Format> formatRegbase = {
-ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND, ge::FORMAT_ND,   ge::FORMAT_ND,
-ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND, ge::FORMAT_ND,   ge::FORMAT_ND,
-ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND, ge::FORMAT_ND,   ge::FORMAT_ND,
-ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND, ge::FORMAT_ND,   ge::FORMAT_ND,
-ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND,   ge::FORMAT_ND, ge::FORMAT_ND,   ge::FORMAT_ND
-};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
 class RmsNormQuantV2 : public OpDef {
 public:

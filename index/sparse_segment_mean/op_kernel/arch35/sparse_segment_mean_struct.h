@@ -16,8 +16,7 @@
 #ifndef SPARSE_SEGMENT_MEAN_STRUCT_H
 #define SPARSE_SEGMENT_MEAN_STRUCT_H
 
-class SparseSegmentMeanSimtTilingData
-{
+class SparseSegmentMeanSimtTilingData {
 public:
     int64_t needCoreNum{0};
     int64_t innerSize{0};
@@ -28,14 +27,13 @@ public:
     int64_t threadNumY{0};
     int64_t perCoreSegmentNum{0};
     int64_t resSegmentNum{0};
-    int64_t normalCoreSegmentNum{0}; // 正常核处理的SegmentNum数
-    int64_t secondToLastCoreSegmentNum{0};     // 倒数第二个核处理的SegmentNum数
-    int64_t lastCoreSegmentNum{0}; // 尾核处理的SegmentNum数
-    int64_t specialBlockTiling{0}; // 特殊分核
+    int64_t normalCoreSegmentNum{0};       // 正常核处理的SegmentNum数
+    int64_t secondToLastCoreSegmentNum{0}; // 倒数第二个核处理的SegmentNum数
+    int64_t lastCoreSegmentNum{0};         // 尾核处理的SegmentNum数
+    int64_t specialBlockTiling{0};         // 特殊分核
 };
 
-class SparseSegmentMeanSimdTilingData
-{
+class SparseSegmentMeanSimdTilingData {
 public:
     int64_t tilingkey{0};
     int64_t usedCoreNum{0};
@@ -61,24 +59,23 @@ public:
     int64_t workspaceBufferSize{0};
 };
 
-class SparseSegmentMeanFullLoadTilingData
-{
+class SparseSegmentMeanFullLoadTilingData {
 public:
-    int64_t innerSize{0};         // 输入非索引轴的元素个数
-    int64_t outterSize{0};        // 输入indices的元素个数
-    int64_t segmentNum{0};        // 输入segment的元素个数
-    int64_t gatherSize{0};        // 索引轴的个数
-    int64_t xBufferSize{0};       // x的数据总量
-    int64_t indicesBufferSize{0}; // indices每核的总数据量
-    int64_t threadNumX{0};        // innerSize使用的线程
-    int64_t threadNumY{0};        // 计算indices使用的线程
-    int64_t perCoreSegmentNum{0}; // segment每核的元素个数
-    int64_t resSegmentNum{0};     // segment剩余的元素个数
-    int64_t needCoreNum{0};          // 开的核数
-    int64_t normalCoreSegmentNum{0}; // 正常核处理的SegmentNum数
-    int64_t secondToLastCoreSegmentNum{0};     // 倒数第二个核处理的SegmentNum数
-    int64_t lastCoreSegmentNum{0}; // 尾核处理的SegmentNum数
-    int64_t specialBlockTiling{0}; // 特殊分核
+    int64_t innerSize{0};                  // 输入非索引轴的元素个数
+    int64_t outterSize{0};                 // 输入indices的元素个数
+    int64_t segmentNum{0};                 // 输入segment的元素个数
+    int64_t gatherSize{0};                 // 索引轴的个数
+    int64_t xBufferSize{0};                // x的数据总量
+    int64_t indicesBufferSize{0};          // indices每核的总数据量
+    int64_t threadNumX{0};                 // innerSize使用的线程
+    int64_t threadNumY{0};                 // 计算indices使用的线程
+    int64_t perCoreSegmentNum{0};          // segment每核的元素个数
+    int64_t resSegmentNum{0};              // segment剩余的元素个数
+    int64_t needCoreNum{0};                // 开的核数
+    int64_t normalCoreSegmentNum{0};       // 正常核处理的SegmentNum数
+    int64_t secondToLastCoreSegmentNum{0}; // 倒数第二个核处理的SegmentNum数
+    int64_t lastCoreSegmentNum{0};         // 尾核处理的SegmentNum数
+    int64_t specialBlockTiling{0};         // 特殊分核
 };
 
 #endif

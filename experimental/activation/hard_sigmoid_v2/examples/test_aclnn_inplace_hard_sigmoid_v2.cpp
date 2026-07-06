@@ -19,7 +19,7 @@
 
 namespace {
 
-int64_t GetShapeSize(const std::vector<int64_t> &shape)
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
 {
     int64_t shape_size = 1;
     for (int64_t dim : shape) {
@@ -28,7 +28,7 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape)
     return shape_size;
 }
 
-std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
+std::vector<int64_t> MakeStrides(const std::vector<int64_t>& shape)
 {
     if (shape.empty()) {
         return {};
@@ -40,18 +40,17 @@ std::vector<int64_t> MakeStrides(const std::vector<int64_t> &shape)
     return strides;
 }
 
-aclError CreateAclTensor(
-    const std::vector<int64_t> &shape, aclDataType dtype, void *device_addr, aclTensor **tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
-    const int64_t *shape_ptr = shape.empty() ? nullptr : shape.data();
-    const int64_t *strides_ptr = strides.empty() ? nullptr : strides.data();
-    *tensor = aclCreateTensor(
-        shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(), device_addr);
+    const int64_t* shape_ptr = shape.empty() ? nullptr : shape.data();
+    const int64_t* strides_ptr = strides.empty() ? nullptr : strides.data();
+    *tensor = aclCreateTensor(shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(),
+                              device_addr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
 
-}  // namespace
+} // namespace
 
 int main()
 {
@@ -63,15 +62,15 @@ int main()
     bool acl_initialized = false;
     bool device_set = false;
     int32_t device_id = 0;
-    if (const char *device_id_env = std::getenv("ASCEND_DEVICE_ID")) {
+    if (const char* device_id_env = std::getenv("ASCEND_DEVICE_ID")) {
         device_id = std::atoi(device_id_env);
     }
 
     aclrtStream stream = nullptr;
-    void *self_device = nullptr;
-    void *workspace = nullptr;
-    aclTensor *self_tensor = nullptr;
-    aclOpExecutor *executor = nullptr;
+    void* self_device = nullptr;
+    void* workspace = nullptr;
+    aclTensor* self_tensor = nullptr;
+    aclOpExecutor* executor = nullptr;
     uint64_t workspace_size = 0;
 
     auto cleanup = [&]() -> int {

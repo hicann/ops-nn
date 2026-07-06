@@ -13,7 +13,7 @@
 namespace ops {
 class HardSigmoidV2 : public OpDef {
 public:
-    explicit HardSigmoidV2(const char *name) : OpDef(name)
+    explicit HardSigmoidV2(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -42,4 +42,4 @@ public:
 };
 
 OP_ADD(HardSigmoidV2);
-}  // namespace ops
+} // namespace ops

@@ -68,8 +68,7 @@ struct DynamicBlockMxQuantTilingParam {
     int64_t workspaceSize = 0;
 };
 
-enum class RoundModeList
-{
+enum class RoundModeList {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -81,10 +80,8 @@ enum class RoundModeList
 
 class DynamicBlockMxQuantTiling {
 public:
-    explicit DynamicBlockMxQuantTiling(gert::TilingContext* context) : context_(context)
-    {}
-    ~DynamicBlockMxQuantTiling()
-    {}
+    explicit DynamicBlockMxQuantTiling(gert::TilingContext* context) : context_(context) {}
+    ~DynamicBlockMxQuantTiling() {}
     ge::graphStatus DoTiling();
 
 private:

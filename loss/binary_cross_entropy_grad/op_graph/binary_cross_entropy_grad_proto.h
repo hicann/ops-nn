@@ -29,10 +29,12 @@ namespace ge {
 * @li weight: An optional 1D or 2D Tensor of type bfloat16, float16 or float32, specifying the weight . \n
 
 * @par Attributes:
-* reduction: A character string from "none", "mean", and "sum", specifying the gradient output mode. Defaults to "mean" . \n
+* reduction: A character string from "none", "mean", and "sum", specifying the gradient output mode. Defaults to "mean"
+. \n
 
 * @par Outputs:
-* output: A 1D or 2D Tensor. When "reduction" is set to "none", a Tensor with the same size as "x" is output. Otherwise, a Scalar is output . \n
+* output: A 1D or 2D Tensor. When "reduction" is set to "none", a Tensor with the same size as "x" is output. Otherwise,
+a Scalar is output . \n
 
 * @attention Constraints:
 * @li The value of "x" must range from 0 to 1.

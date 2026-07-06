@@ -27,8 +27,9 @@ constexpr uint8_t M0 = 16;
 constexpr uint8_t N0 = 16;
 
 struct DimDataToFill {
-    __aicore__ __forceinline__ DimDataToFill(uint64_t& singleCoreDim_, uint64_t& dimIdxStart_, bool& isDimTail_) :
-        singleCoreDim(singleCoreDim_), dimIdxStart(dimIdxStart_), isDimTail(isDimTail_) {}
+    __aicore__ __forceinline__ DimDataToFill(uint64_t& singleCoreDim_, uint64_t& dimIdxStart_, bool& isDimTail_)
+        : singleCoreDim(singleCoreDim_), dimIdxStart(dimIdxStart_), isDimTail(isDimTail_)
+    {}
 
     uint64_t& singleCoreDim;
     uint64_t& dimIdxStart;
@@ -39,10 +40,14 @@ struct ExtendParams {
     __aicore__ inline ExtendParams(){};
 
     __aicore__ inline ExtendParams(GM_ADDR scale0_, GM_ADDR reluWeight0_, GM_ADDR clipValue0_, GM_ADDR scale1_,
-        GM_ADDR reluWeight1_, GM_ADDR clipValue1_, GM_ADDR y1_)
-        : scale0(scale0_), reluWeight0(reluWeight0_), clipValue0(clipValue0_), scale1(scale1_),
-          reluWeight1(reluWeight1_), clipValue1(clipValue1_), y1(y1_)
-    {};
+                                   GM_ADDR reluWeight1_, GM_ADDR clipValue1_, GM_ADDR y1_)
+        : scale0(scale0_),
+          reluWeight0(reluWeight0_),
+          clipValue0(clipValue0_),
+          scale1(scale1_),
+          reluWeight1(reluWeight1_),
+          clipValue1(clipValue1_),
+          y1(y1_){};
 
     GM_ADDR scale0 = nullptr;
     GM_ADDR reluWeight0 = nullptr;
@@ -56,11 +61,11 @@ struct ExtendParams {
 template <class CONV, class CONV_TILING>
 class ConvCommon {
 public:
-    __aicore__ __forceinline__ void Init(CONV *convPtr, const CONV_TILING* tilingPtr, bool hasScaleFlag);
+    __aicore__ __forceinline__ void Init(CONV* convPtr, const CONV_TILING* tilingPtr, bool hasScaleFlag);
 
     // Calc singleCore dim data
     __aicore__ __forceinline__ bool CalcDimData(const uint32_t& blockPerDim, const uint32_t& dim,
-                                                const uint64_t& wholeDim, const uint64_t &realWholeDim,
+                                                const uint64_t& wholeDim, const uint64_t& realWholeDim,
                                                 DimDataToFill& curStruct);
 
     // Calc singleCore N dim data with align by N0
@@ -101,8 +106,8 @@ public:
     uint32_t blockIdx = 0;
 
 protected:
-    CONV *convOps;
-    const CONV_TILING *convTilingData;
+    CONV* convOps;
+    const CONV_TILING* convTilingData;
     bool hasScale = true;
     uint64_t fmStartAddr = 0;
     uint64_t weightStartAddr = 0;
@@ -116,8 +121,8 @@ protected:
 };
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    Init(CONV *convPtr, const CONV_TILING* tilingPtr, bool hasScaleFlag)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::Init(CONV* convPtr, const CONV_TILING* tilingPtr,
+                                                                    bool hasScaleFlag)
 {
     if ASCEND_IS_AIV {
         blockIdx = GetBlockIdx();
@@ -132,9 +137,11 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ bool ConvCommon<CONV, CONV_TILING>::
-    CalcDimData(const uint32_t& blockPerDim, const uint32_t& dim, const uint64_t& wholeDim,
-                const uint64_t &realWholeDim, DimDataToFill& curStruct)
+__aicore__ __forceinline__ bool ConvCommon<CONV, CONV_TILING>::CalcDimData(const uint32_t& blockPerDim,
+                                                                           const uint32_t& dim,
+                                                                           const uint64_t& wholeDim,
+                                                                           const uint64_t& realWholeDim,
+                                                                           DimDataToFill& curStruct)
 {
     const uint32_t dimIdx = (blockIdx / blockPerDim) % dim;
     const uint64_t maxDimPerCore = CeilDiv(wholeDim, dim);
@@ -152,9 +159,9 @@ __aicore__ __forceinline__ bool ConvCommon<CONV, CONV_TILING>::
 
 template <class CONV, class CONV_TILING>
 __aicore__ __forceinline__ bool ConvCommon<CONV, CONV_TILING>::CalcNDimDataAlign(const uint64_t& blockPerDim,
-                                                                              const uint64_t& dim,
-                                                                              const uint64_t& wholeDim,
-                                                                              DimDataToFill& curStruct)
+                                                                                 const uint64_t& dim,
+                                                                                 const uint64_t& wholeDim,
+                                                                                 DimDataToFill& curStruct)
 {
     const uint64_t dimIdx = (blockIdx / blockPerDim) % dim;
     const uint64_t maxDimPerCore = AlignB(CeilDiv(AlignB(wholeDim, N0), dim), N0);
@@ -171,8 +178,8 @@ __aicore__ __forceinline__ bool ConvCommon<CONV, CONV_TILING>::CalcNDimDataAlign
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcStartAddrCommon(const uint32_t din, const uint32_t dout)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrCommon(const uint32_t din,
+                                                                                   const uint32_t dout)
 {
     hwIn = convTilingData->hin * convTilingData->win;
     hwOut = convTilingData->hout * convTilingData->wout;
@@ -192,18 +199,16 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcOutputStartAddr(const uint32_t dout, const uint64_t doIdxStart)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcOutputStartAddr(const uint32_t dout,
+                                                                                   const uint64_t doIdxStart)
 {
     if constexpr (CONV::isMMode) {
         if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW || CONV::C_FORMAT == ConvFormat::NCHW) {
-            outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                              convOps->nIdxStart * dout * hwOut +
+            outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize + convOps->nIdxStart * dout * hwOut +
                               convOps->mIdxStart;
         } else if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC || CONV::C_FORMAT == ConvFormat::NHWC) {
             outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                              convOps->mIdxStart * convTilingData->cout +
-                              convOps->nIdxStart;
+                              convOps->mIdxStart * convTilingData->cout + convOps->nIdxStart;
         }
         if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW) {
             outputStartAddr += doIdxStart * hwOut;
@@ -212,12 +217,11 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
         }
     } else {
         if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW || CONV::C_FORMAT == ConvFormat::NCHW) {
-            outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                              convOps->nIdxStart * dout * hwOut +
+            outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize + convOps->nIdxStart * dout * hwOut +
                               convOps->hoIdxStart * convTilingData->wout;
         } else if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC || CONV::C_FORMAT == ConvFormat::NHWC) {
-            outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize + convOps->hoIdxStart *
-                              convTilingData->wout * convTilingData->cout + convOps->nIdxStart;
+            outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
+                              convOps->hoIdxStart * convTilingData->wout * convTilingData->cout + convOps->nIdxStart;
         }
         if constexpr (CONV::C_FORMAT == ConvFormat::NCHW) {
             outputStartAddr += convOps->woIdxStart;
@@ -233,9 +237,8 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcStartAddrMMode(const uint32_t din, const uint32_t dout, const uint32_t kd, const uint64_t doIdxStart,
-                       const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrMMode(
+    const uint32_t din, const uint32_t dout, const uint32_t kd, const uint64_t doIdxStart, const int64_t diIdxStart)
 {
     CalcStartAddrCommon(din, dout);
 
@@ -268,22 +271,21 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcStartAddrHWode(const uint32_t din, const uint32_t dout, const uint32_t kd, const uint64_t doIdxStart,
-                       const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrHWode(
+    const uint32_t din, const uint32_t dout, const uint32_t kd, const uint64_t doIdxStart, const int64_t diIdxStart)
 {
     CalcStartAddrCommon(din, dout);
 
     int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convTilingData->strideH) -
-        static_cast<int64_t>(convTilingData->padTop);
+                            static_cast<int64_t>(convTilingData->padTop);
     convOps->singleCoreHiStartPos = hiStartPosTmp < 0 ? 0 : hiStartPosTmp;
     if constexpr (CONV::DIS_CONTINUOUS) {
-        fmStartAddr = convOps->singleCoreHiStartPos * convTilingData->win *
-                      convTilingData->batch * convTilingData->cin +
+        fmStartAddr = convOps->singleCoreHiStartPos * convTilingData->win * convTilingData->batch *
+                          convTilingData->cin +
                       convOps->batchIdxStart * convTilingData->cin;
     } else {
-        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->singleCoreHiStartPos *
-            convTilingData->win;
+        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize +
+                      convOps->singleCoreHiStartPos * convTilingData->win;
     }
     convOps->singleCoreHiStartPos = hiStartPosTmp;
     if constexpr (CONV::A_FORMAT == ConvFormat::NCHW) {
@@ -312,8 +314,10 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcStartAddrMModeHWC(const uint32_t din, const uint32_t dout, const uint64_t doIdxStart, const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrMModeHWC(const uint32_t din,
+                                                                                     const uint32_t dout,
+                                                                                     const uint64_t doIdxStart,
+                                                                                     const int64_t diIdxStart)
 {
     CalcStartAddrCommon(din, dout);
 
@@ -330,16 +334,18 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcStartAddrHWodeHWC(const uint32_t din, const uint32_t dout, const uint64_t doIdxStart, const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrHWodeHWC(const uint32_t din,
+                                                                                     const uint32_t dout,
+                                                                                     const uint64_t doIdxStart,
+                                                                                     const int64_t diIdxStart)
 {
     CalcStartAddrCommon(din, dout);
 
     int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convTilingData->strideH) -
-        static_cast<int64_t>(convTilingData->padTop);
+                            static_cast<int64_t>(convTilingData->padTop);
     convOps->singleCoreHiStartPos = hiStartPosTmp < 0 ? 0 : hiStartPosTmp;
-    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->singleCoreHiStartPos *
-        convTilingData->win * convTilingData->cin;
+    fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize +
+                  convOps->singleCoreHiStartPos * convTilingData->win * convTilingData->cin;
     convOps->singleCoreHiStartPos = hiStartPosTmp;
     if constexpr (CONV::A_FORMAT == ConvFormat::NHWC) {
         int64_t wiStartPosTmp = static_cast<int64_t>(convOps->woIdxStart * convTilingData->strideW) -
@@ -361,9 +367,8 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    CalcStartAddrDeQuant(const uint32_t din, const uint32_t dout, const uint32_t kd,
-                         const uint64_t doIdxStart, const int64_t diIdxStart)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrDeQuant(
+    const uint32_t din, const uint32_t dout, const uint32_t kd, const uint64_t doIdxStart, const int64_t diIdxStart)
 {
     CalcStartAddrCommon(din, dout);
 
@@ -375,14 +380,14 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
                           doIdxStart * hwOut * convTilingData->cout;
     } else {
         int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convTilingData->strideH) -
-        static_cast<int64_t>(convTilingData->padTop);
+                                static_cast<int64_t>(convTilingData->padTop);
         convOps->singleCoreHiStartPos = hiStartPosTmp < 0 ? 0 : hiStartPosTmp;
-        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize + convOps->singleCoreHiStartPos *
-            convTilingData->win + diIdxStart * hwIn;
+        fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize +
+                      convOps->singleCoreHiStartPos * convTilingData->win + diIdxStart * hwIn;
         convOps->singleCoreHiStartPos = hiStartPosTmp;
 
-        outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize + convOps->hoIdxStart *
-                          convTilingData->wout * convTilingData->cout + convOps->nIdxStart +
+        outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
+                          convOps->hoIdxStart * convTilingData->wout * convTilingData->cout + convOps->nIdxStart +
                           doIdxStart * hwOut * convTilingData->cout;
     }
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z_3D) {
@@ -393,16 +398,14 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-     InitFixpipeBuffer(const ExtendParams* extendParams)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::InitFixpipeBuffer(const ExtendParams* extendParams)
 {
     if constexpr (CONV::isQuant || CONV::IS_EXTEND_CONV2D) {
         if (hasScale) {
             if constexpr (CONV::A_FORMAT == ConvFormat::NCHW || CONV::A_FORMAT == ConvFormat::NHWC) {
                 if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                    convOps->fixpipeParams.scale0.SetGlobalBuffer(
-                        reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale0 + scaleStartAddr *
-                        sizeof(typename CONV::SCALE_T)));
+                    convOps->fixpipeParams.scale0.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::SCALE_T*>(
+                        extendParams->scale0 + scaleStartAddr * sizeof(typename CONV::SCALE_T)));
                 } else if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
                     convOps->fixpipeParams.scale0.SetGlobalBuffer(
                         reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale0));
@@ -414,15 +417,17 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
                     } else if (convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                         // copy relu_weight from om to gm
                         convOps->fixpipeParams.reluWeight0.SetGlobalBuffer(
-                            reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(extendParams->reluWeight0 +
-                            reluWeightStartAddr * sizeof(typename CONV::RELU_WEIGHT_T)));
+                            reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(
+                                extendParams->reluWeight0 +
+                                reluWeightStartAddr * sizeof(typename CONV::RELU_WEIGHT_T)));
                     }
                     if (convTilingData->dualOutput) {
                         if (convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                             convOps->fixpipeParams.scale1.SetGlobalBuffer(
-                                reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale1 + scaleStartAddr *
-                                sizeof(typename CONV::SCALE_T)));
-                        } else if (convOps->convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
+                                reinterpret_cast<__gm__ typename CONV::SCALE_T*>(
+                                    extendParams->scale1 + scaleStartAddr * sizeof(typename CONV::SCALE_T)));
+                        } else if (convOps->convTilingData->quantMode1 ==
+                                   static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
                             convOps->fixpipeParams.scale1.SetGlobalBuffer(
                                 reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale1));
                         }
@@ -431,23 +436,24 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
                                 reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(extendParams->reluWeight1));
                         } else if (convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                             convOps->fixpipeParams.reluWeight1.SetGlobalBuffer(
-                                reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(extendParams->reluWeight1 +
-                                reluWeightStartAddr * sizeof(typename CONV::RELU_WEIGHT_T)));
+                                reinterpret_cast<__gm__ typename CONV::RELU_WEIGHT_T*>(
+                                    extendParams->reluWeight1 +
+                                    reluWeightStartAddr * sizeof(typename CONV::RELU_WEIGHT_T)));
                         }
                     }
                 }
             } else {
-                convOps->scaleGm.SetGlobalBuffer(
-                    reinterpret_cast<__gm__ typename CONV::SCALE_T*>(extendParams->scale0 + scaleStartAddr *
-                    sizeof(typename CONV::SCALE_T)));
+                convOps->scaleGm.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::SCALE_T*>(
+                    extendParams->scale0 + scaleStartAddr * sizeof(typename CONV::SCALE_T)));
             }
         }
     }
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
-    InitBufferCommon(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+__aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::InitBufferCommon(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                                                                GM_ADDR y,
+                                                                                const ExtendParams* extendParams)
 {
     convOps->fmapGm.SetGlobalBuffer(
         reinterpret_cast<__gm__ typename CONV::FMAP_T*>(x + fmStartAddr * sizeof(typename CONV::FMAP_T)));
@@ -457,9 +463,8 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
         reinterpret_cast<__gm__ typename CONV::OUTPUT_T*>(y + outputStartAddr * sizeof(typename CONV::OUTPUT_T)));
     if constexpr (CONV::IS_EXTEND_CONV2D) {
         if (convTilingData->dualOutput) {
-            convOps->output1Gm.SetGlobalBuffer(
-                reinterpret_cast<__gm__ typename CONV::OUTPUT1_T*>(
-                    extendParams->y1 + outputStartAddr * sizeof(typename CONV::OUTPUT1_T)));
+            convOps->output1Gm.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::OUTPUT1_T*>(
+                extendParams->y1 + outputStartAddr * sizeof(typename CONV::OUTPUT1_T)));
         }
     }
     if (convTilingData->hasBias) {
@@ -471,22 +476,19 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ uint64_t ConvCommon<CONV, CONV_TILING>::
-    AlignB(const uint64_t numA, const uint64_t numB)
+__aicore__ __forceinline__ uint64_t ConvCommon<CONV, CONV_TILING>::AlignB(const uint64_t numA, const uint64_t numB)
 {
     return ((numA + numB - 1) / numB) * numB;
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ uint64_t ConvCommon<CONV, CONV_TILING>::
-    CeilDiv(const uint64_t numA, const uint64_t numB)
+__aicore__ __forceinline__ uint64_t ConvCommon<CONV, CONV_TILING>::CeilDiv(const uint64_t numA, const uint64_t numB)
 {
     return (numA + numB - 1) / numB;
 }
 
 template <class CONV, class CONV_TILING>
-__aicore__ __forceinline__ int64_t ConvCommon<CONV, CONV_TILING>::
-    Max(const int64_t numA, const int64_t numB)
+__aicore__ __forceinline__ int64_t ConvCommon<CONV, CONV_TILING>::Max(const int64_t numA, const int64_t numB)
 {
     return numA > numB ? numA : numB;
 }

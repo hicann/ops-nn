@@ -43,8 +43,8 @@ struct AdaLayerNormQuantOutputTensor {
 static constexpr int32_t MIN_X_DIM = 2;
 static constexpr int32_t MAX_X_DIM = 8;
 
-static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16,
+                                                                         op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
 
@@ -93,9 +93,8 @@ static bool CheckDtypeValid(AdaLayerNormQuantInputTensor& inputTensor, AdaLayerN
 static bool CheckShape(AdaLayerNormQuantInputTensor& inputTensor, AdaLayerNormQuantOutputTensor& outputTensor)
 {
     int64_t xDim = inputTensor.x->GetViewShape().GetDimNum();
-    OP_CHECK(
-        xDim >= MIN_X_DIM && xDim <= MAX_X_DIM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be between 2 and 8."), return false);
+    OP_CHECK(xDim >= MIN_X_DIM && xDim <= MAX_X_DIM,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input x dim num should be between 2 and 8."), return false);
 
     op::Shape xShape = inputTensor.x->GetViewShape();
     op::Shape expectShape1;
@@ -152,8 +151,8 @@ static bool CheckAttr(const char* quantMode)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    AdaLayerNormQuantInputTensor& inputTensor, AdaLayerNormQuantOutputTensor& outputTensor, const char* quantMode)
+static aclnnStatus CheckParams(AdaLayerNormQuantInputTensor& inputTensor, AdaLayerNormQuantOutputTensor& outputTensor,
+                               const char* quantMode)
 {
     // 1. 检查参数是否为空指针
     CHECK_COND(CheckNotNull(inputTensor, outputTensor), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
@@ -171,16 +170,16 @@ static aclnnStatus CheckParams(
 }
 }; // namespace
 
-aclnnStatus aclnnAdaLayerNormQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
-    const aclTensor* biasOptional, const aclTensor* smoothScalesOptional, double epsilon, const char* quantMode,
-    aclTensor* out, aclTensor* quantScale, aclTensor* quantOffsetOptional, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnAdaLayerNormQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* scale, const aclTensor* shift,
+                                                   const aclTensor* weightOptional, const aclTensor* biasOptional,
+                                                   const aclTensor* smoothScalesOptional, double epsilon,
+                                                   const char* quantMode, aclTensor* out, aclTensor* quantScale,
+                                                   aclTensor* quantOffsetOptional, uint64_t* workspaceSize,
+                                                   aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnAdaLayerNormQuant,
-        DFX_IN(x, scale, shift, weightOptional, biasOptional, smoothScalesOptional, epsilon, quantMode),
-        DFX_OUT(out, quantScale, quantOffsetOptional));
+    L2_DFX_PHASE_1(aclnnAdaLayerNormQuant,
+                   DFX_IN(x, scale, shift, weightOptional, biasOptional, smoothScalesOptional, epsilon, quantMode),
+                   DFX_OUT(out, quantScale, quantOffsetOptional));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

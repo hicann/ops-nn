@@ -30,30 +30,31 @@ namespace l0op {
 
 OP_TYPE_REGISTER(ApplyAdamD);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
 static bool IsAiCoreSupport(const aclTensor* var) { return CheckType(var->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
-static const aclTensor* ApplyAdamDAiCore(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
-    const aclTensor* vOut, bool useLocking, bool useNesterov, aclOpExecutor* executor)
+static const aclTensor* ApplyAdamDAiCore(const aclTensor* var, const aclTensor* m, const aclTensor* v,
+                                         const aclTensor* beta1Power, const aclTensor* beta2Power, const aclTensor* lr,
+                                         const aclTensor* beta1, const aclTensor* beta2, const aclTensor* epsilon,
+                                         const aclTensor* grad, const aclTensor* varOut, const aclTensor* mOut,
+                                         const aclTensor* vOut, bool useLocking, bool useNesterov,
+                                         aclOpExecutor* executor)
 {
     L0_DFX(ApplyAdamDAiCore, var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        ApplyAdamD, OP_INPUT(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad),
-        OP_OUTPUT(varOut, mOut, vOut), OP_ATTR(useLocking, useNesterov));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ApplyAdamD,
+                                           OP_INPUT(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad),
+                                           OP_OUTPUT(varOut, mOut, vOut), OP_ATTR(useLocking, useNesterov));
     OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdamDAiCore failed."), return nullptr);
     return varOut;
 }
 
-ApplyAdamDOutputs ApplyAdamD(
-    const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
-    const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1, const aclTensor* beta2,
-    const aclTensor* epsilon, const aclTensor* grad, bool useLocking, bool useNesterov, aclOpExecutor* executor)
+ApplyAdamDOutputs ApplyAdamD(const aclTensor* var, const aclTensor* m, const aclTensor* v, const aclTensor* beta1Power,
+                             const aclTensor* beta2Power, const aclTensor* lr, const aclTensor* beta1,
+                             const aclTensor* beta2, const aclTensor* epsilon, const aclTensor* grad, bool useLocking,
+                             bool useNesterov, aclOpExecutor* executor)
 {
     ApplyAdamDOutputs emptyResult = {nullptr, nullptr, nullptr};
 
@@ -71,9 +72,8 @@ ApplyAdamDOutputs ApplyAdamD(
         return emptyResult;
     }
 
-    const aclTensor* result = ApplyAdamDAiCore(
-        var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad, varOut, mOut, vOut, useLocking, useNesterov,
-        executor);
+    const aclTensor* result = ApplyAdamDAiCore(var, m, v, beta1Power, beta2Power, lr, beta1, beta2, epsilon, grad,
+                                               varOut, mOut, vOut, useLocking, useNesterov, executor);
     if (result == nullptr) {
         return emptyResult;
     }

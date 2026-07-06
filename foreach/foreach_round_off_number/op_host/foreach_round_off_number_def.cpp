@@ -18,7 +18,7 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-class ForeachRoundOffNumber: public OpDef {
+class ForeachRoundOffNumber : public OpDef {
 public:
     explicit ForeachRoundOffNumber(const char* name) : OpDef(name)
     {

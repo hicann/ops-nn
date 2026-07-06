@@ -19,10 +19,10 @@
 #include "atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
-    struct ApplyAdamDCompileInfo {
-        uint64_t coreNum;
-        uint64_t ubSize;
-    };
-}
+struct ApplyAdamDCompileInfo {
+    uint64_t coreNum;
+    uint64_t ubSize;
+};
+} // namespace optiling
 
 #endif // RUNTIME_V2_OP_IMPL_APPLY_ADAM_D_TILING_H_

@@ -29,32 +29,18 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-ASCENDC_TPL_ARGS_DECL(
-    EuclideanNorm,
-    ASCENDC_TPL_BOOL_DECL(templateType, 0, 1),   // 0=normal/empty, 1=group
-    ASCENDC_TPL_BOOL_DECL(isEmptyTensor, 0, 1),
-    ASCENDC_TPL_BOOL_DECL(isTailR, 0, 1)
-);
+ASCENDC_TPL_ARGS_DECL(EuclideanNorm, ASCENDC_TPL_BOOL_DECL(templateType, 0, 1), // 0=normal/empty, 1=group
+                      ASCENDC_TPL_BOOL_DECL(isEmptyTensor, 0, 1), ASCENDC_TPL_BOOL_DECL(isTailR, 0, 1));
 
 ASCENDC_TPL_SEL(
     // normal 模板：两种 tail 类型
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_BOOL_SEL(templateType, 0),
-        ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 0),
-        ASCENDC_TPL_BOOL_SEL(isTailR, 0, 1)
-    ),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_BOOL_SEL(templateType, 0), ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 0),
+                         ASCENDC_TPL_BOOL_SEL(isTailR, 0, 1)),
     // 空 tensor 模板：isTailR 固定 0（kernel 不读）
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_BOOL_SEL(templateType, 0),
-        ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 1),
-        ASCENDC_TPL_BOOL_SEL(isTailR, 0)
-    ),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_BOOL_SEL(templateType, 0), ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 1),
+                         ASCENDC_TPL_BOOL_SEL(isTailR, 0)),
     // group 模板：isEmptyTensor 固定 0（group 与 empty 互斥）
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_BOOL_SEL(templateType, 1),
-        ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 0),
-        ASCENDC_TPL_BOOL_SEL(isTailR, 0, 1)
-    )
-);
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_BOOL_SEL(templateType, 1), ASCENDC_TPL_BOOL_SEL(isEmptyTensor, 0),
+                         ASCENDC_TPL_BOOL_SEL(isTailR, 0, 1)));
 
 #endif // OPS_NORM_EUCLIDEAN_NORM_TILING_KEY_H_

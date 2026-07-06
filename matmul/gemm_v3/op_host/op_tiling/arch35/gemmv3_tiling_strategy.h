@@ -41,4 +41,3 @@ inline std::vector<int32_t> GetGemmV3Priorities(NpuArch npuArch)
 } // namespace strategy
 } // namespace gemmv3
 } // namespace optiling
-

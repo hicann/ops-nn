@@ -31,8 +31,7 @@ const aclTensor* AntiMxQuant(const aclTensor* x, const aclTensor* mxscale, int64
         return nullptr;
     }
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AntiMxQuant, OP_INPUT(x, mxscale), OP_OUTPUT(out),
-                                            OP_ATTR(axis, dstType));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AntiMxQuant, OP_INPUT(x, mxscale), OP_OUTPUT(out), OP_ATTR(axis, dstType));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "AntiMxQuant launch kernel failed.");
         return nullptr;

@@ -42,7 +42,7 @@ struct OperatorDesc {
      * @param [in] format: format
      * @return OperatorDesc
      */
-    OperatorDesc &AddInputTensorDesc(aclDataType dataType, int numDims, const int64_t *dims, aclFormat format);
+    OperatorDesc& AddInputTensorDesc(aclDataType dataType, int numDims, const int64_t* dims, aclFormat format);
 
     /**
      * Add an output tensor description
@@ -52,11 +52,11 @@ struct OperatorDesc {
      * @param [in] format: format
      * @return OperatorDesc
      */
-    OperatorDesc &AddOutputTensorDesc(aclDataType dataType, int numDims, const int64_t *dims, aclFormat format);
+    OperatorDesc& AddOutputTensorDesc(aclDataType dataType, int numDims, const int64_t* dims, aclFormat format);
 
     std::string opType;
-    std::vector<aclTensorDesc *> inputDesc;
-    std::vector<aclTensorDesc *> outputDesc;
+    std::vector<aclTensorDesc*> inputDesc;
+    std::vector<aclTensorDesc*> outputDesc;
 };
 
-#endif  // OPERATOR_DESC_H
+#endif // OPERATOR_DESC_H

@@ -23,9 +23,9 @@ namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3AswTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3AswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg) {};
+    BatchMatMulV3AswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg){};
 
-    ~BatchMatMulV3AswTiling() override {};
+    ~BatchMatMulV3AswTiling() override{};
     void CheckTensorApiSupport();
 
 protected:

@@ -29,14 +29,13 @@ static constexpr int64_t SIMT_DCACHE_SIZE = static_cast<int64_t>(32 * 1024);
 
 ge::graphStatus EmbeddingHashTableImportTiling::GetPlatformInfo()
 {
-    auto compileInfoPtr = reinterpret_cast<const EmbeddingHashTableImportCompileInfo *>(context_->GetCompileInfo());
-    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
-        return ge::GRAPH_FAILED);
+    auto compileInfoPtr = reinterpret_cast<const EmbeddingHashTableImportCompileInfo*>(context_->GetCompileInfo());
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
     OP_CHECK_IF((compileInfoPtr->aivNum <= 0), OP_LOGE(opName, "embeddingHashTableImportTiling fail to get coreNum."),
-        return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF((compileInfoPtr->ubSize <= REGBASE_CCEC_CACHE_SIZE),
-        OP_LOGE(opName, "ub size less than REGBASE_CCEC_CACHE_SIZE Size, please check."),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(opName, "ub size less than REGBASE_CCEC_CACHE_SIZE Size, please check."),
+                return ge::GRAPH_FAILED);
     coreNum_ = static_cast<int64_t>(compileInfoPtr->aivNum);
     ubSize_ = static_cast<int64_t>(compileInfoPtr->ubSize - REGBASE_CCEC_CACHE_SIZE);
 
@@ -67,34 +66,34 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, tableHandleDesc);
     auto tableHandleDtype = tableHandleDesc->GetDataType();
     OP_CHECK_IF((tableHandleDtype != ge::DataType::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "table_handles",
-            ge::TypeUtils::DataTypeToSerialString(tableHandleDtype).c_str(), "int64"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "table_handles",
+                                          ge::TypeUtils::DataTypeToSerialString(tableHandleDtype).c_str(), "int64"),
+                return ge::GRAPH_FAILED);
 
     // check embedding_dims
     auto embeddingDimsDesc = context_->GetRequiredInputDesc(IN_EMBEDDING_DIMS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, embeddingDimsDesc);
     auto embeddingDimsDtype = embeddingDimsDesc->GetDataType();
     OP_CHECK_IF((embeddingDimsDtype != ge::DataType::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "embedding_dims",
-            ge::TypeUtils::DataTypeToSerialString(embeddingDimsDtype).c_str(), "int64"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "embedding_dims",
+                                          ge::TypeUtils::DataTypeToSerialString(embeddingDimsDtype).c_str(), "int64"),
+                return ge::GRAPH_FAILED);
 
     // check bucket_sizes
     auto bucketSizesDesc = context_->GetRequiredInputDesc(IN_BUCKET_SIZES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, bucketSizesDesc);
     auto bucketSizesDtype = bucketSizesDesc->GetDataType();
     OP_CHECK_IF((bucketSizesDtype != ge::DataType::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "bucket_sizes",
-            ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(), "int64"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "bucket_sizes",
+                                          ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(), "int64"),
+                return ge::GRAPH_FAILED);
 
     auto bucketSizesTensor = context_->GetRequiredInputTensor(IN_BUCKET_SIZES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, bucketSizesTensor);
     tablesCount_ = static_cast<int64_t>(bucketSizesTensor->GetShapeSize());
-    OP_CHECK_IF(tablesCount_ <= 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "bucket_sizes",
-            std::to_string(tablesCount_).c_str(), "greater than 0"),
+    OP_CHECK_IF(
+        tablesCount_ <= 0,
+        OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "bucket_sizes", std::to_string(tablesCount_).c_str(), "greater than 0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -106,9 +105,9 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfoOfTensorList()
     auto keysDesc = context_->GetRequiredInputDesc(IN_KEYS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, keysDesc);
     auto keysDtype = keysDesc->GetDataType();
-    OP_CHECK_IF((keysDtype != ge::DataType::DT_INT64),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "keys",
-            ge::TypeUtils::DataTypeToSerialString(keysDtype).c_str(), "int64"),
+    OP_CHECK_IF(
+        (keysDtype != ge::DataType::DT_INT64),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "keys", ge::TypeUtils::DataTypeToSerialString(keysDtype).c_str(), "int64"),
         return ge::GRAPH_FAILED);
 
     // check counters
@@ -116,44 +115,40 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfoOfTensorList()
     OP_CHECK_NULL_WITH_CONTEXT(context_, countersDesc);
     auto countersDtype = countersDesc->GetDataType();
     OP_CHECK_IF((countersDtype != ge::DataType::DT_UINT64),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "counters",
-            ge::TypeUtils::DataTypeToSerialString(countersDtype).c_str(), "uint64"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "counters",
+                                          ge::TypeUtils::DataTypeToSerialString(countersDtype).c_str(), "uint64"),
+                return ge::GRAPH_FAILED);
 
     // check filter_flags
     auto filterFlagsDesc = context_->GetRequiredInputDesc(IN_FILTER_FLAGS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, filterFlagsDesc);
     auto filterFlagDtype = filterFlagsDesc->GetDataType();
     OP_CHECK_IF((filterFlagDtype != ge::DataType::DT_UINT8),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "filter_flags",
-            ge::TypeUtils::DataTypeToSerialString(filterFlagDtype).c_str(), "uint8"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "filter_flags",
+                                          ge::TypeUtils::DataTypeToSerialString(filterFlagDtype).c_str(), "uint8"),
+                return ge::GRAPH_FAILED);
 
     // check values
     auto valuesDesc = context_->GetRequiredInputDesc(IN_VALUES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, valuesDesc);
     auto valuesDtype = valuesDesc->GetDataType();
     OP_CHECK_IF((valuesDtype != ge::DataType::DT_FLOAT),
-        OP_LOGE_FOR_INVALID_DTYPE(opName, "values",
-            ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(), "float32"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "values", ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(),
+                                          "float32"),
+                return ge::GRAPH_FAILED);
     bitWidth_ = static_cast<int64_t>(ge::GetSizeByDataType(valuesDtype));
 
     auto valuesTensor = context_->GetRequiredInputTensor(IN_VALUES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, valuesTensor);
     valuesNum_ = static_cast<int64_t>(valuesTensor->GetShapeSize());
     OP_CHECK_IF(valuesNum_ <= 0,
-        OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "values",
-            std::to_string(valuesNum_).c_str(), "greater than 0"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "values", std::to_string(valuesNum_).c_str(), "greater than 0"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus EmbeddingHashTableImportTiling::CheckInputData()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus EmbeddingHashTableImportTiling::CheckInputData() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus EmbeddingHashTableImportTiling::DoOpTiling()
 {
@@ -168,7 +163,7 @@ ge::graphStatus EmbeddingHashTableImportTiling::DoOpTiling()
 ge::graphStatus EmbeddingHashTableImportTiling::DoLibApiTiling()
 {
     OP_LOGD(context_->GetNodeName(), "bitWidth = %ld, tablesCount = %ld, blockNum = %ld", m_tilingData_.get_bitWidth(),
-        m_tilingData_.get_tablesCount(), m_tilingData_.get_blockNum());
+            m_tilingData_.get_tablesCount(), m_tilingData_.get_blockNum());
 
     return ge::GRAPH_SUCCESS;
 }
@@ -202,20 +197,22 @@ ge::graphStatus EmbeddingHashTableImportTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Tiling4EmbeddingHashTableImport(gert::TilingContext *context)
+ge::graphStatus Tiling4EmbeddingHashTableImport(gert::TilingContext* context)
 {
     EmbeddingHashTableImportTiling tilingObj(context);
     return tilingObj.DoTiling();
 }
 
-static ge::graphStatus TilingPrepare4EmbeddingHashTableImport(gert::TilingParseContext *context)
+static ge::graphStatus TilingPrepare4EmbeddingHashTableImport(gert::TilingParseContext* context)
 {
     OP_LOGD(context->GetNodeName(), "op [EmbeddingHashTableImport] tiling start.");
-    fe::PlatFormInfos *platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_CHECK_IF(platformInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "platformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<EmbeddingHashTableImportCompileInfo>();
-    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "compileInfoPtr is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context->GetNodeName(), "compileInfoPtr is null"),
+                return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->aivNum = ascendcPlatform.GetCoreNumAiv();

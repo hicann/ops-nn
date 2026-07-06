@@ -34,20 +34,16 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT16, DataType::DT_FLOAT, op::DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
+                                                                   op::DataType::DT_BF16};
 
-static inline bool IsSupportBroadcast() {
-    return Ops::NN::AclnnUtil::IsRegbase();
-}
+static inline bool IsSupportBroadcast() { return Ops::NN::AclnnUtil::IsRegbase(); }
 
-static inline bool IsSupportMixPrecision() {
-    return Ops::NN::AclnnUtil::IsRegbase();
-}
+static inline bool IsSupportMixPrecision() { return Ops::NN::AclnnUtil::IsRegbase(); }
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
@@ -58,7 +54,8 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, acl
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput) {
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
+{
     // 检查gradOutput的数据类型是否在SiluGrad算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, DTYPE_SUPPORT_LIST, return false);
 
@@ -79,16 +76,18 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
 
     bool bf16flag = CheckSocVersionIsSupportBf16();
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || gradOutput->GetDataType() == op::DataType::DT_BF16)) {
+    if (!bf16flag &&
+        (self->GetDataType() == op::DataType::DT_BF16 || gradOutput->GetDataType() == op::DataType::DT_BF16)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self or gradOutput dtype %s is unsupported by the current npuArch [%u].",
-        op::ToString(self->GetDataType()).GetString(), static_cast<uint32_t>(curArch));
+                op::ToString(self->GetDataType()).GetString(), static_cast<uint32_t>(curArch));
         return false;
     }
 
     return true;
 }
 
-static bool CheckShapeValid(const aclTensor *gradOutput, const aclTensor *self, aclTensor *gradInput) {
+static bool CheckShapeValid(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
+{
     OP_CHECK_MAX_DIM(gradOutput, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
 
@@ -107,7 +106,8 @@ static bool CheckShapeValid(const aclTensor *gradOutput, const aclTensor *self, 
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput) {
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput)
+{
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, gradInput), ACLNN_ERR_PARAM_NULLPTR);
 
@@ -120,7 +120,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     return ACLNN_SUCCESS;
 }
 
-[[maybe_unused]] static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor) {
+[[maybe_unused]] static aclIntArray* GetTensorShape(const aclTensor* x, aclOpExecutor* executor)
+{
     auto shape = x->GetViewShape();
     int64_t dimSize = x->GetViewShape().GetDimNum();
 
@@ -134,19 +135,19 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
 }
 
 [[maybe_unused]] static const aclTensor* ReshapeLongTensor(const aclTensor* x, aclOpExecutor* executor,
-                                            size_t originalDimSize,
-                                            aclIntArray* valuePerm = nullptr) {
-  size_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
-    return x;
-  }
+                                                           size_t originalDimSize, aclIntArray* valuePerm = nullptr)
+{
+    size_t dimSize = x->GetViewShape().GetDimNum();
+    if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
+        return x;
+    }
 
-  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-  return reshapeSelf;
+    auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
+    return reshapeSelf;
 }
 
-aclnnStatus aclnnSiluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnSiluBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput,
+                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 

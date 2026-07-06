@@ -21,15 +21,9 @@ using namespace op;
 
 class AscendQuantProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AscendQuantProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AscendQuantProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AscendQuantProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AscendQuantProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(AscendQuantProtoTest, AscendQuant_proto_0)
@@ -56,11 +50,10 @@ TEST_F(AscendQuantProtoTest, AscendQuant_proto_0)
                       .IrInstanceNum({1})
                       .InputShapes({&shape_x1})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs(
-                          {{"scale", Ops::NN::AnyValue::CreateFrom<float>(scale)},
-                           {"offset", Ops::NN::AnyValue::CreateFrom<float>(offset)},
-                           {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(sqrt_mode)},
-                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)}})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(scale)},
+                                  {"offset", Ops::NN::AnyValue::CreateFrom<float>(offset)},
+                                  {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(sqrt_mode)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)}})
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NHWC, ge::FORMAT_NHWC)
                       .Build();

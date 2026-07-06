@@ -30,20 +30,13 @@ using namespace ut_util;
 
 class PreluTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "PreluTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "PreluTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "PreluTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "PreluTiling TearDown" << std::endl; }
 };
 
-static void TestPreluTiling(
-    gert::StorageShape& xShape, gert::StorageShape& weightShape, gert::StorageShape& yShape, ge::DataType dtype,
-    uint64_t expectTilingKey)
+static void TestPreluTiling(gert::StorageShape& xShape, gert::StorageShape& weightShape, gert::StorageShape& yShape,
+                            ge::DataType dtype, uint64_t expectTilingKey)
 {
     string compileInfoString = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -68,17 +61,17 @@ static void TestPreluTiling(
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
 
-    auto kernelHolder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
-            .Outputs({&compileInfo})
-            .Build();
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs(
+                                {const_cast<char*>(compileInfoString.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);

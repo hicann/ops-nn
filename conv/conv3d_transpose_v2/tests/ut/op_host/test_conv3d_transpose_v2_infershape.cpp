@@ -31,17 +31,18 @@ using ge::FORMAT_NDHWC;
  * return vector's debug string
  */
 template <typename T>
-std::string DebugString(const std::vector<T>& v) {
-  std::ostringstream oss;
-  oss << "[";
-  if (v.size() > 0) {
-    for (size_t i = 0; i < v.size() - 1; ++i) {
-      oss << v[i] << ", ";
+std::string DebugString(const std::vector<T>& v)
+{
+    std::ostringstream oss;
+    oss << "[";
+    if (v.size() > 0) {
+        for (size_t i = 0; i < v.size() - 1; ++i) {
+            oss << v[i] << ", ";
+        }
+        oss << v[v.size() - 1];
     }
-    oss << v[v.size() - 1];
-  }
-  oss << "]";
-  return oss.str();
+    oss << "]";
+    return oss.str();
 }
 
 struct Conv3DTransposeProtoTestParam {
@@ -89,9 +90,8 @@ TEST_P(Conv3DTransposeV2ProtoTest, general_cases)
     tensor->SetOriginFormat(param.input_size_ori_format);
     tensor->SetStorageFormat(param.input_size_ori_format);
 
-    (void)memcpy_s(
-        tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
-        input_size.size() * sizeof(int64_t));
+    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
+                   input_size.size() * sizeof(int64_t));
 
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(3, 1)
@@ -100,16 +100,16 @@ TEST_P(Conv3DTransposeV2ProtoTest, general_cases)
                       .NodeInputTd(1, ge::DT_FLOAT16, param.x_ori_format, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(2, ge::DT_FLOAT16, param.filter_ori_format, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, param.y_ori_format, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs(
-                          {{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
-                           {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.dilations)},
-                           {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
-                           {"output_padding", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
-                           {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.pads)},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.dilations)},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(param.groups)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(param.data_format)},
+                                  {"output_padding",
+                                   Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
                       .InputShapes({tensor, &x_shape, &filter_shape})
                       .OutputShapes({&y_shape})
                       .Build();

@@ -11,8 +11,8 @@
 #include "group_norm_kernel.h"
 
 template <uint32_t schMode>
-__global__ __aicore__ void group_norm(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void group_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                      GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(GroupNormTilingData);
     GET_TILING_DATA_WITH_STRUCT(GroupNormTilingData, tilingData, tiling);

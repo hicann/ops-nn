@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file multi_add_rms_norm_dynamic_quant_tiling_def.h
  * \brief
  */
@@ -26,46 +26,46 @@
 #pragma pack(1)
 
 struct MultiAddRmsNormDynamicQuantTilingData {
-  uint64_t useCore = 0;
-  uint64_t numFirstDim = 0;
-  uint64_t numLastDim = 0;
-  uint64_t numLastDimAligned = 0;
-  uint64_t firstDimPerCore = 0;
-  uint64_t firstDimPerCoreTail = 0;
-  uint64_t firstDimPerLoop = 0;
-  uint64_t lastDimLoopNum = 0;
-  uint64_t lastDimSliceLen = 0;
-  uint64_t lastDimSliceLenTail = 0;
-  uint32_t smoothNum = 0;
-  float epsilon = 0;
-  float avgFactor = 0;
-  uint32_t x1Num = 0;
+    uint64_t useCore = 0;
+    uint64_t numFirstDim = 0;
+    uint64_t numLastDim = 0;
+    uint64_t numLastDimAligned = 0;
+    uint64_t firstDimPerCore = 0;
+    uint64_t firstDimPerCoreTail = 0;
+    uint64_t firstDimPerLoop = 0;
+    uint64_t lastDimLoopNum = 0;
+    uint64_t lastDimSliceLen = 0;
+    uint64_t lastDimSliceLenTail = 0;
+    uint32_t smoothNum = 0;
+    float epsilon = 0;
+    float avgFactor = 0;
+    uint32_t x1Num = 0;
 };
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)  \
-  __ubuf__ tilingStruct* tilingDataPointer =                                 \
-      reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
-#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)     \
-  CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
+#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
+    CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                            \
-  MultiAddRmsNormDynamicQuantTilingData tilingData;                                               \
-  INIT_TILING_DATA(MultiAddRmsNormDynamicQuantTilingData, tilingDataPointer, tilingPointer);  \
-  (tilingData).useCore = tilingDataPointer->useCore;                              \
-  (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                      \
-  (tilingData).numLastDim = tilingDataPointer->numLastDim;                        \
-  (tilingData).numLastDimAligned = tilingDataPointer->numLastDimAligned;          \
-  (tilingData).firstDimPerCore = tilingDataPointer->firstDimPerCore;              \
-  (tilingData).firstDimPerCoreTail = tilingDataPointer->firstDimPerCoreTail;      \
-  (tilingData).firstDimPerLoop = tilingDataPointer->firstDimPerLoop;              \
-  (tilingData).lastDimLoopNum = tilingDataPointer->lastDimLoopNum;                \
-  (tilingData).lastDimSliceLen = tilingDataPointer->lastDimSliceLen;              \
-  (tilingData).lastDimSliceLenTail = tilingDataPointer->lastDimSliceLenTail;      \
-  (tilingData).smoothNum = tilingDataPointer->smoothNum;                          \
-  (tilingData).epsilon = tilingDataPointer->epsilon;                              \
-  (tilingData).avgFactor = tilingDataPointer->avgFactor;                          \
-  (tilingData).x1Num = tilingDataPointer->x1Num;
+#define GET_TILING_DATA(tilingData, tilingPointer)                                             \
+    MultiAddRmsNormDynamicQuantTilingData tilingData;                                          \
+    INIT_TILING_DATA(MultiAddRmsNormDynamicQuantTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).useCore = tilingDataPointer->useCore;                                         \
+    (tilingData).numFirstDim = tilingDataPointer->numFirstDim;                                 \
+    (tilingData).numLastDim = tilingDataPointer->numLastDim;                                   \
+    (tilingData).numLastDimAligned = tilingDataPointer->numLastDimAligned;                     \
+    (tilingData).firstDimPerCore = tilingDataPointer->firstDimPerCore;                         \
+    (tilingData).firstDimPerCoreTail = tilingDataPointer->firstDimPerCoreTail;                 \
+    (tilingData).firstDimPerLoop = tilingDataPointer->firstDimPerLoop;                         \
+    (tilingData).lastDimLoopNum = tilingDataPointer->lastDimLoopNum;                           \
+    (tilingData).lastDimSliceLen = tilingDataPointer->lastDimSliceLen;                         \
+    (tilingData).lastDimSliceLenTail = tilingDataPointer->lastDimSliceLenTail;                 \
+    (tilingData).smoothNum = tilingDataPointer->smoothNum;                                     \
+    (tilingData).epsilon = tilingDataPointer->epsilon;                                         \
+    (tilingData).avgFactor = tilingDataPointer->avgFactor;                                     \
+    (tilingData).x1Num = tilingDataPointer->x1Num;
 #endif

@@ -25,14 +25,16 @@ extern "C" {
  * 算子功能： 对输入Tensor完成scatter操作
  * @param [in] self: npu device侧的aclTensor,
  * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor, 支持
- * 非连续的tensor。数据格式支持ND。
+ * Atlas
+ * 训练系列产品数据类型不支持BFLOAT16。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor,
+ * 支持 非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
  * INT64。index的维度数量需要与self、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
  * @param [in] src: npu
  * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。src的维度数量需要与self、index相同。src的数据类型需要与self一致。支持空tensor，
+ * Atlas
+ * 训练系列产品数据类型不支持BFLOAT16。src的维度数量需要与self、index相同。src的数据类型需要与self一致。支持空tensor，
  * 支持非连续的 tensor。数据格式支持ND。
  * @param [in] reduce: 选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。
  * 具体操作含义如下：
@@ -46,9 +48,9 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnScatterGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnScatterGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                                   const aclTensor* src, int64_t reduce, aclTensor* out,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief: aclnnScatter的第二段接口，用于执行计算
@@ -60,8 +62,8 @@ ACLNN_API aclnnStatus aclnnScatterGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                   const aclrtStream stream);
 
 /**
  * @brief aclnnScatterValue的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -70,8 +72,9 @@ aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, c
  * 算子功能： 对输入Tensor完成scatter操作
  * @param [in] self: npu device侧的aclTensor,
  * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor, 支持
- * 非连续的tensor。数据格式支持ND。
+ * Atlas
+ * 训练系列产品数据类型不支持BFLOAT16。self的维度数量需要与index、src相同。self的数据类型需要与src一致。支持空tensor,
+ * 支持 非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-self的维度数量, self的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
  * INT64。index的维度数量需要与self、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
@@ -88,9 +91,9 @@ aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, c
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnScatterValueGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, int64_t reduce, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnScatterValueGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                                        const aclScalar* value, int64_t reduce, aclTensor* out,
+                                                        uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief: aclnnScatter的第二段接口，用于执行计算
@@ -102,8 +105,8 @@ ACLNN_API aclnnStatus aclnnScatterValueGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                        const aclrtStream stream);
 
 /**
  * @brief aclnnInplaceScatter的第一段接口，根据具体的计算流程，计算workspace大小。
@@ -120,7 +123,8 @@ aclnnScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* execut
  * INT64。index的维度数量需要与selfRef、src相同。支持空tensor， 支持非连续的tensor。数据格式支持ND。
  * @param [in] src: npu
  * device侧的aclTensor，数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。src的维度数量需要与selfRef、index相同。src的数据类型需要与selfRef一致。支持空tensor，
+ * Atlas
+ * 训练系列产品数据类型不支持BFLOAT16。src的维度数量需要与selfRef、index相同。src的数据类型需要与selfRef一致。支持空tensor，
  * 支持非连续的 tensor。数据格式支持ND。
  * @param [in] reduce: 选择应用的reduction操作。可选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。
  * 具体操作含义如下：
@@ -131,9 +135,9 @@ aclnnScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* execut
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnInplaceScatterGetWorkspaceSize(
-    aclTensor* selfRef, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnInplaceScatterGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
+                                                          const aclTensor* src, int64_t reduce, uint64_t* workspaceSize,
+                                                          aclOpExecutor** executor);
 
 /**
  * @brief: aclnnInplaceScatter的第二段接口，用于执行计算
@@ -145,16 +149,17 @@ ACLNN_API aclnnStatus aclnnInplaceScatterGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnInplaceScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnInplaceScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                          aclrtStream stream);
 
 /**
  * @brief aclnnInplaceScatterValue的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  *
  * 算子功能： 对输入Tensor完成scatter操作
- * @param [in] selfRef: npu device侧的aclTensor, 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128,
- * Atlas 训练系列产品数据类型不支持BFLOAT16。selfRef的维度数量需要与index、src相同。selfRef的数据类型需要与src一致。支持空tensor,
+ * @param [in] selfRef: npu device侧的aclTensor,
+ * 数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128, Atlas
+ * 训练系列产品数据类型不支持BFLOAT16。selfRef的维度数量需要与index、src相同。selfRef的数据类型需要与src一致。支持空tensor,
  * 支持 非连续的tensor。数据格式支持ND。
  * @param [in] dim: 用来scatter的维度，数据类型为INT64。范围为[-selfRef的维度数量, selfRef的维度数量-1]。
  * @param [in] index: npu device侧的aclTensor。数据类型支持INT32,
@@ -172,9 +177,9 @@ aclnnInplaceScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* exec
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(
-    aclTensor* selfRef, int64_t dim, const aclTensor* index, const aclScalar* value, int64_t reduce,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
+                                                               const aclScalar* value, int64_t reduce,
+                                                               uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief: aclnnInplaceScatterValue的第二段接口，用于执行计算
@@ -187,8 +192,8 @@ ACLNN_API aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnInplaceScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnInplaceScatterValue(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                               aclrtStream stream);
 
 #ifdef __cplusplus
 }

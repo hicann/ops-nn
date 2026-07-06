@@ -18,7 +18,7 @@
 namespace ops {
 class ExtendConvTranspose : public OpDef {
 public:
-    explicit ExtendConvTranspose(const char *name) : OpDef(name)
+    explicit ExtendConvTranspose(const char* name) : OpDef(name)
     {
         this->Attr("strides").AttrType(REQUIRED).ListInt();
         this->Attr("pads").AttrType(REQUIRED).ListInt();
@@ -74,4 +74,4 @@ public:
     }
 };
 OP_ADD(ExtendConvTranspose);
-}  // namespace ops
+} // namespace ops

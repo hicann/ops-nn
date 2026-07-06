@@ -64,27 +64,25 @@ public:
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void CalInputBlockPara(int64_t curBlockIdx, BlockSplitParam& blockPara);
-    __aicore__ inline void CopyInput(
-        uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t xOffset);
-    __aicore__ inline void TransposeB16(
-        LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum, uint32_t colNum);
+    __aicore__ inline void CopyInput(uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen,
+                                     int64_t xOffset);
+    __aicore__ inline void TransposeB16(LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum,
+                                        uint32_t colNum);
     template <typename U>
-    __aicore__ inline void TransposeB32(
-        LocalTensor<U> xLocalTrans, LocalTensor<U> xLocal, uint32_t rowNum, uint32_t colNum);
+    __aicore__ inline void TransposeB32(LocalTensor<U> xLocalTrans, LocalTensor<U> xLocal, uint32_t rowNum,
+                                        uint32_t colNum);
     __aicore__ inline void TransInput(uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen);
-    __aicore__ inline void CalKernelSize(
-        int64_t kernelIdx, int32_t kernelNum, int64_t dimIn, int64_t dimOut, LocalTensor<int32_t> startIdxLocal,
-        LocalTensor<int32_t> kernelSizeLocal);
+    __aicore__ inline void CalKernelSize(int64_t kernelIdx, int32_t kernelNum, int64_t dimIn, int64_t dimOut,
+                                         LocalTensor<int32_t> startIdxLocal, LocalTensor<int32_t> kernelSizeLocal);
     template <typename U>
-    __aicore__ inline void CustomSelect(
-        LocalTensor<U> inputLocal, LocalTensor<float> outLocal, uint16_t repeatTimes, uint16_t kernelSize,
-        uint16_t srcStride);
-    __aicore__ inline void AvgPoolOnW(
-        uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx, uint32_t woNum);
-    __aicore__ inline void AvgPoolOnH(
-        uint32_t diDataLen, uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx, uint32_t hoNum);
-    __aicore__ inline void AvgPoolOnD(
-        uint32_t diDataLen, uint32_t hoNum, uint32_t woNum, int64_t doIdx, uint32_t doNum);
+    __aicore__ inline void CustomSelect(LocalTensor<U> inputLocal, LocalTensor<float> outLocal, uint16_t repeatTimes,
+                                        uint16_t kernelSize, uint16_t srcStride);
+    __aicore__ inline void AvgPoolOnW(uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx,
+                                      uint32_t woNum);
+    __aicore__ inline void AvgPoolOnH(uint32_t diDataLen, uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx,
+                                      uint32_t hoNum);
+    __aicore__ inline void AvgPoolOnD(uint32_t diDataLen, uint32_t hoNum, uint32_t woNum, int64_t doIdx,
+                                      uint32_t doNum);
     __aicore__ inline void CalAvg(int64_t doNum, int64_t hoNum, int64_t woNum);
     __aicore__ inline void TransOut(int64_t doNum, int64_t hoNum, int64_t woNum);
     __aicore__ inline void CopyOut(int64_t ncNum, int64_t doNum, int64_t hoNum, int64_t woNum, int64_t yGmOffset);
@@ -160,8 +158,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::Init(GM_ADDR x, GM_AD
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalInputBlockPara(
-    int64_t curBlockIdx, BlockSplitParam& blockPara)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalInputBlockPara(int64_t curBlockIdx,
+                                                                             BlockSplitParam& blockPara)
 {
     int64_t dhwOuter = tilingData_.doOuter * tilingData_.hoOuter * tilingData_.woOuter;
     int64_t hwOuter = tilingData_.hoOuter * tilingData_.woOuter;
@@ -184,12 +182,12 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalInputBlockPara(
     blockPara.kerDStartIdx = ((blockPara.doIdx * tilingData_.doFactor) * tilingData_.dIn) / tilingData_.dOut;
     blockPara.kerHStartIdx = ((blockPara.hoIdx * tilingData_.hoFactor) * tilingData_.hIn) / tilingData_.hOut;
     blockPara.kerWStartIdx = ((blockPara.woIdx * tilingData_.woFactor) * tilingData_.wIn) / tilingData_.wOut;
-    int32_t kerDEndIdx =
-        Ceil((blockPara.doIdx * tilingData_.doFactor + blockPara.doNum) * tilingData_.dIn, tilingData_.dOut);
-    int32_t kerHEndIdx =
-        Ceil((blockPara.hoIdx * tilingData_.hoFactor + blockPara.hoNum) * tilingData_.hIn, tilingData_.hOut);
-    int32_t kerWEndIdx =
-        Ceil((blockPara.woIdx * tilingData_.woFactor + blockPara.woNum) * tilingData_.wIn, tilingData_.wOut);
+    int32_t kerDEndIdx = Ceil((blockPara.doIdx * tilingData_.doFactor + blockPara.doNum) * tilingData_.dIn,
+                              tilingData_.dOut);
+    int32_t kerHEndIdx = Ceil((blockPara.hoIdx * tilingData_.hoFactor + blockPara.hoNum) * tilingData_.hIn,
+                              tilingData_.hOut);
+    int32_t kerWEndIdx = Ceil((blockPara.woIdx * tilingData_.woFactor + blockPara.woNum) * tilingData_.wIn,
+                              tilingData_.wOut);
 
     blockPara.diDataLen = kerDEndIdx - blockPara.kerDStartIdx;
     blockPara.hiDataLen = kerHEndIdx - blockPara.kerHStartIdx;
@@ -199,16 +197,16 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalInputBlockPara(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CopyInput(
-    uint32_t ncNum, uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t xOffset)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CopyInput(uint32_t ncNum, uint32_t diDataLen,
+                                                                     uint32_t hiDataLen, uint32_t wiDataLen,
+                                                                     int64_t xOffset)
 {
     LocalTensor<T> xLocal = inputQue.AllocTensor<T>();
 
     uint32_t wiDataAlign = ops::CeilAlign(wiDataLen, ubAlignNum_);
-    DataCopyExtParams paramsIn = {
-        static_cast<uint16_t>(hiDataLen), static_cast<uint32_t>(wiDataLen * sizeof(T)),
-        static_cast<uint32_t>((tilingData_.wIn - wiDataLen) * sizeof(T)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0)};
+    DataCopyExtParams paramsIn = {static_cast<uint16_t>(hiDataLen), static_cast<uint32_t>(wiDataLen * sizeof(T)),
+                                  static_cast<uint32_t>((tilingData_.wIn - wiDataLen) * sizeof(T)),
+                                  static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPadExtParams<T> padParams = {false, 0, 0, 0};
 
     LoopModeParams loopModeParams;
@@ -226,8 +224,9 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CopyInput(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB16(
-    LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB16(LocalTensor<T> xLocalTrans,
+                                                                        LocalTensor<T> xLocal, uint32_t rowNum,
+                                                                        uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
     uint64_t srcList[TRANS_ADDR_LEN];
@@ -260,8 +259,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB16(
         /* repeat在列方向,一次处理16*8个b32或者16*16个B16， 行方向一次处理16行 */
         for (int32_t rowLoopIdx = 0; rowLoopIdx < rowNum / TRANS_ADDR_LEN; rowLoopIdx++) {
             for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] =
-                    static_cast<uint64_t>(xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
+                srcList[i] = static_cast<uint64_t>(
+                    xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
                 dstList[i] = static_cast<uint64_t>(xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
             }
             TransDataTo5HD<T>(dstList, srcList, transDataParams);
@@ -271,8 +270,9 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB16(
 
 template <typename T, typename ID_T>
 template <typename U>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB32(
-    LocalTensor<U> xLocalTrans, LocalTensor<U> xLocal, uint32_t rowNum, uint32_t colNum)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB32(LocalTensor<U> xLocalTrans,
+                                                                        LocalTensor<U> xLocal, uint32_t rowNum,
+                                                                        uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
     uint64_t srcList[TRANS_ADDR_LEN];
@@ -308,12 +308,12 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB32(
         /* repeat在列方向, 一次处理16*8个b32或者16*16个B16, 行方向一次处理16行 */
         for (int32_t rowLoopIdx = 0; rowLoopIdx < rowNum / TRANS_ADDR_LEN; rowLoopIdx++) {
             for (int32_t i = 0; i < TRANS_ADDR_LEN; i++) {
-                srcList[i] =
-                    static_cast<uint64_t>(xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
+                srcList[i] = static_cast<uint64_t>(
+                    xLocal[rowLoopIdx * TRANS_ADDR_LEN * colNum + i * colNum].GetPhyAddr());
             }
             for (int32_t i = 0; i < TRANS_LEN_B32; i++) {
-                dstList[i * 2] =
-                    static_cast<uint64_t>(xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
+                dstList[i * 2] = static_cast<uint64_t>(
+                    xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum].GetPhyAddr());
                 dstList[i * 2 + 1] = static_cast<uint64_t>(
                     xLocalTrans[rowLoopIdx * TRANS_ADDR_LEN + i * rowNum + transPoseAlign].GetPhyAddr());
             }
@@ -323,8 +323,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransposeB32(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransInput(
-    uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransInput(uint32_t diDataLen, uint32_t hiDataLen,
+                                                                      uint32_t wiDataLen)
 {
     uint32_t wiDataAlign = ops::CeilAlign(wiDataLen, ubAlignNum_);
     LocalTensor<T> xLocal = inputQue.DeQue<T>();
@@ -339,9 +339,10 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransInput(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalKernelSize(
-    int64_t kernelIdx, int32_t kernelNum, int64_t dimIn, int64_t dimOut, LocalTensor<int32_t> startIdxLocal,
-    LocalTensor<int32_t> kernelSizeLocal)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalKernelSize(int64_t kernelIdx, int32_t kernelNum,
+                                                                         int64_t dimIn, int64_t dimOut,
+                                                                         LocalTensor<int32_t> startIdxLocal,
+                                                                         LocalTensor<int32_t> kernelSizeLocal)
 {
     __ubuf__ int32_t* startIdxAddr = (__ubuf__ int32_t*)startIdxLocal.GetPhyAddr();
     __ubuf__ int32_t* kernelSizeAddr = (__ubuf__ int32_t*)kernelSizeLocal.GetPhyAddr();
@@ -396,9 +397,10 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalKernelSize(
 
 template <typename T, typename ID_T>
 template <typename U>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CustomSelect(
-    LocalTensor<U> inputLocal, LocalTensor<float> outLocal, uint16_t repeatTimes, uint16_t kernelSize,
-    uint16_t srcStride)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CustomSelect(LocalTensor<U> inputLocal,
+                                                                        LocalTensor<float> outLocal,
+                                                                        uint16_t repeatTimes, uint16_t kernelSize,
+                                                                        uint16_t srcStride)
 {
     __ubuf__ U* inputAddr = (__ubuf__ U*)inputLocal.GetPhyAddr();
     __ubuf__ float* outAddr = (__ubuf__ float*)outLocal.GetPhyAddr();
@@ -437,8 +439,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CustomSelect(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnW(
-    uint32_t diDataLen, uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx, uint32_t woNum)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnW(uint32_t diDataLen, uint32_t hiDataLen,
+                                                                      uint32_t wiDataLen, int64_t woIdx, uint32_t woNum)
 {
     LocalTensor<T> xTransLocal = avgQue.DeQue<T>();
     LocalTensor<float> avgOutLocal = avgTransQue.AllocTensor<float>();
@@ -464,8 +466,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnW(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnH(
-    uint32_t diDataLen, uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx, uint32_t hoNum)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnH(uint32_t diDataLen, uint32_t hiDataLen,
+                                                                      uint32_t woNum, int64_t hoIdx, uint32_t hoNum)
 {
     LocalTensor<float> wTransLocal = avgTransQue.DeQue<float>();
     LocalTensor<float> avgOutLocal = avgQue.AllocTensor<float>();
@@ -491,8 +493,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnH(
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnD(
-    uint32_t diDataLen, uint32_t hoNum, uint32_t woNum, int64_t doIdx, uint32_t doNum)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::AvgPoolOnD(uint32_t diDataLen, uint32_t hoNum,
+                                                                      uint32_t woNum, int64_t doIdx, uint32_t doNum)
 {
     LocalTensor<float> hTransLocal = avgQue.DeQue<float>();
     LocalTensor<float> avgOutLocal = avgTransQue.DeQue<float>();
@@ -586,8 +588,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::TransOut(int64_t doNu
 }
 
 template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CopyOut(
-    int64_t ncNum, int64_t doNum, int64_t hoNum, int64_t woNum, int64_t yGmOffset)
+__aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CopyOut(int64_t ncNum, int64_t doNum, int64_t hoNum,
+                                                                   int64_t woNum, int64_t yGmOffset)
 {
     uint32_t woNumAlign = ops::CeilAlign(woNum, static_cast<int64_t>(ubAlignNum_));
     LocalTensor<float> avgOutLocal = avgQue.DeQue<float>();
@@ -637,8 +639,7 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::Process()
         return;
     }
     CalInputBlockPara(startBlockIdx_, blockPara_);
-    CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen,
-              blockPara_.wiDataLen, blockPara_.xOffset);
+    CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen, blockPara_.wiDataLen, blockPara_.xOffset);
     for (auto curIdx = startBlockIdx_; curIdx < endBlockIdx_ - 1; curIdx++) {
         auto ncIdx = blockPara_.ncIdx;
         auto doIdx = blockPara_.doIdx;
@@ -661,8 +662,8 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::Process()
         TransInput(diDataLen, hiDataLen, wiDataLen);
 
         CalInputBlockPara(curIdx + 1, blockPara_);
-        CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen,
-                  blockPara_.wiDataLen, blockPara_.xOffset);
+        CopyInput(blockPara_.ncNum, blockPara_.diDataLen, blockPara_.hiDataLen, blockPara_.wiDataLen,
+                  blockPara_.xOffset);
 
         /* outshape: [woNum, hiDataLen, diDataLen, vl] */
         AvgPoolOnW(diDataLen, hiDataLen, wiDataLen, woIdx, woNum);

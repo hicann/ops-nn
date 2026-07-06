@@ -17,15 +17,9 @@
 
 class FatreluMul : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "FatreluMul SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "FatreluMul SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "FatreluMul TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "FatreluMul TearDown" << std::endl; }
 };
 
 TEST_F(FatreluMul, FatreluMul_infershape_case_0)

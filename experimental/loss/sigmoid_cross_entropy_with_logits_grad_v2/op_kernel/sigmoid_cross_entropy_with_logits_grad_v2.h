@@ -22,12 +22,10 @@ constexpr int32_t FP32_BUF_NUM = 5;
 template <typename T, bool HAS_WEIGHT, bool HAS_POS_WEIGHT>
 class KernelSigmoidCrossEntropyWithLogitsGradV2 {
 public:
-    __aicore__ inline KernelSigmoidCrossEntropyWithLogitsGradV2()
-    {}
+    __aicore__ inline KernelSigmoidCrossEntropyWithLogitsGradV2() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR predict, GM_ADDR target, GM_ADDR dout, GM_ADDR gradient, GM_ADDR weight, GM_ADDR pos_weight,
-        const SigmoidCrossEntropyWithLogitsGradV2TilingData& tiling);
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR target, GM_ADDR dout, GM_ADDR gradient, GM_ADDR weight,
+                                GM_ADDR pos_weight, const SigmoidCrossEntropyWithLogitsGradV2TilingData& tiling);
     __aicore__ inline void Process();
 
 private:

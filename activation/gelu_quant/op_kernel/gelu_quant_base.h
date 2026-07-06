@@ -49,18 +49,16 @@ constexpr uint32_t FP16_BLOCK_NUM = 16;
 constexpr uint32_t INT8_BLOCK_NUM = 32;
 constexpr uint32_t FP32_VECTOR_CAPACITY_ONE_CYCLE = 64;
 constexpr uint32_t MAX_ROWS_NUM = 1024;
-class GeluQuantBase
-{
+class GeluQuantBase {
 public:
     __aicore__ inline GeluQuantBase(){};
 
     __aicore__ inline void ParseTilingData(const GeluQuantTilingData& tilingData);
-    __aicore__ inline void ComputeGeluErf(
-        const LocalTensor<float>& castFp32, const LocalTensor<float>& tempRes, LocalTensor<float>& xSquared,
-        const int32_t& calCount);
+    __aicore__ inline void ComputeGeluErf(const LocalTensor<float>& castFp32, const LocalTensor<float>& tempRes,
+                                          LocalTensor<float>& xSquared, const int32_t& calCount);
 
-    __aicore__ inline void ComputeGeluTanh(
-        const LocalTensor<float>& castFp32, const LocalTensor<float>& tempRes, const int32_t& calCount);
+    __aicore__ inline void ComputeGeluTanh(const LocalTensor<float>& castFp32, const LocalTensor<float>& tempRes,
+                                           const int32_t& calCount);
     __aicore__ inline void ComputeReduceMax(const LocalTensor<float>& tempRes, int32_t calCount, float& maxValue);
 
     // 变量区
@@ -97,9 +95,9 @@ __aicore__ inline void GeluQuantBase::ParseTilingData(const GeluQuantTilingData&
     inputOffsetType_ = tilingData.inputOffsetType;
 }
 
-__aicore__ inline void GeluQuantBase::ComputeGeluErf(
-    const LocalTensor<float>& castFp32, const LocalTensor<float>& tempRes, LocalTensor<float>& xSquared,
-    const int32_t& calCount)
+__aicore__ inline void GeluQuantBase::ComputeGeluErf(const LocalTensor<float>& castFp32,
+                                                     const LocalTensor<float>& tempRes, LocalTensor<float>& xSquared,
+                                                     const int32_t& calCount)
 {
     // res = x/(1+exp(((((((a1*x^2+a2)*x^2+a3)*x^2+a4)*x^2+a5)*x^2+a6)*x^2+a7)*x))
     Maxs(castFp32, castFp32, ERF_MAX, calCount);
@@ -155,8 +153,8 @@ __aicore__ inline void GeluQuantBase::ComputeGeluErf(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void GeluQuantBase::ComputeGeluTanh(
-    const LocalTensor<float>& castFp32, const LocalTensor<float>& tempRes, const int32_t& calCount)
+__aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<float>& castFp32,
+                                                      const LocalTensor<float>& tempRes, const int32_t& calCount)
 {
     Mul(tempRes, castFp32, castFp32, calCount); // x^2
     PipeBarrier<PIPE_V>();
@@ -176,8 +174,8 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void GeluQuantBase::ComputeReduceMax(
-    const LocalTensor<float>& tempRes, int32_t calCount, float& maxValue)
+__aicore__ inline void GeluQuantBase::ComputeReduceMax(const LocalTensor<float>& tempRes, int32_t calCount,
+                                                       float& maxValue)
 {
     uint32_t vectorCycles = calCount / FP32_VECTOR_CAPACITY_ONE_CYCLE;
     uint32_t remainElements = calCount % FP32_VECTOR_CAPACITY_ONE_CYCLE;
@@ -201,9 +199,8 @@ __aicore__ inline void GeluQuantBase::ComputeReduceMax(
         PipeBarrier<PIPE_V>();
     }
 
-    WholeReduceMax(
-        tempRes, tempRes, (vectorCycles == 0) ? remainElements : FP32_VECTOR_CAPACITY_ONE_CYCLE, 1, 1, 1,
-        FP32_BLOCK_NUM, ReduceOrder::ORDER_ONLY_VALUE);
+    WholeReduceMax(tempRes, tempRes, (vectorCycles == 0) ? remainElements : FP32_VECTOR_CAPACITY_ONE_CYCLE, 1, 1, 1,
+                   FP32_BLOCK_NUM, ReduceOrder::ORDER_ONLY_VALUE);
 
     event_t curEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(curEventID);

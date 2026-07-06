@@ -25,7 +25,7 @@ using namespace std;
 
 template <class T>
 class KernelND2NZBMM {
-   public:
+public:
     __aicore__ inline KernelND2NZBMM(){};
     __aicore__ inline void CopyIn(uint64_t progress, LocalTensor<T>& dstLocal);
     __aicore__ inline bool SetBufBMM();
@@ -34,7 +34,7 @@ class KernelND2NZBMM {
 
     __aicore__ inline bool ProcessBMM();
 
-   private:
+private:
     __aicore__ inline void CopyOutDirect(uint64_t gmOutOffset, uint32_t startPad, uint16_t total, uint64_t progress);
     __aicore__ inline void CopyOutPageInit(uint64_t& gmOutOffset, uint32_t startPad, uint32_t& bufOffset);
     __aicore__ inline void CopyOutMakePage(uint32_t nLoop, uint32_t& bufOffset);
@@ -48,7 +48,7 @@ class KernelND2NZBMM {
                                               uint64_t progress);
     __aicore__ inline void ComputeBMM(uint64_t progress);
 
-   private:
+private:
     TBuf<TPosition::VECCALC>* ubPtr_;
     GlobalTensor<T> srcGM;
     GlobalTensor<T> dstGM;
@@ -79,7 +79,8 @@ class KernelND2NZBMM {
 };
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::CopyIn(uint64_t progress, LocalTensor<T>& dstLocal) {
+__aicore__ inline void KernelND2NZBMM<T>::CopyIn(uint64_t progress, LocalTensor<T>& dstLocal)
+{
     uint64_t curCopyInSize = progress == nFullProgress_ ? heightTotalTail_ * width_ : copyInSize_;
     uint64_t gmInOffset = copyInSize_ * progress;
     DataCopyExtParams copyParams{DEFAULT_DATA_COPY_NBURST, static_cast<uint32_t>(curCopyInSize * sizeof(T)),
@@ -89,7 +90,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyIn(uint64_t progress, LocalTensor<
 }
 
 template <class T>
-__aicore__ inline bool KernelND2NZBMM<T>::SetBufBMM() {
+__aicore__ inline bool KernelND2NZBMM<T>::SetBufBMM()
+{
     uint32_t hTotal = height_ * batch_;
     uint32_t wAligned = Align2(width_, c0_);
 
@@ -136,8 +138,9 @@ __aicore__ inline bool KernelND2NZBMM<T>::SetBufBMM() {
 }
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::Init(GM_ADDR dst, GM_ADDR src, uint32_t height, uint32_t width, uint32_t batch,
-                                            TBuf<TPosition::VECCALC>& ubBuffer, uint32_t usedCoreNum) {
+__aicore__ inline void KernelND2NZBMM<T>::Init(GM_ADDR dst, GM_ADDR src, uint32_t height, uint32_t width,
+                                               uint32_t batch, TBuf<TPosition::VECCALC>& ubBuffer, uint32_t usedCoreNum)
+{
     height_ = height;
     width_ = width;
     batch_ = batch;
@@ -168,7 +171,8 @@ __aicore__ inline void KernelND2NZBMM<T>::Init(GM_ADDR dst, GM_ADDR src, uint32_
 }
 
 template <class T>
-__aicore__ inline bool KernelND2NZBMM<T>::ProcessBMM() {
+__aicore__ inline bool KernelND2NZBMM<T>::ProcessBMM()
+{
     if (SetBufBMM()) {
         uint32_t nLoop = heightTotalTail_ ? nFullProgress_ + 1 : nFullProgress_;
         for (uint32_t i = blockIdx_; i < nLoop; i += blockDim_) {
@@ -185,7 +189,8 @@ __aicore__ inline bool KernelND2NZBMM<T>::ProcessBMM() {
 
 template <class T>
 __aicore__ inline void KernelND2NZBMM<T>::CopyOutDirect(uint64_t gmOutOffset, uint32_t startPad, uint16_t total,
-                                                     uint64_t progress) {
+                                                        uint64_t progress)
+{
     uint32_t start = startPad - hPad_;
     SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
     WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
@@ -243,7 +248,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutDirect(uint64_t gmOutOffset, ui
 }
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::CopyOutPageInit(uint64_t& gmOutOffset, uint32_t startPad, uint32_t& bufOffset) {
+__aicore__ inline void KernelND2NZBMM<T>::CopyOutPageInit(uint64_t& gmOutOffset, uint32_t startPad, uint32_t& bufOffset)
+{
     uint32_t start = startPad - hPad_;
     uint32_t startSize = start * c0_;
 
@@ -267,7 +273,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutPageInit(uint64_t& gmOutOffset,
 }
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::CopyOutMakePage(uint32_t nLoop, uint32_t& bufOffset) {
+__aicore__ inline void KernelND2NZBMM<T>::CopyOutMakePage(uint32_t nLoop, uint32_t& bufOffset)
+{
     for (int j = 0; j < nLoop; j++) {
         for (int k = 0; k < widthBlockTotal_; k++) {
             Copy(midBuf_[c0_ * hAligned_ * (k + widthBlockTotal_ * j)],
@@ -279,7 +286,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutMakePage(uint32_t nLoop, uint32
 }
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::CopyOutPageMainImp(uint64_t& gmOutOffset, uint32_t nLoop, uint32_t& bufOffset) {
+__aicore__ inline void KernelND2NZBMM<T>::CopyOutPageMainImp(uint64_t& gmOutOffset, uint32_t nLoop, uint32_t& bufOffset)
+{
     CopyOutMakePage(nLoop, bufOffset);
     SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
     WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
@@ -293,7 +301,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutPageMainImp(uint64_t& gmOutOffs
 
 template <class T>
 __aicore__ inline void KernelND2NZBMM<T>::CopyOutPageMain(uint64_t& gmOutOffset, uint32_t mPage, uint32_t startPad,
-                                                       uint32_t total, uint32_t& bufOffset, uint64_t progress) {
+                                                          uint32_t total, uint32_t& bufOffset, uint64_t progress)
+{
     uint32_t mPage2 = mPage / widthBlockTotal_;
     uint32_t nLoopIn = mPage2 / hAligned_;
     uint32_t mFinal = ((total - startPad + hPad_) / height_ + 1) * hPad_ + total;
@@ -309,7 +318,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutPageMain(uint64_t& gmOutOffset,
 }
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::CopyOutPageEnd(uint64_t gmOutOffset, uint32_t res, uint32_t& bufOffset) {
+__aicore__ inline void KernelND2NZBMM<T>::CopyOutPageEnd(uint64_t gmOutOffset, uint32_t res, uint32_t& bufOffset)
+{
     for (int k = 0; k < widthBlockTotal_; k++) {
         Copy(midBuf_[c0_ * res * k], outBuf_[bufOffset + hBuffer_ * c0_ * k], res * c0_);
     }
@@ -321,7 +331,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutPageEnd(uint64_t gmOutOffset, u
 
 template <class T>
 __aicore__ inline void KernelND2NZBMM<T>::CopyOutPage(uint64_t gmOutOffset, uint32_t mPage, uint32_t total,
-                                                   uint32_t startPad, uint64_t progress) {
+                                                      uint32_t startPad, uint64_t progress)
+{
     uint32_t bufOffset = 0;
     uint32_t start = startPad - hPad_;
 
@@ -342,7 +353,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutPage(uint64_t gmOutOffset, uint
 
 template <class T>
 __aicore__ inline void KernelND2NZBMM<T>::CopyOutBatchReform(uint64_t gmOutOffset, uint32_t mPage, uint32_t total,
-                                                          uint32_t startPad, uint64_t progress) {
+                                                             uint32_t startPad, uint64_t progress)
+{
     uint32_t mPage2 = mPage / widthBlockTotal_;
 
     if (hAligned_ > mPage2) {
@@ -353,7 +365,8 @@ __aicore__ inline void KernelND2NZBMM<T>::CopyOutBatchReform(uint64_t gmOutOffse
 }
 
 template <class T>
-__aicore__ inline void KernelND2NZBMM<T>::ComputeBMM(uint64_t progress) {
+__aicore__ inline void KernelND2NZBMM<T>::ComputeBMM(uint64_t progress)
+{
     if (noPadD_) {
         CopyIn(progress, outBuf_);
     } else {
@@ -363,14 +376,14 @@ __aicore__ inline void KernelND2NZBMM<T>::ComputeBMM(uint64_t progress) {
         if (wTail_ == 0) { // 内轴32B对齐，大块搬入，再重排，当前实现可能有问题
             PadDAligned<T>(progress, outBuf_, inBuf_, 0, 0, width_, c0_, hBlockNum_, false);
         } else {
-            PadDMain<T>(progress, outBuf_, inBuf_, midBuf_, zeroBuf_, 0, 0, width_, c0_,
-                                 hBlockNum_, copyInRepeat_, hBuffer_, wTail_, false);
+            PadDMain<T>(progress, outBuf_, inBuf_, midBuf_, zeroBuf_, 0, 0, width_, c0_, hBlockNum_, copyInRepeat_,
+                        hBuffer_, wTail_, false);
         }
     }
     PipeBarrier<PIPE_ALL>();
 
-    uint64_t gmOutOffset =
-        (hBuffer_ * progress) / height_ * hAligned_ * widthBlockTotal_ * c0_ + ((hBuffer_ * progress) % height_) * c0_;
+    uint64_t gmOutOffset = (hBuffer_ * progress) / height_ * hAligned_ * widthBlockTotal_ * c0_ +
+                           ((hBuffer_ * progress) % height_) * c0_;
     uint32_t total = (progress == nFullProgress_) ? heightTotalTail_ : hBuffer_;
     uint32_t startPad = hAligned_ - (progress * hBuffer_) % height_;
     uint32_t mPage = (hBuffer_ * width_) / c0_ / ALIGNED_H * ALIGNED_H;
@@ -383,7 +396,8 @@ __aicore__ inline void KernelND2NZBMM<T>::ComputeBMM(uint64_t progress) {
 #if defined(__DAV_C220_VEC__)
 template <class T>
 __aicore__ inline bool Nd2nzVnchwBMM(GlobalTensor<T>& dst, GlobalTensor<T>& src, uint32_t height, uint32_t width,
-                                     uint32_t batch, TBuf<TPosition::VECCALC>& ubBuffer, uint32_t usedCoreNum) {
+                                     uint32_t batch, TBuf<TPosition::VECCALC>& ubBuffer, uint32_t usedCoreNum)
+{
     KernelND2NZBMM<T> op;
     op.Init((GM_ADDR)dst[0].GetPhyAddr(), (GM_ADDR)src[0].GetPhyAddr(), height, width, batch, ubBuffer, usedCoreNum);
     return op.ProcessBMM();

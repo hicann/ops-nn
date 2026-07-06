@@ -28,23 +28,20 @@ constexpr int32_t HALf_INTERVAL = 2;
 template <typename T_X, typename T_Y>
 class KernelAddRmsNormDynamicQuantRegbaseSingleRow {
 public:
-    __aicore__ inline KernelAddRmsNormDynamicQuantRegbaseSingleRow(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormDynamicQuantRegbaseSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
-        GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2, const AddRmsNormDynamicQuantRegbaseTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR beta,
+                                GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2,
+                                const AddRmsNormDynamicQuantRegbaseTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2, beta);
         this->InitOutGlobalTensors(y1, y2, x, outScale1, outScale2);
         Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, 2 * this->numLastDimAligned * sizeof(T_X)); // 2 * D * 2
         Ppipe->InitBuffer(yQue, BUFFER_NUM, this->numLastDimAligned * sizeof(T_X));          // D * 2
-        Ppipe->InitBuffer(xBufFp32, this->numLastDimAligned * sizeof(float)); // D * 4
-        Ppipe->InitBuffer(yBufFp32, this->numLastDimAligned * sizeof(float)); // D * 4
-        Ppipe->InitBuffer(smoothBuf, this->numLastDimAligned * sizeof(T_X));    // D * 2
+        Ppipe->InitBuffer(xBufFp32, this->numLastDimAligned * sizeof(float));                // D * 4
+        Ppipe->InitBuffer(yBufFp32, this->numLastDimAligned * sizeof(float));                // D * 4
+        Ppipe->InitBuffer(smoothBuf, this->numLastDimAligned * sizeof(T_X));                 // D * 2
         // 2 dynamic quant operator required 2 scale buffer.
         Ppipe->InitBuffer(scalesQue, BUFFER_NUM, 2 * ROW_FACTOR * sizeof(float));
     }
@@ -53,7 +50,8 @@ public:
     {
         if (this->smooth1Exist) {
             AscendC::LocalTensor<T_X> smooth1Local = smoothBuf.Get<T_X>();
-            DataCopyPad(smooth1Local, this->smooth1Gm, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
+            DataCopyPad(smooth1Local, this->smooth1Gm, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0},
+                        {});
         }
         int32_t outLoopTail = this->rowWork % ROW_FACTOR;
         int32_t outLoopCount = this->rowWork / ROW_FACTOR;
@@ -104,9 +102,11 @@ private:
         AscendC::LocalTensor<float> outScalesLocal = scalesQue.template DeQue<float>();
         AscendC::LocalTensor<float> outScales1Local = outScalesLocal[0];
         AscendC::LocalTensor<float> outScales2Local = outScalesLocal[ROW_FACTOR];
-        AscendC::DataCopyPad(this->outScale1Gm[gmOffset], outScales1Local, {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
+        AscendC::DataCopyPad(this->outScale1Gm[gmOffset], outScales1Local,
+                             {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
         if (this->smooth2Exist) {
-            AscendC::DataCopyPad(this->outScale2Gm[gmOffset], outScales2Local, {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
+            AscendC::DataCopyPad(this->outScale2Gm[gmOffset], outScales2Local,
+                                 {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
         }
         scalesQue.FreeTensor(outScalesLocal);
     }
@@ -116,14 +116,17 @@ private:
         AscendC::LocalTensor<T_Y> res12 = yQue.template DeQue<T_Y>();
         auto res1 = res12[0];
         auto res2 = res12[this->numLastDimAligned];
-        AscendC::DataCopyPad(this->y1Gm[gmOffset], res1, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_Y)), 0, 0});
+        AscendC::DataCopyPad(this->y1Gm[gmOffset], res1,
+                             {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_Y)), 0, 0});
         if (this->smooth2Exist) {
-            AscendC::DataCopyPad(this->y2Gm[gmOffset], res2, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_Y)), 0, 0});
+            AscendC::DataCopyPad(this->y2Gm[gmOffset], res2,
+                                 {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_Y)), 0, 0});
         }
         yQue.FreeTensor(res12);
     }
 
-    __aicore__ inline void RoundFloat2Quant(AscendC::LocalTensor<T_Y>& dstTensor, AscendC::LocalTensor<float>& srcTensor, uint32_t count)
+    __aicore__ inline void RoundFloat2Quant(AscendC::LocalTensor<T_Y>& dstTensor,
+                                            AscendC::LocalTensor<float>& srcTensor, uint32_t count)
     {
         uint16_t repeatTimes = static_cast<uint16_t>(CeilDivision(count, V_LENGTH));
         __local_mem__ T_Y* dstAddr = (__ubuf__ T_Y*)dstTensor.GetPhyAddr();
@@ -165,7 +168,8 @@ private:
 
         if (likely(repsFp32 > 1)) {
             // 8 is rep stride
-            AscendC::Max(srcLocal1, srcLocal1[ELEM_PER_REP_FP32], srcLocal1, ELEM_PER_REP_FP32, repsFp32 - 1, {1, 1, 1, 0, 8, 0});
+            AscendC::Max(srcLocal1, srcLocal1[ELEM_PER_REP_FP32], srcLocal1, ELEM_PER_REP_FP32, repsFp32 - 1,
+                         {1, 1, 1, 0, 8, 0});
             PipeBarrier<PIPE_V>();
         }
         if (unlikely(remsFp32 > 0)) {
@@ -178,8 +182,8 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ScaleTensor(
-        AscendC::LocalTensor<float>& srcTensor, AscendC::LocalTensor<float>& tmpTensor1, AscendC::LocalTensor<float>& scaleTensor, int32_t idx)
+    __aicore__ inline void ScaleTensor(AscendC::LocalTensor<float>& srcTensor, AscendC::LocalTensor<float>& tmpTensor1,
+                                       AscendC::LocalTensor<float>& scaleTensor, int32_t idx)
     {
         AscendC::Abs(tmpTensor1, srcTensor, this->numLastDim); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();
@@ -212,9 +216,8 @@ private:
             PipeBarrier<PIPE_V>();
             AscendC::Mul(yLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim); // yLocalFp32 <-- y * smooth2
             PipeBarrier<PIPE_V>();
-            ScaleTensor(
-                yLocalFp32, tmpTensor, scalesLocalOut,
-                idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+            ScaleTensor(yLocalFp32, tmpTensor, scalesLocalOut,
+                        idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
             PipeBarrier<PIPE_V>();
             inRowsQue.FreeTensor(smooth2Local);
             RoundFloat2Quant(y2Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
@@ -229,8 +232,7 @@ private:
             Muls(yLocalFp32, xLocalFp32, (float)1.0, this->numLastDim); // yLocalFp32 <-- y * smooth1
             PipeBarrier<PIPE_V>();
         }
-        ScaleTensor(
-            yLocalFp32, xLocalFp32, scalesLocalOut, idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+        ScaleTensor(yLocalFp32, xLocalFp32, scalesLocalOut, idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
         PipeBarrier<PIPE_V>();
         RoundFloat2Quant(y1Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
         PipeBarrier<PIPE_V>();
@@ -241,7 +243,8 @@ private:
     {
         if (this->smooth2Exist) {
             AscendC::LocalTensor<T_X> smoothCopyIn1 = inRowsQue.template AllocTensor<T_X>();
-            AscendC::DataCopyPad(smoothCopyIn1[0], this->smooth2Gm, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
+            AscendC::DataCopyPad(smoothCopyIn1[0], this->smooth2Gm,
+                                 {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
             inRowsQue.EnQue(smoothCopyIn1);
         }
     }
@@ -249,7 +252,8 @@ private:
     __aicore__ inline void CopyInBeta()
     {
         AscendC::LocalTensor<T_X> betaCopyIn = inRowsQue.template AllocTensor<T_X>();
-        AscendC::DataCopyPad(betaCopyIn[0], this->betaGm, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
+        AscendC::DataCopyPad(betaCopyIn[0], this->betaGm,
+                             {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
         inRowsQue.EnQue(betaCopyIn);
     }
 
@@ -314,7 +318,8 @@ private:
     __aicore__ inline void CopyInGamma()
     {
         AscendC::LocalTensor<T_X> gammaCopyIn1 = inRowsQue.template AllocTensor<T_X>();
-        AscendC::DataCopyPad(gammaCopyIn1[0], this->gammaGm, {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
+        AscendC::DataCopyPad(gammaCopyIn1[0], this->gammaGm,
+                             {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
         inRowsQue.EnQue(gammaCopyIn1);
     }
 
@@ -347,11 +352,13 @@ private:
     __aicore__ inline void CopyInX1X2(uint64_t gmOffset1)
     {
         AscendC::LocalTensor<T_X> x1x2LocalIn = inRowsQue.template AllocTensor<T_X>();
-        AscendC::DataCopyPad(x1x2LocalIn[0], this->x1Gm[gmOffset1], {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
-        AscendC::DataCopyPad(x1x2LocalIn[this->numLastDimAligned], this->x2Gm[gmOffset1], {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
+        AscendC::DataCopyPad(x1x2LocalIn[0], this->x1Gm[gmOffset1],
+                             {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
+        AscendC::DataCopyPad(x1x2LocalIn[this->numLastDimAligned], this->x2Gm[gmOffset1],
+                             {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});
         inRowsQue.EnQue(x1x2LocalIn);
     }
-    
+
     __aicore__ inline void InitBaseParams(const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
         this->numCore = GetBlockNum();
@@ -371,7 +378,7 @@ private:
             this->rowWork = this->firstDimPerCore;
         }
         this->gmOffset_ = this->firstDimPerCore * this->numLastDim;
-        
+
         this->smooth1Exist = tilingData->hasSmoothScale1;
         this->smooth2Exist = tilingData->hasSmoothScale2;
         this->betaExist = tilingData->hasBeta;
@@ -387,8 +394,8 @@ private:
         }
     }
 
-    __aicore__ inline void InitInGlobalTensors(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR beta)
+    __aicore__ inline void InitInGlobalTensors(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2,
+                                               GM_ADDR beta)
     {
         uint64_t gmLen = this->rowWork * this->numLastDim;
         x1Gm.SetGlobalBuffer((__gm__ T_X*)(x1) + this->blockIdx_ * this->gmOffset_, gmLen);
@@ -405,8 +412,7 @@ private:
         }
     }
 
-    __aicore__ inline void InitOutGlobalTensors(
-        GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2)
+    __aicore__ inline void InitOutGlobalTensors(GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2)
     {
         uint64_t gmLen = this->rowWork * this->numLastDim;
         y1Gm.SetGlobalBuffer((__gm__ T_Y*)(y1) + this->blockIdx_ * this->gmOffset_, gmLen);
@@ -414,9 +420,11 @@ private:
             y2Gm.SetGlobalBuffer((__gm__ T_Y*)(y2) + this->blockIdx_ * this->gmOffset_, gmLen);
         }
         xGm.SetGlobalBuffer((__gm__ T_X*)(x) + this->blockIdx_ * this->gmOffset_, gmLen);
-        outScale1Gm.SetGlobalBuffer((__gm__ float*)(outScale1) + this->blockIdx_ * this->firstDimPerCore, this->rowWork);
+        outScale1Gm.SetGlobalBuffer((__gm__ float*)(outScale1) + this->blockIdx_ * this->firstDimPerCore,
+                                    this->rowWork);
         if (this->smooth2Exist) {
-            outScale2Gm.SetGlobalBuffer((__gm__ float*)(outScale2) + this->blockIdx_ * this->firstDimPerCore, this->rowWork);
+            outScale2Gm.SetGlobalBuffer((__gm__ float*)(outScale2) + this->blockIdx_ * this->firstDimPerCore,
+                                        this->rowWork);
         }
     }
 

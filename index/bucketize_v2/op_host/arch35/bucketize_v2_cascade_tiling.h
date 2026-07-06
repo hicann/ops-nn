@@ -9,7 +9,7 @@
  */
 /*!
  * \file bucketize_v2_full_load_tiling
- * \brief 
+ * \brief
  */
 
 #ifndef CANN_BUCKETIZE_V2_CASCADE_TILING_H
@@ -21,10 +21,8 @@ namespace optiling {
 
 class BucketizeV2CascadeTiling : public BucketizeV2BaseTiling {
 public:
-    explicit BucketizeV2CascadeTiling(gert::TilingContext* context) : BucketizeV2BaseTiling(context)
-    {}
-    ~BucketizeV2CascadeTiling() override
-    {}
+    explicit BucketizeV2CascadeTiling(gert::TilingContext* context) : BucketizeV2BaseTiling(context) {}
+    ~BucketizeV2CascadeTiling() override {}
 
 private:
     uint64_t GetTilingKey() const override;
@@ -34,21 +32,21 @@ private:
     void DumpTilingInfo() override;
     void DoUBTiling();
     void DoBlockTiling();
-    void SetTilingData();    
-    int64_t sampleRatio_ {1};
+    void SetTilingData();
+    int64_t sampleRatio_{1};
     int64_t sampleBoundSize_{0};
-    int64_t blockFactor_ {0};
-    int64_t blockTail_ {0};
-    int64_t ubFactor_ {0};
-    int64_t usedCoreNum_ {0};
-    int64_t boundBufSize_ {0};
-    int64_t inUbSize_ {0};
-    int64_t outUbSize_ {0};
-    int64_t midOutUbSize_ {0};
-    int64_t outerMaxIter_ {0};
-    int64_t innerMaxIter_ {0};
-    int64_t ubBlockSize_ {0};
-    int64_t vRegLength_ {0};
+    int64_t blockFactor_{0};
+    int64_t blockTail_{0};
+    int64_t ubFactor_{0};
+    int64_t usedCoreNum_{0};
+    int64_t boundBufSize_{0};
+    int64_t inUbSize_{0};
+    int64_t outUbSize_{0};
+    int64_t midOutUbSize_{0};
+    int64_t outerMaxIter_{0};
+    int64_t innerMaxIter_{0};
+    int64_t ubBlockSize_{0};
+    int64_t vRegLength_{0};
 };
 
 } // namespace optiling

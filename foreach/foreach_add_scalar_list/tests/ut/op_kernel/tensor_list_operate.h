@@ -22,12 +22,14 @@
 #include "data_utils.h"
 
 template <typename T1, typename T2>
-inline T1 CeilA2B(T1 a, T2 b) {
+inline T1 CeilA2B(T1 a, T2 b)
+{
     return (a + b - 1) / b;
 }
 
 template <typename T>
-uint8_t* CreateTensorListForeachAddScalar(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type) {
+uint8_t* CreateTensorListForeachAddScalar(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+{
     uint64_t tensorListDescCount = 1 + shapeInfos.size() * 2;
     for (auto s : shapeInfos) {
         tensorListDescCount += s.size();
@@ -53,7 +55,7 @@ uint8_t* CreateTensorListForeachAddScalar(const std::vector<std::vector<uint64_t
         uint64_t dataSize = shapeSizeList[i] * sizeof(T);
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
         std::stringstream fileName;
-        fileName << "./add_scalar_data/"<< d_type << "_input_t_foreach_add" << i <<".bin";
+        fileName << "./add_scalar_data/" << d_type << "_input_t_foreach_add" << i << ".bin";
         ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
     }
@@ -61,7 +63,8 @@ uint8_t* CreateTensorListForeachAddScalar(const std::vector<std::vector<uint64_t
 }
 
 template <typename T>
-void FreeTensorListForeachAddScalar(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type) {
+void FreeTensorListForeachAddScalar(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+{
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
     for (size_t i = 0; i < shapeInfos.size(); i++) {
@@ -71,7 +74,7 @@ void FreeTensorListForeachAddScalar(uint8_t* addr, const std::vector<std::vector
         }
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
         std::stringstream fileName;
-        fileName << "./add_scalar_data/"<< d_type << "_output_t_foreach_add" << i <<".bin";
+        fileName << "./add_scalar_data/" << d_type << "_output_t_foreach_add" << i << ".bin";
         WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
         AscendC::GmFree((void*)(tensorAddr));
     }
@@ -79,4 +82,4 @@ void FreeTensorListForeachAddScalar(uint8_t* addr, const std::vector<std::vector
     AscendC::GmFree((void*)addr);
 }
 
-#endif  // TENSOR_LIST_OPERATE_H
+#endif // TENSOR_LIST_OPERATE_H

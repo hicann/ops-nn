@@ -14,10 +14,8 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-class Quantize : public OpDef
-{
+namespace ops {
+class Quantize : public OpDef {
 public:
     explicit Quantize(const char* name) : OpDef(name)
     {
@@ -201,4 +199,4 @@ public:
 };
 
 OP_ADD(Quantize);
-}  // namespace ops
+} // namespace ops

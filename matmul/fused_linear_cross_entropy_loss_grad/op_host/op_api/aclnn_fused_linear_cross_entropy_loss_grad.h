@@ -34,30 +34,34 @@ extern "C" {
  * @param [in] logitsMaxOptional: npu device侧的aclTensor，数据类型支持FLOAT，支持非连续的Tensor，数据格式支持ND。
  * @param [in] sumExpLogitsOptional: npu device侧的aclTensor，数据类型支持FLOAT，支持非连续的Tensor，数据格式支持ND。
  * @param [in] softmaxOptional: npu device侧的aclTensor，数据类型支持FLOAT，支持非连续的Tensor，数据格式支持ND。
- * @param [in] inputGradOut: npu device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
- * @param [in] weightGradOut: npu device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [in] inputGradOut: npu
+ * device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [in] weightGradOut: npu
+ * device侧的aclTensor，数据类型支持FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
-    const aclTensor *grad, const aclTensor *input, const aclTensor *weight, const aclTensor *targetMask, const aclTensor *maskedTarget,
-    float labelSmoothing, const aclTensor *logitsMaxOptional, const aclTensor *sumExpLogitsOptional, const aclTensor *softmaxOptional,
-    aclTensor *inputGradOut, aclTensor *weightGradOut, uint64_t *workspaceSize, aclOpExecutor **executor);
+    const aclTensor* grad, const aclTensor* input, const aclTensor* weight, const aclTensor* targetMask,
+    const aclTensor* maskedTarget, float labelSmoothing, const aclTensor* logitsMaxOptional,
+    const aclTensor* sumExpLogitsOptional, const aclTensor* softmaxOptional, aclTensor* inputGradOut,
+    aclTensor* weightGradOut, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnFusedLinearCrossEntropyLossGrad的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aaclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu
+ * device侧申请的workspace大小，由第一段接口aaclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(void* workspace, uint64_t workspaceSize,
+                                                           aclOpExecutor* executor, aclrtStream stream);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // OP_API_INC_FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_H_
+#endif // OP_API_INC_FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_H_

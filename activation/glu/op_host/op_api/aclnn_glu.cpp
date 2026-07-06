@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -57,7 +57,8 @@ extern "C" {
 constexpr size_t MAX_DIM_LEN = 8;
 constexpr int64_t SPLIT_NUM = 2;
 
-static bool CheckNotNull (const aclTensor *self, const aclTensor *out) {
+static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
+{
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
     return true;
@@ -70,84 +71,91 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_L
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_BF16};
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
-  } else {
-    return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
-  }
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
+    } else {
+        return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
+    }
 }
 
-static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
-  const auto& supportList = GetDtypeSupportList();
-  // 检查self数据类型是否在算子的支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+{
+    const auto& supportList = GetDtypeSupportList();
+    // 检查self数据类型是否在算子的支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
 
-  // 检查out的dtype
-  OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
+    // 检查out的dtype
+    OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
 
-  // 检查self的dtype是否可以cast成out的dtype
-  OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
-  return true;
+    // 检查self的dtype是否可以cast成out的dtype
+    OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
+    return true;
 }
 
-static bool CheckParamsDataAndShape(const aclTensor *self, int64_t dim, const aclTensor *out) {
-  // self、out的维度大于 MAX_DIM_LEN
-  OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
-  OP_CHECK_MAX_DIM(out, MAX_DIM_LEN, return false);
+static bool CheckParamsDataAndShape(const aclTensor* self, int64_t dim, const aclTensor* out)
+{
+    // self、out的维度大于 MAX_DIM_LEN
+    OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(out, MAX_DIM_LEN, return false);
 
-  // self的维度必须大于0
-  OP_CHECK_MIN_DIM(self, 1, return false);
+    // self的维度必须大于0
+    OP_CHECK_MIN_DIM(self, 1, return false);
 
-  // 入参dim超出了self的shape可选维度范围[-self.dim，self.dim-1]
-  int64_t selfDim = static_cast<int64_t>(self->GetViewShape().GetDimNum());
-  if (dim < -selfDim || dim >= selfDim) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dimension out of range (expected to be in range of [%ld, %ld], but got %ld).",
-            -selfDim, (selfDim - 1), dim);
-    return false;
-  }
+    // 入参dim超出了self的shape可选维度范围[-self.dim，self.dim-1]
+    int64_t selfDim = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+    if (dim < -selfDim || dim >= selfDim) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Input dimension out of range (expected to be in range of [%ld, %ld], but got %ld).", -selfDim,
+                (selfDim - 1), dim);
+        return false;
+    }
 
-  // 获取dim的非负数维度值selfDim=3时(-3,-2,-1) -> (0,1,2)
-  int64_t positiveDim = dim;
-  if (dim < 0) {
-    positiveDim += selfDim;
-  }
+    // 获取dim的非负数维度值selfDim=3时(-3,-2,-1) -> (0,1,2)
+    int64_t positiveDim = dim;
+    if (dim < 0) {
+        positiveDim += selfDim;
+    }
 
-  // 入参self根据指定的dim所对应的维度不能整除2
-  int64_t splitShape = self->GetViewShape().GetDim(positiveDim);
-  if (splitShape % SPLIT_NUM != 0) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Split dimension must be even, but dimension %ld is size %ld.", dim, splitShape);
-    return false;
-  }
+    // 入参self根据指定的dim所对应的维度不能整除2
+    int64_t splitShape = self->GetViewShape().GetDim(positiveDim);
+    if (splitShape % SPLIT_NUM != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Split dimension must be even, but dimension %ld is size %ld.", dim,
+                splitShape);
+        return false;
+    }
 
-  // out的shape不等于self根据dim拆分后的shape
-  op::Shape outShapeExpect = self->GetViewShape();
-  int64_t outShapeExpectForDim = outShapeExpect.GetDim(static_cast<size_t>(positiveDim)) / SPLIT_NUM;
-  outShapeExpect.SetDim(static_cast<size_t>(positiveDim), outShapeExpectForDim);
-  if (outShapeExpect != out->GetViewShape()) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The shape of out must be %s, but get %s.",
-            op::ToString(outShapeExpect).GetString(), op::ToString(out->GetViewShape()).GetString());
-    return false;
-  }
+    // out的shape不等于self根据dim拆分后的shape
+    op::Shape outShapeExpect = self->GetViewShape();
+    int64_t outShapeExpectForDim = outShapeExpect.GetDim(static_cast<size_t>(positiveDim)) / SPLIT_NUM;
+    outShapeExpect.SetDim(static_cast<size_t>(positiveDim), outShapeExpectForDim);
+    if (outShapeExpect != out->GetViewShape()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The shape of out must be %s, but get %s.",
+                op::ToString(outShapeExpect).GetString(), op::ToString(out->GetViewShape()).GetString());
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTensor *out) {
-  // 1.检查入参参数是否为空指针
-  CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
+static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTensor* out)
+{
+    // 1.检查入参参数是否为空指针
+    CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
-  // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-  CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
+    CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
 
-  // 3. 检查输入数据的有效性
-  CHECK_RET(CheckParamsDataAndShape(self, dim, out), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查输入数据的有效性
+    CHECK_RET(CheckParamsDataAndShape(self, dim, out), ACLNN_ERR_PARAM_INVALID);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
-static bool CheckGluKernel(const aclTensor *self) {
+static bool CheckGluKernel(const aclTensor* self)
+{
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         if (self->GetDataType() == ge::DT_FLOAT || self->GetDataType() == ge::DT_FLOAT16 ||
@@ -158,82 +166,84 @@ static bool CheckGluKernel(const aclTensor *self) {
     return false;
 }
 
-aclnnStatus aclnnGluGetWorkspaceSize(const aclTensor *self, int64_t dim, const aclTensor *out,
-                                     uint64_t *workspaceSize, aclOpExecutor **executor) {
-  L2_DFX_PHASE_1(aclnnGlu, DFX_IN(self, dim), DFX_OUT(out));
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+aclnnStatus aclnnGluGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* out, uint64_t* workspaceSize,
+                                     aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnGlu, DFX_IN(self, dim), DFX_OUT(out));
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  // 入参参数检查
-  auto ret = CheckParams(self, dim, out);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // 入参参数检查
+    auto ret = CheckParams(self, dim, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  // 如果为空tensor，则直接返回空
-  if (self->IsEmpty()) {
-    *workspaceSize = 0;
+    // 如果为空tensor，则直接返回空
+    if (self->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 将输入self转换成连续的tensor
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const aclTensor* result = nullptr;
+    if (CheckGluKernel(selfContiguous)) {
+        result = l0op::Glu(selfContiguous, dim, uniqueExecutor.get());
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        // 入参self根据指定的dim所对应的维度除2,获取SplitV需要的splitSize
+        int64_t selfDim = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+        int64_t positiveDim = dim;
+        if (dim < 0) {
+            positiveDim += selfDim;
+        }
+        int64_t splitShape = self->GetViewShape().GetDim(positiveDim) / SPLIT_NUM;
+        int64_t splitSizeValue[] = {splitShape, splitShape};
+        aclIntArray* splitSize = uniqueExecutor.get()->AllocIntArray(splitSizeValue, SPLIT_NUM);
+
+        // 调用SplitV算子
+        auto splitResult = l0op::SplitV(selfContiguous, splitSize, positiveDim, uniqueExecutor.get());
+        CHECK_RET(splitResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (splitResult->Size() != static_cast<size_t>(SPLIT_NUM)) {
+            OP_LOGE(ACLNN_ERR_INNER, "The result of SplitV should be equal 2, but get %zu.", splitResult->Size());
+            return ACLNN_ERR_INNER;
+        }
+
+        auto splitFirst = (*splitResult)[0];
+        auto splitSecond = (*splitResult)[1];
+
+        // 调用Sigmoid算子Kernel,Inplace方式减少空间占用
+        splitSecond = l0op::Sigmoid(splitSecond, uniqueExecutor.get());
+        CHECK_RET(splitSecond != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        // 调用Mul算子Kernel,Inplace方式减少空间占用
+        result = l0op::Mul(splitFirst, splitSecond, uniqueExecutor.get());
+        CHECK_RET(splitFirst != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    auto resultCasted = result;
+    if (self->GetDataType() != out->GetDataType()) {
+        resultCasted = l0op::Cast(result, out->GetDataType(), uniqueExecutor.get());
+        CHECK_RET(resultCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
+    auto viewCopyResult = l0op::ViewCopy(resultCasted, out, uniqueExecutor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
-  }
-
-  // 将输入self转换成连续的tensor
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  const aclTensor* result = nullptr;
-  if (CheckGluKernel(selfContiguous)) {
-      result = l0op::Glu(selfContiguous, dim, uniqueExecutor.get());
-      CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  } else {
-    // 入参self根据指定的dim所对应的维度除2,获取SplitV需要的splitSize
-    int64_t selfDim = static_cast<int64_t>(self->GetViewShape().GetDimNum());
-    int64_t positiveDim = dim;
-    if (dim < 0) {
-      positiveDim += selfDim;
-    }
-    int64_t splitShape = self->GetViewShape().GetDim(positiveDim) / SPLIT_NUM;
-    int64_t splitSizeValue[] = {splitShape, splitShape};
-    aclIntArray* splitSize = uniqueExecutor.get()->AllocIntArray(splitSizeValue, SPLIT_NUM);
-
-    // 调用SplitV算子
-    auto splitResult = l0op::SplitV(selfContiguous, splitSize, positiveDim, uniqueExecutor.get());
-    CHECK_RET(splitResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (splitResult->Size() != static_cast<size_t>(SPLIT_NUM)) {
-      OP_LOGE(ACLNN_ERR_INNER, "The result of SplitV should be equal 2, but get %zu.", splitResult->Size());
-      return ACLNN_ERR_INNER;
-    }
-
-    auto splitFirst = (*splitResult)[0];
-    auto splitSecond = (*splitResult)[1];
-
-    // 调用Sigmoid算子Kernel,Inplace方式减少空间占用
-    splitSecond = l0op::Sigmoid(splitSecond, uniqueExecutor.get());
-    CHECK_RET(splitSecond != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 调用Mul算子Kernel,Inplace方式减少空间占用
-    result = l0op::Mul(splitFirst, splitSecond, uniqueExecutor.get());
-    CHECK_RET(splitFirst != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-  
-  auto resultCasted = result;
-  if (self->GetDataType() != out->GetDataType()) {
-    resultCasted = l0op::Cast(result, out->GetDataType(), uniqueExecutor.get());
-    CHECK_RET(resultCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-  // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-  auto viewCopyResult = l0op::ViewCopy(resultCasted, out, uniqueExecutor.get());
-  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 获取计算过程中需要使用的workspace大小
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGlu(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnGlu);
-  // 固定写法，调用框架能力，完成计算
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnGlu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnGlu);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

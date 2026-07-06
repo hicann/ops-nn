@@ -37,10 +37,7 @@ __aicore__ inline int32_t CeilDiv(int32_t a, int b)
     return (a + b - 1) / b;
 }
 
-__aicore__ inline int32_t CeilAlign(int32_t a, int b)
-{
-    return CeilDiv(a, b) * b;
-}
+__aicore__ inline int32_t CeilAlign(int32_t a, int b) { return CeilDiv(a, b) * b; }
 
 template <typename T>
 __aicore__ inline int32_t RoundUp(int32_t num)
@@ -76,8 +73,8 @@ __simd_callee__ inline void LoadInputData(RegTensor<float>& dst, __ubuf__ T* src
 }
 
 template <typename T>
-__simd_callee__ inline void StoreOutputData(
-    __ubuf__ T* dst, RegTensor<float>& src, MaskReg pregLoop, uint32_t dstOffset)
+__simd_callee__ inline void StoreOutputData(__ubuf__ T* dst, RegTensor<float>& src, MaskReg pregLoop,
+                                            uint32_t dstOffset)
 {
     if constexpr (IsSameType<T, float>::value) {
         StoreAlign(dst + dstOffset, src, pregLoop);
@@ -89,7 +86,7 @@ __simd_callee__ inline void StoreOutputData(
 }
 
 __simd_callee__ inline void VFSwiGlu(RegTensor<float>& y, RegTensor<float>& x0, RegTensor<float>& x1,
-    RegTensor<float>& vreg, MaskReg pregLoop)
+                                     RegTensor<float>& vreg, MaskReg pregLoop)
 {
     Muls(vreg, x0, static_cast<float>(-1.0f), pregLoop);
     Exp(vreg, vreg, pregLoop);
@@ -99,9 +96,9 @@ __simd_callee__ inline void VFSwiGlu(RegTensor<float>& y, RegTensor<float>& x0, 
 }
 
 template <typename T, bool hasTopkWeight = false, bool hasClampValue = false, bool singleLoop = false>
-__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0LocalAddr,
-    __ubuf__ T* x1LocalAddr, __ubuf__ float* topkWeightLocalAddr, uint16_t loopCount,
-    uint32_t sregNum, uint32_t curColNumAlign, const uint16_t curRowNum, float clampValue)
+__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0LocalAddr, __ubuf__ T* x1LocalAddr,
+                                          __ubuf__ float* topkWeightLocalAddr, uint16_t loopCount, uint32_t sregNum,
+                                          uint32_t curColNumAlign, const uint16_t curRowNum, float clampValue)
 {
     RegTensor<float> weight;
     RegTensor<float> x0;
@@ -155,16 +152,14 @@ __simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0
 }
 
 template <typename T, bool hasTopkWeight = false, bool hasClampValue = false>
-__aicore__ inline void VFProcessSwiglu(
-    const LocalTensor<T>& yLocal, const LocalTensor<T>& x0Local, const LocalTensor<T>& x1Local,
-    const LocalTensor<float>& topkWeightLocal,
-    const uint16_t curRowNum, const uint32_t curColNum, float clampValue)
+__aicore__ inline void VFProcessSwiglu(const LocalTensor<T>& yLocal, const LocalTensor<T>& x0Local,
+                                       const LocalTensor<T>& x1Local, const LocalTensor<float>& topkWeightLocal,
+                                       const uint16_t curRowNum, const uint32_t curColNum, float clampValue)
 {
     __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     __ubuf__ T* x0LocalAddr = (__ubuf__ T*)x0Local.GetPhyAddr();
     __ubuf__ T* x1LocalAddr = (__ubuf__ T*)x1Local.GetPhyAddr();
-    __ubuf__ float* topkWeightLocalAddr =
-        hasTopkWeight ? (__ubuf__ float*)topkWeightLocal.GetPhyAddr() : nullptr;
+    __ubuf__ float* topkWeightLocalAddr = hasTopkWeight ? (__ubuf__ float*)topkWeightLocal.GetPhyAddr() : nullptr;
     uint16_t loopCount = CeilDiv(curColNum, VL_FP32);
     uint32_t sregNum = curColNum;
     uint32_t curColNumAlign = RoundUp<T>(curColNum);
@@ -181,8 +176,9 @@ __aicore__ inline void VFProcessSwiglu(
 
 template <typename T>
 __aicore__ inline void SwigluGroupDispatcher(const LocalTensor<T>& yLocal, const LocalTensor<T>& x0Local,
-    const LocalTensor<T>& x1Local, const LocalTensor<float>& topkWeightLocal, float clampValue,
-    const uint16_t curRowNum, const uint32_t curColNum, int32_t maskBit)
+                                             const LocalTensor<T>& x1Local, const LocalTensor<float>& topkWeightLocal,
+                                             float clampValue, const uint16_t curRowNum, const uint32_t curColNum,
+                                             int32_t maskBit)
 {
     if (maskBit == 0b00) {
         VFProcessSwiglu<T, false, false>(yLocal, x0Local, x1Local, topkWeightLocal, curRowNum, curColNum, clampValue);
@@ -196,8 +192,8 @@ __aicore__ inline void SwigluGroupDispatcher(const LocalTensor<T>& yLocal, const
 }
 
 template <typename T, bool withUbReduce = false>
-__simd_vf__ inline void VFProcessGroupIndexSmallVf(
-    __ubuf__ T* yLocalAddr, __ubuf__ T* xLocalAddr, uint16_t curColNum, uint16_t vlLen, uint16_t loopCount)
+__simd_vf__ inline void VFProcessGroupIndexSmallVf(__ubuf__ T* yLocalAddr, __ubuf__ T* xLocalAddr, uint16_t curColNum,
+                                                   uint16_t vlLen, uint16_t loopCount)
 {
     RegTensor<T> x;
     RegTensor<T> sum;
@@ -223,7 +219,7 @@ __simd_vf__ inline void VFProcessGroupIndexSmallVf(
 
 template <typename T, bool withUbReduce = false>
 __simd_vf__ inline void VFProcessGroupIndexLargeVf(__ubuf__ T* yLocalAddr, __ubuf__ T* xLocalAddr, uint16_t vlLen,
-    uint16_t fourLoopCount, uint16_t tailLoopNum, uint32_t tailReminder)
+                                                   uint16_t fourLoopCount, uint16_t tailLoopNum, uint32_t tailReminder)
 {
     RegTensor<T> x0;
     RegTensor<T> x1;
@@ -271,7 +267,7 @@ __simd_vf__ inline void VFProcessGroupIndexLargeVf(__ubuf__ T* yLocalAddr, __ubu
 
 template <typename T, bool withUbReduce = false>
 __aicore__ inline void VFProcessGroupIndex(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
-    uint16_t curColNum)
+                                           uint16_t curColNum)
 {
     __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
@@ -282,18 +278,17 @@ __aicore__ inline void VFProcessGroupIndex(const LocalTensor<T>& yLocal, const L
     uint16_t tailLoopNum = loopCount - fourLoopCount * FOUR_UNFOLD;
     uint32_t tailReminder = curColNum - fourLoopCount * vlLen * FOUR_UNFOLD;
     if (loopCount < FOUR_UNFOLD) {
-        AscendC::VF_CALL<VFProcessGroupIndexSmallVf<T, withUbReduce>>(
-            yLocalAddr, xLocalAddr, curColNum, vlLen, loopCount);
+        AscendC::VF_CALL<VFProcessGroupIndexSmallVf<T, withUbReduce>>(yLocalAddr, xLocalAddr, curColNum, vlLen,
+                                                                      loopCount);
     } else {
-        AscendC::VF_CALL<VFProcessGroupIndexLargeVf<T, withUbReduce>>(
-            yLocalAddr, xLocalAddr, vlLen, fourLoopCount, tailLoopNum, tailReminder);
+        AscendC::VF_CALL<VFProcessGroupIndexLargeVf<T, withUbReduce>>(yLocalAddr, xLocalAddr, vlLen, fourLoopCount,
+                                                                      tailLoopNum, tailReminder);
     }
 }
 
 template <typename T>
-__aicore__ inline void CopyIn(
-    const GlobalTensor<T>& inputGm, const LocalTensor<T>& inputTensor, const uint16_t nBurst, const uint32_t copyLen,
-    uint32_t srcStride = 0)
+__aicore__ inline void CopyIn(const GlobalTensor<T>& inputGm, const LocalTensor<T>& inputTensor, const uint16_t nBurst,
+                              const uint32_t copyLen, uint32_t srcStride = 0)
 {
     DataCopyPadExtParams<T> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -309,10 +304,10 @@ __aicore__ inline void CopyIn(
     DataCopyPad(inputTensor, inputGm, dataCoptExtParams, dataCopyPadExtParams);
 }
 
-__aicore__ inline void SetDefaultBlockTiling(
-    const SwigluGroupTilingData* tilingData, int64_t& usedCoreNums, int64_t& rowOfFormerBlock,
-    int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock, int64_t& rowLoopOfTailBlock,
-    int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
+__aicore__ inline void SetDefaultBlockTiling(const SwigluGroupTilingData* tilingData, int64_t& usedCoreNums,
+                                             int64_t& rowOfFormerBlock, int64_t& rowOfTailBlock,
+                                             int64_t& rowLoopOfFormerBlock, int64_t& rowLoopOfTailBlock,
+                                             int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
 {
     rowOfFormerBlock = tilingData->rowOfFormerBlock;
     rowOfTailBlock = tilingData->rowOfTailBlock;
@@ -323,38 +318,39 @@ __aicore__ inline void SetDefaultBlockTiling(
     usedCoreNums = GetBlockNum();
 }
 
-__aicore__ inline void SetGroupIndexBlockTiling(
-    const SwigluGroupTilingData* tilingData, int64_t realBs, int64_t& usedCoreNums,
-    int64_t& rowOfFormerBlock, int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
-    int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
+__aicore__ inline void SetGroupIndexBlockTiling(const SwigluGroupTilingData* tilingData, int64_t realBs,
+                                                int64_t& usedCoreNums, int64_t& rowOfFormerBlock,
+                                                int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
+                                                int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock,
+                                                int64_t& tailRowFactorOfTailBlock)
 {
     rowOfFormerBlock = CeilDiv(realBs, static_cast<int64_t>(tilingData->coreNum));
-    usedCoreNums = CeilDiv(realBs, rowOfFormerBlock) < tilingData->coreNum
-        ? CeilDiv(realBs, rowOfFormerBlock)
-        : tilingData->coreNum;
+    usedCoreNums = CeilDiv(realBs, rowOfFormerBlock) < tilingData->coreNum ? CeilDiv(realBs, rowOfFormerBlock) :
+                                                                             tilingData->coreNum;
     rowOfTailBlock = realBs - (usedCoreNums - 1) * rowOfFormerBlock;
 
     rowLoopOfFormerBlock = CeilDiv(rowOfFormerBlock, tilingData->rowFactor);
     rowLoopOfTailBlock = CeilDiv(rowOfTailBlock, tilingData->rowFactor);
-    tailRowFactorOfFormerBlock = rowOfFormerBlock % tilingData->rowFactor == 0
-        ? tilingData->rowFactor
-        : rowOfFormerBlock % tilingData->rowFactor;
-    tailRowFactorOfTailBlock = rowOfTailBlock % tilingData->rowFactor == 0
-        ? tilingData->rowFactor
-        : rowOfTailBlock % tilingData->rowFactor;
+    tailRowFactorOfFormerBlock = rowOfFormerBlock % tilingData->rowFactor == 0 ?
+                                     tilingData->rowFactor :
+                                     rowOfFormerBlock % tilingData->rowFactor;
+    tailRowFactorOfTailBlock = rowOfTailBlock % tilingData->rowFactor == 0 ? tilingData->rowFactor :
+                                                                             rowOfTailBlock % tilingData->rowFactor;
 }
 
 template <typename TBufPoolType>
-__aicore__ inline void ProcessGroupIndexTiling(
-    GM_ADDR groupIndex, const SwigluGroupTilingData* tilingData, TBufPoolType& tBufPool,
-    TQue<QuePosition::VECIN, 1>& groupIndexQue, TBuf<QuePosition::VECCALC>& groupIndexSumBuf,
-    GlobalTensor<int64_t>& groupIndexGm, LocalTensor<int64_t>& groupSumLocal, bool& hasGroupIndex,
-    int64_t& usedCoreNums, int64_t& rowOfFormerBlock, int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
-    int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
+__aicore__ inline void ProcessGroupIndexTiling(GM_ADDR groupIndex, const SwigluGroupTilingData* tilingData,
+                                               TBufPoolType& tBufPool, TQue<QuePosition::VECIN, 1>& groupIndexQue,
+                                               TBuf<QuePosition::VECCALC>& groupIndexSumBuf,
+                                               GlobalTensor<int64_t>& groupIndexGm, LocalTensor<int64_t>& groupSumLocal,
+                                               bool& hasGroupIndex, int64_t& usedCoreNums, int64_t& rowOfFormerBlock,
+                                               int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
+                                               int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock,
+                                               int64_t& tailRowFactorOfTailBlock)
 {
     if (groupIndex == nullptr) {
         SetDefaultBlockTiling(tilingData, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
-            rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+                              rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
         return;
     }
 
@@ -381,15 +377,14 @@ __aicore__ inline void ProcessGroupIndexTiling(
     WaitFlag<HardEvent::V_S>(eventId);
     int64_t groupSum = groupSumLocal.GetValue(0);
     int64_t realBs = groupSum > tilingData->bs ? tilingData->bs : groupSum;
-    SetGroupIndexBlockTiling(tilingData, realBs, usedCoreNums, rowOfFormerBlock, rowOfTailBlock,
-        rowLoopOfFormerBlock, rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+    SetGroupIndexBlockTiling(tilingData, realBs, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
+                             rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
     tBufPool.Reset();
 }
 
 template <typename T, AscendC::PaddingMode mode = AscendC::PaddingMode::Normal>
-__aicore__ inline void CopyOut(
-    const LocalTensor<T>& outputTensor, const GlobalTensor<T>& outputGm, const uint16_t nBurst, const uint32_t copyLen,
-    uint32_t dstStride = 0)
+__aicore__ inline void CopyOut(const LocalTensor<T>& outputTensor, const GlobalTensor<T>& outputGm,
+                               const uint16_t nBurst, const uint32_t copyLen, uint32_t dstStride = 0)
 {
     DataCopyExtParams dataCopyParams;
     dataCopyParams.blockCount = nBurst;

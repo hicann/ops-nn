@@ -17,28 +17,20 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-namespace EluGradOp
-{
+namespace EluGradOp {
 #define TPL_FP16 1
 #define TPL_BF16 2
 #define TPL_FP32 3
- 
+
 #define TPL_SCH_MODE_0 0
 #define TPL_SCH_MODE_1 1
 
+ASCENDC_TPL_ARGS_DECL(EluGrad, ASCENDC_TPL_UINT_DECL(scheMode, 1, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
+                      ASCENDC_TPL_DTYPE_DECL(dType, TPL_FP16, TPL_BF16, TPL_FP32));
 
-ASCENDC_TPL_ARGS_DECL(EluGrad,
-    ASCENDC_TPL_UINT_DECL(scheMode, 1, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
-    ASCENDC_TPL_DTYPE_DECL(dType, TPL_FP16, TPL_BF16, TPL_FP32)
-);
- 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(scheMode, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP16, TPL_BF16, TPL_FP32)
-    )
-);
-}   //namespace EluGradOp
-
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(scheMode, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0,
+                                                          TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP16, TPL_BF16, TPL_FP32)));
+} // namespace EluGradOp
 
 #endif //  CANN_CUSTOM_OPS_ELU_GRAD_STRUCT_H_

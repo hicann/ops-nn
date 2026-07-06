@@ -20,11 +20,12 @@
 
 namespace optiling {
 
-static ge::graphStatus Tiling4ScatterNdUpdate(gert::TilingContext* context) {
-  OP_LOGD(context->GetNodeName(), "ScatterNdUpdateTiling running begin");
-  OP_LOGD(context->GetNodeName(), "Tiling4ScatterNdAdd running ScatterNdUpdate tiling.");
-  ScatterNdUpdateTiling tiling(context);
-  return tiling.DoTiling();
+static ge::graphStatus Tiling4ScatterNdUpdate(gert::TilingContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "ScatterNdUpdateTiling running begin");
+    OP_LOGD(context->GetNodeName(), "Tiling4ScatterNdAdd running ScatterNdUpdate tiling.");
+    ScatterNdUpdateTiling tiling(context);
+    return tiling.DoTiling();
 }
 
 ge::graphStatus TilingPrepareScatterNdUpdateForAscendC(gert::TilingParseContext* context)
@@ -36,26 +37,25 @@ ge::graphStatus TilingPrepareScatterNdUpdateForAscendC(gert::TilingParseContext*
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compile_info->core_num <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to core num."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compile_info->core_num <= 0), OP_LOGE(context->GetNodeName(), "Failed to core num."),
+                return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compile_info->ub_size = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compile_info->ub_size <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compile_info->ub_size <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4ScatterNdUpdate(gert::TilingParseContext* context) {
-  TilingPrepareScatterNdUpdateForAscendC(context);
-  OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4ScatterNdUpdate success.");
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus TilingPrepare4ScatterNdUpdate(gert::TilingParseContext* context)
+{
+    TilingPrepareScatterNdUpdateForAscendC(context);
+    OP_LOGD(context->GetNodeName(), "AscendC TilingPrepare4ScatterNdUpdate success.");
+    return ge::GRAPH_SUCCESS;
 }
 
 // register tiling interface of the ScatterNdUpdate op.
 IMPL_OP_OPTILING(ScatterNdUpdate)
     .Tiling(Tiling4ScatterNdUpdate)
     .TilingParse<ScatterNdUpdateCompileInfo>(TilingPrepare4ScatterNdUpdate);
-}  // namespace optiling
+} // namespace optiling

@@ -83,43 +83,49 @@ void MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcParamsEachCore()
     scalarTilingData_.hOutputOuter = Ops::Base::CeilDiv(inputData.hX, scalarTilingData_.hOutputInner);
     scalarTilingData_.wOutputOuter = Ops::Base::CeilDiv(inputData.wX, scalarTilingData_.wOutputInner);
     scalarTilingData_.highAxisTail = ncTotal - (scalarTilingData_.highAxisOuter - 1) * scalarTilingData_.highAxisInner;
-    scalarTilingData_.hOutputTail =
-        inputData.hX - (scalarTilingData_.hOutputOuter - 1) * scalarTilingData_.hOutputInner;
-    scalarTilingData_.wOutputTail =
-        inputData.wX - (scalarTilingData_.wOutputOuter - 1) * scalarTilingData_.wOutputInner;
-    int64_t totalCount =
-        scalarTilingData_.highAxisOuter * scalarTilingData_.hOutputOuter * scalarTilingData_.wOutputOuter;
+    scalarTilingData_.hOutputTail = inputData.hX -
+                                    (scalarTilingData_.hOutputOuter - 1) * scalarTilingData_.hOutputInner;
+    scalarTilingData_.wOutputTail = inputData.wX -
+                                    (scalarTilingData_.wOutputOuter - 1) * scalarTilingData_.wOutputInner;
+    int64_t totalCount = scalarTilingData_.highAxisOuter * scalarTilingData_.hOutputOuter *
+                         scalarTilingData_.wOutputOuter;
     scalarTilingData_.normalCoreProcessNum = Ops::Base::CeilDiv(totalCount, hardwareData.coreNum);
     scalarTilingData_.usedCoreNum = Ops::Base::CeilDiv(totalCount, scalarTilingData_.normalCoreProcessNum);
-    scalarTilingData_.tailCoreProcessNum =
-        totalCount - (scalarTilingData_.usedCoreNum - 1) * scalarTilingData_.normalCoreProcessNum;
+    scalarTilingData_.tailCoreProcessNum = totalCount -
+                                           (scalarTilingData_.usedCoreNum - 1) * scalarTilingData_.normalCoreProcessNum;
     return;
 }
 void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetNormalInner()
 {
-    scalarTilingData_.argmaxNcOuter = Ops::Base::CeilDiv(scalarTilingData_.highAxisInner, scalarTilingData_.argmaxNcInner);
+    scalarTilingData_.argmaxNcOuter = Ops::Base::CeilDiv(scalarTilingData_.highAxisInner,
+                                                         scalarTilingData_.argmaxNcInner);
     scalarTilingData_.argmaxHOuter = Ops::Base::CeilDiv(hInputInner_, scalarTilingData_.argmaxHInner);
     scalarTilingData_.argmaxWOuter = Ops::Base::CeilDiv(wInputInner_, scalarTilingData_.argmaxWInner);
-    scalarTilingData_.argmaxNcTail =
-        scalarTilingData_.highAxisInner - (scalarTilingData_.argmaxNcOuter - 1) * scalarTilingData_.argmaxNcInner;
-    scalarTilingData_.argmaxHTail = hInputInner_ - (scalarTilingData_.argmaxHOuter - 1) * scalarTilingData_.argmaxHInner;
-    scalarTilingData_.argmaxWTail = wInputInner_ - (scalarTilingData_.argmaxWOuter - 1) * scalarTilingData_.argmaxWInner;
-    scalarTilingData_.argmaxInnerLoop =
-        scalarTilingData_.argmaxNcOuter * scalarTilingData_.argmaxHOuter * scalarTilingData_.argmaxWOuter;
-    return ;
+    scalarTilingData_.argmaxNcTail = scalarTilingData_.highAxisInner -
+                                     (scalarTilingData_.argmaxNcOuter - 1) * scalarTilingData_.argmaxNcInner;
+    scalarTilingData_.argmaxHTail = hInputInner_ -
+                                    (scalarTilingData_.argmaxHOuter - 1) * scalarTilingData_.argmaxHInner;
+    scalarTilingData_.argmaxWTail = wInputInner_ -
+                                    (scalarTilingData_.argmaxWOuter - 1) * scalarTilingData_.argmaxWInner;
+    scalarTilingData_.argmaxInnerLoop = scalarTilingData_.argmaxNcOuter * scalarTilingData_.argmaxHOuter *
+                                        scalarTilingData_.argmaxWOuter;
+    return;
 }
 void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetTailInner()
 {
-    scalarTilingData_.argmaxNcOuterTail = Ops::Base::CeilDiv(scalarTilingData_.highAxisTail, scalarTilingData_.argmaxNcInnerTail);
+    scalarTilingData_.argmaxNcOuterTail = Ops::Base::CeilDiv(scalarTilingData_.highAxisTail,
+                                                             scalarTilingData_.argmaxNcInnerTail);
     scalarTilingData_.argmaxHOuterTail = Ops::Base::CeilDiv(hInputInner_, scalarTilingData_.argmaxHInnerTail);
     scalarTilingData_.argmaxWOuterTail = Ops::Base::CeilDiv(wInputInner_, scalarTilingData_.argmaxWInnerTail);
-    scalarTilingData_.argmaxNcTailTail =
-        scalarTilingData_.highAxisTail - (scalarTilingData_.argmaxNcOuterTail - 1) * scalarTilingData_.argmaxNcInnerTail;
-    scalarTilingData_.argmaxHTailTail = hInputInner_ - (scalarTilingData_.argmaxHOuterTail - 1) * scalarTilingData_.argmaxHInnerTail;
-    scalarTilingData_.argmaxWTailTail = wInputInner_ - (scalarTilingData_.argmaxWOuterTail - 1) * scalarTilingData_.argmaxWInnerTail;
-    scalarTilingData_.argmaxInnerLoopTail =
-        scalarTilingData_.argmaxNcOuterTail * scalarTilingData_.argmaxHOuterTail * scalarTilingData_.argmaxWOuterTail;
-    return ;
+    scalarTilingData_.argmaxNcTailTail = scalarTilingData_.highAxisTail - (scalarTilingData_.argmaxNcOuterTail - 1) *
+                                                                              scalarTilingData_.argmaxNcInnerTail;
+    scalarTilingData_.argmaxHTailTail = hInputInner_ -
+                                        (scalarTilingData_.argmaxHOuterTail - 1) * scalarTilingData_.argmaxHInnerTail;
+    scalarTilingData_.argmaxWTailTail = wInputInner_ -
+                                        (scalarTilingData_.argmaxWOuterTail - 1) * scalarTilingData_.argmaxWInnerTail;
+    scalarTilingData_.argmaxInnerLoopTail = scalarTilingData_.argmaxNcOuterTail * scalarTilingData_.argmaxHOuterTail *
+                                            scalarTilingData_.argmaxWOuterTail;
+    return;
 }
 ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmaxInnerTail(int64_t argmaxCountInUB)
 {
@@ -207,15 +213,13 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmax()
     SetTailInner();
     return result;
 }
-uint64_t MaxPoolGradWithArgmaxV3NCHWScalarTiling::GetTilingKey() const
-{
-    return CHECK_RANGE_TILING_KEY_NCHW_SCALAR;
-}
+uint64_t MaxPoolGradWithArgmaxV3NCHWScalarTiling::GetTilingKey() const { return CHECK_RANGE_TILING_KEY_NCHW_SCALAR; }
 
 void MaxPoolGradWithArgmaxV3NCHWScalarTiling::SetTilingData()
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData*
+        tilingData = context_->GetTilingData<
+            MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData>();
     tilingData->hArgmax = inputData.hGrad;
     tilingData->wArgmax = inputData.wGrad;
     tilingData->hOutput = inputData.hX;
@@ -272,8 +276,9 @@ void MaxPoolGradWithArgmaxV3NCHWScalarTiling::PrintData() const
 }
 ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::PostTiling()
 {
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData*
+        tilingData = context_->GetTilingData<
+            MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWScalarTilingCommonData>();
     context_->SetBlockDim(tilingData->usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }

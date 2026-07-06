@@ -84,25 +84,23 @@ bool BatchNormGradV3RARSplitCoreR1::IsCapable()
 
     // a轴开核大于1/4
     if (aDim > static_cast<int64_t>(coreNum) / A_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR) {
-        OP_LOGD(
-            context_->GetNodeName(), "RAR split core template not support shape: (%ld, %ld, %ld), aDim > %ld", r1Dim,
-            aDim, r0Dim, static_cast<int64_t>(coreNum) / A_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR);
+        OP_LOGD(context_->GetNodeName(), "RAR split core template not support shape: (%ld, %ld, %ld), aDim > %ld",
+                r1Dim, aDim, r0Dim, static_cast<int64_t>(coreNum) / A_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR);
         return false;
     }
 
     // r1 开核后大于一半
     if (r1Dim < static_cast<int64_t>(coreNum)) {
-        OP_LOGD(
-            context_->GetNodeName(), "RAR split core template not support shape: (%ld, %ld, %ld), r1Dim < %ld", r1Dim,
-            aDim, r0Dim, static_cast<int64_t>(coreNum));
+        OP_LOGD(context_->GetNodeName(), "RAR split core template not support shape: (%ld, %ld, %ld), r1Dim < %ld",
+                r1Dim, aDim, r0Dim, static_cast<int64_t>(coreNum));
         return false;
     }
 
     // 剔除全载场景
     if (r1Dim * r0Dim * R1_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR < static_cast<int64_t>(ubSize)) {
-        OP_LOGD(
-            context_->GetNodeName(), "RAR split core template not support shape: (%ld, %ld, %ld), r0Dim * r1Dim < %ld",
-            r1Dim, aDim, r0Dim, ubSize / R1_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR);
+        OP_LOGD(context_->GetNodeName(),
+                "RAR split core template not support shape: (%ld, %ld, %ld), r0Dim * r1Dim < %ld", r1Dim, aDim, r0Dim,
+                ubSize / R1_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR);
         return false;
     }
 
@@ -152,18 +150,16 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage0()
     // dbeta二分预处理，fp32直接用拷贝输入，b16增加cast输出缓存
     int64_t reduceTmpBufNum = dyDtype == ge::DT_FLOAT ? REDUCE_TMP_BUF_NUM_FP32 : REDUCE_TMP_BUF_NUM_FP16;
     // 切r0
-    int64_t factorMax =
-        (ubSize - aInnerAligned * FLOAT32_BYTES * (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) / dyBaseLen_ /
-        (DOUBLE_BUFFER * dyDtypeSize_ * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES);
+    int64_t factorMax = (ubSize -
+                         aInnerAligned * FLOAT32_BYTES * (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) /
+                        dyBaseLen_ / (DOUBLE_BUFFER * dyDtypeSize_ * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES);
 
-    OP_TILING_CHECK(
-        factorMax <= 0,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "BatchNormGradV3 RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
-            "factorMax in stage0 is %ld .",
-            r1Dim, aDim, r0Dim, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(factorMax <= 0,
+                    OP_LOGI(context_->GetNodeName(),
+                            "BatchNormGradV3 RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
+                            "factorMax in stage0 is %ld .",
+                            r1Dim, aDim, r0Dim, factorMax),
+                    return ge::GRAPH_PARAM_INVALID);
 
     int64_t r0FactorMax = Ops::Base::CeilDiv(r0Dim, dyBaseLen_);
     int64_t r0Factor = factorMax <= r0FactorMax ? factorMax : r0FactorMax;
@@ -185,17 +181,16 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage0()
 
     cacheBufferCount = ComputeBinaryAddParams(fusedR, lastCoreFusedR);
 
-    OP_LOGD(
-        context_->GetNodeName(),
-        "BatchNormGradV3 R1 split core template Stage0, r0Outer: %ld, r1InnerOuter: %ld, cache buffer count: %ld.",
-        r0Outer, r1InnerOuter, cacheBufferCount);
+    OP_LOGD(context_->GetNodeName(),
+            "BatchNormGradV3 R1 split core template Stage0, r0Outer: %ld, r1InnerOuter: %ld, cache buffer count: %ld.",
+            r0Outer, r1InnerOuter, cacheBufferCount);
 
     // 切a, 取（aInner + (blockFp32Nums_ -1)) == aAligned 简化计算
-    int64_t aInnerMax =
-        (ubSize -
-         (blockFp32Nums_ - CONST_ONE) * FLOAT32_BYTES * (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) /
-        (r0Inner * r1InnerInner * (dyDtypeSize_ * DOUBLE_BUFFER * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES) +
-         (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount + 2) * FLOAT32_BYTES);
+    int64_t aInnerMax = (ubSize - (blockFp32Nums_ - CONST_ONE) * FLOAT32_BYTES *
+                                      (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount)) /
+                        (r0Inner * r1InnerInner *
+                             (dyDtypeSize_ * DOUBLE_BUFFER * BIG_SHAPES_STG0 + reduceTmpBufNum * FLOAT32_BYTES) +
+                         (DOUBLE_BUFFER * SMALL_SHAPES_STG0 + cacheBufferCount + 2) * FLOAT32_BYTES);
 
     aInner = aInnerMax < aDim ? aInnerMax : aDim;
     aInnerAligned = Ops::Base::CeilAlign(aInner, blockFp32Nums_);
@@ -236,8 +231,9 @@ int64_t BatchNormGradV3RARSplitCoreR1::ComputeBinaryAddParams(int64_t fusedR, in
         binAddResultCacheID = GetCacheID(binAddBasicBlockLoop - CONST_ONE);
     }
 
-    int64_t lastCoreBinAddBasicBlockLoop =
-        lastCoreFusedR > 1 ? (1L << (ULONG_BIT_LEN - CONST_ONE - __builtin_clzl(lastCoreFusedR - CONST_ONE))) : 0;
+    int64_t lastCoreBinAddBasicBlockLoop = lastCoreFusedR > 1 ? (1L << (ULONG_BIT_LEN - CONST_ONE -
+                                                                        __builtin_clzl(lastCoreFusedR - CONST_ONE))) :
+                                                                0;
     int64_t lastCoreMainFoldCount = lastCoreFusedR - lastCoreBinAddBasicBlockLoop;
     int64_t lastCoreBinAddResultCacheID = 0;
     if (lastCoreBinAddBasicBlockLoop != 0) {
@@ -266,14 +262,12 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage1()
     int64_t factorMax = ubSize / (DOUBLE_BUFFER * CONST_TWO * weightBaseLen *
                                   (FLOAT32_BYTES * usedCoreNums_ + (FLOAT32_BYTES + weightDtypeSize)));
 
-    OP_TILING_CHECK(
-        factorMax <= 0,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "BatchNormGradV3 RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
-            "factorMax in stage1 is %ld .",
-            r1Dim, aDim, r0Dim, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(factorMax <= 0,
+                    OP_LOGI(context_->GetNodeName(),
+                            "BatchNormGradV3 RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
+                            "factorMax in stage1 is %ld .",
+                            r1Dim, aDim, r0Dim, factorMax),
+                    return ge::GRAPH_PARAM_INVALID);
 
     int64_t aFactorMax = Ops::Base::CeilDiv(aDim, weightBaseLen);
     int64_t aFactor = factorMax <= aFactorMax ? factorMax : aFactorMax;
@@ -281,10 +275,9 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage1()
     int64_t aOuter = Ops::Base::CeilDiv(aDim, aInner);
     int64_t aTail = aDim - (aOuter - CONST_ONE) * aInner;
 
-    OP_LOGD(
-        context_->GetNodeName(),
-        "BatchNormGradV3 R1 split core template Stage1, weightBaseLen: %ld, aFactor: %ld, aInner: %ld.", weightBaseLen,
-        aFactor, aInner);
+    OP_LOGD(context_->GetNodeName(),
+            "BatchNormGradV3 R1 split core template Stage1, weightBaseLen: %ld, aFactor: %ld, aInner: %ld.",
+            weightBaseLen, aFactor, aInner);
 
     tilingData_.set_aInnerStg1(aInner);
     tilingData_.set_aOuterStg1(aOuter);
@@ -304,14 +297,12 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage2()
     int64_t factorMax = (ubSize - aInnerAligned * FLOAT32_BYTES * DOUBLE_BUFFER * SMALL_SHAPES_STG2) / dyBaseLen_ /
                         (DOUBLE_BUFFER * FLOAT32_BYTES * BIG_SHAPES_STG2);
 
-    OP_TILING_CHECK(
-        factorMax <= 0,
-        OP_LOGI(
-            context_->GetNodeName(),
-            "BatchNormGradV3 RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
-            "factorMax in stage2 is %ld .",
-            r1Dim, aDim, r0Dim, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(factorMax <= 0,
+                    OP_LOGI(context_->GetNodeName(),
+                            "BatchNormGradV3 RAR R1 split core template is not capable. Shape (%ld, %ld, %ld), "
+                            "factorMax in stage2 is %ld .",
+                            r1Dim, aDim, r0Dim, factorMax),
+                    return ge::GRAPH_PARAM_INVALID);
 
     int64_t r0FactorMax = Ops::Base::CeilDiv(r0Dim, dyBaseLen_);
     int64_t r0Factor = factorMax <= r0FactorMax ? factorMax : r0FactorMax;
@@ -355,10 +346,7 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage2()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormGradV3RARSplitCoreR1::GetTilingKey() const
-{
-    return BATCH_NORM_GRAD_V3_RAR_SPLIT_CORE_R1_TILING_KEY;
-}
+uint64_t BatchNormGradV3RARSplitCoreR1::GetTilingKey() const { return BATCH_NORM_GRAD_V3_RAR_SPLIT_CORE_R1_TILING_KEY; }
 
 ge::graphStatus BatchNormGradV3RARSplitCoreR1::GetWorkspaceSize()
 {

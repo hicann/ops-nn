@@ -20,8 +20,11 @@ class LambUpdateWithLr : public OpDef {
 public:
     explicit LambUpdateWithLr(const char* name) : OpDef(name)
     {
-        static const char* kIn[] = {"input_greater1", "input_greater_realdiv", "input_realdiv", "input_mul0",
-                                    "input_mul1", "input_sub", "greater_y", "select_e", "minimum_y"};
+        static const char* kIn[] = {"input_greater1", "input_greater_realdiv",
+                                    "input_realdiv",  "input_mul0",
+                                    "input_mul1",     "input_sub",
+                                    "greater_y",      "select_e",
+                                    "minimum_y"};
         for (auto n : kIn) {
             this->Input(n)
                 .ParamType(REQUIRED)

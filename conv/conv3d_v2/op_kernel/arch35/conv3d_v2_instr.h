@@ -17,8 +17,8 @@
 #define CONV3D_V2_INSTR_H
 
 #if (__CCE_AICORE__ > 300)
-    #include "conv3d_v2_instr_impl.h"
-    #include "conv3d_v2_instr_dequant_impl.h"
+#include "conv3d_v2_instr_impl.h"
+#include "conv3d_v2_instr_dequant_impl.h"
 #endif
 
 #endif // CONV3D_V2_INSTR_H

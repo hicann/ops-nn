@@ -21,24 +21,24 @@
 
 namespace optiling {
 namespace transpose_batch_mat_mul {
-    struct BatchShapeInfo {
-        uint64_t batchA = 1;
-        uint64_t batchA0 = 1;
-        uint64_t batchA1 = 1;
-        uint64_t batchA2 = 1;
-        uint64_t batchA3 = 1;
-        uint64_t batchB = 1;
-        uint64_t batchB0 = 1;
-        uint64_t batchB1 = 1;
-        uint64_t batchB2 = 1;
-        uint64_t batchB3 = 1;
-        uint64_t batchC = 1;
-        uint64_t batchC0 = 1;
-        uint64_t batchC1 = 1;
-        uint64_t batchC2 = 1;
-        uint64_t batchC3 = 1;
-        bool biasWithBatch = false;
-    };
+struct BatchShapeInfo {
+    uint64_t batchA = 1;
+    uint64_t batchA0 = 1;
+    uint64_t batchA1 = 1;
+    uint64_t batchA2 = 1;
+    uint64_t batchA3 = 1;
+    uint64_t batchB = 1;
+    uint64_t batchB0 = 1;
+    uint64_t batchB1 = 1;
+    uint64_t batchB2 = 1;
+    uint64_t batchB3 = 1;
+    uint64_t batchC = 1;
+    uint64_t batchC0 = 1;
+    uint64_t batchC1 = 1;
+    uint64_t batchC2 = 1;
+    uint64_t batchC3 = 1;
+    bool biasWithBatch = false;
+};
 
 enum class TilingCalcSelect : uint8_t //选择不同的计算Tiling的方法
 {
@@ -49,46 +49,46 @@ enum class TilingCalcSelect : uint8_t //选择不同的计算Tiling的方法
 class TransposeBatchMatMulBaseTiling : public matmul_v3::MatmulV3BaseTiling {
 public:
     explicit TransposeBatchMatMulBaseTiling(gert::TilingContext* context)
-       : MatmulV3BaseTiling(context, &tbmmTilingDataSelf_.matmulTiling) , tbmmTilingData_(tbmmTilingDataSelf_){
-    }
+        : MatmulV3BaseTiling(context, &tbmmTilingDataSelf_.matmulTiling), tbmmTilingData_(tbmmTilingDataSelf_)
+    {}
 
-    TransposeBatchMatMulBaseTiling(gert::TilingContext* context, TBMMTilingData &tbmmTilingData,
-        TilingCalcSelect tilingSelect = TilingCalcSelect::COMMON)
-       : MatmulV3BaseTiling(context, &tbmmTilingData.matmulTiling), tbmmTilingData_(tbmmTilingData) {
+    TransposeBatchMatMulBaseTiling(gert::TilingContext* context, TBMMTilingData& tbmmTilingData,
+                                   TilingCalcSelect tilingSelect = TilingCalcSelect::COMMON)
+        : MatmulV3BaseTiling(context, &tbmmTilingData.matmulTiling), tbmmTilingData_(tbmmTilingData)
+    {
         tilingSelect_ = tilingSelect;
     }
 
-    ~TransposeBatchMatMulBaseTiling() override {
-    }
+    ~TransposeBatchMatMulBaseTiling() override {}
 
 protected:
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
     // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override; //4
+    ge::graphStatus DoLibApiTiling() override; // 4
     // 6、保存Tiling数据
-    ge::graphStatus PostTiling() override; //6
+    ge::graphStatus PostTiling() override; // 6
     // 7、计算TilingKey
-    uint64_t GetTilingKey() const override; //7
+    uint64_t GetTilingKey() const override; // 7
 
     ge::graphStatus CheckArgs() override;
     ge::graphStatus GetArgs() override;
     ge::graphStatus GetShape();
-    ge::graphStatus GetShapeMKN(const gert::Shape &aShape, const gert::Shape &bShape);
-    ge::graphStatus GetShapeBatch(const gert::Shape &aShape, const gert::Shape &bShape);
+    ge::graphStatus GetShapeMKN(const gert::Shape& aShape, const gert::Shape& bShape);
+    ge::graphStatus GetShapeBatch(const gert::Shape& aShape, const gert::Shape& bShape);
     ge::graphStatus GetShapeBias();
 
     bool CheckBMMTilingDataIsVaild() const;
     void DoCommonTiling();
     void BaseLoadBalance();
     void ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN);
-    TBMMTilingData &tbmmTilingData_;
+    TBMMTilingData& tbmmTilingData_;
     BatchShapeInfo batchInfo_;
     TilingCalcSelect tilingSelect_ = TilingCalcSelect::ALL;
 
 private:
-    const gert::ContinuousVector *aPermList_ = nullptr;
-    const gert::ContinuousVector *bPermList_ = nullptr;
+    const gert::ContinuousVector* aPermList_ = nullptr;
+    const gert::ContinuousVector* bPermList_ = nullptr;
     uint64_t transA_;
     uint64_t transB_;
     int32_t batchSplitFactor_ = 1;
@@ -97,6 +97,6 @@ private:
     uint64_t bBatchDimAll_{1};
     uint64_t cBatchDimAll_{1};
 };
-}
-}
+} // namespace transpose_batch_mat_mul
+} // namespace optiling
 #endif // __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_BASE_TILING_H__

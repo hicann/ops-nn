@@ -32,8 +32,7 @@ namespace optiling {
 
 namespace rms_norm_quant_v2 {
 
-enum class ComputeMode : uint64_t
-{
+enum class ComputeMode : uint64_t {
     FULL_LOAD = 0,
     RECOMPUTE = 1,
 };
@@ -46,10 +45,7 @@ public:
         return *this;
     }
 
-    uint64_t GetTilingKey() const
-    {
-        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_));
-    }
+    uint64_t GetTilingKey() const { return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_)); }
 
 private:
     ComputeMode computeMode_ = ComputeMode::FULL_LOAD;
@@ -104,7 +100,7 @@ struct RmsNormQuantV2RegbaseTilingParams {
     int64_t rXDtypeAlign{0};
     int64_t rScaleAlign{0};
     int64_t rZeroPointAlign{0};
-    int64_t powerLoop{0};    
+    int64_t powerLoop{0};
     int64_t blockFactor{0};
     int64_t blockTail{0};
     int64_t ubFactor{0};
@@ -130,13 +126,13 @@ struct RmsNormQuantV2RegbaseTilingParams {
 
 class RmsNormQuantV2RegbaseTilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit RmsNormQuantV2RegbaseTilingBase(gert::TilingContext* tilingContext) : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    explicit RmsNormQuantV2RegbaseTilingBase(gert::TilingContext* tilingContext)
+        : Ops::NN::Optiling::TilingBaseClass(tilingContext)
     {}
-    ~RmsNormQuantV2RegbaseTilingBase() override
-    {}
+    ~RmsNormQuantV2RegbaseTilingBase() override {}
 
-    ge::graphStatus CheckDtypeVaild(
-        ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName);
+    ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList,
+                                    string srcName);
     bool CheckShapeNull();
     bool CheckOptionalInput();
     bool CheckInputShapeDim();
@@ -144,10 +140,10 @@ public:
     bool CheckInputDtype();
     bool CheckOutputDtype();
     bool CheckOutputShape();
-    bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
-        string inNodeName, string inSrc1Name, string inSrc2Name);
-    bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape,
-        string inNodeName, string inSrcBcName, string inSrcName);
+    bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape, string inNodeName,
+                        string inSrc1Name, string inSrc2Name);
+    bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape, string inNodeName,
+                      string inSrcBcName, string inSrcName);
     bool CheckAllDimsAreOne(const gert::StorageShape* storegeShape);
     ge::graphStatus SetInputParams();
     int64_t CalUBTotalSize(int64_t baseM, int64_t baseN, const uint32_t tilingType);
@@ -159,22 +155,21 @@ protected:
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus DoLibApiTiling() override;
-    ge::graphStatus GetWorkspaceSize() override; 
+    ge::graphStatus GetWorkspaceSize() override;
     RmsNormQuantV2RegbaseTilingParams tilingParams;
     const std::string nodeName = "RmsNormQuantV2RegbaseTiling";
 };
 
 class RmsNormQuantV2RegbaseTilingFullLoad : public RmsNormQuantV2RegbaseTilingBase {
 public:
-    explicit RmsNormQuantV2RegbaseTilingFullLoad(gert::TilingContext* tilingContext) : RmsNormQuantV2RegbaseTilingBase(tilingContext)
+    explicit RmsNormQuantV2RegbaseTilingFullLoad(gert::TilingContext* tilingContext)
+        : RmsNormQuantV2RegbaseTilingBase(tilingContext)
     {}
     ~RmsNormQuantV2RegbaseTilingFullLoad() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        RmsNormQuantV2RegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { RmsNormQuantV2RegbaseTilingBase::Reset(context); }
     void SetTilingData();
     void PrintTilingData();
+
 protected:
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
@@ -187,14 +182,13 @@ private:
 
 class RmsNormQuantV2RegbaseTilingRecompute : public RmsNormQuantV2RegbaseTilingBase {
 public:
-    explicit RmsNormQuantV2RegbaseTilingRecompute(gert::TilingContext* tilingContext) : RmsNormQuantV2RegbaseTilingBase(tilingContext)
+    explicit RmsNormQuantV2RegbaseTilingRecompute(gert::TilingContext* tilingContext)
+        : RmsNormQuantV2RegbaseTilingBase(tilingContext)
     {}
     ~RmsNormQuantV2RegbaseTilingRecompute() override = default;
-    void Reset(gert::TilingContext* context) override
-    {
-        RmsNormQuantV2RegbaseTilingBase::Reset(context);
-    }
+    void Reset(gert::TilingContext* context) override { RmsNormQuantV2RegbaseTilingBase::Reset(context); }
     void PrintTilingData();
+
 protected:
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
@@ -205,7 +199,7 @@ protected:
 
 private:
     int64_t baseN{64};  // 确保 baseN_  是 2次幂
-    int64_t baseM{128};  // 确保 baseM 32B对齐，rstd一个vf
+    int64_t baseM{128}; // 确保 baseM 32B对齐，rstd一个vf
     RmsNormQuantV2RegbaseRecomputeTilingData tilingData;
 };
 

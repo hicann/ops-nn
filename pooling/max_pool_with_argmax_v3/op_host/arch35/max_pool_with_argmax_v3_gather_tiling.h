@@ -142,11 +142,9 @@ struct MaxPoolWithArgmaxV3GatherSplitInfo {
 
 class MaxPoolWithArgmaxV3GatherTiling : public MaxPoolWithArgmaxV3BaseTiling {
 public:
-    explicit MaxPoolWithArgmaxV3GatherTiling(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context)
-    {}
+    explicit MaxPoolWithArgmaxV3GatherTiling(gert::TilingContext* context) : MaxPoolWithArgmaxV3BaseTiling(context) {}
 
-    ~MaxPoolWithArgmaxV3GatherTiling() override
-    {}
+    ~MaxPoolWithArgmaxV3GatherTiling() override {}
 
 private:
     void DoUBTiling();

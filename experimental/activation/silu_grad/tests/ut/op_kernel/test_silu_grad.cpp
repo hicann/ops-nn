@@ -22,21 +22,14 @@
 #include "../../../op_kernel/silu_grad.h"
 #include <cstdint>
 
-extern "C" __global__ __aicore__ void silu_grad(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void silu_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
 
 using namespace std;
 
 class silu_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "silu_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "silu_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "silu_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "silu_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(silu_grad_test, test_case_0)

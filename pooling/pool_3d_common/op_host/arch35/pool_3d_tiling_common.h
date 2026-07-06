@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file pool_3d_tiling_common.h
  * \brief
@@ -26,8 +26,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include <algorithm>
 
-namespace optiling
-{
+namespace optiling {
 const int32_t DHW_DIMS = 3;
 const int32_t PAD_DIMS = 6;
 
@@ -66,6 +65,6 @@ struct Pool3DInputInfo {
 
 int64_t DivRtn(const int64_t x, const int64_t y);
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

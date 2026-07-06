@@ -30,7 +30,8 @@ using namespace ops;
 
 class PReluGradFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
+    static void SetUpTestCase()
+    {
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
@@ -40,7 +41,8 @@ protected:
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
@@ -50,7 +52,8 @@ protected:
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
-    std::shared_ptr<Graph> BuildPReluGradGraph(DataType dtype) {
+    std::shared_ptr<Graph> BuildPReluGradGraph(DataType dtype)
+    {
         std::vector<int64_t> dims_dy{2, 3, 4};
         std::vector<int64_t> dims_x{2, 3, 4};
         std::vector<int64_t> dims_weight{4};
@@ -63,20 +66,20 @@ protected:
         auto x = graph_builder.CreateInput(1, "x", dtype, FORMAT_ND, shape_x.GetDims());
         auto weight = graph_builder.CreateInput(2, "weight", dtype, FORMAT_ND, shape_weight.GetDims());
 
-        auto *graph = graph_builder.GetCGraphBuilder()->GetGraph();
+        auto* graph = graph_builder.GetCGraphBuilder()->GetGraph();
         auto prelu_grad = CompliantNodeBuilder(graph)
-            .OpType("PReluGrad")
-            .Name("PReluGrad")
-            .IrDefInputs({
-                {"dy", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                {"weight", CompliantNodeBuilder::kEsIrInputRequired, ""},
-            })
-            .IrDefOutputs({
-                {"dx", CompliantNodeBuilder::kEsIrOutputRequired, ""},
-                {"da", CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            })
-            .Build();
+                              .OpType("PReluGrad")
+                              .Name("PReluGrad")
+                              .IrDefInputs({
+                                  {"dy", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                  {"weight", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                              })
+                              .IrDefOutputs({
+                                  {"dx", CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                  {"da", CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                              })
+                              .Build();
 
         TensorDesc dy_output_desc;
         dy.GetProducer()->GetOutputDesc(0, dy_output_desc);
@@ -99,20 +102,22 @@ protected:
         es::AddEdgeAndUpdatePeerDesc(*graph, *dy.GetProducer(), dy.GetProducerOutIndex(), prelu_grad, 0);
         es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), prelu_grad, 1);
         es::AddEdgeAndUpdatePeerDesc(*graph, *weight.GetProducer(), weight.GetProducerOutIndex(), prelu_grad, 2);
-        
-        auto *dx_holder = graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad, 0);
-        auto *da_holder = graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad, 1);
+
+        auto* dx_holder = graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad, 0);
+        auto* da_holder = graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad, 1);
         return graph_builder.BuildAndReset({es::EsTensorHolder(dx_holder), es::EsTensorHolder(da_holder)});
     }
 };
 
-TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_pattern_test) {
+TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_pattern_test)
+{
     ops::PReluGradFusionPass pass;
     std::vector<PatternUniqPtr> patterns = pass.Patterns();
     EXPECT_GT(patterns.size(), 0);
 }
 
-TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_float_success) {
+TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_float_success)
+{
     std::shared_ptr<Graph> graph = BuildPReluGradGraph(DT_FLOAT);
     graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_prelu_grad_test1");
     CustomPassContext pass_context;
@@ -137,7 +142,8 @@ TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_float_success) {
     EXPECT_EQ(findPReluGradReduce, true);
 }
 
-TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_float16_success) {
+TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_float16_success)
+{
     std::shared_ptr<Graph> graph = BuildPReluGradGraph(DT_FLOAT16);
     graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_prelu_grad_test2");
     CustomPassContext pass_context;
@@ -162,7 +168,8 @@ TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_float16_success) {
     EXPECT_EQ(findPReluGradReduce, true);
 }
 
-TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_950_success) {
+TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_950_success)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
@@ -195,7 +202,8 @@ TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_950_success) {
     EXPECT_EQ(findPReluGradReduce, true);
 }
 
-TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_unsupported_platform_fail) {
+TEST_F(PReluGradFusionPassTest, prelu_grad_fusion_unsupported_platform_fail)
+{
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;

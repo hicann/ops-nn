@@ -28,15 +28,9 @@ using namespace ge;
 
 class AdamApplyOneWithDecayTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdamApplyOneWithDecayTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdamApplyOneWithDecayTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdamApplyOneWithDecayTiling TearDown" << std::endl; }
 };
 
 TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_1)
@@ -85,19 +79,19 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_1)
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -109,9 +103,8 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_1)
                       .SetOpType(op_type)
                       .NodeIoNum(10, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -186,19 +179,19 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_2)
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -210,9 +203,9 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_2)
                       .SetOpType(op_type)
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape, &input10_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape,
+                                    &input10_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -288,19 +281,19 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_3)
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -312,9 +305,9 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_3)
                       .SetOpType(op_type)
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape, &input10_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape,
+                                    &input10_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -390,19 +383,19 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_4)
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -414,9 +407,9 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_4)
                       .SetOpType(op_type)
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape, &input10_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape,
+                                    &input10_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
@@ -492,19 +485,19 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_5)
 
     // tilingParseFunc simulate
     compile_info_string = R"({})";
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     // tilingFunc simulate
@@ -516,9 +509,9 @@ TEST_F(AdamApplyOneWithDecayTilingTest, AdamApplyOneWithDecay_tiling_test_5)
                       .SetOpType(op_type)
                       .NodeIoNum(11, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape,
-                           &input6_shape, &input7_shape, &input8_shape, &input9_shape, &input10_shape})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape,
+                                    &input5_shape, &input6_shape, &input7_shape, &input8_shape, &input9_shape,
+                                    &input10_shape})
                       .OutputShapes({&output0_shape, &output1_shape, &output2_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))

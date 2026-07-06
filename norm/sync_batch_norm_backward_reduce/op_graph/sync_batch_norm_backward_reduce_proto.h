@@ -23,9 +23,11 @@ namespace ge {
 
 *@par Inputs:
 * Four inputs, including:
-*@li sum_dy: A ND tensor. Represents the sum of the gradients of the loss function output to the batch normalization layer.
+*@li sum_dy: A ND tensor. Represents the sum of the gradients of the loss function output to the batch normalization
+layer.
 * Must be one of the following types: float16, float32, bfloat16.
-*@li sum_dy_dx_pad: A ND tensor. Represents the sum of the gradients of the input of the loss function to the batch normalization layer.
+*@li sum_dy_dx_pad: A ND tensor. Represents the sum of the gradients of the input of the loss function to the batch
+normalization layer.
 * Must be one of the following types: float16, float32, bfloat16. Has the same type, shape and format as "sum_dy".
 *@li mean: A ND tensor. The mean value of the input data calculated during forward propagation.
 * Must be one of the following types: float16, float32, bfloat16. Has the same type, shape and format as "sum_dy".
@@ -46,6 +48,6 @@ REG_OP(SyncBatchNormBackwardReduce)
     .OUTPUT(sum_dy_xmu, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OP_END_FACTORY_REG(SyncBatchNormBackwardReduce)
-}  // namespace ge
+} // namespace ge
 
-#endif  // SYNC_BATCH_NORM_BACKWARD_REDUCE_PROTO_H
+#endif // SYNC_BATCH_NORM_BACKWARD_REDUCE_PROTO_H

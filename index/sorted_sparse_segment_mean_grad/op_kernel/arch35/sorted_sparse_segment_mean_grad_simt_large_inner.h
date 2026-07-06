@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- /*!
+/*!
  * \file sorted_sparse_segment_mean_grad_simt_large_inner.h
  * \brief
  */
@@ -39,14 +39,15 @@ constexpr uint32_t MAX_SIMPLE_THREAD_NUM = 1024;
 constexpr uint32_t MAX_UB_FLOAT_NUM = 30720;
 constexpr uint32_t MAX_UB_SIZE = 122880;
 
-template <typename X_T, typename INDICES_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
+template <typename X_T, typename INDICES_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T,
+          typename INNER_T>
 class SortedSparseSegmentMeanGradSimtLargeInner {
 public:
-  __aicore__ inline SortedSparseSegmentMeanGradSimtLargeInner(){};
-  __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR output_dim0,
-                              GM_ADDR location, GM_ADDR y, GM_ADDR workspace,
-                              const SortedSparseSegmentMeanGradSimtTilingData* tilingData);
-  __aicore__ inline void Process();
+    __aicore__ inline SortedSparseSegmentMeanGradSimtLargeInner(){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR output_dim0, GM_ADDR location,
+                                GM_ADDR y, GM_ADDR workspace,
+                                const SortedSparseSegmentMeanGradSimtTilingData* tilingData);
+    __aicore__ inline void Process();
 
 private:
     GlobalTensor<X_T> xGm_;
@@ -59,7 +60,7 @@ private:
     GlobalTensor<float> workspaceWeight_;
     TPipe pipe_;
     TBuf<QuePosition::VECCALC> tmpBuf_;
-    
+
     const SortedSparseSegmentMeanGradSimtTilingData* tilingData_ = nullptr;
 
     uint32_t indicesOffsetBase_ = 0;
@@ -70,11 +71,12 @@ private:
     uint32_t newBlockIdx_ = 0;
 };
 
-
-template <typename X_T, typename INDICES_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__aicore__ inline void SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR output_dim0,
-                                                                                           GM_ADDR location, GM_ADDR y, GM_ADDR workspace,
-                                                                                           const SortedSparseSegmentMeanGradSimtTilingData* tilingData) 
+template <typename X_T, typename INDICES_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T,
+          typename INNER_T>
+__aicore__ inline void
+SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>::Init(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR output_dim0, GM_ADDR location, GM_ADDR y,
+    GM_ADDR workspace, const SortedSparseSegmentMeanGradSimtTilingData* tilingData)
 {
     tilingData_ = tilingData;
     pipe_.InitBuffer(tmpBuf_, MAX_UB_SIZE);
@@ -99,14 +101,16 @@ __aicore__ inline void SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T,
         indicesOffsetBase_ = (static_cast<uint32_t>(tilingData_->perCoreIndicesNum) + 1) * newBlockIdx_;
         curCoreIndices_ = static_cast<uint32_t>(tilingData_->perCoreIndicesNum) + 1;
     } else {
-        indicesOffsetBase_ = static_cast<uint32_t>(tilingData_->perCoreIndicesNum) * newBlockIdx_ + static_cast<uint32_t>(tilingData_->resIndicesNum);
+        indicesOffsetBase_ = static_cast<uint32_t>(tilingData_->perCoreIndicesNum) * newBlockIdx_ +
+                             static_cast<uint32_t>(tilingData_->resIndicesNum);
         curCoreIndices_ = static_cast<uint32_t>(tilingData_->perCoreIndicesNum);
     }
 }
 
-
-template <typename X_T, typename INDICES_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__aicore__ inline void SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>::Process()
+template <typename X_T, typename INDICES_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T,
+          typename INNER_T>
+__aicore__ inline void
+SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>::Process()
 {
     if (blockIdx_ >= blockNums_) {
         return;
@@ -134,7 +138,8 @@ __aicore__ inline void SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T,
             srcColOffset = (static_cast<INNER_T>(tilingData_->perCoreInnerSize) + 1) * blockInnerCoreIdx;
         } else {
             processCols = static_cast<INNER_T>(tilingData_->perCoreInnerSize);
-            srcColOffset = static_cast<INNER_T>(tilingData_->perCoreInnerSize) * blockInnerCoreIdx + static_cast<INNER_T>(tilingData_->resCoreInnerSize);
+            srcColOffset = static_cast<INNER_T>(tilingData_->perCoreInnerSize) * blockInnerCoreIdx +
+                           static_cast<INNER_T>(tilingData_->resCoreInnerSize);
         }
         if (blockInnerCoreIdx != 0 && !gtMaxUbNum && processCols <= static_cast<INNER_T>(MAX_THREAD_NUM)) {
             threadNumX = processCols;
@@ -142,37 +147,47 @@ __aicore__ inline void SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T,
     }
     gtThreadNum = !gtMaxUbNum && processCols > static_cast<INNER_T>(MAX_THREAD_NUM);
 
-    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T, OUTTER_T>>(dim3(segThreadNumY, segThreadNumX), blockIdx_, outterSize, blockNums_, segmentNum_, 
-                                                               (__gm__ OUTTER_T*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()));
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T, OUTTER_T>>(
+        dim3(segThreadNumY, segThreadNumX), blockIdx_, outterSize, blockNums_, segmentNum_,
+        (__gm__ OUTTER_T*)(workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()));
     SyncAll();
     asc_vf_call<SimtCalcWeight<SEGMENTIDS_T, OUTTER_T>>(dim3(MAX_SIMPLE_THREAD_NUM), blockIdx_, blockNums_, segmentNum_,
-                                                               (__gm__ OUTTER_T*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)));
-    asc_vf_call<SimtGetSegmentOffset<INDICES_T, OUTTER_T>>(dim3(indexThreadNumY, indexThreadNumX), blockIdx_, outterSize, blockNums_, static_cast<INDICES_T>(tilingData_->outputDim0), 
-                                                               (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()));
+                                                        (__gm__ OUTTER_T*)(workspaceSegmentOffset_.GetPhyAddr()),
+                                                        (__gm__ float*)(workspaceWeight_.GetPhyAddr(segmentNum_ + 1)));
+    asc_vf_call<SimtGetSegmentOffset<INDICES_T, OUTTER_T>>(
+        dim3(indexThreadNumY, indexThreadNumX), blockIdx_, outterSize, blockNums_,
+        static_cast<INDICES_T>(tilingData_->outputDim0),
+        (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
+        (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()));
     SyncAll();
 
-
     if (gtMaxUbNum) {
-        asc_vf_call<SimtLargeInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, threadNumY, innerSize,
-                                                                    segmentNum_, (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
-                                                                   (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()),
-                                                                   (__gm__ LOCATION_T*) (locationGm_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
-                                                                   static_cast<uint32_t>(tilingData_->outputDim0), srcColOffset, processCols + srcColOffset);
+        asc_vf_call<SimtLargeInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(
+            dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, threadNumY, innerSize, segmentNum_,
+            (__gm__ X_T*)(xGm_.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
+            (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
+            (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()), (__gm__ LOCATION_T*)(locationGm_.GetPhyAddr()),
+            (__gm__ float*)(workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
+            static_cast<uint32_t>(tilingData_->outputDim0), srcColOffset, processCols + srcColOffset);
     } else if (gtThreadNum) {
-        asc_vf_call<SimtLargeUBInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, innerSize,
-                                                                    segmentNum_, (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
-                                                                   (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()),
-                                                                   (__gm__ LOCATION_T*) (locationGm_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
-                                                                   static_cast<uint32_t>(tilingData_->outputDim0), (__local_mem__ float*) (tmpLocal.GetPhyAddr()), srcColOffset, processCols + srcColOffset);
+        asc_vf_call<SimtLargeUBInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(
+            dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, innerSize, segmentNum_,
+            (__gm__ X_T*)(xGm_.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
+            (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
+            (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()), (__gm__ LOCATION_T*)(locationGm_.GetPhyAddr()),
+            (__gm__ float*)(workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
+            static_cast<uint32_t>(tilingData_->outputDim0), (__local_mem__ float*)(tmpLocal.GetPhyAddr()), srcColOffset,
+            processCols + srcColOffset);
     } else {
-        asc_vf_call<SimtLargeMinInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, innerSize,
-                                                                    segmentNum_, (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
-                                                                   (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()),
-                                                                   (__gm__ LOCATION_T*) (locationGm_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)), 
-                                                                   static_cast<uint32_t>(tilingData_->outputDim0), srcColOffset);
+        asc_vf_call<SimtLargeMinInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(
+            dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, innerSize, segmentNum_,
+            (__gm__ X_T*)(xGm_.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
+            (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
+            (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()), (__gm__ LOCATION_T*)(locationGm_.GetPhyAddr()),
+            (__gm__ float*)(workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
+            static_cast<uint32_t>(tilingData_->outputDim0), srcColOffset);
     }
 }
 
-
-}  // namespace SparseSegmentMeanGradNameSpace
-#endif  // SORTED_SPARSE_SEGMENT_MEAN_GRAD_SIMT_LARGE_INNER_H
+} // namespace SparseSegmentMeanGradNameSpace
+#endif // SORTED_SPARSE_SEGMENT_MEAN_GRAD_SIMT_LARGE_INNER_H

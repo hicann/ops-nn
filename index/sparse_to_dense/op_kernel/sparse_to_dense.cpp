@@ -22,8 +22,9 @@ using namespace SparseToDense;
 #define TILING_KEY_DATA_NUM_UINT64_TENSOR 1000010
 #define TILING_KEY_DATA_NUM_UINT64_SCALAR 1000011
 
-extern "C" __global__ __aicore__ void sparse_to_dense(GM_ADDR indices, GM_ADDR output_shape, GM_ADDR values, 
-                                            GM_ADDR default_value, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void sparse_to_dense(GM_ADDR indices, GM_ADDR output_shape, GM_ADDR values,
+                                                      GM_ADDR default_value, GM_ADDR y, GM_ADDR workSpace,
+                                                      GM_ADDR tiling)
 {
     if (workSpace == nullptr) {
         return;

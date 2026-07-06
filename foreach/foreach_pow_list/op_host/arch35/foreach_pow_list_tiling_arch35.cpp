@@ -47,9 +47,8 @@ static ge::graphStatus ForeachPowListTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
@@ -64,16 +63,14 @@ static ge::graphStatus ForeachPowListTilingFunc(gert::TilingContext* context)
     int64_t totalElements = 0;
     ForeachPowListTilingData* tiling = context->GetTilingData<ForeachPowListTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ForeachPowListTilingData), 0, sizeof(ForeachPowListTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachPowListTilingData), 0, sizeof(ForeachPowListTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM) {
- 	         OP_LOGE_FOR_INVALID_TENSORNUM(
- 	             context->GetNodeName(), "x", static_cast<int64_t>(tensorNum),
- 	             std::to_string(MAX_TENSOR_NUM).c_str());
- 	         return ge::GRAPH_FAILED;
- 	}
+        OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "x", static_cast<int64_t>(tensorNum),
+                                      std::to_string(MAX_TENSOR_NUM).c_str());
+        return ge::GRAPH_FAILED;
+    }
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);

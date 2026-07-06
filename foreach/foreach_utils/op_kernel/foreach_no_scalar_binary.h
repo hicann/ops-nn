@@ -26,12 +26,10 @@ template <typename T>
 using NoScalarBinaryOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&, const int32_t&);
 
 template <typename T, typename P, NoScalarBinaryOp<P>* op>
-class InnerComputer
-{
+class InnerComputer {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, const LocalTensor<T>& outLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, const LocalTensor<T>& outLocal,
+                                   LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         op(outLocal, inLocal_1, inLocal_2, dataCount);
@@ -41,12 +39,11 @@ public:
 
 #if __CCE_AICORE__ >= 220
 template <NoScalarBinaryOp<float>* op>
-class InnerComputer<bfloat16_t, float, op>
-{
+class InnerComputer<bfloat16_t, float, op> {
 public:
-    __aicore__ inline void Compute(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, const LocalTensor<bfloat16_t>& outLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                   const LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
+                                   uint32_t maxCastDataCount, int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
@@ -55,15 +52,15 @@ public:
         }
 
         if (castTimesRemainder > 0) {
-            ComputePerCast(
-                inLocal_1, inLocal_2, outLocal, float32Tensor, maxCastDataCount, castTimes, castTimesRemainder);
+            ComputePerCast(inLocal_1, inLocal_2, outLocal, float32Tensor, maxCastDataCount, castTimes,
+                           castTimesRemainder);
         }
     }
 
 private:
-    __aicore__ inline void ComputePerCast(
-        LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2, const LocalTensor<bfloat16_t>& outLocal,
-        LocalTensor<float>& float32Tensor, uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
+                                          const LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
+                                          uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
         Cast(float32Tensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
@@ -77,19 +74,17 @@ private:
 };
 #endif
 
-template <
-    typename T, typename P, NoScalarBinaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
-    uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
+template <typename T, typename P, NoScalarBinaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
+          uint8_t paramsCount = INPUT_PARAMETER_COUNT, bool needCopyOut = NEED_COPY_OUT>
 class ForeachNoScalarBinary
-    : public KernelForeachUnary<
-          T, ForeachNoScalarBinary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount, needCopyOut>
-{
+    : public KernelForeachUnary<T, ForeachNoScalarBinary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
+                                paramsCount, needCopyOut> {
 public:
-    using Base = KernelForeachUnary<
-        T, ForeachNoScalarBinary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum, paramsCount, needCopyOut>;
+    using Base = KernelForeachUnary<T, ForeachNoScalarBinary<T, P, op, bufferNum, paramsCount, needCopyOut>, bufferNum,
+                                    paramsCount, needCopyOut>;
     using Operator = NoScalarBinaryOp<P>;
-    __aicore__ inline void Init(
-        GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR inputs_1, GM_ADDR inputs_2, GM_ADDR y, GM_ADDR workspace,
+                                const ForeachCommonTilingData* tilingData);
     __aicore__ inline ForeachNoScalarBinary() : Base(*this){};
     using Base::Process;
 
@@ -99,8 +94,8 @@ protected:
     GM_ADDR inTensorsPtr_2 = nullptr;
 
 private:
-    __aicore__ inline void Compute(
-        uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+    __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                   bool isRemainder)
     {
         LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> inLocal_2 = InQueue_2.DeQue<T>();
@@ -127,16 +122,11 @@ private:
         InQueue_2.EnQue(inLocal_2);
     }
 
-    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)
-    {
-        return false;
-    }
+    __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder) { return false; }
 
-    __aicore__ inline void BeforeProcess()
-    {}
+    __aicore__ inline void BeforeProcess() {}
 
-    __aicore__ inline void AfterProcess()
-    {}
+    __aicore__ inline void AfterProcess() {}
 
     __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
     {

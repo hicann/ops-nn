@@ -21,348 +21,343 @@
 
 using namespace std;
 
-class l2_multilabel_margin_loss_test : public testing::Test
-{
- protected:
-  static void SetUpTestCase() {
-    cout << "multilabel_margin_loss_test SetUp" << endl;
-  }
+class l2_multilabel_margin_loss_test : public testing::Test {
+protected:
+    static void SetUpTestCase() { cout << "multilabel_margin_loss_test SetUp" << endl; }
 
-  static void TearDownTestCase() {
-    cout << "multilabel_margin_loss_test TearDown" << endl;
-  }
+    static void TearDownTestCase() { cout << "multilabel_margin_loss_test TearDown" << endl; }
 };
 
 TEST_F(l2_multilabel_margin_loss_test, case_001)
 {
-  auto selfDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({3, 5}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 5);
-  int64_t reduction = 0;
-  auto outDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({3, 5}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 5);
+    int64_t reduction = 0;
+    auto outDesc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_002)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_003)
 {
-  auto selfDesc = TensorDesc({7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 6);
-  int64_t reduction = 2;
+    auto selfDesc = TensorDesc({7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 6);
+    int64_t reduction = 2;
 
-  auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_004)
 {
-  auto selfDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({0, 1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 0);
-  int64_t reduction = 1;
+    auto selfDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({0, 1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 0);
+    int64_t reduction = 1;
 
-  auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_005)
 {
-  auto selfDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({0, 1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 0);
-  int64_t reduction = 0;
+    auto selfDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({0, 1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 0);
+    int64_t reduction = 0;
 
-  auto outDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
+    auto outDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({0, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001).ValidCount(0);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_006)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_007)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 0;
-  auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 1}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 0;
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-  // SAMPLE: precision simulate
+    // SAMPLE: precision simulate
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_008)
 {
-  auto selfDesc = TensorDesc({10, 1, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 1, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-  // SAMPLE: precision simulate
+    // SAMPLE: precision simulate
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_009)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT((aclTensor*)nullptr, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT((aclTensor*)nullptr, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_010)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, (aclTensor*)nullptr, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, (aclTensor*)nullptr, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_011)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT((aclTensor*)nullptr, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT((aclTensor*)nullptr, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_012)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 2;
-  auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 2;
+    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, (aclTensor*)nullptr));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_013)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 0;
-  auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 0;
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-  // SAMPLE: precision simulate
+    // SAMPLE: precision simulate
 }
 
 TEST_F(l2_multilabel_margin_loss_test, Ascend910B2_case_014)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, Ascend910B2_case_015)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT((aclTensor*)nullptr, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT((aclTensor*)nullptr, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, Ascend910B2_case_016)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, (aclTensor*)nullptr, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, (aclTensor*)nullptr, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, Ascend910B2_case_017)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 1;
-  auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 1;
+    auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT((aclTensor*)nullptr, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT((aclTensor*)nullptr, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, Ascend910B2_case_018)
 {
-  auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 2;
-  auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto selfDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({10, 7}, ACL_INT64, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 2;
+    auto outDesc = TensorDesc({}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto isTargetDesc = TensorDesc({10, 7}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, (aclTensor*)nullptr));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, (aclTensor*)nullptr));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_multilabel_margin_loss_test, case_019)
 {
-  auto selfDesc = TensorDesc({40, 10}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
-  auto targetDesc = TensorDesc({40, 10}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 6);
-  int64_t reduction = 0;
-  auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  auto isTargetDesc = TensorDesc({40, 10}, ACL_INT32, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto selfDesc = TensorDesc({40, 10}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto targetDesc = TensorDesc({40, 10}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-1, 6);
+    int64_t reduction = 0;
+    auto outDesc = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto isTargetDesc = TensorDesc({40, 10}, ACL_INT32, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-  auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
-                      OUTPUT(outDesc, isTargetDesc));
+    auto ut = OP_API_UT(aclnnMultilabelMarginLoss, INPUT(selfDesc, targetDesc, reduction),
+                        OUTPUT(outDesc, isTargetDesc));
 
-  // SAMPLE: only test GetWorkspaceSize
-  uint64_t workspace_size = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-  // SAMPLE: precision simulate
+    // SAMPLE: precision simulate
 }

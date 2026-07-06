@@ -72,34 +72,34 @@
 
 #define OPT_STATUS ((SCALES1_STATUS) | (SCALES2_STATUS) | (ZERO_OFFSET1_STATUS) | (ZERO_OFFSET2_STATUS))
 
-#define CREATE_EMPTY_INPUT_KRENEL(tilingKeyNum, KernelClass)                                               \
-    do {                                                                                                    \
-        KernelClass<SUCCESSOR_NUMBER_OF_ONE> op(&pipe, tilingData);  \
-        op.Init(outScale1, outScale2);                                                                      \
-        op.Process();                                                                                       \
+#define CREATE_EMPTY_INPUT_KRENEL(tilingKeyNum, KernelClass)        \
+    do {                                                            \
+        KernelClass<SUCCESSOR_NUMBER_OF_ONE> op(&pipe, tilingData); \
+        op.Init(outScale1, outScale2);                              \
+        op.Process();                                               \
     } while (0)
 
-#define CREATE_STATIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                               \
+#define CREATE_STATIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                                   \
+    do {                                                                                                        \
+        KernelClass<DTYPE_X1, DTYPE_SCALES1, tilingKeyNum, OPT_STATUS, SUCCESSOR_NUMBER_OF_ONE> op(&pipe);      \
+        op.Init(x1, x2, gamma, beta, bias, scales1, scales2, zeroOffset1, zeroOffset2, y1, y2, x, usrWorkspace, \
+                tilingData);                                                                                    \
+        op.Process();                                                                                           \
+    } while (0)
+
+#define CREATE_DYNAMIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                              \
     do {                                                                                                    \
         KernelClass<DTYPE_X1, DTYPE_SCALES1, tilingKeyNum, OPT_STATUS, SUCCESSOR_NUMBER_OF_ONE> op(&pipe);  \
-        op.Init(                                                                                            \
-            x1, x2, gamma, beta, bias, scales1, scales2, zeroOffset1, zeroOffset2, y1, y2, x, usrWorkspace, \
-            tilingData);                                                                                    \
+        op.Init(x1, x2, gamma, beta, bias, scales1, scales2, y1, y2, x, outScale1, outScale2, usrWorkspace, \
+                tilingData);                                                                                \
         op.Process();                                                                                       \
     } while (0)
 
-#define CREATE_DYNAMIC_QUANT_KRENEL(tilingKeyNum, KernelClass)                                                       \
-    do {                                                                                                             \
-        KernelClass<DTYPE_X1, DTYPE_SCALES1, tilingKeyNum, OPT_STATUS, SUCCESSOR_NUMBER_OF_ONE> op(&pipe);           \
-        op.Init(                                                                                                     \
-            x1, x2, gamma, beta, bias, scales1, scales2, y1, y2, x, outScale1, outScale2, usrWorkspace, tilingData); \
-        op.Process();                                                                                                \
-    } while (0)
-
-extern "C" __global__ __aicore__ void add_layer_norm_quant(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scales1, GM_ADDR scales2,
-    GM_ADDR zeroOffset1, GM_ADDR zeroOffset2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void add_layer_norm_quant(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta,
+                                                           GM_ADDR bias, GM_ADDR scales1, GM_ADDR scales2,
+                                                           GM_ADDR zeroOffset1, GM_ADDR zeroOffset2, GM_ADDR y1,
+                                                           GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2,
+                                                           GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     AscendC::TPipe pipe;
@@ -110,79 +110,66 @@ extern "C" __global__ __aicore__ void add_layer_norm_quant(
     if (TILING_KEY_IS(0)) {
         // 0 Tiling, Do Nothing.
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_NONE_DIV_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_NONE_DIV_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_NONE_DIV_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_ELEWISE_DIV_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_ELEWISE_DIV_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_ELEWISE_DIV_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_BRC_DIV_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_BRC_DIV_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_BRC_DIV_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_NONE_DIV_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_NONE_DIV_SCALE, AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_NONE_DIV_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_ELEWISE_DIV_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_ELEWISE_DIV_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_ELEWISE_DIV_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_BRC_DIV_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_BRC_DIV_SCALE, AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_BRC_DIV_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
     }
 
     else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_NONE_MUL_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_NONE_MUL_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_NONE_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_ELEWISE_MUL_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_ELEWISE_MUL_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_ELEWISE_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_BRC_MUL_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_BRC_MUL_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
+        CREATE_STATIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_BRC_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_NONE_MUL_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_NONE_MUL_SCALE, AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_NONE_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_ELEWISE_MUL_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_ELEWISE_MUL_SCALE,
-            AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_ELEWISE_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_BRC_MUL_SCALE)) {
-        CREATE_STATIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_BRC_MUL_SCALE, AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
+        CREATE_STATIC_QUANT_KRENEL(TILING_WELFORD_BIAS_BRC_MUL_SCALE,
+                                   AddLayerNormQuantRegbase::KernelAddLayerNormStaticQuantRegbaseWelford);
     }
 
     else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_NONE_DYN_QUANT)) {
-        CREATE_DYNAMIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_NONE_DYN_QUANT,
-            AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseFullLoad);
+        CREATE_DYNAMIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_NONE_DYN_QUANT,
+                                    AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_ELEWISE_DYN_QUANT)) {
-        CREATE_DYNAMIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_ELEWISE_DYN_QUANT,
-            AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseFullLoad);
+        CREATE_DYNAMIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_ELEWISE_DYN_QUANT,
+                                    AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_FULL_LOAD_BIAS_BRC_DYN_QUANT)) {
-        CREATE_DYNAMIC_QUANT_KRENEL(
-            TILING_FULL_LOAD_BIAS_BRC_DYN_QUANT,
-            AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseFullLoad);
+        CREATE_DYNAMIC_QUANT_KRENEL(TILING_FULL_LOAD_BIAS_BRC_DYN_QUANT,
+                                    AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseFullLoad);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_NONE_DYN_QUANT)) {
-        CREATE_DYNAMIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_NONE_DYN_QUANT, AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseWelford);
+        CREATE_DYNAMIC_QUANT_KRENEL(TILING_WELFORD_BIAS_NONE_DYN_QUANT,
+                                    AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_ELEWISE_DYN_QUANT)) {
-        CREATE_DYNAMIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_ELEWISE_DYN_QUANT,
-            AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseWelford);
+        CREATE_DYNAMIC_QUANT_KRENEL(TILING_WELFORD_BIAS_ELEWISE_DYN_QUANT,
+                                    AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseWelford);
     } else if (TILING_KEY_IS(TILING_WELFORD_BIAS_BRC_DYN_QUANT)) {
-        CREATE_DYNAMIC_QUANT_KRENEL(
-            TILING_WELFORD_BIAS_BRC_DYN_QUANT, AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseWelford);
-    } else if(TILING_KEY_IS(TILING_EMPTY_INPUT)) {
+        CREATE_DYNAMIC_QUANT_KRENEL(TILING_WELFORD_BIAS_BRC_DYN_QUANT,
+                                    AddLayerNormQuantRegbase::KernelAddLayerNormDynamicQuantRegbaseWelford);
+    } else if (TILING_KEY_IS(TILING_EMPTY_INPUT)) {
         GET_TILING_DATA_WITH_STRUCT(AddLayerNormQuantEmptyTilingData, tilingDataIn, tiling);
         const AddLayerNormQuantEmptyTilingData* __restrict tilingData = &tilingDataIn;
-        CREATE_EMPTY_INPUT_KRENEL(
-            TILING_EMPTY_INPUT, AddLayerNormQuantEmptyInput::KernelAddLayerNormQuantEmptyInput);
+        CREATE_EMPTY_INPUT_KRENEL(TILING_EMPTY_INPUT, AddLayerNormQuantEmptyInput::KernelAddLayerNormQuantEmptyInput);
     }
 }

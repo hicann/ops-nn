@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,15 +21,9 @@ using namespace std;
 
 class l2_ctc_loss_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ctc_loss_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ctc_loss_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ctc_loss_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ctc_loss_test TearDown" << std::endl; }
 };
 
 int64_t T = 12;
@@ -54,9 +48,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_logprobs_is_empty_tensor_normal)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -79,9 +72,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_output_is_null)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = nullptr;
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -99,9 +91,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_input_is_null)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -119,9 +110,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_logprobs_dtype_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -139,9 +129,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_negLogLikelihood_dtype_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_INT8, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -159,9 +148,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_logAlpha_dtype_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -179,9 +167,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_targets_dtype_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -199,9 +186,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_logprobs_first_dim_0_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -219,9 +205,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_logProbs_dimnum_not_3_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -239,9 +224,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_blank_greater_than_C_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -259,9 +243,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_inputLengths_maxvalue_greater_than_T_erro
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -279,9 +262,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_targetLengths_size_not_N_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -299,9 +281,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_target_second_dim_less_than_targetMaxLeng
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -319,9 +300,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_target_1_dim_size_not_sumtargetlengths_er
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -339,9 +319,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_target_shape_isnot_1or2_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -359,9 +338,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_outNegLogLikelihood_shape_not_N_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N + 1}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -379,9 +357,8 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_outLogAlpha_shape_error)
     bool zeroInfinity = false;
     auto negLogLikelihoodOut = TensorDesc({N}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto logAlphaOut = TensorDesc({N, T, LOGALPHA_X + 1}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(
-        aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
-        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

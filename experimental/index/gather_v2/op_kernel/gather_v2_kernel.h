@@ -22,9 +22,8 @@ class GatherV2Kernel {
 public:
     __aicore__ inline GatherV2Kernel() = default;
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, GM_ADDR workspace,
-        optiling::GatherV2TilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR axis, GM_ADDR y, GM_ADDR workspace,
+                                optiling::GatherV2TilingData* tiling)
     {
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(x));
         indicesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ IndexT*>(indices));

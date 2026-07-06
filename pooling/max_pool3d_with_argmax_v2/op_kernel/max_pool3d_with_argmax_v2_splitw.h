@@ -97,10 +97,9 @@ public:
     }
 
 private:
-    __aicore__ inline void DoMaxPool(
-        int32_t dOutOff, int32_t hOutOff, int32_t wOutOff, uint32_t partNC, uint32_t part, uint32_t partOut,
-        uint32_t inputOffset, uint32_t outputOffset, uint32_t padDL, uint32_t padDR, uint32_t padHL, uint32_t padHR,
-        uint32_t padWL, uint32_t padWR)
+    __aicore__ inline void DoMaxPool(int32_t dOutOff, int32_t hOutOff, int32_t wOutOff, uint32_t partNC, uint32_t part,
+                                     uint32_t partOut, uint32_t inputOffset, uint32_t outputOffset, uint32_t padDL,
+                                     uint32_t padDR, uint32_t padHL, uint32_t padHR, uint32_t padWL, uint32_t padWR)
     {
         CopyIn(this->xGm[inputOffset], partNC, part, padHL, padHR, padDL, padDR);
 
@@ -131,18 +130,17 @@ private:
     __aicore__ void MaxPool3DWithArgmaxV2Algorithm();
     __aicore__ void Im2ColNoDilationW(const LocalTensor<T>& dst);
     __aicore__ void Im2ColNoDilationWBigKW(const LocalTensor<T>& dst);
-    __aicore__ void Img2ColC0(
-        const uint32_t partNC, const int32_t offD, const int32_t offH, const int32_t offW,
-        const uint32_t partWOutReal, // H and W values that is not rounded up
-        const uint32_t outputOffset, const uint32_t pDL, const uint32_t pDR, const uint32_t pHL, const uint32_t pHR,
-        const uint32_t pWL, const uint32_t pWR);
-    __aicore__ inline void CopyIn(
-        GlobalTensor<S> srcGm, const uint32_t& partNC, const uint32_t& part, const uint32_t padL, const uint32_t padR,
-        const uint32_t padDL = 0, const uint32_t padDR = 0);
-    __aicore__ void Padding(
-        LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad, const uint32_t& partHWoPad,
-        const uint32_t& partWWoPad, const uint32_t pDL, const uint32_t pDR, const uint32_t pHL, const uint32_t pHR,
-        const uint32_t pWL, const uint32_t pWR);
+    __aicore__ void Img2ColC0(const uint32_t partNC, const int32_t offD, const int32_t offH, const int32_t offW,
+                              const uint32_t partWOutReal, // H and W values that is not rounded up
+                              const uint32_t outputOffset, const uint32_t pDL, const uint32_t pDR, const uint32_t pHL,
+                              const uint32_t pHR, const uint32_t pWL, const uint32_t pWR);
+    __aicore__ inline void CopyIn(GlobalTensor<S> srcGm, const uint32_t& partNC, const uint32_t& part,
+                                  const uint32_t padL, const uint32_t padR, const uint32_t padDL = 0,
+                                  const uint32_t padDR = 0);
+    __aicore__ void Padding(LocalTensor<T>& srcUb, LocalTensor<T>& dstUb, const uint32_t& partDWoPad,
+                            const uint32_t& partHWoPad, const uint32_t& partWWoPad, const uint32_t pDL,
+                            const uint32_t pDR, const uint32_t pHL, const uint32_t pHR, const uint32_t pWL,
+                            const uint32_t pWR);
 };
 
 // Current implementation of MaxPool3DWithArgmaxV2 uses only Vector unit
@@ -191,18 +189,18 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::MaxPool3DWithArgmaxV2Al
                                 (w + this->partW) - (this->widthInput + this->pW) :
                                 0;
                     part = this->partW - padWL - padWR;
-                    uint32_t inputOffset =
-                        b * this->inputSize + (d >= this->pD ? d - this->pD : 0) * this->hwInputSize +
-                        (h >= this->pH ? h - this->pH : 0) * this->widthInput + (w >= this->pW ? w - this->pW : 0);
+                    uint32_t inputOffset = b * this->inputSize +
+                                           (d >= this->pD ? d - this->pD : 0) * this->hwInputSize +
+                                           (h >= this->pH ? h - this->pH : 0) * this->widthInput +
+                                           (w >= this->pW ? w - this->pW : 0);
                     uint32_t outputOffset = b * this->outSize + dOut * hwOut + hOut * this->widthOut + wOut;
 
                     // Offset here can be < 0 for case with padding
                     // This offset is start position of the first kernel for this iteration. If it starts on padding,
                     // offset will be < 0
-                    DoMaxPool(
-                        dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW,
-                        this->blockLength, part, this->partOutW, inputOffset, outputOffset, padDL, padDR, padHL, padHR,
-                        padWL, padWR);
+                    DoMaxPool(dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW,
+                              this->blockLength, part, this->partOutW, inputOffset, outputOffset, padDL, padDR, padHL,
+                              padHR, padWL, padWR);
                     partCount++;
                 }
                 if ((tailOutW >= 1) && (partCount < this->partsCurCore)) {
@@ -215,10 +213,9 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::MaxPool3DWithArgmaxV2Al
                                            (h >= this->pH ? h - this->pH : 0) * this->widthInput + (w - this->pW);
                     uint32_t outputOffset = b * this->outSize + dOut * hwOut + hOut * this->widthOut + wOut;
 
-                    DoMaxPool(
-                        dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW,
-                        this->blockLength, tailW - padWR, tailOutW, inputOffset, outputOffset, padDL, padDR, padHL,
-                        padHR, padWL, padWR);
+                    DoMaxPool(dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW,
+                              this->blockLength, tailW - padWR, tailOutW, inputOffset, outputOffset, padDL, padDR,
+                              padHL, padHR, padWL, padWR);
                     partCount++;
                 }
                 this->wStart = 0;
@@ -254,17 +251,18 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::MaxPool3DWithArgmaxV2Al
                                 (w + this->partW) - (this->widthInput + this->pW) :
                                 0;
                     part = this->partW - padWL - padWR;
-                    uint32_t inputOffset =
-                        b * this->inputSize + (d >= this->pD ? d - this->pD : 0) * this->hwInputSize +
-                        (h >= this->pH ? h - this->pH : 0) * this->widthInput + (w >= this->pW ? w - this->pW : 0);
+                    uint32_t inputOffset = b * this->inputSize +
+                                           (d >= this->pD ? d - this->pD : 0) * this->hwInputSize +
+                                           (h >= this->pH ? h - this->pH : 0) * this->widthInput +
+                                           (w >= this->pW ? w - this->pW : 0);
                     uint32_t outputOffset = b * this->outSize + dOut * hwOut + hOut * this->widthOut + wOut;
 
                     // Offset here can be < 0 for case with padding
                     // This offset is start position of the first kernel for this iteration. If it starts on padding,
                     // offset will be < 0
-                    DoMaxPool(
-                        dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW, partNC,
-                        part, this->partOutW, inputOffset, outputOffset, padDL, padDR, padHL, padHR, padWL, padWR);
+                    DoMaxPool(dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW,
+                              partNC, part, this->partOutW, inputOffset, outputOffset, padDL, padDR, padHL, padHR,
+                              padWL, padWR);
                     partCount++;
                 }
                 if ((tailOutW >= 1) && (partCount < this->partsCurCore)) {
@@ -277,9 +275,9 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::MaxPool3DWithArgmaxV2Al
                                            (h >= this->pH ? h - this->pH : 0) * this->widthInput + (w - this->pW);
                     uint32_t outputOffset = b * this->outSize + dOut * hwOut + hOut * this->widthOut + wOut;
 
-                    DoMaxPool(
-                        dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW, partNC,
-                        tailW - padWR, tailOutW, inputOffset, outputOffset, padDL, padDR, padHL, padHR, padWL, padWR);
+                    DoMaxPool(dOut * this->sD - this->pD, hOut * this->sH - this->pH, wOut * this->sW - this->pW,
+                              partNC, tailW - padWR, tailOutW, inputOffset, outputOffset, padDL, padDR, padHL, padHR,
+                              padWL, padWR);
                     partCount++;
                 }
                 this->wStart = 0;
@@ -294,12 +292,10 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::MaxPool3DWithArgmaxV2Al
 template <typename T, typename S>
 __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Im2ColNoDilationW(const LocalTensor<T>& dst)
 {
-    DataCopyParams Im2colParamsHD = {
-        static_cast<uint16_t>(this->kH * this->kD), static_cast<uint16_t>(this->kW),
-        static_cast<uint16_t>(this->roundW - this->kW), 0};
-    DataCopyParams Im2colParamsW = {
-        static_cast<uint16_t>(this->partOutW), static_cast<uint16_t>(this->kW), 0,
-        static_cast<uint16_t>((this->kH * this->kD - 1) * this->kW)};
+    DataCopyParams Im2colParamsHD = {static_cast<uint16_t>(this->kH * this->kD), static_cast<uint16_t>(this->kW),
+                                     static_cast<uint16_t>(this->roundW - this->kW), 0};
+    DataCopyParams Im2colParamsW = {static_cast<uint16_t>(this->partOutW), static_cast<uint16_t>(this->kW), 0,
+                                    static_cast<uint16_t>((this->kH * this->kD - 1) * this->kW)};
 
     uint32_t sliceByWidthOffset = 0;
     uint32_t dOff = 0;
@@ -312,23 +308,20 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Im2ColNoDilationW(const
         for (uint32_t curWidthOut = 0; curWidthOut < this->kD * this->kH; curWidthOut++,
                       dOff += (this->roundW * this->blockLength), sliceByWidthOffset += this->kW * this->blockLength) {
             for (uint32_t i = 0; i < wholeRepeatTimes; i++) {
-                Copy(
-                    dst[i * MAX_REPEAT_TIMES * this->blockKernelDHW + sliceByWidthOffset],
-                    this->transDataTensorUb1[i * MAX_REPEAT_TIMES * this->kW * this->blockLength + dOff],
-                    this->kW * this->blockLength, MAX_REPEAT_TIMES,
-                    {1, 1, static_cast<uint16_t>(this->kernelDHW), static_cast<uint16_t>(this->kW)});
+                Copy(dst[i * MAX_REPEAT_TIMES * this->blockKernelDHW + sliceByWidthOffset],
+                     this->transDataTensorUb1[i * MAX_REPEAT_TIMES * this->kW * this->blockLength + dOff],
+                     this->kW * this->blockLength, MAX_REPEAT_TIMES,
+                     {1, 1, static_cast<uint16_t>(this->kernelDHW), static_cast<uint16_t>(this->kW)});
             }
-            Copy(
-                dst[wholeOffsetDst + sliceByWidthOffset], this->transDataTensorUb1[wholeOffsetSrc + dOff],
-                this->kW * this->blockLength, tailRepeatTimes,
-                {1, 1, static_cast<uint16_t>(this->kernelDHW), static_cast<uint16_t>(this->kW)});
+            Copy(dst[wholeOffsetDst + sliceByWidthOffset], this->transDataTensorUb1[wholeOffsetSrc + dOff],
+                 this->kW * this->blockLength, tailRepeatTimes,
+                 {1, 1, static_cast<uint16_t>(this->kernelDHW), static_cast<uint16_t>(this->kW)});
         }
     } else {
         for (uint32_t curWidthOut = 0; curWidthOut < this->partOutW;
              curWidthOut++, dOff += this->gmWOff, sliceByWidthOffset += this->blockKernelDHW) {
-            Copy(
-                dst[sliceByWidthOffset], this->transDataTensorUb1[dOff], this->kW * this->blockLength,
-                this->kH * this->kD, {1, 1, static_cast<uint16_t>(this->kW), static_cast<uint16_t>(this->roundW)});
+            Copy(dst[sliceByWidthOffset], this->transDataTensorUb1[dOff], this->kW * this->blockLength,
+                 this->kH * this->kD, {1, 1, static_cast<uint16_t>(this->kW), static_cast<uint16_t>(this->roundW)});
         }
     }
 }
@@ -336,12 +329,10 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Im2ColNoDilationW(const
 template <typename T, typename S>
 __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Im2ColNoDilationWBigKW(const LocalTensor<T>& dst)
 {
-    DataCopyParams Im2colParamsHD = {
-        static_cast<uint16_t>(this->kH * this->kD), static_cast<uint16_t>(this->kW),
-        static_cast<uint16_t>(this->roundW - this->kW), 0};
-    DataCopyParams Im2colParamsW = {
-        static_cast<uint16_t>(this->partOutW), static_cast<uint16_t>(this->kW), 0,
-        static_cast<uint16_t>((this->kH * this->kD - 1) * this->kW)};
+    DataCopyParams Im2colParamsHD = {static_cast<uint16_t>(this->kH * this->kD), static_cast<uint16_t>(this->kW),
+                                     static_cast<uint16_t>(this->roundW - this->kW), 0};
+    DataCopyParams Im2colParamsW = {static_cast<uint16_t>(this->partOutW), static_cast<uint16_t>(this->kW), 0,
+                                    static_cast<uint16_t>((this->kH * this->kD - 1) * this->kW)};
 
     uint32_t sliceByWidthOffset = 0;
     uint32_t dOff = 0;
@@ -377,8 +368,8 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Img2ColC0(
     curBuf = transDataTensorUb2;
 
     LocalTensor<uint8_t> maskIndex = maxTmp.template ReinterpretCast<uint8_t>();
-    LocalTensor<uint8_t> nanMask =
-        maskIndex[this->RoundUpBlock(this->blockKernelDHW / BITS_UINT8, BLOCK_LEN_UINT8) * this->partOutW];
+    LocalTensor<uint8_t>
+        nanMask = maskIndex[this->RoundUpBlock(this->blockKernelDHW / BITS_UINT8, BLOCK_LEN_UINT8) * this->partOutW];
 
     // TransDataTo5HD (NCDHW -> NC1DHWC0)
     this->PrepareInput(transDataTensorUb2, this->partRoundDhwInp);
@@ -391,9 +382,8 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Img2ColC0(
         if (partWOutReal == tailOutW) {
             partWWoPad = tailW - pWL - pWR;
         }
-        Padding(
-            this->transDataTensorUb1, transDataTensorUb2, partDWoPad, partHWoPad, partWWoPad, pDL, pDR, pHL, pHR, pWL,
-            pWR);
+        Padding(this->transDataTensorUb1, transDataTensorUb2, partDWoPad, partHWoPad, partWWoPad, pDL, pDR, pHL, pHR,
+                pWL, pWR);
     }
 
     // Im2ColC0
@@ -427,8 +417,8 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Img2ColC0(
     // Find Indices for each row by width
     this->CompareSelect(reduceMaxResult, curBuf, maskIndex, nanMask, this->partOutW, 0);
 
-    uint32_t alignedRowlen =
-        this->RoundUpBlock((rowLen * this->blockLength) / BITS_UINT8, BLOCK_LEN_UINT8) * this->blockLength;
+    uint32_t alignedRowlen = this->RoundUpBlock((rowLen * this->blockLength) / BITS_UINT8, BLOCK_LEN_UINT8) *
+                             this->blockLength;
     Compare<T>(maskIndex, reduceMaxResult, reduceMaxResult, CMPMODE::EQ, alignedRowlen);
     PipeBarrier<PIPE_V>();
 
@@ -482,17 +472,18 @@ __aicore__ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Img2ColC0(
     Muls(idxsInt, idxsInt, int(this->dH * this->widthInput), ncPartOutTrans);
     PipeBarrier<PIPE_V>();
 
-    this->IndexRecalcThird(
-        generalOffsets, hTmp, wTmp, transDataTensorUb3Int, idxsInt, tmpIdxsInt, idxs, ncPartOutTrans);
+    this->IndexRecalcThird(generalOffsets, hTmp, wTmp, transDataTensorUb3Int, idxsInt, tmpIdxsInt, idxs,
+                           ncPartOutTrans);
 
     this->queIn.template FreeTensor<S>(transDataTensorUb2Old);
     this->queOutVals.template FreeTensor<int>(generalOffsets);
 }
 
 template <typename T, typename S>
-__aicore__ inline void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::CopyIn(
-    GlobalTensor<S> srcGm, const uint32_t& partNC, const uint32_t& part, const uint32_t padL, const uint32_t padR,
-    const uint32_t padDL, const uint32_t padDR)
+__aicore__ inline void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::CopyIn(GlobalTensor<S> srcGm, const uint32_t& partNC,
+                                                                       const uint32_t& part, const uint32_t padL,
+                                                                       const uint32_t padR, const uint32_t padDL,
+                                                                       const uint32_t padDR)
 {
     uint32_t downPartW = this->RoundDownBlock(part, this->blockLengthS);
     uint32_t upPartW = this->roundW;
@@ -508,10 +499,10 @@ __aicore__ inline void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::CopyIn(
 
     if (this->widthInput % this->blockLengthS == 0 && downPartW == part) {
         if (((this->widthInput - downPartW) / this->blockLengthS) < MAX_UINT16) {
-            DataCopyParams params{
-                static_cast<uint16_t>(partHWoPad), static_cast<uint16_t>(downPartW / this->blockLengthS),
-                static_cast<uint16_t>((this->widthInput - downPartW) / this->blockLengthS),
-                static_cast<uint16_t>((upPartW - downPartW) / this->blockLengthS)};
+            DataCopyParams params{static_cast<uint16_t>(partHWoPad),
+                                  static_cast<uint16_t>(downPartW / this->blockLengthS),
+                                  static_cast<uint16_t>((this->widthInput - downPartW) / this->blockLengthS),
+                                  static_cast<uint16_t>((upPartW - downPartW) / this->blockLengthS)};
             for (uint32_t nc = 0; nc < partNC; nc++) {
                 auto tmp = srcGm[nc * this->inputSize];
                 auto tmpDst = srcUb[this->partRoundDhwInp * nc];
@@ -521,8 +512,8 @@ __aicore__ inline void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::CopyIn(
                 }
             }
         } else {
-            DataCopyParams params{
-                static_cast<uint16_t>(1), static_cast<uint16_t>(downPartW / this->blockLengthS), 0, 0};
+            DataCopyParams params{static_cast<uint16_t>(1), static_cast<uint16_t>(downPartW / this->blockLengthS), 0,
+                                  0};
             for (uint32_t nc = 0; nc < partNC; nc++) {
                 for (uint32_t d = 0, dstOff = 0; d < tmpDInSize;
                      d += this->hwInputSize, dstOff += upPartW * this->partH) {
@@ -535,10 +526,9 @@ __aicore__ inline void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::CopyIn(
             }
         }
     } else {
-        DataCopyExtParams copyPadParamsInput{
-            static_cast<uint16_t>(partHWoPad), static_cast<uint32_t>(part * sizeof(S)),
-            static_cast<uint32_t>((this->widthInput - part) * sizeof(S)),
-            static_cast<uint32_t>((upPartW - part) / this->blockLengthS), 0};
+        DataCopyExtParams copyPadParamsInput{static_cast<uint16_t>(partHWoPad), static_cast<uint32_t>(part * sizeof(S)),
+                                             static_cast<uint32_t>((this->widthInput - part) * sizeof(S)),
+                                             static_cast<uint32_t>((upPartW - part) / this->blockLengthS), 0};
         DataCopyPadExtParams<S> paddingParamsInput{false, 0, 0, 0};
         for (uint32_t nc = 0; nc < partNC; nc++) {
             auto tmp = srcGm[nc * this->inputSize];
@@ -561,13 +551,12 @@ __aicore__ /*inline*/ void KernelMaxPool3DWithArgmaxV2SplitW<T, S>::Padding(
         Duplicate<T>(dstUb, this->minFloat, this->partRoundDhwInp * this->blockLength);
         PipeBarrier<PIPE_V>();
 
-        DataCopyParams padParams = {
-            static_cast<uint16_t>(partHWoPad), static_cast<uint16_t>(partWWoPad),
-            static_cast<uint16_t>(this->roundW - partWWoPad), static_cast<uint16_t>(this->roundW - partWWoPad)};
+        DataCopyParams padParams = {static_cast<uint16_t>(partHWoPad), static_cast<uint16_t>(partWWoPad),
+                                    static_cast<uint16_t>(this->roundW - partWWoPad),
+                                    static_cast<uint16_t>(this->roundW - partWWoPad)};
         for (uint32_t d = 0; d < partDWoPad; d++) {
-            DataCopy(
-                dstUb[pWL * this->blockLength + d * this->partHwInp * this->blockLength],
-                srcUb[d * this->partHwInp * this->blockLength], padParams);
+            DataCopy(dstUb[pWL * this->blockLength + d * this->partHwInp * this->blockLength],
+                     srcUb[d * this->partHwInp * this->blockLength], padParams);
         }
         PipeBarrier<PIPE_V>();
 

@@ -35,14 +35,13 @@ struct RegTensorActualT<AscendC::int4b_t> {
     using T = int4x2_t;
 };
 
-static constexpr MicroAPI::CastTrait castTraitNorm = {
-    MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+static constexpr MicroAPI::CastTrait castTraitNorm = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
 // CAST_RINT表示采用四舍六入五成双的舍入模式
-static constexpr MicroAPI::CastTrait castTraitF162Bf16 = {
-    MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+static constexpr MicroAPI::CastTrait castTraitF162Bf16 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN,
+                                                          MicroAPI::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_RINT};
 
 template <typename XType>
 struct ParamsW8NK {
@@ -283,12 +282,12 @@ __aicore__ inline void AntiquantW8PerGroupNK(ParamsW8NK<XType>& param)
                     addRegWeight);
 
                 if constexpr (AscendC::IsSameType<XType, half>::value) {
-                    MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                        weightOut, weightIn, maskWeight);
+                    MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(weightOut, weightIn,
+                                                                                              maskWeight);
                 } else {
                     MicroAPI::RegTensor<half> weightF16;
-                    MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                        weightF16, weightIn, maskWeight);
+                    MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(weightF16, weightIn,
+                                                                                             maskWeight);
                     MicroAPI::Cast<XType, half, castTraitF162Bf16>(weightOut, weightF16, maskWeight);
                 }
 
@@ -296,8 +295,8 @@ __aicore__ inline void AntiquantW8PerGroupNK(ParamsW8NK<XType>& param)
                     MicroAPI::Add(weightOut, weightOut, offset, maskWeight);
                 }
                 MicroAPI::Mul(weightOut, weightOut, scale, maskWeight);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     param.weightOutBaseAddr, weightOut, param.dataBlockStride, param.repeatStride, maskWeight);
             }
             param.weightOutBaseAddr += param.weightOutFixStride;
@@ -323,12 +322,12 @@ __aicore__ inline void AntiquantW8PerGroupNK(ParamsW8NK<XType>& param)
                 addRegWeightTail);
 
             if constexpr (AscendC::IsSameType<XType, half>::value) {
-                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                    weightOut, weightIn, maskWeight);
+                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(weightOut, weightIn,
+                                                                                          maskWeight);
             } else {
                 MicroAPI::RegTensor<half> weightF16;
-                MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                    weightF16, weightIn, maskWeight);
+                MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(weightF16, weightIn,
+                                                                                         maskWeight);
                 MicroAPI::Cast<XType, half, castTraitF162Bf16>(weightOut, weightF16, maskWeight);
             }
 
@@ -356,8 +355,8 @@ __aicore__ inline void AntiquantPerGroupKN(ParamsKN<XType>& param)
     for (uint16_t nIdx = 0; nIdx < static_cast<uint16_t>(param.nLoop); ++nIdx) {
         maskWeight = MicroAPI::UpdateMask<XType>(maskWeightValue);
         for (uint16_t gIdx = 0; gIdx < static_cast<uint16_t>(param.groupNum); ++gIdx) {
-            MicroAPI::AddrReg addRegScale =
-                MicroAPI::CreateAddrReg<XType>(nIdx, param.vfElemB16, gIdx, param.nBubXTypeAlign);
+            MicroAPI::AddrReg addRegScale = MicroAPI::CreateAddrReg<XType>(nIdx, param.vfElemB16, gIdx,
+                                                                           param.nBubXTypeAlign);
             if constexpr (hasAntiquantOffset) {
                 MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_NORM>(offset, param.offsetBaseAddr, addRegScale);
             }
@@ -371,12 +370,12 @@ __aicore__ inline void AntiquantPerGroupKN(ParamsKN<XType>& param)
                         weightIn, (__local_mem__ typename RegTensorActualT<WType>::T*)(param.weightInBaseAddr),
                         addRegWeight);
                     if constexpr (AscendC::IsSameType<XType, half>::value) {
-                        MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                            weightOut, weightIn, maskWeight);
+                        MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(weightOut, weightIn,
+                                                                                                  maskWeight);
                     } else {
                         MicroAPI::RegTensor<half> weightF16;
-                        MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                            weightF16, weightIn, maskWeight);
+                        MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(weightF16, weightIn,
+                                                                                                 maskWeight);
                         MicroAPI::Cast<XType, half, castTraitF162Bf16>(weightOut, weightF16, maskWeight);
                     }
                 } else {
@@ -385,16 +384,16 @@ __aicore__ inline void AntiquantPerGroupKN(ParamsKN<XType>& param)
                     MicroAPI::DataCopy<typename RegTensorActualT<WType>::T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
                         weightIn, (__local_mem__ typename RegTensorActualT<WType>::T*)(param.weightInBaseAddr),
                         addRegWeight);
-                    MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                        weightOut, weightIn, maskWeight);
+                    MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(weightOut, weightIn,
+                                                                                              maskWeight);
                 }
 
                 if constexpr (hasAntiquantOffset) {
                     MicroAPI::Add(weightOut, weightOut, offset, maskWeight);
                 }
                 MicroAPI::Mul(weightOut, weightOut, scale, maskWeight);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     param.weightOutBaseAddr, weightOut, param.dataBlockStride, param.repeatStride, maskWeight);
             }
         }
@@ -414,12 +413,12 @@ __aicore__ inline void AntiquantPerGroupKN(ParamsKN<XType>& param)
                     weightIn, (__local_mem__ typename RegTensorActualT<WType>::T*)(param.weightInGroupTailAddr),
                     addRegWeightTail);
                 if constexpr (AscendC::IsSameType<XType, half>::value) {
-                    MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                        weightOut, weightIn, maskWeight);
+                    MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(weightOut, weightIn,
+                                                                                              maskWeight);
                 } else {
                     MicroAPI::RegTensor<half> weightF16Tail;
-                    MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                        weightF16Tail, weightIn, maskWeight);
+                    MicroAPI::Cast<half, typename RegTensorActualT<WType>::T, castTraitNorm>(weightF16Tail, weightIn,
+                                                                                             maskWeight);
                     MicroAPI::Cast<XType, half, castTraitF162Bf16>(weightOut, weightF16Tail, maskWeight);
                 }
             } else {
@@ -428,8 +427,8 @@ __aicore__ inline void AntiquantPerGroupKN(ParamsKN<XType>& param)
                 MicroAPI::DataCopy<typename RegTensorActualT<WType>::T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(
                     weightIn, (__local_mem__ typename RegTensorActualT<WType>::T*)(param.weightInGroupTailAddr),
                     addRegWeightTail);
-                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(
-                    weightOut, weightIn, maskWeight);
+                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTraitNorm>(weightOut, weightIn,
+                                                                                          maskWeight);
             }
             if constexpr (hasAntiquantOffset) {
                 MicroAPI::Add(weightOut, weightOut, offset, maskWeight);
@@ -445,9 +444,8 @@ __aicore__ inline void AntiquantPerGroupKN(ParamsKN<XType>& param)
 template <typename XType, typename WType, bool hasAntiquantOffset, bool useVag>
 __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<XType, WType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
     MicroAPI::RegTensor<XType> offset0;
     MicroAPI::RegTensor<XType> offset1;
@@ -468,15 +466,15 @@ __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<XType, WType>& 
         // 按照一列一列处理
         for (uint16_t outerIdx = 0; outerIdx < (uint16_t)p.outerExtend; ++outerIdx) {
             if constexpr (useVag) {
-                MicroAPI::AddrReg addrRegScale =
-                    MicroAPI::CreateAddrReg<XType>(innerIdx, 8, outerIdx, p.outerStrideScale);
+                MicroAPI::AddrReg addrRegScale = MicroAPI::CreateAddrReg<XType>(innerIdx, 8, outerIdx,
+                                                                                p.outerStrideScale);
                 MicroAPI::AddrReg addrRegWeight = MicroAPI::CreateAddrReg<typename RegTensorActualT<WType>::T>(
                     innerIdx, 128, outerIdx, p.outerStrideWeight);
 
                 // 载入scale和offset
                 if constexpr (hasAntiquantOffset) {
-                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_E2B_B16>(
-                        offset0, p.offsetBaseAddr0, addrRegScale);
+                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_E2B_B16>(offset0, p.offsetBaseAddr0,
+                                                                                addrRegScale);
                     MicroAPI::Interleave(offset0, offset1, offset0, offset0);
                 }
                 // DIST_E2B_B16 表示搬运模式为
@@ -566,9 +564,8 @@ __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<XType, WType>& 
 template <typename XType, typename WType, bool hasAntiquantOffset, bool useVag>
 __aicore__ inline void AntiquantW4Pergroup64NK(ParamsGroupSize64<XType, WType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
     MicroAPI::RegTensor<XType> oriOffset00;
     MicroAPI::RegTensor<XType> oriOffset01;
@@ -592,10 +589,10 @@ __aicore__ inline void AntiquantW4Pergroup64NK(ParamsGroupSize64<XType, WType>& 
                 MicroAPI::AddrReg aregWeight = MicroAPI::CreateAddrReg<typename RegTensorActualT<WType>::T>(
                     innerIdx, 64, outerIdx, p.outerStrideWeight);
                 if constexpr (hasAntiquantOffset) {
-                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        oriOffset00, p.offsetBaseAddr00, aregScale);
-                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        oriOffset01, p.offsetBaseAddr01, aregScale);
+                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(oriOffset00, p.offsetBaseAddr00,
+                                                                                aregScale);
+                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(oriOffset01, p.offsetBaseAddr01,
+                                                                                aregScale);
                     MicroAPI::Select(offset0, oriOffset00, oriOffset01, maskRegSelect);
                 }
                 MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(oriScale00, p.scaleBaseAddr00, aregScale);
@@ -639,9 +636,8 @@ __aicore__ inline void AntiquantW4Pergroup64NK(ParamsGroupSize64<XType, WType>& 
 template <typename XType, typename WType, bool hasAntiquantOffset, bool useVag>
 __aicore__ inline void AntiquantW4Pergroup128NK(ParamsGroupSize128And256<XType, WType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
     MicroAPI::RegTensor<XType> offset;
     MicroAPI::RegTensor<XType> scale;
@@ -693,9 +689,8 @@ __aicore__ inline void AntiquantW4Pergroup128NK(ParamsGroupSize128And256<XType, 
 template <typename XType, typename WType, bool hasAntiquantOffset, bool useVag>
 __aicore__ inline void AntiquantW4Pergroup256NK(ParamsGroupSize128And256<XType, WType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
     MicroAPI::RegTensor<XType> offset;
     MicroAPI::RegTensor<XType> scale;
@@ -763,9 +758,8 @@ __aicore__ inline void AntiquantW4Pergroup256NK(ParamsGroupSize128And256<XType, 
 template <typename XType, typename WType, bool hasAntiquantOffset, bool tailInMainGroup, bool tailInTailGroup>
 __aicore__ inline void AntiquantW4PergroupGt128NKCase1(ParamsGroupSizeGt128<XType, WType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
     MicroAPI::RegTensor<XType> offset;
     MicroAPI::RegTensor<XType> scale;
@@ -795,8 +789,8 @@ __aicore__ inline void AntiquantW4PergroupGt128NKCase1(ParamsGroupSizeGt128<XTyp
                     MicroAPI::Add(weightB16, weightB16, offset, maskAll);
                 }
                 MicroAPI::Mul(weightB16, weightB16, scale, maskAll);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     p.weightOutBaseAddr0, weightB16, p.dataBlockStride, p.repeatStride0, maskAll);
             }
             // 处理一个 group_size 相对于 128 的尾块
@@ -806,14 +800,14 @@ __aicore__ inline void AntiquantW4PergroupGt128NKCase1(ParamsGroupSizeGt128<XTyp
                     (__local_mem__ typename RegTensorActualT<WType>::T*)(p.weightInBaseAddr + nBubIdx * p.innerExtend +
                                                                          groupIdx * p.groupSizeInByte +
                                                                          p.numVLInGroup * p.vlB4SizeInByte));
-                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTrait>(
-                    weightB16, weightB4, maskGrpMod128);
+                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTrait>(weightB16, weightB4,
+                                                                                      maskGrpMod128);
                 if constexpr (hasAntiquantOffset) {
                     MicroAPI::Add(weightB16, weightB16, offset, maskGrpMod128);
                 }
                 MicroAPI::Mul(weightB16, weightB16, scale, maskGrpMod128);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     p.weightOutBaseAddr0, weightB16, p.dataBlockStride, p.repeatStride1, maskGrpMod128);
             }
         }
@@ -837,8 +831,8 @@ __aicore__ inline void AntiquantW4PergroupGt128NKCase1(ParamsGroupSizeGt128<XTyp
                     MicroAPI::Add(weightB16, weightB16, offset, maskAll);
                 }
                 MicroAPI::Mul(weightB16, weightB16, scale, maskAll);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     p.weightOutBaseAddr1, weightB16, p.dataBlockStride, p.repeatStride0, maskAll);
             }
             // 处理一个不完整的 group 相对于 128 的尾块
@@ -848,15 +842,15 @@ __aicore__ inline void AntiquantW4PergroupGt128NKCase1(ParamsGroupSizeGt128<XTyp
                     (__local_mem__ typename RegTensorActualT<WType>::T*)(p.weightInBaseAddr + nBubIdx * p.innerExtend +
                                                                          p.mainGroupNum * p.groupSizeInByte +
                                                                          p.numVLInRemainGroup * p.vlB4SizeInByte));
-                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTrait>(
-                    weightB16, weightB4, maskRemainGrpMod128);
+                MicroAPI::Cast<XType, typename RegTensorActualT<WType>::T, castTrait>(weightB16, weightB4,
+                                                                                      maskRemainGrpMod128);
                 if constexpr (hasAntiquantOffset) {
                     MicroAPI::Add(weightB16, weightB16, offset, maskRemainGrpMod128);
                 }
                 MicroAPI::Mul(weightB16, weightB16, scale, maskRemainGrpMod128);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    p.weightOutBaseAddr1, weightB16, p.dataBlockStride, 0, maskRemainGrpMod128);
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(p.weightOutBaseAddr1, weightB16,
+                                                                            p.dataBlockStride, 0, maskRemainGrpMod128);
             }
         }
         // 校正从 reg 到 ub 的搬出地址，递增 C0 (32 Byte) 大小的地址
@@ -868,9 +862,8 @@ __aicore__ inline void AntiquantW4PergroupGt128NKCase1(ParamsGroupSizeGt128<XTyp
 template <typename XType, typename WType, bool hasAntiquantOffset>
 __aicore__ inline void AntiquantW4PergroupGt128NKCase2(ParamsGroupSizeGt128<XType, WType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
     MicroAPI::RegTensor<XType> offset;
     MicroAPI::RegTensor<XType> scale;
@@ -921,9 +914,8 @@ __aicore__ inline void AntiquantW4PergroupGt128NKCase2(ParamsGroupSizeGt128<XTyp
 template <typename XType, typename WType, bool hasAntiquantOffset, bool reusePrevGroup, bool crossBorder, bool useVag>
 __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>& p)
 {
-    static constexpr MicroAPI::CastTrait castTrait = {
-        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
+    static constexpr MicroAPI::CastTrait castTrait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
+                                                      MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
     MicroAPI::RegTensor<XType> offsetOdd;
     MicroAPI::RegTensor<XType> scaleOdd;
     MicroAPI::RegTensor<XType> offsetEven;
@@ -943,8 +935,8 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
     for (uint16_t groupIdx = 0; groupIdx < static_cast<uint16_t>(p.groupPairNum); ++groupIdx) {
         for (uint16_t nIdx = 0; nIdx < static_cast<uint16_t>(p.bubNLen); ++nIdx) {
             // odd group part
-            MicroAPI::AddrReg addRegScale =
-                MicroAPI::CreateAddrReg<XType>(groupIdx, p.scaleGroupPairStride, nIdx, p.scaleNStride);
+            MicroAPI::AddrReg addRegScale = MicroAPI::CreateAddrReg<XType>(groupIdx, p.scaleGroupPairStride, nIdx,
+                                                                           p.scaleNStride);
             MicroAPI::AddrReg addRegWeightBorder = MicroAPI::CreateAddrReg<typename RegTensorActualT<WType>::T>(
                 groupIdx, p.weightGroupPairStride, nIdx, p.weightNStride);
             if constexpr (hasAntiquantOffset) {
@@ -964,8 +956,8 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
                     MicroAPI::Add(weightB16, weightB16, offsetOdd, maskWeightOdd);
                 }
                 MicroAPI::Mul(weightB16, weightB16, scaleOdd, maskWeightOdd);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     p.weightOutOddAddr, weightB16, p.dataBlockStride, p.repeatStride, maskWeightOdd);
             }
             p.weightOutOddAddr -= p.offsetNWeightOutOdd;
@@ -973,8 +965,8 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
             // corss border part
             if constexpr (crossBorder) {
                 if constexpr (hasAntiquantOffset) {
-                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(
-                        offsetEven, p.offsetEvenAddr, addRegScale);
+                    MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(offsetEven, p.offsetEvenAddr,
+                                                                                addRegScale);
                 }
                 MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(scaleEven, p.scaleEvenAddr, addRegScale);
 
@@ -988,8 +980,8 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
                     MicroAPI::Add(weightB16, weightB16, offsetEven, maskWeightBorder);
                 }
                 MicroAPI::Mul(weightB16, weightB16, scaleEven, maskWeightBorder);
-                MicroAPI::DataCopy<
-                    XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                   MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     p.weightOutBorderAddr, weightB16, p.dataBlockStride, p.repeatStride, maskWeightBorder);
 
                 // even group part
@@ -1015,8 +1007,8 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
                         MicroAPI::Add(weightB16, weightB16, offsetEven, maskWeightEven);
                     }
                     MicroAPI::Mul(weightB16, weightB16, scaleEven, maskWeightEven);
-                    MicroAPI::DataCopy<
-                        XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                    MicroAPI::DataCopy<XType, MicroAPI::DataCopyMode::DATA_BLOCK_COPY,
+                                       MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                         p.weightOutEvenAddr, weightB16, p.dataBlockStride, p.repeatStride, maskWeightEven);
                 }
                 p.weightOutBorderAddr -= p.offsetNWeightOutBorder;
@@ -1032,4 +1024,3 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
 }
 
 } // namespace WeightQuantBatchMatmulV2::Arch35
-

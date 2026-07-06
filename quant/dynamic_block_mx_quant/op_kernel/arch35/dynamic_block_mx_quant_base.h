@@ -72,36 +72,32 @@ public:
 
 private:
     __aicore__ inline void InitParams();
-    __aicore__ inline void CopyIn(
-        int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int64_t baseXGmOffset,
-        int64_t nowRowBlock);
-    __aicore__ inline void CopyOut(
-        int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int64_t baseXGmOffset,
-        int64_t baseScale1Offset, int64_t baseScale2Offset, int64_t nowRowBlock);
-    __aicore__ inline void Compute(
-        int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int64_t nowRowBlock);
-    __aicore__ inline void ComputeOcp(
-        uint16_t rowNum, int64_t colNum, __ubuf__ T* xAddr, __ubuf__ uint8_t* scaleOutAddr,
-        __ubuf__ uint8_t* scale2OutAddr, __ubuf__ uint16_t* mxScaleReciprocalAddr, __ubuf__ uint8_t* yOutAddr,
-        __ubuf__ uint8_t* gatherIndexAddr);
-    __aicore__ inline void ComputeDdr(
-        uint16_t rowNum, int64_t colNum, __ubuf__ T* xAddr, __ubuf__ uint8_t* scaleOutAddr,
-        __ubuf__ uint8_t* scale2OutAddr, __ubuf__ uint16_t* mxScaleReciprocalAddr, __ubuf__ uint8_t* yOutAddr,
-        __ubuf__ uint8_t* gatherIndexAddr);
-    __aicore__ inline void ComputeYVf(
-        uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint16_t* mxScaleReciprocalAddr,
-        __ubuf__ uint8_t* yAddr);
-    __aicore__ inline void ComputeY1ToFP4(
-        uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
-        __ubuf__ uint8_t* y1Addr);
-    __aicore__ inline void ComputeY1ToFP8(
-        uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
-        __ubuf__ uint8_t* y1Addr);
+    __aicore__ inline void CopyIn(int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum,
+                                  int64_t baseXGmOffset, int64_t nowRowBlock);
+    __aicore__ inline void CopyOut(int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum,
+                                   int64_t baseXGmOffset, int64_t baseScale1Offset, int64_t baseScale2Offset,
+                                   int64_t nowRowBlock);
+    __aicore__ inline void Compute(int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum,
+                                   int64_t nowRowBlock);
+    __aicore__ inline void ComputeOcp(uint16_t rowNum, int64_t colNum, __ubuf__ T* xAddr,
+                                      __ubuf__ uint8_t* scaleOutAddr, __ubuf__ uint8_t* scale2OutAddr,
+                                      __ubuf__ uint16_t* mxScaleReciprocalAddr, __ubuf__ uint8_t* yOutAddr,
+                                      __ubuf__ uint8_t* gatherIndexAddr);
+    __aicore__ inline void ComputeDdr(uint16_t rowNum, int64_t colNum, __ubuf__ T* xAddr,
+                                      __ubuf__ uint8_t* scaleOutAddr, __ubuf__ uint8_t* scale2OutAddr,
+                                      __ubuf__ uint16_t* mxScaleReciprocalAddr, __ubuf__ uint8_t* yOutAddr,
+                                      __ubuf__ uint8_t* gatherIndexAddr);
+    __aicore__ inline void ComputeYVf(uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr,
+                                      __ubuf__ uint16_t* mxScaleReciprocalAddr, __ubuf__ uint8_t* yAddr);
+    __aicore__ inline void ComputeY1ToFP4(uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr,
+                                          __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* y1Addr);
+    __aicore__ inline void ComputeY1ToFP8(uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr,
+                                          __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* y1Addr);
     __aicore__ inline void ComputeFP4FromHalf(Reg::RegTensor<float>& Reg);
 
 protected:
-    static constexpr Reg::CastTrait castTraitHalf2BF16 = {
-        Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC};
+    static constexpr Reg::CastTrait castTraitHalf2BF16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                          Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC};
     static constexpr Reg::CastTrait castTraitHalf2BF16Ddr = {
         Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
     static constexpr Reg::CastTrait castTraitXdtypetoFp32Zero = {
@@ -109,13 +105,13 @@ protected:
     static constexpr Reg::CastTrait castTraitXdtypetoFp32One = {
         Reg::RegLayout::ONE, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
-    static constexpr Reg::CastTrait castTraitFp32toYdtype = {
-        Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr Reg::CastTrait castTraitFp32toYdtype = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                             Reg::MaskMergeMode::ZEROING, roundMode};
 
-    static constexpr Reg::CastTrait castTraitFp32toBF16 = {
-        Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT, Reg::MaskMergeMode::ZEROING, roundMode};
-    static constexpr Reg::CastTrait castTraitBF16toFp4 = {
-        Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr Reg::CastTrait castTraitFp32toBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
+                                                           Reg::MaskMergeMode::ZEROING, roundMode};
+    static constexpr Reg::CastTrait castTraitBF16toFp4 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                          Reg::MaskMergeMode::ZEROING, roundMode};
 
 private:
     // tiling data
@@ -203,8 +199,8 @@ private:
 };
 
 template <typename T, typename U, AscendC::RoundMode roundMode, uint64_t scaleAlg>
-__aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1, GM_ADDR mxScale2)
+__aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1,
+                                                                                GM_ADDR mxScale2)
 {
 #if (__NPU_ARCH__ == 3510)
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
@@ -219,8 +215,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Init(
     pipe_->InitBuffer(outQueue_, DB_BUFFER, rowUbFactor_ * colUbFactor_);
     pipe_->InitBuffer(scale1Queue_, DB_BUFFER, rowUbFactor_ * colUbBlockLoopNum_ * ubBlockSize_);
     pipe_->InitBuffer(scale2Queue_, DB_BUFFER, rowUbBlockLoopNum_ * DIGIT_TWO * colUbBlockLoopNum_ * blockW_);
-    pipe_->InitBuffer(
-        mxScaleReciprocalBuf_, rowUbBlockLoopNum_ * DIGIT_TWO * colUbBlockLoopNum_ * ubBlockSize_ * sizeof(T));
+    pipe_->InitBuffer(mxScaleReciprocalBuf_,
+                      rowUbBlockLoopNum_ * DIGIT_TWO * colUbBlockLoopNum_ * ubBlockSize_ * sizeof(T));
     pipe_->InitBuffer(tempIndexBuf_, vlForFp8);
 
     // 计算核在行列的位置，是否是尾核
@@ -249,8 +245,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Init(
         rowUbBlockLoopNum_ = rowUbBlockLoopNum_ > rowCoreTileNum_ ? rowCoreTileNum_ : rowUbBlockLoopNum_;
         rowUbLoop_ = Ceil(tailCoreRowTileNum_, rowUbBlockLoopNum_);
         // 算前面有多少block行，来计算patch
-        preRowBlockNum_ =
-            rowNormalCoreNum_ * normalCoreRowTileNum_ + (rowCoreIdx_ - rowNormalCoreNum_) * tailCoreRowTileNum_;
+        preRowBlockNum_ = rowNormalCoreNum_ * normalCoreRowTileNum_ +
+                          (rowCoreIdx_ - rowNormalCoreNum_) * tailCoreRowTileNum_;
     } else {
         rowCoreTileNum_ = normalCoreRowTileNum_;
         rowUbLoop_ = Ceil(rowCoreTileNum_, rowUbBlockLoopNum_);
@@ -277,9 +273,9 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Init(
         colUbLoop_ = Ceil(colCoreTileNum_, colUbBlockLoopNum_);
         xColGmOffset = colNormalCoreNum_ * normalCoreColTileNum_ * blockW_ +
                        (colCoreIdx_ - colNormalCoreNum_) * tailCoreColTileNum_ * blockW_;
-        scale1GmColOffset =
-            (colNormalCoreNum_ * normalCoreColTileNum_ + (colCoreIdx_ - colNormalCoreNum_) * tailCoreColTileNum_) *
-            blockW_ / blockSizeCol_;
+        scale1GmColOffset = (colNormalCoreNum_ * normalCoreColTileNum_ +
+                             (colCoreIdx_ - colNormalCoreNum_) * tailCoreColTileNum_) *
+                            blockW_ / blockSizeCol_;
         scale2GmColOffset = colNormalCoreNum_ * normalCoreColTileNum_ * blockW_ * DIGIT_TWO +
                             (colCoreIdx_ - colNormalCoreNum_) * tailCoreColTileNum_ * blockW_ * DIGIT_TWO;
 
@@ -382,8 +378,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Proce
 
     for (int32_t rowUbLoopIdx = 0; rowUbLoopIdx < rowUbLoop_; rowUbLoopIdx++) {
         // 行block数
-        int32_t blockRow =
-            rowUbLoopIdx == rowUbLoop_ - 1 ? rowCoreTileNum_ - rowUbLoopIdx * rowUbBlockLoopNum_ : rowUbBlockLoopNum_;
+        int32_t blockRow = rowUbLoopIdx == rowUbLoop_ - 1 ? rowCoreTileNum_ - rowUbLoopIdx * rowUbBlockLoopNum_ :
+                                                            rowUbBlockLoopNum_;
         int64_t nowRowBlockNum = preRowBlockNum_ + rowUbLoopIdx * rowUbBlockLoopNum_;
         int64_t nowBatch = nowRowBlockNum / singleBatchRowBlockLoopNum_;
         int64_t nowSingleBatchBlock = nowRowBlockNum % singleBatchRowBlockLoopNum_;
@@ -396,34 +392,36 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Proce
         for (int32_t colUbLoopIdx = 0; colUbLoopIdx < colUbLoop_; colUbLoopIdx++) {
             int32_t blockCol = colUbLoopIdx == colUbLoop_ - 1 ? colCoreTileNum_ - colUbLoopIdx * colUbBlockLoopNum_ :
                                                                 colUbBlockLoopNum_;
-            int64_t baseXGmOffset =
-                ((nowBatch - preBatch_) * rowNum_ + (nowSingleBatchBlock - preSingleBatchBlock_) * blockH_) * colNum_ +
-                colUbLoopIdx * colUbBlockLoopNum_ * blockW_;
+            int64_t baseXGmOffset = ((nowBatch - preBatch_) * rowNum_ +
+                                     (nowSingleBatchBlock - preSingleBatchBlock_) * blockH_) *
+                                        colNum_ +
+                                    colUbLoopIdx * colUbBlockLoopNum_ * blockW_;
             int32_t blockColNum = colUbLoopIdx == colUbLoop_ - 1 ?
                                       coreColNum_ - colUbLoopIdx * colUbBlockLoopNum_ * blockW_ :
                                       colUbBlockLoopNum_ * blockW_;
 
-            int64_t baseScale1Offset =
-                ((nowBatch - preBatch_) * rowNum_ + (nowSingleBatchBlock - preSingleBatchBlock_) * blockH_) *
-                    colScaleNum_ +
-                colUbLoopIdx * colUbBlockLoopNum_ * blockW_ / blockSizeCol_;
+            int64_t baseScale1Offset = ((nowBatch - preBatch_) * rowNum_ +
+                                        (nowSingleBatchBlock - preSingleBatchBlock_) * blockH_) *
+                                           colScaleNum_ +
+                                       colUbLoopIdx * colUbBlockLoopNum_ * blockW_ / blockSizeCol_;
 
             int64_t baseScale2Offset = rowUbLoopIdx * rowUbBlockLoopNum_ * DIGIT_TWO * colNum_ +
                                        colUbLoopIdx * colUbBlockLoopNum_ * blockW_ * DIGIT_TWO;
 
             CopyIn(blockRow, blockCol, blockRowNum, blockColNum, baseXGmOffset, nowSingleBatchBlock);
             Compute(blockRow, blockCol, blockRowNum, blockColNum, nowSingleBatchBlock);
-            CopyOut(
-                blockRow, blockCol, blockRowNum, blockColNum, baseXGmOffset, baseScale1Offset, baseScale2Offset,
-                nowSingleBatchBlock);
+            CopyOut(blockRow, blockCol, blockRowNum, blockColNum, baseXGmOffset, baseScale1Offset, baseScale2Offset,
+                    nowSingleBatchBlock);
         }
     }
 }
 
 template <typename T, typename U, AscendC::RoundMode roundMode, uint64_t scaleAlg>
-__aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::CopyIn(
-    int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int64_t baseXGmOffset,
-    int64_t nowRowBlock)
+__aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::CopyIn(int32_t blockRow, int32_t blockCol,
+                                                                                  int32_t blockRowNum,
+                                                                                  int32_t blockColNum,
+                                                                                  int64_t baseXGmOffset,
+                                                                                  int64_t nowRowBlock)
 {
     LocalTensor<T> inLocal = inQueue_.AllocTensor<T>();
 
@@ -450,8 +448,9 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::CopyI
         for (int32_t colIdx = 0; colIdx < blockCol; colIdx++) {
             gmOffset = baseXGmOffset + gmRowOffset + colIdx * blockW_;
             int32_t colBlockSize = colIdx == blockCol - 1 ? blockColNum - colIdx * blockW_ : blockW_;
-            int64_t rightPadding =
-                ops::CeilAlign(static_cast<int64_t>(colBlockSize * sizeof(T)), ubBlockSize_) / sizeof(T) - colBlockSize;
+            int64_t rightPadding = ops::CeilAlign(static_cast<int64_t>(colBlockSize * sizeof(T)), ubBlockSize_) /
+                                       sizeof(T) -
+                                   colBlockSize;
             DataCopyExtParams copyParams = {
                 static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(colBlockSize * sizeof(T)),
                 static_cast<uint32_t>((colNum_ - colBlockSize) * sizeof(T)),
@@ -575,8 +574,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
 
         // -1轴scale循环搬出
         for (uint16_t i = 0; i < rowNum; i++) {
-            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                mxScale1Addr, mxScale1B8, ubBlockSize_ / sizeof(uint8_t), maskReduceB8);
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, mxScale1B8,
+                                                                         ubBlockSize_ / sizeof(uint8_t), maskReduceB8);
         }
 
         // -2轴scale扩展搬出
@@ -725,8 +724,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
         Reg::Select<uint16_t>(reversedExp, specialExp, reversedExp, invalidDataMask);
         // -1轴scale循环搬出
         for (uint16_t i = 0; i < rowNum; i++) {
-            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE>(
-                mxScale1Addr, mxScale1B8, ubBlockSize_ / sizeof(uint8_t), maskReduceB8);
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, mxScale1B8,
+                                                                         ubBlockSize_ / sizeof(uint8_t), maskReduceB8);
         }
         Reg::StoreAlign(mxScaleReciprocalAddr, reversedExp, maskReduceB16);
     }
@@ -793,10 +792,10 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                 ComputeFP4FromHalf(x0OneFP32);
                 Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(x0ZeroBF16, x0ZeroFP32, dataMaskB32);
                 Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(x0OneBF16, x0OneFP32, dataMaskB32);
-                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                    (Reg::RegTensor<uint16_t>&)x0ZeroBF16, (Reg::RegTensor<uint32_t>&)x0ZeroBF16);
-                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                    (Reg::RegTensor<uint16_t>&)x0OneBF16, (Reg::RegTensor<uint32_t>&)x0OneBF16);
+                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x0ZeroBF16,
+                                                                        (Reg::RegTensor<uint32_t>&)x0ZeroBF16);
+                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x0OneBF16,
+                                                                        (Reg::RegTensor<uint32_t>&)x0OneBF16);
                 Reg::Interleave(x0ZeroBF16, x0OneBF16, x0ZeroBF16, x0OneBF16);
 
                 // x1 cast to bf16
@@ -809,10 +808,10 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                 ComputeFP4FromHalf(x1OneFP32);
                 Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1ZeroBF16, x1ZeroFP32, dataMaskB32);
                 Reg::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1OneBF16, x1OneFP32, dataMaskB32);
-                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                    (Reg::RegTensor<uint16_t>&)x1ZeroBF16, (Reg::RegTensor<uint32_t>&)x1ZeroBF16);
-                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(
-                    (Reg::RegTensor<uint16_t>&)x1OneBF16, (Reg::RegTensor<uint32_t>&)x1OneBF16);
+                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x1ZeroBF16,
+                                                                        (Reg::RegTensor<uint32_t>&)x1ZeroBF16);
+                Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)x1OneBF16,
+                                                                        (Reg::RegTensor<uint32_t>&)x1OneBF16);
                 Reg::Interleave(x1ZeroBF16, x1OneBF16, x1ZeroBF16, x1OneBF16);
 
                 // interleave x0 and x1
@@ -960,8 +959,10 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
 }
 
 template <typename T, typename U, AscendC::RoundMode roundMode, uint64_t scaleAlg>
-__aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compute(
-    int32_t blockRow, int32_t blockCol, int32_t blockRowNum, int32_t blockColNum, int64_t nowRowBlock)
+__aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compute(int32_t blockRow, int32_t blockCol,
+                                                                                   int32_t blockRowNum,
+                                                                                   int32_t blockColNum,
+                                                                                   int64_t nowRowBlock)
 {
     LocalTensor<T> inLocal = inQueue_.DeQue<T>();
     __local_mem__ T* xLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
@@ -1018,16 +1019,14 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
             int32_t colBlockSize = colIdx == blockCol - 1 ? blockColNum - colIdx * blockW_ : blockW_;
 
             if constexpr (scaleAlg == 2 && (IsSameType<U, fp4x2_e2m1_t>::value)) {
-                ComputeDdr(
-                    row1BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
-                    scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
-                    outLocalAddr + yOffset, tempIndexLocalAddr);
+                ComputeDdr(row1BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
+                           scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
+                           outLocalAddr + yOffset, tempIndexLocalAddr);
             } else {
                 // 计算基本块中的第一行的block32*256
-                ComputeOcp(
-                    row1BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
-                    scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
-                    outLocalAddr + yOffset, tempIndexLocalAddr);
+                ComputeOcp(row1BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
+                           scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
+                           outLocalAddr + yOffset, tempIndexLocalAddr);
             }
 
             if constexpr ((IsSameType<U, fp8_e4m3fn_t>::value) || (IsSameType<U, fp8_e5m2_t>::value)) {
@@ -1036,9 +1035,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                 // 两个fp4合成一个fp8输出，所以要/2
                 yOffsetFactor = 2;
             }
-            ComputeYVf(
-                colBlockSize, row1BlockSize, xLocalAddr + ubOffset, mxScaleReciprocalAddr + scaleReciprocalOffset,
-                outLocalAddr + yOffset);
+            ComputeYVf(colBlockSize, row1BlockSize, xLocalAddr + ubOffset,
+                       mxScaleReciprocalAddr + scaleReciprocalOffset, outLocalAddr + yOffset);
             scale1Offset = scale1Offset + row1BlockSize * oneBlockCountB8_;
             scale2Offset = scale2Offset + blockW_;
             ubOffset = ubOffset + row1BlockSize * blockW_;
@@ -1049,20 +1047,17 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                 scale2Offset = scale2Offset + blockW_;
             } else {
                 if constexpr (scaleAlg == 2 && (IsSameType<U, fp4x2_e2m1_t>::value)) {
-                    ComputeDdr(
-                        row2BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
-                        scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
-                        outLocalAddr + yOffset, tempIndexLocalAddr);
+                    ComputeDdr(row2BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
+                               scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
+                               outLocalAddr + yOffset, tempIndexLocalAddr);
                 } else {
-                    ComputeOcp(
-                        row2BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
-                        scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
-                        outLocalAddr + yOffset, tempIndexLocalAddr);
+                    ComputeOcp(row2BlockSize, colBlockSize, xLocalAddr + ubOffset, scale1LocalAddr + scale1Offset,
+                               scale2LocalAddr + scale2Offset, mxScaleReciprocalAddr + scaleReciprocalOffset,
+                               outLocalAddr + yOffset, tempIndexLocalAddr);
                 }
 
-                ComputeYVf(
-                    colBlockSize, row2BlockSize, xLocalAddr + ubOffset, mxScaleReciprocalAddr + scaleReciprocalOffset,
-                    outLocalAddr + yOffset);
+                ComputeYVf(colBlockSize, row2BlockSize, xLocalAddr + ubOffset,
+                           mxScaleReciprocalAddr + scaleReciprocalOffset, outLocalAddr + yOffset);
                 scale1Offset = scale1Offset + row2BlockSize * oneBlockCountB8_;
                 scale2Offset = scale2Offset + blockW_;
                 ubOffset = ubOffset + row2BlockSize * blockW_;
@@ -1070,9 +1065,8 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                 yOffset = yOffset + row2BlockSize * blockW_ / yOffsetFactor;
             }
             // -2轴交织
-            Interleave(
-                scale2Local[scale2Offset - (DIGIT_TWO * blockW_)], scale2Local[scale2Offset - blockW_],
-                scale2Local[scale2Offset - (DIGIT_TWO * blockW_)], scale2Local[scale2Offset - blockW_], blockW_);
+            Interleave(scale2Local[scale2Offset - (DIGIT_TWO * blockW_)], scale2Local[scale2Offset - blockW_],
+                       scale2Local[scale2Offset - (DIGIT_TWO * blockW_)], scale2Local[scale2Offset - blockW_], blockW_);
         }
     }
 
@@ -1134,16 +1128,15 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::CopyO
                 yOffset = outGmOffset;
             }
 
-            uint32_t scale1OutLen =
-                ops::CeilAlign(static_cast<int64_t>(colBlockSize), blockSizeCol_ * DIGIT_TWO) / blockSizeCol_;
-            DataCopyExtParams scale1CopyParams = {
-                static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(scale1OutLen), 0,
-                colScaleNum_ - scale1OutLen, 0};
+            uint32_t scale1OutLen = ops::CeilAlign(static_cast<int64_t>(colBlockSize), blockSizeCol_ * DIGIT_TWO) /
+                                    blockSizeCol_;
+            DataCopyExtParams scale1CopyParams = {static_cast<uint16_t>(rowBlockSize),
+                                                  static_cast<uint32_t>(scale1OutLen), 0, colScaleNum_ - scale1OutLen,
+                                                  0};
             DataCopyPad(mxScale1Gm_[scale1GmOffset], scale1Local[scale1UbOffset], scale1CopyParams);
 
-            DataCopyExtParams outCopyParams = {
-                static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(outBlockLen), srcStride,
-                static_cast<uint32_t>(dstStride), 0};
+            DataCopyExtParams outCopyParams = {static_cast<uint16_t>(rowBlockSize), static_cast<uint32_t>(outBlockLen),
+                                               srcStride, static_cast<uint32_t>(dstStride), 0};
 
             DataCopyPad(yGm_[yOffset], outLocal[outUbOffset], outCopyParams);
             if constexpr ((IsSameType<U, fp8_e4m3fn_t>::value) || (IsSameType<U, fp8_e5m2_t>::value)) {
@@ -1162,9 +1155,9 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::CopyO
     uint32_t scale2SrcStride = DIGIT_TWO * ops::CeilDiv(static_cast<int64_t>(blockW_), ubBlockSize_) -
                                ops::CeilDiv(static_cast<int64_t>(DIGIT_TWO * blockColNum), ubBlockSize_);
 
-    DataCopyExtParams scale2CopyParams = {
-        static_cast<uint16_t>(blockRow), static_cast<uint32_t>(blockColNum * DIGIT_TWO), scale2SrcStride,
-        DIGIT_TWO * (colNum_ - blockColNum), 0};
+    DataCopyExtParams scale2CopyParams = {static_cast<uint16_t>(blockRow),
+                                          static_cast<uint32_t>(blockColNum * DIGIT_TWO), scale2SrcStride,
+                                          DIGIT_TWO * (colNum_ - blockColNum), 0};
     DataCopyPad(mxScale2Gm_[baseScale2Offset], scale2Local, scale2CopyParams);
 
     outQueue_.FreeTensor(outLocal);

@@ -46,23 +46,23 @@ constexpr uint32_t PAD_ENABLE = 1;
 constexpr int NCHW = 0;
 constexpr int NHWC = 1;
 
-extern "C" __global__ __aicore__ void max_pool_with_argmax_v3(
-    GM_ADDR x, GM_ADDR y, GM_ADDR argmax, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void max_pool_with_argmax_v3(GM_ADDR x, GM_ADDR y, GM_ADDR argmax, GM_ADDR workspace,
+                                                              GM_ADDR tiling)
 {
     TPipe pipeBase;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_V3_TILING_KEY_NHWC_SMALL_C)) {
         GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxV3NhwcTilingData, tilingDataIn, tiling);
         const MaxPoolWithArgmaxV3NhwcTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPoolWithArgmaxV3SmallCNameSpace::MaxPoolWithArgmaxV3SmallC<DTYPE_X, DTYPE_ARGMAX, 0> op(
-            &pipeBase, tilingData);
+        MaxPoolWithArgmaxV3SmallCNameSpace::MaxPoolWithArgmaxV3SmallC<DTYPE_X, DTYPE_ARGMAX, 0> op(&pipeBase,
+                                                                                                   tilingData);
         op.Init(x, y, argmax);
         op.MaxPoolWithArgmaxV3SmallCProcess();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_V3_TILING_KEY_NHWC_SMALL_C_PAD)) {
         GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxV3NhwcTilingData, tilingDataIn, tiling);
         const MaxPoolWithArgmaxV3NhwcTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPoolWithArgmaxV3SmallCNameSpace::MaxPoolWithArgmaxV3SmallC<DTYPE_X, DTYPE_ARGMAX, 1> op(
-            &pipeBase, tilingData);
+        MaxPoolWithArgmaxV3SmallCNameSpace::MaxPoolWithArgmaxV3SmallC<DTYPE_X, DTYPE_ARGMAX, 1> op(&pipeBase,
+                                                                                                   tilingData);
         op.Init(x, y, argmax);
         op.MaxPoolWithArgmaxV3SmallCProcess();
     } else if (TILING_KEY_IS(MAX_POOL_WITH_ARGMAX_V3_TILING_KEY_NHWC_BIG_C)) {
@@ -104,8 +104,8 @@ extern "C" __global__ __aicore__ void max_pool_with_argmax_v3(
     } else if (TILING_KEY_IS(BIG_KERNEL_FORMAT_NCHW)) {
         GET_TILING_DATA_WITH_STRUCT(MaxPoolWithArgmaxV3BigKernelTilingData, tilingDataIn, tiling);
         const MaxPoolWithArgmaxV3BigKernelTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPoolWithArgMaxV3BigKernel::MaxPoolWithArgmaxV3BigKernel<DTYPE_X, float, DTYPE_ARGMAX> op(
-            &pipeBase, tilingData);
+        MaxPoolWithArgMaxV3BigKernel::MaxPoolWithArgmaxV3BigKernel<DTYPE_X, float, DTYPE_ARGMAX> op(&pipeBase,
+                                                                                                    tilingData);
         op.Init(x, y, argmax);
         op.Process();
     } else if (TILING_KEY_IS(NO_PADDING_TILING_KEY)) {

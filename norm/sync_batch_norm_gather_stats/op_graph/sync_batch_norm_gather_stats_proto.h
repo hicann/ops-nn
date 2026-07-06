@@ -30,9 +30,11 @@ namespace ge {
 * @li total_square_sum: A 2-D tensor, that is, [N, C]. The format must be ND. The square sum of each device.
 * Must be one of the following types: bfloat16, float16, float32. Has the same type, shape and format as "total_sum".
 * @li sample_count: A 1-D tensor. Number of data for each device. The format must be ND.
-* Must be one of the following types: int32. The value of "sample_count" needs to be consistent with the N-axis value of "total_sum".
+* Must be one of the following types: int32. The value of "sample_count" needs to be consistent with the N-axis value of
+"total_sum".
 * @li mean: A 1-D tensor. Runtime mean. The format must be ND.
-* Must be one of the following types: bfloat16, float16, float32. The value of "mean" needs to be consistent with the C-axis value of "total_sum".
+* Must be one of the following types: bfloat16, float16, float32. The value of "mean" needs to be consistent with the
+C-axis value of "total_sum".
 * @li variance: A 1-D tensor. Runtime variance. The format must be ND.
 * Must be one of the following types: bfloat16, float16, float32. Has the same type, shape and format as input "mean".
 * The value of "variance" needs to be consistent with the C-axis value of "total_sum". \n
@@ -51,7 +53,8 @@ namespace ge {
 * @li mean: A 1-D tensor. Updated Runtime mean.
 * Must be one of the following types: bfloat16, float16, float32. Has the same type, shape and format as input "mean".
 * @li variance: A 1-D tensor. Updated Runtime variance.
-* Must be one of the following types: bfloat16, float16, float32. Has the same type, shape and format as input "mean". \n
+* Must be one of the following types: bfloat16, float16, float32. Has the same type, shape and format as input "mean".
+\n
 */
 REG_OP(SyncBatchNormGatherStats)
     .INPUT(total_sum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -66,6 +69,6 @@ REG_OP(SyncBatchNormGatherStats)
     .ATTR(momentum, Float, 0.1f)
     .ATTR(eps, Float, 0.00001f)
     .OP_END_FACTORY_REG(SyncBatchNormGatherStats)
-}  // namespace ge
+} // namespace ge
 
-#endif  // SYNC_BATCH_NORM_GATHER_STATS_PROTO_H
+#endif // SYNC_BATCH_NORM_GATHER_STATS_PROTO_H

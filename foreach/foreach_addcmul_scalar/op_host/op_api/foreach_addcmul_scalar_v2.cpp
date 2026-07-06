@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -24,15 +25,15 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ForeachAddcmulScalar);
 
-const aclTensorList *ForeachAddcmulScalarV2(const aclTensorList *x1, const aclTensorList *x2, const aclTensorList *x3, const aclTensor *scalar, const aclTensorList *out, aclOpExecutor *executor) {
+const aclTensorList* ForeachAddcmulScalarV2(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* x3,
+                                            const aclTensor* scalar, const aclTensorList* out, aclOpExecutor* executor)
+{
     L0_DFX(ForeachAddcmulScalarV2, x1, x2, x3, scalar);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachAddcmulScalar,
-                                      OP_INPUT(x1, x2, x3, scalar),
-                                      OP_OUTPUT(out));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachAddcmulScalar, OP_INPUT(x1, x2, x3, scalar), OP_OUTPUT(out));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
     }
     return out;
 }
-}  // namespace l0op
+} // namespace l0op

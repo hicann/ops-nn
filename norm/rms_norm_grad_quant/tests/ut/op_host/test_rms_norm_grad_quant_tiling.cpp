@@ -27,15 +27,9 @@ using namespace ge;
 
 class RmsNormGradQuantTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RmsNormGradQuantTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RmsNormGradQuantTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RmsNormGradQuantTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RmsNormGradQuantTilingTest TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -90,21 +84,21 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_full_load_dgam
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(6, 2)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(6, 2)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -113,30 +107,28 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_full_load_dgam
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     ASSERT_NE(param, nullptr);
-    auto holder =
-        gert::TilingContextFaker()
-            .SetOpType(op_type)
-            .NodeIoNum(6, 2)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1})
-            .InputShapes({&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape})
-            .OutputShapes({&dx_out_shape, &dgamma_out_shape})
-            .CompileInfo(&compile_info)
-            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-            .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs(
-                {{"quantMode", Ops::NN::AnyValue::CreateFrom<std::string>("static")},
-                 {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
-                 {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
-            .TilingData(param.get())
-            .Workspace(ws_size)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape})
+                      .OutputShapes({&dx_out_shape, &dgamma_out_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"quantMode", Ops::NN::AnyValue::CreateFrom<std::string>("static")},
+                                  {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -153,15 +145,12 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_full_load_dgam
     ASSERT_NE(tilingData, nullptr);
 }
 
-static ge::graphStatus RunRmsNormGradQuantTiling(
-    const std::vector<gert::StorageShape*>& inputShapes,
-    const std::vector<gert::StorageShape*>& outputShapes,
-    const std::vector<ge::DataType>& inputDtypes,
-    const std::vector<ge::DataType>& outputDtypes,
-    const std::vector<uint32_t>& irInstanceNum,
-    bool divMode,
-    uint64_t& outTilingKey,
-    int64_t dstType = 34)
+static ge::graphStatus RunRmsNormGradQuantTiling(const std::vector<gert::StorageShape*>& inputShapes,
+                                                 const std::vector<gert::StorageShape*>& outputShapes,
+                                                 const std::vector<ge::DataType>& inputDtypes,
+                                                 const std::vector<ge::DataType>& outputDtypes,
+                                                 const std::vector<uint32_t>& irInstanceNum, bool divMode,
+                                                 uint64_t& outTilingKey, int64_t dstType = 34)
 {
     std::map<std::string, std::string> soc_version_infos = {{"NpuArch", "3510"}};
     string compile_info_string = R"({
@@ -189,12 +178,12 @@ static ge::graphStatus RunRmsNormGradQuantTiling(
     auto tiling_func = op_impl->tiling;
     auto tiling_parse_func = op_impl->tiling_parse;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(6, 2)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(6, 2)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     if (!kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init()) {
         return ge::GRAPH_FAILED;
@@ -202,10 +191,10 @@ static ge::graphStatus RunRmsNormGradQuantTiling(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
 
     auto parse_ret = tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>());
     if (parse_ret != ge::GRAPH_SUCCESS) {
@@ -237,10 +226,9 @@ static ge::graphStatus RunRmsNormGradQuantTiling(
         faker.NodeOutputTd(static_cast<int32_t>(i), outputDtypes[i], ge::FORMAT_ND, ge::FORMAT_ND);
     }
 
-    faker.NodeAttrs(
-        {{"quantMode", Ops::NN::AnyValue::CreateFrom<std::string>("static")},
-         {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(divMode)},
-         {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstType)}});
+    faker.NodeAttrs({{"quantMode", Ops::NN::AnyValue::CreateFrom<std::string>("static")},
+                     {"div_mode", Ops::NN::AnyValue::CreateFrom<bool>(divMode)},
+                     {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstType)}});
 
     auto holder = faker.Build();
 
@@ -271,17 +259,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_fp16)
     gert::StorageShape dx_out_shape = {{0, 64}, {0, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_fp16)
@@ -302,7 +290,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_fp16)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_no_optional)
@@ -317,13 +305,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_no_optional)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_scalex_zp)
@@ -337,17 +326,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_scalex_zp)
     gert::StorageShape dx_out_shape = {{8, 64}, {8, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_bf16_gamma_float)
@@ -368,7 +357,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_bf16_gamma_float)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_float_all)
@@ -389,7 +378,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_float_all)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_split)
@@ -410,7 +399,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_split)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dgamma_large)
@@ -431,7 +420,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dgamma_large)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_div_mode_false)
@@ -446,13 +435,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_div_mode_false)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, false, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_scalex_dtype_float)
@@ -467,14 +457,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_scalex_dtype_floa
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_bf16_scalex_no_zp)
@@ -489,14 +479,13 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_bf16_scalex_no_zp
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_split_dgamma_large)
@@ -519,7 +508,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_split_dgamma_l
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_with_scalex_zp)
@@ -533,17 +522,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_with_scalex_zp)
     gert::StorageShape dx_out_shape = {{4096, 1024}, {4096, 1024}};
     gert::StorageShape dgamma_out_shape = {{1024}, {1024}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_div_mode_false)
@@ -564,7 +553,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_div_mode_false)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, false, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_bf16)
@@ -585,7 +574,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_bf16)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_with_scalex_zp)
@@ -599,17 +588,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_with_scalex_z
     gert::StorageShape dx_out_shape = {{0, 64}, {0, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_bf16)
@@ -630,7 +619,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_bf16)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_scalex_zp_int8)
@@ -644,17 +633,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_scalex_zp_in
     gert::StorageShape dx_out_shape = {{8, 64}, {8, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_INT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey, 2),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_bf16_scalex_zp_int8)
@@ -668,17 +657,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_bf16_scalex_zp_in
     gert::StorageShape dx_out_shape = {{8, 64}, {8, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_BF16,  ge::DT_BF16,  ge::DT_FLOAT,
+                                             ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_INT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey, 2),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_scalex_no_zp_int8)
@@ -693,14 +682,13 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_fp16_scalex_no_zp
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_INT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey, 2),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_split_int8)
@@ -714,17 +702,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_split_int8)
     gert::StorageShape dx_out_shape = {{8, 8192}, {8, 8192}};
     gert::StorageShape dgamma_out_shape = {{8192}, {8192}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_INT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey, 2),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_div_mode_false_int8)
@@ -738,17 +726,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_div_mode_false_in
     gert::StorageShape dx_out_shape = {{8, 64}, {8, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_INT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, false, tilingKey, 2),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_int8)
@@ -762,17 +750,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_rows0_int8)
     gert::StorageShape dx_out_shape = {{0, 64}, {0, 64}};
     gert::StorageShape dgamma_out_shape = {{64}, {64}};
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_INT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey, 2),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 // Coverage: empty_tiling.cpp CalcUsedCoreNumGamma multi-core path (cols > 8192)
@@ -795,7 +783,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_empty_large_cols)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 // Coverage: big_m_tiling.cpp DgammaDoTilingStg0 tail block fold path (basicBlockLoopTailBlock != 0)
@@ -819,7 +807,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_big_m_large_rows_tail_fol
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 // Coverage: regbase_tiling.cpp CalcUsedCoreNumGamma multi-colset path
@@ -843,7 +831,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_multi_colset)
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 // Coverage: regbase_tiling.cpp CalcTilingDataDgamma WITH_LARGE_ROWS path
@@ -880,7 +868,7 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dgamma_large_rows
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_full_load_2)
@@ -898,31 +886,32 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_full_load_2)
     //     total input = 64000+64000+8000 = 136000
     //     output = ceil(2001*4)*8 = 8004*8=64032
     //     2*(136000+64032) = 400064, UB=245760 => 400064 > 245760 => WITH_LARGE_ROWS!
-    gert::StorageShape dy_shape = {{2, 16239, 9 ,2 ,2, 2}, {2, 16239, 9 ,2 ,2, 2}};
-    gert::StorageShape x_shape = {{2, 16239, 9 ,2 ,2, 2}, {2, 16239, 9 ,2 ,2, 2}};
-    gert::StorageShape rstd_shape = {{2, 16239, 9 ,2}, {2, 16239, 9 ,2}};
+    gert::StorageShape dy_shape = {{2, 16239, 9, 2, 2, 2}, {2, 16239, 9, 2, 2, 2}};
+    gert::StorageShape x_shape = {{2, 16239, 9, 2, 2, 2}, {2, 16239, 9, 2, 2, 2}};
+    gert::StorageShape rstd_shape = {{2, 16239, 9, 2}, {2, 16239, 9, 2}};
     gert::StorageShape gamma_shape = {{2, 2}, {2, 2}};
     gert::StorageShape scales_x_shape = {{1}, {1}};
     gert::StorageShape offset_x_shape = {{1}, {1}};
-    gert::StorageShape dx_out_shape = {{2, 16239, 9 ,2 ,2, 2}, {2, 16239, 9 ,2 ,2, 2}};
+    gert::StorageShape dx_out_shape = {{2, 16239, 9, 2, 2, 2}, {2, 16239, 9, 2, 2, 2}};
     gert::StorageShape dgamma_out_shape = {{2, 2}, {2, 2}};
 
-    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_SUCCESS);
+              ge::GRAPH_SUCCESS);
 }
 
 // Shape validation tests for CheckInputsShape
-static void BuildValidShapes(
-    gert::StorageShape& dy_shape, gert::StorageShape& x_shape, gert::StorageShape& rstd_shape,
-    gert::StorageShape& gamma_shape, gert::StorageShape& scales_x_shape, gert::StorageShape& dx_out_shape,
-    gert::StorageShape& dgamma_out_shape)
+static void BuildValidShapes(gert::StorageShape& dy_shape, gert::StorageShape& x_shape, gert::StorageShape& rstd_shape,
+                             gert::StorageShape& gamma_shape, gert::StorageShape& scales_x_shape,
+                             gert::StorageShape& dx_out_shape, gert::StorageShape& dgamma_out_shape)
 {
     dy_shape = {{8, 64}, {8, 64}};
     x_shape = {{8, 64}, {8, 64}};
@@ -941,13 +930,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dy_dim_invalid)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_x_dim_invalid)
@@ -958,13 +948,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_x_dim_invalid)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_rstd_dim_invalid)
@@ -975,13 +966,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_rstd_dim_invalid)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_gamma_dim_invalid)
@@ -992,13 +984,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_gamma_dim_invalid)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_scalesx_dim_invalid)
@@ -1009,13 +1002,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_scalesx_dim_invalid
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_offsetx_dim_invalid)
@@ -1024,17 +1018,17 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_offsetx_dim_invalid
     BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
     gert::StorageShape offset_x_shape = {{1, 1}, {1, 1}}; // dimNum=2, invalid
 
-    std::vector<gert::StorageShape*> inputs = {
-        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> inputs = {&dy_shape,    &x_shape,        &rstd_shape,
+                                               &gamma_shape, &scales_x_shape, &offset_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                             ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dimnum_relation_invalid)
@@ -1045,13 +1039,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dimnum_relation_inv
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_rstd_prefix_mismatch)
@@ -1062,13 +1057,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_rstd_prefix_mismatc
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_gamma_suffix_mismatch)
@@ -1079,13 +1075,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_gamma_suffix_mismat
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dxout_mismatch)
@@ -1096,13 +1093,14 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dxout_mismatch)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }
 
 TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dgammaout_mismatch)
@@ -1113,11 +1111,12 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dgammaout_mismatch)
 
     std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
     std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
-    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16,
+                                             ge::DT_FLOAT};
     std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
     std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
 
     uint64_t tilingKey = 0;
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
-        ge::GRAPH_FAILED);
+              ge::GRAPH_FAILED);
 }

@@ -30,8 +30,7 @@ struct LambUpdateWithLrCompileInfo {
 
 class LambUpdateWithLrTiling : public TilingBaseClass {
 public:
-    explicit LambUpdateWithLrTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LambUpdateWithLrTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

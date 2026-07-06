@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file index_no_continuous.h
  * \brief Ascendc index kernel
@@ -24,8 +23,7 @@
 
 template <typename T>
 struct noConcalcParams {
-    uint64_t indexedDimStride_[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0},
-                                        {0, 0, 0, 0}, {0, 0, 0, 0}};
+    uint64_t indexedDimStride_[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
     uint64_t indexList_[4] = {0, 0, 0, 0};
     uint64_t usedIndexInputShape[4] = {0, 0, 0, 0};
     T inputShift_[4];
@@ -58,10 +56,10 @@ constexpr uint32_t NOCON_COUNT_NUMS_FOUR = 4;
 constexpr uint32_t OFFSET = 3;
 constexpr uint32_t NONCON_THREAD_DIM = 256;
 
-template <typename T, typename F, typename P, int IdxCount, int IdxDim, int InputDim, typename T2>     
+template <typename T, typename F, typename P, int IdxCount, int IdxDim, int InputDim, typename T2>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtComputeNoContinuous(
-    uint32_t blockId_, uint64_t outputLength_, uint32_t blockNums_, uint32_t firstIndexedDim_, __gm__ T* outputGm_, 
-    __gm__ T* inputXGm_, __ubuf__ noConcalcParams<T2> *calcParamsPtr_)
+    uint32_t blockId_, uint64_t outputLength_, uint32_t blockNums_, uint32_t firstIndexedDim_, __gm__ T* outputGm_,
+    __gm__ T* inputXGm_, __ubuf__ noConcalcParams<T2>* calcParamsPtr_)
 {
     const __gm__ P* localIndexList[IdxCount];
     uint64_t indexFactor[IdxDim];
@@ -70,57 +68,58 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_LAUNCH_BOUND) inline void SimtCom
         localIndexList[i] = (__gm__ P*)calcParamsPtr_->indexList_[i];
     }
 
-    for (T2 i = blockId_ * blockDim.x + threadIdx.x; i < outputLength_;
-        i = i + blockNums_ * blockDim.x) {
-            T2 inputIndex = 0;
-            T2 length = i;
-            T2 index = calcParamsPtr_-> isIndexPut_ == false ? i : 0;
+    for (T2 i = blockId_ * blockDim.x + threadIdx.x; i < outputLength_; i = i + blockNums_ * blockDim.x) {
+        T2 inputIndex = 0;
+        T2 length = i;
+        T2 index = calcParamsPtr_->isIndexPut_ == false ? i : 0;
 
-            for (uint32_t j = 0; j < IdxDim; j++) {
-                T2 lastIdx = length / calcParamsPtr_->indexPara[j];
-                T2 remLength = length - lastIdx * calcParamsPtr_->indexPara[j];
-                T2 mulFactor = AscendC::Simt::UintDiv(calcParamsPtr_->indexPara[j], calcParamsPtr_->indexM_[j], calcParamsPtr_->indexShift_[j]);
-                indexFactor[j] = remLength / mulFactor;
-            }
-
-            int64_t indexValue = 0;
-            for (uint16_t j = 0; j < IdxCount; j++) {
-                T2 idx = 0;
-                for (uint32_t k = 0; k < IdxDim; k++) {
-                    idx += indexFactor[k] * calcParamsPtr_->indexedDimStride_[j][k];
-                }
-                indexValue = localIndexList[j][idx];
-                if (indexValue < 0) {
-                    indexValue += calcParamsPtr_->usedIndexInputShape[j];
-                }
-                inputIndex += indexValue * calcParamsPtr_->usedIndexStride_[j];
-            }
-            for (int32_t j = 0; j < InputDim - IdxCount; j++) {
-                T2 lastIdx = length / calcParamsPtr_->inputPara[j];
-                T2 remLength = length - lastIdx * calcParamsPtr_->inputPara[j];
-                T2 mulFactor = AscendC::Simt::UintDiv(calcParamsPtr_->inputPara[j], calcParamsPtr_->inputM_[j], calcParamsPtr_->inputShift_[j]);
-                indexValue = remLength / mulFactor;
-                inputIndex += indexValue * calcParamsPtr_->nonIndexStride_[j];
-            }
-            
-            if (calcParamsPtr_-> isIndexPut_) {
-                for (uint32_t j = 0; j < calcParamsPtr_->valueDimNum_; j++) {
-                    T2 valueFactor = AscendC::Simt::UintDiv(length, calcParamsPtr_->valueM_[j], calcParamsPtr_->valueShift_[j]);
-                    length = length - calcParamsPtr_->valueViewStride_[j] * valueFactor;
-                    index += valueFactor * calcParamsPtr_->valueStride_[j];
-                }
-            }
-            F()(outputGm_, inputXGm_, index, inputIndex);
+        for (uint32_t j = 0; j < IdxDim; j++) {
+            T2 lastIdx = length / calcParamsPtr_->indexPara[j];
+            T2 remLength = length - lastIdx * calcParamsPtr_->indexPara[j];
+            T2 mulFactor = AscendC::Simt::UintDiv(calcParamsPtr_->indexPara[j], calcParamsPtr_->indexM_[j],
+                                                  calcParamsPtr_->indexShift_[j]);
+            indexFactor[j] = remLength / mulFactor;
         }
+
+        int64_t indexValue = 0;
+        for (uint16_t j = 0; j < IdxCount; j++) {
+            T2 idx = 0;
+            for (uint32_t k = 0; k < IdxDim; k++) {
+                idx += indexFactor[k] * calcParamsPtr_->indexedDimStride_[j][k];
+            }
+            indexValue = localIndexList[j][idx];
+            if (indexValue < 0) {
+                indexValue += calcParamsPtr_->usedIndexInputShape[j];
+            }
+            inputIndex += indexValue * calcParamsPtr_->usedIndexStride_[j];
+        }
+        for (int32_t j = 0; j < InputDim - IdxCount; j++) {
+            T2 lastIdx = length / calcParamsPtr_->inputPara[j];
+            T2 remLength = length - lastIdx * calcParamsPtr_->inputPara[j];
+            T2 mulFactor = AscendC::Simt::UintDiv(calcParamsPtr_->inputPara[j], calcParamsPtr_->inputM_[j],
+                                                  calcParamsPtr_->inputShift_[j]);
+            indexValue = remLength / mulFactor;
+            inputIndex += indexValue * calcParamsPtr_->nonIndexStride_[j];
+        }
+
+        if (calcParamsPtr_->isIndexPut_) {
+            for (uint32_t j = 0; j < calcParamsPtr_->valueDimNum_; j++) {
+                T2 valueFactor = AscendC::Simt::UintDiv(length, calcParamsPtr_->valueM_[j],
+                                                        calcParamsPtr_->valueShift_[j]);
+                length = length - calcParamsPtr_->valueViewStride_[j] * valueFactor;
+                index += valueFactor * calcParamsPtr_->valueStride_[j];
+            }
+        }
+        F()(outputGm_, inputXGm_, index, inputIndex);
+    }
 }
 
 template <typename T, typename F, typename P, typename T2>
 class KernelIndexNoContiguous {
 public:
     __aicore__ inline KernelIndexNoContiguous(){};
-    __aicore__ inline void Init(
-        GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-        IndexNonContinuousTilingData tilingData, GM_ADDR value = nullptr);
+    __aicore__ inline void Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides,
+                                GM_ADDR indices, IndexNonContinuousTilingData tilingData, GM_ADDR value = nullptr);
     __aicore__ inline void ComputeParameter(IndexNonContinuousTilingData tilingData);
 
     __aicore__ inline void Process();
@@ -131,7 +130,7 @@ private:
     AscendC::GlobalTensor<T> outputGm_;
     AscendC::GlobalTensor<T> inputXGm_;
     AscendC::GlobalTensor<int64_t> indexedSizeGm_;
-    TBuf<TPosition::VECCALC> Buf_;  
+    TBuf<TPosition::VECCALC> Buf_;
 
     GM_ADDR inTensorPtr_ = nullptr;
 
@@ -140,20 +139,21 @@ private:
     uint32_t inputDimNum_{1};
     uint32_t valueDimNum_{1};
     uint32_t blockId_;
-    uint32_t blockNums_;    
+    uint32_t blockNums_;
     uint32_t firstIndexedDim_{0};
     uint32_t indexedNum_{0};
     uint32_t indexContinue_{1};
     uint32_t indexedSizesNum_{0};
     bool isIndexPut_{false};
 
-    __ubuf__ noConcalcParams<T2> *calcParamsPtr_;
+    __ubuf__ noConcalcParams<T2>* calcParamsPtr_;
 };
 
 template <typename T, typename F, typename P, typename T2>
-__aicore__ inline void KernelIndexNoContiguous<T, F, P, T2>::Init(
-    GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes, GM_ADDR indexedStrides, GM_ADDR indices,
-    IndexNonContinuousTilingData tilingData, GM_ADDR value)
+__aicore__ inline void KernelIndexNoContiguous<T, F, P, T2>::Init(GM_ADDR output, GM_ADDR inputX, GM_ADDR indexedSizes,
+                                                                  GM_ADDR indexedStrides, GM_ADDR indices,
+                                                                  IndexNonContinuousTilingData tilingData,
+                                                                  GM_ADDR value)
 {
     if (value != nullptr) {
         isIndexPut_ = true;
@@ -216,7 +216,7 @@ __aicore__ inline void KernelIndexNoContiguous<T, F, P, T2>::ComputeParameter(In
         calcParamsPtr_->indexM_[i] = m;
         calcParamsPtr_->indexShift_[i] = shift;
     }
- 
+
     T2 mulFactor = outputLength_;
     uint32_t idN{0};
     uint32_t nonIdN{0};
@@ -279,169 +279,243 @@ template <typename T, typename F, typename P, typename T2>
 __aicore__ inline void KernelIndexNoContiguous<T, F, P, T2>::Process()
 {
     DataSyncBarrier<MemDsbT::UB>();
-    if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_ONE) {
+    if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+        inputDimNum_ == NOCON_DIM_NUMS_ONE) {
         asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_ONE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
-            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);        
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
         asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
-            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);   
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_THREE, T2>>(
+            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_ONE) {
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_ONE) {
         asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_ONE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
         asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_ONE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_ONE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_ONE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_ONE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_TWO, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_ONE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_ONE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_ONE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_ONE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_TWO, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_ONE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_ONE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
-            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);    
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
         asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
-            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);    
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_THREE, T2>>(
+            (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
         asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_TWO, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_TWO) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_TWO, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_TWO) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_TWO, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_TWO && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_TWO, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_THREE) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_THREE, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_THREE) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_THREE, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_THREE && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_THREE, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_ONE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_ONE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_ONE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_TWO && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_TWO &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_TWO, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_THREE && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_THREE &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_THREE, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
-    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_FOUR && inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
-        asc_vf_call<SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
+    } else if (indexedNum_ == NOCON_COUNT_NUMS_FOUR && indexedDimNum_ == NOCON_DIM_NUMS_FOUR &&
+               inputDimNum_ == NOCON_DIM_NUMS_FOUR) {
+        asc_vf_call<
+            SimtComputeNoContinuous<T, F, P, NOCON_COUNT_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, NOCON_DIM_NUMS_FOUR, T2>>(
             dim3{NONCON_THREAD_DIM}, blockId_, outputLength_, blockNums_, firstIndexedDim_,
             (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
     }
 }
 
-}
+} // namespace Index
 
 #endif

@@ -11,12 +11,12 @@
 /*!
  * \file ctc_loss_v3_grad.h
  * \brief
- * 
- * 
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
+ *
+ *
  */
 #ifndef CTC_LOSS_V3_GRAD_H_
 #define CTC_LOSS_V3_GRAD_H_

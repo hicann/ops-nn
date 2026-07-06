@@ -15,8 +15,7 @@
 
 #include "log_softmax_v2_tiling.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace Ops::Base;
 ge::graphStatus LogSoftmaxV2TilingBase::GetAndCheckDtypes()
 {
@@ -33,15 +32,14 @@ ge::graphStatus LogSoftmaxV2TilingBase::GetAndCheckDtypes()
     yDtype_ = yDesc->GetDataType();
     if (xDtype_ != yDtype_) {
         std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "logits and logsoftmax", dtypeMsg.c_str(),
-            "The dtypes of input logits and output logsoftmax must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "logits and logsoftmax", dtypeMsg.c_str(),
+                                               "The dtypes of input logits and output logsoftmax must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-                    OP_LOGE_FOR_INVALID_DTYPE(
-                        context_->GetNodeName(), "logits", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "logits", ToString(xDtype_).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
 
     xDtypeSize_ = xDtype_ == ge::DT_FLOAT ? FLOAT32_BYTES : FLOAT16_BYTES;
     yDtypeSize_ = xDtypeSize_;
@@ -49,7 +47,5 @@ ge::graphStatus LogSoftmaxV2TilingBase::GetAndCheckDtypes()
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(LogSoftmaxV2)
-    .Tiling(TilingForSoftmaxV2)
-    .TilingParse<SoftmaxV2CompileInfo>(TilingPrepareForSoftmaxV2);
-}  // namespace optiling
+IMPL_OP_OPTILING(LogSoftmaxV2).Tiling(TilingForSoftmaxV2).TilingParse<SoftmaxV2CompileInfo>(TilingPrepareForSoftmaxV2);
+} // namespace optiling

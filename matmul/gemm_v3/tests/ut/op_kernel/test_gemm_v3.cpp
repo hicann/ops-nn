@@ -31,17 +31,13 @@
 #include "kernel_tiling/kernel_tiling.h"
 using namespace std;
 
-extern "C" __global__ __aicore__ void gemm_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGm,
-    GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM);
+extern "C" __global__ __aicore__ void gemm_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGm, GM_ADDR yGM, GM_ADDR workspaceGM,
+                                              GM_ADDR tilingGM);
 
 class gemm_v3_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "gemm_v3_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "gemm_v3_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "gemm_v3_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "gemm_v3_test TearDown\n" << endl; }
 };
 
 struct HcclCombinOpParam {
@@ -51,7 +47,8 @@ struct HcclCombinOpParam {
     uint32_t rankDim;
 };
 
-TEST_F(gemm_v3_test, gemm_v3_test_1) {
+TEST_F(gemm_v3_test, gemm_v3_test_1)
+{
     // {{512, 512}, {512, 512}}
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
@@ -67,12 +64,12 @@ TEST_F(gemm_v3_test, gemm_v3_test_1) {
     size_t tilingSize = sizeof(MatmulTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *aGM = (uint8_t *)AscendC::GmAlloc(shape_a);
-    uint8_t *bGM = (uint8_t *)AscendC::GmAlloc(shape_b);
-    uint8_t *cGM = (uint8_t *)AscendC::GmAlloc(shape_c);
-    uint8_t *yGM = (uint8_t *)AscendC::GmAlloc(shape_y);
+    uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shape_a);
+    uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shape_b);
+    uint8_t* cGM = (uint8_t*)AscendC::GmAlloc(shape_c);
+    uint8_t* yGM = (uint8_t*)AscendC::GmAlloc(shape_y);
 
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
 
     memset(aGM, 0, shape_a);
     memset(bGM, 0, shape_b);
@@ -85,7 +82,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_1) {
     system("cd ./gemm_v3_data/ && python3 gen_data.py 512 512 512");
     // system("cd ./fa_data/ && python3 gen_tiling.py case2");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/gemm_v3_data/shape_a.bin", shape_a, aGM, shape_a);
     ReadFile(path + "/gemm_v3_data/shape_b.bin", shape_b, bGM, shape_b);
@@ -93,7 +90,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_1) {
     ReadFile(path + "/gemm_v3_data/shape_y.bin", shape_y, yGM, shape_y);
 
     // mock tilingData
-    MatmulTilingData *tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
+    MatmulTilingData* tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
     tiling_data->matmulTiling.usedCoreNum = 24;
     tiling_data->matmulTiling.M = 512;
     tiling_data->matmulTiling.N = 512;
@@ -131,7 +128,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_1) {
     tiling_data->tileL2cacheTiling.nTileBlock = 4;
     tiling_data->tileL2cacheTiling.calOrder = 0;
     tiling_data->l2cacheUseInfo.l2CacheFlag = 0;
-    
+
     auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
         ::gemm_v3<0, 0, 0, 1, 0, 0>(aGM, bGM, cGM, yGM, workspaceGM, tilingGM);
     };
@@ -146,7 +143,8 @@ TEST_F(gemm_v3_test, gemm_v3_test_1) {
     free(path_);
 }
 
-TEST_F(gemm_v3_test, gemm_v3_test_2) {
+TEST_F(gemm_v3_test, gemm_v3_test_2)
+{
     // {{512, 512}, {512, 3168}}
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
 
@@ -162,12 +160,12 @@ TEST_F(gemm_v3_test, gemm_v3_test_2) {
     size_t tilingSize = sizeof(MatmulTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *aGM = (uint8_t *)AscendC::GmAlloc(shape_a);
-    uint8_t *bGM = (uint8_t *)AscendC::GmAlloc(shape_b);
-    uint8_t *cGM = (uint8_t *)AscendC::GmAlloc(shape_c);
-    uint8_t *yGM = (uint8_t *)AscendC::GmAlloc(shape_y);
+    uint8_t* aGM = (uint8_t*)AscendC::GmAlloc(shape_a);
+    uint8_t* bGM = (uint8_t*)AscendC::GmAlloc(shape_b);
+    uint8_t* cGM = (uint8_t*)AscendC::GmAlloc(shape_c);
+    uint8_t* yGM = (uint8_t*)AscendC::GmAlloc(shape_y);
 
-    uint8_t *contextGM = (uint8_t *)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
+    uint8_t* contextGM = (uint8_t*)AscendC::GmAlloc(sizeof(HcclCombinOpParam));
 
     memset(aGM, 0, shape_a);
     memset(bGM, 0, shape_b);
@@ -180,7 +178,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_2) {
     system("cd ./gemm_v3_data/ && python3 gen_data.py 512 512 3168");
     // system("cd ./fa_data/ && python3 gen_tiling.py case2");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/gemm_v3_data/shape_a.bin", shape_a, aGM, shape_a);
     ReadFile(path + "/gemm_v3_data/shape_b.bin", shape_b, bGM, shape_b);
@@ -188,7 +186,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_2) {
     ReadFile(path + "/gemm_v3_data/shape_y.bin", shape_y, yGM, shape_y);
 
     // mock tilingData
-    MatmulTilingData *tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
+    MatmulTilingData* tiling_data = reinterpret_cast<MatmulTilingData*>(tiling);
     tiling_data->matmulTiling.usedCoreNum = 24;
     tiling_data->matmulTiling.M = 512;
     tiling_data->matmulTiling.N = 3168;
@@ -226,7 +224,7 @@ TEST_F(gemm_v3_test, gemm_v3_test_2) {
     tiling_data->tileL2cacheTiling.nTileBlock = 13;
     tiling_data->tileL2cacheTiling.calOrder = 0;
     tiling_data->l2cacheUseInfo.l2CacheFlag = 0;
-    
+
     auto wrapper = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM) {
         ::gemm_v3<0, 0, 0, 0, 0, 0>(aGM, bGM, cGM, yGM, workspaceGM, tilingGM);
     };

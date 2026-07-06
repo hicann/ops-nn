@@ -19,8 +19,8 @@
 #include "kernel_ut_data_helper.h"
 #include "kernel_ut_data_executor.h"
 
-extern "C" __global__ __aicore__ void ge_glu_grad_v2(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR g_gelu, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ge_glu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADDR g_gelu, GM_ADDR dx,
+                                                     GM_ADDR workspace, GM_ADDR tiling);
 
 namespace {
 std::string GetShapesString(const std::vector<std::vector<int64_t>>& shapeInfo)
@@ -62,20 +62,19 @@ protected:
     static void TearDownTestSuite() { std::cout << "ge_glu_grad_v2_test SetUpTestSuite" << std::endl; }
 
     template <typename T>
-    void SingleCallOperator(
-        const std::vector<std::vector<int64_t>>& shapeInfos, const std::vector<int64_t>& attrInfos,
-        const ge::DataType dyDtype, const bool needCompare = false)
+    void SingleCallOperator(const std::vector<std::vector<int64_t>>& shapeInfos, const std::vector<int64_t>& attrInfos,
+                            const ge::DataType dyDtype, const bool needCompare = false)
     {
         // get tiling data and tiling key
         optiling::GeGluGradV2Tiling tilingObject(shapeInfos, attrInfos, dyDtype);
         tilingObject.RunTiling4GeGluGradV2();
         int32_t tilingKey = tilingObject.GetTilingKey();
 
-        kernel_ut::SetupTestEnvironment(
-            "activation/ge_glu_grad_v2/tests/ut/op_kernel/ge_glu_grad_v2_data", "ge_glu_grad_v2_data");
-        kernel_ut::RunGenData(
-            "./ge_glu_grad_v2_data", {"'" + GetShapesString(shapeInfos) + "'", "'" + GetShapesString(attrInfos) + "'",
-                                      std::to_string(tilingKey)});
+        kernel_ut::SetupTestEnvironment("activation/ge_glu_grad_v2/tests/ut/op_kernel/ge_glu_grad_v2_data",
+                                        "ge_glu_grad_v2_data");
+        kernel_ut::RunGenData("./ge_glu_grad_v2_data",
+                              {"'" + GetShapesString(shapeInfos) + "'", "'" + GetShapesString(attrInfos) + "'",
+                               std::to_string(tilingKey)});
         size_t usrWorkspaceSize = 4096;
         uint8_t* usrWorkSpace = (uint8_t*)AscendC::GmAlloc(usrWorkspaceSize);
         size_t tilingSize = sizeof(GeGluGradV2TilingData);

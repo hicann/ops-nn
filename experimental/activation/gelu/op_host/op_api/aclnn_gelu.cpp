@@ -20,8 +20,8 @@
 
 using namespace op;
 
-static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                   DataType::DT_BF16};
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
@@ -62,9 +62,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     // 如果输入格式是私有格式，记录日志，直接报错
     if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(out->GetStorageFormat())) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW, self [%s], out [%s]",
-            ToString(self->GetStorageFormat()).GetString(), ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW, self [%s], out [%s]",
+                ToString(self->GetStorageFormat()).GetString(), ToString(out->GetStorageFormat()).GetString());
         return false;
     }
     return true;
@@ -87,8 +86,8 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGeluGetWorkspaceSize(
-    const aclTensor* self, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGeluGetWorkspaceSize(const aclTensor* self, aclTensor* out, uint64_t* workspaceSize,
+                                      aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGelu, DFX_IN(self), DFX_OUT(out));
 

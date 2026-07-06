@@ -19,7 +19,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensorList *ForeachAddListV2(const aclTensorList *x1, const aclTensorList *x2, const aclTensor *alpha, const aclTensorList *out, aclOpExecutor *executor);
+const aclTensorList* ForeachAddListV2(const aclTensorList* x1, const aclTensorList* x2, const aclTensor* alpha,
+                                      const aclTensorList* out, aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_FOREACH_ADD_LIST_V2_OP_H

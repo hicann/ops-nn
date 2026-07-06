@@ -20,8 +20,8 @@
 using namespace op;
 
 namespace l0op {
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = { op::DataType::DT_FLOAT,
-                                                                               op::DataType::DT_FLOAT16 };
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                              op::DataType::DT_FLOAT16};
 const uint64_t NCHW_N_IDX = 0;
 const uint64_t NCHW_C_IDX = 1;
 const uint64_t NCHW_H_IDX = 2;
@@ -44,7 +44,7 @@ inline static int64_t CeilDiv(int64_t value, int64_t factor)
 }
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-static bool IsAiCoreSupport(const aclTensor *self)
+static bool IsAiCoreSupport(const aclTensor* self)
 {
     // 只需要判断dtype
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
@@ -64,9 +64,9 @@ OP_TYPE_REGISTER(Pooling);
 //     .ATTR(ceil_mode, Int, 0)
 //     .ATTR(data_format, String, "NCHW")
 //     .OP_END_FACTORY_REG(Pooling)
-const aclTensor *Pooling5Hd(const aclTensor *x, const aclTensor *weight, int64_t mode, bool globalPooling,
-                            const aclIntArray *window, const aclIntArray *stride, const aclIntArray *pad,
-                            const int64_t ceilMode, const char *dataFormat, aclOpExecutor *executor)
+const aclTensor* Pooling5Hd(const aclTensor* x, const aclTensor* weight, int64_t mode, bool globalPooling,
+                            const aclIntArray* window, const aclIntArray* stride, const aclIntArray* pad,
+                            const int64_t ceilMode, const char* dataFormat, aclOpExecutor* executor)
 {
     L0_DFX(Pooling5Hd, x, weight, mode, globalPooling, window, stride, pad, ceilMode, dataFormat);
 
@@ -75,13 +75,13 @@ const aclTensor *Pooling5Hd(const aclTensor *x, const aclTensor *weight, int64_t
         return nullptr;
     }
 
-    FVector<int64_t> newDilation { 1, 1, 1, 1 };
+    FVector<int64_t> newDilation{1, 1, 1, 1};
     auto dilation4 = executor->AllocIntArray(newDilation.data(), 4);
 
-    FVector<int64_t> newWindow { (*window)[0], (*window)[1], (*window)[2], (*window)[3] };
+    FVector<int64_t> newWindow{(*window)[0], (*window)[1], (*window)[2], (*window)[3]};
     auto window4 = executor->AllocIntArray(newWindow.data(), 4);
 
-    FVector<int64_t> newStride { (*stride)[0], (*stride)[1], (*stride)[2], (*stride)[3] };
+    FVector<int64_t> newStride{(*stride)[0], (*stride)[1], (*stride)[2], (*stride)[3]};
     auto stride4 = executor->AllocIntArray(newStride.data(), 4);
 
     // modify pads if ceil_mode
@@ -107,29 +107,30 @@ const aclTensor *Pooling5Hd(const aclTensor *x, const aclTensor *weight, int64_t
 
     if (ceilMode == 0) {
         // window, pad, stride are aclIntArray of length 4, so [0], [2] is index
-        if ((outH - 1) * (*stride)[2] >= x->GetViewShape().GetDim(2) +  (*pad)[0]) {
+        if ((outH - 1) * (*stride)[2] >= x->GetViewShape().GetDim(2) + (*pad)[0]) {
             // x ViewShape is NCHW, so Dim(2) is H
             int64_t needPad = (outH - 2) * (*stride)[2] + (*window)[2] - x->GetViewShape().GetDim(2);
             padD = needPad - padT;
         }
         // window, pad, stride are aclIntArray of length 4, so [2], [3] is index
-        if ((outW - 1) * (*stride)[3] >= x->GetViewShape().GetDim(3) +  (*pad)[2]) {
+        if ((outW - 1) * (*stride)[3] >= x->GetViewShape().GetDim(3) + (*pad)[2]) {
             // x ViewShape is NCHW, so Dim(3) is W
             int64_t needPad = (outW - 2) * (*stride)[3] + (*window)[3] - x->GetViewShape().GetDim(3);
             padR = needPad - padL;
         }
     }
 
-    FVector<int64_t> newPad { padT, padD, padL, padR };
+    FVector<int64_t> newPad{padT, padD, padL, padR};
     auto pad4 = executor->AllocIntArray(newPad.data(), 4);
 
     auto poolingOut = executor->AllocTensor(x->GetDataType(), op::Format::FORMAT_NC1HWC0, op::Format::FORMAT_NCHW);
 
-    const char *priAttr1 = "";
-    const char *priAttr2 = "NOTSET";
-    auto ret = INFER_SHAPE(Pooling, OP_INPUT(x, weight), OP_OUTPUT(poolingOut),
+    const char* priAttr1 = "";
+    const char* priAttr2 = "NOTSET";
+    auto ret = INFER_SHAPE(
+        Pooling, OP_INPUT(x, weight), OP_OUTPUT(poolingOut),
         OP_ATTR(mode, globalPooling, window4, stride4, pad4, dilation4, ceilMode, dataFormat, priAttr1, priAttr2));
-        
+
     // INFER_SHAPE得到poolingOut的shape不对，因此需要手动设置poolingOut的StorageShape
     int64_t c = poolingOut->GetViewShape().GetDim(NCHW_C_IDX);
     int64_t c0 = 0;
@@ -151,7 +152,8 @@ const aclTensor *Pooling5Hd(const aclTensor *x, const aclTensor *weight, int64_t
         return nullptr;
     }
 
-    ret = ADD_TO_LAUNCHER_LIST_AICORE(Pooling, op::AI_CORE, OP_INPUT(x, weight), OP_OUTPUT(poolingOut),
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        Pooling, op::AI_CORE, OP_INPUT(x, weight), OP_OUTPUT(poolingOut),
         OP_ATTR(mode, globalPooling, window4, stride4, pad4, dilation4, ceilMode, dataFormat, priAttr1, priAttr2));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
                                          "Pooling ADD_TO_LAUNCHER_LIST_AICORE failed.");

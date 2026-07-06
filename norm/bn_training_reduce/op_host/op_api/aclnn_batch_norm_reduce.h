@@ -27,7 +27,7 @@ extern "C" {
  * $$
  * sum_i = \sum_{n=0}^{N-1} \sum_{h=0}^{H-1} \sum_{w=0}^{W-1} x_{(n,i,h,w)}
  * $$
- * 
+ *
  * $$
  * squareSum_i = \sum_{n=0}^{N-1} \sum_{h=0}^{H-1} \sum_{w=0}^{W-1} x_{(n,i,h,w)}^2
  * $$
@@ -40,8 +40,8 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnBatchNormReduceGetWorkspaceSize(
-    const aclTensor* x, aclTensor* sum, aclTensor* squareSum, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnBatchNormReduceGetWorkspaceSize(const aclTensor* x, aclTensor* sum, aclTensor* squareSum,
+                                                           uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnBatchNormReduce的第二段接口，用于执行计算。
@@ -55,8 +55,8 @@ ACLNN_API aclnnStatus aclnnBatchNormReduceGetWorkspaceSize(
  * @param [in] stream: 指定执行任务的AscendCL Stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnBatchNormReduce(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+ACLNN_API aclnnStatus aclnnBatchNormReduce(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                           aclrtStream stream);
 #ifdef __cplusplus
 }
 #endif

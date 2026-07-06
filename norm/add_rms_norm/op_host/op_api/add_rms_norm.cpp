@@ -30,13 +30,13 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(AddRmsNorm);
 
-const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(
-    const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, double epsilon, int64_t mode,
-    aclOpExecutor* executor)
+const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(const aclTensor* x1, const aclTensor* x2,
+                                                              const aclTensor* gamma, double epsilon, int64_t mode,
+                                                              aclOpExecutor* executor)
 {
     L0_DFX(AddRmsNorm, x1, x2, gamma, epsilon);
     Shape dummyShape({0});
-    if(mode == ADD_RMS_NORM_MODE) {
+    if (mode == ADD_RMS_NORM_MODE) {
         Shape rstdShape;
         size_t x1DimNum = x1->GetViewShape().GetDimNum();
         size_t gammaDimNum = gamma->GetViewShape().GetDimNum();
@@ -48,7 +48,7 @@ const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(
         }
         dummyShape = rstdShape;
     }
-    
+
     auto yOut = executor->AllocTensor(x1->GetViewShape(), x1->GetDataType(), x1->GetViewFormat());
     auto rstdOut = executor->AllocTensor(dummyShape, DataType::DT_FLOAT, x1->GetViewFormat());
     auto xOut = executor->AllocTensor(x1->GetViewShape(), x1->GetDataType(), x1->GetViewFormat());
@@ -58,8 +58,8 @@ const std::array<aclTensor*, ADD_RMS_NORM_OUT_NUM> AddRmsNorm(
         xOut = executor->AllocTensor(dummyShape, x1->GetDataType(), x1->GetViewFormat());
     }
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        AddRmsNorm, OP_INPUT(x1, x2, gamma), OP_OUTPUT(yOut, rstdOut, xOut), OP_ATTR(static_cast<float>(epsilon)));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(AddRmsNorm, OP_INPUT(x1, x2, gamma), OP_OUTPUT(yOut, rstdOut, xOut),
+                                           OP_ATTR(static_cast<float>(epsilon)));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AddRmsNorm ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr, nullptr};

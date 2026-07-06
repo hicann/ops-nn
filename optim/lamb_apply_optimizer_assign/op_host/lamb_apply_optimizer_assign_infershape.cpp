@@ -42,26 +42,20 @@ static ge::graphStatus InferShape4LambApplyOptimizerAssign(gert::InferShapeConte
     auto outputm_shape = context->GetOutputShape(OUTPUTM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputm_shape);
 
-    OP_CHECK_IF(
-        !BroadcastShape(grad_shape, inputv_shape, output0_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
-            ToString(*inputv_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(grad_shape, inputv_shape, output0_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
+                        ToString(*inputv_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        !BroadcastShape(grad_shape, inputv_shape, outputv_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
-            ToString(*inputv_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(grad_shape, inputv_shape, outputv_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
+                        ToString(*inputv_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        !BroadcastShape(grad_shape, inputm_shape, outputm_shape),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
-            ToString(*inputm_shape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(grad_shape, inputm_shape, outputm_shape),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
+                        ToString(*inputm_shape).c_str()),
+                return ge::GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
 }

@@ -23,28 +23,24 @@ using namespace ge;
 namespace optiling {
 class BatchNormGradV3InferTiling : public BatchNormGradV3InferBase {
 public:
-    explicit BatchNormGradV3InferTiling(gert::TilingContext* context) : BatchNormGradV3InferBase(context)
-    {}
+    explicit BatchNormGradV3InferTiling(gert::TilingContext* context) : BatchNormGradV3InferBase(context) {}
     ~BatchNormGradV3InferTiling() override = default;
 
 protected:
     bool IsCapable() override
     {
         // B0AB1, B1==1时走BA模板
-        OP_TILING_CHECK(
-            fusedB1Len_ == 1,
-            OP_LOGD(
-                context_->GetNodeName(),
-                "BatchNormGradV3InferTiling BAB template is not capable, fused shape: (%ld, %ld, %ld)", fusedB0Len_,
-                fusedALen_, fusedB1Len_),
-            return false);
+        OP_TILING_CHECK(fusedB1Len_ == 1,
+                        OP_LOGD(context_->GetNodeName(),
+                                "BatchNormGradV3InferTiling BAB template is not capable, fused shape: (%ld, %ld, %ld)",
+                                fusedB0Len_, fusedALen_, fusedB1Len_),
+                        return false);
 
         CalcBasicInfo();
 
-        OP_LOGD(
-            context_->GetNodeName(),
-            "BatchNormGradV3InferTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
-            fusedALen_, fusedB1Len_);
+        OP_LOGD(context_->GetNodeName(),
+                "BatchNormGradV3InferTiling BAB template is capable, , fused shape: (%ld, %ld, %ld)", fusedB0Len_,
+                fusedALen_, fusedB1Len_);
         return true;
     }
 
@@ -60,9 +56,9 @@ ge::graphStatus BatchNormGradV3InferTiling::DoOpTiling()
 {
     // 切分A、B基本块， （B0,A,B1） -- >(b0Outer*aOuter*b1Outer, B0inner*Ainner*B1innerA(TileBase))
     int64_t aInner = 1;
-    int64_t ubBufferSize =
-        (aicoreParams_.ubSize / DOUBLE_BUFFER - (bytesPerWeight_ + bytesPerRunningVar_) * aInner * aTileBase_) /
-        bytesPerDy_ / INPUT_OUTPUT_NUM;
+    int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
+                            (bytesPerWeight_ + bytesPerRunningVar_) * aInner * aTileBase_) /
+                           bytesPerDy_ / INPUT_OUTPUT_NUM;
 
     // 先按照B切分，再切A
     // UB可载入最大tile块数
@@ -111,10 +107,7 @@ ge::graphStatus BatchNormGradV3InferTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormGradV3InferTiling::GetTilingKey() const
-{
-    return (TILINGKEY_INFER_BASE);
-}
+uint64_t BatchNormGradV3InferTiling::GetTilingKey() const { return (TILINGKEY_INFER_BASE); }
 
 ge::graphStatus BatchNormGradV3InferTiling::PostTiling()
 {

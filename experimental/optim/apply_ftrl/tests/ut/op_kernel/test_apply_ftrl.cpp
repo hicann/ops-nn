@@ -56,10 +56,9 @@
 // standalone CPU 孪生 UT 无该 codegen。ApplyFtrlTilingData 为纯 C++ struct，按字节拷贝即可
 // 还原（等价于生成版的 InitTilingData<T> memcpy 语义）。REGISTER_TILING_DEFAULT 由 asc 头提供。
 #ifndef GET_TILING_DATA_WITH_STRUCT
-#define GET_TILING_DATA_WITH_STRUCT(StructT, name, arg)                  \
-    StructT name;                                                        \
-    (void)memcpy(reinterpret_cast<void*>(&(name)),                       \
-                 reinterpret_cast<const void*>(arg), sizeof(StructT))
+#define GET_TILING_DATA_WITH_STRUCT(StructT, name, arg) \
+    StructT name;                                       \
+    (void)memcpy(reinterpret_cast<void*>(&(name)), reinterpret_cast<const void*>(arg), sizeof(StructT))
 #endif
 
 // 主线 kernel（带入 ApplyFtrl<T,PAD_TAIL,HAS_L1> 模板与 ApplyFtrlTilingData）。
@@ -69,17 +68,17 @@ using namespace std;
 
 namespace {
 
-constexpr int64_t N = 256;  // 64 的倍数 → 单 tile 无尾块 pad
+constexpr int64_t N = 256; // 64 的倍数 → 单 tile 无尾块 pad
 
 // ---- spec.yaml math_semantics.formula 的 fp64 CPU golden（逐元素）----
 struct GoldenOut {
     double var;
-    double accum;   // accum_new
-    double linear;  // linear_t
+    double accum;  // accum_new
+    double linear; // linear_t
 };
 
-static GoldenOut ComputeGolden(double var, double accum, double linear, double grad,
-                               double lr, double l1, double l2, double lr_power)
+static GoldenOut ComputeGolden(double var, double accum, double linear, double grad, double lr, double l1, double l2,
+                               double lr_power)
 {
     double accum_new = accum + grad * grad;
     double pow_new = std::pow(accum_new, -lr_power);
@@ -106,7 +105,7 @@ TEST_F(ApplyFtrlKernelTest, T001_CorePath_Fp16_HasL1_Aligned)
 {
     const size_t tElems = static_cast<size_t>(N);
     const size_t tBytes = tElems * sizeof(half);
-    const size_t sBytes = sizeof(half);  // scalar: 1 element
+    const size_t sBytes = sizeof(half); // scalar: 1 element
 
     // ---- GM 分配 ----
     uint8_t* var = (uint8_t*)AscendC::GmAlloc(tBytes);
@@ -135,10 +134,10 @@ TEST_F(ApplyFtrlKernelTest, T001_CorePath_Fp16_HasL1_Aligned)
     auto* gradH = reinterpret_cast<half*>(grad);
     std::vector<float> varIn(tElems), accumIn(tElems), linearIn(tElems), gradIn(tElems);
     for (size_t i = 0; i < tElems; ++i) {
-        varIn[i] = ToFp16f(-0.8f + 1.6f * static_cast<float>(i % 11) / 10.0f);  // [-0.8, 0.8]
-        accumIn[i] = ToFp16f(0.5f + 1.0f * static_cast<float>(i % 7) / 6.0f);   // [0.5, 1.5] > 0
-        linearIn[i] = ToFp16f(0.4f + 0.5f * static_cast<float>(i % 5) / 4.0f);  // [0.4, 0.9] > 0
-        gradIn[i] = ToFp16f(-0.2f + 0.4f * static_cast<float>(i % 3) / 2.0f);   // [-0.2, 0.2]
+        varIn[i] = ToFp16f(-0.8f + 1.6f * static_cast<float>(i % 11) / 10.0f); // [-0.8, 0.8]
+        accumIn[i] = ToFp16f(0.5f + 1.0f * static_cast<float>(i % 7) / 6.0f);  // [0.5, 1.5] > 0
+        linearIn[i] = ToFp16f(0.4f + 0.5f * static_cast<float>(i % 5) / 4.0f); // [0.4, 0.9] > 0
+        gradIn[i] = ToFp16f(-0.2f + 0.4f * static_cast<float>(i % 3) / 2.0f);  // [-0.2, 0.2]
         varH[i] = static_cast<half>(varIn[i]);
         accumH[i] = static_cast<half>(accumIn[i]);
         linearH[i] = static_cast<half>(linearIn[i]);
@@ -152,29 +151,27 @@ TEST_F(ApplyFtrlKernelTest, T001_CorePath_Fp16_HasL1_Aligned)
     td->ubFactor = N;
 
     // ---- 运行主线 kernel：ApplyFtrl<half, PAD_TAIL=0, HAS_L1=1> ----
-    auto kernel = [](GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr,
-                     GM_ADDR l1, GM_ADDR l2, GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR ws,
-                     GM_ADDR tl) {
+    auto kernel = [](GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                     GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR ws, GM_ADDR tl) {
         ::apply_ftrl<half, 0U, 1U>(var, accum, linear, grad, lr, l1, l2, lr_power, var_out, ws, tl);
     };
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(kernel, 1, var, accum, linear, grad, lr, l1, l2, lr_power, var_out, workspace, tiling);
 
     // ---- 比对（var_out / accum 原地 / linear 原地）----
-    const double lrD = ToFp16f(lrF), l1D = ToFp16f(l1F), l2D = ToFp16f(l2F),
-                 lrPowerD = ToFp16f(lrPowerF);
+    const double lrD = ToFp16f(lrF), l1D = ToFp16f(l1F), l2D = ToFp16f(l2F), lrPowerD = ToFp16f(lrPowerF);
     // fp16：尾数 10bit，相对精度 ~2^-11≈4.9e-4；叠加 fp32 内算 + 末尾舍入，取保守组合容差。
     const double rtol = 4e-3, atol = 4e-3;
 
     auto* varOutH = reinterpret_cast<half*>(var_out);
-    auto* accumOutH = reinterpret_cast<half*>(accum);    // 原地写回
-    auto* linearOutH = reinterpret_cast<half*>(linear);  // 原地写回
+    auto* accumOutH = reinterpret_cast<half*>(accum);   // 原地写回
+    auto* linearOutH = reinterpret_cast<half*>(linear); // 原地写回
 
     int gatePass = 0;
     for (size_t i = 0; i < tElems; ++i) {
-        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lrD, l1D, l2D,
-                                    lrPowerD);
-        if (std::fabs(g.linear) > l1D) gatePass++;
+        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lrD, l1D, l2D, lrPowerD);
+        if (std::fabs(g.linear) > l1D)
+            gatePass++;
 
         double ov = static_cast<float>(varOutH[i]);
         double oa = static_cast<float>(accumOutH[i]);
@@ -220,19 +217,25 @@ static inline T FromF(float v)
     if constexpr (std::is_same<T, float>::value) {
         return v;
     } else {
-        return static_cast<T>(v);  // half / bfloat16_t 均支持 float 构造（CPU 孪生）
+        return static_cast<T>(v); // half / bfloat16_t 均支持 float 构造（CPU 孪生）
     }
 }
 template <typename T>
-static inline float ToF(T v) { return static_cast<float>(v); }
+static inline float ToF(T v)
+{
+    return static_cast<float>(v);
+}
 template <typename T>
-static inline float RoundF(float v) { return ToF<T>(FromF<T>(v)); }
+static inline float RoundF(float v)
+{
+    return ToF<T>(FromF<T>(v));
+}
 
 // 通用运行器。l1GmF 写入 GM（kernel 读到的 l1）；l1GoldenF 用于 golden（HAS_L1=0 时 kernel
 // 静态丢弃 l1 分支，golden 须以 l1=0 计算 → 以 l1GmF != l1GoldenF 证明 l1 被忽略）。
 template <typename T, uint32_t PAD_TAIL, uint32_t HAS_L1>
-static void RunFtrlCase(int64_t N, float lrF, float l1GmF, float l2F, float lrPowerF,
-                        float l1GoldenF, double rtol, double atol)
+static void RunFtrlCase(int64_t N, float lrF, float l1GmF, float l2F, float lrPowerF, float l1GoldenF, double rtol,
+                        double atol)
 {
     const size_t tElems = static_cast<size_t>(N);
     const size_t tBytes = tElems * sizeof(T);
@@ -261,10 +264,10 @@ static void RunFtrlCase(int64_t N, float lrF, float l1GmF, float l2F, float lrPo
     auto* gradT = reinterpret_cast<T*>(grad);
     std::vector<float> varIn(tElems), accumIn(tElems), linearIn(tElems), gradIn(tElems);
     for (size_t i = 0; i < tElems; ++i) {
-        varIn[i] = RoundF<T>(-0.8f + 1.6f * static_cast<float>(i % 11) / 10.0f);  // [-0.8, 0.8]
-        accumIn[i] = RoundF<T>(0.5f + 1.0f * static_cast<float>(i % 7) / 6.0f);   // [0.5, 1.5] > 0
-        linearIn[i] = RoundF<T>(0.4f + 0.5f * static_cast<float>(i % 5) / 4.0f);  // [0.4, 0.9] > 0
-        gradIn[i] = RoundF<T>(-0.2f + 0.4f * static_cast<float>(i % 3) / 2.0f);   // [-0.2, 0.2]
+        varIn[i] = RoundF<T>(-0.8f + 1.6f * static_cast<float>(i % 11) / 10.0f); // [-0.8, 0.8]
+        accumIn[i] = RoundF<T>(0.5f + 1.0f * static_cast<float>(i % 7) / 6.0f);  // [0.5, 1.5] > 0
+        linearIn[i] = RoundF<T>(0.4f + 0.5f * static_cast<float>(i % 5) / 4.0f); // [0.4, 0.9] > 0
+        gradIn[i] = RoundF<T>(-0.2f + 0.4f * static_cast<float>(i % 3) / 2.0f);  // [-0.2, 0.2]
         varT[i] = FromF<T>(varIn[i]);
         accumT[i] = FromF<T>(accumIn[i]);
         linearT[i] = FromF<T>(linearIn[i]);
@@ -273,28 +276,23 @@ static void RunFtrlCase(int64_t N, float lrF, float l1GmF, float l2F, float lrPo
 
     auto* td = reinterpret_cast<ApplyFtrlTilingData*>(tiling);
     td->totalElements = N;
-    td->blockFactor = N;                       // 单核
-    td->ubFactor = ((N + 63) / 64) * 64;       // 64 元素(256B)对齐，单 tile 容纳 N
+    td->blockFactor = N;                 // 单核
+    td->ubFactor = ((N + 63) / 64) * 64; // 64 元素(256B)对齐，单 tile 容纳 N
 
-    auto kernel = [](GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr,
-                     GM_ADDR l1, GM_ADDR l2, GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR ws,
-                     GM_ADDR tl) {
-        ::apply_ftrl<T, PAD_TAIL, HAS_L1>(var, accum, linear, grad, lr, l1, l2, lr_power, var_out,
-                                          ws, tl);
+    auto kernel = [](GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                     GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR ws, GM_ADDR tl) {
+        ::apply_ftrl<T, PAD_TAIL, HAS_L1>(var, accum, linear, grad, lr, l1, l2, lr_power, var_out, ws, tl);
     };
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(kernel, 1, var, accum, linear, grad, lr, l1, l2, lr_power, var_out, workspace,
-                tiling);
+    ICPU_RUN_KF(kernel, 1, var, accum, linear, grad, lr, l1, l2, lr_power, var_out, workspace, tiling);
 
-    const double lrD = RoundF<T>(lrF), l1D = RoundF<T>(l1GoldenF), l2D = RoundF<T>(l2F),
-                 lrPowerD = RoundF<T>(lrPowerF);
+    const double lrD = RoundF<T>(lrF), l1D = RoundF<T>(l1GoldenF), l2D = RoundF<T>(l2F), lrPowerD = RoundF<T>(lrPowerF);
     auto* varOutT = reinterpret_cast<T*>(var_out);
-    auto* accumOutT = reinterpret_cast<T*>(accum);    // 原地写回
-    auto* linearOutT = reinterpret_cast<T*>(linear);  // 原地写回
+    auto* accumOutT = reinterpret_cast<T*>(accum);   // 原地写回
+    auto* linearOutT = reinterpret_cast<T*>(linear); // 原地写回
 
     for (size_t i = 0; i < tElems; ++i) {
-        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lrD, l1D, l2D,
-                                    lrPowerD);
+        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lrD, l1D, l2D, lrPowerD);
         double ov = ToF<T>(varOutT[i]);
         double oa = ToF<T>(accumOutT[i]);
         double ol = ToF<T>(linearOutT[i]);
@@ -305,7 +303,7 @@ static void RunFtrlCase(int64_t N, float lrF, float l1GmF, float l2F, float lrPo
             << "accum mismatch at i=" << i << " got=" << oa << " golden=" << g.accum;
         EXPECT_LE(std::fabs(ol - g.linear), atol + rtol * std::fabs(g.linear))
             << "linear mismatch at i=" << i << " got=" << ol << " golden=" << g.linear;
-        EXPECT_GE(oa, 0.0) << "accum_out must be non-negative at i=" << i;  // spec invariant
+        EXPECT_GE(oa, 0.0) << "accum_out must be non-negative at i=" << i; // spec invariant
     }
 
     AscendC::GmFree(var);
@@ -330,38 +328,33 @@ constexpr double kRtolFp32 = 1e-3, kAtolFp32 = 1e-4;
 // T002: fp32 完整路径（HAS_L1=1, l1>0），对齐 N=256。fp32 ReinterpretCast 直算。
 TEST_F(ApplyFtrlKernelTest, T002_CorePath_Fp32_HasL1_Aligned)
 {
-    RunFtrlCase<float, 0U, 1U>(256, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolFp32,
-                               kAtolFp32);
+    RunFtrlCase<float, 0U, 1U>(256, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolFp32, kAtolFp32);
 }
 
 // T003: bf16 完整路径（HAS_L1=1, l1>0），对齐 N=256。标量借道 Cast（DESIGN s3.5）。
 TEST_F(ApplyFtrlKernelTest, T003_CorePath_Bf16_HasL1_Aligned)
 {
-    RunFtrlCase<bfloat16_t, 0U, 1U>(256, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolBf16,
-                                    kAtolBf16);
+    RunFtrlCase<bfloat16_t, 0U, 1U>(256, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolBf16, kAtolBf16);
 }
 
 // T004: HAS_L1=0 编译期快路（var=-linear_t/quadratic）。GM 写入 l1=0.5（非零），golden 以 l1=0
 //   计算 → 证明 HAS_L1=0 静态丢弃了 sign+软阈值+gate 分支、完全忽略 l1。fp32, N=256。
 TEST_F(ApplyFtrlKernelTest, T004_FastPath_Fp32_HasL1_0_IgnoresL1)
 {
-    RunFtrlCase<float, 0U, 0U>(256, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp32,
-                               kAtolFp32);
+    RunFtrlCase<float, 0U, 0U>(256, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp32, kAtolFp32);
 }
 
 // T005: HAS_L1=1 但 l1==0 → 运行期快路（var=-linear_t/quadratic）。fp16, N=256。
 TEST_F(ApplyFtrlKernelTest, T005_FastPath_Fp16_RuntimeL1Zero)
 {
-    RunFtrlCase<half, 0U, 1U>(256, 0.1f, /*l1Gm=*/0.0f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp16,
-                              kAtolFp16);
+    RunFtrlCase<half, 0U, 1U>(256, 0.1f, /*l1Gm=*/0.0f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp16, kAtolFp16);
 }
 
 // T006: PAD_TAIL=1 非 32B 对齐尾块（N=100）→ 两级尾块对齐（32B DMA pad + fp32 域 Duplicate 补齐
 //   [nDma,nComp)）。仅前 100 个真实元素写回并比对。fp32, HAS_L1=1。
 TEST_F(ApplyFtrlKernelTest, T006_Tail_Fp32_HasL1_TwoLevelAlign)
 {
-    RunFtrlCase<float, 1U, 1U>(100, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolFp32,
-                               kAtolFp32);
+    RunFtrlCase<float, 1U, 1U>(100, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolFp32, kAtolFp32);
 }
 
 // ===================================================================
@@ -382,38 +375,31 @@ TEST_F(ApplyFtrlKernelTest, T006_Tail_Fp32_HasL1_TwoLevelAlign)
 
 TEST_F(ApplyFtrlKernelTest, T007_Combo_Fp16_Pad0_L0)
 {
-    RunFtrlCase<half, 0U, 0U>(256, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp16,
-                              kAtolFp16);
+    RunFtrlCase<half, 0U, 0U>(256, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp16, kAtolFp16);
 }
 TEST_F(ApplyFtrlKernelTest, T008_Combo_Fp16_Pad1_L1)
 {
-    RunFtrlCase<half, 1U, 1U>(100, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolFp16,
-                              kAtolFp16);
+    RunFtrlCase<half, 1U, 1U>(100, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolFp16, kAtolFp16);
 }
 TEST_F(ApplyFtrlKernelTest, T009_Combo_Fp16_Pad1_L0)
 {
-    RunFtrlCase<half, 1U, 0U>(100, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp16,
-                              kAtolFp16);
+    RunFtrlCase<half, 1U, 0U>(100, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp16, kAtolFp16);
 }
 TEST_F(ApplyFtrlKernelTest, T010_Combo_Fp32_Pad1_L0)
 {
-    RunFtrlCase<float, 1U, 0U>(100, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp32,
-                               kAtolFp32);
+    RunFtrlCase<float, 1U, 0U>(100, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolFp32, kAtolFp32);
 }
 TEST_F(ApplyFtrlKernelTest, T011_Combo_Bf16_Pad0_L0)
 {
-    RunFtrlCase<bfloat16_t, 0U, 0U>(256, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f,
-                                    kRtolBf16, kAtolBf16);
+    RunFtrlCase<bfloat16_t, 0U, 0U>(256, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolBf16, kAtolBf16);
 }
 TEST_F(ApplyFtrlKernelTest, T012_Combo_Bf16_Pad1_L1)
 {
-    RunFtrlCase<bfloat16_t, 1U, 1U>(100, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolBf16,
-                                    kAtolBf16);
+    RunFtrlCase<bfloat16_t, 1U, 1U>(100, 0.1f, 0.01f, 0.05f, 0.5f, /*l1Golden=*/0.01f, kRtolBf16, kAtolBf16);
 }
 TEST_F(ApplyFtrlKernelTest, T013_Combo_Bf16_Pad1_L0)
 {
-    RunFtrlCase<bfloat16_t, 1U, 0U>(100, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f,
-                                    kRtolBf16, kAtolBf16);
+    RunFtrlCase<bfloat16_t, 1U, 0U>(100, 0.1f, /*l1Gm=*/0.5f, 0.05f, 0.5f, /*l1Golden=*/0.0f, kRtolBf16, kAtolBf16);
 }
 
 // ---- 低层启动器：任意输入数组 + 标量，运行主线 kernel，回收三输出 + var 输入端口现值 ----
@@ -421,10 +407,9 @@ TEST_F(ApplyFtrlKernelTest, T013_Combo_Bf16_Pad1_L0)
 //   ubFactorOverride>0 时覆盖默认单 tile ubFactor，用于多 tile 主循环测试。
 template <typename T, uint32_t PAD_TAIL, uint32_t HAS_L1>
 static void LaunchFtrl(int64_t N, const std::vector<float>& varIn, const std::vector<float>& accumIn,
-                       const std::vector<float>& linearIn, const std::vector<float>& gradIn,
-                       float lrF, float l1F, float l2F, float lrPowerF, std::vector<T>& varOut,
-                       std::vector<T>& accumOut, std::vector<T>& linearOut,
-                       std::vector<T>& varInputAfter, int64_t ubFactorOverride = -1)
+                       const std::vector<float>& linearIn, const std::vector<float>& gradIn, float lrF, float l1F,
+                       float l2F, float lrPowerF, std::vector<T>& varOut, std::vector<T>& accumOut,
+                       std::vector<T>& linearOut, std::vector<T>& varInputAfter, int64_t ubFactorOverride = -1)
 {
     const size_t tElems = static_cast<size_t>(N);
     const size_t tBytes = tElems * sizeof(T);
@@ -460,27 +445,24 @@ static void LaunchFtrl(int64_t N, const std::vector<float>& varIn, const std::ve
 
     auto* td = reinterpret_cast<ApplyFtrlTilingData*>(tiling);
     td->totalElements = N;
-    td->blockFactor = N;  // single core
+    td->blockFactor = N; // single core
     td->ubFactor = (ubFactorOverride > 0) ? ubFactorOverride : (((N + 63) / 64) * 64);
 
-    auto kernel = [](GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr,
-                     GM_ADDR l1, GM_ADDR l2, GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR ws,
-                     GM_ADDR tl) {
-        ::apply_ftrl<T, PAD_TAIL, HAS_L1>(var, accum, linear, grad, lr, l1, l2, lr_power, var_out,
-                                          ws, tl);
+    auto kernel = [](GM_ADDR var, GM_ADDR accum, GM_ADDR linear, GM_ADDR grad, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
+                     GM_ADDR lr_power, GM_ADDR var_out, GM_ADDR ws, GM_ADDR tl) {
+        ::apply_ftrl<T, PAD_TAIL, HAS_L1>(var, accum, linear, grad, lr, l1, l2, lr_power, var_out, ws, tl);
     };
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(kernel, 1, var, accum, linear, grad, lr, l1, l2, lr_power, var_out, workspace,
-                tiling);
+    ICPU_RUN_KF(kernel, 1, var, accum, linear, grad, lr, l1, l2, lr_power, var_out, workspace, tiling);
 
     varOut.resize(tElems);
     accumOut.resize(tElems);
     linearOut.resize(tElems);
     varInputAfter.resize(tElems);
     auto* varOutT = reinterpret_cast<T*>(var_out);
-    auto* accumInplaceT = reinterpret_cast<T*>(accum);    // 原地写回端口
-    auto* linearInplaceT = reinterpret_cast<T*>(linear);  // 原地写回端口
-    auto* varInputT = reinterpret_cast<T*>(var);          // var 输入端口（应保持不变）
+    auto* accumInplaceT = reinterpret_cast<T*>(accum);   // 原地写回端口
+    auto* linearInplaceT = reinterpret_cast<T*>(linear); // 原地写回端口
+    auto* varInputT = reinterpret_cast<T*>(var);         // var 输入端口（应保持不变）
     for (size_t i = 0; i < tElems; ++i) {
         varOut[i] = varOutT[i];
         accumOut[i] = accumInplaceT[i];
@@ -502,32 +484,30 @@ static void LaunchFtrl(int64_t N, const std::vector<float>& varIn, const std::ve
 }
 
 // 良态值域输入填充（与 RunFtrlCase 同款；accum>0、|linear_t|>l1、gate 全过）。
-static void FillGoodDomain(int64_t N, std::vector<float>& v, std::vector<float>& a,
-                           std::vector<float>& l, std::vector<float>& g)
+static void FillGoodDomain(int64_t N, std::vector<float>& v, std::vector<float>& a, std::vector<float>& l,
+                           std::vector<float>& g)
 {
     v.resize(N);
     a.resize(N);
     l.resize(N);
     g.resize(N);
     for (int64_t i = 0; i < N; ++i) {
-        v[i] = -0.8f + 1.6f * static_cast<float>(i % 11) / 10.0f;  // [-0.8, 0.8]
-        a[i] = 0.5f + 1.0f * static_cast<float>(i % 7) / 6.0f;     // [0.5, 1.5] > 0
-        l[i] = 0.4f + 0.5f * static_cast<float>(i % 5) / 4.0f;     // [0.4, 0.9] > 0
-        g[i] = -0.2f + 0.4f * static_cast<float>(i % 3) / 2.0f;    // [-0.2, 0.2]
+        v[i] = -0.8f + 1.6f * static_cast<float>(i % 11) / 10.0f; // [-0.8, 0.8]
+        a[i] = 0.5f + 1.0f * static_cast<float>(i % 7) / 6.0f;    // [0.5, 1.5] > 0
+        l[i] = 0.4f + 0.5f * static_cast<float>(i % 5) / 4.0f;    // [0.4, 0.9] > 0
+        g[i] = -0.2f + 0.4f * static_cast<float>(i % 3) / 2.0f;   // [-0.2, 0.2]
     }
 }
 
 // 按 IEEE 类别（finite / Inf+符号 / NaN）逐元素比对（极端值场景，PROBE_SUMMARY #4）。
-static void ExpectClass(double got, double golden, double rtol, double atol, const char* tag,
-                        size_t i)
+static void ExpectClass(double got, double golden, double rtol, double atol, const char* tag, size_t i)
 {
     if (std::isnan(golden)) {
         EXPECT_TRUE(std::isnan(got)) << tag << " expected NaN at i=" << i << " got=" << got;
     } else if (std::isinf(golden)) {
         EXPECT_TRUE(std::isinf(got)) << tag << " expected Inf at i=" << i << " got=" << got;
         if (std::isinf(got)) {
-            EXPECT_EQ(std::signbit(got), std::signbit(golden))
-                << tag << " Inf sign mismatch at i=" << i;
+            EXPECT_EQ(std::signbit(got), std::signbit(golden)) << tag << " Inf sign mismatch at i=" << i;
         }
     } else {
         EXPECT_TRUE(std::isfinite(got)) << tag << " expected finite at i=" << i << " got=" << got;
@@ -548,17 +528,16 @@ TEST_F(ApplyFtrlKernelTest, T014_Extreme_NanGrad_Propagates_Fp32)
     std::vector<float> varIn, accumIn, linearIn, gradIn;
     FillGoodDomain(N, varIn, accumIn, linearIn, gradIn);
     const std::vector<size_t> nanIdx = {3, 17, 50};
-    for (size_t k : nanIdx) gradIn[k] = std::nanf("");
+    for (size_t k : nanIdx)
+        gradIn[k] = std::nanf("");
 
     const float lr = 0.1f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f;
     std::vector<float> vO, aO, lO, vAfter;
-    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO,
-                              vAfter);
+    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO, vAfter);
 
     int nanCount = 0;
     for (size_t i = 0; i < static_cast<size_t>(N); ++i) {
-        GoldenOut g =
-            ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lr, l1, l2, lrPower);
+        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lr, l1, l2, lrPower);
         ExpectClass(aO[i], g.accum, kRtolFp32, kAtolFp32, "accum", i);
         ExpectClass(lO[i], g.linear, kRtolFp32, kAtolFp32, "linear", i);
         ExpectClass(vO[i], g.var, kRtolFp32, kAtolFp32, "var", i);
@@ -584,10 +563,9 @@ TEST_F(ApplyFtrlKernelTest, T015_Extreme_AccumZero_LrPowerPos_Fp32)
         accumIn[i] = 0.0f;
         gradIn[i] = 0.0f;
     }
-    const float lr = 0.1f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f;  // lr_power > 0
+    const float lr = 0.1f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f; // lr_power > 0
     std::vector<float> vO, aO, lO, vAfter;
-    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO,
-                              vAfter);
+    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO, vAfter);
     for (size_t i = 0; i < static_cast<size_t>(N); ++i) {
         EXPECT_TRUE(std::isfinite(aO[i])) << "accum_new=0 stays finite at i=" << i;
         EXPECT_NEAR(aO[i], 0.0, 1e-6) << "accum_new must be 0 at i=" << i;
@@ -605,13 +583,11 @@ TEST_F(ApplyFtrlKernelTest, T016_Extreme_LrZero_Fp32)
     FillGoodDomain(N, varIn, accumIn, linearIn, gradIn);
     const float lr = 0.0f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f;
     std::vector<float> vO, aO, lO, vAfter;
-    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO,
-                              vAfter);
+    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO, vAfter);
     for (size_t i = 0; i < static_cast<size_t>(N); ++i) {
         double accumNew = static_cast<double>(accumIn[i]) + static_cast<double>(gradIn[i]) * gradIn[i];
         EXPECT_TRUE(std::isfinite(aO[i])) << "accum_new is lr-independent, must stay finite at i=" << i;
-        EXPECT_LE(std::fabs(aO[i] - accumNew), kAtolFp32 + kRtolFp32 * std::fabs(accumNew))
-            << "accum_new at i=" << i;
+        EXPECT_LE(std::fabs(aO[i] - accumNew), kAtolFp32 + kRtolFp32 * std::fabs(accumNew)) << "accum_new at i=" << i;
         EXPECT_GE(aO[i], 0.0) << "accum_out non-negative invariant at i=" << i;
         EXPECT_FALSE(std::isfinite(lO[i])) << "lr=0 must make linear non-finite (Inf/NaN) at i=" << i;
     }
@@ -626,10 +602,8 @@ TEST_F(ApplyFtrlKernelTest, T017_Determinism_ByteIdentical_Fp16)
     const float lr = 0.1f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f;
 
     std::vector<half> vO1, aO1, lO1, vA1, vO2, aO2, lO2, vA2;
-    LaunchFtrl<half, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO1, aO1, lO1,
-                             vA1);
-    LaunchFtrl<half, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO2, aO2, lO2,
-                             vA2);
+    LaunchFtrl<half, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO1, aO1, lO1, vA1);
+    LaunchFtrl<half, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO2, aO2, lO2, vA2);
     const size_t nbytes = static_cast<size_t>(N) * sizeof(half);
     EXPECT_EQ(std::memcmp(vO1.data(), vO2.data(), nbytes), 0) << "var_out must be bitwise reproducible";
     EXPECT_EQ(std::memcmp(aO1.data(), aO2.data(), nbytes), 0) << "accum_out must be bitwise reproducible";
@@ -646,12 +620,10 @@ TEST_F(ApplyFtrlKernelTest, T018_InPlaceWriteBack_ThreeOutputs_Fp32)
     const float lr = 0.1f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f;
 
     std::vector<float> vO, aO, lO, vAfter;
-    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO,
-                              vAfter);
+    LaunchFtrl<float, 0U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO, vAfter);
     int accumChanged = 0;
     for (size_t i = 0; i < static_cast<size_t>(N); ++i) {
-        GoldenOut g =
-            ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lr, l1, l2, lrPower);
+        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lr, l1, l2, lrPower);
         // var 输入端口字节级未变（var 经 var_out 输出，不回写 var 输入）。
         EXPECT_EQ(vAfter[i], varIn[i]) << "var input GM must NOT be overwritten at i=" << i;
         // accum/linear 输入端口被原地改写为新值。
@@ -663,7 +635,8 @@ TEST_F(ApplyFtrlKernelTest, T018_InPlaceWriteBack_ThreeOutputs_Fp32)
             << "var_out = var result at i=" << i;
         if (gradIn[i] != 0.0f && std::fabs(aO[i] - varIn[i]) > 0.0f) {
             // accum_new = accum + g^2 (> accum when g != 0) -> in-place write actually changed accum.
-            if (std::fabs(aO[i] - accumIn[i]) > 1e-6) ++accumChanged;
+            if (std::fabs(aO[i] - accumIn[i]) > 1e-6)
+                ++accumChanged;
         }
     }
     EXPECT_GT(accumChanged, 0) << "accum input GM must be updated in place (accum_new != accum)";
@@ -678,11 +651,10 @@ TEST_F(ApplyFtrlKernelTest, T019_MultiTile_TailMidLoop_Fp32)
     const float lr = 0.1f, l1 = 0.01f, l2 = 0.05f, lrPower = 0.5f;
 
     std::vector<float> vO, aO, lO, vAfter;
-    LaunchFtrl<float, 1U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO,
-                              vAfter, /*ubFactorOverride=*/64);
+    LaunchFtrl<float, 1U, 1U>(N, varIn, accumIn, linearIn, gradIn, lr, l1, l2, lrPower, vO, aO, lO, vAfter,
+                              /*ubFactorOverride=*/64);
     for (size_t i = 0; i < static_cast<size_t>(N); ++i) {
-        GoldenOut g =
-            ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lr, l1, l2, lrPower);
+        GoldenOut g = ComputeGolden(varIn[i], accumIn[i], linearIn[i], gradIn[i], lr, l1, l2, lrPower);
         EXPECT_LE(std::fabs(vO[i] - g.var), kAtolFp32 + kRtolFp32 * std::fabs(g.var))
             << "var mismatch (multi-tile) at i=" << i;
         EXPECT_LE(std::fabs(aO[i] - g.accum), kAtolFp32 + kRtolFp32 * std::fabs(g.accum))
@@ -693,4 +665,4 @@ TEST_F(ApplyFtrlKernelTest, T019_MultiTile_TailMidLoop_Fp32)
     }
 }
 
-}  // namespace
+} // namespace

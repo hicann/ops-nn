@@ -86,9 +86,8 @@ ge::graphStatus EluTilingArch35::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
 
-    OP_CHECK_IF(
-        inputDtype != this->outputDtype, OP_LOGE(tilingContext, "input and output dtype is diff, check failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputDtype != this->outputDtype, OP_LOGE(tilingContext, "input and output dtype is diff, check failed"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -103,25 +102,22 @@ ge::graphStatus EluTilingArch35::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
     const gert::Shape& outputShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputShape != outputShape, OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputShape != outputShape, OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus EluTilingArch35::RunTiling()
 {
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
 
     tiling = tilingContext->GetTilingData<EluTilingData>();
-    OP_CHECK_IF(
-        (tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tiling == nullptr), OP_LOGE(tilingContext, "Get EleBaseTilingData from context failed"),
+                return ge::GRAPH_FAILED);
 
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {

@@ -21,13 +21,11 @@ using namespace AscendC;
 template <typename TYPE_X, typename TYPE_Y, uint64_t BUFFER_NUM, uint32_t IS_REDUCE>
 class KernelLpLoss {
 public:
-    __aicore__ inline KernelLpLoss()
-    {}
+    __aicore__ inline KernelLpLoss() {}
 
-    __aicore__ inline void InitNone(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR y, const LpLossTilingData* tilingData, AscendC::TPipe* pipeIn)
+    __aicore__ inline void InitNone(GM_ADDR predict, GM_ADDR label, GM_ADDR y, const LpLossTilingData* tilingData,
+                                    AscendC::TPipe* pipeIn)
     {
-
         InitCommon(predict, label, tilingData, pipeIn);
         yGm.SetGlobalBuffer((__gm__ TYPE_Y*)y + this->globalBufferIndex, this->coreDataNum);
 
@@ -40,12 +38,9 @@ public:
         }
     }
 
-    __aicore__ inline void InitReduce(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM_ADDR usrWorkspace, const LpLossTilingData* tilingData,
-        AscendC::TPipe* pipeIn)
+    __aicore__ inline void InitReduce(GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM_ADDR usrWorkspace,
+                                      const LpLossTilingData* tilingData, AscendC::TPipe* pipeIn)
     {
-
-
         InitCommon(predict, label, tilingData, pipeIn);
         yGm.SetGlobalBuffer((__gm__ TYPE_Y*)y, 1);
 
@@ -55,8 +50,8 @@ public:
         usrWorkspaceBase.SetGlobalBuffer(reduceWorkspace, this->coreNum);
 
         this->totalReduceCount = static_cast<uint32_t>(this->coreNum);
-        this->totalReduceAlignedCount =
-            static_cast<uint32_t>(AlignUpElems(this->totalReduceCount, this->blockSize / sizeof(float)));
+        this->totalReduceAlignedCount = static_cast<uint32_t>(
+            AlignUpElems(this->totalReduceCount, this->blockSize / sizeof(float)));
         pipe->InitBuffer(reduceAccumBuf, sizeof(float) * (this->blockSize / sizeof(float)));
         pipe->InitBuffer(crossCoreReduceBuf, sizeof(float) * this->totalReduceAlignedCount);
         pipe->InitBuffer(reductionOutBuf, this->blockSize);
@@ -108,8 +103,8 @@ private:
         return ((elemNum * elemBytes) % blockSize) == 0;
     }
 
-    __aicore__ inline void InitCommon(
-        GM_ADDR predict, GM_ADDR label, const LpLossTilingData* tilingData, AscendC::TPipe* pipeIn)
+    __aicore__ inline void InitCommon(GM_ADDR predict, GM_ADDR label, const LpLossTilingData* tilingData,
+                                      AscendC::TPipe* pipeIn)
     {
         ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
         ASSERT(tilingData != nullptr && "tilingData can not be nullptr!");
@@ -134,8 +129,8 @@ private:
             this->coreDataNum = tilingData->smallCoreDataNum;
             this->tileNum = tilingData->finalSmallTileNum;
             this->tailDataNum = tilingData->smallTailDataNum;
-            this->globalBufferIndex -=
-                (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (blockIdx - tilingData->tailBlockNum);
+            this->globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                                       (blockIdx - tilingData->tailBlockNum);
         }
 
         if constexpr (IS_REDUCE != 0) {
@@ -314,8 +309,8 @@ private:
 
         if (AscendC::GetBlockIdx() == 0) {
             AscendC::LocalTensor<float> allCoreSums = crossCoreReduceBuf.template Get<float>();
-            AscendC::DataCopyExtParams wsReadParams{
-                1, static_cast<uint32_t>(this->totalReduceCount * sizeof(float)), 0, 0, 0};
+            AscendC::DataCopyExtParams wsReadParams{1, static_cast<uint32_t>(this->totalReduceCount * sizeof(float)), 0,
+                                                    0, 0};
             AscendC::DataCopyPadExtParams<float> wsReadPadParams{true, 0, 0, 0};
             AscendC::DataCopyPad(allCoreSums, usrWorkspaceBase, wsReadParams, wsReadPadParams);
             AscendC::PipeBarrier<PIPE_ALL>();

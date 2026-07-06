@@ -17,8 +17,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim, aclTensor* valueOut,
-                           aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor);
+aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim,
+                                 aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
+                                 aclOpExecutor* executor);
 }
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_WITH_COUNTS_EXT2_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_WITH_COUNTS_EXT2_OP_H_

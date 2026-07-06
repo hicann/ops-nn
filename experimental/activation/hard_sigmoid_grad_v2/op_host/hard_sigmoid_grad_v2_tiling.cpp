@@ -37,8 +37,8 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
@@ -47,7 +47,8 @@ constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
     if (in_shape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -77,11 +78,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto selfShape = EnsureNotScalar(inputSelf->GetStorageShape());
 
     // Shape validation: grad_output and self must have same shape
-    OP_CHECK_IF(
-        gradOutputShape.GetShapeSize() != selfShape.GetShapeSize(),
-        OP_LOGE(context, "HardSigmoidGradV2: grad_output and self shape size mismatch: grad=%ld, self=%ld",
-                gradOutputShape.GetShapeSize(), selfShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradOutputShape.GetShapeSize() != selfShape.GetShapeSize(),
+                OP_LOGE(context, "HardSigmoidGradV2: grad_output and self shape size mismatch: grad=%ld, self=%ld",
+                        gradOutputShape.GetShapeSize(), selfShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
 
     totalNum = gradOutputShape.GetShapeSize();
 
@@ -110,31 +110,24 @@ static ge::graphStatus HardSigmoidGradV2TilingFunc(gert::TilingContext* context)
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and attribute info
     int64_t totalNum;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Get workspace size
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. Compute TilingData
     HardSigmoidGradV2TilingData* tiling = context->GetTilingData<HardSigmoidGradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(HardSigmoidGradV2TilingData), 0, sizeof(HardSigmoidGradV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(HardSigmoidGradV2TilingData), 0, sizeof(HardSigmoidGradV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // Multi-core split
     tiling->totalNum = totalNum;
@@ -165,10 +158,10 @@ static ge::graphStatus HardSigmoidGradV2TilingFunc(gert::TilingContext* context)
     // Queued buffers: 3 T-sized x bufferNum
     // Mask buffers: 2 x (ubFactor/8) bytes (small, ~0.125 per element)
     // bf16 extra: 2 float buffers x 4 bytes per element (not queued, no x bufferNum)
-    int64_t queuedBytes;  // per element
+    int64_t queuedBytes; // per element
     if (dataType == ge::DT_BF16) {
         // 3 bf16 queued (2 bytes each) x bufferNum + 2 float temp (4 bytes each) + mask overhead
-        queuedBytes = 3 * 2 * bufferNum + 2 * 4 + 1;  // +1 for mask bytes
+        queuedBytes = 3 * 2 * bufferNum + 2 * 4 + 1; // +1 for mask bytes
     } else {
         // 3 T queued x bufferNum + mask overhead
         queuedBytes = 3 * typeSize * bufferNum + 1;
@@ -177,7 +170,7 @@ static ge::graphStatus HardSigmoidGradV2TilingFunc(gert::TilingContext* context)
     // Compares Level 2 requires count*sizeof(ComputeT) % 256 == 0.
     // bf16 computes in float (4 bytes), half/float compute in their own type.
     int64_t computeTypeSize = (dataType == ge::DT_BF16 || dataType == ge::DT_FLOAT) ? 4 : 2;
-    int64_t computeAlignment = 256 / computeTypeSize;  // 64 for float/bf16, 128 for fp16
+    int64_t computeAlignment = 256 / computeTypeSize; // 64 for float/bf16, 128 for fp16
     int64_t alignment = std::max(ubBlockSize, computeAlignment);
     tiling->ubFactor = FloorAlign(static_cast<int64_t>(ubSize) / queuedBytes, alignment);
 

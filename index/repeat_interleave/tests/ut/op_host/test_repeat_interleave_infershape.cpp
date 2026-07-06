@@ -21,15 +21,9 @@
 
 class RepeatInterleave : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RepeatInterleave SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RepeatInterleave SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RepeatInterleave TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RepeatInterleave TearDown" << std::endl; }
 };
 
 TEST_F(RepeatInterleave, RepeatInterleave_infershape_test)

@@ -20,8 +20,8 @@ OP_TYPE_REGISTER(GeluGrad);
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool IsAiCoreSupport(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused, const aclTensor* gradInput)
+static bool IsAiCoreSupport(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused,
+                            const aclTensor* gradInput)
 {
     auto checkGradOutputType = CheckType(gradOutput->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
     auto checkOutputType = CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
@@ -31,9 +31,8 @@ static bool IsAiCoreSupport(
 }
 
 // AiCore逻辑
-static void GeluGradAiCore(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused, const aclTensor* gradInput,
-    aclOpExecutor* executor)
+static void GeluGradAiCore(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused,
+                           const aclTensor* gradInput, aclOpExecutor* executor)
 {
     L0_DFX(GeluGradAiCore, gradOutput, self, unused, gradInput);
 
@@ -44,9 +43,8 @@ static void GeluGradAiCore(
     }
 }
 
-const aclTensor* GeluGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused, const aclTensor* gradInput,
-    aclOpExecutor* executor)
+const aclTensor* GeluGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused,
+                          const aclTensor* gradInput, aclOpExecutor* executor)
 {
     L0_DFX(GeluGrad, gradOutput, self, unused, gradInput);
     // 判断走AiCore还是AiCPU，目前无AiCPU实现，默认走AiCore

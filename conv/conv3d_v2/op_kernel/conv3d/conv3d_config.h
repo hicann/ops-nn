@@ -21,12 +21,7 @@
 
 namespace conv3d {
 
-enum class ConvL0PingPong {
-    ALL_CLOSE = 0,
-    L0A_OPEN,
-    L0B_OPEN,
-    ALL_OPEN
-};
+enum class ConvL0PingPong { ALL_CLOSE = 0, L0A_OPEN, L0B_OPEN, ALL_OPEN };
 
 enum class QuantType {
     NO_QUANT = 0,
@@ -41,31 +36,18 @@ enum class QuantType {
     PER_TOKEN_NO_OFFSET
 };
 
-enum class LoadChannelType {
-    NORMAL = 0,
-    LOAD_TOTAL_CORE,
-    LOAD_TOTAL_LC0
-};
+enum class LoadChannelType { NORMAL = 0, LOAD_TOTAL_CORE, LOAD_TOTAL_LC0 };
 
-enum class VecComputeType {
-    ALTERNATE,
-    SPLIT
-};
+enum class VecComputeType { ALTERNATE, SPLIT };
 
-enum class ConvBL1ByPass {
-    BYPASS_OFF = 0,
-    BYPASS_ON = 1
-};
+enum class ConvBL1ByPass { BYPASS_OFF = 0, BYPASS_ON = 1 };
 
 enum class GroupConvType {
-    NoGroup_Conv = 0, // 非group卷积
-	GroupConv_Weight_Gfz // group卷积，weight数据为私有group_fractalz格式
+    NoGroup_Conv = 0,    // 非group卷积
+    GroupConv_Weight_Gfz // group卷积，weight数据为私有group_fractalz格式
 };
 
-enum class OutputOrder {
-    M_Mode = 0,
-    HW_Mode
-};
+enum class OutputOrder { M_Mode = 0, HW_Mode };
 
 struct Conv3dParam : public conv::ConvParam {
     __aicore__ inline Conv3dParam(){};
@@ -74,14 +56,12 @@ struct Conv3dParam : public conv::ConvParam {
 template <class ConvDataType>
 struct Conv3dCfg : public conv::ConvConfig<ConvDataType> {
 public:
-    __aicore__ inline Conv3dCfg()
-    {}
+    __aicore__ inline Conv3dCfg() {}
 
     using ContextData = struct _ : public conv::ConvConfig<ConvDataType>::ContextData {
-        __aicore__ inline _()
-        {}
+        __aicore__ inline _() {}
     };
 };
-}  // namespace conv3d
+} // namespace conv3d
 
 #endif

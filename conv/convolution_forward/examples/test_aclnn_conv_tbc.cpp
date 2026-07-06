@@ -56,9 +56,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor, aclFormat dataFormat)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor, aclFormat dataFormat)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用 aclrtMalloc 申请 device 侧内存
@@ -76,8 +75,8 @@ int CreateAclTensor(
     }
 
     // 调用 aclCreateTensor 接口创建 aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, dataFormat, shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, dataFormat, shape.data(),
+                              shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -115,15 +114,15 @@ int aclnnConvTbcTest(int32_t deviceId, aclrtStream& stream)
     std::vector<float> outputData(GetShapeSize(shapeResult), 1);
 
     // 创建 input aclTensor
-    ret =
-        CreateAclTensor(inputData, shapeInput, &deviceDataA, aclDataType::ACL_FLOAT, &input, aclFormat::ACL_FORMAT_NCL);
+    ret = CreateAclTensor(inputData, shapeInput, &deviceDataA, aclDataType::ACL_FLOAT, &input,
+                          aclFormat::ACL_FORMAT_NCL);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> inputTensorPtr(input, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> deviceDataAPtr(deviceDataA, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建 weight aclTensor
-    ret = CreateAclTensor(
-        weightData, shapeWeight, &deviceDataB, aclDataType::ACL_FLOAT, &weight, aclFormat::ACL_FORMAT_NCL);
+    ret = CreateAclTensor(weightData, shapeWeight, &deviceDataB, aclDataType::ACL_FLOAT, &weight,
+                          aclFormat::ACL_FORMAT_NCL);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> weightTensorPtr(weight, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> deviceDataBPtr(deviceDataB, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
@@ -135,8 +134,8 @@ int aclnnConvTbcTest(int32_t deviceId, aclrtStream& stream)
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建 result aclTensor
-    ret = CreateAclTensor(
-        outputData, shapeResult, &deviceDataResult, aclDataType::ACL_FLOAT, &result, aclFormat::ACL_FORMAT_NCL);
+    ret = CreateAclTensor(outputData, shapeResult, &deviceDataResult, aclDataType::ACL_FLOAT, &result,
+                          aclFormat::ACL_FORMAT_NCL);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outputTensorPtr(result, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> deviceDataResultPtr(deviceDataResult, aclrtFree);
     CHECK_FREE_RET(ret == ACL_SUCCESS, return ret);
@@ -166,11 +165,10 @@ int aclnnConvTbcTest(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将 device 侧内存上的结果拷贝至 host 侧，需要根据具体 API 的接口定义修改
     auto size = GetShapeSize(shapeResult);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), deviceDataResult, size * sizeof(float),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_FREE_RET(
-        ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), deviceDataResult,
+                      size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                   return ret);
     int64_t printSize = size > 10 ? 10 : size;
     for (int64_t i = 0; i < printSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);

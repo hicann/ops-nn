@@ -21,14 +21,14 @@
 #ifdef NN_ENABLE_DLOPEN_LEGACY
 namespace Ops {
 namespace NN {
-uint32_t QueryBank(const void *src, size_t src_len, const std::string &op_type, const std::string &soc_version,
-    uint32_t core_num, tuningtiling::TuningTilingDefPtr &tiling);
+uint32_t QueryBank(const void* src, size_t src_len, const std::string& op_type, const std::string& soc_version,
+                   uint32_t core_num, tuningtiling::TuningTilingDefPtr& tiling);
 } // namespace NN
 } // namespace Ops
 #else
 namespace RuntimeKb {
-uint32_t QueryBank(const void *src, size_t src_len, const std::string &op_type, const std::string &soc_version,
-    uint32_t core_num, tuningtiling::TuningTilingDefPtr &tiling);
+uint32_t QueryBank(const void* src, size_t src_len, const std::string& op_type, const std::string& soc_version,
+                   uint32_t core_num, tuningtiling::TuningTilingDefPtr& tiling);
 } // namespace RuntimeKb
 
 namespace Ops {

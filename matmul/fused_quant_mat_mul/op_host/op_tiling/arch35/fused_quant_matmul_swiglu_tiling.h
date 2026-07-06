@@ -46,7 +46,7 @@ REGISTER_TILING_DATA_CLASS(FusedQuantMatMul_8192, FusedQuantMatmulSwigluTilingDa
 class FusedQuantMatMulSwigluTiling : public FusedQuantMatMulASWTiling {
 public:
     FusedQuantMatmulSwigluTilingData tilingData;
-    explicit FusedQuantMatMulSwigluTiling(gert::TilingContext *context) : FusedQuantMatMulASWTiling(context) {}
+    explicit FusedQuantMatMulSwigluTiling(gert::TilingContext* context) : FusedQuantMatMulASWTiling(context) {}
     ~FusedQuantMatMulSwigluTiling() override = default;
 
 protected:
@@ -71,5 +71,4 @@ protected:
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus PostTiling() override;
 };
-}
-
+} // namespace optiling

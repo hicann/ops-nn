@@ -26,7 +26,7 @@ public:
     virtual uint64_t GetTilingKey() const = 0;
     virtual ~MMTilingKey() = default;
 };
-class MatMulV3TilingKey : public MMTilingKey{
+class MatMulV3TilingKey : public MMTilingKey {
 public:
     MatMulV3TilingKey& SetTrans(bool aTrans, bool bTrans)
     {
@@ -51,7 +51,8 @@ public:
         return *this;
     }
 
-    static uint64_t GetHexTilingKey(const uint64_t tilingkey) {
+    static uint64_t GetHexTilingKey(const uint64_t tilingkey)
+    {
         std::stringstream ss;
         ss << std::hex << std::uppercase << tilingkey;
         std::string tilingkey_str = ss.str();
@@ -118,4 +119,3 @@ protected:
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling
-

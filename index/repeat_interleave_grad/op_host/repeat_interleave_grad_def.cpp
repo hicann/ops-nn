@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class RepeatInterleaveGrad : public OpDef
-{
+class RepeatInterleaveGrad : public OpDef {
 public:
     explicit RepeatInterleaveGrad(const char* name) : OpDef(name)
     {

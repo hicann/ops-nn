@@ -16,8 +16,7 @@ namespace optiling {
 static ge::graphStatus Tiling4ForeachPowScalarAndTensorTiling(gert::TilingContext* context)
 {
     ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE, ForeachInputType::TYPE_SCALAR)
-        != ge::GRAPH_SUCCESS) {
+    if (tilingObject.Init(FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE, ForeachInputType::TYPE_SCALAR) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return tilingObject.RunBigKernelTiling();

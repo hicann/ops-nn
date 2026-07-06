@@ -40,7 +40,7 @@ constexpr int32_t DIM_D = 1;
 
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t ROW_TEMPLATE = 180;
-constexpr int64_t COL_TEMPLATE = 64;  // 按64列进行分核
+constexpr int64_t COL_TEMPLATE = 64; // 按64列进行分核
 constexpr int64_t UB_SIZE = 180 * 1024 + 2 * DOUBLE_BUFFER * COL_TEMPLATE * sizeof(float);
 constexpr int64_t FLOAT_ALIGN = 8;
 constexpr uint64_t B32_REPEAT_STRIDE = 8;
@@ -50,14 +50,14 @@ struct integral_constant {
     static constexpr Tp value = v;
 };
 
-namespace RmsNormGrad{
+namespace RmsNormGrad {
 struct deterministic_struct {
     LocalTensor<float> buffer1_;
     LocalTensor<float> buffer2_;
     GlobalTensor<float> workspaceGmOri_;
     GlobalTensor<float> dgammaGm_;
 };
-}
+} // namespace RmsNormGrad
 using namespace RmsNormGrad;
 
 using true_type = integral_constant<bool, true>;
@@ -67,9 +67,8 @@ struct is_same : public false_type {};
 template <typename Tp>
 struct is_same<Tp, Tp> : public true_type {};
 
-__aicore__ inline void ReduceSumFP32(
-    uint32_t idx, LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
-    const LocalTensor<float>& work_local, int32_t count, uint32_t col_val_align)
+__aicore__ inline void ReduceSumFP32(uint32_t idx, LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
+                                     const LocalTensor<float>& work_local, int32_t count, uint32_t col_val_align)
 {
     if (g_coreType == AIV) {
         int32_t elementNumPerRep = ONE_REPEAT_BYTE_SIZE / sizeof(float);
@@ -164,9 +163,8 @@ __aicore__ inline uint32_t ROUND_UP(uint32_t x, uint32_t block_number)
 }
 
 template <typename T>
-__aicore__ inline void DataCopyCustom(
-    GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, const uint32_t dstOffset, const uint32_t srcOffset,
-    const uint32_t blockCount)
+__aicore__ inline void DataCopyCustom(GlobalTensor<T>& dstTensor, LocalTensor<T>& srcTensor, const uint32_t dstOffset,
+                                      const uint32_t srcOffset, const uint32_t blockCount)
 {
     uint32_t alignLen_ = ALIGN_32;
     if constexpr (!is_same<T, float>::value) {
@@ -192,8 +190,8 @@ __aicore__ inline void DataCopyCustom(
 }
 
 template <typename T>
-__aicore__ inline void InitGmZero(
-    GlobalTensor<T>& outGm, TBuf<TPosition::VECCALC>& TmpZeroTBuf, const uint32_t zeroLen, const uint32_t outOffset)
+__aicore__ inline void InitGmZero(GlobalTensor<T>& outGm, TBuf<TPosition::VECCALC>& TmpZeroTBuf, const uint32_t zeroLen,
+                                  const uint32_t outOffset)
 {
     uint32_t alignLen_ = BLOCK_SIZE / sizeof(T);
     LocalTensor<T> temp_zero_tensor = TmpZeroTBuf.Get<T>();
@@ -210,7 +208,9 @@ __aicore__ inline void InitGmZero(
     PipeBarrier<PIPE_ALL>();
 }
 
-__aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSize, int64_t colAlignV_, int64_t chunkSize, deterministic_struct& deterministicStruct) {
+__aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSize, int64_t colAlignV_,
+                               int64_t chunkSize, deterministic_struct& deterministicStruct)
+{
     uint8_t rightPad = 0;
     bool isPad = false;
     int64_t colSizeMod = colSize % FLOAT_ALIGN;
@@ -218,40 +218,33 @@ __aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSiz
     if (colSizeMod != 0) {
         rightPad = FLOAT_ALIGN - colSizeMod;
         isPad = true;
-    } 
+    }
     TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
     SetFlag<HardEvent::V_MTE2>(eventID);
     WaitFlag<HardEvent::V_MTE2>(eventID);
     GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
     int64_t offset = colIndex * COL_TEMPLATE;
 #if __CCE_AICORE__ == 220
-    if ASCEND_IS_AIV {  
-        DataCopyExtParams copyInParams{
-            static_cast<uint16_t>(rowSize),
-            (uint32_t)(colSize * sizeof(float)),
-            (uint32_t)((chunkSize - colSize) * sizeof(float)),
-            static_cast<uint32_t>((COL_TEMPLATE - colSize) / FLOAT_ALIGN),
-            0
-        };
-        DataCopyPadExtParams<float> padParams{
-            false,
-            0,
-            static_cast<uint8_t>(rightPad),
-            0
-        };
+    if ASCEND_IS_AIV {
+        DataCopyExtParams copyInParams{static_cast<uint16_t>(rowSize), (uint32_t)(colSize * sizeof(float)),
+                                       (uint32_t)((chunkSize - colSize) * sizeof(float)),
+                                       static_cast<uint32_t>((COL_TEMPLATE - colSize) / FLOAT_ALIGN), 0};
+        DataCopyPadExtParams<float> padParams{false, 0, static_cast<uint8_t>(rightPad), 0};
         DataCopyPad(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], copyInParams, padParams);
     }
 #else
-     DataCopyParams intriParams; 
-     intriParams.blockCount = rowSize; 
-     intriParams.blockLen   = (colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN; 
-     intriParams.srcStride  = (chunkSize - colSize) / FLOAT_ALIGN; 
-     intriParams.dstStride  = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN; 
-     DataCopy(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], intriParams);
+    DataCopyParams intriParams;
+    intriParams.blockCount = rowSize;
+    intriParams.blockLen = (colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN;
+    intriParams.srcStride = (chunkSize - colSize) / FLOAT_ALIGN;
+    intriParams.dstStride = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN;
+    DataCopy(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], intriParams);
 #endif
 }
 
-__aicore__ inline void dCompute(int64_t colIndex, int64_t rowIndex, int64_t colSize, int64_t rowSize, deterministic_struct& deterministicStruct) {
+__aicore__ inline void dCompute(int64_t colIndex, int64_t rowIndex, int64_t colSize, int64_t rowSize,
+                                deterministic_struct& deterministicStruct)
+{
     TEventID eventId = GetTPipePtr()->AllocEventID<HardEvent::MTE2_V>();
     SetFlag<HardEvent::MTE2_V>(eventId);
     WaitFlag<HardEvent::MTE2_V>(eventId);
@@ -276,12 +269,14 @@ __aicore__ inline void dCompute(int64_t colIndex, int64_t rowIndex, int64_t colS
         if (i == rowRepeatTimes - 1) {
             repeatTimes = rowSize - (rowRepeatTimes - 1) * MAX_REPEAT_TIMES;
         }
-        Add(deterministicStruct.buffer2_,deterministicStruct.buffer1_[i * MAX_REPEAT_TIMES],deterministicStruct.buffer2_,maskVal,repeatTimes,binaryRepeatParams);
+        Add(deterministicStruct.buffer2_, deterministicStruct.buffer1_[i * MAX_REPEAT_TIMES],
+            deterministicStruct.buffer2_, maskVal, repeatTimes, binaryRepeatParams);
         PipeBarrier<PIPE_V>();
     }
 }
 
-__aicore__ inline void dCopyOut(int64_t colIndex, int64_t colSize, int64_t outOffset, deterministic_struct& deterministicStruct)
+__aicore__ inline void dCopyOut(int64_t colIndex, int64_t colSize, int64_t outOffset,
+                                deterministic_struct& deterministicStruct)
 {
     DataCopyParams intriParams;
     intriParams.blockCount = 1;
@@ -296,7 +291,9 @@ __aicore__ inline void dCopyOut(int64_t colIndex, int64_t colSize, int64_t outOf
     DataCopyPad(deterministicStruct.dgammaGm_[outOffset + offset], deterministicStruct.buffer2_, intriParams);
 }
 
-__aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tblockNum, int64_t tcol, int64_t outOffset, int64_t chunkSize, deterministic_struct& deterministicStruct) {
+__aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tblockNum, int64_t tcol, int64_t outOffset,
+                                                 int64_t chunkSize, deterministic_struct& deterministicStruct)
+{
     int64_t colAlignV_ = tcolAlignV;
     int64_t row_ = tblockNum;
     int64_t col_ = tcol;
@@ -313,7 +310,7 @@ __aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tbl
             }
             dCopyIn(taskId, colSize, row_, colAlignV_, chunkSize, deterministicStruct);
             dCompute(taskId, 0, colSize, row_, deterministicStruct);
-            dCopyOut(taskId, colSize, outOffset, deterministicStruct); 
+            dCopyOut(taskId, colSize, outOffset, deterministicStruct);
         } else {
             break;
         }
@@ -321,8 +318,8 @@ __aicore__ inline void FinalProcessDeterministic(int64_t tcolAlignV, int64_t tbl
 }
 
 // Get chunk range (start position and length) for workspace optimization
-__aicore__ inline void GetChunkRange(uint32_t chunkId, uint32_t chunkSize, uint32_t chunkNum, 
-    uint32_t chunkTail, uint32_t& chunkStart, uint32_t& currentChunkLen)
+__aicore__ inline void GetChunkRange(uint32_t chunkId, uint32_t chunkSize, uint32_t chunkNum, uint32_t chunkTail,
+                                     uint32_t& chunkStart, uint32_t& currentChunkLen)
 {
     chunkStart = chunkId * chunkSize;
     currentChunkLen = (chunkId == chunkNum - 1) ? chunkTail : chunkSize;
@@ -370,7 +367,7 @@ __aicore__ inline void SyncEventMTE3_S()
 }
 
 // Helper function to pad tensor for small length
-template<typename T>
+template <typename T>
 __aicore__ inline void PadTensorForSmallLength(LocalTensor<T>& tensor, uint32_t calcLen, uint32_t alignLen)
 {
     if (calcLen < alignLen) {
@@ -383,8 +380,8 @@ __aicore__ inline void PadTensorForSmallLength(LocalTensor<T>& tensor, uint32_t 
 }
 
 // Helper function to handle tail data copy for dgamma
-__aicore__ inline void HandleDgammaTailCopy(
-    LocalTensor<float>& dgamma_out, uint32_t calcLen, uint32_t calcLenAlign, uint32_t calcLenTail, uint32_t alignLen)
+__aicore__ inline void HandleDgammaTailCopy(LocalTensor<float>& dgamma_out, uint32_t calcLen, uint32_t calcLenAlign,
+                                            uint32_t calcLenTail, uint32_t alignLen)
 {
     if (calcLenTail > 0) {
         for (uint32_t i = 0; i < alignLen; i++) {
@@ -399,10 +396,9 @@ __aicore__ inline void HandleDgammaTailCopy(
 }
 
 // Helper function to copy tail data for dx output
-template<typename T>
-__aicore__ inline void CopyTailDataToGm(
-    GlobalTensor<T>& gmTensor, LocalTensor<T>& localTensor, 
-    uint32_t gmOffset, uint32_t calcLenAlign, uint32_t calcLenTail)
+template <typename T>
+__aicore__ inline void CopyTailDataToGm(GlobalTensor<T>& gmTensor, LocalTensor<T>& localTensor, uint32_t gmOffset,
+                                        uint32_t calcLenAlign, uint32_t calcLenTail)
 {
     if (calcLenTail > 0) {
         SyncEventMTE3_S();
@@ -416,7 +412,7 @@ __aicore__ inline void CopyTailDataToGm(
 }
 
 // Helper function to process loop with main and tail
-template<typename Func>
+template <typename Func>
 __aicore__ inline void ProcessLoopWithTail(uint32_t loopMain, uint32_t tail, Func func)
 {
     for (uint32_t i = 0; i < loopMain; i++) {
@@ -428,9 +424,8 @@ __aicore__ inline void ProcessLoopWithTail(uint32_t loopMain, uint32_t tail, Fun
 }
 
 // Helper function to cast and prepare dx output
-template<typename T>
-__aicore__ inline void CastAndPrepareDxOutput(
-    LocalTensor<float>& dxLocal, LocalTensor<T>& dxLocalB16, uint32_t calcLen)
+template <typename T>
+__aicore__ inline void CastAndPrepareDxOutput(LocalTensor<float>& dxLocal, LocalTensor<T>& dxLocalB16, uint32_t calcLen)
 {
     if constexpr (is_same<T, half>::value) {
         dxLocalB16 = dxLocal.ReinterpretCast<T>();
@@ -447,15 +442,15 @@ __aicore__ inline void CastAndPrepareDxOutput(
 }
 
 // Helper function to initialize workspace buffers
-__aicore__ inline void InitWorkspaceBuffers(
-    GlobalTensor<float>& workspaceGm, GlobalTensor<float>& workspaceBlockFactorGm, 
-    GlobalTensor<float>& workspaceGmOri, GM_ADDR usrWorkspace,
-    uint32_t blockIdx, uint32_t blockDim, uint32_t workspaceColSize, 
-    uint32_t blockFactor, bool needChunk)
+__aicore__ inline void InitWorkspaceBuffers(GlobalTensor<float>& workspaceGm,
+                                            GlobalTensor<float>& workspaceBlockFactorGm,
+                                            GlobalTensor<float>& workspaceGmOri, GM_ADDR usrWorkspace,
+                                            uint32_t blockIdx, uint32_t blockDim, uint32_t workspaceColSize,
+                                            uint32_t blockFactor, bool needChunk)
 {
     workspaceGm.SetGlobalBuffer((__gm__ float*)usrWorkspace + blockIdx * workspaceColSize);
     InitOutput<float>(workspaceGm, workspaceColSize, 0);
-    if(needChunk) {
+    if (needChunk) {
         workspaceBlockFactorGm.SetGlobalBuffer(
             (__gm__ float*)usrWorkspace + blockDim * workspaceColSize + blockIdx * blockFactor, blockFactor);
         InitOutput<float>(workspaceBlockFactorGm, blockFactor, 0);
@@ -464,10 +459,9 @@ __aicore__ inline void InitWorkspaceBuffers(
 }
 
 // Helper function to copy data with conditional offset
-template<typename T>
-__aicore__ inline void DataCopyWithOffset(
-    LocalTensor<T>& dst, GlobalTensor<T>& src, uint32_t offset, 
-    uint32_t calcLen, uint32_t ubFactor, uint32_t alignLen)
+template <typename T>
+__aicore__ inline void DataCopyWithOffset(LocalTensor<T>& dst, GlobalTensor<T>& src, uint32_t offset, uint32_t calcLen,
+                                          uint32_t ubFactor, uint32_t alignLen)
 {
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
     DataCopyExtParams dataCopyParams{1, (uint32_t)(calcLen * sizeof(T)), 0, 0, 0};
@@ -488,9 +482,8 @@ __aicore__ inline void DataCopyWithOffset(
 }
 
 // Initialize dgamma output to zero
-__aicore__ inline void InitDgammaOutCommon(
-    GlobalTensor<float>& outGm, TBuf<TPosition::VECCALC>& outZeroTmpBuf,
-    uint32_t loopMainCol, uint32_t ubFactor, uint32_t tailCol)
+__aicore__ inline void InitDgammaOutCommon(GlobalTensor<float>& outGm, TBuf<TPosition::VECCALC>& outZeroTmpBuf,
+                                           uint32_t loopMainCol, uint32_t ubFactor, uint32_t tailCol)
 {
     for (uint32_t iOuter = 0; iOuter < loopMainCol; iOuter++) {
         InitGmZero<float>(outGm, outZeroTmpBuf, ubFactor, iOuter * ubFactor);
@@ -501,9 +494,9 @@ __aicore__ inline void InitDgammaOutCommon(
 }
 
 // Copy mean output for chunk processing
-__aicore__ inline void CopyMeanOutChunkCommon(
-    TBuf<TPosition::VECCALC>& meanTmpBuf, GlobalTensor<float>& workspaceBlockFactorGm,
-    uint32_t iOuter, uint32_t calcRow, uint32_t rowFactor)
+__aicore__ inline void CopyMeanOutChunkCommon(TBuf<TPosition::VECCALC>& meanTmpBuf,
+                                              GlobalTensor<float>& workspaceBlockFactorGm, uint32_t iOuter,
+                                              uint32_t calcRow, uint32_t rowFactor)
 {
     LocalTensor<float> meanTmpLocal = meanTmpBuf.Get<float>();
     SetAtomicAdd<float>();
@@ -515,9 +508,9 @@ __aicore__ inline void CopyMeanOutChunkCommon(
 }
 
 // Copy dgamma output with atomic add
-__aicore__ inline void CopyDgammaOutCommon(
-    TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueDgamma, GlobalTensor<float>& outGm,
-    uint32_t dIdx, uint32_t calcLen, uint32_t ubFactor)
+__aicore__ inline void CopyDgammaOutCommon(TQue<QuePosition::VECOUT, BUFFER_NUM>& outQueDgamma,
+                                           GlobalTensor<float>& outGm, uint32_t dIdx, uint32_t calcLen,
+                                           uint32_t ubFactor)
 {
     LocalTensor<float> dgamma_out = outQueDgamma.DeQue<float>();
     uint32_t gmOffset = dIdx * ubFactor;

@@ -48,10 +48,9 @@ class HardShrink {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline HardShrink() {};
+    __aicore__ inline HardShrink(){};
 
-    __aicore__ inline void Init(GM_ADDR self, GM_ADDR out,
-        const HardShrinkTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR self, GM_ADDR out, const HardShrinkTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -62,11 +61,11 @@ private:
     TPipe pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQueue;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueue;
-    TBuf<QuePosition::VECCALC> lambdBuf;      // lambd 常量 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> negLambdBuf;   // -lambd 常量 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> tmpBuf;         // 中间结果（两次 Select）(COMPUTE_T)
-    TBuf<QuePosition::VECCALC> tmp2Buf;        // bf16 路径额外中间结果 (COMPUTE_T)
-    TBuf<QuePosition::VECCALC> cmpMaskBuf;     // Compare 输出 bit mask
+    TBuf<QuePosition::VECCALC> lambdBuf;    // lambd 常量 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> negLambdBuf; // -lambd 常量 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> tmpBuf;      // 中间结果（两次 Select）(COMPUTE_T)
+    TBuf<QuePosition::VECCALC> tmp2Buf;     // bf16 路径额外中间结果 (COMPUTE_T)
+    TBuf<QuePosition::VECCALC> cmpMaskBuf;  // Compare 输出 bit mask
 
     GlobalTensor<IO_T> selfGM;
     GlobalTensor<IO_T> outGM;
@@ -77,8 +76,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE, int IS_BF16>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Init(
-    GM_ADDR self, GM_ADDR out, const HardShrinkTilingData* tilingData)
+__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Init(GM_ADDR self, GM_ADDR out,
+                                                                 const HardShrinkTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -111,8 +110,7 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Init(
 }
 
 template <typename T, int BUFFER_MODE, int IS_BF16>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::CopyIn(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::CopyIn(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template AllocTensor<IO_T>();
     AscendC::DataCopyParams copyParams;
@@ -125,8 +123,7 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::CopyIn(
 }
 
 template <typename T, int BUFFER_MODE, int IS_BF16>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Compute(
-    int64_t currentNum)
+__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Compute(int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template DeQue<IO_T>();
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template AllocTensor<IO_T>();
@@ -164,8 +161,8 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Compute(
         // Step 2: mask = (floatInput < -lambd)
         AscendC::Compare(maskLocal, tmpLocal, negLambdLocal, AscendC::CMPMODE::LT, alignedNum);
         // Select: mask ? floatInput : tmp2Local → tmpLocal
-        AscendC::Select(tmpLocal, maskLocal, tmpLocal, tmp2Local,
-                        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
+        AscendC::Select(tmpLocal, maskLocal, tmpLocal, tmp2Local, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                        alignedNum);
 
         // Cast float result → bf16 output
         AscendC::Cast(outputLocal, tmpLocal, AscendC::RoundMode::CAST_RINT, currentNum);
@@ -182,8 +179,8 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Compute(
         // Step 2: mask = (input < -lambd)
         AscendC::Compare(maskLocal, inputLocal, negLambdLocal, AscendC::CMPMODE::LT, alignedNum);
         // Select: mask ? input : tmpLocal → outputLocal
-        AscendC::Select(outputLocal, maskLocal, inputLocal, tmpLocal,
-                        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
+        AscendC::Select(outputLocal, maskLocal, inputLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                        alignedNum);
     }
 
     outputQueue.template EnQue<IO_T>(outputLocal);
@@ -191,8 +188,7 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Compute(
 }
 
 template <typename T, int BUFFER_MODE, int IS_BF16>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::CopyOut(
-    int64_t progress, int64_t currentNum)
+__aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::CopyOut(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template DeQue<IO_T>();
     AscendC::DataCopyParams copyParams;
@@ -208,7 +204,7 @@ template <typename T, int BUFFER_MODE, int IS_BF16>
 __aicore__ inline void HardShrink<T, BUFFER_MODE, IS_BF16>::Process()
 {
     if (blockLength_ <= 0) {
-        return;  // 空 Tensor 或当前核无任务
+        return; // 空 Tensor 或当前核无任务
     }
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {

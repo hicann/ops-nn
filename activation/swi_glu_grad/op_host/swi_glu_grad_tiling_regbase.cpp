@@ -45,8 +45,8 @@ bool GluBaseTiling4RegBase::CalcShapeTo2D(const gert::Shape& inShape, const int6
 
     // 如果shape 不是2的倍数，则报错
     if (shapeAfter % DOUBLE != 0) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_.c_str(), "x",
-            std::to_string(shapeAfter),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            opName_.c_str(), "x", std::to_string(shapeAfter),
             "Shape[" + std::to_string(splitDim) + "] of x must be exactly divisible by 2");
         return false;
     }
@@ -62,14 +62,15 @@ bool GluBaseTiling4RegBase::CheckShapeValid(const gert::Shape& gradYShape, const
     int64_t dimXNum = xShape.GetDimNum();
     if (dimGradYNum != dimXNum) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_.c_str(), "y_grad, x",
-            std::to_string(dimGradYNum) + ", " + std::to_string(dimXNum),
-            "The shape dims of y_grad, x must be the same");
+                                                  std::to_string(dimGradYNum) + ", " + std::to_string(dimXNum),
+                                                  "The shape dims of y_grad, x must be the same");
         return false;
     }
 
     if (dim < -dimXNum || dim >= dimXNum) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_.c_str(), "dim", std::to_string(dim),
-            "The value of dim must be in range [" + std::to_string(-dimXNum) + ", " + std::to_string(dimXNum - 1) + "]");
+                                              "The value of dim must be in range [" + std::to_string(-dimXNum) + ", " +
+                                                  std::to_string(dimXNum - 1) + "]");
         return false;
     }
 
@@ -79,16 +80,18 @@ bool GluBaseTiling4RegBase::CheckShapeValid(const gert::Shape& gradYShape, const
         int64_t yDim = gradYShape.GetDim(i);
         if (i != splitDim) {
             if (xDim != yDim) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_.c_str(), "y_grad, x",
-                    std::to_string(yDim) + ", " + std::to_string(xDim),
-                    "Shape[" + std::to_string(i) + "] of y_grad must be equal to Shape[" + std::to_string(i) + "] of x");
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    opName_.c_str(), "y_grad, x", std::to_string(yDim) + ", " + std::to_string(xDim),
+                    "Shape[" + std::to_string(i) + "] of y_grad must be equal to Shape[" + std::to_string(i) +
+                        "] of x");
                 return false;
             }
         } else {
             if (xDim != yDim * DOUBLE) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_.c_str(), "y_grad, x",
-                    std::to_string(yDim) + ", " + std::to_string(xDim),
-                    "Shape[" + std::to_string(i) + "] of y_grad must be equal to Shape[" + std::to_string(i) + "] of x / 2");
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    opName_.c_str(), "y_grad, x", std::to_string(yDim) + ", " + std::to_string(xDim),
+                    "Shape[" + std::to_string(i) + "] of y_grad must be equal to Shape[" + std::to_string(i) +
+                        "] of x / 2");
                 return false;
             }
         }
@@ -143,10 +146,7 @@ ge::graphStatus GluBaseTiling4RegBase::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool GluBaseTiling4RegBase::IsCapable()
-{
-    return true;
-}
+bool GluBaseTiling4RegBase::IsCapable() { return true; }
 
 // 3、计算数据切分TilingData
 ge::graphStatus GluBaseTiling4RegBase::DoOpTiling()
@@ -170,21 +170,13 @@ ge::graphStatus GluBaseTiling4RegBase::DoOpTiling()
 }
 
 // 4、计算高阶API的TilingData
-ge::graphStatus GluBaseTiling4RegBase::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GluBaseTiling4RegBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 // 5、计算TilingKey
 uint64_t GluBaseTiling4RegBase::GetTilingKey() const
 {
     OP_LOGD(opName_, "GluBaseTiling4RegBase GetTilingKey.");
-    enum class DtypeEnum : uint8_t
-    {
-        FLOAT16 = 0,
-        FLOAT32 = 1,
-        BFLOAT16 = 2
-    };
+    enum class DtypeEnum : uint8_t { FLOAT16 = 0, FLOAT32 = 1, BFLOAT16 = 2 };
 
     DtypeEnum inDtype = DtypeEnum::FLOAT16;
     if (dataType_ == ge::DT_BF16) {
@@ -205,10 +197,7 @@ uint64_t GluBaseTiling4RegBase::GetTilingKey() const
 }
 
 // 6、计算Workspace 大小
-ge::graphStatus GluBaseTiling4RegBase::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus GluBaseTiling4RegBase::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
 // 7、保存Tiling数据
 ge::graphStatus GluBaseTiling4RegBase::PostTiling()
@@ -268,7 +257,8 @@ void GluBaseTiling4RegBase::AutoTiling()
         int64_t delta = rowNormalBlock * colNormalBlock;
         if (colNormalBlock == 0 || rowNormalBlock == 0) {
             OP_LOGE(opName_, "GluBaseTiling4RegBase::AutoTiling devide by 0\
-                colNormalBlock:%ld rowNormalBlock:%ld",colNormalBlock, rowNormalBlock);
+                colNormalBlock:%ld rowNormalBlock:%ld",
+                    colNormalBlock, rowNormalBlock);
         }
         if (m * n == static_cast<int64_t>(usedCoreNum_)) {
             if (rowTotalNum_ % m == 0 && colNumAlign % n == 0) {

@@ -32,9 +32,9 @@ using namespace RmsNormQuantV2;
 REGISTER_TILING_DEFAULT(RmsNormQuantV2RegbaseFullLoadTilingData);
 
 template <int8_t COMPUTE_MODE>
-__aicore__ inline void rms_norm_quant_v2_impl(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
-    GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void rms_norm_quant_v2_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                              GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1,
+                                              GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;

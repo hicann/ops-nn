@@ -18,9 +18,9 @@
 #include "apply_adam_w_v2_mix_dtype.h"
 
 using namespace ApplyAdamWV2;
-extern "C" __global__ __aicore__ void apply_adam_w_v2(
-    GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void apply_adam_w_v2(GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad,
+                                                      GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
+                                                      GM_ADDR tiling)
 {
     GM_ADDR userWS = GetUserWorkspace(workspace);
     if (userWS == nullptr) {

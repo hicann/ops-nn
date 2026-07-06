@@ -37,9 +37,11 @@ constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 #endif
 
 namespace SigmoidCrossEntropyWithLogitsDag1 {
-template<class T>
+template <class T>
 struct CalcSigmoidCrossEntropyWithLogits : public Vec::ElemwiseBinaryOP<T, T, T> {
-    __aicore__ inline CalcSigmoidCrossEntropyWithLogits(LocalTensor<T> &dst, LocalTensor<T> &src0, LocalTensor<T> &src1, uint32_t count) {
+    __aicore__ inline CalcSigmoidCrossEntropyWithLogits(LocalTensor<T>& dst, LocalTensor<T>& src0, LocalTensor<T>& src1,
+                                                        uint32_t count)
+    {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(T);
         uint32_t vlSize = VECTOR_REG_WIDTH / dtypeSize;
@@ -60,32 +62,33 @@ struct CalcSigmoidCrossEntropyWithLogits : public Vec::ElemwiseBinaryOP<T, T, T>
         MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregOutput;
         MicroAPI::MaskReg mask;
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
-                
+
                 MicroAPI::DataCopy(vregPredict, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
                 MicroAPI::DataCopy(vregTarget, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                
+
                 MicroAPI::Duplicate(vregOneAddExp, (T)1.0f, mask);
-                
+
                 MicroAPI::Maxs(vregMaxPredict, vregPredict, (T)0.0f, mask);
-                
+
                 MicroAPI::Abs(vregAbsPredict, vregPredict, mask);
-                
+
                 MicroAPI::Neg(vregNegAbsPredict, vregAbsPredict, mask);
-                
+
                 MicroAPI::Exp(vregExpNegAbs, vregNegAbsPredict, mask);
-                
+
                 MicroAPI::Add(vregOneAddExp, vregExpNegAbs, vregOneAddExp, mask);
-                
+
                 MicroAPI::Log(vregLog, vregOneAddExp, mask);
-                
+
                 MicroAPI::Mul(vregMulPredictTarget, vregPredict, vregTarget, mask);
-                
+
                 MicroAPI::Sub(vregOutput, vregMaxPredict, vregMulPredictTarget, mask);
                 MicroAPI::Add(vregOutput, vregOutput, vregLog, mask);
-                
+
                 MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
@@ -105,7 +108,8 @@ struct SigmoidCrossEntropyWithLogitsDagNoCast {
     using OpCopyInPredict = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
     using OpCopyInTarget = Bind<Vec::CopyIn<T>, Placeholder::In1<T>>;
 
-    using OpLoss = Bind<SigmoidCrossEntropyWithLogitsDag1::CalcSigmoidCrossEntropyWithLogits<T>, OpCopyInPredict, OpCopyInTarget>;
+    using OpLoss = Bind<SigmoidCrossEntropyWithLogitsDag1::CalcSigmoidCrossEntropyWithLogits<T>, OpCopyInPredict,
+                        OpCopyInTarget>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpLoss>;
 
@@ -118,14 +122,15 @@ template <typename U, typename T = float>
 struct SigmoidCrossEntropyWithLogitsDagWithCast {
     constexpr static int CAST_MODE_NONE = 0;
     constexpr static int CAST_MODE_RINT = 1;
-    
+
     using OpCopyInPredict = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
     using OpCopyInTarget = Bind<Vec::CopyIn<U>, Placeholder::In1<U>>;
 
     using OpCopyInPredictCast = Bind<Vec::Cast<T, U, CAST_MODE_NONE>, OpCopyInPredict>;
     using OpCopyInTargetCast = Bind<Vec::Cast<T, U, CAST_MODE_NONE>, OpCopyInTarget>;
 
-    using OpLoss = Bind<SigmoidCrossEntropyWithLogitsDag1::CalcSigmoidCrossEntropyWithLogits<T>, OpCopyInPredictCast, OpCopyInTargetCast>;
+    using OpLoss = Bind<SigmoidCrossEntropyWithLogitsDag1::CalcSigmoidCrossEntropyWithLogits<T>, OpCopyInPredictCast,
+                        OpCopyInTargetCast>;
 
     using OpResCast = Bind<Vec::Cast<U, T, CAST_MODE_RINT>, OpLoss>;
 
@@ -136,6 +141,6 @@ struct SigmoidCrossEntropyWithLogitsDagWithCast {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
-}  // namespace SigmoidCrossEntropyWithLogitsOp
+} // namespace SigmoidCrossEntropyWithLogitsOp
 
-#endif  // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_DAG_H_
+#endif // SIGMOID_CROSS_ENTROPY_WITH_LOGITS_DAG_H_

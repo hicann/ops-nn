@@ -26,8 +26,7 @@
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(InplaceIndexAddForAscendcTilingData)
 TILING_DATA_FIELD_DEF(int64_t, preAxis);
 TILING_DATA_FIELD_DEF(int64_t, varInAxis);
@@ -42,11 +41,9 @@ REGISTER_TILING_DATA_CLASS(InplaceIndexAdd, InplaceIndexAddForAscendcTilingData)
 
 ge::graphStatus InplaceIndexAddTilingForAscendC(gert::TilingContext* context);
 
-class InplaceIndexAddTiling : public Ops::NN::Optiling::TilingBaseClass
-{
+class InplaceIndexAddTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit InplaceIndexAddTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit InplaceIndexAddTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
     ~InplaceIndexAddTiling() override = default;
 
 protected:
@@ -58,8 +55,7 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
-    void DumpTilingInfo() override
-    {}
+    void DumpTilingInfo() override {}
     void SelTemplateByInput();
     ge::graphStatus CheckInputDtype();
     ge::graphStatus CheckInputShape();
@@ -68,7 +64,7 @@ protected:
     void GetCastTypeSize();
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     void GetCastTypeForSort();
-    
+
 public:
     int64_t ubSize_ = 0;
     int64_t totalCoreNum_ = 0;
@@ -134,7 +130,8 @@ public:
     int64_t ubVarOptiFactor_ = 0;
     int64_t isOpti_ = 0;
     int64_t indicesStride_ = 1;
-    uint64_t indicesCastMode_ = 0;  // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32 Cast uint8; 5:int64 Cast uint8.
+    uint64_t indicesCastMode_ = 0; // 0: 不Cast; 1：int32 Cast int16; 2：int64 Cast int32; 3：int64 Cast int16; 4:int32
+                                   // Cast uint8; 5:int64 Cast uint8.
     int64_t indicesCastDtypeSize_ = 0;
     int64_t isProcessSingleRow_ = 0;
 
@@ -142,5 +139,5 @@ public:
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesCastDtype_ = ge::DT_UNDEFINED;
 };
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_INPLACE_INDEX_ADD_TILING_H_

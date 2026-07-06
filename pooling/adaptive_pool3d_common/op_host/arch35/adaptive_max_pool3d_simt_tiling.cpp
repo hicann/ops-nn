@@ -36,8 +36,8 @@ bool AdaptiveMaxPool3DTilingSimt::IsCapable() { return true; }
 ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
 {
     if (GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "AdaptiveMaxPool3d", "indices", "unexpected", "dtype must be DT_INT32 or DT_INT64");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON("AdaptiveMaxPool3d", "indices", "unexpected",
+                                              "dtype must be DT_INT32 or DT_INT64");
         return ge::GRAPH_FAILED;
     }
     tilingData_->nDim = input_.nIn;
@@ -51,9 +51,8 @@ ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
     int64_t ncSize = tilingData_->nDim * tilingData_->cDim;
     outputDataCount = ncSize * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
     indexNeedNum = ncSize * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim;
-    divNeedNum = std::max(
-        {tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim,
-         tilingData_->wInDim * tilingData_->wOutDim, outputDataCount});
+    divNeedNum = std::max({tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim,
+                           tilingData_->wInDim * tilingData_->wOutDim, outputDataCount});
     int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
     int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
     blockNum = std::min(blockNum, static_cast<int64_t>(input_.coreNum));

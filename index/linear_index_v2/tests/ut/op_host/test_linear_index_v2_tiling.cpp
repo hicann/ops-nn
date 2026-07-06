@@ -29,34 +29,25 @@
 using namespace std;
 using namespace ge;
 
-class LinearIndexV2Tiling : public testing::Test
-{
+class LinearIndexV2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "LinearIndexV2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "LinearIndexV2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "LinearIndexV2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "LinearIndexV2Tiling TearDown" << std::endl; }
 };
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}},         // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        dtype,                              // dt
-        nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dt
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -99,18 +90,18 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_continous)
         uint64_t isAscend950 = false;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -118,28 +109,25 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_continous)
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape idx_shape = {
-        {
-            3,
-        },
-        {
-            3,
-        }};
-    gert::StorageShape stride_shape = {
-        {
-            2,
-        },
-        {
-            2,
-        }};
+    gert::StorageShape idx_shape = {{
+                                        3,
+                                    },
+                                    {
+                                        3,
+                                    }};
+    gert::StorageShape stride_shape = {{
+                                           2,
+                                       },
+                                       {
+                                           2,
+                                       }};
     gert::StorageShape value_shape = {{10, 10}, {10, 10}};
-    gert::StorageShape output_shape = {
-        {
-            3,
-        },
-        {
-            3,
-        }};
+    gert::StorageShape output_shape = {{
+                                           3,
+                                       },
+                                       {
+                                           3,
+                                       }};
 
     // tilingParseFunc simulate
     auto holder = gert::TilingContextFaker()
@@ -205,20 +193,20 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_david)
         uint64_t isAscend950 = false;
     } compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -226,28 +214,25 @@ TEST_F(LinearIndexV2Tiling, test_linear_index_david)
     ASSERT_NE(param, nullptr);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
-    gert::StorageShape idx_shape = {
-        {
-            3,
-        },
-        {
-            3,
-        }};
-    gert::StorageShape stride_shape = {
-        {
-            2,
-        },
-        {
-            2,
-        }};
+    gert::StorageShape idx_shape = {{
+                                        3,
+                                    },
+                                    {
+                                        3,
+                                    }};
+    gert::StorageShape stride_shape = {{
+                                           2,
+                                       },
+                                       {
+                                           2,
+                                       }};
     gert::StorageShape value_shape = {{10, 10}, {10, 10}};
-    gert::StorageShape output_shape = {
-        {
-            3,
-        },
-        {
-            3,
-        }};
+    gert::StorageShape output_shape = {{
+                                           3,
+                                       },
+                                       {
+                                           3,
+                                       }};
 
     // tilingParseFunc simulate
     auto holder = gert::TilingContextFaker()

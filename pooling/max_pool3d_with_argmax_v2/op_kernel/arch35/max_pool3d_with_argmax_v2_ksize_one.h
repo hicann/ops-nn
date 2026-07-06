@@ -84,8 +84,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::Process()
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::ProcessTile(
-    int64_t globalElemOffset, int64_t tileLen)
+__aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::ProcessTile(int64_t globalElemOffset,
+                                                                                int64_t tileLen)
 {
     DirectCopy(globalElemOffset, globalElemOffset, tileLen);
 
@@ -105,8 +105,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::ProcessTile(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::DirectCopy(
-    int64_t srcGmOffset, int64_t dstGmOffset, int64_t dataLen)
+__aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::DirectCopy(int64_t srcGmOffset, int64_t dstGmOffset,
+                                                                               int64_t dataLen)
 {
     LocalTensor<T1> dataLocal = dataQueue_.AllocTensor<T1>();
     DataCopyExtParams extParams;
@@ -129,8 +129,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::DirectCopy(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::BatchArgmax(
-    int64_t dstGmOffset, int64_t dataLen, int64_t baseIdx)
+__aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::BatchArgmax(int64_t dstGmOffset, int64_t dataLen,
+                                                                                int64_t baseIdx)
 {
     LocalTensor<T2> argmaxLocal = argmaxQue_.AllocTensor<T2>();
 

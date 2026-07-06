@@ -41,14 +41,9 @@ extern "C" {
  * @param executor [out] Executor handle
  * @return aclnnStatus
  */
-ACLNN_API aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(
-    const aclTensor *x,
-    const aclTensor *bias,
-    double negativeSlope,
-    double scale,
-    const aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(const aclTensor* x, const aclTensor* bias,
+                                                              double negativeSlope, double scale, const aclTensor* out,
+                                                              uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief Execute FusedBiasLeakyRelu computation
@@ -58,11 +53,8 @@ ACLNN_API aclnnStatus aclnnFusedBiasLeakyReluGetWorkspaceSize(
  * @param stream [in] ACL stream
  * @return aclnnStatus
  */
-ACLNN_API aclnnStatus aclnnFusedBiasLeakyRelu(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnFusedBiasLeakyRelu(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              aclrtStream stream);
 
 #ifdef __cplusplus
 }

@@ -27,14 +27,8 @@ using namespace std;
 
 class elu_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "elu_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "elu_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "elu_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "elu_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(elu_grad_test, test_case_0)
@@ -73,7 +67,7 @@ TEST_F(elu_grad_test, test_case_0)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(EluGradKernel, blockDim, grads, activations, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(EluGradKernel, blockDim, grads, activations, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(grads);
     AscendC::GmFree(activations);

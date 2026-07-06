@@ -38,10 +38,10 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
 
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
@@ -100,16 +100,15 @@ static int32_t ParseUseLocking(gert::TilingContext* context)
     return (*useLockingPtr) ? 1 : 0;
 }
 
-static int64_t ComputeSplit(ApplyAdadeltaTilingData* tiling, ge::DataType dataType,
-                            uint64_t ubSize, int64_t coreNum, int64_t ubBlockSize, uint64_t& bufferMode)
+static int64_t ComputeSplit(ApplyAdadeltaTilingData* tiling, ge::DataType dataType, uint64_t ubSize, int64_t coreNum,
+                            int64_t ubBlockSize, uint64_t& bufferMode)
 {
     tiling->blockFactor = CeilAlign(CeilDiv(tiling->totalNum, coreNum), ubBlockSize);
     int64_t usedCoreNum = CeilDiv(tiling->totalNum, tiling->blockFactor);
     bufferMode = (tiling->totalNum > MIN_SPLIT_THRESHOLD) ? 1 : 0;
     int64_t slots = GetTensorSlots(dataType, bufferMode);
-    constexpr int64_t elemBytes = 4;  // Internal computation in fp32
-    tiling->ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
+    constexpr int64_t elemBytes = 4; // Internal computation in fp32
+    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
     return usedCoreNum;
 }
 
@@ -129,19 +128,16 @@ static bool ShapeEqual(const gert::Shape& a, const gert::Shape& b)
 }
 
 // C3 constraint check: lr/rho/epsilon are 1-element Tensors (shape == {1} or any shape with size == 1).
-static bool IsScalarShape(const gert::Shape& s)
-{
-    return s.GetShapeSize() == 1;
-}
+static bool IsScalarShape(const gert::Shape& s) { return s.GetShapeSize() == 1; }
 
 // Input indices (canndev REG_OP(ApplyAdadelta) order)
-constexpr size_t kIdxVar         = 0;
-constexpr size_t kIdxAccum       = 1;
+constexpr size_t kIdxVar = 0;
+constexpr size_t kIdxAccum = 1;
 constexpr size_t kIdxAccumUpdate = 2;
-constexpr size_t kIdxLr          = 3;
-constexpr size_t kIdxRho         = 4;
-constexpr size_t kIdxEps         = 5;
-constexpr size_t kIdxGrad        = 6;
+constexpr size_t kIdxLr = 3;
+constexpr size_t kIdxRho = 4;
+constexpr size_t kIdxEps = 5;
+constexpr size_t kIdxGrad = 6;
 
 // C1: shape(var) == shape(accum) == shape(accum_update) == shape(grad).
 static ge::graphStatus CheckShapeC1(gert::TilingContext* context, const gert::StorageShape* varShape)
@@ -153,18 +149,12 @@ static ge::graphStatus CheckShapeC1(gert::TilingContext* context, const gert::St
     auto gradShape = context->GetInputShape(kIdxGrad);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
 
-    OP_CHECK_IF(
-        !ShapeEqual(varShape->GetStorageShape(), accumShape->GetStorageShape()),
-        OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(accum)"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !ShapeEqual(varShape->GetStorageShape(), accumUpdateShape->GetStorageShape()),
-        OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(accum_update)"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !ShapeEqual(varShape->GetStorageShape(), gradShape->GetStorageShape()),
-        OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(grad)"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape->GetStorageShape(), accumShape->GetStorageShape()),
+                OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(accum)"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape->GetStorageShape(), accumUpdateShape->GetStorageShape()),
+                OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(accum_update)"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape->GetStorageShape(), gradShape->GetStorageShape()),
+                OP_LOGE(context, "C1 shape mismatch: shape(var) != shape(grad)"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -177,23 +167,16 @@ static ge::graphStatus CheckScalarsC3(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, rhoShape);
     auto epsShape = context->GetInputShape(kIdxEps);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsShape);
-    OP_CHECK_IF(
-        !IsScalarShape(lrShape->GetStorageShape()),
-        OP_LOGE(context, "C3: lr must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !IsScalarShape(rhoShape->GetStorageShape()),
-        OP_LOGE(context, "C3: rho must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !IsScalarShape(epsShape->GetStorageShape()),
-        OP_LOGE(context, "C3: epsilon must be a 1-element Tensor"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(lrShape->GetStorageShape()), OP_LOGE(context, "C3: lr must be a 1-element Tensor"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(rhoShape->GetStorageShape()), OP_LOGE(context, "C3: rho must be a 1-element Tensor"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsScalarShape(epsShape->GetStorageShape()), OP_LOGE(context, "C3: epsilon must be a 1-element Tensor"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context,
-                                           int64_t& totalNum, ge::DataType& dataType)
+static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t& totalNum, ge::DataType& dataType)
 {
     auto varShape = context->GetInputShape(kIdxVar);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
@@ -202,15 +185,13 @@ static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context,
     // framework dtype/infershape layers do not enforce rank range explicitly.
     constexpr size_t kMaxRank = 8;
     const size_t varRank = varShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        varRank == 0 || varRank > kMaxRank,
-        OP_LOGE(context, "var rank must be in [1, 8], got %zu", varRank),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varRank == 0 || varRank > kMaxRank, OP_LOGE(context, "var rank must be in [1, 8], got %zu", varRank),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckShapeC1(context, varShape) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "CheckShapeC1 failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckScalarsC3(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "CheckScalarsC3 failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShapeC1(context, varShape) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckShapeC1 failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckScalarsC3(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckScalarsC3 failed"),
+                return ge::GRAPH_FAILED);
 
     totalNum = varShape->GetStorageShape().GetShapeSize();
     auto varDesc = context->GetInputDesc(kIdxVar);
@@ -241,14 +222,12 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, uint32_t 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InitTilingData(gert::TilingContext* context,
-                                      int64_t totalNum, ApplyAdadeltaTilingData*& tiling)
+static ge::graphStatus InitTilingData(gert::TilingContext* context, int64_t totalNum, ApplyAdadeltaTilingData*& tiling)
 {
     tiling = context->GetTilingData<ApplyAdadeltaTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(*tiling), 0, sizeof(*tiling)) != EOK, OP_LOGE(context, "set tiling data error"),
+                return ge::GRAPH_FAILED);
     tiling->totalNum = totalNum;
     return ge::GRAPH_SUCCESS;
 }
@@ -258,19 +237,16 @@ static ge::graphStatus ApplyAdadeltaTilingFunc(gert::TilingContext* context)
     OP_LOGI(context->GetNodeName(), "Enter ApplyAdadeltaTilingFunc");
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalNum = 0;
     ge::DataType dataType = ge::DT_FLOAT;
-    OP_CHECK_IF(
-        GetShapeAndDataType(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAndDataType error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAndDataType(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAndDataType error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        SetWorkspace(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SetWorkspace error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetWorkspace error"),
+                return ge::GRAPH_FAILED);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     if (totalNum == 0) {
@@ -278,9 +254,8 @@ static ge::graphStatus ApplyAdadeltaTilingFunc(gert::TilingContext* context)
     }
 
     ApplyAdadeltaTilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        InitTilingData(context, totalNum, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, totalNum, tiling) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
 
     uint64_t bufferMode = 0;
     int64_t usedCoreNum = ComputeSplit(tiling, dataType, ubSize, coreNum, GetUbBlockSize(context), bufferMode);

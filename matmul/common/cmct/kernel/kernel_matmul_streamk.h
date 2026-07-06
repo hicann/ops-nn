@@ -52,56 +52,93 @@ class KernelMatmulStreamK {
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
           uint64_t FUSED_OP_TYPE_, class OutType_, class FusedEpilogue_>
-class KernelMatmulStreamK<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-                          FUSED_OP_TYPE_, OutType_, FusedEpilogue_, AscendC::Std::enable_if_t<
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
-                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>>>>{
+class KernelMatmulStreamK<
+    ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_, FUSED_OP_TYPE_, OutType_, FusedEpilogue_,
+    AscendC::Std::enable_if_t<
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamK<float, bfloat16_t,
+                                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamK<
+                                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, float,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, bfloat16_t,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, bfloat16_t,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamK<
+                                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamK<float, half,
+                                        MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
+                                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
+                                              MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
+                                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
+                                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, float, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
+                                              MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
+                                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
+        AscendC::Std::is_base_of_v<
+            BlockEpilogue_,
+            Block::BlockEpilogueStreamKFusion<
+                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>>>> {
 public:
     __aicore__ inline KernelMatmulStreamK() {}
     __aicore__ inline ~KernelMatmulStreamK() {}
@@ -117,9 +154,9 @@ public:
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
     // schedulerOp
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<ProblemShape,
-        typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA,
-        transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -223,7 +260,7 @@ public:
         int64_t mTileNum = Get<MNK_M>(bs.GetMNKTileNum());
         int64_t nTileNum = Get<MNK_N>(bs.GetMNKTileNum());
         int64_t skKTileNum = Get<MNK_K>(bs.GetMNKTileNum()); // it only used in sk
-        int64_t batchNum =  Get<MNK_B>(bs.GetMNKTileNum());
+        int64_t batchNum = Get<MNK_B>(bs.GetMNKTileNum());
         int64_t tileNum = bs.GetTotalTileNum();
 
         if ASCEND_IS_AIC {
@@ -245,16 +282,16 @@ public:
             }
             SetMMLayoutTransform(true); // copy out with nfirst, try to make cube and fixp pairing.
             blockMmadOp.Init(problemShape_, tileL1, tileL0, isBias_, bs.isSplitSingleK_);
-            int64_t tailSKTotalTileNum =
-                static_cast<int64_t>(((mTileNum * nTileNum * batchNum) % usedCoreNum_) * skKTileNum);
+            int64_t tailSKTotalTileNum = static_cast<int64_t>(((mTileNum * nTileNum * batchNum) % usedCoreNum_) *
+                                                              skKTileNum);
             for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += usedCoreNum_) {
                 int64_t tmpTileIdx = tileIdx;
                 if (!bs.CheckIsSkScene(0)) { // SK Preload in DP+SK
-                    if (tileIdx % usedCoreNum_ < tailSKTotalTileNum && (CeilDiv(tileIdx + 1, usedCoreNum_) ==
-                                                                        (CeilDiv(tileNum, usedCoreNum_) - 1))) {
+                    if (tileIdx % usedCoreNum_ < tailSKTotalTileNum &&
+                        (CeilDiv(tileIdx + 1, usedCoreNum_) == (CeilDiv(tileNum, usedCoreNum_) - 1))) {
                         tmpTileIdx = tileIdx + usedCoreNum_;
-                    } else if (tileIdx % usedCoreNum_ < tailSKTotalTileNum && (CeilDiv(tileIdx + 1, usedCoreNum_) ==
-                                                                               CeilDiv(tileNum, usedCoreNum_))) {
+                    } else if (tileIdx % usedCoreNum_ < tailSKTotalTileNum &&
+                               (CeilDiv(tileIdx + 1, usedCoreNum_) == CeilDiv(tileNum, usedCoreNum_))) {
                         tmpTileIdx = tileIdx - usedCoreNum_;
                     }
                 }
@@ -269,9 +306,9 @@ public:
                     int64_t offsetB = Get<MNK_N>(blockOffset);
                     int64_t offsetC = Get<2>(blockOffset);
                     int64_t offsetBias = Get<3>(blockOffset);
-                    int64_t offsetWorkspace =
-                        (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum + Get<MNK_K>(singleCoreCoord)) *
-                        BLOCK_BASE_M * BLOCK_BASE_N;
+                    int64_t offsetWorkspace = (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum +
+                                               Get<MNK_K>(singleCoreCoord)) *
+                                              BLOCK_BASE_M * BLOCK_BASE_N;
                     blockMmadOp.template operator()<BlockMmadBuilder::formatB>(
                         cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
                         workspaceGlobal_[offsetWorkspace], singleCoreShape, Get<MNK_K>(singleCoreCoord),
@@ -301,9 +338,8 @@ public:
             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIC_SYNC_AIV_FLAG);
             SyncAll();
             BlockEpilogue epilogueOp;
-            BlockEpilogueParams skEpilogueParams{params.epilogueArgs.cGmAddr,
-                                                  params.epilogueArgs.workspaceGmAddr,
-                                                  params.epilogueArgs.x3GmAddr};
+            BlockEpilogueParams skEpilogueParams{params.epilogueArgs.cGmAddr, params.epilogueArgs.workspaceGmAddr,
+                                                 params.epilogueArgs.x3GmAddr};
             epilogueOp.Init(skEpilogueParams, problemShape_, tileL1, bs.GetMNKTileNum(), usedCoreNum_,
                             bs.CheckIsSkScene(0));
             epilogueOp();
@@ -368,10 +404,7 @@ public:
         return params;
     }
 
-    __aicore__ inline void operator()(Params const& params)
-    {
-        run(params);
-    }
+    __aicore__ inline void operator()(Params const& params) { run(params); }
 };
 
 } // namespace Kernel

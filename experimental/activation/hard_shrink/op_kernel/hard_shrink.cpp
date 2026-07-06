@@ -28,8 +28,7 @@
 #include "hard_shrink.h"
 
 template <typename D_T, int BUFFER_MODE, int IS_BF16>
-__global__ __aicore__ void hard_shrink(GM_ADDR self, GM_ADDR out,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hard_shrink(GM_ADDR self, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling)
 {
     ENABLE_PRINTF();
     REGISTER_TILING_DEFAULT(HardShrinkTilingData);

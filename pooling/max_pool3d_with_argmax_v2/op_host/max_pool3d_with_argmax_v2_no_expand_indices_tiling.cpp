@@ -126,9 +126,9 @@ bool MaxPool3DWithArgmaxV2NoExpandIndicesTiling::IsCapable()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
-    } 
+    }
     if (inputData.dilation[D_DIM] != 1 || inputData.dilation[H_DIM] != 1 || inputData.dilation[W_DIM] != 1) {
         return false;
     }
@@ -205,14 +205,15 @@ void MaxPool3DWithArgmaxV2NoExpandIndicesTiling::DoBufferCalculate()
     bufferData.inputPoolSize = CeilAlign(bufferData.inputPoolSize, CACHE_ALIGN_SIZE);
     bufferData.indiceTempPoolSize = bufferData.ncMaxFactor * bufferData.tmpWyFactorAlign * INT32_SIZE;
     bufferData.indiceTempPoolSize = CeilAlign(bufferData.indiceTempPoolSize, CACHE_ALIGN_SIZE);
-    bufferData.maskPoolSize =
-        CeilAlign(bufferData.blockDataNum * BLOCK_COUNT / MASK_DTYPE_BIT * MASK_DTYPE_SIZE, BLOCK_SIZE) *
-        bufferData.tmpWyFactorAlign;
+    bufferData.maskPoolSize = CeilAlign(bufferData.blockDataNum * BLOCK_COUNT / MASK_DTYPE_BIT * MASK_DTYPE_SIZE,
+                                        BLOCK_SIZE) *
+                              bufferData.tmpWyFactorAlign;
     bufferData.maskPoolSize = CeilAlign(bufferData.maskPoolSize, CACHE_ALIGN_SIZE);
-    bufferData.tmpTotalSize =
-        bufferData.inputPoolSize * NUM_OF_INPUT_PARTS + bufferData.outputMaxPoolSize * NUM_OF_OUTPUT_MAX_PARTS +
-        bufferData.outputIndicePoolSize * NUM_OF_OUTPUT_INDICES_PARTS +
-        bufferData.indiceTempPoolSize * NUM_OF_TEMP_INDICES_PARTS + bufferData.maskPoolSize * NUM_OF_MASK_PARTS;
+    bufferData.tmpTotalSize = bufferData.inputPoolSize * NUM_OF_INPUT_PARTS +
+                              bufferData.outputMaxPoolSize * NUM_OF_OUTPUT_MAX_PARTS +
+                              bufferData.outputIndicePoolSize * NUM_OF_OUTPUT_INDICES_PARTS +
+                              bufferData.indiceTempPoolSize * NUM_OF_TEMP_INDICES_PARTS +
+                              bufferData.maskPoolSize * NUM_OF_MASK_PARTS;
 }
 
 void MaxPool3DWithArgmaxV2NoExpandIndicesTiling::DoBoundaryAdjustment()

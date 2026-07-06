@@ -46,9 +46,8 @@ ge::graphStatus IndexFullLoadTiling::GetShapeAttrsInfo()
     // 获取 tiling 数据
     tilingData_ = context_->GetTilingData<IndexFullLoadTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
-    OP_CHECK_IF(
-        memset_s(tilingData_, sizeof(IndexFullLoadTilingData), 0, sizeof(IndexFullLoadTilingData)) != EOK,
-        OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tilingData_, sizeof(IndexFullLoadTilingData), 0, sizeof(IndexFullLoadTilingData)) != EOK,
+                OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
 
     auto xInputShape = context_->GetInputShape(X_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputShape);
@@ -100,8 +99,7 @@ bool IndexFullLoadTiling::IsCapable()
     if (maskIndices_ != indicesTensorNum_) {
         return false;
     }
-    if ((inputDataTypeSize == dtypeSizeB8 || inputDataTypeSize == dtypeSizeB16) &&
-        inputShapeSize > MAX_UINT16_NUM) {
+    if ((inputDataTypeSize == dtypeSizeB8 || inputDataTypeSize == dtypeSizeB16) && inputShapeSize > MAX_UINT16_NUM) {
         return false;
     } else if (inputShapeSize > MAX_INT32_NUM) {
         return false;
@@ -140,11 +138,10 @@ ge::graphStatus IndexFullLoadTiling::CalcUBBuffer()
     }
     int64_t inputSize = Ops::Base::CeilAlign(inputShape_.GetShapeSize() * inputOutputDtypeSize, blockSize_);
     if (indicesDtypeSize == dtypeSizeB64) {
-        ubIndices_ =
-            (static_cast<int64_t>(ubSize_) - inputSize - DOUBLE * blockSize_ - indicesTensorNum_ * blockSize_ * DOUBLE -
-             blockSize_) /
-            (lastAxisSize_ * inputOutputDtypeSize * DOUBLE + dtypeSizeB32 * indicesTensorNum_ * DOUBLE +
-             indicesDtypeSize);
+        ubIndices_ = (static_cast<int64_t>(ubSize_) - inputSize - DOUBLE * blockSize_ -
+                      indicesTensorNum_ * blockSize_ * DOUBLE - blockSize_) /
+                     (lastAxisSize_ * inputOutputDtypeSize * DOUBLE + dtypeSizeB32 * indicesTensorNum_ * DOUBLE +
+                      indicesDtypeSize);
     } else {
         ubIndices_ = (static_cast<int64_t>(ubSize_) - inputSize - DOUBLE * blockSize_ -
                       indicesTensorNum_ * blockSize_ * DOUBLE) /

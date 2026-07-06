@@ -19,7 +19,7 @@ using namespace fusion;
 
 class __attribute__((visibility("default"))) IndexByTensorStaticFusionPass : public FusionBasePass {
 public:
-    Status Run(GraphPtr &graph, CustomPassContext &passContext) override;
+    Status Run(GraphPtr& graph, CustomPassContext& passContext) override;
 };
 
 } // namespace ops

@@ -31,14 +31,8 @@ using namespace ut_util;
 
 class ForeachNegTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachNegTilingTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachNegTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachNegTilingTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ForeachNegTilingTest TearDown" << std::endl; }
 };
 
 static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
@@ -69,16 +63,19 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     fe::PlatFormInfos pf;
     pf.Init();
 
-    struct ForeachNegCompileInfo {} ci;
+    struct ForeachNegCompileInfo {
+    } ci;
     auto opType = std::string("ForeachNeg");
     auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingFn, nullptr);
     ASSERT_NE(tilingParseFn, nullptr);
 
-    auto kh = gert::KernelRunContextFaker().KernelIONum(2, 1)
-        .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&pf)})
-        .Outputs({&ci}).Build();
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -91,14 +88,18 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     gert::StorageShape yS = {xShape, xShape};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
-    auto th = gert::TilingContextFaker().NodeIoNum(1, 1).IrInstanceNum({1})
-        .InputShapes({&xS}).OutputShapes({&yS})
-        .CompileInfo(&ci).PlatformInfo(reinterpret_cast<char*>(&pf))
-        .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-        .TilingData(param.get())
-        .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
-        .Build();
+    auto th = gert::TilingContextFaker()
+                  .NodeIoNum(1, 1)
+                  .IrInstanceNum({1})
+                  .InputShapes({&xS})
+                  .OutputShapes({&yS})
+                  .CompileInfo(&ci)
+                  .PlatformInfo(reinterpret_cast<char*>(&pf))
+                  .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .TilingData(param.get())
+                  .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
+                  .Build();
     auto* ctx = th.GetContext<gert::TilingContext>();
     ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -108,22 +109,10 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     EXPECT_EQ(ctx->GetTilingKey(), expectKey);
 }
 
-TEST_F(ForeachNegTilingTest, foreach_neg_float32)
-{
-    DoCase({4, 4}, ge::DT_FLOAT, 0);
-}
+TEST_F(ForeachNegTilingTest, foreach_neg_float32) { DoCase({4, 4}, ge::DT_FLOAT, 0); }
 
-TEST_F(ForeachNegTilingTest, foreach_neg_float16)
-{
-    DoCase({4, 4}, ge::DT_FLOAT16, 1);
-}
+TEST_F(ForeachNegTilingTest, foreach_neg_float16) { DoCase({4, 4}, ge::DT_FLOAT16, 1); }
 
-TEST_F(ForeachNegTilingTest, foreach_neg_int32)
-{
-    DoCase({4, 4}, ge::DT_INT32, 2);
-}
+TEST_F(ForeachNegTilingTest, foreach_neg_int32) { DoCase({4, 4}, ge::DT_INT32, 2); }
 
-TEST_F(ForeachNegTilingTest, foreach_neg_bfloat16)
-{
-    DoCase({4, 4}, ge::DT_BF16, 3);
-}
+TEST_F(ForeachNegTilingTest, foreach_neg_bfloat16) { DoCase({4, 4}, ge::DT_BF16, 3); }

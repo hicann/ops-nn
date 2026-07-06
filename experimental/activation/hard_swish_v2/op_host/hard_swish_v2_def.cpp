@@ -26,9 +26,8 @@
 
 namespace ops {
 
-class HardSwishV2 : public OpDef{
-
-    public:
+class HardSwishV2 : public OpDef {
+public:
     explicit HardSwishV2(const char* name) : OpDef(name)
     {
         this->Input("x")
@@ -43,7 +42,7 @@ class HardSwishV2 : public OpDef{
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        
+
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
@@ -51,10 +50,10 @@ class HardSwishV2 : public OpDef{
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "hard_swish_v2");    // 这里制定的值会对应到kernel入口文件名.cpp
-        this->AICore().AddConfig("ascend910b",aicoreConfig);
+            .ExtendCfgInfo("opFile.value", "hard_swish_v2"); // 这里制定的值会对应到kernel入口文件名.cpp
+        this->AICore().AddConfig("ascend910b", aicoreConfig);
     }
 };
 
 OP_ADD(HardSwishV2);
-} // namespace ops 
+} // namespace ops

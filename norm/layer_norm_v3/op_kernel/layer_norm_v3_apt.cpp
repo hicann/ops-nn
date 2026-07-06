@@ -14,8 +14,8 @@
 
 #include "layer_norm_v3_apt.h"
 
-extern "C" __global__ __aicore__ void layer_norm_v3(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void layer_norm_v3(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                                    GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     layer_norm_impl<true>(x, gamma, beta, y, mean, rstd, workspace, tiling);
 }

@@ -25,10 +25,10 @@ constexpr int OUTPUT_COUNT = 2;
 template <typename T, int32_t BUFFER_NUM = 2>
 class EmptyDgamma {
 public:
-    __aicore__ inline EmptyDgamma(TPipe *pipe, const GroupNormGradEmptyTilingData *tilingData) : Ppipe_(pipe), tiling_(tilingData)
-    {
-    }
-    __aicore__ inline void Init(__gm__ uint8_t *dgamma, __gm__ uint8_t *dbeta)
+    __aicore__ inline EmptyDgamma(TPipe* pipe, const GroupNormGradEmptyTilingData* tilingData)
+        : Ppipe_(pipe), tiling_(tilingData)
+    {}
+    __aicore__ inline void Init(__gm__ uint8_t* dgamma, __gm__ uint8_t* dbeta)
     {
         coreIdx_ = AscendC::GetBlockIdx();
         usedCoreNumDG_ = tiling_->usedCoreNumDG;
@@ -51,7 +51,7 @@ public:
     }
 
     __aicore__ inline void CopyDgammaAndDbetaToGm(uint32_t dgammaGmOffset, LocalTensor<T> outLocal, int32_t curCols,
-        int32_t dgammaUBOffset)
+                                                  int32_t dgammaUBOffset)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
@@ -63,7 +63,7 @@ public:
         DataCopyPad(dbetaGm_[dgammaGmOffset], outLocal[dgammaUBOffset], dataCopyParams);
     }
 
-    __aicore__ inline void VFDuplicateRows(LocalTensor<T> &dstAddr, uint32_t currentCols)
+    __aicore__ inline void VFDuplicateRows(LocalTensor<T>& dstAddr, uint32_t currentCols)
     {
         Duplicate<T>(dstAddr, (T)0, currentCols);
     }
@@ -80,42 +80,42 @@ public:
         dgammaQueue_.FreeTensor(dgammaOutLocal);
     }
 
-__aicore__ inline void Process()
-{
-    if (coreIdx_ >= usedCoreNumDG_) {
-        return;
-    }
+    __aicore__ inline void Process()
+    {
+        if (coreIdx_ >= usedCoreNumDG_) {
+            return;
+        }
 
-    bool isLastCore = (coreIdx_ == usedCoreNumDG_ - 1);
-    uint64_t loopCount = isLastCore ? lastUbLoopCount_ : ubLoopCount_;
-    uint64_t tailCols = isLastCore ? lastCoreTailUbCols_ : tailUbCols_;
+        bool isLastCore = (coreIdx_ == usedCoreNumDG_ - 1);
+        uint64_t loopCount = isLastCore ? lastUbLoopCount_ : ubLoopCount_;
+        uint64_t tailCols = isLastCore ? lastCoreTailUbCols_ : tailUbCols_;
 
-    int64_t outputOffset = 0;
-    for (uint32_t curLoop = 0; curLoop < loopCount; curLoop++) {
-        outputOffset = curLoop * colsPerUB_ + gmOffset_;
-        CalcDgamma(outputOffset, colsPerUB_);
+        int64_t outputOffset = 0;
+        for (uint32_t curLoop = 0; curLoop < loopCount; curLoop++) {
+            outputOffset = curLoop * colsPerUB_ + gmOffset_;
+            CalcDgamma(outputOffset, colsPerUB_);
+        }
+        outputOffset = loopCount * colsPerUB_ + gmOffset_;
+        CalcDgamma(outputOffset, tailCols);
     }
-    outputOffset = loopCount * colsPerUB_ + gmOffset_;
-    CalcDgamma(outputOffset, tailCols);
-}
 
 private:
-TQue<QuePosition::VECOUT, OUTPUT_COUNT> dgammaQueue_;
-GlobalTensor<T> dgammaGm_;
-GlobalTensor<T> dbetaGm_;
-uint64_t colsLastCoreDG_;
-uint32_t coreIdx_;
-uint64_t colsPerCore_;
-uint64_t gmOffset_;
-uint64_t usedCoreNumDG_;
-uint64_t colsPerUB_;
-uint64_t tailUbCols_;
-uint64_t ubLoopCount_;
-uint64_t lastUbLoopCount_;
-uint64_t lastCoreTailUbCols_;
-TPipe *Ppipe_ = nullptr;
+    TQue<QuePosition::VECOUT, OUTPUT_COUNT> dgammaQueue_;
+    GlobalTensor<T> dgammaGm_;
+    GlobalTensor<T> dbetaGm_;
+    uint64_t colsLastCoreDG_;
+    uint32_t coreIdx_;
+    uint64_t colsPerCore_;
+    uint64_t gmOffset_;
+    uint64_t usedCoreNumDG_;
+    uint64_t colsPerUB_;
+    uint64_t tailUbCols_;
+    uint64_t ubLoopCount_;
+    uint64_t lastUbLoopCount_;
+    uint64_t lastCoreTailUbCols_;
+    TPipe* Ppipe_ = nullptr;
 
-const GroupNormGradEmptyTilingData *tiling_;
+    const GroupNormGradEmptyTilingData* tiling_;
 };
 } // namespace GroupNormGrad
 #endif

@@ -25,7 +25,8 @@ OP_TYPE_REGISTER(TransposeBatchMatMul);
 const aclTensor* TransposeBatchMatMul(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                       const aclTensor* scale, const aclIntArray* perm_x1, const aclIntArray* perm_x2,
                                       const aclIntArray* perm_y, const bool enable_hf32,
-                                      const int32_t batch_split_factor, aclOpExecutor *executor) {
+                                      const int32_t batch_split_factor, aclOpExecutor* executor)
+{
     L0_DFX(TransposeBatchMatMul, x1, x2, bias, scale, perm_x1, perm_x2, perm_y, enable_hf32, batch_split_factor);
     auto outType = x1->GetDataType();
     if (scale != nullptr) {
@@ -37,10 +38,10 @@ const aclTensor* TransposeBatchMatMul(const aclTensor* x1, const aclTensor* x2, 
     OP_CHECK_INFERSHAPE(ret != ACLNN_SUCCESS, return nullptr, "TransposeBatchMatMul InferShape failed.");
     uint32_t execMode = enable_hf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
     ret = ADD_TO_LAUNCHER_LIST_AICORE(TransposeBatchMatMul, OP_INPUT(x1, x2, bias, scale), OP_OUTPUT(out),
-                                      OP_ATTR(perm_x1, perm_x2, perm_y, enable_hf32, batch_split_factor), OP_MODE(execMode));
+                                      OP_ATTR(perm_x1, perm_x2, perm_y, enable_hf32, batch_split_factor),
+                                      OP_MODE(execMode));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
                                          "TransposeBatchMatMul ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 };
-}  // namespace l0op
-
+} // namespace l0op

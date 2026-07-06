@@ -58,221 +58,241 @@ extern "C" {
 constexpr size_t MAX_DIM_LEN = 8;
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST = {
-  op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_INT8,
-  op::DataType::DT_UINT8, op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,
-  // aicore
-  op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
+    op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_INT8,
+    op::DataType::DT_UINT8, op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,
+    // aicore
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_910B = {
-  op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT8,
-  op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,
-  // aicore
-  op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
-  op::DataType::DT_BF16};
+    op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_INT8, op::DataType::DT_UINT8,
+    op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,
+    // aicore
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_950 = {
-  op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_COMPLEX64,
-  op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,
-  // aicore
-  op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_UINT32,
-  op::DataType::DT_INT64, op::DataType::DT_UINT64, op::DataType::DT_BF16, op::DataType::DT_INT8, op::DataType::DT_UINT8};
+    op::DataType::DT_DOUBLE, op::DataType::DT_INT16, op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128,
+    op::DataType::DT_BOOL,
+    // aicore
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_UINT32,
+    op::DataType::DT_INT64, op::DataType::DT_UINT64, op::DataType::DT_BF16, op::DataType::DT_INT8,
+    op::DataType::DT_UINT8};
 
-static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {
-  op::DataType::DT_INT64, op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
+                                                                             op::DataType::DT_INT32};
 
 static const std::unordered_map<op::DataType, op::DataType> dtypeConversionMap = {
-        {op::DataType::DT_COMPLEX64, op::DataType::DT_INT64},
-        {op::DataType::DT_UINT64, op::DataType::DT_INT64},
-        {op::DataType::DT_DOUBLE, op::DataType::DT_INT64},
-        {op::DataType::DT_UINT32, op::DataType::DT_INT32},
-        {op::DataType::DT_INT16, op::DataType::DT_FLOAT16}};
+    {op::DataType::DT_COMPLEX64, op::DataType::DT_INT64},
+    {op::DataType::DT_UINT64, op::DataType::DT_INT64},
+    {op::DataType::DT_DOUBLE, op::DataType::DT_INT64},
+    {op::DataType::DT_UINT32, op::DataType::DT_INT32},
+    {op::DataType::DT_INT16, op::DataType::DT_FLOAT16}};
 
 static inline bool CheckNotNull(const aclTensor* self, const aclTensor* index, const aclTensor* source,
-                                const aclTensor* out) {
-  OP_CHECK_NULL(self, return false);
-  OP_CHECK_NULL(index, return false);
-  OP_CHECK_NULL(source, return false);
-  OP_CHECK_NULL(out, return false);
-  return true;
+                                const aclTensor* out)
+{
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(index, return false);
+    OP_CHECK_NULL(source, return false);
+    OP_CHECK_NULL(out, return false);
+    return true;
 }
 
-static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
-    return SELF_DTYPE_SUPPORT_LIST_910B;
-  } else if (Ops::NN::AclnnUtil::IsRegbase()) {
-    return SELF_DTYPE_SUPPORT_LIST_950;
-  } else {
-    return SELF_DTYPE_SUPPORT_LIST;
-  }
-}
-
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index,
-                            const aclTensor* source, const aclTensor* out) {
-  auto supportList = GetDtypeSupportList();
-  // 检查self的数据类型是否在算子的支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
-  // 检查index的数据类型是否在算子的支持列表内
-  OP_CHECK_DTYPE_NOT_SUPPORT(index, INDEX_DTYPE_SUPPORT_LIST, return false);
-  // self和source的数据类型要一致
-  OP_CHECK_DTYPE_NOT_SAME(self, source, return false);
-  // self和out的数据类型要一致
-  OP_CHECK_DTYPE_NOT_SAME(self, out, return false);
-  return true;
-}
-
-static bool CheckFormat(const aclTensor *self, const aclTensor *out) {
-  // 输入输出的格式需要一致
-  if (self->GetStorageFormat() != out->GetStorageFormat()) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be same. self [%s], out [%s].",
-            ToString(self->GetStorageFormat()).GetString(), ToString(out->GetStorageFormat()).GetString());
-    return false;
-  }
-  return true;
-}
-
-static inline bool IsSliceShapeSame(const aclTensor* self, const aclTensor* source, int64_t dim) {
-  auto selfShape = self->GetViewShape();
-  auto sourceShape = source->GetViewShape();
-
-  size_t dimNum = selfShape.GetDimNum();
-  int64_t posDim = dim < 0 ? dim + static_cast<int64_t>(dimNum) : dim;
-  for (size_t idx = 0; idx < dimNum; idx++) {
-    if (selfShape.GetDim(idx) != sourceShape.GetDim(idx) && idx != static_cast<uint64_t>(posDim)) {
-      return false;
+static const std::initializer_list<DataType>& GetDtypeSupportList()
+{
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+        return SELF_DTYPE_SUPPORT_LIST_910B;
+    } else if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return SELF_DTYPE_SUPPORT_LIST_950;
+    } else {
+        return SELF_DTYPE_SUPPORT_LIST;
     }
-  }
-  return true;
 }
 
-static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* index,
-                      const aclTensor* source, const aclTensor* out) {
-  OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
-  OP_CHECK_MAX_DIM(source, MAX_DIM_LEN, return false);
-  OP_CHECK_MAX_DIM(index, 1, return false);
-
-  OP_CHECK_SHAPE_NOT_EQUAL(self, out , return false);
-
-  auto selfShape = self->GetViewShape();
-  auto sourceShape = source->GetViewShape();
-  if (sourceShape.IsScalar() && index->GetViewShape().GetShapeSize() != 1) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When source is scalar,index should have one element,but got %ld.", index->Size());
-    return false;
-  }
-
-  if (selfShape.GetDimNum() != sourceShape.GetDimNum() && !selfShape.IsScalar() && !sourceShape.IsScalar()) {
-    OP_LOGE(
-        ACLNN_ERR_PARAM_INVALID,
-        "When source and self are not scalars,their dimensionality must match,but got self dimensionality %s,source "
-        "dimensionlity %s",
-        op::ToString(selfShape).GetString(), op::ToString(sourceShape).GetString());
-    return false;
-  }
-
-  // 检查参数dim是否合法
-  int64_t tmpDim = static_cast<int64_t>(selfShape.GetDimNum());
-  if (tmpDim == 0 && dim != 0 && dim != -1) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [-1, 0], but got %ld)",
-            dim);
-    return false;
-  } else if (tmpDim > 0 && (dim < -tmpDim || dim >= tmpDim)) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [-%ld, %ld],"
-            "but got %ld)", tmpDim, tmpDim - 1, dim);
-    return false;
-  }
-
-  if (!IsSliceShapeSame(self, source, dim)) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self and source must have same slice shapes");
-    return false;
-  }
-
-  return true;
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const aclTensor* source,
+                            const aclTensor* out)
+{
+    auto supportList = GetDtypeSupportList();
+    // 检查self的数据类型是否在算子的支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
+    // 检查index的数据类型是否在算子的支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(index, INDEX_DTYPE_SUPPORT_LIST, return false);
+    // self和source的数据类型要一致
+    OP_CHECK_DTYPE_NOT_SAME(self, source, return false);
+    // self和out的数据类型要一致
+    OP_CHECK_DTYPE_NOT_SAME(self, out, return false);
+    return true;
 }
 
-static inline bool CheckElementNum(const aclTensor* index, const aclTensor* source, int64_t dim) {
-  dim = dim >= 0 ? dim : dim + source->GetViewShape().GetDimNum();
-  auto dimSize = source->GetViewShape().GetDim(dim);
-  if (index->GetViewShape().GetShapeSize() != dimSize && !source->GetViewShape().IsScalar()) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-            "The element num of index (%ld) should be equal to source size in dimension %ld, actual is %ld",
-            index->GetViewShape().GetShapeSize(), dim, dimSize);
-    return false;
-  }
+static bool CheckFormat(const aclTensor* self, const aclTensor* out)
+{
+    // 输入输出的格式需要一致
+    if (self->GetStorageFormat() != out->GetStorageFormat()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and output should be same. self [%s], out [%s].",
+                ToString(self->GetStorageFormat()).GetString(), ToString(out->GetStorageFormat()).GetString());
+        return false;
+    }
+    return true;
+}
 
-  return true;
+static inline bool IsSliceShapeSame(const aclTensor* self, const aclTensor* source, int64_t dim)
+{
+    auto selfShape = self->GetViewShape();
+    auto sourceShape = source->GetViewShape();
+
+    size_t dimNum = selfShape.GetDimNum();
+    int64_t posDim = dim < 0 ? dim + static_cast<int64_t>(dimNum) : dim;
+    for (size_t idx = 0; idx < dimNum; idx++) {
+        if (selfShape.GetDim(idx) != sourceShape.GetDim(idx) && idx != static_cast<uint64_t>(posDim)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* source,
+                       const aclTensor* out)
+{
+    OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(source, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(index, 1, return false);
+
+    OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
+
+    auto selfShape = self->GetViewShape();
+    auto sourceShape = source->GetViewShape();
+    if (sourceShape.IsScalar() && index->GetViewShape().GetShapeSize() != 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When source is scalar,index should have one element,but got %ld.",
+                index->Size());
+        return false;
+    }
+
+    if (selfShape.GetDimNum() != sourceShape.GetDimNum() && !selfShape.IsScalar() && !sourceShape.IsScalar()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When source and self are not scalars,their dimensionality must match,but got self dimensionality "
+                "%s,source "
+                "dimensionlity %s",
+                op::ToString(selfShape).GetString(), op::ToString(sourceShape).GetString());
+        return false;
+    }
+
+    // 检查参数dim是否合法
+    int64_t tmpDim = static_cast<int64_t>(selfShape.GetDimNum());
+    if (tmpDim == 0 && dim != 0 && dim != -1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension out of range (expected to be in range of [-1, 0], but got %ld)",
+                dim);
+        return false;
+    } else if (tmpDim > 0 && (dim < -tmpDim || dim >= tmpDim)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Dimension out of range (expected to be in range of [-%ld, %ld],"
+                "but got %ld)",
+                tmpDim, tmpDim - 1, dim);
+        return false;
+    }
+
+    if (!IsSliceShapeSame(self, source, dim)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self and source must have same slice shapes");
+        return false;
+    }
+
+    return true;
+}
+
+static inline bool CheckElementNum(const aclTensor* index, const aclTensor* source, int64_t dim)
+{
+    dim = dim >= 0 ? dim : dim + source->GetViewShape().GetDimNum();
+    auto dimSize = source->GetViewShape().GetDim(dim);
+    if (index->GetViewShape().GetShapeSize() != dimSize && !source->GetViewShape().IsScalar()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The element num of index (%ld) should be equal to source size in dimension %ld, actual is %ld",
+                index->GetViewShape().GetShapeSize(), dim, dimSize);
+        return false;
+    }
+
+    return true;
 }
 
 static inline aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTensor* index,
-                                      const aclTensor* source, const aclTensor* out) {
-  // 1. 检查参数是否为空指针
-  CHECK_RET(CheckNotNull(self, index, source, out), ACLNN_ERR_PARAM_NULLPTR);
+                                      const aclTensor* source, const aclTensor* out)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(self, index, source, out), ACLNN_ERR_PARAM_NULLPTR);
 
-  // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-  CHECK_RET(CheckDtypeValid(self, index, source, out), ACLNN_ERR_PARAM_INVALID);
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
+    CHECK_RET(CheckDtypeValid(self, index, source, out), ACLNN_ERR_PARAM_INVALID);
 
-  // 3. 检查输入形状是否满足
-  CHECK_RET(CheckShape(self, dim, index, source, out), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查输入形状是否满足
+    CHECK_RET(CheckShape(self, dim, index, source, out), ACLNN_ERR_PARAM_INVALID);
 
-  // 4. 检查输入元素数量是否满足
-  CHECK_RET(CheckElementNum(index, source, dim), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查输入元素数量是否满足
+    CHECK_RET(CheckElementNum(index, source, dim), ACLNN_ERR_PARAM_INVALID);
 
-  // 5. 检查输入输出format是否一致
-  CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
-
-  return ACLNN_SUCCESS;
-}
-
-static const aclTensor* TransposeBySpecifiedAxis(const aclTensor* self, int64_t axis, aclOpExecutor* executor) {
-  auto dimSize = (int64_t)(self->GetViewShape().GetDimNum());
-  std::vector<int64_t> perm(dimSize);
-
-  for (int64_t i = 0; i < dimSize; i++) {
-    perm[i] = i;
-  }
-
-  std::swap(perm[axis], perm[0]);
-  auto valuePerm = executor->AllocIntArray(perm.data(), dimSize);
-  OP_CHECK(valuePerm != nullptr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "selfTransposed is nullptr"), return nullptr);
-
-  auto selfTransposed = l0op::Transpose(self, valuePerm, executor);
-  OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "selfTransposed is nullptr"), return nullptr);
-
-  return selfTransposed;
-}
-
-static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t& dim, const aclTensor* index, const aclTensor* source,
-                                                     aclOpExecutor* uniqueExecutor, const aclTensor*& selfContiguous,
-                                                     const aclTensor*& indexContiguous, const aclTensor*& sourceContiguous,
-                                                     const aclTensor*& selfRefReShape, const aclTensor*& indexReShape, const aclTensor*& sourceReShape, const op::Shape& rowVector) {
-    if (selfRef->GetViewShape().IsScalar()) {
-      dim = 0;
-      selfRefReShape = l0op::Reshape(selfContiguous, rowVector, uniqueExecutor);
-    } else {
-      dim = dim >= 0 ? dim : dim + selfRef->GetViewShape().GetDimNum();
-      selfRefReShape = selfContiguous;
-    }
-    OP_CHECK(selfRefReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfRefReShape is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-
-    if (index->GetViewShape().IsScalar()) {
-      indexReShape = l0op::Reshape(indexContiguous, rowVector, uniqueExecutor);
-    } else {
-      indexReShape = indexContiguous;
-    }
-    OP_CHECK(indexReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexReShape is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-
-    if (source->GetViewShape().IsScalar()) {
-      sourceReShape = l0op::Reshape(sourceContiguous, rowVector, uniqueExecutor);
-    } else {
-      sourceReShape = sourceContiguous;
-    }
-    OP_CHECK(sourceReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceReShape is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+    // 5. 检查输入输出format是否一致
+    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* HandleIndexPutV2WithTypeConversion(
-    aclOpExecutor* executor, aclTensor* selfView, aclTensor* sourceView, const aclTensorList* indicesList,
-    const aclTensor* maskTensor, DataType originalDtype, DataType intermediateDtype)
+static const aclTensor* TransposeBySpecifiedAxis(const aclTensor* self, int64_t axis, aclOpExecutor* executor)
+{
+    auto dimSize = (int64_t)(self->GetViewShape().GetDimNum());
+    std::vector<int64_t> perm(dimSize);
+
+    for (int64_t i = 0; i < dimSize; i++) {
+        perm[i] = i;
+    }
+
+    std::swap(perm[axis], perm[0]);
+    auto valuePerm = executor->AllocIntArray(perm.data(), dimSize);
+    OP_CHECK(valuePerm != nullptr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "selfTransposed is nullptr"), return nullptr);
+
+    auto selfTransposed = l0op::Transpose(self, valuePerm, executor);
+    OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "selfTransposed is nullptr"), return nullptr);
+
+    return selfTransposed;
+}
+
+static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t& dim, const aclTensor* index,
+                                              const aclTensor* source, aclOpExecutor* uniqueExecutor,
+                                              const aclTensor*& selfContiguous, const aclTensor*& indexContiguous,
+                                              const aclTensor*& sourceContiguous, const aclTensor*& selfRefReShape,
+                                              const aclTensor*& indexReShape, const aclTensor*& sourceReShape,
+                                              const op::Shape& rowVector)
+{
+    if (selfRef->GetViewShape().IsScalar()) {
+        dim = 0;
+        selfRefReShape = l0op::Reshape(selfContiguous, rowVector, uniqueExecutor);
+    } else {
+        dim = dim >= 0 ? dim : dim + selfRef->GetViewShape().GetDimNum();
+        selfRefReShape = selfContiguous;
+    }
+    OP_CHECK(selfRefReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfRefReShape is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    if (index->GetViewShape().IsScalar()) {
+        indexReShape = l0op::Reshape(indexContiguous, rowVector, uniqueExecutor);
+    } else {
+        indexReShape = indexContiguous;
+    }
+    OP_CHECK(indexReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexReShape is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    if (source->GetViewShape().IsScalar()) {
+        sourceReShape = l0op::Reshape(sourceContiguous, rowVector, uniqueExecutor);
+    } else {
+        sourceReShape = sourceContiguous;
+    }
+    OP_CHECK(sourceReShape != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceReShape is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    return ACLNN_SUCCESS;
+}
+
+static const aclTensor* HandleIndexPutV2WithTypeConversion(aclOpExecutor* executor, aclTensor* selfView,
+                                                           aclTensor* sourceView, const aclTensorList* indicesList,
+                                                           const aclTensor* maskTensor, DataType originalDtype,
+                                                           DataType intermediateDtype)
 {
     selfView->SetDataType(intermediateDtype);
     sourceView->SetDataType(intermediateDtype);
@@ -285,14 +305,14 @@ static const aclTensor* HandleIndexPutV2WithTypeConversion(
     return kernelOut;
 }
 
-static aclnnStatus ScatterToIndexPutV2(
-    aclOpExecutor* uniqueExecutor, const aclTensor*& indexReShape, const aclTensor* selfRefReShape, int64_t& dim,
-    const aclTensor* sourceReShape, const aclTensor*& kernelOut)
+static aclnnStatus ScatterToIndexPutV2(aclOpExecutor* uniqueExecutor, const aclTensor*& indexReShape,
+                                       const aclTensor* selfRefReShape, int64_t& dim, const aclTensor* sourceReShape,
+                                       const aclTensor*& kernelOut)
 {
     FVector<const aclTensor*, 1> definedIndices;
     definedIndices.emplace_back(indexReShape);
-    const aclTensorList* allIndicesTensorList =
-        uniqueExecutor->AllocTensorList(definedIndices.data(), definedIndices.size());
+    const aclTensorList* allIndicesTensorList = uniqueExecutor->AllocTensorList(definedIndices.data(),
+                                                                                definedIndices.size());
 
     auto dimSize = (int64_t)(selfRefReShape->GetViewShape().GetDimNum());
     std::vector<int64_t> masks(dimSize, 0);
@@ -300,32 +320,29 @@ static aclnnStatus ScatterToIndexPutV2(
     auto maskArray = uniqueExecutor->AllocIntArray(masks.data(), dimSize);
     auto maskTensor = uniqueExecutor->ConvertToTensor(maskArray, op::ToOpDataType(ACL_INT64));
 
-    auto selfView =
-        uniqueExecutor->CreateView(selfRefReShape, selfRefReShape->GetViewShape(), selfRefReShape->GetViewOffset());
-    OP_CHECK(
-        selfView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfView is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-    auto sourceView =
-        uniqueExecutor->CreateView(sourceReShape, sourceReShape->GetViewShape(), sourceReShape->GetViewOffset());
-    OP_CHECK(
-        sourceView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceView is nullptr"),
-        return ACLNN_ERR_INNER_NULLPTR);
+    auto selfView = uniqueExecutor->CreateView(selfRefReShape, selfRefReShape->GetViewShape(),
+                                               selfRefReShape->GetViewOffset());
+    OP_CHECK(selfView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfView is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+    auto sourceView = uniqueExecutor->CreateView(sourceReShape, sourceReShape->GetViewShape(),
+                                                 sourceReShape->GetViewOffset());
+    OP_CHECK(sourceView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceView is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     DataType originalDtype = selfRefReShape->GetDataType();
 
     auto it = dtypeConversionMap.find(originalDtype);
     if (it != dtypeConversionMap.end()) {
-        kernelOut = HandleIndexPutV2WithTypeConversion(
-            uniqueExecutor, selfView, sourceView, allIndicesTensorList, maskTensor, originalDtype, it->second);
-        OP_CHECK(
-            kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
-            return ACLNN_ERR_INNER_NULLPTR);
+        kernelOut = HandleIndexPutV2WithTypeConversion(uniqueExecutor, selfView, sourceView, allIndicesTensorList,
+                                                       maskTensor, originalDtype, it->second);
+        OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
+                 return ACLNN_ERR_INNER_NULLPTR);
     } else {
         aclTensor* out = const_cast<aclTensor*>(selfRefReShape);
-        kernelOut = l0op::IndexPutV2(
-            selfRefReShape, allIndicesTensorList, sourceReShape, maskTensor, false, out, uniqueExecutor);
-        OP_CHECK(
-            kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
-            return ACLNN_ERR_INNER_NULLPTR);
+        kernelOut = l0op::IndexPutV2(selfRefReShape, allIndicesTensorList, sourceReShape, maskTensor, false, out,
+                                     uniqueExecutor);
+        OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
+                 return ACLNN_ERR_INNER_NULLPTR);
     }
     return ACLNN_SUCCESS;
 }
@@ -351,94 +368,109 @@ static bool IsUseIndexPutV2(const aclTensor* selfRefReShape)
 }
 
 aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
-                                          const aclTensor* source, aclTensor* outRef,
-                                          uint64_t* workspaceSize, aclOpExecutor** executor) {
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+                                          const aclTensor* source, aclTensor* outRef, uint64_t* workspaceSize,
+                                          aclOpExecutor** executor)
+{
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  // 固定写法，参数检查
-  auto ret = CheckParams(selfRef, dim, index, source, outRef);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // 固定写法，参数检查
+    auto ret = CheckParams(selfRef, dim, index, source, outRef);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  if (selfRef->IsEmpty() || index->IsEmpty()) {
-    *workspaceSize = 0;
-    uniqueExecutor.ReleaseTo(executor);
-    return ACLNN_SUCCESS;
-  }
-
-  const aclTensor* selfContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
-  OP_CHECK(selfContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfContiguous is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-  const aclTensor* indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
-  OP_CHECK(indexContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexContiguous is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-  const aclTensor* sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
-  OP_CHECK(sourceContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceContiguous is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-  const aclTensor* selfRefReShape = nullptr;
-  const aclTensor* indexReShape = nullptr;
-  const aclTensor* sourceReShape = nullptr;
-  op::Shape rowVector = {-1};
-  auto conReshapeRet = ContiguousAndReshapeParams(selfRef, dim, index, source, uniqueExecutor.get(), selfContiguous, indexContiguous, sourceContiguous, selfRefReShape, indexReShape, sourceReShape, rowVector);
-  CHECK_RET(conReshapeRet == ACLNN_SUCCESS, conReshapeRet);
-
-  // 当前scatterupdate算子不支持指定dim做copy，需要使用transpose
-  const aclTensor* kernelOut = nullptr;
-  if (dim == 0) {
-    // 调用ScatterUpdate算子
-    kernelOut = l0op::ScatterUpdate(selfRefReShape, indexReShape, sourceReShape, uniqueExecutor.get(), false);
-  } else {
-	  if (IsUseIndexPutV2(selfRefReShape)) {
-      // 非dim0轴的算子调到indexputv2上去
-      auto scatterToIndexPutV2Ret = ScatterToIndexPutV2(uniqueExecutor.get(), indexReShape, selfRefReShape, dim, sourceReShape, kernelOut);
-      CHECK_RET(scatterToIndexPutV2Ret == ACLNN_SUCCESS, scatterToIndexPutV2Ret);
-    } else {
-      // 先做transpose再调用ScatterUpdate算子	 
-      auto selfTransposed = TransposeBySpecifiedAxis(selfRefReShape, dim, uniqueExecutor.get());
-      OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-      auto sourceTransposed = TransposeBySpecifiedAxis(sourceReShape, dim, uniqueExecutor.get());
-      OP_CHECK(sourceTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-      auto transposedKernelOut = l0op::ScatterUpdate(selfTransposed, indexReShape, sourceTransposed, uniqueExecutor.get(), false);
-      OP_CHECK(transposedKernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "transposedKernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-      kernelOut = TransposeBySpecifiedAxis(transposedKernelOut, dim, uniqueExecutor.get());
+    if (selfRef->IsEmpty() || index->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
     }
-  }
 
-  OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-  // 固定写法，将计算结果拷贝到输出outRef上
-  auto viewCopyResult = l0op::ViewCopy(kernelOut, outRef, uniqueExecutor.get());
-  OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "viewCopyResult is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* selfContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
+    OP_CHECK(selfContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfContiguous is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
+    OP_CHECK(indexContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "indexContiguous is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
+    OP_CHECK(sourceContiguous != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceContiguous is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* selfRefReShape = nullptr;
+    const aclTensor* indexReShape = nullptr;
+    const aclTensor* sourceReShape = nullptr;
+    op::Shape rowVector = {-1};
+    auto conReshapeRet = ContiguousAndReshapeParams(selfRef, dim, index, source, uniqueExecutor.get(), selfContiguous,
+                                                    indexContiguous, sourceContiguous, selfRefReShape, indexReShape,
+                                                    sourceReShape, rowVector);
+    CHECK_RET(conReshapeRet == ACLNN_SUCCESS, conReshapeRet);
 
-  // 固定写法，获取计算过程中需要使用的workspace大小
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor
-  return ACLNN_SUCCESS;
+    // 当前scatterupdate算子不支持指定dim做copy，需要使用transpose
+    const aclTensor* kernelOut = nullptr;
+    if (dim == 0) {
+        // 调用ScatterUpdate算子
+        kernelOut = l0op::ScatterUpdate(selfRefReShape, indexReShape, sourceReShape, uniqueExecutor.get(), false);
+    } else {
+        if (IsUseIndexPutV2(selfRefReShape)) {
+            // 非dim0轴的算子调到indexputv2上去
+            auto scatterToIndexPutV2Ret = ScatterToIndexPutV2(uniqueExecutor.get(), indexReShape, selfRefReShape, dim,
+                                                              sourceReShape, kernelOut);
+            CHECK_RET(scatterToIndexPutV2Ret == ACLNN_SUCCESS, scatterToIndexPutV2Ret);
+        } else {
+            // 先做transpose再调用ScatterUpdate算子
+            auto selfTransposed = TransposeBySpecifiedAxis(selfRefReShape, dim, uniqueExecutor.get());
+            OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfTransposed is nullptr"),
+                     return ACLNN_ERR_INNER_NULLPTR);
+            auto sourceTransposed = TransposeBySpecifiedAxis(sourceReShape, dim, uniqueExecutor.get());
+            OP_CHECK(sourceTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceTransposed is nullptr"),
+                     return ACLNN_ERR_INNER_NULLPTR);
+            auto transposedKernelOut = l0op::ScatterUpdate(selfTransposed, indexReShape, sourceTransposed,
+                                                           uniqueExecutor.get(), false);
+            OP_CHECK(transposedKernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "transposedKernelOut is nullptr"),
+                     return ACLNN_ERR_INNER_NULLPTR);
+            kernelOut = TransposeBySpecifiedAxis(transposedKernelOut, dim, uniqueExecutor.get());
+        }
+    }
+
+    OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+    // 固定写法，将计算结果拷贝到输出outRef上
+    auto viewCopyResult = l0op::ViewCopy(kernelOut, outRef, uniqueExecutor.get());
+    OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "viewCopyResult is nullptr"),
+             return ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
+    return ACLNN_SUCCESS;
 }
 
 aclnnStatus aclnnIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
-                                          const aclTensor* source, aclTensor* outRef,
-                                          uint64_t* workspaceSize, aclOpExecutor** executor) {
-  L2_DFX_PHASE_1(aclnnIndexCopy, DFX_IN(selfRef, dim, index, source), DFX_OUT(outRef));
-  return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, outRef, workspaceSize, executor);
+                                           const aclTensor* source, aclTensor* outRef, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnIndexCopy, DFX_IN(selfRef, dim, index, source), DFX_OUT(outRef));
+    return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, outRef, workspaceSize, executor);
 }
 
-aclnnStatus aclnnIndexCopy(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                  aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnIndexCopy);
-  // 固定写法，调用框架能力，完成计算
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnIndexCopy(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnIndexCopy);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 aclnnStatus aclnnInplaceIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
                                                   const aclTensor* source, uint64_t* workspaceSize,
-                                                  aclOpExecutor** executor) {
-  L2_DFX_PHASE_1(aclnnInplaceIndexCopy, DFX_IN(selfRef, dim, index, source), DFX_OUT(selfRef));
-  return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, selfRef, workspaceSize, executor);
+                                                  aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnInplaceIndexCopy, DFX_IN(selfRef, dim, index, source), DFX_OUT(selfRef));
+    return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, selfRef, workspaceSize, executor);
 }
 
-aclnnStatus aclnnInplaceIndexCopy(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                  aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnInplaceIndexCopy);
-  // 固定写法，调用框架能力，完成计算
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnInplaceIndexCopy(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnInplaceIndexCopy);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

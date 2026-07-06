@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_mul_scalar_proto.h"
 
-class ForeachMulScalarTest : public testing::Test
-{
+class ForeachMulScalarTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachMulScalar SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachMulScalar SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachMulScalar TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachMulScalar TearDown" << std::endl; }
 };
 
 TEST_F(ForeachMulScalarTest, infer_shape_known_success)

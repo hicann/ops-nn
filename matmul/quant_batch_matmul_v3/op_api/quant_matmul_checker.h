@@ -19,25 +19,29 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 
-using TupleInput = std::tuple<const aclTensor *, const aclTensor *>;
-using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *,
-                              const aclTensor *, const aclTensor *, const aclTensor *, const int64_t &, const int64_t &>;
+using TupleInput = std::tuple<const aclTensor*, const aclTensor*>;
+using TupleQuant = std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                              const aclTensor*, const aclTensor*, const int64_t&, const int64_t&>;
 using TupleAttr = std::tuple<bool, bool>;
 
 namespace op {
 class QuantMatmulChecker {
 public:
-    QuantMatmulChecker(const TupleInput &inputTensors, const TupleQuant &quantTensors,
-                       const TupleAttr &boolsTrans, const aclTensor *out, const bool isWeightNz,
-                       const char *apiName)
-     : inputTensors_(inputTensors), quantTensors_(quantTensors), boolsTrans_(boolsTrans), out_(out),
-       isWeightNz_(isWeightNz), apiName_(apiName) {}
+    QuantMatmulChecker(const TupleInput& inputTensors, const TupleQuant& quantTensors, const TupleAttr& boolsTrans,
+                       const aclTensor* out, const bool isWeightNz, const char* apiName)
+        : inputTensors_(inputTensors),
+          quantTensors_(quantTensors),
+          boolsTrans_(boolsTrans),
+          out_(out),
+          isWeightNz_(isWeightNz),
+          apiName_(apiName)
+    {}
 
     ~QuantMatmulChecker() = default;
     void Init();
     aclnnStatus CheckParams() const;
     bool IsA4W4PergroupNonSymmetric(const uint64_t groupSizeK) const;
-    bool InferGroupSize(int64_t &groupSize);
+    bool InferGroupSize(int64_t& groupSize);
 
 private:
     void GetX1X2DimValue();
@@ -67,9 +71,9 @@ private:
     bool CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckGroupSize() const;
-    bool CheckOutShape(bool twoDimMatmulCaseFlag, const std::vector<int64_t> &batchRecord) const;
-    bool CheckBiasShape(const std::vector<int64_t> &batchRecord, int64_t inferredOutbatchValue) const;
-    int64_t InferOutputShape(std::vector<int64_t> &batchRecord) const;
+    bool CheckOutShape(bool twoDimMatmulCaseFlag, const std::vector<int64_t>& batchRecord) const;
+    bool CheckBiasShape(const std::vector<int64_t>& batchRecord, int64_t inferredOutbatchValue) const;
+    int64_t InferOutputShape(std::vector<int64_t>& batchRecord) const;
     bool CheckDimValue() const;
     bool CheckDimValuePertokenDoubleScale() const;
     bool CheckDimValuePerblock() const;
@@ -84,32 +88,32 @@ private:
     std::string GetX1ScaleName() const;
     std::string GetX2ScaleName() const;
     std::string GetX2OffsetName() const;
-    bool InferGroupSizeM(const aclTensor *x1, const aclTensor *x1Scale, const aclTensor *x2Scale,
-                         bool transX1, uint64_t &groupSizeM) const;
-    bool InferGroupSizeK(const aclTensor *x1, const aclTensor *x1Scale, const aclTensor *x2Scale,
-                         bool transX1, uint64_t &groupSizeK) const;
-    bool InferGroupSizeN(const aclTensor *x2, const aclTensor *x1Scale, const aclTensor *x2Scale,
-                         bool transX2, uint64_t groupSizeK, uint64_t &groupSizeN) const;
-    bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, uint64_t &groupSize, const char *dimensionName) const;
+    bool InferGroupSizeM(const aclTensor* x1, const aclTensor* x1Scale, const aclTensor* x2Scale, bool transX1,
+                         uint64_t& groupSizeM) const;
+    bool InferGroupSizeK(const aclTensor* x1, const aclTensor* x1Scale, const aclTensor* x2Scale, bool transX1,
+                         uint64_t& groupSizeK) const;
+    bool InferGroupSizeN(const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale, bool transX2,
+                         uint64_t groupSizeK, uint64_t& groupSizeN) const;
+    bool ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, uint64_t& groupSize, const char* dimensionName) const;
 
 public:
     const TupleInput inputTensors_;
     const TupleQuant quantTensors_;
     const TupleAttr boolsTrans_;
-    const aclTensor *out_ = nullptr;
+    const aclTensor* out_ = nullptr;
     const bool isWeightNz_;
-    const char *apiName_;
+    const char* apiName_;
 
 private:
-    const aclTensor *x1_ = nullptr;
-    const aclTensor *x2_ = nullptr;
-    const aclTensor *x1Scale_ = nullptr;
-    const aclTensor *x2Scale_ = nullptr;
-    const aclTensor *yScale_ = nullptr;
-    const aclTensor *x1Offset_ = nullptr;
-    const aclTensor *x2Offset_ = nullptr;
-    const aclTensor *yOffset_ = nullptr;
-    const aclTensor *bias_ = nullptr;
+    const aclTensor* x1_ = nullptr;
+    const aclTensor* x2_ = nullptr;
+    const aclTensor* x1Scale_ = nullptr;
+    const aclTensor* x2Scale_ = nullptr;
+    const aclTensor* yScale_ = nullptr;
+    const aclTensor* x1Offset_ = nullptr;
+    const aclTensor* x2Offset_ = nullptr;
+    const aclTensor* yOffset_ = nullptr;
+    const aclTensor* bias_ = nullptr;
     bool transposeX1_ = false;
     bool transposeX2_ = false;
     bool isA4W4_ = false;
@@ -124,6 +128,6 @@ private:
     SocVersion socVersion_;
     NpuArch npuArch_;
 };
-}
+} // namespace op
 
-#endif  // OP_API_SRC_QUANT_MATMUL_CHECKER_H_
+#endif // OP_API_SRC_QUANT_MATMUL_CHECKER_H_

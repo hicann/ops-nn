@@ -35,4 +35,4 @@ ACLNN_API aclnnStatus aclnnMultilabelMarginLoss(void* workspace, uint64_t worksp
 }
 #endif
 
-#endif  // OP_API_INC_MULTILABEL_MARGIN_LOSS_H_
+#endif // OP_API_INC_MULTILABEL_MARGIN_LOSS_H_

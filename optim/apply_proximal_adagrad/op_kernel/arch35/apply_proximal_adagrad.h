@@ -60,38 +60,37 @@
 
 namespace NsApplyProximalAdagrad {
 
-using AscendC::TPipe;
-using AscendC::TQue;
-using AscendC::TBuf;
-using AscendC::QuePosition;
-using AscendC::GlobalTensor;
-using AscendC::LocalTensor;
-using AscendC::DataCopyParams;
-using AscendC::DataCopyPad;
-using AscendC::DataCopyExtParams;
-using AscendC::DataCopyPadExtParams;
-using AscendC::GetBlockIdx;
-using AscendC::Add;
-using AscendC::Sub;
-using AscendC::Mul;
-using AscendC::Muls;
-using AscendC::Adds;
 using AscendC::Abs;
-using AscendC::Div;
-using AscendC::Rsqrt;
-using AscendC::Maxs;
+using AscendC::Add;
+using AscendC::Adds;
+using AscendC::Cast;
+using AscendC::CMPMODE;
 using AscendC::Compare;
 using AscendC::Compares;
 using AscendC::CompareScalar;
-using AscendC::Select;
+using AscendC::DataCopyExtParams;
+using AscendC::DataCopyPad;
+using AscendC::DataCopyPadExtParams;
+using AscendC::DataCopyParams;
+using AscendC::Div;
 using AscendC::Duplicate;
-using AscendC::CMPMODE;
-using AscendC::SELMODE;
-using AscendC::Cast;
-using AscendC::RoundMode;
-using AscendC::Duplicate;
+using AscendC::GetBlockIdx;
+using AscendC::GlobalTensor;
 using AscendC::HardEvent;
+using AscendC::LocalTensor;
+using AscendC::Maxs;
+using AscendC::Mul;
+using AscendC::Muls;
+using AscendC::QuePosition;
+using AscendC::RoundMode;
+using AscendC::Rsqrt;
+using AscendC::Select;
+using AscendC::SELMODE;
 using AscendC::SetFlag;
+using AscendC::Sub;
+using AscendC::TBuf;
+using AscendC::TPipe;
+using AscendC::TQue;
 using AscendC::WaitFlag;
 // NOTE: GetTPipePtr() and event_t are declared in the global namespace by
 // kernel_common.h / cce_aicore_intrinsics.h, NOT inside namespace AscendC.
@@ -102,11 +101,8 @@ class ApplyProximalAdagrad {
 public:
     __aicore__ inline ApplyProximalAdagrad() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum,
-                                GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-                                GM_ADDR grad,
-                                GM_ADDR varOut, GM_ADDR accumOut,
-                                const ApplyProximalAdagradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR grad,
+                                GM_ADDR varOut, GM_ADDR accumOut, const ApplyProximalAdagradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -118,13 +114,9 @@ private:
     // cast paths. Inputs/outputs are all LocalTensor<float>; the cast path
     // wraps this with Cast(native -> fp32) on entry and Cast(fp32 -> native)
     // on exit.
-    __aicore__ inline void ComputeFp32Core(
-        const LocalTensor<float>& varF32,
-        const LocalTensor<float>& accumF32,
-        const LocalTensor<float>& gradF32,
-        const LocalTensor<float>& varOutF32,
-        const LocalTensor<float>& accumOutF32,
-        int32_t n);
+    __aicore__ inline void ComputeFp32Core(const LocalTensor<float>& varF32, const LocalTensor<float>& accumF32,
+                                           const LocalTensor<float>& gradF32, const LocalTensor<float>& varOutF32,
+                                           const LocalTensor<float>& accumOutF32, int32_t n);
 
     // Init helpers split out of Init() to keep each step under the NBNC
     // limit. All require ubFactor_ to be already set.
@@ -150,16 +142,16 @@ private:
     TBuf<QuePosition::VECCALC> accumF32Buf_;
     TBuf<QuePosition::VECCALC> gradF32Buf_;
     // fp32 scratch compute buffers (both paths share).
-    TBuf<QuePosition::VECCALC> etaBuf_;       // lr * rsqrt(accum)
-    TBuf<QuePosition::VECCALC> proxBuf_;      // var - eta * grad
-    TBuf<QuePosition::VECCALC> threshBuf_;    // max(|prox| - eta*l1, 0) and helpers
-    TBuf<QuePosition::VECCALC> scaleBuf_;     // 1 + eta * l2
+    TBuf<QuePosition::VECCALC> etaBuf_;    // lr * rsqrt(accum)
+    TBuf<QuePosition::VECCALC> proxBuf_;   // var - eta * grad
+    TBuf<QuePosition::VECCALC> threshBuf_; // max(|prox| - eta*l1, 0) and helpers
+    TBuf<QuePosition::VECCALC> scaleBuf_;  // 1 + eta * l2
 
     // Scratch buffers for bf16 scalar loading via LocalTensor + Vector Cast.
     // Only allocated on the bf16 path; both buffers are 32B (one DMA block).
     // See LoadScalar() for the rationale.
-    TBuf<QuePosition::VECCALC> scalarLoadBuf_;     // bf16 LocalTensor (32B)
-    TBuf<QuePosition::VECCALC> scalarLoadF32Buf_;  // fp32 LocalTensor (32B)
+    TBuf<QuePosition::VECCALC> scalarLoadBuf_;    // bf16 LocalTensor (32B)
+    TBuf<QuePosition::VECCALC> scalarLoadF32Buf_; // fp32 LocalTensor (32B)
 
     GlobalTensor<T> varGm_;
     GlobalTensor<T> accumGm_;
@@ -206,8 +198,7 @@ private:
 //       before the next reads its result.
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline float ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::LoadScalar(
-    const GlobalTensor<T>& src)
+__aicore__ inline float ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::LoadScalar(const GlobalTensor<T>& src)
 {
     if constexpr (std::is_same_v<T, bfloat16_t>) {
         LocalTensor<T> tmp = scalarLoadBuf_.template Get<T>();
@@ -228,8 +219,7 @@ __aicore__ inline float ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::LoadScalar(
         DataCopyPad(tmp, src, params, pad);
 
         // Sync MTE2 -> Vector before Cast reads tmp.
-        event_t evtMte2V = static_cast<event_t>(
-            GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        event_t evtMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(evtMte2V);
         WaitFlag<HardEvent::MTE2_V>(evtMte2V);
 
@@ -239,8 +229,7 @@ __aicore__ inline float ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::LoadScalar(
         Cast(tmpF32, tmp, RoundMode::CAST_NONE, kBlockF32);
 
         // Sync Vector -> Scalar before scalar-path GetValue reads tmpF32.
-        event_t evtVS = static_cast<event_t>(
-            GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        event_t evtVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(evtVS);
         WaitFlag<HardEvent::V_S>(evtVS);
 
@@ -258,37 +247,36 @@ __aicore__ inline float ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::LoadScalar(
 //   The bf16 scratch buffers must be allocated BEFORE LoadScalar runs in Init().
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void
-ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::InitUbBuffers()
+__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::InitUbBuffers()
 {
     // Queue tensors at native dtype.
-    pipe_.InitBuffer(varInQue_,   2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(varInQue_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(accumInQue_, 2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(gradInQue_,  2, ubFactor_ * sizeof(T));
-    pipe_.InitBuffer(varOutQue_,   2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(gradInQue_, 2, ubFactor_ * sizeof(T));
+    pipe_.InitBuffer(varOutQue_, 2, ubFactor_ * sizeof(T));
     pipe_.InitBuffer(accumOutQue_, 2, ubFactor_ * sizeof(T));
 
     // fp32 cast buffers only allocated on fp16/bf16 path (fp32 path operates
     // directly on the queue tensors).
     if constexpr (!std::is_same_v<T, float>) {
-        pipe_.InitBuffer(varF32Buf_,   ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(varF32Buf_, ubFactor_ * sizeof(float));
         pipe_.InitBuffer(accumF32Buf_, ubFactor_ * sizeof(float));
-        pipe_.InitBuffer(gradF32Buf_,  ubFactor_ * sizeof(float));
+        pipe_.InitBuffer(gradF32Buf_, ubFactor_ * sizeof(float));
     }
 
     // bf16 path scratch buffers for LoadScalar's vector-Cast workaround +
     // bf16 constant buffer for tail-padding.
     if constexpr (std::is_same_v<T, bfloat16_t>) {
-        pipe_.InitBuffer(scalarLoadBuf_,    32);
+        pipe_.InitBuffer(scalarLoadBuf_, 32);
         pipe_.InitBuffer(scalarLoadF32Buf_, 32);
-        pipe_.InitBuffer(bf16ConstBuf_,     32);
+        pipe_.InitBuffer(bf16ConstBuf_, 32);
     }
 
     // fp32 scratch (both paths share).
-    pipe_.InitBuffer(etaBuf_,    ubFactor_ * sizeof(float));
-    pipe_.InitBuffer(proxBuf_,   ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(etaBuf_, ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(proxBuf_, ubFactor_ * sizeof(float));
     pipe_.InitBuffer(threshBuf_, ubFactor_ * sizeof(float));
-    pipe_.InitBuffer(scaleBuf_,  ubFactor_ * sizeof(float));
+    pipe_.InitBuffer(scaleBuf_, ubFactor_ * sizeof(float));
 }
 
 // =============================================================================
@@ -298,19 +286,17 @@ ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::InitUbBuffers()
 //   accumLocal tail.  No-op for non-bf16 paths.
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void
-ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::BuildBf16OneConstant()
+__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::BuildBf16OneConstant()
 {
     if constexpr (std::is_same_v<T, bfloat16_t>) {
-        LocalTensor<float> oneF32   = scalarLoadF32Buf_.template Get<float>();
-        LocalTensor<T>     oneConst = bf16ConstBuf_.template Get<T>();
+        LocalTensor<float> oneF32 = scalarLoadF32Buf_.template Get<float>();
+        LocalTensor<T> oneConst = bf16ConstBuf_.template Get<T>();
         constexpr int32_t kBlockF32 = 32 / sizeof(float);
         Duplicate(oneF32, 1.0f, kBlockF32);
         AscendC::PipeBarrier<PIPE_V>();
         Cast(oneConst, oneF32, RoundMode::CAST_ROUND, kBlockF32);
         // Sync V -> S so subsequent CopyInTile::GetValue reads the new value.
-        event_t evtVS = static_cast<event_t>(
-            GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        event_t evtVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(evtVS);
         WaitFlag<HardEvent::V_S>(evtVS);
     }
@@ -320,12 +306,10 @@ ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::BuildBf16OneConstant()
 // Init
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Init(
-    GM_ADDR var, GM_ADDR accum,
-    GM_ADDR lr, GM_ADDR l1, GM_ADDR l2,
-    GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR accumOut,
-    const ApplyProximalAdagradTilingData* tilingData)
+__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Init(GM_ADDR var, GM_ADDR accum, GM_ADDR lr,
+                                                                       GM_ADDR l1, GM_ADDR l2, GM_ADDR grad,
+                                                                       GM_ADDR varOut, GM_ADDR accumOut,
+                                                                       const ApplyProximalAdagradTilingData* tilingData)
 {
     ubFactor_ = tilingData->ubFactor;
 
@@ -343,9 +327,7 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Init(
         blockLen_ = 0;
         return;
     }
-    blockLen_ = (remaining > tilingData->blockFactor)
-                    ? tilingData->blockFactor
-                    : remaining;
+    blockLen_ = (remaining > tilingData->blockFactor) ? tilingData->blockFactor : remaining;
 
     // Main vectorised tensors -- slice each core's view.
     varGm_.SetGlobalBuffer((__gm__ T*)var + blockOffset_, blockLen_);
@@ -392,12 +374,11 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Init(
 //     bf16-safe spelling (see log_softmax_v2.h:1418).
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyInTile(
-    int64_t gmOffset, int64_t currentNum)
+__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyInTile(int64_t gmOffset, int64_t currentNum)
 {
-    LocalTensor<T> varLocal   = varInQue_.template AllocTensor<T>();
+    LocalTensor<T> varLocal = varInQue_.template AllocTensor<T>();
     LocalTensor<T> accumLocal = accumInQue_.template AllocTensor<T>();
-    LocalTensor<T> gradLocal  = gradInQue_.template AllocTensor<T>();
+    LocalTensor<T> gradLocal = gradInQue_.template AllocTensor<T>();
 
     DataCopyExtParams copyParams;
     copyParams.blockCount = 1;
@@ -406,8 +387,7 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyInTile(
     copyParams.dstStride = 0;
 
     constexpr int64_t kAlignBlock = 32 / sizeof(T);
-    int64_t alignedNum =
-        ((currentNum + kAlignBlock - 1) / kAlignBlock) * kAlignBlock;
+    int64_t alignedNum = ((currentNum + kAlignBlock - 1) / kAlignBlock) * kAlignBlock;
 
     if constexpr (std::is_same_v<T, bfloat16_t>) {
         // ----- bf16 path: scalar-construction-free padding ------------------
@@ -442,20 +422,18 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyInTile(
         LocalTensor<T> oneConst = bf16ConstBuf_.template Get<T>();
         T oneVal = oneConst.GetValue(0);
         // Sync S -> V before Duplicate reads oneVal.
-        event_t evtSV = static_cast<event_t>(
-            GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        event_t evtSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(evtSV);
         WaitFlag<HardEvent::S_V>(evtSV);
         Duplicate(accumLocal, oneVal, static_cast<int32_t>(alignedNum));
         // Sync V -> MTE2 before DataCopyPad overwrites accumLocal[0..currentNum).
-        event_t evtVMte2 = static_cast<event_t>(
-            GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        event_t evtVMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
         SetFlag<HardEvent::V_MTE2>(evtVMte2);
         WaitFlag<HardEvent::V_MTE2>(evtVMte2);
 
-        DataCopyPad(varLocal,   varGm_[gmOffset],   copyParams, padIntZeroParams);
+        DataCopyPad(varLocal, varGm_[gmOffset], copyParams, padIntZeroParams);
         DataCopyPad(accumLocal, accumGm_[gmOffset], copyParams, padNoneParams);
-        DataCopyPad(gradLocal,  gradGm_[gmOffset],  copyParams, padIntZeroParams);
+        DataCopyPad(gradLocal, gradGm_[gmOffset], copyParams, padIntZeroParams);
     } else {
         // fp32 / fp16 path: original DataCopyPad pad-value mechanism is
         // safe (both half and float scalar conversions are supported).
@@ -463,9 +441,9 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyInTile(
         DataCopyPadExtParams<T> padZeroParams{true, 0, rightPadCount, static_cast<T>(0)};
         DataCopyPadExtParams<T> padOneParams{true, 0, rightPadCount, static_cast<T>(1.0f)};
 
-        DataCopyPad(varLocal,   varGm_[gmOffset],   copyParams, padZeroParams);
+        DataCopyPad(varLocal, varGm_[gmOffset], copyParams, padZeroParams);
         DataCopyPad(accumLocal, accumGm_[gmOffset], copyParams, padOneParams);
-        DataCopyPad(gradLocal,  gradGm_[gmOffset],  copyParams, padZeroParams);
+        DataCopyPad(gradLocal, gradGm_[gmOffset], copyParams, padZeroParams);
     }
 
     varInQue_.EnQue(varLocal);
@@ -479,8 +457,7 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyInTile(
 //   neighbouring cores' data.
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyOutTile(
-    int64_t gmOffset, int64_t currentNum)
+__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyOutTile(int64_t gmOffset, int64_t currentNum)
 {
     LocalTensor<T> varOutLocal = varOutQue_.template DeQue<T>();
     LocalTensor<T> accumOutLocal = accumOutQue_.template DeQue<T>();
@@ -491,7 +468,7 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyOutTile(
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
 
-    DataCopyPad(varOutGm_[gmOffset],   varOutLocal,   copyParams);
+    DataCopyPad(varOutGm_[gmOffset], varOutLocal, copyParams);
     DataCopyPad(accumOutGm_[gmOffset], accumOutLocal, copyParams);
 
     varOutQue_.FreeTensor(varOutLocal);
@@ -517,17 +494,13 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::CopyOutTile(
 // =============================================================================
 template <typename T, bool PAD_TAIL, bool HAS_L1>
 __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::ComputeFp32Core(
-    const LocalTensor<float>& varF32,
-    const LocalTensor<float>& accumF32,
-    const LocalTensor<float>& gradF32,
-    const LocalTensor<float>& varOutF32,
-    const LocalTensor<float>& accumOutF32,
-    int32_t n)
+    const LocalTensor<float>& varF32, const LocalTensor<float>& accumF32, const LocalTensor<float>& gradF32,
+    const LocalTensor<float>& varOutF32, const LocalTensor<float>& accumOutF32, int32_t n)
 {
-    LocalTensor<float> etaTmp    = etaBuf_.template Get<float>();
-    LocalTensor<float> proxTmp   = proxBuf_.template Get<float>();
+    LocalTensor<float> etaTmp = etaBuf_.template Get<float>();
+    LocalTensor<float> proxTmp = proxBuf_.template Get<float>();
     LocalTensor<float> threshTmp = threshBuf_.template Get<float>();
-    LocalTensor<float> scaleTmp  = scaleBuf_.template Get<float>();
+    LocalTensor<float> scaleTmp = scaleBuf_.template Get<float>();
 
     // S1: accumOut = accum + grad*grad. etaTmp is reused immediately by S2.
     Mul(etaTmp, gradF32, gradF32, n);
@@ -566,11 +539,9 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::ComputeFp32Cor
             // 1/4 the bytes, so the alias does not overflow. Safe because
             // varOutF32 is not read again until the final Div writes it.
             Muls(scaleTmp, threshTmp, -1.0f, n);
-            LocalTensor<uint8_t> maskTensor =
-                varOutF32.template ReinterpretCast<uint8_t>();
+            LocalTensor<uint8_t> maskTensor = varOutF32.template ReinterpretCast<uint8_t>();
             CompareScalar(maskTensor, proxTmp, 0.0f, CMPMODE::GE, n);
-            Select(proxTmp, maskTensor, threshTmp, scaleTmp,
-                   SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+            Select(proxTmp, maskTensor, threshTmp, scaleTmp, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
 
             // S5: var = signed_thresh / (1 + eta*l2)
             Muls(scaleTmp, etaTmp, l2Scalar_, n);
@@ -586,39 +557,36 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::ComputeFp32Cor
 }
 
 template <typename T, bool PAD_TAIL, bool HAS_L1>
-__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Compute(
-    int64_t currentNum)
+__aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Compute(int64_t currentNum)
 {
-    LocalTensor<T> varLocal   = varInQue_.template DeQue<T>();
+    LocalTensor<T> varLocal = varInQue_.template DeQue<T>();
     LocalTensor<T> accumLocal = accumInQue_.template DeQue<T>();
-    LocalTensor<T> gradLocal  = gradInQue_.template DeQue<T>();
+    LocalTensor<T> gradLocal = gradInQue_.template DeQue<T>();
 
-    LocalTensor<T> varOutLocal   = varOutQue_.template AllocTensor<T>();
+    LocalTensor<T> varOutLocal = varOutQue_.template AllocTensor<T>();
     LocalTensor<T> accumOutLocal = accumOutQue_.template AllocTensor<T>();
 
     // Align work count to 32B / sizeof(float) = 8 elements on the fp32 side.
     // ubFactor is already 32B-aligned for the native dtype, but the compute
     // body operates in fp32, so we use the fp32 block size here.
     constexpr int64_t kAlignBlockF32 = 32 / sizeof(float);
-    int64_t alignedNum =
-        ((currentNum + kAlignBlockF32 - 1) / kAlignBlockF32) * kAlignBlockF32;
+    int64_t alignedNum = ((currentNum + kAlignBlockF32 - 1) / kAlignBlockF32) * kAlignBlockF32;
     int32_t n = static_cast<int32_t>(alignedNum);
 
     if constexpr (std::is_same_v<T, float>) {
         // fp32 native path: queue tensors are already LocalTensor<float>.
-        ComputeFp32Core(varLocal, accumLocal, gradLocal,
-                        varOutLocal, accumOutLocal, n);
+        ComputeFp32Core(varLocal, accumLocal, gradLocal, varOutLocal, accumOutLocal, n);
     } else {
         // fp16 / bf16 cast path: Cast in -> compute in fp32 (in-place on the
         // cast buffers) -> Cast back to native dtype.
-        LocalTensor<float> varF32   = varF32Buf_.template Get<float>();
+        LocalTensor<float> varF32 = varF32Buf_.template Get<float>();
         LocalTensor<float> accumF32 = accumF32Buf_.template Get<float>();
-        LocalTensor<float> gradF32  = gradF32Buf_.template Get<float>();
+        LocalTensor<float> gradF32 = gradF32Buf_.template Get<float>();
 
         // CAST_NONE for both half/bfloat16 -> float.
-        Cast(varF32,   varLocal,   RoundMode::CAST_NONE, n);
+        Cast(varF32, varLocal, RoundMode::CAST_NONE, n);
         Cast(accumF32, accumLocal, RoundMode::CAST_NONE, n);
-        Cast(gradF32,  gradLocal,  RoundMode::CAST_NONE, n);
+        Cast(gradF32, gradLocal, RoundMode::CAST_NONE, n);
 
         // varF32 / accumF32 used as both input and output (in-place).
         ComputeFp32Core(varF32, accumF32, gradF32, varF32, accumF32, n);
@@ -628,10 +596,10 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Compute(
         //   half: CAST_RINT (round-half-to-even, matches IEEE half).
         //   bf16: CAST_ROUND (matches PyTorch / apply_adam_w_v2_b16.h).
         if constexpr (std::is_same_v<T, bfloat16_t>) {
-            Cast(varOutLocal,   varF32,   RoundMode::CAST_ROUND, n);
+            Cast(varOutLocal, varF32, RoundMode::CAST_ROUND, n);
             Cast(accumOutLocal, accumF32, RoundMode::CAST_ROUND, n);
         } else {
-            Cast(varOutLocal,   varF32,   RoundMode::CAST_RINT, n);
+            Cast(varOutLocal, varF32, RoundMode::CAST_RINT, n);
             Cast(accumOutLocal, accumF32, RoundMode::CAST_RINT, n);
         }
     }
@@ -656,9 +624,7 @@ __aicore__ inline void ApplyProximalAdagrad<T, PAD_TAIL, HAS_L1>::Process()
     int64_t loopCount = (blockLen_ + ubFactor_ - 1) / ubFactor_;
     for (int64_t i = 0; i < loopCount; i++) {
         int64_t gmOffset = i * ubFactor_;
-        int64_t currentNum = (i == (loopCount - 1))
-                                 ? (blockLen_ - gmOffset)
-                                 : ubFactor_;
+        int64_t currentNum = (i == (loopCount - 1)) ? (blockLen_ - gmOffset) : ubFactor_;
         CopyInTile(gmOffset, currentNum);
         Compute(currentNum);
         CopyOutTile(gmOffset, currentNum);

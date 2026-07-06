@@ -24,8 +24,7 @@
 #include "norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_dag.h"
 #include "norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_tiling_key.h"
 
-namespace optiling
-{
+namespace optiling {
 using namespace LpNormV2;
 
 static const int32_t ATTR_INDEX_P = 0;
@@ -89,20 +88,17 @@ ge::graphStatus LpNormV2Tiling::HandleP2(const ReduceOpCompileInfo* compileInfo,
 {
     templateNum_ = TEMPLATE_P2;
     if (!dypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P2Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P2Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P2Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P2Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P2Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P2Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -112,20 +108,17 @@ ge::graphStatus LpNormV2Tiling::HandleP1(const ReduceOpCompileInfo* compileInfo,
 {
     templateNum_ = TEMPLATE_P1;
     if (!dypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P1Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P1Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P1Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P1Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P1Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P1Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -135,20 +128,17 @@ ge::graphStatus LpNormV2Tiling::HandleP0(const ReduceOpCompileInfo* compileInfo,
 {
     templateNum_ = TEMPLATE_P0;
     if (!dypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P0Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P0Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P0Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P0Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P0Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P0Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -162,30 +152,27 @@ ge::graphStatus LpNormV2Tiling::HandlePInf(const ReduceOpCompileInfo* compileInf
             // fp16 inf/-inf场景不需要升精度
             OP_CHECK_IF(
                 (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, half, float>::OpDag>(
-                    tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                     tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
                 , return ge::GRAPH_FAILED);
         } else if (xDtype_ == ge::DT_BF16) {
             OP_CHECK_IF(
                 (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, float, float>::OpDag>(
-                    tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                     tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
                 , return ge::GRAPH_FAILED);
         }
     } else if (xDtype_ == ge::DT_FLOAT16) {
         // fp16 inf/-inf场景不需要升精度
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, half, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, half, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2PInfDag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -197,20 +184,17 @@ ge::graphStatus LpNormV2Tiling::HandleP3(const ReduceOpCompileInfo* compileInfo,
     templateNum_ = TEMPLATE_P3;
     recp_ = 1 / p_;
     if (!dypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P3Dag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P3Dag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P3Dag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P3Dag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2P3Dag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2P3Dag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -223,20 +207,17 @@ ge::graphStatus LpNormV2Tiling::HandlePOther(const ReduceOpCompileInfo* compileI
     templateNum_ = TEMPLATE_P_OTHER;
     recp_ = 1 / p_;
     if (!dypeXEqualY) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2POtherDag<half, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2POtherDag<half, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2POtherDag<half, float, half>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2POtherDag<half, float, half>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(
-            (Tiling4ReduceOp<LpNormV2::LpNormV2POtherDag<float, float, float>::OpDag>(
-                 tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
-            , return ge::GRAPH_FAILED);
+        OP_CHECK_IF((Tiling4ReduceOp<LpNormV2::LpNormV2POtherDag<float, float, float>::OpDag>(
+                         tilingContext_, opInput, key_.reduceTiling, compileInfo, &reduceTiling) == ge::GRAPH_FAILED),
+                    , return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -259,8 +240,7 @@ ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileI
 {
     ReduceOpInputParam opInput;
     OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext_, opInput, 0) == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext_->GetNodeName(), "ReduceOp get x input failed"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext_->GetNodeName(), "ReduceOp get x input failed"), return ge::GRAPH_FAILED);
 
     opInput.axes = reduceAxis_;
 
@@ -278,10 +258,9 @@ ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileI
     } else {
         ret = HandlePOther(compileInfo, opInput, tilingData_->reduceTiling);
     }
-    OP_CHECK_IF(
-        (ret == ge::GRAPH_FAILED),
-        OP_LOGE(tilingContext_->GetNodeName(), "LpNormV2 Tiling for p: %f failed", p_),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ret == ge::GRAPH_FAILED),
+                OP_LOGE(tilingContext_->GetNodeName(), "LpNormV2 Tiling for p: %f failed", p_),
+                return ge::GRAPH_FAILED);
 
     key_.templateNum = templateNum_;
 
@@ -300,13 +279,14 @@ ge::graphStatus LpNormV2Tiling::GetAndCheckDtypes()
     dypeXEqualY = xDtype_ == yDtype;
 
     OP_CHECK_IF(xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_BF16,
-                    OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "x",
-                        ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "x", ToString(xDtype_).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-std::string getAxesVector(const gert::TypedContinuousVector<int64_t> *axisListPtr) {
+std::string getAxesVector(const gert::TypedContinuousVector<int64_t>* axisListPtr)
+{
     std::vector<int64_t> axes;
     for (int i = 0; i < static_cast<int>(axisListPtr->GetSize()); i++) {
         axes.push_back(axisListPtr->GetData()[i]);
@@ -347,11 +327,10 @@ ge::graphStatus LpNormV2Tiling::GetAndCheckReduceAxis()
     for (int i = 0; i < static_cast<int>(axisListPtr->GetSize()); i++) {
         int64_t dim = axisListPtr->GetData()[i];
         if (dim < -xShapeDimNum || dim > xShapeDimNum) {
-            std::string reasonMsg = 
-                "Each value of attr axes depends on the number of shape axes of input x";
+            std::string reasonMsg = "Each value of attr axes depends on the number of shape axes of input x";
             std::string axesMsg = getAxesVector(axisListPtr);
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "axes",
-                axesMsg.c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "axes", axesMsg.c_str(),
+                                                  reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
 
@@ -379,7 +358,7 @@ ge::graphStatus LpNormV2Tiling::GetAndCheckOtherAttrs(ge::DataType xDtype)
     if (epsilonPtr == nullptr) {
         if (xDtype == ge::DT_FLOAT16) {
             epsilon_ = DEFAULT_EPSILON_FP16;
-        } else {  // bf16 or fp32
+        } else { // bf16 or fp32
             epsilon_ = DEFAULT_EPSILON_FP32;
         }
     } else {
@@ -401,16 +380,15 @@ ge::graphStatus LpNormV2Tiling::RunTiling(const ReduceOpCompileInfo* compileInfo
     tilingData_ = tilingContext_->GetTilingData<LpNormV2TilingData>();
 
     OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, OP_LOGE("LpNormV2Tiling", "get and check dtypes failed."),
-                    return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(GetAndCheckReduceAxis() != ge::GRAPH_SUCCESS,
-                    OP_LOGE("LpNormV2Tiling", "get and check reduce axis failed."), return ge::GRAPH_FAILED);
+                OP_LOGE("LpNormV2Tiling", "get and check reduce axis failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetAndCheckOtherAttrs(xDtype_) != ge::GRAPH_SUCCESS,
-                    OP_LOGE("LpNormV2Tiling", "get and check attr failed."), return ge::GRAPH_FAILED);
+                OP_LOGE("LpNormV2Tiling", "get and check attr failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext_->GetNodeName(), "do tilingData_ failed for reduce"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext_->GetNodeName(), "do tilingData_ failed for reduce"), return ge::GRAPH_FAILED);
 
     return SetTilingData();
 }
@@ -436,40 +414,35 @@ ge::graphStatus TilingPrepare4LpNormV2(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->vectorCoreNum == 0UL),
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
-                                        compileInfo->vectorCoreNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->vectorCoreNum == 0UL),
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vectorCoreNum:%lu",
+                        compileInfo->vectorCoreNum),
+                return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(ubSize <= CACHE_BUF_SIZE,
-                    OP_LOGE(context->GetNodeName(),
-                                                    "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
-                                                    compileInfo->ubSize, CACHE_BUF_SIZE),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
+                        compileInfo->ubSize, CACHE_BUF_SIZE),
+                return ge::GRAPH_FAILED);
     compileInfo->ubSize = ubSize;
 
     compileInfo->cacheLineSize = Ops::Base::GetCacheLineSize(context);
-    OP_CHECK_IF(
-        compileInfo->cacheLineSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
-                                        compileInfo->cacheLineSize),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(compileInfo->cacheLineSize == 0UL,
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, cacheLineSize:%lu.",
+                        compileInfo->cacheLineSize),
+                return ge::GRAPH_FAILED);
 
     compileInfo->ubBlockSize = Ops::Base::GetUbBlockSize(context);
     OP_CHECK_IF(
         compileInfo->ubBlockSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.",
-                                        compileInfo->ubBlockSize),
+        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubBlockSize:%lu.", compileInfo->ubBlockSize),
         return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = Ops::Base::GetVRegSize(context);
     OP_CHECK_IF(
         compileInfo->vRegSize == 0UL,
-        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.",
-                                        compileInfo->vRegSize),
+        OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, vRegSize:%lu.", compileInfo->vRegSize),
         return ge::GRAPH_FAILED);
 
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%lu, ubSize:%lu, cacheLineSize:%lu, ubBlockSize:%lu, vRegSize:%lu",
@@ -479,7 +452,5 @@ ge::graphStatus TilingPrepare4LpNormV2(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(LpNormV2)
-    .Tiling(Tiling4LpNormV2Func)
-    .TilingParse<ReduceOpCompileInfo>(TilingPrepare4LpNormV2);
-}  // namespace optiling
+IMPL_OP_OPTILING(LpNormV2).Tiling(Tiling4LpNormV2Func).TilingParse<ReduceOpCompileInfo>(TilingPrepare4LpNormV2);
+} // namespace optiling

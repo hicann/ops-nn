@@ -26,20 +26,20 @@ constexpr uint64_t MODE_MUL = 2;
 constexpr uint64_t MODE_DIV = 3;
 
 // tiling key template modes
-constexpr uint64_t TPL_ADDR_32 = 0;  // index address fits in uint32
-constexpr uint64_t TPL_ADDR_64 = 1;  // index address needs uint64
+constexpr uint64_t TPL_ADDR_32 = 0; // index address fits in uint32
+constexpr uint64_t TPL_ADDR_64 = 1; // index address needs uint64
 
 // SIMT atomic tiling data (direct struct; read in kernel via GET_TILING_DATA_WITH_STRUCT).
 // semantics: for each index entry m, var[indices[m]] (a slice of sliceSize elems) is reduced with
 // updates[m] by the reduce mode. The total update-element space (indicesNum * sliceSize) is split
 // across cores (block tiling) then iterated in UB chunks.
 struct ScatterReduceSimtTilingData {
-    uint64_t blockNum;             // number of cores actually used
-    uint64_t blockTilingSize;      // update elements handled per front core
-    uint64_t tailBlockTilingSize;  // update elements handled on the last used core
-    uint64_t sliceSize;            // elements per index slice (product of var tail dims)
-    uint64_t varFirstDim;          // var dim0 size (index bound)
+    uint64_t blockNum;            // number of cores actually used
+    uint64_t blockTilingSize;     // update elements handled per front core
+    uint64_t tailBlockTilingSize; // update elements handled on the last used core
+    uint64_t sliceSize;           // elements per index slice (product of var tail dims)
+    uint64_t varFirstDim;         // var dim0 size (index bound)
 };
-}  // namespace ScatterReduceCommon
+} // namespace ScatterReduceCommon
 
-#endif  // SCATTER_REDUCE_COMMON_STRUCT_H
+#endif // SCATTER_REDUCE_COMMON_STRUCT_H

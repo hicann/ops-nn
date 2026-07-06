@@ -14,8 +14,8 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* HardShrinkGrad(
-    const aclTensor* gradOutput, const aclTensor* self, float lambd, aclOpExecutor* executor);
+const aclTensor* HardShrinkGrad(const aclTensor* gradOutput, const aclTensor* self, float lambd,
+                                aclOpExecutor* executor);
 
 }
 

@@ -29,13 +29,13 @@ class Relu6 : public OpDef {
 public:
     explicit Relu6(const char* name) : OpDef(name)
     {
-        this->Input("x")                                        // 输入 x 定义
-            .ParamType(REQUIRED)                                // 必选输入
+        this->Input("x")                                                          // 输入 x 定义
+            .ParamType(REQUIRED)                                                  // 必选输入
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16})  // 支持数据类型
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}) // 支持 format 格式
-            .UnknownShapeFormat({ge::FORMAT_ND})                // 未确定大小 shape 对应 format
-            .AutoContiguous();                                  // 内存自动连续化
-        this->Output("y")                                       // 输出 y 定义
+            .UnknownShapeFormat({ge::FORMAT_ND})                                  // 未确定大小 shape 对应 format
+            .AutoContiguous();                                                    // 内存自动连续化
+        this->Output("y")                                                         // 输出 y 定义
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
@@ -50,9 +50,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "relu6");     // 指定 Kernel 入口文件名
+            .ExtendCfgInfo("opFile.value", "relu6"); // 指定 Kernel 入口文件名
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
-OP_ADD(Relu6);  // 注册算子到算子信息库
+OP_ADD(Relu6); // 注册算子到算子信息库
 } // namespace ops

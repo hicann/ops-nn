@@ -23,8 +23,8 @@ using namespace AscendC;
 template <typename T>
 class MaxPoolV3NHWCSmallPadKernel {
 public:
-    __aicore__ inline MaxPoolV3NHWCSmallPadKernel(
-        TPipe* pipe, const MaxPoolV3NHWCSmallKernelTilingData* __restrict tiling)
+    __aicore__ inline MaxPoolV3NHWCSmallPadKernel(TPipe* pipe,
+                                                  const MaxPoolV3NHWCSmallKernelTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void Process();
@@ -33,50 +33,44 @@ private:
     template <typename M, typename U, int32_t GATHER_MODE>
     __aicore__ inline void BaseCompute();
     __aicore__ inline void CopyInSingleRow(int64_t offset, int64_t blockLen);
-    __aicore__ inline void CopyInMultiRows(
-        int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t inColsElms, uint32_t channels);
-    __aicore__ inline void CopyInMultiChannels(
-        int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels, int64_t alignChannels, int64_t winDim);
-    __aicore__ inline void CopyMaxOut(
-        int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t channels);
-    __aicore__ inline void CopyOutMultiChannels(
-        int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels);
+    __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
+                                           uint32_t inColsElms, uint32_t channels);
+    __aicore__ inline void CopyInMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels,
+                                               int64_t alignChannels, int64_t winDim);
+    __aicore__ inline void CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen,
+                                      uint32_t channels);
+    __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols,
+                                                int64_t channels);
     template <typename M, typename U>
-    __aicore__ inline void ComputeMultiRow(
-        int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-        int64_t expectColStart, int64_t realRows, int64_t realCols);
+    __aicore__ inline void ComputeMultiRow(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
+                                           int64_t outCols, int64_t expectRowStart, int64_t expectColStart,
+                                           int64_t realRows, int64_t realCols);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleRow(
-        int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-        int64_t expectColStart, int64_t realRows, int64_t realCols);
+    __aicore__ inline void ComputeSingleRow(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
+                                            int64_t outCols, int64_t expectRowStart, int64_t expectColStart,
+                                            int64_t realRows, int64_t realCols);
     template <typename M, typename U>
-    __aicore__ inline void ComputeMultiBatch(
-        int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-        int64_t expectColStart, int64_t realRows, int64_t realCols);
+    __aicore__ inline void ComputeMultiBatch(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
+                                             int64_t outCols, int64_t expectRowStart, int64_t expectColStart,
+                                             int64_t realRows, int64_t realCols);
     template <typename M, typename U>
-    __aicore__ inline void ComputeSingleChannels(
-        int64_t n, int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-        int64_t expectColStart, int64_t realRows, int64_t realCols, int64_t alignChannels);
+    __aicore__ inline void ComputeSingleChannels(int64_t n, int64_t inRows, int64_t inCols, int64_t outRows,
+                                                 int64_t outCols, int64_t expectRowStart, int64_t expectColStart,
+                                                 int64_t realRows, int64_t realCols, int64_t alignChannels);
     template <typename M, typename U>
-    __aicore__ inline void CopyAndPad(
-        LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inColsElms, int64_t expectRowStart,
-        int64_t expectColStart, int64_t realRows, int64_t realCols, int64_t channels);
+    __aicore__ inline void CopyAndPad(LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inColsElms,
+                                      int64_t expectRowStart, int64_t expectColStart, int64_t realRows,
+                                      int64_t realCols, int64_t channels);
     template <typename M, typename U>
-    __aicore__ inline void MultiChannelCopyAndPad(
-        LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inCols, int64_t expectRowStart,
-        int64_t expectColStart, int64_t realRows, int64_t realCols, int64_t channels);
+    __aicore__ inline void MultiChannelCopyAndPad(LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inCols,
+                                                  int64_t expectRowStart, int64_t expectColStart, int64_t realRows,
+                                                  int64_t realCols, int64_t channels);
     template <typename U, int32_t GATHER_MODE>
-    __aicore__ inline void GenGatherIndex(
-        uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms, uint32_t hStride, uint32_t wStride,
-        uint32_t channels, LocalTensor<U>& indexLocal);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
-    __aicore__ inline int64_t max(int64_t a, int64_t b)
-    {
-        return (a < b) ? b : a;
-    }
+    __aicore__ inline void GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms,
+                                          uint32_t hStride, uint32_t wStride, uint32_t channels,
+                                          LocalTensor<U>& indexLocal);
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
+    __aicore__ inline int64_t max(int64_t a, int64_t b) { return (a < b) ? b : a; }
     TPipe* pipe_;
     // 输入队列
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
@@ -144,17 +138,17 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::BaseCompute()
     if (tilingData_->splitMode != SPLIT_COLS) {
         alignCols = max(alignCols, static_cast<uint32_t>(tilingData_->wInDim + tilingData_->lPad));
     }
-    uint32_t alignColsElms =
-        Ops::Base::CeilAlign(alignCols * channels, static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
-    uint32_t alignChannels =
-        Ops::Base::CeilAlign(channels, static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
+    uint32_t alignColsElms = Ops::Base::CeilAlign(alignCols * channels,
+                                                  static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
+    uint32_t alignChannels = Ops::Base::CeilAlign(channels,
+                                                  static_cast<uint32_t>(Ops::Base::GetUbBlockSize() / sizeof(T)));
     LocalTensor<U> scatterIndexLocal = scatterIndexBuf_.Get<U>();
     // maxRows only used for full load hin*win
     uint32_t maxRows = max((outUbFactorH - 1) * sH + tilingData_->kH, tilingData_->hInDim + tilingData_->tPad);
     if constexpr (GATHER_MODE != NOT_GATHER) {
         LocalTensor<U> indexLocal = indexBuf_.Get<U>();
-        GenGatherIndex<U, GATHER_MODE>(
-            outUbFactorH, outUbFactorW, maxRows, alignColsElms, sH, sW, channels, indexLocal);
+        GenGatherIndex<U, GATHER_MODE>(outUbFactorH, outUbFactorW, maxRows, alignColsElms, sH, sW, channels,
+                                       indexLocal);
     }
 
     if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
@@ -172,11 +166,11 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::BaseCompute()
         int64_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
         int64_t expectRowStart = hIdx * sH * outUbFactorH;
         int64_t expectColStart = wIdx * sW * outUbFactorW;
-        int64_t hUpper =
-            min(hIdx * sH * outUbFactorH + (rows - 1) * sH + tilingData_->kH - tilingData_->tPad, tilingData_->hInDim);
+        int64_t hUpper = min(hIdx * sH * outUbFactorH + (rows - 1) * sH + tilingData_->kH - tilingData_->tPad,
+                             tilingData_->hInDim);
         int64_t hLower = max(hIdx * sH * outUbFactorH - tilingData_->tPad, (int64_t)0);
-        int64_t wUpper =
-            min(wIdx * sW * outUbFactorW + (cols - 1) * sW + tilingData_->kW - tilingData_->lPad, tilingData_->wInDim);
+        int64_t wUpper = min(wIdx * sW * outUbFactorW + (cols - 1) * sW + tilingData_->kW - tilingData_->lPad,
+                             tilingData_->wInDim);
         int64_t wLower = max(wIdx * sW * outUbFactorW - tilingData_->lPad, (int64_t)0);
         int64_t realRows = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->hInDim : hUpper - hLower;
         int64_t realCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : wUpper - wLower;
@@ -207,8 +201,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::BaseCompute()
         } else if constexpr (GATHER_MODE == GATHER_MULTI_ROW) {
             ComputeMultiRow<M, U>(n, expectRows, alignColsElms, rows, cols, rowStart, colStart, realRows, realCols);
         } else if constexpr (GATHER_MODE == NOT_GATHER) {
-            ComputeSingleChannels<M, U>(
-                n, expectRows, alignCols, rows, cols, rowStart, colStart, realRows, realCols, alignChannels);
+            ComputeSingleChannels<M, U>(n, expectRows, alignCols, rows, cols, rowStart, colStart, realRows, realCols,
+                                        alignChannels);
         } else {
             ComputeMultiBatch<M, U>(n, expectRows, alignColsElms, rows, cols, rowStart, colStart, realRows, realCols);
         }
@@ -242,8 +236,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInSingleRow(int64_t o
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInMultiRows(
-    int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t inColsElms, uint32_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInMultiRows(int64_t offset, int64_t n, int64_t blockCount,
+                                                                       int64_t blockLen, uint32_t inColsElms,
+                                                                       uint32_t channels)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     int32_t elemNum = Ops::Base::GetUbBlockSize() / sizeof(T);
@@ -277,8 +272,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInMultiRows(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInMultiChannels(
-    int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels, int64_t alignChannels, int64_t winDim)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInMultiChannels(int64_t offset, int64_t n, int64_t rows,
+                                                                           int64_t cols, int64_t channels,
+                                                                           int64_t alignChannels, int64_t winDim)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyPadExtParams<T> padExtParams;
@@ -311,8 +307,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyInMultiChannels(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyMaxOut(
-    int64_t offset, int64_t n, int64_t blockCount, int64_t blockLen, uint32_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyMaxOut(int64_t offset, int64_t n, int64_t blockCount,
+                                                                  int64_t blockLen, uint32_t channels)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -325,8 +321,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyMaxOut(
 }
 
 template <typename T>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyOutMultiChannels(
-    int64_t offset, int64_t n, int64_t rows, int64_t cols, int64_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyOutMultiChannels(int64_t offset, int64_t n, int64_t rows,
+                                                                            int64_t cols, int64_t channels)
 {
     LocalTensor<T> maxOutLocal = maxUBOutput_.DeQue<T>();
     DataCopyExtParams extParams;
@@ -340,9 +336,10 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyOutMultiChannels(
 
 template <typename T>
 template <typename U, int32_t GATHER_MODE>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::GenGatherIndex(
-    uint32_t hFactorOut, uint32_t wFactorOut, uint32_t hIn, uint32_t wInElms, uint32_t hStride, uint32_t wStride,
-    uint32_t channels, LocalTensor<U>& indexLocal)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::GenGatherIndex(uint32_t hFactorOut, uint32_t wFactorOut,
+                                                                      uint32_t hIn, uint32_t wInElms, uint32_t hStride,
+                                                                      uint32_t wStride, uint32_t channels,
+                                                                      LocalTensor<U>& indexLocal)
 {
     if constexpr (GATHER_MODE == GATHER_SINGLE_ROW) {
         NHWCGenGatherIndexSingleRow<U>(wStride, channels, indexLocal);
@@ -355,9 +352,10 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::GenGatherIndex(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(
-    LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inColsElms, int64_t expectRowStart,
-    int64_t expectColStart, int64_t realRows, int64_t realCols, int64_t channels)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(LocalTensor<M>& inLocal, int64_t n, int64_t inRows,
+                                                                  int64_t inColsElms, int64_t expectRowStart,
+                                                                  int64_t expectColStart, int64_t realRows,
+                                                                  int64_t realCols, int64_t channels)
 {
     LocalTensor<U> indexLocal = scatterIndexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
@@ -389,9 +387,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(
         {
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-            CustomCopy(
-                xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, colStride, rowOffsetInUb,
-                colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+            CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, colStride, rowOffsetInUb,
+                       colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
         }
     } else if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
         uint32_t srcBatchStride = realRows * realCols * channels;
@@ -409,9 +406,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(
             MicroAPI::DataCopy(v0, indexAddr);
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-            CustomCopyByScatterMultiRows<M, U>(
-                xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride, dstBatchStride, dstRowStride, dstOffset,
-                loopN, loopRows, repeatElm, tailRepeatElm);
+            CustomCopyByScatterMultiRows<M, U>(xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride,
+                                               dstBatchStride, dstRowStride, dstOffset, loopN, loopRows, repeatElm,
+                                               tailRepeatElm);
         }
     } else {
         constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
@@ -427,18 +424,19 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(
         {
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-            CustomCopyByScatterSingleRow<M, U>(
-                xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, colStride, rowOffsetInUb,
-                colOffsetInUb, ubFactorN, hInUb, preColsLoop, realColsElm, repeatElm);
+            CustomCopyByScatterSingleRow<M, U>(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements,
+                                               colStride, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop,
+                                               realColsElm, repeatElm);
         }
     }
 }
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiBatch(
-    int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-    int64_t expectColStart, int64_t realRows, int64_t realCols)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiBatch(int64_t n, int64_t inRows, int64_t inColsElms,
+                                                                         int64_t outRows, int64_t outCols,
+                                                                         int64_t expectRowStart, int64_t expectColStart,
+                                                                         int64_t realRows, int64_t realCols)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
@@ -472,9 +470,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiBatch(
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        MaxPoolSplitBatch<T, U>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements, tailLoopElements,
-            channels);
+        MaxPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements,
+                                tailLoopElements, channels);
     }
     inputQue_.FreeTensor<M>(inLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -482,9 +479,10 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiBatch(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiRow(
-    int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-    int64_t expectColStart, int64_t realRows, int64_t realCols)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiRow(int64_t n, int64_t inRows, int64_t inColsElms,
+                                                                       int64_t outRows, int64_t outCols,
+                                                                       int64_t expectRowStart, int64_t expectColStart,
+                                                                       int64_t realRows, int64_t realCols)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
@@ -520,9 +518,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiRow(
     {
         MicroAPI::RegTensor<U> v0;
         MicroAPI::DataCopy(v0, indexAddr);
-        MaxPoolSplitH<T, U>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneBatchElements, inColsElms, oneLoopStrideH,
-            oneLoopElements, tailLoopElements, channels);
+        MaxPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneBatchElements, inColsElms,
+                            oneLoopStrideH, oneLoopElements, tailLoopElements, channels);
     }
     inputQue_.FreeTensor<M>(inLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
@@ -530,9 +527,10 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiRow(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(
-    int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-    int64_t expectColStart, int64_t realRows, int64_t realCols)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(int64_t n, int64_t inRows, int64_t inColsElms,
+                                                                        int64_t outRows, int64_t outCols,
+                                                                        int64_t expectRowStart, int64_t expectColStart,
+                                                                        int64_t realRows, int64_t realCols)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
@@ -573,9 +571,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(
         {
             MicroAPI::RegTensor<U> v0;
             MicroAPI::DataCopy(v0, indexAddr);
-            MaxPoolSplitW<M, U>(
-                dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
-                oneLoopElements, tailLoopElements, channels);
+            MaxPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                inColsElms, oneLoopElements, tailLoopElements, channels);
         }
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
@@ -585,9 +582,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(
             {
                 MicroAPI::RegTensor<U> v0;
                 MicroAPI::DataCopy(v0, indexAddr);
-                MaxPoolSplitW<M, U>(
-                    dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
-                    oneLoopElements, tailLoopElements, channels);
+                MaxPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                    inColsElms, oneLoopElements, tailLoopElements, channels);
             }
         }
     }
@@ -597,9 +593,11 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleChannels(
-    int64_t n, int64_t inRows, int64_t inCols, int64_t outRows, int64_t outCols, int64_t expectRowStart,
-    int64_t expectColStart, int64_t realRows, int64_t realCols, int64_t alignChannels)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleChannels(int64_t n, int64_t inRows, int64_t inCols,
+                                                                             int64_t outRows, int64_t outCols,
+                                                                             int64_t expectRowStart,
+                                                                             int64_t expectColStart, int64_t realRows,
+                                                                             int64_t realCols, int64_t alignChannels)
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
@@ -630,8 +628,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleChannels(
     uint16_t cLoop = alignChannels / repeatElm;
     uint16_t tailNum = alignChannels - cLoop * repeatElm;
 
-    MultiChannelCopyAndPad<M, U>(
-        inLocal, n, inRows, inCols, expectRowStart, expectColStart, realRows, realCols, alignChannels);
+    MultiChannelCopyAndPad<M, U>(inLocal, n, inRows, inCols, expectRowStart, expectColStart, realRows, realCols,
+                                 alignChannels);
 
     for (uint16_t i = 0; i < loopN; i++) {
         for (uint16_t j = 0; j < loopH; j++) {
@@ -639,14 +637,14 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleChannels(
             {
                 for (uint16_t k = 0; k < loopW; k++) {
                     for (uint16_t m = 0; m < cLoop; m++) {
-                        auto curSrcAddr =
-                            xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + m * repeatElm;
+                        auto curSrcAddr = xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW +
+                                          m * repeatElm;
                         auto curDstAddr = dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH +
                                           k * alignChannels + m * repeatElm;
                         MaxPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, repeatElm);
                     }
-                    auto curSrcAddr =
-                        xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + cLoop * repeatElm;
+                    auto curSrcAddr = xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW +
+                                      cLoop * repeatElm;
                     auto curDstAddr = dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH +
                                       k * alignChannels + cLoop * repeatElm;
                     MaxPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, tailNum);
@@ -660,9 +658,11 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleChannels(
 
 template <typename T>
 template <typename M, typename U>
-__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::MultiChannelCopyAndPad(
-    LocalTensor<M>& inLocal, int64_t n, int64_t inRows, int64_t inCols, int64_t expectRowStart, int64_t expectColStart,
-    int64_t realRows, int64_t realCols, int64_t alignChannels)
+__aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::MultiChannelCopyAndPad(LocalTensor<M>& inLocal, int64_t n,
+                                                                              int64_t inRows, int64_t inCols,
+                                                                              int64_t expectRowStart,
+                                                                              int64_t expectColStart, int64_t realRows,
+                                                                              int64_t realCols, int64_t alignChannels)
 {
     LocalTensor<U> indexLocal = scatterIndexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
@@ -693,9 +693,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::MultiChannelCopyAndPad(
     {
         CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
         MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-        CustomCopy(
-            xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, dstColStride, rowOffsetInUb,
-            colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+        CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, dstColStride, rowOffsetInUb,
+                   colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
     }
 }
 

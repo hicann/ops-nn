@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file scatter_nd_add_deterministic.h
  * \brief deterministic kernel of scatter_nd_add
@@ -25,8 +25,7 @@ namespace ScatterNdAdd {
 using namespace AscendC;
 
 template <typename T, typename U, typename CAST_T, uint32_t castType>
-class ScatterNdAddSimd : public ScatterNdAddBase<T, U, CAST_T, castType>
-{
+class ScatterNdAddSimd : public ScatterNdAddBase<T, U, CAST_T, castType> {
 public:
     __aicore__ inline ScatterNdAddSimd(const ScatterNdAddRegBaseTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
@@ -50,8 +49,8 @@ private:
 };
 
 template <typename T, typename U, typename CAST_T, uint32_t castType>
-__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Init(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
+__aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                                                      GM_ADDR y, GM_ADDR workspace)
 {
     varGm_.SetGlobalBuffer((__gm__ T*)(var));
     indicesGm_.SetGlobalBuffer((__gm__ U*)(indices));
@@ -66,9 +65,8 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::Init(
     this->afterAxisFactor_ = tilingData_.afterAxisFactor;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y, tilingData_.singleCol);
 
-    curCoreIndexCount_ =
-        (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
-                                                                tilingData_.tailCoreIndexCount);
+    curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
+                                                                                 tilingData_.tailCoreIndexCount);
 }
 
 template <typename T, typename U, typename CAST_T, uint32_t castType>
@@ -80,11 +78,11 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitAft
     int64_t rowMainDataLen = tilingData_.indicesFactor;
     int64_t rowTailDataLen = tilingData_.indiceTailNum;
     int64_t rowLoopNum = tilingData_.indicesLoopSize;
-    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize
-                                                                              : tilingData_.updateLoopSize;
+    int64_t colLoopNum = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateLoopSize :
+                                                                                tilingData_.updateLoopSize;
     int64_t colMainDataLen = tilingData_.afterAxisFactor;
-    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum
-                                                                                  : tilingData_.updateTailNum;
+    int64_t colTailDataLen = (GetBlockIdx() == tilingData_.usedCoreNumBefore - 1) ? tilingData_.tailUpdateAxisNum :
+                                                                                    tilingData_.updateTailNum;
     for (int64_t rowIdx = 0; rowIdx < rowLoopNum; rowIdx++) {
         int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
         this->CopyIndiceInSplitAfter(rowIdx, rowDataLen);
@@ -168,12 +166,11 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitInd
                 SetFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
                 WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
                 this->CopyOutSplitIndices(outOfstLocal, updatesLocal, rowDataLen, colDataLen, colIdx);
-                this->dataQueue_.template FreeTensor(updatesLocal); 
+                this->dataQueue_.template FreeTensor(updatesLocal);
             }
         }
     }
 }
-
 
 template <typename T, typename U, typename CAST_T, uint32_t castType>
 __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitIndicesSingleCol()

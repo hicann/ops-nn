@@ -40,10 +40,7 @@ protected:
         system(cmd.c_str());
         system("chmod -R 755 ./l2_loss_data/");
     }
-    static void TearDownTestCase()
-    {
-        std::cout << "l2_loss_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2_loss_test TearDown" << std::endl; }
 
 private:
     const static std::string rootPath;

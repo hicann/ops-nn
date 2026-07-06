@@ -12,7 +12,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 #define DTYPE_VOCAB_PARALLEL_LOGITS float
 
 struct FusedCrossEntropyLossWithMaxSumTilingData {
@@ -29,14 +28,14 @@ struct FusedCrossEntropyLossWithMaxSumTilingData {
     uint32_t vLen;
 };
 
-
-inline void InitFusedCrossEntropyLossWithMaxSumTilingData(uint8_t* tiling, FusedCrossEntropyLossWithMaxSumTilingData* data)
+inline void InitFusedCrossEntropyLossWithMaxSumTilingData(uint8_t* tiling,
+                                                          FusedCrossEntropyLossWithMaxSumTilingData* data)
 {
     memcpy(data, tiling, sizeof(FusedCrossEntropyLossWithMaxSumTilingData));
 }
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                               \
-    FusedCrossEntropyLossWithMaxSumTilingData tiling_data;                                \
+#define GET_TILING_DATA(tiling_data, tiling_arg)           \
+    FusedCrossEntropyLossWithMaxSumTilingData tiling_data; \
     InitFusedCrossEntropyLossWithMaxSumTilingData(tiling_arg, &tiling_data)
 
 #endif // MATMUL_CELOSS_PART2_TILING_DEF_H

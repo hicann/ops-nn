@@ -28,7 +28,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(IndexPutWithSortV2);
 
-static bool CheckBasicTensorProperties(const aclTensor* self, const aclTensorList* indices, const aclTensor* value) {
+static bool CheckBasicTensorProperties(const aclTensor* self, const aclTensorList* indices, const aclTensor* value)
+{
     if (!self || !value) {
         return false;
     }
@@ -38,11 +39,8 @@ static bool CheckBasicTensorProperties(const aclTensor* self, const aclTensorLis
         return false;
     static constexpr int SELF_DATATYPE_COUNT = 8;
     static constexpr std::array<op::DataType, SELF_DATATYPE_COUNT> selfSupportedDtypes = {
-        op::DataType::DT_INT64,   op::DataType::DT_INT32,
-        op::DataType::DT_FLOAT,   op::DataType::DT_FLOAT16,
-        op::DataType::DT_BF16,    op::DataType::DT_INT8,
-        op::DataType::DT_UINT8,   op::DataType::DT_BOOL
-    };
+        op::DataType::DT_INT64, op::DataType::DT_INT32, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+        op::DataType::DT_BF16,  op::DataType::DT_INT8,  op::DataType::DT_UINT8, op::DataType::DT_BOOL};
     auto it = std::find(selfSupportedDtypes.begin(), selfSupportedDtypes.end(), selfDtype);
     if (it == selfSupportedDtypes.end()) {
         return false;
@@ -57,7 +55,8 @@ static bool CheckBasicTensorProperties(const aclTensor* self, const aclTensorLis
     return true;
 }
 
-static bool CheckIndicesWithSelf(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values) {
+static bool CheckIndicesWithSelf(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
+{
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
     int64_t valuesSize = values->GetViewShape().GetDimNum();
@@ -83,7 +82,8 @@ static bool CheckIndicesWithSelf(const aclTensor* selfRef, const aclTensorList* 
     return true;
 }
 
-static bool CheckValuesShape(const aclTensorList* indices, const aclTensor* values) {
+static bool CheckValuesShape(const aclTensorList* indices, const aclTensor* values)
+{
     auto valuesSize = values->GetViewShape().GetDimNum();
     if (valuesSize < (*indices)[0]->GetViewShape().GetDimNum()) {
         OP_LOGD("IndexPutWithSortV2 Op not support dims of values smaller than dims of indices!");
@@ -99,10 +99,11 @@ static bool CheckValuesShape(const aclTensorList* indices, const aclTensor* valu
     return true;
 }
 
-static bool CheckSliceSize(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values) {
+static bool CheckSliceSize(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
+{
     int64_t numIndexTensors = static_cast<int64_t>(indices->Size());
     int64_t selfDimNum = selfRef->GetViewShape().GetDimNum();
-    int64_t numTailDims = selfDimNum - numIndexTensors; 
+    int64_t numTailDims = selfDimNum - numIndexTensors;
     auto indexDimNum = (*indices)[0]->GetViewShape().GetDimNum();
     auto valuesDimNum = values->GetViewShape().GetDimNum();
     if (valuesDimNum < indexDimNum + numTailDims) {
@@ -120,7 +121,8 @@ static bool CheckSliceSize(const aclTensor* selfRef, const aclTensorList* indice
     return true;
 }
 
-static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices) {
+static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices)
+{
     static const int64_t INT32_MAX_LIMIT = 2147483647;
     auto indicesSize = indices->Size();
     int64_t shapeProd = 1;
@@ -134,7 +136,8 @@ static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices
     return true;
 }
 
-static bool CheckIndicesDtypeAndShape(const aclTensorList* indices) {
+static bool CheckIndicesDtypeAndShape(const aclTensorList* indices)
+{
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     for (int64_t i = 0; i < indicesSize; i++) {
         if (i == 0) {
@@ -163,8 +166,8 @@ static bool CheckIndicesDtypeAndShape(const aclTensorList* indices) {
     return true;
 }
 
-static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef, 
-    const aclTensorList* indices, const aclTensor* values) {
+static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
+{
     constexpr int64_t MIN_TAIL_AXIS_ELEMENTS = 2048;
     constexpr int64_t MEMORY_LIMIT_BYTES = 64 * 1024 * 1024; // 64MB
     constexpr int64_t MIN_INDEX_NUM = 512;
@@ -197,12 +200,12 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef,
 
     int64_t indexNums = 0;
     for (size_t i = 0; i < indexCount; i++) {
-      if ((*indices)[i]) {
-          indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
-          if (indexNums > 0) {
-            break;
-          }
-      }
+        if ((*indices)[i]) {
+            indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+            if (indexNums > 0) {
+                break;
+            }
+        }
     }
     if (selfDtype == ge::DT_INT8 && indexNums < MIN_INDEX_NUM) {
         OP_LOGD("IndexPutWithSortV2 Opt skip: SelfDtype is INT8 And Too few indexes!");
@@ -212,8 +215,7 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef,
     return true;
 }
 
-bool IsSortV2SpecialScene(const aclTensor* selfRef,
-    const aclTensorList* indices, const bool& usePutV2SpeOpt)
+bool IsSortV2SpecialScene(const aclTensor* selfRef, const aclTensorList* indices, const bool& usePutV2SpeOpt)
 {
     if (!usePutV2SpeOpt) {
         return false;
@@ -230,12 +232,12 @@ bool IsSortV2SpecialScene(const aclTensor* selfRef,
         headElementsCount *= static_cast<int64_t>(selfShape.GetDim(i));
     }
     for (size_t i = 0; i < indexCount; i++) {
-      if ((*indices)[i]) {
-        indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
-        if (indexNums > 0) {
-            break;
+        if ((*indices)[i]) {
+            indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+            if (indexNums > 0) {
+                break;
+            }
         }
-      }
     }
 
     if (indexNums < MIN_INDEX_NUM || (indexNums / headElementsCount) < REPEAT_DEGREE) {
@@ -259,12 +261,12 @@ bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices, const
     int64_t selfTypeSize = ge::GetSizeByDataType(selfDtype);
     int64_t selfSize = selfShapeSize * selfTypeSize;
     for (size_t i = 0; i < indexCount; i++) {
-      if ((*indices)[i]) {
-        if ((*indices)[i]->GetViewShape().GetShapeSize() > 0) {
-            indexAxisNums++;
-            indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+        if ((*indices)[i]) {
+            if ((*indices)[i]->GetViewShape().GetShapeSize() > 0) {
+                indexAxisNums++;
+                indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+            }
         }
-      }
     }
 
     if (indexAxisNums != selfDimNum) {
@@ -277,8 +279,8 @@ bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices, const
         return false;
     }
 
-    if (selfDtype != op::DataType::DT_FLOAT16 && selfDtype != op::DataType::DT_BF16 && 
-            selfDtype != op::DataType::DT_INT8 && selfDtype != op::DataType::DT_UINT8) {
+    if (selfDtype != op::DataType::DT_FLOAT16 && selfDtype != op::DataType::DT_BF16 &&
+        selfDtype != op::DataType::DT_INT8 && selfDtype != op::DataType::DT_UINT8) {
         OP_LOGD("IndexPutWithSortV2 Opt skip: selfDtype does not need to be casted!");
         return false;
     }
@@ -292,9 +294,10 @@ bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices, const
     return true;
 }
 
-bool IsUseSortedV2OptScene(
-    const bool isAiCpu, const aclTensor* self, const aclTensorList* indices, const aclTensor* values,
-    const bool deterministicValue, const bool accumulate, const bool isNonContiguous, const bool& usePutV2SpeOpt) {
+bool IsUseSortedV2OptScene(const bool isAiCpu, const aclTensor* self, const aclTensorList* indices,
+                           const aclTensor* values, const bool deterministicValue, const bool accumulate,
+                           const bool isNonContiguous, const bool& usePutV2SpeOpt)
+{
     // 1. 基本判断
     if (isAiCpu || deterministicValue || isNonContiguous) {
         return false;
@@ -324,23 +327,24 @@ bool IsUseSortedV2OptScene(
         return false;
     }
     // 8. sortv2优化判断
-    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, usePutV2SpeOpt) && !IsSortV2Scene(self, indices, accumulate)) {
+    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, usePutV2SpeOpt) &&
+        !IsSortV2Scene(self, indices, accumulate)) {
         return false;
     }
 
     return true;
 }
 
-const aclTensor* IndexPutWithSortV2(
-    const aclTensor* self, const aclTensor* linearIndex, const aclTensor* posIdx, const aclTensor* values,
-    const aclIntArray* indexed_sizes, const bool accumulate, aclTensor* out, aclOpExecutor* executor) {
+const aclTensor* IndexPutWithSortV2(const aclTensor* self, const aclTensor* linearIndex, const aclTensor* posIdx,
+                                    const aclTensor* values, const aclIntArray* indexed_sizes, const bool accumulate,
+                                    aclTensor* out, aclOpExecutor* executor)
+{
     L0_DFX(IndexPutWithSortV2, self, linearIndex, posIdx, values, indexed_sizes, accumulate);
 
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        IndexPutWithSortV2, OP_INPUT(self, linearIndex, posIdx, values), OP_OUTPUT(out),
-        OP_ATTR(indexed_sizes, accumulate));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        ret != ACLNN_SUCCESS, return nullptr, "IndexPutWithSortV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexPutWithSortV2, OP_INPUT(self, linearIndex, posIdx, values),
+                                           OP_OUTPUT(out), OP_ATTR(indexed_sizes, accumulate));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr,
+                                         "IndexPutWithSortV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     return out;
 }
 } // namespace l0op

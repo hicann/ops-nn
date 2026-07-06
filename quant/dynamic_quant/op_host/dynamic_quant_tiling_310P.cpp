@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file dynamic_quant_tiling_310P.cpp
  * \brief
@@ -98,24 +98,21 @@ void DynamicQuantTiling310P::SetSuitNumCopyRow(const gert::TilingContext* contex
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     uint32_t ubSize = static_cast<uint32_t>(ubSizePlatForm);
 
-    tiling.set_numCopyRow(
-        (ubSize - tiling.get_sizeX() * DYNAMIC_QUANT_FP16_BUF_SCALE - DYNAMIC_QUANT_HEADSPACE) /
-        (tiling.get_sizeX() * DYNAMIC_QUANT_COPY_ROW_SCALE));
+    tiling.set_numCopyRow((ubSize - tiling.get_sizeX() * DYNAMIC_QUANT_FP16_BUF_SCALE - DYNAMIC_QUANT_HEADSPACE) /
+                          (tiling.get_sizeX() * DYNAMIC_QUANT_COPY_ROW_SCALE));
 
-    uint32_t rowSuit =
-        DYNAMIC_QUANT_ROW_SUIT_ADD - tiling.get_sizeX() * DYNAMIC_QUANT_ROW_SUIT_MUL / DYNAMIC_QUANT_ROW_SUIT_DIV;
+    uint32_t rowSuit = DYNAMIC_QUANT_ROW_SUIT_ADD -
+                       tiling.get_sizeX() * DYNAMIC_QUANT_ROW_SUIT_MUL / DYNAMIC_QUANT_ROW_SUIT_DIV;
 
     rowSuit = rowSuit - rowSuit % DYNAMIC_QUANT_ALIGN_NUM_SCALE;
 
     if (tiling.get_numCopyRow() > DYNAMIC_QUANT_COPY_ROW_LONG && tiling.get_sizeX() >= DYNAMIC_QUANT_LEN_H_LONG) {
         tiling.set_numCopyRow(DYNAMIC_QUANT_COPY_ROW_LONG);
-    } else if (
-        tiling.get_numCopyRow() > rowSuit && rowSuit > DYNAMIC_QUANT_ALIGN_NUM_SCALE &&
-        tiling.get_sizeX() >= DYNAMIC_QUANT_LEN_H_SHORT) {
+    } else if (tiling.get_numCopyRow() > rowSuit && rowSuit > DYNAMIC_QUANT_ALIGN_NUM_SCALE &&
+               tiling.get_sizeX() >= DYNAMIC_QUANT_LEN_H_SHORT) {
         tiling.set_numCopyRow(rowSuit);
-    } else if (
-        tiling.get_numCopyRow() > DYNAMIC_QUANT_COPY_ROW_SHORT && tiling.get_sizeX() < DYNAMIC_QUANT_LEN_H_SHORT &&
-        tiling.get_sizeX() > DYNAMIC_QUANT_ALIGN_NUM_SCALE) {
+    } else if (tiling.get_numCopyRow() > DYNAMIC_QUANT_COPY_ROW_SHORT &&
+               tiling.get_sizeX() < DYNAMIC_QUANT_LEN_H_SHORT && tiling.get_sizeX() > DYNAMIC_QUANT_ALIGN_NUM_SCALE) {
         tiling.set_numCopyRow(DYNAMIC_QUANT_COPY_ROW_SHORT);
     } else if (tiling.get_numCopyRow() > DYNAMIC_QUANT_ALIGN_NUM_SCALE) {
         tiling.set_numCopyRow(tiling.get_numCopyRow() - tiling.get_numCopyRow() % DYNAMIC_QUANT_ALIGN_NUM_SCALE);
@@ -189,8 +186,7 @@ uint64_t DynamicQuantTiling310P::ComputeTilingKey(const gert::TilingContext* con
         tilingKey += DYNAMIC_QUANT_TILING_KEY_UNALIGN_MODE;
     }
     if (tiling.get_sizeH() > DYNAMIC_QUANT_FP16_LAST_DIM_LIMITATION_310P &&
-        (npuArch == NpuArch::DAV_1001 ||
-         npuArch == NpuArch::DAV_2002)) {
+        (npuArch == NpuArch::DAV_1001 || npuArch == NpuArch::DAV_2002)) {
         tilingKey += DYNAMIC_QUANT_TILING_KEY_LARGE;
     }
 
@@ -203,7 +199,8 @@ ge::graphStatus DynamicQuantTiling310P::CheckDtype(const gert::TilingContext* co
     auto x = context->GetInputDesc(X_INDEX);
     ge::DataType dataType = x->GetDataType();
     if (dataType != ge::DT_FLOAT16) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dataType), "DT_FLOAT16");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dataType),
+                                  "DT_FLOAT16");
         return ge::GRAPH_FAILED;
     }
 

@@ -22,11 +22,11 @@
 #define SPARSE_APPLY_FTRL_V2_TILING_DATA_H_
 
 struct SparseApplyFtrlV2TilingData {
-    int32_t needCoreNum;        // Number of cores to launch (SetBlockDim)
-    int64_t totalElements;      // Total work = M * innerSize
-    int64_t innerSize;          // Elements per row = product(var.shape[1:])
-    int64_t N;                  // var first dim (total rows)
-    int64_t M;                  // indices length (sparse update rows)
+    int32_t needCoreNum;   // Number of cores to launch (SetBlockDim)
+    int64_t totalElements; // Total work = M * innerSize
+    int64_t innerSize;     // Elements per row = product(var.shape[1:])
+    int64_t N;             // var first dim (total rows)
+    int64_t M;             // indices length (sparse update rows)
 };
 
-#endif  // SPARSE_APPLY_FTRL_V2_TILING_DATA_H_
+#endif // SPARSE_APPLY_FTRL_V2_TILING_DATA_H_

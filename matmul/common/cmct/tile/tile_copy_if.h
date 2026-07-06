@@ -18,8 +18,7 @@
 
 namespace Cmct::Gemm::Tile {
 
-enum class CacheMode
-{
+enum class CacheMode {
     NORMAL_FIRST = 0b0000,
     NORMAL_LAST = 0b0001,
     NORMAL_PERSISTENT = 0b0010,
@@ -37,26 +36,23 @@ enum class CacheMode
     EXCLUSIVE_PERSISTENT = 0b1110
 };
 namespace detail {
-template <
-    class ArchTag, class DstTensor, class SrcTensor, class Shape, CacheMode CacheMode = CacheMode::NORMAL_FIRST,
-    typename Enable = void>
+template <class ArchTag, class DstTensor, class SrcTensor, class Shape, CacheMode CacheMode = CacheMode::NORMAL_FIRST,
+          typename Enable = void>
 struct CopyIfImpl {
     static_assert(AscendC::Std::always_false_v<ArchTag>, "can not find the specialization.");
-    __aicore__ inline static void Run(const DstTensor& dstTensor, const SrcTensor& srcTensor, const Shape& shape) =
-        delete;
+    __aicore__ inline static void Run(const DstTensor& dstTensor, const SrcTensor& srcTensor,
+                                      const Shape& shape) = delete;
 };
 } // namespace detail
 
 template <class ArchTag, CacheMode CacheMode = CacheMode::NORMAL_FIRST, class DstTensor, class SrcTensor, class Shape>
 __aicore__ inline void CopyIf(const DstTensor& dstTensor, const SrcTensor& srcTensor, const Shape& shape)
 {
-    detail::CopyIfImpl<
-        AscendC::Std::remove_cvref_t<ArchTag>, AscendC::Std::remove_cvref_t<DstTensor>,
-        AscendC::Std::remove_cvref_t<SrcTensor>, AscendC::Std::remove_cvref_t<Shape>,
-        CacheMode>::Run(dstTensor, srcTensor, shape);
+    detail::CopyIfImpl<AscendC::Std::remove_cvref_t<ArchTag>, AscendC::Std::remove_cvref_t<DstTensor>,
+                       AscendC::Std::remove_cvref_t<SrcTensor>, AscendC::Std::remove_cvref_t<Shape>,
+                       CacheMode>::Run(dstTensor, srcTensor, shape);
 }
 } // namespace Cmct::Gemm::Tile
 
 #include "copy_gm_to_ub.h"
 #include "copy_ub_to_l1.h"
-

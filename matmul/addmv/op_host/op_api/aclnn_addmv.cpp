@@ -37,13 +37,13 @@ using namespace op;
 #define MATRIX_DIM 2
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<DataType> addmvDtypeSupportList = {
-    DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64,  DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT16,
-    DataType::DT_INT8,  DataType::DT_UINT8, DataType::DT_DOUBLE, DataType::DT_BOOL};
-static const std::initializer_list<DataType> matmulDtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+    DataType::DT_FLOAT, DataType::DT_INT32, DataType::DT_INT64, DataType::DT_FLOAT16, DataType::DT_BF16,
+    DataType::DT_INT16, DataType::DT_INT8,  DataType::DT_UINT8, DataType::DT_DOUBLE,  DataType::DT_BOOL};
+static const std::initializer_list<DataType> matmulDtypeSupportList = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                       DataType::DT_BF16};
 
-static bool CheckNotNull(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,
-    const aclTensor* out)
+static bool CheckNotNull(const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha,
+                         const aclScalar* beta, const aclTensor* out)
 {
     // 检查输入的数据类型是否在算子的支持列表内
     OP_CHECK_NULL(self, return false);
@@ -58,9 +58,8 @@ static bool CheckNotNull(
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,
-    const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha,
+                            const aclScalar* beta, const aclTensor* out)
 {
     // 检查self的数据类型是否在addmv算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, addmvDtypeSupportList, return false);
@@ -91,16 +90,14 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-static bool CheckPromoteType(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,
-    const aclTensor* out)
+static bool CheckPromoteType(const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha,
+                             const aclScalar* beta, const aclTensor* out)
 {
     // 检查mat和vec能否做数据类型推导
     DataType promoteType = PromoteType(mat->GetDataType(), vec->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Mat dtype %s and Vec dtype %s can not promote dtype.",
-            ToString(mat->GetDataType()).GetString(), ToString(vec->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Mat dtype %s and Vec dtype %s can not promote dtype.",
+                ToString(mat->GetDataType()).GetString(), ToString(vec->GetDataType()).GetString());
         return false;
     }
 
@@ -109,9 +106,8 @@ static bool CheckPromoteType(
     if (std::abs(alpha->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
         promoteType2 = PromoteType(alpha->GetDataType(), promoteType);
         if (promoteType2 == DataType::DT_UNDEFINED) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s and Mat/Vec dtype %s can not promote dtype.",
-                ToString(alpha->GetDataType()).GetString(), ToString(promoteType).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s and Mat/Vec dtype %s can not promote dtype.",
+                    ToString(alpha->GetDataType()).GetString(), ToString(promoteType).GetString());
             return false;
         }
     }
@@ -121,9 +117,8 @@ static bool CheckPromoteType(
     if (std::abs(beta->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
         promoteType3 = PromoteType(beta->GetDataType(), self->GetDataType());
         if (promoteType3 == DataType::DT_UNDEFINED) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Self dtype %s and Beta dtype %s can not promote dtype.",
-                ToString(self->GetDataType()).GetString(), ToString(beta->GetDataType()).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Self dtype %s and Beta dtype %s can not promote dtype.",
+                    ToString(self->GetDataType()).GetString(), ToString(beta->GetDataType()).GetString());
             return false;
         }
     }
@@ -131,10 +126,9 @@ static bool CheckPromoteType(
     // 检查self和promote_type能否做数据类型推导
     DataType promoteTypeFinal = PromoteType(promoteType3, promoteType2);
     if (promoteTypeFinal == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "part1(beta*self) dtype %s and part2(alpha*(mat@vec)) dtype %s can not promote dtype.",
-            ToString(promoteType3).GetString(), ToString(promoteType2).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "part1(beta*self) dtype %s and part2(alpha*(mat@vec)) dtype %s can not promote dtype.",
+                ToString(promoteType3).GetString(), ToString(promoteType2).GetString());
         return false;
     }
 
@@ -144,8 +138,8 @@ static bool CheckPromoteType(
     return true;
 }
 
-static bool CheckTensorDimAndSize(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclTensor* out)
+static bool CheckTensorDimAndSize(const aclTensor* self, const aclTensor* mat, const aclTensor* vec,
+                                  const aclScalar* alpha, const aclTensor* out)
 {
     // 需要根据算子实际情况添加校验
     Shape selfShape = self->GetViewShape();
@@ -154,21 +148,19 @@ static bool CheckTensorDimAndSize(
     Shape outShape = out->GetViewShape();
     if ((selfShape.GetDimNum() > 1) || (matShape.GetDimNum() != MATRIX_DIM) || (vecShape.GetDimNum() != 1) ||
         (outShape.GetDimNum() != 1)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expect input tensor dim [0/1,2,1,1], but receive self [%zu], mat [%zu], vec [%zu], out [%zu].",
-            selfShape.GetDimNum(), matShape.GetDimNum(), vecShape.GetDimNum(), outShape.GetDimNum());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expect input tensor dim [0/1,2,1,1], but receive self [%zu], mat [%zu], vec [%zu], out [%zu].",
+                selfShape.GetDimNum(), matShape.GetDimNum(), vecShape.GetDimNum(), outShape.GetDimNum());
         return false;
     }
 
     if ((matShape.GetDim(1) != vecShape.GetDim(0)) || (matShape.GetDim(0) != outShape.GetDim(0)) ||
         (selfShape.GetDimNum() != 0 && matShape.GetDim(0) != selfShape.GetDim(0) &&
          (selfShape.GetDim(0) != 1 || std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()))) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Input tensor shape not satisfy, current shape : self [%s], mat [%s], vec [%s], out [%s].",
-            op::ToString(selfShape).GetString(), op::ToString(matShape).GetString(), op::ToString(vecShape).GetString(),
-            op::ToString(outShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Input tensor shape not satisfy, current shape : self [%s], mat [%s], vec [%s], out [%s].",
+                op::ToString(selfShape).GetString(), op::ToString(matShape).GetString(),
+                op::ToString(vecShape).GetString(), op::ToString(outShape).GetString());
         return false;
     }
 
@@ -181,9 +173,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* mat, const aclTe
     auto matFormat = mat->GetStorageFormat();
     auto vecFormat = vec->GetStorageFormat();
     auto outTensorFormat = out->GetStorageFormat();
-    bool noSupportFormat =
-        ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (matFormat == Format::FORMAT_FRACTAL_NZ) ||
-         (vecFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
+    bool noSupportFormat = ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (matFormat == Format::FORMAT_FRACTAL_NZ) ||
+                            (vecFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "One of the tensors ('self', 'mat', 'vec', 'out') does not support NZ format");
         return false;
@@ -191,9 +182,8 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* mat, const aclTe
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,
-    const aclTensor* out, int8_t cubeMathType)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* mat, const aclTensor* vec,
+                               const aclScalar* alpha, const aclScalar* beta, const aclTensor* out, int8_t cubeMathType)
 {
     // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针
@@ -217,15 +207,15 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static inline const aclTensor* MulOrLogAndCalculation(
-    const aclTensor* lTensor, const aclTensor* rTensor, DataType dtype, aclOpExecutor* executor)
+static inline const aclTensor* MulOrLogAndCalculation(const aclTensor* lTensor, const aclTensor* rTensor,
+                                                      DataType dtype, aclOpExecutor* executor)
 {
     return dtype == DataType::DT_BOOL ? l0op::LogicalAnd(lTensor, rTensor, executor) :
                                         l0op::Mul(lTensor, rTensor, executor);
 }
 
-static inline const aclTensor* AddOrLogOrCalculation(
-    const aclTensor* lTensor, const aclTensor* rTensor, DataType dtype, aclOpExecutor* executor)
+static inline const aclTensor* AddOrLogOrCalculation(const aclTensor* lTensor, const aclTensor* rTensor, DataType dtype,
+                                                     aclOpExecutor* executor)
 {
     return dtype == DataType::DT_BOOL ? l0op::LogicalOr(lTensor, rTensor, executor) :
                                         l0op::Add(lTensor, rTensor, executor);
@@ -244,8 +234,8 @@ static inline const aclTensor* MulScalar(const aclScalar* alpha, const aclTensor
     return vecFinalResult;
 }
 
-const aclTensor* GetMatMulResult(
-    const aclTensor* mat, const aclTensor* vec, int8_t cubeMathType, const aclScalar* alpha, aclOpExecutor* executor)
+const aclTensor* GetMatMulResult(const aclTensor* mat, const aclTensor* vec, int8_t cubeMathType,
+                                 const aclScalar* alpha, aclOpExecutor* executor)
 {
     // 将输入vec转换成连续的tensor
     auto vecContiguous = l0op::Contiguous(vec, executor);
@@ -286,8 +276,8 @@ const aclTensor* GetMatMulResult(
     return vecResult;
 }
 
-const aclTensor* GetMulResult(
-    const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, aclOpExecutor* executor)
+const aclTensor* GetMulResult(const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha,
+                              aclOpExecutor* executor)
 {
     // 将输入vec转换成连续的tensor
     auto vecContiguous = l0op::Contiguous(vec, executor);
@@ -338,9 +328,9 @@ static inline bool IsMatMulSupportDtype(const aclTensor* mat, const aclTensor* v
     return false;
 }
 
-aclnnStatus aclnnAddmvGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclScalar* beta,
-    aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnAddmvGetWorkspaceSize(const aclTensor* self, const aclTensor* mat, const aclTensor* vec,
+                                       const aclScalar* alpha, const aclScalar* beta, aclTensor* out,
+                                       int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAddmv, DFX_IN(self, mat, vec, alpha, beta, cubeMathType), DFX_OUT(out));
 
@@ -350,7 +340,7 @@ aclnnStatus aclnnAddmvGetWorkspaceSize(
 
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
-    
+
     // 参数检查
     auto ret = CheckParams(self, mat, vec, alpha, beta, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);

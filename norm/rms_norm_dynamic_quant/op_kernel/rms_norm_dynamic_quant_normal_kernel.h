@@ -16,14 +16,10 @@
 template <typename T, typename T_Y, int TILING_KEY, int BUFFER_NUM = 1>
 class KernelRmsNormDynamicQuantNormal : public KernelRmsNormDynamicQuantBase<T, T_Y, TILING_KEY, BUFFER_NUM> {
 public:
-    __aicore__ inline KernelRmsNormDynamicQuantNormal(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
+    __aicore__ inline KernelRmsNormDynamicQuantNormal(TPipe* pipe) { Ppipe = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
-        GM_ADDR workspace, const RmsNormDynamicQuantTilingData* tiling)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR smooth, GM_ADDR beta, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const RmsNormDynamicQuantTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x, gamma, smooth, beta);
@@ -158,7 +154,7 @@ private:
         } else {
             for (int32_t rid = 0; rid < nums; ++rid) {
                 Muls(yLocalFp32[rid * this->numLastDimAligned], xLocalFp32[rid * this->numLastDimAligned], (float)(1.0),
-                    this->numLastDim);
+                     this->numLastDim);
             }
             PipeBarrier<PIPE_V>();
         }
@@ -168,7 +164,8 @@ private:
         PipeBarrier<PIPE_V>();
         SetDeqScale((half)1.000000e+00f);
         PipeBarrier<PIPE_V>();
-        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, elementCount);
+        Cast(yLocalFp32.ReinterpretCast<half>(), yLocalFp32.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE,
+             elementCount);
         PipeBarrier<PIPE_V>();
         Cast(outQuant01, yLocalFp32.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, elementCount);
         PipeBarrier<PIPE_V>();
@@ -188,9 +185,8 @@ private:
         outRowsQue.FreeTensor(outY12);
     }
 
-    __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
-        int32_t nums)
+    __aicore__ inline void ScaleTensor(LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor,
+                                       LocalTensor<float>& scaleTensor, int32_t size, int32_t nums)
     {
         float maxTemp;
         float scaleTemp;

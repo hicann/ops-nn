@@ -32,21 +32,16 @@ constexpr int64_t MIN_SPLIT_THRESHOLD = 1024; // tiling switches to double buffe
 
 class HardSwishGradV2TilingArch35 : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "HardSwishGradV2TilingArch35 SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "HardSwishGradV2TilingArch35 SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "HardSwishGradV2TilingArch35 TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "HardSwishGradV2TilingArch35 TearDown" << std::endl; }
 };
 
 // Drives one arch35 tiling invocation. dtype is applied to both inputs and the output.
 // On success, the raw tiling data is reinterpreted as HardSwishGradV2Arch35TilingData and returned via outTiling.
 static ge::graphStatus RunArch35Tiling(gert::StorageShape& gradShape, gert::StorageShape& selfShape,
-    gert::StorageShape& outShape, ge::DataType dtype, HardSwishGradV2Arch35TilingData& outTiling)
+                                       gert::StorageShape& outShape, ge::DataType dtype,
+                                       HardSwishGradV2Arch35TilingData& outTiling)
 {
     std::string op_type("HardSwishGradV2");
     EXPECT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -79,12 +74,12 @@ static ge::graphStatus RunArch35Tiling(gert::StorageShape& gradShape, gert::Stor
     platform_info.Init();
     optiling::HardSwishGradV2CompileInfo compile_info;
 
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
 
     EXPECT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -189,7 +184,7 @@ TEST_F(HardSwishGradV2TilingArch35, test_tiling_bf16_double_buffer)
 // This deterministically distinguishes the two branches without hardcoding the UB-derived value.
 TEST_F(HardSwishGradV2TilingArch35, test_tiling_fp32_single_gt_double_ubfactor)
 {
-    gert::StorageShape smallShape = {{64}, {64}};   // single buffer
+    gert::StorageShape smallShape = {{64}, {64}};         // single buffer
     gert::StorageShape largeShape = {{64, 32}, {64, 32}}; // double buffer
     HardSwishGradV2Arch35TilingData single{};
     HardSwishGradV2Arch35TilingData dbl{};

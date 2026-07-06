@@ -81,62 +81,63 @@ constexpr std::size_t GATHER_ND_ORG_INDICES_DIM_LEN = 8;
 constexpr std::size_t GATHER_ND_INDICES_DIM_LEN = 2;
 
 class GatherNdSimtTiling : public Ops::NN::Optiling::TilingBaseClass {
- public:
-  explicit GatherNdSimtTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
-  ~GatherNdSimtTiling() override {}
- protected:
-  bool IsCapable() override;
-  ge::graphStatus GetPlatformInfo() override;
-  ge::graphStatus GetShapeAttrsInfo() override;
-  ge::graphStatus DoOpTiling() override;
-  ge::graphStatus DoLibApiTiling() override;
-  uint64_t GetTilingKey() const override;
-  ge::graphStatus GetWorkspaceSize() override;
-  ge::graphStatus PostTiling() override;
+public:
+    explicit GatherNdSimtTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
+    ~GatherNdSimtTiling() override {}
 
-  ge::graphStatus GetIndicesShapeInfo();
-  ge::graphStatus GetXShapeInfo();
-  bool XDtypeImprove();
-  ge::graphStatus DoZeroShapeOpTiling();
-  ge::graphStatus DoBroadCastOpTiling();
-  ge::graphStatus DoNormOpTiling();
-  ge::graphStatus DoMixKernelOpTiling();
-  void CalcSimdTiling();
-  bool IsGaAllLoad() const;
-  ge::graphStatus GaAllLoadTiling();
+protected:
+    bool IsCapable() override;
+    ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
 
- private:
-  uint64_t coreNum_ = 0;
-  uint64_t ubSize_ = 0;
-  uint64_t rank_ = 1;
+    ge::graphStatus GetIndicesShapeInfo();
+    ge::graphStatus GetXShapeInfo();
+    bool XDtypeImprove();
+    ge::graphStatus DoZeroShapeOpTiling();
+    ge::graphStatus DoBroadCastOpTiling();
+    ge::graphStatus DoNormOpTiling();
+    ge::graphStatus DoMixKernelOpTiling();
+    void CalcSimdTiling();
+    bool IsGaAllLoad() const;
+    ge::graphStatus GaAllLoadTiling();
 
-  uint64_t indicesNum_ = 1;
-  uint64_t gatherSize_ = 1;
-  uint64_t outputSize_ = 1;
+private:
+    uint64_t coreNum_ = 0;
+    uint64_t ubSize_ = 0;
+    uint64_t rank_ = 1;
 
-  uint64_t xShape_[GATHER_ND_X_DIM_LEN] = {1, 1, 1, 1, 1, 1, 1, 1};
-  uint64_t strideShape_[GATHER_ND_X_DIM_LEN] = {1, 1, 1, 1, 1, 1, 1, 1};
-  uint64_t indicesShape_[GATHER_ND_INDICES_DIM_LEN] = {1, 1};
+    uint64_t indicesNum_ = 1;
+    uint64_t gatherSize_ = 1;
+    uint64_t outputSize_ = 1;
 
-  uint64_t xDtypeSize_ = 0;
-  uint64_t improveDtypeSize_ = 0;
-  uint64_t indicesDtypeSize_ = 0;
-  uint64_t xUbSize_ = 0;
-  uint64_t indicesUbSize_ = 0;
-  uint64_t blockFactor_ = 0;
-  uint64_t ubFactor_ = 0;
-  uint64_t blockNum_ = 0;
-  uint64_t gaAllLoadBaseTilingKey_ = 3000;
-  uint64_t gatherDimSize_ = 1;
-  bool isZeroShape_ = false;
-  bool negativeIndexSupport_ = false;
-  bool supportOutOfBoundIndex_ = false;
-  bool isSimd_ = false;
-  bool isGaAllLoad_ = false;
-  bool isMixKernel_ = false;
+    uint64_t xShape_[GATHER_ND_X_DIM_LEN] = {1, 1, 1, 1, 1, 1, 1, 1};
+    uint64_t strideShape_[GATHER_ND_X_DIM_LEN] = {1, 1, 1, 1, 1, 1, 1, 1};
+    uint64_t indicesShape_[GATHER_ND_INDICES_DIM_LEN] = {1, 1};
 
-  GatherNdTilingData tilingData_;
-  GatherNdGaAllLoadTilingData gaAllLoadTilingdata_;
+    uint64_t xDtypeSize_ = 0;
+    uint64_t improveDtypeSize_ = 0;
+    uint64_t indicesDtypeSize_ = 0;
+    uint64_t xUbSize_ = 0;
+    uint64_t indicesUbSize_ = 0;
+    uint64_t blockFactor_ = 0;
+    uint64_t ubFactor_ = 0;
+    uint64_t blockNum_ = 0;
+    uint64_t gaAllLoadBaseTilingKey_ = 3000;
+    uint64_t gatherDimSize_ = 1;
+    bool isZeroShape_ = false;
+    bool negativeIndexSupport_ = false;
+    bool supportOutOfBoundIndex_ = false;
+    bool isSimd_ = false;
+    bool isGaAllLoad_ = false;
+    bool isMixKernel_ = false;
+
+    GatherNdTilingData tilingData_;
+    GatherNdGaAllLoadTilingData gaAllLoadTilingdata_;
 };
-}
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHER_ND_SIMT_ARCH35_H_
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHER_ND_SIMT_ARCH35_H_

@@ -7,7 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file fused_quant_matmul_unary_tiling.h
  * \brief
@@ -27,24 +27,19 @@
 namespace optiling {
 using namespace std;
 
-struct FusedQuantMatmulUnaryInfo : public QuantBatchMatmulInfo {
-};
+struct FusedQuantMatmulUnaryInfo : public QuantBatchMatmulInfo {};
 
-
-class FusedQuantMatMulUnaryTiling : public QuantBatchMatmulV3BasicTiling 
-{
+class FusedQuantMatMulUnaryTiling : public QuantBatchMatmulV3BasicTiling {
 public:
-    explicit FusedQuantMatMulUnaryTiling(gert::TilingContext *contextIn)
-     : QuantBatchMatmulV3BasicTiling(contextIn)
-    {}
-    FusedQuantMatMulUnaryTiling(gert::TilingContext *contextIn, QuantBatchMatmulV3TilingData *out)
-     : QuantBatchMatmulV3BasicTiling(contextIn, out)
+    explicit FusedQuantMatMulUnaryTiling(gert::TilingContext* contextIn) : QuantBatchMatmulV3BasicTiling(contextIn) {}
+    FusedQuantMatMulUnaryTiling(gert::TilingContext* contextIn, QuantBatchMatmulV3TilingData* out)
+        : QuantBatchMatmulV3BasicTiling(contextIn, out)
     {}
     ~FusedQuantMatMulUnaryTiling() override = default;
 
 protected:
     uint64_t GetTilingKey() const override;
-    
+
     uint32_t GetX1Idx() const override { return X1_INDEX_FQMM; }
     uint32_t GetX2Idx() const override { return X2_INDEX_FQMM; }
     uint32_t GetBiasIdx() const override { return BIAS_INDEX_FQMM; }
@@ -64,12 +59,12 @@ protected:
 
     bool CheckDtype() const override;
     bool CheckFormat() const;
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape, const gert::StorageShape* biasShape,
+    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
                     const gert::StorageShape* pertokenShape, const gert::StorageShape* scaleShape,
-                    const std::vector<int64_t> &dimValueOfMKN) const;
+                    const std::vector<int64_t>& dimValueOfMKN) const;
     bool CheckUseBasicTiling() override;
 
     uint64_t fusedOpType_ = 0UL;
 };
-}   // namespace optiling
-#endif  // FUSED_QUANT_MATMUL_UNARY_TILING_H
+} // namespace optiling
+#endif // FUSED_QUANT_MATMUL_UNARY_TILING_H

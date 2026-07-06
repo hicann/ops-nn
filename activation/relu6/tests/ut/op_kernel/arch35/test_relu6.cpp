@@ -36,10 +36,7 @@ static void relu6_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling
 
 class relu6_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "relu6_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "relu6_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "relu6 TearDown\n" << endl;

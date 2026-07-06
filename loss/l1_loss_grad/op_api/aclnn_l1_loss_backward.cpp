@@ -36,30 +36,28 @@ static const int64_t REDUCTION_MEAN_NUM = 1;
 static const int64_t REDUCTION_SUM_NUM = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* gradInput)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            const aclTensor* gradInput)
 {
     // 检查self、target和gradOutput能否做数据类型推导
     op::DataType promoteType1 = op::PromoteType(gradOutput->GetDataType(), self->GetDataType());
     if (promoteType1 == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and Self dtype %s can not be promoted.",
-            op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and Self dtype %s can not be promoted.",
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(self->GetDataType()).GetString());
         return false;
     }
 
     op::DataType promoteType2 = op::PromoteType(target->GetDataType(), promoteType1);
     if (promoteType2 == DataType::DT_UNDEFINED) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Target dtype %s, GradOutput dtype %s and Self dtype %s can not be promoted.",
-            op::ToString(target->GetDataType()).GetString(), op::ToString(gradOutput->GetDataType()).GetString(),
-            op::ToString(self->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Target dtype %s, GradOutput dtype %s and Self dtype %s can not be promoted.",
+                op::ToString(target->GetDataType()).GetString(), op::ToString(gradOutput->GetDataType()).GetString(),
+                op::ToString(self->GetDataType()).GetString());
         return false;
     }
 
@@ -67,15 +65,15 @@ static bool CheckDtypeValid(
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType2, gradInput->GetDataType(), return false);
 
     // 检查promoteType的数据类型是否在支持列表内
-    const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST =
-        (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ?
-            ASCEND910B_DTYPE_SUPPORT_LIST :
-            ASCEND910_DTYPE_SUPPORT_LIST;
+    const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST = (GetCurrentPlatformInfo().GetSocVersion() >=
+                                                                                SocVersion::ASCEND910B &&
+                                                                            GetCurrentPlatformInfo().GetSocVersion() <=
+                                                                                SocVersion::ASCEND910E) ?
+                                                                               ASCEND910B_DTYPE_SUPPORT_LIST :
+                                                                               ASCEND910_DTYPE_SUPPORT_LIST;
     if (!CheckType(promoteType2, CURRENT_DTYPE_SUPPORT_LIST)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list [%s].",
-            op::ToString(promoteType2).GetString(), op::ToString(CURRENT_DTYPE_SUPPORT_LIST).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "promoteType dtype %s should be in dtype support list [%s].",
+                op::ToString(promoteType2).GetString(), op::ToString(CURRENT_DTYPE_SUPPORT_LIST).GetString());
         return false;
     }
     return true;
@@ -90,8 +88,8 @@ static bool CheckReduction(int64_t reduction)
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* gradInput)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                       const aclTensor* gradInput)
 {
     const auto& gradOutputShape = gradOutput->GetViewShape();
     const auto& selfShape = self->GetViewShape();
@@ -111,17 +109,15 @@ static bool CheckShape(
     // broadcast后的shape能否与target做broadcast
     op::Shape broadcastShape2;
     if (!BroadcastInferShape(targetShape, broadcastShape1, broadcastShape2)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "GradOutput tensor shape:%s self tensor shape:%s target tensor shape:%s can't broadcast.",
-            op::ToString(gradOutputShape).GetString(), op::ToString(selfShape).GetString(),
-            op::ToString(targetShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "GradOutput tensor shape:%s self tensor shape:%s target tensor shape:%s can't broadcast.",
+                op::ToString(gradOutputShape).GetString(), op::ToString(selfShape).GetString(),
+                op::ToString(targetShape).GetString());
         return false;
     }
     if (broadcastShape2 != gradInputShape) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
-            op::ToString(broadcastShape2).GetString(), op::ToString(gradInputShape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out should be %s, but current is %s.",
+                op::ToString(broadcastShape2).GetString(), op::ToString(gradInputShape).GetString());
         return false;
     }
     return true;
@@ -132,13 +128,12 @@ static void CheckFormat(const aclTensor* x)
     op::Format format = x->GetStorageFormat();
     if (format == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGW("Format of input gets [%s], this format mat lead to precision failure",
-        op::ToString(format).GetString());
+                op::ToString(format).GetString());
     }
 }
 
-inline aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction,
-    const aclTensor* gradInput)
+inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               int64_t reduction, const aclTensor* gradInput)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull4Tensor(gradOutput, self, target, gradInput), ACLNN_ERR_PARAM_NULLPTR);
@@ -168,9 +163,9 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
     return self;
 }
 
-aclnnStatus aclnnL1LossBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction,
-    aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnL1LossBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                const aclTensor* target, int64_t reduction, aclTensor* gradInput,
+                                                uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -208,8 +203,7 @@ aclnnStatus aclnnL1LossBackwardGetWorkspaceSize(
     BroadcastInferShape(gradOutput->GetViewShape(), self->GetViewShape(), broadcastShape1);
     BroadcastInferShape(target->GetViewShape(), broadcastShape1, broadcastShape2);
     auto gradOutputBroadcast = gradOutputContiguous;
-    if (!Ops::NN::AclnnUtil::IsRegbase() ||
-        !gradOutput->GetViewShape().IsScalar()) {
+    if (!Ops::NN::AclnnUtil::IsRegbase() || !gradOutput->GetViewShape().IsScalar()) {
         // 判断gradOutput是否需要进行broadcast或者promote
         gradOutputBroadcast = BroadcastTensor(gradOutputContiguous, broadcastShape2, uniqueExecutor.get());
         CHECK_RET(gradOutputBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);

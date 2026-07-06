@@ -34,9 +34,8 @@ namespace Gemm {
 namespace Block {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
-template <
-    typename DataTypeIn_, typename DataTypeOut_, typename DataTypeScale_,
-    typename FusionOp_ = DefaultFusion<DataTypeOut_, DataTypeIn_>>
+template <typename DataTypeIn_, typename DataTypeOut_, typename DataTypeScale_,
+          typename FusionOp_ = DefaultFusion<DataTypeOut_, DataTypeIn_>>
 class BlockEpilogueRotateQuant {
 public:
     using DataTypeIn = DataTypeIn_;
@@ -59,9 +58,9 @@ public:
 
     __aicore__ inline BlockEpilogueRotateQuant() {}
 
-    __aicore__ inline void Init(
-        Params const& params, const ProblemShape& problemShape, bfloat16_t alpha, bool needClamp, int64_t axis,
-        int64_t roundMode, int64_t scaleAlg, float dstTypeMax, float invDstTypeMax)
+    __aicore__ inline void Init(Params const& params, const ProblemShape& problemShape, bfloat16_t alpha,
+                                bool needClamp, int64_t axis, int64_t roundMode, int64_t scaleAlg, float dstTypeMax,
+                                float invDstTypeMax)
     {
         // 饱和模式由单指令设置生效
         SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
@@ -76,8 +75,8 @@ public:
     {
         uint32_t mnSize = blkM * k;
         uint64_t yOffset = offset * static_cast<uint64_t>(k);
-        ComputeMxQuant(
-            xTensor_, yTensor_, maxTensor_, eMaxTensor_, scaleTensor_, deQuantScaleTensor_, mnSize, needClamp_);
+        ComputeMxQuant(xTensor_, yTensor_, maxTensor_, eMaxTensor_, scaleTensor_, deQuantScaleTensor_, mnSize,
+                       needClamp_);
 
         uint32_t nScaleSize = RotateQuantCeilDiv(shape_.N, GROUP_SIZE);
         uint32_t isOdd = nScaleSize & 1;
@@ -169,18 +168,18 @@ private:
     static constexpr uint32_t vfLen16 = GetVecLen() / sizeof(uint16_t);
     static constexpr uint32_t vfLen32 = GetVecLen() / sizeof(uint32_t);
 
-    static constexpr CastTrait castTraitZero = {
-        RegLayout::ZERO, SatMode::UNKNOWN, MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr CastTrait castTraitOne = {
-        RegLayout::ONE, SatMode::UNKNOWN, MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
-    static constexpr CastTrait castTrait32to80 = {
-        RegLayout::ZERO, SatMode::SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-    static constexpr CastTrait castTrait32to81 = {
-        RegLayout::ONE, SatMode::SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-    static constexpr CastTrait castTrait32to82 = {
-        RegLayout::TWO, SatMode::SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-    static constexpr CastTrait castTrait32to83 = {
-        RegLayout::THREE, SatMode::SAT, MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    static constexpr CastTrait castTraitZero = {RegLayout::ZERO, SatMode::UNKNOWN, MaskMergeMode::ZEROING,
+                                                RoundMode::UNKNOWN};
+    static constexpr CastTrait castTraitOne = {RegLayout::ONE, SatMode::UNKNOWN, MaskMergeMode::ZEROING,
+                                               RoundMode::UNKNOWN};
+    static constexpr CastTrait castTrait32to80 = {RegLayout::ZERO, SatMode::SAT, MaskMergeMode::ZEROING,
+                                                  RoundMode::CAST_RINT};
+    static constexpr CastTrait castTrait32to81 = {RegLayout::ONE, SatMode::SAT, MaskMergeMode::ZEROING,
+                                                  RoundMode::CAST_RINT};
+    static constexpr CastTrait castTrait32to82 = {RegLayout::TWO, SatMode::SAT, MaskMergeMode::ZEROING,
+                                                  RoundMode::CAST_RINT};
+    static constexpr CastTrait castTrait32to83 = {RegLayout::THREE, SatMode::SAT, MaskMergeMode::ZEROING,
+                                                  RoundMode::CAST_RINT};
 
     RotateQuantShapeInfo shape_;
     TPipe pipe_;
@@ -237,9 +236,8 @@ private:
         shape_.B = Get<MNK_B>(problemShape);
     }
 
-    __aicore__ inline void InitQuantParams(
-        bfloat16_t alpha, bool needClamp, int64_t axis, int64_t roundMode, int64_t scaleAlg, float dstTypeMax,
-        float invDstTypeMax)
+    __aicore__ inline void InitQuantParams(bfloat16_t alpha, bool needClamp, int64_t axis, int64_t roundMode,
+                                           int64_t scaleAlg, float dstTypeMax, float invDstTypeMax)
     {
         alpha_ = alpha;
         needClamp_ = needClamp;
@@ -284,60 +282,57 @@ private:
         eventIdMte3ToV_ = static_cast<event_t>(pipe_.FetchEventID(HardEvent::MTE3_V));
     }
 
-    __aicore__ inline void CopyOutputFromUbToGm(
-        uint64_t offset, LocalTensor<int8_t>& src, uint16_t blockCount, uint32_t dataSize, uint32_t dstStride)
+    __aicore__ inline void CopyOutputFromUbToGm(uint64_t offset, LocalTensor<int8_t>& src, uint16_t blockCount,
+                                                uint32_t dataSize, uint32_t dstStride)
     {
         if constexpr (IsSameType<DataTypeOut, fp4x2_e2m1_t>::value) {
             offset = offset >> 1;
             dataSize = dataSize >> 1;
             dstStride = dstStride >> 1;
         }
-        copy_ubuf_to_gm_align_v2(
-            cGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount, dataSize, 0, dstStride,
-            dataSize);
+        copy_ubuf_to_gm_align_v2(cGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount,
+                                 dataSize, 0, dstStride, dataSize);
     }
 
-    __aicore__ inline void CopyScaleFromUbToGm(
-        uint64_t offset, LocalTensor<int8_t>& src, uint16_t blockCount, uint32_t dataSize, uint32_t dstStride)
+    __aicore__ inline void CopyScaleFromUbToGm(uint64_t offset, LocalTensor<int8_t>& src, uint16_t blockCount,
+                                               uint32_t dataSize, uint32_t dstStride)
     {
-        copy_ubuf_to_gm_align_v2(
-            scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount, dataSize, 0, dstStride,
-            SCALE_STORE_STRIDE);
+        copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, blockCount,
+                                 dataSize, 0, dstStride, SCALE_STORE_STRIDE);
     }
 
-    __aicore__ inline void CopyPadScaleFromUbToGm(
-        uint64_t offset, LocalTensor<int8_t>& src, uint32_t nKRatio, uint32_t nkIdx, uint32_t blkM)
+    __aicore__ inline void CopyPadScaleFromUbToGm(uint64_t offset, LocalTensor<int8_t>& src, uint32_t nKRatio,
+                                                  uint32_t nkIdx, uint32_t blkM)
     {
         uint16_t firstNum = (nKRatio - nkIdx <= blkM) ? nKRatio - nkIdx : blkM;
         uint16_t rowLoopNum = (firstNum < blkM) ? (blkM - firstNum) / nKRatio : 0;
         uint16_t lastNum = (firstNum < blkM) ? (blkM - firstNum) % nKRatio : 0;
 
         uint32_t dataSize = firstNum + ((nkIdx + firstNum == nKRatio) ? 1 : 0);
-        copy_ubuf_to_gm_align_v2(
-            scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, 1, dataSize, 0, 0, 0);
+        copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src.GetPhyAddr(), 0, 1, dataSize, 0,
+                                 0, 0);
         offset += dataSize;
         uint32_t srcOffset = RotateQuantAlign(firstNum + 1, SCALE_STORE_STRIDE);
 
         if (rowLoopNum > 0) {
             dataSize = nKRatio + 1;
             uint32_t srcStride = RotateQuantAlign(dataSize, SCALE_STORE_STRIDE);
-            copy_ubuf_to_gm_align_v2(
-                scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0, rowLoopNum, dataSize,
-                0, dataSize, srcStride);
+            copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0,
+                                     rowLoopNum, dataSize, 0, dataSize, srcStride);
             offset += rowLoopNum * dataSize;
             srcOffset += rowLoopNum * srcStride;
         }
 
         if (lastNum > 0) {
-            copy_ubuf_to_gm_align_v2(
-                scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0, 1, lastNum, 0, 0, 0);
+            copy_ubuf_to_gm_align_v2(scaleGlobal_[offset].GetPhyAddr(), (__ubuf__ void*)src[srcOffset].GetPhyAddr(), 0,
+                                     1, lastNum, 0, 0, 0);
         }
     }
 
-    __aicore__ inline void ComputeMxQuant(
-        LocalTensor<bfloat16_t>& xTensor, LocalTensor<int8_t>& yTensor, LocalTensor<bfloat16_t>& maxTensor,
-        LocalTensor<uint16_t>& eMaxTensor, LocalTensor<int8_t>& scaleTensor, LocalTensor<uint16_t>& deQuantScaleTensor,
-        uint32_t totalDataInUB, bool needClamp)
+    __aicore__ inline void ComputeMxQuant(LocalTensor<bfloat16_t>& xTensor, LocalTensor<int8_t>& yTensor,
+                                          LocalTensor<bfloat16_t>& maxTensor, LocalTensor<uint16_t>& eMaxTensor,
+                                          LocalTensor<int8_t>& scaleTensor, LocalTensor<uint16_t>& deQuantScaleTensor,
+                                          uint32_t totalDataInUB, bool needClamp)
     {
         uint32_t oneRepeatSize = GetVecLen() / sizeof(DataTypeIn);
         uint16_t repeatCount = static_cast<uint16_t>(RotateQuantCeilDiv(totalDataInUB, oneRepeatSize * 2));
@@ -363,17 +358,17 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeExpMax(
-        __ubuf__ uint16_t* maxExpAddr, __ubuf__ bfloat16_t* maxAddr, __ubuf__ bfloat16_t* xAddr, uint32_t totalDataInUB,
-        uint16_t repeatCount, uint32_t oneRepeatSize, bool needClamp)
+    __aicore__ inline void ComputeExpMax(__ubuf__ uint16_t* maxExpAddr, __ubuf__ bfloat16_t* maxAddr,
+                                         __ubuf__ bfloat16_t* xAddr, uint32_t totalDataInUB, uint16_t repeatCount,
+                                         uint32_t oneRepeatSize, bool needClamp)
     {
         if (needClamp) {
             if (scaleAlg_ == 0) {
-                VF_CALL<ClampExpMaxVf<true>>(
-                    maxExpAddr, maxAddr, xAddr, totalDataInUB, alpha_, repeatCount, oneRepeatSize);
+                VF_CALL<ClampExpMaxVf<true>>(maxExpAddr, maxAddr, xAddr, totalDataInUB, alpha_, repeatCount,
+                                             oneRepeatSize);
             } else {
-                VF_CALL<ClampExpMaxVf<false>>(
-                    maxExpAddr, maxAddr, xAddr, totalDataInUB, alpha_, repeatCount, oneRepeatSize);
+                VF_CALL<ClampExpMaxVf<false>>(maxExpAddr, maxAddr, xAddr, totalDataInUB, alpha_, repeatCount,
+                                              oneRepeatSize);
             }
         } else {
             if (scaleAlg_ == 0) {
@@ -384,57 +379,56 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeScale(
-        __ubuf__ uint16_t* scaleAddr, __ubuf__ uint16_t* deScaleAddr, __ubuf__ uint16_t* maxExpAddr, uint16_t scaleNum,
-        uint16_t repeatScaleCount, uint16_t repeatScaleHalfCount)
+    __aicore__ inline void ComputeScale(__ubuf__ uint16_t* scaleAddr, __ubuf__ uint16_t* deScaleAddr,
+                                        __ubuf__ uint16_t* maxExpAddr, uint16_t scaleNum, uint16_t repeatScaleCount,
+                                        uint16_t repeatScaleHalfCount)
     {
         if (scaleAlg_ == 1) {
-            VF_CALL<ScaleVfcuBLAS<true>>(
-                scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleHalfCount, invDstTypeMax_, dtypeMax_);
+            VF_CALL<ScaleVfcuBLAS<true>>(scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleHalfCount,
+                                         invDstTypeMax_, dtypeMax_);
         } else if (scaleAlg_ == 0) {
-            VF_CALL<ScaleVf<false>>(
-                scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleCount, addValueBit_, maxExpValue_);
+            VF_CALL<ScaleVf<false>>(scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleCount, addValueBit_,
+                                    maxExpValue_);
         } else if (dstTypeMax_ == SIX_FLOAT || dstTypeMax_ == SEVEN_FLOAT) {
-            VF_CALL<ScaleVf<true>>(
-                scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleCount, addValueBit_, maxExpValue_);
+            VF_CALL<ScaleVf<true>>(scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleCount, addValueBit_,
+                                   maxExpValue_);
         } else {
-            VF_CALL<ScaleVfcuBLAS<false>>(
-                scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleHalfCount, invDstTypeMax_, dtypeMax_);
+            VF_CALL<ScaleVfcuBLAS<false>>(scaleAddr, deScaleAddr, maxExpAddr, scaleNum, repeatScaleHalfCount,
+                                          invDstTypeMax_, dtypeMax_);
         }
     }
 
     template <bool needClamp>
-    __aicore__ inline void ComputeQuantData(
-        __ubuf__ int8_t* yAddr, __ubuf__ bfloat16_t* maxAddr, __ubuf__ bfloat16_t* xAddr,
-        __ubuf__ uint16_t* deScaleAddr, uint32_t totalDataInUB, uint16_t repeatCount)
+    __aicore__ inline void ComputeQuantData(__ubuf__ int8_t* yAddr, __ubuf__ bfloat16_t* maxAddr,
+                                            __ubuf__ bfloat16_t* xAddr, __ubuf__ uint16_t* deScaleAddr,
+                                            uint32_t totalDataInUB, uint16_t repeatCount)
     {
         if constexpr (IsSameType<DataTypeOut, fp4x2_e2m1_t>::value) {
             if (roundMode_ == MODE_RINT) {
-                VF_CALL<QuantVfFP4<RoundMode::CAST_RINT, needClamp>>(
-                    yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB, repeatCount);
+                VF_CALL<QuantVfFP4<RoundMode::CAST_RINT, needClamp>>(yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB,
+                                                                     repeatCount);
             } else if (roundMode_ == MODE_ROUND) {
-                VF_CALL<QuantVfFP4<RoundMode::CAST_ROUND, needClamp>>(
-                    yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB, repeatCount);
+                VF_CALL<QuantVfFP4<RoundMode::CAST_ROUND, needClamp>>(yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB,
+                                                                      repeatCount);
             } else if (roundMode_ == MODE_FLOOR) {
-                VF_CALL<QuantVfFP4<RoundMode::CAST_FLOOR, needClamp>>(
-                    yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB, repeatCount);
+                VF_CALL<QuantVfFP4<RoundMode::CAST_FLOOR, needClamp>>(yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB,
+                                                                      repeatCount);
             }
         } else {
             VF_CALL<QuantVfFP8<DataTypeOut, needClamp>>(yAddr, xAddr, deScaleAddr, maxAddr, totalDataInUB, repeatCount);
         }
     }
 
-    __aicore__ inline void ComputeTransLayout(
-        LocalTensor<int8_t>& scaleTensor, LocalTensor<int8_t>& scaleBlockTensor, uint16_t M, uint16_t scaleBlockN)
+    __aicore__ inline void ComputeTransLayout(LocalTensor<int8_t>& scaleTensor, LocalTensor<int8_t>& scaleBlockTensor,
+                                              uint16_t M, uint16_t scaleBlockN)
     {
         __ubuf__ int8_t* qscaleAddr = (__ubuf__ int8_t*)scaleTensor.GetPhyAddr();
         __ubuf__ int8_t* qscaleBlkAddr = (__ubuf__ int8_t*)scaleBlockTensor.GetPhyAddr();
         VF_CALL<TransLayoutVf>(qscaleAddr, qscaleBlkAddr, M, scaleBlockN);
     }
 
-    __aicore__ inline void PadScale(
-        LocalTensor<int8_t>& scaleTensor, LocalTensor<int8_t>& scaleBlockTensor, uint32_t nKRatio, uint32_t nkIdx,
-        uint32_t blkM)
+    __aicore__ inline void PadScale(LocalTensor<int8_t>& scaleTensor, LocalTensor<int8_t>& scaleBlockTensor,
+                                    uint32_t nKRatio, uint32_t nkIdx, uint32_t blkM)
     {
         uint16_t firstNum = (nKRatio - nkIdx <= blkM) ? nKRatio - nkIdx : blkM;
         uint16_t rowLoopNum = (firstNum < blkM) ? (blkM - firstNum) / nKRatio : 0;
@@ -445,9 +439,8 @@ private:
     }
 
     template <bool needExp>
-    static __simd_vf__ inline void ExpMaxVf(
-        __ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* srcPtr, uint32_t count, uint16_t repeatTimes,
-        uint32_t oneRepeatSize)
+    static __simd_vf__ inline void ExpMaxVf(__ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* srcPtr, uint32_t count,
+                                            uint16_t repeatTimes, uint32_t oneRepeatSize)
     {
         RegTensor<bfloat16_t> vSrcReg0;
         RegTensor<bfloat16_t> vSrcReg1;
@@ -484,9 +477,9 @@ private:
     }
 
     template <bool needExp>
-    static __simd_vf__ inline void ClampExpMaxVf(
-        __ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* dst2Ptr, __ubuf__ bfloat16_t* srcPtr, uint32_t count,
-        bfloat16_t alpha, uint16_t repeatTimes, uint32_t oneRepeatSize)
+    static __simd_vf__ inline void ClampExpMaxVf(__ubuf__ uint16_t* dstPtr, __ubuf__ bfloat16_t* dst2Ptr,
+                                                 __ubuf__ bfloat16_t* srcPtr, uint32_t count, bfloat16_t alpha,
+                                                 uint16_t repeatTimes, uint32_t oneRepeatSize)
     {
         RegTensor<bfloat16_t> vSrcReg0;
         RegTensor<bfloat16_t> vSrcReg1;
@@ -519,11 +512,11 @@ private:
             Mul(vLimitReg, (RegTensor<bfloat16_t>&)vdMaxExp, alphaReg, maskReg);
             if constexpr (needExp) {
                 And(vExpExtract, (RegTensor<uint16_t>&)vLimitReg, expMaskBF16, maskReg);
-                StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(
-                    dstPtr, vExpExtract, u1, STORE_UNALIGN_STRIDE_BYTES);
+                StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, vExpExtract, u1,
+                                                                      STORE_UNALIGN_STRIDE_BYTES);
             } else {
-                StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(
-                    dstPtr, (RegTensor<uint16_t>&)vLimitReg, u1, STORE_UNALIGN_STRIDE_BYTES);
+                StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, (RegTensor<uint16_t>&)vLimitReg, u1,
+                                                                      STORE_UNALIGN_STRIDE_BYTES);
             }
             StoreUnAlign<bfloat16_t, PostLiteral::POST_MODE_UPDATE>(dst2Ptr, vLimitReg, u2, STORE_UNALIGN_STRIDE_BYTES);
         }
@@ -532,9 +525,9 @@ private:
     }
 
     template <bool isDynamic>
-    static __simd_vf__ inline void ScaleVf(
-        __ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr, __ubuf__ uint16_t* srcPtr, uint32_t scaleNum,
-        uint16_t repeatTimes, uint16_t addValueBit, uint16_t maxExpValue_)
+    static __simd_vf__ inline void ScaleVf(__ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr,
+                                           __ubuf__ uint16_t* srcPtr, uint32_t scaleNum, uint16_t repeatTimes,
+                                           uint16_t addValueBit, uint16_t maxExpValue_)
     {
         RegTensor<uint16_t> vdMaxExp;
         RegTensor<uint16_t> vdMaxExpAdd;
@@ -588,8 +581,8 @@ private:
 
             ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
             Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            StoreAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK_B16>(
-                dstPtr, scaleValue, vfLen32, preMaskScale);
+            StoreAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK_B16>(dstPtr, scaleValue, vfLen32,
+                                                                                          preMaskScale);
             Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
             Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             Sub(halfScale, scaleBias, sharedExp, preMaskScale);
@@ -601,9 +594,9 @@ private:
     }
 
     template <bool isFP8>
-    static __simd_vf__ inline void ScaleVfcuBLAS(
-        __ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr, __ubuf__ uint16_t* srcPtr, uint32_t scaleNum,
-        uint16_t repeatTimes, float invDstTypeMax, uint32_t dtypeMax)
+    static __simd_vf__ inline void ScaleVfcuBLAS(__ubuf__ uint16_t* dstPtr, __ubuf__ uint16_t* dst2Ptr,
+                                                 __ubuf__ uint16_t* srcPtr, uint32_t scaleNum, uint16_t repeatTimes,
+                                                 float invDstTypeMax, uint32_t dtypeMax)
     {
         RegTensor<uint16_t> max16;
         RegTensor<uint32_t> max32;
@@ -646,8 +639,8 @@ private:
             preMaskScale = UpdateMask<uint32_t>(scaleNum);
             LoadAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_UNPACK_B16>(max16, srcPtr, vfLen32);
 
-            Cast<float, bfloat16_t, castTraitZero>(
-                (RegTensor<float>&)max32, (RegTensor<bfloat16_t>&)max16, preMaskScale);
+            Cast<float, bfloat16_t, castTraitZero>((RegTensor<float>&)max32, (RegTensor<bfloat16_t>&)max16,
+                                                   preMaskScale);
             Compare<uint32_t, CMPMODE::LT>(cmpResult, max32, expMask, preMaskScale);
             Compare<uint32_t, CMPMODE::NE>(zeroMask, max32, zeroRegTensor32, preMaskScale);
 
@@ -684,9 +677,9 @@ private:
     }
 
     template <RoundMode roundMode, bool needClamp>
-    static __simd_vf__ inline void QuantVfFP4(
-        __ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr, __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
-        uint32_t oneRepeatSize, uint16_t repeatTimes)
+    static __simd_vf__ inline void QuantVfFP4(__ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr,
+                                              __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
+                                              uint32_t oneRepeatSize, uint16_t repeatTimes)
     {
         MaskReg dataMask1;
         MaskReg dataMask2;
@@ -708,8 +701,8 @@ private:
             dataMask1 = UpdateMask<bfloat16_t>(oneRepeatSize);
             dataMask2 = UpdateMask<bfloat16_t>(oneRepeatSize);
 
-            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(
-                vdExp0, vdExp1, srcPtr, 128 * 2);
+            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
+                                                                                           128 * 2);
             DataCopy<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
 
             if constexpr (needClamp) {
@@ -735,9 +728,9 @@ private:
     }
 
     template <typename FP8Type, bool needClamp>
-    static __simd_vf__ inline void QuantVfFP8(
-        __ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr, __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
-        uint32_t oneRepeatSize, uint16_t repeatTimes)
+    static __simd_vf__ inline void QuantVfFP8(__ubuf__ int8_t* dstPtr, __ubuf__ bfloat16_t* srcPtr,
+                                              __ubuf__ uint16_t* src2Ptr, __ubuf__ bfloat16_t* src3Ptr,
+                                              uint32_t oneRepeatSize, uint16_t repeatTimes)
     {
         MaskReg dataMaskB16 = CreateMask<bfloat16_t>();
         MaskReg dataMaskB8 = CreateMask<FP8Type>();
@@ -761,8 +754,8 @@ private:
         for (uint16_t i = 0; i < repeatTimes; i++) {
             aReg = CreateAddrReg<uint16_t>(i, oneRepeatSize);
 
-            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(
-                vdExp0, vdExp1, srcPtr, 128 * 2);
+            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
+                                                                                           128 * 2);
             DataCopy<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
 
             if constexpr (needClamp) {
@@ -799,8 +792,8 @@ private:
         }
     }
 
-    static __simd_vf__ inline void TransLayoutVf(
-        __ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr, uint16_t mSize, uint16_t scaleBlockN)
+    static __simd_vf__ inline void TransLayoutVf(__ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr,
+                                                 uint16_t mSize, uint16_t scaleBlockN)
     {
         for (uint16_t mIdx = 0; mIdx < mSize; ++mIdx) {
             uint32_t eleNum = scaleBlockN;
@@ -816,9 +809,9 @@ private:
         }
     }
 
-    static __simd_vf__ inline void PadScaleVf(
-        __ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr, uint32_t nkIdx, uint32_t nKRatio, uint16_t firstNum,
-        uint16_t lastNum, uint16_t rowLoopNum)
+    static __simd_vf__ inline void PadScaleVf(__ubuf__ int8_t* scaleAddr, __ubuf__ int8_t* scaleBlkAddr, uint32_t nkIdx,
+                                              uint32_t nKRatio, uint16_t firstNum, uint16_t lastNum,
+                                              uint16_t rowLoopNum)
     {
         DataCopyByCount(scaleBlkAddr, scaleAddr, firstNum);
         scaleAddr += firstNum;
@@ -835,7 +828,8 @@ private:
         }
     }
 
-    static __simd_callee__ inline void DataCopyByCount(__ubuf__ int8_t* dstAddr, __ubuf__ int8_t* srcAddr, uint32_t count) 
+    static __simd_callee__ inline void DataCopyByCount(__ubuf__ int8_t* dstAddr, __ubuf__ int8_t* srcAddr,
+                                                       uint32_t count)
     {
         uint16_t loopNum = (count + vfLen8 - 1) / vfLen8;
         RegTensor<int8_t> vReg0;

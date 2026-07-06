@@ -15,15 +15,9 @@
 
 class l2GroupedQuantMaxTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2GroupedQuantMaxTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2GroupedQuantMaxTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2GroupedQuantMaxTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2GroupedQuantMaxTest TearDown" << std::endl; }
 };
 
 // Test null input x
@@ -44,8 +38,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_null_x)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_NULLPTR);
 }
 
@@ -67,8 +61,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_null_scale)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_NULLPTR);
 }
 
@@ -90,8 +84,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_null_group_list)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_NULLPTR);
 }
 
@@ -113,8 +107,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_null_y)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_NULLPTR);
 }
 
@@ -136,8 +130,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_null_amax)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_NULLPTR);
 }
 
@@ -160,8 +154,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_unsupported_dtype)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -184,8 +178,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_invalid_dst_type)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -208,8 +202,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_dst_type_out_of_range)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -232,8 +226,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_invalid_scale_dtype)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -256,8 +250,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_invalid_group_list_dtype)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -280,8 +274,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_y_shape_mismatch)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -304,8 +298,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_amax_dtype_mismatch)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -328,8 +322,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_roundmode_mismatch_e5m2)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -352,8 +346,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_roundmode_mismatch_hifloat8)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -376,8 +370,8 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_roundmode_nullptr)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -393,15 +387,15 @@ TEST_F(l2GroupedQuantMaxTest, l2_grouped_quant_max_y_dtype_mismatch_dsttype)
     aclTensor* x = xDesc.ToAclTypeRawPtr();
     aclTensor* scale = scaleDesc.ToAclTypeRawPtr();
     aclTensor* groupList = groupListDesc.ToAclTypeRawPtr();
-    int64_t dstType = 35;  // E5M2, but y dtype is HIFLOAT8
+    int64_t dstType = 35; // E5M2, but y dtype is HIFLOAT8
     char roundMode[] = "rint";
     aclTensor* y = yDesc.ToAclTypeRawPtr();
     aclTensor* amax = amaxDesc.ToAclTypeRawPtr();
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
 
@@ -424,8 +418,8 @@ TEST_F(l2GroupedQuantMaxTest, DISABLED_l2_grouped_quant_max_fp32_to_fp8_e5m2)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_SUCCESS);
 }
 
@@ -448,8 +442,8 @@ TEST_F(l2GroupedQuantMaxTest, DISABLED_l2_grouped_quant_max_fp16_to_fp8_e4m3fn)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_SUCCESS);
 }
 
@@ -472,7 +466,7 @@ TEST_F(l2GroupedQuantMaxTest, DISABLED_l2_grouped_quant_max_bf16_to_hifloat8_hyb
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
 
-    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(
-        x, scale, groupList, roundMode, dstType, y, amax, &workspaceSize, &executor);
+    aclnnStatus ret = aclnnGroupedQuantMaxGetWorkspaceSize(x, scale, groupList, roundMode, dstType, y, amax,
+                                                           &workspaceSize, &executor);
     EXPECT_EQ(ret, ACLNN_SUCCESS);
 }

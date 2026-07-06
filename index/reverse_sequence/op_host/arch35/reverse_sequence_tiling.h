@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file reverse_sequence_tiling.h
-* \brief
-*/
+ * \file reverse_sequence_tiling.h
+ * \brief
+ */
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_FILL_D_TILING_H
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_FILL_D_TILING_H
 #include "register/op_def_registry.h"
@@ -27,5 +27,5 @@ struct ReverseSequenceCompileInfo {
     uint64_t ubSize = 0;
 };
 
-}  // namespace optiling
-#endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_REVERSE_SEQUENCE_TILING_H
+} // namespace optiling
+#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_REVERSE_SEQUENCE_TILING_H

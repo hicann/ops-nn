@@ -22,8 +22,7 @@
 extern "C" {
 #endif
 
-namespace op
-{
+namespace op {
 // 针对reduction!='none'且self为空tensor场景，对out按照给定值进行填充
 static aclnnStatus CheckFillScalarLoss(aclTensor* out, float val, aclOpExecutor* executor)
 {
@@ -81,8 +80,8 @@ inline static bool CheckReductionMseLoss(int64_t reduction, int64_t REDUCTION_SU
     return true;
 }
 
-}  // namespace op
+} // namespace op
 #ifdef __cplusplus
 }
 #endif
-#endif  // LEVEL2_BASE_LOSS_H_
+#endif // LEVEL2_BASE_LOSS_H_

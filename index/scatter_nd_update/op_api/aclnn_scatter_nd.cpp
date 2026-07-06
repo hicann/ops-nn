@@ -35,12 +35,13 @@ static constexpr size_t MIN_INPUT_DIM_NUM = 1;
 static constexpr size_t MAX_INPUT_DIM_MUM = 8;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_DATA = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BOOL, op::DataType::DT_BF16
-};
+    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BOOL, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDICES = { op::DataType::DT_INT64, op::DataType::DT_INT32 };
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDICES = {op::DataType::DT_INT64,
+                                                                               op::DataType::DT_INT32};
 
-static bool CheckNotNull(const aclTensor *data, const aclTensor *indices, const aclTensor *updates, const aclTensor *out)
+static bool CheckNotNull(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                         const aclTensor* out)
 {
     OP_CHECK_NULL(data, return false);
     OP_CHECK_NULL(indices, return false);
@@ -49,7 +50,8 @@ static bool CheckNotNull(const aclTensor *data, const aclTensor *indices, const 
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *data, const aclTensor *indices, const aclTensor *updates, const aclTensor *out)
+static bool CheckDtypeValid(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                            const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(data, DTYPE_SUPPORT_LIST_DATA, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(indices, DTYPE_SUPPORT_LIST_INDICES, return false);
@@ -65,7 +67,7 @@ static bool CheckDtypeValid(const aclTensor *data, const aclTensor *indices, con
     return true;
 }
 
-static bool CheckShape(const aclTensor *data, const aclTensor *indices, const aclTensor *updates, const aclTensor *out)
+static bool CheckShape(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, const aclTensor* out)
 {
     OP_CHECK_MIN_DIM(data, MIN_INPUT_DIM_NUM, return false);
     OP_CHECK_MIN_DIM(indices, MIN_INPUT_DIM_NUM, return false);
@@ -76,30 +78,31 @@ static bool CheckShape(const aclTensor *data, const aclTensor *indices, const ac
     OP_CHECK_SHAPE_NOT_EQUAL(data, out, return false);
 
     auto indicesRank = indices->GetViewShape().GetDimNum();
-    auto lastIndicesShapeDim = indices->GetViewShape().GetDim(indicesRank-1);
+    auto lastIndicesShapeDim = indices->GetViewShape().GetDim(indicesRank - 1);
     auto dataRank = data->GetViewShape().GetDimNum();
     auto updatesRank = updates->GetViewShape().GetDimNum();
     // q + r - indices.shape[-1] - 1
-    if (dataRank + indicesRank - lastIndicesShapeDim -1 != updatesRank) {
+    if (dataRank + indicesRank - lastIndicesShapeDim - 1 != updatesRank) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the rank of data,indices should match the shape of updates");
         return false;
     }
 
     // indices.shape[-1] <= len(data.shape)
-    if (indices->GetViewShape().GetDim(indicesRank-1) > static_cast<int64_t>(data->GetViewShape().GetDimNum())) {
+    if (indices->GetViewShape().GetDim(indicesRank - 1) > static_cast<int64_t>(data->GetViewShape().GetDimNum())) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the rank of data should bigger than indices");
         return false;
     }
 
     // updates.shape == indices.shape[:-1] + data.shape[indices.shape[-1] :]
-    for (int i = 0;i < static_cast<int>(indicesRank) - 1;++i) {
+    for (int i = 0; i < static_cast<int>(indicesRank) - 1; ++i) {
         if (updates->GetViewShape().GetDim(i) != indices->GetViewShape().GetDim(i)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the shape of data, indices and updates are not matched");
             return false;
         }
     }
-    for (int i = 0;i < static_cast<int>(dataRank) - lastIndicesShapeDim;++i) {
-        if (data->GetViewShape().GetDim(i+lastIndicesShapeDim) != updates->GetViewShape().GetDim(i+indicesRank-1)) {
+    for (int i = 0; i < static_cast<int>(dataRank) - lastIndicesShapeDim; ++i) {
+        if (data->GetViewShape().GetDim(i + lastIndicesShapeDim) !=
+            updates->GetViewShape().GetDim(i + indicesRank - 1)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the shape of data, indices and updates are not matched");
             return false;
         }
@@ -108,7 +111,8 @@ static bool CheckShape(const aclTensor *data, const aclTensor *indices, const ac
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *data, const aclTensor *indices, const aclTensor *updates, const aclTensor *out)
+static aclnnStatus CheckParams(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                               const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(data, indices, updates, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -121,8 +125,8 @@ static aclnnStatus CheckParams(const aclTensor *data, const aclTensor *indices, 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnScatterNdGetWorkspaceSize(const aclTensor *data, const aclTensor *indices, const aclTensor *updates,
-                                           aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)
+aclnnStatus aclnnScatterNdGetWorkspaceSize(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                                           aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnScatterNd, DFX_IN(data, indices, updates), DFX_OUT(out));
     // 参数检查
@@ -149,7 +153,8 @@ aclnnStatus aclnnScatterNdGetWorkspaceSize(const aclTensor *data, const aclTenso
     CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行L0算子
-    auto updateRet = l0op::ScatterNdUpdate(dataContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
+    auto updateRet = l0op::ScatterNdUpdate(dataContiguous, indicesContiguous, updatesContiguous, false,
+                                           uniqueExecutor.get());
     CHECK_RET(updateRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将计算结果拷贝到输出输出上
@@ -162,7 +167,7 @@ aclnnStatus aclnnScatterNdGetWorkspaceSize(const aclTensor *data, const aclTenso
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnScatterNd(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)
+aclnnStatus aclnnScatterNd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnScatterNd);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

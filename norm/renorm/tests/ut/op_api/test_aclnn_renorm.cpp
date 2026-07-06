@@ -19,18 +19,11 @@
 
 using namespace std;
 
-class l2_renorm_test : public testing::Test
-{
+class l2_renorm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "renorm_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "renorm_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "renorm_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "renorm_test TearDown" << endl; }
 };
 
 TEST_F(l2_renorm_test, case_dtype_fp16)

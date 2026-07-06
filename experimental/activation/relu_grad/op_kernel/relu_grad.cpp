@@ -17,12 +17,14 @@
 using namespace AscendC;
 
 template <uint32_t schMode>
-__global__ __aicore__ void relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void relu_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR backprops, GM_ADDR workspace,
+                                     GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ReluGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(ReluGradTilingData, tilingData, tiling);
     NsReluGrad::KernelReluGrad<DTYPE_GRADIENTS> op; // 算子kernel实例获取
-     op.Init(gradients, features, backprops, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
-        tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum);
+    op.Init(gradients, features, backprops, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum,
+            tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
+            tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum);
     op.Process();
 }

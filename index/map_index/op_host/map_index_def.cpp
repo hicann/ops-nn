@@ -14,49 +14,49 @@
  */
 
 #include "register/op_def_registry.h"
- 
-namespace ops {
- class MapIndex : public OpDef {
- public:
-     explicit MapIndex(const char* name) : OpDef(name)
-     {
-         this->Input("x")
-             .ParamType(REQUIRED)
-             .DataType({ge::DT_INT32})
-             .Format({ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND})
-             .AutoContiguous();
-         this->Input("data_seq")
-             .ParamType(REQUIRED)
-             .DataType({ge::DT_INT32})
-             .Format({ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND})
-             .AutoContiguous();
-         this->Input("level_index")
-             .ParamType(OPTIONAL)
-             .DataType({ge::DT_INT32})
-             .Format({ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND})
-             .AutoContiguous();
-         this->Output("y")
-             .ParamType(REQUIRED)
-             .DataType({ge::DT_INT32})
-             .Format({ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND});
 
-         this->Attr("transpose").AttrType(OPTIONAL).Bool(false);
-         
-         OpAICoreConfig aicoreConfig;
-         aicoreConfig.DynamicCompileStaticFlag(true)
-             .DynamicFormatFlag(false)
-             .DynamicRankSupportFlag(true)
-             .DynamicShapeSupportFlag(true)
-             .NeedCheckSupportFlag(false)
-             .PrecisionReduceFlag(true)
-             .ExtendCfgInfo("opFile.value", "map_index_apt");
-         this->AICore().AddConfig("ascend950", aicoreConfig);
-     }
- };
- 
- OP_ADD(MapIndex);
- }  // namespace ops
+namespace ops {
+class MapIndex : public OpDef {
+public:
+    explicit MapIndex(const char* name) : OpDef(name)
+    {
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("data_seq")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("level_index")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+
+        this->Attr("transpose").AttrType(OPTIONAL).Bool(false);
+
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "map_index_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
+
+OP_ADD(MapIndex);
+} // namespace ops

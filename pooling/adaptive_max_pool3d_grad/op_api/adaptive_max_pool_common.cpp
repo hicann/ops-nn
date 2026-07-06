@@ -29,10 +29,10 @@ using namespace op;
 
 namespace AdaptiveMaxPoolCommon {
 static const std::initializer_list<DataType> NULL_DTYPE_SUPPORT_LIST = {};
-static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST = {
-    DataType::DT_BF16, DataType::DT_FLOAT16, DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST = {DataType::DT_BF16, DataType::DT_FLOAT16,
+                                                                        DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                               op::DataType::DT_INT64};
 
 static const size_t CDHW_DIMS = 4;
 
@@ -44,8 +44,7 @@ static const int64_t STRIDE_DIM_NUM = SPATIAL_DIM_NUM;
 static const int64_t PADDING_DIM_NUM = SPATIAL_DIM_NUM;
 static const int64_t DILATION_DIM_NUM = SPATIAL_DIM_NUM;
 
-bool CheckNotNullPtr(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput)
+bool CheckNotNullPtr(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput)
 {
     // gradOutput, self, indices, kernelSize, stride, padding, dilation, gradInput cannot be null pointers
     OP_CHECK_NULL(gradOutput, return false);
@@ -74,8 +73,8 @@ const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion()
     }
 }
 
-bool CheckShapeSame(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
+bool CheckShapeSame(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                    const aclTensor* gradInput)
 {
     op::Shape gradOutputShape = gradOutput->GetViewShape();
     op::Shape selfShape = self->GetViewShape();
@@ -86,11 +85,10 @@ bool CheckShapeSame(
     size_t gradOutputDimNum = gradOutputShape.GetDimNum();
     size_t indicesDimNum = indicesShape.GetDimNum();
     if ((selfDimNum != gradInputDimNum) || (selfDimNum != gradOutputDimNum) || (selfDimNum != indicesDimNum)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Dims of self and gradOutput and gradInput and indices should be same, self[%lu], gradOutput[%lu], "
-            "gradInput[%lu], indices[%lu].",
-            selfDimNum, gradOutputDimNum, gradInputDimNum, indicesDimNum);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Dims of self and gradOutput and gradInput and indices should be same, self[%lu], gradOutput[%lu], "
+                "gradInput[%lu], indices[%lu].",
+                selfDimNum, gradOutputDimNum, gradInputDimNum, indicesDimNum);
         return false;
     }
     for (size_t idx = 0; idx < selfDimNum; idx++) {
@@ -106,8 +104,8 @@ bool CheckShapeSame(
     return true;
 }
 
-bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
+bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                     const aclTensor* gradInput)
 {
     OP_CHECK_DTYPE_NOT_SAME(self, gradOutput, return false);
     OP_CHECK_DTYPE_NOT_SAME(self, gradInput, return false);
@@ -117,8 +115,8 @@ bool CheckDtypeValid(
     return true;
 }
 
-aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput)
+aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                        aclTensor* gradInput)
 {
     CHECK_RET(CheckNotNullPtr(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
@@ -126,9 +124,8 @@ aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-const aclTensor* selectLevelZeroOperation(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* /* gradInput */,
-    aclOpExecutor* executor)
+const aclTensor* selectLevelZeroOperation(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
+                                          aclTensor* /* gradInput */, aclOpExecutor* executor)
 {
     const auto& selfShape = self->GetViewShape();
     const auto& gradOutputShape = gradOutput->GetViewShape();
@@ -171,8 +168,8 @@ const aclTensor* selectLevelZeroOperation(
         CHECK_RET(dilation != nullptr, nullptr);
         bool ceilMode = false;
 
-        auto gradInputResult = l0op::MaxPool3DGradWithArgmax(
-            gradOutput, self, indices, calculatedKernelSize, calculatedStride, padding, dilation, ceilMode, executor);
+        auto gradInputResult = l0op::MaxPool3DGradWithArgmax(gradOutput, self, indices, calculatedKernelSize,
+                                                             calculatedStride, padding, dilation, ceilMode, executor);
 
         return gradInputResult;
     } else {
@@ -181,5 +178,4 @@ const aclTensor* selectLevelZeroOperation(
 
     return nullptr;
 }
-}
-
+} // namespace AdaptiveMaxPoolCommon

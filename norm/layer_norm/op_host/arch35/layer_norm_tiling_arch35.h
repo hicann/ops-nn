@@ -45,5 +45,5 @@ struct LayerNormOpInfo {
     LayerNormV3CompileInfo regbaseCompileInfo;
     bool is_regbase = true;
 };
-}  // namespace optiling
-#endif  // LAYER_NORM_TILING_ARCH35_H_
+} // namespace optiling
+#endif // LAYER_NORM_TILING_ARCH35_H_

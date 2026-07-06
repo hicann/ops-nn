@@ -25,7 +25,7 @@ namespace batch_matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswAL1FullLoadBasicTiling, DAV_3510, AL1_FULL_LOAD_BASIC);
 
-//supportMmadS8S4平台
+// supportMmadS8S4平台
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswAL1FullLoadBasicTiling, DAV_RESV, AL1_FULL_LOAD_BASIC);
 
 bool BatchMatMulV3AswAL1FullLoadBasicTiling::IsCapable()

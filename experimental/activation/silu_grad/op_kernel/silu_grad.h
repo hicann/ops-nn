@@ -29,7 +29,8 @@ class KernelSiluGrad {
 public:
     __aicore__ inline KernelSiluGrad() {}
 
-    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR dx, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t tileDataNum, uint64_t tailBlockNum, uint64_t schMode);
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR dx, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum,
+                                uint64_t tileDataNum, uint64_t tailBlockNum, uint64_t schMode);
     __aicore__ inline void Process();
 
 private:
@@ -62,7 +63,9 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void KernelSiluGrad<T>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR dx, uint64_t smallCoreDataNum, uint64_t bigCoreDataNum, uint64_t tileDataNum, uint64_t tailBlockNum, uint64_t schMode)
+__aicore__ inline void KernelSiluGrad<T>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR dx, uint64_t smallCoreDataNum,
+                                               uint64_t bigCoreDataNum, uint64_t tileDataNum, uint64_t tailBlockNum,
+                                               uint64_t schMode)
 {
     ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = GetBlockIdx();

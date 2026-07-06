@@ -25,17 +25,16 @@
 using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SyncBNTrainingUpdate);
-const aclTensor* SyncBNTrainingUpdate(
-    const aclTensor* meanAll, const aclTensor* runningMean, const float momentum, aclOpExecutor* executor)
+const aclTensor* SyncBNTrainingUpdate(const aclTensor* meanAll, const aclTensor* runningMean, const float momentum,
+                                      aclOpExecutor* executor)
 {
     L0_DFX(SyncBNTrainingUpdate, meanAll, runningMean, momentum);
     auto out = executor->AllocTensor(meanAll->GetViewShape(), meanAll->GetDataType(), meanAll->GetViewFormat());
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        SyncBNTrainingUpdate, OP_INPUT(meanAll, runningMean), OP_OUTPUT(out), OP_ATTR(momentum));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SyncBNTrainingUpdateAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SyncBNTrainingUpdate, OP_INPUT(meanAll, runningMean), OP_OUTPUT(out),
+                                           OP_ATTR(momentum));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SyncBNTrainingUpdateAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 } // namespace l0op

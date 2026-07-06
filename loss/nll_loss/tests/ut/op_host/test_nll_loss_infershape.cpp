@@ -18,15 +18,9 @@
 // ----------------NLLLoss--------------
 class NLLLossProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "NLLLossProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "NLLLossProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "NLLLossProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "NLLLossProtoTest TearDown" << std::endl; }
 };
 
 TEST_F(NLLLossProtoTest, nll_loss_infershape_test1)
@@ -50,9 +44,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test1)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -88,9 +81,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test2)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -126,9 +118,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test3)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -164,9 +155,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test4)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -202,9 +192,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test5)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -240,9 +229,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test6)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("none")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -278,9 +266,8 @@ TEST_F(NLLLossProtoTest, nll_loss_infershape_test7)
                       .IrInstanceNum({1, 1, 1})
                       .InputShapes({&xShape, &targetShape, &weightShape})
                       .OutputShapes({&output_shape, &output_shape})
-                      .NodeAttrs(
-                          {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                           {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                  {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                       .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -306,9 +293,8 @@ TEST_F(NLLLossProtoTest, success_dtype_infer_0)
                           .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeAttrs(
-                              {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                               {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                          .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                      {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                           .InputDataTypes({&input_ref1, &input_ref2, &input_ref1})
                           .OutputDataTypes({&output_ref, &output_ref})
                           .Build();
@@ -335,9 +321,8 @@ TEST_F(NLLLossProtoTest, fail_dtype_infer_0)
                           .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                           .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeAttrs(
-                              {{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
-                               {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
+                          .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
+                                      {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)}})
                           .InputDataTypes({&input_ref1, &input_ref2, &input_ref1})
                           .OutputDataTypes({&output_ref, &output_ref})
                           .Build();

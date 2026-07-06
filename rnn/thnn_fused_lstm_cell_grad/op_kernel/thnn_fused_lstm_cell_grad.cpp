@@ -16,17 +16,17 @@
 #include "thnn_fused_lstm_cell_grad.h"
 using namespace AscendC;
 
-#define GENERAL_OP_IMPL(templateClass, ...)                  \
-    do {                                                     \
-        templateClass<__VA_ARGS__> op;                       \
-        op.Init(dhy, dc, cx, cy, storage, dgates, dc_prev,          \
-                db, &tiling_data,                       \
-                workspace, &pipe);                           \
-        op.Process();                                        \
+#define GENERAL_OP_IMPL(templateClass, ...)                                                     \
+    do {                                                                                        \
+        templateClass<__VA_ARGS__> op;                                                          \
+        op.Init(dhy, dc, cx, cy, storage, dgates, dc_prev, db, &tiling_data, workspace, &pipe); \
+        op.Process();                                                                           \
     } while (0)
 
 extern "C" __global__ __aicore__ void thnn_fused_lstm_cell_grad(GM_ADDR dhy, GM_ADDR dc, GM_ADDR cx, GM_ADDR cy,
-    GM_ADDR storage, GM_ADDR dgates, GM_ADDR dc_prev, GM_ADDR db, GM_ADDR workspace, GM_ADDR lstmCellGradTiling)
+                                                                GM_ADDR storage, GM_ADDR dgates, GM_ADDR dc_prev,
+                                                                GM_ADDR db, GM_ADDR workspace,
+                                                                GM_ADDR lstmCellGradTiling)
 {
     GET_TILING_DATA(tiling_data, lstmCellGradTiling);
     const ThnnFusedLstmCellGradTilingData* __restrict tilingData = &tiling_data;

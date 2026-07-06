@@ -26,50 +26,43 @@ using namespace ge;
 
 class ForeachSubScalarListTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachSubScalarListTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachSubScalarListTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachSubScalarListTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachSubScalarListTiling TearDown" << std::endl; }
 };
 
 static std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
 
-struct ForeachSubScalarListCompileInfo {
-};
+struct ForeachSubScalarListCompileInfo {};
 
 // Test float32 case: DYNAMIC_INPUT with 1 instance, shape (32,4,4), float32
 TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_float32)
 {
     ForeachSubScalarListCompileInfo compileInfo;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachSubScalarList",
-        {
-            // DYNAMIC_INPUT x: 1 tensor, shape (32,4,4), float32
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            // DYNAMIC_INPUT scalars: 1 scalar tensor, shape (1,), float32
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            // DYNAMIC_OUTPUT y: shape (32,4,4), float32
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            /* attrs: none */
-        },
-        &compileInfo,
-        80,     // number of cores (ascend950)
-        262144, // ubsize
-        8192);  // max tiling data size
+    gert::TilingContextPara tilingContextPara("ForeachSubScalarList",
+                                              {
+                                                  // DYNAMIC_INPUT x: 1 tensor, shape (32,4,4), float32
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  // DYNAMIC_INPUT scalars: 1 scalar tensor, shape (1,), float32
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  // DYNAMIC_OUTPUT y: shape (32,4,4), float32
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs: none */
+                                              },
+                                              &compileInfo,
+                                              80,     // number of cores (ascend950)
+                                              262144, // ubsize
+                                              8192);  // max tiling data size
     uint64_t expectTilingKey = 0;
     // tiling data as 8-byte values: (needCoreNum,tensorCount)=4294967297, totalElements=512, tensorElements[0]=512
     // struct has 258 int64 values total (2 header + 256 tensorElements)
     std::string expectTilingData = "4294967297 512 512 ";
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
@@ -78,25 +71,22 @@ TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_float32)
 TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_int32)
 {
     ForeachSubScalarListCompileInfo compileInfo;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachSubScalarList",
-        {
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND},
-        },
-        {
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        80,
-        262144,
-        8192);
+    gert::TilingContextPara tilingContextPara("ForeachSubScalarList",
+                                              {
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 80, 262144, 8192);
     uint64_t expectTilingKey = 2;
     std::string expectTilingData = "4294967297 512 512 ";
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
@@ -105,25 +95,22 @@ TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_int32)
 TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_float16)
 {
     ForeachSubScalarListCompileInfo compileInfo;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachSubScalarList",
-        {
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        80,
-        262144,
-        8192);
+    gert::TilingContextPara tilingContextPara("ForeachSubScalarList",
+                                              {
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 80, 262144, 8192);
     uint64_t expectTilingKey = 1;
     std::string expectTilingData = "4294967297 512 512 ";
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
@@ -132,25 +119,22 @@ TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_float16)
 TEST_F(ForeachSubScalarListTiling, foreach_sub_scalar_list_bf16)
 {
     ForeachSubScalarListCompileInfo compileInfo;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachSubScalarList",
-        {
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{32, 4, 4}, {32, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            /* attrs */
-        },
-        &compileInfo,
-        80,
-        262144,
-        8192);
+    gert::TilingContextPara tilingContextPara("ForeachSubScalarList",
+                                              {
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{32, 4, 4}, {32, 4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 80, 262144, 8192);
     uint64_t expectTilingKey = 3;
     std::string expectTilingData = "4294967297 512 512 ";
-    for (int i = 1; i < 256; i++) expectTilingData += "0 ";
+    for (int i = 1; i < 256; i++)
+        expectTilingData += "0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }

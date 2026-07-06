@@ -17,16 +17,13 @@ using namespace op;
 
 class EmbeddingDenseGradV2ProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "EmbeddingDenseGradV2ProtoTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "EmbeddingDenseGradV2ProtoTest SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "EmbeddingDenseGradV2ProtoTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "EmbeddingDenseGradV2ProtoTest TearDown" << std::endl; }
 };
 
-TEST_F(EmbeddingDenseGradV2ProtoTest, infer_shape_test) {
+TEST_F(EmbeddingDenseGradV2ProtoTest, infer_shape_test)
+{
     ge::op::EmbeddingDenseGradV2 op;
     op.UpdateInputDesc("grad", create_desc({1024, 4096}, ge::DT_FLOAT));
     op.UpdateInputDesc("sort_indices", create_desc({1024}, ge::DT_INT32));
@@ -36,13 +33,14 @@ TEST_F(EmbeddingDenseGradV2ProtoTest, infer_shape_test) {
     op.SetAttr("scale_grad_by_freq", false);
 
     std::vector<int64_t> expectedValueShape = {100, 4096};
-    Runtime2TestParam param {{"num_weights", "padding_idx", "scale_grad_by_freq"}};
+    Runtime2TestParam param{{"num_weights", "padding_idx", "scale_grad_by_freq"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     auto outputValue = op.GetOutputDescByName("y");
     EXPECT_EQ(outputValue.GetShape().GetDims(), expectedValueShape);
 }
 
-TEST_F(EmbeddingDenseGradV2ProtoTest, infer_dtype_test) {
+TEST_F(EmbeddingDenseGradV2ProtoTest, infer_dtype_test)
+{
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingDenseGradV2"), nullptr);
     auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingDenseGradV2")->infer_datatype;
 
@@ -52,14 +50,14 @@ TEST_F(EmbeddingDenseGradV2ProtoTest, infer_dtype_test) {
         ge::DataType inputRef3 = ge::DT_INT32;
         ge::DataType outputRef = ge::DT_FLOAT;
         auto contextHolder = gert::InferDataTypeContextFaker()
-            .NodeIoNum(3, 1)
-            .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-            .InputDataTypes({&inputRef1, &inputRef2, &inputRef3})
-            .OutputDataTypes({&outputRef})
-            .Build();
+                                 .NodeIoNum(3, 1)
+                                 .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                 .InputDataTypes({&inputRef1, &inputRef2, &inputRef3})
+                                 .OutputDataTypes({&outputRef})
+                                 .Build();
         auto context = contextHolder.GetContext<gert::InferDataTypeContext>();
         EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
         ASSERT_NE(context, nullptr);

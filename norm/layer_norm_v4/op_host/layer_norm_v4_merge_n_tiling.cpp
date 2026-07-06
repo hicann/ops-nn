@@ -1,10 +1,10 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -46,9 +46,9 @@ bool LayerNormV4MergeNTiling::IsCapable()
     if (commonParams.isV3) {
         return false;
     }
-    uint32_t nRow = (commonParams.colSize + commonParams.coreNum - 1 ) / commonParams.coreNum;
+    uint32_t nRow = (commonParams.colSize + commonParams.coreNum - 1) / commonParams.coreNum;
     uint32_t rowMax = (commonParams.ubSizePlatForm - UB_BUF) / FLOAT_SIZE / NUM_TWO;
-    if ((commonParams.rowSize < rowMax && nRow > NUM_TWO) || ((commonParams.rowSize <= COL_LIMIT) && nRow > NUM_TWO)){
+    if ((commonParams.rowSize < rowMax && nRow > NUM_TWO) || ((commonParams.rowSize <= COL_LIMIT) && nRow > NUM_TWO)) {
         return true;
     }
     return false;
@@ -60,7 +60,7 @@ uint64_t LayerNormV4MergeNTiling::GetTilingKey() const
     tilingKy = static_cast<uint64_t>(LayerNormV4TilingKey::LAYER_NORM_MERGE_N_FLOAT32_FLOAT32);
     tilingKy += commonParams.dtypeKey % NUM_TEN;
 
-    if (commonParams.rowSize <= COL_LIMIT){
+    if (commonParams.rowSize <= COL_LIMIT) {
         tilingKy += TILINGKEY_ALIGN_LIMIT;
         if (commonParams.rowSize == 1) {
             tilingKy += TILINGKEY_ALIGN_LIMIT;
@@ -90,19 +90,19 @@ void LayerNormV4MergeNTiling::PrepareTiling(uint64_t ubSize, uint32_t& nRow, uin
     uint32_t ableNRow = ubSize / FLOAT_SIZE / (1 + rowAlign) / NUM_TWO;
 
     if (rowAlign <= N_ROW_LIMIT) {
-        ableNRow = ableNRow / N_ROW_ALIGN * N_ROW_ALIGN; 
+        ableNRow = ableNRow / N_ROW_ALIGN * N_ROW_ALIGN;
     }
 
-    if(nRow > ableNRow){
+    if (nRow > ableNRow) {
         loopCount = nRow / ableNRow;
         formerRemainNum = nRow % ableNRow;
         nRow = ableNRow;
-    }else {
+    } else {
         loopCount = 1;
     }
 
-    if (tailNum > 0){
-        if(tailNRow > ableNRow){
+    if (tailNum > 0) {
+        if (tailNRow > ableNRow) {
             tailLoop = tailNRow / ableNRow;
             tailRemainNum = tailNRow % ableNRow;
             tailNRow = ableNRow;
@@ -110,16 +110,16 @@ void LayerNormV4MergeNTiling::PrepareTiling(uint64_t ubSize, uint32_t& nRow, uin
             tailLoop = 1;
         }
     }
-    td_.set_loopCount(loopCount);   // 单核循环次数(可能有问题)
-    td_.set_tailLoop(tailLoop);   // 同loopcount 此处小核
-    td_.set_tailNRow(tailNRow);   // 小核处理行数
-    td_.set_tailRemainNum(tailRemainNum);   // 小核尾行
-    td_.set_formerRemainNum(formerRemainNum);   // 大核尾行
-    td_.set_eps(commonParams.eps);   // eps
-    td_.set_ableNRow(ableNRow);   // 单核一次可处理行数
-    td_.set_tileLength(nRow * rowAlign);   // 大核单核总数据量
-    td_.set_blockLength(ableNRow * rowAlign);   // 大核单核总大小
-    td_.set_rowAlign(rowAlign);   // 列对齐
+    td_.set_loopCount(loopCount);             // 单核循环次数(可能有问题)
+    td_.set_tailLoop(tailLoop);               // 同loopcount 此处小核
+    td_.set_tailNRow(tailNRow);               // 小核处理行数
+    td_.set_tailRemainNum(tailRemainNum);     // 小核尾行
+    td_.set_formerRemainNum(formerRemainNum); // 大核尾行
+    td_.set_eps(commonParams.eps);            // eps
+    td_.set_ableNRow(ableNRow);               // 单核一次可处理行数
+    td_.set_tileLength(nRow * rowAlign);      // 大核单核总数据量
+    td_.set_blockLength(ableNRow * rowAlign); // 大核单核总大小
+    td_.set_rowAlign(rowAlign);               // 列对齐
 }
 
 ge::graphStatus LayerNormV4MergeNTiling::DoOpTiling()
@@ -132,7 +132,7 @@ ge::graphStatus LayerNormV4MergeNTiling::DoOpTiling()
     uint64_t colSize = commonParams.colSize;
     float coefficient = static_cast<float>(1.0) / static_cast<float>(rowSize);
     uint32_t formerNum = 0;
-    
+
     uint32_t tailNum = 0;
     uint64_t coreNum = commonParams.coreNum;
     uint64_t ubSize = commonParams.ubSizePlatForm - UB_BUF;
@@ -144,27 +144,27 @@ ge::graphStatus LayerNormV4MergeNTiling::DoOpTiling()
         numBlocks = static_cast<uint32_t>(coreNum);
         // 余数为前n个处理多余的行数
         formerNum = colSize % numBlocks;
-        if (formerNum == 0){
+        if (formerNum == 0) {
             formerNum = numBlocks;
             nRow = colSize / numBlocks;
-        }else {
+        } else {
             // 总核数减去前面的就是正常函数的个数40 - n
             tailNum = numBlocks - formerNum;
             // 向上取整
-            nRow = (colSize + numBlocks - 1 ) / numBlocks;
+            nRow = (colSize + numBlocks - 1) / numBlocks;
             tailNRow = colSize / numBlocks;
         }
     }
     PrepareTiling(ubSize, nRow, tailNRow, tailNum);
-    td_.set_numBlocks(numBlocks);   // 核数
-    td_.set_colSize(colSize);   // 行数
-    td_.set_rowSize(rowSize);   // 列数
-    td_.set_coefficient(coefficient);   // 系数
-    td_.set_nRow(nRow);   // 单核处理行数
-    td_.set_formerNum(formerNum);   // 大核数量
-    td_.set_tailNum(tailNum);   // 小核数量
-    td_.set_nullptrGamma(commonParams.gammaNullPtr);   // 
-    td_.set_nullptrBeta(commonParams.betaNullPtr);   // 
+    td_.set_numBlocks(numBlocks);                    // 核数
+    td_.set_colSize(colSize);                        // 行数
+    td_.set_rowSize(rowSize);                        // 列数
+    td_.set_coefficient(coefficient);                // 系数
+    td_.set_nRow(nRow);                              // 单核处理行数
+    td_.set_formerNum(formerNum);                    // 大核数量
+    td_.set_tailNum(tailNum);                        // 小核数量
+    td_.set_nullptrGamma(commonParams.gammaNullPtr); //
+    td_.set_nullptrBeta(commonParams.betaNullPtr);   //
     OP_LOGD(context_, "Exit MergeN OpTiling");
     return ge::GRAPH_SUCCESS;
 }

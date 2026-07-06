@@ -25,9 +25,9 @@ using namespace Common::OpKernel;
 constexpr uint8_t ADDCDIV_LIST_BYTE_PER_BLOCK = 32;
 
 template <typename T>
-__aicore__ void AddcDivListFloatAdapter(
-    const LocalTensor<T>& dstLocal, const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
-    const LocalTensor<T>& tensor3Local, const T& scalarVal, const int32_t& uValue)
+__aicore__ void AddcDivListFloatAdapter(const LocalTensor<T>& dstLocal, const LocalTensor<T>& tensor1Local,
+                                        const LocalTensor<T>& tensor2Local, const LocalTensor<T>& tensor3Local,
+                                        const T& scalarVal, const int32_t& uValue)
 {
     Div(tensor2Local, tensor2Local, tensor3Local, uValue);
     PipeBarrier<PIPE_V>();
@@ -43,9 +43,9 @@ __aicore__ void AddcDivListFloatAdapter(
     }
 }
 
-extern "C" __global__ __aicore__ void foreach_addcdiv_list(
-    GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3, GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_addcdiv_list(GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR tensor3,
+                                                           GM_ADDR scalar, GM_ADDR outputs, GM_ADDR workspace,
+                                                           GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
 

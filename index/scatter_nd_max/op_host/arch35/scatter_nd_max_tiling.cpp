@@ -18,7 +18,7 @@
 using Ops::NN::Optiling::TilingRegistry;
 using namespace AscendC;
 
-namespace optiling{
+namespace optiling {
 
 static ge::graphStatus Tiling4ScatterNdMax(gert::TilingContext* context)
 {
@@ -60,6 +60,4 @@ REGISTER_TILING_TEMPLATE("ScatterNdMax", ScatterNdMaxSimdSortTiling, 2);
 REGISTER_TILING_TEMPLATE("ScatterNdMax", ScatterNdMaxSimtSortTiling, 5);
 REGISTER_TILING_TEMPLATE("ScatterNdMax", ScatterNdMaxSimtTiling, 8);
 
-} //namespace optiling
-
-
+} // namespace optiling

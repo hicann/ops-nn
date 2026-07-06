@@ -14,8 +14,8 @@
  */
 #include "l1_loss_grad.h"
 
-extern "C" __global__ __aicore__ void l1_loss_grad(
-    GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void l1_loss_grad(GM_ADDR grads, GM_ADDR predict, GM_ADDR label, GM_ADDR y,
+                                                   GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(L1LossGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(L1LossGradTilingData, tilingData, tiling);

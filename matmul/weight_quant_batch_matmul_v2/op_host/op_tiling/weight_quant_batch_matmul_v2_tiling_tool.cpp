@@ -48,9 +48,7 @@ int64_t GetDtypeBits(ge::DataType dtype)
 {
     if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
         return B4_BITS;
-    } else if (
-        dtype == ge::DT_INT8 || dtype == ge::DT_HIFLOAT8 ||
-        dtype == ge::DT_FLOAT8_E4M3FN) {
+    } else if (dtype == ge::DT_INT8 || dtype == ge::DT_HIFLOAT8 || dtype == ge::DT_FLOAT8_E4M3FN) {
         return B8_BITS;
     } else if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16) {
         return B16_BITS;

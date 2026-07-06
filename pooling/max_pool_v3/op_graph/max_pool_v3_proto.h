@@ -94,14 +94,10 @@ namespace ge {
 * Compatible with the TensorFlow operator MaxPool.
 */
 REG_OP(MaxPoolV3)
-    .INPUT(
-        x, TensorType(
-               {DT_FLOAT16, DT_BF16, DT_FLOAT32, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8, DT_UINT16,
-                DT_QINT8}))
-    .OUTPUT(
-        y, TensorType(
-               {DT_FLOAT16, DT_BF16, DT_FLOAT32, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8, DT_UINT16,
-                DT_QINT8}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT32, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8,
+                          DT_UINT16, DT_QINT8}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT32, DT_DOUBLE, DT_INT32, DT_INT64, DT_UINT8, DT_INT16, DT_INT8,
+                           DT_UINT16, DT_QINT8}))
     .REQUIRED_ATTR(ksize, ListInt)
     .REQUIRED_ATTR(strides, ListInt)
     .ATTR(padding_mode, String, "CALCULATED")

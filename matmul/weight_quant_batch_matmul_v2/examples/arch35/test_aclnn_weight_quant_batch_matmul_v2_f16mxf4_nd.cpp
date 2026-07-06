@@ -56,11 +56,12 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-extern "C" aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(
-    const aclTensor* weight, const aclTensor* weightInt4Pack, uint64_t* workspaceSize, aclOpExecutor** executor);
+extern "C" aclnnStatus aclnnConvertWeightToINT4PackGetWorkspaceSize(const aclTensor* weight,
+                                                                    const aclTensor* weightInt4Pack,
+                                                                    uint64_t* workspaceSize, aclOpExecutor** executor);
 
-extern "C" aclnnStatus aclnnConvertWeightToINT4Pack(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream);
+extern "C" aclnnStatus aclnnConvertWeightToINT4Pack(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                    aclrtStream stream);
 
 int Init(int32_t deviceId, aclrtStream* stream)
 {
@@ -75,9 +76,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -94,16 +94,14 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensorB4(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor, aclFormat format)
+int CreateAclTensorB4(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                      aclDataType dataType, aclTensor** tensor, aclFormat format)
 {
     auto size = hostData.size() * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -121,9 +119,8 @@ int CreateAclTensorB4(
 
     // 调用aclCreateTensor接口创建aclTensor
     if (format == aclFormat::ACL_FORMAT_ND) {
-        *tensor = aclCreateTensor(
-            shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(),
-            shape.size(), *deviceAddr);
+        *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                  shape.data(), shape.size(), *deviceAddr);
     } else {
         std::vector<int64_t> nzShape;
         if (dataType == aclDataType::ACL_INT4 || dataType == aclDataType::ACL_FLOAT4_E2M1) {
@@ -131,9 +128,8 @@ int CreateAclTensorB4(
         } else {
             nzShape = {CeilDiv(shape[1], (int64_t)2), CeilDiv(shape[0], (int64_t)16), 16, 2};
         }
-        *tensor = aclCreateTensor(
-            shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_FRACTAL_NZ, nzShape.data(),
-            nzShape.size(), *deviceAddr);
+        *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0,
+                                  aclFormat::ACL_FORMAT_FRACTAL_NZ, nzShape.data(), nzShape.size(), *deviceAddr);
     }
 
     return 0;
@@ -219,11 +215,10 @@ int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> yDeviceAddrPtr(yDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建antiquantScale aclTensor
-    ret = CreateAclTensor(
-        antiquantScaleHostData, antiquantScaleShape, &antiquantScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
-        &antiquantScale);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> antiquantScaleTensorPtr(
-        antiquantScale, aclDestroyTensor);
+    ret = CreateAclTensor(antiquantScaleHostData, antiquantScaleShape, &antiquantScaleDeviceAddr,
+                          aclDataType::ACL_FLOAT8_E8M0, &antiquantScale);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> antiquantScaleTensorPtr(antiquantScale,
+                                                                                          aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> antiquantScaleDeviceAddrPtr(antiquantScaleDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建yFp16 aclTensor
@@ -243,9 +238,8 @@ int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
         weightB4PackHostData.resize(CeilAlign(weightDim1 / 2, (int64_t)8) * CeilAlign(weightDim0, (int64_t)16), 0);
     }
     // 创建weightInt4Pack aclTensor
-    ret = CreateAclTensorB4(
-        weightB4PackHostData, weightPackedShape, &weightB4PackDeviceAddr, weightPackedDtype, &weightPacked,
-        weightFormat);
+    ret = CreateAclTensorB4(weightB4PackHostData, weightPackedShape, &weightB4PackDeviceAddr, weightPackedDtype,
+                            &weightPacked, weightFormat);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> weightPackedTensorPtr(weightPacked, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> weightPackedDeviceAddrPtr(weightB4PackDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -268,9 +262,8 @@ int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
     // 调用aclnnWeightQuantBatchMatmulV2第一段接口
     workspaceSize = 0;
     executor = nullptr;
-    ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
-        x, weightPacked, antiquantScale, nullptr, nullptr, nullptr, nullptr, groupSize, yFp16, &workspaceSize,
-        &executor);
+    ret = aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(x, weightPacked, antiquantScale, nullptr, nullptr, nullptr,
+                                                        nullptr, groupSize, yFp16, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulV2GetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -311,9 +304,8 @@ int AclnnWeightQuantBatchMatmulV2Test(int32_t deviceId, aclrtStream& stream)
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), yDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     PrintMat(resultData, yShape);
     return ACL_SUCCESS;

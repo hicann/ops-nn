@@ -19,8 +19,8 @@
 #define _APPLY_PROXIMAL_GRADIENT_DESCENT_TILING_DATA_H_
 
 struct ApplyProximalGradientDescentTilingData {
-    int64_t totalNum    = 0;  // var 总元素数
-    int64_t blockFactor = 0;  // 每核基础元素数（按 UB block size 对齐）
-    int64_t ubFactor    = 0;  // 每次 UB tile 元素数
+    int64_t totalNum = 0;    // var 总元素数
+    int64_t blockFactor = 0; // 每核基础元素数（按 UB block size 对齐）
+    int64_t ubFactor = 0;    // 每次 UB tile 元素数
 };
 #endif

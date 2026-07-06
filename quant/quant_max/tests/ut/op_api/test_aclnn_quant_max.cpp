@@ -15,15 +15,9 @@
 
 class l2QuantMaxTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2QuantMaxTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2QuantMaxTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2QuantMaxTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2QuantMaxTest TearDown" << std::endl; }
 };
 
 // Test null input x
@@ -569,7 +563,7 @@ TEST_F(l2QuantMaxTest, l2_quant_max_roundmode_mismatch_e5m2_round)
 
     aclTensor* x = xDesc.ToAclTypeRawPtr();
     aclTensor* scale = scaleDesc.ToAclTypeRawPtr();
-    int64_t dstType = 35; // FLOAT8_E5M2 should use "rint"
+    int64_t dstType = 35;       // FLOAT8_E5M2 should use "rint"
     char roundMode[] = "round"; // Invalid for FLOAT8_E5M2
     aclTensor* y = yDesc.ToAclTypeRawPtr();
     aclTensor* amax = amaxDesc.ToAclTypeRawPtr();
@@ -590,7 +584,7 @@ TEST_F(l2QuantMaxTest, l2_quant_max_roundmode_mismatch_hifloat8_rint)
 
     aclTensor* x = xDesc.ToAclTypeRawPtr();
     aclTensor* scale = scaleDesc.ToAclTypeRawPtr();
-    int64_t dstType = 34; // HIFLOAT8 should use "round" or "hybrid"
+    int64_t dstType = 34;      // HIFLOAT8 should use "round" or "hybrid"
     char roundMode[] = "rint"; // Invalid for HIFLOAT8
     aclTensor* y = yDesc.ToAclTypeRawPtr();
     aclTensor* amax = amaxDesc.ToAclTypeRawPtr();
@@ -632,7 +626,7 @@ TEST_F(l2QuantMaxTest, l2_quant_max_roundmode_nullptr)
 
     aclTensor* x = xDesc.ToAclTypeRawPtr();
     aclTensor* scale = scaleDesc.ToAclTypeRawPtr();
-    int64_t dstType = 35; // FLOAT8_E5M2
+    int64_t dstType = 35;      // FLOAT8_E5M2
     char* roundMode = nullptr; // null roundMode
     aclTensor* y = yDesc.ToAclTypeRawPtr();
     aclTensor* amax = amaxDesc.ToAclTypeRawPtr();
@@ -653,7 +647,7 @@ TEST_F(l2QuantMaxTest, l2_quant_max_roundmode_empty_string)
 
     aclTensor* x = xDesc.ToAclTypeRawPtr();
     aclTensor* scale = scaleDesc.ToAclTypeRawPtr();
-    int64_t dstType = 35; // FLOAT8_E5M2
+    int64_t dstType = 35;  // FLOAT8_E5M2
     char roundMode[] = ""; // empty roundMode
     aclTensor* y = yDesc.ToAclTypeRawPtr();
     aclTensor* amax = amaxDesc.ToAclTypeRawPtr();

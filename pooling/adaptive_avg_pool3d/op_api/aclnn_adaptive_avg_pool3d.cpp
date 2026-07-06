@@ -39,8 +39,8 @@ static const int64_t cdhwShapeSize = 4;
 static const int64_t ncdhwShapeSize = 5;
 static const int64_t outputSizeLimit = 3;
 static const int64_t INDEX_W = 2;
-static const std::initializer_list<op::DataType> dtypeSupportList310P = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> dtypeSupportList310P = {op::DataType::DT_FLOAT,
+                                                                         op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> dtypeSupportListOrigin = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -68,10 +68,9 @@ static bool CheckInputOutputDims(const aclTensor* self, const aclTensor* out)
         return false;
     }
     // ncdhw n = 0, cdhw c= 0 is ok!
-    for (size_t i = Ops::NN::AclnnUtil::IsRegbase() ? 1 : 0 ; i < inputDimNum; i++) {
+    for (size_t i = Ops::NN::AclnnUtil::IsRegbase() ? 1 : 0; i < inputDimNum; i++) {
         if (inputShape.GetDim(i) <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i, 0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i, 0);
             return false;
         }
     }
@@ -85,9 +84,7 @@ static bool CheckInputOutputDims(const aclTensor* self, const aclTensor* out)
     }
     for (size_t i = offset; i < outputDimNum; i++) {
         if (outputShape.GetDim(i) <= 0) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Out dims is invalid, out No.[%lu] dim is not bigger than [%d].",
-                i, 0);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Out dims is invalid, out No.[%lu] dim is not bigger than [%d].", i, 0);
             return false;
         }
     }
@@ -118,20 +115,19 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 {
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
-            op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input and out should be equal, input [%s], out [%s].",
+                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
         return false;
     }
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        if (self->GetStorageFormat() != ge::FORMAT_NCDHW && self->GetStorageFormat() != ge::FORMAT_NCHW && self->GetStorageFormat() != ge::FORMAT_ND) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
-                op::ToString(self->GetStorageFormat()).GetString());
+        if (self->GetStorageFormat() != ge::FORMAT_NCDHW && self->GetStorageFormat() != ge::FORMAT_NCHW &&
+            self->GetStorageFormat() != ge::FORMAT_ND) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input is not supported, self [%s].",
+                    op::ToString(self->GetStorageFormat()).GetString());
             return false;
         }
-    }else {
+    } else {
         // 如果输入格式是私有格式，记录日志，直接报错
         if (op::IsPrivateFormat(self->GetStorageFormat())) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format don't support private format.");
@@ -199,17 +195,17 @@ static aclnnStatus DoReduceMean(const aclTensor* self, aclTensor* out, aclOpExec
 }
 
 // InputSize不为[1,1,1]
-static aclnnStatus DoAdaptiveAvgPool3D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus DoAdaptiveAvgPool3D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                       aclOpExecutor* executor)
 {
     auto inputReshape = self;
-    if(Ops::NN::AclnnUtil::IsRegbase()){
- 	         auto pool3dResult950 = l0op::AdaptiveAvgPool3d(self, outputSize, executor);
-             CHECK_RET(pool3dResult950 != nullptr, ACLNN_ERR_INNER_NULLPTR);
- 	         auto viewCopyResult = l0op::ViewCopy(pool3dResult950, out, executor);
- 	         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
- 	         return ACLNN_SUCCESS;
- 	}else {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        auto pool3dResult950 = l0op::AdaptiveAvgPool3d(self, outputSize, executor);
+        CHECK_RET(pool3dResult950 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyResult = l0op::ViewCopy(pool3dResult950, out, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    } else {
         // 将CDHW格式reshape为1CDHW
         if (self->GetViewShape().GetDimNum() == cdhwShapeSize) {
             op::Shape inputShape = self->GetViewShape();
@@ -252,8 +248,8 @@ static aclnnStatus DoAdaptiveAvgPool3D(
     }
 }
 
-static aclnnStatus SelectAdaptiveAvgPool3D(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus SelectAdaptiveAvgPool3D(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                           aclOpExecutor* executor)
 {
     int64_t dValue = (*outputSize)[0];
     int64_t hValue = (*outputSize)[1];
@@ -264,9 +260,8 @@ static aclnnStatus SelectAdaptiveAvgPool3D(
     return DoAdaptiveAvgPool3D(self, outputSize, out, executor);
 }
 
-aclnnStatus aclnnAdaptiveAvgPool3dGetWorkspaceSize(
-    const aclTensor* self, const aclIntArray* outputSize, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnAdaptiveAvgPool3dGetWorkspaceSize(const aclTensor* self, const aclIntArray* outputSize, aclTensor* out,
+                                                   uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnAdaptiveAvgPool3d, DFX_IN(self, outputSize), DFX_OUT(out));

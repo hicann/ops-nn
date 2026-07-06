@@ -17,17 +17,17 @@
 using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(HardSigmoidGrad);
-const aclTensor* HardSigmoidGrad(
-    const aclTensor* grads, const aclTensor* x, float alpha, float beta, aclOpExecutor* executor)
+const aclTensor* HardSigmoidGrad(const aclTensor* grads, const aclTensor* x, float alpha, float beta,
+                                 aclOpExecutor* executor)
 {
     L0_DFX(HardSigmoidGrad, grads, x, alpha, beta);
     auto y = executor->AllocTensor(x->GetViewShape(), x->GetDataType());
     CHECK_RET(y != nullptr, nullptr);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSigmoidGrad, OP_INPUT(grads, x), OP_OUTPUT(y), OP_ATTR(alpha, beta));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return y;
 }
 } // namespace l0op

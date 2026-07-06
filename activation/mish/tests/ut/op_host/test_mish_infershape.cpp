@@ -25,15 +25,9 @@
 
 class MishProtoTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "Mish Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "Mish Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "Mish Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "Mish Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(MishProtoTest, mish_infershape_fp16_test)

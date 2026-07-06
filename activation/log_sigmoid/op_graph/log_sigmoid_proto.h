@@ -35,8 +35,8 @@ namespace ge {
 *Compatible with the Pytorch operator LogSigmoid. \n
 */
 REG_OP(LogSigmoid)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16})) /* "input:x" */
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))  /* "output:y" */
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))  /* "input:x" */
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16})) /* "output:y" */
     .OP_END_FACTORY_REG(LogSigmoid)
 } // namespace ge
 #endif // LOG_SIGMOID_PROTO_H_

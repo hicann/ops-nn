@@ -13,9 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* GeluGrad(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused, const aclTensor* gradInput,
-    aclOpExecutor* executor);
+const aclTensor* GeluGrad(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* unused,
+                          const aclTensor* gradInput, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_GELU_GRAD_H_

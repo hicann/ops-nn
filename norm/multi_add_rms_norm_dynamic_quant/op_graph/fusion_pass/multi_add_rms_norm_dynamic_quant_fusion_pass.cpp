@@ -64,28 +64,26 @@ static es::EsTensorHolder BuildPatternConstNode(es::EsGraphBuilder& builder)
     std::string name = "Const_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Const")
-        .Name(name.c_str())
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Const")
+                     .Name(name.c_str())
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
 
-static es::EsTensorHolder BuildPatternReshapeNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& x, const es::EsTensorHolder& shape)
+static es::EsTensorHolder BuildPatternReshapeNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& x,
+                                                  const es::EsTensorHolder& shape)
 {
     static int counter = 0;
     std::string name = "Reshape_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("Reshape")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"shape", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                     .OpType("Reshape")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"shape", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *shape.GetProducer(), shape.GetProducerOutIndex(), node, 1);
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
@@ -124,8 +122,8 @@ static bool IsAllNodeNotNull(const std::vector<NodeIo>& input_nodes)
     for (const auto& input_node : input_nodes) {
         OPS_LOG_I(PASS_NAME.c_str(), "Check if node not null.");
         input_node.node.GetType(node_type);
-        OP_LOGE_IF(
-            &input_node.node == nullptr, false, PASS_NAME.c_str(), "node %s can't be null.", node_type.GetString());
+        OP_LOGE_IF(&input_node.node == nullptr, false, PASS_NAME.c_str(), "node %s can't be null.",
+                   node_type.GetString());
     }
     OPS_LOG_I(PASS_NAME.c_str(), "All nodes not null.");
     return true;
@@ -170,39 +168,30 @@ struct AddRmsNormResult {
     es::EsTensorHolder rstd;
 };
 
-static AddRmsNormResult BuildAddRmsNormNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& x1,
-    const es::EsTensorHolder& x2, const es::EsTensorHolder& gamma)
+static AddRmsNormResult BuildAddRmsNormNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& x1,
+                                            const es::EsTensorHolder& x2, const es::EsTensorHolder& gamma)
 {
     static int counter = 0;
     std::string name = "AddRmsNorm_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("AddRmsNorm")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x1", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"x2", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"gamma", es::CompliantNodeBuilder::kEsIrInputRequired, ""}
-        })
-        .IrDefOutputs({
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"rstd", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"x", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .IrDefAttrs({
-            {"epsilon", es::CompliantNodeBuilder::kEsAttrOptional, "Float",
-             es::CreateFrom(1e-6f)}
-        })
-        .Build();
+                     .OpType("AddRmsNorm")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x1", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"x2", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"gamma", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"rstd", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"x", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .IrDefAttrs(
+                         {{"epsilon", es::CompliantNodeBuilder::kEsAttrOptional, "Float", es::CreateFrom(1e-6f)}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x1.GetProducer(), x1.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *x2.GetProducer(), x2.GetProducerOutIndex(), node, 1);
     es::AddEdgeAndUpdatePeerDesc(*graph, *gamma.GetProducer(), gamma.GetProducerOutIndex(), node, 2);
-    return {
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 2)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1))
-    };
+    return {es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 2)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1))};
 }
 
 struct DynamicQuantResult {
@@ -210,61 +199,48 @@ struct DynamicQuantResult {
     es::EsTensorHolder scale;
 };
 
-static DynamicQuantResult BuildDynamicQuantNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& x)
+static DynamicQuantResult BuildDynamicQuantNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& x)
 {
     static int counter = 0;
     std::string name = "DynamicQuant_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("DynamicQuant")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-            {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-        })
-        .IrDefOutputs({
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .Build();
+                     .OpType("DynamicQuant")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                   {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
-    return {
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1))
-    };
+    return {es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1))};
 }
 
-static DynamicQuantResult BuildDynamicQuantNode(
-    es::EsGraphBuilder& builder, const es::EsTensorHolder& x, const es::EsTensorHolder& smooth)
+static DynamicQuantResult BuildDynamicQuantNode(es::EsGraphBuilder& builder, const es::EsTensorHolder& x,
+                                                const es::EsTensorHolder& smooth)
 {
     static int counter = 0;
     std::string name = "DynamicQuant_s_" + std::to_string(counter++);
     auto graph = builder.GetCGraphBuilder()->GetGraph();
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType("DynamicQuant")
-        .Name(name.c_str())
-        .IrDefInputs({
-            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-        })
-        .IrDefOutputs({
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .Build();
+                     .OpType("DynamicQuant")
+                     .Name(name.c_str())
+                     .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"smooth_scales", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"group_index", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                     .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"scale", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .Build();
     es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), node, 0);
     es::AddEdgeAndUpdatePeerDesc(*graph, *smooth.GetProducer(), smooth.GetProducerOutIndex(), node, 1);
-    return {
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
-        es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1))
-    };
+    return {es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0)),
+            es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 1))};
 }
 
-static es::EsTensorHolder BuildAddChain(
-    es::EsGraphBuilder& graph_bdr, es::EsGraphBuilder& dummy_bdr, int64_t p_num_add_nodes)
+static es::EsTensorHolder BuildAddChain(es::EsGraphBuilder& graph_bdr, es::EsGraphBuilder& dummy_bdr,
+                                        int64_t p_num_add_nodes)
 {
     auto x1_0 = graph_bdr.CreateInput(0);
     auto x1_1 = p_num_add_nodes > 0 ? graph_bdr.CreateInput(1) : dummy_bdr.CreateInput(0);
@@ -290,11 +266,11 @@ static es::EsTensorHolder BuildAddChain(
     return es::Add(x1, x1_4);
 }
 
-static void MakePatternForMultiAddRmsNormDynamicQuant(
-    std::vector<PatternUniqPtr>& pattern_graphs, int64_t p_num_add_nodes, int64_t p_num_smooth, bool p_has_reshape)
+static void MakePatternForMultiAddRmsNormDynamicQuant(std::vector<PatternUniqPtr>& pattern_graphs,
+                                                      int64_t p_num_add_nodes, int64_t p_num_smooth, bool p_has_reshape)
 {
-    std::string pattern_name = "pattern" + std::to_string(p_num_add_nodes) + "Add" +
-        std::to_string(p_num_smooth) + "DQ" + (p_has_reshape ? "Reshape" : "");
+    std::string pattern_name = "pattern" + std::to_string(p_num_add_nodes) + "Add" + std::to_string(p_num_smooth) +
+                               "DQ" + (p_has_reshape ? "Reshape" : "");
     auto graph_bdr = es::EsGraphBuilder(pattern_name.c_str());
     auto dummy_bdr = es::EsGraphBuilder("dummy");
 
@@ -306,11 +282,11 @@ static void MakePatternForMultiAddRmsNormDynamicQuant(
     auto smooth2 = p_num_smooth > 1 ? graph_bdr.CreateInput(4 + p_num_add_nodes) : dummy_bdr.CreateInput(5);
 
     auto arnResult = BuildAddRmsNormNode(graph_bdr, x1, x2, gamma);
-    auto y_reshape = p_has_reshape ? BuildPatternReshapeNode(graph_bdr, arnResult.y, BuildPatternConstNode(graph_bdr))
-                                   : arnResult.y;
+    auto y_reshape = p_has_reshape ? BuildPatternReshapeNode(graph_bdr, arnResult.y, BuildPatternConstNode(graph_bdr)) :
+                                     arnResult.y;
 
-    auto dq1Result = p_num_smooth == 0 ? BuildDynamicQuantNode(graph_bdr, y_reshape)
-                                       : BuildDynamicQuantNode(graph_bdr, y_reshape, smooth1);
+    auto dq1Result = p_num_smooth == 0 ? BuildDynamicQuantNode(graph_bdr, y_reshape) :
+                                         BuildDynamicQuantNode(graph_bdr, y_reshape, smooth1);
 
     std::vector<es::EsTensorHolder> outputs;
     outputs.emplace_back(std::move(dq1Result.y));
@@ -331,9 +307,9 @@ static void MakePatternForMultiAddRmsNormDynamicQuant(
     pattern_graphs.emplace_back(std::make_unique<Pattern>(std::move(*graph)));
 }
 
-static std::tuple<int64_t, int64_t, bool> GetMatchedNodes(
-    const std::vector<NodeIo>& input_nodes, std::vector<NodeIo>& matched_adds,
-    std::vector<NodeIo>& matched_addrns)
+static std::tuple<int64_t, int64_t, bool> GetMatchedNodes(const std::vector<NodeIo>& input_nodes,
+                                                          std::vector<NodeIo>& matched_adds,
+                                                          std::vector<NodeIo>& matched_addrns)
 {
     OPS_LOG_I(PASS_NAME.c_str(), "GetMatchedNodes for specify subgraph.");
     int64_t p_add_num = 0;
@@ -410,16 +386,16 @@ static bool IsMaxSmooth(const std::vector<NodeIo>& input_nodes, int64_t& patern_
     return true;
 }
 
-static bool IsMaxSubGraph(
-    const std::vector<NodeIo>& input_nodes, int64_t& patern_add_num, int64_t& patern_smooth_num, bool& out_has_reshape)
+static bool IsMaxSubGraph(const std::vector<NodeIo>& input_nodes, int64_t& patern_add_num, int64_t& patern_smooth_num,
+                          bool& out_has_reshape)
 {
     OPS_LOG_I(PASS_NAME.c_str(), "Check IsMaxSubGraph for specify subgraph.");
     std::vector<NodeIo> matched_adds;
     std::vector<NodeIo> matched_addrns;
 
     bool has_reshape = false;
-    std::tie(patern_add_num, patern_smooth_num, has_reshape) =
-        GetMatchedNodes(input_nodes, matched_adds, matched_addrns);
+    std::tie(patern_add_num, patern_smooth_num, has_reshape) = GetMatchedNodes(input_nodes, matched_adds,
+                                                                               matched_addrns);
 
     if (!IsMaxAdd(input_nodes)) {
         OP_LOGW_IF(true, PASS_NAME.c_str(), "Check IsMaxAdd failed.");
@@ -501,14 +477,14 @@ static bool IsGammaShapeValid(const std::vector<NodeIo>& input_nodes)
     for (const auto& input_node : input_nodes) {
         AscendString node_type;
         input_node.node.GetType(node_type);
-        if(node_type == "DynamicQuant" && input_node.index == 1) {
+        if (node_type == "DynamicQuant" && input_node.index == 1) {
             TensorDesc desc;
             input_node.node.GetInputDesc(input_node.index, desc);
             auto smooth_dims = desc.GetShape().GetDims();
-            if(smooth_dims.size() != 1) {
+            if (smooth_dims.size() != 1) {
                 return false;
             }
-            if(!gamma_dims.empty() && smooth_dims != gamma_dims) {
+            if (!gamma_dims.empty() && smooth_dims != gamma_dims) {
                 return false;
             }
         }
@@ -516,55 +492,44 @@ static bool IsGammaShapeValid(const std::vector<NodeIo>& input_nodes)
     return true;
 }
 
-static GNode BuildFusedNode(
-    es::EsGraphBuilder& replace_bdr, std::vector<es::EsTensorHolder>& inputs,
-    int64_t add_num)
+static GNode BuildFusedNode(es::EsGraphBuilder& replace_bdr, std::vector<es::EsTensorHolder>& inputs, int64_t add_num)
 {
     auto graph = replace_bdr.GetCGraphBuilder()->GetGraph();
 
     GNode node = es::CompliantNodeBuilder(graph)
-        .OpType(FUSED_OP_TYPE.c_str())
-        .Name(FUSED_OP_TYPE.c_str())
-        .IrDefInputs({
-            {"x1", es::CompliantNodeBuilder::kEsIrInputDynamic, ""},
-            {"x2", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"gamma", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-            {"smooth_scale1", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-            {"smooth_scale2", es::CompliantNodeBuilder::kEsIrInputOptional, ""}
-        })
-        .IrDefOutputs({
-            {"y1", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"y2", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"x", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"scale1", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
-            {"scale2", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}
-        })
-        .IrDefAttrs({
-            {"epsilon", es::CompliantNodeBuilder::kEsAttrOptional, "Float",
-             es::CreateFrom(1e-6f)}
-        })
-        .InstanceDynamicInputNum("x1", static_cast<int32_t>(add_num + 1))
-        .Build();
+                     .OpType(FUSED_OP_TYPE.c_str())
+                     .Name(FUSED_OP_TYPE.c_str())
+                     .IrDefInputs({{"x1", es::CompliantNodeBuilder::kEsIrInputDynamic, ""},
+                                   {"x2", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"gamma", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                   {"smooth_scale1", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+                                   {"smooth_scale2", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
+                     .IrDefOutputs({{"y1", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"y2", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"x", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"scale1", es::CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                                    {"scale2", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                     .IrDefAttrs(
+                         {{"epsilon", es::CompliantNodeBuilder::kEsAttrOptional, "Float", es::CreateFrom(1e-6f)}})
+                     .InstanceDynamicInputNum("x1", static_cast<int32_t>(add_num + 1))
+                     .Build();
 
     for (size_t i = 0; i < inputs.size(); i++) {
-        es::AddEdgeAndUpdatePeerDesc(
-            *graph, *inputs[i].GetProducer(), inputs[i].GetProducerOutIndex(),
-            node, static_cast<int32_t>(i));
+        es::AddEdgeAndUpdatePeerDesc(*graph, *inputs[i].GetProducer(), inputs[i].GetProducerOutIndex(), node,
+                                     static_cast<int32_t>(i));
     }
 
     return node;
 }
 
-static UniqueGraphPtr BuildReplaceGraph(
-    es::EsGraphBuilder& replace_bdr, GNode& fused_node,
-    int64_t smooth_num, bool has_reshape, const es::EsTensorHolder& reshape_shape)
+static UniqueGraphPtr BuildReplaceGraph(es::EsGraphBuilder& replace_bdr, GNode& fused_node, int64_t smooth_num,
+                                        bool has_reshape, const es::EsTensorHolder& reshape_shape)
 {
     (void)has_reshape;
     (void)reshape_shape;
     auto get_output = [&](int64_t idx) {
-        return es::EsTensorHolder(
-            replace_bdr.GetCGraphBuilder()->GetTensorHolderFromNode(fused_node, idx));
+        return es::EsTensorHolder(replace_bdr.GetCGraphBuilder()->GetTensorHolderFromNode(fused_node, idx));
     };
 
     // Output fused node results directly without Reshape.
@@ -678,12 +643,11 @@ UniqueGraphPtr MultiAddRmsNormDynamicQuantFusionPass::Replacement(const std::uni
 
     es::EsTensorHolder reshape_shape; // unused placeholder
     GNode fused_node = BuildFusedNode(replace_bdr, fused_inputs, this->add_num_);
-    UniqueGraphPtr replace_graph = BuildReplaceGraph(
-        replace_bdr, fused_node, this->smooth_num_, this->has_reshape_, reshape_shape);
+    UniqueGraphPtr replace_graph = BuildReplaceGraph(replace_bdr, fused_node, this->smooth_num_, this->has_reshape_,
+                                                     reshape_shape);
 
-    OP_LOGW_IF(
-        InferShape(replace_graph, subgraph_inputs) != SUCCESS, PASS_NAME.c_str(),
-        "Infershape for replacement failed.");
+    OP_LOGW_IF(InferShape(replace_graph, subgraph_inputs) != SUCCESS, PASS_NAME.c_str(),
+               "Infershape for replacement failed.");
     return std::move(replace_graph);
 }
 

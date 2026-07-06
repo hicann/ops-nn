@@ -22,24 +22,17 @@
 using namespace std;
 using namespace op;
 
-
 class l2_matmul_compress_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "matmul_compress_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "matmul_compress_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "matmul_compress_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "matmul_compress_test TearDown" << endl; }
 
-    static void MatMulCompressTest(
-        TensorDesc x_desc, TensorDesc weight_desc, TensorDesc bias_desc, TensorDesc compressIndex_desc, 
-        TensorDesc out_desc, aclnnStatus expect_status)
+    static void MatMulCompressTest(TensorDesc x_desc, TensorDesc weight_desc, TensorDesc bias_desc,
+                                   TensorDesc compressIndex_desc, TensorDesc out_desc, aclnnStatus expect_status)
     {
-        auto ut = OP_API_UT(aclnnMatmulCompress, INPUT(x_desc, weight_desc, bias_desc, compressIndex_desc), OUTPUT(out_desc));
+        auto ut = OP_API_UT(aclnnMatmulCompress, INPUT(x_desc, weight_desc, bias_desc, compressIndex_desc),
+                            OUTPUT(out_desc));
         uint64_t workspaceSize = 0;
         aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
         EXPECT_EQ(getWorkspaceResult, expect_status);

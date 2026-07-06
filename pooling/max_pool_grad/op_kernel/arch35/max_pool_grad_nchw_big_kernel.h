@@ -42,9 +42,8 @@ class MaxPoolGradNCHWBigKernel
 public:
     __aicore__ inline MaxPoolGradNCHWBigKernel() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR origY, GM_ADDR grad, GM_ADDR y, TPipe& pipeIn,
-        const MaxPoolGradNCHWTilingCommonData& tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR origY, GM_ADDR grad, GM_ADDR y, TPipe& pipeIn,
+                                const MaxPoolGradNCHWTilingCommonData& tilingData)
     {
         Base::ParseTilingData(tilingData);
         Base::blockIdx_ = GetBlockIdx();
@@ -52,8 +51,8 @@ public:
             return;
         }
 
-        Base::curCoreProcessNum_ =
-            (Base::blockIdx_ + 1 == Base::usedCoreNum_) ? Base::tailCoreProcessNum_ : Base::normalCoreProcessNum_;
+        Base::curCoreProcessNum_ = (Base::blockIdx_ + 1 == Base::usedCoreNum_) ? Base::tailCoreProcessNum_ :
+                                                                                 Base::normalCoreProcessNum_;
 
         xGm_.SetGlobalBuffer((__gm__ T1*)x);
         origYGm_.SetGlobalBuffer((__gm__ T1*)origY);
@@ -65,10 +64,10 @@ public:
         maxCount_ = (maxCountBySize < 1) ? 1 : maxCountBySize;
 
         const int64_t forwardStageBufferSize = Base::inputBufferSize_ * BK_BUFFER_NUM + MERGE_BUF_ALIGN;
-        const int64_t backwardStageBufferSize =
-            Base::gradBufferSize_ * BK_BUFFER_NUM + Base::outputBufferSize_ * BK_BUFFER_NUM;
-        totalStageBufferSize_ =
-            (forwardStageBufferSize > backwardStageBufferSize) ? forwardStageBufferSize : backwardStageBufferSize;
+        const int64_t backwardStageBufferSize = Base::gradBufferSize_ * BK_BUFFER_NUM +
+                                                Base::outputBufferSize_ * BK_BUFFER_NUM;
+        totalStageBufferSize_ = (forwardStageBufferSize > backwardStageBufferSize) ? forwardStageBufferSize :
+                                                                                     backwardStageBufferSize;
 
         pipeIn.InitBuffer(Base::argmaxBuf_, Base::argmaxBufferSize_);
         pipeIn.InitBuffer(Base::helpBuf_, MaxPoolGradNCHWBackwardBaseNameSpace::HELP_BUFFER);
@@ -186,9 +185,8 @@ private:
         Base::gradQue_.FreeTensor(gradLocal);
     }
 
-    __aicore__ inline void CalcKernelSize(
-        int64_t highIdx, int64_t hIdx, int64_t wIdx, int64_t& curkH, int64_t& curkW, int64_t& curInOffset,
-        int64_t& curOriginIndex)
+    __aicore__ inline void CalcKernelSize(int64_t highIdx, int64_t hIdx, int64_t wIdx, int64_t& curkH, int64_t& curkW,
+                                          int64_t& curInOffset, int64_t& curOriginIndex)
     {
         const int64_t ncOffset = Base::highAxisIndex_ * Base::highAxisInner_ + highIdx;
         const int64_t ho = Base::hArgmaxActualStart_ + hIdx;
@@ -251,15 +249,15 @@ private:
         inputQue_.EnQue(xLocal);
     }
 
-    __aicore__ inline void NoSplitKernelProcess(
-        int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t curOriginIndex, int64_t bufferOffset)
+    __aicore__ inline void NoSplitKernelProcess(int64_t curkH, int64_t curkW, int64_t curInOffset,
+                                                int64_t curOriginIndex, int64_t bufferOffset)
     {
         CopyInMultiRows(curInOffset, curkW, curkH);
         ComputeSingleArgmax<false, false>(curkW * curkH, curkW, curOriginIndex, bufferOffset);
     }
 
-    __aicore__ inline void SplitKernelProcess(
-        int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t curOriginIndex, int64_t bufferOffset)
+    __aicore__ inline void SplitKernelProcess(int64_t curkH, int64_t curkW, int64_t curInOffset, int64_t curOriginIndex,
+                                              int64_t bufferOffset)
     {
         InitMergeBuffer(bufferOffset, curOriginIndex);
 
@@ -277,8 +275,8 @@ private:
             for (int64_t hLoop = 0; hLoop < hLoops; ++hLoop) {
                 const int64_t curhFactor = (hLoop == hLoops - 1) ? hTail : hFactor;
                 CopyInMultiRows(inputOffset, curkW, curhFactor);
-                ComputeSingleArgmax<true, false>(
-                    curkW * curhFactor, ((curkW > 0) ? curkW : 1), kernelOffset, bufferOffset);
+                ComputeSingleArgmax<true, false>(curkW * curhFactor, ((curkW > 0) ? curkW : 1), kernelOffset,
+                                                 bufferOffset);
                 PipeBarrier<PIPE_ALL>();
                 inputOffset += curhFactor * Base::wOutput_;
                 kernelOffset += curhFactor * Base::wOutput_;
@@ -329,8 +327,8 @@ private:
     }
 
     template <bool MERGE, bool SPLITKW>
-    __aicore__ inline void ComputeSingleArgmax(
-        int64_t dataCount, int64_t curKw, int64_t curOriginIndex, int64_t bufferOffset)
+    __aicore__ inline void ComputeSingleArgmax(int64_t dataCount, int64_t curKw, int64_t curOriginIndex,
+                                               int64_t bufferOffset)
     {
         LocalTensor<T1> xLocal = inputQue_.DeQue<T1>();
 

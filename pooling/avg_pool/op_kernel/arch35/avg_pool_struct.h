@@ -67,7 +67,7 @@ public:
     int64_t onceOutNum;
 };
 
-class AvgPoolBigKernelTilingData{
+class AvgPoolBigKernelTilingData {
 public:
     int64_t hInDim;
     int64_t wInDim;
@@ -85,8 +85,8 @@ public:
     int64_t countIncludePad;
     int64_t blockFactor;
     int64_t blockTail;
-    int64_t totalIdx;   
-    int64_t coreNums;   
+    int64_t totalIdx;
+    int64_t coreNums;
     int64_t maxCount;
     int64_t isSigOut;
 };
@@ -186,4 +186,4 @@ public:
 };
 
 } // namespace AvgPool
-#endif //AVG_POOL_STRUCT_H
+#endif // AVG_POOL_STRUCT_H

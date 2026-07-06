@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef OP_API_INC_QUANTIZE_H_
 #define OP_API_INC_QUANTIZE_H_
 
@@ -35,9 +34,8 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnQuantizeGetWorkspaceSize(const aclTensor* x, const aclTensor* scales,
-    const aclTensor* zeroPoints, aclDataType dtype, int32_t axis, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor);
-
+                                                    const aclTensor* zeroPoints, aclDataType dtype, int32_t axis,
+                                                    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnQuantize的第二段接口，用于执行计算。
@@ -51,7 +49,7 @@ ACLNN_API aclnnStatus aclnnQuantizeGetWorkspaceSize(const aclTensor* x, const ac
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnQuantize(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                aclrtStream stream);
+                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

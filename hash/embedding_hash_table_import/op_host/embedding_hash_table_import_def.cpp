@@ -17,44 +17,44 @@
 namespace ops {
 class EmbeddingHashTableImport : public OpDef {
 public:
-    explicit EmbeddingHashTableImport(const char *name) : OpDef(name)
+    explicit EmbeddingHashTableImport(const char* name) : OpDef(name)
     {
         this->Input("table_handles")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_INT64 })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("embedding_dims")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_INT64 })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("bucket_sizes")
             .ParamType(REQUIRED)
-            .DataType({ ge::DT_INT64 })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("keys")
             .ParamType(DYNAMIC)
             .ValueDepend(OPTIONAL)
-            .DataType({ ge::DT_INT64 })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_INT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("counters")
             .ParamType(DYNAMIC)
-            .DataType({ ge::DT_UINT64 })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_UINT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("filter_flags")
             .ParamType(DYNAMIC)
-            .DataType({ ge::DT_UINT8 })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_UINT8})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("values")
             .ParamType(DYNAMIC)
-            .DataType({ ge::DT_FLOAT })
-            .Format({ ge::FORMAT_ND })
-            .UnknownShapeFormat({ ge::FORMAT_ND });
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

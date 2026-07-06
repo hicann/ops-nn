@@ -80,29 +80,26 @@ static ge::graphStatus checkShape(gert::TilingContext* context)
     for (int i = 1; i < 11; i++) {
         auto input = context->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, input);
-        OP_CHECK_IF(
-            input->GetStorageShape().GetDimNum() != firstShape.GetDimNum(),
-            OP_LOGE(context, "AdamApplyOneWithDecayAssign: input shape rank should equal"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(input->GetStorageShape().GetDimNum() != firstShape.GetDimNum(),
+                    OP_LOGE(context, "AdamApplyOneWithDecayAssign: input shape rank should equal"),
+                    return ge::GRAPH_FAILED);
         for (uint32_t dim = 0; dim < firstShape.GetDimNum(); ++dim) {
-            OP_CHECK_IF(
-                input->GetStorageShape().GetDim(dim) != firstShape.GetDim(dim),
-                OP_LOGE(context, "AdamApplyOneWithDecayAssign: input shape should equal"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(input->GetStorageShape().GetDim(dim) != firstShape.GetDim(dim),
+                        OP_LOGE(context, "AdamApplyOneWithDecayAssign: input shape should equal"),
+                        return ge::GRAPH_FAILED);
         }
     }
 
     for (int i = 0; i < 3; i++) {
         auto output = context->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, output);
-        OP_CHECK_IF(
-            output->GetStorageShape().GetDimNum() != firstShape.GetDimNum(),
-            OP_LOGE(context, "AdamApplyOneWithDecayAssign: output shape rank should equal"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(output->GetStorageShape().GetDimNum() != firstShape.GetDimNum(),
+                    OP_LOGE(context, "AdamApplyOneWithDecayAssign: output shape rank should equal"),
+                    return ge::GRAPH_FAILED);
         for (uint32_t dim = 0; dim < firstShape.GetDimNum(); ++dim) {
-            OP_CHECK_IF(
-                output->GetStorageShape().GetDim(dim) != firstShape.GetDim(dim),
-                OP_LOGE(context, "AdamApplyOneWithDecayAssign: output shape should equal"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(output->GetStorageShape().GetDim(dim) != firstShape.GetDim(dim),
+                        OP_LOGE(context, "AdamApplyOneWithDecayAssign: output shape should equal"),
+                        return ge::GRAPH_FAILED);
         }
     }
 
@@ -119,8 +116,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto input0Shape = input0->GetStorageShape();
 
     // shape校验
-    OP_CHECK_IF(
-        checkShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "checkShape error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(checkShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "checkShape error"),
+                return ge::GRAPH_FAILED);
 
     totalIdx = 1;
     for (uint32_t i = 0; i < input0Shape.GetDimNum(); i++) {
@@ -151,19 +148,17 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context, AdamApplyOne
 {
     tiling = context->GetTilingData<AdamApplyOneWithDecayAssignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(
-            tiling, sizeof(AdamApplyOneWithDecayAssignTilingData), 0, sizeof(AdamApplyOneWithDecayAssignTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(AdamApplyOneWithDecayAssignTilingData), 0,
+                         sizeof(AdamApplyOneWithDecayAssignTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus HandleEmptyInput(gert::TilingContext* context)
 {
     AdamApplyOneWithDecayAssignTilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "init tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "init tiling data error"),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(1);
     context->SetTilingKey(0);
     return ge::GRAPH_SUCCESS;
@@ -242,8 +237,8 @@ static AdamApplyOneWithDecayAssignTilingCalcResult CalcTilingData(
     return result;
 }
 
-static void SetTilingData(
-    AdamApplyOneWithDecayAssignTilingData* tiling, const AdamApplyOneWithDecayAssignTilingCalcResult& result)
+static void SetTilingData(AdamApplyOneWithDecayAssignTilingData* tiling,
+                          const AdamApplyOneWithDecayAssignTilingCalcResult& result)
 {
     tiling->smallCoreDataNum = static_cast<int64_t>(result.smallCoreDataNum);
     tiling->bigCoreDataNum = static_cast<int64_t>(result.bigCoreDataNum);
@@ -270,37 +265,30 @@ static ge::graphStatus AdamApplyOneWithDecayAssignTilingFunc(gert::TilingContext
     uint32_t ubDataNumber = 0;
     ge::DataType dataType;
     AdamApplyOneWithDecayAssignTilingData* tiling = nullptr;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
     if (totalIdx <= 0) {
         return HandleEmptyInput(context);
     }
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetTypeLength(context, typeLength) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetTypeLength error"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetUbDataNumber(context, dataType, ubDataNumber) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetUbDataNumber error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "set tiling data error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTypeLength(context, typeLength) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetTypeLength error"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetUbDataNumber(context, dataType, ubDataNumber) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetUbDataNumber error"), return ge::GRAPH_FAILED);
 
     AdamApplyOneWithDecayAssignTilingCalcParams params{blockSize, ubSize, coreNum, totalIdx, typeLength};
     AdamApplyOneWithDecayAssignTilingCalcResult result = CalcTilingData(params, ubDataNumber);
     SetTilingData(tiling, result);
-    OP_LOGI(
-        context,
-        "smallCoreDataNum: %d, bigCoreDataNum: %d, tileDataNum: %d, smallTailDataNum: %d, bigTailDataNum: %d, "
-        "finalSmallTileNum: %d, finalBigTileNum: %d, tailBlockNum: %d",
-        result.smallCoreDataNum, result.bigCoreDataNum, result.tileDataNum, result.smallTailDataNum,
-        result.bigTailDataNum, result.finalSmallTileNum, result.finalBigTileNum, result.tailBlockNum);
+    OP_LOGI(context,
+            "smallCoreDataNum: %d, bigCoreDataNum: %d, tileDataNum: %d, smallTailDataNum: %d, bigTailDataNum: %d, "
+            "finalSmallTileNum: %d, finalBigTileNum: %d, tailBlockNum: %d",
+            result.smallCoreDataNum, result.bigCoreDataNum, result.tileDataNum, result.smallTailDataNum,
+            result.bigTailDataNum, result.finalSmallTileNum, result.finalBigTileNum, result.tailBlockNum);
     context->SetBlockDim(result.finalCoreNum);
     context->SetTilingKey(GET_TPL_TILING_KEY(ELEMENTWISE_TPL_SCH_MODE_0));
     return ge::GRAPH_SUCCESS;

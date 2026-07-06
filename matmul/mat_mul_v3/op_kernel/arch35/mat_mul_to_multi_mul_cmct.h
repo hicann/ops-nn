@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -24,9 +24,9 @@ namespace MatmulV3Advanced {
 using namespace Cmct;
 using namespace Cmct::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT>
-__aicore__ inline void MatMulToVectorActKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR workspaceGM,
-    const MatMulToVectorBasicTilingData& tilingData, int64_t batch = 0)
+__aicore__ inline void MatMulToVectorActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM,
+                                               GM_ADDR workspaceGM, const MatMulToVectorBasicTilingData& tilingData,
+                                               int64_t batch = 0)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -46,27 +46,24 @@ __aicore__ inline void MatMulToVectorActKernel(
     using BlockScheduler = BuiltInVectorScheduler;
 
     // 定义MMAD类型
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
-        MatmulToVector<>>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, MatmulToVector<>>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = Block::BlockEpilogueEmpty;
-    
+
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
 
     // 定义Kernel类型
     using MatmulKernel = Kernel::KernelMatmulToVector<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-        {aGM, bGM, yGM, biasGM},                           // gm addr
-        {},                                     // epilogue and fusion args
-        {&tilingData}};
-   
+    Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
+                     {aGM, bGM, yGM, biasGM},                           // gm addr
+                     {},                                                // epilogue and fusion args
+                     {&tilingData}};
+
     MatmulKernel mm;
     mm(params);
 }
-}
-
+} // namespace MatmulV3Advanced

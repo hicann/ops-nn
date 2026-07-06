@@ -25,25 +25,17 @@
 
 extern "C" __global__ __aicore__ void foreach_abs(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class foreach_abs_test : public testing::Test
-{
+class foreach_abs_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "foreach_abs_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "foreach_abs_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "foreach_abs_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "foreach_abs_test TearDown\n" << std::endl; }
 };
 
 TEST_F(foreach_abs_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_abs/tests/ut/op_kernel/abs_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_abs/tests/ut/op_kernel/abs_data ./");
     system("chmod -R 755 ./abs_data/");
     system("cd ./abs_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float32'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -74,9 +66,8 @@ TEST_F(foreach_abs_test, test_case_float_1)
 TEST_F(foreach_abs_test, test_case_float16_2)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_abs/tests/ut/op_kernel/abs_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_abs/tests/ut/op_kernel/abs_data ./");
     system("chmod -R 755 ./abs_data/");
     system("cd ./abs_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float16'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -107,9 +98,8 @@ TEST_F(foreach_abs_test, test_case_float16_2)
 TEST_F(foreach_abs_test, test_case_bfloat16_3)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
-    system(
-        "cp -rf "
-        "../../../../foreach/foreach_abs/tests/ut/op_kernel/abs_data ./");
+    system("cp -rf "
+           "../../../../foreach/foreach_abs/tests/ut/op_kernel/abs_data ./");
     system("chmod -R 755 ./abs_data/");
     system("cd ./abs_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'bfloat16_t'");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

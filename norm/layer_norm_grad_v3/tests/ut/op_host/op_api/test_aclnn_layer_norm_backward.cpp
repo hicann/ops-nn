@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 #include <array>
@@ -23,15 +24,9 @@ using namespace op;
 
 class l2_layer_norm_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "layer_norm_backward_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "layer_norm_backward_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "layer_norm_backward_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "layer_norm_backward_test TearDown" << endl; }
 };
 
 // nchw, float32
@@ -584,11 +579,10 @@ TEST_F(l2_layer_norm_backward_test, ascend910B2_aclnnLayerNormBackward_nullptr)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
     // outputmask nullptr
-    auto ut8 = OP_API_UT(
-        aclnnLayerNormBackward,
-        INPUT(
-            gradOutDesc, inputDesc, normalizedShape, meanDesc, rstdDesc, weightDesc, biasDesc, (aclBoolArray*)nullptr),
-        OUTPUT(gradInputOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    auto ut8 = OP_API_UT(aclnnLayerNormBackward,
+                         INPUT(gradOutDesc, inputDesc, normalizedShape, meanDesc, rstdDesc, weightDesc, biasDesc,
+                               (aclBoolArray*)nullptr),
+                         OUTPUT(gradInputOutDesc, gradWeightOutDesc, gradBiasOutDesc));
     // SAMPLE: only test GetWorkspaceSize
     aclRet = ut8.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);

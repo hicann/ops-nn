@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef SMOOTH_L1_LOSS_GRAD_V2_H
 #define SMOOTH_L1_LOSS_GRAD_V2_H
 
@@ -26,11 +25,10 @@ constexpr int32_t BUFFER_NUM = 2;
 template <typename TYPE_PREDICT, typename TYPE_LABEL, typename TYPE_DOUT, typename TYPE_GRAD>
 class KernelSmoothL1LossGradV2 {
 public:
-    __aicore__ inline KernelSmoothL1LossGradV2()
-    {}
+    __aicore__ inline KernelSmoothL1LossGradV2() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR gradient, SmoothL1LossGradV2TilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR gradient,
+                                SmoothL1LossGradV2TilingData* tilingData)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
 
@@ -50,10 +48,10 @@ public:
         constexpr uint64_t ubPoolBytes = 196608;
         constexpr uint64_t ubSafetyBytes = 512;
         const uint64_t usableUbBytes = (ubPoolBytes > ubSafetyBytes) ? (ubPoolBytes - ubSafetyBytes) : ubPoolBytes;
-        const uint64_t bytesPerElem =
-            static_cast<uint64_t>(BUFFER_NUM) *
-                (sizeof(TYPE_PREDICT) + sizeof(TYPE_LABEL) + sizeof(TYPE_DOUT) + sizeof(TYPE_GRAD)) +
-            sizeof(float) * 6 + sizeof(uint8_t); // diff, absDiff, temp, smooth1, mask, ones, negOnes
+        const uint64_t bytesPerElem = static_cast<uint64_t>(BUFFER_NUM) * (sizeof(TYPE_PREDICT) + sizeof(TYPE_LABEL) +
+                                                                           sizeof(TYPE_DOUT) + sizeof(TYPE_GRAD)) +
+                                      sizeof(float) * 6 +
+                                      sizeof(uint8_t); // diff, absDiff, temp, smooth1, mask, ones, negOnes
 
         uint64_t maxTileDataNum = (bytesPerElem == 0) ? 0 : (usableUbBytes / bytesPerElem);
         if (maxTileDataNum == 0) {
@@ -80,7 +78,8 @@ public:
             this->coreDataNum = tilingData->bigCoreDataNum;
         } else {
             this->coreDataNum = tilingData->smallCoreDataNum;
-            globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (blockIdx - tilingData->tailBlockNum);
+            globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                                 (blockIdx - tilingData->tailBlockNum);
         }
 
         if (this->alignedTileDataNum == 0) {
@@ -180,32 +179,34 @@ private:
         }
     }
     template <typename T>
-    __aicore__ inline void CopyTailByDataCopyPad(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint64_t tailCount)
+    __aicore__ inline void CopyTailByDataCopyPad(const LocalTensor<T>& dst, const GlobalTensor<T>& src,
+                                                 uint64_t tailCount)
     {
         DataCopyExtParams copyParams;
         copyParams.blockCount = 1;
-        copyParams.blockLen   = static_cast<uint32_t>(tailCount * sizeof(T));
-        copyParams.srcStride  = 0;
-        copyParams.dstStride  = 0;
-        copyParams.rsv        = 0;
+        copyParams.blockLen = static_cast<uint32_t>(tailCount * sizeof(T));
+        copyParams.srcStride = 0;
+        copyParams.dstStride = 0;
+        copyParams.rsv = 0;
 
         DataCopyPadExtParams<T> padParams;
-        padParams.isPad        = false;
-        padParams.leftPadding  = 0;
+        padParams.isPad = false;
+        padParams.leftPadding = 0;
         padParams.rightPadding = 0;
         padParams.paddingValue = static_cast<T>(0);
 
         DataCopyPad(dst, src, copyParams, padParams);
     }
     template <typename T>
-    __aicore__ inline void CopyTailByDataCopyPad(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint64_t tailCount)
+    __aicore__ inline void CopyTailByDataCopyPad(const GlobalTensor<T>& dst, const LocalTensor<T>& src,
+                                                 uint64_t tailCount)
     {
         DataCopyExtParams copyParams;
         copyParams.blockCount = 1;
-        copyParams.blockLen   = static_cast<uint32_t>(tailCount * sizeof(T));
-        copyParams.srcStride  = 0;
-        copyParams.dstStride  = 0;
-        copyParams.rsv        = 0;
+        copyParams.blockLen = static_cast<uint32_t>(tailCount * sizeof(T));
+        copyParams.srcStride = 0;
+        copyParams.dstStride = 0;
+        copyParams.rsv = 0;
 
         DataCopyPad(dst, src, copyParams);
     }

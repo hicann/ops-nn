@@ -34,10 +34,7 @@ ConvTilingBase::ConvTilingBase(const PlatformInfo& platform)
     platformInfo.aivPerAic = platform.aivPerAic;
 }
 
-void ConvTilingBase::SetNodeType(string inType)
-{
-    nodeType = inType;
-}
+void ConvTilingBase::SetNodeType(string inType) { nodeType = inType; }
 
 void ConvTilingBase::InferCubeInfo()
 {
@@ -50,21 +47,20 @@ void ConvTilingBase::InferCubeInfo()
 
 int64_t ConvTilingBase::CheckTilingRes()
 {
-    if (outputOrder == static_cast<int8_t>(OutputOrder::M) &&
-        (l1TilingInfo.mAL1 == 0 || l0TilingInfo.mL0 == 0)) {
+    if (outputOrder == static_cast<int8_t>(OutputOrder::M) && (l1TilingInfo.mAL1 == 0 || l0TilingInfo.mL0 == 0)) {
         OP_LOGE(nodeType, "Check tiling res failed: mAL1: %lu, mL0: %lu.", l1TilingInfo.mAL1, l0TilingInfo.mL0);
         return -1;
     }
     if (outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         (l1TilingInfo.hoAL1 == 0 || l1TilingInfo.woAL1 == 0 || l0TilingInfo.hoL0 == 0 || l0TilingInfo.woL0 == 0)) {
-        OP_LOGE(nodeType, "Check tiling res failed: hoAL1: %lu, woAL1: %lu, hoL0: %lu, woL0: %lu.",
-            l1TilingInfo.hoAL1, l1TilingInfo.woAL1, l0TilingInfo.hoL0, l0TilingInfo.woL0);
+        OP_LOGE(nodeType, "Check tiling res failed: hoAL1: %lu, woAL1: %lu, hoL0: %lu, woL0: %lu.", l1TilingInfo.hoAL1,
+                l1TilingInfo.woAL1, l0TilingInfo.hoL0, l0TilingInfo.woL0);
         return -1;
     }
 
     if (l1TilingInfo.kAL1 == 0 || l1TilingInfo.kBL1 == 0 || l1TilingInfo.nBL1 == 0) {
-        OP_LOGE(nodeType, "Check tiling res failed: kAL1: %lu, kBL1: %lu, nBL1: %lu.",
-            l1TilingInfo.kAL1, l1TilingInfo.kBL1, l1TilingInfo.nBL1);
+        OP_LOGE(nodeType, "Check tiling res failed: kAL1: %lu, kBL1: %lu, nBL1: %lu.", l1TilingInfo.kAL1,
+                l1TilingInfo.kBL1, l1TilingInfo.nBL1);
         return -1;
     }
 
@@ -95,10 +91,9 @@ bool ConvTilingBase::CheckQuantUniqueAttr()
     if (quantConvFlag) {
         ConvDtype fMapDtype = descInfo.fMapType.dtype;
         ConvDtype outputDtype = descInfo.outputType.dtype;
-        if (attrInfo.offsetx != 0 &&
-            (fMapDtype == ConvDtype::HIFLOAT8 || fMapDtype == ConvDtype::FLOAT8_E4M3FN)) {
-                OP_LOGE(nodeType, "Only support offsetX = 0 in hif8 or fp8 mode, actually is %d", attrInfo.offsetx);
-                return false;
+        if (attrInfo.offsetx != 0 && (fMapDtype == ConvDtype::HIFLOAT8 || fMapDtype == ConvDtype::FLOAT8_E4M3FN)) {
+            OP_LOGE(nodeType, "Only support offsetX = 0 in hif8 or fp8 mode, actually is %d", attrInfo.offsetx);
+            return false;
         }
         if (outputDtype == ConvDtype::HIFLOAT8) {
             if (attrInfo.roundMode != conv_tiling::ROUND_MODE_ROUND) {
@@ -121,7 +116,7 @@ bool ConvTilingBase::CheckGroups()
         OP_LOGE(nodeType, "Illegal attrs have set: groups=%d which must > 0.", attrInfo.groups);
         return false;
     }
-    if (optGroupFlag) {//this->optGroupFlag
+    if (optGroupFlag) { // this->optGroupFlag
         if (shapeInfo.singleGroups <= 0) {
             OP_LOGE(nodeType, "Illegal attrs have set: singleGroups=%ld which must > 0.", shapeInfo.singleGroups);
             return false;
@@ -142,11 +137,10 @@ bool ConvTilingBase::CheckDtype()
 {
     vector<ConvDtype> paramsType;
     if (hasBias) {
-        paramsType = {descInfo.fMapType.dtype, descInfo.weightType.dtype,
-                      descInfo.biasType.dtype, descInfo.outputType.dtype};
-    } else {
-        paramsType = {descInfo.fMapType.dtype, descInfo.weightType.dtype,
+        paramsType = {descInfo.fMapType.dtype, descInfo.weightType.dtype, descInfo.biasType.dtype,
                       descInfo.outputType.dtype};
+    } else {
+        paramsType = {descInfo.fMapType.dtype, descInfo.weightType.dtype, descInfo.outputType.dtype};
     }
     auto supportedTypesList = GetSupportedDataTypes();
     for (uint64_t kindsId = 0; kindsId < supportedTypesList.size(); ++kindsId) {
@@ -159,15 +153,12 @@ bool ConvTilingBase::CheckDtype()
     }
     if (hasBias) {
         OP_LOGE(nodeType, "unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
-            DTYPE_TO_STR.at(descInfo.fMapType.dtype).c_str(),
-            DTYPE_TO_STR.at(descInfo.weightType.dtype).c_str(),
-            DTYPE_TO_STR.at(descInfo.biasType.dtype).c_str(),
-            DTYPE_TO_STR.at(descInfo.outputType.dtype).c_str());
+                DTYPE_TO_STR.at(descInfo.fMapType.dtype).c_str(), DTYPE_TO_STR.at(descInfo.weightType.dtype).c_str(),
+                DTYPE_TO_STR.at(descInfo.biasType.dtype).c_str(), DTYPE_TO_STR.at(descInfo.outputType.dtype).c_str());
     } else {
         OP_LOGE(nodeType, "unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
-            DTYPE_TO_STR.at(descInfo.fMapType.dtype).c_str(),
-            DTYPE_TO_STR.at(descInfo.weightType.dtype).c_str(),
-            DTYPE_TO_STR.at(descInfo.outputType.dtype).c_str());
+                DTYPE_TO_STR.at(descInfo.fMapType.dtype).c_str(), DTYPE_TO_STR.at(descInfo.weightType.dtype).c_str(),
+                DTYPE_TO_STR.at(descInfo.outputType.dtype).c_str());
     }
     return false;
 }
@@ -196,11 +187,10 @@ vector<vector<ConvDtype>> ConvTilingBase::GetSupportedDataTypes() const
 
 bool ConvTilingBase::CheckLoad3DLimits()
 {
-    auto LogHelper = [this](const std::string& paramName, const std::string& actualValue,
-                            const std::string& reason) {
+    auto LogHelper = [this](const std::string& paramName, const std::string& actualValue, const std::string& reason) {
         if (platformInfo.npuArch == NpuArch::DAV_5102) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeType.c_str(), paramName.c_str(),
-                actualValue.c_str(), reason.c_str());
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeType.c_str(), paramName.c_str(), actualValue.c_str(),
+                                                  reason.c_str());
         } else {
             OP_LOGD(nodeType, "%s AscendC: %s", nodeType.c_str(), reason.c_str());
         }
@@ -258,4 +248,4 @@ bool ConvTilingBase::CheckLoad3DLimits()
     }
     return true;
 }
-}
+} // namespace conv_tiling

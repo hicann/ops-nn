@@ -56,8 +56,7 @@ static const std::vector<ge::Format> format310p = {ge::FORMAT_ND, ge::FORMAT_ND,
                                                    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                                    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 
-class ScatterList : public OpDef
-{
+class ScatterList : public OpDef {
 public:
     explicit ScatterList(const char* name) : OpDef(name)
     {

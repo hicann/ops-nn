@@ -126,4 +126,3 @@ REG_OP(DynamicRNNV2)
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_IS_FINITE_H_
-

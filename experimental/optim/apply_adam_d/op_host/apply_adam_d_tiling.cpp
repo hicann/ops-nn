@@ -31,8 +31,8 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
 using Ops::Base::GetUbBlockSize;
 
@@ -54,8 +54,8 @@ constexpr int64_t MIN_ELEM_PER_CORE = 2048;
 static constexpr size_t IDX_VAR = 0;
 static constexpr size_t IDX_M = 1;
 static constexpr size_t IDX_V = 2;
-static constexpr size_t IDX_BETA1_POWER = 3;  // first scalar input
-static constexpr size_t IDX_EPSILON = 8;      // last scalar input
+static constexpr size_t IDX_BETA1_POWER = 3; // first scalar input
+static constexpr size_t IDX_EPSILON = 8;     // last scalar input
 static constexpr size_t IDX_GRAD = 9;
 static constexpr size_t INPUT_NUM = 10;
 
@@ -102,8 +102,8 @@ static ge::graphStatus CheckInputContract(gert::TilingContext* context)
         auto shapePtr = context->GetInputShape(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
         OP_CHECK_IF(!ShapeEqual(shapePtr->GetStorageShape(), varShape),
-            OP_LOGE(context, "ApplyAdamD: input[%zu] shape must match var (shape_mismatch)", idx),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "ApplyAdamD: input[%zu] shape must match var (shape_mismatch)", idx),
+                    return ge::GRAPH_FAILED);
     }
 
     // (2) scalar inputs beta1_power..epsilon must have GetShapeSize()==1 (rank-0 [] or [1]).
@@ -111,8 +111,8 @@ static ge::graphStatus CheckInputContract(gert::TilingContext* context)
         auto shapePtr = context->GetInputShape(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
         OP_CHECK_IF(shapePtr->GetStorageShape().GetShapeSize() != 1,
-            OP_LOGE(context, "ApplyAdamD: scalar input[%zu] must have shape size 1 (shape_mismatch)", idx),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "ApplyAdamD: scalar input[%zu] must have shape size 1 (shape_mismatch)", idx),
+                    return ge::GRAPH_FAILED);
     }
 
     // (3) all 10 inputs must share var's dtype.
@@ -120,8 +120,8 @@ static ge::graphStatus CheckInputContract(gert::TilingContext* context)
         auto desc = context->GetInputDesc(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, desc);
         OP_CHECK_IF(desc->GetDataType() != varDtype,
-            OP_LOGE(context, "ApplyAdamD: input[%zu] dtype must match var (dtype_not_supported)", idx),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context, "ApplyAdamD: input[%zu] dtype must match var (dtype_not_supported)", idx),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -156,10 +156,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     dataType = varDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
-    OP_CHECK_IF(
-        supportedDtype.count(dataType) == 0,
-        OP_LOGE(context, "ApplyAdamD: unsupported dtype %d", static_cast<int>(dataType)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtype.count(dataType) == 0,
+                OP_LOGE(context, "ApplyAdamD: unsupported dtype %d", static_cast<int>(dataType)),
+                return ge::GRAPH_FAILED);
 
     auto varShapePtr = context->GetInputShape(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShapePtr);
@@ -180,22 +179,21 @@ static ge::graphStatus InitTilingData(gert::TilingContext* context, ApplyAdamDTi
 {
     tiling = context->GetTilingData<ApplyAdamDTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyAdamDTilingData), 0, sizeof(ApplyAdamDTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(ApplyAdamDTilingData), 0, sizeof(ApplyAdamDTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 // Multi-core split: blockFactor (32B-aligned) + usedCoreNum. Empty tensor -> usedCoreNum=1, blockFactor=0.
-static ge::graphStatus ComputeMultiCoreSplit(gert::TilingContext* context, ge::DataType dataType,
-    int64_t totalNum, int64_t coreNum, ApplyAdamDTilingData* tiling, int64_t& alignElem, int64_t& usedCoreNum)
+static ge::graphStatus ComputeMultiCoreSplit(gert::TilingContext* context, ge::DataType dataType, int64_t totalNum,
+                                             int64_t coreNum, ApplyAdamDTilingData* tiling, int64_t& alignElem,
+                                             int64_t& usedCoreNum)
 {
     constexpr int64_t TYPE_SIZE_FP32 = 4;
     constexpr int64_t TYPE_SIZE_FP16 = 2;
-    int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context);  // 32B
+    int64_t ubBlockSize = Ops::Base::GetUbBlockSize(context); // 32B
     int64_t typeSize = (dataType == ge::DT_FLOAT) ? TYPE_SIZE_FP32 : TYPE_SIZE_FP16;
-    alignElem = ubBlockSize / typeSize;  // fp32: 8, fp16/bf16: 16
+    alignElem = ubBlockSize / typeSize; // fp32: 8, fp16/bf16: 16
     tiling->totalNum = totalNum;
 
     if (totalNum <= 0) {
@@ -228,10 +226,10 @@ static ge::graphStatus ComputeMultiCoreSplit(gert::TilingContext* context, ge::D
 }
 
 // UB split: ubFactor. bytePerElem = 64 (fp32) / 52 (fp16/bf16) (DESIGN §3.7).
-static ge::graphStatus ComputeUbSplit(gert::TilingContext* context, ge::DataType dataType,
-    uint64_t ubSize, int64_t alignElem, ApplyAdamDTilingData* tiling)
+static ge::graphStatus ComputeUbSplit(gert::TilingContext* context, ge::DataType dataType, uint64_t ubSize,
+                                      int64_t alignElem, ApplyAdamDTilingData* tiling)
 {
-    constexpr int64_t RESERVED_UB = 48 * 1024;  // 48 KB reserved (sys + scalar buf + sync)
+    constexpr int64_t RESERVED_UB = 48 * 1024; // 48 KB reserved (sys + scalar buf + sync)
     constexpr int64_t BYTE_PER_ELEM_FP32 = 64;
     constexpr int64_t BYTE_PER_ELEM_FP16 = 52;
     int64_t availableUb = static_cast<int64_t>(ubSize) - RESERVED_UB;
@@ -272,38 +270,39 @@ static ge::graphStatus ApplyAdamDTilingFunc(gert::TilingContext* context)
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalNum = 0;
     ge::DataType dataType;
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalNum, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // Lightweight input contract check (same-shape tensors / scalar size==1 / same dtype).
     // Placed before any GM-offset computation so a violated contract fails tiling (no kernel
     // launch -> no OOB GM read). No-op for legal inputs (preserves tiling output byte-for-byte).
-    OP_CHECK_IF(CheckInputContract(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "CheckInputContract error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputContract(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckInputContract error"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     ApplyAdamDTilingData* tiling = nullptr;
-    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "InitTilingData error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitTilingData(context, tiling) != ge::GRAPH_SUCCESS, OP_LOGE(context, "InitTilingData error"),
+                return ge::GRAPH_FAILED);
 
     int64_t alignElem = 0;
     int64_t usedCoreNum = 0;
-    OP_CHECK_IF(ComputeMultiCoreSplit(context, dataType, totalNum, coreNum, tiling, alignElem, usedCoreNum)
-        != ge::GRAPH_SUCCESS, OP_LOGE(context, "ComputeMultiCoreSplit error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ComputeMultiCoreSplit(context, dataType, totalNum, coreNum, tiling, alignElem, usedCoreNum) !=
+                    ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeMultiCoreSplit error"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(ComputeUbSplit(context, dataType, ubSize, alignElem, tiling) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ComputeUbSplit error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ComputeUbSplit error"), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(usedCoreNum);
 
-    OP_CHECK_IF(SelectTilingKey(context, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "SelectTilingKey error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SelectTilingKey(context, dataType) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SelectTilingKey error"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -314,8 +313,6 @@ static ge::graphStatus TilingParseForApplyAdamD([[maybe_unused]] gert::TilingPar
 
 struct ApplyAdamDCompileInfo {};
 
-IMPL_OP_OPTILING(ApplyAdamD)
-    .Tiling(ApplyAdamDTilingFunc)
-    .TilingParse<ApplyAdamDCompileInfo>(TilingParseForApplyAdamD);
+IMPL_OP_OPTILING(ApplyAdamD).Tiling(ApplyAdamDTilingFunc).TilingParse<ApplyAdamDCompileInfo>(TilingParseForApplyAdamD);
 
-}  // namespace optiling
+} // namespace optiling

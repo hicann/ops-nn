@@ -70,8 +70,8 @@ ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::DoOpTiling()
     // block split, ensure that ub prioritizes a, block split s * (a/maxBaseA)
     uint64_t minBaseS = 1;
     ubSize_ -= SIMD_RESERVED_SIZE;
-    uint64_t maxBaseA =
-        (ubSize_ - BUFFER_NUM * (ubBlockSize_ + minBaseS * idTypeBytes_)) / BUFFER_NUM / (minBaseS * valueTypeBytes_);
+    uint64_t maxBaseA = (ubSize_ - BUFFER_NUM * (ubBlockSize_ + minBaseS * idTypeBytes_)) / BUFFER_NUM /
+                        (minBaseS * valueTypeBytes_);
     maxBaseA = Ops::Base::FloorAlign(maxBaseA, ubBlockSize_ / valueTypeBytes_);
 
     uint64_t colNumAlign = Ops::Base::CeilDiv(innerDim_, maxBaseA);

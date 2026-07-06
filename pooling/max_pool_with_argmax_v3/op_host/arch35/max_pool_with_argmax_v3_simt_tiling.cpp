@@ -28,12 +28,10 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     const char* data_format = runtimeAttrs->GetAttrPointer<char>(FORMAT_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, data_format);
     inputData.data_format = data_format;
-    std::transform(
-        inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
-        [](unsigned char c) { return std::tolower(c); });
+    std::transform(inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
     if (!(inputData.data_format == "nchw" || inputData.data_format == "nhwc")) {
-        OP_LOGE_FOR_INVALID_FORMAT(
-            context_->GetNodeName(), "data_format", data_format, "NCHW or NHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "data_format", data_format, "NCHW or NHWC");
         return ge::GRAPH_FAILED;
     }
     auto inputX = context_->GetInputShape(0);
@@ -49,8 +47,7 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     auto indicesShape = Ops::Base::EnsureNotScalar(indicesX->GetStorageShape());
 
     if (inputShape.GetDimNum() != NCHW_DIMS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(), "4");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(), "4");
         return ge::GRAPH_FAILED;
     }
     if (inputData.data_format == "nhwc") {
@@ -69,23 +66,21 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x", Ops::Base::ToString(dtype).c_str(),
-            "float, float16 and bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(dtype).c_str(),
+                                  "float, float16 and bfloat16");
         return ge::GRAPH_FAILED;
     }
     if (indicesShape != outShape) {
         std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "indices and y", shapeMsg.c_str(),
-            "The Shapes of indices and y must be the same");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indices and y", shapeMsg.c_str(),
+                                               "The Shapes of indices and y must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
     const gert::TypedContinuousVector<int64_t>* kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
-    inputData.kernelSize =
-        array<uint64_t, HW_DIMS>{uint64_t(*(kernelSize->GetData())), uint64_t(*(kernelSize->GetData() + 1))};
+    inputData.kernelSize = array<uint64_t, HW_DIMS>{uint64_t(*(kernelSize->GetData())),
+                                                    uint64_t(*(kernelSize->GetData() + 1))};
     const gert::TypedContinuousVector<int64_t>* stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, stride);
     inputData.stride = array<uint64_t, HW_DIMS>{uint64_t(*(stride->GetData())), uint64_t(*(stride->GetData() + 1))};
@@ -94,8 +89,8 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     inputData.pad = array<uint64_t, HW_DIMS>{uint64_t(*(padding->GetData())), uint64_t(*(padding->GetData() + 1))};
     const gert::TypedContinuousVector<int64_t>* dilation = runtimeAttrs->GetListInt(DILATION_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dilation);
-    inputData.dilation =
-        array<uint64_t, HW_DIMS>{uint64_t(*(dilation->GetData())), uint64_t(*(dilation->GetData() + 1))};
+    inputData.dilation = array<uint64_t, HW_DIMS>{uint64_t(*(dilation->GetData())),
+                                                  uint64_t(*(dilation->GetData() + 1))};
     inputData.ceilMode = *runtimeAttrs->GetAttrPointer<bool>(CEIL_POS);
     return ge::GRAPH_SUCCESS;
 }
@@ -144,12 +139,10 @@ uint64_t MaxPoolWithArgmaxV3TilingSIMT::GetTilingKey() const
 
 ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::PostTiling()
 {
-    OP_CHECK_IF(
-        context_->GetRawTilingData()->GetCapacity() < tiling.GetDataSize(),
-        OP_LOGE(
-            context_, "tiling data's[%zu] is larger than capacity[%zu].", tiling.GetDataSize(),
-            context_->GetRawTilingData()->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context_->GetRawTilingData()->GetCapacity() < tiling.GetDataSize(),
+                OP_LOGE(context_, "tiling data's[%zu] is larger than capacity[%zu].", tiling.GetDataSize(),
+                        context_->GetRawTilingData()->GetCapacity()),
+                return ge::GRAPH_FAILED);
     tiling.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     return ge::GRAPH_SUCCESS;

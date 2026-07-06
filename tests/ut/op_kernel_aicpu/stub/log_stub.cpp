@@ -9,13 +9,11 @@
  */
 
 #include <cstdint>
- 
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-int32_t CheckLogLevel(int32_t module_id, int32_t log_level) {
-  return 0;
-}
+int32_t CheckLogLevel(int32_t module_id, int32_t log_level) { return 0; }
 #ifdef __cplusplus
 }
 #endif // __cplusplus

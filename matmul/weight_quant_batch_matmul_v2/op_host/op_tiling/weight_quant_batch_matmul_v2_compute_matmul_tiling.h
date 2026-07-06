@@ -46,45 +46,39 @@ struct MatmulParams {
     bool kbAlign;
 };
 
-class ComputeMatmulTiling
-{
+class ComputeMatmulTiling {
 public:
-    static bool GetTiling(
-        AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult, const MatmulParams& params,
-        const AiCoreParams& aicoreParams, gert::TilingContext* context);
+    static bool GetTiling(AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult,
+                          const MatmulParams& params, const AiCoreParams& aicoreParams, gert::TilingContext* context);
 
 private:
-    static bool GetCacheTiling(
-        AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult, const MatmulParams& params,
-        gert::TilingContext* context);
+    static bool GetCacheTiling(AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult,
+                               const MatmulParams& params, gert::TilingContext* context);
 
-    static void CalcCommonTiling(
-        AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params, const AiCoreParams& aicoreParams);
+    static void CalcCommonTiling(AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params,
+                                 const AiCoreParams& aicoreParams);
 
     static void CalcMsdBufferSize(AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params);
 
-    static bool MsdA16W8CommonTiling(
-        AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult, const MatmulParams& params,
-        const AiCoreParams& aicoreParams);
+    static bool MsdA16W8CommonTiling(AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult,
+                                     const MatmulParams& params, const AiCoreParams& aicoreParams);
 
-    static bool SimpleIncreTiling(
-        AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult, const MatmulParams& params,
-        const AiCoreParams& aicoreParams);
+    static bool SimpleIncreTiling(AscendC::tiling::TCubeTiling& matmulTiling, MatmulMultiCoreResult& multiCoreResult,
+                                  const MatmulParams& params, const AiCoreParams& aicoreParams);
 
-    static void Convert2AscendCTiling(
-        const CacheTilingData& tbeTiling, AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params,
-        MatmulMultiCoreResult& multiCoreResult);
-    static MatrixTraverse GetIteratorOrder(
-        const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN, int32_t singleCoreK,
-        ge::DataType aDtype);
+    static void Convert2AscendCTiling(const CacheTilingData& tbeTiling, AscendC::tiling::TCubeTiling& matmulTiling,
+                                      const MatmulParams& params, MatmulMultiCoreResult& multiCoreResult);
+    static MatrixTraverse GetIteratorOrder(const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN,
+                                           int32_t singleCoreK, ge::DataType aDtype);
 
-    static bool tryComputeSimpleTiling(
-        AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params, const AiCoreParams& aicoreParams);
+    static bool tryComputeSimpleTiling(AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params,
+                                       const AiCoreParams& aicoreParams);
 
-    static bool tryAFullLoad(AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params, const AiCoreParams& aicoreParams);
+    static bool tryAFullLoad(AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params,
+                             const AiCoreParams& aicoreParams);
 
-    static bool trySimpleTilingNormalLoad(
-        AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params, const AiCoreParams& aicoreParams);
+    static bool trySimpleTilingNormalLoad(AscendC::tiling::TCubeTiling& matmulTiling, const MatmulParams& params,
+                                          const AiCoreParams& aicoreParams);
 };
 } // namespace optiling
 #endif // WEIGHT_QUANT_BATCH_MATMUL_V2_COMPUTE_MATMUL_TILING_H

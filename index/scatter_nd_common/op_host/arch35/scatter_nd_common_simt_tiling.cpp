@@ -23,16 +23,12 @@ namespace optiling {
 using namespace ScatterNdCommon;
 
 static constexpr uint64_t RESERVE_SIZE = 256;
-static constexpr int64_t DCACHE_SIZE = 131072;  // 128k
+static constexpr int64_t DCACHE_SIZE = 131072; // 128k
 static constexpr int64_t TEMPLATE_MODE_SIMT = 8;
 static constexpr uint64_t DB_BUFFER = 2;
 static constexpr uint64_t MIN_TILING_SIZE = 128;
 
-
-bool ScatterNdCommonSimtTiling::IsCapable()
-{
-    return true;
-}
+bool ScatterNdCommonSimtTiling::IsCapable() { return true; }
 
 uint64_t ScatterNdCommonSimtTiling::GetTilingKey() const
 {
@@ -48,8 +44,8 @@ uint64_t ScatterNdCommonSimtTiling::GetTilingKey() const
 
 void ScatterNdCommonSimtTiling::SetTilingData()
 {
-    ScatterNdCommon::ScatterNdCommonSimtTilingData *tilingData = 
-        context_->GetTilingData<ScatterNdCommon::ScatterNdCommonSimtTilingData>();
+    ScatterNdCommon::ScatterNdCommonSimtTilingData*
+        tilingData = context_->GetTilingData<ScatterNdCommon::ScatterNdCommonSimtTilingData>();
 
     for (int32_t i = 0; i < OPTILING_MAX_RANK_COUNT; i++) {
         tilingData->strideList[i] = strideList_[i];
@@ -66,13 +62,13 @@ void ScatterNdCommonSimtTiling::SetTilingData()
     tilingData->varInAxis = varInAxis_;
 }
 
-
 ge::graphStatus ScatterNdCommonSimtTiling::BlockTiling()
 {
     auto typeSize = ge::GetSizeByDataType(updateDtype_);
     OP_CHECK_IF(
         typeSize <= 0,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDtype_).c_str(), "The dtype size of updates must be greater than 0."),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDtype_).c_str(),
+                                              "The dtype size of updates must be greater than 0."),
         return ge::GRAPH_FAILED);
     alignFactor_ = Ops::Base::GetUbBlockSize(context_) / typeSize;
     auto blockFactor = Ops::Base::CeilDiv(updateShapeSize_, totalCoreNum_);
@@ -81,12 +77,11 @@ ge::graphStatus ScatterNdCommonSimtTiling::BlockTiling()
     blockNum_ = Ops::Base::CeilDiv(updateShapeSize_, blockTilingSize_);
     tailBlockTilingSize_ = updateShapeSize_ - blockTilingSize_ * (blockNum_ - 1UL);
     OP_LOGD(context_->GetNodeName(),
-               "updateShapeSize = %lld, blockFactor = %lld, blockAlignFactor = %lld,"
-               "blockTilingSize = %d, tailBlockTilingSize = %d", updateShapeSize_,
-               blockFactor, blockAlignFactor, blockTilingSize_, tailBlockTilingSize_);
+            "updateShapeSize = %lld, blockFactor = %lld, blockAlignFactor = %lld,"
+            "blockTilingSize = %d, tailBlockTilingSize = %d",
+            updateShapeSize_, blockFactor, blockAlignFactor, blockTilingSize_, tailBlockTilingSize_);
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus ScatterNdCommonSimtTiling::UbTiling()
 {
@@ -98,12 +93,13 @@ ge::graphStatus ScatterNdCommonSimtTiling::UbTiling()
     auto indiceNum = indiceShapeSize_ / rankSize_;
     sliceSize_ = updateShapeSize_ / indiceNum;
     OP_CHECK_IF(sliceSize_ == static_cast<uint64_t>(0),
-                    OP_LOGD(context_->GetNodeName(), "sliceSize %lu is zero. please check.", sliceSize_),
-                    return ge::GRAPH_FAILED);
+                OP_LOGD(context_->GetNodeName(), "sliceSize %lu is zero. please check.", sliceSize_),
+                return ge::GRAPH_FAILED);
     auto updateTypeSize = ge::GetSizeByDataType(updateDtype_);
     OP_CHECK_IF(
         updateTypeSize <= 0,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDtype_).c_str(), "The dtype size of updates must be greater than 0."),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDtype_).c_str(),
+                                              "The dtype size of updates must be greater than 0."),
         return ge::GRAPH_FAILED);
     indiceDtype_ = context_->GetInputDesc(INPUT_IDX_INDICES)->GetDataType();
     auto indiceTypeSize = ge::GetSizeByDataType(indiceDtype_);
@@ -119,10 +115,9 @@ ge::graphStatus ScatterNdCommonSimtTiling::UbTiling()
         ubTilingSize_ = maxIndiceCnt * sliceSize_;
     }
     OP_LOGD(context_->GetNodeName(), "sliceUb = %lu, halfUbSize = %u, ubTilingSize = %u", sliceUb, halfUbSize,
-                ubTilingSize_);
+            ubTilingSize_);
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus ScatterNdCommonSimtTiling::DoOpTiling()
 {
@@ -151,16 +146,16 @@ ge::graphStatus ScatterNdCommonSimtTiling::PostTiling()
 
     auto res = context_->SetLocalMemorySize(ubSize_ - DCACHE_SIZE);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGD(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_), return ge::GRAPH_FAILED);
+                OP_LOGD(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
-
 std::string ScatterNdCommonSimtTiling::TilingDataToString()
 {
-    ScatterNdCommon::ScatterNdCommonSimtTilingData* tilingData =
-        context_->GetTilingData<ScatterNdCommon::ScatterNdCommonSimtTilingData>();
+    ScatterNdCommon::ScatterNdCommonSimtTilingData*
+        tilingData = context_->GetTilingData<ScatterNdCommon::ScatterNdCommonSimtTilingData>();
     std::string str = " blockNum:" + std::to_string(tilingData->blockNum);
     str += " rankSize:" + std::to_string(tilingData->rankSize);
     str += " blockTilingSize:" + std::to_string(tilingData->blockTilingSize);

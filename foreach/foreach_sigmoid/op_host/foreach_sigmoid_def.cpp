@@ -18,7 +18,7 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-class ForeachSigmoid: public OpDef {
+class ForeachSigmoid : public OpDef {
 public:
     explicit ForeachSigmoid(const char* name) : OpDef(name)
     {

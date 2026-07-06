@@ -26,25 +26,23 @@ using namespace Ops::Base;
 
 namespace optiling {
 struct BinaryCrossEntropyCompileInfo {
-  ge::DataType dtype;
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
-  Ops::Base::ReduceOpCompileInfo opInfo;
+    ge::DataType dtype;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+    Ops::Base::ReduceOpCompileInfo opInfo;
 };
 
-struct BinaryCrossEntropyTilingKey
-{
+struct BinaryCrossEntropyTilingKey {
     ReduceTilingKey reduceTiling;
     uint32_t dType = 20;
     uint32_t reduction = 2;
     uint32_t hasWeight = 0;
 };
 
-class BinaryCrossEntropyTiling
-{
+class BinaryCrossEntropyTiling {
 public:
-    explicit BinaryCrossEntropyTiling(gert::TilingContext* context) : tilingContext(context) {};
-    ge::graphStatus RunTiling(const BinaryCrossEntropyCompileInfo *compileInfo);
+    explicit BinaryCrossEntropyTiling(gert::TilingContext* context) : tilingContext(context){};
+    ge::graphStatus RunTiling(const BinaryCrossEntropyCompileInfo* compileInfo);
     BinaryCrossEntropyTilingData* tiling = nullptr;
 
 protected:
@@ -52,21 +50,22 @@ protected:
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckInputShape();
     ge::graphStatus DoElewiseTiling();
-    ge::graphStatus DoReduceTiling(const BinaryCrossEntropyCompileInfo *compileInfo);
+    ge::graphStatus DoReduceTiling(const BinaryCrossEntropyCompileInfo* compileInfo);
     ge::graphStatus SetTilingData();
-    
-    ge::graphStatus RunFp16ReduceTiling(ReduceOpInputParam& opInput, const BinaryCrossEntropyCompileInfo *compileInfo);
-    ge::graphStatus RunFp32ReduceTiling(ReduceOpInputParam& opInput, const BinaryCrossEntropyCompileInfo *compileInfo);
+
+    ge::graphStatus RunFp16ReduceTiling(ReduceOpInputParam& opInput, const BinaryCrossEntropyCompileInfo* compileInfo);
+    ge::graphStatus RunFp32ReduceTiling(ReduceOpInputParam& opInput, const BinaryCrossEntropyCompileInfo* compileInfo);
+
 private:
     gert::TilingContext* tilingContext = nullptr;
     ge::DataType outputDtype = ge::DT_UNDEFINED;
     ge::DataType inputXDtype = ge::DT_UNDEFINED;
     ge::DataType inputYDtype = ge::DT_UNDEFINED;
-    const char *reductionStr = "";
+    const char* reductionStr = "";
     bool isReductionNone = false;
     bool isReductionMean = false;
     bool isReductionSum = false;
     BinaryCrossEntropyTilingKey bceTilingKey;
 };
-}  // namespace optiling
-#endif  // OPS_OP_TILING_RUNTIME_BINARY_CORSS_ENTROPY_TILING_H
+} // namespace optiling
+#endif // OPS_OP_TILING_RUNTIME_BINARY_CORSS_ENTROPY_TILING_H

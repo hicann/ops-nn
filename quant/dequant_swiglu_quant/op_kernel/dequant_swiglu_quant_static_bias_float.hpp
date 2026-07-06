@@ -28,8 +28,8 @@ public:
     __aicore__ inline ~DequantSwigluQuantStaticBiasFloat() {}
 
     __aicore__ inline void Init(GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm,
-        GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
-        const SwiGluTilingData* tilingData, TPipe* pipe_);
+                                GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm,
+                                const SwiGluTilingData* tilingData, TPipe* pipe_);
     __aicore__ inline void Process();
 
 protected:
@@ -39,20 +39,21 @@ private:
 };
 
 TEMPLATE_DECLARE_STATIC
-__aicore__ inline void DequantSwigluQuantStaticBiasFloat<TEMPLATE_ARGS_STATIC>::Init(GM_ADDR x_gm, GM_ADDR weight_scale_gm,
-    GM_ADDR activation_scale_gm, GM_ADDR bias_gm, GM_ADDR quant_scale_gm, GM_ADDR quant_offset_gm,
-    GM_ADDR y_gm, GM_ADDR scale_gm, const SwiGluTilingData* tilingData, TPipe* pipe_)
+__aicore__ inline void DequantSwigluQuantStaticBiasFloat<TEMPLATE_ARGS_STATIC>::Init(
+    GM_ADDR x_gm, GM_ADDR weight_scale_gm, GM_ADDR activation_scale_gm, GM_ADDR bias_gm, GM_ADDR quant_scale_gm,
+    GM_ADDR quant_offset_gm, GM_ADDR y_gm, GM_ADDR scale_gm, const SwiGluTilingData* tilingData, TPipe* pipe_)
 {
     this->pipe = pipe_;
-    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm, scale_gm, tilingData, pipe_);
+    this->InitCommon(x_gm, weight_scale_gm, activation_scale_gm, bias_gm, quant_scale_gm, quant_offset_gm, y_gm,
+                     scale_gm, tilingData, pipe_);
     if (this->biasIsEmpty == 0) {
         this->biasGm.SetGlobalBuffer((__gm__ BiasType*)bias_gm, this->colNum);
     }
     if (this->activateScaleIsEmpty == 0) {
-        this->activationScaleGm.SetGlobalBuffer((__gm__ float*) activation_scale_gm + this->inputCopyOffset,
-            this->curCoreRowNum);
+        this->activationScaleGm.SetGlobalBuffer((__gm__ float*)activation_scale_gm + this->inputCopyOffset,
+                                                this->curCoreRowNum);
     }
-    this->weightScaleGm.SetGlobalBuffer((__gm__ float*) weight_scale_gm, this->colNum);
+    this->weightScaleGm.SetGlobalBuffer((__gm__ float*)weight_scale_gm, this->colNum);
 
     this->InitUbBufferCommon();
 
@@ -71,23 +72,23 @@ TEMPLATE_DECLARE_STATIC
 __aicore__ inline void DequantSwigluQuantStaticBiasFloat<TEMPLATE_ARGS_STATIC>::InitUbBuffer()
 {
     // pipe alloc memory to queue, the unit is Bytes
-    int64_t alignNumCol = this->curColNum == this->Align(this->curColNum, sizeof(InType))
-                             ? this->curColNum
-                             : this->Align(this->curColNum, sizeof(OutType));
+    int64_t alignNumCol = this->curColNum == this->Align(this->curColNum, sizeof(InType)) ?
+                              this->curColNum :
+                              this->Align(this->curColNum, sizeof(OutType));
     this->pipe->InitBuffer(this->inQueueWeightScale, bufferNum, alignNumCol * sizeof(float) * NUM2);
     if (this->activateScaleIsEmpty == 0) {
         this->pipe->InitBuffer(this->inQueueActivationScale, bufferNum, this->curCoreRowNum * sizeof(float));
     }
     if (this->biasIsEmpty == 0) {
-        int64_t biasAlignNumCol = this->curColNum == this->Align(this->curColNum, sizeof(BiasType))
-                             ? this->curColNum
-                             : this->Align(this->curColNum, sizeof(OutType));
+        int64_t biasAlignNumCol = this->curColNum == this->Align(this->curColNum, sizeof(BiasType)) ?
+                                      this->curColNum :
+                                      this->Align(this->curColNum, sizeof(OutType));
         this->pipe->InitBuffer(this->inQueueBias, bufferNum, biasAlignNumCol * sizeof(BiasType) * NUM2);
         if constexpr (std::is_same_v<BiasType, bfloat16_t> || std::is_same_v<BiasType, half>) {
             this->pipe->InitBuffer(this->inputBiasTempBuffer, alignNumCol * sizeof(float) * NUM2);
         }
     }
 }
-} // using namespace DequantSwigluQuant
+} // namespace DequantSwigluQuant
 
-#endif  // CANN_DEQUANT_SWIGLU_QUANT_STATIC_BIAS_FLOAT_HPP
+#endif // CANN_DEQUANT_SWIGLU_QUANT_STATIC_BIAS_FLOAT_HPP

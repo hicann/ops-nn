@@ -31,13 +31,14 @@
 #include "util/math_util.h"
 
 using namespace op;
-using Ops::NN::SwapLastTwoDimValue;
 using Ops::NN::IsTransposeLastTwoDims;
+using Ops::NN::SwapLastTwoDimValue;
 
 namespace {
 // 校验x1、x2、x1scale、x2scale、out必须存在，校验yscale、x1offset、x2offset、yoffset、x3、groupsize不支持
-static inline bool CheckInputExistence(TupleInput &inputTensors, TupleQuant &quantTensors, TupleFused &fusedTensors,
-                                       const aclTensor *out) {
+static inline bool CheckInputExistence(TupleInput& inputTensors, TupleQuant& quantTensors, TupleFused& fusedTensors,
+                                       const aclTensor* out)
+{
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
     auto x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
@@ -82,7 +83,8 @@ static inline bool CheckInputExistence(TupleInput &inputTensors, TupleQuant &qua
     return true;
 }
 
-static inline bool CheckDimRange(TupleInput &inputTensors, TupleQuant &quantTensors, const aclTensor *out) {
+static inline bool CheckDimRange(TupleInput& inputTensors, TupleQuant& quantTensors, const aclTensor* out)
+{
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
     auto x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
@@ -92,8 +94,8 @@ static inline bool CheckDimRange(TupleInput &inputTensors, TupleQuant &quantTens
     size_t x2MinDimNum = x2StorageFormat == op::Format::FORMAT_FRACTAL_NZ ? MIN_DIM_NUM_NZ : MIN_DIM_NUM_ND;
     size_t x2DimNum = x2->GetStorageShape().GetDimNum();
     if (x2DimNum < x2MinDimNum || x2DimNum > x2MaxDimNum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Input x2's dimension should be in range[%zu, %zu], but actual is %zu.", x2MinDimNum, x2MaxDimNum, x2DimNum);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x2's dimension should be in range[%zu, %zu], but actual is %zu.",
+                x2MinDimNum, x2MaxDimNum, x2DimNum);
         return false;
     }
     OP_CHECK_MIN_DIM(x1, MIN_DIM_NUM_ND, return false);
@@ -115,17 +117,17 @@ static aclnnStatus CheckParams(const QuantMatmulChecker& qmmV3Checker)
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &quantTensors,
-                                        TupleFused &fusedTensors, TupleAttr &boolsTrans, const aclTensor *out,
-                                        aclOpExecutor *executor) {
-    auto &x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
-    auto &x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
-    auto &x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &x2Offset = std::get<INDEX_X2_OFFSET_IN_QUANT_TUPLE>(quantTensors);
-    auto &yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors);
-    auto &x3 = std::get<INDEX_X3_IN_FUSED_TUPLE>(fusedTensors);
+static aclnnStatus PreMatmulCalcProcess(TupleInput& inputTensors, TupleQuant& quantTensors, TupleFused& fusedTensors,
+                                        TupleAttr& boolsTrans, const aclTensor* out, aclOpExecutor* executor)
+{
+    auto& x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
+    auto& x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
+    auto& x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto& x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto& x2Offset = std::get<INDEX_X2_OFFSET_IN_QUANT_TUPLE>(quantTensors);
+    auto& yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto& bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors);
+    auto& x3 = std::get<INDEX_X3_IN_FUSED_TUPLE>(fusedTensors);
     const char* fusedOpType = std::get<INDEX_FUSEDOPTYPE_IN_FUSED_TUPLE>(fusedTensors);
     int64_t groupSize = std::get<INDEX_GROUP_SIZE_IN_QUANT_TUPLE>(quantTensors);
     bool transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
@@ -134,7 +136,7 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &qu
     CHECK_RET(executor != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 校验tensor是否存在或不支持。
     CHECK_RET(CheckInputExistence(inputTensors, quantTensors, fusedTensors, out), ACLNN_ERR_PARAM_NULLPTR);
-    
+
     // 对存在的tensor进行contiguous处理
     bool tempTransposeValue = false;
     CHECK_RET(TensorContiguousProcess(x1, transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
@@ -168,21 +170,22 @@ bool CheckFusedOpType(const char* fusedOpType)
     return true;
 }
 
-bool CheckInputDtypeValid(const aclTensor *&x1, const aclTensor *&x2)
-{   
+bool CheckInputDtypeValid(const aclTensor*& x1, const aclTensor*& x2)
+{
     bool isA8W8 = x1->GetDataType() == DataType::DT_INT8 && x2->GetDataType() == DataType::DT_INT8;
     bool isA4W4 = x1->GetDataType() == DataType::DT_INT4 && x2->GetDataType() == DataType::DT_INT4;
     if (!isA8W8 && !isA4W4) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnfusedQuantMatmul only support A8W8/A4W4 scenario, but got x1: %s \
-        x2: %s", op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
+        x2: %s",
+                op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
         return false;
     }
     return true;
 }
 
-bool CheckQuantScaleShape(const aclTensor *&x1, const aclTensor *&x2, const aclTensor *&x1Scale, const aclTensor *&x2Scale,
-                             TupleAttr &boolsTrans)
-{   
+bool CheckQuantScaleShape(const aclTensor*& x1, const aclTensor*& x2, const aclTensor*& x1Scale,
+                          const aclTensor*& x2Scale, TupleAttr& boolsTrans)
+{
     bool transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
 
@@ -208,21 +211,24 @@ bool CheckQuantScaleShape(const aclTensor *&x1, const aclTensor *&x2, const aclT
     return true;
 }
 
-static aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inputTensors, TupleQuant &quantTensors,
-                                                                      TupleFused &fusedTensors, TupleAttr &boolsTrans,
-                                                                      const aclTensor *out, const bool isWeightNz, aclOpExecutor *executor) {
-    auto &x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
-    auto &x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
-    auto &x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    auto &x1Offset = std::get<INDEX_X1_OFFSET_IN_QUANT_TUPLE>(quantTensors);
-    auto &x2Offset = std::get<INDEX_X2_OFFSET_IN_QUANT_TUPLE>(quantTensors);
-    auto &yOffset = std::get<INDEX_Y_OFFSET_IN_QUANT_TUPLE>(quantTensors);
-    auto &bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors);
+static aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inputTensors,
+                                                                      TupleQuant& quantTensors,
+                                                                      TupleFused& fusedTensors, TupleAttr& boolsTrans,
+                                                                      const aclTensor* out, const bool isWeightNz,
+                                                                      aclOpExecutor* executor)
+{
+    auto& x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
+    auto& x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
+    auto& x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto& x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto& yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
+    auto& x1Offset = std::get<INDEX_X1_OFFSET_IN_QUANT_TUPLE>(quantTensors);
+    auto& x2Offset = std::get<INDEX_X2_OFFSET_IN_QUANT_TUPLE>(quantTensors);
+    auto& yOffset = std::get<INDEX_Y_OFFSET_IN_QUANT_TUPLE>(quantTensors);
+    auto& bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors);
     int64_t groupSize = std::get<INDEX_GROUP_SIZE_IN_QUANT_TUPLE>(quantTensors);
     int64_t interfaceType = std::get<INDEX_INTERFACE_TYPE_IN_QUANT_TUPLE>(quantTensors);
-    auto &x3 = std::get<INDEX_X3_IN_FUSED_TUPLE>(fusedTensors);
+    auto& x3 = std::get<INDEX_X3_IN_FUSED_TUPLE>(fusedTensors);
     const char* fusedOpType = std::get<INDEX_FUSEDOPTYPE_IN_FUSED_TUPLE>(fusedTensors);
     bool transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
@@ -239,81 +245,82 @@ static aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput
     CHECK_RET(CheckQuantScaleShape(x1, x2, x1Scale, x2Scale, boolsTrans), ACLNN_ERR_PARAM_INVALID);
 
     auto reformatedX1 = SetTensorToNDFormat(x1);
-    const aclTensor *reformatedX2 = x2;
+    const aclTensor* reformatedX2 = x2;
 
     reformatedX2 = SetTensorToNDFormat(x2);
 
-    const aclTensor *reformatedX1Scale = GetNDFormat(x1Scale);
-    const aclTensor *reformatedX2Scale = GetNDFormat(x2Scale);
-    const aclTensor *reformatedBias = GetNDFormat(bias);
+    const aclTensor* reformatedX1Scale = GetNDFormat(x1Scale);
+    const aclTensor* reformatedX2Scale = GetNDFormat(x2Scale);
+    const aclTensor* reformatedBias = GetNDFormat(bias);
     const TupleInput inputTuple = std::tie(reformatedX1, reformatedX2);
-    const TupleQuant quantTuple = std::tie(reformatedX1Scale, reformatedX2Scale, yScale, x1Offset,
-                                           x2Offset, yOffset, reformatedBias, groupSize, interfaceType);
+    const TupleQuant quantTuple = std::tie(reformatedX1Scale, reformatedX2Scale, yScale, x1Offset, x2Offset, yOffset,
+                                           reformatedBias, groupSize, interfaceType);
 
     int64_t dtype = 0;
     TupleTensor inOutTuple = std::tie(reformatedX1, reformatedX2, out);
     GetDtypeAndTranspose(inOutTuple, dtype, transposeX1, transposeX2);
 
-    QuantMatmulChecker qmmV3Checker(inputTuple, quantTuple, boolsTrans, out, isWeightNz,
-                                    isWeightNz ? "aclnnFusedQuantMatmulWeightNzGetWorkspaceSize"
-                                               : "aclnnFusedQuantMatmulGetWorkspaceSize");
+    QuantMatmulChecker qmmV3Checker(
+        inputTuple, quantTuple, boolsTrans, out, isWeightNz,
+        isWeightNz ? "aclnnFusedQuantMatmulWeightNzGetWorkspaceSize" : "aclnnFusedQuantMatmulGetWorkspaceSize");
     qmmV3Checker.Init();
 
     ret = CheckParams(qmmV3Checker);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    const aclTensor *matmulRet = nullptr;
+    const aclTensor* matmulRet = nullptr;
 
-    matmulRet = l0op::FusedQuantMatMul(reformatedX1, reformatedX2, reformatedBias, reformatedX1Scale,
-                                             reformatedX2Scale, yScale, x1Offset, x2Offset, yOffset,
-                                             nullptr, x3, dtype, -1, transposeX1, transposeX2, groupSize, fusedOpType, executor);
+    matmulRet = l0op::FusedQuantMatMul(reformatedX1, reformatedX2, reformatedBias, reformatedX1Scale, reformatedX2Scale,
+                                       yScale, x1Offset, x2Offset, yOffset, nullptr, x3, dtype, -1, transposeX1,
+                                       transposeX2, groupSize, fusedOpType, executor);
     CHECK_RET(PostMatmulCalcProcess(matmulRet, x1, x2, out, executor) == ACLNN_SUCCESS, ret);
     return ACLNN_SUCCESS;
 }
-}  // namespace
+} // namespace
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(const aclTensor *x1, const aclTensor *x2, const aclTensor *x1Scale,
-                                                  const aclTensor *x2Scale, const aclTensor *yScaleOptional,
-                                                  const aclTensor *x1OffsetOptional, const aclTensor *x2OffsetOptional,
-                                                  const aclTensor *yOffsetOptional, const aclTensor *biasOptional,
-                                                  const aclTensor *x3Optional, const char* fusedOpType, 
-                                                  int64_t groupSizeOptional, aclTensor *out,
-                                                  uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                                  const aclTensor* x2Scale, const aclTensor* yScaleOptional,
+                                                  const aclTensor* x1OffsetOptional, const aclTensor* x2OffsetOptional,
+                                                  const aclTensor* yOffsetOptional, const aclTensor* biasOptional,
+                                                  const aclTensor* x3Optional, const char* fusedOpType,
+                                                  int64_t groupSizeOptional, aclTensor* out, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnFusedQuantMatmul,
-                   DFX_IN(x1, x2, x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional, yOffsetOptional, biasOptional, x3Optional, fusedOpType,
-                          groupSizeOptional),
+                   DFX_IN(x1, x2, x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional, yOffsetOptional,
+                          biasOptional, x3Optional, fusedOpType, groupSizeOptional),
                    DFX_OUT(out));
     auto uniqueExecutor = CREATE_EXECUTOR();
     TupleInput inputTuple = std::tie(x1, x2);
     // 5 represents the aclnnFusedQuantMatmul interface
     const int64_t interfaceType = 5;
-    TupleQuant quantTuple = std::tie(x1Scale, x2Scale, yScaleOptional, x1OffsetOptional,
-                                     x2OffsetOptional, yOffsetOptional, biasOptional, groupSizeOptional, interfaceType);
+    TupleQuant quantTuple = std::tie(x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional,
+                                     yOffsetOptional, biasOptional, groupSizeOptional, interfaceType);
     TupleFused fusedTuple = std::tie(x3Optional, fusedOpType);
     bool transposeX1 = IsTransposeLastTwoDims(x1);
- 	bool transposeX2 = IsTransposeLastTwoDims(x2);
+    bool transposeX2 = IsTransposeLastTwoDims(x2);
     TupleAttr attrTuple = std::tie(transposeX1, transposeX2);
-    auto ret = aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(inputTuple, quantTuple, fusedTuple, attrTuple, out, false,
-                                                             uniqueExecutor.get());
+    auto ret = aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(inputTuple, quantTuple, fusedTuple, attrTuple, out,
+                                                                  false, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, const aclTensor *x2, const aclTensor *x1Scale,
-                                                  const aclTensor *x2Scale, const aclTensor *yScaleOptional,
-                                                  const aclTensor *x1OffsetOptional, const aclTensor *x2OffsetOptional,
-                                                  const aclTensor *yOffsetOptional, const aclTensor *biasOptional,
-                                                  const aclTensor *x3Optional, const char* fusedOpType, 
-                                                  int64_t groupSizeOptional, aclTensor *out,
-                                                  uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(
+    const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
+    const aclTensor* yScaleOptional, const aclTensor* x1OffsetOptional, const aclTensor* x2OffsetOptional,
+    const aclTensor* yOffsetOptional, const aclTensor* biasOptional, const aclTensor* x3Optional,
+    const char* fusedOpType, int64_t groupSizeOptional, aclTensor* out, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnFusedQuantMatmulWeightNz,
-                   DFX_IN(x1, x2, x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional, yOffsetOptional, biasOptional, x3Optional, fusedOpType,
-                           groupSizeOptional),
+                   DFX_IN(x1, x2, x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional, yOffsetOptional,
+                          biasOptional, x3Optional, fusedOpType, groupSizeOptional),
                    DFX_OUT(out));
     if (x2 == nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "FusedQuantMatmul WeightNz do not support x2 is nullptr.");
@@ -321,47 +328,50 @@ aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, c
     }
 
     int64_t viewDimNum = x2->GetViewShape().GetDimNum();
-    if(viewDimNum < MIN_DIM_NUM_ND) {
+    if (viewDimNum < MIN_DIM_NUM_ND) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x2's view dimNum should greater than 1, but is %ld.", viewDimNum);
         return ACLNN_ERR_PARAM_INVALID;
     }
     bool transposeX1 = IsTransposeLastTwoDims(x1);
- 	bool transposeX2 = IsTransposeLastTwoDims(x2);
+    bool transposeX2 = IsTransposeLastTwoDims(x2);
     if (transposeX2) {
-        const_cast<aclTensor *>(x2)->SetViewShape(SwapLastTwoDimValue(x2->GetViewShape()));
+        const_cast<aclTensor*>(x2)->SetViewShape(SwapLastTwoDimValue(x2->GetViewShape()));
     }
 
     op::Shape weightNzShape = GetWeightNzShape(x2, transposeX2);
     if (!CheckWeightNzStorageShape(weightNzShape, x2->GetStorageShape())) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-              "x2'format only support NZ, but now x2's format is not NZ(Ascend affinity format). \
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "x2'format only support NZ, but now x2's format is not NZ(Ascend affinity format). \
 aclnnCalculateMatmulWeightSizeV2 and aclnnTransMatmulWeight can be used to convert the input format from ND to Ascend \
 affinity format.");
-      return ACLNN_ERR_PARAM_INVALID;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     auto uniqueExecutor = CREATE_EXECUTOR();
     x2 = SetTensorToNZFormat(x2, weightNzShape, uniqueExecutor.get());
     TupleInput inputTuple = std::tie(x1, x2);
     // 5 represents the aclnnFusedQuantMatmul interface
     const int64_t interfaceType = 5;
-    TupleQuant quantTuple = std::tie(x1Scale, x2Scale, yScaleOptional, x1OffsetOptional,
-                                     x2OffsetOptional, yOffsetOptional, biasOptional, groupSizeOptional, interfaceType);
+    TupleQuant quantTuple = std::tie(x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional,
+                                     yOffsetOptional, biasOptional, groupSizeOptional, interfaceType);
     TupleFused fusedTuple = std::tie(x3Optional, fusedOpType);
     TupleAttr attrTuple = std::tie(transposeX1, transposeX2);
-    auto ret = aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(inputTuple, quantTuple, fusedTuple, attrTuple, out, true,
-                                                             uniqueExecutor.get());
+    auto ret = aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(inputTuple, quantTuple, fusedTuple, attrTuple, out,
+                                                                  true, uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFusedQuantMatmul(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
+aclnnStatus aclnnFusedQuantMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnFusedQuantMatmul);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnFusedQuantMatmulWeightNz(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream) {
+aclnnStatus aclnnFusedQuantMatmulWeightNz(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                          aclrtStream stream)
+{
     L2_DFX_PHASE_2(aclnnFusedQuantMatmulWeightNz);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }

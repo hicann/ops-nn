@@ -35,28 +35,30 @@ public:
     __aicore__ inline SwigluMxQuantAxisLast(){};
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
-        const SwigluMxQuantTilingData *__restrict tilingData, AscendC::TPipe *pipe);
+                                const SwigluMxQuantTilingData* __restrict tilingData, AscendC::TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void InitGroupIndex(int64_t &allNum);
+    __aicore__ inline void InitGroupIndex(int64_t& allNum);
     __aicore__ inline void Compute(int64_t dim0Size, int64_t dim1Size, int64_t dim1AlignSize);
-    __aicore__ inline void ComputeF8(__local_mem__ T *swigluUbAddr, __local_mem__ uint16_t *maxExpUbAddr,
-        __local_mem__ uint16_t *halfScaleLocalAddr, int64_t dim0Size, int64_t dim1AlignSize);
-    __aicore__ inline void ComputeVfSwigluV2(__local_mem__ T *x1UbAddr, __local_mem__ T *x2UbAddr,
-        __local_mem__ T *swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize);
+    __aicore__ inline void ComputeF8(__local_mem__ T* swigluUbAddr, __local_mem__ uint16_t* maxExpUbAddr,
+                                     __local_mem__ uint16_t* halfScaleLocalAddr, int64_t dim0Size,
+                                     int64_t dim1AlignSize);
+    __aicore__ inline void ComputeVfSwigluV2(__local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr,
+                                             __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
+                                             int64_t dim1AlignSize);
 
     __aicore__ inline void CopyIn(int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize);
     __aicore__ inline void CopyOut(int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize,
-        int64_t dim1OnceSizeAlgin);
+                                   int64_t dim1OnceSizeAlgin);
 
 private:
     GlobalTensor<T> xGm_;
     GlobalTensor<T_IDX> groupIndexGm_;
     GlobalTensor<uint8_t> yGm_;
     GlobalTensor<uint8_t> scaleGm_;
-    const SwigluMxQuantTilingData *tiling_;
-    AscendC::TPipe *pipe_;
+    const SwigluMxQuantTilingData* tiling_;
+    AscendC::TPipe* pipe_;
     int32_t blockIdx_ = 0;
 
     AscendC::TQue<AscendC::QuePosition::VECIN, 1> inQuex_;
@@ -100,13 +102,13 @@ private:
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
 __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::InitGroupIndex(
-    int64_t &allNum)
+    int64_t& allNum)
 {
     int64_t groupIndexNum = tiling_->groupIndexNum;
     LocalTensor<T_IDX> reduceSumUb = reduceSumBuffer_.Get<T_IDX>();
     LocalTensor<T_IDX> groupIndexUb = inQuex_.AllocTensor<T_IDX>();
-    DataCopyExtParams copyInParam = { 1, 0, 0, 0, 0 };
-    DataCopyPadExtParams<T_IDX> copyPadParams = { false, 0, 0, 0 };
+    DataCopyExtParams copyInParam = {1, 0, 0, 0, 0};
+    DataCopyPadExtParams<T_IDX> copyPadParams = {false, 0, 0, 0};
     copyInParam.blockLen = groupIndexNum * sizeof(T_IDX);
     DataCopyPad(groupIndexUb, groupIndexGm_[0], copyInParam, copyPadParams);
     inQuex_.EnQue(groupIndexUb);
@@ -120,9 +122,9 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 }
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
-__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::Init(GM_ADDR x,
-    GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
-    const SwigluMxQuantTilingData *__restrict tilingData, AscendC::TPipe *pipe)
+__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::Init(
+    GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
+    const SwigluMxQuantTilingData* __restrict tilingData, AscendC::TPipe* pipe)
 {
 #if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
@@ -130,11 +132,11 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     tiling_ = tilingData;
     pipe_ = pipe;
     blockIdx_ = GetBlockIdx();
-    xGm_.SetGlobalBuffer((__gm__ T *)x);
-    yGm_.SetGlobalBuffer((__gm__ uint8_t *)y);
-    scaleGm_.SetGlobalBuffer((__gm__ uint8_t *)mxscale);
+    xGm_.SetGlobalBuffer((__gm__ T*)x);
+    yGm_.SetGlobalBuffer((__gm__ uint8_t*)y);
+    scaleGm_.SetGlobalBuffer((__gm__ uint8_t*)mxscale);
     if constexpr (isGroupIndex) {
-        groupIndexGm_.SetGlobalBuffer((__gm__ T_IDX *)group_index);
+        groupIndexGm_.SetGlobalBuffer((__gm__ T_IDX*)group_index);
         pipe_->InitBuffer(reduceSumBuffer_, ONE_BLOCK_UB);
     }
     // 开始get tilingData
@@ -310,21 +312,21 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
 __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::ComputeF8(
-    __local_mem__ T *swigluUbAddr, __local_mem__ uint16_t *maxExpUbAddr, __local_mem__ uint16_t *halfScaleLocalAddr,
+    __local_mem__ T* swigluUbAddr, __local_mem__ uint16_t* maxExpUbAddr, __local_mem__ uint16_t* halfScaleLocalAddr,
     int64_t dim0OnceSize, int64_t dim1AlignSize)
 {
     if (scaleAlg_ == 0) {
         ComputeVfMaxExpVfLast<T>(swigluUbAddr, maxExpUbAddr, dim0OnceSize, dim1AlignSize);
         LocalTensor<uint16_t> mxScaleLocal = outQueScale_.AllocTensor<uint16_t>();
-        auto mxScaleLocalAddr = (__ubuf__ uint16_t *)mxScaleLocal.GetPhyAddr();
+        auto mxScaleLocalAddr = (__ubuf__ uint16_t*)mxScaleLocal.GetPhyAddr();
         ComputeScaleLast<T>(f8Emax_, maxExpUbAddr, mxScaleLocalAddr, halfScaleLocalAddr, dim0OnceSize, dim1AlignSize);
         outQueScale_.EnQue(mxScaleLocal);
     } else {
         ComputeVfMaxExpVfBLASLast<T>(swigluUbAddr, maxExpUbAddr, dim0OnceSize, dim1AlignSize);
         LocalTensor<uint16_t> mxScaleLocal = outQueScale_.AllocTensor<uint16_t>();
-        auto mxScaleLocalAddr = (__ubuf__ uint16_t *)mxScaleLocal.GetPhyAddr();
+        auto mxScaleLocalAddr = (__ubuf__ uint16_t*)mxScaleLocal.GetPhyAddr();
         ComputeScaleBLASLast<T>(dtypeMax_, maxExpUbAddr, mxScaleLocalAddr, halfScaleLocalAddr, dim0OnceSize,
-            dim1AlignSize);
+                                dim1AlignSize);
         outQueScale_.EnQue(mxScaleLocal);
     }
 }
@@ -334,23 +336,23 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize)
 {
     LocalTensor<T> xlocal = inQuex_.DeQue<T>();
-    auto x1UbAddr = (__ubuf__ T *)xlocal.GetPhyAddr();
-    auto x2UbAddr = (__ubuf__ T *)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
+    auto x1UbAddr = (__ubuf__ T*)xlocal.GetPhyAddr();
+    auto x2UbAddr = (__ubuf__ T*)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
     LocalTensor<T> swigluUb = swigluBuffer_.Get<T>();
-    auto swigluUbAddr = (__ubuf__ T *)swigluUb.GetPhyAddr();
+    auto swigluUbAddr = (__ubuf__ T*)swigluUb.GetPhyAddr();
     if constexpr (isLast) {
         if (swigluMode_ == 0 && activateLeft_ == 0) {
-            x1UbAddr = (__ubuf__ T *)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
-            x2UbAddr = (__ubuf__ T *)xlocal.GetPhyAddr();
+            x1UbAddr = (__ubuf__ T*)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
+            x2UbAddr = (__ubuf__ T*)xlocal.GetPhyAddr();
         }
         if (swigluMode_ == 1) {
-            x1UbAddr = (__ubuf__ T *)xlocal.GetPhyAddr();
-            x2UbAddr = (__ubuf__ T *)xlocal[CONST_64].GetPhyAddr();
+            x1UbAddr = (__ubuf__ T*)xlocal.GetPhyAddr();
+            x2UbAddr = (__ubuf__ T*)xlocal[CONST_64].GetPhyAddr();
         }
     } else {
         if (activateLeft_ == 0) {
-            x1UbAddr = (__ubuf__ T *)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
-            x2UbAddr = (__ubuf__ T *)xlocal.GetPhyAddr();
+            x1UbAddr = (__ubuf__ T*)xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM].GetPhyAddr();
+            x2UbAddr = (__ubuf__ T*)xlocal.GetPhyAddr();
         }
     }
     if constexpr (isLast) {
@@ -364,32 +366,32 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     }
     inQuex_.FreeTensor(xlocal);
     LocalTensor<uint16_t> maxExpUb = maxExpBuffer_.Get<uint16_t>();
-    auto maxExpUbAddr = (__ubuf__ uint16_t *)maxExpUb.GetPhyAddr();
+    auto maxExpUbAddr = (__ubuf__ uint16_t*)maxExpUb.GetPhyAddr();
     LocalTensor<uint16_t> halfScaleLocal = halfScaleBuffer_.Get<uint16_t>();
-    auto halfScaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t *>(halfScaleLocal.GetPhyAddr());
+    auto halfScaleLocalAddr = reinterpret_cast<__ubuf__ uint16_t*>(halfScaleLocal.GetPhyAddr());
     if constexpr (IsSame<U, fp4x2_e2m1_t>::value || IsSame<U, fp4x2_e1m2_t>::value) {
         ComputeVfMaxExpVfLast<T>(swigluUbAddr, maxExpUbAddr, dim0OnceSize, dim1AlignSize);
         LocalTensor<uint16_t> mxScaleLocal = outQueScale_.AllocTensor<uint16_t>();
-        auto mxScaleLocalAddr = (__ubuf__ uint16_t *)mxScaleLocal.GetPhyAddr();
+        auto mxScaleLocalAddr = (__ubuf__ uint16_t*)mxScaleLocal.GetPhyAddr();
         ComputeScaleLast<T>(f4Emax_, maxExpUbAddr, mxScaleLocalAddr, halfScaleLocalAddr, dim0OnceSize, dim1AlignSize);
         outQueScale_.EnQue(mxScaleLocal);
     } else {
         ComputeF8(swigluUbAddr, maxExpUbAddr, halfScaleLocalAddr, dim0OnceSize, dim1AlignSize);
     }
     LocalTensor<int8_t> outLocal = outQuey_.AllocTensor<int8_t>();
-    auto outLocalAddr = (__ubuf__ int8_t *)outLocal.GetPhyAddr();
+    auto outLocalAddr = (__ubuf__ int8_t*)outLocal.GetPhyAddr();
     if constexpr (IsSame<U, fp4x2_e2m1_t>::value || IsSame<U, fp4x2_e1m2_t>::value) {
         if constexpr (roundMode == RoundMode::CAST_RINT) {
-            ComputeDataF4Last<T, U, RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(swigluUbAddr, halfScaleLocalAddr,
-                outLocalAddr, dim0OnceSize, dim1AlignSize);
+            ComputeDataF4Last<T, U, RoundMode::CAST_TRUNC, RoundMode::CAST_RINT>(
+                swigluUbAddr, halfScaleLocalAddr, outLocalAddr, dim0OnceSize, dim1AlignSize);
         }
         if constexpr (roundMode == RoundMode::CAST_ROUND) {
-            ComputeDataF4Last<T, U, RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(swigluUbAddr, halfScaleLocalAddr,
-                outLocalAddr, dim0OnceSize, dim1AlignSize);
+            ComputeDataF4Last<T, U, RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND>(
+                swigluUbAddr, halfScaleLocalAddr, outLocalAddr, dim0OnceSize, dim1AlignSize);
         }
         if constexpr (roundMode == RoundMode::CAST_FLOOR) {
-            ComputeDataF4Last<T, U, RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(swigluUbAddr, halfScaleLocalAddr,
-                outLocalAddr, dim0OnceSize, dim1AlignSize);
+            ComputeDataF4Last<T, U, RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR>(
+                swigluUbAddr, halfScaleLocalAddr, outLocalAddr, dim0OnceSize, dim1AlignSize);
         }
     } else {
         ComputeDataF8Last<T, U>(swigluUbAddr, halfScaleLocalAddr, outLocalAddr, dim0OnceSize, dim1AlignSize);
@@ -399,7 +401,7 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
 __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::ComputeVfSwigluV2(
-    __local_mem__ T *x1UbAddr, __local_mem__ T *x2UbAddr, __local_mem__ T *swigluUbAddr, int64_t dim0OnceSize,
+    __local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr, __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize,
     int64_t dim1OnceSize, int64_t dim1AlignSize)
 {
     // 在计算swiglu时需把pad 0做了
@@ -462,12 +464,12 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
         AscendC::MicroAPI::MaskReg mask3 = AscendC::MicroAPI::UpdateMask<T>(mask3Num);
         for (uint16_t dim0vfLoopIdx = 0; dim0vfLoopIdx < dim0VfTimes; dim0vfLoopIdx++) {
             for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
-                AscendC::MicroAPI::AddrReg srcIdxOffset =
-                    AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, 128);
+                AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(
+                    dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, 128);
                 AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                    srcIdxOffset);
+                                                                                             srcIdxOffset);
                 AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                    srcIdxOffset);
+                                                                                             srcIdxOffset);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
 
@@ -484,19 +486,18 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 
                 AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, mask);
 
-
                 AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
-                AscendC::MicroAPI::AddrReg outOffset =
-                    AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out, dim1vfLoopIdx, 64);
+                AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
+                                                                                           dim1vfLoopIdx, 64);
                 DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
             }
             AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
             AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
             for (uint16_t aa = 0; aa < dim1TailTimes; aa++) {
                 AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
-                    srcIdxOffset1);
+                                                                                             srcIdxOffset1);
                 AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
-                    srcIdxOffset1);
+                                                                                             srcIdxOffset1);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
 
@@ -524,12 +525,12 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 }
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
-__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::CopyIn(int64_t rowOffset,
-    int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize)
+__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::CopyIn(
+    int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize)
 {
     LocalTensor<T> xlocal = inQuex_.AllocTensor<T>();
-    DataCopyExtParams copyInParam = { 0, 0, 0, 0, 0 };
-    DataCopyPadExtParams<T> copyPadParams = { false, 0, 0, 0 };
+    DataCopyExtParams copyInParam = {0, 0, 0, 0, 0};
+    DataCopyPadExtParams<T> copyPadParams = {false, 0, 0, 0};
     if constexpr (isLast) {
         copyInParam.blockCount = dim0OnceSize;
         copyInParam.blockLen = dim1OnceSize * sizeof(T);
@@ -538,7 +539,7 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
             copyInParam.srcStride = (dim2N_ - dim1OnceSize) * sizeof(T);
             DataCopyPad(xlocal, xGm_[offset], copyInParam, copyPadParams);
             DataCopyPad(xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM], xGm_[offset + dimN_], copyInParam,
-                copyPadParams);
+                        copyPadParams);
         } else {
             int64_t offset = rowOffset * dim2N_ + colBlockStart * X_ONCE_NUM;
             copyInParam.blockCount = dim0OnceSize;
@@ -555,18 +556,18 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
         copyInParam.dstStride = 0;
         DataCopyPad(xlocal, xGm_[rowOffset * dimN_ + colBlockStart], copyInParam, copyPadParams);
         DataCopyPad(xlocal[factorDim0Size_ * factorDim1Size_ * QUANT_ONCE_NUM],
-            xGm_[(rowOffset + dimM_) * dimN_ + colBlockStart], copyInParam, copyPadParams);
+                    xGm_[(rowOffset + dimM_) * dimN_ + colBlockStart], copyInParam, copyPadParams);
     }
     inQuex_.EnQue(xlocal);
 }
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
-__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::CopyOut(int64_t rowOffset,
-    int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1OnceSizeAlgin)
+__aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::CopyOut(
+    int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1OnceSizeAlgin)
 {
     LocalTensor<uint8_t> mxScaleLocal = outQueScale_.DeQue<uint8_t>();
     LocalTensor<uint8_t> outLocal = outQuey_.DeQue<uint8_t>();
-    DataCopyExtParams copyOutParamData = { 0, 0, 0, 0, 0 };
+    DataCopyExtParams copyOutParamData = {0, 0, 0, 0, 0};
     copyOutParamData.blockCount = dim0OnceSize;
     int64_t offset = rowOffset * dimN_ + colBlockStart * 256;
     if constexpr (IsSame<U, fp4x2_e2m1_t>::value || IsSame<U, fp4x2_e1m2_t>::value) {
@@ -581,7 +582,7 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
     }
     DataCopyPad(yGm_[offset], outLocal, copyOutParamData);
 
-    DataCopyExtParams copyOutParamScale = { 0, 0, 0, 0, 0 };
+    DataCopyExtParams copyOutParamScale = {0, 0, 0, 0, 0};
     uint32_t usedFactorDim1 = dim1OnceSizeAlgin / ONE_BLOCK_UB;
     copyOutParamScale.blockCount = dim0OnceSize;
     copyOutParamScale.blockLen = usedFactorDim1;

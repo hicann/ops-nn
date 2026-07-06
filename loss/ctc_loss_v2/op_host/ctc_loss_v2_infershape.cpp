@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -36,8 +36,8 @@ constexpr int64_t EXPECTED_TARGETS_DIM_NUM_2D = 2;
 using namespace ge;
 namespace ops {
 template <typename T>
-static ge::graphStatus GetMaxValueAndSumFromTensor(
-    const T* value, const int64_t batchSize, int64_t& maxLength, int64_t& targetLengthsSum)
+static ge::graphStatus GetMaxValueAndSumFromTensor(const T* value, const int64_t batchSize, int64_t& maxLength,
+                                                   int64_t& targetLengthsSum)
 {
     for (int64_t i = 0; i < batchSize; i++) {
         T currentValue = value[i];
@@ -47,8 +47,8 @@ static ge::graphStatus GetMaxValueAndSumFromTensor(
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus GetMaxTargetLengths(
-    const gert::Tensor* targetLengthsTensor, const int64_t batchSize, int64_t& maxLength, int64_t& targetLengthsSum)
+static ge::graphStatus GetMaxTargetLengths(const gert::Tensor* targetLengthsTensor, const int64_t batchSize,
+                                           int64_t& maxLength, int64_t& targetLengthsSum)
 {
     auto status = ge::GRAPH_SUCCESS;
     if (targetLengthsTensor->GetDataType() == ge::DT_INT32) {
@@ -61,8 +61,8 @@ static ge::graphStatus GetMaxTargetLengths(
     return status;
 }
 
-static ge::graphStatus CheckTensorAndBlankValid(
-    const gert::InferShapeContext* context, const gert::Shape* logProbsShape)
+static ge::graphStatus CheckTensorAndBlankValid(const gert::InferShapeContext* context,
+                                                const gert::Shape* logProbsShape)
 {
     int64_t logProbsDimNum = logProbsShape->GetDimNum();
     if (logProbsDimNum != EXPECTED_LOG_PROBS_DIM_NUM) {
@@ -70,8 +70,8 @@ static ge::graphStatus CheckTensorAndBlankValid(
         return ge::GRAPH_FAILED;
     }
     int64_t const symbolSet = logProbsShape->GetDim(2); // symbol set size info
-    OP_CHECK_IF(
-        symbolSet == 0, OP_LOGE(context->GetNodeName(), "The value of symbolSet cannot be 0."), return GRAPH_FAILED);
+    OP_CHECK_IF(symbolSet == 0, OP_LOGE(context->GetNodeName(), "The value of symbolSet cannot be 0."),
+                return GRAPH_FAILED);
     auto const targetsShape = context->GetInputShape(INPUT_TARGETS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, targetsShape);
     int64_t targetsDimNum = targetsShape->GetDimNum();
@@ -95,11 +95,10 @@ static ge::graphStatus CheckTarget(const gert::InferShapeContext* context, int64
     auto const targetsShape = context->GetInputShape(INPUT_TARGETS_IDX);
     if ((targetsShape->GetDimNum() == 1) && (targetsShape->GetShapeSize() != targetLengthsSum) &&
         (targetsShape->GetShapeSize() >= 0)) {
-        OP_LOGE(
-            context->GetNodeName(),
-            "targets is 1D, the size of targets should be euqal to the sum of target_lengths, but got targets %s, "
-            "the sum of target_lengths %ld.",
-            Shape2String(*targetsShape).c_str(), targetLengthsSum);
+        OP_LOGE(context->GetNodeName(),
+                "targets is 1D, the size of targets should be euqal to the sum of target_lengths, but got targets %s, "
+                "the sum of target_lengths %ld.",
+                Shape2String(*targetsShape).c_str(), targetLengthsSum);
         return ge::GRAPH_FAILED;
     }
 
@@ -175,12 +174,10 @@ static ge::graphStatus CTCLossV2InferDataTypeFunc(gert::InferDataTypeContext* co
     OP_LOGD(context->GetNodeName(), "log_probs dtype: %s", Ops::Base::ToString(inputDtype).c_str());
     context->SetOutputDataType(NEG_LOG_LIKELIHOOD_IDX, inputDtype);
     context->SetOutputDataType(LOG_ALPHA_IDX, inputDtype);
-    OP_LOGD(
-        context->GetNodeName(), "neg_log_likelihood dtype: %s",
-        Ops::Base::ToString(context->GetOutputDataType(NEG_LOG_LIKELIHOOD_IDX)).c_str());
-    OP_LOGD(
-        context->GetNodeName(), "log_alpha dtype: %s",
-        Ops::Base::ToString(context->GetOutputDataType(LOG_ALPHA_IDX)).c_str());
+    OP_LOGD(context->GetNodeName(), "neg_log_likelihood dtype: %s",
+            Ops::Base::ToString(context->GetOutputDataType(NEG_LOG_LIKELIHOOD_IDX)).c_str());
+    OP_LOGD(context->GetNodeName(), "log_alpha dtype: %s",
+            Ops::Base::ToString(context->GetOutputDataType(LOG_ALPHA_IDX)).c_str());
     OP_LOGD(context->GetNodeName(), "CTCLossV2InferDataTypeFunc end");
     return GRAPH_SUCCESS;
 }

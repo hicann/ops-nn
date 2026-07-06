@@ -35,12 +35,12 @@ void MatMulV3AswTiling::CalcTailBasicBlock()
     runInfo_.tailInfo.nCnt = 1UL;
     if (tailCnt != 0UL) {
         while ((runInfo_.tailInfo.mCnt + 1UL) * runInfo_.tailInfo.nCnt * tailCnt <= compileInfo_.aicNum &&
-            (!args_.isATrans || MathUtil::CeilDivision(runInfo_.baseM, runInfo_.tailInfo.mCnt) *
-                args_.aDtypeSize > BASIC_BLOCK_K_128_BYTE)) {
+               (!args_.isATrans || MathUtil::CeilDivision(runInfo_.baseM, runInfo_.tailInfo.mCnt) * args_.aDtypeSize >
+                                       BASIC_BLOCK_K_128_BYTE)) {
             runInfo_.tailInfo.mCnt += 1UL;
             if (runInfo_.tailInfo.mCnt * (runInfo_.tailInfo.nCnt + 1UL) * tailCnt <= compileInfo_.aicNum &&
-                (args_.isBTrans || MathUtil::CeilDivision(runInfo_.baseN, runInfo_.tailInfo.nCnt) *
-                args_.bDtypeSize > BASIC_BLOCK_K_128_BYTE)) {
+                (args_.isBTrans || MathUtil::CeilDivision(runInfo_.baseN, runInfo_.tailInfo.nCnt) * args_.bDtypeSize >
+                                       BASIC_BLOCK_K_128_BYTE)) {
                 runInfo_.tailInfo.nCnt += 1UL;
             }
         }

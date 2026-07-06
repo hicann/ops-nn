@@ -52,14 +52,14 @@
 #include "acl/acl.h"
 #include "aclnn_selu.h"
 
-#define CHECK_ACL(expr)                                                     \
-    do {                                                                    \
-        auto _ret = (expr);                                                 \
-        if (_ret != ACL_SUCCESS) {                                          \
-            std::cerr << "ACL Error: " << #expr << " returned " << _ret    \
-                      << " at " << __FILE__ << ":" << __LINE__ << std::endl;\
-            goto cleanup;                                                   \
-        }                                                                   \
+#define CHECK_ACL(expr)                                                                                          \
+    do {                                                                                                         \
+        auto _ret = (expr);                                                                                      \
+        if (_ret != ACL_SUCCESS) {                                                                               \
+            std::cerr << "ACL Error: " << #expr << " returned " << _ret << " at " << __FILE__ << ":" << __LINE__ \
+                      << std::endl;                                                                              \
+            goto cleanup;                                                                                        \
+        }                                                                                                        \
     } while (0)
 
 // SELU 固定常数
@@ -89,9 +89,9 @@ int main()
 
     // 输入数据: 覆盖大负值、小负值、零、小正值、大正值
     float hostInput[ELEM_COUNT] = {
-        -5.0f,  -2.5f,  -1.0f,  -0.1f,  -0.001f,   // 负值区域（指数分支）
-         0.0f,   0.001f, 0.1f,   0.5f,    1.0f,      // 零及小正值（线性分支）
-         2.5f,   5.0f,  10.0f, 100.0f,   -10.0f      // 大正值 + 极端负值
+        -5.0f, -2.5f,  -1.0f, -0.1f,  -0.001f, // 负值区域（指数分支）
+        0.0f,  0.001f, 0.1f,  0.5f,   1.0f,    // 零及小正值（线性分支）
+        2.5f,  5.0f,   10.0f, 100.0f, -10.0f   // 大正值 + 极端负值
     };
 
     // ========================================================================
@@ -99,11 +99,11 @@ int main()
     // ========================================================================
     int ret = 1;
     aclrtStream stream = nullptr;
-    void *devInput = nullptr;
-    void *devOutput = nullptr;
-    void *workspace = nullptr;
-    aclTensor *selfTensor = nullptr;
-    aclTensor *outTensor = nullptr;
+    void* devInput = nullptr;
+    void* devOutput = nullptr;
+    void* workspace = nullptr;
+    aclTensor* selfTensor = nullptr;
+    aclTensor* outTensor = nullptr;
 
     CHECK_ACL(aclInit(nullptr));
     CHECK_ACL(aclrtSetDevice(0));
@@ -123,19 +123,16 @@ int main()
         // ====================================================================
         // 4. 创建 aclTensor
         // ====================================================================
-        selfTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0,
-                                     ACL_FORMAT_ND, shape, ndim, devInput);
-        outTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0,
-                                    ACL_FORMAT_ND, shape, ndim, devOutput);
+        selfTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0, ACL_FORMAT_ND, shape, ndim, devInput);
+        outTensor = aclCreateTensor(shape, ndim, ACL_FLOAT, strides, 0, ACL_FORMAT_ND, shape, ndim, devOutput);
 
         // ====================================================================
         // 5. 调用 aclnnSelu（无 alpha 属性参数，仅输入和输出）
         // ====================================================================
         uint64_t workspaceSize = 0;
-        aclOpExecutor *executor = nullptr;
+        aclOpExecutor* executor = nullptr;
 
-        CHECK_ACL(aclnnSeluGetWorkspaceSize(selfTensor, outTensor,
-                                              &workspaceSize, &executor));
+        CHECK_ACL(aclnnSeluGetWorkspaceSize(selfTensor, outTensor, &workspaceSize, &executor));
         if (workspaceSize > 0) {
             CHECK_ACL(aclrtMalloc(&workspace, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST));
         }
@@ -168,9 +165,8 @@ int main()
             bool pass = (diff <= threshold);
             passCount += pass ? 1 : 0;
 
-            printf("  [%d,%d] | %11.5f | %11.5f | %11.5f | %9.2e %s\n",
-                   (int)(i / COLS), (int)(i % COLS), x, hostOutput[i], expected, diff,
-                   pass ? "PASS" : "FAIL");
+            printf("  [%d,%d] | %11.5f | %11.5f | %11.5f | %9.2e %s\n", (int)(i / COLS), (int)(i % COLS), x,
+                   hostOutput[i], expected, diff, pass ? "PASS" : "FAIL");
         }
 
         std::cout << "---------------------------------------------------------------" << std::endl;
@@ -188,12 +184,18 @@ int main()
     // 7. 资源释放
     // ========================================================================
 cleanup:
-    if (selfTensor) aclDestroyTensor(selfTensor);
-    if (outTensor) aclDestroyTensor(outTensor);
-    if (workspace) aclrtFree(workspace);
-    if (devInput) aclrtFree(devInput);
-    if (devOutput) aclrtFree(devOutput);
-    if (stream) aclrtDestroyStream(stream);
+    if (selfTensor)
+        aclDestroyTensor(selfTensor);
+    if (outTensor)
+        aclDestroyTensor(outTensor);
+    if (workspace)
+        aclrtFree(workspace);
+    if (devInput)
+        aclrtFree(devInput);
+    if (devOutput)
+        aclrtFree(devOutput);
+    if (stream)
+        aclrtDestroyStream(stream);
     aclrtResetDevice(0);
     aclFinalize();
 

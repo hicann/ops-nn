@@ -19,21 +19,21 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(SoftplusV2Grad);
 
-const aclTensor *SoftplusV2Grad(const aclTensor *grad_output, const aclTensor *self,
-                                float beta, float threshold, aclOpExecutor *executor) {
-  // AICORE算子kernel
-  L0_DFX(SoftplusV2Grad, grad_output, self, beta, threshold);
+const aclTensor* SoftplusV2Grad(const aclTensor* grad_output, const aclTensor* self, float beta, float threshold,
+                                aclOpExecutor* executor)
+{
+    // AICORE算子kernel
+    L0_DFX(SoftplusV2Grad, grad_output, self, beta, threshold);
 
-  auto grad_input = executor->AllocTensor(grad_output->GetViewShape(), grad_output->GetDataType());
-  CHECK_RET(grad_input != nullptr, nullptr);
+    auto grad_input = executor->AllocTensor(grad_output->GetViewShape(), grad_output->GetDataType());
+    CHECK_RET(grad_input != nullptr, nullptr);
 
-  // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore SoftplusV2Grad算子加入任务队列
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftplusV2Grad,
-                                         OP_INPUT(grad_output, self),
-                                         OP_OUTPUT(grad_input),
-                                         OP_ATTR(beta, threshold));
-  OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftplusV2GradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-    return nullptr);
-  return grad_input;
+    // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore SoftplusV2Grad算子加入任务队列
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftplusV2Grad, OP_INPUT(grad_output, self), OP_OUTPUT(grad_input),
+                                           OP_ATTR(beta, threshold));
+    OP_CHECK(ret == ACLNN_SUCCESS,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftplusV2GradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
+    return grad_input;
 }
-}  // namespace l0op
+} // namespace l0op

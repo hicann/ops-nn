@@ -16,11 +16,12 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-class ForeachSign: public OpDef {
+class ForeachSign : public OpDef {
 public:
     explicit ForeachSign(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT8, ge::DT_INT32, ge::DT_INT64, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT8,
+                                                       ge::DT_INT32,   ge::DT_INT64, ge::DT_BF16};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
         this->Input("x")
             .ParamType(DYNAMIC)
@@ -54,7 +55,8 @@ private:
     OpAICoreConfig GetKirinCoreConfig() const
     {
         OpAICoreConfig config_kirin;
-        std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT8, ge::DT_INT32, ge::DT_INT64};
+        std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT8, ge::DT_INT32,
+                                                             ge::DT_INT64};
         std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
         config_kirin.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)

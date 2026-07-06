@@ -26,11 +26,7 @@ using namespace std;
 extern "C" __global__ __aicore__ void gelu_mul(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
 class gelu_mul_test : public testing::Test {
 protected:
-
-    static void SetUpTestCase()
-    {
-        cout << "gelu_mul SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "gelu_mul SetUp\n" << endl; }
 
     static void TearDownTestCase()
     {
@@ -38,7 +34,6 @@ protected:
         kernel_ut::CleanGeneratedBinFiles("./gelu_mul_data");
     }
 };
-
 
 TEST_F(gelu_mul_test, test_gelu_mul_float_0)
 {

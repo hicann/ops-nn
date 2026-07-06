@@ -21,8 +21,7 @@ static constexpr float BETA2 = 0.999;
 static constexpr float EMADECAY = 0.9999;
 static constexpr float MODE = 1.0;
 static constexpr float EPS = 1e-8;
-class ApplyFusedEmaAdam : public OpDef
-{
+class ApplyFusedEmaAdam : public OpDef {
 public:
     explicit ApplyFusedEmaAdam(const char* name) : OpDef(name)
     {

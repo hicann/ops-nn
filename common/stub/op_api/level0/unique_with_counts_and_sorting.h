@@ -19,6 +19,6 @@ aclnnStatus UniqueWithCountsAndSorting(const aclTensor* self, bool sorted, bool 
 
 aclnnStatus UniqueWithCountsAndSorting(const aclTensor* self, bool sorted, bool returnInverse, aclTensor* valueOut,
                                        aclTensor* inverseOut, aclOpExecutor* executor);
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_WITH_COUNTS_AND_SORTING_OP_H_
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_UNIQUE_WITH_COUNTS_AND_SORTING_OP_H_

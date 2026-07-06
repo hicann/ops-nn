@@ -15,14 +15,14 @@
 
 #include "elu_grad.h"
 
-
 template <uint32_t schMode>
 __global__ __aicore__ void elu_grad(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(EluGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(EluGradTilingData, tilingData, tiling);
     NsEluGrad::KernelEluGrad<DTYPE_GRADS> op; // 算子kernel实例获取
-    op.Init(grads, activations, y, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
-       tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.bufferOpen);
+    op.Init(grads, activations, y, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum,
+            tilingData.finalSmallTileNum, tilingData.tileDataNum, tilingData.smallTailDataNum,
+            tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.bufferOpen);
     op.Process();
 }

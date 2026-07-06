@@ -17,20 +17,16 @@
 
 namespace ops {
 
-template<typename Tp, Tp v>
+template <typename Tp, Tp v>
 struct IntegralConstant {
     static constexpr Tp value = v;
 };
 using trueType = IntegralConstant<bool, true>;
 using falseType = IntegralConstant<bool, false>;
-template<typename, typename>
-struct IsSame
-    : public falseType {
-};
-template<typename Tp>
-struct IsSame<Tp, Tp>
-    : public trueType {
-};
+template <typename, typename>
+struct IsSame : public falseType {};
+template <typename Tp>
+struct IsSame<Tp, Tp> : public trueType {};
 
 template <typename T>
 __aicore__ inline T Ceil(T a, T b)
@@ -71,5 +67,5 @@ __aicore__ inline T Aligned(T value, T alignment)
     return (value + alignment - 1) / alignment * alignment;
 }
 
-}
-#endif  // OPS_BUILT_IN_OP_ASCENDC_KERNEL_UTILS_H_
+} // namespace ops
+#endif // OPS_BUILT_IN_OP_ASCENDC_KERNEL_UTILS_H_

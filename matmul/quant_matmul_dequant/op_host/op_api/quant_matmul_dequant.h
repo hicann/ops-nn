@@ -14,9 +14,10 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor *QuantMatmulDequant(const aclTensor *x, const aclTensor *weight, const aclTensor *weightScale,
-                                    const aclTensor *bias, const aclTensor *xScale, const aclTensor *xOffset, const aclTensor *smoothScale,
-                                    char *xQuantMode, bool transposeWeight, const aclTensor *out, aclOpExecutor *executor);
+const aclTensor* QuantMatmulDequant(const aclTensor* x, const aclTensor* weight, const aclTensor* weightScale,
+                                    const aclTensor* bias, const aclTensor* xScale, const aclTensor* xOffset,
+                                    const aclTensor* smoothScale, char* xQuantMode, bool transposeWeight,
+                                    const aclTensor* out, aclOpExecutor* executor);
 }
 
 #endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_MATMUL_DEQUANT_H

@@ -30,27 +30,26 @@ constexpr int64_t CONST_TWO = 2;
 constexpr int64_t CONST_FOUR = 4;
 constexpr int64_t CONST_TEN = 10;
 
-class BatchNormGradInferChannelLastTiling : public BatchNormGradInferBase
-{
+class BatchNormGradInferChannelLastTiling : public BatchNormGradInferBase {
 public:
-    explicit BatchNormGradInferChannelLastTiling(gert::TilingContext* context) : BatchNormGradInferBase(context)
-    {}
+    explicit BatchNormGradInferChannelLastTiling(gert::TilingContext* context) : BatchNormGradInferBase(context) {}
     ~BatchNormGradInferChannelLastTiling() override = default;
     int64_t GetCacheID(const int64_t idx);
 
 protected:
     bool IsCapable() override
     {
-        OP_CHECK_IF(r0Dim != 1,
-            OP_LOGD(context_, "BatchNormGradInferChannelLastTiling BA template is not capable, fused shape: (%ld, %ld, %ld)",
-                r1Dim, aDim, r0Dim),
+        OP_CHECK_IF(
+            r0Dim != 1,
+            OP_LOGD(context_,
+                    "BatchNormGradInferChannelLastTiling BA template is not capable, fused shape: (%ld, %ld, %ld)",
+                    r1Dim, aDim, r0Dim),
             return false);
 
         CalcBasicInfo();
 
-        OP_LOGD(context_,
-            "BatchNormGradInferChannelLastTiling BA template is capable, fused shape: (%ld, %ld, %ld)", r1Dim,
-            aDim, r0Dim);
+        OP_LOGD(context_, "BatchNormGradInferChannelLastTiling BA template is capable, fused shape: (%ld, %ld, %ld)",
+                r1Dim, aDim, r0Dim);
         return true;
     }
 
@@ -76,9 +75,9 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage0()
 {
     // 切分A、B基本块， （B,A） -- >(Bouter, Aouter, Binner*Ainner*aTileBase_)
     int64_t aInner = 1;
-    int64_t ubBufferSize =
-        (aicoreParams_.ubSize / DOUBLE_BUFFER - (bytesPerWeight_ + bytesPerRunningVar_) * aInner * aTileBase_) /
-        bytesPerDy_ / INPUT_OUTPUT_NUM;
+    int64_t ubBufferSize = (aicoreParams_.ubSize / DOUBLE_BUFFER -
+                            (bytesPerWeight_ + bytesPerRunningVar_) * aInner * aTileBase_) /
+                           bytesPerDy_ / INPUT_OUTPUT_NUM;
 
     // 先按照B切分，再切A
     int64_t bFactorMax = ubBufferSize / aTileBase_;
@@ -126,8 +125,9 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage1()
     int64_t binAddRTotalLoop = Ops::Base::CeilDiv(r1Dim, binAddRFactor);
     int64_t binAddRTail = r1Dim - (binAddRTotalLoop - 1) * binAddRFactor;
     // 计算最接近binAddRTotalLoop_的2^k
-    int64_t binAddBasicBlockLoop =
-        binAddRTotalLoop > 1 ? (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binAddRTotalLoop - 1))) : 0;
+    int64_t binAddBasicBlockLoop = binAddRTotalLoop > 1 ?
+                                       (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binAddRTotalLoop - 1))) :
+                                       0;
     int64_t mainFoldCount = binAddRLoop - binAddBasicBlockLoop;
     int64_t binAddCacheBufferCount = 1;
     int64_t binAddResultCacheID = 0;
@@ -136,13 +136,12 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage1()
         binAddResultCacheID = GetCacheID(binAddBasicBlockLoop - 1);
     }
 
-    OP_LOGI(
-        context_->GetNodeName(),
-        "Binary add rFactor: %ld, rLoop: %ld, binAddRTotalLoop: %ld, rTail: %ld, basicBlockLoop: %ld, "
-        "mainFoldCount:%ld,cacheBufferCount: "
-        "%ld, resultCacheId:%ld ",
-        binAddRFactor, binAddRLoop, binAddRTotalLoop, binAddRTail, binAddBasicBlockLoop, mainFoldCount,
-        binAddCacheBufferCount, binAddResultCacheID);
+    OP_LOGI(context_->GetNodeName(),
+            "Binary add rFactor: %ld, rLoop: %ld, binAddRTotalLoop: %ld, rTail: %ld, basicBlockLoop: %ld, "
+            "mainFoldCount:%ld,cacheBufferCount: "
+            "%ld, resultCacheId:%ld ",
+            binAddRFactor, binAddRLoop, binAddRTotalLoop, binAddRTail, binAddBasicBlockLoop, mainFoldCount,
+            binAddCacheBufferCount, binAddResultCacheID);
 
     tilingData_.set_binAddRFactorStg1(binAddRFactor);
     tilingData_.set_binAddRLoopStg1(binAddRLoop);
@@ -165,12 +164,12 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage1()
                      FLOAT32_BYTES * CONST_TEN + binAddCacheBufferCount * FLOAT32_BYTES * CONST_TWO);
     }
 
-    OP_CHECK_IF(
-        factorMax <= 0,
-        OP_LOGE(context_, "RA recompute template is not capable. merged shape is (%ld, %ld), ub size: %luB, "
-            "tileBase: %ld, ub factor: %ld.",
-            r1Dim, aDim, aicoreParams_.ubSize, aBase, factorMax),
-        return ge::GRAPH_PARAM_INVALID);
+    OP_CHECK_IF(factorMax <= 0,
+                OP_LOGE(context_,
+                        "RA recompute template is not capable. merged shape is (%ld, %ld), ub size: %luB, "
+                        "tileBase: %ld, ub factor: %ld.",
+                        r1Dim, aDim, aicoreParams_.ubSize, aBase, factorMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     // 尽量占多核
     int64_t aFactorMax = Ops::Base::CeilDiv(aDim, aBase);
@@ -199,10 +198,7 @@ ge::graphStatus BatchNormGradInferChannelLastTiling::DoOpTilingForStage1()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormGradInferChannelLastTiling::GetTilingKey() const
-{
-    return TILINGKEY_INFER_CHANNEL_LAST_BASE;
-}
+uint64_t BatchNormGradInferChannelLastTiling::GetTilingKey() const { return TILINGKEY_INFER_CHANNEL_LAST_BASE; }
 
 int64_t BatchNormGradInferChannelLastTiling::GetCacheID(const int64_t idx)
 {
@@ -211,7 +207,8 @@ int64_t BatchNormGradInferChannelLastTiling::GetCacheID(const int64_t idx)
 
 ge::graphStatus BatchNormGradInferChannelLastTiling::PostTiling()
 {
-    context_->SetBlockDim(static_cast<uint32_t>(std::max(tilingData_.get_usedCoreNumsStg1(), tilingData_.dxTilingData.get_usedCoreNums())));
+    context_->SetBlockDim(static_cast<uint32_t>(
+        std::max(tilingData_.get_usedCoreNumsStg1(), tilingData_.dxTilingData.get_usedCoreNums())));
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;

@@ -102,9 +102,8 @@ static __aicore__ inline void InitLoadToB2Params(Intf* self)
     self->ctx.load2dv2_.ifTranspose = 0;
     self->ctx.load2dv2_.mStep = 1;
     self->ctx.load2dv2_.dstStride = 1;
-    if constexpr (
-        Intf::conv3dConfig.loadB2Condition != TPL_REVERSE_ONLY &&
-        Intf::conv3dConfig.loadB2Condition != TPL_NO_TRANSPOSE_NO_REVERSE) {
+    if constexpr (Intf::conv3dConfig.loadB2Condition != TPL_REVERSE_ONLY &&
+                  Intf::conv3dConfig.loadB2Condition != TPL_NO_TRANSPOSE_NO_REVERSE) {
         self->ctx.load2dv2_.ifTranspose = 1;
     }
 }
@@ -126,8 +125,8 @@ static __aicore__ inline void UpdateLoadToB2ParamsN(Intf* self)
                 } else {
                     self->ctx.load2dv2_.srcStride = -self->ctx.blockBaseN_ * self->ctx.tiling_->strideW; // 逆序
                 }
-                self->ctx.dstB2Stride_ =
-                    self->ctx.blockBaseN_ * self->ctx.splitHkWkList_[self->ctx.splitIndex_] * blockSize;
+                self->ctx.dstB2Stride_ = self->ctx.blockBaseN_ * self->ctx.splitHkWkList_[self->ctx.splitIndex_] *
+                                         blockSize;
             } else {
                 self->ctx.load2dv2_.srcStride = -self->ctx.blockBaseN_; // 逆序
                 self->ctx.dstB2Stride_ = 0;
@@ -153,19 +152,21 @@ template <class Intf>
 static __aicore__ inline void UpdateLoadToB2ParamsKForKernelSplit(Intf* self, uint32_t kPos)
 {
     uint32_t kRepeat = self->ctx.tiling_->baseK / self->ctx.splitHkWkC0List_[self->ctx.splitIndex_]; // cout1
-    self->ctx.startAddrOffset_ = self->ctx.hkWk_ * kPos * kRepeat;                                   // 跳过多少个cout
+    self->ctx.startAddrOffset_ = self->ctx.hkWk_ * kPos * kRepeat;             // 跳过多少个cout
     self->ctx.load2dv2_.kStep = self->ctx.splitWkList_[self->ctx.splitIndex_]; // 当前kernel拆分场景只可以为1或者2
-    self->ctx.load2dv2_.mStartPosition =
-        ((self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->strideH * self->ctx.tiling_->wk +
-         (self->ctx.splitWkList_[self->ctx.splitIndex_] - 1) * self->ctx.tiling_->strideW +
-         (self->ctx.splitHIndex_ * self->ctx.tiling_->wk + self->ctx.splitWIndex_)) *
-        self->ctx.blockBaseN_;
+    self->ctx.load2dv2_.mStartPosition = ((self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) *
+                                              self->ctx.tiling_->strideH * self->ctx.tiling_->wk +
+                                          (self->ctx.splitWkList_[self->ctx.splitIndex_] - 1) *
+                                              self->ctx.tiling_->strideW +
+                                          (self->ctx.splitHIndex_ * self->ctx.tiling_->wk + self->ctx.splitWIndex_)) *
+                                         self->ctx.blockBaseN_;
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2NoTransposeNoReverse(
-    Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t srcB1Offset, uint32_t kPos,
-    LocalTensor<typename Intf::SrcBT>& l0b)
+static __aicore__ inline void LoadToB2NoTransposeNoReverse(Intf* self,
+                                                           const LocalTensor<typename Intf::SrcBT>& l1B1Matrix,
+                                                           uint32_t srcB1Offset, uint32_t kPos,
+                                                           LocalTensor<typename Intf::SrcBT>& l0b)
 {
     self->ctx.load2dv2_.mStartPosition = 0;
     self->ctx.load2dv2_.kStartPosition = 0;
@@ -176,9 +177,9 @@ static __aicore__ inline void LoadToB2NoTransposeNoReverse(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2ReverseOnlyCommon(
-    Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t blockSize, uint32_t srcB1Offset,
-    uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcBT>& l0b)
+static __aicore__ inline void LoadToB2ReverseOnlyCommon(Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix,
+                                                        uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset,
+                                                        const uint32_t kPos, LocalTensor<typename Intf::SrcBT>& l0b)
 {
     // baseK可能会跨越HkWk,分多组HkWk进行逆序,以baseK=256,HkWk=9,kPos=1为例
     // *******kk  loop1: kStep=2
@@ -207,9 +208,11 @@ static __aicore__ inline void LoadToB2ReverseOnlyCommon(
 }
 
 template <class Intf>
-static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(
-    Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t blockSize, uint32_t srcB1Offset,
-    uint32_t dstB2Offset, LocalTensor<typename Intf::SrcBT>& l0b)
+static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf* self,
+                                                               const LocalTensor<typename Intf::SrcBT>& l1B1Matrix,
+                                                               uint32_t blockSize, uint32_t srcB1Offset,
+                                                               uint32_t dstB2Offset,
+                                                               LocalTensor<typename Intf::SrcBT>& l0b)
 {
     if (self->ctx.tiling_->strideH == self->ctx.tiling_->hk) {
         uint32_t kRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
@@ -240,9 +243,9 @@ static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(
 }
 
 template <class Intf, bool ksCoutFullLoad>
-static __aicore__ inline void LoadToB2ReverseOnly(
-    Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t blockSize, uint32_t srcB1Offset,
-    uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcBT>& l0b)
+static __aicore__ inline void LoadToB2ReverseOnly(Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix,
+                                                  uint32_t blockSize, uint32_t srcB1Offset, uint32_t dstB2Offset,
+                                                  const uint32_t kPos, LocalTensor<typename Intf::SrcBT>& l0b)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (ksCoutFullLoad) { // B1全载时，在load2b2阶段完成子kernel重排
@@ -261,9 +264,8 @@ static __aicore__ inline void LoadToB2ReverseOnly(
 }
 
 template <class Intf, bool ksCoutFullLoad>
-static __aicore__ inline void LoadToB2(
-    Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t kPos,
-    LocalTensor<typename Intf::SrcBT>& l0b)
+static __aicore__ inline void LoadToB2(Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t kPos,
+                                       LocalTensor<typename Intf::SrcBT>& l0b)
 {
     uint32_t blockSize = self->ctx.tiling_->c0 << 4;
     uint32_t srcB1Offset = 0;
@@ -298,8 +300,8 @@ static __aicore__ inline void LoadToB2(
 
 // 数据从A1加载到A2
 template <class Intf>
-static __aicore__ inline void LoadToA2(
-    Intf* self, const LocalTensor<typename Intf::SrcAT>& l1A1Matrix, LocalTensor<typename Intf::SrcAT>& l0a)
+static __aicore__ inline void LoadToA2(Intf* self, const LocalTensor<typename Intf::SrcAT>& l1A1Matrix,
+                                       LocalTensor<typename Intf::SrcAT>& l0a)
 {
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
     LoadDataWithStride(l0a, l1A1Matrix, self->ctx.load3d_);

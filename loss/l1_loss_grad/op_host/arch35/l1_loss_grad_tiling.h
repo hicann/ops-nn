@@ -18,11 +18,10 @@
 #include <vector>
 
 namespace optiling {
-struct L1LossGradCompileInfo
-{
+struct L1LossGradCompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSize = 0;
     ge::DataType dtype;
 };
-}  // namespace optiling
-#endif  // L1_LOSS_GRAD_H_
+} // namespace optiling
+#endif // L1_LOSS_GRAD_H_

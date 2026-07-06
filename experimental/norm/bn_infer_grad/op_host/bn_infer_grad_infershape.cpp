@@ -54,8 +54,6 @@ static ge::graphStatus InferDataType4BnInferGrad(gert::InferDataTypeContext* con
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(BnInferGrad)
-    .InferShape(InferShape4BnInferGrad)
-    .InferDataType(InferDataType4BnInferGrad);
+IMPL_OP_INFERSHAPE(BnInferGrad).InferShape(InferShape4BnInferGrad).InferDataType(InferDataType4BnInferGrad);
 
 } // namespace ops

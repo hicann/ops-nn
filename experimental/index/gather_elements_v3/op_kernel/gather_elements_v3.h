@@ -70,54 +70,54 @@ private:
 template <typename T>
 __aicore__ inline void GatherElementsV3<T>::Init(GM_ADDR x, GM_ADDR idx, GM_ADDR y, const GatherElementsV3TilingData* t)
 {
-        xPreDim_ = t->xPreDim;
-        xGatherDim_ = t->xGatherDim;
-        xPostDim_ = t->xPostDim;
-        idxPreDim_ = t->idxPreDim;
-        idxGatherDim_ = t->idxGatherDim;
-        idxPostDim_ = t->idxPostDim;
-        tileSize_ = t->tileSize;
+    xPreDim_ = t->xPreDim;
+    xGatherDim_ = t->xGatherDim;
+    xPostDim_ = t->xPostDim;
+    idxPreDim_ = t->idxPreDim;
+    idxGatherDim_ = t->idxGatherDim;
+    idxPostDim_ = t->idxPostDim;
+    tileSize_ = t->tileSize;
 
-        coreId_ = GetBlockIdx();
-        ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
-        coreNum_ = GetBlockNum();
+    coreId_ = GetBlockIdx();
+    ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
+    coreNum_ = GetBlockNum();
 
-        xGm_.SetGlobalBuffer((__gm__ T*)x);
-        idxGm_.SetGlobalBuffer((__gm__ int32_t*)idx);
-        yGm_.SetGlobalBuffer((__gm__ T*)y);
+    xGm_.SetGlobalBuffer((__gm__ T*)x);
+    idxGm_.SetGlobalBuffer((__gm__ int32_t*)idx);
+    yGm_.SetGlobalBuffer((__gm__ T*)y);
 
-        uint32_t idxByteSize = tileSize_ * sizeof(int32_t);
-        uint32_t yByteSize = tileSize_ * sizeof(T);
-        
-        uint32_t idxAllocSize = (idxByteSize + ALIGN_BYTES - 1) / ALIGN_BYTES * ALIGN_BYTES;
-        uint32_t yAllocSize = (yByteSize + ALIGN_BYTES - 1) / ALIGN_BYTES * ALIGN_BYTES;
+    uint32_t idxByteSize = tileSize_ * sizeof(int32_t);
+    uint32_t yByteSize = tileSize_ * sizeof(T);
 
-        pipe.InitBuffer(idxInQue_, BUFFER_NUM, idxAllocSize);
-        pipe.InitBuffer(yOutQue_, BUFFER_NUM, yAllocSize);
+    uint32_t idxAllocSize = (idxByteSize + ALIGN_BYTES - 1) / ALIGN_BYTES * ALIGN_BYTES;
+    uint32_t yAllocSize = (yByteSize + ALIGN_BYTES - 1) / ALIGN_BYTES * ALIGN_BYTES;
+
+    pipe.InitBuffer(idxInQue_, BUFFER_NUM, idxAllocSize);
+    pipe.InitBuffer(yOutQue_, BUFFER_NUM, yAllocSize);
 }
 
 template <typename T>
 __aicore__ inline void GatherElementsV3<T>::CopyIn(uint32_t idxDataOffset, uint32_t curDataNum)
 {
-        LocalTensor<int32_t> idxLocal = idxInQue_.AllocTensor<int32_t>();
+    LocalTensor<int32_t> idxLocal = idxInQue_.AllocTensor<int32_t>();
 
-        DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(sizeof(int32_t) * curDataNum), 0, 0, 0};
-        DataCopyPadExtParams<int32_t> idxPadParams{true, 0, 0, 0};
-        
-        DataCopyPad(idxLocal, idxGm_[idxDataOffset], idxCopyParams, idxPadParams);
-  
-        idxInQue_.EnQue(idxLocal);
+    DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(sizeof(int32_t) * curDataNum), 0, 0, 0};
+    DataCopyPadExtParams<int32_t> idxPadParams{true, 0, 0, 0};
+
+    DataCopyPad(idxLocal, idxGm_[idxDataOffset], idxCopyParams, idxPadParams);
+
+    idxInQue_.EnQue(idxLocal);
 }
 
 template <typename T>
 __aicore__ inline void GatherElementsV3<T>::CopyOut(uint32_t yDataOffset, uint32_t curDataNum)
 {
-        LocalTensor<T> yLocal = yOutQue_.DeQue<T>();
+    LocalTensor<T> yLocal = yOutQue_.DeQue<T>();
 
-        DataCopyExtParams yCopyParams{1, static_cast<uint32_t>(sizeof(T) * curDataNum), 0, 0, 0};
-        DataCopyPad(yGm_[yDataOffset], yLocal, yCopyParams);
+    DataCopyExtParams yCopyParams{1, static_cast<uint32_t>(sizeof(T) * curDataNum), 0, 0, 0};
+    DataCopyPad(yGm_[yDataOffset], yLocal, yCopyParams);
 
-        yOutQue_.FreeTensor(yLocal);
+    yOutQue_.FreeTensor(yLocal);
 }
 
 template <typename T>
@@ -129,9 +129,10 @@ __aicore__ inline void GatherElementsV3<T>::Compute(uint32_t xBase, uint32_t pos
 
         for (uint32_t i = 0; i < len; ++i) {
             int32_t indexVal = idxLocal.GetValue(i);
-            
+
             // 处理负索引
-            if (indexVal < 0) indexVal += xGatherDim_;
+            if (indexVal < 0)
+                indexVal += xGatherDim_;
 
             uint32_t xRealOffset = xBase + indexVal * xPostDim_ + (postStart + i);
 
@@ -147,25 +148,24 @@ __aicore__ inline void GatherElementsV3<T>::Compute(uint32_t xBase, uint32_t pos
 template <typename T>
 __aicore__ inline void GatherElementsV3<T>::Process()
 {
-        uint32_t totalRows = idxPreDim_ * idxGatherDim_;
+    uint32_t totalRows = idxPreDim_ * idxGatherDim_;
 
-        for (uint32_t rowId = coreId_; rowId < totalRows; rowId += coreNum_) {
-            
-            uint32_t preIdx = rowId / idxGatherDim_;
-            uint32_t gatherIdx = rowId % idxGatherDim_;
+    for (uint32_t rowId = coreId_; rowId < totalRows; rowId += coreNum_) {
+        uint32_t preIdx = rowId / idxGatherDim_;
+        uint32_t gatherIdx = rowId % idxGatherDim_;
 
-            uint32_t idxBase = preIdx * idxGatherDim_ * idxPostDim_ + gatherIdx * idxPostDim_;
-            uint32_t xBase = preIdx * xGatherDim_ * xPostDim_;
-            uint32_t yBase = idxBase;
+        uint32_t idxBase = preIdx * idxGatherDim_ * idxPostDim_ + gatherIdx * idxPostDim_;
+        uint32_t xBase = preIdx * xGatherDim_ * xPostDim_;
+        uint32_t yBase = idxBase;
 
-            for (uint32_t colOffset = 0; colOffset < idxPostDim_; colOffset += tileSize_) {
-                uint32_t len = tileSize_ < (idxPostDim_ - colOffset) ? tileSize_ : (idxPostDim_ - colOffset);
-                CopyIn(idxBase + colOffset, len);
-                Compute(xBase, colOffset, len);
-                CopyOut(yBase + colOffset, len);
-            }
+        for (uint32_t colOffset = 0; colOffset < idxPostDim_; colOffset += tileSize_) {
+            uint32_t len = tileSize_ < (idxPostDim_ - colOffset) ? tileSize_ : (idxPostDim_ - colOffset);
+            CopyIn(idxBase + colOffset, len);
+            Compute(xBase, colOffset, len);
+            CopyOut(yBase + colOffset, len);
         }
     }
+}
 
 } // namespace NsGatherElementsV3
 #endif // GATHER_ELEMENTS_V3_H

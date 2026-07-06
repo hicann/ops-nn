@@ -21,18 +21,17 @@ namespace l0op {
 
 OP_TYPE_REGISTER(HardSigmoidGradV3);
 
-const aclTensor *HardSigmoidGradV3(const aclTensor *gradOutput, const aclTensor *self, aclOpExecutor *executor)
+const aclTensor* HardSigmoidGradV3(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
 {
     L0_DFX(HardSigmoidGradV3, gradOutput, self);
-    auto out = executor->AllocTensor(
-        gradOutput->GetStorageShape(), gradOutput->GetDataType(), gradOutput->GetStorageFormat());
+    auto out = executor->AllocTensor(gradOutput->GetStorageShape(), gradOutput->GetDataType(),
+                                     gradOutput->GetStorageFormat());
     CHECK_RET(out != nullptr, nullptr);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSigmoidGradV3, OP_INPUT(gradOutput, self), OP_OUTPUT(out));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidGradV3 ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "HardSigmoidGradV3 ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
     return out;
 }
 
-}  // namespace l0op
+} // namespace l0op

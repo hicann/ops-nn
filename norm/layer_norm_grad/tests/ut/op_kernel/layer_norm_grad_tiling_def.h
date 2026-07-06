@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -58,7 +58,7 @@ struct LayerNormGradTilingDataRecompute {
     int32_t backwardNfactor = 0;
     int32_t backwardCacheBufferCountMain = 0;
     int32_t backwardResultCacheIDMain = 0;
-    
+
     int32_t pdxIsRequire = 1;
     int32_t pdgammaIsRequire = 1;
     int32_t pdbetaIsRequire = 1;
@@ -68,7 +68,7 @@ struct LayerNormGradTilingDataRecompute {
 struct LayerNormGradTilingDataGroupedReduceBigM {
     int64_t row = 0;
     int64_t col = 0;
-    
+
     int64_t gammaBetaUsableBlocks = 0;
     int64_t gammaBetaMPerBlock = 0;
     int64_t gammaBetaMReminder = 0;
@@ -123,7 +123,7 @@ struct LayerNormGradTilingDataGroupedReduceBigN {
     int64_t gammaBetaResultCacheID = 0;
     int64_t gammaBetaNfactor = 0;
     int64_t gammaBetaMfactor = 0;
-    
+
     int64_t backwardBlockDim = 0;
     int64_t backwardNPerBlock = 0;
     int64_t backwardNRem = 0;
@@ -155,8 +155,7 @@ struct LayerNormGradTilingDataGroupedReduceBigN {
 #pragma pack()
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataRecompute* const_data)
-{
+inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataRecompute* const_data) {
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)const_data;
     for (auto i = 0; i < sizeof(LayerNormGradTilingDataRecompute) / 4; i++)
@@ -170,13 +169,13 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataRecompute* co
 #endif
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigM* const_data)
-{
-    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
-    uint32_t* dst = (uint32_t*)const_data;
-    for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigM) / 4; i++)
-        *(dst + i) = *(src + i);
-}
+inline
+    [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigM* const_data) {
+        const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+        uint32_t* dst = (uint32_t*)const_data;
+        for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigM) / 4; i++)
+            *(dst + i) = *(src + i);
+    }
 #else
 inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigM* const_data)
 {
@@ -185,13 +184,13 @@ inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataGroupedReduce
 #endif
 
 #ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigN* const_data)
-{
-    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
-    uint32_t* dst = (uint32_t*)const_data;
-    for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigN) / 4; i++)
-        *(dst + i) = *(src + i);
-}
+inline
+    [aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigN* const_data) {
+        const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+        uint32_t* dst = (uint32_t*)const_data;
+        for (auto i = 0; i < sizeof(LayerNormGradTilingDataGroupedReduceBigN) / 4; i++)
+            *(dst + i) = *(src + i);
+    }
 #else
 inline void InitTilingData(uint8_t* tiling, LayerNormGradTilingDataGroupedReduceBigN* const_data)
 {

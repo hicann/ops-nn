@@ -42,35 +42,35 @@ struct ScatterAddWithSortedTilingData {
 
 #pragma pack()
 
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
+#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer)              \
+    __ubuf__ tilingStruct* tilingDataPointer = reinterpret_cast<__ubuf__ tilingStruct*>( \
+        (__ubuf__ uint8_t*)(tilingPointer));
 
 #define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
     CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
 
-#define GET_TILING_DATA(tilingData, tilingPointer)                                          \
-    ScatterAddWithSortedTilingData tilingData;                                              \
-    INIT_TILING_DATA(ScatterAddWithSortedTilingData, tilingDataPointer, tilingPointer);     \
-    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                              \
-    (tilingData).extraTaskCore = tilingDataPointer->extraTaskCore;                          \
-    (tilingData).eachCount = tilingDataPointer->eachCount;                                  \
-    (tilingData).lastCount = tilingDataPointer->lastCount;                                  \
-    (tilingData).inputCount = tilingDataPointer->inputCount;                                \
-    (tilingData).indicesCount = tilingDataPointer->indicesCount;                            \
-    (tilingData).updatesCount = tilingDataPointer->updatesCount;                            \
-    (tilingData).inputOneTime = tilingDataPointer->inputOneTime;                            \
-    (tilingData).updatesOneTime = tilingDataPointer->updatesOneTime;                        \
-    (tilingData).updatesAlign = tilingDataPointer->updatesAlign;                            \
-    (tilingData).maxSize = tilingDataPointer->maxSize;                                      \
-    (tilingData).eachNum = tilingDataPointer->eachNum;                                      \
-    (tilingData).eachLoop = tilingDataPointer->eachLoop;                                    \
-    (tilingData).eachTail = tilingDataPointer->eachTail;                                    \
-    (tilingData).lastNum = tilingDataPointer->lastNum;                                      \
-    (tilingData).lastLoop = tilingDataPointer->lastLoop;                                    \
-    (tilingData).lastTail = tilingDataPointer->lastTail;                                    \
-    (tilingData).updatesLoop = tilingDataPointer->updatesLoop;                              \
-    (tilingData).updatesEach = tilingDataPointer->updatesEach;                              \
+#define GET_TILING_DATA(tilingData, tilingPointer)                                      \
+    ScatterAddWithSortedTilingData tilingData;                                          \
+    INIT_TILING_DATA(ScatterAddWithSortedTilingData, tilingDataPointer, tilingPointer); \
+    (tilingData).usedCoreNum = tilingDataPointer->usedCoreNum;                          \
+    (tilingData).extraTaskCore = tilingDataPointer->extraTaskCore;                      \
+    (tilingData).eachCount = tilingDataPointer->eachCount;                              \
+    (tilingData).lastCount = tilingDataPointer->lastCount;                              \
+    (tilingData).inputCount = tilingDataPointer->inputCount;                            \
+    (tilingData).indicesCount = tilingDataPointer->indicesCount;                        \
+    (tilingData).updatesCount = tilingDataPointer->updatesCount;                        \
+    (tilingData).inputOneTime = tilingDataPointer->inputOneTime;                        \
+    (tilingData).updatesOneTime = tilingDataPointer->updatesOneTime;                    \
+    (tilingData).updatesAlign = tilingDataPointer->updatesAlign;                        \
+    (tilingData).maxSize = tilingDataPointer->maxSize;                                  \
+    (tilingData).eachNum = tilingDataPointer->eachNum;                                  \
+    (tilingData).eachLoop = tilingDataPointer->eachLoop;                                \
+    (tilingData).eachTail = tilingDataPointer->eachTail;                                \
+    (tilingData).lastNum = tilingDataPointer->lastNum;                                  \
+    (tilingData).lastLoop = tilingDataPointer->lastLoop;                                \
+    (tilingData).lastTail = tilingDataPointer->lastTail;                                \
+    (tilingData).updatesLoop = tilingDataPointer->updatesLoop;                          \
+    (tilingData).updatesEach = tilingDataPointer->updatesEach;                          \
     (tilingData).updatesLast = tilingDataPointer->updatesLast;
 
 #define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg) \

@@ -13,55 +13,35 @@
  * \brief binary_cross_entropy_grad def
  */
 
- #include "register/op_def_registry.h"
- 
+#include "register/op_def_registry.h"
+
 namespace ops {
-static const std::vector<ge::DataType> dataType = {
-    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT   
-};
+static const std::vector<ge::DataType> dataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> dataFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 class BinaryCrossEntropyGrad : public OpDef {
-    public:
-        explicit BinaryCrossEntropyGrad(const char* name) : OpDef(name)
-        {
-            this->Input("x")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Input("y")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Input("grad_output")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Input("weight")
-                .ParamType(OPTIONAL)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Output("output")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat)
-                .UnknownShapeFormat(dataFormat);
-            this->Attr("reduction").AttrType(OPTIONAL).String("mean");
+public:
+    explicit BinaryCrossEntropyGrad(const char* name) : OpDef(name)
+    {
+        this->Input("x").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Input("y").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Input("grad_output")
+            .ParamType(REQUIRED)
+            .DataType(dataType)
+            .Format(dataFormat)
+            .UnknownShapeFormat(dataFormat);
+        this->Input("weight").ParamType(OPTIONAL).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Output("output").ParamType(REQUIRED).DataType(dataType).Format(dataFormat).UnknownShapeFormat(dataFormat);
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false);
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false);
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
- 
+
 OP_ADD(BinaryCrossEntropyGrad);
-}  // namespace ops
+} // namespace ops

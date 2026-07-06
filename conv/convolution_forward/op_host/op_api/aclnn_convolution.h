@@ -165,4 +165,4 @@ ACLNN_API aclnnStatus aclnnConvDepthwise2d(void* workspace, const uint64_t works
 }
 #endif
 
-#endif  // OP_API_INC_CONVOLUTION_H
+#endif // OP_API_INC_CONVOLUTION_H

@@ -22,261 +22,279 @@ using namespace op;
 using namespace std;
 
 class l2_logsoftmax_backward_test : public testing::Test {
-  protected:
-  static void SetUpTestCase() { cout << "logsoftmax_backward_test SetUp" << endl; }
+protected:
+    static void SetUpTestCase() { cout << "logsoftmax_backward_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "logsoftmax_backward_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "logsoftmax_backward_test TearDown" << endl; }
 };
 
-TEST_F(l2_logsoftmax_backward_test, case_001_float32_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_001_float32_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_002_float16_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_002_float16_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_003_double_abnormal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_003_double_abnormal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_005_diff_input_dtype_abnormal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_005_diff_input_dtype_abnormal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_006_diff_input_format_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_006_diff_input_format_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_007_diff_input_shape_abnormal) {
-  auto grad_output = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_007_diff_input_shape_abnormal)
+{
+    auto grad_output = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_008_diff_in_out_dtype_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_008_diff_in_out_dtype_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_009_diff_in_out_format_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_009_diff_in_out_format_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_010_diff_in_out_shape_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_010_diff_in_out_shape_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_011_8_dim_input) {
-  auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_011_8_dim_input)
+{
+    auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_012_max_dim) {
-  auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 7;
+TEST_F(l2_logsoftmax_backward_test, case_012_max_dim)
+{
+    auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 7;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_013_dim_invalid) {
-  auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 8;
+TEST_F(l2_logsoftmax_backward_test, case_013_dim_invalid)
+{
+    auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 8;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_014_format_NHWC_normal) {
-  auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC);
-  auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_014_format_NHWC_normal)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC);
+    auto output = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_NHWC).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_016_input_emptytensor_normal) {
-  auto grad_output = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_016_input_emptytensor_normal)
+{
+    auto grad_output = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_017_input_contigous_normal) {
-  auto grad_output = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {4, 5}).ValueRange(0, 10);
-  auto output = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {4, 5}).ValueRange(0, 10);
-  auto out = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_017_input_contigous_normal)
+{
+    auto grad_output = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {4, 5}).ValueRange(0, 10);
+    auto output = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {4, 5}).ValueRange(0, 10);
+    auto out = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-  // ut.TestPrecision();
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // ut.TestPrecision();
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_018_9_dim_input) {
-  auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_018_9_dim_input)
+{
+    auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_logsoftmax_backward_test, case_019_nullptr) {
-  auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, case_019_nullptr)
+{
+    auto grad_output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto output = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(nullptr, output, dim), OUTPUT(out));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(nullptr, output, dim), OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-  auto ut2 = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, nullptr, dim), OUTPUT(out));
-  workspaceSize = 0;
-  aclRet = ut2.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    auto ut2 = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, nullptr, dim), OUTPUT(out));
+    workspaceSize = 0;
+    aclRet = ut2.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 
-  auto ut3 = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(nullptr));
-  workspaceSize = 0;
-  aclRet = ut3.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    auto ut3 = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(nullptr));
+    workspaceSize = 0;
+    aclRet = ut3.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2_logsoftmax_backward_test, ascend910B2_case_BF16_910b) {
-  auto grad_output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
-  auto output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
-  auto out = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
-  int64_t dim = 0;
+TEST_F(l2_logsoftmax_backward_test, ascend910B2_case_BF16_910b)
+{
+    auto grad_output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
+    auto output = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
+    auto out = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t dim = 0;
 
-  auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
+    auto ut = OP_API_UT(aclnnLogSoftmaxBackward, INPUT(grad_output, output, dim), OUTPUT(out));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-  // ut.TestPrecision();
+    // ut.TestPrecision();
 }

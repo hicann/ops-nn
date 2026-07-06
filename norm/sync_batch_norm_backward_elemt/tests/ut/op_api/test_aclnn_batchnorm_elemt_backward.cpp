@@ -15,18 +15,11 @@
 #include "opdev/platform.h"
 #include "op_api/op_api_def.h"
 
-class l2BatchNormElemtBackwardTest : public testing::Test
-{
+class l2BatchNormElemtBackwardTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "l2l2BatchNormElemtBackwardTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2l2BatchNormElemtBackwardTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "l2l2BatchNormElemtBackwardTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "l2l2BatchNormElemtBackwardTest TearDown" << std::endl; }
 };
 
 TEST_F(l2BatchNormElemtBackwardTest, l2_batch_norm_elemt_backward_float32)

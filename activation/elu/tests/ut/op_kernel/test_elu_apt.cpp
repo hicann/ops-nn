@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -43,17 +43,13 @@ struct EluTilingData {
 
 class elu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "elu_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "elu_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "elu TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./elu_data");
     }
 };
-
 
 TEST_F(elu_test, test_case_fp32_1)
 {
@@ -63,7 +59,7 @@ TEST_F(elu_test, test_case_fp32_1)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/elu/tests/ut/op_kernel/elu_data", "elu_data");
@@ -98,7 +94,7 @@ TEST_F(elu_test, test_case_fp32_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    //system("cd ./elu_data/ && python3 compare_data.py 'float32'");
+    // system("cd ./elu_data/ && python3 compare_data.py 'float32'");
 }
 
 TEST_F(elu_test, test_case_fp32_2)
@@ -109,7 +105,7 @@ TEST_F(elu_test, test_case_fp32_2)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/elu/tests/ut/op_kernel/elu_data", "elu_data");
@@ -144,7 +140,7 @@ TEST_F(elu_test, test_case_fp32_2)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    //system("cd ./elu_data/ && python3 compare_data.py 'float32'");
+    // system("cd ./elu_data/ && python3 compare_data.py 'float32'");
 }
 
 TEST_F(elu_test, test_case_fp16_1)
@@ -155,7 +151,7 @@ TEST_F(elu_test, test_case_fp16_1)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/elu/tests/ut/op_kernel/elu_data", "elu_data");
@@ -190,5 +186,5 @@ TEST_F(elu_test, test_case_fp16_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    //system("cd ./elu_data/ && python3 compare_data.py 'float16'");
+    // system("cd ./elu_data/ && python3 compare_data.py 'float16'");
 }

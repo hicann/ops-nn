@@ -51,11 +51,10 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::GetAttrs()
 ge::graphStatus AddLayerNormQuantEmptyTiling::CheckShapeAllPositive(gert::Shape& shape)
 {
     for (size_t idx = 0; idx < shape.GetDimNum(); idx++) {
-        OP_CHECK_IF(
-            shape.GetDim(idx) < 0,
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", idx, shape.GetDim(idx)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape.GetDim(idx) < 0,
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", idx,
+                            shape.GetDim(idx)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -91,7 +90,7 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::DoTiling()
         return ret;
     }
     context_->SetTilingKey(GetTilingKey());
-    
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -117,10 +116,10 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CheckInputsShape()
     const gert::StorageShape* gammaShape = this->context_->GetInputShape(GAMMA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, gammaShape);
     auto gammaStorageShape = gammaShape->GetStorageShape();
-   
+
     const gert::StorageShape* betaShape = this->context_->GetInputShape(BETA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, betaShape);
- 
+
     const gert::StorageShape* y1Shape = this->context_->GetOutputShape(Y1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, y1Shape);
 
@@ -130,25 +129,22 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CheckInputsShape()
 
     size_t elewiseDimNum = x1StorageShape.GetDimNum();
     size_t weightDimNum = gammaStorageShape.GetDimNum();
-    OP_CHECK_IF(
-        (0 == elewiseDimNum || 0 == weightDimNum),
-        OP_LOGW(this->context_->GetNodeName(), "Got x1/gamma is zero dim tensor, tiling FAILED."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((0 == elewiseDimNum || 0 == weightDimNum),
+                OP_LOGW(this->context_->GetNodeName(), "Got x1/gamma is zero dim tensor, tiling FAILED."),
+                return ge::GRAPH_FAILED);
 
     bool elewiseShapeEqual = ((*x1Shape) == (*x2Shape)) && ((*x1Shape) == (*xShape)) && ((*x1Shape) == (*y1Shape));
     bool weightShapeEqual = ((*gammaShape) == (*betaShape));
-    OP_CHECK_IF(
-        !(elewiseShapeEqual && weightShapeEqual),
-        OP_LOGW(
-            this->context_->GetNodeName(),
-            "Got x1/x2/y1/x shape not equat OR gamma/beta Shape not equal, tiling FAILED."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(elewiseShapeEqual && weightShapeEqual),
+                OP_LOGW(this->context_->GetNodeName(),
+                        "Got x1/x2/y1/x shape not equat OR gamma/beta Shape not equal, tiling FAILED."),
+                return ge::GRAPH_FAILED);
 
     // calculate the number of valid rows.
     CalcRowsAndCols(xStorageShape, gammaStorageShape);
 
     return ge::GRAPH_SUCCESS;
 }
-
 
 ge::graphStatus AddLayerNormQuantEmptyTiling::GetShapeAttrsInfo()
 {
@@ -166,10 +162,7 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t AddLayerNormQuantEmptyTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t AddLayerNormQuantEmptyTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus AddLayerNormQuantEmptyTiling::PostTiling()
 {
@@ -190,7 +183,8 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t AddLayerNormQuantEmptyTiling::NearestLowerPowerOfTwo(int32_t tmp) {
+uint64_t AddLayerNormQuantEmptyTiling::NearestLowerPowerOfTwo(int32_t tmp)
+{
     int64_t power = 0;
     uint64_t powerOfTwoValue = 0;
     while (power <= tmp) {
@@ -200,8 +194,9 @@ uint64_t AddLayerNormQuantEmptyTiling::NearestLowerPowerOfTwo(int32_t tmp) {
     return powerOfTwoValue - 1;
 }
 
-ge::graphStatus AddLayerNormQuantEmptyTiling::CalcuTilingData() {
-    if(static_cast<int64_t>(ubSize_) >= KERNEL_BUFFER_NUM * (rowsPerCore_ * BYTES_OF_FLOAT)){
+ge::graphStatus AddLayerNormQuantEmptyTiling::CalcuTilingData()
+{
+    if (static_cast<int64_t>(ubSize_) >= KERNEL_BUFFER_NUM * (rowsPerCore_ * BYTES_OF_FLOAT)) {
         numBlocks_ = 0;
         lastBlockSize_ = rowsPerCore_;
         numBlocksLastCore_ = 0;
@@ -222,7 +217,8 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::CalcuTilingData() {
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AddLayerNormQuantEmptyTiling::CalcUsedCoreNums() {
+ge::graphStatus AddLayerNormQuantEmptyTiling::CalcUsedCoreNums()
+{
     ge::graphStatus ret = ge::GRAPH_SUCCESS;
     if (this->rows_ <= MAX_SIZE_PER_CORE) {
         // 单核计算
@@ -255,9 +251,9 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::DoOpTiling()
     tilingKey_ = EMPTY_TENSOR_KEY;
     // split cores
     CalcUsedCoreNums();
-    
+
     auto scale2 = context_->GetOptionalInputTensor(SCALE2_IDX);
-    if(scale2 != nullptr) {
+    if (scale2 != nullptr) {
         isDualQuant_ = 1;
     }
     tilingData_.set_isDualQuant(isDualQuant_);
@@ -277,4 +273,4 @@ ge::graphStatus AddLayerNormQuantEmptyTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

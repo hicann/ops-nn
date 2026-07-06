@@ -14,36 +14,28 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
+namespace ops {
 static const std::vector<ge::DataType> DataTypeXY = {
-    ge::DT_UINT8, ge::DT_INT8, ge::DT_UINT16, ge::DT_INT16,
-    ge::DT_UINT32, ge::DT_INT32, ge::DT_UINT64, ge::DT_INT64,
-    ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
-    ge::DT_BOOL};
+    ge::DT_UINT8, ge::DT_INT8,   ge::DT_UINT16, ge::DT_INT16,   ge::DT_UINT32, ge::DT_INT32, ge::DT_UINT64,
+    ge::DT_INT64, ge::DT_DOUBLE, ge::DT_FLOAT,  ge::DT_FLOAT16, ge::DT_BF16,   ge::DT_BOOL};
 static const std::vector<ge::Format> format = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND};
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 static const std::vector<ge::DataType> DataTypeIdx = {
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64};
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 static const std::vector<ge::DataType> DataTypeCount = {
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64};
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 
-static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& result) {
-    result = ge::AscendString(R"({"isSupported": "True", "dynamicCompileStatic": "True", "reason": "CheckSupported success."})");
+static ge::graphStatus CheckSupport(const ge::Operator& op, ge::AscendString& result)
+{
+    result = ge::AscendString(
+        R"({"isSupported": "True", "dynamicCompileStatic": "True", "reason": "CheckSupported success."})");
     return ge::GRAPH_SUCCESS;
 }
 
-class UniqueDim : public OpDef
-{
+class UniqueDim : public OpDef {
 public:
     explicit UniqueDim(const char* name) : OpDef(name)
     {

@@ -20,237 +20,241 @@
 using namespace std;
 
 class l2_inplace_quant_scatter_test_v2 : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "l2_inplace_quant_scatter_test_v2 SetUp" << endl;
-  }
-  static void TearDownTestCase() {
-    cout << "l2_inplace_quant_scatter_test_v2 TearDown" << endl;
-  }
+protected:
+    static void SetUpTestCase() { cout << "l2_inplace_quant_scatter_test_v2 SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_inplace_quant_scatter_test_v2 TearDown" << endl; }
 };
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_dtype_combine_err1) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_dtype_combine_err1)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-  // precision simulate
-  
+    // precision simulate
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_dtype_combine_err2) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = nullptr;
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_dtype_combine_err2)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = nullptr;
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-  // precision simulate
-  
+    // precision simulate
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_self_dtype_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT64, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_self_dtype_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT64, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_indices_dtype_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT8, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_indices_dtype_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT8, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_updates_dtype_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_updates_dtype_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_quantScales_dtype_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_quantScales_dtype_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_quantZeroPoints_dtype_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_INT64, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_quantZeroPoints_dtype_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_INT64, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_round_mode_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "round";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_round_mode_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "round";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_hi8_round_mode_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_hi8_round_mode_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({24, 4096, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_shape_invalid) {
-  // 使用**Desc描述host api输入输出
-  auto selfRefDesc = TensorDesc({2, 12, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
-  auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
-  auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
-  int64_t axis = -2;
-  int64_t quantAxis = -1;
-  int64_t reduction = 1;
-  const char* roundMode = "rint";
-  auto ut = OP_API_UT(
-      aclnnInplaceQuantScatterV2,
-      INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis, quantAxis, reduction, roundMode),
-      OUTPUT());
+TEST_F(l2_inplace_quant_scatter_test_v2, ascend950_test_abnormal_shape_invalid)
+{
+    // 使用**Desc描述host api输入输出
+    auto selfRefDesc = TensorDesc({2, 12, 4096, 128}, ACL_INT8, ACL_FORMAT_ND);
+    auto indicesDesc = TensorDesc({24}, ACL_INT32, ACL_FORMAT_ND);
+    auto updatesDesc = TensorDesc({24, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantScalesDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    auto quantZeroPointsDesc = TensorDesc({1, 1, 128}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -2;
+    int64_t quantAxis = -1;
+    int64_t reduction = 1;
+    const char* roundMode = "rint";
+    auto ut = OP_API_UT(aclnnInplaceQuantScatterV2,
+                        INPUT(selfRefDesc, indicesDesc, updatesDesc, quantScalesDesc, quantZeroPointsDesc, axis,
+                              quantAxis, reduction, roundMode),
+                        OUTPUT());
 
-  // only test GetWorkspaceSize
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

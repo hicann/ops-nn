@@ -27,8 +27,8 @@ protected:
 };
 
 static void GetInputsInfo(const std::vector<SubgraphInput>& subgraph_inputs, std::vector<Shape>& input_shapes,
-    std::vector<DataType>& input_dtypes, std::vector<Format>& input_formats);
+                          std::vector<DataType>& input_dtypes, std::vector<Format>& input_formats);
 static Status InferShape(const GraphUniqPtr& replace_graph, const std::vector<SubgraphInput>& subgraph_inputs);
 
-} //namespace ops
+} // namespace ops
 #endif // PRELU_GRAD_FUSION_PASS_H

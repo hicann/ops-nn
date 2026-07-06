@@ -16,43 +16,40 @@ using NodeProto = ge::onnx::NodeProto;
 static const int dtype_int8 = 2;
 static const int dtype_int32 = 3;
 
-static Status ParseParamsNpuQuantize(const Message *opSrc, ge::Operator &opDest) {
-  const NodeProto *node = dynamic_cast<const NodeProto *>(opSrc);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(opDest).c_str(), "Dynamic cast opSrc to NodeProto failed.");
-    return FAILED;
-  }
-
-  for (const auto& attr : node->attribute()) {
-    if (attr.name() == "axis" && attr.type() == ge::onnx::AttributeProto::INT) {
-      int axis = attr.i();
-      opDest.SetAttr("axis", axis);
-    } else if (attr.name() == "dtype" && attr.type() == ge::onnx::AttributeProto::INT) {
-      int dtype = attr.i();
-      if (dtype == dtype_int8) {
-        opDest.SetAttr("dtype", "torch.qint8");
-      } else if (dtype == dtype_int32) {
-        opDest.SetAttr("dtype", "torch.qint32");
-      } else {
-        opDest.SetAttr("dtype", "torch.quint8");        
-      }
+static Status ParseParamsNpuQuantize(const Message* opSrc, ge::Operator& opDest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(opSrc);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(opDest).c_str(), "Dynamic cast opSrc to NodeProto failed.");
+        return FAILED;
     }
-  }
 
-  return SUCCESS;
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "axis" && attr.type() == ge::onnx::AttributeProto::INT) {
+            int axis = attr.i();
+            opDest.SetAttr("axis", axis);
+        } else if (attr.name() == "dtype" && attr.type() == ge::onnx::AttributeProto::INT) {
+            int dtype = attr.i();
+            if (dtype == dtype_int8) {
+                opDest.SetAttr("dtype", "torch.qint8");
+            } else if (dtype == dtype_int32) {
+                opDest.SetAttr("dtype", "torch.qint32");
+            } else {
+                opDest.SetAttr("dtype", "torch.quint8");
+            }
+        }
+    }
+
+    return SUCCESS;
 }
 
 REGISTER_CUSTOM_OP("Quantize")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUQuantize"),
-                 ge::AscendString("ai.onnx::11::NPUQuantize"),
-                 ge::AscendString("ai.onnx::12::NPUQuantize"),
-                 ge::AscendString("ai.onnx::13::NPUQuantize"),
-                 ge::AscendString("ai.onnx::14::NPUQuantize"),
-                 ge::AscendString("ai.onnx::15::NPUQuantize"),
-                 ge::AscendString("ai.onnx::16::NPUQuantize"),
-                 ge::AscendString("ai.onnx::17::NPUQuantize"),
-                 ge::AscendString("ai.onnx::18::NPUQuantize")})
-  .ParseParamsFn(ParseParamsNpuQuantize)
-  .ImplyType(ImplyType::TVM);
-} // domi
+    .FrameworkType(ONNX)
+    .OriginOpType({ge::AscendString("npu::1::NPUQuantize"), ge::AscendString("ai.onnx::11::NPUQuantize"),
+                   ge::AscendString("ai.onnx::12::NPUQuantize"), ge::AscendString("ai.onnx::13::NPUQuantize"),
+                   ge::AscendString("ai.onnx::14::NPUQuantize"), ge::AscendString("ai.onnx::15::NPUQuantize"),
+                   ge::AscendString("ai.onnx::16::NPUQuantize"), ge::AscendString("ai.onnx::17::NPUQuantize"),
+                   ge::AscendString("ai.onnx::18::NPUQuantize")})
+    .ParseParamsFn(ParseParamsNpuQuantize)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

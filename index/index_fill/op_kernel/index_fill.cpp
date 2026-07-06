@@ -20,7 +20,8 @@
 using namespace IndexFillNS;
 
 extern "C" __global__ __aicore__ void index_fill(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR y,
-                                                 GM_ADDR workspace, GM_ADDR tiling) {
+                                                 GM_ADDR workspace, GM_ADDR tiling)
+{
     GET_TILING_DATA(tilingData, tiling);
     AscendC::TPipe tpipe;
 

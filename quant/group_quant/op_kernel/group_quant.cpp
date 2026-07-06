@@ -18,7 +18,8 @@
 using namespace GroupQuant;
 
 extern "C" __global__ __aicore__ void group_quant(GM_ADDR x, GM_ADDR scale, GM_ADDR groupIndex, GM_ADDR offset,
-                                                  GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
+                                                  GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+{
     if (workspace == nullptr) {
         return;
     }

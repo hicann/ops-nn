@@ -12,7 +12,7 @@
  * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
- 
+
 /*!
  * @file shrink.h
  * @brief Shrink Kernel class (arch35)
@@ -54,10 +54,9 @@ class Shrink {
     static constexpr int32_t BUFFER_NUM = BUFFER_MODE ? 2 : 1;
 
 public:
-    __aicore__ inline Shrink() {};
+    __aicore__ inline Shrink(){};
 
-    __aicore__ inline void Init(GM_ADDR self, GM_ADDR out,
-                                const ShrinkTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR self, GM_ADDR out, const ShrinkTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -88,9 +87,7 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void Shrink<T, BUFFER_MODE>::Init(
-    GM_ADDR self, GM_ADDR out,
-    const ShrinkTilingData* tilingData)
+__aicore__ inline void Shrink<T, BUFFER_MODE>::Init(GM_ADDR self, GM_ADDR out, const ShrinkTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -109,7 +106,8 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::Init(
 
     // Mask buffers: ubLength/8 bytes, 32-byte aligned, minimum 32 bytes
     int64_t maskBytes = (ubLength_ / 8 + 31) & ~31;
-    if (maskBytes < 32) maskBytes = 32;
+    if (maskBytes < 32)
+        maskBytes = 32;
     pipe_.InitBuffer(maskBuf1_, maskBytes);
     pipe_.InitBuffer(maskBuf2_, maskBytes);
 }
@@ -120,9 +118,8 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t 
     LocalTensor<T> inLocal = inputQueue_.template AllocTensor<T>();
 
     // byteLen is uint16_t (max 65535); Tiling ensures currentNum * sizeof(T) <= 65535
-    DataCopyPad(inLocal, gmIn_[progress * ubLength_],
-        {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
-        {false, 0, 0, 0});
+    DataCopyPad(inLocal, gmIn_[progress * ubLength_], {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
+                {false, 0, 0, 0});
 
     inputQueue_.EnQue(inLocal);
 }
@@ -133,8 +130,7 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t
     LocalTensor<T> outLocal = outputQueue_.template DeQue<T>();
 
     // byteLen is uint16_t (max 65535); Tiling ensures currentNum * sizeof(T) <= 65535
-    DataCopyPad(gmOut_[progress * ubLength_], outLocal,
-        {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0});
+    DataCopyPad(gmOut_[progress * ubLength_], outLocal, {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0});
 
     outputQueue_.FreeTensor(outLocal);
 }
@@ -168,16 +164,14 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
     Duplicate(midLocal, static_cast<T>(0.0f), currentNum);
 
     // Step 3: Where maskPos=0 (not positive region), pick 0; maskPos=1 keep self-bias
-    Select(outLocal, maskPos, outLocal, midLocal,
-           SELMODE::VSEL_TENSOR_TENSOR_MODE, currentNum);
+    Select(outLocal, maskPos, outLocal, midLocal, SELMODE::VSEL_TENSOR_TENSOR_MODE, currentNum);
 
     // Step 4: midLocal = self + bias (negative region value, inLocal still has original self)
     T posBias = static_cast<T>(bias_);
     Adds(midLocal, inLocal, posBias, currentNum);
 
     // Step 5: Where maskNeg=1 (negative region), pick self+bias; else keep current
-    Select(outLocal, maskNeg, midLocal, outLocal,
-           SELMODE::VSEL_TENSOR_TENSOR_MODE, currentNum);
+    Select(outLocal, maskNeg, midLocal, outLocal, SELMODE::VSEL_TENSOR_TENSOR_MODE, currentNum);
 
     outputQueue_.template EnQue<T>(outLocal);
     inputQueue_.FreeTensor(inLocal);
@@ -186,7 +180,8 @@ __aicore__ inline void Shrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void Shrink<T, BUFFER_MODE>::Process()
 {
-    if (blockLength_ <= 0) return;
+    if (blockLength_ <= 0)
+        return;
 
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {

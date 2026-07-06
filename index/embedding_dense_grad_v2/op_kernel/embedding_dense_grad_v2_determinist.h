@@ -24,13 +24,12 @@ constexpr uint64_t FIRST_PROGRESS_FLAG = 0;
 
 namespace AscendC {
 template <typename T>
-class EmbeddingDenseGradV2DeterministKernel
-{
+class EmbeddingDenseGradV2DeterministKernel {
 public:
     __aicore__ inline EmbeddingDenseGradV2DeterministKernel() = delete;
-    __aicore__ inline EmbeddingDenseGradV2DeterministKernel(
-        GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR backProps, GM_ADDR workSpace,
-        const EmbeddingDenseGradV2TilingData& tiling, TPipe& pipe)
+    __aicore__ inline EmbeddingDenseGradV2DeterministKernel(GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx,
+                                                            GM_ADDR backProps, GM_ADDR workSpace,
+                                                            const EmbeddingDenseGradV2TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
@@ -111,8 +110,8 @@ private:
         uint64_t tailRowNumLoops = blockIdx_ < tiling.determinTiling.formerRowNumRepTime ?
                                        0 :
                                        blockIdx_ - tiling.determinTiling.formerRowNumRepTime;
-        indicesAddrOffset_ =
-            tiling.determinTiling.formerRowNum * formerRowNumLoops + tiling.determinTiling.tailRowNum * tailRowNumLoops;
+        indicesAddrOffset_ = tiling.determinTiling.formerRowNum * formerRowNumLoops +
+                             tiling.determinTiling.tailRowNum * tailRowNumLoops;
     }
 
     __aicore__ inline void UpdateParams(const uint64_t dimJ)
@@ -143,9 +142,8 @@ private:
         pipe.InitBuffer(addResQue_[1], BUFFER_NUM, gradAlignNum * sizeof(T));
     }
 
-    __aicore__ inline void SetGmAddr(
-        GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR backProps, GM_ADDR workSpace,
-        const EmbeddingDenseGradV2TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR backProps,
+                                     GM_ADDR workSpace, const EmbeddingDenseGradV2TilingData& tiling)
     {
         gradGm_.SetGlobalBuffer((__gm__ T*)grad);
         indiceGm_.SetGlobalBuffer((__gm__ int*)sortIndices + indicesAddrOffset_);
@@ -303,21 +301,17 @@ private:
         addResQue_[1].FreeTensor<T>(addResLocal2);
     }
 
-    __aicore__ inline void ResetAddQue(LocalTensor<T>& addRes)
-    {
-        Duplicate<T>(addRes, 0.0, formerEmbeddingDim_);
-    }
+    __aicore__ inline void ResetAddQue(LocalTensor<T>& addRes) { Duplicate<T>(addRes, 0.0, formerEmbeddingDim_); }
 
-    __aicore__ inline void ResetAddCount(const uint64_t id)
-    {
-        addCount_[id] = INIT_PARAM;
-    }
+    __aicore__ inline void ResetAddCount(const uint64_t id) { addCount_[id] = INIT_PARAM; }
 
-    __aicore__ inline void PIPE_MTE2_S() {
+    __aicore__ inline void PIPE_MTE2_S()
+    {
         int32_t eventIDMTE2ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
         WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
     }
+
 private:
     GlobalTensor<T> gradGm_;
     GlobalTensor<T> outputGm_;

@@ -21,14 +21,11 @@
 using namespace AscendC;
 
 template <typename T>
-class KernelAdaptiveAvgPool3DGradNcLargeFloat
-{
+class KernelAdaptiveAvgPool3DGradNcLargeFloat {
 public:
-    __aicore__ inline KernelAdaptiveAvgPool3DGradNcLargeFloat()
-    {}
-    __aicore__ inline void Init(
-        GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data,
-        TPipe* tmpPipe)
+    __aicore__ inline KernelAdaptiveAvgPool3DGradNcLargeFloat() {}
+    __aicore__ inline void Init(GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace,
+                                const AdaptiveAvgPool3dGradTilingData* __restrict__ tiling_data, TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         ncAlign = tiling_data->ncNum;
@@ -113,9 +110,8 @@ public:
                 if (ncIdx == ncSliceNum - 1) {
                     ncMoveNum = ncAlignSliceTail;
                 }
-                DataCopyPad(
-                    outputGradGm[taskIdx * ncAlign + ncIdx * ncAlignSliceLength], inputLocal,
-                    {1, (uint32_t)(ncMoveNum * sizeof(T)), 0, 0, 0});
+                DataCopyPad(outputGradGm[taskIdx * ncAlign + ncIdx * ncAlignSliceLength], inputLocal,
+                            {1, (uint32_t)(ncMoveNum * sizeof(T)), 0, 0, 0});
             }
         }
 

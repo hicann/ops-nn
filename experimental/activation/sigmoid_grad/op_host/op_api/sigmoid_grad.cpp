@@ -27,15 +27,15 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-inline static bool IsAiCoreSupport(const aclTensor *gradOutput)
+inline static bool IsAiCoreSupport(const aclTensor* gradOutput)
 {
     // sigmoidGrad只需要判断dtype
     return CheckType(gradOutput->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AICORE算子kernel
-inline static const aclTensor *SigmoidGradAiCore(const aclTensor *output, const aclTensor *gradOutput,
-                                                 aclTensor *sigmoidGradInput, aclOpExecutor *executor)
+inline static const aclTensor* SigmoidGradAiCore(const aclTensor* output, const aclTensor* gradOutput,
+                                                 aclTensor* sigmoidGradInput, aclOpExecutor* executor)
 {
     L0_DFX(SigmoidGradAiCore, output, gradOutput, sigmoidGradInput);
     // 使用框架宏ADD_TO_LAUNCHER_LIST，将AiCore SigmoidGrad算子加入任务队列
@@ -45,22 +45,22 @@ inline static const aclTensor *SigmoidGradAiCore(const aclTensor *output, const 
 }
 
 // AICPU算子kernel
-inline static const aclTensor *SigmoidGradAiCpu(const aclTensor *output, const aclTensor *gradOutput,
-                                                aclTensor *sigmoidGradInput, aclOpExecutor *executor)
+inline static const aclTensor* SigmoidGradAiCpu(const aclTensor* output, const aclTensor* gradOutput,
+                                                aclTensor* sigmoidGradInput, aclOpExecutor* executor)
 {
     // 使用框架宏ADD_TO_AICPU_LAUNCHER_LIST，将AiCpu SigmoidGrad算子加入任务队列
     // SigmoidGrad是算子的OpType，gradOutput、output是算子的输入，sigmoidGradInput是算子的输出
     L0_DFX(SigmoidGradAiCpu, output, gradOutput, sigmoidGradInput);
 
     static internal::AicpuTaskSpace space("SigmoidGrad");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(SigmoidGrad, OP_ATTR_NAMES({ "complex_conj" }), OP_INPUT(output, gradOutput),
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(SigmoidGrad, OP_ATTR_NAMES({"complex_conj"}), OP_INPUT(output, gradOutput),
                                           OP_OUTPUT(sigmoidGradInput), OP_ATTR(true));
     CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
 
     return sigmoidGradInput;
 }
 
-const aclTensor *SigmoidGrad(const aclTensor *output, const aclTensor *gradOutput, aclOpExecutor *executor)
+const aclTensor* SigmoidGrad(const aclTensor* output, const aclTensor* gradOutput, aclOpExecutor* executor)
 {
     auto sigmoidGradInput = executor->AllocTensor(gradOutput->GetViewShape(), gradOutput->GetDataType());
     if (IsAiCoreSupport(gradOutput)) {
@@ -69,4 +69,4 @@ const aclTensor *SigmoidGrad(const aclTensor *output, const aclTensor *gradOutpu
         return SigmoidGradAiCpu(output, gradOutput, sigmoidGradInput, executor);
     }
 }
-}
+} // namespace l0op

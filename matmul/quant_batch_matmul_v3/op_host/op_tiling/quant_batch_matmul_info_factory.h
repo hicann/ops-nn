@@ -28,15 +28,15 @@ public:
 
     QuantBatchMatmulInfo* Get()
     {
-        QuantBatchMatmulInfo *ptr = nullptr;
+        QuantBatchMatmulInfo* ptr = nullptr;
         auto threadId = pthread_self();
         {
             std::shared_lock<std::shared_mutex> read_lock(mutex_);
             auto it = inst_.find(threadId);
             if (it != inst_.end()) {
-                return &(it->second); 
+                return &(it->second);
             }
-        } 
+        }
         // Not found: acquire write lock and double-check
         std::unique_lock<std::shared_mutex> write_lock(mutex_);
         auto it = inst_.find(threadId);
@@ -53,5 +53,5 @@ private:
     std::shared_mutex mutex_;
 };
 
-}  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_INFO_FACTORY_H
+} // namespace optiling
+#endif // QUANT_BATCH_MATMUL_INFO_FACTORY_H

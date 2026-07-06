@@ -28,8 +28,8 @@ using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::MemType;
+using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 using namespace NormCommon;
@@ -71,9 +71,9 @@ __aicore__ inline void SimpleNativePipeSync()
  * @return void
  */
 template <typename U_X, typename U_GAMMA>
-__aicore__ inline void ComputeY(
-    LocalTensor<float>& y1Local, LocalTensor<U_X>& y2Local, LocalTensor<float>& xLocal,
-    LocalTensor<U_GAMMA>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t rstdOffset, uint64_t count)
+__aicore__ inline void ComputeY(LocalTensor<float>& y1Local, LocalTensor<U_X>& y2Local, LocalTensor<float>& xLocal,
+                                LocalTensor<U_GAMMA>& gammaLocal, LocalTensor<float>& rstdLocal, uint32_t rstdOffset,
+                                uint64_t count)
 {
     uint32_t calCount = (uint32_t)(count / 2); // Unroll
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
@@ -132,10 +132,9 @@ __aicore__ inline void ComputeY(
  * @return void
  */
 template <typename U_X, typename U_GAMMA>
-__aicore__ inline void ComputeYMulti(
-    LocalTensor<float>& y1Local, LocalTensor<U_X>& y2Local, LocalTensor<float>& xLocal,
-    LocalTensor<U_GAMMA>& gammaLocal, LocalTensor<float>& rstdLocal, uint64_t rstdOffsetStart, uint64_t count,
-    uint64_t curRows)
+__aicore__ inline void ComputeYMulti(LocalTensor<float>& y1Local, LocalTensor<U_X>& y2Local, LocalTensor<float>& xLocal,
+                                     LocalTensor<U_GAMMA>& gammaLocal, LocalTensor<float>& rstdLocal,
+                                     uint64_t rstdOffsetStart, uint64_t count, uint64_t curRows)
 {
     uint32_t rstdOffset = (uint32_t)rstdOffsetStart;
     uint32_t calCount = (uint32_t)(count / 2); // Unroll

@@ -22,20 +22,23 @@ using namespace AscendC;
 using namespace SigmoidCrossEntropyWithLogitsV2;
 
 template <uint64_t schMode, uint32_t Reduction, uint32_t HasWeight, uint32_t HasPosWeight>
-__global__ __aicore__ void sigmoid_cross_entropy_with_logits_v2(
-    GM_ADDR predict, GM_ADDR target, GM_ADDR weight, GM_ADDR pos_weight, GM_ADDR loss,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void sigmoid_cross_entropy_with_logits_v2(GM_ADDR predict, GM_ADDR target, GM_ADDR weight,
+                                                                GM_ADDR pos_weight, GM_ADDR loss, GM_ADDR workspace,
+                                                                GM_ADDR tiling)
 {
     if constexpr (HasWeight && HasPosWeight) {
-        using OpDag = SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2HasTwoWeight<DTYPE_PREDICT, DTYPE_LOSS>::OpDag;
+        using OpDag = SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2HasTwoWeight<DTYPE_PREDICT,
+                                                                                         DTYPE_LOSS>::OpDag;
         BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(predict, target, weight, pos_weight, loss);
-    } else if constexpr (HasWeight){
-        using OpDag = SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2WeightOnly<DTYPE_PREDICT, DTYPE_LOSS>::OpDag;
+    } else if constexpr (HasWeight) {
+        using OpDag = SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2WeightOnly<DTYPE_PREDICT,
+                                                                                       DTYPE_LOSS>::OpDag;
         BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(predict, target, weight, loss);
-    } else if constexpr (HasPosWeight){
-        using OpDag = SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2PosWeightOnly<DTYPE_PREDICT, DTYPE_LOSS>::OpDag;
+    } else if constexpr (HasPosWeight) {
+        using OpDag = SigmoidCrossEntropyWithLogitsV2::SigmoidCEWithLogitsV2PosWeightOnly<DTYPE_PREDICT,
+                                                                                          DTYPE_LOSS>::OpDag;
         BroadcastSch<schMode, OpDag> sch(tiling);
         sch.Process(predict, target, pos_weight, loss);
     } else {

@@ -9,7 +9,7 @@
  */
 
 /**
-  * NOTE: Portions of this code were AI-generated and have been
+ * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
 
@@ -43,11 +43,8 @@ extern "C" {
  * @param executor [out] Executor
  * @return aclnnStatus
  */
-ACLNN_API aclnnStatus aclnnSoftsignGetWorkspaceSize(
-    const aclTensor *self,
-    const aclTensor *out,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnSoftsignGetWorkspaceSize(const aclTensor* self, const aclTensor* out,
+                                                    uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief Execute Softsign computation
@@ -57,11 +54,8 @@ ACLNN_API aclnnStatus aclnnSoftsignGetWorkspaceSize(
  * @param stream [in] ACL stream
  * @return aclnnStatus
  */
-ACLNN_API aclnnStatus aclnnSoftsign(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnSoftsign(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                    aclrtStream stream);
 
 #ifdef __cplusplus
 }

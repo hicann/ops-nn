@@ -25,7 +25,6 @@
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
-
 struct CrossV2TilingDataTest {
     uint64_t stepSize;
     uint64_t tileNum;
@@ -40,6 +39,6 @@ inline void InitCrossV2TilingData(uint8_t* tiling, CrossV2TilingDataTest* const_
 }
 
 #define GET_TILING_DATA(tilingData, tilingPointer) \
-    CrossV2TilingDataTest tilingData;                  \
+    CrossV2TilingDataTest tilingData;              \
     InitCrossV2TilingData(tilingPointer, &tilingData)
 #endif

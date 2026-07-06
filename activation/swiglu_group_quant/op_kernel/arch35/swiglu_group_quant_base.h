@@ -79,10 +79,7 @@ __aicore__ inline int32_t CeilDiv(int32_t a, int b)
     return (a + b - 1) / b;
 }
 
-__aicore__ inline int32_t CeilAlign(int32_t a, int b)
-{
-    return CeilDiv(a, b) * b;
-}
+__aicore__ inline int32_t CeilAlign(int32_t a, int b) { return CeilDiv(a, b) * b; }
 
 template <typename T>
 __aicore__ inline int32_t RoundUp(int32_t num)
@@ -146,8 +143,8 @@ __simd_callee__ inline void LoadInputData(RegTensor<float>& dst, __ubuf__ T* src
 }
 
 template <typename T>
-__simd_callee__ inline void StoreOutputData(
-    __ubuf__ T* dst, RegTensor<float>& src, MaskReg pregLoop, uint32_t dstOffset)
+__simd_callee__ inline void StoreOutputData(__ubuf__ T* dst, RegTensor<float>& src, MaskReg pregLoop,
+                                            uint32_t dstOffset)
 {
     if constexpr (IsSameType<T, float>::value) {
         StoreAlign(dst + dstOffset, src, pregLoop);
@@ -163,8 +160,8 @@ __simd_callee__ inline void StoreOutputData(
 }
 
 template <typename T>
-__simd_callee__ inline void StoreOuputDataUnalign(
-    RegTensor<float>& src, __ubuf__ T*& dst, UnalignRegForStore& uDst, MaskReg pregLoop, uint32_t postUpdateStride)
+__simd_callee__ inline void StoreOuputDataUnalign(RegTensor<float>& src, __ubuf__ T*& dst, UnalignRegForStore& uDst,
+                                                  MaskReg pregLoop, uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, float>::value) {
         StoreUnAlign(dst, src, uDst, postUpdateStride);
@@ -178,16 +175,16 @@ __simd_callee__ inline void StoreOuputDataUnalign(
 }
 
 template <typename T>
-__simd_callee__ inline void StoreMxFp8Scale(
-    __ubuf__ T* dst, RegTensor<int32_t>& src, MaskReg pregLoop, uint32_t dstOffset)
+__simd_callee__ inline void StoreMxFp8Scale(__ubuf__ T* dst, RegTensor<int32_t>& src, MaskReg pregLoop,
+                                            uint32_t dstOffset)
 {
     RegTensor<uint8_t> tmp1;
     Cast<uint8_t, int32_t, castTraitU32toU8Even>(tmp1, src, pregLoop);
-    StoreAlign<T, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B8>(dst + dstOffset, (RegTensor<T> &)tmp1, pregLoop);
+    StoreAlign<T, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B8>(dst + dstOffset, (RegTensor<T>&)tmp1, pregLoop);
 }
 
 __simd_callee__ inline void VFSwiGlu(RegTensor<float>& y, RegTensor<float>& x0, RegTensor<float>& x1,
-    RegTensor<float>& one, RegTensor<float>& vreg, MaskReg pregLoop)
+                                     RegTensor<float>& one, RegTensor<float>& vreg, MaskReg pregLoop)
 {
     Muls(vreg, x0, static_cast<float>(-1.0f), pregLoop);
     Exp(vreg, vreg, pregLoop);
@@ -197,9 +194,8 @@ __simd_callee__ inline void VFSwiGlu(RegTensor<float>& y, RegTensor<float>& x0, 
 }
 
 template <typename T, typename U>
-__simd_callee__ inline void FP16Convert(
-    AscendC::Reg::RegTensor<half>& output, AscendC::Reg::RegTensor<half>& input,
-    AscendC::Reg::MaskReg& mask)
+__simd_callee__ inline void FP16Convert(AscendC::Reg::RegTensor<half>& output, AscendC::Reg::RegTensor<half>& input,
+                                        AscendC::Reg::MaskReg& mask)
 {
     AscendC::Reg::RegTensor<uint16_t> specialValueTensor;
     AscendC::Reg::RegTensor<uint16_t> newMantissa;
@@ -218,15 +214,14 @@ __simd_callee__ inline void FP16Convert(
     AscendC::Reg::CompareScalar<uint16_t, CMPMODE::LT>(specialMask, andResult, NEW_MANTISSA, mask);
     AscendC::Reg::MaskAnd(specialMask, specialMask, nonzeroMask, mask);
     AscendC::Reg::Or(newValue, (AscendC::Reg::RegTensor<uint16_t>&)input, newMantissa, mask);
-    AscendC::Reg::Select<uint16_t>(
-        (AscendC::Reg::RegTensor<uint16_t>&)output, newValue, (AscendC::Reg::RegTensor<uint16_t>&)input,
-        specialMask);
+    AscendC::Reg::Select<uint16_t>((AscendC::Reg::RegTensor<uint16_t>&)output, newValue,
+                                   (AscendC::Reg::RegTensor<uint16_t>&)input, specialMask);
 }
 
 template <typename T, bool hasTopkWeight = false, bool hasClampValue = false>
-__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0LocalAddr,
-    __ubuf__ T* x1LocalAddr, __ubuf__ float* topkWeightLocalAddr, uint16_t loopCount,
-    uint32_t sregNum, uint32_t curColNumAlign, const uint16_t curRowNum, float clampValue)
+__simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0LocalAddr, __ubuf__ T* x1LocalAddr,
+                                          __ubuf__ float* topkWeightLocalAddr, uint16_t loopCount, uint32_t sregNum,
+                                          uint32_t curColNumAlign, const uint16_t curRowNum, float clampValue)
 {
     RegTensor<float> weight;
     RegTensor<float> x0;
@@ -260,27 +255,25 @@ __simd_vf__ inline void VFProcessSwigluVf(__ubuf__ T* yLocalAddr, __ubuf__ T* x0
 }
 
 template <typename T, bool hasTopkWeight = false, bool hasClampValue = false>
-__aicore__ inline void VFProcessSwiglu(
-    const LocalTensor<T>& yLocal, const LocalTensor<T>& x0Local, const LocalTensor<T>& x1Local,
-    const LocalTensor<float>& topkWeightLocal,
-    const uint16_t curRowNum, const uint32_t curColNum, float clampValue)
+__aicore__ inline void VFProcessSwiglu(const LocalTensor<T>& yLocal, const LocalTensor<T>& x0Local,
+                                       const LocalTensor<T>& x1Local, const LocalTensor<float>& topkWeightLocal,
+                                       const uint16_t curRowNum, const uint32_t curColNum, float clampValue)
 {
     __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     __ubuf__ T* x0LocalAddr = (__ubuf__ T*)x0Local.GetPhyAddr();
     __ubuf__ T* x1LocalAddr = (__ubuf__ T*)x1Local.GetPhyAddr();
-    __ubuf__ float* topkWeightLocalAddr =
-        hasTopkWeight ? (__ubuf__ float*)topkWeightLocal.GetPhyAddr() : nullptr;
+    __ubuf__ float* topkWeightLocalAddr = hasTopkWeight ? (__ubuf__ float*)topkWeightLocal.GetPhyAddr() : nullptr;
     uint16_t loopCount = CeilDiv(curColNum, VL_FP32);
     uint32_t sregNum = curColNum;
     uint32_t curColNumAlign = RoundUp<T>(curColNum);
-    AscendC::VF_CALL<VFProcessSwigluVf<T, hasTopkWeight, hasClampValue>>(
-        yLocalAddr, x0LocalAddr, x1LocalAddr, topkWeightLocalAddr, loopCount, sregNum, curColNumAlign, curRowNum,
-        clampValue);
+    AscendC::VF_CALL<VFProcessSwigluVf<T, hasTopkWeight, hasClampValue>>(yLocalAddr, x0LocalAddr, x1LocalAddr,
+                                                                         topkWeightLocalAddr, loopCount, sregNum,
+                                                                         curColNumAlign, curRowNum, clampValue);
 }
 
 template <typename T>
-__simd_vf__ inline void VFComputeMaxExpMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uint16_t* maxExpAddr,
-    uint32_t scaleNum, uint32_t onceXNum, uint32_t totalCountInUB, uint16_t loopNum)
+__simd_vf__ inline void VFComputeMaxExpMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uint16_t* maxExpAddr, uint32_t scaleNum,
+                                               uint32_t onceXNum, uint32_t totalCountInUB, uint16_t loopNum)
 {
     AscendC::Reg::RegTensor<T> vdExp0;
     AscendC::Reg::RegTensor<T> vdExp1;
@@ -300,51 +293,42 @@ __simd_vf__ inline void VFComputeMaxExpMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uin
     AscendC::Reg::MaskReg invalidDataMask1;
     AscendC::Reg::UnalignRegForStore u1;
     static constexpr AscendC::Reg::CastTrait castTraitHalf2Bf16 = {
-        AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+        AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        RoundMode::CAST_TRUNC};
 
     for (uint16_t i = 0; i < loopNum; i++) {
         scaleMask1 = AscendC::Reg::UpdateMask<T>(totalCountInUB);
-        AscendC::Reg::LoadAlign<
-            T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE, AscendC::Reg::LoadDist::DIST_DINTLV_B16>(
-            vdExp0, vdExp1, srcAddr, onceXNum);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
+                                AscendC::Reg::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr, onceXNum);
 
         if constexpr (IsSameType<T, half>::value) {
-            AscendC::Reg::And(
-                vdExpSelect0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0, invalidmaskfp16, scaleMask1);
-            AscendC::Reg::And(
-                vdExpSelect1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1, invalidmaskfp16, scaleMask1);
-            AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(
-                invalidDataMask0, vdExpSelect0, invalidmaskfp16, scaleMask1);
-            AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(
-                invalidDataMask1, vdExpSelect1, invalidmaskfp16, scaleMask1);
+            AscendC::Reg::And(vdExpSelect0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0, invalidmaskfp16, scaleMask1);
+            AscendC::Reg::And(vdExpSelect1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1, invalidmaskfp16, scaleMask1);
+            AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(invalidDataMask0, vdExpSelect0, invalidmaskfp16, scaleMask1);
+            AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(invalidDataMask1, vdExpSelect1, invalidmaskfp16, scaleMask1);
             AscendC::Reg::Cast<bfloat16_t, T, castTraitHalf2Bf16>(vdExp0BF16, vdExp0, scaleMask1);
             AscendC::Reg::Cast<bfloat16_t, T, castTraitHalf2Bf16>(vdExp1BF16, vdExp1, scaleMask1);
-            AscendC::Reg::And(
-                vdExpExtract0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0BF16, expMaskBF16, scaleMask1);
-            AscendC::Reg::And(
-                vdExpExtract1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1BF16, expMaskBF16, scaleMask1);
+            AscendC::Reg::And(vdExpExtract0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0BF16, expMaskBF16, scaleMask1);
+            AscendC::Reg::And(vdExpExtract1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1BF16, expMaskBF16, scaleMask1);
             AscendC::Reg::Select<uint16_t>(vdExpExtract0, vdExpExtract0, expMaskBF16, invalidDataMask0);
             AscendC::Reg::Select<uint16_t>(vdExpExtract1, vdExpExtract1, expMaskBF16, invalidDataMask1);
         } else {
-            AscendC::Reg::And(
-                vdExpExtract0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0, expMaskBF16, scaleMask1);
-            AscendC::Reg::And(
-                vdExpExtract1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1, expMaskBF16, scaleMask1);
+            AscendC::Reg::And(vdExpExtract0, (AscendC::Reg::RegTensor<uint16_t>&)vdExp0, expMaskBF16, scaleMask1);
+            AscendC::Reg::And(vdExpExtract1, (AscendC::Reg::RegTensor<uint16_t>&)vdExp1, expMaskBF16, scaleMask1);
         }
 
         AscendC::Reg::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, scaleMask1);
         AscendC::Reg::ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, scaleMask1);
 
-        AscendC::Reg::StoreUnAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(
-            maxExpAddr, vdMaxExp, u1, scaleNum);
+        AscendC::Reg::StoreUnAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, vdMaxExp, u1,
+                                                                                          scaleNum);
     }
     AscendC::Reg::StoreUnAlignPost(maxExpAddr, u1, 0);
 }
 
 template <typename T>
 __aicore__ inline void VFComputeMaxExpMXFP4(const LocalTensor<T>& srcLocal, const LocalTensor<uint16_t>& maxExpLocal,
-    uint16_t curRowNum, uint32_t curColNum)
+                                            uint16_t curRowNum, uint32_t curColNum)
 {
     __ubuf__ T* srcAddr = (__ubuf__ T*)srcLocal.GetPhyAddr();
     __ubuf__ uint16_t* maxExpAddr = (__ubuf__ uint16_t*)maxExpLocal.GetPhyAddr();
@@ -354,17 +338,15 @@ __aicore__ inline void VFComputeMaxExpMXFP4(const LocalTensor<T>& srcLocal, cons
     uint32_t curColNumAlign = RoundUp<T>(curColNum);
     uint32_t totalCountInUB = static_cast<uint32_t>(curRowNum) * curColNumAlign;
     uint16_t loopNum = CeilDiv(totalCountInUB, onceXNum);
-    AscendC::VF_CALL<VFComputeMaxExpMXFP4Vf<T>>(
-        srcAddr, maxExpAddr, scaleNum, onceXNum, totalCountInUB, loopNum);
+    AscendC::VF_CALL<VFComputeMaxExpMXFP4Vf<T>>(srcAddr, maxExpAddr, scaleNum, onceXNum, totalCountInUB, loopNum);
 }
 
-
-__simd_vf__ inline void VFComputeScaleMXFP4Vf(__ubuf__ uint16_t* maxExpAddr,
-    __ubuf__ uint16_t* mxScaleLocalAddr, __ubuf__ uint16_t* halfScaleLocalAddr,
-    uint32_t totalScaleInUB, uint16_t loopNumScale, uint16_t f4Emax)
+__simd_vf__ inline void VFComputeScaleMXFP4Vf(__ubuf__ uint16_t* maxExpAddr, __ubuf__ uint16_t* mxScaleLocalAddr,
+                                              __ubuf__ uint16_t* halfScaleLocalAddr, uint32_t totalScaleInUB,
+                                              uint16_t loopNumScale, uint16_t f4Emax)
 {
-    constexpr uint16_t onceNum = REPEAT_SIZE / sizeof(uint16_t);              // 128 scales per loop
-    constexpr uint16_t onceNumMxScale = 64;                                   // e8m0 store stride (uint16 words)
+    constexpr uint16_t onceNum = REPEAT_SIZE / sizeof(uint16_t); // 128 scales per loop
+    constexpr uint16_t onceNumMxScale = 64;                      // e8m0 store stride (uint16 words)
     AscendC::Reg::RegTensor<uint16_t> expMask;
     AscendC::Reg::Duplicate(expMask, BF16_EMASK_AND_INF_VAL_MAXFP4);
     AscendC::Reg::RegTensor<uint16_t> vdMaxExp;
@@ -392,8 +374,7 @@ __simd_vf__ inline void VFComputeScaleMXFP4Vf(__ubuf__ uint16_t* maxExpAddr,
     uint32_t sreg = totalScaleInUB;
     for (uint16_t i = 0; i < loopNumScale; i++) {
         preMaskScale = AscendC::Reg::UpdateMask<uint16_t>(sreg);
-        AscendC::Reg::LoadAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(
-            vdMaxExp, maxExpAddr, onceNum);
+        AscendC::Reg::LoadAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(vdMaxExp, maxExpAddr, onceNum);
         AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale); // INF/NAN
         AscendC::Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
         AscendC::Reg::Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
@@ -406,9 +387,9 @@ __simd_vf__ inline void VFComputeScaleMXFP4Vf(__ubuf__ uint16_t* maxExpAddr,
         AscendC::Reg::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
         AscendC::Reg::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
 
-        AscendC::Reg::StoreAlign<
-            uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE, AscendC::Reg::StoreDist::DIST_PACK_B16>(
-            mxScaleLocalAddr, scaleValue, onceNumMxScale, preMaskScale);
+        AscendC::Reg::StoreAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
+                                 AscendC::Reg::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, scaleValue, onceNumMxScale,
+                                                                         preMaskScale);
 
         AscendC::Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
         AscendC::Reg::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
@@ -416,31 +397,31 @@ __simd_vf__ inline void VFComputeScaleMXFP4Vf(__ubuf__ uint16_t* maxExpAddr,
         AscendC::Reg::Select<uint16_t>(halfScale, halfScale, zeroRegTensor, zeroMask);
         AscendC::Reg::Select<uint16_t>(halfScale, specialExpRegTensor, halfScale, specialDataMask);
 
-        AscendC::Reg::StoreAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(
-            halfScaleLocalAddr, halfScale, onceNum, preMaskScale);
+        AscendC::Reg::StoreAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE>(halfScaleLocalAddr, halfScale,
+                                                                                        onceNum, preMaskScale);
     }
 }
 
-__aicore__ inline void VFComputeScaleMXFP4(
-    const LocalTensor<uint16_t>& maxExpLocal, const LocalTensor<uint16_t>& mxScaleLocal,
-    const LocalTensor<uint16_t>& halfScaleLocal, uint16_t curRowNum, uint32_t curColNum, uint16_t f4Emax)
+__aicore__ inline void VFComputeScaleMXFP4(const LocalTensor<uint16_t>& maxExpLocal,
+                                           const LocalTensor<uint16_t>& mxScaleLocal,
+                                           const LocalTensor<uint16_t>& halfScaleLocal, uint16_t curRowNum,
+                                           uint32_t curColNum, uint16_t f4Emax)
 {
     __ubuf__ uint16_t* mxScaleLocalAddr = (__ubuf__ uint16_t*)mxScaleLocal.GetPhyAddr();
     __ubuf__ uint16_t* maxExpAddr = (__ubuf__ uint16_t*)maxExpLocal.GetPhyAddr();
     __ubuf__ uint16_t* halfScaleLocalAddr = (__ubuf__ uint16_t*)halfScaleLocal.GetPhyAddr();
     uint32_t scaleColAlign = RoundUp<uint16_t>(CeilDiv(curColNum, MX_BLOCK_SIZE_MXFP4));
     uint32_t totalScaleInUB = curRowNum * scaleColAlign;
-    constexpr uint16_t onceNum = REPEAT_SIZE / sizeof(uint16_t);              // 128 scales per loop
+    constexpr uint16_t onceNum = REPEAT_SIZE / sizeof(uint16_t); // 128 scales per loop
     uint16_t loopNumScale = CeilDiv(totalScaleInUB, static_cast<uint32_t>(onceNum));
-    AscendC::VF_CALL<VFComputeScaleMXFP4Vf>(
-        maxExpAddr, mxScaleLocalAddr, halfScaleLocalAddr, totalScaleInUB, loopNumScale, f4Emax);
+    AscendC::VF_CALL<VFComputeScaleMXFP4Vf>(maxExpAddr, mxScaleLocalAddr, halfScaleLocalAddr, totalScaleInUB,
+                                            loopNumScale, f4Emax);
 }
-
 
 template <typename T, typename U>
 __simd_vf__ inline void VFComputeDataMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uint16_t* halfScaleLocalAddr,
-    __ubuf__ int8_t* outLocalAddr, uint32_t numUbBlocksPerVReg, uint32_t onceXNum, uint32_t totalCountInUB,
-    uint16_t loopNum)
+                                             __ubuf__ int8_t* outLocalAddr, uint32_t numUbBlocksPerVReg,
+                                             uint32_t onceXNum, uint32_t totalCountInUB, uint16_t loopNum)
 {
     AscendC::Reg::MaskReg dataMask1;
     AscendC::Reg::RegTensor<uint16_t> halfScaleForMul;
@@ -453,30 +434,27 @@ __simd_vf__ inline void VFComputeDataMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uint1
     AscendC::Reg::RegTensor<U> vdExp0FP4;
     AscendC::Reg::RegTensor<U> vdExp1FP4;
 
-    static constexpr AscendC::Reg::CastTrait castTrait = {
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+    static constexpr AscendC::Reg::CastTrait castTrait = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                          AscendC::Reg::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_RINT};
     static constexpr AscendC::Reg::CastTrait castTraitHalf2Bf16 = {
-        AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN,
-        AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_TRUNC};
+        AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_TRUNC};
     for (uint16_t i = 0; i < loopNum; i++) {
         dataMask1 = AscendC::Reg::UpdateMask<T>(totalCountInUB);
-        AscendC::Reg::LoadAlign<
-            T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE, AscendC::Reg::LoadDist::DIST_DINTLV_B16>(
-            vdExp0, vdExp1, srcAddr, onceXNum);
-        AscendC::Reg::LoadAlign<
-            uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE, AscendC::Reg::LoadDist::DIST_E2B_B16>(
-            halfScaleForMul, halfScaleLocalAddr, numUbBlocksPerVReg);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
+                                AscendC::Reg::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr, onceXNum);
+        AscendC::Reg::LoadAlign<uint16_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
+                                AscendC::Reg::LoadDist::DIST_E2B_B16>(halfScaleForMul, halfScaleLocalAddr,
+                                                                      numUbBlocksPerVReg);
 
         if constexpr (IsSameType<T, half>::value) {
             FP16Convert<T, U>(vdExp0, vdExp0, dataMask1);
             FP16Convert<T, U>(vdExp1, vdExp1, dataMask1);
             AscendC::Reg::Cast<bfloat16_t, T, castTraitHalf2Bf16>(vdExp0BF16, vdExp0, dataMask1);
             AscendC::Reg::Cast<bfloat16_t, T, castTraitHalf2Bf16>(vdExp1BF16, vdExp1, dataMask1);
-            AscendC::Reg::Mul(
-                vdExp0BF16, vdExp0BF16, (AscendC::Reg::RegTensor<bfloat16_t>&)halfScaleForMul, dataMask1);
-            AscendC::Reg::Mul(
-                vdExp1BF16, vdExp1BF16, (AscendC::Reg::RegTensor<bfloat16_t>&)halfScaleForMul, dataMask1);
+            AscendC::Reg::Mul(vdExp0BF16, vdExp0BF16, (AscendC::Reg::RegTensor<bfloat16_t>&)halfScaleForMul, dataMask1);
+            AscendC::Reg::Mul(vdExp1BF16, vdExp1BF16, (AscendC::Reg::RegTensor<bfloat16_t>&)halfScaleForMul, dataMask1);
             AscendC::Reg::Interleave(vdExp0BF16, vdExp1BF16, vdExp0BF16, vdExp1BF16);
             AscendC::Reg::Cast<U, bfloat16_t, castTrait>(vdExp0FP4, vdExp0BF16, dataMask1);
             AscendC::Reg::Cast<U, bfloat16_t, castTrait>(vdExp1FP4, vdExp1BF16, dataMask1);
@@ -488,18 +466,18 @@ __simd_vf__ inline void VFComputeDataMXFP4Vf(__ubuf__ T* srcAddr, __ubuf__ uint1
             AscendC::Reg::Cast<U, T, castTrait>(vdExp1FP4, vdExp1, dataMask1);
         }
 
-        AscendC::Reg::StoreAlign<
-            int8_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
+        AscendC::Reg::StoreAlign<int8_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
+                                 AscendC::Reg::StoreDist::DIST_PACK4_B32>(
             outLocalAddr, (AscendC::Reg::RegTensor<int8_t>&)vdExp0FP4, OUT_ELE_NUM_ONE_BLK_MAXFP4, dataMask1);
-        AscendC::Reg::StoreAlign<
-            int8_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE, AscendC::Reg::StoreDist::DIST_PACK4_B32>(
+        AscendC::Reg::StoreAlign<int8_t, AscendC::Reg::PostLiteral::POST_MODE_UPDATE,
+                                 AscendC::Reg::StoreDist::DIST_PACK4_B32>(
             outLocalAddr, (AscendC::Reg::RegTensor<int8_t>&)vdExp1FP4, OUT_ELE_NUM_ONE_BLK_MAXFP4, dataMask1);
     }
 }
 
 template <typename T, typename U>
 __aicore__ inline void VFComputeDataMXFP4(const LocalTensor<T>& srcLocal, const LocalTensor<uint16_t>& halfScaleLocal,
-    const LocalTensor<int8_t>& outLocal, uint16_t curRowNum, uint32_t curColNum)
+                                          const LocalTensor<int8_t>& outLocal, uint16_t curRowNum, uint32_t curColNum)
 {
     __ubuf__ T* srcAddr = (__ubuf__ T*)srcLocal.GetPhyAddr();
     __ubuf__ uint16_t* halfScaleLocalAddr = (__ubuf__ uint16_t*)halfScaleLocal.GetPhyAddr();
@@ -510,17 +488,19 @@ __aicore__ inline void VFComputeDataMXFP4(const LocalTensor<T>& srcLocal, const 
     uint32_t curColNumAlign = RoundUp<T>(curColNum);
     uint32_t totalCountInUB = static_cast<uint32_t>(curRowNum) * curColNumAlign;
     uint16_t loopNum = CeilDiv(totalCountInUB, onceXNum);
-    AscendC::VF_CALL<VFComputeDataMXFP4Vf<T, U>>(
-        srcAddr, halfScaleLocalAddr, outLocalAddr, numUbBlocksPerVReg, onceXNum, totalCountInUB, loopNum);
+    AscendC::VF_CALL<VFComputeDataMXFP4Vf<T, U>>(srcAddr, halfScaleLocalAddr, outLocalAddr, numUbBlocksPerVReg,
+                                                 onceXNum, totalCountInUB, loopNum);
 }
 
 // curColNum must be divisible by 128.
 template <typename T0, typename T1, typename T2, bool hasRoundScale = false, bool hasClampValue = false,
-    bool hasOutput = false, bool hasTopkWeight = false>
+          bool hasOutput = false, bool hasTopkWeight = false>
 __simd_vf__ inline void VFProcessSwigluGroupQuantVf(__ubuf__ T0* yLocalAddr, __ubuf__ T1* yOriginLocalAddr,
-    __ubuf__ T2* scaleLocalAddr, __ubuf__ T1* x0LocalAddr, __ubuf__ T1* x1LocalAddr,
-    __ubuf__ float* topkWeightLocalAddr, float clampValue, const uint16_t curRowNum, uint32_t curColNumAlign,
-    uint32_t dstCurColNumAlign, uint32_t scaleColNum, uint16_t loopCountFoldTwo, uint32_t maxValueInt, float fp8Max)
+                                                    __ubuf__ T2* scaleLocalAddr, __ubuf__ T1* x0LocalAddr,
+                                                    __ubuf__ T1* x1LocalAddr, __ubuf__ float* topkWeightLocalAddr,
+                                                    float clampValue, const uint16_t curRowNum, uint32_t curColNumAlign,
+                                                    uint32_t dstCurColNumAlign, uint32_t scaleColNum,
+                                                    uint16_t loopCountFoldTwo, uint32_t maxValueInt, float fp8Max)
 {
     RegTensor<float> weight;
     RegTensor<float> one;
@@ -621,11 +601,11 @@ __simd_vf__ inline void VFProcessSwigluGroupQuantVf(__ubuf__ T0* yLocalAddr, __u
             } else {
                 // bits == (RegTensor<uint32_t>&)scale
                 ShiftRights(scale2, (RegTensor<uint32_t>&)scale, static_cast<int16_t>(FAST_LOG_SHIFT_BITS), pregMerge);
-                And(scale2, scale2, tmp0, pregMerge); //exp
+                And(scale2, scale2, tmp0, pregMerge);                      // exp
                 And(scale3, (RegTensor<uint32_t>&)scale, tmp1, pregMerge); // man_bits
                 Compare<uint32_t, AscendC::CMPMODE::NE>(compareMask0, scale3, zeroUint32, pregMerge);
                 Select(tmp2, oneUint32, zeroUint32, compareMask0); // man_bits != 0
-                Sub(scale3, scale2, tmp3, pregMerge); // exp - 127
+                Sub(scale3, scale2, tmp3, pregMerge);              // exp - 127
                 // exp_scale-uint32 = exp - 127 + (man_bits != 0)
                 Add((RegTensor<uint32_t>&)scale4, scale3, tmp2, pregMerge);
 
@@ -655,11 +635,12 @@ __simd_vf__ inline void VFProcessSwigluGroupQuantVf(__ubuf__ T0* yLocalAddr, __u
 }
 
 template <typename T0, typename T1, typename T2, bool hasRoundScale = false, bool hasClampValue = false,
-    bool hasOutput = false, bool hasTopkWeight = false>
-__aicore__ inline void VFProcessSwigluGroupQuant(const LocalTensor<T0>& yLocal,
-    const LocalTensor<T1>& yOriginLocal, const LocalTensor<T2>& scaleLocal, const LocalTensor<T1>& x0Local,
-    const LocalTensor<T1>& x1Local, const LocalTensor<float>& topkWeightLocal, float clampValue,
-    const uint16_t curRowNum, const uint32_t curColNum)
+          bool hasOutput = false, bool hasTopkWeight = false>
+__aicore__ inline void VFProcessSwigluGroupQuant(const LocalTensor<T0>& yLocal, const LocalTensor<T1>& yOriginLocal,
+                                                 const LocalTensor<T2>& scaleLocal, const LocalTensor<T1>& x0Local,
+                                                 const LocalTensor<T1>& x1Local,
+                                                 const LocalTensor<float>& topkWeightLocal, float clampValue,
+                                                 const uint16_t curRowNum, const uint32_t curColNum)
 {
     __ubuf__ T0* yLocalAddr = (__ubuf__ T0*)yLocal.GetPhyAddr();
     __ubuf__ T1* yOriginLocalAddr = hasOutput ? (__ubuf__ T1*)yOriginLocal.GetPhyAddr() : nullptr;
@@ -689,10 +670,11 @@ __aicore__ inline void VFProcessSwigluGroupQuant(const LocalTensor<T0>& yLocal,
 }
 
 template <typename T0, typename T1, typename T2>
-__aicore__ inline void SwigluGroupQuantDispatcher(const LocalTensor<T0>& yLocal,
-    const LocalTensor<T1>& yOriginLocal, const LocalTensor<T2>& scaleLocal, const LocalTensor<T1>& x0Local,
-    const LocalTensor<T1>& x1Local, const LocalTensor<float>& topkWeightLocal, float clampValue,
-    const uint16_t curRowNum, const uint32_t curColNum, int32_t maskBit)
+__aicore__ inline void SwigluGroupQuantDispatcher(const LocalTensor<T0>& yLocal, const LocalTensor<T1>& yOriginLocal,
+                                                  const LocalTensor<T2>& scaleLocal, const LocalTensor<T1>& x0Local,
+                                                  const LocalTensor<T1>& x1Local,
+                                                  const LocalTensor<float>& topkWeightLocal, float clampValue,
+                                                  const uint16_t curRowNum, const uint32_t curColNum, int32_t maskBit)
 {
     if (maskBit == 0b000) {
         VFProcessSwigluGroupQuant<T0, T1, T2, false, false, false, false>(
@@ -722,10 +704,10 @@ __aicore__ inline void SwigluGroupQuantDispatcher(const LocalTensor<T0>& yLocal,
 }
 
 template <typename T0, typename T1, typename T2>
-__aicore__ inline void SwigluGroupQuantDispatcherYOrigin(const LocalTensor<T0>& yLocal,
-    const LocalTensor<T1>& yOriginLocal, const LocalTensor<T2>& scaleLocal, const LocalTensor<T1>& x0Local,
-    const LocalTensor<T1>& x1Local, const LocalTensor<float>& topkWeightLocal, float clampValue,
-    const uint16_t curRowNum, const uint32_t curColNum, int32_t maskBit)
+__aicore__ inline void SwigluGroupQuantDispatcherYOrigin(
+    const LocalTensor<T0>& yLocal, const LocalTensor<T1>& yOriginLocal, const LocalTensor<T2>& scaleLocal,
+    const LocalTensor<T1>& x0Local, const LocalTensor<T1>& x1Local, const LocalTensor<float>& topkWeightLocal,
+    float clampValue, const uint16_t curRowNum, const uint32_t curColNum, int32_t maskBit)
 {
     if (maskBit == 0b000) {
         VFProcessSwigluGroupQuant<T0, T1, T2, false, false, true, false>(
@@ -755,8 +737,8 @@ __aicore__ inline void SwigluGroupQuantDispatcherYOrigin(const LocalTensor<T0>& 
 }
 
 template <typename T, bool withUbReduce = false>
-__simd_vf__ inline void VFProcessGroupIndexSmallVf(
-    __ubuf__ T* yLocalAddr, __ubuf__ T* xLocalAddr, uint16_t curColNum, uint16_t vlLen, uint16_t loopCount)
+__simd_vf__ inline void VFProcessGroupIndexSmallVf(__ubuf__ T* yLocalAddr, __ubuf__ T* xLocalAddr, uint16_t curColNum,
+                                                   uint16_t vlLen, uint16_t loopCount)
 {
     RegTensor<T> x;
     RegTensor<T> sum;
@@ -782,7 +764,7 @@ __simd_vf__ inline void VFProcessGroupIndexSmallVf(
 
 template <typename T, bool withUbReduce = false>
 __simd_vf__ inline void VFProcessGroupIndexLargeVf(__ubuf__ T* yLocalAddr, __ubuf__ T* xLocalAddr, uint16_t vlLen,
-    uint16_t fourLoopCount, uint16_t tailLoopNum, uint32_t tailReminder)
+                                                   uint16_t fourLoopCount, uint16_t tailLoopNum, uint32_t tailReminder)
 {
     RegTensor<T> x0;
     RegTensor<T> x1;
@@ -830,7 +812,7 @@ __simd_vf__ inline void VFProcessGroupIndexLargeVf(__ubuf__ T* yLocalAddr, __ubu
 
 template <typename T, bool withUbReduce = false>
 __aicore__ inline void VFProcessGroupIndex(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
-    uint16_t curColNum)
+                                           uint16_t curColNum)
 {
     __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
     __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
@@ -840,21 +822,23 @@ __aicore__ inline void VFProcessGroupIndex(const LocalTensor<T>& yLocal, const L
     uint16_t tailLoopNum = loopCount % FOUR_UNFOLD;
     uint32_t tailReminder = curColNum - fourLoopCount * vlLen * FOUR_UNFOLD;
     if (loopCount < FOUR_UNFOLD) {
-        AscendC::VF_CALL<VFProcessGroupIndexSmallVf<T, withUbReduce>>(
-            yLocalAddr, xLocalAddr, curColNum, vlLen, loopCount);
+        AscendC::VF_CALL<VFProcessGroupIndexSmallVf<T, withUbReduce>>(yLocalAddr, xLocalAddr, curColNum, vlLen,
+                                                                      loopCount);
     } else {
-        AscendC::VF_CALL<VFProcessGroupIndexLargeVf<T, withUbReduce>>(
-            yLocalAddr, xLocalAddr, vlLen, fourLoopCount, tailLoopNum, tailReminder);
+        AscendC::VF_CALL<VFProcessGroupIndexLargeVf<T, withUbReduce>>(yLocalAddr, xLocalAddr, vlLen, fourLoopCount,
+                                                                      tailLoopNum, tailReminder);
     }
 }
 
-
 template <typename T0, typename T1, bool hasClampLimit = false, bool hasOutput = false, bool hasWeight = false>
-__simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocalAddr,
-    __ubuf__ float* yLocalAddr, __ubuf__ uint8_t* scaleLocalAddr, __ubuf__ float* invScaleLocalAddr,
-    __ubuf__ T0* x0LocalAddr, __ubuf__ T0* x1LocalAddr, __ubuf__ float* weightLocalAddr, float clampLimit,
-    const uint16_t curRowNum, uint16_t loopCount, uint32_t curColNumAlignT, uint32_t curColNumAlignFloat,
-    uint32_t invScaleColNumAlign, uint16_t vlLen, uint32_t maxValueInt)
+__simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocalAddr, __ubuf__ float* yLocalAddr,
+                                                       __ubuf__ uint8_t* scaleLocalAddr,
+                                                       __ubuf__ float* invScaleLocalAddr, __ubuf__ T0* x0LocalAddr,
+                                                       __ubuf__ T0* x1LocalAddr, __ubuf__ float* weightLocalAddr,
+                                                       float clampLimit, const uint16_t curRowNum, uint16_t loopCount,
+                                                       uint32_t curColNumAlignT, uint32_t curColNumAlignFloat,
+                                                       uint32_t invScaleColNumAlign, uint16_t vlLen,
+                                                       uint32_t maxValueInt)
 {
     RegTensor<float> weight;
     RegTensor<float> one;
@@ -869,8 +853,8 @@ __simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocal
     RegTensor<float> x1Layout1;
     RegTensor<float> yLayout0; // 奇偶交错 偶数部分
     RegTensor<float> yLayout1; // 奇偶交错 奇数部分
-    RegTensor<float> y0; // 还原交错逻辑 高64位
-    RegTensor<float> y1; // 还原交错逻辑 低64位
+    RegTensor<float> y0;       // 还原交错逻辑 高64位
+    RegTensor<float> y1;       // 还原交错逻辑 低64位
     RegTensor<float> yMax0;
     RegTensor<float> yMax1;
     RegTensor<float> yMax1Layout0;
@@ -962,16 +946,16 @@ __simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocal
 
             Max(scale, yMax1Layout0, yMax1Layout1, pregMerge);
 
-            Maxs(clampScale, scale, 0.0001f, pregMerge); // amax
+            Maxs(clampScale, scale, 0.0001f, pregMerge);                 // amax
             Mul(scale, clampScale, (RegTensor<float>&)coeff, pregMerge); // sf = amax / 448.0
 
             // 量化逻辑
             ShiftRights(scale2, (RegTensor<uint32_t>&)scale, static_cast<int16_t>(FAST_LOG_SHIFT_BITS), pregMerge);
-            And(scale2, scale2, tmp0, pregMerge); // exp
+            And(scale2, scale2, tmp0, pregMerge);                      // exp
             And(scale3, (RegTensor<uint32_t>&)scale, tmp1, pregMerge); // man_bits
             Compare<uint32_t, AscendC::CMPMODE::NE>(compareMask0, scale3, zeroUint32, pregMerge);
             Select(tmp2, oneUint32, zeroUint32, compareMask0); // man_bits != 0
-            Sub(scale3, scale2, tmp3, pregMerge); // exp - 127
+            Sub(scale3, scale2, tmp3, pregMerge);              // exp - 127
             // exp_scale-uint32 = exp - 127 + (man_bits != 0)
             Add((RegTensor<uint32_t>&)scale4, scale3, tmp2, pregMerge);
             Adds(scale5, scale4, 127, pregMerge); // sf_uint32
@@ -993,14 +977,10 @@ __simd_vf__ inline void VFProcessSwigluMxFp8InvScaleVf(__ubuf__ T0* yOriginLocal
 }
 
 template <typename T0, typename T1, bool hasClampLimit = false, bool hasOutput = false, bool hasWeight = false>
-__aicore__ inline void VFProcessSwigluMxFp8InvScale(const LocalTensor<T0>& yOriginLocal,
-                                                    const LocalTensor<float>& yLocal,
-                                                    const LocalTensor<uint8_t>& scaleLocal,
-                                                    const LocalTensor<float>& invScaleLocal,
-                                                    const LocalTensor<T0>& x0Local, const LocalTensor<T0>& x1Local,
-                                                    const LocalTensor<float>& weightLocal,
-                                                    float clampLimit, const uint16_t curRowNum,
-                                                    const uint32_t curColNum)
+__aicore__ inline void VFProcessSwigluMxFp8InvScale(
+    const LocalTensor<T0>& yOriginLocal, const LocalTensor<float>& yLocal, const LocalTensor<uint8_t>& scaleLocal,
+    const LocalTensor<float>& invScaleLocal, const LocalTensor<T0>& x0Local, const LocalTensor<T0>& x1Local,
+    const LocalTensor<float>& weightLocal, float clampLimit, const uint16_t curRowNum, const uint32_t curColNum)
 {
     __ubuf__ float* yLocalAddr = (__ubuf__ float*)yLocal.GetPhyAddr();
     __ubuf__ T0* yOriginLocalAddr = hasOutput ? (__ubuf__ T0*)yOriginLocal.GetPhyAddr() : nullptr;
@@ -1028,8 +1008,9 @@ __aicore__ inline void VFProcessSwigluMxFp8InvScale(const LocalTensor<T0>& yOrig
 
 template <typename T>
 __simd_vf__ inline void VFProcessSwigluMxFp8QuantVf(__ubuf__ T* yQuantLocalAddr, __ubuf__ float* yLocalAddr,
-    __ubuf__ float* scaleLocalAddr, const uint16_t curRowNum, uint16_t loopCount, uint32_t curColNumAlign,
-    uint32_t dstCurColNumAlign, uint32_t invScaleColNumAlign)
+                                                    __ubuf__ float* scaleLocalAddr, const uint16_t curRowNum,
+                                                    uint16_t loopCount, uint32_t curColNumAlign,
+                                                    uint32_t dstCurColNumAlign, uint32_t invScaleColNumAlign)
 {
     RegTensor<float> y;
     RegTensor<float> invScale;
@@ -1038,8 +1019,8 @@ __simd_vf__ inline void VFProcessSwigluMxFp8QuantVf(__ubuf__ T* yQuantLocalAddr,
     for (uint16_t i = 0; i < curRowNum; i++) {
         for (uint16_t j = 0; j < loopCount; j++) {
             LoadInputData<float>(y, yLocalAddr, pregMain, i * curColNumAlign + j * VL_FP32);
-            LoadAlign<float, AscendC::Reg::LoadDist::DIST_E2B_B32>(
-                invScale, scaleLocalAddr + j * 8 + i * invScaleColNumAlign);
+            LoadAlign<float, AscendC::Reg::LoadDist::DIST_E2B_B32>(invScale,
+                                                                   scaleLocalAddr + j * 8 + i * invScaleColNumAlign);
             Mul(y, y, invScale, pregMain);
             StoreOutputData<T>(yQuantLocalAddr, y, pregMain, j * VL_FP32 + i * dstCurColNumAlign);
         }
@@ -1047,8 +1028,7 @@ __simd_vf__ inline void VFProcessSwigluMxFp8QuantVf(__ubuf__ T* yQuantLocalAddr,
 }
 
 template <typename T>
-__aicore__ inline void VFProcessSwigluMxFp8Quant(const LocalTensor<T>& yQuantLocal,
-                                                 const LocalTensor<float>& yLocal,
+__aicore__ inline void VFProcessSwigluMxFp8Quant(const LocalTensor<T>& yQuantLocal, const LocalTensor<float>& yLocal,
                                                  const LocalTensor<float>& invScaleLocal, const uint16_t curRowNum,
                                                  const uint32_t curColNum)
 {
@@ -1060,15 +1040,13 @@ __aicore__ inline void VFProcessSwigluMxFp8Quant(const LocalTensor<T>& yQuantLoc
     uint32_t curColNumAlign = RoundUp<float>(curColNum);
     uint32_t dstCurColNumAlign = RoundUp<T>(curColNum);
     uint32_t invScaleColNumAlign = RoundUp<float>(CeilDiv(curColNum, 8));
-    AscendC::VF_CALL<VFProcessSwigluMxFp8QuantVf<T>>(
-        yQuantLocalAddr, yLocalAddr, scaleLocalAddr, curRowNum, loopCount, curColNumAlign, dstCurColNumAlign,
-        invScaleColNumAlign);
+    AscendC::VF_CALL<VFProcessSwigluMxFp8QuantVf<T>>(yQuantLocalAddr, yLocalAddr, scaleLocalAddr, curRowNum, loopCount,
+                                                     curColNumAlign, dstCurColNumAlign, invScaleColNumAlign);
 }
 
 template <typename T>
-__aicore__ inline void CopyIn(
-    const GlobalTensor<T>& inputGm, const LocalTensor<T>& inputTensor, const uint16_t nBurst, const uint32_t copyLen,
-    uint32_t srcStride = 0)
+__aicore__ inline void CopyIn(const GlobalTensor<T>& inputGm, const LocalTensor<T>& inputTensor, const uint16_t nBurst,
+                              const uint32_t copyLen, uint32_t srcStride = 0)
 {
     DataCopyPadExtParams<T> dataCopyPadExtParams;
     dataCopyPadExtParams.isPad = false;
@@ -1084,10 +1062,10 @@ __aicore__ inline void CopyIn(
     DataCopyPad(inputTensor, inputGm, dataCoptExtParams, dataCopyPadExtParams);
 }
 
-__aicore__ inline void SetDefaultBlockTiling(
-    const SwigluGroupQuantTilingData* tilingData, int64_t& usedCoreNums, int64_t& rowOfFormerBlock,
-    int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock, int64_t& rowLoopOfTailBlock,
-    int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
+__aicore__ inline void SetDefaultBlockTiling(const SwigluGroupQuantTilingData* tilingData, int64_t& usedCoreNums,
+                                             int64_t& rowOfFormerBlock, int64_t& rowOfTailBlock,
+                                             int64_t& rowLoopOfFormerBlock, int64_t& rowLoopOfTailBlock,
+                                             int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
 {
     rowOfFormerBlock = tilingData->rowOfFormerBlock;
     rowOfTailBlock = tilingData->rowOfTailBlock;
@@ -1098,38 +1076,39 @@ __aicore__ inline void SetDefaultBlockTiling(
     usedCoreNums = GetBlockNum();
 }
 
-__aicore__ inline void SetGroupIndexBlockTiling(
-    const SwigluGroupQuantTilingData* tilingData, int64_t realBs, int64_t& usedCoreNums,
-    int64_t& rowOfFormerBlock, int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
-    int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
+__aicore__ inline void SetGroupIndexBlockTiling(const SwigluGroupQuantTilingData* tilingData, int64_t realBs,
+                                                int64_t& usedCoreNums, int64_t& rowOfFormerBlock,
+                                                int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
+                                                int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock,
+                                                int64_t& tailRowFactorOfTailBlock)
 {
     rowOfFormerBlock = CeilDiv(realBs, static_cast<int64_t>(tilingData->coreNum));
-    usedCoreNums = CeilDiv(realBs, rowOfFormerBlock) < tilingData->coreNum
-        ? CeilDiv(realBs, rowOfFormerBlock)
-        : tilingData->coreNum;
+    usedCoreNums = CeilDiv(realBs, rowOfFormerBlock) < tilingData->coreNum ? CeilDiv(realBs, rowOfFormerBlock) :
+                                                                             tilingData->coreNum;
     rowOfTailBlock = realBs - (usedCoreNums - 1) * rowOfFormerBlock;
 
     rowLoopOfFormerBlock = CeilDiv(rowOfFormerBlock, tilingData->rowFactor);
     rowLoopOfTailBlock = CeilDiv(rowOfTailBlock, tilingData->rowFactor);
-    tailRowFactorOfFormerBlock = rowOfFormerBlock % tilingData->rowFactor == 0
-        ? tilingData->rowFactor
-        : rowOfFormerBlock % tilingData->rowFactor;
-    tailRowFactorOfTailBlock = rowOfTailBlock % tilingData->rowFactor == 0
-        ? tilingData->rowFactor
-        : rowOfTailBlock % tilingData->rowFactor;
+    tailRowFactorOfFormerBlock = rowOfFormerBlock % tilingData->rowFactor == 0 ?
+                                     tilingData->rowFactor :
+                                     rowOfFormerBlock % tilingData->rowFactor;
+    tailRowFactorOfTailBlock = rowOfTailBlock % tilingData->rowFactor == 0 ? tilingData->rowFactor :
+                                                                             rowOfTailBlock % tilingData->rowFactor;
 }
 
 template <typename TBufPoolType>
-__aicore__ inline void ProcessGroupIndexTiling(
-    GM_ADDR groupIndex, const SwigluGroupQuantTilingData* tilingData, TBufPoolType& tBufPool,
-    TQue<QuePosition::VECIN, 1>& groupIndexQue, TBuf<QuePosition::VECCALC>& groupIndexSumBuf,
-    GlobalTensor<int64_t>& groupIndexGm, LocalTensor<int64_t>& groupSumLocal, bool& hasGroupIndex,
-    int64_t& usedCoreNums, int64_t& rowOfFormerBlock, int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
-    int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock, int64_t& tailRowFactorOfTailBlock)
+__aicore__ inline void ProcessGroupIndexTiling(GM_ADDR groupIndex, const SwigluGroupQuantTilingData* tilingData,
+                                               TBufPoolType& tBufPool, TQue<QuePosition::VECIN, 1>& groupIndexQue,
+                                               TBuf<QuePosition::VECCALC>& groupIndexSumBuf,
+                                               GlobalTensor<int64_t>& groupIndexGm, LocalTensor<int64_t>& groupSumLocal,
+                                               bool& hasGroupIndex, int64_t& usedCoreNums, int64_t& rowOfFormerBlock,
+                                               int64_t& rowOfTailBlock, int64_t& rowLoopOfFormerBlock,
+                                               int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock,
+                                               int64_t& tailRowFactorOfTailBlock)
 {
     if (groupIndex == nullptr) {
         SetDefaultBlockTiling(tilingData, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
-            rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+                              rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
         return;
     }
 
@@ -1155,15 +1134,14 @@ __aicore__ inline void ProcessGroupIndexTiling(
     SetFlag<HardEvent::V_S>(eventId);
     WaitFlag<HardEvent::V_S>(eventId);
     int64_t realBs = groupSumLocal.GetValue(0) > tilingData->bs ? tilingData->bs : groupSumLocal.GetValue(0);
-    SetGroupIndexBlockTiling(tilingData, realBs, usedCoreNums, rowOfFormerBlock, rowOfTailBlock,
-        rowLoopOfFormerBlock, rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
+    SetGroupIndexBlockTiling(tilingData, realBs, usedCoreNums, rowOfFormerBlock, rowOfTailBlock, rowLoopOfFormerBlock,
+                             rowLoopOfTailBlock, tailRowFactorOfFormerBlock, tailRowFactorOfTailBlock);
     tBufPool.Reset();
 }
 
 template <typename T, AscendC::PaddingMode mode = AscendC::PaddingMode::Normal>
-__aicore__ inline void CopyOut(
-    const LocalTensor<T>& outputTensor, const GlobalTensor<T>& outputGm, const uint16_t nBurst, const uint32_t copyLen,
-    uint32_t dstStride = 0)
+__aicore__ inline void CopyOut(const LocalTensor<T>& outputTensor, const GlobalTensor<T>& outputGm,
+                               const uint16_t nBurst, const uint32_t copyLen, uint32_t dstStride = 0)
 {
     DataCopyExtParams dataCopyParams;
     dataCopyParams.blockCount = nBurst;

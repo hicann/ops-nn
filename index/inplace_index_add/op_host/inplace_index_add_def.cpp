@@ -32,12 +32,9 @@ static const std::vector<ge::Format> format = {
 
 class InplaceIndexAdd : public OpDef {
 public:
-    explicit InplaceIndexAdd(const char *name) : OpDef(name) {
-        this->Input("var")
-            .ParamType(REQUIRED)
-            .DataType(varSupportedTypes)
-            .Format(format)
-            .UnknownShapeFormat(format);
+    explicit InplaceIndexAdd(const char* name) : OpDef(name)
+    {
+        this->Input("var").ParamType(REQUIRED).DataType(varSupportedTypes).Format(format).UnknownShapeFormat(format);
         this->Input("indices")
             .ParamType(REQUIRED)
             .DataType(indicesSupportedTypes)
@@ -48,16 +45,8 @@ public:
             .DataType(varSupportedTypes)
             .Format(format)
             .UnknownShapeFormat(format);
-        this->Input("alpha")
-            .ParamType(OPTIONAL)
-            .DataType(varSupportedTypes)
-            .Format(format)
-            .UnknownShapeFormat(format);
-        this->Output("var")
-            .ParamType(REQUIRED)
-            .DataType(varSupportedTypes)
-            .Format(format)
-            .UnknownShapeFormat(format);
+        this->Input("alpha").ParamType(OPTIONAL).DataType(varSupportedTypes).Format(format).UnknownShapeFormat(format);
+        this->Output("var").ParamType(REQUIRED).DataType(varSupportedTypes).Format(format).UnknownShapeFormat(format);
         this->Attr("axis").AttrType(REQUIRED).Int();
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
@@ -72,4 +61,4 @@ public:
 };
 
 OP_ADD(InplaceIndexAdd);
-}
+} // namespace ops

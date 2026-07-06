@@ -90,16 +90,12 @@ ge::graphStatus AdamApplyOneWithDecayAssignTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdamApplyOneWithDecayAssignTiling::IsCapable()
-{
-    return true;
-}
+bool AdamApplyOneWithDecayAssignTiling::IsCapable() { return true; }
 
 ge::graphStatus AdamApplyOneWithDecayAssignTiling::DoOpTiling()
 {
-    OP_CHECK_IF(
-        CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Shape check failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "Shape check failed."),
+                return ge::GRAPH_FAILED);
 
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
@@ -107,31 +103,27 @@ ge::graphStatus AdamApplyOneWithDecayAssignTiling::DoOpTiling()
     if (input0DType == ge::DT_FLOAT16) {
         BroadcastBaseTiling<AdamApplyOneWithDecayAssignOp::AdamApplyOneWithDecayAssignCompute<half, float>::OpDag>
             brcBaseTiling(context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_BOTH));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (input0DType == ge::DT_BF16) {
         BroadcastBaseTiling<AdamApplyOneWithDecayAssignOp::AdamApplyOneWithDecayAssignCompute<bfloat16_t, float>::OpDag>
             brcBaseTiling(context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_BOTH));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else if (input0DType == ge::DT_FLOAT) {
         BroadcastBaseTiling<AdamApplyOneWithDecayAssignOp::AdamApplyOneWithDecayAssignCompute<float, float>::OpDag>
             brcBaseTiling(context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_BOTH));
-        OP_CHECK_IF(
-            brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
-            OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
+                    return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "input0", Ops::Base::ToString(input0DType).c_str(),
-            "fp16, bf16 or fp32");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "input0", Ops::Base::ToString(input0DType).c_str(),
+                                  "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -160,30 +152,15 @@ ge::graphStatus AdamApplyOneWithDecayAssignTiling::CheckShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdamApplyOneWithDecayAssignTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneWithDecayAssignTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t AdamApplyOneWithDecayAssignTiling::GetTilingKey() const
-{
-    return tilingKey;
-}
+uint64_t AdamApplyOneWithDecayAssignTiling::GetTilingKey() const { return tilingKey; }
 
-ge::graphStatus AdamApplyOneWithDecayAssignTiling::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneWithDecayAssignTiling::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdamApplyOneWithDecayAssignTiling::PostTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneWithDecayAssignTiling::PostTiling() { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus AdamApplyOneWithDecayAssignTiling::GetPlatformInfo()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdamApplyOneWithDecayAssignTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
 
 static ge::graphStatus TilingForAdamApplyOneWithDecayAssign(gert::TilingContext* context)
 {
@@ -204,7 +181,6 @@ IMPL_OP_OPTILING(AdamApplyOneWithDecayAssign)
     .Tiling(TilingForAdamApplyOneWithDecayAssign)
     .TilingParse<AdamApplyOneWithDecayAssignCompileInfo>(TilingPrepareForAdamApplyOneWithDecayAssign);
 
-REGISTER_OPS_TILING_TEMPLATE(
-    AdamApplyOneWithDecayAssign, AdamApplyOneWithDecayAssignTiling,
-    ADAM_APPLY_ONE_WITH_DECAY_ASSIGN_COMMON_TILING_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(AdamApplyOneWithDecayAssign, AdamApplyOneWithDecayAssignTiling,
+                             ADAM_APPLY_ONE_WITH_DECAY_ASSIGN_COMMON_TILING_PRIORITY);
 } // namespace optiling

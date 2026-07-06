@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file test_embedding_dense_grad_infershape.cpp
  * \brief
@@ -28,33 +27,30 @@
 
 class EmbeddingDenseGradTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "embedding_dense_grad test SetUp" << std::endl;
-}
+    static void SetUpTestCase() { std::cout << "embedding_dense_grad test SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "embedding_dense_grad test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "embedding_dense_grad test TearDown" << std::endl; }
 };
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_1) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_1)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({20, 30, 32});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({20, 30});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 2);
-	embedding_dense_grad_op.SetAttr("padding_idx", -1);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 2);
+    embedding_dense_grad_op.SetAttr("padding_idx", -1);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
@@ -75,24 +71,25 @@ TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_1) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_2) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_2)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({20, 300, 64});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({20, 300});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 2000);
-	embedding_dense_grad_op.SetAttr("padding_idx", 7);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 2000);
+    embedding_dense_grad_op.SetAttr("padding_idx", 7);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
@@ -113,24 +110,25 @@ TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_2) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_3) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_3)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({7, 7, 7, 7, 1024});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({7, 7, 7, 7});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 99);
-	embedding_dense_grad_op.SetAttr("padding_idx", 7);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 0);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 99);
+    embedding_dense_grad_op.SetAttr("padding_idx", 7);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 0);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
@@ -151,24 +149,25 @@ TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_3) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_4) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_4)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({3, 3, 32});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({3, 3});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 23);
-	embedding_dense_grad_op.SetAttr("padding_idx", 7);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 23);
+    embedding_dense_grad_op.SetAttr("padding_idx", 7);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
@@ -189,24 +188,25 @@ TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_4) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_5) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_5)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({-1, -1, -1});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({2, 2});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 2000);
-	embedding_dense_grad_op.SetAttr("padding_idx", 7);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", -1);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 2000);
+    embedding_dense_grad_op.SetAttr("padding_idx", 7);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", -1);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
@@ -227,24 +227,25 @@ TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_5) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_6) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_6)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({-1, -1, -1, -1, -1});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({-1, -1, -1, -1});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 20000);
-	embedding_dense_grad_op.SetAttr("padding_idx", 7);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 20000);
+    embedding_dense_grad_op.SetAttr("padding_idx", 7);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 1);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
@@ -265,24 +266,25 @@ TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_6) {
     EXPECT_EQ(output0_desc.GetShape().GetDims(), expected_output_shape);
 }
 
-TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_7) {
+TEST_F(EmbeddingDenseGradTest, embedding_dense_grad_test_case_7)
+{
     ge::op::EmbeddingDenseGrad embedding_dense_grad_op;
     ge::TensorDesc grad;
     ge::Shape grad_shape({-1, -1, 256});
     grad.SetDataType(ge::DT_FLOAT);
     grad.SetShape(grad_shape);
     grad.SetOriginShape(grad_shape);
-	ge::TensorDesc indices;
+    ge::TensorDesc indices;
     ge::Shape indices_shape({-1, -1});
     indices.SetDataType(ge::DT_INT32);
     indices.SetShape(indices_shape);
     indices.SetOriginShape(indices_shape);
 
     embedding_dense_grad_op.UpdateInputDesc("grad", grad);
-	embedding_dense_grad_op.UpdateInputDesc("indices", indices);
-	embedding_dense_grad_op.SetAttr("num_weights", 20010);
-	embedding_dense_grad_op.SetAttr("padding_idx", 7);
-	embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 0);
+    embedding_dense_grad_op.UpdateInputDesc("indices", indices);
+    embedding_dense_grad_op.SetAttr("num_weights", 20010);
+    embedding_dense_grad_op.SetAttr("padding_idx", 7);
+    embedding_dense_grad_op.SetAttr("scale_grad_by_freq", 0);
 
     auto ret = embedding_dense_grad_op.InferShapeAndType();
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);

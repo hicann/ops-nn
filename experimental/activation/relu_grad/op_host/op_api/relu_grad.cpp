@@ -23,19 +23,18 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ReluGrad);
 
-const aclTensor *ReluGrad(const aclTensor *gradOutput, const aclTensor *self, aclOpExecutor *executor) {
-  L0_DFX(ReluGrad, gradOutput, self);
-  // 根据推导出的输出shape申请输出tensor
-  Shape broadcastShape;
-  OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, gradOutput, broadcastShape, return nullptr);
-  // 第一个参数是输出shape，第二个参数是输出的dtype
-  auto out = executor->AllocTensor(broadcastShape, self->GetDataType());
+const aclTensor* ReluGrad(const aclTensor* gradOutput, const aclTensor* self, aclOpExecutor* executor)
+{
+    L0_DFX(ReluGrad, gradOutput, self);
+    // 根据推导出的输出shape申请输出tensor
+    Shape broadcastShape;
+    OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, gradOutput, broadcastShape, return nullptr);
+    // 第一个参数是输出shape，第二个参数是输出的dtype
+    auto out = executor->AllocTensor(broadcastShape, self->GetDataType());
 
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(ReluGrad,
-                                               OP_INPUT(gradOutput, self),
-                                               OP_OUTPUT(out));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "ReluGrad ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return out;
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(ReluGrad, OP_INPUT(gradOutput, self), OP_OUTPUT(out));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "ReluGrad ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return out;
 }
-}  // namespace l0op
+} // namespace l0op

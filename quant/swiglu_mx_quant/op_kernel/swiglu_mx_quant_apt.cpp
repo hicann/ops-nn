@@ -47,10 +47,10 @@ struct RoundModeMapper {
     }();
 };
 
-template <template<typename, typename, typename, bool, AscendC::RoundMode, bool> class OpClass,
-          bool IsActLast, uint64_t GroupIndexType, uint64_t RoundMode>
-__aicore__ inline void LaunchQuantOp(GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                                     GM_ADDR usrWorkspace, const SwigluMxQuantTilingData* tilingData, TPipe* pipe)
+template <template <typename, typename, typename, bool, AscendC::RoundMode, bool> class OpClass, bool IsActLast,
+          uint64_t GroupIndexType, uint64_t RoundMode>
+__aicore__ inline void LaunchQuantOp(GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR usrWorkspace,
+                                     const SwigluMxQuantTilingData* tilingData, TPipe* pipe)
 {
     constexpr AscendC::RoundMode ascendcRoundMode = RoundModeMapper<RoundMode>::value;
     if constexpr (GroupIndexType == TPL_NO_GROUP_INDEX) {
@@ -71,7 +71,7 @@ __aicore__ inline void LaunchQuantOp(GM_ADDR x, GM_ADDR group_index, GM_ADDR y, 
 
 template <uint64_t groupIndexType, uint64_t axisLast, uint64_t activateDimLast, uint64_t roundMode>
 __global__ __aicore__ void swiglu_mx_quant(GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                                            GM_ADDR workspace, GM_ADDR tiling)
+                                           GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(SwigluMxQuantTilingData);

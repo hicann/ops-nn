@@ -22,10 +22,8 @@
 #include "arch35/fake_quant_affine_cachemask.h"
 
 template <typename D_T_X, typename D_T_ZP, int MODE, int HAS_ZP>
-__global__ __aicore__ void fake_quant_affine_cachemask(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR zp,
-    GM_ADDR y, GM_ADDR mask,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void fake_quant_affine_cachemask(GM_ADDR x, GM_ADDR scale, GM_ADDR zp, GM_ADDR y, GM_ADDR mask,
+                                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(FakeQuantAffineCachemaskTilingDataArch35);
     GET_TILING_DATA_WITH_STRUCT(FakeQuantAffineCachemaskTilingDataArch35, tilingData, tiling);

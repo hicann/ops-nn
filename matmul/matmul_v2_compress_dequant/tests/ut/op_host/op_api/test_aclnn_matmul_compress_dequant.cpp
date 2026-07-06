@@ -21,22 +21,16 @@ using namespace std;
 
 class l2_matmul_compress_dequant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
+    static void SetUpTestCase() { cout << "l2_matmul_compress_dequant_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "l2_matmul_compress_dequant_test TearDown" << endl; }
+    static void MatMulCompressDequantCommonTest(TensorDesc a_desc, TensorDesc b_desc, TensorDesc index_desc,
+                                                TensorDesc bias_desc, TensorDesc deqScale_desc,
+                                                IntArrayDesc compress_info_desc, TensorDesc out_desc,
+                                                aclnnStatus expect_status)
     {
-        cout << "l2_matmul_compress_dequant_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "l2_matmul_compress_dequant_test TearDown" << endl;
-    }
-    static void MatMulCompressDequantCommonTest(
-        TensorDesc a_desc, TensorDesc b_desc, TensorDesc index_desc, TensorDesc bias_desc, TensorDesc deqScale_desc,
-        IntArrayDesc compress_info_desc, TensorDesc out_desc, aclnnStatus expect_status)
-    {
-        auto ut = OP_API_UT(
-            aclnnMatmulCompressDequant,
-            INPUT(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, nullptr, 1, compress_info_desc),
-            OUTPUT(out_desc));
+        auto ut = OP_API_UT(aclnnMatmulCompressDequant,
+                            INPUT(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, nullptr, 1, compress_info_desc),
+                            OUTPUT(out_desc));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspace_size = 0;
@@ -56,8 +50,8 @@ TEST_F(l2_matmul_compress_dequant_test, ascend310P_test_normal_input)
     vector<int64_t> compress_info = {8, 8, 32, 16, 1};
     IntArrayDesc compress_info_desc = IntArrayDesc(compress_info);
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
-    MatMulCompressDequantCommonTest(
-        a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc, ACLNN_SUCCESS);
+    MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
+                                    ACLNN_SUCCESS);
 }
 
 TEST_F(l2_matmul_compress_dequant_test, ascend310P_test_empty)
@@ -71,6 +65,6 @@ TEST_F(l2_matmul_compress_dequant_test, ascend310P_test_empty)
     vector<int64_t> compress_info = {8, 8, 0, 16, 1};
     IntArrayDesc compress_info_desc = IntArrayDesc(compress_info);
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
-    MatMulCompressDequantCommonTest(
-        a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc, ACLNN_SUCCESS);
+    MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
+                                    ACLNN_SUCCESS);
 }

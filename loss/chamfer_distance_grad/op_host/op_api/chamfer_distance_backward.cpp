@@ -20,15 +20,16 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ChamferDistanceGrad);
 
-const std::tuple<aclTensor*, aclTensor*> ChamferDistanceGrad(
-    const aclTensor* xyz1, const aclTensor* xyz2, const aclTensor* idx1, const aclTensor* idx2,
-    const aclTensor* gradDist1, const aclTensor* gradDist2, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> ChamferDistanceGrad(const aclTensor* xyz1, const aclTensor* xyz2,
+                                                             const aclTensor* idx1, const aclTensor* idx2,
+                                                             const aclTensor* gradDist1, const aclTensor* gradDist2,
+                                                             aclOpExecutor* executor)
 {
     L0_DFX(ChamferDistanceGrad, xyz1, xyz2, idx1, idx2, gradDist1, gradDist2);
     auto gradXyz1 = executor->AllocTensor(xyz1->GetViewShape(), xyz1->GetDataType(), op::Format::FORMAT_ND);
     auto gradXyz2 = executor->AllocTensor(xyz2->GetViewShape(), xyz2->GetDataType(), op::Format::FORMAT_ND);
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        ChamferDistanceGrad, OP_INPUT(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2), OP_OUTPUT(gradXyz1, gradXyz2));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ChamferDistanceGrad, OP_INPUT(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2),
+                                           OP_OUTPUT(gradXyz1, gradXyz2));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ChamferDistanceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

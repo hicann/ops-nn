@@ -20,10 +20,10 @@
 
 namespace optiling {
 struct KlDivTargetLossGradCompileInfo {
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
-  ge::DataType reduce_mean_cof_dtype;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+    ge::DataType reduce_mean_cof_dtype;
 }; // namespace optiling
 
-}
-#endif  // KL_DIV_TARGET_LOSS_GRAD_TILING_ARCH35_h
+} // namespace optiling
+#endif // KL_DIV_TARGET_LOSS_GRAD_TILING_ARCH35_h

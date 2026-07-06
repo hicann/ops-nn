@@ -33,15 +33,9 @@ using namespace ut_util;
 
 class DynamicDualLevelMxQuantTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicDualLevelMxQuantTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicDualLevelMxQuantTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicDualLevelMxQuantTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicDualLevelMxQuantTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -57,11 +51,11 @@ static string to_string(void* buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType xDtype, ge::DataType yDtype, ge::DataType level0ScaleDtype, ge::DataType level1ScaleDtype,
-    gert::StorageShape shape, gert::StorageShape level0ScaleShape, gert::StorageShape level1ScaleShape,
-    string roundMode, int64_t level0Scale, int64_t level1Scale, string expectTilingData,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType xDtype, ge::DataType yDtype, ge::DataType level0ScaleDtype,
+                            ge::DataType level1ScaleDtype, gert::StorageShape shape,
+                            gert::StorageShape level0ScaleShape, gert::StorageShape level1ScaleShape, string roundMode,
+                            int64_t level0Scale, int64_t level1Scale, string expectTilingData,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -100,8 +94,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -122,10 +116,9 @@ static void ExecuteTestCase(
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, level0ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, level1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
-                           {"level0_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level0Scale)},
-                           {"level1_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level1Scale)}})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
+                                  {"level0_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level0Scale)},
+                                  {"level1_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level1Scale)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -151,10 +144,11 @@ static void ExecuteTestCase(
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
-static void ExecuteTestCaseFailed(
-    ge::DataType xDtype, ge::DataType yDtype, ge::DataType level0ScaleDtype, ge::DataType level1ScaleDtype,
-    gert::StorageShape shape, gert::StorageShape level0ScaleShape, gert::StorageShape level1ScaleShape,
-    string roundMode, int64_t level0Scale, int64_t level1Scale, ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCaseFailed(ge::DataType xDtype, ge::DataType yDtype, ge::DataType level0ScaleDtype,
+                                  ge::DataType level1ScaleDtype, gert::StorageShape shape,
+                                  gert::StorageShape level0ScaleShape, gert::StorageShape level1ScaleShape,
+                                  string roundMode, int64_t level0Scale, int64_t level1Scale,
+                                  ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -193,8 +187,8 @@ static void ExecuteTestCaseFailed(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -217,10 +211,9 @@ static void ExecuteTestCaseFailed(
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, level0ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, level1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
-                           {"level0_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level0Scale)},
-                           {"level1_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level1Scale)}})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
+                                  {"level0_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level0Scale)},
+                                  {"level1_scale", Ops::NN::AnyValue::CreateFrom<int64_t>(level1Scale)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -246,9 +239,8 @@ TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_roundMode_rint)
     int64_t level1BlockSize = 32;
     string expectTilingData = "0 64 64 4 512 32 512 128 512 1 1 128 1 64 1 2 1 2 512 512 1 1 1 1 67 0 0 0 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
-        roundMode, level0BlockSize, level1BlockSize, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape,
+                    scale2Shape, roundMode, level0BlockSize, level1BlockSize, expectTilingData);
 }
 
 TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_shape_failed1)
@@ -260,9 +252,8 @@ TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_shape_failed1)
     int64_t level0BlockSize = 512;
     int64_t level1BlockSize = 32;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
-        roundMode, level0BlockSize, level1BlockSize);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape,
+                          scale2Shape, roundMode, level0BlockSize, level1BlockSize);
 }
 
 TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_shape_failed2)
@@ -274,9 +265,8 @@ TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_shape_failed2)
     int64_t level0BlockSize = 512;
     int64_t level1BlockSize = 32;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
-        roundMode, level0BlockSize, level1BlockSize);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape,
+                          scale2Shape, roundMode, level0BlockSize, level1BlockSize);
 }
 
 TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_shape_failed3)
@@ -288,7 +278,6 @@ TEST_F(DynamicDualLevelMxQuantTiling, DynamicDualLevelMxQuant_shape_failed3)
     int64_t level0BlockSize = 512;
     int64_t level1BlockSize = 32;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
-        roundMode, level0BlockSize, level1BlockSize);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, shape, scale1Shape,
+                          scale2Shape, roundMode, level0BlockSize, level1BlockSize);
 }

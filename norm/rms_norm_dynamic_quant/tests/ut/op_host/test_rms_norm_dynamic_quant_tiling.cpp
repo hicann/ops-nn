@@ -28,8 +28,8 @@ using namespace ge;
 
 namespace {
 const std::string OP_TYPE = "RmsNormDynamicQuant";
-constexpr int kInputNum = 4;   // x, gamma, smooth_scales, beta
-constexpr int kOutputNum = 2;  // y, scale
+constexpr int kInputNum = 4;  // x, gamma, smooth_scales, beta
+constexpr int kOutputNum = 2; // y, scale
 
 const std::string COMPILE_INFO_910B = R"({
       "hardware_info": {
@@ -50,37 +50,24 @@ const std::string COMPILE_INFO_910_93 = R"({
         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 64
       }
     })";
-}  // namespace
+} // namespace
 
 class RmsNormDynamicQuantTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RmsNormDynamicQuantTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RmsNormDynamicQuantTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RmsNormDynamicQuantTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RmsNormDynamicQuantTilingTest TearDown" << std::endl; }
 };
 
 // ---------------------------------------------------------------------------
 // RunTiling — single helper that encapsulates all the boilerplate
 // ---------------------------------------------------------------------------
-static ge::graphStatus RunTiling(
-    const std::string& compileInfoJson,
-    const map<string, string>& versionInfos,
-    const vector<ge::DataType>& inputDtypes,
-    const vector<ge::DataType>& outputDtypes,
-    gert::StorageShape& xShape,
-    gert::StorageShape& gammaShape,
-    gert::StorageShape& smoothShape,
-    gert::StorageShape& betaShape,
-    gert::StorageShape& yShape,
-    gert::StorageShape& scaleShape,
-    const vector<pair<string, Ops::NN::AnyValue>>& attrs,
-    uint32_t* outputTilingKey = {})
+static ge::graphStatus RunTiling(const std::string& compileInfoJson, const map<string, string>& versionInfos,
+                                 const vector<ge::DataType>& inputDtypes, const vector<ge::DataType>& outputDtypes,
+                                 gert::StorageShape& xShape, gert::StorageShape& gammaShape,
+                                 gert::StorageShape& smoothShape, gert::StorageShape& betaShape,
+                                 gert::StorageShape& yShape, gert::StorageShape& scaleShape,
+                                 const vector<pair<string, Ops::NN::AnyValue>>& attrs, uint32_t* outputTilingKey = {})
 {
     map<string, string> socInfos, aicoreSpec, intrinsics;
     GetPlatFormInfos(compileInfoJson.c_str(), socInfos, aicoreSpec, intrinsics);
@@ -100,8 +87,8 @@ static ge::graphStatus RunTiling(
 
     auto kernelHolder = gert::KernelRunContextFaker()
                             .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoJson.c_str()),
-                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Inputs(
+                                {const_cast<char*>(compileInfoJson.c_str()), reinterpret_cast<void*>(&platformInfo)})
                             .Outputs({&compileInfo})
                             .Build();
 
@@ -112,8 +99,7 @@ static ge::graphStatus RunTiling(
     parseCtx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     parseCtx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     if (!versionInfos.empty()) {
-        parseCtx->GetPlatformInfo()->SetPlatformRes("version",
-            const_cast<map<string, string>&>(versionInfos));
+        parseCtx->GetPlatformInfo()->SetPlatformRes("version", const_cast<map<string, string>&>(versionInfos));
     }
     EXPECT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -150,20 +136,15 @@ static ge::graphStatus RunTiling(
     return status;
 }
 
-static ge::graphStatus RunTiling(
-    const std::string& compileInfoJson,
-    const vector<ge::DataType>& inputDtypes,
-    const vector<ge::DataType>& outputDtypes,
-    gert::StorageShape& xShape,
-    gert::StorageShape& gammaShape,
-    gert::StorageShape& smoothShape,
-    gert::StorageShape& betaShape,
-    gert::StorageShape& yShape,
-    gert::StorageShape& scaleShape,
-    const vector<pair<string, Ops::NN::AnyValue>>& attrs = {})
+static ge::graphStatus RunTiling(const std::string& compileInfoJson, const vector<ge::DataType>& inputDtypes,
+                                 const vector<ge::DataType>& outputDtypes, gert::StorageShape& xShape,
+                                 gert::StorageShape& gammaShape, gert::StorageShape& smoothShape,
+                                 gert::StorageShape& betaShape, gert::StorageShape& yShape,
+                                 gert::StorageShape& scaleShape,
+                                 const vector<pair<string, Ops::NN::AnyValue>>& attrs = {})
 {
-    return RunTiling(compileInfoJson, {}, inputDtypes, outputDtypes,
-                     xShape, gammaShape, smoothShape, betaShape, yShape, scaleShape, attrs, nullptr);
+    return RunTiling(compileInfoJson, {}, inputDtypes, outputDtypes, xShape, gammaShape, smoothShape, betaShape, yShape,
+                     scaleShape, attrs, nullptr);
 }
 
 // ============================================================================
@@ -181,11 +162,8 @@ TEST_F(RmsNormDynamicQuantTilingTest, normal_fp16_small_d)
 
     uint32_t expectTilingKey = 1;
     uint32_t outputTilingKey = 0;
-    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {},
-                        {DT_FLOAT16, DT_FLOAT16, DT_FLOAT16, DT_FLOAT16},
-                        {DT_INT8, DT_FLOAT},
-                        x, gamma, smooth, beta, y, scale,
-                        {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}},
+    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {}, {DT_FLOAT16, DT_FLOAT16, DT_FLOAT16, DT_FLOAT16}, {DT_INT8, DT_FLOAT}, x,
+                        gamma, smooth, beta, y, scale, {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}},
                         &outputTilingKey),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(outputTilingKey, expectTilingKey);
@@ -202,13 +180,10 @@ TEST_F(RmsNormDynamicQuantTilingTest, normal_bf16_small_d)
 
     uint32_t expectTilingKey = 1;
     uint32_t outputTilingKey = 0;
-    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {},
-                        {DT_BF16, DT_BF16, DT_BF16, DT_BF16},
-                        {DT_INT8, DT_FLOAT},
-                        x, gamma, smooth, beta, y, scale,
-                        {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}},
-                        &outputTilingKey),
-              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(
+        RunTiling(COMPILE_INFO_910B, {}, {DT_BF16, DT_BF16, DT_BF16, DT_BF16}, {DT_INT8, DT_FLOAT}, x, gamma, smooth,
+                  beta, y, scale, {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}}, &outputTilingKey),
+        ge::GRAPH_SUCCESS);
     EXPECT_EQ(outputTilingKey, expectTilingKey);
 }
 
@@ -227,11 +202,8 @@ TEST_F(RmsNormDynamicQuantTilingTest, slice_d_large_col)
 
     uint32_t expectTilingKey = 3;
     uint32_t outputTilingKey = 0;
-    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {},
-                        {DT_FLOAT16, DT_FLOAT16, DT_FLOAT16, DT_FLOAT16},
-                        {DT_INT8, DT_FLOAT},
-                        x, gamma, smooth, beta, y, scale,
-                        {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}},
+    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {}, {DT_FLOAT16, DT_FLOAT16, DT_FLOAT16, DT_FLOAT16}, {DT_INT8, DT_FLOAT}, x,
+                        gamma, smooth, beta, y, scale, {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}},
                         &outputTilingKey),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(outputTilingKey, expectTilingKey);
@@ -250,10 +222,7 @@ TEST_F(RmsNormDynamicQuantTilingTest, error_gamma_lastdim_mismatch)
     gert::StorageShape y = {{24, 1, 2560}, {24, 1, 2560}};
     gert::StorageShape scale = {{24, 1}, {24, 1}};
 
-    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {},
-                        {DT_FLOAT16, DT_FLOAT16, DT_FLOAT16, DT_FLOAT16},
-                        {DT_INT8, DT_FLOAT},
-                        x, gamma, smooth, beta, y, scale,
-                        {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}}),
+    EXPECT_EQ(RunTiling(COMPILE_INFO_910B, {}, {DT_FLOAT16, DT_FLOAT16, DT_FLOAT16, DT_FLOAT16}, {DT_INT8, DT_FLOAT}, x,
+                        gamma, smooth, beta, y, scale, {{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}}),
               ge::GRAPH_FAILED);
 }

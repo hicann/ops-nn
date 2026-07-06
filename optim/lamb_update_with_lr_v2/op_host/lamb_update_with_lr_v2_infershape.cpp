@@ -32,12 +32,10 @@ static ge::graphStatus InferShape4LambUpdateWithLrV2(gert::InferShapeContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, x5);
     auto out = context->GetOutputShape(OUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, out);
-    OP_CHECK_IF(
-        !BroadcastShape(x4, x5, out),
-        OP_LOGE(
-            context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*x4).c_str(),
-            ToString(*x5).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(x4, x5, out),
+                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*x4).c_str(),
+                        ToString(*x5).c_str()),
+                return ge::GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }
 IMPL_OP_INFERSHAPE(LambUpdateWithLrV2).InferShape(InferShape4LambUpdateWithLrV2);

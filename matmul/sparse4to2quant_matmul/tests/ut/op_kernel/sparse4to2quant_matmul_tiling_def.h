@@ -27,10 +27,10 @@ inline void InitSparse4to2QuantMatmulTilingData(uint8_t* tiling, SparseQmm::Spar
 }
 
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
-    tiling_struct tiling_data; \
+    tiling_struct tiling_data;                                              \
     InitSparse4to2QuantMatmulTilingData(tiling_arg, &tiling_data);
 
-#define GET_TILING_DATA(tiling_data, tiling_arg)                                                        \
-    SparseQmm::Sparse4to2QuantMatmulTilingData tiling_data;                                                 \
+#define GET_TILING_DATA(tiling_data, tiling_arg)            \
+    SparseQmm::Sparse4to2QuantMatmulTilingData tiling_data; \
     InitSparse4to2QuantMatmulTilingData(tiling_arg, &tiling_data)
-#endif  // SPARSE4TO2_QUANT_MATMUL_TILING_DEF_H
+#endif // SPARSE4TO2_QUANT_MATMUL_TILING_DEF_H

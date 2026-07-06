@@ -21,7 +21,7 @@ namespace AddRmsNormQuant {
 
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 class KernelAddRmsNormQuantRegbaseSpiltReduce {
-#define HAS_BETA (((TILING_KEY % 1000)/100) == 1)
+#define HAS_BETA (((TILING_KEY % 1000) / 100) == 1)
 #define HAS_RESOUT ((TILING_KEY / 1000) == 2)
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_ZEROPOINTS1 ((INPUT_KEY >> 2) % 2 == 1)
@@ -29,15 +29,11 @@ class KernelAddRmsNormQuantRegbaseSpiltReduce {
 #define HAS_ZEROPOINTS2 (INPUT_KEY % 2 == 1)
 #define HAS_Y2 (HAS_SCALE2 || HAS_ZEROPOINTS2)
 public:
-    __aicore__ inline KernelAddRmsNormQuantRegbaseSpiltReduce(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormQuantRegbaseSpiltReduce(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
-        const AddRmsNormQuantRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR res_out, const AddRmsNormQuantRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -73,32 +69,32 @@ public:
         reduceBufAlign_ = CeilAlign(reduceBufLen, B32_BLOCK_NUM);
     }
 
-    __aicore__ inline void SetGlobalBuffers(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, 
-        GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out)
+    __aicore__ inline void SetGlobalBuffers(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                            GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1,
+                                            GM_ADDR y2, GM_ADDR x, GM_ADDR res_out)
     {
         SetQuantGlobalBuffers<T_X, T_Y, T_SCALES, T_ZEROPOINTS, TILING_KEY>(
-            x1Gm_, x2Gm_, gammaGm_, betaGm_, scales1Gm_, scales2Gm_, zeroPoints1Gm_, zeroPoints2Gm_,
-            y1Gm_, y2Gm_, xGm_, resOutGm_, x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x, res_out,
-            blockIdx_, mPerCore_, mCore_, numN_);
+            x1Gm_, x2Gm_, gammaGm_, betaGm_, scales1Gm_, scales2Gm_, zeroPoints1Gm_, zeroPoints2Gm_, y1Gm_, y2Gm_, xGm_,
+            resOutGm_, x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x, res_out, blockIdx_,
+            mPerCore_, mCore_, numN_);
     }
 
     __aicore__ inline void InitPipeBuffers()
     {
         InitQuantPipeBuffers<T_X, T_Y, T_SCALES, T_ZEROPOINTS, TILING_KEY, false>(
-            pipe_, inQueueX1_, inQueueX2_, outQueueX_, inQueueGamma_, inQueueBeta_, inQueueScales1_,
-            inQueueScales2_, inQueueZeroPoints1_, inQueueZeroPoints2_, outQueueY1_, outQueueY2_, outQueueResOut_,
-            rstdBuf_, xOutFp32Buf_, reduceBuf_, baseNReduceAlign_, baseNDtypeAlign_, baseNB8Align_, baseN_, reduceBufAlign_);
-    
+            pipe_, inQueueX1_, inQueueX2_, outQueueX_, inQueueGamma_, inQueueBeta_, inQueueScales1_, inQueueScales2_,
+            inQueueZeroPoints1_, inQueueZeroPoints2_, outQueueY1_, outQueueY2_, outQueueResOut_, rstdBuf_, xOutFp32Buf_,
+            reduceBuf_, baseNReduceAlign_, baseNDtypeAlign_, baseNB8Align_, baseN_, reduceBufAlign_);
+
         pipe_->InitBuffer(level1Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(level2Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(level3Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(tempBuf_, V_LENGTH * sizeof(float));
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                      GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                      GM_ADDR x, GM_ADDR res_out)
     {
         SetGlobalBuffers(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x, res_out);
         InitPipeBuffers();
@@ -116,8 +112,8 @@ public:
         for (uint64_t mIdx = 0; mIdx < mCore_; mIdx++) {
             uint64_t xGmOffset = mIdx * numN_;
             // Cal Sum and Copy out xOut(x1+x2)
-            ComputeFormer<true>(
-                rstdLocal, mIdx, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_, epsilon_);
+            ComputeFormer<true>(rstdLocal, mIdx, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_,
+                                epsilon_);
 
             for (uint32_t nIdx = 0; nIdx < nCnt_; nIdx++) {
                 uint64_t realN = (nIdx == nCnt_ - 1) ? tailN_ : baseN_;
@@ -148,8 +144,8 @@ public:
                 uint64_t gmOffset = mIdx * numN_ + nIdx * baseN_;
                 CopyInX(inQueueX1_, x1Gm_, gmOffset, realN, 0, realNDtypeAlign - realN);
                 CopyInX(inQueueX2_, x2Gm_, gmOffset, realN, 0, realNDtypeAlign - realN);
-                Compute(
-                    rstdLocal, gammaLocal, betaLocal, scales1Local, scales2Local, zeroPoints1Local, zeroPoints2Local, mIdx, nIdx);
+                Compute(rstdLocal, gammaLocal, betaLocal, scales1Local, scales2Local, zeroPoints1Local,
+                        zeroPoints2Local, mIdx, nIdx);
                 CopyOutY(y1Gm_, outQueueY1_, gmOffset, realN);
                 if constexpr (HAS_Y2) {
                     CopyOutY(y2Gm_, outQueueY2_, gmOffset, realN);
@@ -216,8 +212,8 @@ private:
     /**
      * @brief Copy in xGm_[srcGmOffset:srcGmOffset+count] and reduce to dst[dstOffset].
      */
-    __aicore__ inline void ComputeFormerHandle(
-        LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset, uint32_t count, uint32_t powerSplit)
+    __aicore__ inline void ComputeFormerHandle(LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset,
+                                               uint32_t count, uint32_t powerSplit)
     {
         uint32_t calCount = Aligned((uint64_t)(count * sizeof(T_X)), ALIGN_32_FACTOR) / sizeof(T_X);
         CopyInX(inQueueX1_, x1Gm_, srcGmOffset, count, 0, calCount - count);
@@ -234,8 +230,8 @@ private:
         }
 
         LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
-        NormCommon::ReduceSumRstd<T_X, true, false, false>(
-            dstLocal, xOutLocal, workLocal, x1Local, x2Local, workLocal, dstOffset, calNum, powerSplit);
+        NormCommon::ReduceSumRstd<T_X, true, false, false>(dstLocal, xOutLocal, workLocal, x1Local, x2Local, workLocal,
+                                                           dstOffset, calNum, powerSplit);
         outQueueX_.EnQue<T_X>(xOutLocal);
         inQueueX1_.FreeTensor(x1Local);
         inQueueX2_.FreeTensor(x2Local);
@@ -244,9 +240,9 @@ private:
     }
 
     template <bool IS_RSTD>
-    __aicore__ inline void ComputeFormer(
-        LocalTensor<float> dstLocal, uint64_t position, uint64_t curRow, uint64_t masterLoop, uint64_t tailLoop,
-        uint64_t tail, float avgFactor = 1.0f, float epsilon = 0.0f)
+    __aicore__ inline void ComputeFormer(LocalTensor<float> dstLocal, uint64_t position, uint64_t curRow,
+                                         uint64_t masterLoop, uint64_t tailLoop, uint64_t tail, float avgFactor = 1.0f,
+                                         float epsilon = 0.0f)
     {
         uint64_t offset{curRow};
         uint32_t level1{0};
@@ -303,15 +299,14 @@ private:
             level1 += 1;
             RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
         }
-        ComputeMultiLevelRstd<IS_RSTD>(
-            dstLocal, position, level1Local, level2Local, level3Local, level1, level2, avgFactor, epsilon);
+        ComputeMultiLevelRstd<IS_RSTD>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2,
+                                       avgFactor, epsilon);
     }
 
-    __aicore__ inline void Compute(
-        LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal, LocalTensor<T_X>& betaLocal,
-        LocalTensor<T_SCALES>& scales1Local, LocalTensor<T_SCALES>& scales2Local,
-        LocalTensor<T_ZEROPOINTS>& zeroPoints1Local, LocalTensor<T_ZEROPOINTS>& zeroPoints2Local,
-        uint64_t mIdx, uint64_t nIdx)
+    __aicore__ inline void Compute(LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal,
+                                   LocalTensor<T_X>& betaLocal, LocalTensor<T_SCALES>& scales1Local,
+                                   LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
+                                   LocalTensor<T_ZEROPOINTS>& zeroPoints2Local, uint64_t mIdx, uint64_t nIdx)
     {
         LocalTensor<T_X> x1Local = inQueueX1_.DeQue<T_X>();
         LocalTensor<T_X> x2Local = inQueueX2_.DeQue<T_X>();
@@ -334,17 +329,21 @@ private:
         SetOverflowMode<T_Y>(0);
         if (divMode_) {
             ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, true, HAS_RESOUT, true>(
-                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mIdx, baseNDtypeAlign_, resOutAddr, nullptr, x2Addr);
+                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mIdx,
+                baseNDtypeAlign_, resOutAddr, nullptr, x2Addr);
             if constexpr (HAS_Y2) {
                 ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, true, false, true>(
-                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mIdx, baseNDtypeAlign_, nullptr, nullptr, x2Addr);
+                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mIdx,
+                    baseNDtypeAlign_, nullptr, nullptr, x2Addr);
             }
         } else {
             ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, false, HAS_RESOUT, true>(
-                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mIdx, baseNDtypeAlign_, resOutAddr, nullptr, x2Addr);
+                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mIdx,
+                baseNDtypeAlign_, resOutAddr, nullptr, x2Addr);
             if constexpr (HAS_Y2) {
                 ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, false, false, true>(
-                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mIdx, baseNDtypeAlign_, nullptr, nullptr, x2Addr);
+                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mIdx,
+                    baseNDtypeAlign_, nullptr, nullptr, x2Addr);
             }
         }
         SetOverflowMode<T_Y>(oriOverflowMode_);

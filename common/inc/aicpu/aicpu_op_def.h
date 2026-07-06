@@ -30,7 +30,7 @@ const std::string DEFAULT_SUB_TYPE_OF_INFERSHAPE_1 = "1";
 const std::string DEFAULT_SUB_TYPE_OF_INFERSHAPE_3 = "3";
 
 template <typename TOpDef>
-inline void ApplyNnAicpuDefaultCfg(TOpDef &opDef)
+inline void ApplyNnAicpuDefaultCfg(TOpDef& opDef)
 {
     opDef.AICPU().OpKernelLib(AICPU_OP_KERNEL_LIB.c_str());
     opDef.AICPU().KernelSo(NN_AICPU_KERNEL_SO.c_str());
@@ -40,6 +40,6 @@ inline void ApplyNnAicpuDefaultCfg(TOpDef &opDef)
     opDef.AICPU().ExtendCfgInfo(OP_INFO_OPS_FLAG.c_str(), CLOSE_OPS_FLAG.c_str());
     opDef.AICPU().ExtendCfgInfo(OP_INFO_SUB_TYPE_OF_INFERSHAPE.c_str(), DEFAULT_SUB_TYPE_OF_INFERSHAPE_1.c_str());
 }
-}  // namespace ops
+} // namespace ops
 
 #endif

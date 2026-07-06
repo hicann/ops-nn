@@ -24,25 +24,23 @@ namespace GeluQuantALL {
 using namespace AscendC;
 // dynamic quant 基础泛化模板  ub内单个大尾轴
 template <typename T1, typename T2>
-class GeluDynamicQuantWorkspace : public GeluQuantBase
-{
+class GeluDynamicQuantWorkspace : public GeluQuantBase {
 public:
     __aicore__ inline GeluDynamicQuantWorkspace(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-        const GeluQuantTilingData& tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale,
+                                GM_ADDR workspace, const GeluQuantTilingData& tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ProcessScalarInput();
     __aicore__ inline void ProcessPerBlock(int64_t endAxisOffset, int32_t calCount, float& maxUpdateValue);
     __aicore__ inline void ProcessPerEndAxis();
-    __aicore__ inline void ProcessOptionalScale(
-        LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount);
-    __aicore__ inline void ScaleResToWorkspace(
-        LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount);
+    __aicore__ inline void ProcessOptionalScale(LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset,
+                                                int32_t calCount);
+    __aicore__ inline void ScaleResToWorkspace(LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32,
+                                               int64_t endAxisOffset, int32_t calCount);
     __aicore__ inline void WorkspaceToScaleRes(int64_t endAxisOffset, int32_t calCount);
     __aicore__ inline void CopyIn(int64_t endAxisOffset, int32_t calCount);
-    __aicore__ inline void Compute(
-        LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount, float& maxUpdateValue);
+    __aicore__ inline void Compute(LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount,
+                                   float& maxUpdateValue);
     __aicore__ inline void ComputeMaxValue(LocalTensor<float>& scaleRes, int32_t calCount, float& maxUpdateValue);
     __aicore__ inline void CopyOut(int64_t endAxisOffset, int32_t calCount);
     __aicore__ inline void CopyOutScaleOut(float value);
@@ -74,9 +72,9 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset, GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
-    const GeluQuantTilingData& tilingData)
+__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Init(GM_ADDR x, GM_ADDR inputScale, GM_ADDR inputOffset,
+                                                               GM_ADDR y, GM_ADDR outScale, GM_ADDR workspace,
+                                                               const GeluQuantTilingData& tilingData)
 {
     // Init tiling data
     GeluQuantBase::ParseTilingData(tilingData);
@@ -128,8 +126,8 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ProcessScalarInput()
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ProcessPerBlock(
-    int64_t endAxisOffset, int32_t calCount, float& maxUpdateValue)
+__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ProcessPerBlock(int64_t endAxisOffset, int32_t calCount,
+                                                                          float& maxUpdateValue)
 {
     LocalTensor<float> scaleLocalFp32 = scaleQueue_.AllocTensor<float>();
     if (inputScaleType_ == NORMAL_TENSOR) {
@@ -182,13 +180,12 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Process()
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ProcessOptionalScale(
-    LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount)
+__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ProcessOptionalScale(LocalTensor<float>& scaleLocalFp32,
+                                                                               int64_t endAxisOffset, int32_t calCount)
 {
     LocalTensor<T2> optionalScale = inQueue_.AllocTensor<T2>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T2)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T2> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
 
@@ -211,9 +208,8 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::CopyIn(int64_t endAxisOffset, int32_t calCount)
 {
     LocalTensor<T1> xLocal = inQueue_.AllocTensor<T1>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T1)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(T1)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPadExtParams<T1> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
     DataCopyPad(xLocal, xGm_[endAxisLen_ * loopNum_ + endAxisOffset], copyParams, padParams);
@@ -221,8 +217,9 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::CopyIn(int64_t endAxis
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Compute(
-    LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount, float& maxUpdateValue)
+__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Compute(LocalTensor<float>& scaleLocalFp32,
+                                                                  int64_t endAxisOffset, int32_t calCount,
+                                                                  float& maxUpdateValue)
 {
     LocalTensor<float> geluRes = geluQueue_.Get<float>();
     ComputeGelu(geluRes, calCount);
@@ -231,8 +228,9 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Compute(
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ScaleResToWorkspace(
-    LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, int64_t endAxisOffset, int32_t calCount)
+__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ScaleResToWorkspace(LocalTensor<float>& geluRes,
+                                                                              LocalTensor<float>& scaleLocalFp32,
+                                                                              int64_t endAxisOffset, int32_t calCount)
 {
     if (inputScaleType_ == SCALAR_TENSOR) {
         Muls(geluRes, geluRes, inputScaleScalar_, calCount);
@@ -247,9 +245,8 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ScaleResToWorkspace(
     workspaceQueue_.EnQue<float>(workspaceLocal);
 
     LocalTensor<float> workspaceLocalOut = workspaceQueue_.DeQue<float>();
-    DataCopyExtParams copyParamsFloat{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(float)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsFloat{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(float)),
+                                      static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(workspaceGm_[endAxisOffset], workspaceLocalOut, copyParamsFloat);
     workspaceQueue_.FreeTensor(workspaceLocalOut);
@@ -259,12 +256,11 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::WorkspaceToScaleRes(int64_t endAxisOffset, int32_t calCount)
 {
     LocalTensor<float> scaleResLocal = inQueue_.AllocTensor<float>();
-    DataCopyExtParams copyParams{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(float)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParams{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(float)),
+                                 static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
-    DataCopyPadExtParams<float> padParams{
-        false, static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<float>(0)};
+    DataCopyPadExtParams<float> padParams{false, static_cast<uint8_t>(0), static_cast<uint8_t>(0),
+                                          static_cast<float>(0)};
     DataCopyPad(scaleResLocal, workspaceGm_[endAxisOffset], copyParams, padParams);
     inQueue_.EnQue(scaleResLocal);
 }
@@ -273,9 +269,8 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::CopyOut(int64_t endAxisOffset, int32_t calCount)
 {
     LocalTensor<int8_t> outLocal = outQueue_.DeQue<int8_t>();
-    DataCopyExtParams copyParamsInt8{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int8_t)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsInt8{static_cast<uint16_t>(1), static_cast<uint32_t>(calCount * sizeof(int8_t)),
+                                     static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
 
     DataCopyPad(yGm_[endAxisLen_ * loopNum_ + endAxisOffset], outLocal, copyParamsInt8);
     outQueue_.FreeTensor(outLocal);
@@ -288,9 +283,8 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::CopyOutScaleOut(float 
     scaleOutLocal.SetValue(0, value);
     scaleOutQueue_.EnQue<float>(scaleOutLocal);
     LocalTensor<float> scaleOut = scaleOutQueue_.DeQue<float>();
-    DataCopyExtParams copyParamsFloat{
-        static_cast<uint16_t>(1), static_cast<uint32_t>(1 * sizeof(float)), static_cast<uint32_t>(0),
-        static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+    DataCopyExtParams copyParamsFloat{static_cast<uint16_t>(1), static_cast<uint32_t>(1 * sizeof(float)),
+                                      static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     DataCopyPad(outScaleGm_[loopNum_], scaleOut, copyParamsFloat);
     scaleOutQueue_.FreeTensor(scaleOut);
 }
@@ -337,8 +331,8 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ComputeDynamicQuant(fl
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ComputeMaxValue(
-    LocalTensor<float>& scaleRes, int32_t calCount, float& maxUpdateValue)
+__aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ComputeMaxValue(LocalTensor<float>& scaleRes,
+                                                                          int32_t calCount, float& maxUpdateValue)
 {
     LocalTensor<float> tempRes = tempQueue_.Get<float>();
     Abs(tempRes, scaleRes, calCount);

@@ -37,8 +37,8 @@ constexpr uint32_t TBUF_SIZE = 4096;
 
 template <typename X_T, typename INDICES_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_SMALL_INNER_THREAD_NUM) inline void FullLoadBinaryAddComputer(
-    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize,
-    __local_mem__ float* tmpLocal, __local_mem__ X_T* xLocal, __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset,
+    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize, __local_mem__ float* tmpLocal,
+    __local_mem__ X_T* xLocal, __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset,
     __local_mem__ INDICES_T* indicesTensor)
 {
     uint32_t threadIdxX = threadIdx.x;
@@ -74,13 +74,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_SMALL_INNER_THREAD_NUM) inline voi
     }
 }
 
-
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
-class SparseSegmentMeanFullLoadSmallInner
-{
+class SparseSegmentMeanFullLoadSmallInner {
 public:
-    __aicore__ inline SparseSegmentMeanFullLoadSmallInner(const SparseSegmentMeanFullLoadTilingData& tilingData, TPipe& pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline SparseSegmentMeanFullLoadSmallInner(const SparseSegmentMeanFullLoadTilingData& tilingData,
+                                                          TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR segment_ids, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void Process();
     __aicore__ inline void CopyInX(LocalTensor<X_T>& xLocal);
@@ -129,18 +128,17 @@ __aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGME
     if (tilingData_.specialBlockTiling) {
         if (tilingData_.secondToLastCoreSegmentNum == 0) {
             segOffsetBase_ = tilingData_.normalCoreSegmentNum * blockIdx_;
-            curCoreSegments_ = blockIdx_ == tilingData_.needCoreNum - 1
-                ? tilingData_.lastCoreSegmentNum
-                : tilingData_.normalCoreSegmentNum;
+            curCoreSegments_ = blockIdx_ == tilingData_.needCoreNum - 1 ? tilingData_.lastCoreSegmentNum :
+                                                                          tilingData_.normalCoreSegmentNum;
         } else {
             if (blockIdx_ == tilingData_.needCoreNum - 1) {
-                segOffsetBase_ = tilingData_.normalCoreSegmentNum * (blockIdx_ - 1) + tilingData_.secondToLastCoreSegmentNum;
+                segOffsetBase_ = tilingData_.normalCoreSegmentNum * (blockIdx_ - 1) +
+                                 tilingData_.secondToLastCoreSegmentNum;
                 curCoreSegments_ = tilingData_.lastCoreSegmentNum;
             } else {
                 segOffsetBase_ = tilingData_.normalCoreSegmentNum * blockIdx_;
-                curCoreSegments_ = blockIdx_ == tilingData_.needCoreNum - 2
-                    ? tilingData_.secondToLastCoreSegmentNum
-                    : tilingData_.normalCoreSegmentNum;
+                curCoreSegments_ = blockIdx_ == tilingData_.needCoreNum - 2 ? tilingData_.secondToLastCoreSegmentNum :
+                                                                              tilingData_.normalCoreSegmentNum;
             }
         }
         threadNumZ_ = blockIdx_ == tilingData_.needCoreNum - 1 ? tilingData_.lastCoreSegmentNum : 16;
@@ -157,7 +155,8 @@ __aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGME
 }
 
 template <typename X_T, typename INDICES_T, typename SEGMENTIDS_T>
-__aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGMENTIDS_T>::CopyInX(LocalTensor<X_T>& xLocal)
+__aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGMENTIDS_T>::CopyInX(
+    LocalTensor<X_T>& xLocal)
 {
     DataCopyPadExtParams<X_T> dataCopyPadExtParams = {false, 0, 0, 0};
     DataCopyExtParams dataCoptExtParams;

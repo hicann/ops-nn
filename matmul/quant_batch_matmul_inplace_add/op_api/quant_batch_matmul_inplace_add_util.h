@@ -15,11 +15,11 @@
 namespace QBMMInplaceAdd {
 using namespace op;
 struct QuantBatchMatmulInplaceAddParams {
-    const aclTensor *x1 = nullptr;
-    const aclTensor *x2 = nullptr;
-    const aclTensor *x1ScaleOptional = nullptr;
-    const aclTensor *x2Scale = nullptr;
-    aclTensor *yRef = nullptr;
+    const aclTensor* x1 = nullptr;
+    const aclTensor* x2 = nullptr;
+    const aclTensor* x1ScaleOptional = nullptr;
+    const aclTensor* x2Scale = nullptr;
+    aclTensor* yRef = nullptr;
 
     bool transposeX1;
     bool transposeX2;
@@ -30,8 +30,10 @@ static const std::initializer_list<op::DataType> X1_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
 static const std::initializer_list<op::DataType> X2_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
-static const std::initializer_list<op::DataType> X1_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0, DataType::DT_FLOAT};
-static const std::initializer_list<op::DataType> X2_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0, DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> X1_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0,
+                                                                                DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> X2_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0,
+                                                                                DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> YREF_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT};
 
 constexpr uint32_t MX_X1_DIM = 2U;

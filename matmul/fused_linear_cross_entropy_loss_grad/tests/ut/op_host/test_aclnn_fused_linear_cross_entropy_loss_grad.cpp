@@ -17,14 +17,16 @@ using namespace op;
 
 class l2_fused_linear_cross_entropy_loss_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "l2_fused_linear_cross_entropy_loss_grad_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "l2_fused_linear_cross_entropy_loss_grad_test SetUp" << std::endl; }
 
-    static void TearDownTestCase() { std::cout << "l2_fused_linear_cross_entropy_loss_grad_test TearDown" << std::endl; }
+    static void TearDownTestCase()
+    {
+        std::cout << "l2_fused_linear_cross_entropy_loss_grad_test TearDown" << std::endl;
+    }
 };
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_input_empty_success) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_input_empty_success)
+{
     int64_t BT = 0;
     int64_t H = 4096;
     int64_t V = 19936;
@@ -50,16 +52,14 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or \
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     } else {
@@ -68,7 +68,8 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     }
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_platform_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_platform_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -94,16 +95,14 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or \
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     } else {
@@ -111,7 +110,9 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     }
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_softmax_nullptr_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_softmax_nullptr_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -137,19 +138,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = nullptr;
     auto weightGradOut_desc = nullptr;
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_labelsmoothing_nonzero_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_labelsmoothing_nonzero_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -175,19 +176,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 1.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 1.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_input_size0_not_eq_grad_size0_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_input_size0_not_eq_grad_size0_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -213,19 +214,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_weight_size0_lt_512B_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_weight_size0_lt_512B_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 100;
@@ -251,19 +252,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_weight_size1_not_eq_input_size1_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_weight_size1_not_eq_input_size1_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -289,19 +290,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_targetMask_size0_not_eq_grad_size0_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_targetMask_size0_not_eq_grad_size0_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -327,19 +328,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_test_maskedTarget_size0_not_eq_grad_size0_failed) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_test_maskedTarget_size0_not_eq_grad_size0_failed)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -365,19 +366,19 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entropy_loss_grad_mem_friendly_test_small_case_success) {
+TEST_F(l2_fused_linear_cross_entropy_loss_grad_test,
+       l2_fused_linear_cross_entropy_loss_grad_mem_friendly_test_small_case_success)
+{
     int64_t BT = 8192;
     int64_t H = 4096;
     int64_t V = 19392;
@@ -403,16 +404,14 @@ TEST_F(l2_fused_linear_cross_entropy_loss_grad_test, l2_fused_linear_cross_entro
     auto inputGradOut_desc = TensorDesc(inputGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
     auto weightGradOut_desc = TensorDesc(weightGradOut, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
-              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
-        OUTPUT(inputGradOut_desc, weightGradOut_desc)
-    );
+    auto ut = OP_API_UT(aclnnFusedLinearCrossEntropyLossGrad,
+                        INPUT(grad_desc, input_desc, weight_desc, targetMask_desc, maskedTarget_desc, 0.0,
+                              logitsMaxOptional_desc, sumExpLogitsOptional_desc, softmaxOptional_desc),
+                        OUTPUT(inputGradOut_desc, weightGradOut_desc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or \
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
     } else {

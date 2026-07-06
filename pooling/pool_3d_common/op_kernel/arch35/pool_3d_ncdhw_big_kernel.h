@@ -20,15 +20,13 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 using namespace AscendC;
 
 static constexpr int32_t OUT_BUFFER_LEN = 1024;
 
 template <typename T, int32_t OP_TYPE>
-class Pool3DNcdhwBigKernel
-{
+class Pool3DNcdhwBigKernel {
 public:
     __aicore__ inline Pool3DNcdhwBigKernel(TPipe* pipe, const Pool3DNcdhwBigKernelTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -52,10 +50,7 @@ private:
                                               int64_t curInOffset, int64_t maxCount);
     template <bool CLEAR>
     __aicore__ inline void InitOutLocal(int32_t localCurIdx);
-    __aicore__ inline int64_t min(int64_t a, int64_t b)
-    {
-        return (a > b) ? b : a;
-    }
+    __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
     TPipe* pipe_;
     // 输入队列
@@ -161,8 +156,8 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::CalcKernelSize(int64_t 
     CalcKernelSizeCore(ParamsForDim{tilingData_->wInDim, curWo, tilingData_->kW, tilingData_->sW, tilingData_->dW,
                                     tilingData_->lPad, tilingData_->rPad},
                        curkW, curkPadW, curOriginW_);
-    curOriginIndex_ =
-        curOriginD_ * tilingData_->hInDim * tilingData_->wInDim + curOriginH_ * tilingData_->wInDim + curOriginW_;
+    curOriginIndex_ = curOriginD_ * tilingData_->hInDim * tilingData_->wInDim + curOriginH_ * tilingData_->wInDim +
+                      curOriginW_;
     curInOffset = curNc * inDHW_ + curOriginIndex_;
 
     if (OP_TYPE == OP_TYPE_AVG_POOL_3D) {
@@ -335,7 +330,7 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::SplitKernelProcess(int3
     int64_t inputOffset = curInOffset;
     T padValue = GetPadValue<T, OP_TYPE>();
     int64_t curkHW = curkH * curkW;
-    if (curkHW <= maxCount) {  // ZHENGHANG行搬入
+    if (curkHW <= maxCount) { // ZHENGHANG行搬入
         int64_t dFactor = maxCount / curkHW;
         int64_t dLoops = (curkD + dFactor - ONE) / dFactor;
         int64_t dTail = curkD - (dLoops - ONE) * dFactor;
@@ -402,7 +397,7 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
     event_t eventIdMTE3toV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
-    if constexpr (!CLEAR) {  // kerel 全载场景无需merge，因此无需初始化output
+    if constexpr (!CLEAR) { // kerel 全载场景无需merge，因此无需初始化output
         return;
     }
     LocalTensor<T> uboutLocal = uBOutput_.Get<T>();
@@ -432,5 +427,5 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
     }
 }
 
-}  // namespace Pool3D
-#endif  // MAX_POOL_3D_BIG_KERNEL_H_
+} // namespace Pool3D
+#endif // MAX_POOL_3D_BIG_KERNEL_H_

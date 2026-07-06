@@ -19,12 +19,10 @@
 template <typename T>
 class RmsNormGradSplitN {
 public:
-    __aicore__ inline RmsNormGradSplitN()
-    {}
+    __aicore__ inline RmsNormGradSplitN() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
-        const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx, GM_ADDR dgamma,
+                                const RmsNormGradTilingData* tiling, GM_ADDR usrWorkspace)
     {
         InitVar(tiling);
         InitInputGmBuffer(dy, x, rstd, gamma, block_dim, core_calc_num, core_calc_tail);
@@ -66,9 +64,8 @@ public:
         fixed_output = tiling->fixed_output;
     }
 
-    __aicore__ inline void InitInputGmBuffer(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t block_dim, uint32_t core_calc_num,
-        uint32_t core_calc_tail)
+    __aicore__ inline void InitInputGmBuffer(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, uint32_t block_dim,
+                                             uint32_t core_calc_num, uint32_t core_calc_tail)
     {
         if (GetBlockIdx() < block_dim - 1) {
             core_offset = block_factor;
@@ -81,8 +78,8 @@ public:
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma, col_val);
     }
 
-    __aicore__ inline void InitOutputGmBuffer(
-        GM_ADDR dx, GM_ADDR dgamma, uint32_t block_dim, uint32_t core_calc_num, uint32_t core_calc_tail)
+    __aicore__ inline void InitOutputGmBuffer(GM_ADDR dx, GM_ADDR dgamma, uint32_t block_dim, uint32_t core_calc_num,
+                                              uint32_t core_calc_tail)
     {
         dxGm.SetGlobalBuffer((__gm__ T*)dx + GetBlockIdx() * block_factor * col_val, core_offset * col_val);
         dgammaGm.SetGlobalBuffer((__gm__ float*)dgamma, col_val);
@@ -308,8 +305,8 @@ public:
         outQueDgamma.FreeTensor(dgamma_out);
     }
 
-    __aicore__ inline void Compute(
-        uint32_t loop_idx, uint32_t calc_len, LocalTensor<float>& gamma_ub, LocalTensor<float>& dgamma)
+    __aicore__ inline void Compute(uint32_t loop_idx, uint32_t calc_len, LocalTensor<float>& gamma_ub,
+                                   LocalTensor<float>& dgamma)
     {
         LocalTensor<T> x_ub = inQueX.DeQue<T>();
         LocalTensor<T> dy_ub = inQueDY.DeQue<T>();
@@ -326,9 +323,9 @@ public:
         outQueDX.EnQue(dx_ub);
     }
 
-    __aicore__ inline void ComputeMainSmallD(
-        LocalTensor<float>& x, LocalTensor<float>& tmp_32_buf, LocalTensor<float>& dx, LocalTensor<float>& dy,
-        LocalTensor<float>& rstd, LocalTensor<float>& gamma, LocalTensor<float>& dgamma, uint32_t calc_len)
+    __aicore__ inline void ComputeMainSmallD(LocalTensor<float>& x, LocalTensor<float>& tmp_32_buf,
+                                             LocalTensor<float>& dx, LocalTensor<float>& dy, LocalTensor<float>& rstd,
+                                             LocalTensor<float>& gamma, LocalTensor<float>& dgamma, uint32_t calc_len)
     {
         PipeBarrier<PIPE_ALL>();
         LocalTensor<float> tmp_rstd_buf = nFp32Buf.Get<float>();
@@ -381,9 +378,9 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeMain(
-        LocalTensor<float>& x, LocalTensor<float>& tmp_buf, LocalTensor<float>& dx, LocalTensor<float>& dy,
-        LocalTensor<float>& rstd, LocalTensor<float>& gamma, LocalTensor<float>& dgamma, uint32_t calc_len)
+    __aicore__ inline void ComputeMain(LocalTensor<float>& x, LocalTensor<float>& tmp_buf, LocalTensor<float>& dx,
+                                       LocalTensor<float>& dy, LocalTensor<float>& rstd, LocalTensor<float>& gamma,
+                                       LocalTensor<float>& dgamma, uint32_t calc_len)
     {
         PipeBarrier<PIPE_ALL>();
         for (uint32_t i = 0; i < calc_len; i++) {
@@ -478,8 +475,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeFp16(
-        uint32_t loop_idx, uint32_t calc_len, LocalTensor<T>& gamma_ub, LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeFp16(uint32_t loop_idx, uint32_t calc_len, LocalTensor<T>& gamma_ub,
+                                       LocalTensor<float>& dgamma)
     {
         LocalTensor<T> x_ub = inQueX.DeQue<T>();
         LocalTensor<T> dy_ub = inQueDY.DeQue<T>();
@@ -493,9 +490,9 @@ public:
         outQueDX.EnQue(dx_ub);
     }
 
-    __aicore__ inline void ComputeMainFp16SmallD(
-        LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy, LocalTensor<float>& rstd, LocalTensor<T>& gamma,
-        LocalTensor<float>& dgamma, uint32_t calc_len)
+    __aicore__ inline void ComputeMainFp16SmallD(LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy,
+                                                 LocalTensor<float>& rstd, LocalTensor<T>& gamma,
+                                                 LocalTensor<float>& dgamma, uint32_t calc_len)
     {
         PipeBarrier<PIPE_ALL>();
         LocalTensor<float> dy_sum = ndBufFp32Buf1.Get<float>();
@@ -563,9 +560,9 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeMainFp16(
-        LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy, LocalTensor<float>& rstd, LocalTensor<T>& gamma,
-        LocalTensor<float>& dgamma, uint32_t calc_len)
+    __aicore__ inline void ComputeMainFp16(LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy,
+                                           LocalTensor<float>& rstd, LocalTensor<T>& gamma, LocalTensor<float>& dgamma,
+                                           uint32_t calc_len)
     {
         PipeBarrier<PIPE_ALL>();
         LocalTensor<float> dy_sum = ndBufFp32Buf1.Get<float>();
@@ -672,8 +669,8 @@ public:
         }
     }
 
-    __aicore__ inline void ComputeBf16(
-        uint32_t loop_idx, uint32_t calc_len, LocalTensor<T>& gamma_ub, LocalTensor<float>& dgamma)
+    __aicore__ inline void ComputeBf16(uint32_t loop_idx, uint32_t calc_len, LocalTensor<T>& gamma_ub,
+                                       LocalTensor<float>& dgamma)
     {
         LocalTensor<T> x_ub = inQueX.DeQue<T>();
         LocalTensor<T> dy_ub = inQueDY.DeQue<T>();
@@ -687,9 +684,9 @@ public:
         outQueDX.EnQue(dx_ub);
     }
 
-    __aicore__ inline void ComputeMainBf16SmallD(
-        LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy, LocalTensor<float>& rstd, LocalTensor<T>& gamma,
-        LocalTensor<float>& dgamma, uint32_t calc_len)
+    __aicore__ inline void ComputeMainBf16SmallD(LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy,
+                                                 LocalTensor<float>& rstd, LocalTensor<T>& gamma,
+                                                 LocalTensor<float>& dgamma, uint32_t calc_len)
     {
         LocalTensor<float> dy_sum = ndBufFp32Buf1.Get<float>();
         LocalTensor<float> tmp_32_buf = ndBufFp32Buf3.Get<float>();
@@ -765,9 +762,9 @@ public:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeMainBf16(
-        LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy, LocalTensor<float>& rstd, LocalTensor<T>& gamma,
-        LocalTensor<float>& dgamma, uint32_t calc_len)
+    __aicore__ inline void ComputeMainBf16(LocalTensor<T>& x, LocalTensor<T>& dx, LocalTensor<T>& dy,
+                                           LocalTensor<float>& rstd, LocalTensor<T>& gamma, LocalTensor<float>& dgamma,
+                                           uint32_t calc_len)
     {
         LocalTensor<float> dy_sum = ndBufFp32Buf1.Get<float>();
         LocalTensor<float> tmp_32_buf = ndBufFp32Buf3.Get<float>();

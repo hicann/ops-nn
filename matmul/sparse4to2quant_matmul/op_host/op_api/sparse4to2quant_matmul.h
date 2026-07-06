@@ -14,9 +14,9 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* Sparse4to2QuantMatmul(
-    const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* index, const aclTensor* xScale,
-    const aclTensor* sparseWeightScale, const aclTensor* bias, int64_t dtype, aclOpExecutor* executor);
+const aclTensor* Sparse4to2QuantMatmul(const aclTensor* x, const aclTensor* sparseWeight, const aclTensor* index,
+                                       const aclTensor* xScale, const aclTensor* sparseWeightScale,
+                                       const aclTensor* bias, int64_t dtype, aclOpExecutor* executor);
 }
 
 #endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_SPARSE_4TO2_QUANT_MATMUL_H

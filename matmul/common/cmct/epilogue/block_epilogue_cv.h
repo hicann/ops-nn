@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -79,7 +79,7 @@ public:
     }
 
     __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset, int64_t flagId = 5)
-    {   
+    {
         // 默认1-2不再基于splitM区分, aiv 0~1分别搬运blockShapeM/2
         int64_t blockShapeM = Get<0>(blockShape);
         int64_t halfBlockShapeM = Cmct::Gemm::CeilDiv(blockShapeM, AscendC::GetTaskRation());
@@ -107,25 +107,22 @@ public:
             offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
             // Do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_  in stage 1
-            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign,
-                stageSize, stageOffset, CUBE_OUT_VECTOR_IN);
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign, stageSize, stageOffset,
+                      CUBE_OUT_VECTOR_IN);
             if (stageOffset + stageSize >= inputSize) {
                 // Notify aic
                 AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(flagId);
             }
             // CopyOut in stage 2
-            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign,
-                stageSize, stageOffset, ONLY_VECTOR_IN);
+            fusionOp_(offset, stageSize / blockShapeNAlign, blockShapeN, N, M, blockShapeNAlign, stageSize, stageOffset,
+                      ONLY_VECTOR_IN);
             stageOffset += stageSize;
             loop++;
         }
     }
 
     // GetTensor from ub from current AIV
-    __aicore__ inline auto GetTensor()
-    {
-        return cLocal_;
-    }
+    __aicore__ inline auto GetTensor() { return cLocal_; }
 
     __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset = 0, int64_t flagId = 5)
     {
@@ -134,8 +131,8 @@ public:
     }
 
     __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset,
-        AscendC::GlobalTensor<DataTypeIn>& workspaceGlobal, int64_t workspaceOffset, bool useWorkspace,
-        int64_t flagId = 5)
+                                      AscendC::GlobalTensor<DataTypeIn>& workspaceGlobal, int64_t workspaceOffset,
+                                      bool useWorkspace, int64_t flagId = 5)
     {
         Run(blockShape, dstOffset, flagId);
         return;
@@ -167,4 +164,3 @@ public:
 } // namespace Gemm
 } // namespace Cmct
 #endif // EPILOGUE_BLOCK_EPILOGUE_H
-

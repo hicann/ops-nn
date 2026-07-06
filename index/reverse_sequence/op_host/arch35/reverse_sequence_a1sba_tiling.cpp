@@ -29,8 +29,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 using namespace ReverseSequence;
 
 static constexpr int64_t SBA_RESERVED_SIZE = 131072; // 128k
@@ -45,4 +44,4 @@ void ReverseSequenceA1SBATiling::InitializationVars()
 
 REGISTER_TILING_TEMPLATE("ReverseSequence", ReverseSequenceA1SBATiling, 4);
 
-}  // namespace optiling
+} // namespace optiling

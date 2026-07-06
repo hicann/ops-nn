@@ -20,15 +20,12 @@ using namespace ge;
 
 class ThresholdGradV2DInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "ThresholdGradV2DInferShapeTest SetUp" << std::endl;
-    }
-    static void TearDownTestCase() {
-        std::cout << "ThresholdGradV2DInferShapeTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ThresholdGradV2DInferShapeTest SetUp" << std::endl; }
+    static void TearDownTestCase() { std::cout << "ThresholdGradV2DInferShapeTest TearDown" << std::endl; }
 };
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_same_shape_fp32) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_same_shape_fp32)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{16, 16}, {16, 16}};
     gert::StorageShape self_shape = {{16, 16}, {16, 16}};
@@ -48,7 +45,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_same_shape_fp32) {
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_broadcast_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_broadcast_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{4, 1}, {4, 1}};
     gert::StorageShape self_shape = {{1, 8}, {1, 8}};
@@ -68,7 +66,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_broadcast_shape) {
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_fp16_same_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_fp16_same_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{32, 64, 128}, {32, 64, 128}};
     gert::StorageShape self_shape = {{32, 64, 128}, {32, 64, 128}};
@@ -85,7 +84,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_fp16_same_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_bf16_same_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_bf16_same_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{2, 64}, {2, 64}};
     gert::StorageShape self_shape = {{2, 64}, {2, 64}};
@@ -102,7 +102,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_bf16_same_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_int32_same_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_int32_same_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{4, 4}, {4, 4}};
     gert::StorageShape self_shape = {{4, 4}, {4, 4}};
@@ -119,7 +120,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_int32_same_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_int8_same_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_int8_same_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{8, 8}, {8, 8}};
     gert::StorageShape self_shape = {{8, 8}, {8, 8}};
@@ -136,7 +138,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_int8_same_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_uint8_same_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_uint8_same_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{16}, {16}};
     gert::StorageShape self_shape = {{16}, {16}};
@@ -153,7 +156,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_uint8_same_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_8d_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_8d_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
     gert::StorageShape self_shape = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
@@ -170,7 +174,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_8d_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_empty_tensor) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_empty_tensor)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{0, 0}, {0, 0}};
     gert::StorageShape self_shape = {{0, 0}, {0, 0}};
@@ -187,7 +192,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_empty_tensor) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_scalar_input) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_scalar_input)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{}, {}};
     gert::StorageShape self_shape = {{}, {}};
@@ -204,7 +210,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_scalar_input) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_large_shape) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_large_shape)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{1024, 1024}, {1024, 1024}};
     gert::StorageShape self_shape = {{1024, 1024}, {1024, 1024}};
@@ -221,7 +228,8 @@ TEST_F(ThresholdGradV2DInferShapeTest, test_large_shape) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ThresholdGradV2DInferShapeTest, test_broadcast_different_rank) {
+TEST_F(ThresholdGradV2DInferShapeTest, test_broadcast_different_rank)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ThresholdGradV2D")->infer_shape;
     gert::StorageShape gradOutput_shape = {{2, 3, 4}, {2, 3, 4}};
     gert::StorageShape self_shape = {{4}, {4}};

@@ -65,4 +65,4 @@ ACLNN_API aclnnStatus aclnnInplaceQuantScatter(void* workspace, uint64_t workspa
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_QUANT_SCATTER_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_QUANT_SCATTER_H_

@@ -46,11 +46,9 @@ struct RoundModeMapper {
 } // namespace
 
 template <uint64_t mode, uint64_t roundMode, uint64_t scaleAlg, uint64_t isGroupIdx>
-__global__ __aicore__ void swiglu_backward_mx_quant_with_dual_axis(
-    GM_ADDR x, GM_ADDR y_grad, GM_ADDR group_index,
-    GM_ADDR x_grad1, GM_ADDR mx_scale1,
-    GM_ADDR x_grad2, GM_ADDR mx_scale2,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void swiglu_backward_mx_quant_with_dual_axis(GM_ADDR x, GM_ADDR y_grad, GM_ADDR group_index,
+                                                                   GM_ADDR x_grad1, GM_ADDR mx_scale1, GM_ADDR x_grad2,
+                                                                   GM_ADDR mx_scale2, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 

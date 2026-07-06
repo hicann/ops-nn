@@ -21,16 +21,13 @@
 #include "tiling/tiling_api.h"
 #include "embedding_bag_tiling.h"
 
-namespace optiling 
-{
+namespace optiling {
 ge::graphStatus EmbeddingBagTilingForRegBase(gert::TilingContext* context);
 
 using Ops::NN::Optiling::TilingBaseClass;
 class EmbeddingBagRegBaseTiling : public TilingBaseClass {
 public:
-    explicit EmbeddingBagRegBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) 
-    {
-    }
+    explicit EmbeddingBagRegBaseTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;
@@ -58,7 +55,7 @@ private:
     ge::DataType offsetsType_;
     uint64_t ubSize_ = 0;
     uint64_t totalCoreNum_ = 0;
-    uint64_t weightShapeSize_ {0};
+    uint64_t weightShapeSize_{0};
     int64_t usedCoreNum_ = 0;
     int64_t numBags_ = 0;
     int64_t embeddingDim_ = 0;

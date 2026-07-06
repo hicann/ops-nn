@@ -25,8 +25,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "../../../avg_pool_v2_grad/op_host/arch35/avg_pool_v2_grad_tiling_common.h"
 
-namespace optiling
-{
+namespace optiling {
 struct AvgPoolGradCompileInfo {
     uint64_t coreNum;
     uint64_t ubSize;
@@ -48,6 +47,6 @@ ge::graphStatus GetAvgPoolGradPlatformInfo(gert::TilingContext* context, uint64_
 
 ge::graphStatus GetAvgPoolGradShapeAttrsInfo(gert::TilingContext* context, AvgPoolV2GradInputInfo& inputData);
 
-}  // namespace optiling
+} // namespace optiling
 
 #endif

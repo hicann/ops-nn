@@ -13,41 +13,41 @@
  * \brief scatter_sub
  */
 
- #include "kernel_operator.h"
- #include "../scatter_add/arch35/scatter_add_simt.h"
- #include "../scatter_add/arch35/scatter_add_simd.h"
- #include "../scatter_add/arch35/scatter_add_simd_support_atomicadd.h"
- #include "../scatter_add/arch35/scatter_add_deterministic.h"
- #include "../scatter_add/arch35/scatter_add_simt_sort.h"
- #include "../scatter_add/arch35/scatter_add_simd_sort_support_atomicadd.h"
- 
- using namespace AscendC;
+#include "kernel_operator.h"
+#include "../scatter_add/arch35/scatter_add_simt.h"
+#include "../scatter_add/arch35/scatter_add_simd.h"
+#include "../scatter_add/arch35/scatter_add_simd_support_atomicadd.h"
+#include "../scatter_add/arch35/scatter_add_deterministic.h"
+#include "../scatter_add/arch35/scatter_add_simt_sort.h"
+#include "../scatter_add/arch35/scatter_add_simd_sort_support_atomicadd.h"
 
- #define TILING_KEY_0                                0
- #define TILING_KEY_UNSORT_SIMT_ADDR32_SCALAR        10000000000333331000UL
- #define TILING_KEY_UNSORT_SIMT_ADDR32_TENSOR        10000000000333330000UL
- #define TILING_KEY_UNSORT_SIMT_ADDR64_SCALAR        10000000000333331100UL
- #define TILING_KEY_UNSORT_SIMT_ADDR64_TENSOR        10000000000333330100UL
- #define TILING_KEY_SORT_SIMT_ADDR32_SCALAR          10000000000333331001UL
- #define TILING_KEY_SORT_SIMT_ADDR32_TENSOR          10000000000333330001UL
- #define TILING_KEY_SORT_SIMT_ADDR64_SCALAR          10000000000333331101UL
- #define TILING_KEY_SORT_SIMT_ADDR64_TENSOR          10000000000333330101UL
- #define TILING_KEY_UNSORT_SIMD_SCALAR               10000000000333331010UL
- #define TILING_KEY_UNSORT_SIMD_TENSOR               10000000000333330010UL
- #define TILING_KEY_SORT_SIMD_SCALAR                 10000000000333331011UL
- #define TILING_KEY_SORT_SIMD_TENSOR                 10000000000333330011UL
+using namespace AscendC;
 
- using namespace ScatterAdd;
+#define TILING_KEY_0 0
+#define TILING_KEY_UNSORT_SIMT_ADDR32_SCALAR 10000000000333331000UL
+#define TILING_KEY_UNSORT_SIMT_ADDR32_TENSOR 10000000000333330000UL
+#define TILING_KEY_UNSORT_SIMT_ADDR64_SCALAR 10000000000333331100UL
+#define TILING_KEY_UNSORT_SIMT_ADDR64_TENSOR 10000000000333330100UL
+#define TILING_KEY_SORT_SIMT_ADDR32_SCALAR 10000000000333331001UL
+#define TILING_KEY_SORT_SIMT_ADDR32_TENSOR 10000000000333330001UL
+#define TILING_KEY_SORT_SIMT_ADDR64_SCALAR 10000000000333331101UL
+#define TILING_KEY_SORT_SIMT_ADDR64_TENSOR 10000000000333330101UL
+#define TILING_KEY_UNSORT_SIMD_SCALAR 10000000000333331010UL
+#define TILING_KEY_UNSORT_SIMD_TENSOR 10000000000333330010UL
+#define TILING_KEY_SORT_SIMD_SCALAR 10000000000333331011UL
+#define TILING_KEY_SORT_SIMD_TENSOR 10000000000333330011UL
 
- __aicore__ inline void ScatterAddUnsortSimtSubr32Scalar(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+using namespace ScatterAdd;
+
+__aicore__ inline void ScatterAddUnsortSimtSubr32Scalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                        GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (is_same<uint8_t, DTYPE_VAR>::value) {
         ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, uint32_t, uint32_t, true, SUB> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
-    } else if constexpr(is_same<int8_t, DTYPE_VAR>::value) {
+    } else if constexpr (is_same<int8_t, DTYPE_VAR>::value) {
         ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, int32_t, uint32_t, true, SUB> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
@@ -58,12 +58,13 @@
     }
 }
 
- __aicore__ inline void ScatterAddUnsortSimtSubr32Tensor(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddUnsortSimtSubr32Tensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                        GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if (tilingData.isDeterminTemplate) {
-        if constexpr (is_same<half, DTYPE_VAR>::value || is_same<float, DTYPE_VAR>::value || is_same<bfloat16_t, DTYPE_VAR>::value) {
+        if constexpr (is_same<half, DTYPE_VAR>::value || is_same<float, DTYPE_VAR>::value ||
+                      is_same<bfloat16_t, DTYPE_VAR>::value) {
             ScatterAddDeterministicImpl<DTYPE_VAR, DTYPE_INDICES, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
@@ -73,7 +74,7 @@
             ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, uint32_t, uint32_t, false, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
-        } else if constexpr(is_same<int8_t, DTYPE_VAR>::value) {
+        } else if constexpr (is_same<int8_t, DTYPE_VAR>::value) {
             ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, int32_t, uint32_t, false, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
@@ -85,15 +86,15 @@
     }
 }
 
- __aicore__ inline void ScatterAddUnsortSimtSubr64Scalar(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddUnsortSimtSubr64Scalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                        GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (is_same<uint8_t, DTYPE_VAR>::value) {
         ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, uint32_t, uint64_t, true, SUB> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
-    } else if constexpr(is_same<int8_t, DTYPE_VAR>::value) {
+    } else if constexpr (is_same<int8_t, DTYPE_VAR>::value) {
         ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, int32_t, uint64_t, true, SUB> op(tilingData, pipe);
         op.Init(var, indices, updates, userWs);
         op.Process();
@@ -104,12 +105,13 @@
     }
 }
 
- __aicore__ inline void ScatterAddUnsortSimtSubr64Tensor(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddUnsortSimtSubr64Tensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                        GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if (tilingData.isDeterminTemplate) {
-        if constexpr (is_same<float, DTYPE_VAR>::value || is_same<half, DTYPE_VAR>::value || is_same<bfloat16_t, DTYPE_VAR>::value) {
+        if constexpr (is_same<float, DTYPE_VAR>::value || is_same<half, DTYPE_VAR>::value ||
+                      is_same<bfloat16_t, DTYPE_VAR>::value) {
             ScatterAddDeterministicImpl<DTYPE_VAR, DTYPE_INDICES, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
@@ -119,7 +121,7 @@
             ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, uint32_t, uint64_t, false, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
-        } else if constexpr(is_same<int8_t, DTYPE_VAR>::value) {
+        } else if constexpr (is_same<int8_t, DTYPE_VAR>::value) {
             ScatterAddSimt<DTYPE_INDICES, DTYPE_VAR, int32_t, uint64_t, false, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
@@ -131,15 +133,16 @@
     }
 }
 
- __aicore__ inline void ScatterAddSortSimtSubr32Scalar(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddSortSimtSubr32Scalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                      GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (is_same<int8_t, DTYPE_VAR>::value || is_same<uint8_t, DTYPE_VAR>::value) {
         return;
     } else {
         if (tilingData.indicesCastMode == CAST_0) {
-            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint32_t, true, CAST_0, SUB> op(tilingData, pipe);
+            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint32_t, true, CAST_0, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_1) {
@@ -166,15 +169,16 @@
     }
 }
 
- __aicore__ inline void ScatterAddSortSimtSubr32Tensor(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddSortSimtSubr32Tensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                      GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (is_same<int8_t, DTYPE_VAR>::value || is_same<uint8_t, DTYPE_VAR>::value) {
         return;
     } else {
         if (tilingData.indicesCastMode == CAST_0) {
-            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint32_t, false, CAST_0, SUB> op(tilingData, pipe);
+            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint32_t, false, CAST_0, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_1) {
@@ -201,15 +205,16 @@
     }
 }
 
- __aicore__ inline void ScatterAddSortSimtSubr64Scalar(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddSortSimtSubr64Scalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                      GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (is_same<int8_t, DTYPE_VAR>::value || is_same<uint8_t, DTYPE_VAR>::value) {
         return;
     } else {
         if (tilingData.indicesCastMode == CAST_0) {
-            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint64_t, true, CAST_0, SUB> op(tilingData, pipe);
+            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint64_t, true, CAST_0, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_1) {
@@ -236,15 +241,16 @@
     }
 }
 
- __aicore__ inline void ScatterAddSortSimtSubr64Tensor(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddSortSimtSubr64Tensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                      GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (is_same<int8_t, DTYPE_VAR>::value || is_same<uint8_t, DTYPE_VAR>::value) {
         return;
     } else {
         if (tilingData.indicesCastMode == CAST_0) {
-            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint64_t, false, CAST_0, SUB> op(tilingData, pipe);
+            ScatterAddSimtSort<DTYPE_INDICES, DTYPE_VAR, DTYPE_INDICES, uint64_t, false, CAST_0, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_1) {
@@ -271,12 +277,13 @@
     }
 }
 
- __aicore__ inline void ScatterAddUnsortSimdScalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
-                                                                 GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddUnsortSimdScalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                  GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if (tilingData.isDeterminTemplate) {
-        if constexpr (is_same<bfloat16_t, DTYPE_VAR>::value || is_same<half, DTYPE_VAR>::value || is_same<float, DTYPE_VAR>::value) {
+        if constexpr (is_same<bfloat16_t, DTYPE_VAR>::value || is_same<half, DTYPE_VAR>::value ||
+                      is_same<float, DTYPE_VAR>::value) {
             ScatterAddDeterministicImpl<DTYPE_VAR, DTYPE_INDICES, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
@@ -294,12 +301,13 @@
     }
 }
 
- __aicore__ inline void ScatterAddUnsortSimdTensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
-                                                                 GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddUnsortSimdTensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                  GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if (tilingData.isDeterminTemplate) {
-        if constexpr (is_same<float, DTYPE_VAR>::value || is_same<half, DTYPE_VAR>::value || is_same<bfloat16_t, DTYPE_VAR>::value) {
+        if constexpr (is_same<float, DTYPE_VAR>::value || is_same<half, DTYPE_VAR>::value ||
+                      is_same<bfloat16_t, DTYPE_VAR>::value) {
             ScatterAddDeterministicImpl<DTYPE_VAR, DTYPE_INDICES, SUB> op(tilingData, pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
@@ -317,33 +325,39 @@
     }
 }
 
- __aicore__ inline void ScatterAddSortSimdScalar(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddSortSimdScalar(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (platform::IsSupportAtomicAddTypeSIMD<DTYPE_VAR>()) {
         if (tilingData.indicesCastMode == CAST_0) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, DTYPE_INDICES, true, CAST_0, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, DTYPE_INDICES, true, CAST_0, SUB> op(
+                tilingData, pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_1) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, true, CAST_1, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, true, CAST_1, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_2) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int32_t, true, CAST_2, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int32_t, true, CAST_2, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_3) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, true, CAST_3, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, true, CAST_3, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_4) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, true, CAST_4, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, true, CAST_4, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_5) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, true, CAST_5, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, true, CAST_5, SUB> op(tilingData,
+                                                                                                        pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         }
@@ -352,33 +366,39 @@
     }
 }
 
- __aicore__ inline void ScatterAddSortSimdTensor(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR userWs, GM_ADDR tiling, TPipe &pipe)
+__aicore__ inline void ScatterAddSortSimdTensor(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y,
+                                                GM_ADDR userWs, GM_ADDR tiling, TPipe& pipe)
 {
     GET_TILING_DATA(tilingData, tiling);
     if constexpr (platform::IsSupportAtomicAddTypeSIMD<DTYPE_VAR>()) {
         if (tilingData.indicesCastMode == CAST_0) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, DTYPE_INDICES, false, CAST_0, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, DTYPE_INDICES, false, CAST_0, SUB> op(
+                tilingData, pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_1) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, false, CAST_1, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, false, CAST_1, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_2) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int32_t, false, CAST_2, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int32_t, false, CAST_2, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_3) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, false, CAST_3, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, int16_t, false, CAST_3, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_4) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, false, CAST_4, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, false, CAST_4, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         } else if (tilingData.indicesCastMode == CAST_5) {
-            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, false, CAST_5, SUB> op(tilingData, pipe);
+            ScatterAddSIMDSortSupportAtomicAdd<DTYPE_VAR, DTYPE_INDICES, uint8_t, false, CAST_5, SUB> op(tilingData,
+                                                                                                         pipe);
             op.Init(var, indices, updates, y, userWs);
             op.Process();
         }

@@ -20,13 +20,13 @@ namespace optiling {
 const int32_t LAST_DIM_MAX = 8;
 
 struct GatherNdCompileInfo {
-  int32_t core_num;
-  int32_t ub_size;
-  int32_t l1_size;
-  int32_t params_dsize;
-  int32_t indices_dsize;
-  bool is_tik{false};
+    int32_t core_num;
+    int32_t ub_size;
+    int32_t l1_size;
+    int32_t params_dsize;
+    int32_t indices_dsize;
+    bool is_tik{false};
 };
 
-}  // namespace optiling
-#endif  // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHER_ND_TILING_RUNTIME2_H_ 
+} // namespace optiling
+#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_GATHER_ND_TILING_RUNTIME2_H_

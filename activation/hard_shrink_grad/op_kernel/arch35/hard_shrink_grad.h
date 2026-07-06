@@ -58,7 +58,7 @@ class HardShrinkGrad {
     using ComputeT = ComputeType<T>;
 
 public:
-    __aicore__ inline HardShrinkGrad() {};
+    __aicore__ inline HardShrinkGrad(){};
 
     __aicore__ inline void Init(GM_ADDR selfGrad, GM_ADDR self, GM_ADDR out,
                                 const HardShrinkGradTilingData* tilingData);
@@ -92,9 +92,8 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Init(
-    GM_ADDR selfGrad, GM_ADDR self, GM_ADDR out,
-    const HardShrinkGradTilingData* tilingData)
+__aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Init(GM_ADDR selfGrad, GM_ADDR self, GM_ADDR out,
+                                                            const HardShrinkGradTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -113,7 +112,8 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Init(
 
     // Mask buffer: ubLength/8 bytes, 32-byte aligned
     int64_t maskBytes = (ubLength_ / 8 + 31) & ~31;
-    if (maskBytes < 32) maskBytes = 32;
+    if (maskBytes < 32)
+        maskBytes = 32;
     pipe_.InitBuffer(maskBuf_, maskBytes);
 
     // bf16 path: extra fp32 intermediate buffers (NOT double buffered)
@@ -129,12 +129,10 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::CopyIn(int64_t progress, 
     LocalTensor<T> gradLocal = inputQueueGrad_.template AllocTensor<T>();
     LocalTensor<T> selfLocal = inputQueueSelf_.template AllocTensor<T>();
 
-    DataCopyPad(gradLocal, gmGrad_[progress * ubLength_],
-        {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
-        {false, 0, 0, 0});
-    DataCopyPad(selfLocal, gmSelf_[progress * ubLength_],
-        {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
-        {false, 0, 0, 0});
+    DataCopyPad(gradLocal, gmGrad_[progress * ubLength_], {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
+                {false, 0, 0, 0});
+    DataCopyPad(selfLocal, gmSelf_[progress * ubLength_], {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
+                {false, 0, 0, 0});
 
     inputQueueGrad_.EnQue(gradLocal);
     inputQueueSelf_.EnQue(selfLocal);
@@ -145,8 +143,7 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::CopyOut(int64_t progress,
 {
     LocalTensor<T> outLocal = outputQueue_.template DeQue<T>();
 
-    DataCopyPad(gmOut_[progress * ubLength_], outLocal,
-        {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0});
+    DataCopyPad(gmOut_[progress * ubLength_], outLocal, {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0});
 
     outputQueue_.FreeTensor(outLocal);
 }
@@ -180,8 +177,7 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Compute(int64_t currentNu
         // Step 4: Select - mask=1 (dead zone) picks 0, mask=0 picks gradFloat
         // Fill selfFloatLocal with 0 (reuse as zero tensor, no longer needed)
         Duplicate(selfFloatLocal, 0.0f, computeNum);
-        Select(gradFloatLocal, maskLocal, selfFloatLocal, gradFloatLocal,
-               SELMODE::VSEL_TENSOR_TENSOR_MODE, computeNum);
+        Select(gradFloatLocal, maskLocal, selfFloatLocal, gradFloatLocal, SELMODE::VSEL_TENSOR_TENSOR_MODE, computeNum);
 
         // Step 5: Cast float -> bf16
         Cast(outLocal, gradFloatLocal, RoundMode::CAST_RINT, computeNum);
@@ -198,8 +194,7 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Compute(int64_t currentNu
         // Step 3: Select - mask=1 (dead zone) picks 0, mask=0 picks grad
         // Fill selfLocal with 0 (reuse as zero tensor, no longer needed after Abs)
         Duplicate(selfLocal, static_cast<ComputeT>(0.0f), computeNum);
-        Select(outLocal, maskLocal, selfLocal, gradLocal,
-               SELMODE::VSEL_TENSOR_TENSOR_MODE, computeNum);
+        Select(outLocal, maskLocal, selfLocal, gradLocal, SELMODE::VSEL_TENSOR_TENSOR_MODE, computeNum);
     }
 
     outputQueue_.template EnQue<T>(outLocal);
@@ -210,7 +205,8 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Compute(int64_t currentNu
 template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::Process()
 {
-    if (blockLength_ <= 0) return;
+    if (blockLength_ <= 0)
+        return;
 
     int64_t loopCount = (blockLength_ + ubLength_ - 1) / ubLength_;
     for (int64_t i = 0; i < loopCount; i++) {

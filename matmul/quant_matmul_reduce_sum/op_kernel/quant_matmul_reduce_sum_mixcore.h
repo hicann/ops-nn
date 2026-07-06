@@ -27,8 +27,7 @@ constexpr uint32_t FP32_PER_REPEAT = 64;
 /** @brief intenal computation class
  */
 template <class mmType, bool sync = false>
-class QuantMatmulReduceSumQuantMixCoreCompute : public QbmmRSCompute<mmType, sync>
-{
+class QuantMatmulReduceSumQuantMixCoreCompute : public QbmmRSCompute<mmType, sync> {
 public:
     using AT = typename mmType::AT::T;
     using BT = typename mmType::BT::T;
@@ -43,10 +42,9 @@ public:
         : QbmmRSCompute<mmType, sync>(mm_)
     {}
 
-    __aicore__ inline void Init(
-        const QbmmRSComputeInitParams* __restrict initParams,
-        const QuantMatmulReduceSumParams* __restrict qbmmReduceSumParams, const TCubeTiling* __restrict mmTilingData,
-        TPipe* tPipe);
+    __aicore__ inline void Init(const QbmmRSComputeInitParams* __restrict initParams,
+                                const QuantMatmulReduceSumParams* __restrict qbmmReduceSumParams,
+                                const TCubeTiling* __restrict mmTilingData, TPipe* tPipe);
 
     __aicore__ inline void MMCompute(uint32_t batchIdx, MNConfig& mnConfig, uint32_t coreIdx);
 
@@ -63,22 +61,22 @@ private:
 
     __aicore__ inline void DataCopyScale(uint32_t curBaseN, uint32_t alignBaseN, uint64_t x2ScaleOffset);
 
-    __aicore__ inline void DataCopyPerTokenScaleAndBrcb(
-        MNConfig& mnConfig, uint32_t curBaseM, uint32_t alignBaseN, uint32_t offsetM);
+    __aicore__ inline void DataCopyPerTokenScaleAndBrcb(MNConfig& mnConfig, uint32_t curBaseM, uint32_t alignBaseN,
+                                                        uint32_t offsetM);
 
     __aicore__ inline void SetPerTokenQuantRefreshedBuffer(const MNConfig mnConfig);
 
-    __aicore__ inline void ActivationCompute(
-        uint32_t computeSize, LocalTensor<float> preResUb, LocalTensor<uint8_t> actTmpLocal);
+    __aicore__ inline void ActivationCompute(uint32_t computeSize, LocalTensor<float> preResUb,
+                                             LocalTensor<uint8_t> actTmpLocal);
 
-    __aicore__ inline void ComputeDequantAndActivate(
-        MNConfig& mnConfig, uint32_t curVecBaseM, uint32_t alignBaseN, uint32_t curVecBaseN, uint32_t offsetM);
+    __aicore__ inline void ComputeDequantAndActivate(MNConfig& mnConfig, uint32_t curVecBaseM, uint32_t alignBaseN,
+                                                     uint32_t curVecBaseN, uint32_t offsetM);
 
-    __aicore__ inline void DataCopyOut(
-        MNConfig& mnConfig, uint32_t curVecBaseM, uint32_t curVecBaseN, uint32_t alignBaseN, uint64_t outOffset);
+    __aicore__ inline void DataCopyOut(MNConfig& mnConfig, uint32_t curVecBaseM, uint32_t curVecBaseN,
+                                       uint32_t alignBaseN, uint64_t outOffset);
 
-    __aicore__ inline void VectorTilingCalc(
-        MNConfig& mnConfig, uint32_t& curCubeSingleN, uint32_t& curCubeSingleM, uint32_t& vecBaseN, uint32_t& vecBaseM);
+    __aicore__ inline void VectorTilingCalc(MNConfig& mnConfig, uint32_t& curCubeSingleN, uint32_t& curCubeSingleM,
+                                            uint32_t& vecBaseN, uint32_t& vecBaseM);
 
     GM_ADDR x1ScaleTensorPtr;
     GM_ADDR x2ScaleTensorPtr;
@@ -128,13 +126,14 @@ __aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::Po
 }
 
 template <typename mmType, bool sync>
-__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::MMCompute(
-    uint32_t batchIdx, MNConfig& mnConfig, uint32_t coreIdx)
+__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::MMCompute(uint32_t batchIdx,
+                                                                                        MNConfig& mnConfig,
+                                                                                        uint32_t coreIdx)
 {
     uint32_t tailN = mnConfig.nIdx * mnConfig.baseN;
     uint32_t curSingleN = mnConfig.nIdx < mnConfig.blockDimN - 1 ? mnConfig.baseN : mnConfig.n - tailN;
-    uint32_t curSingleM =
-        mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.baseM : mnConfig.m - mnConfig.mIdx * mnConfig.baseM;
+    uint32_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.baseM :
+                                                                   mnConfig.m - mnConfig.mIdx * mnConfig.baseM;
     uint64_t xOffset = mnConfig.mIdx * mnConfig.baseM * mnConfig.k;
     uint64_t outOffset = mnConfig.mIdx * mnConfig.baseM * mnConfig.n + tailN;
     // init global buffer
@@ -147,8 +146,8 @@ __aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::MM
         this->mm.SetTensorB(x2Gm, transposeX2);
         while (this->mm.Iterate()) {
             if (sequentialWrite) {
-                mnConfig.workSpaceOffset =
-                    mnConfig.baseN * mnConfig.baseM * (coreIdx + (cubeNum % PIPELINE_NUM) * this->coreNum);
+                mnConfig.workSpaceOffset = mnConfig.baseN * mnConfig.baseM *
+                                           (coreIdx + (cubeNum % PIPELINE_NUM) * this->coreNum);
             } else {
                 mnConfig.workSpaceOffset = outOffset + mnConfig.yBaseOffset;
             }
@@ -163,14 +162,14 @@ __aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::MM
 }
 
 template <typename mmType, bool sync>
-__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::VectorCompute(
-    uint32_t batchIdx, MNConfig& mnConfig)
+__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::VectorCompute(uint32_t batchIdx,
+                                                                                            MNConfig& mnConfig)
 {
     nOffset = 0;
     uint32_t tailN = mnConfig.nIdx * mnConfig.singleN;
     uint32_t curSingleN = mnConfig.nIdx < mnConfig.blockDimN - 1 ? mnConfig.singleN : mnConfig.n - tailN;
-    uint32_t curSingleM =
-        mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM : mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
+    uint32_t curSingleM = mnConfig.mIdx < mnConfig.blockDimM - 1 ? mnConfig.singleM :
+                                                                   mnConfig.m - mnConfig.mIdx * mnConfig.singleM;
     int nDim = Ceil(curSingleN, mnConfig.baseN);
     uint64_t outOffset = mnConfig.mIdx * mnConfig.singleM * mnConfig.n + tailN;
     if ASCEND_IS_AIV {
@@ -234,18 +233,18 @@ template <typename mmType, bool sync>
 __aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::VectorTilingCalc(
     MNConfig& mnConfig, uint32_t& curCubeSingleN, uint32_t& curCubeSingleM, uint32_t& vecBaseN, uint32_t& vecBaseM)
 {
-    curCubeSingleN =
-        mnConfig.nIdx == mnConfig.blockDimN - 1 ? mnConfig.n - mnConfig.nIdx * mnConfig.baseN : mnConfig.baseN;
-    curCubeSingleM =
-        mnConfig.mIdx == mnConfig.blockDimM - 1 ? mnConfig.m - mnConfig.mIdx * mnConfig.baseM : mnConfig.baseM;
+    curCubeSingleN = mnConfig.nIdx == mnConfig.blockDimN - 1 ? mnConfig.n - mnConfig.nIdx * mnConfig.baseN :
+                                                               mnConfig.baseN;
+    curCubeSingleM = mnConfig.mIdx == mnConfig.blockDimM - 1 ? mnConfig.m - mnConfig.mIdx * mnConfig.baseM :
+                                                               mnConfig.baseM;
     vecBaseN = mnConfig.baseN;
     vecBaseM = this->ubCalSize / AlignUp(vecBaseN, static_cast<uint32_t>(UB_BLOCK_DOUBLE_UNIT_SIZE / sizeof(int32_t)));
     vecBaseM = Min(vecBaseM, curCubeSingleM);
 }
 
 template <typename mmType, bool sync>
-__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::Dequant(
-    uint32_t batchIdx, MNConfig& mnConfig)
+__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::Dequant(uint32_t batchIdx,
+                                                                                      MNConfig& mnConfig)
 {
     uint32_t curCubeSingleN;
     uint32_t curCubeSingleM;
@@ -279,8 +278,8 @@ __aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::De
             DataCopyPad2D(mmOutLocal, mmOutGm[mmOutOffset], curVecBaseM, curVecBaseN, rowLength);
             vecInQueue.EnQue(mmOutLocal);
             ComputeDequantAndActivate(mnConfig, curVecBaseM, alignBaseN, curVecBaseN, offsetM);
-            uint64_t outOffset =
-                (mnConfig.mIdx * mnConfig.singleM + offsetM) * mnConfig.n + mnConfig.nIdx * mnConfig.singleN + offsetN;
+            uint64_t outOffset = (mnConfig.mIdx * mnConfig.singleM + offsetM) * mnConfig.n +
+                                 mnConfig.nIdx * mnConfig.singleN + offsetN;
             // use AtomicAdd
             AscendC::SetAtomicAdd<DTYPE_Y>();
             DataCopyOut(mnConfig, curVecBaseM, curVecBaseN, alignBaseN, outOffset);
@@ -344,8 +343,9 @@ __aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::Se
 }
 
 template <typename mmType, bool sync>
-__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::DataCopyScale(
-    uint32_t curBaseN, uint32_t alignBaseN, uint64_t x2ScaleOffset)
+__aicore__ inline void QuantMatmulReduceSumQuantMixCoreCompute<mmType, sync>::DataCopyScale(uint32_t curBaseN,
+                                                                                            uint32_t alignBaseN,
+                                                                                            uint64_t x2ScaleOffset)
 {
     // GM copy scale
     DataCopyPadExtParams<bfloat16_t> padParams;

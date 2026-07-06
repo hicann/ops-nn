@@ -31,19 +31,19 @@ namespace optiling {
 
 // ==================== CompileInfo（编译时存储芯片信息）====================
 struct SwigluMxQuantCompileInfo {
-    int64_t totalCoreNum{0};    // 总核数
-    int64_t ubSize{0};          // UB 大小
+    int64_t totalCoreNum{0}; // 总核数
+    int64_t ubSize{0};       // UB 大小
 };
 
 // ==================== 输入信息 ====================
 struct SwigluMxQuantInputInfo {
     ge::DataType xDtype{ge::DT_UNDEFINED};
-    int64_t dimNum{0};              // 输入维度数量
-    int64_t inputDim0{1};           // 合轴后的第0维
-    int64_t inputDim1{0};           // 合轴后的第1维
-    int64_t inputDim2{0};           // 合轴后的第2维
-    int64_t groupIndexType{0};      // 0=不存在, 1=int32, 2=int64
-    int64_t groupIndexNum{0};       // group_index 的第0维 shape，不存在时为 0
+    int64_t dimNum{0};         // 输入维度数量
+    int64_t inputDim0{1};      // 合轴后的第0维
+    int64_t inputDim1{0};      // 合轴后的第1维
+    int64_t inputDim2{0};      // 合轴后的第2维
+    int64_t groupIndexType{0}; // 0=不存在, 1=int32, 2=int64
+    int64_t groupIndexNum{0};  // group_index 的第0维 shape，不存在时为 0
 };
 
 // ==================== 输出信息 ====================
@@ -70,7 +70,7 @@ struct SwigluMxQuantAttrParam {
     int64_t scaleAlg{0};
     float maxDtypeValue{0.0f};
     int64_t groupMode{0};
-    int64_t groupIndexType{0};  // 0=不存在, 1=int32, 2=int64
+    int64_t groupIndexType{0}; // 0=不存在, 1=int32, 2=int64
 };
 
 // ==================== Tiling 计算结果 ====================
@@ -117,10 +117,9 @@ enum class RoundModeList {
 
 // ==================== SwigluMxQuantRegbaseTiling 类定义 ====================
 
-class SwigluMxQuantRegbaseTiling
-{
+class SwigluMxQuantRegbaseTiling {
 public:
-    explicit SwigluMxQuantRegbaseTiling(gert::TilingContext* context) : context_(context) {};
+    explicit SwigluMxQuantRegbaseTiling(gert::TilingContext* context) : context_(context){};
 
     ge::graphStatus GetNpuInfo();
     ge::graphStatus ParseAttrs();
@@ -129,8 +128,10 @@ public:
     ge::graphStatus PreProcess();
     ge::graphStatus CalculateTiling();
     ge::graphStatus ComputeTilingAxisNotLast();
-    ge::graphStatus ValidateYOutput(const gert::StorageShape* xShape, const gert::StorageShape* yShape, int64_t yDimNum);
-    ge::graphStatus CheckScaleShape(const gert::StorageShape* scaleShape, const gert::StorageShape* yShape, int64_t scaleDimNum);
+    ge::graphStatus ValidateYOutput(const gert::StorageShape* xShape, const gert::StorageShape* yShape,
+                                    int64_t yDimNum);
+    ge::graphStatus CheckScaleShape(const gert::StorageShape* scaleShape, const gert::StorageShape* yShape,
+                                    int64_t scaleDimNum);
     ge::graphStatus ComputeTilingAxisLast();
     void SetTilingKeyAndCore();
     ge::graphStatus FillTilingData();

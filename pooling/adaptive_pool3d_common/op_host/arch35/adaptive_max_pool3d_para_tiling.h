@@ -55,13 +55,10 @@ struct ComputeInfo {
     uint64_t maxInputSize{0};
 };
 
-class AdaptiveMaxPool3dParaPoolTiling : public AdaptivePool3dBaseTiling
-{
+class AdaptiveMaxPool3dParaPoolTiling : public AdaptivePool3dBaseTiling {
 public:
-    explicit AdaptiveMaxPool3dParaPoolTiling(gert::TilingContext* context) : AdaptivePool3dBaseTiling(context)
-    {}
-    ~AdaptiveMaxPool3dParaPoolTiling() override
-    {}
+    explicit AdaptiveMaxPool3dParaPoolTiling(gert::TilingContext* context) : AdaptivePool3dBaseTiling(context) {}
+    ~AdaptiveMaxPool3dParaPoolTiling() override {}
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
@@ -80,7 +77,6 @@ private:
     void PrintTilingData() const;
     ComputeInfo computeInfo_;
 };
-
 
 } // namespace optiling
 #endif // ADAPTIVE_MAX_POOL3D_PARA_TILING_H

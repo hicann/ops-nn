@@ -13,9 +13,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> FlatQuant(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, float clipRatio, int64_t dst_dtype,
-    float dstTypeMax, aclTensor* out, aclTensor* quantScale, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> FlatQuant(const aclTensor* x, const aclTensor* kroneckerP1,
+                                                   const aclTensor* kroneckerP2, float clipRatio, int64_t dst_dtype,
+                                                   float dstTypeMax, aclTensor* out, aclTensor* quantScale,
+                                                   aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_FLAT_QUANT_H_

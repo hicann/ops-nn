@@ -38,14 +38,14 @@ namespace ge {
 * @li single struct contains keys、counters、filter_flags and values, should be algin to 8 bytes.
 */
 REG_OP(EmbeddingHashTableImport)
-.INPUT(table_handles, TensorType({DT_INT64}))
-.INPUT(embedding_dims, TensorType({DT_INT64}))
-.INPUT(bucket_sizes, TensorType({DT_INT64}))
-.DYNAMIC_INPUT(keys, TensorType({DT_INT64}))
-.DYNAMIC_INPUT(counters, TensorType({DT_UINT64}))
-.DYNAMIC_INPUT(filter_flags, TensorType({DT_UINT8}))
-.DYNAMIC_INPUT(values, TensorType({DT_FLOAT}))
-.OP_END_FACTORY_REG(EmbeddingHashTableImport)
+    .INPUT(table_handles, TensorType({DT_INT64}))
+    .INPUT(embedding_dims, TensorType({DT_INT64}))
+    .INPUT(bucket_sizes, TensorType({DT_INT64}))
+    .DYNAMIC_INPUT(keys, TensorType({DT_INT64}))
+    .DYNAMIC_INPUT(counters, TensorType({DT_UINT64}))
+    .DYNAMIC_INPUT(filter_flags, TensorType({DT_UINT8}))
+    .DYNAMIC_INPUT(values, TensorType({DT_FLOAT}))
+    .OP_END_FACTORY_REG(EmbeddingHashTableImport)
 
 } // namespace ge
-#endif  // EMBEDDING_HASH_TABLE_IMPORT_PROTO_H_
+#endif // EMBEDDING_HASH_TABLE_IMPORT_PROTO_H_

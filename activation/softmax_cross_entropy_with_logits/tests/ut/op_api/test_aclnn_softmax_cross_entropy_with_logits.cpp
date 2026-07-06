@@ -40,7 +40,7 @@ TEST_F(l2_softmax_cross_entropy_with_logits_test, ascend910B_case_dtype_aicore_s
     auto loss_tensor_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto backprop_tensor_desc = TensorDesc({16, 4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnSoftmaxCrossEntropyWithLogits, INPUT(features_tensor_desc, labels_tensor_desc),
-                                          OUTPUT(loss_tensor_desc, backprop_tensor_desc));
+                        OUTPUT(loss_tensor_desc, backprop_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
@@ -54,9 +54,9 @@ TEST_F(l2_softmax_cross_entropy_with_logits_test, ascend910B_case_dtype_aicore_s
     auto loss_tensor_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
     auto backprop_tensor_desc = TensorDesc({16, 4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnSoftmaxCrossEntropyWithLogits, INPUT(features_tensor_desc, labels_tensor_desc),
-                                          OUTPUT(loss_tensor_desc, backprop_tensor_desc));
+                        OUTPUT(loss_tensor_desc, backprop_tensor_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
-}
+} // namespace

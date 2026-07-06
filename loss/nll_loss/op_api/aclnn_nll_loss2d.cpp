@@ -39,29 +39,27 @@ static const std::string REDUCTION_MEAN = "mean";
 static const std::string REDUCTION_SUM = "sum";
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 // 根据API定义，需要列出target所能支持的所有dtype
-static const std::initializer_list<op::DataType> TARGET_DTYPE_SUPPORT_LIST = {
-    DataType::DT_INT64, DataType::DT_UINT8, DataType::DT_INT32};
+static const std::initializer_list<op::DataType> TARGET_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT8,
+                                                                              DataType::DT_INT32};
 
 static const std::initializer_list<DataType>& GetSelfDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-        Ops::NN::AclnnUtil::IsRegbase()) {
+        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return ASCEND910_DTYPE_SUPPORT_LIST;
 }
 
-static inline bool CheckNotNull(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
-    const aclTensor* totalWeightOut)
+static inline bool CheckNotNull(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                                const aclTensor* out, const aclTensor* totalWeightOut)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(target, return false);
@@ -76,15 +74,13 @@ static void CheckFormat(const aclTensor* self)
 {
     // 检查self和other能否做数据类型推导
     if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGW(
-            "Format of self gets [%s], this format may lead to precision failure.",
-            op::ToString(self->GetStorageFormat()).GetString());
+        OP_LOGW("Format of self gets [%s], this format may lead to precision failure.",
+                op::ToString(self->GetStorageFormat()).GetString());
     }
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
-    const aclTensor* totalWeightOut)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                            const aclTensor* out, const aclTensor* totalWeightOut)
 {
     // 检查self的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, GetSelfDtypeSupportList(), return false);
@@ -115,24 +111,21 @@ static inline bool CheckReduction(int64_t reduction)
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
-    const aclTensor* totalWeightOut, int64_t reduction)
+static bool CheckShape(const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
+                       const aclTensor* totalWeightOut, int64_t reduction)
 {
     size_t selfDimNum = self->GetViewShape().GetDimNum();
-    OP_CHECK(
-        selfDimNum == 4, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor dim should be 4D, other dim not supported."),
-        return false);
+    OP_CHECK(selfDimNum == 4,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor dim should be 4D, other dim not supported."), return false);
 
     const auto nClasses = self->GetViewShape().GetDim(1);
-    OP_CHECK(
-        weight->GetViewShape().GetDim(0) == nClasses,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor x[1] should be equal to weight[0]."), return false);
+    OP_CHECK(weight->GetViewShape().GetDim(0) == nClasses,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor x[1] should be equal to weight[0]."), return false);
 
     size_t targetDimNum = target->GetViewShape().GetDimNum();
-    OP_CHECK(
-        targetDimNum == 3, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "target tensor dim should be 3D, other dim not supported."),
-        return false);
+    OP_CHECK(targetDimNum == 3,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "target tensor dim should be 3D, other dim not supported."),
+             return false);
 
     const auto input0 = self->GetViewShape().GetDim(0);
     const auto input2 = self->GetViewShape().GetDim(2);
@@ -142,39 +135,32 @@ static bool CheckShape(
     const auto target1 = target->GetViewShape().GetDim(1);
     const auto target2 = target->GetViewShape().GetDim(2);
 
-    OP_CHECK(
-        input0 == target0 && input2 == target1 && input3 == target2,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "size mismatch got input: [%s], target: [%s].",
-            op::ToString(self->GetViewShape()).GetString(), op::ToString(target->GetViewShape()).GetString()),
-        return false);
+    OP_CHECK(input0 == target0 && input2 == target1 && input3 == target2,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "size mismatch got input: [%s], target: [%s].",
+                     op::ToString(self->GetViewShape()).GetString(), op::ToString(target->GetViewShape()).GetString()),
+             return false);
 
     if (reduction == 0) {
         OP_CHECK_SHAPE_NOT_EQUAL(out, target, return false);
     } else {
-        OP_CHECK(
-            out->Numel() == 1,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Shape of out tensor should be [1], but current is %s.",
-                op::ToString(out->GetViewShape()).GetString()),
-            return false);
+        OP_CHECK(out->Numel() == 1,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of out tensor should be [1], but current is %s.",
+                         op::ToString(out->GetViewShape()).GetString()),
+                 return false);
     }
 
-    OP_CHECK(
-        totalWeightOut->Numel() == 1,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of totalWeightOut tensor should be [1], but current is %s.",
-            op::ToString(totalWeightOut->GetViewShape()).GetString()),
-        return false);
+    OP_CHECK(totalWeightOut->Numel() == 1,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of totalWeightOut tensor should be [1], but current is %s.",
+                     op::ToString(totalWeightOut->GetViewShape()).GetString()),
+             return false);
     return true;
 }
 
 /**
  * param类型检查
  */
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, int64_t reduction, const aclTensor* out,
-    const aclTensor* totalWeightOut)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                               int64_t reduction, const aclTensor* out, const aclTensor* totalWeightOut)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, target, weight, out, totalWeightOut), ACLNN_ERR_PARAM_NULLPTR);
@@ -219,8 +205,8 @@ static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus NLLLossEmptyTensorCompute(
-    int64_t reduction, aclTensor* out, aclTensor* totalWeightOut, aclOpExecutor* executor)
+static aclnnStatus NLLLossEmptyTensorCompute(int64_t reduction, aclTensor* out, aclTensor* totalWeightOut,
+                                             aclOpExecutor* executor)
 {
     aclnnStatus ret;
     if (reduction == 0) {
@@ -236,9 +222,9 @@ static aclnnStatus NLLLossEmptyTensorCompute(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, int64_t reduction, int64_t ignoreIndex,
-    aclTensor* out, aclTensor* totalWeightOut, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                                           int64_t reduction, int64_t ignoreIndex, aclTensor* out,
+                                           aclTensor* totalWeightOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnNLLLoss2d, DFX_IN(self, target, weight, reduction, ignoreIndex), DFX_OUT(out, totalWeightOut));
 
@@ -300,24 +286,24 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(
             selfPermute = selfFormat;
         } else {
             const int64_t permuteList[] = {0, 2, 3, 1};
-            selfPermute = l0op::Transpose(
-                selfFormat, uniqueExecutor.get()->AllocIntArray(permuteList, PERMUTE_DIM4), uniqueExecutor.get());
+            selfPermute = l0op::Transpose(selfFormat, uniqueExecutor.get()->AllocIntArray(permuteList, PERMUTE_DIM4),
+                                          uniqueExecutor.get());
             CHECK_RET(selfPermute != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
         // [reshape] 维度转换为2维
         const int64_t reshapeList[] = {-1, self->GetViewShape().GetDim(1)};
-        auto selfReshape =
-            l0op::Reshape(selfPermute, uniqueExecutor.get()->AllocIntArray(reshapeList, 2), uniqueExecutor.get());
+        auto selfReshape = l0op::Reshape(selfPermute, uniqueExecutor.get()->AllocIntArray(reshapeList, 2),
+                                         uniqueExecutor.get());
         CHECK_RET(selfReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // [reshape] 完成维度降维为一维
         const int64_t tarReshapeList[] = {-1};
-        auto targetReshape = l0op::Reshape(
-            targetContiguous, uniqueExecutor.get()->AllocIntArray(tarReshapeList, 1), uniqueExecutor.get());
+        auto targetReshape = l0op::Reshape(targetContiguous, uniqueExecutor.get()->AllocIntArray(tarReshapeList, 1),
+                                           uniqueExecutor.get());
 
         // [Cast] 进行类型转换
-        targetPromoteType =
-            target->GetDataType() == op::DataType::DT_INT64 ? op::DataType::DT_INT64 : op::DataType::DT_INT32;
+        targetPromoteType = target->GetDataType() == op::DataType::DT_INT64 ? op::DataType::DT_INT64 :
+                                                                              op::DataType::DT_INT32;
 
         auto targetCasted = l0op::Cast(targetReshape, targetPromoteType, uniqueExecutor.get());
         CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -333,11 +319,11 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(
             loss = lossOut[0];
         } else {
             // 将輸出self按照需要重写排列
-            const int64_t outSquence[] = {
-                target->GetViewShape().GetDim(0), target->GetViewShape().GetDim(1), target->GetViewShape().GetDim(2)};
+            const int64_t outSquence[] = {target->GetViewShape().GetDim(0), target->GetViewShape().GetDim(1),
+                                          target->GetViewShape().GetDim(2)};
             size_t dims = target->GetViewShape().GetDimNum();
-            loss =
-                l0op::Reshape(lossOut[0], uniqueExecutor.get()->AllocIntArray(outSquence, dims), uniqueExecutor.get());
+            loss = l0op::Reshape(lossOut[0], uniqueExecutor.get()->AllocIntArray(outSquence, dims),
+                                 uniqueExecutor.get());
             CHECK_RET(loss != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     } else {

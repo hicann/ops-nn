@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -85,8 +85,8 @@ static bool IsregBaseAiCoreSupport(const aclTensor* logProbs)
 }
 
 // 根据size判断算子是否支持走aicore CTCLossV2
-static bool IsV2AiCoreSupport(
-    const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets, const aclTensor* inputLengthsTensor)
+static bool IsV2AiCoreSupport(const aclTensor* logProbs, const aclTensor* logAlpha, const aclTensor* targets,
+                              const aclTensor* inputLengthsTensor)
 {
     auto logAlphaShape = logAlpha->GetViewShape();
     int64_t maxLabel = (logAlphaShape.GetDim(LABEL_INDEX) - 1) / COEF;
@@ -143,14 +143,14 @@ static bool IsV3AiCoreSupport(const aclTensor* logProbs, const aclTensor* logAlp
 }
 
 // AICORE算子kernel
-const std::tuple<aclTensor*, aclTensor*> CtcLossAiCore(
-    const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, aclTensor* negLogLikelihood, aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> CtcLossAiCore(const aclTensor* logProbs, const aclTensor* targets,
+                                                       const aclTensor* inputLengthsTensor,
+                                                       const aclTensor* targetLengthsTensor,
+                                                       aclTensor* negLogLikelihood, aclTensor* logAlpha, int64_t blank,
+                                                       bool zeroInfinity, aclOpExecutor* executor)
 {
-    L0_DFX(
-        CtcLossAiCore, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
-        zeroInfinity);
+    L0_DFX(CtcLossAiCore, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
+           zeroInfinity);
 
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
@@ -164,14 +164,14 @@ const std::tuple<aclTensor*, aclTensor*> CtcLossAiCore(
 }
 
 // CTCLossV3 AICORE算子kernel
-const std::tuple<aclTensor*, aclTensor*> CtcLossV3AiCore(
-    const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, aclTensor* negLogLikelihood, aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> CtcLossV3AiCore(const aclTensor* logProbs, const aclTensor* targets,
+                                                         const aclTensor* inputLengthsTensor,
+                                                         const aclTensor* targetLengthsTensor,
+                                                         aclTensor* negLogLikelihood, aclTensor* logAlpha,
+                                                         int64_t blank, bool zeroInfinity, aclOpExecutor* executor)
 {
-    L0_DFX(
-        CtcLossV3AiCore, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
-        zeroInfinity);
+    L0_DFX(CtcLossV3AiCore, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha,
+           blank, zeroInfinity);
 
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
@@ -185,21 +185,21 @@ const std::tuple<aclTensor*, aclTensor*> CtcLossV3AiCore(
 }
 
 // AICPU算子kernel
-const std::tuple<aclTensor*, aclTensor*> CtcLossAiCpu(
-    const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, aclTensor* negLogLikelihood, aclTensor* logAlpha, int64_t blank,
-    bool zeroInfinity, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> CtcLossAiCpu(const aclTensor* logProbs, const aclTensor* targets,
+                                                      const aclTensor* inputLengthsTensor,
+                                                      const aclTensor* targetLengthsTensor, aclTensor* negLogLikelihood,
+                                                      aclTensor* logAlpha, int64_t blank, bool zeroInfinity,
+                                                      aclOpExecutor* executor)
 {
-    L0_DFX(
-        CtcLossAiCpu, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
-        zeroInfinity);
+    L0_DFX(CtcLossAiCpu, logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank,
+           zeroInfinity);
 
     static internal::AicpuTaskSpace space("CTCLossV2");
     // 使用框架宏ADD_TO_LAUNCHER_LIST_AICPU，将算子加入任务队列
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        CTCLossV2, OP_ATTR_NAMES({"blank", "reduction", "zero_infinity"}),
-        OP_INPUT(logProbs, targets, inputLengthsTensor, targetLengthsTensor), OP_OUTPUT(negLogLikelihood, logAlpha),
-        OP_ATTR(blank, REDUCTION_MEAN, zeroInfinity));
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(CTCLossV2, OP_ATTR_NAMES({"blank", "reduction", "zero_infinity"}),
+                                          OP_INPUT(logProbs, targets, inputLengthsTensor, targetLengthsTensor),
+                                          OP_OUTPUT(negLogLikelihood, logAlpha),
+                                          OP_ATTR(blank, REDUCTION_MEAN, zeroInfinity));
     if (ret != ACL_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "CtcLossAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
@@ -228,10 +228,10 @@ const std::tuple<op::Shape, op::Shape> CtcLossNpuOutputShape(const aclTensor* lo
     return std::tie(negLogLikelihoodShape, logAlphaShape);
 }
 
-const std::tuple<aclTensor*, aclTensor*> CtcLossV2(
-    const aclTensor* logProbs, const aclTensor* targets, const aclTensor* inputLengthsTensor,
-    const aclTensor* targetLengthsTensor, int64_t blank, bool zeroInfinity, int64_t maxTargetLengths,
-    aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> CtcLossV2(const aclTensor* logProbs, const aclTensor* targets,
+                                                   const aclTensor* inputLengthsTensor,
+                                                   const aclTensor* targetLengthsTensor, int64_t blank,
+                                                   bool zeroInfinity, int64_t maxTargetLengths, aclOpExecutor* executor)
 {
     // 计算输出Tensor的Shape
     auto outputShapeTuple = CtcLossNpuOutputShape(logProbs, maxTargetLengths);
@@ -239,25 +239,21 @@ const std::tuple<aclTensor*, aclTensor*> CtcLossV2(
     op::Shape logAlphaShape = std::get<1>(outputShapeTuple);
 
     // 申请输出tensor的空间
-    auto negLogLikelihood =
-        executor->AllocTensor(negLogLikelihoodShape, logProbs->GetDataType(), op::Format::FORMAT_ND);
+    auto negLogLikelihood = executor->AllocTensor(negLogLikelihoodShape, logProbs->GetDataType(),
+                                                  op::Format::FORMAT_ND);
     auto logAlpha = executor->AllocTensor(logAlphaShape, logProbs->GetDataType(), op::Format::FORMAT_ND);
     if (IsregBaseAiCoreSupport(logProbs) && !targets->IsEmpty()) {
-        return CtcLossAiCore(
-            logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank, zeroInfinity,
-            executor);
+        return CtcLossAiCore(logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha,
+                             blank, zeroInfinity, executor);
     } else if (IsV3AiCoreSupport(logProbs, logAlpha, targets) && !targets->IsEmpty()) {
-        return CtcLossV3AiCore(
-            logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank, zeroInfinity,
-            executor);
+        return CtcLossV3AiCore(logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha,
+                               blank, zeroInfinity, executor);
     } else if (IsV2AiCoreSupport(logProbs, logAlpha, targets, inputLengthsTensor) && !targets->IsEmpty()) {
-        return CtcLossAiCore(
-            logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank, zeroInfinity,
-            executor);
+        return CtcLossAiCore(logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha,
+                             blank, zeroInfinity, executor);
     } else {
-        return CtcLossAiCpu(
-            logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha, blank, zeroInfinity,
-            executor);
+        return CtcLossAiCpu(logProbs, targets, inputLengthsTensor, targetLengthsTensor, negLogLikelihood, logAlpha,
+                            blank, zeroInfinity, executor);
     }
 }
 } // namespace l0op

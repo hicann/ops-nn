@@ -20,8 +20,9 @@ const ge::AscendString CONV_BACKPROP_FILTER_V2_PASS = "Conv3DBackpropFilterToV2F
 
 class __attribute__((visibility("default"))) Conv3DBackpropFilterToV2FusionPass : public ConvBackpropFusionBasePass {
 public:
-    explicit Conv3DBackpropFilterToV2FusionPass(const std::vector<ge::AscendString>& opTypes) 
-        : ConvBackpropFusionBasePass(opTypes) {}
+    explicit Conv3DBackpropFilterToV2FusionPass(const std::vector<ge::AscendString>& opTypes)
+        : ConvBackpropFusionBasePass(opTypes)
+    {}
 
 protected:
     ge::AscendString GetNodeType() const override;
@@ -33,11 +34,9 @@ private:
     bool GetOutputChannelDims(int64_t& cin, int64_t& cout) const;
     bool GetInputDepthDim(int64_t& di) const;
     bool IsShapeNeedTranspose() const;
-    bool CreateOutputWithTranspose(
-        ge::es::EsGraphBuilder& builder, 
-        const ge::es::EsTensorHolder& conv3dBackpropFilterV2, 
-        ge::GNode* conv3dBackpropFilterV2Node,
-        ge::es::EsTensorHolder& transOutput);
+    bool CreateOutputWithTranspose(ge::es::EsGraphBuilder& builder,
+                                   const ge::es::EsTensorHolder& conv3dBackpropFilterV2,
+                                   ge::GNode* conv3dBackpropFilterV2Node, ge::es::EsTensorHolder& transOutput);
 };
 
 } // namespace ops

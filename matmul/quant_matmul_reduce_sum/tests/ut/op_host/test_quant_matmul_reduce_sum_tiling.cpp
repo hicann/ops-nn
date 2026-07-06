@@ -28,16 +28,11 @@
 using namespace std;
 using namespace ge;
 
-
 class QuantMatmulReduceSumTilingTest : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "QuantMatmulReduceSum SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "QuantMatmulReduceSum SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "QuantMatmulReduceSum TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "QuantMatmulReduceSum TearDown" << std::endl; }
 };
 
 struct QuantMatmulReduceSumTilingTestData {
@@ -85,7 +80,7 @@ static void TestInputFunc(struct QuantMatmulReduceSumTilingTestData testCase, ui
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
 
-    struct QuantMatmulReduceSumCompileInfo{
+    struct QuantMatmulReduceSumCompileInfo {
     } compileInfo;
 
     auto param = gert::TilingData::CreateCap(12016);
@@ -95,24 +90,23 @@ static void TestInputFunc(struct QuantMatmulReduceSumTilingTestData testCase, ui
 
     gert::StorageShape dimsShape = {{1}, {1}};
     gert::StorageShape biasShape = {{}, {}};
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(6, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1})
-            .InputShapes({&(testCase.x1Shape), &(testCase.x2Shape), &dimsShape, &biasShape,
-                          &(testCase.x1ScaleShape), &(testCase.x2ScaleShape)})
-            .OutputShapes({&(testCase.outShape)})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-            .NodeInputTd(0, testCase.x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, testCase.x2Dtype, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
-            .NodeInputTd(4, testCase.x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, testCase.x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, testCase.outDType, ge::FORMAT_ND, ge::FORMAT_ND)
-            .TilingData(param.get())
-            .Workspace(wsSize)
-            .SetOpType(opType)
-            .Build();
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&(testCase.x1Shape), &(testCase.x2Shape), &dimsShape, &biasShape,
+                                    &(testCase.x1ScaleShape), &(testCase.x2ScaleShape)})
+                      .OutputShapes({&(testCase.outShape)})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, testCase.x1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, testCase.x2Dtype, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ)
+                      .NodeInputTd(4, testCase.x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, testCase.x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, testCase.outDType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .SetOpType(opType)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -130,40 +124,40 @@ static void TestInputFunc(struct QuantMatmulReduceSumTilingTestData testCase, ui
 
 TEST_F(QuantMatmulReduceSumTilingTest, obj_cases_01)
 {
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulReduceSum"), nullptr);
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulReduceSum"), nullptr);
 
-  struct QuantMatmulReduceSumTilingTestData testCase = {
-      {{8, 2048, 1024}, {8, 2048, 1024}},
-      {{8, 1024, 7168}, {8, 1024, 7168}},
-      {{8, 2048}, {8, 2048}},
-      {{7168}, {7168}},
-      {{2048, 7168}, {2048, 7168}},
-      ge::DT_INT8,
-      ge::DT_INT8,
-      ge::DT_FLOAT,
-      ge::DT_BF16,
-      ge::DT_BF16,
-  };
+    struct QuantMatmulReduceSumTilingTestData testCase = {
+        {{8, 2048, 1024}, {8, 2048, 1024}},
+        {{8, 1024, 7168}, {8, 1024, 7168}},
+        {{8, 2048}, {8, 2048}},
+        {{7168}, {7168}},
+        {{2048, 7168}, {2048, 7168}},
+        ge::DT_INT8,
+        ge::DT_INT8,
+        ge::DT_FLOAT,
+        ge::DT_BF16,
+        ge::DT_BF16,
+    };
 
-  TestInputFunc(testCase, 0);
+    TestInputFunc(testCase, 0);
 }
 
 TEST_F(QuantMatmulReduceSumTilingTest, obj_cases_02)
 {
-  ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulReduceSum"), nullptr);
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantMatmulReduceSum"), nullptr);
 
-  struct QuantMatmulReduceSumTilingTestData testCase = {
-      {{8, 2048, 2048}, {8, 2048, 2048}},
-      {{8, 2048, 7168}, {8, 2048, 7168}},
-      {{8, 2048}, {8, 2048}},
-      {{7168}, {7168}},
-      {{2048, 7168}, {2048, 7168}},
-      ge::DT_INT8,
-      ge::DT_INT8,
-      ge::DT_FLOAT,
-      ge::DT_BF16,
-      ge::DT_BF16,
-  };
+    struct QuantMatmulReduceSumTilingTestData testCase = {
+        {{8, 2048, 2048}, {8, 2048, 2048}},
+        {{8, 2048, 7168}, {8, 2048, 7168}},
+        {{8, 2048}, {8, 2048}},
+        {{7168}, {7168}},
+        {{2048, 7168}, {2048, 7168}},
+        ge::DT_INT8,
+        ge::DT_INT8,
+        ge::DT_FLOAT,
+        ge::DT_BF16,
+        ge::DT_BF16,
+    };
 
-  TestInputFunc(testCase, 1);
+    TestInputFunc(testCase, 1);
 }

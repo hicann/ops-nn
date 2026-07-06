@@ -35,9 +35,9 @@ static void InferShapeMaskNHWC(const gert::Shape* in_shape, bool bint8, gert::Sh
     constexpr size_t c_dim = 3;
     for (size_t i = 0; i < SHAPE_4D_SIZE - 1; i++) {
         if (1 == i) {
-            out_shape->AppendDim(
-                bint8 ? ((in_shape->GetDim(c_dim) + kBlockDimMap[0].first - 1) / kBlockDimMap[0].first) :
-                        ((in_shape->GetDim(c_dim) + kBlockDimMap[1].first - 1) / kBlockDimMap[1].first));
+            out_shape->AppendDim(bint8 ?
+                                     ((in_shape->GetDim(c_dim) + kBlockDimMap[0].first - 1) / kBlockDimMap[0].first) :
+                                     ((in_shape->GetDim(c_dim) + kBlockDimMap[1].first - 1) / kBlockDimMap[1].first));
         }
         out_shape->AppendDim(in_shape->GetDim(i));
     }
@@ -49,9 +49,9 @@ static void InferShapeMaskNCHW(const gert::Shape* in_shape, bool bint8, gert::Sh
     constexpr size_t c_dim = 1;
     for (size_t i = 0; i < SHAPE_4D_SIZE; i++) {
         if (c_dim == i) {
-            out_shape->AppendDim(
-                bint8 ? ((in_shape->GetDim(c_dim) + kBlockDimMap[0].first - 1) / kBlockDimMap[0].first) :
-                        ((in_shape->GetDim(c_dim) + kBlockDimMap[1].first - 1) / kBlockDimMap[1].first));
+            out_shape->AppendDim(bint8 ?
+                                     ((in_shape->GetDim(c_dim) + kBlockDimMap[0].first - 1) / kBlockDimMap[0].first) :
+                                     ((in_shape->GetDim(c_dim) + kBlockDimMap[1].first - 1) / kBlockDimMap[1].first));
         } else {
             out_shape->AppendDim(in_shape->GetDim(i));
         }
@@ -69,9 +69,9 @@ static void InferShapeMaskHWCN(const gert::Shape* in_shape, bool bint8, gert::Sh
         if (NUM_ZERO == i) {
             out_shape->AppendDim(in_shape->GetDim(n_dim));
         } else if (NUM_ONE == i) {
-            out_shape->AppendDim(
-                bint8 ? ((in_shape->GetDim(c_dim) + kBlockDimMap[0].first - 1) / kBlockDimMap[0].first) :
-                        ((in_shape->GetDim(c_dim) + kBlockDimMap[1].first - 1) / kBlockDimMap[1].first));
+            out_shape->AppendDim(bint8 ?
+                                     ((in_shape->GetDim(c_dim) + kBlockDimMap[0].first - 1) / kBlockDimMap[0].first) :
+                                     ((in_shape->GetDim(c_dim) + kBlockDimMap[1].first - 1) / kBlockDimMap[1].first));
         } else if (NUM_TWO == i) {
             out_shape->AppendDim(in_shape->GetDim(h_dim));
         } else if (NUM_THREE == i) {
@@ -92,13 +92,13 @@ static ge::graphStatus CheckShape(const gert::InferShapeContext* context, const 
     auto dimNum = origin_shape->GetDimNum();
     if (dimNum >= 1) {
         if (origin_shape->GetDim(dimNum - 1) % LAST_DIM_EIGHT != 0) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
-                Ops::Base::ToString(*origin_shape), "Shape[dimNum-1] of this parameter must be exactly divided by 8");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::ToString(*origin_shape),
+                                                  "Shape[dimNum-1] of this parameter must be exactly divided by 8");
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(dimNum), "The shape dim of x must be > 0");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(dimNum),
+                                                 "The shape dim of x must be > 0");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -151,19 +151,17 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
     }
     OP_CHECK_IF(
         origin_shape->GetDimNum() != SHAPE_4D_SIZE,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
-            std::to_string(origin_shape->GetDimNum()), "The shape dim of x must be 4"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(origin_shape->GetDimNum()),
+                                                 "The shape dim of x must be 4"),
         return GRAPH_FAILED);
     mask_shape->SetDimNum(0);
-    auto it = std::find_if(
-        kFuncMap.begin(), kFuncMap.end(),
-        [&origin_format](const std::pair<ge::Format, InferShapeMaskFunc>& item) -> bool {
-            return item.first == origin_format;
-        });
+    auto it = std::find_if(kFuncMap.begin(), kFuncMap.end(),
+                           [&origin_format](const std::pair<ge::Format, InferShapeMaskFunc>& item) -> bool {
+                               return item.first == origin_format;
+                           });
     OP_CHECK_IF(
         it == kFuncMap.end(),
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
-            Ops::Base::ToString(origin_format), "NHWC, NCHW, HWCN"),
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x", Ops::Base::ToString(origin_format), "NHWC, NCHW, HWCN"),
         return GRAPH_FAILED);
     it->second(origin_shape, bint8, mask_shape);
 

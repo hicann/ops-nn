@@ -17,21 +17,13 @@
 
 #include "opdev/op_executor.h"
 
-namespace l0op{
-const std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*> Gru(
-    const aclTensor* input, const aclTensor* weightInput, const aclTensor* weightHidden,
-    const aclTensor* biasInput, const aclTensor* biasHidden,
-    const aclTensor* seqLengthOptional,
-    const aclTensor* initHOptional,
-    const char* direction,
-    bool train,
-    aclTensor* yOut,
-    aclTensor* outputHOut,
-    aclTensor* rOut,
-    aclTensor* zOut,
-    aclTensor* nOut,
-    aclTensor* nHOut,
-    aclOpExecutor* executor);
+namespace l0op {
+const std::tuple<const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*, const aclTensor*,
+                 const aclTensor*>
+Gru(const aclTensor* input, const aclTensor* weightInput, const aclTensor* weightHidden, const aclTensor* biasInput,
+    const aclTensor* biasHidden, const aclTensor* seqLengthOptional, const aclTensor* initHOptional,
+    const char* direction, bool train, aclTensor* yOut, aclTensor* outputHOut, aclTensor* rOut, aclTensor* zOut,
+    aclTensor* nOut, aclTensor* nHOut, aclOpExecutor* executor);
 }
 
-#endif//OP_API_INC_LEVEL0_OP_GRU_H_
+#endif // OP_API_INC_LEVEL0_OP_GRU_H_

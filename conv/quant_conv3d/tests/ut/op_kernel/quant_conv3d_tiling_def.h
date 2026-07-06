@@ -35,7 +35,7 @@ inline void InitQuantConv3dTilingData(uint8_t* tiling, Conv3DV2TilingDataV2* con
 } // namespace NN
 } // namespace Ops
 
-#define GET_TILING_DATA(tilingData, tilingArg) \
+#define GET_TILING_DATA(tilingData, tilingArg)          \
     Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData; \
     Ops::NN::Conv3dV2::InitQuantConv3dTilingData(tilingArg, &tilingData)
 

@@ -14,46 +14,30 @@
  */
 
 #include "register/op_def_registry.h"
- 
+
 namespace ops {
-static const std::vector<ge::DataType> dataType = {
-    ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT   
-};
+static const std::vector<ge::DataType> dataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
 
-static const std::vector<ge::Format> dataFormat = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
 class KlDivTargetLossGrad : public OpDef {
-    public:
-        explicit KlDivTargetLossGrad(const char* name) : OpDef(name)
-        {
-            this->Input("grad")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Input("input")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Input("target")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Output("y")
-                .ParamType(REQUIRED)
-                .DataType(dataType)
-                .Format(dataFormat);
-            this->Attr("reduction").AttrType(OPTIONAL).String("mean");
-            this->Attr("log_target").AttrType(OPTIONAL).Bool(false);
+public:
+    explicit KlDivTargetLossGrad(const char* name) : OpDef(name)
+    {
+        this->Input("grad").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Input("input").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Input("target").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Output("y").ParamType(REQUIRED).DataType(dataType).Format(dataFormat);
+        this->Attr("reduction").AttrType(OPTIONAL).String("mean");
+        this->Attr("log_target").AttrType(OPTIONAL).Bool(false);
 
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .ExtendCfgInfo("opFile.value", "kl_div_target_loss_grad_apt");
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "kl_div_target_loss_grad_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
 };
- 
+
 OP_ADD(KlDivTargetLossGrad);
-}  // namespace ops
+} // namespace ops

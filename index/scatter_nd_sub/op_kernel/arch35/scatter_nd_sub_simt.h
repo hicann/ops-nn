@@ -42,14 +42,11 @@ static constexpr int32_t UB_ALIGN_COUNT = ((UB_PARAM_COUNT * 8 + 31) / 32) * 32 
 
 // Phase 1: Copy var -> output
 template <typename T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void OpScatterNdSubPhase1Copy(
-    int64_t totalVarElements,
-    __gm__ T* varIn,
-    __gm__ T* output)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpScatterNdSubPhase1Copy(int64_t totalVarElements,
+                                                                                          __gm__ T* varIn,
+                                                                                          __gm__ T* output)
 {
-    for (int64_t i = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-         i < totalVarElements;
+    for (int64_t i = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x; i < totalVarElements;
          i += static_cast<int64_t>(blockDim.x) * gridDim.x) {
         output[i] = varIn[i];
     }
@@ -57,18 +54,15 @@ inline void OpScatterNdSubPhase1Copy(
 
 // Phase 2: Scatter subtract (sequential slices to avoid race conditions with duplicate indices)
 template <typename T, typename IndexT>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM)
-inline void OpScatterNdSubPhase2Scatter(
-    int64_t totalVarElements,
-    int64_t numSlices,
-    __gm__ IndexT* indices,
-    __gm__ T* updates,
-    __gm__ T* output,
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpScatterNdSubPhase2Scatter(
+    int64_t totalVarElements, int64_t numSlices, __gm__ IndexT* indices, __gm__ T* updates, __gm__ T* output,
     __ubuf__ int64_t* tilingUb)
 {
-    if (numSlices == 0) return;
+    if (numSlices == 0)
+        return;
     // Only block 0 processes scatter to avoid cross-block race conditions
-    if (blockIdx.x != 0) return;
+    if (blockIdx.x != 0)
+        return;
 
     const int64_t indicesLastDim = tilingUb[MAX_RANK];
     const int64_t sliceSize = tilingUb[MAX_RANK + 1];
@@ -84,9 +78,7 @@ inline void OpScatterNdSubPhase2Scatter(
         if (flatOffset >= 0 && flatOffset + sliceSize <= totalVarElements) {
             int64_t updatesBase = s * sliceSize;
             // Parallel element-wise subtraction within this slice
-            for (int64_t e = static_cast<int64_t>(threadIdx.x);
-                 e < sliceSize;
-                 e += static_cast<int64_t>(blockDim.x)) {
+            for (int64_t e = static_cast<int64_t>(threadIdx.x); e < sliceSize; e += static_cast<int64_t>(blockDim.x)) {
                 output[flatOffset + e] = output[flatOffset + e] - updates[updatesBase + e];
             }
         }
@@ -96,11 +88,11 @@ inline void OpScatterNdSubPhase2Scatter(
 }
 
 template <typename T, typename IndexT>
-__aicore__ inline void Process(
-    GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-    GM_ADDR output, GM_ADDR workspace, const ScatterNdSubTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR workspace,
+                               const ScatterNdSubTilingData* tilingData)
 {
-    if (tilingData->totalVarElements == 0) return;
+    if (tilingData->totalVarElements == 0)
+        return;
 
     __gm__ T* varGm = (__gm__ T*)var;
     __gm__ IndexT* indicesGm = (__gm__ IndexT*)indices;
@@ -108,10 +100,7 @@ __aicore__ inline void Process(
     __gm__ T* outputGm = (__gm__ T*)output;
 
     // Phase 1: Copy var -> output
-    asc_vf_call<OpScatterNdSubPhase1Copy<T>>(
-        dim3(THREAD_NUM),
-        tilingData->totalVarElements,
-        varGm, outputGm);
+    asc_vf_call<OpScatterNdSubPhase1Copy<T>>(dim3(THREAD_NUM), tilingData->totalVarElements, varGm, outputGm);
 
     // Cross-core sync: ensure Phase 1 writes visible to all cores
     SyncAll();
@@ -130,14 +119,10 @@ __aicore__ inline void Process(
     DataSyncBarrier<MemDsbT::UB>();
 
     // Phase 2: Scatter subtract
-    asc_vf_call<OpScatterNdSubPhase2Scatter<T, IndexT>>(
-        dim3(THREAD_NUM),
-        tilingData->totalVarElements,
-        tilingData->numSlices,
-        indicesGm, updatesGm, outputGm,
-        ubPtr);
+    asc_vf_call<OpScatterNdSubPhase2Scatter<T, IndexT>>(dim3(THREAD_NUM), tilingData->totalVarElements,
+                                                        tilingData->numSlices, indicesGm, updatesGm, outputGm, ubPtr);
 }
 
-}  // namespace NsScatterNdSub
+} // namespace NsScatterNdSub
 
-#endif  // SCATTER_ND_SUB_SIMT_H_
+#endif // SCATTER_ND_SUB_SIMT_H_

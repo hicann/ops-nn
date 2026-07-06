@@ -35,4 +35,3 @@ private:
 };
 } // namespace transpose_batch_mat_mul_advanced
 } // namespace optiling
-

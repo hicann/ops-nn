@@ -8,15 +8,13 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #ifndef OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_BATCH_MATMUL_V4_H
 #define OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_BATCH_MATMUL_V4_H
 
 #include "opdev/op_executor.h"
 #include "opdev/make_op_executor.h"
 
-namespace l0op
-{
+namespace l0op {
 const aclTensor* QuantBatchMatmulV4(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
                                     const aclTensor* x1Scale, const aclTensor* x2Scale, const aclTensor* yScale,
                                     const aclTensor* x1Offset, const aclTensor* x2Offset, const aclTensor* yOffset,
@@ -24,4 +22,4 @@ const aclTensor* QuantBatchMatmulV4(const aclTensor* x1, const aclTensor* x2, co
                                     bool transposeX2, uint64_t groupSize, aclOpExecutor* executor);
 }
 
-#endif  // OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_BATCH_MATMUL_V4_H
+#endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_QUANT_BATCH_MATMUL_V4_H

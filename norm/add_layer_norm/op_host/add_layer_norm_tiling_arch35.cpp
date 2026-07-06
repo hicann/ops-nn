@@ -56,9 +56,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::GetPlatformInfo()
         vecRegSize_ = Ops::Base::GetVRegSize(context_);
     } else {
         auto compileInfo = reinterpret_cast<const AddLayerNormCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(
-            compileInfo == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(compileInfo == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+                    return ge::GRAPH_FAILED);
         ubSize_ = compileInfo->ubSize_;
         aivCoreNum_ = compileInfo->aivCoreNum_;
         blockSize_ = compileInfo->blockSize_;
@@ -78,10 +77,8 @@ const gert::Shape& AddLayerNormRegbaseTiling::EnsureNotScalar(const gert::Shape&
 
 ge::graphStatus AddLayerNormRegbaseTiling::CheckDimNum(gert::Shape& shape) const
 {
-    OP_CHECK_IF(
-        shape.GetDimNum() > SHAPE_MAX_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Dim num should be no greater than 8."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shape.GetDimNum() > SHAPE_MAX_DIM_NUM,
+                OP_LOGE(context_->GetNodeName(), "Dim num should be no greater than 8."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -89,31 +86,26 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckDimNum(gert::Shape& shape) const
 ge::graphStatus AddLayerNormRegbaseTiling::CheckShapeAllPositive(gert::Shape& shape)
 {
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape.GetDim(i) <= 0,
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i, shape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape.GetDim(i) <= 0,
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of input should be positive, but actual %ld.", i,
+                            shape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus AddLayerNormRegbaseTiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
 {
-    OP_CHECK_IF(
-        shape0.GetDimNum() != shape1.GetDimNum(),
-        OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
-            shape1.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shape0.GetDimNum() != shape1.GetDimNum(),
+                OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
+                        shape1.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < shape0.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            shape0.GetDim(i) != shape1.GetDim(i),
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, shape0.GetDim(i),
-                shape1.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape0.GetDim(i) != shape1.GetDim(i),
+                    OP_LOGE(context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, shape0.GetDim(i),
+                            shape1.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -123,7 +115,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcRowsAndCols(gert::Shape& shapeX, 
     rows_ = 1;
     cols_ = 1;
     if (shapeX.GetDimNum() < shapeGamma.GetDimNum()) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x1/x2 and gamma/beta",
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x1/x2 and gamma/beta",
             (std::to_string(shapeX.GetDimNum()) + " and " + std::to_string(shapeGamma.GetDimNum())).c_str(),
             "The shape dims of x1 and x2 should be no less than the shape dims of gamma and beta");
         return ge::GRAPH_FAILED;
@@ -134,10 +127,12 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcRowsAndCols(gert::Shape& shapeX, 
             rows_ *= shapeX.GetDim(i);
         } else {
             if (shapeX.GetDim(i) != shapeGamma.GetDim(i - shapeDiff)) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "gamma/beta and x1/x2",
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "gamma/beta and x1/x2",
                     (Ops::Base::ToString(shapeGamma) + " and " + Ops::Base::ToString(shapeX)).c_str(),
                     ("The " + std::to_string(i - shapeDiff) + " dim of gamma and beta should be equal to the " +
-                     std::to_string(i) + " dim of x1 and x2").c_str());
+                     std::to_string(i) + " dim of x1 and x2")
+                        .c_str());
                 return ge::GRAPH_FAILED;
             }
             cols_ *= shapeX.GetDim(i);
@@ -146,27 +141,29 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcRowsAndCols(gert::Shape& shapeX, 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AddLayerNormRegbaseTiling::BiasShapeProcess(
-    gert::Shape& shapeX, gert::Shape& shapeGamma, gert::Shape& shapeBias)
+ge::graphStatus AddLayerNormRegbaseTiling::BiasShapeProcess(gert::Shape& shapeX, gert::Shape& shapeGamma,
+                                                            gert::Shape& shapeBias)
 {
     if (CheckShapeAllPositive(shapeBias) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
-            Ops::Base::ToString(shapeBias).c_str(), "bias cannot be an empty tensor");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias", Ops::Base::ToString(shapeBias).c_str(),
+                                              "bias cannot be an empty tensor");
         return ge::GRAPH_FAILED;
     }
     if (CheckDimNum(shapeBias) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "bias",
-            std::to_string(shapeBias.GetDimNum()).c_str(), "less than or equal to 8");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "bias", std::to_string(shapeBias.GetDimNum()).c_str(),
+                                     "less than or equal to 8");
         return ge::GRAPH_FAILED;
     }
     if (shapeBias.GetDimNum() < shapeGamma.GetDimNum()) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "bias and gamma/beta",
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "bias and gamma/beta",
             (std::to_string(shapeBias.GetDimNum()) + " and " + std::to_string(shapeGamma.GetDimNum())).c_str(),
             "The shape dim of bias should be no less than the shape dims of gamma and beta");
         return ge::GRAPH_FAILED;
     }
     if (shapeBias.GetDimNum() > shapeX.GetDimNum()) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "bias and x1/x2",
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "bias and x1/x2",
             (std::to_string(shapeBias.GetDimNum()) + " and " + std::to_string(shapeX.GetDimNum())).c_str(),
             "The shape dim of bias should be no greater than the shape dims of x1 and x2");
         return ge::GRAPH_FAILED;
@@ -174,10 +171,12 @@ ge::graphStatus AddLayerNormRegbaseTiling::BiasShapeProcess(
     size_t biasGammaShapeDiff = shapeBias.GetDimNum() - shapeGamma.GetDimNum();
     for (size_t i = 0; i < shapeGamma.GetDimNum(); i++) {
         if (shapeGamma.GetDim(i) != shapeBias.GetDim(i + biasGammaShapeDiff)) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "bias and gamma",
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "bias and gamma",
                 (Ops::Base::ToString(shapeBias) + " and " + Ops::Base::ToString(shapeGamma)).c_str(),
                 ("The " + std::to_string(i + biasGammaShapeDiff) + " dim of bias should be equal to the " +
-                 std::to_string(i) + " dim of gamma").c_str());
+                 std::to_string(i) + " dim of gamma")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -189,10 +188,12 @@ ge::graphStatus AddLayerNormRegbaseTiling::BiasShapeProcess(
     if (biasSize == rows_ * cols_ && shapeX.GetDimNum() == shapeBias.GetDimNum()) {
         for (size_t i = 0; i < shapeBias.GetDimNum(); i++) {
             if (shapeBias.GetDim(i) != shapeX.GetDim(i)) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "bias and x1",
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "bias and x1",
                     (Ops::Base::ToString(shapeBias) + " and " + Ops::Base::ToString(shapeX)).c_str(),
-                    ("The " + std::to_string(i) + " dim of bias should be equal to the " +
-                     std::to_string(i) + " dim of x1").c_str());
+                    ("The " + std::to_string(i) + " dim of bias should be equal to the " + std::to_string(i) +
+                     " dim of x1")
+                        .c_str());
                 return ge::GRAPH_FAILED;
             }
         }
@@ -202,9 +203,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::BiasShapeProcess(
     } else if (biasSize == cols_) {
         biasType_ = BIAS::BIAS_BRC;
     } else {
-        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "bias",
-            std::to_string(biasSize).c_str(),
-            "equal to shape size of x1 and x2 or shape size of gamma");
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "bias", std::to_string(biasSize).c_str(),
+                                      "equal to shape size of x1 and x2 or shape size of gamma");
         return ge::GRAPH_FAILED;
     }
 
@@ -218,8 +218,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape0 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1",
-            Ops::Base::ToString(storageShape0).c_str(), "x1 cannot be an empty tensor");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1", Ops::Base::ToString(storageShape0).c_str(),
+                                              "x1 cannot be an empty tensor");
         return ge::GRAPH_FAILED;
     }
 
@@ -228,23 +228,23 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape1 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2",
-            Ops::Base::ToString(storageShape1).c_str(), "x2 cannot be an empty tensor");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2", Ops::Base::ToString(storageShape1).c_str(),
+                                              "x2 cannot be an empty tensor");
         return ge::GRAPH_FAILED;
     }
 
     // check shapes of input0 and input1 are equal
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1 and x2",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x1 and x2",
             (Ops::Base::ToString(storageShape0) + " and " + Ops::Base::ToString(storageShape1)).c_str(),
             "The shapes of x1 and x2 should be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (CheckDimNum(storageShape0) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x1",
-            std::to_string(storageShape0.GetDimNum()).c_str(),
-            "less than or equal to 8");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x1", std::to_string(storageShape0.GetDimNum()).c_str(),
+                                     "less than or equal to 8");
         return ge::GRAPH_FAILED;
     }
 
@@ -254,7 +254,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
     auto storageShape2 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma",
-            Ops::Base::ToString(storageShape2).c_str(), "gamma cannot be an empty tensor");
+                                              Ops::Base::ToString(storageShape2).c_str(),
+                                              "gamma cannot be an empty tensor");
         return ge::GRAPH_FAILED;
     }
 
@@ -264,13 +265,15 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
     auto storageShape3 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "beta",
-            Ops::Base::ToString(storageShape3).c_str(), "beta cannot be an empty tensor");
+                                              Ops::Base::ToString(storageShape3).c_str(),
+                                              "beta cannot be an empty tensor");
         return ge::GRAPH_FAILED;
     }
 
     // check shapes of input2 and input3 are equal
     if (CheckShapesEqual(storageShape2, storageShape3) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "gamma and beta",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "gamma and beta",
             (Ops::Base::ToString(storageShape2) + " and " + Ops::Base::ToString(storageShape3)).c_str(),
             "The shapes of gamma and beta should be the same");
         return ge::GRAPH_FAILED;
@@ -295,11 +298,12 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AddLayerNormRegbaseTiling::MeanRstdShapeProcess(
-    gert::Shape& shapeX, gert::Shape& shapeGamma, gert::Shape& shapeMeanRstd) const
+ge::graphStatus AddLayerNormRegbaseTiling::MeanRstdShapeProcess(gert::Shape& shapeX, gert::Shape& shapeGamma,
+                                                                gert::Shape& shapeMeanRstd) const
 {
     if (shapeX.GetDimNum() != shapeMeanRstd.GetDimNum()) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "mean/rstd and x1",
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "mean/rstd and x1",
             (std::to_string(shapeMeanRstd.GetDimNum()) + " and " + std::to_string(shapeX.GetDimNum())).c_str(),
             "The shape dims of mean and rstd should be equal to the shape dim of x1");
         return ge::GRAPH_FAILED;
@@ -307,16 +311,18 @@ ge::graphStatus AddLayerNormRegbaseTiling::MeanRstdShapeProcess(
     for (size_t i = 0; i < shapeX.GetDimNum(); i++) {
         if (i < shapeX.GetDimNum() - shapeGamma.GetDimNum()) {
             if (shapeX.GetDim(i) != shapeMeanRstd.GetDim(i)) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "mean/rstd and x1",
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "mean/rstd and x1",
                     (Ops::Base::ToString(shapeMeanRstd) + " and " + Ops::Base::ToString(shapeX)).c_str(),
-                    ("The " + std::to_string(i) + " dim of mean and rstd should be equal to the " +
-                     std::to_string(i) + " dim of x1").c_str());
+                    ("The " + std::to_string(i) + " dim of mean and rstd should be equal to the " + std::to_string(i) +
+                     " dim of x1")
+                        .c_str());
                 return ge::GRAPH_FAILED;
             }
         } else {
             if (shapeMeanRstd.GetDim(i) != 1) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "mean/rstd",
-                    Ops::Base::ToString(shapeMeanRstd).c_str(),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "mean/rstd", Ops::Base::ToString(shapeMeanRstd).c_str(),
                     ("The " + std::to_string(i) + " dim of mean and rstd should be equal to 1").c_str());
                 return ge::GRAPH_FAILED;
             }
@@ -336,7 +342,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto yShape = EnsureNotScalar(outputShape->GetStorageShape());
     if (CheckShapesEqual(x1Shape, yShape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1 and y",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x1 and y",
             (Ops::Base::ToString(x1Shape) + " and " + Ops::Base::ToString(yShape)).c_str(),
             "The shapes of x1 and y should be the same");
         return ge::GRAPH_FAILED;
@@ -349,7 +356,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto rstdShape = EnsureNotScalar(outputShape->GetStorageShape());
     if (CheckShapesEqual(meanShape, rstdShape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "mean and rstd",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "mean and rstd",
             (Ops::Base::ToString(meanShape) + " and " + Ops::Base::ToString(rstdShape)).c_str(),
             "The shapes of mean and rstd should be the same");
         return ge::GRAPH_FAILED;
@@ -367,7 +375,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
     auto xShape = EnsureNotScalar(outputShape->GetStorageShape());
     if (CheckShapesEqual(x1Shape, xShape) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1 and x",
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x1 and x",
             (Ops::Base::ToString(x1Shape) + " and " + Ops::Base::ToString(xShape)).c_str(),
             "The shapes of x1 and x should be the same");
         return ge::GRAPH_FAILED;
@@ -385,8 +394,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsDtype()
         // check dtype
         auto dtype = inputDesc->GetDataType();
         if (dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(),
-                kInputNames[i], Ops::Base::ToString(dtype).c_str(), "float16, bfloat16 or float32.");
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), kInputNames[i], Ops::Base::ToString(dtype).c_str(),
+                                      "float16, bfloat16 or float32.");
             return ge::GRAPH_FAILED;
         }
     }
@@ -438,9 +447,9 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsDtype()
         if (biasType_ == BIAS::BIAS_NONE) {
             for (const auto& supported : supportedDtypes) {
                 if (std::make_tuple(std::get<TUPLE_INDEX_0>(dtypeTuple), std::get<TUPLE_INDEX_1>(dtypeTuple),
-                    std::get<TUPLE_INDEX_2>(dtypeTuple), std::get<TUPLE_INDEX_3>(dtypeTuple)) ==
+                                    std::get<TUPLE_INDEX_2>(dtypeTuple), std::get<TUPLE_INDEX_3>(dtypeTuple)) ==
                     std::make_tuple(std::get<TUPLE_INDEX_0>(supported), std::get<TUPLE_INDEX_1>(supported),
-                    std::get<TUPLE_INDEX_2>(supported), std::get<TUPLE_INDEX_3>(supported))) {
+                                    std::get<TUPLE_INDEX_2>(supported), std::get<TUPLE_INDEX_3>(supported))) {
                     return true;
                 }
             }
@@ -482,19 +491,21 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsDtype()
     if (!isSupported(inputDtypes)) {
         if (biasType_ == BIAS::BIAS_NONE) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x1, x2, gamma and beta",
-                (Ops::Base::ToString(std::get<TUPLE_INDEX_0>(inputDtypes)) + ", " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_1>(inputDtypes)) + ", " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_2>(inputDtypes)) + " and " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_3>(inputDtypes))).c_str(),
-                "Input dtypes are not supported");  
+                                                   (Ops::Base::ToString(std::get<TUPLE_INDEX_0>(inputDtypes)) + ", " +
+                                                    Ops::Base::ToString(std::get<TUPLE_INDEX_1>(inputDtypes)) + ", " +
+                                                    Ops::Base::ToString(std::get<TUPLE_INDEX_2>(inputDtypes)) +
+                                                    " and " + Ops::Base::ToString(std::get<TUPLE_INDEX_3>(inputDtypes)))
+                                                       .c_str(),
+                                                   "Input dtypes are not supported");
         } else {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x1, x2, gamma, beta and bias",
-                (Ops::Base::ToString(std::get<TUPLE_INDEX_0>(inputDtypes)) + ", " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_1>(inputDtypes)) + ", " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_2>(inputDtypes)) + ", " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_3>(inputDtypes)) + " and " +
-                 Ops::Base::ToString(std::get<TUPLE_INDEX_4>(inputDtypes))).c_str(),
-                "Input dtypes are not supported");
+                                                   (Ops::Base::ToString(std::get<TUPLE_INDEX_0>(inputDtypes)) + ", " +
+                                                    Ops::Base::ToString(std::get<TUPLE_INDEX_1>(inputDtypes)) + ", " +
+                                                    Ops::Base::ToString(std::get<TUPLE_INDEX_2>(inputDtypes)) + ", " +
+                                                    Ops::Base::ToString(std::get<TUPLE_INDEX_3>(inputDtypes)) +
+                                                    " and " + Ops::Base::ToString(std::get<TUPLE_INDEX_4>(inputDtypes)))
+                                                       .c_str(),
+                                                   "Input dtypes are not supported");
         }
         return ge::GRAPH_FAILED;
     }
@@ -520,15 +531,18 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsDtype() const
 
     if (x1Dtype == x2Dtype) {
         if (yDtype != x1Dtype || xDtype != x1Dtype) {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y, x and x1",
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "y, x and x1",
                 (Ops::Base::ToString(yDtype) + ", " + Ops::Base::ToString(xDtype) + " and " +
-                 Ops::Base::ToString(x1Dtype)).c_str(),
+                 Ops::Base::ToString(x1Dtype))
+                    .c_str(),
                 "The dtypes of y and x should be equal to the dtypes of x1 and x2 when x1 and x2 has same dtype");
             return ge::GRAPH_FAILED;
         }
     } else {
         if (yDtype != ge::DT_FLOAT || xDtype != ge::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and x",
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "y and x",
                 (Ops::Base::ToString(yDtype) + " and " + Ops::Base::ToString(xDtype)).c_str(),
                 "The dtypes of y and x should be float32 when x1 and x2 has different dtype");
             return ge::GRAPH_FAILED;
@@ -541,7 +555,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsDtype() const
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     auto rstdDtype = outputDesc->GetDataType();
     if (meanDtype != ge::DT_FLOAT || rstdDtype != ge::DT_FLOAT) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "mean and rstd",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "mean and rstd",
             (Ops::Base::ToString(meanDtype) + " and " + Ops::Base::ToString(rstdDtype)).c_str(),
             "The dtypes of mean and rstd should be float32");
         return ge::GRAPH_FAILED;
@@ -588,15 +603,9 @@ ge::graphStatus AddLayerNormRegbaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AddLayerNormRegbaseTiling::IsCapable()
-{
-    return true;
-}
+bool AddLayerNormRegbaseTiling::IsCapable() { return true; }
 
-uint64_t AddLayerNormRegbaseTiling::GetTilingKey() const
-{
-    return tilingKey_;
-}
+uint64_t AddLayerNormRegbaseTiling::GetTilingKey() const { return tilingKey_; }
 
 ge::graphStatus AddLayerNormRegbaseTiling::PostTiling()
 {
@@ -609,10 +618,7 @@ ge::graphStatus AddLayerNormRegbaseTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AddLayerNormRegbaseTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AddLayerNormRegbaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus AddLayerNormRegbaseTiling::GetWorkspaceSize()
 {
@@ -720,15 +726,14 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
         isWelford_ = false;
     } else {
         // welford
-        colsPerLoop_ =
-            (ubSize_ - UB_RESERVED_SIZE - meanUbSizeForOneRow - rstdUbSizeForOneRow) * vlFp32_ /
-            (((inputNum + OUTPUT_NUM) * dataTypeSize * bufferNum + BUFFER_NUM * sizeof(float)) * vlFp32_ + 1);
+        colsPerLoop_ = (ubSize_ - UB_RESERVED_SIZE - meanUbSizeForOneRow - rstdUbSizeForOneRow) * vlFp32_ /
+                       (((inputNum + OUTPUT_NUM) * dataTypeSize * bufferNum + BUFFER_NUM * sizeof(float)) * vlFp32_ +
+                        1);
         if (dataTypeSize > 0 && blockSize_ > 0) {
             colsPerLoop_ = colsPerLoop_ * dataTypeSize / blockSize_ * blockSize_ / dataTypeSize;
             colsPerLoop_ = colsPerLoop_ / (blockSize_ / TWO) * (blockSize_ / TWO);
         } else {
-            OP_LOGE(
-                context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%ld) is zero", dataTypeSize, blockSize_);
+            OP_LOGE(context_->GetNodeName(), "dataTypeSize(%d) or blockSize(%ld) is zero", dataTypeSize, blockSize_);
             return ge::GRAPH_FAILED;
         }
         rowsPerLoop_ = 1;
@@ -755,9 +760,8 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
         }
         binaryAddLastNum_ = vlFp32_;
     }
-    OP_LOGW(
-        "ComputeBinaryAddVars", "binaryAddNum:%ld, binaryAddK:%ld, binaryAddLastNum:%ld", binaryAddNum_, binaryAddK_,
-        binaryAddLastNum_);
+    OP_LOGW("ComputeBinaryAddVars", "binaryAddNum:%ld, binaryAddK:%ld, binaryAddLastNum:%ld", binaryAddNum_,
+            binaryAddK_, binaryAddLastNum_);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -766,19 +770,15 @@ void AddLayerNormRegbaseTiling::LogTilingResult()
 {
     OP_LOGD(OP_NAME, "eps: %f", epsilon_);
     OP_LOGD(OP_NAME, "rows: %ld, cols: %ld", rows_, cols_);
-    OP_LOGD(
-        OP_NAME, "ubSize: %ld, blockSize: %d, vecRegSize: %d, vlFp32: %d, aivCoreNum: %d", ubSize_, blockSize_,
-        vecRegSize_, vlFp32_, aivCoreNum_);
-    OP_LOGD(
-        OP_NAME, "usedCoreNum: %d, tailCoreNum: %d, tailCoreStartIndex: %d", usedCoreNum_, tailCoreNum_,
-        tailCoreStartIndex_);
-    OP_LOGD(
-        OP_NAME, "rowsPerCore: %ld, rowsPerTailCore: %ld, rowsPerLoop: %ld", rowsPerCore_, rowsPerTailCore_,
-        rowsPerLoop_);
+    OP_LOGD(OP_NAME, "ubSize: %ld, blockSize: %d, vecRegSize: %d, vlFp32: %d, aivCoreNum: %d", ubSize_, blockSize_,
+            vecRegSize_, vlFp32_, aivCoreNum_);
+    OP_LOGD(OP_NAME, "usedCoreNum: %d, tailCoreNum: %d, tailCoreStartIndex: %d", usedCoreNum_, tailCoreNum_,
+            tailCoreStartIndex_);
+    OP_LOGD(OP_NAME, "rowsPerCore: %ld, rowsPerTailCore: %ld, rowsPerLoop: %ld", rowsPerCore_, rowsPerTailCore_,
+            rowsPerLoop_);
     OP_LOGD(OP_NAME, "colsPerLoop: %ld, colsLoopCount: %ld, colsTail: %ld", colsPerLoop_, colsLoopCount_, colsTail_);
-    OP_LOGD(
-        OP_NAME, "binaryAddNum: %ld, binaryAddK: %ld, binaryAddLastNum: %ld", binaryAddNum_, binaryAddK_,
-        binaryAddLastNum_);
+    OP_LOGD(OP_NAME, "binaryAddNum: %ld, binaryAddK: %ld, binaryAddLastNum: %ld", binaryAddNum_, binaryAddK_,
+            binaryAddLastNum_);
     OP_LOGD(OP_NAME, "tilingKey: %d", tilingKey_);
 }
 

@@ -18,7 +18,7 @@
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
 
 namespace ops {
-class ForeachLog1p: public OpDef {
+class ForeachLog1p : public OpDef {
 public:
     explicit ForeachLog1p(const char* name) : OpDef(name)
     {

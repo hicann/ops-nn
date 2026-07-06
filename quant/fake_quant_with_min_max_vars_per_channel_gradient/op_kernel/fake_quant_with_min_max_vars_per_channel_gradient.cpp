@@ -20,8 +20,8 @@
 #endif
 
 extern "C" __global__ __aicore__ void fake_quant_with_min_max_vars_per_channel_gradient(
-    GM_ADDR gradients, GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR backprops_wrt_x,
-    GM_ADDR backprops_wrt_min, GM_ADDR backprops_wrt_max, GM_ADDR workspace, GM_ADDR tiling)
+    GM_ADDR gradients, GM_ADDR x, GM_ADDR min, GM_ADDR max, GM_ADDR backprops_wrt_x, GM_ADDR backprops_wrt_min,
+    GM_ADDR backprops_wrt_max, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     GET_TILING_DATA(tilingData, tiling);
@@ -29,8 +29,7 @@ extern "C" __global__ __aicore__ void fake_quant_with_min_max_vars_per_channel_g
 #if (__NPU_ARCH__ == 3510)
     if (TILING_KEY_IS(1001)) {
         FakeQuantWMMVPCG::Kernel<float> op;
-        op.Init(gradients, x, min, max, backprops_wrt_x, backprops_wrt_min, backprops_wrt_max,
-                workspace, tilingData);
+        op.Init(gradients, x, min, max, backprops_wrt_x, backprops_wrt_min, backprops_wrt_max, workspace, tilingData);
         op.Process();
     }
 #endif

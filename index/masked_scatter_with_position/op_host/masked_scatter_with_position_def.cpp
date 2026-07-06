@@ -15,25 +15,21 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> SUPPORT_DTYPE = {
-    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8, ge::DT_INT8,
-    ge::DT_INT16, ge::DT_INT32, ge::DT_INT64, ge::DT_BOOL, ge::DT_BF16
-};
+static const std::vector<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8,
+                                                        ge::DT_INT8,  ge::DT_INT16,   ge::DT_INT32,  ge::DT_INT64,
+                                                        ge::DT_BOOL,  ge::DT_BF16};
 
-static const std::vector<ge::DataType> MASK_SUPPORT_DTYPE = {
-    ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL,
-    ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL
-};
+static const std::vector<ge::DataType> MASK_SUPPORT_DTYPE = {ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL,
+                                                             ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL, ge::DT_BOOL,
+                                                             ge::DT_BOOL, ge::DT_BOOL};
 
-static const std::vector<ge::DataType> POSITION_SUPPORT_DTYPE = {
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
-    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64
-};
+static const std::vector<ge::DataType> POSITION_SUPPORT_DTYPE = {ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                                                                 ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+                                                                 ge::DT_INT64, ge::DT_INT64};
 
-static const std::vector<ge::Format> SUPPORT_FORMAT = {
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
-};
+static const std::vector<ge::Format> SUPPORT_FORMAT = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                       ge::FORMAT_ND, ge::FORMAT_ND};
 class MaskedScatterWithPosition : public OpDef {
 public:
     explicit MaskedScatterWithPosition(const char* name) : OpDef(name)

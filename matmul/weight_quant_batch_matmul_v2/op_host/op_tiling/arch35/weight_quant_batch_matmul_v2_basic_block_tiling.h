@@ -98,13 +98,9 @@ struct BasicBlockParam {
     BasicBlock basicBlock;
 };
 
-class WeightQuantBatchMatmulV2BasicBlockTiling
-{
+class WeightQuantBatchMatmulV2BasicBlockTiling {
 public:
-    WeightQuantBatchMatmulV2BasicBlockTiling()
-    {
-        Init();
-    }
+    WeightQuantBatchMatmulV2BasicBlockTiling() { Init(); }
     ~WeightQuantBatchMatmulV2BasicBlockTiling() = default;
 
     void Init();
@@ -118,10 +114,7 @@ public:
     double GetMte2BW(int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const;
     double GetMte2BWRatio(int64_t baseM, int64_t baseN, int64_t mDim, int64_t nDim) const;
     bool GetBasicBlockTiling();
-    const BasicBlockParam& GetTilingResult() const
-    {
-        return basicBlockParam_;
-    }
+    const BasicBlockParam& GetTilingResult() const { return basicBlockParam_; }
 
 protected:
     void InitBasicBlockParam();
@@ -191,13 +184,10 @@ protected:
                               std::min(param.l1Param.stepN * param.basicBlock.baseN, param.singleN);
     }
 
-    static int64_t GetBFullInnerSize(const BasicBlockParam& param)
-    {
-        return param.transB ? param.kSize : param.nSize;
-    }
+    static int64_t GetBFullInnerSize(const BasicBlockParam& param) { return param.transB ? param.kSize : param.nSize; }
 
-    static bool PreferFullloadKInPergroupNKLessCacheline(
-        const BasicBlockParam& param1, const BasicBlockParam& param2, bool& result)
+    static bool PreferFullloadKInPergroupNKLessCacheline(const BasicBlockParam& param1, const BasicBlockParam& param2,
+                                                         bool& result)
     {
         // Early return not weightND pergroup nk
         if (param1.weightNzFlag || param1.groupSize <= 0 || !param1.transB) {
@@ -277,10 +267,10 @@ protected:
             return param1.basicBlock.mte2BWRatio > param2.basicBlock.mte2BWRatio;
         }
         // 6）ND及NZ场景，此处希望单次AL1载入量越大越好
-        int64_t al1LoadSize1 =
-            param1.l1Param.stepM * param1.basicBlock.baseM * param1.l1Param.stepKa * param1.basicBlock.baseK;
-        int64_t al1LoadSize2 =
-            param2.l1Param.stepM * param2.basicBlock.baseM * param2.l1Param.stepKa * param2.basicBlock.baseK;
+        int64_t al1LoadSize1 = param1.l1Param.stepM * param1.basicBlock.baseM * param1.l1Param.stepKa *
+                               param1.basicBlock.baseK;
+        int64_t al1LoadSize2 = param2.l1Param.stepM * param2.basicBlock.baseM * param2.l1Param.stepKa *
+                               param2.basicBlock.baseK;
         return al1LoadSize1 > al1LoadSize2;
     }
 
@@ -290,10 +280,10 @@ protected:
         nBl1TailSize1 = nBl1TailSize1 == 0 ? param1.l1Param.stepN * param1.basicBlock.baseN : nBl1TailSize1;
         int64_t nBl1TailSize2 = param2.singleN % std::max(param2.l1Param.stepN * param2.basicBlock.baseN, BLOCK_CUBE);
         nBl1TailSize2 = nBl1TailSize2 == 0 ? param2.l1Param.stepN * param2.basicBlock.baseN : nBl1TailSize2;
-        int64_t bubLoadSize1 =
-            CeilAlign(CeilDiv(nBl1TailSize1, BUFF_NUM_2), BLOCK_CUBE) * param1.l1Param.stepKb * param1.basicBlock.baseK;
-        int64_t bubLoadSize2 =
-            CeilAlign(CeilDiv(nBl1TailSize2, BUFF_NUM_2), BLOCK_CUBE) * param2.l1Param.stepKb * param2.basicBlock.baseK;
+        int64_t bubLoadSize1 = CeilAlign(CeilDiv(nBl1TailSize1, BUFF_NUM_2), BLOCK_CUBE) * param1.l1Param.stepKb *
+                               param1.basicBlock.baseK;
+        int64_t bubLoadSize2 = CeilAlign(CeilDiv(nBl1TailSize2, BUFF_NUM_2), BLOCK_CUBE) * param2.l1Param.stepKb *
+                               param2.basicBlock.baseK;
         // 1）优先选Bub的载入量较大的解，即优先保证B矩阵的MTE2效率
         // 此处采用bubLoadSize而非bL1LoadSize，是由于nBL1切分nBub时可能出现非因子切分，因此以nBub计算结果为准
         if (bubLoadSize1 != bubLoadSize2) {
@@ -313,10 +303,10 @@ protected:
         if (al1TailSize1 != al1TailSize2) {
             return al1TailSize1 > al1TailSize2;
         } else {
-            int64_t al1LoadSize1 =
-                param1.l1Param.stepM * param1.basicBlock.baseM * param1.l1Param.stepKa * param1.basicBlock.baseK;
-            int64_t al1LoadSize2 =
-                param2.l1Param.stepM * param2.basicBlock.baseM * param2.l1Param.stepKa * param2.basicBlock.baseK;
+            int64_t al1LoadSize1 = param1.l1Param.stepM * param1.basicBlock.baseM * param1.l1Param.stepKa *
+                                   param1.basicBlock.baseK;
+            int64_t al1LoadSize2 = param2.l1Param.stepM * param2.basicBlock.baseM * param2.l1Param.stepKa *
+                                   param2.basicBlock.baseK;
             return al1LoadSize1 > al1LoadSize2;
         }
     }
@@ -384,10 +374,10 @@ protected:
         }
 
         // 6) 最后微调BL1，优先选择BL1载入量较大的解
-        int64_t bL1LoadSize1 =
-            param1.l1Param.stepN * param1.basicBlock.baseN * param1.l1Param.stepKb * param1.basicBlock.baseK;
-        int64_t bL1LoadSize2 =
-            param2.l1Param.stepN * param2.basicBlock.baseN * param2.l1Param.stepKb * param2.basicBlock.baseK;
+        int64_t bL1LoadSize1 = param1.l1Param.stepN * param1.basicBlock.baseN * param1.l1Param.stepKb *
+                               param1.basicBlock.baseK;
+        int64_t bL1LoadSize2 = param2.l1Param.stepN * param2.basicBlock.baseN * param2.l1Param.stepKb *
+                               param2.basicBlock.baseK;
         return bL1LoadSize1 > bL1LoadSize2;
     }
 
@@ -496,4 +486,3 @@ protected:
 };
 
 } // namespace optiling
-

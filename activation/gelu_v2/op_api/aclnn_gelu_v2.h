@@ -44,8 +44,8 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeluV2GetWorkspaceSize(
-    const aclTensor* x, int64_t approximate, aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeluV2GetWorkspaceSize(const aclTensor* x, int64_t approximate, aclTensor* y,
+                                                  uint64_t* workspaceSize, aclOpExecutor** executor);
 /**
  * @brief aclnnGeluV2的第二段接口，用于执行计算。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
@@ -54,8 +54,8 @@ ACLNN_API aclnnStatus aclnnGeluV2GetWorkspaceSize(
  * @param [in] stream: acl stream流。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus
-aclnnGeluV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGeluV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                  const aclrtStream stream);
 
 #ifdef __cplusplus
 }

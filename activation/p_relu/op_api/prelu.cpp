@@ -28,22 +28,23 @@ OP_TYPE_REGISTER(PRelu);
 
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-                                                                                         DataType::DT_FLOAT16,
-                                                                                         DataType::DT_BF16};
+static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-static bool IsAiCoreSupport(const aclTensor *self) {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-    return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
-  }
+static bool IsAiCoreSupport(const aclTensor* self)
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
+    }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 
 // AICORE算子kernel
-static const aclTensor *PReluAiCore(const aclTensor *self, const aclTensor *weight,
-                                   const aclTensor *preluOut, aclOpExecutor *executor) {
+static const aclTensor* PReluAiCore(const aclTensor* self, const aclTensor* weight, const aclTensor* preluOut,
+                                    aclOpExecutor* executor)
+{
     L0_DFX(PReluAiCore, self, weight, preluOut);
     ADD_TO_LAUNCHER_LIST_AICORE(PRelu, OP_INPUT(self, weight), OP_OUTPUT(preluOut));
 
@@ -51,8 +52,9 @@ static const aclTensor *PReluAiCore(const aclTensor *self, const aclTensor *weig
 }
 
 // AICPU算子kernel
-[[maybe_unused]] static const aclTensor *PReluAiCpu(const aclTensor *self, const aclTensor *weight,
-                                  const aclTensor *preluOut, aclOpExecutor *executor) {
+[[maybe_unused]] static const aclTensor* PReluAiCpu(const aclTensor* self, const aclTensor* weight,
+                                                    const aclTensor* preluOut, aclOpExecutor* executor)
+{
     // 使用框架宏ADD_AICPU_TO_KERNEL_OBJ_LIST，将PRelu算子加入任务队列
     L0_DFX(PReluAiCpu, self, weight, preluOut);
     static internal::AicpuTaskSpace space("PRelu");
@@ -61,7 +63,8 @@ static const aclTensor *PReluAiCore(const aclTensor *self, const aclTensor *weig
     return preluOut;
 }
 
-const aclTensor *PRelu(const aclTensor *self, const aclTensor *weight, aclOpExecutor *executor) {
+const aclTensor* PRelu(const aclTensor* self, const aclTensor* weight, aclOpExecutor* executor)
+{
     auto preluOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetViewFormat());
     auto ret = INFER_SHAPE(PRelu, OP_INPUT(self, weight), OP_OUTPUT(preluOut), OP_EMPTY_ARG);
     if (ret != ACLNN_SUCCESS) {
@@ -70,9 +73,9 @@ const aclTensor *PRelu(const aclTensor *self, const aclTensor *weight, aclOpExec
     }
 
     if (IsAiCoreSupport(self)) {
-      return PReluAiCore(self, weight, preluOut, executor);
+        return PReluAiCore(self, weight, preluOut, executor);
     }
     OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "prelu is both not supported in aicore and aicpu");
     return nullptr;
 }
-}  // namespace l0op
+} // namespace l0op

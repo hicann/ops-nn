@@ -36,4 +36,4 @@ ACLNN_API aclnnStatus aclnnMishBackward(void* workspace, uint64_t workspaceSize,
 }
 #endif
 
-#endif  // OP_API_INC_MISH_DBACKWARD_H_
+#endif // OP_API_INC_MISH_DBACKWARD_H_

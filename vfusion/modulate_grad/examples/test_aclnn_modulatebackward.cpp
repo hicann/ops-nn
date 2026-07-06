@@ -17,10 +17,10 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
-
 constexpr size_t MEMORY_ALIGNMENT = 32;
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
     int64_t shapeSize = 1;
     for (auto i : shape) {
         shapeSize *= i;
@@ -28,7 +28,8 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
     return shapeSize;
 }
 
-void* AlignedMalloc(size_t size) {
+void* AlignedMalloc(size_t size)
+{
     size_t aligned_size = (size + MEMORY_ALIGNMENT - 1) / MEMORY_ALIGNMENT * MEMORY_ALIGNMENT;
     void* ptr = nullptr;
     auto ret = aclrtMalloc(&ptr, aligned_size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -36,14 +37,16 @@ void* AlignedMalloc(size_t size) {
     return ptr;
 }
 
-void PrintOutResult(const std::vector<int64_t>& shape, void* deviceAddr, const std::string& name) {
+void PrintOutResult(const std::vector<int64_t>& shape, void* deviceAddr, const std::string& name)
+{
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(float),
-                            deviceAddr,size * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy %s from device to host failed. ERROR:%d\n", name.c_str(), ret); return );
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(float), deviceAddr, size * sizeof(float),
+                           ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy %s from device to host failed. ERROR:%d\n", name.c_str(), ret);
+              return );
 
-    int print_count = std::min(static_cast<int64_t>(10),size);
+    int print_count = std::min(static_cast<int64_t>(10), size);
     LOG_PRINT("%s (first %d elements):\n", name.c_str(), print_count);
     for (int64_t i = 0; i < print_count; i++) {
         LOG_PRINT("[%ld]: %f\n", i, resultData[i]);
@@ -64,7 +67,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 
 template <typename T>
 int CreateInputTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                        aclDataType dataType, aclTensor** tensor) {
+                      aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     *deviceAddr = AlignedMalloc(size);
     CHECK_RET(*deviceAddr != nullptr, LOG_PRINT("AlignedMalloc failed for input tensor\n"); return -1);
@@ -72,61 +76,62 @@ int CreateInputTensor(const std::vector<T>& hostData, const std::vector<int64_t>
     auto ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, nullptr, 0,
-                                aclFormat::ACL_FORMAT_ND,shape.data(), shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, nullptr, 0, aclFormat::ACL_FORMAT_ND, shape.data(),
+                              shape.size(), *deviceAddr);
     CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed\n"); return -1);
     return 0;
 }
 
 template <typename T>
-int CreateOutputTensor(const std::vector<int64_t>& shape, void** deviceAddr,
-                        aclDataType dataType, aclTensor** tensor) {
+int CreateOutputTensor(const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType, aclTensor** tensor)
+{
     auto size = GetShapeSize(shape) * sizeof(T);
     *deviceAddr = AlignedMalloc(size);
     CHECK_RET(*deviceAddr != nullptr, LOG_PRINT("AlignedMalloc failed for output tensor\n"); return -1);
 
-    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, nullptr, 0,
-                                aclFormat::ACL_FORMAT_ND, shape.data(),shape.size(), *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, nullptr, 0, aclFormat::ACL_FORMAT_ND, shape.data(),
+                              shape.size(), *deviceAddr);
     CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed\n"); return -1);
     return 0;
 }
 
-std::vector<float> GenerateRandomData(int64_t size, float min = -1.0f, float max = 1.0f) {
+std::vector<float> GenerateRandomData(int64_t size, float min = -1.0f, float max = 1.0f)
+{
     std::vector<float> data(size);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(min, max);
 
-    for (int64_t i = 0; i < size; i++)
-    {
+    for (int64_t i = 0; i < size; i++) {
         data[i] = dis(gen);
     }
     return data;
 }
 
-int main(){
+int main()
+{
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-    std::vector<int64_t> grad_outputShape = {2,3,4};
-    std::vector<int64_t> inputShape = {2,3,4};
-    std::vector<int64_t> scaleShape = {2,4};
-    std::vector<int64_t> shiftShape = {2,4};
-    std::vector<int64_t> grad_inputShape = {2,3,4};
-    std::vector<int64_t> grad_scaleShape = {2,4};
-    std::vector<int64_t> grad_shiftShape = {2,4};
+    std::vector<int64_t> grad_outputShape = {2, 3, 4};
+    std::vector<int64_t> inputShape = {2, 3, 4};
+    std::vector<int64_t> scaleShape = {2, 4};
+    std::vector<int64_t> shiftShape = {2, 4};
+    std::vector<int64_t> grad_inputShape = {2, 3, 4};
+    std::vector<int64_t> grad_scaleShape = {2, 4};
+    std::vector<int64_t> grad_shiftShape = {2, 4};
 
     int64_t grad_outputSize = GetShapeSize(grad_outputShape);
     int64_t inputSize = GetShapeSize(inputShape);
     int64_t scaleSize = GetShapeSize(scaleShape);
     int64_t shiftSize = GetShapeSize(shiftShape);
 
-    std::vector<float> grad_outputHostData(24,2);
-    std::vector<float> inputHostData(24,2);
-    std::vector<float> scaleHostData(8,2);
-    std::vector<float> shiftHostData(8,2);
+    std::vector<float> grad_outputHostData(24, 2);
+    std::vector<float> inputHostData(24, 2);
+    std::vector<float> scaleHostData(8, 2);
+    std::vector<float> shiftHostData(8, 2);
 
     void* grad_outputDeviceAddr = nullptr;
     void* inputDeviceAddr = nullptr;
@@ -144,43 +149,37 @@ int main(){
     aclTensor* grad_scale = nullptr;
     aclTensor* grad_shift = nullptr;
 
-    ret = CreateInputTensor(grad_outputHostData, grad_outputShape, &grad_outputDeviceAddr,
-                            aclDataType::ACL_FLOAT, &grad_output);
+    ret = CreateInputTensor(grad_outputHostData, grad_outputShape, &grad_outputDeviceAddr, aclDataType::ACL_FLOAT,
+                            &grad_output);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateInputTensor(inputHostData, inputShape, &inputDeviceAddr,
-                            aclDataType::ACL_FLOAT, &input);
+    ret = CreateInputTensor(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateInputTensor(scaleHostData, scaleShape, &scaleDeviceAddr,
-                            aclDataType::ACL_FLOAT, &scale);
+    ret = CreateInputTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateInputTensor(shiftHostData, shiftShape, &shiftDeviceAddr,
-                            aclDataType::ACL_FLOAT, &shift);
+    ret = CreateInputTensor(shiftHostData, shiftShape, &shiftDeviceAddr, aclDataType::ACL_FLOAT, &shift);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    ret = CreateOutputTensor<float>(grad_inputShape, &grad_inputDeviceAddr,
-                                    aclDataType::ACL_FLOAT, &grad_input);
+    ret = CreateOutputTensor<float>(grad_inputShape, &grad_inputDeviceAddr, aclDataType::ACL_FLOAT, &grad_input);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateOutputTensor<float>(grad_scaleShape, &grad_scaleDeviceAddr,
-                                    aclDataType::ACL_FLOAT, &grad_scale);
+    ret = CreateOutputTensor<float>(grad_scaleShape, &grad_scaleDeviceAddr, aclDataType::ACL_FLOAT, &grad_scale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateOutputTensor<float>(grad_shiftShape, &grad_shiftDeviceAddr,
-                                    aclDataType::ACL_FLOAT, &grad_shift);
+    ret = CreateOutputTensor<float>(grad_shiftShape, &grad_shiftDeviceAddr, aclDataType::ACL_FLOAT, &grad_shift);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    ret = aclnnModulateBackwardGetWorkspaceSize(grad_output, input, scale, shift,
-                                                grad_input, grad_scale, grad_shift,
+    ret = aclnnModulateBackwardGetWorkspaceSize(grad_output, input, scale, shift, grad_input, grad_scale, grad_shift,
                                                 &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnModulateBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnModulateBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
 
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         workspaceAddr = AlignedMalloc(workspaceSize);
         CHECK_RET(workspaceAddr != nullptr, LOG_PRINT("allocate workspace failed\n"); return -1);
     }
-    ret = aclnnModulateBackward(workspaceAddr,workspaceSize, executor, stream);
+    ret = aclnnModulateBackward(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnModulateBackward failed. ERROR: %d\n", ret); return ret);
 
     ret = aclrtSynchronizeStream(stream);

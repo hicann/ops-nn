@@ -15,14 +15,14 @@
 
 #include "softplus.h"
 
-
 template <uint32_t schMode>
 __global__ __aicore__ void softplus(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SoftplusTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftplusTilingData, tilingData, tiling);
     NsSoftplus::KernelSoftplus<DTYPE_X> op; // 算子kernel实例获取
-    op.Init(x, y, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
-       tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.bufferOpen);
+    op.Init(x, y, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum,
+            tilingData.finalSmallTileNum, tilingData.tileDataNum, tilingData.smallTailDataNum,
+            tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.bufferOpen);
     op.Process();
 }

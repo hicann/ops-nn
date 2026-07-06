@@ -20,14 +20,12 @@
 namespace DynamicQuantNDOpt {
 
 #if __CCE_AICORE__ < 220
-class DynamicQuantUnalign310P : public DynamicQuantAlign310p
-{
+class DynamicQuantUnalign310P : public DynamicQuantAlign310p {
 public:
-    __aicore__ inline DynamicQuantUnalign310P()
-    {}
+    __aicore__ inline DynamicQuantUnalign310P() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR offset, const DynamicQuantTilingData* __restrict tilingData)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR scale, GM_ADDR offset,
+                                const DynamicQuantTilingData* __restrict tilingData)
     {
         DynamicQuantAlign310p::InitParams(tilingData, offset);
         DynamicQuantAlign310p::InitBuffer(x, y, scale, offset);

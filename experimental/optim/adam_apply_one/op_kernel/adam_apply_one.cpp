@@ -16,17 +16,16 @@
 #include "adam_apply_one.h"
 
 template <uint64_t schMode>
-__global__ __aicore__ void adam_apply_one(
-    GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3, GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x,
-    GM_ADDR mul2_x, GM_ADDR mul3_x, GM_ADDR add2_y, GM_ADDR output0, GM_ADDR output1, GM_ADDR output2,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void adam_apply_one(GM_ADDR input0, GM_ADDR input1, GM_ADDR input2, GM_ADDR input3,
+                                          GM_ADDR input4, GM_ADDR mul0_x, GM_ADDR mul1_x, GM_ADDR mul2_x,
+                                          GM_ADDR mul3_x, GM_ADDR add2_y, GM_ADDR output0, GM_ADDR output1,
+                                          GM_ADDR output2, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(AdamApplyOneTilingData);
     GET_TILING_DATA_WITH_STRUCT(AdamApplyOneTilingData, tilingData, tiling);
 
     NsAdamApplyOne::AdamApplyOne<DTYPE_INPUT0> op;
-    op.Init(
-        input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x, mul3_x, add2_y, output0, output1, output2,
-        workspace, &tilingData);
+    op.Init(input0, input1, input2, input3, input4, mul0_x, mul1_x, mul2_x, mul3_x, add2_y, output0, output1, output2,
+            workspace, &tilingData);
     op.Process();
 }

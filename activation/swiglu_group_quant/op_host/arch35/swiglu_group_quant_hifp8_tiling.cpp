@@ -59,7 +59,7 @@ int64_t CeilDiv(int64_t x, int64_t y)
     }
     return x;
 }
-}
+} // namespace
 
 ge::graphStatus SwigluGroupQuantHifp8Tiling::GetPlatformInfo()
 {
@@ -70,37 +70,37 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckInputDtype()
 {
     auto xDtype = context_->GetInputDesc(INPUT_INDEX_X)->GetDataType();
     OP_CHECK_IF((xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16 && xDtype != ge::DT_FLOAT),
-        OP_LOGE(context_->GetNodeName(), "input x dtype only support fp16/bf16/fp32, got %d.",
-                  static_cast<int>(xDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "input x dtype only support fp16/bf16/fp32, got %d.",
+                        static_cast<int>(xDtype)),
+                return ge::GRAPH_FAILED);
 
     auto weightDesc = context_->GetOptionalInputDesc(INPUT_INDEX_WEIGHT);
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
         OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "input weight dtype only support fp32, got %d.",
-                      static_cast<int>(weightDtype)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "input weight dtype only support fp32, got %d.",
+                            static_cast<int>(weightDtype)),
+                    return ge::GRAPH_FAILED);
     }
 
     auto groupDesc = context_->GetOptionalInputDesc(INPUT_INDEX_GROUP_INDEX);
     if (groupDesc != nullptr) {
         auto groupDtype = groupDesc->GetDataType();
         OP_CHECK_IF((groupDtype != ge::DT_INT64),
-            OP_LOGE(context_->GetNodeName(), "group_index dtype only support int64, got %d.",
-                      static_cast<int>(groupDtype)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "group_index dtype only support int64, got %d.",
+                            static_cast<int>(groupDtype)),
+                    return ge::GRAPH_FAILED);
     }
 
     if (quantMode_ == QUANT_MODE_STATIC) {
         auto scaleDesc = context_->GetOptionalInputDesc(INPUT_INDEX_SCALE);
         OP_CHECK_IF((scaleDesc == nullptr),
-            OP_LOGE(context_->GetNodeName(), "scale input is required for static quant mode 2."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "scale input is required for static quant mode 2."),
+                    return ge::GRAPH_FAILED);
         auto scaleDtype = scaleDesc->GetDataType();
-        OP_CHECK_IF((scaleDtype != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "scale dtype only support fp32, got %d.",
-                      static_cast<int>(scaleDtype)),
+        OP_CHECK_IF(
+            (scaleDtype != ge::DT_FLOAT),
+            OP_LOGE(context_->GetNodeName(), "scale dtype only support fp32, got %d.", static_cast<int>(scaleDtype)),
             return ge::GRAPH_FAILED);
     }
 
@@ -111,15 +111,14 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputDtype()
 {
     auto yDtype = context_->GetOutputDesc(OUTPUT_INDEX_Y)->GetDataType();
     OP_CHECK_IF((yDtype != ge::DT_HIFLOAT8),
-        OP_LOGE(context_->GetNodeName(), "y dtype must be hifloat8, got %d.",
-                  static_cast<int>(yDtype)),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "y dtype must be hifloat8, got %d.", static_cast<int>(yDtype)),
+                return ge::GRAPH_FAILED);
 
     if (quantMode_ == QUANT_MODE_DYNAMIC) {
         auto yScaleDtype = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE)->GetDataType();
-        OP_CHECK_IF((yScaleDtype != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "y_scale dtype must be fp32, got %d.",
-                      static_cast<int>(yScaleDtype)),
+        OP_CHECK_IF(
+            (yScaleDtype != ge::DT_FLOAT),
+            OP_LOGE(context_->GetNodeName(), "y_scale dtype must be fp32, got %d.", static_cast<int>(yScaleDtype)),
             return ge::GRAPH_FAILED);
     }
 
@@ -135,23 +134,23 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetAttr()
     if (quantModePtr != nullptr) {
         quantMode_ = *quantModePtr;
         OP_CHECK_IF((quantMode_ != QUANT_MODE_DYNAMIC && quantMode_ != QUANT_MODE_STATIC),
-            OP_LOGE(context_->GetNodeName(), "quant_mode must be %ld (Dynamic) or %ld (Static), got %ld.",
-                      QUANT_MODE_DYNAMIC, QUANT_MODE_STATIC, quantMode_),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "quant_mode must be %ld (Dynamic) or %ld (Static), got %ld.",
+                            QUANT_MODE_DYNAMIC, QUANT_MODE_STATIC, quantMode_),
+                    return ge::GRAPH_FAILED);
     }
 
     auto clampLimitPtr = attrs->GetAttrPointer<float>(ATTR_INDEX_CLAMP_LIMIT);
     clampLimit_ = (clampLimitPtr != nullptr) ? *clampLimitPtr : CLAMP_LIMIT_DEFAULT;
     OP_CHECK_IF((clampLimit_ < 0.0f && clampLimit_ != -1.0f),
-        OP_LOGE(context_->GetNodeName(), "clamp_limit must be -1 or > 0.0, got %f.", clampLimit_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "clamp_limit must be -1 or > 0.0, got %f.", clampLimit_),
+                return ge::GRAPH_FAILED);
     hasClamp_ = (clampLimit_ > 0.0f);
 
     auto dstTypeMaxPtr = attrs->GetAttrPointer<float>(ATTR_INDEX_DST_TYPE_MAX_FINITE);
     dstTypeMax_ = (dstTypeMaxPtr != nullptr) ? *dstTypeMaxPtr : DST_TYPE_MAX_FINITE_DEFAULT;
     OP_CHECK_IF((dstTypeMax_ <= 0.0f),
-        OP_LOGE(context_->GetNodeName(), "dst_type_max must be > 0, got %f.", dstTypeMax_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "dst_type_max must be > 0, got %f.", dstTypeMax_),
+                return ge::GRAPH_FAILED);
 
     auto outputOriginPtr = attrs->GetAttrPointer<bool>(ATTR_INDEX_OUTPUT_ORIGIN);
     if (outputOriginPtr != nullptr) {
@@ -179,13 +178,12 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckGroupIndexInfo()
     isGroup_ = true;
     auto groupIndexStorageShape = groupIndexShape->GetStorageShape();
     size_t giDimNum = groupIndexStorageShape.GetDimNum();
-    OP_CHECK_IF((giDimNum != 1),
-        OP_LOGE(context_->GetNodeName(), "group_index must be 1D, got %zu dims.", giDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((giDimNum != 1), OP_LOGE(context_->GetNodeName(), "group_index must be 1D, got %zu dims.", giDimNum),
+                return ge::GRAPH_FAILED);
     groupNum_ = groupIndexStorageShape.GetDim(0);
     OP_CHECK_IF((groupNum_ <= 0),
-        OP_LOGE(context_->GetNodeName(), "group_index length must be > 0, got %ld.", groupNum_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "group_index length must be > 0, got %ld.", groupNum_),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -196,22 +194,22 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo()
         return ge::GRAPH_SUCCESS;
     }
     auto scaleShape = context_->GetOptionalInputShape(INPUT_INDEX_SCALE);
-    OP_CHECK_IF((scaleShape == nullptr),
-        OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((scaleShape == nullptr), OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2."),
+                return ge::GRAPH_FAILED);
     auto scaleStorageShape = scaleShape->GetStorageShape();
     size_t scaleDimNum = scaleStorageShape.GetDimNum();
-    OP_CHECK_IF((scaleDimNum != 1),
-        OP_LOGE(context_->GetNodeName(), "scale must be 1D, got %zu dims.", scaleDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((scaleDimNum != 1), OP_LOGE(context_->GetNodeName(), "scale must be 1D, got %zu dims.", scaleDimNum),
+                return ge::GRAPH_FAILED);
     int64_t scaleSize = scaleStorageShape.GetDim(0);
     if (isGroup_) {
         OP_CHECK_IF((scaleSize != groupNum_),
-            OP_LOGE(context_->GetNodeName(), "scale size [%ld] must equal group_index size [%ld] when group_index is present.",
-                      scaleSize, groupNum_),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(),
+                            "scale size [%ld] must equal group_index size [%ld] when group_index is present.",
+                            scaleSize, groupNum_),
+                    return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF((scaleSize != 1),
+        OP_CHECK_IF(
+            (scaleSize != 1),
             OP_LOGE(context_->GetNodeName(), "scale size [%ld] must be 1 when group_index is not present.", scaleSize),
             return ge::GRAPH_FAILED);
     }
@@ -221,24 +219,22 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo()
 ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape)
 {
     auto yShape = context_->GetOutputShape(OUTPUT_INDEX_Y);
-    OP_CHECK_IF((yShape == nullptr),
-        OP_LOGE(context_->GetNodeName(), "y shape is null."),
-        return ge::GRAPH_FAILED);
-    const gert::Shape &yShapeStorage = yShape->GetStorageShape();
+    OP_CHECK_IF((yShape == nullptr), OP_LOGE(context_->GetNodeName(), "y shape is null."), return ge::GRAPH_FAILED);
+    const gert::Shape& yShapeStorage = yShape->GetStorageShape();
     OP_CHECK_IF((yShapeStorage.GetDimNum() != xDimNum),
-        OP_LOGE(context_->GetNodeName(), "y dim num [%zu] must equal x dim num [%zu].",
-                  yShapeStorage.GetDimNum(), xDimNum),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "y dim num [%zu] must equal x dim num [%zu].",
+                        yShapeStorage.GetDimNum(), xDimNum),
+                return ge::GRAPH_FAILED);
     for (size_t i = 0; i < xDimNum - 1; i++) {
         OP_CHECK_IF((yShapeStorage.GetDim(i) != xStorageShape.GetDim(i)),
-            OP_LOGE(context_->GetNodeName(), "y dim[%zu] [%ld] must equal x dim[%zu] [%ld].",
-                      i, yShapeStorage.GetDim(i), i, xStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "y dim[%zu] [%ld] must equal x dim[%zu] [%ld].", i,
+                            yShapeStorage.GetDim(i), i, xStorageShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF((yShapeStorage.GetDim(xDimNum - 1) != dimH_),
-        OP_LOGE(context_->GetNodeName(), "y last dim [%ld] must equal dimH [%ld].",
-                  yShapeStorage.GetDim(xDimNum - 1), dimH_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "y last dim [%ld] must equal dimH [%ld].",
+                        yShapeStorage.GetDim(xDimNum - 1), dimH_),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -248,23 +244,22 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYScaleShape()
         return ge::GRAPH_SUCCESS;
     }
     auto yScaleShape = context_->GetOutputShape(OUTPUT_INDEX_Y_SCALE);
-    OP_CHECK_IF((yScaleShape == nullptr),
-        OP_LOGE(context_->GetNodeName(), "y_scale shape is null."),
-        return ge::GRAPH_FAILED);
-    const gert::Shape &yScaleShapeStorage = yScaleShape->GetStorageShape();
+    OP_CHECK_IF((yScaleShape == nullptr), OP_LOGE(context_->GetNodeName(), "y_scale shape is null."),
+                return ge::GRAPH_FAILED);
+    const gert::Shape& yScaleShapeStorage = yScaleShape->GetStorageShape();
     OP_CHECK_IF((yScaleShapeStorage.GetDimNum() != 1),
-        OP_LOGE(context_->GetNodeName(), "y_scale must be 1D, got %zu dims.", yScaleShapeStorage.GetDimNum()),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "y_scale must be 1D, got %zu dims.", yScaleShapeStorage.GetDimNum()),
+                return ge::GRAPH_FAILED);
     if (isGroup_) {
         OP_CHECK_IF((yScaleShapeStorage.GetDim(0) != groupNum_),
-            OP_LOGE(context_->GetNodeName(), "y_scale dim[0] [%ld] must equal groupNum [%ld] in group mode.",
-                      yScaleShapeStorage.GetDim(0), groupNum_),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "y_scale dim[0] [%ld] must equal groupNum [%ld] in group mode.",
+                            yScaleShapeStorage.GetDim(0), groupNum_),
+                    return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF((yScaleShapeStorage.GetDim(0) != 1),
-            OP_LOGE(context_->GetNodeName(), "y_scale dim[0] [%ld] must be 1 in non-group mode.",
-                      yScaleShapeStorage.GetDim(0)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "y_scale dim[0] [%ld] must be 1 in non-group mode.",
+                            yScaleShapeStorage.GetDim(0)),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -276,29 +271,28 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYOriginShape(size_t xDimNum, c
     }
     auto yOriginShape = context_->GetOutputShape(OUTPUT_INDEX_Y_ORIGIN);
     OP_CHECK_IF((yOriginShape == nullptr),
-        OP_LOGE(context_->GetNodeName(), "y_origin shape is null when output_origin=true."),
-        return ge::GRAPH_FAILED);
-    const gert::Shape &yOriginShapeStorage = yOriginShape->GetStorageShape();
+                OP_LOGE(context_->GetNodeName(), "y_origin shape is null when output_origin=true."),
+                return ge::GRAPH_FAILED);
+    const gert::Shape& yOriginShapeStorage = yOriginShape->GetStorageShape();
     OP_CHECK_IF((yOriginShapeStorage.GetDimNum() != xDimNum),
-        OP_LOGE(context_->GetNodeName(), "y_origin dim num [%zu] must equal x dim num [%zu].",
-                  yOriginShapeStorage.GetDimNum(), xDimNum),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "y_origin dim num [%zu] must equal x dim num [%zu].",
+                        yOriginShapeStorage.GetDimNum(), xDimNum),
+                return ge::GRAPH_FAILED);
     for (size_t i = 0; i < xDimNum - 1; i++) {
         OP_CHECK_IF((yOriginShapeStorage.GetDim(i) != xStorageShape.GetDim(i)),
-            OP_LOGE(context_->GetNodeName(), "y_origin dim[%zu] [%ld] must equal x dim[%zu] [%ld].",
-                      i, yOriginShapeStorage.GetDim(i), i, xStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "y_origin dim[%zu] [%ld] must equal x dim[%zu] [%ld].", i,
+                            yOriginShapeStorage.GetDim(i), i, xStorageShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF((yOriginShapeStorage.GetDim(xDimNum - 1) != dimH_),
-        OP_LOGE(context_->GetNodeName(), "y_origin last dim [%ld] must equal dimH [%ld].",
-                  yOriginShapeStorage.GetDim(xDimNum - 1), dimH_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "y_origin last dim [%ld] must equal dimH [%ld].",
+                        yOriginShapeStorage.GetDim(xDimNum - 1), dimH_),
+                return ge::GRAPH_FAILED);
     auto yOriginDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_ORIGIN);
     auto xDtype = context_->GetInputDesc(INPUT_INDEX_X)->GetDataType();
     if (yOriginDesc != nullptr) {
         OP_CHECK_IF((yOriginDesc->GetDataType() != xDtype),
-            OP_LOGE(context_->GetNodeName(), "y_origin dtype must equal x dtype."),
-            return ge::GRAPH_FAILED);
+                    OP_LOGE(context_->GetNodeName(), "y_origin dtype must equal x dtype."), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -331,17 +325,15 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetShapeAttrsInfoInner()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
 
     size_t xDimNum = xStorageShape.GetDimNum();
-    OP_CHECK_IF((xDimNum < 1),
-        OP_LOGE(context_->GetNodeName(), "x dims must be >= 1, got %zu.", xDimNum),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((xDimNum < 1), OP_LOGE(context_->GetNodeName(), "x dims must be >= 1, got %zu.", xDimNum),
+                return ge::GRAPH_FAILED);
     totalTokens_ = 1;
     for (size_t i = 0; i < xDimNum - 1; i++) {
         totalTokens_ *= xStorageShape.GetDim(i);
     }
     dim2H_ = xStorageShape.GetDim(xDimNum - 1);
     OP_CHECK_IF((dim2H_ % SWI_FACTOR != 0),
-        OP_LOGE(context_->GetNodeName(), "x last dim must be even, got %ld.", dim2H_),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context_->GetNodeName(), "x last dim must be even, got %ld.", dim2H_), return ge::GRAPH_FAILED);
     dimH_ = dim2H_ / SWI_FACTOR;
 
     return ge::GRAPH_SUCCESS;
@@ -494,4 +486,4 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::DoOpTiling()
     return ProcessTiling();
 }
 
-}  // namespace optiling
+} // namespace optiling

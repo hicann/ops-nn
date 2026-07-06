@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include "pooling/common/op_api/max_pool_with_argmax_v3.h"
 #include "opdev/data_type_utils.h"
@@ -22,8 +22,7 @@
 
 using namespace op;
 
-namespace l0op
-{
+namespace l0op {
 OP_TYPE_REGISTER(MaxPoolWithArgmaxV3);
 
 // 输入为ND场景下，1980不支持任何数据类型
@@ -125,4 +124,4 @@ const std::tuple<const aclTensor*, const aclTensor*> MaxPoolWithArgmaxV3(
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "no dtype not supported on ai cpu");
     return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
 }
-}  // namespace l0op
+} // namespace l0op

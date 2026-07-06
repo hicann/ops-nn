@@ -20,10 +20,8 @@
 #include "../test_quant_batch_matmul_v3_utils.h"
 #include "arch35/quant_batch_matmul_v3_tiling_data.h"
 
-
 using namespace std;
-class QBMMV3_950_mx : public testing::TestWithParam<QuantBatchMatmulV3TestParam>
-{
+class QBMMV3_950_mx : public testing::TestWithParam<QuantBatchMatmulV3TestParam> {
 protected:
     static void SetUpTestCase()
     {

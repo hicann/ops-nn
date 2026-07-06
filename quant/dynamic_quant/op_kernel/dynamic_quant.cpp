@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 /*!
  * \file dynamic_quant.cpp
  * \brief
@@ -55,8 +55,8 @@ using namespace DynamicQuantNDOpt;
     } while (0)
 #endif
 
-KERNEL_LINKAGE __global__ __aicore__ void dynamic_quant(
-    GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
+KERNEL_LINKAGE __global__ __aicore__ void dynamic_quant(GM_ADDR x, GM_ADDR smooth_scales, GM_ADDR group_index,
+                                                        GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
 {
     if (x == nullptr || y == nullptr || scale == nullptr) {
         return;

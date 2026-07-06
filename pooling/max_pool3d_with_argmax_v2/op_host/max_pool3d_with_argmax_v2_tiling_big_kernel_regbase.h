@@ -21,8 +21,7 @@
 #include "error_util.h"
 #include "op_common/op_host/util/platform_util.h"
 
-namespace optiling
-{
+namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
 static constexpr uint64_t MAX_POOL_WITH_ARGMAX_V2_TILING_KEY_BIG_KERNEL_REGBASE_NCDHW = 611110;
@@ -52,7 +51,6 @@ static constexpr int64_t KW_THRESHOLD = 128;
 static constexpr int64_t THREE = 3;
 constexpr int64_t MAX_INT16 = 32767;
 
-
 struct BigKernelInputInfo {
     uint64_t batches;
     std::array<uint64_t, DHW_DIMS> inputShape;
@@ -70,19 +68,17 @@ struct BigKernelInputInfo {
 
 class MaxPool3DWithArgmaxV2BigKernelRegbaseTiling : public MaxPool3DWithArgmaxV2BaseTiling {
 public:
-    explicit MaxPool3DWithArgmaxV2BigKernelRegbaseTiling(gert::TilingContext* context) : MaxPool3DWithArgmaxV2BaseTiling(context)
-    {
-    }
-    ~MaxPool3DWithArgmaxV2BigKernelRegbaseTiling() override
-    {
-    }
+    explicit MaxPool3DWithArgmaxV2BigKernelRegbaseTiling(gert::TilingContext* context)
+        : MaxPool3DWithArgmaxV2BaseTiling(context)
+    {}
+    ~MaxPool3DWithArgmaxV2BigKernelRegbaseTiling() override {}
 
 private:
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
-    
+
     void DoUBTiling();
     void SetTilingData();
     uint64_t GetTilingKey() const override;
@@ -91,8 +87,8 @@ private:
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
 
-    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingData_ = 
-        context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData>();
+    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingData_ = context_->GetTilingData<
+        MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData>();
     int64_t totalIdx_{0};
     int64_t blockFactor_{0};
     int64_t blockTail_{0};
@@ -107,5 +103,5 @@ public:
     uint32_t ubSize = 0;
 };
 
-}
-#endif  // CANN_MAX_POOL_3D_WITH_ARGMAX_V2_TILING_BIG_KERNEL_REGBASE
+} // namespace optiling
+#endif // CANN_MAX_POOL_3D_WITH_ARGMAX_V2_TILING_BIG_KERNEL_REGBASE

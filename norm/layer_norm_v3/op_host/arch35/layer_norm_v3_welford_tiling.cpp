@@ -32,10 +32,11 @@ bool LayerNormV3WelfordTiling::IsCapable()
         return false;
     }
 
-    if (static_cast<int64_t>(commonParams.normToParamsSize) != 1 || static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
+    if (static_cast<int64_t>(commonParams.normToParamsSize) != 1 ||
+        static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
         return false;
     }
-    
+
     return true;
 }
 
@@ -109,20 +110,20 @@ bool LayerNormV3WelfordTiling::IsValidTileLength(int64_t tileLength)
     int64_t welfordUpdateApiTempSize = 0;
     uint32_t maxValue{0}, minValue{0};
     ge::Shape tensorShape({1, tileLength});
-    AscendC::GetWelfordUpdateMaxMinTmpSize(
-        tensorShape, WELFORD_B32_SIZE, GammaBetaTypeSize, false, true, maxValue, minValue);
+    AscendC::GetWelfordUpdateMaxMinTmpSize(tensorShape, WELFORD_B32_SIZE, GammaBetaTypeSize, false, true, maxValue,
+                                           minValue);
     welfordUpdateApiTempSize = minValue;
     AscendC::GetWelfordFinalizeMaxMinTmpSize(tensorShape, WELFORD_B32_SIZE, false, maxValue, minValue);
     welfordFinalizeApiTempSize = minValue;
-    AscendC::GetNormalizeMaxMinTmpSize(
-        tensorShape, WELFORD_B32_SIZE, GammaBetaTypeSize, true, true, false, maxValue, minValue);
+    AscendC::GetNormalizeMaxMinTmpSize(tensorShape, WELFORD_B32_SIZE, GammaBetaTypeSize, true, true, false, maxValue,
+                                       minValue);
     normalizeApiTempSize = minValue;
     apiTempSize = normalizeApiTempSize + welfordUpdateApiTempSize + welfordFinalizeApiTempSize;
     td_.set_apiTempBufferSize(apiTempSize);
 
     // total size
-    int64_t totalSize =
-        (xSize + ySize) + (meanSize + rstdSize) + (gammaSize + betaSize) + welfordTempSize + apiTempSize;
+    int64_t totalSize = (xSize + ySize) + (meanSize + rstdSize) + (gammaSize + betaSize) + welfordTempSize +
+                        apiTempSize;
     return (totalSize <= static_cast<int64_t>(commonParams.ubSizePlatForm));
 }
 

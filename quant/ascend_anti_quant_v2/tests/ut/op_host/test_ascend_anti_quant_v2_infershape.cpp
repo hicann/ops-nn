@@ -18,15 +18,9 @@ using namespace op;
 
 class AscendAntiQuantV2Proto : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AscendAntiQuantV2Proto SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AscendAntiQuantV2Proto SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AscendAntiQuantV2Proto TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AscendAntiQuantV2Proto TearDown" << std::endl; }
 };
 
 TEST_F(AscendAntiQuantV2Proto, AscendAntiQuantV2_proto_0)
@@ -45,9 +39,8 @@ TEST_F(AscendAntiQuantV2Proto, AscendAntiQuantV2_proto_0)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}, 
-                           {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"sqrt_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .InputShapes({&xShape, &sShape, &sShape})
                       .OutputShapes({&yShape})
                       .Build();

@@ -15,8 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class CTCLossV3 : public OpDef
-{
+class CTCLossV3 : public OpDef {
 public:
     explicit CTCLossV3(const char* name) : OpDef(name)
     {

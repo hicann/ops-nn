@@ -27,24 +27,24 @@
 #include <cstdint>
 
 struct AscendAntiQuantBaseTilingData {
-    int64_t  dim0;
-    int32_t  coreNum;
-    int32_t  ubFormer;
-    int64_t  blockFormer;
-    int64_t  blockNum;
-    int64_t  ubLoopOfFormerBlock;
-    int64_t  ubLoopOfTailBlock;
-    int64_t  ubTailOfFormerBlock;
-    int64_t  ubTailOfTailBlock;
-    int64_t  elemNum;
+    int64_t dim0;
+    int32_t coreNum;
+    int32_t ubFormer;
+    int64_t blockFormer;
+    int64_t blockNum;
+    int64_t ubLoopOfFormerBlock;
+    int64_t ubLoopOfTailBlock;
+    int64_t ubTailOfFormerBlock;
+    int64_t ubTailOfTailBlock;
+    int64_t elemNum;
     uint64_t scheMode;
 };
 
 struct AscendAntiQuantTilingData {
     AscendAntiQuantBaseTilingData baseTiling;
-    float    scale;
-    float    offset;
-    int32_t  sqrtMode;
-    int32_t  reserved;
+    float scale;
+    float offset;
+    int32_t sqrtMode;
+    int32_t reserved;
 };
 #endif // _ASCEND_ANTI_QUANT_TILINGDATA_

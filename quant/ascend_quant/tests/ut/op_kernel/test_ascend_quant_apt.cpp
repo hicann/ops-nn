@@ -25,19 +25,12 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void ascend_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ascend_quant(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 class ascend_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ascend_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ascend_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ascend_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ascend_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(ascend_quant_test, test_case_fp16_to_int8)

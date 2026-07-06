@@ -19,29 +19,23 @@ using namespace ge;
 
 class SparseTensorDenseMatMulTiling : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "SparseTensorDenseMatMulTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SparseTensorDenseMatMulTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase() {
-        std::cout << "SparseTensorDenseMatMulTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SparseTensorDenseMatMulTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}},         // shape
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
-        gert::kFollowing,                   // placement
-        dtype,                              // dt
-        nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}},         // shape
+                        {ge::FORMAT_ND, ge::FORMAT_ND, {}}, // format
+                        gert::kFollowing,                   // placement
+                        dtype,                              // dt
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -52,11 +46,13 @@ void SetConstInput(
     const_tensors.push_back(std::move(pair));
 }
 
-void TestSparseTensorDenseMatMulTiling(
-    gert::StorageShape& x1_indices_shape, gert::StorageShape& x1_values_shape, gert::StorageShape& x1_shape_shape,
-    gert::StorageShape& x2_shape, gert::StorageShape& y_shape, int64_t x1_shape_value[2], ge::DataType x1_indices_dtype,
-    ge::DataType x1_values_dtype, ge::DataType x1_shape_dtype, ge::DataType x2_dtype, ge::DataType y_dtype,
-    bool adjoint_a_value, bool adjoint_b_value, ge::graphStatus expectTilingResult, uint64_t expectTilingKey)
+void TestSparseTensorDenseMatMulTiling(gert::StorageShape& x1_indices_shape, gert::StorageShape& x1_values_shape,
+                                       gert::StorageShape& x1_shape_shape, gert::StorageShape& x2_shape,
+                                       gert::StorageShape& y_shape, int64_t x1_shape_value[2],
+                                       ge::DataType x1_indices_dtype, ge::DataType x1_values_dtype,
+                                       ge::DataType x1_shape_dtype, ge::DataType x2_dtype, ge::DataType y_dtype,
+                                       bool adjoint_a_value, bool adjoint_b_value, ge::graphStatus expectTilingResult,
+                                       uint64_t expectTilingKey)
 {
     constexpr size_t INPUT_IDX_X1_SHAPE = 2;
     constexpr int INPUT_SIZE_X1_SHAPE = 2;
@@ -91,18 +87,18 @@ void TestSparseTensorDenseMatMulTiling(
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", version);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
@@ -124,9 +120,8 @@ void TestSparseTensorDenseMatMulTiling(
                       .NodeInputTd(2, x1_shape_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, x2_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, y_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"adjoint_a", Ops::NN::AnyValue::CreateFrom<bool>(adjoint_a_value)},
-                           {"adjoint_b", Ops::NN::AnyValue::CreateFrom<bool>(adjoint_b_value)}})
+                      .NodeAttrs({{"adjoint_a", Ops::NN::AnyValue::CreateFrom<bool>(adjoint_a_value)},
+                                  {"adjoint_b", Ops::NN::AnyValue::CreateFrom<bool>(adjoint_b_value)}})
                       .ConstInput(const_tensors)
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -149,301 +144,549 @@ void TestSparseTensorDenseMatMulTiling(
     }
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_001) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_001)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{13, 25}, {13, 25}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {25, 33};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, true, true, ge::GRAPH_SUCCESS, 20001);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, true, true, ge::GRAPH_SUCCESS, 20001);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_002) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_002)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {25, 33};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, true, false, ge::GRAPH_SUCCESS, 20002);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, true, false, ge::GRAPH_SUCCESS, 20002);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_003) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_003)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{13, 25}, {13, 25}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, true, ge::GRAPH_SUCCESS, 20003);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, true, ge::GRAPH_SUCCESS, 20003);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_004) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_004)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_SUCCESS, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_SUCCESS, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_005) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_005)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT16, ge::DT_INT64, ge::DT_FLOAT16, ge::DT_FLOAT16, false, false, ge::GRAPH_SUCCESS, 10004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT16, ge::DT_INT64, ge::DT_FLOAT16,
+                                      ge::DT_FLOAT16, false, false, ge::GRAPH_SUCCESS, 10004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_006) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_006)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 0}, {25, 0}};
     gert::StorageShape y_shape = {{33, 0}, {33, 0}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_SUCCESS, 30000);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_SUCCESS, 30000);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_007) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_007)
+{
     gert::StorageShape x1_indices_shape = {{0, 2}, {0, 2}};
-    gert::StorageShape x1_values_shape = {{0,}, {0,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              0,
+                                          },
+                                          {
+                                              0,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{0, 13}, {0, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 0};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_SUCCESS, 40000);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_SUCCESS, 40000);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_008) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_008)
+{
     gert::StorageShape x1_indices_shape = {{88, 2, 2}, {88, 2, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_009) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_009)
+{
     gert::StorageShape x1_indices_shape = {{88, 3}, {88, 3}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_010) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_010)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{100,}, {100,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              100,
+                                          },
+                                          {
+                                              100,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_011) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_011)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
     gert::StorageShape x1_shape_shape = {{2, 3}, {2, 3}};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_012) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_012)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{5,}, {5,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             5,
+                                         },
+                                         {
+                                             5,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_013) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_013)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13, 2}, {25, 13, 2}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_014) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_014)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_FLOAT,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_015) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_015)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_INT64, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_016) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_016)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_017) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_017)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_INT32, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_INT32,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_018) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_018)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, true, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, true, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_019) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_019)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, true, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, true, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_020) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_020)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, -13}, {25, -13}};
     gert::StorageShape y_shape = {{33, 13}, {33, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_021) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_021)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 13, 2}, {33, 13, 2}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_022) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_022)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{2, 13}, {2, 13}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }
 
-TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_023) {
+TEST_F(SparseTensorDenseMatMulTiling, sparse_tensor_dense_mat_mul_tiling_023)
+{
     gert::StorageShape x1_indices_shape = {{88, 2}, {88, 2}};
-    gert::StorageShape x1_values_shape = {{88,}, {88,}};
-    gert::StorageShape x1_shape_shape = {{2,}, {2,}};
+    gert::StorageShape x1_values_shape = {{
+                                              88,
+                                          },
+                                          {
+                                              88,
+                                          }};
+    gert::StorageShape x1_shape_shape = {{
+                                             2,
+                                         },
+                                         {
+                                             2,
+                                         }};
     gert::StorageShape x2_shape = {{25, 13}, {25, 13}};
     gert::StorageShape y_shape = {{33, 2}, {33, 2}};
     int64_t x1_shape_value[2] = {33, 25};
 
-    TestSparseTensorDenseMatMulTiling(
-        x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape, x1_shape_value, ge::DT_INT64,
-        ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
+    TestSparseTensorDenseMatMulTiling(x1_indices_shape, x1_values_shape, x1_shape_shape, x2_shape, y_shape,
+                                      x1_shape_value, ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT,
+                                      ge::DT_FLOAT, false, false, ge::GRAPH_FAILED, 20004);
 }

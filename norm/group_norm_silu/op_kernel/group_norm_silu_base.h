@@ -27,7 +27,7 @@ __aicore__ inline constexpr bool IsDataCopyPadSupport()
     return false;
 #endif
 }
-}
+} // namespace platform
 
 namespace GroupNormSilu {
 using namespace AscendC;
@@ -35,8 +35,7 @@ using namespace AscendC;
 constexpr int32_t BLOCK_SIZE = 32;
 
 template <typename T>
-class GroupNormSiluBase
-{
+class GroupNormSiluBase {
 public:
     __aicore__ inline GroupNormSiluBase(){};
 
@@ -60,8 +59,8 @@ protected:
     };
 
     template <typename T1, bool isAlign = true>
-    __aicore__ inline void CopyInData(
-        const LocalTensor<T1>& dstUB, const GlobalTensor<T1>& srcGM, const int64_t dataCount)
+    __aicore__ inline void CopyInData(const LocalTensor<T1>& dstUB, const GlobalTensor<T1>& srcGM,
+                                      const int64_t dataCount)
     {
         if constexpr (isAlign) {
             DataCopy(dstUB, srcGM, dataCount);
@@ -80,8 +79,8 @@ protected:
     }
 
     template <typename T1, bool isAlign = true>
-    __aicore__ inline void CopyOutData(
-        const GlobalTensor<T1>& dstGM, const LocalTensor<T1>& srcUB, const int64_t dataCount)
+    __aicore__ inline void CopyOutData(const GlobalTensor<T1>& dstGM, const LocalTensor<T1>& srcUB,
+                                       const int64_t dataCount)
     {
         if constexpr (isAlign) {
             DataCopy(dstGM, srcUB, dataCount);

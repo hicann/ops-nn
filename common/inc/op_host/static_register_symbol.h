@@ -13,19 +13,17 @@
  * \brief
  */
 
-#define GLOBAL_REGISTER_SYMBOL_REAL(op_type, class_name, priority, counter, line)   \
-[[maybe_unused]] std::string op_impl_register_template_##op_type##_##class_name##priority##counter##line =  \
-    std::string("op_impl_register_template_" #op_type) \
+#define GLOBAL_REGISTER_SYMBOL_REAL(op_type, class_name, priority, counter, line)                  \
+    [[maybe_unused]] std::string                                                                   \
+        op_impl_register_template_##op_type##_##class_name##priority##counter##line = std::string( \
+            "op_impl_register_template_" #op_type)
 
+#define GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, counter, line) \
+    GLOBAL_REGISTER_SYMBOL_REAL(op_type, class_name, priority, counter, line)
 
-#define GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, counter, line)   \
-GLOBAL_REGISTER_SYMBOL_REAL(op_type, class_name, priority, counter, line)
+#define GLOBAL_REGISTER_STR_SYMBOL_REAL(op_type, class_name, priority, counter, line)                           \
+    [[maybe_unused]] std::string op_impl_register_template_##class_name##priority##counter##line = std::string( \
+        "op_impl_register_template_" op_type)
 
-
-#define GLOBAL_REGISTER_STR_SYMBOL_REAL(op_type, class_name, priority, counter, line)   \
-[[maybe_unused]] std::string op_impl_register_template_##class_name##priority##counter##line =  \
-    std::string("op_impl_register_template_" op_type)  \
-
-
-#define GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, counter, line)   \
-GLOBAL_REGISTER_STR_SYMBOL_REAL(op_type, class_name, priority, counter, line)
+#define GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, counter, line) \
+    GLOBAL_REGISTER_STR_SYMBOL_REAL(op_type, class_name, priority, counter, line)

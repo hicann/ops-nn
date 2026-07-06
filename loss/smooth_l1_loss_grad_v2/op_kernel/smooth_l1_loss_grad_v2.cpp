@@ -20,8 +20,8 @@
 using namespace AscendC;
 
 template <uint64_t schMode, uint32_t doutIsScalar>
-__global__ __aicore__ void smooth_l1_loss_grad_v2(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y, GM_ADDR workspace,
-                                                  GM_ADDR tiling)
+__global__ __aicore__ void smooth_l1_loss_grad_v2(GM_ADDR predict, GM_ADDR label, GM_ADDR dout, GM_ADDR y,
+                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
     if constexpr (doutIsScalar == static_cast<uint32_t>(ATTR_IS_TRUE)) {
         using OpDag = SmoothL1LossGradV2Op::SmoothL1LossGradV2OpScalarDag<DTYPE_PREDICT, float>::OpDag;

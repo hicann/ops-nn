@@ -37,37 +37,37 @@ struct KernelBufferInfoLayerNormQuant {
 };
 
 BEGIN_TILING_DATA_DEF(LayerNormQuantTilingData)
-  TILING_DATA_FIELD_DEF(uint32_t, numCore);
-  TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
-  TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
-  TILING_DATA_FIELD_DEF(uint32_t, colsAligned);
-  TILING_DATA_FIELD_DEF(uint32_t, nlFirstdimPerCore);
-  TILING_DATA_FIELD_DEF(uint32_t, lFirstdimPerCore);
-  TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimes);
-  TILING_DATA_FIELD_DEF(float, epsStr);
-  TILING_DATA_FIELD_DEF(float, aveStr);
+TILING_DATA_FIELD_DEF(uint32_t, numCore);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
+TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
+TILING_DATA_FIELD_DEF(uint32_t, colsAligned);
+TILING_DATA_FIELD_DEF(uint32_t, nlFirstdimPerCore);
+TILING_DATA_FIELD_DEF(uint32_t, lFirstdimPerCore);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimes);
+TILING_DATA_FIELD_DEF(float, epsStr);
+TILING_DATA_FIELD_DEF(float, aveStr);
 
-  TILING_DATA_FIELD_DEF(uint32_t, sliceNum);
-  TILING_DATA_FIELD_DEF(uint32_t, sliceSize);
-  TILING_DATA_FIELD_DEF(uint32_t, tailSliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, sliceNum);
+TILING_DATA_FIELD_DEF(uint32_t, sliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, tailSliceSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormQuant, LayerNormQuantTilingData)
 
 BEGIN_TILING_DATA_DEF(LayerNormQuantRegTilingData)
-  TILING_DATA_FIELD_DEF(uint32_t, numCore);
-  TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
-  TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
-  TILING_DATA_FIELD_DEF(uint32_t, nlFirstdimPerCore);
-  TILING_DATA_FIELD_DEF(uint32_t, lFirstdimPerCore);
-  TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimes);
-  TILING_DATA_FIELD_DEF(uint32_t, colsAligned);
-  TILING_DATA_FIELD_DEF(float, epsStr);
-  TILING_DATA_FIELD_DEF(float, aveStr);
+TILING_DATA_FIELD_DEF(uint32_t, numCore);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
+TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
+TILING_DATA_FIELD_DEF(uint32_t, nlFirstdimPerCore);
+TILING_DATA_FIELD_DEF(uint32_t, lFirstdimPerCore);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimes);
+TILING_DATA_FIELD_DEF(uint32_t, colsAligned);
+TILING_DATA_FIELD_DEF(float, epsStr);
+TILING_DATA_FIELD_DEF(float, aveStr);
 
-  TILING_DATA_FIELD_DEF(uint32_t, sliceNum);
-  TILING_DATA_FIELD_DEF(uint32_t, sliceSize);
-  TILING_DATA_FIELD_DEF(uint32_t, tailSliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, sliceNum);
+TILING_DATA_FIELD_DEF(uint32_t, sliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, tailSliceSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormQuant_2200000000, LayerNormQuantRegTilingData)
@@ -77,10 +77,10 @@ REGISTER_TILING_DATA_CLASS(LayerNormQuant_2110000000, LayerNormQuantRegTilingDat
 REGISTER_TILING_DATA_CLASS(LayerNormQuant_2300000000, LayerNormQuantRegTilingData)
 REGISTER_TILING_DATA_CLASS(LayerNormQuant_2310000000, LayerNormQuantRegTilingData)
 
-class LayerNormQuantTiling{
+class LayerNormQuantTiling {
 public:
-    explicit LayerNormQuantTiling(gert::TilingContext* context): context(context) {};
-    ~LayerNormQuantTiling() {};
+    explicit LayerNormQuantTiling(gert::TilingContext* context) : context(context){};
+    ~LayerNormQuantTiling(){};
 
     ge::graphStatus startTiling();
     void GetTilingBasicInfo();
@@ -88,7 +88,7 @@ public:
     ge::graphStatus GetTilingSliceInfo();
 
 protected:
-    gert::TilingContext *context = nullptr;
+    gert::TilingContext* context = nullptr;
     LayerNormQuantTilingData tilingData;
     NormTilingDataPtrCon layerNormPtrCon;
 
@@ -96,16 +96,16 @@ protected:
     uint32_t colsAligned{0};
     uint32_t numCol{0};
 
-    uint32_t fp16BufNumForMulRow{2};   // 2: x, cast16 x
-    uint32_t i8BufNumForMulRow{1};     // 1: output
-    uint32_t fp32BufNum{3};            // 3: temp fp32 Buffer x, y, z
-    uint32_t fp16BufNum{2};            // 2: beta & gamma
+    uint32_t fp16BufNumForMulRow{2}; // 2: x, cast16 x
+    uint32_t i8BufNumForMulRow{1};   // 1: output
+    uint32_t fp32BufNum{3};          // 3: temp fp32 Buffer x, y, z
+    uint32_t fp16BufNum{2};          // 2: beta & gamma
 };
 
-class LayerNormQuantRegTiling{
+class LayerNormQuantRegTiling {
 public:
-    explicit LayerNormQuantRegTiling(gert::TilingContext* context): context(context) {};
-    ~LayerNormQuantRegTiling() {};
+    explicit LayerNormQuantRegTiling(gert::TilingContext* context) : context(context){};
+    ~LayerNormQuantRegTiling(){};
 
     ge::graphStatus DoTiling();
     void GetTilingBasicInfo();
@@ -113,7 +113,7 @@ public:
     ge::graphStatus GetTilingSliceInfo();
 
 protected:
-    gert::TilingContext *context = nullptr;
+    gert::TilingContext* context = nullptr;
     LayerNormQuantRegTilingData tilingData;
     NormTilingDataPtrCon layerNormPtrCon;
 
@@ -122,10 +122,10 @@ protected:
     uint32_t colsAligned{0};
     uint32_t dtypeSize{4};
 
-    uint32_t fp16BufNumForMulRow{1};   // 1: x 
-    uint32_t i8BufNumForMulRow{1};     // 1: output
-    uint32_t fp32BufNum{3};            // 3: temp fp32 Buffer x, y, z 
-    uint32_t fp16BufNum{2};            // 2: beta & gamma
+    uint32_t fp16BufNumForMulRow{1}; // 1: x
+    uint32_t i8BufNumForMulRow{1};   // 1: output
+    uint32_t fp32BufNum{3};          // 3: temp fp32 Buffer x, y, z
+    uint32_t fp16BufNum{2};          // 2: beta & gamma
 };
-}
+} // namespace optiling
 #endif

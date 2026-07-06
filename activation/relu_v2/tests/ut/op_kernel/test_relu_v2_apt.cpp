@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -42,17 +42,13 @@ struct ReluV2TilingData {
 
 class relu_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "relu_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "relu_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "relu_v2 TearDown\n" << endl;
         kernel_ut::CleanGeneratedBinFiles("./relu_v2_data");
     }
 };
-
 
 TEST_F(relu_v2_test, test_case_fp32_1)
 {
@@ -64,7 +60,7 @@ TEST_F(relu_v2_test, test_case_fp32_1)
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(maskByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/relu_v2/tests/ut/op_kernel/relu_v2_data", "relu_v2_data");
@@ -110,7 +106,7 @@ TEST_F(relu_v2_test, test_case_fp16_1)
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(maskByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     kernel_ut::SetupTestEnvironment("activation/relu_v2/tests/ut/op_kernel/relu_v2_data", "relu_v2_data");

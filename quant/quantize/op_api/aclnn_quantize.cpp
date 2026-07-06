@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
@@ -46,8 +45,8 @@ const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSuppo
     static const std::map<int64_t, std::initializer_list<op::DataType>> emptyDtypesMap = {
         {INDEX_FOR_X, {}}, {INDEX_FOR_SCALES, {}}, {INDEX_FOR_ZERO_POINTS, {}}, {INDEX_FOR_OUT, {}}};
 
-    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_FLOAT_16_LIST = {
-        op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+    static const std::initializer_list<op::DataType> DTYPE_SUPPORT_FLOAT_16_LIST = {op::DataType::DT_FLOAT,
+                                                                                    op::DataType::DT_FLOAT16};
     static const std::initializer_list<op::DataType> DTYPE_SUPPORT_INT_LIST = {
         op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_INT32};
 
@@ -65,22 +64,28 @@ const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSuppo
         op::DataType::DT_INT8,     op::DataType::DT_UINT8,         op::DataType::DT_INT32,
         op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2};
 
-    static const std::map<NpuArch, std::map<int64_t, std::initializer_list<op::DataType>>>
-        socSupportMap = {
-            {NpuArch::DAV_2002,
-             {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
-              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {NpuArch::DAV_1001,
-             {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
-              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {NpuArch::DAV_2201,
-             {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
-              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST}, {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-            {NpuArch::DAV_3510,
-             {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST}, {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
-              {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST}, 
-              {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
-        };
+    static const std::map<NpuArch, std::map<int64_t, std::initializer_list<op::DataType>>> socSupportMap = {
+        {NpuArch::DAV_2002,
+         {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST},
+          {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
+          {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST},
+          {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+        {NpuArch::DAV_1001,
+         {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST},
+          {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
+          {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST},
+          {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+        {NpuArch::DAV_2201,
+         {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
+          {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
+          {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST},
+          {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
+        {NpuArch::DAV_3510,
+         {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
+          {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
+          {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST},
+          {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
+    };
 
     auto found = socSupportMap.find(curArch);
     if (found == socSupportMap.end()) {
@@ -114,8 +119,8 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* scales, aclTensor*
 }
 
 // 数据类型校验
-static bool CheckDtypeValid(
-    const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, aclDataType dtype, const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, aclDataType dtype,
+                            const aclTensor* out)
 {
     NpuArch curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto socSupportMap = GetSocSupportDtypeMap(curArch);
@@ -132,9 +137,8 @@ static bool CheckDtypeValid(
     op::DataType dtypeOP = op::ToOpDataType(dtype);
     // 检查dtype数据类型
     if (!CheckType(dtypeOP, outSupportList)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Param dtype %s should be in dtype support list [%s].",
-            op::ToString(dtypeOP).GetString(), op::ToString(outSupportList).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Param dtype %s should be in dtype support list [%s].",
+                op::ToString(dtypeOP).GetString(), op::ToString(outSupportList).GetString());
         return false;
     }
     // 检查out数据类型
@@ -156,8 +160,8 @@ static bool CheckDtypeValid(
 }
 
 // 执行Shape相关检测
-static bool CheckShapeValid(
-    const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, int32_t axis, const aclTensor* out)
+static bool CheckShapeValid(const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, int32_t axis,
+                            const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(x, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(out, x, return false);
@@ -188,18 +192,16 @@ static bool CheckShapeValid(
     }
     // Per channel/Per head 场景， axis校验
     if (axis < -xDim || axis >= xDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Axis out of range (expected to be in range of [-%ld, %ld], but got %d)", xDim,
-            xDim - 1, axis);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Axis out of range (expected to be in range of [-%ld, %ld], but got %d)", xDim,
+                xDim - 1, axis);
         return false;
     }
     int64_t positiveAxis = MakeWrapDim((int64_t)axis, xDim);
     auto xAxisSize = inputShape.GetDim(positiveAxis);
     if (scalesSize != xAxisSize) {
         // Scales' shape 不满足条件
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The size of scales must equal to 1 or the specified dimension of x, which is %ld.", xAxisSize);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The size of scales must equal to 1 or the specified dimension of x, which is %ld.", xAxisSize);
         return false;
     }
     return true;
@@ -222,9 +224,8 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* scales, const aclTe
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, int32_t axis, aclDataType dtype,
-    aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, int32_t axis,
+                               aclDataType dtype, aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, scales, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -240,8 +241,8 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* QuantizeReshapeTensor(
-    const aclTensor* x, const aclTensor* needReshape, int32_t axis, aclOpExecutor* executor)
+static const aclTensor* QuantizeReshapeTensor(const aclTensor* x, const aclTensor* needReshape, int32_t axis,
+                                              aclOpExecutor* executor)
 {
     auto xShape = x->GetViewShape();
     size_t xDimNum = xShape.GetDimNum();
@@ -256,9 +257,9 @@ static const aclTensor* QuantizeReshapeTensor(
 }
 }; // namespace
 
-aclnnStatus aclnnQuantizeGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints, aclDataType dtype, int32_t axis,
-    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnQuantizeGetWorkspaceSize(const aclTensor* x, const aclTensor* scales, const aclTensor* zeroPoints,
+                                          aclDataType dtype, int32_t axis, aclTensor* out, uint64_t* workspaceSize,
+                                          aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnQuantize, DFX_IN(x, scales, zeroPoints, dtype, axis), DFX_OUT(out));
 
@@ -301,12 +302,12 @@ aclnnStatus aclnnQuantizeGetWorkspaceSize(
     CHECK_RET(scalesReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* zeroPointsReshape = nullptr;
     if (zeroPointsContiguous != nullptr) {
-        zeroPointsReshape =
-            QuantizeReshapeTensor(xContiguous, zeroPointsContiguous, positiveAxis, uniqueExecutor.get());
+        zeroPointsReshape = QuantizeReshapeTensor(xContiguous, zeroPointsContiguous, positiveAxis,
+                                                  uniqueExecutor.get());
         CHECK_RET(zeroPointsReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    quantizeOut = l0op::Quantize(
-        xContiguous, scalesReshape, zeroPointsReshape, op::ToOpDataType(dtype), positiveAxis, uniqueExecutor.get());
+    quantizeOut = l0op::Quantize(xContiguous, scalesReshape, zeroPointsReshape, op::ToOpDataType(dtype), positiveAxis,
+                                 uniqueExecutor.get());
     CHECK_RET(quantizeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行ViewCopy

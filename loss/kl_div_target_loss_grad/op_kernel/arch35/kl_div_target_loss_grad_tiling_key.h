@@ -19,20 +19,12 @@
 #define KDTLG_FALSE 0
 #define KDTLG_TRUE 1
 
-
 #include "atvoss/broadcast/broadcast_base_struct.h"
 
-
 ASCENDC_TPL_ARGS_DECL(klDivTargetLossGrad, BRC_TEMP_SCH_MODE_KEY_DECL(schMode),
-    ASCENDC_TPL_UINT_DECL(logTarget, 1, ASCENDC_TPL_UI_LIST, KDTLG_TRUE, KDTLG_FALSE)
-);
+                      ASCENDC_TPL_UINT_DECL(logTarget, 1, ASCENDC_TPL_UI_LIST, KDTLG_TRUE, KDTLG_FALSE));
 
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        BRC_TEMP_SCH_MODE_KEY_SEL(schMode),
-        ASCENDC_TPL_UINT_SEL(logTarget, ASCENDC_TPL_UI_LIST, KDTLG_TRUE, KDTLG_FALSE)
-    )
-);
-
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(BRC_TEMP_SCH_MODE_KEY_SEL(schMode),
+                                     ASCENDC_TPL_UINT_SEL(logTarget, ASCENDC_TPL_UI_LIST, KDTLG_TRUE, KDTLG_FALSE)));
 
 #endif

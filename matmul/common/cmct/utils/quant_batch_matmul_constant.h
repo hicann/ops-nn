@@ -45,7 +45,7 @@ constexpr uint64_t IDX_M_TAIL_SPLIT_TILEIDX = 2UL;
 constexpr uint64_t IDX_N_TAIL_SPLIT_TILEIDX = 3UL;
 
 constexpr int32_t BT_SIZE = 4096;
- 
+
 constexpr uint64_t IDX_M_IDX = 0UL;
 constexpr uint64_t IDX_N_IDX = 1UL;
 constexpr uint64_t IDX_K_IDX = 2UL;
@@ -72,4 +72,3 @@ enum class QuantMode : uint32_t {
 } // namespace QuantBatchMatmul
 } // namespace Gemm
 } // namespace Cmct
-

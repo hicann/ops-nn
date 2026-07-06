@@ -26,15 +26,15 @@ template <typename T, typename U, bool isDeterministic>
 class LayerNormGradV3Workspace {
 public:
     __aicore__ inline LayerNormGradV3Workspace(){};
-    __aicore__ inline void Init(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX, GM_ADDR pdGamma, GM_ADDR pdBeta,
-        GM_ADDR workspace, const LayerNormGradV3TilingDataWorkspace* tilingData, TPipe& pipeIn)
+    __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pdX,
+                                GM_ADDR pdGamma, GM_ADDR pdBeta, GM_ADDR workspace,
+                                const LayerNormGradV3TilingDataWorkspace* tilingData, TPipe& pipeIn)
     {
         // init gm inputs
         pipe = pipeIn;
         int64_t formerBlockLength = tilingData->blockFormer * tilingData->col;
-        int64_t curRowsNum =
-            (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer : tilingData->blockTail;
+        int64_t curRowsNum = (GetBlockIdx() != tilingData->blockNum - 1) ? tilingData->blockFormer :
+                                                                           tilingData->blockTail;
         int64_t curBlockLength = curRowsNum * tilingData->col;
         colAlign = tilingData->colAlignV;
         int64_t wsLenPerBlock = colAlign * WORKSPACE_NUM;
@@ -55,12 +55,12 @@ public:
             // init workspace
             colLen = tilingData->col;
             workspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx(), wsLenPerBlock);
-            dGammaWorkspaceGM.SetGlobalBuffer(
-                (__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx() + colAlign, colAlign);
-            mul1WorkspaceGM.SetGlobalBuffer(
-                (__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx() + colAlign * 2, colAlign);
-            mul3WorkspaceGM.SetGlobalBuffer(
-                (__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx() + colAlign * 3, colAlign);
+            dGammaWorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx() + colAlign,
+                                              colAlign);
+            mul1WorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx() + colAlign * 2,
+                                            colAlign);
+            mul3WorkspaceGM.SetGlobalBuffer((__gm__ float*)workspace + wsLenPerBlock * GetBlockIdx() + colAlign * 3,
+                                            colAlign);
 
             // clear workspace and pdGamma/pdBeta outputs
             InitOutput<float>(workspaceGM, colAlign + colAlign, 0.0);
@@ -88,7 +88,8 @@ public:
     __aicore__ inline void Process(const LayerNormGradV3TilingDataWorkspace* tilingData)
     {
         if (GetBlockIdx() < tilingData->blockNum) {
-            int64_t rowCount = (GetBlockIdx() == tilingData->blockNum - 1) ? tilingData->blockTail : tilingData->blockFormer;
+            int64_t rowCount = (GetBlockIdx() == tilingData->blockNum - 1) ? tilingData->blockTail :
+                                                                             tilingData->blockFormer;
             for (int64_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
                 float reduce2 = 0.0f;
                 float reduce3 = 0.0f;
@@ -121,10 +122,12 @@ public:
                 PipeBarrier<PIPE_ALL>();
                 for (int64_t ubIndex = 0; ubIndex < tilingData->ubLoop - 1; ubIndex++) {
                     CopyInPhase1(ubIndex, tilingData->ubFormer, tilingData->ubFormer);
-                    ComputePhase1(rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer, reduce2, reduce3, rstdIn);
+                    ComputePhase1(rowIndex, ubIndex, tilingData->ubFormer, tilingData->ubFormer, reduce2, reduce3,
+                                  rstdIn);
                 }
                 CopyInPhase1(tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail);
-                ComputePhase1(rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, reduce2, reduce3, rstdIn);
+                ComputePhase1(rowIndex, tilingData->ubLoop - 1, tilingData->ubFormer, tilingData->ubTail, reduce2,
+                              reduce3, rstdIn);
             }
         }
 
@@ -255,7 +258,8 @@ public:
         queOut5.FreeTensor(buffer5);
     }
 
-    __aicore__ inline float ReducePhase0(const LocalTensor<float>& src, const LocalTensor<float>& tmp, int64_t reduceNum)
+    __aicore__ inline float ReducePhase0(const LocalTensor<float>& src, const LocalTensor<float>& tmp,
+                                         int64_t reduceNum)
     {
         ReduceSum(tmp, src, tmp, reduceNum);
         event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -277,9 +281,8 @@ public:
         queIn1.EnQue(buffer1);
     }
 
-    __aicore__ inline void ComputePhase1(
-        int64_t rowIndex, int64_t ubIndex, int64_t ubFormer, int64_t calcNum, float reduce2, float reduce3,
-        float rstdIn)
+    __aicore__ inline void ComputePhase1(int64_t rowIndex, int64_t ubIndex, int64_t ubFormer, int64_t calcNum,
+                                         float reduce2, float reduce3, float rstdIn)
     {
         buffer4 = queOut4.AllocTensor<float>();
         buffer0 = queIn0.DeQue<float>();
@@ -350,8 +353,8 @@ public:
         }
     }
 
-    __aicore__ inline void FinalProcessDeterministic(
-        int64_t ubIndex, int64_t ubFormer, int64_t calcNum, int64_t blockNum)
+    __aicore__ inline void FinalProcessDeterministic(int64_t ubIndex, int64_t ubFormer, int64_t calcNum,
+                                                     int64_t blockNum)
     {
         if (GetBlockIdx() == 0) {
             buffer3 = queOut3.AllocTensor<float>();
@@ -364,8 +367,8 @@ public:
             Duplicate(buffer4, static_cast<float>(0.0), ubFormer);
             for (int64_t i = 0; i < blockNum; i++) {
                 buffer0 = queIn0.AllocTensor<float>();
-                DataCopyPad(
-                    buffer0, workspaceGM[i * colAlign * WORKSPACE_NUM + colAlign + offset], intriParams, padParams);
+                DataCopyPad(buffer0, workspaceGM[i * colAlign * WORKSPACE_NUM + colAlign + offset], intriParams,
+                            padParams);
                 queIn0.EnQue(buffer0);
                 buffer0 = queIn0.DeQue<float>();
                 Add(buffer3, buffer3, buffer0, calcNum);

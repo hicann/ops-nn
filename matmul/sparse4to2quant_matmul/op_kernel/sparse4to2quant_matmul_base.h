@@ -36,8 +36,8 @@ constexpr uint16_t C2V_PING_FLAG = 0x4;
 constexpr uint16_t C2V_PONG_FLAG = 0x5;
 constexpr uint16_t V2C_PING_FLAG = 0x6;
 
-constexpr MatmulConfig MM_DEFAULT_MDL_CFG =
-    GetMDLConfig(false, false, 0, false, false, false, true, true, true, false, false, true);
+constexpr MatmulConfig MM_DEFAULT_MDL_CFG = GetMDLConfig(false, false, 0, false, false, false, true, true, true, false,
+                                                         false, true);
 
 struct L2CacheParam {
     uint32_t l2MCnt;
@@ -106,20 +106,11 @@ __aicore__ inline uint64_t CeilDiv(uint64_t a, uint64_t b)
     return (a + b - 1) / b;
 }
 
-__aicore__ inline uint64_t Align16(uint64_t num)
-{
-    return (num + 15UL) & 0xFFFFFFFFFFFFFFF0UL;
-}
+__aicore__ inline uint64_t Align16(uint64_t num) { return (num + 15UL) & 0xFFFFFFFFFFFFFFF0UL; }
 
-__aicore__ inline uint64_t Align32(uint64_t num)
-{
-    return (num + 31UL) & 0xFFFFFFFFFFFFFFE0UL;
-}
+__aicore__ inline uint64_t Align32(uint64_t num) { return (num + 31UL) & 0xFFFFFFFFFFFFFFE0UL; }
 
-__aicore__ inline uint64_t Align64(uint64_t num)
-{
-    return (num + 31UL) & 0xFFFFFFFFFFFFFFC0UL;
-}
+__aicore__ inline uint64_t Align64(uint64_t num) { return (num + 31UL) & 0xFFFFFFFFFFFFFFC0UL; }
 
 __aicore__ inline constexpr CubeFormat GetFormat(int format)
 {
@@ -144,14 +135,11 @@ __aicore__ inline constexpr uint32_t GetC0Size()
 /**
  * Get the aiv corenum in different platforms
  */
-__aicore__ inline constexpr uint32_t GetTaskRation()
-{
-    return 1U;
-}
+__aicore__ inline constexpr uint32_t GetTaskRation() { return 1U; }
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
-__aicore__ inline void CalcDequantParams(
-    uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams& dequantParams, bool needUpdate = true)
+__aicore__ inline void CalcDequantParams(uint32_t curAivM, uint32_t curAivN, AscendC::DequantParams& dequantParams,
+                                         bool needUpdate = true)
 {
     if (!needUpdate) {
         return;
@@ -179,17 +167,18 @@ __aicore__ inline void SetGm2UbParams(AscendC::DataCopyParams& gm2UbParams, uint
 }
 
 template <typename yType>
-__aicore__ inline void SetUb2GmParams(
-    AscendC::DataCopyExtParams& ub2GmParams, uint32_t curAivM, uint32_t curAivN, uint32_t n)
+__aicore__ inline void SetUb2GmParams(AscendC::DataCopyExtParams& ub2GmParams, uint32_t curAivM, uint32_t curAivN,
+                                      uint32_t n)
 {
     ub2GmParams.blockLen = curAivN * sizeof(yType);
     ub2GmParams.blockCount = curAivM;
     ub2GmParams.dstStride = (n - curAivN) * sizeof(yType);
 }
 
-__aicore__ inline void CopyMmOutToLocal(
-    AscendC::LocalTensor<int32_t>& srcLocal, AscendC::GlobalTensor<int32_t>& curMmOutGm,
-    AscendC::DataCopyParams& gm2UbParams, AscendC::DataCopyPadParams& padParams, uint32_t curAicAivOffset)
+__aicore__ inline void CopyMmOutToLocal(AscendC::LocalTensor<int32_t>& srcLocal,
+                                        AscendC::GlobalTensor<int32_t>& curMmOutGm,
+                                        AscendC::DataCopyParams& gm2UbParams, AscendC::DataCopyPadParams& padParams,
+                                        uint32_t curAicAivOffset)
 {
     DataCopyPad(srcLocal, curMmOutGm[curAicAivOffset], gm2UbParams, padParams);
     AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
@@ -197,18 +186,18 @@ __aicore__ inline void CopyMmOutToLocal(
 }
 
 template <typename yType>
-__aicore__ inline void CopyUbToGm(
-    uint64_t yGmOffset, AscendC::DataCopyExtParams& ub2GmParams, AscendC::LocalTensor<yType>& dstLocal,
-    AscendC::GlobalTensor<yType>& yGm, AscendC::TQue<AscendC::QuePosition::VECOUT, 1>& vecQueOut)
+__aicore__ inline void CopyUbToGm(uint64_t yGmOffset, AscendC::DataCopyExtParams& ub2GmParams,
+                                  AscendC::LocalTensor<yType>& dstLocal, AscendC::GlobalTensor<yType>& yGm,
+                                  AscendC::TQue<AscendC::QuePosition::VECOUT, 1>& vecQueOut)
 {
     DataCopyPad(yGm[yGmOffset], dstLocal, ub2GmParams);
     vecQueOut.FreeTensor(dstLocal);
 }
 
 template <typename scaleType>
-__aicore__ inline void Bf16ScaleGm2Ub(
-    AscendC::LocalTensor<scaleType>& scaleLocal, AscendC::GlobalTensor<scaleType>& scaleGm,
-    AscendC::DataCopyPadParams& padParams, uint32_t curAivN, uint64_t offsetScale)
+__aicore__ inline void Bf16ScaleGm2Ub(AscendC::LocalTensor<scaleType>& scaleLocal,
+                                      AscendC::GlobalTensor<scaleType>& scaleGm, AscendC::DataCopyPadParams& padParams,
+                                      uint32_t curAivN, uint64_t offsetScale)
 {
     AscendC::DataCopyParams scale2UbParams{1, 0, 0, 0};
     scale2UbParams.blockLen = curAivN * sizeof(scaleType);

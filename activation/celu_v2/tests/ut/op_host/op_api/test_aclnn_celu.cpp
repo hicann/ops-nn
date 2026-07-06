@@ -30,15 +30,9 @@ using namespace std;
 
 class l2_celu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "celu_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "celu_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "celu_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "celu_test TearDown" << std::endl; }
 };
 
 // 正常场景_FLOAT_ND

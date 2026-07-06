@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /*!
  * \file quant_batch_matmul_v4_tiling.h
  * \brief
@@ -104,11 +103,7 @@ enum class QuantType : uint32_t {
     INT4_ASYMMETRICAL = 6
 };
 
-enum class KernelTemplateType : uint32_t {
-    BASIS = 0,
-    LUT_ASW = 1,
-    LUT_AL1FULL = 2
-};
+enum class KernelTemplateType : uint32_t { BASIS = 0, LUT_ASW = 1, LUT_AL1FULL = 2 };
 
 enum class WeightFormat : uint32_t {
     ND = 0,
@@ -140,22 +135,22 @@ struct QuantBatchMatmulInfo {
     ge::DataType biasDtype;
     DtypeEnum templateDtype;
     QuantType antiQuantType;
-    const char *opName;
+    const char* opName;
     ge::Format bFormat = ge::FORMAT_ND;
 };
-}  // namespace matmul_v4
+} // namespace matmul_v4
 
 class QuantBatchMatmulV4TilingBase : public TilingBaseClass {
 public:
-    explicit QuantBatchMatmulV4TilingBase(gert::TilingContext *context) : TilingBaseClass(context)
+    explicit QuantBatchMatmulV4TilingBase(gert::TilingContext* context) : TilingBaseClass(context)
     {
         Reset();
         if (context->GetCompileInfo() == nullptr) {
             InitCompileInfo();
         }
     }
-    explicit QuantBatchMatmulV4TilingBase(
-        gert::TilingContext* context, qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* out)
+    explicit QuantBatchMatmulV4TilingBase(gert::TilingContext* context,
+                                          qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams* out)
         : TilingBaseClass(context)
     {
         Reset();
@@ -164,52 +159,46 @@ public:
     }
     ~QuantBatchMatmulV4TilingBase() override = default;
 
-    void Reset(gert::TilingContext *context) override
+    void Reset(gert::TilingContext* context) override
     {
         TilingBaseClass::Reset(context);
         Reset();
     }
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
+    bool IsCapable() override { return true; }
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus InstantiateTilingData();
     ge::graphStatus PostTiling() override;
-    virtual bool CheckFinalTilingData()
-    {
-        return true;
-    }
+    virtual bool CheckFinalTilingData() { return true; }
 
     void Reset();
     void InitCompileInfo();
     ge::graphStatus CheckContext() const;
     ge::graphStatus CheckInputParams() const;
     bool AnalyzeDtype();
-    bool AnalyzeBiasDtype(const gert::CompileTimeTensorDesc *biasDesc);
-    bool AnalyzeX1scaleDtype(const gert::CompileTimeTensorDesc *x1ScaleDesc);
-    bool AnalyzeX2scaleDtype(const gert::CompileTimeTensorDesc *x2ScaleDesc);
+    bool AnalyzeBiasDtype(const gert::CompileTimeTensorDesc* biasDesc);
+    bool AnalyzeX1scaleDtype(const gert::CompileTimeTensorDesc* x1ScaleDesc);
+    bool AnalyzeX2scaleDtype(const gert::CompileTimeTensorDesc* x2ScaleDesc);
     bool AnalyzeAntiQuantDtype(ge::DataType antiQuantScaleDtype,
-                               const gert::CompileTimeTensorDesc *antiQuantOffsetDesc) const;
-    bool AnalyzeYScaleOffsetShape(const gert::StorageShape *yScaleShape, const gert::StorageShape *yOffsetShape) const;
-    bool AnalyzeAntiQuantShape(const gert::StorageShape *antiQuantScaleShape,
-                               const gert::StorageShape *antiQuantOffsetShape);
+                               const gert::CompileTimeTensorDesc* antiQuantOffsetDesc) const;
+    bool AnalyzeYScaleOffsetShape(const gert::StorageShape* yScaleShape, const gert::StorageShape* yOffsetShape) const;
+    bool AnalyzeAntiQuantShape(const gert::StorageShape* antiQuantScaleShape,
+                               const gert::StorageShape* antiQuantOffsetShape);
     bool AnalyzeTranspose();
     bool AnalyzeAttrs();
-    bool AnalyzeX2InputDim(const gert::StorageShape *x2Shape);
+    bool AnalyzeX2InputDim(const gert::StorageShape* x2Shape);
     bool AnalyzeInputs();
-    bool AnalyzeX2ScalePerGroupShape(const gert::StorageShape *x2ScaleShape);
-    bool AnalyzeShapeSize(const gert::StorageShape *x1Shape, const gert::StorageShape *x2Shape);
+    bool AnalyzeX2ScalePerGroupShape(const gert::StorageShape* x2ScaleShape);
+    bool AnalyzeShapeSize(const gert::StorageShape* x1Shape, const gert::StorageShape* x2Shape);
     bool ValidateShapeDimensions();
-    bool AnalyzeBiasShape(const gert::StorageShape *biasShape);
-    bool AnalyzeX1ScaleShape(const gert::StorageShape *x1ScaleShape);
-    bool AnalyzeX2ScaleShape(const gert::StorageShape *x2ScaleShape);
+    bool AnalyzeBiasShape(const gert::StorageShape* biasShape);
+    bool AnalyzeX1ScaleShape(const gert::StorageShape* x1ScaleShape);
+    bool AnalyzeX2ScaleShape(const gert::StorageShape* x2ScaleShape);
     bool AnalyzeQuantType();
-    virtual bool SetQuantType(const gert::StorageShape *antiQuantScaleShape,
-                              const gert::StorageShape *antiQuantOffsetShape) = 0;
+    virtual bool SetQuantType(const gert::StorageShape* antiQuantScaleShape,
+                              const gert::StorageShape* antiQuantOffsetShape) = 0;
     virtual bool CalcUBSize(uint64_t vecSingleN, uint64_t vecSingleK) const = 0;
     void PrintTilingData(bool debugLevel);
     int64_t DumpTilingDataToLog(bool debugLevel);
@@ -217,13 +206,10 @@ protected:
     virtual bool GetTilingFromCache();
 
     uint32_t CalcAntiQuantTmpSize(uint64_t vecSingleN, uint64_t vecSingleK) const;
-    void Convert2AscendCTiling(const CacheTilingData &tbeTiling, TCubeTiling &matmulTiling);
-    MatrixTraverse GetIteratorOrder(const CacheTilingData &tbeTiling, int32_t singleCoreM, int32_t singleCoreN,
+    void Convert2AscendCTiling(const CacheTilingData& tbeTiling, TCubeTiling& matmulTiling);
+    MatrixTraverse GetIteratorOrder(const CacheTilingData& tbeTiling, int32_t singleCoreM, int32_t singleCoreN,
                                     int32_t singleCoreK) const;
-    virtual bool CheckCoreNum() const
-    {
-        return true;
-    }
+    virtual bool CheckCoreNum() const { return true; }
     matmul_v4::QuantBatchMatmulInfo inputParams_;
     uint64_t cubeBaseN_;
     int32_t templateId_ = -1;
@@ -246,8 +232,7 @@ protected:
 
 class QuantBatchMatmulV4RegBase : public QuantBatchMatmulV4TilingBase {
 public:
-    explicit QuantBatchMatmulV4RegBase(gert::TilingContext *context)
-        : QuantBatchMatmulV4TilingBase(context)
+    explicit QuantBatchMatmulV4RegBase(gert::TilingContext* context) : QuantBatchMatmulV4TilingBase(context)
     {
         tilingSolver_.Init();
     }
@@ -256,34 +241,30 @@ public:
 protected:
     bool IsCapable() override;
     void SetBubTiling();
-    void GetBubTilingA8W4(int64_t &nBubSize, int64_t &kBubSize) const;
-    void GetBubTilingA8W4BySize(int64_t &nBubSize, int64_t &kBubSize,
-        int64_t &kBl1Size, int64_t &nBl1Size) const;
+    void GetBubTilingA8W4(int64_t& nBubSize, int64_t& kBubSize) const;
+    void GetBubTilingA8W4BySize(int64_t& nBubSize, int64_t& kBubSize, int64_t& kBl1Size, int64_t& nBl1Size) const;
     bool CustomCheck() const;
     bool CheckA8W4Params() const;
     ge::graphStatus DoOpTiling() override;
-    ge::graphStatus DoLibApiTiling() override
-    {
-        return ge::GRAPH_SUCCESS;
-    }
+    ge::graphStatus DoLibApiTiling() override { return ge::GRAPH_SUCCESS; }
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     void SetMatmulTiling();
     bool CalcUBSize(uint64_t vecSingleN, uint64_t vecSingleK) const override
     {
-        (void) vecSingleN;
-        (void) vecSingleK;
+        (void)vecSingleN;
+        (void)vecSingleK;
         return true;
     }
 
-    bool SetQuantType(const gert::StorageShape *quantScaleShape, const gert::StorageShape *quantOffsetShape) override
+    bool SetQuantType(const gert::StorageShape* quantScaleShape, const gert::StorageShape* quantOffsetShape) override
     {
-        (void) quantScaleShape;
-        (void) quantOffsetShape;
+        (void)quantScaleShape;
+        (void)quantOffsetShape;
         return true;
     }
-    void UpdateL1Tiling(uint64_t minKL1AL1Size, uint64_t minKL1BL1Size,
-                        uint64_t fullLoadAl1Size, uint64_t fullLoadBl1Size, uint64_t minKL1);
+    void UpdateL1Tiling(uint64_t minKL1AL1Size, uint64_t minKL1BL1Size, uint64_t fullLoadAl1Size,
+                        uint64_t fullLoadBl1Size, uint64_t minKL1);
     uint64_t GetGroupNumBub(uint64_t kDimSzie) const;
     uint64_t GetBubSize(uint64_t bubN, uint64_t bubD, bool isWeightNz) const;
     void PrintCVTilingData(const bool debugLevel) const;
@@ -293,5 +274,4 @@ protected:
 
     QuantBatchMatmulV4BasicBlockTiling tilingSolver_;
 };
-}  // namespace optiling
-
+} // namespace optiling

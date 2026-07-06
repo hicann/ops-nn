@@ -22,15 +22,9 @@ using namespace ge;
 
 class ForeachLog2Tiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachLog2Tiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachLog2Tiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachLog2Tiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachLog2Tiling TearDown" << std::endl; }
 };
 
 std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
@@ -44,13 +38,12 @@ std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "A
  *   int64[2] = tensorElements[0]
  *   int64[3..257] = tensorElements[1..255] = 0
  */
-static std::string BuildExpectedTilingData(int32_t needCoreNum, int32_t tensorCount,
-                                            int64_t totalElements, const std::vector<int64_t>& elements)
+static std::string BuildExpectedTilingData(int32_t needCoreNum, int32_t tensorCount, int64_t totalElements,
+                                           const std::vector<int64_t>& elements)
 {
     std::ostringstream oss;
     // needCoreNum (int32) + tensorCount (int32) packed as one int64
-    int64_t packed = static_cast<int64_t>(needCoreNum) |
-                     (static_cast<int64_t>(tensorCount) << 32);
+    int64_t packed = static_cast<int64_t>(needCoreNum) | (static_cast<int64_t>(tensorCount) << 32);
     oss << packed << " " << totalElements << " ";
     for (size_t i = 0; i < 256; i++) {
         if (i < elements.size()) {
@@ -67,21 +60,20 @@ TEST_F(ForeachLog2Tiling, foreach_log2_float32)
     struct ForeachLog2CompileInfo {
     } compileInfo;
     // ForeachLog2 with 1 dynamic input tensor (float32), shape {4,4}=16 elements
-    gert::TilingContextPara tilingContextPara(
-        "ForeachLog2",
-        {
-            {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            /* no attrs */
-        },
-        &compileInfo,
-        64,     // number of cores
-        262144, // ubsize
-        4096);  // max tiling data size
+    gert::TilingContextPara tilingContextPara("ForeachLog2",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* no attrs */
+                                              },
+                                              &compileInfo,
+                                              64,     // number of cores
+                                              262144, // ubsize
+                                              4096);  // max tiling data size
     // TilingKey for float32 = 0
     uint64_t expectTilingKey = 0;
     // needCoreNum=1, tensorCount=1, totalElements=16, tensorElements[0]=16
@@ -94,21 +86,17 @@ TEST_F(ForeachLog2Tiling, foreach_log2_float16)
 {
     struct ForeachLog2CompileInfo {
     } compileInfo;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachLog2",
-        {
-            {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
-        },
-        {
-            /* no attrs */
-        },
-        &compileInfo,
-        64,
-        262144,
-        4096);
+    gert::TilingContextPara tilingContextPara("ForeachLog2",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* no attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
     uint64_t expectTilingKey = 1;
     string expectTilingData = BuildExpectedTilingData(1, 1, 16, {16});
     std::vector<size_t> expectWorkspaces = {0};
@@ -119,21 +107,17 @@ TEST_F(ForeachLog2Tiling, foreach_log2_bfloat16)
 {
     struct ForeachLog2CompileInfo {
     } compileInfo;
-    gert::TilingContextPara tilingContextPara(
-        "ForeachLog2",
-        {
-            {{{4, 4}, {4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            {{{4, 4}, {4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
-        },
-        {
-            /* no attrs */
-        },
-        &compileInfo,
-        64,
-        262144,
-        4096);
+    gert::TilingContextPara tilingContextPara("ForeachLog2",
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{4, 4}, {4, 4}}, ge::DT_BF16, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* no attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
     uint64_t expectTilingKey = 2;
     string expectTilingData = BuildExpectedTilingData(1, 1, 16, {16});
     std::vector<size_t> expectWorkspaces = {0};

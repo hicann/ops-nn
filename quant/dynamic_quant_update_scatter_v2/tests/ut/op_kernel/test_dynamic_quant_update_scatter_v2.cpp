@@ -22,9 +22,11 @@
 using namespace std;
 using namespace AscendC;
 
-extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(
-    GM_ADDR x, GM_ADDR indices, GM_ADDR var, GM_ADDR varScale, GM_ADDR varOffset, GM_ADDR varOut, GM_ADDR varScaleOut,
-    GM_ADDR varOffsetOut, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(GM_ADDR x, GM_ADDR indices, GM_ADDR var,
+                                                                      GM_ADDR varScale, GM_ADDR varOffset,
+                                                                      GM_ADDR varOut, GM_ADDR varScaleOut,
+                                                                      GM_ADDR varOffsetOut, GM_ADDR workSpace,
+                                                                      GM_ADDR tiling);
 
 class dynamic_quant_update_scatter_v2_test : public testing::Test {
 protected:
@@ -33,10 +35,7 @@ protected:
         cout << "dynamic_quant_update_scatter_v2_test SetUp\n" << endl;
         AscendC::SetKernelMode(KernelMode::AIV_MODE);
     }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_quant_update_scatter_v2_test TearDown\n" << endl;
-    }
+    static void TearDownTestCase() { cout << "dynamic_quant_update_scatter_v2_test TearDown\n" << endl; }
 };
 
 // TEST_F(dynamic_quant_update_scatter_v2_test, test_case_0)
@@ -117,8 +116,8 @@ TEST_F(dynamic_quant_update_scatter_v2_test, test_case_1)
     char* path_ = get_current_dir_name();
     string path(path_);
 
-    DynamicQuantUpdateScatterV2TilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterV2TilingData*>(tiling);
+    DynamicQuantUpdateScatterV2TilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterV2TilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 48;
     tilingDatafromBin->rowLen = 128;
@@ -135,9 +134,8 @@ TEST_F(dynamic_quant_update_scatter_v2_test, test_case_1)
     // (uint8_t*)(tilingDatafromBin));
 
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter_v2, blockDim, x, indices, var, varScale, varOffset, var, varScale, varOffset,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter_v2, blockDim, x, indices, var, varScale, varOffset, var, varScale,
+                varOffset, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(indices);

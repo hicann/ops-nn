@@ -45,14 +45,13 @@ constexpr int64_t BIG_MERGE_BUF_ALIGN = 32;
 
 class MaxPoolGradTilingBase : public MaxPoolGradWithArgmaxTilingCommon {
 public:
-    explicit MaxPoolGradTilingBase(gert::TilingContext* context) : MaxPoolGradWithArgmaxTilingCommon(context)
-    {}
-    ~MaxPoolGradTilingBase() override
-    {}
+    explicit MaxPoolGradTilingBase(gert::TilingContext* context) : MaxPoolGradWithArgmaxTilingCommon(context) {}
+    ~MaxPoolGradTilingBase() override {}
 
     const std::string nodeName = "MaxPoolGrad";
-    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData* tilingData_ =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData>();
+    MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData*
+        tilingData_ = context_->GetTilingData<
+            MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData>();
     MaxPoolGradWithArgmaxInputInfoCommon inputData;
     int64_t coreNum_{0};
     int64_t ubSize_{0};
@@ -72,8 +71,7 @@ protected:
 
 class MaxPoolGradNCHWTilingHelper : public MaxPoolGradNCHWTilingCommon {
 public:
-    MaxPoolGradNCHWTilingHelper(MaxPoolGradWithArgmaxInputInfoCommon* input) : MaxPoolGradNCHWTilingCommon(input)
-    {}
+    MaxPoolGradNCHWTilingHelper(MaxPoolGradWithArgmaxInputInfoCommon* input) : MaxPoolGradNCHWTilingCommon(input) {}
 
 protected:
     void DoBufferCalculate() override;
@@ -81,11 +79,9 @@ protected:
 
 class MaxPoolGradNCHWTiling : public MaxPoolGradTilingBase {
 public:
-    explicit MaxPoolGradNCHWTiling(gert::TilingContext* context) : MaxPoolGradTilingBase(context)
-    {}
+    explicit MaxPoolGradNCHWTiling(gert::TilingContext* context) : MaxPoolGradTilingBase(context) {}
 
-    ~MaxPoolGradNCHWTiling() override
-    {}
+    ~MaxPoolGradNCHWTiling() override {}
 
 private:
     MaxPoolGradNCHWTilingHelper commonTiling{&inputData};

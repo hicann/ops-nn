@@ -39,10 +39,9 @@ std::unique_ptr<uint8_t[]> MakeConstTensor(const gert::StorageShape& shape, cons
     tensor->SetData(gert::TensorData(tensorData, nullptr, sizeof(int64_t) * data.size(), gert::kFollowing));
     return tensorHolder;
 }
-}  // namespace
+} // namespace
 
-class TestIndexInfershape : public testing::Test {
-};
+class TestIndexInfershape : public testing::Test {};
 
 TEST_F(TestIndexInfershape, index_aicore_infershape_continuous_indices)
 {

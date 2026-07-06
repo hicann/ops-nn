@@ -19,16 +19,16 @@ using namespace AscendC;
 using AscendC::HardEvent;
 
 namespace {
-  static constexpr uint32_t BLOCK_NUM = 16;
-  static constexpr uint32_t DATA_BYTE = 2;
-  static constexpr uint32_t BLOCK_SIZE = 32;
-  static constexpr uint32_t BUFFER_NUM = 1;
-  static constexpr uint32_t TAIL_BUFFER_SIZE = 32;
-  static constexpr uint32_t MAX_UB_SIZE_NUM = 98304;
-  static constexpr uint32_t INT8_DATA_BYTE = 1;
-  static constexpr uint32_t BLOCK_NUMEL = 32;
-  static constexpr float QUANT_MIN = -128;
-}
+static constexpr uint32_t BLOCK_NUM = 16;
+static constexpr uint32_t DATA_BYTE = 2;
+static constexpr uint32_t BLOCK_SIZE = 32;
+static constexpr uint32_t BUFFER_NUM = 1;
+static constexpr uint32_t TAIL_BUFFER_SIZE = 32;
+static constexpr uint32_t MAX_UB_SIZE_NUM = 98304;
+static constexpr uint32_t INT8_DATA_BYTE = 1;
+static constexpr uint32_t BLOCK_NUMEL = 32;
+static constexpr float QUANT_MIN = -128;
+} // namespace
 
 template <typename Tp, Tp v>
 struct integral_constant {
@@ -37,23 +37,18 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
-__aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) 
-{ 
-    return x < y ? x : y; 
-}
+__aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
 __aicore__ inline uint32_t RoundUp(uint32_t x, uint32_t y = 32)
 {
-  if (y == 0) {
-    return x;
-  }
-  return (x + y - 1) / y * y;
+    if (y == 0) {
+        return x;
+    }
+    return (x + y - 1) / y * y;
 }
 
 __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
@@ -63,25 +58,22 @@ __aicore__ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     }
     return 0;
 }
-__aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) 
-{ 
-    return x > y ? x : y; 
-}
+__aicore__ inline uint32_t MAX(uint32_t x, uint32_t y) { return x > y ? x : y; }
 
 template <typename T>
-__aicore__ inline void CastFrom32To16(const AscendC::LocalTensor<T> &out, const AscendC::LocalTensor<float> &in,
-    uint32_t count)
+__aicore__ inline void CastFrom32To16(const AscendC::LocalTensor<T>& out, const AscendC::LocalTensor<float>& in,
+                                      uint32_t count)
 {
     if constexpr (AscendC::IsSameType<T, half>::value) {
         Cast(out, in, AscendC::RoundMode::CAST_NONE, count); // 310p cast fp32->half 只能用CAST_NONE，这里拉齐310p和910b
-    } else { // bf16
+    } else {                                                 // bf16
         Cast(out, in, AscendC::RoundMode::CAST_RINT, count);
     }
     AscendC::PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t> &res, const AscendC::LocalTensor<half> &in,
-    half quantMin, uint32_t count)
+__aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t>& res, const AscendC::LocalTensor<half>& in,
+                                       half quantMin, uint32_t count)
 {
     Maxs(in, in, quantMin, count);
     AscendC::PipeBarrier<PIPE_V>();
@@ -96,9 +88,8 @@ __aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t> &res, 
 }
 
 template <typename T, template <typename U> typename R, template <typename U> typename S>
-__aicore__ inline void DataCopyEx(
-    const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T> &tmp, const uint32_t num_last_dim,
-    const uint32_t size = 1)
+__aicore__ inline void DataCopyEx(const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T>& tmp,
+                                  const uint32_t num_last_dim, const uint32_t size = 1)
 {
     auto eleCount = num_last_dim * size;
     int32_t numPerBlock = BLOCK_SIZE / sizeof(T);

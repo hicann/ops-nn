@@ -33,12 +33,12 @@ public:
     __aicore__ inline AscendQuantBase(){};
 
 protected:
-    __aicore__ inline void ParseCoreBlocks(
-        const AscendQuantTilingData* runTilingData, int32_t blockIdx, int64_t& blockLen);
-    __aicore__ inline void GetXInCopyParams(
-        const AscendQuantTilingData* runTilingData, int64_t xLen, AscendC::DataCopyExtParams& copyParams);
-    __aicore__ inline void GetOutCopyParams(
-        const AscendQuantTilingData* runTilingData, int64_t yLen, AscendC::DataCopyExtParams& copyParams);
+    __aicore__ inline void ParseCoreBlocks(const AscendQuantTilingData* runTilingData, int32_t blockIdx,
+                                           int64_t& blockLen);
+    __aicore__ inline void GetXInCopyParams(const AscendQuantTilingData* runTilingData, int64_t xLen,
+                                            AscendC::DataCopyExtParams& copyParams);
+    __aicore__ inline void GetOutCopyParams(const AscendQuantTilingData* runTilingData, int64_t yLen,
+                                            AscendC::DataCopyExtParams& copyParams);
 
 protected:
     constexpr static int32_t BLOCK_SIZE = GetUbBlockSize();
@@ -52,110 +52,95 @@ protected:
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_HIFP8 = []() {
         if constexpr (RoundMode == TPL_ROUND_MODE_HYBRID) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_HYBRID};
         } else {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_ROUND};
         }
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_FP8E5M2 = []() {
-        return AscendC::MicroAPI::CastTrait{
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_FP8E4M3 = []() {
-        return AscendC::MicroAPI::CastTrait{
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_FP32_TO_INT16 = []() {
         if constexpr (RoundMode == TPL_ROUND_MODE_ROUND) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_FLOOR) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_CEIL) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_CEIL};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_CEIL};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_TRUNC) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         } else {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         }
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_INT16_TO_HALF = []() {
         if constexpr (RoundMode == TPL_ROUND_MODE_ROUND) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::UNKNOWN,
+                                                AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_FLOOR) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::UNKNOWN,
+                                                AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_CEIL) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_CEIL};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::UNKNOWN,
+                                                AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_CEIL};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_TRUNC) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::UNKNOWN,
+                                                AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         } else {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::UNKNOWN,
+                                                AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         }
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_HALF_TO_INT8 = []() {
         if constexpr (RoundMode == TPL_ROUND_MODE_ROUND) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_FLOOR) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_FLOOR};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_CEIL) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_CEIL};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_CEIL};
         } else if constexpr (RoundMode == TPL_ROUND_MODE_TRUNC) {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         } else {
-            return AscendC::MicroAPI::CastTrait{
-                AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+            return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                                AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
         }
     }();
 
     static constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_F16_TO_I8 = []() {
-        return AscendC::MicroAPI::CastTrait{
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+        return AscendC::MicroAPI::CastTrait{AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+                                            AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
     }();
 };
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantBase<T, U, RoundMode>::ParseCoreBlocks(
-    const AscendQuantTilingData* runTilingData, int32_t blockIdx, int64_t& blockLen)
+__aicore__ inline void AscendQuantBase<T, U, RoundMode>::ParseCoreBlocks(const AscendQuantTilingData* runTilingData,
+                                                                         int32_t blockIdx, int64_t& blockLen)
 {
     if (blockIdx == runTilingData->numCore - 1) {
         blockLen = runTilingData->blockTailFactor;
@@ -165,8 +150,8 @@ __aicore__ inline void AscendQuantBase<T, U, RoundMode>::ParseCoreBlocks(
 }
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetXInCopyParams(
-    const AscendQuantTilingData* runTilingData, int64_t xLen, DataCopyExtParams& copyParams)
+__aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetXInCopyParams(const AscendQuantTilingData* runTilingData,
+                                                                          int64_t xLen, DataCopyExtParams& copyParams)
 {
     copyParams.blockCount = 1;
     copyParams.blockLen = xLen * sizeof(T);
@@ -184,8 +169,8 @@ __aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetXInCopyParams(
 }
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetOutCopyParams(
-    const AscendQuantTilingData* runTilingData, int64_t yLen, DataCopyExtParams& copyParams)
+__aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetOutCopyParams(const AscendQuantTilingData* runTilingData,
+                                                                          int64_t yLen, DataCopyExtParams& copyParams)
 {
     int64_t yLenReal = yLen;
     if constexpr (IsSameType<U, int4b_t>::value) {

@@ -21,21 +21,13 @@
 
 using namespace std;
 
-extern "C" void inplace_add_layer_norm(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" void inplace_add_layer_norm(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR y,
+                                       GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling);
 
-class inplace_add_layer_norm_test : public testing::Test
-{
+class inplace_add_layer_norm_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "inplace_add_layer_norm_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "inplace_add_layer_norm_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "inplace_add_layer_norm_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "inplace_add_layer_norm_test TearDown\n" << endl; }
 };
 
 TEST_F(inplace_add_layer_norm_test, test_case_fp16)
@@ -82,31 +74,25 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16)
     tilingDatafromBin->colTail = D;
     // normal fp16
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     // big_n fp16
     ICPU_SET_TILING_KEY(40);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(140);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(42);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     tilingDatafromBin->numCore = blockDim;
     tilingDatafromBin->numLastDim = D;
@@ -122,31 +108,25 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16)
 
     // single fp16
     ICPU_SET_TILING_KEY(20);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(120);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(22);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     // singleext fp16
     ICPU_SET_TILING_KEY(30);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(130);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(32);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     tilingDatafromBin->numCore = blockDim;
     tilingDatafromBin->numLastDim = D;
@@ -161,31 +141,25 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16)
     tilingDatafromBin->lastDimPerTime = D / 2;
     // slice fp16
     ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(110);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(12);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     // sliceext fp16
     ICPU_SET_TILING_KEY(50);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(150);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(52);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -246,13 +220,11 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special)
 
     // normal fp16
     ICPU_SET_TILING_KEY(162);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(62);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -313,21 +285,17 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce)
 
     // special reduce
     ICPU_SET_TILING_KEY(70);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(72);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(170);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(172);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -388,21 +356,17 @@ TEST_F(inplace_add_layer_norm_test, test_case_fp16_special_reduce_big_N)
 
     // special reduce big n
     ICPU_SET_TILING_KEY(80);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(82);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(180);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
     ICPU_SET_TILING_KEY(182);
-    ICPU_RUN_KF(
-        inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(inplace_add_layer_norm, blockDim, x1, x2, gamma, beta, bias, y, mean, rstd, x, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

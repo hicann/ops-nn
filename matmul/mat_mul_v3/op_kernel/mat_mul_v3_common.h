@@ -72,8 +72,8 @@ constexpr MatmulConfig MM_CFG_VEC_ND2NZ = GetMDLConfig(false, false, 0, true);
 // set enUnitFlag
 constexpr MatmulConfig MM_CFG_NO_PRELOAD = GetMDLConfig(false, false, 0, false, false, false, true);
 // enable K shift
-constexpr MatmulConfig MM_CFG_K_SHIFT =
-    GetMDLConfig(false, false, 0, false, false, false, true, true, true, false, false, true);
+constexpr MatmulConfig MM_CFG_K_SHIFT = GetMDLConfig(false, false, 0, false, false, false, true, true, true, false,
+                                                     false, true);
 // set doMTE2Preload
 constexpr MatmulConfig MM_CFG_PRELOAD_MK = GetMDLConfig(false, false, 2);
 constexpr MatmulConfig MM_CFG_PRELOAD_NK = GetMDLConfig(false, false, 1);
@@ -84,24 +84,15 @@ constexpr MatmulBatchParams singBiasParams{false, BatchMode::BATCH_LESS_THAN_L1,
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_OUT_SING_BIAS = GetMMConfig<MatmulConfigMode::CONFIG_NORM>(singBiasParams);
 // set ORDER_M
 constexpr MatmulConfig MM_CFG_ORDER_M = GetNormalConfig(false, false, false, BatchMode::BATCH_LESS_THAN_L1, true,
-    IterateOrder::ORDER_M);
+                                                        IterateOrder::ORDER_M);
 // set enMultiBatch & ORDER_M
-constexpr MatmulConfig MM_CFG_MULTI_BATCH_OUT = GetNormalConfig(false, false, false, BatchMode::BATCH_LESS_THAN_L1, true,
-    IterateOrder::ORDER_M, ScheduleType::INNER_PRODUCT, true, false, BatchOutMode::MULTI_BATCH);
+constexpr MatmulConfig MM_CFG_MULTI_BATCH_OUT = GetNormalConfig(
+    false, false, false, BatchMode::BATCH_LESS_THAN_L1, true, IterateOrder::ORDER_M, ScheduleType::INNER_PRODUCT, true,
+    false, BatchOutMode::MULTI_BATCH);
 
-enum class ND2NZ_SELECT : int32_t
-{
-    ONLY_A = 1,
-    ONLY_B = 2,
-    BOTH_AB = 3
-};
+enum class ND2NZ_SELECT : int32_t { ONLY_A = 1, ONLY_B = 2, BOTH_AB = 3 };
 
-enum class FIXPIPE_OPT_SELECT : int32_t
-{
-    BASE = 0,
-    BASE_ENABLE_ALIGNOUT = 1,
-    VEC_NZ2ND_UNALIGNOUT = 2
-};
+enum class FIXPIPE_OPT_SELECT : int32_t { BASE = 0, BASE_ENABLE_ALIGNOUT = 1, VEC_NZ2ND_UNALIGNOUT = 2 };
 
 #if defined(__CCE_KT_TEST__)
 #define SET_G_CORE_TYPE_IS_AIV thread_local int g_coreType = 2
@@ -112,14 +103,16 @@ enum class FIXPIPE_OPT_SELECT : int32_t
 #endif
 
 template <HardEvent event>
-__aicore__ inline void TPipeSetWaitFlag() {
+__aicore__ inline void TPipeSetWaitFlag()
+{
     auto eventID = GetTPipePtr()->FetchEventID(event);
     SetFlag<event>(eventID);
     WaitFlag<event>(eventID);
 }
 
 template <class T>
-__aicore__ inline void GetSizeC0(uint64_t &c0Size) {
+__aicore__ inline void GetSizeC0(uint64_t& c0Size)
+{
     if (sizeof(T) == sizeof(float)) {
         c0Size = 8;
     } else if (sizeof(T) == sizeof(int8_t)) {
@@ -143,26 +136,17 @@ __aicore__ inline uint64_t MMV3DivCeil(uint64_t a, uint64_t b)
 /**
  * if b is 0, return 0
  */
-__aicore__ inline uint64_t MMV3CeilAlign(uint64_t a, uint64_t b)
-{
-    return MMV3DivCeil(a, b) * b;
-}
+__aicore__ inline uint64_t MMV3CeilAlign(uint64_t a, uint64_t b) { return MMV3DivCeil(a, b) * b; }
 
 /**
  * if b is 0, return a
  */
-__aicore__ inline uint64_t MMV3DivFloor(uint64_t a, uint64_t b)
-{
-    return b == 0 ? a : a / b;
-}
+__aicore__ inline uint64_t MMV3DivFloor(uint64_t a, uint64_t b) { return b == 0 ? a : a / b; }
 
 /**
  * if b is 0, return 0
  */
-__aicore__ inline uint64_t MMV3FloorAlign(uint64_t a, uint64_t b)
-{
-    return b == 0 ? 0 : a / b * b;
-}
+__aicore__ inline uint64_t MMV3FloorAlign(uint64_t a, uint64_t b) { return b == 0 ? 0 : a / b * b; }
 
 __aicore__ inline uint64_t GetCurrentBlockIdx()
 {
@@ -173,7 +157,8 @@ __aicore__ inline uint64_t GetCurrentBlockIdx()
 }
 
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510))
-__aicore__ inline uint64_t MMLcm(uint64_t m, uint64_t n) {
+__aicore__ inline uint64_t MMLcm(uint64_t m, uint64_t n)
+{
     if (m == 0 || n == 0) {
         return 0; // 处理输入为0的情况
     }
@@ -187,17 +172,14 @@ __aicore__ inline uint64_t MMLcm(uint64_t m, uint64_t n) {
     return total / m;
 }
 
-__aicore__ inline void WaitFlagDevLocal(int64_t flagID)
-{
-    CrossCoreWaitFlag(flagID);
-}
+__aicore__ inline void WaitFlagDevLocal(int64_t flagID) { CrossCoreWaitFlag(flagID); }
 
-//supportMmadS8S4平台无L2cacheUseInfo，用宏隔离
+// supportMmadS8S4平台无L2cacheUseInfo，用宏隔离
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 template <class A_T, class B_T, class C_T, class BiasT>
-__aicore__ inline void SetL2CacheEnable(const L2cacheUseInfo& l2EnableInfo,
-    GlobalTensor<A_T> &aGlobal, GlobalTensor<B_T> &bGlobal,
-    GlobalTensor<C_T> &cGlobal, GlobalTensor<BiasT> &biasGlobal)
+__aicore__ inline void SetL2CacheEnable(const L2cacheUseInfo& l2EnableInfo, GlobalTensor<A_T>& aGlobal,
+                                        GlobalTensor<B_T>& bGlobal, GlobalTensor<C_T>& cGlobal,
+                                        GlobalTensor<BiasT>& biasGlobal)
 {
     if ((l2EnableInfo.l2CacheFlag & ALL_L2_CACHE_ENABLE) == 0) {
         if (l2EnableInfo.l2CacheFlag & C_L2_DISABLE) {
@@ -208,9 +190,9 @@ __aicore__ inline void SetL2CacheEnable(const L2cacheUseInfo& l2EnableInfo,
 #endif
 
 template <class T>
-__aicore__ inline void CopyGmToUbufAlign(const LocalTensor<T>& dst, const GlobalTensor<T>& src,
-    uint16_t nBurst, uint32_t lenBurst,
-    uint8_t leftPaddingNum, uint8_t rightPaddingNum, uint32_t srcGap, uint32_t dstGap)
+__aicore__ inline void CopyGmToUbufAlign(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint16_t nBurst,
+                                         uint32_t lenBurst, uint8_t leftPaddingNum, uint8_t rightPaddingNum,
+                                         uint32_t srcGap, uint32_t dstGap)
 {
     DataCopyExtParams dataCopyExtParams{nBurst, lenBurst, srcGap, dstGap, 0};
     DataCopyPadExtParams<T> dataCopyPadExtParams{false, leftPaddingNum, rightPaddingNum, static_cast<T>(0)};
@@ -218,8 +200,8 @@ __aicore__ inline void CopyGmToUbufAlign(const LocalTensor<T>& dst, const Global
 }
 
 template <typename T>
-__aicore__ inline void CopyUbufToGmAlign(const GlobalTensor<T>& dst, const LocalTensor<T>& src,
-    uint16_t nBurst, uint32_t lenBurst, uint32_t srcGap, uint32_t dstGap)
+__aicore__ inline void CopyUbufToGmAlign(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint16_t nBurst,
+                                         uint32_t lenBurst, uint32_t srcGap, uint32_t dstGap)
 {
     DataCopyExtParams dataCopyExtParams{nBurst, lenBurst, srcGap, dstGap, 0};
     DataCopyPad(dst, src, dataCopyExtParams);
@@ -227,8 +209,8 @@ __aicore__ inline void CopyUbufToGmAlign(const GlobalTensor<T>& dst, const Local
 
 template <typename T>
 __aicore__ inline void CopyCast(const LocalTensor<float>& ubSrc, const LocalTensor<T>& ubDst,
-    const GlobalTensor<float>& src, const GlobalTensor<T>& dst, uint64_t offset,
-    uint16_t nBurst, uint16_t lenBurst, uint32_t gap, uint8_t pingpongEventId)
+                                const GlobalTensor<float>& src, const GlobalTensor<T>& dst, uint64_t offset,
+                                uint16_t nBurst, uint16_t lenBurst, uint32_t gap, uint8_t pingpongEventId)
 {
     CopyGmToUbufAlign<float>(ubSrc, src[offset], nBurst, lenBurst * sizeof(float), 0, 0, gap * sizeof(float), 0);
     SetFlag<HardEvent::MTE2_V>(static_cast<event_t>(pingpongEventId));
@@ -243,8 +225,8 @@ __aicore__ inline void CopyCast(const LocalTensor<float>& ubSrc, const LocalTens
 #ifdef DBCAST
 // v220
 template <typename T>
-__aicore__ inline void Cast32to16V220(__gm__ T *dst, __gm__ float *src, uint64_t size, uint32_t nCoreUse,
-    uint32_t n, TBuf<TPosition::VECCALC> &tmpBuf)
+__aicore__ inline void Cast32to16V220(__gm__ T* dst, __gm__ float* src, uint64_t size, uint32_t nCoreUse, uint32_t n,
+                                      TBuf<TPosition::VECCALC>& tmpBuf)
 {
     uint16_t dataSize = static_cast<uint16_t>(TOTAL_UB_SIZE / NUM_TWO / sizeof(float));
     uint16_t dataSize1 = static_cast<uint16_t>(TOTAL_UB_SIZE / NUM_TWO / sizeof(T));
@@ -258,8 +240,8 @@ __aicore__ inline void Cast32to16V220(__gm__ T *dst, __gm__ float *src, uint64_t
 
     GlobalTensor<float> gmSrc;
     GlobalTensor<T> gmDst;
-    gmSrc.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(src), size);
-    gmDst.SetGlobalBuffer(reinterpret_cast<__gm__ T *>(dst), size);
+    gmSrc.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(src), size);
+    gmDst.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dst), size);
 
     uint8_t pingpongEventId = 0;
 
@@ -311,8 +293,8 @@ __aicore__ inline void Cast32to16V220(__gm__ T *dst, __gm__ float *src, uint64_t
             ubSrc = ubSrcPong;
         }
         WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(pingpongEventId));
-        CopyCast<T>(ubSrc, ubDst, gmSrc, gmDst, i * nBurst * n, nBurst, static_cast<uint16_t>(nCoreUse),
-            n - nCoreUse, pingpongEventId);
+        CopyCast<T>(ubSrc, ubDst, gmSrc, gmDst, i * nBurst * n, nBurst, static_cast<uint16_t>(nCoreUse), n - nCoreUse,
+                    pingpongEventId);
         SetFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(pingpongEventId));
     }
     WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
@@ -329,14 +311,14 @@ __aicore__ inline void Cast32to16V220(__gm__ T *dst, __gm__ float *src, uint64_t
     if (tail > 0) {
         uint16_t tailNBurst = static_cast<uint16_t>(tail / nCoreUse);
         CopyCast<T>(ubSrc, ubDst, gmSrc, gmDst, repeat * nBurst * n, tailNBurst, static_cast<uint16_t>(nCoreUse),
-            n - nCoreUse, pingpongEventId);
+                    n - nCoreUse, pingpongEventId);
     }
     return;
 }
 
 template <typename T>
-__aicore__ inline void UnAlignedCast32to16V220(__gm__ T *dst, __gm__ float *src, uint32_t offset, uint32_t size,
-    TBuf<TPosition::VECCALC> &tmpBuf)
+__aicore__ inline void UnAlignedCast32to16V220(__gm__ T* dst, __gm__ float* src, uint32_t offset, uint32_t size,
+                                               TBuf<TPosition::VECCALC>& tmpBuf)
 {
     uint32_t dataSize = TOTAL_UB_SIZE / NUM_TWO / sizeof(float);
     uint32_t dataSize1 = TOTAL_UB_SIZE / NUM_TWO / sizeof(T);
@@ -350,8 +332,8 @@ __aicore__ inline void UnAlignedCast32to16V220(__gm__ T *dst, __gm__ float *src,
 
     GlobalTensor<float> gmSrc;
     GlobalTensor<T> gmDst;
-    gmSrc.SetGlobalBuffer(reinterpret_cast<__gm__ float *>(src), size);
-    gmDst.SetGlobalBuffer(reinterpret_cast<__gm__ T *>(dst), size);
+    gmSrc.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(src), size);
+    gmDst.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dst), size);
 
     uint32_t repeat = size / dataSize;
     uint32_t tail = size % dataSize;
@@ -394,11 +376,10 @@ __aicore__ inline void UnAlignedCast32to16V220(__gm__ T *dst, __gm__ float *src,
 
 #endif
 
-
 template <typename T1, typename T2>
 __aicore__ inline void CopyRemovePad(const GlobalTensor<T2>& outputGlobal, const GlobalTensor<T1>& inputGlobal,
-    const LocalTensor<T1>& srcUb, const LocalTensor<T2>& castDstUb, uint32_t nBurst, uint32_t inputWidth,
-    uint32_t outputWidth)
+                                     const LocalTensor<T1>& srcUb, const LocalTensor<T2>& castDstUb, uint32_t nBurst,
+                                     uint32_t inputWidth, uint32_t outputWidth)
 {
     CopyGmToUbufAlign<T1>(srcUb, inputGlobal, static_cast<uint16_t>(nBurst), inputWidth * sizeof(T1), 0, 0, 0, 0);
     SetFlag<HardEvent::MTE2_V>(static_cast<event_t>(0));
@@ -411,8 +392,8 @@ __aicore__ inline void CopyRemovePad(const GlobalTensor<T2>& outputGlobal, const
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void RemovePaddingImpl(GlobalTensor<T2> outputGlobal, GlobalTensor<T1> inputGlobal,
-    uint32_t height, uint32_t width, uint32_t outputWidth, TBuf<TPosition::VECCALC> &tmpBuf)
+__aicore__ inline void RemovePaddingImpl(GlobalTensor<T2> outputGlobal, GlobalTensor<T1> inputGlobal, uint32_t height,
+                                         uint32_t width, uint32_t outputWidth, TBuf<TPosition::VECCALC>& tmpBuf)
 {
     LocalTensor<T1> srcUb = tmpBuf.Get<T1>();
     LocalTensor<T2> castDstUb = srcUb.template ReinterpretCast<T2>();
@@ -427,16 +408,17 @@ __aicore__ inline void RemovePaddingImpl(GlobalTensor<T2> outputGlobal, GlobalTe
             SetFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
             for (uint32_t index = 0; index < castTimes; ++index) {
                 WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
-                UnAlignedCast32to16V220((__gm__ T2 *)(outputGlobal[index * maxWidthLen + mIndex * outputWidth].GetPhyAddr()),
-                               (__gm__ float *)(inputGlobal[index * maxWidthLen + mIndex * width].GetPhyAddr()),
-                               0, maxWidthLen, tmpBuf);
+                UnAlignedCast32to16V220(
+                    (__gm__ T2*)(outputGlobal[index * maxWidthLen + mIndex * outputWidth].GetPhyAddr()),
+                    (__gm__ float*)(inputGlobal[index * maxWidthLen + mIndex * width].GetPhyAddr()), 0, maxWidthLen,
+                    tmpBuf);
                 SetFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
             }
             WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
             if (tailWidth != 0) {
                 CopyRemovePad(outputGlobal[castTimes * maxWidthLen + mIndex * outputWidth],
-                              inputGlobal[castTimes * maxWidthLen + mIndex * width], srcUb, castDstUb,
-                              1, tailWidth, tailOutWidth);
+                              inputGlobal[castTimes * maxWidthLen + mIndex * width], srcUb, castDstUb, 1, tailWidth,
+                              tailOutWidth);
             }
         }
         return;
@@ -446,8 +428,8 @@ __aicore__ inline void RemovePaddingImpl(GlobalTensor<T2> outputGlobal, GlobalTe
     SetFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
     for (uint32_t i = 0; i < nBurstTimes; ++i) {
         WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
-        CopyRemovePad(outputGlobal[i * nBurst * outputWidth], inputGlobal[i * nBurst * width], srcUb, castDstUb,
-                      nBurst, width, outputWidth);
+        CopyRemovePad(outputGlobal[i * nBurst * outputWidth], inputGlobal[i * nBurst * width], srcUb, castDstUb, nBurst,
+                      width, outputWidth);
         SetFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));
     }
     WaitFlag<HardEvent::MTE3_MTE2>(static_cast<event_t>(0));

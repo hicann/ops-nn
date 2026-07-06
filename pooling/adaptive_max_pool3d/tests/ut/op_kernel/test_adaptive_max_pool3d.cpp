@@ -44,32 +44,18 @@ struct AdaptiveMaxPool3dTestParam {
     AdaptiveMaxPool3dTilingData tiling;
 };
 
-class AdaptiveMaxPool3dTest : public testing::TestWithParam<AdaptiveMaxPool3dTestParam>
-{
+class AdaptiveMaxPool3dTest : public testing::TestWithParam<AdaptiveMaxPool3dTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3dTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveMaxPool3dTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3dTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveMaxPool3dTest TearDown" << std::endl; }
 };
 
-class AdaptiveMaxPool3dBigKernelTest : public testing::TestWithParam<AdaptiveMaxPool3dTestParam>
-{
+class AdaptiveMaxPool3dBigKernelTest : public testing::TestWithParam<AdaptiveMaxPool3dTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3dTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AdaptiveMaxPool3dTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveMaxPool3dTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveMaxPool3dTest TearDown" << std::endl; }
 };
 
 TEST_P(AdaptiveMaxPool3dTest, test_case_adaptive_max_pool3d)
@@ -144,8 +130,7 @@ TEST_P(AdaptiveMaxPool3dTest, test_case_adaptive_max_pool3d)
 static AdaptiveMaxPool3dTestParam cases[] = {
     {"test_case_split_nc_float32", 1, 64, 1, 1, 1, 1, 1, 1, sizeof(float), 320000UL, {1, 64, 1, 1,  1,  1, 1, 1, 48,
                                                                                       1, 1,  1, 1,  64, 1, 1, 1, 1,
-                                                                                      1, 1,  1, 64, 1,  1, 1}}
-};
+                                                                                      1, 1,  1, 64, 1,  1, 1}}};
 
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3d, AdaptiveMaxPool3dTest, testing::ValuesIn(cases));
 

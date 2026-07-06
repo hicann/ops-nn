@@ -29,9 +29,9 @@ extern "C" {
  * @param [in] executor: 返回op执行器，包含算子计算流程
  * @return aclnnStatus: 返回状态码
  * */
-ACLNN_API aclnnStatus aclnnNormGetWorkspaceSize(
-    const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim, bool keepdim, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnNormGetWorkspaceSize(const aclTensor* self, const aclScalar* pScalar, const aclIntArray* dim,
+                                                bool keepdim, aclTensor* out, uint64_t* workspaceSize,
+                                                aclOpExecutor** executor);
 
 /**
  * aclnnNorm的第二段接口，用于执行计算

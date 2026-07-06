@@ -22,12 +22,12 @@
 
 namespace optiling {
 struct SmoothL1LossGradV2CompileInfo {
-  std::string reduceMeanCofDtype;
-  ge::DataType reduceDtype;
-  uint64_t coreNum = 0;
-  uint64_t ubSize = 0;
-  ge::DataType dtype;
+    std::string reduceMeanCofDtype;
+    ge::DataType reduceDtype;
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+    ge::DataType dtype;
 };
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_SMOOTH_L1_LOSS_GRAD_V2_H
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_SMOOTH_L1_LOSS_GRAD_V2_H

@@ -22,14 +22,10 @@ using namespace AddRmsNormQuantBase;
 template <typename TX, typename TScale, typename TOffset, bool RN, bool A, bool PT>
 class KernelAddRmsNormQuantSingleN {
 public:
-    __aicore__ inline KernelAddRmsNormQuantSingleN(TPipe* pipe)
-    {
-        Ppipe = pipe;
-    }
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1,
-        GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
-        const AddRMSNormQuantTilingData* tilingData)
+    __aicore__ inline KernelAddRmsNormQuantSingleN(TPipe* pipe) { Ppipe = pipe; }
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                GM_ADDR zero_points1, GM_ADDR zero_points2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR res_out, const AddRMSNormQuantTilingData* tilingData)
     {
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");
 
@@ -63,7 +59,7 @@ public:
         y1Gm.SetGlobalBuffer((__gm__ int8_t*)y1 + gmOffset, calcNum);
         y2Gm.SetGlobalBuffer((__gm__ int8_t*)y2 + gmOffset, calcNum);
         xGm.SetGlobalBuffer((__gm__ TX*)x + gmOffset, calcNum);
-        if(RN) {
+        if (RN) {
             resOutGm.SetGlobalBuffer((__gm__ TX*)res_out + gmOffset, calcNum);
         }
         initSingleNUbSize(scales2, zero_points1, zero_points2, beta);
@@ -116,8 +112,8 @@ private:
 
         if (hasScales2) {
             AddRmsNormQuantBase::CopyInScales<TScale>(scales2Buf, scales2Gm, numCol, ubFactor);
-            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(
-                zeroPoints2Buf, zeroPoints2Gm, numCol, ubFactor, hasZeroPoints2);
+            AddRmsNormQuantBase::CopyInZeroPoints<TOffset>(zeroPoints2Buf, zeroPoints2Gm, numCol, ubFactor,
+                                                           hasZeroPoints2);
         }
     }
 
@@ -278,11 +274,11 @@ private:
         PipeBarrier<PIPE_V>();
         Add(xFp32LocalQuant, xFp32LocalQuant, sqxLocalQuant, numCol);
         PipeBarrier<PIPE_V>();
-        #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
         Cast(x1LocalQuant, xFp32LocalQuant, RoundMode::CAST_NONE, numCol);
-        #else
+#else
         Cast(x1LocalQuant, xFp32LocalQuant, RoundMode::CAST_RINT, numCol);
-        #endif
+#endif
         PipeBarrier<PIPE_V>();
         // copy gamma
         event_t eventVMTE2Quant = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
@@ -348,11 +344,11 @@ private:
         Mul(xFp32LocalQuant, xFp32LocalQuant, sqxLocalQuant, numCol);
         PipeBarrier<PIPE_V>();
         if constexpr (RN) {
-            #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
             Cast(x1LocalQuant, xFp32LocalQuant, RoundMode::CAST_NONE, numCol);
-            #else
+#else
             Cast(x1LocalQuant, xFp32LocalQuant, RoundMode::CAST_RINT, numCol);
-            #endif
+#endif
             SetFlag<HardEvent::V_MTE3>(eventVMTE3Quant);
             WaitFlag<HardEvent::V_MTE3>(eventVMTE3Quant);
             DataCopyCustom<TX>(resOutGm, x1LocalQuant, numCol);
@@ -384,7 +380,8 @@ private:
         }
 
         if constexpr (is_same<TScale, bfloat16_t>::value) {
-            Cast(tmpLocalQuant, tmpLocalQuant.template ReinterpretCast<TScale>()[ubFactor], RoundMode::CAST_NONE, numCol);
+            Cast(tmpLocalQuant, tmpLocalQuant.template ReinterpretCast<TScale>()[ubFactor], RoundMode::CAST_NONE,
+                 numCol);
             PipeBarrier<PIPE_V>();
         }
 
@@ -425,9 +422,9 @@ private:
         DataCopyCustom<int8_t>(y1Gm, y1OutQuant, numCol);
     }
 
-    __aicore__ inline void Quant_Mul(
-        GlobalTensor<TScale> scales1Gm, LocalTensor<float> xFp32Local,
-                                    LocalTensor<float> tmpLocal, uint32_t numCol){
+    __aicore__ inline void Quant_Mul(GlobalTensor<TScale> scales1Gm, LocalTensor<float> xFp32Local,
+                                     LocalTensor<float> tmpLocal, uint32_t numCol)
+    {
         if constexpr (PT) {
             float scale;
             if constexpr (is_same<TScale, bfloat16_t>::value) {

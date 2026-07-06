@@ -30,12 +30,9 @@ using namespace OPS::NN;
 // 辅助函数:构建包含 InplaceSub 节点的测试图
 // InplaceSub 无 ES API,使用 CompliantNodeBuilder
 // ---------------------------------------------------------------------------
-static std::shared_ptr<Graph> BuildTestGraph(
-    DataType xDtype,
-    const std::vector<int64_t>& xDims,
-    const std::vector<int64_t>& indicesDims,
-    const std::vector<int64_t>& vDims,
-    DataType indicesDtype = DT_INT32)
+static std::shared_ptr<Graph> BuildTestGraph(DataType xDtype, const std::vector<int64_t>& xDims,
+                                             const std::vector<int64_t>& indicesDims, const std::vector<int64_t>& vDims,
+                                             DataType indicesDtype = DT_INT32)
 {
     auto graphBuilder = es::EsGraphBuilder("test_graph");
     auto x = graphBuilder.CreateInput(0, "x", xDtype, FORMAT_ND, xDims);
@@ -45,12 +42,12 @@ static std::shared_ptr<Graph> BuildTestGraph(
     ge::Graph* graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     GNode opNode = es::CompliantNodeBuilder(graphPtr)
-        .OpType("InplaceSub")
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                       .OpType("InplaceSub")
+                       .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"v", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                       .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                       .Build();
 
     GNode xNode = *x.GetProducer();
     GNode indicesNode = *indices.GetProducer();
@@ -144,15 +141,9 @@ static void SetPlatform(const std::string& socVersion)
 // ===========================================================================
 class AInplaceSubFusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        SetPlatform("Ascend950");
-    }
+    static void SetUpTestCase() { SetPlatform("Ascend950"); }
 
-    void SetUp() override
-    {
-        SetPlatform("Ascend950");
-    }
+    void SetUp() override { SetPlatform("Ascend950"); }
 };
 
 // ===========================================================================

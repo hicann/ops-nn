@@ -25,7 +25,6 @@
 #include "op_host/tiling_templates_registry.h"
 #include "op_common/op_host/util/platform_util.h"
 
-
 namespace optiling {
 BEGIN_TILING_DATA_DEF(RMSNormTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, num_row);
@@ -156,8 +155,9 @@ inline uint32_t ComputeTotalBufSize(ComputeTotalBufSizeParam computeTotalBufSize
         return queBufSize + tmpBufSzie + static_cast<uint32_t>(RETAINED_SIZE_MULTI_N);
     }
 }
-ge::graphStatus TilingArch354RmsNorm(
-    gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore, uint64_t ubSize,
-    ge::DataType xDataType, ge::DataType gammaDataType, float epsilon, uint8_t isGemma, RMSNormTilingData& rmsNormTilingData, RMSNormArch35TilingData& rmsNormArch35TilingData);
+ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore,
+                                     uint64_t ubSize, ge::DataType xDataType, ge::DataType gammaDataType, float epsilon,
+                                     uint8_t isGemma, RMSNormTilingData& rmsNormTilingData,
+                                     RMSNormArch35TilingData& rmsNormArch35TilingData);
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_RMS_NORM_H_

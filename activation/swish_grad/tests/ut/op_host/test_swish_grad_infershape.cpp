@@ -25,15 +25,9 @@
 
 class SwishGradInfershape : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwishGrad Infershape Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwishGrad Infershape Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwishGrad Infershape Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwishGrad Infershape Test TearDown" << std::endl; }
 };
 
 TEST_F(SwishGradInfershape, swish_grad_infershape_test0)

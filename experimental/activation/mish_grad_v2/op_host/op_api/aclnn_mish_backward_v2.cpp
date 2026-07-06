@@ -25,15 +25,12 @@ extern "C" {
 
 constexpr size_t MAX_DIM_LEN = 8;
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT,
-    op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT,
-    op::DataType::DT_FLOAT16,
-    op::DataType::DT_BF16};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
@@ -45,7 +42,7 @@ static inline const std::initializer_list<op::DataType> &GetDtypeSupportList()
     return ASCEND910_DTYPE_SUPPORT_LIST;
 }
 
-static bool CheckNotNull(const aclTensor *grad, const aclTensor *x, const aclTensor *xGrad)
+static bool CheckNotNull(const aclTensor* grad, const aclTensor* x, const aclTensor* xGrad)
 {
     OP_CHECK_NULL(grad, return false);
     OP_CHECK_NULL(x, return false);
@@ -53,7 +50,7 @@ static bool CheckNotNull(const aclTensor *grad, const aclTensor *x, const aclTen
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor *grad, const aclTensor *x, const aclTensor *xGrad)
+static bool CheckDtypeValid(const aclTensor* grad, const aclTensor* x, const aclTensor* xGrad)
 {
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(grad, supportList, return false);
@@ -64,7 +61,7 @@ static bool CheckDtypeValid(const aclTensor *grad, const aclTensor *x, const acl
     return true;
 }
 
-static bool CheckShape(const aclTensor *grad, const aclTensor *x, const aclTensor *xGrad)
+static bool CheckShape(const aclTensor* grad, const aclTensor* x, const aclTensor* xGrad)
 {
     OP_CHECK_MAX_DIM(grad, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
@@ -74,7 +71,7 @@ static bool CheckShape(const aclTensor *grad, const aclTensor *x, const aclTenso
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *grad, const aclTensor *x, aclTensor *xGrad)
+static aclnnStatus CheckParams(const aclTensor* grad, const aclTensor* x, aclTensor* xGrad)
 {
     CHECK_RET(CheckNotNull(grad, x, xGrad), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(grad, x, xGrad), ACLNN_ERR_PARAM_INVALID);
@@ -82,9 +79,8 @@ static aclnnStatus CheckParams(const aclTensor *grad, const aclTensor *x, aclTen
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ExecMishBackwardV2GetWorkspaceSize(const aclTensor *grad, const aclTensor *x,
-                                                      aclTensor *xGrad, uint64_t *workspaceSize,
-                                                      aclOpExecutor **executor)
+static aclnnStatus ExecMishBackwardV2GetWorkspaceSize(const aclTensor* grad, const aclTensor* x, aclTensor* xGrad,
+                                                      uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -114,20 +110,19 @@ static aclnnStatus ExecMishBackwardV2GetWorkspaceSize(const aclTensor *grad, con
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMishBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self,
-                                              aclTensor *gradInput, uint64_t *workspaceSize,
-                                              aclOpExecutor **executor)
+aclnnStatus aclnnMishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput,
+                                              uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    const aclTensor *grad = gradOutput;
-    const aclTensor *x = self;
-    aclTensor *xGrad = gradInput;
+    const aclTensor* grad = gradOutput;
+    const aclTensor* x = self;
+    aclTensor* xGrad = gradInput;
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnMishBackward, DFX_IN(grad, x), DFX_OUT(xGrad));
     return ExecMishBackwardV2GetWorkspaceSize(grad, x, xGrad, workspaceSize, executor);
 }
 
-aclnnStatus aclnnMishBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
-                                const aclrtStream stream)
+aclnnStatus aclnnMishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                              const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnMishBackward);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

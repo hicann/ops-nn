@@ -21,7 +21,6 @@
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"
 
-
 namespace optiling {
 struct InitEmbeddingHashTableCompileInfo {
     int64_t coreNum{0};
@@ -39,5 +38,5 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(InitEmbeddingHashTable, InitEmbeddingHashTableTilingData)
 
-}  // namespace optiling
-#endif  // OPS_BUILT_IN_OP_TILING_RUNTIME_INIT_EMBEDDING_HASH_TABLE_TILING_H
+} // namespace optiling
+#endif // OPS_BUILT_IN_OP_TILING_RUNTIME_INIT_EMBEDDING_HASH_TABLE_TILING_H

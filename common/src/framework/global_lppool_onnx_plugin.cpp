@@ -31,16 +31,11 @@ static Status ParseParamsGlobalLpPool(const Message* op_src, ge::Operator& op_de
 // register Gemm op info to GE
 REGISTER_CUSTOM_OP("GlobalLpPool")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::GlobalLpPool"), 
-                   ge::AscendString("ai.onnx::9::GlobalLpPool"), 
-                   ge::AscendString("ai.onnx::10::GlobalLpPool"),
-                   ge::AscendString("ai.onnx::11::GlobalLpPool"), 
-                   ge::AscendString("ai.onnx::12::GlobalLpPool"), 
-                   ge::AscendString("ai.onnx::13::GlobalLpPool"),
-                   ge::AscendString("ai.onnx::14::GlobalLpPool"), 
-                   ge::AscendString("ai.onnx::15::GlobalLpPool"), 
-                   ge::AscendString("ai.onnx::16::GlobalLpPool"),
-                   ge::AscendString("ai.onnx::17::GlobalLpPool"), 
+    .OriginOpType({ge::AscendString("ai.onnx::8::GlobalLpPool"), ge::AscendString("ai.onnx::9::GlobalLpPool"),
+                   ge::AscendString("ai.onnx::10::GlobalLpPool"), ge::AscendString("ai.onnx::11::GlobalLpPool"),
+                   ge::AscendString("ai.onnx::12::GlobalLpPool"), ge::AscendString("ai.onnx::13::GlobalLpPool"),
+                   ge::AscendString("ai.onnx::14::GlobalLpPool"), ge::AscendString("ai.onnx::15::GlobalLpPool"),
+                   ge::AscendString("ai.onnx::16::GlobalLpPool"), ge::AscendString("ai.onnx::17::GlobalLpPool"),
                    ge::AscendString("ai.onnx::18::GlobalLpPool")})
     .ParseParamsFn(ParseParamsGlobalLpPool)
     .ImplyType(ImplyType::TVM);

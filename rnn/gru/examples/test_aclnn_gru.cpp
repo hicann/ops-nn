@@ -42,10 +42,10 @@ void PrintOutResult(const std::string& name, const std::vector<int64_t>& shape, 
 {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy %s from device to host failed. ERROR: %d\n", name.c_str(), ret); return);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy %s from device to host failed. ERROR: %d\n", name.c_str(), ret);
+              return );
     LOG_PRINT("=== %s shape=[", name.c_str());
     for (size_t i = 0; i < shape.size(); i++) {
         LOG_PRINT("%ld%s", shape[i], (i + 1 < shape.size()) ? "," : "");
@@ -70,9 +70,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -89,16 +88,14 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensorList(
-    const std::vector<std::vector<int64_t>>& shapes, void** deviceAddr, aclDataType dataType, aclTensorList** tensor,
-    T initVal = 1)
+int CreateAclTensorList(const std::vector<std::vector<int64_t>>& shapes, void** deviceAddr, aclDataType dataType,
+                        aclTensorList** tensor, T initVal = 1)
 {
     int size = shapes.size();
     aclTensor* tensors[size];
@@ -198,7 +195,8 @@ int main()
     ret = CreateAclTensor<float>(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    ret = CreateAclTensorList<float>(paramsListShape, paramsListDeviceAddr.data(), aclDataType::ACL_FLOAT, &params, 1.0);
+    ret = CreateAclTensorList<float>(paramsListShape, paramsListDeviceAddr.data(), aclDataType::ACL_FLOAT, &params,
+                                     1.0);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     std::vector<float> outputHostData(GetShapeSize(outputShape), 0.0);
@@ -215,7 +213,7 @@ int main()
         ret = CreateAclTensor<float>(hxHostData, hxShape, &hxDeviceAddr, aclDataType::ACL_FLOAT, &hx);
         CHECK_RET(ret == ACL_SUCCESS, return ret);
     }
-    
+
     if (isTraining) {
         rOutDeviceAddr.resize(ldScale, nullptr);
         zOutDeviceAddr.resize(ldScale, nullptr);
@@ -241,13 +239,9 @@ int main()
 
     // 调用aclnnGRU第一段接口
     ret = aclnnGRUGetWorkspaceSize(
-        input, params, (useHx ? hx : nullptr), nullptr, isbias, numLayers, dropout, isTraining, bidirection, batchFirst, output, hy,
-        isTraining ? rOut : nullptr,
-        isTraining ? zOut : nullptr, 
-        isTraining ? nOut : nullptr, 
-        isTraining ? hnOut : nullptr, 
-        isTraining ? hOut : nullptr, 
-        &workspaceSize, &executor);
+        input, params, (useHx ? hx : nullptr), nullptr, isbias, numLayers, dropout, isTraining, bidirection, batchFirst,
+        output, hy, isTraining ? rOut : nullptr, isTraining ? zOut : nullptr, isTraining ? nOut : nullptr,
+        isTraining ? hnOut : nullptr, isTraining ? hOut : nullptr, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGRUGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 

@@ -18,22 +18,19 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 
-class LogSoftmaxGradTilingAR : public LogSoftmaxGradTilingBase, public SoftmaxGradTilingAR
-{
+class LogSoftmaxGradTilingAR : public LogSoftmaxGradTilingBase, public SoftmaxGradTilingAR {
 public:
     explicit LogSoftmaxGradTilingAR(gert::TilingContext* context)
         : TilingBaseClass(context),
           SoftmaxGradTilingBase(context),
           LogSoftmaxGradTilingBase(context),
           SoftmaxGradTilingAR(context)
-    {
-    }
+    {}
     ~LogSoftmaxGradTilingAR() override = default;
 };
 
 REGISTER_OPS_TILING_TEMPLATE(LogSoftmaxGrad, LogSoftmaxGradTilingAR, TEMPLATE_AR_FULL_LOAD_PRIORITY);
 
-}  // namespace optiling
+} // namespace optiling

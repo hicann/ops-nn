@@ -135,31 +135,26 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, dtypeInput);
     auto stepDtype = dtypeInput->GetDataType();
 
-    bool isDiffDtype =
-        (gradDtype != varDtype) || (gradDtype != mDtype) || (gradDtype != vDtype) || (gradDtype != sDtype);
+    bool isDiffDtype = (gradDtype != varDtype) || (gradDtype != mDtype) || (gradDtype != vDtype) ||
+                       (gradDtype != sDtype);
     if (isDiffDtype) {
-        std::string dtypeMsg = Ops::Base::ToString(gradDtype) + ", " +
-                               Ops::Base::ToString(varDtype) + ", " +
-                               Ops::Base::ToString(mDtype) + ", " +
-                               Ops::Base::ToString(vDtype) + " and " +
+        std::string dtypeMsg = Ops::Base::ToString(gradDtype) + ", " + Ops::Base::ToString(varDtype) + ", " +
+                               Ops::Base::ToString(mDtype) + ", " + Ops::Base::ToString(vDtype) + " and " +
                                Ops::Base::ToString(sDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context->GetNodeName(), "grad, var, m, v and s", dtypeMsg.c_str(),
-            "grad, var, m, v and s should have the same dtype");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "grad, var, m, v and s", dtypeMsg.c_str(),
+                                               "grad, var, m, v and s should have the same dtype");
         return ge::GRAPH_FAILED;
     }
 
     bool isInvalidType = (gradDtype != ge::DT_FLOAT) && (gradDtype != ge::DT_BF16) && (gradDtype != ge::DT_FLOAT16);
-    OP_CHECK_IF(
-        isInvalidType,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad/var/m/v/s",
-            Ops::Base::ToString(gradDtype).c_str(), "float16, bfloat16 and float"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isInvalidType,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad/var/m/v/s",
+                                          Ops::Base::ToString(gradDtype).c_str(), "float16, bfloat16 and float"),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         stepDtype != ge::DT_INT64,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "step",
-            Ops::Base::ToString(stepDtype).c_str(), "int64"),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "step", Ops::Base::ToString(stepDtype).c_str(), "int64"),
         return ge::GRAPH_FAILED);
 
     uint32_t tilingKey = DTYPE_BF16_KEY;
@@ -199,14 +194,11 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
 
     bool isDiffSize = gradShape != varShape || gradShape != mShape || gradShape != vShape || gradShape != sShape;
     if (isDiffSize) {
-        std::string shapesMsg = Ops::Base::ToString(gradShape) + ", " +
-                                Ops::Base::ToString(varShape) + ", " +
-                                Ops::Base::ToString(mShape) + ", " +
-                                Ops::Base::ToString(vShape) + " and " +
+        std::string shapesMsg = Ops::Base::ToString(gradShape) + ", " + Ops::Base::ToString(varShape) + ", " +
+                                Ops::Base::ToString(mShape) + ", " + Ops::Base::ToString(vShape) + " and " +
                                 Ops::Base::ToString(sShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "grad, var, m, v and s", shapesMsg.c_str(),
-            "grad, var, m, v and s should have the same shape");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "grad, var, m, v and s", shapesMsg.c_str(),
+                                               "grad, var, m, v and s should have the same shape");
         return ge::GRAPH_FAILED;
     }
 
@@ -223,8 +215,8 @@ static ge::graphStatus TilingCompute(gert::TilingContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
 
     uint64_t totalDataNum = context->GetInputShape(INPUT_V_IDX)->GetStorageShape().GetShapeSize();
-    uint64_t dtypeSize =
-        context->GetInputDesc(INPUT_V_IDX)->GetDataType() == ge::DT_FLOAT ? FP32_DTYPE_SIZE : FP16_BF16_DTYPE_SIZE;
+    uint64_t dtypeSize = context->GetInputDesc(INPUT_V_IDX)->GetDataType() == ge::DT_FLOAT ? FP32_DTYPE_SIZE :
+                                                                                             FP16_BF16_DTYPE_SIZE;
     uint64_t frontCoreNum = totalDataNum % coreNum != 0 ? totalDataNum % coreNum : coreNum;
     uint64_t tailCoreNum = totalDataNum <= coreNum ? 0 : coreNum - frontCoreNum;
     uint64_t numBlocks = frontCoreNum + tailCoreNum;
@@ -237,8 +229,8 @@ static ge::graphStatus TilingCompute(gert::TilingContext* context)
 
     uint64_t tBuffersize = TBUFFER_NUM * BYTE_ONE_BLK;
     uint64_t bufferSize = ubSize - tBuffersize;
-    uint64_t coreOnesize =
-        (dtypeSize == FP32_DTYPE_SIZE) ? dtypeSize * QUEUE_NUM : (dtypeSize + FP32_DTYPE_SIZE) * QUEUE_NUM;
+    uint64_t coreOnesize = (dtypeSize == FP32_DTYPE_SIZE) ? dtypeSize * QUEUE_NUM :
+                                                            (dtypeSize + FP32_DTYPE_SIZE) * QUEUE_NUM;
     if (fusedEmaAdamTiling.get_mode() == 1) {
         coreOnesize -= (dtypeSize == FP32_DTYPE_SIZE) ? dtypeSize : (dtypeSize + FP32_DTYPE_SIZE);
     }
@@ -261,21 +253,17 @@ ge::graphStatus Tiling4ApplyFusedEmaAdam(gert::TilingContext* context)
     auto nodeName = context;
     OP_LOGD(nodeName, "Tiling4ApplyFusedEmaAdam running begin");
 
-    OP_CHECK_IF(
-        GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingAttr failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingAttr failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckInputDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputDtype failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputDtype failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputShape failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputShape failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        TilingCompute(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "TilingCompute failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(TilingCompute(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "TilingCompute failed."),
+                return ge::GRAPH_FAILED);
 
     fusedEmaAdamTiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(fusedEmaAdamTiling.GetDataSize());
@@ -293,8 +281,7 @@ ge::graphStatus TilingPrepare4ApplyFusedEmaAdam([[maybe_unused]] gert::TilingPar
     return ge::GRAPH_SUCCESS;
 }
 
-struct ApplyFusedEmaAdamCompileInfo {
-};
+struct ApplyFusedEmaAdamCompileInfo {};
 
 IMPL_OP_OPTILING(ApplyFusedEmaAdam)
     .Tiling(Tiling4ApplyFusedEmaAdam)

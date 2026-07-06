@@ -38,8 +38,10 @@ namespace ge {
 * In MxA8W4 scenario: The shape supports (m, ceildiv(k, group_size * 2), 2). The type supports float8_e8m0.
 * The type bfloat16, bfloat16 is not supported yet.
 * @li x2_scale: An Optional Tensor for quantization parameters.
-* The type supports float8_e8m0, bfloat16, float16, uint64, format supports ND, The shape supports (n, ceildiv(k, group_size)).
-* - In A8W8 scenario: The shape supports (ceildiv(k, group_size_k), ceildiv(n, group_size_n)). The type supports float32.
+* The type supports float8_e8m0, bfloat16, float16, uint64, format supports ND, The shape supports (n, ceildiv(k,
+group_size)).
+* - In A8W8 scenario: The shape supports (ceildiv(k, group_size_k), ceildiv(n, group_size_n)). The type supports
+float32.
 * - In MxA8W4 scenario: The shape supports (n, ceildiv(k, group_size * 2), 2). The type supports float8_e8m0.
 * @li y_scale: An Optional Tensor for quantization parameters.
 * The type support uint64, format supports ND, The shape supprts(1, n).

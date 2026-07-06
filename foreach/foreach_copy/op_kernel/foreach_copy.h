@@ -43,8 +43,8 @@ private:
     __aicore__ inline void ParseTilingData(const ForeachCommonTilingData* tilingData);
     __aicore__ inline void SingleTensorProcess(int64_t dataCount, LocalTensor<float>& float32Tensor);
     __aicore__ inline void CopyIn(uint16_t index, int64_t dataCount, bool isRemainder);
-    __aicore__ inline void ComputeAndCopyOut(
-        uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder);
+    __aicore__ inline void ComputeAndCopyOut(uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
+                                             bool isRemainder);
     __aicore__ inline __gm__ T* GetTensorAddr(uint16_t index, GM_ADDR tensorPtr);
 
 private:
@@ -73,8 +73,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void ForeachCopyND<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const ForeachCommonTilingData* tilingData)
+__aicore__ inline void ForeachCopyND<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
+                                              const ForeachCommonTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
     inTensorsPtr = x;
@@ -157,8 +157,8 @@ __aicore__ inline void ForeachCopyND<T>::CopyIn(uint16_t index, int64_t dataCoun
 }
 
 template <typename T>
-__aicore__ inline void ForeachCopyND<T>::ComputeAndCopyOut(
-    uint16_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
+__aicore__ inline void ForeachCopyND<T>::ComputeAndCopyOut(uint16_t index, int64_t dataCount,
+                                                           LocalTensor<float>& float32Tensor, bool isRemainder)
 {
     LocalTensor<T> dataLocal = dataQueue.DeQue<T>();
 

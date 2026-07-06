@@ -14,10 +14,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormSiluQuant(const aclTensor *x, const aclTensor *gamma,
-                                                                   const aclTensor *beta, const aclTensor *quantScale,
-                                                                   int64_t numGroups, float eps, bool activateSilu,
-                                                                   aclOpExecutor *executor);
+const std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormSiluQuant(const aclTensor* x, const aclTensor* gamma,
+                                                                        const aclTensor* beta,
+                                                                        const aclTensor* quantScale, int64_t numGroups,
+                                                                        float eps, bool activateSilu,
+                                                                        aclOpExecutor* executor);
 }
 
 #endif // OP_API_INC_LEVEL0_OP_GROUP_NORM_SILU_QUANT_OP_H_

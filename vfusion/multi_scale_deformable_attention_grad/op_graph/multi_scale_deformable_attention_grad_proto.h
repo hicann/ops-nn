@@ -19,24 +19,24 @@
 
 namespace ge {
 /**
-* @brief multi-scale deformable attention grad.
-*
-* @par Inputs:
-* @li value: A Tensor. Must be one of the following types: float32.
-* @li value_spatial_shapes: A Tensor. Must be one of the following types: int32.
-* @li value_level_start_index: A Tensor. Must be one of the following types: int32.
-* @li sampling_locations: A Tensor. Must be one of the following types: float32.
-* @li attention_weights: A Tensor. Must be one of the following types: float32.
-* @li grad_output: A Tensor. Must be one of the following types: float32.
-*
-* @par Outputs:
-* grad_value: A Tensor. Must be one of the following types: float32.
-* grad_sampling_locations: A Tensor. Must be one of the following types: float32.
-* grad_attention_weights: A Tensor. Must be one of the following types: float32.
-*
-* @par Restrictions:
-* Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
-*/
+ * @brief multi-scale deformable attention grad.
+ *
+ * @par Inputs:
+ * @li value: A Tensor. Must be one of the following types: float32.
+ * @li value_spatial_shapes: A Tensor. Must be one of the following types: int32.
+ * @li value_level_start_index: A Tensor. Must be one of the following types: int32.
+ * @li sampling_locations: A Tensor. Must be one of the following types: float32.
+ * @li attention_weights: A Tensor. Must be one of the following types: float32.
+ * @li grad_output: A Tensor. Must be one of the following types: float32.
+ *
+ * @par Outputs:
+ * grad_value: A Tensor. Must be one of the following types: float32.
+ * grad_sampling_locations: A Tensor. Must be one of the following types: float32.
+ * grad_attention_weights: A Tensor. Must be one of the following types: float32.
+ *
+ * @par Restrictions:
+ * Warning: THIS FUNCTION IS EXPERIMENTAL. Please do not use.
+ */
 REG_OP(MultiScaleDeformableAttentionGrad)
     .INPUT(value, TensorType({DT_FLOAT}))
     .INPUT(value_spatial_shapes, TensorType({DT_INT32}))

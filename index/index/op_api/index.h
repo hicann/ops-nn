@@ -14,13 +14,11 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* IndexAiCore(
-    const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides, const op::Shape outPutShape,
-    const aclTensorList* indices, aclOpExecutor* executor);
+const aclTensor* IndexAiCore(const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides,
+                             const op::Shape outPutShape, const aclTensorList* indices, aclOpExecutor* executor);
 
-const aclTensor* IndexAiCpu(
-    const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides, const op::Shape outPutShape,
-    const aclTensorList* indices, aclOpExecutor* executor);
+const aclTensor* IndexAiCpu(const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides,
+                            const op::Shape outPutShape, const aclTensorList* indices, aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_INDEX_H_

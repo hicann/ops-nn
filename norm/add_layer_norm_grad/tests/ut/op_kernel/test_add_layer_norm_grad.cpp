@@ -20,20 +20,14 @@
 
 using namespace std;
 
-extern "C" void add_layer_norm_grad(
-    uint8_t* dy, uint8_t* x1, uint8_t* x2, uint8_t* rstd, uint8_t* mean, uint8_t* gamma, uint8_t* dsum, uint8_t* dx,
-    uint8_t* dgamma, uint8_t* dbeta, uint8_t* workspace, uint8_t* tiling);
+extern "C" void add_layer_norm_grad(uint8_t* dy, uint8_t* x1, uint8_t* x2, uint8_t* rstd, uint8_t* mean, uint8_t* gamma,
+                                    uint8_t* dsum, uint8_t* dx, uint8_t* dgamma, uint8_t* dbeta, uint8_t* workspace,
+                                    uint8_t* tiling);
 
 class add_layer_norm_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_layer_norm_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_layer_norm_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_layer_norm_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_layer_norm_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(add_layer_norm_grad_test, test_case_11)
@@ -103,9 +97,8 @@ TEST_F(add_layer_norm_grad_test, test_case_11)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(11);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -189,9 +182,8 @@ TEST_F(add_layer_norm_grad_test, test_case_10)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(10);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -275,9 +267,8 @@ TEST_F(add_layer_norm_grad_test, test_case_21)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(21);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -361,9 +352,8 @@ TEST_F(add_layer_norm_grad_test, test_case_20)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(20);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -447,9 +437,8 @@ TEST_F(add_layer_norm_grad_test, test_case_31)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(31);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -533,9 +522,8 @@ TEST_F(add_layer_norm_grad_test, test_case_30)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(30);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -620,9 +608,8 @@ TEST_F(add_layer_norm_grad_test, test_case_41)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(41);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -707,9 +694,8 @@ TEST_F(add_layer_norm_grad_test, test_case_51)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(51);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);
@@ -794,9 +780,8 @@ TEST_F(add_layer_norm_grad_test, test_case_61)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(61);
-    ICPU_RUN_KF(
-        add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
-        (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(dy);
     AscendC::GmFree(x1);

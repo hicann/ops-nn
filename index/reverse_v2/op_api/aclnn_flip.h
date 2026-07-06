@@ -71,4 +71,4 @@ ACLNN_API aclnnStatus aclnnFlip(void* workspace, uint64_t workspaceSize, aclOpEx
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_FLIP_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_FLIP_H_

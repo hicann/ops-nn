@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 #include <array>
 #include <vector>
@@ -62,22 +62,14 @@ constexpr int32_t MATMUL_DB_L0A = 2;
 constexpr int32_t MATMUL_DB_L0B = 2;
 constexpr int32_t MATMUL_DB_L0C = 1;
 
-class rotate_quant_test : public testing::Test
-{
+class rotate_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rotate_quant_test SetUp" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "rotate_quant_test TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "rotate_quant_test SetUp" << endl; }
+    static void TearDownTestCase() { cout << "rotate_quant_test TearDown" << endl; }
 };
 
-static void InitRotateQuantTiling(RotateQuantOpt::RotateQuantTilingData* tilingData,
-                                   int32_t M, int32_t N, int32_t K,
-                                   int32_t numBlocks, int32_t aivCoreNum)
+static void InitRotateQuantTiling(RotateQuantOpt::RotateQuantTilingData* tilingData, int32_t M, int32_t N, int32_t K,
+                                  int32_t numBlocks, int32_t aivCoreNum)
 {
     tilingData->M = M;
     tilingData->N = N;

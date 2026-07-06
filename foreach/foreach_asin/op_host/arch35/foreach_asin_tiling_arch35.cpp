@@ -46,8 +46,7 @@ static ge::graphStatus ForeachAsinTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     int64_t maxCoreNum = compileInfo->coreNum;
     int64_t ubSize = compileInfo->ubSize;
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE),
-        OP_LOGE(context, "ub size less than DCache Size"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ub size less than DCache Size"), return ge::GRAPH_FAILED);
     int64_t ubSizeActual = ubSize - DCACHE_SIZE;
 
     // 2. 获取输入 tensor 列表信息
@@ -80,11 +79,11 @@ static ge::graphStatus ForeachAsinTilingFunc(gert::TilingContext* context)
         tilingData->needCoreNum = 1;
     } else {
         tilingData->perCoreElements = std::max(MIN_PER_CORE_ELEMENTS,
-            (tilingData->totalElements + maxCoreNum - 1) / maxCoreNum);
+                                               (tilingData->totalElements + maxCoreNum - 1) / maxCoreNum);
         // 对齐到 32
         tilingData->perCoreElements = ((tilingData->perCoreElements + ALIGN_SIZE - 1) / ALIGN_SIZE) * ALIGN_SIZE;
-        tilingData->needCoreNum = static_cast<int32_t>(
-            (tilingData->totalElements + tilingData->perCoreElements - 1) / tilingData->perCoreElements);
+        tilingData->needCoreNum = static_cast<int32_t>((tilingData->totalElements + tilingData->perCoreElements - 1) /
+                                                       tilingData->perCoreElements);
     }
 
     // 6. 根据数据类型确定 tiling key
@@ -113,15 +112,15 @@ static ge::graphStatus ForeachAsinTilingFunc(gert::TilingContext* context)
 
     // 8. 设置本地内存大小
     auto res = context->SetLocalMemorySize(ubSizeActual);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "SetLocalMemorySize ubSize = %ld failed.", ubSizeActual),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize = %ld failed.", ubSizeActual),
+                return ge::GRAPH_FAILED);
 
     // 9. 打印 tiling 信息
-    OP_LOGI(context, "ForeachAsin tiling: tensorNum=%d, totalElements=%ld, "
-        "perCoreElements=%ld, needCoreNum=%d, tilingKey=%lu",
-        tilingData->tensorNum, tilingData->totalElements,
-        tilingData->perCoreElements, tilingData->needCoreNum, tilingKey);
+    OP_LOGI(context,
+            "ForeachAsin tiling: tensorNum=%d, totalElements=%ld, "
+            "perCoreElements=%ld, needCoreNum=%d, tilingKey=%lu",
+            tilingData->tensorNum, tilingData->totalElements, tilingData->perCoreElements, tilingData->needCoreNum,
+            tilingKey);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -138,13 +137,11 @@ static ge::graphStatus TilingParseForForeachAsin(gert::TilingParseContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

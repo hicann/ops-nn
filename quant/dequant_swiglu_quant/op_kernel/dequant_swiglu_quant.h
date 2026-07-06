@@ -33,31 +33,25 @@ constexpr static int64_t SWI_FACTOR = 2;
 constexpr static float DYNAMIC_QUANT_FACTOR = 1.0 / 127.0;
 
 TEMPLATE_DSQ_DECLARE
-class DequantSwigluQuantBase
-{
+class DequantSwigluQuantBase {
 public:
     static constexpr bool hasGroupIndex_ = !IsSameType<TGroup, float>::value;
-    __aicore__ inline DequantSwigluQuantBase(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    };
+    __aicore__ inline DequantSwigluQuantBase(TPipe* pipe) { pipe_ = pipe; };
 
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale, GM_ADDR quantOffset,
-        GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, const DequantSwigluQuantBaseTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias,
+                                GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
+                                const DequantSwigluQuantBaseTilingData* tilingData);
     __aicore__ inline void Process();
     __aicore__ inline void ComputeReduceMax(const LocalTensor<float>& tempRes, int32_t calCount);
     __aicore__ inline void ProcessSingleGroup(int64_t groupIdx, int64_t realCount, int64_t globalOffset);
     __aicore__ inline void ProcessSingleGroupPerCore(int64_t groupIdx, int64_t dimxCore, int64_t dimxCoreOffset);
     __aicore__ inline void CreateOffsetLocalTensor(uint32_t tensorLen, int swigluMode);
-    __aicore__ inline void SwiGluGate(
-        int32_t proDimsx, const LocalTensor<float>& xLocalF32, const LocalTensor<uint32_t>& xOffsetLocalU32);
-    __aicore__ inline void DynamicQuant(
-        const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate,
-        const LocalTensor<float>& inScaleLocal, uint32_t proDimsx);
-    __aicore__ inline void StaticQuant(
-        const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate,
-        const LocalTensor<float>& inScaleLocal, uint32_t proDimsx);
+    __aicore__ inline void SwiGluGate(int32_t proDimsx, const LocalTensor<float>& xLocalF32,
+                                      const LocalTensor<uint32_t>& xOffsetLocalU32);
+    __aicore__ inline void DynamicQuant(const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate,
+                                        const LocalTensor<float>& inScaleLocal, uint32_t proDimsx);
+    __aicore__ inline void StaticQuant(const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate,
+                                       const LocalTensor<float>& inScaleLocal, uint32_t proDimsx);
     __aicore__ inline void CopyInWeightScale(int64_t groupIdx);
     __aicore__ inline void CopyInQuantScale(int64_t groupIdx);
     __aicore__ inline void CopyInBias(int64_t groupIdx);
@@ -69,10 +63,12 @@ public:
     __aicore__ inline void ComputeQuant(int32_t proDimsx);
     __aicore__ inline void CopyOut(int32_t proDimsx, int64_t xDimxOffset);
     __aicore__ inline void ParamFree();
-    __aicore__ inline void CastFloatToInt8(
-        const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate, uint32_t proDimsx, LocalTensor<int8_t>& yOut);
-    template<typename T>
-    __aicore__ inline void CopyReshape(LocalTensor<T>& dstTensor, LocalTensor<T>& oriTensor, uint32_t rowNum, uint32_t colNum, CopyRepeatParams param);
+    __aicore__ inline void CastFloatToInt8(const LocalTensor<float>& tmpUbF32Act,
+                                           const LocalTensor<float>& tmpUbF32Gate, uint32_t proDimsx,
+                                           LocalTensor<int8_t>& yOut);
+    template <typename T>
+    __aicore__ inline void CopyReshape(LocalTensor<T>& dstTensor, LocalTensor<T>& oriTensor, uint32_t rowNum,
+                                       uint32_t colNum, CopyRepeatParams param);
 
 protected:
     /* global memory address */
@@ -156,8 +152,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::Init(
     gateOffset_ = tl_->UbFactorDimy - actOffset_;
 
     // init buffer
-    pipe_->InitBuffer(
-        xActQueue_, DB_BUFFER, (UbSingleOutSize_ * SWI_FACTOR + tl_->UbFactorDimx * BLOCK_ELEM) * sizeof(int32_t));
+    pipe_->InitBuffer(xActQueue_, DB_BUFFER,
+                      (UbSingleOutSize_ * SWI_FACTOR + tl_->UbFactorDimx * BLOCK_ELEM) * sizeof(int32_t));
     pipe_->InitBuffer(weightScaleQueue_, 1, tl_->inDimy * sizeof(float));
 
     if (tl_->quantMode == 0) {
@@ -194,8 +190,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::Process()
 
     groupOffset_ = 0;
     for (int32_t groupIdx = 0; groupIdx < tl_->inGroupNum; ++groupIdx) {
-        int64_t realGroupIdx =
-            tl_->speGroupType == 0 ? static_cast<int64_t>(groupIdx) : static_cast<int64_t>(groupIndexGm_(groupIdx * 2));
+        int64_t realGroupIdx = tl_->speGroupType == 0 ? static_cast<int64_t>(groupIdx) :
+                                                        static_cast<int64_t>(groupIndexGm_(groupIdx * 2));
         realDimx_ = tl_->speGroupType == 0 ? static_cast<int64_t>(groupIndexGm_(groupIdx)) :
                                              static_cast<int64_t>(groupIndexGm_(groupIdx * 2 + 1));
         // do protect realDimx_ < 0, ignore this group
@@ -212,8 +208,9 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::Process()
 }
 
 TEMPLATE_DSQ_DECLARE
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ProcessSingleGroup(
-    int64_t groupIdx, int64_t realCount, int64_t globalOffset)
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ProcessSingleGroup(int64_t groupIdx,
+                                                                                     int64_t realCount,
+                                                                                     int64_t globalOffset)
 {
     // do block tiling again
     int32_t blockDimxFactor = (realCount + tl_->maxCoreNum - 1) / tl_->maxCoreNum;
@@ -276,20 +273,17 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CopyInQuantSca
         if constexpr (std::is_same_v<TQuantScale, float>) {
             DataCopyPad(inScaleLocal, quantScaleGm_[groupIdx * tl_->outDimy], dataCopyQuantScaleParams, padParams);
             if (tl_->quantMode == 0) {
-                DataCopyPad(
-                    inScaleLocal[tl_->outDimy], quantOffsetGm_[groupIdx * tl_->outDimy], dataCopyQuantScaleParams,
-                    padParams);
+                DataCopyPad(inScaleLocal[tl_->outDimy], quantOffsetGm_[groupIdx * tl_->outDimy],
+                            dataCopyQuantScaleParams, padParams);
             }
 
         } else {
             LocalTensor<TQuantScale> quantScaleLocalT16 = inScaleLocal.template ReinterpretCast<TQuantScale>();
-            DataCopyPad(
-                quantScaleLocalT16[tl_->outDimy], quantScaleGm_[groupIdx * tl_->outDimy], dataCopyQuantScaleParams,
-                padParams);
+            DataCopyPad(quantScaleLocalT16[tl_->outDimy], quantScaleGm_[groupIdx * tl_->outDimy],
+                        dataCopyQuantScaleParams, padParams);
             if (tl_->quantMode == 0) {
-                DataCopyPad(
-                    quantScaleLocalT16[tl_->outDimy + tl_->inDimy], quantOffsetGm_[groupIdx * tl_->outDimy],
-                    dataCopyQuantScaleParams, padParams);
+                DataCopyPad(quantScaleLocalT16[tl_->outDimy + tl_->inDimy], quantOffsetGm_[groupIdx * tl_->outDimy],
+                            dataCopyQuantScaleParams, padParams);
             }
         }
     }
@@ -355,11 +349,11 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeDequant
     LocalTensor<int32_t> tmpUbI32 = tmpUbF32.template ReinterpretCast<int32_t>();
 
     if constexpr (std::is_same_v<TXGm, int32_t>) {
-        if constexpr (std::is_same_v<TBias, int32_t>){
+        if constexpr (std::is_same_v<TBias, int32_t>) {
             // Copy bias: [1,2H] -> [proDimsx,2H]
             // params: dstStride: 1, srcStride: 1, dstRepStride: tl_->UbFactorDimy * 2 / 8, srcRepStride: 0
             CopyReshape<int32_t>(tmpUbI32, biasLocal_, proDimsx, tl_->UbFactorDimy * SWI_FACTOR,
-                {1, 1, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 0});
+                                 {1, 1, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 0});
             PipeBarrier<PIPE_V>();
             Add(xActLocal, xActLocal, tmpUbI32, proDimsx * tl_->inDimy);
             PipeBarrier<PIPE_V>();
@@ -368,7 +362,7 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeDequant
         // Copy weight scale: [1,2H] -> [proDimsx,2H]
         // params: dstStride: 1, srcStride: 1, dstRepStride: tl_->UbFactorDimy * 2 / 8, srcRepStride: 0
         CopyReshape<float>(tmpUbF32, weightScaleLocal_, proDimsx, tl_->UbFactorDimy * SWI_FACTOR,
-            {1, 1, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 0});
+                           {1, 1, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 0});
     }
 
     // x 为 bf16时
@@ -381,7 +375,7 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeDequant
         if (!tl_->activationScaleIsEmpty) {
             // Copy act scale: [proDimsx,8] -> [proDimsx,2H]
             CopyReshape<float>(tmpUbF32, activationScaleLocal, proDimsx, tl_->UbFactorDimy * SWI_FACTOR,
-                {1, 0, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 1});
+                               {1, 0, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 1});
             PipeBarrier<PIPE_V>();
             // Calc dequant: xLocalF32 = activationScaleLocal * xLocalF32
             Mul(xLocalF32, tmpUbF32, xLocalF32, tl_->UbFactorDimy * SWI_FACTOR * proDimsx);
@@ -393,7 +387,7 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeDequant
         if (tl_->hasBias == 1) {
             // Copy bias: [1,2H] -> [proDimsx,2H]
             CopyReshape<float>(tmpUbF32, biasLocalF32_, proDimsx, tl_->UbFactorDimy * SWI_FACTOR,
-                {1, 1, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 0});
+                               {1, 1, static_cast<uint16_t>((tl_->UbFactorDimy * SWI_FACTOR) / BLOCK_ELEM), 0});
             PipeBarrier<PIPE_V>();
             Add(xLocalF32, xLocalF32, tmpUbF32, proDimsx * tl_->inDimy);
             PipeBarrier<PIPE_V>();
@@ -419,21 +413,19 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeSwiGLU(
         // Copy dequant result: xLocalF32[gateOffset] -> tmpUbF32Gate, [proDimsx,H]
         SetMaskCount();
         SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
-        Copy<float, false>(
-            tmpUbF32Act, xLocalF32[actOffset_], AscendC::MASK_PLACEHOLDER, proDimsx,
-            {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM),
-             static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM * SWI_FACTOR)});
-        Copy<float, false>(
-            tmpUbF32Gate, xLocalF32[gateOffset_], AscendC::MASK_PLACEHOLDER, proDimsx,
-            {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM),
-             static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM * SWI_FACTOR)});
+        Copy<float, false>(tmpUbF32Act, xLocalF32[actOffset_], AscendC::MASK_PLACEHOLDER, proDimsx,
+                           {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM),
+                            static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM * SWI_FACTOR)});
+        Copy<float, false>(tmpUbF32Gate, xLocalF32[gateOffset_], AscendC::MASK_PLACEHOLDER, proDimsx,
+                           {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM),
+                            static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM * SWI_FACTOR)});
         SetMaskNorm();
         ResetMask();
         PipeBarrier<PIPE_V>();
-		if (tl_->swigluMode == 0) {
-        	Muls(xLocalF32, tmpUbF32Act, static_cast<float>(-1.0), calEleNum);
-		} else {
-			// tmpUbF32Gate
+        if (tl_->swigluMode == 0) {
+            Muls(xLocalF32, tmpUbF32Act, static_cast<float>(-1.0), calEleNum);
+        } else {
+            // tmpUbF32Gate
             Mins(tmpUbF32Gate, tmpUbF32Gate, tl_->clampLimit, calEleNum);
             PipeBarrier<PIPE_V>();
             Maxs(tmpUbF32Gate, tmpUbF32Gate, -(tl_->clampLimit), calEleNum);
@@ -444,7 +436,7 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeSwiGLU(
             Mins(tmpUbF32Act, tmpUbF32Act, tl_->clampLimit, calEleNum);
             PipeBarrier<PIPE_V>();
             Muls(xLocalF32, tmpUbF32Act, -(tl_->gluAlpha), calEleNum);
-		}
+        }
         PipeBarrier<PIPE_V>();
         Exp(xLocalF32, xLocalF32, calEleNum);
         PipeBarrier<PIPE_V>();
@@ -530,9 +522,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ParamDequeAndC
             Cast(inScaleLocal_, quantScaleLocalT16[tl_->outDimy], RoundMode::CAST_NONE, tl_->outDimy);
             PipeBarrier<PIPE_V>();
             if (tl_->quantMode == 0) {
-                Cast(
-                    inScaleLocal_[tl_->outDimy], quantScaleLocalT16[tl_->outDimy + tl_->inDimy], RoundMode::CAST_NONE,
-                    tl_->outDimy);
+                Cast(inScaleLocal_[tl_->outDimy], quantScaleLocalT16[tl_->outDimy + tl_->inDimy], RoundMode::CAST_NONE,
+                     tl_->outDimy);
                 PipeBarrier<PIPE_V>();
             }
         }
@@ -540,8 +531,9 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ParamDequeAndC
 }
 
 TEMPLATE_DSQ_DECLARE
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ProcessSingleGroupPerCore(
-    int64_t groupIdx, int64_t dimxCore, int64_t coreDimxOffset)
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ProcessSingleGroupPerCore(int64_t groupIdx,
+                                                                                            int64_t dimxCore,
+                                                                                            int64_t coreDimxOffset)
 {
     // do ub tiling again
     int32_t ubDimxLoop = (dimxCore + tl_->UbFactorDimx - 1) / tl_->UbFactorDimx;
@@ -582,8 +574,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ParamFree()
 }
 
 TEMPLATE_DSQ_DECLARE
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeReduceMax(
-    const LocalTensor<float>& tempRes, int32_t calCount)
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeReduceMax(const LocalTensor<float>& tempRes,
+                                                                                   int32_t calCount)
 {
     uint32_t vectorCycles = calCount / MASK_NUM_T32;
     uint32_t remainElements = calCount % MASK_NUM_T32;
@@ -608,8 +600,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeReduceM
 }
 
 TEMPLATE_DSQ_DECLARE
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CreateOffsetLocalTensor(
-    uint32_t tensorLen, int swigluMode)
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CreateOffsetLocalTensor(uint32_t tensorLen,
+                                                                                          int swigluMode)
 {
     if (swigluMode == 1) {
         LocalTensor<int32_t> xOffsetLocalI32_ = tmpBuf2_.AllocTensor<int32_t>();
@@ -655,17 +647,17 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::SwiGluGate(
 }
 
 TEMPLATE_DSQ_DECLARE
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(
-    const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate,
-    const LocalTensor<float>& inScaleLocal, uint32_t proDimsx)
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(const LocalTensor<float>& tmpUbF32Act,
+                                                                               const LocalTensor<float>& tmpUbF32Gate,
+                                                                               const LocalTensor<float>& inScaleLocal,
+                                                                               uint32_t proDimsx)
 {
     if (tl_->needSmoothScale == 1) {
         // Copy quant scale: [1,H] -> [proDimsx,H]
         SetMaskCount();
         SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
-        Copy<float, false>(
-            tmpUbF32Gate, inScaleLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
-            {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 0});
+        Copy<float, false>(tmpUbF32Gate, inScaleLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
+                           {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 0});
         SetMaskNorm();
         ResetMask();
         PipeBarrier<PIPE_V>();
@@ -687,9 +679,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(
     }
     // Calc quant: proDimsx * 64 -> proDimsx
     // repeatTimes:proDimsx, dstRepStride:1(dtype), srcBlkStride:1, srcRepStride:tl_->UbFactorDimy / 64 * 8
-    WholeReduceMax(
-        tmpUbF32Gate, tmpUbF32Gate, MASK_NUM_T32, proDimsx, 1, 1, tl_->UbFactorDimy / MASK_NUM_T32 * MASK_BLK_STRIDE,
-        ReduceOrder::ORDER_ONLY_VALUE);
+    WholeReduceMax(tmpUbF32Gate, tmpUbF32Gate, MASK_NUM_T32, proDimsx, 1, 1,
+                   tl_->UbFactorDimy / MASK_NUM_T32 * MASK_BLK_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
     // Calc quant: scaleOut / 127.0
     Muls(scaleOut, tmpUbF32Gate, DYNAMIC_QUANT_FACTOR, proDimsx);
@@ -701,9 +692,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(
     // Copy scale: [proDimsx,8] -> [proDimsx,H]
     SetMaskCount();
     SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
-    Copy<float, false>(
-        tmpUbF32Gate, outLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
-        {1, 0, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 1});
+    Copy<float, false>(tmpUbF32Gate, outLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
+                       {1, 0, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 1});
     SetMaskNorm();
     ResetMask();
     PipeBarrier<PIPE_V>();
@@ -716,9 +706,10 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(
 }
 
 TEMPLATE_DSQ_DECLARE
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::StaticQuant(
-    const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate,
-    const LocalTensor<float>& inScaleLocal, uint32_t proDimsx)
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::StaticQuant(const LocalTensor<float>& tmpUbF32Act,
+                                                                              const LocalTensor<float>& tmpUbF32Gate,
+                                                                              const LocalTensor<float>& inScaleLocal,
+                                                                              uint32_t proDimsx)
 {
     if (tl_->needSmoothScale == 1) {
         if (tl_->quantIsOne) {
@@ -731,9 +722,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::StaticQuant(
             // Copy quant scale: [1,H] -> [proDimsx,H]
             SetMaskCount();
             SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
-            Copy<float, false>(
-                tmpUbF32Gate, inScaleLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
-                {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 0});
+            Copy<float, false>(tmpUbF32Gate, inScaleLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
+                               {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 0});
             SetMaskNorm();
             ResetMask();
             PipeBarrier<PIPE_V>();
@@ -744,9 +734,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::StaticQuant(
             // Copy quant offset: [1,H] -> [proDimsx,H]
             SetMaskCount();
             SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
-            Copy<float, false>(
-                tmpUbF32Gate, inScaleLocal[tl_->outDimy], AscendC::MASK_PLACEHOLDER, proDimsx,
-                {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 0});
+            Copy<float, false>(tmpUbF32Gate, inScaleLocal[tl_->outDimy], AscendC::MASK_PLACEHOLDER, proDimsx,
+                               {1, 1, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 0});
             SetMaskNorm();
             ResetMask();
             PipeBarrier<PIPE_V>();
@@ -766,7 +755,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::StaticQuant(
 
 TEMPLATE_DSQ_DECLARE
 __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CastFloatToInt8(
-    const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate, uint32_t proDimsx, LocalTensor<int8_t>& yOut)
+    const LocalTensor<float>& tmpUbF32Act, const LocalTensor<float>& tmpUbF32Gate, uint32_t proDimsx,
+    LocalTensor<int8_t>& yOut)
 {
     LocalTensor<int32_t> tmpUbF32ActI32 = tmpUbF32Act.ReinterpretCast<int32_t>();
     Cast(tmpUbF32ActI32, tmpUbF32Act, RoundMode::CAST_RINT, tl_->UbFactorDimy * proDimsx);
@@ -781,9 +771,11 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CastFloatToInt
 }
 
 TEMPLATE_DSQ_DECLARE
-template<typename T>
-__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CopyReshape(
-    LocalTensor<T>& dstTensor, LocalTensor<T>& oriTensor, uint32_t rowNum, uint32_t colNum, CopyRepeatParams param)
+template <typename T>
+__aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CopyReshape(LocalTensor<T>& dstTensor,
+                                                                              LocalTensor<T>& oriTensor,
+                                                                              uint32_t rowNum, uint32_t colNum,
+                                                                              CopyRepeatParams param)
 {
     SetMaskCount();
     SetVectorMask<T, MaskMode::COUNTER>(colNum);

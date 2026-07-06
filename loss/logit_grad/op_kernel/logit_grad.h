@@ -29,13 +29,12 @@ constexpr int64_t ONE_REPEAT_ELE_NUM_FP32 = 64;
 constexpr int64_t ALIGN = 16;
 
 template <typename T>
-class LogitGradND
-{
+class LogitGradND {
 public:
     TPipe pipe;
     __aicore__ inline LogitGradND(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR dy, GM_ADDR dx, GM_ADDR workspace, const LogitGradTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR dy, GM_ADDR dx, GM_ADDR workspace,
+                                const LogitGradTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -79,8 +78,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void LogitGradND<T>::Init(
-    GM_ADDR x, GM_ADDR dy, GM_ADDR dx, GM_ADDR workspace, const LogitGradTilingData* tilingData)
+__aicore__ inline void LogitGradND<T>::Init(GM_ADDR x, GM_ADDR dy, GM_ADDR dx, GM_ADDR workspace,
+                                            const LogitGradTilingData* tilingData)
 {
     inputGm.SetGlobalBuffer((__gm__ T*)x);
     dyGm.SetGlobalBuffer((__gm__ T*)dy);

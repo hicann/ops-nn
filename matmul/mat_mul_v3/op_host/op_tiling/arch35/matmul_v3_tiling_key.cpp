@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
 /* !
  * \file matmul_v3_tiling_key.cc
  * \brief
@@ -21,8 +20,8 @@ using namespace optiling::matmul_v3_advanced;
 
 uint64_t MatMulV3TilingKey::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(apiLevel_), static_cast<uint64_t>(atrans_), static_cast<uint64_t>(btrans_),
-        static_cast<uint64_t>(batchModel_), static_cast<uint64_t>(model_), static_cast<uint64_t>(fullLoad_),
-        static_cast<uint64_t>(out_));
+    return GET_TPL_TILING_KEY(static_cast<uint64_t>(apiLevel_), static_cast<uint64_t>(atrans_),
+                              static_cast<uint64_t>(btrans_), static_cast<uint64_t>(batchModel_),
+                              static_cast<uint64_t>(model_), static_cast<uint64_t>(fullLoad_),
+                              static_cast<uint64_t>(out_));
 }

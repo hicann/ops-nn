@@ -22,7 +22,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
-namespace AdaptivePool2dOp{
+namespace AdaptivePool2dOp {
 using namespace AscendC;
 using namespace AdaptiveAvgPool2dOp;
 
@@ -48,18 +48,17 @@ constexpr int32_t HALF_OVERFLOW_MODE_CTRL = 48;
 constexpr int32_t DATABLOCK = 32;
 
 constexpr MicroAPI::CastTrait CASTB4TOB2 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
-                                                  MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+                                            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 constexpr MicroAPI::CastTrait CASTB2TOB4 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 constexpr MicroAPI::CastTrait CASTB4TOB8 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                             MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
 
 template <typename T>
-class AdaptivePool2dBigKernel
-{
+class AdaptivePool2dBigKernel {
 public:
-    __aicore__ inline AdaptivePool2dBigKernel(const AdaptivePool2dBigKernelTilingData &tilingData, TPipe &pipe) :
-        tilingData_(tilingData), pipe_(pipe) {};
+    __aicore__ inline AdaptivePool2dBigKernel(const AdaptivePool2dBigKernelTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
     __aicore__ inline void UnAlignCopyIn(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount);
@@ -120,8 +119,7 @@ __aicore__ inline U AdaptivePool2dBigKernel<T>::GetDtypeMinValue() //取min操�
 }
 
 template <typename T>
-__aicore__ inline void AdaptivePool2dBigKernel<T>::CopyIn(
-    int64_t offset, int64_t blockLen, int64_t blockCount)
+__aicore__ inline void AdaptivePool2dBigKernel<T>::CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     DataCopyExtParams copyParamsWs;
@@ -130,16 +128,16 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::CopyIn(
     copyParamsWs.srcStride = (tilingData_.wInDim - blockLen) * sizeof(T);
     copyParamsWs.dstStride = 0;
 
-    uint32_t rightPadLen = ops::CeilAlign(static_cast<uint32_t>(blockLen), 
-                            static_cast<uint32_t>(DATABLOCK / sizeof(T))) - blockLen;
+    uint32_t rightPadLen = ops::CeilAlign(static_cast<uint32_t>(blockLen),
+                                          static_cast<uint32_t>(DATABLOCK / sizeof(T))) -
+                           blockLen;
     DataCopyPadExtParams<T> padWs{true, 0, static_cast<uint8_t>(rightPadLen), static_cast<T>(0)};
     DataCopyPad(xLocal, xGm_[offset], copyParamsWs, padWs);
     inputQue_.EnQue(xLocal);
 }
 
 template <typename T>
-__aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(
-    int64_t offset, int64_t blockLen, int64_t blockCount)
+__aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(int64_t offset, int64_t blockLen, int64_t blockCount)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     // NDDMA loopInfo init
@@ -156,8 +154,8 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(
     loopInfo.loopDstStride[DIM1] = blockLen;
     loopInfo.loopDstStride[DIM2] = blockLen * blockCount;
 
-    static constexpr MultiCopyConfig mulConfig = { false };
-    MultiCopyParams<T, DIM3> paramsMain = { loopInfo };
+    static constexpr MultiCopyConfig mulConfig = {false};
+    MultiCopyParams<T, DIM3> paramsMain = {loopInfo};
     DataCopy<T, DIM3, mulConfig>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
 }
@@ -222,5 +220,5 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::CalcWindowSize(int64_t curOut
     // calc output idx offset on whole input data
     curInOffset_ = curNc_ * inHW_ + curOriginIndex;
 }
-} // namespace AdaptivePool2d
+} // namespace AdaptivePool2dOp
 #endif // ADAPTIVE_POOL2D_BIG_KERNEL_H

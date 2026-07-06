@@ -40,8 +40,8 @@ class BinaryCrossEntropyGradV2 {
 public:
     __aicore__ inline BinaryCrossEntropyGradV2(){};
 
-    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight, 
-        GM_ADDR outgrad, const BinaryCrossEntropyGradV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight, GM_ADDR outgrad,
+                                const BinaryCrossEntropyGradV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -71,23 +71,24 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void BinaryCrossEntropyGradV2<T>::Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight, 
-     GM_ADDR outgrad, const BinaryCrossEntropyGradV2TilingData* tilingData)
+__aicore__ inline void BinaryCrossEntropyGradV2<T>::Init(GM_ADDR grad, GM_ADDR logits, GM_ADDR labels, GM_ADDR weight,
+                                                         GM_ADDR outgrad,
+                                                         const BinaryCrossEntropyGradV2TilingData* tilingData)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     int64_t coreNum = AscendC::GetBlockIdx();
     int64_t globalBufferIndex = tilingData->bigCoreDataNum * AscendC::GetBlockIdx();
     this->tileDataNum = tilingData->tileDataNum;
-    if (coreNum < tilingData->tailBlockNum) { 
+    if (coreNum < tilingData->tailBlockNum) {
         this->coreDataNum = tilingData->bigCoreDataNum;
         this->tileNum = tilingData->finalBigTileNum;
         this->tailDataNum = tilingData->bigTailDataNum;
-    }
-    else { 
+    } else {
         this->coreDataNum = tilingData->smallCoreDataNum;
         this->tileNum = tilingData->finalSmallTileNum;
         this->tailDataNum = tilingData->smallTailDataNum;
-        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) * (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
+        globalBufferIndex -= (tilingData->bigCoreDataNum - tilingData->smallCoreDataNum) *
+                             (AscendC::GetBlockIdx() - tilingData->tailBlockNum);
     }
     logitsGm.SetGlobalBuffer((__gm__ T*)logits + globalBufferIndex, this->coreDataNum);
     labelsGm.SetGlobalBuffer((__gm__ T*)labels + globalBufferIndex, this->coreDataNum);
@@ -97,7 +98,7 @@ __aicore__ inline void BinaryCrossEntropyGradV2<T>::Init(GM_ADDR grad, GM_ADDR l
     pipe.InitBuffer(inQueueLogits, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(inQueueLabels, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(inQueueGrad, BUFFER_NUM, this->tileDataNum * sizeof(T));
-    pipe.InitBuffer(inQueueWeight, BUFFER_NUM, this->tileDataNum * sizeof(T));   
+    pipe.InitBuffer(inQueueWeight, BUFFER_NUM, this->tileDataNum * sizeof(T));
     pipe.InitBuffer(outQueueOutGrad, BUFFER_NUM, this->tileDataNum * sizeof(T));
 }
 
@@ -108,12 +109,12 @@ __aicore__ inline void BinaryCrossEntropyGradV2<T>::CopyIn(int32_t progress)
     AscendC::LocalTensor<T> labelsLocal = inQueueLabels.AllocTensor<T>();
     AscendC::LocalTensor<T> gradLocal = inQueueGrad.AllocTensor<T>();
     AscendC::LocalTensor<T> weightLocal = inQueueWeight.AllocTensor<T>();
-        
+
     AscendC::DataCopy(logitsLocal, logitsGm[progress * this->tileDataNum], this->processDataNum);
     AscendC::DataCopy(labelsLocal, labelsGm[progress * this->tileDataNum], this->processDataNum);
     AscendC::DataCopy(gradLocal, gradGm[progress * this->tileDataNum], this->processDataNum);
     AscendC::DataCopy(weightLocal, weightGm[progress * this->tileDataNum], this->processDataNum);
-    
+
     inQueueLogits.EnQue(logitsLocal);
     inQueueLabels.EnQue(labelsLocal);
     inQueueGrad.EnQue(gradLocal);
@@ -136,7 +137,7 @@ __aicore__ inline void BinaryCrossEntropyGradV2<T>::Compute(int32_t progress)
     AscendC::LocalTensor<T> gradLocal = inQueueGrad.DeQue<T>();
     AscendC::LocalTensor<T> weightLocal = inQueueWeight.DeQue<T>();
     AscendC::LocalTensor<T> outgradLocal = outQueueOutGrad.AllocTensor<T>();
-            
+
     AscendC::Sub(logitsLocal, logitsLocal, labelsLocal, this->processDataNum);
     AscendC::Mul(logitsLocal, logitsLocal, gradLocal, this->processDataNum);
     AscendC::Mul(outgradLocal, logitsLocal, weightLocal, this->processDataNum);

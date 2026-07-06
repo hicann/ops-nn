@@ -38,7 +38,7 @@ struct MatMulInfo {
     uint64_t transA{0};
     uint64_t transB{0};
     bool biasFlag{0}; // false: 0, true: 1
-    bool isInt8{0}; // 是否shi int8融合
+    bool isInt8{0};   // 是否shi int8融合
     float inDtype{0};
     float outDtype{0};
 };
@@ -80,9 +80,9 @@ struct PpMatmulDefaultTilingData {
     uint64_t enShuffleK{0};
 
     void SetBaseShape(uint64_t batchSize, uint64_t m, uint64_t k, uint64_t n);
-    void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase,
-                   const MatMulInfo &mmInfo, bool isAscend310P);
-    void End(const MatMulInfo &mmInfo, bool isAscend310P);
+    void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo& mmInfo,
+                   bool isAscend310P);
+    void End(const MatMulInfo& mmInfo, bool isAscend310P);
 };
 } // namespace matmulCompressDequant
 } // namespace pp_matmul

@@ -61,36 +61,29 @@ uint64_t AvgPoolV2GradTilingSIMT::GetTilingKey() const
     if (inputData.inputFormat == ge::Format::FORMAT_NHWC) {
         format = TPL_NHWC_FORMAT;
     }
-    uint64_t tilingKey = GET_TPL_TILING_KEY(
-        schMode, format, static_cast<uint64_t>(inputData.isInt32Meet), TPL_NO_PAD, TPL_NO_CHECK_RANGE,
-        inputData.countIncludePad, static_cast<uint64_t>(inputData.hasDivisor));
+    uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, format, static_cast<uint64_t>(inputData.isInt32Meet), TPL_NO_PAD,
+                                            TPL_NO_CHECK_RANGE, inputData.countIncludePad,
+                                            static_cast<uint64_t>(inputData.hasDivisor));
 
     return tilingKey;
 }
 
-ge::graphStatus AvgPoolV2GradTilingSIMT::GetPlatformInfo() {
+ge::graphStatus AvgPoolV2GradTilingSIMT::GetPlatformInfo()
+{
     return GetAvgPoolV2GradPlatformInfo(context_, ubSize, coreNum);
 }
 
-ge::graphStatus AvgPoolV2GradTilingSIMT::GetShapeAttrsInfo() {
+ge::graphStatus AvgPoolV2GradTilingSIMT::GetShapeAttrsInfo()
+{
     return GetAvgPoolV2GradShapeAttrsInfo(context_, inputData);
 }
 
-bool AvgPoolV2GradTilingSIMT::IsCapable()
-{
-    return true;
-}
+bool AvgPoolV2GradTilingSIMT::IsCapable() { return true; }
 
-ge::graphStatus AvgPoolV2GradTilingSIMT::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-     
-ge::graphStatus AvgPoolV2GradTilingSIMT::GetWorkspaceSize()
-{
-    return ge::GRAPH_SUCCESS;
-}
-     
+ge::graphStatus AvgPoolV2GradTilingSIMT::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus AvgPoolV2GradTilingSIMT::GetWorkspaceSize() { return ge::GRAPH_SUCCESS; }
+
 ge::graphStatus AvgPoolV2GradTilingSIMT::PostTiling()
 {
     ubSize = ubSize - DCACHE_SIZE;

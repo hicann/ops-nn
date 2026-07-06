@@ -37,8 +37,8 @@ bool AdaptiveMaxPool3dSmallPoolTiling::IsCapable()
     bool limitSizeMax = (calInfo_.kernelDMax * calInfo_.kernelHMax * kernelWMaxAlign < KERNEL_SIZE_LIMIT);
     bool limitWMax = (calInfo_.kernelWMax <= KERNEL_W_LIMIT);
     bool isCapable = limitSizeMax && limitWMax;
-    OP_LOGD(
-        context_->GetNodeName(), "AdaptiveMaxPool3dSmallPoolTiling IsCapable check: %s", isCapable ? "true" : "false");
+    OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dSmallPoolTiling IsCapable check: %s",
+            isCapable ? "true" : "false");
     return isCapable;
 }
 
@@ -92,9 +92,8 @@ ge::graphStatus AdaptiveMaxPool3dSmallPoolTiling::DoOpTiling()
     auto kernelD = calInfo_.kernelDMax;
     auto kernelH = calInfo_.kernelHMax;
     auto kernelW = calInfo_.kernelWMax;
-    OP_CHECK_IF(
-        (kernelW <= 0 || kernelH <= 0 || kernelD <= 0),
-        OP_LOGE(context_->GetNodeName(), "Kernel size <= 0, not support"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((kernelW <= 0 || kernelH <= 0 || kernelD <= 0),
+                OP_LOGE(context_->GetNodeName(), "Kernel size <= 0, not support"), return ge::GRAPH_FAILED);
 
     calInfo_.ncFactor = BLOCK_LEN / sizeof(float);
 
@@ -114,12 +113,10 @@ ge::graphStatus AdaptiveMaxPool3dSmallPoolTiling::DoOpTiling()
                                  input_.Do;
     auto kernelDFactorMax2 = KERNEL_SIZE_LIMIT / (kernelD * calInfo_.hoFactor * kernelH * kernelWprodFactorAlign);
     calInfo_.doFactor = kernelDFactorMax1 > kernelDFactorMax2 ? kernelDFactorMax2 : kernelDFactorMax1;
-    OP_LOGD(
-        context_->GetNodeName(), "Tiling result: ub factor %lu, %lu, %lu, %lu", calInfo_.ncFactor, calInfo_.doFactor,
-        calInfo_.hoFactor, calInfo_.woFactor);
-    OP_CHECK_IF(
-        (calInfo_.doFactor <= 0 || calInfo_.hoFactor <= 0 || calInfo_.woFactor <= 0),
-        OP_LOGE(context_->GetNodeName(), "Kernel multiply <= 0, not support"), return ge::GRAPH_FAILED);
+    OP_LOGD(context_->GetNodeName(), "Tiling result: ub factor %lu, %lu, %lu, %lu", calInfo_.ncFactor,
+            calInfo_.doFactor, calInfo_.hoFactor, calInfo_.woFactor);
+    OP_CHECK_IF((calInfo_.doFactor <= 0 || calInfo_.hoFactor <= 0 || calInfo_.woFactor <= 0),
+                OP_LOGE(context_->GetNodeName(), "Kernel multiply <= 0, not support"), return ge::GRAPH_FAILED);
 
     calInfo_.doOuter = (input_.Do + calInfo_.doFactor - 1) / calInfo_.doFactor;
     calInfo_.doTail = input_.Do - (calInfo_.doOuter - 1) * calInfo_.doFactor;
@@ -135,9 +132,8 @@ ge::graphStatus AdaptiveMaxPool3dSmallPoolTiling::DoOpTiling()
     calInfo_.useCoreNum = (calInfo_.totalIdx + calInfo_.blockFactor - 1) / calInfo_.blockFactor;
     calInfo_.blockTail = calInfo_.totalIdx - (calInfo_.useCoreNum - 1) * calInfo_.blockFactor;
 
-    OP_LOGD(
-        context_->GetNodeName(), "Tiling result: multi core factor %lu, %lu, %lu, %lu", calInfo_.ncOuter,
-        calInfo_.doOuter, calInfo_.hoOuter, calInfo_.woOuter);
+    OP_LOGD(context_->GetNodeName(), "Tiling result: multi core factor %lu, %lu, %lu, %lu", calInfo_.ncOuter,
+            calInfo_.doOuter, calInfo_.hoOuter, calInfo_.woOuter);
     SetTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -161,12 +157,10 @@ ge::graphStatus AdaptiveMaxPool3dSmallPoolTiling::PostTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dSmallPoolTiling PostTiling start.");
     context_->SetBlockDim(tilingdata_.get_useCoreNum());
-    OP_CHECK_IF(
-        tilingdata_.GetDataSize() > context_->GetRawTilingData()->GetCapacity(),
-        OP_LOGE(
-            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            tilingdata_.GetDataSize(), context_->GetRawTilingData()->GetCapacity()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingdata_.GetDataSize() > context_->GetRawTilingData()->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        tilingdata_.GetDataSize(), context_->GetRawTilingData()->GetCapacity()),
+                return ge::GRAPH_FAILED);
     tilingdata_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingdata_.GetDataSize());
 

@@ -25,7 +25,7 @@ namespace conv2d {
 using namespace AscendC;
 using namespace conv;
 
-template<typename Intf, class Config>
+template <typename Intf, class Config>
 struct Conv2dApiImpl {
 public:
     using ConvParam = typename Config::ConvParam;
@@ -52,31 +52,31 @@ public:
     CONV_REG_IMPL(Config, ConvFunc, GetTensorC);
     CONV_REG_IMPL(Config, ConvFunc, End);
 
-    struct ContextData: public Config::ContextData {
+    struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
 
         const Conv2DTilingData* convTilingData;
 
         // Using Conditional<flag, type1, type2>::type to select M or HW, if flag=true, type=type1, else type=type2
-        using LoadAL1MModeTools = typename Conditional<Intf::isInnerBatchFlag,
-            Conv2dFunc::LoadAL1ToolsInnerBatch<Intf>, Conv2dFunc::LoadAL1ToolsMMode<Intf>>::type;
-        using LoadAL1Tools = typename Conditional<
-            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
-            LoadAL1MModeTools, Conv2dFunc::LoadAL1ToolsHWMode<Intf>>::type;
+        using LoadAL1MModeTools = typename Conditional<Intf::isInnerBatchFlag, Conv2dFunc::LoadAL1ToolsInnerBatch<Intf>,
+                                                       Conv2dFunc::LoadAL1ToolsMMode<Intf>>::type;
+        using LoadAL1Tools = typename Conditional<ConvParam::outputOrder ==
+                                                      static_cast<int8_t>(ConvOutputOrder::M_MODE),
+                                                  LoadAL1MModeTools, Conv2dFunc::LoadAL1ToolsHWMode<Intf>>::type;
         using LoadAL0Tools = typename Conditional<
-            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
-            ConvFunc::LoadAL0ToolsMMode<Intf>, ConvFunc::LoadAL0ToolsHWMode<Intf>>::type;
-        using CopyOutTools = typename Conditional<
-            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
-            ConvFunc::CopyOutToolsMMode<Intf, typename Intf::OutputT>,
-            ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::OutputT>>::type;
+            ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE), ConvFunc::LoadAL0ToolsMMode<Intf>,
+            ConvFunc::LoadAL0ToolsHWMode<Intf>>::type;
+        using CopyOutTools = typename Conditional<ConvParam::outputOrder ==
+                                                      static_cast<int8_t>(ConvOutputOrder::M_MODE),
+                                                  ConvFunc::CopyOutToolsMMode<Intf, typename Intf::OutputT>,
+                                                  ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::OutputT>>::type;
         // extend conv2d exist dual outputs
         using CopyOutTools1 = typename Conditional<
             ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
             ConvFunc::CopyOutToolsMMode<Intf, typename Intf::Output1T, 1>,
             ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::Output1T, 1>>::type;
-        using LoadBL1Tools = typename Conditional<
-            Config::WEIGHT_NZ_FLAG, ConvFunc::LoadBL1FZTools<Intf>, Conv2dFunc::LoadBL1Tools<Intf>>::type;
+        using LoadBL1Tools = typename Conditional<Config::WEIGHT_NZ_FLAG, ConvFunc::LoadBL1FZTools<Intf>,
+                                                  Conv2dFunc::LoadBL1Tools<Intf>>::type;
 
         LoadAL1Tools loadAl1Ins;
         LoadBL1Tools loadBL1Ins;
@@ -91,8 +91,9 @@ public:
         CopyOutTools1 copyOutIns1;
 
         // normal: <A1, 1>, <B1, 1>; preload: <A1, 2>, <B1, 2>
-        TQue<QuePosition::A1, static_cast<int8_t>(Intf::kPreLoadAFlag ||
-            Intf::kPreLoadABFlag || Intf::groupOptPreloadFlag) + 1> queueAL1; // AL1
+        TQue<QuePosition::A1,
+             static_cast<int8_t>(Intf::kPreLoadAFlag || Intf::kPreLoadABFlag || Intf::groupOptPreloadFlag) + 1>
+            queueAL1;                                                                                         // AL1
         TQue<QuePosition::B1, static_cast<int8_t>(Intf::kPreLoadBFlag || Intf::kPreLoadABFlag) + 1> queueBL1; // BL1
 
         // Used in opt group mode(groups > 1)
@@ -185,9 +186,9 @@ public:
     };
 
     struct ImplDataType {
-        __aicore__ inline ImplDataType() {};
+        __aicore__ inline ImplDataType(){};
     };
 };
-}  // namespace conv2d
+} // namespace conv2d
 
 #endif // CONV2D_V2_API_IMPL_H

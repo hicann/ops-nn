@@ -14,10 +14,8 @@
  */
 #include "register/op_def_registry.h"
 
-namespace ops
-{
-class AdaLayerNormGrad : public OpDef
-{
+namespace ops {
+class AdaLayerNormGrad : public OpDef {
 public:
     explicit AdaLayerNormGrad(const char* name) : OpDef(name)
     {
@@ -85,7 +83,6 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-
         OpAICoreConfig membaseCfg;
         membaseCfg.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
@@ -97,4 +94,4 @@ public:
 };
 
 OP_ADD(AdaLayerNormGrad);
-}  // namespace ops
+} // namespace ops

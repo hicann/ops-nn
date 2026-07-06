@@ -22,13 +22,14 @@ using namespace std;
 
 class l2_foreach_add_list_v2_test : public testing::Test {
 protected:
-  static void SetUpTestCase() { cout << "l2_foreach_add_list_v2_test SetUp" << endl; }
+    static void SetUpTestCase() { cout << "l2_foreach_add_list_v2_test SetUp" << endl; }
 
-  static void TearDownTestCase() { cout << "l2_foreach_add_list_v2_test TearDown" << endl; }
+    static void TearDownTestCase() { cout << "l2_foreach_add_list_v2_test TearDown" << endl; }
 };
 
 // self and out diffrent dtype
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_different) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -45,8 +46,8 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_d
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_fp32) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_fp32)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -63,7 +64,8 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_f
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_fp16) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_fp16)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -80,7 +82,8 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_f
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_int32) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_int32)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc((int32_t)1);
     vector<vector<int64_t>> outDims = {{2, 2}};
@@ -98,7 +101,8 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_dtype_i
 }
 
 // self and out diffrent shape
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_shape_different) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_shape_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 4}};
@@ -116,7 +120,8 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_shape_d
 }
 
 // self and x2 diffrent shape
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_input_shape_different) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_input_shape_different)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     vector<vector<int64_t>> x2Dims = {{2, 4}};
     auto scalar_desc = ScalarDesc(1.0);
@@ -135,7 +140,8 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_input_s
 }
 
 // not supported dtype
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_not_supported_shape) {
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_not_supported_shape)
+{
     vector<vector<int64_t>> selfDims = {{2, 2}};
     vector<vector<int64_t>> x2Dims = {{2, 4}};
     auto scalar_desc = ScalarDesc(1.0);
@@ -171,8 +177,9 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_not_sup
 }*/
 
 // format out是私有格式
-TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_private_format) {
-     vector<vector<int64_t>> selfDims = {{2, 2}};
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_private_format)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
     auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_NC1HWC0).ValueRange(-1, 1);

@@ -22,9 +22,9 @@
 #include <cstdint>
 
 struct ApplyAdamWithAmsgradV2TilingData {
-    int64_t totalNum = 0;     // var 总元素数
-    int64_t blockFactor = 0;  // 每核负责的标准元素数（32B 对齐向上取整）
-    int64_t ubFactor = 0;     // UB 内一次循环处理的元素数（tile_numel）
+    int64_t totalNum = 0;    // var 总元素数
+    int64_t blockFactor = 0; // 每核负责的标准元素数（32B 对齐向上取整）
+    int64_t ubFactor = 0;    // UB 内一次循环处理的元素数（tile_numel）
 
     // 缓存标量参数（统一 fp32 升精度存储）
     float beta1Power = 0.0f;

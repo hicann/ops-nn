@@ -27,8 +27,7 @@ using namespace AscendC;
 // SIMT 核函数: 遍历 indices, 归一化后将 mask[nIdx] 置 1
 template <typename INDICES_T, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFillSimdMaskFill(
-    uint64_t blockIdx, uint64_t blockNum, __gm__ INDICES_T* indices,
-    __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
+    uint64_t blockIdx, uint64_t blockNum, __gm__ INDICES_T* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
 {
     COM_T threadIdx = static_cast<COM_T>(blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx());
     COM_T threadNum = static_cast<COM_T>(blockNum * Simt::GetThreadNum());
@@ -46,7 +45,8 @@ template <typename X_T, typename INDICES_T, typename COM_T>
 class InplaceIndexFillSimd {
 public:
     __aicore__ inline InplaceIndexFillSimd(const InplaceIndexFillSimdTilingData& tilingData, TPipe& pipe)
-        : tilingData_(tilingData), pipe_(pipe) {}
+        : tilingData_(tilingData), pipe_(pipe)
+    {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
     {
@@ -72,20 +72,17 @@ public:
         // 2) SIMT 遍历 indices, 置 mask[nIdx]=1
         COM_T indicesNum = static_cast<COM_T>(tilingData_.indicesNum);
         Simt::VF_CALL<InplaceIndexFillSimdMaskFill<INDICES_T, COM_T>>(
-            Simt::Dim3(SIMT_THREAD_NUM), blockIdx_, blockNum_,
-            (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()),
-            (__gm__ int8_t*)(maskGm_.GetPhyAddr()),
-            indicesNum, static_cast<uint64_t>(nLen));
+            Simt::Dim3(SIMT_THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()),
+            (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, static_cast<uint64_t>(nLen));
         SyncAll();
 
         // 3) 按 P*N*Q 遍历, mask==1 的位置原地写 value (复用 common 设施)
         InplaceIndexFillCommon::CallMaskBasedFill<X_T, INDICES_T, COM_T>(
-            (__gm__ X_T*)xGm_.GetPhyAddr(), (__gm__ int8_t*)maskGm_.GetPhyAddr(),
-            fillValue_, n, p, q);
+            (__gm__ X_T*)xGm_.GetPhyAddr(), (__gm__ int8_t*)maskGm_.GetPhyAddr(), fillValue_, n, p, q);
     }
 
 private:
-    GlobalTensor<X_T> xGm_;          // in-place: 直接写回 x
+    GlobalTensor<X_T> xGm_; // in-place: 直接写回 x
     GlobalTensor<INDICES_T> indicesGm_;
     GlobalTensor<X_T> valueGm_;
     GlobalTensor<int8_t> maskGm_;

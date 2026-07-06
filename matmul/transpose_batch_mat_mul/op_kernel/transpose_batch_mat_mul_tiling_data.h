@@ -29,7 +29,7 @@
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) TBMMTilingData{
+struct alignas(8) TBMMTilingData {
     MatmulTilingData matmulTiling;
     MultiBatchInfo multiBatchInfo;
     int32_t batchSplitFactor;
@@ -38,8 +38,7 @@ struct alignas(8) TBMMTilingData{
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) PpMatmulTilingData
-{
+struct alignas(8) PpMatmulTilingData {
     uint32_t batch;
     uint32_t m;
     uint32_t k;

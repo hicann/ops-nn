@@ -17,50 +17,54 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class IndexPutWithSort : public OpDef {
-    public:
-        explicit IndexPutWithSort(const char* name) : OpDef(name)
-        {
-            this->Input("self")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("linear_index")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("pos_idx")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("values")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("self")
-                    .ParamType(REQUIRED)
-                    .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                    .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-                    .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Attr("slice_size")
-                    .AttrType(REQUIRED)
-                    .Int();
-            this->Attr("accumulate")
-                    .AttrType(OPTIONAL)
-                    .Bool(false);
-            OpAICoreConfig aicore_config;
-            aicore_config.DynamicCompileStaticFlag(true)
+class IndexPutWithSort : public OpDef {
+public:
+    explicit IndexPutWithSort(const char* name) : OpDef(name)
+    {
+        this->Input("self")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("linear_index")
+            .ParamType(REQUIRED)
+            .DataType({
+                ge::DT_INT32,
+                ge::DT_INT32,
+                ge::DT_INT32,
+            })
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("pos_idx")
+            .ParamType(REQUIRED)
+            .DataType({
+                ge::DT_INT32,
+                ge::DT_INT32,
+                ge::DT_INT32,
+            })
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("values")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("self")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("slice_size").AttrType(REQUIRED).Int();
+        this->Attr("accumulate").AttrType(OPTIONAL).Bool(false);
+        OpAICoreConfig aicore_config;
+        aicore_config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true);
-            this->AICore().AddConfig("ascend910b");
-            this->AICore().AddConfig("ascend910_93");
-        }
-    };
+        this->AICore().AddConfig("ascend910b");
+        this->AICore().AddConfig("ascend910_93");
+    }
+};
 
-    OP_ADD(IndexPutWithSort);
-}
+OP_ADD(IndexPutWithSort);
+} // namespace ops

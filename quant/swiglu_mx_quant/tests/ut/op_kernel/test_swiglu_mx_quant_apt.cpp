@@ -29,16 +29,12 @@ using namespace SwigluMxQuantOp;
 
 class SwigluMxQuantKernelTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        cout << "SwigluMxQuantKernelTest SetUp" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "SwigluMxQuantKernelTest TearDown" << endl;
-    }
+    static void SetUpTestCase() { cout << "SwigluMxQuantKernelTest SetUp" << endl; }
+    static void TearDownTestCase() { cout << "SwigluMxQuantKernelTest TearDown" << endl; }
 };
 
-static void InitTilingData(SwigluMxQuantTilingData* tilingData, size_t batchSize, size_t seqLen,
-                            size_t hiddenDim, int64_t scaleAlg)
+static void InitTilingData(SwigluMxQuantTilingData* tilingData, size_t batchSize, size_t seqLen, size_t hiddenDim,
+                           int64_t scaleAlg)
 {
     int64_t M = batchSize * seqLen;
     int64_t N = hiddenDim;
@@ -98,10 +94,10 @@ TEST_F(SwigluMxQuantKernelTest, test_swiglu_mx_quant_fp16_to_fp8_e4m3)
     SwigluMxQuantTilingData* tilingData = reinterpret_cast<SwigluMxQuantTilingData*>(tiling);
     InitTilingData(tilingData, batchSize, seqLen, hiddenDim, scaleAlg);
 
-    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                         GM_ADDR workspace, GM_ADDR tiling) {
-        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(
-            x, group_index, y, mxscale, workspace, tiling);
+    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
+                         GM_ADDR tiling) {
+        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(x, group_index, y, mxscale,
+                                                                                          workspace, tiling);
     };
     uint32_t blockDim = 24;
     ICPU_SET_TILING_KEY(tilingKey);
@@ -138,10 +134,10 @@ TEST_F(SwigluMxQuantKernelTest, test_swiglu_mx_quant_bf16_to_fp8_e5m2)
     SwigluMxQuantTilingData* tilingData = reinterpret_cast<SwigluMxQuantTilingData*>(tiling);
     InitTilingData(tilingData, batchSize, seqLen, hiddenDim, scaleAlg);
 
-    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                         GM_ADDR workspace, GM_ADDR tiling) {
-        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(
-            x, group_index, y, mxscale, workspace, tiling);
+    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
+                         GM_ADDR tiling) {
+        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(x, group_index, y, mxscale,
+                                                                                          workspace, tiling);
     };
     uint32_t blockDim = 24;
     ICPU_SET_TILING_KEY(tilingKey);
@@ -161,7 +157,7 @@ TEST_F(SwigluMxQuantKernelTest, test_swiglu_mx_quant_fp16_to_fp4_e2m1)
     size_t seqLen = 256;
     size_t hiddenDim = 2048;
     int64_t scaleAlg = 0;
-    uint64_t tilingKey = 44;  // FLOOR
+    uint64_t tilingKey = 44; // FLOOR
 
     size_t inputSize = batchSize * seqLen * hiddenDim * 2 * sizeof(uint16_t);
     size_t outputSize = batchSize * seqLen * hiddenDim * sizeof(uint8_t);
@@ -178,10 +174,10 @@ TEST_F(SwigluMxQuantKernelTest, test_swiglu_mx_quant_fp16_to_fp4_e2m1)
     SwigluMxQuantTilingData* tilingData = reinterpret_cast<SwigluMxQuantTilingData*>(tiling);
     InitTilingData(tilingData, batchSize, seqLen, hiddenDim, scaleAlg);
 
-    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                         GM_ADDR workspace, GM_ADDR tiling) {
-        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_FLOOR>(
-            x, group_index, y, mxscale, workspace, tiling);
+    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
+                         GM_ADDR tiling) {
+        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_FLOOR>(x, group_index, y, mxscale,
+                                                                                           workspace, tiling);
     };
     uint32_t blockDim = 24;
     ICPU_SET_TILING_KEY(tilingKey);
@@ -218,10 +214,10 @@ TEST_F(SwigluMxQuantKernelTest, test_swiglu_mx_quant_scale_alg_1)
     SwigluMxQuantTilingData* tilingData = reinterpret_cast<SwigluMxQuantTilingData*>(tiling);
     InitTilingData(tilingData, batchSize, seqLen, hiddenDim, scaleAlg);
 
-    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                         GM_ADDR workspace, GM_ADDR tiling) {
-        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(
-            x, group_index, y, mxscale, workspace, tiling);
+    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
+                         GM_ADDR tiling) {
+        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(x, group_index, y, mxscale,
+                                                                                          workspace, tiling);
     };
     uint32_t blockDim = 24;
     ICPU_SET_TILING_KEY(tilingKey);
@@ -258,10 +254,10 @@ TEST_F(SwigluMxQuantKernelTest, test_swiglu_mx_quant_small_shape)
     SwigluMxQuantTilingData* tilingData = reinterpret_cast<SwigluMxQuantTilingData*>(tiling);
     InitTilingData(tilingData, batchSize, seqLen, hiddenDim, scaleAlg);
 
-    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale,
-                         GM_ADDR workspace, GM_ADDR tiling) {
-        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(
-            x, group_index, y, mxscale, workspace, tiling);
+    auto KernelFunc = [](GM_ADDR x, GM_ADDR group_index, GM_ADDR y, GM_ADDR mxscale, GM_ADDR workspace,
+                         GM_ADDR tiling) {
+        ::swiglu_mx_quant<TPL_NO_GROUP_INDEX, TPL_AXIS_LAST, TPL_ACTIVATE_LAST, TPL_RINT>(x, group_index, y, mxscale,
+                                                                                          workspace, tiling);
     };
     uint32_t blockDim = 24;
     ICPU_SET_TILING_KEY(tilingKey);

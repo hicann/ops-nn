@@ -21,29 +21,29 @@ using namespace Ops::Base;
 namespace ops {
 constexpr size_t THREE_NUM_INPUT = 3;
 
-static ge::graphStatus Infershape4BroadcastByThree(gert::InferShapeContext* context) {
-  std::vector<const gert::Shape*> broadcastShapes;
-  for (size_t i = 0; i < THREE_NUM_INPUT; ++i) {
-    auto inShape = context->GetInputShape(i);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
-    broadcastShapes.push_back(inShape);
-  }
-  auto outShape = context->GetOutputShape(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+static ge::graphStatus Infershape4BroadcastByThree(gert::InferShapeContext* context)
+{
+    std::vector<const gert::Shape*> broadcastShapes;
+    for (size_t i = 0; i < THREE_NUM_INPUT; ++i) {
+        auto inShape = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
+        broadcastShapes.push_back(inShape);
+    }
+    auto outShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
 
-  OP_CHECK_IF(!BroadcastShape(broadcastShapes, outShape),
-           OP_LOGE(context->GetNodeName(), "L1LossGrad BroadcastShape failed!"),
-           return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!BroadcastShape(broadcastShapes, outShape),
+                OP_LOGE(context->GetNodeName(), "L1LossGrad BroadcastShape failed!"), return ge::GRAPH_FAILED);
 
-  return ge::GRAPH_SUCCESS;
+    return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeOutSameInput(gert::InferDataTypeContext *context) {
-  auto xDtype = context->GetInputDataType(0);
-  context->SetOutputDataType(0, xDtype);
-  return ge::GRAPH_SUCCESS;
+static ge::graphStatus InferDataTypeOutSameInput(gert::InferDataTypeContext* context)
+{
+    auto xDtype = context->GetInputDataType(0);
+    context->SetOutputDataType(0, xDtype);
+    return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(L1LossGrad).InferShape(Infershape4BroadcastByThree)
-                              .InferDataType(InferDataTypeOutSameInput);
-}
+IMPL_OP_INFERSHAPE(L1LossGrad).InferShape(Infershape4BroadcastByThree).InferDataType(InferDataTypeOutSameInput);
+} // namespace ops

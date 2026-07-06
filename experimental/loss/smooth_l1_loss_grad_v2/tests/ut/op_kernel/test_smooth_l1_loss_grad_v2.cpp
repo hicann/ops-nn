@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
- 
 #include <array>
 #include <vector>
 #include <iostream>
@@ -32,23 +31,16 @@ static constexpr auto dec = ::dec;
 
 namespace fs = std::filesystem;
 
-extern "C" __global__ __aicore__ void smooth_l1_loss_grad_v2(GM_ADDR predict,
-                                                             GM_ADDR label,
-                                                             GM_ADDR dout,
-                                                             GM_ADDR gradient,
-                                                             GM_ADDR workspace,
-                                                             GM_ADDR tiling)
+extern "C" __global__ __aicore__ void smooth_l1_loss_grad_v2(GM_ADDR predict, GM_ADDR label, GM_ADDR dout,
+                                                             GM_ADDR gradient, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SmoothL1LossGradV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SmoothL1LossGradV2TilingData, tilingData, tiling);
     MySmoothL1LossGradV2::KernelSmoothL1LossGradV2<DTYPE_PREDICT, DTYPE_LABEL, DTYPE_DOUT, DTYPE_GRADIENT> op;
-    op.Init(predict, label, dout, gradient,
-            tilingData.smallCoreDataNum, tilingData.bigCoreDataNum,
-            tilingData.finalBigTileNum, tilingData.finalSmallTileNum,
-            tilingData.tileDataNum, tilingData.smallTailDataNum,
-            tilingData.bigTailDataNum, tilingData.tailBlockNum,
-            tilingData.totalDataNum, tilingData.doutDataNum,
-            tilingData.sigma, tilingData.reduction);
+    op.Init(predict, label, dout, gradient, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum,
+            tilingData.finalBigTileNum, tilingData.finalSmallTileNum, tilingData.tileDataNum,
+            tilingData.smallTailDataNum, tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.totalDataNum,
+            tilingData.doutDataNum, tilingData.sigma, tilingData.reduction);
     op.Process();
 }
 
@@ -80,8 +72,7 @@ static bool EnsureSmoothL1LossGradV2DataDir()
         }
     }
 
-    std::fprintf(stderr,
-                 "[SmoothL1LossGradV2Test] cannot locate smooth_l1_loss_grad_v2_data, cwd=%s, __FILE__=%s\n",
+    std::fprintf(stderr, "[SmoothL1LossGradV2Test] cannot locate smooth_l1_loss_grad_v2_data, cwd=%s, __FILE__=%s\n",
                  fs::current_path().c_str(), __FILE__);
     return false;
 }
@@ -89,10 +80,7 @@ static bool EnsureSmoothL1LossGradV2DataDir()
 static std::vector<gert::TilingContextPara::OpAttr> MakeAttrs(float sigma, const std::string& reduction)
 {
     using Ops::Math::AnyValue;
-    return {
-        {"sigma", AnyValue::CreateFrom<float>(sigma)},
-        {"reduction", AnyValue::CreateFrom<std::string>(reduction)}
-    };
+    return {{"sigma", AnyValue::CreateFrom<float>(sigma)}, {"reduction", AnyValue::CreateFrom<std::string>(reduction)}};
 }
 
 class SmoothL1LossGradV2Test : public testing::Test {
@@ -103,10 +91,7 @@ protected:
         ASSERT_TRUE(EnsureSmoothL1LossGradV2DataDir());
         system("chmod -R 755 ./smooth_l1_loss_grad_v2_data/");
     }
-    static void TearDownTestCase()
-    {
-        std::cout << "smooth_l1_loss_grad_v2_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "smooth_l1_loss_grad_v2_test TearDown" << std::endl; }
 };
 
 template <typename T1, typename T2>
@@ -138,9 +123,8 @@ static void ExpectNearRel(float actual, float expected, float rtol, float atol)
     EXPECT_LE(diff, tol);
 }
 
-static void ExpectNearRelVector(const std::vector<float>& actual,
-                                const std::vector<float>& expected,
-                                float rtol, float atol)
+static void ExpectNearRelVector(const std::vector<float>& actual, const std::vector<float>& expected, float rtol,
+                                float atol)
 {
     ASSERT_EQ(actual.size(), expected.size());
     for (size_t i = 0; i < actual.size(); ++i) {
@@ -161,8 +145,7 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float16_none)
         {
             {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // gradient
         },
-        MakeAttrs(1.0f, "none"),
-        &compileInfo);
+        MakeAttrs(1.0f, "none"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -191,8 +174,7 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float16_none)
     std::memcpy(tiling, tilingInfo.tilingData.get(), tilingInfo.tilingDataSize);
     ICPU_SET_TILING_KEY(tilingInfo.tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum,
-                predict, label, dout, gradient, workspace, tiling);
+    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum, predict, label, dout, gradient, workspace, tiling);
 
     fileName = "./smooth_l1_loss_grad_v2_data/float16_output_t_gradient.bin";
     WriteFile(fileName, gradient, outputByteSize);
@@ -210,18 +192,16 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float16_none)
 TEST_F(SmoothL1LossGradV2Test, test_case_float32_none)
 {
     optiling::SmoothL1LossGradV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 0};
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossGradV2",
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1.0f, "none"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossGradV2",
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1.0f, "none"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -250,8 +230,7 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float32_none)
     std::memcpy(tiling, tilingInfo.tilingData.get(), tilingInfo.tilingDataSize);
     ICPU_SET_TILING_KEY(tilingInfo.tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum,
-                predict, label, dout, gradient, workspace, tiling);
+    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum, predict, label, dout, gradient, workspace, tiling);
 
     fileName = "./smooth_l1_loss_grad_v2_data/float32_output_t_gradient.bin";
     WriteFile(fileName, gradient, outputByteSize);
@@ -269,18 +248,16 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float32_none)
 TEST_F(SmoothL1LossGradV2Test, test_case_float32_mean)
 {
     optiling::SmoothL1LossGradV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 2}; // reduction=mean
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossGradV2",
-        {
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // dout 标量
-        },
-        {
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1.0f, "mean"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossGradV2",
+                                              {
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // dout 标量
+                                              },
+                                              {
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1.0f, "mean"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -310,8 +287,7 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float32_mean)
     std::memcpy(tiling, tilingInfo.tilingData.get(), tilingInfo.tilingDataSize);
     ICPU_SET_TILING_KEY(tilingInfo.tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum,
-                predict, label, dout, gradient, workspace, tiling);
+    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum, predict, label, dout, gradient, workspace, tiling);
 
     fileName = "./smooth_l1_loss_grad_v2_data/float32_output_t_gradient.bin";
     WriteFile(fileName, gradient, outputByteSize);
@@ -334,18 +310,16 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float32_mean)
 TEST_F(SmoothL1LossGradV2Test, test_case_float32_sum)
 {
     optiling::SmoothL1LossGradV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 1}; // reduction=sum
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossGradV2",
-        {
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // dout 标量
-        },
-        {
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1.0f, "sum"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossGradV2",
+                                              {
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // dout 标量
+                                              },
+                                              {
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1.0f, "sum"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -375,8 +349,7 @@ TEST_F(SmoothL1LossGradV2Test, test_case_float32_sum)
     std::memcpy(tiling, tilingInfo.tilingData.get(), tilingInfo.tilingDataSize);
     ICPU_SET_TILING_KEY(tilingInfo.tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum,
-                predict, label, dout, gradient, workspace, tiling);
+    ICPU_RUN_KF(smooth_l1_loss_grad_v2, tilingInfo.blockNum, predict, label, dout, gradient, workspace, tiling);
 
     fileName = "./smooth_l1_loss_grad_v2_data/float32_output_t_gradient.bin";
     WriteFile(fileName, gradient, outputByteSize);

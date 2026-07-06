@@ -13,12 +13,8 @@
 #include "arch35/softsign_grad.h"
 
 #ifdef __CCE_KT_TEST__
-extern "C" __global__ __aicore__ void softsign_grad(
-    GM_ADDR gradients,
-    GM_ADDR features,
-    GM_ADDR output,
-    GM_ADDR workspace,
-    GM_ADDR tiling)
+extern "C" __global__ __aicore__ void softsign_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR output,
+                                                    GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(SoftsignGradTilingData, tilingData, tiling);
     NsSoftsignGrad::SoftsignGrad<DTYPE_GRADIENTS, 0> op;
@@ -27,12 +23,8 @@ extern "C" __global__ __aicore__ void softsign_grad(
 }
 #else
 template <int BUFFER_MODE>
-__global__ __aicore__ void softsign_grad(
-    GM_ADDR gradients,
-    GM_ADDR features,
-    GM_ADDR output,
-    GM_ADDR workspace,
-    GM_ADDR tiling)
+__global__ __aicore__ void softsign_grad(GM_ADDR gradients, GM_ADDR features, GM_ADDR output, GM_ADDR workspace,
+                                         GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SoftsignGradTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftsignGradTilingData, tilingData, tiling);

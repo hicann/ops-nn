@@ -49,11 +49,8 @@ constexpr int32_t kPortUpdates = 2;
 // 工具函数
 // ---------------------------------------------------------------------------
 
-static void GetInputsInfo(
-    const std::vector<SubgraphInput>& subgraphInputs,
-    std::vector<Shape>& inputShapes,
-    std::vector<DataType>& inputDtypes,
-    std::vector<Format>& inputFormats)
+static void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,
+                          std::vector<DataType>& inputDtypes, std::vector<Format>& inputFormats)
 {
     for (const auto& subgraphInput : subgraphInputs) {
         auto matchNode = subgraphInput.GetAllInputs().at(0);
@@ -101,12 +98,12 @@ static PatternUniqPtr MakePattern(const std::string& opType)
     ge::Graph* graphPtr = graphBuilder.GetCGraphBuilder()->GetGraph();
 
     GNode opNode = es::CompliantNodeBuilder(graphPtr)
-        .OpType(opType.c_str())
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                       {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .Build();
+                       .OpType(opType.c_str())
+                       .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"indices", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                     {"updates", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                       .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                       .Build();
 
     GNode xNode = *x.GetProducer();
     GNode indicesNode = *indices.GetProducer();
@@ -143,9 +140,8 @@ bool TensorScatterAddFusionPass::MeetRequirements(const std::unique_ptr<MatchRes
     OPS_LOG_D(PASS_NAME.c_str(), "Enter MeetRequirements for TensorScatterAddFusionPass");
 
     NodeIo captured;
-    OP_LOGE_IF(
-        matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS,
-        false, PASS_NAME.c_str(), "Failed to get captured tensor.");
+    OP_LOGE_IF(matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS, false, PASS_NAME.c_str(),
+               "Failed to get captured tensor.");
 
     // 校验匹配节点的 OpType
     AscendString nodeType;
@@ -177,24 +173,21 @@ GraphUniqPtr TensorScatterAddFusionPass::Replacement(const std::unique_ptr<Match
 
     // 2. 创建替换图输入
     auto builder = es::EsGraphBuilder("replacement");
-    auto rX = builder.CreateInput(
-        0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
-    auto rIndices = builder.CreateInput(
-        1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
-    auto rUpdates = builder.CreateInput(
-        2, "updates", inputDtypes[2], inputFormats[2], inputShapes[2].GetDims());
+    auto rX = builder.CreateInput(0, "x", inputDtypes[0], inputFormats[0], inputShapes[0].GetDims());
+    auto rIndices = builder.CreateInput(1, "indices", inputDtypes[1], inputFormats[1], inputShapes[1].GetDims());
+    auto rUpdates = builder.CreateInput(2, "updates", inputDtypes[2], inputFormats[2], inputShapes[2].GetDims());
 
     ge::Graph* graphPtr = builder.GetCGraphBuilder()->GetGraph();
 
     // 3. TensorMove 节点（仓内无 ES API，使用 CompliantNodeBuilder）
     GNode tensorMoveNode = es::CompliantNodeBuilder(graphPtr)
-        .OpType("TensorMove")
-        .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
-        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-        .InstanceOutputShape("y", inputShapes[0].GetDims())
-        .InstanceOutputDataType("y", inputDtypes[0])
-        .InstanceOutputFormat("y", inputFormats[0])
-        .Build();
+                               .OpType("TensorMove")
+                               .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                               .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                               .InstanceOutputShape("y", inputShapes[0].GetDims())
+                               .InstanceOutputDataType("y", inputDtypes[0])
+                               .InstanceOutputFormat("y", inputFormats[0])
+                               .Build();
 
     // 4. 连边：x -> TensorMove
     GNode xNode = *rX.GetProducer();
@@ -204,8 +197,7 @@ GraphUniqPtr TensorScatterAddFusionPass::Replacement(const std::unique_ptr<Match
     UpdateInputFormat(tensorMoveNode, 0, inputFormats[0]);
 
     // 5. TensorMove 输出转为 EsTensorHolder，用于 ScatterNdAdd ES API
-    es::EsTensorHolder tensorMoveOutput(
-        builder.GetCGraphBuilder()->GetTensorHolderFromNode(tensorMoveNode, 0));
+    es::EsTensorHolder tensorMoveOutput(builder.GetCGraphBuilder()->GetTensorHolderFromNode(tensorMoveNode, 0));
 
     // 6. ScatterNdAdd 节点（使用 ES API）
     auto scatterNdAddOutput = es::ScatterNdAdd(tensorMoveOutput, rIndices, rUpdates, false);

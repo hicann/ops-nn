@@ -16,35 +16,35 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-    class SoftmaxCrossEntropyWithLogits : public OpDef {
-    public:
-        explicit SoftmaxCrossEntropyWithLogits(const char *name) : OpDef(name) {
-            this->Input("features")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("labels")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("loss")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("backprop")
-                .ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            OpAICoreConfig aicoreConfig;
-            aicoreConfig.DynamicCompileStaticFlag(true)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false)
-                .ExtendCfgInfo("opFile.value", "softmax_cross_entropy_with_logits_apt");
-            this->AICore().AddConfig("ascend950", aicoreConfig);
-        }
-    };
+class SoftmaxCrossEntropyWithLogits : public OpDef {
+public:
+    explicit SoftmaxCrossEntropyWithLogits(const char* name) : OpDef(name)
+    {
+        this->Input("features")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("labels")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("loss")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("backprop")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .PrecisionReduceFlag(false)
+            .ExtendCfgInfo("opFile.value", "softmax_cross_entropy_with_logits_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
 
-    OP_ADD(SoftmaxCrossEntropyWithLogits);
+OP_ADD(SoftmaxCrossEntropyWithLogits);
 } // namespace ops
-

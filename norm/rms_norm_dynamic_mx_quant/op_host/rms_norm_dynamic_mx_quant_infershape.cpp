@@ -52,8 +52,8 @@ constexpr size_t OUTPUT_RSTD_INDEX = 2;
 constexpr size_t ATTR_DST_DTYPE_INDEX = 3;
 constexpr size_t ATTR_RSTD_INDEX = 4;
 
-static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
+                                                                        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 
 graphStatus InferShapeForRmsNormDynamicMxQuant(gert::InferShapeContext* context)
 {
@@ -66,10 +66,9 @@ graphStatus InferShapeForRmsNormDynamicMxQuant(gert::InferShapeContext* context)
 
     const gert::Shape* xShape = context->GetInputShape(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
-    OP_CHECK_IF(
-        xShape->GetDimNum() < 1 || xShape->GetDimNum() > INPUT_MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() < 1 || xShape->GetDimNum() > INPUT_MAX_DIM_NUM,
+                OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     gert::Shape* yShape = context->GetOutputShape(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
@@ -111,9 +110,8 @@ graphStatus InferShapeForRmsNormDynamicMxQuant(gert::InferShapeContext* context)
         rstdShape->SetDim(lastDim, DIM_VALUE_ONE);
     }
 
-    OP_LOGD(
-        context->GetNodeName(), "x shape is : %s, y shape is %s, mxscale shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*yShape).c_str(), Shape2String(*mxScaleShape).c_str());
+    OP_LOGD(context->GetNodeName(), "x shape is : %s, y shape is %s, mxscale shape is %s.",
+            Shape2String(*xShape).c_str(), Shape2String(*yShape).c_str(), Shape2String(*mxScaleShape).c_str());
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForRmsNormDynamicMxQuant");
     return ge::GRAPH_SUCCESS;
 }
@@ -130,11 +128,10 @@ ge::graphStatus InferDataTypeForRmsNormDynamicMxQuant(gert::InferDataTypeContext
     ge::DataType outDtype = static_cast<ge::DataType>(*dstDtype);
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-        OP_LOGE(
-            context->GetNodeName(),
-            "dst_type is illegal, only supports 40(FLOAT4_E2M1), 41(FLOAT4_E1M2), "
-            "36(FLOAT8_E4M3FN) or 35(FLOAT8_E5M2). but got %ld(%s)please check.",
-            *dstDtype, ge::TypeUtils::DataTypeToAscendString(outDtype).GetString()),
+        OP_LOGE(context->GetNodeName(),
+                "dst_type is illegal, only supports 40(FLOAT4_E2M1), 41(FLOAT4_E1M2), "
+                "36(FLOAT8_E4M3FN) or 35(FLOAT8_E5M2). but got %ld(%s)please check.",
+                *dstDtype, ge::TypeUtils::DataTypeToAscendString(outDtype).GetString()),
         return ge::GRAPH_FAILED);
 
     context->SetOutputDataType(OUTPUT_Y_INDEX, outDtype);

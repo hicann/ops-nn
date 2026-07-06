@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 #include <array>
 #include <vector>
@@ -21,21 +22,15 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void add_rms_norm_quant(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
-    GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void add_rms_norm_quant(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1,
+                                                         GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
+                                                         GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
+                                                         GM_ADDR workspace, GM_ADDR tiling);
 
-class add_rms_norm_quant_test : public testing::Test
-{
+class add_rms_norm_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "add_rms_norm_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "add_rms_norm_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "add_rms_norm_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "add_rms_norm_quant_test TearDown\n" << endl; }
 };
 
 TEST_F(add_rms_norm_quant_test, test_case_0)
@@ -87,9 +82,8 @@ TEST_F(add_rms_norm_quant_test, test_case_0)
     tilingDatafromBin->hasBeta = 1U;
     // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(
-        add_rms_norm_quant, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, x,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_rms_norm_quant, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2,
+                x, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -155,11 +149,10 @@ TEST_F(add_rms_norm_quant_test, test_case_1)
     tilingDatafromBin->hasZeroPoints1 = 1;
     tilingDatafromBin->hasBeta = 1U;
 
-//     // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
+    //     // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(
-        add_rms_norm_quant, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, x,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_rms_norm_quant, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2,
+                x, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -226,9 +219,8 @@ TEST_F(add_rms_norm_quant_test, test_case_3)
     tilingDatafromBin->hasBeta = 1U;
     // ReadFile(path + "/rms_norm_data/input_x.bin", inputByteSize, x, inputByteSize);
     ICPU_SET_TILING_KEY(3);
-    ICPU_RUN_KF(
-        add_rms_norm_quant, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, x,
-        workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(add_rms_norm_quant, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2,
+                x, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

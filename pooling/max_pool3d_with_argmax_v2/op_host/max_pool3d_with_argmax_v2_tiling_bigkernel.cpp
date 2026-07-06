@@ -23,7 +23,6 @@ constexpr uint64_t TILING_KEY_BIG_KERNEL_HALF = 311111;
 // 3, splitD=1, splitH=1, splitW=0, splitKernel = 1, dtype=bfloat16
 constexpr uint64_t TILING_KEY_BIG_KERNEL_BF16 = 311112;
 
-
 namespace optiling {
 
 bool MaxPool3DWithArgmaxV2BigKernelTiling::IsCapable()
@@ -31,9 +30,9 @@ bool MaxPool3DWithArgmaxV2BigKernelTiling::IsCapable()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)){
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
-    } 
+    }
     if (inputData.dilation[D_DIM] == 1 && inputData.dilation[H_DIM] == 1 && inputData.dilation[W_DIM] == 1) {
         return true;
     }
@@ -65,11 +64,12 @@ void MaxPool3DWithArgmaxV2BigKernelTiling::DoUBTiling()
 
 void MaxPool3DWithArgmaxV2BigKernelTiling::SetTilingData()
 {
-    array<uint32_t, DHW_DIMS> tmpInputShape{
-        static_cast<uint32_t>(inputData.inputShape[D_DIM]), static_cast<uint32_t>(inputData.inputShape[H_DIM]),
-        static_cast<uint32_t>(inputData.inputShape[W_DIM])};
-    array<uint32_t, DHW_DIMS> tmpOutShape{
-        static_cast<uint32_t>(inputData.outShape[D_DIM]), static_cast<uint32_t>(inputData.outShape[H_DIM]), static_cast<uint32_t>(inputData.outShape[W_DIM])};
+    array<uint32_t, DHW_DIMS> tmpInputShape{static_cast<uint32_t>(inputData.inputShape[D_DIM]),
+                                            static_cast<uint32_t>(inputData.inputShape[H_DIM]),
+                                            static_cast<uint32_t>(inputData.inputShape[W_DIM])};
+    array<uint32_t, DHW_DIMS> tmpOutShape{static_cast<uint32_t>(inputData.outShape[D_DIM]),
+                                          static_cast<uint32_t>(inputData.outShape[H_DIM]),
+                                          static_cast<uint32_t>(inputData.outShape[W_DIM])};
     tiling.set_inputShapes(&(tmpInputShape[0]));
     tiling.set_outShapes(&(tmpOutShape[0]));
     tiling.set_kD((uint32_t)inputData.kernelSize[D_DIM]);

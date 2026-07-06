@@ -4,14 +4,14 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
-* \file gelu_v2_tiling_arch35.cpp
-* \brief
-*/
+ * \file gelu_v2_tiling_arch35.cpp
+ * \brief
+ */
 
 #include "gelu_v2_tiling_arch35.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -27,10 +27,9 @@
 
 using namespace GeluV2Op;
 
-namespace optiling
-{
+namespace optiling {
 const size_t ASCEND_WORKSPACE = 16777216; // 16M
-const int64_t ASCEND_API_BUFFER = 122880; //120K
+const int64_t ASCEND_API_BUFFER = 122880; // 120K
 const int ATTR_APPROXIMATE_POS = 0;
 
 ge::graphStatus GeluV2Tiling::CalcInputDtype()
@@ -58,20 +57,21 @@ ge::graphStatus GeluV2Tiling::CalcOutputDtype()
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                     tilingContext->GetNodeName(), "x, y",
-                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " +
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
                     "The dtypes of x and y must be the same"),
                 return ge::GRAPH_FAILED);
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = TPL_FP16;
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = TPL_BF16;
-   } else if (this->outputDtype == ge::DT_FLOAT) {
+    } else if (this->outputDtype == ge::DT_FLOAT) {
         dType = TPL_FP32;
-   } else {
+    } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                tilingContext->GetNodeName(), "y",
-                ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
-                "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
+            tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -90,27 +90,25 @@ ge::graphStatus GeluV2Tiling::CheckShape()
 
     OP_CHECK_IF(inputXShape != outputYShape,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    tilingContext->GetNodeName(), "x, y", Ops::Base::ToString(inputXShape) + ", " + Ops::Base::ToString(outputYShape),
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputXShape) + ", " + Ops::Base::ToString(outputYShape),
                     "The shapes of x and y must be the same"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GeluV2Tiling::CheckValid() 
+ge::graphStatus GeluV2Tiling::CheckValid()
 {
-    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED,
-                OP_LOGE(tilingContext, "get input dtype failed"), 
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED,
-                OP_LOGE(tilingContext, "get output dtype failed"), 
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, 
-                OP_LOGE(tilingContext, "check shape failed"), 
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
                 return ge::GRAPH_FAILED);
 
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
-    const auto *approximatePtr = attrs->GetAttrPointer<char>(ATTR_APPROXIMATE_POS);
+    const auto* approximatePtr = attrs->GetAttrPointer<char>(ATTR_APPROXIMATE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, approximatePtr);
     approximateStr = approximatePtr;
     if (approximateStr == "none") {
@@ -118,9 +116,8 @@ ge::graphStatus GeluV2Tiling::CheckValid()
     } else if (approximateStr == "tanh") {
         approximate = TPL_TANH;
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            tilingContext->GetNodeName(), "approximate", approximateStr,
-            "The value of approximate must be none or tanh");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "approximate", approximateStr,
+                                              "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -131,47 +128,52 @@ ge::graphStatus GeluV2Tiling::RunTiling()
     auto tiling = tilingContext->GetTilingData<Ops::Base::EleBaseTilingData16B>();
     OP_LOGD(tilingContext->GetNodeName(), "GeluV2Tiling RunTiling enter.");
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
-    OP_CHECK_IF(CheckValid() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "validity check failed"), 
+    OP_CHECK_IF(CheckValid() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "validity check failed"),
                 return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (approximate == TPL_NONE) {
         if (dType == TPL_FP16) {
-            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf16BDag<half>::OpDag>(*tiling, ASCEND_API_BUFFER);
-        } else if ( dType == TPL_BF16) {
-            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf16BDag<bfloat16_t>::OpDag>(*tiling, ASCEND_API_BUFFER);
+            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf16BDag<half>::OpDag>(*tiling,
+                                                                                                  ASCEND_API_BUFFER);
+        } else if (dType == TPL_BF16) {
+            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf16BDag<bfloat16_t>::OpDag>(
+                *tiling, ASCEND_API_BUFFER);
         } else if (dType == TPL_FP32) {
-            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf32BDag<float>::OpDag>(*tiling, ASCEND_API_BUFFER);
+            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf32BDag<float>::OpDag>(*tiling,
+                                                                                                   ASCEND_API_BUFFER);
         } else {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                    tilingContext->GetNodeName(), "y",
-                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
-                    "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
+                tilingContext->GetNodeName(), "y",
+                ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
-    } else if (approximate == TPL_TANH) {  
+    } else if (approximate == TPL_TANH) {
         if (dType == TPL_FP16) {
-            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<half>::OpDag>(*tiling, ASCEND_API_BUFFER);
+            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<half>::OpDag>(*tiling,
+                                                                                                ASCEND_API_BUFFER);
         } else if (dType == TPL_BF16) {
-            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<bfloat16_t>::OpDag>(*tiling, ASCEND_API_BUFFER);
+            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<bfloat16_t>::OpDag>(
+                *tiling, ASCEND_API_BUFFER);
         } else if (dType == TPL_FP32) {
-            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<float>::OpDag>(*tiling, ASCEND_API_BUFFER);
+            baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<float>::OpDag>(*tiling,
+                                                                                                 ASCEND_API_BUFFER);
         } else {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                    tilingContext->GetNodeName(), "y",
-                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
-                    "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
+                tilingContext->GetNodeName(), "y",
+                ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            tilingContext->GetNodeName(), "approximate", approximateStr,
-            "The value of approximate must be none or tanh");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "approximate", approximateStr,
+                                              "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"), 
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
                 return ge::GRAPH_FAILED);
-            
+
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = ASCEND_WORKSPACE;
@@ -180,7 +182,7 @@ ge::graphStatus GeluV2Tiling::RunTiling()
     OP_LOGD(tilingContext, "[TilingData] : tilingKey=%lu", tilingKey);
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(elewiseBaseTiling.GetBlockDim());
-                
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -207,4 +209,4 @@ static ge::graphStatus Tiling4GeluV2Arch35(gert::TilingContext* tilingContextGen
 }
 
 IMPL_OP_OPTILING(GeluV2).Tiling(Tiling4GeluV2Arch35).TilingParse<GeluV2CompileInfoArch35>(TilingPrepare4GeluV2Arch35);
-}  // namespace optiling
+} // namespace optiling

@@ -37,8 +37,9 @@
         op.Process();                                                   \
     } while (0)
 
-extern "C" __global__ __aicore__ void scatter_add_with_sorted(
-    GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index, GM_ADDR pos, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void scatter_add_with_sorted(GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index,
+                                                              GM_ADDR pos, GM_ADDR output, GM_ADDR workspace,
+                                                              GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
     const ScatterAddWithSortedTilingData* __restrict tilingDevice = &tiling_data;

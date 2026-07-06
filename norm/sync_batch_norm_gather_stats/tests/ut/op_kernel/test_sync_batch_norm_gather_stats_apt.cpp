@@ -33,21 +33,17 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void sync_batch_norm_gather_stats(
-    GM_ADDR total_sum, GM_ADDR total_square_sum, GM_ADDR sample_count, GM_ADDR running_mean, GM_ADDR running_var,
-    GM_ADDR batch_mean, GM_ADDR batch_invstd, GM_ADDR running_mean_update, GM_ADDR running_var_update,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void sync_batch_norm_gather_stats(GM_ADDR total_sum, GM_ADDR total_square_sum,
+                                                                   GM_ADDR sample_count, GM_ADDR running_mean,
+                                                                   GM_ADDR running_var, GM_ADDR batch_mean,
+                                                                   GM_ADDR batch_invstd, GM_ADDR running_mean_update,
+                                                                   GM_ADDR running_var_update, GM_ADDR workspace,
+                                                                   GM_ADDR tiling);
 
 class sync_batch_norm_gather_stats_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sync_batch_norm_gather_stats_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sync_batch_norm_gather_stats_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sync_batch_norm_gather_stats_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sync_batch_norm_gather_stats_test TearDown\n" << endl; }
 };
 
 std::string Shape2Str(const std::vector<int64_t>& shape)
@@ -73,9 +69,8 @@ static inline int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void ExcuteTestCase(
-    const std::vector<int64_t>& sumShape, const std::vector<int64_t>& countShape, const std::string& dtype,
-    int64_t tilingKey, uint32_t blockNum, uint8_t* tiling)
+void ExcuteTestCase(const std::vector<int64_t>& sumShape, const std::vector<int64_t>& countShape,
+                    const std::string& dtype, int64_t tilingKey, uint32_t blockNum, uint8_t* tiling)
 {
     uint32_t typeSize = 4;
     uint32_t fp32TypeSize = 4;
@@ -102,9 +97,8 @@ void ExcuteTestCase(
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        sync_batch_norm_gather_stats, blockNum, total_sum, total_square_sum, sample_count, running_mean, running_var,
-        batch_mean, batch_invstd, running_mean_update, running_var_update, workspace, tiling);
+    ICPU_RUN_KF(sync_batch_norm_gather_stats, blockNum, total_sum, total_square_sum, sample_count, running_mean,
+                running_var, batch_mean, batch_invstd, running_mean_update, running_var_update, workspace, tiling);
 
     AscendC::GmFree(total_sum);
     AscendC::GmFree(total_square_sum);
@@ -128,8 +122,8 @@ TEST_F(sync_batch_norm_gather_stats_test, test_full_load_float32)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(SyncBatchNormGatherStatsTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    SyncBatchNormGatherStatsTilingData* tilingDatafromBin =
-        reinterpret_cast<SyncBatchNormGatherStatsTilingData*>(tiling);
+    SyncBatchNormGatherStatsTilingData* tilingDatafromBin = reinterpret_cast<SyncBatchNormGatherStatsTilingData*>(
+        tiling);
 
     tilingDatafromBin->blockDim = 2;
     tilingDatafromBin->blockFormer = 32;
@@ -152,8 +146,8 @@ TEST_F(sync_batch_norm_gather_stats_test, test_not_full_load_float32)
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(SyncBatchNormGatherStatsNNotFullLoadTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
-    SyncBatchNormGatherStatsNNotFullLoadTilingData* tilingDatafromBin =
-        reinterpret_cast<SyncBatchNormGatherStatsNNotFullLoadTilingData*>(tiling);
+    SyncBatchNormGatherStatsNNotFullLoadTilingData*
+        tilingDatafromBin = reinterpret_cast<SyncBatchNormGatherStatsNNotFullLoadTilingData*>(tiling);
 
     tilingDatafromBin->blockDim = 2;
     tilingDatafromBin->cLen = 128;

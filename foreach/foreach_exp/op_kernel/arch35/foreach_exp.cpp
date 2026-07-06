@@ -28,8 +28,7 @@ __global__ __aicore__ void foreach_exp(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, 
     GET_TILING_DATA_WITH_STRUCT(ForeachExpTilingData, tilingData, tiling);
 
     // Access tiling data via GM pointer to avoid stack overflow with large struct
-    const __gm__ ForeachExpTilingData* tilingGm =
-        reinterpret_cast<const __gm__ ForeachExpTilingData*>(tiling);
+    const __gm__ ForeachExpTilingData* tilingGm = reinterpret_cast<const __gm__ ForeachExpTilingData*>(tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachExpTilingKey::TILING_KEY_FLOAT)) {
         NsForeachExp::Process<float>(x, y, tilingGm);

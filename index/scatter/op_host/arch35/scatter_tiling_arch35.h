@@ -48,10 +48,10 @@ TILING_DATA_FIELD_DEF(int64_t, tailBlockData);
 TILING_DATA_FIELD_DEF(int64_t, loopLength);
 TILING_DATA_FIELD_DEF(int64_t, indicesUbSize);
 TILING_DATA_FIELD_DEF(int64_t, dtypeSize);
-TILING_DATA_FIELD_DEF(int64_t, simtUsedCore);                   // 使用核数
-TILING_DATA_FIELD_DEF(int64_t, simtPerCoreNum);                 // 非尾核jisuan的元素个数
-TILING_DATA_FIELD_DEF(int64_t, simtTailCoreNum);                // 尾核jisuan的元素个数
-TILING_DATA_FIELD_DEF(int64_t, simtThreadNum);                  // 使用线程数
+TILING_DATA_FIELD_DEF(int64_t, simtUsedCore);    // 使用核数
+TILING_DATA_FIELD_DEF(int64_t, simtPerCoreNum);  // 非尾核jisuan的元素个数
+TILING_DATA_FIELD_DEF(int64_t, simtTailCoreNum); // 尾核jisuan的元素个数
+TILING_DATA_FIELD_DEF(int64_t, simtThreadNum);   // 使用线程数
 TILING_DATA_FIELD_DEF(int64_t, normBlockColNum);
 TILING_DATA_FIELD_DEF(int64_t, indicesUbFactor);
 TILING_DATA_FIELD_DEF(int64_t, updatesColUbFactor);
@@ -67,83 +67,82 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(Scatter, ScatterTilingData);
 
 class ScatterTiling : public TilingBaseClass {
- public:
-  explicit ScatterTiling(gert::TilingContext* context) : TilingBaseClass(context) {
-  }
+public:
+    explicit ScatterTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
- protected:
-  ge::graphStatus GetPlatformInfo() override;
-  ge::graphStatus GetShapeAttrsInfo() override;
-  bool IsCapable() override;
+protected:
+    ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    bool IsCapable() override;
 
-  // 1、计算数据切分TilingData
-  ge::graphStatus DoOpTiling() override;
+    // 1、计算数据切分TilingData
+    ge::graphStatus DoOpTiling() override;
 
-  // 2、计算高阶API的TilingData
-  ge::graphStatus DoLibApiTiling() override;
+    // 2、计算高阶API的TilingData
+    ge::graphStatus DoLibApiTiling() override;
 
-  // 3、计算TilingKey
-  uint64_t GetTilingKey() const override;
+    // 3、计算TilingKey
+    uint64_t GetTilingKey() const override;
 
-  // 4、计算Workspace 大小
-  ge::graphStatus GetWorkspaceSize() override;
+    // 4、计算Workspace 大小
+    ge::graphStatus GetWorkspaceSize() override;
 
-  // 5、保存Tiling数据
-  ge::graphStatus PostTiling() override;
-  void DumpTilingInfo() override;
-  uint64_t setSimtTilingKey(uint64_t& tilingKey) const;
+    // 5、保存Tiling数据
+    ge::graphStatus PostTiling() override;
+    void DumpTilingInfo() override;
+    uint64_t setSimtTilingKey(uint64_t& tilingKey) const;
 
-  ge::graphStatus PrepareTilingParams(const gert::TilingContext* context);
+    ge::graphStatus PrepareTilingParams(const gert::TilingContext* context);
 
-  void InitTilingKeyMap();
+    void InitTilingKeyMap();
 
- private:
-  ge::graphStatus GetShapes();
-  ge::graphStatus CheckNullTensor();
-  ge::graphStatus MergeDims();
-  ge::graphStatus CheckShapes();
-  ge::graphStatus PromoteDtype();
-  ge::graphStatus GetTilingParam();
-  ge::graphStatus DoSimdTiling();
-  ge::graphStatus  DoDeterministicTiling();
-  void SetTilingData();
+private:
+    ge::graphStatus GetShapes();
+    ge::graphStatus CheckNullTensor();
+    ge::graphStatus MergeDims();
+    ge::graphStatus CheckShapes();
+    ge::graphStatus PromoteDtype();
+    ge::graphStatus GetTilingParam();
+    ge::graphStatus DoSimdTiling();
+    ge::graphStatus DoDeterministicTiling();
+    void SetTilingData();
 
-  bool oneCoreTemp{false};
-  int64_t simtThreadNum = 1024;
+    bool oneCoreTemp{false};
+    int64_t simtThreadNum = 1024;
 
-  int32_t ubSize = 0;
-  int32_t aivCoreNum = 1;
-  int32_t tailCoreNum = 0;
-  int64_t simtAivCoreNum = 0;
-  int64_t blockFactor = 0;
-  int64_t tailBlockData = 0;
-  int64_t loopLength = 0;
-  int64_t indicesUbSize = 0;
-  uint64_t simdTemp = 0;
-  int32_t axis = 1;
-  int32_t indicesDim = 0;
-  int32_t dtypeSize = 0;
-  int64_t normBlockColNum_ = 0;
-  int64_t tailBlockColNum_ = 0;
-  int64_t indicesUbFactor_ = 0;
-  int64_t updatesColUbFactor_ = 0;
-  int64_t indicesLoop_ = 0;
-  int64_t indicesTailLoopNum_ = 0;
-  int64_t updatesNormBlockColLoop_ = 0;
-  int64_t updatesTailBlockColLoop_ = 0;
-  int64_t updatesNormBlockTailLoopSize_ = 0;
-  int64_t updatesTailBlockTailLoopSize_ = 0;
-  ge::DataType inputDtype = ge::DT_UNDEFINED;
-  ge::DataType indicesDtype = ge::DT_UNDEFINED;
-  ge::DataType updatesDtype = ge::DT_UNDEFINED;
-  gert::Shape inputOriginShape;
-  gert::Shape indicesOriginShape;
-  gert::Shape updatesOriginShape;
-  gert::Shape inputNewShape;
-  gert::Shape updatesNewShape;
-  ScatterTilingData tilingData;
-  bool isUint64{false};
-  bool isDeterministic_{false};
+    int32_t ubSize = 0;
+    int32_t aivCoreNum = 1;
+    int32_t tailCoreNum = 0;
+    int64_t simtAivCoreNum = 0;
+    int64_t blockFactor = 0;
+    int64_t tailBlockData = 0;
+    int64_t loopLength = 0;
+    int64_t indicesUbSize = 0;
+    uint64_t simdTemp = 0;
+    int32_t axis = 1;
+    int32_t indicesDim = 0;
+    int32_t dtypeSize = 0;
+    int64_t normBlockColNum_ = 0;
+    int64_t tailBlockColNum_ = 0;
+    int64_t indicesUbFactor_ = 0;
+    int64_t updatesColUbFactor_ = 0;
+    int64_t indicesLoop_ = 0;
+    int64_t indicesTailLoopNum_ = 0;
+    int64_t updatesNormBlockColLoop_ = 0;
+    int64_t updatesTailBlockColLoop_ = 0;
+    int64_t updatesNormBlockTailLoopSize_ = 0;
+    int64_t updatesTailBlockTailLoopSize_ = 0;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    ge::DataType indicesDtype = ge::DT_UNDEFINED;
+    ge::DataType updatesDtype = ge::DT_UNDEFINED;
+    gert::Shape inputOriginShape;
+    gert::Shape indicesOriginShape;
+    gert::Shape updatesOriginShape;
+    gert::Shape inputNewShape;
+    gert::Shape updatesNewShape;
+    ScatterTilingData tilingData;
+    bool isUint64{false};
+    bool isDeterministic_{false};
 };
 } // namespace optiling
 

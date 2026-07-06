@@ -23,17 +23,20 @@ using namespace AscendC;
 using namespace ApplyMomentumOp;
 
 template <uint64_t schMode, uint64_t useNesterov>
-__global__ __aicore__ void apply_momentum(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad,
-                                          GM_ADDR momentum, GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling) {
+__global__ __aicore__ void apply_momentum(GM_ADDR var, GM_ADDR accum, GM_ADDR lr, GM_ADDR grad, GM_ADDR momentum,
+                                          GM_ADDR var_out, GM_ADDR workspace, GM_ADDR tiling)
+{
     REGISTER_TILING_DEFAULT(ApplyMomentumRegbaseTilingData);
     GET_TILING_DATA_WITH_STRUCT(ApplyMomentumRegbaseTilingData, tilingData, tiling);
     TPipe pipe;
     if constexpr (static_cast<int>(useNesterov) == 0) {
-        ElementwiseSch<schMode, ApplyMomentumOp::ApplyMomentumDag<DTYPE_VAR>::OpDag> sch(&(tilingData.elewiseTiling), &pipe);
+        ElementwiseSch<schMode, ApplyMomentumOp::ApplyMomentumDag<DTYPE_VAR>::OpDag> sch(&(tilingData.elewiseTiling),
+                                                                                         &pipe);
         sch.Init(var, accum, lr, grad, momentum, var_out, accum);
         sch.Process();
     } else if constexpr (static_cast<int>(useNesterov) == 1) {
-        ElementwiseSch<schMode, ApplyMomentumOp::ApplyNesterovMomentumDag<DTYPE_VAR>::OpDag> sch(&(tilingData.elewiseTiling), &pipe);
+        ElementwiseSch<schMode, ApplyMomentumOp::ApplyNesterovMomentumDag<DTYPE_VAR>::OpDag> sch(
+            &(tilingData.elewiseTiling), &pipe);
         sch.Init(var, accum, lr, grad, momentum, var_out, accum);
         sch.Process();
     }

@@ -49,17 +49,16 @@ static void RepeatInterleaveGradPrintParam(RepeatInterleaveGradTilingData& tilin
     OP_LOGD("RepeatInterleaveGradTiling ", "element_num_each_loop = %ld", tiling.get_element_num_each_loop());
 }
 
-static void RepeatInterleaveGradInitShapeInfo(
-    const gert::TilingContext* context, RepeatInterleaveGradTilingData& tiling)
+static void RepeatInterleaveGradInitShapeInfo(const gert::TilingContext* context,
+                                              RepeatInterleaveGradTilingData& tiling)
 {
     // output param
     auto attrs = context->GetAttrs();
     auto inputshape0 = context->GetInputShape(0);
     auto inputshape1 = context->GetInputShape(1);
     auto outputshape0 = context->GetOutputShape(0);
-    OP_CHECK_IF(
-        attrs == nullptr || inputshape0 == nullptr || inputshape1 == nullptr || outputshape0 == nullptr,
-        OP_LOGE(context, "attrs or shape is null."), return);
+    OP_CHECK_IF(attrs == nullptr || inputshape0 == nullptr || inputshape1 == nullptr || outputshape0 == nullptr,
+                OP_LOGE(context, "attrs or shape is null."), return );
     const gert::Shape input_grad_shape = inputshape0->GetStorageShape();
     const gert::Shape repeats_shape = inputshape1->GetStorageShape();
     const gert::Shape output_grad_shape = outputshape0->GetStorageShape();
@@ -95,8 +94,8 @@ static void RepeatInterleaveGradInitShapeInfo(
     tiling.set_data_dim_num(data_dim_num);
 }
 
-static void RepeatInterleaveGradInitSplitInfo(
-    const gert::TilingContext* context, RepeatInterleaveGradTilingData& tiling)
+static void RepeatInterleaveGradInitSplitInfo(const gert::TilingContext* context,
+                                              RepeatInterleaveGradTilingData& tiling)
 {
     // output param
     const auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
@@ -194,8 +193,8 @@ static ge::graphStatus Tiling4RepeatInterleaveGrad(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepare4RepeatInterleaveGrad(gert::TilingParseContext* context)
 {
-    OP_CHECK_IF(
-        nullptr == context, OP_LOGE("RepeatInterleaveGradTiling", "[TilingPrepare] Context is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == context, OP_LOGE("RepeatInterleaveGradTiling", "[TilingPrepare] Context is null."),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

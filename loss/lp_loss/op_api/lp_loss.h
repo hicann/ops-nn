@@ -19,8 +19,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *LpLoss(const aclTensor *self, const aclTensor *target,
-                        int64_t p, int64_t reduction, aclOpExecutor *executor);
+const aclTensor* LpLoss(const aclTensor* self, const aclTensor* target, int64_t p, int64_t reduction,
+                        aclOpExecutor* executor);
 }
 
-#endif  // OP_API_INC_LEVEL0_OP_LP_LOSS_OP_H_
+#endif // OP_API_INC_LEVEL0_OP_LP_LOSS_OP_H_

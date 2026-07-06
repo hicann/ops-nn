@@ -18,14 +18,12 @@ using Gemm::Arch::DAV3510;
 namespace detail {
 // (n1,k1,k0,n0)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
-struct CopyIfImpl<
-    DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
-    typename AscendC::Std::enable_if_t<
-        in_ub<SrcTrait> && in_l1<DstTrait> && IsZn2D<decltype(DstTrait{}.GetLayout())>::value &&
-        IsZn2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
-    __aicore__ inline static void Run(
-        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::LocalTensor<SrcTrait> const& srcTensor,
-        const Shape& shape)
+struct CopyIfImpl<DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
+                  typename AscendC::Std::enable_if_t<
+                      in_ub<SrcTrait> && in_l1<DstTrait> && IsZn2D<decltype(DstTrait{}.GetLayout())>::value &&
+                      IsZn2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
+    __aicore__ inline static void Run(AscendC::LocalTensor<DstTrait> const& dstTensor,
+                                      AscendC::LocalTensor<SrcTrait> const& srcTensor, const Shape& shape)
     {
         using PrimType = AscendC::PrimT<DstTrait>;
         AscendC::DataCopyParams params;
@@ -36,21 +34,19 @@ struct CopyIfImpl<
                            Cmct::Gemm::Get<1>(shape); // k1*k0-k
         params.dstStride = Cmct::Gemm::Get<0, 1>(dstTensor.GetStride()) / Cmct::Gemm::Get<1, 0>(dstTensor.GetStride()) -
                            Cmct::Gemm::Get<1>(shape); // k1*k0-k
-        DataCopyUB2L1Impl(
-            (__cbuf__ PrimType*)(dstTensor.GetPhyAddr()), (__ubuf__ PrimType*)(srcTensor.GetPhyAddr()), params);
+        DataCopyUB2L1Impl((__cbuf__ PrimType*)(dstTensor.GetPhyAddr()), (__ubuf__ PrimType*)(srcTensor.GetPhyAddr()),
+                          params);
     }
 };
 
 // (k1,n1,n0,k0)
 template <class DstTrait, class SrcTrait, class Shape, CacheMode CacheMode>
-struct CopyIfImpl<
-    DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
-    typename AscendC::Std::enable_if_t<
-        in_ub<SrcTrait> && in_l1<DstTrait> && IsNz2D<decltype(DstTrait{}.GetLayout())>::value &&
-        IsNz2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
-    __aicore__ inline static void Run(
-        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::LocalTensor<SrcTrait> const& srcTensor,
-        const Shape& shape)
+struct CopyIfImpl<DAV3510, AscendC::LocalTensor<DstTrait>, AscendC::LocalTensor<SrcTrait>, Shape, CacheMode,
+                  typename AscendC::Std::enable_if_t<
+                      in_ub<SrcTrait> && in_l1<DstTrait> && IsNz2D<decltype(DstTrait{}.GetLayout())>::value &&
+                      IsNz2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
+    __aicore__ inline static void Run(AscendC::LocalTensor<DstTrait> const& dstTensor,
+                                      AscendC::LocalTensor<SrcTrait> const& srcTensor, const Shape& shape)
     {
         using PrimType = AscendC::PrimT<DstTrait>;
         AscendC::DataCopyParams params;
@@ -61,8 +57,8 @@ struct CopyIfImpl<
         params.dstStride = Cmct::Gemm::Get<1, 1>(dstTensor.GetStride()) / Cmct::Gemm::Get<0, 0>(dstTensor.GetStride()) -
                            Cmct::Gemm::Get<0>(shape);
         // PS 待API支持
-        DataCopyUB2L1Impl(
-            (__cbuf__ PrimType*)(dstTensor.GetPhyAddr()), (__ubuf__ PrimType*)(srcTensor.GetPhyAddr()), params);
+        DataCopyUB2L1Impl((__cbuf__ PrimType*)(dstTensor.GetPhyAddr()), (__ubuf__ PrimType*)(srcTensor.GetPhyAddr()),
+                          params);
     }
 };
 
@@ -77,21 +73,19 @@ struct CopyIfImpl<
         IsRowMajor2D<decltype(SrcTrait{}.GetLayout())>::value && CacheMode == CacheMode::NORMAL_FIRST>> {
     using PrimType = AscendC::PrimT<DstTrait>;
 
-    __aicore__ inline static void Run(
-        AscendC::LocalTensor<DstTrait> const& dstTensor, AscendC::LocalTensor<SrcTrait> const& srcTensor,
-        const Shape& shape)
+    __aicore__ inline static void Run(AscendC::LocalTensor<DstTrait> const& dstTensor,
+                                      AscendC::LocalTensor<SrcTrait> const& srcTensor, const Shape& shape)
     {
         AscendC::DataCopyParams params;
         params.blockCount = Cmct::Gemm::Get<0>(shape);
         params.blockLen = Cmct::CeilDiv(Cmct::Gemm::Get<1>(shape), static_cast<uint32_t>(BLK_ELEM<PrimType>));
-        params.srcStride =
-            ElemToByte<PrimType>(Cmct::Gemm::Get<0>(srcTensor.GetStride()) - Cmct::Gemm::Get<1>(shape)) / BYTE_PER_BLK;
+        params.srcStride = ElemToByte<PrimType>(Cmct::Gemm::Get<0>(srcTensor.GetStride()) - Cmct::Gemm::Get<1>(shape)) /
+                           BYTE_PER_BLK;
         params.dstStride = 0;
         // PS 待API支持
-        DataCopyUB2L1Impl(
-            (__cbuf__ PrimType*)(dstTensor.GetPhyAddr()), (__ubuf__ PrimType*)(srcTensor.GetPhyAddr()), params);
+        DataCopyUB2L1Impl((__cbuf__ PrimType*)(dstTensor.GetPhyAddr()), (__ubuf__ PrimType*)(srcTensor.GetPhyAddr()),
+                          params);
     }
 };
 } // namespace detail
 } // namespace Cmct::Gemm::Tile
-

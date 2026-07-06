@@ -98,12 +98,9 @@ __simt_callee__ inline float CastFromFloat<float>(float val)
  * \brief SIMT VF kernel: compute exp for all elements across all tensors
  */
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void OpForeachExpSimt(
-    int32_t tensorCount,
-    __gm__ int64_t* tensorElements,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachExpSimt(int32_t tensorCount,
+                                                                             __gm__ int64_t* tensorElements,
+                                                                             GM_ADDR xList, GM_ADDR yList)
 {
     for (int32_t t = 0; t < tensorCount; t++) {
         int64_t count = tensorElements[t];
@@ -114,22 +111,20 @@ inline void OpForeachExpSimt(
         __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
         __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
 
-        uint64_t tid = static_cast<uint64_t>(
-            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-            AscendC::Simt::GetThreadIdx());
-        uint64_t stride = static_cast<uint64_t>(
-            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+        uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                             AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
 
         for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
             // Read input value
             T xVal = xData[idx];
-            
+
             // Promote to float32 for precision
             float xFloat = PromoteToFloat<T>(xVal);
-            
+
             // Compute exp using high-precision math API
             float yFloat = expf(xFloat);
-            
+
             // Cast back to original type
             yData[idx] = CastFromFloat<T>(yFloat);
         }
@@ -140,24 +135,16 @@ inline void OpForeachExpSimt(
  * \brief Process entry: launch SIMT VF for foreach_exp
  */
 template <typename T>
-__aicore__ inline void Process(
-    GM_ADDR x, GM_ADDR y,
-    const __gm__ ForeachExpTilingData* tilingGm)
+__aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const __gm__ ForeachExpTilingData* tilingGm)
 {
     // Extract tensorElements array pointer from GM tiling data
     __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
-        reinterpret_cast<__gm__ char*>(
-            const_cast<__gm__ ForeachExpTilingData*>(tilingGm)) +
+        reinterpret_cast<__gm__ char*>(const_cast<__gm__ ForeachExpTilingData*>(tilingGm)) +
         offsetof(ForeachExpTilingData, tensorElements));
 
     int32_t tensorCount = tilingGm->tensorCount;
 
-    AscendC::Simt::VF_CALL<OpForeachExpSimt<T>>(
-        AscendC::Simt::Dim3(THREAD_NUM),
-        tensorCount,
-        elemCounts,
-        x,
-        y);
+    AscendC::Simt::VF_CALL<OpForeachExpSimt<T>>(AscendC::Simt::Dim3(THREAD_NUM), tensorCount, elemCounts, x, y);
 }
 
 } // namespace NsForeachExp

@@ -14,9 +14,9 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*> GroupedDynamicMxQuant(const aclTensor *x, const aclTensor *groupIndex, 
-                                                         const char *roundMode, int64_t dstType, int64_t blocksize,
-                                                         int64_t scaleAlg, float dstTypeMax, aclOpExecutor *executor);
-} // l0op
+std::tuple<aclTensor*, aclTensor*> GroupedDynamicMxQuant(const aclTensor* x, const aclTensor* groupIndex,
+                                                         const char* roundMode, int64_t dstType, int64_t blocksize,
+                                                         int64_t scaleAlg, float dstTypeMax, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_GROUP_QUANT_H_

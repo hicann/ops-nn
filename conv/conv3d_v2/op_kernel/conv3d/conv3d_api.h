@@ -23,17 +23,16 @@
 namespace conv3d {
 
 template <class Config, template <typename, class, bool> class Impl = Conv3dApiImpl,
-    template <class, template <typename, class, bool> class> class Intf = Conv3dIntf>
+          template <class, template <typename, class, bool> class> class Intf = Conv3dIntf>
 struct Conv3dIntfExt : public Intf<Config, Impl> {
-    __aicore__ inline Conv3dIntfExt()
-    {}
+    __aicore__ inline Conv3dIntfExt() {}
 };
 
-#define REGISTER_CONV3D_API(name, Config, Impl, Intf)                                                                \
-    template <class INPUT_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG = Conv3dParam> \
-    using name =                                                                                                     \
-        Conv3dIntfExt<Config<ConvDataType<INPUT_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>>, Impl, Intf>
+#define REGISTER_CONV3D_API(name, Config, Impl, Intf)                                                                 \
+    template <class INPUT_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class CONV_CFG = Conv3dParam>  \
+    using name = Conv3dIntfExt<Config<ConvDataType<INPUT_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, CONV_CFG>>, Impl, \
+                               Intf>
 
 REGISTER_CONV3D_API(Conv3d, Conv3dCfg, Conv3dApiImpl, Conv3dIntf);
-}  // namespace conv3d
+} // namespace conv3d
 #endif

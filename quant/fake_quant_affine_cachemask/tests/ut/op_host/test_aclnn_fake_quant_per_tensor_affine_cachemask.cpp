@@ -19,18 +19,11 @@
 
 using namespace std;
 
-class fake_quant_per_tensor_affine_cachemask_test : public testing::Test
-{
+class fake_quant_per_tensor_affine_cachemask_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "fake_quant_per_tensor_affine_cachemask_test SetUp" << endl;
-    }
+    static void SetUpTestCase() { cout << "fake_quant_per_tensor_affine_cachemask_test SetUp" << endl; }
 
-    static void TearDownTestCase()
-    {
-        cout << "fake_quant_per_tensor_affine_cachemask_test TearDown" << endl;
-    }
+    static void TearDownTestCase() { cout << "fake_quant_per_tensor_affine_cachemask_test TearDown" << endl; }
 };
 
 TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_float32)
@@ -46,9 +39,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_float32)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -69,9 +62,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_fake_quant_enabled
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -92,9 +85,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_float16)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -115,9 +108,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_int32)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -138,9 +131,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_int8)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -161,9 +154,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_uint8)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -184,9 +177,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_norm_int16)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -207,9 +200,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_dtype_invalid_out)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -230,9 +223,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_shape_invalid_out)
     int64_t quant_min = -10;
     int64_t quant_max = 10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -253,9 +246,9 @@ TEST_F(fake_quant_per_tensor_affine_cachemask_test, case_quant_val)
     int64_t quant_min = 10;
     int64_t quant_max = -10;
 
-    auto ut = OP_API_UT(
-        aclnnFakeQuantPerTensorAffineCachemask,
-        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max), OUTPUT(outDesc, maskDesc));
+    auto ut = OP_API_UT(aclnnFakeQuantPerTensorAffineCachemask,
+                        INPUT(selfDesc, scaleDesc, zeroPointDesc, fake_quant_enbled, quant_min, quant_max),
+                        OUTPUT(outDesc, maskDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;

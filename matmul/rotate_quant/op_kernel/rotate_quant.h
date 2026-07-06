@@ -54,8 +54,7 @@ struct InitParams {
 template <typename xDtype, typename yDtype, typename MT>
 class RotateQuant {
 public:
-    __aicore__ inline RotateQuant(MT& mm) : mm_(mm)
-    {}
+    __aicore__ inline RotateQuant(MT& mm) : mm_(mm) {}
 
     __aicore__ inline void Init(const InitParams& params);
     __aicore__ inline void Process();
@@ -65,17 +64,15 @@ private:
     __aicore__ inline void CubeProcessRows(int32_t mStart, int32_t mSize);
     __aicore__ inline void AivProcess();
     __aicore__ inline void AllocateLocalBuffers();
-    __aicore__ inline void ComputeVector(
-        uint32_t ubRows, uint32_t ubNums, uint32_t srcShape1[DIMENSION_2], uint32_t dstShape1[DIMENSION_2]);
-    __aicore__ inline void CopyOutVector(
-        uint32_t idx, uint32_t ubRows, uint32_t ubNums, event_t event_mte3_v, uint64_t offsetLoop,
-        uint64_t offsetScale);
+    __aicore__ inline void ComputeVector(uint32_t ubRows, uint32_t ubNums, uint32_t srcShape1[DIMENSION_2],
+                                         uint32_t dstShape1[DIMENSION_2]);
+    __aicore__ inline void CopyOutVector(uint32_t idx, uint32_t ubRows, uint32_t ubNums, event_t event_mte3_v,
+                                         uint64_t offsetLoop, uint64_t offsetScale);
     __aicore__ inline void ReduceMaxInplace(const LocalTensor<float>& src_local, uint32_t count);
     __aicore__ inline void ParseTilingData(const RotateQuantTilingData* __restrict tilingData);
     __aicore__ inline void ComputeReduceMax(uint32_t ubRows);
-    __aicore__ inline void CopyInVector(
-        GlobalTensor<xDtype> srcGm, DataCopyExtParams& copyInParams, DataCopyPadExtParams<xDtype>& padParams,
-        uint32_t ubRows, uint32_t ubNums);
+    __aicore__ inline void CopyInVector(GlobalTensor<xDtype> srcGm, DataCopyExtParams& copyInParams,
+                                        DataCopyPadExtParams<xDtype>& padParams, uint32_t ubRows, uint32_t ubNums);
 
     GlobalTensor<xDtype> xGm_;
     GlobalTensor<xDtype> rotGm_;
@@ -260,8 +257,8 @@ __aicore__ inline void RotateQuant<xDtype, yDtype, MT>::AicProcess()
 }
 
 template <typename xDtype, typename yDtype, typename MT>
-__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::ReduceMaxInplace(
-    const LocalTensor<float>& src_local, uint32_t count)
+__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::ReduceMaxInplace(const LocalTensor<float>& src_local,
+                                                                         uint32_t count)
 {
     uint64_t repsFp32 = count >> 6;
     uint64_t offsetsFp32 = repsFp32 << 6;
@@ -286,9 +283,10 @@ __aicore__ inline void RotateQuant<xDtype, yDtype, MT>::ReduceMaxInplace(
 }
 
 template <typename xDtype, typename yDtype, typename MT>
-__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::CopyInVector(
-    GlobalTensor<xDtype> srcGm, DataCopyExtParams& copyInParams, DataCopyPadExtParams<xDtype>& padParams,
-    uint32_t ubRows, uint32_t ubNums)
+__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::CopyInVector(GlobalTensor<xDtype> srcGm,
+                                                                     DataCopyExtParams& copyInParams,
+                                                                     DataCopyPadExtParams<xDtype>& padParams,
+                                                                     uint32_t ubRows, uint32_t ubNums)
 {
     DataCopyPad(inLocal, srcGm, copyInParams, padParams);
     event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -302,8 +300,9 @@ __aicore__ inline void RotateQuant<xDtype, yDtype, MT>::CopyInVector(
 }
 
 template <typename xDtype, typename yDtype, typename MT>
-__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::ComputeVector(
-    uint32_t ubRows, uint32_t ubNums, uint32_t srcShape1[DIMENSION_2], uint32_t dstShape1[DIMENSION_2])
+__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::ComputeVector(uint32_t ubRows, uint32_t ubNums,
+                                                                      uint32_t srcShape1[DIMENSION_2],
+                                                                      uint32_t dstShape1[DIMENSION_2])
 {
     Abs(absTmp, castTmp, ubNums);
     PipeBarrier<PIPE_V>();
@@ -323,8 +322,9 @@ __aicore__ inline void RotateQuant<xDtype, yDtype, MT>::ComputeVector(
 }
 
 template <typename xDtype, typename yDtype, typename MT>
-__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::CopyOutVector(
-    uint32_t idx, uint32_t ubRows, uint32_t ubNums, event_t event_mte3_v, uint64_t offsetLoop, uint64_t offsetScale)
+__aicore__ inline void RotateQuant<xDtype, yDtype, MT>::CopyOutVector(uint32_t idx, uint32_t ubRows, uint32_t ubNums,
+                                                                      event_t event_mte3_v, uint64_t offsetLoop,
+                                                                      uint64_t offsetScale)
 {
     if (idx != 0) {
         SetFlag<HardEvent::MTE3_V>(event_mte3_v);

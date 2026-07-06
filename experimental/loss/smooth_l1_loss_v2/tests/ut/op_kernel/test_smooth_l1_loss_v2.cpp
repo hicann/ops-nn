@@ -47,21 +47,16 @@ static constexpr auto dec = ::dec;
 
 namespace fs = std::filesystem;
 
-extern "C" __global__ __aicore__ void smooth_l1_loss_v2(GM_ADDR predict,
-                                                        GM_ADDR label,
-                                                        GM_ADDR loss,
-                                                        GM_ADDR workspace,
+extern "C" __global__ __aicore__ void smooth_l1_loss_v2(GM_ADDR predict, GM_ADDR label, GM_ADDR loss, GM_ADDR workspace,
                                                         GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SmoothL1LossV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(SmoothL1LossV2TilingData, tilingData, tiling);
     MySmoothL1LossV2::KernelSmoothL1LossV2<DTYPE_PREDICT, DTYPE_LABEL, DTYPE_LOSS> op;
-    op.Init(predict, label, loss,
-            tilingData.smallCoreDataNum, tilingData.bigCoreDataNum,
-            tilingData.finalBigTileNum, tilingData.finalSmallTileNum,
-            tilingData.tileDataNum, tilingData.smallTailDataNum,
-            tilingData.bigTailDataNum, tilingData.tailBlockNum,
-            tilingData.totalDataNum, tilingData.sigma, tilingData.reduction);
+    op.Init(predict, label, loss, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum,
+            tilingData.finalSmallTileNum, tilingData.tileDataNum, tilingData.smallTailDataNum,
+            tilingData.bigTailDataNum, tilingData.tailBlockNum, tilingData.totalDataNum, tilingData.sigma,
+            tilingData.reduction);
     op.Process();
 }
 
@@ -93,8 +88,7 @@ static bool EnsureSmoothL1LossV2DataDir()
         }
     }
 
-    std::fprintf(stderr,
-                 "[SmoothL1LossV2Test] cannot locate smooth_l1_loss_v2_data, cwd=%s, __FILE__=%s\n",
+    std::fprintf(stderr, "[SmoothL1LossV2Test] cannot locate smooth_l1_loss_v2_data, cwd=%s, __FILE__=%s\n",
                  fs::current_path().c_str(), __FILE__);
     return false;
 }
@@ -102,10 +96,7 @@ static bool EnsureSmoothL1LossV2DataDir()
 static std::vector<gert::TilingContextPara::OpAttr> MakeAttrs(float sigma, const std::string& reduction)
 {
     using Ops::Math::AnyValue;
-    return {
-        {"sigma", AnyValue::CreateFrom<float>(sigma)},
-        {"reduction", AnyValue::CreateFrom<std::string>(reduction)}
-    };
+    return {{"sigma", AnyValue::CreateFrom<float>(sigma)}, {"reduction", AnyValue::CreateFrom<std::string>(reduction)}};
 }
 
 class SmoothL1LossV2Test : public testing::Test {
@@ -116,11 +107,7 @@ protected:
         ASSERT_TRUE(EnsureSmoothL1LossV2DataDir());
         system("chmod -R 755 ./smooth_l1_loss_v2_data/");
     }
-    static void TearDownTestCase()
-    {
-        std::cout << "smooth_l1_loss_v2_test TearDown" << std::endl;
-    }
-
+    static void TearDownTestCase() { std::cout << "smooth_l1_loss_v2_test TearDown" << std::endl; }
 };
 
 template <typename T1, typename T2>
@@ -175,17 +162,15 @@ static void ExpectNearRel(float actual, float expected, float rtol, float atol)
 TEST_F(SmoothL1LossV2Test, test_case_float16_1)
 {
     optiling::SmoothL1LossV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 0}; // sigma=1.0, reduction=none
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossV2",
-        {
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // predict
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // label
-        },
-        {
-            {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // loss
-        },
-        MakeAttrs(1.0f, "none"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossV2",
+                                              {
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // predict
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // label
+                                              },
+                                              {
+                                                  {{{128, 64}, {128, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // loss
+                                              },
+                                              MakeAttrs(1.0f, "none"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -227,17 +212,15 @@ TEST_F(SmoothL1LossV2Test, test_case_float16_1)
 TEST_F(SmoothL1LossV2Test, test_case_float32_1)
 {
     optiling::SmoothL1LossV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 0};
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossV2",
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1.0f, "none"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossV2",
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{256, 33}, {256, 33}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1.0f, "none"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -279,17 +262,15 @@ TEST_F(SmoothL1LossV2Test, test_case_float32_1)
 TEST_F(SmoothL1LossV2Test, test_case_float32_sum)
 {
     optiling::SmoothL1LossV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 1}; // reduction=sum
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossV2",
-        {
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1.0f, "sum"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossV2",
+                                              {
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{128, 32}, {128, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1.0f, "sum"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);
@@ -335,17 +316,15 @@ TEST_F(SmoothL1LossV2Test, test_case_float32_sum)
 TEST_F(SmoothL1LossV2Test, test_case_float32_mean)
 {
     optiling::SmoothL1LossV2CompileInfo compileInfo = {64, 262144, true, 1.0f, 2}; // reduction=mean
-    gert::TilingContextPara tilingContextPara(
-        "SmoothL1LossV2",
-        {
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-            {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        {
-            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
-        },
-        MakeAttrs(1.0f, "mean"),
-        &compileInfo);
+    gert::TilingContextPara tilingContextPara("SmoothL1LossV2",
+                                              {
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{64, 64}, {64, 64}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              MakeAttrs(1.0f, "mean"), &compileInfo);
     TilingInfo tilingInfo;
     auto tilingRet = ExecuteTiling(tilingContextPara, tilingInfo);
     EXPECT_EQ(tilingRet, true);

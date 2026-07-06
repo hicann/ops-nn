@@ -13,11 +13,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::tuple<aclTensor*, aclTensor*> MultilabelMarginLoss(const aclTensor* self,
-                                                              const aclTensor* target,
-                                                              const std::string &reduction,
-                                                              op::Shape shape, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> MultilabelMarginLoss(const aclTensor* self, const aclTensor* target,
+                                                              const std::string& reduction, op::Shape shape,
+                                                              aclOpExecutor* executor);
 
 }
 
-#endif  // OP_API_INC_LEVEL0_OP_MULTILABEL_MARGIN_LOSS_OP_H_
+#endif // OP_API_INC_LEVEL0_OP_MULTILABEL_MARGIN_LOSS_OP_H_

@@ -25,14 +25,8 @@ using namespace std;
 
 class l2_avgpool2dbackward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "avgpool2dbackward_test Setup" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "avgpool2dbackward_test TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "avgpool2dbackward_test Setup" << std::endl; }
+    static void TearDownTestCase() { std::cout << "avgpool2dbackward_test TearDown" << std::endl; }
 };
 
 const int8_t cubeMathType = 1;
@@ -119,12 +113,10 @@ TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_kernelSize_
     auto padding_desc = IntArrayDesc(vector_padding);
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool2dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
-            divisor_override, cubeMathType), // host api输入
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnAvgPool2dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override, cubeMathType), // host api输入
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -152,12 +144,10 @@ TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_stride_ille
     auto padding_desc = IntArrayDesc(vector_padding);
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnAvgPool2dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
-            divisor_override, cubeMathType), // host api输入
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnAvgPool2dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override, cubeMathType), // host api输入
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
@@ -195,7 +185,6 @@ TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_gradInput_i
 }
 */
 
-
 // 输出grad_input的shape取值不合法拦截
 TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_kernel_size_empty)
 {
@@ -216,12 +205,10 @@ TEST_F(l2_avgpool2dbackward_test, ascend910B2_test_avgpool2dbackward_kernel_size
     auto stride_desc = IntArrayDesc(vector_stride);
     auto padding_desc = IntArrayDesc(vector_padding);
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
-    auto ut = OP_API_UT(
-        aclnnAvgPool2dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
-            divisor_override, cubeMathType), // host api输入
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnAvgPool2dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override, cubeMathType), // host api输入
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -250,12 +237,10 @@ TEST_F(l2_avgpool2dbackward_test, ascend310P_test_avgpool2dbackwardbackward_glob
     auto stride_desc = IntArrayDesc(vector_stride);
     auto padding_desc = IntArrayDesc(vector_padding);
     auto grad_input_desc = TensorDesc(vector_grad_input, ACL_BF16, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
-    auto ut = OP_API_UT(
-        aclnnAvgPool2dBackward, // host api第二段接口名称
-        INPUT(
-            grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode, count_include_pad,
-            divisor_override, cubeMathTypeZero), // host api输入
-        OUTPUT(grad_input_desc));
+    auto ut = OP_API_UT(aclnnAvgPool2dBackward, // host api第二段接口名称
+                        INPUT(grad_output_desc, self_desc, kernel_size_desc, stride_desc, padding_desc, ceil_mode,
+                              count_include_pad, divisor_override, cubeMathTypeZero), // host api输入
+                        OUTPUT(grad_input_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

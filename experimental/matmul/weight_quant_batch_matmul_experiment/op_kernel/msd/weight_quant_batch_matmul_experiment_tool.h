@@ -63,9 +63,9 @@ template <typename T>
 __aicore__ constexpr uint32_t GetKBUnit()
 {
     if constexpr (IsSameType<T, int4b_t>::value) {
-        return 2048;  // 2048个int4是1kb
+        return 2048; // 2048个int4是1kb
     }
-    return 1024 / sizeof(T);  // 1024B除size获取1kb的element数量
+    return 1024 / sizeof(T); // 1024B除size获取1kb的element数量
 }
 
 template <typename T>
@@ -83,7 +83,7 @@ __aicore__ inline T CeilDiv(T a, T b)
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(const LocalTensor<T> &dst, const GlobalTensor<T> &src, uint32_t blockCount,
+__aicore__ inline void DataCopyPad2D(const LocalTensor<T>& dst, const GlobalTensor<T>& src, uint32_t blockCount,
                                      uint32_t blockLen, uint32_t dstInnerLength, uint32_t srcInnerLength)
 {
     DataCopyExtParams params;
@@ -108,7 +108,7 @@ __aicore__ inline void DataCopyPad2D(const LocalTensor<T> &dst, const GlobalTens
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(const GlobalTensor<T> &dst, const LocalTensor<T> &src, uint32_t dim1,
+__aicore__ inline void DataCopyPad2D(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint32_t dim1,
                                      uint32_t dim0, uint32_t dstFullDim0)
 {
     DataCopyExtParams params;
@@ -128,7 +128,7 @@ __aicore__ inline void DataCopyPad2D(const GlobalTensor<T> &dst, const LocalTens
 }
 
 template <typename T>
-__aicore__ inline void DataCopyPad2D(const GlobalTensor<T> &dst, const LocalTensor<T> &src, uint32_t dim1,
+__aicore__ inline void DataCopyPad2D(const GlobalTensor<T>& dst, const LocalTensor<T>& src, uint32_t dim1,
                                      uint32_t dim0, uint32_t srcFullDim0, uint32_t dstFullDim0)
 {
     DataCopyExtParams params;
@@ -144,5 +144,5 @@ __aicore__ inline void DataCopyPad2D(const GlobalTensor<T> &dst, const LocalTens
     }
     DataCopyPad(dst, src, params);
 }
-}  // namespace WeightQuantBatchMatmulExperimental
+} // namespace WeightQuantBatchMatmulExperimental
 #endif

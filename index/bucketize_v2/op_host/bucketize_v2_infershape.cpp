@@ -35,7 +35,5 @@ static ge::graphStatus InferDataTypeForBucketizeV2(gert::InferDataTypeContext* c
     return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(BucketizeV2)
-    .InferShape(Ops::Base::InferShape4Elewise)
-    .InferDataType(InferDataTypeForBucketizeV2);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(BucketizeV2).InferShape(Ops::Base::InferShape4Elewise).InferDataType(InferDataTypeForBucketizeV2);
+} // namespace ops

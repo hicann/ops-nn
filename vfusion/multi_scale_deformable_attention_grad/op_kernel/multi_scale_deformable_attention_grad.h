@@ -20,9 +20,10 @@ class MultiScaleDeformableAttentionGrad {
 public:
     __aicore__ inline MultiScaleDeformableAttentionGrad(){};
     __aicore__ inline void Init(GM_ADDR value_gm, GM_ADDR spatial_shapes_gm, GM_ADDR level_start_index_gm,
-                            GM_ADDR sampling_loc_gm, GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm,
-                            GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm, GM_ADDR grad_attn_weight_gm,
-                            const MultiScaleDeformableAttentionGradTilingData* __restrict tiling_data, TPipe *tmpPipe)
+                                GM_ADDR sampling_loc_gm, GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm,
+                                GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm, GM_ADDR grad_attn_weight_gm,
+                                const MultiScaleDeformableAttentionGradTilingData* __restrict tiling_data,
+                                TPipe* tmpPipe)
     {
         pipe = tmpPipe;
         curBlockIdx = GetBlockIdx();
@@ -81,24 +82,22 @@ public:
         eventIdVToMte3Y = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
         eventIdMte3ToS = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE3_S>());
 
-        valueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(value_gm),
+        valueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(value_gm),
                                 batchSize * numKeys * numHeads * embedDims);
-        valueSpatialShapesGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t *>(spatial_shapes_gm),
-                                             numLevels * TWO);
-        valueLevelStartIndexGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t *>(level_start_index_gm),
-                                               numLevels);
-        locationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(sampling_loc_gm),
+        valueSpatialShapesGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(spatial_shapes_gm), numLevels * TWO);
+        valueLevelStartIndexGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(level_start_index_gm), numLevels);
+        locationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(sampling_loc_gm),
                                    batchSize * numQueries * numHeads * numLevels * numPoints * TWO);
-        attentionWeightsGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(attn_weight_gm),
+        attentionWeightsGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(attn_weight_gm),
                                            batchSize * numQueries * numHeads * numLevels * numPoints);
-        gradOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(grad_output_gm),
+        gradOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_output_gm),
                                      batchSize * numQueries * numHeads * embedDims);
 
-        gradValueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(grad_value_gm),
+        gradValueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_value_gm),
                                     batchSize * numKeys * numHeads * embedDims);
-        gradLocationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(grad_sampling_loc_gm),
+        gradLocationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_sampling_loc_gm),
                                        batchSize * numQueries * numHeads * numLevels * TWO * numPoints);
-        gradWeightGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE *>(grad_attn_weight_gm),
+        gradWeightGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_attn_weight_gm),
                                      batchSize * numQueries * numHeads * numLevels * numPoints);
     }
 
@@ -171,16 +170,14 @@ public:
     {
         switch (curBlockIdx) {
             case 0:
-                InitOutput<DTYPE_VALUE>(gradValueGm,
-                                        batchSize * numKeys * numHeads * embedDims, 0);
+                InitOutput<DTYPE_VALUE>(gradValueGm, batchSize * numKeys * numHeads * embedDims, 0);
                 break;
             case 1:
-                InitOutput<DTYPE_VALUE>(gradLocationGm,
-                                        batchSize * numQueries * numHeads * numLevels * TWO * numPoints, 0);
+                InitOutput<DTYPE_VALUE>(gradLocationGm, batchSize * numQueries * numHeads * numLevels * TWO * numPoints,
+                                        0);
                 break;
             case 2:
-                InitOutput<DTYPE_VALUE>(gradWeightGm,
-                                        batchSize * numQueries * numHeads * numLevels * numPoints, 0);
+                InitOutput<DTYPE_VALUE>(gradWeightGm, batchSize * numQueries * numHeads * numLevels * numPoints, 0);
                 break;
             default:
                 break;
@@ -202,8 +199,10 @@ public:
         head = startIdx % numHeads;
         batch = startIdx / numHeads;
 
-        DataCopyPad(shapesLocal, valueSpatialShapesGm, {1, (uint32_t)(TWO * numLevels * sizeof(int32_t)), 0, 0, 0}, padParamsInt);
-        DataCopyPad(offsetLocal, valueLevelStartIndexGm, {1, (uint32_t)(numLevels * sizeof(int32_t)), 0, 0, 0}, padParamsInt);
+        DataCopyPad(shapesLocal, valueSpatialShapesGm, {1, (uint32_t)(TWO * numLevels * sizeof(int32_t)), 0, 0, 0},
+                    padParamsInt);
+        DataCopyPad(offsetLocal, valueLevelStartIndexGm, {1, (uint32_t)(numLevels * sizeof(int32_t)), 0, 0, 0},
+                    padParamsInt);
 
         SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
@@ -230,13 +229,12 @@ public:
 
 private:
     template <bool AddH, bool AddW>
-    __aicore__ inline void ComputeGrad(const LocalTensor<DTYPE_VALUE> &wvLocal, const LocalTensor<DTYPE_VALUE> &mid,
-                                       uint32_t vId, DTYPE_VALUE distH, DTYPE_VALUE distW,
-                                       uint64_t hPtrOffset, uint64_t wPtrOffset, DTYPE_VALUE w)
+    __aicore__ inline void ComputeGrad(const LocalTensor<DTYPE_VALUE>& wvLocal, const LocalTensor<DTYPE_VALUE>& mid,
+                                       uint32_t vId, DTYPE_VALUE distH, DTYPE_VALUE distW, uint64_t hPtrOffset,
+                                       uint64_t wPtrOffset, DTYPE_VALUE w)
     {
         DataCopyPad(zerosLocal[vId * embedDims + queryOffsetv + 4 * baseOffsetUb],
-                    valueGm[offsetValue + hPtrOffset + wPtrOffset],
-                    copyInParams, padParamsFloat);
+                    valueGm[offsetValue + hPtrOffset + wPtrOffset], copyInParams, padParamsFloat);
 
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
@@ -265,57 +263,51 @@ private:
         DataCopyPad(gradValueGm[offsetValue + hPtrOffset + wPtrOffset], mid[queryOffset], copyOutParams);
     }
 
-    __aicore__ inline void ComputeGradSeparate(DTYPE_VALUE distHH, DTYPE_VALUE distHW,
-                                               DTYPE_VALUE distLH, DTYPE_VALUE distLW,
-                                               DTYPE_VALUE w1, DTYPE_VALUE w2,
-                                               DTYPE_VALUE w3, DTYPE_VALUE w4,
-                                               DTYPE_VALUE attentionWeight)
+    __aicore__ inline void ComputeGradSeparate(DTYPE_VALUE distHH, DTYPE_VALUE distHW, DTYPE_VALUE distLH,
+                                               DTYPE_VALUE distLW, DTYPE_VALUE w1, DTYPE_VALUE w2, DTYPE_VALUE w3,
+                                               DTYPE_VALUE w4, DTYPE_VALUE attentionWeight)
     {
-        Muls(zerosLocal[queryOffset + topGradValueId * baseOffsetUb],
-             topGradLocal[query * embedDims], attentionWeight, embedDims);
+        Muls(zerosLocal[queryOffset + topGradValueId * baseOffsetUb], topGradLocal[query * embedDims], attentionWeight,
+             embedDims);
         if (hLow >= 0 && wLow >= 0) {
-            ComputeGrad<false, false>(wv1Local, mid1Local, v1Id, distHH, distHW,
-                                      hLowPtrOffset, wLowPtrOffset, w1);
+            ComputeGrad<false, false>(wv1Local, mid1Local, v1Id, distHH, distHW, hLowPtrOffset, wLowPtrOffset, w1);
         }
         if (hLow >= 0 && wLow < w - 1) {
-            ComputeGrad<false, true>(wv2Local, mid2Local, v2Id, distHH, distLW,
-                                     hLowPtrOffset, wLowPtrOffset + wStride, w2);
+            ComputeGrad<false, true>(wv2Local, mid2Local, v2Id, distHH, distLW, hLowPtrOffset, wLowPtrOffset + wStride,
+                                     w2);
         }
         if (hLow < h - 1 && wLow >= 0) {
-            ComputeGrad<true, false>(wv3Local, mid3Local, v3Id, distLH, distHW,
-                                     hLowPtrOffset + hStride, wLowPtrOffset,  w3);
+            ComputeGrad<true, false>(wv3Local, mid3Local, v3Id, distLH, distHW, hLowPtrOffset + hStride, wLowPtrOffset,
+                                     w3);
         }
         if (hLow < h - 1 && wLow < w - 1) {
-            ComputeGrad<true, true>(wv4Local, mid4Local, v4Id, distLH, distLW,
-                                    hLowPtrOffset + hStride, wLowPtrOffset + wStride, w4);
+            ComputeGrad<true, true>(wv4Local, mid4Local, v4Id, distLH, distLW, hLowPtrOffset + hStride,
+                                    wLowPtrOffset + wStride, w4);
         }
         Add(wv1Local, wv1Local, wv2Local, embedDims);
         Add(wv3Local, wv3Local, wv4Local, embedDims);
         Add(wv1Local, wv1Local, wv3Local, embedDims);
-        Mul(zerosLocal[queryOffset + gradWeightId * baseOffsetUb], topGradLocal[query * embedDims], wv1Local, embedDims);
+        Mul(zerosLocal[queryOffset + gradWeightId * baseOffsetUb], topGradLocal[query * embedDims], wv1Local,
+            embedDims);
     }
 
-    __aicore__ inline void ComputeGradTogether(DTYPE_VALUE distLH, DTYPE_VALUE distLW,
-                                               DTYPE_VALUE w1, DTYPE_VALUE w2, DTYPE_VALUE w3, DTYPE_VALUE w4,
-                                               DTYPE_VALUE attentionWeight)
+    __aicore__ inline void ComputeGradTogether(DTYPE_VALUE distLH, DTYPE_VALUE distLW, DTYPE_VALUE w1, DTYPE_VALUE w2,
+                                               DTYPE_VALUE w3, DTYPE_VALUE w4, DTYPE_VALUE attentionWeight)
     {
         DataCopyPad(zerosLocal[v1Id * embedDims + queryOffsetv + FOUR * baseOffsetUb],
-                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset],
-                    copyInParams, padParamsFloat);
+                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset], copyInParams, padParamsFloat);
         DataCopyPad(zerosLocal[v2Id * embedDims + queryOffsetv + FOUR * baseOffsetUb],
-                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride],
-                    copyInParams, padParamsFloat);
+                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride], copyInParams, padParamsFloat);
         DataCopyPad(zerosLocal[v3Id * embedDims + queryOffsetv + FOUR * baseOffsetUb],
-                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride],
-                    copyInParams, padParamsFloat);
+                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride], copyInParams, padParamsFloat);
         DataCopyPad(zerosLocal[v4Id * embedDims + queryOffsetv + FOUR * baseOffsetUb],
-                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride + wStride],
-                    copyInParams, padParamsFloat);
+                    valueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride + wStride], copyInParams,
+                    padParamsFloat);
 
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
-        Muls(zerosLocal[queryOffset + topGradValueId * baseOffsetUb],
-             topGradLocal[query * embedDims], attentionWeight, embedDims);
+        Muls(zerosLocal[queryOffset + topGradValueId * baseOffsetUb], topGradLocal[query * embedDims], attentionWeight,
+             embedDims);
 
         Muls(mid1Local[queryOffset], zerosLocal[queryOffset + topGradValueId * baseOffsetUb], w1, embedDims);
         Muls(mid2Local[queryOffset], zerosLocal[queryOffset + topGradValueId * baseOffsetUb], w2, embedDims);
@@ -356,14 +348,15 @@ private:
         Add(wv1Local, wv1Local, wv2Local, embedDims);
         Add(wv3Local, wv3Local, wv4Local, embedDims);
         Add(wv1Local, wv1Local, wv3Local, embedDims);
-        Mul(zerosLocal[queryOffset + gradWeightId * baseOffsetUb], topGradLocal[query * embedDims], wv1Local, embedDims);
+        Mul(zerosLocal[queryOffset + gradWeightId * baseOffsetUb], topGradLocal[query * embedDims], wv1Local,
+            embedDims);
 
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset], mid1Local[queryOffset], copyOutParams);
-        DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride],
-                    mid2Local[queryOffset], copyOutParams);
-        DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride],
-                    mid3Local[queryOffset], copyOutParams);
+        DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride], mid2Local[queryOffset],
+                    copyOutParams);
+        DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride], mid3Local[queryOffset],
+                    copyOutParams);
         DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + hStride + wStride],
                     mid4Local[queryOffset], copyOutParams);
     }
@@ -421,10 +414,10 @@ private:
         h = shapesLocal.GetValue(level * TWO);
         w = shapesLocal.GetValue(level * TWO + 1);
         offsetGrad = batch * gradOutStride2 + nqloop * maxUbNum * gradOutStride1 + head * gradOutStride0;
-        offsetWeight = batch * weightStride3 + head * weightStride2 + level * weightStride1 + point  * weightStride0;
+        offsetWeight = batch * weightStride3 + head * weightStride2 + level * weightStride1 + point * weightStride0;
         offsetLocation = TWO * offsetWeight;
-        thisCycleNumAlign = (nqloop == numQueriesper -1) ? numQueriestail : maxUbNum;
-        thisCycleNum = (nqloop == numQueriesper -1) ? (numQueries - (numQueriesper - 1) * maxUbNum) : maxUbNum;
+        thisCycleNumAlign = (nqloop == numQueriesper - 1) ? numQueriestail : maxUbNum;
+        thisCycleNum = (nqloop == numQueriesper - 1) ? (numQueries - (numQueriesper - 1) * maxUbNum) : maxUbNum;
         offsetValue = batch * valueStride2 + levelStartId * valueStride1 + head * valueStride0;
         hStride = w * wStride;
         copyParams = {1, (uint32_t)(thisCycleNum * sizeof(DTYPE_VALUE)), 0, 0, 0};
@@ -437,7 +430,7 @@ private:
 
         WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
         Duplicate(zerosLocal, (DTYPE_VALUE)0, eightBuffer * numQueriesAlign * embedDims);
-        DataCopyPad(locWLocal, locationGm[offsetLocation + nqloop * maxUbNum],  copyParams, padParamsFloat);
+        DataCopyPad(locWLocal, locationGm[offsetLocation + nqloop * maxUbNum], copyParams, padParamsFloat);
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         Muls(imLocal, locWLocal, (DTYPE_VALUE)w, thisCycleNumAlign);
@@ -447,9 +440,11 @@ private:
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         Muls(imLocal[thisCycleNumAlign], locHLocal, (DTYPE_VALUE)h, thisCycleNumAlign);
 
-        DataCopyPad(attentionWeightLocal, attentionWeightsGm[offsetWeight + nqloop * maxUbNum], copyParams, padParamsFloat);
+        DataCopyPad(attentionWeightLocal, attentionWeightsGm[offsetWeight + nqloop * maxUbNum], copyParams,
+                    padParamsFloat);
         for (query = 0; query < thisCycleNum; query++) {
-            DataCopyPad(topGradLocal[query * embedDims], gradOutputGm[offsetGrad + query * gradOutStride1], copyInParams, padParamsFloat);
+            DataCopyPad(topGradLocal[query * embedDims], gradOutputGm[offsetGrad + query * gradOutStride1],
+                        copyInParams, padParamsFloat);
         }
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
@@ -467,10 +462,10 @@ private:
             zerosLocal[gradWWeightId * baseOffsetUb], thisCycleNum * embedDims);
         Mul(zerosLocal[gradHWeightId * baseOffsetUb], zerosLocal[topGradValueId * baseOffsetUb],
             zerosLocal[gradHWeightId * baseOffsetUb], thisCycleNum * embedDims);
-        Muls(zerosLocal[gradWWeightId * baseOffsetUb], zerosLocal[gradWWeightId * baseOffsetUb],
-            (DTYPE_VALUE)w, thisCycleNum * embedDims);
-        Muls(zerosLocal[gradHWeightId * baseOffsetUb], zerosLocal[gradHWeightId * baseOffsetUb],
-            (DTYPE_VALUE)h, thisCycleNum * embedDims);
+        Muls(zerosLocal[gradWWeightId * baseOffsetUb], zerosLocal[gradWWeightId * baseOffsetUb], (DTYPE_VALUE)w,
+             thisCycleNum * embedDims);
+        Muls(zerosLocal[gradHWeightId * baseOffsetUb], zerosLocal[gradHWeightId * baseOffsetUb], (DTYPE_VALUE)h,
+             thisCycleNum * embedDims);
 
         WaitFlag<HardEvent::MTE3_S>(eventIdMte3ToS);
 
@@ -491,7 +486,7 @@ private:
     }
 
 private:
-    TPipe *pipe;
+    TPipe* pipe;
     GlobalTensor<DTYPE_VALUE> valueGm, locationGm, attentionWeightsGm, gradOutputGm, gradValueGm, gradLocationGm,
         gradWeightGm;
     GlobalTensor<int32_t> valueSpatialShapesGm, valueLevelStartIndexGm;
@@ -545,10 +540,10 @@ private:
     SumParams sumParams;
     // DataCopyExtParams copyParams, copyParamsV2;
     DataCopyExtParams copyParams, copyInParams, copyOutParams;
-    DataCopyPadExtParams<int32_t> padParamsInt {false, 0, 0, 0};
-    DataCopyPadExtParams<DTYPE_VALUE> padParamsFloat {false, 0, 0, 0};
-    event_t eventIdVToMte2, eventIdVToMte3, eventIdMte2ToV, eventIdMte3ToV,
-            eventIdVToMteWeight, eventIdVToMte3X, eventIdVToMte3Y, eventIdMte3ToS;
+    DataCopyPadExtParams<int32_t> padParamsInt{false, 0, 0, 0};
+    DataCopyPadExtParams<DTYPE_VALUE> padParamsFloat{false, 0, 0, 0};
+    event_t eventIdVToMte2, eventIdVToMte3, eventIdMte2ToV, eventIdMte3ToV, eventIdVToMteWeight, eventIdVToMte3X,
+        eventIdVToMte3Y, eventIdMte3ToS;
 
     TBuf<TPosition::VECCALC> wv1Ub, wv2Ub, wv3Ub, wv4Ub, mid1Ub, mid2Ub, mid3Ub, mid4Ub;
 };

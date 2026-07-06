@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /*!
  * \file conv3d_v2_base_tiling_check_input.cpp
  * \brief
  */
 #include "conv3d_v2_base_tiling.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv3dBaseTilingV2::ParseFmapShape()
@@ -21,9 +21,8 @@ ge::graphStatus Conv3dBaseTilingV2::ParseFmapShape()
     auto fMapShapePtr = context_->GetInputShape(INPUT_FMAP_INDEX);
     auto fMapShape = fMapShapePtr->GetStorageShape();
     if (fMapShape.GetDimNum() != CONV3D_DIM_SIZE_LIMIT) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "x",
-            std::to_string(fMapShape.GetDimNum()).c_str(),
-            std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "x", std::to_string(fMapShape.GetDimNum()).c_str(),
+                                     std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
     oriShapeAttrInfo_.oriFmapN = fMapShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX]);
@@ -45,21 +44,20 @@ ge::graphStatus Conv3dBaseTilingV2::ParseWeightShape()
     auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
     auto weightShape = GetWeightShape(weightShapePtr);
     if (weightShape.GetDimNum() != CONV3D_DIM_SIZE_LIMIT) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "filter",
-            std::to_string(weightShape.GetDimNum()).c_str(),
-            std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "filter", std::to_string(weightShape.GetDimNum()).c_str(),
+                                     std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
-    oriShapeAttrInfo_.oriWeightN = 
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriWeightC = 
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriWeightD = 
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX]);
-    oriShapeAttrInfo_.oriWeightH = 
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriWeightW = 
-        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
+    oriShapeAttrInfo_.oriWeightN = weightShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriWeightC = weightShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriWeightD = weightShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX]);
+    oriShapeAttrInfo_.oriWeightH = weightShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriWeightW = weightShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
     shapeInfo_.kd = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightD);
     shapeInfo_.kh = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightH);
     shapeInfo_.kw = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightW);
@@ -76,38 +74,48 @@ ge::graphStatus Conv3dBaseTilingV2::ParseWeightShape()
 ge::graphStatus Conv3dBaseTilingV2::CheckFmapShape()
 {
     if (oriShapeAttrInfo_.oriFmapN < 1 || oriShapeAttrInfo_.oriFmapN > MAX_N_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX], 1, MAX_N_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX], 1, MAX_N_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriFmapC < 1 || oriShapeAttrInfo_.oriFmapC > MAX_CIN_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX], 1, MAX_CIN_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX], 1, MAX_CIN_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriFmapD < 1 || oriShapeAttrInfo_.oriFmapD > MAX_FM_D_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_D_IDX], 1, MAX_FM_D_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_D_IDX], 1, MAX_FM_D_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriFmapH < 1 || oriShapeAttrInfo_.oriFmapH > MAX_FM_H_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_H_IDX], 1, MAX_FM_H_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_H_IDX], 1, MAX_FM_H_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriFmapW < 1 || oriShapeAttrInfo_.oriFmapW > MAX_FM_W_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_W_IDX], 1, MAX_FM_W_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_W_IDX], 1, MAX_FM_W_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -116,31 +124,39 @@ ge::graphStatus Conv3dBaseTilingV2::CheckFmapShape()
 ge::graphStatus Conv3dBaseTilingV2::CheckWeightShape()
 {
     if (oriShapeAttrInfo_.oriWeightD < 1 || oriShapeAttrInfo_.oriWeightD > MAX_KD_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX], 1, MAX_KD_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX], 1, MAX_KD_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriWeightH < 1 || oriShapeAttrInfo_.oriWeightH > MAX_KH_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX], 1, MAX_KH_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX], 1, MAX_KH_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriWeightW < 1 || oriShapeAttrInfo_.oriWeightW > MAX_KW_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX], 1, MAX_KW_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX], 1, MAX_KW_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriWeightN < 1 || oriShapeAttrInfo_.oriWeightN > MAX_COUT_BF16_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], 1, MAX_COUT_BF16_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], 1, MAX_COUT_BF16_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (IsWeightNZFormat(descInfo_.weightFormat)) {
@@ -157,9 +173,8 @@ ge::graphStatus Conv3dBaseTilingV2::CheckWeightNZFormatShape()
     auto weightStorageShape = context_->GetInputShape(INPUT_WEIGHT_INDEX)->GetStorageShape();
     auto storageDimNum = weightStorageShape.GetDimNum();
     if (storageDimNum != FORMAT_FRACTAL_3D_DIM) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "filter",
-            std::to_string(storageDimNum).c_str(),
-            std::to_string(FORMAT_FRACTAL_3D_DIM).c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "filter", std::to_string(storageDimNum).c_str(),
+                                     std::to_string(FORMAT_FRACTAL_3D_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
     auto c0 = static_cast<int64_t>(CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX));
@@ -169,32 +184,34 @@ ge::graphStatus Conv3dBaseTilingV2::CheckWeightNZFormatShape()
         return ge::GRAPH_FAILED;
     }
     int64_t n1 = (oriShapeAttrInfo_.oriWeightN + n0 - 1) / n0;
-    int64_t dc1hw = oriShapeAttrInfo_.oriWeightD *
-                    ((oriShapeAttrInfo_.oriWeightC + c0 - 1) / c0) *
-                    oriShapeAttrInfo_.oriWeightH *
-                    oriShapeAttrInfo_.oriWeightW;
+    int64_t dc1hw = oriShapeAttrInfo_.oriWeightD * ((oriShapeAttrInfo_.oriWeightC + c0 - 1) / c0) *
+                    oriShapeAttrInfo_.oriWeightH * oriShapeAttrInfo_.oriWeightW;
     if (weightStorageShape.GetDim(FORMAT_FRACTAL_3D_DKCIN1KHKW_INDEX) != dc1hw ||
         weightStorageShape.GetDim(FORMAT_FRACTAL_3D_N1_INDEX) != n1 ||
         weightStorageShape.GetDim(FORMAT_FRACTAL_3D_N0_INDEX) != n0 ||
         weightStorageShape.GetDim(FORMAT_FRACTAL_3D_C0_INDEX) != c0) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("FRACTAL_Z_3D storage shape must correspond with origin shape, "
-                "expected [%ld, %ld, %ld, %ld]", dc1hw, n1, n0, c0).c_str());
+                         "expected [%ld, %ld, %ld, %ld]",
+                         dc1hw, n1, n0, c0)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-bool Conv3dBaseTilingV2::GetPosByFormat(const ge::Format format, const std::string &pos,
-                                      const std::string &inputStr, size_t &posIdx) const
+bool Conv3dBaseTilingV2::GetPosByFormat(const ge::Format format, const std::string& pos, const std::string& inputStr,
+                                        size_t& posIdx) const
 {
     string formatStr = formatToStrTab[format];
     // util func illegal scene protect, not a useful dfx
     OP_LOGE_IF(formatStr.length() != CONV3D_DIM_SIZE_LIMIT, false, context_->GetNodeName(),
-        "%s AscendC: %s format is not 5D.", paramInfo_.nodeType.c_str(), inputStr.c_str());
+               "%s AscendC: %s format is not 5D.", paramInfo_.nodeType.c_str(), inputStr.c_str());
     OP_LOGE_IF(pos.length() != 1 || formatStr.find(pos) == string::npos, false, context_->GetNodeName(),
-        "%s AscendC: position %s not in 5d format: %s", paramInfo_.nodeType.c_str(), pos.c_str(), formatStr.c_str());
+               "%s AscendC: position %s not in 5d format: %s", paramInfo_.nodeType.c_str(), pos.c_str(),
+               formatStr.c_str());
     posIdx = formatStr.find(pos);
     return true;
 }
@@ -202,21 +219,21 @@ bool Conv3dBaseTilingV2::GetPosByFormat(const ge::Format format, const std::stri
 ge::graphStatus Conv3dBaseTilingV2::ParseBiasShape()
 {
     if (flagInfo_.isConv3dDequant && !flagInfo_.hasBias) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "bias", "nullptr",
-            FormatString("If the dtype of input x is int8, parameter %s must be set", "bias").c_str()
-        );
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeType(), "bias", "nullptr",
+            FormatString("If the dtype of input x is int8, parameter %s must be set", "bias").c_str());
         return ge::GRAPH_FAILED;
     }
-    auto biasShapePtr = flagInfo_.quantFlag ?
-        context_->GetOptionalInputShape(QUANT_INPUT_BIAS_INDEX) : context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
+    auto biasShapePtr = flagInfo_.quantFlag ? context_->GetOptionalInputShape(QUANT_INPUT_BIAS_INDEX) :
+                                              context_->GetOptionalInputShape(INPUT_BIAS_INDEX);
     if (!flagInfo_.hasBias || biasShapePtr == nullptr) {
         return ge::GRAPH_SUCCESS;
     }
     auto biasDimNum = biasShapePtr->GetStorageShape().GetDimNum();
     if (biasDimNum != FORMAT_ND_DIM && biasDimNum != CONV3D_DIM_SIZE_LIMIT) {
         string expectDims = std::to_string(FORMAT_ND_DIM) + " or " + std::to_string(CONV3D_DIM_SIZE_LIMIT);
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "bias",
-            std::to_string(biasDimNum).c_str(), expectDims.c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "bias", std::to_string(biasDimNum).c_str(),
+                                     expectDims.c_str());
         return ge::GRAPH_FAILED;
     }
     size_t idxC = 0;
@@ -234,15 +251,19 @@ ge::graphStatus Conv3dBaseTilingV2::ParseBiasShape()
     for (size_t i = 0; i < biasDimNum; i++) {
         if (i == idxC) {
             if (biasShapePtr->GetStorageShape().GetDim(i) != weightShape.GetDim(weightIdx)) {
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeType(), "bias, filter",
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeType(), "bias, filter",
                     VectorsToString(std::vector<std::vector<int64_t>>{GetInputShapeVec(context_, INPUT_BIAS_INDEX),
-                        GetInputShapeVec(context_, INPUT_WEIGHT_INDEX)}, IntToString<int64_t>).c_str(),
-                    FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s",
-                        i, "bias", weightIdx, "filter").c_str());
+                                                                      GetInputShapeVec(context_, INPUT_WEIGHT_INDEX)},
+                                    IntToString<int64_t>)
+                        .c_str(),
+                    FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s", i, "bias", weightIdx, "filter")
+                        .c_str());
                 return ge::GRAPH_FAILED;
             }
         } else if (biasShapePtr->GetStorageShape().GetDim(i) != 1) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "bias",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeType(), "bias",
                 VectorToString(GetInputShapeVec(context_, INPUT_BIAS_INDEX), IntToString<int64_t>).c_str(),
                 FormatString("Shape[%zu] of this parameter must be equal to %d", i, 1).c_str());
             return ge::GRAPH_FAILED;
@@ -254,24 +275,30 @@ ge::graphStatus Conv3dBaseTilingV2::ParseBiasShape()
 ge::graphStatus Conv3dBaseTilingV2::CheckOutputShape()
 {
     if (oriShapeAttrInfo_.oriOutputD < 1 || oriShapeAttrInfo_.oriOutputD > MAX_DOUT_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_D_IDX], 1, MAX_DOUT_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_D_IDX], 1, MAX_DOUT_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriOutputH < 1 || oriShapeAttrInfo_.oriOutputH > MAX_HOUT_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX], 1, MAX_HOUT_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX], 1, MAX_HOUT_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriOutputW < 1 || oriShapeAttrInfo_.oriOutputW > MAX_WOUT_SHAPE) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX], 1, MAX_WOUT_SHAPE).c_str());
+                         paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX], 1, MAX_WOUT_SHAPE)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -280,8 +307,8 @@ ge::graphStatus Conv3dBaseTilingV2::CheckOutputShape()
 ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
 {
     bool isConv3dDequantFormatLegal = descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
-                                     (descInfo_.weightFormat == ge::FORMAT_NCDHW ||
-                                      descInfo_.weightFormat == ge::FORMAT_FRACTAL_Z_3D) &&
+                                      (descInfo_.weightFormat == ge::FORMAT_NCDHW ||
+                                       descInfo_.weightFormat == ge::FORMAT_FRACTAL_Z_3D) &&
                                       descInfo_.outFormat == ge::FORMAT_NDHWC;
     std::stringstream ss;
     ss << "[[NCDHW, NCDHW, NDHWC], [NCDHW, FRACTAL_Z_3D, NDHWC]]";
@@ -289,9 +316,11 @@ ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
         string incorrectFormats = formatToStrTab.at(descInfo_.fMapFormat) + ", " +
                                   formatToStrTab.at(descInfo_.weightFormat) + ", " +
                                   formatToStrTab.at(descInfo_.outFormat);
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeType(), "x, filter, y", incorrectFormats.c_str(),
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            context_->GetNodeType(), "x, filter, y", incorrectFormats.c_str(),
             FormatString("If the dtype of input x is int8, the formats of these parameters must be %s",
-                ss.str().c_str()).c_str());
+                         ss.str().c_str())
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -307,21 +336,20 @@ ge::graphStatus Conv3dBaseTilingV2::ParseOutputShape()
     auto outputShapePtr = context_->GetOutputShape(OUTPUT_INDEX);
     auto outputShape = outputShapePtr->GetStorageShape();
     if (outputShape.GetDimNum() != CONV3D_DIM_SIZE_LIMIT) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "y",
-            std::to_string(outputShape.GetDimNum()).c_str(),
-            std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "y", std::to_string(outputShape.GetDimNum()).c_str(),
+                                     std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
-    oriShapeAttrInfo_.oriOutputN =
-        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriOutputC =
-        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriOutputD =
-        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_D_IDX]);
-    oriShapeAttrInfo_.oriOutputH =
-        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriOutputW =
-        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX]);
+    oriShapeAttrInfo_.oriOutputN = outputShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriOutputC = outputShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriOutputD = outputShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_D_IDX]);
+    oriShapeAttrInfo_.oriOutputH = outputShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriOutputW = outputShape.GetDim(
+        paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX]);
     shapeInfo_.dout = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputD);
     shapeInfo_.ho = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputH);
     shapeInfo_.wo = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputW);
@@ -332,18 +360,19 @@ ge::graphStatus Conv3dBaseTilingV2::CheckQuantScaleDtype()
 {
     if (flagInfo_.quantFlag) {
         if (descInfo_.scaleDtype != ge::DataType::DT_INT64 && descInfo_.scaleDtype != ge::DataType::DT_UINT64) {
-            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeType(), "scale",
-                dtypeToStrTab.at(descInfo_.scaleDtype).c_str(), "int64 or uint64");
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeType(), "scale", dtypeToStrTab.at(descInfo_.scaleDtype).c_str(),
+                                      "int64 or uint64");
             return ge::GRAPH_FAILED;
         }
         fixpipeInfo_.channelWiseCoeff += INT64_DTYPE_SIZE_COMPARE_FP16;
     } else {
         // conv3d
         if (descInfo_.scaleDtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeType(), "scale",
-                GeDtypeToString(descInfo_.scaleDtype).c_str(),
-                FormatString("If the dtype of input x is int8, the dtype of parameter %s must be %s",
-                    "scale", "float32").c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeType(), "scale", GeDtypeToString(descInfo_.scaleDtype).c_str(),
+                FormatString("If the dtype of input x is int8, the dtype of parameter %s must be %s", "scale",
+                             "float32")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
         // scale will in UB, skip fbsize calc
@@ -359,33 +388,36 @@ ge::graphStatus Conv3dBaseTilingV2::CheckQuantScaleDesc()
     }
 
     if (flagInfo_.isConv3dDequant && !flagInfo_.hasScale) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "scale", "nullptr",
-            FormatString("If the dtype of input x is int8, parameter %s must be set", "scale").c_str()
-        );
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeType(), "scale", "nullptr",
+            FormatString("If the dtype of input x is int8, parameter %s must be set", "scale").c_str());
         return ge::GRAPH_FAILED;
     }
 
     if (static_cast<ge::Format>(descInfo_.scaleFormat) != ge::Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeType(), "scale",
-            formatToStrTab.at(descInfo_.scaleFormat).c_str(), "ND");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeType(), "scale", formatToStrTab.at(descInfo_.scaleFormat).c_str(),
+                                   "ND");
         return ge::GRAPH_FAILED;
     }
     auto tmpScaleIdx = flagInfo_.quantFlag ? QUANT_CONV_SCALE_IDX : CONV_SCALE_IDX;
     auto scaleShapePtr = context_->GetOptionalInputShape(tmpScaleIdx);
     if (scaleShapePtr->GetStorageShape().GetDimNum() != FORMAT_ND_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "scale",
-            std::to_string(scaleShapePtr->GetStorageShape().GetDimNum()).c_str(),
-            std::to_string(FORMAT_ND_DIM).c_str());
+                                     std::to_string(scaleShapePtr->GetStorageShape().GetDimNum()).c_str(),
+                                     std::to_string(FORMAT_ND_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
     size_t scaleShape = scaleShapePtr->GetStorageShape().GetDim(0);
     if (scaleShape != static_cast<size_t>(oriShapeAttrInfo_.oriWeightN)) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeType(), "scale, filter",
-            VectorsToString(std::vector<std::vector<int64_t>>{
-                GetInputShapeVec(context_, tmpScaleIdx),
-                GetInputShapeVec(context_, INPUT_WEIGHT_INDEX)}, IntToString<int64_t>).c_str(),
-            FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s",
-                0, "scale", paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], "filter").c_str());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeType(), "scale, filter",
+            VectorsToString(std::vector<std::vector<int64_t>>{GetInputShapeVec(context_, tmpScaleIdx),
+                                                              GetInputShapeVec(context_, INPUT_WEIGHT_INDEX)},
+                            IntToString<int64_t>)
+                .c_str(),
+            FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s", 0, "scale",
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], "filter")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (CheckQuantScaleDtype() == ge::GRAPH_FAILED) {
@@ -414,19 +446,22 @@ ge::graphStatus Conv3dBaseTilingV2::CheckParamsDtype()
         }
     }
     if (flagInfo_.hasBias) {
-            string incorrectDtypes = GeDtypeToString(descInfo_.fMapDtype) + ", " + 
-                GeDtypeToString(descInfo_.weightDtype) + ", " + GeDtypeToString(descInfo_.biasDtype) + ", " +
-                GeDtypeToString(descInfo_.outDtype);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeType(), "x, filter, bias, y",
-                incorrectDtypes.c_str(),
-                FormatString("The dtypes of these parameters support only the following combinations: %s",
-                    VectorsToString(supportedTypesList, GeDtypeToString).c_str()).c_str());
-    } else { 
-            string incorrectDtypes = GeDtypeToString(descInfo_.fMapDtype) + ", " + 
-                GeDtypeToString(descInfo_.weightDtype) + ", " + GeDtypeToString(descInfo_.outDtype);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeType(), "x, filter, y", incorrectDtypes.c_str(),
-                FormatString("The dtypes of these parameters support only the following combinations: %s",
-                    VectorsToString(supportedTypesList, GeDtypeToString).c_str()).c_str());
+        string incorrectDtypes = GeDtypeToString(descInfo_.fMapDtype) + ", " + GeDtypeToString(descInfo_.weightDtype) +
+                                 ", " + GeDtypeToString(descInfo_.biasDtype) + ", " +
+                                 GeDtypeToString(descInfo_.outDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeType(), "x, filter, bias, y", incorrectDtypes.c_str(),
+            FormatString("The dtypes of these parameters support only the following combinations: %s",
+                         VectorsToString(supportedTypesList, GeDtypeToString).c_str())
+                .c_str());
+    } else {
+        string incorrectDtypes = GeDtypeToString(descInfo_.fMapDtype) + ", " + GeDtypeToString(descInfo_.weightDtype) +
+                                 ", " + GeDtypeToString(descInfo_.outDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeType(), "x, filter, y", incorrectDtypes.c_str(),
+            FormatString("The dtypes of these parameters support only the following combinations: %s",
+                         VectorsToString(supportedTypesList, GeDtypeToString).c_str())
+                .c_str());
     }
     return ge::GRAPH_FAILED;
 }
@@ -445,14 +480,17 @@ ge::graphStatus Conv3dBaseTilingV2::CheckInputDescForND()
     }
     if (!formatMatchTag) {
         string incorrectFormats = formatToStrTab.at(descInfo_.fMapFormat) + ", " +
-            formatToStrTab.at(descInfo_.weightFormat) + ", " + formatToStrTab.at(descInfo_.outFormat);
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeType(), "x, filter, y", incorrectFormats.c_str(),
+                                  formatToStrTab.at(descInfo_.weightFormat) + ", " +
+                                  formatToStrTab.at(descInfo_.outFormat);
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            context_->GetNodeType(), "x, filter, y", incorrectFormats.c_str(),
             FormatString("The formats of these parameters support only the following combinations: %s",
-                ss.str().c_str()).c_str());
+                         ss.str().c_str())
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling

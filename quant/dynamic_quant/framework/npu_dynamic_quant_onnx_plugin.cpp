@@ -15,44 +15,47 @@ using namespace ge;
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;
 
-static Status  ParseParamsNpuDynamicQuant(const Message* op_src, ge::Operator& op_dest) {
-    const NodeProto *node = dynamic_cast<const NodeProto *>(op_src);
+static Status ParseParamsNpuDynamicQuant(const Message* op_src, ge::Operator& op_dest)
+{
+    const NodeProto* node = dynamic_cast<const NodeProto*>(op_src);
     if (node == nullptr) {
-      OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-      return FAILED;
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
     return SUCCESS;
 }
 
 // register npu_dynamic_quant op info to GE
 REGISTER_CUSTOM_OP("DynamicQuant")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::11::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::12::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::13::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::14::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::15::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::16::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::17::NPUDynamicQuant"),
-                 ge::AscendString("ai.onnx::18::NPUDynamicQuant"),
-                })
-  .ParseParamsFn(ParseParamsNpuDynamicQuant)
-  .ImplyType(ImplyType::TVM);
+    .FrameworkType(ONNX)
+    .OriginOpType({
+        ge::AscendString("npu::1::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::11::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::12::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::13::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::14::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::15::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::16::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::17::NPUDynamicQuant"),
+        ge::AscendString("ai.onnx::18::NPUDynamicQuant"),
+    })
+    .ParseParamsFn(ParseParamsNpuDynamicQuant)
+    .ImplyType(ImplyType::TVM);
 
 // register npu_dynamic_quant op info to GE
 REGISTER_CUSTOM_OP("DynamicQuantV2")
-  .FrameworkType(ONNX)
-  .OriginOpType({ge::AscendString("npu::1::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::11::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::12::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::13::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::14::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::15::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::16::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::17::NPUDynamicQuantV2"),
-                 ge::AscendString("ai.onnx::18::NPUDynamicQuantV2"),
-                })
-  .ParseParamsFn(ParseParamsNpuDynamicQuant)
-  .ImplyType(ImplyType::TVM);
+    .FrameworkType(ONNX)
+    .OriginOpType({
+        ge::AscendString("npu::1::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::11::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::12::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::13::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::14::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::15::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::16::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::17::NPUDynamicQuantV2"),
+        ge::AscendString("ai.onnx::18::NPUDynamicQuantV2"),
+    })
+    .ParseParamsFn(ParseParamsNpuDynamicQuant)
+    .ImplyType(ImplyType::TVM);
 } // namespace domi

@@ -64,15 +64,15 @@ ge::graphStatus AdaptivePool2dBaseTiling::CheckOutDims()
     }
 
     if (nOutDim != input_.nIn || cOutDim != input_.cIn || hOutDim != input_.hOut || wOutDim != input_.wOut) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName_, "out", "nOutDim, cOutDim, hOutDim, wOutDim", "Invalid shape. Maybe out tensor is error.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "out", "nOutDim, cOutDim, hOutDim, wOutDim",
+                                               "Invalid shape. Maybe out tensor is error.");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptivePool2dBaseTiling::GetRealOutDims(
-    const int64_t* outputSize, const gert::Shape& xShape, size_t output_size_len, size_t input_dim_num)
+ge::graphStatus AdaptivePool2dBaseTiling::GetRealOutDims(const int64_t* outputSize, const gert::Shape& xShape,
+                                                         size_t output_size_len, size_t input_dim_num)
 {
     const char* opName_ = "AdaptiveAvgPool2d";
     std::vector<int> realOutDims = {};
@@ -130,8 +130,8 @@ ge::graphStatus AdaptivePool2dBaseTiling::GetShapeAttrsInfo()
     auto outputDtype = outputDesc->GetDataType();
     if (outputDtype != ge::DT_FLOAT && outputDtype != ge::DT_FLOAT16 && outputDtype != ge::DT_BF16) {
         std::string outputDtypeStr = std::to_string(static_cast<int32_t>(outputDtype));
-        OP_LOGE_FOR_INVALID_DTYPE(
-            opName_, "output", outputDtypeStr.c_str(), "[0(DT_FLOAT), 1(DT_FLOAT16), 27(DT_BF16)]");
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "output", outputDtypeStr.c_str(),
+                                  "[0(DT_FLOAT), 1(DT_FLOAT16), 27(DT_BF16)]");
         return ge::GRAPH_FAILED;
     }
     gert::Shape xShape = Ops::NN::OpTiling::EnsureNotScalar(inputX->GetStorageShape());
@@ -150,12 +150,11 @@ ge::graphStatus AdaptivePool2dBaseTiling::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
     if (input_.nIn < 1 || input_.cIn < 1 || input_.hIn < 1 || input_.wIn < 1) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName_, "x",
-            (std::to_string(input_.nIn) + ", " + std::to_string(input_.cIn) + ", " + std::to_string(input_.hIn) + ", " +
-             std::to_string(input_.wIn))
-                .c_str(),
-            "Invalid shape. Maybe empty tensor. Each dimension must be >= 1.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x",
+                                               (std::to_string(input_.nIn) + ", " + std::to_string(input_.cIn) + ", " +
+                                                std::to_string(input_.hIn) + ", " + std::to_string(input_.wIn))
+                                                   .c_str(),
+                                               "Invalid shape. Maybe empty tensor. Each dimension must be >= 1.");
         return ge::GRAPH_FAILED;
     }
     auto attrPtr = context_->GetAttrs();
@@ -165,8 +164,8 @@ ge::graphStatus AdaptivePool2dBaseTiling::GetShapeAttrsInfo()
     size_t output_size_len = outputSizePtr->GetSize();
     size_t input_dim_num = xShape.GetDimNum();
     if (output_size_len != OUTPUT_DIM_MAX && output_size_len != ONE_DIM && output_size_len != NONE_DIM) {
-        OP_LOGE_FOR_INVALID_LISTSIZE(
-            opName_, "Length of output_size", std::to_string(output_size_len).c_str(), "0, 1, or 2");
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of output_size", std::to_string(output_size_len).c_str(),
+                                     "0, 1, or 2");
         return ge::GRAPH_FAILED;
     }
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());

@@ -28,15 +28,9 @@ using namespace ge;
 
 class QuantMaxInferShapeTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "QuantMaxInferShapeTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "QuantMaxInferShapeTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "QuantMaxInferShapeTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "QuantMaxInferShapeTest TearDown" << std::endl; }
 };
 
 TEST_F(QuantMaxInferShapeTest, quant_max_infershape_basic)
@@ -132,7 +126,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_fp32_fp8)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}  // FLOAT8_E5M2
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)} // FLOAT8_E5M2
                                   })
                                   .Build();
 
@@ -165,7 +159,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_fp16_fp8_e5m2)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}  // FLOAT8_E5M2
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)} // FLOAT8_E5M2
                                   })
                                   .Build();
 
@@ -198,7 +192,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_fp16_fp8_e4m3fn)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}  // FLOAT8_E4M3FN
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)} // FLOAT8_E4M3FN
                                   })
                                   .Build();
 
@@ -231,7 +225,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_fp16_hifloat8)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Round")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}  // HIFLOAT8
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)} // HIFLOAT8
                                   })
                                   .Build();
 
@@ -264,7 +258,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_bf16_fp8_e5m2)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}  // FLOAT8_E5M2
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)} // FLOAT8_E5M2
                                   })
                                   .Build();
 
@@ -297,7 +291,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_bf16_fp8_e4m3fn)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}  // FLOAT8_E4M3FN
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)} // FLOAT8_E4M3FN
                                   })
                                   .Build();
 
@@ -330,7 +324,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_bf16_hifloat8)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Round")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}  // HIFLOAT8
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)} // HIFLOAT8
                                   })
                                   .Build();
 
@@ -348,7 +342,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_invalid_scale_dtype)
     auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->infer_datatype;
     if (infer_datatype_func != nullptr) {
         ge::DataType x_dtype = ge::DT_FLOAT;
-        ge::DataType scale_dtype = ge::DT_FLOAT16;  // Invalid: scale should be FLOAT
+        ge::DataType scale_dtype = ge::DT_FLOAT16; // Invalid: scale should be FLOAT
         ge::DataType y_dtype = ge::DT_FLOAT8_E5M2;
         ge::DataType amax_dtype = ge::DT_FLOAT;
 
@@ -363,7 +357,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_invalid_scale_dtype)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}  // FLOAT8_E5M2
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)} // FLOAT8_E5M2
                                   })
                                   .Build();
 
@@ -380,7 +374,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_invalid_x_dtype)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->infer_datatype;
     if (infer_datatype_func != nullptr) {
-        ge::DataType x_dtype = ge::DT_INT32;  // Invalid: x should be FLOAT/FLOAT16/BF16
+        ge::DataType x_dtype = ge::DT_INT32; // Invalid: x should be FLOAT/FLOAT16/BF16
         ge::DataType scale_dtype = ge::DT_FLOAT;
         ge::DataType y_dtype = ge::DT_FLOAT8_E5M2;
         ge::DataType amax_dtype = ge::DT_INT32;
@@ -396,7 +390,7 @@ TEST_F(QuantMaxInferShapeTest, quant_max_inferdatatype_invalid_x_dtype)
                                   .OutputDataTypes({&y_dtype, &amax_dtype})
                                   .NodeAttrs({
                                       {"round_mode", Ops::NN::AnyValue::CreateFrom<std::string>("Rint")},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}  // FLOAT8_E5M2
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)} // FLOAT8_E5M2
                                   })
                                   .Build();
 

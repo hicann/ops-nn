@@ -90,7 +90,7 @@ BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataWelford)
 TILING_DATA_FIELD_DEF(int64_t, M);                  // 输入tensor的行
 TILING_DATA_FIELD_DEF(int64_t, N);                  // 输入tensor的列，即reduce的轴
 TILING_DATA_FIELD_DEF(int64_t, rAlign);             // r对齐的大小
-TILING_DATA_FIELD_DEF(int64_t, numBlocks);           // 实际使用的core数量
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);          // 实际使用的core数量
 TILING_DATA_FIELD_DEF(int64_t, mainBlockCount);     // 整核的数量
 TILING_DATA_FIELD_DEF(int64_t, mainBlockFactor);    // 整核处理的row大小
 TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);    // 尾核处理的row大小
@@ -268,8 +268,7 @@ struct ParamsLayerNomrV3 {
     uint64_t paramsToNormSize = 1;
 };
 
-enum class LayerNormV3TilingKey : int64_t
-{
+enum class LayerNormV3TilingKey : int64_t {
     // FLOAT32/FLOAT16/BFLOAT16 -- 0/1/2
     // Regbase no reduce
     LAYER_NORM_REGBASE_NO_REDUCE_FLOAT32_FLOAT32 = 600,
@@ -309,8 +308,7 @@ enum class LayerNormV3TilingKey : int64_t
     LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_BFLOAT16_BFLOAT16 = 922,
 };
 
-enum class LNTemplateKey : int
-{
+enum class LNTemplateKey : int {
     SINGEL_READ = 1,
     TRANSPOSE = 2,
     SINGEL_READ_REGBASE = 3,
@@ -330,8 +328,7 @@ struct LayerNormV3CompileInfo {
 
 class LayerNormV3TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit LayerNormV3TilingBase(gert::TilingContext* context_) : Ops::NN::Optiling::TilingBaseClass(context_)
-    {}
+    explicit LayerNormV3TilingBase(gert::TilingContext* context_) : Ops::NN::Optiling::TilingBaseClass(context_) {}
     ~LayerNormV3TilingBase() override = default;
     ParamsLayerNomrV3 commonParams;
 
@@ -349,27 +346,26 @@ protected:
     ge::graphStatus InputDtypeCheck(ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType betaDtype);
     bool isFloatDtype(ge::DataType dtype) const;
     int64_t GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype) const;
-    ge::graphStatus InputShapeAndAxisCheck(
-        const gert::Shape& xShape, const gert::Shape& gammaShape, const gert::Shape& betaShape, int64_t& beginNormAxis,
-        int64_t& beginParamsAxis);
+    ge::graphStatus InputShapeAndAxisCheck(const gert::Shape& xShape, const gert::Shape& gammaShape,
+                                           const gert::Shape& betaShape, int64_t& beginNormAxis,
+                                           int64_t& beginParamsAxis);
     ge::graphStatus OutputShapeCheck(const gert::Shape& xShape, int64_t beginNormAxis);
-    ge::graphStatus OutputDtypeCheck(
-        ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType yDtype, ge::DataType meanDtype, ge::DataType rstdDtype);
+    ge::graphStatus OutputDtypeCheck(ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType yDtype,
+                                     ge::DataType meanDtype, ge::DataType rstdDtype);
     bool isIndexValid(const gert::Shape& xShape, int64_t beginAxis) const;
     ge::graphStatus GetCommonPlatformInfo(const LayerNormV3CompileInfo* compileInfo);
 };
 
 class LayerNormV3RegBaseTwoPassTiling : public LayerNormV3TilingBase {
 public:
-    explicit LayerNormV3RegBaseTwoPassTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
-    {}
+    explicit LayerNormV3RegBaseTwoPassTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_) {}
     ~LayerNormV3RegBaseTwoPassTiling() override = default;
     LayerNormV3TilingDataRegBaseTwoPass td_;
 
 protected:
     bool CanFitInBuffer(int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse);
-    bool CanFitInBuffer(
-        int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse, int64_t xElemSize);
+    bool CanFitInBuffer(int64_t curA, int64_t largeBufferMemPerA, int64_t baseMemSize, int64_t& tmpBufferUse,
+                        int64_t xElemSize);
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus DoOpTiling() override;
@@ -382,8 +378,7 @@ protected:
 
 class LayerNormV3WelfordTiling : public LayerNormV3TilingBase {
 public:
-    explicit LayerNormV3WelfordTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
-    {}
+    explicit LayerNormV3WelfordTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_) {}
     ~LayerNormV3WelfordTiling() override = default;
     LayerNormV3TilingDataWelford td_;
 
@@ -400,8 +395,7 @@ protected:
 
 class LayerNormV3RegBaseTwoPassPerfTiling : public LayerNormV3TilingBase {
 public:
-    explicit LayerNormV3RegBaseTwoPassPerfTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
-    {}
+    explicit LayerNormV3RegBaseTwoPassPerfTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_) {}
     ~LayerNormV3RegBaseTwoPassPerfTiling() override = default;
     LayerNormV3TilingDataRegBaseTwoPassPerf td_;
 
@@ -420,8 +414,7 @@ protected:
 
 class LayerNormV3RegBaseNoReduceTiling : public LayerNormV3TilingBase {
 public:
-    explicit LayerNormV3RegBaseNoReduceTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
-    {}
+    explicit LayerNormV3RegBaseNoReduceTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_) {}
     ~LayerNormV3RegBaseNoReduceTiling() override = default;
     LayerNormV3TilingDataRegBaseNoReduce td_;
 
@@ -470,8 +463,7 @@ private:
 
 class LayerNormV3WelfordMultiReduceTiling : public LayerNormV3TilingBase {
 public:
-    explicit LayerNormV3WelfordMultiReduceTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
-    {}
+    explicit LayerNormV3WelfordMultiReduceTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_) {}
     ~LayerNormV3WelfordMultiReduceTiling() override = default;
     LayerNormV3TilingDataWelfordMultiReduce td_;
 
@@ -489,8 +481,7 @@ private:
 
 class LayerNormV3WelfordMultiParamsTiling : public LayerNormV3TilingBase {
 public:
-    explicit LayerNormV3WelfordMultiParamsTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
-    {}
+    explicit LayerNormV3WelfordMultiParamsTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_) {}
     ~LayerNormV3WelfordMultiParamsTiling() override = default;
     LayerNormV3TilingDataWelfordMultiParams td_;
 
@@ -506,10 +497,10 @@ private:
 };
 
 ge::graphStatus Tiling4LayerNormV3ForAscendC(gert::TilingContext* context);
-ge::graphStatus TilingPrepare4LayerNormV3ForAscendC(
-    gert::TilingParseContext* context, LayerNormV3CompileInfo& regbaseCompileInfo);
-ge::graphStatus TilingPrepare4LayerNormV3CompileInfo(
-    gert::TilingParseContext* context, LayerNormV3CompileInfo* compileInfo);
+ge::graphStatus TilingPrepare4LayerNormV3ForAscendC(gert::TilingParseContext* context,
+                                                    LayerNormV3CompileInfo& regbaseCompileInfo);
+ge::graphStatus TilingPrepare4LayerNormV3CompileInfo(gert::TilingParseContext* context,
+                                                     LayerNormV3CompileInfo* compileInfo);
 } // namespace optiling
 
 #endif // LAYER_NORM_V3_TILING_H

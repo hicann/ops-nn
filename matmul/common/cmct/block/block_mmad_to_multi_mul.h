@@ -23,8 +23,8 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_, class TileCopy_>
+template <class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_,
+          class TileCopy_>
 class BlockMmad<MatmulToVector<>, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_> {
 public:
     using AType = AType_;
@@ -63,8 +63,8 @@ public:
     }
 
 public:
-    __aicore__ inline void Init(
-        const TupleShape& shape, const TupleShape& blockInfo, uint64_t tailK, uint64_t loopK, bool hasBias)
+    __aicore__ inline void Init(const TupleShape& shape, const TupleShape& blockInfo, uint64_t tailK, uint64_t loopK,
+                                bool hasBias)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -83,23 +83,22 @@ public:
 
     __aicore__ inline void SetTailN(int64_t tailN) { tailN_ = tailN; }
 
-    __aicore__ inline void CopyIn(
-        const AscendC::GlobalTensor<float>& srcGlobal, const AscendC::LocalTensor<float>& dstLocal, uint64_t blockCount)
+    __aicore__ inline void CopyIn(const AscendC::GlobalTensor<float>& srcGlobal,
+                                  const AscendC::LocalTensor<float>& dstLocal, uint64_t blockCount)
     {
         uint32_t alignK = AscendC::CeilAlign(currentK_, ALIGN_NUM);
         uint8_t rightPadding = static_cast<uint8_t>(alignK - currentK_);
         AscendC::DataCopyPadExtParams<float> copyPadParams{true, 0, rightPadding, 0};
         uint32_t srcStride = static_cast<uint32_t>((k_ - currentK_) * sizeof(float));
         uint32_t dstStride = static_cast<uint32_t>((baseK_ - alignK) / ALIGN_NUM);
-        AscendC::DataCopyExtParams copyParams{
-            static_cast<uint16_t>(blockCount), static_cast<uint32_t>(currentK_ * sizeof(float)), srcStride, dstStride,
-            0};
+        AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount),
+                                              static_cast<uint32_t>(currentK_ * sizeof(float)), srcStride, dstStride,
+                                              0};
         AscendC::DataCopyPad(dstLocal, srcGlobal, copyParams, copyPadParams);
     }
 
-    static __simd_vf__ inline void MulsVf(
-        __ubuf__ float* dstPtr, __ubuf__ float* bubPtr, __ubuf__ float* aubPtr, uint64_t mAub, uint64_t nBub,
-        uint64_t baseK, uint64_t alignN)
+    static __simd_vf__ inline void MulsVf(__ubuf__ float* dstPtr, __ubuf__ float* bubPtr, __ubuf__ float* aubPtr,
+                                          uint64_t mAub, uint64_t nBub, uint64_t baseK, uint64_t alignN)
     {
         AscendC::MicroAPI::RegTensor<float> vSrcAReg0;
         AscendC::MicroAPI::RegTensor<float> vSrcBReg0;
@@ -116,8 +115,8 @@ public:
             // B矩阵baseN行去乘A矩阵同一行
             for (uint16_t nIdx = 0; nIdx < static_cast<uint16_t>(nBub); ++nIdx) {
                 auto addrReg1 = AscendC::MicroAPI::CreateAddrReg<float>(nIdx, baseK);
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
-                    vSrcBReg0, bubPtr, addrReg1);
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vSrcBReg0, bubPtr,
+                                                                                            addrReg1);
                 AscendC::MicroAPI::Mul(vDstReg0, vSrcAReg0, vSrcBReg0, maskReg0);
                 // 乘出来的64个数直接做reduce成1个数
                 AscendC::MicroAPI::Reduce<AscendC::MicroAPI::ReduceType::SUM>(vDstReg1, vDstReg0, maskReg0);
@@ -139,8 +138,8 @@ public:
         AscendC::VF_CALL<MulsVf>(dstPtr, bubPtr, aubPtr, tailM_, tailN_, baseK_, alignN_);
     }
 
-    __aicore__ inline void CopyOut(
-        const AscendC::GlobalTensor<float>& cGlobal, const AscendC::LocalTensor<float>& outubLocal)
+    __aicore__ inline void CopyOut(const AscendC::GlobalTensor<float>& cGlobal,
+                                   const AscendC::LocalTensor<float>& outubLocal)
     {
         uint16_t blockCount = static_cast<uint16_t>(tailM_);
         uint32_t blockLen = static_cast<uint32_t>(tailN_ * sizeof(float));
@@ -150,9 +149,9 @@ public:
         AscendC::DataCopyPad(cGlobal, outubLocal, copyParams);
     }
 
-    __aicore__ inline void operator()(
-        const AscendC::GlobalTensor<float>& cGlobal, const AscendC::GlobalTensor<float>& aGlobal,
-        const AscendC::GlobalTensor<float>& bGlobal)
+    __aicore__ inline void operator()(const AscendC::GlobalTensor<float>& cGlobal,
+                                      const AscendC::GlobalTensor<float>& aGlobal,
+                                      const AscendC::GlobalTensor<float>& bGlobal)
     {
         uint64_t ubOffsetAPing = 0;
         uint64_t ubOffsetBPing = baseM_ * baseK_ + ubOffsetAPing;
@@ -200,14 +199,12 @@ public:
             // A矩阵和B矩阵使用完毕，可以搬新的进来了
             AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(j & 0x1);
             // 把算好的(baseM, baseN)加到对应的out
-            AscendC::Add(
-                ubLocal_[ubOffsetD[j & 0x1]], ubLocal_[ubOffsetD[j & 0x1]], ubLocal_[ubOffsetC[j & 0x1]],
-                static_cast<int32_t>(baseM_ * alignN_));
+            AscendC::Add(ubLocal_[ubOffsetD[j & 0x1]], ubLocal_[ubOffsetD[j & 0x1]], ubLocal_[ubOffsetC[j & 0x1]],
+                         static_cast<int32_t>(baseM_ * alignN_));
         }
         AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(0x0);
-        AscendC::Add(
-            ubLocal_[ubOffsetOut], ubLocal_[ubOffsetDPing], ubLocal_[ubOffsetDPong],
-            static_cast<int32_t>(baseM_ * alignN_));
+        AscendC::Add(ubLocal_[ubOffsetOut], ubLocal_[ubOffsetDPing], ubLocal_[ubOffsetDPong],
+                     static_cast<int32_t>(baseM_ * alignN_));
         AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(0x0);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(0x0);
         CopyOut(cGlobal, ubLocal_[ubOffsetOut]);

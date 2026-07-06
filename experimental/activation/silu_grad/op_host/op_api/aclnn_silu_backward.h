@@ -36,4 +36,4 @@ ACLNN_API aclnnStatus aclnnSiluBackward(void* workspace, uint64_t workspaceSize,
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_SILU_BACKWARD_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_SILU_BACKWARD_H_

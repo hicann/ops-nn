@@ -41,10 +41,7 @@ static constexpr uint32_t THREAD_NUM = 512;
 // float32 version: direct acosf call
 template <typename T>
 struct AcosCompute {
-    __simt_callee__ static inline T Compute(T val)
-    {
-        return acosf(val);
-    }
+    __simt_callee__ static inline T Compute(T val) { return acosf(val); }
 };
 
 // float16 version: half -> float -> acosf -> float -> half (MDE Section 5.5)
@@ -82,8 +79,7 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 
 // ========== Prefix-sum binary search O(log N) (MDE Section 5.4) ==========
 
-__simt_callee__ inline int32_t PrefixSumUpperBound(
-    __gm__ const int64_t* prefixSums, int32_t n, int64_t target)
+__simt_callee__ inline int32_t PrefixSumUpperBound(__gm__ const int64_t* prefixSums, int32_t n, int64_t target)
 {
     int32_t lo = 0;
     int32_t hi = n;
@@ -102,15 +98,9 @@ __simt_callee__ inline int32_t PrefixSumUpperBound(
 // ========== SIMT VF kernel: per-core continuous acos on tensor list (MDE Section 5.2) ==========
 
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
-inline void ForeachAcosSimtKernel(
-    int32_t needCoreNum,
-    int32_t tensorNum,
-    int64_t totalElements,
-    int64_t perCoreElements,
-    __gm__ const int64_t* prefixSums,
-    GM_ADDR xList,
-    GM_ADDR yList)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachAcosSimtKernel(
+    int32_t needCoreNum, int32_t tensorNum, int64_t totalElements, int64_t perCoreElements,
+    __gm__ const int64_t* prefixSums, GM_ADDR xList, GM_ADDR yList)
 {
     // Early return for empty list (MDE Section 5.2)
     if (totalElements == 0) {
@@ -121,14 +111,10 @@ inline void ForeachAcosSimtKernel(
     // flatIdx = coreIdx * perCoreElements + threadIdx + k * THREAD_NUM
     int32_t coreIdx = static_cast<int32_t>(blockIdx.x);
     int64_t coreStart = static_cast<int64_t>(coreIdx) * perCoreElements;
-    int64_t coreEnd = (coreStart + perCoreElements > totalElements)
-                          ? totalElements
-                          : (coreStart + perCoreElements);
+    int64_t coreEnd = (coreStart + perCoreElements > totalElements) ? totalElements : (coreStart + perCoreElements);
 
-    for (int64_t flatIdx = coreStart + static_cast<int64_t>(threadIdx.x);
-         flatIdx < coreEnd;
-         flatIdx += static_cast<int64_t>(blockDim.x))
-    {
+    for (int64_t flatIdx = coreStart + static_cast<int64_t>(threadIdx.x); flatIdx < coreEnd;
+         flatIdx += static_cast<int64_t>(blockDim.x)) {
         // Step 1: flat index → tensor index + local offset via binary search (MDE Section 5.4)
         int32_t tensorIdx = PrefixSumUpperBound(prefixSums, tensorNum, flatIdx);
         int64_t localIdx = flatIdx - prefixSums[tensorIdx];
@@ -152,8 +138,7 @@ template <typename T>
 __aicore__ inline void Process(GM_ADDR workspace, GM_ADDR tiling, GM_ADDR inputList, GM_ADDR outputList)
 {
     // 1. Read tiling data from GM
-    __gm__ const ForeachAcosTilingData* tilingData =
-        reinterpret_cast<__gm__ const ForeachAcosTilingData*>(tiling);
+    __gm__ const ForeachAcosTilingData* tilingData = reinterpret_cast<__gm__ const ForeachAcosTilingData*>(tiling);
 
     int32_t needCoreNum = tilingData->needCoreNum;
     int32_t tensorNum = tilingData->tensorNum;
@@ -167,10 +152,8 @@ __aicore__ inline void Process(GM_ADDR workspace, GM_ADDR tiling, GM_ADDR inputL
     }
 
     // 3. Launch SIMT kernel (MDE Section 5.2)
-    asc_vf_call<ForeachAcosSimtKernel<T>>(
-        dim3(THREAD_NUM),
-        needCoreNum, tensorNum, totalElements, perCoreElements,
-        prefixSums, inputList, outputList);
+    asc_vf_call<ForeachAcosSimtKernel<T>>(dim3(THREAD_NUM), needCoreNum, tensorNum, totalElements, perCoreElements,
+                                          prefixSums, inputList, outputList);
 }
 
 } // namespace NsForeachAcos

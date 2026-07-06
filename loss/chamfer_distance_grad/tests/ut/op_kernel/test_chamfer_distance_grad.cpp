@@ -25,19 +25,13 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void chamfer_distance_grad(
-    GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR idx1, GM_ADDR idx2, GM_ADDR grad_dist1, GM_ADDR grad_dist2, GM_ADDR grad_xyz1,
-    GM_ADDR grad_xyz2, GM_ADDR workspace, GM_ADDR tiling_data);
+extern "C" __global__ __aicore__ void chamfer_distance_grad(GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR idx1, GM_ADDR idx2,
+                                                            GM_ADDR grad_dist1, GM_ADDR grad_dist2, GM_ADDR grad_xyz1,
+                                                            GM_ADDR grad_xyz2, GM_ADDR workspace, GM_ADDR tiling_data);
 class chamfer_distance_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "chamfer_distance_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "chamfer_distance_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "chamfer_distance_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "chamfer_distance_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(chamfer_distance_grad_test, test_case_fp32)
@@ -74,9 +68,8 @@ TEST_F(chamfer_distance_grad_test, test_case_fp32)
 
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(
-        chamfer_distance_grad, blockDim, xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
-        workspace, tiling);
+    ICPU_RUN_KF(chamfer_distance_grad, blockDim, xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
+                workspace, tiling);
     AscendC::GmFree(xyz1);
     AscendC::GmFree(xyz2);
     AscendC::GmFree(grad_dist1);
@@ -123,9 +116,8 @@ TEST_F(chamfer_distance_grad_test, test_case_fp16)
     tilingDatafromBin->task_tail_core = 1;
 
     ICPU_SET_TILING_KEY(2);
-    ICPU_RUN_KF(
-        chamfer_distance_grad, blockDim, xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
-        workspace, tiling);
+    ICPU_RUN_KF(chamfer_distance_grad, blockDim, xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
+                workspace, tiling);
     AscendC::GmFree(xyz1);
     AscendC::GmFree(xyz2);
     AscendC::GmFree(grad_dist1);

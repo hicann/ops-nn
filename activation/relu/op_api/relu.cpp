@@ -23,17 +23,15 @@ namespace l0op {
 
 OP_TYPE_REGISTER(Relu);
 
-const aclTensor *Relu(const aclTensor *self,
-                      aclOpExecutor *executor) {
-  L0_DFX(Relu, self);
-  auto reluOut = executor->AllocTensor(self->GetStorageShape(), self->GetDataType(), self->GetStorageFormat());
-  CHECK_RET(reluOut != nullptr, nullptr);
-  auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(Relu,
-                                               OP_INPUT(self),
-                                               OP_OUTPUT(reluOut));
-  OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
-                                       "Relu ADD_TO_LAUNCHER_LIST_AICORE failed.");
-  return reluOut;
+const aclTensor* Relu(const aclTensor* self, aclOpExecutor* executor)
+{
+    L0_DFX(Relu, self);
+    auto reluOut = executor->AllocTensor(self->GetStorageShape(), self->GetDataType(), self->GetStorageFormat());
+    CHECK_RET(reluOut != nullptr, nullptr);
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(Relu, OP_INPUT(self), OP_OUTPUT(reluOut));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return nullptr,
+                                         "Relu ADD_TO_LAUNCHER_LIST_AICORE failed.");
+    return reluOut;
 }
 
-}
+} // namespace l0op

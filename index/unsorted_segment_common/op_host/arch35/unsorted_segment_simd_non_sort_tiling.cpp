@@ -41,8 +41,8 @@ uint64_t UnsortedSegmentSimdNonSortTiling::GetTilingKey() const
 
 void UnsortedSegmentSimdNonSortTiling::SetTilingData()
 {
-    UnsortedSegment::UnsortedSegmentSimdNonSortTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdNonSortTilingData>();
+    UnsortedSegment::UnsortedSegmentSimdNonSortTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdNonSortTilingData>();
 
     tilingData->outputOuterDim = outputOuterDim_;
     tilingData->innerDim = innerDim_;
@@ -66,8 +66,8 @@ ge::graphStatus UnsortedSegmentSimdNonSortTiling::DoOpTiling()
 
     // block split, ensure that ub prioritizes a, block split s * (a/maxBaseA)
     uint64_t minBaseS = 1;
-    uint64_t maxBaseA =
-        (ubSize_ - BUFFER_NUM * (ubBlockSize_ + minBaseS * idTypeBytes_)) / BUFFER_NUM / (minBaseS * dataTypeBytes_);
+    uint64_t maxBaseA = (ubSize_ - BUFFER_NUM * (ubBlockSize_ + minBaseS * idTypeBytes_)) / BUFFER_NUM /
+                        (minBaseS * dataTypeBytes_);
     maxBaseA = Ops::Base::FloorAlign(maxBaseA, ubBlockSize_ / dataTypeBytes_);
 
     uint64_t colNumAlign = Ops::Base::CeilDiv(innerDim_, maxBaseA);
@@ -104,8 +104,8 @@ ge::graphStatus UnsortedSegmentSimdNonSortTiling::PostTiling()
 
 void UnsortedSegmentSimdNonSortTiling::DumpTilingInfo()
 {
-    UnsortedSegment::UnsortedSegmentSimdNonSortTilingData *tilingData = 
-        context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdNonSortTilingData>();
+    UnsortedSegment::UnsortedSegmentSimdNonSortTilingData*
+        tilingData = context_->GetTilingData<UnsortedSegment::UnsortedSegmentSimdNonSortTilingData>();
 
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();

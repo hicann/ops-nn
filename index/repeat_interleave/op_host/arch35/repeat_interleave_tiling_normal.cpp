@@ -37,10 +37,7 @@ inline T1 CeilDiv(T1 a, T2 b)
     return (a + b - 1) / b;
 };
 
-bool RepeatInterleaveTilingKernelNorm::IsCapable()
-{
-    return true;
-}
+bool RepeatInterleaveTilingKernelNorm::IsCapable() { return true; }
 void RepeatInterleaveTilingKernelNorm::SplitRepeatsShape()
 {
     int64_t ratio = totalCoreNum_ / usedCoreNumBefore_;
@@ -102,8 +99,8 @@ void RepeatInterleaveTilingKernelNorm::GetUbFactor()
         ubFactor = (ubSize_ - REDUCE_SUM_BUFFER * ge::GetSizeByDataType(computeDtype)) /
                    (ge::GetSizeByDataType(inputDtype_) * DOUBLE + ge::GetSizeByDataType(repeatDtype_));
     } else {
-        ubFactor =
-            ubSize_ / DOUBLE / (ge::GetSizeByDataType(inputDtype_) * DOUBLE + ge::GetSizeByDataType(repeatDtype_));
+        ubFactor = ubSize_ / DOUBLE /
+                   (ge::GetSizeByDataType(inputDtype_) * DOUBLE + ge::GetSizeByDataType(repeatDtype_));
     }
     ubFactor_ = ubFactor / ALIGN_COUNT * ALIGN_COUNT;
     return;
@@ -112,11 +109,11 @@ void RepeatInterleaveTilingKernelNorm::GetUbFactor()
 void RepeatInterleaveTilingKernelNorm::UseInt64()
 {
     uint64_t yShapeNum = 1;
-    for (int i = 0; i < yShape_.GetDimNum(); i++){
+    for (int i = 0; i < yShape_.GetDimNum(); i++) {
         yShapeNum *= yShape_.GetDim(i);
     }
 
-    if (repeatDtype_ == ge::DataType::DT_INT64 || yShapeNum > INT32_MAX_LIM){
+    if (repeatDtype_ == ge::DataType::DT_INT64 || yShapeNum > INT32_MAX_LIM) {
         isUseInt64_ = 1;
     }
     return;
@@ -159,8 +156,8 @@ ge::graphStatus RepeatInterleaveTilingKernelNorm::PostTiling()
         kernelTilingDataSmall_.set_totalRepeatSum(totalRepeatSum_);
         kernelTilingDataSmall_.set_averageRepeatTime(averageRepeatTime_);
         kernelTilingDataSmall_.set_mergedDims(mergedDim_);
-        kernelTilingDataSmall_.SaveToBuffer(
-            context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+        kernelTilingDataSmall_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                            context_->GetRawTilingData()->GetCapacity());
         context_->GetRawTilingData()->SetDataSize(kernelTilingDataSmall_.GetDataSize());
         return ge::GRAPH_SUCCESS;
     }
@@ -177,8 +174,8 @@ ge::graphStatus RepeatInterleaveTilingKernelNorm::PostTiling()
     kernelTilingData_.set_totalRepeatSum(totalRepeatSum_);
     kernelTilingData_.set_mergedDims(mergedDim_);
 
-    kernelTilingData_.SaveToBuffer(
-        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    kernelTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
+                                   context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(kernelTilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }

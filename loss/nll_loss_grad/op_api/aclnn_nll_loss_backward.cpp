@@ -39,18 +39,17 @@ static const int64_t REDUCTION_SUM_NUM = 2;
 static const int64_t MAX_SELF_DIM_NUM = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> TARGET_DTYPE_SUPPORT_LIST = {
-    DataType::DT_INT64, DataType::DT_UINT8, DataType::DT_INT32};
+static const std::initializer_list<op::DataType> TARGET_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT8,
+                                                                              DataType::DT_INT32};
 
-static bool CheckNotNull(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const aclTensor* totalWeight, const aclTensor* out)
+static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                         const aclTensor* weight, const aclTensor* totalWeight, const aclTensor* out)
 {
     OP_CHECK_NULL(gradOutput, return false);
     OP_CHECK_NULL(self, return false);
@@ -88,9 +87,8 @@ static bool CheckReduction(int64_t reduction)
     return true;
 }
 
-static bool CheckDtypeValid(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const aclTensor* totalWeight, const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                            const aclTensor* weight, const aclTensor* totalWeight, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_MATCH(weight, self->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(gradOutput, self->GetDataType(), return false);
@@ -106,68 +104,55 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    const aclTensor* totalWeight, const aclTensor* out, int64_t reduction)
+static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                       const aclTensor* weight, const aclTensor* totalWeight, const aclTensor* out, int64_t reduction)
 {
     size_t selfDimNum = self->GetViewShape().GetDimNum();
-    OP_CHECK(
-        selfDimNum > 0 && selfDimNum <= MAX_SELF_DIM_NUM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor should be 1D or 2D."), return false);
+    OP_CHECK(selfDimNum > 0 && selfDimNum <= MAX_SELF_DIM_NUM,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor should be 1D or 2D."), return false);
 
     size_t targetDimNum = target->GetViewShape().GetDimNum();
-    OP_CHECK(
-        targetDimNum <= 1,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "0D or 1D target tensor expected, multi-target not supported."), return false);
+    OP_CHECK(targetDimNum <= 1,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "0D or 1D target tensor expected, multi-target not supported."),
+             return false);
 
     bool noBatchDim = selfDimNum == 1 && targetDimNum == 0;
-    OP_CHECK(
-        noBatchDim || self->GetViewShape().GetDim(0) == target->GetViewShape().GetDim(0),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Size mismatch (got input: %s, target: %s) ",
-            op::ToString(self->GetViewShape()).GetString(), op::ToString(target->GetViewShape()).GetString()),
-        return false);
+    OP_CHECK(noBatchDim || self->GetViewShape().GetDim(0) == target->GetViewShape().GetDim(0),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Size mismatch (got input: %s, target: %s) ",
+                     op::ToString(self->GetViewShape()).GetString(), op::ToString(target->GetViewShape()).GetString()),
+             return false);
 
     const auto nClasses = self->GetViewShape().GetDim(selfDimNum - 1);
-    OP_CHECK(
-        weight->GetViewShape().GetDimNum() == 1 && weight->GetViewShape().GetDim(0) == nClasses,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Weight tensor should be defined for all %ld classes but got weight tensor of shape: %s", nClasses,
-            op::ToString(weight->GetViewShape()).GetString()),
-        return false);
+    OP_CHECK(weight->GetViewShape().GetDimNum() == 1 && weight->GetViewShape().GetDim(0) == nClasses,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "Weight tensor should be defined for all %ld classes but got weight tensor of shape: %s", nClasses,
+                     op::ToString(weight->GetViewShape()).GetString()),
+             return false);
 
-    OP_CHECK(
-        totalWeight->GetViewShape().GetShapeSize() == 1,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Expected totalWeight to be a single element tensor, but current is %s.",
-            op::ToString(totalWeight->GetViewShape()).GetString()),
-        return false);
+    OP_CHECK(totalWeight->GetViewShape().GetShapeSize() == 1,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected totalWeight to be a single element tensor, but current is %s.",
+                     op::ToString(totalWeight->GetViewShape()).GetString()),
+             return false);
 
     if (reduction == 0 && selfDimNum == MAX_SELF_DIM_NUM) {
-        OP_CHECK(
-            gradOutput->GetViewShape().GetDimNum() == 1 &&
-                gradOutput->GetViewShape().GetDim(0) == self->GetViewShape().GetDim(0),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Expect gradOutput shape [%ld], but got: %s.", self->GetViewShape().GetDim(0),
-                op::ToString(gradOutput->GetViewShape()).GetString()),
-            return false);
+        OP_CHECK(gradOutput->GetViewShape().GetDimNum() == 1 &&
+                     gradOutput->GetViewShape().GetDim(0) == self->GetViewShape().GetDim(0),
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expect gradOutput shape [%ld], but got: %s.",
+                         self->GetViewShape().GetDim(0), op::ToString(gradOutput->GetViewShape()).GetString()),
+                 return false);
     } else {
-        OP_CHECK(
-            gradOutput->GetViewShape().GetDimNum() <= 1 && gradOutput->GetViewShape().GetShapeSize() == 1,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Expected a single element grad_output tensor, but got: %s",
-                op::ToString(gradOutput->GetViewShape()).GetString()),
-            return false);
+        OP_CHECK(gradOutput->GetViewShape().GetDimNum() <= 1 && gradOutput->GetViewShape().GetShapeSize() == 1,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected a single element grad_output tensor, but got: %s",
+                         op::ToString(gradOutput->GetViewShape()).GetString()),
+                 return false);
     }
 
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    int64_t reduction, const aclTensor* totalWeight, aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target,
+                               const aclTensor* weight, int64_t reduction, const aclTensor* totalWeight, aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, self, target, weight, totalWeight, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -195,14 +180,13 @@ static const std::string& GetReductionStr(int64_t reduction)
     }
 }
 
-aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-    int64_t reduction, int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
+aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                 const aclTensor* target, const aclTensor* weight, int64_t reduction,
+                                                 int64_t ignoreIndex, const aclTensor* totalWeight, aclTensor* out,
+                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnNLLLossBackward, DFX_IN(gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight),
-        DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnNLLLossBackward, DFX_IN(gradOutput, self, target, weight, reduction, ignoreIndex, totalWeight),
+                   DFX_OUT(out));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -271,13 +255,12 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(
     CHECK_RET(totalWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行计算
-    auto grad = l0op::NLLLossGrad(
-        gradOutputCast, selfReshape, targetCasted, weightCast, GetReductionStr(reduction), ignoreIndex, totalWeightCast,
-        uniqueExecutor.get());
+    auto grad = l0op::NLLLossGrad(gradOutputCast, selfReshape, targetCasted, weightCast, GetReductionStr(reduction),
+                                  ignoreIndex, totalWeightCast, uniqueExecutor.get());
     CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradReshape =
-        self->GetViewShape().GetDimNum() == 1 ? l0op::SqueezeNd(grad, squeezeDim, uniqueExecutor.get()) : grad;
+    auto gradReshape = self->GetViewShape().GetDimNum() == 1 ? l0op::SqueezeNd(grad, squeezeDim, uniqueExecutor.get()) :
+                                                               grad;
     CHECK_RET(gradReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果转换成输出out的数据类型

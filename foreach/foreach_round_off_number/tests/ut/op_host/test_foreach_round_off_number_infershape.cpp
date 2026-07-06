@@ -19,18 +19,11 @@
 #include "log/log.h"
 #include "../../../op_graph/foreach_round_off_number_proto.h"
 
-class ForeachRoundOffNumberTest : public testing::Test
-{
+class ForeachRoundOffNumberTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ForeachRoundOffNumber SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ForeachRoundOffNumber SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ForeachRoundOffNumber TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ForeachRoundOffNumber TearDown" << std::endl; }
 };
 
 TEST_F(ForeachRoundOffNumberTest, infer_shape_known_success)

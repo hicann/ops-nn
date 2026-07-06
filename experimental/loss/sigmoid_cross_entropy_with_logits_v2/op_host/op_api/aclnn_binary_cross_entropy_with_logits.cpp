@@ -38,14 +38,9 @@ extern "C" {
 
 static const int64_t REDUCTION_MAX_NUM = 2;
 
-enum Reduction
-{
-    None = 0,
-    Mean = 1,
-    Sum = 2
-};
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+enum Reduction { None = 0, Mean = 1, Sum = 2 };
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
@@ -103,8 +98,8 @@ static bool CheckReduction(int64_t reduction, const aclTensor* out)
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* posWeight)
+static bool CheckShape(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                       const aclTensor* posWeight)
 {
     // 所有算子的维度都不能超过8
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -137,9 +132,8 @@ static bool CheckShape(
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* posWeight,
-    int64_t reduction, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                               const aclTensor* posWeight, int64_t reduction, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, target, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -156,8 +150,8 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus HandleEmptyTensor(
-    int64_t reduction, aclTensor* out, uint64_t* workspaceSize, UniqueExecutor& uniqueExecutor)
+static aclnnStatus HandleEmptyTensor(int64_t reduction, aclTensor* out, uint64_t* workspaceSize,
+                                     UniqueExecutor& uniqueExecutor)
 {
     aclOpExecutor* executor = uniqueExecutor.get();
 
@@ -195,8 +189,8 @@ static aclnnStatus HandleEmptyTensor(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus HandleMeanAndSumReductionOut(
-    int64_t reduction, const aclTensor* out, const aclTensor** reduceOut, aclOpExecutor* executor)
+static aclnnStatus HandleMeanAndSumReductionOut(int64_t reduction, const aclTensor* out, const aclTensor** reduceOut,
+                                                aclOpExecutor* executor)
 {
     if (reduction == Reduction::None) {
         return ACLNN_SUCCESS;
@@ -222,9 +216,9 @@ static aclnnStatus HandleMeanAndSumReductionOut(
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus BinaryCrossEntropyWithLogitsStub(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* posWeight,
-    int64_t reduction, aclTensor* out, aclOpExecutor* executor)
+static aclnnStatus BinaryCrossEntropyWithLogitsStub(const aclTensor* self, const aclTensor* target,
+                                                    const aclTensor* weight, const aclTensor* posWeight,
+                                                    int64_t reduction, aclTensor* out, aclOpExecutor* executor)
 {
     // 连续性转换
     auto selfContiguous = l0op::Contiguous(self, executor);
@@ -240,15 +234,15 @@ static aclnnStatus BinaryCrossEntropyWithLogitsStub(
     CHECK_RET(targetCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 可选参数weight，如果没有定义，则用默认值；同时进行类型转换
-    auto weightContiguous =
-        ((weight == nullptr) ? l0op::OnesLike(selfCast, executor) : l0op::Contiguous(weight, executor));
+    auto weightContiguous = ((weight == nullptr) ? l0op::OnesLike(selfCast, executor) :
+                                                   l0op::Contiguous(weight, executor));
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto weightCast = l0op::Cast(weightContiguous, promoteType, executor);
     CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 可选参数posWeight，如果没有定义，则用默认值；同时进行类型转换
-    auto posWeightContiguous =
-        ((posWeight == nullptr) ? l0op::OnesLike(selfCast, executor) : l0op::Contiguous(posWeight, executor));
+    auto posWeightContiguous = ((posWeight == nullptr) ? l0op::OnesLike(selfCast, executor) :
+                                                         l0op::Contiguous(posWeight, executor));
     CHECK_RET(posWeightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto posWeightCast = l0op::Cast(posWeightContiguous, promoteType, executor);
     CHECK_RET(posWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -256,8 +250,8 @@ static aclnnStatus BinaryCrossEntropyWithLogitsStub(
     // 调用SigmoidCrossEntropyWithLogitsV2接口完成bceWithLogits计算
     // 该算子为融合算子，先求none情况下的返回值，再依据reduction求最终值
     static const std::string reductionCurr = "none";
-    auto bceWithLogitsOut =
-        l0op::SigmoidCrossEntropyWithLogitsV2(selfCast, targetCast, weightCast, posWeightCast, reductionCurr, executor);
+    auto bceWithLogitsOut = l0op::SigmoidCrossEntropyWithLogitsV2(selfCast, targetCast, weightCast, posWeightCast,
+                                                                  reductionCurr, executor);
     CHECK_RET(bceWithLogitsOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 通过ReduceMean或ReduceSum计算reduction为mean或sum时的损失值
@@ -266,8 +260,8 @@ static aclnnStatus BinaryCrossEntropyWithLogitsStub(
         auto ret = HandleMeanAndSumReductionOut(reduction, bceWithLogitsOut, &bceWithLogitsReduceOut, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
-            out, bceWithLogitsOut->GetStorageShape(), return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, bceWithLogitsOut->GetStorageShape(),
+                                                    return ACLNN_ERR_PARAM_INVALID);
     }
 
     // 输出类型转换成out dtype类型
@@ -281,13 +275,14 @@ static aclnnStatus BinaryCrossEntropyWithLogitsStub(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* target, const aclTensor* weightOptioanl, const aclTensor* posWeightOptioanl,
-    int64_t reduction, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* self, const aclTensor* target,
+                                                              const aclTensor* weightOptioanl,
+                                                              const aclTensor* posWeightOptioanl, int64_t reduction,
+                                                              aclTensor* out, uint64_t* workspaceSize,
+                                                              aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnBinaryCrossEntropyWithLogits, DFX_IN(self, target, weightOptioanl, posWeightOptioanl, reduction),
-        DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnBinaryCrossEntropyWithLogits,
+                   DFX_IN(self, target, weightOptioanl, posWeightOptioanl, reduction), DFX_OUT(out));
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -307,8 +302,8 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(
     }
 
     // 开始bce with logits计算
-    auto bceWithLogitsRet = BinaryCrossEntropyWithLogitsStub(
-        self, target, weightOptioanl, posWeightOptioanl, reduction, out, uniqueExecutor.get());
+    auto bceWithLogitsRet = BinaryCrossEntropyWithLogitsStub(self, target, weightOptioanl, posWeightOptioanl, reduction,
+                                                             out, uniqueExecutor.get());
     CHECK_RET(bceWithLogitsRet == ACLNN_SUCCESS, bceWithLogitsRet);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
@@ -318,8 +313,8 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnBinaryCrossEntropyWithLogits(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+aclnnStatus aclnnBinaryCrossEntropyWithLogits(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                              const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnBinaryCrossEntropyWithLogits);
 

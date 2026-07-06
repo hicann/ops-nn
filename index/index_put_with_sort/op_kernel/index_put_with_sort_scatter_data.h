@@ -21,13 +21,14 @@
 namespace IndexPutWithSort {
 using namespace AscendC;
 
-template<typename IT, typename CT>
+template <typename IT, typename CT>
 class ScatterDataBetweenKernelOp {
 public:
     __aicore__ inline ScatterDataBetweenKernelOp() {}
 
     __aicore__ inline void Init(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, GM_ADDR values,
-                                GM_ADDR userWorkspace, const IndexPutWithSortTilingData* tilingData, TPipe* tpipe) {
+                                GM_ADDR userWorkspace, const IndexPutWithSortTilingData* tilingData, TPipe* tpipe)
+    {
         this->InitTilingData(tilingData, tpipe);
         this->CoreSplitData();
         this->InitGmTensor(out, linear_index, pos_idx, values);
@@ -37,7 +38,8 @@ public:
     /**
         @brief 核对自己分到的部分尾轴进行切块，以保证后续可以整块搬入
     */
-    __aicore__ inline void CoreSplitData() {
+    __aicore__ inline void CoreSplitData()
+    {
         uint64_t coreDataLength = this->coreEndId - this->coreStartId;
         if (coreDataLength <= TBUF_BLOCK_SIZE) {
             this->frontBlocks = 1;
@@ -61,7 +63,8 @@ public:
         @param tilingData tiling数据
         @param tpipe 系统资源
     */
-    __aicore__ inline void InitTilingData(const IndexPutWithSortTilingData* tilingData, TPipe* tpipe) {
+    __aicore__ inline void InitTilingData(const IndexPutWithSortTilingData* tilingData, TPipe* tpipe)
+    {
         this->pipe = tpipe;
         this->sliceSize = tilingData->sliceSize;
         this->allIndicesNums = tilingData->indicesNums;
@@ -71,8 +74,8 @@ public:
             this->coreStartId = GetBlockIdx() * tilingData->frontCoreDataLength;
             this->coreEndId = this->coreStartId + tilingData->frontCoreDataLength;
         } else {
-            this->coreStartId = tilingData->frontCoreNums * tilingData->frontCoreDataLength + 
-                  (GetBlockIdx() - tilingData->frontCoreNums) * tilingData->tailCoreDataLength;
+            this->coreStartId = tilingData->frontCoreNums * tilingData->frontCoreDataLength +
+                                (GetBlockIdx() - tilingData->frontCoreNums) * tilingData->tailCoreDataLength;
             this->coreEndId = this->coreStartId + tilingData->tailCoreDataLength;
         }
     }
@@ -80,8 +83,8 @@ public:
     /**
         @brief 将GM上的地址初始化为对应的GmTensor
     */
-    __aicore__ inline void InitGmTensor(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, 
-                                        GM_ADDR values) {
+    __aicore__ inline void InitGmTensor(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, GM_ADDR values)
+    {
         this->outGm.SetGlobalBuffer(reinterpret_cast<__gm__ IT*>(out));
         this->indexGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(linear_index));
         this->posIdxGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(pos_idx));
@@ -91,7 +94,8 @@ public:
     /**
         @brief 分配Ub上空间，valuesUbBuf有两块数据，后一块用于搬入values数据，前一块用于存储分组的累加
     */
-    __aicore__ inline void InitLocalTensor(uint64_t indexUbSize, uint64_t valueUbSize, uint64_t outUbSize) {
+    __aicore__ inline void InitLocalTensor(uint64_t indexUbSize, uint64_t valueUbSize, uint64_t outUbSize)
+    {
         this->pipe->InitBuffer(this->indexUbBuf, indexUbSize * sizeof(int32_t));
         this->pipe->InitBuffer(this->posIdxUbBuf, indexUbSize * sizeof(int32_t));
         this->pipe->InitBuffer(this->valuesUbBuf, valueUbSize * sizeof(int32_t));
@@ -106,7 +110,8 @@ public:
     /**
         @brief 处理流程起始函数
     */
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         // 循环处理每个尾轴块
         for (uint64_t i = 0; i <= this->frontBlocks; i++) {
             if (i == this->frontBlocks && this->lastBlockSize == 0) {
@@ -128,7 +133,8 @@ public:
     */
     // 这个函数要打造成和big_tail分支适配
     __aicore__ inline void ProcessDataBlockWithIndices(uint64_t dataBlockStart, uint64_t dataBlockSize,
-                                                       uint64_t indicesStart, uint64_t indicesNums) {
+                                                       uint64_t indicesStart, uint64_t indicesNums)
+    {
         // 索引切块
         uint64_t indicesBlockSize = INDEX_UB_NUMS;
         uint64_t indicesBlocks = 0;
@@ -153,7 +159,8 @@ public:
         @param indicesBlockNums 索引个数
     */
     __aicore__ inline void ProcessDataBlockWithIndicesBlock(uint64_t dataBlockStart, uint64_t dataBlockSize,
-                                                            uint64_t indicesBlockStart, uint64_t indicesBlockNums) {
+                                                            uint64_t indicesBlockStart, uint64_t indicesBlockNums)
+    {
         // 搬入index, pos
         this->CopyInIndices(indicesBlockStart, indicesBlockNums);
         this->CopyInPosIdx(indicesBlockStart, indicesBlockNums);
@@ -181,7 +188,8 @@ public:
             }
             if (i == indicesBlockNums - 1) {
                 this->InitOutLocal(pre, dataBlockSize, dataBlockStart);
-                this->ProcessGivenIndex<IT>(pre, i + 1, dataBlockSize, dataBlockStart, this->valuesGm, this->castEnable);
+                this->ProcessGivenIndex<IT>(pre, i + 1, dataBlockSize, dataBlockStart, this->valuesGm,
+                                            this->castEnable);
                 this->ThrowOutResult(pre, dataBlockSize, dataBlockStart);
                 int32_t indexValue = this->indexLocal.GetValue(pre);
                 if (indexValue != this->headIndexValue && indexValue != this->tailIndexValue && this->castEnable) {
@@ -197,9 +205,9 @@ public:
         @param indexEndId 索引段在ub上的截止下标
     */
     template <typename IC>
-    __aicore__ inline void ProcessGivenIndex(uint64_t indexStartId, uint64_t indexEndId, 
-                                             uint64_t blockSize, uint64_t blockStart,
-                                             GlobalTensor<IC> srcGm, bool needCast=false) {
+    __aicore__ inline void ProcessGivenIndex(uint64_t indexStartId, uint64_t indexEndId, uint64_t blockSize,
+                                             uint64_t blockStart, GlobalTensor<IC> srcGm, bool needCast = false)
+    {
         if (this->accumulate == 0) {
             this->ProcessLastIndex<IC>(indexEndId - 1, blockSize, blockStart, srcGm, needCast);
             return;
@@ -235,7 +243,8 @@ public:
     // 第二阶段进来，IC为CT, neadcast一定为false
     template <typename IC>
     __aicore__ inline void ProcessLastIndex(uint64_t indexId, uint64_t blockSize, uint64_t blockStart,
-                                             GlobalTensor<IC> srcGm, bool needCast=false) {
+                                            GlobalTensor<IC> srcGm, bool needCast = false)
+    {
         if (blockSize == 0) {
             return;
         }
@@ -260,7 +269,9 @@ public:
     }
 
     // outLocal搬出或者累加出去
-    __aicore__ inline void ThrowOutResult(uint64_t indexStartId, uint64_t blockSize, uint64_t blockStart, bool fromCache=false) {
+    __aicore__ inline void ThrowOutResult(uint64_t indexStartId, uint64_t blockSize, uint64_t blockStart,
+                                          bool fromCache = false)
+    {
         int32_t indexValue = this->indexLocal.GetValue(indexStartId);
         if (indexValue == this->headIndexValue) {
             uint64_t src = 0;
@@ -312,7 +323,8 @@ public:
         @brief 处理outLocal，当需要升精度计算时搬入outGm，不需要升精度时置零outLocal
         @param indexStartId 索引段在ub上的起始下标
     */
-    __aicore__ inline void InitOutLocal(uint64_t indexStartId, uint64_t blockSize, uint64_t blockStart) {
+    __aicore__ inline void InitOutLocal(uint64_t indexStartId, uint64_t blockSize, uint64_t blockStart)
+    {
         if (this->accumulate == 0) {
             return;
         }
@@ -337,8 +349,9 @@ public:
     }
 
     template <typename IC> // IC为IT或CT，第一阶段为IT从valuesGm搬入数据，第二阶段为CT从cacheSpaceGm搬入数据
-    __aicore__ inline void ProcessBatchNums(uint64_t batchIndexStart, uint64_t nums, uint64_t blockSize, uint64_t blockStart,
-                                            GlobalTensor<IC> srcGm, bool needCast) {
+    __aicore__ inline void ProcessBatchNums(uint64_t batchIndexStart, uint64_t nums, uint64_t blockSize,
+                                            uint64_t blockStart, GlobalTensor<IC> srcGm, bool needCast)
+    {
         for (uint64_t i = 0; i < nums; i++) {
             // 1. 往valuesLocal后半段搬入一行
             uint64_t src = this->posIdxLocal.GetValue(batchIndexStart + i) * this->sliceSize + blockStart;
@@ -366,13 +379,16 @@ public:
         @param dst 搬运目的位置，单位为元素
         @param count 搬运数目，单位为元素
     */
-    __aicore__ inline void CopyInOut(uint64_t src, uint64_t dst, uint64_t count) {
+    __aicore__ inline void CopyInOut(uint64_t src, uint64_t dst, uint64_t count)
+    {
         CopyGm2Ub<IT>(this->outLocal[dst], this->outGm[src], count);
         PIPE_MTE2_S();
     }
 
     template <typename IC>
-    __aicore__ inline void CopyInValues(const uint64_t src, const uint64_t dst, const int64_t count, GlobalTensor<IC> srcGm) {
+    __aicore__ inline void CopyInValues(const uint64_t src, const uint64_t dst, const int64_t count,
+                                        GlobalTensor<IC> srcGm)
+    {
         auto dstTensor = this->valuesLocal.template ReinterpretCast<IC>();
         CopyGm2Ub<IC>(dstTensor[dst], srcGm[src], count);
         PIPE_MTE2_S();
@@ -383,7 +399,8 @@ public:
         @param src 由索引在indexLocal上的下标计算得来的valuesLocal搬运起始点
         @param dst 由索引值计算得来的目的地址起始点，单位是元素个数
     */
-    __aicore__ inline void AddToOut(uint64_t src, uint64_t dst, const LocalTensor<IT>& srcTensor, uint64_t blockSize) {
+    __aicore__ inline void AddToOut(uint64_t src, uint64_t dst, const LocalTensor<IT>& srcTensor, uint64_t blockSize)
+    {
         AddUb2Gm<IT>(this->outGm[dst], srcTensor[src], blockSize);
         PIPE_MTE3_S();
     }
@@ -393,26 +410,31 @@ public:
         @param src 由索引在indexLocal上的下标计算得来的valuesLocal搬运起始点
         @param dst 由索引值计算得来的目的地址起始点，单位是元素个数
     */
-    __aicore__ inline void CopyToOut(uint64_t src, uint64_t dst, const LocalTensor<IT>& srcTensor, uint64_t blockSize) {
+    __aicore__ inline void CopyToOut(uint64_t src, uint64_t dst, const LocalTensor<IT>& srcTensor, uint64_t blockSize)
+    {
         CopyUb2Gm<IT>(this->outGm[dst], srcTensor[src], blockSize);
     }
 
-    __aicore__ inline void CopyInIndices(uint64_t start, uint64_t size) {
+    __aicore__ inline void CopyInIndices(uint64_t start, uint64_t size)
+    {
         CopyGm2Ub<int32_t>(this->indexLocal, this->indexGm[start], size);
         PIPE_MTE2_S();
     }
 
-    __aicore__ inline void CopyInPosIdx(uint64_t start, uint64_t size) {
+    __aicore__ inline void CopyInPosIdx(uint64_t start, uint64_t size)
+    {
         CopyGm2Ub<int32_t>(this->posIdxLocal, this->posIdxGm[start], size);
         PIPE_MTE2_S();
     }
 
-    __aicore__ inline void AddToCache(uint64_t src, uint64_t dst, const LocalTensor<CT>& srcTensor, uint64_t blockSize) {
+    __aicore__ inline void AddToCache(uint64_t src, uint64_t dst, const LocalTensor<CT>& srcTensor, uint64_t blockSize)
+    {
         AddUb2Gm<CT>(this->cacheSpaceGm[dst], srcTensor[src], blockSize);
         PIPE_MTE3_S();
     }
 
-    __aicore__ inline void CopyToCache(uint64_t src, uint64_t dst, const LocalTensor<CT>& srcTensor, uint64_t blockSize) {
+    __aicore__ inline void CopyToCache(uint64_t src, uint64_t dst, const LocalTensor<CT>& srcTensor, uint64_t blockSize)
+    {
         CopyUb2Gm<CT>(this->cacheSpaceGm[dst], srcTensor[src], blockSize);
         PIPE_MTE3_S();
     }
@@ -430,11 +452,11 @@ protected:
     uint32_t sliceSizeAligned = 0;
 
     uint64_t coreStartId = 0; // 核在尾轴上的起始位置
-    uint64_t coreEndId = 0; // 核在位置上的截止位置
+    uint64_t coreEndId = 0;   // 核在位置上的截止位置
 
-    uint64_t frontBlocks = 0; // 整块数，再核上计算
+    uint64_t frontBlocks = 0;    // 整块数，再核上计算
     uint64_t frontBlockSize = 0; // 整块大小
-    uint64_t lastBlockSize = 0; // 尾块大小
+    uint64_t lastBlockSize = 0;  // 尾块大小
 
     bool castEnable = (sizeof(IT) != sizeof(CT));
     int32_t headIndexValue = -1;
@@ -454,18 +476,19 @@ protected:
     TBuf<TPosition::VECCALC> outUbBuf;
 };
 
-template<typename IT, typename CT>
+template <typename IT, typename CT>
 class ScatterDataInKernelOp : public ScatterDataBetweenKernelOp<IT, CT> {
 public:
-    __aicore__ inline void Init(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, 
-                                GM_ADDR values, GM_ADDR userWorkspace,
-                                const IndexPutWithSortTilingData* tilingData, TPipe* tpipe) {
+    __aicore__ inline void Init(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, GM_ADDR values,
+                                GM_ADDR userWorkspace, const IndexPutWithSortTilingData* tilingData, TPipe* tpipe)
+    {
         InitTilingData(tilingData, tpipe);
         this->InitLocalTensor(INDEX_UB_NUMS, TBUF_BLOCK_SIZE * BUFFER_NUM, TBUF_BLOCK_SIZE);
         InitGmTensor(out, linear_index, pos_idx, values, userWorkspace);
     }
 
-    __aicore__ inline void InitTilingData(const IndexPutWithSortTilingData* tilingData, TPipe* tpipe) {
+    __aicore__ inline void InitTilingData(const IndexPutWithSortTilingData* tilingData, TPipe* tpipe)
+    {
         this->pipe = tpipe;
         this->coreNums = tilingData->coreNums;
         this->sliceSize = tilingData->sliceSize;
@@ -479,14 +502,15 @@ public:
             this->coreStartIndex = GetBlockIdx() * tilingData->frontCoreIndicesNums;
             this->coreEndIndex = this->coreStartIndex + tilingData->frontCoreIndicesNums;
         } else {
-            this->coreStartIndex = tilingData->frontCoreNums * tilingData->frontCoreIndicesNums + 
-                  (GetBlockIdx() - tilingData->frontCoreNums) * tilingData->tailCoreIndicesNums;
+            this->coreStartIndex = tilingData->frontCoreNums * tilingData->frontCoreIndicesNums +
+                                   (GetBlockIdx() - tilingData->frontCoreNums) * tilingData->tailCoreIndicesNums;
             this->coreEndIndex = this->coreStartIndex + tilingData->tailCoreIndicesNums;
         }
     }
 
-    __aicore__ inline void InitGmTensor(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, 
-                                        GM_ADDR values, GM_ADDR userWorkspace) {
+    __aicore__ inline void InitGmTensor(GM_ADDR out, GM_ADDR linear_index, GM_ADDR pos_idx, GM_ADDR values,
+                                        GM_ADDR userWorkspace)
+    {
         ScatterDataBetweenKernelOp<IT, CT>::InitGmTensor(out, linear_index, pos_idx, values);
         this->syncSpaceGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(userWorkspace));
         uint32_t syncLength = this->coreNums * SYNC_SIZE;
@@ -494,7 +518,8 @@ public:
         InitWorkSpace();
     }
 
-    __aicore__ inline void InitWorkSpace() {
+    __aicore__ inline void InitWorkSpace()
+    {
         const uint64_t sizeSync = this->coreNums * SYNC_SIZE;
         Duplicate(this->indexLocal, (int32_t)0, sizeSync);
         PIPE_V_S();
@@ -520,7 +545,8 @@ public:
         SyncAll();
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         this->GetHeadTailIndexValue();
         // 尾轴切块
         for (uint64_t i = 0; i <= this->frontBlocks; i++) {
@@ -551,7 +577,8 @@ public:
     /**
         @brief 处理cacheSpaceGm上的数据，每个核需要处理自己的头部数据，和上一个核的尾部数据
     */
-    __aicore__ inline void ProcessCacheData(uint64_t blockSize, uint64_t blockStart) {
+    __aicore__ inline void ProcessCacheData(uint64_t blockSize, uint64_t blockStart)
+    {
         // 搬入所有核的头部、尾部索引值
         uint32_t validIndicesNums = this->CopyInCacheIndices();
         this->headIndexValue = -1;
@@ -595,7 +622,8 @@ public:
         最后使posIdxLocal上记录“values”在cacheSpaceGm上的位置，indexLocal记录要写入out的位置，并且indexLocal是有序的
         validIndicesNums记录有多少个索引。
     */
-    __aicore__ inline uint32_t CopyInCacheIndices() {
+    __aicore__ inline uint32_t CopyInCacheIndices()
+    {
         // 搬入所有核的首尾索引值
         uint32_t dst = INDEX_UB_NUMS / BUFFER_NUM;
         uint64_t size = this->coreNums * SYNC_SIZE;
@@ -612,14 +640,15 @@ public:
             validIndicesNums++;
             if (coreHeadIndexValue != coreTailIndexValue) {
                 this->indexLocal.SetValue(validIndicesNums, coreTailIndexValue);
-                this->posIdxLocal.SetValue(validIndicesNums, i * 2 + 1);// 2 is double location
+                this->posIdxLocal.SetValue(validIndicesNums, i * 2 + 1); // 2 is double location
                 validIndicesNums++;
             }
         }
         return validIndicesNums;
     }
 
-    __aicore__ inline void GetHeadTailIndexValue() {
+    __aicore__ inline void GetHeadTailIndexValue()
+    {
         this->CopyInIndices(this->coreStartIndex, 1);
         this->headIndexValue = this->indexLocal.GetValue(0);
         this->CopyInIndices(this->coreEndIndex - 1, 1);
@@ -629,8 +658,9 @@ public:
     /**
         @brief 核间同步相关信息写入syncGm
     */
-    __aicore__ inline void CopyOutSyncData() {
-        this->indexLocal.SetValue(0, 1); // 第一阶段完成标识
+    __aicore__ inline void CopyOutSyncData()
+    {
+        this->indexLocal.SetValue(0, 1);                    // 第一阶段完成标识
         this->indexLocal.SetValue(1, this->headIndexValue); // core首索引值
         this->indexLocal.SetValue(2, this->tailIndexValue); // core尾索引值
         PIPE_S_MTE3();
@@ -642,10 +672,11 @@ public:
     /**
         @brief 阻塞等待前一个核第一阶段计算任务的完成
     */
-    __aicore__ inline void PIPE_CORE_S() {
+    __aicore__ inline void PIPE_CORE_S()
+    {
         uint64_t frontCoreSrc = (GetBlockIdx() - 1) * SYNC_SIZE;
         if (GetBlockIdx() != 0) {
-            while(true) {
+            while (true) {
                 this->CopyInSyncData(frontCoreSrc);
                 if (this->indexLocal.GetValue(0) == 1) {
                     break;
@@ -654,12 +685,14 @@ public:
         }
     }
 
-    __aicore__ inline void CopyInSyncData(uint64_t src) {
+    __aicore__ inline void CopyInSyncData(uint64_t src)
+    {
         CopyGm2Ub<int32_t>(this->indexLocal, this->syncSpaceGm[src], 1);
         PIPE_MTE2_S();
     }
 
-    __aicore__ inline void GetFreeCore(uint64_t& coreId) {
+    __aicore__ inline void GetFreeCore(uint64_t& coreId)
+    {
         coreId += 1;
         if (coreId == this->coreNums) {
             coreId = 0;
@@ -671,5 +704,5 @@ protected:
     uint64_t coreStartIndex = 0;
     uint64_t coreEndIndex = 0; // [start, end) 核分到的索引范围
 };
-}
+} // namespace IndexPutWithSort
 #endif // INDEX_PUT_WITH_SORT_SCATTER_DATA

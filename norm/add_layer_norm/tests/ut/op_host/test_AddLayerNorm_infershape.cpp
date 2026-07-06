@@ -16,15 +16,9 @@
 
 class AddLayerNorm : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AddLayerNorm Proto Test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AddLayerNorm Proto Test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AddLayerNorm Proto Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AddLayerNorm Proto Test TearDown" << std::endl; }
 };
 
 TEST_F(AddLayerNorm, AddLayerNorm_infershape_case_0)

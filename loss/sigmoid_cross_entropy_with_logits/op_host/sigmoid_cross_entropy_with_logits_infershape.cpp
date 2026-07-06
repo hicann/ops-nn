@@ -26,8 +26,8 @@ static ge::graphStatus InferShapeForSigmoidCrossEntropyWithLogits(gert::InferSha
     OP_LOGD(context, "InferShapeForSigmoidCrossEntropyWithLogits begin.");
     ge::graphStatus ret = ge::GRAPH_FAILED;
     ret = Ops::Base::InferShape4Elewise(context);
-    OP_CHECK_IF(ret == ge::GRAPH_FAILED,
-                OP_LOGE(context, "InferShapeForSigmoidCrossEntropyWithLogits failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ret == ge::GRAPH_FAILED, OP_LOGE(context, "InferShapeForSigmoidCrossEntropyWithLogits failed."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "InferShapeForSigmoidCrossEntropyWithLogits end");
     return ret;
 }

@@ -12,7 +12,7 @@
  * \file rms_norm_dynamic_mx_quant.h
  * \brief
  */
- 
+
 #ifndef OP_API_INC_LEVEL0_RMS_NORM_DYNAMIC_MX_QUANT_H_
 #define OP_API_INC_LEVEL0_RMS_NORM_DYNAMIC_MX_QUANT_H_
 
@@ -22,9 +22,9 @@ namespace l0op {
 constexpr size_t RMS_NORM_DYNAMIC_MX_QUANT_OUT_NUM = 3;
 
 const std::array<aclTensor*, RMS_NORM_DYNAMIC_MX_QUANT_OUT_NUM> RmsNormDynamicMxQuant(
-    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon,
-    int64_t scaleAlg, char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut,
-    aclTensor* mxscaleOut, aclTensor* rstdOut, aclOpExecutor* executor);
+    const aclTensor* x, const aclTensor* gamma, const aclTensor* beta, double epsilon, int64_t scaleAlg,
+    char* roundMode, int64_t dstType, bool outputRstd, aclTensor* yOut, aclTensor* mxscaleOut, aclTensor* rstdOut,
+    aclOpExecutor* executor);
 } // namespace l0op
 
 #endif // OP_API_INC_LEVEL0_RMS_NORM_DYNAMIC_MX_QUANT_H_

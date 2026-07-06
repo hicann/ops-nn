@@ -35,6 +35,6 @@ inline void IAdvanceStepTilingData(uint8_t* tiling, AdvanceStepTilingDataTest* c
 }
 
 #define GET_TILING_DATA(tilingData, tilingPointer) \
-    AdvanceStepTilingDataTest tilingData;              \
+    AdvanceStepTilingDataTest tilingData;          \
     IAdvanceStepTilingData(tilingPointer, &tilingData)
 #endif

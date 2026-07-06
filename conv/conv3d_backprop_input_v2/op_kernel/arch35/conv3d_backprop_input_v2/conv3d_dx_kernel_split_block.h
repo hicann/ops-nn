@@ -19,17 +19,17 @@
 
 namespace AscendC {
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-    typename biasType, int biasFormat,
-    uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-    uint8_t b1Condition = TPL_GM_TO_L1,
-    bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
-class Conv3dDxKsBlock : public Conv3dDxOswBlock<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-    b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scaleType = uint64_t,
+          int scaleFormat = FORMAT_MAX>
+class Conv3dDxKsBlock : public Conv3dDxOswBlock<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat,
+                                                biasType, biasFormat, b2Condition, kernelSplitMode, groupMode,
+                                                b1Condition, enableC04Flag, scaleType, scaleFormat> {
 public:
-    __aicore__ inline Conv3dDxKsBlock() {};
+    __aicore__ inline Conv3dDxKsBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData,
-                                GM_ADDR bias = nullptr, GM_ADDR scale=nullptr)
+                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData,
+                                GM_ADDR bias = nullptr, GM_ADDR scale = nullptr)
     {
         if constexpr (kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
@@ -39,23 +39,23 @@ public:
 
         InitTilingData(tilingData);
         if (this->enableVecTrans_) {
-            this->filterGm_.SetGlobalBuffer((__gm__ filterType *)workSpace);
-            workSpace += static_cast<uint64_t>(this->tiling_->coutG) *
-                this->tiling_->dk * this->tiling_->hk * this->tiling_->wk *
-                (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) * sizeof(filterType); // 4 : 2的4次方
+            this->filterGm_.SetGlobalBuffer((__gm__ filterType*)workSpace);
+            workSpace += static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->dk * this->tiling_->hk *
+                         this->tiling_->wk * (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) *
+                         sizeof(filterType); // 4 : 2的4次方
         } else {
-            this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
+            this->filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);
         }
-        this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
-        this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
+        this->dedyGm_.SetGlobalBuffer((__gm__ dedyType*)dedy);
+        this->yGm_.SetGlobalBuffer((__gm__ yType*)y);
 
         if (unlikely(bias != nullptr)) {
             this->hasBias_ = true;
-            this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
+            this->biasGm_.SetGlobalBuffer((__gm__ biasType*)bias);
         }
 
         if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
+            this->scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
         }
         this->dedx_.Init(&(tilingData->conv3DDxTiling), this->hasBias_);
 
@@ -64,7 +64,8 @@ public:
 #endif
     }
 
-    __aicore__ inline void Process() {
+    __aicore__ inline void Process()
+    {
         if constexpr (kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
@@ -91,19 +92,20 @@ protected:
     {
         if constexpr (kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             if (this->kSUseWorkSpace_) {
-                this->dedx_.ctx.l0cOutWorkspace_.SetGlobalBuffer((__gm__ yType *)workSpace);
+                this->dedx_.ctx.l0cOutWorkspace_.SetGlobalBuffer((__gm__ yType*)workSpace);
             }
         }
     }
 
-    __aicore__ inline void CalBasicBlockCnt() {
+    __aicore__ inline void CalBasicBlockCnt()
+    {
         uint64_t kSCnt = static_cast<uint64_t>(this->tiling_->strideH);
         this->kSM_ = DivCeil(static_cast<uint64_t>(this->tiling_->hi), this->tiling_->strideH);
         if constexpr (kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             kSCnt = 1;
             this->kSM_ *= DivCeil(static_cast<uint64_t>(this->tiling_->wi), this->tiling_->strideW);
-        } else {	
-            this->kSM_ *= this->tiling_->wi;	
+        } else {
+            this->kSM_ *= this->tiling_->wi;
         }
         this->mCnt_ = DivCeil(this->kSM_, this->singleShapeM_);
         this->mCoreTail_ = this->kSM_ - (this->mCnt_ - 1) * this->singleShapeM_;
@@ -124,8 +126,8 @@ protected:
         this->coutGroupTail_ = k - (this->tiling_->group - 1) * this->singleShapeK_;
 
         // 记录基本块的位置
-        this->totalCnt_ = kSCnt * static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->group *
-            this->dinCnt_ * this->mCnt_ * this->nCnt_;
+        this->totalCnt_ = kSCnt * static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->group * this->dinCnt_ *
+                          this->mCnt_ * this->nCnt_;
 
         uint64_t blockNum = GetBlockNum();
         if (this->totalCnt_ < blockNum) {
@@ -138,7 +140,8 @@ protected:
         this->tailCnt_ = this->totalCnt_ - this->calRound_ * this->usedCoreNum_;
     }
 
-    __aicore__ inline void InitBasicBlockLoopDirect() {
+    __aicore__ inline void InitBasicBlockLoopDirect()
+    {
         // 1.Kernel>1时右矩阵格式转换Bound,有效带宽不到1T,先沿着N走位;Kerenl=1沿着窄的方向走位
         // 2.M方向尽可能按照滑窗叠加的方向来分基本块，优先复用D的滑窗OverLap, 其次时H滑窗在L1边界的叠加
         if (this->tiling_->dk > 1) {
@@ -152,7 +155,8 @@ protected:
         }
     }
 
-    __aicore__ inline void CalBasicBlockIdx(uint64_t basicBlockIdx) {
+    __aicore__ inline void CalBasicBlockIdx(uint64_t basicBlockIdx)
+    {
         uint64_t mnCnt = this->mCnt_ * this->nCnt_;
         uint64_t depthMNCnt = this->dinCnt_ * mnCnt;
         if constexpr (kernelSplitMode == TPL_SPLIT_KERNEL_H) {
@@ -185,8 +189,8 @@ protected:
         this->groupCoreIdx_ = 0;
     }
 
-    static __aicore__ inline int32_t CalcSubKernelBackPadUp(int32_t kernelSize, int32_t stride,
-        int32_t backPad, int32_t idx)
+    static __aicore__ inline int32_t CalcSubKernelBackPadUp(int32_t kernelSize, int32_t stride, int32_t backPad,
+                                                            int32_t idx)
     {
         int32_t subKernelSize = (kernelSize + stride - idx - 1) / stride;
         int32_t subKernelBackPadUpMax = subKernelSize - 1;
@@ -200,7 +204,8 @@ protected:
         return subKernelBackPadUp;
     }
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData) {
+    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
+    {
         this->tiling_ = &(tilingData->conv3DDxTiling);
         this->kSUseWorkSpace_ = tilingData->conv3DDxKSTiling.kSUseWorkSpace;
         this->dedx_.SetKernelSplitParams(tilingData->conv3DDxKSTiling.kSCoutFullLoad, this->kSUseWorkSpace_);
@@ -231,7 +236,7 @@ protected:
     {
         if (this->enableVecTrans_) {
             kernelSplitStrideB_ = this->tiling_->wk *
-                (((this->tiling_->cin + BLOCK_CUBE - 1) >> 4) << 4); // 4 : 2的4次方
+                                  (((this->tiling_->cin + BLOCK_CUBE - 1) >> 4) << 4); // 4 : 2的4次方
         } else if (this->filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
             kernelSplitStrideB_ = this->tiling_->wk * this->tiling_->cin;
         } else {
@@ -249,18 +254,19 @@ protected:
         }
     }
 
-    __aicore__ inline void SetIterateParams(uint64_t mCoreUse, uint32_t splitBaseHk,
-        uint32_t baseHkIter, uint32_t splitTailHk, uint32_t kernelIdx)
+    __aicore__ inline void SetIterateParams(uint64_t mCoreUse, uint32_t splitBaseHk, uint32_t baseHkIter,
+                                            uint32_t splitTailHk, uint32_t kernelIdx)
     {
         uint64_t nCoreUse = (this->nCoreIdx_ == (this->nCnt_ - 1)) ? this->nCoreTail_ : this->singleShapeN_;
         uint64_t dinCoreUse = (this->dCoreIdx_ == (this->dinCnt_ - 1)) ? this->dinCoreTail_ : this->singleShapeDin_;
         uint32_t curSplitHk = this->kSCoreIdx_ < baseHkIter ? splitBaseHk : splitTailHk;
-        int32_t curBackpropPadUp = CalcSubKernelBackPadUp(this->tiling_->hk, this->tiling_->strideH, this->tiling_->backpropPadUp, this->kSCoreIdx_);
+        int32_t curBackpropPadUp = CalcSubKernelBackPadUp(this->tiling_->hk, this->tiling_->strideH,
+                                                          this->tiling_->backpropPadUp, this->kSCoreIdx_);
 
         this->dedx_.SetSingleShapeParams(curSplitHk, curBackpropPadUp);
         this->dedx_.SetSingleShape(mCoreUse, this->singleShapeK_, nCoreUse, dinCoreUse);
         this->dedx_.SetStartIdx(this->dCoreIdx_ * this->singleShapeDin_, this->mCoreIdx_ * this->tiling_->singleCoreM,
-            this->nCoreIdx_ * this->tiling_->singleCoreCin, 0);
+                                this->nCoreIdx_ * this->tiling_->singleCoreCin, 0);
         this->CalBasicBlockOffset();
         CalcBlockKSOffset(kernelIdx);
         this->dedx_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
@@ -279,8 +285,8 @@ protected:
     {
         uint32_t splitBaseHk = DivCeil(this->tiling_->hk, this->tiling_->strideH);
         uint32_t splitTailHk = this->tiling_->hk / this->tiling_->strideH;
-        uint32_t baseHkIter = splitTailHk == splitBaseHk ?
-            this->tiling_->strideH : this->tiling_->hk - splitTailHk * this->tiling_->strideH;
+        uint32_t baseHkIter = splitTailHk == splitBaseHk ? this->tiling_->strideH :
+                                                           this->tiling_->hk - splitTailHk * this->tiling_->strideH;
         uint32_t kernelStartIdx = this->tiling_->padUp % this->tiling_->strideH;
         kernelStartIdx = kernelStartIdx == 0 ? 0 : this->tiling_->strideH - kernelStartIdx;
         uint32_t kSTailIdx = this->tiling_->hi - (this->tiling_->hi / this->tiling_->strideH) * this->tiling_->strideH;
@@ -299,7 +305,7 @@ protected:
 
             if (kSTailIdx != 0 && kernelIdx >= kSTailIdx) {
                 if (this->mCoreIdx_ >= this->kSTailMCnt_) {
-                    continue;   // 当切换子kernel后，mcnt可能会变小
+                    continue; // 当切换子kernel后，mcnt可能会变小
                 }
                 mCoreUse = (this->mCoreIdx_ == (this->kSTailMCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
             } else {
@@ -318,7 +324,7 @@ protected:
     __aicore__ inline void CalBasicBlock()
     {
         uint64_t blockIdx = GetAicBlockIdx();
-        if (blockIdx < this->tailCnt_) {     // 拖尾的部分依次分配到前面的核计算，这些核会多算一轮
+        if (blockIdx < this->tailCnt_) { // 拖尾的部分依次分配到前面的核计算，这些核会多算一轮
             ++this->calRound_;
         }
 
@@ -340,6 +346,6 @@ protected:
         }
     }
 };
-}
+} // namespace AscendC
 
 #endif // CONV3D_BACKPROP_INPUT_KERNEL_SPLIT_BLOCK_H

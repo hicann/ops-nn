@@ -1,12 +1,12 @@
- /**
-* Copyright (c) 2026 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file dequant_swiglu_quant_dynamic_not_full.h
@@ -18,9 +18,9 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #if ASC_DEVKIT_MAJOR >= 9
-    #include "basic_api/kernel_vec_intf.h"
+#include "basic_api/kernel_vec_intf.h"
 #else
-    #include "kernel_operator.h"
+#include "kernel_operator.h"
 #endif
 #include "dequant_swiglu_quant_common.h"
 #include "dequant_swiglu_quant_dynamic_not_full_vf.h"
@@ -28,14 +28,18 @@
 namespace DequantSwigluQuantV35Ops {
 using namespace AscendC;
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
 class DequantSwigluQuantDynamicNotFull {
 public:
     static constexpr bool hasActScale_ = IsSameType<ActiScaleType, float>::value;
     static constexpr bool hasQuantScale_ = IsSameType<QuantScaleType, float>::value;
-    static constexpr bool hasGroupIndex_ = IsSameType<GroupType, int64_t>::value || IsSameType<GroupType, int32_t>::value;
+    static constexpr bool hasGroupIndex_ = IsSameType<GroupType, int64_t>::value ||
+                                           IsSameType<GroupType, int32_t>::value;
     // bias标记 bias可支持float，float16，bf16，int32
-    static constexpr bool hasBiasIndex_ = IsSameType<BiasType, float>::value || IsSameType<BiasType, half>::value || IsSameType<BiasType, bfloat16_t>::value || IsSameType<BiasType, int32_t>::value;
+    static constexpr bool hasBiasIndex_ = IsSameType<BiasType, float>::value || IsSameType<BiasType, half>::value ||
+                                          IsSameType<BiasType, bfloat16_t>::value ||
+                                          IsSameType<BiasType, int32_t>::value;
     // bias数据类型为int32标记
     static constexpr bool ifBiasIntIndex_ = IsSameType<BiasType, int32_t>::value;
     // bias数据类型为float标记
@@ -64,17 +68,20 @@ public:
     static constexpr bool ifYHiFloat8Index_ = IsSameType<YType, hifloat8_t>::value;
 
     __aicore__ inline DequantSwigluQuantDynamicNotFull(TPipe* pipe) { pipe_ = pipe; };
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale,
-                                GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias,
+                                GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
                                 GM_ADDR workspace, const DequantSwigluQuantV35BaseTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void SetGlobalTensor(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale,
-                                        GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace);
-    __aicore__ inline void ParseTilingData(const DequantSwigluQuantV35BaseTilingData* tilingData);                   
-    __aicore__ inline void CopyIn(int64_t groupIndex, size_t rowIndex, uint64_t loop, uint32_t tileData, int64_t blockLength);
-    __aicore__ inline void CopyInV2(int64_t groupIndex, size_t rowIndex, uint64_t loop, uint32_t tileData, int64_t blockLength);
+    __aicore__ inline void SetGlobalTensor(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias,
+                                           GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR groupIndex, GM_ADDR y,
+                                           GM_ADDR scale, GM_ADDR workspace);
+    __aicore__ inline void ParseTilingData(const DequantSwigluQuantV35BaseTilingData* tilingData);
+    __aicore__ inline void CopyIn(int64_t groupIndex, size_t rowIndex, uint64_t loop, uint32_t tileData,
+                                  int64_t blockLength);
+    __aicore__ inline void CopyInV2(int64_t groupIndex, size_t rowIndex, uint64_t loop, uint32_t tileData,
+                                    int64_t blockLength);
     __aicore__ inline void ProcessSingleRow(int64_t groupIndex, size_t rowIndex);
     __aicore__ inline void PreProcess(uint32_t tileData);
     __aicore__ inline void PreProcessV2(uint32_t tileData);
@@ -123,7 +130,7 @@ protected:
     __local_mem__ float* xTempPtr_;
     LocalTensor<float> scaleLocal_;
     __local_mem__ float* scalePtr_;
-   
+
     uint32_t blockIdx_ = GetBlockIdx();
     // 处理一行需要的循环次数
     int64_t loopCount_ = 0;
@@ -164,23 +171,26 @@ protected:
     uint32_t biasAlignLength_ = 0;
 };
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-using DSQDynamicNotFull = DequantSwigluQuantDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>;
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+using DSQDynamicNotFull = DequantSwigluQuantDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType,
+                                                           YType>;
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::Init(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale,
-                                            GM_ADDR bias, GM_ADDR quantScale, GM_ADDR quantOffset,
-                                            GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale,
-                                            GM_ADDR workspace, const DequantSwigluQuantV35BaseTilingData* tilingData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::Init(
+    GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale, GM_ADDR quantOffset,
+    GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace,
+    const DequantSwigluQuantV35BaseTilingData* tilingData)
 {
     ParseTilingData(tilingData);
     SetGlobalTensor(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, workspace);
     pipe_->InitBuffer(xQueue_, DOUBLE_BUFFER, blockLength_ * 2 * sizeof(XType));
     pipe_->InitBuffer(weightScaleQueue_, 1, blockLength_ * 2 * sizeof(float));
-    pipe_->InitBuffer(activationScaleQueue_, DOUBLE_BUFFER,  BLOCK_ELEM_B32 * sizeof(float));
+    pipe_->InitBuffer(activationScaleQueue_, DOUBLE_BUFFER, BLOCK_ELEM_B32 * sizeof(float));
     pipe_->InitBuffer(quantScaleQueue_, 1, blockLength_ * sizeof(float));
-    pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER,  blockLength_ * sizeof(YType));
-    pipe_->InitBuffer(scaleQueue_, 1,  BLOCK_ELEM_B32 * sizeof(float));
+    pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER, blockLength_ * sizeof(YType));
+    pipe_->InitBuffer(scaleQueue_, 1, BLOCK_ELEM_B32 * sizeof(float));
     pipe_->InitBuffer(tmpBuffer_, blockLength_ * sizeof(float));
     // 如果有bias入参，则给bias进行地址申请
     if constexpr (hasBiasIndex_) {
@@ -189,10 +199,12 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     SetFloatOverflowModeForRegbase<YType>();
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::SetGlobalTensor(GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale,
-                                                        GM_ADDR bias, GM_ADDR quantScale, GM_ADDR quantOffset,
-                                                        GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::SetGlobalTensor(
+    GM_ADDR x, GM_ADDR weightScale, GM_ADDR activationScale, GM_ADDR bias, GM_ADDR quantScale, GM_ADDR quantOffset,
+    GM_ADDR groupIndex, GM_ADDR y, GM_ADDR scale, GM_ADDR workspace)
 {
     xGm_.SetGlobalBuffer((__gm__ XType*)x);
     weightScaleGm_.SetGlobalBuffer((__gm__ float*)weightScale);
@@ -211,8 +223,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     xTempGm_.SetGlobalBuffer((__gm__ float*)workspace, usedCoreNum_ * yLength_);
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::ParseTilingData(const DequantSwigluQuantV35BaseTilingData* tilingData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType,
+                                         YType>::ParseTilingData(const DequantSwigluQuantV35BaseTilingData* tilingData)
 {
     roundMode_ = tilingData->roundMode;
     loopCount_ = tilingData->loopTimesPerRow;
@@ -232,9 +246,11 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     gluBias_ = tilingData->gluBias;
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyIn(int64_t groupIdx, size_t rowIndex, uint64_t loop, uint32_t tileData, int64_t blockLength)
-{   // uint32_t tailData = 321;
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyIn(
+    int64_t groupIdx, size_t rowIndex, uint64_t loop, uint32_t tileData, int64_t blockLength)
+{ // uint32_t tailData = 321;
     int64_t xGmOffset = rowIndex * xLength_;
     // 激活左/右部分偏移，actRight是表示是否激活右半部分
     int64_t actOffset;
@@ -254,7 +270,7 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     dataCopyXParams.blockLen = tileData * sizeof(XType);
     dataCopyXParams.srcStride = 0;
     dataCopyXParams.dstStride = 0;
-    DataCopyPad(xLocal[0], xGm_[xGmOffset + actOffset], dataCopyXParams, padParams); // 激活部分
+    DataCopyPad(xLocal[0], xGm_[xGmOffset + actOffset], dataCopyXParams, padParams);              // 激活部分
     DataCopyPad(xLocal[xAlignLength_], xGm_[xGmOffset + gateOffset], dataCopyXParams, padParams); // 门控部分
     xQueue_.EnQue(xLocal);
     // copy_in: weight_scale(G, H)
@@ -265,8 +281,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         dataCopyWeightScaleParams.blockLen = tileData * sizeof(float);
         dataCopyWeightScaleParams.srcStride = 0;
         dataCopyWeightScaleParams.dstStride = 0;
-        DataCopyPad(weightScaleLocal[0], weightScaleGm_[groupIdx * xLength_ + actOffset], dataCopyWeightScaleParams, padParams); // 激活部分
-        DataCopyPad(weightScaleLocal[weightAlignLength_], weightScaleGm_[groupIdx * xLength_ + gateOffset], dataCopyWeightScaleParams, padParams); // 门控部分
+        DataCopyPad(weightScaleLocal[0], weightScaleGm_[groupIdx * xLength_ + actOffset], dataCopyWeightScaleParams,
+                    padParams); // 激活部分
+        DataCopyPad(weightScaleLocal[weightAlignLength_], weightScaleGm_[groupIdx * xLength_ + gateOffset],
+                    dataCopyWeightScaleParams, padParams); // 门控部分
         weightScaleQueue_.EnQue(weightScaleLocal);
     }
     // copy_in: activation_scale(BS,)
@@ -288,7 +306,8 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         dataCopyQuantScaleParams.blockLen = tileData * sizeof(QuantScaleType);
         dataCopyQuantScaleParams.srcStride = 0;
         dataCopyQuantScaleParams.dstStride = 0;
-        DataCopyPad(quantScaleLocal[0], quantScaleGm_[groupIdx * yLength_ + loop * blockLength], dataCopyQuantScaleParams, padParams);
+        DataCopyPad(quantScaleLocal[0], quantScaleGm_[groupIdx * yLength_ + loop * blockLength],
+                    dataCopyQuantScaleParams, padParams);
         quantScaleQueue_.EnQue(quantScaleLocal);
     }
     // copy_in: bias(1, 2H)->(1, H), (1, H)
@@ -300,12 +319,14 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         dataCopyBiasParams.srcStride = 0;
         dataCopyBiasParams.dstStride = 0;
         DataCopyPad(biasLocal[0], biasGm_[groupIdx * xLength_ + actOffset], dataCopyBiasParams, padParams);
-        DataCopyPad(biasLocal[biasAlignLength_], biasGm_[groupIdx * xLength_ + gateOffset], dataCopyBiasParams, padParams);
+        DataCopyPad(biasLocal[biasAlignLength_], biasGm_[groupIdx * xLength_ + gateOffset], dataCopyBiasParams,
+                    padParams);
         biasQueue_.EnQue(biasLocal);
-    }  
+    }
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
 __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::Process()
 {
     if (blockIdx_ >= usedCoreNum_) {
@@ -327,7 +348,7 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         } else {
             realDimx = static_cast<int64_t>(groupIndexGm_(groupIndex));
         }
-        
+
         for (size_t rowIndex = blockIdx_; rowIndex < realDimx && rowOffset + rowIndex < row_; rowIndex += coreNum_) {
             ProcessSingleRow(groupIndex, rowOffset + rowIndex);
         }
@@ -335,8 +356,11 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     }
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::ProcessSingleRow(int64_t groupIdx, size_t rowIndex)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::ProcessSingleRow(int64_t groupIdx,
+                                                                                                      size_t rowIndex)
 {
     xTempLocal_ = tmpBuffer_.Get<float>();
     xTempPtr_ = (__local_mem__ float*)xTempLocal_.GetPhyAddr();
@@ -395,8 +419,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     scaleQueue_.FreeTensor(scaleLocal_);
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::PreProcess(uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::PreProcess(
+    uint32_t tileData)
 {
     LocalTensor<XType> xLocal;
     LocalTensor<float> weightScaleLocal;
@@ -428,10 +454,11 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         bias2Ptr = (__local_mem__ BiasType*)biasLocal.GetPhyAddr(biasAlignLength_);
     }
 
-    VF_CALL<DequantAndSwiGlu<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
-                            ifBiasIntIndex_, hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_, ifBiasBfloat16Index_>>(x1Ptr, x2Ptr,
-                            wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xTempPtr_, tileData);
-    
+    VF_CALL<
+        DequantAndSwiGlu<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_, ifBiasIntIndex_,
+                         hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_, ifBiasBfloat16Index_>>(
+        x1Ptr, x2Ptr, wScale1Ptr, wScale2Ptr, aScalePtr, bias1Ptr, bias2Ptr, xTempPtr_, tileData);
+
     xQueue_.FreeTensor(xLocal);
     if constexpr (ifXIntIndex_) {
         weightScaleQueue_.FreeTensor(weightScaleLocal);
@@ -444,8 +471,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     }
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::UpdateReduceMax(uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::UpdateReduceMax(uint32_t tileData)
 {
     LocalTensor<float> quantScaleLocal;
     if constexpr (hasQuantScale_) {
@@ -462,8 +491,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     }
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CalculateResult(uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CalculateResult(uint32_t tileData)
 {
     LocalTensor<YType> yLocal = yQueue_.AllocTensor<YType>();
     LocalTensor<uint8_t> yFp4Local = yLocal.template ReinterpretCast<uint8_t>();
@@ -473,12 +504,16 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     __local_mem__ YType* yPtr = (__local_mem__ YType*)yLocal.GetPhyAddr();
     __local_mem__ uint8_t* yFp4Ptr = (__local_mem__ uint8_t*)yFp4Local.GetPhyAddr();
     __local_mem__ float* scalePtr = (__local_mem__ float*)scaleLocal_.GetPhyAddr();
-    VF_CALL<QuantAndCast<YType, ifYFloat8e4m3Index_, ifYFloat8e5m2Index_, ifYFloat4e2m1Index_, ifYFloat4e1m2Index_, ifYHiFloat8Index_>>(xTempPtr_, yPtr, yFp4Ptr, scalePtr, roundMode_, tileData);
+    VF_CALL<QuantAndCast<YType, ifYFloat8e4m3Index_, ifYFloat8e5m2Index_, ifYFloat4e2m1Index_, ifYFloat4e1m2Index_,
+                         ifYHiFloat8Index_>>(xTempPtr_, yPtr, yFp4Ptr, scalePtr, roundMode_, tileData);
     yQueue_.EnQue<YType>(yLocal);
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyInForXTemp(uint64_t gmOffset, uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyInForXTemp(uint64_t gmOffset,
+                                                                                                    uint32_t tileData)
 {
     DataCopyPadExtParams<float> padParams{true, 0, 0, static_cast<float>(0)};
     DataCopyExtParams dataCopyParam;
@@ -489,8 +524,11 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     DataCopyPad(xTempLocal_, xTempGm_[gmOffset], dataCopyParam, padParams);
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyOutForXTemp(uint64_t gmOffset, uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyOutForXTemp(uint64_t gmOffset,
+                                                                                                     uint32_t tileData)
 {
     DataCopyExtParams dataCopyParam;
     dataCopyParam.blockCount = 1;
@@ -500,8 +538,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     DataCopyPad(xTempGm_[gmOffset], xTempLocal_, dataCopyParam);
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::SetAlignLength(uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::SetAlignLength(uint32_t tileData)
 {
     if constexpr (ifXBf16Index_ || ifXFloat16Index_) {
         uint32_t BLOCK_ELEM_B32_BF = BLOCK_SIZE / sizeof(XType);
@@ -514,8 +554,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     biasAlignLength_ = CeilDivision(tileData, blockElem) * blockElem;
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline float DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::GetScalarMaxNum()
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline float
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::GetScalarMaxNum()
 {
     //获取指定输出类型对应的最大值
     if constexpr (ifYFloat8e4m3Index_) {
@@ -533,12 +575,14 @@ __aicore__ inline float DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTy
     if constexpr (ifYHiFloat8Index_) {
         return 32768.0;
     }
-    
+
     return 127.0;
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyOutScale(uint64_t gmOffset)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyOutScale(uint64_t gmOffset)
 {
     scaleQueue_.EnQue<float>(scaleLocal_);
     scaleLocal_ = scaleQueue_.DeQue<float>();
@@ -550,8 +594,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     DataCopyPad(scaleGm_[gmOffset], scaleLocal_[0], dataCopyScaleParams);
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyOutY(uint64_t gmOffset, uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyOutY(
+    uint64_t gmOffset, uint32_t tileData)
 {
     LocalTensor<YType> yLocal = yQueue_.DeQue<YType>();
     LocalTensor<uint8_t> yFp4Local = yLocal.template ReinterpretCast<uint8_t>();
@@ -574,8 +620,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     }
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyInV2(int64_t groupIdx, size_t rowIndex, uint64_t loop, uint32_t tileData, int64_t blockLength)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::CopyInV2(
+    int64_t groupIdx, size_t rowIndex, uint64_t loop, uint32_t tileData, int64_t blockLength)
 {
     int64_t xGmOffset = rowIndex * xLength_;
     int64_t ubOffset = 2 * loop * blockLength;
@@ -597,7 +645,8 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         dataCopyWeightScaleParams.blockLen = 2 * tileData * sizeof(float);
         dataCopyWeightScaleParams.srcStride = 0;
         dataCopyWeightScaleParams.dstStride = 0;
-        DataCopyPad(weightScaleLocal[0], weightScaleGm_[groupIdx * xLength_ + ubOffset], dataCopyWeightScaleParams, padParams); // 激活部分
+        DataCopyPad(weightScaleLocal[0], weightScaleGm_[groupIdx * xLength_ + ubOffset], dataCopyWeightScaleParams,
+                    padParams); // 激活部分
         weightScaleQueue_.EnQue(weightScaleLocal);
     }
     // copy_in: activation_scale(BS,)
@@ -619,7 +668,8 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         dataCopyQuantScaleParams.blockLen = tileData * sizeof(QuantScaleType);
         dataCopyQuantScaleParams.srcStride = 0;
         dataCopyQuantScaleParams.dstStride = 0;
-        DataCopyPad(quantScaleLocal[0], quantScaleGm_[groupIdx * yLength_ + loop * blockLength], dataCopyQuantScaleParams, padParams);
+        DataCopyPad(quantScaleLocal[0], quantScaleGm_[groupIdx * yLength_ + loop * blockLength],
+                    dataCopyQuantScaleParams, padParams);
         quantScaleQueue_.EnQue(quantScaleLocal);
     }
     // copy_in: bias(1, 2H)->(1, H), (1, H)
@@ -632,11 +682,13 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         dataCopyBiasParams.dstStride = 0;
         DataCopyPad(biasLocal[0], biasGm_[groupIdx * xLength_ + ubOffset], dataCopyBiasParams, padParams);
         biasQueue_.EnQue(biasLocal);
-    }  
+    }
 }
 
-template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
-__aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::PreProcessV2(uint32_t tileData)
+template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType,
+          typename YType>
+__aicore__ inline void
+DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::PreProcessV2(uint32_t tileData)
 {
     LocalTensor<XType> xLocal;
     LocalTensor<float> weightScaleLocal;
@@ -665,9 +717,10 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     }
 
     VF_CALL<DequantAndSwiGluV2<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,
-                            ifBiasIntIndex_, hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_, ifBiasBfloat16Index_>>(xPtr,
-                            wScalePtr, aScalePtr, biasPtr, clampLimit_, gluAlpha_, gluBias_, xTempPtr_, tileData);
-    
+                               ifBiasIntIndex_, hasActScale_, ifBiasFloatIndex_, ifBiasFloat16Index_,
+                               ifBiasBfloat16Index_>>(xPtr, wScalePtr, aScalePtr, biasPtr, clampLimit_, gluAlpha_,
+                                                      gluBias_, xTempPtr_, tileData);
+
     xQueue_.FreeTensor(xLocal);
     if constexpr (ifXIntIndex_) {
         weightScaleQueue_.FreeTensor(weightScaleLocal);
@@ -679,5 +732,5 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
         biasQueue_.FreeTensor(biasLocal);
     }
 }
-}  // namespace DequantSwigluQuantV35Ops
-#endif  // DEQUANT_SWIGLU_QUANT_H
+} // namespace DequantSwigluQuantV35Ops
+#endif // DEQUANT_SWIGLU_QUANT_H

@@ -42,8 +42,8 @@ private:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
 
-    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData* tilingData_ =
-        context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData>();
+    MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData*
+        tilingData_ = context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData>();
 
     int64_t inputBytes_ = 0;
     int64_t indexBytes_ = 0;

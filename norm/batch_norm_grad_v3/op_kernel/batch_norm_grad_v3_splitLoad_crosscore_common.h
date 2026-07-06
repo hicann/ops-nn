@@ -25,8 +25,7 @@ using namespace AscendC;
 template <typename T1, typename T2, typename T3, BNGV3SplitMode SPLIT_MODE = BNGV3SplitMode::R0_SPLIT_MODE>
 class BatchNormGradV3SplitLoadCrossCoreBase : public BatchNormGradV3SplitLoadBase<T1, T2, T3, SPLIT_MODE> {
 public:
-    __aicore__ inline BatchNormGradV3SplitLoadCrossCoreBase()
-    {}
+    __aicore__ inline BatchNormGradV3SplitLoadCrossCoreBase() {}
 
     __aicore__ inline void initSplitLoadCrossCoreTiling(
         const BatchNormGradV3SplitLoadCrossCoreTilingData* crossCoreTilingData_)

@@ -275,9 +275,10 @@ const aclTensor* KthvalueCalculate(const aclTensor* x, int64_t k, int64_t dim, a
     return l0op::GatherV2(x, positiveDim, indexTensor, executor);
 }
 
-aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim,
-                                          bool keepdim, aclTensor *valuesOut,
-                                          aclTensor *indicesOut, uint64_t *workspaceSize, aclOpExecutor **executor) {
+aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t dim, bool keepdim,
+                                          aclTensor* valuesOut, aclTensor* indicesOut, uint64_t* workspaceSize,
+                                          aclOpExecutor** executor)
+{
     L2_DFX_PHASE_1(aclnnKthvalue, DFX_IN(self, k, dim, keepdim), DFX_OUT(valuesOut, indicesOut));
 
     // 创建OpExecutor

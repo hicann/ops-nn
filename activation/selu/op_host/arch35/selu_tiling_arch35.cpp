@@ -40,19 +40,19 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
-using Ops::Base::GetUbBlockSize;
+using Ops::Base::FloorDiv;
 using Ops::Base::GetAivCoreNum;
+using Ops::Base::GetUbBlockSize;
 using Ops::Base::GetUbSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
-constexpr int64_t BLOCK_ALIGN_BYTES = 32;          // UB 32 字节对齐
-constexpr int64_t FP32_BYTE_SIZE = 4;              // cast-to-fp32 中间计算字节宽
+constexpr int64_t BLOCK_ALIGN_BYTES = 32; // UB 32 字节对齐
+constexpr int64_t FP32_BYTE_SIZE = 4;     // cast-to-fp32 中间计算字节宽
 constexpr int64_t FP16_BYTE_SIZE = 2;
 constexpr int64_t INT8_BYTE_SIZE = 1;
-constexpr int64_t IO_BUF_NUM = 2;                  // inputQueue + outputQueue
-constexpr int64_t TMP_BUF_NUM = 2;                 // tmpBuf1 + tmpBuf2
+constexpr int64_t IO_BUF_NUM = 2;  // inputQueue + outputQueue
+constexpr int64_t TMP_BUF_NUM = 2; // tmpBuf1 + tmpBuf2
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -64,8 +64,7 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements,
-                                    ge::DataType& dataType)
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements, ge::DataType& dataType)
 {
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
@@ -75,9 +74,8 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& total
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
-    const std::set<ge::DataType> supportedDtype = {
-        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8
-    };
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32,
+                                                   ge::DT_INT8};
     if (supportedDtype.count(dataType) == 0) {
         OP_LOGE(context, "Selu: unsupported dtype %d", static_cast<int>(dataType));
         return ge::GRAPH_FAILED;
@@ -108,9 +106,8 @@ static void SetEmptyTensorTiling(gert::TilingContext* context, SeluTilingData* t
 // dtype 推导与 UB 切分在同一函数内，确保 typeSize ∈ {1,2,4} 的常量约束对所有除法可见。
 // Buffer layout per element: inputQueue + outputQueue (typeSize) + tmpBuf1 + tmpBuf2 (computeTypeSize=4)
 //   ubDivisor = (2*typeSize + 2*computeTypeSize) / typeSize
-static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingData* tiling,
-                                      ge::DataType dataType, int64_t totalElements,
-                                      uint64_t ubSize, int64_t coreNum)
+static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingData* tiling, ge::DataType dataType,
+                                     int64_t totalElements, uint64_t ubSize, int64_t coreNum)
 {
     // 用户约定：所有非 fp32 dtype 中间都走 cast-to-fp32，computeTypeSize 固定为 4
     int64_t typeSize = FP32_BYTE_SIZE;
@@ -137,9 +134,7 @@ static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingDat
     blockFactor = ((blockFactor + ubBlockSize - 1) / ubBlockSize) * ubBlockSize;
     int64_t usedCoreNum = CeilDiv(totalElements, blockFactor);
     int64_t ubDivisor = (IO_BUF_NUM * typeSize + TMP_BUF_NUM * computeTypeSize) / typeSize;
-    int64_t ubFactor = FloorAlign(
-        FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor),
-        ubBlockSize);
+    int64_t ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor), ubBlockSize);
     OP_CHECK_IF(ubFactor <= 0, OP_LOGE(context, "Selu: ubFactor is %ld, UB too small", ubFactor),
                 return ge::GRAPH_FAILED);
 
@@ -162,8 +157,8 @@ static ge::graphStatus SeluTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     SeluTilingData* tiling = context->GetTilingData<SeluTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);

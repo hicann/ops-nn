@@ -40,27 +40,20 @@ struct AvgPool3dGradCompileInfo {
 
 class AvgPool3DBackwardTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "AvgPool3DBackwardTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "AvgPool3DBackwardTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AvgPool3DBackwardTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AvgPool3DBackwardTiling TearDown" << std::endl; }
 };
 
 template <typename T>
-void SetConstInput(
-    size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
-    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
+void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_t data_size,
+                   std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& const_tensors)
 {
-    std::unique_ptr<uint8_t[]> input_tensor_holder =
-        std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
+    std::unique_ptr<uint8_t[]> input_tensor_holder = std::unique_ptr<uint8_t[]>(
+        new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
-    gert::Tensor tensor(
-        {{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype, nullptr);
+    gert::Tensor tensor({{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype,
+                        nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -99,18 +92,18 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_0)
     // compile info
     optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -132,14 +125,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_0)
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -185,18 +177,18 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_1)
     // compile info
     optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -218,14 +210,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_1)
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -272,18 +263,18 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_3)
     // compile info
     optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -306,14 +297,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_3)
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4, 4})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NDHWC")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -360,18 +350,18 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_4)
     // compile info
     optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -393,14 +383,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_4)
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCDHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCDHW")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -447,18 +436,18 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_5)
     // compile info
     optiling::avgPool3DTilingCompileInfo::AvgPool3DGradCubeCompileInfo compile_info;
     // tilingParseFunc simulate
-    auto kernel_holder =
-        gert::KernelRunContextFaker()
-            .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-            .Outputs({&compile_info})
-            .Build();
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -480,14 +469,13 @@ TEST_F(AvgPool3DBackwardTiling, avgpool3d_backward_tiling_5)
                       .InputShapes({&input_0, &input_1})
                       .OutputShapes({&output_shape})
                       .CompileInfo(&compile_info)
-                      .NodeAttrs(
-                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
-                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
-                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                           {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                           {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCDHW")}})
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 2})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"count_include_pad", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"divisor_override", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<string>("NCDHW")}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)

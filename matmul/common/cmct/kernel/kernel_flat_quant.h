@@ -183,8 +183,8 @@ public:
                     }
                 }
                 int64_t offsetA = batchOffset * m_ * k_;
-                blockMmadOp.template operator()<AscendC::LocalTensor<AType>>(
-                    ubLocal, aGlobal_[offsetA], p1Global_, p2Global_, blockShape, tileIdx < blockNum);
+                blockMmadOp.template operator()<AscendC::LocalTensor<AType>>(ubLocal, aGlobal_[offsetA], p1Global_,
+                                                                             p2Global_, blockShape, tileIdx < blockNum);
                 // skip last round
                 if (roundIdx % 2 == 0) {
                     CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(SYNC_AIC_AIV_FLAG);
@@ -260,10 +260,7 @@ public:
         return params;
     }
 
-    __aicore__ inline void operator()(const Params& params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(const Params& params) { Run(params); }
 };
 
 } // namespace Kernel

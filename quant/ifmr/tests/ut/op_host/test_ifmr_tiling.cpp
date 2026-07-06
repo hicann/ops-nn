@@ -9,7 +9,7 @@
  */
 
 #include <gtest/gtest.h>
- 
+
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -32,15 +32,11 @@ struct IFMRCompileInfo {
 
 class IFMRTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase() {
-        std::cout << "IFMRTilingTest SetUp" << std::endl;
-    }
- 
-    static void TearDownTestCase() {
-        std::cout << "IFMRTilingTest TearDown" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "IFMRTilingTest SetUp" << std::endl; }
+
+    static void TearDownTestCase() { std::cout << "IFMRTilingTest TearDown" << std::endl; }
 };
- 
+
 struct IFMRAttrs {
     float minPercentile;
     float maxPercentile;
@@ -49,22 +45,23 @@ struct IFMRAttrs {
     bool withOffset;
     uint32_t quantBits;
 };
- 
+
 ge::graphStatus IFMRTestCase(vector<vector<int64_t>> input_shapes, vector<vector<int64_t>> output_shapes,
-                  IFMRAttrs attrs, ge::DataType dataType, IfmrTilingData &tilingParam) {
+                             IFMRAttrs attrs, ge::DataType dataType, IfmrTilingData& tilingParam)
+{
     std::string opType("IFMR");
     if (gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()) == nullptr) {
         std::cout << "gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()) is nullptr" << std::endl;
         return ge::GRAPH_FAILED;
     }
- 
+
     gert::StorageShape data = {{input_shapes[0][0]}, {input_shapes[0][0]}};
     gert::StorageShape dataMin = {{input_shapes[1][0]}, {input_shapes[1][0]}};
     gert::StorageShape dataMax = {{input_shapes[2][0]}, {input_shapes[2][0]}};
     gert::StorageShape cumsum = {{input_shapes[3][0]}, {input_shapes[3][0]}};
     gert::StorageShape scale = {{output_shapes[0][0]}, {output_shapes[0][0]}};
     gert::StorageShape offset = {{output_shapes[0][0]}, {output_shapes[0][0]}};
- 
+
     if (gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()) == nullptr) {
         std::cout << "gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()) is nullptr" << std::endl;
         return ge::GRAPH_FAILED;
@@ -94,56 +91,59 @@ ge::graphStatus IFMRTestCase(vector<vector<int64_t>> input_shapes, vector<vector
     platformInfo.Init();
     auto tilingDataPtr = gert::TilingData::CreateCap(4096);
     auto workspaceSizeHoler = gert::ContinuousVector::Create<size_t>(4096);
-    auto wsSize = reinterpret_cast<gert::ContinuousVector *>(workspaceSizeHoler.get());
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHoler.get());
     if (tilingDataPtr == nullptr) {
         std::cout << "tilingDataPtr is nullptr" << std::endl;
         return ge::GRAPH_FAILED;
     }
- 
+
     std::vector<void*> inputShapeRef = {&data, &dataMin, &dataMax, &cumsum};
     std::vector<void*> outputShapesRef = {&scale, &offset};
- 
+
     // compile info
     IFMRCompileInfo compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder = gert::KernelRunContextFaker()
-                      .KernelIONum(2, 1)
-                      .Inputs({const_cast<char *>(compile_info_string.c_str()), reinterpret_cast<void *>(&platformInfo)})
-                      .Outputs({&compileInfo})
-                      .Build();
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                     reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
     if (kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init() == false) {
-        std::cout << "kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init() is nullptr" << std::endl;
+        std::cout << "kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init() is nullptr"
+                  << std::endl;
         return ge::GRAPH_FAILED;
     }
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                           intrinsics);
 
-    auto holder = gert::TilingContextFaker().SetOpType(opType)
-                              .NodeIoNum(4, 2)
-                              .IrInstanceNum({1, 1, 1, 1})
-                              .InputShapes(inputShapeRef)
-                              .OutputShapes(outputShapesRef)
-                              .CompileInfo(&compileInfo)
-                              .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-                              .NodeInputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(1, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeAttrs({
-                                {"min_percentile", Ops::NN::AnyValue::CreateFrom<float>(attrs.minPercentile)},
-                                {"max_percentile", Ops::NN::AnyValue::CreateFrom<float>(attrs.maxPercentile)},
-                                {"search_range", Ops::NN::AnyValue::CreateFrom<std::vector<float>>(attrs.searchRange)},
-                                {"search_step", Ops::NN::AnyValue::CreateFrom<float>(attrs.searchStep)},
-                                {"with_offset", Ops::NN::AnyValue::CreateFrom<bool>(attrs.withOffset)},
-                                {"quant_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(attrs.quantBits)}
-                                })
-                              .TilingData(tilingDataPtr.get())
-                              .Workspace(wsSize)
-                              .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(opType)
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes(inputShapeRef)
+                      .OutputShapes(outputShapesRef)
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs(
+                          {{"min_percentile", Ops::NN::AnyValue::CreateFrom<float>(attrs.minPercentile)},
+                           {"max_percentile", Ops::NN::AnyValue::CreateFrom<float>(attrs.maxPercentile)},
+                           {"search_range", Ops::NN::AnyValue::CreateFrom<std::vector<float>>(attrs.searchRange)},
+                           {"search_step", Ops::NN::AnyValue::CreateFrom<float>(attrs.searchStep)},
+                           {"with_offset", Ops::NN::AnyValue::CreateFrom<bool>(attrs.withOffset)},
+                           {"quant_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(attrs.quantBits)}})
+                      .TilingData(tilingDataPtr.get())
+                      .Workspace(wsSize)
+                      .Build();
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     if (tilingContext->GetPlatformInfo() == nullptr) {
         std::cout << "tilingContext->GetPlatformInfo() is nullptr" << std::endl;
@@ -159,8 +159,9 @@ ge::graphStatus IFMRTestCase(vector<vector<int64_t>> input_shapes, vector<vector
     tilingParam = *buf;
     return ret;
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_0) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_0)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -171,12 +172,12 @@ TEST_F(IFMRTilingTest, run_IFMR_case_0) {
     attrs.withOffset = true;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
-    
+
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
     EXPECT_EQ(attrs.maxPercentile, tilingdata.maxPercentile);
     EXPECT_EQ(attrs.searchRange[0], tilingdata.searchRange[0]);
@@ -185,8 +186,9 @@ TEST_F(IFMRTilingTest, run_IFMR_case_0) {
     EXPECT_EQ((uint32_t)attrs.withOffset, tilingdata.withOffset);
     EXPECT_EQ(attrs.quantBits, tilingdata.quantBits);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_1) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_1)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -197,12 +199,12 @@ TEST_F(IFMRTilingTest, run_IFMR_case_1) {
     attrs.withOffset = true;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT16;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
-    
+
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
     EXPECT_EQ(attrs.maxPercentile, tilingdata.maxPercentile);
     EXPECT_EQ(attrs.searchRange[0], tilingdata.searchRange[0]);
@@ -211,8 +213,9 @@ TEST_F(IFMRTilingTest, run_IFMR_case_1) {
     EXPECT_EQ((uint32_t)attrs.withOffset, tilingdata.withOffset);
     EXPECT_EQ(attrs.quantBits, tilingdata.quantBits);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_2) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_2)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -223,12 +226,12 @@ TEST_F(IFMRTilingTest, run_IFMR_case_2) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT16;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
-    
+
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
     EXPECT_EQ(attrs.maxPercentile, tilingdata.maxPercentile);
     EXPECT_EQ(attrs.searchRange[0], tilingdata.searchRange[0]);
@@ -237,8 +240,9 @@ TEST_F(IFMRTilingTest, run_IFMR_case_2) {
     EXPECT_EQ((uint32_t)attrs.withOffset, tilingdata.withOffset);
     EXPECT_EQ(attrs.quantBits, tilingdata.quantBits);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_3) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_3)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -249,12 +253,12 @@ TEST_F(IFMRTilingTest, run_IFMR_case_3) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
-    
+
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
     EXPECT_EQ(attrs.maxPercentile, tilingdata.maxPercentile);
     EXPECT_EQ(attrs.searchRange[0], tilingdata.searchRange[0]);
@@ -263,8 +267,9 @@ TEST_F(IFMRTilingTest, run_IFMR_case_3) {
     EXPECT_EQ((uint32_t)attrs.withOffset, tilingdata.withOffset);
     EXPECT_EQ(attrs.quantBits, tilingdata.quantBits);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_01) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_01)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -275,14 +280,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_01) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_02) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_02)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -293,14 +299,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_02) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_01) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_01)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -311,14 +318,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_01) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_02) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_02)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -329,14 +337,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_02) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_01) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_01)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -347,14 +356,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_01) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_02) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_02)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -365,14 +375,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_02) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchStep_01) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchStep_01)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -383,14 +394,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchStep_01) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_quantBits_01) {
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_quantBits_01)
+{
     vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -401,15 +413,15 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_quantBits_01) {
     attrs.withOffset = false;
     attrs.quantBits = 9;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }
 
- 
-TEST_F(IFMRTilingTest, run_IFMR_case_invalid_data_length) {
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_data_length)
+{
     vector<vector<int64_t>> input_shapes = {{0}, {0}, {0}, {0}};
     vector<vector<int64_t>> output_shapes = {{1}, {1}};
     IFMRAttrs attrs;
@@ -420,9 +432,9 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_data_length) {
     attrs.withOffset = false;
     attrs.quantBits = 8;
     ge::DataType dataType = ge::DT_FLOAT;
-    
+
     IfmrTilingData tilingdata;
-    
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
 }

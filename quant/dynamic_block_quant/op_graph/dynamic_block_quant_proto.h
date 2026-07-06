@@ -46,7 +46,8 @@ namespace ge {
 
 * @par Outputs:
 - y: Quantized tensor with same shape as input x. Data type depends on dst_type.
-- scale: Scale tensor of type float. Shape is [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)] or [B, ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)].
+- scale: Scale tensor of type float. Shape is [ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)] or [B,
+ceil(x.rows/row_block_size), ceil(x.cols/col_block_size)].
 
 * @par Third-party framework compatibility:
 * Custom operator with no direct mapping in Caffe/ONNX/TensorFlow/PyTorch.

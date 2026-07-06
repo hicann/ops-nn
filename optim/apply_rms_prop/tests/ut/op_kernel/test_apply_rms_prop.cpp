@@ -73,7 +73,7 @@ static inline uint16_t Float2Half(float f)
     uint32_t x;
     std::memcpy(&x, &f, sizeof(x));
     uint32_t sign = (x >> 31) & 0x1;
-    int32_t  exp  = ((x >> 23) & 0xff) - 127 + 15;
+    int32_t exp = ((x >> 23) & 0xff) - 127 + 15;
     uint32_t mant = x & 0x7fffff;
     uint16_t h;
     if (exp <= 0) {
@@ -88,7 +88,7 @@ static inline uint16_t Float2Half(float f)
         uint16_t mantH = static_cast<uint16_t>(mant >> 13);
         if (round > 0x1000 || (round == 0x1000 && (mantH & 0x1))) {
             mantH += 1;
-            if (mantH == 0x400) {  // mantissa overflow into exp
+            if (mantH == 0x400) { // mantissa overflow into exp
                 mantH = 0;
                 exp += 1;
                 if (exp >= 0x1f) {
@@ -150,14 +150,8 @@ static void FillArray(uint8_t* gm, size_t n, float value)
 
 class apply_rms_prop_kernel_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "apply_rms_prop_kernel_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "apply_rms_prop_kernel_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "apply_rms_prop_kernel_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "apply_rms_prop_kernel_test TearDown\n" << endl; }
 };
 
 // =====================================================================
@@ -172,51 +166,47 @@ protected:
 // inplace).
 // =====================================================================
 template <typename T, int BUFFER_MODE>
-static void LaunchApplyRmsPropOnce(
-    size_t totalNum,
-    float lrVal, float rhoVal, float momentumVal, float epsilonVal,
-    float varVal, float msVal, float momVal, float gradVal,
-    std::vector<uint8_t>& outVar,
-    std::vector<uint8_t>& outMs,
-    std::vector<uint8_t>& outMom)
+static void LaunchApplyRmsPropOnce(size_t totalNum, float lrVal, float rhoVal, float momentumVal, float epsilonVal,
+                                   float varVal, float msVal, float momVal, float gradVal, std::vector<uint8_t>& outVar,
+                                   std::vector<uint8_t>& outMs, std::vector<uint8_t>& outMom)
 {
     constexpr size_t kElemSize = sizeof(T);
-    const size_t mainBytes   = totalNum * kElemSize;
+    const size_t mainBytes = totalNum * kElemSize;
     const size_t scalarBytes = 1 * kElemSize;
 
-    uint8_t* var      = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* ms       = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* mom      = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* lr       = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* rho      = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* ms = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* mom = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* lr = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* rho = (uint8_t*)AscendC::GmAlloc(scalarBytes);
     uint8_t* momentum = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* epsilon  = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* grad     = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* var_out  = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* epsilon = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* var_out = (uint8_t*)AscendC::GmAlloc(mainBytes);
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t* tiling    = (uint8_t*)AscendC::GmAlloc(sizeof(ApplyRmsPropTilingData));
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(ApplyRmsPropTilingData));
 
     // Fill inputs uniformly with the requested values.
-    FillArray<T>(var,  totalNum, varVal);
-    FillArray<T>(ms,   totalNum, msVal);
-    FillArray<T>(mom,  totalNum, momVal);
+    FillArray<T>(var, totalNum, varVal);
+    FillArray<T>(ms, totalNum, msVal);
+    FillArray<T>(mom, totalNum, momVal);
     FillArray<T>(grad, totalNum, gradVal);
     FillArray<T>(var_out, totalNum, 0.0f);
-    FillScalar<T>(lr,       lrVal);
-    FillScalar<T>(rho,      rhoVal);
+    FillScalar<T>(lr, lrVal);
+    FillScalar<T>(rho, rhoVal);
     FillScalar<T>(momentum, momentumVal);
-    FillScalar<T>(epsilon,  epsilonVal);
+    FillScalar<T>(epsilon, epsilonVal);
 
     // Populate TilingData. We choose blockFactor == totalNum (single core)
     // so per-core remain >= 0; ubFactor must be >0 and at least 1 element.
     auto* tilingData = reinterpret_cast<ApplyRmsPropTilingData*>(tiling);
-    tilingData->totalNum    = static_cast<int64_t>(totalNum);
+    tilingData->totalNum = static_cast<int64_t>(totalNum);
     tilingData->blockFactor = static_cast<int64_t>(totalNum > 0 ? totalNum : 1);
     // 256-element UB iterations for non-tiny inputs, otherwise the full size.
-    tilingData->ubFactor    = static_cast<int64_t>(totalNum >= 256 ? 256 : (totalNum > 0 ? totalNum : 1));
-    tilingData->useLocking  = 0;
-    tilingData->reserved    = 0;
+    tilingData->ubFactor = static_cast<int64_t>(totalNum >= 256 ? 256 : (totalNum > 0 ? totalNum : 1));
+    tilingData->useLocking = 0;
+    tilingData->reserved = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     // BUFFER_MODE encoded in TilingKey upper byte; not consumed by the
@@ -225,14 +215,11 @@ static void LaunchApplyRmsPropOnce(
 
     uint32_t blockDim = 1;
     // Explicit template instantiation: call apply_rms_prop<T, BUFFER_MODE>.
-    auto KernelApplyRmsProp = [](GM_ADDR a, GM_ADDR b, GM_ADDR c,
-                                 GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g,
-                                 GM_ADDR h, GM_ADDR i, GM_ADDR j, GM_ADDR k) {
-        ::apply_rms_prop<T, BUFFER_MODE>(a, b, c, d, e, f, g, h, i, j, k);
-    };
-    ICPU_RUN_KF(KernelApplyRmsProp, blockDim,
-                var, ms, mom, lr, rho, momentum, epsilon, grad, var_out,
-                workspace, tiling);
+    auto KernelApplyRmsProp = [](GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g, GM_ADDR h,
+                                 GM_ADDR i, GM_ADDR j,
+                                 GM_ADDR k) { ::apply_rms_prop<T, BUFFER_MODE>(a, b, c, d, e, f, g, h, i, j, k); };
+    ICPU_RUN_KF(KernelApplyRmsProp, blockDim, var, ms, mom, lr, rho, momentum, epsilon, grad, var_out, workspace,
+                tiling);
 
     // Snapshot the outputs the caller wants to validate. var_out is the
     // GE IR single output; ms / mom GM addresses are inplace-updated.
@@ -261,11 +248,9 @@ TEST_F(apply_rms_prop_kernel_test, test_fp32_single_buffer_basic)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> outVar, outMs, outMom;
-    LaunchApplyRmsPropOnce<float, 0>(
-        totalNum,
-        /*lr=*/0.01f, /*rho=*/0.9f, /*momentum=*/0.1f, /*epsilon=*/1e-7f,
-        /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.0f, /*grad=*/0.2f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/0.01f, /*rho=*/0.9f, /*momentum=*/0.1f, /*epsilon=*/1e-7f,
+                                     /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.0f, /*grad=*/0.2f, outVar, outMs, outMom);
     // var_out has the right number of bytes
     EXPECT_EQ(outVar.size(), totalNum * sizeof(float));
 }
@@ -278,11 +263,9 @@ TEST_F(apply_rms_prop_kernel_test, test_fp32_double_buffer_large_shape)
 {
     constexpr size_t totalNum = 2048;
     std::vector<uint8_t> outVar, outMs, outMom;
-    LaunchApplyRmsPropOnce<float, 1>(
-        totalNum,
-        /*lr=*/0.001f, /*rho=*/0.9f, /*momentum=*/0.5f, /*epsilon=*/1e-7f,
-        /*var=*/2.0f, /*ms=*/1.0f, /*mom=*/0.1f, /*grad=*/0.5f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<float, 1>(totalNum,
+                                     /*lr=*/0.001f, /*rho=*/0.9f, /*momentum=*/0.5f, /*epsilon=*/1e-7f,
+                                     /*var=*/2.0f, /*ms=*/1.0f, /*mom=*/0.1f, /*grad=*/0.5f, outVar, outMs, outMom);
     EXPECT_EQ(outVar.size(), totalNum * sizeof(float));
 }
 
@@ -295,11 +278,9 @@ TEST_F(apply_rms_prop_kernel_test, test_fp16_single_buffer_cast_path)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> outVar, outMs, outMom;
-    LaunchApplyRmsPropOnce<half, 0>(
-        totalNum,
-        /*lr=*/0.01f, /*rho=*/0.9f, /*momentum=*/0.1f, /*epsilon=*/1e-7f,
-        /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.0f, /*grad=*/0.2f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<half, 0>(totalNum,
+                                    /*lr=*/0.01f, /*rho=*/0.9f, /*momentum=*/0.1f, /*epsilon=*/1e-7f,
+                                    /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.0f, /*grad=*/0.2f, outVar, outMs, outMom);
     EXPECT_EQ(outVar.size(), totalNum * sizeof(half));
 }
 
@@ -311,11 +292,10 @@ TEST_F(apply_rms_prop_kernel_test, test_bf16_single_buffer_cast_path)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> outVar, outMs, outMom;
-    LaunchApplyRmsPropOnce<bfloat16_t, 0>(
-        totalNum,
-        /*lr=*/0.01f, /*rho=*/0.9f, /*momentum=*/0.1f, /*epsilon=*/1e-7f,
-        /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.0f, /*grad=*/0.2f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<bfloat16_t, 0>(totalNum,
+                                          /*lr=*/0.01f, /*rho=*/0.9f, /*momentum=*/0.1f, /*epsilon=*/1e-7f,
+                                          /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.0f, /*grad=*/0.2f, outVar, outMs,
+                                          outMom);
     EXPECT_EQ(outVar.size(), totalNum * sizeof(bfloat16_t));
 }
 
@@ -331,17 +311,15 @@ TEST_F(apply_rms_prop_kernel_test, test_ms_mom_inplace_writeback)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> outVar, outMs, outMom;
-    LaunchApplyRmsPropOnce<float, 0>(
-        totalNum,
-        /*lr=*/0.1f, /*rho=*/0.5f, /*momentum=*/0.5f, /*epsilon=*/1e-3f,
-        /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.1f, /*grad=*/0.7f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/0.1f, /*rho=*/0.5f, /*momentum=*/0.5f, /*epsilon=*/1e-3f,
+                                     /*var=*/1.0f, /*ms=*/0.5f, /*mom=*/0.1f, /*grad=*/0.7f, outVar, outMs, outMom);
 
     // var output must be present (GE IR single-output asserted by other tests);
     // ms / mom ICPU DataCopyPad write-back is not guaranteed to mutate in
     // CPU debug mode — the primary goal here is no-crash with shared GM.
     EXPECT_EQ(outVar.size(), totalNum * sizeof(float));
-    EXPECT_EQ(outMs.size(),  totalNum * sizeof(float));
+    EXPECT_EQ(outMs.size(), totalNum * sizeof(float));
     EXPECT_EQ(outMom.size(), totalNum * sizeof(float));
 }
 
@@ -355,11 +333,9 @@ TEST_F(apply_rms_prop_kernel_test, test_scalar_gm_reads_independent)
     constexpr size_t totalNum = 64;
     std::vector<uint8_t> outVar, outMs, outMom;
     // Distinct values for lr / rho / momentum / epsilon
-    LaunchApplyRmsPropOnce<float, 0>(
-        totalNum,
-        /*lr=*/0.123f, /*rho=*/0.456f, /*momentum=*/0.789f, /*epsilon=*/0.001f,
-        /*var=*/1.0f, /*ms=*/2.0f, /*mom=*/3.0f, /*grad=*/0.5f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/0.123f, /*rho=*/0.456f, /*momentum=*/0.789f, /*epsilon=*/0.001f,
+                                     /*var=*/1.0f, /*ms=*/2.0f, /*mom=*/3.0f, /*grad=*/0.5f, outVar, outMs, outMom);
 
     // We don't assert exact numerical values (precision tests own that),
     // but the run must complete and produce a buffer of the right size.
@@ -378,20 +354,18 @@ TEST_F(apply_rms_prop_kernel_test, test_epsilon_flt_min_clamp)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> outVar, outMs, outMom;
-    LaunchApplyRmsPropOnce<float, 0>(
-        totalNum,
-        /*lr=*/0.1f, /*rho=*/0.9f, /*momentum=*/0.5f, /*epsilon=*/0.0f,  // !
-        /*var=*/1.0f, /*ms=*/0.0f, /*mom=*/0.0f, /*grad=*/0.0f,
-        outVar, outMs, outMom);
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/0.1f, /*rho=*/0.9f, /*momentum=*/0.5f, /*epsilon=*/0.0f, // !
+                                     /*var=*/1.0f, /*ms=*/0.0f, /*mom=*/0.0f, /*grad=*/0.0f, outVar, outMs, outMom);
 
     const auto* varPtr = reinterpret_cast<const float*>(outVar.data());
-    const auto* msPtr  = reinterpret_cast<const float*>(outMs.data());
+    const auto* msPtr = reinterpret_cast<const float*>(outMs.data());
     const auto* momPtr = reinterpret_cast<const float*>(outMom.data());
     for (size_t i = 0; i < totalNum; ++i) {
         EXPECT_FALSE(std::isnan(varPtr[i])) << "var has NaN at index " << i;
         EXPECT_FALSE(std::isinf(varPtr[i])) << "var has Inf at index " << i;
-        EXPECT_FALSE(std::isnan(msPtr[i]))  << "ms has NaN at index "  << i;
-        EXPECT_FALSE(std::isinf(msPtr[i]))  << "ms has Inf at index "  << i;
+        EXPECT_FALSE(std::isnan(msPtr[i])) << "ms has NaN at index " << i;
+        EXPECT_FALSE(std::isinf(msPtr[i])) << "ms has Inf at index " << i;
         EXPECT_FALSE(std::isnan(momPtr[i])) << "mom has NaN at index " << i;
         EXPECT_FALSE(std::isinf(momPtr[i])) << "mom has Inf at index " << i;
     }
@@ -411,50 +385,47 @@ TEST_F(apply_rms_prop_kernel_test, test_empty_input_no_op)
     // ubFactor; we keep ubFactor small to minimize UB usage).
     constexpr size_t totalNum = 0;
     constexpr size_t backingElems = 8;
-    const size_t mainBytes   = backingElems * sizeof(float);
+    const size_t mainBytes = backingElems * sizeof(float);
     const size_t scalarBytes = 1 * sizeof(float);
 
-    uint8_t* var      = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* ms       = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* mom      = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* lr       = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* rho      = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* ms = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* mom = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* lr = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* rho = (uint8_t*)AscendC::GmAlloc(scalarBytes);
     uint8_t* momentum = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* epsilon  = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* grad     = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* var_out  = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* epsilon = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* var_out = (uint8_t*)AscendC::GmAlloc(mainBytes);
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t* tiling    = (uint8_t*)AscendC::GmAlloc(sizeof(ApplyRmsPropTilingData));
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(ApplyRmsPropTilingData));
 
-    FillArray<float>(var,  backingElems, 0.0f);
-    FillArray<float>(ms,   backingElems, 0.0f);
-    FillArray<float>(mom,  backingElems, 0.0f);
+    FillArray<float>(var, backingElems, 0.0f);
+    FillArray<float>(ms, backingElems, 0.0f);
+    FillArray<float>(mom, backingElems, 0.0f);
     FillArray<float>(grad, backingElems, 0.0f);
-    FillScalar<float>(lr,       0.01f);
-    FillScalar<float>(rho,      0.9f);
+    FillScalar<float>(lr, 0.01f);
+    FillScalar<float>(rho, 0.9f);
     FillScalar<float>(momentum, 0.1f);
-    FillScalar<float>(epsilon,  1e-7f);
+    FillScalar<float>(epsilon, 1e-7f);
 
     auto* tilingData = reinterpret_cast<ApplyRmsPropTilingData*>(tiling);
-    tilingData->totalNum    = totalNum;
+    tilingData->totalNum = totalNum;
     tilingData->blockFactor = 0;
-    tilingData->ubFactor    = 1;  // Init clamps to >= 1
-    tilingData->useLocking  = 0;
-    tilingData->reserved    = 0;
+    tilingData->ubFactor = 1; // Init clamps to >= 1
+    tilingData->useLocking = 0;
+    tilingData->reserved = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(0);
     uint32_t blockDim = 1;
-    auto KernelApplyRmsProp = [](GM_ADDR a, GM_ADDR b, GM_ADDR c,
-                                 GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g,
-                                 GM_ADDR h, GM_ADDR i, GM_ADDR j, GM_ADDR k) {
-        ::apply_rms_prop<float, 0>(a, b, c, d, e, f, g, h, i, j, k);
-    };
+    auto KernelApplyRmsProp = [](GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g, GM_ADDR h,
+                                 GM_ADDR i, GM_ADDR j,
+                                 GM_ADDR k) { ::apply_rms_prop<float, 0>(a, b, c, d, e, f, g, h, i, j, k); };
     // Must not crash; Process() exits early because block_length_ == 0.
-    ICPU_RUN_KF(KernelApplyRmsProp, blockDim,
-                var, ms, mom, lr, rho, momentum, epsilon, grad, var_out,
-                workspace, tiling);
+    ICPU_RUN_KF(KernelApplyRmsProp, blockDim, var, ms, mom, lr, rho, momentum, epsilon, grad, var_out, workspace,
+                tiling);
 
     AscendC::GmFree(var);
     AscendC::GmFree(ms);

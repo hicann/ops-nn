@@ -28,14 +28,12 @@
 
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 static constexpr int32_t SIZE4 = 4;
 static constexpr int32_t SIZE2 = 2;
-class L2LossTiling
-{
+class L2LossTiling {
 public:
-    explicit L2LossTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit L2LossTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:
@@ -62,8 +60,7 @@ ge::graphStatus L2LossTiling::TilingReduce()
 {
     ReduceOpInputParam opInput;
     OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext, opInput, 0) == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext->GetNodeName(), "ReduceOp get x input failed"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "ReduceOp get x input failed"), return ge::GRAPH_FAILED);
     opInput.axes.resize(opInput.shape.size());
     for (size_t i = 0; i < opInput.shape.size(); i++) {
         opInput.axes[i] = i;
@@ -77,9 +74,8 @@ ge::graphStatus L2LossTiling::TilingReduce()
     }
 
     OP_CHECK_IF((status == ge::GRAPH_FAILED),
-                    OP_LOGE(tilingContext->GetNodeName(),
-                                                    "ReduceOp Tiling failed, dtype shoude be in (half/bf16/float)"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "ReduceOp Tiling failed, dtype shoude be in (half/bf16/float)"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -88,8 +84,7 @@ ge::graphStatus L2LossTiling::RunTiling()
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     OP_CHECK_IF(TilingReduce() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"),
-                    return ge::GRAPH_FAILED);
+                OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"), return ge::GRAPH_FAILED);
     return SetTilingData();
 }
 
@@ -110,9 +105,9 @@ static ge::graphStatus TilingForL2Loss(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForL2Loss(gert::TilingParseContext* context)
 {
-    (void) context;
+    (void)context;
     return ge::GRAPH_SUCCESS;
 }
 
 IMPL_OP_OPTILING(L2Loss).Tiling(TilingForL2Loss).TilingParse<ReduceOpCompileInfo>(TilingPrepareForL2Loss);
-}  // namespace optiling
+} // namespace optiling

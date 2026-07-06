@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -21,12 +21,10 @@ namespace Glu {
 using namespace AscendC;
 
 template <typename T>
-class GluSmallShape
-{
+class GluSmallShape {
 public:
     __aicore__ inline GluSmallShape(){};
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData);
     __aicore__ inline void Process();
 
     constexpr static int32_t bufferNum = 2;
@@ -72,8 +70,7 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void GluSmallShape<T>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
+__aicore__ inline void GluSmallShape<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const GluTilingData* tilingData)
 {
     blockIdx = GetBlockIdx();
 
@@ -106,7 +103,7 @@ __aicore__ inline void GluSmallShape<T>::Init(
     one_process_out_stride = group * splitSize;
 
     isLastCore = (this->blockIdx == realCoreNum - 1) && (tailLoopNum != 0 || lastTailGroup != 0);
-    
+
     pipe.InitBuffer(inQueueX1, bufferNum, bufferSize * sizeof(float));
     pipe.InitBuffer(inQueueX2, bufferNum, bufferSize * sizeof(float));
     pipe.InitBuffer(outQueue, 1, bufferSize * sizeof(float));
@@ -192,7 +189,8 @@ __aicore__ inline void GluSmallShape<T>::CopyIn(const int64_t& index, const int6
         intriPadParams.paddingValue = 1;
         if constexpr (std::is_same_v<T, bfloat16_t>) {
             DataCopyPad(ubX1[bufferSize], xGm[gmXOffset + index * one_process_in_stride], intriParams, intriPadParams);
-            DataCopyPad(ubX2[bufferSize], xGm[gmXOffset + index * one_process_in_stride + splitSize], intriParams, intriPadParams);
+            DataCopyPad(ubX2[bufferSize], xGm[gmXOffset + index * one_process_in_stride + splitSize], intriParams,
+                        intriPadParams);
         } else {
             DataCopyPad(ubX1, xGm[gmXOffset + index * one_process_in_stride], intriParams, intriPadParams);
             DataCopyPad(ubX2, xGm[gmXOffset + index * one_process_in_stride + splitSize], intriParams, intriPadParams);
@@ -242,8 +240,7 @@ __aicore__ inline void GluSmallShape<T>::ComputeSigmoidAndMul(const int64_t& ub_
 }
 
 template <typename T>
-__aicore__ inline void GluSmallShape<T>::CopyOut(
-    const int64_t& index, const int64_t& ub_num, const int64_t& group)
+__aicore__ inline void GluSmallShape<T>::CopyOut(const int64_t& index, const int64_t& ub_num, const int64_t& group)
 {
     LocalTensor<T> outLocal = outQueue.DeQue<T>();
     if (splitSize % blockSize == 0) {

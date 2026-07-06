@@ -24,20 +24,13 @@ using namespace std;
 
 class l2_mv_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "mv_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "mv_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "mv_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "mv_test TearDown" << std::endl; }
 
-    void test_run(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        vector<int64_t> vecDims, aclDataType vecDtype, aclFormat vecFormat, vector<int64_t> vecRange,
-        vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat, int8_t cubeMathType)
+    void test_run(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
+                  vector<int64_t> vecDims, aclDataType vecDtype, aclFormat vecFormat, vector<int64_t> vecRange,
+                  vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat, int8_t cubeMathType)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto vec = TensorDesc(vecDims, vecDtype, vecFormat).ValueRange(vecRange[0], vecRange[1]);
@@ -50,10 +43,10 @@ protected:
         // ut.TestPrecision();
     }
 
-    void test_run_invalid(
-        vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat, vector<int64_t> selfRange,
-        vector<int64_t> vecDims, aclDataType vecDtype, aclFormat vecFormat, vector<int64_t> vecRange,
-        vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat, int8_t cubeMathType)
+    void test_run_invalid(vector<int64_t> selfDims, aclDataType selfDtype, aclFormat selfFormat,
+                          vector<int64_t> selfRange, vector<int64_t> vecDims, aclDataType vecDtype, aclFormat vecFormat,
+                          vector<int64_t> vecRange, vector<int64_t> outDims, aclDataType outDtype, aclFormat outFormat,
+                          int8_t cubeMathType)
     {
         auto self = TensorDesc(selfDims, selfDtype, selfFormat).ValueRange(selfRange[0], selfRange[1]);
         auto vec = TensorDesc(vecDims, vecDtype, vecFormat).ValueRange(vecRange[0], vecRange[1]);
@@ -73,30 +66,24 @@ protected:
 // self + other + out: fp16 bf16
 TEST_F(l2_mv_test, l2_mv_test_01)
 {
-    test_run(
-        {2, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
-    test_run(
-        {2, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_BF16, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_BF16,
-        ACL_FORMAT_ND, 1);
+    test_run({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {2},
+             ACL_FLOAT16, ACL_FORMAT_ND, 1);
+    test_run({2, 3}, ACL_BF16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_BF16, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_BF16,
+             ACL_FORMAT_ND, 1);
 }
 
 // self + other + out: fp32 910不支持FP32, cubeMathType为0/3/其余值时报错，1/2正常运行
 TEST_F(l2_mv_test, l2_mv_test_02)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910);
-    test_run_invalid(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 0);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 1);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 2);
-    test_run_invalid(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 3);
+    test_run_invalid({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_FLOAT, ACL_FORMAT_ND, 0);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 1);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 2);
+    test_run_invalid({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_FLOAT, ACL_FORMAT_ND, 3);
     // 后续cubemathtype整改后取消注释
     // test_run_invalid(
     //     {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
@@ -106,70 +93,53 @@ TEST_F(l2_mv_test, l2_mv_test_02)
 // self + other + out: fp32 910B支持FP32, cubeMathType为0/1/2/3正常运行, 其余值报错
 TEST_F(l2_mv_test, ascend910B2_l2_mv_test_02)
 {
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 0);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 1);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 2);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 3);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 0);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 1);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 2);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 3);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 4);
 }
 
 // self + other + out: 不支持double、complex64、complex128 + bool、uint8、int8、int16、int32、int64
 TEST_F(l2_mv_test, l2_mv_test_03)
 {
-    test_run_invalid(
-        {2, 3}, ACL_DOUBLE, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_DOUBLE, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_DOUBLE,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_COMPLEX64, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_COMPLEX64, ACL_FORMAT_ND, {-15, -10}, {2},
-        ACL_COMPLEX64, ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_COMPLEX128, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_COMPLEX128, ACL_FORMAT_ND, {-15, -10}, {2},
-        ACL_COMPLEX128, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_DOUBLE, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_DOUBLE, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_DOUBLE, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_COMPLEX64, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_COMPLEX64, ACL_FORMAT_ND, {-15, -10},
+                     {2}, ACL_COMPLEX64, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_COMPLEX128, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_COMPLEX128, ACL_FORMAT_ND, {-15, -10},
+                     {2}, ACL_COMPLEX128, ACL_FORMAT_ND, 1);
 
-    test_run_invalid(
-        {2, 3}, ACL_BOOL, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_BOOL, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_BOOL,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_UINT8, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_UINT8, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_UINT8,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_INT8, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT8, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_INT8,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_INT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT16, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_INT16,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_INT32, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT32, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_COMPLEX64,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {2, 3}, ACL_INT64, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT64, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_COMPLEX128,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_BOOL, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_BOOL, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_BOOL, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_UINT8, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_UINT8, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_UINT8, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_INT8, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT8, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_INT8, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_INT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT16, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_INT16, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_INT32, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT32, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_COMPLEX64, ACL_FORMAT_ND, 1);
+    test_run_invalid({2, 3}, ACL_INT64, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_INT64, ACL_FORMAT_ND, {-15, -10}, {2},
+                     ACL_COMPLEX128, ACL_FORMAT_ND, 1);
 }
 
 // self、vec、out dtype应该一致
 TEST_F(l2_mv_test, l2_mv_test_04)
 {
-    test_run(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+             ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // vec != self
-    test_run_invalid(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // out != self
-    test_run_invalid(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_FLOAT, ACL_FORMAT_ND, 1);
 }
 
 // ///////////////////////////////////////
@@ -205,33 +175,26 @@ TEST_F(l2_mv_test, l2_mv_test_05)
 TEST_F(l2_mv_test, l2_mv_test_06)
 {
     // self n x 0, vec 0, out n   n不为0
-    test_run(
-        {3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run({3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+             ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // self 0 x m, vec m, out 0   m不为0
-    test_run(
-        {0, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {0}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run({0, 3}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {0},
+             ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // self 0 x 0, vec 0, out 0   m, n都为0
-    test_run(
-        {0, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {0}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run({0, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {0},
+             ACL_FLOAT16, ACL_FORMAT_ND, 1);
 
     // self为空tensor时，如果vec + out dtype一致，则支持运算
     // 1. self可以和vec/out dtype不一致
-    test_run(
-        {3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
-        ACL_FORMAT_ND, 1);
+    test_run({3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
+             ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_FLOAT, ACL_FORMAT_ND, 1);
     // 2. 该场景下，out dtype为不支持的数据类型也行
-    test_run_invalid(
-        {3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_BOOL, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_BOOL,
-        ACL_FORMAT_ND, 1);
-    test_run_invalid(
-        {3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_BOOL,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_BOOL, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_BOOL, ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_BOOL, ACL_FORMAT_ND, 1);
 }
 
 ///////////////////////////////////////
@@ -260,70 +223,54 @@ TEST_F(l2_mv_test, l2_mv_test_07)
 TEST_F(l2_mv_test, l2_mv_test_08)
 {
     // self n x m, vec m, out n
-    test_run(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+             ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // self n x m, vec m-1, out n
-    test_run_invalid(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // self n x m, vec m, out n+1
-    test_run_invalid(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {4}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {4},
+                     ACL_FLOAT16, ACL_FORMAT_ND, 1);
 
     // self不为2维
-    test_run_invalid(
-        {3, 4, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // vec不为1维
-    test_run_invalid(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3},
+                     ACL_FLOAT16, ACL_FORMAT_ND, 1);
     // out不为1维
-    test_run_invalid(
-        {3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3, 3}, ACL_FLOAT16,
-        ACL_FORMAT_ND, 1);
+    test_run_invalid({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {4}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3, 3},
+                     ACL_FLOAT16, ACL_FORMAT_ND, 1);
 }
 
 // self + other + out: fp32 910B支持FP32, cubeMathType为0/1/2/3正常运行, 4会路由到0
 TEST_F(l2_mv_test, ascend910B_fp32_cubeMathType0_to_4)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 0);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 1);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 2);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 3);
-    test_run(
-        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 0);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 1);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 2);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 3);
+    test_run({2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 4);
 }
 
 // self + other + out: fp32 910B支持FP32, cubeMathType为4，全部会路由到0
 TEST_F(l2_mv_test, ascend910B_fp32_cubeMathType_all4)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
-    test_run(
-        {3, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
-    test_run(
-        {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {5}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
-    test_run(
-        {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {5}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
-    test_run(
-        {10, 10}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {10}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {10}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
-    test_run(
-        {101, 301}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {301}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {101}, ACL_FLOAT,
-        ACL_FORMAT_ND, 4);
+    test_run({3, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
+             ACL_FORMAT_ND, 4);
+    test_run({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {5}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+             ACL_FORMAT_ND, 4);
+    test_run({5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {5}, ACL_FLOAT,
+             ACL_FORMAT_ND, 4);
+    test_run({10, 10}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {10}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {10}, ACL_FLOAT,
+             ACL_FORMAT_ND, 4);
+    test_run({101, 301}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {301}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {101},
+             ACL_FLOAT, ACL_FORMAT_ND, 4);
 }

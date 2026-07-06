@@ -54,10 +54,7 @@
 /**
  * @brief CPU reference: softsign(x) = x / (1 + |x|)
  */
-static float SoftsignRef(float x)
-{
-    return x / (1.0f + std::fabs(x));
-}
+static float SoftsignRef(float x) { return x / (1.0f + std::fabs(x)); }
 
 int32_t main(int32_t argc, char** argv)
 {
@@ -115,18 +112,15 @@ int32_t main(int32_t argc, char** argv)
     // =========================================================================
     // 4. Copy input to device and execute via single-op IR dispatch
     // =========================================================================
-    CHECK_ACL(aclrtMemcpy(inputDeviceMem, bufferSize, inputData.data(),
-                          bufferSize, ACL_MEMCPY_HOST_TO_DEVICE));
+    CHECK_ACL(aclrtMemcpy(inputDeviceMem, bufferSize, inputData.data(), bufferSize, ACL_MEMCPY_HOST_TO_DEVICE));
 
     // Compile + execute via OPP custom op package lookup.
     // ACL_ENGINE_SYS lets ACL choose the engine; ACL_COMPILE_SYS uses the
     // installed system OPP path (custom op package installed under
     // $ASCEND_OPP_PATH/vendors/softsign_custom is automatically discovered).
-    CHECK_ACL(aclopCompileAndExecute(opType,
-                                     inputDescs.size(), inputDescs.data(), inputBuffers.data(),
-                                     outputDescs.size(), outputDescs.data(), outputBuffers.data(),
-                                     opAttr, ACL_ENGINE_SYS, ACL_COMPILE_SYS, nullptr,
-                                     stream));
+    CHECK_ACL(aclopCompileAndExecute(opType, inputDescs.size(), inputDescs.data(), inputBuffers.data(),
+                                     outputDescs.size(), outputDescs.data(), outputBuffers.data(), opAttr,
+                                     ACL_ENGINE_SYS, ACL_COMPILE_SYS, nullptr, stream));
 
     CHECK_ACL(aclrtSynchronizeStream(stream));
 
@@ -134,8 +128,7 @@ int32_t main(int32_t argc, char** argv)
     // 5. Copy result back to host
     // =========================================================================
     std::vector<float> outputData(elementCount, 0.0f);
-    CHECK_ACL(aclrtMemcpy(outputData.data(), bufferSize, outputDeviceMem,
-                          bufferSize, ACL_MEMCPY_DEVICE_TO_HOST));
+    CHECK_ACL(aclrtMemcpy(outputData.data(), bufferSize, outputDeviceMem, bufferSize, ACL_MEMCPY_DEVICE_TO_HOST));
 
     // =========================================================================
     // 6. Verify result against CPU reference
@@ -156,8 +149,8 @@ int32_t main(int32_t argc, char** argv)
         float expected = SoftsignRef(inputData[i]);
         float diff = std::fabs(outputData[i] - expected);
         if (diff > tolerance) {
-            fprintf(stderr, "[FAIL] index=%ld, output=%.6f, expected=%.6f, diff=%.6f\n",
-                    i, outputData[i], expected, diff);
+            fprintf(stderr, "[FAIL] index=%ld, output=%.6f, expected=%.6f, diff=%.6f\n", i, outputData[i], expected,
+                    diff);
             pass = false;
         }
     }

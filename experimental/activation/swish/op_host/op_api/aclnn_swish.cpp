@@ -33,100 +33,106 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                 op::DataType::DT_FLOAT16};
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool CheckDtypeValidBetaToFloat(const aclScalar* betaOptional) {
-  if (betaOptional != nullptr && !CanCast(betaOptional->GetDataType(), DataType::DT_FLOAT)) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "betaOptional dtype %s can not cast to float32.",
-    ToString(betaOptional->GetDataType()).GetString());
-    return false;
-  }
-  return true;
+static bool CheckDtypeValidBetaToFloat(const aclScalar* betaOptional)
+{
+    if (betaOptional != nullptr && !CanCast(betaOptional->GetDataType(), DataType::DT_FLOAT)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "betaOptional dtype %s can not cast to float32.",
+                ToString(betaOptional->GetDataType()).GetString());
+        return false;
+    }
+    return true;
 }
 
-static bool CheckDim(const aclTensor *self, const aclTensor *out) {
-  OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
-  OP_CHECK_MAX_DIM(out, MAX_SUPPORT_DIMS_NUMS, return false);
-  return true;
+static bool CheckDim(const aclTensor* self, const aclTensor* out)
+{
+    OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MAX_DIM(out, MAX_SUPPORT_DIMS_NUMS, return false);
+    return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor *self, const aclScalar* betaOptional, const aclTensor *out) {
-  CHECK_RET(CheckNotNull2Tensor(self, out), ACLNN_ERR_PARAM_NULLPTR);
+static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* betaOptional, const aclTensor* out)
+{
+    CHECK_RET(CheckNotNull2Tensor(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
-  auto supportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
-  CHECK_RET(CheckDtypeValidActivation(self, out, supportList), ACLNN_ERR_PARAM_INVALID);
-  CHECK_RET(CheckDtypeValidBetaToFloat(betaOptional), ACLNN_ERR_PARAM_INVALID);
+    auto supportList = GetDtypeSupportListV1(ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST);
+    CHECK_RET(CheckDtypeValidActivation(self, out, supportList), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValidBetaToFloat(betaOptional), ACLNN_ERR_PARAM_INVALID);
 
-  CHECK_RET(CheckDim(self, out), ACLNN_ERR_PARAM_INVALID);
-  CHECK_RET(CheckSameShapeNotlimit1In1Out(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDim(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckSameShapeNotlimit1In1Out(self, out), ACLNN_ERR_PARAM_INVALID);
 
-  return ACLNN_SUCCESS;
+    return ACLNN_SUCCESS;
 }
 
-static const aclTensor *reshapeLongTensor(const aclTensor *x, aclOpExecutor *executor, size_t originalDimSize,
-                                          aclIntArray *valuePerm = nullptr) {
-  size_t dimSize = x->GetViewShape().GetDimNum();
-  if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
-    return x;
-  }
+static const aclTensor* reshapeLongTensor(const aclTensor* x, aclOpExecutor* executor, size_t originalDimSize,
+                                          aclIntArray* valuePerm = nullptr)
+{
+    size_t dimSize = x->GetViewShape().GetDimNum();
+    if (originalDimSize == dimSize && dimSize <= MAX_SUPPORT_DIMS_NUMS) {
+        return x;
+    }
 
-  auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
-  return reshapeSelf;
+    auto reshapeSelf = l0op::Reshape(x, valuePerm, executor);
+    return reshapeSelf;
 }
 
-aclnnStatus aclnnSwishGetWorkspaceSize(const aclTensor* self, const aclScalar* betaOptional, aclTensor* out, uint64_t* workspaceSize,
-                                      aclOpExecutor** executor) {
-  OP_CHECK_COMM_INPUT(workspaceSize, executor);
+aclnnStatus aclnnSwishGetWorkspaceSize(const aclTensor* self, const aclScalar* betaOptional, aclTensor* out,
+                                       uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-  L2_DFX_PHASE_1(aclnnSwish, DFX_IN(self, betaOptional), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnSwish, DFX_IN(self, betaOptional), DFX_OUT(out));
 
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-  auto ret = CheckParams(self, betaOptional, out);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    auto ret = CheckParams(self, betaOptional, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-  if (self->IsEmpty() || out->IsEmpty()) {
-    *workspaceSize = 0;
+    if (self->IsEmpty() || out->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    size_t dimSize = self->GetViewShape().GetDimNum();
+    auto shapeOriDetial = GetTensorShapeActivation(selfContiguous, uniqueExecutor.get());
+    auto reshapeSelf = ReshapeSelfValueGetActivation(self, dimSize, selfContiguous, uniqueExecutor);
+
+    float scale = 1.0f;
+    if (betaOptional != nullptr) {
+        scale = betaOptional->ToFloat();
+    }
+
+    auto swishOut = l0op::Swish(reshapeSelf, scale, uniqueExecutor.get());
+    CHECK_RET(swishOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto reshapeSwishOut = swishOut;
+    if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
+        reshapeSwishOut = reshapeLongTensor(swishOut, uniqueExecutor.get(), dimSize, shapeOriDetial);
+    }
+
+    auto viewCopyOut = l0op::ViewCopy(reshapeSwishOut, out, uniqueExecutor.get());
+    CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
-  }
-
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  size_t dimSize = self->GetViewShape().GetDimNum();
-  auto shapeOriDetial = GetTensorShapeActivation(selfContiguous, uniqueExecutor.get());
-  auto reshapeSelf = ReshapeSelfValueGetActivation(self, dimSize, selfContiguous, uniqueExecutor);
-
-  float scale = 1.0f;
-  if (betaOptional != nullptr) {
-    scale = betaOptional->ToFloat();
-  }
-
-  auto swishOut = l0op::Swish(reshapeSelf, scale, uniqueExecutor.get());
-  CHECK_RET(swishOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto reshapeSwishOut = swishOut;
-  if (dimSize > MAX_SUPPORT_DIMS_NUMS) {
-    reshapeSwishOut = reshapeLongTensor(swishOut, uniqueExecutor.get(), dimSize, shapeOriDetial);
-  }
-
-  auto viewCopyOut = l0op::ViewCopy(reshapeSwishOut, out, uniqueExecutor.get());
-  CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnSwish(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnSwish);
-  return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+aclnnStatus aclnnSwish(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnSwish);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

@@ -30,7 +30,7 @@ struct EluCompileInfo {
 
 class EluTilingArch35 {
 public:
-    explicit EluTilingArch35(gert::TilingContext* context) : tilingContext(context) {};
+    explicit EluTilingArch35(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
     EluTilingData* tiling = nullptr;
 

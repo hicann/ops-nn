@@ -13,8 +13,8 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor *Log(const aclTensor *self, const float base, const float scale,
-                     const float shift, aclOpExecutor *executor);
+const aclTensor* Log(const aclTensor* self, const float base, const float scale, const float shift,
+                     aclOpExecutor* executor);
 
 }
 

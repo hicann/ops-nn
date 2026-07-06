@@ -33,11 +33,11 @@ using namespace op;
 extern "C" {
 #endif
 
-#define OP_CHECK_FORMAT_NOT_ND(tensor, retExpr) \
-  if ((tensor)->GetStorageFormat() != Format::FORMAT_ND) { \
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor %s only supports ND format.", #tensor); \
-    retExpr; \
-  }
+#define OP_CHECK_FORMAT_NOT_ND(tensor, retExpr)                                          \
+    if ((tensor)->GetStorageFormat() != Format::FORMAT_ND) {                             \
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor %s only supports ND format.", #tensor); \
+        retExpr;                                                                         \
+    }
 
 static constexpr size_t EXPECTED_DIM_ONE = 1;
 static constexpr size_t EXPECTED_DIM_TWO = 2;
@@ -68,12 +68,12 @@ struct FusedLinearCrossEntropyLossGradOutputs {
     aclTensor* inputGradOut;
     aclTensor* weightGradOut;
 };
-}
+} // namespace
 
 inline static bool CheckNotNull(FusedLinearCrossEntropyLossGradInputs& inputs,
                                 FusedLinearCrossEntropyLossGradOutputs& outputs)
 {
-    if (inputs.softmaxOptional == nullptr and \
+    if (inputs.softmaxOptional == nullptr and
         (inputs.logitsMaxOptional == nullptr or inputs.sumExpLogitsOptional == nullptr)) {
         OP_LOGE(ACLNN_ERR_PARAM_NULLPTR,
                 "softmaxOptional can not be nullptr when logitsMaxOptional or sumExpLogitsOptional is nullptr");
@@ -89,7 +89,6 @@ inline static bool CheckNotNull(FusedLinearCrossEntropyLossGradInputs& inputs,
     OP_CHECK_NULL(outputs.weightGradOut, return false);
     return true;
 }
-
 
 inline static bool CheckDtypeValid(FusedLinearCrossEntropyLossGradInputs& inputs,
                                    FusedLinearCrossEntropyLossGradOutputs& outputs)
@@ -183,12 +182,14 @@ inline static bool CheckShapeValid(FusedLinearCrossEntropyLossGradInputs& inputs
     }
     if (inputs.targetMask->GetDataType() == DataType::DT_BOOL) {
         if (targetMaskShape.GetDim(DIM_NUM_ZERO) != BT) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "targetMask.size(0) should be equal to grad.size(0) when targetMask is in BOOL");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "targetMask.size(0) should be equal to grad.size(0) when targetMask is in BOOL");
             return false;
         }
     } else {
         if (targetMaskShape.GetDim(DIM_NUM_ZERO) * SIZE_8 < BT) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "targetMask.size(0) * 8 should not be less than grad.size(0) when targetMask is in UINT8");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "targetMask.size(0) * 8 should not be less than grad.size(0) when targetMask is in UINT8");
             return false;
         }
     }
@@ -213,7 +214,7 @@ inline static bool CheckShapeValid(FusedLinearCrossEntropyLossGradInputs& inputs
 
 inline static bool CheckPlatformSupported()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or \
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B or
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         return true;
     }
@@ -240,43 +241,45 @@ inline static aclnnStatus CheckParam(FusedLinearCrossEntropyLossGradInputs& inpu
 
 inline static bool CheckTupleNotNullptr(std::tuple<aclTensor*, aclTensor*>& result)
 {
-    if (std::get<DIM_NUM_ZERO>(result) == nullptr or \
-        std::get<DIM_NUM_ONE>(result) == nullptr) {
+    if (std::get<DIM_NUM_ZERO>(result) == nullptr or std::get<DIM_NUM_ONE>(result) == nullptr) {
         return false;
     }
     return true;
 }
 
-static const aclTensor* ViewCopyTensors(
-    FusedLinearCrossEntropyLossGradOutputs& outputs,
-    std::tuple<aclTensor*, aclTensor*>& result,
-    aclOpExecutor* executor)
+static const aclTensor* ViewCopyTensors(FusedLinearCrossEntropyLossGradOutputs& outputs,
+                                        std::tuple<aclTensor*, aclTensor*>& result, aclOpExecutor* executor)
 {
-    auto viewCopyResult = l0op::ViewCopy(std::get<DIM_NUM_ZERO>(result),
-                                        outputs.inputGradOut, executor);
+    auto viewCopyResult = l0op::ViewCopy(std::get<DIM_NUM_ZERO>(result), outputs.inputGradOut, executor);
     CHECK_RET(viewCopyResult != nullptr, nullptr);
-    viewCopyResult = l0op::ViewCopy(std::get<DIM_NUM_ONE>(result),
-                                    outputs.weightGradOut, executor);
+    viewCopyResult = l0op::ViewCopy(std::get<DIM_NUM_ONE>(result), outputs.weightGradOut, executor);
     CHECK_RET(viewCopyResult != nullptr, nullptr);
     return viewCopyResult;
 }
 
 aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
-    const aclTensor *grad, const aclTensor *input, const aclTensor *weight, const aclTensor *targetMask, const aclTensor *maskedTarget,
-    float labelSmoothing, const aclTensor *logitsMaxOptional, const aclTensor *sumExpLogitsOptional, const aclTensor *softmaxOptional,
-    aclTensor *inputGradOut, aclTensor *weightGradOut, uint64_t *workspaceSize, aclOpExecutor **executor)
+    const aclTensor* grad, const aclTensor* input, const aclTensor* weight, const aclTensor* targetMask,
+    const aclTensor* maskedTarget, float labelSmoothing, const aclTensor* logitsMaxOptional,
+    const aclTensor* sumExpLogitsOptional, const aclTensor* softmaxOptional, aclTensor* inputGradOut,
+    aclTensor* weightGradOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnFusedLinearCrossEntropyLossGrad,
-        DFX_IN(grad, input, weight, targetMask, maskedTarget, labelSmoothing, logitsMaxOptional, sumExpLogitsOptional, softmaxOptional),
-        DFX_OUT(inputGradOut, weightGradOut)
-    );
+    L2_DFX_PHASE_1(aclnnFusedLinearCrossEntropyLossGrad,
+                   DFX_IN(grad, input, weight, targetMask, maskedTarget, labelSmoothing, logitsMaxOptional,
+                          sumExpLogitsOptional, softmaxOptional),
+                   DFX_OUT(inputGradOut, weightGradOut));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    FusedLinearCrossEntropyLossGradInputs inputs = {
-        grad, input, weight, targetMask, maskedTarget, labelSmoothing, logitsMaxOptional, sumExpLogitsOptional, softmaxOptional};
+    FusedLinearCrossEntropyLossGradInputs inputs = {grad,
+                                                    input,
+                                                    weight,
+                                                    targetMask,
+                                                    maskedTarget,
+                                                    labelSmoothing,
+                                                    logitsMaxOptional,
+                                                    sumExpLogitsOptional,
+                                                    softmaxOptional};
     FusedLinearCrossEntropyLossGradOutputs outputs = {inputGradOut, weightGradOut};
 
     // 入参检查
@@ -296,9 +299,11 @@ aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
     auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
     auto targetMaskContiguous = l0op::Contiguous(targetMask, uniqueExecutor.get());
     auto maskedTargetContiguous = l0op::Contiguous(maskedTarget, uniqueExecutor.get());
-    const aclTensor *logitsMaxOptionalContiguous = nullptr;;
-    const aclTensor *sumExpLogitsOptionalContiguous = nullptr;
-    const aclTensor *softmaxOptionalContiguous = nullptr;;
+    const aclTensor* logitsMaxOptionalContiguous = nullptr;
+    ;
+    const aclTensor* sumExpLogitsOptionalContiguous = nullptr;
+    const aclTensor* softmaxOptionalContiguous = nullptr;
+    ;
     if (inputs.softmaxOptional) {
         // 高性能分支
         softmaxOptionalContiguous = l0op::Contiguous(softmaxOptional, uniqueExecutor.get());
@@ -312,12 +317,10 @@ aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
     CHECK_RET(CheckPlatformSupported(), ACLNN_ERR_RUNTIME_ERROR);
 
     // 调用l0算子
-    std::tuple<aclTensor *, aclTensor *> result = l0op::FusedLinearCrossEntropyLossGrad(
-        gradContiguous, inputContiguous, weightContiguous,
-        targetMaskContiguous, maskedTargetContiguous, logitsMaxOptionalContiguous, sumExpLogitsOptionalContiguous,
-        softmaxOptionalContiguous, labelSmoothing,
-        uniqueExecutor.get()
-    );
+    std::tuple<aclTensor*, aclTensor*> result = l0op::FusedLinearCrossEntropyLossGrad(
+        gradContiguous, inputContiguous, weightContiguous, targetMaskContiguous, maskedTargetContiguous,
+        logitsMaxOptionalContiguous, sumExpLogitsOptionalContiguous, softmaxOptionalContiguous, labelSmoothing,
+        uniqueExecutor.get());
     CHECK_RET(CheckTupleNotNullptr(result), ACLNN_ERR_INNER_NULLPTR);
 
     // 获取输出视图
@@ -330,7 +333,8 @@ aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnFusedLinearCrossEntropyLossGrad(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                 aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFusedLinearCrossEntropyLossGrad);
     // 固定写法，调用框架能力，完成计算

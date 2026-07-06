@@ -36,8 +36,8 @@ using namespace Ops::NN;
 using namespace op;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> dtypeSupportList = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+static const std::initializer_list<op::DataType> dtypeSupportList = {op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
+                                                                     op::DataType::DT_BF16};
 
 static inline bool CheckNotNull(const aclTensor* A, const aclTensor* B, const aclTensor* C, const aclTensor* out)
 {
@@ -75,12 +75,11 @@ static inline bool CheckDtypeValid(const aclTensor* C, const aclTensor* A, const
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!bf16flag && (C->GetDataType() == op::DataType::DT_BF16 || A->GetDataType() == op::DataType::DT_BF16 ||
                       B->GetDataType() == op::DataType::DT_BF16 || out->GetDataType() == op::DataType::DT_BF16)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Bfloat16 is unsupported by the current SOC version [%s], A is %s, B is %s, C is %s, out is %s",
-            op::ToString(socVersion).GetString(), op::ToString(A->GetDataType()).GetString(),
-            op::ToString(B->GetDataType()).GetString(), op::ToString(C->GetDataType()).GetString(),
-            op::ToString(out->GetDataType()).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Bfloat16 is unsupported by the current SOC version [%s], A is %s, B is %s, C is %s, out is %s",
+                op::ToString(socVersion).GetString(), op::ToString(A->GetDataType()).GetString(),
+                op::ToString(B->GetDataType()).GetString(), op::ToString(C->GetDataType()).GetString(),
+                op::ToString(out->GetDataType()).GetString());
         return false;
     }
 
@@ -106,8 +105,8 @@ static inline bool CheckMatmul(const aclTensor* A, const aclTensor* B, int64_t t
     return true;
 }
 
-static inline bool CheckBroadcast(
-    const aclTensor* A, const aclTensor* B, const aclTensor* C, int64_t transA, int64_t transB)
+static inline bool CheckBroadcast(const aclTensor* A, const aclTensor* B, const aclTensor* C, int64_t transA,
+                                  int64_t transB)
 {
     auto mDim = static_cast<bool>(transA) ? (A->GetViewShape())[1] : (A->GetViewShape())[0];
     auto nDim = static_cast<bool>(transB) ? (B->GetViewShape())[0] : (B->GetViewShape())[1];
@@ -118,8 +117,8 @@ static inline bool CheckBroadcast(
 }
 
 // 假设A是 n x m，B是 m x p，out必须是 n x p    如果n / p为0，那么out为empty即可
-static inline bool CheckOutShape(
-    const aclTensor* A, const aclTensor* B, int64_t transA, int64_t transB, const aclTensor* out)
+static inline bool CheckOutShape(const aclTensor* A, const aclTensor* B, int64_t transA, int64_t transB,
+                                 const aclTensor* out)
 {
     auto mDim = static_cast<bool>(transA) ? A->GetViewShape().GetDim(1) : A->GetViewShape().GetDim(0);
     auto nDim = static_cast<bool>(transB) ? B->GetViewShape().GetDim(0) : B->GetViewShape().GetDim(1);
@@ -141,9 +140,8 @@ static inline bool CheckMathType(const aclTensor* A, const aclTensor* B, int8_t 
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* A, const aclTensor* B, const aclTensor* C, int64_t transA, int64_t transB, const aclTensor* out,
-    int8_t cubeMathType)
+static aclnnStatus CheckParams(const aclTensor* A, const aclTensor* B, const aclTensor* C, int64_t transA,
+                               int64_t transB, const aclTensor* out, int8_t cubeMathType)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(A, B, C, out), ACLNN_ERR_INNER_NULLPTR);
@@ -162,10 +160,10 @@ static aclnnStatus CheckParams(
 
     // 6. 检查cubeMathType
     CHECK_RET(CheckMathType(A, B, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-    
+
     // 7. 检查数据格式是否在API支持的范围之内
     CHECK_RET(CheckFormat(A, B, C, out), ACLNN_ERR_PARAM_INVALID);
-    
+
     return ACLNN_SUCCESS;
 }
 
@@ -202,8 +200,8 @@ static aclnnStatus GemmMulEmptyProcess(const aclTensor* C, float beta, aclTensor
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* AddProcess(
-    const aclTensor* mulOut, const aclTensor* matmulOut, float alpha, aclOpExecutor* executor)
+static const aclTensor* AddProcess(const aclTensor* mulOut, const aclTensor* matmulOut, float alpha,
+                                   aclOpExecutor* executor)
 {
     // Add算子需要对C和A两个输入做隐式数据类型转换，根据具体算子语义按需调用
     auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), matmulOut->GetDataType());
@@ -222,9 +220,9 @@ static const aclTensor* AddProcess(
     return addOut;
 }
 
-aclnnStatus aclnnGemmGetWorkspaceSize(
-    const aclTensor* A, const aclTensor* B, const aclTensor* C, float alpha, float beta, int64_t transA, int64_t transB,
-    aclTensor* out, int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnGemmGetWorkspaceSize(const aclTensor* A, const aclTensor* B, const aclTensor* C, float alpha,
+                                      float beta, int64_t transA, int64_t transB, aclTensor* out, int8_t cubeMathType,
+                                      uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGemm, DFX_IN(A, B, C, alpha, beta, transA, transB, cubeMathType), DFX_OUT(out));
 
@@ -233,7 +231,7 @@ aclnnStatus aclnnGemmGetWorkspaceSize(
 
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
-    
+
     auto ret = CheckParams(A, B, C, transA, transB, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 

@@ -57,10 +57,9 @@ constexpr int64_t NUM_TWO = 2;
 constexpr int64_t NUM_TWELVE = 12;
 const std::string OP_NAME = "CTCLossV3";
 
-class CTCLossV3Tiling
-{
+class CTCLossV3Tiling {
 public:
-    explicit CTCLossV3Tiling(gert::TilingContext* ctx) : context(ctx) {};
+    explicit CTCLossV3Tiling(gert::TilingContext* ctx) : context(ctx){};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     bool CheckShapeInfo();
@@ -156,27 +155,21 @@ bool CTCLossV3Tiling::CheckShapeInfoForN()
     auto const inputLengthsShape = context->GetInputShape(INPUT_INPUT_LENGTHS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputLengthsShape);
     auto const inputLengthsShapeVal = inputLengthsShape->GetStorageShape();
-    OP_CHECK_IF(
-        inputLengthsShapeVal.GetDimNum() != LOSS_DIM_NUM,
-        OP_LOGE(
-            nodeName, "Check input_lengths shape failed, the dims of input_lengths not equal 1."),
-        return false);
+    OP_CHECK_IF(inputLengthsShapeVal.GetDimNum() != LOSS_DIM_NUM,
+                OP_LOGE(nodeName, "Check input_lengths shape failed, the dims of input_lengths not equal 1."),
+                return false);
     inputLengthsN = inputLengthsShapeVal.GetDim(BATCH_DIM);
     auto const targetLengthsShape = context->GetInputShape(INPUT_TARGET_LENGTHS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, targetLengthsShape);
     auto const targetLengthsShapeVal = targetLengthsShape->GetStorageShape();
-    OP_CHECK_IF(
-        targetLengthsShapeVal.GetDimNum() != LOSS_DIM_NUM,
-        OP_LOGE(nodeName, "Check target_lengths shape failed, the dims not equal 1."),
-        return false);
+    OP_CHECK_IF(targetLengthsShapeVal.GetDimNum() != LOSS_DIM_NUM,
+                OP_LOGE(nodeName, "Check target_lengths shape failed, the dims not equal 1."), return false);
     targetLengthsN = targetLengthsShapeVal.GetDim(BATCH_DIM);
     auto const lossShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, lossShape);
     auto const lossShapeVal = lossShape->GetStorageShape();
-    OP_CHECK_IF(
-        lossShapeVal.GetDimNum() != LOSS_DIM_NUM,
-        OP_LOGE(nodeName, "Check loss shape failed, the dims of grad not equal 1."),
-        return false);
+    OP_CHECK_IF(lossShapeVal.GetDimNum() != LOSS_DIM_NUM,
+                OP_LOGE(nodeName, "Check loss shape failed, the dims of grad not equal 1."), return false);
     lossN = lossShapeVal.GetDim(BATCH_DIM);
     return true;
 }
@@ -188,10 +181,8 @@ bool CTCLossV3Tiling::CheckShapeInfoForCT()
     auto const logProbsShape = context->GetInputShape(INPUT_LOG_PROB_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, logProbsShape);
     auto const logProbsShapeVal = logProbsShape->GetStorageShape();
-    OP_CHECK_IF(
-        logProbsShapeVal.GetDimNum() != PROB_DIM_NUM,
-        OP_LOGE(nodeName, "Check log_probs shape failed, the dims of log_probs not equal 3."),
-        return false);
+    OP_CHECK_IF(logProbsShapeVal.GetDimNum() != PROB_DIM_NUM,
+                OP_LOGE(nodeName, "Check log_probs shape failed, the dims of log_probs not equal 3."), return false);
     timeStep = logProbsShapeVal.GetDim(T_DIM);
     batchSize = logProbsShapeVal.GetDim(N_DIM);
     symbleSet = logProbsShapeVal.GetDim(C_DIM);
@@ -199,14 +190,11 @@ bool CTCLossV3Tiling::CheckShapeInfoForCT()
     OP_CHECK_NULL_WITH_CONTEXT(context, targetsShape);
     auto const targetsShapeVal = targetsShape->GetStorageShape();
     targetsDimNum = targetsShapeVal.GetDimNum();
-    OP_CHECK_IF(
-        targetsDimNum != LOSS_DIM_NUM && targetsDimNum != TARGETS_DIM_NUM,
-        OP_LOGE(nodeName, "Check targets shape failed, the dims of targets not equal 1 or 2."),
-        return false);
+    OP_CHECK_IF(targetsDimNum != LOSS_DIM_NUM && targetsDimNum != TARGETS_DIM_NUM,
+                OP_LOGE(nodeName, "Check targets shape failed, the dims of targets not equal 1 or 2."), return false);
     targetsN = targetsNum = targetsShapeVal.GetDim(BATCH_DIM);
     auto ret = GetMaxTargetLengths();
-    OP_CHECK_IF(!ret, OP_LOGE(nodeName, "GetMaxTargetLengths failed."),
-        return false);
+    OP_CHECK_IF(!ret, OP_LOGE(nodeName, "GetMaxTargetLengths failed."), return false);
     if (targetsDimNum > LOSS_DIM_NUM) {
         targetsNum = targetsNum * targetsShapeVal.GetDim(1);
         targetsDimLength = targetsShapeVal.GetDim(1);
@@ -217,10 +205,8 @@ bool CTCLossV3Tiling::CheckShapeInfoForCT()
     auto const logAlphaShape = context->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, logAlphaShape);
     auto const logAlphaShapeVal = logAlphaShape->GetStorageShape();
-    OP_CHECK_IF(
-        logAlphaShapeVal.GetDimNum() != PROB_DIM_NUM,
-        OP_LOGE(nodeName, "Check logAlpha shape failed, the dims of grad not equal 3."),
-        return false);
+    OP_CHECK_IF(logAlphaShapeVal.GetDimNum() != PROB_DIM_NUM,
+                OP_LOGE(nodeName, "Check logAlpha shape failed, the dims of grad not equal 3."), return false);
     logAlphaN = logAlphaShapeVal.GetDim(T_DIM);
     logAlphaT = logAlphaShapeVal.GetDim(N_DIM);
     alphaLength = logAlphaShapeVal.GetDim(C_DIM);
@@ -234,7 +220,7 @@ bool CTCLossV3Tiling::GetMaxTargetLengths()
     if (targetLengthsDtype == ge::DataType::DT_INT64) {
         const int64_t* targetLengthsValue = targetLengthsTensor->GetData<int64_t>();
         OP_CHECK_IF(targetLengthsValue == nullptr, OP_LOGE(context->GetNodeName(), "Get const input failed."),
-            return false);
+                    return false);
         for (int64_t i = 0; i < batchSize; i++) {
             maxTargetLength = std::max(maxTargetLength, static_cast<int64_t>(targetLengthsValue[i]));
         }
@@ -242,7 +228,7 @@ bool CTCLossV3Tiling::GetMaxTargetLengths()
         int32_t maxTargetLengthTmp = 1;
         const int32_t* targetLengthsValue = targetLengthsTensor->GetData<int32_t>();
         OP_CHECK_IF(targetLengthsValue == nullptr, OP_LOGE(context->GetNodeName(), "Get const input failed."),
-            return false);
+                    return false);
         for (int64_t i = 0; i < batchSize; i++) {
             maxTargetLengthTmp = std::max(maxTargetLengthTmp, static_cast<int32_t>(targetLengthsValue[i]));
         }
@@ -259,21 +245,17 @@ bool CTCLossV3Tiling::CheckShapeInfo()
         return false;
     }
 
-    bool NCheck =
-        batchSize == inputLengthsN && inputLengthsN == targetLengthsN && targetLengthsN == lossN && lossN == logAlphaN;
+    bool NCheck = batchSize == inputLengthsN && inputLengthsN == targetLengthsN && targetLengthsN == lossN &&
+                  lossN == logAlphaN;
     NCheck = targetsDimNum > 1 ? (NCheck && (batchSize == targetsN)) : NCheck;
     OP_CHECK_IF(!NCheck, OP_LOGE(nodeName, "Check batchSize failed."), return false);
 
-    OP_CHECK_IF(
-        logAlphaN > MAX_BATCH, OP_LOGE(nodeName, "batchSize is too large, AICPU recommended."),
-        return false);
+    OP_CHECK_IF(logAlphaN > MAX_BATCH, OP_LOGE(nodeName, "batchSize is too large, AICPU recommended."), return false);
 
     bool TCheck = timeStep == logAlphaT;
     OP_CHECK_IF(!TCheck, OP_LOGE(nodeName, "Check max time failed."), return false);
-    OP_CHECK_IF(
-        symbleSet > MAX_SYMBOL_SET_LEN_V3 || maxTargetLength > MAX_LABEL_LEN,
-        OP_LOGE(nodeName, "symbleSet or max targetLength is too large, AICPU recommended."),
-        return false);
+    OP_CHECK_IF(symbleSet > MAX_SYMBOL_SET_LEN_V3 || maxTargetLength > MAX_LABEL_LEN,
+                OP_LOGE(nodeName, "symbleSet or max targetLength is too large, AICPU recommended."), return false);
     return true;
 }
 
@@ -298,9 +280,8 @@ ge::graphStatus CTCLossV3Tiling::Init()
     const auto* blankPtr = attrs->GetAttrPointer<int64_t>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, blankPtr);
     blankAtr = *blankPtr;
-    OP_CHECK_IF(
-        blankAtr < 0 || blankAtr >= symbleSet,
-        OP_LOGE(nodeName, "blank is pout of range, AICPU recommended."), return false);
+    OP_CHECK_IF(blankAtr < 0 || blankAtr >= symbleSet, OP_LOGE(nodeName, "blank is pout of range, AICPU recommended."),
+                return false);
     const auto* zeroInfinityPtr = attrs->GetAttrPointer<int64_t>(ZERO_INFINITY_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, zeroInfinityPtr);
     zeroInfinity = *zeroInfinityPtr;
@@ -404,20 +385,15 @@ ge::graphStatus TilingPrepare4CTCLossV3(gert::TilingParseContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNum <= 0), OP_LOGE(nodeName, "Failed to get core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(nodeName, "Failed to get core num."), return ge::GRAPH_FAILED);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_CHECK_IF(
-        (compileInfo->sysWorkspaceSize <= 0U),
-        OP_LOGE(nodeName, "sysWorkspaceSize should be greater than or equal to zero"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->sysWorkspaceSize <= 0U),
+                OP_LOGE(nodeName, "sysWorkspaceSize should be greater than or equal to zero"), return ge::GRAPH_FAILED);
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(nodeName, "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(nodeName, "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context, "TilingPrepare4CTCLossV3 end.");
 
     return ge::GRAPH_SUCCESS;

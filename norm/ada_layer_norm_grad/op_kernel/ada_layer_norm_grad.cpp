@@ -64,49 +64,46 @@ using namespace AdaLayerNormGrad;
 #define MERGE_BS_WORKSPACE_BF16_BF16_DETERMINISTIC 414
 #define MERGE_BS_WORKSPACE_BF16_FLOAT_DETERMINISTIC 415
 
-#define INVOKE_ADA_LAYER_NORM_GRAD_MERGE_BS_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                      \
-    do {                                                                                                      \
-        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataMergeBSWorkspace, tilingData, tiling);          \
-        AdaLayerNormGradMergeBSWorkspace<Tdy, Tgamma, Isdeterministic> op;                                    \
-        op.Init(                                                                                              \
-            dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
-            &tilingData, pipe);                                                                               \
-        op.Process(&tilingData);                                                                              \
+#define INVOKE_ADA_LAYER_NORM_GRAD_MERGE_BS_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                          \
+    do {                                                                                                          \
+        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataMergeBSWorkspace, tilingData, tiling);              \
+        AdaLayerNormGradMergeBSWorkspace<Tdy, Tgamma, Isdeterministic> op;                                        \
+        op.Init(dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
+                &tilingData, pipe);                                                                               \
+        op.Process(&tilingData);                                                                                  \
     } while (0)
 
-#define INVOKE_ADA_LAYER_NORM_GRAD_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                               \
-    do {                                                                                                      \
-        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataWorkspace, tilingData, tiling);                 \
-        AdaLayerNormGradWorkspace<Tdy, Tgamma, Isdeterministic> op;                                           \
-        op.Init(                                                                                              \
-            dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
-            &tilingData, pipe);                                                                               \
-        op.Process(&tilingData);                                                                              \
+#define INVOKE_ADA_LAYER_NORM_GRAD_WORKSPACE_IMPL(Tdy, Tgamma, Isdeterministic)                                   \
+    do {                                                                                                          \
+        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataWorkspace, tilingData, tiling);                     \
+        AdaLayerNormGradWorkspace<Tdy, Tgamma, Isdeterministic> op;                                               \
+        op.Init(dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
+                &tilingData, pipe);                                                                               \
+        op.Process(&tilingData);                                                                                  \
     } while (0)
 
-#define INVOKE_ADA_LAYER_NORM_GRAD_MERGE_BS_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                         \
-    do {                                                                                                      \
-        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataMergeBSCommon, tilingData, tiling);             \
-        AdaLayerNormGradMergeBSCommon<Tdy, Tgamma, Isdeterministic> op;                                       \
-        op.Init(                                                                                              \
-            dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
-            &tilingData, pipe);                                                                               \
-        op.Process(&tilingData);                                                                              \
+#define INVOKE_ADA_LAYER_NORM_GRAD_MERGE_BS_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                             \
+    do {                                                                                                          \
+        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataMergeBSCommon, tilingData, tiling);                 \
+        AdaLayerNormGradMergeBSCommon<Tdy, Tgamma, Isdeterministic> op;                                           \
+        op.Init(dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
+                &tilingData, pipe);                                                                               \
+        op.Process(&tilingData);                                                                                  \
     } while (0)
 
-#define INVOKE_ADA_LAYER_NORM_GRAD_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                                  \
-    do {                                                                                                      \
-        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataCommon, tilingData, tiling);                    \
-        AdaLayerNormGradCommon<Tdy, Tgamma, Isdeterministic> op;                                              \
-        op.Init(                                                                                              \
-            dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
-            &tilingData, pipe);                                                                               \
-        op.Process(&tilingData);                                                                              \
+#define INVOKE_ADA_LAYER_NORM_GRAD_COMMON_IMPL(Tdy, Tgamma, Isdeterministic)                                      \
+    do {                                                                                                          \
+        GET_TILING_DATA_WITH_STRUCT(AdaLayerNormGradTilingDataCommon, tilingData, tiling);                        \
+        AdaLayerNormGradCommon<Tdy, Tgamma, Isdeterministic> op;                                                  \
+        op.Init(dy, x, rstd, mean, scale, gamma, beta, pd_x, pd_scale, pd_shift, pd_gamma, pd_beta, usrWorkspace, \
+                &tilingData, pipe);                                                                               \
+        op.Process(&tilingData);                                                                                  \
     } while (0)
 
-extern "C" __global__ __aicore__ void ada_layer_norm_grad(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR scale, GM_ADDR gamma, GM_ADDR beta, GM_ADDR pd_x,
-    GM_ADDR pd_scale, GM_ADDR pd_shift, GM_ADDR pd_gamma, GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void ada_layer_norm_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                          GM_ADDR scale, GM_ADDR gamma, GM_ADDR beta, GM_ADDR pd_x,
+                                                          GM_ADDR pd_scale, GM_ADDR pd_shift, GM_ADDR pd_gamma,
+                                                          GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
     if (g_coreType == AIC) {

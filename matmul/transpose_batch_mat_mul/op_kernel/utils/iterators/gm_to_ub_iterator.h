@@ -17,15 +17,15 @@
 #define GM_TO_UB_ITERATOR_H
 template <ArchType ArchTag, typename DType>
 struct gm_to_ub {
-    __aicore__ inline gm_to_ub(
-        AscendC::LocalTensor<DType> dstTensor, AscendC::GlobalTensor<DType> srcTensor, uint8_t sid, uint16_t nBurst,
-        uint16_t lenBurst, uint16_t srcStride, uint16_t dstStride)
+    __aicore__ inline gm_to_ub(AscendC::LocalTensor<DType> dstTensor, AscendC::GlobalTensor<DType> srcTensor,
+                               uint8_t sid, uint16_t nBurst, uint16_t lenBurst, uint16_t srcStride, uint16_t dstStride)
     {
         AscendC::DataCopy(dstTensor, srcTensor, AscendC::DataCopyParams(nBurst, lenBurst, srcStride, dstStride));
     };
 };
 
-template <ArchType ArchTag, typename DType> struct gm_to_ub_align {
+template <ArchType ArchTag, typename DType>
+struct gm_to_ub_align {
     __aicore__ inline gm_to_ub_align(AscendC::LocalTensor<DType> dstTensor, AscendC::GlobalTensor<DType> srcTensor,
                                      uint8_t sid, uint16_t nBurst, uint32_t lenBurst, uint8_t leftPaddingNum,
                                      uint8_t rightPaddingNum, uint32_t srcGap, uint32_t dstGap)
@@ -37,27 +37,25 @@ template <ArchType ArchTag, typename DType> struct gm_to_ub_align {
 
 template <ArchType ArchTag, typename DType>
 struct ub_to_ub {
-    __aicore__ inline ub_to_ub(
-        AscendC::LocalTensor<DType> dstTensor, AscendC::LocalTensor<DType> srcTensor, uint8_t sid, uint16_t nBurst,
-        uint16_t lenBurst, uint16_t srcStride, uint16_t dstStride)
+    __aicore__ inline ub_to_ub(AscendC::LocalTensor<DType> dstTensor, AscendC::LocalTensor<DType> srcTensor,
+                               uint8_t sid, uint16_t nBurst, uint16_t lenBurst, uint16_t srcStride, uint16_t dstStride)
     {
         AscendC::DataCopy(dstTensor, srcTensor, AscendC::DataCopyParams(nBurst, lenBurst, srcStride, dstStride));
     };
 };
 
-template <
-    ArchType ArchTag, typename DataType, DataFormat InDataFormat = DataFormat::ND,
-    DataFormat OutDataFormat = DataFormat::ND>
+template <ArchType ArchTag, typename DataType, DataFormat InDataFormat = DataFormat::ND,
+          DataFormat OutDataFormat = DataFormat::ND>
 struct ub_to_gm {
-    __aicore__ inline ub_to_gm(
-        AscendC::GlobalTensor<DataType> dstTensor, AscendC::LocalTensor<DataType> srcTensor, uint8_t sid,
-        uint16_t nBurst, uint16_t lenBurst, uint16_t srcStride, uint16_t dstStride)
+    __aicore__ inline ub_to_gm(AscendC::GlobalTensor<DataType> dstTensor, AscendC::LocalTensor<DataType> srcTensor,
+                               uint8_t sid, uint16_t nBurst, uint16_t lenBurst, uint16_t srcStride, uint16_t dstStride)
     {
         AscendC::DataCopy(dstTensor, srcTensor, AscendC::DataCopyParams(nBurst, lenBurst, srcStride, dstStride));
     };
 };
 
-template <ArchType ArchTag, typename DataType> struct ub_to_gm<ArchTag, DataType, DataFormat::NZ, DataFormat::NZ> {
+template <ArchType ArchTag, typename DataType>
+struct ub_to_gm<ArchTag, DataType, DataFormat::NZ, DataFormat::NZ> {
     using HardwareParams = HardwareInfo<ArchTag>;
     static constexpr uint32_t BLOCK_SIZE = HardwareParams::l1l0BlockSize / sizeof(DataType);
 
@@ -91,9 +89,9 @@ template <ArchType ArchTag, typename DataType> struct ub_to_gm<ArchTag, DataType
 
 template <ArchType ArchTag, typename DType>
 struct ub_to_gm_align {
-    __aicore__ inline ub_to_gm_align(
-        AscendC::GlobalTensor<DType> dstTensor, AscendC::LocalTensor<DType> srcTensor, uint8_t sid, uint16_t nBurst,
-        uint32_t lenBurst, uint8_t leftPaddingNum, uint8_t rightPaddingNum, uint32_t srcGap, uint32_t dstGap)
+    __aicore__ inline ub_to_gm_align(AscendC::GlobalTensor<DType> dstTensor, AscendC::LocalTensor<DType> srcTensor,
+                                     uint8_t sid, uint16_t nBurst, uint32_t lenBurst, uint8_t leftPaddingNum,
+                                     uint8_t rightPaddingNum, uint32_t srcGap, uint32_t dstGap)
     {
         AscendC::DataCopyPad(dstTensor, srcTensor, AscendC::DataCopyExtParams(nBurst, lenBurst, srcGap, dstGap, 0));
     };

@@ -53,8 +53,8 @@ constexpr int64_t SCALE2_ROW = 2;
 constexpr int64_t gatherCommandRequire = 256;
 const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
 const std::set<ge::DataType> INPUT_FP16_DTYPE_SET = {ge::DT_FLOAT16};
-const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {
-    ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
+const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN,
+                                                    ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> MX_SCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
@@ -92,48 +92,45 @@ ge::graphStatus DynamicBlockMxQuantTiling::GetAttr()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrRoundMode);
     std::string roundModeStr = attrRoundMode;
     RoundModeList roundMode = GetRoundMode(roundModeStr);
-    OP_CHECK_IF(
-        (roundMode == RoundModeList::MODE_UNDEFINED),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "round_mode", roundModeStr, "The value of round_mode must be rint, floor, or round"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0 && roundMode != RoundModeList::MODE_RINT),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "round_mode", roundModeStr,
-            "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter round_mode must be rint"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((roundMode == RoundModeList::MODE_UNDEFINED),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundModeStr,
+                                                      "The value of round_mode must be rint, floor, or round"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0 && roundMode != RoundModeList::MODE_RINT),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "round_mode", roundModeStr,
+                    "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter round_mode must be rint"),
+                return ge::GRAPH_FAILED);
     tilingParams.roundMode = static_cast<int64_t>(roundMode);
 
     auto* attrDstType = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_DST_DTYPE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrDstType);
     tilingParams.dstType = static_cast<int64_t>(*attrDstType);
     int checkDstType = static_cast<int>(*attrDstType);
-    OP_CHECK_IF(
-        (yDtype == ge::DT_FLOAT4_E2M1 && checkDstType != 40) || (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
-            (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||
-            (yDtype == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "y, dst_type",
-            Ops::Base::ToString(yDtype) + ", " + std::to_string(tilingParams.dstType),
-            "The dtypes of y and dst_type must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((yDtype == ge::DT_FLOAT4_E2M1 && checkDstType != 40) ||
+                    (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
+                    (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||
+                    (yDtype == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context_->GetNodeName(), "y, dst_type",
+                    Ops::Base::ToString(yDtype) + ", " + std::to_string(tilingParams.dstType),
+                    "The dtypes of y and dst_type must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrScaleAlg);
     tilingParams.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
-    OP_CHECK_IF(
-        tilingParams.scaleAlg != DIGIT_ZERO && tilingParams.scaleAlg != DIGIT_TWO,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "scale_alg", std::to_string(tilingParams.scaleAlg), "The value of scale_alg must be 0 or 2"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (tilingParams.scaleAlg != DIGIT_ZERO) &&
-            (yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2 || yDtype == ge::DT_FLOAT4_E1M2),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "scale_alg", std::to_string(tilingParams.scaleAlg),
-            "If the dtype of output y is FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2, parameter scale_alg must be 0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingParams.scaleAlg != DIGIT_ZERO && tilingParams.scaleAlg != DIGIT_TWO,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "scale_alg",
+                                                      std::to_string(tilingParams.scaleAlg),
+                                                      "The value of scale_alg must be 0 or 2"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParams.scaleAlg != DIGIT_ZERO) &&
+                    (yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_FLOAT8_E5M2 || yDtype == ge::DT_FLOAT4_E1M2),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "scale_alg", std::to_string(tilingParams.scaleAlg),
+                    "If the dtype of output y is FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2, parameter scale_alg must be 0"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (yDtype == ge::DT_FLOAT4_E2M1 && tilingParams.scaleAlg != DIGIT_ZERO && tilingParams.scaleAlg != DIGIT_TWO),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -144,13 +141,12 @@ ge::graphStatus DynamicBlockMxQuantTiling::GetAttr()
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_TYPE_MAX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrDstTypeMax);
     tilingParams.dstTypeMax = static_cast<float>(*attrDstTypeMax);
-    OP_CHECK_IF(
-        (tilingParams.dstTypeMax != DIGIT_ZERO_FLOAT &&
-         (tilingParams.scaleAlg != DIGIT_TWO || yDtype != ge::DT_FLOAT4_E2M1)),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "dst_type_max", std::to_string(tilingParams.dstTypeMax),
-            "When scale_alg is not 2 or the yDtype is not FLOAT4_E2M1,the value of dst_type_max must be 0.0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParams.dstTypeMax != DIGIT_ZERO_FLOAT &&
+                 (tilingParams.scaleAlg != DIGIT_TWO || yDtype != ge::DT_FLOAT4_E2M1)),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "dst_type_max", std::to_string(tilingParams.dstTypeMax),
+                    "When scale_alg is not 2 or the yDtype is not FLOAT4_E2M1,the value of dst_type_max must be 0.0"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (tilingParams.scaleAlg == DIGIT_TWO && yDtype == ge::DT_FLOAT4_E2M1 &&
          (tilingParams.dstTypeMax != DIGIT_ZERO_FLOAT && tilingParams.dstTypeMax != DIGIT_SIX_FLOAT &&
@@ -168,39 +164,35 @@ ge::graphStatus DynamicBlockMxQuantTiling::CheckDtype() const
     auto inputXPtr = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXPtr);
     auto xDtype = inputXPtr->GetDataType();
-    OP_CHECK_IF(
-        INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "x", Ops::Base::ToString(xDtype), "The dtype of x must be DT_FLOAT16 or DT_BF16"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype),
+                                                      "The dtype of x must be DT_FLOAT16 or DT_BF16"),
+                return ge::GRAPH_FAILED);
 
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
-    OP_CHECK_IF(
-        Y_SUPPORT_DTYPE_SET.count(yDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context_->GetNodeName(), "y", Ops::Base::ToString(yDtype),
-            "The dtype of y must be DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, or DT_FLOAT8_E5M2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(Y_SUPPORT_DTYPE_SET.count(yDtype) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "y", Ops::Base::ToString(yDtype),
+                    "The dtype of y must be DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, or DT_FLOAT8_E5M2"),
+                return ge::GRAPH_FAILED);
 
     auto outputScale1Ptr = context_->GetOutputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputScale1Ptr);
     auto scale1Dtype = outputScale1Ptr->GetDataType();
-    OP_CHECK_IF(
-        MX_SCALE_SUPPORT_DTYPE_SET.count(scale1Dtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "scale1", Ops::Base::ToString(scale1Dtype), "DT_FLOAT8_E8M0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(MX_SCALE_SUPPORT_DTYPE_SET.count(scale1Dtype) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scale1", Ops::Base::ToString(scale1Dtype),
+                                          "DT_FLOAT8_E8M0"),
+                return ge::GRAPH_FAILED);
 
     auto outputScale2Ptr = context_->GetOutputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputScale2Ptr);
     auto scale2Dtype = outputScale2Ptr->GetDataType();
-    OP_CHECK_IF(
-        MX_SCALE_SUPPORT_DTYPE_SET.count(scale2Dtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "scale2", Ops::Base::ToString(scale2Dtype), "DT_FLOAT8_E8M0"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(MX_SCALE_SUPPORT_DTYPE_SET.count(scale2Dtype) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scale2", Ops::Base::ToString(scale2Dtype),
+                                          "DT_FLOAT8_E8M0"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -212,39 +204,36 @@ ge::graphStatus DynamicBlockMxQuantTiling::CheckShape() const
     auto xShape = xShapePtr->GetStorageShape();
     size_t xSizeNum = xShape.GetShapeSize();
     if (xSizeNum == 0ULL) {
-        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-            context_->GetNodeName(), "x", std::to_string(xSizeNum), "dynamic_block_mx_quant does not support empty tensor");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xSizeNum),
+                                                  "dynamic_block_mx_quant does not support empty tensor");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        xShape.GetDimNum() != 2 && xShape.GetDimNum() != 3,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "x", std::to_string(static_cast<int64_t>(xShape.GetDimNum())),
-            "The shape dim of x must be 2 or 3"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDimNum() != 2 && xShape.GetDimNum() != 3,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                                                         std::to_string(static_cast<int64_t>(xShape.GetDimNum())),
+                                                         "The shape dim of x must be 2 or 3"),
+                return ge::GRAPH_FAILED);
 
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
 
-    OP_CHECK_IF(
-        xShape.GetDim(xShape.GetDimNum() - 1) % DIGIT_TWO != 0 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype) != 0,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context_->GetNodeName(), "x", std::to_string(xShape.GetDim(xShape.GetDimNum() - 1)),
-            "If the dtype of output y is FLOAT4_E2M1/FLOAT4_E1M2, the last dim of x must be even"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape.GetDim(xShape.GetDimNum() - 1) % DIGIT_TWO != 0 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype) != 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    context_->GetNodeName(), "x", std::to_string(xShape.GetDim(xShape.GetDimNum() - 1)),
+                    "If the dtype of output y is FLOAT4_E2M1/FLOAT4_E1M2, the last dim of x must be even"),
+                return ge::GRAPH_FAILED);
 
     auto yShapePtr = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
 
-    OP_CHECK_IF(
-        xShape != yShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x, y", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
-            "The shapes of x and y must be the same"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape != yShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, y",
+                                                       Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
+                                                       "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
 
     auto scale1ShapePtr = context_->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scale1ShapePtr);
@@ -255,27 +244,27 @@ ge::graphStatus DynamicBlockMxQuantTiling::CheckShape() const
     auto scale2Shape = scale2ShapePtr->GetStorageShape();
 
     auto newScale1Shape = xShape;
-    newScale1Shape.SetDim(
-        xShape.GetDimNum() - DIGIT_ONE, Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - DIGIT_ONE), DIGIT_64));
+    newScale1Shape.SetDim(xShape.GetDimNum() - DIGIT_ONE,
+                          Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - DIGIT_ONE), DIGIT_64));
     newScale1Shape.AppendDim(DIGIT_TWO);
 
     auto newScale2Shape = xShape;
-    newScale2Shape.SetDim(
-        xShape.GetDimNum() - DIGIT_TWO, Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - DIGIT_TWO), DIGIT_64));
+    newScale2Shape.SetDim(xShape.GetDimNum() - DIGIT_TWO,
+                          Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - DIGIT_TWO), DIGIT_64));
     newScale2Shape.AppendDim(DIGIT_TWO);
 
     OP_CHECK_IF(
         newScale1Shape != scale1Shape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x, scale1", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(scale1Shape),
-            "The shapes of x and scale1 must be the same"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, scale1",
+                                               Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(scale1Shape),
+                                               "The shapes of x and scale1 must be the same"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         newScale2Shape != scale2Shape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x, scale2", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(scale2Shape),
-            "The shapes of x and scale2 must be the same"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, scale2",
+                                               Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(scale2Shape),
+                                               "The shapes of x and scale2 must be the same"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -290,15 +279,13 @@ ge::graphStatus DynamicBlockMxQuantTiling::GetPlatformInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (tilingParams.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to core num."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParams.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to core num."),
+                return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParams.ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(
-        (tilingParams.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParams.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
+                return ge::GRAPH_FAILED);
     tilingParams.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
     return ge::GRAPH_SUCCESS;
@@ -341,8 +328,8 @@ void DynamicBlockMxQuantTiling::SplitCore()
     perBlockTmpUbSize *= N_BUFFER;
     // 1/scale && gather comand require
     int64_t scaleAlignedBlockW = Ops::Base::CeilAlign((tilingParams.blockW / BLOCK_SIZE), BLOCK_SIZE);
-    perBlockUbSize =
-        perBlockTmpUbSize + (tilingParams.blockH / BLOCK_SIZE) * scaleAlignedBlockW * BYTES_OF_RECIPROCAL_SCALE_TYPE;
+    perBlockUbSize = perBlockTmpUbSize +
+                     (tilingParams.blockH / BLOCK_SIZE) * scaleAlignedBlockW * BYTES_OF_RECIPROCAL_SCALE_TYPE;
 
     perBlockUbSize = perBlockUbSize != 0 ? perBlockUbSize : 1;
 
@@ -350,11 +337,13 @@ void DynamicBlockMxQuantTiling::SplitCore()
     // normalCoreColTileNum:一个核列方向的基本块数
     // maxUbAvailable: Ub能放入的基本块数量
     // ub内一行可以搬多少个block
-    tilingParams.colUbBlockLoopNum =
-        maxUbAvailable < tilingParams.normalCoreColTileNum ? maxUbAvailable : tilingParams.normalCoreColTileNum;
+    tilingParams.colUbBlockLoopNum = maxUbAvailable < tilingParams.normalCoreColTileNum ?
+                                         maxUbAvailable :
+                                         tilingParams.normalCoreColTileNum;
     maxUbAvailable = maxUbAvailable / tilingParams.colUbBlockLoopNum;
-    tilingParams.rowUbBlockLoopNum =
-        maxUbAvailable > tilingParams.normalCoreRowTileNum ? tilingParams.normalCoreRowTileNum : maxUbAvailable;
+    tilingParams.rowUbBlockLoopNum = maxUbAvailable > tilingParams.normalCoreRowTileNum ?
+                                         tilingParams.normalCoreRowTileNum :
+                                         maxUbAvailable;
     tilingParams.rowUbFactor = tilingParams.rowUbBlockLoopNum * tilingParams.blockH;
     tilingParams.colUbFactor = tilingParams.colUbBlockLoopNum * tilingParams.blockW;
 }
@@ -377,8 +366,8 @@ ge::graphStatus DynamicBlockMxQuantTiling::AutoTiling()
     OP_LOGD("AutoTiling", "DynamicBlockMxQuant AutoTiling Enter.");
 
     // 计算可用核数
-    tilingParams.usedCoreNum =
-        std::min(tilingParams.totalCoreNum, tilingParams.rowBlockLoopNum * tilingParams.colBlockLoopNum);
+    tilingParams.usedCoreNum = std::min(tilingParams.totalCoreNum,
+                                        tilingParams.rowBlockLoopNum * tilingParams.colBlockLoopNum);
     tilingParams.usedCoreNum = tilingParams.usedCoreNum == 0 ? 1 : tilingParams.usedCoreNum;
 
     // 查找切分的组合
@@ -439,25 +428,21 @@ ge::graphStatus DynamicBlockMxQuantTiling::DoTiling()
 {
     OP_LOGD(context_->GetNodeName(), "Enter DynamicBlockMxQuantTiling DoTiling.");
 
-    OP_CHECK_IF(
-        GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The platforminfo get failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The platforminfo get failed"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The data type check failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The data type check failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The attr get failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The attr get failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The shape check failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "The shape check failed."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        SetTilingParams() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "DynamicBlockMxQuantTiling SetTilingParams failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SetTilingParams() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "DynamicBlockMxQuantTiling SetTilingParams failed"),
+                return ge::GRAPH_FAILED);
 
     SetTilingKey();
     SetTilingData();
@@ -469,8 +454,8 @@ ge::graphStatus DynamicBlockMxQuantTiling::DoTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     auto rawTilingData = context_->GetRawTilingData();
     uint64_t tilingDataSize = sizeof(tilingData);
-    errno_t ret = memcpy_s(
-        rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData), tilingDataSize);
+    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
+                           tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
         return ge::GRAPH_FAILED;
@@ -507,15 +492,15 @@ ge::graphStatus DynamicBlockMxQuantTiling::SetTilingParams()
     tilingParams.tailCoreColTileNum = Ops::Base::FloorDiv(tilingParams.colBlockLoopNum, tilingParams.colTileNum);
 
     // rowTileNum：100，rowTileNum：9；normalCoreColTileNum：12，tailCoreRowTileNum：11
-    tilingParams.rowNormalCoreNum =
-        tilingParams.rowBlockLoopNum - tilingParams.rowTileNum * tilingParams.tailCoreRowTileNum;
-    tilingParams.colNormalCoreNum =
-        tilingParams.colBlockLoopNum - tilingParams.colTileNum * tilingParams.tailCoreColTileNum;
+    tilingParams.rowNormalCoreNum = tilingParams.rowBlockLoopNum -
+                                    tilingParams.rowTileNum * tilingParams.tailCoreRowTileNum;
+    tilingParams.colNormalCoreNum = tilingParams.colBlockLoopNum -
+                                    tilingParams.colTileNum * tilingParams.tailCoreColTileNum;
 
-    tilingParams.rowNormalCoreNum =
-        tilingParams.rowNormalCoreNum == 0 ? tilingParams.rowTileNum : tilingParams.rowNormalCoreNum;
-    tilingParams.colNormalCoreNum =
-        tilingParams.colNormalCoreNum == 0 ? tilingParams.colTileNum : tilingParams.colNormalCoreNum;
+    tilingParams.rowNormalCoreNum = tilingParams.rowNormalCoreNum == 0 ? tilingParams.rowTileNum :
+                                                                         tilingParams.rowNormalCoreNum;
+    tilingParams.colNormalCoreNum = tilingParams.colNormalCoreNum == 0 ? tilingParams.colTileNum :
+                                                                         tilingParams.colNormalCoreNum;
 
     tilingParams.rowTailCoreNum = tilingParams.rowTileNum - tilingParams.rowNormalCoreNum;
     tilingParams.colTailCoreNum = tilingParams.colTileNum - tilingParams.colNormalCoreNum;
@@ -607,8 +592,8 @@ static ge::graphStatus TilingForDynamicBlockMxQuant(gert::TilingContext* context
 {
     OP_LOGD("DynamicBlockMxQuantTiling", "Enter TilingForDynamicBlockMxQuantTiling");
 
-    OP_CHECK_IF(
-        context == nullptr, OP_LOGE("DynamicBlockMxQuantTiling", "Tiling context is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, OP_LOGE("DynamicBlockMxQuantTiling", "Tiling context is null."),
+                return ge::GRAPH_FAILED);
 
     DynamicBlockMxQuantTiling blockMxQuantTiling(context);
     return blockMxQuantTiling.DoTiling();
@@ -618,9 +603,8 @@ static ge::graphStatus TilingPrepareForDynamicBlockMxQuant(gert::TilingParseCont
 {
     OP_LOGD("DynamicBlockMxQuantTiling", "Enter TilingPrepareForDynamicBlockMxQuantTiling");
 
-    OP_CHECK_IF(
-        context == nullptr, OP_LOGE("DynamicBlockMxQuantTiling", "TilingParse context is null."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(context == nullptr, OP_LOGE("DynamicBlockMxQuantTiling", "TilingParse context is null."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

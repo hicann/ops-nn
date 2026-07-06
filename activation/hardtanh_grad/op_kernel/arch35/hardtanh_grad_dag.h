@@ -40,8 +40,10 @@ struct HardtanhGradDag {
 
     // compare
     using OpCompareNaN = Bind<Vec::Compare<uint8_t, T, COMPARE_MODE_NE>, OpCopyIn0Cast, OpCopyIn0Cast>;
-    using OpCompareLowerThanMax = Bind<Vec::Compare<uint8_t, T, COMPARE_MODE_LT>, OpCopyIn0Cast, Placeholder::Var<T, 1>>;
-    using OpCompareGreaterThanMin = Bind<Vec::Compare<uint8_t, T, COMPARE_MODE_GT>, OpCopyIn0Cast, Placeholder::Var<T, 0>>;
+    using OpCompareLowerThanMax = Bind<Vec::Compare<uint8_t, T, COMPARE_MODE_LT>, OpCopyIn0Cast,
+                                       Placeholder::Var<T, 1>>;
+    using OpCompareGreaterThanMin = Bind<Vec::Compare<uint8_t, T, COMPARE_MODE_GT>, OpCopyIn0Cast,
+                                         Placeholder::Var<T, 0>>;
 
     // mask
     using OpMaskAnd = Bind<Vec::And<uint8_t>, OpCompareLowerThanMax, OpCompareGreaterThanMin>;

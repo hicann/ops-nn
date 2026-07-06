@@ -22,8 +22,8 @@ using namespace AscendC;
 template <typename T1, typename T2>
 class NonZeroNullInputTensor {
 public:
-    __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                const NonZeroTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -35,8 +35,8 @@ private:
 };
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroNullInputTensor<T1, T2>::Init(
-    GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace, const NonZeroTilingData* tilingData)
+__aicore__ inline void NonZeroNullInputTensor<T1, T2>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR outShape, GM_ADDR workspace,
+                                                            const NonZeroTilingData* tilingData)
 {
     blockIdx_ = GetBlockIdx();
     shapeGm_.SetGlobalBuffer((__gm__ uint64_t*)outShape);

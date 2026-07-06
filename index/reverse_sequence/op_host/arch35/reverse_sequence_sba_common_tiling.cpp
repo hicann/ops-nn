@@ -30,8 +30,7 @@
 using namespace AscendC;
 using namespace ge;
 
-namespace optiling
-{
+namespace optiling {
 using namespace ReverseSequence;
 
 static constexpr int64_t SIMT_THRESHOLD = 128;
@@ -82,7 +81,9 @@ void ReverseSequenceSBACommonTiling::DoBlockTiling()
     blockFactor_ = totalLoop / static_cast<int64_t>(coreNum_);
     blockTail_ = totalLoop - blockFactor_ * static_cast<int64_t>(coreNum_);
     usedCoreNum_ = blockFactor_ == 0 ? blockTail_ : static_cast<int64_t>(coreNum_);
-    int64_t ubFactorA = splitMode_ == SPLIT_DIM_A || splitMode_ == SPLIT_DIM_A1 ? ubFactorA_ : Ops::Base::CeilAlign(ubFactorA_, oneBlockNum_);
+    int64_t ubFactorA = splitMode_ == SPLIT_DIM_A || splitMode_ == SPLIT_DIM_A1 ?
+                            ubFactorA_ :
+                            Ops::Base::CeilAlign(ubFactorA_, oneBlockNum_);
     int64_t ubFactorSBA = ubFactorS_ * ubFactorB_ * ubFactorA;
     if (splitMode_ == SPLIT_DIM_A1) {
         ubFactorSBA = Ops::Base::CeilAlign(ubFactorSBA, oneBlockNum_);
@@ -90,14 +91,15 @@ void ReverseSequenceSBACommonTiling::DoBlockTiling()
     inUbSize_ = ubFactorA1_ * ubFactorSBA;
 }
 
-int64_t ReverseSequenceSBACommonTiling::CalcBufferSize(int64_t inA1, int64_t inS, int64_t inB, int64_t inA, int64_t splitMode)
+int64_t ReverseSequenceSBACommonTiling::CalcBufferSize(int64_t inA1, int64_t inS, int64_t inB, int64_t inA,
+                                                       int64_t splitMode)
 {
     OP_LOGD("ReverseSequenceSBACommonTiling::CalcBufferSize begin");
     int64_t tmpInDataBufferSize = inA1 * inS * inB * Ops::Base::CeilAlign(inA, oneBlockNum_);
     if (splitMode == SPLIT_DIM_A1) {
         tmpInDataBufferSize = Ops::Base::CeilAlign(inA1 * inS * inB * inA, oneBlockNum_) * 2;
     }
-    
+
     tmpInDataBufferSize *= DOUBLE_BUFFER;
     if (splitMode == SPLIT_DIM_A1) {
         tmpInDataBufferSize += sbaResvervedNum_;
@@ -151,13 +153,14 @@ void ReverseSequenceSBACommonTiling::CalcSplitDimA()
 }
 
 void ReverseSequenceSBACommonTiling::CalcSplitDimS()
-{    
+{
     OP_LOGD("ReverseSequenceSBACommonTiling::CalcSplitDimS begin");
     int64_t inDimSLower = 1;
     int64_t inDimSUpper = inputData_.inputDim[DIM_S];
     while (inDimSLower < inDimSUpper) {
         int64_t inDimSMid = (inDimSLower + inDimSUpper + 1) / DIGIT_TWO;
-        int64_t midBuffer = CalcBufferSize(1, inDimSMid, inputData_.inputDim[DIM_B], inputData_.inputDim[DIM_A], SPLIT_DIM_S);
+        int64_t midBuffer = CalcBufferSize(1, inDimSMid, inputData_.inputDim[DIM_B], inputData_.inputDim[DIM_A],
+                                           SPLIT_DIM_S);
         if (midBuffer <= availableUb_) {
             inDimSLower = inDimSMid;
         } else {
@@ -175,14 +178,15 @@ void ReverseSequenceSBACommonTiling::CalcSplitDimS()
     splitMode_ = SPLIT_DIM_S;
 }
 
-void ReverseSequenceSBACommonTiling::CalcSplitDimA1() 
+void ReverseSequenceSBACommonTiling::CalcSplitDimA1()
 {
     OP_LOGD("ReverseSequenceSBACommonTiling::CalcSplitDimA1 begin");
     int64_t inDimA1Lower = 1;
     int64_t inDimA1Upper = inputData_.inputDim[DIM_A1];
     while (inDimA1Lower < inDimA1Upper) {
         int64_t inDimA1Mid = (inDimA1Lower + inDimA1Upper + 1) / DIGIT_TWO;
-        int64_t midBuffer = CalcBufferSize(inDimA1Mid, inputData_.inputDim[DIM_S], inputData_.inputDim[DIM_B], inputData_.inputDim[DIM_A], SPLIT_DIM_A1);
+        int64_t midBuffer = CalcBufferSize(inDimA1Mid, inputData_.inputDim[DIM_S], inputData_.inputDim[DIM_B],
+                                           inputData_.inputDim[DIM_A], SPLIT_DIM_A1);
         if (midBuffer <= availableUb_) {
             inDimA1Lower = inDimA1Mid;
         } else {
@@ -203,8 +207,9 @@ void ReverseSequenceSBACommonTiling::CalcSplitDimA1()
 void ReverseSequenceSBACommonTiling::DoUBTilingSingle()
 {
     OP_LOGD("ReverseSequenceSBACommonTiling::DoUBTilingSingle begin");
-    int64_t oneSBABuffer = CalcBufferSize(1, inputData_.inputDim[DIM_S], inputData_.inputDim[DIM_B], inputData_.inputDim[DIM_A], SPLIT_DIM_A1);
-    int64_t oneSeqBuffer = CalcBufferSize(1, 1,  inputData_.inputDim[DIM_B], inputData_.inputDim[DIM_A], SPLIT_DIM_S);
+    int64_t oneSBABuffer = CalcBufferSize(1, inputData_.inputDim[DIM_S], inputData_.inputDim[DIM_B],
+                                          inputData_.inputDim[DIM_A], SPLIT_DIM_A1);
+    int64_t oneSeqBuffer = CalcBufferSize(1, 1, inputData_.inputDim[DIM_B], inputData_.inputDim[DIM_A], SPLIT_DIM_S);
     int64_t oneBatchBuffer = CalcBufferSize(1, 1, 1, inputData_.inputDim[DIM_A], SPLIT_DIM_B);
     // SBA 全载
     if (oneSBABuffer <= availableUb_) {
@@ -246,11 +251,7 @@ ge::graphStatus ReverseSequenceSBACommonTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ReverseSequenceSBACommonTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
+ge::graphStatus ReverseSequenceSBACommonTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 uint64_t ReverseSequenceSBACommonTiling::GetTilingKey() const
 {
@@ -280,8 +281,10 @@ ge::graphStatus ReverseSequenceSBACommonTiling::PostTiling()
     }
     if (splitMode_ == SPLIT_DIM_A1) {
         auto res = context_->SetLocalMemorySize(ubSize_ - SBA_RESERVED_SIZE);
-        OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-            OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", (ubSize_ - SBA_RESERVED_SIZE)), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (res != ge::GRAPH_SUCCESS),
+            OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", (ubSize_ - SBA_RESERVED_SIZE)),
+            return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -289,8 +292,8 @@ ge::graphStatus ReverseSequenceSBACommonTiling::PostTiling()
 void ReverseSequenceSBACommonTiling::SetTilingData()
 {
     OP_LOGD("ReverseSequenceSBACommonTiling::SetTilingData begin");
-    ReverseSequence::ReverseSequenceA1SBATilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceA1SBATilingData>();
+    ReverseSequence::ReverseSequenceA1SBATilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceA1SBATilingData>();
 
     tilingData->a1Dim = inputData_.inputDim[DIM_A1];
     tilingData->sDim = inputData_.inputDim[DIM_S];
@@ -317,8 +320,8 @@ void ReverseSequenceSBACommonTiling::SetTilingData()
 void ReverseSequenceSBACommonTiling::DumpTilingInfo()
 {
     OP_LOGD("ReverseSequenceSBACommonTiling::DumpTilingInfo begin");
-    ReverseSequence::ReverseSequenceA1SBATilingData* tilingData =
-        context_->GetTilingData<ReverseSequence::ReverseSequenceA1SBATilingData>();
+    ReverseSequence::ReverseSequenceA1SBATilingData*
+        tilingData = context_->GetTilingData<ReverseSequence::ReverseSequenceA1SBATilingData>();
     std::ostringstream str;
     str << " a1Dim:" << tilingData->a1Dim;
     str << " sDim:" << tilingData->sDim;
@@ -354,4 +357,4 @@ ge::graphStatus ReverseSequenceSBACommonTiling::GetShapeAttrsInfo()
     OP_LOGD("ReverseSequenceSBACommonTiling::GetShapeAttrsInfo begin");
     return GetReverseSequenceShapeAttrsInfo(context_, inputData_);
 }
-}  // namespace optiling
+} // namespace optiling

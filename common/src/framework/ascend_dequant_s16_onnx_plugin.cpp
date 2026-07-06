@@ -12,44 +12,38 @@
 
 namespace domi {
 
-static Status ParseParamsAscendDequantS16(const Message* op_src, ge::Operator& op_dest) {
-  const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-
-  bool relu_flag = false;
-  for (const auto& attr : node->attribute()) {
-    if (attr.name() == "relu_flag" && attr.i() != 0) {
-      relu_flag = true;
-      break;
+static Status ParseParamsAscendDequantS16(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
 
-  op_dest.SetAttr("relu_flag", relu_flag);
+    bool relu_flag = false;
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "relu_flag" && attr.i() != 0) {
+            relu_flag = true;
+            break;
+        }
+    }
 
-  return SUCCESS;
+    op_dest.SetAttr("relu_flag", relu_flag);
+
+    return SUCCESS;
 }
 
 // register AscendDequantS16 op info to GE
 REGISTER_CUSTOM_OP("AscendDequantS16")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::8::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::9::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::10::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::11::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::12::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::13::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::14::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::15::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::16::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::17::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::18::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::19::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::20::AscendDequantS16"),
-                   ge::AscendString("ai.onnx::21::AscendDequantS16"),
+    .OriginOpType({ge::AscendString("ai.onnx::8::AscendDequantS16"), ge::AscendString("ai.onnx::9::AscendDequantS16"),
+                   ge::AscendString("ai.onnx::10::AscendDequantS16"), ge::AscendString("ai.onnx::11::AscendDequantS16"),
+                   ge::AscendString("ai.onnx::12::AscendDequantS16"), ge::AscendString("ai.onnx::13::AscendDequantS16"),
+                   ge::AscendString("ai.onnx::14::AscendDequantS16"), ge::AscendString("ai.onnx::15::AscendDequantS16"),
+                   ge::AscendString("ai.onnx::16::AscendDequantS16"), ge::AscendString("ai.onnx::17::AscendDequantS16"),
+                   ge::AscendString("ai.onnx::18::AscendDequantS16"), ge::AscendString("ai.onnx::19::AscendDequantS16"),
+                   ge::AscendString("ai.onnx::20::AscendDequantS16"), ge::AscendString("ai.onnx::21::AscendDequantS16"),
                    ge::AscendString("ai.onnx::22::AscendDequantS16")})
     .ParseParamsFn(ParseParamsAscendDequantS16)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

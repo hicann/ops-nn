@@ -11,38 +11,37 @@
 /**
  * @file elu_grad_v2_tiling_data.h
  */
- #ifndef ELU_GRAD_V2_TILING_DATA_H
- #define ELU_GRAD_V2_TILING_DATA_H
- 
- #include <cstdint>
- 
+#ifndef ELU_GRAD_V2_TILING_DATA_H
+#define ELU_GRAD_V2_TILING_DATA_H
+
+#include <cstdint>
+
 constexpr uint32_t ELU_GRAD_V2_CORE_CHUNK = 1024U;
 constexpr uint32_t ELU_GRAD_V2_FLOAT_EXP_COMPUTE_CHUNK = 4096U;
 constexpr uint32_t ELU_GRAD_V2_FLOAT_RESULT_COMPUTE_CHUNK = 4096U;
 constexpr uint32_t ELU_GRAD_V2_MIXED_EXP_COMPUTE_CHUNK = 4096U;
 constexpr uint32_t ELU_GRAD_V2_MIXED_RESULT_COMPUTE_CHUNK = 4096U;
- constexpr uint32_t ELU_GRAD_V2_MAX_BUFFER_NUM = 2U;
- constexpr uint32_t ELU_GRAD_V2_RESERVED_UB_BYTES = 1024U;
- constexpr uint32_t ELU_GRAD_V2_BLOCK_BYTES = 256U;
- 
- struct EluGradV2TilingData {
-     uint32_t totalLength = 0;
-     uint32_t tileDataNum = 0;
-     uint32_t coreNum = 0;
-     uint32_t bigCoreNum = 0;
-     uint32_t bigCoreDataNum = 0;
-     uint32_t smallCoreDataNum = 0;
-     uint32_t lastCoreDataNum = 0;
-     uint32_t bufferOpen = 0U;
-     uint32_t computeChunk = ELU_GRAD_V2_FLOAT_EXP_COMPUTE_CHUNK;
-     float alpha = 1.0F;
-     float scale = 1.0F;
-     float inputScale = 1.0F;
-     uint8_t isResult = 0U;
-     uint8_t reserved0 = 0U;
-     uint8_t reserved1 = 0U;
-     uint8_t reserved2 = 0U;
- };
- 
- #endif // ELU_GRAD_V2_TILING_DATA_H
- 
+constexpr uint32_t ELU_GRAD_V2_MAX_BUFFER_NUM = 2U;
+constexpr uint32_t ELU_GRAD_V2_RESERVED_UB_BYTES = 1024U;
+constexpr uint32_t ELU_GRAD_V2_BLOCK_BYTES = 256U;
+
+struct EluGradV2TilingData {
+    uint32_t totalLength = 0;
+    uint32_t tileDataNum = 0;
+    uint32_t coreNum = 0;
+    uint32_t bigCoreNum = 0;
+    uint32_t bigCoreDataNum = 0;
+    uint32_t smallCoreDataNum = 0;
+    uint32_t lastCoreDataNum = 0;
+    uint32_t bufferOpen = 0U;
+    uint32_t computeChunk = ELU_GRAD_V2_FLOAT_EXP_COMPUTE_CHUNK;
+    float alpha = 1.0F;
+    float scale = 1.0F;
+    float inputScale = 1.0F;
+    uint8_t isResult = 0U;
+    uint8_t reserved0 = 0U;
+    uint8_t reserved1 = 0U;
+    uint8_t reserved2 = 0U;
+};
+
+#endif // ELU_GRAD_V2_TILING_DATA_H

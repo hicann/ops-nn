@@ -21,10 +21,9 @@
 namespace optiling {
 using namespace Ops::NN::Optiling;
 
-class SwishTiling
-{
+class SwishTiling {
 public:
-    explicit SwishTiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit SwishTiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:
@@ -49,4 +48,3 @@ struct SwishCompileInfo {
 } // namespace optiling
 
 #endif // AIR_CXX_RUNTIME_V2_OP_IMPL_SWISH_H_
-

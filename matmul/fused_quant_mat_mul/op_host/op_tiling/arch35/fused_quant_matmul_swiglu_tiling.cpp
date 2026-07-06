@@ -9,9 +9,9 @@
  */
 
 /*!
-* \file fused_quant_matmul_swiglu_tiling.cpp
-* \brief
-*/
+ * \file fused_quant_matmul_swiglu_tiling.cpp
+ * \brief
+ */
 #include "fused_quant_matmul_swiglu_tiling.h"
 
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
@@ -30,31 +30,17 @@ constexpr uint64_t WHITE_SHAPE_N = 2;
 
 constexpr uint64_t shapeInputWhiteList[][3] = {
     /* m, k, n */
-    {1, 4096, 5504},
-    {3072, 4096, 5504},
-    {1, 4096, 11008},
-    {3072, 4096, 11008},
+    {1, 4096, 5504},  {3072, 4096, 5504}, {1, 4096, 11008}, {3072, 4096, 11008},
 
-    {1, 2560, 6144},
-    {3072, 2560, 6144},
-    {1, 2560, 12288},
-    {3072, 2560, 12288},
+    {1, 2560, 6144},  {3072, 2560, 6144}, {1, 2560, 12288}, {3072, 2560, 12288},
 
-    {1, 2560, 1536},
-    {3072, 2560, 1536},
-    {1, 2560, 3072},
-    {3072, 2560, 3072},
+    {1, 2560, 1536},  {3072, 2560, 1536}, {1, 2560, 3072},  {3072, 2560, 3072},
 
-    {1, 3072, 5632},
-    {3072, 3072, 5632},
-    {1, 3072, 11264},
-    {3072, 3072, 11264},
+    {1, 3072, 5632},  {3072, 3072, 5632}, {1, 3072, 11264}, {3072, 3072, 11264},
 
-    {256, 2560, 1536}
-};
+    {256, 2560, 1536}};
 
-static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP =
-{
+static std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
     {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
     {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
     {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},
@@ -72,15 +58,9 @@ const std::unordered_map<std::string, FQMMFusedOpType> FUSED_OP_TYPE_STR_TO_ENUM
     {"swiglu", FQMMFusedOpType::SWIGLU},
 };
 
-uint32_t FusedQuantMatMulSwigluTiling::GetX3Idx() const
-{
-    return X3_INDEX_FQMM;
-}
+uint32_t FusedQuantMatMulSwigluTiling::GetX3Idx() const { return X3_INDEX_FQMM; }
 
-uint32_t FusedQuantMatMulSwigluTiling::GetYScaleIdx() const
-{
-    return Y_SCALE_INDEX_FQMM;
-}
+uint32_t FusedQuantMatMulSwigluTiling::GetYScaleIdx() const { return Y_SCALE_INDEX_FQMM; }
 
 bool FusedQuantMatMulSwigluTiling::IsFusedSwigluType() const
 {
@@ -94,15 +74,19 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::GetShapeAttrsInfo()
     OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(inputParams_.opName, "invalid context"),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(!AnalyzeAttrs(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "fail to analyze context attr info"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeAttrs(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "fail to analyze context attr info"),
+                    return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(!IsFusedSwigluType(), OP_LOGI(inputParams_.opName, "is not swiglu fused"), return ge::GRAPH_PARAM_INVALID);
+    OP_TILING_CHECK(!IsFusedSwigluType(), OP_LOGI(inputParams_.opName, "is not swiglu fused"),
+                    return ge::GRAPH_PARAM_INVALID);
 
     OP_TILING_CHECK(!AnalyzeDtype() || !AnalyzeInputs(),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fail to analyze context dtype/inputs info"), return ge::GRAPH_FAILED);
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fail to analyze context dtype/inputs info"),
+                    return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(inputParams_.transA == true || inputParams_.transB == true,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "transA and transB should be false"), return ge::GRAPH_FAILED);
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "transA and transB should be false"),
+                    return ge::GRAPH_FAILED);
 
     OP_LOGD(inputParams_.opName, "input params: MKN[%ld, %ld, %ld], transA[%s], transB[%s], bias[%s]",
             inputParams_.mSize, inputParams_.kSize, inputParams_.nSize, inputParams_.transA ? "true" : "false",
@@ -148,7 +132,8 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeDtype()
     inputParams_.cDtype = ge::DT_FLOAT16;
 
     OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT8 && inputParams_.bDtype != ge::DT_INT4,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "a dtype should be int8 and b dtype should be int4, actual is %s and %s",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "a dtype should be int8 and b dtype should be int4, actual is %s and %s",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
                     return false);
@@ -156,10 +141,11 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeDtype()
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "quant dtype should be float, actual is %s",
                                           ge::TypeUtils::DataTypeToSerialString(quantDtype).c_str()),
                     return false);
-    OP_TILING_CHECK(quantDesc != nullptr && outDtype != ge::DT_INT8,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "out dtype should be int8 when dtype is float, actual is %s",
-                                          ge::TypeUtils::DataTypeToSerialString(outDtype).c_str()),
-                    return false);
+    OP_TILING_CHECK(
+        quantDesc != nullptr && outDtype != ge::DT_INT8,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "out dtype should be int8 when dtype is float, actual is %s",
+                              ge::TypeUtils::DataTypeToSerialString(outDtype).c_str()),
+        return false);
 
     SetFormat();
     return true;
@@ -176,13 +162,13 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
         return false;
     }
 
-    OP_TILING_CHECK(x2ShapeLen != 3 || x2Shape.GetDim(0) != 2,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu x2 ori shape should be like (2, k, n) or (2, n, k)"),
-                    return false);
+    OP_TILING_CHECK(
+        x2ShapeLen != 3 || x2Shape.GetDim(0) != 2,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu x2 ori shape should be like (2, k, n) or (2, n, k)"),
+        return false);
 
     OP_TILING_CHECK(biasShape != nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu bias should not be set"),
-                    return false);
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "fqmm swiglu bias should not be set"), return false);
 
     inputParams_.hasBias = biasShape != nullptr;
 
@@ -201,7 +187,7 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
 
     bool isInWhiteList = false;
     size_t whiteListNum = sizeof(shapeInputWhiteList) / sizeof(shapeInputWhiteList[0]);
-    for (size_t idx  = 0; idx < whiteListNum; idx++) {
+    for (size_t idx = 0; idx < whiteListNum; idx++) {
         if (inputParams_.mSize == shapeInputWhiteList[idx][WHITE_SHAPE_M] &&
             inputParams_.kSize == shapeInputWhiteList[idx][WHITE_SHAPE_K] &&
             inputParams_.nSize == shapeInputWhiteList[idx][WHITE_SHAPE_N]) {
@@ -211,7 +197,8 @@ bool FusedQuantMatMulSwigluTiling::AnalyzeInputs()
     }
     OP_TILING_CHECK(isInWhiteList != true,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "shape m:%lu k:%lu n:%lu is not in white list",
-                    inputParams_.mSize, inputParams_.kSize, inputParams_.nSize), return false);
+                                          inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
+                    return false);
 
     return true;
 }
@@ -220,9 +207,12 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::InitTilingData()
 {
     matmul_tiling::MultiCoreMatmulTiling mm_;
     uint64_t halfL1 = compileInfo_.l1Size >> 1;
-    auto aFormat = inputParams_.aFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND : matmul_tiling::CubeFormat::NZ;
-    auto bFormat = inputParams_.bFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND : matmul_tiling::CubeFormat::NZ;
-    auto cFormat = inputParams_.cFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND : matmul_tiling::CubeFormat::NZ;
+    auto aFormat = inputParams_.aFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND :
+                                                           matmul_tiling::CubeFormat::NZ;
+    auto bFormat = inputParams_.bFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND :
+                                                           matmul_tiling::CubeFormat::NZ;
+    auto cFormat = inputParams_.cFormat == ge::FORMAT_ND ? matmul_tiling::CubeFormat::ND :
+                                                           matmul_tiling::CubeFormat::NZ;
 
     mm_.SetOrgShape(inputParams_.mSize, inputParams_.nSize, inputParams_.kSize);
     mm_.SetShape(basicTiling_.baseM, basicTiling_.baseN, inputParams_.kSize);
@@ -236,7 +226,8 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::InitTilingData()
         mm_.SetBias(false);
     }
 
-    /* 预留L1给B矩阵和反量化参数，考虑到载入太多A头开销会比较大，按一半的L1支持，非全载预埋，暂不支持(当前典型场景刚好使用512K) */
+    /* 预留L1给B矩阵和反量化参数，考虑到载入太多A头开销会比较大，按一半的L1支持，非全载预埋，暂不支持(当前典型场景刚好使用512K)
+     */
     if (inputParams_.kSize * basicTiling_.baseM * 1 <= halfL1) {
         tilingData.baseParams.set_isFullLoadA(1);
         mm_.SetAType(matmul_tiling::TPosition::A1, aFormat, DTYPE_MAP[inputParams_.aDtype], inputParams_.transA);
@@ -325,20 +316,20 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::DoOpTiling()
 
 void FusedQuantMatMulSwigluTiling::PrintBaseParamsTilingData()
 {
-    FusedQuantMatmulSwigluBaseParams &tiling = tilingData.baseParams;
+    FusedQuantMatmulSwigluBaseParams& tiling = tilingData.baseParams;
     std::stringstream ss;
 
-    ss << " isFullLoadA: " << tiling.get_isFullLoadA()
-       << " isDeqQuant: " << tiling.get_isDeqQuant() << " isQuant: " << tiling.get_isQuant()
-       << " singleCoreM: " << tiling.get_singleCoreM() << " singleCoreN: " << tiling.get_singleCoreN()
-       << " mLoops: " << tiling.get_mLoops() << " nLoops: " << tiling.get_nLoops()
-       << " singleMTail: " << tiling.get_singleMTail() << " singleNTail: " << tiling.get_singleNTail();
+    ss << " isFullLoadA: " << tiling.get_isFullLoadA() << " isDeqQuant: " << tiling.get_isDeqQuant()
+       << " isQuant: " << tiling.get_isQuant() << " singleCoreM: " << tiling.get_singleCoreM()
+       << " singleCoreN: " << tiling.get_singleCoreN() << " mLoops: " << tiling.get_mLoops()
+       << " nLoops: " << tiling.get_nLoops() << " singleMTail: " << tiling.get_singleMTail()
+       << " singleNTail: " << tiling.get_singleNTail();
     OPS_LOG_D(inputParams_.opName, "base params tiling: %s", ss.str().c_str());
 }
 
 void FusedQuantMatMulSwigluTiling::PrintMatmulTilingData()
 {
-    optiling::TCubeTiling &tiling = tilingData.mmTilingData;
+    optiling::TCubeTiling& tiling = tilingData.mmTilingData;
     std::stringstream ss;
 
     ss << " usedCoreNum: " << tiling.get_usedCoreNum() << " M: " << tiling.get_M() << " N: " << tiling.get_N()
@@ -372,12 +363,12 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::PostTiling()
 
     OP_TILING_CHECK(tilingData.GetDataSize() % sizeof(uint64_t) != 0,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "tiling data size[%zu] is not aligned to 8",
-                                                tilingData.GetDataSize()),
+                                          tilingData.GetDataSize()),
                     return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(tilingData.GetDataSize() > context_->GetRawTilingData()->GetCapacity(),
                     CUBE_INNER_ERR_REPORT(context_, "actual tiling data size %zu > context tiling data size %zu",
-                                                tilingData.GetDataSize(), context_->GetRawTilingData()->GetCapacity()),
+                                          tilingData.GetDataSize(), context_->GetRawTilingData()->GetCapacity()),
                     return ge::GRAPH_FAILED);
 
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
@@ -385,4 +376,4 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::PostTiling()
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
-}  // namespace optiling
+} // namespace optiling

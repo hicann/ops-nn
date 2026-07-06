@@ -46,13 +46,12 @@ private:
         {256, 1, 32, 32, 141}, {256, 1, 16, 16, 781}, {256, 1, 32, 32, 397}, {256, 1, 64, 64, 205},
         {256, 1, 8, 8, 1549},  {64, 1, 16, 16, 256},  {64, 1, 32, 32, 128}};
 
-    bool Createconv3dBpInputTransposeGraph(
-        ge::es::EsGraphBuilder& builder, ge::es::EsTensorHolder& conv3dBpInputTrans, ge::es::EsTensorHolder& inputSize,
-        ge::es::EsTensorHolder& filter, ge::es::EsTensorHolder& dedy);
+    bool Createconv3dBpInputTransposeGraph(ge::es::EsGraphBuilder& builder, ge::es::EsTensorHolder& conv3dBpInputTrans,
+                                           ge::es::EsTensorHolder& inputSize, ge::es::EsTensorHolder& filter,
+                                           ge::es::EsTensorHolder& dedy);
 
-    bool CreateOutputWithTranspose(
-        ge::es::EsGraphBuilder& builder, const ge::es::EsTensorHolder& conv3dBpInputV2, ge::GNode* conv3dBpInputV2Node,
-        ge::es::EsTensorHolder& transOutput);
+    bool CreateOutputWithTranspose(ge::es::EsGraphBuilder& builder, const ge::es::EsTensorHolder& conv3dBpInputV2,
+                                   ge::GNode* conv3dBpInputV2Node, ge::es::EsTensorHolder& transOutput);
 };
 
 } // namespace ops

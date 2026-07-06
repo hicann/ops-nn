@@ -18,14 +18,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const std::array<const aclTensor *, 3> ThnnFusedLstmCellGrad(
-    const aclTensor *gradHy,
-    const aclTensor *gradC,
-    const aclTensor *cx,
-    const aclTensor *cy,
-    const aclTensor *storage,
-    const bool hasBias,
-    aclOpExecutor *executor);
+const std::array<const aclTensor*, 3> ThnnFusedLstmCellGrad(const aclTensor* gradHy, const aclTensor* gradC,
+                                                            const aclTensor* cx, const aclTensor* cy,
+                                                            const aclTensor* storage, const bool hasBias,
+                                                            aclOpExecutor* executor);
 
 }
 

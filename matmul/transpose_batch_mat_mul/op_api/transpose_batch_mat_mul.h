@@ -15,10 +15,10 @@
 #include "opdev/make_op_executor.h"
 
 namespace l0op {
-const aclTensor* TransposeBatchMatMul(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* scale,
-                                      const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y,
-                                      const bool enable_hf32, const int32_t batch_split_factor, aclOpExecutor *executor);
-}  // namespace l0op
+const aclTensor* TransposeBatchMatMul(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                      const aclTensor* scale, const aclIntArray* perm_x1, const aclIntArray* perm_x2,
+                                      const aclIntArray* perm_y, const bool enable_hf32,
+                                      const int32_t batch_split_factor, aclOpExecutor* executor);
+} // namespace l0op
 
-#endif  // OP_API_OP_API_COMMON_INC_LEVEL0_OP_TRANSPOSE_BATCH_MAT_MUL_OP_H_
-
+#endif // OP_API_OP_API_COMMON_INC_LEVEL0_OP_TRANSPOSE_BATCH_MAT_MUL_OP_H_

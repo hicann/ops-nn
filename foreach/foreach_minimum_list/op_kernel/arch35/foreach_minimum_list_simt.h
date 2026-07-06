@@ -34,11 +34,10 @@ constexpr uint32_t THREAD_NUM = 512;
 
 // ===== float32 VF kernel (NaN-propagating minimum) =====
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtFp32(
-    int64_t count, __gm__ T* x1, __gm__ T* x2, __gm__ T* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtFp32(int64_t count, __gm__ T* x1,
+                                                                                       __gm__ T* x2, __gm__ T* y)
 {
-    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
-         idx < count;
+    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx()); idx < count;
          idx += static_cast<int64_t>(AscendC::Simt::GetThreadNum())) {
         T a = x1[idx];
         T b = x2[idx];
@@ -48,11 +47,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSi
 }
 
 // ===== float16 VF kernel (NaN-propagating minimum) =====
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtFp16(
-    int64_t count, __gm__ half* x1, __gm__ half* x2, __gm__ half* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtFp16(int64_t count, __gm__ half* x1,
+                                                                                       __gm__ half* x2, __gm__ half* y)
 {
-    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
-         idx < count;
+    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx()); idx < count;
          idx += static_cast<int64_t>(AscendC::Simt::GetThreadNum())) {
         half a = x1[idx];
         half b = x2[idx];
@@ -62,11 +60,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSi
 }
 
 // ===== bfloat16 VF kernel (NaN-propagating minimum) =====
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtBf16(
-    int64_t count, __gm__ bfloat16_t* x1, __gm__ bfloat16_t* x2, __gm__ bfloat16_t* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtBf16(int64_t count,
+                                                                                       __gm__ bfloat16_t* x1,
+                                                                                       __gm__ bfloat16_t* x2,
+                                                                                       __gm__ bfloat16_t* y)
 {
-    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
-         idx < count;
+    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx()); idx < count;
          idx += static_cast<int64_t>(AscendC::Simt::GetThreadNum())) {
         bfloat16_t a = x1[idx];
         bfloat16_t b = x2[idx];
@@ -78,11 +77,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSi
 }
 
 // ===== int32 VF kernel (no NaN, simple min) =====
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtInt32(
-    int64_t count, __gm__ int32_t* x1, __gm__ int32_t* x2, __gm__ int32_t* y)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSimtInt32(int64_t count,
+                                                                                        __gm__ int32_t* x1,
+                                                                                        __gm__ int32_t* x2,
+                                                                                        __gm__ int32_t* y)
 {
-    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
-         idx < count;
+    for (int64_t idx = static_cast<int64_t>(AscendC::Simt::GetThreadIdx()); idx < count;
          idx += static_cast<int64_t>(AscendC::Simt::GetThreadNum())) {
         int32_t a = x1[idx];
         int32_t b = x2[idx];
@@ -92,12 +92,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMinimumListSi
 
 // ===== Process: multi-core iterate tensor list =====
 template <typename T, int32_t schMode>
-__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-                                const ForeachMinimumListTilingData* tilingData)
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachMinimumListTilingData* tilingData)
 {
     // 1. Compute core element range
-    int64_t coreStart = static_cast<int64_t>(AscendC::GetBlockIdx())
-                        * tilingData->perCoreElements;
+    int64_t coreStart = static_cast<int64_t>(AscendC::GetBlockIdx()) * tilingData->perCoreElements;
     int64_t coreEnd = coreStart + tilingData->perCoreElements;
     if (static_cast<int32_t>(AscendC::GetBlockIdx()) == tilingData->needCoreNum - 1) {
         coreEnd = tilingData->totalElements;
@@ -128,26 +126,20 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
             __gm__ T* yP = yList.GetDataPtr<T>(t) + localOff;
 
             if constexpr (schMode == 0) {
-                AscendC::Simt::VF_CALL<ForeachMinimumListSimtFp32<T>>(
-                    AscendC::Simt::Dim3(THREAD_NUM), cnt, x1P, x2P, yP);
+                AscendC::Simt::VF_CALL<ForeachMinimumListSimtFp32<T>>(AscendC::Simt::Dim3(THREAD_NUM), cnt, x1P, x2P,
+                                                                      yP);
             } else if constexpr (schMode == 1) {
                 AscendC::Simt::VF_CALL<ForeachMinimumListSimtFp16>(
-                    AscendC::Simt::Dim3(THREAD_NUM), cnt,
-                    reinterpret_cast<__gm__ half*>(x1P),
-                    reinterpret_cast<__gm__ half*>(x2P),
-                    reinterpret_cast<__gm__ half*>(yP));
+                    AscendC::Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ half*>(x1P),
+                    reinterpret_cast<__gm__ half*>(x2P), reinterpret_cast<__gm__ half*>(yP));
             } else if constexpr (schMode == 2) {
                 AscendC::Simt::VF_CALL<ForeachMinimumListSimtBf16>(
-                    AscendC::Simt::Dim3(THREAD_NUM), cnt,
-                    reinterpret_cast<__gm__ bfloat16_t*>(x1P),
-                    reinterpret_cast<__gm__ bfloat16_t*>(x2P),
-                    reinterpret_cast<__gm__ bfloat16_t*>(yP));
+                    AscendC::Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ bfloat16_t*>(x1P),
+                    reinterpret_cast<__gm__ bfloat16_t*>(x2P), reinterpret_cast<__gm__ bfloat16_t*>(yP));
             } else if constexpr (schMode == 3) {
                 AscendC::Simt::VF_CALL<ForeachMinimumListSimtInt32>(
-                    AscendC::Simt::Dim3(THREAD_NUM), cnt,
-                    reinterpret_cast<__gm__ int32_t*>(x1P),
-                    reinterpret_cast<__gm__ int32_t*>(x2P),
-                    reinterpret_cast<__gm__ int32_t*>(yP));
+                    AscendC::Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ int32_t*>(x1P),
+                    reinterpret_cast<__gm__ int32_t*>(x2P), reinterpret_cast<__gm__ int32_t*>(yP));
             }
         }
         tStart = tEnd;

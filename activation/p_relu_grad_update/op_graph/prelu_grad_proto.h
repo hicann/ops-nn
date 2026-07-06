@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -27,7 +27,7 @@ namespace ge {
 *@li features: A ND Tensor of type float16, float32 or bfloat16. Has same dtype with grads. Support 2D~8D tensor.
 *@li weights: A Scalar or 1D Tensor, has same dtype with grads.
 *specifying the weight.
-*The number of dimensions must be the same as the number of 
+*The number of dimensions must be the same as the number of
 *channels(the dim1 number of features's shape) or 1.\n
 
 *@par Outputs:
@@ -46,5 +46,5 @@ REG_OP(PReluGrad)
     .OUTPUT(dx, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(da, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OP_END_FACTORY_REG(PReluGrad)
-}
-#endif //OPS_NN_PRELU_GRAD_PROTO_H_
+} // namespace ge
+#endif // OPS_NN_PRELU_GRAD_PROTO_H_

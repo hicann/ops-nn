@@ -35,15 +35,15 @@ extern "C" {
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnGeluBackwardV2GetWorkspaceSize(
-    const aclTensor* gradOutput, const aclTensor* self, char* approximate, aclTensor* gradInput,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+ACLNN_API aclnnStatus aclnnGeluBackwardV2GetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                          char* approximate, aclTensor* gradInput,
+                                                          uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnGeluBackwardV2的第二段接口，用于执行计算
  */
-ACLNN_API aclnnStatus
-aclnnGeluBackwardV2(void* workspace, uint64_t workspace_size, aclOpExecutor* executor, const aclrtStream stream);
+ACLNN_API aclnnStatus aclnnGeluBackwardV2(void* workspace, uint64_t workspace_size, aclOpExecutor* executor,
+                                          const aclrtStream stream);
 #ifdef __cplusplus
 }
 #endif

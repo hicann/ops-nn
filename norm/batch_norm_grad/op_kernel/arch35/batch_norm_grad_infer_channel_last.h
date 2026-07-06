@@ -38,8 +38,7 @@ using AscendC::MicroAPI::MaskMergeMode;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T1, typename T2>
-class BatchNormGradInferChannelLastDx
-{
+class BatchNormGradInferChannelLastDx {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
 
@@ -90,8 +89,8 @@ public:
             // ping、pang搬运首次或者tile块沿B轴换列时需要拷贝gamma、runningVar
             bool needCopy = (curIdx <= beginIdx + 1) || (curRowIdx <= 1);
 
-            int64_t curTileBLen =
-                curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail : tilingData_->tileBlockBLen;
+            int64_t curTileBLen = curRowIdx == (tilingData_->bOuter - 1) ? tilingData_->tileBlockBTail :
+                                                                           tilingData_->tileBlockBLen;
 
             int64_t curTileALen = tilingData_->tileBlockALen;
             int64_t ubStrideT1 = 0;
@@ -182,9 +181,9 @@ private:
         runningVarQueue_.FreeTensor<T2>(runningVar);
     }
 
-    __aicore__ inline void VFNormalize(
-        __local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal, __local_mem__ T2* varLocal, __local_mem__ T1* dxLocal,
-        uint16_t curTileBLen, uint16_t curTileALen)
+    __aicore__ inline void VFNormalize(__local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal,
+                                       __local_mem__ T2* varLocal, __local_mem__ T1* dxLocal, uint16_t curTileBLen,
+                                       uint16_t curTileALen)
     {
         __VEC_SCOPE__
         {
@@ -203,8 +202,8 @@ private:
 
                 // load runningVar, gamma
                 LoadOneTensor<T2>(varLocal, runningVar, pregMaskFp32, offset);
-                AscendC::MicroAPI::MaskReg pregRstdAll1 =
-                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                AscendC::MicroAPI::MaskReg
+                    pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 LoadOneTensor<T2>(gammaLocal, gamma, pregMaskFp32, offset);
@@ -258,8 +257,7 @@ private:
 };
 
 template <typename T1, typename T2, int BUFFER_NUM = 1, bool EN_DGAMMA = true, bool EN_DBETA = true>
-class BatchNormGradInferChannelLastRecompute
-{
+class BatchNormGradInferChannelLastRecompute {
     static constexpr int32_t BUFFER_DEPTH = 1;
 
     static constexpr uint16_t VECTOR_LENGTH = platform::GetVRegSize();
@@ -280,9 +278,8 @@ public:
         enableDbeta = tilingData_->enableDbeta;
     }
 
-    __aicore__ inline void Process(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR save_mean, GM_ADDR runningVar, GM_ADDR dgamma, GM_ADDR dbeta,
-        GM_ADDR usrWorkspace)
+    __aicore__ inline void Process(GM_ADDR dy, GM_ADDR x, GM_ADDR save_mean, GM_ADDR runningVar, GM_ADDR dgamma,
+                                   GM_ADDR dbeta, GM_ADDR usrWorkspace)
     {
         int64_t blockIdx = GetBlockIdx();
         if (blockIdx >= tilingData_->usedCoreNumsStg1) {
@@ -295,8 +292,8 @@ public:
 
         // [R, A]
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {
-            int64_t curALen =
-                curIdx == (tilingData_->aOuterStg1 - 1) ? tilingData_->aTailStg1 : tilingData_->aInnerStg1;
+            int64_t curALen = curIdx == (tilingData_->aOuterStg1 - 1) ? tilingData_->aTailStg1 :
+                                                                        tilingData_->aInnerStg1;
 
             int64_t meanOffset = curIdx * tilingData_->aInnerStg1;
             uint16_t vlLoopNum = ops::CeilDiv(curALen, static_cast<int64_t>(VL_FP32));
@@ -305,9 +302,8 @@ public:
         }
     }
 
-    __aicore__ inline void InitStage1(
-        __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean, __gm__ uint8_t* runningVar, __gm__ uint8_t* dgamma,
-        __gm__ uint8_t* dbeta)
+    __aicore__ inline void InitStage1(__gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* mean,
+                                      __gm__ uint8_t* runningVar, __gm__ uint8_t* dgamma, __gm__ uint8_t* dbeta)
     {
         dyGm_.SetGlobalBuffer((__gm__ T1*)(dy));
         xGm_.SetGlobalBuffer((__gm__ T1*)(x));
@@ -360,18 +356,17 @@ public:
 
         int64_t blockOffset = tilingData_->aDimStg1 * tilingData_->binAddRFactorStg1;
         for (int64_t basicBlockIdx = 0; basicBlockIdx < tilingData_->binAddBasicBlockLoopStg1; basicBlockIdx++) {
-            ProcessMainBlock(
-                tilingData_->binAddRFactorStg1, curALen, meanOffset + basicBlockIdx * blockOffset, vlLoopNum);
+            ProcessMainBlock(tilingData_->binAddRFactorStg1, curALen, meanOffset + basicBlockIdx * blockOffset,
+                             vlLoopNum);
             if (basicBlockIdx < tilingData_->binAddMainFoldCountStg1) {
-                ProcessFoldBlock(
-                    tilingData_->binAddRFactorStg1, curALen,
-                    meanOffset + (basicBlockIdx + tilingData_->binAddBasicBlockLoopStg1) * blockOffset, vlLoopNum);
-            } else if (
-                basicBlockIdx == tilingData_->binAddMainFoldCountStg1 && tilingData_->binAddRTailStg1 > 0 &&
-                tilingData_->binAddRTailStg1 != tilingData_->binAddRFactorStg1) {
-                ProcessFoldBlock(
-                    tilingData_->binAddRTailStg1, curALen,
-                    meanOffset + (basicBlockIdx + tilingData_->binAddBasicBlockLoopStg1) * blockOffset, vlLoopNum);
+                ProcessFoldBlock(tilingData_->binAddRFactorStg1, curALen,
+                                 meanOffset + (basicBlockIdx + tilingData_->binAddBasicBlockLoopStg1) * blockOffset,
+                                 vlLoopNum);
+            } else if (basicBlockIdx == tilingData_->binAddMainFoldCountStg1 && tilingData_->binAddRTailStg1 > 0 &&
+                       tilingData_->binAddRTailStg1 != tilingData_->binAddRFactorStg1) {
+                ProcessFoldBlock(tilingData_->binAddRTailStg1, curALen,
+                                 meanOffset + (basicBlockIdx + tilingData_->binAddBasicBlockLoopStg1) * blockOffset,
+                                 vlLoopNum);
             }
             ProcessSummation(basicBlockIdx, tilingData_->binAddRFactorStg1);
         }
@@ -386,24 +381,22 @@ public:
         }
         if constexpr (EN_DBETA) {
             LocalTensor<T2> dbeta = dbetaQueue_.AllocTensor<T2>();
-            CopyUB2UB(
-                dbeta, cacheTensorDbeta_[tilingData_->binAddResultCacheIDStg1 * tilingData_->aInnerStg1],
-                tilingData_->aInnerStg1);
+            CopyUB2UB(dbeta, cacheTensorDbeta_[tilingData_->binAddResultCacheIDStg1 * tilingData_->aInnerStg1],
+                      tilingData_->aInnerStg1);
             dbetaQueue_.EnQue(dbeta);
         }
         if constexpr (EN_DGAMMA) {
             LocalTensor<T2> dgamma = dgammaQueue_.AllocTensor<T2>();
-            CopyUB2UB(
-                dgamma, cacheTensorDgamma_[tilingData_->binAddResultCacheIDStg1 * tilingData_->aInnerStg1],
-                tilingData_->aInnerStg1);
+            CopyUB2UB(dgamma, cacheTensorDgamma_[tilingData_->binAddResultCacheIDStg1 * tilingData_->aInnerStg1],
+                      tilingData_->aInnerStg1);
             dgammaQueue_.EnQue(dgamma);
         }
         CopyOutDbetaAndDgamma(meanOffset, curALen);
     }
 
     // copy to main
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t curRLen, const int64_t curALen, const int64_t gmOffset, uint16_t vlLoopNum)
+    __aicore__ inline void ProcessMainBlock(const int64_t curRLen, const int64_t curALen, const int64_t gmOffset,
+                                            uint16_t vlLoopNum)
     {
         CopyInDyAndX(gmOffset, curRLen, curALen);
 
@@ -478,8 +471,8 @@ public:
     }
 
     // fold cast fp32 加到main
-    __aicore__ inline void ProcessFoldBlock(
-        const int64_t curRLen, const int64_t curALen, const int64_t gmOffset, uint16_t vlLoopNum)
+    __aicore__ inline void ProcessFoldBlock(const int64_t curRLen, const int64_t curALen, const int64_t gmOffset,
+                                            uint16_t vlLoopNum)
     {
         CopyInDyAndX(gmOffset, curRLen, curALen);
 
@@ -557,12 +550,11 @@ public:
         dyQueue_.FreeTensor(dyFold);
     }
 
-    __aicore__ inline void UpdateCache(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheId,
-        const int64_t stride, const int64_t count)
+    __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                       const int64_t cacheId, const int64_t stride, const int64_t count)
     {
-        uint16_t outerLoopTimes =
-            ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(platform::GetVRegSize()));
+        uint16_t outerLoopTimes = ops::CeilDiv(static_cast<int64_t>(count * sizeof(float)),
+                                               static_cast<int64_t>(platform::GetVRegSize()));
         uint16_t innerLoopTimes = cacheId;
         uint32_t outerLoopStride = VL_FP32;
         uint32_t innerLoopStride = stride;
@@ -595,12 +587,12 @@ public:
 
         if constexpr (EN_DBETA) {
             if constexpr (IsSameType<T1, float>::value) {
-                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(
-                    tempTensorDbeta_, dyMain_, srcShape, false);
+                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tempTensorDbeta_, dyMain_, srcShape,
+                                                                              false);
                 dyQueue_.FreeTensor(dyMain_);
             } else {
-                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(
-                    tempTensorDbeta_, tempTensorDy_, srcShape, false);
+                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tempTensorDbeta_, tempTensorDy_, srcShape,
+                                                                              false);
             }
 
             UpdateCache(cacheTensorDbeta_, tempTensorDbeta_, cacheID, tilingData_->aInnerStg1, tilingData_->aInnerStg1);
@@ -608,16 +600,16 @@ public:
 
         if constexpr (EN_DGAMMA) {
             if constexpr (IsSameType<T1, float>::value) {
-                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(
-                    tempTensorDgamma_, xMain_, srcShape, false);
+                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tempTensorDgamma_, xMain_, srcShape,
+                                                                              false);
                 xQueue_.FreeTensor(xMain_);
             } else {
-                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(
-                    tempTensorDgamma_, tempTensorX_, srcShape, false);
+                AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tempTensorDgamma_, tempTensorX_, srcShape,
+                                                                              false);
             }
 
-            UpdateCache(
-                cacheTensorDgamma_, tempTensorDgamma_, cacheID, tilingData_->aInnerStg1, tilingData_->aInnerStg1);
+            UpdateCache(cacheTensorDgamma_, tempTensorDgamma_, cacheID, tilingData_->aInnerStg1,
+                        tilingData_->aInnerStg1);
         }
     }
 
@@ -661,13 +653,12 @@ public:
         varQueue_.EnQue(var);
     }
 
-    __aicore__ inline void CopyUB2UB(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t count)
+    __aicore__ inline void CopyUB2UB(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                     const int64_t count)
     {
-        DataCopy(
-            dstTensor, srcTensor,
-            ops::Aligned(
-                static_cast<int64_t>(count), static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float))));
+        DataCopy(dstTensor, srcTensor,
+                 ops::Aligned(static_cast<int64_t>(count),
+                              static_cast<int64_t>(platform::GetUbBlockSize() / sizeof(float))));
     }
 
     __aicore__ inline void CopyOutDbetaAndDgamma(int64_t gmOffset, uint32_t curALen)
@@ -740,8 +731,7 @@ private:
 };
 
 template <typename T1, typename T2>
-class BatchNormGradInferChannelLast
-{
+class BatchNormGradInferChannelLast {
     static constexpr int32_t BUFFER_NUM = 2;
     static constexpr int32_t BUFFER_DEPTH = 1;
 
@@ -752,8 +742,8 @@ class BatchNormGradInferChannelLast
 public:
     __aicore__ inline BatchNormGradInferChannelLast(){};
 
-    __aicore__ inline BatchNormGradInferChannelLast(
-        TPipe* pipeIn, const BatchNormGradInferChannelLastTilingData* tilingDataIn)
+    __aicore__ inline BatchNormGradInferChannelLast(TPipe* pipeIn,
+                                                    const BatchNormGradInferChannelLastTilingData* tilingDataIn)
     {
         pipe_ = pipeIn;
         tilingData_ = tilingDataIn;
@@ -762,9 +752,8 @@ public:
         enableDbeta = tilingData_->enableDbeta;
     }
 
-    __aicore__ inline void Process(
-        GM_ADDR dy, GM_ADDR x, GM_ADDR gamma, GM_ADDR save_mean, GM_ADDR runningVar, GM_ADDR dx, GM_ADDR dgamma,
-        GM_ADDR dbeta, GM_ADDR usrWorkspace)
+    __aicore__ inline void Process(GM_ADDR dy, GM_ADDR x, GM_ADDR gamma, GM_ADDR save_mean, GM_ADDR runningVar,
+                                   GM_ADDR dx, GM_ADDR dgamma, GM_ADDR dbeta, GM_ADDR usrWorkspace)
     {
         if (enableDx) {
             BatchNormGradInferChannelLastDx<T1, T2> opDx(&tilingData_->dxTilingData);

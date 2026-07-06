@@ -46,10 +46,8 @@ class ApplyAdadelta {
 public:
     __aicore__ inline ApplyAdadelta() {}
 
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR accum, GM_ADDR accumUpdate, GM_ADDR grad,
-        GM_ADDR varOut, GM_ADDR accumOut, GM_ADDR accumUpdateOut,
-        const ApplyAdadeltaTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum, GM_ADDR accumUpdate, GM_ADDR grad, GM_ADDR varOut,
+                                GM_ADDR accumOut, GM_ADDR accumUpdateOut, const ApplyAdadeltaTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -70,8 +68,8 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueAccum;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueAccumUpdate;
     // FP32 path: 2 temporary buffers for intermediate computation
-    TBuf<QuePosition::VECCALC> tmpBuf1;  // tmp1: grad^2 / den / updateSq etc.
-    TBuf<QuePosition::VECCALC> tmpBuf2;  // tmp2: num / update / lr*update etc.
+    TBuf<QuePosition::VECCALC> tmpBuf1; // tmp1: grad^2 / den / updateSq etc.
+    TBuf<QuePosition::VECCALC> tmpBuf2; // tmp2: num / update / lr*update etc.
     // FP16 path: 6 fp32 TBuf for Cast workspace + computation
     // (4 for Cast-up workspace: var/accum/accumUpdate/grad fp32 copies,
     //  2 for intermediate computation: tmp1/tmp2)
@@ -92,10 +90,10 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Init(
-    GM_ADDR var, GM_ADDR accum, GM_ADDR accumUpdate, GM_ADDR grad,
-    GM_ADDR varOut, GM_ADDR accumOut, GM_ADDR accumUpdateOut,
-    const ApplyAdadeltaTilingData* tilingData)
+__aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Init(GM_ADDR var, GM_ADDR accum, GM_ADDR accumUpdate,
+                                                           GM_ADDR grad, GM_ADDR varOut, GM_ADDR accumOut,
+                                                           GM_ADDR accumUpdateOut,
+                                                           const ApplyAdadeltaTilingData* tilingData)
 {
     // Compute per-core element range
     int64_t remain = tilingData->totalNum - tilingData->blockFactor * GetBlockIdx();
@@ -130,12 +128,12 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Init(
     // Initialize temporary buffers based on dtype path
     if constexpr (IS_FP16) {
         // FP16 path: 4 fp32 Cast workspace + 2 fp32 tmp = 6 fp32 TBuf
-        pipe.InitBuffer(fp32VarBuf,         ubLength_ * sizeof(float));
-        pipe.InitBuffer(fp32AccumBuf,       ubLength_ * sizeof(float));
+        pipe.InitBuffer(fp32VarBuf, ubLength_ * sizeof(float));
+        pipe.InitBuffer(fp32AccumBuf, ubLength_ * sizeof(float));
         pipe.InitBuffer(fp32AccumUpdateBuf, ubLength_ * sizeof(float));
-        pipe.InitBuffer(fp32GradBuf,        ubLength_ * sizeof(float));
-        pipe.InitBuffer(tmpBuf1,            ubLength_ * sizeof(float));
-        pipe.InitBuffer(tmpBuf2,            ubLength_ * sizeof(float));
+        pipe.InitBuffer(fp32GradBuf, ubLength_ * sizeof(float));
+        pipe.InitBuffer(tmpBuf1, ubLength_ * sizeof(float));
+        pipe.InitBuffer(tmpBuf2, ubLength_ * sizeof(float));
     } else {
         // FP32 path: 2 fp32 TBuf for intermediate computation
         pipe.InitBuffer(tmpBuf1, ubLength_ * sizeof(float));
@@ -188,72 +186,72 @@ __aicore__ inline void ApplyAdadelta<T, BUFFER_MODE>::Compute(int64_t currentNum
     if constexpr (IS_FP16) {
         // FP16 path: Cast up to fp32 -> compute -> Cast down to fp16
         // Get fp32 workspace buffers
-        LocalTensor<float> vF  = fp32VarBuf.Get<float>();
-        LocalTensor<float> aF  = fp32AccumBuf.Get<float>();
+        LocalTensor<float> vF = fp32VarBuf.Get<float>();
+        LocalTensor<float> aF = fp32AccumBuf.Get<float>();
         LocalTensor<float> auF = fp32AccumUpdateBuf.Get<float>();
-        LocalTensor<float> gF  = fp32GradBuf.Get<float>();
+        LocalTensor<float> gF = fp32GradBuf.Get<float>();
 
         // Cast up: half -> fp32
-        Cast(vF,  v,  RoundMode::CAST_NONE, currentNum);
-        Cast(aF,  a,  RoundMode::CAST_NONE, currentNum);
+        Cast(vF, v, RoundMode::CAST_NONE, currentNum);
+        Cast(aF, a, RoundMode::CAST_NONE, currentNum);
         Cast(auF, au, RoundMode::CAST_NONE, currentNum);
-        Cast(gF,  g,  RoundMode::CAST_NONE, currentNum);
+        Cast(gF, g, RoundMode::CAST_NONE, currentNum);
 
         // Step1: accum_new = accum * rho + grad^2 * (1 - rho)
-        Mul(tmp1, gF, gF, currentNum);               // tmp1 = grad^2
-        Muls(tmp1, tmp1, oneMinusRho_, currentNum);   // tmp1 = grad^2 * (1-rho)
-        Muls(aF, aF, rho_, currentNum);               // aF = accum * rho
-        Add(aF, aF, tmp1, currentNum);                // aF = accum_new
+        Mul(tmp1, gF, gF, currentNum);              // tmp1 = grad^2
+        Muls(tmp1, tmp1, oneMinusRho_, currentNum); // tmp1 = grad^2 * (1-rho)
+        Muls(aF, aF, rho_, currentNum);             // aF = accum * rho
+        Add(aF, aF, tmp1, currentNum);              // aF = accum_new
 
         // Step2: update = sqrt(au_old + eps) / sqrt(accum_new + eps) * grad
-        Adds(tmp1, auF, eps_, currentNum);            // tmp1 = au_old + eps
-        Sqrt(tmp1, tmp1, currentNum);                 // tmp1 = sqrt(au_old + eps) = numerator
-        Adds(tmp2, aF, eps_, currentNum);             // tmp2 = accum_new + eps
-        Sqrt(tmp2, tmp2, currentNum);                 // tmp2 = sqrt(accum_new + eps) = denominator
-        Div(tmp1, tmp1, tmp2, currentNum);            // tmp1 = ratio
-        Mul(tmp1, tmp1, gF, currentNum);              // tmp1 = update
+        Adds(tmp1, auF, eps_, currentNum); // tmp1 = au_old + eps
+        Sqrt(tmp1, tmp1, currentNum);      // tmp1 = sqrt(au_old + eps) = numerator
+        Adds(tmp2, aF, eps_, currentNum);  // tmp2 = accum_new + eps
+        Sqrt(tmp2, tmp2, currentNum);      // tmp2 = sqrt(accum_new + eps) = denominator
+        Div(tmp1, tmp1, tmp2, currentNum); // tmp1 = ratio
+        Mul(tmp1, tmp1, gF, currentNum);   // tmp1 = update
 
         // Step3: var_new = var - lr * update
-        Muls(tmp2, tmp1, lr_, currentNum);            // tmp2 = lr * update
-        Sub(vF, vF, tmp2, currentNum);                // vF = var_new
+        Muls(tmp2, tmp1, lr_, currentNum); // tmp2 = lr * update
+        Sub(vF, vF, tmp2, currentNum);     // vF = var_new
 
         // Step4: accum_update_new = au_old * rho + update^2 * (1 - rho)
-        Mul(tmp2, tmp1, tmp1, currentNum);            // tmp2 = update^2
-        Muls(tmp2, tmp2, oneMinusRho_, currentNum);   // tmp2 = update^2 * (1-rho)
-        Muls(auF, auF, rho_, currentNum);             // auF = au_old * rho
-        Add(auF, auF, tmp2, currentNum);              // auF = accum_update_new
+        Mul(tmp2, tmp1, tmp1, currentNum);          // tmp2 = update^2
+        Muls(tmp2, tmp2, oneMinusRho_, currentNum); // tmp2 = update^2 * (1-rho)
+        Muls(auF, auF, rho_, currentNum);           // auF = au_old * rho
+        Add(auF, auF, tmp2, currentNum);            // auF = accum_update_new
 
         // Cast down: fp32 -> half
-        Cast(vOut,  vF,  RoundMode::CAST_RINT, currentNum);
-        Cast(aOut,  aF,  RoundMode::CAST_RINT, currentNum);
+        Cast(vOut, vF, RoundMode::CAST_RINT, currentNum);
+        Cast(aOut, aF, RoundMode::CAST_RINT, currentNum);
         Cast(auOut, auF, RoundMode::CAST_RINT, currentNum);
     } else {
         // FP32 path: T == float, so v/a/au/g/vOut/aOut/auOut are already
         // LocalTensor<float>. No Cast needed; operate directly on them.
 
         // Step1: accum_new = rho * accum + (1-rho) * grad^2
-        Mul(tmp1, g, g, currentNum);                  // tmp1 = grad^2
-        Muls(tmp1, tmp1, oneMinusRho_, currentNum);   // tmp1 = grad^2 * (1-rho)
-        Muls(aOut, a, rho_, currentNum);              // aOut = accum * rho
-        Add(aOut, aOut, tmp1, currentNum);            // aOut = accum*rho + grad^2*(1-rho)
+        Mul(tmp1, g, g, currentNum);                // tmp1 = grad^2
+        Muls(tmp1, tmp1, oneMinusRho_, currentNum); // tmp1 = grad^2 * (1-rho)
+        Muls(aOut, a, rho_, currentNum);            // aOut = accum * rho
+        Add(aOut, aOut, tmp1, currentNum);          // aOut = accum*rho + grad^2*(1-rho)
 
         // Step2: update = sqrt(accum_update + eps) / sqrt(accum_new + eps) * grad
-        Adds(tmp1, au, eps_, currentNum);             // tmp1 = accum_update + eps
-        Sqrt(tmp1, tmp1, currentNum);                 // tmp1 = sqrt(accum_update + eps) = numerator
-        Adds(tmp2, aOut, eps_, currentNum);           // tmp2 = accum_new + eps
-        Sqrt(tmp2, tmp2, currentNum);                 // tmp2 = sqrt(accum_new + eps) = denominator
-        Div(tmp1, tmp1, tmp2, currentNum);            // tmp1 = ratio = num / den
-        Mul(tmp1, tmp1, g, currentNum);               // tmp1 = update = ratio * grad
+        Adds(tmp1, au, eps_, currentNum);   // tmp1 = accum_update + eps
+        Sqrt(tmp1, tmp1, currentNum);       // tmp1 = sqrt(accum_update + eps) = numerator
+        Adds(tmp2, aOut, eps_, currentNum); // tmp2 = accum_new + eps
+        Sqrt(tmp2, tmp2, currentNum);       // tmp2 = sqrt(accum_new + eps) = denominator
+        Div(tmp1, tmp1, tmp2, currentNum);  // tmp1 = ratio = num / den
+        Mul(tmp1, tmp1, g, currentNum);     // tmp1 = update = ratio * grad
 
         // Step3: var_new = var - lr * update
-        Muls(tmp2, tmp1, lr_, currentNum);            // tmp2 = lr * update
-        Sub(vOut, v, tmp2, currentNum);               // vOut = var - lr * update
+        Muls(tmp2, tmp1, lr_, currentNum); // tmp2 = lr * update
+        Sub(vOut, v, tmp2, currentNum);    // vOut = var - lr * update
 
         // Step4: accum_update_new = rho * accum_update + (1-rho) * update^2
-        Mul(tmp2, tmp1, tmp1, currentNum);            // tmp2 = update^2
-        Muls(tmp2, tmp2, oneMinusRho_, currentNum);   // tmp2 = update^2 * (1-rho)
-        Muls(auOut, au, rho_, currentNum);            // auOut = accum_update * rho
-        Add(auOut, auOut, tmp2, currentNum);          // auOut = au*rho + update^2*(1-rho)
+        Mul(tmp2, tmp1, tmp1, currentNum);          // tmp2 = update^2
+        Muls(tmp2, tmp2, oneMinusRho_, currentNum); // tmp2 = update^2 * (1-rho)
+        Muls(auOut, au, rho_, currentNum);          // auOut = accum_update * rho
+        Add(auOut, auOut, tmp2, currentNum);        // auOut = au*rho + update^2*(1-rho)
     }
 
     // Free input tensors

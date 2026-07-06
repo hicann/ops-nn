@@ -15,11 +15,11 @@
 namespace op {
 const aclIntArray* getAllDims(const aclTensor* self, aclOpExecutor* executor);
 
-const aclTensor* ResizeFrom1D(
-    const aclTensor* cdim, const aclTensor* input, bool isSupportNcdhw, aclOpExecutor* executor);
+const aclTensor* ResizeFrom1D(const aclTensor* cdim, const aclTensor* input, bool isSupportNcdhw,
+                              aclOpExecutor* executor);
 
-const aclTensor* ResizeTo1D(
-    const aclTensor* result, const aclTensor* output, bool isSupportNcdhw, aclOpExecutor* executor);
+const aclTensor* ResizeTo1D(const aclTensor* result, const aclTensor* output, bool isSupportNcdhw,
+                            aclOpExecutor* executor);
 
 const aclTensor* ResizeFromND(const aclTensor* input, aclOpExecutor* executor);
 

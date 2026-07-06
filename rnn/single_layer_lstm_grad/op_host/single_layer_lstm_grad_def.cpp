@@ -134,13 +134,11 @@ public:
         this->Attr("direction").AttrType(OPTIONAL).String("UNIDIRECTIONAL");
         this->Attr("gate_order").AttrType(OPTIONAL).String("ijfo");
         OpAICoreConfig aicore_config;
-        aicore_config.DynamicCompileStaticFlag(true)
-        .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true);
+        aicore_config.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
     }
 };
 
 OP_ADD(SingleLayerLstmGrad);
-}
+} // namespace ops

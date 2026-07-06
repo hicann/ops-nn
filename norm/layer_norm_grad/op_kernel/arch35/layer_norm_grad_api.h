@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -33,10 +33,7 @@ namespace Arith {
  *
  * Note: This is optimized for AI Core execution (low-latency).
  */
-__aicore__ inline int64_t Min(int64_t a, int64_t b)
-{
-    return (a < b) ? a : b;
-}
+__aicore__ inline int64_t Min(int64_t a, int64_t b) { return (a < b) ? a : b; }
 
 /**
  * Computes the maximum of two 64-bit integers (aicore)
@@ -47,10 +44,7 @@ __aicore__ inline int64_t Min(int64_t a, int64_t b)
  *
  * Note: This is optimized for AI Core execution (low-latency).
  */
-__aicore__ inline int64_t Max(int64_t a, int64_t b)
-{
-    return (a > b) ? a : b;
-}
+__aicore__ inline int64_t Max(int64_t a, int64_t b) { return (a > b) ? a : b; }
 
 /**
  * Computes ceiling division of two 64-bit integers (aicore)
@@ -123,9 +117,9 @@ __aicore__ inline void CopyIn1D(const LocalTensor<T>& dstTensor, const GlobalTen
 }
 
 template <typename T>
-__aicore__ inline void CopyIn2D(
-    const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize, const int64_t colSize,
-    const int64_t dstStride, const int64_t srcStride)
+__aicore__ inline void CopyIn2D(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor,
+                                const int64_t rowSize, const int64_t colSize, const int64_t dstStride,
+                                const int64_t srcStride)
 {
     DataCopyExtParams params;
     params.blockCount = rowSize;
@@ -151,9 +145,8 @@ __aicore__ inline void CopyOut1D(const GlobalTensor<T>& dstTensor, const LocalTe
 } // namespace DMA
 
 namespace CalcOp {
-__aicore__ inline void VectorAdd(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor, const LocalTensor<float>& src1Tensor,
-    const int64_t count)
+__aicore__ inline void VectorAdd(const LocalTensor<float>& dstTensor, const LocalTensor<float>& src0Tensor,
+                                 const LocalTensor<float>& src1Tensor, const int64_t count)
 {
     constexpr static int64_t VREG_SIZE = 256;
     constexpr static int64_t VL_FP32 = VREG_SIZE / sizeof(float);
@@ -203,9 +196,8 @@ __aicore__ inline int64_t GetCacheID(const int64_t idx)
     return ScalarGetCountOfValue<1>(idx ^ (idx + CONST_ONE)) - CONST_ONE;
 }
 
-__aicore__ inline void UpdateCache(
-    const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const int64_t cacheID,
-    const int64_t stride, const int64_t count)
+__aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
+                                   const int64_t cacheID, const int64_t stride, const int64_t count)
 {
     constexpr static int64_t VREG_SIZE = 256;
     constexpr static int64_t VL_FP32 = VREG_SIZE / sizeof(float);

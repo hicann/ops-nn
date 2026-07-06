@@ -65,15 +65,15 @@ private:
 
 private:
     TPipe pipe;
-    TQue<QuePosition::VECIN, 2> inputQueue;    // 双缓冲：2 个 input buffer 支持乒乓调度
+    TQue<QuePosition::VECIN, 2> inputQueue; // 双缓冲：2 个 input buffer 支持乒乓调度
     TQue<QuePosition::VECOUT, 1> outputQueue;
-    TBuf<QuePosition::VECCALC> tmpBuf;         // 独立临时 buffer（Maxs 中间结果）
+    TBuf<QuePosition::VECCALC> tmpBuf; // 独立临时 buffer（Maxs 中间结果）
 
     GlobalTensor<T> inputGM;
     GlobalTensor<T> outputGM;
 
-    int64_t blockLength_ = 0;  // 当前 Core 需处理的元素数
-    int64_t ubLength_ = 0;     // 单次 UB 循环处理的元素数
+    int64_t blockLength_ = 0; // 当前 Core 需处理的元素数
+    int64_t ubLength_ = 0;    // 单次 UB 循环处理的元素数
 };
 
 template <typename T>
@@ -82,7 +82,7 @@ __aicore__ inline void Relu6<T>::Init(GM_ADDR x, GM_ADDR y, const Relu6TilingDat
     // 计算当前 AI Core 需要处理的元素数量
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     if (remainderLength <= 0) {
-        blockLength_ = 0;  // 空闲核，Process() 中 loopCount=0 直接返回
+        blockLength_ = 0; // 空闲核，Process() 中 loopCount=0 直接返回
         return;
     }
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;

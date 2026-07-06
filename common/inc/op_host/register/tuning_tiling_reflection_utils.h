@@ -26,41 +26,30 @@ using enable_if_t = typename std::enable_if<B, T>::type;
 template <typename T, T... Ints>
 struct integer_sequence {
     using value_type = T;
-    static constexpr std::size_t size()
-    {
-        return sizeof...(Ints);
-    }
+    static constexpr std::size_t size() { return sizeof...(Ints); }
 };
 
 template <std::size_t... Ints>
 using index_sequence = integer_sequence<std::size_t, Ints...>;
 
 template <typename T, std::size_t N, T... Is>
-struct make_integer_sequence : make_integer_sequence<T, N - 1U, N - 1U, Is...> {
-};
+struct make_integer_sequence : make_integer_sequence<T, N - 1U, N - 1U, Is...> {};
 
 template <typename T, T... Is>
-struct make_integer_sequence<T, 0, Is...> : integer_sequence<T, Is...> {
-};
+struct make_integer_sequence<T, 0, Is...> : integer_sequence<T, Is...> {};
 
 template <std::size_t N>
 using make_index_sequence = make_integer_sequence<std::size_t, N>;
 
 template <typename T>
 struct StructInfo {
-    static std::tuple<> Info()
-    {
-        return std::make_tuple();
-    }
+    static std::tuple<> Info() { return std::make_tuple(); }
 };
 
-#define DECLARE_SCHEMA(Struct, ...)                          \
-    template <>                                              \
-    struct StructInfo<Struct> {                              \
-        static decltype(std::make_tuple(__VA_ARGS__)) Info() \
-        {                                                    \
-            return std::make_tuple(__VA_ARGS__);             \
-        }                                                    \
+#define DECLARE_SCHEMA(Struct, ...)                                                                   \
+    template <>                                                                                       \
+    struct StructInfo<Struct> {                                                                       \
+        static decltype(std::make_tuple(__VA_ARGS__)) Info() { return std::make_tuple(__VA_ARGS__); } \
     };
 
 #define FIELD(class, FieldName) std::make_tuple(#FieldName, &class ::FieldName)
@@ -76,18 +65,15 @@ template <typename Fn, typename Tuple>
 void ForEachTuple(Tuple&& tuple, Fn&& fn)
 {
     const auto fields = StructInfo<decay_t<Tuple>>::Info();
-    ForEachTuple(
-        std::forward<Tuple>(tuple), fields, std::forward<Fn>(fn),
-        make_index_sequence<std::tuple_size<decltype(fields)>::value>{});
+    ForEachTuple(std::forward<Tuple>(tuple), fields, std::forward<Fn>(fn),
+                 make_index_sequence<std::tuple_size<decltype(fields)>::value>{});
 }
 
 template <typename T>
-struct is_optional : std::false_type {
-};
+struct is_optional : std::false_type {};
 
 template <typename T>
-struct is_optional<std::unique_ptr<T>> : std::true_type {
-};
+struct is_optional<std::unique_ptr<T>> : std::true_type {};
 
 template <typename T>
 bool is_optional_v()
@@ -140,8 +126,7 @@ void DumpObj(T&& obj, const std::string& field_name, Js& j)
 
 template <typename T>
 struct DumpFunctor {
-    explicit DumpFunctor(T& j) : js(j)
-    {}
+    explicit DumpFunctor(T& j) : js(j) {}
     template <typename Name, typename Field>
     void operator()(Name&& name, Field&& field) const
     {
@@ -178,8 +163,7 @@ void FromJsonImpl(T&& obj, const std::string& field_name, const Js& j)
 
 template <typename Js>
 struct FromJsonFunctor {
-    explicit FromJsonFunctor(const Js& j) : js(j)
-    {}
+    explicit FromJsonFunctor(const Js& j) : js(j) {}
     template <typename Name, typename Field>
     void operator()(Name&& name, Field&& field) const
     {

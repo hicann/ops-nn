@@ -36,7 +36,6 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_1)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // SAMPLE: precision simulate
-    
 }
 
 // checkNotNull var index updates
@@ -66,10 +65,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_2)
 // CheckDtypeValid for index
 TEST_F(l2_tf_scatter_add_test, ascend910B2_case_4)
 {
-    vector<aclDataType> ValidList = {
-        ACL_INT32,
-        ACL_INT64,
-        ACL_DT_UNDEFINED};
+    vector<aclDataType> ValidList = {ACL_INT32, ACL_INT64, ACL_DT_UNDEFINED};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -83,7 +79,7 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_4)
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
         if (ValidList[i] != ACL_DT_UNDEFINED) {
             EXPECT_EQ(aclRet, ACL_SUCCESS);
-            
+
         } else {
             EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
         }
@@ -115,7 +111,6 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_6)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    
 }
 
 // test AiCPU int8
@@ -129,7 +124,6 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_7)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    
 }
 
 // check updatesDimNum
@@ -212,20 +206,13 @@ TEST_F(l2_tf_scatter_add_test, ascend910B2_case_13)
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    
 }
 
 // CheckDtypeValid for var and updates
 TEST_F(l2_tf_scatter_add_test, ascend950_case_1)
 {
-    vector<aclDataType> ValidList = {
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_BF16,
-        ACL_INT32,
-        ACL_INT8,
-        ACL_UINT8,
-        ACL_DT_UNDEFINED};
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16,        ACL_INT32,
+                                     ACL_INT8,  ACL_UINT8,   ACL_DT_UNDEFINED};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {

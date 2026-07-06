@@ -22,8 +22,7 @@
 #include "max_pool_with_argmax_base.h"
 #include "max_pool_with_argmax_struct_common.h"
 
-namespace MaxPoolWithArgmaxNHWC
-{
+namespace MaxPoolWithArgmaxNHWC {
 using namespace AscendC;
 
 constexpr uint32_t BUFFER_NUM = 2;
@@ -34,8 +33,7 @@ constexpr int64_t DIGIT_1 = 1;
 constexpr int64_t DIGIT_2 = 2;
 
 template <typename T1, typename T2, uint32_t IS_PAD = 0, uint32_t NANPROP = 0>
-class MaxPoolWithArgmaxNhwCKernel
-{
+class MaxPoolWithArgmaxNhwCKernel {
 public:
     __aicore__ inline MaxPoolWithArgmaxNhwCKernel(
         TPipe* pipe,
@@ -56,10 +54,10 @@ public:
 
     template <const bool IS_SPLIT_KERNEL>
     __aicore__ inline void MaxPoolAndArgmaxVF(__local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal,
-                                                __local_mem__ T2* argmaxLocal);
+                                              __local_mem__ T2* argmaxLocal);
     template <const bool IS_SPLIT_KERNEL>
     __aicore__ inline void MaxPoolAndArgmaxVFForPad(__local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal,
-                                                      __local_mem__ T2* argmaxLocal);
+                                                    __local_mem__ T2* argmaxLocal);
     __aicore__ inline void CopyOut();
 
     TPipe* pipe_;
@@ -76,8 +74,9 @@ public:
     uint32_t blockIdx_ = 0;
 
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
-    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK =
-        BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ? BLOCK_SIZE / sizeof(T1) : BLOCK_SIZE / sizeof(T2);
+    constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK = BLOCK_SIZE / sizeof(T1) >= BLOCK_SIZE / sizeof(T2) ?
+                                                             BLOCK_SIZE / sizeof(T1) :
+                                                             BLOCK_SIZE / sizeof(T2);
     constexpr static int64_t VREG_LENGTH_DATA_NUM_T2 = platform::GetVRegSize() / sizeof(T2);
 
     // tilingdata
@@ -309,8 +308,8 @@ template <typename T1, typename T2, uint32_t IS_PAD, uint32_t NANPROP>
 __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::InitHelpBuf()
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     __VEC_SCOPE__
     {
@@ -326,12 +325,12 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Ini
 }
 
 template <typename T1, typename T2, uint32_t IS_PAD, uint32_t NANPROP>
-__aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::CopyResultToUb(__local_mem__ T1* maxValueLocal,
-                                                                                     __local_mem__ T2* argmaxLocal)
+__aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::CopyResultToUb(
+    __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     __VEC_SCOPE__
     {
@@ -387,7 +386,7 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Pro
 
 template <typename T1, typename T2, uint32_t IS_PAD, uint32_t NANPROP>
 __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Compute(__local_mem__ T1* maxValueLocal,
-                                                                              __local_mem__ T2* argmaxLocal)
+                                                                                     __local_mem__ T2* argmaxLocal)
 {
     LocalTensor<T1> xLocal = inputQue_.DeQue<T1>();
     __local_mem__ T1* xAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
@@ -414,8 +413,8 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
     __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     int64_t nOutputActual = nOutputActual_;
     int64_t hOutputActual = hOutputActual_;
@@ -435,8 +434,8 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
     // hwc平面偏移
     int64_t indexNHWCOffset = hInputAxisOffset_ + wInputAxisOffset_ + cInputAxisOffset_;
 
-    int64_t cOutputTail = (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2) == 0 ? VREG_LENGTH_DATA_NUM_T2
-                                                                          : (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2);
+    int64_t cOutputTail = (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2) == 0 ? VREG_LENGTH_DATA_NUM_T2 :
+                                                                            (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2);
 
     for (uint16_t nIndex = 0; nIndex < nOutputActual; ++nIndex) {
         for (uint16_t cIndex = 0; cIndex < cLoop; ++cIndex) {
@@ -470,8 +469,7 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
 
                         // 起始点hwc偏移
                         int64_t scopeHWCOffset = indexNHWCOffset +
-                                                 (hIndex * hStride * wInput + wIndex * wStride) * cInput_ +
-                                                 offsetC;
+                                                 (hIndex * hStride * wInput + wIndex * wStride) * cInput_ + offsetC;
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
                             AscendC::MicroAPI::DataCopy(vreg0, maxValueHelp);
@@ -486,7 +484,8 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
                                 AscendC::MicroAPI::DataCopy(
                                     vreg1,
                                     xLocal + startInUb + (hKernelIdx * wInputActual + wKernelIdx) * cOutputActualAlign);
-                                AscendC::MicroAPI::Arange(argmaxUpdateVreg, scopeHWCOffset + (hKernelIdx * wInput + wKernelIdx) * cInput_);
+                                AscendC::MicroAPI::Arange(
+                                    argmaxUpdateVreg, scopeHWCOffset + (hKernelIdx * wInput + wKernelIdx) * cInput_);
 
                                 if constexpr (NANPROP == 1) {
                                     AscendC::MicroAPI::Compare<T1, CMPMODE::LE>(gtMask, vreg1, vreg0, computeMaskT1);
@@ -530,8 +529,8 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
     __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
 {
     __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp =
-        (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
+                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
     int64_t nOutputActual = nOutputActual_;
     int64_t hOutputActual = hOutputActual_;
     int64_t wOutputActual = wOutputActual_;
@@ -545,8 +544,8 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
     int64_t wInput = wInput_;
     int64_t wInputActualPad = wInputActualPad_;
     int64_t indexNHWCOffset = cInputAxisOffset_;
-    int64_t cOutputTail = (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2) == 0 ? VREG_LENGTH_DATA_NUM_T2
-                                                                          : (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2);
+    int64_t cOutputTail = (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2) == 0 ? VREG_LENGTH_DATA_NUM_T2 :
+                                                                            (cOutputActual_ % VREG_LENGTH_DATA_NUM_T2);
     for (uint16_t nIndex = 0; nIndex < nOutputActual; ++nIndex) {
         for (uint16_t hIndex = 0; hIndex < hOutputActual; ++hIndex) {
             for (uint16_t wIndex = 0; wIndex < wOutputActual; ++wIndex) {
@@ -576,15 +575,15 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
                     // UB内偏移
                     int64_t kernelTopOffsetOnLand = hIndex * hStride_;
                     if (baseBlockTopOffsetInOcean_ != 0) {
-                        kernelTopOffsetOnLand = kernelTopOffsetOnLand >= baseBlockTopOffsetInOcean_
-                                                    ? kernelTopOffsetOnLand
-                                                    : baseBlockTopOffsetInOcean_;
+                        kernelTopOffsetOnLand = kernelTopOffsetOnLand >= baseBlockTopOffsetInOcean_ ?
+                                                    kernelTopOffsetOnLand :
+                                                    baseBlockTopOffsetInOcean_;
                     }
                     int64_t kernelLeftOffsetOnLand = wIndex * wStride_;
                     if (baseBlockLeftOffsetInOcean_ != 0) {
-                        kernelLeftOffsetOnLand = kernelLeftOffsetOnLand >= baseBlockLeftOffsetInOcean_
-                                                    ? kernelLeftOffsetOnLand
-                                                    : baseBlockLeftOffsetInOcean_;
+                        kernelLeftOffsetOnLand = kernelLeftOffsetOnLand >= baseBlockLeftOffsetInOcean_ ?
+                                                     kernelLeftOffsetOnLand :
+                                                     baseBlockLeftOffsetInOcean_;
                     }
 
                     int64_t offsetC = cIndex * VREG_LENGTH_DATA_NUM_T2;
@@ -597,8 +596,7 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
                     int64_t topOffsetCoast = topOffset >= 0 ? topOffset : 0;
                     int64_t leftOffsetCoast = leftOffset >= 0 ? leftOffset : 0;
                     int64_t kernelStartArgmaxOffset = indexNHWCOffset +
-                                                      (topOffsetCoast * wInput_ + leftOffsetCoast) * cInput_+
-                                                      offsetC;
+                                                      (topOffsetCoast * wInput_ + leftOffsetCoast) * cInput_ + offsetC;
 
                     __VEC_SCOPE__
                     {
@@ -633,7 +631,9 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Max
                                 AscendC::MicroAPI::DataCopy(
                                     vreg1, xLocal + startInUb +
                                                (hKernelIdx * wInputActualPad + wKernelIdx) * cOutputActualAlign);
-                                AscendC::MicroAPI::Arange(argmaxUpdateVreg, (hKernelIdx * wInput + wKernelIdx) * cInput_ + kernelStartArgmaxOffset);
+                                AscendC::MicroAPI::Arange(
+                                    argmaxUpdateVreg,
+                                    (hKernelIdx * wInput + wKernelIdx) * cInput_ + kernelStartArgmaxOffset);
 
                                 if constexpr (NANPROP == 1) {
                                     AscendC::MicroAPI::Compare<T1, CMPMODE::LE>(gtMask, vreg1, vreg0, computeMaskT1);
@@ -810,5 +810,5 @@ __aicore__ inline void MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>::Cop
     inputQue_.EnQue(xLocal);
 }
 
-}  // namespace MaxPoolWithArgmaxNHWC
-#endif  // MAX_POOL_WITH_ARGMAX_NHWC_BIG_C_H_
+} // namespace MaxPoolWithArgmaxNHWC
+#endif // MAX_POOL_WITH_ARGMAX_NHWC_BIG_C_H_

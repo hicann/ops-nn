@@ -61,8 +61,7 @@ const std::string MAX = "max";
 
 class EmbeddingBagTiling {
 public:
-    explicit EmbeddingBagTiling(gert::TilingContext* context) : tilingContext_(context)
-    {}
+    explicit EmbeddingBagTiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     void GetUsedCore();
     void getTilingKeyAndComputeRepTime(ge::DataType weightDtype, std::string mode);
@@ -158,12 +157,11 @@ ge::graphStatus EmbeddingBagTiling::Init()
     if (includeLastOffset) {
         numOffset_ -= 1;
     }
-    OP_CHECK_IF(
-        (numOffset_ == 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            tilingContext_->GetNodeName(), "numOffset_", std::to_string(numOffset_).c_str(),
-            "offset size must be >=2 when include_last_offset is true"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((numOffset_ == 0),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "numOffset_",
+                                                      std::to_string(numOffset_).c_str(),
+                                                      "offset size must be >=2 when include_last_offset is true"),
+                return ge::GRAPH_FAILED);
     paddingIdx_ = *attrs->GetAttrPointer<int64_t>(PADDING_IDX_INDEX);
     GetUsedCore();
 
@@ -171,8 +169,8 @@ ge::graphStatus EmbeddingBagTiling::Init()
 
     getTilingKeyAndComputeRepTime(weightDatatype, mode);
 
-    OP_CHECK_IF(
-        (computeRepTime_ <= 0), OP_LOGE(tilingContext_, "computeRepTime  less than 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((computeRepTime_ <= 0), OP_LOGE(tilingContext_, "computeRepTime  less than 0"),
+                return ge::GRAPH_FAILED);
 
     size_t sysWorkspaceSize = compileInfo->sysWorkspaceSize;
     size_t* currentWorkSpace = tilingContext_->GetWorkspaceSizes(1);
@@ -229,8 +227,8 @@ ge::graphStatus EmbeddingBagTiling::SetKernelTiling()
     tilingData_.set_hasPerSampleWeights(hasPerSampleWeights_);
     tilingData_.set_tilingKey(tilingKey_);
 
-    tilingData_.SaveToBuffer(
-        tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
+                             tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->SetTilingKey(tilingKey_);
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     TilingDataPrint();
@@ -278,15 +276,13 @@ ge::graphStatus TilingPrepareForEmbeddingBag(gert::TilingParseContext* context)
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+                return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ubSizePlatForm);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_CHECK_IF(
-        (compileInfo->sysWorkspaceSize < 0),
-        OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->sysWorkspaceSize < 0),
+                OP_LOGE(context->GetNodeName(), "sysWorkspaceSize should be greater than or equal to zero"),
+                return ge::GRAPH_FAILED);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
     OP_LOGD(context->GetNodeName(), "total ub size is %lu", totalUbSize);

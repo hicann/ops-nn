@@ -23,8 +23,8 @@ using namespace AscendC;
 using namespace ReluGradV2Ns;
 using namespace Ops::Base;
 template <uint64_t schMode, uint64_t dType>
-__global__ __aicore__ void relu_grad_v2(
-    GM_ADDR gradients, GM_ADDR mask, GM_ADDR backprops, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void relu_grad_v2(GM_ADDR gradients, GM_ADDR mask, GM_ADDR backprops, GM_ADDR workspace,
+                                        GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(EleBaseTilingDataV2);

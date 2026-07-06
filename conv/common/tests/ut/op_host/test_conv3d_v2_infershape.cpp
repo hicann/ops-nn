@@ -37,16 +37,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2Fp16)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -68,16 +66,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2Fp32)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -99,16 +95,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2Bf16)
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -130,16 +124,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2OutNDHWC)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -161,16 +153,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2FmapNDHWC)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -192,16 +182,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2WeightNDHWC)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -223,16 +211,14 @@ TEST_F(Conv3DV2RuntimeInferShape, UnsupportedConv3dv2CNotEqual)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -254,16 +240,14 @@ TEST_F(Conv3DV2RuntimeInferShape, UnsupportedConv3dv2KernelGTFmap)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 5, 10, 17})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 5, 10, 17})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -285,16 +269,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_N_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -318,16 +300,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Cin_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -349,16 +329,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Din_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -382,16 +360,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Hin_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -415,16 +391,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Win_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -448,16 +422,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Weight_Cout_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -481,16 +453,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Weight_Cin_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -512,16 +482,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Weight_Kd_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -543,16 +511,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Weight_Kh_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -574,16 +540,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Weight_Kw_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -605,16 +569,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Input_Zero_Output_Not_Ze
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({5, 5, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({5, 5, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -636,16 +598,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Input_Zero_Output_Not_Ze
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 5, 5, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 5, 5, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -667,16 +627,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Input_Zero_Output_Not_Ze
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 5, 5})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 5, 5})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -698,16 +656,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Din_Zero_negative)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -729,16 +685,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Hin_Zero_negative)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -760,16 +714,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NCDHW_Fmap_Win_Zero_negative)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -791,16 +743,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2PadModeSame)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -822,16 +772,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2PadModeValid)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -853,16 +801,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2PadModeSameUpper)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_UPPER")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_UPPER")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -884,16 +830,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2PadModeSameLower)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_LOWER")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME_LOWER")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -915,16 +859,14 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2PadModeInvalid)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("INVALID")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("INVALID")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -978,16 +920,14 @@ TEST_F(Conv3DV2RuntimeInferShape, supportedConv3dv2NDHWCfp16)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -1009,16 +949,14 @@ TEST_F(Conv3DV2RuntimeInferShape, supportedConv3dv2NDHWCfp32)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -1040,16 +978,14 @@ TEST_F(Conv3DV2RuntimeInferShape, supportedConv3dv2NDHWCbf16)
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -1071,16 +1007,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NDHWC_Fmap_N_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -1104,16 +1038,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NDHWC_Fmap_Cin_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -1135,16 +1067,14 @@ TEST_F(Conv3DV2RuntimeInferShape, Conv3dv2_Format_NDHWC_Fmap_Din_Zero)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_DHWCN, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -1170,18 +1100,16 @@ TEST_F(Conv3DV2RuntimeInferShape, SupportedConv3dv2GroupsTwo)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
-                      .NodeAttrs({
-                          // Stride 1 everywhere
-                          {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          // Pad H/W by 1 each side to keep H/W; no D pad
-                          {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 1, 1, 1, 1})},
-                          {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
-                          {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                          {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
-                          {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                          {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
-                          {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({// Stride 1 everywhere
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  // Pad H/W by 1 each side to keep H/W; no D pad
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 1, 1, 1, 1})},
+                                  {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1, 1, 1})},
+                                  {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();

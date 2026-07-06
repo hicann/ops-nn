@@ -22,8 +22,8 @@ namespace optiling {
 class AdaptiveSlidingWindowCubeBasicAPITiling : public AdaptiveSlidingWindowTiling {
 public:
     explicit AdaptiveSlidingWindowCubeBasicAPITiling(gert::TilingContext* context);
-    AdaptiveSlidingWindowCubeBasicAPITiling(
-        gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
+    AdaptiveSlidingWindowCubeBasicAPITiling(gert::TilingContext* context,
+                                            DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
     ~AdaptiveSlidingWindowCubeBasicAPITiling() override = default;
 
     ge::graphStatus DoLibApiTiling() override;

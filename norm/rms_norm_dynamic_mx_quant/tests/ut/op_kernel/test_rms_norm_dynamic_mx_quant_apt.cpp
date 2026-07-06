@@ -38,14 +38,8 @@ using namespace std;
 
 class rms_norm_dynamic_mx_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "rms_norm_dynamic_mx_quant_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "rms_norm_dynamic_mx_quant_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "rms_norm_dynamic_mx_quant_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "rms_norm_dynamic_mx_quant_test TearDown\n" << endl; }
 };
 
 // numM=1, numN=64, FULL_LOAD + NORMAL mode (key=0), no beta, no rstd, scaleAlg=OCP, roundMode=RINT
@@ -71,8 +65,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_small)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
+    RmsNormDynamicMxQuantFullLoadTilingData* tilingData = reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(
+        tiling);
 
     tilingData->usedCoreNum = 1;
     tilingData->mTailCores = 0;
@@ -97,12 +91,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_small)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                  workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -137,8 +130,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_with_beta_rstd)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
+    RmsNormDynamicMxQuantFullLoadTilingData* tilingData = reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(
+        tiling);
 
     tilingData->usedCoreNum = 1;
     tilingData->mTailCores = 0;
@@ -163,12 +156,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_with_beta_rstd)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                  workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -205,8 +197,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_need_pad)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
+    RmsNormDynamicMxQuantFullLoadTilingData* tilingData = reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(
+        tiling);
 
     tilingData->usedCoreNum = 1;
     tilingData->mTailCores = 0;
@@ -231,12 +223,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_need_pad)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                  workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -271,8 +262,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_optimize)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
+    RmsNormDynamicMxQuantFullLoadTilingData* tilingData = reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(
+        tiling);
 
     tilingData->usedCoreNum = 1;
     tilingData->mTailCores = 0;
@@ -297,12 +288,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_optimize)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_OPTIMIZE>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_OPTIMIZE>(x, gamma, beta, y, mxscale, rstd,
+                                                                                    workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -337,8 +327,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_cublas_scale)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
+    RmsNormDynamicMxQuantFullLoadTilingData* tilingData = reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(
+        tiling);
 
     tilingData->usedCoreNum = 1;
     tilingData->mTailCores = 0;
@@ -363,12 +353,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_cublas_scale)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                  workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -403,8 +392,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_floor_round_mode)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
+    RmsNormDynamicMxQuantFullLoadTilingData* tilingData = reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(
+        tiling);
 
     tilingData->usedCoreNum = 1;
     tilingData->mTailCores = 0;
@@ -429,12 +418,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_floor_round_mode)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                  workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -472,8 +460,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantReduceEmptyTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
+    RmsNormDynamicMxQuantReduceEmptyTilingData*
+        tilingData = reinterpret_cast<RmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
 
     tilingData->perCoreElements = 176;
     tilingData->lastCoreElements = 176;
@@ -491,12 +479,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                     workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -534,8 +521,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantReduceEmptyTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
+    RmsNormDynamicMxQuantReduceEmptyTilingData*
+        tilingData = reinterpret_cast<RmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
 
     tilingData->perCoreElements = 0;
     tilingData->lastCoreElements = 0;
@@ -553,12 +540,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                     workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -596,8 +582,8 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_0_outputRstd_true)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    RmsNormDynamicMxQuantReduceEmptyTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
+    RmsNormDynamicMxQuantReduceEmptyTilingData*
+        tilingData = reinterpret_cast<RmsNormDynamicMxQuantReduceEmptyTilingData*>(tiling);
 
     tilingData->perCoreElements = 0;
     tilingData->lastCoreElements = 0;
@@ -615,12 +601,11 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_0_outputRstd_true)
 
     auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
                                                 GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
-        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(
-            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(x, gamma, beta, y, mxscale, rstd,
+                                                                                     workspace, tiling);
     };
-    ICPU_RUN_KF(
-        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-        (uint8_t*)(tilingData));
+    ICPU_RUN_KF(rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+                (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

@@ -26,19 +26,16 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void ifmr(GM_ADDR data, GM_ADDR data_min, GM_ADDR data_max, GM_ADDR cumsum,
-                                            GM_ADDR scale, GM_ADDR offset, GM_ADDR workspace, GM_ADDR tiling);
+                                           GM_ADDR scale, GM_ADDR offset, GM_ADDR workspace, GM_ADDR tiling);
 
 class ifmr_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "ifmr_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
-        cout << "ifmr_test TearDown\n" << endl;
-    }
+protected:
+    static void SetUpTestCase() { cout << "ifmr_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ifmr_test TearDown\n" << endl; }
 };
 
-IfmrTilingData* FakeGetTilingData(uint64_t tilingKey, uint8_t *tiling, uint32_t blockDim) {
+IfmrTilingData* FakeGetTilingData(uint64_t tilingKey, uint8_t* tiling, uint32_t blockDim)
+{
     IfmrTilingData* tilingData = reinterpret_cast<IfmrTilingData*>(tiling);
 
     tilingData->minPercentile = 0.999999;
@@ -54,7 +51,8 @@ IfmrTilingData* FakeGetTilingData(uint64_t tilingKey, uint8_t *tiling, uint32_t 
     return tilingData;
 }
 
-TEST_F(ifmr_test, test_case_0) {
+TEST_F(ifmr_test, test_case_0)
+{
     int64_t totalLength = 320000;
     int64_t bins = 512;
 
@@ -67,21 +65,21 @@ TEST_F(ifmr_test, test_case_0) {
     size_t offset_size = sizeof(float);
     size_t tiling_data_size = sizeof(IfmrTilingData);
 
-    uint8_t *inputs = (uint8_t*)AscendC::GmAlloc(inputs_size);
-    uint8_t *min = (uint8_t*)AscendC::GmAlloc(min_size);
-    uint8_t *max = (uint8_t*)AscendC::GmAlloc(max_size);
-    uint8_t *cumsum = (uint8_t*)AscendC::GmAlloc(cumsum_size);
-    uint8_t *scale = (uint8_t*)AscendC::GmAlloc(scale_size);
-    uint8_t *offset = (uint8_t*)AscendC::GmAlloc(offset_size);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
-    uint32_t blockDim = 1; //cpu模拟使用单核
+    uint8_t* inputs = (uint8_t*)AscendC::GmAlloc(inputs_size);
+    uint8_t* min = (uint8_t*)AscendC::GmAlloc(min_size);
+    uint8_t* max = (uint8_t*)AscendC::GmAlloc(max_size);
+    uint8_t* cumsum = (uint8_t*)AscendC::GmAlloc(cumsum_size);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offset_size);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 1; // cpu模拟使用单核
     system("cp -r ../ifmr_data ./");
     system("chmod -R 755 ./ifmr_data/");
     system("cd ./ifmr_data/ && rm -rf ./*bin");
     system("cd ./ifmr_data/ && python3 gen_data.py 320000 0 1 512");
 
-    char * path_ = get_current_dir_name();
+    char* path_ = get_current_dir_name();
     string path(path_);
     ReadFile(path + "/ifmr_data/inputs.bin", inputs_size, inputs, inputs_size);
     ReadFile(path + "/ifmr_data/inputs_min.bin", min_size, min, min_size);

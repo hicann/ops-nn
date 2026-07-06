@@ -29,8 +29,7 @@ public:
     using Config = Config_;
 
 public:
-    __aicore__ inline ConvBpImpl()
-    {}
+    __aicore__ inline ConvBpImpl() {}
 
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, Init, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetWeight, Intf);

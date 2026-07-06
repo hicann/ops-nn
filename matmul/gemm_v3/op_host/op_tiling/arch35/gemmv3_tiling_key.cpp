@@ -20,8 +20,8 @@ using namespace optiling::matmul_v3_advanced;
 
 uint64_t GemmV3TilingKey::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(
-        static_cast<uint64_t>(apiLevel_), static_cast<uint64_t>(atrans_), static_cast<uint64_t>(btrans_),
-        static_cast<uint64_t>(batchModel_), static_cast<uint64_t>(model_), static_cast<uint64_t>(fullLoad_),
-        static_cast<uint64_t>(out_));
+    return GET_TPL_TILING_KEY(static_cast<uint64_t>(apiLevel_), static_cast<uint64_t>(atrans_),
+                              static_cast<uint64_t>(btrans_), static_cast<uint64_t>(batchModel_),
+                              static_cast<uint64_t>(model_), static_cast<uint64_t>(fullLoad_),
+                              static_cast<uint64_t>(out_));
 }

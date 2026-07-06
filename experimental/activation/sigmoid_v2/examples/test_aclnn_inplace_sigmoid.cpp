@@ -21,10 +21,10 @@
 #include "aclnnop/aclnn_sigmoid.h"
 
 #define CHECK_RET(cond, expr) \
-    do { \
-        if (!(cond)) { \
-            expr; \
-        } \
+    do {                      \
+        if (!(cond)) {        \
+            expr;             \
+        }                     \
     } while (0)
 
 namespace {
@@ -49,17 +49,16 @@ std::vector<int64_t> MakeStrides(const std::vector<int64_t>& shape)
     return strides;
 }
 
-aclError CreateAclTensor(
-    const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
+aclError CreateAclTensor(const std::vector<int64_t>& shape, aclDataType dtype, void* device_addr, aclTensor** tensor)
 {
     std::vector<int64_t> strides = MakeStrides(shape);
     const int64_t* shape_ptr = shape.empty() ? nullptr : shape.data();
     const int64_t* strides_ptr = strides.empty() ? nullptr : strides.data();
-    *tensor = aclCreateTensor(
-        shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(), device_addr);
+    *tensor = aclCreateTensor(shape_ptr, shape.size(), dtype, strides_ptr, 0, ACL_FORMAT_ND, shape_ptr, shape.size(),
+                              device_addr);
     return *tensor == nullptr ? ACL_ERROR_FAILURE : ACL_SUCCESS;
 }
-}  // namespace
+} // namespace
 
 int main()
 {

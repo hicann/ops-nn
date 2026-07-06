@@ -18,14 +18,14 @@
 
 namespace aicpu {
 class GatherV2CpuKernel : public CpuKernel {
- public:
-  GatherV2CpuKernel() = default;
-  ~GatherV2CpuKernel() override = default;
-  uint32_t Compute(CpuKernelContext &ctx) override;
+public:
+    GatherV2CpuKernel() = default;
+    ~GatherV2CpuKernel() override = default;
+    uint32_t Compute(CpuKernelContext& ctx) override;
 
- private:
-  uint32_t GetInputAndCheck(const CpuKernelContext &ctx);
+private:
+    uint32_t GetInputAndCheck(const CpuKernelContext& ctx);
 };
-}  // namespace aicpu
+} // namespace aicpu
 
-#endif  // OPS_NN_INDEX_GATHER_V2_OP_KERNEL_AICPU_GATHER_V2_AICPU_H_
+#endif // OPS_NN_INDEX_GATHER_V2_OP_KERNEL_AICPU_GATHER_V2_AICPU_H_

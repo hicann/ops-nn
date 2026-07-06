@@ -28,22 +28,23 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(FlatQuant);
 
-static std::tuple<aclTensor*, aclTensor*> FlatQuantAICore(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, float clipRatio, int64_t dst_dtype,
-    float dstTypeMax, aclTensor* out, aclTensor* quantScale, aclOpExecutor* executor)
+static std::tuple<aclTensor*, aclTensor*> FlatQuantAICore(const aclTensor* x, const aclTensor* kroneckerP1,
+                                                          const aclTensor* kroneckerP2, float clipRatio,
+                                                          int64_t dst_dtype, float dstTypeMax, aclTensor* out,
+                                                          aclTensor* quantScale, aclOpExecutor* executor)
 {
     L0_DFX(FlatQuantAICore, x, kroneckerP1, kroneckerP2, clipRatio, dst_dtype, dstTypeMax, out, quantScale);
-    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
-        FlatQuant, OP_INPUT(x, kroneckerP1, kroneckerP2), OP_OUTPUT(out, quantScale),
-        OP_ATTR(clipRatio, dst_dtype, dstTypeMax));
-    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
-        retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr), "FlatQuant add to aicore launch list failed.");
+    auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(FlatQuant, OP_INPUT(x, kroneckerP1, kroneckerP2),
+                                                 OP_OUTPUT(out, quantScale), OP_ATTR(clipRatio, dst_dtype, dstTypeMax));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr),
+                                         "FlatQuant add to aicore launch list failed.");
     return std::tie(out, quantScale);
 }
 
-const std::tuple<aclTensor*, aclTensor*> FlatQuant(
-    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, float clipRatio, int64_t dst_dtype,
-    float dstTypeMax, aclTensor* out, aclTensor* quantScale, aclOpExecutor* executor)
+const std::tuple<aclTensor*, aclTensor*> FlatQuant(const aclTensor* x, const aclTensor* kroneckerP1,
+                                                   const aclTensor* kroneckerP2, float clipRatio, int64_t dst_dtype,
+                                                   float dstTypeMax, aclTensor* out, aclTensor* quantScale,
+                                                   aclOpExecutor* executor)
 {
     if (dst_dtype != DataType::DT_FLOAT4_E2M1) {
         out = executor->AllocTensor(x->GetViewShape(), DataType::DT_INT4, x->GetViewFormat());

@@ -20,13 +20,10 @@
 
 namespace optiling {
 
-class UnsortedSegmentSimdDynSortTiling : public UnsortedSegmentBaseTiling
-{
+class UnsortedSegmentSimdDynSortTiling : public UnsortedSegmentBaseTiling {
 public:
-    explicit UnsortedSegmentSimdDynSortTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context)
-    {}
-    ~UnsortedSegmentSimdDynSortTiling() override
-    {}
+    explicit UnsortedSegmentSimdDynSortTiling(gert::TilingContext* context) : UnsortedSegmentBaseTiling(context) {}
+    ~UnsortedSegmentSimdDynSortTiling() override {}
 
 protected:
     bool IsCapable() override;

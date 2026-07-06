@@ -20,20 +20,15 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void dynamic_quant_update_scatter(
-    GM_ADDR var, GM_ADDR varScale, GM_ADDR indices, GM_ADDR updates, GM_ADDR smoothScales, GM_ADDR varOut,
-    GM_ADDR varScaleOut, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void dynamic_quant_update_scatter(GM_ADDR var, GM_ADDR varScale, GM_ADDR indices,
+                                                                   GM_ADDR updates, GM_ADDR smoothScales,
+                                                                   GM_ADDR varOut, GM_ADDR varScaleOut,
+                                                                   GM_ADDR workSpace, GM_ADDR tiling);
 
 class dynamic_quant_update_scatter_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "dynamic_quant_update_scatter_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "dynamic_quant_update_scatter_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "dynamic_quant_update_scatter_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "dynamic_quant_update_scatter_test TearDown\n" << endl; }
 };
 
 TEST_F(dynamic_quant_update_scatter_test, test_case_100)
@@ -63,8 +58,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_100)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
+    DynamicQuantUpdateScatterTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 24;
     tilingDatafromBin->eachCoreBsNum = 1;
@@ -96,9 +91,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_100)
     tilingDatafromBin->innerLoopTailLastCore = 0;
 
     ICPU_SET_TILING_KEY(100);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output,
+                scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(varScale);
@@ -139,8 +133,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_101)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
+    DynamicQuantUpdateScatterTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 48;
     tilingDatafromBin->eachCoreBsNum = 43;
@@ -172,9 +166,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_101)
     tilingDatafromBin->innerLoopTailLastCore = 0;
 
     ICPU_SET_TILING_KEY(101);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output,
+                scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(varScale);
@@ -215,8 +208,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_102)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
+    DynamicQuantUpdateScatterTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 32;
     tilingDatafromBin->eachCoreBsNum = 2;
@@ -248,9 +241,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_102)
     tilingDatafromBin->innerLoopTailLastCore = 0;
 
     ICPU_SET_TILING_KEY(102);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output,
+                scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(varScale);
@@ -291,8 +283,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_103)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
+    DynamicQuantUpdateScatterTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 24;
     tilingDatafromBin->eachCoreBsNum = 1;
@@ -324,9 +316,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_103)
     tilingDatafromBin->innerLoopTailLastCore = 0;
 
     ICPU_SET_TILING_KEY(103);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output,
+                scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(varScale);
@@ -367,8 +358,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_105)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
+    DynamicQuantUpdateScatterTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 48;
     tilingDatafromBin->eachCoreBsNum = 1;
@@ -400,9 +391,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_105)
     tilingDatafromBin->innerLoopTailLastCore = 0;
 
     ICPU_SET_TILING_KEY(105);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output,
+                scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(varScale);
@@ -443,8 +433,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_106)
     string path(path_);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    DynamicQuantUpdateScatterTilingData* tilingDatafromBin =
-        reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(tiling);
+    DynamicQuantUpdateScatterTilingData* tilingDatafromBin = reinterpret_cast<DynamicQuantUpdateScatterTilingData*>(
+        tiling);
 
     tilingDatafromBin->coreNum = 48;
     tilingDatafromBin->eachCoreBsNum = 192;
@@ -476,9 +466,8 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_106)
     tilingDatafromBin->innerLoopTailLastCore = 16;
 
     ICPU_SET_TILING_KEY(106);
-    ICPU_RUN_KF(
-        dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output, scale,
-        workSpace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(dynamic_quant_update_scatter, blockDim, var, varScale, indices, inputUpdates, smoothScales, output,
+                scale, workSpace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(var);
     AscendC::GmFree(varScale);

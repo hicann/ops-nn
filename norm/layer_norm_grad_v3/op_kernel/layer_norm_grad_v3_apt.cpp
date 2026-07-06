@@ -27,9 +27,9 @@ using namespace LayerNormGradV3;
 #define GROUPED_REDUCE_BIG_N 700
 
 template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
-__aicore__ inline void InvokeLayerNormGradV3RecomputeImpl(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
-    GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void InvokeLayerNormGradV3RecomputeImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                          GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma,
+                                                          GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataRecompute, tiling_data_in, tiling);
     const LayerNormGradV3TilingDataRecompute* __restrict tilingData = &tiling_data_in;
@@ -48,13 +48,13 @@ __aicore__ inline void InvokeLayerNormGradV3RecomputeImpl(
     PRELOAD(4);
     LayerNormGradV3RecomputeBackward<DY_TYPE, GAMMA_TYPE> opBackward;
     opBackward.Init(dy, x, rstd, mean, gamma, pd_x, workspace, tilingData, &pipeIn);
-    opBackward.Process();   
+    opBackward.Process();
 }
 
 template <typename DY_TYPE, typename GAMMA_TYPE, typename PD_GAMMA_TYPE>
-__aicore__ inline void InvokeLayerNormGradV3GroupedReduceBigMImpl(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
-    GM_ADDR workspace, GM_ADDR tiling)
+__aicore__ inline void InvokeLayerNormGradV3GroupedReduceBigMImpl(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                                  GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma,
+                                                                  GM_ADDR pd_beta, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(LayerNormGradV3TilingDataGroupedReduceBigM, tiling_data_in, tiling);
     const LayerNormGradV3TilingDataGroupedReduceBigM* __restrict tilingData = &tiling_data_in;
@@ -95,15 +95,15 @@ __aicore__ inline void InvokeLayerNormGradV3GroupedReduceBigNImpl(GM_ADDR dy, GM
         SyncAll();
         pipeIn.Reset();
     }
-    PRELOAD(4);  // 4*2K
+    PRELOAD(4); // 4*2K
     LayerNormGradV3GroupedReduceBigNBackward<DY_TYPE, GAMMA_TYPE> opBackward;
     opBackward.Init(dy, x, rstd, mean, gamma, pd_x, workspace, tilingData, &pipeIn);
     opBackward.Process();
 }
 
-extern "C" __global__ __aicore__ void layer_norm_grad_v3(
-    GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean, GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void layer_norm_grad_v3(GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR mean,
+                                                         GM_ADDR gamma, GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta,
+                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);

@@ -21,8 +21,9 @@
 #define AB_INT64_TILING_KEY 201
 using namespace MaskedScatterWithPosition;
 
-extern "C" __global__ __aicore__ void masked_scatter_with_position(
-    GM_ADDR x, GM_ADDR mask, GM_ADDR position, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void masked_scatter_with_position(GM_ADDR x, GM_ADDR mask, GM_ADDR position,
+                                                                   GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                                                   GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(MaskedScatterWithPositionTilingData);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);

@@ -98,4 +98,4 @@ ACLNN_API aclnnStatus aclnnGatherNd(void* workspace, uint64_t workspaceSize, acl
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_GATHER_ND_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_GATHER_ND_H_

@@ -91,7 +91,7 @@ uint32_t FindPowerTwo(uint64_t n)
 {
     // Set all the bits after the first 1 in the binary of n to 1,
     // then add 1 and shift one bit to the right to find max power of 2 no more than n (32 bit).
-    n |= n >> 1; // Set the first digit of n's binary to 1
+    n |= n >> 1;     // Set the first digit of n's binary to 1
     n |= n >> MOV_2; // Set the first two bits of n's binary to 1
     n |= n >> MOV_4;
     n |= n >> MOV_8;
@@ -124,78 +124,73 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
     size_t yDimNum = yShape->GetStorageShape().GetDimNum();
     size_t rstdDimNum = rstdShape->GetStorageShape().GetDimNum();
 
-    OP_TILING_CHECK(
-        xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
-            "in the range of [1, 8]"),
-        return false);
-    OP_TILING_CHECK(
-        gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
-        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
-            "in the range of [1, 8]"),
-        return false);
+    OP_TILING_CHECK(xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                                                 "in the range of [1, 8]"),
+                    return false);
+    OP_TILING_CHECK(gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+                                                 "in the range of [1, 8]"),
+                    return false);
     if (gammaDimNum > xDimNum) {
         std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
             "The shape dim of input gamma must be less than or equal to that of input x");
         return false;
     }
     if (xDimNum != yDimNum) {
         std::string dimsMsg = std::to_string(yDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y and x", dimsMsg.c_str(),
-            "The shape dims of input x and output y must be the same");
+                                                  "The shape dims of input x and output y must be the same");
         return false;
     }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
-        OP_TILING_CHECK(
-            gammaShape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
-                ToString(gammaShape->GetStorageShape()).c_str(),
-                "Input gamma cannot be an empty tensor"),
-            return false);
+        OP_TILING_CHECK(gammaShape->GetStorageShape().GetDim(i) == 0,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
+                                                              ToString(gammaShape->GetStorageShape()).c_str(),
+                                                              "Input gamma cannot be an empty tensor"),
+                        return false);
         if (gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)) {
             std::string shapeMsg = ToString(gammaShape->GetStorageShape()) + " and " +
-                 ToString(xShape->GetStorageShape());
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma and x", shapeMsg.c_str(), 
-                "The shape of input gamma must be the same as the shape "
-                "consisting of the last " + std::to_string(gammaDimNum) + " axes of input x");
+                                   ToString(xShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma and x", shapeMsg.c_str(),
+                                                   "The shape of input gamma must be the same as the shape "
+                                                   "consisting of the last " +
+                                                       std::to_string(gammaDimNum) + " axes of input x");
             return false;
         }
     }
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_TILING_CHECK(
-            xShape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
-                ToString(xShape->GetStorageShape()).c_str(),
-                "Input x cannot be an empty tensor"),
-            return false);
-        OP_TILING_CHECK(
-            yShape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y",
-                ToString(yShape->GetStorageShape()).c_str(),
-                "Output y cannot be an empty tensor"),
-            return false);
+        OP_TILING_CHECK(xShape->GetStorageShape().GetDim(i) == 0,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                                                              ToString(xShape->GetStorageShape()).c_str(),
+                                                              "Input x cannot be an empty tensor"),
+                        return false);
+        OP_TILING_CHECK(yShape->GetStorageShape().GetDim(i) == 0,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y",
+                                                              ToString(yShape->GetStorageShape()).c_str(),
+                                                              "Output y cannot be an empty tensor"),
+                        return false);
         if (xShape->GetStorageShape().GetDim(i) != yShape->GetStorageShape().GetDim(i)) {
             std::string shapeMsg = ToString(yShape->GetStorageShape()) + " and " + ToString(xShape->GetStorageShape());
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "y and x", shapeMsg.c_str(),
-                "The shapes of output y and input x must be the same");
+                                                   "The shapes of output y and input x must be the same");
             return false;
         }
     }
     for (uint32_t i = 0; i < rstdDimNum; i++) {
-        OP_TILING_CHECK(
-            rstdShape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd",
-                ToString(rstdShape->GetStorageShape()).c_str(),
-                "Output rstd cannot be an empty tensor"),
-            return false);
+        OP_TILING_CHECK(rstdShape->GetStorageShape().GetDim(i) == 0,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd",
+                                                              ToString(rstdShape->GetStorageShape()).c_str(),
+                                                              "Output rstd cannot be an empty tensor"),
+                        return false);
         if (rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i) &&
-                rstdShape->GetStorageShape().GetDim(i) != 1) {
+            rstdShape->GetStorageShape().GetDim(i) != 1) {
             std::string shapeMsg = ToString(rstdShape->GetStorageShape());
-            std::string reasonMsg = "The " + std::to_string(i) + "th axis of output rstd must be 1 or equal to the "
-                + std::to_string(i) + "th axis of input x";
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd", shapeMsg.c_str(),
-                reasonMsg.c_str());
+            std::string reasonMsg = "The " + std::to_string(i) + "th axis of output rstd must be 1 or equal to the " +
+                                    std::to_string(i) + "th axis of input x";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd", shapeMsg.c_str(), reasonMsg.c_str());
             return false;
         }
     }
@@ -205,22 +200,22 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
 bool CalMixDtypeTiling(uint32_t& modeKey, uint64_t& rowFactor, uint64_t& ubFactor, const RMSNormTilingInfo& rmsTilInfo)
 {
     uint64_t ubSize = rmsTilInfo.ubSize;
-    uint64_t numColAlign =
-        CeilDiv(rmsTilInfo.numCol, static_cast<uint64_t>(BYTE_SIZE_2_BLOCK_ALIGN_NUM)) * BYTE_SIZE_2_BLOCK_ALIGN_NUM;
+    uint64_t numColAlign = CeilDiv(rmsTilInfo.numCol, static_cast<uint64_t>(BYTE_SIZE_2_BLOCK_ALIGN_NUM)) *
+                           BYTE_SIZE_2_BLOCK_ALIGN_NUM;
 
     // Cal buffer size
     // bufsize(UB) = sizeof(dtype) * num * count
     uint64_t oneRowXYGammaBufSize = static_cast<uint64_t>(B16_BYTE_SIZE) * 2 * numColAlign +
                                     static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1 * numColAlign;
-    uint64_t oneRowRstdBufSize =
-        static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1 * static_cast<uint64_t>(FLOAT_BLOCK_ALIGN_NUM); // rstd
+    uint64_t oneRowRstdBufSize = static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1 *
+                                 static_cast<uint64_t>(FLOAT_BLOCK_ALIGN_NUM); // rstd
     uint64_t oneRowtmpBufSize = static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 2 * numColAlign;
-    uint64_t oneRowReduceBufSize =
-        static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1 * static_cast<uint64_t>(FLOAT_PER_REAPEAT); // buffer for reduce
+    uint64_t oneRowReduceBufSize = static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1 *
+                                   static_cast<uint64_t>(FLOAT_PER_REAPEAT); // buffer for reduce
 
-    uint64_t mutiRowRstdBufSize =
-        static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1U *
-        static_cast<uint64_t>(FLOAT_PER_REAPEAT); // rowFactor = FLOAT_PER_REAPEAT, bigger than oneRowRstdBufSize.
+    uint64_t mutiRowRstdBufSize = static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 1U *
+                                  static_cast<uint64_t>(FLOAT_PER_REAPEAT); // rowFactor = FLOAT_PER_REAPEAT, bigger
+                                                                            // than oneRowRstdBufSize.
 
     // 1. Mode MergeN
     uint64_t oneRowBufSize = oneRowXYGammaBufSize + oneRowtmpBufSize + oneRowRstdBufSize + oneRowReduceBufSize;
@@ -255,8 +250,8 @@ bool CalMixDtypeTiling(uint32_t& modeKey, uint64_t& rowFactor, uint64_t& ubFacto
     modeKey = MODE_SPLIT_D;
     rowFactor = FLOAT_PER_REAPEAT;
     uint64_t oneColSize = static_cast<uint64_t>(B16_BYTE_SIZE) * 2 + static_cast<uint64_t>(FLOAT_BYTE_SIZE) * 3;
-    uint64_t mutiRowSumBufSize =
-        static_cast<uint64_t>(FLOAT_BYTE_SIZE) * static_cast<uint64_t>(FLOAT_BLOCK_ALIGN_NUM) * rowFactor;
+    uint64_t mutiRowSumBufSize = static_cast<uint64_t>(FLOAT_BYTE_SIZE) * static_cast<uint64_t>(FLOAT_BLOCK_ALIGN_NUM) *
+                                 rowFactor;
     uint64_t notColBufSizeSum = mutiRowRstdBufSize + oneRowReduceBufSize + mutiRowSumBufSize;
     uint64_t tmpCol;
     if (ubSize > notColBufSizeSum) {
@@ -272,9 +267,8 @@ bool CalMixDtypeTiling(uint32_t& modeKey, uint64_t& rowFactor, uint64_t& ubFacto
 
 static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
 {
-    OP_TILING_CHECK(
-        !CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
+                    return ge::GRAPH_FAILED);
     RMSNormTilingData tiling;
     OP_LOGD(context, " Tiling4RmsNorm");
     auto ptrCompileInfo = reinterpret_cast<const Tiling4RmsNormCompileInfo*>(context->GetCompileInfo());
@@ -300,9 +294,8 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* epsilon = attrs->GetFloat(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
-    OP_TILING_CHECK(
-        *epsilon < 0, OPS_REPORT_VECTOR_INNER_ERR(context, "Epsilon less than zero, please check."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(*epsilon < 0, OPS_REPORT_VECTOR_INNER_ERR(context, "Epsilon less than zero, please check."),
+                    return ge::GRAPH_FAILED);
     uint64_t numCol = gamma_shape.GetShapeSize();
     float avgFactor = (numCol == 0ULL) ? 0.0f : 1.0f / static_cast<float>(numCol);
     size_t xDimNum = x_shape.GetDimNum();
@@ -361,16 +354,16 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     numColAlign = CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * dataPerBlock;
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         RMSNormArch35TilingData arch35TilingData;
-        return TilingArch354RmsNorm(
-            context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon, RMSNORM_MODE, tiling, arch35TilingData);
+        return TilingArch354RmsNorm(context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon,
+                                    RMSNORM_MODE, tiling, arch35TilingData);
     } else if (curSocVersion == platform_ascendc::SocVersion::ASCEND910) {
         SocVersion = 1U;
         colAlign = numColAlign == numCol ? 1ULL : 0ULL;
         int64_t ubDataNum = static_cast<int64_t>(ubSize) / static_cast<int64_t>(FLOAT_BYTE_SIZE);
         if (static_cast<uint64_t>(ubDataNum) > numColAlign) {
             rowFactor = (static_cast<uint64_t>(ubDataNum) - numColAlign) /
-                         (static_cast<uint64_t>(BUFFER_NUM) * static_cast<uint64_t>(FLOAT_PER_REAPEAT) +
-                          numColAlign * static_cast<uint64_t>(UB_COUNTS_X_SQX) * static_cast<uint64_t>(BUFFER_NUM));
+                        (static_cast<uint64_t>(BUFFER_NUM) * static_cast<uint64_t>(FLOAT_PER_REAPEAT) +
+                         numColAlign * static_cast<uint64_t>(UB_COUNTS_X_SQX) * static_cast<uint64_t>(BUFFER_NUM));
         } else {
             rowFactor = 0ULL;
         }
@@ -392,17 +385,17 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             uint32_t bufferFactor = (dataPerBlock / FLOAT_BLOCK_ALIGN_NUM);
 
             onceReduceMaxCols = static_cast<uint64_t>(bufferFactor) *
-                                   (static_cast<uint64_t>(ubDataNum) -
-                                    static_cast<uint64_t>(MASK_64) * static_cast<uint64_t>(FLOAT_BLOCK_ALIGN_NUM) -
-                                    static_cast<uint64_t>(MASK_64)) /
-                                   (static_cast<uint64_t>(UB_COUNTS) +
-                                    static_cast<uint64_t>(bufferFactor) * static_cast<uint64_t>(FLOAT_UB_COUNTS)) /
-                                   static_cast<uint64_t>(dataPerBlock) * static_cast<uint64_t>(dataPerBlock);
+                                (static_cast<uint64_t>(ubDataNum) -
+                                 static_cast<uint64_t>(MASK_64) * static_cast<uint64_t>(FLOAT_BLOCK_ALIGN_NUM) -
+                                 static_cast<uint64_t>(MASK_64)) /
+                                (static_cast<uint64_t>(UB_COUNTS) +
+                                 static_cast<uint64_t>(bufferFactor) * static_cast<uint64_t>(FLOAT_UB_COUNTS)) /
+                                static_cast<uint64_t>(dataPerBlock) * static_cast<uint64_t>(dataPerBlock);
             onceReduceMaxCols = onceReduceMaxCols / dataPerBlock * dataPerBlock;
             ubFactor = CeilDiv(numColAlign, static_cast<uint64_t>(onceReduceMaxCols));
             ubFactor = CeilDiv(numColAlign, static_cast<uint64_t>(ubFactor));
-            ubFactor = (ubFactor + static_cast<uint64_t>(dataPerBlock) - 1UL) /
-                        static_cast<uint64_t>(dataPerBlock) * static_cast<uint64_t>(dataPerBlock);
+            ubFactor = (ubFactor + static_cast<uint64_t>(dataPerBlock) - 1UL) / static_cast<uint64_t>(dataPerBlock) *
+                       static_cast<uint64_t>(dataPerBlock);
             OnceReduceMaxColsAlign64(ubFactor, mask, leftNum);
             uint32_t repeatTime = CeilDiv(numCol, static_cast<uint64_t>(ubFactor));
             uint64_t colTail = numCol - (static_cast<uint64_t>(repeatTime) - 1UL) * ubFactor;
@@ -425,14 +418,19 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         rmsNormTilingInfo.numRow = numRow;
         rmsNormTilingInfo.isSoc910B = isSoc910B;
         bool res = CalMixDtypeTiling(modeKey, rowFactor, ubFactor, rmsNormTilingInfo);
-        OP_TILING_CHECK(
-            !res, OP_LOGE(context, "CalMixDtypeTiling run failed."), return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(!res, OP_LOGE(context, "CalMixDtypeTiling run failed."), return ge::GRAPH_FAILED);
     } else {
-        bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) && gammaDimNum == PERFORMANC_DIM_ONE);
-        bool sizeOk = numCol <= PERFORMANC_DIM_THREE_MAX && ((xDimNum == PERFORMANC_DIM_TWO && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX) || (xDimNum == PERFORMANC_DIM_THREE && x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX && x_shape.GetDim(PERFORMANC_DIM_ONE) <= PERFORMANC_DIM_TWO_MAX));
+        bool dimOK = ((xDimNum == PERFORMANC_DIM_TWO || xDimNum == PERFORMANC_DIM_THREE) &&
+                      gammaDimNum == PERFORMANC_DIM_ONE);
+        bool sizeOk = numCol <= PERFORMANC_DIM_THREE_MAX &&
+                      ((xDimNum == PERFORMANC_DIM_TWO &&
+                        x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX) ||
+                       (xDimNum == PERFORMANC_DIM_THREE &&
+                        x_shape.GetDim(PERFORMANC_DIM_ZERO) <= PERFORMANC_DIM_ONE_MAX &&
+                        x_shape.GetDim(PERFORMANC_DIM_ONE) <= PERFORMANC_DIM_TWO_MAX));
         bool dtypeOk = (xDtypeKey == DTYPE_KEY_FP16 || xDtypeKey == DTYPE_KEY_BF16) && !isMixDtype;
-        if(dimOK && sizeOk && dtypeOk && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) {
-          isPerformance = 1;
+        if (dimOK && sizeOk && dtypeOk && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) {
+            isPerformance = 1;
         }
         ubFactor = (xDtypeKey == DTYPE_KEY_FP32) ? UB_FACTOR_B32 : UB_FACTOR_B16;
         blockFactor = 1ULL;
@@ -448,7 +446,9 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             modeKey = MODE_SPLIT_D;
         }
 
-        if ((numColAlign <= SMALL_REDUCE_NUM && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) || (xDtypeKey == DTYPE_KEY_FP16 && numCol == 128 && curSocVersion == platform_ascendc::SocVersion::ASCEND310P && numRow % BYTE_SIZE_2_BLOCK_ALIGN_NUM == 0)) {
+        if ((numColAlign <= SMALL_REDUCE_NUM && curSocVersion == platform_ascendc::SocVersion::ASCEND910B) ||
+            (xDtypeKey == DTYPE_KEY_FP16 && numCol == 128 &&
+             curSocVersion == platform_ascendc::SocVersion::ASCEND310P && numRow % BYTE_SIZE_2_BLOCK_ALIGN_NUM == 0)) {
             modeKey = MODE_MERGE_N;
         }
 
@@ -457,11 +457,9 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
             ubFactor = CeilDiv(numCol, colTileNum * BLOCK_ALIGN_NUM) * BLOCK_ALIGN_NUM;
             while (numCol % ubFactor != 0UL && numCol % ubFactor < static_cast<uint64_t>(BLOCK_ALIGN_NUM)) {
                 ubFactor -= BLOCK_ALIGN_NUM;
-                OP_TILING_CHECK(
-                    ubFactor == 0,
-                    OPS_REPORT_VECTOR_INNER_ERR(
-                        context, "Tiling split last dim failed, please check."),
-                    return ge::GRAPH_FAILED);
+                OP_TILING_CHECK(ubFactor == 0,
+                                OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling split last dim failed, please check."),
+                                return ge::GRAPH_FAILED);
             }
         }
         if (modeKey == MODE_MERGE_N) {
@@ -479,10 +477,9 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
                 isPerformance = 1;
             }
             ubFactor = rowFactor * numColAlign;
-            OP_TILING_CHECK(
-                ubFactor == 0,
-                OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling split last dim failed, please check."),
-                return ge::GRAPH_FAILED);
+            OP_TILING_CHECK(ubFactor == 0,
+                            OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling split last dim failed, please check."),
+                            return ge::GRAPH_FAILED);
         }
         context->SetBlockDim(useCoreNum);
     }
@@ -499,8 +496,8 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     tiling.set_dst_rep_stride(dstRepStride);
 
     uint32_t tilingKey = (modeKey == 0U) ? static_cast<uint32_t>(colAlign) * ALIGN_WEIGHT + SocVersion * SOC_WEIGHT +
-                                        static_cast<uint32_t>(modeKey) :
-                                        static_cast<uint32_t>(modeKey);
+                                               static_cast<uint32_t>(modeKey) :
+                                           static_cast<uint32_t>(modeKey);
     if ((curSocVersion == platform_ascendc::SocVersion::ASCEND910) && (modeKey == 0)) {
         tilingKey = tilingKey + xDtypeKey * DTYPE_WEIGHT;
     }
@@ -537,15 +534,14 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     tiling.set_col_buffer_length(colBufferLength);
     tiling.set_multi_n_num(multiNNum);
     tiling.set_is_nddma(isNddma);
-    OP_LOGD(
-        context,
-        "TilingData numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlign: %lu, col_buffer_length: %u, "
-        "blockFactor: %lu, rowFactor: %u, ubFactor: %u, epsilon: %f, avgFactor: %f, "
-        "rstdSize: %u, ubLoop: %u, multi_n_num: %u, isNddma: %u.",
-        numCore, ubSize, tiling.get_num_row(), tiling.get_num_col(), tiling.get_num_col_align(),
-        tiling.get_col_buffer_length(), tiling.get_block_factor(), tiling.get_row_factor(), tiling.get_ub_factor(),
-        tiling.get_epsilon(), tiling.get_avg_factor(), tiling.get_rstd_size(), tiling.get_ub_loop(),
-        tiling.get_multi_n_num(), tiling.get_is_nddma());
+    OP_LOGD(context,
+            "TilingData numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlign: %lu, col_buffer_length: %u, "
+            "blockFactor: %lu, rowFactor: %u, ubFactor: %u, epsilon: %f, avgFactor: %f, "
+            "rstdSize: %u, ubLoop: %u, multi_n_num: %u, isNddma: %u.",
+            numCore, ubSize, tiling.get_num_row(), tiling.get_num_col(), tiling.get_num_col_align(),
+            tiling.get_col_buffer_length(), tiling.get_block_factor(), tiling.get_row_factor(), tiling.get_ub_factor(),
+            tiling.get_epsilon(), tiling.get_avg_factor(), tiling.get_rstd_size(), tiling.get_ub_loop(),
+            tiling.get_multi_n_num(), tiling.get_is_nddma());
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
@@ -553,7 +549,8 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-void setPlateCoreInfo(gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize, platform_ascendc::SocVersion& curSocVersion)
+void setPlateCoreInfo(gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize,
+                      platform_ascendc::SocVersion& curSocVersion)
 {
     auto ptrCompileInfo = reinterpret_cast<const Tiling4RmsNormCompileInfo*>(context->GetCompileInfo());
     if (nullptr == ptrCompileInfo) {
@@ -574,19 +571,17 @@ static bool setEpsTiling(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* epsilon = attrs->GetFloat(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
-    OP_TILING_CHECK(
-        *epsilon < 0,
-        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon",
-            std::to_string(*epsilon).c_str(), "greater than 0"),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(*epsilon < 0,
+                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon", std::to_string(*epsilon).c_str(),
+                                              "greater than 0"),
+                    return ge::GRAPH_FAILED);
     tilingData.set_epsilon(*epsilon);
 
     return true;
 }
 
-static bool getUbFactor(
-    const uint32_t dataPerBlock, const uint32_t xDtypeKey, const uint32_t numCore, 
-    uint64_t& numCol, uint64_t& numRow, gert::TilingContext* context)
+static bool getUbFactor(const uint32_t dataPerBlock, const uint32_t xDtypeKey, const uint32_t numCore, uint64_t& numCol,
+                        uint64_t& numRow, gert::TilingContext* context)
 {
     const gert::Shape x_shape = context->GetInputShape(X_INDEX)->GetStorageShape();
     const gert::Shape gamma_shape = context->GetInputShape(GAMMA_INDEX)->GetStorageShape();
@@ -600,8 +595,7 @@ static bool getUbFactor(
         numRow *= x_shape.GetDim(i);
     }
 
-    uint64_t numColAlign =
-        CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * static_cast<uint64_t>(dataPerBlock);
+    uint64_t numColAlign = CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * static_cast<uint64_t>(dataPerBlock);
     uint64_t blockFactor = 1;
     uint64_t ubFactor = (xDtypeKey == DTYPE_KEY_FP32) ? GEMMA_UB_FACTOR_B32 : GEMMA_UB_FACTOR_B16;
     uint32_t modeKey = MODE_NORMAL;
@@ -657,21 +651,18 @@ void setWorkSize(gert::TilingContext* context)
 static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
 {
     platform_ascendc::SocVersion curSocVersion;
-    OP_TILING_CHECK(
-        !CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
+                    return ge::GRAPH_FAILED);
     OP_LOGD(context, " Tiling4GemmaRmsNorm");
-    OP_TILING_CHECK(
-        !setEpsTiling(context), OP_LOGE(context, "Get attr epsilon error."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!setEpsTiling(context), OP_LOGE(context, "Get attr epsilon error."), return ge::GRAPH_FAILED);
 
     auto xDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xDataType = xDesc->GetDataType();
-    
+
     auto gammaDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaDesc);
     auto gammaDataType = gammaDesc->GetDataType();
-
 
     uint32_t numCore;
     uint32_t dataPerBlock;
@@ -683,16 +674,15 @@ static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
     SetByDtype(xDataType, xDtypeKey, dataPerBlock);
     uint64_t numRow = 1;
     uint64_t numCol = 0;
-    OP_TILING_CHECK(
-        !getUbFactor(dataPerBlock, xDtypeKey, numCore, numCol, numRow, context),
-        OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling getUbFactor failed, please check."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!getUbFactor(dataPerBlock, xDtypeKey, numCore, numCol, numRow, context),
+                    OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling getUbFactor failed, please check."),
+                    return ge::GRAPH_FAILED);
     float epsilon = tilingData.get_epsilon();
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         RMSNormArch35TilingData arch35TilingData;
-        return TilingArch354RmsNorm(
-            context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, epsilon, GEMMA_MODE, tilingData, arch35TilingData);
-    } 
+        return TilingArch354RmsNorm(context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, epsilon,
+                                    GEMMA_MODE, tilingData, arch35TilingData);
+    }
     SetDefaultTiling();
     setWorkSize(context);
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());

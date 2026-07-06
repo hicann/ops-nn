@@ -29,8 +29,7 @@ namespace optiling {
 bool AdaptiveMaxPool3dParaPoolTiling::IsCapable()
 {
     if (ge::GetSizeByDataType(input_.xDtype) == 0) {
-        OP_LOGE_FOR_INVALID_DTYPE(
-            "AdaptiveMaxPool3d", "x", "unknown/unsupported", "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
+        OP_LOGE_FOR_INVALID_DTYPE("AdaptiveMaxPool3d", "x", "unknown/unsupported", "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
         return false;
     }
     computeInfo_.vfLen = Ops::Base::GetVRegSize(context_) / ge::GetSizeByDataType(input_.xDtype);
@@ -45,16 +44,16 @@ bool AdaptiveMaxPool3dParaPoolTiling::IsCapable()
     computeInfo_.kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     computeInfo_.kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
 
-    bool isKernelSizeMeet =
-        (computeInfo_.kernelDMax * computeInfo_.kernelHMax * computeInfo_.kernelWMax < KERNEL_SIZE_LIMIT);
+    bool isKernelSizeMeet = (computeInfo_.kernelDMax * computeInfo_.kernelHMax * computeInfo_.kernelWMax <
+                             KERNEL_SIZE_LIMIT);
     bool isIndexSizeMeet = (input_.dIn * input_.hIn * input_.wIn < INT32_MAX_VALUE);
     bool isNcLenEnough = input_.nIn * input_.cIn >= (computeInfo_.vfLen / DOUBLE);
     /* 计算只处理一个窗口占用的UB */
     auto occupyUbSize = CalOccupySize();
     bool isUbSizeEnough = (occupyUbSize <= computeInfo_.availableUbSize);
     bool isCapable = isKernelSizeMeet && isIndexSizeMeet && isNcLenEnough && isUbSizeEnough;
-    OP_LOGD(
-        context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling IsCapable check: %s", isCapable ? "true" : "false");
+    OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling IsCapable check: %s",
+            isCapable ? "true" : "false");
     return isCapable;
 }
 
@@ -170,9 +169,8 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::SearchUbFactor()
     }
     BinarySearch(computeInfo_.woFactor);
 
-    OP_LOGD(
-        context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", computeInfo_.doFactor,
-        computeInfo_.hoFactor, computeInfo_.woFactor);
+    OP_LOGD(context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", computeInfo_.doFactor,
+            computeInfo_.hoFactor, computeInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -192,9 +190,8 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::SearchOuter()
     }
     SearchOuterSingle(computeInfo_.woFactor);
 
-    OP_LOGD(
-        context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", computeInfo_.doFactor,
-        computeInfo_.hoFactor, computeInfo_.woFactor);
+    OP_LOGD(context_->GetNodeName(), "doFactor = %lu, hoFactor = %lu, woFactor = %lu", computeInfo_.doFactor,
+            computeInfo_.hoFactor, computeInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -223,22 +220,19 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling DoOpTiling start.");
     if (GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "AdaptiveMaxPool3d", "indices", "unexpected", "dtype must be DT_INT32 or DT_INT64");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON("AdaptiveMaxPool3d", "indices", "unexpected",
+                                              "dtype must be DT_INT32 or DT_INT64");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        InitUbFactor() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling init ubfactor failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        SearchUbFactor() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling search ubfactor failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        SearchOuter() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling search outer failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(InitUbFactor() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling init ubfactor failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SearchUbFactor() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling search ubfactor failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(SearchOuter() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling search outer failed"),
+                return ge::GRAPH_FAILED);
 
     CalUbBlockFactor();
     CalMaxUbSplitSize();
@@ -249,8 +243,8 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::DoOpTiling()
 
 void AdaptiveMaxPool3dParaPoolTiling::SetTilingData()
 {
-    AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData* tilingData =
-        context_->GetTilingData<AdaptivePool3dParaKernelTilingData>();
+    AdaptivePool3DTiling::AdaptivePool3dParaKernelTilingData*
+        tilingData = context_->GetTilingData<AdaptivePool3dParaKernelTilingData>();
 
     tilingData->dIn = input_.dIn;
     tilingData->hIn = input_.hIn;

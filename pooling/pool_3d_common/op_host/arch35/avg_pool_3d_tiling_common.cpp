@@ -23,9 +23,7 @@
 using namespace AscendC;
 using namespace ge;
 
- 
-namespace optiling
-{
+namespace optiling {
 static const int32_t INPUT_IDX_X = 0;
 
 static const int32_t KERNEL_POS = 0;
@@ -44,11 +42,12 @@ static const int32_t MP_AVG_3D_DIM_FOUR = 4;
 
 static const gert::Shape g_vec_1_shape = {1};
 
-static const gert::Shape& EnsureNotScalar(const gert::Shape &inShape) {
-  if (inShape.IsScalar()) {
-    return g_vec_1_shape;
-  }
-  return inShape;
+static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
+    if (inShape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return inShape;
 }
 
 static bool IsInvalidType(const DataType dtype)
@@ -59,7 +58,7 @@ static bool IsInvalidType(const DataType dtype)
 }
 
 static ge::graphStatus CheckShape(gert::TilingContext* context_, gert::Shape& inputShape, gert::Shape& outputShape,
-                        const ge::Format& inputFormat)
+                                  const ge::Format& inputFormat)
 {
     OP_TILING_CHECK(
         inputShape.GetDimNum() != NCDHW_DIMS,
@@ -93,24 +92,23 @@ static ge::graphStatus CheckShape(gert::TilingContext* context_, gert::Shape& in
         nDim = MP_AVG_3D_DIM_ZERO;
         cDim = MP_AVG_3D_DIM_FOUR;
     }
-    OP_TILING_CHECK(
-        inputShape.GetDim(nDim) != outputShape.GetDim(nDim),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "AvgPool3D: the size of dim-n should be equal in inputShape and \
+    OP_TILING_CHECK(inputShape.GetDim(nDim) != outputShape.GetDim(nDim),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                                    "AvgPool3D: the size of dim-n should be equal in inputShape and \
 outShape, but get input [%ld], output [%ld]",
-                                        inputShape.GetDim(nDim), outputShape.GetDim(nDim)),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        inputShape.GetDim(cDim) != outputShape.GetDim(cDim),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "AvgPool3D: the size of dim-c should be equal in inputShape and \
+                                                    inputShape.GetDim(nDim), outputShape.GetDim(nDim)),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputShape.GetDim(cDim) != outputShape.GetDim(cDim),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                                    "AvgPool3D: the size of dim-c should be equal in inputShape and \
 outShape, but get input [%ld], output [%ld]",
-                                        inputShape.GetDim(cDim), outputShape.GetDim(cDim)),
-        return ge::GRAPH_FAILED);
+                                                    inputShape.GetDim(cDim), outputShape.GetDim(cDim)),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
- 
-static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context_, Pool3DInputInfo& inputData, AvgPool3DCommon& commInfo)
+
+static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context_, Pool3DInputInfo& inputData,
+                                        AvgPool3DCommon& commInfo)
 {
     auto inputX = context_->GetInputShape(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
@@ -126,10 +124,10 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context_, Pool3DInp
         return ge::GRAPH_FAILED;
     }
     inputData.dtypeSize = ge::GetSizeByDataType(dtype);
-    OP_TILING_CHECK(
-        inputData.dtypeSize <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "inputData.dtypeSize must be greater than 0, dtypeSize: %ld", inputData.dtypeSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(inputData.dtypeSize <= 0,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context_, "inputData.dtypeSize must be greater than 0, dtypeSize: %ld", inputData.dtypeSize),
+                    return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(CheckShape(context_, inputShape, outShape, inputData.inputFormat) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "AvgPool3D: check shape failed"),
@@ -158,12 +156,12 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context_, Pool3DInp
     inputData.inputShape = {inputShape.GetDim(commInfo.dDim), inputShape.GetDim(commInfo.hDim),
                             inputShape.GetDim(commInfo.wDim)};
     inputData.outShape = {outShape.GetDim(commInfo.dDim), outShape.GetDim(commInfo.hDim),
-                        outShape.GetDim(commInfo.wDim)};
+                          outShape.GetDim(commInfo.wDim)};
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus GetStrideInfo(gert::TilingContext* context_, const gert::RuntimeAttrs* runtimeAttrs,
-                                    Pool3DInputInfo& inputData, const AvgPool3DCommon& commInfo)
+                                     Pool3DInputInfo& inputData, const AvgPool3DCommon& commInfo)
 {
     auto stride = runtimeAttrs->GetListInt(STRIDE_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, stride);
@@ -201,7 +199,7 @@ static ge::graphStatus GetStrideInfo(gert::TilingContext* context_, const gert::
 }
 
 static ge::graphStatus GetKernelKsizeInfo(gert::TilingContext* context_, const gert::RuntimeAttrs* runtimeAttrs,
-                                Pool3DInputInfo& inputData,const AvgPool3DCommon& commInfo)
+                                          Pool3DInputInfo& inputData, const AvgPool3DCommon& commInfo)
 {
     auto kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
@@ -239,21 +237,23 @@ static ge::graphStatus GetKernelKsizeInfo(gert::TilingContext* context_, const g
 }
 
 static ge::graphStatus GetPadInfo(gert::TilingContext* context_, const gert::RuntimeAttrs* runtimeAttrs,
-                        Pool3DInputInfo& inputData, const AvgPool3DCommon& commInfo)
+                                  Pool3DInputInfo& inputData, const AvgPool3DCommon& commInfo)
 {
     auto padding = runtimeAttrs->GetListInt(PADDING_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, padding);
-    OP_TILING_CHECK(
-        padding->GetSize() != PAD_DIMS && padding->GetSize() != ONE_DIMS && padding->GetSize() != DHW_DIMS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "AvgPool3D: pad list must have 1 dim 3 dims and 6 dims, \
-                                        but got %d dims", static_cast<int32_t>(padding->GetSize())), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(padding->GetSize() != PAD_DIMS && padding->GetSize() != ONE_DIMS && padding->GetSize() != DHW_DIMS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
+                                                    "AvgPool3D: pad list must have 1 dim 3 dims and 6 dims, \
+                                        but got %d dims",
+                                                    static_cast<int32_t>(padding->GetSize())),
+                    return ge::GRAPH_FAILED);
     int64_t frontPad = 0;
     int64_t backendPad = 0;
     int64_t topPad = 0;
     int64_t bottomPad = 0;
     int64_t leftPad = 0;
     int64_t rightPad = 0;
-    if(padding->GetSize() == ONE_DIMS) {
+    if (padding->GetSize() == ONE_DIMS) {
         frontPad = padding->GetData()[FRONT_PAD_INDEX];
         backendPad = frontPad;
         topPad = frontPad;
@@ -293,7 +293,7 @@ be greater than or equal to 0 and smaller than the corresponding kernel size",
 }
 
 static ge::graphStatus GetAttrsInfo(gert::TilingContext* context_, const gert::RuntimeAttrs* runtimeAttrs,
-                            Pool3DInputInfo& inputData, AvgPool3DCommon& commInfo)
+                                    Pool3DInputInfo& inputData, AvgPool3DCommon& commInfo)
 {
     inputData.ceilMode = false;
     const bool* ceilModePtr = runtimeAttrs->GetAttrPointer<bool>(CEIL_POS);
@@ -333,8 +333,8 @@ static ge::graphStatus GetAttrsInfo(gert::TilingContext* context_, const gert::R
     return ge::GRAPH_SUCCESS;
 }
 
-int64_t InferCalculateOutShape(const int64_t ksize, const int64_t padL, const int64_t padR,
-    const int64_t stride, const bool ceilMode, int64_t dimSize)
+int64_t InferCalculateOutShape(const int64_t ksize, const int64_t padL, const int64_t padR, const int64_t stride,
+                               const bool ceilMode, int64_t dimSize)
 {
     int64_t tmpTotalInput = dimSize + padL + padR - ksize;
     if (ceilMode) {
@@ -344,32 +344,35 @@ int64_t InferCalculateOutShape(const int64_t ksize, const int64_t padL, const in
 
     if (ceilMode) {
         if ((outputSize - 1) * stride >= dimSize + padL) {
-        --outputSize;
+            --outputSize;
         }
     }
     return outputSize;
 }
 
-ge::graphStatus CheckOutPutShape(gert::TilingContext* context_, Pool3DInputInfo& inputData, const AvgPool3DCommon& commInfo)
+ge::graphStatus CheckOutPutShape(gert::TilingContext* context_, Pool3DInputInfo& inputData,
+                                 const AvgPool3DCommon& commInfo)
 {
     int64_t expectedD = 0;
     int64_t expectedH = 0;
     int64_t expectedW = 0;
 
-    expectedD = InferCalculateOutShape(inputData.kernelSize[D_DIM], inputData.pad[FRONT_PAD_INDEX], 
-                                      inputData.pad[BACKEND_PAD_INDEX], inputData.stride[D_DIM], 
-                                      inputData.ceilMode, inputData.inputShape[D_DIM]);
-    expectedH = InferCalculateOutShape(inputData.kernelSize[H_DIM], inputData.pad[TOP_PAD_INDEX], 
-                                      inputData.pad[BOTTOM_PAD_INDEX], inputData.stride[H_DIM], 
-                                      inputData.ceilMode, inputData.inputShape[H_DIM]);
-    expectedW = InferCalculateOutShape(inputData.kernelSize[W_DIM], inputData.pad[LEFT_PAD_INDEX], 
-                                      inputData.pad[RIGHT_PAD_INDEX], inputData.stride[W_DIM], 
-                                      inputData.ceilMode, inputData.inputShape[W_DIM]);
-    if (expectedD != inputData.outShape[D_DIM] || expectedH != inputData.outShape[H_DIM] || expectedW != inputData.outShape[W_DIM]) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, 
-                                       "AvgPool3D: output shape in d-dim h-dim and w-dim should be [%ld, %ld, %ld], but got [%ld, %ld, %ld]",
-                                        expectedD, expectedH, expectedW, inputData.outShape[D_DIM],
-                                        inputData.outShape[H_DIM], inputData.outShape[W_DIM]);
+    expectedD = InferCalculateOutShape(inputData.kernelSize[D_DIM], inputData.pad[FRONT_PAD_INDEX],
+                                       inputData.pad[BACKEND_PAD_INDEX], inputData.stride[D_DIM], inputData.ceilMode,
+                                       inputData.inputShape[D_DIM]);
+    expectedH = InferCalculateOutShape(inputData.kernelSize[H_DIM], inputData.pad[TOP_PAD_INDEX],
+                                       inputData.pad[BOTTOM_PAD_INDEX], inputData.stride[H_DIM], inputData.ceilMode,
+                                       inputData.inputShape[H_DIM]);
+    expectedW = InferCalculateOutShape(inputData.kernelSize[W_DIM], inputData.pad[LEFT_PAD_INDEX],
+                                       inputData.pad[RIGHT_PAD_INDEX], inputData.stride[W_DIM], inputData.ceilMode,
+                                       inputData.inputShape[W_DIM]);
+    if (expectedD != inputData.outShape[D_DIM] || expectedH != inputData.outShape[H_DIM] ||
+        expectedW != inputData.outShape[W_DIM]) {
+        VECTOR_INNER_ERR_REPORT_TILIING(
+            context_,
+            "AvgPool3D: output shape in d-dim h-dim and w-dim should be [%ld, %ld, %ld], but got [%ld, %ld, %ld]",
+            expectedD, expectedH, expectedW, inputData.outShape[D_DIM], inputData.outShape[H_DIM],
+            inputData.outShape[W_DIM]);
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -434,7 +437,7 @@ ge::graphStatus GetAvgPool3DShapeAttrsInfo(gert::TilingContext* context_, Pool3D
                     VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetPadInfo fail."), return ge::GRAPH_FAILED);
     OP_TILING_CHECK(CheckOutPutShape(context_, inputData, commInfo) != ge::GRAPH_SUCCESS,
                     VECTOR_INNER_ERR_REPORT_TILIING(context_, "CheckOutPutShape fail."), return ge::GRAPH_FAILED);
-    
+
     if (!inputData.divisorOverride || !inputData.countIncludePad) {
         RefineShape(inputData);
     }
@@ -446,7 +449,8 @@ ge::graphStatus GetAvgPool3DPlatformInfo(gert::TilingContext* context, uint64_t&
 {
     auto platformPtr = context->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = static_cast<const optiling::avgPool3DTilingCompileInfo::CubeCompileInfo *>(context->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const optiling::avgPool3DTilingCompileInfo::CubeCompileInfo*>(
+            context->GetCompileInfo());
         OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compile info is null"),
                         return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->core_num;
@@ -465,4 +469,4 @@ ge::graphStatus GetAvgPool3DPlatformInfo(gert::TilingContext* context, uint64_t&
     return ge::GRAPH_SUCCESS;
 }
 
-}  // namespace optiling
+} // namespace optiling

@@ -272,7 +272,8 @@ static ge::graphStatus TilingParseForSigmoidCrossEntropyWithLogitsV2([[maybe_unu
 }
 static ge::graphStatus SigmoidCrossEntropyWithLogitsV2TilingFunc(gert::TilingContext* context)
 {
-    SigmoidCrossEntropyWithLogitsV2TilingData* tiling = context->GetTilingData<SigmoidCrossEntropyWithLogitsV2TilingData>();
+    SigmoidCrossEntropyWithLogitsV2TilingData*
+        tiling = context->GetTilingData<SigmoidCrossEntropyWithLogitsV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
 
     const gert::StorageShape* predict_shape = context->GetInputShape(0);
@@ -282,10 +283,9 @@ static ge::graphStatus SigmoidCrossEntropyWithLogitsV2TilingFunc(gert::TilingCon
 
     const gert::Shape& predict_origin_shape = predict_shape->GetOriginShape();
     const gert::Shape& target_origin_shape = target_shape->GetOriginShape();
-    OP_CHECK_IF(
-        !IsSameShape(predict_origin_shape, target_origin_shape),
-        OP_LOGE(context, "predict and target must have the same shape when broadcast is disabled"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsSameShape(predict_origin_shape, target_origin_shape),
+                OP_LOGE(context, "predict and target must have the same shape when broadcast is disabled"),
+                return ge::GRAPH_FAILED);
 
     uint32_t totalLength = predict_origin_shape.GetShapeSize();
     const auto* inputDesc = context->GetInputDesc(0);
@@ -312,10 +312,9 @@ static ge::graphStatus SigmoidCrossEntropyWithLogitsV2TilingFunc(gert::TilingCon
         weight_shape = context->GetInputShape(2);
     }
     if (weight_shape != nullptr) {
-        OP_CHECK_IF(
-            !IsSameShape(weight_shape->GetOriginShape(), predict_origin_shape),
-            OP_LOGE(context, "weight must have the same shape as predict when broadcast is disabled"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!IsSameShape(weight_shape->GetOriginShape(), predict_origin_shape),
+                    OP_LOGE(context, "weight must have the same shape as predict when broadcast is disabled"),
+                    return ge::GRAPH_FAILED);
         tiling->has_weight = 1;
     } else {
         tiling->has_weight = 0;
@@ -326,10 +325,9 @@ static ge::graphStatus SigmoidCrossEntropyWithLogitsV2TilingFunc(gert::TilingCon
         pos_w_shape = context->GetInputShape(3);
     }
     if (pos_w_shape != nullptr) {
-        OP_CHECK_IF(
-            !IsSameShape(pos_w_shape->GetOriginShape(), predict_origin_shape),
-            OP_LOGE(context, "pos_weight must have the same shape as predict when broadcast is disabled"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!IsSameShape(pos_w_shape->GetOriginShape(), predict_origin_shape),
+                    OP_LOGE(context, "pos_weight must have the same shape as predict when broadcast is disabled"),
+                    return ge::GRAPH_FAILED);
         tiling->has_pos_weight = 1;
     } else {
         tiling->has_pos_weight = 0;
@@ -343,12 +341,11 @@ static ge::graphStatus SigmoidCrossEntropyWithLogitsV2TilingFunc(gert::TilingCon
         tiling->dtype_enum = 0;
     }
 
-    OP_LOGI(
-        context,
-        "SigmoidCrossEntropyWithLogitsV2 tiling: total=%u maxCore=%u block=%u tileNum=%u tileLen=%u has_weight=%u "
-        "has_pos_weight=%u dtype=%u",
-        totalLength, maxCoreNum, blockDim, tileNum, tileLength, tiling->has_weight, tiling->has_pos_weight,
-        tiling->dtype_enum);
+    OP_LOGI(context,
+            "SigmoidCrossEntropyWithLogitsV2 tiling: total=%u maxCore=%u block=%u tileNum=%u tileLen=%u has_weight=%u "
+            "has_pos_weight=%u dtype=%u",
+            totalLength, maxCoreNum, blockDim, tileNum, tileLength, tiling->has_weight, tiling->has_pos_weight,
+            tiling->dtype_enum);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);

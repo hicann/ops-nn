@@ -6,7 +6,7 @@
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
-*/
+ */
 
 /*!
  * \file conv3d_tiling_engine.h
@@ -71,7 +71,7 @@ struct Conv3DEngineDescInfo {
  */
 class Conv3dTilingEngine {
 public:
-    explicit Conv3dTilingEngine(const std::string &logTag = "Conv3DV2");
+    explicit Conv3dTilingEngine(const std::string& logTag = "Conv3DV2");
 
     bool Init();
     bool IsInitialized() const;
@@ -97,73 +97,65 @@ public:
 
     uint8_t outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
 
-    void SetOrgWeightShape(const std::vector<int64_t> &orgWeightShapeList);
-    void SetOrgFmapShape(const std::vector<int64_t> &orgFmapShapeList);
-    void SetOrgOutputShape(const std::vector<int64_t> &orgOutputShapeList);
-    void SetPadding(const std::vector<int64_t> &padList);
+    void SetOrgWeightShape(const std::vector<int64_t>& orgWeightShapeList);
+    void SetOrgFmapShape(const std::vector<int64_t>& orgFmapShapeList);
+    void SetOrgOutputShape(const std::vector<int64_t>& orgOutputShapeList);
+    void SetPadding(const std::vector<int64_t>& padList);
     // Stride and dilation are passed in DHW order: [D, H, W]
-    void SetStride(const std::vector<int64_t> &strideList);
-    void SetDilation(const std::vector<int64_t> &dilationList);
+    void SetStride(const std::vector<int64_t>& strideList);
+    void SetDilation(const std::vector<int64_t>& dilationList);
     void SetGroups(int64_t groups);
-    void SetDataType(Conv3dApiTiling::ConvDtype fmapDtype,
-                     Conv3dApiTiling::ConvDtype weightDtype,
+    void SetDataType(Conv3dApiTiling::ConvDtype fmapDtype, Conv3dApiTiling::ConvDtype weightDtype,
                      Conv3dApiTiling::ConvDtype outDtype);
-    void SetFormat(Conv3dApiTiling::ConvFormat fmapFormat,
-                   Conv3dApiTiling::ConvFormat weightFormat,
+    void SetFormat(Conv3dApiTiling::ConvFormat fmapFormat, Conv3dApiTiling::ConvFormat weightFormat,
                    Conv3dApiTiling::ConvFormat outFormat);
     void SetBias(bool hasBias, Conv3dApiTiling::ConvDtype biasDtype);
-    void SetBiasShape(const std::vector<int64_t> &biasShape);
+    void SetBiasShape(const std::vector<int64_t>& biasShape);
     void SetScale(bool hasScale, Conv3dApiTiling::ConvDtype scaleDtype);
-    void SetScaleShape(const std::vector<int64_t> &scaleShape);
+    void SetScaleShape(const std::vector<int64_t>& scaleShape);
     void SetHF32(bool enable);
 
-    bool GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData);
+    bool GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData);
 
-    void PrintOpTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
-    void PrintApiTilingDataShapeInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
-    void PrintApiTilingDataDecisionInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
-    void PrintApiTilingDataScalarInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
+    void PrintOpTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData) const;
+    void PrintApiTilingDataShapeInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData) const;
+    void PrintApiTilingDataDecisionInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData) const;
+    void PrintApiTilingDataScalarInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData) const;
 
     // Decision pipeline pieces
     void GetNumBlocksRange();
     void GetNumBlocksInit();
     void NumBlocksDecision();
     void CoreNumBlocksDecision();
-    void InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes);
-    void NumBlocksDecisionBackTrack(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksResTmp,
-                                   const std::vector<std::vector<uint32_t>> &inputRanges,
-                                   uint32_t rangeIdx,
-                                   std::vector<uint32_t> &record);
-    bool ValidateOptimizedTilingContract(const optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes) const;
-    bool ValidateAxisContract(uint64_t wholeDim, uint64_t realWholeDim,
-                              uint32_t dim, const char *axisName) const;
-    uint64_t CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint32_t nDim,
-                           uint32_t doDim, uint32_t groupDim);
-    void NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
-                           const std::vector<uint32_t> &mixRange);
-    void NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t> &inputRange) const;
-    void GetNumBlocksRangeforGroupRange(std::vector<uint32_t> &groupRange) const;
-    void GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
+    void InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRes& numBlocksRes);
+    void NumBlocksDecisionBackTrack(optiling::Conv3dOpsTiling::NumBlocksRes& numBlocksResTmp,
+                                    const std::vector<std::vector<uint32_t>>& inputRanges, uint32_t rangeIdx,
+                                    std::vector<uint32_t>& record);
+    bool ValidateOptimizedTilingContract(const optiling::Conv3dOpsTiling::NumBlocksRes& numBlocksRes) const;
+    bool ValidateAxisContract(uint64_t wholeDim, uint64_t realWholeDim, uint32_t dim, const char* axisName) const;
+    uint64_t CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim, uint32_t groupDim);
+    void NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t>& inputRange, const std::vector<uint32_t>& mixRange);
+    void NumBlocksRangesFilter(uint32_t orgDim, std::vector<uint32_t>& inputRange) const;
+    void GetNumBlocksRangeforGroupRange(std::vector<uint32_t>& groupRange) const;
+    void GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingdata);
 
     // Checks and computations (return bool for success/failure)
     bool GetGroupConvOpt();
     bool ComputeNumBlocks();
-    bool ComputeApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
-    bool GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
-    void SetSingleOutputShapeByMode(const optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes);
+    bool ComputeApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingdata);
+    bool GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingdata);
+    void SetSingleOutputShapeByMode(const optiling::Conv3dOpsTiling::NumBlocksRes& numBlocksRes);
     void GetConv3dApiTilingPartSetAttrAndShape();
     void GetConv3dApiTilingSetGroupsInfo();
     bool InitOutputOrder();
     uint64_t CalcMinL1LoadSize(uint8_t outputOrder);
     bool CheckInputLimitsHwMode();
     bool CheckDims(const std::vector<int64_t>& shape) const;
-    bool CheckValidFormatCombo(Conv3dApiTiling::ConvFormat expectFmap,
-                               Conv3dApiTiling::ConvFormat expectWeight,
-                               Conv3dApiTiling::ConvFormat expectOut,
-                               const char *errMsg);
+    bool CheckValidFormatCombo(Conv3dApiTiling::ConvFormat expectFmap, Conv3dApiTiling::ConvFormat expectWeight,
+                               Conv3dApiTiling::ConvFormat expectOut, const char* errMsg);
 
 private:
-    std::string logTag_ {"Conv3DV2"};
+    std::string logTag_{"Conv3DV2"};
     bool initOk_ = false;
     bool kernelPointWise_ = false;
     int64_t outputBatch_ = -1;

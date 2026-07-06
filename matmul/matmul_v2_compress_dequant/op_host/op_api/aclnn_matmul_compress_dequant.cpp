@@ -119,17 +119,15 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclI
     int64_t x2KDim = 0;
 
     if (dimTensor1 != 2 || dimTensor2 != 1) { // ND format dims > 2 for x1
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "MatmulUnzip not support x1 shape %s, x2 shape %s",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MatmulUnzip not support x1 shape %s, x2 shape %s",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     } else {
         x1KDim = x1Shape.GetDim(dimTensor1 - 1);
         x2KDim = (*compressInfo)[K_DIMENSION_INDEX];
         if (x1KDim != x2KDim) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
+                    op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
             return false;
         }
     }
@@ -204,8 +202,7 @@ static aclnnStatus InputsContiguousAndTransFormat(const aclTensor* tensor, const
 }
 
 static const aclTensor* BuildMatMulUnzipGraph(MatmulUnzipInput matmulUnzipInput, const int offsetX,
-                                              const aclIntArray* compressInfo, aclTensor* out,
-                                              aclOpExecutor* executor)
+                                              const aclIntArray* compressInfo, aclTensor* out, aclOpExecutor* executor)
 {
     /*
      *       x1          x2
@@ -251,12 +248,12 @@ static const aclTensor* BuildMatMulUnzipGraph(MatmulUnzipInput matmulUnzipInput,
 
 aclnnStatus aclnnMatmulCompressDequantGetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
                                                        const aclTensor* compressIndex, const aclTensor* bias,
-                                                       const aclTensor* deqScale, const aclTensor* offsetW,
-                                                       int offsetX, const aclIntArray* compressInfo, aclTensor* out,
+                                                       const aclTensor* deqScale, const aclTensor* offsetW, int offsetX,
+                                                       const aclIntArray* compressInfo, aclTensor* out,
                                                        uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(
-        aclnnMatmulCompressDequant, DFX_IN(x1, x2, compressIndex, bias, deqScale, offsetX, compressInfo), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnMatmulCompressDequant, DFX_IN(x1, x2, compressIndex, bias, deqScale, offsetX, compressInfo),
+                   DFX_OUT(out));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -292,8 +289,8 @@ aclnnStatus aclnnMatmulCompressDequantGetWorkspaceSize(const aclTensor* x1, cons
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMatmulCompressDequant(
-    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+aclnnStatus aclnnMatmulCompressDequant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                       aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnMatmulCompressDequant);
     // 固定写法，调用框架能力，完成计算

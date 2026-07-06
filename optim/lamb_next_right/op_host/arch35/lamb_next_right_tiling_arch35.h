@@ -30,8 +30,7 @@ struct LambNextRightCompileInfo {
 
 class LambNextRightTiling : public TilingBaseClass {
 public:
-    explicit LambNextRightTiling(gert::TilingContext* context) : TilingBaseClass(context)
-    {}
+    explicit LambNextRightTiling(gert::TilingContext* context) : TilingBaseClass(context) {}
 
 protected:
     bool IsCapable() override;

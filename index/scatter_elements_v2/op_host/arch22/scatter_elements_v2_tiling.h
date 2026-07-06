@@ -48,7 +48,7 @@ TILING_DATA_FIELD_DEF(uint64_t, modeFlag);
 TILING_DATA_FIELD_DEF(uint64_t, includeSelf);
 TILING_DATA_FIELD_DEF(uint64_t, mode);
 // 310P tiling parameter
-TILING_DATA_FIELD_DEF(uint64_t, M); //indices行数
+TILING_DATA_FIELD_DEF(uint64_t, M); // indices行数
 TILING_DATA_FIELD_DEF(uint64_t, varN);
 TILING_DATA_FIELD_DEF(uint64_t, indicesN);
 TILING_DATA_FIELD_DEF(uint64_t, updatesN);

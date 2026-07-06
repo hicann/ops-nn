@@ -23,40 +23,40 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void modulate_grad(
-    GM_ADDR grad_Output, GM_ADDR Input, GM_ADDR Scale,
-    GM_ADDR Shift, GM_ADDR grad_input, GM_ADDR grad_scale,
-    GM_ADDR grad_shift, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void modulate_grad(GM_ADDR grad_Output, GM_ADDR Input, GM_ADDR Scale, GM_ADDR Shift,
+                                                    GM_ADDR grad_input, GM_ADDR grad_scale, GM_ADDR grad_shift,
+                                                    GM_ADDR workspace, GM_ADDR tiling);
 
 class modulate_grad_test : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { cout << "modulate_grad_test SetUp\n" << endl; }
     static void TearDownTestCase() { cout << "modulate_grad_test TearDown\n" << endl; }
 };
 
-TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingD_8_4_512) {
+TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingD_8_4_512)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     size_t shape_gradoutput = 8 * 4 * 512 * sizeof(float);
     size_t shape_input = 8 * 4 * 512 * sizeof(float);
     size_t shape_scale = 8 * 512 * sizeof(float);
     size_t shape_shift = 8 * 512 * sizeof(float);
-    size_t shape_gradinput =  8 * 4 * 512 * sizeof(float);
-    size_t shape_gradscale =  8 * 512 * sizeof(float);
-    size_t shape_gradshift =  8 * 512 * sizeof(float);
+    size_t shape_gradinput = 8 * 4 * 512 * sizeof(float);
+    size_t shape_gradscale = 8 * 512 * sizeof(float);
+    size_t shape_gradshift = 8 * 512 * sizeof(float);
 
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
     size_t tilingSize = sizeof(ModulateGradTiling);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *gradoutputGM = (uint8_t *)AscendC::GmAlloc(shape_gradoutput);
-    uint8_t *inputGM = (uint8_t *)AscendC::GmAlloc(shape_input);
-    uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
-    uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
-    uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    uint8_t *gradscaleGM = (uint8_t *)AscendC::GmAlloc(shape_gradscale);
-    uint8_t *gradshiftGM = (uint8_t *)AscendC::GmAlloc(shape_gradshift);
-    
+    uint8_t* gradoutputGM = (uint8_t*)AscendC::GmAlloc(shape_gradoutput);
+    uint8_t* inputGM = (uint8_t*)AscendC::GmAlloc(shape_input);
+    uint8_t* scaleGM = (uint8_t*)AscendC::GmAlloc(shape_scale);
+    uint8_t* shiftGM = (uint8_t*)AscendC::GmAlloc(shape_shift);
+    uint8_t* gradinputGM = (uint8_t*)AscendC::GmAlloc(shape_gradinput);
+    uint8_t* gradscaleGM = (uint8_t*)AscendC::GmAlloc(shape_gradscale);
+    uint8_t* gradshiftGM = (uint8_t*)AscendC::GmAlloc(shape_gradshift);
+
     memset(gradoutputGM, 0, shape_gradoutput);
     memset(inputGM, 0, shape_input);
     memset(scaleGM, 0, shape_scale);
@@ -65,7 +65,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingD_8_4_512) {
     memset(gradscaleGM, 0, shape_gradscale);
     memset(gradshiftGM, 0, shape_gradshift);
 
-    ModulateGradTiling *tilingData = reinterpret_cast<ModulateGradTiling*>(tiling);
+    ModulateGradTiling* tilingData = reinterpret_cast<ModulateGradTiling*>(tiling);
     tilingData->B = 8;
     tilingData->L = 4;
     tilingData->D = 512;
@@ -76,15 +76,16 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingD_8_4_512) {
     tilingData->coresPerB = 6;
     tilingData->usedCores = 48;
     tilingData->formerNum = 2;
-    tilingData->formerLength= 86;
+    tilingData->formerLength = 86;
     tilingData->tailNum = 4;
-    tilingData->tailLength= 85;
+    tilingData->tailLength = 85;
     tilingData->has_scale = 1;
     tilingData->has_shift = 1;
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(modulate_grad, 48, gradoutputGM, inputGM, scaleGM, shiftGM, gradinputGM, gradscaleGM, gradshiftGM, workspace, (uint8_t*)(tilingData));
+    ICPU_RUN_KF(modulate_grad, 48, gradoutputGM, inputGM, scaleGM, shiftGM, gradinputGM, gradscaleGM, gradshiftGM,
+                workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)gradoutputGM);
@@ -95,29 +96,30 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingD_8_4_512) {
     AscendC::GmFree((void*)gradscaleGM);
     AscendC::GmFree((void*)gradshiftGM);
 }
-TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
+TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     size_t shape_gradoutput = 48 * 10 * 20000 * sizeof(float);
     size_t shape_input = 48 * 10 * 20000 * sizeof(float);
     size_t shape_scale = 48 * 20000 * sizeof(float);
     size_t shape_shift = 48 * 20000 * sizeof(float);
-    size_t shape_gradinput =  48 * 10 * 20000 * sizeof(float);
-    size_t shape_gradscale =  48 * 20000 * sizeof(float);
-    size_t shape_gradshift =  48 * 20000 * sizeof(float);
+    size_t shape_gradinput = 48 * 10 * 20000 * sizeof(float);
+    size_t shape_gradscale = 48 * 20000 * sizeof(float);
+    size_t shape_gradshift = 48 * 20000 * sizeof(float);
 
     size_t sysWorkspaceSize = 64 * 1024 * 1024;
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
     size_t tilingSize = sizeof(ModulateGradTiling);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *gradoutputGM = (uint8_t *)AscendC::GmAlloc(shape_gradoutput);
-    uint8_t *inputGM = (uint8_t *)AscendC::GmAlloc(shape_input);
-    uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
-    uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
-    uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    uint8_t *gradscaleGM = (uint8_t *)AscendC::GmAlloc(shape_gradscale);
-    uint8_t *gradshiftGM = (uint8_t *)AscendC::GmAlloc(shape_gradshift);
-    
+    uint8_t* gradoutputGM = (uint8_t*)AscendC::GmAlloc(shape_gradoutput);
+    uint8_t* inputGM = (uint8_t*)AscendC::GmAlloc(shape_input);
+    uint8_t* scaleGM = (uint8_t*)AscendC::GmAlloc(shape_scale);
+    uint8_t* shiftGM = (uint8_t*)AscendC::GmAlloc(shape_shift);
+    uint8_t* gradinputGM = (uint8_t*)AscendC::GmAlloc(shape_gradinput);
+    uint8_t* gradscaleGM = (uint8_t*)AscendC::GmAlloc(shape_gradscale);
+    uint8_t* gradshiftGM = (uint8_t*)AscendC::GmAlloc(shape_gradshift);
+
     memset(gradoutputGM, 0, shape_gradoutput);
     memset(inputGM, 0, shape_input);
     memset(scaleGM, 0, shape_scale);
@@ -126,7 +128,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
     memset(gradscaleGM, 0, shape_gradscale);
     memset(gradshiftGM, 0, shape_gradshift);
 
-    ModulateGradTiling *tilingData = reinterpret_cast<ModulateGradTiling*>(tiling);
+    ModulateGradTiling* tilingData = reinterpret_cast<ModulateGradTiling*>(tiling);
     tilingData->B = 48;
     tilingData->L = 10;
     tilingData->D = 20000;
@@ -137,15 +139,16 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
     tilingData->coresPerB = 1;
     tilingData->usedCores = 48;
     tilingData->formerNum = 0;
-    tilingData->formerLength= 0;
+    tilingData->formerLength = 0;
     tilingData->tailNum = 48;
-    tilingData->tailLength= 1;
+    tilingData->tailLength = 1;
     tilingData->has_scale = 1;
     tilingData->has_shift = 1;
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(modulate_grad, 48, gradoutputGM, inputGM, scaleGM, shiftGM, gradinputGM, gradscaleGM, gradshiftGM, workspace, (uint8_t*)(tilingData));
+    ICPU_RUN_KF(modulate_grad, 48, gradoutputGM, inputGM, scaleGM, shiftGM, gradinputGM, gradscaleGM, gradshiftGM,
+                workspace, (uint8_t*)(tilingData));
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)gradoutputGM);
@@ -156,7 +159,6 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
     AscendC::GmFree((void*)gradscaleGM);
     AscendC::GmFree((void*)gradshiftGM);
 }
-
 
 // TEST_F(modulate_test, modulate_kernel_test_TilingB_8_4_512) {
 //     AscendC::SetKernelMode(KernelMode::MIX_MODE);
@@ -177,7 +179,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
 //     uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(scaleGM, 0, shape_scale);
 //     memset(shiftGM, 0, shape_shift);
@@ -221,7 +223,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
 //     uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(scaleGM, 0, shape_scale);
 //     memset(shiftGM, 0, shape_shift);
@@ -265,7 +267,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
 //     uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(scaleGM, 0, shape_scale);
 //     memset(shiftGM, 0, shape_shift);
@@ -309,7 +311,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
 //     uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(scaleGM, 0, shape_scale);
 //     memset(shiftGM, 0, shape_shift);
@@ -353,7 +355,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
 //     uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(scaleGM, 0, shape_scale);
 //     memset(shiftGM, 0, shape_shift);
@@ -396,7 +398,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = nullptr;
 //     uint8_t *shiftGM = (uint8_t *)AscendC::GmAlloc(shape_shift);
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(shiftGM, 0, shape_shift);
 //     memset(gradinputGM, 0, shape_gradinput);
@@ -437,7 +439,7 @@ TEST_F(modulate_grad_test, modulate_grad_kernel_test_TilingB_8_4_512) {
 //     uint8_t *scaleGM = (uint8_t *)AscendC::GmAlloc(shape_scale);
 //     uint8_t *shiftGM = nullptr;
 //     uint8_t *gradinputGM = (uint8_t *)AscendC::GmAlloc(shape_gradinput);
-    
+
 //     memset(gradoutputGM, 0, shape_gradoutput);
 //     memset(scaleGM, 0, shape_scale);
 //     memset(gradinputGM, 0, shape_gradinput);

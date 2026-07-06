@@ -44,23 +44,21 @@ constexpr uint32_t LEFT_SHIFT_16 = 16;
 QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DECL_PARAMS
 class QuantMmBatchCube {
 public:
-    __aicore__ inline QuantMmBatchCube()
-    {}
-    __aicore__ inline ~QuantMmBatchCube()
-    {}
+    __aicore__ inline QuantMmBatchCube() {}
+    __aicore__ inline ~QuantMmBatchCube() {}
 
     static constexpr bool transA = BlockMmad::transA;
     static constexpr bool transB = BlockMmad::transB;
 
     using BlockMmadParams = typename BlockMmad::Params;
     using AType = typename BlockMmad::AType;
-    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
-        ProblemShape, typename BlockMmad::L1TileShape, typename BlockMmad::L0TileShape, BlockScheduler, transA,
-        transB, AType>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmad::L1TileShape,
+                                                                    typename BlockMmad::L0TileShape, BlockScheduler,
+                                                                    transA, transB, AType>::SchedulerOp;
     using BType = typename BlockMmad::BType;
     using CType = typename BlockMmad::CType;
-    using X2ScaleType = typename AscendC::Conditional<
-        IsSameType<typename BlockMmad::X2ScaleType, int64_t>::value, uint64_t, typename BlockMmad::X2ScaleType>::type;
+    using X2ScaleType = typename AscendC::Conditional<IsSameType<typename BlockMmad::X2ScaleType, int64_t>::value,
+                                                      uint64_t, typename BlockMmad::X2ScaleType>::type;
     using BiasType = typename BlockMmad::BiasType;
     using LayoutB = typename BlockMmad::LayoutB;
     static constexpr CubeFormat FormatB = TagToFormat<LayoutB>::format;
@@ -109,14 +107,11 @@ public:
 public:
     __aicore__ inline void Init(const Params& params);
     __aicore__ inline void Run(const Params& params);
-    __aicore__ inline void operator()(const Params& params)
-    {
-        Run(params);
-    }
+    __aicore__ inline void operator()(const Params& params) { Run(params); }
 
 private:
-    __aicore__ inline void ProcessSingleBatch(
-        const Params& params, BlockSchedulerOp& bs, uint64_t batchCnt, bool isTailRound);
+    __aicore__ inline void ProcessSingleBatch(const Params& params, BlockSchedulerOp& bs, uint64_t batchCnt,
+                                              bool isTailRound);
     __aicore__ inline void ProcessWithBatch(const Params& params, BlockSchedulerOp& bs);
     __aicore__ inline TupleShape ToShapeTuple(const ProblemShape& problemShape)
     {
@@ -153,9 +148,9 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
 
     BlockShape l0TileShape{params.qbmmParams.baseM, params.qbmmParams.baseN, params.qbmmParams.baseK, 0};
     bool enableL0CPingPong = (params.qbmmParams.dbL0C > 1);
-    mmadOp_.Init(
-        problemShape_, l0TileShape, params.qbmmParams.kAL1, params.qbmmParams.kBL1, params.qbmmParams.nBufferNum,
-        static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode), isBias_, enableL0CPingPong);
+    mmadOp_.Init(problemShape_, l0TileShape, params.qbmmParams.kAL1, params.qbmmParams.kBL1,
+                 params.qbmmParams.nBufferNum, static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode),
+                 isBias_, enableL0CPingPong);
 
     if (params.problemShape.b == 1) {
         ProcessSingleBatch(params, bs, 0, true);
@@ -187,9 +182,8 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
     if (static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode) ==
         QuantBatchMatmul::QuantMode::PERCHANNEL_MODE) { // perchannel
         x2ScaleGlobal_.SetGlobalBuffer((__gm__ X2ScaleType*)params.mmadParams.x2ScaleGmAddr);
-    } else if (
-        static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x1QuantMode) ==
-        QuantBatchMatmul::QuantMode::PERTENSOR_MODE) { // double-scale
+    } else if (static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x1QuantMode) ==
+               QuantBatchMatmul::QuantMode::PERTENSOR_MODE) { // double-scale
         auto x1Scale = AscendC::GlobalTensor<float>();
         auto x2Scale = AscendC::GlobalTensor<float>();
         x1Scale.SetGlobalBuffer((__gm__ float*)params.mmadParams.x1ScaleGmAddr);
@@ -197,9 +191,8 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
         float deqScale = x1Scale.GetValue(0) * x2Scale.GetValue(0);
         uint32_t uint32Scale = *(reinterpret_cast<uint32_t*>(&deqScale));
         scaleScalar_ = reinterpret_cast<uint64_t>(uint32Scale & DEQ_SCALE_MUL); // fixpipe只能取高19位
-    } else if (
-        static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode) ==
-        QuantBatchMatmul::QuantMode::PERTENSOR_MODE) { // pertensor
+    } else if (static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode) ==
+               QuantBatchMatmul::QuantMode::PERTENSOR_MODE) { // pertensor
         if constexpr (IsSameType<X2ScaleType, uint64_t>::value) {
             x2ScaleGlobal_.SetGlobalBuffer((__gm__ uint64_t*)params.mmadParams.x2ScaleGmAddr);
             scaleScalar_ = x2ScaleGlobal_.GetValue(0);
@@ -219,8 +212,8 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
 }
 
 QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS
-__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::ProcessWithBatch(
-    const Params& params, BlockSchedulerOp& bs)
+__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::ProcessWithBatch(const Params& params,
+                                                                                                 BlockSchedulerOp& bs)
 {
     uint64_t batchC3C4 = static_cast<uint64_t>(params.qbmmParams.batchC3) * params.qbmmParams.batchC4;
     uint64_t batchC2C3C4 = params.qbmmParams.batchC2 * batchC3C4;
@@ -278,12 +271,13 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
 }
 
 QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS
-__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::ProcessSingleBatch(
-    const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
+__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::ProcessSingleBatch(const Params& params,
+                                                                                                   BlockSchedulerOp& bs,
+                                                                                                   uint64_t restBatch,
+                                                                                                   bool isTailRound)
 {
-    CoordClass coord(
-        params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
-        params.qbmmParams.baseN, params.qbmmParams.baseK);
+    CoordClass coord(params.problemShape.m, params.problemShape.n, params.problemShape.k, params.qbmmParams.baseM,
+                     params.qbmmParams.baseN, params.qbmmParams.baseK);
     BlockCoord blockIdx;
     // both tail of current batch and rest batch are tail round
     if (needUpdateTail_ || (isTailRound && ((bs.GetEndBlockIdx() + 1) + (restBatch * bs.GetTotalCnt())) *
@@ -293,9 +287,8 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
         bs.UpdateTailTile(params.schParams.mTailTile, params.schParams.nTailTile);
     }
     while (bs.GetTileIdx(blockIdx)) {
-        BlockShape singleShape =
-            bs.template GetBlockShape<QuantBatchMatmul::QuantMode::DEFAULT, QuantBatchMatmul::QuantMode::DEFAULT>(
-                blockIdx);
+        BlockShape singleShape = bs.template GetBlockShape<QuantBatchMatmul::QuantMode::DEFAULT,
+                                                           QuantBatchMatmul::QuantMode::DEFAULT>(blockIdx);
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
@@ -305,9 +298,12 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
             Get<QuantBatchMatmul::IDX_M_TAIL_SPLIT_TILEIDX>(singleShape),
             Get<QuantBatchMatmul::IDX_N_TAIL_SPLIT_TILEIDX>(singleShape), loadBalanceInfo);
 
-        Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m * params.problemShape.k;
-        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) += batchBOffset_ * params.problemShape.n * params.problemShape.k;
-        Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.m * params.problemShape.n;
+        Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_) += batchAOffset_ * params.problemShape.m *
+                                                             params.problemShape.k;
+        Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_) += batchBOffset_ * params.problemShape.n *
+                                                             params.problemShape.k;
+        Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.m *
+                                                             params.problemShape.n;
 
         if (static_cast<bool>(params.qbmmParams.biasThreeDim)) {
             Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
@@ -315,18 +311,16 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::
 
         if (static_cast<QuantBatchMatmul::QuantMode>(params.qbmmParams.x2QuantMode) ==
             QuantBatchMatmul::QuantMode::PERCHANNEL_MODE) { // perchannel
-            mmadOp_(
-                aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
-                bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],
-                x2ScaleGlobal_[Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)],
-                biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
-                cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
+            mmadOp_(aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
+                    bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)],
+                    x2ScaleGlobal_[Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(blockOffset_)],
+                    biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
+                    cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
         } else { // double-scale or pertensor
-            mmadOp_(
-                aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
-                bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)], scaleScalar_,
-                biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
-                cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
+            mmadOp_(aGlobal_[Get<QuantBatchMatmul::IDX_A_OFFSET>(blockOffset_)],
+                    bGlobal_[Get<QuantBatchMatmul::IDX_B_OFFSET>(blockOffset_)], scaleScalar_,
+                    biasGlobal_[Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_)],
+                    cGlobal_[Get<QuantBatchMatmul::IDX_C_OFFSET>(blockOffset_)], singleShape);
         }
     }
     bs.UpdateNextBatchBlockRoundParams();

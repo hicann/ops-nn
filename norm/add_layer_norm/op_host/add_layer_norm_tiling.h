@@ -25,7 +25,6 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 
-
 namespace optiling {
 BEGIN_TILING_DATA_DEF(AddLayerNormTilingData)
 TILING_DATA_FIELD_DEF(int64_t, numCore);
@@ -71,16 +70,11 @@ REGISTER_TILING_DATA_CLASS(AddLayerNorm_8100, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8101, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8102, AddLayerNormRegbaseTilingData);
 
-enum class BIAS {
-    BIAS_NONE,
-    BIAS_ELEWISE,
-    BIAS_BRC
-};
+enum class BIAS { BIAS_NONE, BIAS_ELEWISE, BIAS_BRC };
 
 class AddLayerNormRegbaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit AddLayerNormRegbaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context)
-    {}
+    explicit AddLayerNormRegbaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {}
 
 protected:
     ge::graphStatus GetPlatformInfo() override;
@@ -130,8 +124,8 @@ private:
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
     ge::graphStatus CalcRowsAndCols(gert::Shape& shapeX, gert::Shape& shapeGamma);
     ge::graphStatus BiasShapeProcess(gert::Shape& shapeX, gert::Shape& shapeGamma, gert::Shape& shapeBias);
-    ge::graphStatus MeanRstdShapeProcess(
-        gert::Shape& shapeX, gert::Shape& shapeGamma, gert::Shape& shapeMeanRstd) const;
+    ge::graphStatus MeanRstdShapeProcess(gert::Shape& shapeX, gert::Shape& shapeGamma,
+                                         gert::Shape& shapeMeanRstd) const;
 
     void CalcUsedCoreNum();
     ge::graphStatus CalcUbBufferSize();

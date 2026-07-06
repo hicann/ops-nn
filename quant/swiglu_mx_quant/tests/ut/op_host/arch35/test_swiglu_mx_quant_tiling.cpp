@@ -27,24 +27,17 @@ using namespace std;
 
 class SwigluMxQuantTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluMxQuantTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluMxQuantTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluMxQuantTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluMxQuantTilingTest TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    ge::DataType xDtype, ge::DataType yDtype, ge::DataType mxscaleDtype,
-    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape mxscaleShape,
-    int64_t activate_dim, bool activate_left, int64_t swiglu_mode, float clamp_limit,
-    float glu_alpha, float glu_bias, int64_t group_mode, int64_t axis, int64_t dst_type,
-    const string& round_mode, int64_t scale_alg, float max_dtype_value,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType xDtype, ge::DataType yDtype, ge::DataType mxscaleDtype,
+                            gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape mxscaleShape,
+                            int64_t activate_dim, bool activate_left, int64_t swiglu_mode, float clamp_limit,
+                            float glu_alpha, float glu_bias, int64_t group_mode, int64_t axis, int64_t dst_type,
+                            const string& round_mode, int64_t scale_alg, float max_dtype_value,
+                            ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -74,7 +67,8 @@ static void ExecuteTestCase(
 
     auto kernel_holder = gert::KernelRunContextFaker()
                              .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
                              .Outputs({&compile_info})
                              .Build();
 
@@ -82,8 +76,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -103,19 +97,18 @@ static void ExecuteTestCase(
                       .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, mxscaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(activate_dim)},
-                           {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activate_left)},
-                           {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(swiglu_mode)},
-                           {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(clamp_limit)},
-                           {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(glu_alpha)},
-                           {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(glu_bias)},
-                           {"group_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(group_mode)},
-                           {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dst_type)},
-                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)},
-                           {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scale_alg)},
-                           {"max_dtype_value", Ops::NN::AnyValue::CreateFrom<float>(max_dtype_value)}})
+                      .NodeAttrs({{"activate_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(activate_dim)},
+                                  {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activate_left)},
+                                  {"swiglu_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(swiglu_mode)},
+                                  {"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(clamp_limit)},
+                                  {"glu_alpha", Ops::NN::AnyValue::CreateFrom<float>(glu_alpha)},
+                                  {"glu_bias", Ops::NN::AnyValue::CreateFrom<float>(glu_bias)},
+                                  {"group_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(group_mode)},
+                                  {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dst_type)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scale_alg)},
+                                  {"max_dtype_value", Ops::NN::AnyValue::CreateFrom<float>(max_dtype_value)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -140,10 +133,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_fp16_to_fp8_e4m3)
     gert::StorageShape xShape = {{8, 128, 8192}, {8, 128, 8192}};
     gert::StorageShape yShape = {{8, 128, 4096}, {8, 128, 4096}};
     gert::StorageShape mxscaleShape = {{8, 128, 64, 2}, {8, 128, 64, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 36, "rint", 0, 0.0f,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    36, "rint", 0, 0.0f, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_bf16_to_fp8_e5m2)
@@ -154,10 +145,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_bf16_to_fp8_e5m2)
     gert::StorageShape xShape = {{4, 64, 2048}, {4, 64, 2048}};
     gert::StorageShape yShape = {{4, 64, 1024}, {4, 64, 1024}};
     gert::StorageShape mxscaleShape = {{4, 64, 16, 2}, {4, 64, 16, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 35, "rint", 0, 0.0f,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    35, "rint", 0, 0.0f, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_fp16_to_fp4_e2m1)
@@ -168,10 +157,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_fp16_to_fp4_e2m1)
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
     gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 40, "rint", 0, 0.0f,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    40, "rint", 0, 0.0f, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_bf16_to_fp4_e1m2)
@@ -182,10 +169,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_bf16_to_fp4_e1m2)
     gert::StorageShape xShape = {{2, 128, 2048}, {2, 128, 2048}};
     gert::StorageShape yShape = {{2, 128, 1024}, {2, 128, 1024}};
     gert::StorageShape mxscaleShape = {{2, 128, 16, 2}, {2, 128, 16, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 41, "floor", 0, 0.0f,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    41, "floor", 0, 0.0f, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_round_mode_floor_fp4)
@@ -196,10 +181,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_round_mode_floor_fp4)
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
     gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 40, "floor", 0, 0.0f,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    40, "floor", 0, 0.0f, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_round_mode_fp8)
@@ -210,10 +193,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_round_mode_fp8)
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
     gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 36, "floor", 0, 0.0f,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    36, "floor", 0, 0.0f, ge::GRAPH_FAILED);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_scale_alg_1)
@@ -224,10 +205,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_scale_alg_1)
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
     gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 36, "rint", 1, 0.0f,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    36, "rint", 1, 0.0f, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_axis)
@@ -238,10 +217,8 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_axis)
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
     gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, 0, 36, "rint", 0, 0.0f,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, 0,
+                    36, "rint", 0, 0.0f, ge::GRAPH_FAILED);
 }
 
 TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_dst_type)
@@ -252,8 +229,6 @@ TEST_F(SwigluMxQuantTilingTest, test_tiling_invalid_dst_type)
     gert::StorageShape xShape = {{4, 256, 4096}, {4, 256, 4096}};
     gert::StorageShape yShape = {{4, 256, 2048}, {4, 256, 2048}};
     gert::StorageShape mxscaleShape = {{4, 256, 32, 2}, {4, 256, 32, 2}};
-    ExecuteTestCase(
-        xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape,
-        -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1, 99, "rint", 0, 0.0f,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(xDtype, yDtype, mxscaleDtype, xShape, yShape, mxscaleShape, -1, false, 0, 7.0f, 1.702f, 1.0f, 0, -1,
+                    99, "rint", 0, 0.0f, ge::GRAPH_FAILED);
 }

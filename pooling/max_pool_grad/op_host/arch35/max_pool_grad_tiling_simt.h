@@ -31,11 +31,9 @@ constexpr int64_t INT32_SIZE = 4;
 constexpr int64_t INT64_SIZE = 8;
 class MaxPoolGradTiling : public MaxPoolGradTilingBase {
 public:
-    explicit MaxPoolGradTiling(gert::TilingContext* context) : MaxPoolGradTilingBase(context)
-    {}
+    explicit MaxPoolGradTiling(gert::TilingContext* context) : MaxPoolGradTilingBase(context) {}
 
-    ~MaxPoolGradTiling() override
-    {}
+    ~MaxPoolGradTiling() override {}
 
 protected:
     bool IsCapable() override;
@@ -47,8 +45,8 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
 
 private:
-    MaxPoolGradWithArgmaxSimtTilingCommonData* tilingData_ =
-        context_->GetTilingData<MaxPoolGradWithArgmaxSimtTilingCommonData>();
+    MaxPoolGradWithArgmaxSimtTilingCommonData*
+        tilingData_ = context_->GetTilingData<MaxPoolGradWithArgmaxSimtTilingCommonData>();
     int64_t outShapeSize = 0;
     int64_t outputDataCount = 0;
     ge::DataType dtype = ge::DataType::DT_FLOAT;

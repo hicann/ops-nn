@@ -23,7 +23,7 @@ namespace AddRmsNormQuant {
 
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 class KernelAddRmsNormQuantRegbasePerf {
-#define HAS_BETA (((TILING_KEY % 1000)/100) == 1)
+#define HAS_BETA (((TILING_KEY % 1000) / 100) == 1)
 #define HAS_RESOUT ((TILING_KEY / 1000) == 2)
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_ZEROPOINTS1 ((INPUT_KEY >> 2) % 2 == 1)
@@ -31,15 +31,11 @@ class KernelAddRmsNormQuantRegbasePerf {
 #define HAS_ZEROPOINTS2 (INPUT_KEY % 2 == 1)
 #define HAS_Y2 (HAS_SCALE2 || HAS_ZEROPOINTS2)
 public:
-    __aicore__ inline KernelAddRmsNormQuantRegbasePerf(TPipe* pipe)
-    {
-        pipe_ = pipe;
-    }
+    __aicore__ inline KernelAddRmsNormQuantRegbasePerf(TPipe* pipe) { pipe_ = pipe; }
 
-    __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
-        const AddRmsNormQuantRegbaseTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                GM_ADDR x, GM_ADDR res_out, const AddRmsNormQuantRegbaseTilingData* tilingData)
     {
         numM = tilingData->numM;
         numN = tilingData->numN;
@@ -62,7 +58,8 @@ public:
         // dtype align
         xGammaAlign = CeilDiv(baseN, static_cast<int64_t>(xDtypeSize)) * static_cast<int64_t>(xDtypeSize);
         scalesAlign = CeilDiv(baseN, static_cast<int64_t>(scalesDtypeSize)) * static_cast<int64_t>(scalesDtypeSize);
-        zeroPointsAlign = CeilDiv(baseN, static_cast<int64_t>(zeroPointsDtypeSize)) * static_cast<int64_t>(zeroPointsDtypeSize);
+        zeroPointsAlign = CeilDiv(baseN, static_cast<int64_t>(zeroPointsDtypeSize)) *
+                          static_cast<int64_t>(zeroPointsDtypeSize);
         yAlign = CeilDiv(baseN, static_cast<int64_t>(yDtypeSize)) * static_cast<int64_t>(yDtypeSize);
         rstdAlign = CeilDiv(baseM, static_cast<int64_t>(blockSizeB32)) * static_cast<int64_t>(blockSizeB32);
 
@@ -81,9 +78,9 @@ public:
         mTail = mCore - (mLoops - 1) * baseM;
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out)
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+                                      GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
+                                      GM_ADDR x, GM_ADDR res_out)
     {
         uint64_t gmOffset = blockIdx * mPerCore * numN;
         uint64_t gmLen = mCore * numN;
@@ -136,7 +133,10 @@ public:
         }
         pipe_->InitBuffer(rstdBuf, rstdAlign * sizeof(float));
         // reduceTmpBuffer
-        int64_t reduceTmpBufferSize = baseM * CeilDiv(CeilDiv(powerSplit, static_cast<int64_t>(vectorLenB32)), static_cast<int64_t>(blockSizeB32)) * blockSizeB32;
+        int64_t reduceTmpBufferSize = baseM *
+                                      CeilDiv(CeilDiv(powerSplit, static_cast<int64_t>(vectorLenB32)),
+                                              static_cast<int64_t>(blockSizeB32)) *
+                                      blockSizeB32;
         pipe_->InitBuffer(reduceTmpBuf, reduceTmpBufferSize);
     }
 
@@ -170,10 +170,10 @@ public:
             LocalTensor<float> reduceTmpLocal = reduceTmpBuf.Get<float>();
             NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(
                 xOutTmpLocal, reduceTmpLocal, reduceTmpBuf, static_cast<uint16_t>(realM),
-                static_cast<uint32_t>(baseNDtypeAlign), static_cast<uint32_t>(baseN),
-                static_cast<uint32_t>(powerSplit), static_cast<uint32_t>(B32_BLOCK_NUM));
-            NormCommon::ComputeRstdNewtonRaphson<true, true>(
-                reduceTmpLocal, rstdLocal, realM, epsilon, avgFactor, V_LENGTH);
+                static_cast<uint32_t>(baseNDtypeAlign), static_cast<uint32_t>(baseN), static_cast<uint32_t>(powerSplit),
+                static_cast<uint32_t>(B32_BLOCK_NUM));
+            NormCommon::ComputeRstdNewtonRaphson<true, true>(reduceTmpLocal, rstdLocal, realM, epsilon, avgFactor,
+                                                             V_LENGTH);
 
             LocalTensor<T_Y> y1Local = outQueueY1.AllocTensor<T_Y>();
             LocalTensor<T_Y> y2Local;
@@ -190,7 +190,9 @@ public:
 
             // 3. Quant
             SetOverflowMode<T_Y>(0);
-            CalculateQuant(xOutTmpLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,realM,baseN,xGammaAlign,scalesAlign,zeroPointsAlign,yAlign,resOutAddr);
+            CalculateQuant(xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, scales1Local, scales2Local, zeroPoints1Local,
+                           zeroPoints2Local, y1Local, y2Local, realM, baseN, xGammaAlign, scalesAlign, zeroPointsAlign,
+                           yAlign, resOutAddr);
             SetOverflowMode<T_Y>(oriOverflowMode);
 
             if constexpr (HAS_RESOUT) {
@@ -288,11 +290,11 @@ private:
         LocalTensor<T_X> xLocal1 = inQueueX1.AllocTensor<T_X>();
         LocalTensor<T_X> xLocal2 = inQueueX2.AllocTensor<T_X>();
         DataCopyExtParams extParams{
-            static_cast<uint16_t>(realM),                // blockCount
+            static_cast<uint16_t>(realM),               // blockCount
             static_cast<uint32_t>(baseN * sizeof(T_X)), // blockLen
-            static_cast<uint32_t>(0),                    // srcStride
-            static_cast<uint32_t>(0),                    // dstStride
-            0                                            // rsv
+            static_cast<uint32_t>(0),                   // srcStride
+            static_cast<uint32_t>(0),                   // dstStride
+            0                                           // rsv
         };
         DataCopyPadExtParams<T_X> padParams{
             false,                   // isPad
@@ -306,62 +308,62 @@ private:
         inQueueX2.EnQue(xLocal2);
     }
 
-template <typename T_IN>
-__aicore__ inline void LoadTensorForDtypeTIn(
-    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
-{
-    if constexpr (IsSameType<T_IN, float>::value) {
-        DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
-    } else if constexpr (IsSameType<T_IN, int32_t>::value) {
-        RegTensor<T_IN> xIn;
-        DataCopy<int32_t, LoadDist::DIST_NORM>(xIn, src + offset);
-        Cast<float, T_IN, castTraitInt322Fp32>(dst, xIn, preg);
-    } else {
-        RegTensor<T_IN> xIn;
-        DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
-        Cast<float, T_IN, castTraitF162F32>(dst, xIn, preg);
+    template <typename T_IN>
+    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
+                                                 uint32_t offset)
+    {
+        if constexpr (IsSameType<T_IN, float>::value) {
+            DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
+        } else if constexpr (IsSameType<T_IN, int32_t>::value) {
+            RegTensor<T_IN> xIn;
+            DataCopy<int32_t, LoadDist::DIST_NORM>(xIn, src + offset);
+            Cast<float, T_IN, castTraitInt322Fp32>(dst, xIn, preg);
+        } else {
+            RegTensor<T_IN> xIn;
+            DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
+            Cast<float, T_IN, castTraitF162F32>(dst, xIn, preg);
+        }
     }
-}
 
-template <typename T_OUT>
-__aicore__ inline void StoreTensorForDtypeTOut(
-    __local_mem__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg, uint32_t offset)
-{
-    if constexpr (IsSameType<T_OUT, float>::value) {
-        DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, xRegFp32, preg);
-    } else if constexpr (IsSameType<T_OUT, int8_t>::value) {
-        RegTensor<T_OUT> xOut;
-        RegTensor<half> xRegFp16;
-        RegTensor<int32_t> xRegInt32;
-        Cast<int32_t, float, castTraitFp322Int32>(xRegInt32, xRegFp32, preg);
-        Cast<float, int32_t, castTraitInt322Fp32>(xRegFp32, xRegInt32, preg);
-        Cast<half, float, castTraitFp322Fp16>(xRegFp16, xRegFp32, preg);
-        Cast<T_OUT, half, castTraitFp162Int8>(xOut, xRegFp16, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
-    } else if constexpr (IsSameType<T_OUT, fp8_e4m3fn_t>::value || IsSameType<T_OUT, fp8_e5m2_t>::value) {
-        RegTensor<T_OUT> xOut;
-        Cast<T_OUT, float, castTraitFp322Fp8>(xOut, xRegFp32, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
-    } else if constexpr (IsSameType<T_OUT, hifloat8_t>::value) {
-        RegTensor<T_OUT> xOut;
-        Cast<T_OUT, float, castTraitFp322Hifp8>(xOut, xRegFp32, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
-    }else {
-        RegTensor<T_OUT> xOut;
-        Cast<T_OUT, float, castTraitB322B16>(xOut, xRegFp32, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
+    template <typename T_OUT>
+    __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg,
+                                                   uint32_t offset)
+    {
+        if constexpr (IsSameType<T_OUT, float>::value) {
+            DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, xRegFp32, preg);
+        } else if constexpr (IsSameType<T_OUT, int8_t>::value) {
+            RegTensor<T_OUT> xOut;
+            RegTensor<half> xRegFp16;
+            RegTensor<int32_t> xRegInt32;
+            Cast<int32_t, float, castTraitFp322Int32>(xRegInt32, xRegFp32, preg);
+            Cast<float, int32_t, castTraitInt322Fp32>(xRegFp32, xRegInt32, preg);
+            Cast<half, float, castTraitFp322Fp16>(xRegFp16, xRegFp32, preg);
+            Cast<T_OUT, half, castTraitFp162Int8>(xOut, xRegFp16, preg);
+            DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+        } else if constexpr (IsSameType<T_OUT, fp8_e4m3fn_t>::value || IsSameType<T_OUT, fp8_e5m2_t>::value) {
+            RegTensor<T_OUT> xOut;
+            Cast<T_OUT, float, castTraitFp322Fp8>(xOut, xRegFp32, preg);
+            DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+        } else if constexpr (IsSameType<T_OUT, hifloat8_t>::value) {
+            RegTensor<T_OUT> xOut;
+            Cast<T_OUT, float, castTraitFp322Hifp8>(xOut, xRegFp32, preg);
+            DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+        } else {
+            RegTensor<T_OUT> xOut;
+            Cast<T_OUT, float, castTraitB322B16>(xOut, xRegFp32, preg);
+            DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
+        }
     }
-}
 
     __aicore__ inline void CopyOutX(uint64_t offset, uint32_t realM)
     {
         LocalTensor<T_X> xLocal = outQueueX.DeQue<T_X>();
         DataCopyExtParams copyParams{
-            static_cast<uint16_t>(realM),                // blockCount
+            static_cast<uint16_t>(realM),               // blockCount
             static_cast<uint32_t>(baseN * sizeof(T_X)), // blockLen
-            static_cast<uint32_t>(0),                    // srcStride
-            static_cast<uint32_t>(0),                    // dstStride
-            0                                            // rsv
+            static_cast<uint32_t>(0),                   // srcStride
+            static_cast<uint32_t>(0),                   // dstStride
+            0                                           // rsv
         };
         DataCopyPad(xGm[offset], xLocal, copyParams);
         outQueueX.FreeTensor(xLocal);
@@ -371,11 +373,11 @@ __aicore__ inline void StoreTensorForDtypeTOut(
     {
         LocalTensor<T_Y> y1Local = outQueueY1.DeQue<T_Y>();
         DataCopyExtParams copyParams{
-            static_cast<uint16_t>(realM),                // blockCount
+            static_cast<uint16_t>(realM),               // blockCount
             static_cast<uint32_t>(baseN * sizeof(T_Y)), // blockLen
-            static_cast<uint32_t>(0),                    // srcStride
-            static_cast<uint32_t>(0),                    // dstStride
-            0                                            // rsv
+            static_cast<uint32_t>(0),                   // srcStride
+            static_cast<uint32_t>(0),                   // dstStride
+            0                                           // rsv
         };
         DataCopyPad(y1Gm[offset], y1Local, copyParams);
         outQueueY1.FreeTensor(y1Local);
@@ -390,18 +392,18 @@ __aicore__ inline void StoreTensorForDtypeTOut(
     {
         LocalTensor<T_X> resOutLocal = outQueueResOut.DeQue<T_X>();
         DataCopyExtParams copyParams{
-            static_cast<uint16_t>(realM),                // blockCount
+            static_cast<uint16_t>(realM),               // blockCount
             static_cast<uint32_t>(baseN * sizeof(T_X)), // blockLen
-            static_cast<uint32_t>(0),                    // srcStride
-            static_cast<uint32_t>(0),                    // dstStride
-            0                                            // rsv
+            static_cast<uint32_t>(0),                   // srcStride
+            static_cast<uint32_t>(0),                   // dstStride
+            0                                           // rsv
         };
         DataCopyPad(resOutGm[offset], resOutLocal, copyParams);
         outQueueResOut.FreeTensor(resOutLocal);
     }
 
-    __aicore__ inline void CalculateXAdd(
-        LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xLocal, LocalTensor<float>& xOutTmpLocal, uint32_t realM)
+    __aicore__ inline void CalculateXAdd(LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xLocal,
+                                         LocalTensor<float>& xOutTmpLocal, uint32_t realM)
     {
         __local_mem__ T_X* x1InUb = (__local_mem__ T_X*)xLocal1.GetPhyAddr();
         __local_mem__ T_X* x2InUb = (__local_mem__ T_X*)xLocal2.GetPhyAddr();
@@ -430,13 +432,13 @@ __aicore__ inline void StoreTensorForDtypeTOut(
 
     // template <bool HAS_ZEROPOINTS2, bool HAS_ZEROPOINTS1, bool HAS_SCALE2, bool DIV_MODE>
     __aicore__ inline void CalculateQuant(LocalTensor<float> xLocal, LocalTensor<float> rstdLocal,
-        LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
-        LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
-        LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local,
-        LocalTensor<T_Y> y1Local, LocalTensor<T_Y> y2Local,
-        int64_t realM, int64_t baseN, int64_t xGammaAlign, int64_t scalesAlign,
-        int64_t zeroPointsAlign, int64_t yAlign,
-        __local_mem__ T_X* resOutAddr = nullptr)
+                                          LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
+                                          LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
+                                          LocalTensor<T_ZEROPOINTS> zeroPoints1Local,
+                                          LocalTensor<T_ZEROPOINTS> zeroPoints2Local, LocalTensor<T_Y> y1Local,
+                                          LocalTensor<T_Y> y2Local, int64_t realM, int64_t baseN, int64_t xGammaAlign,
+                                          int64_t scalesAlign, int64_t zeroPointsAlign, int64_t yAlign,
+                                          __local_mem__ T_X* resOutAddr = nullptr)
     {
         uint16_t loopsA = static_cast<uint16_t>(realM);
         uint16_t loopsR = static_cast<uint16_t>(CeilDiv(static_cast<uint32_t>(baseN), vectorLenB32));
@@ -454,19 +456,19 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         __local_mem__ T_Y* y1Addr = (__ubuf__ T_Y*)y1Local.GetPhyAddr();
         __local_mem__ T_Y* y2Addr;
 
-        if constexpr(HAS_SCALE2) {
+        if constexpr (HAS_SCALE2) {
             scales2Addr = (__ubuf__ T_SCALES*)scales2Local.GetPhyAddr();
         }
-        if constexpr(HAS_ZEROPOINTS1) {
+        if constexpr (HAS_ZEROPOINTS1) {
             zeroPoints1Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints1Local.GetPhyAddr();
         }
-        if constexpr(HAS_ZEROPOINTS2) {
+        if constexpr (HAS_ZEROPOINTS2) {
             zeroPoints2Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints2Local.GetPhyAddr();
         }
         if constexpr (HAS_BETA) {
             betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
         }
-        if constexpr((HAS_Y2)) {
+        if constexpr ((HAS_Y2)) {
             y2Addr = (__ubuf__ T_Y*)y2Local.GetPhyAddr();
         }
         // y = cast((x * rstd * gamma) */ scales + zeropints)
@@ -488,7 +490,8 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                     LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, j * vectorLenB32);
                     Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
                     if constexpr (HAS_RESOUT) {
-                        StoreTensorForDtypeTOut<T_X>(resOutAddr, mul2Reg, pregCurLoop, (i * sregxGammaAlign + j * vectorLenB32));
+                        StoreTensorForDtypeTOut<T_X>(resOutAddr, mul2Reg, pregCurLoop,
+                                                     (i * sregxGammaAlign + j * vectorLenB32));
                     }
                     if constexpr (HAS_BETA) {
                         LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, j * vectorLenB32);
@@ -501,29 +504,30 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                         Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                     }
 
-                    if constexpr(HAS_ZEROPOINTS1) {
+                    if constexpr (HAS_ZEROPOINTS1) {
                         LoadTensorForDtypeTIn(zeroPoints1Addr, zeroPoints1Reg, pregCurLoop, j * vectorLenB32);
                         Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
                     }
 
                     StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, (i * sregyAlign + j * vectorLenB32));
 
-                    if constexpr(HAS_Y2) {
-                        if constexpr(HAS_SCALE2) {
+                    if constexpr (HAS_Y2) {
+                        if constexpr (HAS_SCALE2) {
                             LoadTensorForDtypeTIn(scales2Addr, scales2Reg, pregCurLoop, j * vectorLenB32);
                             if (divMode) {
                                 Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                             } else {
                                 Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                             }
-                        }else {
+                        } else {
                             Muls(scales2ResultReg, mul2Reg, float(1.0), pregCurLoop);
                         }
-                        if constexpr(HAS_ZEROPOINTS2) {
+                        if constexpr (HAS_ZEROPOINTS2) {
                             LoadTensorForDtypeTIn(zeroPoints2Addr, zeroPoints2Reg, pregCurLoop, j * vectorLenB32);
                             Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
                         }
-                        StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, (i * sregyAlign + j * vectorLenB32));
+                        StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop,
+                                                (i * sregyAlign + j * vectorLenB32));
                     }
                 }
             }

@@ -18,7 +18,7 @@
 
 #include "graph/operator_reg.h"
 
-namespace ge{
+namespace ge {
 /**
     * @brief GeluMul divides the input tensor into left and right tensors x1 and x2 based on the last dimension,
     * performs GELU calculation on x1 on the left, and multiplies the calculation result by x2. \n
@@ -35,11 +35,11 @@ namespace ge{
     * Other dimensions of its shape are the same as those of "x".
     * The value of the last dimension is half the value of the last dimension of "x". \n
     */
-    REG_OP(GeluMul)
-        .INPUT(x, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
-        .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
-        .ATTR(approximate, String, "none")
-        .OP_END_FACTORY_REG(GeluMul)
+REG_OP(GeluMul)
+    .INPUT(x, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
+    .ATTR(approximate, String, "none")
+    .OP_END_FACTORY_REG(GeluMul)
 
-}
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_NN_ACTIVATION_H_
+} // namespace ge
+#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_ACTIVATION_H_

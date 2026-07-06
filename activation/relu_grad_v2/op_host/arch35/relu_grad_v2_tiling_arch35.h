@@ -29,7 +29,7 @@ struct ReluGradV2CompileInfo {
 };
 class ReluGradV2Tiling {
 public:
-    explicit ReluGradV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
+    explicit ReluGradV2Tiling(gert::TilingContext* context) : tilingContext(context){};
     ge::graphStatus RunTiling();
 
 protected:

@@ -86,8 +86,8 @@ uint32_t GetDataTypeSize(DataType dt)
 }
 
 // 生成 features 等浮点输入数据
-int32_t GenFloatData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, float value)
+int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                     float value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -105,8 +105,7 @@ int32_t GenFloatData(
 }
 
 // 生成 labels 整型输入数据，取值范围 [0, num_classes)
-int32_t GenInt32Data(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, int32_t num_classes)
+int32_t GenInt32Data(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, int32_t num_classes)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -131,15 +130,14 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
     const int64_t batchSize = 4;
     const int64_t numClasses = 8;
-    auto sparseSoftmaxCrossEntropyWithLogits1 =
-        op::SparseSoftmaxCrossEntropyWithLogits("sparseSoftmaxCrossEntropyWithLogits1");
+    auto sparseSoftmaxCrossEntropyWithLogits1 = op::SparseSoftmaxCrossEntropyWithLogits(
+        "sparseSoftmaxCrossEntropyWithLogits1");
 
     // features：batch_size * num_classes 的矩阵
     std::vector<int64_t> featuresShape = {batchSize, numClasses};

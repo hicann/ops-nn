@@ -24,47 +24,50 @@ constexpr size_t EMBEDDING_DENSE_GRAD_OUT_Y = 0;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS = 0;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX = 1;
 constexpr size_t EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ = 2;
-}  // namespace
+} // namespace
 
 namespace ops {
-static ge::graphStatus InferShapeForEmbeddingDenseGrad(gert::InferShapeContext* context) {
-  auto grad_shape = context->GetInputShape(EMBEDDING_DENSE_GRAD_IN_GRAD);
-  OP_CHECK_NULL_WITH_CONTEXT(context, grad_shape);
-  auto indices_shape = context->GetInputShape(EMBEDDING_DENSE_GRAD_IN_INDICES);
-  OP_CHECK_NULL_WITH_CONTEXT(context, indices_shape);
-  auto out_shape = context->GetOutputShape(0);
-  OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
-  auto attrs = context->GetAttrs();
-  OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+static ge::graphStatus InferShapeForEmbeddingDenseGrad(gert::InferShapeContext* context)
+{
+    auto grad_shape = context->GetInputShape(EMBEDDING_DENSE_GRAD_IN_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, grad_shape);
+    auto indices_shape = context->GetInputShape(EMBEDDING_DENSE_GRAD_IN_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indices_shape);
+    auto out_shape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
-  auto num_weights = attrs->GetAttrPointer<int64_t>(EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS);
-  OP_CHECK_NULL_WITH_CONTEXT(context, num_weights);
-  auto padding_idx = attrs->GetAttrPointer<int64_t>(EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX);
-  OP_CHECK_NULL_WITH_CONTEXT(context, padding_idx);
-  auto scale_grad_by_freq = attrs->GetAttrPointer<bool>(EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ);
-  OP_CHECK_NULL_WITH_CONTEXT(context, scale_grad_by_freq);
+    auto num_weights = attrs->GetAttrPointer<int64_t>(EMBEDDING_DENSE_GRAD_ATTR_NUM_WEIGHTS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, num_weights);
+    auto padding_idx = attrs->GetAttrPointer<int64_t>(EMBEDDING_DENSE_GRAD_ATTR_PADDING_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, padding_idx);
+    auto scale_grad_by_freq = attrs->GetAttrPointer<bool>(EMBEDDING_DENSE_GRAD_ATTR_SCALE_GRAD_BY_FREQ);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scale_grad_by_freq);
 
-  int64_t output_shape_len = 2;
-  int64_t input_shape_len = grad_shape->GetDimNum();
-  out_shape->SetDimNum(output_shape_len);
-  out_shape->SetDim(0, *num_weights);
-  out_shape->SetDim(1, grad_shape->GetDim(input_shape_len - 1));
+    int64_t output_shape_len = 2;
+    int64_t input_shape_len = grad_shape->GetDimNum();
+    out_shape->SetDimNum(output_shape_len);
+    out_shape->SetDim(0, *num_weights);
+    out_shape->SetDim(1, grad_shape->GetDim(input_shape_len - 1));
 
-  return GRAPH_SUCCESS;
+    return GRAPH_SUCCESS;
 }
 
-static graphStatus InferDtypeForEmbeddingDenseGrad (gert::InferDataTypeContext* context) {
-  OP_LOGD(context->GetNodeName(), "Begin to do InferDtypeForEmbeddingDenseGrad rt2.0");
+static graphStatus InferDtypeForEmbeddingDenseGrad(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDtypeForEmbeddingDenseGrad rt2.0");
 
-  auto grad_dtype = context->GetInputDataType(EMBEDDING_DENSE_GRAD_IN_GRAD);
+    auto grad_dtype = context->GetInputDataType(EMBEDDING_DENSE_GRAD_IN_GRAD);
 
-  context->SetOutputDataType(EMBEDDING_DENSE_GRAD_OUT_Y, grad_dtype);
+    context->SetOutputDataType(EMBEDDING_DENSE_GRAD_OUT_Y, grad_dtype);
 
-  OP_LOGD(context->GetNodeName(), "End to do InferDtypeForEmbeddingDenseGrad");
+    OP_LOGD(context->GetNodeName(), "End to do InferDtypeForEmbeddingDenseGrad");
 
-  return GRAPH_SUCCESS;
+    return GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(EmbeddingDenseGrad).InferShape(InferShapeForEmbeddingDenseGrad)
-                              .InferDataType(InferDtypeForEmbeddingDenseGrad);
-}  // namespace ops
+IMPL_OP_INFERSHAPE(EmbeddingDenseGrad)
+    .InferShape(InferShapeForEmbeddingDenseGrad)
+    .InferDataType(InferDtypeForEmbeddingDenseGrad);
+} // namespace ops

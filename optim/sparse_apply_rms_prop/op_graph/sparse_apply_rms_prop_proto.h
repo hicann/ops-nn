@@ -23,27 +23,27 @@
 namespace ge {
 
 /**
-*@brief Sparse apply RMSProp optimization algorithm for sparse gradients.
-*@par Inputs:
-*Nine inputs, including:
-* @li var: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li ms: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li mom: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li lr: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li rho: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li momentum: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li epsilon: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li grad: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li indices: A 1D Tensor. Must be one of the following types: int32, int64.
-*@par Outputs:
-* @li var: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li ms: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-* @li mom: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
-*@par Attributes:
-* @li use_locking: A optional bool. Defaults to false. Whether to use mutex lock.
-*@par Third-party framework compatibility
-*Compatible with the TensorFlow operator SparseApplyRMSProp.
-*/
+ *@brief Sparse apply RMSProp optimization algorithm for sparse gradients.
+ *@par Inputs:
+ *Nine inputs, including:
+ * @li var: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li ms: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li mom: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li lr: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li rho: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li momentum: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li epsilon: A ND scalar Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li grad: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li indices: A 1D Tensor. Must be one of the following types: int32, int64.
+ *@par Outputs:
+ * @li var: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li ms: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ * @li mom: A ND Tensor. Must be one of the following types: float16, bfloat16, float32.
+ *@par Attributes:
+ * @li use_locking: A optional bool. Defaults to false. Whether to use mutex lock.
+ *@par Third-party framework compatibility
+ *Compatible with the TensorFlow operator SparseApplyRMSProp.
+ */
 REG_OP(SparseApplyRMSProp)
     .INPUT(var, TensorType::NumberType())
     .INPUT(ms, TensorType::NumberType())

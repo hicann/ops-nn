@@ -11,7 +11,7 @@
 /*!
  * \file mish_grad_infershape.cpp
  * \brief
-*/
+ */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -32,7 +32,7 @@ static ge::graphStatus InferShapeMishGrad(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    *yShape = *xShape;  
+    *yShape = *xShape;
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeMishGrad");
     return GRAPH_SUCCESS;

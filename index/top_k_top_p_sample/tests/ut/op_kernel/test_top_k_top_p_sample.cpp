@@ -22,9 +22,9 @@
 #include <cstdint>
 using namespace std;
 
-extern "C" __global__ __aicore__ void top_k_top_p_sample(
-    GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKpSelect,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void top_k_top_p_sample(GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q,
+                                                         GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKpSelect,
+                                                         GM_ADDR workspace, GM_ADDR tiling);
 
 class top_k_top_p_sample_test : public testing::Test {
 protected:
@@ -58,8 +58,8 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_half)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data", "top_k_top_p_sample_data");
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data",
+                                    "top_k_top_p_sample_data");
     kernel_ut::RunGenData("./top_k_top_p_sample_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -71,20 +71,20 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_half)
     topKTopPSampleTilingData->numCore = 40;
     topKTopPSampleTilingData->rowNum = 8;
     topKTopPSampleTilingData->rowLen = 64;
-    topKTopPSampleTilingData->headCoreNum =
-        topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore; // rowNum % numCore
-    topKTopPSampleTilingData->perHeadCoreRowNum =
-        (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) /
-        topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleTilingData->headCoreNum = topKTopPSampleTilingData->rowNum %
+                                            topKTopPSampleTilingData->numCore; // rowNum % numCore
+    topKTopPSampleTilingData->perHeadCoreRowNum = (topKTopPSampleTilingData->rowNum +
+                                                   topKTopPSampleTilingData->numCore - 1) /
+                                                  topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
     topKTopPSampleTilingData->tailCoreRowNum = topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
     topKTopPSampleTilingData->perHeadCorePartNum = 0;
     topKTopPSampleTilingData->tailCorePartNum = 0;
     topKTopPSampleTilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleTilingData->innerLoopTime =
-        (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
-        topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTail =
-        topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleTilingData
+        ->innerLoopTime = (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
+                          topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTail = topKTopPSampleTilingData->rowLen %
+                                                 topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 *
                                                     32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -100,9 +100,8 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_half)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
-        (uint8_t*)(topKTopPSampleTilingData));
+    ICPU_RUN_KF(top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
+                (uint8_t*)(topKTopPSampleTilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -135,8 +134,8 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_bf16)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data", "top_k_top_p_sample_data");
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data",
+                                    "top_k_top_p_sample_data");
     kernel_ut::RunGenData("./top_k_top_p_sample_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "0"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -148,20 +147,20 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_bf16)
     topKTopPSampleTilingData->numCore = 40;
     topKTopPSampleTilingData->rowNum = 8;
     topKTopPSampleTilingData->rowLen = 64;
-    topKTopPSampleTilingData->headCoreNum =
-        topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore; // rowNum % numCore
-    topKTopPSampleTilingData->perHeadCoreRowNum =
-        (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) /
-        topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleTilingData->headCoreNum = topKTopPSampleTilingData->rowNum %
+                                            topKTopPSampleTilingData->numCore; // rowNum % numCore
+    topKTopPSampleTilingData->perHeadCoreRowNum = (topKTopPSampleTilingData->rowNum +
+                                                   topKTopPSampleTilingData->numCore - 1) /
+                                                  topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
     topKTopPSampleTilingData->tailCoreRowNum = topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
     topKTopPSampleTilingData->perHeadCorePartNum = 0;
     topKTopPSampleTilingData->tailCorePartNum = 0;
     topKTopPSampleTilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleTilingData->innerLoopTime =
-        (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
-        topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTail =
-        topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleTilingData
+        ->innerLoopTime = (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
+                          topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTail = topKTopPSampleTilingData->rowLen %
+                                                 topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 *
                                                     32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -177,9 +176,8 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_bf16)
 
     uint64_t tillingKey = 1027;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
-        (uint8_t*)(topKTopPSampleTilingData));
+    ICPU_RUN_KF(top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
+                (uint8_t*)(topKTopPSampleTilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);
@@ -212,8 +210,8 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_isNeedLogits)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    kernel_ut::SetupTestEnvironment(
-        "index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data", "top_k_top_p_sample_data");
+    kernel_ut::SetupTestEnvironment("index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data",
+                                    "top_k_top_p_sample_data");
     kernel_ut::RunGenData("./top_k_top_p_sample_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "1"});
 
     string path = kernel_ut::GetTestWorkDir();
@@ -225,20 +223,20 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_isNeedLogits)
     topKTopPSampleTilingData->numCore = 40;
     topKTopPSampleTilingData->rowNum = 8;
     topKTopPSampleTilingData->rowLen = 64;
-    topKTopPSampleTilingData->headCoreNum =
-        topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore; // rowNum % numCore
-    topKTopPSampleTilingData->perHeadCoreRowNum =
-        (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) /
-        topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleTilingData->headCoreNum = topKTopPSampleTilingData->rowNum %
+                                            topKTopPSampleTilingData->numCore; // rowNum % numCore
+    topKTopPSampleTilingData->perHeadCoreRowNum = (topKTopPSampleTilingData->rowNum +
+                                                   topKTopPSampleTilingData->numCore - 1) /
+                                                  topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
     topKTopPSampleTilingData->tailCoreRowNum = topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
     topKTopPSampleTilingData->perHeadCorePartNum = 0;
     topKTopPSampleTilingData->tailCorePartNum = 0;
     topKTopPSampleTilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleTilingData->innerLoopTime =
-        (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
-        topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTail =
-        topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleTilingData
+        ->innerLoopTime = (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
+                          topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTail = topKTopPSampleTilingData->rowLen %
+                                                 topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
     topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 *
                                                     32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
     topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
@@ -254,9 +252,8 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_isNeedLogits)
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(
-        top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
-        (uint8_t*)(topKTopPSampleTilingData));
+    ICPU_RUN_KF(top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
+                (uint8_t*)(topKTopPSampleTilingData));
 
     AscendC::GmFree((void*)logits);
     AscendC::GmFree((void*)topKs);

@@ -18,8 +18,8 @@ using namespace AscendC;
 using namespace QuantMax;
 
 template <uint64_t RoundMode>
-__global__ __aicore__ void quant_max(
-    GM_ADDR x, GM_ADDR scale, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void quant_max(GM_ADDR x, GM_ADDR scale, GM_ADDR y, GM_ADDR amax, GM_ADDR workspace,
+                                     GM_ADDR tiling)
 {
     int64_t oriOverflowMode = GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 

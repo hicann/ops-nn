@@ -194,4 +194,3 @@ __host_aicore__ inline constexpr Int<(t <= u)> operator<=(Int<t>, Int<u>)
 }
 } // namespace Gemm
 } // namespace Cmct
-

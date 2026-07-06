@@ -59,13 +59,12 @@ ge::graphStatus BatchNormGradV3TilingRASplitR::DoOpTiling()
     aLoopTimes_ = Ops::Base::CeilDiv(aDim, aFactorAlign_);
     aFactorTail_ = (aDim % aFactorAlign_ == 0) ? aFactorAlign_ : aDim % aFactorAlign_;
 
-    OP_TILING_CHECK(
-        ge::GRAPH_SUCCESS != Stage0Stage1UbTiling(),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed Stage0Stage1UbTiling."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        ge::GRAPH_SUCCESS != Stage2UbTiling(),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed Stage2UbTiling."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ge::GRAPH_SUCCESS != Stage0Stage1UbTiling(),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed Stage0Stage1UbTiling."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ge::GRAPH_SUCCESS != Stage2UbTiling(),
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed Stage2UbTiling."),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -78,52 +77,47 @@ ge::graphStatus BatchNormGradV3TilingRASplitR::Stage0Stage1UbTiling()
     cacheBuffCnt_ = ULONG_BIT_LEN - __builtin_clzl(binaryBlockCnt_);
     binaryBlockTail_ = (blockFactor_ % rLoopFactor_) == 0 ? rLoopFactor_ : blockFactor_ % rLoopFactor_;
     lastCoreBlockCnt_ = Ops::Base::CeilDiv(tailBlockFactor_, rLoopFactor_);
-    lastCoreFoldPoint_ =
-        (lastCoreBlockCnt_ <= 1) ? 1 : 1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(lastCoreBlockCnt_ - 1));
+    lastCoreFoldPoint_ = (lastCoreBlockCnt_ <= 1) ? 1 :
+                                                    1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(lastCoreBlockCnt_ - 1));
     lastCoreLoopTail_ = (tailBlockFactor_ % rLoopFactor_) == 0 ? rLoopFactor_ : tailBlockFactor_ % rLoopFactor_;
 
     // 校验UB是否越界
     uint64_t rElemUbSize = Ops::Base::CeilAlign(
         aFactorAlign_ * rLoopFactor_ * STAGE0_R_ELEM_NUM * dyTypeSize_ * DOUBLE_BUFF, blockSize / dyTypeSize_);
-    uint64_t cacheBuffSize =
-        Ops::Base::CeilAlign(cacheBuffCnt_ * aFactorAlign_ * FLOAT_BYTE_SIZE, blockSize / FLOAT_BYTE_SIZE);
-    uint64_t aElemUbSize = Ops::Base::CeilAlign(
-        aFactorAlign_ * STAGE0_A_ELEM_NUM * DOUBLE_BUFF * FLOAT_BYTE_SIZE, blockSize / FLOAT_BYTE_SIZE);
+    uint64_t cacheBuffSize = Ops::Base::CeilAlign(cacheBuffCnt_ * aFactorAlign_ * FLOAT_BYTE_SIZE,
+                                                  blockSize / FLOAT_BYTE_SIZE);
+    uint64_t aElemUbSize = Ops::Base::CeilAlign(aFactorAlign_ * STAGE0_A_ELEM_NUM * DOUBLE_BUFF * FLOAT_BYTE_SIZE,
+                                                blockSize / FLOAT_BYTE_SIZE);
     uint64_t oneStepUbSize = rElemUbSize + cacheBuffSize + aElemUbSize;
-    OP_TILING_CHECK(
-        ubSize < oneStepUbSize,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "ubSize %ld less than oneStepUbSize: %ld.", ubSize, oneStepUbSize),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(ubSize < oneStepUbSize,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "ubSize %ld less than oneStepUbSize: %ld.",
+                                                    ubSize, oneStepUbSize),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus BatchNormGradV3TilingRASplitR::Stage2UbTiling()
 {
-    uint64_t aElemUbSize = Ops::Base::CeilAlign(
-        aFactorAlign_ * STAGE2_A_ELEM_NUM * FLOAT_BYTE_SIZE * DOUBLE_BUFF, blockSize / FLOAT_BYTE_SIZE);
-    uint64_t rElemUbSize =
-        Ops::Base::CeilAlign(aFactorAlign_ * STAGE2_R_ELEM_NUM * dyTypeSize_ * DOUBLE_BUFF, blockSize / dyTypeSize_);
-    OP_TILING_CHECK(
-        ubSize < aElemUbSize + rElemUbSize,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "ubSize %ld less than oneTileUbSize: %ld.", ubSize, aElemUbSize + rElemUbSize),
-        return ge::GRAPH_FAILED);
+    uint64_t aElemUbSize = Ops::Base::CeilAlign(aFactorAlign_ * STAGE2_A_ELEM_NUM * FLOAT_BYTE_SIZE * DOUBLE_BUFF,
+                                                blockSize / FLOAT_BYTE_SIZE);
+    uint64_t rElemUbSize = Ops::Base::CeilAlign(aFactorAlign_ * STAGE2_R_ELEM_NUM * dyTypeSize_ * DOUBLE_BUFF,
+                                                blockSize / dyTypeSize_);
+    OP_TILING_CHECK(ubSize < aElemUbSize + rElemUbSize,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "ubSize %ld less than oneTileUbSize: %ld.",
+                                                    ubSize, aElemUbSize + rElemUbSize),
+                    return ge::GRAPH_FAILED);
     int64_t dxLoopFactor = Ops::Base::FloorDiv(ubSize - aElemUbSize, rElemUbSize);
     dxLoopFactor_ = std::min(blockFactor_, dxLoopFactor);
     dxLoopTimes_ = Ops::Base::CeilDiv(blockFactor_, dxLoopFactor_),
     dxLoopTail_ = (blockFactor_ % dxLoopFactor_ == 0) ? dxLoopFactor_ : blockFactor_ % dxLoopFactor_;
     dxLastCoreFactor_ = std::min(tailBlockFactor_, dxLoopFactor);
     dxLastCoreTimes_ = Ops::Base::CeilDiv(tailBlockFactor_, dxLastCoreFactor_),
-    dxLastCoreTail_ =
-        (tailBlockFactor_ % dxLastCoreFactor_ == 0) ? dxLastCoreFactor_ : tailBlockFactor_ % dxLastCoreFactor_;
+    dxLastCoreTail_ = (tailBlockFactor_ % dxLastCoreFactor_ == 0) ? dxLastCoreFactor_ :
+                                                                    tailBlockFactor_ % dxLastCoreFactor_;
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t BatchNormGradV3TilingRASplitR::GetTilingKey() const
-{
-    return BNG_V3_RA_SPLIT_R_TILING_KEY;
-}
+uint64_t BatchNormGradV3TilingRASplitR::GetTilingKey() const { return BNG_V3_RA_SPLIT_R_TILING_KEY; }
 
 ge::graphStatus BatchNormGradV3TilingRASplitR::GetWorkspaceSize()
 {
@@ -137,22 +131,21 @@ ge::graphStatus BatchNormGradV3TilingRASplitR::GetWorkspaceSize()
 
 void BatchNormGradV3TilingRASplitR::PrintTilingData()
 {
-    OP_LOGI(
-        context_->GetNodeName(),
-        "BatchNormGradV3TilingRASplitR tilingData: useCoreNum is %ld, rDim is %ld, aDim is %ld, "
-        "blockFactor is %ld, tailBlockFactor %ld, rLoopFactor is %ld, binaryBlockCnt is %ld, "
-        "binaryFoldPoint is %ld, binaryBlockTail is %ld, lastCoreBlockCnt is %ld, lastCoreFoldPoint is %ld, "
-        "lastCoreLoopTail is %ld, aFactor %ld, aFactorAlign is %ld, aFactorTail is %ld, aLoopTimes is %ld, "
-        "dxLoopFactor %ld, dxLoopTail is %ld, dxLoopTimes %ld, dxLastCoreFactor %ld, dxLastCoreTail is %ld, "
-        "dxLastCoreTimes %ld, cacheBuffCnt is %ld, tilingKey is %ld",
-        usedCoreNum_, tilingData_.get_rDim(), tilingData_.get_aDim(), tilingData_.get_blockFactor(),
-        tilingData_.get_tailBlockFactor(), tilingData_.get_rLoopFactor(), tilingData_.get_binaryBlockCnt(),
-        tilingData_.get_binaryFoldPoint(), tilingData_.get_binaryBlockTail(), tilingData_.get_lastCoreBlockCnt(),
-        tilingData_.get_lastCoreFoldPoint(), tilingData_.get_lastCoreLoopTail(), tilingData_.get_aFactor(),
-        tilingData_.get_aFactorAlign(), tilingData_.get_aFactorTail(), tilingData_.get_aLoopTimes(),
-        tilingData_.get_dxLoopFactor(), tilingData_.get_dxLoopTail(), tilingData_.get_dxLoopTimes(),
-        tilingData_.get_dxLastCoreFactor(), tilingData_.get_dxLastCoreTail(), tilingData_.get_dxLastCoreTimes(),
-        tilingData_.get_cacheBuffCnt(), GetTilingKey());
+    OP_LOGI(context_->GetNodeName(),
+            "BatchNormGradV3TilingRASplitR tilingData: useCoreNum is %ld, rDim is %ld, aDim is %ld, "
+            "blockFactor is %ld, tailBlockFactor %ld, rLoopFactor is %ld, binaryBlockCnt is %ld, "
+            "binaryFoldPoint is %ld, binaryBlockTail is %ld, lastCoreBlockCnt is %ld, lastCoreFoldPoint is %ld, "
+            "lastCoreLoopTail is %ld, aFactor %ld, aFactorAlign is %ld, aFactorTail is %ld, aLoopTimes is %ld, "
+            "dxLoopFactor %ld, dxLoopTail is %ld, dxLoopTimes %ld, dxLastCoreFactor %ld, dxLastCoreTail is %ld, "
+            "dxLastCoreTimes %ld, cacheBuffCnt is %ld, tilingKey is %ld",
+            usedCoreNum_, tilingData_.get_rDim(), tilingData_.get_aDim(), tilingData_.get_blockFactor(),
+            tilingData_.get_tailBlockFactor(), tilingData_.get_rLoopFactor(), tilingData_.get_binaryBlockCnt(),
+            tilingData_.get_binaryFoldPoint(), tilingData_.get_binaryBlockTail(), tilingData_.get_lastCoreBlockCnt(),
+            tilingData_.get_lastCoreFoldPoint(), tilingData_.get_lastCoreLoopTail(), tilingData_.get_aFactor(),
+            tilingData_.get_aFactorAlign(), tilingData_.get_aFactorTail(), tilingData_.get_aLoopTimes(),
+            tilingData_.get_dxLoopFactor(), tilingData_.get_dxLoopTail(), tilingData_.get_dxLoopTimes(),
+            tilingData_.get_dxLastCoreFactor(), tilingData_.get_dxLastCoreTail(), tilingData_.get_dxLastCoreTimes(),
+            tilingData_.get_cacheBuffCnt(), GetTilingKey());
     return;
 }
 

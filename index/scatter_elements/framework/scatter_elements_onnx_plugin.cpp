@@ -16,47 +16,43 @@
 #include "onnx_common.h"
 
 namespace domi {
-static Status  ParseParamsScatterElements(const Message* op_src, ge::Operator& op_dest) {
-  const ge::onnx::NodeProto *node = reinterpret_cast<const ge::onnx::NodeProto *>(op_src);
-  if (node == nullptr) {
-    OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
-    return FAILED;
-  }
-  
-  int axis = 0;
-  for (const auto &attr : node->attribute()) {
-    if (attr.name() == "axis") {
-      axis = attr.i();
+static Status ParseParamsScatterElements(const Message* op_src, ge::Operator& op_dest)
+{
+    const ge::onnx::NodeProto* node = reinterpret_cast<const ge::onnx::NodeProto*>(op_src);
+    if (node == nullptr) {
+        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        return FAILED;
     }
-  }
-  op_dest.SetAttr("axis", axis);
 
-  std::string reduction = "none";
-  for (const auto& attr : node->attribute()) {
-    if (attr.name() == "reduction" && attr.type() == ge::onnx::AttributeProto::STRING) {
-      reduction = attr.s();
-      break;
+    int axis = 0;
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "axis") {
+            axis = attr.i();
+        }
     }
-  }
-  op_dest.SetAttr("reduction", reduction);
-  
-  return SUCCESS;
+    op_dest.SetAttr("axis", axis);
+
+    std::string reduction = "none";
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "reduction" && attr.type() == ge::onnx::AttributeProto::STRING) {
+            reduction = attr.s();
+            break;
+        }
+    }
+    op_dest.SetAttr("reduction", reduction);
+
+    return SUCCESS;
 }
 
 // register Add op info to GE
 REGISTER_CUSTOM_OP("ScatterElements")
     .FrameworkType(ONNX)
-    .OriginOpType({ge::AscendString("ai.onnx::11::ScatterElements"),
-                   ge::AscendString("ai.onnx::12::ScatterElements"),
-                   ge::AscendString("ai.onnx::13::ScatterElements"),
-                   ge::AscendString("ai.onnx::14::ScatterElements"),
-                   ge::AscendString("ai.onnx::15::ScatterElements"),
-                   ge::AscendString("ai.onnx::16::ScatterElements"),
-                   ge::AscendString("ai.onnx::17::ScatterElements"),
-                   ge::AscendString("ai.onnx::18::ScatterElements"),
-                   ge::AscendString("ai.onnx::9::Scatter"),
-                   ge::AscendString("ai.onnx::10::Scatter"),
+    .OriginOpType({ge::AscendString("ai.onnx::11::ScatterElements"), ge::AscendString("ai.onnx::12::ScatterElements"),
+                   ge::AscendString("ai.onnx::13::ScatterElements"), ge::AscendString("ai.onnx::14::ScatterElements"),
+                   ge::AscendString("ai.onnx::15::ScatterElements"), ge::AscendString("ai.onnx::16::ScatterElements"),
+                   ge::AscendString("ai.onnx::17::ScatterElements"), ge::AscendString("ai.onnx::18::ScatterElements"),
+                   ge::AscendString("ai.onnx::9::Scatter"), ge::AscendString("ai.onnx::10::Scatter"),
                    ge::AscendString("ai.onnx::11::Scatter")})
     .ParseParamsFn(ParseParamsScatterElements)
     .ImplyType(ImplyType::TVM);
-}  // namespace domi
+} // namespace domi

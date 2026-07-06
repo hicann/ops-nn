@@ -38,9 +38,9 @@ static constexpr int64_t NOT_GATHER = 1001;
 
 template <typename T>
 struct GetGatherType {
-    using type =
-        typename std::conditional<std::is_same<T, int8_t>::value, int16_t,
-                                  typename std::conditional<std::is_same<T, uint8_t>::value, uint16_t, T>::type>::type;
+    using type = typename std::conditional<
+        std::is_same<T, int8_t>::value, int16_t,
+        typename std::conditional<std::is_same<T, uint8_t>::value, uint16_t, T>::type>::type;
 };
 
 template <typename T>
@@ -52,30 +52,34 @@ template <typename T>
 struct VciTypeGet {
     using type = typename std::conditional<
         std::is_same<T, uint32_t>::value, int32_t,
-        typename std::conditional<std::is_same<T, uint16_t>::value, int16_t,
-                                  typename std::conditional<std::is_same<T, uint64_t>::value, int64_t, T>::type>::type>::type;
+        typename std::conditional<
+            std::is_same<T, uint16_t>::value, int16_t,
+            typename std::conditional<std::is_same<T, uint64_t>::value, int64_t, T>::type>::type>::type;
 };
 
 template <typename T, typename SeqType>
-class ReverseSequenceBSA
-{
+class ReverseSequenceBSA {
 public:
-    __aicore__ inline ReverseSequenceBSA(TPipe *pipe, const ReverseSequenceBSATilingData *tilingData)
-                        : pipe_(pipe), tilingData_(tilingData) {};
-     __aicore__ inline void Init(GM_ADDR x, GM_ADDR seqLengths, GM_ADDR y);
-     __aicore__ inline void Process();
+    __aicore__ inline ReverseSequenceBSA(TPipe* pipe, const ReverseSequenceBSATilingData* tilingData)
+        : pipe_(pipe), tilingData_(tilingData){};
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR seqLengths, GM_ADDR y);
+    __aicore__ inline void Process();
+
 private:
     template <typename U, int64_t GatherMode, int64_t SplitMode>
     __aicore__ inline void BaseCompute();
     template <typename U>
     __aicore__ inline void GenDimSGatherIndex(int64_t reverseLen, int64_t stride, LocalTensor<U>& indexLocal);
     template <typename U>
-    __aicore__ inline void GenGatherDimBIndex(int64_t notReverseLen, int64_t seqLen, int64_t stride, LocalTensor<U>& indexLocal);
-    __aicore__ inline void ComputeSplitA(int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t aStart, int64_t dimANum);
+    __aicore__ inline void GenGatherDimBIndex(int64_t notReverseLen, int64_t seqLen, int64_t stride,
+                                              LocalTensor<U>& indexLocal);
+    __aicore__ inline void ComputeSplitA(int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t aStart,
+                                         int64_t dimANum);
     template <typename U, int64_t GatherMode>
     __aicore__ inline void ComputeSplitS(int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t dimSNum);
     template <typename U>
-    __aicore__ inline void ComputeSplitSGatherSmallA(int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t dimSNum);
+    __aicore__ inline void ComputeSplitSGatherSmallA(int64_t srcOffset, int64_t bStart, int64_t sStart,
+                                                     int64_t dimSNum);
     __aicore__ inline void ComputeSplitSCopyA(int64_t srcOffset, int64_t copyDims);
     __aicore__ inline void ComputeSplitSReverseBigA(int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t dimSNum);
     template <typename U, int64_t GatherMode>
@@ -88,8 +92,8 @@ private:
     __aicore__ inline void CopyInSingleDim(int64_t offset, int64_t blockLen);
     __aicore__ inline void CopyOutSingleDim(int64_t offset, int64_t blockLen);
     __aicore__ inline void GetCurrentSeqLength(int64_t bStart);
-    TPipe *pipe_;
-    const ReverseSequenceBSATilingData *tilingData_;    
+    TPipe* pipe_;
+    const ReverseSequenceBSATilingData* tilingData_;
     TQue<QuePosition::VECIN, DB_BUFFER> inputQue_;
     // 输出ub
     TQue<QuePosition::VECOUT, DB_BUFFER> outQue_;
@@ -135,7 +139,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::Process()
             BaseCompute<indiceType, NOT_GATHER, SPLIT_DIM_S>();
         }
     } else if (tilingData_->splitMode == SPLIT_DIM_B) {
-         if (tilingData_->gatherMode != NOT_GATHER) {
+        if (tilingData_->gatherMode != NOT_GATHER) {
             BaseCompute<indiceType, GATHER_DIM_B, SPLIT_DIM_B>();
         } else {
             BaseCompute<indiceType, NOT_GATHER, SPLIT_DIM_B>();
@@ -162,13 +166,13 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::BaseCompute()
         int64_t bIdx = idx / (tilingData_->sLoop * tilingData_->aLoop);
         int64_t sIdx = (idx - bIdx * tilingData_->sLoop * tilingData_->aLoop) / tilingData_->aLoop;
         int64_t aIdx = idx % tilingData_->aLoop;
-        int64_t inDimB =
-            bIdx == tilingData_->bLoop - 1 ? tilingData_->bDim - bIdx * tilingData_->ubFactorB : tilingData_->ubFactorB;
-        int64_t inDimS =
-            sIdx == tilingData_->sLoop - 1 ? tilingData_->sDim - sIdx * tilingData_->ubFactorS : tilingData_->ubFactorS;
-        int64_t inDimA =
-            aIdx == tilingData_->aLoop - 1 ? tilingData_->aDim - aIdx * tilingData_->ubFactorA : tilingData_->ubFactorA;
-        
+        int64_t inDimB = bIdx == tilingData_->bLoop - 1 ? tilingData_->bDim - bIdx * tilingData_->ubFactorB :
+                                                          tilingData_->ubFactorB;
+        int64_t inDimS = sIdx == tilingData_->sLoop - 1 ? tilingData_->sDim - sIdx * tilingData_->ubFactorS :
+                                                          tilingData_->ubFactorS;
+        int64_t inDimA = aIdx == tilingData_->aLoop - 1 ? tilingData_->aDim - aIdx * tilingData_->ubFactorA :
+                                                          tilingData_->ubFactorA;
+
         int64_t bStart = bIdx * tilingData_->ubFactorB;
         int64_t sStart = sIdx * tilingData_->ubFactorS;
         int64_t aStart = aIdx * tilingData_->ubFactorA;
@@ -184,7 +188,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::BaseCompute()
 }
 
 template <typename T, typename SeqType>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::CopyInMultiDim(int64_t offset, int64_t blockCount, int64_t blockLen)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::CopyInMultiDim(int64_t offset, int64_t blockCount,
+                                                                      int64_t blockLen)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     int64_t alignBlockLen = ops::Aligned(blockLen, eleBlk_);
@@ -204,7 +209,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::CopyInMultiDim(int64_t of
 }
 
 template <typename T, typename SeqType>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::CopyOutMultiDim(int64_t offset, int64_t blockCount, int64_t blockLen)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::CopyOutMultiDim(int64_t offset, int64_t blockCount,
+                                                                       int64_t blockLen)
 {
     DataCopyExtParams copyExtParams;
     int64_t alignBlockLen = ops::Aligned(blockLen, eleBlk_);
@@ -247,7 +253,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::CopyOutSingleDim(int64_t 
 template <typename T, typename SeqType>
 __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GetCurrentSeqLength(int64_t bStart)
 {
-   if (bStart_ != bStart) {
+    if (bStart_ != bStart) {
         bStart_ = bStart;
         seqLen_ = static_cast<int64_t>(seqGm_.GetValue(bStart_));
     } else {
@@ -262,8 +268,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GetCurrentSeqLength(int64
 }
 
 template <typename T, typename SeqType>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitA(
-    int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t aStart, int64_t dimANum)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitA(int64_t srcOffset, int64_t bStart, int64_t sStart,
+                                                                     int64_t aStart, int64_t dimANum)
 {
     CopyInSingleDim(srcOffset, dimANum);
     GetCurrentSeqLength(bStart);
@@ -278,34 +284,33 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitA(
 
 template <typename T, typename SeqType>
 template <typename U, int64_t GatherMode>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitS(
-    int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t dimSNum)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitS(int64_t srcOffset, int64_t bStart, int64_t sStart,
+                                                                     int64_t dimSNum)
 {
     GetCurrentSeqLength(bStart);
     if constexpr (GatherMode == GATHER_DIM_S) {
         // 小于seq_len部分 gather
         if (sStart + dimSNum < seqLen_) {
-            ComputeSplitSGatherSmallA<U>(srcOffset, bStart, sStart,  dimSNum);
+            ComputeSplitSGatherSmallA<U>(srcOffset, bStart, sStart, dimSNum);
         } else if (sStart >= seqLen_) {
             //直接搬入搬出
             ComputeSplitSCopyA(srcOffset, dimSNum);
         } else {
             int64_t reverseDims = seqLen_ - sStart;
-            ComputeSplitSGatherSmallA<U>(srcOffset, bStart, sStart,  reverseDims);
+            ComputeSplitSGatherSmallA<U>(srcOffset, bStart, sStart, reverseDims);
             int64_t copyDims = dimSNum - reverseDims;
             int64_t offset = srcOffset + reverseDims * tilingData_->aDim;
             ComputeSplitSCopyA(offset, copyDims);
-
         }
     } else {
         if (sStart + dimSNum < seqLen_) {
-            ComputeSplitSReverseBigA(srcOffset, bStart, sStart,  dimSNum);
+            ComputeSplitSReverseBigA(srcOffset, bStart, sStart, dimSNum);
         } else if (sStart >= seqLen_) {
             //直接搬入搬出
             ComputeSplitSCopyA(srcOffset, dimSNum);
         } else {
             int64_t reverseDims = seqLen_ - sStart;
-            ComputeSplitSReverseBigA(srcOffset, bStart, sStart,  reverseDims);
+            ComputeSplitSReverseBigA(srcOffset, bStart, sStart, reverseDims);
             int64_t copyDims = dimSNum - reverseDims;
             int64_t offset = srcOffset + reverseDims * tilingData_->aDim;
             ComputeSplitSCopyA(offset, copyDims);
@@ -315,8 +320,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitS(
 
 template <typename T, typename SeqType>
 template <typename U>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenDimSGatherIndex(
-    int64_t reverseLen, int64_t stride, LocalTensor<U>& indexLocal)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenDimSGatherIndex(int64_t reverseLen, int64_t stride,
+                                                                          LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
 
@@ -346,21 +351,21 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenDimSGatherIndex(
 
             MicroAPI::Div(vd1, v0, v1, p0);
             MicroAPI::Sub(vd2, v2, vd1, p0);
-            MicroAPI::Sub(vd3, vd2, v3, p0); 
+            MicroAPI::Sub(vd3, vd2, v3, p0);
             MicroAPI::Mul(vd4, vd3, v1, p0); // (dimSNum - i/ dimA - 1) * stride
 
             MicroAPI::Mul(vd5, vd1, v1, p0);
             MicroAPI::Sub(vd6, v0, vd5, p0); // i % dimA
             MicroAPI::Add(vd7, vd4, vd6, p0);
-            MicroAPI::DataCopy(dstAddr  + i * repeatNum, vd7, p0);
+            MicroAPI::DataCopy(dstAddr + i * repeatNum, vd7, p0);
         }
     }
 }
 
 template <typename T, typename SeqType>
 template <typename U>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA(
-    int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t dimSNum)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA(int64_t srcOffset, int64_t bStart,
+                                                                                 int64_t sStart, int64_t dimSNum)
 {
     CopyInMultiDim(srcOffset, 1, dimSNum * tilingData_->aDim);
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
@@ -376,7 +381,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA
     __VEC_SCOPE__
     {
         using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                              MicroAPI::RegTensor<T>>::type;
+                                                  MicroAPI::RegTensor<T>>::type;
         using gatherType = typename GetGatherType<T>::type;
         uint32_t updateNum = totalNum;
         uint32_t updateNumB8 = totalNum;
@@ -401,7 +406,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSGatherSmallA
     }
     inputQue_.FreeTensor(xLocal);
     outQue_.EnQue(yLocal);
-    int64_t outOffset = bStart * tilingData_->sDim * tilingData_->aDim + (seqLen_ - dimSNum - sStart) * tilingData_->aDim;
+    int64_t outOffset = bStart * tilingData_->sDim * tilingData_->aDim +
+                        (seqLen_ - dimSNum - sStart) * tilingData_->aDim;
     CopyOutMultiDim(outOffset, 1, dimSNum * tilingData_->aDim);
 }
 
@@ -433,8 +439,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSCopyA(int64_
 }
 
 template <typename T, typename SeqType>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSReverseBigA(
-    int64_t srcOffset, int64_t bStart, int64_t sStart, int64_t dimSNum)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSReverseBigA(int64_t srcOffset, int64_t bStart,
+                                                                                int64_t sStart, int64_t dimSNum)
 {
     CopyInMultiDim(srcOffset, dimSNum, tilingData_->aDim);
     LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
@@ -466,14 +472,15 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitSReverseBigA(
     }
     inputQue_.FreeTensor(xLocal);
     outQue_.EnQue(yLocal);
-    int64_t outOffset = bStart * tilingData_->sDim * tilingData_->aDim + (seqLen_ - dimSNum - sStart) * tilingData_->aDim;
+    int64_t outOffset = bStart * tilingData_->sDim * tilingData_->aDim +
+                        (seqLen_ - dimSNum - sStart) * tilingData_->aDim;
     CopyOutMultiDim(outOffset, dimSNum, tilingData_->aDim);
 }
 
 template <typename T, typename SeqType>
 template <typename U>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenGatherDimBIndex(
-    int64_t notReverseLen, int64_t seqLen, int64_t stride, LocalTensor<U>& indexLocal)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenGatherDimBIndex(int64_t notReverseLen, int64_t seqLen,
+                                                                          int64_t stride, LocalTensor<U>& indexLocal)
 {
     auto dstAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     auto dstAddr1 = dstAddr + seqLen * stride;
@@ -500,7 +507,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenGatherDimBIndex(
         MicroAPI::RegTensor<U> v2;
         MicroAPI::RegTensor<U> vOne;
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(updateNum);;
+            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(updateNum);
+            ;
             MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * repeatNum);
             MicroAPI::Duplicate(v1, (U)stride, p0);
             MicroAPI::Duplicate(v2, (U)seqLen, p0);
@@ -513,7 +521,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::GenGatherDimBIndex(
             // i % dimA
             MicroAPI::Sub(vd6, v0, vd5, p0);
             MicroAPI::Add(vd7, vd4, vd6, p0);
-            MicroAPI::DataCopy(dstAddr  + i * repeatNum, vd7, p0);
+            MicroAPI::DataCopy(dstAddr + i * repeatNum, vd7, p0);
         }
 
         MicroAPI::RegTensor<U> v5;
@@ -553,12 +561,12 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitB(int64_t src
         outQue_.EnQue(yLocal);
         CopyOutMultiDim(srcOffset, dimBNum, tilingData_->aDim * tilingData_->sDim);
     } else {
-        CopyInMultiDim(srcOffset, dimBNum * tilingData_->sDim, tilingData_->aDim);  //A对齐拷入拷出
+        CopyInMultiDim(srcOffset, dimBNum * tilingData_->sDim, tilingData_->aDim); // A对齐拷入拷出
         LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
         LocalTensor<T> xLocal = inputQue_.DeQue<T>();
         __local_mem__ int8_t* xLocalAddr = (__local_mem__ int8_t*)xLocal.GetPhyAddr();
         __local_mem__ int8_t* yLocalAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
-        int32_t dimBStride = tilingData_->sDim *ops::Aligned(tilingData_->aDim * tilingData_->dtypeSize, ubBlockSize_);
+        int32_t dimBStride = tilingData_->sDim * ops::Aligned(tilingData_->aDim * tilingData_->dtypeSize, ubBlockSize_);
         for (int64_t i = 0; i < dimBNum; i++) {
             GetCurrentSeqLength(bStart + i);
             auto srcAddr = xLocalAddr + i * dimBStride;
@@ -573,8 +581,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitB(int64_t src
 
 template <typename T, typename SeqType>
 template <typename U>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(
-    __local_mem__ T* srcAddr, __local_mem__ T* dstAddr, int32_t totalNum)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(__local_mem__ T* srcAddr,
+                                                                           __local_mem__ T* dstAddr, int32_t totalNum)
 {
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
@@ -586,7 +594,7 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(
     __VEC_SCOPE__
     {
         using RegDstT = typename std::conditional<sizeof(T) == B64, MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo>,
-                                      MicroAPI::RegTensor<T>>::type;
+                                                  MicroAPI::RegTensor<T>>::type;
         using gatherType = typename GetGatherType<T>::type;
         uint32_t updateNum = gatherNum;
         MicroAPI::RegTensor<U> v0;
@@ -611,8 +619,8 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBGather(
 }
 
 template <typename T, typename SeqType>
-__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(
-    __local_mem__ int8_t* srcAddr, __local_mem__ int8_t* dstAddr)
+__aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(__local_mem__ int8_t* srcAddr,
+                                                                              __local_mem__ int8_t* dstAddr)
 {
     uint16_t repeatNum = platform::GetVRegSize();
     uint32_t dimASize = tilingData_->aDim * tilingData_->dtypeSize;
@@ -649,6 +657,6 @@ __aicore__ inline void ReverseSequenceBSA<T, SeqType>::ComputeSplitBNotGather(
         }
     }
 }
-}
+} // namespace ReverseSequence
 
 #endif

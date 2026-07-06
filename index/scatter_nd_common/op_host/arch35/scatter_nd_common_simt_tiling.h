@@ -20,13 +20,10 @@
 
 namespace optiling {
 
-class ScatterNdCommonSimtTiling : public ScatterNdCommonBaseTiling
-{
+class ScatterNdCommonSimtTiling : public ScatterNdCommonBaseTiling {
 public:
-    explicit ScatterNdCommonSimtTiling(gert::TilingContext* context) : ScatterNdCommonBaseTiling(context)
-    {}
-    ~ScatterNdCommonSimtTiling() override
-    {}
+    explicit ScatterNdCommonSimtTiling(gert::TilingContext* context) : ScatterNdCommonBaseTiling(context) {}
+    ~ScatterNdCommonSimtTiling() override {}
 
 protected:
     bool IsCapable() override;

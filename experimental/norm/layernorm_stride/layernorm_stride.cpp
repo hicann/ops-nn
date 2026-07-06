@@ -35,9 +35,8 @@ class LayerNormStride {
 public:
     __aicore__ inline LayerNormStride() {}
 
-    __aicore__ inline void Init(
-        const int64_t gbH, const int64_t gbW, const int64_t stride, const float epsilon, GM_ADDR in, GM_ADDR gamma,
-        GM_ADDR beta, GM_ADDR out)
+    __aicore__ inline void Init(const int64_t gbH, const int64_t gbW, const int64_t stride, const float epsilon,
+                                GM_ADDR in, GM_ADDR gamma, GM_ADDR beta, GM_ADDR out)
     {
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
@@ -209,9 +208,9 @@ private:
     int64_t stride_;
 };
 
-extern "C" __global__ __aicore__ void ComputeLayernormStride(
-    const int64_t gbH, const int64_t gbW, const int64_t stride, const float epsilon, GM_ADDR in, GM_ADDR gamma,
-    GM_ADDR beta, GM_ADDR out, int32_t dtype)
+extern "C" __global__ __aicore__ void ComputeLayernormStride(const int64_t gbH, const int64_t gbW, const int64_t stride,
+                                                             const float epsilon, GM_ADDR in, GM_ADDR gamma,
+                                                             GM_ADDR beta, GM_ADDR out, int32_t dtype)
 {
 #if __NPU_ARCH__ == 2201
     TYPE_SWITCH(dtype, T, {
@@ -222,9 +221,9 @@ extern "C" __global__ __aicore__ void ComputeLayernormStride(
 #endif
 }
 
-void LayerNormStrideKernelLaunch(
-    int64_t blockDim, void* stream, const int64_t gbH, const int64_t gbW, const int64_t stride, const float epsilon,
-    uint8_t* in, uint8_t* gamma, uint8_t* beta, uint8_t* out, int32_t dtype)
+void LayerNormStrideKernelLaunch(int64_t blockDim, void* stream, const int64_t gbH, const int64_t gbW,
+                                 const int64_t stride, const float epsilon, uint8_t* in, uint8_t* gamma, uint8_t* beta,
+                                 uint8_t* out, int32_t dtype)
 {
     if (gbH < blockDim) {
         blockDim = gbH;
@@ -260,8 +259,8 @@ int JudgeLayerNormStrideLaunch(const int64_t gbW, const int64_t ubSize)
 
     float useByte = BUFFER_NUM * bkH_ * bkAlignW_ * sizeof(half) * 2;
     useByte += BUFFER_NUM * bkAlignW_ * sizeof(half) * 2;
-    useByte +=
-        (WORK_LOCAL_SIZE + 16 + 2 * bkAlignW_) * sizeof(float); // bf16 增加 2* bkAlignW_ * sizeof(bfloat16_t) tbuf
+    useByte += (WORK_LOCAL_SIZE + 16 + 2 * bkAlignW_) *
+               sizeof(float); // bf16 增加 2* bkAlignW_ * sizeof(bfloat16_t) tbuf
 
     if (useByte > ubSize) {
         std::cout << __FUNCTION__ << ": "
@@ -272,9 +271,8 @@ int JudgeLayerNormStrideLaunch(const int64_t gbW, const int64_t ubSize)
     return 0;
 }
 
-int LayerNormStrideLaunch(
-    int64_t blockDim, void* stream, const int64_t gbH, const int64_t gbW, const int64_t stride, const float epsilon,
-    uint8_t* in, uint8_t* gamma, uint8_t* beta, uint8_t* out, int32_t dtype)
+int LayerNormStrideLaunch(int64_t blockDim, void* stream, const int64_t gbH, const int64_t gbW, const int64_t stride,
+                          const float epsilon, uint8_t* in, uint8_t* gamma, uint8_t* beta, uint8_t* out, int32_t dtype)
 {
     int64_t ubSize = 184 * 1024;
 
@@ -289,36 +287,31 @@ int LayerNormStrideLaunch(
     return 1;
 }
 
-int64_t LayerNormStrideNpu(
-    int64_t blockDim, const int64_t hiddenDim, const double epsilon, torch::Tensor& in, torch::Tensor& gamma,
-    torch::Tensor& beta, torch::Tensor& out)
+int64_t LayerNormStrideNpu(int64_t blockDim, const int64_t hiddenDim, const double epsilon, torch::Tensor& in,
+                           torch::Tensor& gamma, torch::Tensor& beta, torch::Tensor& out)
 {
     TORCH_CHECK(torch_npu::utils::is_npu(in), "input tensor must be on NPU device");
     TORCH_CHECK(torch_npu::utils::is_npu(gamma), "gama tensor must be on NPU device");
     TORCH_CHECK(torch_npu::utils::is_npu(beta), "beta tensor must be on NPU device");
     TORCH_CHECK(torch_npu::utils::is_npu(out), "output tensor must be on NPU device");
-    TORCH_CHECK(
-        in.scalar_type() == at::kBFloat16 || in.scalar_type() == at::kHalf,
-        "dtype of input tensor is invalid, only BF16 or FP16 is supported.");
-    TORCH_CHECK(
-        gamma.scalar_type() == at::kBFloat16 || gamma.scalar_type() == at::kHalf,
-        "dtype of gamma tensor is invalid, only BF16 or FP16 is supported.");
-    TORCH_CHECK(
-        beta.scalar_type() == at::kBFloat16 || beta.scalar_type() == at::kHalf,
-        "dtype of beta tensor is invalid, only BF16 or FP16 is supported.");
-    TORCH_CHECK(
-        out.scalar_type() == at::kBFloat16 || out.scalar_type() == at::kHalf,
-        "dtype of output tensor is invalid, only BF16 or FP16 is supported.");
+    TORCH_CHECK(in.scalar_type() == at::kBFloat16 || in.scalar_type() == at::kHalf,
+                "dtype of input tensor is invalid, only BF16 or FP16 is supported.");
+    TORCH_CHECK(gamma.scalar_type() == at::kBFloat16 || gamma.scalar_type() == at::kHalf,
+                "dtype of gamma tensor is invalid, only BF16 or FP16 is supported.");
+    TORCH_CHECK(beta.scalar_type() == at::kBFloat16 || beta.scalar_type() == at::kHalf,
+                "dtype of beta tensor is invalid, only BF16 or FP16 is supported.");
+    TORCH_CHECK(out.scalar_type() == at::kBFloat16 || out.scalar_type() == at::kHalf,
+                "dtype of output tensor is invalid, only BF16 or FP16 is supported.");
     TORCH_CHECK(blockDim > 0, "blockDim must be greater than 0");
     TORCH_CHECK(hiddenDim > 0, "hiddenDim must be greater than 0");
 
     auto stream = c10_npu::getCurrentNPUStream().stream(false);
     int launchStatus = 0;
     auto aclCall = [=, &launchStatus]() -> int {
-        launchStatus = LayerNormStrideLaunch(
-            blockDim, stream, in.size(0) * in.size(1), hiddenDim, in.size(2), epsilon, (uint8_t*)in.data_ptr(),
-            (uint8_t*)gamma.data_ptr(), (uint8_t*)beta.data_ptr(), (uint8_t*)out.data_ptr(),
-            in.scalar_type() == at::kHalf ? 1 : 27);
+        launchStatus = LayerNormStrideLaunch(blockDim, stream, in.size(0) * in.size(1), hiddenDim, in.size(2), epsilon,
+                                             (uint8_t*)in.data_ptr(), (uint8_t*)gamma.data_ptr(),
+                                             (uint8_t*)beta.data_ptr(), (uint8_t*)out.data_ptr(),
+                                             in.scalar_type() == at::kHalf ? 1 : 27);
         return 0;
     };
     at_npu::native::OpCommand::RunOpApi("layerNormStride", aclCall);

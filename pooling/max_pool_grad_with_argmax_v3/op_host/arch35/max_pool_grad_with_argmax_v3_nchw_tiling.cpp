@@ -50,10 +50,7 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::DoOpTiling()
     return nchwTilingCommon.DoOpTiling(context_, GetTilingKey());
 }
 
-ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::PostTiling()
-{
-    return nchwTilingCommon.PostTiling(context_);
-}
+ge::graphStatus MaxPoolGradWithArgmaxV3NCHWTiling::PostTiling() { return nchwTilingCommon.PostTiling(context_); }
 
 REGISTER_OPS_TILING_TEMPLATE(MaxPoolGradWithArgmaxV3, MaxPoolGradWithArgmaxV3NCHWTiling, 2);
 

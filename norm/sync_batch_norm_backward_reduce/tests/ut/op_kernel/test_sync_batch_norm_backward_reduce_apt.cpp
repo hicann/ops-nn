@@ -1,12 +1,12 @@
 /**
-* Copyright (c) 2025 Huawei Technologies Co., Ltd.
-* This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-* CANN Open Software License Agreement Version 2.0 (the "License").
-* Please refer to the License for details. You may not use this file except in compliance with the License.
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-* INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
-* See LICENSE in the root of the software repository for the full text of the License.
-*/
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 #include <array>
 #include <vector>
 #include <iostream>
@@ -18,9 +18,9 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void sync_batch_norm_backward_reduce(
-    GM_ADDR sumDy, GM_ADDR sumDyDxPad, GM_ADDR mean, GM_ADDR invertStd, GM_ADDR sumDyXmu, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void sync_batch_norm_backward_reduce(GM_ADDR sumDy, GM_ADDR sumDyDxPad, GM_ADDR mean,
+                                                                      GM_ADDR invertStd, GM_ADDR sumDyXmu, GM_ADDR y,
+                                                                      GM_ADDR workspace, GM_ADDR tiling);
 
 struct EleBaseTilingData {
     int64_t dim0;
@@ -40,19 +40,12 @@ struct SyncBatchNormBackwardReduceTilingData {
     EleBaseTilingData baseTiling;
 };
 
-class sync_batch_norm_backward_reduce_test : public testing::Test
-{
+class sync_batch_norm_backward_reduce_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sync_batch_norm_backward_reduce_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sync_batch_norm_backward_reduce_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sync_batch_norm_backward_reduce_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sync_batch_norm_backward_reduce_test TearDown\n" << endl; }
 };
- 
+
 TEST_F(sync_batch_norm_backward_reduce_test, test_case_fp32_1)
 {
     size_t dataLen = 100;
@@ -70,12 +63,12 @@ TEST_F(sync_batch_norm_backward_reduce_test, test_case_fp32_1)
     uint8_t* invertStd = (uint8_t*)AscendC::GmAlloc(invertStdByteSize);
     uint8_t* sumDyXmu = (uint8_t*)AscendC::GmAlloc(sumDyXmuByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
     uint32_t blockDim = 1;
 
-    SyncBatchNormBackwardReduceTilingData* tilingDatafromBin = 
-        reinterpret_cast<SyncBatchNormBackwardReduceTilingData*>(tiling);
+    SyncBatchNormBackwardReduceTilingData* tilingDatafromBin = reinterpret_cast<SyncBatchNormBackwardReduceTilingData*>(
+        tiling);
 
     tilingDatafromBin->baseTiling.dim0 = 100;
     tilingDatafromBin->baseTiling.coreNum = 1;
@@ -91,8 +84,8 @@ TEST_F(sync_batch_norm_backward_reduce_test, test_case_fp32_1)
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(sync_batch_norm_backward_reduce, blockDim, sumDy, sumDyDxPad, mean, invertStd, sumDyXmu, y,
-                workspace, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(sync_batch_norm_backward_reduce, blockDim, sumDy, sumDyDxPad, mean, invertStd, sumDyXmu, y, workspace,
+                (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(sumDy);
     AscendC::GmFree(sumDyDxPad);

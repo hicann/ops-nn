@@ -19,25 +19,19 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(EluV2);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16
-};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
+                                                                              DataType::DT_BF16};
 
-static bool IsAiCoreSupport(const aclTensor* self)
-{
-    return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
-}
+static bool IsAiCoreSupport(const aclTensor* self) { return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
 // AICORE算子kernel
-static const aclTensor* EluV2AiCore(
-    const aclTensor* self, float alpha, float scale, float inputScale, aclTensor* out, aclOpExecutor* executor)
+static const aclTensor* EluV2AiCore(const aclTensor* self, float alpha, float scale, float inputScale, aclTensor* out,
+                                    aclOpExecutor* executor)
 {
     L0_DFX(EluV2AiCore, self, alpha, scale, inputScale, out);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(EluV2, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(alpha, scale, inputScale));
-    OP_CHECK(
-        ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluV2AiCore failed."),
-        return nullptr);
+    OP_CHECK(ret == ACL_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluV2AiCore failed."), return nullptr);
     return out;
 }
 const aclTensor* EluV2(const aclTensor* self, float alpha, float scale, float inputScale, aclOpExecutor* executor)
@@ -50,11 +44,8 @@ const aclTensor* EluV2(const aclTensor* self, float alpha, float scale, float in
         return nullptr;
     }
     aclTensor* out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), Format::FORMAT_ND);
-    OP_CHECK(
-        out != nullptr,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluV2: AllocTensor for output failed."),
-        return nullptr);
+    OP_CHECK(out != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "EluV2: AllocTensor for output failed."), return nullptr);
 
-    return EluV2AiCore(self, alpha, scale, inputScale, out, executor);    
+    return EluV2AiCore(self, alpha, scale, inputScale, out, executor);
 }
 } // namespace l0op

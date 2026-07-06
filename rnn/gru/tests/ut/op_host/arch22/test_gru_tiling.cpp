@@ -35,7 +35,8 @@ protected:
 // ==================== 正例 ====================
 
 // 正例1: 定长FP16，有偏置，有init_h，3D输入
-TEST_F(GruTiling, case_fixed_length_fp16_with_bias_init_h) {
+TEST_F(GruTiling, case_fixed_length_fp16_with_bias_init_h)
+{
     int64_t T = 4;
     int64_t B = 2;
     int64_t I = 128;
@@ -43,21 +44,21 @@ TEST_F(GruTiling, case_fixed_length_fp16_with_bias_init_h) {
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},           // x
+        {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // x
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{gateNum * H}, {gateNum * H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // bi
         {{{gateNum * H}, {gateNum * H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // bh
         {{{}, {}}, ge::DT_INT64, ge::FORMAT_ND},                               // batch_sizes (absent)
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // init_h
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // init_h
     };
     std::vector<TensorDesc> outputs = {
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // output_h
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // r
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // z
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // output_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // r
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // z
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -65,17 +66,16 @@ TEST_F(GruTiling, case_fixed_length_fp16_with_bias_init_h) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceBiasInitH, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceBiasInitH, kOutputIrInstance,
+                                 &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
     uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
 // 正例2: 定长FP32，无偏置，无init_h，3D输入
-TEST_F(GruTiling, case_fixed_length_fp32_no_bias_no_init_h) {
+TEST_F(GruTiling, case_fixed_length_fp32_no_bias_no_init_h)
+{
     int64_t T = 3;
     int64_t B = 4;
     int64_t I = 64;
@@ -86,18 +86,18 @@ TEST_F(GruTiling, case_fixed_length_fp32_no_bias_no_init_h) {
         {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT, ge::FORMAT_ND},               // x
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // wh
-        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                              // bi (absent)
-        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                              // bh (absent)
-        {{{}, {}}, ge::DT_INT64, ge::FORMAT_ND},                              // batch_sizes (absent)
-        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                              // init_h (absent)
+        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                             // bi (absent)
+        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                             // bh (absent)
+        {{{}, {}}, ge::DT_INT64, ge::FORMAT_ND},                             // batch_sizes (absent)
+        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                             // init_h (absent)
     };
     std::vector<TensorDesc> outputs = {
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // output_h
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // r
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // z
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // n
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // n_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // output_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // r
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // z
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // n
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -105,17 +105,16 @@ TEST_F(GruTiling, case_fixed_length_fp32_no_bias_no_init_h) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceNoOpt, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceNoOpt, kOutputIrInstance, &compileInfo,
+                                 "Ascend910B", 1U, 262144ULL, 8192);
 
     uint64_t expectTilingKey = 1; // GRU_TPL_MM_FP32_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
 // 正例3: 不定长(PackedSequence) FP16，有偏置，有batch_sizes，2D输入
-TEST_F(GruTiling, case_variable_length_fp16_with_bias) {
+TEST_F(GruTiling, case_variable_length_fp16_with_bias)
+{
     int64_t totalSteps = 10;
     int64_t B = 3;
     int64_t I = 64;
@@ -124,7 +123,7 @@ TEST_F(GruTiling, case_variable_length_fp16_with_bias) {
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{totalSteps, I}, {totalSteps, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // x (2D)
+        {{{totalSteps, I}, {totalSteps, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},   // x (2D)
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{gateNum * H}, {gateNum * H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // bi
@@ -133,12 +132,12 @@ TEST_F(GruTiling, case_variable_length_fp16_with_bias) {
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // init_h (absent)
     };
     std::vector<TensorDesc> outputs = {
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // output_h
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // r
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // z
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // n
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // n_h
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},             // output_h
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // r
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // z
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -146,17 +145,16 @@ TEST_F(GruTiling, case_variable_length_fp16_with_bias) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceBiasBatchSz, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceBiasBatchSz, kOutputIrInstance,
+                                 &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
     uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
 // 正例4: 不定长(PackedSequence) FP32，无偏置，无init_h，2D输入
-TEST_F(GruTiling, case_variable_length_fp32_no_bias_no_init_h) {
+TEST_F(GruTiling, case_variable_length_fp32_no_bias_no_init_h)
+{
     int64_t totalSteps = 8;
     int64_t B = 4;
     int64_t I = 32;
@@ -168,18 +166,18 @@ TEST_F(GruTiling, case_variable_length_fp32_no_bias_no_init_h) {
         {{{totalSteps, I}, {totalSteps, I}}, ge::DT_FLOAT, ge::FORMAT_ND},   // x (2D)
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // wh
-        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                              // bi (absent)
-        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                              // bh (absent)
-        {{{T}, {T}}, ge::DT_INT64, ge::FORMAT_ND},                            // batch_sizes
-        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                              // init_h (absent)
+        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                             // bi (absent)
+        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                             // bh (absent)
+        {{{T}, {T}}, ge::DT_INT64, ge::FORMAT_ND},                           // batch_sizes
+        {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                             // init_h (absent)
     };
     std::vector<TensorDesc> outputs = {
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND},   // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},               // output_h
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND},   // r
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND},   // z
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND},   // n
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND},   // n_h
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT, ge::FORMAT_ND},             // output_h
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // r
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // z
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // n
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -187,17 +185,16 @@ TEST_F(GruTiling, case_variable_length_fp32_no_bias_no_init_h) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceBatchSzOnly, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceBatchSzOnly, kOutputIrInstance,
+                                 &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
     uint64_t expectTilingKey = 1; // GRU_TPL_MM_FP32_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
 // 正例5: 定长FP16，无偏置，有init_h，3D输入
-TEST_F(GruTiling, case_fixed_length_fp16_no_bias_with_init_h) {
+TEST_F(GruTiling, case_fixed_length_fp16_no_bias_with_init_h)
+{
     int64_t T = 2;
     int64_t B = 3;
     int64_t I = 32;
@@ -205,21 +202,21 @@ TEST_F(GruTiling, case_fixed_length_fp16_no_bias_with_init_h) {
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},           // x
+        {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // x
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // bi (absent)
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // bh (absent)
         {{{}, {}}, ge::DT_INT64, ge::FORMAT_ND},                               // batch_sizes (absent)
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // init_h
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // init_h
     };
     std::vector<TensorDesc> outputs = {
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // output_h
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // r
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // z
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // output_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // r
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // z
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -227,17 +224,16 @@ TEST_F(GruTiling, case_fixed_length_fp16_no_bias_with_init_h) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceNoOpt, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceNoOpt, kOutputIrInstance, &compileInfo,
+                                 "Ascend910B", 1U, 262144ULL, 8192);
 
     uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
 // 正例6: 定长FP16，双向(BIDIRECTIONAL)，有偏置，有init_h，3D输入
-TEST_F(GruTiling, case_fixed_length_bidirectional_fp16) {
+TEST_F(GruTiling, case_fixed_length_bidirectional_fp16)
+{
     int64_t T = 3;
     int64_t B = 2;
     int64_t I = 64;
@@ -245,21 +241,21 @@ TEST_F(GruTiling, case_fixed_length_bidirectional_fp16) {
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},           // x
+        {{{T, B, I}, {T, B, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // x
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{gateNum * H}, {gateNum * H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // bi
         {{{gateNum * H}, {gateNum * H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // bh
         {{{}, {}}, ge::DT_INT64, ge::FORMAT_ND},                               // batch_sizes (absent)
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // init_h
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // init_h
     };
     std::vector<TensorDesc> outputs = {
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // output_h
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // r
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // z
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // output_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // r
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // z
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("BIDIRECTIONAL"))},
@@ -267,10 +263,8 @@ TEST_F(GruTiling, case_fixed_length_bidirectional_fp16) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceBiasInitH, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceBiasInitH, kOutputIrInstance,
+                                 &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
     uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
@@ -279,13 +273,14 @@ TEST_F(GruTiling, case_fixed_length_bidirectional_fp16) {
 // ==================== 负例 ====================
 
 // 负例1: 输入x维度为1D（非法），期望GRAPH_FAILED
-TEST_F(GruTiling, case_invalid_input_dim_1d) {
+TEST_F(GruTiling, case_invalid_input_dim_1d)
+{
     int64_t I = 64;
     int64_t H = 128;
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{I}, {I}}, ge::DT_FLOAT16, ge::FORMAT_ND},                          // x (1D - invalid)
+        {{{I}, {I}}, ge::DT_FLOAT16, ge::FORMAT_ND},                           // x (1D - invalid)
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // bi (absent)
@@ -294,12 +289,12 @@ TEST_F(GruTiling, case_invalid_input_dim_1d) {
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // init_h (absent)
     };
     std::vector<TensorDesc> outputs = {
-        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},                    // y
-        {{{1, 1, H}, {1, 1, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},             // output_h
-        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},                    // r
-        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},                    // z
-        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},                    // n
-        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},                    // n_h
+        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // y
+        {{{1, 1, H}, {1, 1, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // output_h
+        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // r
+        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // z
+        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // n
+        {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -307,16 +302,15 @@ TEST_F(GruTiling, case_invalid_input_dim_1d) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceNoOpt, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceNoOpt, kOutputIrInstance, &compileInfo,
+                                 "Ascend910B", 1U, 262144ULL, 8192);
 
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
 
 // 负例2: 输入x维度为4D（非法），期望GRAPH_FAILED
-TEST_F(GruTiling, case_invalid_input_dim_4d) {
+TEST_F(GruTiling, case_invalid_input_dim_4d)
+{
     int64_t T = 2;
     int64_t B = 3;
     int64_t I = 32;
@@ -324,7 +318,7 @@ TEST_F(GruTiling, case_invalid_input_dim_4d) {
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{T, B, I, 1}, {T, B, I, 1}}, ge::DT_FLOAT16, ge::FORMAT_ND},       // x (4D - invalid)
+        {{{T, B, I, 1}, {T, B, I, 1}}, ge::DT_FLOAT16, ge::FORMAT_ND},         // x (4D - invalid)
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // bi (absent)
@@ -333,12 +327,12 @@ TEST_F(GruTiling, case_invalid_input_dim_4d) {
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // init_h (absent)
     };
     std::vector<TensorDesc> outputs = {
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // y
-        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // output_h
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // r
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // z
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n
-        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // n_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // y
+        {{{1, B, H}, {1, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // output_h
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // r
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // z
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n
+        {{{T, B, H}, {T, B, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -346,23 +340,22 @@ TEST_F(GruTiling, case_invalid_input_dim_4d) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceNoOpt, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceNoOpt, kOutputIrInstance, &compileInfo,
+                                 "Ascend910B", 1U, 262144ULL, 8192);
 
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
 
 // 负例3: 2D输入但没有batch_sizes（不定长模式必须传batch_sizes），期望GRAPH_FAILED
-TEST_F(GruTiling, case_variable_length_no_batch_sizes) {
+TEST_F(GruTiling, case_variable_length_no_batch_sizes)
+{
     int64_t totalSteps = 10;
     int64_t I = 64;
     int64_t H = 128;
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{totalSteps, I}, {totalSteps, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // x (2D)
+        {{{totalSteps, I}, {totalSteps, I}}, ge::DT_FLOAT16, ge::FORMAT_ND},   // x (2D)
         {{{gateNum * H, I}, {gateNum * H, I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wi
         {{{gateNum * H, H}, {gateNum * H, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // wh
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // bi (absent)
@@ -371,12 +364,12 @@ TEST_F(GruTiling, case_variable_length_no_batch_sizes) {
         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},                             // init_h (absent)
     };
     std::vector<TensorDesc> outputs = {
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // y
-        {{{1, 1, H}, {1, 1, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},              // output_h
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // r
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // z
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // n
-        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},  // n_h
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // y
+        {{{1, 1, H}, {1, 1, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},             // output_h
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // r
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // z
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n
+        {{{totalSteps, H}, {totalSteps, H}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // n_h
     };
     std::vector<OpAttr> attrs = {
         {"direction", Ops::NN::AnyValue::CreateFrom(std::string("UNIDIRECTIONAL"))},
@@ -384,22 +377,21 @@ TEST_F(GruTiling, case_variable_length_no_batch_sizes) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        kInputIrInstanceNoOpt, kOutputIrInstance,
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, kInputIrInstanceNoOpt, kOutputIrInstance, &compileInfo,
+                                 "Ascend910B", 1U, 262144ULL, 8192);
 
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
 
 // 负例4: 输入个数不足（少于2个），期望GRAPH_FAILED
-TEST_F(GruTiling, case_insufficient_inputs) {
+TEST_F(GruTiling, case_insufficient_inputs)
+{
     int64_t I = 64;
     int64_t H = 128;
     int64_t gateNum = 3;
 
     std::vector<TensorDesc> inputs = {
-        {{{I}, {I}}, ge::DT_FLOAT16, ge::FORMAT_ND},                          // x only
+        {{{I}, {I}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // x only
     };
     std::vector<TensorDesc> outputs = {
         {{{I, H}, {I, H}}, ge::DT_FLOAT16, ge::FORMAT_ND},
@@ -410,10 +402,8 @@ TEST_F(GruTiling, case_insufficient_inputs) {
     };
 
     optiling::GruCompileInfo compileInfo{0};
-    gert::TilingContextPara para(
-        "Gru", inputs, outputs, attrs,
-        {1}, {1},
-        &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
+    gert::TilingContextPara para("Gru", inputs, outputs, attrs, {1}, {1}, &compileInfo, "Ascend910B", 1U, 262144ULL,
+                                 8192);
 
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }

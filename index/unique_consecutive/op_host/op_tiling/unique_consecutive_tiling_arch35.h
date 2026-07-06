@@ -18,8 +18,7 @@
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 
-namespace optiling
-{
+namespace optiling {
 BEGIN_TILING_DATA_DEF(UniqueConsecutiveTilingData)
 TILING_DATA_FIELD_DEF(int64_t, totalSize);
 TILING_DATA_FIELD_DEF(int64_t, useCoreNums);
@@ -45,12 +44,9 @@ struct UniqueConsecutiveCompileInfo {
     int32_t blockSize_ = 0;
 };
 
-class UniqueConsecutiveTilingHelper
-{
+class UniqueConsecutiveTilingHelper {
 public:
-    explicit UniqueConsecutiveTilingHelper(gert::TilingContext* context) : context_(context)
-    {
-    }
+    explicit UniqueConsecutiveTilingHelper(gert::TilingContext* context) : context_(context) {}
     ~UniqueConsecutiveTilingHelper() = default;
     bool DoTiling();
     void SetTilingDataAndTilingKeyAndWorkSpace(UniqueConsecutiveTilingData* tiling);
@@ -85,8 +81,8 @@ private:
     int64_t dtSizeX_{2};
     int64_t totalSize_{1};
     bool isInt64_{false};
-    
-    //UbTiling nums
+
+    // UbTiling nums
     int64_t adjUbTileLength_{1};
     int64_t tileLength_{1};
     int64_t valueQueueSize_{1};
@@ -111,6 +107,6 @@ private:
     int64_t debugOnlyMaxSingleCoreBytes_{1024};
 };
 
-}  // namespace optiling
+} // namespace optiling
 
-#endif  // UNIQUE_CONSECUTIVE_TILING_H
+#endif // UNIQUE_CONSECUTIVE_TILING_H

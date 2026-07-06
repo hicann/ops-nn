@@ -30,17 +30,10 @@
 
 namespace l0op {
 
-std::tuple<const aclTensor *, const aclTensor *, const aclTensor *> ApplyFtrl(
-    const aclTensor *varRef,
-    const aclTensor *accumRef,
-    const aclTensor *linearRef,
-    const aclTensor *grad,
-    const aclTensor *lr,
-    const aclTensor *l1,
-    const aclTensor *l2,
-    const aclTensor *lrPower,
-    aclOpExecutor *executor);
+std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> ApplyFtrl(
+    const aclTensor* varRef, const aclTensor* accumRef, const aclTensor* linearRef, const aclTensor* grad,
+    const aclTensor* lr, const aclTensor* l1, const aclTensor* l2, const aclTensor* lrPower, aclOpExecutor* executor);
 
-}  // namespace l0op
+} // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_APPLY_FTRL_H_
+#endif // OP_API_INC_LEVEL0_APPLY_FTRL_H_

@@ -31,20 +31,19 @@ const std::array<const aclTensor*, 2> SyncBatchNormGatherStatsWithCounts(
     const aclTensor* countSum, const aclTensor* runningVar, const float momentum, const float epsilon,
     aclOpExecutor* executor)
 {
-    L0_DFX(
-        SyncBatchNormGatherStatsWithCounts, meanAll, invstdAll, countAll, meanBroadcast, countSum, runningVar, momentum,
-        epsilon);
+    L0_DFX(SyncBatchNormGatherStatsWithCounts, meanAll, invstdAll, countAll, meanBroadcast, countSum, runningVar,
+           momentum, epsilon);
 
-    auto invstdOut = executor->AllocTensor(
-        Shape({invstdAll->GetViewShape()[1]}), invstdAll->GetDataType(), invstdAll->GetViewFormat());
-    auto runningVarOut =
-        executor->AllocTensor(runningVar->GetViewShape(), runningVar->GetDataType(), runningVar->GetViewFormat());
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        SyncBatchNormGatherStatsWithCounts, OP_INPUT(meanAll, invstdAll, countAll, meanBroadcast, countSum, runningVar),
-        OP_OUTPUT(invstdOut, runningVarOut), OP_ATTR(momentum, epsilon));
+    auto invstdOut = executor->AllocTensor(Shape({invstdAll->GetViewShape()[1]}), invstdAll->GetDataType(),
+                                           invstdAll->GetViewFormat());
+    auto runningVarOut = executor->AllocTensor(runningVar->GetViewShape(), runningVar->GetDataType(),
+                                               runningVar->GetViewFormat());
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SyncBatchNormGatherStatsWithCounts,
+                                           OP_INPUT(meanAll, invstdAll, countAll, meanBroadcast, countSum, runningVar),
+                                           OP_OUTPUT(invstdOut, runningVarOut), OP_ATTR(momentum, epsilon));
     if (ret != ACL_SUCCESS) {
-        OP_LOGE(
-            ACLNN_ERR_INNER_NULLPTR, "SyncBatchNormGatherStatsWithCountsAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                "SyncBatchNormGatherStatsWithCountsAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return {nullptr, nullptr};
     }
     return {invstdOut, runningVarOut};

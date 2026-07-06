@@ -32,9 +32,8 @@ class SwigluGroupQuantHifp8KernelBase {
 public:
     __aicore__ inline SwigluGroupQuantHifp8KernelBase() {}
 
-    __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y,
-                                    GM_ADDR yOrigin, GM_ADDR workspace,
-                                    const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe);
+    __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR yOrigin,
+                                    GM_ADDR workspace, const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe);
     __aicore__ inline void Process();
 
 protected:
@@ -49,8 +48,8 @@ protected:
 
     __aicore__ inline void CopyIn(int64_t tokenIdx, int64_t curTileTokens);
     __aicore__ inline void ComputeSwiGLU(LocalTensor<float>& xFloatLocalTensor, int64_t curTileTokens);
-    __aicore__ inline void QuantizeOut(LocalTensor<float>& xFloatLocalTensor, int64_t tokenIdx,
-                                       int64_t curTileTokens, float divScale);
+    __aicore__ inline void QuantizeOut(LocalTensor<float>& xFloatLocalTensor, int64_t tokenIdx, int64_t curTileTokens,
+                                       float divScale);
     __aicore__ inline void CopyOutOrigin(LocalTensor<float>& xFloatLocalTensor, int64_t tokenIdx,
                                          int64_t curTileTokens);
     __aicore__ inline void FillYZero(int64_t tokenStart, int64_t tokenEnd);
@@ -134,8 +133,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CalcMinLoadC
     int64_t minCoreIdx = 0;
     for (int64_t core = 0; core < usedCoreNum_; core++) {
         int64_t coreLoad = 0;
-        for (int64_t gg = coreGroupStartArr_[core];
-             gg < coreGroupStartArr_[core] + coreGroupCountArr_[core]; gg++) {
+        for (int64_t gg = coreGroupStartArr_[core]; gg < coreGroupStartArr_[core] + coreGroupCountArr_[core]; gg++) {
             coreLoad += groupIndexGm_.GetValue(gg);
         }
         if (coreLoad < minLoad) {
@@ -252,7 +250,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyIn(int64
     LocalTensor<T> xTLocalTensor = xQueue_.AllocTensor<T>();
     int64_t copySize = curTileTokens * dimH_;
     DataCopyParams copyParams(static_cast<uint32_t>(curTileTokens), static_cast<uint32_t>(dimH_) * sizeof(T),
-        static_cast<uint32_t>(dim2H_ - dimH_) * sizeof(T), 0);
+                              static_cast<uint32_t>(dim2H_ - dimH_) * sizeof(T), 0);
     DataCopyPadParams padParams{false, 0, 0, 0};
     int64_t x0GmOffset = tokenIdx * dim2H_;
     int64_t x1GmOffset = tokenIdx * dim2H_ + dimH_;
@@ -268,7 +266,8 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyIn(int64
         xTLocalTensor = xQueue_.DeQue<T>();
         LocalTensor<float> xFloatLocalTensor = xTLocalTensor.template ReinterpretCast<float>();
         Cast(xFloatLocalTensor, xTLocalTensor[fp16Base], RoundMode::CAST_NONE, static_cast<uint32_t>(copySize));
-        Cast(xFloatLocalTensor[tileLength_], xTLocalTensor[fp16Base + copySize], RoundMode::CAST_NONE, static_cast<uint32_t>(copySize));
+        Cast(xFloatLocalTensor[tileLength_], xTLocalTensor[fp16Base + copySize], RoundMode::CAST_NONE,
+             static_cast<uint32_t>(copySize));
         PipeBarrier<PIPE_V>();
         xQueue_.EnQue<float>(xFloatLocalTensor);
     }
@@ -284,7 +283,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyIn(int64
 
 template <typename Derived, typename T>
 __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ComputeSwiGLU(LocalTensor<float>& xFloatLocalTensor,
-    int64_t curTileTokens)
+                                                                                  int64_t curTileTokens)
 {
     int64_t computeSize = curTileTokens * dimH_;
 
@@ -327,15 +326,16 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ComputeSwiGL
 
 template <typename Derived, typename T>
 __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::QuantizeOut(LocalTensor<float>& xFloatLocalTensor,
-    int64_t tokenIdx, int64_t curTileTokens, float divScale)
+                                                                                int64_t tokenIdx, int64_t curTileTokens,
+                                                                                float divScale)
 {
     int64_t computeSize = curTileTokens * dimH_;
     WaitSToV();
     Muls(xFloatLocalTensor, xFloatLocalTensor, divScale, static_cast<uint32_t>(computeSize));
     PipeBarrier<PIPE_V>();
     LocalTensor<float> x0FloatLocalTensor = xFloatLocalTensor;
-    LocalTensor<hifloat8_t> x0TLocalTensor =
-        xFloatLocalTensor[tileLength_ * TMP_BUFFER_INDEX].template ReinterpretCast<hifloat8_t>();
+    LocalTensor<hifloat8_t> x0TLocalTensor = xFloatLocalTensor[tileLength_ * TMP_BUFFER_INDEX]
+                                                 .template ReinterpretCast<hifloat8_t>();
     Cast(x0TLocalTensor, x0FloatLocalTensor, RoundMode::CAST_ROUND, static_cast<uint32_t>(computeSize));
     WaitVToMte3();
     int64_t gmOffset = tokenIdx * dimH_;
@@ -346,7 +346,8 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::QuantizeOut(
 
 template <typename Derived, typename T>
 __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyOutOrigin(LocalTensor<float>& xFloatLocalTensor,
-    int64_t tokenIdx, int64_t curTileTokens)
+                                                                                  int64_t tokenIdx,
+                                                                                  int64_t curTileTokens)
 {
     int64_t gmOffset = tokenIdx * dimH_;
     int64_t copySize = curTileTokens * dimH_;
@@ -357,8 +358,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::CopyOutOrigi
         WaitVToMte3();
         DataCopyPad(yOriginGm_[gmOffset], x0FloatLocalTensor, outCopyParams);
     } else {
-        LocalTensor<T> x0TLocalTensor =
-            xFloatLocalTensor[tileLength_ * TMP_BUFFER_INDEX].template ReinterpretCast<T>();
+        LocalTensor<T> x0TLocalTensor = xFloatLocalTensor[tileLength_ * TMP_BUFFER_INDEX].template ReinterpretCast<T>();
         Cast(x0TLocalTensor, x0FloatLocalTensor, RoundMode::CAST_RINT, static_cast<uint32_t>(copySize));
         WaitVToMte3();
         DataCopyPad(yOriginGm_[gmOffset], x0TLocalTensor, outCopyParams);
@@ -372,8 +372,8 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::FillYZero(in
     LocalTensor<float> zeroFloatLocalTensor = xQueue_.AllocTensor<float>();
     Duplicate(zeroFloatLocalTensor, 0.0f, static_cast<uint32_t>(tileLength_));
     PipeBarrier<PIPE_V>();
-    LocalTensor<hifloat8_t> zeroHif8LocalTensor =
-        zeroFloatLocalTensor[tileLength_ * TMP_BUFFER_INDEX].template ReinterpretCast<hifloat8_t>();
+    LocalTensor<hifloat8_t> zeroHif8LocalTensor = zeroFloatLocalTensor[tileLength_ * TMP_BUFFER_INDEX]
+                                                      .template ReinterpretCast<hifloat8_t>();
     Cast(zeroHif8LocalTensor, zeroFloatLocalTensor, RoundMode::CAST_ROUND, static_cast<uint32_t>(tileLength_));
     WaitVToMte3();
 
@@ -391,7 +391,7 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::FillYZero(in
 
 template <typename Derived, typename T>
 __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ProcessOutputOrigin(int64_t tokenStart,
-    int64_t tokenEnd)
+                                                                                        int64_t tokenEnd)
 {
     int64_t tokenIdx = tokenStart;
     while (tokenIdx < tokenEnd) {
@@ -410,8 +410,8 @@ __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::ProcessOutpu
 
 template <typename Derived, typename T>
 __aicore__ inline void SwigluGroupQuantHifp8KernelBase<Derived, T>::InitBase(
-    GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR yOrigin,
-    GM_ADDR workspace, const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe)
+    GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR yOrigin, GM_ADDR workspace,
+    const SwigluGroupQuantHifp8TilingData* tilingData, TPipe* pipe)
 {
     this->tilingData_ = tilingData;
     this->pipe_ = pipe;

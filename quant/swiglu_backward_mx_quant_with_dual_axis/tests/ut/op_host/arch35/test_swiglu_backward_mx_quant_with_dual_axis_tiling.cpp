@@ -27,25 +27,17 @@ using namespace std;
 
 class SwigluBackwardMxQuantWithDualAxisTilingTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "SwigluBackwardMxQuantWithDualAxisTilingTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "SwigluBackwardMxQuantWithDualAxisTilingTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "SwigluBackwardMxQuantWithDualAxisTilingTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "SwigluBackwardMxQuantWithDualAxisTilingTest TearDown" << std::endl; }
 };
 
-static void ExecuteTestCase(
-    ge::DataType xDtype, ge::DataType yGradDtype, ge::DataType y1Dtype, ge::DataType mxScale1Dtype,
-    ge::DataType y2Dtype, ge::DataType mxScale2Dtype,
-    gert::StorageShape xShape, gert::StorageShape yGradShape,
-    gert::StorageShape y1Shape, gert::StorageShape mxScale1Shape,
-    gert::StorageShape y2Shape, gert::StorageShape mxScale2Shape,
-    bool activate_left, const string& round_mode, int64_t dst_type, int64_t scale_alg,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType xDtype, ge::DataType yGradDtype, ge::DataType y1Dtype,
+                            ge::DataType mxScale1Dtype, ge::DataType y2Dtype, ge::DataType mxScale2Dtype,
+                            gert::StorageShape xShape, gert::StorageShape yGradShape, gert::StorageShape y1Shape,
+                            gert::StorageShape mxScale1Shape, gert::StorageShape y2Shape,
+                            gert::StorageShape mxScale2Shape, bool activate_left, const string& round_mode,
+                            int64_t dst_type, int64_t scale_alg, ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -75,7 +67,8 @@ static void ExecuteTestCase(
 
     auto kernel_holder = gert::KernelRunContextFaker()
                              .KernelIONum(2, 1)
-                             .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
                              .Outputs({&compile_info})
                              .Build();
 
@@ -83,8 +76,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", socversions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -107,11 +100,10 @@ static void ExecuteTestCase(
                       .NodeOutputTd(1, mxScale1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, y2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, mxScale2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activate_left)},
-                           {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)},
-                           {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scale_alg)},
-                           {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dst_type)}})
+                      .NodeAttrs({{"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(activate_left)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(round_mode)},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scale_alg)},
+                                  {"dst_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(dst_type)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -136,12 +128,9 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_fp16_to_fp8_e4m3
     gert::StorageShape mxScale1Shape = {{8, 128, 2}, {8, 128, 2}};
     gert::StorageShape y2Shape = {{8, 8192}, {8, 8192}};
     gert::StorageShape mxScale2Shape = {{1, 8192, 2}, {1, 8192, 2}};
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        true, "rint", 36, 1,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, true,
+                    "rint", 36, 1, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_bf16_to_fp8_e4m3fn)
@@ -152,12 +141,9 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_bf16_to_fp8_e4m3
     gert::StorageShape mxScale1Shape = {{4, 32, 2}, {4, 32, 2}};
     gert::StorageShape y2Shape = {{4, 2048}, {4, 2048}};
     gert::StorageShape mxScale2Shape = {{1, 2048, 2}, {1, 2048, 2}};
-    ExecuteTestCase(
-        ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        true, "rint", 36, 1,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, true,
+                    "rint", 36, 1, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_fp16_to_fp8_e4m3fn_scale_alg_1)
@@ -168,12 +154,9 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_fp16_to_fp8_e4m3
     gert::StorageShape mxScale1Shape = {{4, 64, 2}, {4, 64, 2}};
     gert::StorageShape y2Shape = {{4, 4096}, {4, 4096}};
     gert::StorageShape mxScale2Shape = {{1, 4096, 2}, {1, 4096, 2}};
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        true, "rint", 36, 1,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, true,
+                    "rint", 36, 1, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_bf16_to_fp8_e4m3fn_batch2)
@@ -184,12 +167,9 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_bf16_to_fp8_e4m3
     gert::StorageShape mxScale1Shape = {{2, 128, 16, 2}, {2, 128, 16, 2}};
     gert::StorageShape y2Shape = {{2, 128, 1024}, {2, 128, 1024}};
     gert::StorageShape mxScale2Shape = {{2, 2, 1024, 2}, {2, 2, 1024, 2}};
-    ExecuteTestCase(
-        ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        true, "rint", 36, 1,
-        ge::GRAPH_SUCCESS);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, true,
+                    "rint", 36, 1, ge::GRAPH_SUCCESS);
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_round_mode_fp8)
@@ -200,12 +180,9 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_round_mo
     gert::StorageShape mxScale1Shape = {{4, 64, 2}, {4, 64, 2}};
     gert::StorageShape y2Shape = {{4, 4096}, {4, 4096}};
     gert::StorageShape mxScale2Shape = {{1, 4096, 2}, {1, 4096, 2}};
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        false, "floor", 36, 1,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, false,
+                    "floor", 36, 1, ge::GRAPH_FAILED);
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_scale_alg_ocp)
@@ -216,12 +193,9 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_scale_al
     gert::StorageShape mxScale1Shape = {{4, 64, 2}, {4, 64, 2}};
     gert::StorageShape y2Shape = {{4, 4096}, {4, 4096}};
     gert::StorageShape mxScale2Shape = {{1, 4096, 2}, {1, 4096, 2}};
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        false, "rint", 36, 0,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, false,
+                    "rint", 36, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_dst_type)
@@ -232,10 +206,7 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_dst_type
     gert::StorageShape mxScale1Shape = {{4, 64, 2}, {4, 64, 2}};
     gert::StorageShape y2Shape = {{4, 4096}, {4, 4096}};
     gert::StorageShape mxScale2Shape = {{1, 4096, 2}, {1, 4096, 2}};
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
-        xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape,
-        false, "rint", 99, 1,
-        ge::GRAPH_FAILED);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, false,
+                    "rint", 99, 1, ge::GRAPH_FAILED);
 }

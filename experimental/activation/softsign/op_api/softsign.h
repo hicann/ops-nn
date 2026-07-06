@@ -9,7 +9,7 @@
  */
 
 /**
-  * NOTE: Portions of this code were AI-generated and have been
+ * NOTE: Portions of this code were AI-generated and have been
  * technically reviewed for functional accuracy and security
  */
 

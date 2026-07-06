@@ -56,11 +56,8 @@ __aicore__ inline void CopyOut(const GlobalTensor<T>& dstTensor, const LocalTens
 template <typename T, typename T_BETA, typename T_MEAN>
 class InstanceNormARWelford {
 public:
-    __aicore__ inline uint64_t CEIL_DIV(uint64_t x, uint64_t y)
-    {
-        return (y != 0) ? (x + y - 1) / y : 0;
-    }
-    
+    __aicore__ inline uint64_t CEIL_DIV(uint64_t x, uint64_t y) { return (y != 0) ? (x + y - 1) / y : 0; }
+
     __aicore__ inline InstanceNormARWelford(const InstanceNormARWelfordTilingData* tilingData)
     {
         this->r_ = tilingData->r;
@@ -70,13 +67,13 @@ public:
         this->blockNum_ = tilingData->blockNum;
         this->totalTiles_ = tilingData->totalTiles;
         this->tilesPerCore_ = tilingData->tilesPerCore;
-        this->a0Outer_ = tilingData->a0Outer; 
-        this->a0Inner_ = tilingData->a0Inner; 
-        this->a0Tail_ = tilingData->a0Tail; 
+        this->a0Outer_ = tilingData->a0Outer;
+        this->a0Inner_ = tilingData->a0Inner;
+        this->a0Tail_ = tilingData->a0Tail;
 
         this->welfordTileLength_ = tilingData->welfordTileLength;
         this->welfordUpdateTimes_ = tilingData->welfordUpdateTimes;
-        this->welfordUpdateTail_ = tilingData->welfordUpdateTail;   
+        this->welfordUpdateTail_ = tilingData->welfordUpdateTail;
         this->epsilon_ = tilingData->epsilon;
         this->welfordTempSize_ = tilingData->welfordTempSize;
         this->apiTempBufferSize_ = tilingData->apiTempBufferSize;
@@ -132,7 +129,7 @@ public:
         CaculateCountBuf(counts_);
 
         for (int64_t i = 0; i < processTileNum_; ++i) {
-            uint64_t aOffsetNow = aOffsetStart_ + i; 
+            uint64_t aOffsetNow = aOffsetStart_ + i;
             uint64_t a1Offest = aOffsetNow % a1_;
             uint64_t a0Offest = (aOffsetNow / a1_) * a0Inner_;
 
@@ -266,18 +263,21 @@ private:
             for (uint16_t i = 0; i < castLoops; i++) {
                 pregLoop = MicroAPI::UpdateMask<float>(castCount);
                 MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_variance, batchVarianceInAddr + VL_F32 * i);
+                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_variance,
+                                                                         batchVarianceInAddr + VL_F32 * i);
                 Cast<T_MEAN, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<T_MEAN, float, castTraitB322B16>(output_variance, input_variance, pregLoop);
-                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN *)batchMeanOutAddr + i * VL_MEAN), output_mean, pregLoop);
-                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN *)batchVarianceOutAddr + i * VL_MEAN), output_variance, pregLoop);
+                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN*)batchMeanOutAddr + i * VL_MEAN),
+                                                           output_mean, pregLoop);
+                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN*)batchVarianceOutAddr + i * VL_MEAN),
+                                                           output_variance, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void CopyoutMeanVarience(const int64_t elemCnt) 
+    __aicore__ inline void CopyoutMeanVarience(const int64_t elemCnt)
     {
-        if constexpr(!IsSameType<T_MEAN, float>::value) {
+        if constexpr (!IsSameType<T_MEAN, float>::value) {
             // float to bfloat16 or float16, input continue and output each repeat have only half value
             CastBatchMeanVariance(elemCnt);
             outQueueMean_.EnQue(meanTensor);
@@ -306,12 +306,14 @@ private:
                 copyInParamsTail.blockLen = tailSize * sizeof(T_MEAN);
                 copyInParamsTail.srcStride = 0;
                 copyInParamsTail.dstStride = 0;
-                DataCopyPad(meanGm_[meanGmOffset + castDmaLoops * VL_F32], meanTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
-                DataCopyPad(varianceGm_[meanGmOffset + castDmaLoops * VL_F32], varianceTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
+                DataCopyPad(meanGm_[meanGmOffset + castDmaLoops * VL_F32],
+                            meanTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
+                DataCopyPad(varianceGm_[meanGmOffset + castDmaLoops * VL_F32],
+                            varianceTensor[castDmaLoops * VL_F32].ReinterpretCast<T_MEAN>(), copyInParamsTail);
             }
             outQueueMean_.FreeTensor(meanTensor);
             outQueueVariance_.FreeTensor(varianceTensor);
-            } else {
+        } else {
             // Refresh Cache
             outQueueMean_.EnQue(meanTensor);
             meanTensor = outQueueMean_.template DeQue<float>();
@@ -416,11 +418,12 @@ private:
             Select(rstd, scalarZero, rstd, cmpRegZero);
             CompareScalar(cmpRegInf, var, float(0.0), pregOne);
             Select(rstd, scalarInf, rstd, cmpRegInf);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdTensorAddr + offset), rstd, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdTensorAddr + offset),
+                                                               rstd, pregOne);
         }
     }
 
-    __aicore__ inline void CopyInGammaBetta(const int64_t paramOffset, const int64_t elemCnt) 
+    __aicore__ inline void CopyInGammaBetta(const int64_t paramOffset, const int64_t elemCnt)
     {
         gammaTensor = inQueueGamma_.template AllocTensor<T_BETA>();
         CopyIn<T_BETA>(gammaTensor, gammaGm_[paramOffset], elemCnt);
@@ -434,8 +437,8 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadTensorForDtypeT(
-        RegTensor<float>& dst, __local_mem__ T_SRC* input, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __local_mem__ T_SRC* input, MaskReg& preg,
+                                               uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, half>::value) {
             RegTensor<half> xFp16;
@@ -451,8 +454,8 @@ private:
     }
 
     template <typename T_SRC_GAMMA>
-    __aicore__ inline void LoadOneNumberTensorForDtypeT(
-        RegTensor<float>& dst, __local_mem__ T_SRC_GAMMA* input, MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadOneNumberTensorForDtypeT(RegTensor<float>& dst, __local_mem__ T_SRC_GAMMA* input,
+                                                        MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC_GAMMA, half>::value) {
             RegTensor<half> xFp16;
@@ -503,13 +506,11 @@ private:
                 if constexpr (IsSameType<T, half>::value) {
                     RegTensor<half> yFp16;
                     Cast<half, float, castTraitB322B16>(yFp16, y, mask0);
-                    DataCopy<half, StoreDist::DIST_PACK_B32>(
-                        yTensorAddr + i * VL_F32, yFp16, mask0);
+                    DataCopy<half, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32, yFp16, mask0);
                 } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                     RegTensor<bfloat16_t> xBf16;
                     Cast<bfloat16_t, float, castTraitB322B16>(xBf16, y, mask0);
-                    DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(
-                        yTensorAddr + i * VL_F32, xBf16, mask0);
+                    DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32, xBf16, mask0);
                 } else {
                     DataCopy(yTensorAddr + i * VL_F32, y, mask0);
                 }
@@ -528,7 +529,7 @@ private:
         yTensor = outQueueY_.template AllocTensor<T>();
 
         CalY(elemCnt, gammaUbOffset);
-    
+
         inQueueX_.FreeTensor(xTensor);
 
         outQueueY_.EnQue(yTensor);
@@ -548,7 +549,7 @@ private:
     TPipe pipe_;
 
     // GM Buffer
-    // global memory address 
+    // global memory address
     GlobalTensor<T> xGm_;
     GlobalTensor<T_BETA> gammaGm_;
     GlobalTensor<T_BETA> betaGm_;

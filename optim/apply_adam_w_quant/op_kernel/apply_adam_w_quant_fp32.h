@@ -26,10 +26,10 @@ template <typename T, typename U>
 class ApplyAdamWQuant {
 public:
     __aicore__ inline ApplyAdamWQuant(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR grad, GM_ADDR m, GM_ADDR v, GM_ADDR qmap_m, GM_ADDR qmap_v, GM_ADDR absmax_m,
-        GM_ADDR absmax_v, GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref, GM_ADDR v_ref, GM_ADDR absmax_m_ref,
-        GM_ADDR absmax_v_ref, const ApplyAdamWQuantTilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR grad, GM_ADDR m, GM_ADDR v, GM_ADDR qmap_m, GM_ADDR qmap_v,
+                                GM_ADDR absmax_m, GM_ADDR absmax_v, GM_ADDR step, GM_ADDR var_ref, GM_ADDR m_ref,
+                                GM_ADDR v_ref, GM_ADDR absmax_m_ref, GM_ADDR absmax_v_ref,
+                                const ApplyAdamWQuantTilingData* tilingData)
     {
         this->blockIdx = AscendC::GetBlockIdx();
         ParseTilingDataFp32(tilingData);
@@ -38,12 +38,12 @@ public:
             gmOffset = this->blockIdx * notLastPreCoreRowWork * blockSize * oneCoreDoBlockNumPerRow;
             absmaxOffset = this->blockIdx * notLastPreCoreRowWork * oneCoreDoBlockNumPerRow;
         } else {
-            gmOffset =
-                (notLastCoreNum * notLastPreCoreRowWork + (this->blockIdx - notLastCoreNum) * lastPreCoreRowWork) *
-                blockSize * oneCoreDoBlockNumPerRow;
-            absmaxOffset =
-                (notLastCoreNum * notLastPreCoreRowWork + (this->blockIdx - notLastCoreNum) * lastPreCoreRowWork) *
-                oneCoreDoBlockNumPerRow;
+            gmOffset = (notLastCoreNum * notLastPreCoreRowWork +
+                        (this->blockIdx - notLastCoreNum) * lastPreCoreRowWork) *
+                       blockSize * oneCoreDoBlockNumPerRow;
+            absmaxOffset = (notLastCoreNum * notLastPreCoreRowWork +
+                            (this->blockIdx - notLastCoreNum) * lastPreCoreRowWork) *
+                           oneCoreDoBlockNumPerRow;
         }
         this->singleBlockNum = oneCoreDoBlockNumPerRow;
         this->singleSize = blockSize * oneCoreDoBlockNumPerRow;
@@ -121,9 +121,8 @@ public:
 
             PipeSync<AscendC::HardEvent::MTE2_V>();
 
-            UpdateStateAndParamFp32(
-                stateM.template ReinterpretCast<T>(), stateV.template ReinterpretCast<T>(), grad, var, calcBuf,
-                singleBlockNum);
+            UpdateStateAndParamFp32(stateM.template ReinterpretCast<T>(), stateV.template ReinterpretCast<T>(), grad,
+                                    var, calcBuf, singleBlockNum);
             PipeSync<AscendC::HardEvent::V_MTE3>();
 
             DataCopyOut<T>(varRefGm[blockOffset], var, singleSize);
@@ -160,9 +159,9 @@ private:
         blockSize = tilingData->block_size;
     }
 
-    __aicore__ inline void BinarySearchFp32(
-        const AscendC::LocalTensor<T>& normState, const AscendC::LocalTensor<T>& qMap,
-        AscendC::LocalTensor<uint8_t>& qState, AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
+    __aicore__ inline void BinarySearchFp32(const AscendC::LocalTensor<T>& normState,
+                                            const AscendC::LocalTensor<T>& qMap, AscendC::LocalTensor<uint8_t>& qState,
+                                            AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
     {
         uint32_t offset = 0;
         AscendC::LocalTensor<int32_t> lowerPivot = calcBuf.GetWithOffset<int32_t>(singleSize, offset);
@@ -210,9 +209,8 @@ private:
 
 #ifdef ASCENDC_CPU_DEBUG
             for (int i = 0; i < singleSize / Q_MAP_SIZE; i++) {
-                AscendC::Gather<T>(
-                    stateTmp[i * Q_MAP_SIZE], qMap, gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE],
-                    0, Q_MAP_SIZE);
+                AscendC::Gather<T>(stateTmp[i * Q_MAP_SIZE], qMap,
+                                   gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0, Q_MAP_SIZE);
             }
 #else
             AscendC::Gather<T>(stateTmp, qMap, gatherOffset.template ReinterpretCast<uint32_t>(), 0, singleSize);
@@ -241,9 +239,8 @@ private:
         AscendC::PipeBarrier<PIPE_V>();
 #ifdef ASCENDC_CPU_DEBUG
         for (int i = 0; i < singleSize / Q_MAP_SIZE; i++) {
-            AscendC::Gather<T>(
-                lowerState[i * Q_MAP_SIZE], qMap, gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0,
-                Q_MAP_SIZE);
+            AscendC::Gather<T>(lowerState[i * Q_MAP_SIZE], qMap,
+                               gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0, Q_MAP_SIZE);
         }
 #else
         AscendC::Gather<T>(lowerState, qMap, gatherOffset.template ReinterpretCast<uint32_t>(), 0, singleSize);
@@ -258,9 +255,8 @@ private:
 
 #ifdef ASCENDC_CPU_DEBUG
         for (int i = 0; i < singleSize / Q_MAP_SIZE; i++) {
-            AscendC::Gather<T>(
-                upperState[i * Q_MAP_SIZE], qMap, gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0,
-                Q_MAP_SIZE);
+            AscendC::Gather<T>(upperState[i * Q_MAP_SIZE], qMap,
+                               gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0, Q_MAP_SIZE);
         }
 #else
         AscendC::Gather<T>(upperState, qMap, gatherOffset.template ReinterpretCast<uint32_t>(), 0, singleSize);
@@ -279,21 +275,21 @@ private:
             upperPivot.template ReinterpretCast<float>(), AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, REPEAT_NUM,
             singleSize / REPEAT_NUM, {1, 1, 1, 8, 8, 8});
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Cast<int16_t, int32_t>(
-            stateTmp.template ReinterpretCast<int16_t>(), pivot, AscendC::RoundMode::CAST_NONE, singleSize);
+        AscendC::Cast<int16_t, int32_t>(stateTmp.template ReinterpretCast<int16_t>(), pivot,
+                                        AscendC::RoundMode::CAST_NONE, singleSize);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Cast<half, int16_t>(
-            pivot.template ReinterpretCast<half>(), stateTmp.template ReinterpretCast<int16_t>(),
-            AscendC::RoundMode::CAST_NONE, singleSize);
+        AscendC::Cast<half, int16_t>(pivot.template ReinterpretCast<half>(),
+                                     stateTmp.template ReinterpretCast<int16_t>(), AscendC::RoundMode::CAST_NONE,
+                                     singleSize);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Cast<uint8_t, half>(
-            qState, pivot.template ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE, singleSize);
+        AscendC::Cast<uint8_t, half>(qState, pivot.template ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE,
+                                     singleSize);
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CheckSignFp32(
-        const AscendC::LocalTensor<T>& normState, const AscendC::LocalTensor<T>& qMap,
-        AscendC::LocalTensor<uint8_t>& qState, AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
+    __aicore__ inline void CheckSignFp32(const AscendC::LocalTensor<T>& normState, const AscendC::LocalTensor<T>& qMap,
+                                         AscendC::LocalTensor<uint8_t>& qState, AscendC::TBuf<>& calcBuf,
+                                         int32_t singleBlockNum)
     {
         uint32_t offset = 0;
         AscendC::LocalTensor<T> dqState = calcBuf.GetWithOffset<T>(singleSize, offset);
@@ -306,38 +302,35 @@ private:
         offset += singleSize * sizeof(int16_t);
         AscendC::LocalTensor<int16_t> posState = calcBuf.GetWithOffset<int16_t>(singleSize, offset);
         offset += singleSize * sizeof(int16_t);
-        AscendC::LocalTensor<uint8_t> signChangeMask =
-            calcBuf.GetWithOffset<uint8_t>(singleSize / PER_UINT8_8BITS, offset);
+        AscendC::LocalTensor<uint8_t> signChangeMask = calcBuf.GetWithOffset<uint8_t>(singleSize / PER_UINT8_8BITS,
+                                                                                      offset);
         offset += singleSize / PER_UINT8_8BITS;
         AscendC::LocalTensor<uint8_t> negMask = calcBuf.GetWithOffset<uint8_t>(singleSize / PER_UINT8_8BITS, offset);
         offset += singleSize / PER_UINT8_8BITS;
         AscendC::LocalTensor<uint8_t> posMask = calcBuf.GetWithOffset<uint8_t>(singleSize / PER_UINT8_8BITS, offset);
 
-        AscendC::Cast<half, uint8_t>(
-            oriQState.template ReinterpretCast<half>(), qState, AscendC::RoundMode::CAST_NONE, singleSize);
+        AscendC::Cast<half, uint8_t>(oriQState.template ReinterpretCast<half>(), qState, AscendC::RoundMode::CAST_NONE,
+                                     singleSize);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Cast<int16_t, half>(
-            oriQState, oriQState.template ReinterpretCast<half>(), AscendC::RoundMode::CAST_RINT, singleSize);
+        AscendC::Cast<int16_t, half>(oriQState, oriQState.template ReinterpretCast<half>(),
+                                     AscendC::RoundMode::CAST_RINT, singleSize);
         AscendC::PipeBarrier<PIPE_V>();
 
         AscendC::Adds<int16_t>(negState, oriQState, -1, singleSize);
         AscendC::Adds<int16_t>(posState, oriQState, 1, singleSize);
 
-        AscendC::Cast<half, uint8_t>(
-            gatherOffset[singleSize >> 1].template ReinterpretCast<half>(), qState, AscendC::RoundMode::CAST_NONE,
-            singleSize);
+        AscendC::Cast<half, uint8_t>(gatherOffset[singleSize >> 1].template ReinterpretCast<half>(), qState,
+                                     AscendC::RoundMode::CAST_NONE, singleSize);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Cast<int32_t, half>(
-            gatherOffset, gatherOffset[singleSize >> 1].template ReinterpretCast<half>(), AscendC::RoundMode::CAST_RINT,
-            singleSize);
+        AscendC::Cast<int32_t, half>(gatherOffset, gatherOffset[singleSize >> 1].template ReinterpretCast<half>(),
+                                     AscendC::RoundMode::CAST_RINT, singleSize);
         AscendC::PipeBarrier<PIPE_V>();
         AscendC::Muls<int32_t>(gatherOffset, gatherOffset, sizeof(T), singleSize);
         AscendC::PipeBarrier<PIPE_V>();
 #ifdef ASCENDC_CPU_DEBUG
         for (int i = 0; i < singleSize / Q_MAP_SIZE; i++) {
-            AscendC::Gather<T>(
-                dqState[i * Q_MAP_SIZE], qMap, gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0,
-                Q_MAP_SIZE);
+            AscendC::Gather<T>(dqState[i * Q_MAP_SIZE], qMap,
+                               gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0, Q_MAP_SIZE);
         }
 #else
         AscendC::Gather<T>(dqState, qMap, gatherOffset.template ReinterpretCast<uint32_t>(), 0, singleSize);
@@ -374,14 +367,13 @@ private:
             singleSize / REPEAT_NUM_128, {1, 1, 1, 8, 8, 8});
         AscendC::PipeBarrier<PIPE_V>();
 
-        AscendC::Cast<uint8_t, half>(
-            qState, oriQState.template ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE, singleSize);
+        AscendC::Cast<uint8_t, half>(qState, oriQState.template ReinterpretCast<half>(), AscendC::RoundMode::CAST_NONE,
+                                     singleSize);
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void NormlizeFp32(
-        const AscendC::LocalTensor<T>& state, const AscendC::LocalTensor<T>& absMax, AscendC::TBuf<>& calcBuf,
-        int32_t singleBlockNum)
+    __aicore__ inline void NormlizeFp32(const AscendC::LocalTensor<T>& state, const AscendC::LocalTensor<T>& absMax,
+                                        AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
     {
         AscendC::LocalTensor<T> absState = calcBuf.GetWithOffset<T>(singleSize, 0);
         AscendC::LocalTensor<T> absMaxTmp = calcBuf.GetWithOffset<T>(singleSize, singleSize * sizeof(T));
@@ -394,9 +386,8 @@ private:
         uint32_t repeat = singleSize / mask;
         AscendC::BlockReduceMax<T>(absMaxTmp, absState, repeat, mask, 1, 1, STRIDE_8);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::WholeReduceMax<T>(
-            absMax, absMaxTmp, blockSize / (AscendC::ONE_BLK_SIZE / sizeof(T)), singleBlockNum, 1, 1, PER_4NUM_ONEMAX,
-            AscendC::ReduceOrder::ORDER_ONLY_VALUE);
+        AscendC::WholeReduceMax<T>(absMax, absMaxTmp, blockSize / (AscendC::ONE_BLK_SIZE / sizeof(T)), singleBlockNum,
+                                   1, 1, PER_4NUM_ONEMAX, AscendC::ReduceOrder::ORDER_ONLY_VALUE);
         AscendC::PipeBarrier<PIPE_V>();
 
         uint32_t srcShape[2] = {static_cast<uint32_t>(singleBlockNum), 1};
@@ -407,10 +398,9 @@ private:
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void QuantMFp32(
-        const AscendC::LocalTensor<T>& state, const AscendC::LocalTensor<T>& qMap,
-        AscendC::LocalTensor<uint8_t>& qState, const AscendC::LocalTensor<T>& absMax, AscendC::TBuf<>& calcBuf,
-        int32_t singleBlockNum)
+    __aicore__ inline void QuantMFp32(const AscendC::LocalTensor<T>& state, const AscendC::LocalTensor<T>& qMap,
+                                      AscendC::LocalTensor<uint8_t>& qState, const AscendC::LocalTensor<T>& absMax,
+                                      AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
     {
         NormlizeFp32(state, absMax, calcBuf, singleBlockNum);
 
@@ -419,19 +409,18 @@ private:
         CheckSignFp32(state, qMap, qState, calcBuf, singleBlockNum);
     }
 
-    __aicore__ inline void QuantVFp32(
-        const AscendC::LocalTensor<T>& state, const AscendC::LocalTensor<T>& qMap,
-        AscendC::LocalTensor<uint8_t>& qState, const AscendC::LocalTensor<T>& absMax, AscendC::TBuf<>& calcBuf,
-        int32_t singleBlockNum)
+    __aicore__ inline void QuantVFp32(const AscendC::LocalTensor<T>& state, const AscendC::LocalTensor<T>& qMap,
+                                      AscendC::LocalTensor<uint8_t>& qState, const AscendC::LocalTensor<T>& absMax,
+                                      AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
     {
         NormlizeFp32(state, absMax, calcBuf, singleBlockNum);
 
         BinarySearchFp32(state, qMap, qState, calcBuf, singleBlockNum);
     }
 
-    __aicore__ inline void DeQuantFp32(
-        const AscendC::LocalTensor<uint8_t>& state, const AscendC::LocalTensor<T>& qMap,
-        AscendC::LocalTensor<T>& absMax, AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
+    __aicore__ inline void DeQuantFp32(const AscendC::LocalTensor<uint8_t>& state, const AscendC::LocalTensor<T>& qMap,
+                                       AscendC::LocalTensor<T>& absMax, AscendC::TBuf<>& calcBuf,
+                                       int32_t singleBlockNum)
     {
         uint32_t offset = 0;
         AscendC::LocalTensor<T> dqState = calcBuf.GetWithOffset<T>(singleSize, offset);
@@ -440,21 +429,18 @@ private:
         offset += singleSize * sizeof(int32_t);
         AscendC::LocalTensor<T> absMaxBrcb = calcBuf.GetWithOffset<T>(singleSize, offset);
 
-        AscendC::Cast<half, uint8_t>(
-            gatherOffset[singleSize >> 1].template ReinterpretCast<half>(), state, AscendC::RoundMode::CAST_NONE,
-            singleSize);
+        AscendC::Cast<half, uint8_t>(gatherOffset[singleSize >> 1].template ReinterpretCast<half>(), state,
+                                     AscendC::RoundMode::CAST_NONE, singleSize);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Cast<int32_t, half>(
-            gatherOffset, gatherOffset[singleSize >> 1].template ReinterpretCast<half>(), AscendC::RoundMode::CAST_RINT,
-            singleSize);
+        AscendC::Cast<int32_t, half>(gatherOffset, gatherOffset[singleSize >> 1].template ReinterpretCast<half>(),
+                                     AscendC::RoundMode::CAST_RINT, singleSize);
         AscendC::PipeBarrier<PIPE_V>();
         AscendC::Muls<int32_t>(gatherOffset, gatherOffset, sizeof(T), singleSize);
         AscendC::PipeBarrier<PIPE_V>();
 #ifdef ASCENDC_CPU_DEBUG
         for (int i = 0; i < singleSize / Q_MAP_SIZE; i++) {
-            AscendC::Gather<T>(
-                dqState[i * Q_MAP_SIZE], qMap, gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0,
-                Q_MAP_SIZE);
+            AscendC::Gather<T>(dqState[i * Q_MAP_SIZE], qMap,
+                               gatherOffset.template ReinterpretCast<uint32_t>()[i * Q_MAP_SIZE], 0, Q_MAP_SIZE);
         }
 #else
         AscendC::Gather<T>(dqState, qMap, gatherOffset.template ReinterpretCast<uint32_t>(), 0, singleSize);
@@ -468,9 +454,10 @@ private:
         AscendC::PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void UpdateStateAndParamFp32(
-        const AscendC::LocalTensor<T>& dqStateM, const AscendC::LocalTensor<T>& dqStateV, AscendC::LocalTensor<T>& grad,
-        AscendC::LocalTensor<T>& var, AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
+    __aicore__ inline void UpdateStateAndParamFp32(const AscendC::LocalTensor<T>& dqStateM,
+                                                   const AscendC::LocalTensor<T>& dqStateV,
+                                                   AscendC::LocalTensor<T>& grad, AscendC::LocalTensor<T>& var,
+                                                   AscendC::TBuf<>& calcBuf, int32_t singleBlockNum)
     {
         uint32_t offset = 0;
         AscendC::LocalTensor<T> tmpVar = calcBuf.GetWithOffset<T>(singleSize, offset);

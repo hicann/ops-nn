@@ -27,8 +27,8 @@ using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::MemType;
+using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
@@ -53,10 +53,7 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 #define IS_BIAS_BROADCAST ((TILING_KEY % 10) == 2)
 #define IS_BIAS_NONE ((TILING_KEY % 10) == 0)
 
-__aicore__ inline int32_t CEIL_DIV(int32_t x, int32_t y)
-{
-    return (y > 0) ? (x + y - 1) / y : 0;
-}
+__aicore__ inline int32_t CEIL_DIV(int32_t x, int32_t y) { return (y > 0) ? (x + y - 1) / y : 0; }
 
 __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
 {
@@ -64,8 +61,7 @@ __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
 }
 
 template <typename T>
-__aicore__ inline void CopyLocalToGm(
-    GlobalTensor<T>& dstGm, LocalTensor<T> srcLocal, int64_t offset, int32_t rowsCount)
+__aicore__ inline void CopyLocalToGm(GlobalTensor<T>& dstGm, LocalTensor<T> srcLocal, int64_t offset, int32_t rowsCount)
 {
     DataCopyExtParams dataCopyParams;
     dataCopyParams.blockCount = 1;
@@ -77,9 +73,9 @@ __aicore__ inline void CopyLocalToGm(
 }
 
 template <typename X1_TYPE, typename X2_TYPE, typename BIAS_TYPE>
-__aicore__ inline void LoadInputsToRegWithBias(
-    __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, __local_mem__ BIAS_TYPE* biasAddr,
-    RegTensor<float>& dst, MaskReg& preg, uint32_t offset0, uint32_t offset1, uint32_t offset2)
+__aicore__ inline void LoadInputsToRegWithBias(__local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr,
+                                               __local_mem__ BIAS_TYPE* biasAddr, RegTensor<float>& dst, MaskReg& preg,
+                                               uint32_t offset0, uint32_t offset1, uint32_t offset2)
 {
     RegTensor<float> x1Fp32, x2Fp32, biasFp32;
 
@@ -111,9 +107,9 @@ __aicore__ inline void LoadInputsToRegWithBias(
 }
 
 template <typename X1_TYPE, typename X2_TYPE>
-__aicore__ inline void LoadInputsToRegWithBiasNone(
-    __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, RegTensor<float>& dst, MaskReg& preg,
-    uint32_t offset0, uint32_t offset1)
+__aicore__ inline void LoadInputsToRegWithBiasNone(__local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr,
+                                                   RegTensor<float>& dst, MaskReg& preg, uint32_t offset0,
+                                                   uint32_t offset1)
 {
     RegTensor<float> x1Fp32, x2Fp32;
 
@@ -136,9 +132,9 @@ __aicore__ inline void LoadInputsToRegWithBiasNone(
 }
 
 template <typename X1_TYPE, typename X2_TYPE, typename BIAS_TYPE, int TILING_KEY>
-__aicore__ inline void LoadInputsToReg(
-    __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, __local_mem__ BIAS_TYPE* biasAddr,
-    RegTensor<float>& dst, MaskReg& preg, uint32_t offset0, uint32_t offset1, uint32_t offset2)
+__aicore__ inline void LoadInputsToReg(__local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr,
+                                       __local_mem__ BIAS_TYPE* biasAddr, RegTensor<float>& dst, MaskReg& preg,
+                                       uint32_t offset0, uint32_t offset1, uint32_t offset2)
 {
     if constexpr (IS_BIAS_NONE) {
         LoadInputsToRegWithBiasNone(x1Addr, x2Addr, dst, preg, offset0, offset1);
@@ -148,9 +144,8 @@ __aicore__ inline void LoadInputsToReg(
 }
 
 template <typename T>
-__aicore__ inline void LoadGammaBeta(
-    __local_mem__ T* gammaAddr, __local_mem__ T* betaAddr, RegTensor<float>& gamma, RegTensor<float>& beta,
-    MaskReg& preg, uint32_t offset)
+__aicore__ inline void LoadGammaBeta(__local_mem__ T* gammaAddr, __local_mem__ T* betaAddr, RegTensor<float>& gamma,
+                                     RegTensor<float>& beta, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> gammaFp16;
@@ -173,10 +168,11 @@ __aicore__ inline void LoadGammaBeta(
 }
 
 template <bool IS_MIX, typename GAMMA_TYPE, typename BETA_TYPE>
-__aicore__ inline void CopyGammaAndBetaToUBCommon(
-    LocalTensor<GAMMA_TYPE> gammaLocal, LocalTensor<BETA_TYPE> betaLocal, GlobalTensor<GAMMA_TYPE>& gammaGm,
-    GlobalTensor<BETA_TYPE>& betaGm, TQue<QuePosition::VECIN, 1>& gammaQueue,
-    TQue<QuePosition::VECIN, 1>& betaQueue, int64_t offset, int32_t copyLen, uint32_t blockSize)
+__aicore__ inline void CopyGammaAndBetaToUBCommon(LocalTensor<GAMMA_TYPE> gammaLocal, LocalTensor<BETA_TYPE> betaLocal,
+                                                  GlobalTensor<GAMMA_TYPE>& gammaGm, GlobalTensor<BETA_TYPE>& betaGm,
+                                                  TQue<QuePosition::VECIN, 1>& gammaQueue,
+                                                  TQue<QuePosition::VECIN, 1>& betaQueue, int64_t offset,
+                                                  int32_t copyLen, uint32_t blockSize)
 {
     if constexpr (IS_MIX) {
         int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(float), blockSize) / sizeof(float);
@@ -228,10 +224,12 @@ __aicore__ inline void StoreRegToOutput(__local_mem__ T* dstAddr, RegTensor<floa
 }
 
 template <bool INIT, typename X1_TYPE, typename X2_TYPE, typename BIAS_TYPE, int TILING_KEY>
-__aicore__ inline void VFWelfordParallelUpdateCommon(
-    __local_mem__ X1_TYPE* x1Local, __local_mem__ X2_TYPE* x2Local, __local_mem__ BIAS_TYPE* biasLocal,
-    __local_mem__ BIAS_TYPE* xOutLocal, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-    uint64_t calLen, uint16_t loopCount, float scale)
+__aicore__ inline void VFWelfordParallelUpdateCommon(__local_mem__ X1_TYPE* x1Local, __local_mem__ X2_TYPE* x2Local,
+                                                     __local_mem__ BIAS_TYPE* biasLocal,
+                                                     __local_mem__ BIAS_TYPE* xOutLocal,
+                                                     __local_mem__ float* tmpMeanLocal,
+                                                     __local_mem__ float* tmpVarLocal, uint64_t calLen,
+                                                     uint16_t loopCount, float scale)
 {
     __VEC_SCOPE__
     {
@@ -246,8 +244,8 @@ __aicore__ inline void VFWelfordParallelUpdateCommon(
         uint32_t sreg0 = calLen;
         for (uint16_t i = 0; i < loopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                x1Local, x2Local, biasLocal, x1, pregLoop, i * VL_FP32, i * VL_FP32, i * VL_FP32);
+            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(x1Local, x2Local, biasLocal, x1, pregLoop,
+                                                                     i * VL_FP32, i * VL_FP32, i * VL_FP32);
             StoreRegToOutput(xOutLocal, x1, pregLoop, i * VL_FP32);
             if constexpr (INIT) {
                 Duplicate(tmpMean, 0.0, pregLoop);
@@ -318,8 +316,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
     uint32_t welfordDiffReminderAlign = welfordDiffReminder == 0 ? 0 : VL_FP32;
     uint16_t welfordReminderLoopCount = welfordDiffReminderAlign / VL_FP32;
 
-    uint32_t dichotomyAddReminderAfterSplit =
-        dichotomyAddReminder - welfordDiffLoopCount * VL_FP32 - welfordDiffReminderAlign;
+    uint32_t dichotomyAddReminderAfterSplit = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32 -
+                                              welfordDiffReminderAlign;
     uint16_t dichotomyAddReminderLoopCount = CEIL_DIV(dichotomyAddReminderAfterSplit, VL_FP32);
     __VEC_SCOPE__
     {
@@ -351,8 +349,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, tailCountScale, pregMain);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + i, mean, pregMerge);
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
+                                                                                  pregMerge);
         }
 
         // 处理welford第一次非对齐点, 整块使用tailCountScale,尾块部分使用tailCountScale, 部分使用countScale
@@ -376,11 +374,9 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
         // 整块使用tailCountScale,尾块使用countScale
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(
-                dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
-            DataCopy(
-                dichotomyAddMeanR,
-                tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
+            DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
+            DataCopy(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign +
+                                            dichotomyAddPower);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
@@ -389,8 +385,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
         }
         // PART2: 整块剩余部分vcadd回刷UB,使用tailCountScale
-        for (uint16_t i = 0;
-             i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); i++) {
+        for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount);
+             i++) {
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             ReduceSum(mean, dichotomyAddMeanL, pregMain);
@@ -422,8 +418,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + i, var, pregMerge);
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
+                                                                                  pregMerge);
         }
         sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
         sreg1 = welfordDiffReminder;
@@ -456,25 +452,21 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(
-                dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
+            DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
             Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
             Muls(deltaL, deltaL, tailCnt, pregMain);
-            DataCopy(
-                dichotomyAddMeanR,
-                tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
+            DataCopy(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign +
+                                            dichotomyAddPower);
             Sub(deltaR, dichotomyAddMeanR, mean, pregLoop);
             Mul(deltaR, deltaR, deltaR, pregLoop);
             Muls(deltaR, deltaR, cnt, pregLoop);
 
-            DataCopy(
-                dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
+            DataCopy(dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            DataCopy(
-                dichotomyAddVarR,
-                tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
+            DataCopy(dichotomyAddVarR,
+                     tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
             Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
@@ -482,8 +474,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
         }
-        for (uint16_t i = 0;
-             i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); i++) {
+        for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount);
+             i++) {
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
@@ -503,11 +495,10 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
 
 // welford整块小于二分累加整块，并且小于等于二分累加尾块向上对齐
 __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
-    __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal,
-    __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-    __local_mem__ float* dichotomyAddLocal, uint32_t reduceCount, uint32_t dichotomyAddPower,
-    uint32_t dichotomyAddK, uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize,
-    float reduceScale, float cnt, float eps)
+    __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal, __local_mem__ float* tmpMeanLocal,
+    __local_mem__ float* tmpVarLocal, __local_mem__ float* dichotomyAddLocal, uint32_t reduceCount,
+    uint32_t dichotomyAddPower, uint32_t dichotomyAddK, uint32_t dichotomyAddLastNum, uint32_t offset,
+    uint32_t tailSize, float reduceScale, float cnt, float eps)
 {
     float countScale = cnt * reduceScale;
     float tailCnt = cnt + float(1.0);
@@ -525,8 +516,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
     uint16_t dichotomyAddPowerLoopCount = dichotomyAddPower / VL_FP32;
     uint16_t innerLoopCountOrigin = tmpReduceCount / VL_FP32;
 
-    uint32_t dichotomyAddReminderAfterSplit =
-        dichotomyAddReminder - welfordDiffLoopCount * VL_FP32 - welfordDiffReminderAlign;
+    uint32_t dichotomyAddReminderAfterSplit = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32 -
+                                              welfordDiffReminderAlign;
     uint16_t dichotomyAddReminderLoopCount = CEIL_DIV(dichotomyAddReminderAfterSplit, VL_FP32);
     __VEC_SCOPE__
     {
@@ -559,8 +550,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregMain);
             Add(sumMeanReg, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(meanReg, sumMeanReg, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + i, meanReg, pregMerge);
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, meanReg,
+                                                                                  pregMerge);
         }
 
         // 处理welford第一次非对齐点, 尾块使用countScale,整块部分使用tailCountScale, 部分使用countScale
@@ -584,11 +575,9 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
         // 整块使用countScale,尾块使用countScale
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(
-                dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
-            DataCopy(
-                dichotomyAddMeanR,
-                tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
+            DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
+            DataCopy(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign +
+                                            dichotomyAddPower);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMeanReg, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
@@ -597,8 +586,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, meanReg, pregMerge);
         }
         // PART2: 整块剩余部分vcadd回刷UB,使用countScale
-        for (uint16_t i = 0;
-             i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); i++) {
+        for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount);
+             i++) {
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             ReduceSum(meanReg, dichotomyAddMeanL, pregMain);
@@ -630,8 +619,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 
             Add(sumVarReg, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(varReg, sumVarReg, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + i, varReg, pregMerge);
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, varReg,
+                                                                                  pregMerge);
         }
         sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
         sreg1 = welfordDiffReminder;
@@ -664,25 +653,21 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
             MaskReg pregMask = UpdateMask<float>(sreg0);
-            DataCopy(
-                dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
+            DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
             Sub(deltaL, dichotomyAddMeanL, meanReg, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
             Muls(deltaL, deltaL, cnt, pregMain);
-            DataCopy(
-                dichotomyAddMeanR,
-                tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
+            DataCopy(dichotomyAddMeanR, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign +
+                                            dichotomyAddPower);
             Sub(deltaR, dichotomyAddMeanR, meanReg, pregMask);
             Mul(deltaR, deltaR, deltaR, pregMask);
             Muls(deltaR, deltaR, cnt, pregMask);
 
-            DataCopy(
-                dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
+            DataCopy(dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            DataCopy(
-                dichotomyAddVarR,
-                tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
+            DataCopy(dichotomyAddVarR,
+                     tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
             Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregMask);
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregMask);
             Add(sumVarReg, dichotomyAddVarL, dichotomyAddVarR, pregMain);
@@ -691,8 +676,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, varReg, pregMerge);
         }
 
-        for (uint16_t i = 0;
-             i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); ++i) {
+        for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount);
+             ++i) {
             DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Sub(deltaL, dichotomyAddMeanL, meanReg, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
@@ -712,14 +697,10 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
 
 // 场景3：welford整块小于二分累加整块，并且大于二分累加尾块向上对齐
 __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
-    __local_mem__ float* meanLocal,
-    __local_mem__ float* rstdLocal,
-    __local_mem__ float* tmpMeanLocal,
-    __local_mem__ float* tmpVarLocal,
-    __local_mem__ float* dichotomyAddLocal,
-    uint32_t reduceCount, uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
-    uint32_t dichotomyAddLastNum, uint32_t offset, uint32_t tailSize,
-    float reduceScale, float cnt, float eps)
+    __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal, __local_mem__ float* tmpMeanLocal,
+    __local_mem__ float* tmpVarLocal, __local_mem__ float* dichotomyAddLocal, uint32_t reduceCount,
+    uint32_t dichotomyAddPower, uint32_t dichotomyAddK, uint32_t dichotomyAddLastNum, uint32_t offset,
+    uint32_t tailSize, float reduceScale, float cnt, float eps)
 {
     float tailCnt = cnt + float(1.0);
     float countScale = cnt * reduceScale;
@@ -741,8 +722,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
     uint16_t welfordReminderLoopCount = welfordDiffReminderAlign / VL_FP32;
     uint16_t dichotomyAddPowerRemainLoopCount = dichotomyAddPowerLoopCount - dichotomyAddReminderLoopCount -
                                                 welfordDiffLoopCount - welfordReminderLoopCount;
-    uint32_t dichotomyAddPowerOffset =
-        dichotomyAddReminderRoundUp + welfordDiffLoopCount * VL_FP32 + welfordDiffReminderAlign;
+    uint32_t dichotomyAddPowerOffset = dichotomyAddReminderRoundUp + welfordDiffLoopCount * VL_FP32 +
+                                       welfordDiffReminderAlign;
 
     __VEC_SCOPE__
     {
@@ -773,8 +754,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
             ReduceSum(meanReg, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + i, meanReg, pregMerge);
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, meanReg,
+                                                                                  pregMerge);
         }
 
         // 剩余整块需要拆分成多部分
@@ -790,9 +771,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         sreg0 = welfordDiffReminder;
         for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(
-                dichotomyAddMeanL,
-                tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
+            DataCopy(dichotomyAddMeanL,
+                     tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             Muls(tmp, dichotomyAddMeanL, coeff, pregLoop);
             Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop);
@@ -806,8 +786,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             ReduceSum(meanReg, dichotomyAddMeanL, pregMain);
             DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount +
-                    welfordReminderLoopCount + i,
+                dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + welfordReminderLoopCount + i,
                 meanReg, pregMerge);
         }
 
@@ -839,8 +818,8 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
             ReduceSum(varReg, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + i, varReg, pregMerge);
+            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, varReg,
+                                                                                  pregMerge);
         }
 
         // 整块剩余部分回刷UB，整块使用tailCountScale
@@ -860,16 +839,15 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         sreg0 = welfordDiffReminder;
         for (uint16_t i = 0; i < welfordReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(
-                dichotomyAddMeanL,
-                tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
+            DataCopy(dichotomyAddMeanL,
+                     tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
             Sub(deltaL, dichotomyAddMeanL, meanReg, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
             Muls(deltaL, deltaL, cnt, pregMain);
             Muls(tmp, deltaL, coeff, pregLoop);
             Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(deltaL, tmp, pregLoop);
-            DataCopy(
-                dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
+            DataCopy(dichotomyAddVarL,
+                     tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(varReg, dichotomyAddVarL, pregMain);
@@ -887,8 +865,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
             ReduceSum(varReg, dichotomyAddVarL, pregMain);
             DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
-                dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount +
-                    welfordReminderLoopCount + i,
+                dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + welfordReminderLoopCount + i,
                 varReg, pregMerge);
         }
 
@@ -898,30 +875,32 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
     }
 }
 
-__aicore__ inline void VFWelfordParallelFinalizeNonAlign(
-    __local_mem__ float* meanLocal, __local_mem__ float* rstdLocal, __local_mem__ float* tmpMeanLocal,
-    __local_mem__ float* tmpVarLocal, __local_mem__ float* dichotomyAddLocal, uint32_t reduceCount,
-    uint32_t dichotomyAddPower, uint32_t dichotomyAddK, uint32_t dichotomyAddLastNum, uint32_t offset,
-    uint32_t tailSize, float reduceScale, float cnt, float eps)
+__aicore__ inline void VFWelfordParallelFinalizeNonAlign(__local_mem__ float* meanLocal, __local_mem__ float* rstdLocal,
+                                                         __local_mem__ float* tmpMeanLocal,
+                                                         __local_mem__ float* tmpVarLocal,
+                                                         __local_mem__ float* dichotomyAddLocal, uint32_t reduceCount,
+                                                         uint32_t dichotomyAddPower, uint32_t dichotomyAddK,
+                                                         uint32_t dichotomyAddLastNum, uint32_t offset,
+                                                         uint32_t tailSize, float reduceScale, float cnt, float eps)
 {
     // 非对齐Welford finalize阶段由于自身存在整尾块，二分折叠存在整尾块，会出现多种不同的场景，每个场景都有独立的VF
     uint32_t dichotomyAddReminder = reduceCount - dichotomyAddPower;
     uint32_t dichotomyAddReminderRoundUp = CEIL_DIV(dichotomyAddReminder, VL_FP32) * VL_FP32;
     if (tailSize >= dichotomyAddPower) {
-        VFWelfordParallelFinalizeNonAlignSituation1(
-            meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal, reduceCount, dichotomyAddPower,
-            dichotomyAddK, dichotomyAddLastNum, offset, tailSize, reduceScale, cnt, eps);
+        VFWelfordParallelFinalizeNonAlignSituation1(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal,
+                                                    reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
+                                                    offset, tailSize, reduceScale, cnt, eps);
         return;
     }
     if (tailSize <= dichotomyAddReminderRoundUp) {
-        VFWelfordParallelFinalizeNonAlignSituation2(
-            meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal, reduceCount, dichotomyAddPower,
-            dichotomyAddK, dichotomyAddLastNum, offset, tailSize, reduceScale, cnt, eps);
+        VFWelfordParallelFinalizeNonAlignSituation2(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal,
+                                                    reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
+                                                    offset, tailSize, reduceScale, cnt, eps);
         return;
     }
-    VFWelfordParallelFinalizeNonAlignSituation3(
-        meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal, reduceCount, dichotomyAddPower,
-        dichotomyAddK, dichotomyAddLastNum, offset, tailSize, reduceScale, cnt, eps);
+    VFWelfordParallelFinalizeNonAlignSituation3(meanLocal, rstdLocal, tmpMeanLocal, tmpVarLocal, dichotomyAddLocal,
+                                                reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
+                                                offset, tailSize, reduceScale, cnt, eps);
 }
 
 } // namespace AddLayerNorm

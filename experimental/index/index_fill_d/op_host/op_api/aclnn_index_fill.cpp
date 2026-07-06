@@ -44,11 +44,11 @@ constexpr size_t MAX_DIM = 8;
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 
 static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
-    op::DataType::DT_BOOL,    op::DataType::DT_BF16};
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BOOL,
+    op::DataType::DT_BF16};
 
-static const std::initializer_list<op::DataType> DTYPE_INDEX_SUPPORT_LIST = {
-    op::DataType::DT_INT32, op::DataType::DT_INT64};
+static const std::initializer_list<op::DataType> DTYPE_INDEX_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                             op::DataType::DT_INT64};
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* index, const aclScalar* value, const aclTensor* out)
 {
@@ -59,8 +59,7 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* index, const ac
     return true;
 }
 
-static bool CheckShape(
-    const aclTensor* self, int64_t dim, const aclTensor* out)
+static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out)
 {
     if (self->IsEmpty()) {
         return true;
@@ -73,15 +72,14 @@ static bool CheckShape(
     auto selfShape = self->GetViewShape();
     auto selfDim = static_cast<int64_t>(selfShape.GetDimNum());
     if ((dim != 0 && dim >= selfDim) || (dim == 0 && dim > selfDim)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dim value error, input dim[%ld] is greater than self dim[%ld].", dim, selfDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value error, input dim[%ld] is greater than self dim[%ld].", dim,
+                selfDim);
         return false;
     }
 
     if ((dim < 0 && (dim * (-1)) > selfDim && selfDim > 0) || (dim < 0 && (dim * (-1)) > 1 && selfDim == 0)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Dim value error, abs(input dim[%ld]) is greater than self dim[%ld].", dim,
-            selfDim);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value error, abs(input dim[%ld]) is greater than self dim[%ld].", dim,
+                selfDim);
         return false;
     }
     return true;
@@ -109,8 +107,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
-static aclnnStatus CheckParams(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value,
+                               const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, index, value, out), ACLNN_ERR_PARAM_NULLPTR);
@@ -151,9 +149,9 @@ static const aclTensor* SwapDim(const aclTensor* self, aclOpExecutor* executor)
     return selfTrans;
 }
 
-aclnnStatus ExecIndexFillGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, aclTensor* out, bool isInplace,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus ExecIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                          const aclScalar* value, aclTensor* out, bool isInplace,
+                                          uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -165,7 +163,7 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    if(self->IsEmpty() || index->IsEmpty()){
+    if (self->IsEmpty() || index->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
@@ -193,12 +191,12 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(
     // 0维Tensor，转1维
     int64_t squeezeDim = 0;
     bool needUnsqueeze = (selfContiguous->GetViewShape().GetDimNum() == 0);
-    selfContiguous =
-        needUnsqueeze ? l0op::UnsqueezeNd(selfContiguous, squeezeDim, uniqueExecutor.get()) : selfContiguous;
+    selfContiguous = needUnsqueeze ? l0op::UnsqueezeNd(selfContiguous, squeezeDim, uniqueExecutor.get()) :
+                                     selfContiguous;
     CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze failed!");
     needUnsqueeze = (indexContiguous->GetViewShape().GetDimNum() == 0);
-    indexContiguous =
-        needUnsqueeze ? l0op::UnsqueezeNd(indexContiguous, squeezeDim, uniqueExecutor.get()) : indexContiguous;
+    indexContiguous = needUnsqueeze ? l0op::UnsqueezeNd(indexContiguous, squeezeDim, uniqueExecutor.get()) :
+                                      indexContiguous;
     CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze failed!");
     // 将value 转为和self同类型的Tensor
     auto valueTensor = uniqueExecutor.get()->ConvertToTensor(value, selfContiguous->GetDataType());
@@ -236,9 +234,9 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnIndexFillGetWorkspaceSize(
-    const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                           const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
@@ -253,10 +251,10 @@ aclnnStatus aclnnIndexFill(void* workspace, uint64_t workspaceSize, aclOpExecuto
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
-aclnnStatus aclnnInplaceIndexFillGetWorkspaceSize(
-    aclTensor* selfRef, int64_t dim, const aclTensor* index, const aclScalar* value, uint64_t* workspaceSize,
-    aclOpExecutor** executor)
-{    
+aclnnStatus aclnnInplaceIndexFillGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
+                                                  const aclScalar* value, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
+{
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
     L2_DFX_PHASE_1(aclnnInplaceIndexFill, DFX_IN(selfRef, dim, index, value), DFX_OUT(selfRef));

@@ -18,7 +18,8 @@
 namespace ops {
 class ConcatOffset : public OpDef {
 public:
-    explicit ConcatOffset(const char *name) : OpDef(name) {
+    explicit ConcatOffset(const char* name) : OpDef(name)
+    {
         this->Input("concat_dim")
             .ParamType(REQUIRED)
             .DataType({ge::DT_INT32})
@@ -35,9 +36,7 @@ public:
             .DataType({ge::DT_INT32})
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND});
-        this->Attr("N")
-            .AttrType(REQUIRED)
-            .Int();
+        this->Attr("N").AttrType(REQUIRED).Int();
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

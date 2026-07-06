@@ -20,8 +20,8 @@
 using namespace ge;
 namespace ops {
 static const size_t ATTR_INDEX_OF_DST_TYPE = 0;
-static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {
-    DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN};
+static const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2,
+                                                                  DT_FLOAT8_E4M3FN};
 static constexpr uint32_t OUTPUT_NUM_DYNAMIC_QUANT = 2;
 
 static ge::graphStatus CheckComputeNodeNumMerged(gert::InferShapeContext* context)
@@ -78,11 +78,11 @@ static ge::graphStatus DynamicQuantInferDataType(gert::InferDataTypeContext* con
         if (pDstDtype != nullptr) {
             int32_t dstDtype = *pDstDtype;
             yDtype = static_cast<ge::DataType>(dstDtype);
-            OP_CHECK_IF(
-                std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
-                    ge::TypeUtils::DataTypeToSerialString(yDtype), "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
-                return ge::GRAPH_FAILED);
+            OP_CHECK_IF(std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
+                        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
+                                                  ge::TypeUtils::DataTypeToSerialString(yDtype),
+                                                  "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
+                        return ge::GRAPH_FAILED);
         }
     }
     context->SetOutputDataType(0, yDtype);

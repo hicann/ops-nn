@@ -30,9 +30,8 @@ enum class ForeachAddListTilingKey : uint32_t {
 };
 
 template <uint32_t schMode>
-__global__ __aicore__ void foreach_add_list(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y,
-    GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void foreach_add_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y, GM_ADDR workspace,
+                                            GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachAddListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachAddListTilingData, tilingData, tiling);
@@ -49,7 +48,7 @@ __global__ __aicore__ void foreach_add_list(
     if constexpr (schMode == static_cast<uint32_t>(ForeachAddListTilingKey::TILING_KEY_FP16)) {
         uint16_t alphaRaw = *((__gm__ uint16_t*)alpha);
         uint32_t sign = static_cast<uint32_t>(alphaRaw >> 15);
-        uint32_t exp  = static_cast<uint32_t>((alphaRaw >> 10) & 0x1F);
+        uint32_t exp = static_cast<uint32_t>((alphaRaw >> 10) & 0x1F);
         uint32_t mant = static_cast<uint32_t>(alphaRaw & 0x3FF);
         uint32_t fbits;
         if (exp == 0) {

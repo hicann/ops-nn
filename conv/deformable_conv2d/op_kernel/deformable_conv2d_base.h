@@ -18,8 +18,7 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 
-namespace DeformableConv2dNS
-{
+namespace DeformableConv2dNS {
 using namespace AscendC;
 
 constexpr MatmulConfig MDL_CFG = GetNormalConfig();
@@ -60,8 +59,7 @@ struct SlideRange {
 };
 
 template <typename T>
-class DeformableConv2dND
-{
+class DeformableConv2dND {
 public:
     TPipe pipe;
     SlideRange range;
@@ -112,18 +110,18 @@ private:
     __aicore__ inline void DeformOutSmallC(int64_t deformOutOffset, int64_t outOffset);
 
 private:
-    TBuf<TPosition::VECCALC> xyBuf;       // 2 * 8K
-    TBuf<TPosition::VECCALC> offsetBuf;   // 3 * 8K
-    TBuf<TPosition::VECCALC> xyFloorBuf;  // 2 * 8K
-    TBuf<TPosition::VECCALC> xyCeilBuf;   // 2 * 8K
-    TBuf<TPosition::VECCALC> weightBuf;   // 4 * 8K
-    TBuf<TPosition::VECCALC> indexBuf;    // 4 * 8K
-    TBuf<TPosition::VECCALC> maskBuf;     // 2K
+    TBuf<TPosition::VECCALC> xyBuf;      // 2 * 8K
+    TBuf<TPosition::VECCALC> offsetBuf;  // 3 * 8K
+    TBuf<TPosition::VECCALC> xyFloorBuf; // 2 * 8K
+    TBuf<TPosition::VECCALC> xyCeilBuf;  // 2 * 8K
+    TBuf<TPosition::VECCALC> weightBuf;  // 4 * 8K
+    TBuf<TPosition::VECCALC> indexBuf;   // 4 * 8K
+    TBuf<TPosition::VECCALC> maskBuf;    // 2K
     // 138K
-    TBuf<TPosition::VECCALC> inputBuf;      // 2 * 4 * 4K
-    TBuf<TPosition::VECCALC> bilinearBuf;   // 4K
-    TBuf<TPosition::VECCALC> srcOffsetBuf;  // 4K
-    TBuf<TPosition::VECCALC> gatherBuf;     // 4K
+    TBuf<TPosition::VECCALC> inputBuf;     // 2 * 4 * 4K
+    TBuf<TPosition::VECCALC> bilinearBuf;  // 4K
+    TBuf<TPosition::VECCALC> srcOffsetBuf; // 4K
+    TBuf<TPosition::VECCALC> gatherBuf;    // 4K
     // 44K
 
     GlobalTensor<T> inputGm;
@@ -456,6 +454,6 @@ __aicore__ inline void DeformableConv2dND<T>::ReleaseEventId()
     pipe.ReleaseEventID<HardEvent::S_V>(eventIdSToV);
     pipe.ReleaseEventID<HardEvent::MTE3_V>(eventIdMte3ToV);
 }
-}  // namespace DeformableConv2dNS
+} // namespace DeformableConv2dNS
 
-#endif  // DEFORMABLE_CONV2D_BASE_H
+#endif // DEFORMABLE_CONV2D_BASE_H

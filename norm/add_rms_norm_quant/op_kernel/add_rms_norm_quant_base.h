@@ -65,9 +65,8 @@ struct is_same : public false_type {};
 template <typename Tp>
 struct is_same<Tp, Tp> : public true_type {};
 
-__aicore__ inline void ReduceSumFP32(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local_v1, const LocalTensor<float>& work_local,
-    int32_t count)
+__aicore__ inline void ReduceSumFP32(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local_v1,
+                                     const LocalTensor<float>& work_local, int32_t count)
 {
     // count need smaller than 255 repeat
     uint64_t mask = NUM_PER_REP_FP32;
@@ -102,15 +101,13 @@ __aicore__ inline void ReduceSumFP32(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void ReduceSumCustom(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local,
-    int32_t count)
+__aicore__ inline void ReduceSumCustom(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
+                                       const LocalTensor<float>& work_local, int32_t count)
 {
     ReduceSumFP32(dst_local, src_local, work_local, count);
 }
-__aicore__ inline void ReduceSumFP32ToBlock(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, const LocalTensor<float>& work_local,
-    int32_t count)
+__aicore__ inline void ReduceSumFP32ToBlock(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
+                                            const LocalTensor<float>& work_local, int32_t count)
 {
     // count need smaller than 255 repeat
     uint64_t mask = NUM_PER_REP_FP32;
@@ -138,8 +135,8 @@ __aicore__ inline void ReduceSumFP32ToBlock(
     PipeBarrier<PIPE_V>();
 }
 
-__aicore__ inline void BlockReduceSumFP32(
-    const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local, int32_t count)
+__aicore__ inline void BlockReduceSumFP32(const LocalTensor<float>& dst_local, const LocalTensor<float>& src_local,
+                                          int32_t count)
 {
     // count need multiple of 8
     int32_t repeatTimes = count / NUM_PER_REP_FP32;
@@ -156,9 +153,8 @@ __aicore__ inline void BlockReduceSumFP32(
     }
 }
 
-__aicore__ inline void doScales(
-    LocalTensor<float> quantLocal, LocalTensor<float> yLocal, TBuf<TPosition::VECCALC>& scalesBuf, uint32_t divMode,
-    uint32_t num)
+__aicore__ inline void doScales(LocalTensor<float> quantLocal, LocalTensor<float> yLocal,
+                                TBuf<TPosition::VECCALC>& scalesBuf, uint32_t divMode, uint32_t num)
 {
     LocalTensor<float> scalesLocal = scalesBuf.Get<float>();
     if (divMode) {
@@ -170,8 +166,8 @@ __aicore__ inline void doScales(
     }
 }
 
-__aicore__ inline void doZeroPoints(
-    LocalTensor<float> yLocal, TBuf<TPosition::VECCALC>& zeroPointsBuf, uint32_t num, uint32_t hasZeroPoints)
+__aicore__ inline void doZeroPoints(LocalTensor<float> yLocal, TBuf<TPosition::VECCALC>& zeroPointsBuf, uint32_t num,
+                                    uint32_t hasZeroPoints)
 {
     if (!hasZeroPoints) {
         return;
@@ -184,7 +180,8 @@ __aicore__ inline void doZeroPoints(
 template <typename T, typename U, typename R>
 __aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, const uint32_t count)
 {
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
     copyParams.blockLen = count * sizeof(T);
     copyParams.blockCount = 1;
@@ -236,8 +233,8 @@ __aicore__ inline void RoundFloat2Int8(LocalTensor<int8_t>& dstTensor, LocalTens
 }
 
 template <typename TScale>
-__aicore__ inline void CopyInScales(
-    TBuf<TPosition::VECCALC>& scalesBuf, const GlobalTensor<TScale>& scalesGm, uint32_t num, uint32_t ubFactor)
+__aicore__ inline void CopyInScales(TBuf<TPosition::VECCALC>& scalesBuf, const GlobalTensor<TScale>& scalesGm,
+                                    uint32_t num, uint32_t ubFactor)
 {
     LocalTensor<float> scales1Local = scalesBuf.Get<float>();
     if constexpr (is_same<TScale, float>::value) {
@@ -254,9 +251,9 @@ __aicore__ inline void CopyInScales(
 }
 
 template <typename TOffset>
-__aicore__ inline void CopyInZeroPoints(
-    TBuf<TPosition::VECCALC>& zeroPointsBuf, const GlobalTensor<TOffset>& zeroPointsGm, uint32_t num, uint32_t ubFactor,
-    uint32_t hasZeroPoints)
+__aicore__ inline void CopyInZeroPoints(TBuf<TPosition::VECCALC>& zeroPointsBuf,
+                                        const GlobalTensor<TOffset>& zeroPointsGm, uint32_t num, uint32_t ubFactor,
+                                        uint32_t hasZeroPoints)
 {
     if (!hasZeroPoints) {
         return;

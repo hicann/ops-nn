@@ -28,8 +28,7 @@ struct PoolManagerUnit {
     int32_t offset = 0;
 };
 
-class ReduceBufPool
-{
+class ReduceBufPool {
     constexpr static int32_t MAX_INPUT_SIZE = 10;
 
 private:
@@ -88,10 +87,7 @@ public:
         computeUnit_.offset = basicNum_ * sizeof(T) * inputNum;
     }
 
-    __aicore__ inline void ResetComputeSize(int32_t computeNum)
-    {
-        computeUnit_.bufNum = computeNum;
-    }
+    __aicore__ inline void ResetComputeSize(int32_t computeNum) { computeUnit_.bufNum = computeNum; }
 
     __aicore__ inline void DeInit()
     {

@@ -21,14 +21,12 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 
-namespace Pool3D
-{
+namespace Pool3D {
 
 using namespace AscendC;
 
 template <typename T, int32_t OP_TYPE>
-class Pool3dNDHWCBigChannel
-{
+class Pool3dNDHWCBigChannel {
 public:
     __aicore__ inline Pool3dNDHWCBigChannel(TPipe* pipe, const Pool3DSmallKernelNDHWCTilingData* __restrict tiling)
         : pipe_(pipe), tilingData_(tiling){};
@@ -111,31 +109,29 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::BaseCompute()
                         dIdx * tilingData_->hLoop * tilingData_->wLoop) /
                        tilingData_->wLoop;
         int64_t wIdx = idx % tilingData_->wLoop;
-        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN
-                                                    : tilingData_->ubFactorN;
-        int64_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD
-                                                      : tilingData_->outUbFactorD;
+        uint32_t n = nIdx == tilingData_->nLoop - 1 ? tilingData_->nOutDim - nIdx * tilingData_->ubFactorN :
+                                                      tilingData_->ubFactorN;
+        int64_t deps = dIdx == tilingData_->dLoop - 1 ? tilingData_->dOutDim - dIdx * tilingData_->outUbFactorD :
+                                                        tilingData_->outUbFactorD;
         int64_t rows = hIdx == tilingData_->hLoop - 1 ? tilingData_->hOutDim - hIdx * outUbFactorH : outUbFactorH;
         int64_t cols = wIdx == tilingData_->wLoop - 1 ? tilingData_->wOutDim - wIdx * outUbFactorW : outUbFactorW;
         int64_t depStart = dIdx * sD * outUbFactorD;
         int64_t rowStart = hIdx * sH * outUbFactorH;
         int64_t colStart = wIdx * sW * outUbFactorW;
 
-        int64_t srcOffset =
-            nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim * channels +
-            depStart * tilingData_->hInDim * tilingData_->wInDim * channels +
-            rowStart * tilingData_->wInDim * channels + colStart * channels;
+        int64_t srcOffset = nIdx * tilingData_->ubFactorN * tilingData_->dInDim * tilingData_->hInDim *
+                                tilingData_->wInDim * channels +
+                            depStart * tilingData_->hInDim * tilingData_->wInDim * channels +
+                            rowStart * tilingData_->wInDim * channels + colStart * channels;
         int64_t dstOffset = nIdx * tilingData_->ubFactorN * tilingData_->dOutDim * tilingData_->hOutDim *
                                 tilingData_->wOutDim * channels +
                             dIdx * outUbFactorD * tilingData_->hOutDim * tilingData_->wOutDim * channels +
                             hIdx * outUbFactorH * tilingData_->wOutDim * channels + wIdx * outUbFactorW * channels;
-        uint32_t inDeps =
-            tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : (deps - 1) * sD + effectiveKd;
-        uint32_t inRows = tilingData_->splitMode == SPLIT_DEPTHS || tilingData_->splitMode == SPLIT_BATCHS
-                              ? tilingData_->hInDim
-                              : (rows - 1) * sH + effectiveKh;
-        uint32_t inCols =
-            tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + effectiveKw;
+        uint32_t inDeps = tilingData_->splitMode == SPLIT_BATCHS ? tilingData_->dInDim : (deps - 1) * sD + effectiveKd;
+        uint32_t inRows = tilingData_->splitMode == SPLIT_DEPTHS || tilingData_->splitMode == SPLIT_BATCHS ?
+                              tilingData_->hInDim :
+                              (rows - 1) * sH + effectiveKh;
+        uint32_t inCols = tilingData_->splitMode != SPLIT_COLS ? tilingData_->wInDim : (cols - 1) * sW + effectiveKw;
 
         uint32_t oneRowElements = inCols * alignChannels;
         uint32_t onePlaneElements = oneRowElements * inRows;
@@ -179,7 +175,7 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::CopyInMultiChannels(in
         SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    } else if (tilingData_->splitMode == SPLIT_ROWS) {  // 切h 跳d
+    } else if (tilingData_->splitMode == SPLIT_ROWS) { // 切h 跳d
         LoopModeParams loopParams;
         loopParams.loop2Size = 1;
         loopParams.loop1Size = inputInfo.size[3];
@@ -191,7 +187,7 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::CopyInMultiChannels(in
         extParams.blockCount = inputInfo.size[1] * inputInfo.size[2];
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    } else {  // 切d n 不跳
+    } else { // 切d n 不跳
         extParams.blockCount = inputInfo.size[1] * inputInfo.size[2] * inputInfo.size[3] * inputInfo.size[4];
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
     }
@@ -261,8 +257,8 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::ComputeSingleChannels(
         for (uint16_t d = 0; d < loopD; d++) {
             for (uint16_t j = 0; j < loopH; j++) {
                 for (uint16_t k = 0; k < loopW; k++) {
-                    auto srcAddr =
-                        xLocalAddr + i * batchStride + d * oneLoopStrideD + j * oneLoopStrideH + k * oneLoopStrideW;
+                    auto srcAddr = xLocalAddr + i * batchStride + d * oneLoopStrideD + j * oneLoopStrideH +
+                                   k * oneLoopStrideW;
                     auto dstAddr = dstLocalAddr + i * oneChannelOutElements + d * outLoopStrideD + j * outLoopStrideH +
                                    k * alignChannels;
                     __VEC_SCOPE__
@@ -296,5 +292,5 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::ComputeSingleChannels(
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
 
-}  // namespace Pool3D
-#endif  // MAX_POOL_V3_NDHWC_BIG_CHANNEL_H_
+} // namespace Pool3D
+#endif // MAX_POOL_V3_NDHWC_BIG_CHANNEL_H_

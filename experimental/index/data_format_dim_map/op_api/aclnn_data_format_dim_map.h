@@ -26,19 +26,12 @@
 extern "C" {
 #endif
 
-ACLNN_API aclnnStatus aclnnDataFormatDimMapGetWorkspaceSize(
-    const aclTensor *x,
-    const char *srcFormat,
-    const char *dstFormat,
-    const aclTensor *y,
-    uint64_t *workspaceSize,
-    aclOpExecutor **executor);
+ACLNN_API aclnnStatus aclnnDataFormatDimMapGetWorkspaceSize(const aclTensor* x, const char* srcFormat,
+                                                            const char* dstFormat, const aclTensor* y,
+                                                            uint64_t* workspaceSize, aclOpExecutor** executor);
 
-ACLNN_API aclnnStatus aclnnDataFormatDimMap(
-    void *workspace,
-    uint64_t workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream stream);
+ACLNN_API aclnnStatus aclnnDataFormatDimMap(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                            aclrtStream stream);
 
 #ifdef __cplusplus
 }

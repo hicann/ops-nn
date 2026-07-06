@@ -17,7 +17,6 @@
 #include "../quant_batch_matmul_v3_base.h"
 #include "qbmm_asw_block.h"
 
-
 namespace QuantBatchMatmulV3 {
 
 using namespace AscendC;
@@ -25,10 +24,10 @@ using namespace matmul;
 
 // 这里入参由blockIdx改成mCntIdx，目的是abL1全载时调用更方便
 template <typename T, bool trans>
-__aicore__ inline void CopyInA1(const QuantBmmAswBlock &block, uint64_t mCntIdx, bool isMultiCore,
-                                LocalTensor<T> &al1Local, const GlobalTensor<T> &aGlobal)
+__aicore__ inline void CopyInA1(const QuantBmmAswBlock& block, uint64_t mCntIdx, bool isMultiCore,
+                                LocalTensor<T>& al1Local, const GlobalTensor<T>& aGlobal)
 {
-    auto &matmulTilingData = *block.tilingData_;
+    auto& matmulTilingData = *block.tilingData_;
     uint64_t shapeM = matmulTilingData.matmulTiling.M;
     uint64_t shapeK = matmulTilingData.matmulTiling.Ka;
     uint64_t singleCoreM = static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM);
@@ -39,9 +38,8 @@ __aicore__ inline void CopyInA1(const QuantBmmAswBlock &block, uint64_t mCntIdx,
     uint64_t dDim = shapeK;
     uint64_t offsetA = mCntIdx * static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM);
     if (mCntIdx > block.params_.mBaseNormCnt) {
-        offsetA -=
-            (mCntIdx - block.params_.mBaseNormCnt) *
-            (static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM) - block.params_.mBaseTailMain);
+        offsetA -= (mCntIdx - block.params_.mBaseNormCnt) *
+                   (static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM) - block.params_.mBaseTailMain);
     }
     // supportMmadS8S4平台的al1全载支持s8s8, s8s4, s4s4; david的al1全载支持s8s8, f8s8, f4f4
     constexpr uint64_t c0Size = DequantBmm::GetC0Size<T>();
@@ -66,7 +64,7 @@ __aicore__ inline void CopyInA1(const QuantBmmAswBlock &block, uint64_t mCntIdx,
     nd2nzParams.dstNzMatrixStride = 0;
     if constexpr (c0Size == K0_INT4) {
         GlobalTensor<int8_t> aGlobalInt8;
-        aGlobalInt8.SetGlobalBuffer(((__gm__ int8_t *)(aGlobal.GetPhyAddr())), (nDim * dDim) >> 1);
+        aGlobalInt8.SetGlobalBuffer(((__gm__ int8_t*)(aGlobal.GetPhyAddr())), (nDim * dDim) >> 1);
         auto al1LocalImpl = al1Local.template ReinterpretCast<int8_t>();
         DataCopy(al1LocalImpl, aGlobalInt8[offsetA >> 1], nd2nzParams);
     } else {
@@ -75,15 +73,15 @@ __aicore__ inline void CopyInA1(const QuantBmmAswBlock &block, uint64_t mCntIdx,
 }
 
 template <typename T, bool trans>
-__aicore__ inline void CopyInNDB1(const QuantBmmAswBlock &block, uint64_t nCntIdx, bool isMultiCore,
-                                  LocalTensor<T> &bl1Local, const GlobalTensor<T> &bGlobal)
+__aicore__ inline void CopyInNDB1(const QuantBmmAswBlock& block, uint64_t nCntIdx, bool isMultiCore,
+                                  LocalTensor<T>& bl1Local, const GlobalTensor<T>& bGlobal)
 {
-    auto &matmulTilingData = *block.tilingData_;
+    auto& matmulTilingData = *block.tilingData_;
     uint64_t shapeK = matmulTilingData.matmulTiling.Kb;
     uint64_t shapeN = matmulTilingData.matmulTiling.N;
-    uint64_t singleCoreN = isMultiCore && nCntIdx == block.params_.nCnt - 1UL
-                               ? block.params_.nBaseTail
-                               : static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreN);
+    uint64_t singleCoreN = isMultiCore && nCntIdx == block.params_.nCnt - 1UL ?
+                               block.params_.nBaseTail :
+                               static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreN);
     uint64_t offsetB = 0;
     // 临时代码，abl1支持s8s8 s8s4, bl1支持s8s8, 无fp4情况
     constexpr int64_t int4Factor = (AscendC::IsSameType<T, AscendC::int4b_t>::value) ? 2 : 1;
@@ -109,7 +107,7 @@ __aicore__ inline void CopyInNDB1(const QuantBmmAswBlock &block, uint64_t nCntId
     nd2nzParams.dstNzMatrixStride = 0;
     if constexpr (AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         GlobalTensor<int8_t> bGlobalInt8;
-        bGlobalInt8.SetGlobalBuffer(((__gm__ int8_t *)(bGlobal.GetPhyAddr())), (nDim * dDim) >> 1);
+        bGlobalInt8.SetGlobalBuffer(((__gm__ int8_t*)(bGlobal.GetPhyAddr())), (nDim * dDim) >> 1);
         auto bl1LocalImpl = bl1Local.template ReinterpretCast<int8_t>();
         DataCopy(bl1LocalImpl, bGlobalInt8[offsetB >> 1], nd2nzParams);
     } else {
@@ -118,17 +116,17 @@ __aicore__ inline void CopyInNDB1(const QuantBmmAswBlock &block, uint64_t nCntId
 }
 
 template <typename T, bool trans>
-__aicore__ inline void CopyInNZB1(const QuantBmmAswBlock &block, uint64_t nCntIdx, bool isMultiCore,
-                                  LocalTensor<T> &bl1Local, const GlobalTensor<T> &bGlobal,
+__aicore__ inline void CopyInNZB1(const QuantBmmAswBlock& block, uint64_t nCntIdx, bool isMultiCore,
+                                  LocalTensor<T>& bl1Local, const GlobalTensor<T>& bGlobal,
                                   uint64_t innerX2AlignedBlock)
 {
-    auto &matmulTilingData = *block.tilingData_;
+    auto& matmulTilingData = *block.tilingData_;
     uint64_t shapeK = matmulTilingData.matmulTiling.Kb;
     uint64_t shapeN = matmulTilingData.matmulTiling.N;
     uint64_t baseN = matmulTilingData.matmulTiling.baseN;
-    uint64_t singleCoreN = isMultiCore && nCntIdx == block.params_.nCnt - 1UL
-                               ? block.params_.nBaseTail
-                               : static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreN);
+    uint64_t singleCoreN = isMultiCore && nCntIdx == block.params_.nCnt - 1UL ?
+                               block.params_.nBaseTail :
+                               static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreN);
     uint64_t offsetB = 0;
     DataCopyParams gm2L1Params{1, 0, 0, 0};
     if constexpr (trans) {
@@ -139,21 +137,20 @@ __aicore__ inline void CopyInNZB1(const QuantBmmAswBlock &block, uint64_t nCntId
     } else {
         offsetB = nCntIdx * matmulTilingData.matmulTiling.singleCoreN * DequantBmm::Align(shapeK);
         gm2L1Params.blockCount = 1;
-        gm2L1Params.blockLen = DequantBmm::Align(shapeK) *
-                                DequantBmm::CeilDiv(singleCoreN, innerX2AlignedBlock);
+        gm2L1Params.blockLen = DequantBmm::Align(shapeK) * DequantBmm::CeilDiv(singleCoreN, innerX2AlignedBlock);
     }
     DataCopy(bl1Local, bGlobal[offsetB], gm2L1Params);
 }
 
 template <typename T>
-__aicore__ inline void CopyInB1Bias(const QuantBmmAswBlock &block, uint64_t nCntIdx, bool isMultiCore,
-                                    LocalTensor<T> &biasl1Local, const GlobalTensor<T> &biasGlobal,
+__aicore__ inline void CopyInB1Bias(const QuantBmmAswBlock& block, uint64_t nCntIdx, bool isMultiCore,
+                                    LocalTensor<T>& biasl1Local, const GlobalTensor<T>& biasGlobal,
                                     uint64_t innerBiasAlignedBlock)
 {
-    auto &matmulTilingData = *block.tilingData_;
-    uint64_t singleCoreN = isMultiCore && nCntIdx == block.params_.nCnt - 1UL
-                               ? block.params_.nBaseTail
-                               : static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreN);
+    auto& matmulTilingData = *block.tilingData_;
+    uint64_t singleCoreN = isMultiCore && nCntIdx == block.params_.nCnt - 1UL ?
+                               block.params_.nBaseTail :
+                               static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreN);
 
     // 32B对齐
     uint64_t alignSize = DequantBmm::Align(singleCoreN, innerBiasAlignedBlock) * sizeof(T);
@@ -168,10 +165,10 @@ template <typename T, bool trans>
 __aicore__ inline void CopyInScaleA(const QuantBmmAswBlock& block, uint32_t blockId, bool isMultiCore,
                                     LocalTensor<T>& scaleAl1Local, const GlobalTensor<T>& scaleAGlobal)
 {
-    auto &multiTilingData = *block.tilingData_;
+    auto& multiTilingData = *block.tilingData_;
     uint64_t shapeM = multiTilingData.matmulTiling.M;
-    uint64_t shapeK =
-        DequantBmm::Align(DequantBmm::CeilDiv(multiTilingData.matmulTiling.Ka, MXFP_GROUP_SIZE), MXFP_MULTI_BASE_SIZE);
+    uint64_t shapeK = DequantBmm::Align(DequantBmm::CeilDiv(multiTilingData.matmulTiling.Ka, MXFP_GROUP_SIZE),
+                                        MXFP_MULTI_BASE_SIZE);
     uint64_t mCntIdx = blockId % block.params_.mCnt;
     uint64_t singleCoreM = static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM);
     if (isMultiCore && mCntIdx >= block.params_.mBaseNormCnt) {
@@ -182,9 +179,8 @@ __aicore__ inline void CopyInScaleA(const QuantBmmAswBlock& block, uint32_t bloc
     uint64_t dDim = shapeK;
     uint64_t offsetScaleA = mCntIdx * static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM);
     if (mCntIdx > block.params_.mBaseNormCnt) {
-        offsetScaleA -=
-            (mCntIdx - block.params_.mBaseNormCnt) *
-            (static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM) - block.params_.mBaseTailMain);
+        offsetScaleA -= (mCntIdx - block.params_.mBaseNormCnt) *
+                        (static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM) - block.params_.mBaseTailMain);
     }
     if constexpr (trans) {
         nDim = shapeK;
@@ -204,7 +200,7 @@ __aicore__ inline void CopyInScaleA(const QuantBmmAswBlock& block, uint32_t bloc
     dn2nzParams.dstNzMatrixStride = 0;
 
     GlobalTensor<half> aScaleGlobalB16;
-    aScaleGlobalB16.SetGlobalBuffer(((__gm__ half *)(scaleAGlobal.GetPhyAddr())), (nDim * dDim) >> 1);
+    aScaleGlobalB16.SetGlobalBuffer(((__gm__ half*)(scaleAGlobal.GetPhyAddr())), (nDim * dDim) >> 1);
     auto scaleAl1LocalImpl = scaleAl1Local.template ReinterpretCast<half>();
     DataCopy(scaleAl1LocalImpl, aScaleGlobalB16[offsetScaleA >> 1], dn2nzParams);
 }
@@ -212,14 +208,11 @@ __aicore__ inline void CopyInScaleA(const QuantBmmAswBlock& block, uint32_t bloc
 template <typename T>
 __aicore__ inline void ProcessWithBatch(QuantBmmAswBlock& block, T& object)
 {
-    uint64_t batchC3C4 =
-        static_cast<uint64_t>(block.tilingData_->params.batchC3) * block.tilingData_->params.batchC4;
+    uint64_t batchC3C4 = static_cast<uint64_t>(block.tilingData_->params.batchC3) * block.tilingData_->params.batchC4;
     uint64_t batchC2C3C4 = block.tilingData_->params.batchC2 * batchC3C4;
-    uint64_t batchB3B4 =
-        static_cast<uint64_t>(block.tilingData_->params.batchB3) * block.tilingData_->params.batchB4;
+    uint64_t batchB3B4 = static_cast<uint64_t>(block.tilingData_->params.batchB3) * block.tilingData_->params.batchB4;
     uint64_t batchB2B3B4 = block.tilingData_->params.batchB2 * batchB3B4;
-    uint64_t batchA3A4 =
-        static_cast<uint64_t>(block.tilingData_->params.batchA3) * block.tilingData_->params.batchA4;
+    uint64_t batchA3A4 = static_cast<uint64_t>(block.tilingData_->params.batchA3) * block.tilingData_->params.batchA4;
     uint64_t batchA2A3A4 = block.tilingData_->params.batchA2 * batchA3A4;
     uint32_t multiA1C1 = block.tilingData_->params.batchA1 / block.tilingData_->params.batchC1;
     uint32_t multiA2C2 = block.tilingData_->params.batchA2 / block.tilingData_->params.batchC2;
@@ -265,4 +258,4 @@ __aicore__ inline void ProcessWithBatch(QuantBmmAswBlock& block, T& object)
     }
 }
 
-}  // namespace QuantBatchMatmulV3
+} // namespace QuantBatchMatmulV3

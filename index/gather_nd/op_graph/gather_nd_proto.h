@@ -51,15 +51,15 @@ namespace ge {
 * Compatible with the TensorFlow operator GatherNd.
 */
 REG_OP(GatherNd)
-    .INPUT(x, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
-                          DT_INT8, DT_QINT16, DT_QINT32, DT_QINT8, DT_QUINT16, DT_QUINT8, DT_UINT16, DT_UINT32,
-                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16}))
+    .INPUT(x, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT,  DT_FLOAT16, DT_INT16,   DT_INT32,
+                          DT_INT64,      DT_INT8,      DT_QINT16, DT_QINT32, DT_QINT8,   DT_QUINT16, DT_QUINT8,
+                          DT_UINT16,     DT_UINT32,    DT_UINT64, DT_UINT8,  DT_BOOL,    DT_STRING,  DT_BF16}))
     .INPUT(indices, TensorType::IndexNumberType())
-    .OUTPUT(y, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT16, DT_INT32, DT_INT64,
-                          DT_INT8, DT_QINT16, DT_QINT32, DT_QINT8, DT_QUINT16, DT_QUINT8, DT_UINT16, DT_UINT32,
-                          DT_UINT64, DT_UINT8, DT_BOOL, DT_STRING, DT_BF16}))
+    .OUTPUT(y, TensorType({DT_COMPLEX128, DT_COMPLEX64, DT_DOUBLE, DT_FLOAT,  DT_FLOAT16, DT_INT16,   DT_INT32,
+                           DT_INT64,      DT_INT8,      DT_QINT16, DT_QINT32, DT_QINT8,   DT_QUINT16, DT_QUINT8,
+                           DT_UINT16,     DT_UINT32,    DT_UINT64, DT_UINT8,  DT_BOOL,    DT_STRING,  DT_BF16}))
     .ATTR(negative_index_support, Bool, false)
     .OP_END_FACTORY_REG(GatherNd)
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_GATHER_ND_PROTO_H_
+#endif // OPS_BUILT_IN_OP_PROTO_INC_GATHER_ND_PROTO_H_

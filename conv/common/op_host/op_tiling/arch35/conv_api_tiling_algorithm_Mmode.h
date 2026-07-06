@@ -98,11 +98,12 @@ struct L1TilingCalc {
 
 class ConvTilingAlgorithmMmode : public ConvTilingAlgorithmBase {
 public:
-    explicit ConvTilingAlgorithmMmode(ConvTilingBase *tilingIns) : ConvTilingAlgorithmBase(tilingIns) {};
-    ~ConvTilingAlgorithmMmode() override {};
+    explicit ConvTilingAlgorithmMmode(ConvTilingBase* tilingIns) : ConvTilingAlgorithmBase(tilingIns){};
+    ~ConvTilingAlgorithmMmode() override{};
     int64_t Process() override;
     void SetL1TilingRes() override;
     void SetL0TilingRes() override;
+
 private:
     // L1 Tiling
     int64_t GetL1Tiling();
@@ -129,7 +130,7 @@ private:
     void UpdateL1DoubelBuffer();
     void CalFormulaicInnerBatch();
     uint64_t GetBatchLimitFromL0ASize();
-     // L0 tiling
+    // L0 tiling
     int64_t GetL0Tiling();
     void InitPingPong();
     void GetL0TilingRange();

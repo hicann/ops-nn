@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -22,8 +22,8 @@ namespace {
 using namespace optiling;
 using namespace optiling::matmul_v3_advanced;
 // ------------------------------ SetNeedNdDma -------------------------------------------//
-void SetNeedNdDmaDefault(
-    const MatmulV3CompileInfo& /* compileInfo */, const MatMulV3Args& /* args */, MatMulV3RunInfo& /* runInfo*/)
+void SetNeedNdDmaDefault(const MatmulV3CompileInfo& /* compileInfo */, const MatMulV3Args& /* args */,
+                         MatMulV3RunInfo& /* runInfo*/)
 {
     return;
 }
@@ -46,10 +46,10 @@ const static std::map<NpuArch, SetNeedNdDmaFunc> SetNeedNdDmaFuncMap = {
 namespace optiling {
 namespace fused_matmul {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(
-    FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510, ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
-MM_REGISTER_TILING_TEMPLATE(
-    FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_RESV, ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510,
+                            ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_RESV,
+                            ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
 
 void FusedMatMulIterBatchApiTiling::SetNeedNdDma()
 {
@@ -103,7 +103,8 @@ uint64_t FusedMatMulIterBatchApiTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-ge::graphStatus FusedMatMulIterBatchApiTiling::DoOpTiling() {
+ge::graphStatus FusedMatMulIterBatchApiTiling::DoOpTiling()
+{
     ge::graphStatus status = BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling();
     SetNeedNdDma();
     return status;

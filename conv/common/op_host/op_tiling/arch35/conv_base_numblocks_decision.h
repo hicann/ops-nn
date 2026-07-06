@@ -26,18 +26,18 @@ using namespace std;
 uint32_t Gcd(uint32_t i, uint32_t j);
 
 uint64_t ConvCeilDiv(uint64_t a, uint64_t b);
-void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, vector<uint32_t> &reslist);
+void ConvCalcCommFactor(const uint64_t num, const uint32_t numMax, vector<uint32_t>& reslist);
 uint32_t ConvAlignB(uint32_t a, uint32_t b);
 uint64_t ConvInferHiL1(uint64_t inputHoL1, uint64_t hi, uint64_t singlekH, uint32_t dilationH, uint32_t strideH);
 uint64_t ConvInferWiL1(uint64_t inputWoL1, uint64_t wi, uint64_t singlekW, uint32_t dilationW, uint32_t strideW);
 int64_t ConvComputeHo(int64_t hi, int64_t hk, int64_t padTop, int64_t padBottom, int64_t dilationH, int64_t strideH);
 int64_t ConvComputeWo(int64_t wi, int64_t wk, int64_t padLeft, int64_t padRight, int64_t dilationW, int64_t strideW);
 int64_t ConvComputeDo(int64_t di, int64_t dk, int64_t padHead, int64_t padTail, int64_t dilationD, int64_t strideD);
-void ConvNumBlocksFactorMix(uint32_t orgDim, vector<uint32_t> &inputRange, const vector<uint32_t> &mixRange);
-void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
-                            const ConvAscendcDescInfo& descInfo, const ConvAscendcShapesInfo& shapeInfo);
+void ConvNumBlocksFactorMix(uint32_t orgDim, vector<uint32_t>& inputRange, const vector<uint32_t>& mixRange);
+void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams, const ConvAscendcDescInfo& descInfo,
+                             const ConvAscendcShapesInfo& shapeInfo);
 
-template<typename T, typename Converter>
+template <typename T, typename Converter>
 std::string VectorToString(const std::vector<T>& vec, Converter converter)
 {
     std::string result = "[";
@@ -51,7 +51,7 @@ std::string VectorToString(const std::vector<T>& vec, Converter converter)
     return result;
 }
 
-template<typename T, typename Converter>
+template <typename T, typename Converter>
 std::string VectorsToString(const std::vector<std::vector<T>>& vecs, Converter converter)
 {
     std::string result = "[";
@@ -65,7 +65,7 @@ std::string VectorsToString(const std::vector<std::vector<T>>& vecs, Converter c
     return result;
 }
 
-template<typename T>
+template <typename T>
 std::string IntToString(const T& intValue)
 {
     return std::to_string(intValue);
@@ -73,7 +73,8 @@ std::string IntToString(const T& intValue)
 
 constexpr size_t LIMIT_MESSAGE_SIZE = 4096U;
 #define FORMAT_STRING(fmt, ...) FormatString(fmt, ##__VA_ARGS__)
-inline std::string FormatString(const char* fmt, ...) {
+inline std::string FormatString(const char* fmt, ...)
+{
     if (fmt == nullptr) {
         return "";
     }
@@ -96,7 +97,7 @@ public:
     ge::graphStatus GetNumBlocksInfo(ConvAscendcTilingInfo& tilingInfo);
     void ConvBaseInitAttrInfo(const ConvAscendcAttrInfo& attrInfo);
     void GetConvBaseCoreInfo(ConvOpsConstParams& convOpsConstParams);
-    void ConvBaseInitNodeInfo (const string& nodeName, const string& nodeType);
+    void ConvBaseInitNodeInfo(const string& nodeName, const string& nodeType);
     void InitNumBlocksConstParas();
     bool CheckInstrLimitsHWmode();
     bool CheckInstrLimitsMmode();
@@ -107,35 +108,36 @@ public:
     ge::graphStatus CheckL1SizeLimitsInMSplitMode();
     ge::graphStatus CheckL1SizeLimitsInHWsplitMode();
     int32_t NumBlocksDecision(NumBlocksRes& numBlocksRes);
+
 private:
     void SetTilingInfo(ConvAscendcTilingInfo& tilingInfo);
-    void ConvBaseInit(const ConvAscendcShapesInfo& shapeInfo,
-                      const ConvAscendcDescInfo& descInfo, const ConvAscendcTilingFlag& flagInfo);
-    void ConvBaseInitPlatformInfo (const ConvAscendcPlatformInfo& platformInfo);
+    void ConvBaseInit(const ConvAscendcShapesInfo& shapeInfo, const ConvAscendcDescInfo& descInfo,
+                      const ConvAscendcTilingFlag& flagInfo);
+    void ConvBaseInitPlatformInfo(const ConvAscendcPlatformInfo& platformInfo);
     void GetNumBlocksRangeCommon();
     void GetNumBlocksRangeMsplitMode();
     void GetNumBlocksInitMsplitMode();
     void CoreNumBlocksDecisionMsplitMode();
-    void NumBlocksDecisionBackTrackMsplitMode(const vector<vector<uint32_t>> &inputRanges,
-                                             uint32_t rangeIdx, vector<uint32_t> &record);
-    uint64_t CalcTotalCostMsplitMode(uint32_t batchDim, uint32_t mDim,
-                                     uint32_t nDim, uint32_t doDim, uint32_t groupDim);
-    bool CmpCoreUtilize(const uint32_t curCoreUtilize, const uint32_t minCostCoreUtilize,
-                        const uint32_t batchDim, const uint32_t doDim);
+    void NumBlocksDecisionBackTrackMsplitMode(const vector<vector<uint32_t>>& inputRanges, uint32_t rangeIdx,
+                                              vector<uint32_t>& record);
+    uint64_t CalcTotalCostMsplitMode(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim,
+                                     uint32_t groupDim);
+    bool CmpCoreUtilize(const uint32_t curCoreUtilize, const uint32_t minCostCoreUtilize, const uint32_t batchDim,
+                        const uint32_t doDim);
     bool CmpCoreUtilizeMsplitMode(uint32_t batchDim, uint32_t mDim, uint32_t nDim, uint32_t doDim, uint32_t groupDim);
-    bool CmpCoreUtilizeHWsplitMode(const vector<uint32_t> &record);
+    bool CmpCoreUtilizeHWsplitMode(const vector<uint32_t>& record);
     bool SkipScaleBiasL1Size();
-    uint64_t CalcCostHWsplitMode(const NumBlocksRes &numBlocksRes, const uint64_t ci1, const uint64_t ci0,
+    uint64_t CalcCostHWsplitMode(const NumBlocksRes& numBlocksRes, const uint64_t ci1, const uint64_t ci0,
                                  const uint64_t co1);
-    uint64_t CalcTotalCostHWsplitMode(const NumBlocksRes &numBlocksRes);
+    uint64_t CalcTotalCostHWsplitMode(const NumBlocksRes& numBlocksRes);
     void SeperateHoRangeHWsplitMode();
     void GetNumBlocksRangeHWsplitMode();
     void GetNumBlocksInitHWsplitMode();
-    void SetNumBlocksHWsplitMode(const vector<uint32_t> &record, const uint64_t curCost,
-                                NumBlocksRes &numBlocksRes) const;
-    void SetNumBlocksMsplitMode(const vector<uint32_t> &record, uint64_t curCost);
-    void NumBlocksDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>> &inputRanges,
-                                              uint32_t rangeIdx, vector<uint32_t> &record);
+    void SetNumBlocksHWsplitMode(const vector<uint32_t>& record, const uint64_t curCost,
+                                 NumBlocksRes& numBlocksRes) const;
+    void SetNumBlocksMsplitMode(const vector<uint32_t>& record, uint64_t curCost);
+    void NumBlocksDecisionBackTrackHWsplitMode(const vector<vector<uint32_t>>& inputRanges, uint32_t rangeIdx,
+                                               vector<uint32_t>& record);
     void CoreNumBlocksDecisionHWsplitMode();
     void CheckCoreUsedupHWsplitMode();
 
@@ -144,6 +146,7 @@ private:
 
     ge::graphStatus SelectNumBlocksMode();
     void GetNumBlocksRes();
+
 public:
     ConvAscendcShapesInfo shapeInfo_;
     ConvAscendcAttrInfo attrInfo_;
@@ -167,6 +170,6 @@ public:
     vector<uint32_t> numBlocksInit_;
     ConvOpsConstParams convOpsConstParams_;
 };
-}
-}
+} // namespace conv_ops_tiling
+} // namespace optiling
 #endif

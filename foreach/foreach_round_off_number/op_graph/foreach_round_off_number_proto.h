@@ -18,14 +18,14 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
-* @brief round off number foreach element in each tensor in tesnorlist, this is an in-place operation.
-* @par Inputs:
+ * @brief round off number foreach element in each tensor in tesnorlist, this is an in-place operation.
+ * @par Inputs:
  * Two inputs
  * @li x: A tensor list containing multiple tensors, can be float16, float.
  * @li roundMode: mode of round off which currently supports 2(floor) and 3(ceil).
-* @par Outputs:
+ * @par Outputs:
  * @li y: A tensor list which store the tensors whose value are produced by round off
-*/
+ */
 REG_OP(ForeachRoundOffNumber)
     .DYNAMIC_INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(roundMode, TensorType({DT_INT8}))

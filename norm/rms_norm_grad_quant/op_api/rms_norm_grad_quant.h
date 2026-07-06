@@ -21,9 +21,8 @@ namespace l0op {
 constexpr size_t RMS_NORM_GRAD_QUANT_OUT_NUM = 2;
 
 const std::array<aclTensor*, RMS_NORM_GRAD_QUANT_OUT_NUM> RmsNormGradQuant(
-    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
-    const aclTensor* scalesX, const aclTensor* offsetXOptional,
-    const char* quantMode, bool divMode, int32_t dstType, aclTensor* dxOut,
+    const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma, const aclTensor* scalesX,
+    const aclTensor* offsetXOptional, const char* quantMode, bool divMode, int32_t dstType, aclTensor* dxOut,
     aclTensor* dgammaOut, aclOpExecutor* executor);
 } // namespace l0op
 

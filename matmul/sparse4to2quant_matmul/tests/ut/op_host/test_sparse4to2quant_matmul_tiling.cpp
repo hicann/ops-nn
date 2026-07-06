@@ -39,8 +39,8 @@ using namespace optiling;
 
 class Sparse4to2QuantMatmulTilingTestParam {
 public:
-    void Prepare(Sparse4to2QuantMatmulCompileInfo &compileInfo) const;
-    void InvokeTilingFunc(Sparse4to2QuantMatmulCompileInfo &compileInfo) const;
+    void Prepare(Sparse4to2QuantMatmulCompileInfo& compileInfo) const;
+    void InvokeTilingFunc(Sparse4to2QuantMatmulCompileInfo& compileInfo) const;
     void Test() const;
     std::string socVersion;
     std::string caseName;
@@ -70,20 +70,21 @@ public:
     bool tilingStub; // 是否tililg打桩，只给kernel的用例，此时tiling ut里不校验tiling出参
 };
 
-#define GET_API_TILING_VALUE(obj, fieldName) *(int32_t *)(obj.data_ptr_ + obj.fieldName##_offset_)
+#define GET_API_TILING_VALUE(obj, fieldName) *(int32_t*)(obj.data_ptr_ + obj.fieldName##_offset_)
 
-static string TilingData2Str(const void *tilingData, size_t tilingSize)
+static string TilingData2Str(const void* tilingData, size_t tilingSize)
 {
     string result;
     for (size_t i = 0; i < tilingSize; i += sizeof(int32_t)) {
-        result += std::to_string((reinterpret_cast<const int32_t *>(tilingData)[i / sizeof(int32_t)]));
+        result += std::to_string((reinterpret_cast<const int32_t*>(tilingData)[i / sizeof(int32_t)]));
         result += " ";
     }
 
     return result;
 }
 
-static gert::Shape TransNd2Nz(const gert::Shape &inShape) {
+static gert::Shape TransNd2Nz(const gert::Shape& inShape)
+{
     gert::Shape outShape;
     for (size_t idx = 0; idx < inShape.GetDimNum() - 2; ++idx) {
         outShape.AppendDim(inShape.GetDim(idx));
@@ -100,16 +101,12 @@ static gert::Shape TransNd2Nz(const gert::Shape &inShape) {
 
 class TestSparse4to2QuantMatmulTiling : public testing::TestWithParam<Sparse4to2QuantMatmulTilingTestParam> {
 protected:
-    static void SetUpTestCase()
-    {
-    }
+    static void SetUpTestCase() {}
 
-    static void TearDownTestCase()
-    {
-    }
+    static void TearDownTestCase() {}
 };
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+static void SplitStr2Vec(const string& input, const string& delimiter, vector<string>& output)
 {
     auto delimiterLen = delimiter.size();
     std::string::size_type currPos = 0;
@@ -125,10 +122,12 @@ static void SplitStr2Vec(const string &input, const string &delimiter, vector<st
     }
 }
 
-static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext *tilingContext, string &compileInfoStr,
+static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext* tilingContext, string& compileInfoStr,
                              int64_t coreNum = -1)
 {
-    map<string, string> soc_version_infos = {{"SoC_version", socVersion},};
+    map<string, string> soc_version_infos = {
+        {"SoC_version", socVersion},
+    };
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -181,7 +180,7 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 }
 
-static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::string &socVersion)
+static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::string& socVersion)
 {
     std::vector<Sparse4to2QuantMatmulTilingTestParam> params;
     std::string rootPath(GetExeDirPath() + "../../../../");
@@ -192,10 +191,10 @@ static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::st
         return params;
     }
 
-    map<string, ge::DataType> dtypeMap = {{"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT},
-                                          {"BF16", ge::DT_BF16},       {"INT8", ge::DT_INT8},
-                                          {"INT4", ge::DT_INT4},       {"UINT64", ge::DT_UINT64},
-                                          {"INT32", ge::DT_INT32},     {"INT64", ge::DT_INT64}, };
+    map<string, ge::DataType> dtypeMap = {
+        {"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT},   {"BF16", ge::DT_BF16},   {"INT8", ge::DT_INT8},
+        {"INT4", ge::DT_INT4},       {"UINT64", ge::DT_UINT64}, {"INT32", ge::DT_INT32}, {"INT64", ge::DT_INT64},
+    };
 
     std::string line;
     while (std::getline(csvData, line)) {
@@ -245,7 +244,7 @@ static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::st
     return params;
 }
 
-void Sparse4to2QuantMatmulTilingTestParam::Prepare(Sparse4to2QuantMatmulCompileInfo &compileInfo) const
+void Sparse4to2QuantMatmulTilingTestParam::Prepare(Sparse4to2QuantMatmulCompileInfo& compileInfo) const
 {
     gert::StorageShape xShape;
     gert::StorageShape sparseWeightShape;
@@ -279,30 +278,30 @@ void Sparse4to2QuantMatmulTilingTestParam::Prepare(Sparse4to2QuantMatmulCompileI
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(6, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1})
-            .InputShapes({&xShape, &sparseWeightShape, &indexShape, &xScaleShape, &sparseWeightscaleShape, &biasShape})
-            .OutputShapes({&outputShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-            .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, sparseWeightDtype, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ)
-            .NodeInputTd(2, indexDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, xScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, sparseWeightScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)}})
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &sparseWeightShape, &indexShape, &xScaleShape, &sparseWeightscaleShape, &biasShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, sparseWeightDtype, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ)
+                      .NodeInputTd(2, indexDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, xScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, sparseWeightScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     string compileInfoStr;
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     InitPlatformInfo(socVersion, tilingContext, compileInfoStr, coreNum);
 
     auto kernelHold = gert::KernelRunContextFaker()
@@ -316,8 +315,9 @@ void Sparse4to2QuantMatmulTilingTestParam::Prepare(Sparse4to2QuantMatmulCompileI
     ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 }
 
-void Sparse4to2QuantMatmulTilingTestParam::InvokeTilingFunc(Sparse4to2QuantMatmulCompileInfo &compileInfo) const
-{   gert::StorageShape xShape;
+void Sparse4to2QuantMatmulTilingTestParam::InvokeTilingFunc(Sparse4to2QuantMatmulCompileInfo& compileInfo) const
+{
+    gert::StorageShape xShape;
     gert::StorageShape sparseWeightShape;
     gert::StorageShape indexShape;
     gert::StorageShape xScaleShape;
@@ -325,7 +325,7 @@ void Sparse4to2QuantMatmulTilingTestParam::InvokeTilingFunc(Sparse4to2QuantMatmu
     gert::StorageShape biasShape;
     gert::StorageShape outputShape;
 
-    cout<<"run case "<<prefix<<std::endl;
+    cout << "run case " << prefix << std::endl;
 
     xShape.MutableOriginShape() = gert::Shape({m, k});
     sparseWeightShape.MutableOriginShape() = gert::Shape({n, k / 2});
@@ -351,29 +351,29 @@ void Sparse4to2QuantMatmulTilingTestParam::InvokeTilingFunc(Sparse4to2QuantMatmu
     auto rawTilingData = gert::TilingData::CreateCap(4096);
     ASSERT_NE(rawTilingData, nullptr);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
-    auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
-    auto holder =
-        gert::TilingContextFaker()
-            .NodeIoNum(6, 1)
-            .IrInstanceNum({1, 1, 1, 1, 1, 1})
-            .InputShapes({&xShape, &sparseWeightShape, &indexShape, &xScaleShape, &sparseWeightscaleShape, &biasShape})
-            .CompileInfo(&compileInfo)
-            .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-            .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(1, sparseWeightDtype, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ)
-            .NodeInputTd(2, indexDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(3, xScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(4, sparseWeightScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeInputTd(5, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-            .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)}})
-            .TilingData(rawTilingData.get())
-            .Workspace(workspace)
-            .SetOpType(opType)
-            .Build();
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&xShape, &sparseWeightShape, &indexShape, &xScaleShape, &sparseWeightscaleShape, &biasShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, sparseWeightDtype, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ)
+                      .NodeInputTd(2, indexDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, xScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, sparseWeightScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(yDtype)}})
+                      .TilingData(rawTilingData.get())
+                      .Workspace(workspace)
+                      .SetOpType(opType)
+                      .Build();
 
     string compileInfoStr;
-    gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
@@ -396,16 +396,12 @@ void Sparse4to2QuantMatmulTilingTestParam::Test() const
     InvokeTilingFunc(compileInfo);
 }
 
-
-TEST_P(TestSparse4to2QuantMatmulTiling, generalTest)
-{
-    GetParam().Test();
-}
+TEST_P(TestSparse4to2QuantMatmulTiling, generalTest) { GetParam().Test(); }
 
 INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestSparse4to2QuantMatmulTiling, testing::ValuesIn(GetParams("Ascend910B2")));
 INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestSparse4to2QuantMatmulTiling, testing::ValuesIn(GetParams("Ascend910B4")));
 
-static void ThreadFunc(const Sparse4to2QuantMatmulTilingTestParam *params, size_t testcaseNum, size_t threadIdx,
+static void ThreadFunc(const Sparse4to2QuantMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum)
 {
     int32_t logLevel = 0;
@@ -419,8 +415,8 @@ namespace {
 mutex sparseQuantMatmulcompileMutex;
 }
 
-static void ThreadFuncPrepare(const Sparse4to2QuantMatmulTilingTestParam *params, size_t testcaseNum, size_t threadIdx,
-                       size_t threadNum, map<size_t, Sparse4to2QuantMatmulCompileInfo> &compileInfos)
+static void ThreadFuncPrepare(const Sparse4to2QuantMatmulTilingTestParam* params, size_t testcaseNum, size_t threadIdx,
+                              size_t threadNum, map<size_t, Sparse4to2QuantMatmulCompileInfo>& compileInfos)
 {
     if (threadIdx >= testcaseNum)
         return;
@@ -435,8 +431,9 @@ static void ThreadFuncPrepare(const Sparse4to2QuantMatmulTilingTestParam *params
     }
 }
 
-static void ThreadFuncInvokeTilingFunc(const Sparse4to2QuantMatmulTilingTestParam *params, size_t testcaseNum, size_t threadIdx,
-                       size_t threadNum, Sparse4to2QuantMatmulCompileInfo &compileInfo)
+static void ThreadFuncInvokeTilingFunc(const Sparse4to2QuantMatmulTilingTestParam* params, size_t testcaseNum,
+                                       size_t threadIdx, size_t threadNum,
+                                       Sparse4to2QuantMatmulCompileInfo& compileInfo)
 {
     if (threadIdx >= testcaseNum)
         return;
@@ -445,7 +442,7 @@ static void ThreadFuncInvokeTilingFunc(const Sparse4to2QuantMatmulTilingTestPara
     params[threadIdx].InvokeTilingFunc(compileInfo);
 }
 
-static void TestMultiThread(const Sparse4to2QuantMatmulTilingTestParam *params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThread(const Sparse4to2QuantMatmulTilingTestParam* params, size_t testcaseNum, size_t threadNum)
 {
     std::thread threads[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
@@ -457,7 +454,8 @@ static void TestMultiThread(const Sparse4to2QuantMatmulTilingTestParam *params, 
     }
 }
 
-static void TestMultiThreadSeparate(const Sparse4to2QuantMatmulTilingTestParam *params, size_t testcaseNum, size_t threadNum)
+static void TestMultiThreadSeparate(const Sparse4to2QuantMatmulTilingTestParam* params, size_t testcaseNum,
+                                    size_t threadNum)
 {
     std::thread threads[threadNum];
     map<size_t, Sparse4to2QuantMatmulCompileInfo> compileInfos;
@@ -471,12 +469,11 @@ static void TestMultiThreadSeparate(const Sparse4to2QuantMatmulTilingTestParam *
 
     std::thread threadsInvoke[threadNum];
     for (size_t idx = 0; idx < threadNum; ++idx) {
-        threadsInvoke[idx] = std::thread(ThreadFuncInvokeTilingFunc, params, testcaseNum, idx, threadNum, std::ref(compileInfos[idx]));
+        threadsInvoke[idx] = std::thread(ThreadFuncInvokeTilingFunc, params, testcaseNum, idx, threadNum,
+                                         std::ref(compileInfos[idx]));
     }
 
     for (size_t idx = 0; idx < threadNum; ++idx) {
         threadsInvoke[idx].join();
     }
 }
-
-

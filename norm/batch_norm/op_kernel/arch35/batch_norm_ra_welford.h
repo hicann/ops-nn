@@ -17,8 +17,7 @@
 
 #include "batch_norm_base.h"
 
-namespace BatchNormOps
-{
+namespace BatchNormOps {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
@@ -31,8 +30,7 @@ using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
 template <typename T1, typename T2>
-class BatchNormRAWelford
-{
+class BatchNormRAWelford {
 public:
     __aicore__ inline BatchNormRAWelford(const BatchNormRAWelfordTilingData* tilingData, TPipe* pipeIn)
     {
@@ -70,8 +68,8 @@ public:
     {
         auto blockIdx = GetBlockIdx();
 
-        this->singleA = (blockIdx == this->blockNum - 1) ? (this->a - this->aBlockFactor * (this->blockNum - 1))
-                                                         : this->aBlockFactor;
+        this->singleA = (blockIdx == this->blockNum - 1) ? (this->a - this->aBlockFactor * (this->blockNum - 1)) :
+                                                           this->aBlockFactor;
         int64_t aGmOffset = this->aBlockFactor * blockIdx;
         xGm.SetGlobalBuffer((__gm__ T1*)x + aGmOffset);
         betaGm.SetGlobalBuffer((__gm__ T2*)beta + aGmOffset);
@@ -105,8 +103,8 @@ public:
 
         pipe->InitBuffer(tMeanBuff, this->rFactor * this->aFactor * sizeof(float));
         pipe->InitBuffer(tVarBuff, this->rFactor * this->aFactor * sizeof(float));
-        int64_t rFactorAlign =
-            (((this->rFactor * sizeof(float) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(float);
+        int64_t rFactorAlign = (((this->rFactor * sizeof(float) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
+                               sizeof(float);
         pipe->InitBuffer(tCountBuff, rFactorAlign * sizeof(float));
     }
 
@@ -116,8 +114,8 @@ public:
         int64_t quotient = (this->singleA + this->aFactor - 1) / this->aFactor;
         for (int64_t ubLoopIdx = 0; ubLoopIdx < quotient; ubLoopIdx++) {
             int64_t aOffset = ubLoopIdx * this->aFactor;
-            int64_t currentA =
-                (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) : this->aFactor;
+            int64_t currentA = (ubLoopIdx == (quotient - 1)) ? (this->singleA - (quotient - 1) * this->aFactor) :
+                                                               this->aFactor;
             currentANumAlign = (((currentA * sizeof(T1) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(T1);
             currentALoopCount = ops::CeilDiv(currentA, static_cast<int64_t>(VL_FP32));
             ProcessAInner(aOffset, currentA);
@@ -192,8 +190,8 @@ private:
         int64_t quotient = (this->r + this->rFactor - 1) / this->rFactor;
         for (int64_t rLoopIdx = 0; rLoopIdx < quotient; rLoopIdx++) {
             int64_t copyXOffset = rLoopIdx * this->rFactor * this->a + aOffset;
-            int64_t currentR =
-                (rLoopIdx == (quotient - 1)) ? (this->r - (quotient - 1) * this->rFactor) : this->rFactor;
+            int64_t currentR = (rLoopIdx == (quotient - 1)) ? (this->r - (quotient - 1) * this->rFactor) :
+                                                              this->rFactor;
 
             CopyInX(copyXOffset, currentR, currentANum);
 
@@ -414,7 +412,6 @@ private:
         uint32_t sevenRLoopSize = ROW_SEVEN_OFFSET * rLoopStride;
         __VEC_SCOPE__
         {
-
             RegTensor<float> x1;
             RegTensor<float> x2;
             RegTensor<float> x3;
@@ -428,7 +425,6 @@ private:
             RegTensor<float> nextRowCount;
             RegTensor<float> remCount;
             RegTensor<float> nextRemCount;
-
 
             MaskReg pregLoop;
             uint32_t sreg0 = currentANum;
@@ -815,16 +811,16 @@ private:
                 Div(r, one, var, pregLoop);
                 Sqrt(y, r, pregLoop);
                 Muls(t, var, float(-0.5), pregLoop);
-                Mul(t, t, y, pregLoop);                 // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);               // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);             // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);   // -1 * x
-                Mula(s, t3, r, pregLoop);               // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop);  // (-1) * y
-                Mula(r, t4, rstd, pregLoop);            // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);              // s + x * t
-                Mul(s, s, rstd, pregLoop);              // e * y
-                Mula(rstd, s, scalar1, pregLoop);       // y + y * e * 0.5
+                Mul(t, t, y, pregLoop);                // -0.5 * x * y
+                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
+                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
+                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
+                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
+                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
+                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
+                Mula(s, var, r, pregLoop);             // s + x * t
+                Mul(s, s, rstd, pregLoop);             // e * y
+                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
                 CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
                 Select(rstd, scalarZero, rstd, cmpRegZero);
                 CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
@@ -861,8 +857,8 @@ private:
         int64_t quotient = (this->r + this->rFactor - 1) / this->rFactor;
         for (int64_t rLoopIdx = 0; rLoopIdx < quotient; rLoopIdx++) {
             int64_t copyXOffset = rLoopIdx * this->rFactor * this->a + aOffset;
-            int64_t currentR =
-                (rLoopIdx == (quotient - 1)) ? (this->r - (quotient - 1) * this->rFactor) : this->rFactor;
+            int64_t currentR = (rLoopIdx == (quotient - 1)) ? (this->r - (quotient - 1) * this->rFactor) :
+                                                              this->rFactor;
 
             CopyInX(copyXOffset, currentR, currentANum);
             NormalizeVF(currentR, currentANum, batchMeanInUbAddr, batchRstdInUbAddr, betaInUbAddr, gammaInUbAddr);
@@ -1030,6 +1026,6 @@ private:
     TBuf<TPosition::VECCALC> tVarBuff;
     TBuf<TPosition::VECCALC> tCountBuff;
 };
-}  // namespace BatchNormOps
+} // namespace BatchNormOps
 
 #endif // NORM_BATCH_NORM_RA_WELFORD_H

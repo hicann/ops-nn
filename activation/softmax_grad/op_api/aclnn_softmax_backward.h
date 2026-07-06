@@ -36,4 +36,4 @@ ACLNN_API aclnnStatus aclnnSoftmaxBackward(void* workspace, uint64_t workspaceSi
 }
 #endif
 
-#endif  // OP_API_INC_LEVEL2_ACLNN_SOFTMAX_BACKWARD_H_
+#endif // OP_API_INC_LEVEL2_ACLNN_SOFTMAX_BACKWARD_H_

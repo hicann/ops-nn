@@ -25,15 +25,9 @@
 
 class ErfinvInferShapeUTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ErfinvInferShapeUTest SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ErfinvInferShapeUTest SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ErfinvInferShapeUTest TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ErfinvInferShapeUTest TearDown" << std::endl; }
 };
 
 TEST_F(ErfinvInferShapeUTest, erfinv_infershape_succ_1)

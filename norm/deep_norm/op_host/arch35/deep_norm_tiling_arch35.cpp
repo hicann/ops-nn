@@ -31,13 +31,13 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
-constexpr uint32_t VL_FP32 = 256U / sizeof(float);   // fp32 vector length (matches kernel)
-constexpr int64_t UB_RESERVED_SIZE = 1024;           // covers mean/rstd/sum block bufs + binaryAddBuf + slack
-constexpr int64_t UB_QUEUE_COUNT = 5;                // x/gx/gamma/beta/y dtype-sized queues
+constexpr uint32_t VL_FP32 = 256U / sizeof(float); // fp32 vector length (matches kernel)
+constexpr int64_t UB_RESERVED_SIZE = 1024;         // covers mean/rstd/sum block bufs + binaryAddBuf + slack
+constexpr int64_t UB_QUEUE_COUNT = 5;              // x/gx/gamma/beta/y dtype-sized queues
 constexpr int64_t ATTR_ALPHA_INDEX = 0;
 constexpr int64_t ATTR_EPSILON_INDEX = 1;
 constexpr int32_t INPUT_X_INDEX = 0;
@@ -68,7 +68,7 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& numCo
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
     OP_CHECK_IF(xDimNum <= gammaDimNum, OP_LOGE(context, "x dim num must be greater than gamma dim num"),
-        return ge::GRAPH_FAILED);
+                return ge::GRAPH_FAILED);
 
     numCol = gammaShape.GetShapeSize();
     OP_CHECK_IF(numCol <= 0, OP_LOGE(context, "numCol must be positive"), return ge::GRAPH_FAILED);
@@ -93,8 +93,9 @@ static ge::graphStatus GetAttrInfo(gert::TilingContext* context, float& alpha, f
 }
 
 // Computes the core split, aligned reduce length and power-of-two fold point, with uint32 range guard.
-static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t numCol, int64_t numRow,
-    int64_t coreNum, int64_t& rowPerCore, int64_t& usedCoreNum, int64_t& numColAlign, int64_t& powerSplit)
+static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t numCol, int64_t numRow, int64_t coreNum,
+                                        int64_t& rowPerCore, int64_t& usedCoreNum, int64_t& numColAlign,
+                                        int64_t& powerSplit)
 {
     rowPerCore = CeilDiv(numRow, coreNum);
     OP_CHECK_IF(rowPerCore <= 0, OP_LOGE(context, "rowPerCore must be positive"), return ge::GRAPH_FAILED);
@@ -111,7 +112,7 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t nu
 
     // Range guard: tiling-data fields are uint32; reject shapes that would silently truncate.
     OP_CHECK_IF(numRow > static_cast<int64_t>(UINT32_MAX) || numColAlign > static_cast<int64_t>(UINT32_MAX),
-        OP_LOGE(context, "numRow/numColAlign exceeds uint32 range"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "numRow/numColAlign exceeds uint32 range"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -119,23 +120,24 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, int64_t nu
 // InitBuffers 5 dtype-sized queues (x/gx/gamma/beta/y) plus an fp32 hBuf of numColAlign, so a
 // large D would overflow UB at kernel InitBuffer (template add_layer_norm has the same guard).
 static ge::graphStatus CheckUbCapacity(gert::TilingContext* context, int64_t numCol, int64_t numColAlign,
-    uint64_t ubSize)
+                                       uint64_t ubSize)
 {
     auto xDescPtr = context->GetInputDesc(INPUT_X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDescPtr);
     int64_t dtSize = GetSizeByDataType(xDescPtr->GetDataType());
     OP_CHECK_IF(dtSize <= 0, OP_LOGE(context, "invalid x dtype size"), return ge::GRAPH_FAILED);
     int64_t ubRequired = numColAlign * (UB_QUEUE_COUNT * dtSize + static_cast<int64_t>(sizeof(float))) +
-        UB_RESERVED_SIZE;
+                         UB_RESERVED_SIZE;
     OP_CHECK_IF(ubRequired > static_cast<int64_t>(ubSize),
-        OP_LOGE(context, "numCol %ld needs UB %ld over capacity %lu", numCol, ubRequired, ubSize),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "numCol %ld needs UB %ld over capacity %lu", numCol, ubRequired, ubSize),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 // Sets workspace size and writes the computed values into the tiling data / block dim / tiling key.
-static ge::graphStatus SetTilingData(gert::TilingContext* context, int64_t usedCoreNum, int64_t numCol,
-    int64_t numRow, int64_t rowPerCore, int64_t numColAlign, int64_t powerSplit, float eps, float alpha)
+static ge::graphStatus SetTilingData(gert::TilingContext* context, int64_t usedCoreNum, int64_t numCol, int64_t numRow,
+                                     int64_t rowPerCore, int64_t numColAlign, int64_t powerSplit, float eps,
+                                     float alpha)
 {
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -144,7 +146,7 @@ static ge::graphStatus SetTilingData(gert::TilingContext* context, int64_t usedC
     DeepNormTilingData* tiling = context->GetTilingData<DeepNormTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(DeepNormTilingData), 0, sizeof(DeepNormTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     tiling->numCore = static_cast<uint32_t>(usedCoreNum);
     tiling->numCol = static_cast<uint32_t>(numCol);
@@ -166,7 +168,7 @@ static ge::graphStatus DeepNormTilingFunc(gert::TilingContext* context)
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t numCol = 0;
     int64_t numRow = 0;
@@ -213,8 +215,6 @@ static ge::graphStatus TilingParseForDeepNorm(gert::TilingParseContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(DeepNorm)
-    .Tiling(DeepNormTilingFunc)
-    .TilingParse<DeepNormCompileInfo>(TilingParseForDeepNorm);
+IMPL_OP_OPTILING(DeepNorm).Tiling(DeepNormTilingFunc).TilingParse<DeepNormCompileInfo>(TilingParseForDeepNorm);
 
 } // namespace optiling

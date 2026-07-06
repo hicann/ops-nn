@@ -59,11 +59,9 @@ struct ASWOffsetParam {
 
 class WeightQuantBmmAswBlock {
 public:
-    __aicore__ inline WeightQuantBmmAswBlock()
-    {
-    }
-    __aicore__ inline void Init(
-        const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData, uint32_t blockIdx);
+    __aicore__ inline WeightQuantBmmAswBlock() {}
+    __aicore__ inline void Init(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData,
+                                uint32_t blockIdx);
     __aicore__ inline void UpdateBasicIndex(uint64_t roundIdx);
     __aicore__ inline void UpdateBlockParams(uint64_t roundIdx);
     template <bool aTrans, bool bTrans, CubeFormat formatX2 = CubeFormat::ND>
@@ -73,7 +71,7 @@ public:
 public:
     ASWTilingParam params_;
     ASWOffsetParam offset_;
-    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams *tilingData_;
+    const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASWTilingDataParams* tilingData_;
 
 private:
     const uint64_t WINDOW_LEN = 4;
@@ -183,11 +181,10 @@ __aicore__ inline void WeightQuantBmmAswBlock::CalcGMOffset()
     offset_.offsetScale = nOffset;
     if (tilingData_->matmulTiling.isBias) {
         offset_.offsetBias = nOffset;
-        if (static_cast<bool>(tilingData_->params.biasWithBatch)){
+        if (static_cast<bool>(tilingData_->params.biasWithBatch)) {
             offset_.offsetBias += offset_.batchCOffset * tilingData_->matmulTiling.N;
         }
     }
 }
 
-}  // namespace WeightQuantBatchMatmulV2::Arch35
-
+} // namespace WeightQuantBatchMatmulV2::Arch35

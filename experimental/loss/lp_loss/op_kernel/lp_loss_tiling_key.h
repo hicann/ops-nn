@@ -27,12 +27,11 @@
 // Param: schMode
 // Default Value: 1 (对应 lp_loss_tiling.cpp 中的 SetTilingKey(1))
 // Allow List: 0, 1
-ASCENDC_TPL_ARGS_DECL(
-    LpLoss, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, LPLOSS_TPL_SCH_MODE_0, LPLOSS_TPL_SCH_MODE_1));
+ASCENDC_TPL_ARGS_DECL(LpLoss, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, LPLOSS_TPL_SCH_MODE_0,
+                                                    LPLOSS_TPL_SCH_MODE_1));
 
 // 注册选择器
-ASCENDC_TPL_SEL(
-    ASCENDC_TPL_ARGS_SEL(
-        ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, LPLOSS_TPL_SCH_MODE_0, LPLOSS_TPL_SCH_MODE_1)), );
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, LPLOSS_TPL_SCH_MODE_0,
+                                                          LPLOSS_TPL_SCH_MODE_1)), );
 
 #endif // LP_LOSS_TILING_KEY_H

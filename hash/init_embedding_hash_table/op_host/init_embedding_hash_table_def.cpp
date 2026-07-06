@@ -17,7 +17,7 @@
 namespace ops {
 class InitEmbeddingHashTable : public OpDef {
 public:
-    explicit InitEmbeddingHashTable(const char *name) : OpDef(name)
+    explicit InitEmbeddingHashTable(const char* name) : OpDef(name)
     {
         this->Input("table_handle")
             .ParamType(REQUIRED)
@@ -43,4 +43,4 @@ public:
 };
 
 OP_ADD(InitEmbeddingHashTable);
-}  // namespace ops
+} // namespace ops

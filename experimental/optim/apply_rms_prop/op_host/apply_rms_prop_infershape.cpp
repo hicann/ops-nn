@@ -26,9 +26,9 @@ using namespace ge;
 
 namespace ops {
 
-static constexpr size_t INPUT_IDX_VAR  = 0;
-static constexpr size_t INPUT_IDX_MS   = 1;
-static constexpr size_t INPUT_IDX_MOM  = 2;
+static constexpr size_t INPUT_IDX_VAR = 0;
+static constexpr size_t INPUT_IDX_MS = 1;
+static constexpr size_t INPUT_IDX_MOM = 2;
 static constexpr size_t INPUT_IDX_GRAD = 3;
 
 static bool ShapeEqual(const gert::Shape& a, const gert::Shape& b)
@@ -52,20 +52,17 @@ static ge::graphStatus InferShape4ApplyRmsProp(gert::InferShapeContext* context)
     const gert::Shape* ms_shape = context->GetInputShape(INPUT_IDX_MS);
     OP_CHECK_NULL_WITH_CONTEXT(context, ms_shape);
     OP_CHECK_IF(!ShapeEqual(*var_shape, *ms_shape),
-        OP_LOGE(context, "ApplyRmsProp InferShape: ms shape must equal var shape"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ApplyRmsProp InferShape: ms shape must equal var shape"), return ge::GRAPH_FAILED);
 
     const gert::Shape* mom_shape = context->GetInputShape(INPUT_IDX_MOM);
     OP_CHECK_NULL_WITH_CONTEXT(context, mom_shape);
     OP_CHECK_IF(!ShapeEqual(*var_shape, *mom_shape),
-        OP_LOGE(context, "ApplyRmsProp InferShape: mom shape must equal var shape"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ApplyRmsProp InferShape: mom shape must equal var shape"), return ge::GRAPH_FAILED);
 
     const gert::Shape* grad_shape = context->GetInputShape(INPUT_IDX_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context, grad_shape);
     OP_CHECK_IF(!ShapeEqual(*var_shape, *grad_shape),
-        OP_LOGE(context, "ApplyRmsProp InferShape: grad shape must equal var shape"),
-        return ge::GRAPH_FAILED);
+                OP_LOGE(context, "ApplyRmsProp InferShape: grad shape must equal var shape"), return ge::GRAPH_FAILED);
 
     gert::Shape* var_out_shape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, var_out_shape);
@@ -75,7 +72,7 @@ static ge::graphStatus InferShape4ApplyRmsProp(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, mom_out_shape);
 
     *var_out_shape = *var_shape;
-    *ms_out_shape  = *var_shape;
+    *ms_out_shape = *var_shape;
     *mom_out_shape = *var_shape;
 
     return ge::GRAPH_SUCCESS;
@@ -83,4 +80,4 @@ static ge::graphStatus InferShape4ApplyRmsProp(gert::InferShapeContext* context)
 
 IMPL_OP_INFERSHAPE(ApplyRmsProp).InferShape(InferShape4ApplyRmsProp);
 
-}  // namespace ops
+} // namespace ops

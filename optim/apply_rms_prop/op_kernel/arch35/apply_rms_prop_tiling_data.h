@@ -30,11 +30,11 @@
 #include <cstdint>
 
 struct ApplyRmsPropTilingData {
-    int64_t totalNum = 0;       // Total number of elements
-    int64_t blockFactor = 0;    // Number of elements per core (aligned to UB block)
-    int64_t ubFactor = 0;       // Number of elements per UB loop iteration (aligned to UB block)
-    int32_t useLocking = 0;     // use_locking attribute (0=false, 1=true); informational
-    int32_t reserved = 0;       // 8-byte alignment padding
+    int64_t totalNum = 0;    // Total number of elements
+    int64_t blockFactor = 0; // Number of elements per core (aligned to UB block)
+    int64_t ubFactor = 0;    // Number of elements per UB loop iteration (aligned to UB block)
+    int32_t useLocking = 0;  // use_locking attribute (0=false, 1=true); informational
+    int32_t reserved = 0;    // 8-byte alignment padding
 };
 
-#endif  // _APPLY_RMS_PROP_TILING_DATA_H_
+#endif // _APPLY_RMS_PROP_TILING_DATA_H_

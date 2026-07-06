@@ -23,9 +23,8 @@
 
 namespace l0op {
 
-const aclTensor* FusedBiasLeakyRelu(const aclTensor* x, const aclTensor* bias,
-                                     double negativeSlope, double scale,
-                                     aclOpExecutor* executor);
+const aclTensor* FusedBiasLeakyRelu(const aclTensor* x, const aclTensor* bias, double negativeSlope, double scale,
+                                    aclOpExecutor* executor);
 
 } // namespace l0op
 

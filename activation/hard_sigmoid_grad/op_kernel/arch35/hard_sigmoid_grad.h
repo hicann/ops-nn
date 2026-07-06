@@ -97,14 +97,14 @@ struct CastDownRound<bfloat16_t> {
 
 template <typename T>
 class HardSigmoidGrad {
-    static constexpr int32_t BUFFER_NUM = 2;                       // double buffer
+    static constexpr int32_t BUFFER_NUM = 2; // double buffer
     static constexpr bool kCastNeeded = !std::is_same<T, float>::value;
 
 public:
-    __aicore__ inline HardSigmoidGrad() {};
+    __aicore__ inline HardSigmoidGrad(){};
 
     __aicore__ inline void Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-                                 const HardSigmoidGradTilingData* tilingData);
+                                const HardSigmoidGradTilingData* tilingData);
     __aicore__ inline void Process();
 
     // Public so RunTileLoop<KernelT>() in hard_sigmoid_grad_common.h can drive
@@ -138,9 +138,8 @@ private:
 };
 
 template <typename T>
-__aicore__ inline void HardSigmoidGrad<T>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
-    const HardSigmoidGradTilingData* tilingData)
+__aicore__ inline void HardSigmoidGrad<T>::Init(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR gradInput,
+                                                const HardSigmoidGradTilingData* tilingData)
 {
     blockLength_ = ComputePerCoreLength(tilingData);
     if (blockLength_ <= 0) {
@@ -150,7 +149,8 @@ __aicore__ inline void HardSigmoidGrad<T>::Init(
     alpha_ = tilingData->alpha;
     beta_ = tilingData->beta;
 
-    gmGradOutput.SetGlobalBuffer((__gm__ T*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    gmGradOutput.SetGlobalBuffer((__gm__ T*)gradOutput + tilingData->blockFactor * AscendC::GetBlockIdx(),
+                                 blockLength_);
     gmSelf.SetGlobalBuffer((__gm__ T*)self + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
     gmGradInput.SetGlobalBuffer((__gm__ T*)gradInput + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
@@ -169,7 +169,8 @@ __aicore__ inline void HardSigmoidGrad<T>::Init(
     }
     // Mask buffer: N fp32 elements → N/8 uint8 bytes, 32-byte aligned.
     int64_t maskBufSize = ((ubLength_ + 7) / 8 + 31) / 32 * 32;
-    if (maskBufSize < 32) maskBufSize = 32;
+    if (maskBufSize < 32)
+        maskBufSize = 32;
     pipe.InitBuffer(maskBuf, maskBufSize);
 }
 
@@ -203,8 +204,7 @@ __aicore__ inline void HardSigmoidGrad<T>::Compute(int64_t currentNum)
     // Align count to 256-byte boundary for CompareScalar.
     // CompareScalar always works in fp32 for the cast path → 256/4 = 64 elements.
     // For fp32 native path → 256/sizeof(T) = 64 (T=float).
-    constexpr int64_t COMPARE_ALIGN =
-        kCastNeeded ? static_cast<int64_t>(64) : static_cast<int64_t>(256 / sizeof(T));
+    constexpr int64_t COMPARE_ALIGN = kCastNeeded ? static_cast<int64_t>(64) : static_cast<int64_t>(256 / sizeof(T));
     int64_t alignedCount = (currentNum + COMPARE_ALIGN - 1) / COMPARE_ALIGN * COMPARE_ALIGN;
 
     if constexpr (kCastNeeded) {
@@ -254,13 +254,11 @@ __aicore__ inline void HardSigmoidGrad<T>::Compute(int64_t currentNum)
 
         // Step 3: mask = (tmp > 0), select.
         CompareScalar(maskLocal, tmpLocal, static_cast<T>(0), CMPMODE::GT, alignedCount);
-        Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0),
-               SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+        Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
 
         // Step 4: mask = (tmp < 1), select.
         CompareScalar(maskLocal, tmpLocal, static_cast<T>(1), CMPMODE::LT, alignedCount);
-        Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0),
-               SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
+        Select(resultLocal, maskLocal, resultLocal, static_cast<T>(0), SELMODE::VSEL_TENSOR_SCALAR_MODE, currentNum);
     }
 
     gradInputQueue.template EnQue<T>(resultLocal);

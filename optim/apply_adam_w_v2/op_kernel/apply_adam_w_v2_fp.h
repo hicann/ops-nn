@@ -22,13 +22,11 @@ namespace ApplyAdamWV2 {
 using namespace AscendC;
 
 template <typename T, typename U>
-class ApplyAdamWV2Fp
-{
+class ApplyAdamWV2Fp {
 public:
     __aicore__ inline ApplyAdamWV2Fp(){};
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step, GM_ADDR maxGradNorm,
-        GM_ADDR workspace, const ApplyAdamWV2TilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step,
+                                GM_ADDR maxGradNorm, GM_ADDR workspace, const ApplyAdamWV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 protected:
@@ -87,9 +85,9 @@ private:
 };
 
 template <typename T, typename U>
-__aicore__ inline void ApplyAdamWV2Fp<T, U>::Init(
-    GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad, GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
-    const ApplyAdamWV2TilingData* tilingData)
+__aicore__ inline void ApplyAdamWV2Fp<T, U>::Init(GM_ADDR var, GM_ADDR expAvg, GM_ADDR expAvgSq, GM_ADDR grad,
+                                                  GM_ADDR step, GM_ADDR maxGradNorm, GM_ADDR workspace,
+                                                  const ApplyAdamWV2TilingData* tilingData)
 {
     this->ParseTilingData(tilingData);
     gmStep_.SetGlobalBuffer((__gm__ U*)step, 1);
@@ -167,7 +165,8 @@ __aicore__ inline float ApplyAdamWV2Fp<T, U>::ScalarPow(float x, float y)
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     float result = outLocal.GetValue(0);
-    PipeBarrier<PIPE_ALL>();;
+    PipeBarrier<PIPE_ALL>();
+    ;
     return result;
 }
 

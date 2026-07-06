@@ -18,20 +18,18 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclTensor* ScatterElements(
-    const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
-    const std::string& reduction, aclOpExecutor* executor, bool includeSelf = true);
-bool UseScatterElementsV2(
-    const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis, int64_t dataDimSize,
-    const std::string& reduction);
-bool UseScatterElements(
-    const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
-    const std::string& reduction);
-bool SupportNoTranspose(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
-                        int64_t axis, const std::string& reduction);
-const aclTensor* ScatterElementsNoTranspose(
-    const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
-    const std::string& reduction, aclOpExecutor* executor, bool includeSelf = true);
+const aclTensor* ScatterElements(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                                 int64_t axis, const std::string& reduction, aclOpExecutor* executor,
+                                 bool includeSelf = true);
+bool UseScatterElementsV2(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
+                          int64_t dataDimSize, const std::string& reduction);
+bool UseScatterElements(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
+                        const std::string& reduction);
+bool SupportNoTranspose(const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
+                        const std::string& reduction);
+const aclTensor* ScatterElementsNoTranspose(const aclTensor* data, const aclTensor* indices, const aclTensor* updates,
+                                            int64_t axis, const std::string& reduction, aclOpExecutor* executor,
+                                            bool includeSelf = true);
 } // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SCATTER_ELEMENTS_OP_H_

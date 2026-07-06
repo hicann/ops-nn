@@ -14,30 +14,22 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-
 #ifndef OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_STRUCT_H
 #define OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_STRUCT_H
 
-namespace LeakyReluOp
-{
-    #define TPL_FP16 1
-    #define TPL_BF16 2
-    #define TPL_FP32 3
+namespace LeakyReluOp {
+#define TPL_FP16 1
+#define TPL_BF16 2
+#define TPL_FP32 3
 
-    #define TPL_SCH_MODE_0 0
-    #define TPL_SCH_MODE_1 1
- 
-    ASCENDC_TPL_ARGS_DECL(LeakyRelu,
-        ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
-        ASCENDC_TPL_DTYPE_DECL(dType, TPL_FP16, TPL_BF16, TPL_FP32)
-    );
-    
-    ASCENDC_TPL_SEL(
-        ASCENDC_TPL_ARGS_SEL(
-            ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
-            ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP16, TPL_BF16, TPL_FP32)
-        )
-    );
-}      // namespace LeakyReluOp
+#define TPL_SCH_MODE_0 0
+#define TPL_SCH_MODE_1 1
+
+ASCENDC_TPL_ARGS_DECL(LeakyRelu, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
+                      ASCENDC_TPL_DTYPE_DECL(dType, TPL_FP16, TPL_BF16, TPL_FP32));
+
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, TPL_SCH_MODE_0, TPL_SCH_MODE_1),
+                                     ASCENDC_TPL_DTYPE_SEL(dType, TPL_FP16, TPL_BF16, TPL_FP32)));
+} // namespace LeakyReluOp
 
 #endif // OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_STRUCT_H

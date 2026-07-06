@@ -25,17 +25,10 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void ge_glu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR gelu, GM_ADDR workspace, GM_ADDR tiling);
 
-class ge_glu_v2_test : public testing::Test
-{
+class ge_glu_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "ge_glu_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "ge_glu_v2_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "ge_glu_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "ge_glu_v2_test TearDown\n" << endl; }
 };
 
 // TEST_F(ge_glu_v2_test, test_case_101)

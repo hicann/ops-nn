@@ -24,15 +24,9 @@ using namespace std;
 
 class l2_elu_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "elu_backward_test SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "elu_backward_test SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "elu_backward_test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "elu_backward_test TearDown" << std::endl; }
 };
 
 // 正常场景_FLOAT_ND
@@ -49,9 +43,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_FLOAT_ND)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -76,9 +70,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_FLOAT16_NCHW)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -103,9 +97,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_BF16_NHWC)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NHWC);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NHWC);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -135,9 +129,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_ratio_uint8_HWCN)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_HWCN);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_HWCN);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -162,9 +156,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_gradInput_COMPLEX64_NDHWC)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NDHWC);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2, 2}, ACL_COMPLEX64, ACL_FORMAT_NDHWC);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -189,9 +183,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_alpha_2_NCDHW)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCDHW);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -216,9 +210,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_alpha_half_NCHW_NHWC)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NHWC);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -243,9 +237,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_scale_2_ND)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -270,9 +264,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_scale_half_ND)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -297,9 +291,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_inputScale_2_ND)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -324,9 +318,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_inputScale_half_ND)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -351,9 +345,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_isResult_false_ND)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -378,9 +372,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_empty_tensor)
     auto selfOrResultDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -405,9 +399,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_nullptr)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -428,9 +422,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_alpha_nullptr)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -451,9 +445,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_scale_nullptr)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -474,9 +468,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_inputScale_nullptr)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -498,9 +492,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_selfOrResult_nullptr)
     auto selfOrResultDesc = nullptr;
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -522,9 +516,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradInput_nullptr)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = nullptr;
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -546,9 +540,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_dtype_unequal)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -570,9 +564,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_INT32)
     auto selfOrResultDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -594,9 +588,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_INT64)
     auto selfOrResultDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -618,9 +612,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_INT16)
     auto selfOrResultDesc = TensorDesc({2}, ACL_INT16, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_INT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -642,9 +636,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_INT8)
     auto selfOrResultDesc = TensorDesc({2}, ACL_INT8, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_INT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -666,9 +660,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_UINT8)
     auto selfOrResultDesc = TensorDesc({2}, ACL_UINT8, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_UINT8, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -690,9 +684,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_BOOL)
     auto selfOrResultDesc = TensorDesc({2}, ACL_BOOL, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_BOOL, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -714,9 +708,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_COMPLEX64)
     auto selfOrResultDesc = TensorDesc({2}, ACL_COMPLEX64, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_COMPLEX64, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -738,9 +732,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_COMPLEX128)
     auto selfOrResultDesc = TensorDesc({2}, ACL_COMPLEX128, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_COMPLEX128, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -762,9 +756,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_DOUBLE)
     auto selfOrResultDesc = TensorDesc({2}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_DOUBLE, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -786,9 +780,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradOutput_UNDEFINED)
     auto selfOrResultDesc = TensorDesc({2}, ACL_DT_UNDEFINED, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_DT_UNDEFINED, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -810,9 +804,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_gradInput_INT32)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -834,9 +828,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_shape_gradOutput_selfOrRes
     auto selfOrResultDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -858,9 +852,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_shape_gradOutput_gradInput
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -882,9 +876,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_shape_10D)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -906,9 +900,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_alpha_negtive)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -930,9 +924,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_valuerange)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -957,9 +951,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_uncontiguous)
     auto selfOrResultDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2});
     auto gradInputDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2});
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -981,9 +975,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_large_shape)
     auto selfOrResultDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -1005,9 +999,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_5d_shape)
     auto selfOrResultDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
     auto gradInputDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -1029,9 +1023,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_scalar_shape)
     auto selfOrResultDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -1053,9 +1047,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_with_specific_values)
     auto selfOrResultDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.1, -0.1, 0.05, -0.05});
     auto gradInputDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -1077,9 +1071,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_dim_gt_9)
     auto selfOrResultDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -1099,9 +1093,9 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_alpha_zero)
     auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(
-        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
-        OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(aclnnEluBackward,
+                        INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+                        OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

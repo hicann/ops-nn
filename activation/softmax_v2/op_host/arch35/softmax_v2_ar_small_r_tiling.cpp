@@ -21,14 +21,13 @@
 using namespace ge;
 
 using namespace Ops::Base;
-namespace optiling
-{
+namespace optiling {
 bool SoftmaxV2TilingArSmallR::IsCapable()
 {
-    OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) || 
-        (a1_ >= static_cast<int64_t>(aicoreParams_.numBlocks) * MIN_A_LEN && a1_ <= static_cast<int64_t>(aicoreParams_.numBlocks) * MAX_A_LEN),
-        OP_LOGI(context_->GetNodeName(), "AR small r template is not capable."),
-                    return false);
+    OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) ||
+                    (a1_ >= static_cast<int64_t>(aicoreParams_.numBlocks) * MIN_A_LEN &&
+                     a1_ <= static_cast<int64_t>(aicoreParams_.numBlocks) * MAX_A_LEN),
+                OP_LOGI(context_->GetNodeName(), "AR small r template is not capable."), return false);
     return true;
 }
 
@@ -47,22 +46,22 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
     int64_t rAligned = CeilDiv(r_, rTileBase) * rTileBase;
 
     int64_t rFactor = rAligned * (xDtypeSize_ * DOUBLE_BUFFER + yDtypeSize_ * DOUBLE_BUFFER +
-                                  FLOAT32_BYTES * DOUBLE_BUFFER);  // 输入、tmp、输出buffer的基本大小，单位为字节
+                                  FLOAT32_BYTES * DOUBLE_BUFFER); // 输入、tmp、输出buffer的基本大小，单位为字节
 
     int64_t a0TileNumMax = aicoreParams_.ubSize / (a0TileBase * (rFactor + FLOAT32_BYTES)); // 最大支持a基础块的个数
 
     OP_CHECK_IF(a0TileNumMax < 1,
-                    OP_LOGI(context_->GetNodeName(),
-                            "AR small r template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
-                            "tileBase: %ld, ub factor: %ld.",
-                            a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, a0TileNumMax),
-                    return ge::GRAPH_PARAM_INVALID);
+                OP_LOGI(context_->GetNodeName(),
+                        "AR small r template is not capable. merged shape is (%ld, %ld, %ld), ub size: %ldB, "
+                        "tileBase: %ld, ub factor: %ld.",
+                        a1_, r_, a0_, aicoreParams_.ubSize, a0TileBase, a0TileNumMax),
+                return ge::GRAPH_PARAM_INVALID);
 
     // 切a0
-    int64_t a0TileNumTmp = CeilDiv(a0New, a0TileBase);  // a基础块的数量
+    int64_t a0TileNumTmp = CeilDiv(a0New, a0TileBase); // a基础块的数量
     int64_t a0TileNum = a0TileNumMax < a0TileNumTmp ? a0TileNumMax : a0TileNumTmp;
-    int64_t tileA0Len = a0TileNum * a0TileBase;     // UB内能放下的tiling块，UB块
-    int64_t a0Outer = CeilDiv(a0New, tileA0Len);    // UB块的数量
+    int64_t tileA0Len = a0TileNum * a0TileBase;  // UB内能放下的tiling块，UB块
+    int64_t a0Outer = CeilDiv(a0New, tileA0Len); // UB块的数量
     int64_t tileA0Tail = a0New - tileA0Len * (a0Outer - 1);
 
     // 按核均分
@@ -78,17 +77,15 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
     tilingData_.set_rTileBase(rTileBase);
     tilingData_.set_rAligned(rAligned);
 
-    OP_LOGI(context_->GetNodeName(), "Do tiling success, tileA0Len: %ld, tileA0Tail: %ld, "
-                                     "totalTiles: %ld, tilesPerCore: %ld, usedCoreNums_:%ld",
-                                     tileA0Len, tileA0Tail, a0Outer, tilesPerCore, usedCoreNums_);
+    OP_LOGI(context_->GetNodeName(),
+            "Do tiling success, tileA0Len: %ld, tileA0Tail: %ld, "
+            "totalTiles: %ld, tilesPerCore: %ld, usedCoreNums_:%ld",
+            tileA0Len, tileA0Tail, a0Outer, tilesPerCore, usedCoreNums_);
 
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t SoftmaxV2TilingArSmallR::GetTilingKey() const
-{
-    return TILINGKEY_AR_SMALL_R;
-}
+uint64_t SoftmaxV2TilingArSmallR::GetTilingKey() const { return TILINGKEY_AR_SMALL_R; }
 
 ge::graphStatus SoftmaxV2TilingArSmallR::PostTiling()
 {
@@ -102,4 +99,4 @@ ge::graphStatus SoftmaxV2TilingArSmallR::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(SoftmaxV2, SoftmaxV2TilingArSmallR, TEMPLATE_AR_SMALL_R_PRIORITY);
-}  // namespace optiling
+} // namespace optiling

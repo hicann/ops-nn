@@ -23,15 +23,11 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void heaviside(
-    GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void heaviside(GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace,
+                                                GM_ADDR tiling);
 class heaviside_test : public testing::Test {
 protected:
-
-    static void SetUpTestCase()
-    {
-        cout << "heaviside SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "heaviside SetUp\n" << endl; }
 
     static void TearDownTestCase()
     {
@@ -39,7 +35,6 @@ protected:
         kernel_ut::CleanGeneratedBinFiles("./heaviside_data");
     }
 };
-
 
 TEST_F(heaviside_test, test_heaviside_float_0)
 {

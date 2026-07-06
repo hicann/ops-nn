@@ -33,15 +33,9 @@ using namespace ut_util;
 
 class DynamicMxQuantWithDualAxisTiling : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "DynamicMxQuantWithDualAxisTiling SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "DynamicMxQuantWithDualAxisTiling SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "DynamicMxQuantWithDualAxisTiling TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "DynamicMxQuantWithDualAxisTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -66,8 +60,8 @@ static string TilingDataToString(void* buf, size_t size)
         result += std::to_string(intData[i]);
         result += " ";
     }
-    const float* floatData = reinterpret_cast<const float*>(
-        reinterpret_cast<const uint8_t*>(buf) + intFieldCount * sizeof(int64_t));
+    const float* floatData = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(buf) +
+                                                            intFieldCount * sizeof(int64_t));
     constexpr size_t floatFieldCount = 2;
     for (size_t i = 0; i < floatFieldCount; i++) {
         result += std::to_string(floatData[i]);
@@ -76,11 +70,10 @@ static string TilingDataToString(void* buf, size_t size)
     return result;
 }
 
-static void ExecuteTestCase(
-    ge::DataType inDtype, ge::DataType yDtype, ge::DataType scaleDtype, gert::StorageShape shape,
-    gert::StorageShape scale1Shape, gert::StorageShape scale2Shape, string roundMode, int64_t dstDtype,
-    int64_t scaleAlg, string expectTilingData, float dstTypeMax = 0.0f,
-    ge::graphStatus status = ge::GRAPH_SUCCESS)
+static void ExecuteTestCase(ge::DataType inDtype, ge::DataType yDtype, ge::DataType scaleDtype,
+                            gert::StorageShape shape, gert::StorageShape scale1Shape, gert::StorageShape scale2Shape,
+                            string roundMode, int64_t dstDtype, int64_t scaleAlg, string expectTilingData,
+                            float dstTypeMax = 0.0f, ge::graphStatus status = ge::GRAPH_SUCCESS)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -119,8 +112,8 @@ static void ExecuteTestCase(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -141,11 +134,10 @@ static void ExecuteTestCase(
                       .NodeOutputTd(1, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstDtype)},
-                           {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scaleAlg)},
-                           {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstDtype)},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scaleAlg)},
+                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -171,10 +163,10 @@ static void ExecuteTestCase(
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
-static void ExecuteTestCaseFailed(
-    ge::DataType inDtype, ge::DataType yDtype, ge::DataType scaleDtype, gert::StorageShape shape,
-    gert::StorageShape scale1Shape, gert::StorageShape scale2Shape, string roundMode, int64_t dstDtype,
-    int64_t scaleAlg, float dstTypeMax = 0.0f)
+static void ExecuteTestCaseFailed(ge::DataType inDtype, ge::DataType yDtype, ge::DataType scaleDtype,
+                                  gert::StorageShape shape, gert::StorageShape scale1Shape,
+                                  gert::StorageShape scale2Shape, string roundMode, int64_t dstDtype, int64_t scaleAlg,
+                                  float dstTypeMax = 0.0f)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -213,8 +205,8 @@ static void ExecuteTestCaseFailed(
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_versions);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -235,11 +227,10 @@ static void ExecuteTestCaseFailed(
                       .NodeOutputTd(1, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs(
-                          {{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
-                           {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstDtype)},
-                           {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scaleAlg)},
-                           {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
+                      .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(dstDtype)},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scaleAlg)},
+                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -265,9 +256,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_ri
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 4 35 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_round)
@@ -280,9 +270,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_ro
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 0 41 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_floor)
@@ -295,9 +284,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_fl
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 1 41 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_To_Fp4)
@@ -310,9 +298,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_To_Fp4)
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 1 41 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_To_Fp8)
@@ -325,9 +312,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_To_Fp8)
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 4 35 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_From_fp16)
@@ -340,9 +326,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_From_fp16)
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 1 41 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_From_Bf16)
@@ -355,9 +340,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_From_Bf16)
     int64_t scaleAlg = 0;
     string expectTilingData = "64 2 1 41 0 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_BF16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstDtype_yDtype_not_corresponded)
@@ -369,9 +353,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstDtype_yDt
     int64_t dstDtype = 36;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_yDtype_failed)
@@ -383,9 +366,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_yDtype_faile
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_xDtype_failed)
@@ -397,9 +379,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_xDtype_faile
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleDtype_failed)
@@ -411,9 +392,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleDtype_f
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_failed1)
@@ -425,9 +405,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_fa
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg_out_of_range_failed)
@@ -439,9 +418,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg_out
     int64_t dstDtype = 35;
     int64_t scaleAlg = 3;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_failed2)
@@ -453,9 +431,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_roundMode_fa
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed1)
@@ -467,9 +444,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed2)
@@ -481,9 +457,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed3)
@@ -495,9 +470,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed
     int64_t dstDtype = 41;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT4_E1M2, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT4_E1M2, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed4)
@@ -509,9 +483,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_shape_failed
     int64_t dstDtype = 35;
     int64_t scaleAlg = 0;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 // ===================== scaleAlg=1 (CuBALS) 成功用例 =====================
@@ -526,9 +499,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp
     int64_t scaleAlg = 1;
     string expectTilingData = "64 2 4 35 1 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp8_e4m3fn)
@@ -541,9 +513,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp
     int64_t scaleAlg = 1;
     string expectTilingData = "64 2 4 36 1 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                    roundMode, dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp8_e5m2_bf16)
@@ -556,9 +527,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp
     int64_t scaleAlg = 1;
     string expectTilingData = "64 2 4 35 1 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_BF16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 // ===================== scaleAlg=2 (DynamicDtypeRange) 成功用例 =====================
@@ -573,9 +543,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     int64_t scaleAlg = 2;
     string expectTilingData = "64 2 4 40 2 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 0.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp4_e2m1_dst6)
@@ -589,9 +558,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     float dstTypeMax = 6.0f;
     string expectTilingData = "64 2 4 40 2 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 6.000000 0.166667 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData, dstTypeMax);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData, dstTypeMax);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp4_e2m1_dst7)
@@ -605,9 +573,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     float dstTypeMax = 7.0f;
     string expectTilingData = "64 2 4 40 2 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 7.000000 0.142857 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData, dstTypeMax);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData, dstTypeMax);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp4_e2m1_custom)
@@ -621,9 +588,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     float dstTypeMax = 8.5f;
     string expectTilingData = "64 2 4 40 2 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 8.500000 0.117647 ";
 
-    ExecuteTestCase(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData, dstTypeMax);
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData, dstTypeMax);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp4_e2m1_bf16)
@@ -637,9 +603,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     float dstTypeMax = 7.0f;
     string expectTilingData = "64 2 1 40 2 32 1 128 256 256 64 0 64 256 2 1 1 0 2 0 0 0 2 8 4 7.000000 0.142857 ";
 
-    ExecuteTestCase(
-        ge::DT_BF16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, expectTilingData, dstTypeMax);
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode,
+                    dstDtype, scaleAlg, expectTilingData, dstTypeMax);
 }
 
 // ===================== scaleAlg 与 dtype 不匹配的失败用例 =====================
@@ -653,9 +618,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp
     int64_t dstDtype = 40;
     int64_t scaleAlg = 1;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp4_e1m2_failed)
@@ -667,9 +631,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg1_fp
     int64_t dstDtype = 41;
     int64_t scaleAlg = 1;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp8_e5m2_failed)
@@ -681,9 +644,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     int64_t dstDtype = 35;
     int64_t scaleAlg = 2;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp4_e1m2_failed)
@@ -695,9 +657,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_scaleAlg2_fp
     int64_t dstDtype = 41;
     int64_t scaleAlg = 2;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg);
 }
 
 // ===================== dstTypeMax 取值范围失败用例 =====================
@@ -712,9 +673,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstTypeMax_n
     int64_t scaleAlg = 2;
     float dstTypeMax = -1.0f;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, dstTypeMax);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg, dstTypeMax);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstTypeMax_too_small_failed)
@@ -727,9 +687,8 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstTypeMax_t
     int64_t scaleAlg = 2;
     float dstTypeMax = 3.0f;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, dstTypeMax);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg, dstTypeMax);
 }
 
 TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstTypeMax_too_large_failed)
@@ -742,7 +701,6 @@ TEST_F(DynamicMxQuantWithDualAxisTiling, DynamicMxQuantWithDualAxis_dstTypeMax_t
     int64_t scaleAlg = 2;
     float dstTypeMax = 15.0f;
 
-    ExecuteTestCaseFailed(
-        ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape, roundMode, dstDtype,
-        scaleAlg, dstTypeMax);
+    ExecuteTestCaseFailed(ge::DT_FLOAT16, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E8M0, shape, scale1Shape, scale2Shape,
+                          roundMode, dstDtype, scaleAlg, dstTypeMax);
 }

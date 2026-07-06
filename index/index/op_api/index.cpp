@@ -28,37 +28,33 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(Index);
 
-const aclTensor* IndexAiCore(
-    const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides, const op::Shape outPutShape,
-    const aclTensorList* indices, aclOpExecutor* executor)
+const aclTensor* IndexAiCore(const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides,
+                             const op::Shape outPutShape, const aclTensorList* indices, aclOpExecutor* executor)
 {
     L0_DFX(IndexAiCore, self, indexedSizes, indexedStrides, indices);
     // 根据推导出的输出shape申请输出tensor
     // 第一个参数是输出shape，第二个参数是输出的dtype
     auto out = executor->AllocTensor(outPutShape, self->GetDataType());
 
-    auto ret =
-        ADD_TO_LAUNCHER_LIST_AICORE(Index, OP_INPUT(self, indexedSizes, indexedStrides, indices), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(Index, OP_INPUT(self, indexedSizes, indexedStrides, indices),
+                                           OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* IndexAiCpu(
-    const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides, const op::Shape outPutShape,
-    const aclTensorList* indices, aclOpExecutor* executor)
+const aclTensor* IndexAiCpu(const aclTensor* self, const aclTensor* indexedSizes, const aclTensor* indexedStrides,
+                            const op::Shape outPutShape, const aclTensorList* indices, aclOpExecutor* executor)
 {
     L0_DFX(IndexAiCpu, self, indexedSizes, indexedStrides, indices);
     // 根据推导出的输出shape申请输出tensor
     // 第一个参数是输出shape，第二个参数是输出的dtype
     auto out = executor->AllocTensor(outPutShape, self->GetDataType());
     static internal::AicpuTaskSpace space("Index");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-        Index, OP_ATTR_NAMES(), OP_INPUT(self, indexedSizes, indexedStrides, indices), OP_OUTPUT(out));
-    OP_CHECK(
-        ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
-        return nullptr);
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(Index, OP_ATTR_NAMES(), OP_INPUT(self, indexedSizes, indexedStrides, indices),
+                                          OP_OUTPUT(out));
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
+             return nullptr);
     return out;
 }
 } // namespace l0op
